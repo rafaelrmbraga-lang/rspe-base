@@ -1,0 +1,68 @@
+name: Gerar RSPE_Base.exe
+
+# Roda a cada envio para a branch main e também manualmente (aba Actions > "Run workflow").
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependências
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Conferir que o código importa
+        run: python -c "import rspe_scraper, rspe_view, rspe_auditoria, rspe_prescricao, rspe_export, rspe_ficha; print('ok')"
+
+      - name: Compilar com PyInstaller
+        run: >
+          python -m PyInstaller --onefile --windowed --clean --name RSPE_Base
+          --icon rspe.ico --add-data "rspe.ico;." --add-data "ui.html;." --add-data "base_juridica.json;."
+          --collect-data pdfminer --collect-data pdfplumber --collect-data reportlab
+          --collect-all webview
+          --exclude-module docxtpl --exclude-module docx --exclude-module docx2pdf
+          rspe_app.py
+
+      - name: Versão
+        id: versao
+        shell: pwsh
+        run: |
+          $v = (Select-String -Path rspe_app.py -Pattern 'VERSAO = "([^"]+)"').Matches[0].Groups[1].Value
+          "v=$v" >> $env:GITHUB_OUTPUT
+
+      - name: Montar pacote
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force pacote | Out-Null
+          Copy-Item dist\RSPE_Base.exe pacote\
+          Copy-Item LEIA-ME.txt, Criterios_de_analise_por_beneficio.pdf pacote\
+          Compress-Archive -Path pacote\* -DestinationPath "RSPE_Base_v${{ steps.versao.outputs.v }}.zip"
+
+      - name: Guardar o .exe (aba Actions)
+        uses: actions/upload-artifact@v4
+        with:
+          name: RSPE_Base_v${{ steps.versao.outputs.v }}
+          path: pacote/*
+          retention-days: 30
+
+      - name: Publicar em Releases (link fixo para baixar)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.versao.outputs.v }}
+          name: RSPE Base v${{ steps.versao.outputs.v }}
+          body: "Gerado automaticamente a partir do commit ${{ github.sha }}. Baixe o .zip, extraia e rode RSPE_Base.exe (Windows 10/11)."
+          files: RSPE_Base_v${{ steps.versao.outputs.v }}.zip
+          make_latest: true
