@@ -285,11 +285,9 @@ def resumo(f):
         return ""
     trab = f.get("trabalho", [])
     em = [x for x in trab if not x.get("fim")]
-    faltas = f.get("faltas", [])
-    return "Conduta %s · %s atestado(s), %s dias remidos · %s · %d falta(s)%s" % (
-        f.get("conduta") or "?", len(f.get("atestados", [])), _fmtn(f.get("dias_remidos_atestados") or 0),
-        ("trabalhando em " + (em[-1].get("empresa") or em[-1].get("setor") or "?") + " desde " + em[-1]["inicio"]) if em else "sem trabalho em curso",
-        len(faltas), (" (" + ", ".join(x["situacao"] for x in faltas) + ")") if faltas else "")
+    return "%s atestado(s), %s dias remidos · %s" % (
+        len(f.get("atestados", [])), _fmtn(f.get("dias_remidos_atestados") or 0),
+        ("trabalhando em " + (em[-1].get("empresa") or em[-1].get("setor") or "?") + " desde " + em[-1]["inicio"]) if em else "sem trabalho em curso")
 
 
 def _fmtn(v):
@@ -335,21 +333,36 @@ def comparativo(r, f, hoje=None):
     out["fd_remidos"] = ("%s / %s" % (_fmtn(atest), _fmtn(homolog))) + ((" · +%s" % _fmtn(dif)) if dif > 1 else "")
     # perdidos
     if perdidos_rspe:
-        add("Dias remidos perdidos", "", "%d perdidos" % perdidos_rspe, "Conferir a falta grave que motivou (LEP, art. 127: até 1/3)", "amarelo")
+        add("Dias remidos perdidos", "", "%d perdidos" % perdidos_rspe, "Limite de 1/3 conferido na Auditoria (LEP, art. 127)", "")
     # dias trabalhados
     dt = f.get("dias_trabalhados_atestados") or 0
     if dt:
         add("Dias trabalhados", "%d (atestados)" % dt, "", "Proporção 1 para 3: %s remidos esperados" % _fmtn(dt / 3.0),
             "amarelo" if abs(dt / 3.0 - atest) > 2 else "verde")
     # atestados individuais: a homologação cobre os atestados em ordem cronológica (soma acumulada ≤ homologado)
+    trab_all = f.get("trabalho", [])
+
+    def empresa_do(a):
+        if a.get("empresa"):
+            return a["empresa"]
+        ini, fim = _d(a.get("periodo_inicio") or ""), _d(a.get("periodo_fim") or "")
+        ref_ini = ini or _dp(a.get("data") or "")
+        ref_fim = fim or ref_ini
+        for t in trab_all:
+            ti, tf = _dp(t.get("inicio") or ""), _dp(t.get("fim") or "") or hoje
+            if ti and ref_ini and ti <= ref_fim and tf >= (ref_ini if ini else ref_ini - timedelta(days=120)):
+                return t.get("empresa") or t.get("setor") or ""
+        return ""
     acum = 0.0
     for a in sorted(f.get("atestados", []), key=lambda a: _dp(a["data"]) or date.min):
         esperado = a["dias_trabalhados"] / 3.0
         ok = abs(esperado - a["dias_remidos"]) <= 1
         acum += a["dias_remidos"]
         homologado = acum <= homolog + 1.5
+        emp = empresa_do(a)
+        per = ("%s a %s" % (a["periodo_inicio"], a["periodo_fim"])) if a.get("periodo_inicio") else "período não informado na ficha"
         add("Atestado %s (%s)" % ((a["numero"] or "s/n").split("/ST")[0], a["data"]),
-            "%d trabalhados · %s remidos%s%s" % (a["dias_trabalhados"], _fmtn(a["dias_remidos"]), (" · " + a["periodo_inicio"] + " a " + a["periodo_fim"]) if a["periodo_inicio"] else "", (" · " + a["empresa"]) if a.get("empresa") else ""),
+            "%s%s · %d trabalhados · %s remidos" % ((emp + " · ") if emp else "", per, a["dias_trabalhados"], _fmtn(a["dias_remidos"])),
             "homologado" if homologado else "sem incidente de remição correspondente",
             ("" if ok else "proporção 1/3 não confere · ") + ("ok" if homologado else "requerer"), "verde" if (homologado and ok) else ("vermelho" if not homologado else "amarelo"))
     # trabalho em curso
@@ -370,41 +383,11 @@ def comparativo(r, f, hoje=None):
     else:
         out["fd_trab"] = "sem trabalho em curso"
         add("Trabalho atual", "sem trabalho em curso" + ((" (último: %s até %s)" % (trab[-1].get("empresa") or trab[-1].get("setor"), trab[-1].get("fim"))) if trab else ""), "", "", "")
-    hist = "; ".join("%s a %s: %s" % (t["inicio"], t.get("fim") or "em curso", t.get("empresa") or t.get("setor")) for t in trab)
-    if hist:
-        add("Histórico de trabalho", hist, "", "%d período(s)" % len(trab), "")
-    # faltas
+    # estudo (remição pela leitura/ensino - LEP, art. 126, § 1º, I)
+    for x in f.get("estudo", []):
+        add("Estudo", x, "", "Conferir certificado e requerer remição (1 dia a cada 12 horas)", "amarelo")
+    # faltas ficam fora desta aba (vão para a Auditoria); só o resumo da coluna
     faltas = f.get("faltas", [])
-    rec = []
-    for fa in faltas:
-        dfato = _dp(fa["data_fato"]) or _dp(fa["data_registro"])
-        r12 = bool(dfato and (hoje - dfato).days <= 365)
-        txt = "%s · %s · %s%s" % (fa["data_fato"], fa["artigo"] or "art. n/i", fa["situacao"], (" · PADIC " + fa["padic"]) if fa.get("padic") else "")
-        if fa["situacao"] == "arquivada":
-            add("Falta disciplinar", txt, r.get("falta_12m_detalhe") or "sem indício de falta", "Arquivada: não pode gerar regressão, perda de remidos nem contar nos 12 meses", "verde" if not r12 else "amarelo")
-            if r12:
-                rec.append(fa)
-        else:
-            add("Falta disciplinar", txt, r.get("falta_12m_detalhe") or "sem indício de falta",
-                ("Nos últimos 12 meses: impede livramento (art. 83, III, b) e indulto (art. 6º) e pode regredir/alterar data-base" if r12 else "Há mais de 12 meses") if fa["grave"] else "Falta média/leve",
-                "vermelho" if (r12 and fa["grave"]) else "amarelo")
-            if r12 and fa["grave"]:
-                rec.append(fa)
-                cor_geral, sit_geral = "vermelho", "Falta grave nos 12 meses"
-    if not faltas:
-        add("Faltas disciplinares", "nenhuma na ficha", r.get("falta_12m_detalhe") or "sem indício", "Sem falta", "verde")
     out["fd_faltas"] = ("%d (%s)" % (len(faltas), ", ".join(x["situacao"] for x in faltas))) if faltas else "nenhuma"
-    if r.get("falta_12m") == "SIM" and not any(fa["situacao"] != "arquivada" for fa in faltas):
-        add("Indício de falta no RSPE", "nenhuma falta vigente na ficha", r.get("falta_12m_detalhe", ""), "RSPE sugere falta (regressão/perda de remidos), mas a ficha não confirma - conferir", "amarelo")
-    # regressão / restabelecimento
-    for x in f.get("restabelecimentos", []):
-        add("Restabelecimento de regime", x, "regime atual: " + (r.get("regime_atual") or "?").replace(" - ATIVO", ""), "Conferir se a regressão cautelar foi baixada no RSPE e a data-base preservada", "amarelo")
-    for x in f.get("regressoes", []):
-        add("Regressão (ficha)", x, "", "", "")
-    for x in f.get("recusa_trabalho", []):
-        add("Recusa de trabalho", x, "", "Relevante para o exame de mérito", "")
-    add("Conduta", f.get("conduta") or "—", "", "", "verde" if (f.get("conduta") or "").startswith(("OT", "BO")) else "")
-    add("Unidade / entrada", "%s · %s" % (f.get("unidade") or "?", f.get("data_entrada") or "?"), (r.get("vara") or ""), "", "")
-    add("Ficha impressa em", f.get("data_impressao") or "?", "RSPE de " + (r.get("data_geracao_rspe") or "?"), "", "")
     out.update(fd_cor=cor_geral, fd_sit=sit_geral, fd_conduta=f.get("conduta") or "", fd_linhas=L)
     return out

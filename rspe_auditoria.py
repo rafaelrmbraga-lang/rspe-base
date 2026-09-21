@@ -45,7 +45,10 @@ def _e_hediondo_lei(c):
         if art in h.get("lei_8072_art1_cp_sempre", []):
             return True, ""
         if art in h.get("lei_8072_art1_cp_condicional", {}):
-            return None, h["lei_8072_art1_cp_condicional"][art]
+            hc = rs.hediondo_condicional(c)
+            if hc is None:
+                return None, h["lei_8072_art1_cp_condicional"][art]
+            return hc, ""
         return False, ""
     eq = h.get("equiparados", {})
     if lei in eq and art in eq[lei]:
@@ -85,6 +88,47 @@ def _agrupar_por_crime(itens):
             b["titulo"] = "%s%s (%s)" % (sufixo[0].upper(), sufixo[1:], "; ".join(g["crimes"]))
             b["detalhe"] = " | ".join(g["detalhes"])
     return ordem
+
+
+def _perda_remidos(incidentes, perdidos):
+    """LEP, art. 127: a falta grave permite revogar ATÉ 1/3 do tempo remido até a data da infração.
+    Confere o limite com os incidentes de remição e de dias perdidos do próprio RSPE."""
+    def dt(i):
+        return rs.to_date(i.get("data_referencia") or i.get("data_decisao") or "")
+    faltas = sorted(d for d in (dt(i) for i in incidentes if "FALTA GRAVE" in (i.get("tipo") or "").upper() and i.get("situacao") == "CONCEDIDO") if d)
+    perdas = [i for i in incidentes if "PERDIDOS" in (i.get("tipo") or "").upper()]
+    remicoes = []
+    for i in incidentes:
+        if "REMI" in (i.get("tipo") or "").upper() and "PERDIDOS" not in (i.get("tipo") or "").upper() and i.get("situacao") == "CONCEDIDO":
+            m = rs.re.search(r"(\d+)\s*Dia", i.get("complemento", ""), rs.re.I)
+            if m:
+                remicoes.append((dt(i), int(m.group(1))))
+    if not faltas or not perdas:
+        return [_item("verificar", "Perda de %d dias remidos sem falta grave datada no RSPE" % perdidos,
+                      "O saldo registra dias perdidos, mas não há incidente de homologação de falta grave com data: conferir a decisão e o PAD.",
+                      "LEP, art. 127.")]
+    itens = []
+    def qtd(i):
+        m = rs.re.search(r"(\d+)", i.get("complemento") or "")
+        return int(m.group(1)) if m else 0
+    for f in faltas:
+        prox = next((g for g in faltas if g > f), None)
+        # perdas desta falta: registradas entre esta falta e a próxima
+        perda_f = sum(qtd(i) for i in perdas if dt(i) and dt(i) >= f and (prox is None or dt(i) < prox))
+        # remido até a falta, descontadas as perdas de faltas anteriores
+        base = sum(n for d, n in remicoes if d and d <= f) - sum(qtd(i) for i in perdas if dt(i) and dt(i) < f)
+        if not perda_f:
+            continue
+        limite = base // 3
+        if base and perda_f > limite:
+            itens.append(_item("alerta", "Perda de dias remidos acima de 1/3 (falta de %s)" % rs.fmt(f),
+                               "Remido até a falta: %d dias; limite de 1/3: %d dias; perdidos: %d (excesso de %d dia(s)). "
+                               "Se a perda foi aplicada remição por remição, o arredondamento para cima de cada parcela ultrapassa o teto legal." % (base, limite, perda_f, perda_f - limite),
+                               "LEP, art. 127 (até 1/3 do tempo remido); STF, RE 638.239."))
+        else:
+            itens.append(_item("info", "Perda de %d dias remidos pela falta grave de %s" % (perda_f, rs.fmt(f)),
+                               "Dentro do limite de 1/3 (remido até a falta: %d dias)." % base, "LEP, art. 127."))
+    return itens
 
 
 def auditar(r, hoje=None):
@@ -132,7 +176,7 @@ def auditar(r, hoje=None):
                                    rs.dias_para_pena(soma), rs.dias_para_pena(pena_total), rs.dias_para_pena(abs(soma - pena_total))),
                                "LEP, art. 111 (soma/unificação); possível pena extinta, comutada, detração ou unificação não refletida nos crimes."))
         else:
-            itens.append(_item("ok", "Soma das penas confere com a pena total", "Soma %s = total %s." % (rs.dias_para_pena(soma), rs.dias_para_pena(pena_total))))
+            itens.append(_item("ok", "Soma das penas confere com a pena total", "Soma das penas = total %s." % r.get("pena_total")))
     _t, _c, _r = rs.pena_amd(r.get("pena_total")), rs.pena_amd(r.get("pena_cumprida")), rs.pena_amd(r.get("pena_remanescente"))
     if _t and _c and _r:
         # conferência em anos/meses/dias, como o SEEU soma (não em dias corridos)
@@ -155,14 +199,13 @@ def auditar(r, hoje=None):
                                "Incidentes de remição somam %d dias; o resumo diz %d remidos (%d perdidos)." % (rem_inc, remidos, perdidos),
                                "LEP, arts. 126 e 127."))
         if perdidos:
-            itens.append(_item("verificar", "Perda de dias remidos registrada",
-                               "%d dias perdidos: indica falta grave reconhecida - conferir data e PAD (reflexo em progressão, LC e indulto)." % perdidos,
-                               "LEP, arts. 127 e 112, § 6º; Decretos de indulto, art. 6º."))
+            itens.extend(_perda_remidos(incidentes, perdidos))
     # pena integralmente cumprida
     if pena_total and cumprida is not None and cumprida >= pena_total and "ATIVO" in (r.get("status_execucao") or "").upper():
         itens.append(_item("alerta", "Pena integralmente cumprida com execução ativa",
                            "Cumprida %s ≥ total %s: cabe extinção da pena." % (rs.dias_para_pena(cumprida), rs.dias_para_pena(pena_total)), "LEP, art. 109; CP, art. 107."))
 
+    reinc_sem_base = []
     # ---------------- 2. crime a crime: hediondez, VGA, frações ----------------
     for c in ativos:
         nome = rs.crimes_curto([c])
@@ -241,19 +284,23 @@ def auditar(r, hoje=None):
         if j and j.get("vedado_lc") and hed and morte:
             itens.append(_item("verificar", "%s: hediondo com resultado morte - vedação de livramento" % nome,
                                "Para fatos a partir de 25/03/2026 o livramento é vedado (LEP, art. 112, VI/VIII); para fatos anteriores, STF Tema 1319 afasta a vedação ao aplicar retroativamente o 50%%.", "LEP, art. 112; STF Tema 1319."))
-        # reincidência: precisa de condenação anterior transitada antes do fato
+        # reincidência: precisa de condenação anterior transitada antes do fato (consolidado após o laço)
         if reinc and fato:
             anteriores = [o for o in crimes if o is not c and rs.to_date(o.get("transito_processo") or o.get("transito_mp") or "") and rs.to_date(o.get("transito_processo") or o.get("transito_mp")) < fato]
             if not anteriores:
-                itens.append(_item("verificar", "%s: marcado reincidente sem condenação anterior transitada no RSPE" % nome,
-                                   "Nenhum outro processo deste RSPE tem trânsito anterior ao fato (%s). A reincidência pode vir de processo não listado; conferir a certidão e o período depurador de 5 anos." % rs.fmt(fato),
-                                   "CP, arts. 63 e 64, I."))
+                reinc_sem_base.append(fato)
         # idade
         if nasc:
             i_fato = fato.year - nasc.year - ((fato.month, fato.day) < (nasc.month, nasc.day)) if fato else None
             if i_fato is not None and i_fato < 21:
                 itens.append(_item("verificar", "%s: menor de 21 anos no fato (%d) - prescrição pela metade" % (nome, i_fato), "Conferir se o SEEU/juízo considerou o art. 115 nos cálculos de prescrição.", "CP, art. 115."))
 
+    if reinc_sem_base:
+        itens.append(_item("verificar", "Marcado reincidente sem condenação anterior transitada no RSPE",
+                           "Nenhum processo deste RSPE transitou em julgado antes dos fatos (%s). A reincidência pode vir de condenação não listada aqui: "
+                           "conferir a certidão de antecedentes e o período depurador de 5 anos (art. 64, I). Afeta frações de progressão, livramento e indulto." % (
+                               rs.fmt(min(reinc_sem_base)) if len(set(reinc_sem_base)) == 1 else "de %s a %s" % (rs.fmt(min(reinc_sem_base)), rs.fmt(max(reinc_sem_base)))),
+                           "CP, arts. 63 e 64, I."))
     # ---------------- 3. data-base e faltas ----------------
     regs = [i for i in incidentes if "REGIME" in (i.get("tipo") or "").upper() and i.get("situacao") == "CONCEDIDO"
             and rs.re.search(r"PROGRESS|REGRESS", i.get("complemento") or "", rs.re.I)]
@@ -332,8 +379,9 @@ def auditar(r, hoje=None):
                 itens.append(_item("alerta", "Indulto %s possível sem incidente no RSPE" % ano, r.get("indulto_%s" % ano, ""), "Decreto %s." % {"2022": "11.302/2022, arts. 4º e 5º", "2024": "12.338/2024, art. 9º", "2025": "12.790/2025, art. 9º"}[ano]))
             elif st == "verificar":
                 itens.append(_item("info", "Indulto %s: hipóteses a verificar" % ano, r.get("indulto_%s" % ano, ""), "Depende de dado que o RSPE não traz (programa de egressos, estudo, saídas, valor do bem, saúde)."))
-        if "POSSÍVEL" in (r.get("comutacao_2025") or "") and "nenhum registro" in (r.get("indulto_comutacao_incidentes") or ""):
-            itens.append(_item("alerta", "Comutação 2025 possível sem incidente no RSPE", r.get("comutacao_2025", ""), "Decreto 12.790/2025, art. 13."))
+        for ano, dec in (("2024", "12.338/2024"), ("2025", "12.790/2025")):
+            if (r.get("comutacao_%s" % ano) or "").startswith("POSSÍVEL") and "nenhum registro" in (r.get("indulto_comutacao_incidentes") or ""):
+                itens.append(_item("alerta", "Comutação %s possível sem incidente no RSPE" % ano, r.get("comutacao_%s" % ano, ""), "Decreto %s, art. 13." % dec))
     # violência doméstica: art. 129 §§ 9º-11 sem sinal de que a vítima é mulher
     for c in ativos:
         vd = rs.violencia_domestica(c)

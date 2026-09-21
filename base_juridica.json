@@ -1,5 +1,5 @@
 {
- "versao": "2026-09-21a",
+ "versao": "2026-09-21b",
  "descricao": "Base juridica do RSPE Base. Editavel: o programa le este arquivo ao abrir (copia ao lado do .exe tem prioridade sobre a embutida). Datas em AAAA-MM-DD. Fracoes como 'num/den' ou percentual 'NN%'.",
  "prescricao": {
   "art109_tabela": [
@@ -262,8 +262,8 @@
     "lei": "Lei 13.964/2019"
    },
    "2848:157 §2-A": {
-    "desde": "2018-04-24",
-    "lei": "Lei 13.654/2018"
+    "desde": "2020-01-23",
+    "lei": "Lei 13.964/2019 (a majorante é de 2018 - Lei 13.654 -, mas a hediondez veio com o Pacote Anticrime)"
    },
    "2848:157 §2-B": {
     "desde": "2020-01-23",
@@ -274,8 +274,8 @@
     "lei": "Lei 13.964/2019"
    },
    "2848:155 §4-A": {
-    "desde": "2018-04-24",
-    "lei": "Lei 13.654/2018"
+    "desde": "2020-01-23",
+    "lei": "Lei 13.964/2019 (furto com explosivo: hediondo só desde o Pacote Anticrime)"
    },
    "2848:121 §2": {
     "desde": "1994-09-07",
@@ -397,6 +397,36 @@
     "desde": "2026-03-25",
     "lei": "Lei 15.358/2026"
    }
+  },
+  "condicional_paragrafos": {
+   "_nota": "Artigos do CP em que a hediondez depende do parágrafo/inciso (Lei 8.072/90, art. 1º). Lista de '§X' ou '§X INCISO'; '§X' vale para qualquer inciso. Fora da lista = não hediondo. A época do fato é conferida à parte (tabela 'desde').",
+   "121": [
+    "§2"
+   ],
+   "155": [
+    "§4-A"
+   ],
+   "157": [
+    "§2 V",
+    "§2-A I",
+    "§2-B",
+    "§3"
+   ],
+   "158": [
+    "§3"
+   ],
+   "129": [
+    "§12"
+   ],
+   "267": [
+    "§1"
+   ],
+   "148": [
+    "§1 IV"
+   ],
+   "149-A": [
+    "§1 II"
+   ]
   }
  },
  "vga_esperado": {

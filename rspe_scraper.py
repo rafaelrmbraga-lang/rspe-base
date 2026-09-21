@@ -337,6 +337,62 @@ def num_art(txt):
     return m.group(1).upper() if m else ""
 
 
+RE_PARAGRAFO = re.compile(r"^\s*§\s*(\d+)\s*[ºo°]?\s*(-\s*[A-Z])?\s*,?\s*([IVXL]+\b)?", re.I)
+
+
+def paragrafo_inciso(c):
+    """Parágrafo e inciso lidos do início do tipo penal impresso no RSPE:
+    '§ 3º, I: ...' -> ('3', 'I'); '§ 2º-A, I:' -> ('2-A', 'I'); 'CAPUT: ...' -> ('', ''); 'PARÁGRAFO ÚNICO' -> ('pu', ''); ilegível -> None."""
+    t = (c.get("tipo_penal") or "").strip()
+    if not t:
+        return None
+    m = RE_PARAGRAFO.match(t)
+    if m:
+        par = m.group(1) + (m.group(2).replace(" ", "").upper() if m.group(2) else "")
+        return (par, (m.group(3) or "").upper())
+    tu = t.upper()
+    if tu.startswith("CAPUT"):
+        return ("", "")
+    if tu.startswith("PAR") and "NICO" in tu[:20]:
+        return ("pu", "")
+    return None
+
+
+def paragrafo_texto(c):
+    """'§ 3º, I' / '§ 2º-A, I' / 'p. ú.' / '' (caput ou ilegível)."""
+    pi = paragrafo_inciso(c)
+    if not pi or not pi[0]:
+        return ""
+    if pi[0] == "pu":
+        return "p. ú."
+    num, suf = (pi[0].split("-", 1) + [""])[:2]
+    return "§ %sº%s%s" % (num, ("-" + suf) if suf else "", (", " + pi[1]) if pi[1] else "")
+
+
+def hediondo_condicional(c):
+    """Para artigos cuja hediondez depende do parágrafo (base: hediondos.condicional_paragrafos):
+    True/False pelo parágrafo impresso; None se o artigo não é condicional ou o parágrafo é ilegível."""
+    try:
+        import rspe_regras as _rg
+        regras = ((_rg.hediondos() or {}).get("condicional_paragrafos") or {})
+    except Exception:
+        regras = {}
+    lei, art = num_lei(c.get("lei")), num_art(c.get("artigo"))
+    if not (lei in ("2848", "") or ("PENAL" in (c.get("lei") or "").upper() and "MILITAR" not in (c.get("lei") or "").upper())):
+        return None
+    if art not in regras or art.startswith("_"):
+        return None
+    pi = paragrafo_inciso(c)
+    if pi is None:
+        return None
+    par, inc = pi
+    for regra in regras[art]:
+        partes = regra.replace("§", "").split()
+        if partes and partes[0].upper() == par and (len(partes) == 1 or partes[1].upper() == inc):
+            return True
+    return False
+
+
 def hediondo_desde(c):
     """(data, lei) a partir da qual o tipo do crime é hediondo, pela tabela hediondos.desde da base jurídica; (None, '') se não tabelado."""
     try:
@@ -392,7 +448,9 @@ def e_hediondo(c):
     if not art:
         return False
     if lei in ("2848", "") or ("PENAL" in (c.get("lei") or "").upper() and "MILITAR" not in (c.get("lei") or "").upper()):
-        return art in h.get("lei_8072_art1_cp_sempre", HEDIONDOS_SEMPRE)
+        if art in h.get("lei_8072_art1_cp_sempre", HEDIONDOS_SEMPRE):
+            return True
+        return bool(hediondo_condicional(c))  # pelo parágrafo/inciso impresso (época já conferida acima)
     eq = h.get("equiparados", EQUIPARADOS)
     if lei in eq and art in eq[lei]:
         if lei == "11343" and art == "33" and "§ 4" in (c.get("tipo_penal") or ""):
@@ -605,7 +663,8 @@ def crimes_curto(crimes):
     for c in ativos:
         art = num_art(c.get("artigo"))
         if art:
-            txt = "art. %s %s" % (art, lei_curta(c.get("lei")))
+            par = paragrafo_texto(c)
+            txt = "art. %s%s %s" % (art, (" " + par) if par else "", lei_curta(c.get("lei")))
         else:
             txt = "art. n/i %s" % lei_curta(c.get("lei"))
         itens.append(txt)
@@ -655,7 +714,10 @@ def faltas(campos, eventos, incidentes, hoje):
             if d and d >= limite:
                 achados.append("%s (%s)" % (" ".join(txt.split()), fmt(d)))
     m = re.search(r"(\d+)\s*dias perdidos", campos.get("saldo_remidos", ""), re.I)
-    if m and int(m.group(1)) > 0:
+    # só vira indício "sem data" se o RSPE não trouxer incidente datado da falta/perda (homologação, dias perdidos)
+    datados = [i for i in incidentes if re.search(r"FALTA GRAVE|PERDIDOS", (i.get("tipo") or ""), re.I)
+               and to_date(i.get("data_referencia") or i.get("data_decisao") or "")]
+    if m and int(m.group(1)) > 0 and not datados:
         achados.append("%s dias remidos perdidos (data não consta)" % m.group(1))
     achados = list(dict.fromkeys(achados))
     return {
@@ -1049,6 +1111,13 @@ def _idade_em(nasc, ref):
     return ref.year - d.year - ((ref.month, ref.day) < (d.month, d.day))
 
 
+def e_incidente_livramento(i):
+    """Incidente que concede/trata o livramento condicional em si. Exclui 'ALTERAÇÃO DE DATA-BASE DE
+    PROGRESSÃO DE REGIME/LIVRAMENTO CONDICIONAL', que só muda a data-base e não concede nada."""
+    t = (i.get("tipo") or "").upper()
+    return "LIVRAMENTO" in t and "DATA-BASE" not in t and "DATA BASE" not in t
+
+
 def livramento_em_curso(campos, incidentes, ref=None):
     """(True/False, data) - livramento condicional vigente: o SEEU imprime "(Em livramento condicional
     deferido em dd/mm/aaaa)", ou há incidente de LC concedido sem revogação posterior."""
@@ -1058,7 +1127,7 @@ def livramento_em_curso(campos, incidentes, ref=None):
         dl = to_date(m.group(1)) if m else date.min
     if not dl:
         for i in incidentes:
-            if i.get("situacao") == "CONCEDIDO" and "LIVRAMENTO" in (i.get("tipo") or "").upper() and "REVOG" not in ((i.get("tipo") or "") + (i.get("complemento") or "")).upper():
+            if i.get("situacao") == "CONCEDIDO" and e_incidente_livramento(i) and "REVOG" not in ((i.get("tipo") or "") + (i.get("complemento") or "")).upper():
                 d = to_date(i.get("data_referencia") or i.get("data_decisao") or i.get("complemento") or "")
                 if d and (dl is None or d > dl):
                     dl = d
@@ -1120,7 +1189,7 @@ def _regime_em(incidentes, ref, regime_atual, custodia=True, campos=None):
     lc = False
     dlc = None
     for i in incidentes:
-        if i.get("situacao") == "CONCEDIDO" and "LIVRAMENTO" in (i.get("tipo") or "").upper():
+        if i.get("situacao") == "CONCEDIDO" and e_incidente_livramento(i):
             d = to_date(i.get("data_referencia") or i.get("data_decisao") or i.get("complemento") or "")
             if d and d <= ref and (dlc is None or d > dlc):
                 dlc = d
@@ -1204,6 +1273,25 @@ def analise_decretos(campos, crimes, eventos, incidentes, hoje):
             out[k + "_status"] = "vedado"
             out[k + "_detalhe"] = "Crime impeditivo: " + "; ".join(imped)
             out[kc] = "VEDADA (art. 1º)"
+            # art. 7º, p. ú.: em concurso, os crimes NÃO impeditivos podem ser indultados/comutados
+            # depois de cumpridos 2/3 da pena do crime impeditivo (o comando de ORCRIM, § 3º, alcança a pessoa)
+            imp_c = [c for c in ativos if impeditivo_decreto(c)]
+            livres = [c for c in ativos if not impeditivo_decreto(c)]
+            if livres and imp_c and not any(c.get("comando_orcrim") == "S" for c in crimes):
+                pena_imp = sum(pena_para_dias(c.get("pena_imposta")) or 0 for c in imp_c)
+                exig = int(pena_imp * 2 / 3)
+                cump_ref, _f = cumprido_na_data(campos, periodos, remicoes, ref)
+                nomes = crimes_curto(livres)
+                if pena_imp and cump_ref >= exig:
+                    out[k] = "A VERIFICAR: art. 7º, p. ú. - 2/3 do crime impeditivo cumpridos; indulto dos crimes não impeditivos (%s)" % nomes
+                    out[k + "_status"] = "verificar"
+                    out[kc] = "A VERIFICAR: art. 7º, p. ú. - comutação dos crimes não impeditivos (%s)" % nomes
+                    out[k + "_detalhe"] += ("\nArt. 7º, p. ú.: cumprido %s até %s ≥ 2/3 da pena dos crimes impeditivos (%s de %s). "
+                                            "Os crimes não impeditivos (%s) podem ser indultados/comutados: analisar os incisos do art. 9º "
+                                            "só com a pena desses crimes." % (dias_para_pena(cump_ref), fmt(ref), dias_para_pena(exig), dias_para_pena(pena_imp), nomes))
+                else:
+                    out[k + "_detalhe"] += ("\nArt. 7º, p. ú.: há crimes não impeditivos (%s), mas o indulto/comutação deles só depois de cumpridos 2/3 da pena "
+                                            "dos impeditivos (%s de %s); cumprido até %s: %s." % (nomes, dias_para_pena(exig), dias_para_pena(pena_imp), fmt(ref), dias_para_pena(cump_ref)))
             continue
         if not pena_total:
             out[k] = out[kc] = "sem pena no RSPE"
@@ -1542,7 +1630,7 @@ def extrair(caminho):
     r["regressoes"] = " | ".join("%s (%s)" % (i["complemento"], i["data_referencia"] or i["data_decisao"]) for i in regr)
 
     # livramento condicional registrado
-    liv = [i for i in incidentes if "LIVRAMENTO" in i["tipo"].upper()]
+    liv = [i for i in incidentes if e_incidente_livramento(i)]
     r["livramento_incidentes"] = " | ".join("%s: %s %s" % (i["situacao"], i["complemento"], i["data_decisao"]) for i in liv)
 
     # indulto / comutação registrados

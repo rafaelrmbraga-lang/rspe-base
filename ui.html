@@ -384,7 +384,7 @@ const ui = {
           ${lin('Progressão', dataSit(r.prog, r.prog_sit, r.prog_cor))}
           ${lin('Livramento', dataSit(r.liv, r.liv_sit, r.liv_cor))}
           ${lin('Indulto', r.imp.startsWith('Sim')?pill('Crime impeditivo · '+r.imp.replace(/^Sim · /,''),'vermelho'):ind)}
-          ${lin('Comutação 2025', pill(r.c25, r.c25_cor))}
+          ${lin('Comutação', `<span class="muted">2024</span> ${pill(r.c24, r.c24_cor)} <span class="muted">2025</span> ${pill(r.c25, r.c25_cor)}`)}
           ${lin('Prescrição', r.presc_ppe?pill(r.presc_ppe, r.presc_cor):'<span class="muted">—</span>')}
           ${lin('Extinção', r.ext_sit?pill(r.ext_sit,r.ext_cor)+(r.ext_cor==='vermelho'||r.ext_cor==='azul'?' <span class="muted">'+esc(r.ext_hipoteses)+'</span>':''):'<span class="muted">—</span>')}
           ${r.falta_sim?lin('Falta (12 meses)', `<span class="falta">${esc(r.falta.replace(/^Sim · /,''))}</span>`):''}
