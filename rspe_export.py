@@ -11,7 +11,7 @@ PRI = "#4F46E5"
 TX2 = "#475467"
 LINE = "#E6E9EF"
 ZEBRA = "#F9FAFB"
-DOT = {"vermelho": "#E5484D", "laranja": "#F97316", "amarelo": "#F5A524", "verde": "#17B26A", "cinza": "#98A2B3", "azul": "#2563EB"}
+DOT = {"vermelho": "#E5484D", "laranja": "#F97316", "amarelo": "#F5A524", "vencido": "#F5A524", "verde": "#17B26A", "cinza": "#98A2B3", "azul": "#2563EB"}
 
 
 def exportar_xlsx(modelos, saida, abas):
@@ -77,7 +77,10 @@ def _linhas_export(spec, modelos):
         for s in m.get(spec["sub"], []):
             d = dict(m)
             d.update(s)
-            d[spec["cor"]] = s.get("ppe_cor") if s.get("ppe_cor") == "vermelho" or s.get("retro_cor") != "vermelho" else s.get("retro_cor")
+            if spec["id"] == "presc":
+                d[spec["cor"]] = s.get("ppe_cor") if s.get("ppe_cor") == "vermelho" or s.get("retro_cor") != "vermelho" else s.get("retro_cor")
+            elif "cor" in s:
+                d[spec["cor"]] = s.get("cor") or ""
             linhas.append(d)
     return cols, linhas
 

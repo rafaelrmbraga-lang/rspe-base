@@ -23,16 +23,17 @@ CORES = {
     "vermelho": ("#FDE8E8", "#B42318"),
     "laranja": ("#FFEAD5", "#C4320A"),
     "amarelo": ("#FEF4D6", "#B54708"),
+    "vencido": ("#FEF4D6", "#B54708"),
     "verde": ("#DDF5E7", "#067647"),
     "cinza": ("#EEF0F3", "#5B6470"),
     "azul": ("#DBEAFE", "#1D4ED8"),
     "": ("#FFFFFF", "#344054"),
 }
 ROTULO = {
-    "lapso": {"vermelho": "Vencido", "laranja": "Até 30 dias", "amarelo": "Até 60 dias", "verde": "Até 90 dias", "cinza": "Não se aplica / interrompida", "azul": "Extinta"},
+    "lapso": {"vencido": "Vencido · verificar", "laranja": "Até 30 dias", "amarelo": "Até 60 dias", "verde": "Até 90 dias", "cinza": "Não se aplica / interrompida", "azul": "Extinta"},
     "indulto": {"vermelho": "Crime impeditivo", "verde": "Possível", "amarelo": "A verificar", "cinza": "Não atinge", "azul": "Extinta"},
-    "presc": {"vermelho": "Prescrição aparente", "amarelo": "Em curso", "": "Não corre", "cinza": "Sem dados", "azul": "Extinta"},
-    "fd": {"vermelho": "Remição pendente", "amarelo": "A atestar / verificar", "verde": "Em ordem", "cinza": "Sem ficha"},
+    "presc": {"vermelho": "Prescrição aparente", "": "Não prescrita", "cinza": "Sem dados", "azul": "Extinta"},
+    "fd": {"vermelho": "Remição pendente", "amarelo": "Trabalho a atestar / verificar", "verde": "Em ordem", "cinza": "Sem ficha"},
     "aud": {"vermelho": "Guia demanda atenção", "amarelo": "Pontos a verificar", "verde": "Sem inconsistências", "azul": "Extinta"},
     "ext": {"vermelho": "Extinção cabível", "laranja": "Término em até 30 dias", "amarelo": "Até 60 dias / a verificar", "verde": "Término em até 90 dias", "cinza": "Sem previsão / interrompida", "azul": "Extinta (registrada)"},
 }
@@ -85,9 +86,7 @@ FILTROS = {
     "presc": [
         ("todas", "Todas"),
         ("aparente", "Prescrição aparente"),
-        ("curso", "Em curso (prazo correndo)"),
-        ("curso1", "Em curso · prescreve em até 1 ano"),
-        ("naocorre", "Não corre"),
+        ("naocorre", "Não prescrita"),
         ("semdados", "Sem dados / extinta"),
     ],
 }
@@ -158,17 +157,20 @@ def data_livramento(r):
     return _sem_data(r)
 
 
+VERIFICAR_VENCIDO = "verificar criminológico, indeferimento ou falta"
+
+
 def situacao(d, interrompida=False):
     """(texto, cor)"""
     if d == "atingido":
-        return ("Interrompida · lapso atingido", "cinza") if interrompida else ("Vencido · lapso atingido", "vermelho")
+        return ("Interrompida · lapso atingido", "cinza") if interrompida else ("Lapso atingido · " + VERIFICAR_VENCIDO, "vencido")
     if not d:
         return (("Pena interrompida", "cinza") if interrompida else ("", ""))
     n = (d - HOJE).days
     if n < 0:
-        return ("Vencido há %d dias" % -n, "vermelho")
+        return ("Vencido há %d dia%s · %s" % (-n, "s" if n < -1 else "", VERIFICAR_VENCIDO), "vencido")
     if n == 0:
-        return ("Vence hoje", "vermelho")
+        return ("Vence hoje", "laranja")
     for lim, cor in ALERTAS_DIAS:
         if n <= lim:
             return ("Em %d dias" % n, cor)
@@ -382,6 +384,21 @@ def extincao(r, presc, interr):
     }
 
 
+def _vencido_full(r, sit, cor, palavra):
+    """Dica (tooltip) do prazo vencido: o que o RSPE mostra sobre pedidos, exame criminológico e faltas."""
+    if cor != "vencido":
+        return sit
+    partes = [sit]
+    ped = pedidos(r, palavra)
+    partes.append("Pedidos no RSPE: " + ped if ped else "Nenhum pedido registrado no RSPE")
+    crim = [i for i in r.get("_incidentes", []) if "CRIMINOL" in ("%s %s" % (i.get("tipo", ""), i.get("complemento", ""))).upper()]
+    if crim:
+        partes.append("Exame criminológico: " + "; ".join("%s (%s)" % (i.get("situacao", "").lower(), i.get("data_decisao") or i.get("data_referencia") or "") for i in crim))
+    if r.get("falta_12m") == "SIM":
+        partes.append("Falta nos últimos 12 meses: " + (r.get("falta_12m_detalhe") or "sim"))
+    return " · ".join(partes)
+
+
 def _dias_para(d):
     if d == "atingido":
         return 0
@@ -453,6 +470,7 @@ def modelo(r, baixas=None, ficha=None):
         "crimes": rs.crimes_curto(r.get("_crimes", [])) or r.get("crimes_curto") or "",
         "termino": termino(r),
         "prog": ptxt, "prog_sit": psit, "prog_cor": pcor, "prog_dias": _dias_para(pd),
+        "prog_sit_full": _vencido_full(r, psit, pcor, "PROGRESS"), "liv_sit_full": _vencido_full(r, lsit, lcor, "LIVRAMENTO"),
         "liv_dias": _dias_para(ld), "interrompida": interr, "estado_exec": est[0] if est else "",
         "presc_cor": presc["presc_cor"], "presc_retro": presc["presc_retro"], "presc_ppe": presc["presc_ppe"],
         "presc_prox": presc["presc_prox"], "presc_dias": presc["presc_dias"], "presc_obs": presc["presc_obs"],
@@ -497,9 +515,9 @@ def modelo(r, baixas=None, ficha=None):
         "geracao": r.get("data_geracao_rspe", ""),
         "importado": r.get("importado_em", ""),
         "arquivo": r.get("arquivo", ""),
-        "pena_total": r.get("pena_total", ""),
-        "pena_cumprida": r.get("pena_cumprida", ""),
-        "pena_rem": r.get("pena_remanescente", ""),
+        "pena_total": rs.pena_extenso(r.get("pena_total", "")),
+        "pena_cumprida": rs.pena_extenso(r.get("pena_cumprida", "")),
+        "pena_rem": rs.pena_extenso(r.get("pena_remanescente", "")),
         "remidos": r.get("saldo_remidos", ""),
         "cumprimento": r.get("situacao_cumprimento", ""),
         "imp_det": r.get("indulto_crime_impeditivo_detalhe", ""),
@@ -510,7 +528,7 @@ def modelo(r, baixas=None, ficha=None):
         "eventos": r.get("eventos", ""),
         "crimes_det": [
             {"nome_crime": rs.nome_crime(c), "dispositivo": rs.dispositivo(c), "lei": rs.lei_curta(c.get("lei")), "artigo": ("art. " + rs.num_art(c.get("artigo")) + ((" " + rs.paragrafo_texto(c)) if rs.paragrafo_texto(c) else "")) if rs.num_art(c.get("artigo")) else "", "extinto": c.get("extinto", ""),
-             "pena": rs.dias_para_pena(rs.pena_para_dias(c.get("pena_imposta"))) or c.get("pena_imposta"), "fato": c.get("data_infracao"),
+             "pena": rs.pena_extenso(c.get("pena_imposta")), "fato": c.get("data_infracao"),
              "vga": c.get("vga"), "morte": c.get("resultado_morte"), "reinc": "%s/%s" % (c.get("reincidente_comum"), c.get("reincidente_especifico")),
              "hediondo": c.get("hediondo_ou_equiparado"), "proc": c.get("processo_criminal"), "desc": c.get("tipo_penal"),
              "frac_prog": c.get("fracao_progressao"), "frac_liv": c.get("fracao_livramento")}
@@ -546,7 +564,7 @@ ABAS = [
      "pilulas": {"imp": "ind_cor", "i22": "i22_cor", "i24": "i24_cor", "c24": "c24_cor", "i25": "i25_cor", "c25": "c25_cor"}},
     {"id": "presc", "titulo": "Prescrição", "cor": "presc_cor", "legenda": "presc", "expansivel": True,
      "cols": [("nome", "Nome", 20), ("proc", "Nº da execução", 17), ("regime", "Regime", 8),
-              ("presc_retro", "Pretensão punitiva", 18), ("presc_ppe", "Pretensão executória", 26), ("presc_prox", "Próxima data", 9)],
+              ("presc_retro", "Pretensão punitiva", 18), ("presc_ppe", "Pretensão executória", 26), ("presc_prox", "Prescrita em", 9)],
      "pilulas": {},
      "sub": "presc_linhas", "sub_cols": PRESC_SUB, "sub_pilulas": {"retro_status": "retro_cor", "ppe_status": "ppe_cor"}, "sub_calc": True},
     {"id": "ext", "titulo": "Extinção", "cor": "ext_cor", "legenda": "ext",
@@ -557,7 +575,7 @@ ABAS = [
      "cols": [("nome", "Nome", 20), ("proc", "Nº da execução", 15), ("fd_trab", "Trabalho atual", 18),
               ("fd_remidos", "Remidos ficha / RSPE", 12), ("fd_atestar", "A atestar", 14), ("fd_sit", "Situação", 14)],
      "pilulas": {"fd_sit": "fd_cor"},
-     "sub": "fd_linhas", "sub_cols": [("item", "Item", 14), ("ficha", "Ficha disciplinar (SIAPEN)", 30), ("rspe", "RSPE (SEEU)", 22), ("sit", "Situação / providência", 30)],
+     "sub": "fd_linhas", "sub_cols": [("emp", "Emprego", 14), ("per", "Período", 14), ("dias", "Dias", 6), ("at", "Atestado", 22), ("rspe", "Remição no RSPE", 18), ("sit", "Situação / providência", 26)],
      "sub_pilulas": {"sit": "cor"}},
     {"id": "aud", "titulo": "Auditoria", "cor": "aud_cor", "legenda": "aud", "expansivel": True,
      "cols": [("nome", "Nome", 22), ("proc", "Nº da execução", 17),

@@ -166,7 +166,7 @@ def analisar(r, hoje=None):
             "sentenca": c.get("data_sentenca", ""),
             "transito_mp": c.get("transito_mp", ""),
             "transito": c.get("transito_processo", ""),
-            "pena": rs.pena_curta(c.get("pena_imposta") or c.get("pena_total_processo")),
+            "pena": rs.pena_extenso(rs.pena_curta(c.get("pena_imposta") or c.get("pena_total_processo"))),
             "reinc": c.get("reincidente_comum") == "S" or c.get("reincidente_especifico") == "S",
             "avisos": list(avisos_gerais),
         }
@@ -355,11 +355,10 @@ def analisar(r, hoje=None):
                 L["ppe_previsao"] = rs.fmt(prescrita[1])
                 L["ppe_dias"] = (prescrita[1] - hoje).days
             elif correndo:
-                dias = (correndo[1] - hoje).days
-                L["ppe_status"] = "Em curso · prescreve em %s (%d dias)" % (rs.fmt(correndo[1]), dias)
-                L["ppe_cor"] = "amarelo"
-                L["ppe_previsao"] = rs.fmt(correndo[1])
-                L["ppe_dias"] = dias
+                # prazo correndo: só interessa quando a prescrição se consumar (não é exibido como alerta)
+                L["ppe_status"] = "Não prescrita"
+                L["ppe_cor"] = ""
+                L["ppe_correndo_ate"] = rs.fmt(correndo[1])
             else:
                 L["ppe_status"] = "Não corre (em cumprimento)"
                 L["ppe_cor"] = ""
@@ -372,8 +371,6 @@ def analisar(r, hoje=None):
     cores = [l.get("retro_cor", "") for l in linhas] + [l.get("ppe_cor", "") for l in linhas]
     if "vermelho" in cores:
         cor = "vermelho"
-    elif "amarelo" in cores:
-        cor = "amarelo"
     elif linhas and all(c in ("cinza",) for c in cores):
         cor = "cinza"
     else:
@@ -386,10 +383,8 @@ def analisar(r, hoje=None):
     resumo_retro = ("Aparente: " + "; ".join(l["crime"] for l in retro)) if retro else ("não configurada" if linhas else "")
     if ppe_red:
         resumo_ppe = "Aparente: " + "; ".join("%s (%s)" % (l["crime"], l["ppe_previsao"]) for l in ppe_red)
-    elif ppe_amb:
-        resumo_ppe = "Em curso: " + "; ".join("%s (%s)" % (l["crime"], l["ppe_previsao"]) for l in ppe_amb)
     elif linhas:
-        resumo_ppe = "; ".join(sorted(set(l["ppe_status"] for l in linhas)))
+        resumo_ppe = "Não prescrita" if any(l.get("ppe_cor") != "cinza" for l in linhas) else "; ".join(sorted(set(l["ppe_status"] for l in linhas)))
     else:
         resumo_ppe = ""
     dias = [l["ppe_dias"] for l in linhas if l.get("ppe_dias") is not None]

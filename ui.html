@@ -61,7 +61,7 @@ input{font:inherit}
 .stat:hover{border-color:#B8C0CC}.stat.on{border-color:var(--pri);box-shadow:0 0 0 3px var(--pri-soft)}
 .stat .dot{width:10px;height:10px;border-radius:50%;flex:none}
 .stat b{font-size:20px;font-weight:700;letter-spacing:-.3px}.stat span{color:var(--tx2);font-size:12.5px}
-.stat.vermelho .dot{background:var(--r-dot)}.stat.laranja .dot{background:var(--o-dot)}.stat.amarelo .dot{background:var(--a-dot)}.stat.verde .dot{background:var(--g-dot)}.stat.cinza .dot{background:var(--c-dot)}.stat.azul .dot{background:var(--b-dot)}.stat.neutro .dot{background:#CBD5E1}
+.stat.vermelho .dot{background:var(--r-dot)}.stat.laranja .dot{background:var(--o-dot)}.stat.amarelo .dot{background:var(--a-dot)}.stat.vencido .dot{background:var(--a-dot)}.stat.verde .dot{background:var(--g-dot)}.stat.cinza .dot{background:var(--c-dot)}.stat.azul .dot{background:var(--b-dot)}.stat.neutro .dot{background:#CBD5E1}
 .info{padding:12px 24px 0;color:var(--tx2);font-size:12.5px}
 
 /* tabela */
@@ -74,15 +74,15 @@ thead th .arr{opacity:.5;margin-left:4px;font-size:10px}
 tbody td{padding:9px 12px;border-bottom:1px solid #F0F2F5;white-space:normal;overflow-wrap:anywhere;vertical-align:middle;line-height:1.35;font-size:13px}
 tbody td:first-child{padding-left:14px;font-weight:600}td.nw,th.nw{white-space:nowrap;font-variant-numeric:tabular-nums}td.nw{max-width:320px;overflow:hidden;text-overflow:ellipsis}td.nw .pill{white-space:nowrap}td.pl .pill{overflow-wrap:normal;word-break:keep-all}
 tbody tr{cursor:pointer;transition:background .1s}tbody tr:hover td{background:#F5F7FB}
-tbody tr.vermelho td{background:#FFF7F7}tbody tr.laranja td{background:#FFF8F3}tbody tr.amarelo td{background:#FFFCF3}tbody tr.verde td{background:#F5FCF8}tbody tr.cinza td{background:#F7F8FA}tbody tr.azul td{background:#F3F7FF}tbody tr.azul:hover td{background:#E8F0FF}
-tbody tr.vermelho:hover td{background:#FFEFEF}tbody tr.laranja:hover td{background:#FFEFE3}tbody tr.amarelo:hover td{background:#FFF7E0}tbody tr.verde:hover td{background:#EAF8F0}
+tbody tr.vermelho td{background:#FFF7F7}tbody tr.laranja td{background:#FFF8F3}tbody tr.amarelo td{background:#FFFCF3}tbody tr.vencido td{background:#FFFBEB}tbody tr.verde td{background:#F5FCF8}tbody tr.cinza td{background:#F7F8FA}tbody tr.azul td{background:#F3F7FF}tbody tr.azul:hover td{background:#E8F0FF}
+tbody tr.vermelho:hover td{background:#FFEFEF}tbody tr.laranja:hover td{background:#FFEFE3}tbody tr.amarelo:hover td{background:#FFF7E0}tbody tr.vencido:hover td{background:#FFF4D6}tbody tr.verde:hover td{background:#EAF8F0}
 td.first{position:relative}td.first::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:3px;border-radius:0 3px 3px 0;background:transparent}
-tr.vermelho td.first::before{background:var(--r-dot)}tr.laranja td.first::before{background:var(--o-dot)}tr.amarelo td.first::before{background:var(--a-dot)}tr.verde td.first::before{background:var(--g-dot)}tr.cinza td.first::before{background:var(--c-dot)}
+tr.vermelho td.first::before{background:var(--r-dot)}tr.laranja td.first::before{background:var(--o-dot)}tr.amarelo td.first::before{background:var(--a-dot)}tr.vencido td.first::before{background:var(--a-dot)}tr.verde td.first::before{background:var(--g-dot)}tr.cinza td.first::before{background:var(--c-dot)}
 .pill{display:inline-flex;align-items:baseline;gap:6px;padding:0;border-radius:0;background:none!important;font-size:12.5px;font-weight:600;max-width:100%;white-space:normal;line-height:1.35}
 .pill::before{content:"";width:7px;height:7px;border-radius:50%;flex:none;position:relative;top:-1px}
 .pill.vermelho{background:var(--r-bg);color:var(--r-tx)}.pill.vermelho::before{background:var(--r-dot)}
 .pill.laranja{color:var(--o-tx)}.pill.laranja::before{background:var(--o-dot)}
-.pill.amarelo{background:var(--a-bg);color:var(--a-tx)}.pill.amarelo::before{background:var(--a-dot)}
+.pill.amarelo,.pill.vencido{background:var(--a-bg);color:var(--a-tx)}.pill.amarelo::before,.pill.vencido::before{background:var(--a-dot)}.pill.vencido{font-weight:600}
 .pill.verde{background:var(--g-bg);color:var(--g-tx)}.pill.verde::before{background:var(--g-dot)}
 .pill.cinza{background:var(--c-bg);color:var(--c-tx)}.pill.cinza::before{background:var(--c-dot)}
 .pill.none{color:var(--tx2);font-weight:500}.pill.none::before{display:none}
@@ -263,7 +263,7 @@ const ui = {
     else{ const cont={}; rs.forEach(r=>{const c=this.cor(r,spec); cont[c]=(cont[c]||0)+1;});
       st.innerHTML=Object.keys(rot).map(c=>`<div class="stat ${c||'neutro'} ${this.filtroCor===c?'on':''}" onclick="ui.filtrarCor('${c}')"><i class="dot"></i><div><b>${cont[c]||0}</b><br><span>${rot[c]}</span></div></div>`).join(''); }
     // legenda
-    document.getElementById('legenda').innerHTML=Object.keys(rot).filter(c=>c||spec.id==='presc').map(c=>`<span class="leg"><i style="background:${c?`var(--${({vermelho:'r',laranja:'o',amarelo:'a',verde:'g',cinza:'c',azul:'b'})[c]}-dot)`:'#CBD5E1'}"></i>${rot[c]}</span>`).join('');
+    document.getElementById('legenda').innerHTML=Object.keys(rot).filter(c=>c||spec.id==='presc').map(c=>`<span class="leg"><i style="background:${c?`var(--${({vermelho:'r',laranja:'o',amarelo:'a',vencido:'a',verde:'g',cinza:'c',azul:'b'})[c]}-dot)`:'#CBD5E1'}"></i>${rot[c]}</span>`).join('');
     // seletor de situação
     const selEl=document.getElementById('filtro');
     if(selEl.dataset.aba!==this.aba){ selEl.innerHTML=(spec.filtros||[]).map(f=>`<option value="${f[0]}">${f[1]}</option>`).join(''); selEl.dataset.aba=this.aba; selEl.value=this.filtroSel='todas'; selEl.parentElement.style.display=spec.filtros&&spec.filtros.length?'':'none'; }
@@ -283,7 +283,7 @@ const ui = {
         if(c[0]==='proc'){ v=`<span class="copy" title="Clique para copiar" onclick="event.stopPropagation();ui.copiar('${esc(String(v))}')">${esc(v)}${svgCopy}</span>`; }
         else if(pk){ const pc = c[0]==='imp' ? (String(v).startsWith('Sim')?'vermelho':'verde') : (r[pk]||''); v = v ? `<span class="pill ${pc||'none'}">${esc(v)}</span>` : (/_sit$/.test(c[0]) ? '' : '<span class="muted">—</span>'); }
         else if(c[0]==='falta'){ v = r.falta_sim ? `<span class="falta">${esc(v)}</span>` : `<span class="muted">${esc(v)}</span>`; }
-        else if(c[0]==='presc_retro'||c[0]==='presc_ppe'){ const cls=/^Aparente/.test(v)?'vermelho':/^Em curso/.test(v)?'amarelo':''; v = v?(cls?`<span class="pill ${cls}">${esc(v)}</span>`:esc(v)):'<span class="muted">—</span>'; }
+        else if(c[0]==='presc_retro'||c[0]==='presc_ppe'){ const cls=/^Aparente/.test(v)?'vermelho':''; v = v?(cls?`<span class="pill ${cls}">${esc(v)}</span>`:esc(v)):'<span class="muted">—</span>'; }
         else { v = esc(v).replace('(est.)','<span class="est">(est.)</span>'); if(!v) v='<span class="muted">—</span>'; }
         if(i===0 && spec.expansivel) v=`<span class="chev">▶</span>${v}`;
         return `<td class="${i===0?'first':''} ${NW.has(c[0])?'nw':''} ${pk&&spec.id==='ind'?'pl':''}" title="${esc(String(r[c[0]+'_full']??r[c[0]]??''))}">${v}</td>`; }).join('');
@@ -316,21 +316,21 @@ const ui = {
       case 'ok': return spec.id==='fd' ? cor==='verde' : r.aud_status==='ok';
     } return true; },
   expandir(id){ this.aberto = this.aberto===id ? null : id; this.render(); },
+  bloco(titulo,txt,cls){ if(!txt) return ''; const linhas=Array.isArray(txt)?txt:String(txt).split('\n').filter(x=>x.trim());
+    const li=linhas.map(l=>{ l=l.trim(); let ic='', k='n'; const m=l.match(/^([✓✔✘✗…?⚠])\s*/); if(m){ ic=m[1]; l=l.slice(m[0].length); k = /[✓✔]/.test(ic)?'ok':/[✘✗]/.test(ic)?'ko':(ic==='…'||ic==='⚠')?'run':'q'; }
+      else if(/^Obs\.?:|^Cumprido em/i.test(l)) k='obs'; else if(/^Termo inicial|^Situação em/i.test(l)) k='termo';
+      const sym={ok:'✓',ko:'✕',run:'!',q:'?',obs:'i',termo:'→',n:'·'}[k];
+      return `<div class="ml ${k}"><span class="mi">${sym}</span><span class="mt">${penaExt(esc(l))}</span></div>`; }).join('');
+    return `<div class="mb ${cls||''}">${titulo?`<div class="mh">${titulo}</div>`:''}${li}</div>`; },
   memoria(s){
-    const bloco=(titulo,txt,cls)=>{ if(!txt) return ''; const linhas=Array.isArray(txt)?txt:String(txt).split('\n').filter(x=>x.trim());
-      const li=linhas.map(l=>{ let ic='', k='n'; const m=l.match(/^([✓✔✘✗…?])\s*/); if(m){ ic=m[1]; l=l.slice(m[0].length); k = /[✓✔]/.test(ic)?'ok':/[✘✗]/.test(ic)?'ko':ic==='…'?'run':'q'; }
-        else if(/^Obs\.?:/i.test(l)) k='obs'; else if(/^Termo inicial/i.test(l)) k='termo';
-        const sym={ok:'✓',ko:'✕',run:'…',q:'?',obs:'i',termo:'→',n:'·'}[k];
-        return `<div class="ml ${k}"><span class="mi">${sym}</span><span class="mt">${esc(l)}</span></div>`; }).join('');
-      return `<div class="mb ${cls||''}"><div class="mh">${titulo}</div>${li}</div>`; };
-    return `<div class="mem">${bloco('Pretensão punitiva',s.retro_detalhe,'pp')}${bloco('Pretensão executória',s.ppe_detalhe,'pe')}${bloco('Avisos',s.avisos&&s.avisos.length?s.avisos:'','av')}</div>`; },
+    return `<div class="mem">${this.bloco('Pretensão punitiva',s.retro_detalhe,'pp')}${this.bloco('Pretensão executória',s.ppe_detalhe,'pe')}${this.bloco('Avisos',s.avisos&&s.avisos.length?s.avisos:'','av')}</div>`; },
   subTabela(r,spec){ const cols=spec.sub_cols; let rows=r[spec.sub]||[]; const tot=cols.reduce((s,c)=>s+c[2],0)+6;
-    if(spec.id==='presc'){ rows=rows.filter(s=>s.ppe_cor==='vermelho'||s.retro_cor==='vermelho'||s.ppe_cor==='amarelo'); }
+    if(spec.id==='presc'){ rows=rows.filter(s=>s.ppe_cor==='vermelho'||s.retro_cor==='vermelho'); }
     let ocultos=0; if(spec.id==='aud' && !this.mostrarTudo){ const all=rows; rows=all.filter(s=>s.baixado||(s.nivel!=='info'&&s.nivel!=='ok')); ocultos=all.length-rows.length; }
     const cg='';
     const calc=!!spec.sub_calc, baixa=!!spec.sub_baixa; const head=`<tr>${cols.map(c=>`<th style="width:${(100*c[2]/tot).toFixed(1)}%">${c[1]}</th>`).join('')}${(calc||baixa)?'<th></th>':''}</tr>`;
     const body=rows.map((s,i)=>{ const tds=cols.map(c=>{ let v=s[c[0]]??''; const pk=spec.sub_pilulas[c[0]];
-        if(pk){ const pc=s[pk]||''; v=v?`<span class="pill ${pc||'none'}">${esc(v)}</span>`:'—'; } else v=esc(v)||'<span class="muted">—</span>';
+        if(pk){ const pc=s[pk]||''; v=v?`<span class="pill ${pc||'none'}">${esc(v)}</span>`:'—'; } else v=penaExt(esc(v))||'<span class="muted">—</span>';
         return `<td>${v}</td>`; }).join('');
       const det=(s.retro_detalhe?'PRETENSÃO PUNITIVA\n'+s.retro_detalhe+'\n\n':'')+(s.ppe_detalhe?'PRETENSÃO EXECUTÓRIA\n'+s.ppe_detalhe:'')+(s.avisos&&s.avisos.length?'\n\nAVISOS\n'+s.avisos.join('\n'):'');
       if(baixa){ const bx = s.baixado ? `<span class="mini" onclick="event.stopPropagation();ui.reabrir('${r.id}','${s.chave}')">Reabrir</span>` : (s.nivel==='ok' ? '' : `<span class="mini" onclick="event.stopPropagation();ui.darBaixa('${r.id}','${s.chave}','${esc(s.titulo).replace(/'/g,'&#39;')}')">Dar baixa</span>`);
@@ -339,14 +339,14 @@ const ui = {
         return `<tr class="${s.baixado?'bx':''}">${tds2}<td style="white-space:nowrap">${bx}</td></tr>`; }
       if(!calc) return `<tr>${tds}</tr>`;
       return `<tr>${tds}<td><span class="why" onclick="event.stopPropagation();const n=this.closest('tr').nextElementSibling;n.style.display=n.style.display==='none'?'':'none'">cálculo</span></td></tr><tr style="display:none"><td colspan="${cols.length+1}">${ui.memoria(s)}</td></tr>`; }).join('');
-    const cab = spec.id==='aud' ? `<b>${esc(r.nome)}</b> <span class="muted">· ${esc(r.aud_resumo)} · conferido com a ${esc(r.aud_base)} · alertas apontam o que demanda atenção, não afirmam erro</span>${(ocultos||this.mostrarTudo)?` · <span class="mini" onclick="event.stopPropagation();ui.mostrarTudo=!ui.mostrarTudo;ui.render()">${this.mostrarTudo?'ocultar informativos e OK':'mostrar '+ocultos+' informativo(s)/OK'}</span>`:''}${r.ficha_resumo?`<div class="muted" style="margin-top:3px">Ficha disciplinar: ${esc(r.ficha_resumo)}</div>`:''}` : spec.id==='fd' ? `<b>${esc(r.nome)}</b> <span class="muted">· ${r.ficha_tem?'ficha disciplinar (SIAPEN) impressa em '+esc((r.ficha||{}).data_impressao||'?')+' · '+esc(r.ficha_resumo):'sem ficha disciplinar importada'}</span>` : `<b>${esc(r.nome)}</b> <span class="muted">· ${(r.presc_linhas||[]).length} crime(s), ${rows.length} com prescrição aparente ou prazo correndo · cada crime prescreve isoladamente (art. 119)${r.presc_obs?' · '+esc(r.presc_obs):''}</span>`;
-    const vazio = (spec.id==='presc' && !rows.length) ? `<tr><td colspan="${cols.length+1}" class="muted">Nenhum crime com prescrição aparente ou prazo correndo.</td></tr>` : '';
+    const cab = spec.id==='aud' ? `<b>${esc(r.nome)}</b> <span class="muted">· ${esc(r.aud_resumo)} · conferido com a ${esc(r.aud_base)} · alertas apontam o que demanda atenção, não afirmam erro</span>${(ocultos||this.mostrarTudo)?` · <span class="mini" onclick="event.stopPropagation();ui.mostrarTudo=!ui.mostrarTudo;ui.render()">${this.mostrarTudo?'ocultar informativos e OK':'mostrar '+ocultos+' informativo(s)/OK'}</span>`:''}${r.ficha_resumo?`<div class="muted" style="margin-top:3px">Ficha disciplinar: ${esc(r.ficha_resumo)}</div>`:''}` : spec.id==='fd' ? `<b>${esc(r.nome)}</b> <span class="muted">· ${r.ficha_tem?'ficha disciplinar (SIAPEN) impressa em '+esc((r.ficha||{}).data_impressao||'?')+' · '+esc(r.fd_resumo_exec||''):'sem ficha disciplinar importada'}</span>` : `<b>${esc(r.nome)}</b> <span class="muted">· ${(r.presc_linhas||[]).length} crime(s), ${rows.length} com prescrição aparente · cada crime prescreve isoladamente (art. 119)${r.presc_obs?' · '+esc(r.presc_obs):''}</span>`;
+    const vazio = (spec.id==='presc' && !rows.length) ? `<tr><td colspan="${cols.length+1}" class="muted">Nenhum crime com prescrição aparente.</td></tr>` : '';
     return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><span>${cab}</span><span class="mini" onclick="event.stopPropagation();ui.abrir('${r.id}')">Abrir ficha completa</span></div><table class="subtab">${cg}${head}${body}${vazio}</table>`; },
   async darBaixa(id, chave, titulo){ const obs = prompt('Dar baixa no alerta:\n'+titulo.replace(/&#39;/g,"'")+'\n\nObservação (opcional: o que foi feito / por que não se aplica):',''); if(obs===null) return; await api('baixar_alerta', id, chave, titulo.replace(/&#39;/g,"'"), obs); this.aberto=id; this.render(); },
   async reabrir(id, chave){ await api('reabrir_alerta', id, chave); this.aberto=id; this.render(); },
   copiar(t){ const done=()=>this.toast('Copiado: '+t); if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(t).then(done).catch(()=>{ this._copiaFallback(t); done(); }); } else { this._copiaFallback(t); done(); } },
   _copiaFallback(t){ const ta=document.createElement('textarea'); ta.value=t; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(e){} ta.remove(); },
-  contaCor(a,rs){ return rs.filter(r=>r[a.cor]==='vermelho').length || ''; },
+  contaCor(a,rs){ return rs.filter(r=>r[a.cor]==='vermelho'||r[a.cor]==='vencido').length || ''; },
   irAba(id){ this.aba=id; this.filtroCor=null; this.filtroSel='todas'; this.aberto=null; this.render(); },
   filtrarCor(c){ this.filtroCor = this.filtroCor===c ? null : c; this.render(); },
   filtrar(){ const q=document.getElementById('q'); this.filtro=q.value.trim().toLowerCase(); document.getElementById('search').classList.toggle('has',!!this.filtro); this.render(); },
@@ -379,7 +379,7 @@ const ui = {
     // só mostra cálculo quando dá (indulto possível / a verificar; prescrição aparente), e só as linhas que sustentam
     const util=(txt)=>(txt||'').split('\n').filter(l=>/^(✔|✓|\?|⚠|Situação em|Cumprido em|Art\. 7º)/.test(l.trim()) && !/XVI:|art\. 1º: saúde/.test(l)).join('\n');
     const dets=[['2025',r.det25,r.i25_cor],['2024',r.det24,r.i24_cor],['2022',r.det22,r.i22_cor]]
-      .filter(x=>x[2]==='verde'||x[2]==='amarelo').map(x=>`<details class="det"><summary>Indulto ${x[0]} · ${x[2]==='verde'?'possível':'a verificar'}</summary><pre>${esc(util(x[1]))}</pre></details>`).join('');
+      .filter(x=>x[2]==='verde'||x[2]==='amarelo').map(x=>`<details class="det"><summary>Indulto ${x[0]} · ${x[2]==='verde'?'possível':'a verificar'}</summary><div class="mem">${ui.bloco('Decreto de '+x[0],util(x[1]),'pe')}</div></details>`).join('');
     const prs=(r.presc_linhas||[]).filter(s=>s.ppe_cor==='vermelho'||s.retro_cor==='vermelho')
       .map(s=>`<details class="det"><summary>Prescrição · ${esc(s.crime)} · ${esc(s.ppe_cor==='vermelho'?s.ppe_status:s.retro_status)}</summary>${ui.memoria(s)}</details>`).join('');
     const calc=dets+prs;
@@ -394,13 +394,12 @@ const ui = {
           ${lin('Livramento', dataSit(r.liv, r.liv_sit, r.liv_cor))}
           ${lin('Indulto', r.imp.startsWith('Sim')?pill('Crime impeditivo · '+r.imp.replace(/^Sim · /,''),'vermelho'):ind)}
           ${lin('Comutação', `<span class="muted">2024</span> ${pill(r.c24, r.c24_cor)} <span class="muted">2025</span> ${pill(r.c25, r.c25_cor)}`)}
-          ${lin('Prescrição', r.presc_ppe?pill(r.presc_ppe, r.presc_cor):'<span class="muted">—</span>')}
+          ${r.presc_cor==='vermelho'?lin('Prescrição', pill(r.presc_ppe, r.presc_cor)):''}
           ${lin('Extinção', r.ext_sit?pill(r.ext_sit,r.ext_cor):'<span class="muted">—</span>')}
           ${r.falta_sim?lin('Falta (12 meses)', `<span class="falta">${esc(r.falta.replace(/^Sim · /,''))}</span>`):''}
         </div>
         <div class="sec"><h3>Pontos de atenção</h3>${ptsHtml}</div>
         <div class="sec"><h3>Crimes em execução</h3><div class="kv one"><div>${crimes||'—'}</div></div></div>
-        ${r.ficha_tem?`<div class="sec"><h3>Ficha disciplinar</h3><div class="kv one"><div>${esc(r.ficha_resumo)}</div></div></div>`:''}
         ${calc?`<div class="sec"><h3>Cálculos do programa</h3>${calc}</div>`:''}
         <div class="sec"><span class="mini" style="color:var(--r-tx)" onclick="ui.confirmarRemocao('${r.id}')">Remover este assistido da base</span></div>
       </div>`;
@@ -480,6 +479,7 @@ const ui = {
   ajuda(){ document.getElementById('modal').innerHTML=`<div class="box" style="width:640px"><h2>Legenda e método</h2><div class="help">${this.dados.ajuda}</div><div class="acts"><button class="btn pri" onclick="ui.fecharModal()">Fechar</button></div></div>`; document.getElementById('modal').classList.add('on'); }
 };
 function curtoInd(t){ return (t||'').split(' | ')[0]; }
+function penaExt(t){ return String(t).replace(/(-?)\b(\d+)a(\d+)m(\d+)d\b/g,(m0,sg,a,mm,d)=>{ a=+a; mm=+mm; d=+d; const p=[]; if(a)p.push(a+(a>1?' anos':' ano')); if(mm)p.push(mm+(mm>1?' meses':' mês')); if(d)p.push(d+(d>1?' dias':' dia')); if(!p.length) return '0 dia'; return sg+(p.length===1?p[0]:p.slice(0,-1).join(', ')+' e '+p[p.length-1]); }); }
 function esc(s){ return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 function cmp(a,b){ const da=dt(a), db=dt(b); if(da&&db) return da-db; if(da) return -1; if(db) return 1; return String(a??'').localeCompare(String(b??''),'pt'); }
 function dt(v){ const m=/^(\d{2})\/(\d{2})\/(\d{4})/.exec(String(v??'')); return m? new Date(+m[3],+m[2]-1,+m[1]).getTime():null; }

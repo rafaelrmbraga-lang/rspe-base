@@ -30,7 +30,7 @@ import rspe_export as rx
 import rspe_regras as rg
 
 APP = "RSPE Base"
-VERSAO = "6.9.6"
+VERSAO = "6.9.9"
 
 
 def pasta_app():
@@ -49,7 +49,8 @@ BASE_PADRAO = os.path.join(PASTA_BASES, "base_padrao.sqlite")
 
 AJUDA = """
 <h4>Cores</h4>
-Progressão, Livramento e Extinção (término): <b>vermelho</b> = vencido; <b>laranja</b> = vence em até 30 dias; <b>amarelo</b> = em até
+Progressão e Livramento: <b>amarelo forte</b> = prazo vencido - verificar exame criminológico, indeferimento ou falta (a dica da
+célula mostra os pedidos do RSPE). Extinção (término): <b>vermelho</b> = cabível. Prazos: <b>laranja</b> = vence em até 30 dias; <b>amarelo</b> = em até
 60 dias; <b>verde</b> = em até 90 dias. Acima de 90 dias a situação fica em branco (não há o que fazer ainda). <b>Cinza</b> = não se
 aplica (pena interrompida, já no aberto, em livramento, cumprida); <b>azul</b> = execução extinta. Indulto/Comutação: <b>vermelho</b> =
 crime impeditivo; <b>verde</b> = possível; <b>amarelo</b> = a verificar; <b>cinza</b> = não atinge. Clique num cartão de resumo para filtrar.
@@ -95,18 +96,19 @@ trânsito em julgado para ambas as partes (STF, Tema 788) ou, se o trânsito par
 (art. 112, I, com a modulação do Tema). Não corre enquanto preso (art. 116, p. único) e interrompe-se pelo início ou continuação
 do cumprimento (art. 117, V); na evasão ou revogação do livramento, regula-se pela pena restante (art. 113). Cada crime é analisado
 isoladamente (art. 119). A "memória de cálculo" de cada crime mostra intervalos, prazos e datas.
-Cores: vermelho = prescrição aparente; amarelo = prazo correndo (com a data prevista); sem cor = não corre; cinza = sem dados ou extinta.
+Só a prescrição já consumada aparece: vermelho = prescrição aparente; sem cor = não prescrita; cinza = sem dados ou extinta.
 <h4>Filtro de situação</h4>
 O seletor ao lado dos botões filtra a aba: vencidas / a vencer em 30 ou 60 dias / interrompidas (progressão e livramento); possível /
-a verificar / não atinge / impeditivo (indulto); aparente / em curso / não corre (prescrição). O número da execução é copiado com um clique.
+a verificar / não atinge / impeditivo (indulto); aparente / não prescrita (prescrição). O número da execução é copiado com um clique.
 <h4>Ficha disciplinar (SIAPEN/AGEPEN)</h4>
 Importe o PDF da Ficha Disciplinar pelo mesmo botão "Importar PDFs": o programa reconhece o documento e o vincula ao RSPE
 pelos autos citados na ficha (ou pelo nome). Extrai conduta, períodos de trabalho (setor/empresa), atestados de trabalho com
 dias trabalhados e remidos, faltas disciplinares (registro, PADIC, arquivamento/homologação), regressão/restabelecimento,
 isolamento e recusa de trabalho. A Auditoria confronta: dias remidos atestados x homologados no RSPE (LEP, art. 126), proporção
-1 para 3, trabalho em curso sem atestado (estimativa a requerer), falta grave nos últimos 12 meses (CP, art. 83, III, b; art. 6º
-dos decretos) e falta arquivada que ainda esteja produzindo efeitos. A aba <b>Ficha disciplinar</b> traz o comparativo
-item a item (Ficha x RSPE x providência); a ficha completa fica também na "ficha" do assistido.
+1 para 3, trabalho sem atestado e baixa de trabalho sem início registrado, falta grave nos últimos 12 meses (CP, art. 83, III, b;
+art. 6º dos decretos), falta arquivada que ainda produza efeitos e perda de dias remidos em duplicidade (LEP, art. 127: a nova
+perda só alcança a remição adquirida depois da falta anterior). A aba <b>Ficha disciplinar</b> mostra uma linha por emprego:
+período, atestado que o cobre, remição homologada no RSPE e providência. Trabalho anterior à 1ª prisão do RSPE fica só no resumo.
 <h4>Presunção de hipossuficiência (Defensoria)</h4>
 Em qualquer hipótese o programa presume a incapacidade econômica do assistido: a <b>multa</b> pendente não obsta a extinção da
 punibilidade (STJ Tema 931, rev. 28/02/2024; STF ADI 7.032), é indultável e não é óbice ao indulto (Decretos 12.338/2024 e

@@ -1,4 +1,4 @@
-RSPE BASE - SEEU  v6.9.6 (programa em abas)
+RSPE BASE - SEEU  v6.9.9 (programa em abas)
 =========================================
 
 O QUE FAZ
@@ -211,6 +211,44 @@ PRESUNÇÃO DE HIPOSSUFICIÊNCIA (Defensoria)
   do art. 9º e sem bloqueio do livramento (CP, art. 83, IV). Tráfico
   privilegiado não é hediondo nem impeditivo (STF PSV 125, Tema 1400; STJ
   Tema 1336). Detalhes e fontes: "Criterios_de_analise_por_beneficio.pdf".
+
+v6.9.9
+  - Ficha disciplinar por emprego: cada linha mostra o emprego, o período, o
+    atestado que o cobre, a remição homologada no RSPE que corresponde a ele
+    (por valor e data, inclusive somas e parcelas) e a providência. Trabalho
+    que continuou depois do último atestado aparece em linha própria.
+    Atestados anteriores à 1ª prisão do RSPE ficam só no resumo.
+  - Remição: o total "pendente" considera só os atestados desta execução
+    (antes somava atestados de custódias anteriores).
+  - Perda de dias remidos (LEP, art. 127): a nova perda só alcança a remição
+    adquirida depois da falta anterior; a Auditoria aponta o desconto em
+    duplicidade (perda escalonada) e o excesso de 1/3 dentro dessa janela.
+    Com ficha: avisa quando a perda alcança remição anterior a falta grave
+    registrada na ficha e não homologada no RSPE.
+  - Prescrição: só aparece a prescrição já consumada (sem "em curso").
+  - Progressão/livramento vencidos: alerta amarelo "verificar criminológico,
+    indeferimento ou falta", com os pedidos do RSPE na dica.
+  - Hediondez superveniente: a Auditoria cita o STF (2ª Turma e monocráticas)
+    e a divergência no TJMS (2ª Câmara concede; 1ª e 3ª seguem o STJ).
+  - Penas por extenso (ex.: 14 anos e 10 meses) na ficha, nas tabelas e nos
+    cálculos; cálculos do indulto no mesmo formato da prescrição.
+
+v6.9.8
+  - Ficha disciplinar: aponta "Baixa sem início registrado" quando a ficha dá
+    baixa de um setor sem ter registrado a entrada (ex.: "Deixa de trabalhar"
+    no setor em que o último início era de anos atrás), com o último período
+    registrado e a providência (pedir à unidade o período e o atestado).
+  - Aponta também os períodos de trabalho encerrados depois do último
+    atestado ("Trabalho sem atestado"), com os dias e a remição estimada.
+  - Os mesmos pontos aparecem na Auditoria (origem: ficha).
+
+v6.9.7
+  - Ficha disciplinar: o trabalho em curso é encerrado quando começa outro
+    trabalho, quando há desligamento, evasão, saída ou transferência de
+    unidade (a ficha nem sempre registra o "deixa de trabalhar"); a baixa de
+    um setor antigo não encerra o trabalho atual.
+  - Ficha do assistido: sem o quadro-resumo da ficha disciplinar (fica na aba
+    Ficha disciplinar).
 
 v6.9.6
   - Regime: livramento seguido de nova decisão de regime (nova condenação,

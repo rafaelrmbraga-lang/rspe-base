@@ -90,44 +90,87 @@ def _agrupar_por_crime(itens):
     return ordem
 
 
-def _perda_remidos(incidentes, perdidos):
-    """LEP, art. 127: a falta grave permite revogar ATÉ 1/3 do tempo remido até a data da infração.
-    Confere o limite com os incidentes de remição e de dias perdidos do próprio RSPE."""
+FUND_127 = ("LEP, art. 127 (até 1/3; a contagem recomeça da data da infração); STJ, HC 398.850/SP e HC 293.475/SP; "
+            "TJMS, AgExec 0046207-54.2017.8.12.0001 e 0000687-22.2014.8.12.0019.")
+
+
+def perdas_por_falta(incidentes):
+    """Para cada falta grave homologada no RSPE com perda de dias remidos: a perda, as parcelas e a remição
+    sobre a qual cada parcela incidiu (parcela = 1/3 da remição, arredondado), a falta anterior e a janela de
+    remição entre a falta anterior e a atual (LEP, art. 127: a contagem recomeça da data da infração)."""
     def dt(i):
         return rs.to_date(i.get("data_referencia") or i.get("data_decisao") or "")
-    faltas = sorted(d for d in (dt(i) for i in incidentes if "FALTA GRAVE" in (i.get("tipo") or "").upper() and i.get("situacao") == "CONCEDIDO") if d)
-    perdas = [i for i in incidentes if "PERDIDOS" in (i.get("tipo") or "").upper()]
+    def qtd(i):
+        m = rs.re.search(r"(\d+)", i.get("complemento") or "")
+        return int(m.group(1)) if m else 0
+    faltas = sorted(set(d for d in (dt(i) for i in incidentes if "FALTA GRAVE" in (i.get("tipo") or "").upper() and i.get("situacao") == "CONCEDIDO") if d))
+    perdas = [(dt(i), qtd(i)) for i in incidentes if "PERDIDOS" in (i.get("tipo") or "").upper()]
     remicoes = []
     for i in incidentes:
-        if "REMI" in (i.get("tipo") or "").upper() and "PERDIDOS" not in (i.get("tipo") or "").upper() and i.get("situacao") == "CONCEDIDO":
+        t = (i.get("tipo") or "").upper()
+        if "REMI" in t and "PERDIDOS" not in t and i.get("situacao") == "CONCEDIDO":
             m = rs.re.search(r"(\d+)\s*Dia", i.get("complemento", ""), rs.re.I)
             if m:
-                remicoes.append((dt(i), int(m.group(1))))
+                remicoes.append({"d": dt(i), "data": i.get("data_decisao") or i.get("data_referencia") or "", "n": int(m.group(1))})
+    out = []
+    resid = {id(x): x["n"] for x in remicoes}  # saldo de cada remição depois das perdas anteriores
+    for k, f in enumerate(faltas):
+        prox = faltas[k + 1] if k + 1 < len(faltas) else None
+        prev = faltas[k - 1] if k else None
+        pf = sorted([q for d, q in perdas if d and d >= f and (prox is None or d < prox)], reverse=True)
+        if not pf:
+            continue
+        usadas, parcelas = set(), []
+        def bate(q, n):
+            return n > 0 and q in (n // 3, -(-n // 3), round(n / 3))
+        for q in pf:
+            cand = [x for x in remicoes if id(x) not in usadas and (bate(q, x["n"]) or bate(q, resid[id(x)]))]
+            cand.sort(key=lambda x: (x["d"] is None or x["d"] > f, -(x["d"] or date.min).toordinal()))
+            rem = cand[0] if cand else None
+            if rem:
+                usadas.add(id(rem))
+            parcelas.append((q, rem))
+        for q, rem in parcelas:
+            if rem:
+                resid[id(rem)] = max(0, resid[id(rem)] - q)
+        janela = sum(x["n"] for x in remicoes if x["d"] and x["d"] <= f and (prev is None or x["d"] > prev))
+        out.append({"falta": f, "prev": prev, "perda": sum(pf), "parcelas": parcelas, "janela": janela,
+                    "remido_ate": sum(x["n"] for x in remicoes if x["d"] and x["d"] <= f)})
+    return out, faltas, perdas
+
+
+def _perda_remidos(incidentes, perdidos):
+    """LEP, art. 127: a falta grave permite revogar ATÉ 1/3 do tempo remido, e a contagem recomeça da data da
+    infração - nova falta só alcança a remição adquirida depois da falta anterior (vedado o desconto em duplicidade)."""
+    res, faltas, perdas = perdas_por_falta(incidentes)
     if not faltas or not perdas:
         return [_item("verificar", "Perda de %d dias remidos sem falta grave datada no RSPE" % perdidos,
                       "O saldo registra dias perdidos, mas não há incidente de homologação de falta grave com data: conferir a decisão e o PAD.",
                       "LEP, art. 127.")]
     itens = []
-    def qtd(i):
-        m = rs.re.search(r"(\d+)", i.get("complemento") or "")
-        return int(m.group(1)) if m else 0
-    for f in faltas:
-        prox = next((g for g in faltas if g > f), None)
-        # perdas desta falta: registradas entre esta falta e a próxima
-        perda_f = sum(qtd(i) for i in perdas if dt(i) and dt(i) >= f and (prox is None or dt(i) < prox))
-        # remido até a falta, descontadas as perdas de faltas anteriores
-        base = sum(n for d, n in remicoes if d and d <= f) - sum(qtd(i) for i in perdas if dt(i) and dt(i) < f)
-        if not perda_f:
-            continue
+    for x in res:
+        f, prev = x["falta"], x["prev"]
+        dup = [(q, rem) for q, rem in x["parcelas"] if prev and rem and rem["d"] and rem["d"] <= prev]
+        if dup:
+            itens.append(_item("alerta", "Perda de dias remidos em duplicidade (falta de %s)" % rs.fmt(f),
+                               "A perda de %d dias pela falta de %s incidiu sobre remição anterior à falta de %s: %s. A contagem recomeçou em %s; "
+                               "a nova perda só pode alcançar a remição adquirida entre as duas faltas (%d dias; limite de 1/3: %d). Cabe impugnar o cálculo." % (
+                                   x["perda"], rs.fmt(f), rs.fmt(prev),
+                                   "; ".join("%d dias sobre a remição de %d dias de %s" % (q, rem["n"], rem["data"]) for q, rem in dup),
+                                   rs.fmt(prev), x["janela"], x["janela"] // 3), FUND_127))
+        base = x["janela"]
         limite = base // 3
-        if base and perda_f > limite:
+        if base and x["perda"] > limite:
             itens.append(_item("alerta", "Perda de dias remidos acima de 1/3 (falta de %s)" % rs.fmt(f),
-                               "Remido até a falta: %d dias; limite de 1/3: %d dias; perdidos: %d (excesso de %d dia(s)). "
-                               "Se a perda foi aplicada remição por remição, o arredondamento para cima de cada parcela ultrapassa o teto legal." % (base, limite, perda_f, perda_f - limite),
-                               "LEP, art. 127 (até 1/3 do tempo remido); STF, RE 638.239."))
-        else:
-            itens.append(_item("info", "Perda de %d dias remidos pela falta grave de %s" % (perda_f, rs.fmt(f)),
-                               "Dentro do limite de 1/3 (remido até a falta: %d dias)." % base, "LEP, art. 127."))
+                               "Remição %s: %d dias; limite de 1/3: %d dias; perdidos: %d (excesso de %d dia(s)).%s" % (
+                                   ("adquirida entre a falta de %s e esta" % rs.fmt(prev)) if prev else "até a falta",
+                                   base, limite, x["perda"], x["perda"] - limite,
+                                   " Parcelas: %s - o arredondamento para cima de cada parcela ultrapassa o teto legal." % ", ".join(
+                                       "%d (sobre %s)" % (q, rem["n"] if rem else "?") for q, rem in x["parcelas"]) if (len(x["parcelas"]) > 1 and not dup) else ""),
+                               FUND_127 + " STF, RE 638.239."))
+        elif not dup:
+            itens.append(_item("info", "Perda de %d dias remidos pela falta grave de %s" % (x["perda"], rs.fmt(f)),
+                               "Dentro do limite de 1/3 (remição %s: %d dias)." % (("entre a falta de %s e esta" % rs.fmt(prev)) if prev else "até a falta", base), "LEP, art. 127."))
     return itens
 
 
@@ -400,9 +443,14 @@ def auditar(r, hoje=None):
     sup = [c for c in ativos if rs.e_hediondo(c, date(2024, 12, 25)) and not rs.e_hediondo(c)]
     if sup:
         itens.append(_item("verificar", "Hediondez posterior ao fato: indulto/comutação vedados pelo STJ, com tese defensiva (%s)" % rs.crimes_curto(sup),
-                           "O crime não era hediondo na data do fato, mas é na data do decreto. O STJ afere na data do decreto e veda o benefício; "
-                           "o STF (2ª Turma, RHC 267.297 AgR, 16/03/2026) concedeu a ordem por irretroatividade. As frações de progressão seguem a data do fato.",
-                           "Decretos de indulto, art. 1º, I; CF, art. 5º, XL."))
+                           "O crime não era hediondo na data do fato, mas é na data do decreto. O STJ afere na data do decreto e veda o benefício. "
+                           "A favor da defesa (irretroatividade da hediondez posterior ao fato): STF, 2ª Turma, RHC 267.297 AgR (16/03/2026) e HC 273.296 AgR (06/08/2026); "
+                           "decisões monocráticas do STF concedendo indulto/comutação: RE 1.572.734 (Fux, 10/10/2025), HC 258.516 (Mendonça, 14/07/2025), "
+                           "RHC 269.076 (Cármen Lúcia, 06/03/2026), HC 271.716 (Fux, 05/05/2026), RE 1.607.670 (Cármen Lúcia, 10/06/2026). "
+                           "TJMS dividido: a 2ª Câmara Criminal afasta o óbice (AgExec 1602006-93.2026.8.12.0000, 15/06/2026; 1602467-65.2026.8.12.0000, 03/08/2026; "
+                           "1603697-45.2026.8.12.0000, 20/08/2026); a 1ª e a 3ª Câmaras seguem o STJ (ex.: 1602236-38.2026.8.12.0000, 03/09/2026; 1604099-29.2026.8.12.0000, 27/08/2026). "
+                           "As frações de progressão seguem a data do fato.",
+                           "Decretos de indulto, art. 1º, I; CF, art. 5º, XL; CP, art. 2º."))
     # violência doméstica: art. 129 §§ 9º-11 sem sinal de que a vítima é mulher
     for c in ativos:
         vd = rs.violencia_domestica(c)

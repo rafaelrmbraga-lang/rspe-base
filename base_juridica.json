@@ -1,5 +1,5 @@
 {
- "versao": "2026-09-21c",
+ "versao": "2026-09-21d",
  "descricao": "Base juridica do RSPE Base. Editavel: o programa le este arquivo ao abrir (copia ao lado do .exe tem prioridade sobre a embutida). Datas em AAAA-MM-DD. Fracoes como 'num/den' ou percentual 'NN%'.",
  "prescricao": {
   "art109_tabela": [
@@ -928,10 +928,17 @@
   },
   {
    "tema": "Indulto/comutação - hediondez aferida na data do decreto",
-   "fonte": "STJ, AgRg no HC 955.700 (5ª T., 26/02/2025); AgRg no HC 1.014.986 (5ª T., 19/08/2025); AgRg no HC 1.087.914/SP (6ª T., 11/06/2026); AgRg no HC 1.076.757 (5ª T., 15/06/2026). Em sentido contrário: STF, RHC 267.297 AgR (2ª T., 16/03/2026) e RE 1.572.734 (dec. mon., 10/10/2025)",
+   "fonte": "STJ, AgRg no HC 955.700 (5ª T., 26/02/2025); AgRg no HC 1.014.986 (5ª T., 19/08/2025); AgRg no HC 1.087.914/SP (6ª T., 11/06/2026); AgRg no HC 1.076.757 (5ª T., 15/06/2026). Em sentido contrário (irretroatividade): STF, 2ª T., RHC 267.297 AgR (16/03/2026) e HC 273.296 AgR (06/08/2026); STF, decisões monocráticas: RE 1.572.734 (Fux, 10/10/2025), HC 258.516 (André Mendonça, 14/07/2025), RHC 269.076 (Cármen Lúcia, 06/03/2026), HC 271.716 (Fux, 05/05/2026), RE 1.607.670 (Cármen Lúcia, 10/06/2026); TJMS, 2ª Câmara Criminal: AgExec 1602006-93.2026.8.12.0000 (Waldir Marques, 15/06/2026), 1602467-65.2026.8.12.0000 (Carlos Eduardo Contar, 03/08/2026), 1603697-45.2026.8.12.0000 (Waldir Marques, 20/08/2026). Seguem o STJ no TJMS: 1ª Câmara (1602236-38.2026.8.12.0000, 03/09/2026; 1602495-33.2026.8.12.0000, 29/06/2026) e 3ª Câmara (1600825-57.2026.8.12.0000, 30/03/2026; 1604099-29.2026.8.12.0000, 27/08/2026; 1602318-69.2026.8.12.0000, 28/08/2026)",
    "nivel": "orientativo",
-   "tese": "Para a vedação do art. 1º, I, dos decretos (crime hediondo), a natureza do delito é aferida na data do decreto: roubo com arma de fogo ou com lesão grave praticado antes da Lei 13.964/2019 é impeditivo. O STF (2ª Turma) já concedeu a ordem de ofício por irretroatividade da hediondez superveniente.",
+   "tese": "Para a vedação do art. 1º, I, dos decretos (crime hediondo), o STJ afere a natureza do delito na data do decreto: roubo com arma de fogo ou com lesão grave praticado antes da Lei 13.964/2019 é impeditivo. O STF (2ª Turma e decisões monocráticas de vários ministros) e a 2ª Câmara Criminal do TJMS concedem indulto/comutação por irretroatividade da hediondez superveniente.",
    "aplicacao": "Indulto/comutação: impeditivo pela data do decreto, com a tese defensiva registrada. Progressão/livramento: frações pela data do fato (lei penal)."
+  },
+  {
+   "tema": "Perda de dias remidos - vedação do desconto em duplicidade",
+   "fonte": "LEP, art. 127; STJ, HC 398.850/SP (5ª T., Rel. Joel Ilan Paciornik, j. 13/06/2017); STJ, HC 293.475/SP (5ª T., Rel. Felix Fischer, j. 21/05/2015); TJDFT, Acórdão 1230029 (3ª T. Crim., j. 06/02/2020); TJMS, AgExec 0046207-54.2017.8.12.0001 (2ª Câm. Crim., Rel. Luiz Gonzaga Mendes Marques, j. 26/02/2018); TJMS, AgExec 0000687-22.2014.8.12.0019 (Rel. Carlos Eduardo Contar)",
+   "nivel": "orientativo",
+   "tese": "Com a perda por falta grave, a contagem da remição recomeça da data da infração: nova falta só alcança a remição adquirida depois da falta anterior homologada, e o saldo que restou da perda anterior não pode sofrer novo desconto (vedada a perda escalonada).",
+   "aplicacao": "Auditoria: cada perda é confrontada com a remição adquirida entre a falta anterior e a atual (limite de 1/3 dessa janela) e aponta desconto sobre remição anterior à falta anterior."
   }
  ],
  "reincidencia": {

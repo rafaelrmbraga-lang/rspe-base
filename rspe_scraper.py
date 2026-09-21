@@ -87,6 +87,25 @@ def pena_amd(txt):
     return tuple(int(x) for x in m.groups()) if m else None
 
 
+def pena_extenso(txt):
+    """'14a10m0d' -> '14 anos e 10 meses'; '5a1m17d' -> '5 anos, 1 mês e 17 dias'. Mantém o texto se não reconhecer."""
+    t = pena_amd(txt) if isinstance(txt, str) else txt
+    if not t:
+        return txt or ""
+    a, m, d = t
+    partes = []
+    if a:
+        partes.append("%d ano%s" % (a, "s" if a > 1 else ""))
+    if m:
+        partes.append("%d %s" % (m, "mês" if m == 1 else "meses"))
+    if d:
+        partes.append("%d dia%s" % (d, "s" if d > 1 else ""))
+    if not partes:
+        return "0 dia"
+    neg = "-" if isinstance(txt, str) and txt.strip().startswith("-") else ""
+    return neg + (partes[0] if len(partes) == 1 else ", ".join(partes[:-1]) + " e " + partes[-1])
+
+
 def amd_normal(a, m, d):
     """Normaliza anos/meses/dias como o SEEU (30 dias = 1 mês, 12 meses = 1 ano) e devolve um número comparável."""
     m += d // 30; d %= 30
@@ -608,7 +627,7 @@ def cumprido_na_data(campos, periodos, remicoes, ref):
         if b > a:
             depois += (b - a).days
     rem_depois = sum(n for d, n in remicoes if d and ref < d <= ger)
-    return max(0, base - depois - rem_depois), "pena cumprida do SEEU em %s menos %d dia(s) de custódia e %d de remição posteriores a %s" % (
+    return max(0, base - depois - rem_depois), "pena cumprida pelo SEEU em %s, descontados %d dias de custódia e %d dias de remição posteriores a %s" % (
         fmt(ger), depois, rem_depois, fmt(ref))
 
 
@@ -910,7 +929,7 @@ def impeditivo_decreto(c, ref=date(2024, 12, 25)):
         if not e_hediondo(c):
             d, lei_h = hediondo_desde(c)
             return ("I", "crime hediondo (%s, vigência %s) - fato anterior, mas a hediondez é aferida na data do decreto (STJ) · "
-                         "tese defensiva: irretroatividade (STF, RHC 267.297 AgR, 2ª T., 16/03/2026)" % (lei_h or "Lei 8.072/90", fmt(d)))
+                         "tese defensiva: irretroatividade (STF, 2ª T., RHC 267.297 AgR e HC 273.296 AgR; monocráticas do STF; TJMS, 2ª Câm. Crim.)" % (lei_h or "Lei 8.072/90", fmt(d)))
         return ("I", "crime hediondo ou equiparado (Lei 8.072/90)")
     if lei == "11343" and art in ART1_DROGAS:
         if art == "33" and (c.get("tipo_penal") or "").strip().startswith("§ 4"):
@@ -1008,7 +1027,7 @@ def exclusao_art7_2022(c):
     if e_hediondo(c, DECRETO_2022_REF):
         if not e_hediondo(c):
             d, lei_h = hediondo_desde(c)
-            return "I: hediondo (%s, vigência %s) aferido na data do decreto (STJ) · fato anterior - tese defensiva: irretroatividade (STF, RHC 267.297 AgR)" % (lei_h or "Lei 8.072/90", fmt(d))
+            return "I: hediondo (%s, vigência %s) aferido na data do decreto (STJ) · fato anterior - tese defensiva: irretroatividade (STF, 2ª T. e monocráticas; TJMS, 2ª Câm. Crim.)" % (lei_h or "Lei 8.072/90", fmt(d))
         return "I: hediondo ou equiparado (Lei 8.072/90)"
     vd = violencia_domestica(c)
     if vd and vd[0] == "sim":
@@ -1579,9 +1598,10 @@ def analise_decretos(campos, crimes, eventos, incidentes, hoje):
             out[k] = "não atinge (cumprido %s de %s%s%s até %s)" % (
                 dias_para_pena(cumprido), dias_para_pena(pena_total), ", reincidente" if reinc else "", ", VGA" if vga else "", fmt(ref)) + (" | " + aviso if aviso else "")
             out[k + "_status"] = "nao"
-        linhas = ["Situação em %s: regime %s%s · cumprido %s · remanescente %s · %s%s%s" % (
-            fmt(ref), regime or "?", " + livramento condicional" if (lc and not regime.lower().startswith("livramento")) else "", dias_para_pena(cumprido), dias_para_pena(remanescente),
-            "reincidente" if reinc else "primário", " · VGA" if vga else "", (" · %d anos (§ 2º, I: lapsos pela metade)" % idade) if meia else ""), "Cumprido em %s: %s (%s)." % (fmt(ref), dias_para_pena(cumprido), cump_fonte)]
+        linhas = ["Situação em %s: regime %s%s · %s%s%s" % (
+            fmt(ref), regime or "?", " + livramento condicional" if (lc and not regime.lower().startswith("livramento")) else "",
+            "reincidente" if reinc else "primário", " · VGA" if vga else "", (" · %d anos (§ 2º, I: lapsos pela metade)" % idade) if meia else ""),
+            "Cumprido em %s: %s (%s) · remanescente %s." % (fmt(ref), dias_para_pena(cumprido), cump_fonte, dias_para_pena(remanescente))]
         todos = [("✔ ", p) for p in possiveis] + [("? ", v) for v in verificar] + [("✘ ", n) for n in nao]
         todos.sort(key=lambda x: _k(x[1]))
         linhas += [a + b for a, b in todos]
