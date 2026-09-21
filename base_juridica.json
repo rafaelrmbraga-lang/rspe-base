@@ -1,5 +1,5 @@
 {
- "versao": "2026-09-21b",
+ "versao": "2026-09-21c",
  "descricao": "Base juridica do RSPE Base. Editavel: o programa le este arquivo ao abrir (copia ao lado do .exe tem prioridade sobre a embutida). Datas em AAAA-MM-DD. Fracoes como 'num/den' ou percentual 'NN%'.",
  "prescricao": {
   "art109_tabela": [
@@ -461,9 +461,7 @@
    "304",
    "307",
    "311",
-   "329",
    "330",
-   "331",
    "334",
    "33",
    "35",
@@ -476,7 +474,7 @@
    "10",
    "180-A"
   ],
-  "nota": "Lista orientativa por artigo do CP (e arts. 33/35/28 da Lei 11.343, 12/14/16 da Lei 10.826, 2 da Lei 12.850, 1 da Lei 9.455). Art. 329 (resistencia) e 331 (desacato): VGA controvertido - verificar."
+  "nota": "Lista orientativa por artigo do CP (e arts. 33/35/28 da Lei 11.343, 12/14/16 da Lei 10.826, 2 da Lei 12.850, 1 da Lei 9.455). Art. 329 (resistencia) e 331 (desacato): VGA controvertido - verificar. 329 e 331 retirados da lista N (o tipo de resistência exige violência ou ameaça; desacato controvertido)."
  },
  "patrimonio_cp": {
   "de": 155,
@@ -927,6 +925,13 @@
    "nivel": "orientativo",
    "tese": "A custódia provisória em outro processo, por fato anterior, pode ser detraída; a custódia por fato posterior não.",
    "aplicacao": "Prescrição executória: custódia provisória de outro processo não interrompe a PPE; regra da detração registrada como alerta de auditoria."
+  },
+  {
+   "tema": "Indulto/comutação - hediondez aferida na data do decreto",
+   "fonte": "STJ, AgRg no HC 955.700 (5ª T., 26/02/2025); AgRg no HC 1.014.986 (5ª T., 19/08/2025); AgRg no HC 1.087.914/SP (6ª T., 11/06/2026); AgRg no HC 1.076.757 (5ª T., 15/06/2026). Em sentido contrário: STF, RHC 267.297 AgR (2ª T., 16/03/2026) e RE 1.572.734 (dec. mon., 10/10/2025)",
+   "nivel": "orientativo",
+   "tese": "Para a vedação do art. 1º, I, dos decretos (crime hediondo), a natureza do delito é aferida na data do decreto: roubo com arma de fogo ou com lesão grave praticado antes da Lei 13.964/2019 é impeditivo. O STF (2ª Turma) já concedeu a ordem de ofício por irretroatividade da hediondez superveniente.",
+   "aplicacao": "Indulto/comutação: impeditivo pela data do decreto, com a tese defensiva registrada. Progressão/livramento: frações pela data do fato (lei penal)."
   }
  ],
  "reincidencia": {

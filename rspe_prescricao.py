@@ -38,7 +38,7 @@ def periodos_cumprimento(r, hoje):
     per = list(rs.periodos_custodia(eventos))
     # livramento condicional concedido conta como cumprimento (período de prova) até revogação
     for i in incidentes:
-        if i.get("situacao") == "CONCEDIDO" and "LIVRAMENTO" in (i.get("tipo") or "").upper():
+        if i.get("situacao") == "CONCEDIDO" and rs.e_incidente_livramento(i):
             ini = rs.to_date(i.get("data_referencia") or i.get("data_decisao") or i.get("complemento") or "")
             if not ini:
                 continue
@@ -90,6 +90,13 @@ def _idade(nasc, ref):
     if not nasc or not ref:
         return None
     return ref.year - nasc.year - ((ref.month, ref.day) < (nasc.month, nasc.day))
+
+
+def _pena_processo(r, c):
+    """Soma das penas dos crimes ativos da mesma condenação (processo criminal) do crime c."""
+    proc = c.get("processo_criminal") or ""
+    mesmos = [x for x in r.get("_crimes", []) if (x.get("processo_criminal") or "") == proc and not (x.get("extinto") or "").upper().startswith("S")] if proc else [c]
+    return sum(rs.pena_para_dias(x.get("pena_imposta")) or 0 for x in mesmos)
 
 
 def _custodia_previa(periodos_det, proc, termo):
@@ -286,13 +293,15 @@ def analisar(r, hoje=None):
         elif pena_cumprida_toda:
             L["ppe_status"] = "pena cumprida"
             L["ppe_cor"] = "cinza"
-        elif pena and _custodia_previa(periodos_det, c.get("processo_criminal") or "", termo) >= pena:
+        elif pena and _pena_processo(r, c) and _custodia_previa(periodos_det, c.get("processo_criminal") or "", termo) >= _pena_processo(r, c):
+            # a detração abate a pena do PROCESSO (todos os crimes da mesma condenação), não a de um crime isolado
             _cp = _custodia_previa(periodos_det, c.get("processo_criminal") or "", termo)
-            L["ppe_status"] = "Pena cumprida por detração (custódia provisória de %s ≥ pena)" % rs.dias_para_pena(_cp)
+            _pp = _pena_processo(r, c)
+            L["ppe_status"] = "Pena cumprida por detração (custódia provisória de %s ≥ pena do processo)" % rs.dias_para_pena(_cp)
             L["ppe_cor"] = "vermelho"
-            L["ppe_detalhe"] = ("Custódia anterior ao trânsito (%s) igual ou superior à pena imposta (%s): a pena está integralmente cumprida por detração "
+            L["ppe_detalhe"] = ("Custódia anterior ao trânsito (%s) igual ou superior à pena de todo o processo %s (%s): a pena está integralmente cumprida por detração "
                                 "(CP, art. 42) e cabe extinção pelo cumprimento (LEP, art. 66, II); a prescrição executória não se coloca." % (
-                                    rs.dias_para_pena(_cp), L["pena"]))
+                                    rs.dias_para_pena(_cp), c.get("processo_criminal") or "", rs.dias_para_pena(_pp)))
             linhas.append(L)
             continue
         else:

@@ -1,4 +1,4 @@
-RSPE BASE - SEEU  v6.9.3 (programa em abas)
+RSPE BASE - SEEU  v6.9.6 (programa em abas)
 =========================================
 
 O QUE FAZ
@@ -211,6 +211,40 @@ PRESUNÇÃO DE HIPOSSUFICIÊNCIA (Defensoria)
   do art. 9º e sem bloqueio do livramento (CP, art. 83, IV). Tráfico
   privilegiado não é hediondo nem impeditivo (STF PSV 125, Tema 1400; STJ
   Tema 1336). Detalhes e fontes: "Criterios_de_analise_por_beneficio.pdf".
+
+v6.9.6
+  - Regime: livramento seguido de nova decisão de regime (nova condenação,
+    somatório, regressão, progressão) é tratado como superado; vale o regime
+    impresso no RSPE.
+  - Processos "(Indultada)" contam como extintos; "(Comutada)" explica a soma
+    das penas maior que a pena total (sem alerta).
+  - Decisões do RSPE sobre os decretos (concedido / indeferido / pendente)
+    prevalecem sobre a triagem.
+  - Indulto VII/VIII com regime aberto fixado mas sem início de cumprimento:
+    "a verificar". Indulto 2022 em concurso com crime excluído: "a verificar".
+  - Livramento de 2/3 para os arts. 33 a 37 da Lei 11.343 (art. 44, p. ú.);
+    reincidência efetiva pelo trânsito anterior; 40% retroativo ao reincidente
+    genérico (Tema 1084).
+  - Auditoria só alerta o que prejudica o apenado; o que o favorece vira
+    informação.
+  - Ficha: crimes com nome e dispositivo completo ("Roubo (art. 157, § 3º, I,
+    do CP)"); sem texto de hipóteses embaixo da Extinção.
+
+v6.9.5
+  - Indulto/comutação: a hediondez que torna o crime impeditivo (art. 1º, I)
+    é aferida na DATA DO DECRETO, como decide o STJ (ex.: roubo § 3º, I ou
+    com arma de fogo praticado antes de 2020 é impeditivo). A tese defensiva
+    de irretroatividade (STF, RHC 267.297 AgR) fica registrada no detalhe e
+    na Auditoria. Frações de progressão/livramento seguem a data do fato.
+  - Alerta de indulto 2022 sem pedido também quando há impeditivo em 2024/25.
+
+v6.9.4
+  - Ficha do assistido: "Cálculos do programa" só aparece quando dá -
+    indulto possível ou a verificar (só as linhas que o sustentam) e
+    prescrição aparente. Sem nada a mostrar, a seção some.
+  - Aba Prescrição: ao abrir a linha, só os crimes com prescrição aparente ou
+    prazo correndo.
+  - Lista de crimes da ficha com parágrafo/inciso.
 
 v6.9.3
   - Parágrafo e inciso dos crimes lidos do RSPE e exibidos ("art. 157 § 3º,

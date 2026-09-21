@@ -325,6 +325,7 @@ const ui = {
       return `<div class="mb ${cls||''}"><div class="mh">${titulo}</div>${li}</div>`; };
     return `<div class="mem">${bloco('Pretensão punitiva',s.retro_detalhe,'pp')}${bloco('Pretensão executória',s.ppe_detalhe,'pe')}${bloco('Avisos',s.avisos&&s.avisos.length?s.avisos:'','av')}</div>`; },
   subTabela(r,spec){ const cols=spec.sub_cols; let rows=r[spec.sub]||[]; const tot=cols.reduce((s,c)=>s+c[2],0)+6;
+    if(spec.id==='presc'){ rows=rows.filter(s=>s.ppe_cor==='vermelho'||s.retro_cor==='vermelho'||s.ppe_cor==='amarelo'); }
     let ocultos=0; if(spec.id==='aud' && !this.mostrarTudo){ const all=rows; rows=all.filter(s=>s.baixado||(s.nivel!=='info'&&s.nivel!=='ok')); ocultos=all.length-rows.length; }
     const cg='';
     const calc=!!spec.sub_calc, baixa=!!spec.sub_baixa; const head=`<tr>${cols.map(c=>`<th style="width:${(100*c[2]/tot).toFixed(1)}%">${c[1]}</th>`).join('')}${(calc||baixa)?'<th></th>':''}</tr>`;
@@ -338,8 +339,9 @@ const ui = {
         return `<tr class="${s.baixado?'bx':''}">${tds2}<td style="white-space:nowrap">${bx}</td></tr>`; }
       if(!calc) return `<tr>${tds}</tr>`;
       return `<tr>${tds}<td><span class="why" onclick="event.stopPropagation();const n=this.closest('tr').nextElementSibling;n.style.display=n.style.display==='none'?'':'none'">cálculo</span></td></tr><tr style="display:none"><td colspan="${cols.length+1}">${ui.memoria(s)}</td></tr>`; }).join('');
-    const cab = spec.id==='aud' ? `<b>${esc(r.nome)}</b> <span class="muted">· ${esc(r.aud_resumo)} · conferido com a ${esc(r.aud_base)} · alertas apontam o que demanda atenção, não afirmam erro</span>${(ocultos||this.mostrarTudo)?` · <span class="mini" onclick="event.stopPropagation();ui.mostrarTudo=!ui.mostrarTudo;ui.render()">${this.mostrarTudo?'ocultar informativos e OK':'mostrar '+ocultos+' informativo(s)/OK'}</span>`:''}${r.ficha_resumo?`<div class="muted" style="margin-top:3px">Ficha disciplinar: ${esc(r.ficha_resumo)}</div>`:''}` : spec.id==='fd' ? `<b>${esc(r.nome)}</b> <span class="muted">· ${r.ficha_tem?'ficha disciplinar (SIAPEN) impressa em '+esc((r.ficha||{}).data_impressao||'?')+' · '+esc(r.ficha_resumo):'sem ficha disciplinar importada'}</span>` : `<b>${esc(r.nome)}</b> <span class="muted">· ${rows.length} crime(s) · cada crime prescreve isoladamente (art. 119)${r.presc_obs?' · '+esc(r.presc_obs):''}</span>`;
-    return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><span>${cab}</span><span class="mini" onclick="event.stopPropagation();ui.abrir('${r.id}')">Abrir ficha completa</span></div><table class="subtab">${cg}${head}${body}</table>`; },
+    const cab = spec.id==='aud' ? `<b>${esc(r.nome)}</b> <span class="muted">· ${esc(r.aud_resumo)} · conferido com a ${esc(r.aud_base)} · alertas apontam o que demanda atenção, não afirmam erro</span>${(ocultos||this.mostrarTudo)?` · <span class="mini" onclick="event.stopPropagation();ui.mostrarTudo=!ui.mostrarTudo;ui.render()">${this.mostrarTudo?'ocultar informativos e OK':'mostrar '+ocultos+' informativo(s)/OK'}</span>`:''}${r.ficha_resumo?`<div class="muted" style="margin-top:3px">Ficha disciplinar: ${esc(r.ficha_resumo)}</div>`:''}` : spec.id==='fd' ? `<b>${esc(r.nome)}</b> <span class="muted">· ${r.ficha_tem?'ficha disciplinar (SIAPEN) impressa em '+esc((r.ficha||{}).data_impressao||'?')+' · '+esc(r.ficha_resumo):'sem ficha disciplinar importada'}</span>` : `<b>${esc(r.nome)}</b> <span class="muted">· ${(r.presc_linhas||[]).length} crime(s), ${rows.length} com prescrição aparente ou prazo correndo · cada crime prescreve isoladamente (art. 119)${r.presc_obs?' · '+esc(r.presc_obs):''}</span>`;
+    const vazio = (spec.id==='presc' && !rows.length) ? `<tr><td colspan="${cols.length+1}" class="muted">Nenhum crime com prescrição aparente ou prazo correndo.</td></tr>` : '';
+    return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><span>${cab}</span><span class="mini" onclick="event.stopPropagation();ui.abrir('${r.id}')">Abrir ficha completa</span></div><table class="subtab">${cg}${head}${body}${vazio}</table>`; },
   async darBaixa(id, chave, titulo){ const obs = prompt('Dar baixa no alerta:\n'+titulo.replace(/&#39;/g,"'")+'\n\nObservação (opcional: o que foi feito / por que não se aplica):',''); if(obs===null) return; await api('baixar_alerta', id, chave, titulo.replace(/&#39;/g,"'"), obs); this.aberto=id; this.render(); },
   async reabrir(id, chave){ await api('reabrir_alerta', id, chave); this.aberto=id; this.render(); },
   copiar(t){ const done=()=>this.toast('Copiado: '+t); if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(t).then(done).catch(()=>{ this._copiaFallback(t); done(); }); } else { this._copiaFallback(t); done(); } },
@@ -372,8 +374,15 @@ const ui = {
     // pontos de atenção: só alertas e "verificar" não baixados, títulos
     const pts=(r.aud_itens||[]).filter(i=>!i.baixado&&(i.nivel==='alerta'||i.nivel==='verificar'));
     const ptsHtml=pts.length?`<ul class="pts">${pts.slice(0,6).map(i=>`<li class="${i.nivel}">${esc(i.titulo)}</li>`).join('')}${pts.length>6?`<li class="muted">+ ${pts.length-6} na aba Auditoria</li>`:''}</ul>`:'<div class="muted">Nenhum ponto pendente.</div>';
-    const crimes=(r.crimes_det||[]).filter(c=>!/^S/i.test(c.extinto||'')).map(c=>`${esc(c.artigo||'art. n/i')} ${esc(c.lei||'')} · ${esc(c.pena||'')}`).join('<br>');
+    const crimes=(r.crimes_det||[]).filter(c=>!/^S/i.test(c.extinto||'')).map(c=>`<b>${esc(c.nome_crime||'Crime')}</b> <span class="muted">(${esc(c.dispositivo||'')})</span> · ${esc(c.pena||'')}`).join('<br>');
     const ind=[['2022',r.i22,r.i22_cor],['2024',r.i24,r.i24_cor],['2025',r.i25,r.i25_cor]].map(x=>`<span class="muted">${x[0]}</span> ${pill(x[1],x[2])}`).join(' ');
+    // só mostra cálculo quando dá (indulto possível / a verificar; prescrição aparente), e só as linhas que sustentam
+    const util=(txt)=>(txt||'').split('\n').filter(l=>/^(✔|✓|\?|⚠|Situação em|Cumprido em|Art\. 7º)/.test(l.trim()) && !/XVI:|art\. 1º: saúde/.test(l)).join('\n');
+    const dets=[['2025',r.det25,r.i25_cor],['2024',r.det24,r.i24_cor],['2022',r.det22,r.i22_cor]]
+      .filter(x=>x[2]==='verde'||x[2]==='amarelo').map(x=>`<details class="det"><summary>Indulto ${x[0]} · ${x[2]==='verde'?'possível':'a verificar'}</summary><pre>${esc(util(x[1]))}</pre></details>`).join('');
+    const prs=(r.presc_linhas||[]).filter(s=>s.ppe_cor==='vermelho'||s.retro_cor==='vermelho')
+      .map(s=>`<details class="det"><summary>Prescrição · ${esc(s.crime)} · ${esc(s.ppe_cor==='vermelho'?s.ppe_status:s.retro_status)}</summary>${ui.memoria(s)}</details>`).join('');
+    const calc=dets+prs;
     document.getElementById('drawer').innerHTML=`
       <div class="dh"><div><h2>${esc(r.nome)}</h2><div class="sub"><span class="copy" onclick="ui.copiar('${esc(r.proc)}')" title="Clique para copiar">${esc(r.proc)} ⧉</span> · ${esc(r.regime)}</div>
         <div class="sub">RSPE de ${esc(r.geracao)}</div></div>
@@ -386,18 +395,13 @@ const ui = {
           ${lin('Indulto', r.imp.startsWith('Sim')?pill('Crime impeditivo · '+r.imp.replace(/^Sim · /,''),'vermelho'):ind)}
           ${lin('Comutação', `<span class="muted">2024</span> ${pill(r.c24, r.c24_cor)} <span class="muted">2025</span> ${pill(r.c25, r.c25_cor)}`)}
           ${lin('Prescrição', r.presc_ppe?pill(r.presc_ppe, r.presc_cor):'<span class="muted">—</span>')}
-          ${lin('Extinção', r.ext_sit?pill(r.ext_sit,r.ext_cor)+(r.ext_cor==='vermelho'||r.ext_cor==='azul'?' <span class="muted">'+esc(r.ext_hipoteses)+'</span>':''):'<span class="muted">—</span>')}
+          ${lin('Extinção', r.ext_sit?pill(r.ext_sit,r.ext_cor):'<span class="muted">—</span>')}
           ${r.falta_sim?lin('Falta (12 meses)', `<span class="falta">${esc(r.falta.replace(/^Sim · /,''))}</span>`):''}
         </div>
         <div class="sec"><h3>Pontos de atenção</h3>${ptsHtml}</div>
         <div class="sec"><h3>Crimes em execução</h3><div class="kv one"><div>${crimes||'—'}</div></div></div>
         ${r.ficha_tem?`<div class="sec"><h3>Ficha disciplinar</h3><div class="kv one"><div>${esc(r.ficha_resumo)}</div></div></div>`:''}
-        <div class="sec"><h3>Cálculos do programa</h3>
-          <details class="det"><summary>Indulto 2025 · inciso por inciso</summary><pre>${esc(r.det25)}</pre></details>
-          <details class="det"><summary>Indulto 2024 · inciso por inciso</summary><pre>${esc(r.det24)}</pre></details>
-          <details class="det"><summary>Indulto 2022 · crime a crime</summary><pre>${esc(r.det22)}</pre></details>
-          ${(r.presc_linhas||[]).map(s=>`<details class="det"><summary>Prescrição · ${esc(s.crime)}</summary>${ui.memoria(s)}</details>`).join('')}
-        </div>
+        ${calc?`<div class="sec"><h3>Cálculos do programa</h3>${calc}</div>`:''}
         <div class="sec"><span class="mini" style="color:var(--r-tx)" onclick="ui.confirmarRemocao('${r.id}')">Remover este assistido da base</span></div>
       </div>`;
     document.getElementById('drawer').classList.add('on'); document.getElementById('veil').classList.add('on'); },

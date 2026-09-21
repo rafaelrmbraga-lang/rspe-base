@@ -206,6 +206,10 @@ def curto_indulto(txt):
         return "Não se aplica (fatos posteriores)"
     if base.startswith("não se aplica"):
         return "Não se aplica (sem execução na data)"
+    if base.startswith("CONCEDIDO no RSPE"):
+        return "Concedido · " + base.split(" em ")[-1]
+    if base.startswith("INDEFERIDO no RSPE"):
+        return "Indeferido · " + base.split(" em ")[-1]
     if base.startswith("prejudicada"):
         return "Prejudicada · indulto cabível"
     if base.startswith("excluído"):
@@ -220,6 +224,8 @@ def curto_indulto(txt):
 
 def cor_texto_indulto(txt):
     t = (txt or "").split(" | ")[0]
+    if t.startswith("CONCEDIDO no RSPE"):
+        return "azul"
     if t.startswith("VEDAD"):
         return "vermelho"
     if t.startswith("POSSÍVEL"):
@@ -235,7 +241,8 @@ def curto_impeditivo(r):
     det = r.get("indulto_crime_impeditivo_detalhe", "")
     partes = [p.split(":")[0].replace("art. 1º, ", "") + " · " + p.split(":")[1].strip().split(" (")[0]
               for p in det.split("; ") if ":" in p]
-    return "Sim · art. 1º, " + "; ".join(partes)
+    sup = " (hediondez posterior ao fato)" if "fato anterior" in det else ""
+    return "Sim · art. 1º, " + "; ".join(partes) + sup
 
 
 def compacto_indulto(txt):
@@ -248,6 +255,7 @@ def compacto_indulto(txt):
     t = rs.re.sub(r"^não atinge.*$", "Não atinge", t)
     t = rs.re.sub(r"^Possível · art\. 13 \(.*\)$", "Possível · art. 13", t)
     t = t.replace("Possível (parcial) · ", "Parcial · ")
+    t = rs.re.sub(r"^(A verificar · art\. 7º, p\. ú\.).*$", r"\1 (2/3 do impeditivo)", t)
     return t
 
 
@@ -256,7 +264,8 @@ def compacto_impeditivo(txt):
         return txt
     corpo = txt[len("Sim · art. 1º, "):] if txt.startswith("Sim · art. 1º, ") else ""
     incs = [p.split(" · ")[0].strip() for p in corpo.split("; ") if p.strip()]
-    return "Sim · art. 1º, " + "; ".join(incs) if incs else "Sim"
+    sup = " · hed. superveniente" if "posterior ao fato" in txt else ""
+    return ("Sim · art. 1º, " + "; ".join(incs) if incs else "Sim") + sup
 
 
 def cor_indulto(r):
@@ -294,7 +303,8 @@ def extincao(r, presc, interr):
         cor, d_ref = "vermelho", term
     # 2) livramento condicional: período de prova expirado sem revogação
     inc = r.get("_incidentes", [])
-    lcs = [i for i in inc if i.get("situacao") == "CONCEDIDO" and rs.e_incidente_livramento(i)]
+    _lc_ok, _ = rs.livramento_em_curso(r, inc)
+    lcs = [i for i in inc if i.get("situacao") == "CONCEDIDO" and rs.e_incidente_livramento(i)] if _lc_ok else []
     if lcs:
         dlc = max((rs.to_date(i.get("data_referencia") or i.get("data_decisao") or i.get("complemento") or "") or date.min for i in lcs))
         revog = any("REVOG" in ((j.get("tipo") or "") + " " + (j.get("complemento") or "")).upper()
@@ -499,7 +509,7 @@ def modelo(r, baixas=None, ficha=None):
         "historico": r.get("historico_regime", ""),
         "eventos": r.get("eventos", ""),
         "crimes_det": [
-            {"lei": rs.lei_curta(c.get("lei")), "artigo": ("art. " + rs.num_art(c.get("artigo"))) if rs.num_art(c.get("artigo")) else "", "extinto": c.get("extinto", ""),
+            {"nome_crime": rs.nome_crime(c), "dispositivo": rs.dispositivo(c), "lei": rs.lei_curta(c.get("lei")), "artigo": ("art. " + rs.num_art(c.get("artigo")) + ((" " + rs.paragrafo_texto(c)) if rs.paragrafo_texto(c) else "")) if rs.num_art(c.get("artigo")) else "", "extinto": c.get("extinto", ""),
              "pena": rs.dias_para_pena(rs.pena_para_dias(c.get("pena_imposta"))) or c.get("pena_imposta"), "fato": c.get("data_infracao"),
              "vga": c.get("vga"), "morte": c.get("resultado_morte"), "reinc": "%s/%s" % (c.get("reincidente_comum"), c.get("reincidente_especifico")),
              "hediondo": c.get("hediondo_ou_equiparado"), "proc": c.get("processo_criminal"), "desc": c.get("tipo_penal"),
