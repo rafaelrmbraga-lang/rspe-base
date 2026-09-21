@@ -30,7 +30,7 @@ import rspe_export as rx
 import rspe_regras as rg
 
 APP = "RSPE Base"
-VERSAO = "6.9.0"
+VERSAO = "6.9.1"
 
 
 def pasta_app():

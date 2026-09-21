@@ -775,6 +775,37 @@ def crime_patrimonial(c):
     return (num_lei(c.get("lei")) in ("2848", "") or "PENAL" in (c.get("lei") or "").upper()) and num_art(c.get("artigo")) in PATRIMONIO_CP
 
 
+def _sem_acento(t):
+    import unicodedata
+    return "".join(ch for ch in unicodedata.normalize("NFD", t or "") if unicodedata.category(ch) != "Mn").upper()
+
+
+RE_VD_FORTE = re.compile(r"VIOLENCIA DOMESTICA|MARIA DA PENHA|11\.?340|CONTRA A MULHER|SEXO FEMININO|FEMINICIDIO|VIOLENCIA DE GENERO")
+
+
+def violencia_domestica(c):
+    """Contexto de violência doméstica/contra a mulher no crime, pelo que o RSPE traz.
+    ('sim', motivo): vara especializada, Lei 11.340, art. 129 § 13, 'sexo feminino' etc. no tipo;
+    ('provavel', motivo): art. 129 §§ 9º a 11 sem esse sinal (a vítima pode não ser mulher); None."""
+    vara = _sem_acento(c.get("vara_condenacao"))
+    tipo = _sem_acento(c.get("tipo_penal"))
+    lei, art = num_lei(c.get("lei")), num_art(c.get("artigo"))
+    if lei == "11340":
+        return ("sim", "crime da Lei 11.340/06")
+    if RE_VD_FORTE.search(vara) or "VIOLENCIA DOMESTICA" in vara or ("DOMESTICA" in vara and "MULHER" in vara):
+        return ("sim", "condenado por: %s" % (c.get("vara_condenacao") or "vara de violência doméstica"))
+    if RE_VD_FORTE.search(tipo):
+        return ("sim", "tipo penal indica violência contra a mulher")
+    if art == "129" and (lei in ("2848", "") or "PENAL" in (c.get("lei") or "").upper()):
+        m = re.match(r"\s*§\s*(\d+)", c.get("tipo_penal") or "")
+        par = m.group(1) if m else ""
+        if par == "13":
+            return ("sim", "art. 129, § 13 (lesão contra a mulher por razões da condição do sexo feminino)")
+        if par in ("9", "10", "11"):
+            return ("provavel", "art. 129, § %sº (violência doméstica): confirmar se a vítima é mulher" % par)
+    return None
+
+
 def impeditivo_decreto(c):
     """Devolve (inciso, motivo) se o crime está no art. 1º dos Decretos 12.338/24 e 12.790/25, senão None."""
     if c.get("extinto", "").upper().startswith("S"):
@@ -790,6 +821,9 @@ def impeditivo_decreto(c):
         return ("XVIII", "tráfico de drogas (art. %s da Lei 11.343/06)" % art)
     if lei == "8069" and art in ART1_ECA:
         return ART1_ECA[art][:2]
+    vd = violencia_domestica(c)
+    if vd and vd[0] == "sim":
+        return ("XVII", "violência contra a mulher (Lei 11.340/06) - %s" % vd[1])
     if lei in ART1_LEIS:
         inc, desc, teto = ART1_LEIS[lei]
         if teto and pena_anos <= teto:
@@ -876,6 +910,9 @@ def exclusao_art7_2022(c):
     codigo_penal = lei in ("2848", "") or "PENAL" in (c.get("lei") or "").upper()
     if e_hediondo(c):
         return "I: hediondo ou equiparado (Lei 8.072/90)"
+    vd = violencia_domestica(c)
+    if vd and vd[0] == "sim":
+        return "III, c: violência doméstica (Lei 11.340/06) - %s" % vd[1]
     if c.get("vga") == "S":
         return "II: praticado com violência ou grave ameaça"
     if lei in ART7_2022_LEIS:
@@ -1342,6 +1379,12 @@ def analise_decretos(campos, crimes, eventos, incidentes, hoje):
             verificar = [p + " - livramento a confirmar" for p in possiveis] + verificar
             possiveis = []
             aviso = ("livramento condicional com situação incerta no RSPE (ver Auditoria)" + ("; " + aviso if aviso else ""))
+        vd_prov = [v[1] for v in (violencia_domestica(c) for c in ativos) if v and v[0] == "provavel"]
+        if vd_prov and possiveis:
+            # art. 1º, XVII (violência contra a mulher): só se confirma com a vítima - nem nega, nem concede
+            verificar = [p + " - confirmar se houve violência contra a mulher (art. 1º, XVII)" for p in possiveis] + verificar
+            possiveis = []
+            aviso = ("; ".join(dict.fromkeys(vd_prov)) + ("; " + aviso if aviso else ""))
         if possiveis:
             inc = ", ".join(p.split(":")[0] for p in possiveis)
             out[k] = "POSSÍVEL: art. 9º, " + inc + (" | " + aviso if aviso else "")
@@ -1369,10 +1412,16 @@ def analise_decretos(campos, crimes, eventos, incidentes, hoje):
 
         # art. 13 - comutação
         f13 = (A("art13_comutacao", "fracao_primario", "1/5"), A("art13_comutacao", "fracao_reincidente", "1/4"))
-        if tem(frac(*f13)):
+        if possiveis:
+            # art. 13, § 5º: a comutação não se aplica a quem preenche os requisitos do indulto (prevalece o mais benéfico)
+            out[kc] = "prejudicada: indulto cabível (art. 13, § 5º)"
+        elif tem(frac(*f13)):
             base = "cumprido" if cumprido > remanescente else "remanescente"
             prop = A("art13_comutacao", "proporcao_par2", "2/3") if meia else A("art13_comutacao", "proporcao", "1/5")
-            out[kc] = "POSSÍVEL: art. 13 (%s do %s%s)" % (prop, base, "; § 5º: prevalece o indulto se cabível" if possiveis else "") + (" | " + aviso if aviso else "")
+            if vd_prov:
+                out[kc] = "A VERIFICAR: art. 13 (%s do %s) - confirmar se houve violência contra a mulher (art. 1º, XVII)" % (prop, base) + (" | " + aviso if aviso else "")
+            else:
+                out[kc] = "POSSÍVEL: art. 13 (%s do %s)" % (prop, base) + (" | " + aviso if aviso else "")
         else:
             out[kc] = "não atinge (%s%s até %s)" % (fmt_fr(*f13), "", fmt(ref)) + (" | " + aviso if aviso else "")
     return out

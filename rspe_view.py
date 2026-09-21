@@ -206,6 +206,8 @@ def curto_indulto(txt):
         return "Não se aplica (fatos posteriores)"
     if base.startswith("não se aplica"):
         return "Não se aplica (sem execução na data)"
+    if base.startswith("prejudicada"):
+        return "Prejudicada · indulto cabível"
     if base.startswith("excluído"):
         return "Excluído (art. 7º)"
     m = rs.re.search(r"cumprido (\S+) de ([0-9amd]+)", base)

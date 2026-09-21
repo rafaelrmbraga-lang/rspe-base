@@ -334,6 +334,14 @@ def auditar(r, hoje=None):
                 itens.append(_item("info", "Indulto %s: hipóteses a verificar" % ano, r.get("indulto_%s" % ano, ""), "Depende de dado que o RSPE não traz (programa de egressos, estudo, saídas, valor do bem, saúde)."))
         if "POSSÍVEL" in (r.get("comutacao_2025") or "") and "nenhum registro" in (r.get("indulto_comutacao_incidentes") or ""):
             itens.append(_item("alerta", "Comutação 2025 possível sem incidente no RSPE", r.get("comutacao_2025", ""), "Decreto 12.790/2025, art. 13."))
+    # violência doméstica: art. 129 §§ 9º-11 sem sinal de que a vítima é mulher
+    for c in ativos:
+        vd = rs.violencia_domestica(c)
+        if vd and vd[0] == "provavel":
+            itens.append(_item("verificar", "%s: violência doméstica - confirmar se a vítima é mulher" % rs.crimes_curto([c]),
+                               "Se a vítima for mulher, o crime é impeditivo de indulto e comutação (art. 1º, XVII, dos Decretos 12.338/2024 e 12.790/2025; "
+                               "art. 7º, III, c, do Decreto 11.302/2022). Enquanto não confirmado, o indulto fica \"a verificar\".",
+                               "Decretos de indulto, art. 1º; Lei 11.340/06."))
     # presunção de hipossuficiência (Defensoria): multa e reparação do dano nunca bloqueiam benefício no programa
     crimes_ativos = [c for c in crimes if not c.get("extinto", "").upper().startswith("S")]
     if any(re.search(r"\b[Ee]\s+Multa", c.get("tipo_penal") or "") for c in crimes_ativos):

@@ -1,4 +1,4 @@
-RSPE BASE - SEEU  v6.9.0 (programa em abas)
+RSPE BASE - SEEU  v6.9.1 (programa em abas)
 =========================================
 
 O QUE FAZ
@@ -211,6 +211,15 @@ PRESUNÇÃO DE HIPOSSUFICIÊNCIA (Defensoria)
   do art. 9º e sem bloqueio do livramento (CP, art. 83, IV). Tráfico
   privilegiado não é hediondo nem impeditivo (STF PSV 125, Tema 1400; STJ
   Tema 1336). Detalhes e fontes: "Criterios_de_analise_por_beneficio.pdf".
+
+INDULTO / COMUTAÇÃO (v6.9.1)
+  Comutação "Prejudicada · indulto cabível" quando o indulto do mesmo decreto
+  é possível (art. 13, § 5º: prevalece o mais benéfico).
+  Violência doméstica: impeditivo (art. 1º, XVII; Decreto 2022, art. 7º,
+  III, c) quando a vara da condenação é de violência doméstica/contra a
+  mulher, o tipo cita Lei 11.340/mulher/sexo feminino, ou art. 129, § 13.
+  Art. 129, §§ 9º a 11 sem esses sinais: indulto "a verificar" e Auditoria
+  pede confirmar se a vítima é mulher.
 
 SITUAÇÃO E ALERTAS (v6.9.0)
   Progressão, livramento e término: vermelho = vencido; laranja = até 30
