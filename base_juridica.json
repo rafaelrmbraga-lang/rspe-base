@@ -1,0 +1,991 @@
+{
+ "versao": "2026-09-21a",
+ "descricao": "Base juridica do RSPE Base. Editavel: o programa le este arquivo ao abrir (copia ao lado do .exe tem prioridade sobre a embutida). Datas em AAAA-MM-DD. Fracoes como 'num/den' ou percentual 'NN%'.",
+ "prescricao": {
+  "art109_tabela": [
+   {
+    "pena_maior_que_anos": 12,
+    "prazo_anos": 20,
+    "inciso": "I"
+   },
+   {
+    "pena_maior_que_anos": 8,
+    "prazo_anos": 16,
+    "inciso": "II"
+   },
+   {
+    "pena_maior_que_anos": 4,
+    "prazo_anos": 12,
+    "inciso": "III"
+   },
+   {
+    "pena_maior_que_anos": 2,
+    "prazo_anos": 8,
+    "inciso": "IV"
+   },
+   {
+    "pena_maior_ou_igual_anos": 1,
+    "prazo_anos": 4,
+    "inciso": "V"
+   },
+   {
+    "pena_menor_que_anos": 1,
+    "prazo_anos": 3,
+    "inciso": "VI"
+   }
+  ],
+  "art110_reincidencia_acrescimo": "1/3",
+  "art115_metade": {
+   "menor_de_anos_no_fato": 21,
+   "maior_de_anos_na_sentenca": 70,
+   "excecao": "salvo se o crime envolver violência sexual contra a mulher (Lei 15.160, de 03/07/2025 - só para fatos a partir da vigência, art. 5º, XL, CF)",
+   "artigos_violencia_sexual": [
+    "213",
+    "215",
+    "216-A",
+    "217-A",
+    "218",
+    "218-A",
+    "218-B",
+    "218-C"
+   ],
+   "lei_15160_2025_vigencia": "2025-07-04"
+  },
+  "lei_12234_2010_vigencia": "2010-05-05",
+  "tema_788_modulacao_data": "2020-11-12",
+  "notas": [
+   "Art. 110, caput: prazo pela pena aplicada, aumentado de 1/3 se reincidente.",
+   "Art. 110, par. 1: retroativa/intercorrente pela pena aplicada; termo inicial nunca anterior a denuncia (Lei 12.234/2010).",
+   "Art. 112, I e II: termo inicial da executoria no transito para a acusacao ou na interrupcao da execucao.",
+   "STF, ARE 848.107 (Tema 788, j. 03/07/2023): termo inicial e o transito para ambas as partes; modulacao para transito da acusacao posterior a 12/11/2020.",
+   "Art. 113: evasao ou revogacao do livramento - prazo pela pena restante.",
+   "Art. 116, par. unico: nao corre enquanto preso por outro motivo. Art. 117, V: inicio/continuacao do cumprimento interrompe.",
+   "Art. 117, IV e STF HC 176.473: acordao confirmatorio interrompe a punitiva - data nao consta no RSPE.",
+   "Arts. 118 e 119: penas mais leves prescrevem com as mais graves; concurso - cada crime isoladamente.",
+   "Detração (art. 42 CP): custódia provisória anterior ao trânsito não reduz o prazo da executória (STJ); se igual ou superior à pena, a pena está cumprida (LEP, art. 66, II).",
+   "Art. 117, V: só a prisão para cumprimento desta pena interrompe a executória; prisão provisória de outro processo não interrompe."
+  ]
+ },
+ "progressao": {
+  "regimes_vigencia": [
+   {
+    "ate": "2020-01-22",
+    "lei": "LEP art. 112 (Lei 10.792/2003) e Lei 8.072/90 art. 2, par. 2",
+    "comum": "1/6",
+    "comum_reincidente": "1/6",
+    "vga_primario": "1/6",
+    "vga_reincidente": "1/6",
+    "hediondo_primario": "2/5",
+    "hediondo_reincidente": "3/5",
+    "hediondo_morte_primario": "2/5",
+    "hediondo_morte_reincidente": "3/5"
+   },
+   {
+    "de": "2020-01-23",
+    "ate": "2026-03-24",
+    "lei": "Lei 13.964/2019 (Pacote Anticrime)",
+    "comum": "16%",
+    "comum_reincidente": "20%",
+    "vga_primario": "25%",
+    "vga_reincidente": "30%",
+    "hediondo_primario": "40%",
+    "hediondo_reincidente": "60%",
+    "hediondo_morte_primario": "50%",
+    "hediondo_morte_reincidente": "70%",
+    "hediondo_reincidente_generico": "40%",
+    "hediondo_morte_reincidente_generico": "50%",
+    "vga_reincidente_generico": "25%",
+    "notas": [
+     "STJ Tema 1084: reincidente generico em hediondo sem morte -> 40% (patamar do primario).",
+     "STJ Tema 1196: reincidente generico em hediondo com morte -> 50%.",
+     "STF Tema 1169: 60% nao se aplica a reincidente nao especifico.",
+     "STJ Tema 1354: percentuais distintos por condenacao na mesma execucao; retroatividade do mais benefico e ultratividade do 1/6 para reincidente sem VGA.",
+     "16% retroage (mais benefico que 1/6); 20% nao retroage para fatos anteriores a 23/01/2020 (1/6 ultra-ativo)."
+    ]
+   },
+   {
+    "de": "2026-03-25",
+    "ate": "2026-05-07",
+    "lei": "Lei 15.358/2026 (Marco Legal do Combate ao Crime Organizado)",
+    "comum": "16%",
+    "comum_reincidente": "20%",
+    "vga_primario": "25%",
+    "vga_reincidente": "30%",
+    "hediondo_primario": "70%",
+    "hediondo_reincidente": "80%",
+    "hediondo_morte_primario": "75%",
+    "hediondo_morte_reincidente": "85%",
+    "vedado_lc": [
+     "hediondo_morte_primario",
+     "hediondo_morte_reincidente",
+     "comando_orcrim",
+     "feminicidio_primario"
+    ],
+    "notas": [
+     "Percentuais mais gravosos nao retroagem: aplicam-se apenas a fatos a partir de 25/03/2026."
+    ]
+   },
+   {
+    "de": "2026-05-08",
+    "lei": "Lei 15.402/2026 (caput 1/6; I 25%; II 30%; III 20%) + Lei 15.358/2026 (V a VIII)",
+    "comum": "1/6",
+    "comum_reincidente": "20%",
+    "vga_primario": "25%",
+    "vga_reincidente": "30%",
+    "hediondo_primario": "70%",
+    "hediondo_reincidente": "80%",
+    "hediondo_morte_primario": "75%",
+    "hediondo_morte_reincidente": "85%",
+    "vedado_lc": [
+     "hediondo_morte_primario",
+     "hediondo_morte_reincidente",
+     "comando_orcrim",
+     "feminicidio_primario"
+    ]
+   }
+  ],
+  "art112_par5": "Trafico privilegiado (art. 33, par. 4, Lei 11.343/06) nao e hediondo para fins de progressao.",
+  "art112_par6": "Falta grave interrompe o prazo; reinicio pela pena remanescente.",
+  "art112_par3_mulheres": "1/8 para gestante/mae/responsavel, sem VGA, primaria, sem ORCRIM."
+ },
+ "livramento": {
+  "comum_primario": "1/3",
+  "comum_reincidente": "1/2",
+  "hediondo": "2/3",
+  "vedado_reincidente_especifico_hediondo": true,
+  "trafico_art44_lei11343": "2/3, vedado ao reincidente especifico",
+  "vedado_lc_lep112": "hediondo com morte (primario e reincidente), comando de ORCRIM ultraviolenta, feminicidio primario - fatos a partir de 25/03/2026 (Lei 15.358/2026); antes, Lei 13.964/2019 ja vedava para hediondo com morte primario (art. 112, VI, a) - STF Tema 1319 permite retroagir o 50% sem a vedacao",
+  "art83_iii_b": "sem falta grave nos ultimos 12 meses",
+  "pena_minima_anos": 2,
+  "fonte": "CP, art. 83 (texto vigente conferido em 18/09/2026): I mais de 1/3 se não reincidente em crime doloso e bons antecedentes; II mais da metade se reincidente em crime doloso; III a) bom comportamento, b) sem falta grave nos últimos 12 meses; V mais de 2/3 para hediondo, tortura, tráfico, tráfico de pessoas e terrorismo, se não reincidente específico",
+  "art88": "Revogado o livramento, não pode ser novamente concedido e o tempo solto não se desconta (salvo revogação por crime anterior ao benefício)"
+ },
+ "hediondos": {
+  "fonte": "Lei 8.072/90, art. 1º (texto vigente conferido em 18/09/2026)",
+  "lei_8072_art1_cp_sempre": [
+   "121-A",
+   "159",
+   "213",
+   "217-A",
+   "218-B",
+   "273"
+  ],
+  "lei_8072_art1_cp_condicional": {
+   "121": "inciso I: homicídio em atividade típica de grupo de extermínio ou homicídio qualificado (§ 2º)",
+   "129": "inciso I-A: lesão gravíssima ou seguida de morte contra agentes de segurança/autoridades (§ 12) ou em instituição de ensino",
+   "122": "inciso X: induzimento/instigação/auxílio a suicídio ou automutilação por rede de computadores/social/tempo real",
+   "155": "inciso IX: furto qualificado pelo emprego de explosivo (§ 4º-A)",
+   "157": "inciso II: roubo com restrição de liberdade (§ 2º, V), com arma de fogo (§ 2º-A, I / § 2º-B) ou qualificado por lesão grave ou morte (§ 3º)",
+   "158": "inciso III: extorsão qualificada por restrição de liberdade, lesão ou morte (§ 3º)",
+   "267": "inciso VII: epidemia com resultado morte (§ 1º)",
+   "148": "inciso XI: sequestro e cárcere privado contra menor de 18 anos",
+   "149-A": "inciso XII: tráfico de pessoas contra criança ou adolescente"
+  },
+  "equiparados": {
+   "11343": [
+    "33",
+    "34",
+    "36"
+   ],
+   "9455": [
+    "1"
+   ],
+   "13260": [
+    "2",
+    "3",
+    "5",
+    "6"
+   ]
+  },
+  "paragrafo_unico": {
+   "2889": [
+    "1",
+    "2",
+    "3"
+   ],
+   "10826": {
+    "16": "só uso proibido (art. 16, § 2º)",
+    "17": "sempre",
+    "18": "sempre"
+   },
+   "12850": {
+    "2": "só quando direcionada à prática de crime hediondo ou equiparado"
+   },
+   "8069": [
+    "240 § 1º",
+    "241-B"
+   ],
+   "15358": [
+    "2 caput, §§ 1º e 3º",
+    "3"
+   ]
+  },
+  "nao_hediondos_frequentes": {
+   "11343": [
+    "35",
+    "28",
+    "37"
+   ],
+   "2848": [
+    "288-A"
+   ],
+   "notas": "art. 35 (associação) e art. 37 não são hediondos; art. 33 § 4º (privilegiado) não é hediondo (LEP 112 § 5º); milícia privada (288-A) não consta do art. 1º da Lei 8.072/90 (tratada apenas no art. 112, VI, c, da LEP)"
+  },
+  "desde": {
+   "_nota": "Data a partir da qual o tipo passou a ser hediondo/equiparado (vigência da lei). Fato anterior não é hediondo (CF, art. 5º, XL). Chave: 'lei:artigo' ou 'lei:artigo §X'; a mais específica prevalece. Conferir e completar conforme a jurisprudência local.",
+   "2848:213": {
+    "desde": "1990-07-26",
+    "lei": "Lei 8.072/90"
+   },
+   "2848:159": {
+    "desde": "1990-07-26",
+    "lei": "Lei 8.072/90"
+   },
+   "2848:267": {
+    "desde": "1990-07-26",
+    "lei": "Lei 8.072/90 (só § 1º, com morte)"
+   },
+   "2848:158 §2": {
+    "desde": "1990-07-26",
+    "lei": "Lei 8.072/90 (extorsão qualificada por morte)"
+   },
+   "2848:158 §3": {
+    "desde": "2009-04-14",
+    "lei": "Lei 11.923/2009 (sequestro relâmpago)"
+   },
+   "2848:157 §3": {
+    "desde": "1990-07-26",
+    "lei": "Lei 8.072/90 (latrocínio); lesão grave (§ 3º, I) só desde 23/01/2020 - Lei 13.964/2019"
+   },
+   "2848:157 §3 I": {
+    "desde": "2020-01-23",
+    "lei": "Lei 13.964/2019"
+   },
+   "2848:157 §2-A": {
+    "desde": "2018-04-24",
+    "lei": "Lei 13.654/2018"
+   },
+   "2848:157 §2-B": {
+    "desde": "2020-01-23",
+    "lei": "Lei 13.964/2019"
+   },
+   "2848:157 §2 V": {
+    "desde": "2020-01-23",
+    "lei": "Lei 13.964/2019"
+   },
+   "2848:155 §4-A": {
+    "desde": "2018-04-24",
+    "lei": "Lei 13.654/2018"
+   },
+   "2848:121 §2": {
+    "desde": "1994-09-07",
+    "lei": "Lei 8.930/94 (homicídio qualificado e grupo de extermínio)"
+   },
+   "2848:121 §2 VI": {
+    "desde": "2015-03-10",
+    "lei": "Lei 13.104/2015 (feminicídio)"
+   },
+   "2848:121 §2 VII": {
+    "desde": "2015-07-07",
+    "lei": "Lei 13.142/2015"
+   },
+   "2848:121-A": {
+    "desde": "2024-10-10",
+    "lei": "Lei 14.994/2024"
+   },
+   "2848:129 §12": {
+    "desde": "2015-07-07",
+    "lei": "Lei 13.142/2015"
+   },
+   "2848:217-A": {
+    "desde": "2009-08-10",
+    "lei": "Lei 12.015/2009"
+   },
+   "2848:218-B": {
+    "desde": "2009-08-10",
+    "lei": "Lei 12.015/2009"
+   },
+   "2848:273": {
+    "desde": "1998-08-21",
+    "lei": "Lei 9.695/98"
+   },
+   "2848:122": {
+    "desde": "2024-01-15",
+    "lei": "Lei 14.811/2024 (por rede de computadores etc.) - conferir"
+   },
+   "2848:148": {
+    "desde": "2024-01-15",
+    "lei": "Lei 14.811/2024 (vítima menor de 18) - conferir"
+   },
+   "2848:149-A": {
+    "desde": "2024-01-15",
+    "lei": "Lei 14.811/2024 (vítima criança/adolescente) - conferir"
+   },
+   "11343:33": {
+    "desde": "1990-07-26",
+    "lei": "Lei 8.072/90, art. 2º (tráfico equiparado)"
+   },
+   "11343:34": {
+    "desde": "1990-07-26",
+    "lei": "Lei 8.072/90, art. 2º"
+   },
+   "11343:36": {
+    "desde": "1990-07-26",
+    "lei": "Lei 8.072/90, art. 2º"
+   },
+   "9455:1": {
+    "desde": "1997-04-08",
+    "lei": "Lei 9.455/97 (tortura) / Lei 8.072/90, art. 2º"
+   },
+   "13260:2": {
+    "desde": "2016-03-17",
+    "lei": "Lei 13.260/2016 (terrorismo)"
+   },
+   "13260:3": {
+    "desde": "2016-03-17",
+    "lei": "Lei 13.260/2016"
+   },
+   "13260:5": {
+    "desde": "2016-03-17",
+    "lei": "Lei 13.260/2016"
+   },
+   "13260:6": {
+    "desde": "2016-03-17",
+    "lei": "Lei 13.260/2016"
+   },
+   "2889:1": {
+    "desde": "1990-07-26",
+    "lei": "Lei 8.072/90 (genocídio)"
+   },
+   "2889:2": {
+    "desde": "2020-01-23",
+    "lei": "Lei 13.964/2019"
+   },
+   "2889:3": {
+    "desde": "2020-01-23",
+    "lei": "Lei 13.964/2019"
+   },
+   "10826:16": {
+    "desde": "2017-10-27",
+    "lei": "Lei 13.497/2017 (uso restrito); desde 23/01/2020 só uso proibido (§ 2º) - Lei 13.964/2019"
+   },
+   "10826:17": {
+    "desde": "2020-01-23",
+    "lei": "Lei 13.964/2019"
+   },
+   "10826:18": {
+    "desde": "2020-01-23",
+    "lei": "Lei 13.964/2019"
+   },
+   "12850:2": {
+    "desde": "2020-01-23",
+    "lei": "Lei 13.964/2019 (ORCRIM voltada a hediondos)"
+   },
+   "8069:240": {
+    "desde": "2024-01-15",
+    "lei": "Lei 14.811/2024 - conferir"
+   },
+   "8069:241-B": {
+    "desde": "2024-01-15",
+    "lei": "Lei 14.811/2024 - conferir"
+   },
+   "15358:2": {
+    "desde": "2026-03-25",
+    "lei": "Lei 15.358/2026"
+   },
+   "15358:3": {
+    "desde": "2026-03-25",
+    "lei": "Lei 15.358/2026"
+   }
+  }
+ },
+ "vga_esperado": {
+  "S": [
+   "121",
+   "121-A",
+   "129",
+   "146",
+   "147",
+   "147-A",
+   "148",
+   "150",
+   "157",
+   "158",
+   "159",
+   "213",
+   "214",
+   "215",
+   "217-A",
+   "218",
+   "218-B",
+   "1"
+  ],
+  "N": [
+   "155",
+   "168",
+   "171",
+   "180",
+   "155-A",
+   "163",
+   "299",
+   "304",
+   "307",
+   "311",
+   "329",
+   "330",
+   "331",
+   "334",
+   "33",
+   "35",
+   "28",
+   "14",
+   "16",
+   "12",
+   "2",
+   "244-B",
+   "10",
+   "180-A"
+  ],
+  "nota": "Lista orientativa por artigo do CP (e arts. 33/35/28 da Lei 11.343, 12/14/16 da Lei 10.826, 2 da Lei 12.850, 1 da Lei 9.455). Art. 329 (resistencia) e 331 (desacato): VGA controvertido - verificar."
+ },
+ "patrimonio_cp": {
+  "de": 155,
+  "ate": 180
+ },
+ "decretos_indulto": {
+  "referencias": {
+   "2024": {
+    "decreto": "12.338/2024",
+    "data": "2024-12-25"
+   },
+   "2025": {
+    "decreto": "12.790/2025",
+    "data": "2025-12-25"
+   }
+  },
+  "art1_leis": {
+   "9455": [
+    "II",
+    "tortura",
+    null
+   ],
+   "9613": [
+    "III",
+    "lavagem de dinheiro",
+    4
+   ],
+   "12850": [
+    "IV",
+    "organizacao criminosa",
+    null
+   ],
+   "13260": [
+    "V",
+    "terrorismo",
+    null
+   ],
+   "7716": [
+    "VI",
+    "racismo",
+    null
+   ],
+   "2889": [
+    "VIII",
+    "genocidio",
+    null
+   ],
+   "7492": [
+    "IX",
+    "crimes contra o sistema financeiro",
+    4
+   ],
+   "14133": [
+    "X",
+    "crimes em licitacoes",
+    4
+   ],
+   "8666": [
+    "X",
+    "crimes em licitacoes",
+    4
+   ],
+   "9605": [
+    "XIV",
+    "crimes ambientais",
+    null
+   ],
+   "13869": [
+    "XVI",
+    "abuso de autoridade",
+    null
+   ],
+   "11340": [
+    "XVII",
+    "violencia contra a mulher (Lei Maria da Penha)",
+    null
+   ],
+   "13718": [
+    "XVII",
+    "violencia contra a mulher",
+    null
+   ],
+   "14192": [
+    "XVII",
+    "violencia politica contra a mulher",
+    null
+   ],
+   "1001": [
+    "XIX",
+    "Codigo Penal Militar (correspondente aos incisos I a XVIII)",
+    null
+   ]
+  },
+  "art1_cp": {
+   "288-A": [
+    "IV",
+    "milicia privada",
+    null
+   ],
+   "149": [
+    "VII",
+    "reducao a condicao analoga a de escravo",
+    null
+   ],
+   "149-A": [
+    "VII",
+    "trafico de pessoas",
+    null
+   ],
+   "215": [
+    "XI",
+    "violacao sexual mediante fraude",
+    null
+   ],
+   "216-A": [
+    "XI",
+    "assedio sexual",
+    null
+   ],
+   "217-A": [
+    "XI",
+    "estupro de vulneravel",
+    null
+   ],
+   "218": [
+    "XI",
+    "mediacao para satisfazer lascivia",
+    null
+   ],
+   "218-A": [
+    "XI",
+    "satisfacao de lascivia na presenca de menor",
+    null
+   ],
+   "218-B": [
+    "XI",
+    "favorecimento da prostituicao de vulneravel",
+    null
+   ],
+   "218-C": [
+    "XI",
+    "divulgacao de cena de estupro",
+    null
+   ],
+   "121-A": [
+    "XVII",
+    "feminicidio",
+    null
+   ],
+   "147-A": [
+    "XVII",
+    "perseguicao (stalking)",
+    null
+   ],
+   "333": [
+    "XII",
+    "corrupcao ativa",
+    4
+   ]
+  },
+  "art1_cp_faixas": [
+   {
+    "de": 312,
+    "ate": 319,
+    "inciso": "XII",
+    "descricao": "crime contra a administracao publica",
+    "teto_anos": 4
+   }
+  ],
+  "art1_eca": {
+   "de": 239,
+   "ate": 244,
+   "extras": [
+    "244-A",
+    "244-B"
+   ],
+   "inciso": "XIII"
+  },
+  "art1_drogas": [
+   "33",
+   "34",
+   "35",
+   "36",
+   "37",
+   "39"
+  ],
+  "art9_incisos": {
+   "I": {
+    "pena_max_anos": 8,
+    "vga": false,
+    "fracao_primario": "1/5",
+    "fracao_reincidente": "1/3"
+   },
+   "II": {
+    "pena_max_anos": 12,
+    "vga": false,
+    "fracao_primario": "1/3",
+    "fracao_reincidente": "1/2"
+   },
+   "III": {
+    "pena_max_anos": 4,
+    "vga": true,
+    "fracao_primario": "1/3",
+    "fracao_reincidente": "1/2"
+   },
+   "IV": {
+    "anos_ininterruptos_primario": 15,
+    "anos_ininterruptos_reincidente": 20
+   },
+   "V": {
+    "anos_primario": 20,
+    "anos_reincidente": 25,
+    "liberdade_max_anos": 2
+   },
+   "VI": {
+    "anos_semiaberto_primario": 10,
+    "anos_semiaberto_reincidente": 15
+   },
+   "VII": {
+    "fracao_primario": "1/6",
+    "fracao_reincidente": "1/5"
+   },
+   "VIII": {
+    "remanescente_max_anos_primario": 6,
+    "remanescente_max_anos_reincidente": 4
+   },
+   "XI": {
+    "pena_max_anos": 12,
+    "fracao_primario": "1/3",
+    "fracao_reincidente": "1/2",
+    "saidas_min": 5
+   },
+   "XII": {
+    "pena_max_anos": 12,
+    "fracao_primario_2024": "1/5",
+    "fracao_reincidente_2024": "1/4",
+    "fracao_primario_2025": "1/6",
+    "fracao_reincidente_2025": "1/5"
+   },
+   "XIII": {
+    "pena_max_anos": 12,
+    "fracao_primario": "1/5",
+    "fracao_reincidente": "1/4"
+   },
+   "XIV": {
+    "meses_cumpridos": 3
+   },
+   "art13_comutacao": {
+    "fracao_primario": "1/5",
+    "fracao_reincidente": "1/4",
+    "proporcao": "1/5",
+    "proporcao_par2": "2/3"
+   },
+   "par2_idade_minima": 60
+  },
+  "decreto_2022": {
+   "numero": "11.302/2022",
+   "publicacao": "23/12/2022",
+   "referencia": "25/12/2022",
+   "art5": "crime cuja pena privativa de liberdade máxima em abstrato não seja superior a 5 anos; em concurso, cada infração considerada individualmente (parágrafo único)",
+   "art4": "maiores de 70 anos com 1/3 da pena cumprido",
+   "art1": "saúde: paraplegia/tetraplegia/cegueira, doença grave permanente, doença terminal (laudo)",
+   "art7_exclusoes": "I hediondos/equiparados; II violência ou grave ameaça / violência doméstica; III Leis 9.455, 9.613, 11.340, 12.850, 13.260; IV CP 215, 216-A, 217-A, 218, 218-A, 218-B, 218-C; V CP 312, 316, 317, 333; VI Lei 11.343 art. 33 caput e §1º (exceto §4º), 34 e 36; VII CPM correspondentes; VIII ECA 240 a 244-B",
+   "art8": "não se estende a PRD, multa e sursis",
+   "art9": "cabe mesmo sem trânsito em julgado ou guia (salvo recurso da acusação após 2º grau)",
+   "stf": "ADI 7.330 (liminar 18/01/2023) suspendeu o trecho relativo a agentes de segurança; art. 5º mantido pelo STF em 2025 (RE 1.450.100) - conferir"
+  }
+ },
+ "jurisprudencia": [
+  {
+   "tema": "Prescricao executoria - termo inicial",
+   "fonte": "STF, ARE 848.107 (Tema 788), Pleno, j. 03/07/2023",
+   "tese": "O prazo para a prescricao da execucao da pena concretamente aplicada somente comeca a correr do dia em que a sentenca condenatoria transita em julgado para ambas as partes.",
+   "modulacao": "transito para a acusacao posterior a 12/11/2020"
+  },
+  {
+   "tema": "Acordao confirmatorio interrompe a prescricao",
+   "fonte": "STF, HC 176.473, Pleno, j. 27/04/2020",
+   "tese": "O acordao condenatorio sempre interrompe a prescricao, inclusive quando confirmatorio da sentenca."
+  },
+  {
+   "tema": "Progressao - reincidente generico hediondo",
+   "fonte": "STJ, REsp 1.910.240 e 1.918.338 (Tema 1084), j. 26/05/2021",
+   "tese": "Retroatividade do patamar de 40% (art. 112, V) a reincidentes nao especificos em hediondo sem morte."
+  },
+  {
+   "tema": "Progressao - reincidente generico hediondo com morte",
+   "fonte": "STJ, REsp 2.016.358 (Tema 1196), j. 22/05/2024",
+   "tese": "Lacuna: aplica-se 50% ao reincidente generico em hediondo com resultado morte."
+  },
+  {
+   "tema": "Progressao - 60% so para reincidente especifico",
+   "fonte": "STF, ARE 1.327.963 (Tema 1169), j. 16/09/2021",
+   "tese": "O percentual de 60% nao se aplica a reincidentes nao especificos."
+  },
+  {
+   "tema": "Progressao - percentuais distintos por condenacao",
+   "fonte": "STJ, Tema 1354",
+   "tese": "Percentuais distintos para cada condenacao na mesma execucao; retroatividade do mais benefico e ultratividade do anterior."
+  },
+  {
+   "tema": "Progressao - hediondo com morte e livramento",
+   "fonte": "STF, RE 1.464.013 (Tema 1319), j. 06/09/2024",
+   "tese": "Retroatividade do art. 112, VI, a (50%) sem a vedacao ao livramento condicional e a saida temporaria."
+  },
+  {
+   "tema": "Sumula 146 STF",
+   "fonte": "STF, Sumula 146",
+   "tese": "A prescricao da acao penal regula-se pela pena concretizada na sentenca, quando nao ha recurso da acusacao."
+  },
+  {
+   "tema": "Sumula 150 STF",
+   "fonte": "STF, Sumula 150",
+   "tese": "Prescreve a execucao no mesmo prazo de prescricao da acao."
+  },
+  {
+   "tema": "Data-base - unificação de penas",
+   "fonte": "STJ, REsp 1.753.509 e 1.753.512 (Tema 1006), 3ª Seção, j. 18/12/2018",
+   "tese": "A unificação de penas não enseja a alteração da data-base para concessão de novos benefícios executórios."
+  },
+  {
+   "tema": "Data-base - termo inicial da nova progressão",
+   "fonte": "STJ, REsp 1.973.589 e outros (Tema 1165), 3ª Seção, j. 14/08/2024",
+   "tese": "A decisão que defere a progressão é declaratória: o termo inicial para a nova progressão é a data em que preenchidos os requisitos objetivo e subjetivo, não a data da decisão."
+  },
+  {
+   "tema": "Extinção - multa inadimplida e hipossuficiência",
+   "fonte": "STJ, REsp 2.024.901 e 2.090.454 (Tema 931, revisão), 3ª Seção, j. 28/02/2024, DJe 01/03/2024",
+   "nivel": "repetitivo",
+   "tese": "O inadimplemento da pena de multa, após cumprida a pena privativa de liberdade ou restritiva de direitos, não obsta a extinção da punibilidade, ante a alegada hipossuficiência do condenado, salvo se diversamente entender o juiz competente, em decisão suficientemente motivada, que indique concretamente a possibilidade de pagamento da sanção pecuniária.",
+   "aplicacao": "Aba Extinção: multa pendente não impede pedido de extinção; o programa presume a hipossuficiência do assistido da Defensoria."
+  },
+  {
+   "tema": "Extinção - multa e ADI 7.032",
+   "fonte": "STF, ADI 7.032, Pleno, j. 25/03/2024",
+   "nivel": "vinculante",
+   "tese": "Constitucionalidade do art. 51 do CP: a multa mantém natureza penal e sua pendência obsta a extinção da punibilidade, salvo comprovada impossibilidade de pagamento, que o juízo da execução pode reconhecer a partir dos elementos dos autos.",
+   "aplicacao": "Fundamento complementar ao Tema 931: a impossibilidade econômica pode ser reconhecida pelos elementos dos autos (assistência pela Defensoria, ausência de bens, trabalho prisional)."
+  },
+  {
+   "tema": "Extinção - multa: divergência a registrar",
+   "fonte": "STJ, REsp 2.055.935 (5ª Turma), j. 09/2025",
+   "nivel": "orientativo",
+   "tese": "Julgado isolado exigiu comprovação concreta da hipossuficiência, considerando insuficiente a presunção decorrente da mera assistência pela Defensoria.",
+   "aplicacao": "Risco a antecipar na petição: instruir com elementos (declaração de hipossuficiência, ausência de bens, remuneração do trabalho prisional)."
+  },
+  {
+   "tema": "Indulto - multa: incapacidade econômica presumida (Defensoria)",
+   "fonte": "Decreto 12.338/2024, art. 12, § 2º, I; Decreto 12.790/2025, art. 12, § 2º, I",
+   "nivel": "norma",
+   "tese": "Para o indulto da pena de multa, a incapacidade econômica de quitá-la é presumida quando a pessoa é assistida pela Defensoria Pública.",
+   "aplicacao": "Aba Indulto: multa não é óbice e é indultável; o inciso XV do art. 9º dispensa a reparação do dano nas hipóteses do art. 12, § 2º (presunção para assistidos da Defensoria)."
+  },
+  {
+   "tema": "Indulto - inciso XV sem reparação do dano",
+   "fonte": "Decreto 12.338/2024 e 12.790/2025, art. 9º, XV c/c art. 12, § 2º",
+   "nivel": "norma",
+   "tese": "Indulto a condenados por crime contra o patrimônio sem violência ou grave ameaça que tenham reparado o dano, 'excetuada a necessidade de reparação do dano nas hipóteses previstas no art. 12, § 2º'.",
+   "aplicacao": "Assistido da Defensoria com crime patrimonial sem VGA em cumprimento em 25/12: XV marcado como POSSÍVEL (presunção de hipossuficiência), com nota para confirmar a inexistência de reparação exigível."
+  },
+  {
+   "tema": "Indulto - tráfico privilegiado",
+   "fonte": "STJ, REsp 2.125.150 e outros (Tema 1336), 3ª Seção, 2025",
+   "nivel": "repetitivo",
+   "tese": "A vedação do indulto ao tráfico (art. 33, caput e § 1º, da Lei 11.343/06) inclusive quanto à multa não alcança o tráfico privilegiado (§ 4º).",
+   "aplicacao": "Aba Indulto: art. 33, § 4º não é impeditivo do art. 1º."
+  },
+  {
+   "tema": "Indulto - tráfico privilegiado (STF)",
+   "fonte": "STF, RE 1.542.482 (Tema 1400), Pleno, 2025",
+   "nivel": "repercussao_geral",
+   "tese": "É constitucional a concessão de indulto natalino ao condenado por tráfico privilegiado.",
+   "aplicacao": "Reforça o Tema 1336."
+  },
+  {
+   "tema": "Tráfico privilegiado não é hediondo",
+   "fonte": "STF, PSV 125 (súmula vinculante aprovada em 26/09/2025); STF, HC 118.533, Pleno, j. 23/06/2016; STJ, Tema 600 (Súmula 512 cancelada)",
+   "nivel": "vinculante",
+   "tese": "O tráfico privilegiado (art. 33, § 4º, da Lei 11.343/06) não tem natureza hedionda.",
+   "aplicacao": "Progressão, livramento, indulto e comutação: art. 33, § 4º tratado como crime comum (LEP art. 112, § 5º)."
+  },
+  {
+   "tema": "Livramento - requisito subjetivo",
+   "fonte": "STJ, REsp 1.970.217 e outros (Tema 1161), 3ª Seção, j. 2023",
+   "nivel": "repetitivo",
+   "tese": "Para o livramento condicional, o bom comportamento (art. 83, III, a) é aferido em todo o histórico da execução, e a ausência de falta grave (alínea b) nos 12 meses anteriores.",
+   "aplicacao": "Aba Livramento: faltas graves fora dos 12 meses não bloqueiam o requisito objetivo, mas são exibidas como alerta subjetivo."
+  },
+  {
+   "tema": "Livramento - 12 meses sem falta grave",
+   "fonte": "STJ, REsp 2.046.020 e outros (Tema 1195), 3ª Seção, j. 2024",
+   "nivel": "repetitivo",
+   "tese": "O prazo de 12 meses do art. 83, III, b, do CP conta-se da data da falta (não ocorrência da falta), desde que instaurado o procedimento disciplinar.",
+   "aplicacao": "Contagem da falta grave para livramento: data do fato."
+  },
+  {
+   "tema": "Falta grave - interrupção só da progressão",
+   "fonte": "STJ, Súmulas 534 e 535",
+   "nivel": "sumula",
+   "tese": "A falta grave interrompe o prazo para a progressão (Súmula 534) e não interrompe os prazos para livramento condicional, indulto e comutação (Súmula 535).",
+   "aplicacao": "Data-base da progressão reinicia na falta (LEP art. 112, § 6º, sobre a pena remanescente); livramento e indulto não são reiniciados."
+  },
+  {
+   "tema": "Falta grave - fuga sem reinício da pena",
+   "fonte": "STJ, Súmula 441; STJ, REsp 1.364.192 (Tema 709), 3ª Seção, j. 12/11/2014",
+   "nivel": "repetitivo",
+   "tese": "A falta grave não interrompe o prazo para o livramento condicional (Súmula 441). A prática de falta grave interrompe a contagem para a progressão, reiniciando-se a partir da pena remanescente (Tema 709).",
+   "aplicacao": "Reinício da contagem da progressão sobre a pena remanescente."
+  },
+  {
+   "tema": "Falta grave - perda de dias remidos",
+   "fonte": "LEP, art. 127 (Lei 12.433/2011); STF, RE 638.239, Pleno, j. 22/09/2011 (cancelamento da SV 9)",
+   "nivel": "repercussao_geral",
+   "tese": "Em caso de falta grave o juiz pode revogar até 1/3 do tempo remido, recomeçando a contagem da data da infração; a Lei 12.433/2011 retroage por ser mais benéfica.",
+   "aplicacao": "Ficha disciplinar: alerta quando a perda de dias remidos superar 1/3 do saldo existente na data da falta."
+  },
+  {
+   "tema": "Remição - trabalho extramuros",
+   "fonte": "STJ, Súmula 562",
+   "nivel": "sumula",
+   "tese": "É possível a remição de parte do tempo de execução da pena quando o condenado, em regime fechado ou semiaberto, desempenha atividade laborativa, ainda que extramuros.",
+   "aplicacao": "Ficha disciplinar: períodos de trabalho externo geram remição (1 dia a cada 3 trabalhados - LEP art. 126, § 1º, II)."
+  },
+  {
+   "tema": "Livramento - reparação do dano (art. 83, IV)",
+   "fonte": "CP, art. 83, IV; STJ, AgRg no HC 799.167, 5ª Turma, j. 23/03/2023; STJ, AgRg no AgRg no AREsp 2.549.886, 5ª Turma, j. 18/02/2025",
+   "nivel": "orientativo",
+   "tese": "A reparação do dano é requisito do livramento 'salvo efetiva impossibilidade de fazê-lo'. Há julgados do STJ exigindo comprovação da insuficiência financeira e, isoladamente, o pagamento da multa.",
+   "aplicacao": "O programa não bloqueia o livramento por reparação do dano ou multa: presume-se a hipossuficiência do assistido (Tema 931 e art. 12, § 2º, I, dos decretos, por analogia) e a petição deve instruir a impossibilidade."
+  },
+  {
+   "tema": "Unificação e limite de 40 anos",
+   "fonte": "STF, Súmula 715",
+   "nivel": "sumula",
+   "tese": "A pena unificada para atender ao limite do art. 75 do CP não é considerada para a concessão de outros benefícios.",
+   "aplicacao": "Frações de progressão/livramento calculadas sobre a pena total, não sobre o teto do art. 75."
+  },
+  {
+   "tema": "Progressão antes do trânsito em julgado",
+   "fonte": "STF, Súmulas 716 e 717",
+   "nivel": "sumula",
+   "tese": "Admite-se a progressão de regime ou a aplicação imediata de regime menos severo antes do trânsito em julgado; a prisão especial não impede a progressão.",
+   "aplicacao": "Execução provisória: os marcos são calculados mesmo sem trânsito em julgado registrado (auditoria apenas informa a ausência)."
+  },
+  {
+   "tema": "Detração - custódia em outro processo",
+   "fonte": "CP, art. 42; STJ, Súmula 715 (por analogia); jurisprudência dominante",
+   "nivel": "orientativo",
+   "tese": "A custódia provisória em outro processo, por fato anterior, pode ser detraída; a custódia por fato posterior não.",
+   "aplicacao": "Prescrição executória: custódia provisória de outro processo não interrompe a PPE; regra da detração registrada como alerta de auditoria."
+  }
+ ],
+ "reincidencia": {
+  "art63": "novo crime após o trânsito em julgado de condenação anterior",
+  "art64_I": "não prevalece se decorridos mais de 5 anos entre cumprimento/extinção da pena anterior e a infração posterior, computado o período de prova de sursis/livramento não revogado",
+  "art42_detracao": "computa-se na pena o tempo de prisão provisória"
+ },
+ "pena_maxima_abstrata": {
+  "_nota": "Pena máxima em abstrato (anos; 0.5 = 6 meses) usada quando o RSPE corta o texto do tipo penal. Chave: 'lei:artigo' ou 'lei:artigo §X'. Só o Decreto 11.302/2022 (art. 5º) usa esta tabela. Edite/complete conforme necessário.",
+  "2848:121": 20,
+  "2848:121 §2": 30,
+  "2848:121 §3": 3,
+  "2848:129": 1,
+  "2848:129 §1": 5,
+  "2848:129 §2": 8,
+  "2848:129 §3": 12,
+  "2848:129 §6": 1,
+  "2848:129 §9": 3,
+  "2848:147": 0.5,
+  "2848:148": 3,
+  "2848:150": 0.25,
+  "2848:155": 4,
+  "2848:155 §4": 8,
+  "2848:155 §4-A": 10,
+  "2848:155 §5": 8,
+  "2848:155 §6": 5,
+  "2848:155 §7": 10,
+  "2848:157": 10,
+  "2848:157 §2": 15,
+  "2848:157 §2-A": 16.67,
+  "2848:157 §3": 30,
+  "2848:158": 10,
+  "2848:163": 0.5,
+  "2848:163 §único": 3,
+  "2848:168": 4,
+  "2848:171": 5,
+  "2848:171 §2-A": 8,
+  "2848:180": 4,
+  "2848:180 §1": 8,
+  "2848:180 §3": 1,
+  "2848:213": 10,
+  "2848:215": 6,
+  "2848:216-A": 2,
+  "2848:217-A": 15,
+  "2848:288": 3,
+  "2848:288-A": 8,
+  "2848:297": 6,
+  "2848:299": 5,
+  "2848:304": 6,
+  "2848:307": 1,
+  "2848:311": 8,
+  "2848:312": 12,
+  "2848:317": 12,
+  "2848:329": 2,
+  "2848:330": 0.5,
+  "2848:331": 2,
+  "2848:339": 8,
+  "2848:340": 0.5,
+  "2848:342": 4,
+  "2848:344": 4,
+  "2848:345": 1,
+  "2848:348": 0.5,
+  "2848:349": 1,
+  "11343:33": 15,
+  "11343:33 §3": 1,
+  "11343:34": 10,
+  "11343:35": 10,
+  "10826:12": 3,
+  "10826:14": 4,
+  "10826:16": 6,
+  "9503:302": 4,
+  "9503:303": 2,
+  "9503:306": 3,
+  "9503:309": 1,
+  "9503:310": 1,
+  "11340:24-A": 2,
+  "8069:244-B": 5,
+  "12850:2": 8
+ },
+ "presuncoes": {
+  "hipossuficiencia": {
+   "regra": "Assistido da Defensoria Pública: presume-se a incapacidade econômica em qualquer hipótese.",
+   "efeitos": [
+    "multa pendente não obsta a extinção da punibilidade (STJ Tema 931; STF ADI 7.032)",
+    "multa é indultável e não é óbice ao indulto (Decretos 12.338/2024 e 12.790/2025, art. 12, § 2º, I)",
+    "inciso XV do art. 9º dispensa a reparação do dano (art. 12, § 2º)",
+    "reparação do dano (CP art. 83, IV) não bloqueia o livramento - efetiva impossibilidade presumida, a instruir na petição"
+   ],
+   "fonte": "LEP arts. 81-A e 81-B; Lei Complementar 80/94"
+  }
+ }
+}
