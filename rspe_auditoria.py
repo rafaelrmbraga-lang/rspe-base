@@ -18,6 +18,12 @@ import rspe_regras as rg
 import rspe_prescricao as rp
 
 
+def _descricao_tipo(c):
+    """Descrição do tipo sem o rótulo do parágrafo e sem a pena cominada."""
+    t = re.sub(r"^\s*(CAPUT|§\s*[\dº°A-Za-z-]+)\s*:\s*", "", c.get("tipo_penal") or "-")
+    return re.split(r",\s*(Reclusão|Detenção|Prisão simples)\s*:", t)[0].strip()
+
+
 def _item(nivel, titulo, detalhe, fundamento=""):
     return {"nivel": nivel, "titulo": titulo, "detalhe": detalhe, "fundamento": fundamento}
 
@@ -273,8 +279,17 @@ def auditar(r, hoje=None):
         hed_seeu = _hediondo_seeu(c)
         hed_lei, obs_h = _e_hediondo_lei(c)
         # dados ausentes
+        if art and c.get("artigo_inferido"):
+            if c.get("lei_do_tempo"):
+                itens.append(_item("verificar", "%s: tipo reconhecido pela descrição, conforme a lei da data do fato" % nome,
+                                   "O SEEU não registrou o artigo; a descrição \u201c%s\u201d é a do tipo atual. %s." % (_descricao_tipo(c), c["lei_do_tempo"][0].upper() + c["lei_do_tempo"][1:]),
+                                   "CF, art. 5º, XL; CP, arts. 1º e 2º."))
+            else:
+                itens.append(_item("info", "%s: artigo reconhecido pela descrição do tipo" % nome,
+                                   "O SEEU não registrou o artigo; a descrição \u201c%s\u201d corresponde a este tipo penal%s. Hediondez, VGA e frações foram conferidas com ele." % (
+                                       _descricao_tipo(c), (", vigente na data do fato (%s)" % c.get("data_infracao")) if c.get("data_infracao") else ""), ""))
         if not art:
-            itens.append(_item("info", "%s: artigo não informado" % nome, "O SEEU não registrou o artigo; a descrição do tipo é: %s" % (c.get("tipo_penal") or "-")[:120], "Sem o artigo, hediondez, VGA e frações ficam sem conferência."))
+            itens.append(_item("info", "%s: artigo não informado" % nome, "O SEEU não registrou o artigo e a descrição do tipo não foi reconhecida: \u201c%s\u201d." % _descricao_tipo(c), "Sem o artigo, hediondez, VGA e frações ficam sem conferência."))
         if not fato:
             itens.append(_item("info", "%s: data do fato ausente" % nome, "Sem a data do fato não se aplica a lei do tempo (frações de progressão, art. 115 CP).", "CF, art. 5º, XL; STJ Tema 1354."))
         if not c.get("transito_processo") and not c.get("transito_mp"):
@@ -298,7 +313,8 @@ def auditar(r, hoje=None):
             itens.append(_item("info", "%s: hediondez depende do parágrafo/inciso" % nome, "Hediondo apenas se: %s. SEEU aplicou %s." % (obs_h, "fração de hediondo" if hed_seeu else "fração comum"), "Lei 8.072/90, art. 1º."))
         # VGA
         esperado = rg.vga_esperado(art) if art else None
-        if esperado and c.get("vga") and esperado != c.get("vga"):
+        # só a marcação que prejudica (VGA = S onde o tipo não a exige); VGA = N a mais é favorável e não se aponta
+        if esperado and c.get("vga") == "S" and esperado != c.get("vga"):
             itens.append(_item("alerta" if c.get("vga") == "S" else "info", "%s: marcação de violência/grave ameaça diverge do tipo" % nome,
                                "RSPE: VGA = %s; pelo tipo penal esperava-se %s. Reflete nas frações de progressão e no indulto (arts. 9º, I a III dos decretos)." % (c.get("vga"), esperado),
                                "LEP, art. 112, I e II; Decretos 12.338/2024 e 12.790/2025."))

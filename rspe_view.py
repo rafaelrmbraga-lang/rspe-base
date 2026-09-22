@@ -33,7 +33,7 @@ ROTULO = {
     "lapso": {"vencido": "Vencido · verificar", "laranja": "Até 30 dias", "amarelo": "Até 60 dias", "verde": "Até 90 dias", "cinza": "Não se aplica / não iniciou / interrompida", "azul": "Extinta"},
     "indulto": {"vermelho": "Crime impeditivo", "verde": "Possível", "amarelo": "A verificar", "cinza": "Não atinge", "azul": "Extinta"},
     "presc": {"vermelho": "Prescrição aparente", "amarelo": "Prescrição iminente", "": "Não prescrita", "cinza": "Sem dados", "azul": "Extinta"},
-    "fd": {"vermelho": "Remição pendente", "amarelo": "Trabalho ou estudo a requerer", "verde": "Em ordem", "cinza": "Sem ficha"},
+    "fd": {"vermelho": "Remição não homologada", "amarelo": "Trabalho sem atestado ou estudo a requerer", "verde": "Em ordem", "cinza": "Sem ficha"},
     "aud": {"vermelho": "Guia demanda atenção", "amarelo": "Pontos a verificar", "verde": "Sem inconsistências", "azul": "Extinta"},
     "ext": {"vermelho": "Extinção cabível", "laranja": "Término em até 30 dias", "amarelo": "Até 60 dias / a verificar", "verde": "Término em até 90 dias", "cinza": "Sem previsão / interrompida", "azul": "Extinta (registrada)"},
 }
@@ -46,8 +46,8 @@ def _dias(m, k):
 FILTROS = {
     "fd": [
         ("todas", "Todas"),
-        ("impeditivo", "Remição pendente"),
-        ("verificar", "Trabalho ou estudo a requerer"),
+        ("impeditivo", "Remição não homologada"),
+        ("verificar", "Trabalho sem atestado ou estudo a requerer"),
         ("ok", "Em ordem"),
         ("nao", "Sem ficha"),
     ],

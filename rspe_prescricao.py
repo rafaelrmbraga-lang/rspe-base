@@ -161,6 +161,7 @@ def analisar(r, hoje=None):
     pena_cumprida_toda = pena_total and cumprido_hoje >= pena_total
 
     linhas = []
+    ativos = [c for c in r.get("_crimes", []) if not c.get("extinto", "").upper().startswith("S")]
     for c in r.get("_crimes", []):
         if c.get("extinto", "").upper().startswith("S"):
             continue  # só crimes ativos
@@ -329,8 +330,13 @@ def analisar(r, hoje=None):
                 cumprido_g0 = rs.dias_cumpridos_ate(periodos_exec, remicoes, g0)
                 if cumprido_g0 > 0:
                     rem = max(0, pena - cumprido_g0) if not pena_total or pena_total < pena else max(0, min(pena, pena_total - cumprido_g0))
+                    fonte_rem = ""
+                    # interrupção em aberto e um só crime ativo: vale a pena remanescente impressa pelo SEEU
+                    rem_seeu = rs.pena_para_dias(r.get("pena_remanescente"))
+                    if g1 >= hoje and rem_seeu and len(ativos) == 1:
+                        rem, fonte_rem = rem_seeu, " (pena remanescente do RSPE)"
                     meses = Fraction(prazo_base_anos(max(rem, 1)) * 12) * fator
-                    base_txt = "pena restante %s em %s, contada da última interrupção do cumprimento (arts. 112, II, 113 e 117, V)" % (rs.dias_para_pena(rem), rs.fmt(g0))
+                    base_txt = "pena restante %s%s em %s, contada da última interrupção do cumprimento (arts. 112, II, 113 e 117, V)" % (rs.dias_para_pena(rem), fonte_rem, rs.fmt(g0))
                 else:
                     meses = ppe_meses
                     base_txt = "pena integral %s (nunca iniciou o cumprimento)" % L["pena"]

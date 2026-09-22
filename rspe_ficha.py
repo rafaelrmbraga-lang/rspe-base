@@ -340,8 +340,8 @@ def confrontar(r, f, hoje=None):
                       "fundamento": "LEP, art. 126, § 1º, I (1 dia a cada 12 h de frequência, em no mínimo 3 dias), e § 5º (+1/3 na conclusão do ensino)."})
     for a in res["atestados_parciais"]:
         itens.append({"nivel": "verificar",
-                      "titulo": "Atestado nº %s (%s) homologado em parte: faltam %s dias" % ((a["numero"] or "s/n").split("/ST")[0], a["data"], _fmtn(a["_parcial"])),
-                      "detalhe": "Atestado de %s dias remidos; a remição correspondente no RSPE é de %s dias. Conferir a decisão e, se for o caso, requerer a diferença." % (
+                      "titulo": "Remição não homologada: %s dias do atestado nº %s (%s)" % (_fmtn(a["_parcial"]), (a["numero"] or "s/n").split("/ST")[0], a["data"]),
+                      "detalhe": "O atestado soma %s dias remidos, mas a remição correspondente no RSPE é de %s dias. Requerer a diferença (ou conferir na decisão por que não foi homologada)." % (
                           _fmtn(a["dias_remidos"]), " + ".join(_fmtn(i["dias"]) for i in a["_inc"])),
                       "fundamento": "LEP, art. 126."})
     for it in itens:
@@ -679,10 +679,11 @@ def quadro_trabalho(r, f, hoje=None):
             L["rspe"] = "; ".join(inc_txt(x) or ("não localizada" if x["_status"] == "pendente" else "—") for x in xs)
             pend = [x for x in xs if x["_status"] == "pendente"]
             parc = [x for x in xs if x["_status"] == "parcial"]
-            if pend:
-                L["sit"], L["cor"] = "Requerer remição (%s dias)" % _fmtn(sum(x["dias_remidos"] for x in pend)), "vermelho"
-            elif parc:
-                L["sit"], L["cor"] = "Homologado em parte: faltam %s dias" % _fmtn(sum(x["_parcial"] for x in parc)), "amarelo"
+            if pend or parc:
+                L["sit"] = "Remição não homologada: " + "; ".join(
+                    "%s dias do atestado nº %s" % (_fmtn(x["dias_remidos"] if x["_status"] == "pendente" else x["_parcial"]), (x["numero"] or "s/n").split("/ST")[0])
+                    for x in pend + parc)
+                L["cor"] = "vermelho"
             elif all(x["_status"] == "anterior" for x in xs):
                 L["sit"], L["cor"] = "Anterior a esta execução", "cinza"
             else:
@@ -715,7 +716,7 @@ def quadro_trabalho(r, f, hoje=None):
             continue
         per = ("%s a %s" % (a["periodo_inicio"], a["periodo_fim"])) if a.get("periodo_inicio") else "período não informado"
         st = {"homologado": ("Homologado", "verde"), "anterior": ("Anterior a esta execução", "cinza"),
-              "parcial": ("Homologado em parte: faltam %s dias" % _fmtn(a.get("_parcial") or 0), "amarelo")}.get(
+              "parcial": ("Remição não homologada: %s dias do atestado nº %s" % (_fmtn(a.get("_parcial") or 0), (a["numero"] or "s/n").split("/ST")[0]), "vermelho")}.get(
             a["_status"], ("Requerer remição (%s dias)" % _fmtn(a["dias_remidos"]), "vermelho"))
         linhas.append({"emp": a.get("empresa") or "emprego não identificado na ficha", "per": per, "dias": a["dias_trabalhados"], "_ini": _d(a.get("periodo_inicio") or "") or _dp(a["data"]),
                        "at": at_txt(a), "rspe": inc_txt(a) or "—", "sit": st[0], "cor": st[1]})
@@ -824,20 +825,23 @@ def comparativo(r, f, hoje=None):
     out["fd_remidos"] = "%s / %s" % (_fmtn(ficha_total), _fmtn(res["homologados"])) + ((" · +%s" % _fmtn(res["pendentes"])) if res["pendentes"] else "")
     out["fd_estudo"] = ("≈ %d h (≈ %d dias)" % (res["estudo_horas_pend"], res["estudo_dias_pend"])) if res["estudo_horas_pend"] >= 12 else ""
     out["fd_atestar"] = ("≈ %d dias (≈ %d remidos)" % (res["dias_a_atestar"], res["dias_a_atestar"] // 3)) if res["dias_a_atestar"] else ""
-    if res["pendentes"]:
-        cor, sit = "vermelho", "Remição pendente (%s dias)" % _fmtn(res["pendentes"])
-    elif res["parciais"]:
-        cor, sit = "amarelo", "Remição homologada em parte (faltam %s dias)" % _fmtn(res["parciais"])
-    elif res["dias_a_atestar"]:
-        cor, sit = "amarelo", "Trabalho a atestar (≈ %d dias)" % res["dias_a_atestar"]
-    elif res["estudo_horas_pend"] >= 12:
-        cor, sit = "amarelo", "Estudo a requerer (≈ %d dias)" % res["estudo_dias_pend"]
-    elif res["baixas"]:
-        cor, sit = "amarelo", "Trabalho sem início registrado"
+    # situação: diz o que falta, sem rodeio (remição não homologada, trabalho sem atestado, estudo, baixa sem início)
+    partes = []
+    nh = (res["pendentes"] or 0) + (res["parciais"] or 0)
+    if nh:
+        partes.append("Remição não homologada (%s dias)" % _fmtn(nh))
+    if res["dias_a_atestar"]:
+        partes.append("trabalho sem atestado (≈ %d dias)" % res["dias_a_atestar"])
+    if res["estudo_horas_pend"] >= 12:
+        partes.append("estudo a requerer (≈ %d dias)" % res["estudo_dias_pend"])
+    if res["baixas"] and not partes:
+        partes.append("trabalho sem início registrado")
+    if partes:
+        cor = "vermelho" if nh else "amarelo"
+        sit = "; ".join(partes)
+        sit = sit[0].upper() + sit[1:]
     else:
         cor, sit = "verde", "Em ordem"
-    if res["dias_a_atestar"] and res["estudo_horas_pend"] >= 12 and cor == "amarelo":
-        sit = "Trabalho e estudo a requerer"
     faltas = f.get("faltas", [])
     out["fd_faltas"] = ("%d (%s)" % (len(faltas), ", ".join(x["situacao"] for x in faltas))) if faltas else "nenhuma"
     out["fd_resumo_exec"] = "trabalho: %s dias remidos atestados · estudo: %s dias remidos%s · homologados no RSPE: %s%s%s" % (

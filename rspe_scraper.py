@@ -311,9 +311,101 @@ def parse_crimes(trecho):
             c["fracao_livramento"] = campo(lei, "Fração adotada no cálculo para livramento condicional")
             c["extinto"] = campo(lei, "Extinto")[:3]
             c["suspenso"] = re.sub(r"\s*Data de suspens.*", "", campo(lei, "Suspenso"))[:3]
+            inferir_artigo(c)
             c["hediondo_ou_equiparado"] = "S" if e_hediondo(c) else "N"
             crimes.append(c)
     return crimes
+
+
+# Artigo reconhecido pela descrição do tipo, quando o SEEU grava "Não informado".
+# (lei, regex sobre a descrição sem acentos e em maiúsculas, artigo, nome). A ordem importa: o mais específico primeiro.
+TIPOS_POR_DESCRICAO = [
+    ("2848", r"CONJUNCAO CARNAL OU (PRATICAR|A PRATICA DE) OUTRO ATO LIBIDINOSO COM MENOR DE 14", "217-A", "Estupro de vulnerável"),
+    ("2848", r"CONSTRANGER ALGUEM, MEDIANTE VIOLENCIA OU GRAVE AMEACA, A TER CONJUNCAO CARNAL", "213", "Estupro"),
+    ("2848", r"CONSTRANGER MULHER A CONJUNCAO CARNAL", "213", "Estupro"),
+    ("2848", r"ATO LIBIDINOSO DIVERSO DA CONJUNCAO CARNAL", "214", "Atentado violento ao pudor"),
+    ("2848", r"PRATICAR CONTRA ALGUEM E SEM A SUA ANUENCIA ATO LIBIDINOSO", "215-A", "Importunação sexual"),
+    ("2848", r"MATAR ALGUEM", "121", "Homicídio"),
+    ("2848", r"SEQUESTRAR PESSOA COM O FIM DE OBTER", "159", "Extorsão mediante sequestro"),
+    ("2848", r"CONSTRANGER ALGUEM, MEDIANTE VIOLENCIA OU GRAVE AMEACA, E COM O INTUITO DE OBTER", "158", "Extorsão"),
+    ("2848", r"SUBTRAIR COISA MOVEL ALHEIA, PARA SI OU PARA OUTREM, MEDIANTE GRAVE AMEACA OU VIOLENCIA", "157", "Roubo"),
+    ("2848", r"SUBTRAIR, PARA SI OU PARA OUTREM, COISA ALHEIA MOVEL", "155", "Furto"),
+    ("2848", r"COISA QUE SABE SER PRODUTO DE CRIME", "180", "Receptação"),
+    ("2848", r"OBTER, PARA SI OU PARA OUTREM, VANTAGEM ILICITA", "171", "Estelionato"),
+    ("2848", r"APROPRIAR-SE DE COISA ALHEIA MOVEL", "168", "Apropriação indébita"),
+    ("2848", r"OFENDER A INTEGRIDADE CORPORAL OU A SAUDE|^(CAPUT: )?LESAO CORPORAL", "129", "Lesão corporal"),
+    ("2848", r"AMEACAR ALGUEM", "147", "Ameaça"),
+    ("2848", r"PRIVAR ALGUEM DE SUA LIBERDADE", "148", "Sequestro e cárcere privado"),
+    ("2848", r"ENTRAR OU PERMANECER, CLANDESTINA OU ASTUCIOSAMENTE", "150", "Violação de domicílio"),
+    ("2848", r"DESTRUIR, INUTILIZAR OU DETERIORAR COISA ALHEIA", "163", "Dano"),
+    ("2848", r"DESTRUIR, SUBTRAIR OU OCULTAR CADAVER", "211", "Destruição, subtração ou ocultação de cadáver"),
+    ("2848", r"ASSOCIAREM-SE (3|TRES) OU MAIS PESSOAS", "288", "Associação criminosa"),
+    ("2848", r"OPOR-SE A EXECUCAO DE ATO LEGAL", "329", "Resistência"),
+    ("2848", r"DESOBEDECER A ORDEM LEGAL", "330", "Desobediência"),
+    ("2848", r"DESACATAR FUNCIONARIO", "331", "Desacato"),
+    ("11340", r"DESCUMPRIR DECISAO JUDICIAL QUE DEFERE MEDIDAS PROTETIVAS", "24-A", "Descumprimento de medida protetiva"),
+    ("11343", r"ASSOCIAREM-SE DUAS OU MAIS PESSOAS", "35", "Associação para o tráfico"),
+    ("11343", r"PARA CONSUMO PESSOAL", "28", "Posse de droga para consumo pessoal"),
+    ("11343", r"IMPORTAR, EXPORTAR, REMETER, PREPARAR, PRODUZIR|NOS DELITOS DEFINIDOS NO CAPUT E NO § 1", "33", "Tráfico de drogas"),
+    ("10826", r"USO (PROIBIDO|RESTRITO)", "16", "Posse ou porte ilegal de arma de fogo de uso restrito"),
+    ("10826", r"DISPARAR ARMA DE FOGO", "15", "Disparo de arma de fogo"),
+    ("10826", r"POSSUIR OU MANTER SOB SUA GUARDA ARMA DE FOGO", "12", "Posse irregular de arma de fogo de uso permitido"),
+    ("10826", r"PORTAR, DETER, ADQUIRIR, FORNECER", "14", "Porte ilegal de arma de fogo de uso permitido"),
+    ("9503", r"CAPACIDADE PSICOMOTORA ALTERADA|SOB A INFLUENCIA DE ALCOOL", "306", "Embriaguez ao volante"),
+    ("9503", r"HOMICIDIO CULPOSO NA DIRECAO", "302", "Homicídio culposo na direção de veículo"),
+    ("9503", r"LESAO CORPORAL CULPOSA NA DIRECAO", "303", "Lesão corporal culposa na direção de veículo"),
+    ("9503", r"SEM A DEVIDA PERMISSAO PARA DIRIGIR OU HABILITACAO", "309", "Direção sem habilitação"),
+]
+
+
+def inferir_artigo(c):
+    """SEEU sem artigo ("Não informado"): reconhece o tipo pela descrição da pena. Marca c["artigo_inferido"]."""
+    if num_art(c.get("artigo") or ""):
+        return
+    desc = _sem_acento(c.get("tipo_penal") or "").upper()
+    desc = re.sub(r"^\s*(CAPUT|§\s*[\dº°A-Z-]+)\s*:\s*", "", desc)
+    desc = re.sub(r"^\((ATE|APOS)[^)]*\)\s*", "", desc)
+    lei = num_lei(c.get("lei") or "") or "2848"
+    fato = to_date(c.get("data_infracao") or "")
+    for l, rx, art, nome in TIPOS_POR_DESCRICAO:
+        if l == lei and re.search(rx, desc):
+            c["artigo_inferido"] = "reconhecido pela descrição do tipo (o SEEU não informou o artigo)"
+            lt = LEI_DO_TEMPO.get((l, art))
+            if lt and fato:
+                vig, lei_txt, antes, nota_antes, depois, nota_depois = lt
+                if fato < vig and antes is not None:
+                    art, nome = antes
+                    c["lei_do_tempo"] = "fato de %s, anterior à %s (vigência %s): %s" % (fmt(fato), lei_txt, fmt(vig), nota_antes)
+                elif fato < vig:
+                    c["lei_do_tempo"] = "fato de %s, anterior à %s (vigência %s): %s" % (fmt(fato), lei_txt, fmt(vig), nota_antes)
+                elif fato >= vig and depois is not None:
+                    art, nome = depois
+                    c["lei_do_tempo"] = "fato de %s, posterior à %s (vigência %s): %s" % (fmt(fato), lei_txt, fmt(vig), nota_depois)
+            elif lt and not fato:
+                c["lei_do_tempo"] = "sem data do fato: o tipo depende da %s (vigência %s) - verificar na ação penal" % (lt[1], fmt(lt[0]))
+            c["artigo"] = "ART %s: %s" % (art, nome)
+            return
+
+
+# Tipo reconhecido pela descrição x lei da data do fato.
+# (lei, art reconhecido): (vigência, lei, (art, nome) se o fato for anterior | None, nota se anterior,
+#                          (art, nome) se o fato for posterior | None, nota se posterior)
+LEI_DO_TEMPO = {
+    ("2848", "217-A"): (date(2009, 8, 10), "Lei 12.015/2009", ("213", "Estupro (ou art. 214) c/c art. 224, a - violência presumida"),
+                        "à época, art. 213 (conjunção carnal) ou art. 214 (outro ato libidinoso) c/c art. 224, a, do CP; conferir na sentença qual foi aplicado e a pena cominada (6 a 10 anos)",
+                        None, ""),
+    ("2848", "213"): (date(2009, 8, 10), "Lei 12.015/2009", None,
+                      "à época, o art. 213 abrangia só a conjunção carnal; outro ato libidinoso era o art. 214 - conferir na sentença",
+                      None, ""),
+    ("2848", "214"): (date(2009, 8, 10), "Lei 12.015/2009", None, "",
+                      ("213", "Estupro"), "o art. 214 foi revogado e a conduta passou ao art. 213 (continuidade normativa)"),
+    ("2848", "215-A"): (date(2018, 9, 25), "Lei 13.718/2018", None,
+                        "o tipo não existia na data do fato (irretroatividade - CF, art. 5º, XL): verificar a capitulação na sentença", None, ""),
+    ("11340", "24-A"): (date(2018, 4, 4), "Lei 13.641/2018", None,
+                        "o descumprimento de medida protetiva não era crime na data do fato (STJ considerava atípico): verificar", None, ""),
+    ("2848", "288"): (date(2013, 9, 19), "Lei 12.850/2013", None,
+                      "à época, 'quadrilha ou bando' (mais de três pessoas, pena de 1 a 3 anos)", None, ""),
+}
 
 
 # ------------------------- triagem de vedação a indulto -------------------- #

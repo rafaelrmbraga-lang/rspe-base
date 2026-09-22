@@ -1,4 +1,4 @@
-RSPE BASE - SEEU  v6.10.5 (programa em abas)
+RSPE BASE - SEEU  v6.10.7 (programa em abas)
 =========================================
 
 O QUE FAZ
@@ -211,6 +211,29 @@ PRESUNÇÃO DE HIPOSSUFICIÊNCIA (Defensoria)
   do art. 9º e sem bloqueio do livramento (CP, art. 83, IV). Tráfico
   privilegiado não é hediondo nem impeditivo (STF PSV 125, Tema 1400; STJ
   Tema 1336). Detalhes e fontes: "Criterios_de_analise_por_beneficio.pdf".
+
+v6.10.7
+  - Artigo reconhecido pela descrição respeita a lei da data do fato:
+    estupro de vulnerável com fato anterior à Lei 12.015/2009 (10/08/2009)
+    = arts. 213/214 c/c 224, a; art. 214 com fato posterior = art. 213;
+    215-A (Lei 13.718/2018), 24-A da Lei 11.340 (Lei 13.641/2018) e 288
+    (Lei 12.850/2013) com fato anterior à lei são apontados na Auditoria.
+    Sem data do fato: "verificar na ação penal".
+
+v6.10.6
+  - Prescrição: o detalhe da linha passa a mostrar também a prescrição
+    iminente, com o cálculo (termo, pena remanescente do RSPE, prazo e o
+    que conferir antes de requerer).
+  - Crime sem artigo no RSPE ("Não informado"): reconhecido pela descrição
+    do tipo (CP, Lei de Drogas, Estatuto do Desarmamento, CTB, Maria da
+    Penha). A Auditoria informa que o artigo foi reconhecido assim.
+  - Ficha disciplinar: sai "homologado em parte". A situação diz o que
+    falta: "Remição não homologada (N dias)" e "trabalho sem atestado
+    (≈ N dias)"; cada linha cita o nº do atestado.
+  - Auditoria: marcação de VGA = N em tipo violento não é mais apontada
+    (é favorável ao apenado).
+  - Cores: a linha cinza ("sem dados", "sem ficha") ficou mais escura que
+    o fundo da área expandida.
 
 v6.10.5
   - Livramento: regressão (inclusive cautelar) concedida depois do

@@ -31,7 +31,7 @@ import rspe_regras as rg
 import rspe_relatorio as rrel
 
 APP = "RSPE Base"
-VERSAO = "6.10.5"
+VERSAO = "6.10.7"
 
 
 def pasta_app():
@@ -122,7 +122,11 @@ daquele trecho não é calculada e a Auditoria aponta "verificar na ação penal
 condicional deferido em ...", o assistido é tratado como em livramento, ainda que o "Regime Atual" traga o regime anterior, salvo se
 houver regressão (inclusive cautelar), suspensão ou revogação posterior: aí vale o regime do RSPE e a Auditoria pede a conferência do
 desfecho (suspensão antes do fim do período de prova, revogação, homologação da falta). Prescrição executória correndo aparece como
-"iminente" quando faltarem até 180 dias. A
+"iminente" quando faltarem até 180 dias, com o cálculo no detalhe. Sem artigo no RSPE ("Não informado"), o crime é
+reconhecido pela descrição do tipo (ex.: "conjunção carnal ... com menor de 14 anos" = art. 217-A do CP), conforme a lei da data do
+fato: antes da Lei 12.015/2009 (10/08/2009), arts. 213/214 c/c 224, a; o art. 214 posterior a ela vira art. 213; tipos criados depois
+do fato (215-A, 24-A da Lei Maria da Penha) são apontados na Auditoria. Na Ficha disciplinar,
+a situação diz o que falta: remição não homologada (atestado sem remição, ou remição menor que o atestado) e trabalho sem atestado. A
 data-base é conferida com a última prisão, progressão/regressão ou falta grave homologada; sem esse evento no RSPE, a Auditoria
 aponta a inconsistência (e, se coincidir com a soma/unificação das penas, o Tema 1006 do STJ).
 <h4>Relatórios em PDF</h4>
