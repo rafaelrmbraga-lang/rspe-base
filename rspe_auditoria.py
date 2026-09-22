@@ -476,7 +476,7 @@ def auditar(r, hoje=None):
                                "STJ, Tema 1006 (REsp 1.753.509); LEP, art. 112."))
         else:
             ant = sorted([m for m in marcos if m[0] <= db_seeu], key=lambda m: m[0])
-            itens.append(_item("alerta" if ant else "verificar", "Inconsistência da data-base (%s): sem prisão, alteração de regime ou falta grave homologada nessa data" % rs.fmt(db_seeu),
+            itens.append(_item("verificar", "Inconsistência da data-base (%s): sem prisão, alteração de regime ou falta grave homologada nessa data" % rs.fmt(db_seeu),
                                "A data-base é a da última prisão, da última progressão/regressão ou da falta grave homologada, e nenhum desses eventos consta no RSPE em %s. "
                                "Último evento anterior no RSPE: %s. Data-base posterior ao último evento atrasa a progressão: verificar no processo a origem "
                                "(ex.: falta ainda não homologada, que não pode mover a data-base)." % (

@@ -31,7 +31,7 @@ import rspe_regras as rg
 import rspe_relatorio as rrel
 
 APP = "RSPE Base"
-VERSAO = "6.12.2"
+VERSAO = "6.13.0"
 
 
 def pasta_app():
@@ -138,6 +138,8 @@ prisão e o da soltura, como o SEEU. A
 data-base é conferida com a última prisão, progressão/regressão ou falta grave homologada; sem esse evento no RSPE, a Auditoria
 aponta a inconsistência (e, se coincidir com a soma/unificação das penas, o Tema 1006 do STJ).
 <h4>Telas e cópia para a petição</h4>
+Na Prescrição, o seletor ao lado do filtro escolhe a pretensão (executória ou punitiva): a tela mostra uma de cada vez.
+No Indulto/Comutação, o filtro escolhe o benefício (ex.: "Indulto 2024 · Sim", "Comutação 2025 · Verificar").
 As tabelas mostram só o essencial: data do SEEU ou "—" (sem data por não iniciar o cumprimento, interrupção, regime aberto
 etc.); indulto e comutação como Sim, Não ou Verificar; prescrição como Não configurada, Não prescrita, Iminente ou Aparente.
 O motivo e o cálculo ficam na ficha do assistido (clique no nome). Condenação por fato posterior à data do decreto na mesma

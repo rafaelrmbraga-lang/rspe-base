@@ -33,6 +33,7 @@ ROTULO = {
     "lapso": {"vencido": "Vencido · verificar", "laranja": "Até 30 dias", "amarelo": "Até 60 dias", "verde": "Até 90 dias", "cinza": "Não se aplica / não iniciou / interrompida", "azul": "Extinta"},
     "indulto": {"vermelho": "Crime impeditivo", "verde": "Possível", "amarelo": "A verificar", "cinza": "Não atinge", "azul": "Extinta"},
     "presc": {"vermelho": "Prescrição aparente", "amarelo": "Prescrição iminente", "": "Não prescrita", "cinza": "Sem dados", "azul": "Extinta"},
+    "presc_pp": {"vermelho": "Prescrição aparente", "": "Não configurada", "cinza": "Sem dados", "azul": "Extinta"},
     "fd": {"vermelho": "Remição a requerer", "amarelo": "Conferir remição / sem atestado / estudo", "verde": "Em ordem", "cinza": "Sem ficha"},
     "aud": {"vermelho": "Guia demanda atenção", "amarelo": "Pontos a verificar", "verde": "Sem inconsistências", "azul": "Extinta"},
     "ext": {"vermelho": "Extinção cabível", "laranja": "Término em até 30 dias", "amarelo": "Até 60 dias / a verificar", "verde": "Término em até 90 dias", "cinza": "Sem previsão / interrompida", "azul": "Extinta (registrada)"},
@@ -63,10 +64,12 @@ FILTROS = {
         ("semdata", "Sem data"),
     ],
     "indulto": [
-        ("todas", "Todas"),
-        ("possivel", "Possível"),
-        ("verificar", "A verificar"),
-        ("nao", "Não atinge / não se aplica"),
+        ("todas", "Todos os benefícios"),
+        ("b:i25:Sim", "Indulto 2025 · Sim"), ("b:i25:Verificar", "Indulto 2025 · Verificar"),
+        ("b:c25:Sim", "Comutação 2025 · Sim"), ("b:c25:Verificar", "Comutação 2025 · Verificar"),
+        ("b:i24:Sim", "Indulto 2024 · Sim"), ("b:i24:Verificar", "Indulto 2024 · Verificar"),
+        ("b:c24:Sim", "Comutação 2024 · Sim"), ("b:c24:Verificar", "Comutação 2024 · Verificar"),
+        ("b:i22:Sim", "Indulto 2022 · Sim"), ("b:i22:Verificar", "Indulto 2022 · Verificar"),
         ("impeditivo", "Crime impeditivo"),
     ],
     "ext": [
@@ -88,8 +91,8 @@ FILTROS = {
         ("todas", "Todas"),
         ("aparente", "Prescrição aparente"),
         ("iminente", "Prescrição iminente"),
-        ("naocorre", "Não prescrita"),
-        ("semdados", "Sem dados / extinta"),
+        ("naocorre", "Não prescrita / não configurada"),
+        ("semdados", "Sem dados"),
     ],
 }
 
@@ -509,8 +512,16 @@ def simplificar(m):
         if cor == "cinza" and not sit.startswith("Pena cumprida"):
             m[k + "_sit_full"] = m.get(k + "_sit_full") or sit
             m[k + "_sit"] = "Não se aplica"
+    for k in ("prog", "liv"):
+        if not m.get(k + "_sit") and re.match(r"^\d{2}/\d{2}/\d{4}", m.get(k) or ""):
+            m[k + "_sit"] = "Em cumprimento"
     if re.search(r"sem previsão\s*$", m.get("ext_hipoteses") or ""):
         m["ext_motivo"], m["ext_hipoteses"] = m["ext_hipoteses"], TRACO
+    if not m.get("ext_sit"):
+        if re.match(r"^\d{2}/\d{2}/\d{4}", m.get("ext_termino") or ""):
+            m["ext_sit"] = "Em cumprimento"
+        elif m.get("ext_cor") == "cinza":
+            m["ext_sit"] = "Não se aplica"
     # indulto e comutação
     m["imp_curto"] = "Sim" if (m.get("imp") or "").startswith("Sim") else ("Não" if m.get("imp") else "")
     for k in ("i22", "i24", "c24", "i25", "c25"):
@@ -520,8 +531,10 @@ def simplificar(m):
     # prescrição
     m["presc_retro_full"], m["presc_ppe_full"] = m.get("presc_retro", ""), m.get("presc_ppe", "")
     m["presc_retro"], m["presc_ppe"] = presc_curto(m["presc_retro_full"]), presc_curto(m["presc_ppe_full"], ppe=True)
+    m["presc_retro"] = m["presc_retro"] or "Sem dados"
+    m["presc_ppe"] = m["presc_ppe"] or "Sem dados"
     _pc = {"Aparente": "vermelho", "Iminente": "amarelo", "Extinta": "azul", "Sem dados": "cinza"}
-    m["presc_retro_cor"], m["presc_ppe_cor"] = _pc.get(m["presc_retro"], "none"), _pc.get(m["presc_ppe"], "none")
+    m["presc_retro_cor"], m["presc_ppe_cor"] = _pc.get(m["presc_retro"], ""), _pc.get(m["presc_ppe"], "")
     return m
 
 
@@ -644,6 +657,8 @@ def modelo(r, baixas=None, ficha=None):
         "c25_cor": cor_texto_indulto(r.get("comutacao_2025", "")),
         "det24": r.get("indulto_2024_detalhe", ""),
         "cdet24": r.get("comutacao_2024_detalhe", ""), "cdet25": r.get("comutacao_2025_detalhe", ""),
+        "exp22": r.get("indulto_2022_explica", ""), "exp24": r.get("indulto_2024_explica", ""), "exp25": r.get("indulto_2025_explica", ""),
+        "cexp24": r.get("comutacao_2024_explica", ""), "cexp25": r.get("comutacao_2025_explica", ""),
         "det25": r.get("indulto_2025_detalhe", ""),
         "geracao": r.get("data_geracao_rspe", ""),
         "importado": r.get("importado_em", ""),
@@ -704,7 +719,7 @@ ABAS = [
      "sub": "presc_linhas", "sub_cols": PRESC_SUB, "sub_pilulas": {"retro_status": "retro_cor", "ppe_status": "ppe_cor"}, "sub_calc": True},
     {"id": "ext", "titulo": "Extinção", "cor": "ext_cor", "legenda": "ext",
      "cols": [("nome", "Nome", 20), ("proc", "Nº da execução", 17),
-              ("ext_termino", "Término", 10), ("ext_sit", "Situação", 12), ("ext_hipoteses", "Extinção pelo cumprimento", 46)],
+              ("ext_termino", "Término", 12), ("ext_sit", "Situação", 20)],
      "pilulas": {"ext_sit": "ext_cor"}},
     {"id": "fd", "titulo": "Ficha disciplinar", "cor": "fd_cor", "legenda": "fd", "expansivel": True,
      "cols": [("nome", "Nome", 20), ("proc", "Nº da execução", 15), ("fd_trab", "Trabalho atual", 18),
@@ -714,7 +729,7 @@ ABAS = [
      "sub_pilulas": {"sit": "cor"}},
     {"id": "aud", "titulo": "Auditoria", "cor": "aud_cor", "legenda": "aud", "expansivel": True,
      "cols": [("nome", "Nome", 22), ("proc", "Nº da execução", 17),
-              ("aud_resumo", "Resultado da auditoria", 28), ("aud_alertas", "Alertas", 6), ("aud_verificar", "A verificar", 7)],
+              ("aud_resumo", "Resultado da auditoria", 40)],
      "pilulas": {"aud_resumo": "aud_cor"},
      "sub": "aud_itens", "sub_cols": [("nivel_txt", "Nível", 9), ("titulo", "Ponto auditado", 26), ("detalhe", "O que foi encontrado", 40), ("fundamento", "Fundamento", 24)],
      "sub_pilulas": {"nivel_txt": "nivel_cor"}, "sub_calc": False, "sub_baixa": True},

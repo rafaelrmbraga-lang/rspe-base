@@ -103,6 +103,7 @@ tr.sub td{padding:0 0 0 0;background:#FFFFFF;cursor:default}tr.sub:hover td{back
 .subtab td{padding:11px 14px;border-bottom:1px solid var(--line);font-size:12.5px;line-height:1.55;vertical-align:top;white-space:normal;font-weight:400;overflow:visible}.subtab td:first-child{padding-left:10px;font-weight:600}.subtab th:first-child{padding-left:10px}
 .subtab tr:last-child td{border-bottom:0}.subtab tr.bx td{color:var(--tx3)}.subtab tr.bx td:nth-child(2){text-decoration:line-through}
 .cc{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px;background:#fff}.cc-h{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:13px}.cc-f{font-size:12.5px;color:var(--tx2);margin-top:4px}.cc-l{margin:6px 0 2px;padding-left:18px;font-size:12.5px;line-height:1.5}.cc-l li{margin:2px 0}.cc-d summary{cursor:pointer;color:var(--pri);font-size:12px;margin-top:4px}.cc-d[open] summary{margin-bottom:6px}
+.ml.fim .mt{font-weight:700;color:var(--tx)}.ml.fim .mi{background:#E0E7FF;color:#3730A3}
 .cp-row{display:flex;justify-content:flex-end;margin:-2px 0 6px}.aviso-exec{padding:8px 12px;border-radius:10px;background:#F2F4F7;color:var(--tx);font-weight:600;font-size:13px}
 .subtab .why{cursor:pointer;color:var(--pri);font-size:11.5px}.subtab .why:hover{text-decoration:underline}
 .mem{display:grid;gap:12px;margin:10px 0 4px}
@@ -218,6 +219,7 @@ tr.sub td{padding:0 0 0 0;background:#FFFFFF;cursor:default}tr.sub:hover td{back
   <button class="btn" onclick="ui.modalRelatorios()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h8l4 4v14H6z"/><path d="M9 13h6M9 17h6M9 9h2"/></svg>Relatórios</button>
   <button class="btn" onclick="ui.modalExportar('pdf')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/></svg>Exportar PDF</button>
   <div class="sep"></div>
+  <div class="sel" id="modoWrap" style="display:none"><select id="modo" onchange="ui.prescModo=this.value;ui.filtroCor=null;ui.aberto=null;ui.render()"><option value="pe">Pretensão executória</option><option value="pp">Pretensão punitiva</option></select></div>
   <div class="sel"><select id="filtro" onchange="ui.filtroSel=this.value;ui.render()"></select></div>
   <div class="spacer"></div>
   <!-- modelos de petição desativados nesta versão (MODELOS_ATIVOS) -->
@@ -262,7 +264,17 @@ const ui = {
     w.classList.remove('on'); document.getElementById('baseNome').textContent=d.base; document.getElementById('baseN').textContent=d.registros.length;
     document.getElementById('hoje').textContent='Hoje '+d.hoje+(d.base_juridica?' · base jurídica '+d.base_juridica.versao:''); if(!this.dados.abas.find(a=>a.id===this.aba)) this.aba='geral'; this.render(); },
   async criarBase(){ const n=document.getElementById('novoNome').value.trim(); if(!n) return this.toast('Dê um nome à base.'); await api('nova_base', n); },
-  spec(){ return this.dados.abas.find(a=>a.id===this.aba); },
+  prescModo:'pe',
+  spec(){ const a=this.dados.abas.find(x=>x.id===this.aba); if(!a||a.id!=='presc') return a;
+    // prescrição: uma pretensão por vez (executória ou punitiva)
+    const pe=this.prescModo!=='pp'; const b=Object.assign({},a);
+    b.cols=a.cols.filter(c=>['nome','proc'].includes(c[0])).concat(pe?[['presc_ppe','Pretensão executória',16],['presc_prox','Prescrição em',10]]:[['presc_retro','Pretensão punitiva',16]]);
+    b.cor=pe?'presc_ppe_cor':'presc_retro_cor'; b.legenda=pe?'presc':'presc_pp';
+    b.pilulas=pe?{presc_ppe:'presc_ppe_cor'}:{presc_retro:'presc_retro_cor'};
+    const base=a.sub_cols.filter(c=>['crime','pena','fato','denuncia','sentenca','transito'].includes(c[0]));
+    b.sub_cols=base.concat(a.sub_cols.filter(c=>pe?['prazo_ppe','ppe_termo','ppe_status'].includes(c[0]):['prazo_ppp','retro_status'].includes(c[0])));
+    b.sub_pilulas=pe?{ppe_status:'ppe_cor'}:{retro_status:'retro_cor'};
+    return b; },
   visiveis(){ const q=this.filtro; let rs=this.dados.registros; if(q){ rs=rs.filter(r=>JSON.stringify(r).toLowerCase().includes(q)); } return rs; },
   cor(r,spec){ return spec.cor ? (r[spec.cor]||'') : ''; },
   render(){
@@ -278,6 +290,7 @@ const ui = {
     document.getElementById('legenda').innerHTML=Object.keys(rot).filter(c=>c||spec.id==='presc').map(c=>`<span class="leg"><i style="background:${c?`var(--${({vermelho:'r',laranja:'o',amarelo:'a',vencido:'a',verde:'g',cinza:'c',azul:'b'})[c]}-dot)`:'#CBD5E1'}"></i>${rot[c]}</span>`).join('');
     // seletor de situação
     const selEl=document.getElementById('filtro');
+    document.getElementById('modoWrap').style.display=this.aba==='presc'?'':'none'; document.getElementById('modo').value=this.prescModo;
     if(selEl.dataset.aba!==this.aba){ selEl.innerHTML=(spec.filtros||[]).map(f=>`<option value="${f[0]}">${f[1]}</option>`).join(''); selEl.dataset.aba=this.aba; selEl.value=this.filtroSel='todas'; selEl.parentElement.style.display=spec.filtros&&spec.filtros.length?'':'none'; }
     // tabela
     let linhas=rs; if(spec.cor && this.filtroCor!==null) linhas=linhas.filter(r=>this.cor(r,spec)===this.filtroCor);
@@ -296,7 +309,6 @@ const ui = {
         else if(pk){ const pc = c[0]==='imp' ? (String(v).startsWith('Sim')?'vermelho':'verde') : (r[pk]||''); v = v ? `<span class="pill ${pc||'none'}">${esc(v)}</span>` : (/_sit$/.test(c[0]) ? '' : '<span class="muted">—</span>'); }
         else if(c[0]==='conduta'){ v = r.conduta_ruim ? `<span class="falta">${esc(v)}</span>` : (r.ficha_tem ? esc(v) : `<span class="muted">${esc(v)}</span>`); }
         else if(c[0]==='falta'){ v = r.falta_sim ? `<span class="falta">${esc(v)}</span>` : `<span class="muted">${esc(v)}</span>`; }
-        else if(c[0]==='presc_retro'||c[0]==='presc_ppe'){ const cls=/^Aparente/.test(v)?'vermelho':''; v = v?(cls?`<span class="pill ${cls}">${esc(v)}</span>`:esc(v)):'<span class="muted">—</span>'; }
         else { v = esc(v).replace('(est.)','<span class="est">(est.)</span>'); if(!v) v='<span class="muted">—</span>'; }
         if(i===0 && spec.expansivel) v=`<span class="chev">▶</span>${v}`;
         return `<td class="${i===0?'first':''} ${NW.has(c[0])?'nw':''} ${pk&&spec.id==='ind'?'pl':''}" title="${esc(String(r[c[0]+'_full']??r[c[0]]??''))}">${v}</td>`; }).join('');
@@ -307,6 +319,7 @@ const ui = {
     card.innerHTML=`<table><thead><tr>${th}</tr></thead><tbody>${tr}</tbody></table>`;
   },
   passaFiltro(r,spec){ const f=this.filtroSel||'todas'; if(f==='todas') return true;
+    if(f.startsWith('b:')){ const p=f.split(':'); return r[p[1]]===p[2]; }
     const d=spec.campo_dias?r[spec.campo_dias]:null; const cor=this.cor(r,spec);
     switch(f){
       case 'vencidas': return d!==null && d<=0;
@@ -333,14 +346,15 @@ const ui = {
   expandir(id){ this.aberto = this.aberto===id ? null : id; this.render(); },
   bloco(titulo,txt,cls){ if(!txt) return ''; const linhas=Array.isArray(txt)?txt:String(txt).split('\n').filter(x=>x.trim());
     const li=linhas.map(l=>{ l=l.trim(); let ic='', k='n'; const m=l.match(/^([✓✔✘✗…?⚠])\s*/); if(m){ ic=m[1]; l=l.slice(m[0].length); k = /[✓✔]/.test(ic)?'ok':/[✘✗]/.test(ic)?'ko':(ic==='…'||ic==='⚠')?'run':'q'; }
-      else if(/^Obs\.?:|^Cumprido em/i.test(l)) k='obs'; else if(/^Termo inicial|^Situação em/i.test(l)) k='termo';
-      const sym={ok:'✓',ko:'✕',run:'!',q:'?',obs:'i',termo:'→',n:'·'}[k];
+      else if(/^Obs\.?:|^Cumprido em/i.test(l)) k='obs'; else if(/^Termo inicial|^Situação em|^Na data:|^Decreto /i.test(l)) k='termo'; else if(/^Conclusão:/.test(l)) k='fim';
+      const sym={ok:'✓',ko:'✕',run:'!',q:'?',obs:'i',termo:'→',fim:'=',n:'·'}[k];
       return `<div class="ml ${k}"><span class="mi">${sym}</span><span class="mt">${penaExt(esc(l))}</span></div>`; }).join('');
     return `<div class="mb ${cls||''}">${titulo?`<div class="mh">${titulo}</div>`:''}${li}</div>`; },
-  memoria(s){
+  memoria(s,so){
     const bt=(parte,rot)=>`<span class="mini" onclick="event.stopPropagation();ui.copiarClip(${ui.clip(ui.txtPresc(s,parte))})">${rot}</span>`;
-    const cps=[s.retro_detalhe?bt('pp','Copiar pretensão punitiva'):'', s.ppe_detalhe?bt('pe','Copiar pretensão executória'):''].filter(Boolean).join(' ');
-    return `<div class="mem"><div class="cp-row" style="gap:6px">${cps}</div>${this.bloco('Pretensão punitiva',s.retro_detalhe,'pp')}${this.bloco('Pretensão executória',s.ppe_detalhe,'pe')}${this.bloco('Avisos',s.avisos&&s.avisos.length?s.avisos:'','av')}</div>`; },
+    const pp=so!=='pe', pe=so!=='pp';
+    const cps=[(pp&&s.retro_detalhe)?bt('pp','Copiar pretensão punitiva'):'', (pe&&s.ppe_detalhe)?bt('pe','Copiar pretensão executória'):''].filter(Boolean).join(' ');
+    return `<div class="mem"><div class="cp-row" style="gap:6px">${cps}</div>${pp?this.bloco('Pretensão punitiva',s.retro_detalhe,'pp'):''}${pe?this.bloco('Pretensão executória',s.ppe_detalhe,'pe'):''}${this.bloco('Avisos',s.avisos&&s.avisos.length?s.avisos:'','av')}</div>`; },
   // ---- cópia em texto simples (para colar na petição, no Word) ----
   _clips:[],
   clip(t){ t=String(t||''); let i=this._clips.indexOf(t); if(i<0){ this._clips.push(t); i=this._clips.length-1; } return i; },
@@ -391,7 +405,7 @@ const ui = {
       <span class="mini" onclick="event.stopPropagation();ui.abrir('${r.id}')">Abrir ficha completa</span></div></div>`;
     return cab+(rows.length?`<div class="ac-lista">${rows.map(card).join('')}</div>`:'<div class="muted" style="padding:8px 2px">Nenhuma inconsistência pendente.</div>'); },
   subTabela(r,spec){ if(spec.id==='aud') return this.audCards(r); const cols=spec.sub_cols; let rows=r[spec.sub]||[]; const tot=cols.reduce((s,c)=>s+c[2],0)+6;
-    if(spec.id==='presc'){ rows=rows.filter(s=>s.ppe_cor==='vermelho'||s.ppe_cor==='amarelo'||s.retro_cor==='vermelho'||/^Verificar na ação penal/.test((s.ppe_status||'')+' '+(s.retro_status||''))||/^Verificar na ação penal/.test(s.retro_status||'')); }
+    if(spec.id==='presc'){ const pe=this.prescModo!=='pp'; rows=rows.filter(s=>pe?(s.ppe_cor==='vermelho'||s.ppe_cor==='amarelo'||/^Verificar na ação penal/.test(s.ppe_status||'')):(s.retro_cor==='vermelho'||/^Verificar na ação penal/.test(s.retro_status||''))); }
     let ocultos=0; if(spec.id==='aud' && !this.mostrarTudo){ const all=rows; rows=all.filter(s=>s.baixado||(s.nivel!=='info'&&s.nivel!=='ok')); ocultos=all.length-rows.length; }
     const cg='';
     const calc=!!spec.sub_calc, baixa=!!spec.sub_baixa; const head=`<tr>${cols.map(c=>`<th style="width:${(100*c[2]/tot).toFixed(1)}%">${c[1]}</th>`).join('')}${(calc||baixa)?'<th></th>':''}</tr>`;
@@ -405,9 +419,9 @@ const ui = {
         let n=0; const tds2 = tds.replace(/<\/td>/g, m=>{ n++; return n===3 ? obs+m : m; });
         return `<tr class="${s.baixado?'bx':''}">${tds2}<td style="white-space:nowrap">${bx}</td></tr>`; }
       if(!calc) return `<tr>${tds}</tr>`;
-      return `<tr>${tds}<td><span class="why" onclick="event.stopPropagation();const n=this.closest('tr').nextElementSibling;n.style.display=n.style.display==='none'?'':'none'">cálculo</span></td></tr><tr style="display:none"><td colspan="${cols.length+1}">${ui.memoria(s)}</td></tr>`; }).join('');
-    const cab = spec.id==='aud' ? `<b>${esc(r.nome)}</b> <span class="muted">· ${esc(r.aud_resumo)} · conferido com a ${esc(r.aud_base)} · alertas apontam o que demanda atenção, não afirmam erro</span>${(ocultos||this.mostrarTudo)?` · <span class="mini" onclick="event.stopPropagation();ui.mostrarTudo=!ui.mostrarTudo;ui.render()">${this.mostrarTudo?'ocultar informativos e OK':'mostrar '+ocultos+' informativo(s)/OK'}</span>`:''}${r.ficha_resumo?`<div class="muted" style="margin-top:3px">Ficha disciplinar: ${esc(r.ficha_resumo)}</div>`:''}` : spec.id==='fd' ? `<b>${esc(r.nome)}</b> <span class="muted">· ${r.ficha_tem?'ficha disciplinar (SIAPEN) impressa em '+esc((r.ficha||{}).data_impressao||'?')+' · '+esc(r.fd_resumo_exec||''):'sem ficha disciplinar importada'}</span>${r.ficha_tem&&r.fd_remicoes?`<div class="muted" style="font-size:12px;margin-top:3px">${esc(r.fd_remicoes)}</div>`:''}` : `<b>${esc(r.nome)}</b> <span class="muted">· ${(r.presc_linhas||[]).length} crime(s), ${rows.length} com prescrição aparente, iminente ou datas a verificar na ação penal · cada crime prescreve isoladamente (art. 119)${r.presc_obs?' · '+esc(r.presc_obs):''}</span>`;
-    const vazio = (spec.id==='presc' && !rows.length) ? `<tr><td colspan="${cols.length+1}" class="muted">Nenhum crime com prescrição aparente ou iminente nem datas faltando.</td></tr>` : '';
+      return `<tr>${tds}<td><span class="why" onclick="event.stopPropagation();const n=this.closest('tr').nextElementSibling;n.style.display=n.style.display==='none'?'':'none'">cálculo</span></td></tr><tr style="display:none"><td colspan="${cols.length+1}">${ui.memoria(s, spec.id==='presc'?(ui.prescModo==='pp'?'pp':'pe'):null)}</td></tr>`; }).join('');
+    const cab = spec.id==='aud' ? `<b>${esc(r.nome)}</b> <span class="muted">· ${esc(r.aud_resumo)} · conferido com a ${esc(r.aud_base)} · alertas apontam o que demanda atenção, não afirmam erro</span>${(ocultos||this.mostrarTudo)?` · <span class="mini" onclick="event.stopPropagation();ui.mostrarTudo=!ui.mostrarTudo;ui.render()">${this.mostrarTudo?'ocultar informativos e OK':'mostrar '+ocultos+' informativo(s)/OK'}</span>`:''}${r.ficha_resumo?`<div class="muted" style="margin-top:3px">Ficha disciplinar: ${esc(r.ficha_resumo)}</div>`:''}` : spec.id==='fd' ? `<b>${esc(r.nome)}</b> <span class="muted">· ${r.ficha_tem?'ficha disciplinar (SIAPEN) impressa em '+esc((r.ficha||{}).data_impressao||'?')+' · '+esc(r.fd_resumo_exec||''):'sem ficha disciplinar importada'}</span>${r.ficha_tem&&r.fd_remicoes?`<div class="muted" style="font-size:12px;margin-top:3px">${esc(r.fd_remicoes)}</div>`:''}` : `<b>${esc(r.nome)}</b> <span class="muted">· ${(r.presc_linhas||[]).length} crime(s), ${rows.length} ${ui.prescModo==='pp'?'com prescrição da pretensão punitiva aparente':'com prescrição executória aparente ou iminente'} ou datas a verificar na ação penal · cada crime prescreve isoladamente (art. 119)${r.presc_obs?' · '+esc(r.presc_obs):''}</span>`;
+    const vazio = (spec.id==='presc' && !rows.length) ? `<tr><td colspan="${cols.length+1}" class="muted">Nenhum crime com prescrição ${ui.prescModo==='pp'?'da pretensão punitiva aparente':'executória aparente ou iminente'} nem datas faltando.</td></tr>` : '';
     return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><span>${cab}</span><span class="mini" onclick="event.stopPropagation();ui.abrir('${r.id}')">Abrir ficha completa</span></div><table class="subtab">${cg}${head}${body}${vazio}</table>`; },
   async darBaixa(id, chave, titulo){ const obs = prompt('Dar baixa no alerta:\n'+titulo.replace(/&#39;/g,"'")+'\n\nObservação (opcional: o que foi feito / por que não se aplica):',''); if(obs===null) return; await api('baixar_alerta', id, chave, titulo.replace(/&#39;/g,"'"), obs); this.aberto=id; this.render(); },
   async reabrir(id, chave){ await api('reabrir_alerta', id, chave); this.aberto=id; this.render(); },
@@ -459,18 +473,20 @@ const ui = {
     const card=(titulo,frase,linhas,full,clip)=>`<div class="cc"><div class="cc-h"><b>${esc(titulo)}</b><span class="mini" onclick="event.stopPropagation();ui.copiarClip(${ui.clip(clip)})">Copiar</span></div>
       ${frase?`<div class="cc-f">${penaExt(esc(frase))}</div>`:''}${linhas.length?`<ul class="cc-l">${linhas.map(l=>`<li>${penaExt(esc(l))}</li>`).join('')}</ul>`:''}
       <details class="cc-d"><summary>ver cálculo completo</summary>${full}</details></div>`;
-    const dets=[['2025',r.det25,r.i25_cor,r.i25_txt],['2024',r.det24,r.i24_cor,r.i24_txt],['2022',r.det22,r.i22_cor,r.i22_txt]]
+    const dets=[['2025',r.det25,r.i25_cor,r.i25_txt,r.exp25],['2024',r.det24,r.i24_cor,r.i24_txt,r.exp24],['2022',r.det22,r.i22_cor,r.i22_txt,r.exp22]]
       .filter(x=>x[2]==='verde'||x[2]==='amarelo').map(x=>{
         const ok=linhasDe(x[1],/^[✔✓]/).filter(l=>!geral.test(l)).map(l=>enxuta(semIcone(l)));
         const q=linhasDe(x[1],/^\?/).filter(l=>!geral.test(l)).map(l=>'A verificar - '+enxuta(semIcone(l)));
         const lin=unicas([...ok,...q]).slice(0,3);
-        return card(`Indulto ${x[0]} · ${x[2]==='verde'?'possível':'a verificar'}`, situacao(x[1])||x[3]||'', lin, `<div class="mem">${ui.bloco('Decreto de '+x[0],util(x[1]),'pe')}</div>`,
-          `Indulto - Decreto de ${x[0]}: ${x[3]||''}\n${situacao(x[1])}\n`+lin.map(l=>'• '+l).join('\n')); }).join('');
-    const cms=[['2025',r.cdet25,r.c25_cor,r.c25_txt],['2024',r.cdet24,r.c24_cor,r.c24_txt]]
+        const exp=x[4]||util(x[1]);
+        return card(`Indulto ${x[0]} · ${x[2]==='verde'?'possível':'a verificar'}`, situacao(x[1])||x[3]||'', lin, `<div class="mem">${ui.bloco('',exp,'pe')}</div>`,
+          `Indulto ${x[0]}\n`+ui.txtLinhas(exp)); }).join('');
+    const cms=[['2025',r.cdet25,r.c25_cor,r.c25_txt,r.cexp25],['2024',r.cdet24,r.c24_cor,r.c24_txt,r.cexp24]]
       .filter(x=>x[1]&&(x[2]==='verde'||x[2]==='amarelo')).map(x=>{
         const lin=unicas(linhasDe(x[1],/^[✔✓✘✗?]/).map(l=>enxuta(semIcone(l)))).slice(0,3);
-        return card(`Comutação ${x[0]} · ${x[3]||''}`, situacao(x[1]), lin, `<div class="mem">${ui.bloco('Decreto de '+x[0]+' · art. 13',x[1],'pp')}</div>`,
-          `Comutação - Decreto de ${x[0]} (art. 13): ${x[3]||''}\n${situacao(x[1])}\n`+lin.map(l=>'• '+l).join('\n')); }).join('');
+        const exp=x[4]||x[1];
+        return card(`Comutação ${x[0]} · ${x[3]||''}`, situacao(x[1]), lin, `<div class="mem">${ui.bloco('',exp,'pp')}</div>`,
+          `Comutação ${x[0]}\n`+ui.txtLinhas(exp)); }).join('');
     const prs=(r.presc_linhas||[]).filter(s=>s.ppe_cor==='vermelho'||s.ppe_cor==='amarelo'||s.retro_cor==='vermelho').map(s=>{
         const exe=s.ppe_cor==='vermelho'||s.ppe_cor==='amarelo';
         const det=exe?s.ppe_detalhe:s.retro_detalhe;
@@ -491,7 +507,7 @@ const ui = {
           ${lin('Indulto', '<div style="display:flex;flex-direction:column;gap:4px">'+ind+'</div>'+(r.imp==='Sim'?`<div class="muted" style="font-size:11.5px;margin-top:3px">Crime impeditivo · ${esc((r.imp_txt||'').replace(/^Sim · /,''))}</div>`:''))}
           ${lin('Comutação', `<div style="display:flex;flex-direction:column;gap:4px"><div><span class="muted">2024</span> ${pill(r.c24_txt, r.c24_cor)}</div><div><span class="muted">2025</span> ${pill(r.c25_txt, r.c25_cor)}</div></div>`)}
           ${lin('Prescrição', pill(r.presc_ppe_full||r.presc_ppe, r.presc_cor))}
-          ${lin('Extinção', r.ext_sit?pill(r.ext_sit,r.ext_cor):'<span class="muted">—</span>')}
+          ${lin('Extinção', r.ext_sit?pill(r.ext_sit,r.ext_cor)+(r.ext_hipoteses&&r.ext_hipoteses!=='—'?`<div class="muted" style="font-size:12px;margin-top:3px">${penaExt(esc(r.ext_hipoteses))}</div>`:''):'<span class="muted">—</span>')}
           ${r.falta_sim?lin('Falta (12 meses)', `<span class="falta">${esc(r.falta.replace(/^Sim · /,''))}</span>`):''}
         </div>
         <div class="sec"><h3>Pontos de atenção</h3>${ptsHtml}</div>

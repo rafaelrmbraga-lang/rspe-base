@@ -1,4 +1,4 @@
-RSPE BASE - SEEU  v6.12.2 (programa em abas)
+RSPE BASE - SEEU  v6.13.0 (programa em abas)
 =========================================
 
 O QUE FAZ
@@ -211,6 +211,29 @@ PRESUNÇÃO DE HIPOSSUFICIÊNCIA (Defensoria)
   do art. 9º e sem bloqueio do livramento (CP, art. 83, IV). Tráfico
   privilegiado não é hediondo nem impeditivo (STF PSV 125, Tema 1400; STJ
   Tema 1336). Detalhes e fontes: "Criterios_de_analise_por_beneficio.pdf".
+
+v6.13.0
+  - Prescrição: seletor "Pretensão executória / Pretensão punitiva" ao
+    lado do filtro - a tela, os contadores, o detalhe expandido e o
+    cálculo mostram uma pretensão de cada vez. Linha sem dados de
+    prescrição = "Sem dados".
+  - Indulto/Comutação: o filtro passa a ser por benefício ("Indulto 2025
+    · Sim", "Comutação 2024 · Verificar"...), além de "Crime impeditivo".
+  - Progressão, Livramento e Extinção: "Em cumprimento" na situação
+    quando há data e nenhum prazo próximo; na Extinção, "Não se aplica"
+    para não iniciado/interrompido e sai a coluna "Extinção pelo
+    cumprimento" (o texto fica na ficha do assistido).
+  - Auditoria: saem as colunas Alertas e A verificar. Data-base sem
+    evento correspondente no RSPE passa a "Verificar" (não "Alerta").
+
+v6.12.3
+  - "Ver cálculo completo" do indulto e da comutação passa a explicar a
+    conta: o decreto e a data de referência, a situação do assistido na
+    data (regime, reincidência, pena total, cumprido e percentual), cada
+    inciso cabível com o exigido x o cumprido, os incisos a verificar, os
+    não atendidos em uma linha e a conclusão. No decreto de 2022: a regra
+    do art. 5º e a pena máxima cominada de cada crime (crimes iguais
+    agrupados). O botão "Copiar" do cartão leva essa explicação.
 
 v6.12.2
   - Grafia: "Indulto 2024 · possível" (em vez de "cabe") e "Não cabível" no livramento.
