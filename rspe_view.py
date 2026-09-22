@@ -30,7 +30,7 @@ CORES = {
     "": ("#FFFFFF", "#344054"),
 }
 ROTULO = {
-    "lapso": {"vencido": "Vencido · verificar", "laranja": "Até 30 dias", "amarelo": "Até 60 dias", "verde": "Até 90 dias", "cinza": "Não se aplica / interrompida", "azul": "Extinta"},
+    "lapso": {"vencido": "Vencido · verificar", "laranja": "Até 30 dias", "amarelo": "Até 60 dias", "verde": "Até 90 dias", "cinza": "Não se aplica / não iniciou / interrompida", "azul": "Extinta"},
     "indulto": {"vermelho": "Crime impeditivo", "verde": "Possível", "amarelo": "A verificar", "cinza": "Não atinge", "azul": "Extinta"},
     "presc": {"vermelho": "Prescrição aparente", "": "Não prescrita", "cinza": "Sem dados", "azul": "Extinta"},
     "fd": {"vermelho": "Remição pendente", "amarelo": "Trabalho ou estudo a requerer", "verde": "Em ordem", "cinza": "Sem ficha"},
@@ -57,6 +57,7 @@ FILTROS = {
         ("30", "Vence em até 30 dias"),
         ("60", "Vence em até 60 dias"),
         ("90", "Vence em até 90 dias"),
+        ("naoiniciou", "Não iniciou o cumprimento"),
         ("interrompida", "Pena interrompida"),
         ("naoaplica", "Não se aplica (cumprida / livramento / aberto)"),
         ("semdata", "Sem data"),
@@ -109,6 +110,24 @@ def execucao_extinta(r):
     return bool(r.get("execucao_extinta")) or (bool(cr) and all(c.get("extinto", "").upper().startswith("S") for c in cr))
 
 
+def nao_iniciou(r):
+    """Não iniciou o cumprimento da pena: o RSPE não registra nenhum início de cumprimento definitivo - só prisões
+    provisórias (flagrante, preventiva, temporária) já encerradas, ou nenhuma prisão."""
+    evs = r.get("_eventos", [])
+    inicios = [e for e in evs if re.search(r"PRIS|IN[ÍI]CIO|REIN[ÍI]CIO|RECAPTURA", ((e.get("tipo") or "") + " " + (e.get("motivo") or "")).upper())]
+    definitivos = [e for e in inicios if not re.search(r"FLAGRANTE|PREVENTIV|TEMPOR|PROVIS", (e.get("motivo") or "").upper())]
+    if definitivos:
+        return False
+    # sem prisão definitiva: só "não iniciou" se não está preso agora (a última prisão provisória foi encerrada)
+    ordem = sorted(evs, key=lambda e: rs.to_date(e.get("data") or "") or date.min)
+    if ordem and not re.search(r"INTERRUP", (ordem[-1].get("tipo") or "").upper()):
+        return False
+    # livramento, aberto com audiência/início registrado etc. não entram aqui
+    if rs.livramento_em_curso(r, r.get("_incidentes", []))[0]:
+        return False
+    return True
+
+
 def estado_execucao(r):
     """Estado que dispensa progressão/livramento: ('extinta', txt), ('cumprida', txt), ('lc', txt), ('aberto', txt) ou None."""
     if execucao_extinta(r):
@@ -123,9 +142,11 @@ def estado_execucao(r):
     lc, dl = rs.livramento_em_curso(r, r.get("_incidentes", []))
     if lc:
         duv = rs.duvidas_livramento(r, r.get("_eventos", []), r.get("_incidentes", []), dl)
-        if duv:
+        if duv and not r.get("_lc_confirmado"):
             return ("lc_duvida", "Livramento a confirmar" + (" (%s)" % rs.fmt(dl) if dl else "") + " · ver Auditoria")
         return ("lc", "Em livramento condicional" + (" desde %s" % rs.fmt(dl) if dl else ""))
+    if nao_iniciou(r):
+        return ("nao_iniciou", "Não iniciou o cumprimento")
     if regime.startswith("ABERTO"):
         m = rs.RE_DATA.search(r.get("progressao_obs_seeu") or "")
         return ("aberto", "Já em regime aberto" + (" (%s)" % m.group(1) if m else ""))
@@ -146,8 +167,22 @@ def data_progressao(r):
 
 def data_livramento(r):
     est = estado_execucao(r)
-    if est and est[0] in ("extinta", "cumprida", "lc", "lc_duvida"):
+    if est and est[0] in ("extinta", "cumprida", "lc", "lc_duvida", "nao_iniciou"):
         return (est[1], None)
+    # livramento deferido e depois suspenso/revogado: o RSPE responde pelos incidentes
+    inc = r.get("_incidentes", [])
+    dls = [rs.to_date(i.get("data_referencia") or i.get("data_decisao") or "") for i in inc
+           if i.get("situacao") == "CONCEDIDO" and rs.e_incidente_livramento(i) and not re.search(r"REVOG|SUSPENS", ((i.get("tipo") or "") + (i.get("complemento") or "")).upper())]
+    dls = [d for d in dls if d]
+    if dls:
+        dl = max(dls)
+        fim = [(rs.to_date(i.get("data_referencia") or i.get("data_decisao") or ""), "revogado" if "REVOG" in ((i.get("tipo") or "") + (i.get("complemento") or "")).upper() else "suspenso")
+               for i in inc if i.get("situacao") == "CONCEDIDO" and "LIVRAMENTO" in ((i.get("tipo") or "") + " " + (i.get("complemento") or "")).upper()
+               and re.search(r"REVOG|SUSPENS", ((i.get("tipo") or "") + " " + (i.get("complemento") or "")).upper())]
+        fim = [x for x in fim if x[0] and x[0] > dl]
+        if fim and not r.get("livramento_previsao_seeu"):
+            d, t = max(fim)
+            return ("Livramento %s em %s (deferido em %s)" % (t, rs.fmt(d), rs.fmt(dl)), None)
     pt = rs.pena_para_dias(r.get("pena_total"))
     _min = rg.carregar().get("livramento", {}).get("pena_minima_anos", 2)
     if pt and pt < _min * rs.DIAS_ANO and not r.get("livramento_previsao_seeu"):
@@ -292,6 +327,8 @@ def cor_indulto(r):
 def termino(r):
     if r.get("termino_previsao_seeu"):
         return r["termino_previsao_seeu"]
+    if nao_iniciou(r):
+        return "Não iniciou"
     return "Interrompida" if "INTERROMPIDA" in (r.get("situacao_cumprimento") or "") else "Não consta no RSPE"
 
 
@@ -362,9 +399,9 @@ def extincao(r, presc, interr):
         else:
             cor = "cinza"
     return {
-        "ext_hipoteses": "; ".join(hip) if hip else ("" if not interr else "Pena interrompida - sem previsão"),
+        "ext_hipoteses": "; ".join(hip) if hip else ("Não iniciou o cumprimento - sem previsão" if nao_iniciou(r) else ("" if not interr else "Pena interrompida - sem previsão")),
         "ext_cor": cor,
-        "ext_termino": (rs.fmt(term) + (" (est.)" if est else "")) if term else ("Interrompida" if interr else ""),
+        "ext_termino": (rs.fmt(term) + (" (est.)" if est else "")) if term else ("Não iniciou" if nao_iniciou(r) else ("Interrompida" if interr else "")),
         "ext_dias": (term - HOJE).days if term else None,
         "ext_sit": ("Pena extinta (registrada)" if ja_extinta else "A verificar (livramento)" if duvida_lc else "Extinção parcial cabível" if parcial_ext else (("Extinção cabível" if cor == "vermelho" else situacao(term)[0].replace("Vence", "Término").replace("Em ", "Término em ")) if (term or cor == "vermelho") else "")),
         "ext_extintos": "; ".join(ext),
@@ -400,16 +437,25 @@ def modelo(r, baixas=None, ficha=None):
     """Registro extraído -> dict plano com tudo que as abas mostram. baixas: {chave: {obs, data}} da auditoria.
     ficha: Ficha Disciplinar do SIAPEN já lida (rspe_ficha.extrair), se houver."""
     baixas = baixas or {}
-    interr = "INTERROMPIDA" in (r.get("situacao_cumprimento") or "")
+    r = dict(r)
+    # baixa dada pelo usuário no alerta de livramento incerto = livramento confirmado (vale em todas as abas)
+    _lc, _dl = rs.livramento_em_curso(r, r.get("_incidentes", []))
+    if _lc:
+        _t = "Livramento condicional%s com situação incerta no RSPE" % ((" deferido em %s" % rs.fmt(_dl)) if _dl else "")
+        if hashlib.sha1(_t.encode("utf-8")).hexdigest()[:12] in baixas:
+            r["_lc_confirmado"] = True
+    sem_inicio = nao_iniciou(r)
+    interr = "INTERROMPIDA" in (r.get("situacao_cumprimento") or "") and not sem_inicio
     ptxt, pd = data_progressao(r)
     ltxt, ld = data_livramento(r)
     est = estado_execucao(r)
     psit, pcor = situacao(pd, interr)
     lsit, lcor = situacao(ld, interr)
     if est:
-        psit, pcor = ({"extinta": "Pena extinta", "cumprida": "Pena cumprida", "lc": "Em livramento", "aberto": "Já no aberto", "lc_duvida": "A verificar (livramento)"}[est[0]],
+        psit, pcor = ({"extinta": "Pena extinta", "cumprida": "Pena cumprida", "lc": "Em livramento", "aberto": "Já no aberto", "lc_duvida": "A verificar (livramento)",
+                       "nao_iniciou": "Não iniciou o cumprimento"}[est[0]],
                       "amarelo" if est[0] == "lc_duvida" else "azul" if est[0] == "extinta" else "cinza")
-        if est[0] in ("extinta", "cumprida", "lc", "lc_duvida"):
+        if est[0] in ("extinta", "cumprida", "lc", "lc_duvida", "nao_iniciou"):
             lsit, lcor = (psit, pcor)
     presc = rp.analisar(r, HOJE)
     aud = ra.auditar(r, HOJE)
@@ -453,7 +499,7 @@ def modelo(r, baixas=None, ficha=None):
         "geral_cor": "azul" if execucao_extinta(r) else "",
         "regime": ("Livramento condicional" if (est and est[0] == "lc") else
                    ("Livramento? (RSPE: %s)" % (r.get("regime_atual") or "").replace(" - ATIVO", "") if (est and est[0] == "lc_duvida") else
-                    (r.get("regime_atual") or "").replace(" - ATIVO", ""))),
+                    ((r.get("regime_atual") or "").replace(" - ATIVO", "") + (" (não iniciado)" if (est and est[0] == "nao_iniciou" and r.get("regime_atual")) else "")))),
         "regime_rspe": (r.get("regime_atual") or "").replace(" - ATIVO", ""),
         "vara": r.get("vara", ""),
         "crimes": rs.crimes_curto(r.get("_crimes", [])) or r.get("crimes_curto") or "",
@@ -567,7 +613,7 @@ ABAS = [
      "cols": [("nome", "Nome", 20), ("proc", "Nº da execução", 15), ("fd_trab", "Trabalho atual", 18),
               ("fd_remidos", "Remidos ficha / RSPE", 11), ("fd_atestar", "Trabalho a atestar", 12), ("fd_estudo", "Estudo a requerer", 11), ("fd_sit", "Situação", 14)],
      "pilulas": {"fd_sit": "fd_cor"},
-     "sub": "fd_linhas", "sub_cols": [("emp", "Emprego", 14), ("per", "Período", 14), ("dias", "Dias", 6), ("at", "Atestado", 22), ("rspe", "Remição no RSPE", 18), ("sit", "Situação / providência", 26)],
+     "sub": "fd_linhas", "sub_cols": [("emp", "Emprego / estudo", 14), ("un", "Unidade", 8), ("per", "Período", 14), ("dias", "Dias", 6), ("at", "Atestado / horas", 20), ("rspe", "Remição no RSPE", 16), ("sit", "Situação / providência", 22)],
      "sub_pilulas": {"sit": "cor"}},
     {"id": "aud", "titulo": "Auditoria", "cor": "aud_cor", "legenda": "aud", "expansivel": True,
      "cols": [("nome", "Nome", 22), ("proc", "Nº da execução", 17),

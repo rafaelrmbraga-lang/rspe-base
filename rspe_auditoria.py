@@ -383,6 +383,48 @@ def auditar(r, hoje=None):
         itens.append(_item("alerta", "Data-base de progressão anterior à última alteração de regime",
                            "Data-base impressa: %s; última alteração de regime: %s (%s)." % (rs.fmt(db_seeu), rs.fmt(ult[0]), ult[1].get("complemento")),
                            "LEP, art. 112, § 6º (falta grave reinicia pela remanescente); STJ Tema 1006 (a unificação de penas não altera a data-base); STJ Tema 1165 (data-base é a do preenchimento dos requisitos, não a da decisão)."))
+    # data-base x eventos que a justificam: última prisão/início do cumprimento, progressão/regressão ou falta grave homologada
+    if db_seeu:
+        marcos = []
+        for e in r.get("_eventos", []):
+            t = ((e.get("tipo") or "") + " " + (e.get("motivo") or "")).upper()
+            d = rs.to_date(e.get("data") or "")
+            if d and re.search(r"PRIS|IN[ÍI]CIO|REIN[ÍI]CIO|RECAPTURA", t):
+                marcos.append((d, "prisão/início do cumprimento (%s)" % (e.get("motivo") or e.get("tipo") or "").strip().lower()))
+        for i in incidentes:
+            if i.get("situacao") != "CONCEDIDO":
+                continue
+            t = (i.get("tipo") or "").upper()
+            for campo in ("data_referencia", "data_decisao"):
+                d = rs.to_date(i.get(campo) or "")
+                if not d:
+                    continue
+                if "DATA-BASE" in t or "DATA BASE" in t:
+                    marcos.append((d, "alteração de data-base determinada no RSPE"))
+                elif "REGIME" in t:
+                    marcos.append((d, "alteração de regime (%s)" % (i.get("complemento") or "").strip()))
+                elif "FALTA GRAVE" in t:
+                    marcos.append((d, "falta grave homologada"))
+                elif "LIVRAMENTO" in t and "REVOG" in (t + " " + (i.get("complemento") or "")).upper():
+                    marcos.append((d, "revogação do livramento"))
+        bate = [m for m in marcos if abs((m[0] - db_seeu).days) <= 1]
+        unif = [i for i in incidentes if re.search(r"SOMAT|UNIFICA", (i.get("tipo") or "").upper())
+                and any(rs.to_date(i.get(c) or "") and abs((rs.to_date(i.get(c)) - db_seeu).days) <= 1 for c in ("data_referencia", "data_decisao"))]
+        if bate:
+            itens.append(_item("ok", "Data-base (%s) confere com o RSPE: %s" % (rs.fmt(db_seeu), bate[0][1]), "", "LEP, art. 112."))
+        elif unif:
+            itens.append(_item("alerta", "Data-base (%s) coincide com a soma/unificação das penas" % rs.fmt(db_seeu),
+                               "Não há prisão, alteração de regime ou falta grave homologada nessa data; a data coincide com o incidente de %s. "
+                               "A unificação não altera a data-base: ela continua sendo a da última prisão, progressão ou falta grave." % (unif[0].get("tipo") or "").lower(),
+                               "STJ, Tema 1006 (REsp 1.753.509); LEP, art. 112."))
+        else:
+            ant = sorted([m for m in marcos if m[0] <= db_seeu], key=lambda m: m[0])
+            itens.append(_item("alerta" if ant else "verificar", "Inconsistência da data-base (%s): sem prisão, alteração de regime ou falta grave homologada nessa data" % rs.fmt(db_seeu),
+                               "A data-base é a da última prisão, da última progressão/regressão ou da falta grave homologada, e nenhum desses eventos consta no RSPE em %s. "
+                               "Último evento anterior no RSPE: %s. Data-base posterior ao último evento atrasa a progressão: verificar no processo a origem "
+                               "(ex.: falta ainda não homologada, que não pode mover a data-base)." % (
+                                   rs.fmt(db_seeu), ("%s em %s" % (ant[-1][1], rs.fmt(ant[-1][0]))) if ant else "nenhum"),
+                               "LEP, arts. 112 e 118; STJ, Temas 1006 e 1165."))
     if ult and "REGRESS" in (ult[1].get("complemento") or "").upper():
         itens.append(_item("info", "Regressão registrada em %s" % rs.fmt(ult[0]),
                            "Se decorreu de falta grave, a data-base da progressão é a data da falta e o requisito recomeça sobre a pena remanescente; a falta também impede LC (12 meses) e indulto (art. 6º dos decretos).",
@@ -429,10 +471,17 @@ def auditar(r, hoje=None):
             itens.append(_item("alerta", "%s: prescrição da pretensão executória aparente (%s)" % (l["crime"], l.get("ppe_previsao")), l.get("ppe_status", ""), "CP, arts. 110, 112, 113 e 117, V; STF Tema 788."))
         if l.get("retro_cor") == "vermelho":
             itens.append(_item("alerta", "%s: prescrição da pretensão punitiva aparente" % l["crime"], l.get("retro_status", ""), "CP, arts. 109, 110, § 1º, e 117."))
-        if l.get("ppe_cor") == "amarelo":
-            # só interessa quando o prazo está próximo (até 1 ano); antes disso é informativo
-            perto = l.get("ppe_dias") is not None and l["ppe_dias"] <= 365
-            itens.append(_item("verificar" if perto else "info", "%s: prescrição executória em curso" % l["crime"], l.get("ppe_status", ""), "CP, arts. 112, II, e 113."))
+    # datas que o RSPE não traz: o programa não presume - apontar para verificar na ação penal
+    falt = {}
+    for l in presc["presc_linhas"]:
+        m = re.search(r"não consta no RSPE: (.+?) - verificar", " ".join(l.get("avisos") or []))
+        if m and not str(l.get("retro_status") or "").startswith("Extinta"):
+            falt.setdefault(l.get("proc_crim") or "?", set()).update(x.strip() for x in m.group(1).split(","))
+    if falt:
+        itens.append(_item("verificar", "Prescrição não aferível por completo: datas ausentes no RSPE - verificar na ação penal",
+                           "; ".join("processo %s: %s" % (p, ", ".join(sorted(v))) for p, v in sorted(falt.items())) +
+                           ". O programa não presume datas: sem fato, recebimento da denúncia, sentença e trânsito em julgado, a prescrição daquele trecho não é calculada.",
+                           "CP, arts. 109 a 117."))
 
     # ---------------- 5. indulto / comutação sem registro ----------------
     if True:  # 2022 tem exclusões próprias (art. 7º); 2024/2025 vêm "vedado" quando há impeditivo
@@ -480,7 +529,11 @@ def auditar(r, hoje=None):
     periodos = rs.periodos_custodia(eventos)
     if not periodos and (cumprida or 0) > 0:
         itens.append(_item("verificar", "Pena cumprida sem evento de prisão no RSPE", "O relatório indica %s cumpridos, mas não lista eventos de início de cumprimento." % rs.dias_para_pena(cumprida), "Conferir a guia e a detração (CP, art. 42)."))
-    if "INTERROMPIDA" in (r.get("situacao_cumprimento") or ""):
+    import rspe_view as _rv2
+    if _rv2.nao_iniciou(r):
+        itens.append(_item("info", "Não iniciou o cumprimento da pena", "O RSPE não registra início de cumprimento definitivo (só prisão provisória encerrada, ou nenhuma). "
+                           "A prescrição executória corre pela pena integral (menos a detração) desde o trânsito.", "CP, arts. 112, I, e 113."))
+    elif "INTERROMPIDA" in (r.get("situacao_cumprimento") or ""):
         itens.append(_item("info", "Cumprimento interrompido (último evento é interrupção)", "Verificar se há prisão posterior não lançada ou se o apenado está foragido/em liberdade; a prescrição executória corre pela pena restante.", "CP, arts. 112, II, e 113."))
 
     itens = _agrupar_por_crime(itens)

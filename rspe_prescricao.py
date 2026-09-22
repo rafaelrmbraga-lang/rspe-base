@@ -224,20 +224,9 @@ def analisar(r, hoje=None):
             intervalos.append(("fato → denúncia", fato, den))
         if den and sent:
             intervalos.append(("denúncia → sentença", den, sent))
-        transito_inferido = None
-        if sent:
-            fim_int = tpr or tmp
-            if fim_int:
-                intervalos.append(("sentença → trânsito", sent, fim_int))
-            else:
-                apos = [x for x in inicio_def if x >= sent]
-                if apos:
-                    transito_inferido = apos[0]
-                    intervalos.append(("sentença → início do cumprimento (trânsito não informado)", sent, transito_inferido))
-                elif em_custodia or periodos:
-                    L["avisos"].append("trânsito não informado e pena em execução: intervalo sentença→trânsito não aferido")
-                else:
-                    intervalos.append(("sentença → hoje (trânsito não informado)", sent, hoje))
+        transito_inferido = None  # o programa não presume datas: sem trânsito no RSPE, verificar na ação penal
+        if sent and (tpr or tmp):
+            intervalos.append(("sentença → trânsito", sent, tmp or tpr))
         det = []
         pior = None
         for nome, a, b in intervalos:
@@ -246,16 +235,15 @@ def analisar(r, hoje=None):
             det.append("%s%s: %s a %s = %s (prazo %s, vence %s)" % ("✘ " if ok else "✔ ", nome, rs.fmt(a), rs.fmt(b), fmt_prazo(_meses(a, b)), L["prazo_ppp"], rs.fmt(limite)))
             if ok and (pior is None or True):
                 pior = nome
-        faltando = [n for n, v in (("fato", fato), ("denúncia", den), ("sentença", sent)) if not v]
-        if not tpr and not tmp:
-            L["avisos"].append("trânsito em julgado não informado no RSPE" + (" (limite usado: início do cumprimento em %s)" % rs.fmt(transito_inferido) if transito_inferido else ""))
-        if fato and fato < LEI_12234 and not den:
-            faltando.append("denúncia (fato anterior à Lei 12.234/2010)")
+        faltando = [n for n, v in (("data do fato", fato), ("recebimento da denúncia", den), ("sentença", sent), ("trânsito em julgado", tpr or tmp)) if not v]
+        if faltando:
+            L["avisos"].append("não consta no RSPE: %s - verificar na ação penal (o programa não presume datas)" % ", ".join(faltando))
+            det.append("Não consta no RSPE: %s. Verificar na ação penal; nenhuma data foi presumida." % ", ".join(faltando))
         if pior:
             L["retro_status"] = "Prescrição da pretensão punitiva aparente (%s)" % pior
             L["retro_cor"] = "vermelho"
         elif not intervalos or faltando:
-            L["retro_status"] = "dados insuficientes: falta " + ", ".join(faltando) if faltando else "dados insuficientes"
+            L["retro_status"] = "Verificar na ação penal: falta " + ", ".join(faltando) if faltando else "Verificar na ação penal"
             L["retro_cor"] = "cinza"
         else:
             L["retro_status"] = "não configurada"
@@ -287,9 +275,9 @@ def analisar(r, hoje=None):
         L["ppe_dias"] = None
         det = []
         if not termo:
-            L["ppe_status"] = "sem trânsito em julgado informado"
+            L["ppe_status"] = "Verificar na ação penal: trânsito em julgado não consta no RSPE"
             L["ppe_cor"] = "cinza"
-            det.append("Sem data de trânsito no RSPE; se a execução for provisória, a prescrição executória ainda não corre.")
+            det.append("Sem data de trânsito no RSPE: verificar na ação penal. Se a execução for provisória, a prescrição executória ainda não corre.")
         elif pena_cumprida_toda:
             L["ppe_status"] = "pena cumprida"
             L["ppe_cor"] = "cinza"
@@ -308,14 +296,17 @@ def analisar(r, hoje=None):
             det.append("Termo inicial: " + termo_txt + ". Prazo: " + L["prazo_ppe"] + ".")
             # custódia provisória (flagrante/preventiva/temporária) de OUTRO processo, sem menção a este,
             # não é "início ou continuação do cumprimento" desta pena (art. 117, V): não interrompe a executória
-            periodos_crime = []
+            periodos_crime, suspensoes = [], []
             proc_x = c.get("processo_criminal") or ""
             for (a, b, motivo, procs) in periodos_det:
                 provisoria = rs.re.search(r"FLAGRANTE|PREVENTIV|TEMPOR|PROVIS", motivo or "", rs.re.I) is not None
                 de_outro = bool(procs) and proc_x not in procs
                 if provisoria and de_outro and (b or hoje) > termo:
-                    det.append("Custódia de %s a %s (%s, processo %s) desconsiderada para este crime: prisão provisória de outro processo, não é cumprimento desta pena." % (
+                    # não é cumprimento desta pena (não interrompe - art. 117, V), mas preso por outro motivo a prescrição
+                    # executória não corre (art. 116, p. único): o prazo fica suspenso nesse período
+                    det.append("Custódia de %s a %s (%s, processo %s): preso por outro motivo - a prescrição fica suspensa nesse período (art. 116, p. único), sem interromper." % (
                         rs.fmt(a), rs.fmt(b) if b else "hoje", (motivo or "").lower(), procs))
+                    suspensoes.append((a, b or hoje))
                     continue
                 periodos_crime.append((a, b))
             periodos_crime += [pp for pp in periodos if pp not in [(a, b) for a, b, _, _ in periodos_det]]  # livramento/inferidos
@@ -337,6 +328,20 @@ def analisar(r, hoje=None):
                     meses = ppe_meses
                     base_txt = "pena integral %s (nunca iniciou o cumprimento)" % L["pena"]
                 limite = soma_meses(g0, meses)
+                # suspensão (art. 116, p. único): os dias preso por outro motivo não contam no prazo
+                susp_d = 0
+                for s0, s1 in sorted(suspensoes):
+                    if s0 >= limite or s1 <= g0:
+                        continue
+                    dias_s = (min(s1, g1) - max(s0, g0)).days
+                    if dias_s > 0:
+                        susp_d += dias_s
+                        limite = limite + timedelta(days=dias_s)
+                if susp_d and susp_d >= (g1 - g0).days - 1:
+                    det.append("✔ De %s a %s preso por outro motivo: a prescrição executória não corre (art. 116, p. único)." % (rs.fmt(g0), "hoje" if g1 >= hoje else rs.fmt(g1)))
+                    continue
+                if susp_d:
+                    base_txt += "; %d dia(s) de suspensão por prisão por outro motivo (art. 116, p. único)" % susp_d
                 aberto = g1 >= hoje and not em_custodia
                 if limite <= g1:
                     prescrita = (g0, limite, base_txt, meses)

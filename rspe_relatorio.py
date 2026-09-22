@@ -276,9 +276,9 @@ def relatorio_individual(m, caminho, nome_base):
         ln = [L for L in m.get("fd_linhas", []) if L.get("cor") in ("vermelho", "amarelo")]
         if ln:
             el.append(Spacer(1, 5))
-            el.append(_tabela([["Trabalho / estudo", "Período", "Atestado / horas", "Remição no RSPE", "Providência"]] +
-                              [[L["emp"], L["per"], L["at"], L["rspe"], _pilula(L["sit"], L["cor"], st)] for L in ln],
-                              [W * 0.2, W * 0.2, W * 0.22, W * 0.16, W * 0.22], st, cores_linha={i + 1: L["cor"] for i, L in enumerate(ln)}))
+            el.append(_tabela([["Trabalho / estudo", "Unidade", "Período", "Atestado / horas", "Remição no RSPE", "Providência"]] +
+                              [[L["emp"], L.get("un") or "—", L["per"], L["at"], L["rspe"], _pilula(L["sit"], L["cor"], st)] for L in ln],
+                              [W * 0.18, W * 0.1, W * 0.18, W * 0.2, W * 0.14, W * 0.2], st, cores_linha={i + 1: L["cor"] for i, L in enumerate(ln)}))
         else:
             el.append(Paragraph("Nada pendente de remição na ficha.", st["mut"]))
     else:
@@ -358,7 +358,8 @@ def estatisticas(modelos, hoje=None):
     for m in modelos:
         cs = [c for c in m.get("crimes_det", []) if not str(c.get("extinto") or "").upper().startswith("S")]
         for c in cs:
-            arts[((c.get("nome_crime") or "Crime não identificado") + " (" + (c.get("artigo") or "") + (" " + c["lei"] if c.get("lei") else "") + ")").replace(" ()", "")] += 1
+            dsp = c.get("dispositivo") or ""
+            arts[("%s (%s)" % (c["nome_crime"], dsp)) if c.get("nome_crime") else (dsp[:1].upper() + dsp[1:] or "Crime não identificado")] += 1
         hed += any(c.get("hediondo") == "S" for c in cs)
         vga += any(c.get("vga") == "S" for c in cs)
         reinc += any("S" in (c.get("reinc") or "") for c in cs)
@@ -434,17 +435,33 @@ def _barras(pares, st, largura, cor=PRI, max_itens=10):
     pares = [p for p in pares if p[1]][:max_itens]
     if not pares:
         return None
-    alt_linha, rot_w = 15, largura * 0.42
-    d = Drawing(largura, alt_linha * len(pares) + 4)
-    mx = max(v for _, v in pares) or 1
+    from reportlab.pdfbase.pdfmetrics import stringWidth
     from reportlab.lib import colors
-    for i, (rot, v) in enumerate(pares):
-        y = d.height - (i + 1) * alt_linha + 3
-        txt = rot if len(rot) <= 48 else rot[:46] + "…"
-        d.add(String(0, y + 2, txt if f["unicode"] else txt.replace("…", "..."), fontName=f["n"], fontSize=7.4, fillColor=colors.HexColor(TX2)))
+    rot_w = largura * 0.42
+    # rótulo inteiro, quebrado em linhas (sem reticências)
+    linhas_rot = []
+    for rot, v in pares:
+        palavras, ls, atual = rot.split(), [], ""
+        for p in palavras:
+            if stringWidth((atual + " " + p).strip(), f["n"], 7.4) > rot_w - 8:
+                ls.append(atual)
+                atual = p
+            else:
+                atual = (atual + " " + p).strip()
+        ls.append(atual)
+        linhas_rot.append(ls)
+    alturas = [max(15, 9 * len(ls) + 5) for ls in linhas_rot]
+    d = Drawing(largura, sum(alturas) + 4)
+    mx = max(v for _, v in pares) or 1
+    y_topo = d.height
+    for (rot, v), ls, h in zip(pares, linhas_rot, alturas):
+        y_topo -= h
+        yb = y_topo + (h - 9) / 2.0
+        for k, l in enumerate(ls):
+            d.add(String(0, y_topo + h - 10 - 9 * k, l, fontName=f["n"], fontSize=7.4, fillColor=colors.HexColor(TX2)))
         w = (largura - rot_w - 30) * v / float(mx)
-        d.add(Rect(rot_w, y, max(w, 1.5), 9, fillColor=colors.HexColor(cor), strokeColor=None, rx=2, ry=2))
-        d.add(String(rot_w + w + 4, y + 1.5, str(v), fontName=f["b"], fontSize=7.4, fillColor=colors.HexColor(TX)))
+        d.add(Rect(rot_w, yb, max(w, 1.5), 9, fillColor=colors.HexColor(cor), strokeColor=None, rx=2, ry=2))
+        d.add(String(rot_w + w + 4, yb + 1.5, str(v), fontName=f["b"], fontSize=7.4, fillColor=colors.HexColor(TX)))
     return d
 
 
@@ -495,12 +512,11 @@ def relatorio_geral(modelos, caminho, nome_base, nominal=True):
                        ("reincidentes (segundo o RSPE)", pct(E["reinc"]))]))
     bloco("Crimes mais frequentes (crimes em execução)", E["artigos"].most_common(10), "#7C6CF6")
     # 4) benefícios
-    el.append(Paragraph("Situação dos benefícios (datas do SEEU)", st["h2"]))
     fx = ["vencido", "até 30 dias", "até 60 dias", "até 90 dias", "até 180 dias"]
     tb = [["", "Vencido", "Até 30 dias", "31 a 60", "61 a 90", "91 a 180"]]
     for rot, cnt in (("Progressão", E["prog"]), ("Livramento condicional", E["liv"]), ("Término da pena", E["term"])):
         tb.append([Paragraph(_t(rot), st["neg"])] + [str(cnt.get(k, 0)) for k in fx])
-    el.append(_tabela(tb, [W * 0.3] + [W * 0.14] * 5, st))
+    el.append(KeepTogether([Paragraph("Situação dos benefícios (datas do SEEU)", st["h2"]), _tabela(tb, [W * 0.3] + [W * 0.14] * 5, st)]))
     el.append(Spacer(1, 6))
     el.append(_tabela([["Cálculos do programa", "Assistidos"],
                        ["Extinção pelo cumprimento cabível", str(E["ext_cabivel"])],

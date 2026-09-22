@@ -31,7 +31,7 @@ import rspe_regras as rg
 import rspe_relatorio as rrel
 
 APP = "RSPE Base"
-VERSAO = "6.10.0"
+VERSAO = "6.10.3"
 
 
 def pasta_app():
@@ -110,6 +110,14 @@ isolamento e recusa de trabalho. A Auditoria confronta: dias remidos atestados x
 art. 6º dos decretos), falta arquivada que ainda produza efeitos e perda de dias remidos em duplicidade (LEP, art. 127: a nova
 perda só alcança a remição adquirida depois da falta anterior). A aba <b>Ficha disciplinar</b> trata só de remição (trabalho e estudo) e mostra uma linha por emprego e por matrícula de estudo:
 período, atestado que o cobre, remição homologada no RSPE e providência. Trabalho anterior à 1ª prisão do RSPE fica só no resumo.
+<h4>Regras de leitura</h4>
+Quem não tem início de cumprimento definitivo no RSPE (só prisão provisória encerrada, ou nenhuma) aparece como "Não iniciou o
+cumprimento", e não como regime aberto ou pena interrompida. Livramento suspenso ou revogado em incidente posterior aparece como tal.
+Dar baixa no alerta de livramento incerto confirma o livramento em todas as abas. O programa não presume datas. Sem data do fato, recebimento da denúncia, sentença ou trânsito em julgado no RSPE, a prescrição
+daquele trecho não é calculada e a Auditoria aponta "verificar na ação penal". Quando a 1ª página do RSPE diz "Em livramento
+condicional deferido em ...", o assistido é tratado como em livramento, ainda que o "Regime Atual" traga o regime anterior. A
+data-base é conferida com a última prisão, progressão/regressão ou falta grave homologada; sem esse evento no RSPE, a Auditoria
+aponta a inconsistência (e, se coincidir com a soma/unificação das penas, o Tema 1006 do STJ).
 <h4>Relatórios em PDF</h4>
 O botão <b>Relatórios</b> gera, numa pasta com a data e a hora: um PDF por assistido (resumo, benefícios, condenações, linha do
 tempo, remição e alertas), o relatório geral da base (perfil, benefícios, remição, alertas e fila de prioridade) e a planilha.

@@ -305,7 +305,8 @@ const ui = {
       case '60': return d!==null && d>0 && d<=60;
       case '90': return d!==null && d>0 && d<=90;
       case 'interrompida': return !!r.interrompida && !r.estado_exec;
-      case 'naoaplica': return !!r.estado_exec;
+      case 'naoiniciou': return r.estado_exec==='nao_iniciou';
+      case 'naoaplica': return !!r.estado_exec && r.estado_exec!=='nao_iniciou';
       case 'semdata': return d===null && !r.interrompida && !r.estado_exec;
       case 'possivel': return (r.ind_status||[]).includes('possivel') && cor!=='vermelho';
       case 'verificar': return cor==='amarelo';
@@ -336,7 +337,7 @@ const ui = {
     const body=rows.map((s,i)=>{ const tds=cols.map(c=>{ let v=s[c[0]]??''; const pk=spec.sub_pilulas[c[0]];
         if(pk){ const pc=s[pk]||''; v=v?`<span class="pill ${pc||'none'}">${esc(v)}</span>`:'—'; } else if(spec.id==='aud' && (c[0]==='detalhe'||c[0]==='fundamento') && v){ v=String(v).split(/(?<=[.;])\s+(?=[A-ZÁÉÍÓÚ(])/).map(x=>`<div class="par">${penaExt(esc(x))}</div>`).join(''); }
         else v=penaExt(esc(v))||'<span class="muted">—</span>';
-        return `<td>${v}</td>`; }).join('');
+        return `<td${s[c[0]+'_full']?` title="${esc(s[c[0]+'_full'])}"`:''}>${v}</td>`; }).join('');
       const det=(s.retro_detalhe?'PRETENSÃO PUNITIVA\n'+s.retro_detalhe+'\n\n':'')+(s.ppe_detalhe?'PRETENSÃO EXECUTÓRIA\n'+s.ppe_detalhe:'')+(s.avisos&&s.avisos.length?'\n\nAVISOS\n'+s.avisos.join('\n'):'');
       if(baixa){ const bx = s.baixado ? `<span class="mini" onclick="event.stopPropagation();ui.reabrir('${r.id}','${s.chave}')">Reabrir</span>` : (s.nivel==='ok' ? '' : `<span class="mini" onclick="event.stopPropagation();ui.darBaixa('${r.id}','${s.chave}','${esc(s.titulo).replace(/'/g,'&#39;')}')">Dar baixa</span>`);
         const obs = s.baixado ? `<div class="muted" style="font-size:11.5px;margin-top:3px">baixado em ${esc(s.baixa_data)}${s.baixa_obs?' · '+esc(s.baixa_obs):''}</div>` : '';

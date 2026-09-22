@@ -377,11 +377,39 @@ def paragrafo_inciso(c):
     return None
 
 
+NOMES_CRIME = {  # nome jurídico usual quando o SEEU traz o texto do tipo (ex.: "Matar alguem:")
+    ("CP", "121"): "Homicídio", ("CP", "211"): "Ocultação de cadáver", ("CP", "129"): "Lesão corporal",
+    ("CP", "147"): "Ameaça", ("CP", "148"): "Sequestro e cárcere privado", ("CP", "171"): "Estelionato",
+    ("CP", "180"): "Receptação", ("CP", "213"): "Estupro", ("CP", "217-A"): "Estupro de vulnerável",
+    ("CP", "288"): "Associação criminosa", ("CP", "329"): "Resistência", ("CP", "330"): "Desobediência",
+    ("CP", "331"): "Desacato", ("CP", "307"): "Falsa identidade", ("CP", "155"): "Furto", ("CP", "157"): "Roubo",
+    ("CP", "158"): "Extorsão", ("CP", "159"): "Extorsão mediante sequestro", ("CP", "163"): "Dano",
+    ("Lei 10.826/03", "12"): "Posse irregular de arma de uso permitido", ("Lei 10.826/03", "14"): "Porte ilegal de arma de uso permitido",
+    ("Lei 10.826/03", "16"): "Posse ou porte de arma de uso restrito", ("Lei 10.826/03", "15"): "Disparo de arma de fogo",
+    ("Lei 11.343/06", "33"): "Tráfico de drogas", ("Lei 11.343/06", "35"): "Associação para o tráfico",
+    ("Lei 11.343/06", "28"): "Posse de drogas para consumo", ("Lei 9.503/97", "306"): "Embriaguez ao volante",
+    ("Lei 9.503/97", "309"): "Direção sem habilitação", ("Lei 3.688/41", "21"): "Vias de fato",
+}
+
+
 def nome_crime(c):
-    """'ART 157: Roubo' -> 'Roubo'; 'ART 12 - Posse irregular de arma...' -> 'Posse irregular de arma...'."""
+    """'ART 157: Roubo' -> 'Roubo'; 'ART 121: Matar alguem:' -> 'Homicídio' (qualificado, se § 2º)."""
     t = c.get("artigo") or ""
+    art = num_art(t)
+    nome = NOMES_CRIME.get((lei_curta(c.get("lei")), art))
+    if nome:
+        if art == "121" and (paragrafo_inciso(c) or ("", ""))[0] == "2":
+            nome = "Homicídio qualificado"
+        pi = paragrafo_inciso(c) or ("", "")
+        if art == "155" and pi[0] in ("4", "4-A", "4-B", "4-C", "5", "6", "7"):
+            nome = "Furto qualificado"
+        if art == "157" and pi[0] == "3" and pi[1] == "II":
+            nome = "Latrocínio"
+        if art == "33" and lei_curta(c.get("lei")) == "Lei 11.343/06" and pi[0] == "4":
+            nome = "Tráfico privilegiado"
+        return nome
     m = re.match(r"\s*ART\.?\s*[\dA-Z-]+\s*[:\-–]\s*(.+)$", t, re.I)
-    return m.group(1).strip() if m else ""
+    return m.group(1).strip().rstrip(":").strip() if m else ""
 
 
 def dispositivo(c):
@@ -1243,6 +1271,12 @@ def livramento_em_curso(campos, incidentes, ref=None):
              if "REVOG" in ((j.get("tipo") or "") + " " + (j.get("complemento") or "")).upper() and "LIVRAMENTO" in ((j.get("tipo") or "") + " " + (j.get("complemento") or "")).upper()]
     if any(d > dl and (ref is None or d <= ref) for d in revog):
         return False, dl
+    # suspensão do livramento registrada em incidente concedido depois do deferimento: não está em livramento
+    susp = [to_date(j.get("data_referencia") or j.get("data_decisao") or "") or date.max for j in incidentes
+            if j.get("situacao") == "CONCEDIDO" and "SUSPENS" in ((j.get("tipo") or "") + " " + (j.get("complemento") or "")).upper()
+            and "LIVRAMENTO" in ((j.get("tipo") or "") + " " + (j.get("complemento") or "")).upper()]
+    if dl != date.min and any(d > dl and (ref is None or d <= ref) for d in susp):
+        return False, dl
     if ref is not None and dl != date.min and dl > ref:
         return False, dl
     if "LIVRAMENTO" in (campos.get("regime_atual") or "").upper():
@@ -1268,7 +1302,10 @@ def duvidas_livramento(campos, eventos, incidentes, dl=None):
     d0 = dl if isinstance(dl, date) and dl != date.min else None
     duv = []
     reg = (campos.get("regime_atual") or "").replace(" - ATIVO", "").strip()
-    if reg and "LIVRAMENTO" not in reg.upper():
+    # a 1ª página do RSPE declarando "Em livramento condicional deferido em ..." prevalece sobre o "Regime Atual"
+    # (o SEEU mantém ali o regime anterior ao livramento)
+    seeu_lc = bool(re.search(r"LIVRAMENTO CONDICIONAL DEFERIDO", (campos.get("livramento_obs_seeu") or "").upper()))
+    if reg and "LIVRAMENTO" not in reg.upper() and not seeu_lc:
         duv.append("Regime Atual no RSPE é %s" % reg)
     for e in eventos:
         d = to_date(e.get("data") or "")

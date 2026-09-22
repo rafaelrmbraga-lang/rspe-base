@@ -1,4 +1,4 @@
-RSPE BASE - SEEU  v6.10.0 (programa em abas)
+RSPE BASE - SEEU  v6.10.3 (programa em abas)
 =========================================
 
 O QUE FAZ
@@ -211,6 +211,41 @@ PRESUNÇÃO DE HIPOSSUFICIÊNCIA (Defensoria)
   do art. 9º e sem bloqueio do livramento (CP, art. 83, IV). Tráfico
   privilegiado não é hediondo nem impeditivo (STF PSV 125, Tema 1400; STJ
   Tema 1336). Detalhes e fontes: "Criterios_de_analise_por_beneficio.pdf".
+
+v6.10.3
+  - "Não iniciou o cumprimento": sem início de cumprimento definitivo no RSPE
+    (só prisão provisória encerrada, ou nenhuma), o assistido não aparece
+    como "já em regime aberto" nem "pena interrompida". Filtro próprio.
+  - Livramento: suspensão ou revogação registrada em incidente posterior
+    encerra o livramento e aparece como "Livramento suspenso/revogado em ...",
+    mesmo que a 1ª página ainda diga "deferido". Dar baixa no alerta de
+    livramento incerto confirma o livramento em todas as abas.
+  - Relatório geral: rótulos inteiros nos gráficos (sem reticências) e
+    nomes jurídicos dos crimes (homicídio qualificado, latrocínio, tráfico
+    privilegiado, furto qualificado...).
+
+v6.10.2
+  - Livramento: "Em livramento condicional deferido em ..." na 1ª página do
+    RSPE prevalece sobre o "Regime Atual" (que o SEEU deixa no regime
+    anterior). Só há dúvida se houver revogação, suspensão, prisão ou nova
+    alteração de regime depois do livramento.
+  - Data-base: conferida com a última prisão, progressão/regressão, falta
+    grave homologada ou alteração de data-base registrada. Sem esse evento,
+    a Auditoria aponta "inconsistência da data-base"; se coincidir com a
+    soma/unificação das penas, alerta pelo Tema 1006 do STJ.
+  - Prescrição: o programa não presume datas. Sem fato, recebimento da
+    denúncia, sentença ou trânsito no RSPE, aquele trecho não é calculado e
+    a Auditoria aponta "verificar na ação penal" (antes usava o início do
+    cumprimento ou a data de hoje no lugar do trânsito).
+  - Prescrição executória: preso por outro motivo, o prazo fica suspenso
+    (CP, art. 116, p. único), não só deixa de interromper.
+
+v6.10.1
+  - Ficha disciplinar: coluna "Unidade" (IPCG, CPAIG, PDIB...) em cada
+    trabalho e matrícula de estudo, pela última entrada em unidade penal
+    antes do início; transferência no meio do período aparece como
+    "IPCG → CPAIG". Nome completo ao passar o mouse. A unidade também sai
+    na Auditoria (a quem pedir atestado/certidão) e no relatório individual.
 
 v6.10.0
   - Relatórios em PDF (botão "Relatórios"): um por assistido e um geral da

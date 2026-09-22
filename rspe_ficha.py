@@ -316,13 +316,13 @@ def confrontar(r, f, hoje=None):
     if sem:
         tot = sum(int(re.match(r"\d+", L["dias"]).group()) for L in sem if re.match(r"\d+", L["dias"]))
         itens.append({"nivel": "verificar", "titulo": "Trabalho sem atestado: %d período(s), ≈ %d dias (≈ %d remidos)" % (len(sem), tot, tot // 3),
-                      "detalhe": "; ".join("%s, %s (%s)" % (L["emp"], _br(L["per"]), L["dias"]) for L in sem) +
+                      "detalhe": "; ".join("%s%s, %s (%s)" % (L["emp"], (" - " + L["un"]) if L.get("un") and L["un"] != "—" else "", _br(L["per"]), L["dias"]) for L in sem) +
                                  ". Estimativa em dias corridos; a unidade atesta só os dias efetivamente trabalhados. Requerer os atestados e a remição.",
                       "fundamento": "LEP, arts. 126 e 129."})
     bx = [L for L in linhas if L["per"].startswith("início não registrado")]
     if bx:
         itens.append({"nivel": "verificar", "titulo": "Baixa de trabalho sem início registrado: %s" % "; ".join(
-                          "%s em %s" % (L["emp"], (re.search(r"baixa em (\S+)", L["per"]) or [None, "?"])[1]) for L in bx),
+                          "%s%s em %s" % (L["emp"], (" (" + L["un"] + ")") if L.get("un") and L["un"] != "—" else "", (re.search(r"baixa em (\S+)", L["per"]) or [None, "?"])[1]) for L in bx),
                       "detalhe": "A ficha registra a saída do trabalho, mas não quando ele começou (%s). A unidade o mantinha alocado sem registro de entrada: requerer à unidade o período trabalhado, o atestado e a remição." % "; ".join(
                           (re.search(r"\((último registro.+)\)", L["per"]) or [None, "sem registro anterior"])[1] for L in bx),
                       "fundamento": "LEP, arts. 126 e 129."})
@@ -333,7 +333,8 @@ def confrontar(r, f, hoje=None):
         itens.append({"nivel": "verificar",
                       "titulo": "Remição pelo estudo a requerer: ≈ %d h (≈ %d dias)" % (res["estudo_horas_pend"], res["estudo_dias_pend"]),
                       "detalhe": "Matrículas sem remição no RSPE: " + "; ".join(
-                          "%s, %s%s" % (e["curso"].title(), _br(e["inicio"]), (" a " + _br(e["fim"])) if e.get("fim") else " em diante (matrícula ativa)")
+                          "%s (%s), %s%s" % (e["curso"].title(), unidade_periodo(linha_unidades(f), e["_ini"], e["_fim"] or hoje)[0], _br(e["inicio"]),
+                                             (" a " + _br(e["fim"])) if e.get("fim") else " em diante (matrícula ativa)")
                           for e in res["estudos_pendentes"]) +
                                  ". Horas estimadas em 4 h por dia útil (como nas certidões da EJA), sem contar duas vezes matrículas simultâneas. Requerer a certidão de frequência escolar e a remição.",
                       "fundamento": "LEP, art. 126, § 1º, I (1 dia a cada 12 h de frequência, em no mínimo 3 dias), e § 5º (+1/3 na conclusão do ensino)."})
@@ -584,6 +585,52 @@ def _cobertura(t, ats):
     return out
 
 
+SIGLAS_UNIDADE = [
+    (r"INSTITUTO PENAL DE CAMPO GRANDE", "IPCG"), (r"AGROINDUSTRIAL DA GAMELEIRA", "CPAIG"), (r"DOIS IRM", "PDIB"),
+    (r"PRES[IÍ]DIO DE TR[AÂ]NSITO", "PTRAN"), (r"JAIR FERREIRA DE CARVALHO", "EPJFC"), (r"MONITORAMENTO", "UMMVE"),
+    (r"REGIME ABERTO E CASA ALBERGADO", "EPRACAG"), (r"CUST[OÓ]DIA DE CAMPO GRANDE", "CPAC"), (r"FEMININO", "EPFIIZ"),
+    (r"SEMIABERTO FEMININO", "EPFSA"), (r"PENITENCI[AÁ]RIA ESTADUAL DE DOURADOS", "PED"), (r"HARRY AMORIM", "PHAC"),
+]
+
+
+def sigla_unidade(nome):
+    u = (nome or "").upper()
+    for rx, sg in SIGLAS_UNIDADE:
+        if re.search(rx, u):
+            return sg
+    return (nome or "").strip().title()
+
+
+def linha_unidades(f):
+    """[(data, unidade)] das entradas em unidade penal registradas na ficha."""
+    out = []
+    for e in f.get("eventos", []):
+        m = re.search(r"Entrada na Unidade Penal:\s*(.+?),\s*Procedente", e.get("texto") or "", re.I)
+        d = _dp(e.get("data") or "")
+        if m and d:
+            nome = re.sub(r'["“”]', "", m.group(1)).strip()
+            if not out or out[-1][1] != nome or out[-1][0] != d:
+                out.append((d, nome))
+    out.sort(key=lambda x: x[0])
+    return out
+
+
+def unidade_periodo(tl, a, b):
+    """Unidade(s) em que a pessoa estava entre a e b: a última entrada até o início e as entradas no meio
+    (transferência no último dia não conta). Devolve (siglas, nomes completos)."""
+    if not a or not tl:
+        return "—", ""
+    b = b or a
+    us = []
+    for d, u in tl:
+        if d <= a:
+            us = [u]
+        elif d < b and u not in us:
+            us.append(u)
+    sig = list(dict.fromkeys(sigla_unidade(u) for u in us))
+    return (" → ".join(sig) or "—"), " → ".join(dict.fromkeys(us))
+
+
 def quadro_trabalho(r, f, hoje=None):
     """Uma linha por emprego da ficha: período, atestado que o cobre, remição no RSPE e providência.
     Devolve (linhas, resumo)."""
@@ -681,7 +728,14 @@ def quadro_trabalho(r, f, hoje=None):
         linhas.append({"emp": re.sub(r"^(PP|CC|A1|R1)\s*-\s*", "", b["setor"]), "per": "início não registrado · baixa em %s%s" % (b["data"], ult), "dias": None, "_ini": db,
                        "at": "—", "rspe": "—", "sit": "Pedir período e atestado à unidade", "cor": "amarelo"})
     linhas.sort(key=lambda L: L["_ini"] or date.min)
+    tl = linha_unidades(f)
     for L in linhas:
+        a0 = L.get("_ini")
+        ds = re.findall(r"\d{2}[./]\d{2}[./]\d{4}", L["per"])
+        b0 = (_dp(ds[1].replace("/", ".")) if len(ds) > 1 else None) or (hoje if ("em curso" in L["per"] or "hoje" in L["per"]) else a0)
+        if L["per"].startswith("início não registrado") and a0:
+            a0 = b0 = a0 - timedelta(days=1)  # a baixa é lançada na saída: vale a unidade que ele deixava
+        L["un"], L["un_full"] = unidade_periodo(tl, a0, b0)
         L.pop("_ini", None)
         L["per"] = _br(L["per"])
         L["at"] = _br(L["at"])
@@ -699,6 +753,7 @@ def quadro_trabalho(r, f, hoje=None):
         horas_txt = ("%d h (carga declarada na ficha)" % e["_horas"]) if e["_declaradas"] else ("≈ %d h estimadas (%d dias úteis × %d h)" % (e["_horas"], du, HORAS_DIA_ESTUDO))
         L = {"emp": "Estudo · %s%s" % (e["curso"].title().replace("Ead", "EAD").replace("Modulo", "Módulo"), (" (turma %s)" % e["turma"]) if e.get("turma") else ""), "per": _br(per),
              "dias": "%d dias úteis" % du if du else "—", "at": horas_txt}
+        L["un"], L["un_full"] = unidade_periodo(tl, e["_ini"], e["_fim"] or hoje)
         if e["_status"] == "homologado":
             L["rspe"] = "; ".join("remição de %s dias em %s (= %d h)" % (_fmtn(i["dias"]), i["data"], int(i["dias"] * 12)) for i in e["_inc"])
             L["sit"], L["cor"] = "Homologado", "verde"
@@ -730,7 +785,7 @@ def quadro_trabalho(r, f, hoje=None):
     # remições do RSPE que não casaram com atestado nem com estudo (leitura ou documento fora da ficha)
     for i in incs:
         if not i["atestados"] and not i["estudos"]:
-            linhas.append({"emp": "Remição sem atestado de trabalho na ficha", "per": "—", "dias": "—", "at": "—",
+            linhas.append({"emp": "Remição sem atestado de trabalho na ficha", "un": "—", "un_full": "", "per": "—", "dias": "—", "at": "—",
                            "rspe": "remição de %s dias em %s" % (_fmtn(i["dias"]), i["data"]), "sit": "Leitura ou documento fora da ficha", "cor": "cinza"})
     exec_ats = [a for a in ats if a["_status"] != "anterior"]
     pend = [a for a in ats if a["_status"] == "pendente"]
