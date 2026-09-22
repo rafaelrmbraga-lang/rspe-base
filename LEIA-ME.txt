@@ -1,4 +1,4 @@
-RSPE BASE - SEEU  v6.11.0 (programa em abas)
+RSPE BASE - SEEU  v6.11.2 (programa em abas)
 =========================================
 
 O QUE FAZ
@@ -211,6 +211,20 @@ PRESUNÇÃO DE HIPOSSUFICIÊNCIA (Defensoria)
   do art. 9º e sem bloqueio do livramento (CP, art. 83, IV). Tráfico
   privilegiado não é hediondo nem impeditivo (STF PSV 125, Tema 1400; STJ
   Tema 1336). Detalhes e fontes: "Criterios_de_analise_por_beneficio.pdf".
+
+v6.11.2
+  - Tabelas com linhas brancas: a cor fica só nas palavras de situação e
+    na barrinha à esquerda do nome.
+  - Prescrição: botões separados "Copiar pretensão punitiva" e "Copiar
+    pretensão executória" (cada um leva o cabeçalho do crime e as datas).
+  - Suspensão da prescrição por prisão por outro motivo (art. 116, p.
+    ú.): conta o dia da prisão e o da soltura.
+
+v6.11.1
+  - Progressão sempre em percentual: 1/6 = 16,67%, 2/5 = 40%, 3/5 = 60%
+    (ficha, relatório, Auditoria, resumo copiado e campo
+    {{fracao_progressao}} das petições). Acabam frações como "4/25".
+    Livramento e indulto seguem em frações, como na lei.
 
 v6.11.0
   - Telas mais enxutas. Geral, Progressão, Livramento, Indulto/Comutação,

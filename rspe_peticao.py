@@ -23,7 +23,7 @@ CAMPOS = [
     ("regime", "regime atual"), ("regime_rspe", "regime como impresso no RSPE"),
     ("pena_total", "pena total"), ("pena_cumprida", "pena cumprida (RSPE)"), ("pena_remanescente", "pena remanescente"),
     ("remidos", "saldo de dias remidos"), ("termino", "término previsto"),
-    ("data_base", "data-base da progressão"), ("fracao_progressao", "fração de progressão"), ("data_progressao", "data da progressão (SEEU/estimada)"),
+    ("data_base", "data-base da progressão"), ("fracao_progressao", "percentual de progressão"), ("data_progressao", "data da progressão (SEEU/estimada)"),
     ("situacao_progressao", "situação da progressão"), ("fracao_livramento", "fração do livramento"), ("data_livramento", "data do livramento"),
     ("situacao_livramento", "situação do livramento"),
     ("crimes", "crimes ativos, só os artigos"), ("crimes_completo", "crimes ativos com descrição, pena e datas (uma linha por crime)"),
@@ -276,7 +276,7 @@ def gerar_modelo_teste(pasta):
         row.cells[1].width = Cm(11)
     doc.add_paragraph("")
     doc.add_paragraph("Exemplo de condição (Jinja2): {% if falta_12m == 'Não consta' %}Sem indício de falta nos últimos 12 meses.{% else %}ATENÇÃO: {{falta_12m}}{% endif %}")
-    doc.add_paragraph("Exemplo de texto corrido: o sentenciado {{nome}}, execução nº {{processo}}, cumpre pena de {{pena_total}} em regime {{regime}}; data-base {{data_base}}, fração {{fracao_progressao}}, progressão prevista para {{data_progressao}} ({{situacao_progressao}}).")
+    doc.add_paragraph("Exemplo de texto corrido: o sentenciado {{nome}}, execução nº {{processo}}, cumpre pena de {{pena_total}} em regime {{regime}}; data-base {{data_base}}, percentual {{fracao_progressao}}, progressão prevista para {{data_progressao}} ({{situacao_progressao}}).")
     doc.save(os.path.join(pasta, "Teste - todos os campos.docx"))
 
 
@@ -328,7 +328,7 @@ def gerar_modelo_exemplo(pasta_app, origem_padrao=None):
     doc.add_paragraph("Sentenciado: {{nome}}")
     doc.add_paragraph("")
     doc.add_paragraph("A DEFENSORIA PÚBLICA DO ESTADO DE MATO GROSSO DO SUL, por seu Defensor Público que esta subscreve, no exercício das atribuições institucionais, em favor de {{nome}}, vem requerer PROGRESSÃO DE REGIME, pelos fundamentos a seguir.")
-    doc.add_paragraph("O sentenciado cumpre pena total de {{pena_total}} em regime {{regime}}, com data-base em {{data_base}} e fração de {{fracao_progressao}}; a data prevista para a progressão é {{data_progressao}} ({{situacao_progressao}}). Crimes: {{crimes}}. Falta nos últimos 12 meses: {{falta_12m}}.")
+    doc.add_paragraph("O sentenciado cumpre pena total de {{pena_total}} em regime {{regime}}, com data-base em {{data_base}} e percentual de {{fracao_progressao}}; a data prevista para a progressão é {{data_progressao}} ({{situacao_progressao}}). Crimes: {{crimes}}. Falta nos últimos 12 meses: {{falta_12m}}.")
     doc.add_paragraph("{{ficha_conduta}}")
     doc.add_paragraph("Diante do exposto, requer a concessão da progressão ao regime subsequente, com a expedição do competente alvará.")
     doc.add_paragraph("")

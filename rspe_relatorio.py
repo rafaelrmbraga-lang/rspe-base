@@ -230,7 +230,7 @@ def relatorio_individual(m, caminho, nome_base):
     el.append(tq)
     # 3) benefícios e datas
     el.append(Paragraph("Benefícios e datas", st["h2"]))
-    ben = [["Benefício", "Data (SEEU)", "Fração / fundamento", "Situação / resultado", "Ponto de atenção"]]
+    ben = [["Benefício", "Data (SEEU)", "Percentual / fração / fundamento", "Situação / resultado", "Ponto de atenção"]]
     cores = {}
 
     def add(nome, data, fr, sit, cor, aten):
@@ -262,7 +262,7 @@ def relatorio_individual(m, caminho, nome_base):
     el.append(Paragraph(_t("Datas de progressão, livramento e término: as do SEEU impressas no RSPE. Indulto, comutação e prescrição: cálculo do programa (estimativa)."), st["mut"]))
     # 4) condenações
     el.append(Paragraph("Condenações", st["h2"]))
-    cd = [["Crime", "Pena", "Fato", "Hed.", "VGA / morte", "Reincid.", "Frações (prog. / LC)"]]
+    cd = [["Crime", "Pena", "Fato", "Hed.", "VGA / morte", "Reincid.", "Progressão (%) / fração LC"]]
     for c in m.get("crimes_det", []):
         ext = str(c.get("extinto") or "").upper().startswith("S")
         reinc = {"S/S": "específico", "S/N": "comum", "N/S": "específico", "N/N": "primário"}.get(c.get("reinc") or "", c.get("reinc") or "")

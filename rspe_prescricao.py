@@ -346,7 +346,7 @@ def analisar(r, hoje=None):
                 for s0, s1 in sorted(suspensoes):
                     if s0 >= limite or s1 <= g0:
                         continue
-                    dias_s = (min(s1, g1) - max(s0, g0)).days
+                    dias_s = (min(s1, g1) - max(s0, g0)).days + 1  # conta o dia da prisão e o da soltura
                     if dias_s > 0:
                         susp_d += dias_s
                         limite = limite + timedelta(days=dias_s)

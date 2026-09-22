@@ -124,6 +124,29 @@ def dias_para_pena(n):
     return ("-" if neg else "") + "%da%dm%dd" % (a, m, d)
 
 
+def pct(fr):
+    """Fraction/'1/6'/'16%' -> '16,67%' (progressão sempre em percentual)."""
+    if fr is None or fr == "":
+        return ""
+    f = fr if isinstance(fr, Fraction) else parse_fracao(str(fr))
+    if f is None:
+        return str(fr)
+    v = round(float(f) * 100, 2)
+    t = ("%.2f" % v).rstrip("0").rstrip(".")
+    return t.replace(".", ",") + "%"
+
+
+def pct_rotulo(txt):
+    """'1/6 - Comum' -> '16,67% - Comum'; '3/5 (LEP ...)' -> '60% (LEP ...)'; percentuais ficam como estão."""
+    t = txt or ""
+    return re.sub(r"^\s*(\d+)\s*/\s*(\d+)", lambda m: pct(Fraction(int(m.group(1)), int(m.group(2)))), t)
+
+
+def pct_texto(t):
+    """Frações simples soltas no texto ('1/6', '2/5', '3/5') -> percentual; não toca em números de lei ('13.964/2019')."""
+    return re.sub(r"(?<![\d./])([1-9])/([1-9]\d?)(?![\d/])", lambda m: pct(Fraction(int(m.group(1)), int(m.group(2)))), t or "")
+
+
 def parse_fracao(txt):
     """'1/6 - Comum' -> Fraction(1,6); '16% - ...' -> Fraction(16,100)."""
     if not txt:

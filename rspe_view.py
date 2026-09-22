@@ -620,7 +620,7 @@ def modelo(r, baixas=None, ficha=None):
         "aud_status": aud["aud_status"], "aud_resumo": aud["aud_resumo"], "aud_alertas": aud["aud_alertas"],
         "aud_verificar": aud["aud_verificar"], "aud_itens": aud["aud_itens"], "aud_n": len(aud["aud_itens"]),
         "aud_base": aud["aud_base"],
-        "frac_prog": r.get("fracao_progressao_aplicada", ""),
+        "frac_prog": rs.pct(r.get("fracao_progressao_aplicada", "")),
         "dbase": r.get("data_base_seeu") or r.get("data_base", ""),
         "ped_prog": pedidos(r, "PROGRESS"),
         "liv": ltxt, "liv_sit": lsit, "liv_cor": lcor,
@@ -664,7 +664,7 @@ def modelo(r, baixas=None, ficha=None):
              "pena": rs.pena_extenso(c.get("pena_imposta")), "fato": c.get("data_infracao"),
              "vga": c.get("vga"), "morte": c.get("resultado_morte"), "reinc": "%s/%s" % (c.get("reincidente_comum"), c.get("reincidente_especifico")),
              "hediondo": c.get("hediondo_ou_equiparado"), "proc": c.get("processo_criminal"), "desc": c.get("tipo_penal"),
-             "frac_prog": c.get("fracao_progressao"), "frac_liv": c.get("fracao_livramento")}
+             "frac_prog": rs.pct_rotulo(c.get("fracao_progressao")), "frac_liv": c.get("fracao_livramento")}
             for c in r.get("_crimes", [])],
         "incidentes": [
             {"sit": i.get("situacao"), "tipo": i.get("tipo"), "comp": i.get("complemento"),

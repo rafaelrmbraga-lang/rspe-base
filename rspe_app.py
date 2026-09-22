@@ -31,7 +31,7 @@ import rspe_regras as rg
 import rspe_relatorio as rrel
 
 APP = "RSPE Base"
-VERSAO = "6.11.0"
+VERSAO = "6.11.2"
 
 
 def pasta_app():
@@ -139,7 +139,7 @@ As tabelas mostram só o essencial: data do SEEU ou "—" (sem data por não ini
 etc.); indulto e comutação como Sim, Não ou Verificar; prescrição como Não configurada, Não prescrita, Iminente ou Aparente.
 O motivo e o cálculo ficam na ficha do assistido (clique no nome). Condenação por fato posterior à data do decreto na mesma
 execução: o indulto e a comutação daquele decreto aparecem como "Não", com a explicação na ficha.
-Para levar ao Word: "Copiar resumo" (ficha do assistido), "Copiar cálculo" (prescrição, indulto e comutação), "Copiar" e
+Para levar ao Word: "Copiar resumo" (ficha do assistido), "Copiar pretensão punitiva" e "Copiar pretensão executória" (prescrição), "Copiar cálculo" (indulto e comutação), "Copiar" e
 "Copiar pendências" (Auditoria). O texto vai em linhas simples, pronto para colar. Nos modelos de petição, o campo
 {{prescricao_calculo}} traz a memória de cálculo da prescrição aparente ou iminente.
 <h4>Relatórios em PDF</h4>
@@ -161,7 +161,7 @@ para reativação futura.
 <h4>Auditoria</h4>
 Confronta o RSPE com a base jurídica (arquivo base_juridica.json, editável e versionado): soma das penas, cumprida + remanescente,
 remições, hediondez pelo rol da Lei 8.072/90 (e art. 112, § 5º, LEP para o tráfico privilegiado), marcação de VGA pelo tipo,
-fração de progressão pela lei da data do fato (1/6 até 22/01/2020; Lei 13.964/2019 de 23/01/2020 a 24/03/2026; Lei 15.358/2026
+percentual de progressão pela lei da data do fato (16,67% - 1/6 - até 22/01/2020; Lei 13.964/2019 de 23/01/2020 a 24/03/2026; Lei 15.358/2026
 a partir de 25/03/2026 para hediondos; Lei 15.402/2026 a partir de 08/05/2026), com retroatividade só do mais benéfico (STJ Temas
 1084, 1196 e 1354; STF Tema 1169), fração de livramento (CP, art. 83; Lei 11.343, art. 44), reincidência sem condenação anterior
 no RSPE (CP, art. 63), data-base e regressões (LEP, art. 112, § 6º), idade (art. 115 CP; § 2º dos decretos), marcos vencidos sem

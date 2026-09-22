@@ -322,17 +322,17 @@ def auditar(r, hoje=None):
         # hediondez
         if hed_lei is True and not hed_seeu:
             itens.append(_item("info", "%s: hediondo/equiparado pela lei, mas o SEEU aplicou fração comum (favorece o apenado)" % nome,
-                               "Frações no RSPE: progressão %s; livramento %s." % (c.get("fracao_progressao"), c.get("fracao_livramento")), "Lei 8.072/90, art. 1º; LEP, art. 112; CP, art. 83, V."))
+                               "No RSPE: progressão %s; livramento %s." % (rs.pct_rotulo(c.get("fracao_progressao")), c.get("fracao_livramento")), "Lei 8.072/90, art. 1º; LEP, art. 112; CP, art. 83, V."))
         elif hed_seeu and rs.hediondo_na_epoca(c) is False:
             _d, _lei = rs.hediondo_desde(c)
             itens.append(_item("alerta", "%s: SEEU tratou como hediondo, mas o fato (%s) é anterior à lei que o tornou hediondo (%s, vigência %s)" % (
                 nome, rs.fmt(fato) if fato else "?", _lei or "?", rs.fmt(_d)),
-                "A hediondez se rege pela lei da data do fato (irretroatividade da lei penal mais gravosa). Reflete na fração de progressão (comum, não 2/5-3/5 ou 70%%+), no livramento (1/3-1/2, não 2/3) e no indulto (art. 1º dos decretos). Frações no RSPE: %s / %s." % (
-                    c.get("fracao_progressao"), c.get("fracao_livramento")),
+                "A hediondez se rege pela lei da data do fato (irretroatividade da lei penal mais gravosa). Reflete no percentual de progressão (comum, não 40%%-60%% ou 70%%+), no livramento (1/3-1/2, não 2/3) e no indulto (art. 1º dos decretos). No RSPE: progressão %s; livramento %s." % (
+                    rs.pct_rotulo(c.get("fracao_progressao")), c.get("fracao_livramento")),
                 "CF, art. 5º, XL; CP, art. 2º; Lei 8.072/90 e alterações; STJ, Temas 1084 e 1196."))
         elif hed_lei is False and hed_seeu and ("HEDIONDO" in (c.get("fracao_progressao") or "").upper() or not (lei == "11343" and art in ("33", "34", "35", "36", "37"))):
             itens.append(_item("alerta", "%s: SEEU tratou como hediondo, mas o tipo não consta do rol" % nome,
-                               (obs_h or "Verificar a capitulação (qualificadora/§) que justifique a hediondez.") + " Frações no RSPE: %s / %s." % (c.get("fracao_progressao"), c.get("fracao_livramento")),
+                               (obs_h or "Verificar a capitulação (qualificadora/§) que justifique a hediondez.") + " No RSPE: progressão %s; livramento %s." % (rs.pct_rotulo(c.get("fracao_progressao")), c.get("fracao_livramento")),
                                "Lei 8.072/90, art. 1º; LEP, art. 112, § 5º."))
         elif hed_lei is None and art:
             itens.append(_item("info", "%s: hediondez depende do parágrafo/inciso" % nome, "Hediondo apenas se: %s. SEEU aplicou %s." % (obs_h, "fração de hediondo" if hed_seeu else "fração comum"), "Lei 8.072/90, art. 1º."))
@@ -355,15 +355,15 @@ def auditar(r, hoje=None):
         if f_seeu is not None and f_esp is not None:
             if abs(float(f_seeu) - float(f_esp)) > 0.01:
                 itens.append(_item("alerta" if float(f_seeu) > float(f_esp) else "info",
-                               ("%s: fração de progressão do SEEU (%s) maior que a legal (%s)" if float(f_seeu) > float(f_esp) else "%s: fração de progressão do SEEU (%s) menor que a esperada (%s) - favorece o apenado") % (nome, c.get("fracao_progressao"), rot),
+                               ("%s: percentual de progressão do SEEU (%s) maior que o legal (%s)" if float(f_seeu) > float(f_esp) else "%s: percentual de progressão do SEEU (%s) menor que o esperado (%s) - favorece o apenado") % (nome, rs.pct_rotulo(c.get("fracao_progressao")), rs.pct_rotulo(rot)),
                                "Fato em %s; %s; %s; %s. %s" % (rs.fmt(fato) if fato else "?", "reincidente" if reinc else "primário", "com VGA" if vga else "sem VGA",
-                                                               "hediondo" if hed else "comum", " ".join(obs)),
+                                                               "hediondo" if hed else "comum", rs.pct_texto(" ".join(obs))),
                                "LEP, art. 112 (redação vigente na data do fato; lei posterior só retroage se mais benéfica - CF, art. 5º, XL; STJ Temas 1084, 1196 e 1354; STF Tema 1169)."))
             else:
                 nota = " ".join(obs) or "Conforme a lei da data do fato."
                 if abs(float(f_seeu) - float(f_esp)) > 0.001:
-                    nota += " (diferença marginal 1/6 x 16%: STJ Tema 1354 admite o percentual mais benéfico)"
-                itens.append(_item("ok", "%s: fração de progressão confere (%s)" % (nome, c.get("fracao_progressao")), nota, "LEP, art. 112."))
+                    nota += " (diferença marginal 16,67% x 16%: STJ Tema 1354 admite o percentual mais benéfico)"
+                itens.append(_item("ok", "%s: percentual de progressão confere (%s)" % (nome, rs.pct_rotulo(c.get("fracao_progressao"))), rs.pct_texto(nota), "LEP, art. 112."))
         # fração de livramento
         if pena_total and pena_total < rg.carregar().get("livramento", {}).get("pena_minima_anos", 2) * rs.DIAS_ANO and c.get("fracao_livramento"):
             itens.append(_item("info", "%s: livramento condicional com pena total inferior a 2 anos" % nome,

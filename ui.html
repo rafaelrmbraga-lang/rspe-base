@@ -74,7 +74,7 @@ thead th .arr{opacity:.5;margin-left:4px;font-size:10px}
 tbody td{padding:9px 12px;border-bottom:1px solid #F0F2F5;white-space:normal;overflow-wrap:anywhere;vertical-align:middle;line-height:1.35;font-size:13px}
 tbody td:first-child{padding-left:14px;font-weight:600}td.nw,th.nw{white-space:nowrap;font-variant-numeric:tabular-nums}td.nw{max-width:320px;overflow:hidden;text-overflow:ellipsis}td.nw .pill{white-space:nowrap}td.pl .pill{overflow-wrap:normal;word-break:keep-all}
 tbody tr{cursor:pointer;transition:background .1s}tbody tr:hover td{background:#F5F7FB}
-tbody tr.vermelho td{background:#FFF7F7}tbody tr.laranja td{background:#FFF8F3}tbody tr.amarelo td{background:#FFFCF3}tbody tr.vencido td{background:#FFFBEB}tbody tr.verde td{background:#F5FCF8}tbody tr.cinza td{background:#E4E7EC}tbody tr.cinza:hover td{background:#DCE0E6}tbody tr.azul td{background:#F3F7FF}tbody tr.azul:hover td{background:#E8F0FF}
+/* linhas brancas: a cor fica só nas palavras (pílulas) e na barrinha lateral */
 tbody tr.vermelho:hover td{background:#FFEFEF}tbody tr.laranja:hover td{background:#FFEFE3}tbody tr.amarelo:hover td{background:#FFF7E0}tbody tr.vencido:hover td{background:#FFF4D6}tbody tr.verde:hover td{background:#EAF8F0}
 td.first{position:relative}td.first::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:3px;border-radius:0 3px 3px 0;background:transparent}
 tr.vermelho td.first::before{background:var(--r-dot)}tr.laranja td.first::before{background:var(--o-dot)}tr.amarelo td.first::before{background:var(--a-dot)}tr.vencido td.first::before{background:var(--a-dot)}tr.verde td.first::before{background:var(--g-dot)}tr.cinza td.first::before{background:var(--c-dot)}
@@ -337,18 +337,20 @@ const ui = {
       return `<div class="ml ${k}"><span class="mi">${sym}</span><span class="mt">${penaExt(esc(l))}</span></div>`; }).join('');
     return `<div class="mb ${cls||''}">${titulo?`<div class="mh">${titulo}</div>`:''}${li}</div>`; },
   memoria(s){
-    return `<div class="mem"><div class="cp-row"><span class="mini" onclick="event.stopPropagation();ui.copiarClip(${ui.clip(ui.txtPresc(s))})">Copiar cálculo</span></div>${this.bloco('Pretensão punitiva',s.retro_detalhe,'pp')}${this.bloco('Pretensão executória',s.ppe_detalhe,'pe')}${this.bloco('Avisos',s.avisos&&s.avisos.length?s.avisos:'','av')}</div>`; },
+    const bt=(parte,rot)=>`<span class="mini" onclick="event.stopPropagation();ui.copiarClip(${ui.clip(ui.txtPresc(s,parte))})">${rot}</span>`;
+    const cps=[s.retro_detalhe?bt('pp','Copiar pretensão punitiva'):'', s.ppe_detalhe?bt('pe','Copiar pretensão executória'):''].filter(Boolean).join(' ');
+    return `<div class="mem"><div class="cp-row" style="gap:6px">${cps}</div>${this.bloco('Pretensão punitiva',s.retro_detalhe,'pp')}${this.bloco('Pretensão executória',s.ppe_detalhe,'pe')}${this.bloco('Avisos',s.avisos&&s.avisos.length?s.avisos:'','av')}</div>`; },
   // ---- cópia em texto simples (para colar na petição, no Word) ----
   _clips:[],
   clip(t){ t=String(t||''); let i=this._clips.indexOf(t); if(i<0){ this._clips.push(t); i=this._clips.length-1; } return i; },
   copiarClip(i){ const t=this._clips[i]||''; const done=()=>this.toast('Copiado ('+t.split('\n').length+' linha(s)) - cole no Word'); if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(t).then(done).catch(()=>{ this._copiaFallback(t); done(); }); } else { this._copiaFallback(t); done(); } },
   txtLinhas(txt){ const ls=Array.isArray(txt)?txt:String(txt||'').split('\n'); return ls.map(l=>l.trim()).filter(Boolean).map(l=>{ const m=l.match(/^([✓✔✘✗…?⚠])\s*/); if(m){ const ic=/[✓✔]/.test(m[1])?'✓':/[✘✗]/.test(m[1])?'✗':(m[1]==='?'?'?':'!'); l=ic+' '+l.slice(m[0].length); } else l='• '+l; return penaExt(l); }).join('\n'); },
-  txtPresc(s){ const cab=[`Prescrição - ${s.crime}${s.proc_crim?' (processo '+s.proc_crim+')':''}`,
+  txtPresc(s,parte){ const cab=[`Prescrição - ${s.crime}${s.proc_crim?' (processo '+s.proc_crim+')':''}`,
       `Pena: ${penaExt(s.pena||'—')} · Fato: ${s.fato||'—'} · Denúncia: ${s.denuncia||'—'} · Sentença: ${s.sentenca||'—'} · Trânsito: ${s.transito||'—'}`];
     const out=[cab.join('\n')];
-    if(s.retro_detalhe) out.push(`Pretensão punitiva (prazo ${s.prazo_ppp||'—'}): ${s.retro_status||''}\n`+this.txtLinhas(s.retro_detalhe));
-    if(s.ppe_detalhe) out.push(`Pretensão executória (prazo ${s.prazo_ppe||'—'}): ${s.ppe_status||''}\n`+this.txtLinhas(s.ppe_detalhe));
-    if(s.avisos&&s.avisos.length) out.push('Avisos\n'+this.txtLinhas(s.avisos));
+    if(s.retro_detalhe&&parte!=='pe') out.push(`Pretensão punitiva (prazo ${s.prazo_ppp||'—'}): ${s.retro_status||''}\n`+this.txtLinhas(s.retro_detalhe));
+    if(s.ppe_detalhe&&parte!=='pp') out.push(`Pretensão executória (prazo ${s.prazo_ppe||'—'}): ${s.ppe_status||''}\n`+this.txtLinhas(s.ppe_detalhe));
+    if(s.avisos&&s.avisos.length&&!parte) out.push('Avisos\n'+this.txtLinhas(s.avisos));
     return out.join('\n\n'); },
   txtAud(s){ return `${s.nivel_txt} - ${s.titulo}`+(s.detalhe?'\n'+penaExt(s.detalhe):'')+(s.fundamento?'\nFundamento: '+penaExt(s.fundamento):''); },
   txtAudTodos(r){ const it=(r.aud_itens||[]).filter(s=>!s.baixado&&(s.nivel==='alerta'||s.nivel==='verificar'));
@@ -358,7 +360,7 @@ const ui = {
     L.push(`Pena total: ${r.pena_total} · cumprida: ${r.pena_cumprida} · remanescente: ${r.pena_rem}`);
     const d=(v,mot)=> v&&v!=='—'?v:(mot||'—');
     L.push(`Término: ${d(r.termino,r.termino_motivo)}`);
-    L.push(`Progressão: ${d(r.prog,r.prog_motivo)}${r.frac_prog?' (fração '+r.frac_prog+', data-base '+(r.dbase||'—')+')':''}`);
+    L.push(`Progressão: ${d(r.prog,r.prog_motivo)}${r.frac_prog?' (percentual '+r.frac_prog+', data-base '+(r.dbase||'—')+')':''}`);
     L.push(`Livramento condicional: ${d(r.liv,r.liv_motivo)}${r.frac_liv?' (fração '+r.frac_liv+')':''}`);
     L.push(`Crime impeditivo (art. 1º dos decretos): ${r.imp_txt||r.imp||'—'}`);
     L.push(`Indulto 2022: ${r.i22_txt||'—'} · Indulto 2024: ${r.i24_txt||'—'} · Indulto 2025: ${r.i25_txt||'—'}`);
