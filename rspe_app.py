@@ -31,7 +31,7 @@ import rspe_regras as rg
 import rspe_relatorio as rrel
 
 APP = "RSPE Base"
-VERSAO = "6.13.0"
+VERSAO = "6.13.1"
 
 
 def pasta_app():
@@ -356,6 +356,12 @@ class Api:
         fichas = self.base.fichas()
         self._modelos = []
         for r in brutos:
+            try:
+                imp = r.get("importado_em")
+                r = rs.reprocessar(r)  # análise refeita com as regras desta versão (a leitura do PDF fica como foi gravada)
+                r["importado_em"] = imp
+            except Exception:
+                pass
             ch = r.get("processo_execucao") or r.get("arquivo")
             ficha = fichas.get(ch) or fichas.get("nome:" + _norm(r.get("nome", "")))
             m = rv.modelo(r, baixas.get(ch, {}), ficha)

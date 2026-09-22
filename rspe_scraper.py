@@ -334,6 +334,7 @@ def parse_crimes(trecho):
             c["fracao_livramento"] = campo(lei, "Fração adotada no cálculo para livramento condicional")
             c["extinto"] = campo(lei, "Extinto")[:3]
             c["suspenso"] = re.sub(r"\s*Data de suspens.*", "", campo(lei, "Suspenso"))[:3]
+            c["artigo_rspe"] = c["artigo"]
             inferir_artigo(c)
             c["hediondo_ou_equiparado"] = "S" if e_hediondo(c) else "N"
             crimes.append(c)
@@ -1410,7 +1411,8 @@ def aplicar_extincoes(r, crimes, incidentes):
     ext_inc = [i for i in incidentes if "EXTIN" in (i.get("tipo") or "").upper() and i.get("situacao", "CONCEDIDO") == "CONCEDIDO"]
     geral = []
     for c in crimes:
-        c["extinto_rspe"] = c.get("extinto", "")
+        c["extinto_rspe"] = c.get("extinto_rspe", c.get("extinto", ""))  # valor original do RSPE (a análise pode ser refeita)
+        c["extinto"] = c["extinto_rspe"]
         c["extincao_fonte"] = ""
         sit_p = (c.get("processo_situacao") or "").upper()
         if sit_p.startswith("EXTINT") or sit_p.startswith("INDULTAD"):
@@ -2104,6 +2106,30 @@ def extrair(caminho):
     for i in inc_pend:
         i["situacao"] = "PENDENTE"
     incidentes = inc_conc + inc_neg + inc_pend
+    return derivar(r, crimes, eventos, incidentes)
+
+
+def reprocessar(r):
+    """Refaz a análise de um registro já gravado na base (leitura do PDF preservada), com as regras desta versão."""
+    return derivar(r, r.get("_crimes", []), r.get("_eventos", []), r.get("_incidentes", []))
+
+
+def derivar(r, crimes, eventos, incidentes):
+    """Tudo o que o programa conclui a partir do que foi lido do RSPE. Roda na importação e de novo ao abrir a base,
+    para que cada versão nova valha também para quem já estava importado."""
+    hoje = to_date(r.get("data_geracao_rspe") or "") or date.today()
+    inc_conc = [i for i in incidentes if i.get("situacao") == "CONCEDIDO"]
+    inc_neg = [i for i in incidentes if i.get("situacao") == "NÃO CONCEDIDO"]
+    inc_pend = [i for i in incidentes if i.get("situacao") == "PENDENTE"]
+    for c in crimes:
+        if c.get("artigo_inferido"):  # artigo reconhecido pela descrição: refaz com a regra atual
+            c["artigo"] = c.get("artigo_rspe") or "Não informado"
+            c.pop("artigo_inferido", None)
+            c.pop("lei_do_tempo", None)
+        c.setdefault("artigo_rspe", c.get("artigo", ""))
+        inferir_artigo(c)
+        c["hediondo_ou_equiparado"] = "S" if e_hediondo(c) else "N"
+    aplicar_extincoes(r, crimes, incidentes)  # antes de tudo: o resto da análise considera só os crimes ativos
 
     # resumo de crimes
     def _nome_crime(c):
@@ -2148,7 +2174,6 @@ def extrair(caminho):
     r["incidentes_nao_concedidos"] = " | ".join("%s %s %s" % (i["tipo"], i["complemento"], i["data_decisao"]) for i in inc_neg)
     r["incidentes_pendentes"] = " | ".join("%s %s" % (i["tipo"], i["complemento"]) for i in inc_pend)
 
-    aplicar_extincoes(r, crimes, incidentes)
     r.update(situacao_execucao(r, eventos, incidentes, crimes, hoje))
     r.update(faltas(r, eventos, incidentes, hoje))
     r.update(analise_decretos(r, crimes, eventos, incidentes, hoje))
