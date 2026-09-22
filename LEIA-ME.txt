@@ -1,4 +1,4 @@
-RSPE BASE - SEEU  v6.9.9 (programa em abas)
+RSPE BASE - SEEU  v6.10.0 (programa em abas)
 =========================================
 
 O QUE FAZ
@@ -211,6 +211,52 @@ PRESUNÇÃO DE HIPOSSUFICIÊNCIA (Defensoria)
   do art. 9º e sem bloqueio do livramento (CP, art. 83, IV). Tráfico
   privilegiado não é hediondo nem impeditivo (STF PSV 125, Tema 1400; STJ
   Tema 1336). Detalhes e fontes: "Criterios_de_analise_por_beneficio.pdf".
+
+v6.10.0
+  - Relatórios em PDF (botão "Relatórios"): um por assistido e um geral da
+    base, numa pasta com a data e a hora, com a planilha junto. Na ficha do
+    assistido, "Relatório em PDF" gera só o dele. Na linha de comando:
+    --relatorios, --relatorio-geral, --sem-planilha e --anonimo.
+  - Ficha disciplinar: estudo. Cada matrícula (série/curso) vira um período
+    com início, cancelamento ou encerramento; o programa liga a matrícula à
+    remição do RSPE e estima as horas das matrículas sem remição (4 h por dia
+    útil, sem contar duas vezes matrículas simultâneas; menos de 3 dias não
+    conta). Nova coluna "Estudo a requerer". Os remidos da ficha passam a
+    somar trabalho e estudo (ex.: 62 / 62, e não 0 / 62).
+  - A análise da ficha trata só de remição: saíram os itens de autos citados
+    na ficha, faltas, restabelecimento e recusa de trabalho.
+  - Atestado homologado em parte (remição menor que o atestado): aponta a
+    diferença.
+  - Livramento: hediondo com resultado morte, primário, fato a partir de
+    23/01/2020 - vedado (LEP, art. 112, VI, a); o 1/1 do SEEU deixa de ser
+    apontado como fração maior que a legal.
+
+v6.9.11
+  - Mais espaçamento nas tabelas internas e nos cálculos; na Auditoria, o
+    "O que foi encontrado" e o fundamento saem em frases separadas.
+  - Comutação explicada: requisito (fração x pena considerada x cumprido) e
+    redução (quanto cai e para quanto vai o remanescente). Se o indulto foi
+    indeferido no RSPE, a comutação deixa de aparecer como "prejudicada".
+  - Inciso XV: só quando todos os crimes são patrimoniais sem violência ou
+    grave ameaça (penas somadas); com roubo, resistência etc. não se aplica.
+  - Geral: sem a coluna Crimes. Progressão e Livramento: coluna Conduta, lida
+    sempre da ficha disciplinar (reimporte a ficha para atualizar).
+  - Extinção: só a extinção pelo cumprimento (prescrição e indulto ficam nas
+    próprias abas).
+
+v6.9.10
+  - Indulto/comutação com crime impeditivo em concurso (art. 7º, p. ú.): o
+    programa confere os 2/3 da pena do impeditivo e analisa os incisos do
+    art. 9º e o art. 13 só com a pena dos crimes não impeditivos (tempo
+    cumprido além dos 2/3). Resultado definido: "Parcial · inciso · art. 7º,
+    p. ú.", "Vedado" (com quanto falta para os 2/3) ou "Não atinge".
+  - Hediondez posterior ao fato: o programa faz a análise completa (tese da
+    irretroatividade) e mostra "Possível/Parcial · ... · tese hed. superv.",
+    com a nota de que o STJ veda e o resultado pela corrente do STJ.
+  - XV em concurso: indulto parcial da pena dos crimes patrimoniais sem VGA
+    (nomeados, com a pena), sem "verificar separação".
+  - Ficha do assistido: a linha Indulto mostra o resultado de cada decreto
+    mesmo quando há crime impeditivo.
 
 v6.9.9
   - Ficha disciplinar por emprego: cada linha mostra o emprego, o período, o

@@ -1,5 +1,5 @@
 {
- "versao": "2026-09-21d",
+ "versao": "2026-09-22a",
  "descricao": "Base juridica do RSPE Base. Editavel: o programa le este arquivo ao abrir (copia ao lado do .exe tem prioridade sobre a embutida). Datas em AAAA-MM-DD. Fracoes como 'num/den' ou percentual 'NN%'.",
  "prescricao": {
   "art109_tabela": [
@@ -100,7 +100,11 @@
      "STJ Tema 1196: reincidente generico em hediondo com morte -> 50%.",
      "STF Tema 1169: 60% nao se aplica a reincidente nao especifico.",
      "STJ Tema 1354: percentuais distintos por condenacao na mesma execucao; retroatividade do mais benefico e ultratividade do 1/6 para reincidente sem VGA.",
-     "16% retroage (mais benefico que 1/6); 20% nao retroage para fatos anteriores a 23/01/2020 (1/6 ultra-ativo)."
+     "16% retroage (mais benefico que 1/6); 20% nao retroage para fatos anteriores a 23/01/2020 (1/6 ultra-ativo).",
+     "Art. 112, VI, a: hediondo com resultado morte, primário - vedado o livramento condicional (fatos a partir de 23/01/2020)."
+    ],
+    "vedado_lc": [
+     "hediondo_morte_primario"
     ]
    },
    {

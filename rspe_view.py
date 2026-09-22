@@ -33,7 +33,7 @@ ROTULO = {
     "lapso": {"vencido": "Vencido · verificar", "laranja": "Até 30 dias", "amarelo": "Até 60 dias", "verde": "Até 90 dias", "cinza": "Não se aplica / interrompida", "azul": "Extinta"},
     "indulto": {"vermelho": "Crime impeditivo", "verde": "Possível", "amarelo": "A verificar", "cinza": "Não atinge", "azul": "Extinta"},
     "presc": {"vermelho": "Prescrição aparente", "": "Não prescrita", "cinza": "Sem dados", "azul": "Extinta"},
-    "fd": {"vermelho": "Remição pendente", "amarelo": "Trabalho a atestar / verificar", "verde": "Em ordem", "cinza": "Sem ficha"},
+    "fd": {"vermelho": "Remição pendente", "amarelo": "Trabalho ou estudo a requerer", "verde": "Em ordem", "cinza": "Sem ficha"},
     "aud": {"vermelho": "Guia demanda atenção", "amarelo": "Pontos a verificar", "verde": "Sem inconsistências", "azul": "Extinta"},
     "ext": {"vermelho": "Extinção cabível", "laranja": "Término em até 30 dias", "amarelo": "Até 60 dias / a verificar", "verde": "Término em até 90 dias", "cinza": "Sem previsão / interrompida", "azul": "Extinta (registrada)"},
 }
@@ -47,7 +47,7 @@ FILTROS = {
     "fd": [
         ("todas", "Todas"),
         ("impeditivo", "Remição pendente"),
-        ("verificar", "A atestar / verificar"),
+        ("verificar", "Trabalho ou estudo a requerer"),
         ("ok", "Em ordem"),
         ("nao", "Sem ficha"),
     ],
@@ -198,8 +198,13 @@ def curto_indulto(txt):
     base = txt.split(" | ")[0]
     if base.startswith("VEDAD"):
         return "Vedado (art. 1º)"
-    if base.startswith("POSSÍVEL (parcial)"):
-        return "Possível (parcial) · " + base.split(": ", 1)[1] + falta
+    m = rs.re.match(r"POSSÍVEL \((.+?)\): (.*)$", base)
+    if m:
+        q = m.group(1)
+        rot = ("Parcial" if "parcial" in q else "Possível")
+        extra = " · art. 7º, p. ú." if "art. 7º" in q else ""
+        extra += " · tese: hed. superveniente" if "hediondez" in q else ""
+        return "%s · %s%s%s" % (rot, m.group(2).replace("art. 9º, ", ""), extra, falta)
     if base.startswith("POSSÍVEL"):
         return base.replace("POSSÍVEL: ", "Possível · ").split("; § 5º")[0].replace("art. 5º (todos os crimes com pena máxima ≤ 5 anos)", "art. 5º (pena máx. ≤ 5 anos)") + falta
     if base.startswith("A VERIFICAR"):
@@ -255,7 +260,8 @@ def compacto_indulto(txt):
     t = t.replace(" · art. 9º, ", " · ").replace("art. 5º (pena máx. ≤ 5 anos)", "art. 5º")
     t = rs.re.sub(r"^Não atinge \(.*\)$", "Não atinge", t)
     t = rs.re.sub(r"^não atinge.*$", "Não atinge", t)
-    t = rs.re.sub(r"^Possível · art\. 13 \(.*\)$", "Possível · art. 13", t)
+    t = rs.re.sub(r"^Possível · art\. 13 \([^)]*\)", "Possível · art. 13", t)
+    t = t.replace(" · tese: hed. superveniente", " · tese hed. superv.")
     t = t.replace("Possível (parcial) · ", "Parcial · ")
     t = rs.re.sub(r"^(A verificar · art\. 7º, p\. ú\.).*$", r"\1 (2/3 do impeditivo)", t)
     return t
@@ -273,11 +279,11 @@ def compacto_impeditivo(txt):
 def cor_indulto(r):
     if execucao_extinta(r):
         return "azul"
-    if r.get("indulto_crime_impeditivo") == "SIM":
-        return "vermelho"
     st = {r.get("indulto_2022_status"), r.get("indulto_2024_status"), r.get("indulto_2025_status")}
     if "possivel" in st:
-        return "verde"
+        return "verde"  # mesmo com crime impeditivo: art. 7º, p. ú., ou tese da hediondez superveniente
+    if r.get("indulto_crime_impeditivo") == "SIM":
+        return "vermelho"
     if "verificar" in st or "POSSÍVEL" in (r.get("comutacao_2025", "") + r.get("comutacao_2024", "")):
         return "amarelo"
     return "cinza"
@@ -319,30 +325,13 @@ def extincao(r, presc, interr):
             if term <= HOJE:
                 hip.append("Livramento condicional desde %s com período de prova expirado em %s sem revogação (CP, arts. 82 e 90)" % (rs.fmt(dlc), rs.fmt(term)))
                 cor = "vermelho"
-    # 3) prescrição / detração
+    # 3) detração que alcança toda a pena do crime (cumprimento pela custódia provisória)
+    #    prescrição e indulto ficam nas próprias abas: aqui só a extinção pelo cumprimento
     for l in presc.get("presc_linhas", []):
         if (l.get("ppe_status") or "").startswith("Pena cumprida por detração"):
             hip.append("%s: %s - CP, art. 42; LEP, art. 66, II" % (l["crime"], l["ppe_status"]))
             cor = "vermelho"
-            continue
-        if l.get("ppe_cor") == "vermelho":
-            hip.append("Prescrição da pretensão executória aparente: %s (%s) - CP, art. 107, IV" % (l["crime"], l.get("ppe_previsao")))
-            cor = "vermelho"
-        if l.get("retro_cor") == "vermelho":
-            hip.append("Prescrição da pretensão punitiva aparente: %s - CP, art. 107, IV" % l["crime"])
-            cor = "vermelho"
-    # 4) indulto
     parcial = False
-    for ano in ("2022", "2024", "2025"):
-        if r.get("indulto_%s_status" % ano) == "possivel":
-            txt = (r.get("indulto_%s" % ano) or "").split(" | ")[0]
-            if txt.startswith("POSSÍVEL (parcial)"):
-                # indulto de parte dos crimes: extingue só esses crimes, não a execução
-                hip.append("Indulto %s parcial (%s) - extingue só esses crimes; a execução prossegue pelos demais (CP, art. 107, II)" % (ano, txt.split(": ", 1)[-1]))
-                parcial = True
-            else:
-                hip.append("Indulto %s possível (%s) - CP, art. 107, II" % (ano, txt.replace("POSSÍVEL: ", "")))
-                cor = "vermelho"
     # multa cominada: não obsta a extinção (hipossuficiência presumida - Defensoria)
     com_multa = any(re.search(r"\b(E|e)\s+Multa", c.get("tipo_penal") or "") for c in r.get("_crimes", []) if not c.get("extinto", "").upper().startswith("S"))
     multa_txt = ("Multa cominada: não obsta a extinção - hipossuficiência presumida (STJ Tema 931; STF ADI 7.032)" if com_multa else "")
@@ -373,7 +362,7 @@ def extincao(r, presc, interr):
         else:
             cor = "cinza"
     return {
-        "ext_hipoteses": "; ".join(hip) if hip else ("Nenhuma hipótese objetiva no RSPE" if not interr else "Pena interrompida - sem previsão"),
+        "ext_hipoteses": "; ".join(hip) if hip else ("" if not interr else "Pena interrompida - sem previsão"),
         "ext_cor": cor,
         "ext_termino": (rs.fmt(term) + (" (est.)" if est else "")) if term else ("Interrompida" if interr else ""),
         "ext_dias": (term - HOJE).days if term else None,
@@ -479,6 +468,8 @@ def modelo(r, baixas=None, ficha=None):
         **ext,
         **rf.comparativo(r, ficha, HOJE),
         "ficha_resumo": rf.resumo(ficha) if ficha else "",
+        "conduta_ruim": bool(ficha and re.search(r"RESPONDE|REGULAR|\bM[ÁA]\b|P[ÉE]SSIMA|RUIM", (ficha.get("conduta") or "").upper())),
+        "conduta": ((ficha.get("conduta") or "não informada na ficha").title().replace("Padic", "PADIC").replace("Ipcg", "IPCG").replace("Otima", "Ótima").replace("Pessima", "Péssima") if ficha else "Sem ficha"),
         "ficha_tem": bool(ficha),
         "ficha": ({k: ficha.get(k) for k in ("nome", "rgi", "cpf", "unidade", "data_entrada", "data_prisao", "conduta", "data_impressao", "trabalho", "atestados",
                                              "dias_trabalhados_atestados", "dias_remidos_atestados", "faltas", "regressoes", "restabelecimentos", "recusa_trabalho", "isolamentos", "estudo", "autos", "importado_em")}
@@ -511,6 +502,7 @@ def modelo(r, baixas=None, ficha=None):
         "i25_cor": cor_texto_indulto(r.get("indulto_2025", "")),
         "c25_cor": cor_texto_indulto(r.get("comutacao_2025", "")),
         "det24": r.get("indulto_2024_detalhe", ""),
+        "cdet24": r.get("comutacao_2024_detalhe", ""), "cdet25": r.get("comutacao_2025_detalhe", ""),
         "det25": r.get("indulto_2025_detalhe", ""),
         "geracao": r.get("data_geracao_rspe", ""),
         "importado": r.get("importado_em", ""),
@@ -547,15 +539,15 @@ PRESC_SUB = [("crime", "Crime", 14), ("pena", "Pena", 8), ("fato", "Fato", 9), (
 ABAS = [
     {"id": "geral", "titulo": "Geral", "cor": "geral_cor", "legenda": "lapso", "sem_stats": True,
      "cols": [("nome", "Nome", 22), ("proc", "Nº da execução", 17), ("regime", "Regime", 9),
-              ("prog", "Progressão", 15), ("liv", "Livramento", 15), ("termino", "Término", 10), ("crimes", "Crimes", 22)],
+              ("prog", "Progressão", 15), ("liv", "Livramento", 15), ("termino", "Término", 10)],
      "pilulas": {}},
     {"id": "prog", "titulo": "Progressão", "cor": "prog_cor", "legenda": "lapso",
      "cols": [("nome", "Nome", 22), ("proc", "Nº da execução", 18), ("regime", "Regime", 9),
-              ("prog", "Data da progressão", 16), ("prog_sit", "Situação", 14), ("falta", "Falta (12 meses)", 16)],
+              ("prog", "Data da progressão", 14), ("prog_sit", "Situação", 16), ("conduta", "Conduta (ficha)", 12), ("falta", "Falta (12 meses)", 14)],
      "pilulas": {"prog_sit": "prog_cor"}},
     {"id": "liv", "titulo": "Livramento", "cor": "liv_cor", "legenda": "lapso",
      "cols": [("nome", "Nome", 22), ("proc", "Nº da execução", 18), ("regime", "Regime", 9),
-              ("liv", "Data do livramento", 16), ("liv_sit", "Situação", 14), ("falta", "Falta (12 meses)", 16)],
+              ("liv", "Data do livramento", 14), ("liv_sit", "Situação", 16), ("conduta", "Conduta (ficha)", 12), ("falta", "Falta (12 meses)", 14)],
      "pilulas": {"liv_sit": "liv_cor"}},
     {"id": "ind", "titulo": "Indulto / Comutação", "cor": "ind_cor", "legenda": "indulto",
      "cols": [("nome", "Nome", 16), ("proc", "Nº da execução", 14), ("regime", "Regime", 8),
@@ -569,11 +561,11 @@ ABAS = [
      "sub": "presc_linhas", "sub_cols": PRESC_SUB, "sub_pilulas": {"retro_status": "retro_cor", "ppe_status": "ppe_cor"}, "sub_calc": True},
     {"id": "ext", "titulo": "Extinção", "cor": "ext_cor", "legenda": "ext",
      "cols": [("nome", "Nome", 20), ("proc", "Nº da execução", 17), ("regime", "Regime", 8),
-              ("ext_termino", "Término", 10), ("ext_sit", "Situação", 12), ("ext_hipoteses", "Hipóteses de extinção no RSPE", 46)],
+              ("ext_termino", "Término", 10), ("ext_sit", "Situação", 12), ("ext_hipoteses", "Extinção pelo cumprimento", 46)],
      "pilulas": {"ext_sit": "ext_cor"}},
     {"id": "fd", "titulo": "Ficha disciplinar", "cor": "fd_cor", "legenda": "fd", "expansivel": True,
      "cols": [("nome", "Nome", 20), ("proc", "Nº da execução", 15), ("fd_trab", "Trabalho atual", 18),
-              ("fd_remidos", "Remidos ficha / RSPE", 12), ("fd_atestar", "A atestar", 14), ("fd_sit", "Situação", 14)],
+              ("fd_remidos", "Remidos ficha / RSPE", 11), ("fd_atestar", "Trabalho a atestar", 12), ("fd_estudo", "Estudo a requerer", 11), ("fd_sit", "Situação", 14)],
      "pilulas": {"fd_sit": "fd_cor"},
      "sub": "fd_linhas", "sub_cols": [("emp", "Emprego", 14), ("per", "Período", 14), ("dias", "Dias", 6), ("at", "Atestado", 22), ("rspe", "Remição no RSPE", 18), ("sit", "Situação / providência", 26)],
      "sub_pilulas": {"sit": "cor"}},

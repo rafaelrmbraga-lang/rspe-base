@@ -28,9 +28,10 @@ import rspe_ficha as rf
 import rspe_peticao as rpet
 import rspe_export as rx
 import rspe_regras as rg
+import rspe_relatorio as rrel
 
 APP = "RSPE Base"
-VERSAO = "6.9.9"
+VERSAO = "6.10.0"
 
 
 def pasta_app():
@@ -107,8 +108,12 @@ dias trabalhados e remidos, faltas disciplinares (registro, PADIC, arquivamento/
 isolamento e recusa de trabalho. A Auditoria confronta: dias remidos atestados x homologados no RSPE (LEP, art. 126), proporção
 1 para 3, trabalho sem atestado e baixa de trabalho sem início registrado, falta grave nos últimos 12 meses (CP, art. 83, III, b;
 art. 6º dos decretos), falta arquivada que ainda produza efeitos e perda de dias remidos em duplicidade (LEP, art. 127: a nova
-perda só alcança a remição adquirida depois da falta anterior). A aba <b>Ficha disciplinar</b> mostra uma linha por emprego:
+perda só alcança a remição adquirida depois da falta anterior). A aba <b>Ficha disciplinar</b> trata só de remição (trabalho e estudo) e mostra uma linha por emprego e por matrícula de estudo:
 período, atestado que o cobre, remição homologada no RSPE e providência. Trabalho anterior à 1ª prisão do RSPE fica só no resumo.
+<h4>Relatórios em PDF</h4>
+O botão <b>Relatórios</b> gera, numa pasta com a data e a hora: um PDF por assistido (resumo, benefícios, condenações, linha do
+tempo, remição e alertas), o relatório geral da base (perfil, benefícios, remição, alertas e fila de prioridade) e a planilha.
+Vale para os assistidos visíveis (busca e filtro). Na ficha do assistido, "Relatório em PDF" gera só o dele.
 <h4>Presunção de hipossuficiência (Defensoria)</h4>
 Em qualquer hipótese o programa presume a incapacidade econômica do assistido: a <b>multa</b> pendente não obsta a extinção da
 punibilidade (STJ Tema 931, rev. 28/02/2024; STF ADI 7.032), é indultável e não é óbice ao indulto (Decretos 12.338/2024 e
@@ -133,9 +138,9 @@ prescrição, indulto, remição, falta), <b>Verificar</b> (depende de dado que 
 <b>Dar baixa</b>: cada ponto pode ser baixado (com observação) quando já foi tratado ou não se aplica; ele sai da contagem,
 fica registrado na base com data e pode ser reaberto. A baixa é por processo e por ponto, e sobrevive à reimportação do RSPE.
 <h4>Extinção</h4>
-Reúne as hipóteses de extinção da pena/punibilidade aferíveis pelo RSPE: pena integralmente cumprida ou término previsto já
-alcançado (LEP, art. 109); livramento condicional com período de prova expirado sem revogação (CP, arts. 82 e 90); prescrição
-aparente (CP, art. 107, IV); indulto possível (CP, art. 107, II); e os crimes já marcados como extintos. Cores: vermelho =
+Só a extinção pelo cumprimento: pena integralmente cumprida ou término previsto já alcançado (LEP, art. 109); livramento
+condicional com período de prova expirado sem revogação (CP, arts. 82 e 90); detração que alcança toda a pena do crime.
+Prescrição e indulto ficam nas próprias abas. Cores: vermelho =
 extinção cabível; amarelo/verde = término em até 30/60 dias; cinza = pena interrompida ou sem previsão.
 <h4>Base jurídica</h4>
 O arquivo base_juridica.json ao lado do programa tem prioridade sobre a cópia embutida. Para atualizar (novo decreto, nova fração,
@@ -685,6 +690,50 @@ class Api:
                 rx.exportar_pdf(modelos, c, self.base.nome, abas)
         except Exception as e:
             return {"erro": "Falha ao exportar: %s" % e}
+        _abrir(c)
+        return {"caminho": c}
+
+
+    # ---- relatórios (PDF) ----
+    def relatorios(self, ids, individual, geral, planilha, nominal):
+        """Gera, numa pasta escolhida, a subpasta 'Relatorios <data hora>' com o relatório geral, os individuais e a planilha."""
+        if not self.base:
+            return {"erro": "Nenhuma base aberta."}
+        modelos = [m for m in self._modelos if m["id"] in set(ids)]
+        if not modelos:
+            return {"erro": "Nada para gerar."}
+        if not (individual or geral or planilha):
+            return {"erro": "Marque ao menos uma saída."}
+        pasta = _um(self._janela.create_file_dialog(webview.FOLDER_DIALOG))
+        if not pasta:
+            return None
+        try:
+            destino, n, erros = rrel.gerar(modelos, pasta, self.base.nome, individual=individual, geral=geral, nominal=nominal)
+            if planilha:
+                rx.exportar_xlsx(modelos, os.path.join(destino, "%s - planilha.xlsx" % self.base.nome),
+                                 ["geral", "prog", "liv", "ind", "presc", "ext", "fd", "aud", "completo"])
+        except Exception as e:
+            return {"erro": "Falha ao gerar relatórios: %s" % e}
+        _abrir(destino)
+        msg = "Relatórios em %s" % destino + (" · %d individual(is)" % n if individual else "")
+        if erros:
+            msg += " · %d falha(s): %s" % (len(erros), "; ".join(erros[:3]))
+        return {"caminho": destino, "msg": msg}
+
+    def relatorio_um(self, id_):
+        """Relatório individual de um assistido (botão na ficha)."""
+        m = next((x for x in self._modelos if x["id"] == id_), None)
+        if not m:
+            return {"erro": "Assistido não encontrado."}
+        c = _um(self._janela.create_file_dialog(webview.SAVE_DIALOG, save_filename=rrel.nome_arquivo(m), file_types=("PDF (*.pdf)",)))
+        if not c:
+            return None
+        if not c.lower().endswith(".pdf"):
+            c += ".pdf"
+        try:
+            rrel.relatorio_individual(m, c, self.base.nome)
+        except Exception as e:
+            return {"erro": "Falha ao gerar o relatório: %s" % e}
         _abrir(c)
         return {"caminho": c}
 

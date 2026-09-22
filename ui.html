@@ -99,15 +99,15 @@ tr.exp td{background:#EEF2FF!important}
 tr.sub td{padding:0 0 0 0;background:#F9FAFB;cursor:default}tr.sub:hover td{background:#F9FAFB}
 .subwrap{padding:10px 14px 14px 22px;border-left:3px solid var(--pri)}
 .subtab{width:100%;border-collapse:collapse;table-layout:fixed;background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden}
-.subtab th{background:#F2F4F7;color:var(--tx2);font-size:11px;text-transform:uppercase;letter-spacing:.3px;padding:7px 10px;text-align:left;position:static;white-space:normal;overflow:visible}
-.subtab td{padding:7px 10px;border-bottom:1px solid var(--line);font-size:12.5px;vertical-align:top;white-space:normal;font-weight:400;overflow:visible}.subtab td:first-child{padding-left:10px;font-weight:600}.subtab th:first-child{padding-left:10px}
+.subtab th{background:#F2F4F7;color:var(--tx2);font-size:11px;text-transform:uppercase;letter-spacing:.3px;padding:9px 14px;text-align:left;position:static;white-space:normal;overflow:visible}
+.subtab td{padding:11px 14px;border-bottom:1px solid var(--line);font-size:12.5px;line-height:1.55;vertical-align:top;white-space:normal;font-weight:400;overflow:visible}.subtab td:first-child{padding-left:10px;font-weight:600}.subtab th:first-child{padding-left:10px}
 .subtab tr:last-child td{border-bottom:0}.subtab tr.bx td{color:var(--tx3)}.subtab tr.bx td:nth-child(2){text-decoration:line-through}
 .subtab .why{cursor:pointer;color:var(--pri);font-size:11.5px}.subtab .why:hover{text-decoration:underline}
-.mem{display:grid;gap:8px;margin:6px 0 2px}
-.mb{background:#F9FAFB;border:1px solid #EEF0F3;border-radius:10px;padding:8px 12px 9px}
+.mem{display:grid;gap:12px;margin:10px 0 4px}
+.mb{background:#F9FAFB;border:1px solid #EEF0F3;border-radius:10px;padding:12px 16px 12px}
 .mb.pp{border-left:3px solid #7C6CF6}.mb.pe{border-left:3px solid #2563EB}.mb.av{border-left:3px solid #B54708}
 .mh{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--tx2);margin-bottom:4px}
-.ml{display:flex;gap:8px;align-items:flex-start;font-size:12.5px;line-height:1.45;padding:2px 0;color:var(--tx)}
+.ml{display:flex;gap:10px;align-items:flex-start;font-size:12.5px;line-height:1.6;padding:4px 0;color:var(--tx)}
 .mi{flex:0 0 18px;height:18px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;margin-top:1px;background:#E5E7EB;color:#4B5563}
 .ml.ok .mi{background:#DDF5E7;color:#067647}.ml.ko .mi{background:#FDE2E1;color:#B42318}.ml.run .mi{background:#FEF4D6;color:#B54708}.ml.q .mi{background:#EEF0F3;color:#5B6470}
 .ml.obs .mt,.ml.termo .mt{color:var(--tx2)}.ml.termo .mi{background:#E0E7FF;color:#3730A3}
@@ -131,7 +131,7 @@ tr.sub td{padding:0 0 0 0;background:#F9FAFB;cursor:default}tr.sub:hover td{back
 .dh h2{margin:0;font-size:18px;letter-spacing:-.2px}.dh .sub{color:var(--tx2);font-size:12.5px;margin-top:4px}
 .dh .close{margin-left:auto;width:32px;height:32px;border-radius:8px;color:var(--tx2)}.dh .close:hover{background:#EEF0F3}
 .db{flex:1;overflow:auto;padding:18px 24px 30px}
-.sec{margin-bottom:18px}.sec h3{margin:0 0 8px;font-size:11.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--tx3)}
+.sec{margin-bottom:26px}.sec h3{margin:0 0 8px;font-size:11.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--tx3)}
 .kv{display:grid;grid-template-columns:1fr 1fr;gap:8px 18px}
 .kv div{background:#F9FAFB;border:1px solid var(--line);border-radius:10px;padding:8px 12px}.kv small{display:block;color:var(--tx3);font-size:11px;margin-bottom:2px}
 .kv.one{grid-template-columns:1fr}
@@ -172,6 +172,8 @@ tr.sub td{padding:0 0 0 0;background:#F9FAFB;cursor:default}tr.sub:hover td{back
 .ln{display:flex;gap:12px;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--ln,#EEF0F3)}
 .ln:last-child{border-bottom:0}.ln .lr{flex:0 0 118px;color:var(--tx3,#667085);font-size:12.5px;padding-top:2px}.ln .lv{flex:1;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .pts{margin:0;padding-left:0;list-style:none}.pts li{padding:5px 0 5px 12px;border-left:3px solid #CBD5E1;margin-bottom:4px}.pts li.alerta{border-color:var(--r-dot,#E5484D)}.pts li.verificar{border-color:var(--a-dot,#F5A524)}
+.subtab .par{margin:0 0 6px}.subtab .par:last-child{margin-bottom:0}
+.det{margin-bottom:10px}
 </style>
 </head>
 <body>
@@ -204,6 +206,7 @@ tr.sub td{padding:0 0 0 0;background:#F9FAFB;cursor:default}tr.sub:hover td{back
   <button class="btn" onclick="api('importar_pasta')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Importar pasta</button>
   <div class="sep"></div>
   <button class="btn" onclick="ui.modalExportar('xlsx')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4zM4 10h16M10 4v16"/></svg>Exportar Excel</button>
+  <button class="btn" onclick="ui.modalRelatorios()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h8l4 4v14H6z"/><path d="M9 13h6M9 17h6M9 9h2"/></svg>Relatórios</button>
   <button class="btn" onclick="ui.modalExportar('pdf')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/></svg>Exportar PDF</button>
   <div class="sep"></div>
   <div class="sel"><select id="filtro" onchange="ui.filtroSel=this.value;ui.render()"></select></div>
@@ -282,6 +285,7 @@ const ui = {
       const tds=spec.cols.map((c,i)=>{ let v=r[c[0]]??''; const pk=spec.pilulas[c[0]];
         if(c[0]==='proc'){ v=`<span class="copy" title="Clique para copiar" onclick="event.stopPropagation();ui.copiar('${esc(String(v))}')">${esc(v)}${svgCopy}</span>`; }
         else if(pk){ const pc = c[0]==='imp' ? (String(v).startsWith('Sim')?'vermelho':'verde') : (r[pk]||''); v = v ? `<span class="pill ${pc||'none'}">${esc(v)}</span>` : (/_sit$/.test(c[0]) ? '' : '<span class="muted">—</span>'); }
+        else if(c[0]==='conduta'){ v = r.conduta_ruim ? `<span class="falta">${esc(v)}</span>` : (r.ficha_tem ? esc(v) : `<span class="muted">${esc(v)}</span>`); }
         else if(c[0]==='falta'){ v = r.falta_sim ? `<span class="falta">${esc(v)}</span>` : `<span class="muted">${esc(v)}</span>`; }
         else if(c[0]==='presc_retro'||c[0]==='presc_ppe'){ const cls=/^Aparente/.test(v)?'vermelho':''; v = v?(cls?`<span class="pill ${cls}">${esc(v)}</span>`:esc(v)):'<span class="muted">—</span>'; }
         else { v = esc(v).replace('(est.)','<span class="est">(est.)</span>'); if(!v) v='<span class="muted">—</span>'; }
@@ -330,7 +334,8 @@ const ui = {
     const cg='';
     const calc=!!spec.sub_calc, baixa=!!spec.sub_baixa; const head=`<tr>${cols.map(c=>`<th style="width:${(100*c[2]/tot).toFixed(1)}%">${c[1]}</th>`).join('')}${(calc||baixa)?'<th></th>':''}</tr>`;
     const body=rows.map((s,i)=>{ const tds=cols.map(c=>{ let v=s[c[0]]??''; const pk=spec.sub_pilulas[c[0]];
-        if(pk){ const pc=s[pk]||''; v=v?`<span class="pill ${pc||'none'}">${esc(v)}</span>`:'—'; } else v=penaExt(esc(v))||'<span class="muted">—</span>';
+        if(pk){ const pc=s[pk]||''; v=v?`<span class="pill ${pc||'none'}">${esc(v)}</span>`:'—'; } else if(spec.id==='aud' && (c[0]==='detalhe'||c[0]==='fundamento') && v){ v=String(v).split(/(?<=[.;])\s+(?=[A-ZÁÉÍÓÚ(])/).map(x=>`<div class="par">${penaExt(esc(x))}</div>`).join(''); }
+        else v=penaExt(esc(v))||'<span class="muted">—</span>';
         return `<td>${v}</td>`; }).join('');
       const det=(s.retro_detalhe?'PRETENSÃO PUNITIVA\n'+s.retro_detalhe+'\n\n':'')+(s.ppe_detalhe?'PRETENSÃO EXECUTÓRIA\n'+s.ppe_detalhe:'')+(s.avisos&&s.avisos.length?'\n\nAVISOS\n'+s.avisos.join('\n'):'');
       if(baixa){ const bx = s.baixado ? `<span class="mini" onclick="event.stopPropagation();ui.reabrir('${r.id}','${s.chave}')">Reabrir</span>` : (s.nivel==='ok' ? '' : `<span class="mini" onclick="event.stopPropagation();ui.darBaixa('${r.id}','${s.chave}','${esc(s.titulo).replace(/'/g,'&#39;')}')">Dar baixa</span>`);
@@ -377,12 +382,14 @@ const ui = {
     const crimes=(r.crimes_det||[]).filter(c=>!/^S/i.test(c.extinto||'')).map(c=>`<b>${esc(c.nome_crime||'Crime')}</b> <span class="muted">(${esc(c.dispositivo||'')})</span> · ${esc(c.pena||'')}`).join('<br>');
     const ind=[['2022',r.i22,r.i22_cor],['2024',r.i24,r.i24_cor],['2025',r.i25,r.i25_cor]].map(x=>`<span class="muted">${x[0]}</span> ${pill(x[1],x[2])}`).join(' ');
     // só mostra cálculo quando dá (indulto possível / a verificar; prescrição aparente), e só as linhas que sustentam
-    const util=(txt)=>(txt||'').split('\n').filter(l=>/^(✔|✓|\?|⚠|Situação em|Cumprido em|Art\. 7º)/.test(l.trim()) && !/XVI:|art\. 1º: saúde/.test(l)).join('\n');
+    const util=(txt)=>(txt||'').split('\n').filter(l=>/^(✔|✓|\?|⚠|Situação em|Cumprido em|Art\. 7º|Crime impeditivo|Pela corrente)/.test(l.trim()) && !/XVI:|art\. 1º: saúde/.test(l)).join('\n');
     const dets=[['2025',r.det25,r.i25_cor],['2024',r.det24,r.i24_cor],['2022',r.det22,r.i22_cor]]
       .filter(x=>x[2]==='verde'||x[2]==='amarelo').map(x=>`<details class="det"><summary>Indulto ${x[0]} · ${x[2]==='verde'?'possível':'a verificar'}</summary><div class="mem">${ui.bloco('Decreto de '+x[0],util(x[1]),'pe')}</div></details>`).join('');
+    const cms=[['2025',r.cdet25,r.c25_cor,r.c25],['2024',r.cdet24,r.c24_cor,r.c24]]
+      .filter(x=>x[1]&&(x[2]==='verde'||x[2]==='amarelo')).map(x=>`<details class="det"><summary>Comutação ${x[0]} · ${esc(x[3])}</summary><div class="mem">${ui.bloco('Decreto de '+x[0]+' · art. 13',x[1],'pp')}</div></details>`).join('');
     const prs=(r.presc_linhas||[]).filter(s=>s.ppe_cor==='vermelho'||s.retro_cor==='vermelho')
       .map(s=>`<details class="det"><summary>Prescrição · ${esc(s.crime)} · ${esc(s.ppe_cor==='vermelho'?s.ppe_status:s.retro_status)}</summary>${ui.memoria(s)}</details>`).join('');
-    const calc=dets+prs;
+    const calc=dets+cms+prs;
     document.getElementById('drawer').innerHTML=`
       <div class="dh"><div><h2>${esc(r.nome)}</h2><div class="sub"><span class="copy" onclick="ui.copiar('${esc(r.proc)}')" title="Clique para copiar">${esc(r.proc)} ⧉</span> · ${esc(r.regime)}</div>
         <div class="sub">RSPE de ${esc(r.geracao)}</div></div>
@@ -392,7 +399,7 @@ const ui = {
         <div class="sec"><h3>Benefícios</h3>
           ${lin('Progressão', dataSit(r.prog, r.prog_sit, r.prog_cor))}
           ${lin('Livramento', dataSit(r.liv, r.liv_sit, r.liv_cor))}
-          ${lin('Indulto', r.imp.startsWith('Sim')?pill('Crime impeditivo · '+r.imp.replace(/^Sim · /,''),'vermelho'):ind)}
+          ${lin('Indulto', r.imp.startsWith('Sim')&&!(r.ind_status||[]).includes('possivel')?pill('Crime impeditivo · '+r.imp.replace(/^Sim · /,''),'vermelho'):ind+(r.imp.startsWith('Sim')?`<div class="muted" style="font-size:11.5px;margin-top:3px">Crime impeditivo · ${esc(r.imp.replace(/^Sim · /,''))}</div>`:''))}
           ${lin('Comutação', `<span class="muted">2024</span> ${pill(r.c24, r.c24_cor)} <span class="muted">2025</span> ${pill(r.c25, r.c25_cor)}`)}
           ${r.presc_cor==='vermelho'?lin('Prescrição', pill(r.presc_ppe, r.presc_cor)):''}
           ${lin('Extinção', r.ext_sit?pill(r.ext_sit,r.ext_cor):'<span class="muted">—</span>')}
@@ -401,7 +408,7 @@ const ui = {
         <div class="sec"><h3>Pontos de atenção</h3>${ptsHtml}</div>
         <div class="sec"><h3>Crimes em execução</h3><div class="kv one"><div>${crimes||'—'}</div></div></div>
         ${calc?`<div class="sec"><h3>Cálculos do programa</h3>${calc}</div>`:''}
-        <div class="sec"><span class="mini" style="color:var(--r-tx)" onclick="ui.confirmarRemocao('${r.id}')">Remover este assistido da base</span></div>
+        <div class="sec"><span class="mini" onclick="ui.relatorioUm('${r.id}')">Relatório em PDF</span> <span class="mini" style="color:var(--r-tx)" onclick="ui.confirmarRemocao('${r.id}')">Remover este assistido da base</span></div>
       </div>`;
     document.getElementById('drawer').classList.add('on'); document.getElementById('veil').classList.add('on'); },
   fecharDrawer(){ document.getElementById('drawer').classList.remove('on'); document.getElementById('veil').classList.remove('on'); },
@@ -439,6 +446,20 @@ const ui = {
       ${fmt==='xlsx'?`<label class="chk"><input type="checkbox" value="completo" checked>Completo (todos os campos extraídos)</label>`:''}
       <div class="acts"><button class="btn" onclick="ui.fecharModal()">Cancelar</button><button class="btn pri" onclick="ui.exportar('${fmt}')">Exportar</button></div></div>`;
     document.getElementById('modal').classList.add('on'); },
+  modalRelatorios(){ const n=this.visiveis().length;
+    document.getElementById('modal').innerHTML=`<div class="box"><h2>Relatórios em PDF</h2><p>${n} assistido(s)${this.filtro?' filtrado(s) pela busca':''}. Os arquivos vão para uma pasta nova com a data e a hora.</p>
+      <label class="chk"><input type="checkbox" id="rel_ind" checked>Relatórios individuais (um PDF por assistido)</label>
+      <label class="chk"><input type="checkbox" id="rel_ger" checked>Relatório geral da base</label>
+      <label class="chk"><input type="checkbox" id="rel_pla" checked>Planilha (Excel, todas as abas)</label>
+      <label class="chk"><input type="checkbox" id="rel_nom" checked>Fila de prioridade com o nome dos assistidos</label>
+      <p class="muted" style="font-size:12px">Triagem: não substitui o Atestado de Pena. Datas de progressão, livramento e término são as do SEEU.</p>
+      <div class="acts"><button class="btn" onclick="ui.fecharModal()">Cancelar</button><button class="btn pri" onclick="ui.gerarRelatorios()">Gerar</button></div></div>`;
+    document.getElementById('modal').classList.add('on'); },
+  async gerarRelatorios(){ const v=id=>document.getElementById(id).checked; const op=[v('rel_ind'),v('rel_ger'),v('rel_pla'),v('rel_nom')];
+    if(!op[0]&&!op[1]&&!op[2]) return this.toast('Marque ao menos uma saída.');
+    this.fecharModal(); this.toast('Gerando relatórios…'); const r=await API().relatorios(this.visiveis().map(x=>x.id), op[0], op[1], op[2], op[3]);
+    if(r && r.msg){ this.toast(r.msg); } else if(r && r.erro){ this.toast(r.erro); } },
+  async relatorioUm(id){ const r=await API().relatorio_um(id); if(r && r.caminho){ this.toast('Relatório: '+r.caminho); } else if(r && r.erro){ this.toast(r.erro); } },
   fecharModal(){ document.getElementById('modal').classList.remove('on'); },
   async exportar(fmt){ const ids=[...document.querySelectorAll('#modal input:checked')].map(i=>i.value); if(!ids.length) return this.toast('Marque ao menos uma aba.');
     this.fecharModal(); const vis=this.visiveis().map(r=>r.id); const r=await API().exportar(fmt, ids, vis);

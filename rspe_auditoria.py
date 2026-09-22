@@ -331,16 +331,22 @@ def auditar(r, hoje=None):
         fl_seeu = _fr_seeu(c.get("fracao_livramento"))
         trafico = lei == "11343" and art in ("33", "34", "35", "36", "37") and not (art == "33" and "§ 4" in (c.get("tipo_penal") or ""))
         fl_esp, rotl = rg.fracao_livramento_esperada(hed, reinc_ef, trafico)
+        jv = rg.regime_progressao(fato) if fato else None
+        chave_m = "hediondo_morte_reincidente" if reinc_ef else "hediondo_morte_primario"
+        lc_vedado = bool(jv and hed and morte and chave_m in (jv.get("vedado_lc") or []))
+        if lc_vedado:
+            # LEP, art. 112, VI, a (Lei 13.964/2019) e VIII (Lei 15.358/2026): livramento vedado - o 1/1 do SEEU é o correto
+            fl_esp, rotl = Fraction(1, 1), "vedado (LEP, art. 112, VI, a/VIII)"
         if fl_seeu is not None and abs(float(fl_seeu) - float(fl_esp)) > 0.005:
             itens.append(_item("alerta" if float(fl_seeu) > float(fl_esp) else "info",
                                ("%s: fração de livramento do SEEU (%s) maior que a legal (%s)" if float(fl_seeu) > float(fl_esp) else "%s: fração de livramento do SEEU (%s) menor que a esperada (%s) - favorece o apenado") % (nome, c.get("fracao_livramento"), rotl),
                                "%s; %s." % ("reincidente" if reinc_ef else "primário", "hediondo/equiparado" if hed else ("art. 44, p. ú., Lei 11.343/06" if trafico else "comum")), "CP, art. 83; Lei 11.343/06, art. 44, p. ú."))
         if hed and reinc_esp:
             itens.append(_item("alerta", "%s: reincidente específico em hediondo - livramento vedado" % nome, "O RSPE prevê fração de livramento %s." % c.get("fracao_livramento"), "CP, art. 83, V."))
-        j = rg.regime_progressao(fato) if fato else None
-        if j and j.get("vedado_lc") and hed and morte:
-            itens.append(_item("verificar", "%s: hediondo com resultado morte - vedação de livramento" % nome,
-                               "Para fatos a partir de 25/03/2026 o livramento é vedado (LEP, art. 112, VI/VIII); para fatos anteriores, STF Tema 1319 afasta a vedação ao aplicar retroativamente o 50%%.", "LEP, art. 112; STF Tema 1319."))
+        if lc_vedado:
+            itens.append(_item("info", "%s: hediondo com resultado morte, fato em %s - livramento vedado" % (nome, rs.fmt(fato)),
+                               "O RSPE aplica 1/1 no livramento, como manda a lei da data do fato (LEP, art. 112, VI, a, na redação da Lei 13.964/2019; VIII a partir de 25/03/2026). "
+                               "Para fatos anteriores a 23/01/2020, o STF (Tema 1319) aplica o 50%% sem a vedação.", "LEP, art. 112; STF Tema 1319."))
         # reincidência: precisa de condenação anterior transitada antes do fato (consolidado após o laço)
         if reinc and fato:
             anteriores = [o for o in crimes if o is not c and rs.to_date(o.get("transito_processo") or o.get("transito_mp") or "") and rs.to_date(o.get("transito_processo") or o.get("transito_mp")) < fato]
@@ -442,14 +448,12 @@ def auditar(r, hoje=None):
     # hediondez superveniente: impeditivo pelo STJ (data do decreto), mas há tese defensiva no STF
     sup = [c for c in ativos if rs.e_hediondo(c, date(2024, 12, 25)) and not rs.e_hediondo(c)]
     if sup:
-        itens.append(_item("verificar", "Hediondez posterior ao fato: indulto/comutação vedados pelo STJ, com tese defensiva (%s)" % rs.crimes_curto(sup),
-                           "O crime não era hediondo na data do fato, mas é na data do decreto. O STJ afere na data do decreto e veda o benefício. "
-                           "A favor da defesa (irretroatividade da hediondez posterior ao fato): STF, 2ª Turma, RHC 267.297 AgR (16/03/2026) e HC 273.296 AgR (06/08/2026); "
-                           "decisões monocráticas do STF concedendo indulto/comutação: RE 1.572.734 (Fux, 10/10/2025), HC 258.516 (Mendonça, 14/07/2025), "
-                           "RHC 269.076 (Cármen Lúcia, 06/03/2026), HC 271.716 (Fux, 05/05/2026), RE 1.607.670 (Cármen Lúcia, 10/06/2026). "
-                           "TJMS dividido: a 2ª Câmara Criminal afasta o óbice (AgExec 1602006-93.2026.8.12.0000, 15/06/2026; 1602467-65.2026.8.12.0000, 03/08/2026; "
-                           "1603697-45.2026.8.12.0000, 20/08/2026); a 1ª e a 3ª Câmaras seguem o STJ (ex.: 1602236-38.2026.8.12.0000, 03/09/2026; 1604099-29.2026.8.12.0000, 27/08/2026). "
-                           "As frações de progressão seguem a data do fato.",
+        itens.append(_item("verificar", "Hediondez posterior ao fato (%s): indulto/comutação possíveis pela tese da irretroatividade; o STJ veda" % rs.crimes_curto(sup),
+                           "Não era hediondo na data do fato; é na data do decreto. "
+                           "STJ: afere na data do decreto e veda. "
+                           "STF, a favor: 2ª Turma (RHC 267.297 AgR e HC 273.296 AgR) e monocráticas (RE 1.572.734, HC 258.516, RHC 269.076, HC 271.716, RE 1.607.670). "
+                           "TJMS: a 2ª Câmara Criminal concede (1602006-93.2026, 1602467-65.2026, 1603697-45.2026); a 1ª e a 3ª seguem o STJ. "
+                           "Frações de progressão: pela data do fato.",
                            "Decretos de indulto, art. 1º, I; CF, art. 5º, XL; CP, art. 2º."))
     # violência doméstica: art. 129 §§ 9º-11 sem sinal de que a vítima é mulher
     for c in ativos:

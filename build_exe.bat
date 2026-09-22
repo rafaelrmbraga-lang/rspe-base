@@ -11,7 +11,7 @@ python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 python -m PyInstaller --onefile --windowed --clean --name RSPE_Base ^
     --icon rspe.ico --add-data "rspe.ico;." --add-data "ui.html;." --add-data "base_juridica.json;." ^
-    --collect-data pdfminer --collect-data pdfplumber --collect-data reportlab ^
+    --collect-data pdfminer --collect-data pdfplumber --collect-data reportlab --hidden-import reportlab.graphics.shapes --hidden-import rspe_relatorio ^
     --collect-all webview ^
     --exclude-module docxtpl --exclude-module docx --exclude-module docx2pdf ^
     rspe_app.py
