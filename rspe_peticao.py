@@ -31,6 +31,7 @@ CAMPOS = [
     ("indulto_2022", "resultado Decreto 11.302/2022"), ("indulto_2024", "resultado Decreto 12.338/2024"), ("indulto_2025", "resultado Decreto 12.790/2025"),
     ("comutacao_2025", "resultado comutação 2025"), ("indulto_analise_2025", "análise inciso por inciso 2025"), ("indulto_analise_2024", "análise inciso por inciso 2024"),
     ("prescricao_resumo", "resumo da prescrição (executória)"), ("prescricao_tabela", "prescrição crime a crime (texto)"),
+    ("prescricao_calculo", "memória de cálculo da prescrição aparente ou iminente (texto)"),
     ("extincao_hipoteses", "hipóteses de extinção apontadas"),
     ("auditoria", "alertas e pontos a verificar da auditoria (texto)"),
     ("ficha_unidade", "unidade penal (ficha disciplinar)"), ("ficha_conduta", "conduta (ficha)"),
@@ -47,6 +48,25 @@ CAMPOS = [
     ("hoje", "data de hoje dd/mm/aaaa"), ("hoje_extenso", "data por extenso"), ("base", "nome da base aberta"),
 ]
 
+
+
+def _dm(m, k):
+    """Data do SEEU ou, sem ela, o motivo (não iniciou, interrompida, aberto...)."""
+    v = m.get(k)
+    return v if v and v != "—" else (m.get(k + "_motivo") or "")
+
+
+def _calc_presc(l):
+    """Memória de cálculo da prescrição em texto corrido, para a petição."""
+    lin = ["%s (processo %s) - pena %s; fato %s; denúncia %s; sentença %s; trânsito %s." % (
+        l.get("crime"), l.get("proc_crim") or "-", l.get("pena"), l.get("fato") or "-", l.get("denuncia") or "-",
+        l.get("sentenca") or "-", l.get("transito") or "-")]
+    for rot, prazo, st, det in (("Pretensão punitiva", l.get("prazo_ppp"), l.get("retro_status"), l.get("retro_detalhe")),
+                                ("Pretensão executória", l.get("prazo_ppe"), l.get("ppe_status"), l.get("ppe_detalhe"))):
+        if det:
+            lin.append("%s (prazo %s): %s" % (rot, prazo or "-", st or ""))
+            lin += [x.strip() for x in det.split("\n") if x.strip()]
+    return "\n".join(lin)
 
 def pena_extenso(txt):
     """'5a6m20d' -> '5 anos, 6 meses e 20 dias'."""
@@ -101,9 +121,9 @@ def campos(m, r, nome_base="", defensor=None):
         "cpf": r.get("cpf", ""), "rg": r.get("rg", ""), "nome_mae": r.get("nome_mae", ""), "data_nascimento": r.get("data_nascimento", ""),
         "regime": m.get("regime", ""), "regime_rspe": m.get("regime_rspe", ""),
         "pena_total": r.get("pena_total", ""), "pena_cumprida": r.get("pena_cumprida", ""), "pena_remanescente": r.get("pena_remanescente", ""),
-        "remidos": r.get("saldo_remidos", ""), "termino": m.get("termino", ""),
-        "data_base": m.get("dbase", ""), "fracao_progressao": m.get("frac_prog", ""), "data_progressao": m.get("prog", ""),
-        "situacao_progressao": m.get("prog_sit", ""), "fracao_livramento": m.get("frac_liv", ""), "data_livramento": m.get("liv", ""),
+        "remidos": r.get("saldo_remidos", ""), "termino": _dm(m, "termino"),
+        "data_base": m.get("dbase", ""), "fracao_progressao": m.get("frac_prog", ""), "data_progressao": _dm(m, "prog"),
+        "situacao_progressao": m.get("prog_sit", ""), "fracao_livramento": m.get("frac_liv", ""), "data_livramento": _dm(m, "liv"),
         "situacao_livramento": m.get("liv_sit", ""),
         "crimes": m.get("crimes", ""),
         "crimes_completo": "\n".join("%s, %s - pena %s - fato %s - trânsito %s (proc. %s)" % (
@@ -112,7 +132,9 @@ def campos(m, r, nome_base="", defensor=None):
         "falta_12m": m.get("falta", ""),
         "indulto_2022": m.get("ind22", ""), "indulto_2024": m.get("ind24", ""), "indulto_2025": m.get("ind25", ""), "comutacao_2025": m.get("com25", ""),
         "indulto_analise_2025": m.get("det25", ""), "indulto_analise_2024": m.get("det24", ""),
-        "prescricao_resumo": m.get("presc_ppe", ""),
+        "prescricao_resumo": m.get("presc_ppe_full") or m.get("presc_ppe", ""),
+        "prescricao_calculo": "\n\n".join(_calc_presc(l) for l in m.get("presc_linhas", [])
+                                           if l.get("ppe_cor") in ("vermelho", "amarelo") or l.get("retro_cor") == "vermelho"),
         "prescricao_tabela": "\n".join("%s (pena %s): punitiva - %s; executória - %s%s" % (
             l.get("crime"), l.get("pena"), l.get("retro_status"), l.get("ppe_status"), (" (termo %s)" % l["ppe_termo"]) if l.get("ppe_termo") else "")
             for l in m.get("presc_linhas", [])),

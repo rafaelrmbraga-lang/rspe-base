@@ -1268,6 +1268,29 @@ def decisoes_decreto(incidentes, ano, tipo):
     return out
 
 
+def vedar_fatos_posteriores(r, crimes):
+    """Condenação por fato posterior à data do decreto na mesma execução: não é hipótese de indulto nem de
+    comutação daquele decreto (a execução segue pela pena do fato novo). A razão vai para o detalhe."""
+    ativos = [c for c in crimes if not c.get("extinto", "").upper().startswith("S")]
+    for ano, ref in (("2022", DECRETO_2022_REF),) + tuple(DECRETOS.items()):
+        post = [c for c in ativos if (to_date(c.get("data_infracao") or "") or date.min) > ref]
+        if not post:
+            continue
+        k, kc = "indulto_%s" % ano, "comutacao_%s" % ano
+        if str(r.get(k + "_status") or "") in ("nao", "vedado"):
+            continue
+        txt = "não se aplica: condenação por fato posterior a %s (%s)" % (fmt(ref), "; ".join(
+            "%s, fato de %s" % (crimes_curto([c]), c.get("data_infracao")) for c in post))
+        r[k], r[k + "_status"] = txt, "nao"
+        r[k + "_detalhe"] = ("A execução tem condenação por fato posterior à data do decreto (%s): %s. O decreto não alcança essa pena e a execução "
+                             "segue por ela; por isso não se trata como hipótese de indulto. Análise dos crimes anteriores, para referência:\n%s") % (
+                                 fmt(ref), "; ".join("%s (fato de %s)" % (crimes_curto([c]), c.get("data_infracao")) for c in post),
+                                 r.get(k + "_detalhe") or "")
+        if kc in r or ano != "2022":
+            r[kc] = "não se aplica: condenação por fato posterior a %s" % fmt(ref)
+            r[kc + "_detalhe"] = "Comutação: a execução tem condenação por fato posterior a %s; não se trata como hipótese do decreto." % fmt(ref)
+
+
 def aplicar_decisoes_decretos(r, incidentes):
     """Se o RSPE já registra decisão sobre o decreto (concedido/indeferido/pendente), ela prevalece sobre a triagem."""
     for ano in ("2022", "2024", "2025"):
@@ -2022,6 +2045,7 @@ def extrair(caminho):
     r.update(faltas(r, eventos, incidentes, hoje))
     r.update(analise_decretos(r, crimes, eventos, incidentes, hoje))
     r.update(analise_decreto_2022(r, crimes, eventos, incidentes))
+    vedar_fatos_posteriores(r, crimes)
     aplicar_decisoes_decretos(r, incidentes)
     r["eventos"] = " | ".join("%s/%s %s" % (e["tipo"], e["motivo"], e["data"]) for e in eventos)
 

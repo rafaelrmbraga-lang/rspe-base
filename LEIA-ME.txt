@@ -1,4 +1,4 @@
-RSPE BASE - SEEU  v6.10.10 (programa em abas)
+RSPE BASE - SEEU  v6.11.0 (programa em abas)
 =========================================
 
 O QUE FAZ
@@ -211,6 +211,35 @@ PRESUNÇÃO DE HIPOSSUFICIÊNCIA (Defensoria)
   do art. 9º e sem bloqueio do livramento (CP, art. 83, IV). Tráfico
   privilegiado não é hediondo nem impeditivo (STF PSV 125, Tema 1400; STJ
   Tema 1336). Detalhes e fontes: "Criterios_de_analise_por_beneficio.pdf".
+
+v6.11.0
+  - Telas mais enxutas. Geral, Progressão, Livramento, Indulto/Comutação,
+    Prescrição e Extinção sem a coluna Regime (o regime fica na ficha).
+  - Datas: onde não há data por motivo que não seja extinção (não iniciou,
+    interrompida, aberto, livramento etc.), a célula mostra "—"; na
+    Progressão e no Livramento a situação fica "Não se aplica". O motivo
+    aparece em destaque na ficha do assistido.
+  - Indulto/Comutação: células só com Sim, Não ou Verificar (Concedido,
+    se o RSPE já registra). Tese de hediondez superveniente = Verificar.
+    Artigos e razões na ficha e no detalhe do cálculo.
+  - Condenação por fato posterior à data do decreto na mesma execução:
+    indulto e comutação daquele decreto = Não, com a explicação na ficha.
+  - Prescrição: Não configurada / Não prescrita / Iminente / Aparente (e
+    Sem dados / Extinta); o artigo e o cálculo ficam no detalhe.
+  - Extinção: "—" quando não há previsão (não iniciou, interrompida).
+  - Cópia para a petição: "Copiar resumo" na ficha, "Copiar cálculo" na
+    prescrição, no indulto e na comutação, "Copiar" e "Copiar pendências"
+    na Auditoria. Novo campo de modelo {{prescricao_calculo}}.
+
+v6.10.11
+  - Auditoria, soma das penas: o alerta deixa de falar em "crimes não
+    extintos" quando nenhum crime está extinto, e passa a comparar a
+    pena total impressa com o valor fixado no incidente de unificação /
+    somatório. Se a unificação confere com a soma dos crimes e a pena
+    total impressa é maior, o alerta diz que a guia pode não ter sido
+    recalculada e que término, progressão e livramento estão adiados.
+  - Auditoria: aponta condenação ativa com "Pena Imposta" zerada no
+    RSPE.
 
 v6.10.10
   - Indulto, incisos XIV e XV: passam a ser aferidos crime a crime. Não

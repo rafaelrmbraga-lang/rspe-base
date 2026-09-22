@@ -214,6 +214,14 @@ def auditar(r, hoje=None):
                                rs.dias_para_pena(soma_at), "" if r.get("regime_atual") else "; Regime Atual em branco"),
                            "LEP, arts. 66, III, a, e 111."))
 
+    # condenação ativa sem pena imposta: distorce soma, frações e prescrição
+    for c in ativos:
+        if not (rs.pena_para_dias(c.get("pena_imposta")) or 0):
+            itens.append(_item("info", "%s: condenação sem pena imposta no RSPE" % (rs.crimes_curto([c]) or "crime"),
+                               "O RSPE traz \u201cPena Imposta: 0 ano(s), 0 mês(es) e 0 dia(s)\u201d no processo %s. Esse crime não entra na soma das penas; "
+                               "conferir a sentença e o lançamento no SEEU." % (c.get("processo_criminal") or "-"),
+                               "LEP, art. 66, III, a."))
+
     # ---------------- 1. coerência aritmética do RSPE ----------------
     soma = sum(rs.pena_para_dias(c.get("pena_imposta")) or 0 for c in ativos)
     _amds = [rs.pena_amd(c.get("pena_imposta")) for c in ativos]
@@ -227,10 +235,27 @@ def auditar(r, hoje=None):
                                    rs.dias_para_pena(soma), r.get("pena_total"), len(_comut), " e processos marcados \"(Comutada)\"" if _comutados else ""),
                                "Decretos de comutação; LEP, art. 192."))
         elif rs.amd_normal(sum(x[0] for x in _amds), sum(x[1] for x in _amds), sum(x[2] for x in _amds)) != rs.amd_normal(*_tot):
+            _extintos = [c for c in r.get("_crimes", []) if c.get("extinto", "").upper().startswith("S")]
+            _rotulo = "Soma das penas dos crimes%s" % (" não extintos" if _extintos else " listados")
+            # unificação/somatório com valor impresso: é o total que deveria valer
+            _unif = []
+            for i in incidentes:
+                if i.get("situacao") == "CONCEDIDO" and re.search(r"UNIFICA|SOMAT", (i.get("tipo") or ""), re.I):
+                    _v = rs.pena_para_dias(i.get("complemento") or "")
+                    _d = rs.to_date(i.get("data_referencia") or i.get("data_decisao") or "")
+                    if _v:
+                        _unif.append((_d or date.min, _v, (i.get("tipo") or "").lower()))
+            _unif.sort()
+            _extra = ""
+            if _unif and abs(_unif[-1][1] - soma) <= 31 and _unif[-1][1] != pena_total:
+                _extra = (" A %s de %s fixou a pena em %s, que confere com a soma dos crimes; a pena total impressa é %s maior. "
+                          "Se a guia não foi recalculada depois da unificação, o término, a progressão e o livramento estão adiados." % (
+                              _unif[-1][2], rs.fmt(_unif[-1][0]) if _unif[-1][0] != date.min else "data não informada",
+                              rs.dias_para_pena(_unif[-1][1]), rs.dias_para_pena(abs(pena_total - _unif[-1][1]))))
             itens.append(_item("alerta", "Soma das penas difere da pena total",
-                               "Soma das penas dos crimes não extintos: %s; pena total impressa: %s (diferença %s)." % (
-                                   rs.dias_para_pena(soma), rs.dias_para_pena(pena_total), rs.dias_para_pena(abs(soma - pena_total))),
-                               "LEP, art. 111 (soma/unificação); possível pena extinta, comutada, detração ou unificação não refletida nos crimes."))
+                               "%s: %s; pena total impressa: %s (diferença %s).%s" % (
+                                   _rotulo, rs.dias_para_pena(soma), rs.dias_para_pena(pena_total), rs.dias_para_pena(abs(soma - pena_total)), _extra),
+                               "LEP, arts. 66, III, a, e 111 (soma/unificação); CP, art. 75, § 2º; possível pena extinta, comutada, detração ou unificação não refletida no cálculo."))
         else:
             itens.append(_item("ok", "Soma das penas confere com a pena total", "Soma das penas = total %s." % r.get("pena_total")))
     _t, _c, _r = rs.pena_amd(r.get("pena_total")), rs.pena_amd(r.get("pena_cumprida")), rs.pena_amd(r.get("pena_remanescente"))

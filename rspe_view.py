@@ -451,6 +451,80 @@ def so_matematica(it):
     return not AUD_OUTRAS_ABAS.search(it["titulo"])
 
 
+# ---------------- telas simplificadas: data ou "—"; Sim/Não/Verificar; o motivo vai para a ficha ----------------
+TRACO = "—"
+
+
+def so_data(txt):
+    """Coluna de data: a data do SEEU, "Pena extinta" / "Pena cumprida", ou "—" (o motivo fica na ficha)."""
+    t = (txt or "").strip()
+    if re.match(r"^\d{2}/\d{2}/\d{4}", t):
+        return t
+    if t.startswith("Pena extinta"):
+        return "Pena extinta"
+    if t.startswith("Pena cumprida"):
+        return "Pena cumprida"
+    return TRACO
+
+
+def sim_nao(txt, cor):
+    """Indulto/comutação na tela: Sim, Não, Verificar (Concedido quando o RSPE já registra)."""
+    t = txt or ""
+    if cor == "azul" or t.startswith("Concedido"):
+        return "Concedido", "azul"
+    if cor == "verde":
+        return ("Verificar", "amarelo") if "tese" in t else ("Sim", "verde")
+    if cor == "amarelo":
+        return "Verificar", "amarelo"
+    return ("Não", cor or "cinza") if t else ("", "")
+
+
+def presc_curto(txt, ppe=False):
+    t = (txt or "").strip()
+    tl = t.lower()
+    if not t:
+        return ""
+    if tl.startswith("aparente") or "aparente" in tl[:40]:
+        return "Aparente"
+    if tl.startswith("iminente"):
+        return "Iminente"
+    if "extint" in tl:
+        return "Extinta"
+    if tl.startswith("não configurada"):
+        return "Não configurada"
+    if tl.startswith("não prescrita") or tl.startswith("não corre") or tl.startswith("pena cumprida"):
+        return "Não prescrita"
+    if tl.startswith("verificar") or "sem pena" in tl or "sem dados" in tl:
+        return "Sem dados"
+    return "Não prescrita" if ppe else "Não configurada"
+
+
+def simplificar(m):
+    m["prog_motivo"], m["liv_motivo"], m["termino_motivo"] = m.get("prog", ""), m.get("liv", ""), m.get("termino", "")
+    m["prog"], m["liv"], m["termino"] = so_data(m["prog"]), so_data(m["liv"]), so_data(m["termino"])
+    m["ext_termino_motivo"] = m.get("ext_termino", "")
+    m["ext_termino"] = so_data(m.get("ext_termino", "")) if m.get("ext_termino") else TRACO
+    for k in ("prog", "liv"):
+        sit, cor = m.get(k + "_sit", ""), m.get(k + "_cor", "")
+        if cor == "cinza" and not sit.startswith("Pena cumprida"):
+            m[k + "_sit_full"] = m.get(k + "_sit_full") or sit
+            m[k + "_sit"] = "Não se aplica"
+    if re.search(r"sem previsão\s*$", m.get("ext_hipoteses") or ""):
+        m["ext_motivo"], m["ext_hipoteses"] = m["ext_hipoteses"], TRACO
+    # indulto e comutação
+    m["imp_curto"] = "Sim" if (m.get("imp") or "").startswith("Sim") else ("Não" if m.get("imp") else "")
+    for k in ("i22", "i24", "c24", "i25", "c25"):
+        m[k + "_txt"] = m.get(k + "_full") or m.get(k, "")
+        m[k], m[k + "_cor"] = sim_nao(m[k + "_txt"], m.get(k + "_cor", ""))
+    m["imp_txt"], m["imp"] = m.get("imp_full") or m.get("imp", ""), m["imp_curto"]
+    # prescrição
+    m["presc_retro_full"], m["presc_ppe_full"] = m.get("presc_retro", ""), m.get("presc_ppe", "")
+    m["presc_retro"], m["presc_ppe"] = presc_curto(m["presc_retro_full"]), presc_curto(m["presc_ppe_full"], ppe=True)
+    _pc = {"Aparente": "vermelho", "Iminente": "amarelo", "Extinta": "azul", "Sem dados": "cinza"}
+    m["presc_retro_cor"], m["presc_ppe_cor"] = _pc.get(m["presc_retro"], "none"), _pc.get(m["presc_ppe"], "none")
+    return m
+
+
 def modelo(r, baixas=None, ficha=None):
     """Registro extraído -> dict plano com tudo que as abas mostram. baixas: {chave: {obs, data}} da auditoria.
     ficha: Ficha Disciplinar do SIAPEN já lida (rspe_ficha.extrair), se houver."""
@@ -513,7 +587,7 @@ def modelo(r, baixas=None, ficha=None):
         aud["aud_resumo"] += " · %d baixado(s)" % n_bx
     aud["aud_info"] = n_info
     falta = ("Sim · " + (r.get("falta_12m_detalhe") or "")) if r.get("falta_12m") == "SIM" else "Não consta"
-    return {
+    m = {
         "id": r.get("processo_execucao") or r.get("arquivo"),
         "nome": r.get("nome", ""),
         "proc": r.get("processo_execucao", ""),
@@ -597,6 +671,8 @@ def modelo(r, baixas=None, ficha=None):
              "dec": i.get("data_decisao"), "ref": i.get("data_referencia")}
             for i in r.get("_incidentes", [])],
     }
+    m["motivo_exec"] = est[1] if est else ("Pena interrompida" if interr else "")
+    return simplificar(m)
 
 
 # abas: colunas (chave, título, peso), campo de cor, campo "status" (pílula), tipo de legenda
@@ -605,29 +681,29 @@ PRESC_SUB = [("crime", "Crime", 14), ("pena", "Pena", 8), ("fato", "Fato", 9), (
              ("prazo_ppe", "Prazo PPE", 11), ("ppe_termo", "Termo inicial", 9), ("ppe_status", "Executória", 22)]
 ABAS = [
     {"id": "geral", "titulo": "Geral", "cor": "geral_cor", "legenda": "lapso", "sem_stats": True,
-     "cols": [("nome", "Nome", 22), ("proc", "Nº da execução", 17), ("regime", "Regime", 9),
+     "cols": [("nome", "Nome", 22), ("proc", "Nº da execução", 17),
               ("prog", "Progressão", 15), ("liv", "Livramento", 15), ("termino", "Término", 10)],
      "pilulas": {}},
     {"id": "prog", "titulo": "Progressão", "cor": "prog_cor", "legenda": "lapso",
-     "cols": [("nome", "Nome", 22), ("proc", "Nº da execução", 18), ("regime", "Regime", 9),
+     "cols": [("nome", "Nome", 22), ("proc", "Nº da execução", 18),
               ("prog", "Data da progressão", 14), ("prog_sit", "Situação", 16), ("conduta", "Conduta (ficha)", 12), ("falta", "Falta (12 meses)", 14)],
      "pilulas": {"prog_sit": "prog_cor"}},
     {"id": "liv", "titulo": "Livramento", "cor": "liv_cor", "legenda": "lapso",
-     "cols": [("nome", "Nome", 22), ("proc", "Nº da execução", 18), ("regime", "Regime", 9),
+     "cols": [("nome", "Nome", 22), ("proc", "Nº da execução", 18),
               ("liv", "Data do livramento", 14), ("liv_sit", "Situação", 16), ("conduta", "Conduta (ficha)", 12), ("falta", "Falta (12 meses)", 14)],
      "pilulas": {"liv_sit": "liv_cor"}},
     {"id": "ind", "titulo": "Indulto / Comutação", "cor": "ind_cor", "legenda": "indulto",
-     "cols": [("nome", "Nome", 16), ("proc", "Nº da execução", 14), ("regime", "Regime", 8),
-              ("imp", "Impeditivo (art. 1º)", 12),
+     "cols": [("nome", "Nome", 16), ("proc", "Nº da execução", 14),
+              ("imp", "Impeditivo (art. 1º)", 10),
               ("i22", "Indulto 2022", 10), ("i24", "Indulto 2024", 10), ("c24", "Comutação 2024", 10), ("i25", "Indulto 2025", 10), ("c25", "Comutação 2025", 10)],
      "pilulas": {"imp": "ind_cor", "i22": "i22_cor", "i24": "i24_cor", "c24": "c24_cor", "i25": "i25_cor", "c25": "c25_cor"}},
     {"id": "presc", "titulo": "Prescrição", "cor": "presc_cor", "legenda": "presc", "expansivel": True,
-     "cols": [("nome", "Nome", 20), ("proc", "Nº da execução", 17), ("regime", "Regime", 8),
-              ("presc_retro", "Pretensão punitiva", 18), ("presc_ppe", "Pretensão executória", 26), ("presc_prox", "Prescrição em", 9)],
-     "pilulas": {},
+     "cols": [("nome", "Nome", 20), ("proc", "Nº da execução", 17),
+              ("presc_retro", "Pretensão punitiva", 14), ("presc_ppe", "Pretensão executória", 14), ("presc_prox", "Prescrição em", 10)],
+     "pilulas": {"presc_retro": "presc_retro_cor", "presc_ppe": "presc_ppe_cor"},
      "sub": "presc_linhas", "sub_cols": PRESC_SUB, "sub_pilulas": {"retro_status": "retro_cor", "ppe_status": "ppe_cor"}, "sub_calc": True},
     {"id": "ext", "titulo": "Extinção", "cor": "ext_cor", "legenda": "ext",
-     "cols": [("nome", "Nome", 20), ("proc", "Nº da execução", 17), ("regime", "Regime", 8),
+     "cols": [("nome", "Nome", 20), ("proc", "Nº da execução", 17),
               ("ext_termino", "Término", 10), ("ext_sit", "Situação", 12), ("ext_hipoteses", "Extinção pelo cumprimento", 46)],
      "pilulas": {"ext_sit": "ext_cor"}},
     {"id": "fd", "titulo": "Ficha disciplinar", "cor": "fd_cor", "legenda": "fd", "expansivel": True,

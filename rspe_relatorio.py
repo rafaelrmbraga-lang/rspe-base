@@ -214,9 +214,9 @@ def relatorio_individual(m, caminho, nome_base):
     # 2) quadro-resumo
     def caixa(rot, val):
         return [Paragraph(_t(rot), st["rot"]), Paragraph(_t(val or "—"), st["val"])]
-    q = [("Regime atual", m.get("regime")), ("Pena total", m.get("pena_total")), ("Cumprida", m.get("pena_cumprida")),
+    q = [("Regime atual", m.get("regime") + ((" · " + m["motivo_exec"]) if m.get("motivo_exec") else "")), ("Pena total", m.get("pena_total")), ("Cumprida", m.get("pena_cumprida")),
          ("Remanescente", m.get("pena_rem")), ("Dias remidos (saldo do RSPE)", (m.get("remidos") or "").split(" (")[0]),
-         ("Data-base", m.get("dbase")), ("Término (SEEU)", m.get("termino")), ("Conduta (ficha disciplinar)", m.get("conduta"))]
+         ("Data-base", m.get("dbase")), ("Término (SEEU)", m.get("termino") if m.get("termino") not in (None, "", "—") else (m.get("termino_motivo") or "—")), ("Conduta (ficha disciplinar)", m.get("conduta"))]
     from reportlab.platypus import Table, TableStyle
     C = st["C"]
     grade = []
@@ -240,17 +240,24 @@ def relatorio_individual(m, caminho, nome_base):
     def fr_lc(x):
         return "1/1 (livramento vedado)" if (x or "").strip() in ("1", "1/1") else x
 
-    add("Progressão", m.get("prog"), m.get("frac_prog"), m.get("prog_sit") or ("Pedidos no RSPE: " + m["ped_prog"] if m.get("ped_prog") else ""), m.get("prog_cor"),
+    def dm(k):  # data do SEEU ou, sem ela, o motivo (não iniciou, interrompida, aberto...)
+        v = m.get(k)
+        return v if v and v != "—" else (m.get(k + "_motivo") or "—")
+
+    def sm(k):
+        return "" if m.get(k) in (None, "", "—") and m.get(k + "_sit") == "Não se aplica" else m.get(k + "_sit")
+
+    add("Progressão", dm("prog"), m.get("frac_prog"), sm("prog") or ("Pedidos no RSPE: " + m["ped_prog"] if m.get("ped_prog") else ""), m.get("prog_cor"),
         _atencao(m, ["progressão", "data-base", "falta grave"]))
-    add("Livramento condicional", m.get("liv"), fr_lc(m.get("frac_liv")), m.get("liv_sit"), m.get("liv_cor"), _atencao(m, ["livramento"]))
-    add("Término da pena", m.get("termino"), "", m.get("ext_sit"), m.get("ext_cor"), m.get("ext_hipoteses") if m.get("ext_cor") in ("vermelho", "amarelo") else "")
+    add("Livramento condicional", dm("liv"), fr_lc(m.get("frac_liv")), sm("liv"), m.get("liv_cor"), _atencao(m, ["livramento"]))
+    add("Término da pena", dm("termino"), "", m.get("ext_sit"), m.get("ext_cor"), m.get("ext_hipoteses") if m.get("ext_cor") in ("vermelho", "amarelo") else "")
     for ano, ki, kc in (("2022", "i22", None), ("2024", "i24", "c24"), ("2025", "i25", "c25")):
         add("Indulto %s" % ano, "", "Decreto %s" % {"2022": "11.302/2022", "2024": "12.338/2024", "2025": "12.790/2025"}[ano],
             m.get(ki + "_full") or m.get(ki), m.get(ki + "_cor"), _atencao(m, ["indulto %s" % ano, "hediondez"]))
         if kc:
             add("Comutação %s" % ano, "", "Decreto %s, art. 13" % {"2024": "12.338/2024", "2025": "12.790/2025"}[ano], m.get(kc + "_full") or m.get(kc), m.get(kc + "_cor"), _atencao(m, ["comutação %s" % ano]))
     if m.get("presc_cor") in ("vermelho", "amarelo"):
-        add("Prescrição", "", "CP, arts. 109 a 117", m.get("presc_ppe"), m.get("presc_cor"), "")
+        add("Prescrição", "", "CP, arts. 109 a 117", m.get("presc_ppe_full") or m.get("presc_ppe"), m.get("presc_cor"), "")
     el.append(_tabela(ben, [W * 0.17, W * 0.2, W * 0.2, W * 0.16, W * 0.27], st, cores_linha=cores))
     el.append(Paragraph(_t("Datas de progressão, livramento e término: as do SEEU impressas no RSPE. Indulto, comutação e prescrição: cálculo do programa (estimativa)."), st["mut"]))
     # 4) condenações
@@ -413,7 +420,7 @@ def fila_prioridade(modelos):
             mot.append((2, "Livramento vencido (%s)" % (m.get("liv_sit") or "").split(" ·")[0], m.get("liv")))
         for rot, k in (("Indulto 2024", "i24"), ("Indulto 2025", "i25"), ("Comutação 2024", "c24"), ("Comutação 2025", "c25")):
             if m.get(k + "_cor") == "verde":
-                mot.append((3, "%s possível (%s)" % (rot, m.get(k) or ""), ""))
+                mot.append((3, "%s possível (%s)" % (rot, m.get(k + "_txt") or m.get(k) or ""), ""))
         if m.get("fd_cor") == "vermelho":
             mot.append((3, m.get("fd_sit"), ""))
         elif m.get("ficha_tem") and m.get("fd_cor") == "amarelo":

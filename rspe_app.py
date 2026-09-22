@@ -31,7 +31,7 @@ import rspe_regras as rg
 import rspe_relatorio as rrel
 
 APP = "RSPE Base"
-VERSAO = "6.10.10"
+VERSAO = "6.11.0"
 
 
 def pasta_app():
@@ -134,6 +134,14 @@ move a data-base do livramento, do indulto nem da comutação (Súmulas 441 e 53
 prisão e o da soltura, como o SEEU. A
 data-base é conferida com a última prisão, progressão/regressão ou falta grave homologada; sem esse evento no RSPE, a Auditoria
 aponta a inconsistência (e, se coincidir com a soma/unificação das penas, o Tema 1006 do STJ).
+<h4>Telas e cópia para a petição</h4>
+As tabelas mostram só o essencial: data do SEEU ou "—" (sem data por não iniciar o cumprimento, interrupção, regime aberto
+etc.); indulto e comutação como Sim, Não ou Verificar; prescrição como Não configurada, Não prescrita, Iminente ou Aparente.
+O motivo e o cálculo ficam na ficha do assistido (clique no nome). Condenação por fato posterior à data do decreto na mesma
+execução: o indulto e a comutação daquele decreto aparecem como "Não", com a explicação na ficha.
+Para levar ao Word: "Copiar resumo" (ficha do assistido), "Copiar cálculo" (prescrição, indulto e comutação), "Copiar" e
+"Copiar pendências" (Auditoria). O texto vai em linhas simples, pronto para colar. Nos modelos de petição, o campo
+{{prescricao_calculo}} traz a memória de cálculo da prescrição aparente ou iminente.
 <h4>Relatórios em PDF</h4>
 O botão <b>Relatórios</b> gera, numa pasta com a data e a hora: um PDF por assistido (resumo, benefícios, condenações, linha do
 tempo, remição e alertas), o relatório geral da base (perfil, benefícios, remição, alertas e fila de prioridade) e a planilha.
