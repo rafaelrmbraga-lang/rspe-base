@@ -1,4 +1,4 @@
-RSPE BASE - SEEU  v6.10.7 (programa em abas)
+RSPE BASE - SEEU  v6.10.8 (programa em abas)
 =========================================
 
 O QUE FAZ
@@ -211,6 +211,12 @@ PRESUNÇÃO DE HIPOSSUFICIÊNCIA (Defensoria)
   do art. 9º e sem bloqueio do livramento (CP, art. 83, IV). Tráfico
   privilegiado não é hediondo nem impeditivo (STF PSV 125, Tema 1400; STJ
   Tema 1336). Detalhes e fontes: "Criterios_de_analise_por_beneficio.pdf".
+
+v6.10.8
+  - Relatórios: dá para escolher de quem sair o relatório individual. O
+    botão abre a lista dos assistidos visíveis, com busca e "Todos" /
+    "Nenhum". O relatório geral, a fila de prioridade e a planilha seguem
+    com todos os visíveis (busca e filtro da tela).
 
 v6.10.7
   - Artigo reconhecido pela descrição respeita a lei da data do fato:

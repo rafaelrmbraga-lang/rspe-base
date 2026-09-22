@@ -560,8 +560,10 @@ def relatorio_geral(modelos, caminho, nome_base, nominal=True):
     return caminho
 
 
-def gerar(modelos, pasta, nome_base, individual=True, geral=True, nominal=True):
-    """Cria <pasta>/Relatorios <data hora>/ com o geral e a subpasta Individuais. Devolve (pasta, n_individuais, erros)."""
+def gerar(modelos, pasta, nome_base, individual=True, geral=True, nominal=True, individuais=None):
+    """Cria <pasta>/Relatorios <data hora>/ com o geral e a subpasta Individuais. O geral e a estatística usam
+    'modelos'; os PDFs individuais, 'individuais' (quando informado, os assistidos escolhidos).
+    Devolve (pasta, n_individuais, erros)."""
     destino = os.path.join(pasta, "Relatorios %s" % datetime.now().strftime("%Y-%m-%d %Hh%M"))
     os.makedirs(destino, exist_ok=True)
     erros, n = [], 0
@@ -573,7 +575,7 @@ def gerar(modelos, pasta, nome_base, individual=True, geral=True, nominal=True):
     if individual:
         sub = os.path.join(destino, "Individuais")
         os.makedirs(sub, exist_ok=True)
-        for m in modelos:
+        for m in (modelos if individuais is None else individuais):
             try:
                 relatorio_individual(m, os.path.join(sub, nome_arquivo(m)), nome_base)
                 n += 1

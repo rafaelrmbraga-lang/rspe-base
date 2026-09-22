@@ -470,18 +470,36 @@ const ui = {
       ${fmt==='xlsx'?`<label class="chk"><input type="checkbox" value="completo" checked>Completo (todos os campos extraídos)</label>`:''}
       <div class="acts"><button class="btn" onclick="ui.fecharModal()">Cancelar</button><button class="btn pri" onclick="ui.exportar('${fmt}')">Exportar</button></div></div>`;
     document.getElementById('modal').classList.add('on'); },
-  modalRelatorios(){ const n=this.visiveis().length;
-    document.getElementById('modal').innerHTML=`<div class="box"><h2>Relatórios em PDF</h2><p>${n} assistido(s)${this.filtro?' filtrado(s) pela busca':''}. Os arquivos vão para uma pasta nova com a data e a hora.</p>
-      <label class="chk"><input type="checkbox" id="rel_ind" checked>Relatórios individuais (um PDF por assistido)</label>
+  modalRelatorios(){ const vis=this.visiveis(), n=vis.length;
+    const lista=vis.map(r=>`<label class="chk relitem" style="padding:5px 9px;font-size:12.5px" data-b="${esc((r.nome+' '+r.proc).toLowerCase())}"><input type="checkbox" class="relp" value="${esc(r.id)}" checked onchange="ui.relConta()"><span>${esc(r.nome)} <span class="muted" style="font-size:11.5px">· ${esc(r.proc)}</span></span></label>`).join('');
+    document.getElementById('modal').innerHTML=`<div class="box" style="width:520px"><h2>Relatórios em PDF</h2><p>${n} assistido(s)${this.filtro?' filtrado(s) pela busca':''}. Os arquivos vão para uma pasta nova com a data e a hora.</p>
+      <label class="chk"><input type="checkbox" id="rel_ind" checked onchange="ui.relLista()">Relatórios individuais (um PDF por assistido)</label>
+      <div id="rel_sel" style="margin:0 0 6px 26px">
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
+          <input id="rel_busca" placeholder="Buscar assistido…" oninput="ui.relFiltrar()" style="flex:1;padding:7px 10px;border:1px solid var(--line2);border-radius:9px;font:inherit;font-size:12.5px;outline:none">
+          <span class="mini" title="Marca os que estão na lista (respeita a busca)" onclick="ui.relMarcar(true)">Todos</span><span class="mini" title="Desmarca os que estão na lista (respeita a busca)" onclick="ui.relMarcar(false)">Nenhum</span>
+        </div>
+        <div class="help" id="rel_pessoas" style="max-height:190px;border:1px solid var(--line);border-radius:10px;padding:2px 4px">${lista}</div>
+        <div class="muted" id="rel_conta" style="font-size:12px;margin:5px 0 0 2px"></div>
+      </div>
       <label class="chk"><input type="checkbox" id="rel_ger" checked>Relatório geral da base</label>
       <label class="chk"><input type="checkbox" id="rel_pla" checked>Planilha (Excel, todas as abas)</label>
       <label class="chk"><input type="checkbox" id="rel_nom" checked>Fila de prioridade com o nome dos assistidos</label>
       <p class="muted" style="font-size:12px">Triagem: não substitui o Atestado de Pena. Datas de progressão, livramento e término são as do SEEU.</p>
       <div class="acts"><button class="btn" onclick="ui.fecharModal()">Cancelar</button><button class="btn pri" onclick="ui.gerarRelatorios()">Gerar</button></div></div>`;
-    document.getElementById('modal').classList.add('on'); },
+    document.getElementById('modal').classList.add('on'); this.relConta(); },
+  relSelecionados(){ return [...document.querySelectorAll('#rel_pessoas .relp:checked')].map(i=>i.value); },
+  relConta(){ const c=document.getElementById('rel_conta'); if(!c) return;
+    const tot=document.querySelectorAll('#rel_pessoas .relp').length, m=this.relSelecionados().length;
+    c.textContent = m===tot ? `Todos os ${tot} assistidos` : `${m} de ${tot} assistidos selecionados`; },
+  relFiltrar(){ const q=(document.getElementById('rel_busca').value||'').trim().toLowerCase();
+    document.querySelectorAll('#rel_pessoas .relitem').forEach(el=>{ el.style.display = !q || el.dataset.b.includes(q) ? '' : 'none'; }); },
+  relMarcar(v){ document.querySelectorAll('#rel_pessoas .relitem').forEach(el=>{ if(el.style.display!=='none') el.querySelector('.relp').checked=v; }); this.relConta(); },
+  relLista(){ const on=document.getElementById('rel_ind').checked; document.getElementById('rel_sel').style.display = on ? '' : 'none'; },
   async gerarRelatorios(){ const v=id=>document.getElementById(id).checked; const op=[v('rel_ind'),v('rel_ger'),v('rel_pla'),v('rel_nom')];
     if(!op[0]&&!op[1]&&!op[2]) return this.toast('Marque ao menos uma saída.');
-    this.fecharModal(); this.toast('Gerando relatórios…'); const r=await API().relatorios(this.visiveis().map(x=>x.id), op[0], op[1], op[2], op[3]);
+    const sel=this.relSelecionados(); if(op[0] && !sel.length) return this.toast('Escolha ao menos um assistido para o relatório individual.');
+    this.fecharModal(); this.toast('Gerando relatórios…'); const r=await API().relatorios(this.visiveis().map(x=>x.id), op[0], op[1], op[2], op[3], sel);
     if(r && r.msg){ this.toast(r.msg); } else if(r && r.erro){ this.toast(r.erro); } },
   async relatorioUm(id){ const r=await API().relatorio_um(id); if(r && r.caminho){ this.toast('Relatório: '+r.caminho); } else if(r && r.erro){ this.toast(r.erro); } },
   fecharModal(){ document.getElementById('modal').classList.remove('on'); },

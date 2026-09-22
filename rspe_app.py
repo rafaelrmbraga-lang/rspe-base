@@ -31,7 +31,7 @@ import rspe_regras as rg
 import rspe_relatorio as rrel
 
 APP = "RSPE Base"
-VERSAO = "6.10.7"
+VERSAO = "6.10.8"
 
 
 def pasta_app():
@@ -132,6 +132,8 @@ aponta a inconsistência (e, se coincidir com a soma/unificação das penas, o T
 <h4>Relatórios em PDF</h4>
 O botão <b>Relatórios</b> gera, numa pasta com a data e a hora: um PDF por assistido (resumo, benefícios, condenações, linha do
 tempo, remição e alertas), o relatório geral da base (perfil, benefícios, remição, alertas e fila de prioridade) e a planilha.
+No próprio botão dá para escolher de quem sai o relatório individual, na lista com busca e "Todos"/"Nenhum"; o relatório geral, a
+fila e a planilha seguem com todos os visíveis.
 Vale para os assistidos visíveis (busca e filtro). Na ficha do assistido, "Relatório em PDF" gera só o dele.
 <h4>Presunção de hipossuficiência (Defensoria)</h4>
 Em qualquer hipótese o programa presume a incapacidade econômica do assistido: a <b>multa</b> pendente não obsta a extinção da
@@ -714,7 +716,7 @@ class Api:
 
 
     # ---- relatórios (PDF) ----
-    def relatorios(self, ids, individual, geral, planilha, nominal):
+    def relatorios(self, ids, individual, geral, planilha, nominal, ids_individual=None):
         """Gera, numa pasta escolhida, a subpasta 'Relatorios <data hora>' com o relatório geral, os individuais e a planilha."""
         if not self.base:
             return {"erro": "Nenhuma base aberta."}
@@ -727,7 +729,10 @@ class Api:
         if not pasta:
             return None
         try:
-            destino, n, erros = rrel.gerar(modelos, pasta, self.base.nome, individual=individual, geral=geral, nominal=nominal)
+            sel = set(ids_individual) if ids_individual else None
+            individuais = [m for m in modelos if m["id"] in sel] if sel is not None else modelos
+            destino, n, erros = rrel.gerar(modelos, pasta, self.base.nome, individual=individual, geral=geral, nominal=nominal,
+                                           individuais=individuais)
             if planilha:
                 rx.exportar_xlsx(modelos, os.path.join(destino, "%s - planilha.xlsx" % self.base.nome),
                                  ["geral", "prog", "liv", "ind", "presc", "ext", "fd", "aud", "completo"])
