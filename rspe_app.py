@@ -31,7 +31,7 @@ import rspe_regras as rg
 import rspe_relatorio as rrel
 
 APP = "RSPE Base"
-VERSAO = "6.10.3"
+VERSAO = "6.10.4"
 
 
 def pasta_app():
@@ -113,7 +113,11 @@ período, atestado que o cobre, remição homologada no RSPE e providência. Tra
 <h4>Regras de leitura</h4>
 Quem não tem início de cumprimento definitivo no RSPE (só prisão provisória encerrada, ou nenhuma) aparece como "Não iniciou o
 cumprimento", e não como regime aberto ou pena interrompida. Livramento suspenso ou revogado em incidente posterior aparece como tal.
-Dar baixa no alerta de livramento incerto confirma o livramento em todas as abas. O programa não presume datas. Sem data do fato, recebimento da denúncia, sentença ou trânsito em julgado no RSPE, a prescrição
+Dar baixa no alerta de livramento incerto confirma o livramento em todas as abas. A Auditoria confere só a matemática do RSPE (frações, soma das penas, data-base, perda de dias remidos, reincidência,
+marcações de hediondez e violência, livramento incerto); remição, indulto, comutação, prescrição e prazos ficam nas próprias abas.
+O programa não usa a expressão "indulto parcial", sinônimo de comutação na jurisprudência (STF, HC 81.567 e HC 96.431; STJ, REsp
+753.646): no concurso com crime impeditivo, fala em "indulto dos crimes não impeditivos (art. 7º, p. ú.)". Sem cumprimento em curso na
+data do decreto (não iniciado ou interrompido), indulto e comutação de 2024 e 2025 "não se aplicam". O programa não presume datas. Sem data do fato, recebimento da denúncia, sentença ou trânsito em julgado no RSPE, a prescrição
 daquele trecho não é calculada e a Auditoria aponta "verificar na ação penal". Quando a 1ª página do RSPE diz "Em livramento
 condicional deferido em ...", o assistido é tratado como em livramento, ainda que o "Regime Atual" traga o regime anterior. A
 data-base é conferida com a última prisão, progressão/regressão ou falta grave homologada; sem esse evento no RSPE, a Auditoria

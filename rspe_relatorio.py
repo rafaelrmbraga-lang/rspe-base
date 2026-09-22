@@ -409,9 +409,9 @@ def fila_prioridade(modelos):
             mot.append((2, "Progressão vencida (%s)" % (m.get("prog_sit") or "").split(" ·")[0], m.get("prog")))
         if m.get("liv_cor") == "vencido":
             mot.append((2, "Livramento vencido (%s)" % (m.get("liv_sit") or "").split(" ·")[0], m.get("liv")))
-        for i in m.get("aud_itens", []):
-            if not i.get("baixado") and i["nivel"] == "alerta" and re.search(r"possível sem incidente", i["titulo"]):
-                mot.append((3, i["titulo"], ""))
+        for rot, k in (("Indulto 2024", "i24"), ("Indulto 2025", "i25"), ("Comutação 2024", "c24"), ("Comutação 2025", "c25")):
+            if m.get(k + "_cor") == "verde":
+                mot.append((3, "%s possível (%s)" % (rot, m.get(k) or ""), ""))
         if m.get("fd_cor") == "vermelho":
             mot.append((3, m.get("fd_sit"), ""))
         elif m.get("ficha_tem") and m.get("fd_cor") == "amarelo":

@@ -1443,6 +1443,19 @@ def analise_decretos(campos, crimes, eventos, incidentes, hoje):
         em_cumprimento = custodia_ref or lc or bool(regime and dreg and dreg <= ref)
         # regime fixado, mas sem início de cumprimento (sem custódia nem início do aberto registrado na data)
         sem_inicio = not custodia_ref and not lc and bool(regime and dreg and dreg <= ref)
+        if sem_inicio:
+            # regime fixado, mas a pena não estava sendo cumprida na data do decreto: não há indulto nem comutação
+            definitivo = [e for e in eventos if re.search(r"PRIS|IN[ÍI]CIO|RECAPTURA", ((e.get("tipo") or "") + " " + (e.get("motivo") or "")).upper())
+                          and not re.search(r"FLAGRANTE|PREVENTIV|TEMPOR|PROVIS", (e.get("motivo") or "").upper())
+                          and (to_date(e.get("data") or "") or date.max) <= ref]
+            motivo = "não iniciou o cumprimento" if not definitivo else "cumprimento interrompido"
+            out[k] = "não se aplica: %s até %s" % (motivo, fmt(ref))
+            out[k + "_status"] = "nao"
+            out[k + "_detalhe"] = ("Regime %s fixado em %s, mas o RSPE não registra cumprimento em curso em %s (%s). "
+                                   "O decreto alcança quem está cumprindo pena: sem início (ou com o cumprimento interrompido), não há indulto nem comutação a calcular."
+                                   % (regime, fmt(dreg), fmt(ref), motivo))
+            out[kc] = "não se aplica: %s" % motivo
+            continue
         if not em_cumprimento:
             primeiro = min((ini for ini, _ in periodos), default=None)
             if not any(ini <= ref for ini, _ in periodos):
@@ -1620,10 +1633,10 @@ def analise_decretos(campos, crimes, eventos, incidentes, hoje):
                 verificar = [p + " - confirmar se houve violência contra a mulher (art. 1º, XVII)" for p in possiveis] + verificar
                 possiveis = []
                 aviso = ("; ".join(dict.fromkeys(vd_prov)) + ("; " + aviso if aviso else ""))
-            so_parcial = bool(possiveis) and all(p.startswith("XV (parcial)") for p in possiveis)
+            so_parcial = False  # "indulto parcial" é sinônimo de comutação (STF HC 81.567; STJ REsp 753.646): termo não usado
             if possiveis:
                 inc = ", ".join(p.split(":")[0].replace(" (parcial)", "") for p in possiveis)
-                out[k] = ("POSSÍVEL (parcial): art. 9º, " if so_parcial else "POSSÍVEL: art. 9º, ") + inc + (" | " + aviso if aviso else "")
+                out[k] = "POSSÍVEL: art. 9º, " + inc + (" | " + aviso if aviso else "")
                 out[k + "_status"] = "possivel"
             elif [v for v in verificar if not v.startswith("XVI")]:
                 inc = ", ".join(p.split(":")[0] for p in verificar if not p.startswith("XVI"))
@@ -1689,8 +1702,6 @@ def analise_decretos(campos, crimes, eventos, incidentes, hoje):
             out[kc + "_detalhe"] = "\n".join(cl13)
 
         def rotulo(txt, prefixo):
-            if txt.startswith("POSSÍVEL (parcial): "):
-                return txt.replace("POSSÍVEL (parcial): ", "POSSÍVEL (parcial, %s): " % prefixo.replace("parcial, ", ""), 1)
             return txt.replace("POSSÍVEL: ", "POSSÍVEL (%s): " % prefixo, 1) if txt.startswith("POSSÍVEL: ") else txt
 
         if not imped or (imp_sup and not imp_est):
@@ -1744,9 +1755,9 @@ def analise_decretos(campos, crimes, eventos, incidentes, hoje):
             concluir(*res[:3], pl, cl, max(0, pl - cl), *res[3:],
                      "tempo cumprido além de 2/3 do impeditivo: %s de %s cumpridos em %s, menos %s (2/3 de %s)" % (
                          dias_para_pena(cl), dias_para_pena(cumprido), fmt(ref), dias_para_pena(exig), dias_para_pena(pena_imp)))
-            out[k] = rotulo(out[k], "parcial, art. 7º, p. ú.")
+            out[k] = rotulo(out[k], "crimes não impeditivos, art. 7º, p. ú.")
             if out[kc].startswith("POSSÍVEL: "):
-                out[kc] = rotulo(out[kc], "parcial, art. 7º, p. ú.")
+                out[kc] = rotulo(out[kc], "crimes não impeditivos, art. 7º, p. ú.")
             if out[k].startswith("não atinge"):
                 out[k] = "não atinge: crimes não impeditivos (art. 7º, p. ú.)" + (" | " + out[k].split(" | ", 1)[1] if " | " in out[k] else "")
             out[kc + "_detalhe"] = ("Art. 7º, p. ú.: comutação só da pena dos crimes não impeditivos (%s), com o tempo cumprido além de 2/3 do impeditivo.\n" % nomes) + out.get(kc + "_detalhe", "")

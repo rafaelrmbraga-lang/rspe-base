@@ -1,4 +1,4 @@
-RSPE BASE - SEEU  v6.10.3 (programa em abas)
+RSPE BASE - SEEU  v6.10.4 (programa em abas)
 =========================================
 
 O QUE FAZ
@@ -211,6 +211,20 @@ PRESUNÇÃO DE HIPOSSUFICIÊNCIA (Defensoria)
   do art. 9º e sem bloqueio do livramento (CP, art. 83, IV). Tráfico
   privilegiado não é hediondo nem impeditivo (STF PSV 125, Tema 1400; STJ
   Tema 1336). Detalhes e fontes: "Criterios_de_analise_por_beneficio.pdf".
+
+v6.10.4
+  - Auditoria só com a matemática do RSPE (frações, soma das penas,
+    data-base, perda de remidos, reincidência, marcações, livramento
+    incerto). Remição, indulto/comutação, prescrição e prazos ficam nas
+    próprias abas. Novo visual em cartões, com nível, achado e fundamento.
+  - Sem "indulto parcial": a expressão é sinônimo de comutação na
+    jurisprudência (STF HC 81.567 e HC 96.431; STJ REsp 753.646 e HC 38.299).
+    No concurso com crime impeditivo: "Possível · VII · só crimes não
+    impeditivos (art. 7º, p. ú.)".
+  - Indulto e comutação 2024/2025: "não se aplica" quando o cumprimento não
+    tinha começado (ou estava interrompido) na data do decreto.
+  - Prescrição: a aba mostra também os crimes com datas a verificar na ação
+    penal.
 
 v6.10.3
   - "Não iniciou o cumprimento": sem início de cumprimento definitivo no RSPE

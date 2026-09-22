@@ -236,8 +236,8 @@ def curto_indulto(txt):
     m = rs.re.match(r"POSSÍVEL \((.+?)\): (.*)$", base)
     if m:
         q = m.group(1)
-        rot = ("Parcial" if "parcial" in q else "Possível")
-        extra = " · art. 7º, p. ú." if "art. 7º" in q else ""
+        rot = "Possível"
+        extra = " · só crimes não impeditivos (art. 7º, p. ú.)" if "art. 7º" in q else ""
         extra += " · tese: hed. superveniente" if "hediondez" in q else ""
         return "%s · %s%s%s" % (rot, m.group(2).replace("art. 9º, ", ""), extra, falta)
     if base.startswith("POSSÍVEL"):
@@ -246,6 +246,10 @@ def curto_indulto(txt):
         return base.replace("A VERIFICAR: ", "A verificar · ") + falta
     if base.startswith("não se aplica: fatos"):
         return "Não se aplica (fatos posteriores)"
+    if base.startswith("não se aplica: não iniciou"):
+        return "Não se aplica (não iniciou o cumprimento)"
+    if base.startswith("não se aplica: cumprimento interrompido"):
+        return "Não se aplica (cumprimento interrompido)"
     if base.startswith("não se aplica"):
         return "Não se aplica (sem execução na data)"
     if base.startswith("CONCEDIDO no RSPE"):
@@ -297,7 +301,7 @@ def compacto_indulto(txt):
     t = rs.re.sub(r"^não atinge.*$", "Não atinge", t)
     t = rs.re.sub(r"^Possível · art\. 13 \([^)]*\)", "Possível · art. 13", t)
     t = t.replace(" · tese: hed. superveniente", " · tese hed. superv.")
-    t = t.replace("Possível (parcial) · ", "Parcial · ")
+    t = t.replace(" · só crimes não impeditivos (art. 7º, p. ú.)", " · não impeditivos")
     t = rs.re.sub(r"^(A verificar · art\. 7º, p\. ú\.).*$", r"\1 (2/3 do impeditivo)", t)
     return t
 
@@ -433,6 +437,19 @@ def _dias_para(d):
     return None
 
 
+AUD_OUTRAS_ABAS = re.compile(
+    r"possível sem incidente|hipóteses a verificar|Hediondez posterior|hipossuficiência|reparação do dano|violência contra a mulher|"
+    r"prescri|vencida em .* sem decisão|Não iniciou|Cumprimento interrompido|trânsito em julgado não informado|"
+    r"cumprida por detração|^Idade |pena total inferior a 2 anos|Indulto 20\d\d|Comutação 20\d\d", re.I)
+
+
+def so_matematica(it):
+    """Itens que ficam na Auditoria: conferência dos números e datas do RSPE."""
+    if it.get("origem") == "ficha":
+        return it["titulo"].startswith("Perda de remidos")  # perda de dias remidos é conta do RSPE
+    return not AUD_OUTRAS_ABAS.search(it["titulo"])
+
+
 def modelo(r, baixas=None, ficha=None):
     """Registro extraído -> dict plano com tudo que as abas mostram. baixas: {chave: {obs, data}} da auditoria.
     ficha: Ficha Disciplinar do SIAPEN já lida (rspe_ficha.extrair), se houver."""
@@ -469,6 +486,9 @@ def modelo(r, baixas=None, ficha=None):
             aud["aud_itens"] = rf.confrontar(r, ficha, HOJE) + aud["aud_itens"]
         except Exception as e:
             aud["aud_itens"].insert(0, {"nivel": "verificar", "titulo": "Ficha disciplinar: falha ao confrontar (%s)" % e, "detalhe": "", "fundamento": ""})
+    # a Auditoria cuida da matemática do RSPE; o que já aparece nas outras abas (remição/ficha, indulto e
+    # comutação, prescrição, prazos vencidos, extinção) não se repete aqui
+    aud["aud_itens"] = [i for i in aud["aud_itens"] if so_matematica(i)]
     aud["aud_itens"].sort(key=lambda i: {"alerta": 0, "verificar": 1, "info": 2, "ok": 3}.get(i["nivel"], 9))
     for it in aud["aud_itens"]:
         it["chave"] = hashlib.sha1(it["titulo"].encode("utf-8")).hexdigest()[:12]

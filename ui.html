@@ -174,6 +174,13 @@ tr.sub td{padding:0 0 0 0;background:#F9FAFB;cursor:default}tr.sub:hover td{back
 .pts{margin:0;padding-left:0;list-style:none}.pts li{padding:5px 0 5px 12px;border-left:3px solid #CBD5E1;margin-bottom:4px}.pts li.alerta{border-color:var(--r-dot,#E5484D)}.pts li.verificar{border-color:var(--a-dot,#F5A524)}
 .subtab .par{margin:0 0 6px}.subtab .par:last-child{margin-bottom:0}
 .det{margin-bottom:10px}
+.ac-top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin:2px 0 12px}.ac-chips{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.ac-lista{display:grid;gap:10px}
+.ac{background:#fff;border:1px solid var(--line);border-left:4px solid #CBD5E1;border-radius:10px;padding:12px 16px}
+.ac.alerta{border-left-color:var(--r-dot)}.ac.verificar{border-left-color:var(--a-dot)}.ac.ok{border-left-color:var(--g-dot)}.ac.info{border-left-color:#CBD5E1}.ac.bx{opacity:.6}
+.ac-h{display:flex;align-items:center;gap:10px}.ac-h b{font-size:13.5px;color:var(--tx);font-weight:600;flex:1}.ac-a{margin-left:auto}
+.ac-d{margin:8px 0 0;max-width:1100px}.ac-d p{margin:0 0 5px;font-size:12.8px;line-height:1.6;color:var(--tx);font-weight:400}
+.ac-f{margin-top:6px;font-size:11.5px;color:var(--tx3);font-weight:400}.ac-top .muted{font-weight:400}
 </style>
 </head>
 <body>
@@ -329,8 +336,23 @@ const ui = {
     return `<div class="mb ${cls||''}">${titulo?`<div class="mh">${titulo}</div>`:''}${li}</div>`; },
   memoria(s){
     return `<div class="mem">${this.bloco('Pretensão punitiva',s.retro_detalhe,'pp')}${this.bloco('Pretensão executória',s.ppe_detalhe,'pe')}${this.bloco('Avisos',s.avisos&&s.avisos.length?s.avisos:'','av')}</div>`; },
-  subTabela(r,spec){ const cols=spec.sub_cols; let rows=r[spec.sub]||[]; const tot=cols.reduce((s,c)=>s+c[2],0)+6;
-    if(spec.id==='presc'){ rows=rows.filter(s=>s.ppe_cor==='vermelho'||s.retro_cor==='vermelho'); }
+  audCards(r){ let rows=r.aud_itens||[]; const todos=rows; if(!this.mostrarTudo) rows=todos.filter(s=>s.baixado||(s.nivel!=='info'&&s.nivel!=='ok'));
+    const ocultos=todos.length-rows.length;
+    const nA=todos.filter(s=>s.nivel==='alerta'&&!s.baixado).length, nV=todos.filter(s=>s.nivel==='verificar'&&!s.baixado).length;
+    const paras=t=>String(t||'').split(/(?<=[.;])\s+(?=[A-ZÁÉÍÓÚ(])/).filter(x=>x.trim()).map(x=>`<p>${penaExt(esc(x))}</p>`).join('');
+    const card=s=>{ const k=s.baixado?'bx':s.nivel;
+      const bx = s.baixado ? `<span class="mini" onclick="event.stopPropagation();ui.reabrir('${r.id}','${s.chave}')">Reabrir</span>` : (s.nivel==='ok'||s.nivel==='info' ? '' : `<span class="mini" onclick="event.stopPropagation();ui.darBaixa('${r.id}','${s.chave}','${esc(s.titulo).replace(/'/g,'&#39;')}')">Dar baixa</span>`);
+      return `<div class="ac ${k}"><div class="ac-h"><span class="pill ${s.nivel_cor}">${esc(s.nivel_txt)}</span><b>${penaExt(esc(s.titulo))}</b><span class="ac-a">${bx}</span></div>
+        ${s.detalhe?`<div class="ac-d">${paras(s.detalhe)}</div>`:''}
+        ${s.fundamento?`<div class="ac-f">${penaExt(esc(s.fundamento))}</div>`:''}
+        ${s.baixado?`<div class="ac-f">Baixado em ${esc(s.baixa_data)}${s.baixa_obs?' · '+esc(s.baixa_obs):''}</div>`:''}</div>`; };
+    const cab=`<div class="ac-top"><div><b>${esc(r.nome)}</b> <span class="muted">· conferência dos números e datas do RSPE (frações, soma das penas, data-base, perda de remidos, reincidência) · ${esc(r.aud_base)}</span></div>
+      <div class="ac-chips">${nA?`<span class="pill vermelho">${nA} alerta(s)</span>`:''}${nV?`<span class="pill amarelo">${nV} a verificar</span>`:''}${!nA&&!nV?'<span class="pill verde">Sem inconsistências</span>':''}
+      ${(ocultos||this.mostrarTudo)?`<span class="mini" onclick="event.stopPropagation();ui.mostrarTudo=!ui.mostrarTudo;ui.render()">${this.mostrarTudo?'ocultar conferências OK':'ver '+ocultos+' conferência(s) OK / informativa(s)'}</span>`:''}
+      <span class="mini" onclick="event.stopPropagation();ui.abrir('${r.id}')">Abrir ficha completa</span></div></div>`;
+    return cab+(rows.length?`<div class="ac-lista">${rows.map(card).join('')}</div>`:'<div class="muted" style="padding:8px 2px">Nenhuma inconsistência pendente.</div>'); },
+  subTabela(r,spec){ if(spec.id==='aud') return this.audCards(r); const cols=spec.sub_cols; let rows=r[spec.sub]||[]; const tot=cols.reduce((s,c)=>s+c[2],0)+6;
+    if(spec.id==='presc'){ rows=rows.filter(s=>s.ppe_cor==='vermelho'||s.retro_cor==='vermelho'||/^Verificar na ação penal/.test((s.ppe_status||'')+' '+(s.retro_status||''))||/^Verificar na ação penal/.test(s.retro_status||'')); }
     let ocultos=0; if(spec.id==='aud' && !this.mostrarTudo){ const all=rows; rows=all.filter(s=>s.baixado||(s.nivel!=='info'&&s.nivel!=='ok')); ocultos=all.length-rows.length; }
     const cg='';
     const calc=!!spec.sub_calc, baixa=!!spec.sub_baixa; const head=`<tr>${cols.map(c=>`<th style="width:${(100*c[2]/tot).toFixed(1)}%">${c[1]}</th>`).join('')}${(calc||baixa)?'<th></th>':''}</tr>`;
@@ -345,8 +367,8 @@ const ui = {
         return `<tr class="${s.baixado?'bx':''}">${tds2}<td style="white-space:nowrap">${bx}</td></tr>`; }
       if(!calc) return `<tr>${tds}</tr>`;
       return `<tr>${tds}<td><span class="why" onclick="event.stopPropagation();const n=this.closest('tr').nextElementSibling;n.style.display=n.style.display==='none'?'':'none'">cálculo</span></td></tr><tr style="display:none"><td colspan="${cols.length+1}">${ui.memoria(s)}</td></tr>`; }).join('');
-    const cab = spec.id==='aud' ? `<b>${esc(r.nome)}</b> <span class="muted">· ${esc(r.aud_resumo)} · conferido com a ${esc(r.aud_base)} · alertas apontam o que demanda atenção, não afirmam erro</span>${(ocultos||this.mostrarTudo)?` · <span class="mini" onclick="event.stopPropagation();ui.mostrarTudo=!ui.mostrarTudo;ui.render()">${this.mostrarTudo?'ocultar informativos e OK':'mostrar '+ocultos+' informativo(s)/OK'}</span>`:''}${r.ficha_resumo?`<div class="muted" style="margin-top:3px">Ficha disciplinar: ${esc(r.ficha_resumo)}</div>`:''}` : spec.id==='fd' ? `<b>${esc(r.nome)}</b> <span class="muted">· ${r.ficha_tem?'ficha disciplinar (SIAPEN) impressa em '+esc((r.ficha||{}).data_impressao||'?')+' · '+esc(r.fd_resumo_exec||''):'sem ficha disciplinar importada'}</span>` : `<b>${esc(r.nome)}</b> <span class="muted">· ${(r.presc_linhas||[]).length} crime(s), ${rows.length} com prescrição aparente · cada crime prescreve isoladamente (art. 119)${r.presc_obs?' · '+esc(r.presc_obs):''}</span>`;
-    const vazio = (spec.id==='presc' && !rows.length) ? `<tr><td colspan="${cols.length+1}" class="muted">Nenhum crime com prescrição aparente.</td></tr>` : '';
+    const cab = spec.id==='aud' ? `<b>${esc(r.nome)}</b> <span class="muted">· ${esc(r.aud_resumo)} · conferido com a ${esc(r.aud_base)} · alertas apontam o que demanda atenção, não afirmam erro</span>${(ocultos||this.mostrarTudo)?` · <span class="mini" onclick="event.stopPropagation();ui.mostrarTudo=!ui.mostrarTudo;ui.render()">${this.mostrarTudo?'ocultar informativos e OK':'mostrar '+ocultos+' informativo(s)/OK'}</span>`:''}${r.ficha_resumo?`<div class="muted" style="margin-top:3px">Ficha disciplinar: ${esc(r.ficha_resumo)}</div>`:''}` : spec.id==='fd' ? `<b>${esc(r.nome)}</b> <span class="muted">· ${r.ficha_tem?'ficha disciplinar (SIAPEN) impressa em '+esc((r.ficha||{}).data_impressao||'?')+' · '+esc(r.fd_resumo_exec||''):'sem ficha disciplinar importada'}</span>` : `<b>${esc(r.nome)}</b> <span class="muted">· ${(r.presc_linhas||[]).length} crime(s), ${rows.length} com prescrição aparente ou datas a verificar na ação penal · cada crime prescreve isoladamente (art. 119)${r.presc_obs?' · '+esc(r.presc_obs):''}</span>`;
+    const vazio = (spec.id==='presc' && !rows.length) ? `<tr><td colspan="${cols.length+1}" class="muted">Nenhum crime com prescrição aparente nem datas faltando.</td></tr>` : '';
     return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><span>${cab}</span><span class="mini" onclick="event.stopPropagation();ui.abrir('${r.id}')">Abrir ficha completa</span></div><table class="subtab">${cg}${head}${body}${vazio}</table>`; },
   async darBaixa(id, chave, titulo){ const obs = prompt('Dar baixa no alerta:\n'+titulo.replace(/&#39;/g,"'")+'\n\nObservação (opcional: o que foi feito / por que não se aplica):',''); if(obs===null) return; await api('baixar_alerta', id, chave, titulo.replace(/&#39;/g,"'"), obs); this.aberto=id; this.render(); },
   async reabrir(id, chave){ await api('reabrir_alerta', id, chave); this.aberto=id; this.render(); },
