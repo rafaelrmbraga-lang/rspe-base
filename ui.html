@@ -102,6 +102,7 @@ tr.sub td{padding:0 0 0 0;background:#FFFFFF;cursor:default}tr.sub:hover td{back
 .subtab th{background:#F8F9FB;color:var(--tx2);font-size:11px;text-transform:uppercase;letter-spacing:.3px;padding:9px 14px;text-align:left;position:static;white-space:normal;overflow:visible}
 .subtab td{padding:11px 14px;border-bottom:1px solid var(--line);font-size:12.5px;line-height:1.55;vertical-align:top;white-space:normal;font-weight:400;overflow:visible}.subtab td:first-child{padding-left:10px;font-weight:600}.subtab th:first-child{padding-left:10px}
 .subtab tr:last-child td{border-bottom:0}.subtab tr.bx td{color:var(--tx3)}.subtab tr.bx td:nth-child(2){text-decoration:line-through}
+.cc{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px;background:#fff}.cc-h{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:13px}.cc-f{font-size:12.5px;color:var(--tx2);margin-top:4px}.cc-l{margin:6px 0 2px;padding-left:18px;font-size:12.5px;line-height:1.5}.cc-l li{margin:2px 0}.cc-d summary{cursor:pointer;color:var(--pri);font-size:12px;margin-top:4px}.cc-d[open] summary{margin-bottom:6px}
 .cp-row{display:flex;justify-content:flex-end;margin:-2px 0 6px}.aviso-exec{padding:8px 12px;border-radius:10px;background:#F2F4F7;color:var(--tx);font-weight:600;font-size:13px}
 .subtab .why{cursor:pointer;color:var(--pri);font-size:11.5px}.subtab .why:hover{text-decoration:underline}
 .mem{display:grid;gap:12px;margin:10px 0 4px}
@@ -405,7 +406,7 @@ const ui = {
         return `<tr class="${s.baixado?'bx':''}">${tds2}<td style="white-space:nowrap">${bx}</td></tr>`; }
       if(!calc) return `<tr>${tds}</tr>`;
       return `<tr>${tds}<td><span class="why" onclick="event.stopPropagation();const n=this.closest('tr').nextElementSibling;n.style.display=n.style.display==='none'?'':'none'">cálculo</span></td></tr><tr style="display:none"><td colspan="${cols.length+1}">${ui.memoria(s)}</td></tr>`; }).join('');
-    const cab = spec.id==='aud' ? `<b>${esc(r.nome)}</b> <span class="muted">· ${esc(r.aud_resumo)} · conferido com a ${esc(r.aud_base)} · alertas apontam o que demanda atenção, não afirmam erro</span>${(ocultos||this.mostrarTudo)?` · <span class="mini" onclick="event.stopPropagation();ui.mostrarTudo=!ui.mostrarTudo;ui.render()">${this.mostrarTudo?'ocultar informativos e OK':'mostrar '+ocultos+' informativo(s)/OK'}</span>`:''}${r.ficha_resumo?`<div class="muted" style="margin-top:3px">Ficha disciplinar: ${esc(r.ficha_resumo)}</div>`:''}` : spec.id==='fd' ? `<b>${esc(r.nome)}</b> <span class="muted">· ${r.ficha_tem?'ficha disciplinar (SIAPEN) impressa em '+esc((r.ficha||{}).data_impressao||'?')+' · '+esc(r.fd_resumo_exec||''):'sem ficha disciplinar importada'}</span>` : `<b>${esc(r.nome)}</b> <span class="muted">· ${(r.presc_linhas||[]).length} crime(s), ${rows.length} com prescrição aparente, iminente ou datas a verificar na ação penal · cada crime prescreve isoladamente (art. 119)${r.presc_obs?' · '+esc(r.presc_obs):''}</span>`;
+    const cab = spec.id==='aud' ? `<b>${esc(r.nome)}</b> <span class="muted">· ${esc(r.aud_resumo)} · conferido com a ${esc(r.aud_base)} · alertas apontam o que demanda atenção, não afirmam erro</span>${(ocultos||this.mostrarTudo)?` · <span class="mini" onclick="event.stopPropagation();ui.mostrarTudo=!ui.mostrarTudo;ui.render()">${this.mostrarTudo?'ocultar informativos e OK':'mostrar '+ocultos+' informativo(s)/OK'}</span>`:''}${r.ficha_resumo?`<div class="muted" style="margin-top:3px">Ficha disciplinar: ${esc(r.ficha_resumo)}</div>`:''}` : spec.id==='fd' ? `<b>${esc(r.nome)}</b> <span class="muted">· ${r.ficha_tem?'ficha disciplinar (SIAPEN) impressa em '+esc((r.ficha||{}).data_impressao||'?')+' · '+esc(r.fd_resumo_exec||''):'sem ficha disciplinar importada'}</span>${r.ficha_tem&&r.fd_remicoes?`<div class="muted" style="font-size:12px;margin-top:3px">${esc(r.fd_remicoes)}</div>`:''}` : `<b>${esc(r.nome)}</b> <span class="muted">· ${(r.presc_linhas||[]).length} crime(s), ${rows.length} com prescrição aparente, iminente ou datas a verificar na ação penal · cada crime prescreve isoladamente (art. 119)${r.presc_obs?' · '+esc(r.presc_obs):''}</span>`;
     const vazio = (spec.id==='presc' && !rows.length) ? `<tr><td colspan="${cols.length+1}" class="muted">Nenhum crime com prescrição aparente ou iminente nem datas faltando.</td></tr>` : '';
     return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><span>${cab}</span><span class="mini" onclick="event.stopPropagation();ui.abrir('${r.id}')">Abrir ficha completa</span></div><table class="subtab">${cg}${head}${body}${vazio}</table>`; },
   async darBaixa(id, chave, titulo){ const obs = prompt('Dar baixa no alerta:\n'+titulo.replace(/&#39;/g,"'")+'\n\nObservação (opcional: o que foi feito / por que não se aplica):',''); if(obs===null) return; await api('baixar_alerta', id, chave, titulo.replace(/&#39;/g,"'"), obs); this.aberto=id; this.render(); },
@@ -445,12 +446,37 @@ const ui = {
     const dmot=(v,mot)=> v&&v!=='—'?v:(mot||'—');
     // só mostra cálculo quando dá (indulto possível / a verificar; prescrição aparente), e só as linhas que sustentam
     const util=(txt)=>(txt||'').split('\n').filter(l=>/^(✔|✓|\?|⚠|Situação em|Cumprido em|Art\. 7º|Crime impeditivo|Pela corrente)/.test(l.trim()) && !/XVI:|art\. 1º: saúde/.test(l)).join('\n');
-    const dets=[['2025',r.det25,r.i25_cor],['2024',r.det24,r.i24_cor],['2022',r.det22,r.i22_cor]]
-      .filter(x=>x[2]==='verde'||x[2]==='amarelo').map(x=>`<details class="det"><summary>Indulto ${x[0]} · ${x[2]==='verde'?'possível':'a verificar'}</summary><div class="mem"><div class="cp-row"><span class="mini" onclick="event.stopPropagation();ui.copiarClip(${ui.clip('Indulto - Decreto de '+x[0]+'\n'+ui.txtLinhas(util(x[1])))})">Copiar cálculo</span></div>${ui.bloco('Decreto de '+x[0],util(x[1]),'pe')}</div></details>`).join('');
-    const cms=[['2025',r.cdet25,r.c25_cor,r.c25],['2024',r.cdet24,r.c24_cor,r.c24]]
-      .filter(x=>x[1]&&(x[2]==='verde'||x[2]==='amarelo')).map(x=>`<details class="det"><summary>Comutação ${x[0]} · ${esc(x[3])}</summary><div class="mem"><div class="cp-row"><span class="mini" onclick="event.stopPropagation();ui.copiarClip(${ui.clip('Comutação - Decreto de '+x[0]+' · art. 13\n'+ui.txtLinhas(x[1]))})">Copiar cálculo</span></div>${ui.bloco('Decreto de '+x[0]+' · art. 13',x[1],'pp')}</div></details>`).join('');
-    const prs=(r.presc_linhas||[]).filter(s=>s.ppe_cor==='vermelho'||s.ppe_cor==='amarelo'||s.retro_cor==='vermelho')
-      .map(s=>`<details class="det"><summary>Prescrição · ${esc(s.crime)} · ${esc(s.ppe_cor==='vermelho'||s.ppe_cor==='amarelo'?s.ppe_status:s.retro_status)}</summary>${ui.memoria(s)}</details>`).join('');
+    // cálculos do programa: cartão curto (título, uma frase, linhas decisivas); o cálculo completo fica recolhido
+    const linhasDe=(txt,rx)=>(txt||'').split('\n').map(l=>l.trim()).filter(l=>rx.test(l));
+    const semIcone=l=>l.replace(/^[✔✓✘✗…?⚠!]\s*/,'');
+    // linha enxuta: sem parênteses de fundamento (os artigos ficam no cálculo completo) e sem repetir o alcance
+    const enxuta=l=>l.replace(/\s*\((?![x×]\d)[^()]*(?:\([^()]*\)[^()]*)*\)/g,'').replace(/\s+-\s+/g,' - ').replace(/\s{2,}/g,' ').trim();
+    const unicas=ls=>{ const vis=new Set(); let alc=false; return ls.map(l=>{ if(/ - alcança /.test(l)){ if(alc) l=l.replace(/ - alcança .*$/,''); alc=true; } return l; }).filter(l=>{ const k=l.toLowerCase(); if(vis.has(k)) return false; vis.add(k); return true; }); };
+    const geral=/XVI:|art\. 1º: saúde|aferidos crime a crime|^Obs|Não aferíveis|^Multa/;
+    const situacao=txt=>{ const a=linhasDe(txt,/^Situação em/)[0]||'', b=linhasDe(txt,/^Cumprido em/)[0]||'';
+      const sit=a.replace(/^Situação em ([\d/]+):\s*/,'Em $1: ').replace(/ · /g,', ');
+      const cp=(b.match(/^Cumprido em [\d/]+:\s*(\S+)/)||[])[1]; return (sit+(cp?'; cumprido '+penaExt(cp):'')).trim(); };
+    const card=(titulo,frase,linhas,full,clip)=>`<div class="cc"><div class="cc-h"><b>${esc(titulo)}</b><span class="mini" onclick="event.stopPropagation();ui.copiarClip(${ui.clip(clip)})">Copiar</span></div>
+      ${frase?`<div class="cc-f">${penaExt(esc(frase))}</div>`:''}${linhas.length?`<ul class="cc-l">${linhas.map(l=>`<li>${penaExt(esc(l))}</li>`).join('')}</ul>`:''}
+      <details class="cc-d"><summary>ver cálculo completo</summary>${full}</details></div>`;
+    const dets=[['2025',r.det25,r.i25_cor,r.i25_txt],['2024',r.det24,r.i24_cor,r.i24_txt],['2022',r.det22,r.i22_cor,r.i22_txt]]
+      .filter(x=>x[2]==='verde'||x[2]==='amarelo').map(x=>{
+        const ok=linhasDe(x[1],/^[✔✓]/).filter(l=>!geral.test(l)).map(l=>enxuta(semIcone(l)));
+        const q=linhasDe(x[1],/^\?/).filter(l=>!geral.test(l)).map(l=>'A verificar - '+enxuta(semIcone(l)));
+        const lin=unicas([...ok,...q]).slice(0,3);
+        return card(`Indulto ${x[0]} · ${x[2]==='verde'?'possível':'a verificar'}`, situacao(x[1])||x[3]||'', lin, `<div class="mem">${ui.bloco('Decreto de '+x[0],util(x[1]),'pe')}</div>`,
+          `Indulto - Decreto de ${x[0]}: ${x[3]||''}\n${situacao(x[1])}\n`+lin.map(l=>'• '+l).join('\n')); }).join('');
+    const cms=[['2025',r.cdet25,r.c25_cor,r.c25_txt],['2024',r.cdet24,r.c24_cor,r.c24_txt]]
+      .filter(x=>x[1]&&(x[2]==='verde'||x[2]==='amarelo')).map(x=>{
+        const lin=unicas(linhasDe(x[1],/^[✔✓✘✗?]/).map(l=>enxuta(semIcone(l)))).slice(0,3);
+        return card(`Comutação ${x[0]} · ${x[3]||''}`, situacao(x[1]), lin, `<div class="mem">${ui.bloco('Decreto de '+x[0]+' · art. 13',x[1],'pp')}</div>`,
+          `Comutação - Decreto de ${x[0]} (art. 13): ${x[3]||''}\n${situacao(x[1])}\n`+lin.map(l=>'• '+l).join('\n')); }).join('');
+    const prs=(r.presc_linhas||[]).filter(s=>s.ppe_cor==='vermelho'||s.ppe_cor==='amarelo'||s.retro_cor==='vermelho').map(s=>{
+        const exe=s.ppe_cor==='vermelho'||s.ppe_cor==='amarelo';
+        const det=exe?s.ppe_detalhe:s.retro_detalhe;
+        const lin=exe ? [s.ppe_resumo||semIcone(linhasDe(det,/^[✘✗…]/)[0]||''), 'Antes de requerer: conferir se houve recaptura, prisão ou nova condenação não registradas no RSPE (interrompem a prescrição).'].filter(Boolean)
+                      : unicas(linhasDe(det,/^[✘✗]/).map(l=>semIcone(l).replace(/\s*\(prazo ([^,]+), vence ([^)]+)\)/,' - prazo de $1, vencido em $2'))).slice(0,3);
+        return card(`Prescrição ${exe?'executória':'punitiva'} · ${s.crime}`, exe?s.ppe_status:s.retro_status, lin, ui.memoria(s), ui.txtPresc(s, exe?'pe':'pp')); }).join('');
     const calc=dets+cms+prs;
     document.getElementById('drawer').innerHTML=`
       <div class="dh"><div><h2>${esc(r.nome)}</h2><div class="sub"><span class="copy" onclick="ui.copiar('${esc(r.proc)}')" title="Clique para copiar">${esc(r.proc)} ⧉</span> · ${esc(r.regime||'regime não informado')}</div>

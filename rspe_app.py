@@ -31,7 +31,7 @@ import rspe_regras as rg
 import rspe_relatorio as rrel
 
 APP = "RSPE Base"
-VERSAO = "6.11.2"
+VERSAO = "6.12.2"
 
 
 def pasta_app():
@@ -105,11 +105,14 @@ a verificar / não atinge / impeditivo (indulto); aparente / não prescrita (pre
 Importe o PDF da Ficha Disciplinar pelo mesmo botão "Importar PDFs": o programa reconhece o documento e o vincula ao RSPE
 pelos autos citados na ficha (ou pelo nome). Extrai conduta, períodos de trabalho (setor/empresa), atestados de trabalho com
 dias trabalhados e remidos, faltas disciplinares (registro, PADIC, arquivamento/homologação), regressão/restabelecimento,
-isolamento e recusa de trabalho. A Auditoria confronta: dias remidos atestados x homologados no RSPE (LEP, art. 126), proporção
+isolamento e recusa de trabalho. O programa confronta: soma dos dias remidos atestados x soma das remições do RSPE (LEP, art. 126), proporção
 1 para 3, trabalho sem atestado e baixa de trabalho sem início registrado, falta grave nos últimos 12 meses (CP, art. 83, III, b;
 art. 6º dos decretos), falta arquivada que ainda produza efeitos e perda de dias remidos em duplicidade (LEP, art. 127: a nova
 perda só alcança a remição adquirida depois da falta anterior). A aba <b>Ficha disciplinar</b> trata só de remição (trabalho e estudo) e mostra uma linha por emprego e por matrícula de estudo:
-período, atestado que o cobre, remição homologada no RSPE e providência. Trabalho anterior à 1ª prisão do RSPE fica só no resumo.
+período, local e atestado que o cobre (pela própria ficha) e providência. O RSPE não diz de onde vem cada remição (trabalho, estudo,
+ENCCEJA/ENEM, leitura), então o programa não liga remição a atestado: aponta "Requerer remição" só quando não há nenhuma remição
+lançada no RSPE depois do atestado (ou depois do período de estudo); os demais atestados ficam "conferir a homologação", com as
+somas e a lista das remições do RSPE no cabeçalho. Trabalho anterior à 1ª prisão do RSPE fica só no resumo.
 <h4>Regras de leitura</h4>
 Quem não tem início de cumprimento definitivo no RSPE (só prisão provisória encerrada, ou nenhuma) aparece como "Não iniciou o
 cumprimento", e não como regime aberto ou pena interrompida. Livramento suspenso ou revogado em incidente posterior aparece como tal.
@@ -129,7 +132,7 @@ desfecho (suspensão antes do fim do período de prova, revogação, homologaç�
 reconhecido pela descrição do tipo (ex.: "conjunção carnal ... com menor de 14 anos" = art. 217-A do CP), conforme a lei da data do
 fato: antes da Lei 12.015/2009 (10/08/2009), arts. 213/214 c/c 224, a; o art. 214 posterior a ela vira art. 213; tipos criados depois
 do fato (215-A, 24-A da Lei Maria da Penha) são apontados na Auditoria. Na Ficha disciplinar,
-a situação diz o que falta: remição não homologada (atestado sem remição, ou remição menor que o atestado) e trabalho sem atestado. Fuga: a data-base vai para a recaptura (falta permanente), mas a Auditoria pede a homologação da falta; falta grave não
+a situação diz o que falta: remição a requerer (atestado sem remição posterior no RSPE), remição a conferir (somas diferentes) e trabalho sem atestado. Fuga: a data-base vai para a recaptura (falta permanente), mas a Auditoria pede a homologação da falta; falta grave não
 move a data-base do livramento, do indulto nem da comutação (Súmulas 441 e 535 do STJ). Os dias cumpridos contam o dia da
 prisão e o da soltura, como o SEEU. A
 data-base é conferida com a última prisão, progressão/regressão ou falta grave homologada; sem esse evento no RSPE, a Auditoria

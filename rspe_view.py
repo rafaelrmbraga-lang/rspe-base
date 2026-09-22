@@ -33,7 +33,7 @@ ROTULO = {
     "lapso": {"vencido": "Vencido · verificar", "laranja": "Até 30 dias", "amarelo": "Até 60 dias", "verde": "Até 90 dias", "cinza": "Não se aplica / não iniciou / interrompida", "azul": "Extinta"},
     "indulto": {"vermelho": "Crime impeditivo", "verde": "Possível", "amarelo": "A verificar", "cinza": "Não atinge", "azul": "Extinta"},
     "presc": {"vermelho": "Prescrição aparente", "amarelo": "Prescrição iminente", "": "Não prescrita", "cinza": "Sem dados", "azul": "Extinta"},
-    "fd": {"vermelho": "Remição não homologada", "amarelo": "Trabalho sem atestado ou estudo a requerer", "verde": "Em ordem", "cinza": "Sem ficha"},
+    "fd": {"vermelho": "Remição a requerer", "amarelo": "Conferir remição / sem atestado / estudo", "verde": "Em ordem", "cinza": "Sem ficha"},
     "aud": {"vermelho": "Guia demanda atenção", "amarelo": "Pontos a verificar", "verde": "Sem inconsistências", "azul": "Extinta"},
     "ext": {"vermelho": "Extinção cabível", "laranja": "Término em até 30 dias", "amarelo": "Até 60 dias / a verificar", "verde": "Término em até 90 dias", "cinza": "Sem previsão / interrompida", "azul": "Extinta (registrada)"},
 }
@@ -46,8 +46,8 @@ def _dias(m, k):
 FILTROS = {
     "fd": [
         ("todas", "Todas"),
-        ("impeditivo", "Remição não homologada"),
-        ("verificar", "Trabalho sem atestado ou estudo a requerer"),
+        ("impeditivo", "Remição a requerer"),
+        ("verificar", "Conferir remição / sem atestado / estudo"),
         ("ok", "Em ordem"),
         ("nao", "Sem ficha"),
     ],
@@ -187,7 +187,7 @@ def data_livramento(r):
     pt = rs.pena_para_dias(r.get("pena_total"))
     _min = rg.carregar().get("livramento", {}).get("pena_minima_anos", 2)
     if pt and pt < _min * rs.DIAS_ANO and not r.get("livramento_previsao_seeu"):
-        return ("Não cabe: pena < %s anos (art. 83 CP)" % _min, None)
+        return ("Não cabível: pena < %s anos (art. 83 CP)" % _min, None)
     if r.get("livramento_previsao_seeu"):
         return (r["livramento_previsao_seeu"], _data(r["livramento_previsao_seeu"]))
     return _sem_data(r)
@@ -710,7 +710,7 @@ ABAS = [
      "cols": [("nome", "Nome", 20), ("proc", "Nº da execução", 15), ("fd_trab", "Trabalho atual", 18),
               ("fd_remidos", "Remidos ficha / RSPE", 11), ("fd_atestar", "Trabalho a atestar", 12), ("fd_estudo", "Estudo a requerer", 11), ("fd_sit", "Situação", 14)],
      "pilulas": {"fd_sit": "fd_cor"},
-     "sub": "fd_linhas", "sub_cols": [("emp", "Emprego / estudo", 14), ("un", "Unidade", 8), ("per", "Período", 14), ("dias", "Dias", 6), ("at", "Atestado / horas", 20), ("rspe", "Remição no RSPE", 16), ("sit", "Situação / providência", 22)],
+     "sub": "fd_linhas", "sub_cols": [("emp", "Emprego / estudo", 14), ("un", "Unidade", 8), ("per", "Período", 14), ("dias", "Dias", 6), ("at", "Atestado / horas", 26), ("sit", "Situação / providência", 28)],
      "sub_pilulas": {"sit": "cor"}},
     {"id": "aud", "titulo": "Auditoria", "cor": "aud_cor", "legenda": "aud", "expansivel": True,
      "cols": [("nome", "Nome", 22), ("proc", "Nº da execução", 17),

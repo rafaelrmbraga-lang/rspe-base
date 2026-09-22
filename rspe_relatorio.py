@@ -283,9 +283,9 @@ def relatorio_individual(m, caminho, nome_base):
         ln = [L for L in m.get("fd_linhas", []) if L.get("cor") in ("vermelho", "amarelo")]
         if ln:
             el.append(Spacer(1, 5))
-            el.append(_tabela([["Trabalho / estudo", "Unidade", "Período", "Atestado / horas", "Remição no RSPE", "Providência"]] +
-                              [[L["emp"], L.get("un") or "—", L["per"], L["at"], L["rspe"], _pilula(L["sit"], L["cor"], st)] for L in ln],
-                              [W * 0.18, W * 0.1, W * 0.18, W * 0.2, W * 0.14, W * 0.2], st, cores_linha={i + 1: L["cor"] for i, L in enumerate(ln)}))
+            el.append(_tabela([["Trabalho / estudo", "Unidade", "Período", "Atestado / horas", "Providência"]] +
+                              [[L["emp"], L.get("un") or "—", L["per"], L["at"], _pilula(L["sit"], L["cor"], st)] for L in ln],
+                              [W * 0.2, W * 0.1, W * 0.2, W * 0.24, W * 0.26], st, cores_linha={i + 1: L["cor"] for i, L in enumerate(ln)}))
         else:
             el.append(Paragraph("Nada pendente de remição na ficha.", st["mut"]))
     else:

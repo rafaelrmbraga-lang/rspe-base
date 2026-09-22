@@ -17,6 +17,7 @@ Penas mais leves prescrevem com as mais graves (art. 118); cada crime isoladamen
 """
 
 from datetime import date, timedelta
+import re
 from fractions import Fraction
 
 import rspe_scraper as rs
@@ -75,6 +76,19 @@ def periodos_cumprimento(r, hoje):
         else:
             fund.append((a, b))
     return fund, avisos
+
+
+def _desde(g0, termo, cumprido):
+    """Início da contagem, em linguagem simples."""
+    if not cumprido and g0 == termo:
+        return "Conta do trânsito em julgado (%s), sem início do cumprimento" % rs.fmt(g0)
+    return "Cumprimento parado desde %s" % rs.fmt(g0)
+
+
+def _mods(L):
+    """'(+1/3 reincidência)', '(½ art. 115)' do prazo, se houver."""
+    m = re.findall(r"\(([^)]*)\)", L.get("prazo_ppe") or "")
+    return (" (%s)" % "; ".join(m)) if m else ""
 
 
 def soma_meses(d, meses):
@@ -337,9 +351,11 @@ def analisar(r, hoje=None):
                         rem, fonte_rem = rem_seeu, " (pena remanescente do RSPE)"
                     meses = Fraction(prazo_base_anos(max(rem, 1)) * 12) * fator
                     base_txt = "pena restante %s%s em %s, contada da última interrupção do cumprimento (arts. 112, II, 113 e 117, V)" % (rs.dias_para_pena(rem), fonte_rem, rs.fmt(g0))
+                    base_curto = "pena restante de %s" % rs.dias_para_pena(rem)
                 else:
                     meses = ppe_meses
                     base_txt = "pena integral %s (nunca iniciou o cumprimento)" % L["pena"]
+                    base_curto = "pena de %s" % L["pena"]
                 limite = soma_meses(g0, meses)
                 # suspensão (art. 116, p. único): os dias preso por outro motivo não contam no prazo
                 susp_d = 0
@@ -358,11 +374,13 @@ def analisar(r, hoje=None):
                 aberto = g1 >= hoje and not em_custodia
                 if limite <= g1:
                     prescrita = (g0, limite, base_txt, meses)
+                    L["ppe_resumo"] = "%s. Com %s, o prazo é de %s%s: venceu em %s." % (_desde(g0, termo, cumprido_g0), base_curto, fmt_prazo(meses), _mods(L), rs.fmt(limite))
                     det.append("✘ Sem custódia de %s a %s: prazo de %s pela %s venceu em %s." % (
                         rs.fmt(g0), "hoje" if aberto else rs.fmt(g1), fmt_prazo(meses), base_txt, rs.fmt(limite)))
                     break
                 elif aberto:
                     correndo = (g0, limite, base_txt, meses)
+                    L["ppe_resumo"] = "%s. Com %s, o prazo é de %s%s: vence em %s." % (_desde(g0, termo, cumprido_g0), base_curto, fmt_prazo(meses), _mods(L), rs.fmt(limite))
                     det.append("… Corre desde %s (%s): prazo de %s, prescreve em %s." % (rs.fmt(g0), base_txt, fmt_prazo(meses), rs.fmt(limite)))
                 else:
                     det.append("✔ Sem custódia de %s a %s (%s): prazo de %s não se completou (venceria em %s); retomada do cumprimento interrompeu (art. 117, V)." % (

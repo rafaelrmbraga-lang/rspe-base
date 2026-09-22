@@ -1,4 +1,4 @@
-RSPE BASE - SEEU  v6.11.2 (programa em abas)
+RSPE BASE - SEEU  v6.12.2 (programa em abas)
 =========================================
 
 O QUE FAZ
@@ -211,6 +211,44 @@ PRESUNÇÃO DE HIPOSSUFICIÊNCIA (Defensoria)
   do art. 9º e sem bloqueio do livramento (CP, art. 83, IV). Tráfico
   privilegiado não é hediondo nem impeditivo (STF PSV 125, Tema 1400; STJ
   Tema 1336). Detalhes e fontes: "Criterios_de_analise_por_beneficio.pdf".
+
+v6.12.2
+  - Grafia: "Indulto 2024 · possível" (em vez de "cabe") e "Não cabível" no livramento.
+
+v6.12.1
+  - Ficha do assistido: cada cálculo (indulto, comutação, prescrição) vira
+    um cartão curto - título, uma frase de situação e até três linhas
+    decisivas, sem os parênteses de fundamento; o cálculo completo fica
+    em "ver cálculo completo". Prescrição executória com frase-resumo:
+    desde quando conta, a pena considerada, o prazo e o vencimento.
+  - Ficha disciplinar mais limpa: atestado como "nº X · N remidos",
+    situações curtas ("Conferir homologação", "Requerer atestado (≈ N
+    remidos)", "Pedir período e atestado"); o detalhe aparece ao passar
+    o mouse. Cabeçalho em uma linha e as remições do RSPE numa segunda.
+
+v6.12.0
+  - Ficha disciplinar sem inferência: o RSPE não indica a origem de cada
+    remição (trabalho, estudo, ENCCEJA/ENEM, leitura), então o programa
+    deixou de ligar remição a atestado pelo valor e pela data (o caso do
+    Zoel: os 20 dias de 13/04/2022 eram do ENCCEJA, não do atestado).
+    Agora afirma só o que é certo:
+      - atestado sem nenhuma remição lançada no RSPE depois dele =
+        "Requerer remição" (vermelho);
+      - estudo sem remição posterior, ou a parte dele depois da última
+        remição do RSPE = remição a requerer;
+      - trabalho sem atestado na ficha (onde e quando, pela própria ficha)
+        = "Requerer atestado";
+      - os demais atestados = "Atestado emitido · conferir a homologação",
+        com a soma da ficha x a soma do RSPE e a lista das remições do RSPE
+        no cabeçalho, para conferir nas decisões.
+    Sai a coluna "Remição no RSPE" da tabela. A perda de remidos em
+    duplicidade passa a considerar só remições lançadas antes da falta.
+
+v6.11.3
+  - Ficha disciplinar: quando a remição do RSPE é menor que o atestado, a
+    linha explica a conta (o atestado soma X, a remição compatível no RSPE
+    é de Y, em tal data) e avisa que o vínculo é feito pelo valor e pela
+    data, porque o RSPE não indica qual atestado cada remição homologou.
 
 v6.11.2
   - Tabelas com linhas brancas: a cor fica só nas palavras de situação e
