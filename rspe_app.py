@@ -31,7 +31,7 @@ import rspe_regras as rg
 import rspe_relatorio as rrel
 
 APP = "RSPE Base"
-VERSAO = "6.10.8"
+VERSAO = "6.10.10"
 
 
 def pasta_app():
@@ -116,7 +116,10 @@ cumprimento", e não como regime aberto ou pena interrompida. Livramento suspens
 Dar baixa no alerta de livramento incerto confirma o livramento em todas as abas. A Auditoria confere só a matemática do RSPE (frações, soma das penas, data-base, perda de dias remidos, reincidência,
 marcações de hediondez e violência, livramento incerto); remição, indulto, comutação, prescrição e prazos ficam nas próprias abas.
 O programa não usa a expressão "indulto parcial", sinônimo de comutação na jurisprudência (STF, HC 81.567 e HC 96.431; STJ, REsp
-753.646): no concurso com crime impeditivo, fala em "indulto dos crimes não impeditivos (art. 7º, p. ú.)". Sem cumprimento em curso na
+753.646): no concurso com crime impeditivo, fala em "indulto dos crimes não impeditivos (art. 7º, p. ú.)". Os incisos XIV e XV (crime contra o patrimônio sem violência) são aferidos crime a crime: não têm teto de pena nem
+fração, e o indulto alcança as penas desses crimes, seguindo as dos demais - o art. 7º, parágrafo único, só trava no concurso com
+crime do art. 1º (2/3 da pena do impeditivo). No XV a reparação do dano é dispensada pela hipossuficiência (art. 12, § 2º, I).
+Sem cumprimento em curso na
 data do decreto (não iniciado ou interrompido), indulto e comutação de 2024 e 2025 "não se aplicam". O programa não presume datas. Sem data do fato, recebimento da denúncia, sentença ou trânsito em julgado no RSPE, a prescrição
 daquele trecho não é calculada e a Auditoria aponta "verificar na ação penal". Quando a 1ª página do RSPE diz "Em livramento
 condicional deferido em ...", o assistido é tratado como em livramento, ainda que o "Regime Atual" traga o regime anterior, salvo se
@@ -126,7 +129,9 @@ desfecho (suspensão antes do fim do período de prova, revogação, homologaç�
 reconhecido pela descrição do tipo (ex.: "conjunção carnal ... com menor de 14 anos" = art. 217-A do CP), conforme a lei da data do
 fato: antes da Lei 12.015/2009 (10/08/2009), arts. 213/214 c/c 224, a; o art. 214 posterior a ela vira art. 213; tipos criados depois
 do fato (215-A, 24-A da Lei Maria da Penha) são apontados na Auditoria. Na Ficha disciplinar,
-a situação diz o que falta: remição não homologada (atestado sem remição, ou remição menor que o atestado) e trabalho sem atestado. A
+a situação diz o que falta: remição não homologada (atestado sem remição, ou remição menor que o atestado) e trabalho sem atestado. Fuga: a data-base vai para a recaptura (falta permanente), mas a Auditoria pede a homologação da falta; falta grave não
+move a data-base do livramento, do indulto nem da comutação (Súmulas 441 e 535 do STJ). Os dias cumpridos contam o dia da
+prisão e o da soltura, como o SEEU. A
 data-base é conferida com a última prisão, progressão/regressão ou falta grave homologada; sem esse evento no RSPE, a Auditoria
 aponta a inconsistência (e, se coincidir com a soma/unificação das penas, o Tema 1006 do STJ).
 <h4>Relatórios em PDF</h4>

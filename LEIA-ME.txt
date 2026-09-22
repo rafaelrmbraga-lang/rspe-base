@@ -1,4 +1,4 @@
-RSPE BASE - SEEU  v6.10.8 (programa em abas)
+RSPE BASE - SEEU  v6.10.10 (programa em abas)
 =========================================
 
 O QUE FAZ
@@ -211,6 +211,29 @@ PRESUNÇÃO DE HIPOSSUFICIÊNCIA (Defensoria)
   do art. 9º e sem bloqueio do livramento (CP, art. 83, IV). Tráfico
   privilegiado não é hediondo nem impeditivo (STF PSV 125, Tema 1400; STJ
   Tema 1336). Detalhes e fontes: "Criterios_de_analise_por_beneficio.pdf".
+
+v6.10.10
+  - Indulto, incisos XIV e XV: passam a ser aferidos crime a crime. Não
+    têm teto de pena nem fração, então o concurso com crime que não é do
+    art. 1º não afasta o benefício: o indulto alcança as penas dos crimes
+    patrimoniais sem violência e as dos demais seguem. Antes o programa
+    exigia que todos os crimes fossem patrimoniais e dizia "não se
+    aplica" (erro). No XV a reparação do dano segue dispensada pela
+    hipossuficiência (art. 12, § 2º, I).
+
+v6.10.9
+  - Dias cumpridos: passam a contar o dia da prisão e o da soltura, como
+    o SEEU (antes faltava 1 dia por período). Afeta indulto, comutação e
+    a pena restante da prescrição.
+  - Auditoria: fuga com recaptura - a data-base vai para a recaptura, mas
+    o programa aponta quando não há falta homologada no RSPE (a
+    interrupção e a perda de remidos dependem de PAD com defesa).
+  - Auditoria: aponta se a data-base do livramento foi movida por falta
+    grave (Súmulas 441 e 535/STJ; STJ, Tema 709).
+  - Listas de crimes repetidos passam a sair resumidas ("art. 155 CP
+    (x5)") no indulto de 2022 e nos itens da Auditoria; o motivo da
+    exclusão do art. 5º deixa de citar o art. 7º quando a razão é a pena
+    máxima do tipo.
 
 v6.10.8
   - Relatórios: dá para escolher de quem sair o relatório individual. O

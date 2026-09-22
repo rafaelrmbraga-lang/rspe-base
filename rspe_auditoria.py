@@ -91,7 +91,7 @@ def _agrupar_por_crime(itens):
     for (nivel, sufixo, _), g in grupos.items():
         b = g["base"]
         if len(g["crimes"]) > 1:
-            b["titulo"] = "%s%s (%s)" % (sufixo[0].upper(), sufixo[1:], "; ".join(g["crimes"]))
+            b["titulo"] = "%s%s (%s)" % (sufixo[0].upper(), sufixo[1:], rs.resumir_nomes(g["crimes"]))
             b["detalhe"] = " | ".join(g["detalhes"])
     return ordem
 
@@ -426,7 +426,23 @@ def auditar(r, hoje=None):
         bate = [m for m in marcos if abs((m[0] - db_seeu).days) <= 1]
         unif = [i for i in incidentes if re.search(r"SOMAT|UNIFICA", (i.get("tipo") or "").upper())
                 and any(rs.to_date(i.get(c) or "") and abs((rs.to_date(i.get(c)) - db_seeu).days) <= 1 for c in ("data_referencia", "data_decisao"))]
-        if bate:
+        # fuga: a data-base vai para a recaptura (infração permanente), mas a falta tem de ser apurada e homologada
+        _fuga = [rs.to_date(e.get("data") or "") for e in r.get("_eventos", [])
+                 if "FUGA" in ((e.get("tipo") or "") + " " + (e.get("motivo") or "")).upper()]
+        _fuga = sorted(d for d in _fuga if d)
+        _homolog = any(re.search(r"FALTA|DISCIPLINAR|PAD\b", (i.get("tipo") or "") + " " + (i.get("complemento") or ""), re.I)
+                       for i in incidentes if i.get("situacao") == "CONCEDIDO")
+        _recapt = bool(bate) and "recaptura" in (bate[0][1] if bate else "").lower()
+        if _fuga and _recapt and _fuga[-1] < db_seeu and not _homolog:
+            itens.append(_item("verificar", "Data-base movida para a recaptura (%s) sem falta homologada no RSPE" % rs.fmt(db_seeu),
+                               "Houve fuga em %s e recaptura em %s. Na fuga, a nova data-base é a da recaptura, porque a falta é permanente, "
+                               "mas a interrupção depende de apuração em procedimento disciplinar com defesa técnica e de homologação judicial, "
+                               "e o RSPE não registra esse incidente. Sem homologação, a data-base volta a ser %s e a progressão se antecipa; "
+                               "a perda de até 1/3 dos %d dias remidos também depende dessa apuração." % (
+                                   rs.fmt(_fuga[-1]), rs.fmt(db_seeu), ("%s (%s)" % (rs.fmt(ant2[0]), ant2[1]) if (ant2 := next((m for m in sorted(marcos, key=lambda x: x[0], reverse=True) if m[0] < _fuga[-1]), None)) else "a anterior"),
+                                   rs.saldo_remidos_num(r.get("saldo_remidos"))[0]),
+                               "LEP, arts. 50, II, 57, 59, 118 e 127; Súmulas 533, 534 e 535/STJ; STJ, Tema 709."))
+        elif bate:
             itens.append(_item("ok", "Data-base (%s) confere com o RSPE: %s" % (rs.fmt(db_seeu), bate[0][1]), "", "LEP, art. 112."))
         elif unif:
             itens.append(_item("alerta", "Data-base (%s) coincide com a soma/unificação das penas" % rs.fmt(db_seeu),
@@ -441,6 +457,15 @@ def auditar(r, hoje=None):
                                "(ex.: falta ainda não homologada, que não pode mover a data-base)." % (
                                    rs.fmt(db_seeu), ("%s em %s" % (ant[-1][1], rs.fmt(ant[-1][0]))) if ant else "nenhum"),
                                "LEP, arts. 112 e 118; STJ, Temas 1006 e 1165."))
+    # falta grave não interrompe o livramento condicional, o indulto nem a comutação
+    _dbl = rs.to_date(r.get("livramento_data_base_seeu") or "")
+    _faltas_d = sorted(d for d in [rs.to_date(e.get("data") or "") for e in r.get("_eventos", [])
+                                   if re.search(r"FUGA|DESCUMPRIMENTO", (e.get("tipo") or "") + " " + (e.get("motivo") or ""), re.I)] if d)
+    if _dbl and _faltas_d and any(abs((d - _dbl).days) <= 1 for d in _faltas_d + [rs.to_date(r.get("data_base_seeu") or "") or date.min]):
+        itens.append(_item("alerta", "Data-base do livramento (%s) alterada por falta grave" % rs.fmt(_dbl),
+                           "A falta grave interrompe o prazo da progressão, não o do livramento condicional, nem os do indulto e da comutação. "
+                           "A data-base do livramento deve continuar a do início do cumprimento.",
+                           "Súmulas 441 e 535/STJ; STJ, Tema 709; LEP, art. 112, § 6º."))
     # regressão depois do deferimento do livramento: conferir o desfecho da falta e do livramento
     _dls = [rs.to_date(i.get("data_referencia") or i.get("data_decisao") or i.get("complemento") or "") for i in incidentes
             if i.get("situacao") == "CONCEDIDO" and rs.e_incidente_livramento(i)]

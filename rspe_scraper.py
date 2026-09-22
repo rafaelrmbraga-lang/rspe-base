@@ -707,12 +707,13 @@ def periodos_custodia(eventos):
 
 
 def dias_cumpridos_ate(periodos, remicoes, ate):
+    """Dias de pena cumpridos até 'ate'. Conta o dia da prisão e o da soltura, como o SEEU (detração, CP, art. 42)."""
     total = 0
     for ini, fim in periodos:
         if ini > ate:
             continue
         f = fim if (fim and fim <= ate) else ate
-        total += (f - ini).days
+        total += (f - ini).days + 1
     for d, n in remicoes:
         if d and d <= ate:
             total += n
@@ -821,6 +822,16 @@ def saldo_remidos_num(txt):
         return int(m.group(1)), int(m.group(2))
     m = re.match(r"\s*(\d+)", t)
     return (int(m.group(1)) if m else 0), 0
+
+
+def resumir_nomes(nomes):
+    """['art. 155 CP', 'art. 155 CP', 'art. 12 Lei 10.826/03'] -> 'art. 155 CP (x2); art. 12 Lei 10.826/03'."""
+    cont, ordem = {}, []
+    for x in nomes:
+        if x not in cont:
+            ordem.append(x)
+        cont[x] = cont.get(x, 0) + 1
+    return "; ".join(x + (" (x%d)" % cont[x] if cont[x] > 1 else "") for x in ordem)
 
 
 def crimes_curto(crimes):
@@ -1179,7 +1190,7 @@ def analise_decreto_2022(campos, crimes, eventos, incidentes):
     ativos = [c for c in crimes if not c.get("extinto", "").upper().startswith("S")]
     linhas, alcanca, verificar = [], [], []
     for c in ativos:
-        nome = "art. %s %s" % (num_art(c.get("artigo")) or "?", lei_curta(c.get("lei")))
+        nome = crimes_curto([c]) or ("art. %s %s" % (num_art(c.get("artigo")) or "?", lei_curta(c.get("lei"))))
         fato = to_date(c.get("data_infracao") or "")
         excl = exclusao_art7_2022(c)
         if excl:
@@ -1223,11 +1234,13 @@ def analise_decreto_2022(campos, crimes, eventos, incidentes):
         out["indulto_2022"] = "POSSÍVEL: art. 5º (todos os crimes com pena máxima ≤ 5 anos)"
         out["indulto_2022_status"] = "possivel"
     elif alcanca:
-        # concurso com crime excluído: o alcance parcial depende da regra de concurso do decreto - não afirmar
-        out["indulto_2022"] = "A VERIFICAR: art. 5º só para %s (concurso com crime excluído pelo art. 7º)" % ", ".join(alcanca)
+        # concurso com crime não alcançado: o alcance parcial depende da regra de concurso do decreto - não afirmar
+        _fora7 = [c for c in ativos if exclusao_art7_2022(c)]
+        _motivo = "crime excluído pelo art. 7º" if _fora7 else "crime com pena máxima superior a 5 anos"
+        out["indulto_2022"] = "A VERIFICAR: art. 5º só para %s (concurso com %s)" % (resumir_nomes(alcanca), _motivo)
         out["indulto_2022_status"] = "verificar"
     elif verificar:
-        out["indulto_2022"] = "A VERIFICAR: %s" % ", ".join(verificar)
+        out["indulto_2022"] = "A VERIFICAR: %s" % resumir_nomes(verificar)
         out["indulto_2022_status"] = "verificar"
     else:
         if all(to_date(c.get("data_infracao") or "") and to_date(c.get("data_infracao")) > ref for c in ativos):
@@ -1689,19 +1702,27 @@ def analise_decretos(campos, crimes, eventos, incidentes, hoje):
                 verificar.append("XIII: pena ≤ 12 anos, %s cumprido - verificar conclusão de curso certificado" % fmt_fr(A("XIII", "fracao_primario", "1/5"), A("XIII", "fracao_reincidente", "1/4")))
             else:
                 nao.append("XIII: exige %s cumprido (%s)" % (fmt_fr(A("XIII", "fracao_primario", "1/5"), A("XIII", "fracao_reincidente", "1/4")), cump_txt))
-            # XIV / XV
-            if patrimonial and not vga:
+            # XIV / XV: valem pelo crime (não têm teto de pena nem fração, salvo os 3 meses do XIV).
+            # A soma do art. 7º serve aos incisos com teto/lapso; só o concurso com crime do art. 1º trava (art. 7º, p. ú.).
+            pat = [c for c in ativos if crime_patrimonial(c) and c.get("vga") != "S"]
+            imp_conc = [c for c in ativos if impeditivo_decreto(c, ref)]
+            if pat and not imp_conc:
+                parcial = "" if len(pat) == len(ativos) else " - alcança as penas de %s; as dos demais crimes (%s) seguem" % (
+                    crimes_curto(pat), crimes_curto([c for c in ativos if c not in pat]))
                 if cumprido >= A("XIV", "meses_cumpridos", 3) * 30:
-                    verificar.append("XIV: crime patrimonial sem VGA, %s meses cumpridos - verificar bem ≤ 1 salário mínimo" % A("XIV", "meses_cumpridos", 3))
+                    verificar.append("XIV: crime patrimonial sem VGA, %s meses cumpridos - verificar bem ≤ 1 salário mínimo à época do fato%s" % (
+                        A("XIV", "meses_cumpridos", 3), parcial))
                 else:
                     nao.append("XIV: exige %s meses cumpridos" % A("XIV", "meses_cumpridos", 3))
                 # art. 12, § 2º, I: incapacidade econômica presumida para o assistido da Defensoria -> reparação dispensada no XV
-                possiveis.append("XV: crime patrimonial sem VGA - reparação do dano dispensada (art. 9º, XV c/c art. 12, § 2º, I: hipossuficiência presumida, Defensoria)")
-            elif any(crime_patrimonial(c) and c.get("vga") != "S" for c in ativos):
-                outros = [c for c in ativos if not (crime_patrimonial(c) and c.get("vga") != "S")]
-                nao.append("XIV e XV: não se aplicam - as penas são somadas e há crime com violência/grave ameaça ou não patrimonial em concurso (%s)" % crimes_curto(outros))
+                possiveis.append("XV: crime patrimonial sem VGA - reparação do dano dispensada (art. 9º, XV c/c art. 12, § 2º, I: hipossuficiência presumida, Defensoria)%s" % parcial)
+                if parcial:
+                    verificar.append("XIV e XV são aferidos crime a crime: não têm teto de pena nem fração, e a soma do art. 7º serve aos incisos com teto/lapso. "
+                                     "O art. 7º, parágrafo único, só trava o indulto no concurso com crime do art. 1º, que aqui não há.")
+            elif pat and imp_conc:
+                nao.append("XIV e XV: concurso com crime do art. 1º (%s) - o indulto do crime não impeditivo só depois de 2/3 da pena do impeditivo (art. 7º, p. ú.)" % crimes_curto(imp_conc))
             else:
-                nao.append("XIV e XV: não se aplicam - exigem crime contra o patrimônio sem VGA")
+                nao.append("XIV e XV: não se aplicam - exigem crime contra o patrimônio sem violência ou grave ameaça")
             verificar.append("XVI: saúde/deficiência - não aferível pelo RSPE (laudo médico)")
             # ordena por inciso
             ordem_inc = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII", "XIII", "XIV", "XV", "XVI"]
