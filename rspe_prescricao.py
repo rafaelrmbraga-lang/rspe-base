@@ -28,6 +28,9 @@ def prazo_base_anos(pena_dias):
     return rg.prazo_art109_anos(pena_dias)
 
 
+IMINENTE_DIAS = 180  # prescrição executória correndo: destacar quando faltar até isto
+
+
 def periodos_cumprimento(r, hoje):
     """Períodos em que a pena esteve em cumprimento (custódia, regime aberto, livramento condicional):
     a prescrição executória não corre nesses períodos (arts. 116, p. ú., e 117, V, CP).
@@ -42,13 +45,17 @@ def periodos_cumprimento(r, hoje):
             ini = rs.to_date(i.get("data_referencia") or i.get("data_decisao") or i.get("complemento") or "")
             if not ini:
                 continue
-            fim = None
+            # o período de prova deixa de correr na revogação, suspensão, regressão ou interrupção posterior
+            fins = []
             for j in incidentes:
-                if "REVOG" in ((j.get("tipo") or "") + " " + (j.get("complemento") or "")).upper():
-                    dj = rs.to_date(j.get("data_referencia") or j.get("data_decisao") or "")
-                    if dj and dj > ini and (fim is None or dj < fim):
-                        fim = dj
-            per.append((ini, fim))
+                t = ((j.get("tipo") or "") + " " + (j.get("complemento") or "")).upper()
+                if "REVOG" in t or ("SUSPENS" in t and "LIVRAMENTO" in t) or (j.get("situacao") == "CONCEDIDO" and "REGRESS" in t):
+                    fins.append(rs.to_date(j.get("data_referencia") or j.get("data_decisao") or ""))
+            for e in eventos:
+                if "INTERRUP" in (e.get("tipo") or "").upper():
+                    fins.append(rs.to_date(e.get("data") or ""))
+            fins = [d for d in fins if d and d > ini]
+            per.append((ini, min(fins) if fins else None))
     # RSPE diz "em cumprimento" (último evento não é interrupção) mas não há período aberto: abre a partir da última alteração de regime
     em_cumpr = "INTERROMPIDA" not in (r.get("situacao_cumprimento") or "")
     if em_cumpr and not any(f is None for _, f in per):
@@ -364,6 +371,15 @@ def analisar(r, hoje=None):
                 L["ppe_status"] = "Não prescrita"
                 L["ppe_cor"] = ""
                 L["ppe_correndo_ate"] = rs.fmt(correndo[1])
+                _falta = (correndo[1] - hoje).days
+                if _falta <= IMINENTE_DIAS:
+                    # consumação próxima: é benefício a acompanhar (fuga/interrupção sem recaptura)
+                    L["ppe_status"] = "Prescrição executória em %s (faltam %d dias)" % (rs.fmt(correndo[1]), _falta)
+                    L["ppe_cor"] = "amarelo"
+                    L["ppe_previsao"] = rs.fmt(correndo[1])
+                    L["ppe_dias"] = _falta
+                    det.append("Conferir nos autos, antes de requerer: recaptura ou prisão não registrada no RSPE e nova condenação transitada "
+                               "(interrompem - art. 117, V e VI); regressão cautelar e mandado de prisão não interrompem o prazo.")
             else:
                 L["ppe_status"] = "Não corre (em cumprimento)"
                 L["ppe_cor"] = ""
@@ -376,6 +392,8 @@ def analisar(r, hoje=None):
     cores = [l.get("retro_cor", "") for l in linhas] + [l.get("ppe_cor", "") for l in linhas]
     if "vermelho" in cores:
         cor = "vermelho"
+    elif "amarelo" in cores:
+        cor = "amarelo"
     elif linhas and all(c in ("cinza",) for c in cores):
         cor = "cinza"
     else:
@@ -388,6 +406,8 @@ def analisar(r, hoje=None):
     resumo_retro = ("Aparente: " + "; ".join(l["crime"] for l in retro)) if retro else ("não configurada" if linhas else "")
     if ppe_red:
         resumo_ppe = "Aparente: " + "; ".join("%s (%s)" % (l["crime"], l["ppe_previsao"]) for l in ppe_red)
+    elif ppe_amb:
+        resumo_ppe = "Iminente: " + "; ".join("%s (%s)" % (l["crime"], l["ppe_previsao"]) for l in ppe_amb)
     elif linhas:
         resumo_ppe = "Não prescrita" if any(l.get("ppe_cor") != "cinza" for l in linhas) else "; ".join(sorted(set(l["ppe_status"] for l in linhas)))
     else:

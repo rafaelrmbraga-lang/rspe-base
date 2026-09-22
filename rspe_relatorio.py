@@ -249,8 +249,8 @@ def relatorio_individual(m, caminho, nome_base):
             m.get(ki + "_full") or m.get(ki), m.get(ki + "_cor"), _atencao(m, ["indulto %s" % ano, "hediondez"]))
         if kc:
             add("Comutação %s" % ano, "", "Decreto %s, art. 13" % {"2024": "12.338/2024", "2025": "12.790/2025"}[ano], m.get(kc + "_full") or m.get(kc), m.get(kc + "_cor"), _atencao(m, ["comutação %s" % ano]))
-    if m.get("presc_cor") == "vermelho":
-        add("Prescrição", "", "CP, arts. 109 a 117", m.get("presc_ppe"), "vermelho", "")
+    if m.get("presc_cor") in ("vermelho", "amarelo"):
+        add("Prescrição", "", "CP, arts. 109 a 117", m.get("presc_ppe"), m.get("presc_cor"), "")
     el.append(_tabela(ben, [W * 0.17, W * 0.2, W * 0.2, W * 0.16, W * 0.27], st, cores_linha=cores))
     el.append(Paragraph(_t("Datas de progressão, livramento e término: as do SEEU impressas no RSPE. Indulto, comutação e prescrição: cálculo do programa (estimativa)."), st["mut"]))
     # 4) condenações
@@ -405,6 +405,8 @@ def fila_prioridade(modelos):
             mot.append((1, "Extinção pelo cumprimento cabível", m.get("ext_termino")))
         if m.get("presc_cor") == "vermelho":
             mot.append((1, "Prescrição aparente", m.get("presc_prox")))
+        elif m.get("presc_cor") == "amarelo":
+            mot.append((1, "Prescrição executória iminente", m.get("presc_prox")))
         if m.get("prog_cor") == "vencido":
             mot.append((2, "Progressão vencida (%s)" % (m.get("prog_sit") or "").split(" ·")[0], m.get("prog")))
         if m.get("liv_cor") == "vencido":

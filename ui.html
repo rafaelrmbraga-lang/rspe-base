@@ -320,6 +320,7 @@ const ui = {
       case 'nao': return cor==='cinza';
       case 'impeditivo': return cor==='vermelho';
       case 'aparente': return cor==='vermelho';
+      case 'iminente': return cor==='amarelo';
       case 'curso': return cor==='amarelo';
       case 'curso1': return cor==='amarelo' && d!==null && d<=365;
       case 'naocorre': return cor==='';
@@ -424,7 +425,7 @@ const ui = {
           ${lin('Livramento', dataSit(r.liv, r.liv_sit, r.liv_cor))}
           ${lin('Indulto', r.imp.startsWith('Sim')&&!(r.ind_status||[]).includes('possivel')?pill('Crime impeditivo · '+r.imp.replace(/^Sim · /,''),'vermelho'):ind+(r.imp.startsWith('Sim')?`<div class="muted" style="font-size:11.5px;margin-top:3px">Crime impeditivo · ${esc(r.imp.replace(/^Sim · /,''))}</div>`:''))}
           ${lin('Comutação', `<span class="muted">2024</span> ${pill(r.c24, r.c24_cor)} <span class="muted">2025</span> ${pill(r.c25, r.c25_cor)}`)}
-          ${r.presc_cor==='vermelho'?lin('Prescrição', pill(r.presc_ppe, r.presc_cor)):''}
+          ${(r.presc_cor==='vermelho'||r.presc_cor==='amarelo')?lin('Prescrição', pill(r.presc_ppe, r.presc_cor)):''}
           ${lin('Extinção', r.ext_sit?pill(r.ext_sit,r.ext_cor):'<span class="muted">—</span>')}
           ${r.falta_sim?lin('Falta (12 meses)', `<span class="falta">${esc(r.falta.replace(/^Sim · /,''))}</span>`):''}
         </div>

@@ -31,7 +31,7 @@ import rspe_regras as rg
 import rspe_relatorio as rrel
 
 APP = "RSPE Base"
-VERSAO = "6.10.4"
+VERSAO = "6.10.5"
 
 
 def pasta_app():
@@ -119,7 +119,10 @@ O programa não usa a expressão "indulto parcial", sinônimo de comutação na 
 753.646): no concurso com crime impeditivo, fala em "indulto dos crimes não impeditivos (art. 7º, p. ú.)". Sem cumprimento em curso na
 data do decreto (não iniciado ou interrompido), indulto e comutação de 2024 e 2025 "não se aplicam". O programa não presume datas. Sem data do fato, recebimento da denúncia, sentença ou trânsito em julgado no RSPE, a prescrição
 daquele trecho não é calculada e a Auditoria aponta "verificar na ação penal". Quando a 1ª página do RSPE diz "Em livramento
-condicional deferido em ...", o assistido é tratado como em livramento, ainda que o "Regime Atual" traga o regime anterior. A
+condicional deferido em ...", o assistido é tratado como em livramento, ainda que o "Regime Atual" traga o regime anterior, salvo se
+houver regressão (inclusive cautelar), suspensão ou revogação posterior: aí vale o regime do RSPE e a Auditoria pede a conferência do
+desfecho (suspensão antes do fim do período de prova, revogação, homologação da falta). Prescrição executória correndo aparece como
+"iminente" quando faltarem até 180 dias. A
 data-base é conferida com a última prisão, progressão/regressão ou falta grave homologada; sem esse evento no RSPE, a Auditoria
 aponta a inconsistência (e, se coincidir com a soma/unificação das penas, o Tema 1006 do STJ).
 <h4>Relatórios em PDF</h4>

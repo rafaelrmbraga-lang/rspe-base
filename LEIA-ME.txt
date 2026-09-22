@@ -1,4 +1,4 @@
-RSPE BASE - SEEU  v6.10.4 (programa em abas)
+RSPE BASE - SEEU  v6.10.5 (programa em abas)
 =========================================
 
 O QUE FAZ
@@ -211,6 +211,20 @@ PRESUNÇÃO DE HIPOSSUFICIÊNCIA (Defensoria)
   do art. 9º e sem bloqueio do livramento (CP, art. 83, IV). Tráfico
   privilegiado não é hediondo nem impeditivo (STF PSV 125, Tema 1400; STJ
   Tema 1336). Detalhes e fontes: "Criterios_de_analise_por_beneficio.pdf".
+
+v6.10.5
+  - Livramento: regressão (inclusive cautelar) concedida depois do
+    deferimento encerra o livramento, mesmo que a 1ª página do RSPE ainda
+    diga "Em livramento condicional deferido". Vale o regime do RSPE.
+  - A dúvida sobre livramento saiu da aba Extinção. Na Auditoria, novo item
+    "Regressão cautelar ... após o livramento: verificar o desfecho"
+    (suspensão antes do fim do período de prova - Súmula 617/STJ;
+    revogação e desconto do tempo - CP, arts. 87 e 88; homologação da
+    falta e data-base).
+  - Prescrição: o período de prova do livramento termina na interrupção,
+    suspensão, regressão ou revogação posterior. Prescrição executória
+    correndo aparece em amarelo, "iminente", quando faltarem até 180 dias
+    (filtro próprio; entra na fila de prioridade do relatório geral).
 
 v6.10.4
   - Auditoria só com a matemática do RSPE (frações, soma das penas,

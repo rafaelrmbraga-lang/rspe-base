@@ -425,7 +425,30 @@ def auditar(r, hoje=None):
                                "(ex.: falta ainda não homologada, que não pode mover a data-base)." % (
                                    rs.fmt(db_seeu), ("%s em %s" % (ant[-1][1], rs.fmt(ant[-1][0]))) if ant else "nenhum"),
                                "LEP, arts. 112 e 118; STJ, Temas 1006 e 1165."))
-    if ult and "REGRESS" in (ult[1].get("complemento") or "").upper():
+    # regressão depois do deferimento do livramento: conferir o desfecho da falta e do livramento
+    _dls = [rs.to_date(i.get("data_referencia") or i.get("data_decisao") or i.get("complemento") or "") for i in incidentes
+            if i.get("situacao") == "CONCEDIDO" and rs.e_incidente_livramento(i)]
+    _dls = [d for d in _dls if d]
+    _lc_reg = bool(ult and _dls and "REGRESS" in (ult[1].get("complemento") or "").upper() and ult[0] > max(_dls))
+    if _lc_reg:
+        _dlc = max(_dls)
+        _int = [(rs.to_date(e.get("data") or ""), (e.get("motivo") or "").strip().lower()) for e in eventos
+                if "INTERRUP" in (e.get("tipo") or "").upper() and (rs.to_date(e.get("data") or "") or date.min) > _dlc]
+        _rev = any("REVOG" in ((j.get("tipo") or "") + " " + (j.get("complemento") or "")).upper() for j in incidentes
+                   if (rs.to_date(j.get("data_referencia") or j.get("data_decisao") or "") or date.min) > _dlc)
+        _cautelar = "CAUTELAR" in (ult[1].get("complemento") or "").upper()
+        itens.append(_item("verificar", "%s em %s após o livramento condicional (deferido em %s): verificar o desfecho" % (
+                               "Regressão cautelar" if _cautelar else "Regressão", rs.fmt(ult[0]), rs.fmt(_dlc)),
+                           "O RSPE registra %s%s%s. Conferir nos autos: (a) se o livramento foi suspenso antes do fim do período de prova - sem suspensão "
+                           "ou revogação nesse prazo, a pena está extinta (CP, art. 90; Súmula 617/STJ); (b) se houve revogação e por qual causa - revogado "
+                           "por descumprimento de condição, o tempo em livramento não se desconta (CP, arts. 87 e 88); (c) se a falta foi apurada e homologada "
+                           "(PAD/audiência): regressão cautelar é provisória e não fixa, por si, a data-base%s." % (
+                               "; ".join("interrupção em %s (%s)" % (rs.fmt(d), m or "sem motivo") for d, m in _int) + " e " if _int else "",
+                               "%s em %s" % ("regressão cautelar" if _cautelar else "regressão", rs.fmt(ult[0])),
+                               "" if _rev else ", sem registro de suspensão ou revogação do livramento",
+                               (" (o RSPE adota %s)" % r.get("data_base")) if r.get("data_base") else ""),
+                           "CP, arts. 86 a 90; LEP, arts. 118, 145 e 146; Súmula 617/STJ; STJ, Tema 1006."))
+    if ult and "REGRESS" in (ult[1].get("complemento") or "").upper() and not _lc_reg:
         itens.append(_item("info", "Regressão registrada em %s" % rs.fmt(ult[0]),
                            "Se decorreu de falta grave, a data-base da progressão é a data da falta e o requisito recomeça sobre a pena remanescente; a falta também impede LC (12 meses) e indulto (art. 6º dos decretos).",
                            "LEP, arts. 112, § 6º, 118 e 127; CP, art. 83, III, b."))

@@ -1279,6 +1279,14 @@ def livramento_em_curso(campos, incidentes, ref=None):
         return False, dl
     if ref is not None and dl != date.min and dl > ref:
         return False, dl
+    # regressão (inclusive cautelar) concedida depois do deferimento: o livramento deixou de vigorar,
+    # ainda que a 1ª página do RSPE continue a imprimir "Em livramento condicional deferido em ..."
+    if dl != date.min:
+        for i in incidentes:
+            t = ((i.get("tipo") or "") + " " + (i.get("complemento") or "")).upper()
+            d = to_date(i.get("data_referencia") or i.get("data_decisao") or "")
+            if i.get("situacao") == "CONCEDIDO" and "REGRESS" in t and d and d > dl and (ref is None or d <= ref):
+                return False, dl
     if "LIVRAMENTO" in (campos.get("regime_atual") or "").upper():
         return True, dl
     # livramento superado: regime fixado/alterado por decisão posterior (nova condenação, somatório,

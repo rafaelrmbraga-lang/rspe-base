@@ -32,7 +32,7 @@ CORES = {
 ROTULO = {
     "lapso": {"vencido": "Vencido · verificar", "laranja": "Até 30 dias", "amarelo": "Até 60 dias", "verde": "Até 90 dias", "cinza": "Não se aplica / não iniciou / interrompida", "azul": "Extinta"},
     "indulto": {"vermelho": "Crime impeditivo", "verde": "Possível", "amarelo": "A verificar", "cinza": "Não atinge", "azul": "Extinta"},
-    "presc": {"vermelho": "Prescrição aparente", "": "Não prescrita", "cinza": "Sem dados", "azul": "Extinta"},
+    "presc": {"vermelho": "Prescrição aparente", "amarelo": "Prescrição iminente", "": "Não prescrita", "cinza": "Sem dados", "azul": "Extinta"},
     "fd": {"vermelho": "Remição pendente", "amarelo": "Trabalho ou estudo a requerer", "verde": "Em ordem", "cinza": "Sem ficha"},
     "aud": {"vermelho": "Guia demanda atenção", "amarelo": "Pontos a verificar", "verde": "Sem inconsistências", "azul": "Extinta"},
     "ext": {"vermelho": "Extinção cabível", "laranja": "Término em até 30 dias", "amarelo": "Até 60 dias / a verificar", "verde": "Término em até 90 dias", "cinza": "Sem previsão / interrompida", "azul": "Extinta (registrada)"},
@@ -87,6 +87,7 @@ FILTROS = {
     "presc": [
         ("todas", "Todas"),
         ("aparente", "Prescrição aparente"),
+        ("iminente", "Prescrição iminente"),
         ("naocorre", "Não prescrita"),
         ("semdados", "Sem dados / extinta"),
     ],
@@ -359,9 +360,9 @@ def extincao(r, presc, interr):
         revog = any("REVOG" in ((j.get("tipo") or "") + " " + (j.get("complemento") or "")).upper()
                     and (rs.to_date(j.get("data_referencia") or j.get("data_decisao") or "") or date.min) > dlc for j in inc)
         duv = rs.duvidas_livramento(r, r.get("_eventos", []), inc, dlc if dlc != date.min else None) if not revog else []
+        # livramento com situação incerta: fica só na Auditoria (esta aba mostra apenas extinção pelo cumprimento)
         if dlc != date.min and not revog and duv:
-            hip.append("Livramento condicional desde %s com situação incerta no RSPE (%s): conferir revogação/suspensão e o fim do período de prova (CP, arts. 86 a 90) - ver Auditoria" % (rs.fmt(dlc), "; ".join(duv)))
-            cor = "amarelo_lc"
+            pass
         elif dlc != date.min and not revog and term:
             if term <= HOJE:
                 hip.append("Livramento condicional desde %s com período de prova expirado em %s sem revogação (CP, arts. 82 e 90)" % (rs.fmt(dlc), rs.fmt(term)))
@@ -622,7 +623,7 @@ ABAS = [
      "pilulas": {"imp": "ind_cor", "i22": "i22_cor", "i24": "i24_cor", "c24": "c24_cor", "i25": "i25_cor", "c25": "c25_cor"}},
     {"id": "presc", "titulo": "Prescrição", "cor": "presc_cor", "legenda": "presc", "expansivel": True,
      "cols": [("nome", "Nome", 20), ("proc", "Nº da execução", 17), ("regime", "Regime", 8),
-              ("presc_retro", "Pretensão punitiva", 18), ("presc_ppe", "Pretensão executória", 26), ("presc_prox", "Prescrita em", 9)],
+              ("presc_retro", "Pretensão punitiva", 18), ("presc_ppe", "Pretensão executória", 26), ("presc_prox", "Prescrição em", 9)],
      "pilulas": {},
      "sub": "presc_linhas", "sub_cols": PRESC_SUB, "sub_pilulas": {"retro_status": "retro_cor", "ppe_status": "ppe_cor"}, "sub_calc": True},
     {"id": "ext", "titulo": "Extinção", "cor": "ext_cor", "legenda": "ext",
