@@ -1,5 +1,5 @@
 {
- "versao": "2026-09-22a",
+ "versao": "2026-09-23",
  "descricao": "Base juridica do RSPE Base. Editavel: o programa le este arquivo ao abrir (copia ao lado do .exe tem prioridade sobre a embutida). Datas em AAAA-MM-DD. Fracoes como 'num/den' ou percentual 'NN%'.",
  "prescricao": {
   "art109_tabela": [
@@ -739,12 +739,36 @@
    "publicacao": "23/12/2022",
    "referencia": "25/12/2022",
    "art5": "crime cuja pena privativa de liberdade máxima em abstrato não seja superior a 5 anos; em concurso, cada infração considerada individualmente (parágrafo único)",
-   "art4": "maiores de 70 anos com 1/3 da pena cumprido",
-   "art1": "saúde: paraplegia/tetraplegia/cegueira, doença grave permanente, doença terminal (laudo)",
-   "art7_exclusoes": "I hediondos/equiparados; II violência ou grave ameaça / violência doméstica; III Leis 9.455, 9.613, 11.340, 12.850, 13.260; IV CP 215, 216-A, 217-A, 218, 218-A, 218-B, 218-C; V CP 312, 316, 317, 333; VI Lei 11.343 art. 33 caput e §1º (exceto §4º), 34 e 36; VII CPM correspondentes; VIII ECA 240 a 244-B",
-   "art8": "não se estende a PRD, multa e sursis",
-   "art9": "cabe mesmo sem trânsito em julgado ou guia (salvo recurso da acusação após 2º grau)",
-   "stf": "ADI 7.330 (liminar 18/01/2023) suspendeu o trecho relativo a agentes de segurança; art. 5º mantido pelo STF em 2025 (RE 1.450.100) - conferir"
+   "art4": "maiores de 70 anos condenados a PPL com pelo menos 1/3 da pena cumprido; art. 7º, § 2º: não se aplicam ao art. 4º as vedações do art. 7º, III, b (Lei 9.613) e d (Lei 12.850), e V (CP 312, 316, 317, 333)",
+   "art1": "saúde (até 25/12/2022): I paraplegia, tetraplegia ou cegueira posterior ao delito ou dele consequente; II doença grave permanente com severa limitação e cuidados contínuos não prestáveis no estabelecimento; III doença grave em estágio terminal (neoplasia maligna, aids) - laudo oficial ou de médico designado",
+   "art7_exclusoes": "I hediondos/equiparados (Lei 8.072); II grave ameaça ou violência contra a pessoa ou violência doméstica e familiar contra a mulher; III Leis a) 9.455, b) 9.613, c) 11.340, d) 12.850, e) 13.260; IV CP 215, 216-A, 217-A, 218, 218-A, 218-B, 218-C; V CP 312, 316, 317, 333; VI Lei 11.343, art. 33 caput e § 1º (exceto § 4º), 34 e 36; VII CPM correspondentes aos incisos I a V; VIII ECA 240 a 244-B. § 1º integrantes de facções criminosas",
+   "art8": "não se estende a I penas restritivas de direitos, II multa, III pessoas beneficiadas pela suspensão condicional do processo",
+   "art9": "cabe ainda que I trânsito só para a acusação; II ré em outro processo, inclusive por crime do art. 7º; III sem guia de recolhimento. Parágrafo único: não se concede se houver recurso da acusação de qualquer natureza após o julgamento em segunda instância",
+   "stf": "STF, Tema 1267 (RE 1.450.100, Pleno, 19/05/2025): é constitucional o art. 5º, caput e parágrafo único. STJ, 3ª Seção, AgRg no HC 890.929/SE (24/04/2024): o crime impeditivo obsta ainda que não praticado em concurso (unificação).",
+   "art2": "agentes do Susp condenados, no exercício da função ou em decorrência dela: I excesso culposo (CP, art. 23, p. ú.); II crime culposo com 1/6 cumprido (metade para primário, § 2º)",
+   "art3": "militares das Forças Armadas em operações de GLO condenados por excesso culposo (CPM, art. 45)",
+   "art6": "agentes de segurança pública (CF, art. 144) condenados por fato praticado há mais de 30 anos da publicação e não hediondo à época; art. 7º, § 3º afasta a vedação do inciso II",
+   "art10": "não se estende aos efeitos da condenação",
+   "art11": "penas unificadas ou somadas até 25/12/2022 (LEP, art. 111); p. ú.: o crime não impeditivo só é indultado depois de cumprida a pena do impeditivo (art. 7º), ressalvado o art. 1º, III",
+   "art12": "condenação primária sem recurso da acusação: indulto concedido pelo juízo do processo de conhecimento",
+   "art15": "PSC: comutação do remanescente em prestação pecuniária com 1/6 cumprido (1 dia-multa mínimo por hora), salvo crimes do art. 7º, I, II, III a/c/e, IV, VI, VII e VIII"
+  },
+  "decretos_2024_2025": {
+   "art2": "indulto e comutação cabíveis ainda que: I trânsito só para a acusação; II recurso da acusação que não vise majorar a pena ou as condições do benefício; III em livramento condicional; IV sem guia de recolhimento",
+   "art3": "aplicam-se ainda que: I PPL substituída por PRD; II regime aberto, prisão domiciliar ou período de prova do livramento; III sursis concedido",
+   "art4": "indulto ou comutação da PPL alcança a multa cumulativa (art. 12); inadimplência da multa não impede",
+   "art5": "conta como pena cumprida, para o requisito temporal: prisão cautelar, domiciliar, especial ou recolhimento domiciliar noturno, com ou sem monitoramento, sem prejuízo da remição (LEP, art. 126)",
+   "art6": "falta grave cometida nos 12 meses anteriores a 25/12, com sanção reconhecida em audiência de justificação; p. ú.: falta noticiada após a publicação não impede",
+   "art7": "penas somadas até 25/12; p. ú.: no concurso com crime do art. 1º, o não impeditivo só depois de 2/3 da pena do impeditivo",
+   "art8": "não se exigem exame criminológico nem outros requisitos além dos do decreto",
+   "art10_2024": "indulto especial para mulheres presas, cumulativamente: I sem outro crime com violência/grave ameaça; II sem punição por falta grave; III a) mães de filhos até 12 anos (ou PcD) com 1/6; b) avós de netos até 12 anos (ou PcD) com 1/6; c) 60 anos ou mais ou menos de 21 anos com 1/6; d) mulheres com deficiência",
+   "art10_2025": "igual a 2024, mas filhos e netos até 16 anos e fração de 1/8 nas alíneas a, b e c",
+   "art11": "comutação para mulheres: I reincidente, pena até 8 anos, 1/3 cumprido, comuta 1/4; II primária com filho < 16 anos (ou PcD/doença crônica), 1/5 cumprido, comuta 2/3; III reincidente com filho, 1/5 cumprido, comuta 1/2",
+   "art12": "indulto da multa: I até o valor mínimo de execução fiscal; II acima, sem capacidade econômica; § 2º incapacidade presumida: I Defensoria/dativo/pro bono; II programa social; III desempregado ou sem vínculo/bens; IV sem capacidade laborativa; V dia-multa no mínimo; VI situação de rua",
+   "art13": "comutação de 1/5 do remanescente (ou do cumprido, se maior, § 1º) com 1/5 (primário) ou 1/4 (reincidente) cumprido; § 2º comutação anterior dispensa novo requisito temporal; § 3º não cumulativas; § 4º proporção de 2/3 para as pessoas do art. 9º, § 2º; § 5º não se aplica a quem tem direito ao indulto",
+   "art14": "reincidência considerada até 25/12 do ano do decreto",
+   "par2_filhos": "§ 2º, II e III: filhos até 14 anos (2024) e até 16 anos (2025)",
+   "par3_2025": "2025, art. 1º, § 3º: as restrições (facção, RDD, presídio de segurança máxima) valem para o indulto e a comutação; em 2024, só para o indulto coletivo"
   }
  },
  "jurisprudencia": [
@@ -1012,6 +1036,7 @@
   "11343:35": 10,
   "10826:12": 3,
   "10826:14": 4,
+  "10826:15": 4,
   "10826:16": 6,
   "9503:302": 4,
   "9503:303": 2,

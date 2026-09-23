@@ -1,4 +1,4 @@
-RSPE BASE - SEEU  v6.13.1 (programa em abas)
+RSPE BASE - SEEU  v6.15.5 (programa em abas)
 =========================================
 
 O QUE FAZ
@@ -27,6 +27,22 @@ Os dados ficam em arquivos .sqlite na pasta "bases", ao lado do .exe.
     Abrir base…         troca para outra base já salva
     Salvar base como…   grava a base atual com outro nome e passa a usá-la
 O programa reabre a última base usada.
+
+PASTA VIGIADA (menu da base > "Pasta vigiada…")
+  Escolha uma pasta mãe e crie dentro dela uma subpasta por base, com o
+  nome da base. Todo PDF (RSPE ou Ficha Disciplinar) salvo numa subpasta
+  entra sozinho na base de mesmo nome, enquanto o programa estiver aberto
+  (verificação a cada 15 segundos). Exemplo:
+      Entrada\2ª VEP\    -> base "2ª VEP"
+      Entrada\1ª VEP\    -> base "1ª VEP"
+  Também vale separar por tipo: Entrada\RSPE\2ª VEP\ e Entrada\FD\2ª VEP\.
+  - Se a base ainda não existir, é criada no primeiro PDF.
+  - "Criar pastas das bases" cria uma subpasta para cada base existente.
+  - PDF solto na pasta mãe é ignorado. PDF já lido não é lido de novo,
+    salvo se o arquivo for substituído. Nada é apagado nem movido.
+  - Vale a mesma regra de duplicados da importação manual.
+  - O arquivo pasta_vigiada_estado.json (ao lado do .exe) guarda o que já
+    foi lido; apagá-lo faz a pasta ser relida (os repetidos são ignorados).
 
 DUPLICADOS
   A chave é o nº da execução. Ao importar:
@@ -218,6 +234,150 @@ PRESUNÇÃO DE HIPOSSUFICIÊNCIA (Defensoria)
   do art. 9º e sem bloqueio do livramento (CP, art. 83, IV). Tráfico
   privilegiado não é hediondo nem impeditivo (STF PSV 125, Tema 1400; STJ
   Tema 1336). Detalhes e fontes: "Criterios_de_analise_por_beneficio.pdf".
+
+v6.15.5  (revisão pelos textos integrais dos Decretos 11.302/2022, 12.338/2024
+         e 12.790/2025 - cópias na pasta "decretos")
+  - XII (estudo), 2024 e 2025: reincidente exige 18 meses nos 5 anos
+    anteriores; primário, 12 meses nos 3 anos. A v6.15.3 tinha retirado,
+    por engano, a regra do reincidente em 2025.
+  - XIII (curso concluído): só vale conclusão ou certificado nos 3 anos
+    anteriores a 25/12 (antes aceitava qualquer data da execução).
+  - § 2º do art. 9º (maiores de 60 anos): reduz pela metade só os lapsos
+    dos incisos I a XI. Deixou de reduzir as frações do XII, do XIII e o
+    requisito do art. 13 (para a comutação, o § 4º dá a proporção de 2/3).
+  - Art. 13, § 2º: com comutação anterior concedida no RSPE, a nova
+    comutação dispensa o requisito temporal.
+  - XI pelo RSPE: só contam saídas temporárias até 25/12 do decreto.
+  - IV (15/20 anos ininterruptos): a remição concedida dentro do período
+    contínuo integra o requisito temporal (art. 5º dos decretos).
+  - VII e IX: PRD e sursis (art. 3º) contam como o regime aberto quando o
+    RSPE os indica; se não indicar, o texto manda conferir nos autos.
+    IX de 2025 lembra que o decreto fala em regime aberto inicial.
+  - Decreto 2022, art. 4º (70 anos e 1/3): passa a usar a pena cumprida com
+    remição, alcança a pena toda e não é barrado pelas vedações do art. 7º,
+    III, b e d, e V (art. 7º, § 2º). Observação do art. 8º corrigida
+    (PRD, multa e suspensão condicional do processo).
+  - Base jurídica (versão 2026-09-23): resumo de todos os artigos dos três
+    decretos (arts. 2º a 8º, 10 a 14 de 2024/2025; arts. 1º a 15 de 2022).
+
+v6.15.4
+  - Indulto, inciso V (20/25 anos não ininterruptos, liberdade ≤ 2 anos):
+    conta o tempo cumprido na execução toda (penas somadas, art. 7º),
+    também no concurso com crime do art. 1º - o parágrafo único só adia o
+    indulto dos crimes não impeditivos até 2/3 do impeditivo, não desconta
+    esse tempo. Antes o programa usava só o tempo além dos 2/3.
+
+v6.15.3
+  - Indulto 2024/2025, incisos XI, XII e XIII conferidos na ficha
+    disciplinar (quando importada): saídas temporárias usufruídas até
+    25/12 ("Saída confirmada do benefício"), trabalho externo nos 3 anos,
+    dias de matrícula em estudo na janela do decreto e curso concluído ou
+    certificado ENCCEJA/ENEM durante a execução. Atende = possível; não
+    consta = não atendido; curso livre com carga horária = conferir.
+  - Decreto 12.790/2025, XII: 12 meses nos 3 anos também para o
+    reincidente (os 18 meses nos 5 anos eram só do Decreto 2024).
+  - Indulto registrado no RSPE e depois comutação dos mesmos processos:
+    o programa não trata as penas como extintas (o indulto pode ter sido
+    revogado ou reformado sem registro no RSPE) e a Auditoria pede
+    conferência. Sem comutação posterior, segue o alerta de indulto sem
+    baixa no cálculo.
+
+v6.15.2
+  - Indulto concedido no RSPE (incidente INDULTO com processos
+    selecionados) extingue a pena desses processos na análise do programa,
+    mesmo que a linha do crime diga "Extinto: Não". A Auditoria alerta
+    quando a pena total ainda inclui as penas indultadas (término,
+    progressão e livramento adiados) e quando uma comutação posterior
+    alcançou os mesmos processos.
+  - Extinção por detração só quando a custódia provisória foi registrada
+    apenas para aquele processo. Prisão lançada para vários processos já
+    conta uma vez na pena unificada e não extingue um deles isoladamente.
+  - Reincidência específica não demonstrada: para fato anterior a
+    23/01/2020 o texto usa a Lei 8.072/90 da época (2/5 ou 3/5).
+  - Perda de dias remidos sem falta homologada: cita a fuga/evasão
+    registrada no RSPE, quando houver.
+  - Ficha disciplinar: lê atestados com o número por extenso entre
+    parênteses ("157 (CENTO E CINQUENTA E SETE) DIAS"), com "À" entre as
+    datas, "PJFC N°170/2018", "totalizando X dias trabalhados e Y
+    remidos" e vários setores no mesmo atestado; ENCCEJA/ENEM registrados
+    na ficha entram no bloco Estudo.
+  - Prescrição: removidos os parênteses vazios em "Aparente: art. X ()".
+
+v6.15.1
+  - Coluna "Regime" de volta nas abas Geral e Progressão.
+
+v6.15.0
+  - Ficha disciplinar agrupada por atestado: cada bloco traz o atestado
+    ("nº 272/22 · 341 trabalhados · 113 remidos") e, embaixo, os empregos
+    que ele cobre. Depois: "Sem atestado na ficha" (procurar nos autos ou
+    pedir à unidade), "Estudo" e "Adicionados por você".
+  - Conferência: círculo à direita de cada atestado/período; clicou, fica
+    verde e a linha esmaece. "Conferidos X de Y" no cabeçalho. Fica
+    gravado na base.
+  - "+ Adicionar atestado": lança o que não está na ficha (ENCCEJA/ENEM,
+    trabalho não registrado, leitura, curso), com nº, período, dias
+    trabalhados/horas e dias remidos. Entra na soma "ficha × RSPE".
+  - Sem a coluna "Dias" e sem estimativa de remidos por dias corridos: o
+    atestado conta dias trabalhados (e a unidade pode contar sábados).
+    "Trabalho a atestar" virou "Períodos sem atestado".
+
+v6.14.4
+  - Aba Indulto/Comutação: "Vedado (art. 1º)" / "Vedado (art. 7º)" em
+    vermelho; "Não atinge" e "Fato posterior" em cinza.
+
+v6.14.3
+  - Aba Indulto/Comutação: o "Não" genérico diz o motivo, em vermelho:
+    "Fato posterior" (condenação por fato posterior ao decreto), "Vedado
+    pelo decreto (1º)" (crime impeditivo do art. 1º, Decretos 2024/2025),
+    "Vedado pelo decreto (7º)" (exclusão do art. 7º, Decreto 2022) e "Não
+    atinge" (requisito não cumprido, inclusive sem pena em cumprimento na
+    data). "Indeferido" (decisão registrada no RSPE) também em vermelho;
+    "Prejudicada" (comutação quando o indulto do ano é cabível) em cinza.
+  - Filtro "Fato posterior (qualquer benefício)". O relatório em PDF
+    mantém as cores anteriores.
+
+v6.14.2
+  - Regra de tela: "Sim" (verde) sempre que o benefício é possível, ainda
+    que por tese defensiva (a tese continua indicada no texto e no
+    cálculo). "Verificar" só quando falta dado que o decreto exige e o
+    RSPE não traz - e o texto diz o que conferir e em qual processo.
+  - Indulto 2022 (Decreto 11.302/2022) em concurso com crime excluído pelo
+    art. 7º: aplica o art. 11, p. ú. (o crime não impeditivo só é
+    indultado depois de cumprida a pena do impeditivo; STJ, 3ª Seção,
+    AgRg no HC 890.929/SE). Compara a soma das penas impeditivas com a
+    pena cumprida em 25/12/2022: menor = "Não atinge", com os processos,
+    a soma e o que faltava; cumprida = "Sim" (CP, art. 76).
+  - Indulto 2022 em concurso só com crime de pena máxima acima de 5 anos
+    (não excluído): "Sim" para os crimes alcançados (art. 5º, p. ú.).
+  - Indulto 2022 com trânsito posterior ao decreto: se o trânsito para a
+    acusação é anterior a 25/12/2022, conta (art. 9º); senão, "conferir
+    se havia recurso da acusação após o 2º grau" (art. 9º, p. ú.).
+  - Roubo com lesão grave/morte de fato anterior à hediondez: no Decreto
+    2022 a exclusão aparece pelo inciso II (violência), onde a tese da
+    hediondez superveniente não altera o resultado.
+  - Pena máxima lida também de "Prisão Simples" (contravenções) e tabela
+    com o art. 15 da Lei 10.826/03 (4 anos).
+
+v6.14.1
+  - Auditoria: o item que trata de um crime traz o número do processo
+    ("Proc. 0000554-90.2023.8.12.0042 · art. 33 Lei 11.343/06: ..."). Itens
+    agrupados mantêm o título curto e listam os processos no detalhe.
+  - Reincidência específica em hediondo/tráfico conferida no próprio RSPE:
+    procura condenação anterior por hediondo, equiparado ou tráfico
+    transitada antes do fato. Encontrada: "confere", com o processo e a
+    data do trânsito. Não encontrada ou sem trânsito: alerta "reincidência
+    específica não demonstrada no RSPE", indicando o processo sem trânsito
+    (não se presume a data). Tráfico privilegiado anterior não conta.
+  - Corrigido falso alerta "fração de livramento do SEEU (1/1) maior que a
+    legal (2/3)" para o reincidente específico (CP, art. 83, V; Lei
+    11.343/06, art. 44, p. ú.): o livramento é vedado e o 1/1 é coerente.
+  - Itens da Auditoria marcados como "baixados" cujo título ganhou o
+    processo voltam a aparecer uma vez.
+
+v6.14.0
+  - Pasta vigiada: uma pasta mãe com uma subpasta por base (ex.: "2ª VEP",
+    "1ª VEP"); os PDFs salvos ali entram sozinhos na base de mesmo nome.
+    Menu da base > "Pasta vigiada…". Ver a seção PASTA VIGIADA.
 
 v6.13.1
   - Atualizar o programa não exige refazer a base. A base guarda o que foi

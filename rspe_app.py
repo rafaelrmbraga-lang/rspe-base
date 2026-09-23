@@ -17,6 +17,7 @@ import sqlite3
 import subprocess
 import sys
 import threading
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 
@@ -31,7 +32,7 @@ import rspe_regras as rg
 import rspe_relatorio as rrel
 
 APP = "RSPE Base"
-VERSAO = "6.13.1"
+VERSAO = "6.15.5"
 
 
 def pasta_app():
@@ -46,6 +47,22 @@ def recurso(nome):
 
 PASTA_BASES = os.path.join(pasta_app(), "bases")
 CONFIG = os.path.join(pasta_app(), "rspe_config.json")
+VIGIA_ESTADO = os.path.join(pasta_app(), "pasta_vigiada_estado.json")
+VIGIA_INTERVALO = 15  # segundos entre as varreduras da pasta vigiada
+PASTAS_TIPO = {"RSPE", "RSPES", "FD", "FDS", "FICHA", "FICHAS", "FICHA DISCIPLINAR", "FICHAS DISCIPLINARES"}
+
+
+def _nome_seguro(nome):
+    return "".join(ch for ch in (nome or "") if ch not in '\\/:*?"<>|').strip()
+
+
+def base_da_pasta(raiz, arquivo):
+    """Nome da base pelo caminho do PDF dentro da pasta vigiada:
+    <mãe>/<base>/... ou <mãe>/<RSPE|FD>/<base>/...  (PDF solto na pasta mãe: None)."""
+    partes = os.path.relpath(arquivo, raiz).split(os.sep)[:-1]
+    if partes and partes[0].strip().upper() in PASTAS_TIPO:
+        partes = partes[1:]
+    return _nome_seguro(partes[0]) if partes else None
 BASE_PADRAO = os.path.join(PASTA_BASES, "base_padrao.sqlite")
 
 AJUDA = """
@@ -54,7 +71,7 @@ Progressão e Livramento: <b>amarelo forte</b> = prazo vencido - verificar exame
 célula mostra os pedidos do RSPE). Extinção (término): <b>vermelho</b> = cabível. Prazos: <b>laranja</b> = vence em até 30 dias; <b>amarelo</b> = em até
 60 dias; <b>verde</b> = em até 90 dias. Acima de 90 dias a situação fica em branco (não há o que fazer ainda). <b>Cinza</b> = não se
 aplica (pena interrompida, já no aberto, em livramento, cumprida); <b>azul</b> = execução extinta. Indulto/Comutação: <b>vermelho</b> =
-crime impeditivo; <b>verde</b> = possível; <b>amarelo</b> = a verificar; <b>cinza</b> = não atinge. Clique num cartão de resumo para filtrar.
+crime impeditivo; <b>verde</b> = possível (também quando depende de tese defensiva, indicada no texto); <b>amarelo</b> = a verificar; <b>cinza</b> = não atinge. Clique num cartão de resumo para filtrar.
 <h4>Datas</h4>
 Progressão, livramento e término são os impressos pelo SEEU no RSPE; o programa não os recalcula. Sem data no RSPE aparece
 "Não consta no RSPE" ou "Pena interrompida". O programa só calcula indulto/comutação e prescrição, na convenção do SEEU
@@ -68,20 +85,23 @@ escravidão/tráfico de pessoas, genocídio, sistema financeiro (&gt;4 anos), li
 218 a 218-C), administração pública 312-319 e 333 (&gt;4 anos), ECA 239-244-B, ambientais, Estado Democrático, abuso de autoridade,
 violência contra a mulher, tráfico (33 caput/§1º, 34-37, 39). Art. 6º: falta grave nos 12 meses antes de 25/12.
 Art. 9º, testado inciso por inciso com a situação em 25/12 de cada ano (regime, pena cumprida, remanescente, reincidência):
-I, II, III (frações por faixa de pena), IV e V (15/20 e 20/25 anos), VI (semiaberto ininterrupto), VII (regime aberto, 1/6 ou 1/5),
+I, II, III (frações por faixa de pena), IV (15/20 anos ininterruptos; a remição do período conta, art. 5º) e V (20/25 anos),
+VI (semiaberto ininterrupto), VII (regime aberto, PRD ou sursis, 1/6 ou 1/5),
 VIII (aberto ou livramento com remanescente ≤ 6 anos, ≤ 4 se reincidente), IX a XV marcados como "a verificar" quando a parte
 objetiva é atendida (programa de egressos, monitoramento, saídas temporárias, estudo, valor do bem, reparação do dano).
-§ 2º, I: para maiores de 60 anos os lapsos dos incisos I a XI caem pela metade (aplicado automaticamente pela data de nascimento);
+§ 2º, I: para maiores de 60 anos os lapsos dos incisos I a XI caem pela metade (aplicado automaticamente pela data de nascimento;
+não alcança as frações do XII e do XIII nem o requisito do art. 13);
 os demais grupos do § 2º, o inciso XVI (saúde) e o art. 10 (mulheres) não são aferíveis pelo RSPE.
+Com a ficha disciplinar importada, os incisos XI (5 saídas temporárias ou 12 meses de trabalho externo nos 3 anos), XII (estudo por 12 meses nos 3 anos; 18 meses nos 5 anos se reincidente, em 2024 e em 2025) e XIII (curso concluído ou certificado ENCCEJA/ENEM durante a execução e nos 3 anos anteriores a 25/12) são conferidos na ficha: atende = possível; não consta = não atendido.
 Art. 13 (comutação): 1/5 do remanescente (ou do cumprido, se maior) para quem cumpriu 1/5 (primário) ou 1/4 (reincidente);
-2/3 para os grupos do § 2º; não cumula com indulto (§ 5º). A análise completa está na ficha, em "Análise inciso por inciso".
+2/3 para os grupos do § 2º; não cumula com indulto (§ 5º); com comutação anterior concedida, dispensa novo requisito temporal (§ 2º). A análise completa está na ficha, em "Análise inciso por inciso".
 <b>Decreto 11.302/2022</b> (referência 25/12/2022) tem lógica própria: art. 5º alcança o crime cuja <b>pena máxima em abstrato</b>
-não supere 5 anos (em concurso, cada crime é avaliado isoladamente - parágrafo único), sem exigir fração cumprida nem regime;
-art. 4º, maiores de 70 anos com 1/3 cumprido; art. 1º, saúde (laudo); art. 7º exclui hediondos, violência/grave ameaça e violência
+não supere 5 anos (em concurso, cada crime é avaliado isoladamente - parágrafo único), sem exigir fração cumprida nem regime; havendo crime excluído pelo art. 7º em concurso, o crime não impeditivo só é indultado depois de cumprida a pena do impeditivo (art. 11, p. ú.; STJ, 3ª Seção, AgRg no HC 890.929/SE) - o programa compara a soma das penas impeditivas com a pena cumprida em 25/12/2022;
+art. 4º, maiores de 70 anos com 1/3 cumprido (alcança a pena toda; as vedações do art. 7º, III, b e d, e V não se aplicam a ele - art. 7º, § 2º); art. 1º, saúde (laudo); art. 7º exclui hediondos, violência/grave ameaça e violência
 doméstica, tortura, lavagem, ORCRIM, terrorismo, crimes sexuais (215 a 218-C), 312/316/317/333, tráfico (33 caput e § 1º, 34, 36 -
 exceto o § 4º) e ECA 240-244-B; art. 9º dispensa o trânsito em julgado. A pena máxima é lida do tipo penal impresso no RSPE; quando o
 SEEU corta o texto, usa-se a tabela editável "pena_maxima_abstrata" da base jurídica (indicado na análise). O trecho relativo a
-agentes de segurança (arts. 2º, 3º e 6º) foi suspenso pelo STF na ADI 7.330 e não é avaliado.
+agentes de segurança e militares (arts. 2º, 3º e 6º) não é avaliado; o art. 8º exclui PRD, multa e suspensão condicional do processo.
 <b>Hediondez pela época do fato</b>: a tabela "hediondos.desde" da base jurídica guarda a data em que cada tipo passou a ser
 hediondo (Lei 8.072/90 e alterações - 8.930/94, 9.695/98, 12.015/2009, 13.104 e 13.142/2015, 13.497/2017, 13.654/2018,
 13.964/2019, 14.811 e 14.994/2024, 15.358/2026). Fato anterior à data não é tratado como hediondo (CF, art. 5º, XL): isso
@@ -101,6 +121,10 @@ Só a prescrição já consumada aparece: vermelho = prescrição aparente; sem 
 <h4>Filtro de situação</h4>
 O seletor ao lado dos botões filtra a aba: vencidas / a vencer em 30 ou 60 dias / interrompidas (progressão e livramento); possível /
 a verificar / não atinge / impeditivo (indulto); aparente / não prescrita (prescrição). O número da execução é copiado com um clique.
+<h4>Pasta vigiada</h4>
+Menu da base &gt; "Pasta vigiada…": escolha uma pasta mãe com uma subpasta por base (ex.: "2ª VEP", "1ª VEP", ou RSPE\2ª VEP e
+FD\2ª VEP). Os PDFs salvos numa subpasta entram sozinhos na base de mesmo nome, com o programa aberto; a base é criada se não
+existir. PDF solto na pasta mãe é ignorado; nada é apagado ou movido.
 <h4>Ficha disciplinar (SIAPEN/AGEPEN)</h4>
 Importe o PDF da Ficha Disciplinar pelo mesmo botão "Importar PDFs": o programa reconhece o documento e o vincula ao RSPE
 pelos autos citados na ficha (ou pelo nome). Extrai conduta, períodos de trabalho (setor/empresa), atestados de trabalho com
@@ -108,8 +132,11 @@ dias trabalhados e remidos, faltas disciplinares (registro, PADIC, arquivamento/
 isolamento e recusa de trabalho. O programa confronta: soma dos dias remidos atestados x soma das remições do RSPE (LEP, art. 126), proporção
 1 para 3, trabalho sem atestado e baixa de trabalho sem início registrado, falta grave nos últimos 12 meses (CP, art. 83, III, b;
 art. 6º dos decretos), falta arquivada que ainda produza efeitos e perda de dias remidos em duplicidade (LEP, art. 127: a nova
-perda só alcança a remição adquirida depois da falta anterior). A aba <b>Ficha disciplinar</b> trata só de remição (trabalho e estudo) e mostra uma linha por emprego e por matrícula de estudo:
-período, local e atestado que o cobre (pela própria ficha) e providência. O RSPE não diz de onde vem cada remição (trabalho, estudo,
+perda só alcança a remição adquirida depois da falta anterior). A aba <b>Ficha disciplinar</b> trata só de remição (trabalho e estudo) e agrupa por atestado: cada bloco
+mostra o atestado (dias trabalhados e remidos, como constam nele) e os empregos que ele cobre; depois vêm os períodos sem atestado na
+ficha (procurar nos autos ou pedir à unidade), o estudo e o que você adicionou ("+ Adicionar atestado": ENCCEJA/ENEM, trabalho fora da
+ficha). O círculo à direita marca o atestado ou o período como conferido (fica gravado na base). Não há contagem de dias pelo período:
+o atestado conta dias trabalhados (inclusive sábados, conforme a unidade), e o programa não estima. O RSPE não diz de onde vem cada remição (trabalho, estudo,
 ENCCEJA/ENEM, leitura), então o programa não liga remição a atestado: aponta "Requerer remição" só quando não há nenhuma remição
 lançada no RSPE depois do atestado (ou depois do período de estudo); os demais atestados ficam "conferir a homologação", com as
 somas e a lista das remições do RSPE no cabeçalho. Trabalho anterior à 1ª prisão do RSPE fica só no resumo.
@@ -212,6 +239,8 @@ class Base:
             arquivo TEXT, importado_em TEXT, dados TEXT)""")
         self.con.execute("""CREATE TABLE IF NOT EXISTS baixas (
             processo TEXT, chave TEXT, titulo TEXT, obs TEXT, data TEXT, PRIMARY KEY (processo, chave))""")
+        self.con.execute("""CREATE TABLE IF NOT EXISTS atestados_manuais (
+            processo TEXT, id TEXT, dados TEXT, data TEXT, PRIMARY KEY (processo, id))""")
         self.con.execute("""CREATE TABLE IF NOT EXISTS fichas (
             chave TEXT PRIMARY KEY, processo TEXT, nome_norm TEXT, data_impressao TEXT, importado_em TEXT, dados TEXT)""")
         self.con.commit()
@@ -254,6 +283,26 @@ class Base:
         with self.lock:
             self.con.execute("INSERT OR REPLACE INTO baixas VALUES (?,?,?,?,?)",
                              (processo, chave, titulo, obs or "", datetime.now().strftime("%d/%m/%Y %H:%M")))
+            self.con.commit()
+
+    def manuais(self):
+        with self.lock:
+            rows = self.con.execute("SELECT processo, id, dados, data FROM atestados_manuais ORDER BY data").fetchall()
+        out = {}
+        for p, i, d, dt in rows:
+            out.setdefault(p, []).append({"id": i, "dados": json.loads(d or "{}"), "data": dt})
+        return out
+
+    def manual_gravar(self, processo, dados):
+        import uuid
+        with self.lock:
+            self.con.execute("INSERT INTO atestados_manuais VALUES (?,?,?,?)",
+                             (processo, uuid.uuid4().hex[:10], json.dumps(dados, ensure_ascii=False), datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+            self.con.commit()
+
+    def manual_remover(self, processo, id_):
+        with self.lock:
+            self.con.execute("DELETE FROM atestados_manuais WHERE processo=? AND id=?", (processo, id_))
             self.con.commit()
 
     def reabrir(self, processo, chave):
@@ -317,6 +366,10 @@ class Api:
         self._janela = None
         self.base = None          # o programa abre sem base carregada
         self._modelos = []
+        self._imp_lock = threading.RLock()   # uma importação por vez (manual ou pela pasta vigiada)
+        self._vigia_thread = None
+        self._vigia_tam = {}
+        self._vigia_ultima = ""
         rg.carregar()
 
     # ---- configuração (só a lista de bases recentes) ----
@@ -328,15 +381,27 @@ class Api:
         except Exception:
             return []
 
-    def _salvar_config(self):
+    def _cfg(self):
         try:
-            rec = self._recentes()
-            if self.base:
-                rec = [self.base.caminho] + [p for p in rec if p != self.base.caminho]
+            with open(CONFIG, encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return {}
+
+    def _cfg_gravar(self, **kv):
+        c = self._cfg()
+        c.update(kv)
+        try:
             with open(CONFIG, "w", encoding="utf-8") as f:
-                json.dump({"recentes": rec[:8]}, f)
+                json.dump(c, f, ensure_ascii=False)
         except Exception:
             pass
+
+    def _salvar_config(self):
+        rec = self._recentes()
+        if self.base:
+            rec = [self.base.caminho] + [p for p in rec if p != self.base.caminho]
+        self._cfg_gravar(recentes=rec[:8])
 
     def _js(self, codigo):
         if self._janela:
@@ -354,6 +419,7 @@ class Api:
         brutos = self.base.todos()
         baixas = self.base.baixas()
         fichas = self.base.fichas()
+        manuais = self.base.manuais()
         self._modelos = []
         for r in brutos:
             try:
@@ -364,7 +430,7 @@ class Api:
                 pass
             ch = r.get("processo_execucao") or r.get("arquivo")
             ficha = fichas.get(ch) or fichas.get("nome:" + _norm(r.get("nome", "")))
-            m = rv.modelo(r, baixas.get(ch, {}), ficha)
+            m = rv.modelo(r, baixas.get(ch, {}), ficha, manuais.get(ch, []))
             m["_bruto"] = r
             self._modelos.append(m)
         return {
@@ -385,6 +451,35 @@ class Api:
         r["msg"] = "Alerta baixado."
         return r
 
+    # ---- ficha disciplinar: conferência e atestados fora da ficha ----
+    def fd_conferir(self, processo, chave, marcar):
+        if not self.base:
+            return None
+        if marcar:
+            self.base.baixar(processo, chave, "conferido (ficha disciplinar)", "")
+        else:
+            self.base.reabrir(processo, chave)
+        return self.listar()
+
+    def fd_adicionar(self, processo, dados):
+        if not self.base:
+            return None
+        dados = {k: str(v or "").strip() for k, v in (dados or {}).items()}
+        if not (dados.get("remidos") or dados.get("trabalhados") or dados.get("horas")):
+            return {"erro": "Informe ao menos os dias remidos, os dias trabalhados ou as horas."}
+        self.base.manual_gravar(processo, dados)
+        r = self.listar()
+        r["msg"] = "Adicionado."
+        return r
+
+    def fd_remover(self, processo, id_):
+        if not self.base:
+            return None
+        self.base.manual_remover(processo, id_)
+        r = self.listar()
+        r["msg"] = "Removido."
+        return r
+
     def reabrir_alerta(self, processo, chave):
         if not self.base:
             return None
@@ -401,6 +496,10 @@ class Api:
 
     # ---- bases ----
     def _trocar_base(self, caminho):
+        with self._imp_lock:
+            return self._trocar_base_(caminho)
+
+    def _trocar_base_(self, caminho):
         if self.base:
             self.base.fechar()
         self.base = Base(caminho)
@@ -493,14 +592,19 @@ class Api:
     def _importar(self, arqs):
         threading.Thread(target=self._worker, args=(arqs,), daemon=True).start()
 
-    def _worker(self, arqs):
+    def _worker(self, arqs, base=None, silencioso=False):
+        with self._imp_lock:
+            return self._worker_(arqs, base or self.base, silencioso)
+
+    def _worker_(self, arqs, base, silencioso):
         novos, atualizados, duplicados, antigos, erros = 0, 0, [], [], []
         fichas_ok = []
         incompletos = []
         total = len(arqs)
         vistos = set()
         lock = threading.Lock()
-        self._js("ui.progresso(0,%d)" % total)
+        if not silencioso:
+            self._js("ui.progresso(0,%d)" % total)
         with ThreadPoolExecutor(max_workers=min(4, os.cpu_count() or 2)) as ex:
             futs = {ex.submit(_extrair_com_hash, a): a for a in arqs}
             for n, fut in enumerate(as_completed(futs), 1):
@@ -510,8 +614,8 @@ class Api:
                     r = fut.result()
                     if r.get("tipo") == "ficha_disciplinar":
                         with lock:
-                            proc = self._vincular_ficha(r)
-                            self.base.gravar_ficha(r, proc)
+                            proc = self._vincular_ficha(r, base)
+                            base.gravar_ficha(r, proc)
                             fichas_ok.append("%s: ficha de %s %s" % (nome_arq, r.get("nome"), ("vinculada a " + proc) if proc else "SEM RSPE correspondente na base (fica guardada pelo nome)"))
                         continue
                     if not r.get("processo_execucao"):
@@ -522,7 +626,7 @@ class Api:
                             duplicados.append("%s: arquivo repetido no mesmo lote" % nome_arq)
                             continue
                         vistos.add(r["_hash"])
-                        ex_ = self.base.existente(chave)
+                        ex_ = base.existente(chave)
                         if ex_:
                             data_ex, hash_ex = ex_
                             if hash_ex == r["_hash"] or (data_ex and data_ex == r.get("data_geracao_rspe")):
@@ -532,17 +636,17 @@ class Api:
                             if d_ex and d_novo and d_novo < d_ex:
                                 antigos.append("%s: RSPE de %s é mais antigo que o da base (%s) - ignorado" % (nome_arq, r.get("data_geracao_rspe"), data_ex))
                                 continue
-                            self.base.gravar(r)
+                            base.gravar(r)
                             atualizados += 1
                         else:
-                            self.base.gravar(r)
+                            base.gravar(r)
                             novos += 1
                         faltam = rs.campos_faltantes(r)
                         if faltam:
                             incompletos.append("%s: %s - não foi possível ler %s" % (nome_arq, r.get("nome") or "?", ", ".join(faltam)))
                 except Exception as e:
                     erros.append("%s: %s" % (nome_arq, e))
-                if n % 3 == 0 or n == total:
+                if not silencioso and (n % 3 == 0 or n == total):
                     self._js("ui.progresso(%d,%d)" % (n, total))
         avisos = incompletos + duplicados + antigos + erros + fichas_ok
         if avisos:
@@ -550,12 +654,15 @@ class Api:
                 f.write("\n".join(avisos))
         resumo = {"novos": novos, "atualizados": atualizados, "duplicados": len(duplicados), "antigos": len(antigos),
                   "erros": len(erros), "fichas": len(fichas_ok), "incompletos": len(incompletos), "avisos": avisos[:60]}
-        self._js("ui.importado(%s)" % json.dumps(resumo, ensure_ascii=False))
+        if not silencioso:
+            self._js("ui.importado(%s)" % json.dumps(resumo, ensure_ascii=False))
+        return resumo
 
-    def _vincular_ficha(self, f):
+    def _vincular_ficha(self, f, base=None):
         """Processo de execução da base ao qual a ficha pertence: pelos autos citados na ficha, senão pelo nome."""
-        with self.base.lock:
-            rows = self.base.con.execute("SELECT processo, nome FROM assistidos").fetchall()
+        base = base or self.base
+        with base.lock:
+            rows = base.con.execute("SELECT processo, nome FROM assistidos").fetchall()
         procs = {p for p, _ in rows}
         for a in f.get("autos", []):
             if a in procs:
@@ -565,6 +672,147 @@ class Api:
             if _norm(n) == nn:
                 return p
         return ""
+
+    # ---- pasta vigiada: <pasta mãe>/<nome da base>/*.pdf entra sozinho na base de mesmo nome ----
+    def vigia_info(self):
+        c = self._cfg()
+        pasta = c.get("pasta_vigiada") or ""
+        subs = []
+        if pasta and os.path.isdir(pasta):
+            for n in sorted(os.listdir(pasta)):
+                if os.path.isdir(os.path.join(pasta, n)):
+                    if n.strip().upper() in PASTAS_TIPO:
+                        subs += ["%s / %s" % (n, m) for m in sorted(os.listdir(os.path.join(pasta, n))) if os.path.isdir(os.path.join(pasta, n, m))]
+                    else:
+                        subs.append(n)
+        bases = sorted(os.path.splitext(n)[0] for n in os.listdir(PASTA_BASES) if n.lower().endswith(".sqlite")) if os.path.isdir(PASTA_BASES) else []
+        return {"pasta": pasta, "ativa": bool(c.get("vigiar") and pasta and os.path.isdir(pasta)), "pastas": subs, "bases": bases,
+                "ultima": self._vigia_ultima, "intervalo": VIGIA_INTERVALO}
+
+    def vigia_escolher(self):
+        d = _um(self._janela.create_file_dialog(webview.FOLDER_DIALOG))
+        if not d:
+            return None
+        self._cfg_gravar(pasta_vigiada=d, vigiar=True)
+        self._vigia_iniciar()
+        r = self.vigia_info()
+        r["msg"] = "Pasta vigiada: %s" % d
+        return r
+
+    def vigia_ativar(self, ativo):
+        self._cfg_gravar(vigiar=bool(ativo))
+        if ativo:
+            self._vigia_iniciar()
+        r = self.vigia_info()
+        r["msg"] = "Pasta vigiada %s." % ("ativada" if ativo else "desativada")
+        return r
+
+    def vigia_criar_pastas(self):
+        """Cria na pasta mãe uma subpasta para cada base existente."""
+        pasta = self._cfg().get("pasta_vigiada") or ""
+        if not pasta or not os.path.isdir(pasta):
+            return {"erro": "Escolha a pasta mãe primeiro."}
+        # se a pasta mãe já separa por tipo (RSPE\, FD\), cria dentro de cada uma; senão, direto na pasta mãe
+        tipos = [os.path.join(pasta, x) for x in os.listdir(pasta)
+                 if x.strip().upper() in PASTAS_TIPO and os.path.isdir(os.path.join(pasta, x))] or [pasta]
+        n = 0
+        for b in self.vigia_info()["bases"]:
+            for t in tipos:
+                alvo = os.path.join(t, b)
+                if not os.path.isdir(alvo):
+                    os.makedirs(alvo, exist_ok=True)
+                    n += 1
+        r = self.vigia_info()
+        r["msg"] = "%d pasta(s) criada(s)." % n if n else "Todas as bases já têm pasta."
+        return r
+
+    def vigia_agora(self):
+        threading.Thread(target=self._vigia_varrer, kwargs={"imediato": True}, daemon=True).start()
+        return {"msg": "Verificando a pasta vigiada…"}
+
+    def vigia_abrir(self):
+        pasta = self._cfg().get("pasta_vigiada") or ""
+        if pasta and os.path.isdir(pasta):
+            _abrir(pasta)
+        return None
+
+    def _vigia_iniciar(self):
+        if self._vigia_thread and self._vigia_thread.is_alive():
+            return
+        self._vigia_thread = threading.Thread(target=self._vigia_loop, daemon=True)
+        self._vigia_thread.start()
+
+    def _vigia_loop(self):
+        while True:
+            try:
+                c = self._cfg()
+                if c.get("vigiar") and c.get("pasta_vigiada") and os.path.isdir(c["pasta_vigiada"]):
+                    self._vigia_varrer()
+            except Exception as e:
+                logging.warning("pasta vigiada: %s", e)
+            time.sleep(VIGIA_INTERVALO)
+
+    def _vigia_varrer(self, imediato=False):
+        c = self._cfg()
+        raiz = c.get("pasta_vigiada") or ""
+        if not raiz or not os.path.isdir(raiz):
+            return
+        try:
+            with open(VIGIA_ESTADO, encoding="utf-8") as f:
+                estado = json.load(f)
+        except Exception:
+            estado = {}
+        pend, soltos = {}, 0
+        agora = time.time()
+        for dirpath, _, nomes in os.walk(raiz):
+            for n in nomes:
+                if not n.lower().endswith(".pdf"):
+                    continue
+                p = os.path.join(dirpath, n)
+                try:
+                    st = os.stat(p)
+                except OSError:
+                    continue
+                sig = "%d:%d" % (st.st_size, int(st.st_mtime))
+                if estado.get(p) == sig:
+                    continue
+                # download ainda em andamento: só entra quando o tamanho parar de mudar
+                if not imediato and (self._vigia_tam.get(p) != st.st_size or agora - st.st_mtime < 5):
+                    self._vigia_tam[p] = st.st_size
+                    continue
+                b = base_da_pasta(raiz, p)
+                if not b:
+                    soltos += 1
+                    continue
+                pend.setdefault(b, []).append((p, sig))
+        for b, itens in sorted(pend.items()):
+            os.makedirs(PASTA_BASES, exist_ok=True)
+            caminho = os.path.join(PASTA_BASES, b + ".sqlite")
+            nova = not os.path.exists(caminho)
+            aberta = bool(self.base) and os.path.normcase(os.path.abspath(self.base.caminho)) == os.path.normcase(os.path.abspath(caminho))
+            base = self.base if aberta else Base(caminho)
+            try:
+                res = self._worker([p for p, _ in itens], base=base, silencioso=True)
+            finally:
+                if not aberta:
+                    base.fechar()
+            for p, sig in itens:
+                estado[p] = sig
+            try:
+                with open(VIGIA_ESTADO, "w", encoding="utf-8") as f:
+                    json.dump(estado, f, ensure_ascii=False)
+            except Exception:
+                pass
+            partes = []
+            for k, rot in (("novos", "novo(s)"), ("atualizados", "atualizado(s)"), ("fichas", "ficha(s)"), ("duplicados", "já na base"), ("erros", "com erro")):
+                if res.get(k):
+                    partes.append("%d %s" % (res[k], rot))
+            self._vigia_ultima = "%s · %s: %s" % (datetime.now().strftime("%d/%m %H:%M"), b, ", ".join(partes) or "nada novo")
+            self._js("ui.toast(%s)" % json.dumps("Pasta vigiada · base %s%s: %s" % (b, " (criada agora)" if nova else "", ", ".join(partes) or "nada novo"), ensure_ascii=False))
+            if aberta:
+                self._js("api('listar')")
+        if soltos and imediato:
+            self._js("ui.toast(%s)" % json.dumps("%d PDF(s) soltos na pasta mãe foram ignorados: coloque-os na pasta da base." % soltos, ensure_ascii=False))
 
     # ---- petições a partir de modelos .docx ----
     def listar_modelos(self):
@@ -858,6 +1106,7 @@ def main():
     api._janela = janela
 
     def ao_abrir():
+        api._vigia_iniciar()
         arqs = [a for a in sys.argv[1:] if a.lower().endswith(".pdf") or os.path.isdir(a)]
         lista = []
         for a in arqs:

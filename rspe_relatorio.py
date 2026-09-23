@@ -253,9 +253,9 @@ def relatorio_individual(m, caminho, nome_base):
     add("Término da pena", dm("termino"), "", m.get("ext_sit"), m.get("ext_cor"), m.get("ext_hipoteses") if m.get("ext_cor") in ("vermelho", "amarelo") else "")
     for ano, ki, kc in (("2022", "i22", None), ("2024", "i24", "c24"), ("2025", "i25", "c25")):
         add("Indulto %s" % ano, "", "Decreto %s" % {"2022": "11.302/2022", "2024": "12.338/2024", "2025": "12.790/2025"}[ano],
-            m.get(ki + "_full") or m.get(ki), m.get(ki + "_cor"), _atencao(m, ["indulto %s" % ano, "hediondez"]))
+            m.get(ki + "_full") or m.get(ki), m.get(ki + "_cor_rel", m.get(ki + "_cor")), _atencao(m, ["indulto %s" % ano, "hediondez"]))
         if kc:
-            add("Comutação %s" % ano, "", "Decreto %s, art. 13" % {"2024": "12.338/2024", "2025": "12.790/2025"}[ano], m.get(kc + "_full") or m.get(kc), m.get(kc + "_cor"), _atencao(m, ["comutação %s" % ano]))
+            add("Comutação %s" % ano, "", "Decreto %s, art. 13" % {"2024": "12.338/2024", "2025": "12.790/2025"}[ano], m.get(kc + "_full") or m.get(kc), m.get(kc + "_cor_rel", m.get(kc + "_cor")), _atencao(m, ["comutação %s" % ano]))
     if m.get("presc_cor") in ("vermelho", "amarelo"):
         add("Prescrição", "", "CP, arts. 109 a 117", m.get("presc_ppe_full") or m.get("presc_ppe"), m.get("presc_cor"), "")
     el.append(_tabela(ben, [W * 0.17, W * 0.2, W * 0.2, W * 0.16, W * 0.27], st, cores_linha=cores))
@@ -387,8 +387,7 @@ def estatisticas(modelos, hoje=None):
             continue
         mm = re.search(r"\+([\d.,]+)", m.get("fd_remidos") or "")
         rp += float(mm.group(1).replace(",", ".")) if mm else 0
-        mt = re.search(r"≈ (\d+) remidos", m.get("fd_atestar") or "")
-        tr += int(mt.group(1)) if mt else 0
+        tr += int(m.get("fd_sem_n") or 0)
         me = re.search(r"≈ (\d+) dias", m.get("fd_estudo") or "")
         es += int(me.group(1)) if me else 0
     E["rem_pend"], E["rem_trab"], E["rem_est"] = rp, tr, es
@@ -539,10 +538,10 @@ def relatorio_geral(modelos, caminho, nome_base, nominal=True):
                        ("sem remição no RSPE", E["rem_zero"])]))
     if E["com_ficha"]:
         el.append(Spacer(1, 6))
-        el.append(cartoes([("dias atestados sem homologação", "%d" % E["rem_pend"]), ("remidos estimados de trabalho sem atestado", "≈ %d" % E["rem_trab"]),
+        el.append(cartoes([("dias atestados sem homologação", "%d" % E["rem_pend"]), ("períodos de trabalho sem atestado", "%d" % E["rem_trab"]),
                            ("remidos estimados de estudo a requerer", "≈ %d" % E["rem_est"])]))
-        tot = E["rem_pend"] + E["rem_trab"] + E["rem_est"]
-        el.append(Paragraph(_t("Dias de pena potencialmente em jogo pela remição (só assistidos com ficha): ≈ %d." % tot), st["p"]))
+        tot = E["rem_pend"] + E["rem_est"]
+        el.append(Paragraph(_t("Dias de pena em jogo pela remição (atestados sem homologação e estudo; só assistidos com ficha): ≈ %d. Os períodos sem atestado dependem do atestado para serem contados." % tot), st["p"]))
     # 6) Auditoria
     bloco("Alertas da Auditoria (divergências que prejudicam o assistido)", E["alertas"].most_common(10), "#E5484D",
           "A Auditoria só aponta divergência do RSPE que prejudica o assistido; o programa não recalcula progressão, livramento ou término.")

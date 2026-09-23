@@ -120,10 +120,14 @@ def _pena_processo(r, c):
     return sum(rs.pena_para_dias(x.get("pena_imposta")) or 0 for x in mesmos)
 
 
-def _custodia_previa(periodos_det, proc, termo):
-    """Dias de custódia anteriores ao termo inicial ligados a este processo (ou sem processo indicado): detração."""
+def _custodia_previa(periodos_det, proc, termo, exclusiva=False):
+    """Dias de custódia anteriores ao termo inicial ligados a este processo (ou sem processo indicado): detração.
+    exclusiva: só a custódia registrada apenas para este processo (a prisão que alcança vários processos já conta
+    uma vez só na pena unificada; não serve para extinguir um deles isoladamente)."""
     total = 0
     for a, b, motivo, procs in periodos_det:
+        if exclusiva and set(procs or []) != {proc}:
+            continue
         if procs and proc not in procs:
             continue
         f = min(b or termo, termo)
@@ -303,9 +307,9 @@ def analisar(r, hoje=None):
         elif pena_cumprida_toda:
             L["ppe_status"] = "pena cumprida"
             L["ppe_cor"] = "cinza"
-        elif pena and _pena_processo(r, c) and _custodia_previa(periodos_det, c.get("processo_criminal") or "", termo) >= _pena_processo(r, c):
+        elif pena and _pena_processo(r, c) and _custodia_previa(periodos_det, c.get("processo_criminal") or "", termo, exclusiva=True) >= _pena_processo(r, c):
             # a detração abate a pena do PROCESSO (todos os crimes da mesma condenação), não a de um crime isolado
-            _cp = _custodia_previa(periodos_det, c.get("processo_criminal") or "", termo)
+            _cp = _custodia_previa(periodos_det, c.get("processo_criminal") or "", termo, exclusiva=True)
             _pp = _pena_processo(r, c)
             L["ppe_status"] = "Pena cumprida por detração (custódia provisória de %s ≥ pena do processo)" % rs.dias_para_pena(_cp)
             L["ppe_cor"] = "vermelho"
@@ -429,7 +433,7 @@ def analisar(r, hoje=None):
     ppe_amb = [l for l in linhas if l.get("ppe_cor") == "amarelo"]
     resumo_retro = ("Aparente: " + "; ".join(l["crime"] for l in retro)) if retro else ("não configurada" if linhas else "")
     if ppe_red:
-        resumo_ppe = "Aparente: " + "; ".join("%s (%s)" % (l["crime"], l["ppe_previsao"]) for l in ppe_red)
+        resumo_ppe = "Aparente: " + "; ".join(("%s (%s)" % (l["crime"], l["ppe_previsao"])) if l.get("ppe_previsao") else l["crime"] for l in ppe_red)
     elif ppe_amb:
         resumo_ppe = "Iminente: " + "; ".join("%s (%s)" % (l["crime"], l["ppe_previsao"]) for l in ppe_amb)
     elif linhas:

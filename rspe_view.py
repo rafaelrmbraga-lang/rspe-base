@@ -70,6 +70,7 @@ FILTROS = {
         ("b:i24:Sim", "Indulto 2024 · Sim"), ("b:i24:Verificar", "Indulto 2024 · Verificar"),
         ("b:c24:Sim", "Comutação 2024 · Sim"), ("b:c24:Verificar", "Comutação 2024 · Verificar"),
         ("b:i22:Sim", "Indulto 2022 · Sim"), ("b:i22:Verificar", "Indulto 2022 · Verificar"),
+        ("b:*:Fato posterior", "Fato posterior (qualquer benefício)"),
         ("impeditivo", "Crime impeditivo"),
     ],
     "ext": [
@@ -264,6 +265,8 @@ def curto_indulto(txt):
         return "Prejudicada · indulto cabível"
     if base.startswith("excluído"):
         return "Excluído (art. 7º)"
+    if base.startswith("não atinge: pena dos crimes impeditivos"):
+        return "Não atinge · pena dos crimes impeditivos não cumprida (art. 11, p. ú.)" + falta
     m = rs.re.search(r"cumprido (\S+) de ([0-9amd]+)", base)
     if m:
         return "Não atinge (%s de %s)" % (m.group(1), m.group(2)) + falta
@@ -476,10 +479,23 @@ def sim_nao(txt, cor):
     if cor == "azul" or t.startswith("Concedido"):
         return "Concedido", "azul"
     if cor == "verde":
-        return ("Verificar", "amarelo") if "tese" in t else ("Sim", "verde")
+        return "Sim", "verde"  # possível, ainda que por tese (a tese aparece no texto e no cálculo)
     if cor == "amarelo":
         return "Verificar", "amarelo"
-    return ("Não", cor or "cinza") if t else ("", "")
+    if not t:
+        return "", ""
+    # o "Não" diz o motivo: fato posterior, vedado pelo decreto ou não atinge (inclui "não se aplica")
+    if "fato posterior" in t or "fatos posteriores" in t:
+        return "Fato posterior", "cinza"
+    if t.startswith("Vedado"):
+        return "Vedado (art. 1º)", "vermelho"
+    if t.startswith("Excluído"):
+        return "Vedado (art. 7º)", "vermelho"
+    if t.startswith("Indeferido"):
+        return "Indeferido", "vermelho"
+    if t.startswith("Prejudicada"):
+        return "Prejudicada", "cinza"
+    return "Não atinge", "cinza"
 
 
 def presc_curto(txt, ppe=False):
@@ -526,6 +542,7 @@ def simplificar(m):
     m["imp_curto"] = "Sim" if (m.get("imp") or "").startswith("Sim") else ("Não" if m.get("imp") else "")
     for k in ("i22", "i24", "c24", "i25", "c25"):
         m[k + "_txt"] = m.get(k + "_full") or m.get(k, "")
+        m[k + "_cor_rel"] = m.get(k + "_cor", "")  # cor do relatório em PDF (o vermelho da aba é só para a tela)
         m[k], m[k + "_cor"] = sim_nao(m[k + "_txt"], m.get(k + "_cor", ""))
     m["imp_txt"], m["imp"] = m.get("imp_full") or m.get("imp", ""), m["imp_curto"]
     # prescrição
@@ -538,11 +555,16 @@ def simplificar(m):
     return m
 
 
-def modelo(r, baixas=None, ficha=None):
+def modelo(r, baixas=None, ficha=None, manuais=None):
     """Registro extraído -> dict plano com tudo que as abas mostram. baixas: {chave: {obs, data}} da auditoria.
     ficha: Ficha Disciplinar do SIAPEN já lida (rspe_ficha.extrair), se houver."""
     baixas = baixas or {}
     r = dict(r)
+    if ficha:
+        try:
+            rf.complementar_decretos(r, ficha, HOJE)  # XI, XII e XIII do art. 9º pela ficha (saídas, trabalho externo, estudo, curso)
+        except Exception:
+            pass
     # baixa dada pelo usuário no alerta de livramento incerto = livramento confirmado (vale em todas as abas)
     _lc, _dl = rs.livramento_em_curso(r, r.get("_incidentes", []))
     if _lc:
@@ -620,7 +642,7 @@ def modelo(r, baixas=None, ficha=None):
         "presc_linhas": presc["presc_linhas"], "presc_n": len(presc["presc_linhas"]),
         "ind_status": [r.get("indulto_2022_status", ""), r.get("indulto_2024_status", ""), r.get("indulto_2025_status", "")],
         **ext,
-        **rf.comparativo(r, ficha, HOJE),
+        **rf.comparativo(r, ficha, HOJE, conferidos={k for k in baixas if k.startswith("fd:")}, manuais=manuais),
         "ficha_resumo": rf.resumo(ficha) if ficha else "",
         "conduta_ruim": bool(ficha and re.search(r"RESPONDE|REGULAR|\bM[ÁA]\b|P[ÉE]SSIMA|RUIM", (ficha.get("conduta") or "").upper())),
         "conduta": ((ficha.get("conduta") or "não informada na ficha").title().replace("Padic", "PADIC").replace("Ipcg", "IPCG").replace("Otima", "Ótima").replace("Pessima", "Péssima") if ficha else "Sem ficha"),
@@ -696,11 +718,11 @@ PRESC_SUB = [("crime", "Crime", 14), ("pena", "Pena", 8), ("fato", "Fato", 9), (
              ("prazo_ppe", "Prazo PPE", 11), ("ppe_termo", "Termo inicial", 9), ("ppe_status", "Executória", 22)]
 ABAS = [
     {"id": "geral", "titulo": "Geral", "cor": "geral_cor", "legenda": "lapso", "sem_stats": True,
-     "cols": [("nome", "Nome", 22), ("proc", "Nº da execução", 17),
+     "cols": [("nome", "Nome", 22), ("proc", "Nº da execução", 17), ("regime", "Regime", 9),
               ("prog", "Progressão", 15), ("liv", "Livramento", 15), ("termino", "Término", 10)],
      "pilulas": {}},
     {"id": "prog", "titulo": "Progressão", "cor": "prog_cor", "legenda": "lapso",
-     "cols": [("nome", "Nome", 22), ("proc", "Nº da execução", 18),
+     "cols": [("nome", "Nome", 22), ("proc", "Nº da execução", 18), ("regime", "Regime", 9),
               ("prog", "Data da progressão", 14), ("prog_sit", "Situação", 16), ("conduta", "Conduta (ficha)", 12), ("falta", "Falta (12 meses)", 14)],
      "pilulas": {"prog_sit": "prog_cor"}},
     {"id": "liv", "titulo": "Livramento", "cor": "liv_cor", "legenda": "lapso",
