@@ -97,6 +97,17 @@ tr.vermelho td.first::before{background:var(--r-dot)}tr.laranja td.first::before
 .copy{display:inline-flex;align-items:center;gap:6px;cursor:copy;border-radius:6px;padding:1px 4px;margin:-1px -4px}.copy:hover{background:#EEF2FF;color:var(--pri)}.copy svg{width:13px;height:13px;opacity:0;transition:.15s}.copy:hover svg{opacity:1}
 tr.exp td{background:#EEF2FF!important}
 tr.sub td{padding:0 0 0 0;background:#FFFFFF;cursor:default}tr.sub:hover td{background:#FFFFFF}
+.pc-wrap{display:flex;flex-direction:column;gap:12px}
+.pc{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.pc-h{display:flex;align-items:center;gap:10px;padding:11px 14px;background:#F8F9FB;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.pc-h b{font-size:13px}.pc-h .pc-m{color:var(--tx2);font-size:12px;font-weight:400}.pc-h .sp{flex:1}
+.pc table{width:100%;border-collapse:collapse;table-layout:fixed}
+.subwrap .pc th{position:static!important;background:#fff!important;font-size:11px;text-transform:uppercase;letter-spacing:.3px;color:var(--tx2);text-align:left;padding:8px 14px!important;font-weight:600;white-space:normal!important;border-bottom:1px solid var(--line)}
+.subwrap .pc td{padding:10px 14px!important;border-top:0!important;border-bottom:1px solid var(--line)!important;font-size:12.5px!important;vertical-align:top;line-height:1.5;font-weight:400!important;white-space:normal!important;background:#fff!important;color:var(--tx)}
+.subwrap .pc tr:last-child td{border-bottom:0!important}
+.subwrap .pc td:first-child{font-weight:600!important}
+.subwrap .pc tr.fora td{color:var(--tx3)!important}
+.subwrap .pc tr:hover td{background:#fff!important}
 .subwrap{padding:10px 14px 14px 22px;border-left:3px solid var(--pri)}
 .subtab{width:100%;border-collapse:collapse;table-layout:fixed;background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden}
 .subtab th{background:#F8F9FB;color:var(--tx2);font-size:11px;text-transform:uppercase;letter-spacing:.3px;padding:9px 14px;text-align:left;position:static;white-space:normal;overflow:visible}
@@ -285,7 +296,7 @@ const ui = {
     b.cols=a.cols.filter(c=>['nome','proc'].includes(c[0])).concat(pe?[['presc_ppe','Pretensão executória',16],['presc_prox','Prescrição em',10]]:[['presc_retro','Pretensão punitiva',16]]);
     b.cor=pe?'presc_ppe_cor':'presc_retro_cor'; b.legenda=pe?'presc':'presc_pp';
     b.pilulas=pe?{presc_ppe:'presc_ppe_cor'}:{presc_retro:'presc_retro_cor'};
-    const base=a.sub_cols.filter(c=>['crime','pena','fato','denuncia','sentenca','transito'].includes(c[0]));
+    const base=a.sub_cols.filter(c=>['crime','proc_crim','pena','fato','denuncia','sentenca','transito'].includes(c[0]));
     b.sub_cols=base.concat(a.sub_cols.filter(c=>pe?['prazo_ppe','ppe_termo','ppe_status'].includes(c[0]):['prazo_ppp','retro_status'].includes(c[0])));
     b.sub_pilulas=pe?{ppe_status:'ppe_cor'}:{retro_status:'retro_cor'};
     return b; },
@@ -297,7 +308,7 @@ const ui = {
     document.getElementById('tabs').innerHTML=this.dados.abas.map(a=>`<button class="tab ${a.id===this.aba?'on':''}" onclick="ui.irAba('${a.id}')">${a.titulo}${a.cor&&!a.sem_stats?`<span class="cnt">${this.contaCor(a,rs)}</span>`:''}</button>`).join('');
     // resumo
     const st=document.getElementById('stats'); const rot=this.dados.rotulos[spec.legenda];
-    if(!spec.cor || spec.sem_stats){ const nExt=rs.filter(r=>r.geral_cor==='azul').length; st.innerHTML=`<div class="info">${rs.length} assistido(s)${nExt?` · <span class="pill azul">${nExt} com pena extinta registrada</span>`:''}. As abas seguintes mostram cada marco com prazo, cor e falta nos últimos 12 meses.</div>`; }
+    if(!spec.cor || spec.sem_stats){ const nExt=rs.filter(r=>r.geral_cor==='azul').length; st.innerHTML=`<div class="info">${pl(rs.length,'assistido','assistidos')}${nExt?` · <span class="pill azul">${nExt} com pena extinta registrada</span>`:''}. As abas seguintes mostram cada marco com prazo, cor e falta nos últimos 12 meses.</div>`; }
     else{ const cont={}; rs.forEach(r=>{const c=this.cor(r,spec); cont[c]=(cont[c]||0)+1;});
       st.innerHTML=Object.keys(rot).map(c=>`<div class="stat ${c||'neutro'} ${this.filtroCor===c?'on':''}" onclick="ui.filtrarCor('${c}')"><i class="dot"></i><div><b>${cont[c]||0}</b><br><span>${rot[c]}</span></div></div>`).join(''); }
     // legenda
@@ -322,7 +333,7 @@ const ui = {
         if(c[0]==='proc'){ v=`<span class="copy" title="Clique para copiar" onclick="event.stopPropagation();ui.copiar('${esc(String(v))}')">${esc(v)}${svgCopy}</span>`; }
         else if(pk){ const pc = c[0]==='imp' ? (String(v).startsWith('Sim')?'vermelho':'verde') : (r[pk]||''); v = v ? `<span class="pill ${pc||'none'}">${esc(v)}</span>` : (/_sit$/.test(c[0]) ? '' : '<span class="muted">—</span>'); }
         else if(c[0]==='conduta'){ v = r.conduta_ruim ? `<span class="falta">${esc(v)}</span>` : (r.ficha_tem ? esc(v) : `<span class="muted">${esc(v)}</span>`); }
-        else if(c[0]==='falta'){ v = r.falta_sim ? `<span class="falta">${esc(v)}</span>` : `<span class="muted">${esc(v)}</span>`; }
+        else if(c[0]==='falta'){ v = r.falta_sim ? `<span class="falta">Sim</span>` : `<span class="muted">${esc(v)}</span>`; }
         else { v = esc(v).replace('(est.)','<span class="est">(est.)</span>'); if(!v) v='<span class="muted">—</span>'; }
         if(i===0 && spec.expansivel) v=`<span class="chev">▶</span>${v}`;
         return `<td class="${i===0?'first':''} ${NW.has(c[0])?'nw':''} ${pk&&spec.id==='ind'?'pl':''}" title="${esc(String(r[c[0]+'_full']??r[c[0]]??''))}">${v}</td>`; }).join('');
@@ -372,7 +383,7 @@ const ui = {
   // ---- cópia em texto simples (para colar na petição, no Word) ----
   _clips:[],
   clip(t){ t=String(t||''); let i=this._clips.indexOf(t); if(i<0){ this._clips.push(t); i=this._clips.length-1; } return i; },
-  copiarClip(i){ const t=this._clips[i]||''; const done=()=>this.toast('Copiado ('+t.split('\n').length+' linha(s)) - cole no Word'); if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(t).then(done).catch(()=>{ this._copiaFallback(t); done(); }); } else { this._copiaFallback(t); done(); } },
+  copiarClip(i){ const t=this._clips[i]||''; const done=()=>this.toast('Copiado ('+pl(t.split('\n').length,'linha','linhas')+') - cole no Word'); if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(t).then(done).catch(()=>{ this._copiaFallback(t); done(); }); } else { this._copiaFallback(t); done(); } },
   txtLinhas(txt){ const ls=Array.isArray(txt)?txt:String(txt||'').split('\n'); return ls.map(l=>l.trim()).filter(Boolean).map(l=>{ const m=l.match(/^([✓✔✘✗…?⚠])\s*/); if(m){ const ic=/[✓✔]/.test(m[1])?'✓':/[✘✗]/.test(m[1])?'✗':(m[1]==='?'?'?':'!'); l=ic+' '+l.slice(m[0].length); } else l='• '+l; return penaExt(l); }).join('\n'); },
   txtPresc(s,parte){ const cab=[`Prescrição - ${s.crime}${s.proc_crim?' (processo '+s.proc_crim+')':''}`,
       `Pena: ${penaExt(s.pena||'—')} · Fato: ${s.fato||'—'} · Denúncia: ${s.denuncia||'—'} · Sentença: ${s.sentenca||'—'} · Trânsito: ${s.transito||'—'}`];
@@ -413,20 +424,36 @@ const ui = {
         ${s.fundamento?`<div class="ac-f">${penaExt(esc(s.fundamento))}</div>`:''}
         ${s.baixado?`<div class="ac-f">Baixado em ${esc(s.baixa_data)}${s.baixa_obs?' · '+esc(s.baixa_obs):''}</div>`:''}</div>`; };
     const cab=`<div class="ac-top"><div><b>${esc(r.nome)}</b> <span class="muted">· conferência dos números e datas do RSPE (frações, soma das penas, data-base, perda de remidos, reincidência) · ${esc(r.aud_base)}</span></div>
-      <div class="ac-chips">${nA?`<span class="pill vermelho">${nA} alerta(s)</span>`:''}${nV?`<span class="pill amarelo">${nV} a verificar</span>`:''}${!nA&&!nV?'<span class="pill verde">Sem inconsistências</span>':''}
-      ${(ocultos||this.mostrarTudo)?`<span class="mini" onclick="event.stopPropagation();ui.mostrarTudo=!ui.mostrarTudo;ui.render()">${this.mostrarTudo?'ocultar conferências OK':'ver '+ocultos+' conferência(s) OK / informativa(s)'}</span>`:''}
+      <div class="ac-chips">${nA?`<span class="pill vermelho">${nA} ${nA===1?'alerta':'alertas'}</span>`:''}${nV?`<span class="pill amarelo">${nV} ${nV===1?'ponto a verificar':'pontos a verificar'}</span>`:''}${!nA&&!nV?'<span class="pill verde">Sem inconsistências</span>':''}
+      ${(ocultos||this.mostrarTudo)?`<span class="mini" onclick="event.stopPropagation();ui.mostrarTudo=!ui.mostrarTudo;ui.render()">${this.mostrarTudo?'ocultar conferências OK':'ver '+pl(ocultos,'conferência OK / informativa','conferências OK / informativas')}</span>`:''}
       <span class="mini" onclick="event.stopPropagation();ui.copiarClip(${ui.clip(ui.txtAudTodos(r))})">Copiar pendências</span>
       <span class="mini" onclick="event.stopPropagation();ui.abrir('${r.id}')">Abrir ficha completa</span></div></div>`;
     return cab+(rows.length?`<div class="ac-lista">${rows.map(card).join('')}</div>`:'<div class="muted" style="padding:8px 2px">Nenhuma inconsistência pendente.</div>'); },
-  subTabela(r,spec){ if(spec.id==='aud') return this.audCards(r); const cols=spec.sub_cols; let rows=r[spec.sub]||[]; const tot=cols.reduce((s,c)=>s+c[2],0)+6;
-    if(spec.id==='presc'){ const pe=this.prescModo!=='pp'; rows=rows.filter(s=>pe?(s.ppe_cor==='vermelho'||s.ppe_cor==='amarelo'||/^Verificar na ação penal/.test(s.ppe_status||'')):(s.retro_cor==='vermelho'||/^Verificar na ação penal/.test(s.retro_status||''))); }
+  prescCards(r){ const pe=this.prescModo!=='pp'; const todas=(r.presc_linhas||[]);
+    const rel=s=>pe?(s.ppe_cor==='vermelho'||s.ppe_cor==='amarelo'||/^Verificar na ação penal/.test(s.ppe_status||'')):(s.retro_cor==='vermelho'||/^Verificar na ação penal/.test(s.retro_status||''));
+    const grupos={}; todas.filter(rel).forEach(s=>{ const k=s.proc_crim||'não informada'; (grupos[k]=grupos[k]||[]).push(s); });
+    const um=(xs,k)=>{ const v=[...new Set(xs.map(x=>x[k]||''))]; return v.length===1?v[0]:null; };
+    const d=v=>v?esc(v):'—'; const cur=t=>String(t||'').replace(/^Prescrição (executória|da pretensão punitiva|retroativa|intercorrente) aparente/,'Prescrição aparente');
+    const st=pe?'ppe_status':'retro_status', sc=pe?'ppe_cor':'retro_cor';
+    const cards=Object.keys(grupos).sort().map(k=>{ const xs=grupos[k];
+      const pior=xs.find(x=>x[sc]==='vermelho')||xs.find(x=>x[sc]==='amarelo')||xs.find(x=>/^Verificar/.test(x[st]||''))||xs[0];
+      const meta=[['Denúncia',um(xs,'denuncia')],['Sentença',um(xs,'sentenca')],['Trânsito',um(xs,'transito')]].filter(m=>m[1]!==null).map(m=>m[0]+' '+d(m[1])).join(' · ');
+      const cols=pe?[['Crime',24],['Pena',11],['Fato',11],['Prazo PPE',16],['Termo inicial',12],['Executória',26]]:[['Crime',26],['Pena',11],['Fato',11],['Prazo PPP',14],['Retroativa / intercorrente',38]];
+      const lin=xs.map(x=>{ const v=pe?[x.crime,x.pena,x.fato,x.prazo_ppe,x.ppe_termo]:[x.crime,x.pena,x.fato,x.prazo_ppp];
+        return `<tr class="${rel(x)?'':'fora'}">${v.map(y=>`<td>${penaExt(d(y))}</td>`).join('')}<td>${x[st]?`<span class="pill ${x[sc]||'none'}">${esc(cur(x[st]))}</span>`:'—'}</td><td style="white-space:nowrap!important"><span class="why" onclick="event.stopPropagation();const n=this.closest('tr').nextElementSibling;n.style.display=n.style.display==='none'?'':'none'">cálculo</span></td></tr><tr style="display:none"><td colspan="${cols.length+1}">${ui.memoria(x, pe?'pe':'pp')}</td></tr>`; }).join('');
+      return `<div class="pc"><div class="pc-h"><b>Ação penal ${esc(k)}</b><span class="pc-m">${pl(xs.length,'crime','crimes')}${meta?' · '+meta:''}</span><span class="sp"></span>${pior[st]?`<span class="pill ${pior[sc]||'none'}">${esc(cur(pior[st]).split(' em ')[0])}</span>`:''}</div>
+        <table><thead><tr>${cols.map(c=>`<th style="width:${c[1]}%">${c[0]}</th>`).join('')}<th style="width:84px"></th></tr></thead><tbody>${lin}</tbody></table></div>`; }).join('');
+    const abrir=`<div style="text-align:right;margin-top:8px"><span class="mini" onclick="event.stopPropagation();ui.abrir('${r.id}')">Abrir ficha completa</span></div>`;
+    return cards?`<div class="pc-wrap">${cards}</div>${abrir}`:`<div class="muted">Nenhum crime com prescrição ${pe?'executória aparente ou iminente':'da pretensão punitiva aparente'} nem datas a verificar.</div>`; },
+  subTabela(r,spec){ if(spec.id==='aud') return this.audCards(r); if(spec.id==='presc') return this.prescCards(r); const cols=spec.sub_cols; let rows=r[spec.sub]||[]; const tot=cols.reduce((s,c)=>s+c[2],0)+6;
+    if(spec.id==='presc'){ const pe=this.prescModo!=='pp'; rows=[...rows].sort((x,y)=>String(x.proc_crim||'').localeCompare(String(y.proc_crim||''))); rows=rows.filter(s=>pe?(s.ppe_cor==='vermelho'||s.ppe_cor==='amarelo'||/^Verificar na ação penal/.test(s.ppe_status||'')):(s.retro_cor==='vermelho'||/^Verificar na ação penal/.test(s.retro_status||''))); }
     let ocultos=0; if(spec.id==='aud' && !this.mostrarTudo){ const all=rows; rows=all.filter(s=>s.baixado||(s.nivel!=='info'&&s.nivel!=='ok')); ocultos=all.length-rows.length; }
     const cg='';
     const calc=!!spec.sub_calc, baixa=!!spec.sub_baixa; const head=`<tr>${cols.map(c=>`<th style="width:${(100*c[2]/tot).toFixed(1)}%">${c[1]}</th>`).join('')}${(calc||baixa)?'<th></th>':''}</tr>`;
     const body=rows.map((s,i)=>{ const tds=cols.map(c=>{ let v=s[c[0]]??''; const pk=spec.sub_pilulas[c[0]];
         if(pk){ const pc=s[pk]||''; v=v?`<span class="pill ${pc||'none'}">${esc(v)}</span>`:'—'; } else if(spec.id==='aud' && (c[0]==='detalhe'||c[0]==='fundamento') && v){ v=String(v).split(/(?<=[.;])\s+(?=[A-ZÁÉÍÓÚ(])/).map(x=>`<div class="par">${penaExt(esc(x))}</div>`).join(''); }
         else v=penaExt(esc(v))||'<span class="muted">—</span>';
-        return `<td${s[c[0]+'_full']?` title="${esc(s[c[0]+'_full'])}"`:''}>${v}</td>`; }).join('');
+        return `<td${c[0]==='proc_crim'?' style="white-space:nowrap"':''}${s[c[0]+'_full']?` title="${esc(s[c[0]+'_full'])}"`:''}>${v}</td>`; }).join('');
       const det=(s.retro_detalhe?'PRETENSÃO PUNITIVA\n'+s.retro_detalhe+'\n\n':'')+(s.ppe_detalhe?'PRETENSÃO EXECUTÓRIA\n'+s.ppe_detalhe:'')+(s.avisos&&s.avisos.length?'\n\nAVISOS\n'+s.avisos.join('\n'):'');
       if(baixa){ const bx = s.baixado ? `<span class="mini" onclick="event.stopPropagation();ui.reabrir('${r.id}','${s.chave}')">Reabrir</span>` : (s.nivel==='ok' ? '' : `<span class="mini" onclick="event.stopPropagation();ui.darBaixa('${r.id}','${s.chave}','${esc(s.titulo).replace(/'/g,'&#39;')}')">Dar baixa</span>`);
         const obs = s.baixado ? `<div class="muted" style="font-size:11.5px;margin-top:3px">baixado em ${esc(s.baixa_data)}${s.baixa_obs?' · '+esc(s.baixa_obs):''}</div>` : '';
@@ -471,7 +498,7 @@ const ui = {
   async reabrir(id, chave){ await api('reabrir_alerta', id, chave); this.aberto=id; this.render(); },
   copiar(t){ const done=()=>this.toast('Copiado: '+t); if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(t).then(done).catch(()=>{ this._copiaFallback(t); done(); }); } else { this._copiaFallback(t); done(); } },
   _copiaFallback(t){ const ta=document.createElement('textarea'); ta.value=t; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(e){} ta.remove(); },
-  contaCor(a,rs){ return rs.filter(r=>r[a.cor]==='vermelho'||r[a.cor]==='vencido').length || ''; },
+  contaCor(a,rs){ if(a.id==='ind') return rs.filter(r=>r.ind_sim).length || ''; return rs.filter(r=>r[a.cor]==='vermelho'||r[a.cor]==='vencido').length || ''; },
   irAba(id){ this.aba=id; this.filtroCor=null; this.filtroSel='todas'; this.aberto=null; this.render(); },
   filtrarCor(c){ this.filtroCor = this.filtroCor===c ? null : c; this.render(); },
   filtrar(){ const q=document.getElementById('q'); this.filtro=q.value.trim().toLowerCase(); document.getElementById('search').classList.toggle('has',!!this.filtro); this.render(); },
@@ -482,8 +509,8 @@ const ui = {
   toast(t){ const e=document.getElementById('toast'); e.textContent=t; e.classList.add('on'); clearTimeout(this._t); this._t=setTimeout(()=>e.classList.remove('on'),3500); },
   progresso(n,tot){ const p=document.getElementById('prog'); p.classList.add('on'); document.getElementById('progTxt').textContent=`Importando ${n} de ${tot}`; document.getElementById('progFill').style.width=(100*n/tot)+'%'; },
   importado(r){ document.getElementById('prog').classList.remove('on'); api('listar');
-    const partes=[]; if(r.novos) partes.push(`${r.novos} novo(s)`); if(r.atualizados) partes.push(`${r.atualizados} atualizado(s) por RSPE mais recente`);
-    if(r.duplicados) partes.push(`${r.duplicados} duplicado(s) ignorado(s)`); if(r.antigos) partes.push(`${r.antigos} mais antigo(s) ignorado(s)`); if(r.erros) partes.push(`${r.erros} falha(s)`); if(r.fichas) partes.push(`${r.fichas} ficha(s) disciplinar(es)`); if(r.incompletos) partes.push(`${r.incompletos} com dados incompletos (ver Auditoria)`);
+    const partes=[]; if(r.novos) partes.push(pl(r.novos,'novo','novos')); if(r.atualizados) partes.push(pl(r.atualizados,'atualizado','atualizados')+' por RSPE mais recente');
+    if(r.duplicados) partes.push(pl(r.duplicados,'duplicado ignorado','duplicados ignorados')); if(r.antigos) partes.push(pl(r.antigos,'mais antigo ignorado','mais antigos ignorados')); if(r.erros) partes.push(pl(r.erros,'falha','falhas')); if(r.fichas) partes.push(pl(r.fichas,'ficha disciplinar','fichas disciplinares')); if(r.incompletos) partes.push(`${r.incompletos} com dados incompletos (ver Auditoria)`);
     if(!partes.length) partes.push('nada importado');
     if(r.avisos && r.avisos.length){ this.modalAvisos(partes.join(' · '), r.avisos); } else { this.toast('Importação: '+partes.join(' · ')); } },
   modalAvisos(titulo, avisos){ document.getElementById('modal').innerHTML=`<div class="box" style="width:640px"><h2>Importação concluída</h2><p>${esc(titulo)}</p>
@@ -590,14 +617,14 @@ const ui = {
   async confirmarRemocao(id){ if(confirm('Remover '+id+' da base?')){ this.fecharDrawer(); await api('remover',id); } },
   // exportação
   modalExportar(fmt){ const abas=this.dados.abas; const n=this.visiveis().length;
-    document.getElementById('modal').innerHTML=`<div class="box"><h2>Exportar ${fmt==='pdf'?'PDF':'Excel'}</h2><p>${n} assistido(s)${this.filtro?' filtrado(s) pela busca':''}. Marque as abas que devem sair no arquivo.</p>
+    document.getElementById('modal').innerHTML=`<div class="box"><h2>Exportar ${fmt==='pdf'?'PDF':'Excel'}</h2><p>${pl(n,'assistido','assistidos')}${this.filtro?(n===1?' filtrado':' filtrados')+' pela busca':''}. Marque as abas que devem sair no arquivo.</p>
       ${abas.map(a=>`<label class="chk"><input type="checkbox" value="${a.id}" ${fmt==='pdf'?(a.id===this.aba?'checked':''):'checked'}>${a.titulo}</label>`).join('')}
       ${fmt==='xlsx'?`<label class="chk"><input type="checkbox" value="completo" checked>Completo (todos os campos extraídos)</label>`:''}
       <div class="acts"><button class="btn" onclick="ui.fecharModal()">Cancelar</button><button class="btn pri" onclick="ui.exportar('${fmt}')">Exportar</button></div></div>`;
     document.getElementById('modal').classList.add('on'); },
   modalRelatorios(){ const vis=this.visiveis(), n=vis.length;
     const lista=vis.map(r=>`<label class="chk relitem" style="padding:5px 9px;font-size:12.5px" data-b="${esc((r.nome+' '+r.proc).toLowerCase())}"><input type="checkbox" class="relp" value="${esc(r.id)}" checked onchange="ui.relConta()"><span>${esc(r.nome)} <span class="muted" style="font-size:11.5px">· ${esc(r.proc)}</span></span></label>`).join('');
-    document.getElementById('modal').innerHTML=`<div class="box" style="width:520px"><h2>Relatórios em PDF</h2><p>${n} assistido(s)${this.filtro?' filtrado(s) pela busca':''}. Os arquivos vão para uma pasta nova com a data e a hora.</p>
+    document.getElementById('modal').innerHTML=`<div class="box" style="width:520px"><h2>Relatórios em PDF</h2><p>${pl(n,'assistido','assistidos')}${this.filtro?(n===1?' filtrado':' filtrados')+' pela busca':''}. Os arquivos vão para uma pasta nova com a data e a hora.</p>
       <label class="chk"><input type="checkbox" id="rel_ind" checked onchange="ui.relLista()">Relatórios individuais (um PDF por assistido)</label>
       <div id="rel_sel" style="margin:0 0 6px 26px">
         <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
@@ -632,11 +659,11 @@ const ui = {
     this.fecharModal(); const vis=this.visiveis().map(r=>r.id); const r=await API().exportar(fmt, ids, vis);
     if(r && r.caminho){ this.toast('Exportado: '+r.caminho); } else if(r && r.erro){ this.toast(r.erro); } },
   async modelos(){ const info=await API().modelos_info(); if(!info){ return; }
-    const lista=(info.modelos||[]).map(m=>`<div class="chk" style="justify-content:space-between;cursor:default"><span><b>${esc(m.nome.replace(/\.docx$/i,''))}</b> <span class="muted">· ${esc(m.modificado)} · ${m.campos} campo(s)${m.desconhecidos&&m.desconhecidos.length?' · <span style="color:var(--r-tx)">campos desconhecidos: '+esc(m.desconhecidos.join(', '))+'</span>':''}</span></span>
+    const lista=(info.modelos||[]).map(m=>`<div class="chk" style="justify-content:space-between;cursor:default"><span><b>${esc(m.nome.replace(/\.docx$/i,''))}</b> <span class="muted">· ${esc(m.modificado)} · ${pl(m.campos,'campo','campos')}${m.desconhecidos&&m.desconhecidos.length?' · <span style="color:var(--r-tx)">campos desconhecidos: '+esc(m.desconhecidos.join(', '))+'</span>':''}</span></span>
         <span style="white-space:nowrap"><span class="mini" onclick="ui.modeloAcao('abrir','${esc(m.nome)}')" title="Abre no Word para editar; salve e feche">Editar</span> <span class="mini" onclick="ui.modeloAcao('substituir','${esc(m.nome)}')">Substituir</span> <span class="mini" onclick="ui.modeloAcao('renomear','${esc(m.nome)}')">Renomear</span> <span class="mini" style="color:var(--r-tx)" onclick="ui.modeloAcao('excluir','${esc(m.nome)}')">Excluir</span></span></div>`).join('')||'<p class="muted">Nenhum modelo ainda.</p>';
     document.getElementById('modal').innerHTML=`<div class="box" style="width:720px;max-height:calc(100vh - 40px);display:flex;flex-direction:column"><h2>Modelos de petição (.docx)</h2>
       <p class="muted" style="margin:0 0 8px">Pasta: ${esc(info.pasta)}. Escreva os campos no Word como {{nome}}, {{processo}}, {{vara}}… (lista completa no CAMPOS.txt ou em "Ver campos").</p>
-      <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap"><button class="btn pri" onclick="ui.modeloAcao('adicionar')">Adicionar modelo(s)…</button><button class="btn" onclick="ui.modeloAcao('novo')">Criar modelo em branco…</button><button class="btn" onclick="ui.modeloAcao('pasta')">Abrir pasta</button><button class="btn" onclick="ui.modeloAcao('campos')">Ver campos</button><button class="btn" onclick="ui.modeloAcao('restaurar')" title="Recoloca os modelos da unidade que foram excluídos, sem alterar os existentes">Restaurar modelos da unidade</button></div>
+      <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap"><button class="btn pri" onclick="ui.modeloAcao('adicionar')">Adicionar modelos…</button><button class="btn" onclick="ui.modeloAcao('novo')">Criar modelo em branco…</button><button class="btn" onclick="ui.modeloAcao('pasta')">Abrir pasta</button><button class="btn" onclick="ui.modeloAcao('campos')">Ver campos</button><button class="btn" onclick="ui.modeloAcao('restaurar')" title="Recoloca os modelos da unidade que foram excluídos, sem alterar os existentes">Restaurar modelos da unidade</button></div>
       <div class="help" style="flex:1;min-height:100px;overflow:auto">${lista}</div>
       <div class="acts"><button class="btn pri" onclick="ui.fecharModal()">Fechar</button></div></div>`; document.getElementById('modal').classList.add('on'); },
   async modalVigia(r){ r=r||await API().vigia_info(); if(!r) return; if(r.msg) this.toast(r.msg); if(r.erro) this.toast(r.erro);
@@ -685,6 +712,7 @@ const ui = {
 };
 function curtoInd(t){ return (t||'').split(' | ')[0]; }
 function penaExt(t){ return String(t).replace(/(-?)\b(\d+)a(\d+)m(\d+)d\b/g,(m0,sg,a,mm,d)=>{ a=+a; mm=+mm; d=+d; const p=[]; if(a)p.push(a+(a>1?' anos':' ano')); if(mm)p.push(mm+(mm>1?' meses':' mês')); if(d)p.push(d+(d>1?' dias':' dia')); if(!p.length) return '0 dia'; return sg+(p.length===1?p[0]:p.slice(0,-1).join(', ')+' e '+p[p.length-1]); }); }
+function pl(n,a,b){ return n+' '+(n===1?a:b); }
 function esc(s){ return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 function cmp(a,b){ const da=dt(a), db=dt(b); if(da&&db) return da-db; if(da) return -1; if(db) return 1; return String(a??'').localeCompare(String(b??''),'pt'); }
 function dt(v){ const m=/^(\d{2})\/(\d{2})\/(\d{4})/.exec(String(v??'')); return m? new Date(+m[3],+m[2]-1,+m[1]).getTime():null; }

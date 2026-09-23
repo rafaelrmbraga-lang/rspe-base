@@ -1,4 +1,4 @@
-RSPE BASE - SEEU  v6.15.5 (programa em abas)
+RSPE BASE - SEEU  v6.15.9 (programa em abas)
 =========================================
 
 O QUE FAZ
@@ -234,6 +234,50 @@ PRESUNÇÃO DE HIPOSSUFICIÊNCIA (Defensoria)
   do art. 9º e sem bloqueio do livramento (CP, art. 83, IV). Tráfico
   privilegiado não é hediondo nem impeditivo (STF PSV 125, Tema 1400; STJ
   Tema 1336). Detalhes e fontes: "Criterios_de_analise_por_beneficio.pdf".
+
+v6.15.9
+  - Auditoria: resultado só com o que existe, no singular ou plural certo
+    ("1 alerta", "2 pontos a verificar", "1 alerta · 2 pontos a verificar",
+    "Sem inconsistências"). Saíram "Guia demanda atenção" e "pendentes";
+    o cartão do topo passou a "Com alertas".
+  - Textos com "(s)" (assistido(s), crime(s), saída(s), dia(s) etc.)
+    passaram a sair no singular ou no plural conforme a quantidade.
+
+v6.15.8
+  - Prescrição: ao abrir o assistido, um card por ação penal (número do
+    processo, quantidade de crimes, denúncia, sentença e trânsito no
+    cabeçalho). Só aparecem os crimes com prescrição aparente, iminente ou
+    datas a verificar; o que não prescreveu não é mostrado. O texto ficou
+    "Prescrição aparente em dd/mm/aaaa". O "cálculo" de cada crime abre
+    dentro do card.
+
+v6.15.7
+  - Prescrição: nova subcoluna "Ação penal" (número do processo criminal)
+    ao lado do crime; os crimes aparecem ordenados por ação penal.
+  - Indulto 2022: vias de fato, ameaça, lesão, dano, violação de domicílio
+    e crimes contra a honra sem vara nem sinal de violência doméstica no
+    RSPE, quando a mesma execução tem condenação por violência doméstica,
+    vão para "Verificar" com o texto "confirmar se houve violência
+    doméstica (art. 7º, II)" - o programa não presume nem afasta.
+
+v6.15.6
+  - Aba Indulto / Comutação: o número ao lado do nome da aba passa a contar
+    os assistidos com algum benefício possível (antes contava impeditivos).
+  - Falta grave nos 12 meses (art. 6º): o indulto ou a comutação que seria
+    "Sim" aparece como "Falta", em vermelho; o detalhe fica na ficha.
+    Novo filtro "Falta nos 12 meses".
+  - Progressão e Livramento: a coluna de falta mostra só "Sim"; as
+    informações completas ficam na ficha do assistido.
+  - Inciso IV (anos ininterruptos): se dentro do período contínuo houver
+    nova prisão sem interrupção registrada, ou incidente de fuga, evasão,
+    abandono ou recaptura, o inciso vai para "Verificar" e diz o que conferir.
+  - Decreto 2022, art. 9º: trânsito posterior ao decreto sem registro de
+    recurso da acusação não impede o "Sim" (o indulto cabe sem trânsito);
+    fica em "Verificar" só se o trânsito para a acusação também for
+    posterior ao decreto.
+  - Decreto 2022, art. 11: condenação por crime do art. 7º com sentença
+    posterior a 25/12/2022 não entra na soma do decreto e não trava o
+    indulto dos demais crimes.
 
 v6.15.5  (revisão pelos textos integrais dos Decretos 11.302/2022, 12.338/2024
          e 12.790/2025 - cópias na pasta "decretos")

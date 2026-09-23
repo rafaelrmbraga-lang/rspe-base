@@ -32,7 +32,7 @@ import rspe_regras as rg
 import rspe_relatorio as rrel
 
 APP = "RSPE Base"
-VERSAO = "6.15.5"
+VERSAO = "6.15.9"
 
 
 def pasta_app():
@@ -83,7 +83,7 @@ fuga/evasão, sanção. "Não consta" não garante ausência de falta: conferir 
 Art. 1º (mesmo rol nos dois decretos): hediondos/equiparados, tortura, lavagem (&gt;4 anos), ORCRIM e milícia, terrorismo, racismo,
 escravidão/tráfico de pessoas, genocídio, sistema financeiro (&gt;4 anos), licitações (&gt;4 anos), crimes sexuais (215, 216-A, 217-A,
 218 a 218-C), administração pública 312-319 e 333 (&gt;4 anos), ECA 239-244-B, ambientais, Estado Democrático, abuso de autoridade,
-violência contra a mulher, tráfico (33 caput/§1º, 34-37, 39). Art. 6º: falta grave nos 12 meses antes de 25/12.
+violência contra a mulher, tráfico (33 caput/§1º, 34-37, 39). Art. 6º: falta grave nos 12 meses antes de 25/12 - o benefício que seria Sim aparece como "Falta" (vermelho), com o detalhe na ficha.
 Art. 9º, testado inciso por inciso com a situação em 25/12 de cada ano (regime, pena cumprida, remanescente, reincidência):
 I, II, III (frações por faixa de pena), IV (15/20 anos ininterruptos; a remição do período conta, art. 5º) e V (20/25 anos),
 VI (semiaberto ininterrupto), VII (regime aberto, PRD ou sursis, 1/6 ou 1/5),
@@ -199,7 +199,7 @@ a partir de 25/03/2026 para hediondos; Lei 15.402/2026 a partir de 08/05/2026), 
 no RSPE (CP, art. 63), data-base e regressões (LEP, art. 112, § 6º), idade (art. 115 CP; § 2º dos decretos), marcos vencidos sem
 decisão, prescrição aparente e indulto/comutação possível sem incidente. Os pontos têm quatro níveis: <b>Alerta</b> (divergência com efeito concreto para o apenado: fração, hediondez, marco vencido,
 prescrição, indulto, remição, falta), <b>Verificar</b> (depende de dado que o RSPE não traz, mas pode ter efeito), <b>Info</b>
-(registro sem efeito prático - fica oculto por padrão; "mostrar informativos") e <b>OK</b>. "Guia demanda atenção" = há ao menos um alerta objetivo;
+(registro sem efeito prático - fica oculto por padrão; "mostrar informativos") e <b>OK</b>. "Com alertas" = há ao menos um alerta objetivo;
 "a verificar" = depende de dado que o RSPE não traz. Nada é afirmado como erro: cada item traz o fundamento para conferência.
 <b>Dar baixa</b>: cada ponto pode ser baixado (com observação) quando já foi tratado ou não se aplica; ele sai da contagem,
 fica registrado na base com data e pode ser reaberto. A baixa é por processo e por ponto, e sobrevive à reimportação do RSPE.

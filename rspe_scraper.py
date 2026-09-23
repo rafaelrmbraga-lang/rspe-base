@@ -53,6 +53,11 @@ RE_PENA_AMD = re.compile(r"(\d+)a(\d+)m(\d+)d")
 RE_PENA_EXT = re.compile(r"(\d+)\s*ano\(s\),\s*(\d+)\s*m[êe]s\(es\)\s*e\s*(\d+)\s*dia\(s\)")
 
 
+def pl(n, um, varios):
+    """'1 dia' / '3 dias' (sem o '(s)')."""
+    return "%d %s" % (n, um if n == 1 else varios)
+
+
 def to_date(s):
     try:
         return datetime.strptime(s.strip(), "%d/%m/%Y").date()
@@ -1175,6 +1180,27 @@ def pena_maxima_abstrata(c):
     return anos * DIAS_ANO + meses * 30 + dias
 
 
+TIPOS_VD_COMUNS = {("3688", "21"), ("2848", "147"), ("2848", "129"), ("2848", "150"), ("2848", "163"), ("2848", "140"), ("2848", "139"), ("2848", "138")}
+
+
+def vd_contexto(c, ativos):
+    """Crime típico de violência doméstica (vias de fato, ameaça, lesão, dano, crimes contra a honra etc.) sem sinal
+    próprio no RSPE, mas na mesma execução há condenação por violência doméstica: não se presume nem se afasta -
+    devolve o motivo para conferir; senão None."""
+    if violencia_domestica(c):
+        return None
+    lei = num_lei(c.get("lei")) or "2848"
+    if "PENAL" in (c.get("lei") or "").upper() and "CONTRAVEN" not in (c.get("lei") or "").upper():
+        lei = "2848"
+    if (lei, num_art(c.get("artigo"))) not in TIPOS_VD_COMUNS:
+        return None
+    outros = [o for o in ativos if o is not c and (violencia_domestica(o) or ("", ""))[0] == "sim"]
+    if not outros:
+        return None
+    return "a execução tem condenação por violência doméstica (%s, proc. %s) e o RSPE não informa a vara nem a vítima deste processo (%s)" % (
+        crimes_curto(outros[:1]), outros[0].get("processo_criminal") or "?", c.get("processo_criminal") or "?")
+
+
 def exclusao_art7_2022(c):
     """Devolve texto do inciso do art. 7º do Decreto 11.302/2022 que exclui o crime, ou None."""
     lei, art = num_lei(c.get("lei")), num_art(c.get("artigo"))
@@ -1249,6 +1275,7 @@ def analise_decreto_2022(campos, crimes, eventos, incidentes):
     out = {}
     ativos = [c for c in crimes if not c.get("extinto", "").upper().startswith("S")]
     linhas, alcanca, verificar = [], [], []
+    vd_conf = []
     for c in ativos:
         nome = crimes_curto([c]) or ("art. %s %s" % (num_art(c.get("artigo")) or "?", lei_curta(c.get("lei"))))
         fato = to_date(c.get("data_infracao") or "")
@@ -1257,6 +1284,13 @@ def analise_decreto_2022(campos, crimes, eventos, incidentes):
             linhas.append("✗ %s: excluído pelo art. 7º, %s" % (nome, excl))
             continue
         pm = pena_maxima_abstrata(c)
+        vdc = vd_contexto(c, ativos)
+        if vdc and pm is not None and pm <= 5 * DIAS_ANO and not (fato and fato > ref):
+            linhas.append("? %s: pena máxima em abstrato %s ≤ 5 anos (art. 5º), mas %s - confirmar se houve violência doméstica e familiar contra a mulher (art. 7º, II e III, c)" % (
+                nome, dias_para_pena(pm), vdc))
+            verificar.append(nome)
+            vd_conf.append(nome)
+            continue
         if pm is None:
             linhas.append("? %s: pena máxima em abstrato não lida do RSPE - conferir o tipo penal" % nome)
             verificar.append(nome)
@@ -1271,8 +1305,12 @@ def analise_decreto_2022(campos, crimes, eventos, incidentes):
                 # art. 9º: cabe sem trânsito para a defesa; a acusação já não recorria em 25/12/2022 (art. 9º, p. ú.)
                 linhas.append("✓ %s: pena máxima em abstrato %s ≤ 5 anos (art. 5º) - trânsito para a acusação em %s, antes do decreto (art. 9º)" % (nome, dias_para_pena(pm), fmt(tr_mp)))
                 alcanca.append(nome)
+            elif tr and tr > ref and not tr_mp:
+                # art. 9º: o indulto cabe sem trânsito em julgado; o RSPE não registra recurso da acusação (p. ú.)
+                linhas.append("✓ %s: pena máxima em abstrato %s ≤ 5 anos (art. 5º) - trânsito em %s, depois do decreto: o art. 9º admite o indulto sem trânsito e o RSPE não registra recurso da acusação" % (nome, dias_para_pena(pm), fmt(tr)))
+                alcanca.append(nome)
             elif tr and tr > ref:
-                linhas.append("? %s: pena máxima em abstrato %s ≤ 5 anos (art. 5º), mas trânsito em %s, depois de 25/12/2022 - conferir se havia recurso da acusação após o 2º grau nessa data (art. 9º, p. ú.)" % (nome, dias_para_pena(pm), fmt(tr)))
+                linhas.append("? %s: pena máxima em abstrato %s ≤ 5 anos (art. 5º), mas trânsito em %s, depois de 25/12/2022, e trânsito para a acusação em %s - conferir se havia recurso da acusação após o 2º grau nessa data (art. 9º, p. ú.)" % (nome, dias_para_pena(pm), fmt(tr), fmt(tr_mp)))
                 verificar.append(nome)
             else:
                 linhas.append("✓ %s: pena máxima em abstrato %s ≤ 5 anos (art. 5º)%s" % (nome, dias_para_pena(pm), " - tipo cortado no RSPE, valor da tabela da base jurídica" if c.get("_pena_max_fonte") else ""))
@@ -1316,13 +1354,20 @@ def analise_decreto_2022(campos, crimes, eventos, incidentes):
         out["indulto_2022"] = "POSSÍVEL: art. 5º (todos os crimes com pena máxima ≤ 5 anos)"
         out["indulto_2022_status"] = "possivel"
     elif alcanca:
-        _fora7 = [c for c in ativos if exclusao_art7_2022(c)]
+        # art. 11: só entram na soma as penas existentes em 25/12/2022 - condenação por crime excluído posterior ao decreto
+        # não trava o indulto (o p. ú. fala do concurso na data)
+        _fora7_pos = [c for c in ativos if exclusao_art7_2022(c) and (to_date(c.get("data_sentenca") or "") or date.min) > ref]
+        _fora7 = [c for c in ativos if exclusao_art7_2022(c) and c not in _fora7_pos]
+        if _fora7_pos:
+            linhas.append("Obs.: art. 11 - condenação por crime excluído posterior ao decreto (%s) não entra na soma de 25/12/2022 e não impede o indulto dos demais." % "; ".join(
+                "%s, sentença de %s" % (crimes_curto([c]), c.get("data_sentenca")) for c in _fora7_pos))
         if not _fora7:
             # art. 5º, p. ú.: em concurso, cada crime é avaliado isoladamente; o crime com pena máxima > 5 anos só não é alcançado
-            _acima = len(ativos) - len(alcanca) - len(verificar)
-            out["indulto_2022"] = "POSSÍVEL: art. 5º para %s%s%s" % (
+            _acima = len([c for c in ativos if not exclusao_art7_2022(c)]) - len(alcanca) - len(verificar)
+            out["indulto_2022"] = "POSSÍVEL: art. 5º para %s%s%s%s" % (
                 resumir_nomes(alcanca),
                 " (os crimes com pena máxima acima de 5 anos não são alcançados)" if _acima > 0 else "",
+                " (crimes do art. 7º condenados depois do decreto não entram na soma do art. 11)" if _fora7_pos else "",
                 (" | conferir %s" % resumir_nomes(verificar)) if verificar else "")
             out["indulto_2022_status"] = "possivel"
         else:
@@ -1357,7 +1402,7 @@ def analise_decreto_2022(campos, crimes, eventos, incidentes):
                     resumir_nomes(alcanca), "; ".join("proc. %s" % (c.get("processo_criminal") or "?") for c in _fora7))
                 out["indulto_2022_status"] = "verificar"
     elif verificar:
-        out["indulto_2022"] = "A VERIFICAR: %s" % resumir_nomes(verificar)
+        out["indulto_2022"] = "A VERIFICAR: %s%s" % (resumir_nomes(verificar), " - confirmar se houve violência doméstica (art. 7º, II)" if vd_conf else "")
         out["indulto_2022_status"] = "verificar"
     else:
         if all(to_date(c.get("data_infracao") or "") and to_date(c.get("data_infracao")) > ref for c in ativos):
@@ -1371,13 +1416,15 @@ def analise_decreto_2022(campos, crimes, eventos, incidentes):
     ex = ["Decreto 11.302/2022 · data de referência 25/12/2022. Art. 5º: indulto para o crime com pena máxima cominada de até 5 anos; "
           "em concurso, cada crime conta isoladamente. Não exige tempo cumprido nem regime. Havendo crime excluído (art. 7º), o crime não impeditivo só é indultado depois de cumprida a pena do impeditivo (art. 11, p. ú.; STJ, 3ª Seção, AgRg no HC 890.929/SE)."]
     for l in linhas:
-        if re.search(r"saúde|^Obs", l):
+        if re.search(r"saúde|^Obs\.: art\. 9º", l):
             continue
         l2 = l.replace("tipo cortado no RSPE, valor da tabela da base jurídica", "o RSPE não trouxe a pena cominada; valor da tabela do programa")
         l2 = re.sub(r"^✓ (.+?): pena máxima em abstrato (\S+) ≤ 5 anos \(art\. 5º\)", r"✔ \1: pena máxima cominada de \2, dentro do limite de 5 anos", l2)
         l2 = re.sub(r"^✗ (.+?): pena máxima em abstrato (\S+) supera 5 anos", r"✘ \1: pena máxima cominada de \2, acima de 5 anos", l2)
-        l2 = re.sub(r"^\? (.+?): pena máxima em abstrato (\S+) ≤ 5 anos \(art\. 5º\), mas trânsito em (\S+), depois de 25/12/2022 - ",
-                    r"? \1: pena máxima cominada de \2 (dentro do limite), mas o trânsito é de \3, posterior ao decreto; o art. 9º admite o indulto sem trânsito - ", l2)
+        l2 = re.sub(r"^\? (.+?): pena máxima em abstrato (\S+) ≤ 5 anos \(art\. 5º\), mas trânsito em (\S+), depois de 25/12/2022, e trânsito para a acusação em (\S+) - ",
+                    r"? \1: pena máxima cominada de \2 (dentro do limite), mas o trânsito é de \3 e o da acusação de \4, posteriores ao decreto; o art. 9º admite o indulto sem trânsito, salvo recurso da acusação após o 2º grau - ", l2)
+        l2 = re.sub(r"^✓ (.+?): pena máxima em abstrato (\S+) ≤ 5 anos \(art\. 5º\) - trânsito em",
+                    r"✔ \1: pena máxima cominada de \2, dentro do limite de 5 anos; trânsito em", l2)
         l2 = re.sub(r"^✓ (.+?): pena máxima em abstrato (\S+) ≤ 5 anos \(art\. 5º\) - trânsito para a acusação",
                     r"✔ \1: pena máxima cominada de \2, dentro do limite de 5 anos; trânsito para a acusação", l2)
         ex.append(l2.replace("✓", "✔").replace("✗", "✘"))
@@ -1839,8 +1886,27 @@ def analise_decretos(campos, crimes, eventos, incidentes, hoje):
             _pc = max(((ini, (fim if (fim and fim <= ref) else ref)) for ini, fim in periodos if ini <= ref), key=lambda x: (x[1] - x[0]).days, default=None)
             rem_cont = sum(n for d, n in remicoes if _pc and d and _pc[0] <= d <= _pc[1])
             req = (A("IV", "anos_ininterruptos_reincidente", 20) if reinc else A("IV", "anos_ininterruptos_primario", 15)) * DIAS_ANO * red
-            (possiveis if continuo + rem_cont >= req else nao).append("IV: %s anos ininterruptos (tem %s%s)" % (
-                int(round(req / DIAS_ANO)), dias_para_pena(continuo + rem_cont), (" = %s de custódia contínua + %d dias remidos, art. 5º" % (dias_para_pena(continuo), rem_cont)) if rem_cont else ""))
+            # indícios de interrupção dentro do período contínuo (o SEEU só separa os períodos quando registra INTERRUPÇÃO):
+            # nova prisão/recaptura sem interrupção registrada, ou incidente de fuga/evasão/não retorno
+            sinais_iv = []
+            if _pc:
+                for e in eventos:
+                    d_e = to_date(e.get("data") or "")
+                    if d_e and _pc[0] < d_e <= _pc[1] and "INTERRUP" not in (e.get("tipo") or "").upper():
+                        sinais_iv.append("nova prisão (%s) em %s" % ((e.get("motivo") or e.get("tipo") or "").strip().lower(), fmt(d_e)))
+                for i in incidentes:
+                    t_i = ((i.get("tipo") or "") + " " + (i.get("complemento") or "")).upper()
+                    d_i = to_date(i.get("data_referencia") or i.get("data_decisao") or "")
+                    if d_i and _pc[0] <= d_i <= _pc[1] and re.search(r"FUGA|EVAS|ABANDONO|N[ÃA]O RETORNO|RECAPTURA", t_i):
+                        sinais_iv.append("%s em %s" % ((i.get("tipo") or "").strip().lower(), fmt(d_i)))
+            txt_iv = "IV: %s anos ininterruptos (tem %s%s)" % (
+                int(round(req / DIAS_ANO)), dias_para_pena(continuo + rem_cont), (" = %s de custódia contínua desde %s + %d dias remidos, art. 5º" % (dias_para_pena(continuo), fmt(_pc[0]), rem_cont)) if rem_cont else (" desde %s" % fmt(_pc[0]) if _pc else ""))
+            if continuo + rem_cont < req:
+                nao.append(txt_iv)
+            elif sinais_iv:
+                verificar.append(txt_iv + " - verificar se houve interrupção no período: " + "; ".join(dict.fromkeys(sinais_iv)))
+            else:
+                possiveis.append(txt_iv)
             # V
             req = (A("V", "anos_reincidente", 25) if reinc else A("V", "anos_primario", 20)) * DIAS_ANO * red
             # anos de pena cumpridos na execução toda (penas somadas, art. 7º); no concurso com crime do art. 1º,
@@ -1899,7 +1965,7 @@ def analise_decretos(campos, crimes, eventos, incidentes, hoje):
                 if len(sai_ref) >= A("XI", "saidas_min", 5):
                     possiveis.append(txt + "%d saídas temporárias no RSPE até %s" % (len(sai_ref), fmt(ref)))
                 else:
-                    verificar.append(txt + "verificar 5 saídas temporárias ou 12 meses de trabalho externo (RSPE registra %d saída(s) até %s)" % (len(sai_ref), fmt(ref)))
+                    verificar.append(txt + "verificar 5 saídas temporárias ou 12 meses de trabalho externo (RSPE registra %s até %s)" % (pl(len(sai_ref), "saída", "saídas"), fmt(ref)))
             # XII
             f12 = (A("XII", "fracao_primario_%s" % ano, "1/6" if ano == "2025" else "1/5"), A("XII", "fracao_reincidente_%s" % ano, "1/5" if ano == "2025" else "1/4"))
             if anos_pena > 12:
@@ -1974,7 +2040,7 @@ def analise_decretos(campos, crimes, eventos, incidentes, hoje):
                 out[k] = "POSSÍVEL: art. 9º, " + inc + (" | " + aviso if aviso else "")
                 out[k + "_status"] = "possivel"
             elif [v for v in verificar if not v.startswith("XVI")]:
-                inc = ", ".join(p.split(":")[0] for p in verificar if not p.startswith("XVI"))
+                inc = ", ".join(p.split(":")[0] for p in verificar if not p.startswith("XVI") and re.match(r"^[IVX]+(\s+e\s+[IVX]+)?:", p))
                 out[k] = "A VERIFICAR: art. 9º, " + inc + (" | " + aviso if aviso else "")
                 out[k + "_status"] = "verificar"
             else:

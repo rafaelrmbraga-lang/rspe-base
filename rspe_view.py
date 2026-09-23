@@ -35,7 +35,7 @@ ROTULO = {
     "presc": {"vermelho": "Prescrição aparente", "amarelo": "Prescrição iminente", "": "Não prescrita", "cinza": "Sem dados", "azul": "Extinta"},
     "presc_pp": {"vermelho": "Prescrição aparente", "": "Não configurada", "cinza": "Sem dados", "azul": "Extinta"},
     "fd": {"vermelho": "Remição a requerer", "amarelo": "Conferir remição / sem atestado / estudo", "verde": "Em ordem", "cinza": "Sem ficha"},
-    "aud": {"vermelho": "Guia demanda atenção", "amarelo": "Pontos a verificar", "verde": "Sem inconsistências", "azul": "Extinta"},
+    "aud": {"vermelho": "Com alertas", "amarelo": "Pontos a verificar", "verde": "Sem inconsistências", "azul": "Extinta"},
     "ext": {"vermelho": "Extinção cabível", "laranja": "Término em até 30 dias", "amarelo": "Até 60 dias / a verificar", "verde": "Término em até 90 dias", "cinza": "Sem previsão / interrompida", "azul": "Extinta (registrada)"},
 }
 
@@ -71,6 +71,7 @@ FILTROS = {
         ("b:c24:Sim", "Comutação 2024 · Sim"), ("b:c24:Verificar", "Comutação 2024 · Verificar"),
         ("b:i22:Sim", "Indulto 2022 · Sim"), ("b:i22:Verificar", "Indulto 2022 · Verificar"),
         ("b:*:Fato posterior", "Fato posterior (qualquer benefício)"),
+        ("b:*:Falta", "Falta nos 12 meses (qualquer benefício)"),
         ("impeditivo", "Crime impeditivo"),
     ],
     "ext": [
@@ -84,7 +85,7 @@ FILTROS = {
     ],
     "aud": [
         ("todas", "Todas"),
-        ("atencao", "Guia demanda atenção"),
+        ("atencao", "Com alertas"),
         ("verificar", "Pontos a verificar"),
         ("ok", "Sem inconsistências"),
     ],
@@ -478,6 +479,9 @@ def sim_nao(txt, cor):
     t = txt or ""
     if cor == "azul" or t.startswith("Concedido"):
         return "Concedido", "azul"
+    if cor in ("verde", "amarelo") and "falta 12m" in t:
+        # art. 6º: falta grave nos 12 meses anteriores a 25/12 impede a declaração (detalhe na ficha)
+        return "Falta", "vermelho"
     if cor == "verde":
         return "Sim", "verde"  # possível, ainda que por tese (a tese aparece no texto e no cálculo)
     if cor == "amarelo":
@@ -545,6 +549,10 @@ def simplificar(m):
         m[k + "_cor_rel"] = m.get(k + "_cor", "")  # cor do relatório em PDF (o vermelho da aba é só para a tela)
         m[k], m[k + "_cor"] = sim_nao(m[k + "_txt"], m.get(k + "_cor", ""))
     m["imp_txt"], m["imp"] = m.get("imp_full") or m.get("imp", ""), m["imp_curto"]
+    m["ind_sim"] = any(m.get(k + "_cor") == "verde" for k in ("i22", "i24", "c24", "i25", "c25"))
+    if m.get("ind_cor") == "verde" and not m["ind_sim"]:
+        # o único "possível" ficou barrado pela falta do art. 6º
+        m["ind_cor"] = "vermelho" if m.get("imp_curto") == "Sim" else ("amarelo" if any(m.get(k + "_cor") == "amarelo" for k in ("i22", "i24", "c24", "i25", "c25")) else "cinza")
     # prescrição
     m["presc_retro_full"], m["presc_ppe_full"] = m.get("presc_retro", ""), m.get("presc_ppe", "")
     m["presc_retro"], m["presc_ppe"] = presc_curto(m["presc_retro_full"]), presc_curto(m["presc_ppe_full"], ppe=True)
@@ -617,9 +625,15 @@ def modelo(r, baixas=None, ficha=None, manuais=None):
     n_info = sum(1 for i in aud["aud_itens"] if i["nivel"] == "info" and not i["baixado"])
     aud["aud_alertas"], aud["aud_verificar"] = n_al, n_ve
     aud["aud_status"] = "atencao" if n_al else ("verificar" if n_ve else "ok")
-    aud["aud_resumo"] = ("Guia demanda atenção: %d alerta(s), %d a verificar" % (n_al, n_ve)) if n_al else (("%d ponto(s) a verificar" % n_ve) if n_ve else "Sem inconsistências pendentes")
+    pl = lambda n, s1, s2: "%d %s" % (n, s1 if n == 1 else s2)
+    partes = []
+    if n_al:
+        partes.append(pl(n_al, "alerta", "alertas"))
+    if n_ve:
+        partes.append(pl(n_ve, "ponto a verificar", "pontos a verificar"))
+    aud["aud_resumo"] = " · ".join(partes) if partes else "Sem inconsistências"
     if n_bx:
-        aud["aud_resumo"] += " · %d baixado(s)" % n_bx
+        aud["aud_resumo"] += " · " + pl(n_bx, "baixado", "baixados")
     aud["aud_info"] = n_info
     falta = ("Sim · " + (r.get("falta_12m_detalhe") or "")) if r.get("falta_12m") == "SIM" else "Não consta"
     m = {
@@ -713,7 +727,7 @@ def modelo(r, baixas=None, ficha=None, manuais=None):
 
 
 # abas: colunas (chave, título, peso), campo de cor, campo "status" (pílula), tipo de legenda
-PRESC_SUB = [("crime", "Crime", 14), ("pena", "Pena", 8), ("fato", "Fato", 9), ("denuncia", "Denúncia", 9), ("sentenca", "Sentença", 9),
+PRESC_SUB = [("crime", "Crime", 12), ("proc_crim", "Ação penal", 15), ("pena", "Pena", 7), ("fato", "Fato", 9), ("denuncia", "Denúncia", 9), ("sentenca", "Sentença", 9),
              ("transito", "Trânsito", 9), ("prazo_ppp", "Prazo PPP", 9), ("retro_status", "Retroativa / intercorrente", 20),
              ("prazo_ppe", "Prazo PPE", 11), ("ppe_termo", "Termo inicial", 9), ("ppe_status", "Executória", 22)]
 ABAS = [

@@ -232,9 +232,9 @@ def _perda_remidos(incidentes, perdidos, eventos=None):
         limite = base // 3
         if base and x["perda"] > limite:
             itens.append(_item("alerta", "Perda de dias remidos acima de 1/3 (falta de %s)" % rs.fmt(f),
-                               "Remição %s: %d dias; limite de 1/3: %d dias; perdidos: %d (excesso de %d dia(s)).%s" % (
+                               "Remição %s: %d dias; limite de 1/3: %d dias; perdidos: %d (excesso de %s).%s" % (
                                    ("adquirida entre a falta de %s e esta" % rs.fmt(prev)) if prev else "até a falta",
-                                   base, limite, x["perda"], x["perda"] - limite,
+                                   base, limite, x["perda"], rs.pl(x["perda"] - limite, "dia", "dias"),
                                    " Parcelas: %s - o arredondamento para cima de cada parcela ultrapassa o teto legal." % ", ".join(
                                        "%d (sobre %s)" % (q, rem["n"] if rem else "?") for q, rem in x["parcelas"]) if (len(x["parcelas"]) > 1 and not dup) else ""),
                                FUND_127 + " STF, RE 638.239."))
@@ -313,7 +313,7 @@ def auditar(r, hoje=None):
                 "LEP, art. 66, II; CP, art. 107."))
     if not pena_total and ativos:
         soma_at = sum(rs.pena_para_dias(c.get("pena_imposta")) or 0 for c in ativos)
-        itens.append(_item("alerta", "Guia sem pena calculada: pena total %s com %d condenação(ões) ativa(s)" % (r.get("pena_total") or "em branco", len(ativos)),
+        itens.append(_item("alerta", "Guia sem pena calculada: pena total %s com %s" % (r.get("pena_total") or "em branco", rs.pl(len(ativos), "condenação ativa", "condenações ativas")),
                            "As condenações ativas somam %s%s. Sem cálculo de pena, regime atual, marcos e término não constam; conferir se as guias foram unificadas/calculadas no SEEU." % (
                                rs.dias_para_pena(soma_at), "" if r.get("regime_atual") else "; Regime Atual em branco"),
                            "LEP, arts. 66, III, a, e 111."))
@@ -335,8 +335,8 @@ def auditar(r, hoje=None):
         _comutados = any("COMUTAD" in (c.get("processo_situacao") or "").upper() for c in ativos)
         if rs.amd_normal(sum(x[0] for x in _amds), sum(x[1] for x in _amds), sum(x[2] for x in _amds)) != rs.amd_normal(*_tot) and (_comut or _comutados) and soma > pena_total:
             itens.append(_item("info", "Soma das penas maior que a pena total: compatível com comutação",
-                               "Soma das penas originais: %s; pena total impressa: %s. Há %d comutação(ões) concedida(s)%s - a pena total já considera a redução." % (
-                                   rs.dias_para_pena(soma), r.get("pena_total"), len(_comut), " e processos marcados \"(Comutada)\"" if _comutados else ""),
+                               "Soma das penas originais: %s; pena total impressa: %s. Há %s%s - a pena total já considera a redução." % (
+                                   rs.dias_para_pena(soma), r.get("pena_total"), rs.pl(len(_comut), "comutação concedida", "comutações concedidas"), " e processos marcados \"(Comutada)\"" if _comutados else ""),
                                "Decretos de comutação; LEP, art. 192."))
         elif _ind_total:
             pass  # divergência explicada pelo indulto sem baixa (item acima)
@@ -769,6 +769,6 @@ def auditar(r, hoje=None):
     ordem = {"alerta": 0, "verificar": 1, "info": 2, "ok": 3}
     itens.sort(key=lambda i: ordem[i["nivel"]])
     return {"aud_status": status, "aud_itens": itens, "aud_alertas": n_alerta, "aud_verificar": n_verif,
-            "aud_resumo": "Guia demanda atenção: %d alerta(s), %d a verificar" % (n_alerta, n_verif) if n_alerta else
-                          ("%d ponto(s) a verificar" % n_verif if n_verif else "Sem inconsistências detectadas"),
+            "aud_resumo": " · ".join(x for x in (("%d alerta%s" % (n_alerta, "" if n_alerta == 1 else "s")) if n_alerta else "",
+                                                 ("%d ponto%s a verificar" % (n_verif, "" if n_verif == 1 else "s")) if n_verif else "") if x) or "Sem inconsistências",
             "aud_base": "base jurídica %s" % rg.versao()}

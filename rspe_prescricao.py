@@ -374,7 +374,7 @@ def analisar(r, hoje=None):
                     det.append("✔ De %s a %s preso por outro motivo: a prescrição executória não corre (art. 116, p. único)." % (rs.fmt(g0), "hoje" if g1 >= hoje else rs.fmt(g1)))
                     continue
                 if susp_d:
-                    base_txt += "; %d dia(s) de suspensão por prisão por outro motivo (art. 116, p. único)" % susp_d
+                    base_txt += "; %s de suspensão por prisão por outro motivo (art. 116, p. único)" % rs.pl(susp_d, "dia", "dias")
                 aberto = g1 >= hoje and not em_custodia
                 if limite <= g1:
                     prescrita = (g0, limite, base_txt, meses)

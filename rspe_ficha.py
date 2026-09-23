@@ -335,7 +335,7 @@ def confrontar(r, f, hoje=None):
     sem = [L for L in linhas if L["cor"] == "amarelo" and L["at"].startswith("sem atestado")]
     if sem:
         tot = sum(int(re.match(r"\d+", L["dias"]).group()) for L in sem if re.match(r"\d+", L["dias"]))
-        itens.append({"nivel": "verificar", "titulo": "Trabalho sem atestado: %d período(s), ≈ %d dias (≈ %d remidos)" % (len(sem), tot, tot // 3),
+        itens.append({"nivel": "verificar", "titulo": "Trabalho sem atestado: %s, ≈ %d dias (≈ %d remidos)" % (rs.pl(len(sem), "período", "períodos"), tot, tot // 3),
                       "detalhe": "; ".join("%s%s, %s (%s)" % (L["emp"], (" - " + L["un"]) if L.get("un") and L["un"] != "—" else "", _br(L["per"]), L["dias"]) for L in sem) +
                                  ". Estimativa em dias corridos; a unidade atesta só os dias efetivamente trabalhados. Requerer os atestados e a remição.",
                       "fundamento": "LEP, arts. 126 e 129."})
@@ -410,8 +410,8 @@ def resumo(f):
         return ""
     trab = f.get("trabalho", [])
     em = [x for x in trab if not x.get("fim")]
-    return "%s atestado(s), %s dias remidos · %s" % (
-        len(f.get("atestados", [])), _fmtn(f.get("dias_remidos_atestados") or 0),
+    return "%s, %s dias remidos · %s" % (
+        rs.pl(len(f.get("atestados", [])), "atestado", "atestados"), _fmtn(f.get("dias_remidos_atestados") or 0),
         ("trabalhando em " + (em[-1].get("empresa") or em[-1].get("setor") or "?") + " desde " + em[-1]["inicio"]) if em else "sem trabalho em curso")
 
 
@@ -988,7 +988,7 @@ def complementar_decretos(r, f, hoje=None):
         elif dext >= 360:
             res["XI"] = (True, "ficha: %d dias de trabalho externo nos 3 anos anteriores" % dext)
         else:
-            res["XI"] = (False, "ficha: %d saída(s) temporária(s) até %s e %d dia(s) de trabalho externo nos 3 anos anteriores" % (ns, rs.fmt(ref), dext))
+            res["XI"] = (False, "ficha: %s até %s e %s de trabalho externo nos 3 anos anteriores" % (rs.pl(ns, "saída temporária", "saídas temporárias"), rs.fmt(ref), rs.pl(dext, "dia", "dias")))
         # XII: estudo (fundamental, médio, superior, profissionalizante) por 12 meses nos 3 anos anteriores
         # (reincidente: 18 meses nos 5 anos anteriores - Decretos 2024 e 2025, art. 9º, XII)
         meses, anos_j = (18, 5) if reinc else (12, 3)
