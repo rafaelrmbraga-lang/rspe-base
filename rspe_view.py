@@ -250,7 +250,7 @@ def curto_indulto(txt):
         return base.replace("POSSÍVEL: ", "Possível · ").split("; § 5º")[0].replace("art. 5º (todos os crimes com pena máxima ≤ 5 anos)", "art. 5º (pena máx. ≤ 5 anos)") + falta
     if base.startswith("A VERIFICAR"):
         return base.replace("A VERIFICAR: ", "A verificar · ") + falta
-    if base.startswith("não se aplica: fatos"):
+    if base.startswith("não se aplica: fatos") or "fato posterior" in base:
         return "Não se aplica (fatos posteriores)"
     if base.startswith("não se aplica: não iniciou"):
         return "Não se aplica (não iniciou o cumprimento)"
@@ -353,7 +353,7 @@ def extincao(r, presc, interr):
     est = False
     # 1) pena cumprida
     if pt and cump is not None and cump >= pt:
-        hip.append("Pena integralmente cumprida (%s de %s): extinção pelo cumprimento (CP, art. 51 e Tema 931/STJ: multa pendente não obsta)" % (rs.dias_para_pena(cump), rs.dias_para_pena(pt)))
+        hip.append("Pena integralmente cumprida (%s de %s): extinção pelo cumprimento (LEP, art. 66, II)" % (rs.dias_para_pena(cump), rs.dias_para_pena(pt)))
         cor, d_ref = "vermelho", HOJE
     elif term and term <= HOJE:
         hip.append("Término da pena previsto para %s%s já alcançado" % (rs.fmt(term), " (est.)" if est else ""))
@@ -372,7 +372,7 @@ def extincao(r, presc, interr):
             pass
         elif dlc != date.min and not revog and term:
             if term <= HOJE:
-                hip.append("Livramento condicional desde %s com período de prova expirado em %s sem revogação (CP, arts. 82 e 90)" % (rs.fmt(dlc), rs.fmt(term)))
+                hip.append("Livramento condicional desde %s com período de prova expirado em %s sem revogação (CP, arts. 89 e 90; LEP, art. 146)" % (rs.fmt(dlc), rs.fmt(term)))
                 cor = "vermelho"
     # 3) detração que alcança toda a pena do crime (cumprimento pela custódia provisória)
     #    prescrição e indulto ficam nas próprias abas: aqui só a extinção pelo cumprimento
@@ -380,10 +380,9 @@ def extincao(r, presc, interr):
         if (l.get("ppe_status") or "").startswith("Pena cumprida por detração"):
             hip.append("%s: %s - CP, art. 42; LEP, art. 66, II" % (l["crime"], l["ppe_status"]))
             cor = "vermelho"
-    parcial = False
-    # multa cominada: não obsta a extinção (hipossuficiência presumida - Defensoria)
+    # multa cominada: extinção exige prova da impossibilidade de pagamento (STF ADI 7.032)
     com_multa = any(re.search(r"\b(E|e)\s+Multa", c.get("tipo_penal") or "") for c in r.get("_crimes", []) if not c.get("extinto", "").upper().startswith("S"))
-    multa_txt = ("Multa cominada: não obsta a extinção - hipossuficiência presumida (STJ Tema 931; STF ADI 7.032)" if com_multa else "")
+    multa_txt = ("Multa cominada: extinção cabível se comprovada a impossibilidade de pagamento (STF ADI 7.032, vinculante; STJ Tema 931) - instruir com prova da hipossuficiência" if com_multa else "")
     # crimes já extintos no RSPE
     ext = ["%s%s%s" % (rs.crimes_curto([c]).replace(" (extinto)", ""), (" · " + c["extincao_motivo"].lower()) if c.get("extincao_motivo") else "",
                        (" em " + c["data_extincao"]) if c.get("data_extincao") else "")
@@ -392,16 +391,10 @@ def extincao(r, presc, interr):
     if r.get("execucao_extinta") or todos_extintos:
         hip.insert(0, "Execução já extinta segundo o RSPE (%s)" % (r.get("execucao_extinta") or "todos os crimes extintos"))
         cor = "extinta"
-    # prazo do término
-    duvida_lc = cor == "amarelo_lc"
+    # prazo do término (livramento com situação incerta fica só na Auditoria)
     ja_extinta = cor == "extinta"
-    parcial_ext = parcial and cor not in ("vermelho", "extinta", "amarelo_lc")
-    if duvida_lc:
-        cor = "amarelo"
-    elif ja_extinta:
+    if ja_extinta:
         cor = "azul"
-    elif parcial_ext:
-        cor = "amarelo"
     elif cor != "vermelho":
         if interr and not term:
             cor = "cinza"
@@ -415,7 +408,7 @@ def extincao(r, presc, interr):
         "ext_cor": cor,
         "ext_termino": (rs.fmt(term) + (" (est.)" if est else "")) if term else ("Não iniciou" if nao_iniciou(r) else ("Interrompida" if interr else "")),
         "ext_dias": (term - HOJE).days if term else None,
-        "ext_sit": ("Pena extinta (registrada)" if ja_extinta else "A verificar (livramento)" if duvida_lc else "Extinção parcial cabível" if parcial_ext else (("Extinção cabível" if cor == "vermelho" else situacao(term)[0].replace("Vence", "Término").replace("Em ", "Término em ")) if (term or cor == "vermelho") else "")),
+        "ext_sit": ("Pena extinta (registrada)" if ja_extinta else (("Extinção cabível" if cor == "vermelho" else situacao(term)[0].replace("Vence", "Término").replace("Em ", "Término em ")) if (term or cor == "vermelho") else "")),
         "ext_extintos": "; ".join(ext),
         "ext_multa": multa_txt,
         "ext_n": len(hip),
@@ -446,7 +439,7 @@ def _dias_para(d):
 
 
 AUD_OUTRAS_ABAS = re.compile(
-    r"possível sem incidente|hipóteses a verificar|Hediondez posterior|hipossuficiência|reparação do dano|violência contra a mulher|"
+    r"possível sem incidente|hipóteses a verificar|Hediondez posterior|hipossuficiência|multa cominada|reparação do dano|violência contra a mulher|confirmar se a vítima é mulher|"
     r"prescri|vencida em .* sem decisão|Não iniciou|Cumprimento interrompido|trânsito em julgado não informado|"
     r"cumprida por detração|^Idade |pena total inferior a 2 anos|Indulto 20\d\d|Comutação 20\d\d", re.I)
 
@@ -507,6 +500,8 @@ def presc_curto(txt, ppe=False):
     tl = t.lower()
     if not t:
         return ""
+    if tl.startswith("pena cumprida por detra"):
+        return "Cumprida por detração"
     if tl.startswith("aparente") or "aparente" in tl[:40]:
         return "Aparente"
     if tl.startswith("iminente"):
@@ -548,6 +543,8 @@ def simplificar(m):
         m[k + "_txt"] = m.get(k + "_full") or m.get(k, "")
         m[k + "_cor_rel"] = m.get(k + "_cor", "")  # cor do relatório em PDF (o vermelho da aba é só para a tela)
         m[k], m[k + "_cor"] = sim_nao(m[k + "_txt"], m.get(k + "_cor", ""))
+        if m[k] == "Falta":
+            m[k + "_cor_rel"] = "vermelho"  # art. 6º: o relatório acompanha a tela
     m["imp_txt"], m["imp"] = m.get("imp_full") or m.get("imp", ""), m["imp_curto"]
     m["ind_sim"] = any(m.get(k + "_cor") == "verde" for k in ("i22", "i24", "c24", "i25", "c25"))
     if m.get("ind_cor") == "verde" and not m["ind_sim"]:
@@ -558,7 +555,7 @@ def simplificar(m):
     m["presc_retro"], m["presc_ppe"] = presc_curto(m["presc_retro_full"]), presc_curto(m["presc_ppe_full"], ppe=True)
     m["presc_retro"] = m["presc_retro"] or "Sem dados"
     m["presc_ppe"] = m["presc_ppe"] or "Sem dados"
-    _pc = {"Aparente": "vermelho", "Iminente": "amarelo", "Extinta": "azul", "Sem dados": "cinza"}
+    _pc = {"Aparente": "vermelho", "Iminente": "amarelo", "Extinta": "azul", "Cumprida por detração": "azul", "Sem dados": "cinza"}
     m["presc_retro_cor"], m["presc_ppe_cor"] = _pc.get(m["presc_retro"], ""), _pc.get(m["presc_ppe"], "")
     return m
 
@@ -772,5 +769,6 @@ ABAS = [
 ]
 ABA_POR_ID = {a["id"]: a for a in ABAS}
 for _a in ABAS:
-    _a["filtros"] = FILTROS.get(_a["id"], FILTROS["indulto"] if _a["id"] == "ind" else FILTROS["lapso"])
+    # a aba Geral não tem prazo próprio (não há campo de dias): sem filtro de situação
+    _a["filtros"] = [] if _a["id"] == "geral" else FILTROS.get(_a["id"], FILTROS["indulto"] if _a["id"] == "ind" else FILTROS["lapso"])
     _a["campo_dias"] = {"prog": "prog_dias", "liv": "liv_dias", "presc": "presc_dias", "ext": "ext_dias"}.get(_a["id"], "")

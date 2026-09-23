@@ -1,4 +1,4 @@
-RSPE BASE - SEEU  v6.15.9 (programa em abas)
+RSPE BASE - SEEU  v6.15.10 (programa em abas)
 =========================================
 
 O QUE FAZ
@@ -234,6 +234,50 @@ PRESUNÇÃO DE HIPOSSUFICIÊNCIA (Defensoria)
   do art. 9º e sem bloqueio do livramento (CP, art. 83, IV). Tráfico
   privilegiado não é hediondo nem impeditivo (STF PSV 125, Tema 1400; STJ
   Tema 1336). Detalhes e fontes: "Criterios_de_analise_por_beneficio.pdf".
+
+v6.15.10
+  Correções apontadas no Memorial Técnico-Jurídico (código e base jurídica
+  conferidos pelo JusRatio):
+  - Indulto/comutação: o inciso XI não interrompe mais a análise (erro de
+    nome de variável); hediondez aferida na data de cada decreto (25/12/2024
+    e 25/12/2025); art. 1º passa a reconhecer ECA 241-A a 241-E, CP 313-A,
+    313-B e 215-A (XVII); tráfico: só o art. 33, caput e § 1º, é impeditivo
+    (§§ 2º, 3º e 4º não); art. 1º, § 3º, I (liderança de facção): em 2024
+    afasta só o indulto, a comutação segue analisada; art. 6º: falta pela
+    data do fato, ignorando incidente não concedido; o aviso de falta não se
+    perde quando a ficha completa XI a XIII; "Fato posterior" aparece na
+    tela também em 2024/2025; indulto parcial pelo XV não prejudica a
+    comutação dos demais crimes (fica "a verificar"); pena cumprida projeta a
+    custódia em curso quando o RSPE é anterior à data do decreto; remição
+    negada, pendente ou perda de dias remidos não conta como remição.
+  - Progressão (Auditoria): 1/6 para hediondos por fato até 28/03/2007
+    (Súmula 471/STJ; SV 26); feminicídio primário 55% (VI-A, 10/10/2024 a
+    24/03/2026) e 75% (VI, d, desde 25/03/2026), com livramento vedado;
+    milícia e comando de organização criminosa (VI, b e c); livramento
+    vedado também no VIII (Lei 13.964); reincidente genérico em hediondo
+    após a Lei 15.358/2026: 70%/75% por analogia (sem precedente próprio).
+  - Rol de hediondos: vicaricídio (121-B), ECA (Lei 15.487/2026), incisos
+    VIII a X do art. 121, § 2º; datas corrigidas (218-B em 2014, 158, § 3º
+    em 2020, Lei 2.889 desde 1990).
+  - Prescrição: detração ("pena cumprida por detração") volta a funcionar;
+    art. 113 (pena restante) só na evasão ou revogação do livramento, com
+    aviso quando o motivo da interrupção não consta (STJ, RHC 67.403);
+    "Sem dados" quando todas as linhas da punitiva dependem de datas;
+    maior de 70 anos na sentença inclui quem tem exatamente 70; corte da
+    Lei 12.234/2010 em 06/05/2010.
+  - Citações corrigidas: STF Tema 1319 (pendente, não é tese); STF Tema
+    477 (RE 1.116.485) no lugar do RE 638.239; Súmula 441 (livramento) e
+    535 (indulto/comutação); Temas 709, 1161, 1169, 1195, 1196, 1336 e 1354
+    com a tese literal; ADI 7.032 (multa: extinção exige prova da
+    impossibilidade de pagamento); ADI 7.330; CP, arts. 89 e 90 (não 82).
+  - Idade: aviso do art. 117, I, da LEP separado do art. 115 do CP; § 2º dos
+    decretos medido na data de cada decreto.
+  - Ficha: curso de 3 dias corridos gera remição; ficha mais antiga não
+    substitui a mais nova; sem vínculo automático com homônimos.
+  - Outros: RSPE sem data não substitui o da base; RG não é mais lido de
+    dentro do nome; aba Geral sem filtro de prazo; cartão do relatório de
+    remição pendente corrigido; data de hoje atualizada a cada listagem;
+    pasta vigiada não para por erro de registro.
 
 v6.15.9
   - Auditoria: resultado só com o que existe, no singular ou plural certo

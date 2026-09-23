@@ -530,7 +530,7 @@ def vincular(r, f, hoje=None):
         e["_rem_depois"] = _depois(e["_ini"])
         if ini and (e["_fim"] or hoje) < ini:
             e["_status"] = "anterior"
-        elif ((e["_fim"] or hoje) - (e["_ini"] or hoje)).days < 3:
+        elif ((e["_fim"] or hoje) - (e["_ini"] or hoje)).days + 1 < 3:  # período inclusivo: 01 a 03 = 3 dias
             e["_status"] = "curto"  # a lei exige as 12 h divididas em pelo menos 3 dias
         elif not e["_rem_depois"]:
             e["_status"] = "sem_remicao"
@@ -748,7 +748,7 @@ def quadro_trabalho(r, f, hoje=None):
         L["un"], L["un_full"] = unidade_periodo(tl, e["_ini"], e["_fim"] or hoje)
         dias_e = e["_horas"] // 12
         if e["_status"] == "curto":
-            L["sit"], L["cor"] = "Menos de 3 dias: sem remição", "cinza"
+            L["sit"], L["cor"] = "Menos de 3 dias de frequência: as 12 h precisam estar divididas em pelo menos 3 dias (LEP, art. 126, § 1º, I)", "cinza"
         else:
             dentro = next((o for o in ests if o is not e and o["_status"] in ("sem_remicao", "conferir") and o["_ini"] and e["_ini"] and o["_ini"] <= e["_ini"]
                            and (o["_fim"] or hoje) >= (e["_fim"] or hoje) and not e["_declaradas"]), None)
@@ -1038,6 +1038,8 @@ def complementar_decretos(r, f, hoje=None):
         if antes.startswith(("CONCEDIDO", "INDEFERIDO", "não se aplica", "VEDAD", "excluído")) or r.get(k + "_status") in ("vedado",):
             r[k + "_explica"] = exp
             continue
+        # avisos da análise (falta do art. 6º, livramento incerto etc.) seguem na célula depois de " | "
+        aviso = (" | " + antes.split(" | ", 1)[1]) if " | " in antes else ""
         rot = ""
         mrot = re.match(r"^(?:POSSÍVEL|A VERIFICAR) \(([^)]*)\)", antes)
         if mrot:
@@ -1045,17 +1047,17 @@ def complementar_decretos(r, f, hoje=None):
         elif "Art. 7º, p. ú.: 2/3 da pena dos impeditivos cumpridos" in det:
             rot = " (crimes não impeditivos, art. 7º, p. ú.)"
         if poss:
-            r[k] = "POSSÍVEL%s: art. 9º, %s" % (rot, ", ".join(poss))
+            r[k] = "POSSÍVEL%s: art. 9º, %s%s" % (rot, ", ".join(poss), aviso)
             r[k + "_status"] = "possivel"
             if (r.get(kc) or "").startswith("POSSÍVEL"):
                 r[kc] = "prejudicada: indulto cabível (art. 13, § 5º)"
             concl = "possível pelo art. 9º, %s (conferido na ficha disciplinar)." % ", ".join(poss)
         elif verif:
-            r[k] = "A VERIFICAR: art. 9º, %s" % ", ".join(verif)
+            r[k] = "A VERIFICAR: art. 9º, %s%s" % (", ".join(verif), aviso)
             r[k + "_status"] = "verificar"
             concl = "a verificar (%s)." % ", ".join(verif)
         else:
-            r[k] = "não atinge: incisos dependentes de estudo/saídas não atendidos pela ficha disciplinar"
+            r[k] = "não atinge: incisos dependentes de estudo/saídas não atendidos pela ficha disciplinar" + aviso
             r[k + "_status"] = "nao"
             concl = "não atinge nenhum inciso nesta data (XI, XII e XIII conferidos na ficha disciplinar)."
         r[k + "_explica"] = re.sub(r"^Conclusão: .*$", "Conclusão: " + concl, exp, flags=re.M) if exp else exp

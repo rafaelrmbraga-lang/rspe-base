@@ -1,5 +1,5 @@
 {
- "versao": "2026-09-23",
+ "versao": "2026-09-23b",
  "descricao": "Base juridica do RSPE Base. Editavel: o programa le este arquivo ao abrir (copia ao lado do .exe tem prioridade sobre a embutida). Datas em AAAA-MM-DD. Fracoes como 'num/den' ou percentual 'NN%'.",
  "prescricao": {
   "art109_tabela": [
@@ -51,7 +51,7 @@
    ],
    "lei_15160_2025_vigencia": "2025-07-04"
   },
-  "lei_12234_2010_vigencia": "2010-05-05",
+  "lei_12234_2010_vigencia": "2010-05-06",
   "tema_788_modulacao_data": "2020-11-12",
   "notas": [
    "Art. 110, caput: prazo pela pena aplicada, aumentado de 1/3 se reincidente.",
@@ -69,8 +69,25 @@
  "progressao": {
   "regimes_vigencia": [
    {
+    "ate": "2007-03-28",
+    "lei": "LEP art. 112 (redação original de 1984 e Lei 10.792/2003): 1/6 - hediondos por fatos anteriores à Lei 11.464/2007 (STJ Súmula 471; STF Súmula Vinculante 26)",
+    "comum": "1/6",
+    "comum_reincidente": "1/6",
+    "vga_primario": "1/6",
+    "vga_reincidente": "1/6",
+    "hediondo_primario": "1/6",
+    "hediondo_reincidente": "1/6",
+    "hediondo_morte_primario": "1/6",
+    "hediondo_morte_reincidente": "1/6",
+    "notas": [
+     "STJ, Súmula 471: 'Os condenados por crimes hediondos ou assemelhados cometidos antes da vigência da Lei n. 11.464/2007 sujeitam-se ao disposto no art. 112 da Lei n. 7.210/1984 (Lei de Execução Penal) para a progressão de regime prisional.'",
+     "Lei 11.464/2007: DOU e vigência em 29/03/2007."
+    ]
+   },
+   {
+    "de": "2007-03-29",
     "ate": "2020-01-22",
-    "lei": "LEP art. 112 (Lei 10.792/2003) e Lei 8.072/90 art. 2, par. 2",
+    "lei": "LEP art. 112 (Lei 10.792/2003) e Lei 8.072/90, art. 2º, § 2º (redação da Lei 11.464/2007: 2/5 primário, 3/5 reincidente)",
     "comum": "1/6",
     "comum_reincidente": "1/6",
     "vga_primario": "1/6",
@@ -82,7 +99,7 @@
    },
    {
     "de": "2020-01-23",
-    "ate": "2026-03-24",
+    "ate": "2024-10-09",
     "lei": "Lei 13.964/2019 (Pacote Anticrime)",
     "comum": "16%",
     "comum_reincidente": "20%",
@@ -101,11 +118,49 @@
      "STF Tema 1169: 60% nao se aplica a reincidente nao especifico.",
      "STJ Tema 1354: percentuais distintos por condenacao na mesma execucao; retroatividade do mais benefico e ultratividade do 1/6 para reincidente sem VGA.",
      "16% retroage (mais benefico que 1/6); 20% nao retroage para fatos anteriores a 23/01/2020 (1/6 ultra-ativo).",
-     "Art. 112, VI, a: hediondo com resultado morte, primário - vedado o livramento condicional (fatos a partir de 23/01/2020)."
+     "Art. 112, VI, a e VIII: hediondo com resultado morte (primário e reincidente) - vedado o livramento condicional (fatos a partir de 23/01/2020).",
+     "Art. 112, VI, b (comando de organização criminosa estruturada para hediondos) e c (milícia privada): 50%, sem vedação ao livramento."
     ],
     "vedado_lc": [
-     "hediondo_morte_primario"
-    ]
+     "hediondo_morte_primario",
+     "hediondo_morte_reincidente"
+    ],
+    "comando_orcrim": "50%",
+    "milicia": "50%"
+   },
+   {
+    "de": "2024-10-10",
+    "ate": "2026-03-24",
+    "lei": "Lei 13.964/2019 (Pacote Anticrime) + Lei 14.994/2024 (art. 112, VI-A: feminicídio)",
+    "comum": "16%",
+    "comum_reincidente": "20%",
+    "vga_primario": "25%",
+    "vga_reincidente": "30%",
+    "hediondo_primario": "40%",
+    "hediondo_reincidente": "60%",
+    "hediondo_morte_primario": "50%",
+    "hediondo_morte_reincidente": "70%",
+    "hediondo_reincidente_generico": "40%",
+    "hediondo_morte_reincidente_generico": "50%",
+    "vga_reincidente_generico": "25%",
+    "notas": [
+     "STJ Tema 1084: reincidente generico em hediondo sem morte -> 40% (patamar do primario).",
+     "STJ Tema 1196: reincidente generico em hediondo com morte -> 50%.",
+     "STF Tema 1169: 60% nao se aplica a reincidente nao especifico.",
+     "STJ Tema 1354: percentuais distintos por condenacao na mesma execucao; retroatividade do mais benefico e ultratividade do 1/6 para reincidente sem VGA.",
+     "16% retroage (mais benefico que 1/6); 20% nao retroage para fatos anteriores a 23/01/2020 (1/6 ultra-ativo).",
+     "Art. 112, VI, a e VIII: hediondo com resultado morte (primário e reincidente) - vedado o livramento condicional (fatos a partir de 23/01/2020).",
+     "Art. 112, VI, b (comando de organização criminosa estruturada para hediondos) e c (milícia privada): 50%, sem vedação ao livramento.",
+     "Art. 112, VI-A (Lei 14.994/2024, DOU e vigência em 10/10/2024): 55% ao condenado por feminicídio, se primário, vedado o livramento condicional."
+    ],
+    "vedado_lc": [
+     "hediondo_morte_primario",
+     "hediondo_morte_reincidente",
+     "feminicidio_primario"
+    ],
+    "comando_orcrim": "50%",
+    "milicia": "50%",
+    "feminicidio_primario": "55%"
    },
    {
     "de": "2026-03-25",
@@ -126,8 +181,17 @@
      "feminicidio_primario"
     ],
     "notas": [
-     "Percentuais mais gravosos nao retroagem: aplicam-se apenas a fatos a partir de 25/03/2026."
-    ]
+     "Percentuais mais gravosos nao retroagem: aplicam-se apenas a fatos a partir de 25/03/2026.",
+     "Art. 112, VI, b (comando de organização criminosa ULTRAVIOLENTA estruturada para hediondos, vedado o livramento), c (milícia privada) e d (feminicídio, primário, vedado o livramento): 75%.",
+     "Reincidente genérico em hediondo (não específico): 70% (75% com morte) por analogia in bonam partem (ratio dos STJ Temas 1084 e 1196 e STF Tema 1169), sem precedente específico sobre a Lei 15.358/2026 - conferir.",
+     "Incisos I a IV ainda na redação da Lei 13.964/2019: reincidente não específico em crime com VGA - 25% por analogia (STJ Tema 1084)."
+    ],
+    "feminicidio_primario": "75%",
+    "comando_orcrim": "75%",
+    "milicia": "75%",
+    "hediondo_reincidente_generico": "70%",
+    "hediondo_morte_reincidente_generico": "75%",
+    "vga_reincidente_generico": "25%"
    },
    {
     "de": "2026-05-08",
@@ -145,6 +209,16 @@
      "hediondo_morte_reincidente",
      "comando_orcrim",
      "feminicidio_primario"
+    ],
+    "feminicidio_primario": "75%",
+    "comando_orcrim": "75%",
+    "milicia": "75%",
+    "hediondo_reincidente_generico": "70%",
+    "hediondo_morte_reincidente_generico": "75%",
+    "notas": [
+     "Art. 112, VI, b (comando de organização criminosa ULTRAVIOLENTA estruturada para hediondos, vedado o livramento), c (milícia privada) e d (feminicídio, primário, vedado o livramento): 75%.",
+     "Reincidente genérico em hediondo (não específico): 70% (75% com morte) por analogia in bonam partem (ratio dos STJ Temas 1084 e 1196 e STF Tema 1169), sem precedente específico sobre a Lei 15.358/2026 - conferir.",
+     "Lei 15.402/2026 (DOU e vigência em 08/05/2026): caput 1/6; I 25% (primário, VGA); II 30% (reincidente, VGA - basta a reincidência); III 20% (reincidente em crime diverso). I e II não se aplicam aos crimes do Título XII da Parte Especial do CP (contra o Estado Democrático de Direito)."
     ]
    }
   ],
@@ -158,25 +232,26 @@
   "hediondo": "2/3",
   "vedado_reincidente_especifico_hediondo": true,
   "trafico_art44_lei11343": "2/3, vedado ao reincidente especifico",
-  "vedado_lc_lep112": "hediondo com morte (primario e reincidente), comando de ORCRIM ultraviolenta, feminicidio primario - fatos a partir de 25/03/2026 (Lei 15.358/2026); antes, Lei 13.964/2019 ja vedava para hediondo com morte primario (art. 112, VI, a) - STF Tema 1319 permite retroagir o 50% sem a vedacao",
+  "vedado_lc_lep112": "Vedado o livramento (LEP, art. 112): hediondo com morte primário (VI, a) e reincidente em hediondo com morte (VIII) desde 23/01/2020; feminicídio primário (VI-A) de 10/10/2024 a 24/03/2026; a partir de 25/03/2026 (Lei 15.358/2026): VI, a; VI, b (comando de organização criminosa ultraviolenta); VI, d (feminicídio primário) e VIII. A retroação do 50% sem a vedação é entendimento do STJ (Tema 1196); no STF é o Tema 1319, com repercussão geral reconhecida e mérito pendente.",
   "art83_iii_b": "sem falta grave nos ultimos 12 meses",
   "pena_minima_anos": 2,
   "fonte": "CP, art. 83 (texto vigente conferido em 18/09/2026): I mais de 1/3 se não reincidente em crime doloso e bons antecedentes; II mais da metade se reincidente em crime doloso; III a) bom comportamento, b) sem falta grave nos últimos 12 meses; V mais de 2/3 para hediondo, tortura, tráfico, tráfico de pessoas e terrorismo, se não reincidente específico",
   "art88": "Revogado o livramento, não pode ser novamente concedido e o tempo solto não se desconta (salvo revogação por crime anterior ao benefício)"
  },
  "hediondos": {
-  "fonte": "Lei 8.072/90, art. 1º (texto vigente conferido em 18/09/2026)",
+  "fonte": "Lei 8.072/90, art. 1º (texto vigente conferido em 23/09/2026, com as Leis 15.134/2025, 15.159/2025, 15.384/2026 e 15.487/2026)",
   "lei_8072_art1_cp_sempre": [
    "121-A",
    "159",
    "213",
    "217-A",
    "218-B",
-   "273"
+   "273",
+   "121-B"
   ],
   "lei_8072_art1_cp_condicional": {
    "121": "inciso I: homicídio em atividade típica de grupo de extermínio ou homicídio qualificado (§ 2º)",
-   "129": "inciso I-A: lesão gravíssima ou seguida de morte contra agentes de segurança/autoridades (§ 12) ou em instituição de ensino",
+   "129": "inciso I-A: lesão gravíssima (§ 2º) ou seguida de morte (§ 3º) contra agentes de segurança e seus familiares (a), membros do Judiciário, MP, Defensoria, Advocacia Pública ou oficial de justiça (b, desde 07/05/2025) ou em instituição de ensino (c, desde 04/07/2025); o programa reconhece só pelo § 12 (vítima agente) - nas demais hipóteses, conferir",
    "122": "inciso X: induzimento/instigação/auxílio a suicídio ou automutilação por rede de computadores/social/tempo real",
    "155": "inciso IX: furto qualificado pelo emprego de explosivo (§ 4º-A)",
    "157": "inciso II: roubo com restrição de liberdade (§ 2º, V), com arma de fogo (§ 2º-A, I / § 2º-B) ou qualificado por lesão grave ou morte (§ 3º)",
@@ -216,13 +291,18 @@
     "2": "só quando direcionada à prática de crime hediondo ou equiparado"
    },
    "8069": [
-    "240 § 1º",
-    "241-B"
+    "240",
+    "241",
+    "241-A",
+    "241-B",
+    "241-D",
+    "244-A"
    ],
    "15358": [
     "2 caput, §§ 1º e 3º",
     "3"
-   ]
+   ],
+   "_nota_1001": "Parágrafo único, VI (Lei 14.688/2023, vigência 20/11/2023): crimes do Código Penal Militar idênticos aos do art. 1º - não reconhecidos automaticamente; conferir."
   },
   "nao_hediondos_frequentes": {
    "11343": [
@@ -254,8 +334,8 @@
     "lei": "Lei 8.072/90 (extorsão qualificada por morte)"
    },
    "2848:158 §3": {
-    "desde": "2009-04-14",
-    "lei": "Lei 11.923/2009 (sequestro relâmpago)"
+    "desde": "2020-01-23",
+    "lei": "Lei 13.964/2019 (antes, o inciso III só previa a extorsão qualificada pela morte, art. 158, § 2º)"
    },
    "2848:157 §3": {
     "desde": "1990-07-26",
@@ -306,8 +386,8 @@
     "lei": "Lei 12.015/2009"
    },
    "2848:218-B": {
-    "desde": "2009-08-10",
-    "lei": "Lei 12.015/2009"
+    "desde": "2014-05-22",
+    "lei": "Lei 12.978/2014 (a Lei 12.015/2009 criou o tipo; a hediondez veio em 2014)"
    },
    "2848:273": {
     "desde": "1998-08-21",
@@ -315,15 +395,15 @@
    },
    "2848:122": {
     "desde": "2024-01-15",
-    "lei": "Lei 14.811/2024 (por rede de computadores etc.) - conferir"
+    "lei": "Lei 14.811/2024 (por rede de computadores etc.)"
    },
    "2848:148": {
     "desde": "2024-01-15",
-    "lei": "Lei 14.811/2024 (vítima menor de 18) - conferir"
+    "lei": "Lei 14.811/2024 (vítima menor de 18)"
    },
    "2848:149-A": {
     "desde": "2024-01-15",
-    "lei": "Lei 14.811/2024 (vítima criança/adolescente) - conferir"
+    "lei": "Lei 14.811/2024 (vítima criança/adolescente)"
    },
    "11343:33": {
     "desde": "1990-07-26",
@@ -362,12 +442,12 @@
     "lei": "Lei 8.072/90 (genocídio)"
    },
    "2889:2": {
-    "desde": "2020-01-23",
-    "lei": "Lei 13.964/2019"
+    "desde": "1990-07-26",
+    "lei": "Lei 8.072/90 (redação original já incluía os arts. 1º, 2º e 3º da Lei 2.889/56)"
    },
    "2889:3": {
-    "desde": "2020-01-23",
-    "lei": "Lei 13.964/2019"
+    "desde": "1990-07-26",
+    "lei": "Lei 8.072/90 (redação original já incluía os arts. 1º, 2º e 3º da Lei 2.889/56)"
    },
    "10826:16": {
     "desde": "2017-10-27",
@@ -386,12 +466,12 @@
     "lei": "Lei 13.964/2019 (ORCRIM voltada a hediondos)"
    },
    "8069:240": {
-    "desde": "2024-01-15",
-    "lei": "Lei 14.811/2024 - conferir"
+    "desde": "2026-08-07",
+    "lei": "Lei 15.487/2026"
    },
    "8069:241-B": {
     "desde": "2024-01-15",
-    "lei": "Lei 14.811/2024 - conferir"
+    "lei": "Lei 14.811/2024"
    },
    "15358:2": {
     "desde": "2026-03-25",
@@ -400,6 +480,42 @@
    "15358:3": {
     "desde": "2026-03-25",
     "lei": "Lei 15.358/2026"
+   },
+   "2848:121-B": {
+    "desde": "2026-04-10",
+    "lei": "Lei 15.384/2026 (vicaricídio)"
+   },
+   "2848:121 §2 VIII": {
+    "desde": "2021-04-30",
+    "lei": "Lei 13.964/2019 (inciso VIII promulgado após a derrubada do veto, DOU 30/04/2021)"
+   },
+   "2848:121 §2 IX": {
+    "desde": "2022-07-09",
+    "lei": "Lei 14.344/2022"
+   },
+   "2848:121 §2 X": {
+    "desde": "2025-07-04",
+    "lei": "Lei 15.159/2025"
+   },
+   "8069:240 §1": {
+    "desde": "2024-01-15",
+    "lei": "Lei 14.811/2024"
+   },
+   "8069:241": {
+    "desde": "2026-08-07",
+    "lei": "Lei 15.487/2026"
+   },
+   "8069:241-A": {
+    "desde": "2026-08-07",
+    "lei": "Lei 15.487/2026"
+   },
+   "8069:241-D": {
+    "desde": "2026-08-07",
+    "lei": "Lei 15.487/2026"
+   },
+   "8069:244-A": {
+    "desde": "2026-08-07",
+    "lei": "Lei 15.487/2026"
    }
   },
   "condicional_paragrafos": {
@@ -637,6 +753,21 @@
     "XII",
     "corrupcao ativa",
     4
+   ],
+   "313-A": [
+    "XII",
+    "insercao de dados falsos em sistema de informacoes",
+    4
+   ],
+   "313-B": [
+    "XII",
+    "modificacao ou alteracao nao autorizada de sistema de informacoes",
+    4
+   ],
+   "215-A": [
+    "XVII",
+    "importunacao sexual (Lei 13.718/2018)",
+    null
    ]
   },
   "art1_cp_faixas": [
@@ -652,6 +783,11 @@
    "de": 239,
    "ate": 244,
    "extras": [
+    "241-A",
+    "241-B",
+    "241-C",
+    "241-D",
+    "241-E",
     "244-A",
     "244-B"
    ],
@@ -747,7 +883,7 @@
    "stf": "STF, Tema 1267 (RE 1.450.100, Pleno, 19/05/2025): é constitucional o art. 5º, caput e parágrafo único. STJ, 3ª Seção, AgRg no HC 890.929/SE (24/04/2024): o crime impeditivo obsta ainda que não praticado em concurso (unificação).",
    "art2": "agentes do Susp condenados, no exercício da função ou em decorrência dela: I excesso culposo (CP, art. 23, p. ú.); II crime culposo com 1/6 cumprido (metade para primário, § 2º)",
    "art3": "militares das Forças Armadas em operações de GLO condenados por excesso culposo (CPM, art. 45)",
-   "art6": "agentes de segurança pública (CF, art. 144) condenados por fato praticado há mais de 30 anos da publicação e não hediondo à época; art. 7º, § 3º afasta a vedação do inciso II",
+   "art6": "agentes de segurança pública (CF, art. 144) condenados por fato praticado há mais de 30 anos da publicação e não hediondo à época; art. 7º, § 3º afasta a vedação do inciso II - suspenso pela ADI 7.330 (medida cautelar de 16/01/2023), assim como o art. 7º, § 3º",
    "art10": "não se estende aos efeitos da condenação",
    "art11": "penas unificadas ou somadas até 25/12/2022 (LEP, art. 111); p. ú.: o crime não impeditivo só é indultado depois de cumprida a pena do impeditivo (art. 7º), ressalvado o art. 1º, III",
    "art12": "condenação primária sem recurso da acusação: indulto concedido pelo juízo do processo de conhecimento",
@@ -758,7 +894,7 @@
    "art3": "aplicam-se ainda que: I PPL substituída por PRD; II regime aberto, prisão domiciliar ou período de prova do livramento; III sursis concedido",
    "art4": "indulto ou comutação da PPL alcança a multa cumulativa (art. 12); inadimplência da multa não impede",
    "art5": "conta como pena cumprida, para o requisito temporal: prisão cautelar, domiciliar, especial ou recolhimento domiciliar noturno, com ou sem monitoramento, sem prejuízo da remição (LEP, art. 126)",
-   "art6": "falta grave cometida nos 12 meses anteriores a 25/12, com sanção reconhecida em audiência de justificação; p. ú.: falta noticiada após a publicação não impede",
+   "art6": "A declaração do indulto e da comutação de pena prevista neste Decreto fica condicionada à inexistência de aplicação de sanção reconhecida pelo juízo competente em audiência de justificação, garantido o direito aos princípios do contraditório e da ampla defesa, por falta disciplinar de natureza grave prevista na Lei nº 7.210, de 11 de julho de 1984, cometida nos doze meses de cumprimento da pena, contados retroativamente a 25 de dezembro de 2024 [2025, no Decreto 12.790/2025]. Parágrafo único. A notícia da prática de falta disciplinar de natureza grave prevista na Lei nº 7.210, de 11 de julho de 1984, ocorrida após a data de publicação deste Decreto, não suspende nem impede a obtenção do indulto ou da comutação de pena. (STJ Tema 1195: conta a data da falta, ainda que a apuração termine depois.)",
    "art7": "penas somadas até 25/12; p. ú.: no concurso com crime do art. 1º, o não impeditivo só depois de 2/3 da pena do impeditivo",
    "art8": "não se exigem exame criminológico nem outros requisitos além dos do decreto",
    "art10_2024": "indulto especial para mulheres presas, cumulativamente: I sem outro crime com violência/grave ameaça; II sem punição por falta grave; III a) mães de filhos até 12 anos (ou PcD) com 1/6; b) avós de netos até 12 anos (ou PcD) com 1/6; c) 60 anos ou mais ou menos de 21 anos com 1/6; d) mulheres com deficiência",
@@ -775,8 +911,8 @@
   {
    "tema": "Prescricao executoria - termo inicial",
    "fonte": "STF, ARE 848.107 (Tema 788), Pleno, j. 03/07/2023",
-   "tese": "O prazo para a prescricao da execucao da pena concretamente aplicada somente comeca a correr do dia em que a sentenca condenatoria transita em julgado para ambas as partes.",
-   "modulacao": "transito para a acusacao posterior a 12/11/2020"
+   "tese": "O prazo para a prescrição da execução da pena concretamente aplicada somente começa a correr do dia em que a sentença condenatória transita em julgado para ambas as partes, momento em que nasce para o Estado a pretensão executória da pena, conforme interpretação dada pelo Supremo Tribunal Federal ao princípio da presunção de inocência (art. 5º, inciso LVII, da Constituição Federal) nas ADC 43, 44 e 54.",
+   "modulacao": "casos em que (i) a pena não foi declarada extinta pela prescrição e (ii) o trânsito em julgado para a acusação ocorreu após 12/11/2020"
   },
   {
    "tema": "Acordao confirmatorio interrompe a prescricao",
@@ -790,27 +926,28 @@
   },
   {
    "tema": "Progressao - reincidente generico hediondo com morte",
-   "fonte": "STJ, REsp 2.016.358 (Tema 1196), j. 22/05/2024",
-   "tese": "Lacuna: aplica-se 50% ao reincidente generico em hediondo com resultado morte."
+   "fonte": "STJ, REsp 2.012.101, 2.012.112 e 2.016.358 (Tema 1196), 3ª Seção, j. 22/05/2024 (recurso extraordinário sobrestado até o julgamento do STF Tema 1319)",
+   "tese": "É válida a aplicação retroativa do percentual de 50% (cinquenta por cento), para fins de progressão de regime, a condenado por crime hediondo, com resultado morte, que seja reincidente genérico, nos moldes da alteração legal promovida pela Lei n. 13.964/2019 no art. 112, inc. VI, alínea a, da Lei n. 7.210/84 (Lei de Execução Penal), bem como a posterior concessão do livramento condicional, podendo ser formulado posteriormente com base no art. 83, inc. V, do Código Penal, o que não configura combinação de leis na aplicação retroativa de norma penal material mais benéfica."
   },
   {
    "tema": "Progressao - 60% so para reincidente especifico",
-   "fonte": "STF, ARE 1.327.963 (Tema 1169), j. 16/09/2021",
-   "tese": "O percentual de 60% nao se aplica a reincidentes nao especificos."
+   "fonte": "STF, ARE 1.327.963 (Tema 1169), Pleno, Rel. Gilmar Mendes, j. 16/09/2021",
+   "tese": "Tendo em vista a legalidade e a taxatividade da norma penal (art. 5º, XXXIX, CF), a alteração promovida pela Lei 13.964/2019 no art. 112 da LEP não autoriza a incidência do percentual de 60% (inc. VII) aos condenados reincidentes não específicos para o fim de progressão de regime. Diante da omissão legislativa, impõe-se a analogia in bonam partem, para aplicação, inclusive retroativa, do inciso V do artigo 112 da LEP (lapso temporal de 40%) ao condenado por crime hediondo ou equiparado sem resultado morte reincidente não específico."
   },
   {
    "tema": "Progressao - percentuais distintos por condenacao",
-   "fonte": "STJ, Tema 1354",
-   "tese": "Percentuais distintos para cada condenacao na mesma execucao; retroatividade do mais benefico e ultratividade do anterior."
+   "fonte": "STJ, REsp 2.037.377/SC e 2.037.447/SC (Tema 1354), 3ª Seção, Rel. Maria Marluce Caldas, j. 18/06/2026, DJEN 02/07/2026",
+   "tese": "É possível, para fins de cálculo para progressão de regime, a aplicação de percentuais distintos para cada condenação isoladamente, em uma mesma execução, reconhecendo-se a retroatividade da Lei n. 13.964/2019 e a ultratividade da redação anterior do art. 112 da Lei de Execução Penal, em respeito à norma mais favorável ao executado."
   },
   {
-   "tema": "Progressao - hediondo com morte e livramento",
-   "fonte": "STF, RE 1.464.013 (Tema 1319), j. 06/09/2024",
-   "tese": "Retroatividade do art. 112, VI, a (50%) sem a vedacao ao livramento condicional e a saida temporaria."
+   "tema": "Progressao - hediondo com morte e livramento (pendente no STF)",
+   "fonte": "STF, RE 1.464.013 (Tema 1319), repercussão geral reconhecida em 06/09/2024 (DJe 12/09/2024); mérito pendente",
+   "tese": "Questão submetida (sem tese de mérito): possibilidade de aplicação retroativa do art. 112, VI, a, da LEP (redação da Lei 13.964/2019) para garantir a progressão de regime de condenado por crime hediondo, mas sem a incidência da vedação ao livramento condicional e à saída temporária. No STJ, a retroação do 50% com posterior livramento (CP, art. 83, V) é admitida (Tema 1196).",
+   "nivel": "repercussao_geral_pendente"
   },
   {
    "tema": "Sumula 146 STF",
-   "fonte": "STF, Sumula 146",
+   "fonte": "STF, Súmula 146 (aprovada em 13/12/1963)",
    "tese": "A prescricao da acao penal regula-se pela pena concretizada na sentenca, quando nao ha recurso da acusacao."
   },
   {
@@ -825,7 +962,7 @@
   },
   {
    "tema": "Data-base - termo inicial da nova progressão",
-   "fonte": "STJ, REsp 1.973.589 e outros (Tema 1165), 3ª Seção, j. 14/08/2024",
+   "fonte": "STJ, REsp 1.972.187, 1.973.105, 1.973.589, 1.976.197 e 1.976.210 (Tema 1165), 3ª Seção, j. 14/08/2024, DJe 02/12/2024",
    "tese": "A decisão que defere a progressão é declaratória: o termo inicial para a nova progressão é a data em que preenchidos os requisitos objetivo e subjetivo, não a data da decisão."
   },
   {
@@ -833,20 +970,20 @@
    "fonte": "STJ, REsp 2.024.901 e 2.090.454 (Tema 931, revisão), 3ª Seção, j. 28/02/2024, DJe 01/03/2024",
    "nivel": "repetitivo",
    "tese": "O inadimplemento da pena de multa, após cumprida a pena privativa de liberdade ou restritiva de direitos, não obsta a extinção da punibilidade, ante a alegada hipossuficiência do condenado, salvo se diversamente entender o juiz competente, em decisão suficientemente motivada, que indique concretamente a possibilidade de pagamento da sanção pecuniária.",
-   "aplicacao": "Aba Extinção: multa pendente não impede pedido de extinção; o programa presume a hipossuficiência do assistido da Defensoria."
+   "aplicacao": "Aba Extinção: multa pendente é apontada; a extinção é cabível se comprovada a impossibilidade de pagamento (ADI 7.032). A mera assistência pela Defensoria foi tida por insuficiente pelo STJ (REsp 2.055.935)."
   },
   {
    "tema": "Extinção - multa e ADI 7.032",
-   "fonte": "STF, ADI 7.032, Pleno, j. 25/03/2024",
+   "fonte": "STF, ADI 7.032, Pleno, Rel. Flávio Dino, j. 25/03/2024, DJe 12/04/2024",
    "nivel": "vinculante",
-   "tese": "Constitucionalidade do art. 51 do CP: a multa mantém natureza penal e sua pendência obsta a extinção da punibilidade, salvo comprovada impossibilidade de pagamento, que o juízo da execução pode reconhecer a partir dos elementos dos autos.",
-   "aplicacao": "Fundamento complementar ao Tema 931: a impossibilidade econômica pode ser reconhecida pelos elementos dos autos (assistência pela Defensoria, ausência de bens, trabalho prisional)."
+   "tese": "Interpretação conforme ao art. 51 do CP: cominada conjuntamente com a pena privativa de liberdade, o inadimplemento da pena de multa obsta o reconhecimento da extinção da punibilidade, salvo comprovada impossibilidade de seu pagamento, ainda que de forma parcelada.",
+   "aplicacao": "Decisão vinculante: a extinção com multa pendente exige prova da impossibilidade de pagamento; instruir o pedido com elementos concretos (declaração de hipossuficiência, ausência de bens, remuneração do trabalho prisional)."
   },
   {
    "tema": "Extinção - multa: divergência a registrar",
-   "fonte": "STJ, REsp 2.055.935 (5ª Turma), j. 09/2025",
+   "fonte": "STJ, REsp 2.055.935 (5ª Turma), j. 02/09/2025, DJEN 08/09/2025",
    "nivel": "orientativo",
-   "tese": "Julgado isolado exigiu comprovação concreta da hipossuficiência, considerando insuficiente a presunção decorrente da mera assistência pela Defensoria.",
+   "tese": "Réu assistido pela Defensoria Pública: hipossuficiência presumida - impossibilidade. Eficácia erga omnes e efeito vinculante da ADI 7.032: necessidade de comprovação da impossibilidade econômica de pagamento da multa.",
    "aplicacao": "Risco a antecipar na petição: instruir com elementos (declaração de hipossuficiência, ausência de bens, remuneração do trabalho prisional)."
   },
   {
@@ -865,10 +1002,10 @@
   },
   {
    "tema": "Indulto - tráfico privilegiado",
-   "fonte": "STJ, REsp 2.125.150 e outros (Tema 1336), 3ª Seção, 2025",
+   "fonte": "STJ, REsp 2.195.927 e 2.195.928 (Tema 1336), 3ª Seção, Rel. Sebastião Reis Júnior, j. 05/06/2025, DJEN 10/06/2025",
    "nivel": "repetitivo",
-   "tese": "A vedação do indulto ao tráfico (art. 33, caput e § 1º, da Lei 11.343/06) inclusive quanto à multa não alcança o tráfico privilegiado (§ 4º).",
-   "aplicacao": "Aba Indulto: art. 33, § 4º não é impeditivo do art. 1º."
+   "tese": "O indulto previsto no Decreto n. 11.846/2023 não se aplica ao condenado por tráfico de drogas na forma do caput e § 1º do art. 33 da Lei de Drogas, vedação essa que abrange a pena de multa eventualmente cominada, salvo se beneficiado com o redutor especial (art. 33, § 4º, da Lei n. 11.343/2006).",
+   "aplicacao": "Aba Indulto: só o art. 33, caput e § 1º, é impeditivo (art. 1º, XVIII, dos Decretos 12.338/2024 e 12.790/2025, de mesma redação: aplicação por analogia); §§ 2º, 3º e 4º não são."
   },
   {
    "tema": "Indulto - tráfico privilegiado (STF)",
@@ -886,38 +1023,38 @@
   },
   {
    "tema": "Livramento - requisito subjetivo",
-   "fonte": "STJ, REsp 1.970.217 e outros (Tema 1161), 3ª Seção, j. 2023",
+   "fonte": "STJ, REsp 1.970.217 e 1.974.104 (Tema 1161), 3ª Seção, Rel. Ribeiro Dantas, j. 24/05/2023",
    "nivel": "repetitivo",
-   "tese": "Para o livramento condicional, o bom comportamento (art. 83, III, a) é aferido em todo o histórico da execução, e a ausência de falta grave (alínea b) nos 12 meses anteriores.",
+   "tese": "A valoração do requisito subjetivo para concessão do livramento condicional - bom comportamento durante da execução da pena (art. 83, inciso III, alínea 'a', do Código Penal) - deve considerar todo o histórico prisional, não se limitando ao período de 12 meses referido na alínea 'b' do mesmo inciso III do art. 83 do Código Penal.",
    "aplicacao": "Aba Livramento: faltas graves fora dos 12 meses não bloqueiam o requisito objetivo, mas são exibidas como alerta subjetivo."
   },
   {
-   "tema": "Livramento - 12 meses sem falta grave",
-   "fonte": "STJ, REsp 2.046.020 e outros (Tema 1195), 3ª Seção, j. 2024",
+   "tema": "Indulto/comutação - 12 meses sem falta grave (data do fato)",
+   "fonte": "STJ, Tema 1195 (Decreto 9.246/2017), 3ª Seção",
    "nivel": "repetitivo",
-   "tese": "O prazo de 12 meses do art. 83, III, b, do CP conta-se da data da falta (não ocorrência da falta), desde que instaurado o procedimento disciplinar.",
-   "aplicacao": "Contagem da falta grave para livramento: data do fato."
+   "tese": "O período de 12 meses a que se refere o art. 4º, I, do Decreto n. 9.246/2017 caracteriza-se pela não ocorrência de falta grave nesse interstício, ainda que a apuração da infração disciplinar tenha sido concluída em momento posterior, desde que não configurada inércia ou mora estatal para instauração de procedimento apuratório.",
+   "aplicacao": "Art. 6º dos Decretos 12.338/2024 e 12.790/2025: conta a data do fato da falta nos 12 meses anteriores a 25/12, ainda que a sanção seja reconhecida depois (por analogia)."
   },
   {
    "tema": "Falta grave - interrupção só da progressão",
-   "fonte": "STJ, Súmulas 534 e 535",
+   "fonte": "STJ, Súmulas 441, 534 e 535",
    "nivel": "sumula",
-   "tese": "A falta grave interrompe o prazo para a progressão (Súmula 534) e não interrompe os prazos para livramento condicional, indulto e comutação (Súmula 535).",
+   "tese": "A falta grave interrompe o prazo para a progressão (Súmula 534), mas não interrompe o do livramento condicional (Súmula 441) nem os da comutação e do indulto (Súmula 535).",
    "aplicacao": "Data-base da progressão reinicia na falta (LEP art. 112, § 6º, sobre a pena remanescente); livramento e indulto não são reiniciados."
   },
   {
-   "tema": "Falta grave - fuga sem reinício da pena",
-   "fonte": "STJ, Súmula 441; STJ, REsp 1.364.192 (Tema 709), 3ª Seção, j. 12/11/2014",
+   "tema": "Falta grave - efeitos sobre progressão, livramento, indulto e comutação",
+   "fonte": "STJ, Súmula 441; STJ, REsp 1.364.192/RS (Tema 709), 3ª Seção, Rel. Sebastião Reis Júnior, j. 12/02/2014, DJe 17/09/2014",
    "nivel": "repetitivo",
-   "tese": "A falta grave não interrompe o prazo para o livramento condicional (Súmula 441). A prática de falta grave interrompe a contagem para a progressão, reiniciando-se a partir da pena remanescente (Tema 709).",
+   "tese": "1. A prática de falta grave interrompe o prazo para a progressão de regime, acarretando a modificação da data-base e o início de nova contagem do lapso necessário para o preenchimento do requisito objetivo. 2. Em se tratando de livramento condicional, não ocorre a interrupção do prazo pela prática de falta grave. Aplicação da Súmula 441/STJ. 3. Também não é interrompido automaticamente o prazo pela falta grave no que diz respeito à comutação de pena ou indulto, mas a sua concessão deverá observar o cumprimento dos requisitos previstos no decreto presidencial pelo qual foram instituídos. (O reinício sobre a pena remanescente decorre da LEP, art. 112, § 6º, incluído pela Lei 13.964/2019.)",
    "aplicacao": "Reinício da contagem da progressão sobre a pena remanescente."
   },
   {
    "tema": "Falta grave - perda de dias remidos",
-   "fonte": "LEP, art. 127 (Lei 12.433/2011); STF, RE 638.239, Pleno, j. 22/09/2011 (cancelamento da SV 9)",
+   "fonte": "LEP, art. 127 (Lei 12.433/2011); STF, Tema 477 (RE 1.116.485, Pleno, j. 01/03/2023); SV 9 cancelada (PSV 60, j. 26/09/2025)",
    "nivel": "repercussao_geral",
-   "tese": "Em caso de falta grave o juiz pode revogar até 1/3 do tempo remido, recomeçando a contagem da data da infração; a Lei 12.433/2011 retroage por ser mais benéfica.",
-   "aplicacao": "Ficha disciplinar: alerta quando a perda de dias remidos superar 1/3 do saldo existente na data da falta."
+   "tese": "LEP, art. 127: 'Em caso de falta grave, o juiz poderá revogar até 1/3 (um terço) do tempo remido, observado o disposto no art. 57, recomeçando a contagem a partir da data da infração disciplinar.' STF, Tema 477: '1. A revogação ou modificação do ato normativo em que se fundou a edição de enunciado de súmula vinculante acarreta, em regra, a necessidade de sua revisão ou cancelamento pelo Supremo Tribunal Federal, conforme o caso. 2. É constitucional a previsão legislativa de perda dos dias remidos pelo condenado que comete falta grave no curso da execução penal.'",
+   "aplicacao": "Auditoria: alerta quando a perda superar 1/3 da remição adquirida entre a falta anterior (ou o início) e a data da infração (LEP, art. 127; STJ, HC 398.850/SP)."
   },
   {
    "tema": "Remição - trabalho extramuros",
@@ -956,14 +1093,14 @@
   },
   {
    "tema": "Indulto/comutação - hediondez aferida na data do decreto",
-   "fonte": "STJ, AgRg no HC 955.700 (5ª T., 26/02/2025); AgRg no HC 1.014.986 (5ª T., 19/08/2025); AgRg no HC 1.087.914/SP (6ª T., 11/06/2026); AgRg no HC 1.076.757 (5ª T., 15/06/2026). Em sentido contrário (irretroatividade): STF, 2ª T., RHC 267.297 AgR (16/03/2026) e HC 273.296 AgR (06/08/2026); STF, decisões monocráticas: RE 1.572.734 (Fux, 10/10/2025), HC 258.516 (André Mendonça, 14/07/2025), RHC 269.076 (Cármen Lúcia, 06/03/2026), HC 271.716 (Fux, 05/05/2026), RE 1.607.670 (Cármen Lúcia, 10/06/2026); TJMS, 2ª Câmara Criminal: AgExec 1602006-93.2026.8.12.0000 (Waldir Marques, 15/06/2026), 1602467-65.2026.8.12.0000 (Carlos Eduardo Contar, 03/08/2026), 1603697-45.2026.8.12.0000 (Waldir Marques, 20/08/2026). Seguem o STJ no TJMS: 1ª Câmara (1602236-38.2026.8.12.0000, 03/09/2026; 1602495-33.2026.8.12.0000, 29/06/2026) e 3ª Câmara (1600825-57.2026.8.12.0000, 30/03/2026; 1604099-29.2026.8.12.0000, 27/08/2026; 1602318-69.2026.8.12.0000, 28/08/2026)",
+   "fonte": "STJ, AgRg no HC 955.700 (5ª T., 26/02/2025); AgRg no HC 1.014.986 (5ª T., 19/08/2025); AgRg no HC 1.087.914/SP (6ª T., 11/06/2026); AgRg no HC 1.076.757 (5ª T., 15/06/2026). Em sentido contrário (irretroatividade): STF, 2ª T., RHC 267.297 AgR (16/03/2026) e HC 273.296 AgR (06/08/2026); STF, decisões monocráticas: RE 1.572.734 (Fux, 10/10/2025), HC 258.516 (André Mendonça, 14/07/2025), RHC 269.076 (Cármen Lúcia, 06/03/2026; Decreto 11.846/2023), HC 271.716 (Fux, 05/05/2026), RE 1.607.670 (Cármen Lúcia, 10/06/2026); TJMS, 2ª Câmara Criminal (provimento parcial, para reanálise pelo juízo): AgExec 1602006-93.2026.8.12.0000 (Waldir Marques, 15/06/2026), 1602467-65.2026.8.12.0000 (Carlos Eduardo Contar, 03/08/2026), 1603697-45.2026.8.12.0000 (Waldir Marques, 20/08/2026). STF, monocrática em sentido contrário: RHC 273.867 (Flávio Dino, 13/07/2026: aferição na data do decreto). Seguem o STJ no TJMS: 1ª Câmara (1602236-38.2026.8.12.0000, 03/09/2026; 1602495-33.2026.8.12.0000, 29/06/2026) e 3ª Câmara (1600825-57.2026.8.12.0000, 30/03/2026; 1604099-29.2026.8.12.0000, 27/08/2026; 1602318-69.2026.8.12.0000, 28/08/2026)",
    "nivel": "orientativo",
-   "tese": "Para a vedação do art. 1º, I, dos decretos (crime hediondo), o STJ afere a natureza do delito na data do decreto: roubo com arma de fogo ou com lesão grave praticado antes da Lei 13.964/2019 é impeditivo. O STF (2ª Turma e decisões monocráticas de vários ministros) e a 2ª Câmara Criminal do TJMS concedem indulto/comutação por irretroatividade da hediondez superveniente.",
+   "tese": "Para a vedação do art. 1º, I, dos decretos (crime hediondo), o STJ afere a natureza do delito na data do decreto: roubo com arma de fogo ou com lesão grave praticado antes da Lei 13.964/2019 é impeditivo. O STF (2ª Turma e decisões monocráticas de vários ministros) e a 2ª Câmara Criminal do TJMS afastam a vedação por irretroatividade da hediondez superveniente (há monocrática do STF em sentido contrário).",
    "aplicacao": "Indulto/comutação: impeditivo pela data do decreto, com a tese defensiva registrada. Progressão/livramento: frações pela data do fato (lei penal)."
   },
   {
    "tema": "Perda de dias remidos - vedação do desconto em duplicidade",
-   "fonte": "LEP, art. 127; STJ, HC 398.850/SP (5ª T., Rel. Joel Ilan Paciornik, j. 13/06/2017); STJ, HC 293.475/SP (5ª T., Rel. Felix Fischer, j. 21/05/2015); TJDFT, Acórdão 1230029 (3ª T. Crim., j. 06/02/2020); TJMS, AgExec 0046207-54.2017.8.12.0001 (2ª Câm. Crim., Rel. Luiz Gonzaga Mendes Marques, j. 26/02/2018); TJMS, AgExec 0000687-22.2014.8.12.0019 (Rel. Carlos Eduardo Contar)",
+   "fonte": "LEP, art. 127; STJ, HC 398.850/SP (5ª T., Rel. Joel Ilan Paciornik, j. 13/06/2017); STJ, HC 293.475/SP (5ª T., Rel. Felix Fischer, j. 21/05/2015); STJ, HC 377.088/SP (6ª T., j. 27/04/2017); TJDFT, Acórdão 1230029 (3ª T. Crim., j. 06/02/2020)",
    "nivel": "orientativo",
    "tese": "Com a perda por falta grave, a contagem da remição recomeça da data da infração: nova falta só alcança a remição adquirida depois da falta anterior homologada, e o saldo que restou da perda anterior não pode sofrer novo desconto (vedada a perda escalonada).",
    "aplicacao": "Auditoria: cada perda é confrontada com a remição adquirida entre a falta anterior e a atual (limite de 1/3 dessa janela) e aponta desconto sobre remição anterior à falta anterior."

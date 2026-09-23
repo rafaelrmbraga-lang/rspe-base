@@ -99,7 +99,7 @@ def data_lei_15160():
 
 
 def data_lei_12234():
-    return d(carregar().get("prescricao", {}).get("lei_12234_2010_vigencia", "2010-05-05"))
+    return d(carregar().get("prescricao", {}).get("lei_12234_2010_vigencia", "2010-05-06"))
 
 
 def data_tema_788():
@@ -123,13 +123,24 @@ def regime_progressao(data_fato):
     return None
 
 
-def fracao_progressao_esperada(data_fato, hediondo, morte, vga, reincidente, reinc_especifico=None):
+ESPECIAIS = {  # hipóteses próprias do art. 112 (chave na janela de vigência -> descrição)
+    "feminicidio_primario": "feminicídio, primário (LEP, art. 112, VI-A de 10/10/2024 a 24/03/2026; VI, d, desde 25/03/2026)",
+    "milicia": "constituição de milícia privada (LEP, art. 112, VI, c)",
+    "comando_orcrim": "comando de organização criminosa (LEP, art. 112, VI, b)",
+}
+
+
+def fracao_progressao_esperada(data_fato, hediondo, morte, vga, reincidente, reinc_especifico=None, especial=None):
     """Devolve (fração, rótulo, observações) esperadas pela lei da data do fato, com as teses do STJ/STF.
-    reinc_especifico: None = desconhecido."""
+    reinc_especifico: None = desconhecido. especial: chave de ESPECIAIS (usada só se a janela a prevê)."""
     j = regime_progressao(data_fato)
     if not j:
         return None, "", ["sem data do fato: fração não aferida"]
     obs = []
+    if especial and j.get(especial) and not (especial == "feminicidio_primario" and reincidente):
+        valor = j.get(especial)
+        obs.append(ESPECIAIS.get(especial, especial))
+        return fr(valor), "%s (%s)" % (valor, j.get("lei", "")), obs
     if hediondo:
         if morte:
             chave = "hediondo_morte_reincidente" if reincidente else "hediondo_morte_primario"
@@ -142,9 +153,11 @@ def fracao_progressao_esperada(data_fato, hediondo, morte, vga, reincidente, rei
             chave = "hediondo_reincidente" if reincidente else "hediondo_primario"
             if reincidente and reinc_especifico is False and j.get("hediondo_reincidente_generico"):
                 chave = "hediondo_reincidente_generico"
-                obs.append("reincidente genérico em hediondo: STJ Tema 1084 / STF Tema 1169")
+                obs.append("reincidente genérico em hediondo: STJ Tema 1084 / STF Tema 1169" + (
+                    " (analogia na redação da Lei 15.358/2026, sem precedente específico - conferir)" if (d(j.get("de", "")) or date.min) >= date(2026, 3, 25) else ""))
             elif reincidente and reinc_especifico is None and j.get("hediondo_reincidente_generico"):
-                obs.append("se a reincidência for genérica (não em hediondo), aplica-se %s (STJ Tema 1084; STF Tema 1169)" % j["hediondo_reincidente_generico"])
+                obs.append("se a reincidência for genérica (não em hediondo), aplica-se %s (STJ Tema 1084; STF Tema 1169%s)" % (
+                    j["hediondo_reincidente_generico"], "; por analogia na redação da Lei 15.358/2026" if (d(j.get("de", "")) or date.min) >= date(2026, 3, 25) else ""))
     elif vga:
         chave = "vga_reincidente" if reincidente else "vga_primario"
         if reincidente and reinc_especifico is False and j.get("vga_reincidente_generico"):
@@ -156,7 +169,7 @@ def fracao_progressao_esperada(data_fato, hediondo, morte, vga, reincidente, rei
     return fr(valor), "%s (%s)" % (valor, j.get("lei", "")), obs
 
 
-def fracao_mais_benefica(data_fato, hediondo, morte, vga, reincidente):
+def fracao_mais_benefica(data_fato, hediondo, morte, vga, reincidente, especial=None):
     """Considera retroatividade da lei mais benéfica (Tema 1354): menor fração entre a da data do fato e as posteriores."""
     jan = carregar().get("progressao", {}).get("regimes_vigencia", [])
     if not data_fato:
@@ -166,12 +179,12 @@ def fracao_mais_benefica(data_fato, hediondo, morte, vga, reincidente):
         ate = d(j.get("ate", "9999-12-31")) or date.max
         if ate < data_fato:
             continue
-        f, rot, _ = _fracao_em(j, hediondo, morte, vga, reincidente)
+        f, rot, _ = _fracao_em(j, hediondo, morte, vga, reincidente, especial)
         if f is not None:
             cands.append((f, rot, j.get("lei", "")))
     if not cands:
         return None, "", []
-    f_fato, rot_fato, obs = fracao_progressao_esperada(data_fato, hediondo, morte, vga, reincidente)
+    f_fato, rot_fato, obs = fracao_progressao_esperada(data_fato, hediondo, morte, vga, reincidente, especial=especial)
     melhor = min(cands, key=lambda x: x[0])
     if f_fato is not None and melhor[0] < f_fato:
         obs.append("lei posterior mais benéfica retroage: %s" % melhor[1])
@@ -179,7 +192,10 @@ def fracao_mais_benefica(data_fato, hediondo, morte, vga, reincidente):
     return f_fato, rot_fato, obs
 
 
-def _fracao_em(j, hediondo, morte, vga, reincidente):
+def _fracao_em(j, hediondo, morte, vga, reincidente, especial=None):
+    if especial and j.get(especial) and not (especial == "feminicidio_primario" and reincidente):
+        v = j.get(especial)
+        return fr(v), "%s (%s)" % (v, j.get("lei", "")), []
     if hediondo:
         chave = ("hediondo_morte_" if morte else "hediondo_") + ("reincidente" if reincidente else "primario")
     elif vga:

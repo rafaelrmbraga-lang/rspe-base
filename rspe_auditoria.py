@@ -151,8 +151,8 @@ def _agrupar_por_crime(itens):
     return ordem
 
 
-FUND_127 = ("LEP, art. 127 (até 1/3; a contagem recomeça da data da infração); STJ, HC 398.850/SP e HC 293.475/SP; "
-            "TJMS, AgExec 0046207-54.2017.8.12.0001 e 0000687-22.2014.8.12.0019.")
+FUND_127 = ("LEP, art. 127 (até 1/3; a contagem recomeça da data da infração); STJ, HC 398.850/SP, HC 293.475/SP e HC 377.088/SP; "
+            "TJDFT, Acórdão 1230029.")
 
 
 def perdas_por_falta(incidentes):
@@ -237,7 +237,7 @@ def _perda_remidos(incidentes, perdidos, eventos=None):
                                    base, limite, x["perda"], rs.pl(x["perda"] - limite, "dia", "dias"),
                                    " Parcelas: %s - o arredondamento para cima de cada parcela ultrapassa o teto legal." % ", ".join(
                                        "%d (sobre %s)" % (q, rem["n"] if rem else "?") for q, rem in x["parcelas"]) if (len(x["parcelas"]) > 1 and not dup) else ""),
-                               FUND_127 + " STF, RE 638.239."))
+                               FUND_127 + " STF, Tema 477 (RE 1.116.485)."))
         elif not dup:
             itens.append(_item("info", "Perda de %d dias remidos pela falta grave de %s" % (x["perda"], rs.fmt(f)),
                                "Dentro do limite de 1/3 (remição %s: %d dias)." % (("entre a falta de %s e esta" % rs.fmt(prev)) if prev else "até a falta", base), "LEP, art. 127."))
@@ -374,7 +374,7 @@ def auditar(r, hoje=None):
     # remições
     rem_inc = 0
     for i in incidentes:
-        if "REMI" in (i.get("tipo") or "").upper() and i.get("situacao") == "CONCEDIDO":
+        if rs.e_remicao_concedida(i):
             m = rs.re.search(r"(\d+)\s*Dia", i.get("complemento", ""), rs.re.I)
             if m:
                 rem_inc += int(m.group(1))
@@ -433,8 +433,13 @@ def auditar(r, hoje=None):
                                    "O RSPE marca “Reincidente específico: S”. %s. Sem condenação anterior por hediondo/equiparado transitada antes do fato, "
                                    "%s e o livramento é possível (2/3). O RSPE aplica %s. "
                                    "Conferir a certidão de trânsito em julgado." % ("; ".join(partes)[0].upper() + "; ".join(partes)[1:],
-                                       ("a progressão é de 3/5 só se houver reincidência em qualquer crime, e de 2/5 sem ela (Lei 8.072/90, art. 2º, § 2º, na redação da Lei 11.464/2007, vigente no fato)"
-                                        if fato and fato < date(2020, 1, 23) else "o percentual é o do reincidente genérico (40%; STJ Tema 1084, STF Tema 1169)"), _fx),
+                                       ("a progressão é de 1/6, ainda que haja reincidência (LEP, art. 112, redação anterior à Lei 13.964/2019; fato anterior à Lei 11.464/2007: STJ Súmula 471; STF Súmula Vinculante 26)"
+                                        if fato and fato < date(2007, 3, 29) else
+                                        "a progressão é de 3/5 só se houver reincidência em qualquer crime, e de 2/5 sem ela (Lei 8.072/90, art. 2º, § 2º, na redação da Lei 11.464/2007, vigente no fato)"
+                                        if fato and fato < date(2020, 1, 23) else
+                                        "o percentual, por analogia, é o do primário (70%, ou 75% com morte), sem precedente específico sobre a Lei 15.358/2026 - conferir (ratio dos STJ Temas 1084 e 1196; STF Tema 1169)"
+                                        if fato and fato >= date(2026, 3, 25) else
+                                        "o percentual é o do reincidente genérico (40%, ou 50% com morte; STJ Temas 1084 e 1196, STF Tema 1169)"), _fx),
                                    "CP, arts. 63 e 83, V; LEP, art. 112, VII; Lei 11.343/06, art. 44, p. ú.; STJ Tema 1084; STF Tema 1169."))
         # dados ausentes
         if art and c.get("artigo_inferido"):
@@ -479,8 +484,17 @@ def auditar(r, hoje=None):
         # fração de progressão
         f_seeu = _fr_seeu(c.get("fracao_progressao"))
         hed = hed_lei if hed_lei is not None else hed_seeu
-        f_esp, rot, obs = rg.fracao_mais_benefica(fato, hed, morte, vga, reinc)
-        if reinc and not reinc_esp and hed:
+        _tp = c.get("tipo_penal") or ""
+        _cp = lei in ("2848", "") or ("PENAL" in (c.get("lei") or "").upper() and "MILITAR" not in (c.get("lei") or "").upper())
+        especial = None
+        if c.get("comando_orcrim") == "S":
+            especial = "comando_orcrim"
+        elif _cp and art == "288-A":
+            especial = "milicia"
+        elif _cp and (art == "121-A" or (art == "121" and rs.re.match(r"\s*§\s*2[ºo°]?\s*,?\s*(inciso\s*)?VI\b", _tp))):
+            especial = "feminicidio_primario"
+        f_esp, rot, obs = rg.fracao_mais_benefica(fato, hed, morte, vga, reinc, especial=especial)
+        if reinc and not reinc_esp and hed and not especial:
             for _dref in ([fato, date(2020, 1, 23)] if fato and fato < date(2020, 1, 23) else [fato]):
                 f_esp2, rot2, obs2 = rg.fracao_progressao_esperada(_dref, hed, morte, vga, reinc, reinc_especifico=False)
                 if f_esp2 is not None and (f_esp is None or f_esp2 < f_esp):
@@ -510,21 +524,30 @@ def auditar(r, hoje=None):
         jv = rg.regime_progressao(fato) if fato else None
         chave_m = "hediondo_morte_reincidente" if reinc_ef else "hediondo_morte_primario"
         lc_vedado = bool(jv and hed and morte and chave_m in (jv.get("vedado_lc") or []))
+        lc_vedado_esp = bool(jv and especial and jv.get(especial) and especial in (jv.get("vedado_lc") or [])
+                             and not (especial == "feminicidio_primario" and reinc_ef))
         if esp_ok is not None:
             # reincidente específico em hediondo/tráfico: livramento vedado (CP, art. 83, V; Lei 11.343/06, art. 44, p. ú.);
             # o 1/1 do SEEU é coerente com a marcação - a base da reincidência é conferida no item próprio
             fl_esp, rotl = Fraction(1, 1), "vedado (reincidente específico)"
         if lc_vedado:
-            # LEP, art. 112, VI, a (Lei 13.964/2019) e VIII (Lei 15.358/2026): livramento vedado - o 1/1 do SEEU é o correto
+            # LEP, art. 112, VI, a e VIII (Lei 13.964/2019): livramento vedado - o 1/1 do SEEU é o correto
             fl_esp, rotl = Fraction(1, 1), "vedado (LEP, art. 112, VI, a/VIII)"
+        elif lc_vedado_esp:
+            fl_esp, rotl = Fraction(1, 1), "vedado (%s)" % rg.ESPECIAIS.get(especial, especial)
         if fl_seeu is not None and abs(float(fl_seeu) - float(fl_esp)) > 0.005:
             itens.append(_item("alerta" if float(fl_seeu) > float(fl_esp) else "info",
                                ("%s: fração de livramento do SEEU (%s) maior que a legal (%s)" if float(fl_seeu) > float(fl_esp) else "%s: fração de livramento do SEEU (%s) menor que a esperada (%s) - favorece o apenado") % (nome, c.get("fracao_livramento"), rotl),
                                "%s; %s." % ("reincidente" if reinc_ef else "primário", "hediondo/equiparado" if hed else ("art. 44, p. ú., Lei 11.343/06" if trafico else "comum")), "CP, art. 83; Lei 11.343/06, art. 44, p. ú."))
         if lc_vedado:
             itens.append(_item("info", "%s: hediondo com resultado morte, fato em %s - livramento vedado" % (nome, rs.fmt(fato)),
-                               "O RSPE aplica 1/1 no livramento, como manda a lei da data do fato (LEP, art. 112, VI, a, na redação da Lei 13.964/2019; VIII a partir de 25/03/2026). "
-                               "Para fatos anteriores a 23/01/2020, o STF (Tema 1319) aplica o 50%% sem a vedação.", "LEP, art. 112; STF Tema 1319."))
+                               "O RSPE aplica 1/1 no livramento, como manda a lei da data do fato (LEP, art. 112, VI, a, e VIII, na redação da Lei 13.964/2019). "
+                               "Para fatos anteriores a 23/01/2020, o STJ admite o 50%% sem a vedação ao livramento (Tema 1196; CP, art. 83, V); "
+                               "a questão está pendente no STF (Tema 1319, repercussão geral reconhecida, sem julgamento de mérito).",
+                               "LEP, art. 112; STJ Tema 1196; STF Tema 1319 (pendente)."))
+        elif lc_vedado_esp:
+            itens.append(_item("info", "%s: %s, fato em %s - livramento vedado" % (nome, rg.ESPECIAIS.get(especial, especial), rs.fmt(fato)),
+                               "A lei da data do fato veda o livramento condicional nesta hipótese; o 1/1 do SEEU é o correto.", "LEP, art. 112, VI-A e VI, b e d."))
         # reincidência: precisa de condenação anterior transitada antes do fato (consolidado após o laço)
         if reinc and fato:
             anteriores = [o for o in crimes if o is not c and rs.to_date(o.get("transito_processo") or o.get("transito_mp") or "") and rs.to_date(o.get("transito_processo") or o.get("transito_mp")) < fato]
@@ -659,9 +682,19 @@ def auditar(r, hoje=None):
     if nasc:
         idade = hoje.year - nasc.year - ((hoje.month, hoje.day) < (nasc.month, nasc.day))
         if idade >= 70:
-            itens.append(_item("verificar", "Idade %d anos: prescrição pela metade e prisão domiciliar" % idade, "Art. 115 do CP (maior de 70 na sentença) e art. 117, I, da LEP (regime aberto em residência).", "CP, art. 115; LEP, art. 117."))
-        elif idade >= 60:
-            itens.append(_item("verificar", "Idade %d anos: lapsos de indulto pela metade" % idade, "Decretos 12.338/2024 e 12.790/2025, art. 9º, § 2º, I.", ""))
+            itens.append(_item("verificar", "Idade %d anos: prisão domiciliar no regime aberto (LEP, art. 117, I); conferir a idade na data da sentença para o art. 115 do CP" % idade,
+                               "Art. 117, I, da LEP: recolhimento em residência particular do beneficiário do regime aberto maior de 70 anos. "
+                               "Art. 115 do CP: prazos de prescrição pela metade só se era maior de 70 anos na data da sentença (a aba Prescrição calcula).",
+                               "CP, art. 115; LEP, art. 117, I."))
+        # § 2º, I, dos decretos: maior de 60 anos em 25/12 do ano do decreto (medido na data de cada decreto)
+        _i60 = []
+        for _ano, _ref in sorted(rs.DECRETOS.items()):
+            _id = _ref.year - nasc.year - ((_ref.month, _ref.day) < (nasc.month, nasc.day))
+            if _id >= 60:
+                _i60.append("%d anos em %s" % (_id, rs.fmt(_ref)))
+        if _i60:
+            itens.append(_item("verificar", "Idade para o indulto: lapsos pela metade (%s)" % "; ".join(_i60),
+                               "Decretos 12.338/2024 e 12.790/2025, art. 9º, § 2º, I (pessoas maiores de sessenta anos): os lapsos dos incisos I a XI caem pela metade.", ""))
 
     # regime impresso no RSPE x livramento em curso
     _lc, _dl = rs.livramento_em_curso(r, incidentes)
@@ -721,13 +754,14 @@ def auditar(r, hoje=None):
             if (r.get("comutacao_%s" % ano) or "").startswith("POSSÍVEL") and not rs.decisoes_decreto(incidentes, ano, "COMUTA"):
                 itens.append(_item("alerta", "Comutação %s possível sem incidente no RSPE" % ano, r.get("comutacao_%s" % ano, ""), "Decreto %s, art. 13." % dec))
     # hediondez superveniente: impeditivo pelo STJ (data do decreto), mas há tese defensiva no STF
-    sup = [c for c in ativos if rs.e_hediondo(c, date(2024, 12, 25)) and not rs.e_hediondo(c)]
+    sup = [c for c in ativos if any(rs.e_hediondo(c, _ref) for _ref in rs.DECRETOS.values()) and not rs.e_hediondo(c)]
     if sup:
         itens.append(_item("verificar", "Hediondez posterior ao fato (%s): indulto/comutação possíveis pela tese da irretroatividade; o STJ veda" % rs.crimes_curto(sup),
                            "Não era hediondo na data do fato; é na data do decreto. "
                            "STJ: afere na data do decreto e veda. "
                            "STF, a favor: 2ª Turma (RHC 267.297 AgR e HC 273.296 AgR) e monocráticas (RE 1.572.734, HC 258.516, RHC 269.076, HC 271.716, RE 1.607.670). "
-                           "TJMS: a 2ª Câmara Criminal concede (1602006-93.2026, 1602467-65.2026, 1603697-45.2026); a 1ª e a 3ª seguem o STJ. "
+                           "Em sentido contrário no STF, monocrática: RHC 273.867. "
+                           "TJMS: a 2ª Câmara Criminal dá provimento parcial para reanálise (1602006-93.2026, 1602467-65.2026, 1603697-45.2026); a 1ª e a 3ª seguem o STJ. "
                            "Frações de progressão: pela data do fato.",
                            "Decretos de indulto, art. 1º, I; CF, art. 5º, XL; CP, art. 2º."))
     # violência doméstica: art. 129 §§ 9º-11 sem sinal de que a vítima é mulher
@@ -741,9 +775,11 @@ def auditar(r, hoje=None):
     # presunção de hipossuficiência (Defensoria): multa e reparação do dano nunca bloqueiam benefício no programa
     crimes_ativos = [c for c in crimes if not c.get("extinto", "").upper().startswith("S")]
     if any(re.search(r"\b[Ee]\s+Multa", c.get("tipo_penal") or "") for c in crimes_ativos):
-        itens.append(_item("info", "Pena de multa cominada: hipossuficiência presumida",
-                           "A multa não é tratada como óbice à extinção, ao livramento ou ao indulto; instruir a petição com a assistência pela Defensoria e a ausência de bens.",
-                           "STJ Tema 931 (rev. 28/02/2024); STF ADI 7.032; Decretos 12.338/2024 e 12.790/2025, art. 12, § 2º, I."))
+        itens.append(_item("info", "Pena de multa cominada: extinção cabível se comprovada a impossibilidade de pagamento",
+                           "Multa pendente: a extinção da punibilidade exige prova da impossibilidade de pagamento, ainda que parcelado (STF ADI 7.032, vinculante; STJ Tema 931). "
+                           "Instruir com elementos concretos (declaração de hipossuficiência, ausência de bens, remuneração do trabalho prisional): a mera assistência pela Defensoria "
+                           "foi tida por insuficiente pelo STJ (REsp 2.055.935). No indulto, a incapacidade econômica é presumida para o assistido da Defensoria (art. 12, § 2º, I, dos decretos).",
+                           "STF ADI 7.032; STJ Tema 931 (rev. 28/02/2024); Decretos 12.338/2024 e 12.790/2025, art. 12, § 2º, I."))
     if any(rs.crime_patrimonial(c) and c.get("vga") != "S" for c in crimes_ativos):
         itens.append(_item("info", "Crime patrimonial sem VGA: reparação do dano presumida impossível",
                            "Livramento (CP, art. 83, IV) e indulto (art. 9º, XV) não são bloqueados pela ausência de reparação; a impossibilidade econômica é presumida para o assistido da Defensoria.",

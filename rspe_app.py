@@ -10,6 +10,7 @@ em rspe_export.py. Bases locais (.sqlite) ficam na pasta "bases".
 
 import hashlib
 import json
+import logging
 import os
 import re
 import shutil
@@ -32,7 +33,7 @@ import rspe_regras as rg
 import rspe_relatorio as rrel
 
 APP = "RSPE Base"
-VERSAO = "6.15.9"
+VERSAO = "6.15.10"
 
 
 def pasta_app():
@@ -104,12 +105,13 @@ SEEU corta o texto, usa-se a tabela editável "pena_maxima_abstrata" da base jur
 agentes de segurança e militares (arts. 2º, 3º e 6º) não é avaliado; o art. 8º exclui PRD, multa e suspensão condicional do processo.
 <b>Hediondez pela época do fato</b>: a tabela "hediondos.desde" da base jurídica guarda a data em que cada tipo passou a ser
 hediondo (Lei 8.072/90 e alterações - 8.930/94, 9.695/98, 12.015/2009, 13.104 e 13.142/2015, 13.497/2017, 13.654/2018,
-13.964/2019, 14.811 e 14.994/2024, 15.358/2026). Fato anterior à data não é tratado como hediondo (CF, art. 5º, XL): isso
-vale para as frações, o livramento e o art. 1º dos decretos, e a Auditoria alerta quando o SEEU rotulou como hediondo um
-fato anterior à lei.
+12.978/2014, 13.964/2019, 14.811 e 14.994/2024, 15.134 e 15.159/2025, 15.358, 15.384 e 15.487/2026). Fato anterior à data não é
+tratado como hediondo (CF, art. 5º, XL) nas frações e no livramento, e a Auditoria alerta quando o SEEU rotulou como hediondo um
+fato anterior à lei. No art. 1º dos decretos de indulto, a hediondez é aferida na data de cada decreto (STJ); a tese da
+irretroatividade (STF, 2ª Turma) aparece como "tese hed. superv.".
 <h4>Prescrição (arts. 109 a 119 do CP), crime a crime</h4>
 <b>Pretensão punitiva (retroativa e intercorrente, art. 110, § 1º)</b>: prazo pela pena aplicada (art. 109), metade se menor de 21 anos
-no fato ou maior de 70 na sentença (art. 115); intervalos fato→denúncia (só para fatos anteriores a 05/05/2010, Lei 12.234/2010),
+no fato ou maior de 70 na sentença (art. 115); intervalos fato→denúncia (só para fatos até 05/05/2010; Lei 12.234/2010, DOU e vigência em 06/05/2010),
 denúncia→sentença e sentença→trânsito. O acórdão confirmatório também interrompe (art. 117, IV; STF HC 176.473) e sua data não
 consta no RSPE: conferir antes de pedir.
 <b>Pretensão executória (art. 110, caput)</b>: prazo pela pena aplicada, +1/3 se reincidente, metade pelo art. 115. Termo inicial no
@@ -193,8 +195,10 @@ para reativação futura.
 <h4>Auditoria</h4>
 Confronta o RSPE com a base jurídica (arquivo base_juridica.json, editável e versionado): soma das penas, cumprida + remanescente,
 remições, hediondez pelo rol da Lei 8.072/90 (e art. 112, § 5º, LEP para o tráfico privilegiado), marcação de VGA pelo tipo,
-percentual de progressão pela lei da data do fato (16,67% - 1/6 - até 22/01/2020; Lei 13.964/2019 de 23/01/2020 a 24/03/2026; Lei 15.358/2026
-a partir de 25/03/2026 para hediondos; Lei 15.402/2026 a partir de 08/05/2026), com retroatividade só do mais benéfico (STJ Temas
+percentual de progressão pela lei da data do fato (1/6 para crimes comuns até 22/01/2020 e para hediondos até 28/03/2007 - STJ Súmula 471;
+2/5 ou 3/5 para hediondos de 29/03/2007 a 22/01/2020 - Lei 11.464/2007; Lei 13.964/2019 de 23/01/2020 a 24/03/2026, com o VI-A
+(feminicídio, 55%) de 10/10/2024 a 24/03/2026; Lei 15.358/2026 a partir de 25/03/2026 para hediondos, feminicídio, milícia e comando de
+organização criminosa; Lei 15.402/2026 a partir de 08/05/2026), com retroatividade só do mais benéfico (STJ Temas
 1084, 1196 e 1354; STF Tema 1169), fração de livramento (CP, art. 83; Lei 11.343, art. 44), reincidência sem condenação anterior
 no RSPE (CP, art. 63), data-base e regressões (LEP, art. 112, § 6º), idade (art. 115 CP; § 2º dos decretos), marcos vencidos sem
 decisão, prescrição aparente e indulto/comutação possível sem incidente. Os pontos têm quatro níveis: <b>Alerta</b> (divergência com efeito concreto para o apenado: fração, hediondez, marco vencido,
@@ -205,7 +209,7 @@ prescrição, indulto, remição, falta), <b>Verificar</b> (depende de dado que 
 fica registrado na base com data e pode ser reaberto. A baixa é por processo e por ponto, e sobrevive à reimportação do RSPE.
 <h4>Extinção</h4>
 Só a extinção pelo cumprimento: pena integralmente cumprida ou término previsto já alcançado (LEP, art. 109); livramento
-condicional com período de prova expirado sem revogação (CP, arts. 82 e 90); detração que alcança toda a pena do crime.
+condicional com período de prova expirado sem revogação (CP, arts. 89 e 90; LEP, art. 146); detração que alcança toda a pena do crime.
 Prescrição e indulto ficam nas próprias abas. Cores: vermelho =
 extinção cabível; amarelo/verde = término em até 30/60 dias; cinza = pena interrompida ou sem previsão.
 <h4>Base jurídica</h4>
@@ -246,12 +250,18 @@ class Base:
         self.con.commit()
 
     def gravar_ficha(self, f, processo):
+        """Grava a ficha; não substitui ficha impressa depois (devolve False nesse caso)."""
         chave = processo or ("nome:" + _norm(f.get("nome", "")))
         with self.lock:
+            row = self.con.execute("SELECT data_impressao FROM fichas WHERE chave=?", (chave,)).fetchone()
+            d_ex, d_novo = rs.to_date((row[0] if row else "") or ""), rs.to_date(f.get("data_impressao") or "")
+            if d_ex and (not d_novo or d_novo < d_ex):
+                return False
             self.con.execute("INSERT OR REPLACE INTO fichas VALUES (?,?,?,?,?,?)",
                              (chave, processo or "", _norm(f.get("nome", "")), f.get("data_impressao", ""),
                               datetime.now().strftime("%d/%m/%Y %H:%M"), json.dumps(f, ensure_ascii=False)))
             self.con.commit()
+        return True
 
     def fichas(self):
         """{processo: ficha} + {'nome:xxx': ficha} para as não vinculadas."""
@@ -412,6 +422,7 @@ class Api:
 
     # ---- dados ----
     def listar(self):
+        rv.HOJE = datetime.now().date()  # a data de referência acompanha o relógio (programa aberto após a meia-noite)
         if not self.base:
             return {"sem_base": True, "recentes": [{"caminho": p, "nome": os.path.splitext(os.path.basename(p))[0]} for p in self._recentes()],
                     "hoje": rv.HOJE.strftime("%d/%m/%Y"), "abas": rv.ABAS, "rotulos": rv.ROTULO, "ajuda": AJUDA,
@@ -421,6 +432,9 @@ class Api:
         fichas = self.base.fichas()
         manuais = self.base.manuais()
         self._modelos = []
+        _homonimos = {}
+        for _r in brutos:
+            _homonimos[_norm(_r.get("nome", ""))] = _homonimos.get(_norm(_r.get("nome", "")), 0) + 1
         for r in brutos:
             try:
                 imp = r.get("importado_em")
@@ -429,7 +443,8 @@ class Api:
             except Exception:
                 pass
             ch = r.get("processo_execucao") or r.get("arquivo")
-            ficha = fichas.get(ch) or fichas.get("nome:" + _norm(r.get("nome", "")))
+            _nn = _norm(r.get("nome", ""))
+            ficha = fichas.get(ch) or (fichas.get("nome:" + _nn) if _homonimos.get(_nn, 0) == 1 else None)
             m = rv.modelo(r, baixas.get(ch, {}), ficha, manuais.get(ch, []))
             m["_bruto"] = r
             self._modelos.append(m)
@@ -615,7 +630,9 @@ class Api:
                     if r.get("tipo") == "ficha_disciplinar":
                         with lock:
                             proc = self._vincular_ficha(r, base)
-                            base.gravar_ficha(r, proc)
+                            if not base.gravar_ficha(r, proc):
+                                antigos.append("%s: ficha de %s impressa em %s é mais antiga que a da base - ignorada" % (nome_arq, r.get("nome"), r.get("data_impressao") or "?"))
+                                continue
                             fichas_ok.append("%s: ficha de %s %s" % (nome_arq, r.get("nome"), ("vinculada a " + proc) if proc else "SEM RSPE correspondente na base (fica guardada pelo nome)"))
                         continue
                     if not r.get("processo_execucao"):
@@ -635,6 +652,9 @@ class Api:
                             d_ex, d_novo = rs.to_date(data_ex or ""), rs.to_date(r.get("data_geracao_rspe") or "")
                             if d_ex and d_novo and d_novo < d_ex:
                                 antigos.append("%s: RSPE de %s é mais antigo que o da base (%s) - ignorado" % (nome_arq, r.get("data_geracao_rspe"), data_ex))
+                                continue
+                            if d_ex and not d_novo:
+                                antigos.append("%s: RSPE sem data de geração legível; a base já tem o de %s - ignorado" % (nome_arq, data_ex))
                                 continue
                             base.gravar(r)
                             atualizados += 1
@@ -668,10 +688,9 @@ class Api:
             if a in procs:
                 return a
         nn = _norm(f.get("nome", ""))
-        for p, n in rows:
-            if _norm(n) == nn:
-                return p
-        return ""
+        mesmos = [p for p, n in rows if _norm(n) == nn]
+        # pelo nome só quando não há homônimo na base (com homônimos, a ficha fica guardada pelo nome, sem vínculo)
+        return mesmos[0] if len(mesmos) == 1 else ""
 
     # ---- pasta vigiada: <pasta mãe>/<nome da base>/*.pdf entra sozinho na base de mesmo nome ----
     def vigia_info(self):

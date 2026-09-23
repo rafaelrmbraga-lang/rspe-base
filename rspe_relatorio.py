@@ -385,8 +385,9 @@ def estatisticas(modelos, hoje=None):
     for m in modelos:
         if not m.get("ficha_tem"):
             continue
-        mm = re.search(r"\+([\d.,]+)", m.get("fd_remidos") or "")
-        rp += float(mm.group(1).replace(",", ".")) if mm else 0
+        # fd_remidos = "remidos pela ficha / homologados no RSPE": a diferença positiva está pendente de homologação
+        mm = re.match(r"\s*([\d,]+)\s*/\s*([\d,]+)", m.get("fd_remidos") or "")
+        rp += max(0.0, float(mm.group(1).replace(",", ".")) - float(mm.group(2).replace(",", "."))) if mm else 0
         tr += int(m.get("fd_sem_n") or 0)
         me = re.search(r"≈ (\d+) dias", m.get("fd_estudo") or "")
         es += int(me.group(1)) if me else 0
