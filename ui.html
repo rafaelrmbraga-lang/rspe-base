@@ -234,32 +234,20 @@ tr.sub td{padding:0 0 0 0;background:#FFFFFF;cursor:default}tr.sub:hover td{back
 .tk:hover{border-color:var(--g-dot)}
 .tk.on{background:var(--g-dot);border-color:var(--g-dot)}.tk.on::after{content:"✓";color:#fff;font-size:12px;font-weight:700;line-height:1}
 
-/* prescrição executória no padrão do SEEU (editável, recálculo pelo art. 109) */
-.sq{margin:0 0 12px;border:1px solid var(--line);border-radius:12px;background:#fff;overflow:hidden}
-.sq-h{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 14px;background:#F8F9FB;border-bottom:1px solid var(--line)}
-.sq-h b{font-size:13px}.sq-h .sp{flex:1}.sq-h .muted{font-size:12px}
-.sq-wrap{overflow-x:auto}
-table.sq-t{width:100%;border-collapse:collapse;font-size:12px;min-width:1560px;table-layout:fixed}
-.sq-t th{background:#5E7A4B;color:#fff;font-weight:600;font-size:11.5px;padding:7px 6px;text-align:center;border:1px solid #fff;white-space:normal;word-break:normal;overflow-wrap:normal;text-transform:none;letter-spacing:0;line-height:1.25;position:static;cursor:default}
-.sq-t td{padding:5px 6px;border:1px solid #fff;text-align:center;vertical-align:middle;white-space:nowrap;background:#F1F3EC}
-.sq-t tr:nth-child(even) td{background:#E6EBDD}
-.sq-t input,.sq-t select{font:inherit;font-size:12px;border:1px dashed transparent;background:transparent;border-radius:4px;padding:2px 3px;text-align:center;color:var(--tx);width:100%;min-width:0}
-.sq-t input:hover,.sq-t select:hover{border-color:#98A2B3;background:#fff}
-.sq-t input:focus,.sq-t select:focus{outline:none;border:1px solid var(--pri);background:#fff}
-.sq-t .ed input,.sq-t .ed select{background:#FEF4D6;border-color:#F5A524;font-weight:600}
-.sq-t .w-acao{width:190px}.sq-t .w-d{width:92px}.sq-t .w-p{width:72px}
-.sq-bar{display:flex;height:16px;border-radius:2px;overflow:hidden;min-width:140px;font-size:10px;font-weight:700;color:#fff;line-height:16px}
-.sq-bar i{display:block;font-style:normal;text-align:center;overflow:hidden}
-.sq-bar .cu{background:#5CB85C}.sq-bar .re{background:#D9534F}
-.sq-sit{display:inline-block;min-width:78px;padding:6px 8px;border-radius:4px;font-weight:700;font-size:11.5px;letter-spacing:.3px;border:1px solid}
-.sq-sit.ok{background:#A9C77A;color:#fff;border-color:#8FB05F;text-shadow:0 1px 0 rgba(0,0,0,.15)}
-.sq-sit.pr{background:#A94442;color:#FFE08A;border-color:#8A3432}
-.sq-sit.sd{background:#EEF0F3;color:#5B6470;border-color:#D0D5DD}
-.sq-calc{color:#101828;font-weight:600}
-.sq-f{padding:8px 14px;font-size:11.5px;color:var(--tx2);line-height:1.5;border-top:1px solid var(--line)}
-.sq-f b{color:var(--tx)}
-.sq-rs{cursor:pointer;color:var(--tx3);font-size:13px;padding:0 2px}.sq-rs:hover{color:var(--pri)}
-
+/* edição dos dados da prescrição (preencher ou corrigir) e triagem do saldo */
+.pf{border:1px solid #D0D5DD;border-radius:10px;background:#FCFCFD;padding:10px 12px;margin:6px 0;font-size:12px}
+.pf h5{margin:0 0 8px;font-size:12.5px}.pf .muted{font-size:11.5px}
+.pf-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px 12px}
+.pf label{display:flex;flex-direction:column;gap:3px;color:var(--tx2);font-weight:600;font-size:11.5px}
+.pf input,.pf select{font:inherit;font-size:12.5px;padding:5px 7px;border:1px solid var(--line2);border-radius:6px;background:#fff;color:var(--tx)}
+.pf input.ed,.pf select.ed{background:#FEF4D6;border-color:#F5A524}
+.pf .sd{margin-top:10px;padding:8px 10px;border:1px dashed #F5A524;border-radius:8px;background:#FFFAEB}
+.pf .sd .amd{display:flex;gap:6px;align-items:center;margin-top:4px}.pf .sd .amd input{width:62px}
+.pf .acts{display:flex;gap:8px;margin-top:10px;justify-content:flex-end}
+.btn-sal{display:inline-flex;align-items:center;gap:5px;padding:4px 9px;border-radius:7px;background:#F79009;color:#fff;font-weight:700;font-size:11px;cursor:pointer;letter-spacing:.3px}
+.btn-sal:hover{background:#DC6803}
+.aj{color:#B54708;font-size:11px;font-weight:600;margin-left:4px}
+.ptl-res .tri{margin-top:4px;font-weight:600}.ptl-res .sr{margin-top:3px;color:var(--tx2);font-size:12px}
 /* linha do tempo de indulto e comutação */
 .tlv{position:fixed;inset:0;z-index:35;background:rgba(16,24,40,.45);display:none}
 .tlv.on{display:block}
@@ -307,11 +295,11 @@ table.sq-t{width:100%;border-collapse:collapse;font-size:12px;min-width:1560px;t
 .cl .it{font-weight:600}.cl .tx{color:var(--tx2);display:block;font-weight:400}
 .hw{color:var(--pri);cursor:pointer;font-size:11px;white-space:nowrap;font-weight:600}.hw:hover{text-decoration:underline}
 .stt{display:inline-block;padding:3px 8px;border-radius:6px;font-weight:700;font-size:11px}
-.stt.cabe{background:#DDF5E7;color:#067647}.stt.nao{background:#FDE8E8;color:#B42318}.stt.verificar{background:#FEF4D6;color:#B54708}.stt.ainda{background:#DBEAFE;color:#1D4ED8}.stt.prejudicada{background:#EEF0F3;color:#5B6470}
+.stt.cabe{background:#DDF5E7;color:#067647}.stt.nao{background:#FDE8E8;color:#B42318}.stt.verificar{background:#FEF4D6;color:#B54708}.stt.ainda{background:#DBEAFE;color:#1D4ED8}.stt.prejudicada{background:#EEF0F3;color:#5B6470}.stt.concedido{background:#DBEAFE;color:#1D4ED8}
 .res{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px}
 .rc{border-radius:10px;padding:10px 12px;border-left:5px solid;font-size:12px;line-height:1.5}
 .rc b{display:block;font-size:12.5px;letter-spacing:.3px}.rc .mu{color:var(--tx2);font-size:11.5px}
-.rc.cabe{background:#ECFDF3;border-color:#17B26A}.rc.nao{background:#FEF3F2;border-color:#E5484D}.rc.verificar{background:#FFFAEB;border-color:#F5A524}.rc.ainda{background:#EFF8FF;border-color:#2563EB}
+.rc.cabe{background:#ECFDF3;border-color:#17B26A}.rc.nao{background:#FEF3F2;border-color:#E5484D}.rc.verificar{background:#FFFAEB;border-color:#F5A524}.rc.ainda,.rc.concedido{background:#EFF8FF;border-color:#2563EB}.rc.prejudicada{background:#F9FAFB;border-color:#98A2B3}
 .rc .pj{margin-top:6px;padding:6px 8px;border-radius:6px;background:#fff;border:1px dashed #2563EB;color:#1D4ED8;font-weight:600}
 .tlv-det{position:absolute;top:62px;right:14px;width:390px;max-height:calc(100% - 80px);overflow:auto;background:#fff;border:1px solid var(--line2);border-radius:12px;box-shadow:var(--shadow2);padding:12px 14px;display:none;font-size:12px;z-index:3}
 .tlv-det.on{display:block}
@@ -557,7 +545,7 @@ const ui = {
       rt.sort((p,q)=>p.x-q.x); let lx=-9999, dy=22;
       rt.forEach(t=>{ dy=(t.x-lx<260)? dy+13 : 22; lx=t.x; const anchor=t.x>PL+W-150?'end':(t.x<PL+150?'start':'middle');
         svg+=`<line x1="${t.x}" y1="${yc-8}" x2="${t.x}" y2="${yc+8}" stroke="${t.col}" stroke-width="${t.w}" ${t.dash?`stroke-dasharray="${t.dash}"`:''}/><text x="${t.x}" y="${yc+dy}" text-anchor="${anchor}" font-size="9.5" fill="${t.col}" ${t.b?'font-weight="700"':''}>${esc(t.txt)}</text>`; });
-      const cw=340, ch=130, cxx=Math.min(Math.max(xa,PL), PL+W-cw), cy=yc+72;
+      const cw=470, ch=130, cxx=Math.min(Math.max(xa,PL), PL+W-cw), cy=yc+72;
       svg+=`<rect x="${cxx}" y="${cy}" width="${cw}" height="${ch}" rx="7" fill="#fff" stroke="${cor}" stroke-width="1.5"/><text x="${cxx+10}" y="${cy+16}" font-size="11" font-weight="700" fill="${cor}">${esc(rot.toUpperCase())}</text>`;
       const venc=(()=>{ const ls=(s.faixas||[]).filter(f=>f.limite).map(f=>f.limite); const u=[...new Set(ls)]; return u.length>1? u[0]+' a '+u[u.length-1] : (u[0]||s.limite_max||'—'); })();
       const li=[['Pena aplicada', amd(s.saldo_max + s.cumprido_min)], ['Cumprido (execução)', dias(s.cumprido_desde_termo)+(s.remicao?' + '+s.remicao+' remidos':'')],
@@ -570,8 +558,10 @@ const ui = {
   prescTimelineHtml(L){
     const idx=this.tlReg(L); const amd=this.tlAmd.bind(this), dias=this.tlDias.bind(this);
     const sal=L.ppe_saldos||[]; const ultima=sal.find(s=>s.resultado==='a verificar')||sal.find(s=>s.resultado==='prescrita')||sal[sal.length-1]||{};
-    const r=(L.ppe_status||'').startsWith('A VERIFICAR')?['amb','A VERIFICAR']: /aparente/i.test(L.ppe_status||'')?['verm','PRESCRITO']: ['verde','Não reconhecida'];
-    const motivo=r[1]==='A VERIFICAR' ? 'não foi possível determinar, com os dados do SEEU, o saldo de pena atribuído a esta condenação na data da fuga' : r[1]==='PRESCRITO' ? L.ppe_status : (ultima.fim&&ultima.fim!=='hoje' ? 'a recaptura ocorreu antes do vencimento calculado em todas as hipóteses de saldo' : 'o prazo ainda não venceu em nenhuma das hipóteses de saldo');
+    const r=(L.ppe_status||'').startsWith('A VERIFICAR')?['amb','🟠 A VERIFICAR']: /aparente/i.test(L.ppe_status||'')?['verm','🔴 PRESCRITO']: ['verde','🟢 NÃO PRESCRITO'];
+    const motivo=r[1].includes('A VERIFICAR') ? (L.ppe_status.replace(/^A VERIFICAR:\s*/,'')||'não foi possível determinar, com os dados do SEEU, o saldo de pena atribuído a esta condenação na data da fuga') : r[1].includes('PRESCRITO')&&!r[1].includes('NÃO') ? L.ppe_status : (ultima.fim&&ultima.fim!=='hoje' ? 'a recaptura ocorreu antes do vencimento calculado em todas as hipóteses de saldo' : 'o prazo ainda não venceu em nenhuma das hipóteses de saldo');
+    const iminente=r[0]==='verde'&&L.ppe_previsao&&L.ppe_dias!=null ? `<div class="sr">⚠ Prazo em curso: vence em ${esc(L.ppe_previsao)} (${L.ppe_dias===1?'falta 1 dia':'faltam '+L.ppe_dias+' dias'}).</div>`:'';
+    const antes=r[0]==='verm' ? '<div class="sr">Antes de requerer: conferir recaptura ou nova condenação não registradas no RSPE (interrompem - art. 117, V e VI).</div>':'';
     const hip=ultima.art76? `<div class="ptl-hip"><div class="box"><b>Hipótese 1 · CP, art. 76 (pena mais grave primeiro)</b>Este crime seria o ${ultima.art76.posicao}º de ${ultima.art76.de} em execução. Saldo na fuga: ${amd(ultima.art76.saldo)} · prazo ${esc(ultima.art76.prazo||'—')} · ${ultima.art76.limite? 'venceria em '+ultima.art76.limite : ''} → <b style="display:inline">${esc(ultima.art76.resultado)}</b></div>
       <div class="box"><b>Hipótese 2 · ordem cronológica do trânsito</b>Este crime seria o ${ultima.cronologica.posicao}º de ${ultima.cronologica.de}. Saldo na fuga: ${amd(ultima.cronologica.saldo)} · ${ultima.cronologica.prazo? 'prazo '+esc(ultima.cronologica.prazo)+' · venceria em '+ultima.cronologica.limite : 'nada a prescrever'} → <b style="display:inline">${esc(ultima.cronologica.resultado)}</b></div></div>`:'';
     const saldoTxt=ultima.saldo_min===ultima.saldo_max? amd(ultima.saldo_max) : 'entre '+amd(ultima.saldo_min)+' e '+amd(ultima.saldo_max);
@@ -583,7 +573,8 @@ const ui = {
        <div class="box"><b>2 · Saldo da pena na fuga</b>Pena de ${penaExt(esc(L.pena||''))} menos o cumprimento imputável a esta condenação: ${saldoTxt} (na fuga de ${esc(ultima.evasao||'—')}).</div><div class="arr">→</div>
        <div class="box"><b>3 · Prazo de prescrição</b>Art. 109 sobre o saldo, +1/3 reincidência, ½ art. 115: ${ultima.prazo_min && ultima.prazo_min!==ultima.prazo_max? esc(ultima.prazo_min)+' a '+esc(ultima.prazo_max) : esc(ultima.prazo_max||'nada a prescrever')}.</div></div>
      ${hip}
-     <div class="ptl-res ${r[0]}"><div><b>PRESCRIÇÃO: ${r[1]}</b>Motivo: ${esc(motivo)}.${L.ppe_faltam&&L.ppe_faltam.length? `<div class="falta"><b style="display:inline">Falta para concluir:</b> ${esc(L.ppe_faltam.join('; '))}.</div>`:''}</div></div></div>`; },
+     <div class="ptl-res ${r[0]}"><div><b>${r[1]}</b>${r[0]!=='verde'||!L.ppe_triagem?'Motivo: '+esc(motivo)+'.':''}${L.ppe_triagem?`<div class="tri">${esc(L.ppe_triagem)}</div>`:''}${L.ppe_saldo_rotulo?`<div class="sr">${esc(L.ppe_saldo_rotulo)}</div>`:''}${iminente}${antes}${r[0]==='amb'&&L.ppe_faltam&&L.ppe_faltam.length? `<div class="falta"><b style="display:inline">Falta para concluir:</b> ${esc(L.ppe_faltam.join('; '))}.</div>`:''}
+       ${r[0]==='amb'?`<div style="margin-top:8px"><span class="btn-sal" onclick="event.stopPropagation();ui.pfAbrir(this,${idx},'saldo')">CONFERIR / INFORMAR SALDO</span></div>`:''}<div class="pf-holder"></div></div></div></div>`; },
   tlClick(ev){
     const x=ev.target.closest('.ptl-pop .x'); if(x){ x.closest('.ptl-pop').classList.remove('on'); return; }
     const g=ev.target.closest('.ptl .mk'); if(!g) return; ev.stopPropagation();
@@ -666,13 +657,13 @@ const ui = {
       const meta=[['Denúncia',um(xs,'denuncia')],['Sentença',um(xs,'sentenca')],['Trânsito',um(xs,'transito')]].filter(m=>m[1]!==null).map(m=>m[0]+' '+d(m[1])).join(' · ');
       const cols=pe?[['Crime',24],['Pena',11],['Fato',11],['Prazo PPE',16],['Termo inicial',12],['Executória',26]]:[['Crime',26],['Pena',11],['Fato',11],['Prazo PPP',14],['Retroativa / intercorrente',38]];
       const lin=xs.map(x=>{ const v=pe?[x.crime,x.pena,x.fato,x.prazo_ppe,x.ppe_termo]:[x.crime,x.pena,x.fato,x.prazo_ppp];
-        const tem=pe&&ui.tlTem(x); const ti=tem?ui.tlReg(x):-1;
-        return `<tr class="${rel(x)?'':'fora'}">${v.map(y=>`<td>${penaExt(d(y))}</td>`).join('')}<td>${x[st]?`<span class="pill ${x[sc]||'none'}">${esc(cur(x[st]))}</span>`:'—'}</td><td style="white-space:nowrap!important"><span class="why" onclick="event.stopPropagation();ui.tlToggle(this,'calc',${ti})">cálculo</span>${tem?` · <span class="why" onclick="event.stopPropagation();ui.tlToggle(this,'tl',${ti})">linha do tempo</span>`:''}</td></tr><tr style="display:none"><td colspan="${cols.length+1}">${ui.memoria(x, pe?'pe':'pp')}</td></tr><tr style="display:none"><td colspan="${cols.length+1}"></td></tr>`; }).join('');
+        const tem=pe&&ui.tlTem(x); const ti=ui.tlReg(x);
+        const verif=pe&&/^A VERIFICAR/.test(x.ppe_status||'');
+        return `<tr class="${rel(x)?'':'fora'}">${v.map((y,j)=>`<td>${penaExt(d(y))}${j===0&&x.ajustado?'<span class="aj" title="Dados preenchidos ou corrigidos pelo operador">✎ ajustado</span>':''}</td>`).join('')}<td>${x[st]?`<span class="pill ${x[sc]||'none'}">${esc(cur(x[st]))}</span>`:'—'}${verif?`<div style="margin-top:4px"><span class="btn-sal" onclick="event.stopPropagation();ui.pfAbrir(this,${ti},'saldo')">CONFERIR / INFORMAR SALDO</span></div>`:''}</td><td style="white-space:nowrap!important"><span class="why" onclick="event.stopPropagation();ui.tlToggle(this,'calc',${ti})">cálculo</span>${tem?` · <span class="why" onclick="event.stopPropagation();ui.tlToggle(this,'tl',${ti})">linha do tempo</span>`:''} · <span class="why" onclick="event.stopPropagation();ui.pfAbrir(this,${ti})">editar dados</span></td></tr><tr style="display:none"><td colspan="${cols.length+1}">${ui.memoria(x, pe?'pe':'pp')}</td></tr><tr style="display:none"><td colspan="${cols.length+1}"></td></tr><tr style="display:none"><td colspan="${cols.length+1}"><div class="pf-holder"></div></td></tr>`; }).join('');
       return `<div class="pc"><div class="pc-h"><b>Ação penal ${esc(k)}</b><span class="pc-m">${pl(xs.length,'crime','crimes')}${meta?' · '+meta:''}</span><span class="sp"></span>${pior[st]?`<span class="pill ${pior[sc]||'none'}">${esc(cur(pior[st]).split(' em ')[0])}</span>`:''}</div>
-        <table><thead><tr>${cols.map(c=>`<th style="width:${c[1]}%">${c[0]}</th>`).join('')}<th style="width:150px"></th></tr></thead><tbody>${lin}</tbody></table></div>`; }).join('');
+        <table><thead><tr>${cols.map(c=>`<th style="width:${c[1]}%">${c[0]}</th>`).join('')}<th style="width:250px"></th></tr></thead><tbody>${lin}</tbody></table></div>`; }).join('');
     const abrir=`<div style="text-align:right;margin-top:8px"><span class="mini" onclick="event.stopPropagation();ui.abrir('${r.id}')">Abrir ficha completa</span></div>`;
-    const sq=pe?this.sqTabela(r):'';
-    return sq+(cards?`<div class="pc-wrap">${cards}</div>${abrir}`:`<div class="muted">Nenhum crime com prescrição ${pe?'executória aparente ou iminente':'da pretensão punitiva aparente'} nem datas a verificar.</div>`); },
+    return cards?`<div class="pc-wrap">${cards}</div>${abrir}`:`<div class="muted">Nenhum crime com prescrição ${pe?'executória aparente ou iminente':'da pretensão punitiva aparente'} nem datas a verificar.</div>`; },
   subTabela(r,spec){ if(spec.id==='aud') return this.audCards(r); if(spec.id==='presc') return this.prescCards(r); const cols=spec.sub_cols; let rows=r[spec.sub]||[]; const tot=cols.reduce((s,c)=>s+c[2],0)+6;
     if(spec.id==='presc'){ const pe=this.prescModo!=='pp'; rows=[...rows].sort((x,y)=>String(x.proc_crim||'').localeCompare(String(y.proc_crim||''))); rows=rows.filter(s=>pe?(s.ppe_cor==='vermelho'||s.ppe_cor==='amarelo'||/^Verificar na ação penal/.test(s.ppe_status||'')):(s.retro_cor==='vermelho'||/^Verificar na ação penal/.test(s.retro_status||''))); }
     let ocultos=0; if(spec.id==='aud' && !this.mostrarTudo){ const all=rows; rows=all.filter(s=>s.baixado||(s.nivel!=='info'&&s.nivel!=='ok')); ocultos=all.length-rows.length; }
@@ -895,90 +886,38 @@ const ui = {
     this.fecharModal(); this.toast('Gerando relatórios…'); const r=await API().relatorios(this.visiveis().map(x=>x.id), op[0], op[1], op[2], op[3], sel);
     if(r && r.msg){ this.toast(r.msg); } else if(r && r.erro){ this.toast(r.erro); } },
   async relatorioUm(id){ const r=await API().relatorio_um(id); if(r && r.caminho){ this.toast('Relatório: '+r.caminho); } else if(r && r.erro){ this.toast(r.erro); } },
-  // ---- prescrição executória no padrão do SEEU: a tabela é editável e o prazo (art. 109 sobre o remanescente, +1/3 da
-  //      reincidência, metade do art. 115), a validade e a situação são recalculados a cada alteração ----
-  seeuP(){ return (this.dados&&this.dados.presc_param)||{}; },
+  // ---- pena em dias <-> 'XaYmZd' (convenção do SEEU: ano 365, mês 30) ----
   sqAmd(t){ t=String(t??'').trim(); if(!t) return null; if(/^\d+$/.test(t)) return +t;
-    const m=/^(\d+)\s*a\s*(\d+)\s*m\s*(\d+)\s*d$/i.exec(t.replace(/\s+/g,'')); if(m) return (+m[1])*365+(+m[2])*30+(+m[3]);
+    const m=/^(\d+)a(\d+)m(\d+)d$/i.exec(t.replace(/\s+/g,'')); if(m) return (+m[1])*365+(+m[2])*30+(+m[3]);
     const a=/(\d+)\s*ano/i.exec(t), mm=/(\d+)\s*m[eê]s/i.exec(t), d=/(\d+)\s*dia/i.exec(t); if(a||mm||d) return (a?+a[1]:0)*365+(mm?+mm[1]:0)*30+(d?+d[1]:0); return null; },
   sqFmt(n){ n=Math.max(0,Math.round(n||0)); const a=Math.floor(n/365), r=n%365, m=Math.min(Math.floor(r/30),11), d=r-30*m; return `${a}a${m}m${d}d`; },
-  sqData(t){ const m=/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(String(t||'').trim()); if(!m) return null; const d=new Date(+m[3],+m[2]-1,+m[1]); return d.getMonth()===+m[2]-1?d:null; },
-  sqFd(d){ return d?`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`:''; },
-  sqMaisMeses(d,m){ const y=d.getFullYear()+Math.floor((d.getMonth()+m)/12), mo=(d.getMonth()+m)%12; const ult=new Date(y,mo+1,0).getDate(); return new Date(y,mo,Math.min(d.getDate(),ult)); },
-  sqFr(t){ const m=/^(\d+)\/(\d+)$/.exec(String(t||'1/3').trim()); return m? +m[1]/+m[2] : 1/3; },
-  sqArt109(dias, fato){ const P=this.seeuP(); const a=dias/365;
-    const tab=(P.art109&&P.art109.length)?P.art109:[{pena_maior_que_anos:12,prazo_anos:20,inciso:'I'},{pena_maior_que_anos:8,prazo_anos:16,inciso:'II'},{pena_maior_que_anos:4,prazo_anos:12,inciso:'III'},{pena_maior_que_anos:2,prazo_anos:8,inciso:'IV'},{pena_maior_ou_igual_anos:1,prazo_anos:4,inciso:'V'},{pena_menor_que_anos:1,prazo_anos:3,inciso:'VI',prazo_anos_fato_ate_2010_05_05:2}];
-    const lim=/^\d{4}-\d{2}-\d{2}$/.test(P.lei12234||'')?new Date(P.lei12234+'T00:00:00'):new Date(2010,4,6);
-    for(const f of tab){ const ok=('pena_maior_que_anos' in f)?a>f.pena_maior_que_anos:('pena_maior_ou_igual_anos' in f)?a>=f.pena_maior_ou_igual_anos:('pena_menor_que_anos' in f)?a<f.pena_menor_que_anos:false;
-      if(ok) return (f.prazo_anos_fato_ate_2010_05_05!=null && fato && fato<lim) ? {anos:f.prazo_anos_fato_ate_2010_05_05,inciso:f.inciso,antigo:true} : {anos:f.prazo_anos,inciso:f.inciso}; }
-    return {anos:3,inciso:'VI'}; },
-  // valores da linha: importados do RSPE, com os ajustes gravados por cima
-  sqChave(s){ return (s.seeu.acao||'')+'|'+(s.seeu.crime||''); },
-  sqValores(r,s){ const b=s.seeu, a=((r.presc_ajustes||{})[this.sqChave(s)]||{}).valores||{};
-    const base={acao:b.acao, pena:this.sqFmt(b.pena_dias), fato:b.fato, sentenca:b.sentenca, transito:b.transito, ref:b.ref, idade:b.idade, reinc:b.reinc?'S':'N',
-      cumprida:this.sqFmt(b.cumprida), rem:this.sqFmt(Math.max(0,b.pena_dias-b.cumprida))};
-    return {base, v:Object.assign({},base,a)}; },
-  sqCalc(v){ const P=this.seeuP(); const pena=this.sqAmd(v.pena), cum=this.sqAmd(v.cumprida), rem=this.sqAmd(v.rem), ref=this.sqData(v.ref), fato=this.sqData(v.fato);
-    const hoje=this.tlHoje(); const o={pct:0, prazo:'', validade:'', sit:'', cls:'sd', expl:''};
-    if(pena&&cum!=null) o.pct=Math.max(0,Math.min(100,Math.round(100*cum/pena)));
-    if(rem==null||!ref){ o.sit='DADOS'; o.expl='falta '+(!ref?'a data de referência':'o remanescente'); return o; }
-    if(rem<=0){ o.sit='SEM SALDO'; o.expl='sem pena remanescente: nada a prescrever'; return o; }
-    const b=this.sqArt109(rem,fato); let fator=1; const acr=this.sqFr(P.acrescimo); if(v.reinc==='S') fator*=1+acr; if(v.idade!=='entre') fator*=0.5;
-    const meses=b.anos*12*fator, mi=Math.floor(meses+1e-9), dd=Math.round((meses-mi)*30);
-    const val=new Date(this.sqMaisMeses(ref,mi).getTime()+(dd-1)*86400000);
-    o.prazo=`${Math.floor(mi/12)}a${mi%12}m${dd}d`; o.validade=this.sqFd(val);
-    o.sit= val<hoje ? 'PRESCRITA' : 'VÁLIDA'; o.cls= val<hoje ? 'pr' : 'ok';
-    o.expl=`remanescente ${this.sqFmt(rem)} → art. 109, ${b.inciso} (${b.anos} anos${b.antigo?', redação anterior à Lei 12.234/2010':''})${v.reinc==='S'?' + '+(P.acrescimo||'1/3')+' (reincidência, art. 110)':''}${v.idade!=='entre'?' × 1/2 (art. 115)':''} = ${o.prazo}; ${v.ref} + ${o.prazo} − 1 dia = ${o.validade}`;
-    return o; },
-  sqIdade:{entre:'Entre 21 e 70 anos', menor21:'Menor de 21 no fato', maior70:'Maior de 70 na sentença'},
-  sqLinhas(r){ return (r.presc_linhas||[]).filter(s=>s.seeu); },
-  sqTabela(r){ const ls=this.sqLinhas(r); if(!ls.length) return '';
-    const aj=r.presc_ajustes||{}; const nAj=ls.filter(s=>aj[this.sqChave(s)]).length;
-    const verif=ls.some(s=>/^A VERIFICAR/.test(s.ppe_status||''));
-    const aberto=this._sqAberto&&this._sqAberto[r.id]!==undefined ? this._sqAberto[r.id] : (verif||nAj>0);
-    const cab=`<div class="sq-h"><b>Prescrição executória - padrão SEEU</b><span class="muted">${verif?'<span class="pill amarelo">A verificar</span> ':''}edite qualquer célula (datas, pena, idade, reincidência, cumprida, remanescente): prazo, validade e situação se recalculam na hora (art. 109 sobre o remanescente)${nAj?` · ${pl(nAj,'linha ajustada','linhas ajustadas')}`:''}</span><span class="sp"></span>
-      ${nAj?`<span class="mini" onclick="event.stopPropagation();ui.sqRestaurarTudo('${r.id}')">Restaurar dados importados</span>`:''}
-      <span class="mini" onclick="event.stopPropagation();ui.sqAlternar('${r.id}')">${aberto?'Recolher':'Ver tabela no padrão SEEU'}</span></div>`;
-    if(!aberto) return `<div class="sq">${cab}</div>`;
-    const th=[['Ação Penal',190],['Pena',74],['Data Fato',92],['Data Sentença',92],['Data de Trânsito Julgado',96],['Data de Referência da Prescrição',104],['Idade Fato/Sentença',150],['Reincidente',78],['Cumprida',80],['Remanescente',104],['',150],['Prazo Prescricional',96],['Validade',92],['Situação',100],['',26]];
-    const rows=ls.map((s,i)=>{ const {base,v}=this.sqValores(r,s); const c=this.sqCalc(v); const k=this.sqChave(s);
-      const ed=f=>String(v[f]??'')!==String(base[f]??'')?' class="ed"':'';
-      const tit=f=>String(v[f]??'')!==String(base[f]??'')?` title="Ajustado manualmente · importado: ${esc(base[f]||'—')}"`:'';
-      const inp=(f,w)=>`<td${ed(f)}${tit(f)}><input class="${w||'w-d'}" value="${esc(v[f]||'')}" data-f="${f}" oninput="ui.sqEditar('${r.id}',${i},this)" onchange="ui.sqGravar('${r.id}',${i})" onclick="event.stopPropagation()"></td>`;
-      const sel=(f,opts)=>`<td${ed(f)}${tit(f)}><select data-f="${f}" onchange="ui.sqEditar('${r.id}',${i},this);ui.sqGravar('${r.id}',${i})" onclick="event.stopPropagation()">${opts.map(o=>`<option value="${o[0]}"${v[f]===o[0]?' selected':''}>${o[1]}</option>`).join('')}</select></td>`;
-      const faixa=(s.seeu.saldo_min!=null)?`<div class="muted" style="font-size:10.5px;white-space:normal">saldo entre ${this.sqFmt(s.seeu.saldo_min)} e ${this.sqFmt(s.seeu.saldo_max)}</div>`:'';
-      return `<tr data-sq="${esc(r.id)}:${i}">${inp('acao','w-acao')}${inp('pena','w-p')}${inp('fato')}${inp('sentenca')}${inp('transito')}${inp('ref')}
-        ${sel('idade',Object.entries(this.sqIdade))}${sel('reinc',[['N','Não'],['S','Sim']])}${inp('cumprida','w-p')}<td${ed('rem')}${tit('rem')}><input class="w-p" value="${esc(v.rem||'')}" data-f="rem" oninput="ui.sqEditar('${r.id}',${i},this)" onchange="ui.sqGravar('${r.id}',${i})" onclick="event.stopPropagation()">${faixa}</td>
-        <td><div class="sq-bar" data-o="bar"><i class="cu" style="width:${c.pct}%">${c.pct>=12?c.pct+'%':''}</i><i class="re" style="width:${100-c.pct}%">${100-c.pct>=12?(100-c.pct)+'%':''}</i></div></td>
-        <td class="sq-calc" data-o="prazo">${esc(c.prazo||'—')}</td><td class="sq-calc" data-o="validade">${esc(c.validade||'—')}</td>
-        <td data-o="sit" title="${esc(c.expl)}"><span class="sq-sit ${c.cls}">${esc(c.sit)}</span></td>
-        <td>${aj[k]?`<span class="sq-rs" title="Restaurar esta linha (dados importados)" onclick="event.stopPropagation();ui.sqRestaurar('${r.id}',${i})">↺</span>`:''}</td></tr>`; }).join('');
-    const notas=ls.map((s,i)=>{ const {v}=this.sqValores(r,s); const c=this.sqCalc(v); return `<div data-n="${esc(r.id)}:${i}"><b>${esc(s.seeu.crime||s.crime)}</b> (${esc(v.acao||'—')}): ${esc(c.expl)} <span class="muted">· análise do programa com os dados importados: ${esc(s.seeu.status_programa||'—')}</span></div>`; }).join('');
-    return `<div class="sq" onclick="event.stopPropagation()">${cab}<div class="sq-wrap"><table class="sq-t"><thead><tr>${th.map(t=>`<th style="width:${t[1]}px">${t[0]}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div>
-      <div class="sq-f">${notas}<div style="margin-top:4px">Validade = data de referência + prazo − 1 dia (como o SEEU). A data de referência é o início da contagem: trânsito em julgado, evasão ou revogação do livramento (CP, arts. 112 e 113). A suspensão do art. 116, p. único (preso por outro motivo), não entra: se houver, ajuste a data de referência. Os ajustes ficam gravados nesta base.</div></div></div>`; },
-  sqAlternar(id){ this._sqAberto=this._sqAberto||{}; const r=this.dados.registros.find(x=>x.id===id); const ls=r?this.sqLinhas(r):[];
-    const atual=this._sqAberto[id]!==undefined?this._sqAberto[id]:(ls.some(s=>/^A VERIFICAR/.test(s.ppe_status||''))||Object.keys(r.presc_ajustes||{}).length>0); this._sqAberto[id]=!atual; this.render(); },
-  sqLer(id,i){ const tr=document.querySelector(`tr[data-sq="${CSS.escape(id+':'+i)}"]`); const v={}; if(!tr) return null; tr.querySelectorAll('[data-f]').forEach(el=>v[el.dataset.f]=el.value.trim()); return {tr,v}; },
-  sqEditar(id,i,el){ const x=this.sqLer(id,i); if(!x) return; const {tr,v}=x; const pena=this.sqAmd(v.pena);
-    // cumprida e remanescente andam juntas: alterar uma recalcula a outra pela pena
-    if(el&&el.dataset.f==='cumprida'&&pena!=null&&this.sqAmd(v.cumprida)!=null){ v.rem=this.sqFmt(pena-this.sqAmd(v.cumprida)); tr.querySelector('[data-f="rem"]').value=v.rem; }
-    if(el&&el.dataset.f==='rem'&&pena!=null&&this.sqAmd(v.rem)!=null){ v.cumprida=this.sqFmt(pena-this.sqAmd(v.rem)); tr.querySelector('[data-f="cumprida"]').value=v.cumprida; }
-    if(el&&el.dataset.f==='pena'&&pena!=null&&this.sqAmd(v.cumprida)!=null){ v.rem=this.sqFmt(pena-this.sqAmd(v.cumprida)); tr.querySelector('[data-f="rem"]').value=v.rem; }
-    const c=this.sqCalc(v);
-    tr.querySelector('[data-o="prazo"]').textContent=c.prazo||'—'; tr.querySelector('[data-o="validade"]').textContent=c.validade||'—';
-    const st=tr.querySelector('[data-o="sit"]'); st.title=c.expl; st.innerHTML=`<span class="sq-sit ${c.cls}">${esc(c.sit)}</span>`;
-    tr.querySelector('[data-o="bar"]').innerHTML=`<i class="cu" style="width:${c.pct}%">${c.pct>=12?c.pct+'%':''}</i><i class="re" style="width:${100-c.pct}%">${100-c.pct>=12?(100-c.pct)+'%':''}</i>`;
-    const r=this.dados.registros.find(x=>x.id===id); const s=this.sqLinhas(r)[i]; const {base}=this.sqValores(r,s);
-    tr.querySelectorAll('[data-f]').forEach(e=>{ const td=e.closest('td'); td.classList.toggle('ed', String(e.value.trim())!==String(base[e.dataset.f]??'')); });
-    const n=document.querySelector(`[data-n="${CSS.escape(id+':'+i)}"]`); if(n) n.innerHTML=`<b>${esc(s.seeu.crime||s.crime)}</b> (${esc(v.acao||'—')}): ${esc(c.expl)} <span class="muted">· análise do programa com os dados importados: ${esc(s.seeu.status_programa||'—')}</span>`; },
-  sqGravar(id,i){ const x=this.sqLer(id,i); if(!x) return; const r=this.dados.registros.find(y=>y.id===id); const s=this.sqLinhas(r)[i]; const {base}=this.sqValores(r,s);
-    const valores={}; Object.keys(x.v).forEach(k=>{ if(String(x.v[k])!==String(base[k]??'')) valores[k]=x.v[k]; });
-    const k=this.sqChave(s); r.presc_ajustes=r.presc_ajustes||{}; const dados=Object.keys(valores).length?{valores}:null;
-    if(dados) r.presc_ajustes[k]=dados; else delete r.presc_ajustes[k];
-    const A=API(); if(A&&A.presc_ajuste) A.presc_ajuste(id,k,dados); },
-  sqRestaurar(id,i){ const r=this.dados.registros.find(y=>y.id===id); const s=this.sqLinhas(r)[i]; const k=this.sqChave(s); if(r.presc_ajustes) delete r.presc_ajustes[k];
-    const A=API(); if(A&&A.presc_ajuste) A.presc_ajuste(id,k,null); this.render(); },
-  sqRestaurarTudo(id){ const r=this.dados.registros.find(y=>y.id===id); const A=API(); Object.keys(r.presc_ajustes||{}).forEach(k=>{ if(A&&A.presc_ajuste) A.presc_ajuste(id,k,null); }); r.presc_ajustes={}; this.render(); },
+  // ---- prescrição: preencher ou corrigir os dados e recalcular (o layout da aba não muda) ----
+  ridDe(L){ const r=(this.dados.registros||[]).find(x=>(x.presc_linhas||[]).includes(L)); return r?r.id:null; },
+  pfForm(L, foco){ const o=L.orig||{}, v=((L.ajuste||{}).valores)||{}, sd=((L.ajuste||{}).saldos)||{}; const id='pf'+Math.random().toString(36).slice(2,8);
+    const val=k=>v[k]!==undefined?v[k]:(o[k]||'');
+    const inp=(k,rot,ph)=>`<label>${rot}<input data-k="${k}" data-o="${esc(o[k]||'')}" class="${v[k]!==undefined?'ed':''}" value="${esc(val(k))}" placeholder="${esc(ph||'dd/mm/aaaa')}" oninput="this.classList.toggle('ed',this.value.trim()!==this.dataset.o)"></label>`;
+    const sel=(k,rot,ops)=>`<label>${rot}<select data-k="${k}" class="${v[k]!==undefined?'ed':''}">${ops.map(x=>`<option value="${x[0]}"${(v[k]||'')===x[0]?' selected':''}>${x[1]}</option>`).join('')}</select></label>`;
+    const sal=(L.ppe_saldos||[]).map(S=>{ const n=sd[S.evasao]; const a=n!=null?Math.floor(n/365):'', r=n!=null?n%365:0, m=n!=null?Math.min(Math.floor(r/30),11):'', d=n!=null?r-30*m:'';
+      return `<div class="sd" data-ev="${esc(S.evasao)}"><b>${S.revogacao?'Revogação do livramento':'Fuga'} de ${esc(S.evasao)} - saldo da pena nesta data</b> <span class="muted">(não é o remanescente atual do SEEU; deixe em branco para o programa calcular)</span>
+        <div class="muted">${esc(S.saldo_rotulo||'')}</div>
+        <div class="amd"><input data-s="a" value="${a}" placeholder="0"> ano(s) <input data-s="m" value="${m}" placeholder="0"> mês(es) <input data-s="d" value="${d}" placeholder="0"> dia(s)</div></div>`; }).join('');
+    return `<div class="pf" id="${id}" onclick="event.stopPropagation()"><h5>${esc(L.rotulo||L.crime)} · preencher ou corrigir os dados <span class="muted">(em branco = dado importado do RSPE; o valor importado aparece como exemplo)</span></h5>
+      <div class="pf-g">${inp('fato','Data do fato')}${inp('denuncia','Recebimento da denúncia')}${inp('sentenca','Sentença')}${inp('transito_mp','Trânsito para a acusação')}${inp('transito','Trânsito final')}${inp('pena','Pena aplicada','ex.: 2a6m0d')}
+        ${sel('reinc','Reincidente',[['','Conforme o RSPE'+(o.reinc?' ('+(o.reinc==='S'?'sim':'não')+')':' (não informado)')],['S','Sim'],['N','Não']])}
+        ${sel('art115','Art. 115 (metade do prazo)',[['','Conforme o RSPE'+(o.nascimento?' (nasc. '+o.nascimento+')':' (sem data de nascimento)')],['sim','Aplicar: menor de 21 no fato ou maior de 70 na sentença'],['nao','Não aplicar']])}</div>
+      ${sal}
+      <div class="acts">${L.ajustado?`<button class="btn" onclick="ui.pfSalvar('${id}',true)">Restaurar dados importados</button>`:''}<button class="btn" onclick="this.closest('.pf').parentElement.innerHTML=''">Cancelar</button><button class="btn pri" onclick="ui.pfSalvar('${id}')">Salvar e recalcular</button></div></div>`; },
+  pfAbrir(el, idx, foco){ const L=this._tl[idx]; const h=(el.closest('.ptl')||el.closest('tr').nextElementSibling.nextElementSibling.nextElementSibling).querySelector('.pf-holder');
+    if(h.innerHTML){ h.innerHTML=''; if(!el.closest('.ptl')) h.closest('tr').style.display='none'; return; } this._pfL=this._pfL||{}; h.innerHTML=this.pfForm(L, foco); const f=h.querySelector('.pf'); this._pfL[f.id]=L;
+    if(!el.closest('.ptl')) h.closest('tr').style.display=''; const alvo=foco==='saldo'?f.querySelector('.sd input'):f.querySelector('input'); if(alvo) alvo.focus(); },
+  async pfSalvar(fid, restaurar){ const f=document.getElementById(fid); const L=this._pfL[fid]; const rid=this.ridDe(L); if(!f||!L||!rid) return;
+    let dados=null;
+    if(!restaurar){ const valores={}; f.querySelectorAll('[data-k]').forEach(e=>{ const k=e.dataset.k, x=e.value.trim(); if(x && x!==(e.dataset.o||'')) valores[k]=x; });
+      for(const k of ['fato','denuncia','sentenca','transito_mp','transito']) if(valores[k] && !/^\d{2}\/\d{2}\/\d{4}$/.test(valores[k])) return this.toast('Data inválida em "'+k+'": use dd/mm/aaaa.');
+      if(valores.pena && this.sqAmd(valores.pena)==null) return this.toast('Pena inválida: use o formato 2a6m0d.');
+      const saldos={}; f.querySelectorAll('.sd').forEach(b=>{ const g=q=>b.querySelector(`[data-s="${q}"]`).value.trim(); if(g('a')===''&&g('m')===''&&g('d')==='') return; saldos[b.dataset.ev]=(+g('a')||0)*365+(+g('m')||0)*30+(+g('d')||0); });
+      if(Object.keys(valores).length||Object.keys(saldos).length) dados={valores,saldos}; }
+    await api('presc_ajuste', rid, L.chave_ajuste, dados); this.toast(dados?'Dados gravados: prescrição recalculada.':'Dados importados restaurados.'); },
   // ---- linha do tempo de indulto e comutação: uma linha por assistido; a figura é a memória de cálculo ----
   async indTL(id){ this.toast('Montando a linha do tempo…'); const d=await api('indulto_linha', id); if(!d||d.erro) return;
     this._tlv=d; this._tlvDec=d.ultimo_decreto||((d.decretos||[]).slice(-1)[0]||{}).id; this._tlvDets=[]; this.renderTLV();
@@ -1020,7 +959,7 @@ const ui = {
     let imp=''; const I=B.imputacao;
     if(I){ const w=sx(I.imputado_imp); const di=this.tlvReg('Imputação ao impeditivo', I.det); imp=`<g class="ck" onclick="ui.tlvDet(${di})"><rect x="0" y="90" width="${w}" height="10" fill="url(#tvImp)" stroke="#475467"/><text x="${w+6}" y="99" font-size="11" fill="#101828">← ${I.fracao} da pena de ${I.crimes_imp.join(', ')} imputados primeiro (${esc(I.dispositivo)}) = ${penaExt(I.exigido_txt)}${I.data?`; atingido em ${I.data}${I.projecao?' (projeção)':''}`:''} → libera ${I.crimes_liv.join(', ')}</text></g>`; }
     let cm=''; if(com){ const di=this.tlvReg('Comutação na pena unificada', com.det); cm=`<text class="ck" onclick="ui.tlvDet(${di})" x="0" y="${I?118:104}" font-size="12" font-weight="700" fill="#1D4ED8">Comutação (${esc(com.decreto)}): remanescente ${penaExt(com.antes_txt)} → ${penaExt(com.depois_txt)} (−${penaExt(com.reducao_txt)}, ${com.fracao} da pena ${com.base})</text>`; }
-    const seeu=B.seeu; const conf=seeu?`<div class="muted" style="font-size:11.5px;margin-top:4px">Conferência: o SEEU informa ${penaExt(esc(seeu.pena))} cumpridos (${esc(seeu.fonte)}).${Math.abs(seeu.diferenca)>30?` <b style="color:#B54708">⚠ Diferença de ${pl(Math.abs(seeu.diferenca),'dia','dias')} em relação à soma dos eventos - conferir os eventos de início/interrupção no SEEU.</b>`:''}</div>`:'';
+    const seeu=B.seeu; const conf=seeu?`<div class="muted" style="font-size:11.5px;margin-top:4px">Mesmo cálculo da aba Indulto / Comutação: ${esc(seeu.fonte)}. Pela soma dos eventos do SEEU: ${penaExt(esc(seeu.pena))}.${Math.abs(seeu.diferenca)>30?` <b style="color:#B54708">⚠ ${pl(Math.abs(seeu.diferenca),'dia','dias')} ${seeu.diferenca<0?'de tempo cumprido não identificado nos eventos':'a mais nos eventos do que na pena cumprida do SEEU'} - conferir os eventos de início/interrupção.</b>`:''}</div>`:'';
     const barra=`<svg viewBox="-2 0 ${W+4} ${I||com?126:96}" width="100%" style="max-width:${W+4}px">${defs}<text x="0" y="14" font-size="12" font-weight="700" fill="#101828">PENA UNIFICADA: ${penaExt(B.pena_total_txt||'')}${B.pena_seeu&&this.sqAmd(B.pena_seeu)!==B.pena_total?` (SEEU: ${penaExt(B.pena_seeu)})`:''}</text>${segs}${cb}${rest}${imp}${cm}</svg>
       <div class="muted" style="font-size:11.5px">└ cumprimento ${penaExt(ct.cumprimento||'0a0m0d')} + detração ${penaExt(ct.detracao||'0a0m0d')} + remição ${penaExt(ct.remicao||'0a0m0d')}${cu.perda?` − perda de remidos ${penaExt(ct.perda)}`:''} = <b>${penaExt(ct.total||'')}</b> até ${esc(d.hoje)} · falta grave não zera nem reinicia esta conta</div>${conf}`;
     // 3. linha do tempo principal
@@ -1069,7 +1008,7 @@ const ui = {
     const ico={ok:'✔',ko:'✖',q:'?'};
     const lista=(ck,pref)=>`<ul class="cl">${(ck||[]).map(c=>{ const di=this.tlvReg(`${pref} - ${c.item}`, Object.assign({}, c.det, {efeito:(c.det&&c.det.efeito)||c.texto})); return `<li class="${c.estado}"><span class="ic">${ico[c.estado]}</span><span><span class="it">${esc(c.item)}</span><span class="tx">${penaExt(esc(c.texto))}</span></span><span class="hw" onclick="ui.tlvDet(${di})">Como cheguei aqui?</span></li>`; }).join('')}</ul>`;
     const decs=(d.decretos||[]).map(x=>{ const i=x.indulto||{}, c=x.comutacao||{}; const oi=(i.checklist||[])[0]||{};
-      const gi=i.exigido!=null&&i.hipotese&&i.fracao?`<div class="dc-g"><span class="k">Requisito objetivo</span><span class="v">${esc(i.fracao||'-')} (${esc(i.hipotese)})</span><span></span><span class="k">Pena considerada</span><span class="v">${penaExt(esc(i.pena_considerada_txt||''))}</span><span></span><span class="k">Exigido</span><span class="v">${penaExt(esc(i.exigido_txt||''))}</span><span></span><span class="k">Cumprido na data</span><span class="v">${penaExt(esc(i.cumprido_txt||''))}</span><span>${oi.estado?`<span class="ic" style="color:${oi.estado==='ok'?'#067647':oi.estado==='ko'?'#B42318':'#B54708'}">${ico[oi.estado]}</span>`:''}</span></div>`:'';
+      const gi=i.cumprido_txt?`<div class="dc-g"><span class="k">Pena considerada</span><span class="v">${penaExt(esc(i.pena_considerada_txt||''))}${i.reinc?' · '+esc(i.reinc):''}</span><span></span><span class="k">Cumprido na data</span><span class="v" title="${esc(i.fonte||'')}">${penaExt(esc(i.cumprido_txt))}</span><span></span><span class="k">Remanescente</span><span class="v">${penaExt(esc(i.remanescente_txt||''))}</span><span></span>${i.projecao&&i.projecao.data?`<span class="k">Projeção</span><span class="v">${esc(i.projecao.hipotese)}: exige ${penaExt(esc(i.projecao.exigido_txt))} → ${esc(i.projecao.data)}</span><span></span>`:''}</div>`:'';
       const gc=c.exigido!=null?`<div class="dc-g"><span class="k">Requisito objetivo</span><span class="v">${esc(c.fracao||'')}</span><span></span><span class="k">Exigido</span><span class="v">${penaExt(esc(c.exigido_txt||''))}</span><span></span>${c.reducao?`<span class="k">Redução</span><span class="v">${esc(c.reducao.fracao)} de ${penaExt(esc(this.sqFmt(c.reducao.base_dias)))} = ${penaExt(esc(c.reducao.reducao_txt))}</span><span></span><span class="k">Remanescente</span><span class="v">${penaExt(esc(c.reducao.antes_txt))} → ${penaExt(esc(c.reducao.depois_txt))}</span><span></span>`:''}</div>`:'';
       return `<div class="dc ${x.id===this._tlvDec?'sel':''}" id="dc_${x.id}"><div class="dc-h"><b>DECRETO Nº ${esc(x.numero)}</b> <span class="mu">· data de referência ${esc(x.referencia)}${x.publicacao?' · publicação '+esc(x.publicacao):''}</span>${x.nota?`<div class="mu" style="margin-top:2px">${esc(x.nota)}</div>`:''}</div>
         <div class="dc-s"><div class="t">Indulto <span class="stt ${i.status}">${esc(i.rotulo||'')}</span></div>${gi}${lista(i.checklist,'Indulto '+x.numero)}</div>

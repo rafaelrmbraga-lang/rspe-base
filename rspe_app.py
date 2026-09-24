@@ -588,6 +588,7 @@ class Api:
             except Exception:
                 pass
             ch = r.get("processo_execucao") or r.get("arquivo")
+            r["_presc_ajustes"] = ajustes.get(ch, {})  # dados de prescrição preenchidos/corrigidos pelo operador (só em memória)
             _nn = _norm(r.get("nome", ""))
             ficha = fichas.get(ch) or (fichas.get("nome:" + _nn) if _homonimos.get(_nn, 0) == 1 else None)
             # um registro com dado ilegível não pode derrubar a base: tenta sem a ficha e, se ainda falhar, mostra o
@@ -609,7 +610,6 @@ class Api:
                         self.base.migrar_baixa(ch, it["migrar_de"], it["chave"])
                     except Exception:
                         logging.getLogger("rspe").exception("falha ao migrar baixa %s", ch)
-            m["presc_ajustes"] = ajustes.get(ch, {})
             m["_bruto"] = r
             self._modelos.append(m)
         return {
@@ -619,7 +619,6 @@ class Api:
             "rotulos": rv.ROTULO,
             "ajuda": AJUDA,
             "base_juridica": {"versao": rg.versao(), "origem": rg.origem()},
-            "presc_param": _presc_param(),
             # json_seguro: um Fraction ou date esquecido no modelo derrubava a lista inteira ("Object of type Fraction is not JSON serializable")
             "registros": rv.json_seguro([{k: v for k, v in m.items() if k != "_bruto"} for m in self._modelos]),
         }
@@ -636,19 +635,12 @@ class Api:
             return {"erro": "Falha ao montar a linha do tempo: %s" % e}
 
     def presc_ajuste(self, processo, chave, dados):
-        """Grava (ou apaga, com dados vazios) o ajuste manual de uma linha da tabela de prescrição executória."""
+        """Grava (ou apaga, com dados vazios) os dados de prescrição preenchidos ou corrigidos pelo operador para um crime
+        (datas, pena, reincidência, art. 115, saldo na data da fuga) e refaz a análise."""
         if not self.base:
             return {"erro": "Nenhuma base aberta."}
         self.base.presc_ajuste_gravar(processo, chave, dados or None)
-        for m in self._modelos:
-            if m.get("id") == processo or (m.get("_bruto") or {}).get("processo_execucao") == processo:
-                aj = dict(m.get("presc_ajustes") or {})
-                if dados:
-                    aj[chave] = dados
-                else:
-                    aj.pop(chave, None)
-                m["presc_ajustes"] = aj
-        return {"ok": True}
+        return self.listar()
 
     def baixar_alerta(self, processo, chave, titulo, obs):
         if not self.base:
@@ -1248,15 +1240,6 @@ class Api:
             return {"erro": "Falha ao gerar o relatório: %s" % e}
         _abrir(c)
         return {"caminho": c}
-
-
-def _presc_param():
-    """Parâmetros da tabela de prescrição executória recalculada na tela (base jurídica, não fixos no código)."""
-    p = rg.carregar().get("prescricao", {}) or {}
-    a115 = p.get("art115_metade", {}) or {}
-    return {"art109": p.get("art109_tabela") or [], "acrescimo": p.get("art110_reincidencia_acrescimo", "1/3"),
-            "menor": a115.get("menor_de_anos_no_fato", 21), "maior": a115.get("maior_de_anos_na_sentenca", 70),
-            "lei12234": p.get("lei_12234_2010_vigencia", "2010-05-06")}
 
 
 DEFENSORES = os.path.join(pasta_app(), "defensores.json")
