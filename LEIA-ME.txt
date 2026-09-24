@@ -1,8 +1,8 @@
-RSPE BASE - SEEU  v6.16.4 (programa em abas)
+RSPE BASE - SEEU  v6.16.5 (programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-6.16.4. A documentação técnica completa (cada parâmetro, a regra, a norma e
+6.16.5. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -535,6 +535,10 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v6.16.5
+  - Nome do assistido copiável com um clique, como o número da execução: nas
+    tabelas de todas as abas (ícone ao passar o mouse) e no topo da ficha.
 
 v6.16.4
   - Linha do tempo do indulto: botão "Copiar fundamentação" no indulto e na
