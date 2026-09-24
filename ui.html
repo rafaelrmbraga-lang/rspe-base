@@ -532,24 +532,30 @@ const ui = {
     faixas.forEach(p=>{ if(p.tipo==='evasao'||p.tipo==='interrupcao'){ marcos.push({d:p.a,r:p.rotulo||(p.tipo==='evasao'?'Fuga':'Interrupção'),t:'fuga',p}); marcos.push({d:p.b,r:p.fim?'Recaptura':'Hoje',t:'recaptura',p}); } });
     marcos.push({d:HOJE,r:'Situação atual',t:'hoje'});
     const evas=sal;
-    const pelaPena=!evas.length && (L.ppe_previsao||L.ppe_correndo_ate); const H=(evas.length?250+230*evas.length:(pelaPena?300:250));
+    // marcos a menos de 70 px viram um rótulo só; cada rótulo ocupa a faixa livre mais baixa (sem sobreposição)
+    marcos.sort((a,b)=>a.d-b.d);
+    const grp=[]; marcos.forEach(m=>{ const cx=x(m.d); const g=grp[grp.length-1]; if(g && cx-g.x1<70){ g.ms.push(m); g.x1=cx; } else grp.push({x0:cx,x1:cx,ms:[m]}); });
+    const ocup=[]; grp.forEach(g=>{ g.cx=(g.x0+g.x1)/2; g.l1=g.ms.map(m=>m.r).join(' · '); g.l2=[...new Set(g.ms.map(m=>fmt(m.d)))].join(' · ');
+      const w=Math.max(g.l1.length*6.3, g.l2.length*5.8)+12; g.anc=g.cx>PL+W-w/2?'end':(g.cx<PL+w/2?'start':'middle');
+      const a0=g.anc==='end'?g.cx-w:(g.anc==='start'?g.cx:g.cx-w/2), a1=a0+w;
+      let t=0; while(ocup[t]&&ocup[t].some(([p,q])=>a0<q+8&&a1>p-8)) t++; (ocup[t]=ocup[t]||[]).push([a0,a1]); g.tier=t; });
+    const Y=Math.max(150, 90+ocup.length*30);
+    const pelaPena=!evas.length && (L.ppe_previsao||L.ppe_correndo_ate); const H=(evas.length?250+230*evas.length:(pelaPena?300:250))+(Y-150);
     let svg=`<svg viewBox="0 40 ${Wm} ${H-40}" xmlns="http://www.w3.org/2000/svg"><defs>
      <pattern id="hFuga${sfx}" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="8" height="8" fill="#FDE8E8"/><rect width="4" height="8" fill="#F04438"/></pattern>
      <pattern id="hDup${sfx}" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="8" height="8" fill="#FEF4D6"/><rect width="4" height="8" fill="#F79009"/></pattern>
      <pattern id="hProv${sfx}" width="7" height="10" patternUnits="userSpaceOnUse"><rect width="7" height="10" fill="#fff"/><rect width="4" height="10" fill="#98A2B3"/></pattern></defs>`;
     const fill=sty=>sty.f.startsWith('#')?sty.f:`url(#${sty.f}${sfx})`;
-    const Y=150;
     svg+=`<line x1="${PL}" y1="${Y}" x2="${PL+W}" y2="${Y}" stroke="#D0D5DD" stroke-width="2"/>`;
     faixas.forEach((p,i)=>{ const sty=TIPO[p.tipo]||TIPO.liberdade; const x1=x(p.a), x2=Math.max(x(p.b),x1+3);
       svg+=`<g class="mk" data-k="f${i}"><rect x="${x1}" y="${Y-14}" width="${x2-x1}" height="28" fill="${fill(sty)}" stroke="${sty.c}" stroke-width="1" rx="3"/>`;
       if(p.tipo==='duvida') svg+=`<text x="${(x1+x2)/2}" y="${Y+5}" text-anchor="middle" font-size="14" font-weight="700" fill="#B54708">?</text>`;
       if(x2-x1>70) svg+=`<text x="${(x1+x2)/2}" y="${Y+40}" text-anchor="middle" font-size="10" fill="#475467">${dias(Math.round((p.b-p.a)/864e5))}</text>`;
       svg+=`</g>`; });
-    marcos.sort((a,b)=>a.d-b.d); const tiers=[-999,-999,-999];
-    marcos.forEach((m,i)=>{ const cx=x(m.d); const col={fato:'#475467',sentenca:'#475467',transito:'#4F46E5',fuga:'#B42318',recaptura:'#067647',hoje:'#101828'}[m.t];
-      let tier=tiers.findIndex(v=>cx-v>=95); if(tier<0) tier=2; tiers[tier]=cx; const ty=Y-30-tier*30, ty2=ty+12;
-      svg+=`<line x1="${cx}" y1="${ty2+3}" x2="${cx}" y2="${Y-8}" stroke="${col}" stroke-width="1" stroke-dasharray="2 2"/>`;
-      svg+=`<g class="mk" data-k="m${i}"><circle cx="${cx}" cy="${Y}" r="6" fill="#fff" stroke="${col}" stroke-width="2.5"/><text x="${cx}" y="${ty}" text-anchor="${cx>PL+W-50?'end':cx<PL+50?'start':'middle'}" font-size="10.5" font-weight="700" fill="${col}">${esc(m.r)}</text><text x="${cx}" y="${ty2}" text-anchor="${cx>PL+W-50?'end':cx<PL+50?'start':'middle'}" font-size="10" fill="#475467">${fmt(m.d)}</text></g>`; });
+    const COL={fato:'#475467',sentenca:'#475467',transito:'#4F46E5',fuga:'#B42318',recaptura:'#067647',hoje:'#101828'};
+    grp.forEach((g,i)=>{ const ty=Y-30-g.tier*30, ty2=ty+12; const col=COL[(g.ms.find(m=>m.t==='fuga')||g.ms.find(m=>m.t==='transito')||g.ms[g.ms.length-1]).t];
+      g.ms.forEach(m=>{ const cx=x(m.d); svg+=`<line x1="${cx}" y1="${ty2+3}" x2="${cx}" y2="${Y-8}" stroke="${COL[m.t]}" stroke-width="1" stroke-dasharray="2 2"/><circle cx="${cx}" cy="${Y}" r="6" fill="#fff" stroke="${COL[m.t]}" stroke-width="2.5"/>`; });
+      svg+=`<g class="mk" data-k="m${i}"><text x="${g.cx}" y="${ty}" text-anchor="${g.anc}" font-size="10.5" font-weight="700" fill="${col}">${esc(g.l1)}</text><text x="${g.cx}" y="${ty2}" text-anchor="${g.anc}" font-size="10" fill="#475467">${esc(g.l2)}</text></g>`; });
     let yc=Y+95;
     if(pelaPena){ const a=D(L.ppe_inicio||L.ppe_termo), lim=D(L.ppe_previsao||L.ppe_correndo_ate); const xa=x(a), xl=x(Math.min(lim,HOJE)); const venc=lim<=HOJE; const cor=venc?'#B42318':'#067647';
       svg+=`<line x1="${xa}" y1="${Y}" x2="${xa}" y2="${yc}" stroke="${cor}" stroke-dasharray="3 3"/><line x1="${xa}" y1="${yc}" x2="${Math.max(xl,xa+3)}" y2="${yc}" stroke="${cor}" stroke-width="5" stroke-linecap="round"/>
