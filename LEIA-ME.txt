@@ -559,6 +559,14 @@ v6.16.0
     escolhido; a linha do tempo abre nele e mostra só o cartão e o
     resultado dele (botão "Todos" para a visão completa). Letras e
     espaçamento maiores na linha do tempo.
+  - Prescrição: "linha do tempo" disponível em todo crime com trânsito, ao
+    lado de "editar dados" (antes só nos casos com fuga); sem fuga, mostra
+    a contagem pela pena aplicada desde o termo inicial até o vencimento.
+    Legenda só com os tipos presentes.
+  - Linha do tempo do indulto mais limpa: eventos do mesmo dia num rótulo
+    só, rótulos em uma linha, remições como losangos (resumo na legenda),
+    textos das faixas e da barra só quando cabem, imputação e comutação
+    descritas abaixo da barra.
   - Triagem da prescrição executória (item 6): pelos limites de saldo.
     PRESCRITO quando prescreve até com o maior saldo ("Prescrição
     confirmada pela análise do limite máximo de saldo"); NÃO PRESCRITO
