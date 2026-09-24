@@ -1,8 +1,8 @@
-RSPE BASE - SEEU  v6.16.0 (programa em abas)
+RSPE BASE - SEEU  v6.16.1 (programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-6.16.0. A documentação técnica completa (cada parâmetro, a regra, a norma e
+6.16.1. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -535,6 +535,10 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v6.16.1
+  - Mesmo conteúdo da 6.16.0 com os ajustes finais (linha do tempo do
+    indulto simplificada). Número novo para o GitHub gerar um release novo.
 
 v6.16.0
   - Corrigido: após a importação nada aparecia na tela ("TypeError: Object
