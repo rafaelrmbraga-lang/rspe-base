@@ -565,6 +565,13 @@ v6.16.0
     Legenda só com os tipos presentes.
   - Aba Prescrição: sub-abas "Pretensão executória" e "Pretensão punitiva"
     (no lugar da lista de seleção), como as sub-abas por decreto do indulto.
+  - Linha do tempo do indulto simplificada: só o período cumprido (uma
+    faixa verde; cumprimento, detração e livramento juntos, remição no
+    total) e as faltas (na janela, fora dela ou sem homologação), com os
+    decretos (cumprido na data de referência), a janela da falta, a
+    imputação ao impeditivo, hoje e a projeção. Fato, sentença, trânsito,
+    prisão provisória e remições saíram da linha (continuam nos cartões e
+    na barra da pena).
   - Linha do tempo do indulto cabe inteira na largura da janela (sem
     rolagem nem corte à direita; refeita ao redimensionar); rótulos perto
     da borda ficam à esquerda do marco.

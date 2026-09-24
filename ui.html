@@ -951,6 +951,7 @@ const ui = {
   async indTL(id){ this.toast('Montando a linha do tempo…'); const d=await api('indulto_linha', id); if(!d||d.erro) return;
     this._tlv=d; this._tlvDec=(this.indDec!=='todos'&&(d.decretos||[]).some(x=>x.id===this.indDec))?this.indDec:(d.ultimo_decreto||((d.decretos||[]).slice(-1)[0]||{}).id); this._tlvDets=[]; this.renderTLV();
     document.getElementById('tlv').classList.add('on'); },
+  tlvF(d){ return d?`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`:''; },
   tlvLarg(t,px){ return String(t).length*px*0.58; },
   tlvCabe(opcoes,larg,px){ return opcoes.find(t=>t&&this.tlvLarg(t,px)<=larg)||''; },
   fecharTLV(){ document.getElementById('tlv').classList.remove('on'); },
@@ -995,59 +996,56 @@ const ui = {
     const seeu=B.seeu; const conf=seeu?`<div class="muted" style="font-size:11.5px;margin-top:4px">Mesmo cálculo da aba Indulto / Comutação: ${esc(seeu.fonte)}. Pela soma dos eventos do SEEU: ${penaExt(esc(seeu.pena))}.${Math.abs(seeu.diferenca)>30?` <b style="color:#B54708">⚠ ${pl(Math.abs(seeu.diferenca),'dia','dias')} ${seeu.diferenca<0?'de tempo cumprido não identificado nos eventos':'a mais nos eventos do que na pena cumprida do SEEU'} - conferir os eventos de início/interrupção.</b>`:''}</div>`:'';
     const barra=`<svg viewBox="-2 0 ${W+4} ${I?104:92}" width="100%" style="max-width:${W+4}px">${defs}<text x="0" y="14" font-size="13.5" font-weight="700" fill="#101828">PENA UNIFICADA: ${penaExt(B.pena_total_txt||'')}${B.pena_seeu&&this.sqAmd(B.pena_seeu)!==B.pena_total?` (SEEU: ${penaExt(B.pena_seeu)})`:''}</text>${segs}${cb}${rest}${imp}</svg>${impTxt}${cm}
       <div class="muted" style="font-size:11.5px">└ cumprimento ${penaExt(ct.cumprimento||'0a0m0d')} + detração ${penaExt(ct.detracao||'0a0m0d')} + remição ${penaExt(ct.remicao||'0a0m0d')}${cu.perda?` − perda de remidos ${penaExt(ct.perda)}`:''} = <b>${penaExt(ct.total||'')}</b> até ${esc(d.hoje)} · falta grave não zera nem reinicia esta conta</div>${conf}`;
-    // 3. linha do tempo principal
-    const dt=t=>this.tlD(t); const hoje=dt(d.hoje);
-    const datas=[...(d.marcos||[]).map(m=>dt(m.data)), ...(d.faixas||[]).map(f=>dt(f.ini))].filter(x=>x&&!isNaN(x));
+    // 3. linha do tempo: só o período cumprido (cumprimento, detração e livramento numa faixa só) e as faltas,
+    //    com os decretos (cumprido na data de referência), a janela da falta, hoje e a projeção
+    const dt=t=>this.tlD(t); const hoje=dt(d.hoje); const DIA=86400000;
+    const conta=(d.faixas||[]).filter(f=>['cumprimento','detracao','livramento'].includes(f.tipo)).map(f=>({a:dt(f.ini), b:dt(f.fim), f})).sort((p,q)=>p.a-q.a);
+    const blocos=[]; conta.forEach(z=>{ const u=blocos[blocos.length-1]; if(u&&z.a-u.b<=DIA*1.5){ if(z.b>u.b) u.b=z.b; u.fs.push(z.f); } else blocos.push({a:z.a, b:z.b, fs:[z.f]}); });
+    const faltas=(d.marcos||[]).filter(m=>m.tipo==='falta');
+    const datas=[...blocos.map(b=>b.a), ...faltas.map(m=>dt(m.data)), ...(d.decretos||[]).map(x=>dt(x.referencia))].filter(x=>x&&!isNaN(x));
     (d.decretos||[]).forEach(x=>{ const p=(x.indulto||{}).projecao; if(p&&p.data) datas.push(dt(p.data)); if(x.imputacao&&x.imputacao.data) datas.push(dt(x.imputacao.data)); });
-    const t0=new Date(Math.min(...datas)); t0.setMonth(t0.getMonth()-4); const t1=new Date(Math.max(hoje,...datas)); t1.setMonth(t1.getMonth()+4);
+    const t0=new Date(Math.min(...datas)); t0.setMonth(t0.getMonth()-3); const t1=new Date(Math.max(hoje,...datas)); t1.setMonth(t1.getMonth()+3);
     const TW=Math.max(760, Math.round((window.innerWidth||1400)-28-36-28-6)); const X=t=>40+(dt(t)-t0)/(t1-t0)*(TW-80); const Xd=dd=>40+(dd-t0)/(t1-t0)*(TW-80);
-    const yB=96, yA=130; let svg='';
-    // janelas de falta grave (sombreadas) e decretos
-    (d.decretos||[]).forEach(x=>{ const J=x.janela_falta; if(!J||J.informativa) return; const sel=x.id===this._tlvDec; if(!sel) return; svg+=`<rect x="${X(J.ini)}" y="30" width="${X(J.fim)-X(J.ini)}" height="${yA+200-30}" fill="rgba(240,68,56,.10)" stroke="rgba(240,68,56,.45)" stroke-dasharray="4 3"/>${sel?`<text x="${X(J.ini)+4}" y="44" font-size="10.5" font-weight="600" fill="#B42318">${esc(ui.tlvCabe([`janela da falta: ${J.ini} a ${J.fim}`,`janela ${J.meses} meses`,'janela'], X(J.fim)-X(J.ini)-8, 10.5)||'')}</text>`:''}`; });
-    // faixas
-    (d.faixas||[]).forEach(f=>{ const s=this.TLV_FX[f.tipo]||{f:'#ccc',r:f.tipo}; const x1=X(f.ini), x2=Math.max(x1+2, X(f.fim)+ (TW-80)/((t1-t0)/86400000)); const di=this.tlvReg(s.r, f.det);
-      svg+=`<g class="ck" onclick="ui.tlvDet(${di})"><rect x="${x1}" y="${yB}" width="${x2-x1}" height="20" rx="3" fill="${s.f}" stroke="${f.tipo==='liberdade'?'#D0D5DD':'none'}"/>${(()=>{ const t=ui.tlvCabe([`${s.r.split(' (')[0].split(' / ')[0].split(' - ')[0]} · ${pl(f.dias,'dia','dias')}`, pl(f.dias,'dia','dias')], x2-x1-10, 10.5); return t?`<text x="${(x1+x2)/2}" y="${yB+14}" text-anchor="middle" font-size="10.5" font-weight="700" fill="${f.tipo==='cumprimento'?'#fff':'#101828'}" ${f.tipo!=='cumprimento'?'paint-order="stroke" stroke="#fff" stroke-width="3"':''}>${esc(t)}</text>`:''; })()}</g>`; });
+    const yB=112, yA=144; let svg='';
+    const J=D.janela_falta&&!D.janela_falta.informativa?D.janela_falta:null; const dentro=t=>J&&dt(t)>=dt(J.ini)&&dt(t)<=dt(J.fim);
+    if(J) svg+=`<rect x="${X(J.ini)}" y="54" width="${X(J.fim)-X(J.ini)}" height="${yA+60-54}" fill="rgba(240,68,56,.10)" stroke="rgba(240,68,56,.45)" stroke-dasharray="4 3"/><text x="${X(J.ini)+4}" y="${yA+32}" font-size="10.5" font-weight="600" fill="#B42318">${esc(ui.tlvCabe([`janela da falta: ${J.ini} a ${J.fim}`,`janela ${J.meses} meses`,'janela'], X(J.fim)-X(J.ini)-8, 10.5)||'')}</text>`;
+    // faixa do período cumprido (fora dela: fuga, liberdade ou antes do início)
+    blocos.forEach(B2=>{ const x1=Xd(B2.a), x2=Math.max(x1+2, Xd(new Date(+B2.b+DIA))); const n=Math.round((B2.b-B2.a)/DIA)+1;
+      const tipos=[...new Set(B2.fs.map(f=>f.tipo))].map(t=>({cumprimento:'cumprimento',detracao:'detração',livramento:'livramento'})[t]);
+      const di=this.tlvReg('Período cumprido', {evento:B2.fs.map(f=>(f.det&&f.det.evento)||'').filter(Boolean).join(' | '), periodo:`${this.tlvF(B2.a)} → ${this.tlvF(B2.b)}`, tratamento:'conta como pena cumprida ('+tipos.join(', ')+')', fundamento:'LEP, arts. 111 e 128; CP, art. 42; STJ, Súmula 535', calculo:`${this.tlvF(B2.a)} → ${this.tlvF(B2.b)} = ${n} dias`, efeito:'soma no tempo cumprido para indulto e comutação'});
+      const t=ui.tlvCabe([`cumprido · ${pl(n,'dia','dias')}`, pl(n,'dia','dias')], x2-x1-10, 11);
+      svg+=`<g class="ck" onclick="ui.tlvDet(${di})"><rect x="${x1}" y="${yB}" width="${x2-x1}" height="22" rx="4" fill="#17B26A"/>${t?`<text x="${(x1+x2)/2}" y="${yB+15}" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">${esc(t)}</text>`:''}</g>`; });
     // imputação do cumprido ao impeditivo (decreto selecionado)
-    if(D.imputacao&&d.inicio){ const I2=D.imputacao; const xe=I2.data?X(I2.data):TW-40; const xi=X(d.inicio); const di=this.tlvReg('Cumprimento imputado ao impeditivo', I2.det);
-      svg+=`<g class="ck" onclick="ui.tlvDet(${di})"><rect x="${xi}" y="${yB-14}" width="${Math.max(2,xe-xi)}" height="10" fill="url(#tvImp)" stroke="#475467" stroke-width=".6"/><text x="${xi+4}" y="${yB-17}" font-size="10.5" fill="#344054">imputado a ${I2.crimes_imp.join(', ')} (${I2.fracao})</text>
-        ${I2.data?`<path d="M${xe} ${yB-20} l6 6 l-6 6 l-6 -6 z" fill="${I2.projecao?'#fff':'#101828'}" stroke="#101828"/><text x="${xe>TW-380?xe-8:xe+8}" text-anchor="${xe>TW-380?'end':'start'}" y="${yB-26}" font-size="11" font-weight="700" fill="#101828">${I2.crimes_imp.join(', ')} atinge ${I2.fracao} em ${I2.data}${I2.projecao?' (projeção)':''} → libera ${I2.crimes_liv.join(', ')}</text>`:''}</g>`; }
-    // eixo, anos
+    if(D.imputacao&&blocos.length){ const I2=D.imputacao; const xe=I2.data?X(I2.data):TW-40; const xi=Xd(blocos[0].a); const di=this.tlvReg('Cumprimento imputado ao impeditivo', I2.det);
+      svg+=`<g class="ck" onclick="ui.tlvDet(${di})"><rect x="${xi}" y="${yB-13}" width="${Math.max(2,xe-xi)}" height="9" fill="url(#tvImp)" stroke="#475467" stroke-width=".6"/>
+        ${I2.data?`<path d="M${xe} ${yB-19} l6 6 l-6 6 l-6 -6 z" fill="${I2.projecao?'#fff':'#101828'}" stroke="#101828"/><text x="${xe>TW-380?xe-8:xe+8}" text-anchor="${xe>TW-380?'end':'start'}" y="${yB-22}" font-size="11" font-weight="700" fill="#101828">${I2.crimes_imp.join(', ')} atinge ${I2.fracao} em ${I2.data}${I2.projecao?' (projeção)':''} → libera ${I2.crimes_liv.join(', ')}</text>`:''}</g>`; }
+    // eixo e anos
     svg+=`<line x1="30" y1="${yA}" x2="${TW-20}" y2="${yA}" stroke="#344054" stroke-width="2"/>`;
     for(let y=t0.getFullYear()+1;y<=t1.getFullYear();y++){ const xx=Xd(new Date(y,0,1)); svg+=`<line x1="${xx}" y1="${yA-4}" x2="${xx}" y2="${yA+4}" stroke="#344054"/><text x="${xx}" y="${yA+16}" text-anchor="middle" font-size="10.5" font-weight="600" fill="#98A2B3">${y}</text>`; }
-    // decretos: linha vertical na data de referência
+    // decretos: linha na data de referência, com o cumprido naquela data
+    let decDir=-1e9, decLin=0;
     (d.decretos||[]).forEach(x=>{ const xx=X(x.referencia); const st=(x.indulto||{}).status||'verificar'; const c={cabe:'#067647',nao:'#B42318',verificar:'#B54708',ainda:'#1D4ED8'}[st]||'#475467';
-      const di=this.tlvReg(`Decreto ${x.numero}`, {evento:`Decreto ${x.numero} · publicação ${x.publicacao||'não cadastrada'} · data de referência ${x.referencia}`, crime:'GERAL', periodo:x.referencia, tratamento:'data de referência', fundamento:x.fonte||'', calculo:x.cumprido_txt?`cumprido na data: ${x.cumprido_txt.total} (cumprimento ${x.cumprido_txt.cumprimento} + detração ${x.cumprido_txt.detracao} + remição ${x.cumprido_txt.remicao})`:'', efeito:`Indulto: ${(x.indulto||{}).rotulo||''} · Comutação: ${(x.comutacao||{}).rotulo||''}`});
-      svg+=`<g class="ck" opacity="${vis(x)?1:.3}" onclick="ui.tlvSel('${x.id}');setTimeout(()=>ui.tlvDet(${di}),0)"><line x1="${xx}" y1="26" x2="${xx}" y2="${yA+200}" stroke="${c}" stroke-width="${x.id===this._tlvDec?3:1.5}"/><rect x="${Math.min(Math.max(xx-60,2),TW-122)}" y="4" width="120" height="20" rx="5" fill="${c}"/><text x="${Math.min(Math.max(xx,62),TW-62)}" y="18" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">${esc(x.numero)}${x.cadastrado?'':' ⚠'}</text></g>`; });
-    // hoje
-    svg+=`<line x1="${X(d.hoje)}" y1="30" x2="${X(d.hoje)}" y2="${yA+200}" stroke="#101828" stroke-dasharray="3 3"/><text x="${X(d.hoje)-4}" y="${yA+196}" text-anchor="end" font-size="11" font-weight="700" fill="#101828">HOJE ${esc(d.hoje)}</text>`;
-    // projeção do último decreto
-    (d.decretos||[]).forEach(x=>{ const p=(x.indulto||{}).projecao; if(!(p&&p.data)||!vis(x)) return; const xx=X(p.data); const di=this.tlvReg('Projeção', {evento:'requisito objetivo do último decreto publicado', periodo:`${x.referencia} → ${p.data}`, tratamento:'projeção', fundamento:`Decreto ${x.numero}`, calculo:`exigido ${(x.indulto||{}).exigido_txt||''}`, efeito:'Projeção baseada nos requisitos do último decreto publicado; depende de o próximo decreto repetir as mesmas condições.'});
-      svg+=`<g class="ck" onclick="ui.tlvDet(${di})"><line x1="${xx}" y1="${yB-4}" x2="${xx}" y2="${yA+150}" stroke="#2563EB" stroke-dasharray="6 3" stroke-width="2"/><text x="${xx>TW-240?xx-4:xx+4}" text-anchor="${xx>TW-240?'end':'start'}" y="${yA+176}" font-size="11" font-weight="700" fill="#1D4ED8">projeção: requisito em ${p.data}</text></g>`; });
-    // marcos com rótulos em faixas para não sobrepor
-    const niveis=[]; const J=D.janela_falta&&!D.janela_falta.informativa?D.janela_falta:null; const dentro=t=>J&&dt(t)>=dt(J.ini)&&dt(t)<=dt(J.fim);
-    const rems=(d.marcos||[]).filter(m=>m.tipo==='remicao'||m.tipo==='perda');
-    rems.forEach(m=>{ const xx=X(m.data); const di=this.tlvReg(m.rotulo, Object.assign({}, m.det, {efeito:m.efeito})); svg+=`<g class="ck" onclick="ui.tlvDet(${di})"><rect x="${xx-4}" y="${yA+22}" width="8" height="8" transform="rotate(45 ${xx} ${yA+26})" fill="${m.tipo==='perda'?'#E5484D':'#0BA5EC'}"/></g>`; });
-    const remTot=rems.reduce((a,m)=>a+(+(m.rotulo.match(/\d+/)||[0])[0]*(m.tipo==='perda'?-1:1)),0);
-    // eventos do mesmo dia viram um rótulo só (ex.: fato e prisão; fuga e falta a apurar; recaptura e reinício)
-    const grupos=[]; (d.marcos||[]).filter(m=>!['decreto','hoje','publicacao','remicao','perda'].includes(m.tipo)).forEach(m=>{ const g=grupos.find(x=>x.data===m.data); if(g) g.ms.push(m); else grupos.push({data:m.data, ms:[m]}); });
-    const PRIO=['fuga','falta','prisao','livramento','transito','sentenca','fato','unificacao','recaptura'];
-    grupos.forEach(G=>{ let ms=G.ms; if(ms.some(m=>m.tipo==='prisao')) ms=ms.filter(m=>m.tipo!=='recaptura');
-      if(ms.some(m=>m.tipo==='fuga')) ms=ms.map(m=>m.tipo==='falta'&&m.duvida?Object.assign({},m,{rotulo:'falta a apurar'}):m);
-      ms.sort((a,b)=>PRIO.indexOf(a.tipo)-PRIO.indexOf(b.tipo)); const m=ms[0]; const xx=X(G.data);
-      const tags=[...new Set(ms.flatMap(z=>(z.crimes||[]).filter(t=>t!=='GERAL'&&!z.rotulo.includes(t))))].join(', ');
-      const rot=ms.map(z=>z.rotulo).join(' · '); const lab=`${G.data} · ${rot}${tags?' ['+tags+']':''}`; const w=ui.tlvLarg(lab,11)+16;
-      const fim=xx+w>TW-8; const ini=fim?xx-w:xx; let n=0; while(niveis[n]!==undefined && niveis[n]>ini-4) n++; niveis[n]=fim?xx+6:xx+w; const ly=yA+(rems.length?50:38)+n*21;
-      let c='#475467'; const cs=[...new Set(ms.flatMap(z=>z.crimes||[]))]; if(cs.length===1&&cor[cs[0]]) c=cor[cs[0]];
-      const fl=ms.find(z=>z.tipo==='falta'); if(fl) c=fl.duvida?'#F79009':(dentro(G.data)?'#E5484D':'#98A2B3'); if(ms.some(z=>z.tipo==='fuga')) c='#F04438';
-      const det=Object.assign({}, m.det, {evento:ms.map(z=>(z.det&&z.det.evento)||z.rotulo).join(' | '), efeito:ms.map(z=>z.efeito).filter(Boolean).join('; ')});
-      const di=this.tlvReg(rot, det);
-      svg+=`<g class="ck" onclick="ui.tlvDet(${di})"><line x1="${xx}" y1="${yA}" x2="${xx}" y2="${ly-10}" stroke="${c}" stroke-width="1" opacity=".6"/><circle cx="${xx}" cy="${yA}" r="${fl?6:5}" fill="#fff" stroke="${c}" stroke-width="2.5"/>${fl&&fl.duvida?`<text x="${xx}" y="${yA-9}" text-anchor="middle" font-size="12">⚠</text>`:''}
-        <text x="${fim?xx-4:xx+4}" text-anchor="${fim?'end':'start'}" y="${ly}" font-size="11" fill="#667085">${esc(G.data)} · <tspan font-weight="700" fill="${c}">${esc(rot)}</tspan>${tags?` <tspan fill="#98A2B3">[${esc(tags)}]</tspan>`:''}</text></g>`; });
-    const H=yA+(rems.length?50:38)+Math.max(1,niveis.length)*21+24;
-    // dúvidas no ponto exato
-    (d.duvidas||[]).forEach(q=>{ if(!q.data) return; const xx=X(q.data); const di=this.tlvReg('A VERIFICAR', {evento:q.texto, crime:q.crime, periodo:q.data, tratamento:'dúvida - nada foi presumido', efeito:'o resultado depende desse dado'}); svg+=`<g class="ck" onclick="ui.tlvDet(${di})"><circle cx="${xx}" cy="60" r="9" fill="#FEF4D6" stroke="#F79009" stroke-width="2"/><text x="${xx}" y="64" text-anchor="middle" font-size="11" font-weight="800" fill="#B54708">!</text></g>`; });
-    const linha=`<div class="tlv-tl"><svg width="100%" viewBox="0 0 ${TW} ${Math.max(H,yA+210)}" preserveAspectRatio="xMinYMin meet">${defs}${svg}</svg></div>
-      <div class="tlv-leg">${Object.values(this.TLV_FX).map(s=>`<span><i style="background:${s.f.startsWith('url')?({'url(#tvDet)':'repeating-linear-gradient(90deg,#067647 0 2px,#D1FADF 2px 6px)','url(#tvFuga)':'repeating-linear-gradient(135deg,#F04438 0 3px,#FDE8E8 3px 8px)','url(#tvDup)':'repeating-linear-gradient(45deg,#F79009 0 3px,#FEF4D6 3px 8px)'})[s.f]:s.f};border:1px solid #D0D5DD"></i>${s.r}</span>`).join('')}<span><i style="background:rgba(240,68,56,.12);border:1px dashed rgba(240,68,56,.5)"></i>janela da falta grave (decreto selecionado)</span><span><i style="background:repeating-linear-gradient(135deg,rgba(16,24,40,.45) 0 2px,transparent 2px 8px);border:1px solid #475467"></i>cumprido imputado ao impeditivo</span>${rems.length?`<span style="color:#0086C9">◆ ${pl(rems.length,'remição','remições')} (${remTot>=0?'+':''}${remTot} dias) - clique no losango</span>`:''}<span style="color:#E5484D">● falta na janela</span><span style="color:#98A2B3">● falta fora da janela (sem efeito)</span><span style="color:#B54708">⚠ a verificar</span></div>`;
+      const cum=(x.indulto||{}).cumprido_txt||(x.cumprido_txt||{}).total||'';
+      const di=this.tlvReg(`Decreto ${x.numero}`, {evento:`Decreto ${x.numero} · publicação ${x.publicacao||'não cadastrada'} · data de referência ${x.referencia}`, crime:'GERAL', periodo:x.referencia, tratamento:'data de referência', fundamento:x.fonte||'', calculo:cum?`cumprido na data: ${cum}${(x.indulto||{}).fonte?' ('+x.indulto.fonte+')':''}`:'', efeito:`Indulto: ${(x.indulto||{}).rotulo||''} · Comutação: ${(x.comutacao||{}).rotulo||''}`});
+      // caixas de decretos próximos se alternam em duas alturas para não se sobreporem
+      const lx=Math.min(Math.max(xx,72),TW-72); decLin=(lx-72<decDir+6)?1-decLin:0; decDir=lx+72; const by=4+decLin*42;
+      const cc=String(cum||'').replace(/^(\d+)a(\d+)m(\d+)d$/,'$1a $2m $3d');
+      svg+=`<g class="ck" opacity="${vis(x)?1:.3}" onclick="ui.tlvSel('${x.id}');setTimeout(()=>ui.tlvDet(${di}),0)"><line x1="${xx}" y1="${by+36}" x2="${xx}" y2="${yA+40}" stroke="${c}" stroke-width="${x.id===this._tlvDec?3:1.5}"/><rect x="${lx-72}" y="${by}" width="144" height="36" rx="5" fill="${c}"/><text x="${lx}" y="${by+15}" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">${esc(x.numero)}</text><text x="${lx}" y="${by+30}" text-anchor="middle" font-size="10.5" fill="#fff">cumprido ${esc(cc||'—')}</text></g>`; });
+    // hoje e projeção
+    svg+=`<line x1="${X(d.hoje)}" y1="54" x2="${X(d.hoje)}" y2="${yA+40}" stroke="#101828" stroke-dasharray="3 3"/><text x="${X(d.hoje)-4}" y="${yA+34}" text-anchor="end" font-size="11" font-weight="700" fill="#101828">HOJE ${esc(d.hoje)}</text>`;
+    (d.decretos||[]).forEach(x=>{ const p=(x.indulto||{}).projecao; if(!(p&&p.data)||!vis(x)) return; const xx=X(p.data); const di=this.tlvReg('Projeção', {evento:'requisito objetivo do último decreto publicado', periodo:`${x.referencia} → ${p.data}`, tratamento:'projeção', fundamento:`Decreto ${x.numero}`, calculo:`exigido ${(p.exigido_txt)||''}`, efeito:'Projeção baseada nos requisitos do último decreto publicado; depende de o próximo decreto repetir as mesmas condições.'});
+      svg+=`<g class="ck" onclick="ui.tlvDet(${di})"><line x1="${xx}" y1="${yB-4}" x2="${xx}" y2="${yA+40}" stroke="#2563EB" stroke-dasharray="6 3" stroke-width="2"/><text x="${xx>TW-240?xx-4:xx+4}" text-anchor="${xx>TW-240?'end':'start'}" y="${yA+50}" font-size="11" font-weight="700" fill="#1D4ED8">projeção: requisito em ${p.data}</text></g>`; });
+    // faltas (as do mesmo dia num rótulo só)
+    const niveis=[]; const grupos=[]; faltas.forEach(m=>{ const g=grupos.find(x=>x.data===m.data); if(g) g.ms.push(m); else grupos.push({data:m.data, ms:[m]}); });
+    grupos.forEach(G=>{ const ms=G.ms; const xx=X(G.data); const duv=ms.every(z=>z.duvida); const c=duv?'#F79009':(dentro(G.data)?'#E5484D':'#98A2B3');
+      const fuga=ms.some(z=>/FUGA|EVAS|ABANDON|RETORN/i.test((z.det&&z.det.evento)||'')); const rot=duv?(fuga?'Fuga · falta a apurar':'Falta sem homologação'):'Falta grave'+(ms[0].sub?' · '+ms[0].sub:''); const lab=`${G.data} · ${rot}`; const w=ui.tlvLarg(lab,11)+16;
+      const fim=xx+w>TW-8; const ini=fim?xx-w:xx; let n=0; while(niveis[n]!==undefined && niveis[n]>ini-4) n++; niveis[n]=fim?xx+6:xx+w; const ly=yA+70+n*21;
+      const di=this.tlvReg(rot, Object.assign({}, ms[0].det, {evento:ms.map(z=>(z.det&&z.det.evento)||z.rotulo).join(' | '), efeito:(dentro(G.data)?'dentro da janela do decreto selecionado: requisito subjetivo. ':J?'fora da janela do decreto selecionado: sem efeito. ':'')+'Não zera nem reinicia o tempo cumprido (Súmula 535/STJ).'}));
+      svg+=`<g class="ck" onclick="ui.tlvDet(${di})"><line x1="${xx}" y1="${yA}" x2="${xx}" y2="${ly-10}" stroke="${c}" stroke-width="1" opacity=".7"/><circle cx="${xx}" cy="${yA}" r="6" fill="#fff" stroke="${c}" stroke-width="2.5"/>${duv?`<text x="${xx}" y="${yA-9}" text-anchor="middle" font-size="12">⚠</text>`:''}
+        <text x="${fim?xx-4:xx+4}" text-anchor="${fim?'end':'start'}" y="${ly}" font-size="11" fill="#667085">${esc(G.data)} · <tspan font-weight="700" fill="${c}">${esc(rot)}</tspan></text></g>`; });
+    const H=yA+70+Math.max(1,niveis.length)*21+10;
+    const linha=`<div class="tlv-tl"><svg width="100%" viewBox="0 0 ${TW} ${H}" preserveAspectRatio="xMinYMin meet">${defs}${svg}</svg></div>
+      <div class="tlv-leg"><span><i style="background:#17B26A"></i>período cumprido (cumprimento, detração e livramento; a remição entra no total)</span><span><i style="background:#fff;border:1px solid #D0D5DD"></i>fora do cumprimento (fuga, liberdade)</span>${J?'<span><i style="background:rgba(240,68,56,.12);border:1px dashed rgba(240,68,56,.5)"></i>janela da falta grave do decreto</span>':''}${D.imputacao?'<span><i style="background:repeating-linear-gradient(135deg,rgba(16,24,40,.45) 0 2px,transparent 2px 8px);border:1px solid #475467"></i>cumprido imputado ao impeditivo</span>':''}<span style="color:#E5484D">● falta na janela</span><span style="color:#98A2B3">● falta fora da janela (sem efeito)</span><span style="color:#B54708">⚠ falta sem homologação</span></div>`;
     // 4-6. cartões dos decretos com checklist
     const ico={ok:'✔',ko:'✖',q:'?'};
     const lista=(ck,pref)=>`<ul class="cl">${(ck||[]).map(c=>{ const di=this.tlvReg(`${pref} - ${c.item}`, Object.assign({}, c.det, {efeito:(c.det&&c.det.efeito)||c.texto})); return `<li class="${c.estado}"><span class="ic">${ico[c.estado]}</span><span><span class="it">${esc(c.item)}</span><span class="tx">${penaExt(esc(c.texto))}</span></span><span class="hw" onclick="ui.tlvDet(${di})">Como cheguei aqui?</span></li>`; }).join('')}</ul>`;
@@ -1065,7 +1063,7 @@ const ui = {
         <div class="tlv-sec">${sep}</div>
         <div class="tlv-sec"><h3>1 · Crimes <span class="muted" style="text-transform:none;letter-spacing:0">selo pelo Decreto ${esc(Dsel.numero||'')}</span></h3><div class="crs">${crs}</div></div>
         <div class="tlv-sec tlv-bar"><h3>2 · Pena unificada e tempo cumprido</h3>${barra}</div>
-        <div class="tlv-sec"><h3>3 · Linha do tempo <span class="sp"></span><span class="muted" style="text-transform:none;letter-spacing:0">fatos → prisões → sentenças/trânsitos → execução → remições → faltas → fugas → decretos → hoje</span></h3>${linha}</div>
+        <div class="tlv-sec"><h3>3 · Linha do tempo <span class="sp"></span><span class="muted" style="text-transform:none;letter-spacing:0">período cumprido · faltas · decretos · hoje</span></h3>${linha}</div>
         ${duv}
         <div class="tlv-sec"><h3>4 · ${todos?'Decretos':'Decreto '+esc(D.numero||'')} (exigido × cumprido na data de referência)</h3><div class="decs ${todos?'':'um'}">${decs}</div></div>
         <div class="tlv-sec"><h3>5 · Resultado</h3><div class="res">${res}</div></div>
