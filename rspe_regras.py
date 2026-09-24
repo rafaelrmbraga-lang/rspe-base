@@ -278,3 +278,16 @@ def decretos():
 
 def jurisprudencia():
     return carregar().get("jurisprudencia", [])
+
+
+def decretos_linha():
+    """Decretos cadastrados para a linha do tempo de indulto/comutação (base jurídica, decretos_linha.decretos). Se a cópia
+    ao lado do executável for anterior a esse cadastro, usa o da base embutida; sem nenhum, lista vazia (tudo A VERIFICAR)."""
+    lst = (carregar().get("decretos_linha") or {}).get("decretos")
+    if lst is None:
+        try:
+            with open(_recurso("base_juridica.json"), encoding="utf-8") as f:
+                lst = (json.load(f).get("decretos_linha") or {}).get("decretos")
+        except Exception:
+            lst = None
+    return [x for x in (lst or []) if isinstance(x, dict)]

@@ -1,5 +1,5 @@
 {
- "versao": "2026-09-24b",
+ "versao": "2026-09-24c",
  "descricao": "Base juridica do RSPE Base. Editavel: o programa le este arquivo ao abrir (copia ao lado do .exe tem prioridade sobre a embutida). Datas em AAAA-MM-DD. Fracoes como 'num/den' ou percentual 'NN%'.",
  "prescricao": {
   "art109_tabela": [
@@ -1314,5 +1314,211 @@
    ],
    "fonte": "LEP arts. 81-A e 81-B; Lei Complementar 80/94"
   }
+ },
+ "decretos_linha": {
+  "_nota": "Parâmetros da linha do tempo de indulto e comutação (aba Indulto / Comutação). Nenhuma fração, janela, vedação ou data fica no código: cada decreto é cadastrado aqui. Decreto com 'cadastrado': false dá A VERIFICAR, nunca aplicação por analogia. hipoteses: a primeira que se aplica à pena considerada (vga true/false/null; pena_max_anos) define a fração. vedacoes.regra: art1_2024_2025 (listas art1_* de decretos_indulto) ou art7_2022. falta_grave.ate: 'publicacao' fecha a janela na publicação.",
+  "decretos": [
+   {
+    "id": "2022",
+    "numero": "11.302/2022",
+    "publicacao": "2022-12-23",
+    "referencia": "2022-12-25",
+    "cadastrado": true,
+    "fonte": "Decreto 11.302/2022 (DOU de 23/12/2022)",
+    "indulto": {
+     "hipoteses": [
+      {
+       "id": "art5",
+       "tipo": "pena_max_abstrata_por_crime",
+       "anos": 5,
+       "dispositivo": "art. 5º, caput e parágrafo único",
+       "descricao": "pena máxima em abstrato até 5 anos, cada crime isoladamente; sem fração cumprida"
+      }
+     ]
+    },
+    "comutacao": null,
+    "vedacoes": {
+     "regra": "art7_2022",
+     "dispositivo": "art. 7º"
+    },
+    "falta_grave": {
+     "exige": false,
+     "janela_meses": 12,
+     "dispositivo": "Decreto 11.302/2022: não há requisito disciplinar (arts. 1º a 11)"
+    },
+    "concurso_impeditivo": {
+     "fracao": "1/1",
+     "ordem": "impeditivo_primeiro",
+     "dispositivo": "art. 11, parágrafo único (cumprida a pena do impeditivo)"
+    },
+    "regra_fato": {
+     "dispositivo": "art. 11 (penas somadas até 25/12/2022); STJ, HC 190.963"
+    },
+    "regra_transito": {
+     "dispositivo": "art. 9º, I e parágrafo único"
+    },
+    "nota": "O decreto não exige ausência de falta grave: as faltas aparecem só como informação e não afastam o indulto."
+   },
+   {
+    "id": "2024",
+    "numero": "12.338/2024",
+    "publicacao": "2024-12-23",
+    "referencia": "2024-12-25",
+    "cadastrado": true,
+    "fonte": "Decreto 12.338/2024 (DOU de 23/12/2024)",
+    "indulto": {
+     "hipoteses": [
+      {
+       "id": "art9_I",
+       "dispositivo": "art. 9º, I",
+       "descricao": "pena até 8 anos, sem violência ou grave ameaça",
+       "vga": false,
+       "pena_max_anos": 8,
+       "fracao": {
+        "primario": "1/5",
+        "reincidente": "1/3"
+       }
+      },
+      {
+       "id": "art9_II",
+       "dispositivo": "art. 9º, II",
+       "descricao": "pena até 12 anos, sem violência ou grave ameaça",
+       "vga": false,
+       "pena_max_anos": 12,
+       "fracao": {
+        "primario": "1/3",
+        "reincidente": "1/2"
+       }
+      },
+      {
+       "id": "art9_III",
+       "dispositivo": "art. 9º, III",
+       "descricao": "pena até 4 anos, com violência ou grave ameaça",
+       "vga": true,
+       "pena_max_anos": 4,
+       "fracao": {
+        "primario": "1/3",
+        "reincidente": "1/2"
+       }
+      }
+     ]
+    },
+    "comutacao": {
+     "dispositivo": "art. 13, caput",
+     "fracao": {
+      "primario": "1/5",
+      "reincidente": "1/4"
+     },
+     "reducao": "1/5",
+     "base": "remanescente_ou_cumprido_se_maior",
+     "dispositivo_reducao": "art. 13, caput e § 1º",
+     "dispositivo_prejudicada": "art. 13, § 5º"
+    },
+    "vedacoes": {
+     "regra": "art1_2024_2025",
+     "dispositivo": "art. 1º (rol de crimes impeditivos, mantido nas listas art1_* desta base)"
+    },
+    "falta_grave": {
+     "janela_meses": 12,
+     "exige_homologacao": true,
+     "ate": "publicacao",
+     "dispositivo": "art. 6º, caput e parágrafo único (falta posterior à publicação não impede)"
+    },
+    "concurso_impeditivo": {
+     "fracao": "2/3",
+     "ordem": "impeditivo_primeiro",
+     "dispositivo": "art. 7º, parágrafo único (2/3 da pena do impeditivo; STJ, HC 1.066.254)"
+    },
+    "regra_fato": {
+     "dispositivo": "art. 7º (penas somadas até 25/12); STJ, HC 190.963 e AgRg no HC 441.551"
+    },
+    "regra_transito": {
+     "dispositivo": "art. 2º, I e II"
+    },
+    "regra_reincidencia": {
+     "dispositivo": "art. 14 (reincidência até 25/12)"
+    }
+   },
+   {
+    "id": "2025",
+    "numero": "12.790/2025",
+    "publicacao": "2025-12-23",
+    "referencia": "2025-12-25",
+    "cadastrado": true,
+    "fonte": "Decreto 12.790/2025 (DOU de 23/12/2025)",
+    "indulto": {
+     "hipoteses": [
+      {
+       "id": "art9_I",
+       "dispositivo": "art. 9º, I",
+       "descricao": "pena até 8 anos, sem violência ou grave ameaça",
+       "vga": false,
+       "pena_max_anos": 8,
+       "fracao": {
+        "primario": "1/5",
+        "reincidente": "1/3"
+       }
+      },
+      {
+       "id": "art9_II",
+       "dispositivo": "art. 9º, II",
+       "descricao": "pena até 12 anos, sem violência ou grave ameaça",
+       "vga": false,
+       "pena_max_anos": 12,
+       "fracao": {
+        "primario": "1/3",
+        "reincidente": "1/2"
+       }
+      },
+      {
+       "id": "art9_III",
+       "dispositivo": "art. 9º, III",
+       "descricao": "pena até 4 anos, com violência ou grave ameaça",
+       "vga": true,
+       "pena_max_anos": 4,
+       "fracao": {
+        "primario": "1/3",
+        "reincidente": "1/2"
+       }
+      }
+     ]
+    },
+    "comutacao": {
+     "dispositivo": "art. 13, caput",
+     "fracao": {
+      "primario": "1/5",
+      "reincidente": "1/4"
+     },
+     "reducao": "1/5",
+     "base": "remanescente_ou_cumprido_se_maior",
+     "dispositivo_reducao": "art. 13, caput e § 1º",
+     "dispositivo_prejudicada": "art. 13, § 5º"
+    },
+    "vedacoes": {
+     "regra": "art1_2024_2025",
+     "dispositivo": "art. 1º (rol de crimes impeditivos, mantido nas listas art1_* desta base)"
+    },
+    "falta_grave": {
+     "janela_meses": 12,
+     "exige_homologacao": true,
+     "ate": "publicacao",
+     "dispositivo": "art. 6º, caput e parágrafo único (falta posterior à publicação não impede)"
+    },
+    "concurso_impeditivo": {
+     "fracao": "2/3",
+     "ordem": "impeditivo_primeiro",
+     "dispositivo": "art. 7º, parágrafo único (2/3 da pena do impeditivo; STJ, HC 1.066.254)"
+    },
+    "regra_fato": {
+     "dispositivo": "art. 7º (penas somadas até 25/12); STJ, HC 190.963 e AgRg no HC 441.551"
+    },
+    "regra_transito": {
+     "dispositivo": "art. 2º, I e II"
+    },
+    "regra_reincidencia": {
+     "dispositivo": "art. 14 (reincidência até 25/12)"
+    }
+   }
+  ]
  }
 }

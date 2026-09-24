@@ -1,8 +1,8 @@
-RSPE BASE - SEEU  v6.15.13 (programa em abas)
+RSPE BASE - SEEU  v6.16.0 (programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-6.15.13. A documentação técnica completa (cada parâmetro, a regra, a norma e
+6.16.0. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -535,6 +535,60 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v6.16.0
+  - Corrigido: após a importação nada aparecia na tela ("TypeError: Object
+    of type Fraction is not JSON serializable"). A lista agora é convertida
+    (fração vira número, data vira dd/mm/aaaa) antes de ir para a tela.
+  - Aba Prescrição: layout da versão anterior. Em cada crime, "editar
+    dados" abre o formulário para preencher ou corrigir datas (fato,
+    denúncia, sentença, trânsitos), pena, reincidência e art. 115; ao
+    salvar, a análise é refeita com esses dados (gravados na base, tabela
+    presc_ajustes; "✎ ajustado" no crime; "Restaurar dados importados").
+  - Prescrição: os cartões trazem todos os marcos do processo (fato,
+    denúncia, sentença, acórdão, trânsito e termo inicial) e, na
+    executória, o prazo com a pena sobre a qual foi calculado (pena
+    aplicada ou saldo na fuga, com a origem do saldo). No formulário:
+    acórdão (se houver; interrompe a punitiva - art. 117, IV) e modalidade
+    da pena - privativa de liberdade (padrão) ou restritiva de direitos,
+    com o último comparecimento como marco do descumprimento (prazo pelo
+    restante da pena, com o saldo informado ou testado entre 1 dia e a
+    pena inteira).
+  - Indulto / Comutação: sub-abas por decreto (Todos, 11.302/2022,
+    12.338/2024, 12.790/2025): colunas, cores e contagem só do decreto
+    escolhido; a linha do tempo abre nele e mostra só o cartão e o
+    resultado dele (botão "Todos" para a visão completa). Letras e
+    espaçamento maiores na linha do tempo.
+  - Triagem da prescrição executória (item 6): pelos limites de saldo.
+    PRESCRITO quando prescreve até com o maior saldo ("Prescrição
+    confirmada pela análise do limite máximo de saldo"); NÃO PRESCRITO
+    quando não prescreve nem com o menor saldo (sem alerta); A VERIFICAR
+    quando o saldo, a imputação ou dado ausente decide, com o botão
+    "CONFERIR / INFORMAR SALDO" (saldo na data da fuga, em anos, meses e
+    dias - não é o remanescente atual). A origem do saldo fica sempre à
+    vista: confirmado (remanescente do SEEU), calculado a partir dos
+    eventos, informado pelo operador ou não determinado (este mantém A
+    VERIFICAR). Reincidência ou data de nascimento ausentes que mudam o
+    resultado também levam a A VERIFICAR. Na linha do tempo só aparecem
+    🔴 PRESCRITO, 🟠 A VERIFICAR e 🟢 NÃO PRESCRITO (o prazo em curso vira
+    aviso dentro do verde); no PRESCRITO, lembrete de conferir recaptura
+    ou nova condenação antes de requerer.
+  - Aba Indulto / Comutação: botão "Verificar indulto/comutação" abre a
+    linha do tempo única do assistido (crimes C1, C2..., barra da pena
+    unificada, faixas, faltas na janela, decretos, checklist e resultado,
+    com "Como cheguei aqui?"). Ela desenha o MESMO cálculo da aba (pena
+    cumprida ancorada no SEEU, hipóteses, faltas e comutação): as duas
+    análises não divergem. Falta grave nunca zera o cumprido (Súmula 535).
+  - Falta grave com sanção reconhecida nos 12 meses (art. 6º dos Decretos
+    2024 e 2025): NÃO CABE indulto nem comutação, na aba e na linha do
+    tempo (antes o resultado ficava com o alerta "falta 12m!"). A memória
+    mostra o que seria sem a falta.
+  - Tráfico (art. 33 da Lei 11.343) sem indicação de caput/§ 1º ou § 4º:
+    A VERIFICAR (antes era tratado como impeditivo).
+  - Decreto 11.302/2022: não exige ausência de falta grave; as faltas
+    aparecem só como informação e não afastam o indulto.
+  - Base jurídica 2026-09-24c: seção decretos_linha (parâmetros de cada
+    decreto para a linha do tempo).
 
 v6.15.13
   Linha do tempo visual da prescrição executória, aprovada pelo Defensor.

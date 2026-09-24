@@ -31,9 +31,10 @@ import rspe_peticao as rpet
 import rspe_export as rx
 import rspe_regras as rg
 import rspe_relatorio as rrel
+import rspe_indulto_tl as rtl
 
 APP = "RSPE Base"
-VERSAO = "6.15.13"
+VERSAO = "6.16.0"
 
 
 def pasta_app():
@@ -337,6 +338,9 @@ class Base:
             processo TEXT, id TEXT, dados TEXT, data TEXT, PRIMARY KEY (processo, id))""")
         self.con.execute("""CREATE TABLE IF NOT EXISTS fichas (
             chave TEXT PRIMARY KEY, processo TEXT, nome_norm TEXT, data_impressao TEXT, importado_em TEXT, dados TEXT)""")
+        # ajustes manuais da tabela de prescrição executória (padrão SEEU): por processo e linha (ação penal + crime)
+        self.con.execute("""CREATE TABLE IF NOT EXISTS presc_ajustes (
+            processo TEXT, chave TEXT, dados TEXT, data TEXT, PRIMARY KEY (processo, chave))""")
         self.con.commit()
 
     def gravar_ficha(self, f, processo, mesma_pessoa=False):
@@ -411,6 +415,28 @@ class Base:
         with self.lock:
             if not self.con.execute("SELECT 1 FROM baixas WHERE processo=? AND chave=?", (processo, nova)).fetchone():
                 self.con.execute("UPDATE baixas SET chave=? WHERE processo=? AND chave=?", (nova, processo, antiga))
+            self.con.commit()
+
+    def presc_ajustes(self):
+        with self.lock:
+            rows = self.con.execute("SELECT processo, chave, dados, data FROM presc_ajustes").fetchall()
+        out = {}
+        for p, ch, d, dt in rows:
+            try:
+                v = json.loads(d or "{}")
+            except Exception:
+                continue
+            v["_data"] = dt
+            out.setdefault(p, {})[ch] = v
+        return out
+
+    def presc_ajuste_gravar(self, processo, chave, dados):
+        with self.lock:
+            if dados:
+                self.con.execute("INSERT OR REPLACE INTO presc_ajustes VALUES (?,?,?,?)",
+                                 (processo, chave, json.dumps(dados, ensure_ascii=False), datetime.now().strftime("%d/%m/%Y %H:%M")))
+            else:
+                self.con.execute("DELETE FROM presc_ajustes WHERE processo=? AND chave=?", (processo, chave))
             self.con.commit()
 
     def manuais(self):
@@ -549,6 +575,7 @@ class Api:
         baixas = self.base.baixas()
         fichas = self.base.fichas()
         manuais = self.base.manuais()
+        ajustes = self.base.presc_ajustes()
         self._modelos = []
         _homonimos = {}
         for _r in brutos:
@@ -561,6 +588,7 @@ class Api:
             except Exception:
                 pass
             ch = r.get("processo_execucao") or r.get("arquivo")
+            r["_presc_ajustes"] = ajustes.get(ch, {})  # dados de prescrição preenchidos/corrigidos pelo operador (só em memória)
             _nn = _norm(r.get("nome", ""))
             ficha = fichas.get(ch) or (fichas.get("nome:" + _nn) if _homonimos.get(_nn, 0) == 1 else None)
             # um registro com dado ilegível não pode derrubar a base: tenta sem a ficha e, se ainda falhar, mostra o
@@ -591,8 +619,28 @@ class Api:
             "rotulos": rv.ROTULO,
             "ajuda": AJUDA,
             "base_juridica": {"versao": rg.versao(), "origem": rg.origem()},
-            "registros": [{k: v for k, v in m.items() if k != "_bruto"} for m in self._modelos],
+            # json_seguro: um Fraction ou date esquecido no modelo derrubava a lista inteira ("Object of type Fraction is not JSON serializable")
+            "registros": rv.json_seguro([{k: v for k, v in m.items() if k != "_bruto"} for m in self._modelos]),
         }
+
+    def indulto_linha(self, id_):
+        """Linha do tempo de indulto e comutação de um assistido (aba Indulto / Comutação)."""
+        m = next((x for x in self._modelos if x.get("id") == id_), None)
+        if not m or not m.get("_bruto"):
+            return {"erro": "Assistido não encontrado."}
+        try:
+            return rv.json_seguro(rtl.linha(m["_bruto"], rv.HOJE))
+        except Exception as e:
+            logging.getLogger("rspe").exception("linha do tempo de indulto %s", id_)
+            return {"erro": "Falha ao montar a linha do tempo: %s" % e}
+
+    def presc_ajuste(self, processo, chave, dados):
+        """Grava (ou apaga, com dados vazios) os dados de prescrição preenchidos ou corrigidos pelo operador para um crime
+        (datas, pena, reincidência, art. 115, saldo na data da fuga) e refaz a análise."""
+        if not self.base:
+            return {"erro": "Nenhuma base aberta."}
+        self.base.presc_ajuste_gravar(processo, chave, dados or None)
+        return self.listar()
 
     def baixar_alerta(self, processo, chave, titulo, obs):
         if not self.base:

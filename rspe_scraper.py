@@ -1314,6 +1314,19 @@ def violencia_domestica(c):
     return None
 
 
+def trafico_incerto(c):
+    """Tráfico (art. 33 da Lei 11.343/06) sem indicação, no RSPE, de caput/§ 1º nem dos §§ 2º a 4º: a natureza (impeditivo
+    ou tráfico privilegiado) não se presume - fica a verificar."""
+    if c.get("extinto", "").upper().startswith("S"):
+        return False
+    if num_lei(c.get("lei")) != "11343" or num_art(c.get("artigo")) != "33":
+        return False
+    txt = " ".join(str(c.get(k) or "") for k in ("tipo_penal", "artigo", "artigo_rspe"))
+    if re.search(r"§\s*[1234](?!\d)|PRIVILEGI|CAPUT", txt, re.I):
+        return False
+    return True
+
+
 def impeditivo_decreto(c, ref=date(2024, 12, 25)):
     """Devolve (inciso, motivo) se o crime está no art. 1º dos Decretos 12.338/24 e 12.790/25, senão None.
     Hediondez aferida na data do decreto (ref), conforme o STJ."""
@@ -1322,6 +1335,8 @@ def impeditivo_decreto(c, ref=date(2024, 12, 25)):
     lei, art = num_lei(c.get("lei")), num_art(c.get("artigo"))
     pena_anos = (pena_para_dias(c.get("pena_imposta")) or 0) / float(DIAS_ANO)
     codigo_penal = lei in ("2848", "") or ("PENAL" in (c.get("lei") or "").upper() and "MILITAR" not in (c.get("lei") or "").upper())
+    if trafico_incerto(c):
+        return None  # a verificar (impeditivo_verificar): caput/§ 1º impede; § 4º não
     if e_hediondo(c, ref):
         if not e_hediondo(c):
             d, lei_h = hediondo_desde(c)
@@ -1445,6 +1460,8 @@ def exclusao_art7_2022(c):
     """Devolve texto do inciso do art. 7º do Decreto 11.302/2022 que exclui o crime, ou None."""
     lei, art = num_lei(c.get("lei")), num_art(c.get("artigo"))
     codigo_penal = lei in ("2848", "") or ("PENAL" in (c.get("lei") or "").upper() and "MILITAR" not in (c.get("lei") or "").upper())
+    if trafico_incerto(c):
+        return None  # a verificar (impeditivo_verificar)
     if e_hediondo(c, DECRETO_2022_REF):
         if not e_hediondo(c):
             if c.get("vga") == "S":
@@ -1480,6 +1497,9 @@ def impeditivo_verificar(c):
     art. 7º (Decreto 2022, art. 7º, VII). Devolve o texto para conferir, ou ''."""
     if c.get("extinto", "").upper().startswith("S"):
         return ""
+    if trafico_incerto(c):
+        return ("tráfico (art. 33 da Lei 11.343/06) sem indicação, no RSPE, de caput/§ 1º ou do § 4º: caput ou § 1º é impeditivo "
+                "(Decretos 2024 e 2025, art. 1º, XVIII; Decreto 2022, art. 7º, I e VI); o § 4º (privilegiado) não é (STJ, Tema 1336; STF, Tema 1400) - conferir na sentença")
     if num_lei(c.get("lei")) == "1001" or "MILITAR" in (c.get("lei") or "").upper():
         return "crime militar (CPM): só impede se corresponder a crime do art. 1º, I a XVIII (Decretos 2024 e 2025, XIX) ou do art. 7º, I a V (Decreto 2022, VII) - conferir"
     if num_art(c.get("artigo")) == "129" and num_lei(c.get("lei")) in ("2848", "") and hediondo_condicional(c) is None and not e_hediondo(c):
@@ -2483,6 +2503,7 @@ def analise_decretos(campos, crimes, eventos, incidentes, hoje):
                 ressalvas.append(("conferir recurso da acusação (art. 2º, II)", texto_art2_ii(art2, publicacao)))
             for txt_v in dict.fromkeys(cpm):
                 ressalvas.append(("conferir o crime militar (art. 1º, XIX)" if txt_v.startswith("crime militar") else
+                                  "conferir se o tráfico é do caput/§ 1º ou do § 4º (art. 1º, XVIII)" if txt_v.startswith("tráfico") else
                                   "conferir a vítima da lesão (art. 1º, I)", txt_v))
             out[k + "_ressalva"] = "; ".join(x[0] for x in ressalvas)
             if ressalvas:
@@ -2525,6 +2546,10 @@ def analise_decretos(campos, crimes, eventos, incidentes, hoje):
             linhas.append("Multa: indultável e não é óbice - incapacidade econômica presumida para assistido da Defensoria (art. 12, § 2º, I). "
                           "Tráfico privilegiado (art. 33, § 4º) não é impeditivo (STJ Tema 1336; STF Tema 1400).")
             out[k + "_detalhe"] = "\n".join(linhas)
+            # números desta análise, para a linha do tempo desenhar o mesmo cálculo (sem refazê-lo)
+            out[k + "_num"] = {"pena": pena_total, "cumprido": cumprido, "remanescente": remanescente, "fonte": cump_fonte,
+                               "reinc": bool(reinc), "vga": bool(vga), "regime": regime or "", "meia": bool(meia),
+                               "falta_firme": list(falta_firme), "falta_verif": list(falta_verif)}
             # explicação objetiva do cálculo (o que o decreto exige, os números do assistido e a conclusão)
             ex = ["Decreto %s · data de referência %s." % (NUM_DECRETO.get(ano, ano), fmt(ref)),
                   "Na data: regime %s, %s%s. Pena total %s; cumprido %s (%s da pena); falta cumprir %s." % (
@@ -2583,11 +2608,14 @@ def analise_decretos(campos, crimes, eventos, incidentes, hoje):
                 else:
                     cl13.append("%s Requisito: %s da pena cumprida até %s = %s; cumprido %s." % (
                         "✔" if cumprido >= exig13 else "✘", fmt_fr(*f13, par2=False), fmt(ref), dias_para_pena(exig13), dias_para_pena(cumprido)))
+                out[kc + "_num"] = {"fracao": str(fr13), "exigido": exig13, "cumprido": cumprido, "ok": bool(ok13), "pena": pena_total}
                 if ok13:
                     base = "cumprido" if cumprido > remanescente else "remanescente"
                     prop = A("art13_comutacao", "proporcao_par2", "2/3") if meia else A("art13_comutacao", "proporcao", "1/5")
                     bval = cumprido if base == "cumprido" else remanescente
                     red13 = int(bval * F(prop))
+                    out[kc + "_num"].update({"base": base, "base_dias": bval, "prop": str(prop), "reducao": red13,
+                                             "antes": remanescente, "depois": max(0, remanescente - red13)})
                     cl13.append("Redução: %s da pena %s (%s) = %s a menos; remanescente passa de %s para %s." % (
                         prop, "cumprida" if base == "cumprido" else "remanescente", dias_para_pena(bval), dias_para_pena(red13), dias_para_pena(remanescente), dias_para_pena(max(0, remanescente - red13))))
                 if aviso:
@@ -2643,6 +2671,7 @@ def analise_decretos(campos, crimes, eventos, incidentes, hoje):
             pena_imp = sum(pena_para_dias(c.get("pena_imposta")) or 0 for c in imp_c)
             exig = int(pena_imp * 2 / 3)
             nomes = crimes_curto(livres)
+            out[k + "_imp"] = {"pena_imp": pena_imp, "exigido": exig, "fracao": "2/3", "cumprido_total": cumprido}
             cab = "Crime impeditivo: " + "; ".join(imped)
             if cumprido < exig:
                 out[k] = "VEDADO (art. 1º) · art. 7º, p. ú.: faltam %s para 2/3 do impeditivo" % dias_para_pena(exig - cumprido)
@@ -2708,6 +2737,28 @@ def analise_decretos(campos, crimes, eventos, incidentes, hoje):
         for kk in (k, kc):
             if kk in out and out[kk] and not out[kk].startswith("não se aplica"):
                 out[kk] += suf
+    # art. 6º: falta grave com sanção reconhecida em juízo nos 12 meses (até a publicação) -> não cabe o indulto nem a
+    # comutação (a declaração fica condicionada à inexistência dessa sanção)
+    for ano in DECRETOS:
+        k, kc = "indulto_%s" % ano, "comutacao_%s" % ano
+        txt = out.get(k) or ""
+        if "FALTA nos 12 meses (art. 6º)" not in txt or txt.startswith(("VEDAD", "não se aplica")):
+            continue
+        faltas_txt = txt.split("FALTA nos 12 meses (art. 6º): ", 1)[1].split("; a verificar:")[0].split(" | ")[0]
+        triagem = txt.split(" | ")[0]
+        out[k] = "NÃO CABE (art. 6º): falta grave com sanção reconhecida nos 12 meses - %s" % faltas_txt
+        out[k + "_status"] = "nao"
+        nota = ("✘ Art. 6º: falta grave com sanção reconhecida nos 12 meses anteriores a 25/12/%s (%s): a declaração do indulto e da comutação "
+                "fica condicionada à inexistência dessa sanção - não cabe. Sem a falta, a triagem seria: %s." % (ano, faltas_txt, triagem))
+        for kk in (k + "_detalhe", k + "_explica"):
+            if kk in out:
+                out[kk] = (out.get(kk) or "") + "\n" + nota
+        ctxt = out.get(kc) or ""
+        if ctxt.startswith(("POSSÍVEL", "A VERIFICAR", "prejudicada", "não atinge")):
+            out[kc] = "NÃO CABE (art. 6º): falta grave com sanção reconhecida nos 12 meses - %s" % faltas_txt
+            out[kc + "_detalhe"] = (out.get(kc + "_detalhe") or "").replace(
+                "Prejudicada: o indulto é cabível e prevalece (art. 13, § 5º).", "") + "\n" + nota.replace("Sem a falta, a triagem seria: %s." % triagem,
+                                                                                                           "Sem a falta, a comutação seria: %s." % ctxt.split(" | ")[0])
     for ano, nota in notas_tr.items():
         for kk in ("indulto_%s_detalhe" % ano, "comutacao_%s_detalhe" % ano):
             if kk in out:
