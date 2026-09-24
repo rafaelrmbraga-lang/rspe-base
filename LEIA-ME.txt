@@ -1,8 +1,8 @@
-RSPE BASE - SEEU  v6.16.5 (programa em abas)
+RSPE BASE - SEEU  v6.16.6 (programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-6.16.5. A documentação técnica completa (cada parâmetro, a regra, a norma e
+6.16.6. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -535,6 +535,11 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v6.16.6
+  - Linha do tempo da prescrição: o status (prescrito, a verificar, não
+    prescrito) usa a mesma bolinha colorida dos contadores do topo, no lugar
+    do emoji; idem na legenda de faltas da linha do tempo do indulto.
 
 v6.16.5
   - Nome do assistido copiável com um clique, como o número da execução: nas
