@@ -4,7 +4,8 @@ Modelo de exibição: transforma o registro extraído (rspe_scraper) nos campos
 curtos que as abas, o Excel e o PDF mostram. Também define as abas/colunas.
 """
 
-from datetime import date
+from datetime import date, datetime
+from fractions import Fraction
 import hashlib
 import re
 
@@ -873,3 +874,17 @@ for _a in ABAS:
     # a aba Geral não tem prazo próprio (não há campo de dias): sem filtro de situação
     _a["filtros"] = [] if _a["id"] == "geral" else FILTROS.get(_a["id"], FILTROS["indulto"] if _a["id"] == "ind" else FILTROS["lapso"])
     _a["campo_dias"] = {"prog": "prog_dias", "liv": "liv_dias", "presc": "presc_dias", "ext": "ext_dias"}.get(_a["id"], "")
+
+
+def json_seguro(o):
+    """Cópia do modelo que a tela consegue receber: Fraction vira número, date vira dd/mm/aaaa, tupla/conjunto vira lista.
+    (A ponte com a tela serializa em JSON; um Fraction perdido derrubava a lista inteira.)"""
+    if isinstance(o, dict):
+        return {k: json_seguro(v) for k, v in o.items()}
+    if isinstance(o, (list, tuple, set)):
+        return [json_seguro(v) for v in o]
+    if isinstance(o, Fraction):
+        return int(o) if o.denominator == 1 else float(o)
+    if isinstance(o, (date, datetime)):
+        return o.strftime("%d/%m/%Y")
+    return o

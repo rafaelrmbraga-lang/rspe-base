@@ -1,8 +1,8 @@
-RSPE BASE - SEEU  v6.15.13 (programa em abas)
+RSPE BASE - SEEU  v6.16.0 (programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-6.15.13. A documentação técnica completa (cada parâmetro, a regra, a norma e
+6.16.0. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -535,6 +535,38 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v6.16.0
+  - Corrigido: após a importação nada aparecia na tela ("TypeError: Object
+    of type Fraction is not JSON serializable"). Os prazos da prescrição
+    passaram a ser guardados como fração e a ponte com a tela não os
+    aceitava; a lista agora é convertida (fração vira número, data vira
+    dd/mm/aaaa) antes de ir para a tela.
+  - Aba Prescrição (pretensão executória): tabela no padrão do SEEU (Ação
+    Penal, Pena, Fato, Sentença, Trânsito, Data de Referência, Idade,
+    Reincidente, Cumprida, Remanescente, barra, Prazo, Validade, Situação).
+    Abre sozinha quando algum crime está A VERIFICAR (ou tem ajuste); nos
+    demais, botão "Ver tabela no padrão SEEU". Toda célula é editável; o
+    prazo (art. 109 sobre o remanescente, +1/3 da reincidência, metade do
+    art. 115), a validade (referência + prazo − 1 dia) e a situação
+    (VÁLIDA / PRESCRITA) se recalculam a cada tecla. Cumprida e
+    remanescente andam juntas pela pena. Os ajustes ficam gravados na base
+    (tabela presc_ajustes), marcados em amarelo, com "↺" por linha e
+    "Restaurar dados importados".
+  - Aba Indulto / Comutação: botão "Verificar indulto/comutação" no fim da
+    linha abre a linha do tempo única do assistido (LEP, art. 111): painel
+    de crimes C1, C2... com selo IMPEDITIVO / NÃO IMPEDITIVO / A VERIFICAR
+    por decreto; barra da pena unificada (impeditivo hachurado; cumprido =
+    cumprimento + detração + remição, com a imputação ao impeditivo e a
+    comutação antes → depois); linha do tempo com faixas (cumprimento,
+    detração, fuga, período não comprovado), marcos, janela da falta grave
+    sombreada, decretos e projeção; cartão de cada decreto com exigido x
+    cumprido e checklist ✔/✖/?; resultado consolidado. Cada elemento abre
+    "Como cheguei aqui?". Falta grave nunca zera o cumprido (Súmula 535).
+  - Base jurídica 2026-09-24c: nova seção decretos_linha com os parâmetros
+    de cada decreto (frações, limite, vedações, janela da falta, concurso
+    com impeditivo, dispositivos). Decreto 11.846/2023 cadastrado sem
+    parâmetros: fica A VERIFICAR até ser completado (nunca por analogia).
 
 v6.15.13
   Linha do tempo visual da prescrição executória, aprovada pelo Defensor.

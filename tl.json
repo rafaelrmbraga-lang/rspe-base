@@ -1,0 +1,1419 @@
+{
+ "nome": "FULANO DE TAL",
+ "proc": "6005311-80.2025.8.12.0001",
+ "hoje": "24/09/2026",
+ "inicio": "02/05/2019",
+ "crimes": [
+  {
+   "id": "C1",
+   "cor": "#2563EB",
+   "proc": "0001234-56.2019.8.12.0001",
+   "tipificacao": "Art. 155 § 4º, I, CP",
+   "nome": "Furto qualificado",
+   "fato": "10/03/2019",
+   "sentenca": "20/09/2019",
+   "transito": "15/10/2019",
+   "pena": "2a8m0d",
+   "pena_dias": 970,
+   "natureza": "sem violência ou grave ameaça",
+   "reinc": "reincidente",
+   "selos": {
+    "2022": {
+     "selo": "NAO_IMPEDITIVO",
+     "motivo": "não consta do rol de vedações",
+     "dispositivo": "Decreto 11.302/2022, art. 7º"
+    },
+    "2023": {
+     "selo": "A_VERIFICAR",
+     "motivo": "decreto não cadastrado",
+     "dispositivo": "Decreto 11.846/2023"
+    },
+    "2024": {
+     "selo": "NAO_IMPEDITIVO",
+     "motivo": "não consta do rol de vedações",
+     "dispositivo": "Decreto 12.338/2024, art. 1º (rol de crimes impeditivos, mantido nas listas art1_* desta base)"
+    },
+    "2025": {
+     "selo": "NAO_IMPEDITIVO",
+     "motivo": "não consta do rol de vedações",
+     "dispositivo": "Decreto 12.790/2025, art. 1º (rol de crimes impeditivos, mantido nas listas art1_* desta base)"
+    }
+   }
+  },
+  {
+   "id": "C2",
+   "cor": "#D97706",
+   "proc": "0009876-54.2021.8.12.0001",
+   "tipificacao": "Art. 33, Lei 11.343/2006",
+   "nome": "",
+   "fato": "05/08/2021",
+   "sentenca": "10/05/2022",
+   "transito": "20/06/2022",
+   "pena": "5a0m0d",
+   "pena_dias": 1825,
+   "natureza": "hediondo ou equiparado",
+   "reinc": "reincidente",
+   "selos": {
+    "2022": {
+     "selo": "A_VERIFICAR",
+     "motivo": "tráfico (art. 33 da Lei 11.343/06) sem indicação, no SEEU, de caput/§ 1º ou do § 4º (tráfico privilegiado)",
+     "dispositivo": "Decreto 11.302/2022, art. 7º, I e VI (só caput e § 1º; § 4º fora - STJ, Tema 1336; STF, Tema 1400)",
+     "se_sim": "caput ou § 1º: IMPEDITIVO",
+     "se_nao": "§ 4º (privilegiado): NÃO IMPEDITIVO"
+    },
+    "2023": {
+     "selo": "A_VERIFICAR",
+     "motivo": "decreto não cadastrado",
+     "dispositivo": "Decreto 11.846/2023"
+    },
+    "2024": {
+     "selo": "A_VERIFICAR",
+     "motivo": "tráfico (art. 33 da Lei 11.343/06) sem indicação, no SEEU, de caput/§ 1º ou do § 4º (tráfico privilegiado)",
+     "dispositivo": "Decreto 12.338/2024, art. 1º, XVIII (só caput e § 1º; § 4º fora - STJ, Tema 1336; STF, Tema 1400)",
+     "se_sim": "caput ou § 1º: IMPEDITIVO",
+     "se_nao": "§ 4º (privilegiado): NÃO IMPEDITIVO"
+    },
+    "2025": {
+     "selo": "A_VERIFICAR",
+     "motivo": "tráfico (art. 33 da Lei 11.343/06) sem indicação, no SEEU, de caput/§ 1º ou do § 4º (tráfico privilegiado)",
+     "dispositivo": "Decreto 12.790/2025, art. 1º, XVIII (só caput e § 1º; § 4º fora - STJ, Tema 1336; STF, Tema 1400)",
+     "se_sim": "caput ou § 1º: IMPEDITIVO",
+     "se_nao": "§ 4º (privilegiado): NÃO IMPEDITIVO"
+    }
+   }
+  }
+ ],
+ "faixas": [
+  {
+   "tipo": "detracao",
+   "ini": "02/05/2019",
+   "fim": "14/10/2019",
+   "aberta": false,
+   "crimes": [
+    "C1"
+   ],
+   "dias": 166,
+   "det": {
+    "evento": "prisão em flagrante de 02/05/2019 (processo 0001234-56.2019.8.12.0001)",
+    "crime": "C1",
+    "periodo": "02/05/2019 → 14/10/2019",
+    "tratamento": "prisão provisória / detração",
+    "fundamento": "CP, art. 42 (detração); decretos 2024/2025, art. 5º",
+    "calculo": "02/05/2019 → 14/10/2019 = 166 dias (contagem do SEEU: inclui o 1º e o último dia)",
+    "efeito": "soma 166 dias no cumprido"
+   }
+  },
+  {
+   "tipo": "cumprimento",
+   "ini": "15/10/2019",
+   "fim": "10/02/2021",
+   "aberta": false,
+   "crimes": [
+    "C1"
+   ],
+   "dias": 485,
+   "det": {
+    "evento": "prisão em flagrante de 02/05/2019 (processo 0001234-56.2019.8.12.0001), depois do trânsito em 15/10/2019",
+    "crime": "C1",
+    "periodo": "15/10/2019 → 10/02/2021",
+    "tratamento": "cumprimento",
+    "fundamento": "LEP, art. 111 (execução unificada)",
+    "calculo": "15/10/2019 → 10/02/2021 = 485 dias (contagem do SEEU: inclui o 1º e o último dia)",
+    "efeito": "soma 485 dias no cumprido"
+   }
+  },
+  {
+   "tipo": "fuga",
+   "ini": "11/02/2021",
+   "fim": "13/01/2022",
+   "aberta": false,
+   "crimes": [
+    "GERAL"
+   ],
+   "dias": 337,
+   "det": {
+    "evento": "interrupção em 10/02/2021 (fuga)",
+    "crime": "GERAL",
+    "periodo": "11/02/2021 → 13/01/2022",
+    "tratamento": "fuga / evasão",
+    "fundamento": "LEP, art. 50, II; o tempo fora não é pena cumprida",
+    "calculo": "337 dias fora do cumprimento",
+    "efeito": "não soma no cumprido"
+   }
+  },
+  {
+   "tipo": "cumprimento",
+   "ini": "14/01/2022",
+   "fim": "24/09/2026",
+   "aberta": true,
+   "crimes": [
+    "C2"
+   ],
+   "dias": 1715,
+   "det": {
+    "evento": "recaptura de 14/01/2022 (processo 0009876-54.2021.8.12.0001)",
+    "crime": "C2",
+    "periodo": "14/01/2022 → 24/09/2026",
+    "tratamento": "cumprimento",
+    "fundamento": "LEP, art. 111 (execução unificada)",
+    "calculo": "14/01/2022 → 24/09/2026 = 1715 dias (contagem do SEEU: inclui o 1º e o último dia)",
+    "efeito": "soma 1715 dias no cumprido"
+   }
+  }
+ ],
+ "marcos": [
+  {
+   "data": "10/03/2019",
+   "tipo": "fato",
+   "rotulo": "Fato C1",
+   "sub": "Art. 155 § 4º, I, CP",
+   "crimes": [
+    "C1"
+   ],
+   "efeito": "o decreto só alcança fato anterior à sua data",
+   "det": {
+    "evento": "Fato - processo 0001234-56.2019.8.12.0001",
+    "crime": "C1 · 0001234-56.2019.8.12.0001",
+    "periodo": "10/03/2019",
+    "tratamento": "fato",
+    "fundamento": "",
+    "calculo": "",
+    "efeito": ""
+   }
+  },
+  {
+   "data": "02/05/2019",
+   "tipo": "prisao",
+   "rotulo": "Prisão provisória",
+   "sub": "prisão em flagrante",
+   "crimes": [
+    "C1"
+   ],
+   "efeito": "conta como pena cumprida (detração, CP, art. 42)",
+   "det": {
+    "evento": "PRISÃO EM FLAGRANTE em 02/05/2019 - processos: 0001234-56.2019.8.12.0001",
+    "crime": "C1",
+    "periodo": "02/05/2019 → 10/02/2021",
+    "tratamento": "detração",
+    "fundamento": "CP, art. 42; LEP, art. 111",
+    "calculo": "651 dias até 10/02/2021",
+    "efeito": "soma no tempo cumprido para indulto/comutação"
+   }
+  },
+  {
+   "data": "20/09/2019",
+   "tipo": "sentenca",
+   "rotulo": "Sentença C1",
+   "sub": "Art. 155 § 4º, I, CP",
+   "crimes": [
+    "C1"
+   ],
+   "efeito": "condenação posterior à publicação fica fora da soma",
+   "det": {
+    "evento": "Sentença - processo 0001234-56.2019.8.12.0001",
+    "crime": "C1 · 0001234-56.2019.8.12.0001",
+    "periodo": "20/09/2019",
+    "tratamento": "sentença",
+    "fundamento": "",
+    "calculo": "",
+    "efeito": ""
+   }
+  },
+  {
+   "data": "15/10/2019",
+   "tipo": "transito",
+   "rotulo": "Trânsito em julgado C1",
+   "sub": "Art. 155 § 4º, I, CP",
+   "crimes": [
+    "C1"
+   ],
+   "efeito": "prisão anterior a esta data é provisória (detração)",
+   "det": {
+    "evento": "Trânsito em julgado - processo 0001234-56.2019.8.12.0001",
+    "crime": "C1 · 0001234-56.2019.8.12.0001",
+    "periodo": "15/10/2019",
+    "tratamento": "trânsito em julgado",
+    "fundamento": "",
+    "calculo": "",
+    "efeito": ""
+   }
+  },
+  {
+   "data": "10/02/2021",
+   "tipo": "fuga",
+   "rotulo": "Fuga / evasão",
+   "sub": "fuga",
+   "crimes": [
+    "GERAL"
+   ],
+   "efeito": "o tempo fora não conta; não zera o cumprido (Súmula 535/STJ)",
+   "det": {
+    "evento": "interrupção do cumprimento em 10/02/2021 (fuga)",
+    "crime": "GERAL",
+    "periodo": "11/02/2021 → 13/01/2022",
+    "tratamento": "fuga / evasão",
+    "fundamento": "STJ, Súmula 535 (a falta não interrompe o prazo do indulto e da comutação)",
+    "calculo": "",
+    "efeito": "o período fora não soma"
+   }
+  },
+  {
+   "data": "10/02/2021",
+   "tipo": "falta",
+   "rotulo": "Falta (não homologada)",
+   "sub": "sem homologação no SEEU",
+   "crimes": [
+    "GERAL"
+   ],
+   "efeito": "só pesa no requisito subjetivo, se dentro da janela do decreto; não zera o cumprido",
+   "duvida": true,
+   "det": {
+    "evento": "INTERRUPÇÃO FUGA (registrada só como evento; falta a apurar)",
+    "crime": "GERAL",
+    "periodo": "10/02/2021",
+    "tratamento": "falta grave",
+    "fundamento": "STJ, Súmula 535; decretos 2024/2025, art. 6º; STJ, Tema 1195 (vale a data do fato)",
+    "calculo": "",
+    "efeito": "sem efeito no tempo cumprido"
+   }
+  },
+  {
+   "data": "05/08/2021",
+   "tipo": "fato",
+   "rotulo": "Fato C2",
+   "sub": "Art. 33, Lei 11.343/2006",
+   "crimes": [
+    "C2"
+   ],
+   "efeito": "o decreto só alcança fato anterior à sua data",
+   "det": {
+    "evento": "Fato - processo 0009876-54.2021.8.12.0001",
+    "crime": "C2 · 0009876-54.2021.8.12.0001",
+    "periodo": "05/08/2021",
+    "tratamento": "fato",
+    "fundamento": "",
+    "calculo": "",
+    "efeito": ""
+   }
+  },
+  {
+   "data": "14/01/2022",
+   "tipo": "prisao",
+   "rotulo": "Início/reinício do cumprimento",
+   "sub": "recaptura",
+   "crimes": [
+    "C2"
+   ],
+   "efeito": "conta como pena cumprida",
+   "det": {
+    "evento": "RECAPTURA em 14/01/2022 - processos: 0009876-54.2021.8.12.0001",
+    "crime": "C2",
+    "periodo": "14/01/2022 → hoje",
+    "tratamento": "cumprimento",
+    "fundamento": "LEP, arts. 66, III, a, e 111",
+    "calculo": "1715 dias até hoje",
+    "efeito": "soma no tempo cumprido para indulto/comutação"
+   }
+  },
+  {
+   "data": "14/01/2022",
+   "tipo": "recaptura",
+   "rotulo": "Recaptura / reinício",
+   "sub": "",
+   "crimes": [
+    "GERAL"
+   ],
+   "efeito": "o cumprimento volta a contar",
+   "det": {
+    "evento": "reinício em 14/01/2022",
+    "crime": "GERAL",
+    "periodo": "",
+    "tratamento": "cumprimento",
+    "fundamento": "LEP, art. 111",
+    "calculo": "",
+    "efeito": "volta a somar"
+   }
+  },
+  {
+   "data": "10/05/2022",
+   "tipo": "sentenca",
+   "rotulo": "Sentença C2",
+   "sub": "Art. 33, Lei 11.343/2006",
+   "crimes": [
+    "C2"
+   ],
+   "efeito": "condenação posterior à publicação fica fora da soma",
+   "det": {
+    "evento": "Sentença - processo 0009876-54.2021.8.12.0001",
+    "crime": "C2 · 0009876-54.2021.8.12.0001",
+    "periodo": "10/05/2022",
+    "tratamento": "sentença",
+    "fundamento": "",
+    "calculo": "",
+    "efeito": ""
+   }
+  },
+  {
+   "data": "20/06/2022",
+   "tipo": "transito",
+   "rotulo": "Trânsito em julgado C2",
+   "sub": "Art. 33, Lei 11.343/2006",
+   "crimes": [
+    "C2"
+   ],
+   "efeito": "prisão anterior a esta data é provisória (detração)",
+   "det": {
+    "evento": "Trânsito em julgado - processo 0009876-54.2021.8.12.0001",
+    "crime": "C2 · 0009876-54.2021.8.12.0001",
+    "periodo": "20/06/2022",
+    "tratamento": "trânsito em julgado",
+    "fundamento": "",
+    "calculo": "",
+    "efeito": ""
+   }
+  },
+  {
+   "data": "01/08/2022",
+   "tipo": "unificacao",
+   "rotulo": "Unificação/soma de penas",
+   "sub": "",
+   "crimes": [
+    "GERAL"
+   ],
+   "efeito": "penas somadas (LEP, art. 111): uma execução só",
+   "det": {
+    "evento": "UNIFICAÇÃO DE PENAS (decisão 01/08/2022)",
+    "crime": "GERAL",
+    "periodo": "01/08/2022",
+    "tratamento": "unificação",
+    "fundamento": "LEP, art. 111",
+    "calculo": "",
+    "efeito": "a pena considerada é a soma"
+   }
+  },
+  {
+   "data": "23/12/2022",
+   "tipo": "publicacao",
+   "rotulo": "Publicação 11.302/2022",
+   "sub": "",
+   "crimes": [
+    "GERAL"
+   ],
+   "efeito": "falta posterior à publicação não impede; sentença posterior fica fora da soma",
+   "decreto": "2022",
+   "det": {
+    "evento": "publicação no DOU",
+    "crime": "GERAL",
+    "periodo": "23/12/2022",
+    "tratamento": "publicação",
+    "fundamento": "",
+    "calculo": "",
+    "efeito": ""
+   }
+  },
+  {
+   "data": "25/12/2022",
+   "tipo": "decreto",
+   "rotulo": "Decreto 11.302/2022",
+   "sub": "data de referência",
+   "crimes": [
+    "GERAL"
+   ],
+   "efeito": "NÃO CABE - limite de pena",
+   "decreto": "2022",
+   "det": {
+    "evento": "Decreto 11.302/2022 - publicação 23/12/2022, data de referência 25/12/2022",
+    "crime": "GERAL",
+    "periodo": "25/12/2022",
+    "tratamento": "data de referência do decreto",
+    "fundamento": "Decreto 11.302/2022 (DOU de 23/12/2022)",
+    "calculo": "",
+    "efeito": "NÃO CABE - limite de pena"
+   }
+  },
+  {
+   "data": "02/03/2023",
+   "tipo": "falta",
+   "rotulo": "Falta (não homologada)",
+   "sub": "sem homologação no SEEU",
+   "crimes": [
+    "GERAL"
+   ],
+   "efeito": "só pesa no requisito subjetivo, se dentro da janela do decreto; não zera o cumprido",
+   "duvida": true,
+   "det": {
+    "evento": "FALTA GRAVE Data da infração: 02/03/2023",
+    "crime": "GERAL",
+    "periodo": "02/03/2023",
+    "tratamento": "falta grave",
+    "fundamento": "STJ, Súmula 535; decretos 2024/2025, art. 6º; STJ, Tema 1195 (vale a data do fato)",
+    "calculo": "",
+    "efeito": "sem efeito no tempo cumprido"
+   }
+  },
+  {
+   "data": "10/03/2023",
+   "tipo": "remicao",
+   "rotulo": "Remição +60 dias",
+   "sub": "",
+   "crimes": [
+    "GERAL"
+   ],
+   "efeito": "soma no cumprido (LEP, art. 128)",
+   "det": {
+    "evento": "REMIÇÃO - 60 Dia(s) Remido(s) por trabalho (decisão de 10/03/2023)",
+    "crime": "GERAL",
+    "periodo": "10/03/2023",
+    "tratamento": "remição",
+    "fundamento": "LEP, art. 128 (remição é pena cumprida)",
+    "calculo": "+60 dias",
+    "efeito": "entra no cumprido a partir de 10/03/2023"
+   }
+  },
+  {
+   "data": "25/12/2023",
+   "tipo": "decreto",
+   "rotulo": "Decreto 11.846/2023",
+   "sub": "data de referência",
+   "crimes": [
+    "GERAL"
+   ],
+   "efeito": "A VERIFICAR - decreto não cadastrado",
+   "decreto": "2023",
+   "det": {
+    "evento": "Decreto 11.846/2023 - publicação não cadastrada, data de referência 25/12/2023",
+    "crime": "GERAL",
+    "periodo": "25/12/2023",
+    "tratamento": "data de referência do decreto",
+    "fundamento": "",
+    "calculo": "",
+    "efeito": "A VERIFICAR - decreto não cadastrado"
+   }
+  },
+  {
+   "data": "23/12/2024",
+   "tipo": "publicacao",
+   "rotulo": "Publicação 12.338/2024",
+   "sub": "",
+   "crimes": [
+    "GERAL"
+   ],
+   "efeito": "falta posterior à publicação não impede; sentença posterior fica fora da soma",
+   "decreto": "2024",
+   "det": {
+    "evento": "publicação no DOU",
+    "crime": "GERAL",
+    "periodo": "23/12/2024",
+    "tratamento": "publicação",
+    "fundamento": "",
+    "calculo": "",
+    "efeito": ""
+   }
+  },
+  {
+   "data": "25/12/2024",
+   "tipo": "decreto",
+   "rotulo": "Decreto 12.338/2024",
+   "sub": "data de referência",
+   "crimes": [
+    "GERAL"
+   ],
+   "efeito": "A VERIFICAR",
+   "decreto": "2024",
+   "det": {
+    "evento": "Decreto 12.338/2024 - publicação 23/12/2024, data de referência 25/12/2024",
+    "crime": "GERAL",
+    "periodo": "25/12/2024",
+    "tratamento": "data de referência do decreto",
+    "fundamento": "Decreto 12.338/2024 (DOU de 23/12/2024)",
+    "calculo": "",
+    "efeito": "A VERIFICAR"
+   }
+  },
+  {
+   "data": "18/07/2025",
+   "tipo": "falta",
+   "rotulo": "Falta grave",
+   "sub": "homologada em 30/08/2025",
+   "crimes": [
+    "GERAL"
+   ],
+   "efeito": "só pesa no requisito subjetivo, se dentro da janela do decreto; não zera o cumprido",
+   "duvida": false,
+   "det": {
+    "evento": "FALTA GRAVE Data da infração: 18/07/2025",
+    "crime": "GERAL",
+    "periodo": "18/07/2025",
+    "tratamento": "falta grave",
+    "fundamento": "STJ, Súmula 535; decretos 2024/2025, art. 6º; STJ, Tema 1195 (vale a data do fato)",
+    "calculo": "",
+    "efeito": "sem efeito no tempo cumprido"
+   }
+  },
+  {
+   "data": "23/12/2025",
+   "tipo": "publicacao",
+   "rotulo": "Publicação 12.790/2025",
+   "sub": "",
+   "crimes": [
+    "GERAL"
+   ],
+   "efeito": "falta posterior à publicação não impede; sentença posterior fica fora da soma",
+   "decreto": "2025",
+   "det": {
+    "evento": "publicação no DOU",
+    "crime": "GERAL",
+    "periodo": "23/12/2025",
+    "tratamento": "publicação",
+    "fundamento": "",
+    "calculo": "",
+    "efeito": ""
+   }
+  },
+  {
+   "data": "25/12/2025",
+   "tipo": "decreto",
+   "rotulo": "Decreto 12.790/2025",
+   "sub": "data de referência",
+   "crimes": [
+    "GERAL"
+   ],
+   "efeito": "NÃO CABE - requisito subjetivo (falta grave na janela)",
+   "decreto": "2025",
+   "det": {
+    "evento": "Decreto 12.790/2025 - publicação 23/12/2025, data de referência 25/12/2025",
+    "crime": "GERAL",
+    "periodo": "25/12/2025",
+    "tratamento": "data de referência do decreto",
+    "fundamento": "Decreto 12.790/2025 (DOU de 23/12/2025)",
+    "calculo": "",
+    "efeito": "NÃO CABE - requisito subjetivo (falta grave na janela)"
+   }
+  },
+  {
+   "data": "24/09/2026",
+   "tipo": "hoje",
+   "rotulo": "Hoje",
+   "sub": "",
+   "crimes": [
+    "GERAL"
+   ],
+   "efeito": "",
+   "det": {
+    "evento": "data da consulta",
+    "crime": "GERAL",
+    "periodo": "24/09/2026",
+    "tratamento": "",
+    "fundamento": "",
+    "calculo": "",
+    "efeito": ""
+   }
+  }
+ ],
+ "barra": {
+  "pena_total": 2795,
+  "pena_total_txt": "7a8m0d",
+  "pena_seeu": "7a8m0d",
+  "segmentos": [
+   {
+    "crime": "C1",
+    "cor": "#2563EB",
+    "dias": 970,
+    "pena": "2a8m0d",
+    "impeditivo": false,
+    "duvida": false
+   },
+   {
+    "crime": "C2",
+    "cor": "#D97706",
+    "dias": 1825,
+    "pena": "5a0m0d",
+    "impeditivo": false,
+    "duvida": true
+   }
+  ],
+  "cumprido": {
+   "cumprimento": 2200,
+   "detracao": 166,
+   "remicao": 60,
+   "perda": 0,
+   "nao_comprovado": 0,
+   "total": 2426
+  },
+  "cumprido_txt": {
+   "cumprimento": "6a0m10d",
+   "detracao": "0a5m16d",
+   "remicao": "0a2m0d",
+   "perda": "0a0m0d",
+   "nao_comprovado": "0a0m0d",
+   "total": "6a7m26d"
+  },
+  "restante": 369,
+  "restante_txt": "1a0m4d",
+  "seeu": {
+   "dias": 1642,
+   "pena": "4a6m2d",
+   "fonte": "pena cumprida do SEEU em 23/09/2026 mais 1 dia de cumprimento em curso até 24/09/2026 (projeção: o RSPE é anterior a essa data; remições posteriores não constam)",
+   "diferenca": 784
+  },
+  "imputacao": null,
+  "comutacao": null,
+  "det": {
+   "evento": "eventos de início/interrupção, livramento e remições do SEEU",
+   "crime": "todos",
+   "periodo": "02/05/2019 → hoje",
+   "tratamento": "cumprimento + detração + remição, sem interrupção por falta grave",
+   "fundamento": "LEP, arts. 111 e 128; CP, art. 42; STJ, Súmula 535",
+   "calculo": "6a0m10d (cumprimento) + 0a5m16d (detração) + 0a2m0d (remição) = 6a7m26d",
+   "efeito": "base de todas as frações dos decretos"
+  }
+ },
+ "decretos": [
+  {
+   "id": "2022",
+   "numero": "11.302/2022",
+   "referencia": "25/12/2022",
+   "publicacao": "23/12/2022",
+   "cadastrado": true,
+   "fonte": "Decreto 11.302/2022 (DOU de 23/12/2022)",
+   "nota": "Regra de falta grave não cadastrada para este decreto: o requisito subjetivo fica A VERIFICAR.",
+   "fora": [],
+   "cumprido": {
+    "cumprimento": 831,
+    "detracao": 166,
+    "remicao": 0,
+    "perda": 0,
+    "nao_comprovado": 0,
+    "total": 997
+   },
+   "cumprido_txt": {
+    "cumprimento": "2a3m11d",
+    "detracao": "0a5m16d",
+    "remicao": "0a0m0d",
+    "perda": "0a0m0d",
+    "nao_comprovado": "0a0m0d",
+    "total": "2a8m27d"
+   },
+   "janela_falta": null,
+   "faltas": [],
+   "imputacao": null,
+   "indulto": {
+    "hipotese": "art. 5º, caput e parágrafo único",
+    "exigido": 0,
+    "cumprido": 997,
+    "pena_considerada": 2795,
+    "status": "nao",
+    "rotulo": "NÃO CABE - limite de pena",
+    "checklist": [
+     {
+      "item": "Requisito objetivo (art. 5º, caput e parágrafo único)",
+      "estado": "ok",
+      "texto": "Sem fração de pena cumprida: basta a pena máxima em abstrato ≤ 5a0m0d, crime a crime.",
+      "det": {
+       "evento": "tipo penal impresso no SEEU",
+       "crime": "C1, C2",
+       "periodo": "",
+       "tratamento": "limite de pena",
+       "fundamento": "art. 5º, caput e parágrafo único",
+       "calculo": "C1: máximo em abstrato 8a0m0d > 5a0m0d; C2: máximo em abstrato 15a0m0d > 5a0m0d",
+       "efeito": ""
+      }
+     },
+     {
+      "item": "Natureza dos crimes (vedações)",
+      "estado": "q",
+      "texto": "Natureza a verificar: C2 - tráfico (art. 33 da Lei 11.343/06) sem indicação, no SEEU, de caput/§ 1º ou do § 4º (tráfico privilegiado) (caput ou § 1º: IMPEDITIVO; § 4º (privilegiado): NÃO IMPEDITIVO)",
+      "det": {
+       "evento": "tipificação, lei e parágrafos do SEEU",
+       "crime": "C1: NAO IMPEDITIVO, C2: A VERIFICAR",
+       "periodo": "",
+       "tratamento": "impeditivo / não impeditivo",
+       "fundamento": "art. 7º",
+       "calculo": "",
+       "efeito": "crime impeditivo afasta o benefício ou adia os demais"
+      }
+     },
+     {
+      "item": "Limite de pena",
+      "estado": "ko",
+      "texto": "C1: máximo em abstrato 8a0m0d > 5a0m0d; C2: máximo em abstrato 15a0m0d > 5a0m0d",
+      "det": {
+       "evento": "",
+       "crime": "",
+       "periodo": "",
+       "tratamento": "",
+       "fundamento": "art. 5º, caput e parágrafo único",
+       "calculo": "",
+       "efeito": ""
+      }
+     },
+     {
+      "item": "Requisito subjetivo (falta grave na janela)",
+      "estado": "q",
+      "texto": "Regra de falta grave deste decreto não cadastrada: conferir no texto do decreto.",
+      "det": {
+       "evento": "incidentes de falta/sanção e eventos de fuga do SEEU",
+       "crime": "GERAL",
+       "periodo": "",
+       "tratamento": "falta grave",
+       "fundamento": "; STJ, Tema 1195; STJ, Súmula 535",
+       "calculo": "",
+       "efeito": "só o requisito subjetivo; o tempo cumprido não se altera"
+      }
+     },
+     {
+      "item": "Fato anterior ao decreto",
+      "estado": "ok",
+      "texto": "Todos os fatos alcançados são anteriores a 25/12/2022.",
+      "det": {
+       "evento": "datas dos fatos e sentenças no SEEU",
+       "crime": "C1, C2",
+       "periodo": "até 25/12/2022",
+       "tratamento": "alcance do decreto",
+       "fundamento": "art. 11 (penas somadas até 25/12/2022); STJ, HC 190.963",
+       "calculo": "",
+       "efeito": "crimes posteriores não entram na soma nem impedem os anteriores"
+      }
+     },
+     {
+      "item": "Condenação na data (trânsito/recurso da acusação)",
+      "estado": "ok",
+      "texto": "Todas as condenações alcançadas transitaram até 23/12/2022.",
+      "det": {
+       "evento": "datas de trânsito no SEEU",
+       "crime": "C1, C2",
+       "periodo": "",
+       "tratamento": "",
+       "fundamento": "art. 9º, I e parágrafo único",
+       "calculo": "",
+       "efeito": ""
+      }
+     }
+    ],
+    "alcancados": [],
+    "nao_alcancados": [],
+    "projecao": null
+   },
+   "comutacao": {
+    "status": "nao",
+    "rotulo": "Decreto sem comutação cadastrada",
+    "checklist": []
+   }
+  },
+  {
+   "id": "2023",
+   "numero": "11.846/2023",
+   "referencia": "25/12/2023",
+   "publicacao": "",
+   "cadastrado": false,
+   "fonte": "",
+   "nota": "Parâmetros não cadastrados: completar frações (art. 2º), vedações, falta (art. 6º) e publicação para habilitar o cálculo.",
+   "indulto": {
+    "status": "verificar",
+    "rotulo": "A VERIFICAR - decreto não cadastrado",
+    "checklist": [
+     {
+      "item": "Decreto cadastrado",
+      "estado": "q",
+      "texto": "Decreto 11.846/2023 não cadastrado na base jurídica (frações, vedações e janela da falta): resultado A VERIFICAR, sem aplicar por analogia outro decreto.",
+      "det": {
+       "evento": "",
+       "crime": "",
+       "periodo": "25/12/2023",
+       "tratamento": "",
+       "fundamento": "base_juridica.json → decretos_linha",
+       "calculo": "",
+       "efeito": "sem parâmetros, não há cálculo"
+      }
+     }
+    ]
+   },
+   "comutacao": {
+    "status": "verificar",
+    "rotulo": "A VERIFICAR - decreto não cadastrado",
+    "checklist": []
+   }
+  },
+  {
+   "id": "2024",
+   "numero": "12.338/2024",
+   "referencia": "25/12/2024",
+   "publicacao": "23/12/2024",
+   "cadastrado": true,
+   "fonte": "Decreto 12.338/2024 (DOU de 23/12/2024)",
+   "nota": "",
+   "fora": [],
+   "cumprido": {
+    "cumprimento": 1562,
+    "detracao": 166,
+    "remicao": 60,
+    "perda": 0,
+    "nao_comprovado": 0,
+    "total": 1788
+   },
+   "cumprido_txt": {
+    "cumprimento": "4a3m12d",
+    "detracao": "0a5m16d",
+    "remicao": "0a2m0d",
+    "perda": "0a0m0d",
+    "nao_comprovado": "0a0m0d",
+    "total": "4a10m28d"
+   },
+   "janela_falta": {
+    "ini": "25/12/2023",
+    "fim": "23/12/2024",
+    "meses": 12,
+    "dispositivo": "art. 6º, caput e parágrafo único (falta posterior à publicação não impede)"
+   },
+   "faltas": [
+    {
+     "fato": "18/07/2025",
+     "homol": "30/08/2025",
+     "texto": "FALTA GRAVE Data da infração: 18/07/2025",
+     "estado": "fora"
+    },
+    {
+     "fato": "02/03/2023",
+     "homol": "",
+     "texto": "FALTA GRAVE Data da infração: 02/03/2023",
+     "estado": "fora"
+    },
+    {
+     "fato": "10/02/2021",
+     "homol": "",
+     "texto": "INTERRUPÇÃO FUGA (registrada só como evento; falta a apurar)",
+     "estado": "fora"
+    }
+   ],
+   "imputacao": null,
+   "indulto": {
+    "hipotese": "art. 9º, I",
+    "descricao": "pena até 8 anos, sem violência ou grave ameaça",
+    "fracao": "1/3",
+    "exigido": 931,
+    "exigido_txt": "2a6m21d",
+    "cumprido": 1788,
+    "cumprido_txt": "4a10m28d",
+    "pena_considerada": 2795,
+    "pena_considerada_txt": "7a8m0d",
+    "status": "verificar",
+    "rotulo": "A VERIFICAR",
+    "checklist": [
+     {
+      "item": "Requisito objetivo (art. 9º, I)",
+      "estado": "ok",
+      "texto": "Exigido 2a6m21d (1/3, reincidente); cumprido 4a10m28d em 25/12/2024.",
+      "det": {
+       "evento": "pena unificada dos crimes alcançados",
+       "crime": "C1, C2",
+       "periodo": "início → 25/12/2024",
+       "tratamento": "fração sobre a pena",
+       "fundamento": "art. 9º, I c/c art. 14 (reincidência até 25/12)",
+       "calculo": "7a8m0d × 1/3 = 2a6m21d",
+       "efeito": "atende"
+      }
+     },
+     {
+      "item": "Natureza dos crimes (vedações)",
+      "estado": "q",
+      "texto": "Natureza a verificar: C2 - tráfico (art. 33 da Lei 11.343/06) sem indicação, no SEEU, de caput/§ 1º ou do § 4º (tráfico privilegiado) (caput ou § 1º: IMPEDITIVO; § 4º (privilegiado): NÃO IMPEDITIVO)",
+      "det": {
+       "evento": "tipificação, lei e parágrafos do SEEU",
+       "crime": "C1: NAO IMPEDITIVO, C2: A VERIFICAR",
+       "periodo": "",
+       "tratamento": "impeditivo / não impeditivo",
+       "fundamento": "art. 1º (rol de crimes impeditivos, mantido nas listas art1_* desta base)",
+       "calculo": "",
+       "efeito": "crime impeditivo afasta o benefício ou adia os demais"
+      }
+     },
+     {
+      "item": "Limite de pena",
+      "estado": "ok",
+      "texto": "Pena considerada 7a8m0d ≤ 8 anos.",
+      "det": {
+       "evento": "",
+       "crime": "",
+       "periodo": "",
+       "tratamento": "",
+       "fundamento": "art. 9º, I",
+       "calculo": "",
+       "efeito": ""
+      }
+     },
+     {
+      "item": "Requisito subjetivo (falta grave na janela)",
+      "estado": "ok",
+      "texto": "Nenhuma falta grave dentro da janela de 12 meses (25/12/2023 a 23/12/2024).",
+      "det": {
+       "evento": "incidentes de falta/sanção e eventos de fuga do SEEU",
+       "crime": "GERAL",
+       "periodo": "25/12/2023 → 23/12/2024",
+       "tratamento": "falta grave",
+       "fundamento": "art. 6º, caput e parágrafo único (falta posterior à publicação não impede); STJ, Tema 1195; STJ, Súmula 535",
+       "calculo": "",
+       "efeito": "só o requisito subjetivo; o tempo cumprido não se altera"
+      }
+     },
+     {
+      "item": "Fato anterior ao decreto",
+      "estado": "ok",
+      "texto": "Todos os fatos alcançados são anteriores a 25/12/2024.",
+      "det": {
+       "evento": "datas dos fatos e sentenças no SEEU",
+       "crime": "C1, C2",
+       "periodo": "até 25/12/2024",
+       "tratamento": "alcance do decreto",
+       "fundamento": "art. 7º (penas somadas até 25/12); STJ, HC 190.963 e AgRg no HC 441.551",
+       "calculo": "",
+       "efeito": "crimes posteriores não entram na soma nem impedem os anteriores"
+      }
+     },
+     {
+      "item": "Condenação na data (trânsito/recurso da acusação)",
+      "estado": "ok",
+      "texto": "Todas as condenações alcançadas transitaram até 23/12/2024.",
+      "det": {
+       "evento": "datas de trânsito no SEEU",
+       "crime": "C1, C2",
+       "periodo": "",
+       "tratamento": "",
+       "fundamento": "art. 2º, I e II",
+       "calculo": "",
+       "efeito": ""
+      }
+     }
+    ],
+    "alcancados": [],
+    "nao_alcancados": [],
+    "projecao": null
+   },
+   "comutacao": {
+    "status": "verificar",
+    "rotulo": "A VERIFICAR",
+    "checklist": [
+     {
+      "item": "Requisito objetivo (art. 13, caput)",
+      "estado": "ok",
+      "texto": "Exigido 1a11m3d (1/4, reincidente); cumprido 4a10m28d em 25/12/2024.",
+      "det": {
+       "evento": "pena considerada",
+       "crime": "C1, C2",
+       "periodo": "início → 25/12/2024",
+       "tratamento": "fração sobre a pena",
+       "fundamento": "art. 13, caput",
+       "calculo": "7a8m0d × 1/4 = 1a11m3d",
+       "efeito": "atende"
+      }
+     },
+     {
+      "item": "Fato anterior ao decreto",
+      "estado": "ok",
+      "texto": "Todos os fatos alcançados são anteriores a 25/12/2024.",
+      "det": {
+       "evento": "datas dos fatos e sentenças no SEEU",
+       "crime": "C1, C2",
+       "periodo": "até 25/12/2024",
+       "tratamento": "alcance do decreto",
+       "fundamento": "art. 7º (penas somadas até 25/12); STJ, HC 190.963 e AgRg no HC 441.551",
+       "calculo": "",
+       "efeito": "crimes posteriores não entram na soma nem impedem os anteriores"
+      }
+     },
+     {
+      "item": "Natureza dos crimes (vedações)",
+      "estado": "q",
+      "texto": "Natureza a verificar: C2 - tráfico (art. 33 da Lei 11.343/06) sem indicação, no SEEU, de caput/§ 1º ou do § 4º (tráfico privilegiado) (caput ou § 1º: IMPEDITIVO; § 4º (privilegiado): NÃO IMPEDITIVO)",
+      "det": {
+       "evento": "tipificação, lei e parágrafos do SEEU",
+       "crime": "C1: NAO IMPEDITIVO, C2: A VERIFICAR",
+       "periodo": "",
+       "tratamento": "impeditivo / não impeditivo",
+       "fundamento": "art. 1º (rol de crimes impeditivos, mantido nas listas art1_* desta base)",
+       "calculo": "",
+       "efeito": "crime impeditivo afasta o benefício ou adia os demais"
+      }
+     },
+     {
+      "item": "Requisito subjetivo (falta grave na janela)",
+      "estado": "ok",
+      "texto": "Nenhuma falta grave dentro da janela de 12 meses (25/12/2023 a 23/12/2024).",
+      "det": {
+       "evento": "incidentes de falta/sanção e eventos de fuga do SEEU",
+       "crime": "GERAL",
+       "periodo": "25/12/2023 → 23/12/2024",
+       "tratamento": "falta grave",
+       "fundamento": "art. 6º, caput e parágrafo único (falta posterior à publicação não impede); STJ, Tema 1195; STJ, Súmula 535",
+       "calculo": "",
+       "efeito": "só o requisito subjetivo; o tempo cumprido não se altera"
+      }
+     },
+     {
+      "item": "Condenação na data (trânsito/recurso da acusação)",
+      "estado": "ok",
+      "texto": "Todas as condenações alcançadas transitaram até 23/12/2024.",
+      "det": {
+       "evento": "datas de trânsito no SEEU",
+       "crime": "C1, C2",
+       "periodo": "",
+       "tratamento": "",
+       "fundamento": "art. 2º, I e II",
+       "calculo": "",
+       "efeito": ""
+      }
+     }
+    ],
+    "reducao": {
+     "fracao": "1/5",
+     "base": "cumprida",
+     "base_dias": 1788,
+     "reducao": 357,
+     "reducao_txt": "0a11m27d",
+     "antes": 1007,
+     "antes_txt": "2a9m7d",
+     "depois": 650,
+     "depois_txt": "1a9m15d",
+     "crimes": [
+      "C1",
+      "C2"
+     ],
+     "det": {
+      "evento": "pena cumprida em 25/12/2024",
+      "crime": "C1, C2",
+      "periodo": "25/12/2024",
+      "tratamento": "comutação",
+      "fundamento": "art. 13, caput e § 1º",
+      "calculo": "4a10m28d × 1/5 = 0a11m27d; 2a9m7d − 0a11m27d = 1a9m15d",
+      "efeito": "a pena remanescente passa de 2a9m7d para 1a9m15d e alimenta os demais cálculos"
+     }
+    },
+    "fracao": "1/4",
+    "exigido": 698,
+    "exigido_txt": "1a11m3d"
+   }
+  },
+  {
+   "id": "2025",
+   "numero": "12.790/2025",
+   "referencia": "25/12/2025",
+   "publicacao": "23/12/2025",
+   "cadastrado": true,
+   "fonte": "Decreto 12.790/2025 (DOU de 23/12/2025)",
+   "nota": "",
+   "fora": [],
+   "cumprido": {
+    "cumprimento": 1927,
+    "detracao": 166,
+    "remicao": 60,
+    "perda": 0,
+    "nao_comprovado": 0,
+    "total": 2153
+   },
+   "cumprido_txt": {
+    "cumprimento": "5a3m12d",
+    "detracao": "0a5m16d",
+    "remicao": "0a2m0d",
+    "perda": "0a0m0d",
+    "nao_comprovado": "0a0m0d",
+    "total": "5a10m28d"
+   },
+   "janela_falta": {
+    "ini": "25/12/2024",
+    "fim": "23/12/2025",
+    "meses": 12,
+    "dispositivo": "art. 6º, caput e parágrafo único (falta posterior à publicação não impede)"
+   },
+   "faltas": [
+    {
+     "fato": "18/07/2025",
+     "homol": "30/08/2025",
+     "texto": "FALTA GRAVE Data da infração: 18/07/2025",
+     "estado": "impede"
+    },
+    {
+     "fato": "02/03/2023",
+     "homol": "",
+     "texto": "FALTA GRAVE Data da infração: 02/03/2023",
+     "estado": "fora"
+    },
+    {
+     "fato": "10/02/2021",
+     "homol": "",
+     "texto": "INTERRUPÇÃO FUGA (registrada só como evento; falta a apurar)",
+     "estado": "fora"
+    }
+   ],
+   "imputacao": null,
+   "indulto": {
+    "hipotese": "art. 9º, I",
+    "descricao": "pena até 8 anos, sem violência ou grave ameaça",
+    "fracao": "1/3",
+    "exigido": 931,
+    "exigido_txt": "2a6m21d",
+    "cumprido": 2153,
+    "cumprido_txt": "5a10m28d",
+    "pena_considerada": 2795,
+    "pena_considerada_txt": "7a8m0d",
+    "status": "nao",
+    "rotulo": "NÃO CABE - requisito subjetivo (falta grave na janela)",
+    "checklist": [
+     {
+      "item": "Requisito objetivo (art. 9º, I)",
+      "estado": "ok",
+      "texto": "Exigido 2a6m21d (1/3, reincidente); cumprido 5a10m28d em 25/12/2025.",
+      "det": {
+       "evento": "pena unificada dos crimes alcançados",
+       "crime": "C1, C2",
+       "periodo": "início → 25/12/2025",
+       "tratamento": "fração sobre a pena",
+       "fundamento": "art. 9º, I c/c art. 14 (reincidência até 25/12)",
+       "calculo": "7a8m0d × 1/3 = 2a6m21d",
+       "efeito": "atende"
+      }
+     },
+     {
+      "item": "Natureza dos crimes (vedações)",
+      "estado": "q",
+      "texto": "Natureza a verificar: C2 - tráfico (art. 33 da Lei 11.343/06) sem indicação, no SEEU, de caput/§ 1º ou do § 4º (tráfico privilegiado) (caput ou § 1º: IMPEDITIVO; § 4º (privilegiado): NÃO IMPEDITIVO)",
+      "det": {
+       "evento": "tipificação, lei e parágrafos do SEEU",
+       "crime": "C1: NAO IMPEDITIVO, C2: A VERIFICAR",
+       "periodo": "",
+       "tratamento": "impeditivo / não impeditivo",
+       "fundamento": "art. 1º (rol de crimes impeditivos, mantido nas listas art1_* desta base)",
+       "calculo": "",
+       "efeito": "crime impeditivo afasta o benefício ou adia os demais"
+      }
+     },
+     {
+      "item": "Limite de pena",
+      "estado": "ok",
+      "texto": "Pena considerada 7a8m0d ≤ 8 anos.",
+      "det": {
+       "evento": "",
+       "crime": "",
+       "periodo": "",
+       "tratamento": "",
+       "fundamento": "art. 9º, I",
+       "calculo": "",
+       "efeito": ""
+      }
+     },
+     {
+      "item": "Requisito subjetivo (falta grave na janela)",
+      "estado": "ko",
+      "texto": "Falta grave homologada dentro da janela (25/12/2024 a 23/12/2025): 18/07/2025, homologada em 30/08/2025.",
+      "det": {
+       "evento": "incidentes de falta/sanção e eventos de fuga do SEEU",
+       "crime": "GERAL",
+       "periodo": "25/12/2024 → 23/12/2025",
+       "tratamento": "falta grave",
+       "fundamento": "art. 6º, caput e parágrafo único (falta posterior à publicação não impede); STJ, Tema 1195; STJ, Súmula 535",
+       "calculo": "",
+       "efeito": "só o requisito subjetivo; o tempo cumprido não se altera"
+      }
+     },
+     {
+      "item": "Fato anterior ao decreto",
+      "estado": "ok",
+      "texto": "Todos os fatos alcançados são anteriores a 25/12/2025.",
+      "det": {
+       "evento": "datas dos fatos e sentenças no SEEU",
+       "crime": "C1, C2",
+       "periodo": "até 25/12/2025",
+       "tratamento": "alcance do decreto",
+       "fundamento": "art. 7º (penas somadas até 25/12); STJ, HC 190.963 e AgRg no HC 441.551",
+       "calculo": "",
+       "efeito": "crimes posteriores não entram na soma nem impedem os anteriores"
+      }
+     },
+     {
+      "item": "Condenação na data (trânsito/recurso da acusação)",
+      "estado": "ok",
+      "texto": "Todas as condenações alcançadas transitaram até 23/12/2025.",
+      "det": {
+       "evento": "datas de trânsito no SEEU",
+       "crime": "C1, C2",
+       "periodo": "",
+       "tratamento": "",
+       "fundamento": "art. 2º, I e II",
+       "calculo": "",
+       "efeito": ""
+      }
+     }
+    ],
+    "alcancados": [],
+    "nao_alcancados": [],
+    "projecao": null
+   },
+   "comutacao": {
+    "status": "nao",
+    "rotulo": "NÃO CABE - requisito subjetivo (falta grave na janela)",
+    "checklist": [
+     {
+      "item": "Requisito objetivo (art. 13, caput)",
+      "estado": "ok",
+      "texto": "Exigido 1a11m3d (1/4, reincidente); cumprido 5a10m28d em 25/12/2025.",
+      "det": {
+       "evento": "pena considerada",
+       "crime": "C1, C2",
+       "periodo": "início → 25/12/2025",
+       "tratamento": "fração sobre a pena",
+       "fundamento": "art. 13, caput",
+       "calculo": "7a8m0d × 1/4 = 1a11m3d",
+       "efeito": "atende"
+      }
+     },
+     {
+      "item": "Fato anterior ao decreto",
+      "estado": "ok",
+      "texto": "Todos os fatos alcançados são anteriores a 25/12/2025.",
+      "det": {
+       "evento": "datas dos fatos e sentenças no SEEU",
+       "crime": "C1, C2",
+       "periodo": "até 25/12/2025",
+       "tratamento": "alcance do decreto",
+       "fundamento": "art. 7º (penas somadas até 25/12); STJ, HC 190.963 e AgRg no HC 441.551",
+       "calculo": "",
+       "efeito": "crimes posteriores não entram na soma nem impedem os anteriores"
+      }
+     },
+     {
+      "item": "Natureza dos crimes (vedações)",
+      "estado": "q",
+      "texto": "Natureza a verificar: C2 - tráfico (art. 33 da Lei 11.343/06) sem indicação, no SEEU, de caput/§ 1º ou do § 4º (tráfico privilegiado) (caput ou § 1º: IMPEDITIVO; § 4º (privilegiado): NÃO IMPEDITIVO)",
+      "det": {
+       "evento": "tipificação, lei e parágrafos do SEEU",
+       "crime": "C1: NAO IMPEDITIVO, C2: A VERIFICAR",
+       "periodo": "",
+       "tratamento": "impeditivo / não impeditivo",
+       "fundamento": "art. 1º (rol de crimes impeditivos, mantido nas listas art1_* desta base)",
+       "calculo": "",
+       "efeito": "crime impeditivo afasta o benefício ou adia os demais"
+      }
+     },
+     {
+      "item": "Requisito subjetivo (falta grave na janela)",
+      "estado": "ko",
+      "texto": "Falta grave homologada dentro da janela (25/12/2024 a 23/12/2025): 18/07/2025, homologada em 30/08/2025.",
+      "det": {
+       "evento": "incidentes de falta/sanção e eventos de fuga do SEEU",
+       "crime": "GERAL",
+       "periodo": "25/12/2024 → 23/12/2025",
+       "tratamento": "falta grave",
+       "fundamento": "art. 6º, caput e parágrafo único (falta posterior à publicação não impede); STJ, Tema 1195; STJ, Súmula 535",
+       "calculo": "",
+       "efeito": "só o requisito subjetivo; o tempo cumprido não se altera"
+      }
+     },
+     {
+      "item": "Condenação na data (trânsito/recurso da acusação)",
+      "estado": "ok",
+      "texto": "Todas as condenações alcançadas transitaram até 23/12/2025.",
+      "det": {
+       "evento": "datas de trânsito no SEEU",
+       "crime": "C1, C2",
+       "periodo": "",
+       "tratamento": "",
+       "fundamento": "art. 2º, I e II",
+       "calculo": "",
+       "efeito": ""
+      }
+     }
+    ],
+    "reducao": null,
+    "fracao": "1/4",
+    "exigido": 698,
+    "exigido_txt": "1a11m3d"
+   }
+  }
+ ],
+ "resultado": [
+  {
+   "decreto": "11.302/2022",
+   "tipo": "indulto",
+   "status": "nao",
+   "titulo": "NÃO CABE",
+   "linhas": [
+    "Motivo: Natureza a verificar: C2 - tráfico (art. 33 da Lei 11.343/06) sem indicação, no SEEU, de caput/§ 1º ou do § 4º (tráfico privilegiado) (caput ou § 1º: IMPEDITIVO; § 4º (privilegiado): NÃO IMPEDITIVO)"
+   ],
+   "projecao": false
+  },
+  {
+   "decreto": "11.302/2022",
+   "tipo": "comutacao",
+   "status": "nao",
+   "titulo": "NÃO CABE",
+   "linhas": [],
+   "projecao": false
+  },
+  {
+   "decreto": "11.846/2023",
+   "tipo": "indulto",
+   "status": "verificar",
+   "titulo": "A VERIFICAR",
+   "linhas": [
+    "Motivo: Decreto 11.846/2023 não cadastrado na base jurídica (frações, vedações e janela da falta): resultado A VERIFICAR, sem aplicar por analogia outro decreto."
+   ],
+   "projecao": false
+  },
+  {
+   "decreto": "11.846/2023",
+   "tipo": "comutacao",
+   "status": "verificar",
+   "titulo": "A VERIFICAR",
+   "linhas": [],
+   "projecao": false
+  },
+  {
+   "decreto": "12.338/2024",
+   "tipo": "indulto",
+   "status": "verificar",
+   "titulo": "A VERIFICAR",
+   "linhas": [
+    "Motivo: Natureza a verificar: C2 - tráfico (art. 33 da Lei 11.343/06) sem indicação, no SEEU, de caput/§ 1º ou do § 4º (tráfico privilegiado) (caput ou § 1º: IMPEDITIVO; § 4º (privilegiado): NÃO IMPEDITIVO)"
+   ],
+   "projecao": false
+  },
+  {
+   "decreto": "12.338/2024",
+   "tipo": "comutacao",
+   "status": "verificar",
+   "titulo": "A VERIFICAR",
+   "linhas": [
+    "Fração 1/5 sobre a pena cumprida de C1, C2.",
+    "Pena remanescente passa de 2a9m7d para 1a9m15d."
+   ],
+   "projecao": false
+  },
+  {
+   "decreto": "12.790/2025",
+   "tipo": "indulto",
+   "status": "nao",
+   "titulo": "NÃO CABE",
+   "linhas": [
+    "Motivo: Natureza a verificar: C2 - tráfico (art. 33 da Lei 11.343/06) sem indicação, no SEEU, de caput/§ 1º ou do § 4º (tráfico privilegiado) (caput ou § 1º: IMPEDITIVO; § 4º (privilegiado): NÃO IMPEDITIVO)"
+   ],
+   "projecao": false
+  },
+  {
+   "decreto": "12.790/2025",
+   "tipo": "comutacao",
+   "status": "nao",
+   "titulo": "NÃO CABE",
+   "linhas": [
+    "Motivo: Natureza a verificar: C2 - tráfico (art. 33 da Lei 11.343/06) sem indicação, no SEEU, de caput/§ 1º ou do § 4º (tráfico privilegiado) (caput ou § 1º: IMPEDITIVO; § 4º (privilegiado): NÃO IMPEDITIVO)"
+   ],
+   "projecao": false
+  }
+ ],
+ "duvidas": [
+  {
+   "data": "25/12/2023",
+   "crime": "GERAL",
+   "texto": "Decreto 11.846/2023 não cadastrado na base jurídica (frações, vedações e janela da falta): resultado A VERIFICAR, sem aplicar por analogia outro decreto."
+  }
+ ],
+ "em_curso": true,
+ "ultimo_decreto": "2025"
+}

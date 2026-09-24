@@ -857,6 +857,7 @@ def analisar(r, hoje=None):
         if aviso497:
             det.append("⚠ " + aviso497[0].upper() + aviso497[1:] + ".")
         L["ppe_detalhe"] = "\n".join(det)
+        L["seeu"] = _linha_seeu(L, c, pena, nasc, fato, sent, menor21, maior70)
         linhas.append(L)
     # avisos próprios de cada crime identificam o crime e a ação penal (uma execução pode ter vários processos)
     geral = set(avisos_gerais)
@@ -914,6 +915,31 @@ def analisar(r, hoje=None):
         "presc_dias": min(dias) if dias else None,
         "presc_obs": "; ".join(sorted(set(a for l in linhas for a in l["avisos"]))),
     }
+
+
+def _linha_seeu(L, c, pena, nasc, fato, sent, menor21, maior70):
+    """Linha da tabela de prescrição executória no padrão do SEEU (Ação Penal, Pena, Fato, Sentença, Trânsito, Data de
+    Referência, Idade, Reincidente, Cumprida, Remanescente, Prazo, Validade, Situação). Só as entradas: prazo, validade e
+    situação são recalculados na tela (art. 109 sobre o remanescente, +1/3 da reincidência, metade do art. 115), inclusive
+    depois de ajuste manual. Cumprida e remanescente vêm do trecho que regula o prazo (saldo máximo, quando há limites)."""
+    i_fato, i_sent = _idade(nasc, fato), _idade(nasc, sent)
+    if i_fato is not None and i_fato < menor21:
+        idade = "menor21"
+    elif i_sent is not None and i_sent >= maior70:
+        idade = "maior70"
+    else:
+        idade = "entre"
+    if idade != "entre" and not L.get("art115"):
+        idade = "entre"  # art. 115 afastado (Lei 15.160/2025): o prazo não se reduz
+    cumprida = int(L.get("ppe_cumprido_dias") or 0) if L.get("ppe_restante") else 0
+    S = (L.get("ppe_saldos") or [None])[-1]
+    return {"acao": L.get("proc_crim") or "", "crime": L.get("rotulo") or L.get("crime") or "", "pena_dias": int(pena or 0),
+            "fato": L.get("fato") or "", "sentenca": L.get("sentenca") or "", "transito": L.get("transito") or L.get("transito_mp") or "",
+            "ref": L.get("ppe_inicio") or L.get("ppe_termo") or "", "idade": idade, "idade_conhecida": nasc is not None,
+            "reinc": bool(L.get("reinc")), "cumprida": min(cumprida, int(pena or 0)),
+            "saldo_min": S["saldo_min"] if S and S["saldo_min"] != S["saldo_max"] else None,
+            "saldo_max": S["saldo_max"] if S and S["saldo_min"] != S["saldo_max"] else None,
+            "status_programa": L.get("ppe_status") or "", "cor_programa": L.get("ppe_cor") or ""}
 
 
 def _meses(a, b):
