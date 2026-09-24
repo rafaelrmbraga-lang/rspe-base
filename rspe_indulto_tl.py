@@ -465,7 +465,7 @@ def linha(r, hoje=None):
         x.pop("_c", None)
 
     resultado = _consolidado(saida_dec, C)
-    return {"nome": r.get("nome", ""), "proc": r.get("processo_execucao", ""), "hoje": _f(hoje), "inicio": _f(ini_exec),
+    return {"nome": rv.nome_proprio(r.get("nome", "")), "proc": r.get("processo_execucao", ""), "hoje": _f(hoje), "inicio": _f(ini_exec),
             "crimes": C, "faixas": sorted(faixas, key=lambda f: _d(f["ini"])), "marcos": marcos, "barra": barra, "decretos": saida_dec,
             "resultado": resultado, "duvidas": duvidas, "em_curso": em_curso,
             "ultimo_decreto": ult_cad["id"] if ult_cad else ""}

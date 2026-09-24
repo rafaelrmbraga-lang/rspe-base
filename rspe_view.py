@@ -707,7 +707,7 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
              "A apurar" if r.get("falta_12m") == "A APURAR" else "Não consta")
     m = {
         "id": r.get("processo_execucao") or r.get("arquivo"),
-        "nome": r.get("nome", ""),
+        "nome": nome_proprio(r.get("nome", "")),
         "proc": r.get("processo_execucao", ""),
         "geral_cor": "azul" if execucao_extinta(r) else "",
         "regime": ("Livramento condicional" if (est and est[0] == "lc") else
@@ -817,7 +817,7 @@ def modelo_erro(r, erro, baixas=None):
     for a in ABAS:
         for k in list(a["pilulas"].values()) + [a["cor"]]:
             m[k] = ""
-    m.update({"id": r.get("processo_execucao") or r.get("arquivo"), "nome": r.get("nome", ""), "proc": r.get("processo_execucao", ""),
+    m.update({"id": r.get("processo_execucao") or r.get("arquivo"), "nome": nome_proprio(r.get("nome", "")), "proc": r.get("processo_execucao", ""),
               "regime": (r.get("regime_atual") or "").replace(" - ATIVO", ""), "aud_itens": [it], "aud_n": 1, "aud_alertas": 0 if b else 1, "aud_verificar": 0,
               "aud_status": "ok" if b else "atencao", "aud_cor": "verde" if b else "vermelho",
               "aud_resumo": "Falha ao analisar (baixada) - conferir o PDF" if b else "Falha ao analisar - conferir o PDF", "aud_base": "base jurídica %s" % rg.versao(),
@@ -876,6 +876,32 @@ for _a in ABAS:
     # a aba Geral não tem prazo próprio (não há campo de dias): sem filtro de situação
     _a["filtros"] = [] if _a["id"] == "geral" else FILTROS.get(_a["id"], FILTROS["indulto"] if _a["id"] == "ind" else FILTROS["lapso"])
     _a["campo_dias"] = {"prog": "prog_dias", "liv": "liv_dias", "presc": "presc_dias", "ext": "ext_dias"}.get(_a["id"], "")
+
+
+_PARTICULAS = {"da", "de", "do", "das", "dos", "e", "di", "du", "del", "della", "van", "von", "y"}
+_ROMANOS = re.compile(r"^(i{1,3}|iv|v|vi{1,3}|ix|x)$", re.I)
+
+
+def nome_proprio(nome):
+    """Nome no padrão de nome próprio, qualquer que seja a grafia do SEEU (caixa alta ou mista):
+    'RODRIGO DEUSDEDIT DA SILVA' -> 'Rodrigo Deusdedit da Silva'; 'Caua De Paula Alves' -> 'Caua de Paula Alves'.
+    Partículas (da, de, do, das, dos, e) em minúscula; algarismos romanos em maiúscula (Neto II);
+    D'Ávila, Sant'Ana e nomes compostos com hífen mantêm a maiúscula em cada parte. Só muda a exibição:
+    a base guarda o nome como veio do SEEU."""
+    def parte(w):
+        return "'".join(x[:1].upper() + x[1:] for x in w.split("'")) if "'" in w else w[:1].upper() + w[1:]
+    out = []
+    for i, w in enumerate(re.sub(r"\s+", " ", (nome or "").strip()).split(" ")):
+        if not w:
+            continue
+        lw = w.lower()
+        if i > 0 and lw in _PARTICULAS:
+            out.append(lw)
+        elif i > 0 and _ROMANOS.match(lw):
+            out.append(lw.upper())
+        else:
+            out.append("-".join(parte(x) for x in lw.split("-")))
+    return " ".join(out)
 
 
 def json_seguro(o):

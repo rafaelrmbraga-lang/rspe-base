@@ -1,8 +1,8 @@
-RSPE BASE - SEEU  v6.16.7 (programa em abas)
+RSPE BASE - SEEU  v6.16.8 (programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-6.16.7. A documentação técnica completa (cada parâmetro, a regra, a norma e
+6.16.8. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -535,6 +535,14 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v6.16.8
+  - Nomes dos assistidos no padrão de nome próprio, qualquer que seja a
+    grafia do SEEU: "RODRIGO DEUSDEDIT DA SILVA" -> "Rodrigo Deusdedit da
+    Silva"; partículas (da, de, do, das, dos, e) em minúscula; D'Ávila,
+    Sant'Ana, nomes com hífen e algarismos romanos (II) preservados. Vale nas
+    tabelas, ficha, linha do tempo, exportações e petições; a base guarda o
+    nome como veio do SEEU (sem reimportar).
 
 v6.16.7
   - Reentrega de rspe_prescricao.py e rspe_indulto_tl.py (da v6.16.4), que
