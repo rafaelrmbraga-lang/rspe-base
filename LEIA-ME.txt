@@ -1,8 +1,8 @@
-RSPE BASE - SEEU  v6.16.3 (programa em abas)
+RSPE BASE - SEEU  v6.16.4 (programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-6.16.3. A documentação técnica completa (cada parâmetro, a regra, a norma e
+6.16.4. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -535,6 +535,21 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v6.16.4
+  - Linha do tempo do indulto: botão "Copiar fundamentação" no indulto e na
+    comutação de cada decreto (texto corrido da análise da aba, pronto para
+    a petição). Saem os quadros "Lapso de progressão / livramento" e "Pena
+    remanescente após comutação"; a seção da pena mostra pena unificada,
+    cumprida e restante, com a barra sem texto sobreposto e a legenda
+    cumprimento / detração / remição. Incisos não atendidos aparecem só pelos
+    números; a ressalva da falta do art. 6º não se repete.
+  - Linha do tempo da prescrição: eixo com os anos, duração de cada faixa em
+    anos/meses/dias dentro da faixa, e sem os quadros 1-2-3 abaixo da linha.
+  - Prescrição: reincidência marcada no RSPE sem condenação anterior
+    transitada no próprio RSPE (o mesmo ponto da Auditoria) é testada também
+    sem o +1/3. Se o resultado muda, A VERIFICAR; se não muda, aviso com o
+    prazo sem a reincidência.
 
 v6.16.3
   - Linha do tempo da prescrição com marcos numerados: na linha só o número
