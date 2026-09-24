@@ -40,9 +40,18 @@ CAMPOS = [
     ("pena_total_extenso", "pena total por extenso (X anos, Y meses e Z dias)"), ("pena_cumprida_extenso", "pena cumprida por extenso"),
     ("pena_remanescente_extenso", "pena remanescente por extenso"),
     ("processos_criminais", "números dos processos criminais ativos"),
-    ("data_evasao", "data da última interrupção do cumprimento (evasão/fuga)"), ("data_recaptura", "data da recaptura/reinício após a última interrupção"),
-    ("prescricao_prazo", "prazo da prescrição executória do crime em análise (ex.: 4 anos)"), ("prescricao_data", "data em que a prescrição executória se consuma"),
-    ("art115", "'S' se o art. 115 do CP (menor de 21 / maior de 70) se aplica a algum crime"),
+    ("data_evasao", "evasão que inicia a prescrição executória do crime escolhido (vazio se não houve); sem prescrição executória calculada, a última evasão"), ("data_recaptura", "recaptura/reinício após essa evasão ou revogação"),
+    ("data_revogacao", "revogação do livramento que inicia a prescrição executória do crime escolhido (vazio se não houve)"),
+    ("prescricao_prazo", "prazo da prescrição executória do crime em análise, já com a metade do art. 115 se aplicável (ex.: 4 anos)"),
+    ("prescricao_prazo_integral", "prazo do art. 109 antes da redução do art. 115 (ex.: 8 anos)"),
+    ("prescricao_prazo_reduzido", "prazo reduzido de metade pelo art. 115 (vazio se não se aplica)"),
+    ("prescricao_crime", "crime usado na petição de prescrição"), ("prescricao_termo", "início da contagem da prescrição executória desse crime"),
+    ("prescricao_pena_base_extenso", "pena que regula o prazo (restante, na evasão; aplicada, nos demais casos)"),
+    ("prescricao_cumprido_extenso", "pena cumprida nesse crime até o início da contagem"),
+    ("prescricao_inciso", "inciso do art. 109 do CP que corresponde à pena (ex.: V)"),
+    ("prescricao_prazo_art109", "prazo do inciso do art. 109, sem o aumento da reincidência nem a metade do art. 115 (ex.: 4 anos)"),
+    ("prescricao_reincidencia", "'S' se o prazo tem o aumento de 1/3 da reincidência (art. 110, caput)"), ("prescricao_data", "data em que a prescrição executória se consuma"),
+    ("art115", "'S' se o art. 115 do CP (menor de 21 / maior de 70) se aplica ao crime da petição"),
     ("defensor", "nome do defensor selecionado"), ("defensor_cargo", "cargo do defensor (ex.: Defensor Público)"),
     ("defensor_matricula", "matrícula/identificação do defensor"), ("defensor_email", "e-mail do defensor"),
     ("hoje", "data de hoje dd/mm/aaaa"), ("hoje_extenso", "data por extenso"), ("base", "nome da base aberta"),
@@ -76,9 +85,9 @@ def pena_extenso(txt):
     a, me, d = int(m.group(1)), int(m.group(2)), int(m.group(3))
     partes = []
     if a:
-        partes.append("%d ano%s" % (a, "" if a == 1 else "s"))
+        partes.append(rs.pl(a, "ano", "anos"))
     if me:
-        partes.append(("%d mês" % me if me == 1 else "%d meses" % me))
+        partes.append(rs.pl(me, "mês", "meses"))
     if d or not partes:
         partes.append("%d dia%s" % (d, "" if d == 1 else "s"))
     return partes[0] if len(partes) == 1 else ", ".join(partes[:-1]) + " e " + partes[-1]
@@ -103,9 +112,12 @@ def campos(m, r, nome_base="", defensor=None):
     crimes_ativos = [c for c in r.get("_crimes", []) if not c.get("extinto", "").upper().startswith("S")]
     # evasão / recaptura: última interrupção e o reinício seguinte
     ev = [e for e in r.get("_eventos", []) if rs.to_date(e.get("data") or "")]
-    data_evasao = data_recaptura = ""
+    data_evasao = data_recaptura = data_revogacao = ""
+    import rspe_prescricao as _rp
     for i, e in enumerate(ev):
-        if "INTERRUP" in (e.get("tipo") or "").upper():
+        # só a evasão (fuga, não retorno, abandono) ou a revogação do livramento: concessão de livramento,
+        # liberdade provisória e habeas corpus também são "interrupção" no SEEU, mas não são evasão
+        if "INTERRUP" in (e.get("tipo") or "").upper() and _rp.RE_EVASAO.search(e.get("motivo") or "") and not _rp.RE_REVOGA_LC.search(e.get("motivo") or ""):
             data_evasao = e.get("data", "")
             data_recaptura = ""
             for e2 in ev[i + 1:]:
@@ -116,6 +128,16 @@ def campos(m, r, nome_base="", defensor=None):
     pl = [l for l in m.get("presc_linhas", []) if l.get("prazo_ppe")]
     pl.sort(key=lambda l: (0 if l.get("ppe_cor") == "vermelho" else 1, l.get("ppe_dias") if l.get("ppe_dias") is not None else 10**6))
     presc = pl[0] if pl else {}
+    _S = (presc.get("ppe_saldos") or [{}])[-1] if presc else {}
+    if presc:
+        # a evasão da petição é a do crime escolhido: sem evasão no início da contagem (ou sem prazo correndo), o texto usa o
+        # termo do crime (art. 112, I) e não a última evasão da execução
+        # revogação do livramento não é evasão: o texto diz "livramento revogado", não "considerado evadido"
+        data_evasao, data_revogacao, data_recaptura = presc.get("ppe_evasao", ""), presc.get("ppe_revogacao", ""), ""
+        d_ev = rs.to_date(data_evasao or data_revogacao) if (data_evasao or data_revogacao) else None
+        if d_ev:
+            data_recaptura = next((e.get("data", "") for e in ev if "INTERRUP" not in (e.get("tipo") or "").upper()
+                                   and (rs.to_date(e.get("data") or "") or date.min) > d_ev), "")
     d = {
         "nome": m.get("nome", ""), "processo": m.get("proc", ""), "vara": m.get("vara", ""),
         "cpf": r.get("cpf", ""), "rg": r.get("rg", ""), "nome_mae": r.get("nome_mae", ""), "data_nascimento": r.get("data_nascimento", ""),
@@ -129,7 +151,7 @@ def campos(m, r, nome_base="", defensor=None):
         "crimes_completo": "\n".join("%s, %s - pena %s - fato %s - trânsito %s (proc. %s)" % (
             rs.lei_curta(c.get("lei")), c.get("artigo", ""), rs.pena_curta(c.get("pena_imposta")), c.get("data_infracao", ""),
             c.get("transito_processo") or c.get("transito_mp") or "não informado", c.get("processo_criminal", "")) for c in crimes_ativos),
-        "falta_12m": m.get("falta", ""),
+        "falta_12m": m.get("falta_full") or m.get("falta", ""),  # "Sim · ...", "A apurar · ..." ou "Não consta"
         "indulto_2022": m.get("ind22", ""), "indulto_2024": m.get("ind24", ""), "indulto_2025": m.get("ind25", ""), "comutacao_2025": m.get("com25", ""),
         "indulto_analise_2025": m.get("det25", ""), "indulto_analise_2024": m.get("det24", ""),
         "prescricao_resumo": m.get("presc_ppe_full") or m.get("presc_ppe", ""),
@@ -143,8 +165,8 @@ def campos(m, r, nome_base="", defensor=None):
                                for i in m.get("aud_itens", []) if i.get("nivel") in ("alerta", "verificar") and not i.get("baixado")),
         "ficha_unidade": f.get("unidade", ""), "ficha_conduta": f.get("conduta", ""),
         "ficha_trabalho": "\n".join("%s a %s - %s" % (t.get("inicio"), t.get("fim") or "em curso", t.get("empresa") or t.get("setor")) for t in f.get("trabalho", [])),
-        "ficha_atestados": "\n".join("atestado nº %s (%s): %s dias trabalhados, %s remidos%s" % (
-            a.get("numero") or "s/n", a.get("data"), a.get("dias_trabalhados"), a.get("dias_remidos"),
+        "ficha_atestados": "\n".join("atestado nº %s (%s): %s trabalhados, %s remidos%s" % (
+            a.get("numero") or "s/n", a.get("data"), rs.pl(int(a.get("dias_trabalhados") or 0), "dia", "dias"), a.get("dias_remidos"),
             (" - " + a["periodo_inicio"] + " a " + a["periodo_fim"]) if a.get("periodo_inicio") else "") for a in f.get("atestados", [])),
         "ficha_dias_remidos": str(f.get("dias_remidos_atestados", "")) if f else "",
         "ficha_faltas": "\n".join("%s (%s): %s" % (x.get("data_fato"), x.get("artigo") or "art. n/i", x.get("situacao")) for x in f.get("faltas", [])) or ("nenhuma" if f else ""),
@@ -152,10 +174,28 @@ def campos(m, r, nome_base="", defensor=None):
         "pena_cumprida_extenso": pena_extenso(r.get("pena_cumprida", "")),
         "pena_remanescente_extenso": pena_extenso(r.get("pena_remanescente", "")),
         "processos_criminais": ", ".join(sorted(set(c.get("processo_criminal", "") for c in crimes_ativos if c.get("processo_criminal")))),
-        "data_evasao": data_evasao, "data_recaptura": data_recaptura,
-        "prescricao_prazo": (presc.get("prazo_ppe") or "").split(" (")[0],
+        "data_evasao": data_evasao, "data_recaptura": data_recaptura, "data_revogacao": data_revogacao,
+        "prescricao_prazo": _rp.fmt_prazo(presc["ppe_meses"]) if presc.get("ppe_meses") else (presc.get("prazo_ppe") or "").split(" (")[0],
+        "prescricao_crime": presc.get("rotulo") or presc.get("crime", ""),
+        "prescricao_termo": presc.get("ppe_inicio") or presc.get("ppe_termo", ""),
+        "prescricao_pena_base_extenso": pena_extenso(rs.dias_para_pena(presc["ppe_base_dias"])) if presc.get("ppe_base_dias") else (presc.get("pena") or ""),
+        "prescricao_cumprido_extenso": (pena_extenso(rs.dias_para_pena(presc["ppe_cumprido_dias"])) if presc.get("ppe_cumprido_dias") else "nenhum dia"),
+        "prescricao_prazo_integral": _rp.fmt_prazo(presc["ppe_meses_integral"]) if presc.get("ppe_meses_integral") else "",
+        "prescricao_prazo_art109": _rp.fmt_prazo(presc["ppe_meses_art109"]) if presc.get("ppe_meses_art109") else "",
+        "prescricao_reincidencia": "S" if presc.get("reinc") else "N",
+        "prescricao_prazo_reduzido": _rp.fmt_prazo(presc["ppe_meses"]) if (presc.get("ppe_meses") and presc.get("art115")) else "",
+        "prescricao_inciso": presc.get("inciso109", ""),
         "prescricao_data": presc.get("ppe_previsao", ""),
-        "art115": "S" if any(l.get("art115") for l in m.get("presc_linhas", [])) else "N",
+        # saldo na evasão entre dois limites (imputação do cumprimento entre condenações unificadas): a petição usa o saldo máximo
+        "prescricao_saldo_min_extenso": pena_extenso(rs.dias_para_pena(_S["saldo_min"])) if _S and _S.get("saldo_min") else ("nenhum dia" if _S else ""),
+        "prescricao_saldo_max_extenso": pena_extenso(rs.dias_para_pena(_S["saldo_max"])) if _S and _S.get("saldo_max") else "",
+        "prescricao_data_min": _S.get("limite_min", "") if _S else "",
+        "prescricao_data_max": _S.get("limite_max", "") if _S else "",
+        "prescricao_a_verificar": ("a verificar: o saldo da pena na evasão de %s depende da imputação do cumprimento entre as condenações unificadas (saldo entre %s e %s)" % (
+            _S["evasao"], pena_extenso(rs.dias_para_pena(_S["saldo_min"])) if _S.get("saldo_min") else "zero", pena_extenso(rs.dias_para_pena(_S["saldo_max"]))))
+        if (presc.get("ppe_status") or "").startswith("A VERIFICAR") and _S else "",
+        "prescricao_faltam": "; ".join(presc.get("ppe_faltam") or []),
+        "art115": "S" if presc.get("art115") else "N",  # da linha usada na petição (o prazo reduzido vem dela)
         "defensor": defensor.get("nome", ""), "defensor_cargo": defensor.get("cargo", "") or ("Defensor Público" if defensor else ""),
         "defensor_matricula": defensor.get("matricula", ""), "defensor_email": defensor.get("email", ""),
         "hoje": hoje.strftime("%d/%m/%Y"),

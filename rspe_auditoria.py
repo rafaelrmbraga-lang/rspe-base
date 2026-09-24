@@ -2,11 +2,14 @@
 """
 Auditoria do RSPE: confronta os dados que o SEEU imprimiu com a legislação e a
 jurisprudência da base jurídica (base_juridica.json) e com a coerência interna
-do próprio relatório. Não afirma erro: aponta o que "demanda atenção" e o que
+do próprio relatório. Não afirma erro: aponta o que tem efeito concreto e o que
 deve ser verificado, sempre com o fundamento.
 
-Níveis: 'alerta' (inconsistência objetiva), 'verificar' (depende de dado que o
-RSPE não traz) e 'ok' (conferido sem ressalva).
+Níveis: 'alerta' (divergência com efeito concreto), 'verificar' (depende de dado
+que o RSPE não traz), 'info' (registro sem efeito prático, oculto por padrão na
+tela) e 'ok' (conferido sem ressalva). Cada item traz 'tipo' e 'ref' (chave da
+baixa e filtro das outras abas: rspe_view.so_matematica tira da aba Auditoria
+os pontos que outras abas já mostram).
 """
 
 import re
@@ -32,9 +35,19 @@ def _nome(c):
 
 
 def _trafico(c):
-    """Tráfico da Lei 11.343/06 (arts. 33 caput/§ 1º a 37), fora o privilegiado."""
-    return (rs.num_lei(c.get("lei")) == "11343" and rs.num_art(c.get("artigo")) in ("33", "34", "35", "36", "37")
-            and not (rs.num_art(c.get("artigo")) == "33" and "§ 4" in (c.get("tipo_penal") or "")))
+    """Tráfico da Lei 11.343/06 com livramento de 2/3 (art. 44, p. ú.: arts. 33, caput e § 1º, e 34 a 37).
+    O art. 33, §§ 2º, 3º e 4º, fica fora."""
+    if not (rs.num_lei(c.get("lei")) == "11343" and rs.num_art(c.get("artigo")) in ("33", "34", "35", "36", "37")):
+        return False
+    tp = c.get("tipo_penal") or ""
+    return not (rs.num_art(c.get("artigo")) == "33" and (re.match(r"\s*§\s*[234](?!\d)", tp) or "§ 4" in tp))
+
+
+def _trafico_pessoas(c):
+    """CP, art. 149-A (tráfico de pessoas): livramento só após 2/3 (CP, art. 83, V, incluído pela Lei 13.344/2016,
+    que também criou o tipo - por isso não há fato anterior à regra)."""
+    lei = rs.num_lei(c.get("lei"))
+    return (lei in ("2848", "") or ("PENAL" in (c.get("lei") or "").upper() and "MILITAR" not in (c.get("lei") or "").upper())) and rs.num_art(c.get("artigo")) == "149-A"
 
 
 def _transito(c):
@@ -42,15 +55,16 @@ def _transito(c):
 
 
 def _reinc_especifica(c, crimes):
-    """Base da reincidência específica em hediondo/equiparado no próprio RSPE: condenação anterior por hediondo,
-    equiparado ou tráfico transitada antes do fato. Não presume: sem trânsito, a condenação fica 'não aferível'."""
+    """Base da reincidência específica do art. 83, V, do CP no próprio RSPE: condenação anterior por hediondo,
+    equiparado (tortura, tráfico de drogas, terrorismo) ou tráfico de pessoas (art. 149-A), transitada antes do fato.
+    Não presume: sem trânsito, a condenação fica 'não aferível'."""
     fato = rs.to_date(c.get("data_infracao") or "")
     confirma, sem_transito, nao_hed = [], [], []
     for o in crimes:
-        if o is c or (o.get("processo_criminal") and o.get("processo_criminal") == c.get("processo_criminal")):
+        if o is c or (o.get("processo_criminal") and rs.mesmo_processo(o.get("processo_criminal"), c.get("processo_criminal"))):
             continue
         hed_o = _e_hediondo_lei(o)[0]
-        qualifica = hed_o is True or _trafico(o) or (hed_o is None and _hediondo_seeu(o))
+        qualifica = hed_o is True or _trafico(o) or _trafico_pessoas(o) or (hed_o is None and _hediondo_seeu(o))
         t, f_o = _transito(o), rs.to_date(o.get("data_infracao") or "")
         if not qualifica:
             if t and fato and t < fato and rs.num_lei(o.get("lei")) == "11343":
@@ -63,8 +77,10 @@ def _reinc_especifica(c, crimes):
     return confirma, sem_transito, nao_hed
 
 
-def _item(nivel, titulo, detalhe, fundamento=""):
-    return {"nivel": nivel, "titulo": titulo, "detalhe": detalhe, "fundamento": fundamento}
+def _item(nivel, titulo, detalhe, fundamento="", tipo="", ref=""):
+    """tipo: identificador fixo do ponto (não muda com números, datas ou agrupamento do título); ref: o crime, o ano
+    ou a falta a que o ponto se refere. A baixa usa tipo + ref (o processo já separa as baixas)."""
+    return {"nivel": nivel, "titulo": titulo, "detalhe": detalhe, "fundamento": fundamento, "tipo": tipo, "ref": ref or ""}
 
 
 def _fr_seeu(txt):
@@ -97,8 +113,11 @@ def _e_hediondo_lei(c):
         return False, ""
     eq = h.get("equiparados", {})
     if lei in eq and art in eq[lei]:
-        if lei == "11343" and art == "33" and "§ 4" in (c.get("tipo_penal") or ""):
+        _tp = c.get("tipo_penal") or ""
+        if lei == "11343" and art == "33" and "§ 4" in _tp:
             return False, "tráfico privilegiado (art. 33, § 4º) não é hediondo (LEP, art. 112, § 5º)"
+        if lei == "11343" and art == "33" and rs.re.match(r"\s*§\s*[23](?!\d)", _tp):
+            return False, "art. 33, §§ 2º e 3º (induzimento e uso compartilhado) ficam fora do tráfico equiparado a hediondo"
         return True, ""
     pu = h.get("paragrafo_unico", {})
     if lei in pu:
@@ -106,7 +125,7 @@ def _e_hediondo_lei(c):
         if isinstance(regra, dict):
             if art in regra:
                 return (True, "") if regra[art] == "sempre" else (None, "art. 1º, p. ú., Lei 8.072/90: " + regra[art])
-        elif art in regra:
+        elif isinstance(regra, list) and art in [str(x).split()[0] for x in regra]:
             return True, ""
     return False, ""
 
@@ -162,17 +181,29 @@ def perdas_por_falta(incidentes):
     def dt(i):
         return rs.to_date(i.get("data_referencia") or i.get("data_decisao") or "")
     def qtd(i):
-        m = rs.re.search(r"(\d+)", i.get("complemento") or "")
-        return int(m.group(1)) if m else 0
-    faltas = sorted(set(d for d in (dt(i) for i in incidentes if "FALTA GRAVE" in (i.get("tipo") or "").upper() and i.get("situacao") == "CONCEDIDO") if d))
+        m = rs.re.search(rs.NUM_DIAS, i.get("complemento") or "")
+        return rs.num_br(m.group(1)) if m else 0
+    # a falta é datada pelo fato (data da infração lida no complemento da homologação), que é o que reinicia a contagem
+    # (art. 127); sem ela, pela data de referência do incidente, com a ressalva
+    sem_fato = set()
+    def dt_falta(i):
+        m = rs.RE_DATA.search(i.get("complemento") or "")
+        d = rs.to_date(m.group(1)) if m else None
+        if d:
+            return d
+        d = dt(i)
+        if d:
+            sem_fato.add(d)
+        return d
+    faltas = sorted(set(d for d in (dt_falta(i) for i in incidentes if "FALTA GRAVE" in (i.get("tipo") or "").upper() and i.get("situacao") == "CONCEDIDO") if d))
     perdas = [(dt(i), qtd(i)) for i in incidentes if "PERDIDOS" in (i.get("tipo") or "").upper()]
     remicoes = []
     for i in incidentes:
         t = (i.get("tipo") or "").upper()
         if "REMI" in t and "PERDIDOS" not in t and i.get("situacao") == "CONCEDIDO":
-            m = rs.re.search(r"(\d+)\s*Dia", i.get("complemento", ""), rs.re.I)
-            if m:
-                remicoes.append({"d": dt(i), "data": i.get("data_decisao") or i.get("data_referencia") or "", "n": int(m.group(1))})
+            n = rs.dias_de(i.get("complemento", ""))
+            if n is not None:
+                remicoes.append({"d": dt(i), "data": i.get("data_decisao") or i.get("data_referencia") or "", "n": n})
     out = []
     resid = {id(x): x["n"] for x in remicoes}  # saldo de cada remição depois das perdas anteriores
     for k, f in enumerate(faltas):
@@ -195,7 +226,7 @@ def perdas_por_falta(incidentes):
             if rem:
                 resid[id(rem)] = max(0, resid[id(rem)] - q)
         janela = sum(x["n"] for x in remicoes if x["d"] and x["d"] <= f and (prev is None or x["d"] > prev))
-        out.append({"falta": f, "prev": prev, "perda": sum(pf), "parcelas": parcelas, "janela": janela,
+        out.append({"falta": f, "prev": prev, "perda": sum(pf), "parcelas": parcelas, "janela": janela, "sem_fato": f in sem_fato,
                     "remido_ate": sum(x["n"] for x in remicoes if x["d"] and x["d"] <= f)})
     return out, faltas, perdas
 
@@ -214,33 +245,35 @@ def _perda_remidos(incidentes, perdidos, eventos=None):
                      "incide só sobre a remição adquirida até a falta." % (
                          "; ".join("%s em %s" % ((e.get("motivo") or e.get("tipo") or "").strip().lower(), e.get("data")) for e in _fg),
                          (" (decisão de %s)" % rs.fmt(max(_dp_))) if _dp_ else ""))
-        return [_item("verificar", "Perda de %d dias remidos sem falta grave datada no RSPE" % perdidos,
+        return [_item("verificar", "Perda de %s remidos sem falta grave datada no RSPE" % rs.pl(perdidos, "dia", "dias"),
                       "O saldo registra dias perdidos, mas não há incidente de homologação de falta grave com data: conferir a decisão e o PAD." + extra,
-                      "LEP, arts. 118 e 127; Súmula 533/STJ.")]
+                      "LEP, arts. 118 e 127; Súmula 533/STJ.", tipo="perda-de-remidos-sem-falta-grave-datada-no-rspe")]
     itens = []
     for x in res:
         f, prev = x["falta"], x["prev"]
+        ress = (" Data do fato não consta no complemento da homologação: usada a data de referência (%s); conferir a data da infração, "
+                "que é a que reinicia a contagem (art. 127)." % rs.fmt(f)) if x.get("sem_fato") else ""
         dup = [(q, rem) for q, rem in x["parcelas"] if prev and rem and rem["d"] and rem["d"] <= prev]
         if dup:
             itens.append(_item("alerta", "Perda de dias remidos em duplicidade (falta de %s)" % rs.fmt(f),
-                               "A perda de %d dias pela falta de %s incidiu sobre remição anterior à falta de %s: %s. A contagem recomeçou em %s; "
-                               "a nova perda só pode alcançar a remição adquirida entre as duas faltas (%d dias; limite de 1/3: %d). Cabe impugnar o cálculo." % (
-                                   x["perda"], rs.fmt(f), rs.fmt(prev),
-                                   "; ".join("%d dias sobre a remição de %d dias de %s" % (q, rem["n"], rem["data"]) for q, rem in dup),
-                                   rs.fmt(prev), x["janela"], x["janela"] // 3), FUND_127))
+                               "A perda de %s pela falta de %s incidiu sobre remição anterior à falta de %s: %s. A contagem recomeçou em %s; "
+                               "a nova perda só pode alcançar a remição adquirida entre as duas faltas (%s; limite de 1/3: %d). Cabe impugnar o cálculo." % (
+                                   rs.pl(x["perda"], "dia", "dias"), rs.fmt(f), rs.fmt(prev),
+                                   "; ".join("%s sobre a remição de %s de %s" % (rs.pl(q, "dia", "dias"), rs.pl(rem["n"], "dia", "dias"), rem["data"]) for q, rem in dup),
+                                   rs.fmt(prev), rs.pl(x["janela"], "dia", "dias"), x["janela"] // 3) + ress, FUND_127, tipo="perda-de-dias-remidos-em-duplicidade-falta-de", ref=rs.fmt(f)))
         base = x["janela"]
         limite = base // 3
         if base and x["perda"] > limite:
             itens.append(_item("alerta", "Perda de dias remidos acima de 1/3 (falta de %s)" % rs.fmt(f),
-                               "Remição %s: %d dias; limite de 1/3: %d dias; perdidos: %d (excesso de %s).%s" % (
+                               "Remição %s: %s; limite de 1/3: %s; perdidos: %s (excesso de %s).%s" % (
                                    ("adquirida entre a falta de %s e esta" % rs.fmt(prev)) if prev else "até a falta",
-                                   base, limite, x["perda"], rs.pl(x["perda"] - limite, "dia", "dias"),
+                                   rs.pl(base, "dia", "dias"), rs.pl(limite, "dia", "dias"), rs.num_txt(x["perda"]), rs.pl(x["perda"] - limite, "dia", "dias"),
                                    " Parcelas: %s - o arredondamento para cima de cada parcela ultrapassa o teto legal." % ", ".join(
-                                       "%d (sobre %s)" % (q, rem["n"] if rem else "?") for q, rem in x["parcelas"]) if (len(x["parcelas"]) > 1 and not dup) else ""),
-                               FUND_127 + " STF, Tema 477 (RE 1.116.485)."))
+                                       "%s (sobre %s)" % (rs.num_txt(q), rs.num_txt(rem["n"]) if rem else "?") for q, rem in x["parcelas"]) if (len(x["parcelas"]) > 1 and not dup) else "") + ress,
+                               FUND_127 + " STF, Tema 477 (RE 1.116.485).", tipo="perda-de-dias-remidos-acima-de-1-3-falta-de", ref=rs.fmt(f)))
         elif not dup:
-            itens.append(_item("info", "Perda de %d dias remidos pela falta grave de %s" % (x["perda"], rs.fmt(f)),
-                               "Dentro do limite de 1/3 (remição %s: %d dias)." % (("entre a falta de %s e esta" % rs.fmt(prev)) if prev else "até a falta", base), "LEP, art. 127."))
+            itens.append(_item("info", "Perda de %s remidos pela falta grave de %s" % (rs.pl(x["perda"], "dia", "dias"), rs.fmt(f)),
+                               "Dentro do limite de 1/3 (remição %s: %s)." % (("entre a falta de %s e esta" % rs.fmt(prev)) if prev else "até a falta", rs.pl(base, "dia", "dias")) + ress, "LEP, art. 127.", tipo="perda-de-remidos-pela-falta-grave-de", ref=rs.fmt(f)))
     return itens
 
 
@@ -260,11 +293,11 @@ def auditar(r, hoje=None):
     if faltam:
         itens.append(_item("verificar", "Dados ausentes no RSPE: %s" % ", ".join(faltam),
                            "O SEEU não imprimiu esses dados (guia sem cálculo, pena interrompida) ou o programa não conseguiu lê-los. Os cálculos deste assistido podem ficar incompletos; conferir o PDF.",
-                           ""))
+                           "", tipo="dados-ausentes-no-rspe"))
     # ---------------- 0. extinções registradas em incidentes / cabeçalho ----------------
     if r.get("execucao_extinta"):
         itens.append(_item("alerta", "Execução extinta segundo incidente do RSPE (%s)" % r["execucao_extinta"],
-                           "Há incidente de EXTINÇÃO sem processo selecionado: alcança a execução. Conferir se a guia deve ser baixada/arquivada.", "LEP, arts. 66, II, e 109; CP, art. 107."))
+                           "Há incidente de EXTINÇÃO sem processo selecionado: alcança a execução. Conferir se a guia deve ser baixada/arquivada.", "LEP, arts. 66, II, e 109; CP, art. 107.", tipo="execucao-extinta-segundo-incidente-do-rspe"))
     # indulto concedido no RSPE que o cálculo não refletiu: os processos seguem ativos e somados na pena total
     _ind = [c for c in r.get("_crimes", []) if c.get("indultado_rspe") and not (c.get("extinto_rspe") or "").upper().startswith("S")]
     _ind_total = False
@@ -292,7 +325,7 @@ def auditar(r, hoje=None):
                                " e a pena total continua a incluí-las" if _ind_total else "",
                                _soma_txt, r.get("pena_total") or "?",
                                (" A comutação de %s alcançou os mesmos processos, o que só se explica se o indulto não foi aplicado." % (_com[0].get("data_decisao") or _com[0].get("data_referencia") or "?")) if _com else ""),
-                           "CP, art. 107, II; LEP, arts. 66, II, e 192."))
+                           "CP, art. 107, II; LEP, arts. 66, II, e 192.", tipo="indulto-concedido-sem-baixa-no-calculo"))
     _duv = [c for c in r.get("_crimes", []) if c.get("indulto_duvida")]
     if _duv:
         x = _duv[0]["indulto_duvida"]
@@ -302,7 +335,7 @@ def auditar(r, hoje=None):
                            "conferir a decisão do indulto e o eventual recurso: se o indulto foi mantido, pedir a baixa das penas indultadas." % (
                                x["data"] or "?", (" (Decreto %s)" % x["decreto"]) if x.get("decreto") else "",
                                ", ".join("proc. %s" % c.get("processo_criminal") for c in _duv), x.get("comutacao") or "?"),
-                           "CP, art. 107, II; LEP, arts. 66, II, e 192."))
+                           "CP, art. 107, II; LEP, arts. 66, II, e 192.", tipo="indulto-de-seguido-de-comutacao-dos-mesmos-proce"))
     for c in r.get("_crimes", []):
         if c.get("indultado_rspe") and _ind:
             continue
@@ -310,13 +343,13 @@ def auditar(r, hoje=None):
             itens.append(_item("info", "%s: extinção registrada (%s), mas a linha do crime diz \"Extinto: %s\"" % (
                 _nome(c), c["extincao_fonte"], c.get("extinto_rspe") or "?"),
                 "O programa tratou o crime como extinto (não entra na soma das penas, nas frações nem na prescrição). Conferir se o SEEU precisa ser atualizado.",
-                "LEP, art. 66, II; CP, art. 107."))
+                "LEP, art. 66, II; CP, art. 107.", tipo="extincao-registrada-mas-a-linha-do-crime-diz-ext", ref=_nome(c)))
     if not pena_total and ativos:
         soma_at = sum(rs.pena_para_dias(c.get("pena_imposta")) or 0 for c in ativos)
         itens.append(_item("alerta", "Guia sem pena calculada: pena total %s com %s" % (r.get("pena_total") or "em branco", rs.pl(len(ativos), "condenação ativa", "condenações ativas")),
                            "As condenações ativas somam %s%s. Sem cálculo de pena, regime atual, marcos e término não constam; conferir se as guias foram unificadas/calculadas no SEEU." % (
                                rs.dias_para_pena(soma_at), "" if r.get("regime_atual") else "; Regime Atual em branco"),
-                           "LEP, arts. 66, III, a, e 111."))
+                           "LEP, arts. 66, III, a, e 111.", tipo="guia-sem-pena-calculada-pena-total-com"))
 
     # condenação ativa sem pena imposta: distorce soma, frações e prescrição
     for c in ativos:
@@ -324,7 +357,7 @@ def auditar(r, hoje=None):
             itens.append(_item("info", "%s: condenação sem pena imposta no RSPE" % _nome(c),
                                "O RSPE traz \u201cPena Imposta: 0 ano(s), 0 mês(es) e 0 dia(s)\u201d no processo %s. Esse crime não entra na soma das penas; "
                                "conferir a sentença e o lançamento no SEEU." % (c.get("processo_criminal") or "-"),
-                               "LEP, art. 66, III, a."))
+                               "LEP, art. 66, III, a.", tipo="condenacao-sem-pena-imposta-no-rspe", ref=_nome(c)))
 
     # ---------------- 1. coerência aritmética do RSPE ----------------
     soma = sum(rs.pena_para_dias(c.get("pena_imposta")) or 0 for c in ativos)
@@ -337,7 +370,7 @@ def auditar(r, hoje=None):
             itens.append(_item("info", "Soma das penas maior que a pena total: compatível com comutação",
                                "Soma das penas originais: %s; pena total impressa: %s. Há %s%s - a pena total já considera a redução." % (
                                    rs.dias_para_pena(soma), r.get("pena_total"), rs.pl(len(_comut), "comutação concedida", "comutações concedidas"), " e processos marcados \"(Comutada)\"" if _comutados else ""),
-                               "Decretos de comutação; LEP, art. 192."))
+                               "Decretos de comutação; LEP, art. 192.", tipo="soma-das-penas-maior-que-a-pena-total-compativel"))
         elif _ind_total:
             pass  # divergência explicada pelo indulto sem baixa (item acima)
         elif rs.amd_normal(sum(x[0] for x in _amds), sum(x[1] for x in _amds), sum(x[2] for x in _amds)) != rs.amd_normal(*_tot):
@@ -361,36 +394,34 @@ def auditar(r, hoje=None):
             itens.append(_item("alerta", "Soma das penas difere da pena total",
                                "%s: %s; pena total impressa: %s (diferença %s).%s" % (
                                    _rotulo, rs.dias_para_pena(soma), rs.dias_para_pena(pena_total), rs.dias_para_pena(abs(soma - pena_total)), _extra),
-                               "LEP, arts. 66, III, a, e 111 (soma/unificação); CP, art. 75, § 2º; possível pena extinta, comutada, detração ou unificação não refletida no cálculo."))
+                               "LEP, arts. 66, III, a, e 111 (soma/unificação); CP, art. 75, § 2º; possível pena extinta, comutada, detração ou unificação não refletida no cálculo.", tipo="soma-das-penas-difere-da-pena-total"))
         else:
-            itens.append(_item("ok", "Soma das penas confere com a pena total", "Soma das penas = total %s." % r.get("pena_total")))
+            itens.append(_item("ok", "Soma das penas confere com a pena total", "Soma das penas = total %s." % r.get("pena_total"), tipo="soma-das-penas-confere-com-a-pena-total"))
     _t, _c, _r = rs.pena_amd(r.get("pena_total")), rs.pena_amd(r.get("pena_cumprida")), rs.pena_amd(r.get("pena_remanescente"))
     if _t and _c and _r:
         # conferência em anos/meses/dias, como o SEEU soma (não em dias corridos)
         if rs.amd_normal(_c[0] + _r[0], _c[1] + _r[1], _c[2] + _r[2]) != rs.amd_normal(*_t):
             itens.append(_item("alerta", "Cumprida + remanescente ≠ pena total",
                                "%s + %s = %s, mas a pena total é %s." % (rs.dias_para_pena(cumprida), rs.dias_para_pena(reman), rs.dias_para_pena(cumprida + reman), rs.dias_para_pena(pena_total)),
-                               "Coerência interna do atestado; pedir recálculo/atestado atualizado."))
+                               "Coerência interna do atestado; pedir recálculo/atestado atualizado.", tipo="cumprida-remanescente-pena-total"))
     # remições
     rem_inc = 0
     for i in incidentes:
         if rs.e_remicao_concedida(i):
-            m = rs.re.search(r"(\d+)\s*Dia", i.get("complemento", ""), rs.re.I)
-            if m:
-                rem_inc += int(m.group(1))
-    m = rs.re.search(r"\((\d+)\s*dias remidos\s*-\s*(\d+)\s*dias perdidos\)", r.get("saldo_remidos", ""), rs.re.I)
+            rem_inc += rs.dias_de(i.get("complemento", "")) or 0
+    m = rs.re.search(r"\(" + rs.NUM_DIAS + r"\s*dias remidos\s*-\s*" + rs.NUM_DIAS + r"\s*dias perdidos\)", r.get("saldo_remidos", ""), rs.re.I)
     if m:
-        remidos, perdidos = int(m.group(1)), int(m.group(2))
-        if rem_inc and rem_inc != remidos:
+        remidos, perdidos = rs.num_br(m.group(1)), rs.num_br(m.group(2))
+        if rem_inc and abs(rem_inc - remidos) > 0.01:
             itens.append(_item("alerta", "Dias remidos: incidentes não fecham com o saldo",
-                               "Incidentes de remição somam %d dias; o resumo diz %d remidos (%d perdidos)." % (rem_inc, remidos, perdidos),
-                               "LEP, arts. 126 e 127."))
+                               "Incidentes de remição somam %s; o resumo diz %s remidos (%s perdidos)." % (rs.pl(rem_inc, "dia", "dias"), rs.num_txt(remidos), rs.num_txt(perdidos)),
+                               "LEP, arts. 126 e 127.", tipo="dias-remidos-incidentes-nao-fecham-com-o-saldo"))
         if perdidos:
             itens.extend(_perda_remidos(incidentes, perdidos, eventos))
     # pena integralmente cumprida
     if pena_total and cumprida is not None and cumprida >= pena_total and "ATIVO" in (r.get("status_execucao") or "").upper():
         itens.append(_item("alerta", "Pena integralmente cumprida com execução ativa",
-                           "Cumprida %s ≥ total %s: cabe extinção da pena." % (rs.dias_para_pena(cumprida), rs.dias_para_pena(pena_total)), "LEP, art. 109; CP, art. 107."))
+                           "Cumprida %s ≥ total %s: cabe extinção da pena." % (rs.dias_para_pena(cumprida), rs.dias_para_pena(pena_total)), "LEP, art. 109; CP, art. 107.", tipo="pena-integralmente-cumprida-com-execucao-ativa"))
 
     reinc_sem_base = []
     # ---------------- 2. crime a crime: hediondez, VGA, frações ----------------
@@ -410,7 +441,7 @@ def auditar(r, hoje=None):
         hed_seeu = _hediondo_seeu(c)
         hed_lei, obs_h = _e_hediondo_lei(c)
         esp_ok = None  # reincidência específica em hediondo/tráfico: True confirmada no RSPE, False não aferível
-        if reinc_esp and (hed_seeu or hed_lei or _trafico(c)):
+        if reinc_esp and (hed_seeu or hed_lei or _trafico(c) or _trafico_pessoas(c)):
             _conf, _semt, _naoh = _reinc_especifica(c, crimes)
             _pp = (rs.pct_rotulo(c.get("fracao_progressao")) or "?").split(" - ")[0]
             _fx = "%s e livramento %s" % (_pp, "vedado" if (_fr_seeu(c.get("fracao_livramento")) or 0) >= 1 else (c.get("fracao_livramento") or "?").split(" - ")[0])
@@ -420,7 +451,7 @@ def auditar(r, hoje=None):
                 itens.append(_item("ok", "%s: reincidência específica confere com o RSPE" % nome,
                                    "Condenação anterior: %s, trânsito em %s, antes do fato (%s). O RSPE aplica %s." % (
                                        _nome(o), rs.fmt(_transito(o)), rs.fmt(fato), _fx),
-                                   "CP, arts. 63 e 83, V; LEP, art. 112, VII; Lei 11.343/06, art. 44, p. ú."))
+                                   "CP, arts. 63 e 83, V; LEP, art. 112, VII; Lei 11.343/06, art. 44, p. ú.", tipo="reincidencia-especifica-confere-com-o-rspe", ref=nome))
             else:
                 esp_ok = False
                 partes = ["%s (fato %s): sem trânsito em julgado no RSPE, não é possível aferir se transitou antes de %s" % (
@@ -428,7 +459,7 @@ def auditar(r, hoje=None):
                 partes += ["%s (trânsito %s): %s: não gera reincidência específica em hediondo" % (
                     _nome(o), rs.fmt(_transito(o)), "tráfico privilegiado, não hediondo" if "§ 4" in (o.get("tipo_penal") or "") else "não é hediondo") for o in _naoh]
                 if not _semt:
-                    partes.append("nenhuma condenação anterior por hediondo/equiparado consta no RSPE; pode vir de processo não listado (certidão de antecedentes)")
+                    partes.append("nenhuma condenação anterior por hediondo, equiparado ou tráfico de pessoas (CP, art. 83, V) consta no RSPE; pode vir de processo não listado (certidão de antecedentes)")
                 itens.append(_item("alerta", "%s: reincidência específica não demonstrada no RSPE (%s)" % (nome, _fx),
                                    "O RSPE marca “Reincidente específico: S”. %s. Sem condenação anterior por hediondo/equiparado transitada antes do fato, "
                                    "%s e o livramento é possível (2/3). O RSPE aplica %s. "
@@ -440,47 +471,49 @@ def auditar(r, hoje=None):
                                         "o percentual, por analogia, é o do primário (70%, ou 75% com morte), sem precedente específico sobre a Lei 15.358/2026 - conferir (ratio dos STJ Temas 1084 e 1196; STF Tema 1169)"
                                         if fato and fato >= date(2026, 3, 25) else
                                         "o percentual é o do reincidente genérico (40%, ou 50% com morte; STJ Temas 1084 e 1196, STF Tema 1169)"), _fx),
-                                   "CP, arts. 63 e 83, V; LEP, art. 112, VII; Lei 11.343/06, art. 44, p. ú.; STJ Tema 1084; STF Tema 1169."))
+                                   "CP, arts. 63 e 83, V; LEP, art. 112, VII; Lei 11.343/06, art. 44, p. ú.; STJ Tema 1084; STF Tema 1169.", tipo="reincidencia-especifica-nao-demonstrada-no-rspe", ref=nome))
         # dados ausentes
         if art and c.get("artigo_inferido"):
             if c.get("lei_do_tempo"):
                 itens.append(_item("verificar", "%s: tipo reconhecido pela descrição, conforme a lei da data do fato" % nome,
                                    "O SEEU não registrou o artigo; a descrição \u201c%s\u201d é a do tipo atual. %s." % (_descricao_tipo(c), c["lei_do_tempo"][0].upper() + c["lei_do_tempo"][1:]),
-                                   "CF, art. 5º, XL; CP, arts. 1º e 2º."))
+                                   "CF, art. 5º, XL; CP, arts. 1º e 2º.", tipo="tipo-reconhecido-pela-descricao-conforme-a-lei-d", ref=nome))
             else:
                 itens.append(_item("info", "%s: artigo reconhecido pela descrição do tipo" % nome,
                                    "O SEEU não registrou o artigo; a descrição \u201c%s\u201d corresponde a este tipo penal%s. Hediondez, VGA e frações foram conferidas com ele." % (
-                                       _descricao_tipo(c), (", vigente na data do fato (%s)" % c.get("data_infracao")) if c.get("data_infracao") else ""), ""))
+                                       _descricao_tipo(c), (", vigente na data do fato (%s)" % c.get("data_infracao")) if c.get("data_infracao") else ""), "", tipo="artigo-reconhecido-pela-descricao-do-tipo", ref=nome))
         if not art:
-            itens.append(_item("info", "%s: artigo não informado" % nome, "O SEEU não registrou o artigo e a descrição do tipo não foi reconhecida: \u201c%s\u201d." % _descricao_tipo(c), "Sem o artigo, hediondez, VGA e frações ficam sem conferência."))
+            itens.append(_item("info", "%s: artigo não informado" % nome, "O SEEU não registrou o artigo e a descrição do tipo não foi reconhecida: \u201c%s\u201d." % _descricao_tipo(c), "Sem o artigo, hediondez, VGA e frações ficam sem conferência.", tipo="artigo-nao-informado", ref=nome))
         if not fato:
-            itens.append(_item("info", "%s: data do fato ausente" % nome, "Sem a data do fato não se aplica a lei do tempo (frações de progressão, art. 115 CP).", "CF, art. 5º, XL; STJ Tema 1354."))
+            itens.append(_item("info", "%s: data do fato ausente" % nome, "Sem a data do fato não se aplica a lei do tempo (frações de progressão, art. 115 CP).", "CF, art. 5º, XL; STJ Tema 1354.", tipo="data-do-fato-ausente", ref=nome))
         if not c.get("transito_processo") and not c.get("transito_mp"):
-            itens.append(_item("info", "%s: trânsito em julgado não informado" % nome, "Sem trânsito o RSPE pode estar em execução provisória; afeta prescrição executória e indulto.", "CP, art. 112, I; STF Tema 788."))
+            itens.append(_item("info", "%s: trânsito em julgado não informado" % nome,
+                               "Sem trânsito o RSPE pode estar em execução provisória; afeta a prescrição executória. O indulto não depende do trânsito "
+                               "(Decretos 12.338/2024 e 12.790/2025, art. 2º; Decreto 11.302/2022, art. 9º).", "CP, art. 112, I; STF Tema 788.", tipo="transito-em-julgado-nao-informado", ref=nome))
         # hediondez
         if hed_lei is True and not hed_seeu:
             itens.append(_item("info", "%s: hediondo/equiparado pela lei, mas o SEEU aplicou fração comum (favorece o apenado)" % nome,
-                               "No RSPE: progressão %s; livramento %s." % (rs.pct_rotulo(c.get("fracao_progressao")), c.get("fracao_livramento")), "Lei 8.072/90, art. 1º; LEP, art. 112; CP, art. 83, V."))
+                               "No RSPE: progressão %s; livramento %s." % (rs.pct_rotulo(c.get("fracao_progressao")), c.get("fracao_livramento")), "Lei 8.072/90, art. 1º; LEP, art. 112; CP, art. 83, V.", tipo="hediondo-equiparado-pela-lei-mas-o-seeu-aplicou", ref=nome))
         elif hed_seeu and rs.hediondo_na_epoca(c) is False:
             _d, _lei = rs.hediondo_desde(c)
             itens.append(_item("alerta", "%s: SEEU tratou como hediondo, mas o fato (%s) é anterior à lei que o tornou hediondo (%s, vigência %s)" % (
                 nome, rs.fmt(fato) if fato else "?", _lei or "?", rs.fmt(_d)),
                 "A hediondez se rege pela lei da data do fato (irretroatividade da lei penal mais gravosa). Reflete no percentual de progressão (comum, não 40%%-60%% ou 70%%+), no livramento (1/3-1/2, não 2/3) e no indulto (art. 1º dos decretos). No RSPE: progressão %s; livramento %s." % (
                     rs.pct_rotulo(c.get("fracao_progressao")), c.get("fracao_livramento")),
-                "CF, art. 5º, XL; CP, art. 2º; Lei 8.072/90 e alterações; STJ, Temas 1084 e 1196."))
+                "CF, art. 5º, XL; CP, art. 2º; Lei 8.072/90 e alterações; STJ, Temas 1084 e 1196.", tipo="seeu-tratou-como-hediondo-mas-o-fato-e-anterior", ref=nome))
         elif hed_lei is False and hed_seeu and ("HEDIONDO" in (c.get("fracao_progressao") or "").upper() or not (lei == "11343" and art in ("33", "34", "35", "36", "37"))):
             itens.append(_item("alerta", "%s: SEEU tratou como hediondo, mas o tipo não consta do rol" % nome,
                                (obs_h or "Verificar a capitulação (qualificadora/§) que justifique a hediondez.") + " No RSPE: progressão %s; livramento %s." % (rs.pct_rotulo(c.get("fracao_progressao")), c.get("fracao_livramento")),
-                               "Lei 8.072/90, art. 1º; LEP, art. 112, § 5º."))
+                               "Lei 8.072/90, art. 1º; LEP, art. 112, § 5º.", tipo="seeu-tratou-como-hediondo-mas-o-tipo-nao-consta", ref=nome))
         elif hed_lei is None and art:
-            itens.append(_item("info", "%s: hediondez depende do parágrafo/inciso" % nome, "Hediondo apenas se: %s. SEEU aplicou %s." % (obs_h, "fração de hediondo" if hed_seeu else "fração comum"), "Lei 8.072/90, art. 1º."))
+            itens.append(_item("info", "%s: hediondez depende do parágrafo/inciso" % nome, "Hediondo apenas se: %s. SEEU aplicou %s." % (obs_h, "fração de hediondo" if hed_seeu else "fração comum"), "Lei 8.072/90, art. 1º.", tipo="hediondez-depende-do-paragrafo-inciso", ref=nome))
         # VGA
         esperado = rg.vga_esperado(art) if art else None
         # só a marcação que prejudica (VGA = S onde o tipo não a exige); VGA = N a mais é favorável e não se aponta
         if esperado and c.get("vga") == "S" and esperado != c.get("vga"):
             itens.append(_item("alerta" if c.get("vga") == "S" else "info", "%s: marcação de violência/grave ameaça diverge do tipo" % nome,
                                "RSPE: VGA = %s; pelo tipo penal esperava-se %s. Reflete nas frações de progressão e no indulto (arts. 9º, I a III dos decretos)." % (c.get("vga"), esperado),
-                               "LEP, art. 112, I e II; Decretos 12.338/2024 e 12.790/2025."))
+                               "LEP, art. 112, I e II; Decretos 12.338/2024 e 12.790/2025.", tipo="marcacao-de-violencia-grave-ameaca-diverge-do-ti", ref=nome))
         # fração de progressão
         f_seeu = _fr_seeu(c.get("fracao_progressao"))
         hed = hed_lei if hed_lei is not None else hed_seeu
@@ -493,34 +526,57 @@ def auditar(r, hoje=None):
             especial = "milicia"
         elif _cp and (art == "121-A" or (art == "121" and rs.re.match(r"\s*§\s*2[ºo°]?\s*,?\s*(inciso\s*)?VI\b", _tp))):
             especial = "feminicidio_primario"
+        # desde 25/03/2026 o VI, b exige organização criminosa ULTRAVIOLENTA: o RSPE não diz; 75% só se o SEEU aplicou (conferir)
+        orcrim_uv = especial == "comando_orcrim" and fato and fato >= date(2026, 3, 25)
+        if orcrim_uv:
+            especial = None
         f_esp, rot, obs = rg.fracao_mais_benefica(fato, hed, morte, vga, reinc, especial=especial)
-        if reinc and not reinc_esp and hed and not especial:
+        if reinc and not reinc_esp and hed:
             for _dref in ([fato, date(2020, 1, 23)] if fato and fato < date(2020, 1, 23) else [fato]):
-                f_esp2, rot2, obs2 = rg.fracao_progressao_esperada(_dref, hed, morte, vga, reinc, reinc_especifico=False)
+                f_esp2, rot2, obs2 = rg.fracao_progressao_esperada(_dref, hed, morte, vga, reinc, reinc_especifico=False, especial=especial)
                 if f_esp2 is not None and (f_esp is None or f_esp2 < f_esp):
                     f_esp, rot, obs = f_esp2, rot2, obs + obs2 + (["retroatividade da lei mais benéfica (Lei 13.964/2019; STJ Tema 1084)"] if _dref != fato else [])
-        if f_seeu is not None and f_esp is not None:
+        # reincidente em crime com VGA: o RSPE não diz se a condenação anterior teve violência; se não teve, a base prevê o
+        # percentual do primário com VGA por analogia (vga_reincidente_generico). Só informa: o esperado segue o vga_reincidente
+        _jan = rg.regime_progressao(fato) if fato else None
+        _vg = (_jan or {}).get("vga_reincidente_generico")
+        if (vga and reinc and not reinc_esp and not hed and not especial and _vg and f_seeu is not None
+                and float(f_seeu) > float(rg.fr(_vg)) + 0.001):
+            itens.append(_item("info", "%s: reincidente em crime com violência ou grave ameaça - percentual se a reincidência não for específica" % nome,
+                               "O SEEU aplica %s. Se a condenação anterior não foi por crime com violência ou grave ameaça, o percentual por analogia "
+                               "in bonam partem é %s (STJ, Tema 1084, aplicado por analogia). O RSPE não informa a natureza da condenação anterior: "
+                               "conferir a certidão de antecedentes. O cálculo da Auditoria não muda." % (rs.pct_rotulo(c.get("fracao_progressao")), _vg),
+                               "LEP, art. 112, III e IV; STJ, Tema 1084.", tipo="reincidente-vga-percentual-se-nao-especifica", ref=nome))
+        if orcrim_uv:
+            itens.append(_item("verificar", "%s: comando de organização criminosa (fato em %s) - 75%% só se a organização for ultraviolenta" % (nome, rs.fmt(fato)),
+                               "Desde 25/03/2026 (Lei 15.358/2026), o art. 112, VI, b, da LEP prevê 75%%, vedado o livramento, ao condenado por exercer o comando de organização "
+                               "criminosa ultraviolenta estruturada para a prática de crime hediondo ou equiparado. O RSPE não informa se a organização é ultraviolenta: "
+                               "sem essa qualificação, vale o percentual do crime. No RSPE: progressão %s." % rs.pct_rotulo(c.get("fracao_progressao")),
+                               "LEP, art. 112, VI, b (redação da Lei 15.358/2026).", tipo="comando-de-organizacao-criminosa-fato-em-75-so-s", ref=nome))
+        if orcrim_uv and f_seeu is not None and abs(float(f_seeu) - 0.75) <= 0.01:
+            pass  # 75% aplicado pelo SEEU: depende da qualificação "ultraviolenta" (item acima)
+        elif f_seeu is not None and f_esp is not None:
             if abs(float(f_seeu) - float(f_esp)) > 0.01:
                 itens.append(_item("alerta" if float(f_seeu) > float(f_esp) else "info",
                                ("%s: percentual de progressão do SEEU (%s) maior que o legal (%s)" if float(f_seeu) > float(f_esp) else "%s: percentual de progressão do SEEU (%s) menor que o esperado (%s) - favorece o apenado") % (nome, rs.pct_rotulo(c.get("fracao_progressao")), rs.pct_rotulo(rot)),
                                "Fato em %s; %s; %s; %s. %s" % (rs.fmt(fato) if fato else "?", "reincidente" if reinc else "primário", "com VGA" if vga else "sem VGA",
                                                                "hediondo" if hed else "comum", rs.pct_texto(" ".join(obs))),
-                               "LEP, art. 112 (redação vigente na data do fato; lei posterior só retroage se mais benéfica - CF, art. 5º, XL; STJ Temas 1084, 1196 e 1354; STF Tema 1169)."))
+                               "LEP, art. 112 (redação vigente na data do fato; lei posterior só retroage se mais benéfica - CF, art. 5º, XL; STJ Temas 1084, 1196 e 1354; STF Tema 1169).", tipo="percentual-de-progressao-diverge", ref=nome))
             elif esp_ok is False:
                 pass  # o alerta de reincidência específica já trata do 60%
             else:
                 nota = " ".join(obs) or "Conforme a lei da data do fato."
                 if abs(float(f_seeu) - float(f_esp)) > 0.001:
                     nota += " (diferença marginal 16,67% x 16%: STJ Tema 1354 admite o percentual mais benéfico)"
-                itens.append(_item("ok", "%s: percentual de progressão confere (%s)" % (nome, rs.pct_rotulo(c.get("fracao_progressao"))), rs.pct_texto(nota), "LEP, art. 112."))
+                itens.append(_item("ok", "%s: percentual de progressão confere (%s)" % (nome, rs.pct_rotulo(c.get("fracao_progressao"))), rs.pct_texto(nota), "LEP, art. 112.", tipo="percentual-de-progressao-confere", ref=nome))
         # fração de livramento
         if pena_total and pena_total < rg.carregar().get("livramento", {}).get("pena_minima_anos", 2) * rs.DIAS_ANO and c.get("fracao_livramento"):
             itens.append(_item("info", "%s: livramento condicional com pena total inferior a 2 anos" % nome,
                                "O RSPE calcula fração de livramento (%s), mas o benefício exige pena igual ou superior a 2 anos (pena total %s)." % (c.get("fracao_livramento"), rs.dias_para_pena(pena_total)),
-                               "CP, art. 83, caput."))
+                               "CP, art. 83, caput.", tipo="livramento-condicional-com-pena-total-inferior-a", ref=nome))
         fl_seeu = _fr_seeu(c.get("fracao_livramento"))
-        trafico = lei == "11343" and art in ("33", "34", "35", "36", "37") and not (art == "33" and "§ 4" in (c.get("tipo_penal") or ""))
-        fl_esp, rotl = rg.fracao_livramento_esperada(hed, reinc_ef, trafico)
+        trafico = _trafico(c)
+        fl_esp, rotl = rg.fracao_livramento_esperada(hed, reinc_ef, trafico, _trafico_pessoas(c))
         jv = rg.regime_progressao(fato) if fato else None
         chave_m = "hediondo_morte_reincidente" if reinc_ef else "hediondo_morte_primario"
         lc_vedado = bool(jv and hed and morte and chave_m in (jv.get("vedado_lc") or []))
@@ -535,19 +591,27 @@ def auditar(r, hoje=None):
             fl_esp, rotl = Fraction(1, 1), "vedado (LEP, art. 112, VI, a/VIII)"
         elif lc_vedado_esp:
             fl_esp, rotl = Fraction(1, 1), "vedado (%s)" % rg.ESPECIAIS.get(especial, especial)
-        if fl_seeu is not None and abs(float(fl_seeu) - float(fl_esp)) > 0.005:
+        if orcrim_uv and fl_seeu is not None and float(fl_seeu) >= 1:
+            # a vedação do livramento (VI, b) depende da mesma qualificação "ultraviolenta" que o RSPE não informa
+            itens.append(_item("verificar", "%s: livramento vedado pelo SEEU (1/1) - só se a organização for ultraviolenta" % nome,
+                               "Desde 25/03/2026, o art. 112, VI, b, da LEP veda o livramento ao comando de organização criminosa ultraviolenta. "
+                               "O RSPE não informa essa qualificação: sem ela, vale a fração de livramento do crime (%s)." % rotl,
+                               "LEP, art. 112, VI, b (redação da Lei 15.358/2026); CP, art. 83.", tipo="livramento-vedado-pelo-seeu-1-1-so-se-a-organiza", ref=nome))
+        elif fl_seeu is not None and abs(float(fl_seeu) - float(fl_esp)) > 0.005:
             itens.append(_item("alerta" if float(fl_seeu) > float(fl_esp) else "info",
                                ("%s: fração de livramento do SEEU (%s) maior que a legal (%s)" if float(fl_seeu) > float(fl_esp) else "%s: fração de livramento do SEEU (%s) menor que a esperada (%s) - favorece o apenado") % (nome, c.get("fracao_livramento"), rotl),
-                               "%s; %s." % ("reincidente" if reinc_ef else "primário", "hediondo/equiparado" if hed else ("art. 44, p. ú., Lei 11.343/06" if trafico else "comum")), "CP, art. 83; Lei 11.343/06, art. 44, p. ú."))
+                               "%s; %s." % ("reincidente" if reinc_ef else "primário", "hediondo/equiparado" if hed else ("art. 44, p. ú., Lei 11.343/06" if trafico else
+                                                                                                  "tráfico de pessoas, art. 83, V, CP" if _trafico_pessoas(c) else "comum")), "CP, art. 83; Lei 11.343/06, art. 44, p. ú.", tipo="fracao-de-livramento-diverge", ref=nome))
         if lc_vedado:
             itens.append(_item("info", "%s: hediondo com resultado morte, fato em %s - livramento vedado" % (nome, rs.fmt(fato)),
-                               "O RSPE aplica 1/1 no livramento, como manda a lei da data do fato (LEP, art. 112, VI, a, e VIII, na redação da Lei 13.964/2019). "
-                               "Para fatos anteriores a 23/01/2020, o STJ admite o 50%% sem a vedação ao livramento (Tema 1196; CP, art. 83, V); "
-                               "a questão está pendente no STF (Tema 1319, repercussão geral reconhecida, sem julgamento de mérito).",
-                               "LEP, art. 112; STJ Tema 1196; STF Tema 1319 (pendente)."))
+                               ("O RSPE aplica 1/1 no livramento, como manda a lei da data do fato (LEP, art. 112, VI, a, e VIII, na redação da %s). "
+                                "Para fatos anteriores a 23/01/2020, o STJ admite o 50%% sem a vedação ao livramento (Tema 1196; CP, art. 83, V); "
+                                "a questão está pendente no STF (Tema 1319, repercussão geral reconhecida, sem julgamento de mérito).") % (
+                                   "Lei 15.358/2026" if fato and fato >= date(2026, 3, 25) else "Lei 13.964/2019"),
+                               "LEP, art. 112; STJ Tema 1196; STF Tema 1319 (pendente).", tipo="hediondo-com-resultado-morte-fato-em-livramento", ref=nome))
         elif lc_vedado_esp:
             itens.append(_item("info", "%s: %s, fato em %s - livramento vedado" % (nome, rg.ESPECIAIS.get(especial, especial), rs.fmt(fato)),
-                               "A lei da data do fato veda o livramento condicional nesta hipótese; o 1/1 do SEEU é o correto.", "LEP, art. 112, VI-A e VI, b e d."))
+                               "A lei da data do fato veda o livramento condicional nesta hipótese; o 1/1 do SEEU é o correto.", "LEP, art. 112, VI-A e VI, b e d.", tipo="fato-em-livramento-vedado", ref=nome))
         # reincidência: precisa de condenação anterior transitada antes do fato (consolidado após o laço)
         if reinc and fato:
             anteriores = [o for o in crimes if o is not c and rs.to_date(o.get("transito_processo") or o.get("transito_mp") or "") and rs.to_date(o.get("transito_processo") or o.get("transito_mp")) < fato]
@@ -557,14 +621,14 @@ def auditar(r, hoje=None):
         if nasc:
             i_fato = fato.year - nasc.year - ((fato.month, fato.day) < (nasc.month, nasc.day)) if fato else None
             if i_fato is not None and i_fato < 21:
-                itens.append(_item("verificar", "%s: menor de 21 anos no fato (%d) - prescrição pela metade" % (nome, i_fato), "Conferir se o SEEU/juízo considerou o art. 115 nos cálculos de prescrição.", "CP, art. 115."))
+                itens.append(_item("verificar", "%s: menor de 21 anos no fato (%d) - prescrição pela metade" % (nome, i_fato), "Conferir se o SEEU/juízo considerou o art. 115 nos cálculos de prescrição.", "CP, art. 115.", tipo="menor-de-21-anos-no-fato-prescricao-pela-metade", ref=nome))
 
     if reinc_sem_base:
         itens.append(_item("verificar", "Marcado reincidente sem condenação anterior transitada no RSPE",
                            "Nenhum processo deste RSPE transitou em julgado antes dos fatos (%s). A reincidência pode vir de condenação não listada aqui: "
                            "conferir a certidão de antecedentes e o período depurador de 5 anos (art. 64, I). Afeta frações de progressão, livramento e indulto." % (
                                rs.fmt(min(reinc_sem_base)) if len(set(reinc_sem_base)) == 1 else "de %s a %s" % (rs.fmt(min(reinc_sem_base)), rs.fmt(max(reinc_sem_base)))),
-                           "CP, arts. 63 e 64, I."))
+                           "CP, arts. 63 e 64, I.", tipo="marcado-reincidente-sem-condenacao-anterior-tran"))
     # ---------------- 3. data-base e faltas ----------------
     regs = [i for i in incidentes if "REGIME" in (i.get("tipo") or "").upper() and i.get("situacao") == "CONCEDIDO"
             and rs.re.search(r"PROGRESS|REGRESS", i.get("complemento") or "", rs.re.I)]
@@ -577,13 +641,13 @@ def auditar(r, hoje=None):
         if "PROGRESS" in (i.get("complemento") or "").upper() and i.get("data_decisao") and i.get("data_decisao") == i.get("data_referencia"):
             itens.append(_item("info", "Progressão com data-base igual à data da decisão (%s)" % i.get("data_decisao"),
                                "A data-base da progressão seguinte deve ser a data em que os requisitos foram preenchidos, não a da decisão que a deferiu; se o lapso já estava vencido antes, a data-base pode ser anterior.",
-                               "STJ, Tema 1165 (REsp 1.973.589)."))
+                               "STJ, Tema 1165 (REsp 1.973.589).", tipo="progressao-com-data-base-igual-a-data-da-decisao"))
             break
     db_seeu = rs.to_date(r.get("data_base_seeu") or "")
     if db_seeu and ult and db_seeu < ult[0]:
         itens.append(_item("alerta", "Data-base de progressão anterior à última alteração de regime",
                            "Data-base impressa: %s; última alteração de regime: %s (%s)." % (rs.fmt(db_seeu), rs.fmt(ult[0]), ult[1].get("complemento")),
-                           "LEP, art. 112, § 6º (falta grave reinicia pela remanescente); STJ Tema 1006 (a unificação de penas não altera a data-base); STJ Tema 1165 (data-base é a do preenchimento dos requisitos, não a da decisão)."))
+                           "LEP, art. 112, § 6º (falta grave reinicia pela remanescente); STJ Tema 1006 (a unificação de penas não altera a data-base); STJ Tema 1165 (data-base é a do preenchimento dos requisitos, não a da decisão).", tipo="data-base-de-progressao-anterior-a-ultima-altera"))
     # data-base x eventos que a justificam: última prisão/início do cumprimento, progressão/regressão ou falta grave homologada
     if db_seeu:
         marcos = []
@@ -623,17 +687,17 @@ def auditar(r, hoje=None):
                                "Houve fuga em %s e recaptura em %s. Na fuga, a nova data-base é a da recaptura, porque a falta é permanente, "
                                "mas a interrupção depende de apuração em procedimento disciplinar com defesa técnica e de homologação judicial, "
                                "e o RSPE não registra esse incidente. Sem homologação, a data-base volta a ser %s e a progressão se antecipa; "
-                               "a perda de até 1/3 dos %d dias remidos também depende dessa apuração." % (
+                               "a perda de até 1/3 dos %s remidos também depende dessa apuração." % (
                                    rs.fmt(_fuga[-1]), rs.fmt(db_seeu), ("%s (%s)" % (rs.fmt(ant2[0]), ant2[1]) if (ant2 := next((m for m in sorted(marcos, key=lambda x: x[0], reverse=True) if m[0] < _fuga[-1]), None)) else "a anterior"),
-                                   rs.saldo_remidos_num(r.get("saldo_remidos"))[0]),
-                               "LEP, arts. 50, II, 57, 59, 118 e 127; Súmulas 533, 534 e 535/STJ; STJ, Tema 709."))
+                                   rs.pl(rs.saldo_remidos_num(r.get("saldo_remidos"))[0], "dia", "dias")),
+                               "LEP, arts. 50, II, 57, 59, 118 e 127; Súmulas 533, 534 e 535/STJ; STJ, Tema 709.", tipo="data-base-movida-para-a-recaptura-sem-falta-homo"))
         elif bate:
-            itens.append(_item("ok", "Data-base (%s) confere com o RSPE: %s" % (rs.fmt(db_seeu), bate[0][1]), "", "LEP, art. 112."))
+            itens.append(_item("ok", "Data-base (%s) confere com o RSPE: %s" % (rs.fmt(db_seeu), bate[0][1]), "", "LEP, art. 112.", tipo="data-base-confere-com-o-rspe"))
         elif unif:
             itens.append(_item("alerta", "Data-base (%s) coincide com a soma/unificação das penas" % rs.fmt(db_seeu),
                                "Não há prisão, alteração de regime ou falta grave homologada nessa data; a data coincide com o incidente de %s. "
                                "A unificação não altera a data-base: ela continua sendo a da última prisão, progressão ou falta grave." % (unif[0].get("tipo") or "").lower(),
-                               "STJ, Tema 1006 (REsp 1.753.509); LEP, art. 112."))
+                               "STJ, Tema 1006 (REsp 1.753.509); LEP, art. 112.", tipo="data-base-coincide-com-a-soma-unificacao-das-pen"))
         else:
             ant = sorted([m for m in marcos if m[0] <= db_seeu], key=lambda m: m[0])
             itens.append(_item("verificar", "Inconsistência da data-base (%s): sem prisão, alteração de regime ou falta grave homologada nessa data" % rs.fmt(db_seeu),
@@ -641,7 +705,7 @@ def auditar(r, hoje=None):
                                "Último evento anterior no RSPE: %s. Data-base posterior ao último evento atrasa a progressão: verificar no processo a origem "
                                "(ex.: falta ainda não homologada, que não pode mover a data-base)." % (
                                    rs.fmt(db_seeu), ("%s em %s" % (ant[-1][1], rs.fmt(ant[-1][0]))) if ant else "nenhum"),
-                               "LEP, arts. 112 e 118; STJ, Temas 1006 e 1165."))
+                               "LEP, arts. 112 e 118; STJ, Temas 1006 e 1165.", tipo="inconsistencia-da-data-base-sem-prisao-alteracao"))
     # falta grave não interrompe o livramento condicional, o indulto nem a comutação
     _dbl = rs.to_date(r.get("livramento_data_base_seeu") or "")
     _faltas_d = sorted(d for d in [rs.to_date(e.get("data") or "") for e in r.get("_eventos", [])
@@ -650,17 +714,17 @@ def auditar(r, hoje=None):
         itens.append(_item("alerta", "Data-base do livramento (%s) alterada por falta grave" % rs.fmt(_dbl),
                            "A falta grave interrompe o prazo da progressão, não o do livramento condicional, nem os do indulto e da comutação. "
                            "A data-base do livramento deve continuar a do início do cumprimento.",
-                           "Súmulas 441 e 535/STJ; STJ, Tema 709; LEP, art. 112, § 6º."))
+                           "Súmulas 441 e 535/STJ; STJ, Tema 709; LEP, art. 112, § 6º.", tipo="data-base-do-livramento-alterada-por-falta-grave"))
     # regressão depois do deferimento do livramento: conferir o desfecho da falta e do livramento
     _dls = [rs.to_date(i.get("data_referencia") or i.get("data_decisao") or i.get("complemento") or "") for i in incidentes
-            if i.get("situacao") == "CONCEDIDO" and rs.e_incidente_livramento(i)]
+            if rs.e_concessao_livramento(i)]
     _dls = [d for d in _dls if d]
     _lc_reg = bool(ult and _dls and "REGRESS" in (ult[1].get("complemento") or "").upper() and ult[0] > max(_dls))
     if _lc_reg:
         _dlc = max(_dls)
         _int = [(rs.to_date(e.get("data") or ""), (e.get("motivo") or "").strip().lower()) for e in eventos
                 if "INTERRUP" in (e.get("tipo") or "").upper() and (rs.to_date(e.get("data") or "") or date.min) > _dlc]
-        _rev = any("REVOG" in ((j.get("tipo") or "") + " " + (j.get("complemento") or "")).upper() for j in incidentes
+        _rev = any(rs.e_revogacao_livramento(j) for j in incidentes
                    if (rs.to_date(j.get("data_referencia") or j.get("data_decisao") or "") or date.min) > _dlc)
         _cautelar = "CAUTELAR" in (ult[1].get("complemento") or "").upper()
         itens.append(_item("verificar", "%s em %s após o livramento condicional (deferido em %s): verificar o desfecho" % (
@@ -673,29 +737,44 @@ def auditar(r, hoje=None):
                                "%s em %s" % ("regressão cautelar" if _cautelar else "regressão", rs.fmt(ult[0])),
                                "" if _rev else ", sem registro de suspensão ou revogação do livramento",
                                (" (o RSPE adota %s)" % r.get("data_base")) if r.get("data_base") else ""),
-                           "CP, arts. 86 a 90; LEP, arts. 118, 145 e 146; Súmula 617/STJ; STJ, Tema 1006."))
+                           "CP, arts. 86 a 90; LEP, arts. 118, 145 e 146; Súmula 617/STJ; STJ, Tema 1006.", tipo="em-apos-o-livramento-condicional-deferido-em-ver", ref="Regressão cautelar" if _cautelar else "Regressão"))
     if ult and "REGRESS" in (ult[1].get("complemento") or "").upper() and not _lc_reg:
         itens.append(_item("info", "Regressão registrada em %s" % rs.fmt(ult[0]),
                            "Se decorreu de falta grave, a data-base da progressão é a data da falta e o requisito recomeça sobre a pena remanescente; a falta também impede LC (12 meses) e indulto (art. 6º dos decretos).",
-                           "LEP, arts. 112, § 6º, 118 e 127; CP, art. 83, III, b."))
+                           "LEP, arts. 112, § 6º, 118 e 127; CP, art. 83, III, b.", tipo="regressao-registrada-em"))
     idade = None
     if nasc:
         idade = hoje.year - nasc.year - ((hoje.month, hoje.day) < (nasc.month, nasc.day))
         if idade >= 70:
-            itens.append(_item("verificar", "Idade %d anos: prisão domiciliar no regime aberto (LEP, art. 117, I); conferir a idade na data da sentença para o art. 115 do CP" % idade,
+            itens.append(_item("verificar", "Idade %s: prisão domiciliar no regime aberto (LEP, art. 117, I); conferir a idade na data da sentença para o art. 115 do CP" % rs.pl(idade, "ano", "anos"),
                                "Art. 117, I, da LEP: recolhimento em residência particular do beneficiário do regime aberto maior de 70 anos. "
                                "Art. 115 do CP: prazos de prescrição pela metade só se era maior de 70 anos na data da sentença (a aba Prescrição calcula).",
-                               "CP, art. 115; LEP, art. 117, I."))
+                               "CP, art. 115; LEP, art. 117, I.", tipo="idade-prisao-domiciliar-no-regime-aberto-lep-art"))
         # § 2º, I, dos decretos: maior de 60 anos em 25/12 do ano do decreto (medido na data de cada decreto)
         _i60 = []
         for _ano, _ref in sorted(rs.DECRETOS.items()):
             _id = _ref.year - nasc.year - ((_ref.month, _ref.day) < (nasc.month, nasc.day))
             if _id >= 60:
-                _i60.append("%d anos em %s" % (_id, rs.fmt(_ref)))
+                _i60.append("%s em %s" % (rs.pl(_id, "ano", "anos"), rs.fmt(_ref)))
         if _i60:
             itens.append(_item("verificar", "Idade para o indulto: lapsos pela metade (%s)" % "; ".join(_i60),
-                               "Decretos 12.338/2024 e 12.790/2025, art. 9º, § 2º, I (pessoas maiores de sessenta anos): os lapsos dos incisos I a XI caem pela metade.", ""))
+                               "Decretos 12.338/2024 e 12.790/2025, art. 9º, § 2º, I (pessoas maiores de sessenta anos): os lapsos dos incisos I a XI caem pela metade.", "", tipo="idade-para-o-indulto-lapsos-pela-metade"))
 
+    # LEP, art. 112, §§ 3º e 4º: progressão com 1/8 para a mulher gestante, mãe ou responsável por criança ou pessoa com
+    # deficiência - o RSPE não informa sexo nem filhos; só se aponta quando os demais requisitos objetivos batem
+    _fr_seeu_max = max((_fr_seeu(c.get("fracao_progressao")) or 0 for c in ativos), default=0)
+    if (ativos and not any(c.get("vga") == "S" for c in ativos)
+            and not any(c.get("comando_orcrim") == "S" or rs.num_lei(c.get("lei")) == "12850" for c in ativos)
+            and not any(c.get("reincidente_comum") == "S" or c.get("reincidente_especifico") == "S" for c in ativos)
+            and _fr_seeu_max and float(_fr_seeu_max) > 0.125 + 0.001):
+        # texto dos requisitos: o da base jurídica (progressao.art112_par3_mulheres), editável
+        _txt18 = (rg.carregar() or {}).get("progressao", {}).get("art112_par3_mulheres") or (
+            "Se for mulher gestante, mãe ou responsável por criança ou pessoa com deficiência, a progressão exige 1/8 da pena, desde que: "
+            "sem violência ou grave ameaça, crime não cometido contra filho ou dependente, primária e com bom comportamento, e sem integrar "
+            "organização criminosa (o benefício é revogado por novo crime doloso ou falta grave).")
+        itens.append(_item("info", "Progressão especial da mulher (1/8): a verificar",
+                           "%s O RSPE aplica %s." % (_txt18, rs.pct(_fr_seeu_max)),
+                           "LEP, art. 112, §§ 3º e 4º.", tipo="progressao-especial-da-mulher-1-8-a-verificar"))
     # regime impresso no RSPE x livramento em curso
     _lc, _dl = rs.livramento_em_curso(r, incidentes)
     if _lc:
@@ -705,7 +784,7 @@ def auditar(r, hoje=None):
                 "O SEEU imprime o livramento como vigente, mas o RSPE registra: %s. Conferir nos autos se o livramento foi suspenso ou revogado "
                 "(CP, arts. 86 a 88; LEP, arts. 140 a 145) ou se o período de prova se esgotou sem revogação, caso em que a pena está extinta (CP, art. 90). "
                 "Enquanto isso, progressão, livramento, indulto e extinção ficam como 'a verificar'." % "; ".join(_duv),
-                "CP, arts. 86 a 90; LEP, arts. 140 a 145."))
+                "CP, arts. 86 a 90; LEP, arts. 140 a 145.", tipo="livramento-condicional-com-situacao-incerta-no-r"))
     # ---------------- 4. marcos vencidos e prescrição ----------------
     import rspe_view as _rv
     _est = _rv.estado_execucao(r)
@@ -721,15 +800,23 @@ def auditar(r, hoje=None):
                            and (rs.to_date(i.get("data_decisao") or "") or date.min) >= d]
             if not pedidos_pos:
                 itens.append(_item("alerta", "%s vencida em %s sem decisão posterior no RSPE" % (nome_marco, rs.fmt(d)),
-                                   "Lapso atingido há %d dias e nenhum incidente decidido depois dessa data." % (hoje - d).days, "LEP, art. 112; CP, art. 83."))
+                                   "Lapso atingido há %s e nenhum incidente decidido depois dessa data." % rs.pl((hoje - d).days, "dia", "dias"), "LEP, art. 112; CP, art. 83.", tipo="vencida-em-sem-decisao-posterior-no-rspe", ref=nome_marco))
     presc = rp.analisar(r, hoje)
     for l in presc["presc_linhas"]:
-        if (l.get("ppe_status") or "").startswith("Pena cumprida por detração"):
-            itens.append(_item("alerta", "%s: pena cumprida por detração" % l["crime"], l.get("ppe_detalhe", ""), "CP, art. 42; LEP, art. 66, II."))
-        elif l.get("ppe_cor") == "vermelho":
-            itens.append(_item("alerta", "%s: prescrição da pretensão executória aparente (%s)" % (l["crime"], l.get("ppe_previsao")), l.get("ppe_status", ""), "CP, arts. 110, 112, 113 e 117, V; STF Tema 788."))
+        rot = l.get("rotulo") or l["crime"]
+        if l.get("ppe_detracao_cobre"):
+            itens.append(_item("verificar", "%s: detração iguala ou supera a pena do processo - conferir extinção pelo cumprimento" % rot,
+                               "Custódia anterior ao trânsito de %s e pena do processo de %s. A mesma prisão pode servir a várias condenações (a detração vale uma vez só na "
+                               "pena unificada); se computada nesta condenação, cabe extinção pelo cumprimento." % (rs.dias_para_pena(l.get("ppe_detracao_dias") or 0), l.get("ppe_pena_processo") or l.get("pena")),
+                               "CP, art. 42; LEP, arts. 66, II, e 111.", tipo="pena-cumprida-por-detracao", ref=rot))
+        if l.get("ppe_cor") == "vermelho":
+            itens.append(_item("alerta", "%s: prescrição da pretensão executória aparente (%s)" % (rot, l.get("ppe_previsao")), l.get("ppe_resumo") or l.get("ppe_status", ""), "CP, arts. 110, 112, 113, 117, V, e 119; STF Tema 788.", tipo="prescricao-da-pretensao-executoria-aparente", ref=rot))
+        elif (l.get("ppe_status") or "").startswith("A VERIFICAR"):
+            itens.append(_item("verificar", "%s: prescrição executória a verificar - saldo na evasão depende da imputação do cumprimento" % rot,
+                               (l.get("ppe_resumo") or "") + (" Falta: " + "; ".join(l.get("ppe_faltam") or []) + "." if l.get("ppe_faltam") else ""),
+                               "CP, arts. 76, 113 e 119; LEP, art. 111.", tipo="prescricao-executoria-a-verificar-saldo-na-evasao", ref=rot))
         if l.get("retro_cor") == "vermelho":
-            itens.append(_item("alerta", "%s: prescrição da pretensão punitiva aparente" % l["crime"], l.get("retro_status", ""), "CP, arts. 109, 110, § 1º, e 117."))
+            itens.append(_item("alerta", "%s: prescrição da pretensão punitiva aparente" % rot, l.get("retro_status", ""), "CP, arts. 109, 110, § 1º, e 117.", tipo="prescricao-da-pretensao-punitiva-aparente", ref=rot))
     # datas que o RSPE não traz: o programa não presume - apontar para verificar na ação penal
     falt = {}
     for l in presc["presc_linhas"]:
@@ -740,19 +827,19 @@ def auditar(r, hoje=None):
         itens.append(_item("verificar", "Prescrição não aferível por completo: datas ausentes no RSPE - verificar na ação penal",
                            "; ".join("processo %s: %s" % (p, ", ".join(sorted(v))) for p, v in sorted(falt.items())) +
                            ". O programa não presume datas: sem fato, recebimento da denúncia, sentença e trânsito em julgado, a prescrição daquele trecho não é calculada.",
-                           "CP, arts. 109 a 117."))
+                           "CP, arts. 109 a 117.", tipo="prescricao-nao-aferivel-por-completo-datas-ausen"))
 
     # ---------------- 5. indulto / comutação sem registro ----------------
     if True:  # 2022 tem exclusões próprias (art. 7º); 2024/2025 vêm "vedado" quando há impeditivo
         for ano in ("2022", "2024", "2025"):
             st = r.get("indulto_%s_status" % ano)
             if st == "possivel" and not rs.decisoes_decreto(incidentes, ano, "INDULTO"):
-                itens.append(_item("alerta", "Indulto %s possível sem incidente no RSPE" % ano, r.get("indulto_%s" % ano, ""), "Decreto %s." % {"2022": "11.302/2022, arts. 4º e 5º", "2024": "12.338/2024, art. 9º", "2025": "12.790/2025, art. 9º"}[ano]))
+                itens.append(_item("alerta", "Indulto %s possível sem incidente no RSPE" % ano, r.get("indulto_%s" % ano, ""), "Decreto %s." % {"2022": "11.302/2022, arts. 4º e 5º", "2024": "12.338/2024, art. 9º", "2025": "12.790/2025, art. 9º"}[ano], tipo="indulto-possivel-sem-incidente-no-rspe", ref=ano))
             elif st == "verificar":
-                itens.append(_item("info", "Indulto %s: hipóteses a verificar" % ano, r.get("indulto_%s" % ano, ""), "Depende de dado que o RSPE não traz (programa de egressos, estudo, saídas, valor do bem, saúde)."))
+                itens.append(_item("info", "Indulto %s: hipóteses a verificar" % ano, r.get("indulto_%s" % ano, ""), "Depende de dado que o RSPE não traz (programa de egressos, estudo, saídas, valor do bem, saúde).", tipo="indulto-hipoteses-a-verificar", ref=ano))
         for ano, dec in (("2024", "12.338/2024"), ("2025", "12.790/2025")):
             if (r.get("comutacao_%s" % ano) or "").startswith("POSSÍVEL") and not rs.decisoes_decreto(incidentes, ano, "COMUTA"):
-                itens.append(_item("alerta", "Comutação %s possível sem incidente no RSPE" % ano, r.get("comutacao_%s" % ano, ""), "Decreto %s, art. 13." % dec))
+                itens.append(_item("alerta", "Comutação %s possível sem incidente no RSPE" % ano, r.get("comutacao_%s" % ano, ""), "Decreto %s, art. 13." % dec, tipo="comutacao-possivel-sem-incidente-no-rspe", ref=ano))
     # hediondez superveniente: impeditivo pelo STJ (data do decreto), mas há tese defensiva no STF
     sup = [c for c in ativos if any(rs.e_hediondo(c, _ref) for _ref in rs.DECRETOS.values()) and not rs.e_hediondo(c)]
     if sup:
@@ -760,18 +847,18 @@ def auditar(r, hoje=None):
                            "Não era hediondo na data do fato; é na data do decreto. "
                            "STJ: afere na data do decreto e veda. "
                            "STF, a favor: 2ª Turma (RHC 267.297 AgR e HC 273.296 AgR) e monocráticas (RE 1.572.734, HC 258.516, RHC 269.076, HC 271.716, RE 1.607.670). "
-                           "Em sentido contrário no STF, monocrática: RHC 273.867. "
+                           "Em sentido contrário no STF: 1ª Turma, RHC 273.867 AgR (24/08/2026; antes, monocrática de 13/07/2026), aferição na data do decreto. "
                            "TJMS: a 2ª Câmara Criminal dá provimento parcial para reanálise (1602006-93.2026, 1602467-65.2026, 1603697-45.2026); a 1ª e a 3ª seguem o STJ. "
                            "Frações de progressão: pela data do fato.",
-                           "Decretos de indulto, art. 1º, I; CF, art. 5º, XL; CP, art. 2º."))
+                           "Decretos de indulto, art. 1º, I; CF, art. 5º, XL; CP, art. 2º.", tipo="hediondez-posterior-ao-fato-indulto-comutacao-po"))
     # violência doméstica: art. 129 §§ 9º-11 sem sinal de que a vítima é mulher
     for c in ativos:
         vd = rs.violencia_domestica(c)
         if vd and vd[0] == "provavel":
             itens.append(_item("verificar", "%s: violência doméstica - confirmar se a vítima é mulher" % _nome(c),
                                "Se a vítima for mulher, o crime é impeditivo de indulto e comutação (art. 1º, XVII, dos Decretos 12.338/2024 e 12.790/2025; "
-                               "art. 7º, III, c, do Decreto 11.302/2022). Enquanto não confirmado, o indulto fica \"a verificar\".",
-                               "Decretos de indulto, art. 1º; Lei 11.340/06."))
+                               "art. 7º, II, do Decreto 11.302/2022). Enquanto não confirmado, o indulto fica \"a verificar\".",
+                               "Decretos de indulto, art. 1º; Lei 11.340/06.", tipo="violencia-domestica-confirmar-se-a-vitima-e-mulh", ref=_nome(c)))
     # presunção de hipossuficiência (Defensoria): multa e reparação do dano nunca bloqueiam benefício no programa
     crimes_ativos = [c for c in crimes if not c.get("extinto", "").upper().startswith("S")]
     if any(re.search(r"\b[Ee]\s+Multa", c.get("tipo_penal") or "") for c in crimes_ativos):
@@ -779,24 +866,25 @@ def auditar(r, hoje=None):
                            "Multa pendente: a extinção da punibilidade exige prova da impossibilidade de pagamento, ainda que parcelado (STF ADI 7.032, vinculante; STJ Tema 931). "
                            "Instruir com elementos concretos (declaração de hipossuficiência, ausência de bens, remuneração do trabalho prisional): a mera assistência pela Defensoria "
                            "foi tida por insuficiente pelo STJ (REsp 2.055.935). No indulto, a incapacidade econômica é presumida para o assistido da Defensoria (art. 12, § 2º, I, dos decretos).",
-                           "STF ADI 7.032; STJ Tema 931 (rev. 28/02/2024); Decretos 12.338/2024 e 12.790/2025, art. 12, § 2º, I."))
+                           "STF ADI 7.032; STJ Tema 931 (rev. 28/02/2024); Decretos 12.338/2024 e 12.790/2025, art. 12, § 2º, I.", tipo="pena-de-multa-cominada-extincao-cabivel-se-compr"))
     if any(rs.crime_patrimonial(c) and c.get("vga") != "S" for c in crimes_ativos):
-        itens.append(_item("info", "Crime patrimonial sem VGA: reparação do dano presumida impossível",
-                           "Livramento (CP, art. 83, IV) e indulto (art. 9º, XV) não são bloqueados pela ausência de reparação; a impossibilidade econômica é presumida para o assistido da Defensoria.",
-                           "CP, art. 83, IV ('salvo efetiva impossibilidade'); Decretos 12.338/2024 e 12.790/2025, art. 9º, XV c/c art. 12, § 2º, I."))
-    if r.get("falta_12m") == "SIM":
-        itens.append(_item("verificar", "Indício de falta nos últimos 12 meses", r.get("falta_12m_detalhe", ""), "Reflexo em LC (CP, art. 83, III, b), indulto (art. 6º dos decretos) e progressão (LEP, art. 112, §§ 6º e 7º)."))
+        itens.append(_item("info", "Crime patrimonial sem VGA: reparação do dano",
+                           "Indulto, art. 9º, XV: reparação dispensada (art. 12, § 2º, I: presunção para o assistido da Defensoria). "
+                           "Livramento (CP, art. 83, IV): a efetiva impossibilidade de reparar deve ser demonstrada - o STJ exige prova (AgRg no HC 799.167). Instruir o pedido.",
+                           "CP, art. 83, IV ('salvo efetiva impossibilidade'); Decretos 12.338/2024 e 12.790/2025, art. 9º, XV c/c art. 12, § 2º, I; STJ, AgRg no HC 799.167.", tipo="crime-patrimonial-sem-vga-reparacao-do-dano"))
+    if r.get("falta_12m") in ("SIM", "A APURAR"):
+        itens.append(_item("verificar", "Indício de falta nos últimos 12 meses", r.get("falta_12m_detalhe", ""), "Reflexo em LC (CP, art. 83, III, b), indulto (art. 6º dos decretos) e progressão (LEP, art. 112, §§ 6º e 7º).", tipo="indicio-de-falta-nos-ultimos-12-meses"))
 
     # ---------------- 6. eventos / detração ----------------
     periodos = rs.periodos_custodia(eventos)
     if not periodos and (cumprida or 0) > 0:
-        itens.append(_item("verificar", "Pena cumprida sem evento de prisão no RSPE", "O relatório indica %s cumpridos, mas não lista eventos de início de cumprimento." % rs.dias_para_pena(cumprida), "Conferir a guia e a detração (CP, art. 42)."))
+        itens.append(_item("verificar", "Pena cumprida sem evento de prisão no RSPE", "O relatório indica %s cumpridos, mas não lista eventos de início de cumprimento." % rs.dias_para_pena(cumprida), "Conferir a guia e a detração (CP, art. 42).", tipo="pena-cumprida-sem-evento-de-prisao-no-rspe"))
     import rspe_view as _rv2
     if _rv2.nao_iniciou(r):
         itens.append(_item("info", "Não iniciou o cumprimento da pena", "O RSPE não registra início de cumprimento definitivo (só prisão provisória encerrada, ou nenhuma). "
-                           "A prescrição executória corre pela pena integral (menos a detração) desde o trânsito.", "CP, arts. 112, I, e 113."))
+                           "A prescrição executória corre pela pena integral (menos a detração) desde o trânsito.", "CP, arts. 112, I, e 113.", tipo="nao-iniciou-o-cumprimento-da-pena"))
     elif "INTERROMPIDA" in (r.get("situacao_cumprimento") or ""):
-        itens.append(_item("info", "Cumprimento interrompido (último evento é interrupção)", "Verificar se há prisão posterior não lançada ou se o apenado está foragido/em liberdade; a prescrição executória corre pela pena restante.", "CP, arts. 112, II, e 113."))
+        itens.append(_item("info", "Cumprimento interrompido (último evento é interrupção)", "Verificar se há prisão posterior não lançada ou se o apenado está foragido/em liberdade; a prescrição executória corre pela pena restante.", "CP, arts. 112, II, e 113.", tipo="cumprimento-interrompido-ultimo-evento-e-interru"))
 
     itens = _agrupar_por_crime(itens)
     n_alerta = sum(1 for i in itens if i["nivel"] == "alerta")

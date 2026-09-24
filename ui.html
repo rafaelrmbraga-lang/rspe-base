@@ -88,6 +88,7 @@ tr.vermelho td.first::before{background:var(--r-dot)}tr.laranja td.first::before
 .pill.none{color:var(--tx2);font-weight:500}.pill.none::before{display:none}
 .muted{color:var(--tx3)}.est{color:var(--tx2);font-size:11.5px}
 .falta{color:var(--r-tx);font-weight:600}
+.apurar{color:var(--a-tx);font-weight:600}
 .empty{display:grid;place-items:center;height:100%;color:var(--tx3);text-align:center;padding:40px}
 .empty b{display:block;color:var(--tx2);font-size:15px;margin-bottom:6px}
 
@@ -117,10 +118,34 @@ tr.sub td{padding:0 0 0 0;background:#FFFFFF;cursor:default}tr.sub:hover td{back
 .ml.fim .mt{font-weight:700;color:var(--tx)}.ml.fim .mi{background:#E0E7FF;color:#3730A3}
 .cp-row{display:flex;justify-content:flex-end;margin:-2px 0 6px}.aviso-exec{padding:8px 12px;border-radius:10px;background:#F2F4F7;color:var(--tx);font-weight:600;font-size:13px}
 .subtab .why{cursor:pointer;color:var(--pri);font-size:11.5px}.subtab .why:hover{text-decoration:underline}
+.ptl{margin:8px 0 4px;font-size:12.5px}
+.ptl-h{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:6px}
+.ptl .pill.verde{background:#DDF5E7;color:#067647}.ptl .pill.verm{background:#FDE8E8;color:#B42318}.ptl .pill.amb{background:#FEF4D6;color:#B54708}
+.ptl-legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--tx2);margin:6px 0 10px}
+.ptl-legend span i{display:inline-block;width:22px;height:10px;border-radius:3px;vertical-align:-1px;margin-right:5px}
+.ptl-legend .i-cump{background:#34A853}.ptl-legend .i-fuga{background:repeating-linear-gradient(135deg,#F04438 0 4px,#FDE8E8 4px 8px)}.ptl-legend .i-prov{background:repeating-linear-gradient(90deg,#98A2B3 0 4px,#fff 4px 7px);border:1px solid #98A2B3}.ptl-legend .i-susp{background:#B692F6}.ptl-legend .i-dup{background:repeating-linear-gradient(135deg,#F79009 0 4px,#FEF4D6 4px 8px)}.ptl-legend .i-lib{background:#EEF0F3;border:1px solid #D0D5DD}.ptl-legend .i-lc{background:#84CAFF}
+.ptl-tl{position:relative;overflow:visible}.ptl-tl svg{display:block;width:100%;height:auto}
+.ptl .mk{cursor:pointer}.ptl .mk:hover circle{stroke-width:3}
+.ptl-help{font-size:11px;color:var(--tx3);margin:2px 0 6px}
+.ptl-fluxo{display:grid;grid-template-columns:1fr 24px 1fr 24px 1fr;gap:8px;align-items:stretch;margin:10px 0}
+.ptl-fluxo .box{border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:#F9FAFB}
+.ptl-fluxo .box b{display:block;font-size:11px;letter-spacing:.3px;color:var(--tx2);text-transform:uppercase;margin-bottom:3px}
+.ptl-fluxo .arr{display:flex;align-items:center;justify-content:center;color:var(--tx3);font-size:18px}
+.ptl-hip{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
+.ptl-hip .box{border:1px dashed #D0D5DD;border-radius:8px;padding:8px 10px;font-size:12px}.ptl-hip .box b{display:block;margin-bottom:2px}
+.ptl-res{display:flex;gap:14px;align-items:flex-start;border-left:4px solid #B54708;background:#FEF4D6;border-radius:8px;padding:10px 12px;margin-top:10px}
+.ptl-res.verm{border-color:#B42318;background:#FDE8E8}.ptl-res.verde{border-color:#067647;background:#DDF5E7}
+.ptl-res b{font-size:13px;display:block}.ptl-res .falta{margin-top:4px;color:var(--tx2);font-size:12px}
+.ptl-pop{position:absolute;z-index:9;background:#fff;border:1px solid #D0D5DD;border-radius:8px;box-shadow:0 8px 24px rgba(16,24,40,.14);padding:10px 12px;width:360px;font-size:12px;display:none;text-align:left}
+.ptl-pop.on{display:block}.ptl-pop h4{margin:0 0 6px;font-size:12.5px}.ptl-pop dl{margin:0;display:grid;grid-template-columns:110px 1fr;gap:2px 8px}.ptl-pop dt{color:var(--tx2)}.ptl-pop dd{margin:0}.ptl-pop .x{position:absolute;right:8px;top:6px;cursor:pointer;color:var(--tx3)}
+.why.on{font-weight:700;text-decoration:underline}
+.ptl-holder{margin-top:6px}
 .mem{display:grid;gap:12px;margin:10px 0 4px}
 .mb{background:#F9FAFB;border:1px solid #EEF0F3;border-radius:10px;padding:12px 16px 12px}
 .mb.pp{border-left:3px solid #7C6CF6}.mb.pe{border-left:3px solid #2563EB}.mb.av{border-left:3px solid #B54708}
 .mh{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--tx2);margin-bottom:4px}
+.lt{width:100%;border-collapse:collapse;font-size:12px;margin-top:6px}.lt th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--tx2);padding:4px 8px;border-bottom:1px solid #E5E7EB}.lt td{padding:5px 8px;border-bottom:1px solid #EEF0F3;vertical-align:top;line-height:1.45;color:var(--tx)}.lt td:first-child{white-space:nowrap}
+.lt .t-provisoria{color:var(--tx2)}.lt .t-cumprimento,.lt .t-livramento{color:#166534}.lt .t-outro_motivo{color:#92400E}.lt .t-evasao,.lt .t-interrupcao{color:#991B1B;font-weight:600}.lt .t-liberdade{color:#1E40AF}
 .ml{display:flex;gap:10px;align-items:flex-start;font-size:12.5px;line-height:1.6;padding:4px 0;color:var(--tx)}
 .mi{flex:0 0 18px;height:18px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;margin-top:1px;background:#E5E7EB;color:#4B5563}
 .ml.ok .mi{background:#DDF5E7;color:#067647}.ml.ko .mi{background:#FDE2E1;color:#B42318}.ml.run .mi{background:#FEF4D6;color:#B54708}.ml.q .mi{background:#EEF0F3;color:#5B6470}
@@ -331,9 +356,9 @@ const ui = {
     const tr=linhas.map(r=>{ const cor=this.cor(r,spec); const exp=spec.expansivel && this.aberto===r.id;
       const tds=spec.cols.map((c,i)=>{ let v=r[c[0]]??''; const pk=spec.pilulas[c[0]];
         if(c[0]==='proc'){ v=`<span class="copy" title="Clique para copiar" onclick="event.stopPropagation();ui.copiar('${esc(String(v))}')">${esc(v)}${svgCopy}</span>`; }
-        else if(pk){ const pc = c[0]==='imp' ? (String(v).startsWith('Sim')?'vermelho':'verde') : (r[pk]||''); v = v ? `<span class="pill ${pc||'none'}">${esc(v)}</span>` : (/_sit$/.test(c[0]) ? '' : '<span class="muted">—</span>'); }
+        else if(pk){ const pc = r[pk]||''; v = v ? `<span class="pill ${pc||'none'}">${esc(v)}</span>` : (/_sit$/.test(c[0]) ? '' : '<span class="muted">—</span>'); }
         else if(c[0]==='conduta'){ v = r.conduta_ruim ? `<span class="falta">${esc(v)}</span>` : (r.ficha_tem ? esc(v) : `<span class="muted">${esc(v)}</span>`); }
-        else if(c[0]==='falta'){ v = r.falta_sim ? `<span class="falta">Sim</span>` : `<span class="muted">${esc(v)}</span>`; }
+        else if(c[0]==='falta'){ v = r.falta_sim ? `<span class="falta">Sim</span>` : (r.falta_apurar ? `<span class="apurar">A apurar</span>` : `<span class="muted">${esc(v)}</span>`); }
         else { v = esc(v).replace('(est.)','<span class="est">(est.)</span>'); if(!v) v='<span class="muted">—</span>'; }
         if(i===0 && spec.expansivel) v=`<span class="chev">▶</span>${v}`;
         return `<td class="${i===0?'first':''} ${NW.has(c[0])?'nw':''} ${pk&&spec.id==='ind'?'pl':''}" title="${esc(String(r[c[0]+'_full']??r[c[0]]??''))}">${v}</td>`; }).join('');
@@ -344,10 +369,12 @@ const ui = {
     card.innerHTML=`<table><thead><tr>${th}</tr></thead><tbody>${tr}</tbody></table>`;
   },
   passaFiltro(r,spec){ const f=this.filtroSel||'todas'; if(f==='todas') return true;
-    if(f.startsWith('b:')){ const p=f.split(':'); return p[1]==='*'?['i22','i24','c24','i25','c25'].some(k=>r[k]===p[2]):r[p[1]]===p[2]; }
+    if(f.startsWith('b:')){ const p=f.split(':'); const ks=p[1]==='*'?['i22','i24','c24','i25','c25']:[p[1]];
+      if(p[2]==='Fato posterior') return ks.some(k=>r[k]==='Fato posterior'||/fato posterior/i.test(String(r[k+'_txt']||'')));
+      return ks.some(k=>r[k]===p[2]); }
     const d=spec.campo_dias?r[spec.campo_dias]:null; const cor=this.cor(r,spec);
     switch(f){
-      case 'vencidas': return d!==null && d<=0;
+      case 'vencidas': return spec.id==='ext' ? cor==='vermelho' : (d!==null && d<=0);
       case '30': return d!==null && d>0 && d<=30;
       case '60': return d!==null && d>0 && d<=60;
       case '90': return d!==null && d>0 && d<=90;
@@ -358,13 +385,14 @@ const ui = {
       case 'possivel': return (r.ind_status||[]).includes('possivel') && cor!=='vermelho';
       case 'verificar': return cor==='amarelo';
       case 'nao': return cor==='cinza';
-      case 'impeditivo': return cor==='vermelho';
+      case 'impeditivo': return spec.id==='ind' ? r.imp_cor==='vermelho' : cor==='vermelho';
       case 'aparente': return cor==='vermelho';
       case 'iminente': return cor==='amarelo';
       case 'curso': return cor==='amarelo';
       case 'curso1': return cor==='amarelo' && d!==null && d<=365;
       case 'naocorre': return cor==='';
       case 'semdados': return cor==='cinza';
+      case 'extinta': return cor==='azul';
       case 'atencao': return r.aud_status==='atencao';
       case 'ok': return spec.id==='fd' ? cor==='verde' : r.aud_status==='ok';
     } return true; },
@@ -379,7 +407,115 @@ const ui = {
     const bt=(parte,rot)=>`<span class="mini" onclick="event.stopPropagation();ui.copiarClip(${ui.clip(ui.txtPresc(s,parte))})">${rot}</span>`;
     const pp=so!=='pe', pe=so!=='pp';
     const cps=[(pp&&s.retro_detalhe)?bt('pp','Copiar pretensão punitiva'):'', (pe&&s.ppe_detalhe)?bt('pe','Copiar pretensão executória'):''].filter(Boolean).join(' ');
-    return `<div class="mem"><div class="cp-row" style="gap:6px">${cps}</div>${pp?this.bloco('Pretensão punitiva',s.retro_detalhe,'pp'):''}${pe?this.bloco('Pretensão executória',s.ppe_detalhe,'pe'):''}${this.bloco('Avisos',s.avisos&&s.avisos.length?s.avisos:'','av')}</div>`; },
+    return `<div class="mem"><div class="cp-row" style="gap:6px">${cps}</div>${pp?this.bloco('Pretensão punitiva',s.retro_detalhe,'pp'):''}${pe?this.bloco('Pretensão executória',s.ppe_detalhe,'pe'):''}${pe?this.linhaTempo(s):''}${this.bloco('Avisos',s.avisos&&s.avisos.length?s.avisos:'','av')}</div>`; },
+  // linha do tempo da executória deste crime: cada período dos eventos classificado (prisão provisória, cumprimento, prisão por outro motivo, evasão, liberdade)
+  LT_ROT:{provisoria:'Prisão provisória (detração)',cumprimento:'Cumprimento da pena',livramento:'Livramento condicional',outro_motivo:'Prisão por outro motivo',evasao:'Evasão',interrupcao:'Interrupção',liberdade:'Liberdade',suspensao:'Suspensão'},
+  linhaTempo(s){ const lt=s.ppe_linha_tempo||[]; if(!lt.length) return '';
+    const tr=lt.map(x=>`<tr><td>${esc(x.inicio)} a ${esc(x.fim||'hoje')}</td><td class="t-${esc(x.tipo)}">${esc(this.LT_ROT[x.tipo]||x.tipo)}</td><td>${esc(x.fonte||'')}</td><td>${penaExt(esc(x.efeito||''))}</td></tr>`).join('');
+    return `<div class="mb pe"><div class="mh">Linha do tempo deste crime</div><table class="lt"><thead><tr><th>Período</th><th>Classificação</th><th>Fonte</th><th>Efeito na prescrição</th></tr></thead><tbody>${tr}</tbody></table></div>`; },
+  txtLinhaTempo(s){ const lt=s.ppe_linha_tempo||[]; if(!lt.length) return ''; return 'Linha do tempo\n'+lt.map(x=>`• ${x.inicio} a ${x.fim||'hoje'} - ${this.LT_ROT[x.tipo]||x.tipo} - ${x.fonte||''} - ${penaExt(x.efeito||'')}`).join('\n'); },
+  // ---- linha do tempo visual da prescrição executória (memória de cálculo em figura; todos os números vêm de ppe_linha_tempo / ppe_saldos) ----
+  TL_TIPO:{provisoria:{c:'#98A2B3',f:'hProv',r:'Prisão provisória (detração)'}, cumprimento:{c:'#34A853',f:'#34A853',r:'Cumprimento da pena'}, evasao:{c:'#F04438',f:'hFuga',r:'Fuga / evasão'}, interrupcao:{c:'#F04438',f:'hFuga',r:'Interrupção do cumprimento (motivo a conferir)'}, outro_motivo:{c:'#B692F6',f:'#B692F6',r:'Prisão por outro motivo (suspensão)'}, liberdade:{c:'#D0D5DD',f:'#EEF0F3',r:'Liberdade sem evasão'}, livramento:{c:'#84CAFF',f:'#84CAFF',r:'Livramento (período de prova)'}, duvida:{c:'#F79009',f:'hDup',r:'Atribuição não comprovada'}},
+  TL_FUND:{provisoria:'CP, art. 42 (detração) — informativa; não reduz a pena nem o prazo (STJ, AgRg no HC 967.565; RHC 67.403)', cumprimento:'LEP, art. 111 (execução unificada); CP, art. 117, V (início ou continuação do cumprimento interrompe)', evasao:'CP, art. 113 (na evasão, a prescrição regula-se pelo tempo que resta da pena)', interrupcao:'CP, art. 113 (saldo), com aviso: o motivo não é evasão nem revogação do livramento (STJ, RHC 67.403)', outro_motivo:'CP, art. 116, p. único (não corre enquanto o condenado está preso por outro motivo)', liberdade:'CP, art. 110 (prazo pela pena aplicada)', livramento:'CP, arts. 83 e 89; LEP, art. 146', duvida:'LEP, art. 111; CP, art. 76 — o RSPE não informa a imputação do tempo cumprido entre as condenações'},
+  _tl:[],
+  tlReg(L){ const i=this._tl.indexOf(L); if(i>=0) return i; this._tl.push(L); return this._tl.length-1; },
+  tlTem(L){ return !!(L && L.ppe_linha_tempo && L.ppe_linha_tempo.length && (L.ppe_saldos||[]).length); },
+  tlD(s){ const [d,m,a]=String(s).split('/'); return new Date(+a,+m-1,+d); },
+  tlDias(n){ n=Math.round(n||0); return n===1?'1 dia':`${n.toLocaleString('pt-BR')} dias`; },
+  tlAmd(n){ n=Math.max(0,Math.round(n||0)); const a=Math.floor(n/365), r=n%365, m=Math.min(Math.floor(r/30),11), d=r-30*m; const p=[]; if(a)p.push(a===1?'1 ano':a+' anos'); if(m)p.push(m===1?'1 mês':m+' meses'); if(d||!p.length)p.push(this.tlDias(d)); return p.join(', '); },
+  tlHoje(){ return this.dados&&this.dados.hoje? this.tlD(this.dados.hoje) : new Date(); },
+  tlTipo(p){ return (p.tipo==='cumprimento' && p.atribuicao==='nao_comprovada') ? 'duvida' : p.tipo; },
+  prescTimelineSvg(L, idx){
+    const D=this.tlD.bind(this), dias=this.tlDias.bind(this), amd=this.tlAmd.bind(this), HOJE=this.tlHoje(), TIPO=this.TL_TIPO, fmt=d=>d.toLocaleDateString('pt-BR');
+    const lt=L.ppe_linha_tempo||[], sal=L.ppe_saldos||[]; const sfx='_'+idx;
+    const inicios=lt.map(p=>D(p.inicio)); const t0=new Date(Math.min(D(L.fato||L.ppe_termo), ...inicios)), t1=HOJE; const Wm=1120, PL=40, PR=40, W=Wm-PL-PR;
+    const x=d=>PL+W*Math.min(1,Math.max(0,(d-t0)/Math.max(1,(t1-t0))));
+    const marcos=[{d:D(L.fato||L.ppe_termo),r:'Fato',t:'fato'}];
+    if(L.sentenca) marcos.push({d:D(L.sentenca),r:'Sentença',t:'sentenca'});
+    marcos.push({d:D(L.ppe_termo),r:'Trânsito (termo inicial)',t:'transito'});
+    const faixas=lt.map(p=>({...p,a:D(p.inicio),b:p.fim?D(p.fim):HOJE,tipo:this.tlTipo(p)}));
+    faixas.forEach(p=>{ if(p.tipo==='evasao'||p.tipo==='interrupcao'){ marcos.push({d:p.a,r:p.tipo==='evasao'?'Fuga':'Interrupção',t:'fuga',p}); marcos.push({d:p.b,r:p.fim?'Recaptura':'Hoje',t:'recaptura',p}); } });
+    marcos.push({d:HOJE,r:'Situação atual',t:'hoje'});
+    const evas=sal;
+    const H=330+230*evas.length;
+    let svg=`<svg viewBox="0 0 ${Wm} ${H}" xmlns="http://www.w3.org/2000/svg"><defs>
+     <pattern id="hFuga${sfx}" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="8" height="8" fill="#FDE8E8"/><rect width="4" height="8" fill="#F04438"/></pattern>
+     <pattern id="hDup${sfx}" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="8" height="8" fill="#FEF4D6"/><rect width="4" height="8" fill="#F79009"/></pattern>
+     <pattern id="hProv${sfx}" width="7" height="10" patternUnits="userSpaceOnUse"><rect width="7" height="10" fill="#fff"/><rect width="4" height="10" fill="#98A2B3"/></pattern></defs>`;
+    const fill=sty=>sty.f.startsWith('#')?sty.f:`url(#${sty.f}${sfx})`;
+    const Y=150;
+    svg+=`<line x1="${PL}" y1="${Y}" x2="${PL+W}" y2="${Y}" stroke="#D0D5DD" stroke-width="2"/>`;
+    faixas.forEach((p,i)=>{ const sty=TIPO[p.tipo]||TIPO.liberdade; const x1=x(p.a), x2=Math.max(x(p.b),x1+3);
+      svg+=`<g class="mk" data-k="f${i}"><rect x="${x1}" y="${Y-14}" width="${x2-x1}" height="28" fill="${fill(sty)}" stroke="${sty.c}" stroke-width="1" rx="3"/>`;
+      if(p.tipo==='duvida') svg+=`<text x="${(x1+x2)/2}" y="${Y+5}" text-anchor="middle" font-size="14" font-weight="700" fill="#B54708">?</text>`;
+      if(x2-x1>70) svg+=`<text x="${(x1+x2)/2}" y="${Y+40}" text-anchor="middle" font-size="10" fill="#475467">${dias(Math.round((p.b-p.a)/864e5))}</text>`;
+      svg+=`</g>`; });
+    marcos.sort((a,b)=>a.d-b.d); const tiers=[-999,-999,-999];
+    marcos.forEach((m,i)=>{ const cx=x(m.d); const col={fato:'#475467',sentenca:'#475467',transito:'#4F46E5',fuga:'#B42318',recaptura:'#067647',hoje:'#101828'}[m.t];
+      let tier=tiers.findIndex(v=>cx-v>=95); if(tier<0) tier=2; tiers[tier]=cx; const ty=Y-30-tier*30, ty2=ty+12;
+      svg+=`<line x1="${cx}" y1="${ty2+3}" x2="${cx}" y2="${Y-8}" stroke="${col}" stroke-width="1" stroke-dasharray="2 2"/>`;
+      svg+=`<g class="mk" data-k="m${i}"><circle cx="${cx}" cy="${Y}" r="6" fill="#fff" stroke="${col}" stroke-width="2.5"/><text x="${cx}" y="${ty}" text-anchor="middle" font-size="10.5" font-weight="700" fill="${col}">${esc(m.r)}</text><text x="${cx}" y="${ty2}" text-anchor="middle" font-size="10" fill="#475467">${fmt(m.d)}</text></g>`; });
+    let yc=Y+95;
+    evas.forEach((s,k)=>{ const a=D(s.evasao), b=(s.fim&&s.fim!=='hoje')?D(s.fim):HOJE; const xa=x(a), xb=x(b);
+      const lim=s.limite_max?D(s.limite_max):null, limMin=s.limite_min?D(s.limite_min):null; const xl=lim?x(lim):null, xlm=limMin?x(limMin):null;
+      const cor=s.resultado==='prescrita'?'#B42318': s.resultado==='a verificar'?'#B54708':'#067647';
+      const rot=(s.revogacao?'revogação do livramento':(s.e_evasao===false?'interrupção':'fuga'))+' de '+s.evasao;
+      svg+=`<g class="mk" data-k="s${k}"><line x1="${xa}" y1="${Y}" x2="${xa}" y2="${yc}" stroke="#B42318" stroke-dasharray="3 3"/><line x1="${xa}" y1="${yc}" x2="${Math.min(xb, xl||xb)}" y2="${yc}" stroke="${cor}" stroke-width="5" stroke-linecap="round"/><text x="${xa>PL+W-420?PL+W:xa}" y="${yc-14}" text-anchor="${xa>PL+W-420?'end':'start'}" font-size="10" fill="${cor}" font-weight="700">contagem da prescrição pelo saldo (art. 113) · ${esc(rot)}</text>`;
+      const rt=[]; if(xlm && xlm<xb) rt.push({x:xlm,col:'#B42318',txt:`venceria ${s.limite_min} (saldo mín.)`,w:2,dash:''});
+      const vistos=new Set([s.limite_min,s.limite_max]);
+      (s.faixas||[]).forEach(f=>{ if(f.limite && f.prescrita && !vistos.has(f.limite)){ vistos.add(f.limite); rt.push({x:x(D(f.limite)),col:'#B42318',txt:`venceria ${f.limite} se o saldo fosse ${f.rotulo||amd(f.saldo)+' a '+amd(f.saldo_ate)}`,w:2,dash:'3 2'}); } });
+      if(xl) rt.push({x:xl,col:'#475467',txt:`venceria ${s.limite_max} (saldo máx.)`,w:2,dash:''});
+      rt.push({x:xb,col:'#067647',txt:(s.fim&&s.fim!=='hoje')?`recaptura ${s.fim} → interrompe (art. 117, V)`:'hoje',w:3,dash:'',b:true});
+      rt.sort((p,q)=>p.x-q.x); let lx=-9999, dy=22;
+      rt.forEach(t=>{ dy=(t.x-lx<260)? dy+13 : 22; lx=t.x; const anchor=t.x>PL+W-150?'end':(t.x<PL+150?'start':'middle');
+        svg+=`<line x1="${t.x}" y1="${yc-8}" x2="${t.x}" y2="${yc+8}" stroke="${t.col}" stroke-width="${t.w}" ${t.dash?`stroke-dasharray="${t.dash}"`:''}/><text x="${t.x}" y="${yc+dy}" text-anchor="${anchor}" font-size="9.5" fill="${t.col}" ${t.b?'font-weight="700"':''}>${esc(t.txt)}</text>`; });
+      const cw=340, ch=130, cxx=Math.min(Math.max(xa,PL), PL+W-cw), cy=yc+72;
+      svg+=`<rect x="${cxx}" y="${cy}" width="${cw}" height="${ch}" rx="7" fill="#fff" stroke="${cor}" stroke-width="1.5"/><text x="${cxx+10}" y="${cy+16}" font-size="11" font-weight="700" fill="${cor}">${esc(rot.toUpperCase())}</text>`;
+      const venc=(()=>{ const ls=(s.faixas||[]).filter(f=>f.limite).map(f=>f.limite); const u=[...new Set(ls)]; return u.length>1? u[0]+' a '+u[u.length-1] : (u[0]||s.limite_max||'—'); })();
+      const li=[['Pena aplicada', amd(s.saldo_max + s.cumprido_min)], ['Cumprido (execução)', dias(s.cumprido_desde_termo)+(s.remicao?' + '+s.remicao+' remidos':'')],
+        ['Imputável ao crime', (s.saldo_min===s.saldo_max? amd(s.cumprido_max) : `de ${amd(s.cumprido_min)} até ${amd(s.cumprido_max)}`)],
+        ['Saldo na fuga', (s.saldo_min===s.saldo_max? amd(s.saldo_max): `${amd(s.saldo_min)} a ${amd(s.saldo_max)}`)],
+        ['Prazo (art. 113)', s.prazo_min && s.prazo_min!==s.prazo_max? `${s.prazo_min} a ${s.prazo_max}` : (s.prazo_max||'nada a prescrever')], ['Vencimento', venc]];
+      li.forEach(([a,b],j)=>{ svg+=`<text x="${cxx+10}" y="${cy+33+j*16}" font-size="10.5" fill="#475467">${esc(a)}:</text><text x="${cxx+cw-10}" y="${cy+33+j*16}" font-size="10.5" text-anchor="end" font-weight="600" fill="#101828">${esc(b)}</text>`; });
+      svg+=`</g>`; yc+=230; });
+    return svg+`</svg>`; },
+  prescTimelineHtml(L){
+    const idx=this.tlReg(L); const amd=this.tlAmd.bind(this), dias=this.tlDias.bind(this);
+    const sal=L.ppe_saldos||[]; const ultima=sal.find(s=>s.resultado==='a verificar')||sal.find(s=>s.resultado==='prescrita')||sal[sal.length-1]||{};
+    const r=(L.ppe_status||'').startsWith('A VERIFICAR')?['amb','A VERIFICAR']: /aparente/i.test(L.ppe_status||'')?['verm','PRESCRITO']: ['verde','Não reconhecida'];
+    const motivo=r[1]==='A VERIFICAR' ? 'não foi possível determinar, com os dados do SEEU, o saldo de pena atribuído a esta condenação na data da fuga' : r[1]==='PRESCRITO' ? L.ppe_status : (ultima.fim&&ultima.fim!=='hoje' ? 'a recaptura ocorreu antes do vencimento calculado em todas as hipóteses de saldo' : 'o prazo ainda não venceu em nenhuma das hipóteses de saldo');
+    const hip=ultima.art76? `<div class="ptl-hip"><div class="box"><b>Hipótese 1 · CP, art. 76 (pena mais grave primeiro)</b>Este crime seria o ${ultima.art76.posicao}º de ${ultima.art76.de} em execução. Saldo na fuga: ${amd(ultima.art76.saldo)} · prazo ${esc(ultima.art76.prazo||'—')} · ${ultima.art76.limite? 'venceria em '+ultima.art76.limite : ''} → <b style="display:inline">${esc(ultima.art76.resultado)}</b></div>
+      <div class="box"><b>Hipótese 2 · ordem cronológica do trânsito</b>Este crime seria o ${ultima.cronologica.posicao}º de ${ultima.cronologica.de}. Saldo na fuga: ${amd(ultima.cronologica.saldo)} · ${ultima.cronologica.prazo? 'prazo '+esc(ultima.cronologica.prazo)+' · venceria em '+ultima.cronologica.limite : 'nada a prescrever'} → <b style="display:inline">${esc(ultima.cronologica.resultado)}</b></div></div>`:'';
+    const saldoTxt=ultima.saldo_min===ultima.saldo_max? amd(ultima.saldo_max) : 'entre '+amd(ultima.saldo_min)+' e '+amd(ultima.saldo_max);
+    return `<div class="ptl" data-tl="${idx}"><div class="ptl-h"><span class="pill ${r[0]}">${r[1]}</span><span class="muted">${esc(L.rotulo||L.crime)} · pena ${penaExt(esc(L.pena||''))} · fato ${esc(L.fato||'—')} · trânsito ${esc(L.ppe_termo||'—')}</span></div>
+     <div class="ptl-legend"><span><i class="i-cump"></i>cumprimento da pena</span><span><i class="i-fuga"></i>fuga / evasão</span><span><i class="i-prov"></i>prisão provisória (detração)</span><span><i class="i-susp"></i>suspensão (preso por outro motivo)</span><span><i class="i-lib"></i>liberdade sem evasão</span><span><i class="i-lc"></i>livramento</span><span><i class="i-dup"></i>atribuição não comprovada</span></div>
+     <div class="ptl-tl">${this.prescTimelineSvg(L, idx)}<div class="ptl-pop"><span class="x">✕</span><div class="pc"></div></div></div>
+     <div class="ptl-help">Clique em qualquer marco, faixa ou linha de contagem para ver "Como cheguei aqui?" (evento do SEEU, processo, período, tratamento, fundamento e efeito).</div>
+     <div class="ptl-fluxo"><div class="box"><b>1 · Tempo de prisão / detração</b>Prisão provisória antes do trânsito: <b style="display:inline">${dias(L.ppe_detracao_dias||0)}</b> (CP, art. 42). Não entra no prazo.</div><div class="arr">→</div>
+       <div class="box"><b>2 · Saldo da pena na fuga</b>Pena de ${penaExt(esc(L.pena||''))} menos o cumprimento imputável a esta condenação: ${saldoTxt} (na fuga de ${esc(ultima.evasao||'—')}).</div><div class="arr">→</div>
+       <div class="box"><b>3 · Prazo de prescrição</b>Art. 109 sobre o saldo, +1/3 reincidência, ½ art. 115: ${ultima.prazo_min && ultima.prazo_min!==ultima.prazo_max? esc(ultima.prazo_min)+' a '+esc(ultima.prazo_max) : esc(ultima.prazo_max||'nada a prescrever')}.</div></div>
+     ${hip}
+     <div class="ptl-res ${r[0]}"><div><b>PRESCRIÇÃO: ${r[1]}</b>Motivo: ${esc(motivo)}.${L.ppe_faltam&&L.ppe_faltam.length? `<div class="falta"><b style="display:inline">Falta para concluir:</b> ${esc(L.ppe_faltam.join('; '))}.</div>`:''}</div></div></div>`; },
+  tlClick(ev){
+    const x=ev.target.closest('.ptl-pop .x'); if(x){ x.closest('.ptl-pop').classList.remove('on'); return; }
+    const g=ev.target.closest('.ptl .mk'); if(!g) return; ev.stopPropagation();
+    const wrap=g.closest('.ptl'), tl=g.closest('.ptl-tl'), pop=tl.querySelector('.ptl-pop'); const L=this._tl[+wrap.dataset.tl]; if(!L) return;
+    const amd=this.tlAmd.bind(this), dias=this.tlDias.bind(this), TIPO=this.TL_TIPO, FUND=this.TL_FUND; const k=g.dataset.k; let html='';
+    if(k[0]==='f'){ const p=L.ppe_linha_tempo[+k.slice(1)]; const tipo=this.tlTipo(p); const T=TIPO[tipo]||TIPO.liberdade;
+      html=`<h4>Como cheguei aqui? · ${esc(T.r)}</h4><dl><dt>Evento utilizado</dt><dd>${esc(p.fonte)}</dd><dt>Período considerado</dt><dd>${esc(p.inicio)} → ${esc(p.fim||'hoje')}</dd><dt>Tratamento</dt><dd>${esc(T.r)}</dd><dt>Fundamento</dt><dd>${esc(FUND[tipo]||'')}</dd><dt>Efeito no cálculo</dt><dd>${penaExt(esc(p.efeito))}</dd></dl>`;
+      if(tipo==='duvida') html+=`<p style="margin:6px 0 0;color:#B54708"><b>Atribuição não comprovada:</b> o SEEU registra prisão neste período só para outro processo; os dados disponíveis não permitem determinar quanto dele foi destinado a esta condenação. O período não é assumido como redução certa da pena: entra só como limite.</p>`;
+    } else if(k[0]==='s'){ const s=(L.ppe_saldos||[])[+k.slice(1)];
+      html=`<h4>Contagem da prescrição · ${s.revogacao?'revogação do livramento':'fuga'} de ${esc(s.evasao)}</h4><dl><dt>Cumprido desde o termo</dt><dd>${dias(s.cumprido_desde_termo)}${s.remicao?' + '+s.remicao+' dias remidos (LEP, art. 128)':''}</dd><dt>Outras condenações em execução</dt><dd>${s.outras} (soma ${amd(s.soma_outras)})</dd><dt>Saldo deste crime</dt><dd>${amd(s.saldo_min)} a ${amd(s.saldo_max)}</dd><dt>Faixas do art. 109</dt><dd>${(s.faixas||[]).map(f=>`saldo ${amd(f.saldo)}${f.saldo_ate!==f.saldo?' a '+amd(f.saldo_ate):''} (${esc(f.rotulo||'')}) → ${f.meses? f.meses+' meses, '+(f.prescrita?'venceu':'não venceria')+' em '+f.limite : 'nada a prescrever'}`).join('<br>')}</dd><dt>Suspensão (art. 116)</dt><dd>${s.suspensao_dias? dias(s.suspensao_dias):'nenhuma'}</dd><dt>Fim do intervalo</dt><dd>${(s.fim&&s.fim!=='hoje')? 'recaptura em '+esc(s.fim)+' — interrompe (art. 117, V)':'em aberto'}</dd><dt>Resultado</dt><dd><b>${esc(s.resultado)}</b></dd></dl>`;
+    } else { const ts=g.querySelectorAll('text'); html=`<h4>Marco</h4><p>${esc(ts[0].textContent)} · ${esc(ts[1].textContent)}</p>`; }
+    pop.querySelector('.pc').innerHTML=html; pop.classList.add('on');
+    const r=tl.getBoundingClientRect(); pop.style.left=Math.max(0,Math.min(ev.clientX-r.left, r.width-380))+'px'; pop.style.top=(ev.clientY-r.top+12)+'px'; },
+  tlToggle(el, qual, idx){
+    // "cálculo" e "linha do tempo" na mesma linha: só um aberto por vez; clicar de novo fecha
+    const tr=el.closest('tr'); const calc=tr.nextElementSibling, tl=calc.nextElementSibling; const alvo=qual==='tl'?tl:calc, outro=qual==='tl'?calc:tl;
+    if(qual==='tl' && !tl.dataset.ok){ tl.firstElementChild.innerHTML=this.prescTimelineHtml(this._tl[idx]); tl.dataset.ok='1'; }
+    const aberto=alvo.style.display!=='none'; outro.style.display='none'; alvo.style.display=aberto?'none':'';
+    tr.querySelectorAll('.why').forEach(w=>w.classList.remove('on')); if(!aberto) el.classList.add('on'); },
+  tlToggleDrawer(el, idx){ const h=el.closest('.cc').querySelector('.ptl-holder'); if(!h.dataset.ok){ h.innerHTML=this.prescTimelineHtml(this._tl[idx]); h.dataset.ok='1'; } const ab=h.style.display!=='none'; h.style.display=ab?'none':''; el.classList.toggle('on',!ab); },
   // ---- cópia em texto simples (para colar na petição, no Word) ----
   _clips:[],
   clip(t){ t=String(t||''); let i=this._clips.indexOf(t); if(i<0){ this._clips.push(t); i=this._clips.length-1; } return i; },
@@ -390,6 +526,7 @@ const ui = {
     const out=[cab.join('\n')];
     if(s.retro_detalhe&&parte!=='pe') out.push(`Pretensão punitiva (prazo ${s.prazo_ppp||'—'}): ${s.retro_status||''}\n`+this.txtLinhas(s.retro_detalhe));
     if(s.ppe_detalhe&&parte!=='pp') out.push(`Pretensão executória (prazo ${s.prazo_ppe||'—'}): ${s.ppe_status||''}\n`+this.txtLinhas(s.ppe_detalhe));
+    if(parte!=='pp'&&this.txtLinhaTempo(s)) out.push(this.txtLinhaTempo(s));
     if(s.avisos&&s.avisos.length&&!parte) out.push('Avisos\n'+this.txtLinhas(s.avisos));
     return out.join('\n\n'); },
   txtAud(s){ return `${s.nivel_txt} - ${s.titulo}`+(s.detalhe?'\n'+penaExt(s.detalhe):'')+(s.fundamento?'\nFundamento: '+penaExt(s.fundamento):''); },
@@ -406,8 +543,9 @@ const ui = {
     L.push(`Indulto 2022: ${r.i22_txt||'—'} · Indulto 2024: ${r.i24_txt||'—'} · Indulto 2025: ${r.i25_txt||'—'}`);
     L.push(`Comutação 2024: ${r.c24_txt||'—'} · Comutação 2025: ${r.c25_txt||'—'}`);
     L.push(`Prescrição - punitiva: ${r.presc_retro_full||'—'} · executória: ${r.presc_ppe_full||'—'}`);
-    L.push(`Extinção: ${r.ext_sit||'—'}${r.ext_hipoteses&&r.ext_hipoteses!=='—'?' · '+r.ext_hipoteses:''}`);
+    L.push(`Extinção: ${r.ext_sit||'—'}${r.ext_hipoteses&&r.ext_hipoteses!=='—'?' · '+r.ext_hipoteses:''}${r.ext_multa?' · '+r.ext_multa:''}`);
     if(r.falta_sim) L.push(`Falta (12 meses): ${r.falta.replace(/^Sim · /,'')}`);
+    else if(r.falta_apurar) L.push(`Falta a apurar (12 meses, sem sanção reconhecida): ${r.falta_det}`);
     const cr=(r.crimes_det||[]).filter(c=>!/^S/i.test(c.extinto||'')).map(c=>`• ${c.nome_crime||'Crime'} (${c.dispositivo||''}) · pena ${c.pena||''} · fato ${c.fato||'—'} · processo ${c.proc||'—'}`);
     if(cr.length) L.push('\nCrimes em execução\n'+cr.join('\n'));
     const pts=(r.aud_itens||[]).filter(i=>!i.baixado&&(i.nivel==='alerta'||i.nivel==='verificar'));
@@ -440,9 +578,10 @@ const ui = {
       const meta=[['Denúncia',um(xs,'denuncia')],['Sentença',um(xs,'sentenca')],['Trânsito',um(xs,'transito')]].filter(m=>m[1]!==null).map(m=>m[0]+' '+d(m[1])).join(' · ');
       const cols=pe?[['Crime',24],['Pena',11],['Fato',11],['Prazo PPE',16],['Termo inicial',12],['Executória',26]]:[['Crime',26],['Pena',11],['Fato',11],['Prazo PPP',14],['Retroativa / intercorrente',38]];
       const lin=xs.map(x=>{ const v=pe?[x.crime,x.pena,x.fato,x.prazo_ppe,x.ppe_termo]:[x.crime,x.pena,x.fato,x.prazo_ppp];
-        return `<tr class="${rel(x)?'':'fora'}">${v.map(y=>`<td>${penaExt(d(y))}</td>`).join('')}<td>${x[st]?`<span class="pill ${x[sc]||'none'}">${esc(cur(x[st]))}</span>`:'—'}</td><td style="white-space:nowrap!important"><span class="why" onclick="event.stopPropagation();const n=this.closest('tr').nextElementSibling;n.style.display=n.style.display==='none'?'':'none'">cálculo</span></td></tr><tr style="display:none"><td colspan="${cols.length+1}">${ui.memoria(x, pe?'pe':'pp')}</td></tr>`; }).join('');
+        const tem=pe&&ui.tlTem(x); const ti=tem?ui.tlReg(x):-1;
+        return `<tr class="${rel(x)?'':'fora'}">${v.map(y=>`<td>${penaExt(d(y))}</td>`).join('')}<td>${x[st]?`<span class="pill ${x[sc]||'none'}">${esc(cur(x[st]))}</span>`:'—'}</td><td style="white-space:nowrap!important"><span class="why" onclick="event.stopPropagation();ui.tlToggle(this,'calc',${ti})">cálculo</span>${tem?` · <span class="why" onclick="event.stopPropagation();ui.tlToggle(this,'tl',${ti})">linha do tempo</span>`:''}</td></tr><tr style="display:none"><td colspan="${cols.length+1}">${ui.memoria(x, pe?'pe':'pp')}</td></tr><tr style="display:none"><td colspan="${cols.length+1}"></td></tr>`; }).join('');
       return `<div class="pc"><div class="pc-h"><b>Ação penal ${esc(k)}</b><span class="pc-m">${pl(xs.length,'crime','crimes')}${meta?' · '+meta:''}</span><span class="sp"></span>${pior[st]?`<span class="pill ${pior[sc]||'none'}">${esc(cur(pior[st]).split(' em ')[0])}</span>`:''}</div>
-        <table><thead><tr>${cols.map(c=>`<th style="width:${c[1]}%">${c[0]}</th>`).join('')}<th style="width:84px"></th></tr></thead><tbody>${lin}</tbody></table></div>`; }).join('');
+        <table><thead><tr>${cols.map(c=>`<th style="width:${c[1]}%">${c[0]}</th>`).join('')}<th style="width:150px"></th></tr></thead><tbody>${lin}</tbody></table></div>`; }).join('');
     const abrir=`<div style="text-align:right;margin-top:8px"><span class="mini" onclick="event.stopPropagation();ui.abrir('${r.id}')">Abrir ficha completa</span></div>`;
     return cards?`<div class="pc-wrap">${cards}</div>${abrir}`:`<div class="muted">Nenhum crime com prescrição ${pe?'executória aparente ou iminente':'da pretensão punitiva aparente'} nem datas a verificar.</div>`; },
   subTabela(r,spec){ if(spec.id==='aud') return this.audCards(r); if(spec.id==='presc') return this.prescCards(r); const cols=spec.sub_cols; let rows=r[spec.sub]||[]; const tot=cols.reduce((s,c)=>s+c[2],0)+6;
@@ -461,7 +600,7 @@ const ui = {
         return `<tr class="${s.baixado?'bx':''}">${tds2}<td style="white-space:nowrap">${bx}</td></tr>`; }
       if(!calc) return `<tr>${tds}</tr>`;
       return `<tr>${tds}<td><span class="why" onclick="event.stopPropagation();const n=this.closest('tr').nextElementSibling;n.style.display=n.style.display==='none'?'':'none'">cálculo</span></td></tr><tr style="display:none"><td colspan="${cols.length+1}">${ui.memoria(s, spec.id==='presc'?(ui.prescModo==='pp'?'pp':'pe'):null)}</td></tr>`; }).join('');
-    const cab = spec.id==='aud' ? `<b>${esc(r.nome)}</b> <span class="muted">· ${esc(r.aud_resumo)} · conferido com a ${esc(r.aud_base)} · alertas apontam o que demanda atenção, não afirmam erro</span>${(ocultos||this.mostrarTudo)?` · <span class="mini" onclick="event.stopPropagation();ui.mostrarTudo=!ui.mostrarTudo;ui.render()">${this.mostrarTudo?'ocultar informativos e OK':'mostrar '+ocultos+' informativo(s)/OK'}</span>`:''}${r.ficha_resumo?`<div class="muted" style="margin-top:3px">Ficha disciplinar: ${esc(r.ficha_resumo)}</div>`:''}` : spec.id==='fd' ? `<b>${esc(r.nome)}</b> <span class="muted">· ${r.ficha_tem?'ficha disciplinar (SIAPEN) impressa em '+esc((r.ficha||{}).data_impressao||'?')+' · '+esc(r.fd_resumo_exec||''):'sem ficha disciplinar importada'}</span>${r.ficha_tem&&r.fd_remicoes?`<div class="muted" style="font-size:12px;margin-top:3px">${esc(r.fd_remicoes)}</div>`:''}` : `<b>${esc(r.nome)}</b> <span class="muted">· ${(r.presc_linhas||[]).length} crime(s), ${rows.length} ${ui.prescModo==='pp'?'com prescrição da pretensão punitiva aparente':'com prescrição executória aparente ou iminente'} ou datas a verificar na ação penal · cada crime prescreve isoladamente (art. 119)${r.presc_obs?' · '+esc(r.presc_obs):''}</span>`;
+    const cab = spec.id==='aud' ? `<b>${esc(r.nome)}</b> <span class="muted">· ${esc(r.aud_resumo)} · conferido com a ${esc(r.aud_base)} · alertas apontam o que demanda atenção, não afirmam erro</span>${(ocultos||this.mostrarTudo)?` · <span class="mini" onclick="event.stopPropagation();ui.mostrarTudo=!ui.mostrarTudo;ui.render()">${this.mostrarTudo?'ocultar informativos e OK':'mostrar '+pl(ocultos,'informativo','informativos')+'/OK'}</span>`:''}${r.ficha_resumo?`<div class="muted" style="margin-top:3px">Ficha disciplinar: ${esc(r.ficha_resumo)}</div>`:''}` : spec.id==='fd' ? `<b>${esc(r.nome)}</b> <span class="muted">· ${r.ficha_tem?'ficha disciplinar (SIAPEN) impressa em '+esc((r.ficha||{}).data_impressao||'?')+' · '+esc(r.fd_resumo_exec||''):'sem ficha disciplinar importada'}</span>${r.ficha_tem&&r.fd_remicoes?`<div class="muted" style="font-size:12px;margin-top:3px">${esc(r.fd_remicoes)}</div>`:''}` : `<b>${esc(r.nome)}</b> <span class="muted">· ${pl((r.presc_linhas||[]).length,'crime','crimes')}, ${rows.length} ${ui.prescModo==='pp'?'com prescrição da pretensão punitiva aparente':'com prescrição executória aparente ou iminente'} ou datas a verificar na ação penal · cada crime prescreve isoladamente (art. 119)${r.presc_obs?' · '+esc(r.presc_obs):''}</span>`;
     const vazio = (spec.id==='presc' && !rows.length) ? `<tr><td colspan="${cols.length+1}" class="muted">Nenhum crime com prescrição ${ui.prescModo==='pp'?'da pretensão punitiva aparente':'executória aparente ou iminente'} nem datas faltando.</td></tr>` : '';
     if(spec.id==='fd' && r.ficha_tem) return `<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:8px"><span>${cab}</span><span style="white-space:nowrap">${r.fd_conf_tot?`<span class="muted" style="font-size:12.5px;margin-right:10px">Conferidos <b style="color:var(--g-tx)">${r.fd_conf_n||0}</b> de ${r.fd_conf_tot}</span>`:''}<span class="mini" onclick="event.stopPropagation();ui.fdAdicionar('${r.id}')">+ Adicionar atestado</span> <span class="mini" onclick="event.stopPropagation();ui.abrir('${r.id}')">Abrir ficha completa</span></span></div>${this.fdTabela(r)}`;
     return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><span>${cab}</span><span class="mini" onclick="event.stopPropagation();ui.abrir('${r.id}')">Abrir ficha completa</span></div><table class="subtab">${cg}${head}${body}${vazio}</table>`; },
@@ -498,7 +637,7 @@ const ui = {
   async reabrir(id, chave){ await api('reabrir_alerta', id, chave); this.aberto=id; this.render(); },
   copiar(t){ const done=()=>this.toast('Copiado: '+t); if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(t).then(done).catch(()=>{ this._copiaFallback(t); done(); }); } else { this._copiaFallback(t); done(); } },
   _copiaFallback(t){ const ta=document.createElement('textarea'); ta.value=t; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(e){} ta.remove(); },
-  contaCor(a,rs){ if(a.id==='ind') return rs.filter(r=>r.ind_sim).length || ''; return rs.filter(r=>r[a.cor]==='vermelho'||r[a.cor]==='vencido').length || ''; },
+  contaCor(a,rs){ if(a.id==='ind') return rs.filter(r=>r.ind_sim).length || ''; const k = a.id==='presc' ? (this.prescModo!=='pp'?'presc_ppe_cor':'presc_retro_cor') : a.cor; return rs.filter(r=>r[k]==='vermelho'||r[k]==='vencido').length || ''; },
   irAba(id){ this.aba=id; this.filtroCor=null; this.filtroSel='todas'; this.aberto=null; this.render(); },
   filtrarCor(c){ this.filtroCor = this.filtroCor===c ? null : c; this.render(); },
   filtrar(){ const q=document.getElementById('q'); this.filtro=q.value.trim().toLowerCase(); document.getElementById('search').classList.toggle('has',!!this.filtro); this.render(); },
@@ -561,9 +700,12 @@ const ui = {
     const prs=(r.presc_linhas||[]).filter(s=>s.ppe_cor==='vermelho'||s.ppe_cor==='amarelo'||s.retro_cor==='vermelho').map(s=>{
         const exe=s.ppe_cor==='vermelho'||s.ppe_cor==='amarelo';
         const det=exe?s.ppe_detalhe:s.retro_detalhe;
-        const lin=exe ? [s.ppe_resumo||semIcone(linhasDe(det,/^[✘✗…]/)[0]||''), 'Antes de requerer: conferir se houve recaptura, prisão ou nova condenação não registradas no RSPE (interrompem a prescrição).'].filter(Boolean)
+        const lin=exe ? [s.ppe_resumo||semIcone(linhasDe(det,/^[✘✗…?]/)[0]||''), (s.ppe_faltam&&s.ppe_faltam.length)?'Falta: '+s.ppe_faltam.join('; ')+'.':'Antes de requerer: conferir se houve recaptura, prisão ou nova condenação não registradas no RSPE (interrompem a prescrição).'].filter(Boolean)
                       : unicas(linhasDe(det,/^[✘✗]/).map(l=>semIcone(l).replace(/\s*\(prazo ([^,]+), vence ([^)]+)\)/,' - prazo de $1, vencido em $2'))).slice(0,3);
-        return card(`Prescrição ${exe?'executória':'punitiva'} · ${s.crime}`, exe?s.ppe_status:s.retro_status, lin, ui.memoria(s), ui.txtPresc(s, exe?'pe':'pp')); }).join('');
+        const h=card(`Prescrição ${exe?'executória':'punitiva'} · ${s.rotulo||s.crime}`, exe?s.ppe_status:s.retro_status, lin, ui.memoria(s), ui.txtPresc(s, exe?'pe':'pp'));
+        if(!(exe&&ui.tlTem(s))) return h;
+        const ti=ui.tlReg(s);
+        return h.replace('<details class="cc-d">', `<div class="cp-row" style="gap:6px;margin:4px 0"><span class="mini why" onclick="event.stopPropagation();ui.tlToggleDrawer(this,${ti})">linha do tempo</span></div><div class="ptl-holder" style="display:none"></div><details class="cc-d">`); }).join('');
     const calc=dets+cms+prs;
     document.getElementById('drawer').innerHTML=`
       <div class="dh"><div><h2>${esc(r.nome)}</h2><div class="sub"><span class="copy" onclick="ui.copiar('${esc(r.proc)}')" title="Clique para copiar">${esc(r.proc)} ⧉</span> · ${esc(r.regime||'regime não informado')}</div>
@@ -578,24 +720,34 @@ const ui = {
           ${lin('Indulto', '<div style="display:flex;flex-direction:column;gap:4px">'+ind+'</div>'+(r.imp==='Sim'?`<div class="muted" style="font-size:11.5px;margin-top:3px">Crime impeditivo · ${esc((r.imp_txt||'').replace(/^Sim · /,''))}</div>`:''))}
           ${lin('Comutação', `<div style="display:flex;flex-direction:column;gap:4px"><div><span class="muted">2024</span> ${pill(r.c24_txt, r.c24_cor)}</div><div><span class="muted">2025</span> ${pill(r.c25_txt, r.c25_cor)}</div></div>`)}
           ${lin('Prescrição', pill(r.presc_ppe_full||r.presc_ppe, r.presc_cor))}
-          ${lin('Extinção', r.ext_sit?pill(r.ext_sit,r.ext_cor)+(r.ext_hipoteses&&r.ext_hipoteses!=='—'?`<div class="muted" style="font-size:12px;margin-top:3px">${penaExt(esc(r.ext_hipoteses))}</div>`:''):'<span class="muted">—</span>')}
+          ${lin('Extinção', r.ext_sit?pill(r.ext_sit,r.ext_cor)+(r.ext_hipoteses&&r.ext_hipoteses!=='—'?`<div class="muted" style="font-size:12px;margin-top:3px">${penaExt(esc(r.ext_hipoteses))}</div>`:'')+(r.ext_multa?`<div class="muted" style="font-size:12px;margin-top:3px">${esc(r.ext_multa)}</div>`:''):'<span class="muted">—</span>')}
           ${r.falta_sim?lin('Falta (12 meses)', `<span class="falta">${esc(r.falta.replace(/^Sim · /,''))}</span>`):''}
+          ${r.falta_apurar?lin('Falta a apurar (12 meses)', `<span class="apurar">${esc(r.falta_det)}</span> <span class="muted">sem sanção reconhecida no RSPE</span>`):''}
         </div>
         <div class="sec"><h3>Pontos de atenção</h3>${ptsHtml}</div>
         <div class="sec"><h3>Crimes em execução</h3><div class="kv one"><div>${crimes||'—'}</div></div></div>
+        ${this.fichaHtml(r)}
         ${calc?`<div class="sec"><h3>Cálculos do programa</h3>${calc}</div>`:''}
         <div class="sec"><span class="mini" onclick="ui.relatorioUm('${r.id}')">Relatório em PDF</span> <span class="mini" style="color:var(--r-tx)" onclick="ui.confirmarRemocao('${r.id}')">Remover este assistido da base</span></div>
       </div>`;
     document.getElementById('drawer').classList.add('on'); document.getElementById('veil').classList.add('on'); },
   fecharDrawer(){ document.getElementById('drawer').classList.remove('on'); document.getElementById('veil').classList.remove('on'); },
-  fichaHtml(r){ const f=r.ficha; if(!f) return `<div class="sec"><h3>Ficha disciplinar (SIAPEN)</h3><div class="kv one"><div class="muted">Nenhuma ficha importada para este assistido. Importe o PDF da Ficha Disciplinar pelo botão "Importar PDFs": o programa reconhece e vincula pelos autos ou pelo nome.</div></div></div>`;
+  fichaHtml(r){ const f=r.ficha;
+    // falta dos 12 meses (RSPE): o detalhe da coluna Falta aparece aqui, com ou sem ficha
+    const faltaRspe=r.falta_sim?`<span class="falta">Sim</span> · ${esc(r.falta.replace(/^Sim · /,''))}`
+      :(r.falta_apurar?`<span class="apurar">A apurar</span> · ${esc(r.falta_det)} <span class="muted">(sem sanção reconhecida no RSPE)</span>`:'<span class="muted">Não consta no RSPE (conferir o PAD)</span>');
+    const faltaSec=`<div class="kv one" style="margin:8px 0"><div><small>Falta nos 12 meses (RSPE)</small>${faltaRspe}</div></div>`;
+    if(!f) return `<div class="sec"><h3>Ficha disciplinar (SIAPEN)</h3>${faltaSec}<div class="kv one"><div class="muted">Nenhuma ficha importada para este assistido. Importe o PDF da Ficha Disciplinar pelo botão "Importar PDFs": o programa vincula pelos autos citados nela (ou pelo nome, se não houver homônimo na base).</div></div></div>`;
     const kv=(l,v)=>`<div><small>${l}</small>${esc(v||'—')}</div>`;
+    const pillFd=r.fd_sit?`<span class="pill ${r.fd_cor||'none'}">${esc(r.fd_sit)}</span>`:'<span class="muted">—</span>';
+    const rem=`<div class="kv">${kv('Conduta',f.conduta)}${kv('Trabalho atual',r.fd_trab)}${kv('Remidos: atestados na ficha / homologados no RSPE',r.fd_remidos)}${kv('Trabalho a atestar',r.fd_atestar)}${kv('Estudo a requerer',r.fd_estudo)}<div><small>Situação da remição</small>${pillFd}</div></div>`;
     const trab=(f.trabalho||[]).map(t=>`<li><span>${esc(t.inicio)}${t.fim?' → '+esc(t.fim):' → em curso'}</span><span>${esc(t.empresa||t.setor)}${t.externo?' <span class="tag ok">externo</span>':''}${t.motivo_fim?' <span class="muted">· '+esc(t.motivo_fim)+'</span>':''}</span></li>`).join('')||'<li>—</li>';
     const at=(f.atestados||[]).map(a=>`<li><span>${esc(a.data)}</span><span>nº ${esc(a.numero||'s/n')} · <b>${a.dias_trabalhados} trabalhados · ${a.dias_remidos} remidos</b>${a.periodo_inicio?' · '+esc(a.periodo_inicio)+' a '+esc(a.periodo_fim):''}${a.empresa?' · '+esc(a.empresa):''}</span></li>`).join('')||'<li>—</li>';
     const fal=(f.faltas||[]).map(x=>`<li><span>${esc(x.data_fato)}</span><span><span class="tag ${x.situacao==='arquivada'?'ok':x.situacao==='registrada'?'pend':'no'}">${esc(x.situacao)}</span>${esc(x.artigo||'art. n/i')}${x.grave?' · <b>grave</b>':''}${x.padic?' · PADIC '+esc(x.padic):''}${x.data_resultado?' · decisão '+esc(x.data_resultado):''}</span></li>`).join('')||'<li>nenhuma</li>';
     const outros=[...(f.regressoes||[]),...(f.restabelecimentos||[]),...(f.recusa_trabalho||[]),...(f.isolamentos||[])].map(x=>`<li><span>${esc(x.slice(0,10))}</span><span>${esc(x.slice(13))}</span></li>`).join('');
     return `<div class="sec"><h3>Ficha disciplinar (SIAPEN) <span class="muted" style="font-weight:400">· impressa em ${esc(f.data_impressao||'?')} · importada em ${esc(f.importado_em||'?')}</span></h3>
-      <div class="kv">${kv('Unidade',f.unidade)}${kv('Entrada na unidade',f.data_entrada)}${kv('Conduta',f.conduta)}${kv('RGI',f.rgi)}${kv('Dias trabalhados (atestados)',String(f.dias_trabalhados_atestados||0))}${kv('Dias remidos (atestados)',String(f.dias_remidos_atestados||0))}</div>
+      ${rem}${faltaSec}
+      <div class="kv" style="margin-bottom:6px">${kv('Unidade',f.unidade)}${kv('Entrada na unidade',f.data_entrada)}${kv('RGI',f.rgi)}${kv('Dias trabalhados (atestados)',String(f.dias_trabalhados_atestados||0))}${kv('Dias remidos (atestados)',String(f.dias_remidos_atestados||0))}</div>
       <h4 style="margin:10px 0 4px;font-size:12px;color:var(--tx2)">Trabalho</h4><ul class="tl">${trab}</ul>
       <h4 style="margin:10px 0 4px;font-size:12px;color:var(--tx2)">Atestados de trabalho / remição</h4><ul class="tl">${at}</ul>
       <h4 style="margin:10px 0 4px;font-size:12px;color:var(--tx2)">Faltas disciplinares</h4><ul class="tl">${fal}</ul>
@@ -717,6 +869,7 @@ function esc(s){ return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&l
 function cmp(a,b){ const da=dt(a), db=dt(b); if(da&&db) return da-db; if(da) return -1; if(db) return 1; return String(a??'').localeCompare(String(b??''),'pt'); }
 function dt(v){ const m=/^(\d{2})\/(\d{2})\/(\d{4})/.exec(String(v??'')); return m? new Date(+m[3],+m[2]-1,+m[1]).getTime():null; }
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ ui.fecharDrawer(); ui.fecharModal(); } });
+document.addEventListener('click',e=>ui.tlClick(e));
 window.addEventListener('pywebviewready', ()=>api('listar'));
 if(window.__mockApi) api('listar');
 </script>

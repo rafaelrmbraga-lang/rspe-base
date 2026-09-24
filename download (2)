@@ -1,0 +1,16 @@
+# dados reais: nunca versionar
+exemplo/
+bases/
+*.sqlite
+*.db
+rspe_config.json
+defensores.json
+importacao_avisos.txt
+rspe_log.txt
+# build
+build/
+dist/
+*.spec
+__pycache__/
+*.pyc
+pacote/

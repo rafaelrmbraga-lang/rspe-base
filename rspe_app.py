@@ -33,7 +33,7 @@ import rspe_regras as rg
 import rspe_relatorio as rrel
 
 APP = "RSPE Base"
-VERSAO = "6.15.10"
+VERSAO = "6.15.13"
 
 
 def pasta_app():
@@ -68,127 +68,208 @@ BASE_PADRAO = os.path.join(PASTA_BASES, "base_padrao.sqlite")
 
 AJUDA = """
 <h4>Cores</h4>
-Progressão e Livramento: <b>amarelo forte</b> = prazo vencido - verificar exame criminológico, indeferimento ou falta (a dica da
-célula mostra os pedidos do RSPE). Extinção (término): <b>vermelho</b> = cabível. Prazos: <b>laranja</b> = vence em até 30 dias; <b>amarelo</b> = em até
-60 dias; <b>verde</b> = em até 90 dias. Acima de 90 dias a situação fica em branco (não há o que fazer ainda). <b>Cinza</b> = não se
-aplica (pena interrompida, já no aberto, em livramento, cumprida); <b>azul</b> = execução extinta. Indulto/Comutação: <b>vermelho</b> =
-crime impeditivo; <b>verde</b> = possível (também quando depende de tese defensiva, indicada no texto); <b>amarelo</b> = a verificar; <b>cinza</b> = não atinge. Clique num cartão de resumo para filtrar.
-<h4>Datas</h4>
-Progressão, livramento e término são os impressos pelo SEEU no RSPE; o programa não os recalcula. Sem data no RSPE aparece
-"Não consta no RSPE" ou "Pena interrompida". O programa só calcula indulto/comutação e prescrição, na convenção do SEEU
-(ano de 365 dias, mês de 30, prazos pelo calendário), partindo da pena cumprida impressa no RSPE.
+Progressão e Livramento: <b>amarelo forte</b> = prazo vencido ("Vencido há N dias · verificar criminológico, indeferimento ou
+falta"; a dica mostra os pedidos do RSPE e, quando houver, o aviso sobre o exame criminológico, que é só dica: não muda a cor nem
+gera alerta). Prazos: <b>laranja</b> = vence em até 30 dias; <b>amarelo</b> = em até 60; <b>verde</b> = em até 90. Acima de 90 dias:
+"Em cumprimento", sem cor. <b>Cinza</b> = "Pena cumprida" ou "Não se aplica" (em livramento, já no aberto, não iniciou, pena
+interrompida - o motivo fica na ficha); <b>amarelo</b> também para "A verificar (livramento)"; <b>azul</b> = execução extinta.
+Extinção: <b>vermelho</b> = extinção cabível; <b>laranja</b>/<b>amarelo</b>/<b>verde</b> = término em até 30/60/90 dias; cinza = pena
+interrompida ou sem previsão; azul = extinta (registrada).
+Indulto/Comutação (células): <b>vermelho</b> = "Vedado (art. 1º)", "Vedado (art. 7º)", "Indeferido" ou "Falta" (falta com sanção
+reconhecida nos 12 meses); <b>verde</b> = "Sim" (possível, também quando depende de tese defensiva, indicada no texto); <b>amarelo</b> =
+"Verificar" (inclusive falta a apurar e a controvérsia do art. 2º, II); <b>cinza</b> = "Não atinge", "Não se aplica" (nenhuma
+condenação na publicação do decreto), "Fato posterior" ou "Prejudicada"; <b>azul</b> = "Concedido" no RSPE.
+Prescrição: vermelho = aparente; amarelo = iminente (executória em até 180 dias) ou "A VERIFICAR" (saldo na evasão que depende da
+imputação do cumprimento entre condenações); sem cor = não prescrita; cinza = sem dados; azul = extinta. Clique num cartão de resumo
+para filtrar pela cor.
+<h4>Datas e cálculos</h4>
+Progressão, livramento e término são os impressos pelo SEEU no RSPE; o programa não os recalcula. Sem data no RSPE, a tabela mostra
+"—" e o motivo ("Não consta no RSPE", "Pena interrompida", "Não iniciou") fica na ficha. O programa calcula indulto e comutação,
+prescrição, extinção pelo cumprimento, estado da execução, falta nos 12 meses, remição a requerer (ficha x RSPE, estudo estimado) e as
+conferências da Auditoria, na convenção do SEEU (ano de 365 dias, mês de 30, prazos pelo calendário).
+Nos decretos, a pena cumprida é ancorada no SEEU: pena total menos os dias entre a geração do RSPE e o término impresso (sem término,
+a pena cumprida impressa); para a data do decreto, desconta o cumprimento e as remições posteriores a ela ou, se o RSPE é anterior,
+projeta o cumprimento que ele mostra em curso. Na prescrição, o tempo cumprido de cada crime é o dos períodos de cumprimento
+posteriores ao seu termo inicial (custódia e livramento, unidos) mais as remições concedidas; a pena remanescente impressa só entra
+no trecho em aberto com um só crime ativo. Dias de custódia contam o dia da prisão e o da soltura; na prescrição e no desconto entre
+a data do decreto e o RSPE, a conta é pela diferença das datas. Remição: só a concedida; aceita decimal ("12,5 Dia(s)").
 <h4>Falta (12 meses)</h4>
-O RSPE não lista faltas formalmente. A coluna aponta indícios nos 12 meses anteriores: regressão, perda de dias remidos,
-fuga/evasão, sanção. "Não consta" não garante ausência de falta: conferir o PAD.
+O RSPE não lista faltas formalmente. A janela é de 365 dias até a data de geração do RSPE (não até hoje). A coluna mostra "Sim"
+(vermelho) só para falta com sanção reconhecida no RSPE (falta grave homologada, sanção concedida), pela data do fato; indício sem essa
+sanção (fuga ou abandono só como evento, regressão cautelar, falta pendente, perda de remidos sem falta datada, dias perdidos sem data)
+aparece como "A apurar" (amarelo), com o detalhe na ficha do assistido. Regressão e perda de remidos são datadas pela decisão.
+Incidente negado não conta. A ficha disciplinar não entra nesta coluna. "Não consta" não garante ausência de falta: conferir o PAD.
 <h4>Indulto / Comutação</h4>
 Art. 1º (mesmo rol nos dois decretos): hediondos/equiparados, tortura, lavagem (&gt;4 anos), ORCRIM e milícia, terrorismo, racismo,
 escravidão/tráfico de pessoas, genocídio, sistema financeiro (&gt;4 anos), licitações (&gt;4 anos), crimes sexuais (215, 216-A, 217-A,
 218 a 218-C), administração pública 312-319 e 333 (&gt;4 anos), ECA 239-244-B, ambientais, Estado Democrático, abuso de autoridade,
-violência contra a mulher, tráfico (33 caput/§1º, 34-37, 39). Art. 6º: falta grave nos 12 meses antes de 25/12 - o benefício que seria Sim aparece como "Falta" (vermelho), com o detalhe na ficha.
+violência contra a mulher, tráfico (33 caput/§1º, 34-37, 39); crime militar só se corresponder a esses incisos (XIX - fica "a verificar").
+Lesão do art. 129, § 2º ou § 3º, só é hedionda contra agente ou autoridade (Lei 8.072, art. 1º, I-A): "a verificar"; o § 12
+sozinho não torna o crime hediondo. Importunação sexual (215-A) e perseguição (147-A): impeditivas só se a vítima for mulher ("a
+verificar"). Violência doméstica sem sinal de que a vítima é mulher: "a verificar" no texto do indulto.
+Art. 6º: falta grave com sanção reconhecida em juízo nos 12 meses antes de 25/12, pela data do fato - o benefício que seria Sim
+aparece como "Falta" (vermelho); falta pendente, regressão sem falta homologada, perda de remidos sem falta datada e fuga só registrada
+como evento aparecem como "Verificar". Falta depois da publicação do decreto (23/12) não impede (art. 6º, p. ú.). Condenação por
+fato posterior a 25/12, ou com sentença posterior à publicação do decreto (23/12), fica fora da soma do art. 7º (STJ, AgRg no HC 441.551);
+sentença anterior com trânsito para a acusação só depois fica "A VERIFICAR (art. 2º, II)", com as duas correntes - por cautela,
+mesmo quando algum inciso seria possível (o "POSSÍVEL" passa a "A VERIFICAR" até se conferir o recurso da acusação).
 Art. 9º, testado inciso por inciso com a situação em 25/12 de cada ano (regime, pena cumprida, remanescente, reincidência):
 I, II, III (frações por faixa de pena), IV (15/20 anos ininterruptos; a remição do período conta, art. 5º) e V (20/25 anos),
 VI (semiaberto ininterrupto), VII (regime aberto, PRD ou sursis, 1/6 ou 1/5),
-VIII (aberto ou livramento com remanescente ≤ 6 anos, ≤ 4 se reincidente), IX a XV marcados como "a verificar" quando a parte
-objetiva é atendida (programa de egressos, monitoramento, saídas temporárias, estudo, valor do bem, reparação do dano).
+VIII (aberto ou livramento com remanescente ≤ 6 anos, ≤ 4 se reincidente); IX "a verificar" (programa de egressos) só com aberto,
+livramento, PRD ou sursis; X "a verificar" (monitoramento) só com semiaberto há 3 anos ou mais; XI (pena ≤ 12 anos em semiaberto ou
+aberto com a fração cumprida): possível com 5 saídas temporárias no RSPE até a data, senão "a verificar"; XII e XIII (pena ≤ 12 anos com
+a fração cumprida): "a verificar" (estudo, curso); XIV (crime patrimonial sem VGA com 3 meses cumpridos): "a verificar" (valor do bem);
+XV possível (reparação dispensada, art. 12, § 2º, I). XIV e XV são aferidos crime a crime.
 § 2º, I: para maiores de 60 anos os lapsos dos incisos I a XI caem pela metade (aplicado automaticamente pela data de nascimento;
 não alcança as frações do XII e do XIII nem o requisito do art. 13);
-os demais grupos do § 2º, o inciso XVI (saúde) e o art. 10 (mulheres) não são aferíveis pelo RSPE.
+os demais grupos do § 2º, o inciso XVI (saúde), os arts. 10 e 11 (mulheres) e o art. 1º, § 1º (colaboração premiada) não são aferíveis pelo RSPE.
 Com a ficha disciplinar importada, os incisos XI (5 saídas temporárias ou 12 meses de trabalho externo nos 3 anos), XII (estudo por 12 meses nos 3 anos; 18 meses nos 5 anos se reincidente, em 2024 e em 2025) e XIII (curso concluído ou certificado ENCCEJA/ENEM durante a execução e nos 3 anos anteriores a 25/12) são conferidos na ficha: atende = possível; não consta = não atendido.
 Art. 13 (comutação): 1/5 do remanescente (ou do cumprido, se maior) para quem cumpriu 1/5 (primário) ou 1/4 (reincidente);
-2/3 para os grupos do § 2º; não cumula com indulto (§ 5º); com comutação anterior concedida, dispensa novo requisito temporal (§ 2º). A análise completa está na ficha, em "Análise inciso por inciso".
+2/3 para os grupos do § 2º; não cumula com indulto (§ 5º: "Prejudicada"); com comutação anterior concedida, dispensa novo requisito
+temporal (§ 2º). Sem cumprimento em curso na data (não iniciado ou interrompido), indulto e comutação de 2024 e 2025 "não se aplicam"
+(célula "Não atinge"), salvo o inciso XV, que não exige fração e fica "a verificar". A análise completa está na ficha, em "Análise
+inciso por inciso". O programa não usa a expressão "indulto parcial", sinônimo de comutação na jurisprudência (STF, HC 81.567 e HC
+96.431; STJ, REsp 753.646): no concurso com crime impeditivo, fala em "indulto dos crimes não impeditivos (art. 7º, p. ú.)", analisado
+depois de 2/3 da pena do impeditivo.
+Livramento incerto (o SEEU imprime o livramento como vigente, mas há regressão, prisão ou interrupção posterior): no indulto e na
+comutação de 2024 e 2025, o que seria possível passa a "A VERIFICAR" com a ressalva "livramento a confirmar". Dar baixa no alerta da Auditoria confirma o livramento em todas as abas.
 <b>Decreto 11.302/2022</b> (referência 25/12/2022) tem lógica própria: art. 5º alcança o crime cuja <b>pena máxima em abstrato</b>
 não supere 5 anos (em concurso, cada crime é avaliado isoladamente - parágrafo único), sem exigir fração cumprida nem regime; havendo crime excluído pelo art. 7º em concurso, o crime não impeditivo só é indultado depois de cumprida a pena do impeditivo (art. 11, p. ú.; STJ, 3ª Seção, AgRg no HC 890.929/SE) - o programa compara a soma das penas impeditivas com a pena cumprida em 25/12/2022;
-art. 4º, maiores de 70 anos com 1/3 cumprido (alcança a pena toda; as vedações do art. 7º, III, b e d, e V não se aplicam a ele - art. 7º, § 2º); art. 1º, saúde (laudo); art. 7º exclui hediondos, violência/grave ameaça e violência
+art. 4º, maiores de 70 anos com 1/3 cumprido (as vedações do art. 7º, III, b e d, e V não se aplicam a ele - art. 7º, § 2º; com outro crime excluído, 1/3 dos demais depois de cumprida a pena do excluído - art. 11, p. ú.); art. 1º, saúde (laudo); art. 7º exclui hediondos, violência/grave ameaça e violência
 doméstica, tortura, lavagem, ORCRIM, terrorismo, crimes sexuais (215 a 218-C), 312/316/317/333, tráfico (33 caput e § 1º, 34, 36 -
 exceto o § 4º) e ECA 240-244-B; art. 9º dispensa o trânsito em julgado. A pena máxima é lida do tipo penal impresso no RSPE; quando o
 SEEU corta o texto, usa-se a tabela editável "pena_maxima_abstrata" da base jurídica (indicado na análise). O trecho relativo a
-agentes de segurança e militares (arts. 2º, 3º e 6º) não é avaliado; o art. 8º exclui PRD, multa e suspensão condicional do processo.
+agentes de segurança e militares (arts. 2º, 3º e 6º) não é avaliado; o art. 8º exclui PRD, multa e suspensão condicional do processo (pena marcada
+"CONVERTIDA" fica "a verificar"); crime militar, "a verificar" (art. 7º, VII). O Decreto 11.846/2023 não é analisado.
 <b>Hediondez pela época do fato</b>: a tabela "hediondos.desde" da base jurídica guarda a data em que cada tipo passou a ser
-hediondo (Lei 8.072/90 e alterações - 8.930/94, 9.695/98, 12.015/2009, 13.104 e 13.142/2015, 13.497/2017, 13.654/2018,
+hediondo (Lei 8.072/90 e alterações - 8.930/94, 9.695/98, 12.015/2009, 13.104 e 13.142/2015, 13.497/2017,
 12.978/2014, 13.964/2019, 14.811 e 14.994/2024, 15.134 e 15.159/2025, 15.358, 15.384 e 15.487/2026). Fato anterior à data não é
 tratado como hediondo (CF, art. 5º, XL) nas frações e no livramento, e a Auditoria alerta quando o SEEU rotulou como hediondo um
 fato anterior à lei. No art. 1º dos decretos de indulto, a hediondez é aferida na data de cada decreto (STJ); a tese da
-irretroatividade (STF, 2ª Turma) aparece como "tese hed. superv.".
+irretroatividade (STF, 2ª Turma) aparece como "tese hed. superv.", com a corrente contrária (STF, 1ª Turma) no texto.
 <h4>Prescrição (arts. 109 a 119 do CP), crime a crime</h4>
 <b>Pretensão punitiva (retroativa e intercorrente, art. 110, § 1º)</b>: prazo pela pena aplicada (art. 109), metade se menor de 21 anos
-no fato ou maior de 70 na sentença (art. 115); intervalos fato→denúncia (só para fatos até 05/05/2010; Lei 12.234/2010, DOU e vigência em 06/05/2010),
-denúncia→sentença e sentença→trânsito. O acórdão confirmatório também interrompe (art. 117, IV; STF HC 176.473) e sua data não
-consta no RSPE: conferir antes de pedir.
+no fato ou maior de 70 na sentença (art. 115; salvo violência sexual contra a mulher, com aviso); intervalos fato→denúncia (só para
+fatos até 05/05/2010; Lei 12.234/2010, DOU e vigência em 06/05/2010), denúncia→sentença e sentença→trânsito final (a intercorrente vai
+até o trânsito para a defesa). O acórdão condenatório também interrompe (art. 117, IV; STF HC 176.473), assim como a pronúncia e sua
+confirmação nos crimes do júri (art. 117, II e III; Súmula 191); essas datas não constam do RSPE: conferir antes de pedir. Pena menor
+que 1 ano por fato anterior a 06/05/2010: prazo de 2 anos (art. 109, VI, na redação anterior à Lei 12.234/2010). Crime continuado e
+concurso formal: o prazo se calcula sem o acréscimo (STF, Súmula 497; art. 119) - a memória avisa.
 <b>Pretensão executória (art. 110, caput)</b>: prazo pela pena aplicada, +1/3 se reincidente, metade pelo art. 115. Termo inicial no
 trânsito em julgado para ambas as partes (STF, Tema 788) ou, se o trânsito para a acusação é anterior a 12/11/2020, nessa data
-(art. 112, I, com a modulação do Tema). Não corre enquanto preso (art. 116, p. único) e interrompe-se pelo início ou continuação
-do cumprimento (art. 117, V); na evasão ou revogação do livramento, regula-se pela pena restante (art. 113). Cada crime é analisado
-isoladamente (art. 119). A "memória de cálculo" de cada crime mostra intervalos, prazos e datas.
-Só a prescrição já consumada aparece: vermelho = prescrição aparente; sem cor = não prescrita; cinza = sem dados ou extinta.
+(art. 112, I, com a modulação do Tema). Cada período dos eventos do RSPE é classificado em relação ao crime: custódia anterior ao
+termo inicial = prisão provisória (detração, CP, art. 42), só informativa - não reduz a pena nem o prazo (STJ, AgRg no HC 967.565;
+RHC 67.403); custódia a partir do termo = cumprimento da pena unificada (LEP, art. 111), que interrompe (art. 117, V) - inclusive o
+flagrante ou a preventiva cujo campo "Processos" inclui o processo do crime (também no formato curto do SEEU) ou não indica processo;
+prisão provisória registrada só para outro processo e iniciada depois do termo = prisão por outro motivo: suspende (art. 116, p.
+único) e não conta como cumprimento (se foi convertida em cumprimento, o efeito é de interrupção - a conferir). Livramento
+condicional concedido conta como cumprimento. Intervalo sem custódia depois do termo começado por fuga, evasão, abandono ou
+revogação do livramento é evasão: o prazo corre pelo saldo da pena (art. 113); motivo não informado: também, com aviso; soltura sem
+culpa (liberdade provisória, relaxamento, habeas corpus, alvará) ou sem início do cumprimento: prazo pela pena aplicada (STJ, RHC
+67.403).
+<b>Saldo na evasão</b>: com uma só condenação, pena menos o cumprido desde o termo (ou a pena remanescente do RSPE no trecho em
+aberto). Com várias condenações unificadas, o RSPE não informa como o tempo cumprido foi imputado entre elas: o programa calcula
+dois limites - saldo mínimo (este crime imputado primeiro) e saldo máximo (este crime imputado por último, depois das outras
+condenações com trânsito anterior à evasão) - e mostra, como referência, a hipótese do art. 76 do CP (mais grave primeiro; STJ, RHC
+9.158) e a da ordem cronológica do trânsito (STJ, HC 627.646). O prazo (art. 109 sobre o saldo, +1/3, metade) é testado em cada
+faixa do art. 109 atravessada pelos dois limites e a data-limite soma os dias de suspensão. Todas as faixas prescrevem:
+"Prescrição executória aparente" (data mais tardia); nenhuma: "Não prescrita"; divergem: "A VERIFICAR: saldo na evasão depende da
+imputação do cumprimento entre as condenações unificadas" (amarelo), com a lista do que falta (cálculo do SEEU com o saldo por
+condenação, ordem de imputação, prisões por outro processo). Recaptura ou reinício interrompe (art. 117, V); cada crime prescreve
+isoladamente pelo seu saldo (art. 119; STJ, AgRg no REsp 2.256.555, RHC 35.425, HC 261.866). Nunca se usa "tempo total preso
+igual ou maior que a pena do crime": a mesma prisão serve a várias condenações. Custódia provisória anterior ao trânsito igual ou
+maior que a pena do processo não é resultado de prescrição: vira aviso na memória e hipótese "a verificar" na aba Extinção.
+A "memória de cálculo" de cada crime mostra, nesta ordem: pena aplicada; termo inicial; prazo pela pena aplicada; prisão provisória
+(informativa); cada período (cumprimento, prisão por outro motivo, evasão com cumprido, saldo, prazo, vencimento e recaptura,
+liberdade sem evasão); conclusão. Abaixo dela, a tabela da linha do tempo do crime (Período | Classificação | Fonte | Efeito na prescrição).
+<b>Linha do tempo visual</b>: na linha de cada crime da aba Prescrição (e no cartão da prescrição executória da ficha do assistido),
+"cálculo" abre a memória em texto e "linha do tempo" abre a figura, um de cada vez (clicar de novo fecha). A figura é a memória de
+cálculo desenhada e não faz conta própria: eixo do fato à situação atual com os marcos (fato, sentença, trânsito, fuga, recaptura, hoje)
+e cada período classificado. Legenda das faixas: verde = cumprimento da pena; vermelho hachurado = fuga/evasão; listras cinza = prisão
+provisória (detração); roxo = suspensão (preso por outro motivo); cinza claro = liberdade sem evasão; azul claro = livramento; laranja
+hachurado com "?" = atribuição não comprovada (cumprimento registrado no SEEU só para outro processo: conta na execução unificada, mas
+a imputação a esta condenação não consta). Sob cada fuga, a linha de contagem pelo saldo (art. 113) com os vencimentos (saldo mínimo,
+faixa intermediária do art. 109, saldo máximo) e a recaptura, e o cartão com pena aplicada, cumprido, imputável ao crime, saldo, prazo e
+vencimento. Abaixo, os blocos "detração → saldo → prazo", as hipóteses de imputação (CP, art. 76 e ordem cronológica do trânsito) e o
+cartão do resultado (A VERIFICAR / PRESCRITO / Não reconhecida) com o motivo e "Falta para concluir". Clique em marco, faixa ou linha de
+contagem para o balão "Como cheguei aqui?" (evento do SEEU, período, tratamento, fundamento e efeito). O relatório individual traz a
+mesma figura, sem os balões.
 <h4>Filtro de situação</h4>
-O seletor ao lado dos botões filtra a aba: vencidas / a vencer em 30 ou 60 dias / interrompidas (progressão e livramento); possível /
-a verificar / não atinge / impeditivo (indulto); aparente / não prescrita (prescrição). O número da execução é copiado com um clique.
+O seletor ao lado dos botões filtra a aba (a Geral não tem). Progressão e Livramento: vencidas, vence em até 30, 60 ou 90 dias, não
+iniciou, pena interrompida, não se aplica (cumprida / livramento / aberto), sem data. Indulto/Comutação: por benefício e resultado
+("Indulto 2024 · Sim", "Comutação 2025 · Verificar" etc.), fato posterior à data do decreto, falta nos 12 meses e crime impeditivo.
+Prescrição: aparente, iminente / a verificar, não prescrita / não configurada, sem dados, extinta. Extinção: extinção cabível,
+término em até 30, 60 ou 90 dias, pena interrompida, sem previsão. Ficha disciplinar: remição a requerer, conferir remição / sem atestado
+/ estudo, em ordem, sem ficha. Auditoria: com alertas, pontos a verificar, sem inconsistências. O número da execução é copiado com um clique.
 <h4>Pasta vigiada</h4>
-Menu da base &gt; "Pasta vigiada…": escolha uma pasta mãe com uma subpasta por base (ex.: "2ª VEP", "1ª VEP", ou RSPE\2ª VEP e
-FD\2ª VEP). Os PDFs salvos numa subpasta entram sozinhos na base de mesmo nome, com o programa aberto; a base é criada se não
+Menu da base &gt; "Pasta vigiada…": escolha uma pasta mãe com uma subpasta por base (ex.: "2ª VEP", "1ª VEP", ou RSPE\\2ª VEP e
+FD\\2ª VEP). Os PDFs salvos numa subpasta entram sozinhos na base de mesmo nome, com o programa aberto; a base é criada se não
 existir. PDF solto na pasta mãe é ignorado; nada é apagado ou movido.
 <h4>Ficha disciplinar (SIAPEN/AGEPEN)</h4>
-Importe o PDF da Ficha Disciplinar pelo mesmo botão "Importar PDFs": o programa reconhece o documento e o vincula ao RSPE
-pelos autos citados na ficha (ou pelo nome). Extrai conduta, períodos de trabalho (setor/empresa), atestados de trabalho com
-dias trabalhados e remidos, faltas disciplinares (registro, PADIC, arquivamento/homologação), regressão/restabelecimento,
-isolamento e recusa de trabalho. O programa confronta: soma dos dias remidos atestados x soma das remições do RSPE (LEP, art. 126), proporção
-1 para 3, trabalho sem atestado e baixa de trabalho sem início registrado, falta grave nos últimos 12 meses (CP, art. 83, III, b;
-art. 6º dos decretos), falta arquivada que ainda produza efeitos e perda de dias remidos em duplicidade (LEP, art. 127: a nova
-perda só alcança a remição adquirida depois da falta anterior). A aba <b>Ficha disciplinar</b> trata só de remição (trabalho e estudo) e agrupa por atestado: cada bloco
-mostra o atestado (dias trabalhados e remidos, como constam nele) e os empregos que ele cobre; depois vêm os períodos sem atestado na
-ficha (procurar nos autos ou pedir à unidade), o estudo e o que você adicionou ("+ Adicionar atestado": ENCCEJA/ENEM, trabalho fora da
-ficha). O círculo à direita marca o atestado ou o período como conferido (fica gravado na base). Não há contagem de dias pelo período:
-o atestado conta dias trabalhados (inclusive sábados, conforme a unidade), e o programa não estima. O RSPE não diz de onde vem cada remição (trabalho, estudo,
-ENCCEJA/ENEM, leitura), então o programa não liga remição a atestado: aponta "Requerer remição" só quando não há nenhuma remição
-lançada no RSPE depois do atestado (ou depois do período de estudo); os demais atestados ficam "conferir a homologação", com as
-somas e a lista das remições do RSPE no cabeçalho. Trabalho anterior à 1ª prisão do RSPE fica só no resumo.
+Importe o PDF da Ficha Disciplinar pelo mesmo botão "Importar PDFs": o programa reconhece o documento e o vincula ao RSPE pelos autos
+citados na ficha. Sem esse vínculo, a ficha fica guardada pelo nome e vale para o assistido de mesmo nome só se houver um único na base
+(com homônimos, não é ligada a ninguém). Extrai conduta, períodos de trabalho (setor/empresa), atestados de trabalho com dias
+trabalhados e remidos, estudo, faltas disciplinares (registro, PADIC, arquivamento/homologação), regressão/restabelecimento, isolamento e
+recusa de trabalho. A análise da ficha é de remição: a aba <b>Ficha disciplinar</b> agrupa por atestado (dias trabalhados e remidos,
+como constam nele, e os empregos que ele cobre); depois vêm os períodos sem atestado na ficha (procurar nos autos ou pedir à unidade),
+a baixa de trabalho sem início registrado, o estudo e o que você adicionou ("+ Adicionar atestado": ENCCEJA/ENEM, trabalho fora da
+ficha). O círculo à direita marca o atestado ou o período como conferido (fica gravado na base). A remição do trabalho vem dos dias
+trabalhados do atestado; a coluna "Dias" mostra os dias corridos do período, só como referência. O estudo sem carga declarada é
+estimado em 4 h por dia útil (1 dia remido a cada 12 h); início ou fim ilegível = "Conferir datas". O RSPE não diz de onde vem cada
+remição (trabalho, estudo, ENCCEJA/ENEM, leitura), então o programa não liga remição a atestado: aponta "Requerer remição" só quando não
+há nenhuma remição lançada no RSPE depois do atestado (ou depois do período de estudo); os demais ficam "conferir a homologação", com as
+somas e a lista das remições do RSPE no cabeçalho. Trabalho anterior à 1ª prisão do RSPE fica só no resumo. As faltas da ficha não
+entram na coluna Falta nem no indulto; na Auditoria, só no ponto "Perda de remidos pode alcançar remição anterior à falta" (desconto
+em duplicidade, LEP, art. 127).
 <h4>Regras de leitura</h4>
 Quem não tem início de cumprimento definitivo no RSPE (só prisão provisória encerrada, ou nenhuma) aparece como "Não iniciou o
 cumprimento", e não como regime aberto ou pena interrompida. Livramento suspenso ou revogado em incidente posterior aparece como tal.
-Dar baixa no alerta de livramento incerto confirma o livramento em todas as abas. A Auditoria confere só a matemática do RSPE (frações, soma das penas, data-base, perda de dias remidos, reincidência,
-marcações de hediondez e violência, livramento incerto); remição, indulto, comutação, prescrição e prazos ficam nas próprias abas.
-O programa não usa a expressão "indulto parcial", sinônimo de comutação na jurisprudência (STF, HC 81.567 e HC 96.431; STJ, REsp
-753.646): no concurso com crime impeditivo, fala em "indulto dos crimes não impeditivos (art. 7º, p. ú.)". Os incisos XIV e XV (crime contra o patrimônio sem violência) são aferidos crime a crime: não têm teto de pena nem
-fração, e o indulto alcança as penas desses crimes, seguindo as dos demais - o art. 7º, parágrafo único, só trava no concurso com
-crime do art. 1º (2/3 da pena do impeditivo). No XV a reparação do dano é dispensada pela hipossuficiência (art. 12, § 2º, I).
-Sem cumprimento em curso na
-data do decreto (não iniciado ou interrompido), indulto e comutação de 2024 e 2025 "não se aplicam". O programa não presume datas. Sem data do fato, recebimento da denúncia, sentença ou trânsito em julgado no RSPE, a prescrição
+A Auditoria confere a matemática e as marcações do RSPE (frações, soma das penas, data-base, perda de dias remidos, reincidência,
+marcações de hediondez e violência, livramento incerto) e mantém os avisos que nenhuma outra aba mostra: idade (LEP, art. 117, I; § 2º
+dos decretos), multa cominada, reparação do dano no crime patrimonial sem VGA e progressão especial da mulher (1/8). Remição da ficha,
+indulto, comutação, prescrição e prazos vencidos ficam nas próprias abas.
+O programa não presume datas. Sem data do fato, recebimento da denúncia, sentença ou trânsito em julgado no RSPE, a prescrição
 daquele trecho não é calculada e a Auditoria aponta "verificar na ação penal". Quando a 1ª página do RSPE diz "Em livramento
 condicional deferido em ...", o assistido é tratado como em livramento, ainda que o "Regime Atual" traga o regime anterior, salvo se
 houver regressão (inclusive cautelar), suspensão ou revogação posterior: aí vale o regime do RSPE e a Auditoria pede a conferência do
-desfecho (suspensão antes do fim do período de prova, revogação, homologação da falta). Prescrição executória correndo aparece como
-"iminente" quando faltarem até 180 dias, com o cálculo no detalhe. Sem artigo no RSPE ("Não informado"), o crime é
-reconhecido pela descrição do tipo (ex.: "conjunção carnal ... com menor de 14 anos" = art. 217-A do CP), conforme a lei da data do
-fato: antes da Lei 12.015/2009 (10/08/2009), arts. 213/214 c/c 224, a; o art. 214 posterior a ela vira art. 213; tipos criados depois
-do fato (215-A, 24-A da Lei Maria da Penha) são apontados na Auditoria. Na Ficha disciplinar,
-a situação diz o que falta: remição a requerer (atestado sem remição posterior no RSPE), remição a conferir (somas diferentes) e trabalho sem atestado. Fuga: a data-base vai para a recaptura (falta permanente), mas a Auditoria pede a homologação da falta; falta grave não
-move a data-base do livramento, do indulto nem da comutação (Súmulas 441 e 535 do STJ). Os dias cumpridos contam o dia da
-prisão e o da soltura, como o SEEU. A
-data-base é conferida com a última prisão, progressão/regressão ou falta grave homologada; sem esse evento no RSPE, a Auditoria
-aponta a inconsistência (e, se coincidir com a soma/unificação das penas, o Tema 1006 do STJ).
+desfecho. Sem artigo no RSPE ("Não informado"), o crime é reconhecido pela descrição do tipo (ex.: "conjunção carnal ... com menor de
+14 anos" = art. 217-A do CP), conforme a lei da data do fato: antes da Lei 12.015/2009 (10/08/2009), arts. 213/214 c/c 224, a; o art.
+214 posterior a ela vira art. 213; tipos criados depois do fato (215-A, 24-A da Lei Maria da Penha) são apontados na Auditoria. Fuga: a
+data-base vai para a recaptura (falta permanente), mas a Auditoria pede a homologação da falta; falta grave não move a data-base do
+livramento, do indulto nem da comutação (Súmulas 441 e 535 do STJ). A data-base é conferida com a última prisão, progressão/regressão
+ou falta grave homologada; sem esse evento no RSPE, a Auditoria aponta a inconsistência (e, se coincidir com a soma/unificação das
+penas, o Tema 1006 do STJ).
 <h4>Telas e cópia para a petição</h4>
-Na Prescrição, o seletor ao lado do filtro escolhe a pretensão (executória ou punitiva): a tela mostra uma de cada vez.
-No Indulto/Comutação, o filtro escolhe o benefício (ex.: "Indulto 2024 · Sim", "Comutação 2025 · Verificar").
-As tabelas mostram só o essencial: data do SEEU ou "—" (sem data por não iniciar o cumprimento, interrupção, regime aberto
-etc.); indulto e comutação como Sim, Não ou Verificar; prescrição como Não configurada, Não prescrita, Iminente ou Aparente.
-O motivo e o cálculo ficam na ficha do assistido (clique no nome). Condenação por fato posterior à data do decreto na mesma
-execução: o indulto e a comutação daquele decreto aparecem como "Não", com a explicação na ficha.
+Nas abas Geral, Progressão, Livramento, Indulto/Comutação e Extinção, o clique na linha abre a ficha do assistido; em Prescrição, Ficha
+disciplinar e Auditoria, expande a linha, e a ficha abre por "Abrir ficha completa". A ficha do assistido mostra pena, benefícios,
+falta, pontos de atenção, crimes, a ficha disciplinar (conduta, remição atestada x homologada, o que requerer, o detalhe da falta -
+"Sim" ou "A apurar" -, trabalho, atestados e faltas) e os cálculos do programa.
+Na Prescrição, o seletor ao lado do filtro escolhe a pretensão (executória ou punitiva): a tela mostra uma de cada vez, com os
+crimes de prescrição aparente, iminente ou com datas a verificar, agrupados por ação penal.
+As tabelas mostram só o essencial: data do SEEU ou "—"; indulto e comutação como Concedido, Sim, Verificar, Falta, Vedado (art. 1º),
+Vedado (art. 7º), Indeferido, Prejudicada, Fato posterior, Não se aplica ou Não atinge; prescrição como Aparente, Iminente, A verificar,
+Não prescrita (executória) / Não configurada (punitiva), Sem dados ou Extinta. O motivo e o cálculo ficam na ficha do
+assistido. Condenação por fato posterior à data do decreto na mesma execução: o decreto não alcança essa pena, que segue em execução,
+mas ela não impede o indulto nem a comutação das penas anteriores (art. 7º; art. 6º, p. ú.; STJ, HC 190.963). A análise usa só os
+crimes anteriores e a ficha traz a nota; "Fato posterior" só aparece quando não resta crime anterior.
 Para levar ao Word: "Copiar resumo" (ficha do assistido), "Copiar pretensão punitiva" e "Copiar pretensão executória" (prescrição), "Copiar cálculo" (indulto e comutação), "Copiar" e
-"Copiar pendências" (Auditoria). O texto vai em linhas simples, pronto para colar. Nos modelos de petição, o campo
-{{prescricao_calculo}} traz a memória de cálculo da prescrição aparente ou iminente.
+"Copiar pendências" (Auditoria). O texto vai em linhas simples, pronto para colar.
 <h4>Relatórios em PDF</h4>
-O botão <b>Relatórios</b> gera, numa pasta com a data e a hora: um PDF por assistido (resumo, benefícios, condenações, linha do
-tempo, remição e alertas), o relatório geral da base (perfil, benefícios, remição, alertas e fila de prioridade) e a planilha.
-No próprio botão dá para escolher de quem sai o relatório individual, na lista com busca e "Todos"/"Nenhum"; o relatório geral, a
-fila e a planilha seguem com todos os visíveis.
-Vale para os assistidos visíveis (busca e filtro). Na ficha do assistido, "Relatório em PDF" gera só o dele.
+O botão <b>Relatórios</b> gera, numa pasta com a data e a hora: um PDF por assistido (bloco da pena, tabela de benefícios com
+etiquetas e observação, condenações, linha do tempo em eventos e incidentes, remição, um bloco por alerta em frases curtas com o
+fundamento em lista e, para os crimes com evasão, prescrição aparente ou a verificar, a figura da linha do tempo da prescrição
+executória com o cartão de saldo de cada fuga, as hipóteses de imputação e o resultado), o relatório geral da base (perfil, benefícios, remição, alertas e fila de prioridade, com a prescrição
+punitiva e a executória em linhas separadas) e a planilha. No próprio botão dá para escolher de quem sai o relatório individual, na
+lista com busca e "Todos"/"Nenhum". Vale para os assistidos visíveis pela busca (o filtro de situação e os cartões não restringem).
+Na ficha do assistido, "Relatório em PDF" gera só o dele. A exportação Excel/PDF segue a mesma regra.
 <h4>Presunção de hipossuficiência (Defensoria)</h4>
-Em qualquer hipótese o programa presume a incapacidade econômica do assistido: a <b>multa</b> pendente não obsta a extinção da
-punibilidade (STJ Tema 931, rev. 28/02/2024; STF ADI 7.032), é indultável e não é óbice ao indulto (Decretos 12.338/2024 e
-12.790/2025, art. 12, § 2º, I - presunção expressa para quem é assistido pela Defensoria); a <b>reparação do dano</b> é dispensada
-no inciso XV do art. 9º (crime patrimonial sem VGA) e não bloqueia o livramento (CP, art. 83, IV, "salvo efetiva impossibilidade").
-O tráfico privilegiado (art. 33, § 4º) não é hediondo nem impeditivo de indulto (STF PSV 125 e Tema 1400; STJ Tema 1336).
-A petição deve instruir a impossibilidade (há julgados do STJ exigindo prova - ver base jurídica).
+No indulto, a <b>multa</b> é indultável e não é óbice (Decretos 12.338/2024 e 12.790/2025, art. 12, § 2º, I - presunção expressa
+de incapacidade econômica para quem é assistido pela Defensoria). Na extinção da punibilidade, a multa pendente só não obsta se
+comprovada a impossibilidade de pagamento, ainda que parcelado (STF ADI 7.032, vinculante; STJ Tema 931, rev. 28/02/2024): instruir
+o pedido. A <b>reparação do dano</b> é dispensada no inciso XV do art. 9º (crime patrimonial sem VGA); no livramento (CP, art. 83,
+IV, "salvo efetiva impossibilidade"), a impossibilidade deve ser demonstrada (STJ, AgRg no HC 799.167).
+O tráfico privilegiado (art. 33, § 4º) não é hediondo nem impeditivo de indulto (STF, SV 63 e Tema 1400; STJ Tema 1336).
 <h4>Petições a partir de modelos .docx</h4>
 Recurso desativado nesta versão (foco na exatidão dos cálculos). Os modelos e o cadastro de defensores permanecem no programa
 para reativação futura.
@@ -200,18 +281,27 @@ percentual de progressão pela lei da data do fato (1/6 para crimes comuns até 
 (feminicídio, 55%) de 10/10/2024 a 24/03/2026; Lei 15.358/2026 a partir de 25/03/2026 para hediondos, feminicídio, milícia e comando de
 organização criminosa; Lei 15.402/2026 a partir de 08/05/2026), com retroatividade só do mais benéfico (STJ Temas
 1084, 1196 e 1354; STF Tema 1169), fração de livramento (CP, art. 83; Lei 11.343, art. 44), reincidência sem condenação anterior
-no RSPE (CP, art. 63), data-base e regressões (LEP, art. 112, § 6º), idade (art. 115 CP; § 2º dos decretos), marcos vencidos sem
-decisão, prescrição aparente e indulto/comutação possível sem incidente. Os pontos têm quatro níveis: <b>Alerta</b> (divergência com efeito concreto para o apenado: fração, hediondez, marco vencido,
-prescrição, indulto, remição, falta), <b>Verificar</b> (depende de dado que o RSPE não traz, mas pode ter efeito), <b>Info</b>
-(registro sem efeito prático - fica oculto por padrão; "mostrar informativos") e <b>OK</b>. "Com alertas" = há ao menos um alerta objetivo;
-"a verificar" = depende de dado que o RSPE não traz. Nada é afirmado como erro: cada item traz o fundamento para conferência.
+no RSPE (CP, art. 63) e reincidência específica (art. 83, V), data-base e regressões (LEP, art. 112, § 6º), livramento incerto, idade
+(LEP, art. 117, I; § 2º dos decretos), multa, reparação do dano, progressão especial da mulher (1/8) e, para o reincidente em crime
+com violência ou grave ameaça, o percentual por analogia (25%) se a condenação anterior não teve violência (informativo). Os pontos que outras abas já
+mostram (prazos vencidos sem decisão, prescrição, indulto/comutação possível sem incidente, hediondez posterior ao fato, violência
+doméstica a confirmar, não iniciou, interrompida, trânsito não informado, detração) são gerados, mas ficam fora da aba e da contagem.
+Os pontos têm quatro níveis: <b>Alerta</b> (divergência com efeito concreto para o apenado), <b>Verificar</b> (depende de dado que o RSPE
+não traz, mas pode ter efeito), <b>Info</b> (registro sem efeito prático - fica oculto por padrão; "ver conferências OK / informativas")
+e <b>OK</b>. "Com alertas" = há ao menos um alerta; "pontos a verificar" = dependem de dado que o RSPE não traz. Nada é afirmado como
+erro: cada item traz o fundamento para conferência.
 <b>Dar baixa</b>: cada ponto pode ser baixado (com observação) quando já foi tratado ou não se aplica; ele sai da contagem,
-fica registrado na base com data e pode ser reaberto. A baixa é por processo e por ponto, e sobrevive à reimportação do RSPE.
+fica registrado na base com data e pode ser reaberto. A baixa é por processo, pelo tipo do ponto e pelo crime (ou ano do decreto,
+ou falta) a que ele se refere: sobrevive à reimportação do RSPE e continua valendo quando o título muda (números, datas ou
+agrupamento de crimes). Baixas gravadas em versões anteriores passam sozinhas para a chave nova na primeira abertura. Os avisos
+"Ficha disciplinar ignorada" e "Falha ao analisar" contam como alerta e também podem ser baixados.
 <h4>Extinção</h4>
-Só a extinção pelo cumprimento: pena integralmente cumprida ou término previsto já alcançado (LEP, art. 109); livramento
-condicional com período de prova expirado sem revogação (CP, arts. 89 e 90; LEP, art. 146); detração que alcança toda a pena do crime.
-Prescrição e indulto ficam nas próprias abas. Cores: vermelho =
-extinção cabível; amarelo/verde = término em até 30/60 dias; cinza = pena interrompida ou sem previsão.
+Só a extinção pelo cumprimento: pena integralmente cumprida ou término previsto já alcançado (LEP, arts. 66, II, e 109); livramento
+condicional com período de prova expirado sem revogação (CP, arts. 89 e 90; LEP, art. 146); detração que iguala ou supera a pena do
+processo, como hipótese "a verificar" (a mesma prisão pode servir a várias condenações - CP, art. 42; LEP, arts. 66, II, e 111).
+Prescrição e indulto ficam nas próprias abas; o livramento incerto não gera hipótese (fica na Auditoria). Situação: "Extinção
+cabível" (vermelho), "Término em N dias" (laranja até 30, amarelo até 60, verde até 90), "Em cumprimento" (acima de 90 dias), "Pena
+extinta (registrada)" (azul), "Não se aplica" (cinza: pena interrompida ou sem previsão).
 <h4>Base jurídica</h4>
 O arquivo base_juridica.json ao lado do programa tem prioridade sobre a cópia embutida. Para atualizar (novo decreto, nova fração,
 nova tese), edite o arquivo e use "Base ▾ → Recarregar base jurídica". A versão em uso aparece na aba Auditoria.
@@ -249,22 +339,41 @@ class Base:
             chave TEXT PRIMARY KEY, processo TEXT, nome_norm TEXT, data_impressao TEXT, importado_em TEXT, dados TEXT)""")
         self.con.commit()
 
-    def gravar_ficha(self, f, processo):
-        """Grava a ficha; não substitui ficha impressa depois (devolve False nesse caso)."""
-        chave = processo or ("nome:" + _norm(f.get("nome", "")))
+    def gravar_ficha(self, f, processo, mesma_pessoa=False):
+        """Grava a ficha; não substitui ficha impressa depois (devolve False nesse caso). A comparação vale também
+        contra a ficha guardada pelo nome (antes de o RSPE existir); ao vincular a ficha ao processo, a linha pelo
+        nome da mesma pessoa sai, para não ficar órfã."""
+        nn = _norm(f.get("nome", ""))
+        chave = processo or ("nome:" + nn)
         with self.lock:
-            row = self.con.execute("SELECT data_impressao FROM fichas WHERE chave=?", (chave,)).fetchone()
-            d_ex, d_novo = rs.to_date((row[0] if row else "") or ""), rs.to_date(f.get("data_impressao") or "")
+            chaves = [chave]
+            if processo and nn:
+                # a ficha guardada pelo nome só conta se for da mesma pessoa: sem autos, ou com este processo nos autos
+                row = self.con.execute("SELECT dados FROM fichas WHERE chave=?", ("nome:" + nn,)).fetchone()
+                try:
+                    autos = (json.loads(row[0]) or {}).get("autos") or [] if row else None
+                except Exception:
+                    autos = []
+                # sem homônimo na base, a ficha guardada pelo nome é da mesma pessoa; com homônimo, só se ela citar o processo
+                if row and (mesma_pessoa or processo in autos):
+                    chaves.append("nome:" + nn)
+            rows = [self.con.execute("SELECT data_impressao FROM fichas WHERE chave=?", (ch,)).fetchone() for ch in chaves]
+            datas = [rs.to_date((row[0] if row else "") or "") for row in rows]
+            d_ex = max((d for d in datas if d), default=None)
+            d_novo = rs.to_date(f.get("data_impressao") or "")
             if d_ex and (not d_novo or d_novo < d_ex):
                 return False
             self.con.execute("INSERT OR REPLACE INTO fichas VALUES (?,?,?,?,?,?)",
-                             (chave, processo or "", _norm(f.get("nome", "")), f.get("data_impressao", ""),
+                             (chave, processo or "", nn, f.get("data_impressao", ""),
                               datetime.now().strftime("%d/%m/%Y %H:%M"), json.dumps(f, ensure_ascii=False)))
+            if len(chaves) > 1:
+                self.con.execute("DELETE FROM fichas WHERE chave=?", (chaves[1],))
             self.con.commit()
         return True
 
     def fichas(self):
-        """{processo: ficha} + {'nome:xxx': ficha} para as não vinculadas."""
+        """{processo: ficha} + {'nome:xxx': ficha} só para as não vinculadas (a ficha vinculada a um processo não é
+        entregue a outro RSPE pelo nome)."""
         with self.lock:
             rows = self.con.execute("SELECT chave, processo, nome_norm, importado_em, dados FROM fichas").fetchall()
         out = {}
@@ -272,13 +381,16 @@ class Base:
             f = json.loads(dados)
             f["importado_em"] = imp
             out[ch] = f
-            if nn:
+            if nn and not p:
                 out.setdefault("nome:" + nn, f)
         return out
 
-    def remover_ficha(self, chave):
+    def remover_ficha(self, chave, nome_norm=None):
+        """Remove a ficha do processo; sem ela, a ficha guardada pelo nome (a que o assistido recebe sem homônimo)."""
         with self.lock:
-            self.con.execute("DELETE FROM fichas WHERE chave=? OR processo=?", (chave, chave))
+            cur = self.con.execute("DELETE FROM fichas WHERE chave=? OR processo=?", (chave, chave))
+            if not cur.rowcount and nome_norm:
+                self.con.execute("DELETE FROM fichas WHERE chave=?", ("nome:" + nome_norm,))
             self.con.commit()
 
     def baixas(self):
@@ -293,6 +405,12 @@ class Base:
         with self.lock:
             self.con.execute("INSERT OR REPLACE INTO baixas VALUES (?,?,?,?,?)",
                              (processo, chave, titulo, obs or "", datetime.now().strftime("%d/%m/%Y %H:%M")))
+            self.con.commit()
+
+    def migrar_baixa(self, processo, antiga, nova):
+        with self.lock:
+            if not self.con.execute("SELECT 1 FROM baixas WHERE processo=? AND chave=?", (processo, nova)).fetchone():
+                self.con.execute("UPDATE baixas SET chave=? WHERE processo=? AND chave=?", (nova, processo, antiga))
             self.con.commit()
 
     def manuais(self):
@@ -445,7 +563,25 @@ class Api:
             ch = r.get("processo_execucao") or r.get("arquivo")
             _nn = _norm(r.get("nome", ""))
             ficha = fichas.get(ch) or (fichas.get("nome:" + _nn) if _homonimos.get(_nn, 0) == 1 else None)
-            m = rv.modelo(r, baixas.get(ch, {}), ficha, manuais.get(ch, []))
+            # um registro com dado ilegível não pode derrubar a base: tenta sem a ficha e, se ainda falhar, mostra o
+            # registro com o aviso da falha
+            try:
+                m = rv.modelo(r, baixas.get(ch, {}), ficha, manuais.get(ch, []))
+            except Exception as e:
+                logging.getLogger("rspe").exception("falha ao montar %s", ch)
+                try:
+                    # o aviso entra antes da contagem: conta no resumo e na cor, e a baixa dele fica gravada
+                    m = rv.modelo(r, baixas.get(ch, {}), None, manuais.get(ch, []),
+                                  extras=[rv.item_falha("Ficha disciplinar ignorada: falha ao ler (%s)" % e, "falha-ficha")])
+                except Exception as e2:
+                    m = rv.modelo_erro(r, e2, baixas.get(ch, {}))
+            # baixas gravadas pelo título (até a 6.15.11): passam para a chave estável (tipo do ponto + crime)
+            for it in m.get("aud_itens") or []:
+                if it.get("migrar_de"):
+                    try:
+                        self.base.migrar_baixa(ch, it["migrar_de"], it["chave"])
+                    except Exception:
+                        logging.getLogger("rspe").exception("falha ao migrar baixa %s", ch)
             m["_bruto"] = r
             self._modelos.append(m)
         return {
@@ -629,8 +765,8 @@ class Api:
                     r = fut.result()
                     if r.get("tipo") == "ficha_disciplinar":
                         with lock:
-                            proc = self._vincular_ficha(r, base)
-                            if not base.gravar_ficha(r, proc):
+                            proc, mesma_pessoa = self._vincular_ficha(r, base)
+                            if not base.gravar_ficha(r, proc, mesma_pessoa):
                                 antigos.append("%s: ficha de %s impressa em %s é mais antiga que a da base - ignorada" % (nome_arq, r.get("nome"), r.get("data_impressao") or "?"))
                                 continue
                             fichas_ok.append("%s: ficha de %s %s" % (nome_arq, r.get("nome"), ("vinculada a " + proc) if proc else "SEM RSPE correspondente na base (fica guardada pelo nome)"))
@@ -679,18 +815,20 @@ class Api:
         return resumo
 
     def _vincular_ficha(self, f, base=None):
-        """Processo de execução da base ao qual a ficha pertence: pelos autos citados na ficha, senão pelo nome."""
+        """(processo, mesma_pessoa): processo de execução da base ao qual a ficha pertence, pelos autos citados na ficha ou
+        pelo nome; mesma_pessoa = sem homônimo na base (a ficha guardada pelo nome pode ser comparada e migrada)."""
         base = base or self.base
         with base.lock:
             rows = base.con.execute("SELECT processo, nome FROM assistidos").fetchall()
         procs = {p for p, _ in rows}
-        for a in f.get("autos", []):
-            if a in procs:
-                return a
         nn = _norm(f.get("nome", ""))
         mesmos = [p for p, n in rows if _norm(n) == nn]
+        for a in f.get("autos", []):
+            if a in procs:
+                # vinculada pelos autos: sem homônimo na base, a ficha guardada pelo nome é da mesma pessoa
+                return a, len(mesmos) <= 1
         # pelo nome só quando não há homônimo na base (com homônimos, a ficha fica guardada pelo nome, sem vínculo)
-        return mesmos[0] if len(mesmos) == 1 else ""
+        return (mesmos[0], True) if len(mesmos) == 1 else ("", False)
 
     # ---- pasta vigiada: <pasta mãe>/<nome da base>/*.pdf entra sozinho na base de mesmo nome ----
     def vigia_info(self):
@@ -742,7 +880,7 @@ class Api:
                     os.makedirs(alvo, exist_ok=True)
                     n += 1
         r = self.vigia_info()
-        r["msg"] = "%d pasta(s) criada(s)." % n if n else "Todas as bases já têm pasta."
+        r["msg"] = ("%s." % rs.pl(n, "pasta criada", "pastas criadas")) if n else "Todas as bases já têm pasta."
         return r
 
     def vigia_agora(self):
@@ -823,15 +961,15 @@ class Api:
             except Exception:
                 pass
             partes = []
-            for k, rot in (("novos", "novo(s)"), ("atualizados", "atualizado(s)"), ("fichas", "ficha(s)"), ("duplicados", "já na base"), ("erros", "com erro")):
+            for k, rot in (("novos", ("novo", "novos")), ("atualizados", ("atualizado", "atualizados")), ("fichas", ("ficha", "fichas")), ("duplicados", ("já na base", "já na base")), ("erros", ("com erro", "com erro"))):
                 if res.get(k):
-                    partes.append("%d %s" % (res[k], rot))
+                    partes.append("%d %s" % (res[k], rot[0] if res[k] == 1 else rot[1]))
             self._vigia_ultima = "%s · %s: %s" % (datetime.now().strftime("%d/%m %H:%M"), b, ", ".join(partes) or "nada novo")
             self._js("ui.toast(%s)" % json.dumps("Pasta vigiada · base %s%s: %s" % (b, " (criada agora)" if nova else "", ", ".join(partes) or "nada novo"), ensure_ascii=False))
             if aberta:
                 self._js("api('listar')")
         if soltos and imediato:
-            self._js("ui.toast(%s)" % json.dumps("%d PDF(s) soltos na pasta mãe foram ignorados: coloque-os na pasta da base." % soltos, ensure_ascii=False))
+            self._js("ui.toast(%s)" % json.dumps("%s na pasta mãe: %s. Coloque na pasta da base." % (rs.pl(soltos, "PDF solto", "PDFs soltos"), "ignorado" if soltos == 1 else "ignorados"), ensure_ascii=False))
 
     # ---- petições a partir de modelos .docx ----
     def listar_modelos(self):
@@ -840,7 +978,7 @@ class Api:
 
     def modelo_restaurar_padrao(self):
         n = rpet.instalar_modelos_padrao(pasta_app(), recurso("modelos_padrao"))
-        return {"msg": "%d modelo(s) da unidade restaurado(s) (os existentes não foram alterados)." % n}
+        return {"msg": "%s (os existentes não foram alterados)." % rs.pl(n, "modelo da unidade restaurado", "modelos da unidade restaurados")}
 
     # ---- defensores ----
     def defensores_listar(self):
@@ -853,7 +991,7 @@ class Api:
                       "padrao": bool(d.get("padrao"))} for d in (lista or []) if (d.get("nome") or "").strip()]
             with open(DEFENSORES, "w", encoding="utf-8") as f:
                 json.dump(lista, f, ensure_ascii=False, indent=1)
-            return {"msg": "%d defensor(es) salvo(s)." % len(lista), "lista": lista}
+            return {"msg": "%s." % rs.pl(len(lista), "defensor salvo", "defensores salvos"), "lista": lista}
         except Exception as e:
             return {"erro": "Não foi possível salvar: %s" % e}
 
@@ -885,7 +1023,7 @@ class Api:
             if a.lower().endswith(".docx"):
                 shutil.copy2(a, os.path.join(pasta, os.path.basename(a)))
                 n += 1
-        return {"msg": "%d modelo(s) adicionado(s)." % n}
+        return {"msg": "%s." % rs.pl(n, "modelo adicionado", "modelos adicionados")}
 
     def modelo_substituir(self, nome):
         a = _um(self._janela.create_file_dialog(webview.OPEN_DIALOG, file_types=("Modelo Word (*.docx)",)))
@@ -943,6 +1081,8 @@ class Api:
         m = next((x for x in self._modelos if x["id"] == chave), None)
         if not m:
             return {"erro": "Assistido não encontrado."}
+        if m.get("erro"):
+            return {"erro": "Registro não analisado (%s): conferir o PDF antes de gerar a petição." % m["erro"]}
         caminho_modelo = os.path.join(rpet.pasta_modelos(pasta_app()), modelo)
         if not os.path.exists(caminho_modelo):
             return {"erro": "Modelo não encontrado: %s" % modelo}
@@ -977,7 +1117,8 @@ class Api:
     def remover_ficha(self, chave):
         if not self.base:
             return None
-        self.base.remover_ficha(chave)
+        m = next((x for x in self._modelos if x.get("id") == chave), None)
+        self.base.remover_ficha(chave, _norm(m.get("nome", "")) if m else None)
         return self.listar()
 
     # ---- exportação ----
@@ -1030,9 +1171,9 @@ class Api:
         except Exception as e:
             return {"erro": "Falha ao gerar relatórios: %s" % e}
         _abrir(destino)
-        msg = "Relatórios em %s" % destino + (" · %d individual(is)" % n if individual else "")
+        msg = "Relatórios em %s" % destino + (" · %s" % rs.pl(n, "individual", "individuais") if individual else "")
         if erros:
-            msg += " · %d falha(s): %s" % (len(erros), "; ".join(erros[:3]))
+            msg += " · %s: %s" % (rs.pl(len(erros), "falha", "falhas"), "; ".join(erros[:3]))
         return {"caminho": destino, "msg": msg}
 
     def relatorio_um(self, id_):

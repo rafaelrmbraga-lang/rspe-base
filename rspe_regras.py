@@ -74,19 +74,37 @@ def d(txt):
 
 
 # ---------------------------------------------------------------- prescrição
-def prazo_art109_anos(pena_dias):
+def _faixa_art109(pena_dias):
     tab = carregar().get("prescricao", {}).get("art109_tabela")
     a = pena_dias / 365.0
     if not tab:
-        return 20 if a > 12 else 16 if a > 8 else 12 if a > 4 else 8 if a > 2 else 4 if a >= 1 else 3
+        tab = [{"pena_maior_que_anos": 12, "prazo_anos": 20, "inciso": "I"}, {"pena_maior_que_anos": 8, "prazo_anos": 16, "inciso": "II"},
+               {"pena_maior_que_anos": 4, "prazo_anos": 12, "inciso": "III"}, {"pena_maior_que_anos": 2, "prazo_anos": 8, "inciso": "IV"},
+               {"pena_maior_ou_igual_anos": 1, "prazo_anos": 4, "inciso": "V"},
+               {"pena_menor_que_anos": 1, "prazo_anos": 3, "inciso": "VI", "prazo_anos_fato_ate_2010_05_05": 2}]
     for faixa in tab:
         if "pena_maior_que_anos" in faixa and a > faixa["pena_maior_que_anos"]:
-            return faixa["prazo_anos"]
+            return faixa
         if "pena_maior_ou_igual_anos" in faixa and a >= faixa["pena_maior_ou_igual_anos"]:
-            return faixa["prazo_anos"]
+            return faixa
         if "pena_menor_que_anos" in faixa and a < faixa["pena_menor_que_anos"]:
-            return faixa["prazo_anos"]
-    return 3
+            return faixa
+    return {"prazo_anos": 3, "inciso": "VI", "prazo_anos_fato_ate_2010_05_05": 2}
+
+
+def prazo_art109_anos(pena_dias, data_fato=None):
+    """Prazo do art. 109 do CP pela pena. data_fato anterior à Lei 12.234/2010 (vigência em 06/05/2010): inciso VI
+    na redação da Lei 7.209/1984 (2 anos), porque a lei mais gravosa não retroage (CF, art. 5º, XL)."""
+    f = _faixa_art109(pena_dias)
+    antigo = f.get("prazo_anos_fato_ate_2010_05_05")
+    if antigo is not None and data_fato and data_fato < (data_lei_12234() or date(2010, 5, 6)):
+        return antigo
+    return f["prazo_anos"]
+
+
+def inciso_art109(pena_dias):
+    """Inciso do art. 109 do CP que corresponde à pena ('V')."""
+    return _faixa_art109(pena_dias).get("inciso", "")
 
 
 def art115():
@@ -139,6 +157,11 @@ def fracao_progressao_esperada(data_fato, hediondo, morte, vga, reincidente, rei
     obs = []
     if especial and j.get(especial) and not (especial == "feminicidio_primario" and reincidente):
         valor = j.get(especial)
+        if especial in ("comando_orcrim", "milicia"):
+            # hipótese que se soma às demais: vale o percentual mais alto entre ela e o do crime (ex.: reincidente em hediondo)
+            f_base, rot_base, obs_base = fracao_progressao_esperada(data_fato, hediondo, morte, vga, reincidente, reinc_especifico)
+            if f_base is not None and f_base > fr(valor):
+                return f_base, rot_base, obs_base + ["%s: %s, menor que o do crime" % (ESPECIAIS[especial], valor)]
         obs.append(ESPECIAIS.get(especial, especial))
         return fr(valor), "%s (%s)" % (valor, j.get("lei", "")), obs
     if hediondo:
@@ -160,6 +183,7 @@ def fracao_progressao_esperada(data_fato, hediondo, morte, vga, reincidente, rei
                     j["hediondo_reincidente_generico"], "; por analogia na redação da Lei 15.358/2026" if (d(j.get("de", "")) or date.min) >= date(2026, 3, 25) else ""))
     elif vga:
         chave = "vga_reincidente" if reincidente else "vga_primario"
+        # a Auditoria só pede reinc_especifico=False para hediondos: o RSPE não diz se a condenação anterior teve violência
         if reincidente and reinc_especifico is False and j.get("vga_reincidente_generico"):
             chave = "vga_reincidente_generico"
             obs.append("reincidente genérico em crime com VGA: analogia in bonam partem (STJ Tema 1084)")
@@ -195,6 +219,10 @@ def fracao_mais_benefica(data_fato, hediondo, morte, vga, reincidente, especial=
 def _fracao_em(j, hediondo, morte, vga, reincidente, especial=None):
     if especial and j.get(especial) and not (especial == "feminicidio_primario" and reincidente):
         v = j.get(especial)
+        if especial in ("comando_orcrim", "milicia"):
+            fb, rb, _ = _fracao_em(j, hediondo, morte, vga, reincidente)
+            if fb is not None and fb > fr(v):
+                return fb, rb, []
         return fr(v), "%s (%s)" % (v, j.get("lei", "")), []
     if hediondo:
         chave = ("hediondo_morte_" if morte else "hediondo_") + ("reincidente" if reincidente else "primario")
@@ -207,10 +235,13 @@ def _fracao_em(j, hediondo, morte, vga, reincidente, especial=None):
 
 
 # ---------------------------------------------------------------- livramento
-def fracao_livramento_esperada(hediondo, reincidente, trafico=False):
+def fracao_livramento_esperada(hediondo, reincidente, trafico=False, trafico_pessoas=False):
+    """CP, art. 83, V: mais de 2/3 nos crimes hediondos, tortura, tráfico de drogas, tráfico de pessoas e terrorismo
+    (tráfico de pessoas incluído pela Lei 13.344/2016, a mesma que criou o art. 149-A do CP)."""
     l = carregar().get("livramento", {})
-    if hediondo or trafico:
-        return fr(l.get("hediondo", "2/3")), "2/3 (art. 83, V, CP%s)" % ("; art. 44, p. ú., Lei 11.343/06" if trafico else "")
+    if hediondo or trafico or trafico_pessoas:
+        return fr(l.get("hediondo", "2/3")), "2/3 (art. 83, V, CP%s)" % (
+            "; art. 44, p. ú., Lei 11.343/06" if trafico else " - tráfico de pessoas" if (trafico_pessoas and not hediondo) else "")
     if reincidente:
         return fr(l.get("comum_reincidente", "1/2")), "1/2 (art. 83, II, CP)"
     return fr(l.get("comum_primario", "1/3")), "1/3 (art. 83, I, CP)"
@@ -233,6 +264,12 @@ def vga_esperado(artigo):
 def patrimonio():
     p = carregar().get("patrimonio_cp", {"de": 155, "ate": 180})
     return set(str(a) for a in range(p["de"], p["ate"] + 1))
+
+
+def patrimonio_faixa():
+    """(de, ate, incluir_sufixos): Título II da Parte Especial do CP; com sufixos, 168-A, 171-A, 180-A etc. entram."""
+    p = carregar().get("patrimonio_cp", {"de": 155, "ate": 180})
+    return int(p.get("de", 155)), int(p.get("ate", 180)), bool(p.get("incluir_sufixos", True))
 
 
 def decretos():

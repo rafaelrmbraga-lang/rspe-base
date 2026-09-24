@@ -1,24 +1,40 @@
-RSPE BASE - SEEU  v6.15.10 (programa em abas)
+RSPE BASE - SEEU  v6.15.13 (programa em abas)
 =========================================
 
+As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
+6.15.13. A documentação técnica completa (cada parâmetro, a regra, a norma e
+exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
+
 O QUE FAZ
-Janela com quatro abas (interface moderna em HTML dentro de uma janela nativa;
-no Windows 10/11 usa o WebView2 que já vem no sistema), alimentada pelos RSPE
-(PDF) dos assistidos. Aceita
+Janela com oito abas (interface em HTML dentro de uma janela nativa; no
+Windows 10/11 usa o WebView2 que já vem no sistema), alimentada pelos RSPE
+(PDF) dos assistidos e, se houver, pela Ficha Disciplinar do SIAPEN. Aceita
 centenas de PDFs de uma vez ("Importar PDFs…" com seleção múltipla, "Importar
 pasta…" varrendo subpastas, ou arrastando PDFs/pasta sobre o .exe).
+  - Datas de progressão, livramento e término: as impressas pelo SEEU no
+    RSPE. O programa não as recalcula.
+  - Cálculos do programa: indulto e comutação (Decretos 11.302/2022,
+    12.338/2024 e 12.790/2025), prescrição (punitiva e executória, crime a
+    crime), extinção pelo cumprimento, estado da execução (não iniciou,
+    interrompida, em livramento, no aberto, cumprida, extinta), falta nos 12
+    meses, remição a requerer (ficha disciplinar x RSPE, estudo estimado) e
+    as conferências da Auditoria (frações de progressão e livramento pela lei
+    da data do fato, soma das penas, data-base, hediondez etc.).
+  - Convenção do SEEU: ano de 365 dias, mês de 30, prazos pelo calendário.
 
 ABERTURA
 O programa abre SEM base carregada. A tela inicial pede: criar uma base nova
 (digitando o nome, ex.: "Comarca de Dourados") ou abrir uma existente; lista as
-bases recentes. Arrastar PDFs sobre o .exe cria uma base "Importação <data>".
+bases recentes (até 8). Arrastar PDFs sobre o .exe cria uma base
+"Importação <data>".
 
 ATUALIZAR O PROGRAMA
   Substitua só o RSPE_Base.exe e mantenha, ao lado dele, a pasta "bases"
-  (e as pastas "modelos" e o rspe_config.json, se usar). Não é preciso
-  refazer nem reimportar a base: ao abrir, o programa refaz a análise de
-  todos os assistidos com as regras da versão nova. Se o .exe novo ficar
-  em outra pasta, use "Abrir base..." e escolha o arquivo .sqlite antigo.
+  (e a pasta "modelos", o rspe_config.json e o defensores.json, se usar).
+  Não é preciso refazer nem reimportar a base: ao abrir, o programa refaz a
+  análise de todos os assistidos com as regras da versão nova (a leitura do
+  PDF fica como foi gravada). Se o .exe novo ficar em outra pasta, use
+  "Abrir base..." e escolha o arquivo .sqlite antigo.
 
 BASES (uma por comarca ou unidade)
 Os dados ficam em arquivos .sqlite na pasta "bases", ao lado do .exe.
@@ -26,7 +42,9 @@ Os dados ficam em arquivos .sqlite na pasta "bases", ao lado do .exe.
     Nova base…          cria uma base vazia (ex.: "Comarca de Dourados.sqlite")
     Abrir base…         troca para outra base já salva
     Salvar base como…   grava a base atual com outro nome e passa a usá-la
-O programa reabre a última base usada.
+Cada base guarda os RSPE lidos, as fichas disciplinares, as baixas da
+Auditoria, as conferências da aba Ficha disciplinar e os atestados
+adicionados à mão.
 
 PASTA VIGIADA (menu da base > "Pasta vigiada…")
   Escolha uma pasta mãe e crie dentro dela uma subpasta por base, com o
@@ -47,70 +65,158 @@ PASTA VIGIADA (menu da base > "Pasta vigiada…")
 DUPLICADOS
   A chave é o nº da execução. Ao importar:
    - arquivo repetido no lote, ou RSPE do mesmo processo com a mesma data de
-     geração já na base  -> ignorado como duplicado;
+     geração (ou o mesmo conteúdo) já na base  -> ignorado como duplicado;
    - RSPE mais recente do mesmo processo  -> substitui o anterior (atualizado);
-   - RSPE mais antigo que o da base       -> ignorado.
-  O resumo aparece ao fim da importação e a lista fica em importacao_avisos.txt.
+   - RSPE mais antigo que o da base, ou sem data de geração legível quando a
+     base já tem RSPE datado do processo  -> ignorado.
+  Ficha disciplinar impressa antes da já gravada (ou sem data legível) é
+  ignorada. O resumo aparece ao fim da importação e a lista fica em
+  importacao_avisos.txt.
 
-ABAS
-  Geral        nome, nº da execução, regime atual, progressão, livramento,
-               término e crimes.
-  Progressão   fração, data-base, data da progressão, situação e falta (12
-               meses). Pena cumprida, livramento em curso e regime aberto
-               aparecem em cinza ("não se aplica"), nunca como vencidos.
-  Livramento   idem, para o livramento condicional.
-  Prescrição   uma linha por sentenciado; clicar na linha expande a tabela por
-               crime (fato, denúncia, sentença, trânsito, pena, prazo, pretensão
-               punitiva retroativa/intercorrente e pretensão executória com termo
-               inicial e data prevista), com "cálculo" mostrando a memória.
-  Extinção     pena total, cumprida, término previsto, situação (extinção
-               cabível / término em 30 ou 60 dias / em curso / interrompida),
-               hipóteses de extinção que o RSPE já autoriza apontar (pena
-               cumprida ou término alcançado, período de prova do livramento
-               expirado sem revogação, prescrição executória aparente, indulto
-               possível) e crimes cuja pena o SEEU já registra como extinta.
-               Filtro: extinção cabível, a vencer, interrompidas.
-  Auditoria    uma linha por sentenciado com o resultado ("Guia demanda
-               atenção" / "pontos a verificar" / "sem inconsistências"); clicar
-               expande a lista de pontos auditados, com o que foi encontrado e o
-               fundamento legal/jurisprudencial. Nada é afirmado como erro.
-               Cada ponto tem "Dar baixa" (com observação): sai da contagem,
-               fica gravado na base com a data e pode ser reaberto.
-  Indulto /    crimes, crime impeditivo (art. 1º dos Decretos 12.338/2024 e
-  Comutação    12.790/2025, com o inciso), falta (12 meses, art. 6º), situação
-               no indulto de 2022 (Decreto 11.302/2022: pena máxima em abstrato
-               do crime até 5 anos, crime a crime; exclusões do art. 7º), no de
-               2024, no de 2025 e na comutação (art. 13). A célula mostra o
-               resumo; passe o mouse (ou abra a ficha) para o texto completo.
-               Regime "Livramento condicional" quando o SEEU imprime o
-               livramento como vigente. Se o RSPE tiver indícios contrários
-               (Regime Atual diverso, interrupção, regressão ou prisão depois
-               do livramento), o caso vira "Livramento? (RSPE: ...)": a
-               Auditoria abre um ALERTA e progressão, livramento, indulto e
-               extinção ficam em "A verificar" até a conferência nos autos.
+ABAS (colunas)
+  Geral        Nome, Nº da execução, Regime, Progressão, Livramento, Término.
+               Linha azul = execução extinta.
+  Progressão   Nome, Nº, Regime, Data da progressão, Situação, Conduta
+               (ficha), Falta (12 meses). A fração e a data-base não são
+               colunas: estão na ficha do assistido, no resumo copiado, no
+               relatório e nas petições.
+  Livramento   Nome, Nº, Data do livramento, Situação, Conduta (ficha), Falta
+               (12 meses). Pena total inferior a 2 anos: "Não cabível: pena <
+               2 anos (art. 83 CP)".
+  Indulto /    Nome, Nº, Impeditivo (art. 1º), Indulto 2022, Indulto 2024,
+  Comutação    Comutação 2024, Indulto 2025, Comutação 2025. Não há coluna de
+               crimes nem de falta: a falta do art. 6º aparece na própria
+               célula ("Falta"). A célula mostra o resumo; passe o mouse (ou
+               abra a ficha) para o texto completo.
+  Prescrição   Nome, Nº, Pretensão punitiva, Pretensão executória, Prescrição
+               em. Clicar na linha abre cartões por ação penal, uma pretensão
+               por vez (seletor executória/punitiva ao lado do filtro), só com
+               os crimes de prescrição aparente, iminente (executória) ou com
+               datas a verificar na ação penal; cada crime tem a "memória de
+               cálculo" e o botão de cópia.
+  Extinção     Nome, Nº, Término, Situação. Só a extinção pelo cumprimento:
+               pena integralmente cumprida ou término alcançado, período de
+               prova do livramento expirado sem revogação, detração que
+               alcança toda a pena do crime. Prescrição e indulto ficam nas
+               próprias abas. A multa cominada aparece na ficha do assistido
+               (extinção cabível se comprovada a impossibilidade de pagamento).
+  Ficha        Nome, Nº, Trabalho atual, Remidos ficha / RSPE, Trabalho a
+  disciplinar  atestar (em períodos), Estudo a requerer, Situação. Clicar
+               expande os blocos por atestado.
+  Auditoria    Nome, Nº, Resultado da auditoria ("1 alerta", "2 pontos a
+               verificar", combinação dos dois, "... · 1 baixado" ou "Sem
+               inconsistências"). Clicar expande os pontos, com o que foi
+               encontrado e o fundamento. Nada é afirmado como erro.
+
+SITUAÇÃO NAS ABAS DE PRAZO
+  Progressão e Livramento:
+   - "Vencido há N dias · verificar criminológico, indeferimento ou falta"
+     (amarelo forte); a dica traz os pedidos do RSPE e, na progressão com
+     exame criminológico, o aviso da irretroatividade da Lei 14.843/2024
+     (só na dica: não muda a cor nem gera alerta).
+   - "Vence hoje" / "Em N dias" (laranja até 30, amarelo até 60, verde até
+     90); acima de 90 dias, "Em cumprimento", sem cor.
+   - "Pena cumprida" (cinza); "Pena extinta" (azul); "A verificar
+     (livramento)" (amarelo) quando o livramento está incerto; os demais
+     casos sem prazo (em livramento, já no aberto, não iniciou,
+     interrompida) aparecem como "Não se aplica" (cinza), com o motivo na
+     ficha.
+   - Sem data no RSPE, a coluna da data mostra "—" e o motivo ("Não consta
+     no RSPE", "Pena interrompida", "Não iniciou") fica na ficha.
+  Extinção: "Extinção cabível" (vermelho), "Término em N dias" (laranja até
+  30, amarelo até 60, verde até 90), "Em cumprimento" (sem cor, acima de 90
+  dias), "Pena extinta (registrada)" (azul), "Não se aplica" (cinza: pena
+  interrompida ou sem previsão).
 
 FILTROS
-  Seletor "Situação" ao lado dos botões: vencidas / a vencer em 30 ou 60 dias /
-  a vencer (qualquer prazo) / interrompidas (progressão e livramento); possível /
-  a verificar / não atinge / impeditivo (indulto); aparente / em curso / em curso
-  até 1 ano / não corre (prescrição). Os cartões de resumo também filtram.
-  O número da execução é copiado com um clique (na tabela ou na ficha).
+  Seletor "Situação" ao lado dos botões (a aba Geral não tem):
+   - Progressão e Livramento: vencidas; vence em até 30, 60 ou 90 dias; não
+     iniciou o cumprimento; pena interrompida; não se aplica (cumprida /
+     livramento / aberto); sem data.
+   - Indulto/Comutação: por benefício e resultado ("Indulto 2025 · Sim",
+     "Comutação 2024 · Verificar" etc.), fato posterior à data do decreto,
+     falta nos 12 meses (célula "Falta") e crime impeditivo (coluna
+     Impeditivo).
+   - Prescrição: aparente, iminente / a verificar, não prescrita / não
+     configurada, sem dados, extinta.
+   - Extinção: extinção cabível, término em até 30, 60 ou 90 dias, pena
+     interrompida, sem previsão.
+   - Ficha disciplinar: remição a requerer, conferir remição / sem atestado /
+     estudo, em ordem, sem ficha.
+   - Auditoria: com alertas, pontos a verificar, sem inconsistências.
+  Os cartões de resumo também filtram (pela cor). O número da execução é
+  copiado com um clique (na tabela ou na ficha).
 
 CORES
-  Progressão / Livramento: vermelho = vencido; amarelo = vence em até 30 dias;
-  verde = vence em até 60 dias; cinza = pena interrompida sem reinício.
-  Indulto: vermelho = crime impeditivo; verde = requisito objetivo atingido;
-  amarelo = ainda não atingido / conferir.
-Clique numa linha para abrir a ficha completa (painel lateral). Clique no
-título da coluna para ordenar. Os cartões de resumo filtram por cor. A busca
-filtra todas as abas. As colunas se ajustam à janela.
+  Progressão / Livramento: amarelo forte = vencido; laranja = vence em até 30
+  dias; amarelo = em até 60; verde = em até 90; cinza = não se aplica ou pena
+  cumprida; azul = extinta.
+  Indulto (células): vermelho = "Vedado (art. 1º)", "Vedado (art. 7º)",
+  "Indeferido" ou "Falta" (falta com sanção reconhecida); verde = "Sim"
+  (possível, também por tese indicada no texto); amarelo = "Verificar"; cinza =
+  "Não atinge", "Não se aplica" (nenhuma condenação na publicação do
+  decreto), "Fato posterior" ou "Prejudicada"; azul = "Concedido" no RSPE.
+  Cor da linha do Indulto: verde se algum benefício é possível ("Sim"); vermelha
+  se há crime impeditivo e nenhum possível; amarela se há algo a verificar;
+  cinza nos demais casos; azul se a execução está extinta.
+  Prescrição: vermelho = aparente; amarelo = iminente (executória em até 180
+  dias) ou "A VERIFICAR" (saldo na evasão que depende da imputação do
+  cumprimento entre condenações); sem cor = não prescrita / não configurada;
+  cinza = sem dados; azul = extinta.
+  Ficha disciplinar: vermelho = remição a requerer; amarelo = conferir remição,
+  trabalho sem atestado, estudo a requerer ou trabalho sem início registrado;
+  verde = em ordem; cinza = sem ficha.
+  Auditoria: vermelho = com alertas; amarelo = pontos a verificar; verde = sem
+  inconsistências; azul = execução extinta.
+  Falta (12 meses): "Sim" (vermelho) só com sanção reconhecida; indício sem
+  ela = "A apurar" (amarelo), com o detalhe na ficha do assistido.
+  Execução extinta registrada no RSPE: azul em Geral, Progressão, Livramento,
+  Prescrição (executória), Extinção, Auditoria e na linha do Indulto; as
+  células de indulto/comutação e a pretensão punitiva mostram o resultado
+  do cálculo; a aba Ficha disciplinar não muda.
+
+CLIQUES E FICHA DO ASSISTIDO
+  Nas abas Geral, Progressão, Livramento, Indulto/Comutação e Extinção, o
+  clique na linha abre a ficha do assistido (painel lateral). Nas abas
+  Prescrição, Ficha disciplinar e Auditoria, o clique expande a linha; a
+  ficha abre pelo link "Abrir ficha completa". A ficha do assistido mostra:
+  pena, uma linha por benefício, falta (12 meses), pontos de atenção (alertas
+  e pontos a verificar não baixados), crimes em execução e, recolhidos, os
+  a ficha disciplinar (conduta, remidos atestados na ficha x homologados
+  no RSPE, trabalho a atestar, estudo a requerer, situação da remição, o
+  detalhe da falta dos 12 meses - "Sim" ou "A apurar" -, trabalho,
+  atestados e faltas disciplinares, com "Remover ficha") e, recolhidos, os
+  cálculos do programa (indulto e comutação possíveis ou a verificar,
+  prescrição aparente ou iminente). Clique no título da
+  coluna para ordenar. A busca filtra todas as abas.
 
 EXPORTAR
   Ao clicar em Exportar Excel / Exportar PDF, uma janela pergunta QUAIS abas
   exportar (no PDF vem marcada só a aba que está aberta; no Excel, todas mais a
-  aba "Completo" com todos os campos). Se houver texto na busca, exporta só o
-  que está filtrado. O PDF sai em paisagem, com cabeçalho, resumo por cor,
-  tabela colorida, legenda e numeração de página.
+  aba "Completo" com todos os campos). Só a busca restringe o que sai: o
+  filtro de situação e o cartão de cor não. Nas colunas vai o texto completo
+  (ex.: "Sim · <indícios>" na falta). O PDF sai em paisagem, com cabeçalho,
+  resumo por cor, tabela colorida, legenda e numeração de página.
+
+RELATÓRIOS EM PDF
+  O botão "Relatórios" gera, numa pasta "Relatorios <data hora>": um PDF por
+  assistido escolhido (lista com busca e "Todos"/"Nenhum"), o relatório geral
+  da base (perfil, benefícios, remição, alertas e fila de prioridade, com a
+  prescrição punitiva e a executória em linhas separadas) e, se marcada, a
+  planilha. Vale para os assistidos visíveis pela busca. Na ficha do
+  assistido, "Relatório em PDF" gera só o dele.
+  O relatório individual traz: cabeçalho e bloco da pena (regime, pena
+  total, cumprida, remanescente, remidos, data-base, término, conduta);
+  tabela de benefícios com etiqueta curta e observação (progressão,
+  livramento, término, falta grave, indulto e comutação de cada decreto,
+  prescrição quando aparente, iminente ou a verificar); condenações; a linha
+  do tempo em duas tabelas (eventos de cumprimento e incidentes); remição da
+  ficha disciplinar; um bloco por alerta ou ponto a verificar, em frases
+  curtas, com o fundamento em lista; e, para os crimes com evasão, prescrição
+  aparente ou a verificar, a figura da linha do tempo da prescrição
+  executória (a mesma da tela, sem os balões): eixo com faixas e marcos,
+  linha de contagem e cartão por fuga, blocos detração → saldo → prazo,
+  hipóteses de imputação e cartão do resultado.
 
 CRIMES
   Mostrados só pelo artigo: "art. 33 Lei 11.343/06 (x2)", "art. 180 CP".
@@ -122,118 +228,518 @@ COMO GERAR O .EXE (uma vez, em um Windows com Python instalado)
   3. Copie dist\RSPE_Base.exe para onde quiser (não precisa de Python).
 
 LEITURA DOS CAMPOS
-  * Datas de progressão/livramento/término: exatamente as impressas pelo
-    SEEU no RSPE; o programa não as recalcula. Sem data: "Não consta no
-    RSPE" ou "Pena interrompida".
-  * Cálculos próprios: só indulto/comutação e prescrição, na convenção do
-    SEEU (ano de 365 dias, mês de 30, prazos pelo calendário), partindo da
-    pena cumprida impressa no RSPE.
-  * Falta (12 meses): o RSPE não lista faltas formalmente. A coluna aponta
-    INDÍCIOS nos 12 meses anteriores (regressão, perda de remidos, fuga,
-    sanção). "não consta" não garante ausência de falta: conferir o PAD.
-  * Indulto/Comutação: o rol do art. 1º é o mesmo nos dois decretos. O art. 9º
-    é testado inciso por inciso (I a XV) com a situação em 25/12 de cada ano:
-    regime vigente, pena cumprida, remanescente, reincidência, VGA; IX a XV
-    ficam "a verificar" quando a parte objetiva é atendida. Maiores de 60 anos
-    têm os lapsos I-XI pela metade (§ 2º, I). Art. 13: comutação de 1/5 (2/3
-    para o § 2º). Se não havia execução em curso em 25/12, "não se aplica".
-    Cores: vermelho impeditivo, verde possível, amarelo a verificar, cinza não
-    atinge. A ficha traz a análise inciso por inciso.
-  * Prescrição: arts. 109-119 do CP, crime a crime. Executória com termo
-    inicial no trânsito para ambas as partes (STF, Tema 788; para a acusação
-    quando anterior a 12/11/2020), +1/3 reincidente, metade art. 115, não corre
-    preso, art. 113 na evasão. O acórdão confirmatório (art. 117, IV) não consta
-    no RSPE: conferir a data antes de pedir. Ver "memória de cálculo".
+  * Campo em branco = não consta no RSPE. Nada é inventado nem presumido.
+  * Pena cumprida nos decretos de indulto: ancorada no SEEU - pena total
+    menos os dias entre a geração do RSPE e o término impresso (sem término,
+    a pena cumprida impressa). Para a data do decreto, desconta o
+    cumprimento (custódia e livramento) e as remições posteriores a ela; se o
+    RSPE é anterior à data do decreto, projeta o cumprimento que o RSPE
+    mostra em curso (sem remições posteriores, que não constam).
+  * Pena cumprida na prescrição: somada crime a crime pelos eventos
+    (custódia e livramento) e pelas remições concedidas, em dias de
+    calendário; a pena remanescente impressa só é usada no trecho em aberto
+    com um só crime ativo.
+  * Dias de custódia: contam o dia da prisão e o da soltura. Na detração
+    exclusiva e no desconto entre a data do decreto e o RSPE, a conta é pela
+    diferença das datas.
+  * Remição: só a concedida (tipo com "REMI", sem perda nem revogação;
+    situação "CONCEDIDO" ou em branco). Aceita decimal ("12,5 Dia(s)").
+  * Falta (12 meses): o RSPE não lista faltas formalmente. A janela é de 365
+    dias até a data de geração do RSPE (não até hoje). Falta própria (falta,
+    sanção, disciplinar, RDD, isolamento) conta pela data do fato lida no
+    complemento; regressão e perda de remidos, pela data da decisão, e saem
+    quando já há falta própria nos 12 meses anteriores a elas; fuga, evasão,
+    abandono, foragido, não retorno e descumprimento registrados só como
+    evento entram como "falta a apurar"; dias perdidos no saldo sem incidente
+    datado entram sem limite de tempo. "Sim" só com falta de sanção
+    reconhecida (homologação ou sanção concedida); os demais indícios
+    aparecem como "A apurar". Incidente negado não conta. "Não consta" não
+    garante ausência de falta: conferir o PAD. A ficha disciplinar não
+    alimenta esta coluna.
+  * Não iniciou: sem início de cumprimento definitivo no RSPE (só prisão
+    provisória encerrada, ou nenhuma), o assistido aparece como "Não iniciou
+    o cumprimento", e não como regime aberto ou pena interrompida.
+  * Livramento: quando a 1ª página diz "Em livramento condicional deferido
+    em ...", o assistido é tratado como em livramento, ainda que o "Regime
+    Atual" traga o regime anterior. Com indícios contrários (regressão,
+    inclusive cautelar, prisão ou interrupção depois do livramento, regime
+    diverso), vira "livramento incerto": a coluna Regime (Geral e
+    Progressão) mostra "Livramento? (RSPE: ...)", Progressão e Livramento
+    ficam "A verificar (livramento)", a Auditoria abre um alerta e, no
+    indulto e na comutação de 2024 e 2025, o que seria possível passa a
+    "A VERIFICAR" com a ressalva "livramento a confirmar". A aba Extinção não gera a
+    hipótese do período de prova. Dar baixa no alerta confirma o livramento
+    em todas as abas. Livramento suspenso ou revogado em incidente posterior
+    aparece como tal.
   * Extinções registradas fora da linha "Extinto:" do crime - "(Extinta)" ao
     lado do número do processo ou incidente EXTINÇÃO com o processo
-    selecionado - são levadas em conta: o crime sai da soma, das frações e
-    da prescrição e das listas (só crimes ativos são exibidos; a ficha
-    mantém a descrição completa) e a Auditoria aponta a divergência com a
-    linha do crime. Incidente EXTINÇÃO sem processo
-    selecionado = execução extinta (alerta).
-  * Prescrição executória: prisão provisória (flagrante, preventiva,
-    temporária) de OUTRO processo não interrompe o prazo do crime analisado
-    (art. 117, V, exige início/continuação do cumprimento daquela pena); a
-    memória de cálculo informa quando uma custódia foi desconsiderada. A
-    custódia provisória anterior ao trânsito não reduz o prazo (é detração,
-    art. 42 CP); se ela for igual ou maior que a pena, o programa aponta
-    "pena cumprida por detração" (extinção pelo cumprimento, LEP art. 66,
-    II) em vez de prescrição.
-  * Execução extinta registrada no RSPE (incidente EXTINÇÃO sem processo ou
-    todos os crimes extintos) aparece em AZUL em todas as abas ("Pena
-    extinta"), sem marcos, prescrição ou indulto calculados.
-  * Campo em branco = não consta no RSPE. Nada é inventado.
+    selecionado - são levadas em conta: o crime sai da soma, das frações, da
+    prescrição e das listas (a ficha mantém a descrição completa) e a
+    Auditoria aponta a divergência com a linha do crime. Incidente EXTINÇÃO
+    sem processo selecionado, ou todos os crimes extintos = execução extinta
+    (alerta e azul).
+  * Artigo não informado: o crime é reconhecido pela descrição do tipo,
+    conforme a lei da data do fato (ex.: antes da Lei 12.015/2009, arts.
+    213/214 c/c 224, a); a Auditoria aponta.
+
+INDULTO E COMUTAÇÃO
+  * Decretos 12.338/2024 e 12.790/2025 (datas 25/12; publicação no DOU em
+    23/12): o rol do art. 1º é o mesmo. A hediondez é aferida na data de cada
+    decreto (STJ); só com hediondez posterior ao fato, a tese da
+    irretroatividade (STF, 2ª Turma) aparece como "tese: hed. superveniente",
+    com a corrente contrária no texto. Crime militar, art. 129, §§ 2º/3º
+    (vítima agente ou autoridade), 215-A e 147-A (vítima mulher) e violência
+    doméstica sem sinal de que a vítima é mulher ficam "a verificar"; esse
+    último ponto aparece no texto do indulto, não na Auditoria.
+  * Art. 9º, inciso por inciso, com a situação em 25/12 (regime, pena
+    cumprida, remanescente, reincidência, VGA):
+     I, II, III (faixas de pena e frações), IV (anos ininterruptos; a remição
+     do período conta), V, VI (semiaberto ininterrupto), VII (aberto, PRD ou
+     sursis), VIII (aberto ou livramento com remanescente até o limite);
+     IX: "a verificar" (programa de egressos) só com aberto, livramento, PRD
+     ou sursis; X: "a verificar" (monitoramento) só com semiaberto há 3
+     anos ou mais; XI: pena até 12 anos em semiaberto/aberto com a fração
+     cumprida - possível com 5 saídas temporárias no RSPE até a data, senão
+     "a verificar"; XII e XIII: pena até 12 anos com a fração cumprida -
+     "a verificar" (estudo, curso); XIV: crime patrimonial sem VGA com 3
+     meses cumpridos - "a verificar" (valor do bem); XV: crime patrimonial
+     sem VGA - possível (reparação dispensada, art. 12, § 2º, I). XIV e XV são
+     aferidos crime a crime. Com a ficha disciplinar importada, XI, XII e
+     XIII são decididos pela ficha (atende = possível; não consta = não
+     atendido). XVI (saúde), os demais grupos do § 2º, os arts. 10 e 11
+     (mulheres) e a colaboração premiada não são aferíveis pelo RSPE.
+  * § 2º, I: maiores de 60 anos têm os lapsos dos incisos I a XI pela metade
+    (pela data de nascimento).
+  * Art. 6º: falta com sanção reconhecida em juízo nos 12 meses antes de
+    25/12, pela data do fato, até a publicação (23/12) - o "Sim" vira "Falta";
+    falta pendente, regressão sem falta homologada, perda de remidos sem
+    falta datada e fuga só como evento transformam o "Sim" em "Verificar".
+  * Art. 7º, p. ú.: no concurso com crime impeditivo, os crimes não
+    impeditivos são analisados depois de 2/3 da pena do impeditivo ("só
+    crimes não impeditivos"), podendo dar "Sim", "Verificar" ou "Não
+    atinge".
+  * Fato posterior a 25/12 ou sentença posterior à publicação: a pena fica
+    fora da análise e segue em execução; sem outro crime, "Fato posterior"
+    ou "Não se aplica". Sentença anterior à publicação com trânsito para a
+    acusação só depois: "A VERIFICAR (art. 2º, II)", com as duas correntes -
+    por cautela, mesmo quando algum inciso seria possível.
+  * Sem cumprimento em curso na data (não iniciou, interrompida), indulto e
+    comutação "não se aplicam" (célula "Não atinge"), salvo o XV, que fica
+    "a verificar".
+  * Art. 13 (comutação): 1/5 do remanescente (2/3 para o § 2º) para quem
+    cumpriu a fração; "Prejudicada" quando o indulto do mesmo decreto é
+    possível (§ 5º).
+  * Decreto 11.302/2022 (referência 25/12/2022): art. 5º (crime com pena
+    máxima em abstrato até 5 anos, crime a crime), art. 4º (70 anos), art. 7º
+    (exclusões), art. 11, p. ú. (crime excluído em concurso), art. 9º
+    (sentença anterior e trânsito depois), art. 8º (pena convertida "a
+    verificar"), art. 15 (PSC, aviso).
+  * O programa não analisa o Decreto 11.846/2023 (o modelo de petição do
+    inciso XV desse decreto é só um modelo da unidade).
+  * A ficha do assistido traz a análise inciso por inciso.
+
+PRESCRIÇÃO (arts. 109 a 119 do CP, crime a crime)
+  Punitiva (retroativa e intercorrente): prazo pela pena aplicada, metade pelo
+  art. 115 (menor de 21 no fato ou maior de 70 na sentença, salvo violência
+  sexual contra a mulher: aviso); intervalos fato→denúncia (só fatos até
+  05/05/2010), denúncia→sentença e sentença→trânsito final. Pena menor que 1
+  ano por fato anterior a 06/05/2010: 2 anos. O acórdão condenatório (art.
+  117, IV), a pronúncia e sua confirmação (júri; Súmula 191), embargos, ANPP e
+  recursos inadmitidos (art. 116, III e IV) não constam do RSPE: avisos para
+  conferir. Crime continuado e concurso formal: prazo sem o acréscimo (Súmula
+  497; art. 119) - aviso.
+  Executória: prazo pela pena aplicada, +1/3 se reincidente, metade pelo art.
+  115; termo inicial no trânsito para ambas as partes (Tema 788) ou, se o
+  trânsito para a acusação é anterior a 12/11/2020, nessa data. Cada período
+  dos eventos do RSPE é classificado em relação ao crime: a custódia anterior
+  ao termo inicial é prisão provisória (detração, CP, art. 42) - só
+  informativa, não reduz a pena nem o prazo (STJ, AgRg no HC 967.565; RHC
+  67.403); a custódia a partir do termo é cumprimento da pena unificada (LEP,
+  art. 111) e interrompe (art. 117, V), inclusive o flagrante ou a preventiva
+  cujo campo "Processos" inclui o processo do crime (também no formato curto
+  do SEEU, "32698") ou não indica processo; a prisão provisória registrada só
+  para outro processo, iniciada depois do termo, é prisão por outro motivo:
+  suspende (art. 116, p. único) e não conta como cumprimento (se foi
+  convertida em cumprimento, o efeito é de interrupção - ponto a conferir).
+  Livramento condicional concedido conta como cumprimento. Intervalo sem
+  custódia depois do termo: começado por fuga, evasão, abandono ou revogação
+  do livramento é evasão - o prazo corre pelo saldo da pena (art. 113); com o
+  motivo não informado, também, com aviso; começado por soltura sem culpa
+  (liberdade provisória, relaxamento, habeas corpus, alvará) ou sem início do
+  cumprimento, o prazo é o da pena aplicada (STJ, RHC 67.403).
+  Saldo na evasão: com uma só condenação, pena menos o cumprido desde o termo
+  (ou a pena remanescente do RSPE, no trecho em aberto). Com várias
+  condenações unificadas, o RSPE não informa como o tempo cumprido foi
+  imputado entre elas: o programa calcula dois limites - saldo mínimo (este
+  crime imputado primeiro) e saldo máximo (este crime imputado por último,
+  depois das outras condenações com trânsito anterior à evasão) - e mostra,
+  como referência, a hipótese do art. 76 do CP (mais grave primeiro; STJ, RHC
+  9.158) e a da ordem cronológica do trânsito (STJ, HC 627.646). O prazo (art.
+  109 sobre o saldo, +1/3, metade) é testado em cada faixa do art. 109
+  atravessada pelos dois limites; a data-limite soma os dias de suspensão. Se
+  todas as faixas prescrevem: "Prescrição executória aparente" (data mais
+  tardia); se nenhuma: "Não prescrita"; se divergem: "A VERIFICAR: saldo na
+  evasão depende da imputação do cumprimento entre as condenações
+  unificadas", com a lista do que falta (cálculo do SEEU com o saldo por
+  condenação, ordem de imputação, prisões por outro processo). A recaptura ou
+  o reinício interrompe (art. 117, V); cada crime prescreve isoladamente pelo
+  seu saldo (art. 119; STJ, AgRg no REsp 2.256.555, RHC 35.425, HC 261.866).
+  A memória de cálculo mostra, nesta ordem: pena aplicada; termo inicial;
+  prazo pela pena aplicada; prisão provisória (detração, informativa); cada
+  período (cumprimento, prisão por outro motivo, evasão com cumprido, saldo,
+  prazo, vencimento e recaptura, liberdade sem evasão); conclusão. Abaixo
+  dela, a tabela da linha do tempo do crime (Período | Classificação |
+  Fonte | Efeito na prescrição).
+  Linha do tempo visual (aba Prescrição e ficha do assistido): na linha de
+  cada crime, "cálculo" abre a memória em texto e "linha do tempo" abre a
+  figura, um de cada vez (clicar de novo fecha). A figura é a memória de
+  cálculo desenhada; todos os números vêm do cálculo do programa: eixo do
+  fato à situação atual com os marcos (fato, sentença, trânsito, fuga,
+  recaptura, hoje) e cada período classificado - verde: cumprimento da pena;
+  vermelho hachurado: fuga/evasão; listras cinza: prisão provisória
+  (detração); roxo: suspensão (preso por outro motivo); cinza claro:
+  liberdade sem evasão; azul claro: livramento; laranja hachurado com "?":
+  atribuição não comprovada (cumprimento registrado só para outro processo).
+  Sob cada fuga, a linha de contagem pelo saldo (art. 113) com os
+  vencimentos (saldo mínimo, faixa intermediária, saldo máximo) e a
+  recaptura, e um cartão com pena aplicada, cumprido, imputável ao crime,
+  saldo, prazo e vencimento. Abaixo: os blocos "detração → saldo → prazo",
+  as duas hipóteses de imputação (art. 76 e ordem cronológica) e o cartão
+  do resultado (A VERIFICAR / PRESCRITO / Não reconhecida) com o motivo e
+  "Falta para concluir". Clique em marco, faixa ou linha de contagem para o
+  balão "Como cheguei aqui?" (evento do SEEU, período, tratamento,
+  fundamento e efeito).
+  Iminente =
+  executória em até 180 dias. Sem trânsito no RSPE, a executória não é
+  calculada: verificar na ação penal. Custódia provisória anterior ao
+  trânsito igual ou maior que a pena do processo não é resultado de
+  prescrição: vira aviso na memória e hipótese "a verificar" na aba Extinção
+  (a mesma prisão pode servir a várias condenações - LEP, art. 111).
+
+AUDITORIA
+  Confronta o RSPE com a base jurídica e com a coerência interna do próprio
+  relatório: soma das penas, cumprida + remanescente, remições e perda de
+  dias remidos (art. 127), hediondez pela lei da data do fato, marcação de
+  VGA, percentual de progressão e fração de livramento pela lei da data do
+  fato, reincidência (inclusive a específica do art. 83, V), data-base e
+  regressões, livramento incerto, idade (70 anos; lapsos do indulto pela
+  metade), multa cominada, reparação do dano no crime patrimonial sem VGA,
+  progressão especial da mulher (1/8) e, para o reincidente em crime com
+  violência ou grave ameaça, o percentual por analogia (25%) se a
+  condenação anterior não teve violência (informativo: o RSPE não diz).
+  Níveis: Alerta (divergência com efeito concreto para o apenado), Verificar
+  (depende de dado que o RSPE não traz), Info (registro sem efeito prático:
+  oculto por padrão, "ver conferências OK / informativas") e OK.
+  Pontos que outras abas já mostram - prazos vencidos sem decisão,
+  prescrição, indulto/comutação possível sem incidente, hediondez posterior
+  ao fato no indulto, violência doméstica a confirmar, não iniciou,
+  interrompida, trânsito não informado, detração, livramento com pena
+  inferior a 2 anos - são gerados mas ficam fora da aba e da contagem (o
+  filtro é pelo tipo do ponto). Da ficha disciplinar, só fica o ponto
+  "Perda de remidos pode alcançar remição anterior à falta ...".
+  Dar baixa (com observação): o ponto sai da contagem, fica gravado na base
+  com a data e pode ser reaberto. A baixa vale pelo tipo do ponto e pelo
+  crime (ou ano do decreto, ou falta): sobrevive à reimportação e à mudança
+  do título. Os avisos "Ficha disciplinar ignorada" e "Falha ao analisar"
+  contam como alerta e podem ser baixados.
+
+FICHA DISCIPLINAR (SIAPEN/AGEPEN)
+  Importe o PDF da Ficha Disciplinar pelo botão "Importar PDFs" (pode ir no
+  mesmo lote dos RSPEs). O programa reconhece a ficha e a vincula ao RSPE
+  pelos autos citados nela. Sem esse vínculo, a ficha fica guardada pelo
+  nome e vale para o assistido de mesmo nome só se houver um único na base;
+  com homônimos, não é ligada a ninguém. A ficha guardada pelo nome passa
+  para o processo quando chega ficha nova vinculada a ele (a mais recente
+  prevalece).
+  Extrai: conduta, trabalho (setor/empresa, início/fim), atestados de trabalho
+  (dias trabalhados e remidos), estudo, faltas (registro, PADIC,
+  arquivamento), regressão/restabelecimento, isolamento, recusa de trabalho.
+  A análise da ficha é de remição (trabalho e estudo). A aba agrupa por
+  atestado: cada bloco mostra o atestado e os empregos que ele cobre; depois
+  vêm os períodos sem atestado na ficha, a baixa de trabalho sem início
+  registrado, o estudo (horas declaradas ou estimadas em 4 h por dia útil,
+  1 dia a cada 12 h; início ou fim ilegível = "Conferir datas") e o que você
+  adicionou ("+ Adicionar atestado"). A tabela expandida tem a coluna "Dias"
+  (dias corridos do período). O círculo marca o item como conferido.
+  O RSPE não diz de onde vem cada remição: o programa aponta "Requerer
+  remição" só quando não há remição lançada no RSPE depois do atestado (ou
+  do estudo); os demais ficam "conferir a homologação". As faltas da ficha não
+  entram na coluna Falta nem no indulto; só servem ao ponto de perda de
+  remidos em duplicidade da Auditoria.
 
 BASE JURÍDICA (base_juridica.json)
   Arquivo editável e versionado com os parâmetros de cálculo: tabela do art.
   109 do CP, art. 115 (com a exceção da Lei 15.160/2025, só para fatos a
   partir de 04/07/2025), Lei 12.234/2010, Tema 788; tabelas dos decretos de
-  indulto (art. 1º, art. 9º inciso a inciso, art. 13 e Decreto 11.302/2022),
-  usadas diretamente pelo cálculo; pena máxima em abstrato por tipo; frações de progressão por
-  janela de vigência (1/6 até 22/01/2020; Lei 13.964/2019 de 23/01/2020 a
-  24/03/2026; Lei 15.358/2026 a partir de 25/03/2026; Lei 15.402/2026 a partir
-  de 08/05/2026) e as teses STJ 1084/1196/1354 e STF 1169/1319; frações de
-  livramento; rol de hediondos; VGA esperada por artigo; parâmetros dos
-  decretos de indulto 2024/2025; jurisprudência citada. A cópia ao lado do
-  .exe tem prioridade sobre a embutida: para atualizar, edite o arquivo e use
-  "Base ▾ → Recarregar base jurídica" (ou reabra o programa). A versão em uso
-  aparece no rodapé e na aba Auditoria.
+  indulto (art. 1º, art. 9º inciso a inciso, art. 13, publicação e Decreto
+  11.302/2022), usadas diretamente pelo cálculo; pena máxima em abstrato por
+  tipo; frações de progressão por janela de vigência (até 28/03/2007: 1/6,
+  também para hediondos; de 29/03/2007 a 22/01/2020: 1/6 para crimes comuns
+  e 2/5 ou 3/5 para hediondos; Lei 13.964/2019 de 23/01/2020 a 09/10/2024 e, com o VI-A
+  - feminicídio primário, 55% - de 10/10/2024 a 24/03/2026; Lei 15.358/2026 a
+  partir de 25/03/2026; Lei 15.402/2026 a partir de 08/05/2026), com as teses
+  STJ 1084/1196/1354 e STF 1169 (o STF Tema 1319 está registrado como
+  repercussão geral pendente, sem tese); frações de livramento; rol de
+  hediondos com a data de cada lei; VGA esperada por artigo; jurisprudência
+  citada. A cópia ao lado do .exe tem prioridade sobre a embutida: para
+  atualizar, edite o arquivo e use "Base ▾ → Recarregar base jurídica" (ou
+  reabra o programa). A versão em uso aparece na aba Auditoria.
 
-PRESCRIÇÃO (revisada)
-  Executória: termo inicial no trânsito (Tema 788 / art. 112, I com modulação);
-  não corre em custódia, regime aberto ou livramento; cada interrupção do
-  cumprimento reinicia a contagem pela pena restante (arts. 112, II, 113 e
-  117, V). Se o RSPE não informa o trânsito mas registra início do cumprimento
-  após a sentença, essa data é usada como limite; se a pena está em execução
-  sem trânsito informado, o intervalo não é computado (evita falso positivo).
-  Art. 115 (metade): menor de 21 no fato ou maior de 70 na sentença, salvo
-  violência sexual contra a mulher (aviso para conferir a vítima).
+PRESUNÇÃO DE HIPOSSUFICIÊNCIA (Defensoria)
+  No indulto, a multa é indultável e não é óbice (Decretos 12.338/2024 e
+  12.790/2025, art. 12, § 2º, I: incapacidade presumida para o assistido da
+  Defensoria). Na extinção, a multa pendente só não obsta se comprovada a
+  impossibilidade de pagamento (STF ADI 7.032; STJ Tema 931): instruir o
+  pedido. Reparação do dano dispensada no inciso XV do art. 9º; no
+  livramento (CP, art. 83, IV), a impossibilidade deve ser demonstrada.
+  Tráfico privilegiado não é hediondo nem impeditivo (STF, SV 63 e Tema
+  1400; STJ Tema 1336). Detalhes e fontes:
+  "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
+
+PETIÇÕES (modelos .docx) - DESATIVADAS NESTA VERSÃO
+  Os modelos (pasta "modelos"; os 12 modelos padrão são copiados para ela
+  quando o gerenciador é aberto pela primeira vez), o gerenciador e o cadastro de defensores continuam no
+  programa, mas os botões foram ocultados (MODELOS_ATIVOS em ui.html). Entre
+  os modelos padrão está "Indulto 2023 - Decreto 11.846 - inciso XV", da
+  unidade: o programa não analisa esse decreto.
 
 ARQUIVOS
-  rspe_app.py      janela, bases, importação em lote (API para a interface)
-  ui.html          interface (abas, cartões, ficha, exportação)
-  rspe_view.py     campos exibidos e definição das abas
-  rspe_prescricao.py análise de prescrição por crime
+  rspe_app.py        janela, bases, importação em lote, pasta vigiada (API da interface)
+  ui.html            interface (abas, cartões, ficha, exportação)
+  rspe_view.py       campos exibidos e definição das abas
+  rspe_scraper.py    extração do PDF, indulto/comutação e regras (também roda por linha de comando)
+  rspe_prescricao.py prescrição por crime
   rspe_auditoria.py  auditoria do RSPE
+  rspe_ficha.py      ficha disciplinar (leitura e remição)
   rspe_regras.py     leitura da base jurídica
+  rspe_relatorio.py  relatórios em PDF (individual e geral)
+  rspe_export.py     exportação Excel e PDF
+  rspe_peticao.py    petições por modelo .docx (desativadas)
   base_juridica.json base jurídica (editável)
-  rspe_export.py   exportação Excel e PDF
-  rspe.ico         ícone do programa (usado pelo build)
-  rspe_scraper.py  extração do PDF e regras (também roda sozinho por linha de comando)
-  build_exe.bat    gera o executável
-  requirements.txt bibliotecas
-  exemplo/         RSPEs de exemplo
+  modelos_padrao/    modelos .docx instalados na pasta "modelos"
+  decretos/          textos dos decretos de indulto
+  exemplo/           RSPEs de exemplo
+  rspe.ico, build_exe.bat, requirements.txt   ícone, geração do .exe, bibliotecas
+  RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf   documentação técnica
+  Criados ao lado do .exe: bases/, modelos/, rspe_config.json (bases
+  recentes e pasta vigiada), pasta_vigiada_estado.json, defensores.json,
+  importacao_avisos.txt, rspe_log.txt.
 
 PROBLEMAS
   Se o programa não abrir ou travar, veja o arquivo rspe_log.txt criado ao
   lado do .exe: ele registra os erros (o .exe roda sem console). Envie esse
-  arquivo junto com o relato do problema.
+  arquivo junto com o relato do problema. Um RSPE ou ficha com dado ilegível
+  não derruba a base: o assistido aparece com o aviso na Auditoria.
 
-FICHA DISCIPLINAR (SIAPEN/AGEPEN)
-  Importe o PDF da Ficha Disciplinar pelo botão "Importar PDFs" (pode ir no
-  mesmo lote dos RSPEs). O programa reconhece a ficha e a vincula ao RSPE
-  pelos autos citados nela ou pelo nome; se não houver RSPE correspondente,
-  fica guardada pelo nome e é vinculada quando o RSPE for importado.
-  Extrai: conduta, trabalho (setor/empresa, início/fim), atestados de trabalho
-  (dias trabalhados e remidos), faltas (registro, PADIC, arquivamento),
-  regressão/restabelecimento, isolamento, recusa de trabalho.
-  Auditoria: remidos atestados x homologados no RSPE; proporção 1 para 3;
-  trabalho em curso sem atestado; falta grave nos 12 meses; falta arquivada.
-  Aba "Ficha disciplinar": uma linha por assistido (conduta, trabalho atual,
-  remidos ficha/RSPE, a atestar, faltas, situação); clicar expande o
-  comparativo item a item Ficha x RSPE com a providência (requerer remição,
-  atestado, conferir regressão etc.). Cores: vermelho = remição pendente ou
-  falta grave nos 12 meses; amarelo = a atestar/verificar; verde = em ordem;
-  cinza = sem ficha. A ficha inteira também aparece na ficha do assistido.
+HISTÓRICO DE VERSÕES
+  Registro das mudanças de cada versão. As notas das versões anteriores à
+  6.15.13 descrevem o programa daquela época e podem não valer mais: o
+  comportamento atual é o descrito nas seções acima.
 
-PRESUNÇÃO DE HIPOSSUFICIÊNCIA (Defensoria)
-  Em qualquer hipótese o programa presume a incapacidade econômica do
-  assistido. Multa pendente não obsta a extinção (STJ Tema 931; STF ADI
-  7.032), é indultável e não é óbice ao indulto (Decretos 12.338/2024 e
-  12.790/2025, art. 12, § 2º, I). Reparação do dano dispensada no inciso XV
-  do art. 9º e sem bloqueio do livramento (CP, art. 83, IV). Tráfico
-  privilegiado não é hediondo nem impeditivo (STF PSV 125, Tema 1400; STJ
-  Tema 1336). Detalhes e fontes: "Criterios_de_analise_por_beneficio.pdf".
+v6.15.13
+  Linha do tempo visual da prescrição executória, aprovada pelo Defensor.
+  - Aba Prescrição: na linha de cada crime, "cálculo" (memória em texto) e
+    "linha do tempo" (figura SVG), um aberto por vez; a figura traz o eixo
+    com as faixas classificadas e os marcos, a contagem e o cartão de saldo
+    por fuga, os blocos detração → saldo → prazo, as duas hipóteses de
+    imputação, o cartão do resultado e os balões "Como cheguei aqui?".
+  - Ficha do assistido: o cartão da prescrição executória ganha o link
+    "linha do tempo" (mesmo componente).
+  - Relatório individual: a seção "Prescrição executória: linha do tempo por
+    crime" passa a trazer a figura desenhada (sem balões) no lugar da
+    tabela, só para crimes com evasão, prescrição aparente ou a verificar.
+  - Novos campos por período e faixa: "atribuicao" (comprovada /
+    nao_comprovada - cumprimento registrado só para outro processo) e
+    "rotulo" da faixa do art. 109 ("inferior a 1 ano", "de 1 a 2 anos"...);
+    a figura não faz cálculo próprio.
+  - Base jurídica 2026-09-24b (só a versão).
+
+v6.15.12
+  Prescrição da pretensão executória após evasão, reescrita a pedido da
+  Defensoria (caso real com sete condenações unificadas e três fugas):
+  - A análise é crime a crime, pelo saldo da pena de cada condenação na data
+    da evasão (CP, arts. 113 e 119), e não pela detração. A prisão provisória
+    anterior ao trânsito é só informativa: pena de 1 ano com 1 dia de
+    cautelar continua com prazo de 4 anos (art. 109, V), nunca 3.
+  - Saíram a regra "tempo total preso igual ou maior que a pena = coberta
+    pelo cumprimento" e o resultado "Pena cumprida por detração": a mesma
+    prisão serve a várias condenações. A detração que cobre a pena do
+    processo vira aviso na memória e hipótese "a verificar" na aba Extinção
+    e na Auditoria.
+  - Cada período dos eventos é classificado (prisão provisória, cumprimento,
+    prisão por outro motivo, evasão, liberdade sem evasão); o saldo na evasão
+    fica entre dois limites quando há mais de uma condenação, com as
+    hipóteses do art. 76 e da ordem cronológica; o prazo é testado por faixa
+    do art. 109; resultado "A VERIFICAR" (amarelo) quando as faixas divergem,
+    com a lista do que falta.
+  - Novos campos por crime: linha do tempo (ppe_linha_tempo), saldos por
+    evasão (ppe_saldos) e faltantes (ppe_faltam); a ficha do assistido e o
+    relatório mostram a linha do tempo. Petição: prescricao_saldo_min_extenso,
+    prescricao_saldo_max_extenso, prescricao_data_min, prescricao_data_max,
+    prescricao_a_verificar e prescricao_faltam; a pena-base é o saldo máximo.
+  - Relatório individual novo: bloco da pena, tabela de benefícios com
+    etiquetas, linha do tempo em eventos e incidentes, alertas em frases
+    curtas com o fundamento em lista, e a linha do tempo da prescrição
+    executória dos crimes com evasão.
+  - Rótulos: "Iminente / a verificar" (amarelo) e "Extinta" (azul) na aba
+    Prescrição; os avisos e os itens da Auditoria identificam o crime pela
+    ação penal quando o artigo se repete.
+  - Base jurídica 2026-09-24a: AgRg no REsp 2.256.555, RHC 35.425, HC
+    261.866 (saldo por condenação), RHC 9.158 e HC 627.646 (ordem de
+    imputação: art. 76 x cronológica - controvérsia registrada), AgRg no RHC
+    150.075, HC 400.704 e AgRg no AREsp 571.907 (detração não interfere).
+
+v6.15.11
+  Correções das revisões de código e jurídica de 23/09/2026.
+  - Indulto e comutação 2022/2024/2025:
+    - Fato posterior ao decreto não derruba mais o benefício das penas
+      anteriores. A análise usa só os crimes anteriores; a pena do fato
+      posterior segue em execução (art. 7º; art. 6º, p. ú.; STJ, HC 190.963).
+      "Fato posterior" só aparece quando não resta crime anterior.
+    - Art. 6º: vale a data do fato da falta. Só a sanção reconhecida em juízo
+      mostra "Falta". Falta pendente, regressão sem falta homologada e perda de
+      remidos sem falta datada mostram "Verificar".
+    - Pena cumprida em 25/12 desconta o livramento posterior à data.
+    - Comando de organização criminosa: vale só crime não extinto. Em 2024, a
+      comutação mantém o aviso de falta e as ressalvas.
+    - Ficha disciplinar não derruba mais a ressalva de violência doméstica,
+      livramento incerto ou crime militar.
+    - Crime militar: "a verificar" (XIX; 2022, art. 7º, VII), não vedado.
+    - CP 337-E a 337-P (licitações) impeditivos acima de 4 anos (X).
+    - Crimes patrimoniais com letra (168-A, 171-A, 180-A) entram no XIV e XV.
+    - Sem cumprimento em 25/12: o XV fica "a verificar" (não exige fração).
+    - Decreto 2022: pena CONVERTIDA fica "a verificar" (art. 8º, I); art. 33,
+      §§ 2º e 3º, da Lei de Drogas não são excluídos; art. 4º (70 anos) com
+      crime excluído segue o art. 11, p. ú.
+    - Detalhe: colaboração premiada (art. 1º, § 1º) e art. 11 (mulheres) como
+      não aferíveis; 2/3 do impeditivo à parte (STJ, HC 1.066.254).
+    - Triagem exportada só aponta vedação do art. 1º.
+  - Prescrição:
+    - Intercorrente vai até o trânsito final.
+    - Art. 109, VI: 2 anos para fato anterior a 06/05/2010.
+    - Prisão provisória por outro processo não conta como pena cumprida
+      desta execução (suspende o prazo, sem interromper) e não muda o
+      resultado conforme a data coincida com a soltura.
+    - Revogação do livramento só conta se decidida (concedida) e do livramento.
+    - Avisos a verificar: crime continuado (Súmula 497/STF), pronúncia no júri
+      (art. 117, II e III), art. 116, III e IV (fatos desde 23/01/2020).
+    - "1 mês" com acento. Azul = extinta ou cumprida por detração, com filtro.
+  - Auditoria e livramento: tráfico de pessoas (149-A) com 2/3 (art. 83, V);
+    art. 33, §§ 2º e 3º, sem 2/3; comando de organização ultraviolenta com
+    livramento 1/1 fica "verificar"; homicídio qualificado-privilegiado não é
+    hediondo; aviso da progressão especial da mulher (1/8); trânsito não
+    afeta o indulto.
+  - Progressão vencida com exame criminológico: aviso da irretroatividade da
+    Lei 14.843/2024, só na dica da célula (não muda a cor nem gera alerta).
+  - Ficha disciplinar: ficha mais antiga não substitui a mais nova guardada
+    pelo nome; ficha vinculada não vai para outro RSPE pelo nome; aviso do
+    acréscimo de 1/3 na conclusão do ensino (LEP, art. 126, § 5º); sem "1 dias".
+  - Telas e exportação: "Impeditivo: Sim" em vermelho no Excel; filtro
+    "Extinção cabível" pela cor; contagem da Prescrição pela pretensão
+    escolhida; relatório individual com uma linha por pretensão.
+  - Petição de prescrição: "evadido em" só na evasão; prazo integral e
+    reduzido (art. 115) em campos próprios; inciso do art. 109 pelo cálculo.
+  - Segunda revisão:
+    - Ficha com data ilegível não derruba mais a base; um registro que
+      falhe aparece com o aviso na Auditoria.
+    - Art. 129, § 12, não é hediondo; §§ 2º e 3º ficam "a verificar" (vítima,
+      Lei 8.072, art. 1º, I-A). Art. 273, § 2º (culposo), não é hediondo.
+    - Sentença posterior à publicação do decreto fica fora da soma (STJ,
+      AgRg no HC 441.551 e 919.210); sentença anterior com trânsito só
+      depois fica "A VERIFICAR (art. 2º, II)" (ver rodada 3).
+    - Art. 6º: falta depois da publicação (23/12) não impede; fuga só como
+      evento e perda de remidos sem falta recente ficam "a verificar".
+    - XV sem cumprimento respeita a falta e a liderança de facção.
+    - Todas as ressalvas vão para o texto do indulto; incisos em ordem.
+    - Baixa do livramento incerto vale também para o indulto.
+    - Suspensão do livramento não é mais lida como concessão.
+    - Importunação sexual (215-A): impeditiva só se a vítima for mulher.
+    - Decreto 2022: violência doméstica em crime do CP é o art. 7º, II;
+      art. 4º com crime excluído mostra também a leitura literal (a
+      verificar); aviso do art. 15.
+    - Prescrição: concurso formal (art. 70) e Súmula 191 (vara do júri);
+      aviso quando só há trânsito para a acusação.
+    - Petição: art. 115 da linha usada; prazo do art. 109 separado do +1/3.
+    - Filtro "Crime impeditivo" pela coluna Impeditivo; fila de prioridade do
+      relatório geral com cada pretensão (o cartão "Prescrição aparente"
+      conta as duas); "1 dia" em todas as mensagens.
+    - Auditoria: reparação do dano no livramento exige prova; dica da mulher
+      (1/8) não aparece para organização criminosa.
+  - Terceira revisão:
+    - Art. 2º, II: sentença anterior à publicação e trânsito para a acusação
+      só depois fica "A VERIFICAR (art. 2º, II)", com as duas correntes; só a
+      sentença posterior à publicação (23/12) sai da soma. Por cautela, o
+      "POSSÍVEL" passa a "A VERIFICAR" enquanto não se confere o recurso. Mesmo critério no
+      Decreto 2022, com o art. 9º, p. ú.; o crime excluído com sentença
+      posterior virou tese "a verificar" (STF, SL 1.698).
+    - Perseguição (147-A): impeditiva só se a vítima for mulher.
+    - Abandono e foragido como falta a apurar (art. 6º).
+    - Baixa do livramento incerto não repete mais a decisão de 2022.
+    - Petição de prescrição: pena, cumprido e início da contagem do crime
+      escolhido; "evasão" só quando houve.
+    - Célula "Não se aplica" (cinza) quando não havia condenação na data; o
+      motivo fica na ficha; vara do júri só pela
+      palavra "júri"; art. 70 também no campo artigo; ficha pelo nome
+      migrada também no vínculo pelos autos (sem homônimo); petição recusada
+      para registro não analisado; "1 dia", "1 ano", "1 mês", "1 pasta" em
+      todas as mensagens.
+    - A nota do art. 2º, II e o crime impeditivo aparecem também quando a
+      pena total do RSPE está zerada ou não havia cumprimento na data.
+  - Quarta revisão:
+    - Auditoria: os avisos "Ficha disciplinar ignorada" e "Falha ao
+      analisar" entram na contagem, na cor e no resumo, e a baixa deles fica
+      gravada. A baixa passa a valer pelo tipo do ponto e pelo crime (ou
+      ano, ou falta), com migração automática das baixas antigas. O filtro
+      das outras abas é pelo tipo do ponto: extinção cujo motivo cita a
+      prescrição continua na Auditoria.
+    - Falta (12 meses): "Sim" só com sanção reconhecida; indício sem ela,
+      "A apurar". Incidente de falta negado não esconde mais o aviso de
+      dias remidos perdidos sem data.
+    - Perda de 1/3 (art. 127): a falta é datada pela data do fato lida no
+      complemento; sem ela, pela data de referência, com a ressalva.
+    - Reincidência específica (CP, art. 83, V): condenação anterior por
+      tráfico de pessoas (149-A) também serve de base.
+    - Remição com decimal ("12,5 Dias") lida inteira em todos os módulos;
+      relatório geral soma o estudo de "≈ 1 dia" e imprime "60,5".
+    - Estudo com data de início ilegível: "Conferir datas".
+    - Petição de prescrição: revogação do livramento não é "evasão";
+      cumprido + restante = pena do crime escolhido.
+    - Célula "Não se aplica" quando não havia condenação na data;
+      "individual/individuais" sem "(is)".
+  - Quinta revisão (documentação): LEIA-ME e AJUDA reescritos para o estado
+    atual; docstrings de rspe_scraper, rspe_prescricao e rspe_auditoria
+    corrigidos; a AJUDA exibia um caractere de controle no exemplo da pasta
+    vigiada ("RSPE\2ª VEP"); o item da mulher (1/8) usa o texto da base
+    jurídica; o indulto e a Auditoria citam a 1ª Turma do STF (RHC 273.867
+    AgR) em sentido contrário à tese da hediondez superveniente.
+  - Sexta revisão: o painel do assistido mostra a ficha disciplinar (com a
+    remição atestada x homologada, o que requerer e o detalhe da falta);
+    "Remover ficha" também remove a ficha guardada pelo nome; a comutação
+    recebe a ressalva "livramento a confirmar", como o indulto; item
+    informativo da Auditoria para o reincidente em crime com violência
+    (25% por analogia se a reincidência não for em crime violento).
+  - Base jurídica 2026-09-23h: nota do vga_reincidente_generico com o item
+    informativo da Auditoria.
+  - Base jurídica 2026-09-23g: RHC 273.867 AgR (1ª Turma do STF) na
+    hediondez aferida na data do decreto; nota do vga_reincidente_generico.
+  - Base jurídica 2026-09-23f: versão (sem mudança de regra).
+  - Base jurídica 2026-09-23e: 147-A fora do rol firme; art. 2º, II
+    (AgRg no HC 864.086; TJMG); publicação dos decretos; SL 1.698.
+  - Base jurídica 2026-09-23d: Temas 1084, 1165 e 1195 e HC 176.473 com a
+    tese literal ou os dados completos; 244-B = 4 anos; VGA esperada sem
+    215, 218, 218-B e 150; ADI 7.330; Súmula 191; concurso formal.
+  - Base jurídica 2026-09-23c: SV 63; Temas 1084, 1195 e 1400 com a tese e a
+    data; detração em outro processo; ADI 7.032; penas máximas dos arts. 311,
+    345 e 349; novas entradas (fato posterior, Súmula 497, art. 1º, XVII,
+    art. 7º, p. ú., início do cumprimento, exame criminológico).
+
+  Sétima revisão (caso real com fato de 1999):
+  - Atentado violento ao pudor (CP, art. 214, revogado pela Lei 12.015/2009) entrou no rol
+    de hediondos com data desde 26/07/1990 (Lei 8.072/90, art. 1º, VI, redação original e
+    da Lei 8.930/94). A Auditoria deixava de reconhecer a hediondez e acusava o SEEU.
+  - Pena em anos/meses/dias volta a limitar os meses a 11 (resto de 360 a 364 dias sai
+    como 11 meses e 30 a 34 dias): o SEEU nunca imprime "12 meses".
+  - Base jurídica 2026-09-23i.
 
 v6.15.10
   Correções apontadas no Memorial Técnico-Jurídico (código e base jurídica
@@ -362,8 +868,8 @@ v6.15.3
     dias de matrícula em estudo na janela do decreto e curso concluído ou
     certificado ENCCEJA/ENEM durante a execução. Atende = possível; não
     consta = não atendido; curso livre com carga horária = conferir.
-  - Decreto 12.790/2025, XII: 12 meses nos 3 anos também para o
-    reincidente (os 18 meses nos 5 anos eram só do Decreto 2024).
+  - (Corrigido na v6.15.5: no Decreto 12.790/2025, XII, o reincidente
+    também precisa de 18 meses nos 5 anos.)
   - Indulto registrado no RSPE e depois comutação dos mesmos processos:
     o programa não trata as penas como extintas (o indulto pode ter sido
     revogado ou reformado sem registro no RSPE) e a Auditoria pede
@@ -755,8 +1261,9 @@ v6.9.9
     Com ficha: avisa quando a perda alcança remição anterior a falta grave
     registrada na ficha e não homologada no RSPE.
   - Prescrição: só aparece a prescrição já consumada (sem "em curso").
-  - Progressão/livramento vencidos: alerta amarelo "verificar criminológico,
-    indeferimento ou falta", com os pedidos do RSPE na dica.
+  - Progressão/livramento vencidos: amarelo forte "verificar indeferimento
+    ou falta", com os pedidos do RSPE na dica (o exame criminológico, hoje,
+    é só dica da célula).
   - Hediondez superveniente: a Auditoria cita o STF (2ª Turma e monocráticas)
     e a divergência no TJMS (2ª Câmara concede; 1ª e 3ª seguem o STJ).
   - Penas por extenso (ex.: 14 anos e 10 meses) na ficha, nas tabelas e nos
@@ -840,14 +1347,15 @@ INDULTO / COMUTAÇÃO (v6.9.1)
   Comutação "Prejudicada · indulto cabível" quando o indulto do mesmo decreto
   é possível (art. 13, § 5º: prevalece o mais benéfico).
   Violência doméstica: impeditivo (art. 1º, XVII; Decreto 2022, art. 7º,
-  III, c) quando a vara da condenação é de violência doméstica/contra a
+  II, ou III, c, se crime da Lei 11.340) quando a vara da condenação é de violência doméstica/contra a
   mulher, o tipo cita Lei 11.340/mulher/sexo feminino, ou art. 129, § 13.
   Art. 129, §§ 9º a 11 sem esses sinais: indulto "a verificar" e Auditoria
   pede confirmar se a vítima é mulher.
 
 SITUAÇÃO E ALERTAS (v6.9.0)
-  Progressão, livramento e término: vermelho = vencido; laranja = até 30
-  dias; amarelo = até 60; verde = até 90. Acima de 90 dias a coluna fica em
+  Progressão, livramento e término: vencido em destaque (hoje, amarelo
+  forte na progressão e no livramento; vermelho = extinção cabível no
+  término); laranja = até 30 dias; amarelo = até 60; verde = até 90. Acima de 90 dias a coluna fica em
   branco. Situações em texto colorido (sem balões). Pontos da Auditoria
   repetidos em vários crimes aparecem uma vez só, com os crimes listados.
   Importação avisa "com dados incompletos" quando algum campo essencial do
@@ -858,13 +1366,3 @@ INTERFACE (v6.8.0)
   pena, uma linha por benefício, pontos de atenção, crimes em execução e,
   recolhidos, os cálculos do programa (indulto inciso por inciso e memória
   da prescrição). O detalhe de eventos, incidentes e histórico fica no RSPE.
-
-PETIÇÕES (modelos .docx) - DESATIVADO NESTA VERSÃO
-  Os modelos, o gerenciador e o cadastro de defensores continuam no
-  programa, mas os botões foram ocultados (MODELOS_ATIVOS em ui.html).
-
-AUDITORIA - NÍVEIS
-  Alerta = efeito concreto para o apenado (fração, hediondez, marco vencido,
-  prescrição, indulto, remição, falta). Verificar = pode ter efeito, depende
-  de dado externo. Info = sem efeito prático (oculto por padrão). OK.
-  Hediondez respeita a época do fato (tabela hediondos.desde da base).

@@ -146,7 +146,7 @@ def exportar_pdf(modelos, saida, nome_base, abas):
             el.append(PageBreak())
         primeiro = False
         el.append(Paragraph(spec["titulo"], st_tit))
-        el.append(Paragraph("%d assistido(s)  ·  referência: hoje, %s" % (len(modelos), rv.HOJE.strftime("%d/%m/%Y")), st_sub))
+        el.append(Paragraph("%s  ·  referência: hoje, %s" % (rs.pl(len(modelos), "assistido", "assistidos"), rv.HOJE.strftime("%d/%m/%Y")), st_sub))
         el.append(Spacer(1, 6))
 
         # cartões de resumo
@@ -194,6 +194,8 @@ def exportar_pdf(modelos, saida, nome_base, abas):
                     v = '<font color="%s">●</font> <b><font color="%s">%s</font></b>' % (DOT.get(pc, "#CBD5E1"), rv.CORES[pc][1], v)
                 elif k == "falta" and m.get("falta_sim"):
                     v = '<b><font color="%s">%s</font></b>' % (rv.CORES["vermelho"][1], v)
+                elif k == "falta" and m.get("falta_apurar"):
+                    v = '<b><font color="%s">%s</font></b>' % (rv.CORES["amarelo"][1], v)
                 elif not v:
                     v = '<font color="#98A2B3">—</font>'
                 linha.append(Paragraph(v, st_neg if j == 0 else st_cel))
