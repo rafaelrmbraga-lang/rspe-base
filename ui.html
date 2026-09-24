@@ -280,7 +280,7 @@ tr.sub td{padding:0 0 0 0;background:#FFFFFF;cursor:default}tr.sub:hover td{back
 .selo{display:inline-flex;align-items:center;gap:5px;margin-top:6px;padding:3px 8px;border-radius:6px;font-weight:700;font-size:11.5px}
 .selo.IMPEDITIVO{background:#FDE8E8;color:#B42318}.selo.NAO_IMPEDITIVO{background:#DDF5E7;color:#067647}.selo.A_VERIFICAR{background:#FEF4D6;color:#B54708}.selo.FORA{background:#EEF0F3;color:#5B6470}
 .tlv-bar svg,.tlv-tl svg{display:block}
-.tlv-tl{overflow-x:auto;overflow-y:hidden;border:1px solid var(--line);border-radius:10px;background:#FCFCFD}
+.tlv-tl{overflow:hidden;border:1px solid var(--line);border-radius:10px;background:#FCFCFD}
 .tlv .ck{cursor:pointer}.tlv .ck:hover{opacity:.8}
 .tlv-leg{display:flex;flex-wrap:wrap;gap:12px;font-size:11.5px;color:var(--tx2);margin-top:8px}
 .tlv-leg i{display:inline-block;width:22px;height:10px;border-radius:3px;vertical-align:-1px;margin-right:5px}
@@ -1000,7 +1000,7 @@ const ui = {
     const datas=[...(d.marcos||[]).map(m=>dt(m.data)), ...(d.faixas||[]).map(f=>dt(f.ini))].filter(x=>x&&!isNaN(x));
     (d.decretos||[]).forEach(x=>{ const p=(x.indulto||{}).projecao; if(p&&p.data) datas.push(dt(p.data)); if(x.imputacao&&x.imputacao.data) datas.push(dt(x.imputacao.data)); });
     const t0=new Date(Math.min(...datas)); t0.setMonth(t0.getMonth()-4); const t1=new Date(Math.max(hoje,...datas)); t1.setMonth(t1.getMonth()+4);
-    const anos=(t1-t0)/31557600000; const TW=Math.max(1200, Math.round(anos*210)); const X=t=>40+(dt(t)-t0)/(t1-t0)*(TW-80); const Xd=dd=>40+(dd-t0)/(t1-t0)*(TW-80);
+    const TW=Math.max(760, Math.round((window.innerWidth||1400)-28-36-28-6)); const X=t=>40+(dt(t)-t0)/(t1-t0)*(TW-80); const Xd=dd=>40+(dd-t0)/(t1-t0)*(TW-80);
     const yB=96, yA=130; let svg='';
     // janelas de falta grave (sombreadas) e decretos
     (d.decretos||[]).forEach(x=>{ const J=x.janela_falta; if(!J||J.informativa) return; const sel=x.id===this._tlvDec; if(!sel) return; svg+=`<rect x="${X(J.ini)}" y="30" width="${X(J.fim)-X(J.ini)}" height="${yA+200-30}" fill="rgba(240,68,56,.10)" stroke="rgba(240,68,56,.45)" stroke-dasharray="4 3"/>${sel?`<text x="${X(J.ini)+4}" y="44" font-size="10.5" font-weight="600" fill="#B42318">${esc(ui.tlvCabe([`janela da falta: ${J.ini} a ${J.fim}`,`janela ${J.meses} meses`,'janela'], X(J.fim)-X(J.ini)-8, 10.5)||'')}</text>`:''}`; });
@@ -1017,12 +1017,12 @@ const ui = {
     // decretos: linha vertical na data de referência
     (d.decretos||[]).forEach(x=>{ const xx=X(x.referencia); const st=(x.indulto||{}).status||'verificar'; const c={cabe:'#067647',nao:'#B42318',verificar:'#B54708',ainda:'#1D4ED8'}[st]||'#475467';
       const di=this.tlvReg(`Decreto ${x.numero}`, {evento:`Decreto ${x.numero} · publicação ${x.publicacao||'não cadastrada'} · data de referência ${x.referencia}`, crime:'GERAL', periodo:x.referencia, tratamento:'data de referência', fundamento:x.fonte||'', calculo:x.cumprido_txt?`cumprido na data: ${x.cumprido_txt.total} (cumprimento ${x.cumprido_txt.cumprimento} + detração ${x.cumprido_txt.detracao} + remição ${x.cumprido_txt.remicao})`:'', efeito:`Indulto: ${(x.indulto||{}).rotulo||''} · Comutação: ${(x.comutacao||{}).rotulo||''}`});
-      svg+=`<g class="ck" opacity="${vis(x)?1:.3}" onclick="ui.tlvSel('${x.id}');setTimeout(()=>ui.tlvDet(${di}),0)"><line x1="${xx}" y1="26" x2="${xx}" y2="${yA+200}" stroke="${c}" stroke-width="${x.id===this._tlvDec?3:1.5}"/><rect x="${xx-60}" y="4" width="120" height="20" rx="5" fill="${c}"/><text x="${xx}" y="18" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">${esc(x.numero)}${x.cadastrado?'':' ⚠'}</text></g>`; });
+      svg+=`<g class="ck" opacity="${vis(x)?1:.3}" onclick="ui.tlvSel('${x.id}');setTimeout(()=>ui.tlvDet(${di}),0)"><line x1="${xx}" y1="26" x2="${xx}" y2="${yA+200}" stroke="${c}" stroke-width="${x.id===this._tlvDec?3:1.5}"/><rect x="${Math.min(Math.max(xx-60,2),TW-122)}" y="4" width="120" height="20" rx="5" fill="${c}"/><text x="${Math.min(Math.max(xx,62),TW-62)}" y="18" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">${esc(x.numero)}${x.cadastrado?'':' ⚠'}</text></g>`; });
     // hoje
     svg+=`<line x1="${X(d.hoje)}" y1="30" x2="${X(d.hoje)}" y2="${yA+200}" stroke="#101828" stroke-dasharray="3 3"/><text x="${X(d.hoje)-4}" y="${yA+196}" text-anchor="end" font-size="11" font-weight="700" fill="#101828">HOJE ${esc(d.hoje)}</text>`;
     // projeção do último decreto
     (d.decretos||[]).forEach(x=>{ const p=(x.indulto||{}).projecao; if(!(p&&p.data)||!vis(x)) return; const xx=X(p.data); const di=this.tlvReg('Projeção', {evento:'requisito objetivo do último decreto publicado', periodo:`${x.referencia} → ${p.data}`, tratamento:'projeção', fundamento:`Decreto ${x.numero}`, calculo:`exigido ${(x.indulto||{}).exigido_txt||''}`, efeito:'Projeção baseada nos requisitos do último decreto publicado; depende de o próximo decreto repetir as mesmas condições.'});
-      svg+=`<g class="ck" onclick="ui.tlvDet(${di})"><line x1="${xx}" y1="${yB-4}" x2="${xx}" y2="${yA+150}" stroke="#2563EB" stroke-dasharray="6 3" stroke-width="2"/><text x="${xx+4}" y="${yA+176}" font-size="11" font-weight="700" fill="#1D4ED8">projeção: requisito em ${p.data}</text></g>`; });
+      svg+=`<g class="ck" onclick="ui.tlvDet(${di})"><line x1="${xx}" y1="${yB-4}" x2="${xx}" y2="${yA+150}" stroke="#2563EB" stroke-dasharray="6 3" stroke-width="2"/><text x="${xx>TW-240?xx-4:xx+4}" text-anchor="${xx>TW-240?'end':'start'}" y="${yA+176}" font-size="11" font-weight="700" fill="#1D4ED8">projeção: requisito em ${p.data}</text></g>`; });
     // marcos com rótulos em faixas para não sobrepor
     const niveis=[]; const J=D.janela_falta&&!D.janela_falta.informativa?D.janela_falta:null; const dentro=t=>J&&dt(t)>=dt(J.ini)&&dt(t)<=dt(J.fim);
     const rems=(d.marcos||[]).filter(m=>m.tipo==='remicao'||m.tipo==='perda');
@@ -1036,17 +1036,17 @@ const ui = {
       ms.sort((a,b)=>PRIO.indexOf(a.tipo)-PRIO.indexOf(b.tipo)); const m=ms[0]; const xx=X(G.data);
       const tags=[...new Set(ms.flatMap(z=>(z.crimes||[]).filter(t=>t!=='GERAL'&&!z.rotulo.includes(t))))].join(', ');
       const rot=ms.map(z=>z.rotulo).join(' · '); const lab=`${G.data} · ${rot}${tags?' ['+tags+']':''}`; const w=ui.tlvLarg(lab,11)+16;
-      let n=0; while(niveis[n]!==undefined && niveis[n]>xx-4) n++; niveis[n]=xx+w; const ly=yA+(rems.length?50:38)+n*21;
+      const fim=xx+w>TW-8; const ini=fim?xx-w:xx; let n=0; while(niveis[n]!==undefined && niveis[n]>ini-4) n++; niveis[n]=fim?xx+6:xx+w; const ly=yA+(rems.length?50:38)+n*21;
       let c='#475467'; const cs=[...new Set(ms.flatMap(z=>z.crimes||[]))]; if(cs.length===1&&cor[cs[0]]) c=cor[cs[0]];
       const fl=ms.find(z=>z.tipo==='falta'); if(fl) c=fl.duvida?'#F79009':(dentro(G.data)?'#E5484D':'#98A2B3'); if(ms.some(z=>z.tipo==='fuga')) c='#F04438';
       const det=Object.assign({}, m.det, {evento:ms.map(z=>(z.det&&z.det.evento)||z.rotulo).join(' | '), efeito:ms.map(z=>z.efeito).filter(Boolean).join('; ')});
       const di=this.tlvReg(rot, det);
       svg+=`<g class="ck" onclick="ui.tlvDet(${di})"><line x1="${xx}" y1="${yA}" x2="${xx}" y2="${ly-10}" stroke="${c}" stroke-width="1" opacity=".6"/><circle cx="${xx}" cy="${yA}" r="${fl?6:5}" fill="#fff" stroke="${c}" stroke-width="2.5"/>${fl&&fl.duvida?`<text x="${xx}" y="${yA-9}" text-anchor="middle" font-size="12">⚠</text>`:''}
-        <text x="${xx+4}" y="${ly}" font-size="11" fill="#667085">${esc(G.data)} · <tspan font-weight="700" fill="${c}">${esc(rot)}</tspan>${tags?` <tspan fill="#98A2B3">[${esc(tags)}]</tspan>`:''}</text></g>`; });
+        <text x="${fim?xx-4:xx+4}" text-anchor="${fim?'end':'start'}" y="${ly}" font-size="11" fill="#667085">${esc(G.data)} · <tspan font-weight="700" fill="${c}">${esc(rot)}</tspan>${tags?` <tspan fill="#98A2B3">[${esc(tags)}]</tspan>`:''}</text></g>`; });
     const H=yA+(rems.length?50:38)+Math.max(1,niveis.length)*21+24;
     // dúvidas no ponto exato
     (d.duvidas||[]).forEach(q=>{ if(!q.data) return; const xx=X(q.data); const di=this.tlvReg('A VERIFICAR', {evento:q.texto, crime:q.crime, periodo:q.data, tratamento:'dúvida - nada foi presumido', efeito:'o resultado depende desse dado'}); svg+=`<g class="ck" onclick="ui.tlvDet(${di})"><circle cx="${xx}" cy="60" r="9" fill="#FEF4D6" stroke="#F79009" stroke-width="2"/><text x="${xx}" y="64" text-anchor="middle" font-size="11" font-weight="800" fill="#B54708">!</text></g>`; });
-    const linha=`<div class="tlv-tl"><svg width="${TW}" height="${Math.max(H,yA+210)}" viewBox="0 0 ${TW} ${Math.max(H,yA+210)}">${defs}${svg}</svg></div>
+    const linha=`<div class="tlv-tl"><svg width="100%" viewBox="0 0 ${TW} ${Math.max(H,yA+210)}" preserveAspectRatio="xMinYMin meet">${defs}${svg}</svg></div>
       <div class="tlv-leg">${Object.values(this.TLV_FX).map(s=>`<span><i style="background:${s.f.startsWith('url')?({'url(#tvDet)':'repeating-linear-gradient(90deg,#067647 0 2px,#D1FADF 2px 6px)','url(#tvFuga)':'repeating-linear-gradient(135deg,#F04438 0 3px,#FDE8E8 3px 8px)','url(#tvDup)':'repeating-linear-gradient(45deg,#F79009 0 3px,#FEF4D6 3px 8px)'})[s.f]:s.f};border:1px solid #D0D5DD"></i>${s.r}</span>`).join('')}<span><i style="background:rgba(240,68,56,.12);border:1px dashed rgba(240,68,56,.5)"></i>janela da falta grave (decreto selecionado)</span><span><i style="background:repeating-linear-gradient(135deg,rgba(16,24,40,.45) 0 2px,transparent 2px 8px);border:1px solid #475467"></i>cumprido imputado ao impeditivo</span>${rems.length?`<span style="color:#0086C9">◆ ${pl(rems.length,'remição','remições')} (${remTot>=0?'+':''}${remTot} dias) - clique no losango</span>`:''}<span style="color:#E5484D">● falta na janela</span><span style="color:#98A2B3">● falta fora da janela (sem efeito)</span><span style="color:#B54708">⚠ a verificar</span></div>`;
     // 4-6. cartões dos decretos com checklist
     const ico={ok:'✔',ko:'✖',q:'?'};
@@ -1132,6 +1132,7 @@ function pl(n,a,b){ return n+' '+(n===1?a:b); }
 function esc(s){ return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 function cmp(a,b){ const da=dt(a), db=dt(b); if(da&&db) return da-db; if(da) return -1; if(db) return 1; return String(a??'').localeCompare(String(b??''),'pt'); }
 function dt(v){ const m=/^(\d{2})\/(\d{2})\/(\d{4})/.exec(String(v??'')); return m? new Date(+m[3],+m[2]-1,+m[1]).getTime():null; }
+window.addEventListener('resize',()=>{ clearTimeout(ui._rz); ui._rz=setTimeout(()=>{ if(document.getElementById('tlv').classList.contains('on')) ui.renderTLV(); },200); });
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ ui.fecharDrawer(); ui.fecharModal(); ui.fecharTLV(); } });
 document.addEventListener('click',e=>ui.tlClick(e));
 window.addEventListener('pywebviewready', ()=>api('listar'));

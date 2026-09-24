@@ -565,6 +565,9 @@ v6.16.0
     Legenda só com os tipos presentes.
   - Aba Prescrição: sub-abas "Pretensão executória" e "Pretensão punitiva"
     (no lugar da lista de seleção), como as sub-abas por decreto do indulto.
+  - Linha do tempo do indulto cabe inteira na largura da janela (sem
+    rolagem nem corte à direita; refeita ao redimensionar); rótulos perto
+    da borda ficam à esquerda do marco.
   - Linha do tempo do indulto mais limpa: eventos do mesmo dia num rótulo
     só, rótulos em uma linha, remições como losangos (resumo na legenda),
     textos das faixas e da barra só quando cabem, imputação e comutação
