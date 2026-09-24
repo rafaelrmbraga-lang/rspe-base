@@ -567,6 +567,18 @@ def _decreto(D, ref, pub, C, cumprido, data_atinge, faltas, hoje, ultimo, em_cur
     # falta
     if not FG:
         est_f, txt_f = "q", "Regra de falta grave deste decreto não cadastrada: conferir no texto do decreto."
+    elif FG.get("exige") is False:
+        # o decreto não exige requisito disciplinar: a falta é verificada e mostrada, mas não afasta o benefício
+        reg = [f for f in faltas_out if f["estado"] != "fora"]
+        for f in reg:
+            f["estado"] = "informativa"
+        est_f = "ok"
+        txt_f = "O Decreto %s não exige ausência de falta grave: não afasta o indulto." % num + (
+            (" Faltas registradas nos %d meses anteriores (informativo): %s." % (janela["meses"], "; ".join(
+                "%s%s" % (f["fato"], (", homologada em %s" % f["homol"]) if f["homol"] else ", sem homologação") for f in reg))) if reg else
+            " Nenhuma falta registrada nos %d meses anteriores." % janela["meses"])
+        janela = dict(janela, informativa=True)
+        out["janela_falta"] = janela
     else:
         imps = [f for f in faltas_out if f["estado"] == "impede"]
         vers = [f for f in faltas_out if f["estado"] == "verificar"]
@@ -576,7 +588,7 @@ def _decreto(D, ref, pub, C, cumprido, data_atinge, faltas, hoje, ultimo, em_cur
             est_f, txt_f = "q", "Falta na janela sem homologação no SEEU (%s): se homologada, impede; se não, não impede." % "; ".join(f["fato"] for f in vers)
         else:
             est_f, txt_f = "ok", "Nenhuma falta grave dentro da janela de %d meses (%s a %s)." % (janela["meses"], janela["ini"], janela["fim"])
-    comum.append(chk("Requisito subjetivo (falta grave na janela)", est_f, txt_f,
+    comum.append(chk("Requisito subjetivo (falta grave%s)" % (": não exigido" if FG and FG.get("exige") is False else " na janela"), est_f, txt_f,
                      _det("incidentes de falta/sanção e eventos de fuga do SEEU", "GERAL", ("%s → %s" % (janela["ini"], janela["fim"])) if janela else "", "falta grave",
                           (janela or {}).get("dispositivo", "") + "; STJ, Tema 1195; STJ, Súmula 535", "", "só o requisito subjetivo; o tempo cumprido não se altera")))
     # trânsito / recurso da acusação

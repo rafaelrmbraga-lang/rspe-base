@@ -1316,7 +1316,7 @@
   }
  },
  "decretos_linha": {
-  "_nota": "Parâmetros da linha do tempo de indulto e comutação (aba Indulto / Comutação). Nenhuma fração, janela, vedação ou data fica no código: cada decreto é cadastrado aqui. Decreto com 'cadastrado': false (ou ausente) dá A VERIFICAR, nunca aplicação por analogia. hipoteses: a primeira que se aplica à pena considerada (vga true/false/null; pena_max_anos) define a fração. vedacoes.regra: art1_2024_2025 (listas art1_* de decretos_indulto) ou art7_2022. falta_grave.ate: 'publicacao' fecha a janela na publicação.",
+  "_nota": "Parâmetros da linha do tempo de indulto e comutação (aba Indulto / Comutação). Nenhuma fração, janela, vedação ou data fica no código: cada decreto é cadastrado aqui. Decreto com 'cadastrado': false dá A VERIFICAR, nunca aplicação por analogia. hipoteses: a primeira que se aplica à pena considerada (vga true/false/null; pena_max_anos) define a fração. vedacoes.regra: art1_2024_2025 (listas art1_* de decretos_indulto) ou art7_2022. falta_grave.ate: 'publicacao' fecha a janela na publicação.",
   "decretos": [
    {
     "id": "2022",
@@ -1341,7 +1341,11 @@
      "regra": "art7_2022",
      "dispositivo": "art. 7º"
     },
-    "falta_grave": null,
+    "falta_grave": {
+     "exige": false,
+     "janela_meses": 12,
+     "dispositivo": "Decreto 11.302/2022: não há requisito disciplinar (arts. 1º a 11)"
+    },
     "concurso_impeditivo": {
      "fracao": "1/1",
      "ordem": "impeditivo_primeiro",
@@ -1353,15 +1357,7 @@
     "regra_transito": {
      "dispositivo": "art. 9º, I e parágrafo único"
     },
-    "nota": "Regra de falta grave não cadastrada para este decreto: o requisito subjetivo fica A VERIFICAR."
-   },
-   {
-    "id": "2023",
-    "numero": "11.846/2023",
-    "publicacao": null,
-    "referencia": "2023-12-25",
-    "cadastrado": false,
-    "nota": "Parâmetros não cadastrados: completar frações (art. 2º), vedações, falta (art. 6º) e publicação para habilitar o cálculo."
+    "nota": "O decreto não exige ausência de falta grave: as faltas aparecem só como informação e não afastam o indulto."
    },
    {
     "id": "2024",

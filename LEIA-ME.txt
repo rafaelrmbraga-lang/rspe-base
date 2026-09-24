@@ -565,8 +565,8 @@ v6.16.0
     "Como cheguei aqui?". Falta grave nunca zera o cumprido (Súmula 535).
   - Base jurídica 2026-09-24c: nova seção decretos_linha com os parâmetros
     de cada decreto (frações, limite, vedações, janela da falta, concurso
-    com impeditivo, dispositivos). Decreto 11.846/2023 cadastrado sem
-    parâmetros: fica A VERIFICAR até ser completado (nunca por analogia).
+    com impeditivo, dispositivos). Decreto 11.302/2022: não exige ausência
+    de falta grave; as faltas aparecem só como informação.
 
 v6.15.13
   Linha do tempo visual da prescrição executória, aprovada pelo Defensor.

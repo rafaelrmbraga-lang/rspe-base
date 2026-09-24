@@ -1031,7 +1031,7 @@ const ui = {
     const anos=(t1-t0)/31557600000; const TW=Math.max(1100, Math.round(anos*170)); const X=t=>40+(dt(t)-t0)/(t1-t0)*(TW-80); const Xd=dd=>40+(dd-t0)/(t1-t0)*(TW-80);
     const yB=96, yA=128; let svg='';
     // janelas de falta grave (sombreadas) e decretos
-    (d.decretos||[]).forEach(x=>{ const J=x.janela_falta; if(!J) return; const sel=x.id===this._tlvDec; svg+=`<rect x="${X(J.ini)}" y="30" width="${X(J.fim)-X(J.ini)}" height="${yA+170-30}" fill="${sel?'rgba(240,68,56,.10)':'rgba(152,162,179,.08)'}" stroke="${sel?'rgba(240,68,56,.45)':'none'}" stroke-dasharray="4 3"/>${sel?`<text x="${X(J.ini)+4}" y="42" font-size="10.5" fill="#B42318">janela de ${J.meses} meses do Decreto ${esc(x.numero)} (${J.ini} a ${J.fim})</text>`:''}`; });
+    (d.decretos||[]).forEach(x=>{ const J=x.janela_falta; if(!J||J.informativa) return; const sel=x.id===this._tlvDec; svg+=`<rect x="${X(J.ini)}" y="30" width="${X(J.fim)-X(J.ini)}" height="${yA+170-30}" fill="${sel?'rgba(240,68,56,.10)':'rgba(152,162,179,.08)'}" stroke="${sel?'rgba(240,68,56,.45)':'none'}" stroke-dasharray="4 3"/>${sel?`<text x="${X(J.ini)+4}" y="42" font-size="10.5" fill="#B42318">janela de ${J.meses} meses do Decreto ${esc(x.numero)} (${J.ini} a ${J.fim})</text>`:''}`; });
     // faixas
     (d.faixas||[]).forEach(f=>{ const s=this.TLV_FX[f.tipo]||{f:'#ccc',r:f.tipo}; const x1=X(f.ini), x2=Math.max(x1+2, X(f.fim)+ (TW-80)/((t1-t0)/86400000)); const di=this.tlvReg(s.r, f.det);
       svg+=`<g class="ck" onclick="ui.tlvDet(${di})"><rect x="${x1}" y="${yB}" width="${x2-x1}" height="20" rx="3" fill="${s.f}" stroke="${f.tipo==='liberdade'?'#D0D5DD':'none'}"/>${x2-x1>90?`<text x="${(x1+x2)/2}" y="${yB+14}" text-anchor="middle" font-size="10.5" font-weight="700" fill="${f.tipo==='cumprimento'?'#fff':'#101828'}">${esc(s.r.split(' (')[0])} · ${pl(f.dias,'dia','dias')}</text>`:''}</g>`; });
@@ -1052,7 +1052,7 @@ const ui = {
     (d.decretos||[]).forEach(x=>{ const p=(x.indulto||{}).projecao; if(!(p&&p.data)) return; const xx=X(p.data); const di=this.tlvReg('Projeção', {evento:'requisito objetivo do último decreto publicado', periodo:`${x.referencia} → ${p.data}`, tratamento:'projeção', fundamento:`Decreto ${x.numero}`, calculo:`exigido ${(x.indulto||{}).exigido_txt||''}`, efeito:'Projeção baseada nos requisitos do último decreto publicado; depende de o próximo decreto repetir as mesmas condições.'});
       svg+=`<g class="ck" onclick="ui.tlvDet(${di})"><line x1="${xx}" y1="${yB-4}" x2="${xx}" y2="${yA+150}" stroke="#2563EB" stroke-dasharray="6 3" stroke-width="2"/><text x="${xx+4}" y="${yA+148}" font-size="10.5" font-weight="700" fill="#1D4ED8">projeção: requisito em ${p.data}</text></g>`; });
     // marcos com rótulos em faixas para não sobrepor
-    const niveis=[]; const J=D.janela_falta; const dentro=t=>J&&dt(t)>=dt(J.ini)&&dt(t)<=dt(J.fim);
+    const niveis=[]; const J=D.janela_falta&&!D.janela_falta.informativa?D.janela_falta:null; const dentro=t=>J&&dt(t)>=dt(J.ini)&&dt(t)<=dt(J.fim);
     (d.marcos||[]).filter(m=>!['decreto','hoje','publicacao'].includes(m.tipo)).forEach(m=>{ const xx=X(m.data); const lab=`${m.data} ${m.rotulo} [${(m.crimes||[]).join(', ')}]`; const w=Math.max(lab.length*6.2, Math.min(70,(m.sub||'').length)*5.4)+14;
       let n=0; while(niveis[n]!==undefined && niveis[n]>xx-4) n++; niveis[n]=xx+w; const ly=yA+34+n*30;
       let c='#475467'; if(m.crimes&&m.crimes.length===1&&cor[m.crimes[0]]) c=cor[m.crimes[0]];
