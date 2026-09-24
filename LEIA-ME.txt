@@ -1,8 +1,8 @@
-RSPE BASE - SEEU  v6.16.2 (programa em abas)
+RSPE BASE - SEEU  v6.16.3 (programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-6.16.2. A documentação técnica completa (cada parâmetro, a regra, a norma e
+6.16.3. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -535,6 +535,12 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v6.16.3
+  - Linha do tempo da prescrição com marcos numerados: na linha só o número
+    (1, 2, 3...) com o ponto; acima dela, a legenda "1 Fato 12/04/2017 · 2
+    Denúncia ..." na ordem das datas. Marcos da mesma data viram um número
+    só; números próximos sobem um degrau, sem sobreposição.
 
 v6.16.2
   - Linha do tempo da prescrição: marcos próximos (ex.: sentença e trânsito

@@ -145,6 +145,7 @@ tr.sub td{padding:0 0 0 0;background:#FFFFFF;cursor:default}tr.sub:hover td{back
 .ptl-pop.on{display:block}.ptl-pop h4{margin:0 0 6px;font-size:12.5px}.ptl-pop dl{margin:0;display:grid;grid-template-columns:110px 1fr;gap:2px 8px}.ptl-pop dt{color:var(--tx2)}.ptl-pop dd{margin:0}.ptl-pop .x{position:absolute;right:8px;top:6px;cursor:pointer;color:var(--tx3)}
 .why.on{font-weight:700;text-decoration:underline}
 .ptl-holder{margin-top:6px}
+.ptl-num{display:flex;flex-wrap:wrap;gap:6px 18px;margin:4px 0 8px;padding-left:14px;font-size:12.5px;color:var(--tx)}.ptl-num b{display:inline-flex;width:20px;height:20px;border-radius:50%;color:#fff;font-size:11px;align-items:center;justify-content:center;margin-right:6px}.ptl-num em{font-style:normal;color:var(--tx2)}
 .mem{display:grid;gap:12px;margin:10px 0 4px}
 .mb{background:#F9FAFB;border:1px solid #EEF0F3;border-radius:10px;padding:12px 16px 12px}
 .mb.pp{border-left:3px solid #7C6CF6}.mb.pe{border-left:3px solid #2563EB}.mb.av{border-left:3px solid #B54708}
@@ -532,14 +533,14 @@ const ui = {
     faixas.forEach(p=>{ if(p.tipo==='evasao'||p.tipo==='interrupcao'){ marcos.push({d:p.a,r:p.rotulo||(p.tipo==='evasao'?'Fuga':'Interrupção'),t:'fuga',p}); marcos.push({d:p.b,r:p.fim?'Recaptura':'Hoje',t:'recaptura',p}); } });
     marcos.push({d:HOJE,r:'Situação atual',t:'hoje'});
     const evas=sal;
-    // marcos a menos de 70 px viram um rótulo só; cada rótulo ocupa a faixa livre mais baixa (sem sobreposição)
+    // marcos numerados: na linha só o número; a legenda com nome e data fica abaixo da figura
     marcos.sort((a,b)=>a.d-b.d);
-    const grp=[]; marcos.forEach(m=>{ const cx=x(m.d); const g=grp[grp.length-1]; if(g && cx-g.x1<70){ g.ms.push(m); g.x1=cx; } else grp.push({x0:cx,x1:cx,ms:[m]}); });
-    const ocup=[]; grp.forEach(g=>{ g.cx=(g.x0+g.x1)/2; g.l1=g.ms.map(m=>m.r).join(' · '); g.l2=[...new Set(g.ms.map(m=>fmt(m.d)))].join(' · ');
-      const w=Math.max(g.l1.length*6.3, g.l2.length*5.8)+12; g.anc=g.cx>PL+W-w/2?'end':(g.cx<PL+w/2?'start':'middle');
-      const a0=g.anc==='end'?g.cx-w:(g.anc==='start'?g.cx:g.cx-w/2), a1=a0+w;
-      let t=0; while(ocup[t]&&ocup[t].some(([p,q])=>a0<q+8&&a1>p-8)) t++; (ocup[t]=ocup[t]||[]).push([a0,a1]); g.tier=t; });
-    const Y=Math.max(150, 90+ocup.length*30);
+    // mesma data = um número só (ex.: "Hoje · Situação atual")
+    for(let i=marcos.length-1;i>0;i--){ if(+marcos[i].d===+marcos[i-1].d){ marcos[i-1].r=[...new Set([marcos[i-1].r,marcos[i].r])].join(' · '); if(marcos[i].t==='fuga'||marcos[i].t==='transito') marcos[i-1].t=marcos[i].t; marcos.splice(i,1); } }
+    marcos.forEach((m,i)=>m.n=i+1);
+    const ocup=[]; marcos.forEach(m=>{ const cx=x(m.d); let t=0; while(ocup[t]&&ocup[t].some(q=>Math.abs(q-cx)<22)) t++; (ocup[t]=ocup[t]||[]).push(cx); m.tier=t; m.cx=cx; });
+    this._tlNum=this._tlNum||{}; this._tlNum[idx]=marcos;
+    const Y=Math.max(150, 110+ocup.length*24);
     const pelaPena=!evas.length && (L.ppe_previsao||L.ppe_correndo_ate); const H=(evas.length?250+230*evas.length:(pelaPena?300:250))+(Y-150);
     let svg=`<svg viewBox="0 40 ${Wm} ${H-40}" xmlns="http://www.w3.org/2000/svg"><defs>
      <pattern id="hFuga${sfx}" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="8" height="8" fill="#FDE8E8"/><rect width="4" height="8" fill="#F04438"/></pattern>
@@ -553,9 +554,8 @@ const ui = {
       if(x2-x1>70) svg+=`<text x="${(x1+x2)/2}" y="${Y+40}" text-anchor="middle" font-size="10" fill="#475467">${dias(Math.round((p.b-p.a)/864e5))}</text>`;
       svg+=`</g>`; });
     const COL={fato:'#475467',sentenca:'#475467',transito:'#4F46E5',fuga:'#B42318',recaptura:'#067647',hoje:'#101828'};
-    grp.forEach((g,i)=>{ const ty=Y-30-g.tier*30, ty2=ty+12; const col=COL[(g.ms.find(m=>m.t==='fuga')||g.ms.find(m=>m.t==='transito')||g.ms[g.ms.length-1]).t];
-      g.ms.forEach(m=>{ const cx=x(m.d); svg+=`<line x1="${cx}" y1="${ty2+3}" x2="${cx}" y2="${Y-8}" stroke="${COL[m.t]}" stroke-width="1" stroke-dasharray="2 2"/><circle cx="${cx}" cy="${Y}" r="6" fill="#fff" stroke="${COL[m.t]}" stroke-width="2.5"/>`; });
-      svg+=`<g class="mk" data-k="m${i}"><text x="${g.cx}" y="${ty}" text-anchor="${g.anc}" font-size="10.5" font-weight="700" fill="${col}">${esc(g.l1)}</text><text x="${g.cx}" y="${ty2}" text-anchor="${g.anc}" font-size="10" fill="#475467">${esc(g.l2)}</text></g>`; });
+    marcos.forEach((m,i)=>{ const by=Y-34-m.tier*24; const c=COL[m.t];
+      svg+=`<g class="mk" data-k="m${i}"><line x1="${m.cx}" y1="${by+10}" x2="${m.cx}" y2="${Y-6}" stroke="${c}" stroke-width="1" stroke-dasharray="2 2"/><circle cx="${m.cx}" cy="${Y}" r="4" fill="${c}"/><circle cx="${m.cx}" cy="${by}" r="10" fill="${c}"/><text x="${m.cx}" y="${by+4}" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">${m.n}</text><text display="none">${esc(m.r)}</text><text display="none">${fmt(m.d)}</text></g>`; });
     let yc=Y+95;
     if(pelaPena){ const a=D(L.ppe_inicio||L.ppe_termo), lim=D(L.ppe_previsao||L.ppe_correndo_ate); const xa=x(a), xl=x(Math.min(lim,HOJE)); const venc=lim<=HOJE; const cor=venc?'#B42318':'#067647';
       svg+=`<line x1="${xa}" y1="${Y}" x2="${xa}" y2="${yc}" stroke="${cor}" stroke-dasharray="3 3"/><line x1="${xa}" y1="${yc}" x2="${Math.max(xl,xa+3)}" y2="${yc}" stroke="${cor}" stroke-width="5" stroke-linecap="round"/>
@@ -596,7 +596,8 @@ const ui = {
     const saldoTxt=ultima.saldo_min===ultima.saldo_max? amd(ultima.saldo_max) : 'entre '+amd(ultima.saldo_min)+' e '+amd(ultima.saldo_max);
     return `<div class="ptl" data-tl="${idx}"><div class="ptl-h"><span class="pill ${r[0]}">${r[1]}</span><span class="muted">${esc(L.rotulo||L.crime)} · pena ${penaExt(esc(L.pena||''))} · fato ${esc(L.fato||'—')} · trânsito ${esc(L.ppe_termo||'—')}</span></div>
      <div class="ptl-legend">${(()=>{ const ts=new Set((L.ppe_linha_tempo||[]).map(p=>this.tlTipo(p))); return [['cumprimento','i-cump','cumprimento da pena'],['evasao','i-fuga','fuga / evasão'],['interrupcao','i-fuga','interrupção'],['provisoria','i-prov','prisão provisória (detração)'],['outro_motivo','i-susp','suspensão (preso por outro motivo)'],['liberdade','i-lib','liberdade / sem início do cumprimento'],['livramento','i-lc','livramento'],['duvida','i-dup','atribuição não comprovada']].filter(z=>ts.has(z[0])).map(z=>`<span><i class="${z[1]}"></i>${z[2]}</span>`).join('')+(ts.has('prd')?'<span><i style="background:#D9D6FE;border:1px solid #7A5AF8"></i>restritiva de direitos</span>':''); })()}</div>
-     <div class="ptl-tl">${this.prescTimelineSvg(L, idx)}<div class="ptl-pop"><span class="x">✕</span><div class="pc"></div></div></div>
+     ${(()=>{ const sv=this.prescTimelineSvg(L, idx); return `<div class="ptl-num">${(this._tlNum[idx]||[]).map(m=>`<span><b style="background:${({fato:'#475467',sentenca:'#475467',transito:'#4F46E5',fuga:'#B42318',recaptura:'#067647',hoje:'#101828'})[m.t]}">${m.n}</b>${esc(m.r)} <em>${m.d.toLocaleDateString('pt-BR')}</em></span>`).join('')}</div><div class="ptl-tl">${sv}<div class="ptl-pop"><span class="x">✕</span><div class="pc"></div></div></div>`; })()}
+     <div style="display:none">${(this._tlNum[idx]||[]).map(m=>`<span><b style="background:${({fato:'#475467',sentenca:'#475467',transito:'#4F46E5',fuga:'#B42318',recaptura:'#067647',hoje:'#101828'})[m.t]}">${m.n}</b>${esc(m.r)} <em>${m.d.toLocaleDateString('pt-BR')}</em></span>`).join('')}</div>
      <div class="ptl-help">Clique em qualquer marco, faixa ou linha de contagem para ver "Como cheguei aqui?" (evento do SEEU, processo, período, tratamento, fundamento e efeito).</div>
      <div class="ptl-fluxo"><div class="box"><b>1 · Tempo de prisão / detração</b>Prisão provisória antes do trânsito: <b style="display:inline">${dias(L.ppe_detracao_dias||0)}</b> (CP, art. 42). Não entra no prazo.</div><div class="arr">→</div>
        ${sal.length?`<div class="box"><b>2 · Saldo da pena na ${ultima.rotulo_evento?'data do '+esc(ultima.rotulo_evento):'fuga'}</b>Pena de ${penaExt(esc(L.pena||''))} menos o cumprimento imputável a esta condenação: ${saldoTxt} (em ${esc(ultima.evasao||'—')}).</div>`
@@ -615,7 +616,7 @@ const ui = {
       if(tipo==='duvida') html+=`<p style="margin:6px 0 0;color:#B54708"><b>Atribuição não comprovada:</b> o SEEU registra prisão neste período só para outro processo; os dados disponíveis não permitem determinar quanto dele foi destinado a esta condenação. O período não é assumido como redução certa da pena: entra só como limite.</p>`;
     } else if(k[0]==='s'){ const s=(L.ppe_saldos||[])[+k.slice(1)];
       html=`<h4>Contagem da prescrição · ${s.revogacao?'revogação do livramento':'fuga'} de ${esc(s.evasao)}</h4><dl><dt>Cumprido desde o termo</dt><dd>${dias(s.cumprido_desde_termo)}${s.remicao?' + '+s.remicao+' dias remidos (LEP, art. 128)':''}</dd><dt>Outras condenações em execução</dt><dd>${s.outras} (soma ${amd(s.soma_outras)})</dd><dt>Saldo deste crime</dt><dd>${amd(s.saldo_min)} a ${amd(s.saldo_max)}</dd><dt>Faixas do art. 109</dt><dd>${(s.faixas||[]).map(f=>`saldo ${amd(f.saldo)}${f.saldo_ate!==f.saldo?' a '+amd(f.saldo_ate):''} (${esc(f.rotulo||'')}) → ${f.meses? f.meses+' meses, '+(f.prescrita?'venceu':'não venceria')+' em '+f.limite : 'nada a prescrever'}`).join('<br>')}</dd><dt>Suspensão (art. 116)</dt><dd>${s.suspensao_dias? dias(s.suspensao_dias):'nenhuma'}</dd><dt>Fim do intervalo</dt><dd>${(s.fim&&s.fim!=='hoje')? 'recaptura em '+esc(s.fim)+' — interrompe (art. 117, V)':'em aberto'}</dd><dt>Resultado</dt><dd><b>${esc(s.resultado)}</b></dd></dl>`;
-    } else { const ts=g.querySelectorAll('text'); html=`<h4>Marco</h4><p>${esc(ts[0].textContent)} · ${esc(ts[1].textContent)}</p>`; }
+    } else { const ts=[...g.querySelectorAll('text')].map(t=>t.textContent); const [rot,dat]=ts.length>2?[ts[1],ts[2]]:[ts[0],ts[1]]; html=`<h4>Marco${ts.length>2?' '+esc(ts[0]):''}</h4><p>${esc(rot)} · ${esc(dat)}</p>`; }
     pop.querySelector('.pc').innerHTML=html; pop.classList.add('on');
     const r=tl.getBoundingClientRect(); pop.style.left=Math.max(0,Math.min(ev.clientX-r.left, r.width-380))+'px'; pop.style.top=(ev.clientY-r.top+12)+'px'; },
   tlToggle(el, qual, idx){
