@@ -593,8 +593,8 @@ def _decreto(D, ref, pub, C, cumprido, data_atinge, faltas, hoje, ultimo, em_cur
         firmes, verif = (num_i.get("falta_firme"), num_i.get("falta_verif")) if num_i else rs.falta_art6(incidentes, ref, eventos, pub)
         if firmes:
             est_f = "ko"
-            txt_f = ("Falta com sanção reconhecida dentro da janela (%s a %s): %s. Impede a declaração (%s); a aba mantém o resultado com o alerta "
-                     "\"falta 12m!\"." % (janela["ini"], janela["fim"], "; ".join(firmes), FG.get("dispositivo", "")))
+            txt_f = ("Falta com sanção reconhecida dentro da janela (%s a %s): %s. Não cabe o indulto nem a comutação (%s)." % (
+                janela["ini"], janela["fim"], "; ".join(firmes), FG.get("dispositivo", "")))
         elif verif:
             est_f, txt_f = "q", "Falta na janela a verificar (só impede se a sanção for reconhecida em juízo): %s." % "; ".join(verif)
         else:
@@ -709,6 +709,9 @@ def _consolidado(decs, C):
                 ck = x.get("checklist") or []
                 ordem = ("q", "ko") if st == "verificar" else ("ko", "q")
                 mot = [c for c in ck if c["estado"] == ordem[0]] + [c for c in ck if c["estado"] == ordem[1]]
+                # o motivo decisivo vem primeiro: falta grave do art. 6º e vedação, antes dos incisos não atendidos
+                mot.sort(key=lambda c: 0 if (c["texto"].startswith("Art. 6º") or c["item"].startswith("Requisito subjetivo")) else
+                         (1 if c["item"].startswith("Natureza") else 2))
                 if mot:
                     linhas.append("Motivo: %s" % mot[0]["texto"])
             if x.get("projecao") and x["projecao"].get("data"):

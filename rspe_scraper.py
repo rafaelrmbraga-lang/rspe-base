@@ -2737,6 +2737,28 @@ def analise_decretos(campos, crimes, eventos, incidentes, hoje):
         for kk in (k, kc):
             if kk in out and out[kk] and not out[kk].startswith("não se aplica"):
                 out[kk] += suf
+    # art. 6º: falta grave com sanção reconhecida em juízo nos 12 meses (até a publicação) -> não cabe o indulto nem a
+    # comutação (a declaração fica condicionada à inexistência dessa sanção)
+    for ano in DECRETOS:
+        k, kc = "indulto_%s" % ano, "comutacao_%s" % ano
+        txt = out.get(k) or ""
+        if "FALTA nos 12 meses (art. 6º)" not in txt or txt.startswith(("VEDAD", "não se aplica")):
+            continue
+        faltas_txt = txt.split("FALTA nos 12 meses (art. 6º): ", 1)[1].split("; a verificar:")[0].split(" | ")[0]
+        triagem = txt.split(" | ")[0]
+        out[k] = "NÃO CABE (art. 6º): falta grave com sanção reconhecida nos 12 meses - %s" % faltas_txt
+        out[k + "_status"] = "nao"
+        nota = ("✘ Art. 6º: falta grave com sanção reconhecida nos 12 meses anteriores a 25/12/%s (%s): a declaração do indulto e da comutação "
+                "fica condicionada à inexistência dessa sanção - não cabe. Sem a falta, a triagem seria: %s." % (ano, faltas_txt, triagem))
+        for kk in (k + "_detalhe", k + "_explica"):
+            if kk in out:
+                out[kk] = (out.get(kk) or "") + "\n" + nota
+        ctxt = out.get(kc) or ""
+        if ctxt.startswith(("POSSÍVEL", "A VERIFICAR", "prejudicada", "não atinge")):
+            out[kc] = "NÃO CABE (art. 6º): falta grave com sanção reconhecida nos 12 meses - %s" % faltas_txt
+            out[kc + "_detalhe"] = (out.get(kc + "_detalhe") or "").replace(
+                "Prejudicada: o indulto é cabível e prevalece (art. 13, § 5º).", "") + "\n" + nota.replace("Sem a falta, a triagem seria: %s." % triagem,
+                                                                                                           "Sem a falta, a comutação seria: %s." % ctxt.split(" | ")[0])
     for ano, nota in notas_tr.items():
         for kk in ("indulto_%s_detalhe" % ano, "comutacao_%s_detalhe" % ano):
             if kk in out:

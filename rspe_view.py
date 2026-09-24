@@ -242,6 +242,8 @@ def curto_indulto(txt):
         falta += " · fato posterior segue"
     if base.startswith("VEDAD"):
         return "Vedado (art. 1º)"
+    if base.startswith("NÃO CABE (art. 6º)"):
+        return "Não cabe · falta grave 12m (art. 6º)"
     m = rs.re.match(r"POSSÍVEL \((.+?)\): (.*)$", base)
     if m:
         q = m.group(1)

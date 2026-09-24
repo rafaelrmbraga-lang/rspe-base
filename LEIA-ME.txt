@@ -565,6 +565,10 @@ v6.16.0
     com "Como cheguei aqui?"). Ela desenha o MESMO cálculo da aba (pena
     cumprida ancorada no SEEU, hipóteses, faltas e comutação): as duas
     análises não divergem. Falta grave nunca zera o cumprido (Súmula 535).
+  - Falta grave com sanção reconhecida nos 12 meses (art. 6º dos Decretos
+    2024 e 2025): NÃO CABE indulto nem comutação, na aba e na linha do
+    tempo (antes o resultado ficava com o alerta "falta 12m!"). A memória
+    mostra o que seria sem a falta.
   - Tráfico (art. 33 da Lei 11.343) sem indicação de caput/§ 1º ou § 4º:
     A VERIFICAR (antes era tratado como impeditivo).
   - Decreto 11.302/2022: não exige ausência de falta grave; as faltas
