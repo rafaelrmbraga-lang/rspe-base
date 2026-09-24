@@ -563,6 +563,8 @@ v6.16.0
     lado de "editar dados" (antes só nos casos com fuga); sem fuga, mostra
     a contagem pela pena aplicada desde o termo inicial até o vencimento.
     Legenda só com os tipos presentes.
+  - Aba Prescrição: sub-abas "Pretensão executória" e "Pretensão punitiva"
+    (no lugar da lista de seleção), como as sub-abas por decreto do indulto.
   - Linha do tempo do indulto mais limpa: eventos do mesmo dia num rótulo
     só, rótulos em uma linha, remições como losangos (resumo na legenda),
     textos das faixas e da barra só quando cabem, imputação e comutação
