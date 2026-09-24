@@ -950,6 +950,13 @@ def analisar(r, hoje=None):
         ctx["saldos_inf"] = {k_: int(v_) for k_, v_ in (_aj.get("saldos") or {}).items() if str(v_).lstrip("-").isdigit()}
         ctx["ajuste_data"] = (_aj.get("_data") or "").split(" ")[0]
         reinc_desc = (c.get("reincidente_comum") not in ("S", "N")) and c.get("reincidente_especifico") != "S"
+        # reincidência marcada sem base no próprio RSPE (mesmo critério da Auditoria: nenhuma condenação deste RSPE transitou
+        # antes do fato); não confirmada pelo operador em "editar dados" -> o +1/3 é conferido também sem ele
+        _fx = rs.to_date(L["fato"] or "")
+        reinc_sem_base = bool(L["reinc"] and _fx and (_aj.get("valores") or {}).get("reinc") not in ("S", "N") and not any(
+            o is not c and rs.to_date(o.get("transito_processo") or o.get("transito_mp") or "")
+            and rs.to_date(o.get("transito_processo") or o.get("transito_mp")) < _fx for o in crimes))
+        L["reinc_sem_base"] = reinc_sem_base
         pena = rs.pena_para_dias(c.get("pena_imposta") or c.get("pena_total_processo"))
         if "CONVERTIDA" in (c.get("pena_total_processo") or "").upper():
             L["avisos"].append("pena originalmente substituída por restritiva de direitos (CONVERTIDA): o período de cumprimento da PRD não consta no RSPE e também suspende/interrompe a executória - conferir")
@@ -1108,6 +1115,8 @@ def analisar(r, hoje=None):
             variantes = []
             if reinc_desc:
                 variantes.append(("reincidência", not L["reinc"], meia))
+            if reinc_sem_base:
+                variantes.append(("reincidência sem condenação anterior no RSPE", False, meia))
             if meia_desc:
                 variantes.append(("idade no fato/sentença (art. 115)", L["reinc"], not meia))
             if reinc_desc and meia_desc:
@@ -1117,15 +1126,23 @@ def analisar(r, hoje=None):
                 Lx = copy.deepcopy(L0)
                 Lx["reinc"] = rv_
                 fx = ((1 + ACRESC) if rv_ else Fraction(1)) * (Fraction(1, 2) if mv_ else 1)
+                Lx["prazo_ppe"] = fmt_prazo(Fraction(base_meses) * fx) + (" (+1/3 reincidência)" if rv_ else "") + (" (½ art. 115)" if mv_ else "")
                 _exec(Lx, c, r, ctx, termo, termo_txt, pena, fato, fx, Fraction(base_meses) * fx, mv_)
                 if _classe(Lx) != _classe(L):
                     difs.append((nome_v, Lx))
+                elif nome_v.startswith("reincidência sem"):
+                    _base_do_prazo(Lx)
+                    L["ppe_reinc_aviso"] = ("Reincidência marcada no RSPE sem condenação anterior transitada neste RSPE (ver Auditoria: conferir a "
+                                            "certidão de antecedentes e o período depurador - CP, art. 64, I). Sem o +1/3, o prazo seria %s: "
+                                            "o resultado não muda." % (Lx.get("ppe_prazo_efetivo") or Lx.get("prazo_ppe") or "—"))
             if difs:
                 antes = L["ppe_status"]
                 L["ppe_status"] = "A VERIFICAR: o resultado depende de dado ausente no RSPE (%s)" % difs[0][0]
                 L["ppe_cor"], L["ppe_previsao"], L["ppe_dias"] = "amarelo", "", None
                 _nm = " ".join(n for n, _ in difs)
-                L["ppe_faltam"] = ([x for x in ("reincidência (o RSPE não informa; +1/3 no prazo - CP, art. 110)" if "reincid" in _nm else "",
+                L["ppe_faltam"] = ([x for x in ("reincidência (marcada no RSPE sem condenação anterior transitada listada: conferir a certidão de antecedentes; "
+                                                "+1/3 no prazo - CP, arts. 64, I, e 110)" if "sem condenação" in _nm else
+                                                ("reincidência (o RSPE não informa; +1/3 no prazo - CP, art. 110)" if "reincid" in _nm else ""),
                                                 "data de nascimento (idade no fato e na sentença - CP, art. 115)" if "idade" in _nm else "") if x]
                                    + list(L.get("ppe_faltam") or []))
                 L["ppe_triagem"] = "O resultado muda conforme %s: informe o dado em \"editar dados\"." % " / ".join(n for n, _ in difs)
