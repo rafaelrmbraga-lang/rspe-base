@@ -545,6 +545,20 @@ v6.16.0
     denúncia, sentença, trânsitos), pena, reincidência e art. 115; ao
     salvar, a análise é refeita com esses dados (gravados na base, tabela
     presc_ajustes; "✎ ajustado" no crime; "Restaurar dados importados").
+  - Prescrição: os cartões trazem todos os marcos do processo (fato,
+    denúncia, sentença, acórdão, trânsito e termo inicial) e, na
+    executória, o prazo com a pena sobre a qual foi calculado (pena
+    aplicada ou saldo na fuga, com a origem do saldo). No formulário:
+    acórdão (se houver; interrompe a punitiva - art. 117, IV) e modalidade
+    da pena - privativa de liberdade (padrão) ou restritiva de direitos,
+    com o último comparecimento como marco do descumprimento (prazo pelo
+    restante da pena, com o saldo informado ou testado entre 1 dia e a
+    pena inteira).
+  - Indulto / Comutação: sub-abas por decreto (Todos, 11.302/2022,
+    12.338/2024, 12.790/2025): colunas, cores e contagem só do decreto
+    escolhido; a linha do tempo abre nele e mostra só o cartão e o
+    resultado dele (botão "Todos" para a visão completa). Letras e
+    espaçamento maiores na linha do tempo.
   - Triagem da prescrição executória (item 6): pelos limites de saldo.
     PRESCRITO quando prescreve até com o maior saldo ("Prescrição
     confirmada pela análise do limite máximo de saldo"); NÃO PRESCRITO
