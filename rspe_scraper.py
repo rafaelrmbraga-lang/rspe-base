@@ -712,6 +712,64 @@ def hediondo_desde(c):
     return None, ""
 
 
+# tipo, qualificadora ou majorante criados por lei posterior ao Código: a capitulação com fato anterior à criação é
+# anacronismo do cadastro (a sentença usou a redação da época) - chave como em hediondos.desde
+TIPO_CRIADO = {
+    "2848:157 §2-A": ("2018-04-24", "Lei 13.654/2018 (antes, o roubo com arma era o art. 157, § 2º, I)"),
+    "2848:157 §2 VI": ("2018-04-24", "Lei 13.654/2018"),
+    "2848:157 §2 VII": ("2020-01-23", "Lei 13.964/2019"),
+    "2848:157 §2-B": ("2020-01-23", "Lei 13.964/2019"),
+    "2848:155 §4-A": ("2018-04-24", "Lei 13.654/2018"),
+    "2848:155 §4-B": ("2021-05-28", "Lei 14.155/2021"),
+    "2848:155 §4-C": ("2021-05-28", "Lei 14.155/2021"),
+    "2848:155 §7": ("2018-04-24", "Lei 13.654/2018"),
+    "2848:171 §2-A": ("2021-05-28", "Lei 14.155/2021"),
+    "2848:121 §2 VI": ("2015-03-10", "Lei 13.104/2015"),
+    "2848:121 §2 VII": ("2015-07-07", "Lei 13.142/2015"),
+    "2848:121-A": ("2024-10-10", "Lei 14.994/2024 (antes, feminicídio era o art. 121, § 2º, VI)"),
+    "2848:147-A": ("2021-04-01", "Lei 14.132/2021"),
+    "2848:147-B": ("2021-07-29", "Lei 14.188/2021"),
+    "2848:149-A": ("2016-11-22", "Lei 13.344/2016"),
+    "2848:215-A": ("2018-09-25", "Lei 13.718/2018"),
+    "2848:217-A": ("2009-08-10", "Lei 12.015/2009 (antes, arts. 213/214 c/c 224)"),
+    "2848:218-B": ("2009-08-10", "Lei 12.015/2009"),
+    "2848:218-C": ("2018-09-25", "Lei 13.718/2018"),
+    "11343:33": ("2006-10-08", "Lei 11.343/2006 (antes, Lei 6.368/76, art. 12)"),
+    "11343:35": ("2006-10-08", "Lei 11.343/2006 (antes, Lei 6.368/76, art. 14)"),
+    "10826:12": ("2003-12-23", "Lei 10.826/2003"), "10826:14": ("2003-12-23", "Lei 10.826/2003"),
+    "10826:16": ("2003-12-23", "Lei 10.826/2003"), "10826:17": ("2003-12-23", "Lei 10.826/2003"),
+    "12850:2": ("2013-09-19", "Lei 12.850/2013 (antes, quadrilha - CP, art. 288)"),
+    "11340:24-A": ("2018-04-04", "Lei 13.641/2018"),
+}
+
+
+def _chaves_tipo(c):
+    lei, art = num_lei(c.get("lei")) or "2848", num_art(c.get("artigo"))
+    if "PENAL" in (c.get("lei") or "").upper() and "MILITAR" not in (c.get("lei") or "").upper():
+        lei = "2848"
+    if not art:
+        return []
+    t = (c.get("tipo_penal") or "").strip()
+    chaves = []
+    mp = re.match(r"§\s*(\d+[ºo°]?(?:\s*-\s*[A-Z])?)\s*,?\s*([IVXL]+)?", t)
+    if mp:
+        par = re.sub(r"[ºo°\s]", "", mp.group(1))
+        if mp.group(2):
+            chaves.append("%s:%s §%s %s" % (lei, art, par, mp.group(2)))
+        chaves.append("%s:%s §%s" % (lei, art, par))
+    chaves.append("%s:%s" % (lei, art))
+    return chaves
+
+
+def tipo_criado_em(c):
+    """(data, lei) de criação do tipo/qualificadora/majorante capitulado, se posterior ao Código; (None, '') se não tabelado."""
+    for k in _chaves_tipo(c):
+        if k in TIPO_CRIADO:
+            d, lei = TIPO_CRIADO[k]
+            return datetime.strptime(d, "%Y-%m-%d").date(), lei
+    return None, ""
+
+
 def hediondo_na_epoca(c):
     """False se a tabela 'desde' mostra que o fato é anterior à lei que tornou o tipo hediondo; True/None caso contrário."""
     d, lei = hediondo_desde(c)
@@ -923,6 +981,11 @@ def situacao_execucao(campos, eventos, incidentes, crimes, hoje):
     out = {}
     periodos = periodos_custodia(eventos)
     out["situacao_cumprimento"] = "EM CUMPRIMENTO" if em_custodia(periodos, hoje) else "PENA INTERROMPIDA (sem evento de reinício)"
+    # interrupção por prisão em outro processo: a execução fica suspensa com a pessoa presa (não é liberdade nem fuga)
+    ult = max((e for e in eventos if to_date(e.get("data") or "")), key=lambda e: to_date(e["data"]), default=None)
+    if (out["situacao_cumprimento"] != "EM CUMPRIMENTO" and ult and "INTERRUP" in (ult.get("tipo") or "").upper()
+            and RE_OUTRO_PROC.search(ult.get("motivo") or "")):
+        out["situacao_cumprimento"] = "PENA SUSPENSA (preso em outro processo desde %s)" % fmt(to_date(ult["data"]))
     fp = [parse_fracao(c.get("fracao_progressao")) for c in crimes if not c.get("extinto", "").upper().startswith("S")]
     fl = [parse_fracao(c.get("fracao_livramento")) for c in crimes if not c.get("extinto", "").upper().startswith("S")]
     fp = [f for f in fp if f]
@@ -955,7 +1018,7 @@ def campos_faltantes(r):
             falta.append("pena de algum crime")
         if any(not c.get("data_infracao") for c in ativos):
             falta.append("data do fato de algum crime")
-    if not r.get("termino_previsao_seeu") and "INTERROMPIDA" not in (r.get("situacao_cumprimento") or "") and not r.get("execucao_extinta"):
+    if not r.get("termino_previsao_seeu") and not re.search(r"INTERROMPIDA|SUSPENSA", r.get("situacao_cumprimento") or "") and not r.get("execucao_extinta"):
         falta.append("término")
     return falta
 
@@ -1075,6 +1138,7 @@ def _data_fato_falta(i):
     return to_date(m.group(1)) if m else to_date(i.get("data_referencia") or i.get("data_decisao") or "")
 
 
+RE_OUTRO_PROC = re.compile(r"OUTRO PROCESSO|OUTRA EXECU|OUTRO FEITO|PRESO POR OUTRO|PRIS[ÃA]O EM OUTRO|OUTRA CONDENA", re.I)
 RE_FUGA_EV = re.compile(r"FUGA|EVAS|ABANDON|FORAGID|N[ÃA]O RETORN", re.I)
 
 
@@ -1087,7 +1151,20 @@ def _texto_evento(e):
     return " ".join(("%s %s" % (e.get("tipo", ""), e.get("motivo", ""))).split())
 
 
-def faltas_editaveis(incidentes, eventos):
+def corte_faltas(hoje=None):
+    """Data a partir da qual um indício de falta ainda importa: a janela do art. 6º do decreto mais antigo em análise
+    (12 meses antes de 25/12/2024) ou os 3 anos anteriores a hoje (prazo da falta disciplinar - STJ, art. 109, VI, do CP
+    por analogia), o que for anterior. Indício mais antigo não pede decisão: não afeta indulto, comutação nem livramento,
+    e a data-base de progressão já está fixada no RSPE."""
+    hoje = hoje or date.today()
+    return min(hoje - timedelta(days=3 * 365), min(DECRETOS.values()) - timedelta(days=365))
+
+
+def faltas_editaveis(incidentes, eventos, hoje=None):
+    return [x for x in _faltas_editaveis(incidentes, eventos) if not x["data"] or to_date(x["data"]) >= corte_faltas(hoje)]
+
+
+def _faltas_editaveis(incidentes, eventos):
     """Todos os indícios de falta da execução que admitem decisão do operador: fuga (falta grave por padrão - LEP, art. 50, II),
     descumprimento, incidente pendente, perda de remidos ou regressão sem falta homologada. Cada um com a chave, a data, o
     texto, o estado padrão e a decisão gravada (_falta: 'sim' / 'nao')."""
@@ -1106,7 +1183,7 @@ def faltas_editaveis(incidentes, eventos):
             d = to_date(i.get("data_referencia") or i.get("data_decisao") or "")
             if re.search(r"PERD|REGRESS", txt, re.I) and any(d and d - timedelta(days=365) <= x <= d for x in datas_proprias):
                 continue
-        out.append({"chave": chave_falta(txt, d), "data": fmt(d) if d else "", "texto": txt, "padrao": "apurar",
+        out.append({"chave": chave_falta(txt, d), "data": fmt(d) if d else "", "texto": txt, "padrao": "falta" if i.get("_fuga_ficha") else "apurar",
                     "decisao": i.get("_falta") or "", "origem": "incidente"})
     for e in eventos or []:
         t = _texto_evento(e)
@@ -1118,6 +1195,41 @@ def faltas_editaveis(incidentes, eventos):
         out.append({"chave": chave_falta(t, d), "data": fmt(d), "texto": t, "padrao": "falta" if RE_FUGA_EV.search(t) else "apurar",
                     "decisao": e.get("_falta") or "", "origem": "evento"})
     return out
+
+
+def faltas_da_ficha(r, ficha, hoje=None):
+    """Faltas graves registradas na ficha disciplinar do SIAPEN que o RSPE não traz (sem falta própria em até 30 dias da
+    mesma data): entram como incidente PENDENTE (falta a apurar), datado pelo fato - a sanção do conselho disciplinar não é
+    reconhecimento em juízo (decretos, art. 6º). O operador decide ("é falta grave" / "não é") como nos demais indícios, e a
+    decisão vale no sistema inteiro. Falta arquivada não entra."""
+    r["_incidentes"] = [i for i in r.get("_incidentes", []) if not i.get("_ficha")]
+    if not ficha:
+        return
+    proprias = [i for i in r["_incidentes"] if RE_FALTA_PROPRIA.search(_rotulo_incidente(i)) and not _negado(i)]
+    datas = [d for d in (_data_fato_falta(i) for i in proprias) if d]
+    for x in ficha.get("faltas") or []:
+        d = to_date(x.get("data_fato") or x.get("data_registro") or "")
+        if (not d or not x.get("grave") or x.get("situacao") == "arquivada" or d < corte_faltas(hoje)
+                or any(abs((d - y).days) <= 30 for y in datas)):
+            continue
+        sit = x.get("situacao") or "registrada"
+        r["_incidentes"].append({"tipo": "FALTA GRAVE NA FICHA DISCIPLINAR (SIAPEN)",
+                                 "complemento": "Data da infração: %s%s - %s" % (fmt(d), (" - " + x["artigo"]) if x.get("artigo") else "", sit),
+                                 "situacao": "PENDENTE", "data_referencia": fmt(d), "data_decisao": "", "_ficha": True})
+        datas.append(d)
+    # fuga/evasão registrada na ficha e ausente no RSPE: falta grave por padrão (LEP, art. 50, II), decidível pelo operador
+    fugas_r = [to_date(e.get("data") or "") for e in r.get("_eventos", []) if RE_FUGA_EV.search(_texto_evento(e))]
+    fugas_r += [to_date(i.get("data_referencia") or i.get("data_decisao") or "") for i in r["_incidentes"] if RE_FUGA_EV.search(_rotulo_incidente(i))]
+    for e in ficha.get("eventos") or []:
+        t = e.get("texto") or ""
+        d = to_date((e.get("data") or "").replace(".", "/"))
+        if (not d or d < corte_faltas(hoje) or not re.search(r"\bFUGA\b|EVADIU|EVAS[ÃA]O|FORAGID|N[ÃA]O RETORNOU|EMPREENDEU FUGA", t, re.I)
+                or re.search(r"ABANDONO D[OE] (SERVI|TRABALHO|CURSO)", t, re.I)
+                or any(x and abs((x - d).days) <= 30 for x in fugas_r + datas)):
+            continue
+        r["_incidentes"].append({"tipo": "FALTA GRAVE - FUGA/EVASÃO NA FICHA DISCIPLINAR (SIAPEN)", "complemento": "Data da infração: %s" % fmt(d),
+                                 "situacao": "PENDENTE", "data_referencia": fmt(d), "data_decisao": "", "_ficha": True, "_fuga_ficha": True})
+        datas.append(d)
 
 
 def aplicar_decisoes_falta(r, decisoes):
@@ -1159,6 +1271,8 @@ def indicios_falta(incidentes, ref, dias=365, eventos=None, ate=None):
             if d and limite <= d <= fim:
                 if i.get("_falta") == "sim":
                     out.append(("%s (%s - falta grave confirmada pelo operador)" % (txt, fmt(d)), True))
+                elif i.get("_fuga_ficha"):
+                    out.append(("%s (%s - fuga: falta grave, LEP, art. 50, II)" % (txt, fmt(d)), True))
                 elif _pendente(i):
                     out.append(("%s (%s - pendente: só impede se a sanção for reconhecida em juízo)" % (txt, fmt(d)), False))
                 else:
@@ -1695,6 +1809,11 @@ def analise_decreto_2022(campos, crimes, eventos, incidentes):
         cpm = impeditivo_verificar(c)
         if cpm and not excl:
             linhas.append("? %s: %s" % (nome, cpm))
+            verificar.append(nome)
+            continue
+        if excl and "fato anterior - tese" in excl:
+            # hediondez posterior ao fato: o STJ afere na data do decreto (excluído); pela irretroatividade (data do fato), não
+            linhas.append("? %s: %s - a verificar (pela data do fato não é excluído)" % (nome, excl))
             verificar.append(nome)
             continue
         if excl:
@@ -2419,7 +2538,7 @@ def analise_decretos(campos, crimes, eventos, incidentes, hoje):
             out[k + "_detalhe"] = ("Regime %s fixado em %s, mas o RSPE não registra cumprimento em curso em %s (%s). "
                                    "Sem cumprimento na data, não há fração a aferir: os incisos com tempo cumprido e a comutação não se aplicam."
                                    % (regime, fmt(dreg), fmt(ref), motivo)) + nota_art2
-            out[kc] = "não se aplica: %s" % motivo
+            out[kc] = "não se aplica: %s até %s" % (motivo, fmt(ref))
             _xv_sem_cumprimento(motivo, out[k + "_detalhe"])
             continue
         if not em_cumprimento:
@@ -2778,6 +2897,14 @@ def analise_decretos(campos, crimes, eventos, incidentes, hoje):
         def rotulo(txt, prefixo):
             return txt.replace("POSSÍVEL: ", "POSSÍVEL (%s): " % prefixo, 1) if txt.startswith("POSSÍVEL: ") else txt
 
+        def rotulo_tese(txt):
+            # cabível só pela tese (hediondez aferida na data do fato): fica "a verificar", nunca "possível"
+            if txt.startswith("POSSÍVEL: "):
+                return txt.replace("POSSÍVEL: ", "A VERIFICAR (tese: hediondez superveniente): ", 1)
+            if txt.startswith("A VERIFICAR: "):
+                return txt.replace("A VERIFICAR: ", "A VERIFICAR (tese: hediondez superveniente): ", 1)
+            return txt
+
         if not imped or (imp_sup and not imp_est):
             # sem impeditivo, ou só hediondez posterior ao fato: análise da pena toda
             res = avaliar(pena_total, cumprido, remanescente, vga, patrimonial, ativos)
@@ -2787,9 +2914,12 @@ def analise_decretos(campos, crimes, eventos, incidentes, hoje):
                 nota = ("Hediondez posterior ao fato (%s): o STJ afere a hediondez na data do decreto e veda o benefício; "
                         "pela irretroatividade concedem o STF (2ª Turma, RHC 267.297 AgR e HC 273.296 AgR; monocráticas) e a 2ª Câmara Criminal do TJMS; "
                         "em sentido contrário, a 1ª Turma do STF afere na data do decreto (RHC 273.867 AgR, 24/08/2026)." % nomes_sup)
-                out[k] = rotulo(out[k], "tese: hediondez superveniente")
-                if out[kc].startswith("POSSÍVEL: "):
-                    out[kc] = rotulo(out[kc], "tese: hediondez superveniente")
+                out[k] = rotulo_tese(out[k])
+                if out[k].startswith("A VERIFICAR"):
+                    out[k + "_status"] = "verificar"
+                out[kc] = rotulo_tese(out[kc])
+                if out[kc].startswith("A VERIFICAR"):
+                    out[kc + "_status"] = "verificar"
                 out[k + "_detalhe"] = "⚠ " + nota + "\n" + out[k + "_detalhe"]
                 out[k + "_explica"] = "⚠ " + nota + "\n" + out.get(k + "_explica", "")
                 out[kc + "_detalhe"] = "⚠ " + nota + "\n" + out.get(kc + "_detalhe", "")
@@ -2884,27 +3014,29 @@ def analise_decretos(campos, crimes, eventos, incidentes, hoje):
             if kk in out and out[kk] and not out[kk].startswith("não se aplica"):
                 out[kk] += suf
     # art. 6º: falta grave com sanção reconhecida em juízo nos 12 meses (até a publicação) -> não cabe o indulto nem a
-    # comutação (a declaração fica condicionada à inexistência dessa sanção)
+    # comutação (a declaração fica condicionada à inexistência dessa sanção). A falta é conferida aqui, uma vez por decreto,
+    # e vale para os dois - qualquer que tenha sido o caminho da triagem (incisos com fração, XV, art. 7º, p. ú.)
     for ano in DECRETOS:
         k, kc = "indulto_%s" % ano, "comutacao_%s" % ano
-        txt = out.get(k) or ""
-        if "FALTA nos 12 meses (art. 6º)" not in txt or txt.startswith(("VEDAD", "não se aplica")):
+        ref_a = DECRETOS[ano]
+        ff, _fv = falta_art6(incidentes, ref_a, eventos, DECRETOS_PUB.get(ano) or ref_a)
+        if not ff:
             continue
-        faltas_txt = txt.split("FALTA nos 12 meses (art. 6º): ", 1)[1].split("; a verificar:")[0].split(" | ")[0]
+        faltas_txt = "; ".join(ff)
+        txt = out.get(k) or ""
         triagem = txt.split(" | ")[0]
-        out[k] = "NÃO CABE (art. 6º): falta grave com sanção reconhecida nos 12 meses - %s" % faltas_txt
-        out[k + "_status"] = "nao"
         nota = ("✘ Art. 6º: falta grave com sanção reconhecida nos 12 meses anteriores a 25/12/%s (%s): a declaração do indulto e da comutação "
-                "fica condicionada à inexistência dessa sanção - não cabe. Sem a falta, a triagem seria: %s." % (ano, faltas_txt, triagem))
-        for kk in (k + "_detalhe", k + "_explica"):
-            if kk in out:
-                out[kk] = (out.get(kk) or "") + "\n" + nota
-        ctxt = out.get(kc) or ""
-        if ctxt.startswith(("POSSÍVEL", "A VERIFICAR", "prejudicada", "não atinge")):
-            out[kc] = "NÃO CABE (art. 6º): falta grave com sanção reconhecida nos 12 meses - %s" % faltas_txt
-            out[kc + "_detalhe"] = (out.get(kc + "_detalhe") or "").replace(
-                "Prejudicada: o indulto é cabível e prevalece (art. 13, § 5º).", "") + "\n" + nota.replace("Sem a falta, a triagem seria: %s." % triagem,
-                                                                                                           "Sem a falta, a comutação seria: %s." % ctxt.split(" | ")[0])
+                "fica condicionada à inexistência dessa sanção - não cabe." % (ano, faltas_txt))
+        for kk, nome in ((k, "a triagem"), (kc, "a comutação")):
+            t = out.get(kk) or ""
+            if not t or t.upper().startswith(("VEDAD", "NÃO SE APLICA", "CONCEDID", "INDEFERID", "NÃO CABE", "DECRETO SEM", "EXCLU")):
+                continue
+            out[kk] = "NÃO CABE (art. 6º): falta grave com sanção reconhecida nos 12 meses - %s" % faltas_txt
+            out[kk + "_status"] = "nao"
+            n2 = nota + " Sem a falta, %s seria: %s." % (nome, t.split(" | ")[0])
+            for dk in (kk + "_detalhe", kk + "_explica"):
+                if dk in out or dk.endswith("_detalhe"):
+                    out[dk] = (out.get(dk) or "").replace("Prejudicada: o indulto é cabível e prevalece (art. 13, § 5º).", "") + "\n" + n2
     for ano, nota in notas_tr.items():
         for kk in ("indulto_%s_detalhe" % ano, "comutacao_%s_detalhe" % ano):
             if kk in out:

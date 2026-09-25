@@ -13,7 +13,7 @@ os pontos que outras abas já mostram).
 """
 
 import re
-from datetime import date
+from datetime import date, timedelta
 from fractions import Fraction
 
 import rspe_scraper as rs
@@ -178,6 +178,7 @@ def perdas_por_falta(incidentes):
     """Para cada falta grave homologada no RSPE com perda de dias remidos: a perda, as parcelas e a remição
     sobre a qual cada parcela incidiu (parcela = 1/3 da remição, arredondado), a falta anterior e a janela de
     remição entre a falta anterior e a atual (LEP, art. 127: a contagem recomeça da data da infração)."""
+    incidentes = [i for i in incidentes if not i.get("_ficha")]  # falta da ficha disciplinar: não é homologação no RSPE
     def dt(i):
         return rs.to_date(i.get("data_referencia") or i.get("data_decisao") or "")
     def qtd(i):
@@ -310,7 +311,7 @@ def auditar(r, hoje=None):
                 r["_nasc_fonte"], rs.fmt(nasc), (" (RSPE: %s)" % r["_nasc_rspe"]) if r.get("_nasc_rspe") else ""), "data": _dt}
         itens.append(it)
     # indícios de falta: a decisão fica com o operador (botão Preencher); fuga é falta grave por padrão (LEP, art. 50, II)
-    for fi in rs.faltas_editaveis(incidentes, eventos):
+    for fi in rs.faltas_editaveis(incidentes, eventos, hoje):
         dec = fi["decisao"]
         rot = {"sim": "falta grave", "nao": "não houve falta grave"}.get(dec, "")
         fuga = fi["padrao"] == "falta"
@@ -555,6 +556,25 @@ def auditar(r, hoje=None):
                                        _descricao_tipo(c), (", vigente na data do fato (%s)" % c.get("data_infracao")) if c.get("data_infracao") else ""), "", tipo="artigo-reconhecido-pela-descricao-do-tipo", ref=nome))
         if not art:
             itens.append(_item("info", "%s: artigo não informado" % nome, "O SEEU não registrou o artigo e a descrição do tipo não foi reconhecida: \u201c%s\u201d." % _descricao_tipo(c), "Sem o artigo, hediondez, VGA e frações ficam sem conferência.", tipo="artigo-nao-informado", ref=nome))
+        # lei do tempo: capitulação criada depois do fato (anacronismo do cadastro) e hediondez posterior ao fato
+        _dc, _lc = rs.tipo_criado_em(c)
+        _dh, _lh = rs.hediondo_desde(c)
+        if fato and _dc and fato < _dc:
+            itens.append(_item("alerta", "%s: capitulação criada depois do fato (%s)" % (nome, rs.fmt(fato)),
+                               "O tipo, a qualificadora ou a majorante cadastrados foram criados pela %s, em vigor desde %s; o fato é de %s. "
+                               "A sentença usou a redação da época: o cadastro no SEEU está anacrônico. Conferir a capitulação da sentença - ela "
+                               "decide a hediondez (%s), a fração de progressão e livramento e a vedação do indulto e da comutação." % (
+                                   _lc, rs.fmt(_dc), rs.fmt(fato),
+                                   ("não era hediondo na data do fato: hediondez só desde %s" % rs.fmt(_dh)) if (_dh and fato < _dh) else "conferir"),
+                               "CF, art. 5º, XL; CP, arts. 1º e 2º; Lei 8.072/90.", tipo="capitulacao-criada-depois-do-fato", ref=nome))
+        elif fato and _dh and fato < _dh and not _hediondo_seeu(c) and rs.e_hediondo(c, date.today()):
+            itens.append(_item("verificar", "%s: hediondez posterior ao fato (hediondo só desde %s)" % (nome, rs.fmt(_dh)),
+                               "Fato em %s; o tipo passou a ser hediondo pela %s, em vigor desde %s. Progressão e livramento: vale a lei da época, "
+                               "sem as frações de hediondo (CF, art. 5º, XL)%s. Indulto e comutação: o STJ afere a hediondez na data do decreto e "
+                               "mantém a vedação; tese defensiva: irretroatividade (a vedação alcança só fatos posteriores à lei)." % (
+                                   rs.fmt(fato), _lh or "lei", rs.fmt(_dh),
+                                   ""),
+                               "CF, art. 5º, XL; CP, art. 2º; Lei 8.072/90; STF, 2ª T., RHC 267.297 AgR.", tipo="hediondez-posterior-ao-fato", ref=nome))
         if not fato:
             itens.append(_item("info", "%s: data do fato ausente" % nome, "Sem a data do fato não se aplica a lei do tempo (frações de progressão, art. 115 CP).", "CF, art. 5º, XL; STJ Tema 1354.", tipo="data-do-fato-ausente", ref=nome))
         if not c.get("transito_processo") and not c.get("transito_mp"):
@@ -719,8 +739,42 @@ def auditar(r, hoje=None):
         itens.append(_item("alerta", "Data-base de progressão anterior à última alteração de regime",
                            "Data-base impressa: %s; última alteração de regime: %s (%s)." % (rs.fmt(db_seeu), rs.fmt(ult[0]), ult[1].get("complemento")),
                            "LEP, art. 112, § 6º (falta grave reinicia pela remanescente); STJ Tema 1006 (a unificação de penas não altera a data-base); STJ Tema 1165 (data-base é a do preenchimento dos requisitos, não a da decisão).", tipo="data-base-de-progressao-anterior-a-ultima-altera"))
+    # alteração de data-base determinada no RSPE depois da última progressão: só se justifica por falta grave homologada
+    # (LEP, arts. 112, § 6º, e 118; Súmula 534/STJ), regressão ou nova prisão após interrupção; soma/unificação não altera
+    # (STJ, Tema 1006). Sem nenhum desses fundamentos no RSPE, a alteração atrasa a progressão e pede conferência
+    _lp = max((rs.to_date(i.get("data_referencia") or i.get("data_decisao") or "") or date.min for i in regs
+               if "PROGRESS" in (i.get("complemento") or "").upper()), default=date.min)
+    _firmes = [rs._data_fato_falta(i) for i in incidentes if rs.RE_FALTA_PROPRIA.search(rs._rotulo_incidente(i)) and not rs._negado(i)
+               and not rs._pendente(i) and not i.get("_ficha")]
+    _firmes = [d for d in _firmes if d]
+    _firmes += [rs.to_date(e.get("data") or "") for e in eventos if e.get("_falta") == "sim"]
+    _regr = [rs.to_date(i.get("data_referencia") or i.get("data_decisao") or "") for i in regs if "REGRESS" in (i.get("complemento") or "").upper()]
+    _pris = [rs.to_date(e.get("data") or "") for e in eventos if re.search(r"PRIS|REIN[ÍI]CIO|RECAPTURA", ((e.get("tipo") or "") + " " + (e.get("motivo") or "")).upper())]
+    _db_sem = []
+    for i in incidentes:
+        t = ((i.get("tipo") or "") + " " + (i.get("complemento") or "")).upper()
+        if not re.search(r"DATA[- ]BASE", i.get("tipo") or "", re.I) or i.get("situacao") != "CONCEDIDO":
+            continue
+        d = rs.to_date(i.get("data_referencia") or i.get("data_decisao") or "")
+        if not d or d < _lp or d < rs.corte_faltas(hoje):
+            continue
+        if (any(x and d - timedelta(days=365) <= x <= d for x in _firmes) or any(x and abs((x - d).days) <= 30 for x in _regr)
+                or any(x and abs((x - d).days) <= 5 for x in _pris)):
+            continue
+        unif = bool(re.search(r"SOMA|UNIFICA|NOVA CONDENA|GUIA", t))
+        itens.append(_item("alerta" if unif else "verificar",
+                           "Alteração de data-base em %s sem falta grave homologada no RSPE" % rs.fmt(d),
+                           "%s (decisão de %s). Não há falta grave homologada nos 12 meses anteriores, regressão nem nova prisão nessa data. "
+                           "A data-base só se altera por falta grave reconhecida em juízo, por regressão ou pela recaptura/nova prisão depois de "
+                           "interrupção; %s. Conferir o fundamento nos autos: sem ele, a data-base volta à anterior e a progressão se antecipa." % (
+                               rs._rotulo_incidente(i), i.get("data_decisao") or "?",
+                               "a soma ou unificação de penas não altera a data-base (STJ, Tema 1006)" if unif else "falta pendente não pode mover a data-base"),
+                           "LEP, arts. 112, § 6º, e 118; Súmula 534/STJ; STJ, Temas 1006 e 1165.",
+                           tipo="alteracao-de-data-base-sem-falta-homologada", ref=rs.fmt(d)))
+        _db_sem.append(d)
     # data-base x eventos que a justificam: última prisão/início do cumprimento, progressão/regressão ou falta grave homologada
-    if db_seeu:
+    # (a data-base que é a própria alteração sem fundamento já tem o item acima)
+    if db_seeu and not any(abs((x - db_seeu).days) <= 1 for x in _db_sem):
         marcos = []
         for e in r.get("_eventos", []):
             t = ((e.get("tipo") or "") + " " + (e.get("motivo") or "")).upper()
@@ -943,7 +997,10 @@ def auditar(r, hoje=None):
                            "Indulto, art. 9º, XV: reparação dispensada (art. 12, § 2º, I: presunção para o assistido da Defensoria). "
                            "Livramento (CP, art. 83, IV): a efetiva impossibilidade de reparar deve ser demonstrada - o STJ exige prova (AgRg no HC 799.167). Instruir o pedido.",
                            "CP, art. 83, IV ('salvo efetiva impossibilidade'); Decretos 12.338/2024 e 12.790/2025, art. 9º, XV c/c art. 12, § 2º, I; STJ, AgRg no HC 799.167.", tipo="crime-patrimonial-sem-vga-reparacao-do-dano"))
-    if r.get("falta_12m") in ("SIM", "A APURAR"):
+    # os indícios decidíveis já têm item próprio (Falta a apurar / Fuga): este só entra para a falta firme ou para o que não é decidível
+    if r.get("falta_12m") == "SIM":
+        itens.append(_item("info", "Falta grave nos últimos 12 meses", r.get("falta_12m_detalhe", ""), "Reflexo em LC (CP, art. 83, III, b), indulto e comutação (art. 6º dos decretos) e progressão (LEP, art. 112, §§ 6º e 7º).", tipo="indicio-de-falta-nos-ultimos-12-meses"))
+    elif r.get("falta_12m") == "A APURAR" and not any(not fi["decisao"] for fi in rs.faltas_editaveis(incidentes, eventos, hoje)):
         itens.append(_item("verificar", "Indício de falta nos últimos 12 meses", r.get("falta_12m_detalhe", ""), "Reflexo em LC (CP, art. 83, III, b), indulto (art. 6º dos decretos) e progressão (LEP, art. 112, §§ 6º e 7º).", tipo="indicio-de-falta-nos-ultimos-12-meses"))
 
     # ---------------- 6. eventos / detração ----------------
@@ -954,6 +1011,12 @@ def auditar(r, hoje=None):
     if _rv2.nao_iniciou(r):
         itens.append(_item("info", "Não iniciou o cumprimento da pena", "O RSPE não registra início de cumprimento definitivo (só prisão provisória encerrada, ou nenhuma). "
                            "A prescrição executória corre pela pena integral (menos a detração) desde o trânsito.", "CP, arts. 112, I, e 113.", tipo="nao-iniciou-o-cumprimento-da-pena"))
+    elif "SUSPENSA" in (r.get("situacao_cumprimento") or ""):
+        itens.append(_item("info", "Execução suspensa: %s" % (r.get("situacao_cumprimento") or "").split("(", 1)[-1].rstrip(")"),
+                           "O RSPE registra a interrupção por prisão em outro processo: a pessoa segue presa, e esta execução fica suspensa até o "
+                           "reinício. Não é fuga nem liberdade - a prescrição executória não corre enquanto estiver preso por outro motivo "
+                           "(CP, art. 116, p. único). Conferir se a prisão no outro processo já foi convertida em cumprimento da pena unificada.",
+                           "CP, art. 116, p. único; LEP, art. 111.", tipo="execucao-suspensa-preso-em-outro-processo"))
     elif "INTERROMPIDA" in (r.get("situacao_cumprimento") or ""):
         itens.append(_item("info", "Cumprimento interrompido (último evento é interrupção)", "Verificar se há prisão posterior não lançada ou se o apenado está foragido/em liberdade; a prescrição executória corre pela pena restante.", "CP, arts. 112, II, e 113.", tipo="cumprimento-interrompido-ultimo-evento-e-interru"))
 

@@ -1,8 +1,8 @@
-RSPE BASE - SEEU  v6.16.23 (programa em abas)
+RSPE BASE - SEEU  v6.16.30 (programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-6.16.23. A documentação técnica completa (cada parâmetro, a regra, a norma e
+6.16.30. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -535,6 +535,136 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v6.16.30
+  - Aba Progressão: sai a coluna Data-base (ela segue no quadro da ficha do
+    assistido, com motivo, cor e edição).
+  - Trabalho sem atestado: a estimativa deixa de usar dias corridos. Conta dias
+    de trabalho pela jornada registrada na ficha ("de segunda a sexta", "segunda a
+    sábado", "12x36", "todos os dias"); sem jornada na ficha, segunda a sábado
+    (LEP, art. 33: descanso aos domingos e feriados). Feriados nacionais
+    descontados (inclusive Sexta-feira Santa e, desde 2024, 20 de novembro). O
+    período sem atestado mostra os dias de trabalho, a jornada e os remidos
+    estimados; a mesma conta vale para distribuir atestados sem período.
+
+v6.16.29
+  - Data-base da progressão com o motivo, na ficha do assistido (quadro abaixo de
+    pena/término) e em coluna própria na aba Progressão:
+      * normal: confere (início do cumprimento, reinício/recaptura, progressão,
+        regressão, falta grave homologada, revogação do livramento);
+      * vermelho: motivo incorreto verificável no RSPE (soma/unificação - STJ,
+        Tema 1006; data anterior à última alteração de regime; falta pendente;
+        alteração de data-base por soma);
+      * amarelo: data suspeita, sem explicação no RSPE nem na ficha (a ficha é
+        consultada: prisão/recaptura registrada nela explica a data).
+    Botão Editar: o operador informa a data-base correta e o motivo; a previsão de
+    progressão é refeita (previsão do SEEU - (1 - fração) x diferença de datas) e
+    vale em todas as abas, na exportação, nos relatórios e nas petições. "Voltar
+    ao SEEU" desfaz.
+  - Homônimos: a ficha passa a ler a filiação (nome da mãe). O vínculo da ficha ao
+    assistido (pelos autos ou pelo nome) exige a mesma mãe quando os dois
+    documentos a trazem; mãe diferente gera alerta.
+  - Unidades da AGEPEN/MS catalogadas por regime (fechado, semiaberto, aberto,
+    monitoramento, provisória, federal) - ex.: Penitenciária de Regime Fechado da
+    Gameleira (fechado) x Centro Penal Agroindustrial da Gameleira (semiaberto);
+    Presídio de Trânsito, Centro de Triagem e CPAC (provisórias). Saída da ficha
+    com "Motivo: Progressão" para unidade de semiaberto/aberto conta como
+    progressão cumprida.
+  - Conduta má/péssima: alerta só quando não há falta nos últimos 12 meses (RSPE
+    nem ficha) - a conduta deveria ter sido reabilitada.
+
+v6.16.28
+  - Novos confrontos RSPE x ficha disciplinar (Auditoria, "Ficha x RSPE"):
+      * identidade: CPF, nome e nascimento divergentes (ficha de homônimo ou
+        cadastro errado; o nascimento decide o art. 115 e o indulto por idade);
+      * prisão na ficha em período que o RSPE trata como liberdade: dias sem
+        cômputo (detração - CP, art. 42);
+      * processos da ficha que o RSPE não lista (condenação a somar, prisão por
+        outro processo, guia pendente);
+      * pena da condenação na ficha diferente da pena total do RSPE;
+      * regime x unidade: RSPE fechado com a pessoa em unidade de semiaberto/
+        aberto/monitoramento (progressão não lançada); RSPE semiaberto/aberto com
+        a pessoa em unidade de regime fechado (regressão não lançada ou falta de
+        vaga - Súmula Vinculante 56);
+      * fuga/evasão registrada na ficha e ausente no RSPE: alerta, e a fuga entra
+        como falta grave (decidível pelo operador); fuga no RSPE sem registro na
+        ficha, que mostra custódia contínua: a verificar;
+      * conduta má/péssima na ficha sem falta grave recente no RSPE.
+
+v6.16.27
+  - Análise conjunta RSPE + ficha disciplinar: com a ficha importada, o programa
+    confronta as duas antes de calcular, lança o que o RSPE omite (marcado como
+    "lançado pela ficha SIAPEN") e alerta cada divergência:
+      * reinício omitido: RSPE termina em interrupção e a ficha registra nova
+        entrada vinda de fora (delegacia/audiência de custódia) ou saída em
+        liberdade seguida de entrada - o reinício entra na data da ficha;
+      * retomada divergente: RSPE reinicia depois da entrada registrada na ficha
+        (dias de custódia fora da conta);
+      * RSPE sem evento de prisão: o início entra pela data de prisão da ficha;
+      * "não iniciou o cumprimento" só com prisão provisória: afastado quando a
+        ficha registra a pessoa presa depois do último evento;
+      * progressão, regressão e livramento cumpridos na unidade (ficha) e
+        ausentes do RSPE.
+    Transferência entre unidades depois de uma interrupção = custódia contínua:
+    nada é lançado, e o alerta aponta provável prisão em outro processo.
+  - Hediondez posterior ao fato no indulto e na comutação: sempre "A verificar
+    (tese: hediondez superveniente)", nunca "Possível" nem "Impeditivo" - o STJ
+    afere na data do decreto, a 2ª Turma do STF na data do fato. Selo do crime na
+    linha do tempo: A VERIFICAR, com as duas leituras. Decreto 2022: a verificar
+    quando a hediondez é a única causa de exclusão.
+
+v6.16.26
+  - Interrupção por prisão em outro processo = execução SUSPENSA (a pessoa segue
+    presa): "Pena suspensa (preso em outro processo)" na ficha, progressão,
+    livramento e término, no lugar de "Pena interrompida"; a prescrição
+    executória não corre nesse período (CP, art. 116, p. único).
+  - RSPE com o cumprimento parado x ficha disciplinar: custódia registrada na
+    ficha depois da interrupção confirma a suspensão (ok) ou, se o motivo é outro,
+    gera alerta "RSPE indica pena interrompida, mas a ficha registra custódia"
+    (provável prisão em outro processo ou reinício não lançado); saída em
+    liberdade na ficha confirma a interrupção; sem registro posterior, a verificar.
+  - Lei do tempo, crime a crime: capitulação criada depois do fato (ex.: art.
+    157, § 2º-A, com fato de 2007 - a majorante é da Lei 13.654/2018) gera alerta
+    de cadastro anacrônico; hediondez posterior ao fato (sem o selo do SEEU)
+    gera ponto a verificar com a tese da irretroatividade. O cartão do crime na
+    linha do tempo do indulto mostra o aviso.
+
+v6.16.25
+  - Faltas antigas saem dos pontos de atenção: só pedem decisão os indícios de
+    falta a partir do início da janela do art. 6º do Decreto 2024 (26/12/2023)
+    ou dos 3 anos anteriores a hoje, o que for anterior. Falta mais antiga não
+    afeta indulto, comutação nem livramento; a data-base já está no RSPE.
+  - Auditoria: alteração de data-base determinada no RSPE depois da última
+    progressão sem falta grave homologada nos 12 meses anteriores, regressão ou
+    nova prisão na data: "Alteração de data-base sem falta grave homologada"
+    (alerta quando o incidente fala em soma/unificação - STJ, Tema 1006).
+  - Indulto, inciso IV (anos ininterruptos): a nova prisão que o RSPE registra
+    dentro do período contínuo é confrontada com a movimentação da ficha
+    disciplinar. Custodiado antes e depois, sem soltura, fuga ou evasão = não
+    interrompe (✔); saída por alvará/fuga/determinação judicial ou entrada vinda
+    da delegacia/audiência de custódia = interrompeu (✘, com a data e o motivo).
+    Sem movimentação na ficha ao redor da data, segue a verificar.
+  - A linha do tempo do indulto usa o mesmo resultado da aba (incisos IV, XI,
+    XII e XIII resolvidos pela ficha).
+
+v6.16.24
+  - Falta grave do art. 6º (decretos 2024 e 2025) conferida uma única vez por
+    decreto e aplicada ao indulto e à comutação juntos, qualquer que seja o
+    inciso (inclusive o XV e os incisos XI/XII/XIII conferidos na ficha): não
+    cabe mais "Possível" no indulto com "Não cabe · falta" na comutação. A
+    ficha disciplinar não reabre o indulto afastado pela falta.
+  - Faltas graves registradas na ficha disciplinar (SIAPEN) e ausentes do RSPE
+    entram como "Falta a apurar" (data do fato): aparecem na coluna Falta, na
+    Auditoria (botão Preencher: houve / não houve falta grave) e na linha do
+    tempo; confirmada, afasta indulto e comutação. Falta arquivada não entra.
+  - "Não se aplica" com a data do decreto: "não iniciou o cumprimento em
+    25/12/2024", "sem condenação até 23/12/2025" - a situação é a da data do
+    decreto; falta posterior (inclusive na prisão provisória) não a contradiz.
+  - Auditoria: "Indício de falta" só quando não há item de falta a decidir; falta
+    firme vira "Falta grave nos últimos 12 meses" (informativo).
+  - Prescrição: coluna e marco "R. Denúncia" (recebimento da denúncia).
+  - Contador das abas: quem tem o pedido marcado sai da contagem (volta se a
+    situação da aba mudar depois do pedido).
 
 v6.16.23
   - Padrão único de escrita nas tabelas: nome em negrito, demais informações em

@@ -231,7 +231,7 @@ def _obs_indulto(full):
     base, aviso = t[0], (t[1] if len(t) > 1 else "")
     m = re.match(r"^(?:Possível|A verificar|Não atinge)(?: \([^)]*\))?\s*·\s*(.*)$", base)
     inc = m.group(1) if m else ""
-    inc = re.sub(r"\s*\((?:sem execução na data|fatos posteriores)\)", "", inc)
+    inc = re.sub(r"\s*\((?:sem execução na data|fatos posteriores|sem condenação até [\d/]+|sem pena em cumprimento em [\d/]+|não iniciou o cumprimento em [\d/]+|cumprimento interrompido em [\d/]+)\)", "", inc)
     inc = inc.replace("art. 9º, ", "").replace(" · tese: hed. superveniente", " · tese: hediondez superveniente")
     partes = [p for p in (inc.strip(" ·"), aviso.strip()) if p]
     return " · ".join(partes)

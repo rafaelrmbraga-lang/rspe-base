@@ -34,7 +34,7 @@ import rspe_relatorio as rrel
 import rspe_indulto_tl as rtl
 
 APP = "RSPE Base"
-VERSAO = "6.16.23"
+VERSAO = "6.16.30"
 
 
 def pasta_app():
@@ -99,7 +99,7 @@ O RSPE não lista faltas formalmente. A janela é de 365 dias até a data de ger
 (vermelho) só para falta com sanção reconhecida no RSPE (falta grave homologada, sanção concedida), pela data do fato; indício sem essa
 sanção (fuga ou abandono só como evento, regressão cautelar, falta pendente, perda de remidos sem falta datada, dias perdidos sem data)
 aparece como "A apurar" (amarelo), com o detalhe na ficha do assistido. Regressão e perda de remidos são datadas pela decisão.
-Incidente negado não conta. A ficha disciplinar não entra nesta coluna. "Não consta" não garante ausência de falta: conferir o PAD.
+Incidente negado não conta. Falta grave da ficha disciplinar ausente do RSPE entra como "A apurar" (decidir na Auditoria). "Não consta" não garante ausência de falta: conferir o PAD.
 <h4>Indulto / Comutação</h4>
 Art. 1º (mesmo rol nos dois decretos): hediondos/equiparados, tortura, lavagem (&gt;4 anos), ORCRIM e milícia, terrorismo, racismo,
 escravidão/tráfico de pessoas, genocídio, sistema financeiro (&gt;4 anos), licitações (&gt;4 anos), crimes sexuais (215, 216-A, 217-A,
@@ -635,6 +635,9 @@ class Api:
             _dm = dmanuais.get(_ch0, {})
             _n0 = _norm(r.get("nome", ""))
             _f0 = fichas.get(_ch0) or (fichas.get("nome:" + _n0) if _homonimos.get(_n0, 0) == 1 else None)
+            if _f0 and _f0 is not fichas.get(_ch0) and _norm(_f0.get("nome_mae") or "") and _norm(r.get("nome_mae") or "") \
+                    and _norm(_f0.get("nome_mae")) != _norm(r.get("nome_mae")):
+                _f0 = None  # ficha de homônimo: a mãe não confere
             r.pop("_nasc_fonte", None); r.pop("_nasc_data", None)
             if _dm.get("data_nascimento"):
                 if r.get("data_nascimento") != _dm["data_nascimento"]["valor"]:
@@ -646,6 +649,20 @@ class Api:
                 r["data_nascimento"] = _f0["data_nascimento"]
                 r["_nasc_fonte"] = "lida da ficha disciplinar do SIAPEN"
                 r["_nasc_data"] = ""
+            # RSPE x ficha: retomada do cumprimento omitida no RSPE é lançada pela ficha; divergência vira alerta
+            try:
+                rf.reconciliar_eventos(r, _f0)
+            except Exception:
+                logging.getLogger("rspe").exception("reconciliação com a ficha %s", _ch0)
+            # faltas graves da ficha disciplinar que o RSPE não traz: entram como falta a apurar
+            try:
+                rs.faltas_da_ficha(r, _f0, rv.HOJE)
+            except Exception:
+                logging.getLogger("rspe").exception("faltas da ficha %s", _ch0)
+            # data-base corrigida pelo operador ("dd/mm/aaaa|motivo"): refaz a previsão de progressão em todas as abas
+            r.pop("_db_manual", None)
+            if (_dm.get("data_base") or {}).get("valor"):
+                r["_db_manual"] = _dm["data_base"]["valor"]
             # decisões do operador sobre indícios de falta (fuga, pendente, perda sem falta): valem em todas as abas
             rs.aplicar_decisoes_falta(r, {k.split("|", 1)[1]: v["valor"] for k, v in _dm.items() if k.startswith("falta|")})
             for _c in r.get("_crimes", []):
@@ -663,7 +680,7 @@ class Api:
             ch = r.get("processo_execucao") or r.get("arquivo")
             r["_presc_ajustes"] = ajustes.get(ch, {})  # dados de prescrição preenchidos/corrigidos pelo operador (só em memória)
             _nn = _norm(r.get("nome", ""))
-            ficha = fichas.get(ch) or (fichas.get("nome:" + _nn) if _homonimos.get(_nn, 0) == 1 else None)
+            ficha = _f0 if ch == _ch0 else (fichas.get(ch) or (fichas.get("nome:" + _nn) if _homonimos.get(_nn, 0) == 1 else None))
             # um registro com dado ilegível não pode derrubar a base: tenta sem a ficha e, se ainda falhar, mostra o
             # registro com o aviso da falha
             try:
@@ -685,10 +702,10 @@ class Api:
                         logging.getLogger("rspe").exception("falha ao migrar baixa %s", ch)
             m["pedidos"] = peds.get(ch, {})  # pedidos já feitos, por aba (coluna "Pedido")
             try:
-                m["faltas_itens"] = rs.faltas_editaveis(r.get("_incidentes", []), r.get("_eventos", []))
+                m["faltas_itens"] = rs.faltas_editaveis(r.get("_incidentes", []), r.get("_eventos", []), rv.HOJE)
             except Exception:
                 m["faltas_itens"] = []
-            m["_bruto"] = r
+            m["_bruto"] = m.pop("_final", None) or r
             self._modelos.append(m)
         return {
             "base": self.base.nome,
@@ -741,6 +758,8 @@ class Api:
         valor = (valor or "").strip()
         if valor and campo == "data_nascimento" and not rs.to_date(valor):
             return {"erro": "Data inválida: use dd/mm/aaaa."}
+        if valor and campo == "data_base" and not rs.to_date(valor.split("|")[0]):
+            return {"erro": "Data-base inválida: use dd/mm/aaaa."}
         if campo.startswith("falta|") and valor not in ("", "sim", "nao"):
             return {"erro": "Decisão inválida sobre a falta."}
         if valor and campo.startswith("pena_max|") and not rs.pena_livre(valor):
@@ -975,16 +994,28 @@ class Api:
         pelo nome; mesma_pessoa = sem homônimo na base (a ficha guardada pelo nome pode ser comparada e migrada)."""
         base = base or self.base
         with base.lock:
-            rows = base.con.execute("SELECT processo, nome FROM assistidos").fetchall()
-        procs = {p for p, _ in rows}
+            rows = base.con.execute("SELECT processo, nome, dados FROM assistidos").fetchall()
+        maes = {}
+        for p, _, d in rows:
+            try:
+                maes[p] = _norm((json.loads(d) or {}).get("nome_mae") or "")
+            except Exception:
+                maes[p] = ""
+        mae_f = _norm(f.get("nome_mae") or "")
+
+        def mae_ok(p):
+            # nome da mãe nos dois documentos e diferente = outra pessoa (homônimo); ausente em um deles = não decide
+            return not (mae_f and maes.get(p)) or maes[p] == mae_f
+        procs = {p for p, _, _ in rows}
         nn = _norm(f.get("nome", ""))
-        mesmos = [p for p, n in rows if _norm(n) == nn]
+        mesmos = [p for p, n, _ in rows if _norm(n) == nn]
+        mesmos_mae = [p for p in mesmos if mae_ok(p)]
         for a in f.get("autos", []):
-            if a in procs:
+            if a in procs and mae_ok(a):
                 # vinculada pelos autos: sem homônimo na base, a ficha guardada pelo nome é da mesma pessoa
-                return a, len(mesmos) <= 1
-        # pelo nome só quando não há homônimo na base (com homônimos, a ficha fica guardada pelo nome, sem vínculo)
-        return (mesmos[0], True) if len(mesmos) == 1 else ("", False)
+                return a, len(mesmos_mae) <= 1
+        # pelo nome (e pela mãe): só quando resta um único assistido (com homônimos, a ficha fica guardada pelo nome)
+        return (mesmos_mae[0], True) if len(mesmos_mae) == 1 else ("", False)
 
     # ---- pasta vigiada: <pasta mãe>/<nome da base>/*.pdf entra sozinho na base de mesmo nome ----
     def vigia_info(self):
