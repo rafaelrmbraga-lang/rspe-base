@@ -34,7 +34,7 @@ import rspe_relatorio as rrel
 import rspe_indulto_tl as rtl
 
 APP = "RSPE Base"
-VERSAO = "6.16.18"
+VERSAO = "6.16.19"
 
 
 def pasta_app():
@@ -1294,6 +1294,25 @@ class Api:
         _abrir(c)
         return {"caminho": c}
 
+
+    def providencias_xlsx(self, titulo, linhas):
+        """Salva em Excel o relatório de providências montado na tela (mês escolhido)."""
+        if not self.base:
+            return {"erro": "Nenhuma base aberta."}
+        if not linhas:
+            return {"erro": "Nenhuma providência no período."}
+        nome = "%s - %s.xlsx" % (self.base.nome, re.sub(r"[^\w\s-]", "", titulo).strip()[:60])
+        c = _um(self._janela.create_file_dialog(webview.SAVE_DIALOG, save_filename=nome, file_types=("Excel (*.xlsx)",)))
+        if not c:
+            return None
+        if not c.lower().endswith(".xlsx"):
+            c += ".xlsx"
+        try:
+            rx.exportar_providencias(linhas, c, titulo)
+        except Exception as e:
+            return {"erro": "Falha ao salvar: %s" % e}
+        _abrir(c)
+        return {"caminho": c, "msg": "Relatório salvo."}
 
     # ---- relatórios (PDF) ----
     def relatorios(self, ids, individual, geral, planilha, nominal, ids_individual=None):

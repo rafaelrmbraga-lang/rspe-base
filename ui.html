@@ -166,6 +166,8 @@ tr.sub td{padding:0 0 0 0;background:#FFFFFF;cursor:default}tr.sub:hover td{back
 .pck{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:5px;border:1.5px solid #D0D5DD;background:#fff;cursor:pointer;font-size:14px;font-weight:800;line-height:1;color:#fff;vertical-align:middle}.pck:hover{border-color:var(--pri)}
 .peds{display:flex;flex-direction:column;gap:6px;border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:#F9FAFB}.pedl{display:flex;align-items:center;gap:8px;font-size:12.5px}.pedl .pn{color:var(--tx2);min-width:150px}.pedl .po{flex:1;color:var(--tx2)}
 .sapl{display:flex;flex-direction:column;gap:5px;border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:#F9FAFB;font-size:12.5px}.sapl label{display:flex;align-items:center;gap:6px;cursor:pointer}
+.provr{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin-bottom:8px}.provr>div{border:1px solid var(--line);border-radius:9px;padding:8px 10px;background:#F9FAFB}.provr b{display:block;font-size:20px}.provr span{font-size:11.5px;color:var(--tx2)}
+.provc{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12.5px;color:var(--tx2);margin-bottom:10px}.provc b{color:var(--tx)}
 .pck.ok{background:#17B26A;border-color:#17B26A}.pck.ok.mud{background:#F5A524;border-color:#F5A524}
 .mini.pre{background:var(--pri);color:#fff;border-color:var(--pri)}.mini.pre:hover{opacity:.9;color:#fff}
 .chev{display:inline-block;width:14px;color:var(--tx3);font-size:11px;margin-right:4px;transition:.15s}tr.exp .chev{transform:rotate(90deg);color:var(--pri)}
@@ -970,6 +972,35 @@ const ui = {
       ${fmt==='xlsx'?`<label class="chk"><input type="checkbox" value="completo" checked>Completo (todos os campos extraídos)</label>`:''}
       <div class="acts"><button class="btn" onclick="ui.fecharModal()">Cancelar</button><button class="btn pri" onclick="ui.exportar('${fmt}')">Exportar</button></div></div>`;
     document.getElementById('modal').classList.add('on'); },
+  // ---------- relatório de providências: pedidos e ofícios marcados na coluna Pedido, por mês (base inteira) ----------
+  provLinhas(){ const ASS={prog:'Progressão de regime',liv:'Livramento condicional',ind:'Indulto / comutação',presc:'Prescrição',ext:'Extinção da pena',fd:'Remição'};
+    const TP={pedido:'Pedido nos autos',oficio:'Ofício à unidade prisional',outro:'Outra providência'}; const out=[];
+    (this.dados.registros||[]).forEach(r=>Object.entries(r.pedidos||{}).forEach(([k,x])=>{ if(!x||!x.data) return;
+      out.push({data:x.data, nome:r.nome, proc:r.proc, id:r.id, assunto:ASS[k]||k, tipo:TP[x.tipo]||TP.pedido, obs:x.obs||'', registrado:x.registrado||''}); }));
+    return out.sort((a,b)=>this.tlD(a.data)-this.tlD(b.data)||a.nome.localeCompare(b.nome)); },
+  modalProvidencias(mes){ const todas=this.provLinhas(); const mm=d=>d.slice(3); // "mm/aaaa"
+    const meses=[...new Set(todas.map(x=>mm(x.data)))].sort((a,b)=>(b.slice(3)+b.slice(0,2)).localeCompare(a.slice(3)+a.slice(0,2)));
+    const atual=(this.dados.hoje||'').slice(3); if(mes===undefined) mes=meses.includes(atual)?atual:(meses[0]||atual);
+    const L=mes==='todos'?todas:todas.filter(x=>mm(x.data)===mes);
+    const NM=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+    const rot=m=>m==='todos'?'todo o período':(NM[+m.slice(0,2)-1]||m)+' de '+m.slice(3);
+    const titulo='Providências - '+rot(mes); this._prov={titulo, L};
+    const cont=(f)=>L.filter(f).length; const tipos=['Pedido nos autos','Ofício à unidade prisional','Outra providência'];
+    const ass=[...new Set(L.map(x=>x.assunto))];
+    const resumo=`<div class="provr"><div><b>${L.length}</b><span>providências</span></div>${tipos.map((t,i)=>`<div><b>${cont(x=>x.tipo===t)}</b><span>${['pedidos nos autos','ofícios à unidade prisional','outras providências'][i]}</span></div>`).join('')}<div><b>${new Set(L.map(x=>x.id)).size}</b><span>assistidos</span></div></div>
+      ${ass.length?`<div class="provc">${ass.map(a=>`<span>${esc(a)} <b>${cont(x=>x.assunto===a)}</b></span>`).join('')}</div>`:''}`;
+    const tab=L.length?`<div class="help" style="max-height:300px;border:1px solid var(--line);border-radius:10px;padding:0"><table class="subtab" style="width:100%"><thead><tr><th>Data</th><th>Assistido</th><th>Benefício</th><th>Providência</th><th>Observação</th></tr></thead><tbody>${L.map(x=>`<tr><td style="white-space:nowrap">${esc(x.data)}</td><td>${esc(x.nome)}<div class="muted" style="font-size:11px;white-space:nowrap">${esc(x.proc)}</div></td><td>${esc(x.assunto)}</td><td>${esc(x.tipo)}</td><td>${esc(x.obs)}</td></tr>`).join('')}</tbody></table></div>`
+      :'<p class="muted">Nenhuma providência marcada neste período.</p>';
+    document.getElementById('modal').innerHTML=`<div class="box" style="width:820px;max-height:calc(100vh - 40px);display:flex;flex-direction:column"><h2>Relatório de providências</h2>
+      <p class="muted" style="margin:0 0 10px">Pedidos e ofícios marcados na coluna Pedido de todas as abas, pela data da providência. Base inteira, sem separar por pessoa.</p>
+      <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px"><label for="prov_mes">Período</label><select id="prov_mes" onchange="ui.modalProvidencias(this.value)" style="padding:6px 9px;border:1px solid var(--line);border-radius:8px;font:inherit">${(meses.includes(mes)||mes==='todos'?meses:[mes].concat(meses)).map(m=>`<option value="${m}" ${m===mes?'selected':''}>${rot(m)}</option>`).join('')}<option value="todos" ${mes==='todos'?'selected':''}>Todo o período</option></select></div>
+      ${resumo}${tab}
+      <div class="acts"><button class="btn" style="margin-right:auto" onclick="ui.modalRelatorios()">Voltar</button><button class="btn" onclick="ui.copiarClip(ui.clip(ui.provTexto()))" ${L.length?'':'disabled'}>Copiar</button><button class="btn pri" onclick="ui.provExcel()" ${L.length?'':'disabled'}>Salvar em Excel</button></div></div>`;
+    document.getElementById('modal').classList.add('on'); },
+  provTexto(){ const P=this._prov; if(!P) return ''; const L=P.L; const tipos=['Pedido nos autos','Ofício à unidade prisional','Outra providência'];
+    return P.titulo+' ('+(this.dados.base||'')+')\n'+L.length+' providências · '+tipos.map((t,i)=>L.filter(x=>x.tipo===t).length+' '+['pedidos nos autos','ofícios à unidade prisional','outras providências'][i]).join(' · ')+'\n\n'
+      +L.map(x=>`${x.data}\t${x.nome}\t${x.proc}\t${x.assunto}\t${x.tipo}${x.obs?'\t'+x.obs:''}`).join('\n'); },
+  async provExcel(){ const P=this._prov; if(!P||!P.L.length) return; const r=await API().providencias_xlsx(P.titulo, P.L); if(r&&r.erro) this.toast(r.erro); else if(r&&r.msg) this.toast(r.msg); },
   modalRelatorios(){ const vis=this.visiveis(), n=vis.length;
     const lista=vis.map(r=>`<label class="chk relitem" style="padding:5px 9px;font-size:12.5px" data-b="${esc((r.nome+' '+r.proc).toLowerCase())}"><input type="checkbox" class="relp" value="${esc(r.id)}" checked onchange="ui.relConta()"><span>${esc(r.nome)} <span class="muted" style="font-size:11.5px">· ${esc(r.proc)}</span></span></label>`).join('');
     document.getElementById('modal').innerHTML=`<div class="box" style="width:520px"><h2>Relatórios em PDF</h2><p>${pl(n,'assistido','assistidos')}${this.filtro?(n===1?' filtrado':' filtrados')+' pela busca':''}. Os arquivos vão para uma pasta nova com a data e a hora.</p>
@@ -986,7 +1017,7 @@ const ui = {
       <label class="chk"><input type="checkbox" id="rel_pla" checked>Planilha (Excel, todas as abas)</label>
       <label class="chk"><input type="checkbox" id="rel_nom" checked>Fila de prioridade com o nome dos assistidos</label>
       <p class="muted" style="font-size:12px">Triagem: não substitui o Atestado de Pena. Datas de progressão, livramento e término são as do SEEU.</p>
-      <div class="acts"><button class="btn" onclick="ui.fecharModal()">Cancelar</button><button class="btn pri" onclick="ui.gerarRelatorios()">Gerar</button></div></div>`;
+      <div class="acts"><button class="btn" style="margin-right:auto" onclick="ui.modalProvidencias()">Relatório de providências</button><button class="btn" onclick="ui.fecharModal()">Cancelar</button><button class="btn pri" onclick="ui.gerarRelatorios()">Gerar</button></div></div>`;
     document.getElementById('modal').classList.add('on'); this.relConta(); },
   relSelecionados(){ return [...document.querySelectorAll('#rel_pessoas .relp:checked')].map(i=>i.value); },
   relConta(){ const c=document.getElementById('rel_conta'); if(!c) return;
