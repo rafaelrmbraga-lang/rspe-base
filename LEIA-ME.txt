@@ -1,8 +1,8 @@
-RSPE BASE - SEEU  v6.16.29 (programa em abas)
+RSPE BASE - SEEU  v6.16.30 (programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-6.16.29. A documentação técnica completa (cada parâmetro, a regra, a norma e
+6.16.30. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -535,6 +535,17 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v6.16.30
+  - Aba Progressão: sai a coluna Data-base (ela segue no quadro da ficha do
+    assistido, com motivo, cor e edição).
+  - Trabalho sem atestado: a estimativa deixa de usar dias corridos. Conta dias
+    de trabalho pela jornada registrada na ficha ("de segunda a sexta", "segunda a
+    sábado", "12x36", "todos os dias"); sem jornada na ficha, segunda a sábado
+    (LEP, art. 33: descanso aos domingos e feriados). Feriados nacionais
+    descontados (inclusive Sexta-feira Santa e, desde 2024, 20 de novembro). O
+    período sem atestado mostra os dias de trabalho, a jornada e os remidos
+    estimados; a mesma conta vale para distribuir atestados sem período.
 
 v6.16.29
   - Data-base da progressão com o motivo, na ficha do assistido (quadro abaixo de

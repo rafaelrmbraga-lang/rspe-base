@@ -206,6 +206,15 @@ def extrair(caminho):
                 aberto["empresa"] = me.group(1).strip()
     if aberto:
         trabalho.append(aberto)
+    # jornada de cada trabalho: a ficha às vezes registra a carga horária ("de segunda a sexta", "12x36") no início
+    for t in trabalho:
+        ti, tf = _dp(t["inicio"]), _dp(t.get("fim") or "")
+        for e in eventos:
+            if e["d"] and ti and ti - timedelta(days=3) <= e["d"] <= min(tf or date.max, ti + timedelta(days=30)):
+                j = jornada_do_texto(e["texto"])
+                if j:
+                    t["jornada"] = j
+                    break
     f["trabalho"] = trabalho
     f["baixas_sem_inicio"] = baixas_orfas
 
@@ -346,7 +355,9 @@ def confrontar(r, f, hoje=None):
         tot = sum(int(re.match(r"\d+", L["dias"]).group()) for L in sem if re.match(r"\d+", L["dias"]))
         itens.append({"nivel": "verificar", "titulo": "Trabalho sem atestado: %s, ≈ %s (≈ %d remidos)" % (rs.pl(len(sem), "período", "períodos"), rs.pl(tot, "dia", "dias"), tot // 3),
                       "detalhe": "; ".join("%s%s, %s (%s)" % (L["emp"], (" - " + L["un"]) if L.get("un") and L["un"] != "—" else "", _br(L["per"]), L["dias"]) for L in sem) +
-                                 ". Estimativa em dias corridos; a unidade atesta só os dias efetivamente trabalhados. Requerer os atestados e a remição.",
+                                 ". Estimativa em dias de trabalho (não em dias corridos): pela jornada registrada na ficha, quando há; sem ela, segunda a sábado "
+                                 "(LEP, art. 33: descanso aos domingos e feriados). Feriados nacionais descontados. A unidade atesta só os dias efetivamente "
+                                 "trabalhados: requerer os atestados e a remição.",
                       "fundamento": "LEP, arts. 126 e 129."})
     bx = [L for L in linhas if L["per"].startswith("início não registrado")]
     if bx:
@@ -865,6 +876,67 @@ def _dias_uteis(a, b):
     return n
 
 
+def jornada_do_texto(txt):
+    """Jornada de trabalho registrada na ficha: 'seg-sex', 'seg-sab', '12x36' ou 'todos'; '' se não informada."""
+    u = rs._sem_acento(txt or "").upper()
+    if re.search(r"12\s*X\s*36", u):
+        return "12x36"
+    if re.search(r"SEGUNDA\s*(-|A|À)\s*SEXTA|SEG\.?\s*(-|A|À)\s*SEX", u):
+        return "seg-sex"
+    if re.search(r"SEGUNDA\s*(-|A|À)\s*SABADO|SEG\.?\s*(-|A|À)\s*SAB", u):
+        return "seg-sab"
+    if re.search(r"SEGUNDA\s*(-|A|À)\s*DOMINGO|TODOS OS DIAS|DIARIAMENTE|INCLUSIVE (AOS )?DOMINGOS", u):
+        return "todos"
+    return ""
+
+
+JORNADA_TXT = {"seg-sex": "segunda a sexta (ficha)", "seg-sab": "segunda a sábado (ficha)", "12x36": "escala 12x36 (ficha)",
+               "todos": "todos os dias (ficha)", "": "segunda a sábado - jornada não informada na ficha (LEP, art. 33: descanso aos domingos e feriados)"}
+
+
+def _pascoa(ano):
+    a, b, c = ano % 19, ano // 100, ano % 100
+    d, e = b // 4, b % 4
+    g = (8 * b + 13) // 25
+    h = (19 * a + b - d - g + 15) % 30
+    j, k = c // 4, c % 4
+    m = (a + 11 * h) // 319
+    r = (2 * e + 2 * j - k - h + m + 32) % 7
+    n = (h - m + r + 90) // 25
+    p = (h - m + r + n + 19) % 32
+    return date(ano, n, p)
+
+
+def feriados(ano):
+    """Feriados nacionais (Lei 662/1949, Lei 6.802/1980, Lei 14.759/2023 - 20/11 desde 2024) e a Sexta-feira Santa."""
+    fs = {date(ano, 1, 1), date(ano, 4, 21), date(ano, 5, 1), date(ano, 9, 7), date(ano, 10, 12), date(ano, 11, 2),
+          date(ano, 11, 15), date(ano, 12, 25), _pascoa(ano) - timedelta(days=2)}
+    if ano >= 2024:
+        fs.add(date(ano, 11, 20))
+    return fs
+
+
+def dias_trabalho(a, b, jornada=""):
+    """Dias de trabalho entre a e b (inclusive) pela jornada: segunda a sexta, segunda a sábado (padrão: LEP, art. 33 -
+    descanso aos domingos e feriados), 12x36 (dia sim, dia não) ou todos os dias. Feriados nacionais fora, salvo 12x36/todos."""
+    if not a or not b or b < a:
+        return 0
+    if jornada == "12x36":
+        return ((b - a).days + 2) // 2
+    if jornada == "todos":
+        return (b - a).days + 1
+    lim = 5 if jornada == "seg-sex" else 6
+    fer = set()
+    for y in range(a.year, b.year + 1):
+        fer |= feriados(y)
+    n, d = 0, a
+    while d <= b:
+        if d.weekday() < lim and d not in fer:
+            n += 1
+        d += timedelta(days=1)
+    return n
+
+
 def horas_estudo(p, hoje=None):
     """Horas do período de estudo: as declaradas na ficha ou, se não houver, estimativa de 4 h por dia útil."""
     if p.get("horas"):
@@ -987,6 +1059,11 @@ def unidade_periodo(tl, a, b):
     return (" → ".join(sig) or "—"), " → ".join(dict.fromkeys(us))
 
 
+def _dias_est(n, jor):
+    j = {"seg-sex": "seg. a sex.", "seg-sab": "seg. a sáb.", "12x36": "12x36", "todos": "todos os dias"}.get(jor, "seg. a sáb., jornada não informada")
+    return " · ≈ %s de trabalho (%s) ≈ %d remidos" % (rs.pl(n, "dia", "dias"), j, n // 3) if n else ""
+
+
 def quadro_trabalho(r, f, hoje=None):
     """Uma linha por emprego da ficha: período, atestado que o cobre, remição no RSPE e providência.
     Devolve (linhas, resumo)."""
@@ -1007,7 +1084,7 @@ def quadro_trabalho(r, f, hoje=None):
             if acum >= a["dias_trabalhados"]:
                 break
             cob[id(t)] = [(a, _dp(t["inicio"]), _dp(t["fim"]))]
-            acum += (_dp(t["fim"]) - _dp(t["inicio"])).days + 1
+            acum += dias_trabalho(_dp(t["inicio"]), _dp(t["fim"]), t.get("jornada", ""))
             usados.add(id(a))
     ult_at = max((a["_fim"] for a in ats if a.get("_fim")), default=None)
     linhas = []
@@ -1027,11 +1104,14 @@ def quadro_trabalho(r, f, hoje=None):
 
     for t in trab:
         ti, tf = _dp(t["inicio"]), _dp(t.get("fim") or "")
-        dias = ((tf or hoje) - ti).days + 1
+        jor = t.get("jornada", "")
+        dias = dias_trabalho(ti, tf or hoje, jor)
+        corridos = ((tf or hoje) - ti).days + 1
         per = "%s a %s" % (t["inicio"], t["fim"]) if tf else "%s em diante (em curso)" % t["inicio"]
         c = cob[id(t)]
         fora = ini_exec and (tf or hoje) < ini_exec
-        L = {"emp": _nome_emprego(t) + (" (externo)" if t.get("externo") else ""), "per": per, "dias": dias, "_ini": ti}
+        L = {"emp": _nome_emprego(t) + (" (externo)" if t.get("externo") else ""), "per": per, "dias": dias, "_ini": ti,
+             "jornada": JORNADA_TXT.get(jor, JORNADA_TXT[""])}
         if c and not fora:
             for x, i2, f2 in c:
                 s0 = max(ti, i2) if i2 else ti
@@ -1055,12 +1135,13 @@ def quadro_trabalho(r, f, hoje=None):
             fim_cob = max(f2 for _, _, f2 in c)
             resto_fim = tf or hoje
             if (resto_fim - fim_cob).days >= 15 and not fora:
-                nd = (resto_fim - fim_cob).days
+                nd = dias_trabalho(fim_cob + timedelta(days=1), resto_fim, jor)
                 L["per"] = "%s a %s" % (t["inicio"], rs.fmt(fim_cob))
-                L["dias"] = (fim_cob - ti).days + 1
+                L["dias"] = dias_trabalho(ti, fim_cob, jor)
                 L2 = {"emp": L["emp"], "per": "%s a %s" % (rs.fmt(fim_cob + timedelta(days=1)), rs.fmt(tf) if tf else "hoje (em curso)"), "dias": nd, "_ini": fim_cob + timedelta(days=1),
-                      "at": "sem atestado", "at_full": "Trabalho posterior ao último atestado da ficha.", "sit": "Pedir atestado", "cor": "amarelo"}
-                sem_itens.append({"emp": L["emp"], "_a": fim_cob + timedelta(days=1), "_b": tf or hoje, "per": L2["per"], "sit": "Pedir atestado"})
+                      "at": "sem atestado", "at_full": "Trabalho posterior ao último atestado da ficha.", "sit": "Pedir atestado", "cor": "amarelo",
+                      "jornada": L["jornada"]}
+                sem_itens.append({"emp": L["emp"], "_a": fim_cob + timedelta(days=1), "_b": tf or hoje, "per": L2["per"] + _dias_est(nd, jor), "per_k": L2["per"], "sit": "Pedir atestado"})
                 linhas.append(L)
                 linhas.append(L2)
                 continue
@@ -1071,10 +1152,10 @@ def quadro_trabalho(r, f, hoje=None):
             else:
                 L["at"] = "sem atestado"
                 L["sit"], L["cor"] = "Pedir atestado", "amarelo"
-        if dias <= 1 and not c:
+        if corridos <= 1 and not c:
             continue  # alocação de um dia só, sem atestado: ruído
         if not c and not fora:
-            sem_itens.append({"emp": L["emp"], "_a": ti, "_b": tf or hoje, "per": per, "sit": "Pedir atestado"})
+            sem_itens.append({"emp": L["emp"], "_a": ti, "_b": tf or hoje, "per": per + _dias_est(dias, jor), "per_k": per, "sit": "Pedir atestado"})
         linhas.append(L)
     # atestados que não casaram com nenhum emprego da ficha
     for a in ats:
@@ -1114,7 +1195,10 @@ def quadro_trabalho(r, f, hoje=None):
             m_b = re.search(r"baixa em (\S+)", L["per"])
             L["per"] = "baixa em %s (sem início)" % (m_b.group(1) if m_b else "?")
         L["at"] = _br(L["at"])
-        L["dias"] = rs.pl(L["dias"], "dia", "dias") if L.get("dias") else "—"
+        # dias de trabalho estimados pela jornada (sem atestado); com atestado, o que vale é o número atestado
+        _jc = {"segunda a sexta (ficha)": "seg. a sex.", "segunda a sábado (ficha)": "seg. a sáb.", "escala 12x36 (ficha)": "12x36",
+               "todos os dias (ficha)": "todos os dias"}.get(L.get("jornada", ""), "seg. a sáb., jornada não informada")
+        L["dias"] = (rs.pl(L["dias"], "dia", "dias") + (" (%s)" % _jc if L.get("at", "").startswith("sem atestado") else "")) if L.get("dias") else "—"
     # estudo (LEP, art. 126, § 1º, I: 1 dia a cada 12 h de frequência, divididas em no mínimo 3 dias)
     pend_est, conf_est = [], []
     ult_rem = max((max(i["d"] or date.min, i["ref"] or date.min) for i in incs), default=None)
@@ -1225,7 +1309,7 @@ def quadro_trabalho(r, f, hoje=None):
     for i in sorted(sem_itens, key=lambda i: i["_a"] or date.min):
         un = unidade_periodo(tl, i["_a"], i["_b"])[0]
         sem.append({"emp": _nome(i["emp"]), "un": un, "per": _br(i["per"]), "sit": i["sit"], "cor": "amarelo",
-                    "chave": "fd:sem:%s:%s" % (_norm(i["emp"]), _br(i["per"]))})
+                    "chave": "fd:sem:%s:%s" % (_norm(i["emp"]), _br(i.get("per_k") or i["per"]))})
     if sem:
         blocos.append({"tipo": "sem", "titulo": "Sem atestado na ficha", "info": "procurar nos autos ou pedir à unidade", "itens": sem})
     est = [L for L in linhas if L["emp"].startswith("Estudo")]
