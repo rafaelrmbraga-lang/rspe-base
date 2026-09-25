@@ -11,7 +11,7 @@ PRI = "#4F46E5"
 TX2 = "#475467"
 LINE = "#E6E9EF"
 ZEBRA = "#F9FAFB"
-DOT = {"vermelho": "#E5484D", "laranja": "#F97316", "amarelo": "#F5A524", "vencido": "#F5A524", "verde": "#17B26A", "cinza": "#98A2B3", "azul": "#2563EB"}
+DOT = {"vermelho": "#E5484D", "laranja": "#F97316", "amarelo": "#F5A524", "vencido": "#E5484D", "verde": "#17B26A", "cinza": "#98A2B3", "azul": "#2563EB"}
 
 
 def exportar_xlsx(modelos, saida, abas):

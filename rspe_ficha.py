@@ -925,8 +925,9 @@ def comparativo(r, f, hoje=None, conferidos=None, manuais=None):
     out["fd_trab"] = ("%s desde %s" % (_nome_emprego(em[-1]), em[-1]["inicio"])) if em else "sem trabalho em curso"
     ficha_total = res["remidos_execucao"] + res["remidos_estudo"] + rem_man
     out["fd_remidos"] = "%s / %s" % (_fmtn(ficha_total), _fmtn(res["homologados"]))
-    out["fd_estudo"] = ("≈ %d h (≈ %s)" % (res["estudo_horas_pend"], rs.pl(res["estudo_dias_pend"], "dia", "dias"))) if res["estudo_horas_pend"] >= 12 else ""
-    out["fd_atestar"] = ("%d período%s" % (res["sem_n"], "s" if res["sem_n"] > 1 else "")) if res.get("sem_n") else ""
+    # colunas objetivas: Sim / Não (o detalhe vai para o cabeçalho da linha expandida)
+    out["fd_estudo"] = "Sim" if res["estudo_horas_pend"] >= 12 else "Não"
+    out["fd_atestar"] = "Sim" if res.get("sem_n") else "Não"
     # situação: diz o que falta, sem rodeio (remição não homologada, trabalho sem atestado, estudo, baixa sem início)
     partes = []
     nh = res["pendentes"] or 0
@@ -940,12 +941,33 @@ def comparativo(r, f, hoje=None, conferidos=None, manuais=None):
         partes.append("estudo a requerer (≈ %s)" % rs.pl(res["estudo_dias_pend"], "dia", "dias"))
     if res["baixas"] and not partes:
         partes.append("trabalho sem início registrado")
+    # último atestado há mais de 6 meses, com trabalho em curso
+    ult = None
+    for a in f.get("atestados", []):
+        d = _d(a.get("periodo_fim") or "") or _d(a.get("data") or "")
+        if d and (ult is None or d > ult):
+            ult = d
+    velho = bool(em and ult and (hoje - ult).days > 183)
+    if velho:
+        partes.append("último atestado há mais de 6 meses (período até %s)" % ult.strftime("%d/%m/%Y"))
+    # situação objetiva na coluna; o texto completo fica no cabeçalho da linha expandida
+    rot = []
+    if nh or res["estudo_horas_pend"] >= 12:
+        rot.append("Remição a requerer")
+    if not nh and res["diferenca"] >= 1:
+        rot.append("Conferir remição")
+    if res.get("sem_n") or (res["baixas"] and not rot):
+        rot.append("Ausência de atestado")
+    if velho:
+        rot.append("Último atestado há 6 meses")
     if partes:
-        cor = "vermelho" if nh else "amarelo"
-        sit = "; ".join(partes)
-        sit = sit[0].upper() + sit[1:]
+        cor = "vermelho" if (nh or res["estudo_horas_pend"] >= 12) else "amarelo"
+        det = "; ".join(partes)
+        det = det[0].upper() + det[1:]
+        sit = " · ".join(rot) or det
     else:
-        cor, sit = "verde", "Em ordem"
+        cor, sit, det = "verde", "Em ordem", ""
+    out["fd_sit_det"] = det
     faltas = f.get("faltas", [])
     out["fd_faltas"] = ("%d (%s)" % (len(faltas), ", ".join(x["situacao"] for x in faltas))) if faltas else "nenhuma"
     out["fd_remicoes"] = ("Remições no RSPE: " + " · ".join("%s em %s" % (_dias_txt(i["dias"]), i["data"]) for i in res["remicoes"]) +

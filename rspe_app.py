@@ -34,7 +34,7 @@ import rspe_relatorio as rrel
 import rspe_indulto_tl as rtl
 
 APP = "RSPE Base"
-VERSAO = "6.16.9"
+VERSAO = "6.16.10"
 
 
 def pasta_app():
@@ -607,20 +607,23 @@ class Api:
             _dm = dmanuais.get(_ch0, {})
             _n0 = _norm(r.get("nome", ""))
             _f0 = fichas.get(_ch0) or (fichas.get("nome:" + _n0) if _homonimos.get(_n0, 0) == 1 else None)
-            r.pop("_nasc_fonte", None)
+            r.pop("_nasc_fonte", None); r.pop("_nasc_data", None)
             if _dm.get("data_nascimento"):
                 if r.get("data_nascimento") != _dm["data_nascimento"]["valor"]:
                     r["_nasc_rspe"] = r.get("data_nascimento") or ""
                 r["data_nascimento"] = _dm["data_nascimento"]["valor"]
-                r["_nasc_fonte"] = "informada pelo operador em %s" % "/".join(_dm["data_nascimento"]["data"][:10].split("-")[::-1])
+                r["_nasc_data"] = "/".join(_dm["data_nascimento"]["data"][:10].split("-")[::-1])
+                r["_nasc_fonte"] = "informada pelo operador"
             elif not r.get("data_nascimento") and _f0 and (_f0.get("data_nascimento") or ""):
                 r["data_nascimento"] = _f0["data_nascimento"]
                 r["_nasc_fonte"] = "lida da ficha disciplinar do SIAPEN"
+                r["_nasc_data"] = ""
             for _c in r.get("_crimes", []):
                 _c.pop("_pena_max_inf", None)
                 _v = _dm.get("pena_max|" + rs.chave_pena_max(_c))
                 if _v:
                     _c["_pena_max_inf"] = rs.pena_livre(_v["valor"])
+                    _c["_pena_max_data"] = "/".join(_v["data"][:10].split("-")[::-1])
             try:
                 imp = r.get("importado_em")
                 r = rs.reprocessar(r)  # análise refeita com as regras desta versão (a leitura do PDF fica como foi gravada)

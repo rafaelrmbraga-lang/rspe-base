@@ -25,7 +25,7 @@ TX3 = "#98A2B3"
 LINE = "#E6E9EF"
 ZEBRA = "#F9FAFB"
 COR = {"vermelho": ("#FDE8E8", "#B42318"), "laranja": ("#FFEAD5", "#C4320A"), "amarelo": ("#FEF4D6", "#B54708"),
-       "vencido": ("#FEF4D6", "#B54708"), "verde": ("#DDF5E7", "#067647"), "cinza": ("#EEF0F3", "#5B6470"),
+       "vencido": ("#FDE8E8", "#B42318"), "verde": ("#DDF5E7", "#067647"), "cinza": ("#EEF0F3", "#5B6470"),
        "azul": ("#DBEAFE", "#1D4ED8"), "": ("#FFFFFF", TX)}
 AVISO = ("Triagem automatizada a partir do RSPE (SEEU) e da ficha disciplinar (SIAPEN). Não substitui o Atestado de Pena. "
          "Progressão, livramento e término são as datas do SEEU; indulto, comutação, prescrição e remição a requerer são "

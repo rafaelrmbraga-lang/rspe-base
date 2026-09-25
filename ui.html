@@ -65,7 +65,7 @@ input{font:inherit}
 .stat:hover{border-color:#B8C0CC}.stat.on{border-color:var(--pri);box-shadow:0 0 0 3px var(--pri-soft)}
 .stat .dot{width:10px;height:10px;border-radius:50%;flex:none}
 .stat b{font-size:20px;font-weight:700;letter-spacing:-.3px}.stat span{color:var(--tx2);font-size:12.5px}
-.stat.vermelho .dot{background:var(--r-dot)}.stat.laranja .dot{background:var(--o-dot)}.stat.amarelo .dot{background:var(--a-dot)}.stat.vencido .dot{background:var(--a-dot)}.stat.verde .dot{background:var(--g-dot)}.stat.cinza .dot{background:var(--c-dot)}.stat.azul .dot{background:var(--b-dot)}.stat.neutro .dot{background:#CBD5E1}
+.stat.vermelho .dot{background:var(--r-dot)}.stat.laranja .dot{background:var(--o-dot)}.stat.amarelo .dot{background:var(--a-dot)}.stat.vencido .dot{background:var(--r-dot)}.stat.verde .dot{background:var(--g-dot)}.stat.cinza .dot{background:var(--c-dot)}.stat.azul .dot{background:var(--b-dot)}.stat.neutro .dot{background:#CBD5E1}
 .info{padding:12px 24px 0;color:var(--tx2);font-size:12.5px}
 
 /* tabela */
@@ -79,16 +79,16 @@ tbody td{padding:9px 12px;border-bottom:1px solid #F0F2F5;white-space:normal;ove
 tbody td:first-child{padding-left:14px;font-weight:600}td.nw,th.nw{white-space:nowrap;font-variant-numeric:tabular-nums}td.nw{max-width:320px;overflow:hidden;text-overflow:ellipsis}td.nw .pill{white-space:nowrap}td.pl .pill{overflow-wrap:normal;word-break:keep-all}
 tbody tr{cursor:pointer;transition:background .1s}tbody tr:hover td{background:#F5F7FB}
 /* linhas brancas: a cor fica só nas palavras (pílulas) e na barrinha lateral */
-tbody tr.vermelho:hover td{background:#FFEFEF}tbody tr.laranja:hover td{background:#FFEFE3}tbody tr.amarelo:hover td{background:#FFF7E0}tbody tr.vencido:hover td{background:#FFF4D6}tbody tr.verde:hover td{background:#EAF8F0}
+tbody tr.vermelho:hover td{background:#FFEFEF}tbody tr.laranja:hover td{background:#FFEFE3}tbody tr.amarelo:hover td{background:#FFF7E0}tbody tr.vencido:hover td{background:#FFEFEF}tbody tr.verde:hover td{background:#EAF8F0}
 td.first{position:relative}td.first::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:3px;border-radius:0 3px 3px 0;background:transparent}
-tr.vermelho td.first::before{background:var(--r-dot)}tr.laranja td.first::before{background:var(--o-dot)}tr.amarelo td.first::before{background:var(--a-dot)}tr.vencido td.first::before{background:var(--a-dot)}tr.verde td.first::before{background:var(--g-dot)}tr.cinza td.first::before{background:var(--c-dot)}
+tr.vermelho td.first::before{background:var(--r-dot)}tr.laranja td.first::before{background:var(--o-dot)}tr.amarelo td.first::before{background:var(--a-dot)}tr.vencido td.first::before{background:var(--r-dot)}tr.verde td.first::before{background:var(--g-dot)}tr.cinza td.first::before{background:var(--c-dot)}
 .pill{display:inline-flex;align-items:baseline;gap:6px;padding:0;border-radius:0;background:none!important;font-size:12.5px;font-weight:600;max-width:100%;white-space:normal;line-height:1.35}
 .pill::before{content:"";width:7px;height:7px;border-radius:50%;flex:none;position:relative;top:-1px}
-.sdot{display:inline-block;width:10px;height:10px;border-radius:50%;flex:none;margin-right:7px;vertical-align:0}.sdot.verm{background:var(--r-dot)}.sdot.amb{background:var(--a-dot)}.sdot.verde{background:var(--g-dot)}
+.sdot{display:inline-block;width:10px;height:10px;border-radius:50%;flex:none;margin-right:7px;vertical-align:0;background:#98A2B3}.sdot.verm{background:var(--r-dot)}.sdot.amb{background:var(--a-dot)}.sdot.verde{background:var(--g-dot)}
 .ptl .pill.verm::before,.ptl .pill.amb::before,.ptl .pill.verde::before{display:none}.ptl .pill{align-items:center}.ptl .pill .sdot{margin-right:0}
 .pill.vermelho{background:var(--r-bg);color:var(--r-tx)}.pill.vermelho::before{background:var(--r-dot)}
 .pill.laranja{color:var(--o-tx)}.pill.laranja::before{background:var(--o-dot)}
-.pill.amarelo,.pill.vencido{background:var(--a-bg);color:var(--a-tx)}.pill.amarelo::before,.pill.vencido::before{background:var(--a-dot)}.pill.vencido{font-weight:600}
+.pill.amarelo{background:var(--a-bg);color:var(--a-tx)}.pill.amarelo::before{background:var(--a-dot)}.pill.vencido{background:var(--r-bg);color:var(--r-tx)}.pill.vencido::before{background:var(--r-dot)}.pill.vencido{font-weight:600}
 .pill.verde{background:var(--g-bg);color:var(--g-tx)}.pill.verde::before{background:var(--g-dot)}
 .pill.cinza{background:var(--c-bg);color:var(--c-tx)}.pill.cinza::before{background:var(--c-dot)}
 .pill.none{color:var(--tx2);font-weight:500}.pill.none::before{display:none}
@@ -162,6 +162,7 @@ tr.sub td{padding:0 0 0 0;background:#FFFFFF;cursor:default}tr.sub:hover td{back
 .pill.azul{color:#1D4ED8}.pill.azul::before{background:#2563EB}.card tr.azul td:first-child{box-shadow:inset 3px 0 0 #2563EB}.dot.azul,.lg .azul::before{background:#2563EB}
 .subtab pre{white-space:pre-wrap;overflow-wrap:anywhere;font:11.5px/1.5 Consolas,monospace;margin:6px 0 0;color:var(--tx2);background:#F9FAFB;border-radius:8px;padding:8px 10px}
 .mini{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:8px;font-size:11px;font-weight:600;color:var(--tx2);border:1px solid var(--line);background:#fff;cursor:pointer}.mini:hover{border-color:var(--pri);color:var(--pri)}
+.fdsit.vermelho{color:var(--r-tx)}.fdsit.amarelo{color:var(--a-tx)}.fdsit.verde{color:var(--g-tx)}
 .mini.pre{background:var(--pri);color:#fff;border-color:var(--pri)}.mini.pre:hover{opacity:.9;color:#fff}
 .chev{display:inline-block;width:14px;color:var(--tx3);font-size:11px;margin-right:4px;transition:.15s}tr.exp .chev{transform:rotate(90deg);color:var(--pri)}
 
@@ -433,7 +434,7 @@ const ui = {
     else{ const cont={}; rs.forEach(r=>{const c=this.cor(r,spec); cont[c]=(cont[c]||0)+1;});
       st.innerHTML=Object.keys(rot).map(c=>`<div class="stat ${c||'neutro'} ${this.filtroCor===c?'on':''}" onclick="ui.filtrarCor('${c}')"><i class="dot"></i><div><b>${cont[c]||0}</b><br><span>${rot[c]}</span></div></div>`).join(''); }
     // legenda
-    document.getElementById('legenda').innerHTML=Object.keys(rot).filter(c=>c||spec.id==='presc').map(c=>`<span class="leg"><i style="background:${c?`var(--${({vermelho:'r',laranja:'o',amarelo:'a',vencido:'a',verde:'g',cinza:'c',azul:'b'})[c]}-dot)`:'#CBD5E1'}"></i>${rot[c]}</span>`).join('');
+    document.getElementById('legenda').innerHTML=Object.keys(rot).filter(c=>c||spec.id==='presc').map(c=>`<span class="leg"><i style="background:${c?`var(--${({vermelho:'r',laranja:'o',amarelo:'a',vencido:'r',verde:'g',cinza:'c',azul:'b'})[c]}-dot)`:'#CBD5E1'}"></i>${rot[c]}</span>`).join('');
     // seletor de situação
     const selEl=document.getElementById('filtro');
     const stb=document.getElementById('subtabs'); stb.classList.toggle('on',this.aba==='ind'||this.aba==='presc');
@@ -462,7 +463,7 @@ const ui = {
         else { v = esc(v).replace('(est.)','<span class="est">(est.)</span>'); if(!v) v='<span class="muted">—</span>'; }
         if(i===0 && spec.expansivel) v=`<span class="chev">▶</span>${v}`;
         return `<td class="${i===0?'first':''} ${NW.has(c[0])?'nw':''} ${pk&&spec.id==='ind'?'pl':''}" title="${esc(String(r[c[0]+'_full']??r[c[0]]??''))}">${v}</td>`; }).join('');
-      const acao=`<td class="nw act">${spec.id==='ind'?`<span class="mini" title="Linha do tempo: crimes, impeditivos, pena cumprida em cada decreto, faltas na janela e resultado" onclick="event.stopPropagation();ui.indTL('${r.id}')">Verificar indulto/comutação</span> `:''}${MODELOS_ATIVOS?`<span class="mini" title="Preencher modelo .docx com os dados deste assistido" onclick="event.stopPropagation();ui.peticao('${r.id}')">Petição</span>`:''}${r.ficha_tem?'<span class="tag ok" title="Ficha disciplinar importada">ficha</span>':''}</td>`;
+      const acao=`<td class="nw act">${spec.id==='ind'?`<span class="mini" title="Linha do tempo: crimes, impeditivos, pena cumprida em cada decreto, faltas na janela e resultado" onclick="event.stopPropagation();ui.indTL('${r.id}')">Verificar indulto/comutação</span> `:''}${spec.id==='ext'?`<span class="mini" title="Linha do tempo: períodos cumpridos, fugas, faltas, hoje e término da pena" onclick="event.stopPropagation();ui.extTL('${r.id}')">Linha do tempo</span> `:''}${MODELOS_ATIVOS?`<span class="mini" title="Preencher modelo .docx com os dados deste assistido" onclick="event.stopPropagation();ui.peticao('${r.id}')">Petição</span>`:''}${r.ficha_tem?'<span class="tag ok" title="Ficha disciplinar importada">ficha</span>':''}</td>`;
       let html=`<tr class="${cor} ${exp?'exp':''}" onclick="${spec.expansivel?`ui.expandir('${r.id}')`:`ui.abrir('${r.id}')`}">${tds}${acao}</tr>`;
       if(exp) html+=`<tr class="sub"><td colspan="${spec.cols.length+1}"><div class="subwrap">${this.subTabela(r,spec)}</div></td></tr>`;
       return html; }).join('');
@@ -672,11 +673,11 @@ const ui = {
     const nA=todos.filter(s=>s.nivel==='alerta'&&!s.baixado).length, nV=todos.filter(s=>s.nivel==='verificar'&&!s.baixado).length;
     const paras=t=>String(t||'').split(/(?<=[.;])\s+(?=[A-ZÁÉÍÓÚ(])/).filter(x=>x.trim()).map(x=>`<p>${penaExt(esc(x))}</p>`).join('');
     const card=s=>{ const k=s.baixado?'bx':s.nivel;
-      const bx = (s.preencher&&!s.baixado?`<span class="mini pre" onclick="event.stopPropagation();ui.preencher('${r.id}',${ui.clip(JSON.stringify(s.preencher))})">Preencher</span> `:'')+`<span class="mini" onclick="event.stopPropagation();ui.copiarClip(${ui.clip(ui.txtAud(s))})">Copiar</span> `+(s.baixado ? `<span class="mini" onclick="event.stopPropagation();ui.reabrir('${r.id}','${s.chave}')">Reabrir</span>` : (s.nivel==='ok'||s.nivel==='info' ? '' : `<span class="mini" onclick="event.stopPropagation();ui.darBaixa('${r.id}','${s.chave}','${esc(s.titulo).replace(/'/g,'&#39;')}')">Dar baixa</span>`));
+      const bx = (s.preencher&&(!s.baixado||s.auto_baixa)?`<span class="mini ${s.baixado?'':'pre'}" onclick="event.stopPropagation();ui.preencher('${r.id}',${ui.clip(JSON.stringify(s.preencher))})">${s.baixado?'Alterar':'Preencher'}</span> `:'')+`<span class="mini" onclick="event.stopPropagation();ui.copiarClip(${ui.clip(ui.txtAud(s))})">Copiar</span> `+(s.baixado&&s.auto_baixa?'':s.baixado ? `<span class="mini" onclick="event.stopPropagation();ui.reabrir('${r.id}','${s.chave}')">Reabrir</span>` : (s.nivel==='ok'||s.nivel==='info' ? '' : `<span class="mini" onclick="event.stopPropagation();ui.darBaixa('${r.id}','${s.chave}','${esc(s.titulo).replace(/'/g,'&#39;')}')">Dar baixa</span>`));
       return `<div class="ac ${k}"><div class="ac-h"><span class="pill ${s.nivel_cor}">${esc(s.nivel_txt)}</span><b>${penaExt(esc(s.titulo))}</b><span class="ac-a">${bx}</span></div>
         ${s.detalhe?`<div class="ac-d">${paras(s.detalhe)}</div>`:''}
         ${s.fundamento?`<div class="ac-f">${penaExt(esc(s.fundamento))}</div>`:''}
-        ${s.baixado?`<div class="ac-f">Baixado em ${esc(s.baixa_data)}${s.baixa_obs?' · '+esc(s.baixa_obs):''}</div>`:''}</div>`; };
+        ${s.baixado?`<div class="ac-f">Baixado${s.baixa_data?' em '+esc(s.baixa_data):''}${s.baixa_obs?' · '+esc(s.baixa_obs):''}</div>`:''}</div>`; };
     const cab=`<div class="ac-top"><div><b>${esc(r.nome)}</b> <span class="muted">· conferência dos números e datas do RSPE (frações, soma das penas, data-base, perda de remidos, reincidência) · ${esc(r.aud_base)}</span></div>
       <div class="ac-chips">${nA?`<span class="pill vermelho">${nA} ${nA===1?'alerta':'alertas'}</span>`:''}${nV?`<span class="pill amarelo">${nV} ${nV===1?'ponto a verificar':'pontos a verificar'}</span>`:''}${!nA&&!nV?'<span class="pill verde">Sem inconsistências</span>':''}
       ${(ocultos||this.mostrarTudo)?`<span class="mini" onclick="event.stopPropagation();ui.mostrarTudo=!ui.mostrarTudo;ui.render()">${this.mostrarTudo?'ocultar conferências OK':'ver '+pl(ocultos,'conferência OK / informativa','conferências OK / informativas')}</span>`:''}
@@ -715,12 +716,12 @@ const ui = {
         return `<td${c[0]==='proc_crim'?' style="white-space:nowrap"':''}${s[c[0]+'_full']?` title="${esc(s[c[0]+'_full'])}"`:''}>${v}</td>`; }).join('');
       const det=(s.retro_detalhe?'PRETENSÃO PUNITIVA\n'+s.retro_detalhe+'\n\n':'')+(s.ppe_detalhe?'PRETENSÃO EXECUTÓRIA\n'+s.ppe_detalhe:'')+(s.avisos&&s.avisos.length?'\n\nAVISOS\n'+s.avisos.join('\n'):'');
       if(baixa){ const bx = s.baixado ? `<span class="mini" onclick="event.stopPropagation();ui.reabrir('${r.id}','${s.chave}')">Reabrir</span>` : (s.nivel==='ok' ? '' : `<span class="mini" onclick="event.stopPropagation();ui.darBaixa('${r.id}','${s.chave}','${esc(s.titulo).replace(/'/g,'&#39;')}')">Dar baixa</span>`);
-        const obs = s.baixado ? `<div class="muted" style="font-size:11.5px;margin-top:3px">baixado em ${esc(s.baixa_data)}${s.baixa_obs?' · '+esc(s.baixa_obs):''}</div>` : '';
+        const obs = s.baixado ? `<div class="muted" style="font-size:11.5px;margin-top:3px">baixado${s.baixa_data?' em '+esc(s.baixa_data):''}${s.baixa_obs?' · '+esc(s.baixa_obs):''}</div>` : '';
         let n=0; const tds2 = tds.replace(/<\/td>/g, m=>{ n++; return n===3 ? obs+m : m; });
         return `<tr class="${s.baixado?'bx':''}">${tds2}<td style="white-space:nowrap">${bx}</td></tr>`; }
       if(!calc) return `<tr>${tds}</tr>`;
       return `<tr>${tds}<td><span class="why" onclick="event.stopPropagation();const n=this.closest('tr').nextElementSibling;n.style.display=n.style.display==='none'?'':'none'">cálculo</span></td></tr><tr style="display:none"><td colspan="${cols.length+1}">${ui.memoria(s, spec.id==='presc'?(ui.prescModo==='pp'?'pp':'pe'):null)}</td></tr>`; }).join('');
-    const cab = spec.id==='aud' ? `<b>${esc(r.nome)}</b> <span class="muted">· ${esc(r.aud_resumo)} · conferido com a ${esc(r.aud_base)} · alertas apontam o que demanda atenção, não afirmam erro</span>${(ocultos||this.mostrarTudo)?` · <span class="mini" onclick="event.stopPropagation();ui.mostrarTudo=!ui.mostrarTudo;ui.render()">${this.mostrarTudo?'ocultar informativos e OK':'mostrar '+pl(ocultos,'informativo','informativos')+'/OK'}</span>`:''}${r.ficha_resumo?`<div class="muted" style="margin-top:3px">Ficha disciplinar: ${esc(r.ficha_resumo)}</div>`:''}` : spec.id==='fd' ? `<b>${esc(r.nome)}</b> <span class="muted">· ${r.ficha_tem?'ficha disciplinar (SIAPEN) impressa em '+esc((r.ficha||{}).data_impressao||'?')+' · '+esc(r.fd_resumo_exec||''):'sem ficha disciplinar importada'}</span>${r.ficha_tem&&r.fd_remicoes?`<div class="muted" style="font-size:12px;margin-top:3px">${esc(r.fd_remicoes)}</div>`:''}` : `<b>${esc(r.nome)}</b> <span class="muted">· ${pl((r.presc_linhas||[]).length,'crime','crimes')}, ${rows.length} ${ui.prescModo==='pp'?'com prescrição da pretensão punitiva aparente':'com prescrição executória aparente ou iminente'} ou datas a verificar na ação penal · cada crime prescreve isoladamente (art. 119)${r.presc_obs?' · '+esc(r.presc_obs):''}</span>`;
+    const cab = spec.id==='aud' ? `<b>${esc(r.nome)}</b> <span class="muted">· ${esc(r.aud_resumo)} · conferido com a ${esc(r.aud_base)} · alertas apontam o que demanda atenção, não afirmam erro</span>${(ocultos||this.mostrarTudo)?` · <span class="mini" onclick="event.stopPropagation();ui.mostrarTudo=!ui.mostrarTudo;ui.render()">${this.mostrarTudo?'ocultar informativos e OK':'mostrar '+pl(ocultos,'informativo','informativos')+'/OK'}</span>`:''}${r.ficha_resumo?`<div class="muted" style="margin-top:3px">Ficha disciplinar: ${esc(r.ficha_resumo)}</div>`:''}` : spec.id==='fd' ? (r.ficha_tem?`<b class="fdsit ${esc(r.fd_cor||'')}">${esc(r.fd_sit_det||'Em ordem')}</b> <span class="muted">· ficha disciplinar (SIAPEN) impressa em ${esc((r.ficha||{}).data_impressao||'?')}</span>`:'<span class="muted">Sem ficha disciplinar importada: importe o PDF da ficha (SIAPEN) pelo botão Importar PDFs.</span>')+`${r.ficha_tem&&r.fd_remicoes?`<div class="muted" style="font-size:12px;margin-top:3px">${esc(r.fd_remicoes)}</div>`:''}` : `<b>${esc(r.nome)}</b> <span class="muted">· ${pl((r.presc_linhas||[]).length,'crime','crimes')}, ${rows.length} ${ui.prescModo==='pp'?'com prescrição da pretensão punitiva aparente':'com prescrição executória aparente ou iminente'} ou datas a verificar na ação penal · cada crime prescreve isoladamente (art. 119)${r.presc_obs?' · '+esc(r.presc_obs):''}</span>`;
     const vazio = (spec.id==='presc' && !rows.length) ? `<tr><td colspan="${cols.length+1}" class="muted">Nenhum crime com prescrição ${ui.prescModo==='pp'?'da pretensão punitiva aparente':'executória aparente ou iminente'} nem datas faltando.</td></tr>` : '';
     if(spec.id==='fd' && r.ficha_tem) return `<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:8px"><span>${cab}</span><span style="white-space:nowrap">${r.fd_conf_tot?`<span class="muted" style="font-size:12.5px;margin-right:10px">Conferidos <b style="color:var(--g-tx)">${r.fd_conf_n||0}</b> de ${r.fd_conf_tot}</span>`:''}<span class="mini" onclick="event.stopPropagation();ui.fdAdicionar('${r.id}')">+ Adicionar atestado</span> <span class="mini" onclick="event.stopPropagation();ui.abrir('${r.id}')">Abrir ficha completa</span></span></div>${this.fdTabela(r)}`;
     return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><span>${cab}</span><span class="mini" onclick="event.stopPropagation();ui.abrir('${r.id}')">Abrir ficha completa</span></div><table class="subtab">${cg}${head}${body}${vazio}</table>`; },
@@ -964,13 +965,54 @@ const ui = {
       if(Object.keys(valores).length||Object.keys(saldos).length) dados={valores,saldos}; }
     await api('presc_ajuste', rid, L.chave_ajuste, dados); this.toast(dados?'Dados gravados: prescrição recalculada.':'Dados importados restaurados.'); },
   // ---- linha do tempo de indulto e comutação: uma linha por assistido; a figura é a memória de cálculo ----
-  async indTL(id){ this.toast('Montando a linha do tempo…'); const d=await api('indulto_linha', id); if(!d||d.erro) return;
+  async indTL(id){ this.toast('Montando a linha do tempo…'); const d=await api('indulto_linha', id); if(!d||d.erro) return; this._tlvModo='ind';
     this._tlv=d; this._tlvDec=(this.indDec!=='todos'&&(d.decretos||[]).some(x=>x.id===this.indDec))?this.indDec:(d.ultimo_decreto||((d.decretos||[]).slice(-1)[0]||{}).id); this._tlvDets=[]; this.renderTLV();
     document.getElementById('tlv').classList.add('on'); },
   tlvF(d){ return d?`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`:''; },
   tlvLarg(t,px){ return String(t).length*px*0.58; },
   tlvCabe(opcoes,larg,px){ return opcoes.find(t=>t&&this.tlvLarg(t,px)<=larg)||''; },
-  fecharTLV(){ document.getElementById('tlv').classList.remove('on'); },
+  fecharTLV(){ document.getElementById('tlv').classList.remove('on'); this._tlvModo=''; },
+  // ---------- linha do tempo da Extinção: o que já foi cumprido, as interrupções e o que falta até o término ----------
+  async extTL(id){ this.toast('Montando a linha do tempo…'); const d=await api('indulto_linha', id); if(!d||d.erro) return;
+    this._ext={d, m:(this.dados.registros||[]).find(x=>x.id===id)||{}}; this._tlvModo='ext'; this.renderExtTL();
+    document.getElementById('tlv').classList.add('on'); document.getElementById('toast').classList.remove('on'); },
+  renderExtTL(){ const E=this._ext; if(!E) return; const d=E.d, m=E.m, B=d.barra||{}, ct=B.cumprido_txt||{}; const dt=t=>this.tlD(t), DIA=864e5;
+    const hoje=dt(d.hoje); const term=/^\d{2}\/\d{2}\/\d{4}$/.test(m.ext_termino||'')?dt(m.ext_termino):null;
+    const fx=(d.faixas||[]).map(f=>({...f,a:dt(f.ini),b:dt(f.fim)})).filter(f=>!isNaN(f.a));
+    const t0=new Date(Math.min(...fx.map(f=>f.a), hoje)); t0.setMonth(t0.getMonth()-2); const t1=new Date(Math.max(hoje, term||hoje)); t1.setMonth(t1.getMonth()+4);
+    const TW=Math.max(760, Math.round((window.innerWidth||1400)-28-36-28-6)), PL=40, W=TW-80; const X=t=>PL+(t-t0)/(t1-t0)*W;
+    const COR={cumprimento:'#17B26A',detracao:'#47CD89',livramento:'#2E90FA',nao_comprovado:'#F5A524',fuga:'url(#exFuga)',liberdade:'#EAECF0'};
+    const NOME={cumprimento:'cumprimento',detracao:'prisão provisória (detração)',livramento:'livramento condicional',nao_comprovado:'atribuição não comprovada',fuga:'fuga / evasão',liberdade:'fora do cumprimento'};
+    // marcos numerados (como na prescrição): início, fugas, recapturas, livramento, faltas, hoje e término
+    const TIPOS={prisao:['Início do cumprimento','#475467'],fuga:['Fuga / interrupção','#B42318'],recaptura:['Recaptura / reinício','#067647'],livramento:['Livramento condicional','#1D4ED8'],falta:['Falta grave','#E5484D'],hoje:['Hoje','#101828']};
+    let mk=[]; let primeiro=true;
+    (d.marcos||[]).forEach(x=>{ if(!TIPOS[x.tipo]) return; if(x.tipo==='prisao'){ if(!primeiro) return; primeiro=false; }
+      mk.push({d:dt(x.data), r:x.tipo==='falta'?(x.rotulo||'Falta grave'):TIPOS[x.tipo][0], c:TIPOS[x.tipo][1]}); });
+    if(term) mk.push({d:term, r:'Término da pena', c:'#7A5AF8'});
+    mk=mk.filter(x=>!isNaN(x.d)).sort((p,q)=>p.d-q.d);
+    for(let i=mk.length-1;i>0;i--){ if(+mk[i].d===+mk[i-1].d){ mk[i-1].r=[...new Set([mk[i-1].r,mk[i].r])].join(' · '); mk.splice(i,1); } }
+    const ocup=[]; mk.forEach((x,i)=>{ x.n=i+1; x.cx=X(x.d); let t=0; while(ocup[t]&&ocup[t].some(q=>Math.abs(q-x.cx)<22)) t++; (ocup[t]=ocup[t]||[]).push(x.cx); x.tier=t; });
+    const Y=60+ocup.length*24; let svg=`<defs><pattern id="exFuga" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="8" height="8" fill="#FDE8E8"/><rect width="3" height="8" fill="#F04438"/></pattern></defs>`;
+    svg+=`<line x1="${PL}" y1="${Y}" x2="${PL+W}" y2="${Y}" stroke="#D0D5DD" stroke-width="2"/>`;
+    fx.forEach(f=>{ const x1=X(f.a), x2=Math.max(X(new Date(+f.b+DIA)),x1+2); const n=f.dias||Math.round((f.b-f.a)/DIA)+1; const tx=n>=365?this.tlAmd(n):this.tlDias(n);
+      svg+=`<g><title>${esc(NOME[f.tipo]||f.tipo)}: ${esc(f.ini)} a ${esc(f.fim)} (${esc(tx)})</title><rect x="${x1}" y="${Y-13}" width="${x2-x1}" height="26" rx="3" fill="${COR[f.tipo]||'#EAECF0'}" ${f.tipo==='liberdade'?'stroke="#D0D5DD"':''}/>${x2-x1>ui.tlvLarg(tx,10)+12?`<text x="${(x1+x2)/2}" y="${Y+4}" text-anchor="middle" font-size="10" font-weight="600" fill="${['liberdade','detracao','nao_comprovado'].includes(f.tipo)?'#344054':'#fff'}" ${f.tipo==='fuga'?'paint-order="stroke" stroke="#fff" stroke-width="3"':''}>${esc(tx)}</text>`:''}</g>`; });
+    if(term&&term>hoje){ const x1=X(hoje), x2=X(term); const n=Math.round((term-hoje)/DIA); const tx='a cumprir · '+(n>=365?this.tlAmd(n):this.tlDias(n));
+      svg+=`<rect x="${x1}" y="${Y-13}" width="${x2-x1}" height="26" rx="3" fill="#F4F3FF" stroke="#7A5AF8" stroke-dasharray="5 3"/>${x2-x1>ui.tlvLarg(tx,10)+12?`<text x="${(x1+x2)/2}" y="${Y+4}" text-anchor="middle" font-size="10" font-weight="600" fill="#5925DC">${esc(tx)}</text>`:''}`; }
+    { const a0=t0.getFullYear(), a1=t1.getFullYear(), passo=Math.max(1,Math.ceil((a1-a0+1)/(W/60))), ya=Y+26; svg+=`<line x1="${PL}" y1="${ya}" x2="${PL+W}" y2="${ya}" stroke="#98A2B3"/>`;
+      for(let a=a0+1;a<=a1;a++){ const xx=X(new Date(a,0,1)); svg+=`<line x1="${xx}" y1="${ya-3}" x2="${xx}" y2="${ya+3}" stroke="#98A2B3"/>${(a-a0)%passo===0?`<text x="${xx}" y="${ya+15}" text-anchor="middle" font-size="10.5" font-weight="600" fill="#667085">${a}</text>`:''}`; } }
+    mk.forEach(x=>{ const by=Y-34-x.tier*24; svg+=`<g><title>${esc(x.r)} · ${this.tlvF(x.d)}</title><line x1="${x.cx}" y1="${by+10}" x2="${x.cx}" y2="${Y+13}" stroke="${x.c}" stroke-width="1.5"/><circle cx="${x.cx}" cy="${by}" r="10" fill="${x.c}"/><text x="${x.cx}" y="${by+4}" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">${x.n}</text></g>`; });
+    const H=Y+50, vt=Y-34-(ocup.length-1)*24-16;
+    const tipos=[...new Set(fx.map(f=>f.tipo))];
+    const leg=tipos.map(t=>`<span><i style="background:${t==='fuga'?'repeating-linear-gradient(135deg,#F04438 0 3px,#FDE8E8 3px 8px)':COR[t]};${t==='liberdade'?'border:1px solid #D0D5DD':''}"></i>${NOME[t]||t}</span>`).join('')+(term&&term>hoje?'<span><i style="background:#F4F3FF;border:1px dashed #7A5AF8"></i>pena a cumprir até o término</span>':'');
+    const num=`<div class="ptl-num">${mk.map(x=>`<span><b style="background:${x.c}">${x.n}</b>${esc(x.r)} <em>${this.tlvF(x.d)}</em></span>`).join('')}</div>`;
+    const cls={vermelho:'verm',laranja:'amb',amarelo:'amb',verde:'verde',azul:'verde',cinza:''}[m.ext_cor]||'';
+    const info=[m.ext_hipoteses&&m.ext_hipoteses!=='—'?m.ext_hipoteses:'', m.ext_motivo||'', m.ext_extintos?'Extintos: '+m.ext_extintos:'', m.ext_multa||''].filter(Boolean);
+    document.getElementById('tlv').innerHTML=`<div class="tlv-in"><div class="tlv-top"><div><h2>Extinção · linha do tempo</h2><div class="sub">${esc(d.nome)} · ${esc(d.proc)} · passe o mouse sobre as faixas e os números para ver as datas</div></div><span class="sp"></span><button class="btn" onclick="ui.fecharTLV()">Fechar</button></div>
+      <div class="tlv-body">
+        <div class="tlv-sec"><div class="tlv-sum"><div><span class="k">Pena unificada</span><span class="v">${penaExt(esc(B.pena_total_txt||m.pena_total||''))}</span></div><div class="m"><span class="k">Cumprida até ${esc(d.hoje)}</span><span class="v">${penaExt(esc(ct.total||''))}</span></div><div><span class="k">Restante</span><span class="v">${penaExt(esc(B.restante_txt||''))}</span></div><div><span class="k">Término (SEEU)</span><span class="v">${esc(m.ext_termino||'—')}</span></div><div><span class="k">Situação</span><span class="v"><span class="sdot ${cls}"></span>${esc(m.ext_sit||'—')}</span></div></div></div>
+        <div class="tlv-sec"><h3>Linha do tempo</h3>${num}<div class="tlv-tl"><svg width="100%" viewBox="0 ${vt} ${TW} ${H-vt}" preserveAspectRatio="xMinYMin meet">${svg}</svg></div><div class="tlv-leg">${leg}</div></div>
+        ${info.length?`<div class="tlv-sec"><h3>Extinção</h3>${info.map(t=>`<div style="font-size:12.5px;margin:3px 0">${penaExt(esc(t))}</div>`).join('')}</div>`:''}
+      </div></div>`; },
   tlvSel(id){ this._tlvDec=id; this.renderTLV(); },
   tlvReg(titulo,det){ this._tlvDets.push({titulo,det}); return this._tlvDets.length-1; },
   tlvDet(i){ const x=this._tlvDets[i]; if(!x) return; const d=x.det||{}; const el=document.getElementById('tlvDet');
@@ -1145,7 +1187,7 @@ function pl(n,a,b){ return n+' '+(n===1?a:b); }
 function esc(s){ return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 function cmp(a,b){ const da=dt(a), db=dt(b); if(da&&db) return da-db; if(da) return -1; if(db) return 1; return String(a??'').localeCompare(String(b??''),'pt'); }
 function dt(v){ const m=/^(\d{2})\/(\d{2})\/(\d{4})/.exec(String(v??'')); return m? new Date(+m[3],+m[2]-1,+m[1]).getTime():null; }
-window.addEventListener('resize',()=>{ clearTimeout(ui._rz); ui._rz=setTimeout(()=>{ if(document.getElementById('tlv').classList.contains('on')) ui.renderTLV(); },200); });
+window.addEventListener('resize',()=>{ clearTimeout(ui._rz); ui._rz=setTimeout(()=>{ if(document.getElementById('tlv').classList.contains('on')) (ui._tlvModo==='ext'?ui.renderExtTL():ui.renderTLV()); },200); });
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ ui.fecharDrawer(); ui.fecharModal(); ui.fecharTLV(); } });
 document.addEventListener('click',e=>ui.tlClick(e));
 window.addEventListener('pywebviewready', ()=>api('listar'));

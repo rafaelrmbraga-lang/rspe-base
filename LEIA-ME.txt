@@ -1,8 +1,8 @@
-RSPE BASE - SEEU  v6.16.9 (programa em abas)
+RSPE BASE - SEEU  v6.16.10 (programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-6.16.9. A documentação técnica completa (cada parâmetro, a regra, a norma e
+6.16.10. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -535,6 +535,20 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v6.16.10
+  - Ficha disciplinar: sai a coluna "Remidos ficha / RSPE"; "Trabalho a atestar"
+    e "Estudo a requerer" em Sim/Não; Situação objetiva (Remição a requerer,
+    Conferir remição, Ausência de atestado, Último atestado há 6 meses, Sem
+    ficha). O texto completo aparece no cabeçalho da linha expandida.
+  - Extinção: botão "Linha do tempo" em cada linha (períodos cumpridos,
+    fugas, faltas, hoje e a pena a cumprir até o término).
+  - Dado preenchido pela Auditoria (ou data de nascimento lida da ficha): o
+    alerta sai da contagem e aparece como baixado, com a origem do dado e o
+    botão "Alterar".
+  - Contadores: "Extinta" só nas abas Extinção e Auditoria; a aba Indulto não
+    tem mais o contador de crime impeditivo.
+  - Progressão e Livramento: "Vencido" em vermelho (antes igual a "Até 60 dias").
 
 v6.16.9
   - Ficha disciplinar com remição em formato "4.33..." era recusada como
