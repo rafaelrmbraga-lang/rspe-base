@@ -2277,8 +2277,20 @@ def periodos_livramento(eventos, incidentes):
             if e_revogacao_livramento(j) or e_suspensao_livramento(j) or (j.get("situacao") == "CONCEDIDO" and "REGRESS" in t):
                 fins.append(to_date(j.get("data_referencia") or j.get("data_decisao") or ""))
         for e in eventos:
+            d = to_date(e.get("data") or "")
+            if not d:
+                continue
+            mot = (e.get("motivo") or "").upper()
             if "INTERRUP" in (e.get("tipo") or "").upper():
-                fins.append(to_date(e.get("data") or ""))
+                # a saída da unidade para o livramento é registrada como interrupção da custódia: é o início do período de
+                # prova, não o fim. Só encerra o livramento a interrupção por fuga/evasão ou a que vem bem depois do deferimento
+                if ini <= d <= ini + timedelta(days=60) and not RE_FUGA_EV.search(mot):
+                    continue
+                if "LIVRAMENTO" in mot and not re.search(r"REVOG|SUSPE", mot):
+                    continue
+                fins.append(d)
+            elif d > ini + timedelta(days=3) and re.search(r"PRIS|IN[ÍI]CIO|RECAPTURA", ((e.get("tipo") or "") + " " + mot).upper()):
+                fins.append(d)  # nova prisão durante o período de prova: o livramento fica suspenso (LEP, art. 145)
         fins = [d for d in fins if d and d > ini]
         per.append((ini, min(fins) if fins else None))
     return per
