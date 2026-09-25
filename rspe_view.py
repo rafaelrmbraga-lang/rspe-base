@@ -24,18 +24,18 @@ CORES = {
     "vermelho": ("#FDE8E8", "#B42318"),
     "laranja": ("#FFEAD5", "#C4320A"),
     "amarelo": ("#FEF4D6", "#B54708"),
-    "vencido": ("#FEF4D6", "#B54708"),
+    "vencido": ("#FDE8E8", "#B42318"),
     "verde": ("#DDF5E7", "#067647"),
     "cinza": ("#EEF0F3", "#5B6470"),
     "azul": ("#DBEAFE", "#1D4ED8"),
     "": ("#FFFFFF", "#344054"),
 }
 ROTULO = {
-    "lapso": {"vencido": "Vencido · verificar", "laranja": "Até 30 dias", "amarelo": "Até 60 dias", "verde": "Até 90 dias", "cinza": "Não se aplica / não iniciou / interrompida", "azul": "Extinta"},
-    "indulto": {"vermelho": "Crime impeditivo", "verde": "Possível", "amarelo": "A verificar", "cinza": "Não atinge", "azul": "Extinta"},
-    "presc": {"vermelho": "Prescrição aparente", "amarelo": "Iminente / a verificar", "": "Não prescrita", "cinza": "Sem dados", "azul": "Extinta"},
-    "presc_pp": {"vermelho": "Prescrição aparente", "": "Não configurada", "cinza": "Sem dados", "azul": "Extinta"},
-    "fd": {"vermelho": "Remição a requerer", "amarelo": "Conferir remição / sem atestado / estudo", "verde": "Em ordem", "cinza": "Sem ficha"},
+    "lapso": {"vencido": "Vencido · verificar", "laranja": "Até 30 dias", "amarelo": "Até 60 dias", "verde": "Até 90 dias", "cinza": "Não se aplica / não iniciou / interrompida"},
+    "indulto": {"verde": "Possível", "amarelo": "A verificar", "cinza": "Não atinge"},
+    "presc": {"vermelho": "Prescrição aparente", "amarelo": "Iminente / a verificar", "": "Não prescrita", "cinza": "Sem dados"},
+    "presc_pp": {"vermelho": "Prescrição aparente", "": "Não configurada", "cinza": "Sem dados"},
+    "fd": {"vermelho": "Remição a requerer", "amarelo": "Conferir remição / ausência de atestado / último atestado há 6 meses", "verde": "Em ordem", "cinza": "Sem ficha"},
     "aud": {"vermelho": "Com alertas", "amarelo": "Pontos a verificar", "verde": "Sem inconsistências", "azul": "Extinta"},
     "ext": {"vermelho": "Extinção cabível", "laranja": "Término em até 30 dias", "amarelo": "Até 60 dias / a verificar", "verde": "Término em até 90 dias", "cinza": "Sem previsão / interrompida", "azul": "Extinta (registrada)"},
 }
@@ -676,6 +676,8 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
     for it in aud["aud_itens"]:
         it["chave"] = chave_item(it)
         b, antiga = baixa_de(it, baixas)
+        if not b and it.get("auto_baixa"):
+            b = it["auto_baixa"]  # dado preenchido: o alerta aparece como baixado, com a origem do dado
         if antiga:
             it["migrar_de"] = antiga  # o app regrava a baixa na chave nova
         it["baixado"] = bool(b)
@@ -860,7 +862,7 @@ ABAS = [
      "pilulas": {"ext_sit": "ext_cor"}},
     {"id": "fd", "titulo": "Ficha disciplinar", "cor": "fd_cor", "legenda": "fd", "expansivel": True,
      "cols": [("nome", "Nome", 20), ("proc", "Nº da execução", 15), ("fd_trab", "Trabalho atual", 18),
-              ("fd_remidos", "Remidos ficha / RSPE", 11), ("fd_atestar", "Trabalho a atestar", 12), ("fd_estudo", "Estudo a requerer", 11), ("fd_sit", "Situação", 14)],
+              ("fd_atestar", "Trabalho a atestar", 10), ("fd_estudo", "Estudo a requerer", 10), ("fd_sit", "Situação", 20)],
      "pilulas": {"fd_sit": "fd_cor"},
      "sub": "fd_linhas", "sub_cols": [("emp", "Emprego / estudo", 14), ("un", "Unidade", 8), ("per", "Período", 14), ("dias", "Dias", 6), ("at", "Atestado / horas", 26), ("sit", "Situação / providência", 28)],
      "sub_pilulas": {"sit": "cor"}},

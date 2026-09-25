@@ -1,5 +1,5 @@
 {
- "versao": "2026-09-24c",
+ "versao": "2026-09-25",
  "descricao": "Base juridica do RSPE Base. Editavel: o programa le este arquivo ao abrir (copia ao lado do .exe tem prioridade sobre a embutida). Datas em AAAA-MM-DD. Fracoes como 'num/den' ou percentual 'NN%'.",
  "prescricao": {
   "art109_tabela": [
@@ -1232,6 +1232,21 @@
  },
  "pena_maxima_abstrata": {
   "_nota": "Pena máxima em abstrato (anos; 0.5 = 6 meses) usada quando o RSPE corta o texto do tipo penal. Chave: 'lei:artigo' ou 'lei:artigo §X'. Só o Decreto 11.302/2022 (art. 5º) usa esta tabela. Edite/complete conforme necessário.",
+  "_nota_lcp": "Contravenções (Decreto-Lei 3.688/41, LCP): prisão simples, máximo cominado de cada tipo. Contravenção fora desta lista: o programa usa o teto de 5 anos do art. 10 da LCP (a prisão simples nunca passa de 5 anos).",
+  "3688:19": 0.5,
+  "3688:21": 0.25,
+  "3688:24": 2,
+  "3688:28": 0.5,
+  "3688:31": 0.1667,
+  "3688:34": 0.25,
+  "3688:35": 0.25,
+  "3688:39": 0.5,
+  "3688:42": 0.25,
+  "3688:47": 0.25,
+  "3688:50": 1,
+  "3688:59": 0.25,
+  "3688:62": 0.25,
+  "3688:64": 0.0833,
   "2848:121": 20,
   "2848:121 §2": 30,
   "2848:121 §3": 3,

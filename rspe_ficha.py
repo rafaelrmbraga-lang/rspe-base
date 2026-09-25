@@ -39,7 +39,9 @@ def _dp(txt):
 
 
 def _num(txt):
-    return float(txt.replace(",", "."))
+    """Número da ficha ('4,33', '4.33...', '12'): só a parte numérica; 0 se não houver."""
+    m = re.search(r"\d+(?:[.,]\d+)?", str(txt or ""))
+    return float(m.group(0).replace(",", ".")) if m else 0.0
 
 
 def texto_pdf(caminho):
@@ -134,7 +136,7 @@ def extrair(caminho):
     cab = t.split("HISTÓRICO")[0]
     f["nome"] = (re.search(r"Nome:\s*(.+?)\s+RGI:", cab) or [None, ""])[1].strip() if re.search(r"Nome:\s*(.+?)\s+RGI:", cab) else ""
     f["rgi"] = (re.search(r"RGI:\s*(\d+)", cab) or [None, ""])[1]
-    f["cpf"] = (re.search(r"CPF:\s*(\d+)", cab) or [None, ""])[1]
+    f["cpf"] = (re.search(r"CPF:\s*([\d.\-]+\d)", cab) or [None, ""])[1]
     f["data_nascimento"] = (re.search(r"Data Nascimento:\s*(\d{2}/\d{2}/\d{4})", cab) or [None, ""])[1]
     f["artigo"] = (re.search(r"Artigo:\s*(.+)", cab) or [None, ""])[1].strip()
     f["data_prisao"] = (re.search(r"Data Prisão:\s*(\d{2}/\d{2}/\d{4})", cab) or [None, ""])[1]
@@ -923,8 +925,9 @@ def comparativo(r, f, hoje=None, conferidos=None, manuais=None):
     out["fd_trab"] = ("%s desde %s" % (_nome_emprego(em[-1]), em[-1]["inicio"])) if em else "sem trabalho em curso"
     ficha_total = res["remidos_execucao"] + res["remidos_estudo"] + rem_man
     out["fd_remidos"] = "%s / %s" % (_fmtn(ficha_total), _fmtn(res["homologados"]))
-    out["fd_estudo"] = ("≈ %d h (≈ %s)" % (res["estudo_horas_pend"], rs.pl(res["estudo_dias_pend"], "dia", "dias"))) if res["estudo_horas_pend"] >= 12 else ""
-    out["fd_atestar"] = ("%d período%s" % (res["sem_n"], "s" if res["sem_n"] > 1 else "")) if res.get("sem_n") else ""
+    # colunas objetivas: Sim / Não (o detalhe vai para o cabeçalho da linha expandida)
+    out["fd_estudo"] = "Sim" if res["estudo_horas_pend"] >= 12 else "Não"
+    out["fd_atestar"] = "Sim" if res.get("sem_n") else "Não"
     # situação: diz o que falta, sem rodeio (remição não homologada, trabalho sem atestado, estudo, baixa sem início)
     partes = []
     nh = res["pendentes"] or 0
@@ -938,12 +941,33 @@ def comparativo(r, f, hoje=None, conferidos=None, manuais=None):
         partes.append("estudo a requerer (≈ %s)" % rs.pl(res["estudo_dias_pend"], "dia", "dias"))
     if res["baixas"] and not partes:
         partes.append("trabalho sem início registrado")
+    # último atestado há mais de 6 meses, com trabalho em curso
+    ult = None
+    for a in f.get("atestados", []):
+        d = _d(a.get("periodo_fim") or "") or _d(a.get("data") or "")
+        if d and (ult is None or d > ult):
+            ult = d
+    velho = bool(em and ult and (hoje - ult).days > 183)
+    if velho:
+        partes.append("último atestado há mais de 6 meses (período até %s)" % ult.strftime("%d/%m/%Y"))
+    # situação objetiva na coluna; o texto completo fica no cabeçalho da linha expandida
+    rot = []
+    if nh or res["estudo_horas_pend"] >= 12:
+        rot.append("Remição a requerer")
+    if not nh and res["diferenca"] >= 1:
+        rot.append("Conferir remição")
+    if res.get("sem_n") or (res["baixas"] and not rot):
+        rot.append("Ausência de atestado")
+    if velho:
+        rot.append("Último atestado há 6 meses")
     if partes:
-        cor = "vermelho" if nh else "amarelo"
-        sit = "; ".join(partes)
-        sit = sit[0].upper() + sit[1:]
+        cor = "vermelho" if (nh or res["estudo_horas_pend"] >= 12) else "amarelo"
+        det = "; ".join(partes)
+        det = det[0].upper() + det[1:]
+        sit = " · ".join(rot) or det
     else:
-        cor, sit = "verde", "Em ordem"
+        cor, sit, det = "verde", "Em ordem", ""
+    out["fd_sit_det"] = det
     faltas = f.get("faltas", [])
     out["fd_faltas"] = ("%d (%s)" % (len(faltas), ", ".join(x["situacao"] for x in faltas))) if faltas else "nenhuma"
     out["fd_remicoes"] = ("Remições no RSPE: " + " · ".join("%s em %s" % (_dias_txt(i["dias"]), i["data"]) for i in res["remicoes"]) +

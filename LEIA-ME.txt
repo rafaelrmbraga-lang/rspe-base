@@ -1,8 +1,8 @@
-RSPE BASE - SEEU  v6.16.8 (programa em abas)
+RSPE BASE - SEEU  v6.16.10 (programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-6.16.8. A documentação técnica completa (cada parâmetro, a regra, a norma e
+6.16.10. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -535,6 +535,40 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v6.16.10
+  - Ficha disciplinar: sai a coluna "Remidos ficha / RSPE"; "Trabalho a atestar"
+    e "Estudo a requerer" em Sim/Não; Situação objetiva (Remição a requerer,
+    Conferir remição, Ausência de atestado, Último atestado há 6 meses, Sem
+    ficha). O texto completo aparece no cabeçalho da linha expandida.
+  - Extinção: botão "Linha do tempo" em cada linha (períodos cumpridos,
+    fugas, faltas, hoje e a pena a cumprir até o término).
+  - Dado preenchido pela Auditoria (ou data de nascimento lida da ficha): o
+    alerta sai da contagem e aparece como baixado, com a origem do dado e o
+    botão "Alterar".
+  - Contadores: "Extinta" só nas abas Extinção e Auditoria; a aba Indulto não
+    tem mais o contador de crime impeditivo.
+  - Progressão e Livramento: "Vencido" em vermelho (antes igual a "Até 60 dias").
+
+v6.16.9
+  - Ficha disciplinar com remição em formato "4.33..." era recusada como
+    "não é um RSPE do SEEU": a leitura do número foi corrigida, e uma ficha com
+    falha de leitura passa a ser relatada como ficha, não como RSPE inválido.
+  - Contravenções penais (Decreto-Lei 3.688/41) na base jurídica: pena máxima
+    dos tipos mais comuns (arts. 19, 21, 24, 28, 31, 34, 35, 39, 42, 47, 50, 59,
+    62 e 64) e, para os demais, o teto de 5 anos da prisão simples (LCP, art. 10).
+    O indulto do Decreto 2022 (art. 5º) deixa de ficar A VERIFICAR por isso.
+  - Data de nascimento: leitura do RSPE mais tolerante (rótulo e data em linhas
+    separadas); sem ela no RSPE, o programa usa a da ficha disciplinar.
+  - Auditoria pede o preenchimento de dado objetivo que falta: data de
+    nascimento e pena máxima em abstrato não lida (botão "Preencher"); a análise
+    é refeita com o dado informado. Datas e penas dos crimes: Prescrição →
+    editar dados.
+  - Concurso com crime impeditivo: a linha do tempo mostra, para o decreto
+    selecionado, a parte da pena do impeditivo imputada primeiro (2/3 em 2024 e
+    2025; pena integral em 2022 - STF, RHC 246.431; STJ, HC 930.896) e quanto
+    sobra de pena cumprida para os demais crimes; a fundamentação copiada traz
+    a mesma conta.
 
 v6.16.8
   - Nomes dos assistidos no padrão de nome próprio, qualquer que seja a

@@ -34,7 +34,7 @@ import rspe_relatorio as rrel
 import rspe_indulto_tl as rtl
 
 APP = "RSPE Base"
-VERSAO = "6.16.8"
+VERSAO = "6.16.10"
 
 
 def pasta_app():
@@ -341,6 +341,9 @@ class Base:
         # ajustes manuais da tabela de prescrição executória (padrão SEEU): por processo e linha (ação penal + crime)
         self.con.execute("""CREATE TABLE IF NOT EXISTS presc_ajustes (
             processo TEXT, chave TEXT, dados TEXT, data TEXT, PRIMARY KEY (processo, chave))""")
+        # dados objetivos que o RSPE não trouxe, informados pelo operador pela Auditoria (data de nascimento, pena máxima)
+        self.con.execute("""CREATE TABLE IF NOT EXISTS dados_manuais (
+            processo TEXT, campo TEXT, valor TEXT, data TEXT, PRIMARY KEY (processo, campo))""")
         self.con.commit()
 
     def gravar_ficha(self, f, processo, mesma_pessoa=False):
@@ -437,6 +440,23 @@ class Base:
                                  (processo, chave, json.dumps(dados, ensure_ascii=False), datetime.now().strftime("%d/%m/%Y %H:%M")))
             else:
                 self.con.execute("DELETE FROM presc_ajustes WHERE processo=? AND chave=?", (processo, chave))
+            self.con.commit()
+
+    def dados_manuais(self):
+        with self.lock:
+            rows = self.con.execute("SELECT processo, campo, valor, data FROM dados_manuais").fetchall()
+        out = {}
+        for p, c, v, dt in rows:
+            out.setdefault(p, {})[c] = {"valor": v, "data": dt}
+        return out
+
+    def dado_gravar(self, processo, campo, valor):
+        with self.lock:
+            if valor in (None, ""):
+                self.con.execute("DELETE FROM dados_manuais WHERE processo=? AND campo=?", (processo, campo))
+            else:
+                self.con.execute("INSERT OR REPLACE INTO dados_manuais VALUES (?,?,?,?)",
+                                 (processo, campo, str(valor), datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
             self.con.commit()
 
     def manuais(self):
@@ -576,11 +596,34 @@ class Api:
         fichas = self.base.fichas()
         manuais = self.base.manuais()
         ajustes = self.base.presc_ajustes()
+        dmanuais = self.base.dados_manuais()
         self._modelos = []
         _homonimos = {}
         for _r in brutos:
             _homonimos[_norm(_r.get("nome", ""))] = _homonimos.get(_norm(_r.get("nome", "")), 0) + 1
         for r in brutos:
+            # dados que o RSPE não trouxe: informados na Auditoria ou, para a data de nascimento, lidos da ficha disciplinar
+            _ch0 = r.get("processo_execucao") or r.get("arquivo")
+            _dm = dmanuais.get(_ch0, {})
+            _n0 = _norm(r.get("nome", ""))
+            _f0 = fichas.get(_ch0) or (fichas.get("nome:" + _n0) if _homonimos.get(_n0, 0) == 1 else None)
+            r.pop("_nasc_fonte", None); r.pop("_nasc_data", None)
+            if _dm.get("data_nascimento"):
+                if r.get("data_nascimento") != _dm["data_nascimento"]["valor"]:
+                    r["_nasc_rspe"] = r.get("data_nascimento") or ""
+                r["data_nascimento"] = _dm["data_nascimento"]["valor"]
+                r["_nasc_data"] = "/".join(_dm["data_nascimento"]["data"][:10].split("-")[::-1])
+                r["_nasc_fonte"] = "informada pelo operador"
+            elif not r.get("data_nascimento") and _f0 and (_f0.get("data_nascimento") or ""):
+                r["data_nascimento"] = _f0["data_nascimento"]
+                r["_nasc_fonte"] = "lida da ficha disciplinar do SIAPEN"
+                r["_nasc_data"] = ""
+            for _c in r.get("_crimes", []):
+                _c.pop("_pena_max_inf", None)
+                _v = _dm.get("pena_max|" + rs.chave_pena_max(_c))
+                if _v:
+                    _c["_pena_max_inf"] = rs.pena_livre(_v["valor"])
+                    _c["_pena_max_data"] = "/".join(_v["data"][:10].split("-")[::-1])
             try:
                 imp = r.get("importado_em")
                 r = rs.reprocessar(r)  # análise refeita com as regras desta versão (a leitura do PDF fica como foi gravada)
@@ -641,6 +684,21 @@ class Api:
             return {"erro": "Nenhuma base aberta."}
         self.base.presc_ajuste_gravar(processo, chave, dados or None)
         return self.listar()
+
+    def dado_manual(self, processo, campo, valor):
+        """Dado objetivo que o RSPE não trouxe, informado pelo operador no alerta da Auditoria (data de nascimento,
+        pena máxima em abstrato de um tipo). Valor vazio apaga. A análise é refeita com ele."""
+        if not self.base:
+            return {"erro": "Nenhuma base aberta."}
+        valor = (valor or "").strip()
+        if valor and campo == "data_nascimento" and not rs.to_date(valor):
+            return {"erro": "Data inválida: use dd/mm/aaaa."}
+        if valor and campo.startswith("pena_max|") and not rs.pena_livre(valor):
+            return {"erro": "Pena inválida: use, por exemplo, 3 meses, 1 ano e 6 meses ou 0a3m0d."}
+        self.base.dado_gravar(processo, campo, valor)
+        r = self.listar()
+        r["msg"] = "Dado gravado; análise refeita." if valor else "Dado informado apagado."
+        return r
 
     def baixar_alerta(self, processo, chave, titulo, obs):
         if not self.base:
@@ -1264,9 +1322,16 @@ def _extrair_com_hash(caminho):
     except ValueError as e:
         # pode ser uma Ficha Disciplinar do SIAPEN
         try:
-            r = rf.extrair(caminho)
+            txt = rf.texto_pdf(caminho)
         except Exception:
             raise e
+        if not rf.e_ficha(txt):
+            raise e
+        # é uma ficha disciplinar: uma falha na leitura dela não pode ser relatada como "não é um RSPE"
+        try:
+            r = rf.extrair(caminho)
+        except Exception as e2:
+            raise ValueError("ficha disciplinar do SIAPEN com falha na leitura (%s) - enviar o arquivo para correção" % e2)
     r["_hash"] = h.hexdigest()
     return r
 

@@ -626,6 +626,7 @@ def _decreto(D, ref, pub, C, cumprido, data_atinge, faltas, hoje, ultimo, em_cur
                      "pena_imp_txt": _pena(ti["pena_imp"]), "exigido": ti["exigido"], "exigido_txt": _pena(ti["exigido"]), "data": _f(dt_lib), "projecao": proj,
                      "crimes_imp": ids_imp, "crimes_liv": ids_liv, "imputado_imp": min(ti["cumprido_total"], ti["exigido"]),
                      "imputado_liv": max(0, ti["cumprido_total"] - ti["exigido"]),
+                     "sobra_txt": _pena(max(0, ti["cumprido_total"] - ti["exigido"])), "cumprido_total_txt": _pena(ti["cumprido_total"]),
                      "det": _det("pena dos crimes impeditivos: %s" % _pena(ti["pena_imp"]), ", ".join(ids_imp), "%s → %s" % (_f(ref), _f(dt_lib) or "sem data"),
                                  "imputação do cumprido primeiro ao impeditivo", (D.get("concurso_impeditivo") or {}).get("dispositivo", ""),
                                  "%s × %s = %s; cumprido em %s: %s" % (_pena(ti["pena_imp"]), ti["fracao"], _pena(ti["exigido"]), _f(ref), _pena(ti["cumprido_total"])),
@@ -742,9 +743,10 @@ def _fundamentacao(out, tipo, num_c=None):
     im = out.get("imputacao")
     if im:
         ps.append("Concurso com crime impeditivo (%s). %s da pena de %s (%s) é imputado primeiro ao crime impeditivo%s; "
-                  "só depois se analisa %s." % (im.get("dispositivo", ""), im["fracao"], ", ".join(im["crimes_imp"]), _pena_ext(im["exigido_txt"]),
-                                                (", atingido em %s%s" % (im["data"], " (projeção)" if im.get("projecao") else "")) if im.get("data") else "",
-                                                ", ".join(im["crimes_liv"]) or "os demais crimes"))
+                  "o tempo cumprido que sobra (%s, de %s cumpridos em %s) é o que se considera para %s." % (
+                      im.get("dispositivo", ""), "A totalidade" if im["fracao"] == "100%" else im["fracao"], ", ".join(im["crimes_imp"]), _pena_ext(im["exigido_txt"]),
+                      (", atingido em %s%s" % (im["data"], " (projeção)" if im.get("projecao") else "")) if im.get("data") else "",
+                      _pena_ext(im.get("sobra_txt", "")), _pena_ext(im.get("cumprido_total_txt", "")), ref, ", ".join(im["crimes_liv"]) or "os demais crimes"))
     rot = {"Natureza dos crimes (vedações)": "Natureza dos crimes", "Fato anterior ao decreto": "Alcance temporal",
            "Condenação na data (trânsito/recurso da acusação)": "Condenação"}
     for c in x.get("checklist") or []:

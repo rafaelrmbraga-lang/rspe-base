@@ -292,8 +292,43 @@ def auditar(r, hoje=None):
     faltam = rs.campos_faltantes(r)
     if faltam:
         itens.append(_item("verificar", "Dados ausentes no RSPE: %s" % ", ".join(faltam),
-                           "O SEEU não imprimiu esses dados (guia sem cálculo, pena interrompida) ou o programa não conseguiu lê-los. Os cálculos deste assistido podem ficar incompletos; conferir o PDF.",
+                           "O SEEU não imprimiu esses dados (guia sem cálculo, pena interrompida) ou o programa não conseguiu lê-los. Os cálculos deste assistido podem ficar incompletos; conferir o PDF."
+                           + (" Data do fato, pena, sentença e trânsito de cada crime: preencher em Prescrição → editar dados." if any("crime" in f for f in faltam) else ""),
                            "", tipo="dados-ausentes-no-rspe"))
+    # dados objetivos que o RSPE não trouxe: o alerta pede o preenchimento (botão "Preencher" na Auditoria)
+    if not nasc or r.get("_nasc_fonte"):
+        it = _item("verificar", "Data de nascimento não consta no RSPE - informar",
+                   "Sem ela o programa não aplica a metade do prazo de prescrição (menor de 21 anos no fato ou maior de 70 na sentença) nem as "
+                   "hipóteses de idade do indulto e da comutação, e esses pontos ficam A VERIFICAR. Informe a data pelo botão Preencher "
+                   "(ou importe a ficha disciplinar do SIAPEN, que traz a data).",
+                   "CP, art. 115; Decretos de indulto (hipóteses por idade).", tipo="nascimento-nao-consta")
+        it["preencher"] = {"campo": "data_nascimento", "rotulo": "Data de nascimento (dd/mm/aaaa)", "tipo": "data"}
+        if nasc:
+            # preenchido (pelo operador ou pela ficha): o alerta sai da contagem e fica como baixado, com a origem do dado
+            _dt = r.get("_nasc_data") or ""
+            it["auto_baixa"] = {"obs": "Data de nascimento %s: %s%s. Usada nos cálculos (art. 115 e idade no indulto)." % (
+                r["_nasc_fonte"], rs.fmt(nasc), (" (RSPE: %s)" % r["_nasc_rspe"]) if r.get("_nasc_rspe") else ""), "data": _dt}
+        itens.append(it)
+    _pm_vistos = set()
+    for c in ativos:
+        _ff = rs.to_date(c.get("data_infracao") or "")
+        if _ff and _ff > date(2022, 12, 25):
+            continue  # só o Decreto 11.302/2022 usa a pena máxima em abstrato
+        _inf = c.get("_pena_max_inf")
+        if _inf or rs.pena_maxima_abstrata(dict(c)) is None:
+            ch = rs.chave_pena_max(c)
+            if ch in _pm_vistos:
+                continue
+            _pm_vistos.add(ch)
+            nome = rs.crimes_curto([c])
+            it = _item("verificar", "%s: pena máxima em abstrato não lida do RSPE - informar" % nome,
+                       "O SEEU cortou o texto do tipo penal e o tipo não está na tabela da base jurídica. Sem a pena máxima, o indulto do "
+                       "Decreto 11.302/2022 (art. 5º: pena máxima de até 5 anos) fica A VERIFICAR. Informe a pena máxima cominada pelo botão Preencher.",
+                       "Decreto 11.302/2022, art. 5º.", tipo="pena-maxima-nao-lida", ref=ch)
+            it["preencher"] = {"campo": "pena_max|" + ch, "rotulo": "Pena máxima cominada de %s (ex.: 3 meses, 4 anos, 1 ano e 6 meses)" % nome, "tipo": "pena"}
+            if _inf:
+                it["auto_baixa"] = {"obs": "Pena máxima informada pelo operador: %s." % rs.dias_para_pena(int(_inf)), "data": c.get("_pena_max_data") or ""}
+            itens.append(it)
     # ---------------- 0. extinções registradas em incidentes / cabeçalho ----------------
     if r.get("execucao_extinta"):
         itens.append(_item("alerta", "Execução extinta segundo incidente do RSPE (%s)" % r["execucao_extinta"],
