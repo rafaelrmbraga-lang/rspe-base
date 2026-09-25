@@ -418,6 +418,13 @@ def linha(r, hoje=None):
     faltas = []
     for i in incidentes:
         rot = rs._rotulo_incidente(i)
+        if i.get("_ficha_falta") and not rs.RE_FALTA_PROPRIA.search(rot) and i.get("_falta") != "nao" and not rs._negado(i):
+            # regressão/perda explicada por falta registrada na ficha: falta grave pela data do fato na ficha
+            x = _d(i["_ficha_falta"]["data"])
+            if x:
+                faltas.append({"fato": x, "homol": None, "pendente": False, "texto": "%s - ficha: %s" % (rot, i["_ficha_falta"]["texto"][:80]),
+                               "sub": "registrada na ficha (motivou: %s)" % rot.lower()[:40]})
+            continue
         if not rs.RE_FALTA_PROPRIA.search(rot) or rs._negado(i) or i.get("_falta") == "nao":
             continue
         fato = rs._data_fato_falta(i)

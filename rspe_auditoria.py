@@ -314,11 +314,16 @@ def auditar(r, hoje=None):
     for fi in rs.faltas_editaveis(incidentes, eventos, hoje):
         dec = fi["decisao"]
         rot = {"sim": "falta grave", "nao": "não houve falta grave"}.get(dec, "")
-        fuga = fi["padrao"] == "falta"
+        fuga = fi["padrao"] == "falta" and not fi.get("ficha_falta")
         if dec:
             it = _item("verificar", "%s em %s: %s" % ("Fuga" if fuga else "Falta a apurar", fi["data"] or "data não informada", "informar se houve falta grave"),
                        fi["texto"], "LEP, arts. 50 e 118; STJ, Tema 1195.", tipo="falta-a-apurar", ref=fi["chave"])
             it["auto_baixa"] = {"obs": "Decisão do operador: %s. Vale em todas as abas (falta nos 12 meses, indulto, comutação)." % rot, "data": ""}
+        elif fi.get("ficha_falta"):
+            it = _item("info", "%s em %s: a ficha registra a falta - tratada como falta grave" % (fi["texto"][:40], fi["data"] or "data não informada"),
+                       "%s. %s. A ficha explica o indício do RSPE: entra como falta grave pela data do fato registrada na ficha (falta nos 12 meses, "
+                       "indulto, comutação). Se o juízo não reconheceu a falta, informe pelo botão Preencher." % (fi["texto"], fi["ficha"]),
+                       "LEP, arts. 50, 52 e 118; STJ, Tema 1195.", tipo="falta-a-apurar", ref=fi["chave"])
         elif fuga:
             it = _item("info", "Fuga em %s tratada como falta grave" % (fi["data"] or "data não informada"),
                        "%s. Fuga é falta grave (LEP, art. 50, II) e impede o indulto e a comutação quando está na janela do decreto, "
@@ -326,8 +331,9 @@ def auditar(r, hoje=None):
                        "informe pelo botão Preencher." % fi["texto"], "LEP, art. 50, II; STJ, Tema 1195.", tipo="fuga-falta-grave", ref=fi["chave"])
         else:
             it = _item("verificar", "Falta a apurar em %s: informar se houve falta grave" % (fi["data"] or "data não informada"),
-                       "%s. O RSPE não registra sanção reconhecida. Informe se houve falta grave: a decisão vale em todas as abas "
-                       "(falta nos 12 meses, indulto, comutação, linha do tempo)." % fi["texto"], "LEP, arts. 50 e 118; STJ, Tema 1195.",
+                       "%s. O RSPE não registra sanção reconhecida.%s Informe se houve falta grave: a decisão vale em todas as abas "
+                       "(falta nos 12 meses, indulto, comutação, linha do tempo)." % (fi["texto"], (" " + fi["ficha"]) if fi.get("ficha") else
+                       " Ficha disciplinar não importada: importá-la ajuda a explicar o indício."), "LEP, arts. 50 e 118; STJ, Tema 1195.",
                        tipo="falta-a-apurar", ref=fi["chave"])
         it["preencher"] = {"campo": "falta|" + fi["chave"], "rotulo": fi["texto"], "tipo": "falta", "data": fi["data"], "padrao": fi["padrao"], "decisao": dec}
         itens.append(it)

@@ -1183,8 +1183,10 @@ def _faltas_editaveis(incidentes, eventos):
             d = to_date(i.get("data_referencia") or i.get("data_decisao") or "")
             if re.search(r"PERD|REGRESS", txt, re.I) and any(d and d - timedelta(days=365) <= x <= d for x in datas_proprias):
                 continue
-        out.append({"chave": chave_falta(txt, d), "data": fmt(d) if d else "", "texto": txt, "padrao": "falta" if i.get("_fuga_ficha") else "apurar",
-                    "decisao": i.get("_falta") or "", "origem": "incidente"})
+        out.append({"chave": chave_falta(txt, d), "data": fmt(d) if d else "", "texto": txt,
+                    "padrao": "falta" if (i.get("_fuga_ficha") or i.get("_ficha_falta")) else "apurar",
+                    "decisao": i.get("_falta") or "", "origem": "incidente", "ficha": i.get("_ficha_obs") or "",
+                    "ficha_falta": bool(i.get("_ficha_falta"))})
     for e in eventos or []:
         t = _texto_evento(e)
         if not re.search(r"FUGA|EVAS|ABANDON|FORAGID|N[ÃA]O RETORN|DESCUMPRIMENTO", t, re.I):
@@ -1232,6 +1234,53 @@ def faltas_da_ficha(r, ficha, hoje=None):
         datas.append(d)
 
 
+RE_FALTA_NA_FICHA = re.compile(
+    r"\bFUGA\b|EVADIU|EVAS[ÃA]O|FORAGID|N[ÃA]O RETORNOU|ROMP(EU|IMENTO)|VIOLA[ÇC][ÃA]O D[AOE]S? (MONITORA|TORNOZ|ZONA|[ÁA]REA|PER[ÍI]METRO)|"
+    r"FORA D[AO] (ZONA|[ÁA]REA|PER[ÍI]METRO)|DESCUMPRI|REGISTRO DE FALTA|LAN[ÇC]AMENTO DE FALTA|FALTA GRAVE|FALTA DISCIPLINAR|"
+    r"CONSELHO DISCIPLINAR|ISOLAD[OA] PREVENTIVA|APREENS|APARELHO CELULAR|ENTORPECENTE|SUBST[ÂA]NCIA", re.I)
+
+
+def explicar_indicios_ficha(r, ficha, hoje=None):
+    """Indícios de falta do RSPE sem sanção (regressão sem falta homologada, perda de remidos sem falta datada, incidente de
+    falta pendente) confrontados com a ficha disciplinar: registro de falta, fuga/evasão, violação do monitoramento ou apreensão
+    nos 120 dias anteriores explica o indício - ele passa a falta grave por padrão, datada pelo fato da ficha (decidível pelo
+    operador). Sem nada na ficha, o indício segue a apurar, com a anotação de que a ficha foi conferida."""
+    for i in r.get("_incidentes", []):
+        i.pop("_ficha_falta", None); i.pop("_ficha_obs", None)
+    if not ficha:
+        return
+    ev = sorted(((to_date((e.get("data") or "").replace(".", "/")), e.get("texto") or "") for e in ficha.get("eventos") or []),
+                key=lambda x: x[0] or date.min)
+    ev = [(x, t) for x, t in ev if x]
+    if not ev:
+        return
+    for i in r.get("_incidentes", []):
+        if i.get("_ficha"):
+            continue
+        txt = _rotulo_incidente(i)
+        if not RE_FALTA.search(txt) or _negado(i):
+            continue
+        propria = RE_FALTA_PROPRIA.search(txt)
+        if propria and not _pendente(i):
+            continue
+        if not propria and not re.search(r"PERD|REGRESS", txt, re.I):
+            continue
+        d = _data_fato_falta(i) if propria else to_date(i.get("data_referencia") or i.get("data_decisao") or "")
+        if not d or d < corte_faltas(hoje):
+            continue
+        ini = d - timedelta(days=120)
+        achados = [(x, t) for x, t in ev if ini <= x <= d + timedelta(days=5) and RE_FALTA_NA_FICHA.search(t)
+                   and not re.search(r"ARQUIVAD|ABSOLVI|N[ÃA]O (FOI )?CONFIGURAD|ABANDONO D[OE] (SERVI|TRABALHO|CURSO)", t, re.I)]
+        if achados:
+            x, t = achados[0]
+            tt = re.split(r",?\s+conforme\b", " ".join(t.split()), maxsplit=1, flags=re.I)[0]
+            i["_ficha_falta"] = {"data": fmt(x), "texto": tt[:160]}
+            i["_ficha_obs"] = "Ficha disciplinar em %s: %s" % (fmt(x), " ".join(t.split())[:160])
+        else:
+            i["_ficha_obs"] = ("Ficha disciplinar conferida: nenhum registro de falta, fuga, violação do monitoramento ou apreensão entre %s e %s "
+                               "(ficha com registros de %s a %s)." % (fmt(ini), fmt(d), fmt(ev[0][0]), fmt(ev[-1][0])))
+
+
 def aplicar_decisoes_falta(r, decisoes):
     """Grava em cada evento/incidente do registro a decisão do operador sobre a falta (decisoes: {chave: 'sim'|'nao'})."""
     for e in r.get("_eventos", []):
@@ -1273,6 +1322,8 @@ def indicios_falta(incidentes, ref, dias=365, eventos=None, ate=None):
                     out.append(("%s (%s - falta grave confirmada pelo operador)" % (txt, fmt(d)), True))
                 elif i.get("_fuga_ficha"):
                     out.append(("%s (%s - fuga: falta grave, LEP, art. 50, II)" % (txt, fmt(d)), True))
+                elif i.get("_ficha_falta") and _pendente(i):
+                    out.append(("%s (%s - pendente no RSPE; ficha: %s)" % (txt, fmt(d), i["_ficha_falta"]["texto"][:90]), True))
                 elif _pendente(i):
                     out.append(("%s (%s - pendente: só impede se a sanção for reconhecida em juízo)" % (txt, fmt(d)), False))
                 else:
@@ -1284,6 +1335,12 @@ def indicios_falta(incidentes, ref, dias=365, eventos=None, ate=None):
         if i.get("_falta") == "sim":
             if limite <= d <= fim:
                 out.append(("%s (%s - falta grave confirmada pelo operador)" % (txt, fmt(d)), True))
+            continue
+        if i.get("_ficha_falta"):
+            # a ficha registra a falta que motivou a regressão/perda: falta grave pela data do fato na ficha
+            x = to_date(i["_ficha_falta"]["data"])
+            if x and limite <= x <= fim:
+                out.append(("%s (%s) - ficha: %s em %s" % (txt, fmt(d), i["_ficha_falta"]["texto"][:90], fmt(x)), True))
             continue
         if re.search(r"PERD|REGRESS", txt, re.I):
             # perda de remidos e regressão decorrem da falta: só se descartam se houver falta homologada nos 12 meses

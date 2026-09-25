@@ -34,7 +34,7 @@ import rspe_relatorio as rrel
 import rspe_indulto_tl as rtl
 
 APP = "RSPE Base"
-VERSAO = "6.16.30"
+VERSAO = "6.16.31"
 
 
 def pasta_app():
@@ -657,6 +657,7 @@ class Api:
             # faltas graves da ficha disciplinar que o RSPE não traz: entram como falta a apurar
             try:
                 rs.faltas_da_ficha(r, _f0, rv.HOJE)
+                rs.explicar_indicios_ficha(r, _f0, rv.HOJE)  # regressão/perda/pendente: a ficha explica?
             except Exception:
                 logging.getLogger("rspe").exception("faltas da ficha %s", _ch0)
             # data-base corrigida pelo operador ("dd/mm/aaaa|motivo"): refaz a previsão de progressão em todas as abas

@@ -1,8 +1,8 @@
-RSPE BASE - SEEU  v6.16.30 (programa em abas)
+RSPE BASE - SEEU  v6.16.31 (programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-6.16.30. A documentação técnica completa (cada parâmetro, a regra, a norma e
+6.16.31. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -535,6 +535,17 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v6.16.31
+  - Indícios de falta do RSPE sem sanção (regressão sem falta homologada, perda de
+    remidos sem falta datada, falta pendente) passam a ser confrontados com a
+    ficha disciplinar: registro de falta, fuga/evasão, não retorno, violação ou
+    rompimento do monitoramento, conselho disciplinar ou apreensão nos 120 dias
+    anteriores explica o indício - ele vira falta grave por padrão, datada pelo
+    fato registrado na ficha (falta nos 12 meses, indulto, comutação, linha do
+    tempo), e o operador pode desfazer pelo Preencher. Sem nada na ficha, o item
+    segue "a apurar" e diz que a ficha foi conferida (período e registros
+    olhados); sem ficha importada, o item sugere importá-la.
 
 v6.16.30
   - Aba Progressão: sai a coluna Data-base (ela segue no quadro da ficha do
