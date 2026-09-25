@@ -739,58 +739,99 @@ def _ext_txt(t):
     return re.sub(r"\b\d+a\d+m\d+d\b", lambda m: _pena_ext(m.group(0)), t or "")
 
 
+def _fund_curto(f):
+    """Fundamento do item do checklist, só o dispositivo (sem as notas da base)."""
+    f = (f or "").split(";")[0]
+    f = re.split(r"\s*\(", f)[0]
+    return f.replace(", caput e parágrafo único", "").strip().rstrip(".")
+
+
+def _hip_txt(t):
+    """'Inciso XV: crime patrimonial ... - verificar ... Depende de dado...' -> 'inciso XV (crime patrimonial ...)'."""
+    t = re.sub(r"\s*Depende de dado que o RSPE não traz\.?", "", t)
+    t = re.sub(r"\s*-\s*verificar ([^.]*)\.?", r"; a conferir: \1.", t)
+    t = re.sub(r"\.\s*Exige", "; exige", t)
+    m = re.match(r"^Inciso ([IVXL]+(?: e [IVXL]+)?):\s*(.*)$", t.strip(), re.S)
+    t = ("inciso %s (%s)" % (m.group(1), m.group(2).strip().rstrip("."))) if m else t.strip().rstrip(".")
+    return t[0].lower() + t[1:] if t.startswith("Requisito") else t
+
+
 def _fundamentacao(out, tipo, num_c=None):
-    """Texto corrido da análise, pronto para colar na petição (botão "Copiar fundamentação" da linha do tempo).
-    Reúne só o que a aba Indulto / Comutação já concluiu: não acrescenta tese nem cálculo."""
+    """Fundamentação pronta para a petição (botão "Copiar fundamentação"), no padrão do programa: título, um parágrafo com
+    os fatos e os fundamentos (dispositivo entre parênteses) e o pedido. Usa só o que a aba já concluiu."""
     x = out.get(tipo) or {}
     ind = out.get("indulto") or {}
     num, ref, pub = out.get("numero", ""), out.get("referencia", ""), out.get("publicacao", "")
-    dec = "Decreto nº %s%s" % (num, (", publicado em %s" % pub) if pub else "")
-    nome = "indulto" if tipo == "indulto" else "comutação"
+    dec = "Decreto nº %s" % num
+    indulto = tipo == "indulto"
     st = x.get("status")
     red = x.get("reducao")
-    ps = []
-    if st == "cabe":
-        ab = "O(a) assistido(a) preenche os requisitos %s previstos no %s." % ("do indulto" if tipo == "indulto" else "da comutação", dec)
-        if tipo == "comutacao" and red:
-            ab += (" Faz jus à redução de %s da pena %s, isto é, %s, passando a pena remanescente de %s para %s."
-                   % (red["fracao"], red["base"], _pena_ext(red["reducao_txt"]), _pena_ext(red["antes_txt"]), _pena_ext(red["depois_txt"])))
-        ps.append(ab)
-    elif st == "ainda" and x.get("projecao"):
-        pj = x["projecao"]
-        ps.append("Pelo %s, o requisito objetivo do %s (%s, %s) é atingido em %s%s." % (
-            dec, nome, pj.get("hipotese", ""), _pena_ext(pj.get("exigido_txt", "")), pj.get("data", ""),
-            " (projeção, a depender de novo decreto com as mesmas condições)" if pj.get("projecao") else ""))
-    else:
-        ps.append("%s pelo %s: %s." % (nome.capitalize(), dec, _ext_txt(x.get("rotulo", "")).rstrip(".")))
+    tit = "%s - %s%s" % ("DO INDULTO" if indulto else "DA COMUTAÇÃO", dec, (" (data de referência %s)" % ref) if ref else "")
+    fatos = []
     if ind.get("cumprido_txt"):
-        ps.append("Requisito objetivo. Na data de referência (%s), o(a) assistido(a) havia cumprido %s da pena de %s (%s), "
-                  "somados o tempo de prisão, a detração (CP, art. 42) e a remição (LEP, art. 128), sem interrupção pela falta grave "
-                  "(STJ, Súmula 535)." % (ref, _pena_ext(ind["cumprido_txt"]), _pena_ext(ind.get("pena_considerada_txt", "")), ind.get("reinc", "")))
-    if tipo == "comutacao" and num_c and num_c.get("exigido") is not None:
-        ps[-1] += " O decreto exige %s da pena (%s)." % (num_c.get("fracao", ""), _pena_ext(_pena(num_c["exigido"])))
-    # a lista de incisos não atendidos fica só na tela; na petição basta a hipótese que fundamenta a conclusão
-    obj = [re.sub(r"\s*Não atendidos:.*$", "", c["texto"], flags=re.S) for c in x.get("checklist") or [] if c["item"].startswith("Requisito objetivo")]
-    obj = [t for t in obj if t.strip()]
-    if obj:
-        ps.append(" ".join(_ext_txt(t).rstrip(".") + "." for t in obj))
+        fatos.append("Na data de referência do %s (%s), o(a) assistido(a)%s cumpria a pena de %s e havia cumprido %s, somados o tempo de "
+                     "prisão, a detração (CP, art. 42) e a remição (LEP, art. 128)" % (
+                         dec, ref, (", " + ind["reinc"] + ",") if ind.get("reinc") else "", _pena_ext(ind.get("pena_considerada_txt", "")), _pena_ext(ind["cumprido_txt"])))
+    hip = [re.sub(r"\s*Não atendidos:.*$", "", c["texto"], flags=re.S) for c in x.get("checklist") or []
+           if c["item"].startswith("Requisito objetivo") and c.get("estado") in ("ok", "q")]
+    hip = [_hip_txt(_ext_txt(t)) for t in hip if t.strip()]
+    if tipo == "comutacao" and num_c and num_c.get("exigido") is not None and not any(h.startswith("Requisito") for h in hip):
+        hip.append("o decreto exige %s da pena (%s)" % (num_c.get("fracao", ""), _pena_ext(_pena(num_c["exigido"]))))
     im = out.get("imputacao")
+    imp_txt = ""
     if im:
-        ps.append("Concurso com crime impeditivo (%s). %s da pena de %s (%s) é imputado primeiro ao crime impeditivo%s; "
-                  "o tempo cumprido que sobra (%s, de %s cumpridos em %s) é o que se considera para %s." % (
-                      im.get("dispositivo", ""), "A totalidade" if im["fracao"] == "100%" else im["fracao"], ", ".join(im["crimes_imp"]), _pena_ext(im["exigido_txt"]),
-                      (", atingido em %s%s" % (im["data"], " (projeção)" if im.get("projecao") else "")) if im.get("data") else "",
-                      _pena_ext(im.get("sobra_txt", "")), _pena_ext(im.get("cumprido_total_txt", "")), ref, ", ".join(im["crimes_liv"]) or "os demais crimes"))
-    rot = {"Natureza dos crimes (vedações)": "Natureza dos crimes", "Fato anterior ao decreto": "Alcance temporal",
-           "Condenação na data (trânsito/recurso da acusação)": "Condenação"}
+        imp_txt = ("Em concurso com crime impeditivo (%s), %s da pena de %s (%s) imputa-se primeiro ao crime impeditivo%s; o tempo que sobra "
+                   "(%s) é o considerado para %s" % (
+                       re.sub(r"\s*\((.*)\)$", r"; \1", im.get("dispositivo", "")), "a totalidade" if im["fracao"] == "100%" else im["fracao"], ", ".join(im["crimes_imp"]),
+                       _pena_ext(im["exigido_txt"]), (", o que se deu em %s" % im["data"]) if im.get("data") else "",
+                       _pena_ext(im.get("sobra_txt", "")), ", ".join(im["crimes_liv"]) or "os demais crimes"))
+    # requisitos atendidos, em uma frase cada, com o dispositivo
+    req, pend = [], []
     for c in x.get("checklist") or []:
         if c["item"].startswith("Requisito objetivo"):
             continue
         if c["item"] == "Ressalva" and re.match(r"^(FALTA nos|Art\. 6º)", c["texto"]):
-            continue  # a falta do art. 6º já vai no requisito subjetivo
-        t = rot.get(c["item"], "Requisito subjetivo" if c["item"].startswith("Requisito subjetivo") else c["item"])
-        ps.append("%s. %s" % (t, _ext_txt(c["texto"])))
-    return "\n\n".join(p.strip() for p in ps if p.strip())
+            continue
+        t = _ext_txt(c["texto"]).strip()
+        t = re.sub(r"\s*Não cabe o indulto nem a comutação.*$", "", t, flags=re.S)
+        t = re.sub(r"Data da infração: (\S+) \(\1\)", r"fato em \1", t).strip().rstrip(".")
+        fnd = _fund_curto((c.get("det") or {}).get("fundamento", ""))
+        frase = "%s%s" % (t[0].lower() + t[1:] if t else "", (" (%s)" % fnd) if fnd else "")
+        if im and re.match(r"concurso com impeditivo", frase, re.I):
+            continue  # já explicado na frase da imputação
+        (req if c.get("estado") in ("ok", "info") else pend).append(frase)
+    par = []
+    if fatos:
+        par.append(fatos[0] + ".")
+    if hip and st in ("cabe", "verificar", "ainda"):
+        par.append("Enquadra-se %s: %s." % ("no art. 9º" if indulto else "no art. 13", "; ".join(hip)))
+    if imp_txt:
+        par.append(imp_txt + ".")
+    if req and st in ("cabe", "verificar", "ainda"):
+        par.append("Quanto aos demais requisitos do %s: %s." % (dec, "; ".join(req)))
+    corpo = " ".join(par)
+    if st == "cabe":
+        if indulto:
+            ped = "Preenchidos os requisitos, requer-se a concessão do indulto, com a declaração da extinção da punibilidade (CP, art. 107, II; LEP, art. 192)."
+        else:
+            ped = ("Preenchidos os requisitos, requer-se a comutação da pena%s (LEP, art. 192)." % (
+                (": redução de %s da pena %s (%s), passando a pena remanescente de %s para %s" % (
+                    red["fracao"], red["base"], _pena_ext(red["reducao_txt"]), _pena_ext(red["antes_txt"]), _pena_ext(red["depois_txt"]))) if red else ""))
+    elif st == "ainda" and x.get("projecao"):
+        pj = x["projecao"]
+        ped = "O requisito objetivo (%s, %s) é atingido em %s%s: o pedido deve ser feito a partir dessa data." % (
+            pj.get("hipotese", ""), _pena_ext(pj.get("exigido_txt", "")), pj.get("data", ""), " (projeção, a depender de novo decreto nas mesmas condições)" if pj.get("projecao") else "")
+    elif st == "verificar":
+        conf = [re.search(r"a conferir: (.+?)(?=; exige|; cumprido|\)$|$)", h).group(1).rstrip(".") for h in hip if "a conferir:" in h]
+        ped = "A conferir nos autos: %s. Confirmado, requer-se %s." % (
+            "; ".join(pend + conf) if (pend or conf) else _ext_txt(x.get("rotulo", "")).rstrip("."),
+            "a concessão do indulto, com a declaração da extinção da punibilidade (CP, art. 107, II; LEP, art. 192)" if indulto else "a comutação da pena (LEP, art. 192)")
+    elif st == "prejudicada":
+        ped = "Prejudicada: cabível o indulto, que prevalece sobre a comutação (%s, art. 13, § 5º)." % dec
+    else:
+        ped = "Não cabe %s: %s." % ("o indulto" if indulto else "a comutação", "; ".join(pend) if pend else _ext_txt(x.get("rotulo", "")).rstrip("."))
+        corpo = " ".join(par[:1])  # sem pedido: só a situação na data e o motivo
+    return "\n".join(p for p in (tit, corpo, ped) if p.strip())
 
 
 TITULO = {"cabe": "CABE", "nao": "NÃO CABE", "verificar": "A VERIFICAR", "ainda": "AINDA NÃO - PROJEÇÃO", "concedido": "CONCEDIDO NO RSPE",

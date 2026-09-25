@@ -1,8 +1,8 @@
-RSPE BASE - SEEU  v6.16.33 (programa em abas)
+RSPE BASE - SEEU  v6.16.34 (programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-6.16.33. A documentação técnica completa (cada parâmetro, a regra, a norma e
+6.16.34. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -535,6 +535,24 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v6.16.34
+  - Padrão único de fundamentação para petição (direto, objetivo, conciso):
+    título ("DO INDULTO - Decreto nº ...", "DA PRESCRIÇÃO DA PRETENSÃO
+    EXECUTÓRIA - crime (autos)", "DA REMIÇÃO DE PENA"), um parágrafo com os fatos
+    e os fundamentos (dispositivo entre parênteses) e o pedido. Aplicado em:
+      * Indulto e comutação (Copiar fundamentação, linha do tempo): cabe - pedido
+        de indulto/comutação (LEP, art. 192); a verificar - o que conferir nos
+        autos e o pedido condicionado; não cabe/prejudicada - só o motivo;
+      * Prescrição, aba e ficha: "Copiar fundamentação (punitiva/executória)"
+        (retroativa/intercorrente com os marcos do art. 117; executória pela pena
+        aplicada ou pelo saldo na evasão); o cálculo detalhado segue em "Copiar
+        cálculo";
+      * Remição: "Copiar fundamentação" na aba Ficha disciplinar (atestados sem
+        remição no RSPE e estudo a requerer).
+  - Modelos de petição: novos campos {{fundamentacao_indulto_2025}},
+    {{fundamentacao_comutacao_2025}}, {{..._2024}}, {{fundamentacao_indulto_2022}}
+    e {{fundamentacao_remicao}}.
 
 v6.16.33
   - Prescrição, linha do tempo: o quadro da fuga/interrupção sai do desenho e

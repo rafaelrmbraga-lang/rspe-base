@@ -538,9 +538,10 @@ const ui = {
       return `<div class="ml ${k}"><span class="mi">${sym}</span><span class="mt">${penaExt(esc(l))}</span></div>`; }).join('');
     return `<div class="mb ${cls||''}">${titulo?`<div class="mh">${titulo}</div>`:''}${li}</div>`; },
   memoria(s,so){
-    const bt=(parte,rot)=>`<span class="mini" onclick="event.stopPropagation();ui.copiarClip(${ui.clip(ui.txtPresc(s,parte))})">${rot}</span>`;
+    const bt=(parte,rot,f)=>`<span class="mini ${f?'pre':''}" onclick="event.stopPropagation();ui.copiarClip(${ui.clip(f?ui.fundPresc(s,parte):ui.txtPresc(s,parte))})">${rot}</span>`;
     const pp=so!=='pe', pe=so!=='pp';
-    const cps=[(pp&&s.retro_detalhe)?bt('pp','Copiar pretensão punitiva'):'', (pe&&s.ppe_detalhe)?bt('pe','Copiar pretensão executória'):''].filter(Boolean).join(' ');
+    const cps=[(pp&&s.retro_detalhe)?bt('pp','Copiar fundamentação (punitiva)',1):'', (pe&&s.ppe_detalhe)?bt('pe','Copiar fundamentação (executória)',1):'',
+               (pp&&s.retro_detalhe)?bt('pp','Copiar cálculo (punitiva)'):'', (pe&&s.ppe_detalhe)?bt('pe','Copiar cálculo (executória)'):''].filter(Boolean).join(' ');
     return `<div class="mem"><div class="cp-row" style="gap:6px">${cps}</div>${pp?this.bloco('Pretensão punitiva',s.retro_detalhe,'pp'):''}${pe?this.bloco('Pretensão executória',s.ppe_detalhe,'pe'):''}${pe?this.linhaTempo(s):''}${this.bloco('Avisos',s.avisos&&s.avisos.length?s.avisos:'','av')}</div>`; },
   // linha do tempo da executória deste crime: cada período dos eventos classificado (prisão provisória, cumprimento, prisão por outro motivo, evasão, liberdade)
   LT_ROT:{provisoria:'Prisão provisória (detração)',cumprimento:'Cumprimento da pena',livramento:'Livramento condicional',outro_motivo:'Prisão por outro motivo',evasao:'Evasão',interrupcao:'Interrupção',liberdade:'Liberdade',suspensao:'Suspensão',prd:'Restritiva de direitos'},
@@ -659,8 +660,9 @@ const ui = {
         (fim? `, antes da recaptura/reinício do cumprimento em ${fim} (CP, art. 117, V).` : '.')+
         `\nAssim, requer-se a imputação do tempo cumprido na forma mais favorável e o reconhecimento da prescrição da pretensão executória, com a extinção da punibilidade quanto a esta condenação (CP, art. 107, IV, c/c art. 119).`;
     } else {
-      corpo=`, com saldo de ${s.saldo_min===s.saldo_max? amd(s.saldo_max) : 'entre '+amd(s.saldo_min)+' e '+amd(s.saldo_max)}. O prazo, de ${s.prazo_max||'—'}, ${s.limite_max?'venceria em '+s.limite_max:''}`+
-        (fim? `, depois da recaptura/reinício em ${fim}, que o interrompeu (CP, art. 117, V). Não há prescrição por este período.` : '.');
+      corpo=`, com saldo ${s.saldo_min===s.saldo_max? 'de '+amd(s.saldo_max) : 'entre '+amd(s.saldo_min)+' e '+amd(s.saldo_max)} para esta condenação. Pelo saldo máximo, o prazo é de ${s.prazo_max||'—'}${s.limite_max?', com vencimento em '+s.limite_max:''}`+
+        (fim? `, posterior à recaptura/reinício em ${fim}, que o interrompeu (CP, art. 117, V).` : '.')+(s.saldo_min===0?' Pelo saldo mínimo, a pena estaria integralmente cumprida (extinção pelo cumprimento - LEP, art. 66, II).':'')+
+        `\nNão há prescrição a requerer por este período.`;
     }
     return cab+corpo; },
   prescTimelineHtml(L){
@@ -706,6 +708,38 @@ const ui = {
   clip(t){ t=String(t||''); let i=this._clips.indexOf(t); if(i<0){ this._clips.push(t); i=this._clips.length-1; } return i; },
   copiarClip(i){ const t=this._clips[i]||''; const done=()=>this.toast('Copiado ('+pl(t.split('\n').length,'linha','linhas')+') - cole no Word'); if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(t).then(done).catch(()=>{ this._copiaFallback(t); done(); }); } else { this._copiaFallback(t); done(); } },
   txtLinhas(txt){ const ls=Array.isArray(txt)?txt:String(txt||'').split('\n'); return ls.map(l=>l.trim()).filter(Boolean).map(l=>{ const m=l.match(/^([✓✔✘✗…?⚠])\s*/); if(m){ const ic=/[✓✔]/.test(m[1])?'✓':/[✘✗]/.test(m[1])?'✗':(m[1]==='?'?'?':'!'); l=ic+' '+l.slice(m[0].length); } else l='• '+l; return penaExt(l); }).join('\n'); },
+  // fundamentação da prescrição no padrão do programa: título, fatos e fundamentos em um parágrafo, pedido (ou conclusão)
+  fundPresc(s, parte){
+    const cab=(t)=>`DA PRESCRIÇÃO DA ${t} - ${s.rotulo||s.crime}${s.proc_crim?' (autos '+s.proc_crim+')':''}`;
+    const mods=()=>{ const m=[]; if(s.art115) m.push('reduzido à metade em razão da idade (CP, art. 115)'); if(s.reinc&&parte==='pe') m.push('acrescido de 1/3 pela reincidência (CP, art. 110, caput)'); return m.length?', '+m.join(' e '):''; };
+    const diasPena=t=>{ t=String(t||''); const g=re=>{ const m=t.match(re); return m?+m[1]:0; };
+      const a=g(/(\d+)\s*(?:a\b|ano)/), me=g(/(\d+)\s*(?:m\b|m[eê]s)/), d=g(/(\d+)\s*(?:d\b|dia)/); return a*365+me*30+d; };
+    const incDe=dd=>{ const y=dd/365; return y<1?'VI':y<=2?'V':y<=4?'IV':y<=8?'III':y<=12?'II':'I'; };
+    const inc=parte==='pp' ? incDe(diasPena(s.pena)) : (s.inciso109||'').replace(/^art\.\s*109,\s*/i,'');
+    const antiga=(()=>{ const f=this.tlD(s.fato||''); return f&&f<new Date(2010,4,6); })();
+    if(parte==='pp'){
+      const m=(s.retro_detalhe||'').match(/✘\s*(.+?):\s*(\d{2}\/\d{2}\/\d{4}) a (\d{2}\/\d{2}\/\d{4}) = (.+?) \(prazo (.+?), vence (\d{2}\/\d{2}\/\d{4})\)/);
+      if(!m) return cab('PRETENSÃO PUNITIVA')+`\nPela pena aplicada (${penaExt(s.pena||'—')}), o prazo é de ${s.prazo_ppp||'—'} (CP, arts. 109 e 110, § 1º). Situação: ${s.retro_status||'—'}.`;
+      const [,nome,a,b,dur,prazo,vence]=m;
+      const marco={'fato → denúncia':['a data do fato','','o recebimento da denúncia','CP, art. 117, I','retroativa - CP, art. 110, § 1º, na redação anterior à Lei 12.234/2010'],
+        'denúncia → sentença':['o recebimento da denúncia','CP, art. 117, I','a sentença condenatória','CP, art. 117, IV','retroativa - CP, art. 110, § 1º'],
+        'sentença → acórdão':['a sentença condenatória','CP, art. 117, IV','o acórdão condenatório','CP, art. 117, IV','intercorrente - CP, art. 110, § 1º'],
+        'acórdão → trânsito':['o acórdão condenatório','CP, art. 117, IV','o trânsito em julgado','','intercorrente - CP, art. 110, § 1º'],
+        'sentença → trânsito':['a sentença condenatória','CP, art. 117, IV','o trânsito em julgado','','intercorrente - CP, art. 110, § 1º']}[nome]||[nome.split(' → ')[0],'',nome.split(' → ')[1]||'','',''];
+      const mk=(l,d,c)=>`${l} (${d}${c?'; '+c:''})`;
+      return cab('PRETENSÃO PUNITIVA')+`\nCom trânsito em julgado para a acusação, a prescrição regula-se pela pena aplicada (${penaExt(s.pena||'—')}): prazo do art. 109, ${inc||'—'}, do Código Penal${antiga&&/VI/.test(inc)?' (redação anterior à Lei 12.234/2010)':''}${mods()}: ${prazo}. `+
+        `Entre ${mk(marco[0],a,marco[1])} e ${mk(marco[2],b,marco[3])} decorreram ${dur}, superando o prazo, que se esgotou em ${vence} (prescrição ${marco[4]}).`+
+        `\nOperou-se a prescrição da pretensão punitiva, requerendo-se a declaração da extinção da punibilidade (CP, art. 107, IV), com o afastamento dos efeitos da condenação.`;
+    }
+    // executória
+    const sal=s.ppe_saldos||[]; const dec=sal.find(x=>x.resultado==='prescrita')||sal.find(x=>x.resultado==='a verificar');
+    if(dec) return this.fundPrescEvasao(s, dec);
+    const st=s.ppe_status||''; const prazo=(s.prazo_ppe||'').replace(/\s*\(.*$/,'');
+    const base=`A condenação a ${penaExt(s.pena||'—')} (fato em ${s.fato||'—'}) transitou em julgado para a acusação em ${s.ppe_termo||'—'}, termo inicial da prescrição da pretensão executória (CP, art. 112, I). `+
+      `Regulada pela pena aplicada (CP, art. 110, caput), o prazo é o do art. 109, ${inc||'—'}${antiga&&/VI/.test(inc)?' (redação anterior à Lei 12.234/2010)':''}${mods()}: ${prazo||'—'}`;
+    if(/aparente/i.test(st)) return cab('PRETENSÃO EXECUTÓRIA')+'\n'+base+`, que se esgotou em ${(st.match(/\d{2}\/\d{2}\/\d{4}/)||[''])[0]}, sem causa interruptiva no período (CP, art. 117, V e VI).`+
+      `\nOperou-se a prescrição da pretensão executória, requerendo-se a declaração da extinção da punibilidade (CP, art. 107, IV).`;
+    return cab('PRETENSÃO EXECUTÓRIA')+'\n'+base+'. Situação: '+st+(s.ppe_previsao?' (vencimento em '+s.ppe_previsao+')':'')+'.'; },
   txtPresc(s,parte){ const cab=[`Prescrição - ${s.crime}${s.proc_crim?' (processo '+s.proc_crim+')':''}`,
       `Pena: ${penaExt(s.pena||'—')} · Fato: ${s.fato||'—'} · R. Denúncia: ${s.denuncia||'—'} · Sentença: ${s.sentenca||'—'} · Trânsito: ${s.transito||'—'}`];
     const out=[cab.join('\n')];
@@ -791,7 +825,7 @@ const ui = {
       return `<tr>${tds}<td><span class="why" onclick="event.stopPropagation();const n=this.closest('tr').nextElementSibling;n.style.display=n.style.display==='none'?'':'none'">cálculo</span></td></tr><tr style="display:none"><td colspan="${cols.length+1}">${ui.memoria(s, spec.id==='presc'?(ui.prescModo==='pp'?'pp':'pe'):null)}</td></tr>`; }).join('');
     const cab = spec.id==='aud' ? `<b>${esc(r.nome)}</b> <span class="muted">· ${esc(r.aud_resumo)} · conferido com a ${esc(r.aud_base)} · alertas apontam o que demanda atenção, não afirmam erro</span>${(ocultos||this.mostrarTudo)?` · <span class="mini" onclick="event.stopPropagation();ui.mostrarTudo=!ui.mostrarTudo;ui.render()">${this.mostrarTudo?'ocultar informativos e OK':'mostrar '+pl(ocultos,'informativo','informativos')+'/OK'}</span>`:''}${r.ficha_resumo?`<div class="muted" style="margin-top:3px">Ficha disciplinar: ${esc(r.ficha_resumo)}</div>`:''}` : spec.id==='fd' ? (r.ficha_tem?`<b class="fdsit ${esc(r.fd_cor||'')}">${esc(r.fd_sit_det||'Em ordem')}</b> <span class="muted">· ficha disciplinar (SIAPEN) impressa em ${esc((r.ficha||{}).data_impressao||'?')}</span>`:'<span class="muted">Sem ficha disciplinar importada: importe o PDF da ficha (SIAPEN) pelo botão Importar PDFs.</span>')+`${r.ficha_tem&&r.fd_remicoes?`<div class="muted" style="font-size:12px;margin-top:3px">${esc(r.fd_remicoes)}</div>`:''}` : `<b>${esc(r.nome)}</b> <span class="muted">· ${pl((r.presc_linhas||[]).length,'crime','crimes')}, ${rows.length} ${ui.prescModo==='pp'?'com prescrição da pretensão punitiva aparente':'com prescrição executória aparente ou iminente'} ou datas a verificar na ação penal · cada crime prescreve isoladamente (art. 119)${r.presc_obs?' · '+esc(r.presc_obs):''}</span>`;
     const vazio = (spec.id==='presc' && !rows.length) ? `<tr><td colspan="${cols.length+1}" class="muted">Nenhum crime com prescrição ${ui.prescModo==='pp'?'da pretensão punitiva aparente':'executória aparente ou iminente'} nem datas faltando.</td></tr>` : '';
-    if(spec.id==='fd' && r.ficha_tem) return `<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:8px"><span>${cab}</span><span style="white-space:nowrap">${r.fd_conf_tot?`<span class="muted" style="font-size:12.5px;margin-right:10px">Conferidos <b style="color:var(--g-tx)">${r.fd_conf_n||0}</b> de ${r.fd_conf_tot}</span>`:''}<span class="mini" onclick="event.stopPropagation();ui.fdAdicionar('${r.id}')">+ Adicionar atestado</span> <span class="mini" onclick="event.stopPropagation();ui.abrir('${r.id}')">Abrir ficha completa</span></span></div>${this.fdTabela(r)}`;
+    if(spec.id==='fd' && r.ficha_tem) return `<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:8px"><span>${cab}</span><span style="white-space:nowrap">${r.fd_conf_tot?`<span class="muted" style="font-size:12.5px;margin-right:10px">Conferidos <b style="color:var(--g-tx)">${r.fd_conf_n||0}</b> de ${r.fd_conf_tot}</span>`:''}${r.fd_fund?`<span class="mini pre" onclick="event.stopPropagation();ui.copiarClip(${ui.clip(r.fd_fund)})">Copiar fundamentação</span> `:''}<span class="mini" onclick="event.stopPropagation();ui.fdAdicionar('${r.id}')">+ Adicionar atestado</span> <span class="mini" onclick="event.stopPropagation();ui.abrir('${r.id}')">Abrir ficha completa</span></span></div>${this.fdTabela(r)}`;
     return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><span>${cab}</span><span class="mini" onclick="event.stopPropagation();ui.abrir('${r.id}')">Abrir ficha completa</span></div><table class="subtab">${cg}${head}${body}${vazio}</table>`; },
   fdTabela(r){ const B=r.fd_blocos||[]; if(!B.length) return '<p class="muted">Nenhum trabalho ou estudo nesta execução.</p>';
     const tk=(on,ch)=>ch?`<span class="tk ${on?'on':''}" title="${on?'Conferido - clique para desfazer':'Marcar como conferido'}" onclick="event.stopPropagation();ui.fdConferir('${r.id}','${esc(ch).replace(/'/g,'&#39;')}',${!on})"></span>`:'';

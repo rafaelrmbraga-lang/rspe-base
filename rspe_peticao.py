@@ -54,6 +54,11 @@ CAMPOS = [
     ("art115", "'S' se o art. 115 do CP (menor de 21 / maior de 70) se aplica ao crime da petição"),
     ("defensor", "nome do defensor selecionado"), ("defensor_cargo", "cargo do defensor (ex.: Defensor Público)"),
     ("defensor_matricula", "matrícula/identificação do defensor"), ("defensor_email", "e-mail do defensor"),
+    ("fundamentacao_indulto_2025", "fundamentação do indulto 2025 (título, fatos e fundamentos, pedido)"),
+    ("fundamentacao_comutacao_2025", "fundamentação da comutação 2025"),
+    ("fundamentacao_indulto_2024", "fundamentação do indulto 2024"), ("fundamentacao_comutacao_2024", "fundamentação da comutação 2024"),
+    ("fundamentacao_indulto_2022", "fundamentação do indulto 2022"),
+    ("fundamentacao_remicao", "fundamentação do pedido de remição (atestados sem remição no RSPE e estudo)"),
     ("hoje", "data de hoje dd/mm/aaaa"), ("hoje_extenso", "data por extenso"), ("base", "nome da base aberta"),
 ]
 
@@ -201,7 +206,17 @@ def campos(m, r, nome_base="", defensor=None):
         "hoje": hoje.strftime("%d/%m/%Y"),
         "hoje_extenso": "%d de %s de %d" % (hoje.day, MESES[hoje.month - 1], hoje.year),
         "base": nome_base,
+        "fundamentacao_remicao": m.get("fd_fund", ""),
     }
+    # fundamentação do indulto/comutação no padrão do programa (a mesma do botão "Copiar fundamentação")
+    try:
+        import rspe_indulto_tl as _rtl
+        _tl = _rtl.linha(r, hoje)
+        for _d in _tl.get("decretos", []):
+            for _k in ("indulto", "comutacao"):
+                d["fundamentacao_%s_%s" % (_k, _d["id"])] = (_d.get(_k) or {}).get("fundamentacao", "")
+    except Exception:
+        pass
     return {k: ("" if v is None else str(v)) for k, v in d.items()}
 
 
