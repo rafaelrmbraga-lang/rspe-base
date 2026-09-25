@@ -34,7 +34,7 @@ import rspe_relatorio as rrel
 import rspe_indulto_tl as rtl
 
 APP = "RSPE Base"
-VERSAO = "6.16.15"
+VERSAO = "6.16.16"
 
 
 def pasta_app():
@@ -345,6 +345,11 @@ class Base:
         # controle de pedidos: por assistido e aba (progressão, livramento, indulto, prescrição, extinção, remição)
         self.con.execute("""CREATE TABLE IF NOT EXISTS pedidos (
             processo TEXT, aba TEXT, data TEXT, obs TEXT, ref TEXT, registrado TEXT, PRIMARY KEY (processo, aba))""")
+        try:
+            # tipo de providência (pedido nos autos, ofício à unidade prisional, outra): coluna nova da 6.16.16
+            self.con.execute("ALTER TABLE pedidos ADD COLUMN tipo TEXT")
+        except sqlite3.OperationalError:
+            pass
         self.con.execute("""CREATE TABLE IF NOT EXISTS dados_manuais (
             processo TEXT, campo TEXT, valor TEXT, data TEXT, PRIMARY KEY (processo, campo))""")
         self.con.commit()
@@ -447,10 +452,11 @@ class Base:
 
     def pedidos(self):
         with self.lock:
-            rows = self.con.execute("SELECT processo, aba, data, obs, ref, registrado FROM pedidos").fetchall()
+            rows = self.con.execute("SELECT processo, aba, data, obs, ref, registrado, tipo FROM pedidos").fetchall()
         out = {}
-        for p, a, d, o, rf_, rg_ in rows:
-            out.setdefault(p, {})[a] = {"data": d or "", "obs": o or "", "ref": rf_ or "", "registrado": rg_ or ""}
+        for p, a, d, o, rf_, rg_, tp in rows:
+            out.setdefault(p, {})[a] = {"data": d or "", "obs": o or "", "ref": rf_ or "", "registrado": rg_ or "",
+                                        "tipo": tp or ("oficio" if a == "fd" else "pedido")}
         return out
 
     def pedido_gravar(self, processo, aba, dados):
@@ -458,9 +464,9 @@ class Base:
             if not dados:
                 self.con.execute("DELETE FROM pedidos WHERE processo=? AND aba=?", (processo, aba))
             else:
-                self.con.execute("INSERT OR REPLACE INTO pedidos VALUES (?,?,?,?,?,?)",
+                self.con.execute("INSERT OR REPLACE INTO pedidos (processo, aba, data, obs, ref, registrado, tipo) VALUES (?,?,?,?,?,?,?)",
                                  (processo, aba, dados.get("data", ""), dados.get("obs", ""), dados.get("ref", ""),
-                                  datetime.now().strftime("%d/%m/%Y %H:%M")))
+                                  datetime.now().strftime("%d/%m/%Y %H:%M"), dados.get("tipo", "") or "pedido"))
             self.con.commit()
 
     def dados_manuais(self):
@@ -708,7 +714,7 @@ class Api:
         self.base.presc_ajuste_gravar(processo, chave, dados or None)
         return self.listar()
 
-    def pedido(self, processo, aba, data, obs, ref):
+    def pedido(self, processo, aba, data, obs, ref, tipo="pedido"):
         """Marca (ou desmarca, com data vazia) o pedido já feito na aba: data do protocolo, observação livre e a situação
         da aba no momento da marcação (para avisar se ela mudar depois, com um RSPE novo)."""
         if not self.base:
@@ -716,7 +722,7 @@ class Api:
         data = (data or "").strip()
         if data and not rs.to_date(data):
             return {"erro": "Data inválida: use dd/mm/aaaa."}
-        self.base.pedido_gravar(processo, aba, {"data": data, "obs": (obs or "").strip(), "ref": ref or ""} if data else None)
+        self.base.pedido_gravar(processo, aba, {"data": data, "obs": (obs or "").strip(), "ref": ref or "", "tipo": tipo or "pedido"} if data else None)
         r = self.listar()
         r["msg"] = "Pedido registrado." if data else "Marcação de pedido removida."
         return r

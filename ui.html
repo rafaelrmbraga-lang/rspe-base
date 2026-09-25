@@ -771,19 +771,52 @@ const ui = {
   pedRef(r,aba){ return ({prog:r.prog, liv:r.liv, ind:['i22','i24','c24','i25','c25'].map(k=>r[k]).join('|'), presc:(r.presc_ppe||'')+'|'+(r.presc_prox||''), ext:r.ext_termino, fd:r.fd_sit})[aba]||''; },
   pedidoAbrir(id, aba){ const r=(this.dados.registros||[]).find(x=>x.id===id)||{}; const P=(r.pedidos||{})[aba]; const hoje=this.dados.hoje||'';
     const mud=P&&P.ref&&P.ref!==this.pedRef(r,aba);
-    document.getElementById('modal').innerHTML=`<div class="box" style="width:480px"><h2>Pedido de ${this.PED_NOME[aba]||aba}</h2>
+    document.getElementById('modal').innerHTML=`<div class="box" style="width:580px"><h2>Pedido de ${this.PED_NOME[aba]||aba}</h2>
       <p class="muted" style="margin:0 0 10px">${esc(r.nome)} · ${esc(r.proc)}${P?`<br>Marcado em ${esc(P.registrado)}${P.ref?` · situação na marcação: ${esc(P.ref.replace(/\|/g,' · '))}`:''}`:''}</p>
       ${mud?`<p style="margin:0 0 10px;color:var(--a-tx);font-weight:600">⚠ A situação desta aba mudou depois do pedido (hoje: ${esc(this.pedRef(r,aba).replace(/\|/g,' · '))}). Confira se o pedido ainda vale ou se é o caso de um novo.</p>`:''}
       <div style="display:grid;grid-template-columns:150px 1fr;gap:8px;align-items:center">
-        <label>Data do pedido</label><input id="ped_data" value="${esc(P?P.data:hoje)}" placeholder="dd/mm/aaaa" style="padding:7px 9px;border:1px solid var(--line);border-radius:8px;font:inherit">
+        <label>Providência</label><select id="ped_tipo" style="padding:7px 9px;border:1px solid var(--line);border-radius:8px;font:inherit">${[['pedido','Pedido protocolado nos autos'],['oficio','Ofício à unidade prisional'],['outro','Outra providência']].map(o=>`<option value="${o[0]}" ${((P&&P.tipo)||(aba==='fd'?'oficio':'pedido'))===o[0]?'selected':''}>${o[1]}</option>`).join('')}</select>
+        <label>Data</label><input id="ped_data" value="${esc(P?P.data:hoje)}" placeholder="dd/mm/aaaa" style="padding:7px 9px;border:1px solid var(--line);border-radius:8px;font:inherit">
         <label>Observação</label><input id="ped_obs" value="${esc(P?P.obs:'')}" placeholder="ex.: mov. 123, indulto 2025, aguardando MP" style="padding:7px 9px;border:1px solid var(--line);border-radius:8px;font:inherit">
       </div>
-      <div class="acts">${P?`<button class="btn" style="margin-right:auto;color:var(--r-tx)" onclick="ui.pedidoSalvar('${id}','${aba}',true)">Remover marcação</button>`:''}<button class="btn" onclick="ui.fecharModal()">Cancelar</button><button class="btn pri" onclick="ui.pedidoSalvar('${id}','${aba}')">${P?'Salvar':'Marcar pedido feito'}</button></div></div>`;
+      <div class="acts">${P?`<button class="btn" style="margin-right:auto;color:var(--r-tx)" onclick="ui.pedidoSalvar('${id}','${aba}',true)">Remover marcação</button><button class="btn" onclick="ui.fecharModal();ui.abrirSAP('${id}')">Registro para o SAP</button>`:''}<button class="btn" onclick="ui.fecharModal()">Cancelar</button><button class="btn pri" onclick="ui.pedidoSalvar('${id}','${aba}')">${P?'Salvar':'Marcar pedido feito'}</button></div></div>`;
     document.getElementById('modal').classList.add('on'); setTimeout(()=>{ const e=document.getElementById('ped_obs'); if(e) e.focus(); },50); },
+  // ---------- registro de atendimento para o SAP: o que foi constatado e o que foi feito, em texto corrido ----------
+  registroSAP(r){ const lin=(r.presc_linhas||[]); const DEC={i22:'Decreto 11.302/2022',i24:'Decreto 12.338/2024',i25:'Decreto 12.790/2025',c24:'Decreto 12.338/2024',c25:'Decreto 12.790/2025'};
+    const c=[];
+    const ind=['i22','i24','i25'].filter(k=>r[k+'_cor']==='verde').map(k=>DEC[k]); const com=['c24','c25'].filter(k=>r[k+'_cor']==='verde').map(k=>DEC[k]);
+    if(ind.length) c.push('direito a indulto ('+ind.join(', ')+')');
+    if(com.length) c.push('direito a comutação ('+com.join(', ')+')');
+    const ppe=lin.filter(L=>L.ppe_cor==='vermelho').map(L=>L.rotulo||L.crime); if(ppe.length) c.push('possível prescrição da pretensão executória ('+ppe.join('; ')+')');
+    const ppp=lin.filter(L=>L.retro_cor==='vermelho').map(L=>L.rotulo||L.crime); if(ppp.length) c.push('possível prescrição da pretensão punitiva ('+ppp.join('; ')+')');
+    if(/Remição a requerer/.test(r.fd_sit||'')) c.push('remição a requerer'+(r.fd_sit_det?' ('+r.fd_sit_det.replace(/^Remição a requerer\s*/,'').replace(/^\(|\)$/g,'')+')':''));
+    if(/Ausência de atestado|Último atestado/.test(r.fd_sit||'')) c.push('pendência de atestado de trabalho ou de certificação de estudo na ficha disciplinar');
+    const al=(r.aud_itens||[]).filter(i=>i.nivel==='alerta'&&!i.baixado).map(i=>i.titulo); if(al.length) c.push('inconsistências no cálculo da pena ('+al.join('; ')+')');
+    if(r.prog_cor==='vencido') c.push('direito à progressão de regime (requisito objetivo atingido em '+r.prog+')');
+    if(r.liv_cor==='vencido') c.push('direito ao livramento condicional (requisito objetivo atingido em '+r.liv+')');
+    if(r.ext_cor==='vermelho') c.push('possível extinção da pena ('+(r.ext_sit||'')+')');
+    const P=r.pedidos||{}; const NOME={prog:'progressão de regime',liv:'livramento condicional',ind:'indulto/comutação',presc:'extinção da punibilidade pela prescrição',ext:'extinção da pena',fd:'remição'};
+    const ordem=Object.keys(P).sort((a,b)=>this.tlD(P[a].data)-this.tlD(P[b].data));
+    const f=ordem.map(k=>{ const x=P[k], o=x.obs?' ('+x.obs+')':'';
+      if(x.tipo==='oficio') return 'foi expedido ofício à unidade prisional em '+x.data+(k==='fd'?', solicitando atestado de trabalho e/ou certificação de estudo':', referente a '+NOME[k])+o;
+      if(x.tipo==='outro') return 'em '+x.data+', '+(x.obs||'providência referente a '+NOME[k]);
+      return 'foi protocolado nos autos, em '+x.data+', pedido de '+NOME[k]+o; });
+    const quem=`execução penal nº ${r.proc} (${r.nome})`;
+    let t=`Em análise da ${quem}, com base no RSPE de ${r.geracao||'data não informada'}, `;
+    t+= c.length ? 'foi constatado que o(a) assistido(a) possuía: '+c.join('; ')+'.' : 'não foram constatadas pendências (benefícios a requerer, prescrição, remição ou inconsistências no cálculo).';
+    t+= f.length ? ' Assim, '+f.join('; ')+'.' : ' Nenhuma providência registrada até '+(this.dados.hoje||'esta data')+'.';
+    return t; },
+  abrirSAP(id){ const r=(this.dados.registros||[]).find(x=>x.id===id); if(!r) return; const t=this.registroSAP(r);
+    document.getElementById('modal').innerHTML=`<div class="box" style="width:640px"><h2>Registro para o SAP</h2>
+      <p class="muted" style="margin:0 0 8px">${esc(r.nome)} · ${esc(r.proc)} · texto montado com o que o programa constatou e com os pedidos e ofícios marcados. Pode editar antes de copiar.</p>
+      <textarea id="sap_txt" style="width:100%;min-height:280px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font:inherit;line-height:1.55;resize:vertical;box-sizing:border-box">${esc(t)}</textarea>
+      <div class="acts"><button class="btn" onclick="ui.fecharModal()">Fechar</button><button class="btn pri" onclick="ui.copiarClip(ui.clip(document.getElementById('sap_txt').value))">Copiar texto</button></div></div>`;
+    document.getElementById('modal').classList.add('on'); },
   async pedidoSalvar(id, aba, remover){ const r=(this.dados.registros||[]).find(x=>x.id===id)||{};
     const data=remover?'':document.getElementById('ped_data').value.trim(), obs=remover?'':document.getElementById('ped_obs').value.trim();
     if(!remover&&!/^\d{2}\/\d{2}\/\d{4}$/.test(data)){ this.toast('Use a data no formato dd/mm/aaaa.'); return; }
-    const res=await API().pedido(id, aba, data, obs, this.pedRef(r,aba)); if(res&&res.erro){ this.toast(res.erro); return; }
+    const tipo=remover?'':(document.getElementById('ped_tipo')||{}).value||'pedido';
+    const res=await API().pedido(id, aba, data, obs, this.pedRef(r,aba), tipo); if(res&&res.erro){ this.toast(res.erro); return; }
     this.fecharModal(); if(res&&res.registros) this.carregar(res); if(res&&res.msg) this.toast(res.msg); },
   async darBaixa(id, chave, titulo){ const obs = prompt('Dar baixa no alerta:\n'+titulo.replace(/&#39;/g,"'")+'\n\nObservação (opcional: o que foi feito / por que não se aplica):',''); if(obs===null) return; await api('baixar_alerta', id, chave, titulo.replace(/&#39;/g,"'"), obs); this.aberto=id; this.render(); },
   async reabrir(id, chave){ await api('reabrir_alerta', id, chave); this.aberto=id; this.render(); },
@@ -861,7 +894,7 @@ const ui = {
     const calc=dets+cms+prs;
     document.getElementById('drawer').innerHTML=`
       <div class="dh"><div><h2><span class="copy" onclick="ui.copiar(ui._clips[${this.clip(r.nome||'')}])" title="Clique para copiar o nome">${esc(r.nome)} ⧉</span></h2><div class="sub"><span class="copy" onclick="ui.copiar('${esc(r.proc)}')" title="Clique para copiar">${esc(r.proc)} ⧉</span> · ${esc(r.regime||'regime não informado')}</div>
-        <div class="sub">RSPE de ${esc(r.geracao)} · <span class="mini" onclick="ui.copiarClip(${ui.clip(ui.txtFicha(r))})">Copiar resumo</span></div></div>
+        <div class="sub">RSPE de ${esc(r.geracao)} · <span class="mini" onclick="ui.copiarClip(${ui.clip(ui.txtFicha(r))})">Copiar resumo</span> <span class="mini pre" onclick="ui.abrirSAP('${r.id}')">Registro para o SAP</span></div></div>
         <button class="close" onclick="ui.fecharDrawer()">✕</button></div>
       <div class="db">
         ${r.motivo_exec?`<div class="sec"><div class="aviso-exec">${esc(r.motivo_exec)}</div></div>`:''}
@@ -879,7 +912,7 @@ const ui = {
         <div class="sec"><h3>Pontos de atenção</h3>${ptsHtml}</div>
         ${(()=>{ const P=r.pedidos||{}; const ks=['prog','liv','ind','presc','ext','fd'].filter(k=>P[k]); if(!ks.length) return '';
           return `<div class="sec"><h3>Pedidos feitos</h3><div class="peds">${ks.map(k=>{ const x=P[k], mud=x.ref&&x.ref!==this.pedRef(r,k);
-            return `<div class="pedl"><span class="pck ok ${mud?'mud':''}" style="width:16px;height:16px;font-size:11px">✓</span><span class="pn">${this.PED_NOME[k].replace(/^./,c=>c.toUpperCase())}</span><b>${esc(x.data)}</b><span class="po">${esc(x.obs||'')}${mud?` <span style="color:var(--a-tx);font-weight:600">· ⚠ situação mudou depois do pedido</span>`:''}</span><span class="mini" onclick="ui.pedidoAbrir('${r.id}','${k}')">Editar</span></div>`; }).join('')}</div></div>`; })()}
+            return `<div class="pedl"><span class="pck ok ${mud?'mud':''}" style="width:16px;height:16px;font-size:11px">✓</span><span class="pn">${this.PED_NOME[k].replace(/^./,c=>c.toUpperCase())}</span><b>${esc(x.data)}</b><span class="muted" style="white-space:nowrap">${({pedido:'pedido nos autos',oficio:'ofício à unidade',outro:'outra providência'})[x.tipo]||''}</span><span class="po">${esc(x.obs||'')}${mud?` <span style="color:var(--a-tx);font-weight:600">· ⚠ situação mudou depois do pedido</span>`:''}</span><span class="mini" onclick="ui.pedidoAbrir('${r.id}','${k}')">Editar</span></div>`; }).join('')}</div></div>`; })()}
         <div class="sec"><h3>Crimes em execução</h3><div class="kv one"><div>${crimes||'—'}</div></div></div>
         ${this.fichaHtml(r)}
         ${calc?`<div class="sec"><h3>Cálculos do programa</h3>${calc}</div>`:''}
