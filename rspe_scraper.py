@@ -1451,7 +1451,9 @@ def pena_maxima_abstrata(c):
         if v is None:
             return None
         c["_pena_max_fonte"] = "tabela"
-        return int(float(v) * DIAS_ANO)
+        # anos inteiros de 365 dias e a fração em meses de 30 dias (convenção do SEEU): 0.25 = 3 meses = 90 dias
+        anos_ = int(float(v))
+        return anos_ * DIAS_ANO + int(round((float(v) - anos_) * 12 * 30))
     faixa = m.group(2)
     partes = re.split(r"\s+a\s+", faixa, maxsplit=1)
     maximo = partes[-1].strip()
