@@ -374,7 +374,7 @@ def _falta_anterior_x_perda(r, f):
     """Falta grave anterior registrada na ficha (e sem homologação no RSPE) x perda de dias remidos por falta posterior:
     pelo art. 127 da LEP, a nova perda não alcança a remição adquirida antes da falta anterior."""
     import rspe_auditoria as ra
-    res, faltas_rspe, _ = ra.perdas_por_falta(r.get("_incidentes", []))
+    res, faltas_rspe, _ = ra.perdas_por_falta([i for i in r.get("_incidentes", []) if not i.get("_ficha")])
     if not res:
         return []
     ats, incs, _, _e = vincular(r, f)
@@ -1077,7 +1077,8 @@ def complementar_decretos(r, f, hoje=None):
         poss = [m.group(1) for m in re.finditer(r"^✔ ([IVX]+(?: e [IVX]+)?):", det, re.M)]
         verif = [m.group(1) for m in re.finditer(r"^\? ([IVX]+):", det, re.M) if m.group(1) not in ("XVI",)]
         antes = r.get(k) or ""
-        if antes.startswith(("CONCEDIDO", "INDEFERIDO", "não se aplica", "VEDAD", "excluído")) or r.get(k + "_status") in ("vedado",):
+        # NÃO CABE (art. 6º, falta grave nos 12 meses): a ficha não reabre - a falta afasta o indulto qualquer que seja o inciso
+        if antes.startswith(("CONCEDIDO", "INDEFERIDO", "não se aplica", "VEDAD", "excluído", "NÃO CABE")) or r.get(k + "_status") in ("vedado",):
             r[k + "_explica"] = exp
             continue
         # avisos da análise (falta do art. 6º, livramento incerto etc.) seguem na célula depois de " | "

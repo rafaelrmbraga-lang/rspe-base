@@ -34,7 +34,7 @@ import rspe_relatorio as rrel
 import rspe_indulto_tl as rtl
 
 APP = "RSPE Base"
-VERSAO = "6.16.23"
+VERSAO = "6.16.24"
 
 
 def pasta_app():
@@ -99,7 +99,7 @@ O RSPE não lista faltas formalmente. A janela é de 365 dias até a data de ger
 (vermelho) só para falta com sanção reconhecida no RSPE (falta grave homologada, sanção concedida), pela data do fato; indício sem essa
 sanção (fuga ou abandono só como evento, regressão cautelar, falta pendente, perda de remidos sem falta datada, dias perdidos sem data)
 aparece como "A apurar" (amarelo), com o detalhe na ficha do assistido. Regressão e perda de remidos são datadas pela decisão.
-Incidente negado não conta. A ficha disciplinar não entra nesta coluna. "Não consta" não garante ausência de falta: conferir o PAD.
+Incidente negado não conta. Falta grave da ficha disciplinar ausente do RSPE entra como "A apurar" (decidir na Auditoria). "Não consta" não garante ausência de falta: conferir o PAD.
 <h4>Indulto / Comutação</h4>
 Art. 1º (mesmo rol nos dois decretos): hediondos/equiparados, tortura, lavagem (&gt;4 anos), ORCRIM e milícia, terrorismo, racismo,
 escravidão/tráfico de pessoas, genocídio, sistema financeiro (&gt;4 anos), licitações (&gt;4 anos), crimes sexuais (215, 216-A, 217-A,
@@ -646,6 +646,11 @@ class Api:
                 r["data_nascimento"] = _f0["data_nascimento"]
                 r["_nasc_fonte"] = "lida da ficha disciplinar do SIAPEN"
                 r["_nasc_data"] = ""
+            # faltas graves da ficha disciplinar que o RSPE não traz: entram como falta a apurar
+            try:
+                rs.faltas_da_ficha(r, _f0)
+            except Exception:
+                logging.getLogger("rspe").exception("faltas da ficha %s", _ch0)
             # decisões do operador sobre indícios de falta (fuga, pendente, perda sem falta): valem em todas as abas
             rs.aplicar_decisoes_falta(r, {k.split("|", 1)[1]: v["valor"] for k, v in _dm.items() if k.startswith("falta|")})
             for _c in r.get("_crimes", []):

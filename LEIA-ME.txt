@@ -1,8 +1,8 @@
-RSPE BASE - SEEU  v6.16.23 (programa em abas)
+RSPE BASE - SEEU  v6.16.24 (programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-6.16.23. A documentação técnica completa (cada parâmetro, a regra, a norma e
+6.16.24. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -535,6 +535,25 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v6.16.24
+  - Falta grave do art. 6º (decretos 2024 e 2025) conferida uma única vez por
+    decreto e aplicada ao indulto e à comutação juntos, qualquer que seja o
+    inciso (inclusive o XV e os incisos XI/XII/XIII conferidos na ficha): não
+    cabe mais "Possível" no indulto com "Não cabe · falta" na comutação. A
+    ficha disciplinar não reabre o indulto afastado pela falta.
+  - Faltas graves registradas na ficha disciplinar (SIAPEN) e ausentes do RSPE
+    entram como "Falta a apurar" (data do fato): aparecem na coluna Falta, na
+    Auditoria (botão Preencher: houve / não houve falta grave) e na linha do
+    tempo; confirmada, afasta indulto e comutação. Falta arquivada não entra.
+  - "Não se aplica" com a data do decreto: "não iniciou o cumprimento em
+    25/12/2024", "sem condenação até 23/12/2025" - a situação é a da data do
+    decreto; falta posterior (inclusive na prisão provisória) não a contradiz.
+  - Auditoria: "Indício de falta" só quando não há item de falta a decidir; falta
+    firme vira "Falta grave nos últimos 12 meses" (informativo).
+  - Prescrição: coluna e marco "R. Denúncia" (recebimento da denúncia).
+  - Contador das abas: quem tem o pedido marcado sai da contagem (volta se a
+    situação da aba mudar depois do pedido).
 
 v6.16.23
   - Padrão único de escrita nas tabelas: nome em negrito, demais informações em

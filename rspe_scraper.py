@@ -1120,6 +1120,27 @@ def faltas_editaveis(incidentes, eventos):
     return out
 
 
+def faltas_da_ficha(r, ficha):
+    """Faltas graves registradas na ficha disciplinar do SIAPEN que o RSPE não traz (sem falta própria em até 30 dias da
+    mesma data): entram como incidente PENDENTE (falta a apurar), datado pelo fato - a sanção do conselho disciplinar não é
+    reconhecimento em juízo (decretos, art. 6º). O operador decide ("é falta grave" / "não é") como nos demais indícios, e a
+    decisão vale no sistema inteiro. Falta arquivada não entra."""
+    r["_incidentes"] = [i for i in r.get("_incidentes", []) if not i.get("_ficha")]
+    if not ficha:
+        return
+    proprias = [i for i in r["_incidentes"] if RE_FALTA_PROPRIA.search(_rotulo_incidente(i)) and not _negado(i)]
+    datas = [d for d in (_data_fato_falta(i) for i in proprias) if d]
+    for x in ficha.get("faltas") or []:
+        d = to_date(x.get("data_fato") or x.get("data_registro") or "")
+        if not d or not x.get("grave") or x.get("situacao") == "arquivada" or any(abs((d - y).days) <= 30 for y in datas):
+            continue
+        sit = x.get("situacao") or "registrada"
+        r["_incidentes"].append({"tipo": "FALTA GRAVE NA FICHA DISCIPLINAR (SIAPEN)",
+                                 "complemento": "Data da infração: %s%s - %s" % (fmt(d), (" - " + x["artigo"]) if x.get("artigo") else "", sit),
+                                 "situacao": "PENDENTE", "data_referencia": fmt(d), "data_decisao": "", "_ficha": True})
+        datas.append(d)
+
+
 def aplicar_decisoes_falta(r, decisoes):
     """Grava em cada evento/incidente do registro a decisão do operador sobre a falta (decisoes: {chave: 'sim'|'nao'})."""
     for e in r.get("_eventos", []):
@@ -2419,7 +2440,7 @@ def analise_decretos(campos, crimes, eventos, incidentes, hoje):
             out[k + "_detalhe"] = ("Regime %s fixado em %s, mas o RSPE não registra cumprimento em curso em %s (%s). "
                                    "Sem cumprimento na data, não há fração a aferir: os incisos com tempo cumprido e a comutação não se aplicam."
                                    % (regime, fmt(dreg), fmt(ref), motivo)) + nota_art2
-            out[kc] = "não se aplica: %s" % motivo
+            out[kc] = "não se aplica: %s até %s" % (motivo, fmt(ref))
             _xv_sem_cumprimento(motivo, out[k + "_detalhe"])
             continue
         if not em_cumprimento:
@@ -2884,27 +2905,29 @@ def analise_decretos(campos, crimes, eventos, incidentes, hoje):
             if kk in out and out[kk] and not out[kk].startswith("não se aplica"):
                 out[kk] += suf
     # art. 6º: falta grave com sanção reconhecida em juízo nos 12 meses (até a publicação) -> não cabe o indulto nem a
-    # comutação (a declaração fica condicionada à inexistência dessa sanção)
+    # comutação (a declaração fica condicionada à inexistência dessa sanção). A falta é conferida aqui, uma vez por decreto,
+    # e vale para os dois - qualquer que tenha sido o caminho da triagem (incisos com fração, XV, art. 7º, p. ú.)
     for ano in DECRETOS:
         k, kc = "indulto_%s" % ano, "comutacao_%s" % ano
-        txt = out.get(k) or ""
-        if "FALTA nos 12 meses (art. 6º)" not in txt or txt.startswith(("VEDAD", "não se aplica")):
+        ref_a = DECRETOS[ano]
+        ff, _fv = falta_art6(incidentes, ref_a, eventos, DECRETOS_PUB.get(ano) or ref_a)
+        if not ff:
             continue
-        faltas_txt = txt.split("FALTA nos 12 meses (art. 6º): ", 1)[1].split("; a verificar:")[0].split(" | ")[0]
+        faltas_txt = "; ".join(ff)
+        txt = out.get(k) or ""
         triagem = txt.split(" | ")[0]
-        out[k] = "NÃO CABE (art. 6º): falta grave com sanção reconhecida nos 12 meses - %s" % faltas_txt
-        out[k + "_status"] = "nao"
         nota = ("✘ Art. 6º: falta grave com sanção reconhecida nos 12 meses anteriores a 25/12/%s (%s): a declaração do indulto e da comutação "
-                "fica condicionada à inexistência dessa sanção - não cabe. Sem a falta, a triagem seria: %s." % (ano, faltas_txt, triagem))
-        for kk in (k + "_detalhe", k + "_explica"):
-            if kk in out:
-                out[kk] = (out.get(kk) or "") + "\n" + nota
-        ctxt = out.get(kc) or ""
-        if ctxt.startswith(("POSSÍVEL", "A VERIFICAR", "prejudicada", "não atinge")):
-            out[kc] = "NÃO CABE (art. 6º): falta grave com sanção reconhecida nos 12 meses - %s" % faltas_txt
-            out[kc + "_detalhe"] = (out.get(kc + "_detalhe") or "").replace(
-                "Prejudicada: o indulto é cabível e prevalece (art. 13, § 5º).", "") + "\n" + nota.replace("Sem a falta, a triagem seria: %s." % triagem,
-                                                                                                           "Sem a falta, a comutação seria: %s." % ctxt.split(" | ")[0])
+                "fica condicionada à inexistência dessa sanção - não cabe." % (ano, faltas_txt))
+        for kk, nome in ((k, "a triagem"), (kc, "a comutação")):
+            t = out.get(kk) or ""
+            if not t or t.upper().startswith(("VEDAD", "NÃO SE APLICA", "CONCEDID", "INDEFERID", "NÃO CABE", "DECRETO SEM", "EXCLU")):
+                continue
+            out[kk] = "NÃO CABE (art. 6º): falta grave com sanção reconhecida nos 12 meses - %s" % faltas_txt
+            out[kk + "_status"] = "nao"
+            n2 = nota + " Sem a falta, %s seria: %s." % (nome, t.split(" | ")[0])
+            for dk in (kk + "_detalhe", kk + "_explica"):
+                if dk in out or dk.endswith("_detalhe"):
+                    out[dk] = (out.get(dk) or "").replace("Prejudicada: o indulto é cabível e prevalece (art. 13, § 5º).", "") + "\n" + n2
     for ano, nota in notas_tr.items():
         for kk in ("indulto_%s_detalhe" % ano, "comutacao_%s_detalhe" % ano):
             if kk in out:

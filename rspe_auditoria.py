@@ -178,6 +178,7 @@ def perdas_por_falta(incidentes):
     """Para cada falta grave homologada no RSPE com perda de dias remidos: a perda, as parcelas e a remição
     sobre a qual cada parcela incidiu (parcela = 1/3 da remição, arredondado), a falta anterior e a janela de
     remição entre a falta anterior e a atual (LEP, art. 127: a contagem recomeça da data da infração)."""
+    incidentes = [i for i in incidentes if not i.get("_ficha")]  # falta da ficha disciplinar: não é homologação no RSPE
     def dt(i):
         return rs.to_date(i.get("data_referencia") or i.get("data_decisao") or "")
     def qtd(i):
@@ -943,7 +944,10 @@ def auditar(r, hoje=None):
                            "Indulto, art. 9º, XV: reparação dispensada (art. 12, § 2º, I: presunção para o assistido da Defensoria). "
                            "Livramento (CP, art. 83, IV): a efetiva impossibilidade de reparar deve ser demonstrada - o STJ exige prova (AgRg no HC 799.167). Instruir o pedido.",
                            "CP, art. 83, IV ('salvo efetiva impossibilidade'); Decretos 12.338/2024 e 12.790/2025, art. 9º, XV c/c art. 12, § 2º, I; STJ, AgRg no HC 799.167.", tipo="crime-patrimonial-sem-vga-reparacao-do-dano"))
-    if r.get("falta_12m") in ("SIM", "A APURAR"):
+    # os indícios decidíveis já têm item próprio (Falta a apurar / Fuga): este só entra para a falta firme ou para o que não é decidível
+    if r.get("falta_12m") == "SIM":
+        itens.append(_item("info", "Falta grave nos últimos 12 meses", r.get("falta_12m_detalhe", ""), "Reflexo em LC (CP, art. 83, III, b), indulto e comutação (art. 6º dos decretos) e progressão (LEP, art. 112, §§ 6º e 7º).", tipo="indicio-de-falta-nos-ultimos-12-meses"))
+    elif r.get("falta_12m") == "A APURAR" and not any(not fi["decisao"] for fi in rs.faltas_editaveis(incidentes, eventos)):
         itens.append(_item("verificar", "Indício de falta nos últimos 12 meses", r.get("falta_12m_detalhe", ""), "Reflexo em LC (CP, art. 83, III, b), indulto (art. 6º dos decretos) e progressão (LEP, art. 112, §§ 6º e 7º).", tipo="indicio-de-falta-nos-ultimos-12-meses"))
 
     # ---------------- 6. eventos / detração ----------------

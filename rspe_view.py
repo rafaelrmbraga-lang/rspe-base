@@ -261,13 +261,19 @@ def curto_indulto(txt):
             return "A verificar · %s%s%s" % (m.group(2), extra, falta)
         return base.replace("A VERIFICAR: ", "A verificar · ") + falta
     if base.startswith("não se aplica: sem condenação"):
-        return "Não se aplica (sem condenação na data)"
+        # a data é a do decreto: falta ou prisão posterior não contradiz (o que conta é a condenação até ali)
+        md = rs.re.search(r"até (\d{2}/\d{2}/\d{4})", base)
+        return "Não se aplica (sem condenação até %s)" % md.group(1) if md else "Não se aplica (sem condenação na data)"
     if base.startswith("não se aplica: fatos") or "fato posterior" in base:
         return "Não se aplica (fatos posteriores)"
-    if base.startswith("não se aplica: não iniciou"):
-        return "Não se aplica (não iniciou o cumprimento)"
-    if base.startswith("não se aplica: cumprimento interrompido"):
-        return "Não se aplica (cumprimento interrompido)"
+    if base.startswith(("não se aplica: não iniciou", "não se aplica: cumprimento interrompido")):
+        # a data deixa claro que a situação é a da data do decreto (faltas posteriores não contradizem)
+        md = rs.re.search(r"até (\d{2}/\d{2}/\d{4})", base)
+        oque = "não iniciou o cumprimento" if "não iniciou" in base else "cumprimento interrompido"
+        return "Não se aplica (%s em %s)" % (oque, md.group(1)) if md else "Não se aplica (%s)" % oque
+    if base.startswith("não se aplica: sem pena em cumprimento"):
+        md = rs.re.search(r"em (\d{2}/\d{2}/\d{4})", base)
+        return "Não se aplica (sem pena em cumprimento em %s)" % md.group(1) if md else "Não se aplica (sem execução na data)"
     if base.startswith("não se aplica"):
         return "Não se aplica (sem execução na data)"
     if base.startswith("CONCEDIDO no RSPE"):
@@ -314,7 +320,7 @@ def curto_impeditivo(r):
 def compacto_indulto(txt):
     """Versão curta para a célula da tabela; o texto completo vai para o tooltip e para a ficha."""
     t = txt or ""
-    t = rs.re.sub(r"\s*\((?:sem execução na data|fatos posteriores)\)", "", t)
+    t = rs.re.sub(r"\s*\((?:sem execução na data|fatos posteriores|sem condenação até [\d/]+|sem pena em cumprimento em [\d/]+|não iniciou o cumprimento em [\d/]+|cumprimento interrompido em [\d/]+)\)", "", t)
     t = t.replace("Vedado (art. 1º)", "Vedado · art. 1º").replace("Excluído (art. 7º)", "Excluído · art. 7º")
     t = t.replace(" · art. 9º, ", " · ").replace("art. 5º (pena máx. ≤ 5 anos)", "art. 5º")
     t = rs.re.sub(r"^Não atinge \(.*\)$", "Não atinge", t)
@@ -796,7 +802,7 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
         "incidentes": [
             {"sit": i.get("situacao"), "tipo": i.get("tipo"), "comp": i.get("complemento"),
              "dec": i.get("data_decisao"), "ref": i.get("data_referencia")}
-            for i in r.get("_incidentes", [])],
+            for i in r.get("_incidentes", []) if not i.get("_ficha")],
     }
     m["motivo_exec"] = est[1] if est else ("Pena interrompida" if interr else "")
     return simplificar(m)
@@ -832,7 +838,7 @@ def modelo_erro(r, erro, baixas=None):
 
 
 # abas: colunas (chave, título, peso), campo de cor, campo "status" (pílula), tipo de legenda
-PRESC_SUB = [("crime", "Crime", 12), ("proc_crim", "Ação penal", 15), ("pena", "Pena", 7), ("fato", "Fato", 9), ("denuncia", "Denúncia", 9), ("sentenca", "Sentença", 9),
+PRESC_SUB = [("crime", "Crime", 12), ("proc_crim", "Ação penal", 15), ("pena", "Pena", 7), ("fato", "Fato", 9), ("denuncia", "R. Denúncia", 9), ("sentenca", "Sentença", 9),
              ("transito", "Trânsito", 9), ("prazo_ppp", "Prazo PPP", 9), ("retro_status", "Retroativa / intercorrente", 20),
              ("prazo_ppe", "Prazo PPE", 11), ("ppe_termo", "Termo inicial", 9), ("ppe_status", "Executória", 22)]
 ABAS = [
