@@ -24,21 +24,40 @@ def _recurso(nome):
     return os.path.join(getattr(sys, "_MEIPASS", _pasta_app()), nome)
 
 
+def _completar(dest, orig):
+    """Acrescenta em dest o que só existe em orig (chaves ausentes, também dentro das tabelas), sem alterar o que dest já tem."""
+    for k, v in orig.items():
+        if k not in dest:
+            dest[k] = v
+        elif isinstance(dest[k], dict) and isinstance(v, dict):
+            _completar(dest[k], v)
+    return dest
+
+
 def carregar(forcar=False):
+    """Base jurídica em uso: entre a cópia ao lado do executável (editável) e a embutida no programa, vale a de versão mais
+    recente; o que só existe na outra (tabela nova, tipo acrescentado) é completado a partir dela. Assim uma cópia antiga
+    deixada na pasta do programa não esconde o que as versões novas trazem, e uma cópia editada mais nova continua valendo."""
     global _BASE, _ORIGEM
     if _BASE is not None and not forcar:
         return _BASE
-    candidatos = [os.path.join(_pasta_app(), "base_juridica.json"), _recurso("base_juridica.json")]
-    for c in candidatos:
+    lidas = []
+    for c in (os.path.join(_pasta_app(), "base_juridica.json"), _recurso("base_juridica.json")):
+        if any(os.path.abspath(c) == os.path.abspath(x[0]) for x in lidas):
+            continue
         try:
             with open(c, encoding="utf-8") as f:
-                _BASE = json.load(f)
-            _ORIGEM = c
-            return _BASE
+                lidas.append((c, json.load(f)))
         except Exception:
             continue
-    _BASE = {}
-    _ORIGEM = "(não encontrada)"
+    if not lidas:
+        _BASE, _ORIGEM = {}, "(não encontrada)"
+        return _BASE
+    # a mais recente primeiro (versão 'aaaa-mm-dd' + sufixo; em empate, a cópia ao lado do executável)
+    lidas.sort(key=lambda x: str(x[1].get("versao") or ""), reverse=True)
+    _ORIGEM, _BASE = lidas[0]
+    for c, b in lidas[1:]:
+        _completar(_BASE, b)
     return _BASE
 
 

@@ -1419,42 +1419,50 @@ ART7_2022_ECA = ["240", "241", "241-A", "241-B", "241-C", "241-D", "241-E", "242
 
 def pena_maxima_abstrata(c):
     """Pena máxima em abstrato (dias) lida do tipo penal impresso no RSPE:
-    'Reclusão: 6 anos e 8 meses a 16 anos e 8 meses', 'Detenção: 2 meses a 2 anos', 'Reclusão: 1 a 4 anos'."""
+    'Reclusão: 6 anos e 8 meses a 16 anos e 8 meses', 'Detenção: 2 meses a 2 anos', 'Reclusão: 1 a 4 anos'.
+    Texto ausente, cortado ou ilegível: tabela da base jurídica (pena_maxima_abstrata) e, para contravenção, o teto do
+    art. 10 da LCP (5 anos)."""
     if c.get("_pena_max_inf"):
         c["_pena_max_fonte"] = "informada pelo operador"
         return int(c["_pena_max_inf"])
     t = c.get("tipo_penal") or ""
     lei, art = num_lei(c.get("lei")) or "2848", num_art(c.get("artigo"))
+    if re.search(r"CONTRAVEN", (c.get("lei") or "") + " " + (c.get("artigo") or ""), re.I):
+        lei = "3688"
     if lei == "11343" and art == "33" and t.startswith("§ 4"):
         return int(15 * DIAS_ANO * 5 / 6)  # tráfico privilegiado: máximo de 15 anos com a redução mínima de 1/6
     m = re.search(r"(Reclus[ãa]o|Deten[çc][ãa]o|Pris[ãa]o simples)\s*:\s*(.+?)(?:\s+(?:E|OU|e|ou)\s+Multa|\s+Sem\s+Multa|$)", t, re.I)
-    if not m:
-        # texto do tipo cortado pelo SEEU: tabela editável da base jurídica (pena_maxima_abstrata)
-        try:
-            import rspe_regras as _rg
-            tab = (_rg.carregar() or {}).get("pena_maxima_abstrata", {})
-        except Exception:
-            tab = {}
-        mp = re.match(r"§\s*(\d+[ºo°]?(?:-[A-Z])?|único)", t)
-        chave = "%s:%s" % (lei, art)
-        if mp:
-            chave += " §" + mp.group(1).replace("º", "").replace("o", "").replace("°", "")
-        v = tab.get(chave)
-        if v is None and not mp and t.upper().startswith("CAPUT"):
-            v = tab.get("%s:%s" % (lei, art))
-        if v is None and mp:
-            v = tab.get("%s:%s" % (lei, art)) if lei == "3688" else None
-        if v is None and lei == "3688":
-            # contravenção fora da tabela: a prisão simples nunca passa de 5 anos (LCP, art. 10)
-            c["_pena_max_fonte"] = "LCP, art. 10"
-            return 5 * DIAS_ANO
-        if v is None:
-            return None
-        c["_pena_max_fonte"] = "tabela"
-        # anos inteiros de 365 dias e a fração em meses de 30 dias (convenção do SEEU): 0.25 = 3 meses = 90 dias
-        anos_ = int(float(v))
-        return anos_ * DIAS_ANO + int(round((float(v) - anos_) * 12 * 30))
-    faixa = m.group(2)
+    if m:
+        d = _pena_max_do_texto(m.group(2))
+        if d:
+            return d
+    # texto do tipo cortado ou ilegível: tabela editável da base jurídica (pena_maxima_abstrata)
+    try:
+        import rspe_regras as _rg
+        tab = (_rg.carregar() or {}).get("pena_maxima_abstrata", {})
+    except Exception:
+        tab = {}
+    mp = re.match(r"§\s*(\d+[ºo°]?(?:-[A-Z])?|único)", t)
+    chave = "%s:%s" % (lei, art)
+    if mp:
+        chave += " §" + mp.group(1).replace("º", "").replace("o", "").replace("°", "")
+    v = tab.get(chave)
+    if v is None and (lei == "3688" or (not mp and t.upper().startswith("CAPUT"))):
+        v = tab.get("%s:%s" % (lei, art))  # contravenção: o caput vale para os parágrafos sem aumento próprio
+    if v is None and lei == "3688":
+        # contravenção fora da tabela: a prisão simples nunca passa de 5 anos (LCP, art. 10)
+        c["_pena_max_fonte"] = "LCP, art. 10"
+        return 5 * DIAS_ANO
+    if v is None:
+        return None
+    c["_pena_max_fonte"] = "tabela"
+    # anos inteiros de 365 dias e a fração em meses de 30 dias (convenção do SEEU): 0.25 = 3 meses = 90 dias
+    anos_ = int(float(v))
+    return anos_ * DIAS_ANO + int(round((float(v) - anos_) * 12 * 30))
+
+
+def _pena_max_do_texto(faixa):
+    """'6 anos e 8 meses a 16 anos e 8 meses' / '1 a 4 anos' / '15 dias a 3 meses' -> dias do máximo; None se ilegível."""
     partes = re.split(r"\s+a\s+", faixa, maxsplit=1)
     maximo = partes[-1].strip()
     anos = meses = dias = 0

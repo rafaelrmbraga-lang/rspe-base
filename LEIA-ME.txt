@@ -1,8 +1,8 @@
-RSPE BASE - SEEU  v6.16.12 (programa em abas)
+RSPE BASE - SEEU  v6.16.13 (programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-6.16.12. A documentação técnica completa (cada parâmetro, a regra, a norma e
+6.16.13. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -535,6 +535,17 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v6.16.13
+  - Base jurídica: a cópia de base_juridica.json deixada ao lado do programa
+    não esconde mais a base embutida. Vale a de versão mais recente, e o que
+    só existe na outra (como a tabela das contravenções) é completado a partir
+    dela. Antes, uma cópia antiga na pasta tinha prioridade e as tabelas novas
+    não eram lidas.
+  - Pena máxima em abstrato: quando o texto do tipo no RSPE vem ilegível
+    (pena por extenso, cortada), o programa recorre à tabela da base jurídica e,
+    para contravenção, ao teto de 5 anos do art. 10 da LCP - antes ficava "não
+    lida". Contravenção reconhecida também pelo nome da lei.
 
 v6.16.12
   - Indulto 2022 com crime impeditivo: o art. 11, parágrafo único, decide
