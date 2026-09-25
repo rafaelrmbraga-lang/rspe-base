@@ -165,6 +165,7 @@ tr.sub td{padding:0 0 0 0;background:#FFFFFF;cursor:default}tr.sub:hover td{back
 .fdsit.vermelho{color:var(--r-tx)}.fdsit.amarelo{color:var(--a-tx)}.fdsit.verde{color:var(--g-tx)}
 .pck{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:5px;border:1.5px solid #D0D5DD;background:#fff;cursor:pointer;font-size:14px;font-weight:800;line-height:1;color:#fff;vertical-align:middle}.pck:hover{border-color:var(--pri)}
 .peds{display:flex;flex-direction:column;gap:6px;border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:#F9FAFB}.pedl{display:flex;align-items:center;gap:8px;font-size:12.5px}.pedl .pn{color:var(--tx2);min-width:150px}.pedl .po{flex:1;color:var(--tx2)}
+.sapl{display:flex;flex-direction:column;gap:5px;border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:#F9FAFB;font-size:12.5px}.sapl label{display:flex;align-items:center;gap:6px;cursor:pointer}
 .pck.ok{background:#17B26A;border-color:#17B26A}.pck.ok.mud{background:#F5A524;border-color:#F5A524}
 .mini.pre{background:var(--pri);color:#fff;border-color:var(--pri)}.mini.pre:hover{opacity:.9;color:#fff}
 .chev{display:inline-block;width:14px;color:var(--tx3);font-size:11px;margin-right:4px;transition:.15s}tr.exp .chev{transform:rotate(90deg);color:var(--pri)}
@@ -782,7 +783,7 @@ const ui = {
       <div class="acts">${P?`<button class="btn" style="margin-right:auto;color:var(--r-tx)" onclick="ui.pedidoSalvar('${id}','${aba}',true)">Remover marcação</button><button class="btn" onclick="ui.fecharModal();ui.abrirSAP('${id}')">Registro para o SAP</button>`:''}<button class="btn" onclick="ui.fecharModal()">Cancelar</button><button class="btn pri" onclick="ui.pedidoSalvar('${id}','${aba}')">${P?'Salvar':'Marcar pedido feito'}</button></div></div>`;
     document.getElementById('modal').classList.add('on'); setTimeout(()=>{ const e=document.getElementById('ped_obs'); if(e) e.focus(); },50); },
   // ---------- registro de atendimento para o SAP: o que foi constatado e o que foi feito, em texto corrido ----------
-  registroSAP(r){ const lin=(r.presc_linhas||[]); const DEC={i22:'Decreto 11.302/2022',i24:'Decreto 12.338/2024',i25:'Decreto 12.790/2025',c24:'Decreto 12.338/2024',c25:'Decreto 12.790/2025'};
+  registroSAP(r, sel){ const lin=(r.presc_linhas||[]); const DEC={i22:'Decreto 11.302/2022',i24:'Decreto 12.338/2024',i25:'Decreto 12.790/2025',c24:'Decreto 12.338/2024',c25:'Decreto 12.790/2025'};
     // só o que foi feito: cada providência marcada leva junto a constatação da aba correspondente
     const achado={
       prog:()=>r.prog_cor==='vencido'?'direito à progressão de regime (requisito objetivo atingido em '+r.prog+')':'progressão de regime'+(/^\d{2}\/\d{2}\/\d{4}$/.test(r.prog||'')?' (requisito objetivo em '+r.prog+')':''),
@@ -794,20 +795,31 @@ const ui = {
       ext:()=>'possível extinção da pena'+(r.ext_sit?' ('+r.ext_sit+')':''),
       fd:()=>{ const p=[]; if(/Remição a requerer/.test(r.fd_sit||'')) p.push('remição a requerer'); if(/Ausência de atestado|Último atestado/.test(r.fd_sit||'')) p.push('pendência de atestado de trabalho ou de certificação de estudo'); if(/Conferir remição/.test(r.fd_sit||'')) p.push('remição a conferir'); return p.join(' e ')||'remição a requerer'; }};
     const NOME={prog:'progressão de regime',liv:'livramento condicional',ind:'indulto/comutação',presc:'extinção da punibilidade pela prescrição',ext:'extinção da pena',fd:'remição'};
-    const P=r.pedidos||{}; const ks=Object.keys(P).filter(k=>achado[k]).sort((a,b)=>this.tlD(P[a].data)-this.tlD(P[b].data));
-    if(!ks.length) return `Execução penal nº ${r.proc} (${r.nome}): nenhuma providência registrada até ${this.dados.hoje||'esta data'}.`;
+    const P=r.pedidos||{}; const ks=Object.keys(P).filter(k=>achado[k]&&(!sel||sel.includes(k))).sort((a,b)=>this.tlD(P[a].data)-this.tlD(P[b].data));
+    if(!ks.length) return sel ? 'Selecione ao menos uma providência.' : `Execução penal nº ${r.proc} (${r.nome}): nenhuma providência registrada até ${this.dados.hoje||'esta data'}.`;
     const c=ks.map(k=>achado[k]());
     const f=ks.map(k=>{ const x=P[k], o=x.obs?' ('+x.obs+')':'';
       if(x.tipo==='oficio') return 'foi expedido ofício à unidade prisional em '+x.data+(k==='fd'?', solicitando atestado de trabalho e/ou certificação de estudo':', referente a '+NOME[k])+o;
       if(x.tipo==='outro') return 'em '+x.data+', '+(x.obs||'providência referente a '+NOME[k]);
       return 'foi protocolado nos autos, em '+x.data+', pedido de '+NOME[k]+o; });
     return `Em análise da execução penal nº ${r.proc} (${r.nome}), com base no RSPE de ${r.geracao||'data não informada'}, foi constatado que o(a) assistido(a) possuía: ${c.join('; ')}. Assim, ${f.join('; ')}.`; },
-  abrirSAP(id){ const r=(this.dados.registros||[]).find(x=>x.id===id); if(!r) return; const t=this.registroSAP(r);
-    document.getElementById('modal').innerHTML=`<div class="box" style="width:640px"><h2>Registro para o SAP</h2>
-      <p class="muted" style="margin:0 0 8px">${esc(r.nome)} · ${esc(r.proc)} · só o que foi feito: as providências marcadas na coluna Pedido, cada uma com a constatação que a motivou. Pode editar antes de copiar.</p>
-      <textarea id="sap_txt" style="width:100%;min-height:280px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font:inherit;line-height:1.55;resize:vertical;box-sizing:border-box">${esc(t)}</textarea>
+  // escolha das providências que entram no registro: por padrão, as marcadas hoje (o atendimento do dia); sem nenhuma de hoje, todas
+  abrirSAP(id){ const r=(this.dados.registros||[]).find(x=>x.id===id); if(!r) return; const P=r.pedidos||{};
+    const NOME={prog:'Progressão de regime',liv:'Livramento condicional',ind:'Indulto / comutação',presc:'Prescrição',ext:'Extinção da pena',fd:'Remição'};
+    const TP={pedido:'pedido nos autos',oficio:'ofício à unidade prisional',outro:'outra providência'};
+    const ks=['prog','liv','ind','presc','ext','fd'].filter(k=>P[k]); const hoje=this.dados.hoje||'';
+    const deHoje=ks.filter(k=>(P[k].registrado||'').slice(0,10)===hoje||P[k].data===hoje); const sel0=deHoje.length?deHoje:ks;
+    this._sap={id, sel:sel0.slice()};
+    const lista=ks.length?`<div class="sapl">${ks.map(k=>`<label><input type="checkbox" id="sap_${k}" ${sel0.includes(k)?'checked':''} onchange="ui.sapToggle('${k}',this.checked)"> <b>${NOME[k]}</b> <span class="muted">· ${TP[P[k].tipo]||''} · ${esc(P[k].data)}${P[k].obs?' · '+esc(P[k].obs):''}</span></label>`).join('')}</div>
+      <p class="muted" style="margin:6px 0 8px;font-size:12px">${deHoje.length&&deHoje.length<ks.length?'Marcadas as providências registradas hoje; inclua as anteriores se quiser.':'Desmarque o que não entra neste registro.'}</p>`:'';
+    document.getElementById('modal').innerHTML=`<div class="box" style="width:660px"><h2>Registro para o SAP</h2>
+      <p class="muted" style="margin:0 0 8px">${esc(r.nome)} · ${esc(r.proc)} · só o que foi feito, cada providência com a constatação que a motivou. Pode editar antes de copiar.</p>
+      ${lista}
+      <textarea id="sap_txt" style="width:100%;min-height:220px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font:inherit;line-height:1.55;resize:vertical;box-sizing:border-box">${esc(this.registroSAP(r, ks.length?sel0:null))}</textarea>
       <div class="acts"><button class="btn" onclick="ui.fecharModal()">Fechar</button><button class="btn pri" onclick="ui.copiarClip(ui.clip(document.getElementById('sap_txt').value))">Copiar texto</button></div></div>`;
     document.getElementById('modal').classList.add('on'); },
+  sapToggle(k, on){ const S=this._sap; if(!S) return; S.sel=S.sel.filter(x=>x!==k); if(on) S.sel.push(k);
+    const r=(this.dados.registros||[]).find(x=>x.id===S.id); document.getElementById('sap_txt').value=this.registroSAP(r, S.sel); },
   async pedidoSalvar(id, aba, remover){ const r=(this.dados.registros||[]).find(x=>x.id===id)||{};
     const data=remover?'':document.getElementById('ped_data').value.trim(), obs=remover?'':document.getElementById('ped_obs').value.trim();
     if(!remover&&!/^\d{2}\/\d{2}\/\d{4}$/.test(data)){ this.toast('Use a data no formato dd/mm/aaaa.'); return; }

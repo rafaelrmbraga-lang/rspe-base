@@ -1,8 +1,8 @@
-RSPE BASE - SEEU  v6.16.17 (programa em abas)
+RSPE BASE - SEEU  v6.16.18 (programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-6.16.17. A documentação técnica completa (cada parâmetro, a regra, a norma e
+6.16.18. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -535,6 +535,12 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v6.16.18
+  - Registro para o SAP: escolha das providências que entram no texto (uma
+    caixa por providência marcada). Por padrão vêm marcadas as registradas
+    hoje - o atendimento do dia -; sem nenhuma de hoje, todas. O texto se
+    refaz a cada escolha.
 
 v6.16.17
   - Registro para o SAP traz só o que foi feito: as providências marcadas na
