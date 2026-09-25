@@ -1,8 +1,8 @@
-RSPE BASE - SEEU  v6.16.28 (programa em abas)
+RSPE BASE - SEEU  v6.16.29 (programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-6.16.28. A documentação técnica completa (cada parâmetro, a regra, a norma e
+6.16.29. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -535,6 +535,32 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v6.16.29
+  - Data-base da progressão com o motivo, na ficha do assistido (quadro abaixo de
+    pena/término) e em coluna própria na aba Progressão:
+      * normal: confere (início do cumprimento, reinício/recaptura, progressão,
+        regressão, falta grave homologada, revogação do livramento);
+      * vermelho: motivo incorreto verificável no RSPE (soma/unificação - STJ,
+        Tema 1006; data anterior à última alteração de regime; falta pendente;
+        alteração de data-base por soma);
+      * amarelo: data suspeita, sem explicação no RSPE nem na ficha (a ficha é
+        consultada: prisão/recaptura registrada nela explica a data).
+    Botão Editar: o operador informa a data-base correta e o motivo; a previsão de
+    progressão é refeita (previsão do SEEU - (1 - fração) x diferença de datas) e
+    vale em todas as abas, na exportação, nos relatórios e nas petições. "Voltar
+    ao SEEU" desfaz.
+  - Homônimos: a ficha passa a ler a filiação (nome da mãe). O vínculo da ficha ao
+    assistido (pelos autos ou pelo nome) exige a mesma mãe quando os dois
+    documentos a trazem; mãe diferente gera alerta.
+  - Unidades da AGEPEN/MS catalogadas por regime (fechado, semiaberto, aberto,
+    monitoramento, provisória, federal) - ex.: Penitenciária de Regime Fechado da
+    Gameleira (fechado) x Centro Penal Agroindustrial da Gameleira (semiaberto);
+    Presídio de Trânsito, Centro de Triagem e CPAC (provisórias). Saída da ficha
+    com "Motivo: Progressão" para unidade de semiaberto/aberto conta como
+    progressão cumprida.
+  - Conduta má/péssima: alerta só quando não há falta nos últimos 12 meses (RSPE
+    nem ficha) - a conduta deveria ter sido reabilitada.
 
 v6.16.28
   - Novos confrontos RSPE x ficha disciplinar (Auditoria, "Ficha x RSPE"):

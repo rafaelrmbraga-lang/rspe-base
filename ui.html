@@ -294,6 +294,8 @@ tr.sub td{padding:0 0 0 0;background:#FFFFFF;cursor:default}tr.sub:hover td{back
 .cr:hover{box-shadow:var(--shadow)}
 .cr .tg{display:inline-block;background:var(--c);color:#fff;font-weight:700;border-radius:5px;padding:1px 7px;margin-right:6px;font-size:11.5px}
 .cr .pr{font-weight:600;font-variant-numeric:tabular-nums}.cr .tp{color:var(--tx);font-weight:600;margin-top:3px}.cr .mu{color:var(--tx2)}
+.dbbox{margin-top:10px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}.dbbox small{display:block;color:var(--tx3);font-size:11.5px;margin-bottom:2px}
+.dbbox .dbm{color:var(--tx2)}.dbbox.vermelho{border-color:var(--r-dot);background:var(--r-bg)}.dbbox.vermelho .dbm{color:var(--r-tx)}.dbbox.amarelo{border-color:var(--a-dot);background:var(--a-bg)}.dbbox.amarelo .dbm{color:var(--a-tx)}
 .selo{display:inline-flex;align-items:center;gap:5px;margin-top:6px;padding:3px 8px;border-radius:6px;font-weight:700;font-size:11.5px}
 .selo.IMPEDITIVO{background:#FDE8E8;color:#B42318}.selo.NAO_IMPEDITIVO{background:#DDF5E7;color:#067647}.selo.A_VERIFICAR{background:#FEF4D6;color:#B54708}.selo.FORA{background:#EEF0F3;color:#5B6470}
 .tlv-bar svg,.tlv-tl svg{display:block}
@@ -787,6 +789,13 @@ const ui = {
   async faltasSalvar(id, n){ let res=null; for(let i=0;i<n;i++){ const e=document.getElementById('fal_'+i); if(!e||e.value===e.dataset.v) continue;
       res=await API().dado_manual(id, 'falta|'+e.dataset.ch, e.value); if(res&&res.erro){ this.toast(res.erro); return; } }
     this.fecharModal(); if(res&&res.registros){ this.carregar(res); this.toast('Decisão gravada: vale em todas as abas.'); } },
+  async editarDataBase(id, limpar){ const r=(this.dados.registros||[]).find(x=>x.id===id)||{};
+    if(limpar){ const res=await API().dado_manual(id,'data_base',''); if(res&&res.erro){this.toast(res.erro);return;} if(res&&res.registros) this.carregar(res); this.toast('Data-base do SEEU restabelecida.'); this.abrir(id); return; }
+    const d=prompt('Data-base correta (dd/mm/aaaa):', r.db||''); if(d===null||!d.trim()) return;
+    if(!/^\d{2}\/\d{2}\/\d{4}$/.test(d.trim())){ this.toast('Use a data no formato dd/mm/aaaa.'); return; }
+    const mot=prompt('Motivo (ex.: início do cumprimento, falta homologada em ..., progressão em ...):', ''); if(mot===null) return;
+    const res=await API().dado_manual(id,'data_base', d.trim()+'|'+mot.replace(/\|/g,'/').trim()); if(res&&res.erro){ this.toast(res.erro); return; }
+    if(res&&res.registros) this.carregar(res); this.toast('Data-base gravada: previsão de progressão refeita em todas as abas.'); this.abrir(id); },
   async preencher(id, ci){ const P=JSON.parse(this._clips[ci]||'{}'); if(P.tipo==='falta'){ this.faltasModal(id, P.campo); return; } const v=prompt(P.rotulo+':', ''); if(v===null||!v.trim()) return;
     if(P.tipo==='data'&&!/^\d{2}\/\d{2}\/\d{4}$/.test(v.trim())){ this.toast('Use o formato dd/mm/aaaa.'); return; }
     await api('dado_manual', id, P.campo, v.trim()); this.aberto=id; this.render(); },
@@ -931,7 +940,9 @@ const ui = {
         <button class="close" onclick="ui.fecharDrawer()">✕</button></div>
       <div class="db">
         ${r.motivo_exec?`<div class="sec"><div class="aviso-exec">${esc(r.motivo_exec)}</div></div>`:''}
-        <div class="sec"><div class="kv">${kv('Pena total',r.pena_total)}${kv('Cumprida',r.pena_cumprida)}${kv('Remanescente',r.pena_rem)}${kv('Término',dmot(r.termino,r.termino_motivo))}</div></div>
+        <div class="sec"><div class="kv">${kv('Pena total',r.pena_total)}${kv('Cumprida',r.pena_cumprida)}${kv('Remanescente',r.pena_rem)}${kv('Término',dmot(r.termino,r.termino_motivo))}</div>
+          <div class="dbbox ${r.db_cor||''}"><small>Data-base (progressão)</small><div><b>${esc(r.db||'—')}</b>${r.db_motivo?` <span class="dbm">- ${esc(r.db_motivo)}</span>`:''}
+            <span class="mini" style="margin-left:6px" onclick="ui.editarDataBase('${r.id}')">${r.db_editada?'Alterar':'Editar'}</span>${r.db_editada?` <span class="mini" onclick="ui.editarDataBase('${r.id}',true)">Voltar ao SEEU</span>`:''}</div></div></div>
         <div class="sec"><h3>Benefícios</h3>
           ${lin('Progressão', r.prog&&r.prog!=='—'?dataSit(r.prog, r.prog_sit, r.prog_cor):esc(r.prog_motivo||'—'))}
           ${lin('Livramento', r.liv&&r.liv!=='—'?dataSit(r.liv, r.liv_sit, r.liv_cor):esc(r.liv_motivo||'—'))}

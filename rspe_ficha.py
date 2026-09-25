@@ -138,6 +138,10 @@ def extrair(caminho):
     f["rgi"] = (re.search(r"RGI:\s*(\d+)", cab) or [None, ""])[1]
     f["cpf"] = (re.search(r"CPF:\s*([\d.\-]+\d)", cab) or [None, ""])[1]
     f["data_nascimento"] = (re.search(r"Data Nascimento:\s*(\d{2}/\d{2}/\d{4})", cab) or [None, ""])[1]
+    # filiação "MÃE \\ PAI" (a mãe vem primeiro no SIAPEN): confronto de identidade com o nome da mãe do RSPE (homônimos)
+    mfi = re.search(r"Filia[çc][ãa]o:\s*(.+?)(?:\s+N[ºo°]\s*Pront|\n|$)", cab)
+    f["filiacao"] = mfi.group(1).strip() if mfi else ""
+    f["nome_mae"] = re.split(r"\s*[\\/|]\s*", f["filiacao"])[0].strip() if f["filiacao"] else ""
     f["artigo"] = (re.search(r"Artigo:\s*(.+)", cab) or [None, ""])[1].strip()
     f["data_prisao"] = (re.search(r"Data Prisão:\s*(\d{2}/\d{2}/\d{4})", cab) or [None, ""])[1]
     f["condenacao"] = (re.search(r"Condenação:\s*(.+)", cab) or [None, ""])[1].strip()
@@ -465,10 +469,41 @@ def reconciliar_eventos(r, f):
 
 
 RE_FUGA_FICHA = re.compile(r"\bFUGA\b|EVADIU|EVAS[ÃA]O|FORAGID|N[ÃA]O RETORNOU|EMPREENDEU FUGA", re.I)
-RE_UN_SEMI = re.compile(r"AGROINDUSTRIAL|COL[ÔO]NIA|SEMI[- ]?ABERTO|GAMELEIRA", re.I)
-RE_UN_ABERTO = re.compile(r"ALBERGADO|PATRONATO|REGIME ABERTO", re.I)
-RE_UN_MONIT = re.compile(r"MONITORAMENTO", re.I)
-RE_UN_FECHADO = re.compile(r"PENITENCI[ÁA]RIA|PRES[ÍI]DIO|ESTABELECIMENTO PENAL|CENTRO DE DETEN|CADEIA|INSTITUTO PENAL|CENTRAL PROVIS", re.I)
+# Unidades da AGEPEN/MS (levantamento de set/2026 nas páginas e notícias da AGEPEN e da SEJUSP): padrão do nome -> (regime,
+# nome usual). Ordem importa: a primeira que casa decide ("Penitenciária de Regime Fechado da Gameleira" antes do
+# "Centro Penal Agroindustrial da Gameleira"; "Regime Semiaberto, Aberto e Assistência ao Albergado" é semiaberto).
+# regime: fechado | semiaberto | aberto | monitoramento | provisorio | federal
+UNIDADES_MS = [
+    (r"MONITORAMENTO", "monitoramento", "Unidade Mista de Monitoramento Virtual Estadual (UMMVE)"),
+    (r"PATRONATO", "aberto", "Patronato Penitenciário (regime aberto, livramento, egressos)"),
+    (r"ALTERNATIVAS PENAIS|ESCRIT[ÓO]RIO SOCIAL", "aberto", "Central Integrada de Alternativas Penais / Escritório Social"),
+    (r"PENITENCI[ÁA]RIA FEDERAL", "federal", "Penitenciária Federal de Campo Grande"),
+    (r"(REGIME\s+)?FECHADO DA GAMELEIRA|PENITENCI[ÁA]RIA ESTADUAL MASCULINA DE REGIME FECHADO", "fechado", "Penitenciária Estadual Masculina de Regime Fechado da Gameleira"),
+    (r"AGROINDUSTRIAL", "semiaberto", "Centro Penal Agroindustrial da Gameleira (semiaberto masculino)"),
+    (r"SEMI[- ]?ABERTO", "semiaberto", "Estabelecimento de regime semiaberto (e aberto/albergado)"),
+    (r"COL[ÔO]NIA PENAL", "semiaberto", "Colônia Penal (semiaberto)"),
+    (r"ALBERGAD", "aberto", "Casa do Albergado / assistência ao albergado (regime aberto)"),
+    (r"AUDI[ÊE]NCIA DE CUST[ÓO]DIA|\bCPAC\b", "provisorio", "Central Provisória de Audiência de Custódia (CPAC)"),
+    (r"TRIAGEM", "provisorio", "Centro de Triagem (Anísio Lima / feminino Irmã Irma Zorzi)"),
+    (r"TR[ÂA]NSITO|\bPTRAN\b", "provisorio", "Presídio de Trânsito de Campo Grande (PTRAN)"),
+    (r"JAIR FERREIRA|\bEPJFC\b", "fechado", "Estabelecimento Penal Jair Ferreira de Carvalho (segurança máxima)"),
+    (r"INSTITUTO PENAL|\bIPCG\b", "fechado", "Instituto Penal de Campo Grande"),
+    (r"IRM[ÃA] IRMA ZORZI", "fechado", "Estabelecimento Penal Feminino Irmã Irma Zorzi"),
+    (r"JONAS GIORDANO", "fechado", "Estabelecimento Penal Feminino Carlos Alberto Jonas Giordano (Corumbá)"),
+    (r"RICARDO BRAND[ÃA]O", "fechado", "Estabelecimento Penal Ricardo Brandão (Ponta Porã)"),
+    (r"M[ÁA]XIMO ROMERO", "fechado", "Estabelecimento Penal Máximo Romero (Jardim)"),
+    (r"PENITENCI[ÁA]RIA ESTADUAL DE DOURADOS|\bPED\b", "fechado", "Penitenciária Estadual de Dourados"),
+    (r"SEGURAN[ÇC]A M[ÁA]XIMA", "fechado", "Penitenciária de Segurança Máxima"),
+    (r"PENITENCI[ÁA]RIA|PRES[ÍI]DIO|CADEIA|ESTABELECIMENTO PENAL|CENTRO DE DETEN", "fechado", "Estabelecimento de regime fechado"),
+]
+
+
+def classificar_unidade(nome):
+    """(regime, nome usual) da unidade prisional de MS pelo nome impresso no SIAPEN; (None, '') se não reconhecida."""
+    for pad, reg, rot in UNIDADES_MS:
+        if re.search(pad, nome or "", re.I):
+            return reg, rot
+    return None, ""
 
 
 def _item_rf(nivel, titulo, detalhe, fundamento):
@@ -483,6 +518,11 @@ def _identidade_x_ficha(r, f):
         out.append(_item_rf("alerta", "CPF da ficha (%s) difere do RSPE (%s)" % (f.get("cpf"), r.get("cpf")),
                             "A ficha vinculada pode ser de outra pessoa (homônimo) ou um dos cadastros está errado. Conferir antes de usar os dados da ficha.",
                             "Identificação do apenado (LEP, art. 106)."))
+    m1, m2 = rs._sem_acento(r.get("nome_mae") or "").upper().split(), rs._sem_acento(f.get("nome_mae") or "").upper().split()
+    if m1 and m2 and m1 != m2:
+        out.append(_item_rf("alerta", "Mãe na ficha (%s) difere do RSPE (%s)" % ((f.get("nome_mae") or "").title(), (r.get("nome_mae") or "").title()),
+                            "O nome da mãe é o critério para separar homônimos: a ficha vinculada provavelmente é de outra pessoa. Conferir antes de usar os "
+                            "dados da ficha (remição, faltas, custódia) e, se for o caso, remover a ficha deste assistido.", "Identificação do apenado (LEP, art. 106)."))
     n1, n2 = rs._sem_acento(r.get("nome") or "").upper().split(), rs._sem_acento(f.get("nome") or "").upper().split()
     if n1 and n2 and (n1[0] != n2[0] or n1[-1] != n2[-1]):
         out.append(_item_rf("alerta", "Nome na ficha (%s) difere do RSPE" % (f.get("nome") or "").title(),
@@ -540,31 +580,29 @@ def _pena_x_ficha(r, f):
 
 
 def _unidade_x_ficha(r, f):
-    """Regime do RSPE x unidade em que a pessoa está (ficha)."""
+    """Regime do RSPE x unidade em que a pessoa está (ficha), pela tabela das unidades da AGEPEN."""
     un, reg = (f.get("unidade") or ""), (r.get("regime_atual") or "").upper()
     if not un or not reg or "EXTIN" in reg:
         return []
-    if RE_UN_SEMI.search(un):
-        tipo_un = "semiaberto"
-    elif RE_UN_ABERTO.search(un):
-        tipo_un = "aberto"
-    elif RE_UN_MONIT.search(un):
-        tipo_un = "monitoramento"
-    elif RE_UN_FECHADO.search(un):
-        tipo_un = "fechado"
-    else:
+    tipo_un, rot = classificar_unidade(un)
+    if not tipo_un:
         return []
     desde = (" desde %s" % f["data_entrada"]) if f.get("data_entrada") else ""
     if reg.startswith("FECHADO") and tipo_un in ("semiaberto", "aberto", "monitoramento"):
         return [_item_rf("alerta", "RSPE em regime fechado, mas a ficha indica unidade de %s (%s)" % (tipo_un, un.title()),
-                         "Unidade atual%s: %s. Provável progressão não lançada no RSPE (a data-base e as frações seguintes mudam) ou regime desatualizado no SEEU: "
-                         "conferir a decisão e pedir a atualização." % (desde, un.title()), "LEP, art. 112.")]
-    if (reg.startswith("SEMI") or reg.startswith("ABERTO")) and tipo_un == "fechado":
-        return [_item_rf("alerta", "RSPE em regime %s, mas a ficha indica unidade de regime fechado (%s)" % (reg.split(" - ")[0].lower(), un.title()),
-                         "Unidade atual%s: %s. Se não houve regressão (nem cautelar), a pessoa cumpre em regime mais gravoso que o fixado: a falta de vaga "
-                         "não autoriza isso - pedir a transferência ou, na falta de vaga, o regime menos gravoso/monitoramento (STF, Súmula Vinculante 56; "
-                         "RE 641.320). Se houve regressão, conferir o lançamento no RSPE." % (desde, un.title()),
+                         "Unidade atual%s: %s - %s. Provável progressão não lançada no RSPE (a data-base e as frações seguintes mudam) ou regime "
+                         "desatualizado no SEEU: conferir a decisão e pedir a atualização." % (desde, un.title(), rot), "LEP, art. 112.")]
+    if (reg.startswith("SEMI") or reg.startswith("ABERTO")) and tipo_un in ("fechado", "provisorio", "federal"):
+        return [_item_rf("alerta", "RSPE em regime %s, mas a ficha indica unidade de regime %s (%s)" % (
+                             reg.split(" - ")[0].lower(), "fechado" if tipo_un != "provisorio" else "provisório", un.title()),
+                         "Unidade atual%s: %s - %s. Se não houve regressão (nem cautelar) ou nova prisão, a pessoa cumpre em regime mais gravoso que o "
+                         "fixado: a falta de vaga não autoriza isso - pedir a transferência ou, na falta de vaga, o regime menos gravoso/monitoramento "
+                         "(STF, Súmula Vinculante 56; RE 641.320). Se houve regressão, conferir o lançamento no RSPE." % (desde, un.title(), rot),
                          "STF, Súmula Vinculante 56; LEP, arts. 112 e 118.")]
+    if reg.startswith("SEMI") and tipo_un in ("aberto", "monitoramento") or reg.startswith("ABERTO") and tipo_un == "semiaberto":
+        return [_item_rf("verificar", "RSPE em regime %s; a ficha indica unidade de %s (%s)" % (reg.split(" - ")[0].lower(), tipo_un, un.title()),
+                         "Unidade atual%s: %s - %s. Conferir se houve progressão, regressão ou monitoramento eletrônico não lançado no RSPE." % (desde, un.title(), rot),
+                         "LEP, arts. 112, 118 e 146-B.")]
     return []
 
 
@@ -595,16 +633,22 @@ def _fuga_x_ficha(r, f):
     return out
 
 
-def _conduta_x_ficha(r, f):
+def _conduta_x_ficha(r, f, hoje=None):
+    """Conduta má/péssima sem falta nos últimos 12 meses (RSPE nem ficha): a classificação deveria ter sido reabilitada."""
+    hoje = hoje or date.today()
     c = (f.get("conduta") or "").upper()
     if not re.search(r"\bM[ÁA]\b|P[ÉE]SSIMA|RUIM", c):
         return []
-    if (r.get("falta_12m") or "") in ("SIM",):
+    lim = hoje - timedelta(days=365)
+    recente_f = [x for x in f.get("faltas", []) if (_dp(x.get("data_fato") or x.get("data_registro") or "") or date.min) >= lim
+                 and x.get("situacao") != "arquivada"]
+    recente_r = [t for t, _ in rs.indicios_falta(r.get("_incidentes", []), hoje, eventos=r.get("_eventos", []))]
+    if recente_f or recente_r:
         return []
-    return [_item_rf("verificar", "Conduta na ficha: %s, sem falta grave recente no RSPE" % c.lower(),
-                     "A classificação da conduta pela unidade diverge do que o RSPE mostra (sem falta grave nos últimos 12 meses). Conferir as faltas da ficha e o "
-                     "prazo de reabilitação da conduta (regulamento estadual): o atestado de conduta pesa no requisito subjetivo da progressão e do livramento.",
-                     "LEP, art. 112, § 1º; CP, art. 83, III.")]
+    return [_item_rf("verificar", "Conduta na ficha: %s, sem falta nos últimos 12 meses" % c.lower(),
+                     "Nem o RSPE nem a ficha registram falta de %s até hoje. A classificação da conduta pela unidade deveria ter sido reabilitada "
+                     "(prazo de reabilitação do regulamento disciplinar) - pedir o atestado de conduta atualizado: ele pesa no requisito subjetivo da "
+                     "progressão e do livramento." % rs.fmt(lim), "LEP, art. 112, § 1º; CP, art. 83, III.")]
 
 
 def _regime_x_ficha(r, f):
@@ -626,6 +670,11 @@ def _regime_x_ficha(r, f):
         if not x:
             continue
         m = re.search(r"PROGRESS[ÃA]O DE REGIME PARA O\s+(SEMI[- ]?ABERTO|ABERTO)", u)
+        if not m and re.search(r"MOTIVO:\s*PROGRESS", u):
+            dest = re.search(r"DESTINO:\s*([^,]+)", u)
+            reg_d = classificar_unidade(dest.group(1))[0] if dest else None
+            if reg_d in ("semiaberto", "aberto", "monitoramento"):
+                m = re.match(r"(.*)", "SEMIABERTO" if reg_d != "aberto" else "ABERTO")
         if m and ("prog", m.group(1)) not in vistos and not no_rspe(r"PROGRESS", x):
             vistos.add(("prog", m.group(1)))
             out.append(("Progressão para o %s registrada na ficha em %s e ausente no RSPE" % (m.group(1).lower().replace(" ", ""), rs.fmt(x)),
