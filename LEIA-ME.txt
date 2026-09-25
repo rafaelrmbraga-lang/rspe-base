@@ -1,8 +1,8 @@
-RSPE BASE - SEEU  v6.16.14 (programa em abas)
+RSPE BASE - SEEU  v6.16.15 (programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-6.16.14. A documentação técnica completa (cada parâmetro, a regra, a norma e
+6.16.15. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -535,6 +535,13 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v6.16.15
+  - Coluna "Pedido" só com o ícone: caixa vazia (sem pedido) ou check verde
+    (pedido feito; amarelo se a situação da aba mudou depois). A data e a
+    observação aparecem na ficha do assistido, na seção "Pedidos feitos", com
+    o botão Editar. A coluna agora aparece também na aba Prescrição e em cada
+    sub-aba de decreto do Indulto.
 
 v6.16.14
   - Controle de pedidos: coluna "Pedido" nas abas Progressão, Livramento,
