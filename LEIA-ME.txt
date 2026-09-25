@@ -1,8 +1,8 @@
-RSPE BASE - SEEU  v6.16.10 (programa em abas)
+RSPE BASE - SEEU  v6.16.11 (programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-6.16.10. A documentação técnica completa (cada parâmetro, a regra, a norma e
+6.16.11. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -535,6 +535,14 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v6.16.11
+  - Base jurídica (2026-09-25b): tabela das contravenções conferida no texto
+    compilado da LCP (Decreto-Lei 3.688/41) - todos os tipos com prisão simples
+    em vigor (arts. 18 a 70), com os parágrafos que têm causa de aumento
+    (19 §1º e §2º, 21 §1º e §2º, 50 §1º). Revogados e só com multa ficam fora;
+    os demais seguem o teto de 5 anos do art. 10. Pena da tabela convertida em
+    meses de 30 dias, como no SEEU (3 meses = 90 dias).
 
 v6.16.10
   - Ficha disciplinar: sai a coluna "Remidos ficha / RSPE"; "Trabalho a atestar"
