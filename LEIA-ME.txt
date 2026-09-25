@@ -1,8 +1,8 @@
-RSPE BASE - SEEU  v6.16.22 (programa em abas)
+RSPE BASE - SEEU  v6.16.23 (programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-6.16.22. A documentação técnica completa (cada parâmetro, a regra, a norma e
+6.16.23. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -535,6 +535,15 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v6.16.23
+  - Padrão único de escrita nas tabelas: nome em negrito, demais informações em
+    texto normal; situação com cor (vencido, até 30/60/90 dias, possível, a
+    verificar, prescrição aparente, falta) em texto fino com bolinha colorida;
+    situação neutra (não se aplica, sem dados, não atinge, em cumprimento, não
+    prescrita, não consta) escrita como as demais informações, sem bolinha.
+  - Títulos das colunas alinhados à esquerda com o texto das células,
+    inclusive nas abas com a seta de expandir.
 
 v6.16.22
   - Fuga é falta grave (LEP, art. 50, II): fuga, evasão, abandono ou não
