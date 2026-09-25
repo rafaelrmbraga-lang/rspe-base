@@ -66,12 +66,25 @@ def exportar_xlsx(modelos, saida, abas):
     wb.save(saida)
 
 
+def _com_pedido(spec, modelos):
+    """Coluna "Pedido": 'feito em dd/mm/aaaa (observação)' da aba, ou vazio."""
+    out = []
+    for m in modelos:
+        P = (m.get("pedidos") or {}).get(spec["id"])
+        d = dict(m)
+        d["pedido"] = ("feito em %s%s" % (P.get("data", ""), (" (%s)" % P["obs"]) if P.get("obs") else "")) if P else ""
+        out.append(d)
+    return out
+
+
 def _linhas_export(spec, modelos):
     """Abas expansíveis (prescrição) exportam uma linha por crime."""
+    modelos = _com_pedido(spec, modelos)
     if not spec.get("sub"):
         return spec["cols"], modelos
     datas = {"fato", "denuncia", "sentenca", "transito", "ppe_termo"}
-    cols = [("nome", "Nome", 16), ("proc", "Nº da execução", 14)] + [(k, t, 12 if k in datas else p) for k, t, p in spec["sub_cols"]]
+    cols = [("nome", "Nome", 16), ("proc", "Nº da execução", 14)] + [(k, t, 12 if k in datas else p) for k, t, p in spec["sub_cols"]] + (
+        [("pedido", "Pedido", 10)] if any(c[0] == "pedido" for c in spec["cols"]) else [])
     linhas = []
     for m in modelos:
         for s in m.get(spec["sub"], []):

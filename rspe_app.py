@@ -34,7 +34,7 @@ import rspe_relatorio as rrel
 import rspe_indulto_tl as rtl
 
 APP = "RSPE Base"
-VERSAO = "6.16.13"
+VERSAO = "6.16.14"
 
 
 def pasta_app():
@@ -342,6 +342,9 @@ class Base:
         self.con.execute("""CREATE TABLE IF NOT EXISTS presc_ajustes (
             processo TEXT, chave TEXT, dados TEXT, data TEXT, PRIMARY KEY (processo, chave))""")
         # dados objetivos que o RSPE não trouxe, informados pelo operador pela Auditoria (data de nascimento, pena máxima)
+        # controle de pedidos: por assistido e aba (progressão, livramento, indulto, prescrição, extinção, remição)
+        self.con.execute("""CREATE TABLE IF NOT EXISTS pedidos (
+            processo TEXT, aba TEXT, data TEXT, obs TEXT, ref TEXT, registrado TEXT, PRIMARY KEY (processo, aba))""")
         self.con.execute("""CREATE TABLE IF NOT EXISTS dados_manuais (
             processo TEXT, campo TEXT, valor TEXT, data TEXT, PRIMARY KEY (processo, campo))""")
         self.con.commit()
@@ -440,6 +443,24 @@ class Base:
                                  (processo, chave, json.dumps(dados, ensure_ascii=False), datetime.now().strftime("%d/%m/%Y %H:%M")))
             else:
                 self.con.execute("DELETE FROM presc_ajustes WHERE processo=? AND chave=?", (processo, chave))
+            self.con.commit()
+
+    def pedidos(self):
+        with self.lock:
+            rows = self.con.execute("SELECT processo, aba, data, obs, ref, registrado FROM pedidos").fetchall()
+        out = {}
+        for p, a, d, o, rf_, rg_ in rows:
+            out.setdefault(p, {})[a] = {"data": d or "", "obs": o or "", "ref": rf_ or "", "registrado": rg_ or ""}
+        return out
+
+    def pedido_gravar(self, processo, aba, dados):
+        with self.lock:
+            if not dados:
+                self.con.execute("DELETE FROM pedidos WHERE processo=? AND aba=?", (processo, aba))
+            else:
+                self.con.execute("INSERT OR REPLACE INTO pedidos VALUES (?,?,?,?,?,?)",
+                                 (processo, aba, dados.get("data", ""), dados.get("obs", ""), dados.get("ref", ""),
+                                  datetime.now().strftime("%d/%m/%Y %H:%M")))
             self.con.commit()
 
     def dados_manuais(self):
@@ -597,6 +618,7 @@ class Api:
         manuais = self.base.manuais()
         ajustes = self.base.presc_ajustes()
         dmanuais = self.base.dados_manuais()
+        peds = self.base.pedidos()
         self._modelos = []
         _homonimos = {}
         for _r in brutos:
@@ -653,6 +675,7 @@ class Api:
                         self.base.migrar_baixa(ch, it["migrar_de"], it["chave"])
                     except Exception:
                         logging.getLogger("rspe").exception("falha ao migrar baixa %s", ch)
+            m["pedidos"] = peds.get(ch, {})  # pedidos já feitos, por aba (coluna "Pedido")
             m["_bruto"] = r
             self._modelos.append(m)
         return {
@@ -684,6 +707,19 @@ class Api:
             return {"erro": "Nenhuma base aberta."}
         self.base.presc_ajuste_gravar(processo, chave, dados or None)
         return self.listar()
+
+    def pedido(self, processo, aba, data, obs, ref):
+        """Marca (ou desmarca, com data vazia) o pedido já feito na aba: data do protocolo, observação livre e a situação
+        da aba no momento da marcação (para avisar se ela mudar depois, com um RSPE novo)."""
+        if not self.base:
+            return {"erro": "Nenhuma base aberta."}
+        data = (data or "").strip()
+        if data and not rs.to_date(data):
+            return {"erro": "Data inválida: use dd/mm/aaaa."}
+        self.base.pedido_gravar(processo, aba, {"data": data, "obs": (obs or "").strip(), "ref": ref or ""} if data else None)
+        r = self.listar()
+        r["msg"] = "Pedido registrado." if data else "Marcação de pedido removida."
+        return r
 
     def dado_manual(self, processo, campo, valor):
         """Dado objetivo que o RSPE não trouxe, informado pelo operador no alerta da Auditoria (data de nascimento,

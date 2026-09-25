@@ -1,8 +1,8 @@
-RSPE BASE - SEEU  v6.16.13 (programa em abas)
+RSPE BASE - SEEU  v6.16.14 (programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-6.16.13. A documentação técnica completa (cada parâmetro, a regra, a norma e
+6.16.14. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -535,6 +535,15 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v6.16.14
+  - Controle de pedidos: coluna "Pedido" nas abas Progressão, Livramento,
+    Indulto / Comutação, Prescrição, Extinção e Ficha disciplinar. "Marcar"
+    registra a data do pedido e uma observação (ex.: mov. 123, decreto); a
+    coluna passa a mostrar "✓ dd/mm/aaaa". Se a situação da aba mudar depois
+    (RSPE novo), a marca fica amarela com ⚠ para conferir se o pedido ainda
+    vale. Filtro "Pedido já feito" / "Sem pedido" em cada aba; a coluna sai
+    também no Excel e no PDF. A marcação fica gravada na base.
 
 v6.16.13
   - Base jurídica: a cópia de base_juridica.json deixada ao lado do programa

@@ -874,9 +874,14 @@ ABAS = [
      "sub_pilulas": {"nivel_txt": "nivel_cor"}, "sub_calc": False, "sub_baixa": True},
 ]
 ABA_POR_ID = {a["id"]: a for a in ABAS}
+ABAS_PEDIDO = ("prog", "liv", "ind", "presc", "ext", "fd")
 for _a in ABAS:
     # a aba Geral não tem prazo próprio (não há campo de dias): sem filtro de situação
-    _a["filtros"] = [] if _a["id"] == "geral" else FILTROS.get(_a["id"], FILTROS["indulto"] if _a["id"] == "ind" else FILTROS["lapso"])
+    _a["filtros"] = [] if _a["id"] == "geral" else list(FILTROS.get(_a["id"], FILTROS["indulto"] if _a["id"] == "ind" else FILTROS["lapso"]))
+    if _a["id"] in ABAS_PEDIDO:
+        # controle de pedidos: coluna "Pedido" (feito em dd/mm/aaaa ou botão para marcar) e filtro
+        _a["cols"] = list(_a["cols"]) + [("pedido", "Pedido", 9)]
+        _a["filtros"] += [("pedfeito", "Pedido já feito"), ("pedsem", "Sem pedido")]
     _a["campo_dias"] = {"prog": "prog_dias", "liv": "liv_dias", "presc": "presc_dias", "ext": "ext_dias"}.get(_a["id"], "")
 
 

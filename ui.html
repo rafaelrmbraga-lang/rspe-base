@@ -163,6 +163,8 @@ tr.sub td{padding:0 0 0 0;background:#FFFFFF;cursor:default}tr.sub:hover td{back
 .subtab pre{white-space:pre-wrap;overflow-wrap:anywhere;font:11.5px/1.5 Consolas,monospace;margin:6px 0 0;color:var(--tx2);background:#F9FAFB;border-radius:8px;padding:8px 10px}
 .mini{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:8px;font-size:11px;font-weight:600;color:var(--tx2);border:1px solid var(--line);background:#fff;cursor:pointer}.mini:hover{border-color:var(--pri);color:var(--pri)}
 .fdsit.vermelho{color:var(--r-tx)}.fdsit.amarelo{color:var(--a-tx)}.fdsit.verde{color:var(--g-tx)}
+.ped{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:7px;font-size:11.5px;font-weight:600;color:var(--tx3);border:1px dashed var(--line2);cursor:pointer;white-space:nowrap}.ped:hover{color:var(--pri);border-color:var(--pri)}
+.ped.ok{color:#1D4ED8;background:#EFF4FF;border:1px solid #C7D7FE}.ped.ok.mud{color:var(--a-tx);background:var(--a-bg);border-color:#FEDF89}
 .mini.pre{background:var(--pri);color:#fff;border-color:var(--pri)}.mini.pre:hover{opacity:.9;color:#fff}
 .chev{display:inline-block;width:14px;color:var(--tx3);font-size:11px;margin-right:4px;transition:.15s}tr.exp .chev{transform:rotate(90deg);color:var(--pri)}
 
@@ -458,6 +460,9 @@ const ui = {
         if(c[0]==='proc'){ v=`<span class="copy" title="Clique para copiar" onclick="event.stopPropagation();ui.copiar('${esc(String(v))}')">${esc(v)}${svgCopy}</span>`; }
         else if(c[0]==='nome'&&v){ v=`<span class="copy" title="Clique para copiar o nome" onclick="event.stopPropagation();ui.copiar(ui._clips[${this.clip(String(v))}])">${esc(v)}${svgCopy}</span>`; }
         else if(pk){ const pc = r[pk]||''; v = v ? `<span class="pill ${pc||'none'}">${esc(v)}</span>` : (/_sit$/.test(c[0]) ? '' : '<span class="muted">—</span>'); }
+        else if(c[0]==='pedido'){ const P=(r.pedidos||{})[spec.id]; const mud=P&&P.ref&&P.ref!==this.pedRef(r,spec.id);
+          v = P ? `<span class="ped ok ${mud?'mud':''}" title="${esc((P.obs?P.obs+' · ':'')+'registrado em '+P.registrado+(mud?' · a situação da aba mudou depois do pedido (RSPE novo?)':''))}" onclick="event.stopPropagation();ui.pedidoAbrir('${r.id}','${spec.id}')">✓ ${esc(P.data)}${mud?' ⚠':''}</span>`
+                : `<span class="ped" onclick="event.stopPropagation();ui.pedidoAbrir('${r.id}','${spec.id}')">Marcar</span>`; }
         else if(c[0]==='conduta'){ v = r.conduta_ruim ? `<span class="falta">${esc(v)}</span>` : (r.ficha_tem ? esc(v) : `<span class="muted">${esc(v)}</span>`); }
         else if(c[0]==='falta'){ v = r.falta_sim ? `<span class="falta">Sim</span>` : (r.falta_apurar ? `<span class="apurar">A apurar</span>` : `<span class="muted">${esc(v)}</span>`); }
         else { v = esc(v).replace('(est.)','<span class="est">(est.)</span>'); if(!v) v='<span class="muted">—</span>'; }
@@ -495,6 +500,8 @@ const ui = {
       case 'semdados': return cor==='cinza';
       case 'extinta': return cor==='azul';
       case 'atencao': return r.aud_status==='atencao';
+      case 'pedfeito': return !!(r.pedidos||{})[spec.id];
+      case 'pedsem': return !(r.pedidos||{})[spec.id];
       case 'ok': return spec.id==='fd' ? cor==='verde' : r.aud_status==='ok';
     } return true; },
   expandir(id){ this.aberto = this.aberto===id ? null : id; this.render(); },
@@ -757,6 +764,25 @@ const ui = {
   async preencher(id, ci){ const P=JSON.parse(this._clips[ci]||'{}'); const v=prompt(P.rotulo+':', ''); if(v===null||!v.trim()) return;
     if(P.tipo==='data'&&!/^\d{2}\/\d{2}\/\d{4}$/.test(v.trim())){ this.toast('Use o formato dd/mm/aaaa.'); return; }
     await api('dado_manual', id, P.campo, v.trim()); this.aberto=id; this.render(); },
+  // ---------- controle de pedidos (coluna "Pedido" das abas de benefício) ----------
+  PED_NOME:{prog:'progressão de regime',liv:'livramento condicional',ind:'indulto / comutação',presc:'extinção pela prescrição',ext:'extinção da pena',fd:'remição'},
+  pedRef(r,aba){ return ({prog:r.prog, liv:r.liv, ind:['i22','i24','c24','i25','c25'].map(k=>r[k]).join('|'), presc:(r.presc_ppe||'')+'|'+(r.presc_prox||''), ext:r.ext_termino, fd:r.fd_sit})[aba]||''; },
+  pedidoAbrir(id, aba){ const r=(this.dados.registros||[]).find(x=>x.id===id)||{}; const P=(r.pedidos||{})[aba]; const hoje=this.dados.hoje||'';
+    const mud=P&&P.ref&&P.ref!==this.pedRef(r,aba);
+    document.getElementById('modal').innerHTML=`<div class="box" style="width:480px"><h2>Pedido de ${this.PED_NOME[aba]||aba}</h2>
+      <p class="muted" style="margin:0 0 10px">${esc(r.nome)} · ${esc(r.proc)}${P?`<br>Marcado em ${esc(P.registrado)}${P.ref?` · situação na marcação: ${esc(P.ref.replace(/\|/g,' · '))}`:''}`:''}</p>
+      ${mud?`<p style="margin:0 0 10px;color:var(--a-tx);font-weight:600">⚠ A situação desta aba mudou depois do pedido (hoje: ${esc(this.pedRef(r,aba).replace(/\|/g,' · '))}). Confira se o pedido ainda vale ou se é o caso de um novo.</p>`:''}
+      <div style="display:grid;grid-template-columns:150px 1fr;gap:8px;align-items:center">
+        <label>Data do pedido</label><input id="ped_data" value="${esc(P?P.data:hoje)}" placeholder="dd/mm/aaaa" style="padding:7px 9px;border:1px solid var(--line);border-radius:8px;font:inherit">
+        <label>Observação</label><input id="ped_obs" value="${esc(P?P.obs:'')}" placeholder="ex.: mov. 123, indulto 2025, aguardando MP" style="padding:7px 9px;border:1px solid var(--line);border-radius:8px;font:inherit">
+      </div>
+      <div class="acts">${P?`<button class="btn" style="margin-right:auto;color:var(--r-tx)" onclick="ui.pedidoSalvar('${id}','${aba}',true)">Remover marcação</button>`:''}<button class="btn" onclick="ui.fecharModal()">Cancelar</button><button class="btn pri" onclick="ui.pedidoSalvar('${id}','${aba}')">${P?'Salvar':'Marcar pedido feito'}</button></div></div>`;
+    document.getElementById('modal').classList.add('on'); setTimeout(()=>{ const e=document.getElementById('ped_obs'); if(e) e.focus(); },50); },
+  async pedidoSalvar(id, aba, remover){ const r=(this.dados.registros||[]).find(x=>x.id===id)||{};
+    const data=remover?'':document.getElementById('ped_data').value.trim(), obs=remover?'':document.getElementById('ped_obs').value.trim();
+    if(!remover&&!/^\d{2}\/\d{2}\/\d{4}$/.test(data)){ this.toast('Use a data no formato dd/mm/aaaa.'); return; }
+    const res=await API().pedido(id, aba, data, obs, this.pedRef(r,aba)); if(res&&res.erro){ this.toast(res.erro); return; }
+    this.fecharModal(); if(res&&res.registros) this.carregar(res); if(res&&res.msg) this.toast(res.msg); },
   async darBaixa(id, chave, titulo){ const obs = prompt('Dar baixa no alerta:\n'+titulo.replace(/&#39;/g,"'")+'\n\nObservação (opcional: o que foi feito / por que não se aplica):',''); if(obs===null) return; await api('baixar_alerta', id, chave, titulo.replace(/&#39;/g,"'"), obs); this.aberto=id; this.render(); },
   async reabrir(id, chave){ await api('reabrir_alerta', id, chave); this.aberto=id; this.render(); },
   copiar(t){ const done=()=>this.toast('Copiado: '+t); if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(t).then(done).catch(()=>{ this._copiaFallback(t); done(); }); } else { this._copiaFallback(t); done(); } },
