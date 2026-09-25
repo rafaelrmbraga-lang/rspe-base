@@ -1,8 +1,8 @@
-RSPE BASE - SEEU  v6.16.31 (programa em abas)
+RSPE BASE - SEEU  v6.16.32 (programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-6.16.31. A documentação técnica completa (cada parâmetro, a regra, a norma e
+6.16.32. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -535,6 +535,16 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v6.16.32
+  - Livramento condicional: a saída da unidade para o livramento, que o SEEU
+    registra como "interrupção" logo depois do deferimento, deixava o período de
+    prova com poucos dias e fazia a prescrição executória correr a partir dela
+    (como se fosse liberdade). Agora essa interrupção (até 60 dias depois do
+    deferimento, ou com motivo "livramento") é o início do período de prova; o
+    livramento só termina na revogação, suspensão, regressão, fuga/evasão ou nova
+    prisão (LEP, art. 145). Vale para a prescrição, o tempo cumprido nos decretos
+    e as linhas do tempo.
 
 v6.16.31
   - Indícios de falta do RSPE sem sanção (regressão sem falta homologada, perda de
