@@ -1176,7 +1176,8 @@ const ui = {
         <div class="tp">${esc(c.tipificacao)}${c.nome?' - '+esc(c.nome.toLowerCase()):''}</div>
         <div class="mu">Fato: <b>${esc(c.fato||'—')}</b> · Pena: <b>${penaExt(esc(c.pena))}</b></div>
         <div class="mu">${esc(c.natureza)} · ${esc(c.reinc)}</div>
-        ${s?`<span class="selo ${s.selo}">${icSelo[s.selo]||s.selo}</span> <span class="mu" style="font-size:11px">${esc(s.dispositivo||'')}</span>`:''}</div>`; }).join('');
+        ${s?`<span class="selo ${s.selo}">${icSelo[s.selo]||s.selo}</span> <span class="mu" style="font-size:11px">${esc(s.dispositivo||'')}</span>`:''}
+        ${c.alerta_tempo?`<div style="margin-top:6px;font-size:11.5px;color:var(--a-tx,#B54708)">⚠ ${esc(c.alerta_tempo)}</div>`:''}</div>`; }).join('');
     // 2. barra da pena unificada
     const W=1100, tot=Math.max(1,B.pena_total||1), sx=v=>Math.max(0,v)/tot*W;
     let x0=0; const segs=(B.segmentos||[]).map(g=>{ const w=sx(g.dias); const di=this.tlvReg(`${g.crime} na pena unificada`, {evento:`pena de ${g.crime}: ${g.pena}`, crime:g.crime, tratamento:g.impeditivo?'impeditivo (hachurado)':(g.duvida?'natureza a verificar':'não impeditivo'), fundamento:'LEP, art. 111', calculo:`${g.pena} de ${B.pena_total_txt} (${Math.round(100*g.dias/tot)}%)`, efeito:g.impeditivo?'não alcançado pelo benefício; cumprido imputado primeiro a ele, se o decreto assim exigir':''});

@@ -189,6 +189,22 @@ class Dias:
 # montagem
 # --------------------------------------------------------------------------- #
 
+def _alerta_tempo(c):
+    """Lei do tempo: capitulação criada depois do fato ou hediondez posterior ao fato (a vedação do decreto é aferida pelo STJ
+    na data do decreto; tese defensiva: irretroatividade)."""
+    fato = rs.to_date(c.get("data_infracao") or "")
+    if not fato:
+        return ""
+    dc, lc = rs.tipo_criado_em(c)
+    dh, _ = rs.hediondo_desde(c)
+    if dc and fato < dc:
+        return ("Capitulação criada em %s (%s), depois do fato: cadastro anacrônico - conferir a sentença%s." % (
+            rs.fmt(dc), lc.split(" (")[0], ("; não era hediondo no fato (hediondez desde %s)" % rs.fmt(dh)) if (dh and fato < dh) else ""))
+    if dh and fato < dh:
+        return ("Hediondez desde %s, posterior ao fato: o STJ afere na data do decreto (vedado); tese defensiva - irretroatividade." % rs.fmt(dh))
+    return ""
+
+
 def linha(r, hoje=None):
     hoje = hoje or date.today()
     crimes_all = r.get("_crimes", []) or []
@@ -205,7 +221,7 @@ def linha(r, hoje=None):
                   "tipificacao": _tipificacao(c), "nome": _nome(c), "fato": c.get("data_infracao") or "",
                   "sentenca": c.get("data_sentenca") or "", "transito": c.get("transito_processo") or c.get("transito_mp") or "",
                   "pena": _pena(rs.pena_para_dias(c.get("pena_imposta")) or 0), "pena_dias": rs.pena_para_dias(c.get("pena_imposta")) or 0,
-                  "natureza": _natureza_txt(c), "reinc": _reinc_txt(c), "selos": {}, "_c": c})
+                  "natureza": _natureza_txt(c), "reinc": _reinc_txt(c), "selos": {}, "_c": c, "alerta_tempo": _alerta_tempo(c)})
     por_proc = {}
     for x in C:
         por_proc.setdefault(rs.chave_processo(x["proc"]), []).append(x["id"])

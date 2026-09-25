@@ -415,6 +415,13 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
         aberto = g1 >= hoje and not em_custodia
         ref = hoje if aberto else g1
         fim_txt = "hoje" if g1 >= hoje else rs.fmt(g1)
+        # interrupção por prisão em outro processo: a pessoa segue presa - o prazo não corre (art. 116, p. único)
+        _mot0 = _motivo_interrupcao(eventos, incidentes, g0) if g0 > termo else ""
+        if _mot0 and rs.RE_OUTRO_PROC.search(_mot0):
+            lt(g0, g1 if g1 < hoje else None, "outro_motivo", "interrupção de %s (%s)" % (rs.fmt(g0), _mot0.lower()),
+               "preso em outro processo: suspende o prazo (art. 116, p. único)")
+            corpo.append((g0, "De %s a %s preso em outro processo (%s): a prescrição não corre (art. 116, p. único)." % (rs.fmt(g0), fim_txt, _mot0.lower())))
+            continue
 
         def _limite(meses):
             """Data-limite: g0 + prazo + dias presos por outro motivo dentro do intervalo (art. 116, p. único). A suspensão que

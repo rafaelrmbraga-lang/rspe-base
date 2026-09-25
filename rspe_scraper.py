@@ -712,6 +712,64 @@ def hediondo_desde(c):
     return None, ""
 
 
+# tipo, qualificadora ou majorante criados por lei posterior ao Código: a capitulação com fato anterior à criação é
+# anacronismo do cadastro (a sentença usou a redação da época) - chave como em hediondos.desde
+TIPO_CRIADO = {
+    "2848:157 §2-A": ("2018-04-24", "Lei 13.654/2018 (antes, o roubo com arma era o art. 157, § 2º, I)"),
+    "2848:157 §2 VI": ("2018-04-24", "Lei 13.654/2018"),
+    "2848:157 §2 VII": ("2020-01-23", "Lei 13.964/2019"),
+    "2848:157 §2-B": ("2020-01-23", "Lei 13.964/2019"),
+    "2848:155 §4-A": ("2018-04-24", "Lei 13.654/2018"),
+    "2848:155 §4-B": ("2021-05-28", "Lei 14.155/2021"),
+    "2848:155 §4-C": ("2021-05-28", "Lei 14.155/2021"),
+    "2848:155 §7": ("2018-04-24", "Lei 13.654/2018"),
+    "2848:171 §2-A": ("2021-05-28", "Lei 14.155/2021"),
+    "2848:121 §2 VI": ("2015-03-10", "Lei 13.104/2015"),
+    "2848:121 §2 VII": ("2015-07-07", "Lei 13.142/2015"),
+    "2848:121-A": ("2024-10-10", "Lei 14.994/2024 (antes, feminicídio era o art. 121, § 2º, VI)"),
+    "2848:147-A": ("2021-04-01", "Lei 14.132/2021"),
+    "2848:147-B": ("2021-07-29", "Lei 14.188/2021"),
+    "2848:149-A": ("2016-11-22", "Lei 13.344/2016"),
+    "2848:215-A": ("2018-09-25", "Lei 13.718/2018"),
+    "2848:217-A": ("2009-08-10", "Lei 12.015/2009 (antes, arts. 213/214 c/c 224)"),
+    "2848:218-B": ("2009-08-10", "Lei 12.015/2009"),
+    "2848:218-C": ("2018-09-25", "Lei 13.718/2018"),
+    "11343:33": ("2006-10-08", "Lei 11.343/2006 (antes, Lei 6.368/76, art. 12)"),
+    "11343:35": ("2006-10-08", "Lei 11.343/2006 (antes, Lei 6.368/76, art. 14)"),
+    "10826:12": ("2003-12-23", "Lei 10.826/2003"), "10826:14": ("2003-12-23", "Lei 10.826/2003"),
+    "10826:16": ("2003-12-23", "Lei 10.826/2003"), "10826:17": ("2003-12-23", "Lei 10.826/2003"),
+    "12850:2": ("2013-09-19", "Lei 12.850/2013 (antes, quadrilha - CP, art. 288)"),
+    "11340:24-A": ("2018-04-04", "Lei 13.641/2018"),
+}
+
+
+def _chaves_tipo(c):
+    lei, art = num_lei(c.get("lei")) or "2848", num_art(c.get("artigo"))
+    if "PENAL" in (c.get("lei") or "").upper() and "MILITAR" not in (c.get("lei") or "").upper():
+        lei = "2848"
+    if not art:
+        return []
+    t = (c.get("tipo_penal") or "").strip()
+    chaves = []
+    mp = re.match(r"§\s*(\d+[ºo°]?(?:\s*-\s*[A-Z])?)\s*,?\s*([IVXL]+)?", t)
+    if mp:
+        par = re.sub(r"[ºo°\s]", "", mp.group(1))
+        if mp.group(2):
+            chaves.append("%s:%s §%s %s" % (lei, art, par, mp.group(2)))
+        chaves.append("%s:%s §%s" % (lei, art, par))
+    chaves.append("%s:%s" % (lei, art))
+    return chaves
+
+
+def tipo_criado_em(c):
+    """(data, lei) de criação do tipo/qualificadora/majorante capitulado, se posterior ao Código; (None, '') se não tabelado."""
+    for k in _chaves_tipo(c):
+        if k in TIPO_CRIADO:
+            d, lei = TIPO_CRIADO[k]
+            return datetime.strptime(d, "%Y-%m-%d").date(), lei
+    return None, ""
+
+
 def hediondo_na_epoca(c):
     """False se a tabela 'desde' mostra que o fato é anterior à lei que tornou o tipo hediondo; True/None caso contrário."""
     d, lei = hediondo_desde(c)
@@ -923,6 +981,11 @@ def situacao_execucao(campos, eventos, incidentes, crimes, hoje):
     out = {}
     periodos = periodos_custodia(eventos)
     out["situacao_cumprimento"] = "EM CUMPRIMENTO" if em_custodia(periodos, hoje) else "PENA INTERROMPIDA (sem evento de reinício)"
+    # interrupção por prisão em outro processo: a execução fica suspensa com a pessoa presa (não é liberdade nem fuga)
+    ult = max((e for e in eventos if to_date(e.get("data") or "")), key=lambda e: to_date(e["data"]), default=None)
+    if (out["situacao_cumprimento"] != "EM CUMPRIMENTO" and ult and "INTERRUP" in (ult.get("tipo") or "").upper()
+            and RE_OUTRO_PROC.search(ult.get("motivo") or "")):
+        out["situacao_cumprimento"] = "PENA SUSPENSA (preso em outro processo desde %s)" % fmt(to_date(ult["data"]))
     fp = [parse_fracao(c.get("fracao_progressao")) for c in crimes if not c.get("extinto", "").upper().startswith("S")]
     fl = [parse_fracao(c.get("fracao_livramento")) for c in crimes if not c.get("extinto", "").upper().startswith("S")]
     fp = [f for f in fp if f]
@@ -955,7 +1018,7 @@ def campos_faltantes(r):
             falta.append("pena de algum crime")
         if any(not c.get("data_infracao") for c in ativos):
             falta.append("data do fato de algum crime")
-    if not r.get("termino_previsao_seeu") and "INTERROMPIDA" not in (r.get("situacao_cumprimento") or "") and not r.get("execucao_extinta"):
+    if not r.get("termino_previsao_seeu") and not re.search(r"INTERROMPIDA|SUSPENSA", r.get("situacao_cumprimento") or "") and not r.get("execucao_extinta"):
         falta.append("término")
     return falta
 
@@ -1075,6 +1138,7 @@ def _data_fato_falta(i):
     return to_date(m.group(1)) if m else to_date(i.get("data_referencia") or i.get("data_decisao") or "")
 
 
+RE_OUTRO_PROC = re.compile(r"OUTRO PROCESSO|OUTRA EXECU|OUTRO FEITO|PRESO POR OUTRO|PRIS[ÃA]O EM OUTRO|OUTRA CONDENA", re.I)
 RE_FUGA_EV = re.compile(r"FUGA|EVAS|ABANDON|FORAGID|N[ÃA]O RETORN", re.I)
 
 

@@ -1,8 +1,8 @@
-RSPE BASE - SEEU  v6.16.25 (programa em abas)
+RSPE BASE - SEEU  v6.16.26 (programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-6.16.25. A documentação técnica completa (cada parâmetro, a regra, a norma e
+6.16.26. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -535,6 +535,22 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v6.16.26
+  - Interrupção por prisão em outro processo = execução SUSPENSA (a pessoa segue
+    presa): "Pena suspensa (preso em outro processo)" na ficha, progressão,
+    livramento e término, no lugar de "Pena interrompida"; a prescrição
+    executória não corre nesse período (CP, art. 116, p. único).
+  - RSPE com o cumprimento parado x ficha disciplinar: custódia registrada na
+    ficha depois da interrupção confirma a suspensão (ok) ou, se o motivo é outro,
+    gera alerta "RSPE indica pena interrompida, mas a ficha registra custódia"
+    (provável prisão em outro processo ou reinício não lançado); saída em
+    liberdade na ficha confirma a interrupção; sem registro posterior, a verificar.
+  - Lei do tempo, crime a crime: capitulação criada depois do fato (ex.: art.
+    157, § 2º-A, com fato de 2007 - a majorante é da Lei 13.654/2018) gera alerta
+    de cadastro anacrônico; hediondez posterior ao fato (sem o selo do SEEU)
+    gera ponto a verificar com a tese da irretroatividade. O cartão do crime na
+    linha do tempo do indulto mostra o aviso.
 
 v6.16.25
   - Faltas antigas saem dos pontos de atenção: só pedem decisão os indícios de

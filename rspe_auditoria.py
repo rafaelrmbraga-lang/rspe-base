@@ -556,6 +556,25 @@ def auditar(r, hoje=None):
                                        _descricao_tipo(c), (", vigente na data do fato (%s)" % c.get("data_infracao")) if c.get("data_infracao") else ""), "", tipo="artigo-reconhecido-pela-descricao-do-tipo", ref=nome))
         if not art:
             itens.append(_item("info", "%s: artigo não informado" % nome, "O SEEU não registrou o artigo e a descrição do tipo não foi reconhecida: \u201c%s\u201d." % _descricao_tipo(c), "Sem o artigo, hediondez, VGA e frações ficam sem conferência.", tipo="artigo-nao-informado", ref=nome))
+        # lei do tempo: capitulação criada depois do fato (anacronismo do cadastro) e hediondez posterior ao fato
+        _dc, _lc = rs.tipo_criado_em(c)
+        _dh, _lh = rs.hediondo_desde(c)
+        if fato and _dc and fato < _dc:
+            itens.append(_item("alerta", "%s: capitulação criada depois do fato (%s)" % (nome, rs.fmt(fato)),
+                               "O tipo, a qualificadora ou a majorante cadastrados foram criados pela %s, em vigor desde %s; o fato é de %s. "
+                               "A sentença usou a redação da época: o cadastro no SEEU está anacrônico. Conferir a capitulação da sentença - ela "
+                               "decide a hediondez (%s), a fração de progressão e livramento e a vedação do indulto e da comutação." % (
+                                   _lc, rs.fmt(_dc), rs.fmt(fato),
+                                   ("não era hediondo na data do fato: hediondez só desde %s" % rs.fmt(_dh)) if (_dh and fato < _dh) else "conferir"),
+                               "CF, art. 5º, XL; CP, arts. 1º e 2º; Lei 8.072/90.", tipo="capitulacao-criada-depois-do-fato", ref=nome))
+        elif fato and _dh and fato < _dh and not _hediondo_seeu(c) and rs.e_hediondo(c, date.today()):
+            itens.append(_item("verificar", "%s: hediondez posterior ao fato (hediondo só desde %s)" % (nome, rs.fmt(_dh)),
+                               "Fato em %s; o tipo passou a ser hediondo pela %s, em vigor desde %s. Progressão e livramento: vale a lei da época, "
+                               "sem as frações de hediondo (CF, art. 5º, XL)%s. Indulto e comutação: o STJ afere a hediondez na data do decreto e "
+                               "mantém a vedação; tese defensiva: irretroatividade (a vedação alcança só fatos posteriores à lei)." % (
+                                   rs.fmt(fato), _lh or "lei", rs.fmt(_dh),
+                                   ""),
+                               "CF, art. 5º, XL; CP, art. 2º; Lei 8.072/90; STF, 2ª T., RHC 267.297 AgR.", tipo="hediondez-posterior-ao-fato", ref=nome))
         if not fato:
             itens.append(_item("info", "%s: data do fato ausente" % nome, "Sem a data do fato não se aplica a lei do tempo (frações de progressão, art. 115 CP).", "CF, art. 5º, XL; STJ Tema 1354.", tipo="data-do-fato-ausente", ref=nome))
         if not c.get("transito_processo") and not c.get("transito_mp"):
@@ -992,6 +1011,12 @@ def auditar(r, hoje=None):
     if _rv2.nao_iniciou(r):
         itens.append(_item("info", "Não iniciou o cumprimento da pena", "O RSPE não registra início de cumprimento definitivo (só prisão provisória encerrada, ou nenhuma). "
                            "A prescrição executória corre pela pena integral (menos a detração) desde o trânsito.", "CP, arts. 112, I, e 113.", tipo="nao-iniciou-o-cumprimento-da-pena"))
+    elif "SUSPENSA" in (r.get("situacao_cumprimento") or ""):
+        itens.append(_item("info", "Execução suspensa: %s" % (r.get("situacao_cumprimento") or "").split("(", 1)[-1].rstrip(")"),
+                           "O RSPE registra a interrupção por prisão em outro processo: a pessoa segue presa, e esta execução fica suspensa até o "
+                           "reinício. Não é fuga nem liberdade - a prescrição executória não corre enquanto estiver preso por outro motivo "
+                           "(CP, art. 116, p. único). Conferir se a prisão no outro processo já foi convertida em cumprimento da pena unificada.",
+                           "CP, art. 116, p. único; LEP, art. 111.", tipo="execucao-suspensa-preso-em-outro-processo"))
     elif "INTERROMPIDA" in (r.get("situacao_cumprimento") or ""):
         itens.append(_item("info", "Cumprimento interrompido (último evento é interrupção)", "Verificar se há prisão posterior não lançada ou se o apenado está foragido/em liberdade; a prescrição executória corre pela pena restante.", "CP, arts. 112, II, e 113.", tipo="cumprimento-interrompido-ultimo-evento-e-interru"))
 

@@ -60,7 +60,7 @@ FILTROS = {
         ("60", "Vence em até 60 dias"),
         ("90", "Vence em até 90 dias"),
         ("naoiniciou", "Não iniciou o cumprimento"),
-        ("interrompida", "Pena interrompida"),
+        ("interrompida", "Pena interrompida / suspensa"),
         ("naoaplica", "Não se aplica (cumprida / livramento / aberto)"),
         ("semdata", "Sem data"),
     ],
@@ -81,7 +81,7 @@ FILTROS = {
         ("30", "Término em até 30 dias"),
         ("60", "Término em até 60 dias"),
         ("90", "Término em até 90 dias"),
-        ("interrompida", "Pena interrompida"),
+        ("interrompida", "Pena interrompida / suspensa"),
         ("semdata", "Sem previsão"),
     ],
     "aud": [
@@ -105,10 +105,21 @@ def _data(txt):
     return rs.to_date(txt) if txt else None
 
 
+def parada(r):
+    """Cumprimento parado: interrompido (sem reinício) ou suspenso (preso em outro processo)."""
+    return bool(re.search(r"INTERROMPIDA|SUSPENSA", r.get("situacao_cumprimento") or ""))
+
+
+def rotulo_parada(r, curto=False):
+    if "SUSPENSA" in (r.get("situacao_cumprimento") or ""):
+        return "Suspensa" if curto else "Pena suspensa (preso em outro processo)"
+    return "Interrompida" if curto else "Pena interrompida"
+
+
 def _sem_data(r):
     """O programa não calcula progressão/livramento/término: sem data do SEEU, só informa o motivo."""
-    if "INTERROMPIDA" in (r.get("situacao_cumprimento") or ""):
-        return ("Pena interrompida", None)
+    if parada(r):
+        return (rotulo_parada(r), None)
     return ("Não consta no RSPE", None)
 
 
@@ -201,12 +212,12 @@ def data_livramento(r):
 VERIFICAR_VENCIDO = "verificar criminológico, indeferimento ou falta"
 
 
-def situacao(d, interrompida=False):
+def situacao(d, interrompida=False, rot="Pena interrompida"):
     """(texto, cor)"""
     if d == "atingido":
-        return ("Interrompida · lapso atingido", "cinza") if interrompida else ("Lapso atingido · " + VERIFICAR_VENCIDO, "vencido")
+        return ("%s · lapso atingido" % rot.replace("Pena i", "I").replace("Pena s", "S").split(" (")[0], "cinza") if interrompida else ("Lapso atingido · " + VERIFICAR_VENCIDO, "vencido")
     if not d:
-        return (("Pena interrompida", "cinza") if interrompida else ("", ""))
+        return ((rot, "cinza") if interrompida else ("", ""))
     n = (d - HOJE).days
     if n < 0:
         return ("Vencido há %d dia%s · %s" % (-n, "s" if n < -1 else "", VERIFICAR_VENCIDO), "vencido")
@@ -359,7 +370,7 @@ def termino(r):
         return r["termino_previsao_seeu"]
     if nao_iniciou(r):
         return "Não iniciou"
-    return "Interrompida" if "INTERROMPIDA" in (r.get("situacao_cumprimento") or "") else "Não consta no RSPE"
+    return rotulo_parada(r, True) if parada(r) else "Não consta no RSPE"
 
 
 def extincao(r, presc, interr):
@@ -424,9 +435,9 @@ def extincao(r, presc, interr):
         if a_verificar and cor in ("", "cinza", "verde"):
             cor = "amarelo"
     return {
-        "ext_hipoteses": "; ".join(hip) if hip else ("Não iniciou o cumprimento - sem previsão" if nao_iniciou(r) else ("" if not interr else "Pena interrompida - sem previsão")),
+        "ext_hipoteses": "; ".join(hip) if hip else ("Não iniciou o cumprimento - sem previsão" if nao_iniciou(r) else ("" if not interr else rotulo_parada(r) + " - sem previsão")),
         "ext_cor": cor,
-        "ext_termino": rs.fmt(term) if term else ("Não iniciou" if nao_iniciou(r) else ("Interrompida" if interr else "")),
+        "ext_termino": rs.fmt(term) if term else ("Não iniciou" if nao_iniciou(r) else (rotulo_parada(r, True) if interr else "")),
         "ext_dias": (term - HOJE).days if term else None,
         "ext_sit": ("Pena extinta (registrada)" if ja_extinta else (("Extinção cabível" if cor == "vermelho" else situacao(term)[0].replace("Vence", "Término").replace("Em ", "Término em ")) if (term or cor == "vermelho") else "")),
         "ext_extintos": "; ".join(ext),
@@ -483,7 +494,8 @@ AUD_OUTRAS_ABAS = {
 def so_matematica(it):
     """Itens que ficam na Auditoria: conferência dos números e datas do RSPE."""
     if it.get("origem") == "ficha":
-        return it["titulo"].startswith("Perda de remidos")  # perda de dias remidos é conta do RSPE
+        # perda de dias remidos é conta do RSPE; cumprimento parado no RSPE x custódia na ficha é contradição do RSPE
+        return it["titulo"].startswith("Perda de remidos") or it.get("tipo") == "interrupcao-x-ficha"
     return it.get("tipo") not in AUD_OUTRAS_ABAS
 
 
@@ -652,12 +664,12 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
         except Exception:
             pass
     sem_inicio = nao_iniciou(r)
-    interr = "INTERROMPIDA" in (r.get("situacao_cumprimento") or "") and not sem_inicio
+    interr = parada(r) and not sem_inicio
     ptxt, pd = data_progressao(r)
     ltxt, ld = data_livramento(r)
     est = estado_execucao(r)
-    psit, pcor = situacao(pd, interr)
-    lsit, lcor = situacao(ld, interr)
+    psit, pcor = situacao(pd, interr, rotulo_parada(r))
+    lsit, lcor = situacao(ld, interr, rotulo_parada(r))
     if est:
         psit, pcor = ({"extinta": "Pena extinta", "cumprida": "Pena cumprida", "lc": "Em livramento", "aberto": "Já no aberto", "lc_duvida": "A verificar (livramento)",
                        "nao_iniciou": "Não iniciou o cumprimento"}[est[0]],
@@ -804,7 +816,7 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
              "dec": i.get("data_decisao"), "ref": i.get("data_referencia")}
             for i in r.get("_incidentes", []) if not i.get("_ficha")],
     }
-    m["motivo_exec"] = est[1] if est else ("Pena interrompida" if interr else "")
+    m["motivo_exec"] = est[1] if est else (rotulo_parada(r) if interr else "")
     m = simplificar(m)
     m["_final"] = r  # o registro com o que a ficha resolveu (incisos IV, XI a XIII): base da linha do tempo, igual à aba
     return m
