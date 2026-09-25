@@ -1,8 +1,8 @@
-RSPE BASE - SEEU  v6.16.32 (programa em abas)
+RSPE BASE - SEEU  v6.16.33 (programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-6.16.32. A documentação técnica completa (cada parâmetro, a regra, a norma e
+6.16.33. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -535,6 +535,20 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v6.16.33
+  - Prescrição, linha do tempo: o quadro da fuga/interrupção sai do desenho e
+    ganha, ao lado, o quadro "Fundamentação para a petição" com botão Copiar -
+    texto pronto com o art. 113 (saldo), o inciso do art. 109 (e a redação
+    anterior à Lei 12.234/2010 quando for o caso), a metade do art. 115, o +1/3
+    da reincidência (art. 110), o vencimento, a causa interruptiva (art. 117, V)
+    e o pedido de extinção (arts. 107, IV, e 119). No "a verificar", o texto
+    sustenta a hipótese de imputação mais favorável e diz com qual ordem ela
+    coincide (art. 76 ou cronológica do trânsito).
+  - Quadros do topo das abas com coluna Pedido: novo quadro "Pedido feito". Quem
+    tem o pedido marcado sai dos demais quadros (Possível, Remição a requerer...)
+    e conta em "Pedido feito"; clicar nele filtra esses assistidos. Se a situação
+    da aba mudar depois do pedido, a pessoa volta ao quadro da situação.
 
 v6.16.32
   - Livramento condicional: a saída da unidade para o livramento, que o SEEU
