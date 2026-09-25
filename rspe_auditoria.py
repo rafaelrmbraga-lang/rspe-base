@@ -13,7 +13,7 @@ os pontos que outras abas já mostram).
 """
 
 import re
-from datetime import date
+from datetime import date, timedelta
 from fractions import Fraction
 
 import rspe_scraper as rs
@@ -311,7 +311,7 @@ def auditar(r, hoje=None):
                 r["_nasc_fonte"], rs.fmt(nasc), (" (RSPE: %s)" % r["_nasc_rspe"]) if r.get("_nasc_rspe") else ""), "data": _dt}
         itens.append(it)
     # indícios de falta: a decisão fica com o operador (botão Preencher); fuga é falta grave por padrão (LEP, art. 50, II)
-    for fi in rs.faltas_editaveis(incidentes, eventos):
+    for fi in rs.faltas_editaveis(incidentes, eventos, hoje):
         dec = fi["decisao"]
         rot = {"sim": "falta grave", "nao": "não houve falta grave"}.get(dec, "")
         fuga = fi["padrao"] == "falta"
@@ -720,8 +720,42 @@ def auditar(r, hoje=None):
         itens.append(_item("alerta", "Data-base de progressão anterior à última alteração de regime",
                            "Data-base impressa: %s; última alteração de regime: %s (%s)." % (rs.fmt(db_seeu), rs.fmt(ult[0]), ult[1].get("complemento")),
                            "LEP, art. 112, § 6º (falta grave reinicia pela remanescente); STJ Tema 1006 (a unificação de penas não altera a data-base); STJ Tema 1165 (data-base é a do preenchimento dos requisitos, não a da decisão).", tipo="data-base-de-progressao-anterior-a-ultima-altera"))
+    # alteração de data-base determinada no RSPE depois da última progressão: só se justifica por falta grave homologada
+    # (LEP, arts. 112, § 6º, e 118; Súmula 534/STJ), regressão ou nova prisão após interrupção; soma/unificação não altera
+    # (STJ, Tema 1006). Sem nenhum desses fundamentos no RSPE, a alteração atrasa a progressão e pede conferência
+    _lp = max((rs.to_date(i.get("data_referencia") or i.get("data_decisao") or "") or date.min for i in regs
+               if "PROGRESS" in (i.get("complemento") or "").upper()), default=date.min)
+    _firmes = [rs._data_fato_falta(i) for i in incidentes if rs.RE_FALTA_PROPRIA.search(rs._rotulo_incidente(i)) and not rs._negado(i)
+               and not rs._pendente(i) and not i.get("_ficha")]
+    _firmes = [d for d in _firmes if d]
+    _firmes += [rs.to_date(e.get("data") or "") for e in eventos if e.get("_falta") == "sim"]
+    _regr = [rs.to_date(i.get("data_referencia") or i.get("data_decisao") or "") for i in regs if "REGRESS" in (i.get("complemento") or "").upper()]
+    _pris = [rs.to_date(e.get("data") or "") for e in eventos if re.search(r"PRIS|REIN[ÍI]CIO|RECAPTURA", ((e.get("tipo") or "") + " " + (e.get("motivo") or "")).upper())]
+    _db_sem = []
+    for i in incidentes:
+        t = ((i.get("tipo") or "") + " " + (i.get("complemento") or "")).upper()
+        if not re.search(r"DATA[- ]BASE", i.get("tipo") or "", re.I) or i.get("situacao") != "CONCEDIDO":
+            continue
+        d = rs.to_date(i.get("data_referencia") or i.get("data_decisao") or "")
+        if not d or d < _lp or d < rs.corte_faltas(hoje):
+            continue
+        if (any(x and d - timedelta(days=365) <= x <= d for x in _firmes) or any(x and abs((x - d).days) <= 30 for x in _regr)
+                or any(x and abs((x - d).days) <= 5 for x in _pris)):
+            continue
+        unif = bool(re.search(r"SOMA|UNIFICA|NOVA CONDENA|GUIA", t))
+        itens.append(_item("alerta" if unif else "verificar",
+                           "Alteração de data-base em %s sem falta grave homologada no RSPE" % rs.fmt(d),
+                           "%s (decisão de %s). Não há falta grave homologada nos 12 meses anteriores, regressão nem nova prisão nessa data. "
+                           "A data-base só se altera por falta grave reconhecida em juízo, por regressão ou pela recaptura/nova prisão depois de "
+                           "interrupção; %s. Conferir o fundamento nos autos: sem ele, a data-base volta à anterior e a progressão se antecipa." % (
+                               rs._rotulo_incidente(i), i.get("data_decisao") or "?",
+                               "a soma ou unificação de penas não altera a data-base (STJ, Tema 1006)" if unif else "falta pendente não pode mover a data-base"),
+                           "LEP, arts. 112, § 6º, e 118; Súmula 534/STJ; STJ, Temas 1006 e 1165.",
+                           tipo="alteracao-de-data-base-sem-falta-homologada", ref=rs.fmt(d)))
+        _db_sem.append(d)
     # data-base x eventos que a justificam: última prisão/início do cumprimento, progressão/regressão ou falta grave homologada
-    if db_seeu:
+    # (a data-base que é a própria alteração sem fundamento já tem o item acima)
+    if db_seeu and not any(abs((x - db_seeu).days) <= 1 for x in _db_sem):
         marcos = []
         for e in r.get("_eventos", []):
             t = ((e.get("tipo") or "") + " " + (e.get("motivo") or "")).upper()
@@ -947,7 +981,7 @@ def auditar(r, hoje=None):
     # os indícios decidíveis já têm item próprio (Falta a apurar / Fuga): este só entra para a falta firme ou para o que não é decidível
     if r.get("falta_12m") == "SIM":
         itens.append(_item("info", "Falta grave nos últimos 12 meses", r.get("falta_12m_detalhe", ""), "Reflexo em LC (CP, art. 83, III, b), indulto e comutação (art. 6º dos decretos) e progressão (LEP, art. 112, §§ 6º e 7º).", tipo="indicio-de-falta-nos-ultimos-12-meses"))
-    elif r.get("falta_12m") == "A APURAR" and not any(not fi["decisao"] for fi in rs.faltas_editaveis(incidentes, eventos)):
+    elif r.get("falta_12m") == "A APURAR" and not any(not fi["decisao"] for fi in rs.faltas_editaveis(incidentes, eventos, hoje)):
         itens.append(_item("verificar", "Indício de falta nos últimos 12 meses", r.get("falta_12m_detalhe", ""), "Reflexo em LC (CP, art. 83, III, b), indulto (art. 6º dos decretos) e progressão (LEP, art. 112, §§ 6º e 7º).", tipo="indicio-de-falta-nos-ultimos-12-meses"))
 
     # ---------------- 6. eventos / detração ----------------

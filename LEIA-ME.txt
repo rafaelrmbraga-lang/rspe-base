@@ -1,8 +1,8 @@
-RSPE BASE - SEEU  v6.16.24 (programa em abas)
+RSPE BASE - SEEU  v6.16.25 (programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-6.16.24. A documentação técnica completa (cada parâmetro, a regra, a norma e
+6.16.25. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -535,6 +535,24 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v6.16.25
+  - Faltas antigas saem dos pontos de atenção: só pedem decisão os indícios de
+    falta a partir do início da janela do art. 6º do Decreto 2024 (26/12/2023)
+    ou dos 3 anos anteriores a hoje, o que for anterior. Falta mais antiga não
+    afeta indulto, comutação nem livramento; a data-base já está no RSPE.
+  - Auditoria: alteração de data-base determinada no RSPE depois da última
+    progressão sem falta grave homologada nos 12 meses anteriores, regressão ou
+    nova prisão na data: "Alteração de data-base sem falta grave homologada"
+    (alerta quando o incidente fala em soma/unificação - STJ, Tema 1006).
+  - Indulto, inciso IV (anos ininterruptos): a nova prisão que o RSPE registra
+    dentro do período contínuo é confrontada com a movimentação da ficha
+    disciplinar. Custodiado antes e depois, sem soltura, fuga ou evasão = não
+    interrompe (✔); saída por alvará/fuga/determinação judicial ou entrada vinda
+    da delegacia/audiência de custódia = interrompeu (✘, com a data e o motivo).
+    Sem movimentação na ficha ao redor da data, segue a verificar.
+  - A linha do tempo do indulto usa o mesmo resultado da aba (incisos IV, XI,
+    XII e XIII resolvidos pela ficha).
 
 v6.16.24
   - Falta grave do art. 6º (decretos 2024 e 2025) conferida uma única vez por

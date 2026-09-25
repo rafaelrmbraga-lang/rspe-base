@@ -1087,7 +1087,20 @@ def _texto_evento(e):
     return " ".join(("%s %s" % (e.get("tipo", ""), e.get("motivo", ""))).split())
 
 
-def faltas_editaveis(incidentes, eventos):
+def corte_faltas(hoje=None):
+    """Data a partir da qual um indício de falta ainda importa: a janela do art. 6º do decreto mais antigo em análise
+    (12 meses antes de 25/12/2024) ou os 3 anos anteriores a hoje (prazo da falta disciplinar - STJ, art. 109, VI, do CP
+    por analogia), o que for anterior. Indício mais antigo não pede decisão: não afeta indulto, comutação nem livramento,
+    e a data-base de progressão já está fixada no RSPE."""
+    hoje = hoje or date.today()
+    return min(hoje - timedelta(days=3 * 365), min(DECRETOS.values()) - timedelta(days=365))
+
+
+def faltas_editaveis(incidentes, eventos, hoje=None):
+    return [x for x in _faltas_editaveis(incidentes, eventos) if not x["data"] or to_date(x["data"]) >= corte_faltas(hoje)]
+
+
+def _faltas_editaveis(incidentes, eventos):
     """Todos os indícios de falta da execução que admitem decisão do operador: fuga (falta grave por padrão - LEP, art. 50, II),
     descumprimento, incidente pendente, perda de remidos ou regressão sem falta homologada. Cada um com a chave, a data, o
     texto, o estado padrão e a decisão gravada (_falta: 'sim' / 'nao')."""
@@ -1120,7 +1133,7 @@ def faltas_editaveis(incidentes, eventos):
     return out
 
 
-def faltas_da_ficha(r, ficha):
+def faltas_da_ficha(r, ficha, hoje=None):
     """Faltas graves registradas na ficha disciplinar do SIAPEN que o RSPE não traz (sem falta própria em até 30 dias da
     mesma data): entram como incidente PENDENTE (falta a apurar), datado pelo fato - a sanção do conselho disciplinar não é
     reconhecimento em juízo (decretos, art. 6º). O operador decide ("é falta grave" / "não é") como nos demais indícios, e a
@@ -1132,7 +1145,8 @@ def faltas_da_ficha(r, ficha):
     datas = [d for d in (_data_fato_falta(i) for i in proprias) if d]
     for x in ficha.get("faltas") or []:
         d = to_date(x.get("data_fato") or x.get("data_registro") or "")
-        if not d or not x.get("grave") or x.get("situacao") == "arquivada" or any(abs((d - y).days) <= 30 for y in datas):
+        if (not d or not x.get("grave") or x.get("situacao") == "arquivada" or d < corte_faltas(hoje)
+                or any(abs((d - y).days) <= 30 for y in datas)):
             continue
         sit = x.get("situacao") or "registrada"
         r["_incidentes"].append({"tipo": "FALTA GRAVE NA FICHA DISCIPLINAR (SIAPEN)",

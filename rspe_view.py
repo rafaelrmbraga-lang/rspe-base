@@ -805,7 +805,9 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
             for i in r.get("_incidentes", []) if not i.get("_ficha")],
     }
     m["motivo_exec"] = est[1] if est else ("Pena interrompida" if interr else "")
-    return simplificar(m)
+    m = simplificar(m)
+    m["_final"] = r  # o registro com o que a ficha resolveu (incisos IV, XI a XIII): base da linha do tempo, igual à aba
+    return m
 
 
 def item_falha(titulo, tipo="falha"):

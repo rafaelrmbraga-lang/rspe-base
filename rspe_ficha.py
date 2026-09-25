@@ -998,6 +998,49 @@ def _dias_no_intervalo(periodos, a, b):
     return len(dias)
 
 
+RE_SAIDA_LIVRE = re.compile(r"SA[ÍI]DA DA UNIDADE PENAL.*MOTIVO:\s*(ALVAR|SOLTURA|LIBERDADE|FUGA|EVAS|DETERMINA[ÇC][ÃA]O JUDICIAL|LIVRAMENTO|"
+                            r"T[ÉE]RMINO|EXTIN|CUMPRIMENTO DE PENA|DOMICILIAR)|ALVAR[ÁA] DE SOLTURA|\bFUGA\b|EVADIU|EVAS[ÃA]O|FORAGID|N[ÃA]O RETORNOU", re.I)
+RE_ENTRADA_RUA = re.compile(r"(ENTRADA NA UNIDADE PENAL|DEU ENTRADA).*(PROCEDENTE:\s*(DP\b|DEPAC|DELEGACIA|CEPOL|CPAC)|PROVINDO DA DELEGACIA|"
+                            r"AUDI[ÊE]NCIA DE CUST[ÓO]DIA)|ENTRADA NA UNIDADE PENAL:\s*CENTRAL PROVIS[ÓO]RIA DE AUDI[ÊE]NCIA DE CUST[ÓO]DIA", re.I)
+
+
+def custodia_na_ficha(f, ini, datas):
+    """Inciso IV (custódia ininterrupta): confronta cada nova prisão que o RSPE registra dentro do período contínuo com a
+    movimentação da ficha disciplinar. (True, nota): a ficha mostra a pessoa custodiada antes e depois, sem soltura, fuga
+    ou evasão - a prisão ocorreu durante a custódia e não interrompe; (False, nota): a ficha registra saída em liberdade
+    (alvará, fuga, evasão) ou entrada vinda da delegacia/audiência de custódia; (None, nota): a ficha não cobre a data."""
+    ev = sorted(((_dp(e["data"]), e["texto"]) for e in f.get("eventos", []) if _dp(e.get("data") or "")), key=lambda x: x[0])
+    if not ev or not datas:
+        return None, ""
+    notas, res = [], True
+    for d in datas:
+        livres = [(x, t) for x, t in ev if ini < x <= d and RE_SAIDA_LIVRE.search(t)]
+        rua = [(x, t) for x, t in ev if max(d - timedelta(days=10), ini + timedelta(days=5)) < x <= d + timedelta(days=20) and RE_ENTRADA_RUA.search(t)]
+        if livres or rua:
+            partes = []
+            if livres:
+                x, t = livres[-1]
+                mm = re.search(r"MOTIVO:\s*([^,]+)", t, re.I)
+                partes.append("saída em %s (%s)" % (rs.fmt(x), mm.group(1).strip().lower() if mm else _br(t)[:80].rstrip(" ,.")))
+            if rua:
+                x, t = rua[0]
+                mm = re.search(r"PROCEDENTE:\s*([^,]+)", t, re.I)
+                partes.append("entrada em %s vinda de %s" % (rs.fmt(x), mm.group(1).strip() if mm else "fora do sistema prisional"))
+            notas.append("ficha: %s - houve interrupção antes da prisão de %s" % ("; ".join(partes), rs.fmt(d)))
+            res = False
+            continue
+        antes = [x for x, _ in ev if d - timedelta(days=365) <= x < d]
+        depois = [x for x, _ in ev if d < x <= d + timedelta(days=365)]
+        if not antes or not depois:
+            notas.append("ficha sem movimentação ao redor de %s (registros desde %s) - conferir nos autos" % (rs.fmt(d), rs.fmt(ev[0][0])))
+            if res is True:
+                res = None
+            continue
+        notas.append("ficha: custodiado antes e depois de %s (registros desde %s), sem soltura, fuga ou evasão desde %s - a prisão ocorreu "
+                     "durante a custódia e não interrompe o período" % (rs.fmt(d), rs.fmt(ev[0][0]), rs.fmt(max(ini, ev[0][0]))))
+    return res, "; ".join(notas)
+
+
 def complementar_decretos(r, f, hoje=None):
     """Decretos 12.338/2024 e 12.790/2025, art. 9º, XI, XII e XIII: o RSPE não traz saídas temporárias, trabalho externo,
     estudo nem curso concluído; a ficha traz. Resolve pela ficha os incisos que o cálculo deixou "a verificar"
@@ -1013,7 +1056,7 @@ def complementar_decretos(r, f, hoje=None):
     for ano in ("2024", "2025"):
         k, kc = "indulto_%s" % ano, "comutacao_%s" % ano
         det = r.get(k + "_detalhe") or ""
-        if not re.search(r"^\? (XI|XII|XIII):", det, re.M):
+        if not re.search(r"^\? (IV|XI|XII|XIII):", det, re.M):
             continue
         ref = rs.DECRETOS.get(ano)
         if not ref:
@@ -1048,12 +1091,18 @@ def complementar_decretos(r, f, hoje=None):
                 livres[0]["curso"].title(), livres[0]["horas"], _br(livres[0]["inicio"]), _br(livres[0]["fim"])))
         else:
             res["XIII"] = (False, "ficha: nenhum curso concluído nem certificado ENCCEJA/ENEM entre %s e %s" % (rs.fmt(j13), rs.fmt(ref)))
+        # IV: nova prisão dentro do período contínuo - a movimentação da ficha diz se houve interrupção
+        m4 = re.search(r"^\? IV: .*?desde (\d{2}/\d{2}/\d{4}).*verificar se houve interrupção no período: (.*)$", det, re.M)
+        if m4:
+            ok4, nota4 = custodia_na_ficha(f, rs.to_date(m4.group(1)), sorted({rs.to_date(x) for x in re.findall(r"\d{2}/\d{2}/\d{4}", m4.group(2))} - {None}))
+            if nota4:
+                res["IV"] = (ok4, nota4)
         # ressalva da análise (violência doméstica provável, livramento incerto, crime militar): a ficha não a resolve
         ressalva = r.get(k + "_ressalva") or ""
         # reescreve as linhas "? XI/XII/XIII" do detalhe e da explicação
         novas, poss, verif = [], [], []
         for l in det.split("\n"):
-            m = re.match(r"^\? (XI|XII|XIII): (.*)$", l)
+            m = re.match(r"^\? (IV|XI|XII|XIII): (.*)$", l)
             if m and m.group(1) in res:
                 ok, nota = res[m.group(1)]
                 txt = re.sub(r"\s*-\s*verificar .*$", "", m.group(2))
@@ -1065,7 +1114,7 @@ def complementar_decretos(r, f, hoje=None):
         if exp:
             ex2 = []
             for l in exp.split("\n"):
-                m = re.match(r"^\? Inciso (XI|XII|XIII): ", l)
+                m = re.match(r"^\? Inciso (IV|XI|XII|XIII): ", l)
                 if m and m.group(1) in res:
                     ok, nota = res[m.group(1)]
                     l = re.sub(r"\s*Depende de dado que o RSPE não traz\.?", "", l)
@@ -1105,7 +1154,7 @@ def complementar_decretos(r, f, hoje=None):
             r[k + "_status"] = "verificar"
             concl = "a verificar (%s)." % ", ".join(verif)
         else:
-            r[k] = "não atinge: incisos dependentes de estudo/saídas não atendidos pela ficha disciplinar" + aviso
+            r[k] = "não atinge: incisos conferidos na ficha disciplinar não atendidos" + aviso
             r[k + "_status"] = "nao"
-            concl = "não atinge nenhum inciso nesta data (XI, XII e XIII conferidos na ficha disciplinar)."
+            concl = "não atinge nenhum inciso nesta data (%s conferidos na ficha disciplinar)." % ", ".join(k2 for k2 in ("IV", "XI", "XII", "XIII") if k2 in res)
         r[k + "_explica"] = re.sub(r"^Conclusão: .*$", "Conclusão: " + concl, exp, flags=re.M) if exp else exp

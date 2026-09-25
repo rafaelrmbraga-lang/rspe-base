@@ -34,7 +34,7 @@ import rspe_relatorio as rrel
 import rspe_indulto_tl as rtl
 
 APP = "RSPE Base"
-VERSAO = "6.16.24"
+VERSAO = "6.16.25"
 
 
 def pasta_app():
@@ -648,7 +648,7 @@ class Api:
                 r["_nasc_data"] = ""
             # faltas graves da ficha disciplinar que o RSPE não traz: entram como falta a apurar
             try:
-                rs.faltas_da_ficha(r, _f0)
+                rs.faltas_da_ficha(r, _f0, rv.HOJE)
             except Exception:
                 logging.getLogger("rspe").exception("faltas da ficha %s", _ch0)
             # decisões do operador sobre indícios de falta (fuga, pendente, perda sem falta): valem em todas as abas
@@ -690,10 +690,10 @@ class Api:
                         logging.getLogger("rspe").exception("falha ao migrar baixa %s", ch)
             m["pedidos"] = peds.get(ch, {})  # pedidos já feitos, por aba (coluna "Pedido")
             try:
-                m["faltas_itens"] = rs.faltas_editaveis(r.get("_incidentes", []), r.get("_eventos", []))
+                m["faltas_itens"] = rs.faltas_editaveis(r.get("_incidentes", []), r.get("_eventos", []), rv.HOJE)
             except Exception:
                 m["faltas_itens"] = []
-            m["_bruto"] = r
+            m["_bruto"] = m.pop("_final", None) or r
             self._modelos.append(m)
         return {
             "base": self.base.nome,
