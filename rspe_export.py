@@ -7,7 +7,7 @@ import rspe_scraper as rs
 import rspe_view as rv
 
 NAVY = "#1F2937"
-PRI = "#4F46E5"
+PRI = "#00602C"
 TX2 = "#475467"
 LINE = "#E6E9EF"
 ZEBRA = "#F9FAFB"
@@ -227,3 +227,49 @@ def exportar_pdf(modelos, saida, nome_base, abas):
         leg = "     ".join('<font color="%s">●</font> <font color="%s">%s</font>' % (DOT[c], TX2, n) for c, n in rot.items() if c)
         el.append(Paragraph(leg, ParagraphStyle("leg", parent=st_cel, fontSize=8)))
     doc.build(el, onFirstPage=moldura, onLaterPages=moldura)
+
+
+def exportar_providencias(linhas, saida, titulo):
+    """Relatório de providências (pedidos e ofícios marcados na coluna Pedido) em Excel: resumo e lista."""
+    from openpyxl import Workbook
+    from openpyxl.styles import Alignment, Font, PatternFill
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Providências"
+    ws.append([titulo])
+    ws["A1"].font = Font(bold=True, size=13)
+    ws.append(["Gerado em %s · %d providência(s)" % (datetime.now().strftime("%d/%m/%Y %H:%M"), len(linhas))])
+    ws.append([])
+    cab = ["Data", "Assistido", "Nº da execução", "Benefício / assunto", "Providência", "Observação", "Registrado em"]
+    ws.append(cab)
+    for cell in ws[ws.max_row]:
+        cell.font = Font(bold=True, color="FFFFFF")
+        cell.fill = PatternFill("solid", fgColor=NAVY.lstrip("#"))
+        cell.alignment = Alignment(vertical="center")
+    for L in linhas:
+        ws.append([L.get("data", ""), L.get("nome", ""), L.get("proc", ""), L.get("assunto", ""), L.get("tipo", ""), L.get("obs", ""), L.get("registrado", "")])
+    for col, w in zip("ABCDEFG", (12, 34, 28, 26, 26, 40, 17)):
+        ws.column_dimensions[col].width = w
+    ws.freeze_panes = "A5"
+    # resumo: providência x assunto
+    rs_ = wb.create_sheet("Resumo")
+    rs_.append(["Benefício / assunto", "Pedido nos autos", "Ofício à unidade prisional", "Outra providência", "Total"])
+    for cell in rs_[1]:
+        cell.font = Font(bold=True, color="FFFFFF")
+        cell.fill = PatternFill("solid", fgColor=NAVY.lstrip("#"))
+    tipos = ["Pedido nos autos", "Ofício à unidade prisional", "Outra providência"]
+    assuntos = []
+    for L in linhas:
+        if L.get("assunto") not in assuntos:
+            assuntos.append(L.get("assunto"))
+    for a in assuntos:
+        q = [sum(1 for L in linhas if L.get("assunto") == a and L.get("tipo") == t) for t in tipos]
+        rs_.append([a] + q + [sum(q)])
+    q = [sum(1 for L in linhas if L.get("tipo") == t) for t in tipos]
+    rs_.append(["Total"] + q + [sum(q)])
+    for cell in rs_[rs_.max_row]:
+        cell.font = Font(bold=True)
+    for col, w in zip("ABCDE", (28, 18, 26, 18, 10)):
+        rs_.column_dimensions[col].width = w
+    wb.save(saida)
+
