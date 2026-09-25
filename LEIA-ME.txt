@@ -1,8 +1,8 @@
-RSPE BASE - SEEU  v6.16.21 (programa em abas)
+RSPE BASE - SEEU  v6.16.22 (programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-6.16.21. A documentação técnica completa (cada parâmetro, a regra, a norma e
+6.16.22. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -535,6 +535,21 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v6.16.22
+  - Fuga é falta grave (LEP, art. 50, II): fuga, evasão, abandono ou não
+    retorno registrados no RSPE contam como falta grave em todo o programa -
+    falta nos 12 meses, indulto e comutação (art. 6º dos decretos, também
+    quando a homologação vem depois - STJ, Tema 1195) e linha do tempo -, sem
+    ficar "a apurar".
+  - Decisão sobre indícios de falta: clicar em "A apurar"/"Sim" na coluna
+    Falta (12 meses) das abas Progressão e Livramento, ou em "Preencher" na
+    Auditoria, abre a lista de indícios (fuga, falta pendente, perda de remidos
+    ou regressão sem falta homologada) com a opção "Houve falta grave", "Não
+    houve falta grave" ou o padrão do programa. A decisão fica gravada e vale
+    em todas as abas; na Auditoria o ponto passa a baixado, com a decisão.
+  - Indulto/comutação barrado pela falta do art. 6º aparece como "Falta" na
+    tabela (antes, em alguns casos, "Não atinge").
 
 v6.16.21
   - Cor principal do programa no verde da Defensoria Pública de MS (#00602C),

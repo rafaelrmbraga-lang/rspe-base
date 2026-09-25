@@ -171,6 +171,8 @@ tr.sub td{padding:0 0 0 0;background:#FFFFFF;cursor:default}tr.sub:hover td{back
 .provleg{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:11.5px;color:var(--tx2);margin-top:4px}.provleg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
 .provc{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12.5px;color:var(--tx2);margin-bottom:10px}.provc b{color:var(--tx)}
 .pck.ok{background:#17B26A;border-color:#17B26A}.pck.ok.mud{background:#F5A524;border-color:#F5A524}
+.fedit{cursor:pointer;border-radius:6px;padding:1px 4px;margin:-1px -4px}.fedit:hover{background:var(--pri-soft)}.fedit .fe{font-size:11px;color:var(--tx3)}
+.fl{display:grid;grid-template-columns:1fr 210px;gap:10px;align-items:center;border:1px solid var(--line);border-radius:9px;padding:8px 10px;font-size:12.5px}.fl.foco{border-color:var(--pri);box-shadow:0 0 0 2px var(--pri-soft)}.fl .fd span{color:var(--tx2)}
 .mini.pre{background:var(--pri);color:#fff;border-color:var(--pri)}.mini.pre:hover{opacity:.9;color:#fff}
 .chev{display:inline-block;width:14px;color:var(--tx3);font-size:11px;margin-right:4px;transition:.15s}tr.exp .chev{transform:rotate(90deg);color:var(--pri)}
 
@@ -471,7 +473,8 @@ const ui = {
           v = P ? `<span class="pck ok ${mud?'mud':''}" title="${mud?'Pedido feito - a situação da aba mudou depois do pedido':'Pedido feito'}" onclick="event.stopPropagation();ui.pedidoAbrir('${r.id}','${spec.id}')">✓</span>`
                 : `<span class="pck" title="Marcar pedido feito" onclick="event.stopPropagation();ui.pedidoAbrir('${r.id}','${spec.id}')"></span>`; }
         else if(c[0]==='conduta'){ v = r.conduta_ruim ? `<span class="falta">${esc(v)}</span>` : (r.ficha_tem ? esc(v) : `<span class="muted">${esc(v)}</span>`); }
-        else if(c[0]==='falta'){ v = r.falta_sim ? `<span class="falta">Sim</span>` : (r.falta_apurar ? `<span class="apurar">A apurar</span>` : `<span class="muted">${esc(v)}</span>`); }
+        else if(c[0]==='falta'){ v = r.falta_sim ? `<span class="falta">Sim</span>` : (r.falta_apurar ? `<span class="apurar">A apurar</span>` : `<span class="muted">${esc(v)}</span>`);
+          if((r.faltas_itens||[]).length) v=`<span class="fedit" title="Ver e decidir as faltas (vale em todas as abas)" onclick="event.stopPropagation();ui.faltasModal('${r.id}')">${v} <span class="fe">✎</span></span>`; }
         else { v = esc(v).replace('(est.)','<span class="est">(est.)</span>'); if(!v) v='<span class="muted">—</span>'; }
         if(i===0 && spec.expansivel) v=`<span class="chev">▶</span>${v}`;
         return `<td class="${i===0?'first':''} ${NW.has(c[0])?'nw':''} ${pk&&spec.id==='ind'?'pl':''}" title="${esc(String(r[c[0]+'_full']??r[c[0]]??''))}">${v}</td>`; }).join('');
@@ -768,7 +771,21 @@ const ui = {
     document.getElementById('modal').classList.add('on'); },
   async fdSalvar(id){ const d={}; ['tipo','numero','descricao','inicio','fim','trabalhados','horas','remidos','unidade'].forEach(k=>{ const e=document.getElementById('fdm_'+k); d[k]=e?e.value:''; });
     const r=await API().fd_adicionar(id,d); if(r&&r.erro){ this.toast(r.erro); return; } this.fecharModal(); if(r&&r.registros){ this.aberto=id; this.carregar(r); } if(r&&r.msg) this.toast(r.msg); },
-  async preencher(id, ci){ const P=JSON.parse(this._clips[ci]||'{}'); const v=prompt(P.rotulo+':', ''); if(v===null||!v.trim()) return;
+  // ---------- decisão sobre indícios de falta: vale em todas as abas (falta 12 meses, indulto, comutação, linha do tempo, Auditoria) ----------
+  faltasModal(id, foco){ const r=(this.dados.registros||[]).find(x=>x.id===id); if(!r) return; const its=(r.faltas_itens||[]).slice().sort((a,b)=>this.tlD(b.data||'01/01/1900')-this.tlD(a.data||'01/01/1900'));
+    const pad=f=>f.padrao==='falta'?'Falta grave (fuga - padrão)':'A apurar (padrão)';
+    const linhas=its.map((f,i)=>`<div class="fl ${('falta|'+f.chave)===foco?'foco':''}"><div class="fd"><b>${esc(f.data||'sem data')}</b> <span>${esc(f.texto)}</span></div>
+      <select id="fal_${i}" data-ch="${esc(f.chave)}" data-v="${esc(f.decisao||'')}" style="padding:6px 8px;border:1px solid var(--line);border-radius:8px;font:inherit;font-size:12.5px">
+        <option value="" ${!f.decisao?'selected':''}>${pad(f)}</option><option value="sim" ${f.decisao==='sim'?'selected':''}>Houve falta grave</option><option value="nao" ${f.decisao==='nao'?'selected':''}>Não houve falta grave</option></select></div>`).join('');
+    document.getElementById('modal').innerHTML=`<div class="box" style="width:720px;max-height:calc(100vh - 40px);display:flex;flex-direction:column"><h2>Faltas · ${esc(r.nome)}</h2>
+      <p class="muted" style="margin:0 0 10px">Indícios de falta registrados no RSPE sem sanção reconhecida. Fuga é falta grave por padrão (LEP, art. 50, II). A decisão vale em todas as abas: falta nos 12 meses (progressão e livramento), indulto, comutação, linha do tempo e Auditoria.</p>
+      <div style="overflow:auto;display:flex;flex-direction:column;gap:8px">${linhas||'<p class="muted">Nenhum indício de falta a decidir.</p>'}</div>
+      <div class="acts"><button class="btn" onclick="ui.fecharModal()">Cancelar</button><button class="btn pri" onclick="ui.faltasSalvar('${id}',${its.length})">Salvar</button></div></div>`;
+    document.getElementById('modal').classList.add('on'); const fo=document.querySelector('#modal .fl.foco'); if(fo) fo.scrollIntoView({block:'center'}); },
+  async faltasSalvar(id, n){ let res=null; for(let i=0;i<n;i++){ const e=document.getElementById('fal_'+i); if(!e||e.value===e.dataset.v) continue;
+      res=await API().dado_manual(id, 'falta|'+e.dataset.ch, e.value); if(res&&res.erro){ this.toast(res.erro); return; } }
+    this.fecharModal(); if(res&&res.registros){ this.carregar(res); this.toast('Decisão gravada: vale em todas as abas.'); } },
+  async preencher(id, ci){ const P=JSON.parse(this._clips[ci]||'{}'); if(P.tipo==='falta'){ this.faltasModal(id, P.campo); return; } const v=prompt(P.rotulo+':', ''); if(v===null||!v.trim()) return;
     if(P.tipo==='data'&&!/^\d{2}\/\d{2}\/\d{4}$/.test(v.trim())){ this.toast('Use o formato dd/mm/aaaa.'); return; }
     await api('dado_manual', id, P.campo, v.trim()); this.aberto=id; this.render(); },
   // ---------- controle de pedidos (coluna "Pedido" das abas de benefício) ----------
@@ -1217,7 +1234,7 @@ const ui = {
     // faltas (as do mesmo dia num rótulo só)
     const niveis=[]; const grupos=[]; faltas.forEach(m=>{ const g=grupos.find(x=>x.data===m.data); if(g) g.ms.push(m); else grupos.push({data:m.data, ms:[m]}); });
     grupos.forEach(G=>{ const ms=G.ms; const xx=X(G.data); const duv=ms.every(z=>z.duvida); const c=duv?'#F79009':(dentro(G.data)?'#E5484D':'#98A2B3');
-      const fuga=ms.some(z=>/FUGA|EVAS|ABANDON|RETORN/i.test((z.det&&z.det.evento)||'')); const rot=duv?(fuga?'Fuga · falta a apurar':'Falta sem homologação'):'Falta grave'+(ms[0].sub?' · '+ms[0].sub:''); const lab=`${G.data} · ${rot}`; const w=ui.tlvLarg(lab,11)+16;
+      const fuga=ms.some(z=>/FUGA|EVAS|ABANDON|RETORN/i.test((z.det&&z.det.evento)||'')); const rot=duv?'Falta sem homologação':'Falta grave'+(ms[0].sub?' · '+ms[0].sub:''); const lab=`${G.data} · ${rot}`; const w=ui.tlvLarg(lab,11)+16;
       const fim=xx+w>TW-8; const ini=fim?xx-w:xx; let n=0; while(niveis[n]!==undefined && niveis[n]>ini-4) n++; niveis[n]=fim?xx+6:xx+w; const ly=yA+70+n*21;
       const di=this.tlvReg(rot, Object.assign({}, ms[0].det, {evento:ms.map(z=>(z.det&&z.det.evento)||z.rotulo).join(' | '), efeito:(dentro(G.data)?'dentro da janela do decreto selecionado: requisito subjetivo. ':J?'fora da janela do decreto selecionado: sem efeito. ':'')+'Não zera nem reinicia o tempo cumprido (Súmula 535/STJ).'}));
       svg+=`<g class="ck" onclick="ui.tlvDet(${di})"><line x1="${xx}" y1="${yA}" x2="${xx}" y2="${ly-10}" stroke="${c}" stroke-width="1" opacity=".7"/><circle cx="${xx}" cy="${yA}" r="6" fill="#fff" stroke="${c}" stroke-width="2.5"/>${duv?`<text x="${xx}" y="${yA-9}" text-anchor="middle" font-size="12">⚠</text>`:''}
