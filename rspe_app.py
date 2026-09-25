@@ -34,7 +34,7 @@ import rspe_relatorio as rrel
 import rspe_indulto_tl as rtl
 
 APP = "RSPE Base"
-VERSAO = "6.16.21"
+VERSAO = "6.16.23"
 
 
 def pasta_app():
@@ -646,6 +646,8 @@ class Api:
                 r["data_nascimento"] = _f0["data_nascimento"]
                 r["_nasc_fonte"] = "lida da ficha disciplinar do SIAPEN"
                 r["_nasc_data"] = ""
+            # decisões do operador sobre indícios de falta (fuga, pendente, perda sem falta): valem em todas as abas
+            rs.aplicar_decisoes_falta(r, {k.split("|", 1)[1]: v["valor"] for k, v in _dm.items() if k.startswith("falta|")})
             for _c in r.get("_crimes", []):
                 _c.pop("_pena_max_inf", None)
                 _v = _dm.get("pena_max|" + rs.chave_pena_max(_c))
@@ -682,6 +684,10 @@ class Api:
                     except Exception:
                         logging.getLogger("rspe").exception("falha ao migrar baixa %s", ch)
             m["pedidos"] = peds.get(ch, {})  # pedidos já feitos, por aba (coluna "Pedido")
+            try:
+                m["faltas_itens"] = rs.faltas_editaveis(r.get("_incidentes", []), r.get("_eventos", []))
+            except Exception:
+                m["faltas_itens"] = []
             m["_bruto"] = r
             self._modelos.append(m)
         return {
@@ -735,6 +741,8 @@ class Api:
         valor = (valor or "").strip()
         if valor and campo == "data_nascimento" and not rs.to_date(valor):
             return {"erro": "Data inválida: use dd/mm/aaaa."}
+        if campo.startswith("falta|") and valor not in ("", "sim", "nao"):
+            return {"erro": "Decisão inválida sobre a falta."}
         if valor and campo.startswith("pena_max|") and not rs.pena_livre(valor):
             return {"erro": "Pena inválida: use, por exemplo, 3 meses, 1 ano e 6 meses ou 0a3m0d."}
         self.base.dado_gravar(processo, campo, valor)

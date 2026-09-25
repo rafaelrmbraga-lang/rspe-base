@@ -1075,6 +1075,68 @@ def _data_fato_falta(i):
     return to_date(m.group(1)) if m else to_date(i.get("data_referencia") or i.get("data_decisao") or "")
 
 
+RE_FUGA_EV = re.compile(r"FUGA|EVAS|ABANDON|FORAGID|N[ÃA]O RETORN", re.I)
+
+
+def chave_falta(texto, d):
+    """Identificador estável de um indício de falta (data + texto), para a decisão do operador ("é falta grave" / "não é")."""
+    return "%s|%s" % (fmt(d) if d else "?", re.sub(r"[^A-Z0-9]", "", _sem_acento(texto or "").upper())[:40])
+
+
+def _texto_evento(e):
+    return " ".join(("%s %s" % (e.get("tipo", ""), e.get("motivo", ""))).split())
+
+
+def faltas_editaveis(incidentes, eventos):
+    """Todos os indícios de falta da execução que admitem decisão do operador: fuga (falta grave por padrão - LEP, art. 50, II),
+    descumprimento, incidente pendente, perda de remidos ou regressão sem falta homologada. Cada um com a chave, a data, o
+    texto, o estado padrão e a decisão gravada (_falta: 'sim' / 'nao')."""
+    out = []
+    proprias = [i for i in incidentes if RE_FALTA_PROPRIA.search(_rotulo_incidente(i)) and not _negado(i)]
+    datas_proprias = [d for d in (_data_fato_falta(i) for i in proprias) if d]
+    for i in incidentes:
+        txt = _rotulo_incidente(i)
+        if not RE_FALTA.search(txt) or _negado(i):
+            continue
+        if i in proprias:
+            if not _pendente(i):
+                continue  # homologada/concedida: já é falta grave reconhecida
+            d = _data_fato_falta(i)
+        else:
+            d = to_date(i.get("data_referencia") or i.get("data_decisao") or "")
+            if re.search(r"PERD|REGRESS", txt, re.I) and any(d and d - timedelta(days=365) <= x <= d for x in datas_proprias):
+                continue
+        out.append({"chave": chave_falta(txt, d), "data": fmt(d) if d else "", "texto": txt, "padrao": "apurar",
+                    "decisao": i.get("_falta") or "", "origem": "incidente"})
+    for e in eventos or []:
+        t = _texto_evento(e)
+        if not re.search(r"FUGA|EVAS|ABANDON|FORAGID|N[ÃA]O RETORN|DESCUMPRIMENTO", t, re.I):
+            continue
+        d = to_date(e.get("data") or "")
+        if not d or any(abs((x - d).days) <= 1 for x in datas_proprias):
+            continue
+        out.append({"chave": chave_falta(t, d), "data": fmt(d), "texto": t, "padrao": "falta" if RE_FUGA_EV.search(t) else "apurar",
+                    "decisao": e.get("_falta") or "", "origem": "evento"})
+    return out
+
+
+def aplicar_decisoes_falta(r, decisoes):
+    """Grava em cada evento/incidente do registro a decisão do operador sobre a falta (decisoes: {chave: 'sim'|'nao'})."""
+    for e in r.get("_eventos", []):
+        e.pop("_falta", None)
+        v = decisoes.get(chave_falta(_texto_evento(e), to_date(e.get("data") or "")))
+        if v:
+            e["_falta"] = v
+    proprias = [i for i in r.get("_incidentes", []) if RE_FALTA_PROPRIA.search(_rotulo_incidente(i)) and not _negado(i)]
+    for i in r.get("_incidentes", []):
+        i.pop("_falta", None)
+        txt = _rotulo_incidente(i)
+        d = _data_fato_falta(i) if i in proprias else to_date(i.get("data_referencia") or i.get("data_decisao") or "")
+        v = decisoes.get(chave_falta(txt, d))
+        if v:
+            i["_falta"] = v
+
+
 def indicios_falta(incidentes, ref, dias=365, eventos=None, ate=None):
     """Faltas nos 'dias' anteriores a ref (art. 6º dos decretos; CP, art. 83, III, b), pela data do FATO.
     Devolve [(texto, firme)]: firme = falta grave, homologação ou sanção CONCEDIDA (sanção reconhecida em juízo);
@@ -1090,16 +1152,24 @@ def indicios_falta(incidentes, ref, dias=365, eventos=None, ate=None):
         txt = _rotulo_incidente(i)
         if not RE_FALTA.search(txt) or _negado(i):
             continue
+        if i.get("_falta") == "nao":
+            continue  # o operador informou que não houve falta grave
         if i in proprias:
             d = _data_fato_falta(i)
             if d and limite <= d <= fim:
-                if _pendente(i):
+                if i.get("_falta") == "sim":
+                    out.append(("%s (%s - falta grave confirmada pelo operador)" % (txt, fmt(d)), True))
+                elif _pendente(i):
                     out.append(("%s (%s - pendente: só impede se a sanção for reconhecida em juízo)" % (txt, fmt(d)), False))
                 else:
                     out.append(("%s (%s)" % (txt, fmt(d)), True))
             continue
         d = to_date(i.get("data_referencia") or i.get("data_decisao") or "")
         if not d:
+            continue
+        if i.get("_falta") == "sim":
+            if limite <= d <= fim:
+                out.append(("%s (%s - falta grave confirmada pelo operador)" % (txt, fmt(d)), True))
             continue
         if re.search(r"PERD|REGRESS", txt, re.I):
             # perda de remidos e regressão decorrem da falta: só se descartam se houver falta homologada nos 12 meses
@@ -1114,15 +1184,20 @@ def indicios_falta(incidentes, ref, dias=365, eventos=None, ate=None):
             continue
         if limite <= d <= fim:
             out.append(("%s (%s%s)" % (txt, fmt(d), " - pendente" if _pendente(i) else ""), False))
-    # fuga, evasão, não retorno ou descumprimento registrados só como evento: falta a apurar (LEP, art. 50, II e V;
-    # a homologação pode vir depois - STJ, Tema 1195)
+    # fuga registrada só como evento: falta grave (LEP, art. 50, II), salvo decisão contrária do operador; descumprimento: a
+    # apurar (LEP, art. 50, V). A homologação pode vir depois - STJ, Tema 1195
     for e in eventos or []:
-        t = " ".join(("%s %s" % (e.get("tipo", ""), e.get("motivo", ""))).split())
-        if not re.search(r"FUGA|EVAS|ABANDON|FORAGID|N[ÃA]O RETORN|DESCUMPRIMENTO", t, re.I):
+        t = _texto_evento(e)
+        if not re.search(r"FUGA|EVAS|ABANDON|FORAGID|N[ÃA]O RETORN|DESCUMPRIMENTO", t, re.I) or e.get("_falta") == "nao":
             continue
         d = to_date(e.get("data") or "")
         if d and limite <= d <= fim and not any(abs((x - d).days) <= 1 for x in datas_proprias):
-            out.append(("%s (%s; falta a apurar)" % (t, fmt(d)), False))
+            if e.get("_falta") == "sim":
+                out.append(("%s (%s - falta grave confirmada pelo operador)" % (t, fmt(d)), True))
+            elif RE_FUGA_EV.search(t):
+                out.append(("%s (%s - fuga: falta grave, LEP, art. 50, II)" % (t, fmt(d)), True))
+            else:
+                out.append(("%s (%s; falta a apurar)" % (t, fmt(d)), False))
     return list(dict.fromkeys(out))
 
 

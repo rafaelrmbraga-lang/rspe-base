@@ -396,16 +396,21 @@ def linha(r, hoje=None):
     faltas = []
     for i in incidentes:
         rot = rs._rotulo_incidente(i)
-        if not rs.RE_FALTA_PROPRIA.search(rot) or rs._negado(i):
+        if not rs.RE_FALTA_PROPRIA.search(rot) or rs._negado(i) or i.get("_falta") == "nao":
             continue
         fato = rs._data_fato_falta(i)
+        conf = i.get("_falta") == "sim"
+        pend = rs._pendente(i) and not conf
         homol = _d(i.get("data_decisao")) if not rs._pendente(i) else None
-        faltas.append({"fato": fato, "homol": homol, "pendente": rs._pendente(i), "texto": rot})
+        faltas.append({"fato": fato, "homol": homol, "pendente": pend, "texto": rot + (" (falta grave confirmada pelo operador)" if conf else ""),
+                       "sub": "confirmada pelo operador" if conf and not homol else ""})
     for e in eventos:
         tt = " ".join(("%s %s" % (e.get("tipo", ""), e.get("motivo", ""))).split())
         d0 = _d(e.get("data"))
-        if d0 and RE_FUGA.search(tt) and not any(f["fato"] and abs((f["fato"] - d0).days) <= 1 for f in faltas):
-            faltas.append({"fato": d0, "homol": None, "pendente": True, "texto": tt + " (registrada só como evento; falta a apurar)"})
+        if d0 and RE_FUGA.search(tt) and e.get("_falta") != "nao" and not any(f["fato"] and abs((f["fato"] - d0).days) <= 1 for f in faltas):
+            # fuga: falta grave (LEP, art. 50, II) - a homologação posterior não muda a data do fato (STJ, Tema 1195)
+            faltas.append({"fato": d0, "homol": None, "pendente": False, "fuga": True, "texto": tt + " (fuga: falta grave, LEP, art. 50, II)",
+                           "sub": "fuga (LEP, art. 50, II)"})
 
     # ---- decretos ----
     ult_cad = max((D for D in decretos if D.get("cadastrado")), key=lambda D: _d(D.get("referencia")) or date.min, default=None)
@@ -430,9 +435,9 @@ def linha(r, hoje=None):
         if not f["fato"]:
             continue
         marcos.append({"data": _f(f["fato"]), "tipo": "falta", "rotulo": "Falta grave" if not f["pendente"] else "Falta (não homologada)",
-                       "sub": ("homologada em %s" % _f(f["homol"])) if f["homol"] else "sem homologação no SEEU", "crimes": ["GERAL"],
+                       "sub": ("homologada em %s" % _f(f["homol"])) if f["homol"] else (f.get("sub") or "sem homologação no SEEU"), "crimes": ["GERAL"],
                        "efeito": "só pesa no requisito subjetivo, se dentro da janela do decreto; não zera o cumprido",
-                       "duvida": not f["homol"],
+                       "duvida": f["pendente"], "fuga": bool(f.get("fuga")),
                        "det": _det(f["texto"], "GERAL", _f(f["fato"]), "falta grave", "STJ, Súmula 535; decretos 2024/2025, art. 6º; STJ, Tema 1195 (vale a data do fato)",
                                    "", "sem efeito no tempo cumprido")})
     marcos.append({"data": _f(hoje), "tipo": "hoje", "rotulo": "Hoje", "sub": "", "crimes": ["GERAL"], "efeito": "",
@@ -576,7 +581,7 @@ def _decreto(D, ref, pub, C, cumprido, data_atinge, faltas, hoje, ultimo, em_cur
             dentro = j0 <= f["fato"] <= j1
             est = "fora"
             if dentro:
-                est = "informativa" if FG.get("exige") is False else ("impede" if (f["homol"] and not f["pendente"]) else "verificar")
+                est = "informativa" if FG.get("exige") is False else ("verificar" if f["pendente"] else "impede")
             faltas_out.append({"fato": _f(f["fato"]), "homol": _f(f["homol"]), "texto": f["texto"], "estado": est})
     out["janela_falta"] = janela
     out["faltas"] = faltas_out

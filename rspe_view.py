@@ -518,6 +518,8 @@ def sim_nao(txt, cor):
     if ("fato posterior" in t and "fato posterior segue" not in t) or "fatos posteriores" in t:
         # só quando não resta crime anterior alcançável
         return "Fato posterior", "cinza"
+    if t.startswith("Não cabe") and "falta" in t:
+        return "Falta", "vermelho"  # art. 6º: falta grave nos 12 meses (inclui fuga) - o motivo fica na ficha
     if t.startswith("Vedado"):
         return "Vedado (art. 1º)", "vermelho"
     if t.startswith("Excluído"):

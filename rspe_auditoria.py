@@ -309,6 +309,27 @@ def auditar(r, hoje=None):
             it["auto_baixa"] = {"obs": "Data de nascimento %s: %s%s. Usada nos cálculos (art. 115 e idade no indulto)." % (
                 r["_nasc_fonte"], rs.fmt(nasc), (" (RSPE: %s)" % r["_nasc_rspe"]) if r.get("_nasc_rspe") else ""), "data": _dt}
         itens.append(it)
+    # indícios de falta: a decisão fica com o operador (botão Preencher); fuga é falta grave por padrão (LEP, art. 50, II)
+    for fi in rs.faltas_editaveis(incidentes, eventos):
+        dec = fi["decisao"]
+        rot = {"sim": "falta grave", "nao": "não houve falta grave"}.get(dec, "")
+        fuga = fi["padrao"] == "falta"
+        if dec:
+            it = _item("verificar", "%s em %s: %s" % ("Fuga" if fuga else "Falta a apurar", fi["data"] or "data não informada", "informar se houve falta grave"),
+                       fi["texto"], "LEP, arts. 50 e 118; STJ, Tema 1195.", tipo="falta-a-apurar", ref=fi["chave"])
+            it["auto_baixa"] = {"obs": "Decisão do operador: %s. Vale em todas as abas (falta nos 12 meses, indulto, comutação)." % rot, "data": ""}
+        elif fuga:
+            it = _item("info", "Fuga em %s tratada como falta grave" % (fi["data"] or "data não informada"),
+                       "%s. Fuga é falta grave (LEP, art. 50, II) e impede o indulto e a comutação quando está na janela do decreto, "
+                       "ainda que homologada depois (STJ, Tema 1195). Se não houve falta (retorno justificado, absolvição no PAD), "
+                       "informe pelo botão Preencher." % fi["texto"], "LEP, art. 50, II; STJ, Tema 1195.", tipo="fuga-falta-grave", ref=fi["chave"])
+        else:
+            it = _item("verificar", "Falta a apurar em %s: informar se houve falta grave" % (fi["data"] or "data não informada"),
+                       "%s. O RSPE não registra sanção reconhecida. Informe se houve falta grave: a decisão vale em todas as abas "
+                       "(falta nos 12 meses, indulto, comutação, linha do tempo)." % fi["texto"], "LEP, arts. 50 e 118; STJ, Tema 1195.",
+                       tipo="falta-a-apurar", ref=fi["chave"])
+        it["preencher"] = {"campo": "falta|" + fi["chave"], "rotulo": fi["texto"], "tipo": "falta", "data": fi["data"], "padrao": fi["padrao"], "decisao": dec}
+        itens.append(it)
     # contravenção com pena aplicada acima do que a LCP permite: quase sempre erro de cadastro do tipo no SEEU
     # (ex.: art. 35 da LCP no lugar do art. 35 da Lei 11.343/06, associação para o tráfico)
     for c in ativos:
