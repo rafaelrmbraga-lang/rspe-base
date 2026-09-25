@@ -1796,6 +1796,11 @@ def analise_decreto_2022(campos, crimes, eventos, incidentes):
             linhas.append("? %s: %s" % (nome, cpm))
             verificar.append(nome)
             continue
+        if excl and "fato anterior - tese" in excl:
+            # hediondez posterior ao fato: o STJ afere na data do decreto (excluído); pela irretroatividade (data do fato), não
+            linhas.append("? %s: %s - a verificar (pela data do fato não é excluído)" % (nome, excl))
+            verificar.append(nome)
+            continue
         if excl:
             linhas.append("✗ %s: excluído pelo art. 7º, %s" % (nome, excl))
             continue
@@ -2877,6 +2882,14 @@ def analise_decretos(campos, crimes, eventos, incidentes, hoje):
         def rotulo(txt, prefixo):
             return txt.replace("POSSÍVEL: ", "POSSÍVEL (%s): " % prefixo, 1) if txt.startswith("POSSÍVEL: ") else txt
 
+        def rotulo_tese(txt):
+            # cabível só pela tese (hediondez aferida na data do fato): fica "a verificar", nunca "possível"
+            if txt.startswith("POSSÍVEL: "):
+                return txt.replace("POSSÍVEL: ", "A VERIFICAR (tese: hediondez superveniente): ", 1)
+            if txt.startswith("A VERIFICAR: "):
+                return txt.replace("A VERIFICAR: ", "A VERIFICAR (tese: hediondez superveniente): ", 1)
+            return txt
+
         if not imped or (imp_sup and not imp_est):
             # sem impeditivo, ou só hediondez posterior ao fato: análise da pena toda
             res = avaliar(pena_total, cumprido, remanescente, vga, patrimonial, ativos)
@@ -2886,9 +2899,12 @@ def analise_decretos(campos, crimes, eventos, incidentes, hoje):
                 nota = ("Hediondez posterior ao fato (%s): o STJ afere a hediondez na data do decreto e veda o benefício; "
                         "pela irretroatividade concedem o STF (2ª Turma, RHC 267.297 AgR e HC 273.296 AgR; monocráticas) e a 2ª Câmara Criminal do TJMS; "
                         "em sentido contrário, a 1ª Turma do STF afere na data do decreto (RHC 273.867 AgR, 24/08/2026)." % nomes_sup)
-                out[k] = rotulo(out[k], "tese: hediondez superveniente")
-                if out[kc].startswith("POSSÍVEL: "):
-                    out[kc] = rotulo(out[kc], "tese: hediondez superveniente")
+                out[k] = rotulo_tese(out[k])
+                if out[k].startswith("A VERIFICAR"):
+                    out[k + "_status"] = "verificar"
+                out[kc] = rotulo_tese(out[kc])
+                if out[kc].startswith("A VERIFICAR"):
+                    out[kc + "_status"] = "verificar"
                 out[k + "_detalhe"] = "⚠ " + nota + "\n" + out[k + "_detalhe"]
                 out[k + "_explica"] = "⚠ " + nota + "\n" + out.get(k + "_explica", "")
                 out[kc + "_detalhe"] = "⚠ " + nota + "\n" + out.get(kc + "_detalhe", "")

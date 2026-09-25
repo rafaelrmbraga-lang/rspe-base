@@ -34,7 +34,7 @@ import rspe_relatorio as rrel
 import rspe_indulto_tl as rtl
 
 APP = "RSPE Base"
-VERSAO = "6.16.26"
+VERSAO = "6.16.27"
 
 
 def pasta_app():
@@ -646,6 +646,11 @@ class Api:
                 r["data_nascimento"] = _f0["data_nascimento"]
                 r["_nasc_fonte"] = "lida da ficha disciplinar do SIAPEN"
                 r["_nasc_data"] = ""
+            # RSPE x ficha: retomada do cumprimento omitida no RSPE é lançada pela ficha; divergência vira alerta
+            try:
+                rf.reconciliar_eventos(r, _f0)
+            except Exception:
+                logging.getLogger("rspe").exception("reconciliação com a ficha %s", _ch0)
             # faltas graves da ficha disciplinar que o RSPE não traz: entram como falta a apurar
             try:
                 rs.faltas_da_ficha(r, _f0, rv.HOJE)

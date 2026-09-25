@@ -355,6 +355,8 @@ def confrontar(r, f, hoje=None):
     itens.extend(_falta_anterior_x_perda(r, f))
     # 3c) cumprimento parado no RSPE x custódia na ficha
     itens.extend(_interrupcao_x_ficha(r, f))
+    # 3d) progressão, regressão e livramento cumpridos na unidade e ausentes do RSPE
+    itens.extend(_regime_x_ficha(r, f))
     # 4) estudo sem remição (a análise da ficha é só de remição: faltas, regime e identidade ficam fora)
     if res["estudo_horas_pend"] >= 12:
         itens.append({"nivel": "verificar",
@@ -393,36 +395,157 @@ def custodia_apos(f, d):
     return True, "registros na unidade%s até %s, sem saída em liberdade" % ((" " + un) if un else "", rs.fmt(dep[-1][0]))
 
 
+RE_ENTRADA = re.compile(r"ENTRADA NA UNIDADE|DEU ENTRADA", re.I)
+
+
+def reconciliar_eventos(r, f):
+    """RSPE x ficha na retomada do cumprimento. Omissão: o último evento do RSPE é uma interrupção (que não é prisão em
+    outro processo) e a ficha registra nova entrada no sistema prisional depois dela, sem saída em liberdade posterior -
+    o reinício é lançado pela ficha (evento marcado _ficha), e os cálculos passam a considerar a custódia. Divergência:
+    reinício no RSPE posterior à entrada vinda de fora registrada na ficha - devolve o aviso (não altera o RSPE).
+    Altera r no lugar; devolve [(tipo, dados)] para a Auditoria."""
+    r["_eventos"] = [e for e in r.get("_eventos", []) if not e.get("_ficha")]
+    r.pop("_custodia_ficha", None); r.pop("_reconc_ficha", None)
+    if not f:
+        return []
+    ev = sorted(((_dp(e["data"]), e["texto"]) for e in f.get("eventos", []) if _dp(e.get("data") or "")), key=lambda x: x[0])
+    if not ev:
+        return []
+    evs = sorted((e for e in r["_eventos"] if rs.to_date(e.get("data") or "")), key=lambda e: rs.to_date(e["data"]))
+    avisos = []
+    # divergência: interrupção seguida de reinício no RSPE, com entrada vinda de fora na ficha antes do reinício
+    for i, e in enumerate(evs[:-1]):
+        if "INTERRUP" not in (e.get("tipo") or "").upper():
+            continue
+        d, g1 = rs.to_date(e["data"]), rs.to_date(evs[i + 1]["data"])
+        rua = [(x, t) for x, t in ev if d < x < g1 - timedelta(days=2) and RE_ENTRADA_RUA.search(t)]
+        if rua:
+            mm = re.search(r"PROCEDENTE:\s*([^,]+)", rua[0][1], re.I)
+            avisos.append(("reinicio-divergente", {"interrupcao": d, "reinicio": g1, "entrada": rua[0][0], "origem": mm.group(1).strip() if mm else "",
+                                                   "motivo": (e.get("motivo") or "").strip()}))
+    # omissão: parado no RSPE, preso segundo a ficha
+    if evs and "INTERRUP" in (evs[-1].get("tipo") or "").upper() and not rs.RE_OUTRO_PROC.search(evs[-1].get("motivo") or ""):
+        d = rs.to_date(evs[-1]["data"])
+        entradas = [(x, t) for x, t in ev if x > d and RE_ENTRADA.search(t)]
+        if entradas:
+            x, t = entradas[0]
+            ok, _ = custodia_apos(f, x - timedelta(days=1))
+            # só é retomada se a pessoa esteve fora: entrada vinda da delegacia/audiência de custódia, ou saída em liberdade
+            # entre a interrupção e a entrada. Transferência entre unidades = custódia contínua (provável prisão em outro
+            # processo): não se lança nada - a Auditoria alerta a contradição
+            fora = RE_ENTRADA_RUA.search(t) or any(d - timedelta(days=3) <= y < x and RE_SAIDA_LIVRE.search(u) for y, u in ev)
+            if ok and fora:
+                mm = re.search(r"PROCEDENTE:\s*([^,]+)", t, re.I)
+                rua = bool(RE_ENTRADA_RUA.search(t))
+                r["_eventos"].append({"tipo": "REINÍCIO", "motivo": "%s (lançado pela ficha SIAPEN)" % ("RECAPTURA" if rua else "ENTRADA NO SISTEMA PRISIONAL"),
+                                      "complemento": "", "data": rs.fmt(x), "data_decisao": "", "data_referencia": "", "processos": "", "_ficha": True})
+                r["_eventos"].sort(key=lambda e2: rs.to_date(e2.get("data") or "") or date.min)
+                avisos.append(("reinicio-pela-ficha", {"interrupcao": d, "entrada": x, "origem": mm.group(1).strip() if mm else "", "rua": rua,
+                                                       "motivo": (evs[-1].get("motivo") or "").strip()}))
+    # omissão: nenhum evento de prisão no RSPE, e a ficha registra a entrada no sistema prisional
+    if not evs:
+        ent = [(x, t) for x, t in ev if RE_ENTRADA.search(t)]
+        x0 = _dp(f.get("data_prisao") or "") or (ent[0][0] if ent else None)
+        if x0:
+            r["_eventos"].append({"tipo": "PRISÃO", "motivo": "ENTRADA NO SISTEMA PRISIONAL (lançada pela ficha SIAPEN)", "complemento": "",
+                                  "data": rs.fmt(x0), "data_decisao": "", "data_referencia": "", "processos": "", "_ficha": True})
+            avisos.append(("inicio-pela-ficha", {"entrada": x0}))
+    # custódia atual segundo a ficha (depois do último evento do RSPE): afasta o "não iniciou o cumprimento" quando a
+    # única prisão registrada é a provisória
+    evs2 = sorted((e for e in r["_eventos"] if rs.to_date(e.get("data") or "")), key=lambda e: rs.to_date(e["data"]))
+    r["_custodia_ficha"] = custodia_apos(f, rs.to_date(evs2[-1]["data"]))[0] if evs2 else None
+    r["_reconc_ficha"] = avisos
+    return avisos
+
+
+def _regime_x_ficha(r, f):
+    """Progressão, regressão e livramento que a ficha registra (cumprimento da decisão na unidade) e o RSPE não traz."""
+    out = []
+    incs = [i for i in r.get("_incidentes", []) if not i.get("_ficha") and not rs._negado(i)]
+    def no_rspe(padrao, x, dias=45):
+        for i in incs:
+            t = ((i.get("tipo") or "") + " " + (i.get("complemento") or "")).upper()
+            if re.search(padrao, t):
+                for c in ("data_referencia", "data_decisao"):
+                    d = rs.to_date(i.get(c) or "")
+                    if d and abs((d - x).days) <= dias:
+                        return True
+        return False
+    vistos = set()
+    for e in f.get("eventos", []):
+        x, u = _dp(e.get("data") or ""), (e.get("texto") or "").upper()
+        if not x:
+            continue
+        m = re.search(r"PROGRESS[ÃA]O DE REGIME PARA O\s+(SEMI[- ]?ABERTO|ABERTO)", u)
+        if m and ("prog", m.group(1)) not in vistos and not no_rspe(r"PROGRESS", x):
+            vistos.add(("prog", m.group(1)))
+            out.append(("Progressão para o %s registrada na ficha em %s e ausente no RSPE" % (m.group(1).lower().replace(" ", ""), rs.fmt(x)),
+                        "A ficha registra o cumprimento da progressão (%s). Sem o incidente no RSPE, a data-base e as frações seguintes ficam erradas: "
+                        "conferir a decisão e pedir o lançamento no SEEU." % _br(e["texto"])[:160]))
+        if re.search(r"REGRESS[ÃA]O", u) and "regr" not in vistos and not no_rspe(r"REGRESS", x):
+            vistos.add("regr")
+            out.append(("Regressão registrada na ficha em %s e ausente no RSPE" % rs.fmt(x),
+                        "Ficha: %s. Conferir se houve decisão de regressão (e a falta que a motivou) e o lançamento no SEEU." % _br(e["texto"])[:160]))
+        if re.search(r"MOTIVO:\s*LIVRAMENTO CONDICIONAL|BENEFICIADO COM (O )?LIVRAMENTO", u) and "lc" not in vistos and not no_rspe(r"LIVRAMENTO", x):
+            vistos.add("lc")
+            out.append(("Livramento condicional registrado na ficha em %s e ausente no RSPE" % rs.fmt(x),
+                        "Ficha: %s. Sem o incidente no RSPE, o período de prova não é contado: pedir o lançamento no SEEU." % _br(e["texto"])[:160]))
+    return [{"nivel": "alerta", "titulo": t, "detalhe": d, "fundamento": "LEP, arts. 112, 118 e 131.", "tipo": "rspe-x-ficha"} for t, d in out]
+
+
 def _interrupcao_x_ficha(r, f):
     """RSPE com o cumprimento parado (último evento é interrupção): a ficha explica? Custódia depois da interrupção =
     preso (em outro processo ou sem reinício lançado), não em liberdade nem foragido; saída em liberdade = confirma."""
+    out = []
+    for tp, x in r.get("_reconc_ficha") or []:
+        if tp == "reinicio-pela-ficha":
+            out.append({"nivel": "alerta", "titulo": "Reinício omitido no RSPE: lançado pela ficha em %s" % rs.fmt(x["entrada"]),
+                        "detalhe": "O RSPE termina na interrupção de %s (%s), sem reinício. A ficha registra entrada%s em %s e custódia desde então. "
+                                   "Os cálculos do programa (situação, custódia, prescrição, incisos do indulto) passam a considerar o cumprimento a "
+                                   "partir de %s. Pedir a retificação do RSPE (reinício/recaptura) - sem ele, o SEEU não projeta progressão nem livramento." % (
+                                       rs.fmt(x["interrupcao"]), x["motivo"].lower() or "motivo não consta",
+                                       (" vinda de " + x["origem"]) if x["origem"] else "", rs.fmt(x["entrada"]), rs.fmt(x["entrada"])),
+                        "fundamento": "LEP, arts. 111 e 112; CP, arts. 113 e 117, V.", "tipo": "rspe-x-ficha"})
+        elif tp == "inicio-pela-ficha":
+            out.append({"nivel": "alerta", "titulo": "RSPE sem evento de prisão: início lançado pela ficha em %s" % rs.fmt(x["entrada"]),
+                        "detalhe": "O RSPE não lista eventos de início do cumprimento; a ficha registra a prisão/entrada no sistema prisional em %s. "
+                                   "Os cálculos do programa passam a considerar a custódia desde essa data. Conferir a guia e pedir a retificação do RSPE." % rs.fmt(x["entrada"]),
+                        "fundamento": "LEP, arts. 105 e 106; CP, art. 42.", "tipo": "rspe-x-ficha"})
+        elif tp == "reinicio-divergente":
+            dias = (x["reinicio"] - x["entrada"]).days
+            out.append({"nivel": "alerta", "titulo": "Retomada divergente: RSPE reinício em %s, ficha entrada em %s" % (rs.fmt(x["reinicio"]), rs.fmt(x["entrada"])),
+                        "detalhe": "Depois da interrupção de %s (%s), a ficha registra entrada no sistema prisional%s em %s; o RSPE só reinicia o cumprimento em %s. "
+                                   "São %s de custódia fora da conta (pena cumprida, data-base, prescrição): conferir a data da prisão nos autos e pedir a retificação." % (
+                                       rs.fmt(x["interrupcao"]), x["motivo"].lower() or "motivo não consta", (" vinda de " + x["origem"]) if x["origem"] else "",
+                                       rs.fmt(x["entrada"]), rs.fmt(x["reinicio"]), rs.pl(dias, "dia", "dias")),
+                        "fundamento": "CP, art. 42; LEP, arts. 111 e 112.", "tipo": "rspe-x-ficha"})
     evs = sorted((e for e in r.get("_eventos", []) if rs.to_date(e.get("data") or "")), key=lambda e: rs.to_date(e["data"]))
     if not evs or "INTERRUP" not in (evs[-1].get("tipo") or "").upper():
-        return []
+        return out
     d = rs.to_date(evs[-1]["data"])
     mot = (evs[-1].get("motivo") or "").strip()
     outro = bool(rs.RE_OUTRO_PROC.search(mot))
     ok, txt = custodia_apos(f, d)
     if ok is None:
-        return [] if outro else [{"nivel": "verificar", "titulo": "Cumprimento interrompido em %s: a ficha não tem registro posterior" % rs.fmt(d),
+        return out if outro else out + [{"nivel": "verificar", "titulo": "Cumprimento interrompido em %s: a ficha não tem registro posterior" % rs.fmt(d),
                                   "detalhe": "Motivo no RSPE: %s. Sem movimentação na ficha depois dessa data, não há como dizer se a pessoa está presa, "
-                                             "em liberdade ou foragida: conferir nos autos." % (mot.lower() or "não consta"), "fundamento": "CP, arts. 113 e 116, p. único.", "tipo": "interrupcao-x-ficha"}]
+                                             "em liberdade ou foragida: conferir nos autos." % (mot.lower() or "não consta"), "fundamento": "CP, arts. 113 e 116, p. único.", "tipo": "rspe-x-ficha"}]
     if outro and ok:
-        return [{"nivel": "ok", "titulo": "Suspensão confirmada pela ficha: preso desde a interrupção de %s" % rs.fmt(d),
+        return out + [{"nivel": "ok", "titulo": "Suspensão confirmada pela ficha: preso desde a interrupção de %s" % rs.fmt(d),
                  "detalhe": "RSPE: %s. Ficha: %s. Esta execução está suspensa com a pessoa presa - não corre prescrição (CP, art. 116, p. único)." % (mot.lower(), txt),
-                 "fundamento": "CP, art. 116, p. único.", "tipo": "interrupcao-x-ficha"}]
+                 "fundamento": "CP, art. 116, p. único.", "tipo": "rspe-x-ficha"}]
     if outro and not ok:
-        return [{"nivel": "verificar", "titulo": "Suspensão por prisão em outro processo, mas a ficha registra saída em liberdade",
+        return out + [{"nivel": "verificar", "titulo": "Suspensão por prisão em outro processo, mas a ficha registra saída em liberdade",
                  "detalhe": "RSPE: %s em %s. Ficha: %s. Se foi solto no outro processo, esta execução deveria ter sido retomada (reinício): conferir." % (mot.lower(), rs.fmt(d), txt),
-                 "fundamento": "LEP, art. 111; CP, art. 116, p. único.", "tipo": "interrupcao-x-ficha"}]
+                 "fundamento": "LEP, art. 111; CP, art. 116, p. único.", "tipo": "rspe-x-ficha"}]
     if ok:
-        return [{"nivel": "alerta", "titulo": "RSPE indica pena interrompida em %s, mas a ficha registra custódia" % rs.fmt(d),
-                 "detalhe": "Motivo no RSPE: %s. Ficha: %s. A pessoa está presa: provável prisão em outro processo (suspensão, sem curso da prescrição - "
+        return out + [{"nivel": "alerta", "titulo": "RSPE indica pena interrompida em %s, mas a ficha registra custódia" % rs.fmt(d),
+                 "detalhe": "Motivo no RSPE: %s. Ficha: %s, sem entrada vinda de fora depois da interrupção (custódia contínua). A pessoa está presa: provável prisão em outro processo (suspensão, sem curso da prescrição - "
                             "CP, art. 116, p. único) ou reinício do cumprimento não lançado. Conferir e pedir a retificação do RSPE (reinício ou "
                             "unificação), que destrava progressão e livramento." % (mot.lower() or "não consta", txt),
-                 "fundamento": "LEP, arts. 111 e 112; CP, art. 116, p. único.", "tipo": "interrupcao-x-ficha"}]
-    return [{"nivel": "info", "titulo": "Interrupção de %s confirmada pela ficha: %s" % (rs.fmt(d), txt),
-             "detalhe": "Motivo no RSPE: %s. A ficha registra a saída do sistema prisional depois da interrupção." % (mot.lower() or "não consta"), "fundamento": "CP, art. 113.", "tipo": "interrupcao-x-ficha"}]
+                 "fundamento": "LEP, arts. 111 e 112; CP, art. 116, p. único.", "tipo": "rspe-x-ficha"}]
+    return out + [{"nivel": "info", "titulo": "Interrupção de %s confirmada pela ficha: %s" % (rs.fmt(d), txt),
+             "detalhe": "Motivo no RSPE: %s. A ficha registra a saída do sistema prisional depois da interrupção." % (mot.lower() or "não consta"), "fundamento": "CP, art. 113.", "tipo": "rspe-x-ficha"}]
 
 
 def _falta_anterior_x_perda(r, f):

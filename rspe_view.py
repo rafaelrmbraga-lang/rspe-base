@@ -133,6 +133,8 @@ def nao_iniciou(r):
     """Não iniciou o cumprimento da pena: o RSPE não registra nenhum início de cumprimento definitivo - só prisões
     provisórias (flagrante, preventiva, temporária) já encerradas, ou nenhuma prisão."""
     evs = r.get("_eventos", [])
+    if r.get("_custodia_ficha"):
+        return False  # a ficha disciplinar registra a pessoa presa depois do último evento do RSPE
     inicios = [e for e in evs if re.search(r"PRIS|IN[ÍI]CIO|REIN[ÍI]CIO|RECAPTURA", ((e.get("tipo") or "") + " " + (e.get("motivo") or "")).upper())]
     definitivos = [e for e in inicios if not re.search(r"FLAGRANTE|PREVENTIV|TEMPOR|PROVIS", (e.get("motivo") or "").upper())]
     if definitivos:
@@ -495,7 +497,7 @@ def so_matematica(it):
     """Itens que ficam na Auditoria: conferência dos números e datas do RSPE."""
     if it.get("origem") == "ficha":
         # perda de dias remidos é conta do RSPE; cumprimento parado no RSPE x custódia na ficha é contradição do RSPE
-        return it["titulo"].startswith("Perda de remidos") or it.get("tipo") == "interrupcao-x-ficha"
+        return it["titulo"].startswith("Perda de remidos") or it.get("tipo") == "rspe-x-ficha"
     return it.get("tipo") not in AUD_OUTRAS_ABAS
 
 

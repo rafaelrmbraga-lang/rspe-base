@@ -99,10 +99,16 @@ def natureza(c, D, ref):
                 "se_sim": "caput ou § 1º: IMPEDITIVO", "se_nao": "§ 4º (privilegiado): NÃO IMPEDITIVO"}
     if regra == "art1_2024_2025":
         imp = rs.impeditivo_decreto(c, ref)
+        if imp and "fato anterior" in imp[1]:
+            return {"selo": "A_VERIFICAR", "motivo": imp[1], "dispositivo": "Decreto %s, art. 1º, %s" % (num, imp[0]),
+                    "se_sim": "hediondez na data do decreto (STJ): IMPEDITIVO", "se_nao": "na data do fato (irretroatividade - STF, 2ª T.): NÃO IMPEDITIVO"}
         if imp:
             return {"selo": "IMPEDITIVO", "motivo": imp[1], "dispositivo": "Decreto %s, art. 1º, %s" % (num, imp[0])}
     elif regra == "art7_2022":
         exc = rs.exclusao_art7_2022(c)
+        if exc and "fato anterior - tese" in exc:
+            return {"selo": "A_VERIFICAR", "motivo": exc.split(":", 1)[-1].strip(), "dispositivo": "Decreto %s, art. 7º, %s" % (num, exc.split(":")[0]),
+                    "se_sim": "hediondez na data do decreto (STJ): IMPEDITIVO", "se_nao": "na data do fato (irretroatividade): NÃO IMPEDITIVO"}
         if exc:
             return {"selo": "IMPEDITIVO", "motivo": exc.split(":", 1)[-1].strip(), "dispositivo": "Decreto %s, art. 7º, %s" % (num, exc.split(":")[0])}
         if (c.get("vga") or "") not in ("S", "N"):

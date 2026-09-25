@@ -1,8 +1,8 @@
-RSPE BASE - SEEU  v6.16.26 (programa em abas)
+RSPE BASE - SEEU  v6.16.27 (programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-6.16.26. A documentação técnica completa (cada parâmetro, a regra, a norma e
+6.16.27. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -535,6 +535,28 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v6.16.27
+  - Análise conjunta RSPE + ficha disciplinar: com a ficha importada, o programa
+    confronta as duas antes de calcular, lança o que o RSPE omite (marcado como
+    "lançado pela ficha SIAPEN") e alerta cada divergência:
+      * reinício omitido: RSPE termina em interrupção e a ficha registra nova
+        entrada vinda de fora (delegacia/audiência de custódia) ou saída em
+        liberdade seguida de entrada - o reinício entra na data da ficha;
+      * retomada divergente: RSPE reinicia depois da entrada registrada na ficha
+        (dias de custódia fora da conta);
+      * RSPE sem evento de prisão: o início entra pela data de prisão da ficha;
+      * "não iniciou o cumprimento" só com prisão provisória: afastado quando a
+        ficha registra a pessoa presa depois do último evento;
+      * progressão, regressão e livramento cumpridos na unidade (ficha) e
+        ausentes do RSPE.
+    Transferência entre unidades depois de uma interrupção = custódia contínua:
+    nada é lançado, e o alerta aponta provável prisão em outro processo.
+  - Hediondez posterior ao fato no indulto e na comutação: sempre "A verificar
+    (tese: hediondez superveniente)", nunca "Possível" nem "Impeditivo" - o STJ
+    afere na data do decreto, a 2ª Turma do STF na data do fato. Selo do crime na
+    linha do tempo: A VERIFICAR, com as duas leituras. Decreto 2022: a verificar
+    quando a hediondez é a única causa de exclusão.
 
 v6.16.26
   - Interrupção por prisão em outro processo = execução SUSPENSA (a pessoa segue
