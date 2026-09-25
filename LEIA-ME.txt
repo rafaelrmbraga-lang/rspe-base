@@ -1,8 +1,8 @@
-RSPE BASE - SEEU  v6.16.11 (programa em abas)
+RSPE BASE - SEEU  v6.16.12 (programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-6.16.11. A documentação técnica completa (cada parâmetro, a regra, a norma e
+6.16.12. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -535,6 +535,15 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v6.16.12
+  - Indulto 2022 com crime impeditivo: o art. 11, parágrafo único, decide
+    antes de qualquer ponto a verificar dos demais crimes. Pena do impeditivo
+    não cumprida integralmente em 25/12/2022 = "não atinge" (antes, se o único
+    crime não impeditivo estava a verificar, o resultado ficava A VERIFICAR).
+  - Auditoria: contravenção com pena aplicada muito acima do máximo cominado
+    (ex.: art. 35 da LCP com 3 anos e 6 meses) é apontada como provável erro de
+    tipificação no SEEU (conferir na sentença).
 
 v6.16.11
   - Base jurídica (2026-09-25b): tabela das contravenções conferida no texto

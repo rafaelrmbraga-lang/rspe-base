@@ -309,6 +309,21 @@ def auditar(r, hoje=None):
             it["auto_baixa"] = {"obs": "Data de nascimento %s: %s%s. Usada nos cálculos (art. 115 e idade no indulto)." % (
                 r["_nasc_fonte"], rs.fmt(nasc), (" (RSPE: %s)" % r["_nasc_rspe"]) if r.get("_nasc_rspe") else ""), "data": _dt}
         itens.append(it)
+    # contravenção com pena aplicada acima do que a LCP permite: quase sempre erro de cadastro do tipo no SEEU
+    # (ex.: art. 35 da LCP no lugar do art. 35 da Lei 11.343/06, associação para o tráfico)
+    for c in ativos:
+        if rs.num_lei(c.get("lei")) != "3688":
+            continue
+        _pa = rs.pena_para_dias(c.get("pena_imposta") or "")
+        _pm = rs.pena_maxima_abstrata(dict(c))
+        if _pa and _pm and _pa > 2 * _pm:
+            nome = rs.crimes_curto([c])
+            itens.append(_item("verificar", "%s: pena aplicada (%s) muito acima do máximo cominado (%s) - conferir a tipificação no SEEU" % (
+                nome, rs.pena_extenso(c.get("pena_imposta")), rs.pena_extenso(rs.dias_para_pena(_pm))),
+                "A contravenção tem prisão simples de no máximo %s (e nunca mais de 5 anos - LCP, art. 10). Pena de %s indica provável erro "
+                "de cadastro do tipo no SEEU (por exemplo, art. %s da Lei 11.343/06 lançado como Lei 3.688/41). Conferir na sentença: se o crime "
+                "for outro, a natureza (impeditivo ou não) e as frações mudam." % (rs.pena_extenso(rs.dias_para_pena(_pm)), rs.pena_extenso(c.get("pena_imposta")), rs.num_art(c.get("artigo"))),
+                "LCP, arts. 10 e %s." % rs.num_art(c.get("artigo")), tipo="contravencao-pena-acima-do-maximo", ref=rs.chave_pena_max(c)))
     _pm_vistos = set()
     for c in ativos:
         _ff = rs.to_date(c.get("data_infracao") or "")

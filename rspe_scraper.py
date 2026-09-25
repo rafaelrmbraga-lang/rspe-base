@@ -1744,7 +1744,9 @@ def analise_decreto_2022(campos, crimes, eventos, incidentes):
     elif alcanca and len(alcanca) >= len([c for c in ativos]):
         out["indulto_2022"] = "POSSÍVEL: art. 5º (todos os crimes com pena máxima ≤ 5 anos)"
         out["indulto_2022_status"] = "possivel"
-    elif alcanca:
+    elif alcanca or (verificar and any(exclusao_art7_2022(c) for c in ativos)):
+        # (com crime impeditivo, o art. 11, p. ú., decide antes do que ficou a verificar nos demais: pena do impeditivo
+        # não cumprida em 25/12/2022 = não atinge, qualquer que seja o resultado da conferência)
         # art. 11: só entram na soma as penas existentes em 25/12/2022 - condenação por crime excluído posterior ao decreto
         # não trava o indulto (o p. ú. fala do concurso na data)
         _fora7_pos = [c for c in ativos if exclusao_art7_2022(c) and _sentenca_posterior(c, pub22)]
@@ -1754,7 +1756,10 @@ def analise_decreto_2022(campos, crimes, eventos, incidentes):
                           "(art. 11; STJ, AgRg no HC 441.551) e não impediria o indulto dos demais; o STF (SL 1.698 MC-Ref, 21/02/2024) e o STJ "
                           "(AgRg no HC 890.929) consideram óbice a pena de impeditivo remanescente - a verificar." % "; ".join(
                 "%s, sentença de %s" % (crimes_curto([c]), c.get("data_sentenca")) for c in _fora7_pos))
-        if not _fora7:
+        if not _fora7 and not alcanca:
+            out["indulto_2022"] = "A VERIFICAR: %s%s" % (resumir_nomes(verificar), " - confirmar se houve violência doméstica (art. 7º, II)" if vd_conf else "")
+            out["indulto_2022_status"] = "verificar"
+        elif not _fora7:
             # art. 5º, p. ú.: em concurso, cada crime é avaliado isoladamente; o crime com pena máxima > 5 anos só não é alcançado
             _acima = len([c for c in ativos if not exclusao_art7_2022(c)]) - len(alcanca) - len(verificar)
             out["indulto_2022"] = "%s: art. 5º para %s%s%s%s" % (
@@ -1792,12 +1797,17 @@ def analise_decreto_2022(campos, crimes, eventos, incidentes):
                 linhas.append("✓ Art. 11, p. ú.: pena dos crimes impeditivos cumprida até 25/12/2022 (soma %s; cumprido %s; a pena mais grave se executa primeiro - CP, art. 76). "
                               "Sobram %s de pena cumprida para os demais crimes. Impeditivos: %s." % (
                     dias_para_pena(pena_imp), dias_para_pena(cump22), dias_para_pena(cump22 - pena_imp), procs))
-                out["indulto_2022"] = "POSSÍVEL: art. 5º para %s (pena dos impeditivos já cumprida, art. 11, p. ú.)" % resumir_nomes(alcanca)
-                out["indulto_2022_status"] = "possivel"
+                if alcanca:
+                    out["indulto_2022"] = "POSSÍVEL: art. 5º para %s (pena dos impeditivos já cumprida, art. 11, p. ú.)%s" % (
+                        resumir_nomes(alcanca), (" | conferir %s" % resumir_nomes(verificar)) if verificar else "")
+                    out["indulto_2022_status"] = "possivel"
+                else:
+                    out["indulto_2022"] = "A VERIFICAR: %s (pena dos impeditivos já cumprida, art. 11, p. ú.)" % resumir_nomes(verificar)
+                    out["indulto_2022_status"] = "verificar"
             else:
                 linhas.append("? Art. 11, p. ú.: conferir se a pena dos crimes impeditivos foi integralmente cumprida até 25/12/2022 - %s. Sem a pena cumprida na data, o programa não afere." % procs)
                 out["indulto_2022"] = "A VERIFICAR: art. 5º para %s - conferir se a pena dos crimes impeditivos (%s) foi cumprida até 25/12/2022 (art. 11, p. ú.)" % (
-                    resumir_nomes(alcanca), "; ".join("proc. %s" % (c.get("processo_criminal") or "?") for c in _fora7))
+                    resumir_nomes(alcanca or verificar), "; ".join("proc. %s" % (c.get("processo_criminal") or "?") for c in _fora7))
                 out["indulto_2022_status"] = "verificar"
     elif verificar:
         out["indulto_2022"] = "A VERIFICAR: %s%s" % (resumir_nomes(verificar), " - confirmar se houve violência doméstica (art. 7º, II)" if vd_conf else "")
