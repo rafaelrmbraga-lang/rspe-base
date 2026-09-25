@@ -39,7 +39,9 @@ def _dp(txt):
 
 
 def _num(txt):
-    return float(txt.replace(",", "."))
+    """Número da ficha ('4,33', '4.33...', '12'): só a parte numérica; 0 se não houver."""
+    m = re.search(r"\d+(?:[.,]\d+)?", str(txt or ""))
+    return float(m.group(0).replace(",", ".")) if m else 0.0
 
 
 def texto_pdf(caminho):
@@ -134,7 +136,7 @@ def extrair(caminho):
     cab = t.split("HISTÓRICO")[0]
     f["nome"] = (re.search(r"Nome:\s*(.+?)\s+RGI:", cab) or [None, ""])[1].strip() if re.search(r"Nome:\s*(.+?)\s+RGI:", cab) else ""
     f["rgi"] = (re.search(r"RGI:\s*(\d+)", cab) or [None, ""])[1]
-    f["cpf"] = (re.search(r"CPF:\s*(\d+)", cab) or [None, ""])[1]
+    f["cpf"] = (re.search(r"CPF:\s*([\d.\-]+\d)", cab) or [None, ""])[1]
     f["data_nascimento"] = (re.search(r"Data Nascimento:\s*(\d{2}/\d{2}/\d{4})", cab) or [None, ""])[1]
     f["artigo"] = (re.search(r"Artigo:\s*(.+)", cab) or [None, ""])[1].strip()
     f["data_prisao"] = (re.search(r"Data Prisão:\s*(\d{2}/\d{2}/\d{4})", cab) or [None, ""])[1]

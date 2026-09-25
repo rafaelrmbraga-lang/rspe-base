@@ -162,6 +162,7 @@ tr.sub td{padding:0 0 0 0;background:#FFFFFF;cursor:default}tr.sub:hover td{back
 .pill.azul{color:#1D4ED8}.pill.azul::before{background:#2563EB}.card tr.azul td:first-child{box-shadow:inset 3px 0 0 #2563EB}.dot.azul,.lg .azul::before{background:#2563EB}
 .subtab pre{white-space:pre-wrap;overflow-wrap:anywhere;font:11.5px/1.5 Consolas,monospace;margin:6px 0 0;color:var(--tx2);background:#F9FAFB;border-radius:8px;padding:8px 10px}
 .mini{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:8px;font-size:11px;font-weight:600;color:var(--tx2);border:1px solid var(--line);background:#fff;cursor:pointer}.mini:hover{border-color:var(--pri);color:var(--pri)}
+.mini.pre{background:var(--pri);color:#fff;border-color:var(--pri)}.mini.pre:hover{opacity:.9;color:#fff}
 .chev{display:inline-block;width:14px;color:var(--tx3);font-size:11px;margin-right:4px;transition:.15s}tr.exp .chev{transform:rotate(90deg);color:var(--pri)}
 
 /* rodapé */
@@ -671,7 +672,7 @@ const ui = {
     const nA=todos.filter(s=>s.nivel==='alerta'&&!s.baixado).length, nV=todos.filter(s=>s.nivel==='verificar'&&!s.baixado).length;
     const paras=t=>String(t||'').split(/(?<=[.;])\s+(?=[A-ZÁÉÍÓÚ(])/).filter(x=>x.trim()).map(x=>`<p>${penaExt(esc(x))}</p>`).join('');
     const card=s=>{ const k=s.baixado?'bx':s.nivel;
-      const bx = `<span class="mini" onclick="event.stopPropagation();ui.copiarClip(${ui.clip(ui.txtAud(s))})">Copiar</span> `+(s.baixado ? `<span class="mini" onclick="event.stopPropagation();ui.reabrir('${r.id}','${s.chave}')">Reabrir</span>` : (s.nivel==='ok'||s.nivel==='info' ? '' : `<span class="mini" onclick="event.stopPropagation();ui.darBaixa('${r.id}','${s.chave}','${esc(s.titulo).replace(/'/g,'&#39;')}')">Dar baixa</span>`));
+      const bx = (s.preencher&&!s.baixado?`<span class="mini pre" onclick="event.stopPropagation();ui.preencher('${r.id}',${ui.clip(JSON.stringify(s.preencher))})">Preencher</span> `:'')+`<span class="mini" onclick="event.stopPropagation();ui.copiarClip(${ui.clip(ui.txtAud(s))})">Copiar</span> `+(s.baixado ? `<span class="mini" onclick="event.stopPropagation();ui.reabrir('${r.id}','${s.chave}')">Reabrir</span>` : (s.nivel==='ok'||s.nivel==='info' ? '' : `<span class="mini" onclick="event.stopPropagation();ui.darBaixa('${r.id}','${s.chave}','${esc(s.titulo).replace(/'/g,'&#39;')}')">Dar baixa</span>`));
       return `<div class="ac ${k}"><div class="ac-h"><span class="pill ${s.nivel_cor}">${esc(s.nivel_txt)}</span><b>${penaExt(esc(s.titulo))}</b><span class="ac-a">${bx}</span></div>
         ${s.detalhe?`<div class="ac-d">${paras(s.detalhe)}</div>`:''}
         ${s.fundamento?`<div class="ac-f">${penaExt(esc(s.fundamento))}</div>`:''}
@@ -752,6 +753,9 @@ const ui = {
     document.getElementById('modal').classList.add('on'); },
   async fdSalvar(id){ const d={}; ['tipo','numero','descricao','inicio','fim','trabalhados','horas','remidos','unidade'].forEach(k=>{ const e=document.getElementById('fdm_'+k); d[k]=e?e.value:''; });
     const r=await API().fd_adicionar(id,d); if(r&&r.erro){ this.toast(r.erro); return; } this.fecharModal(); if(r&&r.registros){ this.aberto=id; this.carregar(r); } if(r&&r.msg) this.toast(r.msg); },
+  async preencher(id, ci){ const P=JSON.parse(this._clips[ci]||'{}'); const v=prompt(P.rotulo+':', ''); if(v===null||!v.trim()) return;
+    if(P.tipo==='data'&&!/^\d{2}\/\d{2}\/\d{4}$/.test(v.trim())){ this.toast('Use o formato dd/mm/aaaa.'); return; }
+    await api('dado_manual', id, P.campo, v.trim()); this.aberto=id; this.render(); },
   async darBaixa(id, chave, titulo){ const obs = prompt('Dar baixa no alerta:\n'+titulo.replace(/&#39;/g,"'")+'\n\nObservação (opcional: o que foi feito / por que não se aplica):',''); if(obs===null) return; await api('baixar_alerta', id, chave, titulo.replace(/&#39;/g,"'"), obs); this.aberto=id; this.render(); },
   async reabrir(id, chave){ await api('reabrir_alerta', id, chave); this.aberto=id; this.render(); },
   copiar(t){ const done=()=>this.toast('Copiado: '+t); if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(t).then(done).catch(()=>{ this._copiaFallback(t); done(); }); } else { this._copiaFallback(t); done(); } },
@@ -998,9 +1002,9 @@ const ui = {
     let c0=0; const cb=cparts.map(p=>{ const v=Math.max(0,(cu[p[0]]||0)-(p[0]==='remicao'?(cu.perda||0):0)); const w=sx(v); const di=this.tlvReg(`Cumprido - ${p[2]}`, Object.assign({}, B.det, {tratamento:p[2], calculo:`${p[2]}: ${ct[p[0]]}${p[0]==='remicao'&&cu.perda?` − perda ${ct.perda}`:''}`}));
       const h=w>0?`<g class="ck" onclick="ui.tlvDet(${di})"><rect x="${c0}" y="62" width="${w}" height="24" fill="${p[1]}"/></g>`:''; c0+=w; return h; }).join('');
     const rest=`<rect x="${Math.min(W,c0)}" y="62" width="${Math.max(0,W-c0)}" height="24" fill="#F2F4F7" stroke="#D0D5DD"/>`;
-    let imp=''; const I=B.imputacao;
+    let imp=''; const I=(!todos&&D.imputacao)?D.imputacao:(todos?B.imputacao:null);
     if(I){ const w=sx(I.imputado_imp); const di=this.tlvReg('Imputação ao impeditivo', I.det); imp=`<g class="ck" onclick="ui.tlvDet(${di})"><rect x="0" y="90" width="${w}" height="10" fill="url(#tvImp)" stroke="#475467"/></g>`; }
-    const impTxt=I?`<div style="font-size:12.5px;margin-top:2px"><span class="ck" style="display:inline-block;width:26px;height:9px;border:1px solid #475467;background:repeating-linear-gradient(135deg,rgba(16,24,40,.45) 0 2px,transparent 2px 7px);vertical-align:0;margin-right:6px" onclick="ui.tlvDet(${this.tlvReg('Imputação ao impeditivo', I.det)})"></span>${I.fracao} da pena de ${I.crimes_imp.join(', ')} imputados primeiro = <b>${penaExt(esc(I.exigido_txt))}</b>${I.data?` · atingido em <b>${esc(I.data)}</b>${I.projecao?' (projeção)':''}`:''} → libera ${I.crimes_liv.join(', ')} <span class="muted">(${esc(I.dispositivo)})</span></div>`:'';
+    const impTxt=I?`<div style="font-size:12.5px;margin-top:2px"><span class="ck" style="display:inline-block;width:26px;height:9px;border:1px solid #475467;background:repeating-linear-gradient(135deg,rgba(16,24,40,.45) 0 2px,transparent 2px 7px);vertical-align:0;margin-right:6px" onclick="ui.tlvDet(${this.tlvReg('Imputação ao impeditivo', I.det)})"></span>${I.fracao==='100%'?'pena integral':I.fracao} de ${I.crimes_imp.join(', ')} imputada primeiro = <b>${penaExt(esc(I.exigido_txt))}</b>${I.data?` · atingida em <b>${esc(I.data)}</b>${I.projecao?' (projeção)':''}`:''} → ${I.imputado_liv>0?`sobram <b>${penaExt(esc(I.sobra_txt||''))}</b> de pena cumprida para ${I.crimes_liv.join(', ')}`:`libera ${I.crimes_liv.join(', ')}`} <span class="muted">(${esc(I.dispositivo)})</span></div>`:'';
     const cm=com?`<div class="ck" style="font-size:12.5px;margin-top:4px;color:#1D4ED8;font-weight:600" onclick="ui.tlvDet(${this.tlvReg('Comutação na pena unificada', com.det)})">Comutação (${esc(com.decreto)}): remanescente ${penaExt(esc(com.antes_txt))} → ${penaExt(esc(com.depois_txt))} (−${penaExt(esc(com.reducao_txt))}, ${esc(com.fracao)} da pena ${esc(com.base)})</div>`:'';
     const seeu=B.seeu; const conf=seeu&&Math.abs(seeu.diferenca)>30?`<div style="font-size:11.5px;margin-top:4px;color:#B54708;font-weight:600">⚠ ${pl(Math.abs(seeu.diferenca),'dia','dias')} ${seeu.diferenca<0?'de tempo cumprido não identificado nos eventos':'a mais nos eventos do que na pena cumprida do SEEU'} - conferir os eventos de início/interrupção.</div>`:'';
     const sw=(c,t,v)=>`<span><i style="background:${c}"></i>${t} <b>${penaExt(esc(v||'0a0m0d'))}</b></span>`;

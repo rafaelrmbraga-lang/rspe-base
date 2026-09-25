@@ -233,6 +233,41 @@ def _campo_rg(texto):
     return m.group(1).strip() if m else ""
 
 
+def _nascimento(cab):
+    """Data de nascimento do cabeçalho: aceita 'Data de Nascimento', 'Data Nascimento', 'Dt. Nascimento' ou 'Nascimento',
+    com a data na mesma linha ou na seguinte (quebra do texto do PDF)."""
+    for rot in (r"Data\s+de\s+Nascimento", r"Data\s+Nascimento", r"Dt\.?\s*(?:de\s+)?Nascimento", r"Nascimento"):
+        m = re.search(rot + r"[ \t]*:?[\s]{0,40}?(\d{2}/\d{2}/\d{4})", cab or "", re.I)
+        if m:
+            return m.group(1)
+    return ""
+
+
+def chave_pena_max(c):
+    """Chave do tipo penal na tabela 'pena_maxima_abstrata' da base jurídica: 'lei:artigo' ou 'lei:artigo §X'."""
+    t = c.get("tipo_penal") or ""
+    lei, art = num_lei(c.get("lei")) or "2848", num_art(c.get("artigo"))
+    mp = re.match(r"§\s*(\d+[ºo°]?(?:-[A-Z])?|único)", t)
+    chave = "%s:%s" % (lei, art)
+    if mp:
+        chave += " §" + mp.group(1).replace("º", "").replace("o", "").replace("°", "")
+    return chave
+
+
+def pena_livre(txt):
+    """Pena digitada pelo operador: '0a3m0d', '3 meses', '1 ano e 6 meses', '15 dias' -> dias (ano 365, mês 30)."""
+    t = (txt or "").strip().lower()
+    d = pena_para_dias(t)
+    if d is not None:
+        return d
+    a = re.search(r"(\d+)\s*(?:a\b|ano)", t)
+    m = re.search(r"(\d+)\s*(?:m\b|m[eê]s)", t)
+    dd = re.search(r"(\d+)\s*(?:d\b|dia)", t)
+    if not (a or m or dd):
+        return None
+    return (int(a.group(1)) * DIAS_ANO if a else 0) + (int(m.group(1)) * 30 if m else 0) + (int(dd.group(1)) if dd else 0)
+
+
 def campo_data(texto, rotulo):
     v = campo(texto, rotulo)
     m = RE_DATA.search(v)
@@ -1385,6 +1420,9 @@ ART7_2022_ECA = ["240", "241", "241-A", "241-B", "241-C", "241-D", "241-E", "242
 def pena_maxima_abstrata(c):
     """Pena máxima em abstrato (dias) lida do tipo penal impresso no RSPE:
     'Reclusão: 6 anos e 8 meses a 16 anos e 8 meses', 'Detenção: 2 meses a 2 anos', 'Reclusão: 1 a 4 anos'."""
+    if c.get("_pena_max_inf"):
+        c["_pena_max_fonte"] = "informada pelo operador"
+        return int(c["_pena_max_inf"])
     t = c.get("tipo_penal") or ""
     lei, art = num_lei(c.get("lei")) or "2848", num_art(c.get("artigo"))
     if lei == "11343" and art == "33" and t.startswith("§ 4"):
@@ -1404,6 +1442,12 @@ def pena_maxima_abstrata(c):
         v = tab.get(chave)
         if v is None and not mp and t.upper().startswith("CAPUT"):
             v = tab.get("%s:%s" % (lei, art))
+        if v is None and mp:
+            v = tab.get("%s:%s" % (lei, art)) if lei == "3688" else None
+        if v is None and lei == "3688":
+            # contravenção fora da tabela: a prisão simples nunca passa de 5 anos (LCP, art. 10)
+            c["_pena_max_fonte"] = "LCP, art. 10"
+            return 5 * DIAS_ANO
         if v is None:
             return None
         c["_pena_max_fonte"] = "tabela"
@@ -1609,7 +1653,9 @@ def analise_decreto_2022(campos, crimes, eventos, incidentes):
                 linhas.append("? %s: pena máxima em abstrato %s ≤ 5 anos (art. 5º), mas trânsito em %s, depois de 25/12/2022, e trânsito para a acusação em %s - conferir se havia recurso da acusação após o 2º grau nessa data (art. 9º, p. ú.)" % (nome, dias_para_pena(pm), fmt(tr), fmt(tr_mp)))
                 verificar.append(nome)
             else:
-                linhas.append("✓ %s: pena máxima em abstrato %s ≤ 5 anos (art. 5º)%s" % (nome, dias_para_pena(pm), " - tipo cortado no RSPE, valor da tabela da base jurídica" if c.get("_pena_max_fonte") else ""))
+                linhas.append("✓ %s: pena máxima em abstrato %s ≤ 5 anos (art. 5º)%s" % (nome, dias_para_pena(pm), (" - contravenção: prisão simples não passa de 5 anos (LCP, art. 10)" if c.get("_pena_max_fonte") == "LCP, art. 10"
+                     else " - pena máxima informada pelo operador (Auditoria)" if c.get("_pena_max_fonte") == "informada pelo operador"
+                     else " - tipo cortado no RSPE, valor da tabela da base jurídica" if c.get("_pena_max_fonte") else "")))
                 alcanca.append(nome)
         else:
             linhas.append("✗ %s: pena máxima em abstrato %s supera 5 anos" % (nome, dias_para_pena(pm)))
@@ -1731,14 +1777,19 @@ def analise_decreto_2022(campos, crimes, eventos, incidentes):
             except Exception:
                 cump22 = None
             procs = "; ".join("proc. %s (%s, %s)" % (c.get("processo_criminal") or "?", crimes_curto([c]), dias_para_pena(pena_para_dias(c.get("pena_imposta")) or 0)) for c in _fora7)
+            if cump22 is not None and pena_imp:
+                # imputação: a pena inteira do impeditivo primeiro (no Decreto 2022, a pena integral - STF, RHC 246.431;
+                # STJ, HC 930.896); o que sobra do cumprido é o tempo que vale para os demais crimes
+                out["indulto_2022_imp"] = {"pena_imp": pena_imp, "exigido": pena_imp, "fracao": "100%", "cumprido_total": cump22}
             if cump22 is not None and pena_imp and cump22 < pena_imp:
                 linhas.append("✗ Art. 11, p. ú.: o crime não impeditivo só é indultado depois de cumprida a pena do impeditivo. Impeditivos: %s; soma %s; cumprido em 25/12/2022: %s - faltavam %s." % (
                     procs, dias_para_pena(pena_imp), dias_para_pena(cump22), dias_para_pena(pena_imp - cump22)))
                 out["indulto_2022"] = "não atinge: pena dos crimes impeditivos não cumprida até 25/12/2022 (art. 11, p. ú.)"
                 out["indulto_2022_status"] = "nao"
             elif cump22 is not None and pena_imp:
-                linhas.append("✓ Art. 11, p. ú.: pena dos crimes impeditivos cumprida até 25/12/2022 (soma %s; cumprido %s; a pena mais grave se executa primeiro - CP, art. 76). Impeditivos: %s." % (
-                    dias_para_pena(pena_imp), dias_para_pena(cump22), procs))
+                linhas.append("✓ Art. 11, p. ú.: pena dos crimes impeditivos cumprida até 25/12/2022 (soma %s; cumprido %s; a pena mais grave se executa primeiro - CP, art. 76). "
+                              "Sobram %s de pena cumprida para os demais crimes. Impeditivos: %s." % (
+                    dias_para_pena(pena_imp), dias_para_pena(cump22), dias_para_pena(cump22 - pena_imp), procs))
                 out["indulto_2022"] = "POSSÍVEL: art. 5º para %s (pena dos impeditivos já cumprida, art. 11, p. ú.)" % resumir_nomes(alcanca)
                 out["indulto_2022_status"] = "possivel"
             else:
@@ -2820,7 +2871,7 @@ def extrair(caminho):
         "cpf": campo(cab, "CPF"),
         "rg": _campo_rg(cab),
         "nome_mae": campo(cab, "Nome da Mãe"),
-        "data_nascimento": campo_data(cab, "Data de Nascimento"),
+        "data_nascimento": _nascimento(cab),
         "regime_atual": campo(calc, "Regime Atual"),
         "pena_total": campo(calc, "Pena Total Imposta"),
         "pena_cumprida": campo(calc, "Pena Cumprida Até Data Atual"),
