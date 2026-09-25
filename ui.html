@@ -783,32 +783,28 @@ const ui = {
     document.getElementById('modal').classList.add('on'); setTimeout(()=>{ const e=document.getElementById('ped_obs'); if(e) e.focus(); },50); },
   // ---------- registro de atendimento para o SAP: o que foi constatado e o que foi feito, em texto corrido ----------
   registroSAP(r){ const lin=(r.presc_linhas||[]); const DEC={i22:'Decreto 11.302/2022',i24:'Decreto 12.338/2024',i25:'Decreto 12.790/2025',c24:'Decreto 12.338/2024',c25:'Decreto 12.790/2025'};
-    const c=[];
-    const ind=['i22','i24','i25'].filter(k=>r[k+'_cor']==='verde').map(k=>DEC[k]); const com=['c24','c25'].filter(k=>r[k+'_cor']==='verde').map(k=>DEC[k]);
-    if(ind.length) c.push('direito a indulto ('+ind.join(', ')+')');
-    if(com.length) c.push('direito a comutação ('+com.join(', ')+')');
-    const ppe=lin.filter(L=>L.ppe_cor==='vermelho').map(L=>L.rotulo||L.crime); if(ppe.length) c.push('possível prescrição da pretensão executória ('+ppe.join('; ')+')');
-    const ppp=lin.filter(L=>L.retro_cor==='vermelho').map(L=>L.rotulo||L.crime); if(ppp.length) c.push('possível prescrição da pretensão punitiva ('+ppp.join('; ')+')');
-    if(/Remição a requerer/.test(r.fd_sit||'')) c.push('remição a requerer'+(r.fd_sit_det?' ('+r.fd_sit_det.replace(/^Remição a requerer\s*/,'').replace(/^\(|\)$/g,'')+')':''));
-    if(/Ausência de atestado|Último atestado/.test(r.fd_sit||'')) c.push('pendência de atestado de trabalho ou de certificação de estudo na ficha disciplinar');
-    const al=(r.aud_itens||[]).filter(i=>i.nivel==='alerta'&&!i.baixado).map(i=>i.titulo); if(al.length) c.push('inconsistências no cálculo da pena ('+al.join('; ')+')');
-    if(r.prog_cor==='vencido') c.push('direito à progressão de regime (requisito objetivo atingido em '+r.prog+')');
-    if(r.liv_cor==='vencido') c.push('direito ao livramento condicional (requisito objetivo atingido em '+r.liv+')');
-    if(r.ext_cor==='vermelho') c.push('possível extinção da pena ('+(r.ext_sit||'')+')');
-    const P=r.pedidos||{}; const NOME={prog:'progressão de regime',liv:'livramento condicional',ind:'indulto/comutação',presc:'extinção da punibilidade pela prescrição',ext:'extinção da pena',fd:'remição'};
-    const ordem=Object.keys(P).sort((a,b)=>this.tlD(P[a].data)-this.tlD(P[b].data));
-    const f=ordem.map(k=>{ const x=P[k], o=x.obs?' ('+x.obs+')':'';
+    // só o que foi feito: cada providência marcada leva junto a constatação da aba correspondente
+    const achado={
+      prog:()=>r.prog_cor==='vencido'?'direito à progressão de regime (requisito objetivo atingido em '+r.prog+')':'progressão de regime'+(/^\d{2}\/\d{2}\/\d{4}$/.test(r.prog||'')?' (requisito objetivo em '+r.prog+')':''),
+      liv:()=>r.liv_cor==='vencido'?'direito ao livramento condicional (requisito objetivo atingido em '+r.liv+')':'livramento condicional'+(/^\d{2}\/\d{2}\/\d{4}$/.test(r.liv||'')?' (requisito objetivo em '+r.liv+')':''),
+      ind:()=>{ const i=['i22','i24','i25'].filter(k=>r[k+'_cor']==='verde').map(k=>DEC[k]), c=['c24','c25'].filter(k=>r[k+'_cor']==='verde').map(k=>DEC[k]);
+        const p=[i.length?'direito a indulto ('+i.join(', ')+')':'', c.length?'direito a comutação ('+c.join(', ')+')':''].filter(Boolean); return p.length?p.join(' e '):'possível direito a indulto/comutação'; },
+      presc:()=>{ const e=lin.filter(L=>L.ppe_cor==='vermelho').map(L=>L.rotulo||L.crime), u=lin.filter(L=>L.retro_cor==='vermelho').map(L=>L.rotulo||L.crime);
+        const p=[e.length?'possível prescrição da pretensão executória ('+e.join('; ')+')':'', u.length?'possível prescrição da pretensão punitiva ('+u.join('; ')+')':''].filter(Boolean); return p.length?p.join(' e '):'possível prescrição'; },
+      ext:()=>'possível extinção da pena'+(r.ext_sit?' ('+r.ext_sit+')':''),
+      fd:()=>{ const p=[]; if(/Remição a requerer/.test(r.fd_sit||'')) p.push('remição a requerer'); if(/Ausência de atestado|Último atestado/.test(r.fd_sit||'')) p.push('pendência de atestado de trabalho ou de certificação de estudo'); if(/Conferir remição/.test(r.fd_sit||'')) p.push('remição a conferir'); return p.join(' e ')||'remição a requerer'; }};
+    const NOME={prog:'progressão de regime',liv:'livramento condicional',ind:'indulto/comutação',presc:'extinção da punibilidade pela prescrição',ext:'extinção da pena',fd:'remição'};
+    const P=r.pedidos||{}; const ks=Object.keys(P).filter(k=>achado[k]).sort((a,b)=>this.tlD(P[a].data)-this.tlD(P[b].data));
+    if(!ks.length) return `Execução penal nº ${r.proc} (${r.nome}): nenhuma providência registrada até ${this.dados.hoje||'esta data'}.`;
+    const c=ks.map(k=>achado[k]());
+    const f=ks.map(k=>{ const x=P[k], o=x.obs?' ('+x.obs+')':'';
       if(x.tipo==='oficio') return 'foi expedido ofício à unidade prisional em '+x.data+(k==='fd'?', solicitando atestado de trabalho e/ou certificação de estudo':', referente a '+NOME[k])+o;
       if(x.tipo==='outro') return 'em '+x.data+', '+(x.obs||'providência referente a '+NOME[k]);
       return 'foi protocolado nos autos, em '+x.data+', pedido de '+NOME[k]+o; });
-    const quem=`execução penal nº ${r.proc} (${r.nome})`;
-    let t=`Em análise da ${quem}, com base no RSPE de ${r.geracao||'data não informada'}, `;
-    t+= c.length ? 'foi constatado que o(a) assistido(a) possuía: '+c.join('; ')+'.' : 'não foram constatadas pendências (benefícios a requerer, prescrição, remição ou inconsistências no cálculo).';
-    t+= f.length ? ' Assim, '+f.join('; ')+'.' : ' Nenhuma providência registrada até '+(this.dados.hoje||'esta data')+'.';
-    return t; },
+    return `Em análise da execução penal nº ${r.proc} (${r.nome}), com base no RSPE de ${r.geracao||'data não informada'}, foi constatado que o(a) assistido(a) possuía: ${c.join('; ')}. Assim, ${f.join('; ')}.`; },
   abrirSAP(id){ const r=(this.dados.registros||[]).find(x=>x.id===id); if(!r) return; const t=this.registroSAP(r);
     document.getElementById('modal').innerHTML=`<div class="box" style="width:640px"><h2>Registro para o SAP</h2>
-      <p class="muted" style="margin:0 0 8px">${esc(r.nome)} · ${esc(r.proc)} · texto montado com o que o programa constatou e com os pedidos e ofícios marcados. Pode editar antes de copiar.</p>
+      <p class="muted" style="margin:0 0 8px">${esc(r.nome)} · ${esc(r.proc)} · só o que foi feito: as providências marcadas na coluna Pedido, cada uma com a constatação que a motivou. Pode editar antes de copiar.</p>
       <textarea id="sap_txt" style="width:100%;min-height:280px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font:inherit;line-height:1.55;resize:vertical;box-sizing:border-box">${esc(t)}</textarea>
       <div class="acts"><button class="btn" onclick="ui.fecharModal()">Fechar</button><button class="btn pri" onclick="ui.copiarClip(ui.clip(document.getElementById('sap_txt').value))">Copiar texto</button></div></div>`;
     document.getElementById('modal').classList.add('on'); },
