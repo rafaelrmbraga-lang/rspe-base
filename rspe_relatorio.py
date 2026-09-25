@@ -1074,3 +1074,132 @@ def gerar(modelos, pasta, nome_base, individual=True, geral=True, nominal=True, 
             except Exception as e:
                 erros.append("%s: %s" % (m.get("nome"), e))
     return destino, n, erros
+
+
+# ---------------------------------------------------------------- relatório de providências
+TIPOS_PROV = [("Pedido nos autos", "#4F46E5", "pedidos nos autos"), ("Ofício à unidade prisional", "#0BA5EC", "ofícios à unidade prisional"),
+              ("Outra providência", "#98A2B3", "outras providências")]
+_MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"]
+
+
+def _graf_ranking(linhas, largura, f):
+    """Barras horizontais: benefícios com mais providências, cada barra dividida pelo tipo de providência."""
+    from reportlab.graphics.shapes import Drawing, Rect, String, Line
+    from reportlab.lib import colors
+    C = colors.HexColor
+    ass = {}
+    for L in linhas:
+        ass.setdefault(L.get("assunto", ""), []).append(L)
+    orden = sorted(ass.items(), key=lambda kv: (-len(kv[1]), kv[0]))
+    rotw, barh, gap = 150, 14, 9
+    h = len(orden) * (barh + gap) + 34
+    d = Drawing(largura, h)
+    mx = max(len(v) for _, v in orden) if orden else 1
+    area = largura - rotw - 40
+    y = h - 8 - barh
+    for nome, ls in orden:
+        d.add(String(rotw - 8, y + 3.5, _t(nome).replace("&amp;", "&"), fontName=f["n"], fontSize=8.4, fillColor=C(TX), textAnchor="end"))
+        x = rotw
+        for t, cor, _ in TIPOS_PROV:
+            n = sum(1 for L in ls if L.get("tipo") == t)
+            if n:
+                w = area * n / mx
+                d.add(Rect(x, y, w, barh, fillColor=C(cor), strokeColor=None))
+                if w > 14:
+                    d.add(String(x + w / 2, y + 3.8, str(n), fontName=f["b"], fontSize=7.6, fillColor=colors.white, textAnchor="middle"))
+                x += w
+        d.add(String(x + 5, y + 3.5, str(len(ls)), fontName=f["b"], fontSize=8.4, fillColor=C(NAVY)))
+        y -= barh + gap
+    lx = rotw
+    for t, cor, rot in TIPOS_PROV:
+        d.add(Rect(lx, 4, 8, 8, fillColor=C(cor), strokeColor=None))
+        d.add(String(lx + 11, 5, rot, fontName=f["n"], fontSize=7.6, fillColor=C(TX2)))
+        from reportlab.pdfbase.pdfmetrics import stringWidth
+        lx += 11 + stringWidth(rot, f["n"], 7.6) + 16
+    return d
+
+
+def _graf_meses(todas, mes_sel, largura, f):
+    """Colunas: providências por mês (até 12 meses, terminando no mais recente), com o mês do relatório destacado."""
+    from reportlab.graphics.shapes import Drawing, Rect, String, Line
+    from reportlab.lib import colors
+    C = colors.HexColor
+    cont = {}
+    for L in todas:
+        m = (L.get("data") or "")[3:]
+        if len(m) == 7:
+            cont[m] = cont.get(m, 0) + 1
+    if not cont:
+        return None
+    chave = lambda m: (int(m[3:]), int(m[:2]))
+    ult = max(cont, key=chave)
+    a, mm_ = chave(ult)
+    meses = []
+    for _ in range(12):
+        meses.append("%02d/%d" % (mm_, a))
+        mm_ -= 1
+        if mm_ == 0:
+            mm_, a = 12, a - 1
+    meses = [m for m in reversed(meses) if chave(m) >= chave(min(cont, key=chave))] or [ult]
+    h = 120
+    d = Drawing(largura, h)
+    base_y, topo = 22, h - 16
+    mx = max(cont.get(m, 0) for m in meses) or 1
+    passo = largura / len(meses)
+    bw = min(34, passo * 0.62)
+    d.add(Line(0, base_y, largura, base_y, strokeColor=C(LINE), strokeWidth=0.8))
+    for i, m in enumerate(meses):
+        n = cont.get(m, 0)
+        hh = (topo - base_y - 10) * n / mx
+        x = i * passo + (passo - bw) / 2
+        cor = PRI if m == mes_sel else "#C7D2FE"
+        if n:
+            d.add(Rect(x, base_y, bw, hh, fillColor=C(cor), strokeColor=None))
+            d.add(String(x + bw / 2, base_y + hh + 3, str(n), fontName=f["b"], fontSize=7.6, fillColor=C(NAVY), textAnchor="middle"))
+        d.add(String(x + bw / 2, base_y - 10, "%s/%s" % (_MESES[int(m[:2]) - 1], m[5:]), fontName=f["n"], fontSize=7, fillColor=C(TX2), textAnchor="middle"))
+    return d
+
+
+def relatorio_providencias(linhas, todas, mes_sel, caminho, titulo, nome_base):
+    """PDF do relatório de providências: totais, gráfico dos benefícios com mais providências, providências por mês e a lista."""
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.units import mm
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+    st = _estilos()
+    f = _fontes()
+    C = st["C"]
+    W = A4[0] - 32 * mm
+    el = [Paragraph(_t(titulo), st["tit"]),
+          Paragraph(_t("%s · pedidos e ofícios marcados na coluna Pedido, pela data da providência · base inteira, sem separar por pessoa" % nome_base), st["sub"]),
+          Spacer(1, 10)]
+    # totais
+    nums = [(len(linhas), "providências")] + [(sum(1 for L in linhas if L.get("tipo") == t), rot) for t, _, rot in TIPOS_PROV] + \
+           [(len({L.get("proc") for L in linhas}), "assistidos")]
+    cel = [[Paragraph(str(n), st["num"]) for n, _ in nums], [Paragraph(_t(r), st["rot"]) for _, r in nums]]
+    tb = Table(cel, colWidths=[W / len(nums)] * len(nums))
+    tb.setStyle(TableStyle([("BOX", (0, 0), (-1, -1), 0.6, C(LINE)), ("INNERGRID", (0, 0), (-1, -1), 0.6, C(LINE)),
+                            ("BACKGROUND", (0, 0), (-1, -1), C(ZEBRA)), ("LEFTPADDING", (0, 0), (-1, -1), 8),
+                            ("TOPPADDING", (0, 0), (-1, 0), 7), ("BOTTOMPADDING", (0, 1), (-1, 1), 7), ("VALIGN", (0, 0), (-1, -1), "TOP")]))
+    el += [tb]
+    if linhas:
+        el += [Paragraph("Benefícios com mais providências", st["h2"]), _graf_ranking(linhas, W, f)]
+    gm = _graf_meses(todas, mes_sel, W, f)
+    if gm is not None:
+        el += [Paragraph("Providências por mês", st["h2"]), gm]
+    el += [Paragraph("Lista", st["h2"])]
+    if linhas:
+        from reportlab.lib.styles import ParagraphStyle
+        peq = ParagraphStyle("peq", parent=st["cel"], fontSize=7.4, leading=10)
+        dados = [["Data", "Assistido", "Nº da execução", "Benefício", "Providência", "Observação"]]
+        for L in linhas:
+            dados.append([Paragraph(_t(L.get("data", "")), peq), L.get("nome", ""), Paragraph(_t(L.get("proc", "")), peq),
+                          L.get("assunto", ""), L.get("tipo", ""), L.get("obs", "")])
+        el.append(_tabela(dados, [21 * mm, 32 * mm, 46 * mm, 25 * mm, 25 * mm, W - 149 * mm], st))
+    else:
+        el.append(Paragraph("Nenhuma providência no período.", st["mut"]))
+    doc = SimpleDocTemplate(caminho, pagesize=A4, leftMargin=16 * mm, rightMargin=16 * mm, topMargin=21 * mm, bottomMargin=20 * mm,
+                            title=titulo, author="RSPE Base")
+    fr = _moldura("Relatório de providências", nome_base, rodape="Providências registradas no RSPE Base (coluna Pedido). Conferir nos autos e no SAP.")
+    doc.build(el, onFirstPage=fr, onLaterPages=fr)
+    return caminho
+

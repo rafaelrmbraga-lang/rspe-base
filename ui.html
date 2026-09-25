@@ -167,6 +167,8 @@ tr.sub td{padding:0 0 0 0;background:#FFFFFF;cursor:default}tr.sub:hover td{back
 .peds{display:flex;flex-direction:column;gap:6px;border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:#F9FAFB}.pedl{display:flex;align-items:center;gap:8px;font-size:12.5px}.pedl .pn{color:var(--tx2);min-width:150px}.pedl .po{flex:1;color:var(--tx2)}
 .sapl{display:flex;flex-direction:column;gap:5px;border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:#F9FAFB;font-size:12.5px}.sapl label{display:flex;align-items:center;gap:6px;cursor:pointer}
 .provr{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin-bottom:8px}.provr>div{border:1px solid var(--line);border-radius:9px;padding:8px 10px;background:#F9FAFB}.provr b{display:block;font-size:20px}.provr span{font-size:11.5px;color:var(--tx2)}
+.provg{display:grid;grid-template-columns:3fr 2fr;gap:12px;margin-bottom:10px}.provg>div{border:1px solid var(--line);border-radius:9px;padding:8px 10px}.provg h4{margin:0 0 6px;font-size:12px;color:var(--tx2);text-transform:uppercase;letter-spacing:.3px}
+.provleg{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:11.5px;color:var(--tx2);margin-top:4px}.provleg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
 .provc{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12.5px;color:var(--tx2);margin-bottom:10px}.provc b{color:var(--tx)}
 .pck.ok{background:#17B26A;border-color:#17B26A}.pck.ok.mud{background:#F5A524;border-color:#F5A524}
 .mini.pre{background:var(--pri);color:#fff;border-color:var(--pri)}.mini.pre:hover{opacity:.9;color:#fff}
@@ -984,22 +986,39 @@ const ui = {
     const L=mes==='todos'?todas:todas.filter(x=>mm(x.data)===mes);
     const NM=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
     const rot=m=>m==='todos'?'todo o período':(NM[+m.slice(0,2)-1]||m)+' de '+m.slice(3);
-    const titulo='Providências - '+rot(mes); this._prov={titulo, L};
+    const titulo='Providências - '+rot(mes); this._prov={titulo, L, todas, mes};
     const cont=(f)=>L.filter(f).length; const tipos=['Pedido nos autos','Ofício à unidade prisional','Outra providência'];
     const ass=[...new Set(L.map(x=>x.assunto))];
     const resumo=`<div class="provr"><div><b>${L.length}</b><span>providências</span></div>${tipos.map((t,i)=>`<div><b>${cont(x=>x.tipo===t)}</b><span>${['pedidos nos autos','ofícios à unidade prisional','outras providências'][i]}</span></div>`).join('')}<div><b>${new Set(L.map(x=>x.id)).size}</b><span>assistidos</span></div></div>
-      ${ass.length?`<div class="provc">${ass.map(a=>`<span>${esc(a)} <b>${cont(x=>x.assunto===a)}</b></span>`).join('')}</div>`:''}`;
-    const tab=L.length?`<div class="help" style="max-height:300px;border:1px solid var(--line);border-radius:10px;padding:0"><table class="subtab" style="width:100%"><thead><tr><th>Data</th><th>Assistido</th><th>Benefício</th><th>Providência</th><th>Observação</th></tr></thead><tbody>${L.map(x=>`<tr><td style="white-space:nowrap">${esc(x.data)}</td><td>${esc(x.nome)}<div class="muted" style="font-size:11px;white-space:nowrap">${esc(x.proc)}</div></td><td>${esc(x.assunto)}</td><td>${esc(x.tipo)}</td><td>${esc(x.obs)}</td></tr>`).join('')}</tbody></table></div>`
+`;
+    const graf=L.length?`<div class="provg"><div><h4>Benefícios com mais providências</h4>${this.provGrafRanking(L)}</div><div><h4>Providências por mês</h4>${this.provGrafMeses(todas, mes)}</div></div>`:'';
+    const tab=L.length?`<div class="help" style="max-height:260px;border:1px solid var(--line);border-radius:10px;padding:0"><table class="subtab" style="width:100%;table-layout:auto"><thead><tr><th>Data</th><th style="min-width:210px">Assistido</th><th>Benefício</th><th>Providência</th><th>Observação</th></tr></thead><tbody>${L.map(x=>`<tr><td style="white-space:nowrap">${esc(x.data)}</td><td>${esc(x.nome)}<div class="muted" style="font-size:11px;white-space:nowrap">${esc(x.proc)}</div></td><td>${esc(x.assunto)}</td><td>${esc(x.tipo)}</td><td>${esc(x.obs)}</td></tr>`).join('')}</tbody></table></div>`
       :'<p class="muted">Nenhuma providência marcada neste período.</p>';
     document.getElementById('modal').innerHTML=`<div class="box" style="width:820px;max-height:calc(100vh - 40px);display:flex;flex-direction:column"><h2>Relatório de providências</h2>
       <p class="muted" style="margin:0 0 10px">Pedidos e ofícios marcados na coluna Pedido de todas as abas, pela data da providência. Base inteira, sem separar por pessoa.</p>
       <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px"><label for="prov_mes">Período</label><select id="prov_mes" onchange="ui.modalProvidencias(this.value)" style="padding:6px 9px;border:1px solid var(--line);border-radius:8px;font:inherit">${(meses.includes(mes)||mes==='todos'?meses:[mes].concat(meses)).map(m=>`<option value="${m}" ${m===mes?'selected':''}>${rot(m)}</option>`).join('')}<option value="todos" ${mes==='todos'?'selected':''}>Todo o período</option></select></div>
-      ${resumo}${tab}
-      <div class="acts"><button class="btn" style="margin-right:auto" onclick="ui.modalRelatorios()">Voltar</button><button class="btn" onclick="ui.copiarClip(ui.clip(ui.provTexto()))" ${L.length?'':'disabled'}>Copiar</button><button class="btn pri" onclick="ui.provExcel()" ${L.length?'':'disabled'}>Salvar em Excel</button></div></div>`;
+      <div style="overflow:auto;min-height:0">${resumo}${graf}${tab}</div>
+      <div class="acts"><button class="btn" style="margin-right:auto" onclick="ui.modalRelatorios()">Voltar</button><button class="btn" onclick="ui.copiarClip(ui.clip(ui.provTexto()))" ${L.length?'':'disabled'}>Copiar</button><button class="btn" onclick="ui.provExcel()" ${L.length?'':'disabled'}>Salvar em Excel</button><button class="btn pri" onclick="ui.provPDF()" ${L.length?'':'disabled'}>Salvar em PDF</button></div></div>`;
     document.getElementById('modal').classList.add('on'); },
   provTexto(){ const P=this._prov; if(!P) return ''; const L=P.L; const tipos=['Pedido nos autos','Ofício à unidade prisional','Outra providência'];
     return P.titulo+' ('+(this.dados.base||'')+')\n'+L.length+' providências · '+tipos.map((t,i)=>L.filter(x=>x.tipo===t).length+' '+['pedidos nos autos','ofícios à unidade prisional','outras providências'][i]).join(' · ')+'\n\n'
       +L.map(x=>`${x.data}\t${x.nome}\t${x.proc}\t${x.assunto}\t${x.tipo}${x.obs?'\t'+x.obs:''}`).join('\n'); },
+  PROV_TIPOS:[['Pedido nos autos','#4F46E5','pedidos nos autos'],['Ofício à unidade prisional','#0BA5EC','ofícios à unidade prisional'],['Outra providência','#98A2B3','outras providências']],
+  provGrafRanking(L){ const g={}; L.forEach(x=>(g[x.assunto]=g[x.assunto]||[]).push(x)); const ord=Object.entries(g).sort((a,b)=>b[1].length-a[1].length||a[0].localeCompare(b[0]));
+    const W=560, RW=150, BH=16, GAP=8, mx=Math.max(...ord.map(o=>o[1].length)), area=W-RW-34; let y=6, svg='';
+    ord.forEach(([nome,ls])=>{ let x=RW; svg+=`<text x="${RW-8}" y="${y+12}" text-anchor="end" font-size="12" fill="var(--tx)">${esc(nome)}</text>`;
+      this.PROV_TIPOS.forEach(([t,cor])=>{ const n=ls.filter(z=>z.tipo===t).length; if(!n) return; const w=area*n/mx; svg+=`<rect x="${x}" y="${y}" width="${w}" height="${BH}" rx="2" fill="${cor}"><title>${esc(nome)}: ${n} ${esc(t.toLowerCase())}</title></rect>${w>16?`<text x="${x+w/2}" y="${y+12}" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">${n}</text>`:''}`; x+=w; });
+      svg+=`<text x="${x+6}" y="${y+12}" font-size="12" font-weight="700" fill="var(--tx)">${ls.length}</text>`; y+=BH+GAP; });
+    const leg=this.PROV_TIPOS.filter(([t])=>L.some(z=>z.tipo===t)).map(([t,cor,r])=>`<span><i style="background:${cor}"></i>${r}</span>`).join('');
+    return `<svg viewBox="0 0 ${W} ${y}" width="100%" style="display:block">${svg}</svg><div class="provleg">${leg}</div>`; },
+  provGrafMeses(todas, sel){ const c={}; todas.forEach(x=>{ const m=x.data.slice(3); c[m]=(c[m]||0)+1; }); const ks=Object.keys(c); if(!ks.length) return '';
+    const k=m=>(+m.slice(3))*12+(+m.slice(0,2)-1); const fim=Math.max(...ks.map(k)), ini=Math.max(Math.min(...ks.map(k)), fim-11);
+    const NM=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez']; const ms=[]; for(let i=ini;i<=fim;i++) ms.push(String(i%12+1).padStart(2,'0')+'/'+Math.floor(i/12));
+    const W=440, H=150, B=24, T=18, mx=Math.max(...ms.map(m=>c[m]||0))||1, p=W/ms.length, bw=Math.min(30,p*0.62); let svg=`<line x1="0" y1="${H-B}" x2="${W}" y2="${H-B}" stroke="var(--line)"/>`;
+    ms.forEach((m,i)=>{ const n=c[m]||0, h=(H-B-T)*n/mx, x=i*p+(p-bw)/2; if(n) svg+=`<rect x="${x}" y="${H-B-h}" width="${bw}" height="${h}" rx="2" fill="${m===sel?'#4F46E5':'#C7D2FE'}"><title>${NM[+m.slice(0,2)-1]}/${m.slice(3)}: ${n}</title></rect><text x="${x+bw/2}" y="${H-B-h-4}" text-anchor="middle" font-size="11" font-weight="700" fill="var(--tx)">${n}</text>`;
+      svg+=`<text x="${x+bw/2}" y="${H-8}" text-anchor="middle" font-size="10.5" fill="var(--tx2)">${NM[+m.slice(0,2)-1]}/${m.slice(5)}</text>`; });
+    return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">${svg}</svg>`; },
+  async provPDF(){ const P=this._prov; if(!P||!P.L.length) return; const r=await API().providencias_pdf(P.titulo, P.L, P.todas, P.mes==='todos'?'':P.mes); if(r&&r.erro) this.toast(r.erro); else if(r&&r.msg) this.toast(r.msg); },
   async provExcel(){ const P=this._prov; if(!P||!P.L.length) return; const r=await API().providencias_xlsx(P.titulo, P.L); if(r&&r.erro) this.toast(r.erro); else if(r&&r.msg) this.toast(r.msg); },
   modalRelatorios(){ const vis=this.visiveis(), n=vis.length;
     const lista=vis.map(r=>`<label class="chk relitem" style="padding:5px 9px;font-size:12.5px" data-b="${esc((r.nome+' '+r.proc).toLowerCase())}"><input type="checkbox" class="relp" value="${esc(r.id)}" checked onchange="ui.relConta()"><span>${esc(r.nome)} <span class="muted" style="font-size:11.5px">· ${esc(r.proc)}</span></span></label>`).join('');

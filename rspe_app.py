@@ -34,7 +34,7 @@ import rspe_relatorio as rrel
 import rspe_indulto_tl as rtl
 
 APP = "RSPE Base"
-VERSAO = "6.16.19"
+VERSAO = "6.16.20"
 
 
 def pasta_app():
@@ -1313,6 +1313,23 @@ class Api:
             return {"erro": "Falha ao salvar: %s" % e}
         _abrir(c)
         return {"caminho": c, "msg": "Relatório salvo."}
+
+    def providencias_pdf(self, titulo, linhas, todas, mes):
+        """Salva em PDF o relatório de providências (totais, gráficos e lista)."""
+        if not self.base:
+            return {"erro": "Nenhuma base aberta."}
+        nome = "%s - %s.pdf" % (self.base.nome, re.sub(r"[^\w\s-]", "", titulo).strip()[:60])
+        c = _um(self._janela.create_file_dialog(webview.SAVE_DIALOG, save_filename=nome, file_types=("PDF (*.pdf)",)))
+        if not c:
+            return None
+        if not c.lower().endswith(".pdf"):
+            c += ".pdf"
+        try:
+            rrel.relatorio_providencias(linhas or [], todas or [], mes or "", c, titulo, self.base.nome)
+        except Exception as e:
+            return {"erro": "Falha ao gerar o PDF: %s" % e}
+        _abrir(c)
+        return {"caminho": c, "msg": "PDF salvo."}
 
     # ---- relatórios (PDF) ----
     def relatorios(self, ids, individual, geral, planilha, nominal, ids_individual=None):
