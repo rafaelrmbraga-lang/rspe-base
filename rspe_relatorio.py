@@ -18,7 +18,7 @@ import rspe_view as rv
 import rspe_prescricao as rp
 
 NAVY = "#1F2937"
-PRI = "#4F46E5"
+PRI = "#00602C"
 TX = "#101828"
 TX2 = "#475467"
 TX3 = "#98A2B3"
@@ -465,7 +465,7 @@ def figura_prescricao(L, W, hoje=None):
     if D(L.get("sentenca")):
         marcos.append((D(L.get("sentenca")), "Sentença", "#475467"))
     if D(L.get("ppe_termo")):
-        marcos.append((D(L.get("ppe_termo")), "Trânsito (termo)", "#4F46E5"))
+        marcos.append((D(L.get("ppe_termo")), "Trânsito (termo)", "#2563EB"))
     for a, b, tipo, p in faixas:
         if tipo in ("evasao", "interrupcao"):
             marcos.append((a, "Fuga" if tipo == "evasao" else "Interrupção", "#B42318"))
@@ -1077,7 +1077,7 @@ def gerar(modelos, pasta, nome_base, individual=True, geral=True, nominal=True, 
 
 
 # ---------------------------------------------------------------- relatório de providências
-TIPOS_PROV = [("Pedido nos autos", "#4F46E5", "pedidos nos autos"), ("Ofício à unidade prisional", "#0BA5EC", "ofícios à unidade prisional"),
+TIPOS_PROV = [("Pedido nos autos", "#00602C", "pedidos nos autos"), ("Ofício à unidade prisional", "#0BA5EC", "ofícios à unidade prisional"),
               ("Outra providência", "#98A2B3", "outras providências")]
 _MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"]
 
@@ -1152,7 +1152,7 @@ def _graf_meses(todas, mes_sel, largura, f):
         n = cont.get(m, 0)
         hh = (topo - base_y - 10) * n / mx
         x = i * passo + (passo - bw) / 2
-        cor = PRI if m == mes_sel else "#C7D2FE"
+        cor = PRI if m == mes_sel else "#B7D7C2"
         if n:
             d.add(Rect(x, base_y, bw, hh, fillColor=C(cor), strokeColor=None))
             d.add(String(x + bw / 2, base_y + hh + 3, str(n), fontName=f["b"], fontSize=7.6, fillColor=C(NAVY), textAnchor="middle"))

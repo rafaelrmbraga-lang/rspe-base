@@ -7,7 +7,7 @@ import rspe_scraper as rs
 import rspe_view as rv
 
 NAVY = "#1F2937"
-PRI = "#4F46E5"
+PRI = "#00602C"
 TX2 = "#475467"
 LINE = "#E6E9EF"
 ZEBRA = "#F9FAFB"

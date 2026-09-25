@@ -1,8 +1,8 @@
-RSPE BASE - SEEU  v6.16.20 (programa em abas)
+RSPE BASE - SEEU  v6.16.21 (programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-6.16.20. A documentação técnica completa (cada parâmetro, a regra, a norma e
+6.16.21. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -535,6 +535,13 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v6.16.21
+  - Cor principal do programa no verde da Defensoria Pública de MS (#00602C),
+    no lugar do roxo: botões, abas, sub-abas, seleção, links, logotipo,
+    cabeçalho dos relatórios em PDF e gráficos de providências. Marcas de
+    trânsito e de término nas linhas do tempo passam a azul, para não se
+    confundirem com o verde do cumprimento.
 
 v6.16.20
   - Relatório de providências com gráficos: benefícios com mais providências

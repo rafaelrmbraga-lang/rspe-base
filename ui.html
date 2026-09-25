@@ -7,7 +7,7 @@
 :root{
   --bg:#F4F6FA; --card:#FFFFFF; --line:#E6E9EF; --line2:#D0D5DD;
   --tx:#101828; --tx2:#475467; --tx3:#98A2B3;
-  --pri:#4F46E5; --pri2:#4338CA; --pri-soft:#EEF2FF;
+  --pri:#00602C; --pri2:#004A22; --pri-soft:#E3F1E8;
   --r-bg:#FDE8E8; --r-tx:#B42318; --r-dot:#E5484D;
   --o-bg:#FFEAD5; --o-tx:#C4320A; --o-dot:#F97316;
   --a-bg:#FEF4D6; --a-tx:#B54708; --a-dot:#F5A524;
@@ -27,7 +27,7 @@ input{font:inherit}
 
 /* topo */
 .top{display:flex;align-items:center;gap:14px;padding:12px 24px;background:var(--card);border-bottom:1px solid var(--line)}
-.logo{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#4F46E5,#7C3AED);display:grid;place-items:center;box-shadow:var(--shadow)}
+.logo{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#00602C,#0B7A3E);display:grid;place-items:center;box-shadow:var(--shadow)}
 .logo svg{width:20px;height:20px}
 .brand{line-height:1.1}.brand b{font-size:16px;letter-spacing:-.2px}.brand span{display:block;color:var(--tx3);font-size:11.5px;margin-top:2px}
 .base{margin-left:8px;display:flex;align-items:center;gap:8px;padding:6px 10px 6px 12px;border:1px solid var(--line);border-radius:999px;background:#FAFBFC;font-size:12.5px;color:var(--tx2)}
@@ -101,8 +101,8 @@ tr.vermelho td.first::before{background:var(--r-dot)}tr.laranja td.first::before
 /* filtro de situação */
 .sel{position:relative}.sel select{appearance:none;max-width:260px;padding:9px 34px 9px 12px;border:1px solid var(--line2);border-radius:10px;background:#fff;font:inherit;font-weight:600;color:var(--tx);outline:none;cursor:pointer}
 .sel select:focus{border-color:var(--pri);box-shadow:0 0 0 3px var(--pri-soft)}.sel::after{content:"▾";position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--tx3);pointer-events:none}
-.copy{display:inline-flex;align-items:center;gap:6px;cursor:copy;border-radius:6px;padding:1px 4px;margin:-1px -4px}.copy:hover{background:#EEF2FF;color:var(--pri)}.copy svg{width:13px;height:13px;opacity:0;transition:.15s}.copy:hover svg{opacity:1}
-tr.exp td{background:#EEF2FF!important}
+.copy{display:inline-flex;align-items:center;gap:6px;cursor:copy;border-radius:6px;padding:1px 4px;margin:-1px -4px}.copy:hover{background:var(--pri-soft);color:var(--pri)}.copy svg{width:13px;height:13px;opacity:0;transition:.15s}.copy:hover svg{opacity:1}
+tr.exp td{background:#EEF6F0!important}
 tr.sub td{padding:0 0 0 0;background:#FFFFFF;cursor:default}tr.sub:hover td{background:#FFFFFF}
 .pc-wrap{display:flex;flex-direction:column;gap:12px}
 .pc>table{min-width:1430px}.pc{overflow-x:auto}.pc th{word-break:keep-all;overflow-wrap:normal;hyphens:none}.subwrap .pc td.dt,.pc td.dt{white-space:nowrap!important;font-variant-numeric:tabular-nums;padding-left:8px!important;padding-right:8px!important}
@@ -122,7 +122,7 @@ tr.sub td{padding:0 0 0 0;background:#FFFFFF;cursor:default}tr.sub:hover td{back
 .subtab td{padding:11px 14px;border-bottom:1px solid var(--line);font-size:12.5px;line-height:1.55;vertical-align:top;white-space:normal;font-weight:400;overflow:visible}.subtab td:first-child{padding-left:10px;font-weight:600}.subtab th:first-child{padding-left:10px}
 .subtab tr:last-child td{border-bottom:0}.subtab tr.bx td{color:var(--tx3)}.subtab tr.bx td:nth-child(2){text-decoration:line-through}
 .cc{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px;background:#fff}.cc-h{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:13px}.cc-f{font-size:12.5px;color:var(--tx2);margin-top:4px}.cc-l{margin:6px 0 2px;padding-left:18px;font-size:12.5px;line-height:1.5}.cc-l li{margin:2px 0}.cc-d summary{cursor:pointer;color:var(--pri);font-size:12px;margin-top:4px}.cc-d[open] summary{margin-bottom:6px}
-.ml.fim .mt{font-weight:700;color:var(--tx)}.ml.fim .mi{background:#E0E7FF;color:#3730A3}
+.ml.fim .mt{font-weight:700;color:var(--tx)}.ml.fim .mi{background:var(--pri-soft);color:var(--pri)}
 .cp-row{display:flex;justify-content:flex-end;margin:-2px 0 6px}.aviso-exec{padding:8px 12px;border-radius:10px;background:#F2F4F7;color:var(--tx);font-weight:600;font-size:13px}
 .subtab .why{cursor:pointer;color:var(--pri);font-size:11.5px}.subtab .why:hover{text-decoration:underline}
 .ptl{margin:8px 0 4px;font-size:12.5px}
@@ -157,7 +157,7 @@ tr.sub td{padding:0 0 0 0;background:#FFFFFF;cursor:default}tr.sub:hover td{back
 .ml{display:flex;gap:10px;align-items:flex-start;font-size:12.5px;line-height:1.6;padding:4px 0;color:var(--tx)}
 .mi{flex:0 0 18px;height:18px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;margin-top:1px;background:#E5E7EB;color:#4B5563}
 .ml.ok .mi{background:#DDF5E7;color:#067647}.ml.ko .mi{background:#FDE2E1;color:#B42318}.ml.run .mi{background:#FEF4D6;color:#B54708}.ml.q .mi{background:#EEF0F3;color:#5B6470}
-.ml.obs .mt,.ml.termo .mt{color:var(--tx2)}.ml.termo .mi{background:#E0E7FF;color:#3730A3}
+.ml.obs .mt,.ml.termo .mt{color:var(--tx2)}.ml.termo .mi{background:var(--pri-soft);color:var(--pri)}
 .ml .mt{font-weight:400}.ml.ko .mt{font-weight:600}
 .pill.azul{color:#1D4ED8}.pill.azul::before{background:#2563EB}.card tr.azul td:first-child{box-shadow:inset 3px 0 0 #2563EB}.dot.azul,.lg .azul::before{background:#2563EB}
 .subtab pre{white-space:pre-wrap;overflow-wrap:anywhere;font:11.5px/1.5 Consolas,monospace;margin:6px 0 0;color:var(--tx2);background:#F9FAFB;border-radius:8px;padding:8px 10px}
@@ -245,7 +245,7 @@ tr.sub td{padding:0 0 0 0;background:#FFFFFF;cursor:default}tr.sub:hover td{back
 .fdt tr.fdb td{background:#F8F9FB;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:9px 12px;font-weight:600}
 .fdt tr.fdb td .n{color:var(--tx2);font-weight:400}
 .fdt tr.fdi td:first-child{padding-left:30px!important}
-.fdt tr.fdi:hover td{background:#EEF2FF}
+.fdt tr.fdi:hover td{background:#EEF6F0}
 .fdt tr.ok td{color:var(--tx3)}.fdt tr.ok .pill{opacity:.55}
 .fdt .c{text-align:center}
 .tk{width:20px;height:20px;border-radius:50%;border:2px solid #D0D5DD;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;vertical-align:middle;box-sizing:border-box;background:#fff}
@@ -579,7 +579,7 @@ const ui = {
     { const a0=t0.getFullYear(), a1=t1.getFullYear(), passo=Math.max(1,Math.ceil((a1-a0+1)/(W/60))); const ya=Y+26;
       svg+=`<line x1="${PL}" y1="${ya}" x2="${PL+W}" y2="${ya}" stroke="#98A2B3"/>`;
       for(let a=a0+1;a<=a1;a++){ const xx=x(new Date(a,0,1)); svg+=`<line x1="${xx}" y1="${ya-3}" x2="${xx}" y2="${ya+3}" stroke="#98A2B3"/>${(a-a0)%passo===0?`<text x="${xx}" y="${ya+15}" text-anchor="middle" font-size="10.5" font-weight="600" fill="#667085">${a}</text>`:''}<line x1="${xx}" y1="${Y+14}" x2="${xx}" y2="${ya}" stroke="#EAECF0"/>`; } }
-    const COL={fato:'#475467',sentenca:'#475467',transito:'#4F46E5',fuga:'#B42318',recaptura:'#067647',hoje:'#101828'};
+    const COL={fato:'#475467',sentenca:'#475467',transito:'#2563EB',fuga:'#B42318',recaptura:'#067647',hoje:'#101828'};
     marcos.forEach((m,i)=>{ const by=Y-34-m.tier*24; const c=COL[m.t];
       svg+=`<g class="mk" data-k="m${i}"><line x1="${m.cx}" y1="${by+10}" x2="${m.cx}" y2="${Y-6}" stroke="${c}" stroke-width="1" stroke-dasharray="2 2"/><circle cx="${m.cx}" cy="${Y}" r="4" fill="${c}"/><circle cx="${m.cx}" cy="${by}" r="10" fill="${c}"/><text x="${m.cx}" y="${by+4}" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">${m.n}</text><text display="none">${esc(m.r)}</text><text display="none">${fmt(m.d)}</text></g>`; });
     let yc=Y+85;
@@ -623,7 +623,7 @@ const ui = {
     const saldoTxt=ultima.saldo_min===ultima.saldo_max? amd(ultima.saldo_max) : 'entre '+amd(ultima.saldo_min)+' e '+amd(ultima.saldo_max);
     return `<div class="ptl" data-tl="${idx}"><div class="ptl-h"><span class="pill ${r[0]}">${sd}${r[1]}</span><span class="muted">${esc(L.rotulo||L.crime)} · pena ${penaExt(esc(L.pena||''))} · fato ${esc(L.fato||'—')} · trânsito ${esc(L.ppe_termo||'—')}</span></div>
      <div class="ptl-legend">${(()=>{ const ts=new Set((L.ppe_linha_tempo||[]).map(p=>this.tlTipo(p))); return [['cumprimento','i-cump','cumprimento da pena'],['evasao','i-fuga','fuga / evasão'],['interrupcao','i-fuga','interrupção'],['provisoria','i-prov','prisão provisória (detração)'],['outro_motivo','i-susp','suspensão (preso por outro motivo)'],['liberdade','i-lib','liberdade / sem início do cumprimento'],['livramento','i-lc','livramento'],['duvida','i-dup','atribuição não comprovada']].filter(z=>ts.has(z[0])).map(z=>`<span><i class="${z[1]}"></i>${z[2]}</span>`).join('')+(ts.has('prd')?'<span><i style="background:#D9D6FE;border:1px solid #7A5AF8"></i>restritiva de direitos</span>':''); })()}</div>
-     ${(()=>{ const sv=this.prescTimelineSvg(L, idx); return `<div class="ptl-num">${(this._tlNum[idx]||[]).map(m=>`<span><b style="background:${({fato:'#475467',sentenca:'#475467',transito:'#4F46E5',fuga:'#B42318',recaptura:'#067647',hoje:'#101828'})[m.t]}">${m.n}</b>${esc(m.r)} <em>${m.d.toLocaleDateString('pt-BR')}</em></span>`).join('')}</div><div class="ptl-tl">${sv}<div class="ptl-pop"><span class="x">✕</span><div class="pc"></div></div></div>`; })()}
+     ${(()=>{ const sv=this.prescTimelineSvg(L, idx); return `<div class="ptl-num">${(this._tlNum[idx]||[]).map(m=>`<span><b style="background:${({fato:'#475467',sentenca:'#475467',transito:'#2563EB',fuga:'#B42318',recaptura:'#067647',hoje:'#101828'})[m.t]}">${m.n}</b>${esc(m.r)} <em>${m.d.toLocaleDateString('pt-BR')}</em></span>`).join('')}</div><div class="ptl-tl">${sv}<div class="ptl-pop"><span class="x">✕</span><div class="pc"></div></div></div>`; })()}
      ${hip}
      <div class="ptl-res ${r[0]}"><div><b>${sd}${r[1]}</b>${r[0]!=='verde'||!L.ppe_triagem?'Motivo: '+esc(motivo)+'.':''}${L.ppe_triagem?`<div class="tri">${esc(L.ppe_triagem)}</div>`:''}${L.ppe_saldo_rotulo?`<div class="sr">${esc(L.ppe_saldo_rotulo)}</div>`:''}${L.ppe_reinc_aviso?`<div class="sr">⚠ ${esc(L.ppe_reinc_aviso)}</div>`:''}${iminente}${antes}${r[0]==='amb'&&L.ppe_faltam&&L.ppe_faltam.length? `<div class="falta"><b style="display:inline">Falta para concluir:</b> ${esc(L.ppe_faltam.join('; '))}.</div>`:''}
        ${r[0]==='amb'?`<div style="margin-top:8px"><span class="btn-sal" onclick="event.stopPropagation();ui.pfAbrir(this,${idx},'saldo')">CONFERIR / INFORMAR SALDO</span></div>`:''}<div class="pf-holder"></div></div></div></div>`; },
@@ -1003,7 +1003,7 @@ const ui = {
   provTexto(){ const P=this._prov; if(!P) return ''; const L=P.L; const tipos=['Pedido nos autos','Ofício à unidade prisional','Outra providência'];
     return P.titulo+' ('+(this.dados.base||'')+')\n'+L.length+' providências · '+tipos.map((t,i)=>L.filter(x=>x.tipo===t).length+' '+['pedidos nos autos','ofícios à unidade prisional','outras providências'][i]).join(' · ')+'\n\n'
       +L.map(x=>`${x.data}\t${x.nome}\t${x.proc}\t${x.assunto}\t${x.tipo}${x.obs?'\t'+x.obs:''}`).join('\n'); },
-  PROV_TIPOS:[['Pedido nos autos','#4F46E5','pedidos nos autos'],['Ofício à unidade prisional','#0BA5EC','ofícios à unidade prisional'],['Outra providência','#98A2B3','outras providências']],
+  PROV_TIPOS:[['Pedido nos autos','#00602C','pedidos nos autos'],['Ofício à unidade prisional','#0BA5EC','ofícios à unidade prisional'],['Outra providência','#98A2B3','outras providências']],
   provGrafRanking(L){ const g={}; L.forEach(x=>(g[x.assunto]=g[x.assunto]||[]).push(x)); const ord=Object.entries(g).sort((a,b)=>b[1].length-a[1].length||a[0].localeCompare(b[0]));
     const W=560, RW=150, BH=16, GAP=8, mx=Math.max(...ord.map(o=>o[1].length)), area=W-RW-34; let y=6, svg='';
     ord.forEach(([nome,ls])=>{ let x=RW; svg+=`<text x="${RW-8}" y="${y+12}" text-anchor="end" font-size="12" fill="var(--tx)">${esc(nome)}</text>`;
@@ -1015,7 +1015,7 @@ const ui = {
     const k=m=>(+m.slice(3))*12+(+m.slice(0,2)-1); const fim=Math.max(...ks.map(k)), ini=Math.max(Math.min(...ks.map(k)), fim-11);
     const NM=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez']; const ms=[]; for(let i=ini;i<=fim;i++) ms.push(String(i%12+1).padStart(2,'0')+'/'+Math.floor(i/12));
     const W=440, H=150, B=24, T=18, mx=Math.max(...ms.map(m=>c[m]||0))||1, p=W/ms.length, bw=Math.min(30,p*0.62); let svg=`<line x1="0" y1="${H-B}" x2="${W}" y2="${H-B}" stroke="var(--line)"/>`;
-    ms.forEach((m,i)=>{ const n=c[m]||0, h=(H-B-T)*n/mx, x=i*p+(p-bw)/2; if(n) svg+=`<rect x="${x}" y="${H-B-h}" width="${bw}" height="${h}" rx="2" fill="${m===sel?'#4F46E5':'#C7D2FE'}"><title>${NM[+m.slice(0,2)-1]}/${m.slice(3)}: ${n}</title></rect><text x="${x+bw/2}" y="${H-B-h-4}" text-anchor="middle" font-size="11" font-weight="700" fill="var(--tx)">${n}</text>`;
+    ms.forEach((m,i)=>{ const n=c[m]||0, h=(H-B-T)*n/mx, x=i*p+(p-bw)/2; if(n) svg+=`<rect x="${x}" y="${H-B-h}" width="${bw}" height="${h}" rx="2" fill="${m===sel?'#00602C':'#B7D7C2'}"><title>${NM[+m.slice(0,2)-1]}/${m.slice(3)}: ${n}</title></rect><text x="${x+bw/2}" y="${H-B-h-4}" text-anchor="middle" font-size="11" font-weight="700" fill="var(--tx)">${n}</text>`;
       svg+=`<text x="${x+bw/2}" y="${H-8}" text-anchor="middle" font-size="10.5" fill="var(--tx2)">${NM[+m.slice(0,2)-1]}/${m.slice(5)}</text>`; });
     return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">${svg}</svg>`; },
   async provPDF(){ const P=this._prov; if(!P||!P.L.length) return; const r=await API().providencias_pdf(P.titulo, P.L, P.todas, P.mes==='todos'?'':P.mes); if(r&&r.erro) this.toast(r.erro); else if(r&&r.msg) this.toast(r.msg); },
@@ -1110,7 +1110,7 @@ const ui = {
     let mk=[]; let primeiro=true;
     (d.marcos||[]).forEach(x=>{ if(!TIPOS[x.tipo]) return; if(x.tipo==='prisao'){ if(!primeiro) return; primeiro=false; }
       mk.push({d:dt(x.data), r:x.tipo==='falta'?(x.rotulo||'Falta grave'):TIPOS[x.tipo][0], c:TIPOS[x.tipo][1]}); });
-    if(term) mk.push({d:term, r:'Término da pena', c:'#7A5AF8'});
+    if(term) mk.push({d:term, r:'Término da pena', c:'#1D4ED8'});
     mk=mk.filter(x=>!isNaN(x.d)).sort((p,q)=>p.d-q.d);
     for(let i=mk.length-1;i>0;i--){ if(+mk[i].d===+mk[i-1].d){ mk[i-1].r=[...new Set([mk[i-1].r,mk[i].r])].join(' · '); mk.splice(i,1); } }
     const ocup=[]; mk.forEach((x,i)=>{ x.n=i+1; x.cx=X(x.d); let t=0; while(ocup[t]&&ocup[t].some(q=>Math.abs(q-x.cx)<22)) t++; (ocup[t]=ocup[t]||[]).push(x.cx); x.tier=t; });
@@ -1119,13 +1119,13 @@ const ui = {
     fx.forEach(f=>{ const x1=X(f.a), x2=Math.max(X(new Date(+f.b+DIA)),x1+2); const n=f.dias||Math.round((f.b-f.a)/DIA)+1; const tx=n>=365?this.tlAmd(n):this.tlDias(n);
       svg+=`<g><title>${esc(NOME[f.tipo]||f.tipo)}: ${esc(f.ini)} a ${esc(f.fim)} (${esc(tx)})</title><rect x="${x1}" y="${Y-13}" width="${x2-x1}" height="26" rx="3" fill="${COR[f.tipo]||'#EAECF0'}" ${f.tipo==='liberdade'?'stroke="#D0D5DD"':''}/>${x2-x1>ui.tlvLarg(tx,10)+12?`<text x="${(x1+x2)/2}" y="${Y+4}" text-anchor="middle" font-size="10" font-weight="600" fill="${['liberdade','detracao','nao_comprovado'].includes(f.tipo)?'#344054':'#fff'}" ${f.tipo==='fuga'?'paint-order="stroke" stroke="#fff" stroke-width="3"':''}>${esc(tx)}</text>`:''}</g>`; });
     if(term&&term>hoje){ const x1=X(hoje), x2=X(term); const n=Math.round((term-hoje)/DIA); const tx='a cumprir · '+(n>=365?this.tlAmd(n):this.tlDias(n));
-      svg+=`<rect x="${x1}" y="${Y-13}" width="${x2-x1}" height="26" rx="3" fill="#F4F3FF" stroke="#7A5AF8" stroke-dasharray="5 3"/>${x2-x1>ui.tlvLarg(tx,10)+12?`<text x="${(x1+x2)/2}" y="${Y+4}" text-anchor="middle" font-size="10" font-weight="600" fill="#5925DC">${esc(tx)}</text>`:''}`; }
+      svg+=`<rect x="${x1}" y="${Y-13}" width="${x2-x1}" height="26" rx="3" fill="#EFF4FF" stroke="#1D4ED8" stroke-dasharray="5 3"/>${x2-x1>ui.tlvLarg(tx,10)+12?`<text x="${(x1+x2)/2}" y="${Y+4}" text-anchor="middle" font-size="10" font-weight="600" fill="#1D4ED8">${esc(tx)}</text>`:''}`; }
     { const a0=t0.getFullYear(), a1=t1.getFullYear(), passo=Math.max(1,Math.ceil((a1-a0+1)/(W/60))), ya=Y+26; svg+=`<line x1="${PL}" y1="${ya}" x2="${PL+W}" y2="${ya}" stroke="#98A2B3"/>`;
       for(let a=a0+1;a<=a1;a++){ const xx=X(new Date(a,0,1)); svg+=`<line x1="${xx}" y1="${ya-3}" x2="${xx}" y2="${ya+3}" stroke="#98A2B3"/>${(a-a0)%passo===0?`<text x="${xx}" y="${ya+15}" text-anchor="middle" font-size="10.5" font-weight="600" fill="#667085">${a}</text>`:''}`; } }
     mk.forEach(x=>{ const by=Y-34-x.tier*24; svg+=`<g><title>${esc(x.r)} · ${this.tlvF(x.d)}</title><line x1="${x.cx}" y1="${by+10}" x2="${x.cx}" y2="${Y+13}" stroke="${x.c}" stroke-width="1.5"/><circle cx="${x.cx}" cy="${by}" r="10" fill="${x.c}"/><text x="${x.cx}" y="${by+4}" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">${x.n}</text></g>`; });
     const H=Y+50, vt=Y-34-(ocup.length-1)*24-16;
     const tipos=[...new Set(fx.map(f=>f.tipo))];
-    const leg=tipos.map(t=>`<span><i style="background:${t==='fuga'?'repeating-linear-gradient(135deg,#F04438 0 3px,#FDE8E8 3px 8px)':COR[t]};${t==='liberdade'?'border:1px solid #D0D5DD':''}"></i>${NOME[t]||t}</span>`).join('')+(term&&term>hoje?'<span><i style="background:#F4F3FF;border:1px dashed #7A5AF8"></i>pena a cumprir até o término</span>':'');
+    const leg=tipos.map(t=>`<span><i style="background:${t==='fuga'?'repeating-linear-gradient(135deg,#F04438 0 3px,#FDE8E8 3px 8px)':COR[t]};${t==='liberdade'?'border:1px solid #D0D5DD':''}"></i>${NOME[t]||t}</span>`).join('')+(term&&term>hoje?'<span><i style="background:#EFF4FF;border:1px dashed #1D4ED8"></i>pena a cumprir até o término</span>':'');
     const num=`<div class="ptl-num">${mk.map(x=>`<span><b style="background:${x.c}">${x.n}</b>${esc(x.r)} <em>${this.tlvF(x.d)}</em></span>`).join('')}</div>`;
     const cls={vermelho:'verm',laranja:'amb',amarelo:'amb',verde:'verde',azul:'verde',cinza:''}[m.ext_cor]||'';
     const info=[m.ext_hipoteses&&m.ext_hipoteses!=='—'?m.ext_hipoteses:'', m.ext_motivo||'', m.ext_extintos?'Extintos: '+m.ext_extintos:'', m.ext_multa||''].filter(Boolean);
