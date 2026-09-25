@@ -1183,7 +1183,7 @@ def _faltas_editaveis(incidentes, eventos):
             d = to_date(i.get("data_referencia") or i.get("data_decisao") or "")
             if re.search(r"PERD|REGRESS", txt, re.I) and any(d and d - timedelta(days=365) <= x <= d for x in datas_proprias):
                 continue
-        out.append({"chave": chave_falta(txt, d), "data": fmt(d) if d else "", "texto": txt, "padrao": "apurar",
+        out.append({"chave": chave_falta(txt, d), "data": fmt(d) if d else "", "texto": txt, "padrao": "falta" if i.get("_fuga_ficha") else "apurar",
                     "decisao": i.get("_falta") or "", "origem": "incidente"})
     for e in eventos or []:
         t = _texto_evento(e)
@@ -1216,6 +1216,19 @@ def faltas_da_ficha(r, ficha, hoje=None):
         r["_incidentes"].append({"tipo": "FALTA GRAVE NA FICHA DISCIPLINAR (SIAPEN)",
                                  "complemento": "Data da infração: %s%s - %s" % (fmt(d), (" - " + x["artigo"]) if x.get("artigo") else "", sit),
                                  "situacao": "PENDENTE", "data_referencia": fmt(d), "data_decisao": "", "_ficha": True})
+        datas.append(d)
+    # fuga/evasão registrada na ficha e ausente no RSPE: falta grave por padrão (LEP, art. 50, II), decidível pelo operador
+    fugas_r = [to_date(e.get("data") or "") for e in r.get("_eventos", []) if RE_FUGA_EV.search(_texto_evento(e))]
+    fugas_r += [to_date(i.get("data_referencia") or i.get("data_decisao") or "") for i in r["_incidentes"] if RE_FUGA_EV.search(_rotulo_incidente(i))]
+    for e in ficha.get("eventos") or []:
+        t = e.get("texto") or ""
+        d = to_date((e.get("data") or "").replace(".", "/"))
+        if (not d or d < corte_faltas(hoje) or not re.search(r"\bFUGA\b|EVADIU|EVAS[ÃA]O|FORAGID|N[ÃA]O RETORNOU|EMPREENDEU FUGA", t, re.I)
+                or re.search(r"ABANDONO D[OE] (SERVI|TRABALHO|CURSO)", t, re.I)
+                or any(x and abs((x - d).days) <= 30 for x in fugas_r + datas)):
+            continue
+        r["_incidentes"].append({"tipo": "FALTA GRAVE - FUGA/EVASÃO NA FICHA DISCIPLINAR (SIAPEN)", "complemento": "Data da infração: %s" % fmt(d),
+                                 "situacao": "PENDENTE", "data_referencia": fmt(d), "data_decisao": "", "_ficha": True, "_fuga_ficha": True})
         datas.append(d)
 
 
@@ -1258,6 +1271,8 @@ def indicios_falta(incidentes, ref, dias=365, eventos=None, ate=None):
             if d and limite <= d <= fim:
                 if i.get("_falta") == "sim":
                     out.append(("%s (%s - falta grave confirmada pelo operador)" % (txt, fmt(d)), True))
+                elif i.get("_fuga_ficha"):
+                    out.append(("%s (%s - fuga: falta grave, LEP, art. 50, II)" % (txt, fmt(d)), True))
                 elif _pendente(i):
                     out.append(("%s (%s - pendente: só impede se a sanção for reconhecida em juízo)" % (txt, fmt(d)), False))
                 else:

@@ -1,8 +1,8 @@
-RSPE BASE - SEEU  v6.16.27 (programa em abas)
+RSPE BASE - SEEU  v6.16.28 (programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-6.16.27. A documentação técnica completa (cada parâmetro, a regra, a norma e
+6.16.28. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -535,6 +535,24 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v6.16.28
+  - Novos confrontos RSPE x ficha disciplinar (Auditoria, "Ficha x RSPE"):
+      * identidade: CPF, nome e nascimento divergentes (ficha de homônimo ou
+        cadastro errado; o nascimento decide o art. 115 e o indulto por idade);
+      * prisão na ficha em período que o RSPE trata como liberdade: dias sem
+        cômputo (detração - CP, art. 42);
+      * processos da ficha que o RSPE não lista (condenação a somar, prisão por
+        outro processo, guia pendente);
+      * pena da condenação na ficha diferente da pena total do RSPE;
+      * regime x unidade: RSPE fechado com a pessoa em unidade de semiaberto/
+        aberto/monitoramento (progressão não lançada); RSPE semiaberto/aberto com
+        a pessoa em unidade de regime fechado (regressão não lançada ou falta de
+        vaga - Súmula Vinculante 56);
+      * fuga/evasão registrada na ficha e ausente no RSPE: alerta, e a fuga entra
+        como falta grave (decidível pelo operador); fuga no RSPE sem registro na
+        ficha, que mostra custódia contínua: a verificar;
+      * conduta má/péssima na ficha sem falta grave recente no RSPE.
 
 v6.16.27
   - Análise conjunta RSPE + ficha disciplinar: com a ficha importada, o programa

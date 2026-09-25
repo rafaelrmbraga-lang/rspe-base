@@ -422,7 +422,7 @@ def linha(r, hoje=None):
             continue
         fato = rs._data_fato_falta(i)
         conf = i.get("_falta") == "sim"
-        pend = rs._pendente(i) and not conf
+        pend = rs._pendente(i) and not conf and not i.get("_fuga_ficha")  # fuga (ficha): falta grave por padrão
         homol = _d(i.get("data_decisao")) if not rs._pendente(i) else None
         faltas.append({"fato": fato, "homol": homol, "pendente": pend, "texto": rot + (" (falta grave confirmada pelo operador)" if conf else ""),
                        "sub": "confirmada pelo operador" if conf and not homol else ""})

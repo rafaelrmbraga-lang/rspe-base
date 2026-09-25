@@ -357,6 +357,12 @@ def confrontar(r, f, hoje=None):
     itens.extend(_interrupcao_x_ficha(r, f))
     # 3d) progressão, regressão e livramento cumpridos na unidade e ausentes do RSPE
     itens.extend(_regime_x_ficha(r, f))
+    # 3e) identidade, prisão, processos, pena, unidade x regime, fuga e conduta
+    for fn in (_identidade_x_ficha, _prisao_x_ficha, _processos_x_ficha, _pena_x_ficha, _unidade_x_ficha, _fuga_x_ficha, _conduta_x_ficha):
+        try:
+            itens.extend(fn(r, f))
+        except Exception as e:
+            itens.append(_item_rf("verificar", "Ficha x RSPE: falha ao conferir (%s: %s)" % (fn.__name__.strip("_"), e), "", ""))
     # 4) estudo sem remição (a análise da ficha é só de remição: faltas, regime e identidade ficam fora)
     if res["estudo_horas_pend"] >= 12:
         itens.append({"nivel": "verificar",
@@ -456,6 +462,149 @@ def reconciliar_eventos(r, f):
     r["_custodia_ficha"] = custodia_apos(f, rs.to_date(evs2[-1]["data"]))[0] if evs2 else None
     r["_reconc_ficha"] = avisos
     return avisos
+
+
+RE_FUGA_FICHA = re.compile(r"\bFUGA\b|EVADIU|EVAS[ÃA]O|FORAGID|N[ÃA]O RETORNOU|EMPREENDEU FUGA", re.I)
+RE_UN_SEMI = re.compile(r"AGROINDUSTRIAL|COL[ÔO]NIA|SEMI[- ]?ABERTO|GAMELEIRA", re.I)
+RE_UN_ABERTO = re.compile(r"ALBERGADO|PATRONATO|REGIME ABERTO", re.I)
+RE_UN_MONIT = re.compile(r"MONITORAMENTO", re.I)
+RE_UN_FECHADO = re.compile(r"PENITENCI[ÁA]RIA|PRES[ÍI]DIO|ESTABELECIMENTO PENAL|CENTRO DE DETEN|CADEIA|INSTITUTO PENAL|CENTRAL PROVIS", re.I)
+
+
+def _item_rf(nivel, titulo, detalhe, fundamento):
+    return {"nivel": nivel, "titulo": titulo, "detalhe": detalhe, "fundamento": fundamento, "tipo": "rspe-x-ficha"}
+
+
+def _identidade_x_ficha(r, f):
+    """Mesma pessoa? CPF, nome e nascimento da ficha x RSPE (a ficha vinculada pode ser de homônimo ou o cadastro estar errado)."""
+    out = []
+    c1, c2 = re.sub(r"\D", "", r.get("cpf") or ""), re.sub(r"\D", "", f.get("cpf") or "")
+    if len(c1) == 11 and len(c2) == 11 and c1 != c2:
+        out.append(_item_rf("alerta", "CPF da ficha (%s) difere do RSPE (%s)" % (f.get("cpf"), r.get("cpf")),
+                            "A ficha vinculada pode ser de outra pessoa (homônimo) ou um dos cadastros está errado. Conferir antes de usar os dados da ficha.",
+                            "Identificação do apenado (LEP, art. 106)."))
+    n1, n2 = rs._sem_acento(r.get("nome") or "").upper().split(), rs._sem_acento(f.get("nome") or "").upper().split()
+    if n1 and n2 and (n1[0] != n2[0] or n1[-1] != n2[-1]):
+        out.append(_item_rf("alerta", "Nome na ficha (%s) difere do RSPE" % (f.get("nome") or "").title(),
+                            "RSPE: %s. Conferir se a ficha é desta pessoa." % (r.get("nome") or "").title(), "Identificação do apenado (LEP, art. 106)."))
+    d1, d2 = rs.to_date(r.get("_nasc_rspe") or ("" if r.get("_nasc_fonte") else r.get("data_nascimento")) or ""), _dp(f.get("data_nascimento") or "")
+    if d1 and d2 and d1 != d2:
+        out.append(_item_rf("alerta", "Nascimento na ficha (%s) difere do RSPE (%s)" % (rs.fmt(d2), rs.fmt(d1)),
+                            "A data decide a redução do prazo prescricional (CP, art. 115: menor de 21 no fato, maior de 70 na sentença) e as hipóteses de "
+                            "indulto por idade. Conferir no documento de identidade e informar a correta na Auditoria.", "CP, art. 115; decretos de indulto."))
+    return out
+
+
+def _prisao_x_ficha(r, f):
+    """Data da prisão da ficha em período que o RSPE trata como liberdade: custódia sem cômputo (detração)."""
+    x = _dp(f.get("data_prisao") or "")
+    evs = sorted((e for e in r.get("_eventos", []) if rs.to_date(e.get("data") or "")), key=lambda e: rs.to_date(e["data"]))
+    if not x or not evs:
+        return []
+    per = rs.periodos_custodia(evs)
+    if any(a - timedelta(days=2) <= x and (b is None or x < b) for a, b in per):
+        return []
+    depois = [a for a, _ in per if a > x]
+    if not depois:
+        return []  # parado no RSPE depois dessa data: tratado na retomada
+    s = min(depois)
+    return [_item_rf("alerta", "Prisão em %s na ficha; RSPE só registra início em %s (%s sem cômputo)" % (rs.fmt(x), rs.fmt(s), rs.pl((s - x).days, "dia", "dias")),
+                     "A ficha registra a prisão em %s; o RSPE trata o período até %s como liberdade. Se a prisão foi por este processo (ou por processo "
+                     "unificado), os dias entram como detração e antecipam progressão, livramento e término. Conferir o auto de prisão e pedir a retificação." % (rs.fmt(x), rs.fmt(s)),
+                     "CP, art. 42; LEP, art. 111.")]
+
+
+def _processos_x_ficha(r, f):
+    """Processos na ficha que não aparecem no RSPE: condenação não somada, prisão por outro processo, guia pendente."""
+    rspe = {rs.chave_processo(c.get("processo_criminal") or "") for c in r.get("_crimes", [])}
+    rspe.add(rs.chave_processo(r.get("processo_execucao") or ""))
+    for e in r.get("_eventos", []) + r.get("_incidentes", []):
+        for p in rs.lista_processos(e.get("processos") or ""):
+            rspe.add(rs.chave_processo(p))
+    fora = [p for p in f.get("autos") or [] if re.match(r"\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}$", p) and rs.chave_processo(p) not in rspe]
+    if not fora:
+        return []
+    return [_item_rf("verificar", "Processos na ficha que o RSPE não lista: %d" % len(fora),
+                     "%s. Podem ser ações penais com condenação ainda não somada a esta execução (guia pendente - LEP, art. 111), prisões por outro "
+                     "processo (suspensão) ou inquéritos/preventivas já encerrados. Conferir no SEEU e nos sistemas do TJ se há pena a unificar ou prisão "
+                     "que deva ser computada." % "; ".join(fora), "LEP, art. 111; CP, art. 42.")]
+
+
+def _pena_x_ficha(r, f):
+    pf, pr = rs.pena_livre(f.get("condenacao") or ""), rs.pena_para_dias(r.get("pena_total"))
+    if not pf or not pr or abs(pf - pr) <= 30:
+        return []
+    return [_item_rf("verificar", "Pena na ficha (%s) difere da pena total do RSPE (%s)" % ((f.get("condenacao") or "").lower(), rs.dias_para_pena(pr)),
+                     "A unidade trabalha com outra pena: guia ou unificação não atualizada em um dos sistemas, ou condenação ainda não somada. "
+                     "Conferir a última unificação - a pena usada define benefícios, término e remição informados pela unidade.", "LEP, arts. 106, 111 e 66, V, a.")]
+
+
+def _unidade_x_ficha(r, f):
+    """Regime do RSPE x unidade em que a pessoa está (ficha)."""
+    un, reg = (f.get("unidade") or ""), (r.get("regime_atual") or "").upper()
+    if not un or not reg or "EXTIN" in reg:
+        return []
+    if RE_UN_SEMI.search(un):
+        tipo_un = "semiaberto"
+    elif RE_UN_ABERTO.search(un):
+        tipo_un = "aberto"
+    elif RE_UN_MONIT.search(un):
+        tipo_un = "monitoramento"
+    elif RE_UN_FECHADO.search(un):
+        tipo_un = "fechado"
+    else:
+        return []
+    desde = (" desde %s" % f["data_entrada"]) if f.get("data_entrada") else ""
+    if reg.startswith("FECHADO") and tipo_un in ("semiaberto", "aberto", "monitoramento"):
+        return [_item_rf("alerta", "RSPE em regime fechado, mas a ficha indica unidade de %s (%s)" % (tipo_un, un.title()),
+                         "Unidade atual%s: %s. Provável progressão não lançada no RSPE (a data-base e as frações seguintes mudam) ou regime desatualizado no SEEU: "
+                         "conferir a decisão e pedir a atualização." % (desde, un.title()), "LEP, art. 112.")]
+    if (reg.startswith("SEMI") or reg.startswith("ABERTO")) and tipo_un == "fechado":
+        return [_item_rf("alerta", "RSPE em regime %s, mas a ficha indica unidade de regime fechado (%s)" % (reg.split(" - ")[0].lower(), un.title()),
+                         "Unidade atual%s: %s. Se não houve regressão (nem cautelar), a pessoa cumpre em regime mais gravoso que o fixado: a falta de vaga "
+                         "não autoriza isso - pedir a transferência ou, na falta de vaga, o regime menos gravoso/monitoramento (STF, Súmula Vinculante 56; "
+                         "RE 641.320). Se houve regressão, conferir o lançamento no RSPE." % (desde, un.title()),
+                         "STF, Súmula Vinculante 56; LEP, arts. 112 e 118.")]
+    return []
+
+
+def _fuga_x_ficha(r, f):
+    """Fuga/evasão na ficha sem registro no RSPE (falta e interrupção omitidas) e fuga no RSPE sem registro na ficha."""
+    out = []
+    ev_r = [(rs.to_date(e.get("data") or ""), rs._texto_evento(e)) for e in r.get("_eventos", [])]
+    ev_r += [(rs.to_date(i.get("data_referencia") or i.get("data_decisao") or ""), rs._rotulo_incidente(i)) for i in r.get("_incidentes", []) if not i.get("_ficha")]
+    fugas_r = [d for d, t in ev_r if d and rs.RE_FUGA_EV.search(t)]
+    ev = sorted(((_dp(e["data"]), e["texto"]) for e in f.get("eventos", []) if _dp(e.get("data") or "")), key=lambda x: x[0])
+    fugas_f = [(x, t) for x, t in ev if RE_FUGA_FICHA.search(t) and not re.search(r"ABANDONO D[OE] (SERVI|TRABALHO|CURSO)", t, re.I)]
+    for x, t in fugas_f:
+        if not any(abs((x - d).days) <= 30 for d in fugas_r):
+            out.append(_item_rf("alerta", "Fuga/evasão em %s registrada na ficha e ausente no RSPE" % rs.fmt(x),
+                                "Ficha: %s. O RSPE não registra a interrupção nem a falta: conferir se houve fuga (falta grave - LEP, art. 50, II), a recaptura "
+                                "e a homologação. A fuga já entra como falta grave (falta nos 12 meses, indulto, comutação); se não houve, informe no item da fuga (Preencher)." % _br(t)[:180], "LEP, arts. 50, II, e 118; CP, art. 113."))
+    ini_f = ev[0][0] if ev else None
+    for d in fugas_r:
+        if ini_f and d > ini_f and not any(abs((x - d).days) <= 30 for x, _ in fugas_f):
+            # a ficha cobre a data e não registra saída/fuga: custódia contínua?
+            antes = [x for x, _ in ev if d - timedelta(days=90) <= x < d]
+            depois = [x for x, _ in ev if d < x <= d + timedelta(days=90)]
+            livres = [x for x, t in ev if abs((x - d).days) <= 30 and RE_SAIDA_LIVRE.search(t)]
+            if antes and depois and not livres:
+                out.append(_item_rf("verificar", "Fuga no RSPE em %s sem registro na ficha" % rs.fmt(d),
+                                    "A ficha tem movimentação antes e depois dessa data sem saída, fuga ou evasão. Conferir se o evento do RSPE está correto: fuga "
+                                    "lançada por engano interrompe o cumprimento, move a data-base e impede indulto e comutação.", "LEP, arts. 50, II, e 118."))
+    return out
+
+
+def _conduta_x_ficha(r, f):
+    c = (f.get("conduta") or "").upper()
+    if not re.search(r"\bM[ÁA]\b|P[ÉE]SSIMA|RUIM", c):
+        return []
+    if (r.get("falta_12m") or "") in ("SIM",):
+        return []
+    return [_item_rf("verificar", "Conduta na ficha: %s, sem falta grave recente no RSPE" % c.lower(),
+                     "A classificação da conduta pela unidade diverge do que o RSPE mostra (sem falta grave nos últimos 12 meses). Conferir as faltas da ficha e o "
+                     "prazo de reabilitação da conduta (regulamento estadual): o atestado de conduta pesa no requisito subjetivo da progressão e do livramento.",
+                     "LEP, art. 112, § 1º; CP, art. 83, III.")]
 
 
 def _regime_x_ficha(r, f):
