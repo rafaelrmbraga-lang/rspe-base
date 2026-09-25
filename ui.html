@@ -163,6 +163,9 @@ tr.sub td{padding:0 0 0 0;background:#FFFFFF;cursor:default}tr.sub:hover td{back
 .subtab pre{white-space:pre-wrap;overflow-wrap:anywhere;font:11.5px/1.5 Consolas,monospace;margin:6px 0 0;color:var(--tx2);background:#F9FAFB;border-radius:8px;padding:8px 10px}
 .mini{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:8px;font-size:11px;font-weight:600;color:var(--tx2);border:1px solid var(--line);background:#fff;cursor:pointer}.mini:hover{border-color:var(--pri);color:var(--pri)}
 .fdsit.vermelho{color:var(--r-tx)}.fdsit.amarelo{color:var(--a-tx)}.fdsit.verde{color:var(--g-tx)}
+.pck{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:5px;border:1.5px solid #D0D5DD;background:#fff;cursor:pointer;font-size:14px;font-weight:800;line-height:1;color:#fff;vertical-align:middle}.pck:hover{border-color:var(--pri)}
+.peds{display:flex;flex-direction:column;gap:6px;border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:#F9FAFB}.pedl{display:flex;align-items:center;gap:8px;font-size:12.5px}.pedl .pn{color:var(--tx2);min-width:150px}.pedl .po{flex:1;color:var(--tx2)}
+.pck.ok{background:#17B26A;border-color:#17B26A}.pck.ok.mud{background:#F5A524;border-color:#F5A524}
 .mini.pre{background:var(--pri);color:#fff;border-color:var(--pri)}.mini.pre:hover{opacity:.9;color:#fff}
 .chev{display:inline-block;width:14px;color:var(--tx3);font-size:11px;margin-right:4px;transition:.15s}tr.exp .chev{transform:rotate(90deg);color:var(--pri)}
 
@@ -409,13 +412,13 @@ const ui = {
   IND_DEC:[{id:'2022',k:['i22'],r:'Decreto 11.302/2022'},{id:'2024',k:['i24','c24'],r:'Decreto 12.338/2024'},{id:'2025',k:['i25','c25'],r:'Decreto 12.790/2025'}],
   irDec(id){ this.indDec=id; this.filtroCor=null; this.aberto=null; this.render(); },
   spec(){ const a=this.dados.abas.find(x=>x.id===this.aba); if(a&&a.id==='ind'&&this.indDec!=='todos'){ const D=this.IND_DEC.find(x=>x.id===this.indDec); if(D){
-      const b=Object.assign({},a); b.cols=a.cols.filter(c=>['nome','proc','imp'].includes(c[0])||D.k.includes(c[0])).map(c=>D.k.includes(c[0])?[c[0],c[1],24]:c);
+      const b=Object.assign({},a); b.cols=a.cols.filter(c=>['nome','proc','imp','pedido'].includes(c[0])||D.k.includes(c[0])).map(c=>D.k.includes(c[0])?[c[0],c[1],24]:c);
       b.cor=D.k[0]+'_cor'; b.pilulas={}; Object.keys(a.pilulas).forEach(k=>{ if(k==='imp'||D.k.includes(k)) b.pilulas[k]=a.pilulas[k]; });
       b.filtros=(a.filtros||[]).filter(f=>!/^b:/.test(f[0])||D.k.some(k=>f[0].startsWith('b:'+k+':'))); return b; } }
     if(!a||a.id!=='presc') return a;
     // prescrição: uma pretensão por vez (executória ou punitiva)
     const pe=this.prescModo!=='pp'; const b=Object.assign({},a);
-    b.cols=a.cols.filter(c=>['nome','proc'].includes(c[0])).concat(pe?[['presc_ppe','Pretensão executória',16],['presc_prox','Prescrição em',10]]:[['presc_retro','Pretensão punitiva',16]]);
+    b.cols=a.cols.filter(c=>['nome','proc'].includes(c[0])).concat(pe?[['presc_ppe','Pretensão executória',16],['presc_prox','Prescrição em',10]]:[['presc_retro','Pretensão punitiva',16]]).concat(a.cols.filter(c=>c[0]==='pedido'));
     b.cor=pe?'presc_ppe_cor':'presc_retro_cor'; b.legenda=pe?'presc':'presc_pp';
     b.pilulas=pe?{presc_ppe:'presc_ppe_cor'}:{presc_retro:'presc_retro_cor'};
     const base=a.sub_cols.filter(c=>['crime','proc_crim','pena','fato','denuncia','sentenca','transito'].includes(c[0]));
@@ -458,6 +461,10 @@ const ui = {
         if(c[0]==='proc'){ v=`<span class="copy" title="Clique para copiar" onclick="event.stopPropagation();ui.copiar('${esc(String(v))}')">${esc(v)}${svgCopy}</span>`; }
         else if(c[0]==='nome'&&v){ v=`<span class="copy" title="Clique para copiar o nome" onclick="event.stopPropagation();ui.copiar(ui._clips[${this.clip(String(v))}])">${esc(v)}${svgCopy}</span>`; }
         else if(pk){ const pc = r[pk]||''; v = v ? `<span class="pill ${pc||'none'}">${esc(v)}</span>` : (/_sit$/.test(c[0]) ? '' : '<span class="muted">—</span>'); }
+        else if(c[0]==='pedido'){ const P=(r.pedidos||{})[spec.id]; const mud=P&&P.ref&&P.ref!==this.pedRef(r,spec.id);
+          // só o ícone: marcado = check; a data e a observação ficam na ficha do assistido (e na janela do clique)
+          v = P ? `<span class="pck ok ${mud?'mud':''}" title="${mud?'Pedido feito - a situação da aba mudou depois do pedido':'Pedido feito'}" onclick="event.stopPropagation();ui.pedidoAbrir('${r.id}','${spec.id}')">✓</span>`
+                : `<span class="pck" title="Marcar pedido feito" onclick="event.stopPropagation();ui.pedidoAbrir('${r.id}','${spec.id}')"></span>`; }
         else if(c[0]==='conduta'){ v = r.conduta_ruim ? `<span class="falta">${esc(v)}</span>` : (r.ficha_tem ? esc(v) : `<span class="muted">${esc(v)}</span>`); }
         else if(c[0]==='falta'){ v = r.falta_sim ? `<span class="falta">Sim</span>` : (r.falta_apurar ? `<span class="apurar">A apurar</span>` : `<span class="muted">${esc(v)}</span>`); }
         else { v = esc(v).replace('(est.)','<span class="est">(est.)</span>'); if(!v) v='<span class="muted">—</span>'; }
@@ -495,6 +502,8 @@ const ui = {
       case 'semdados': return cor==='cinza';
       case 'extinta': return cor==='azul';
       case 'atencao': return r.aud_status==='atencao';
+      case 'pedfeito': return !!(r.pedidos||{})[spec.id];
+      case 'pedsem': return !(r.pedidos||{})[spec.id];
       case 'ok': return spec.id==='fd' ? cor==='verde' : r.aud_status==='ok';
     } return true; },
   expandir(id){ this.aberto = this.aberto===id ? null : id; this.render(); },
@@ -757,6 +766,25 @@ const ui = {
   async preencher(id, ci){ const P=JSON.parse(this._clips[ci]||'{}'); const v=prompt(P.rotulo+':', ''); if(v===null||!v.trim()) return;
     if(P.tipo==='data'&&!/^\d{2}\/\d{2}\/\d{4}$/.test(v.trim())){ this.toast('Use o formato dd/mm/aaaa.'); return; }
     await api('dado_manual', id, P.campo, v.trim()); this.aberto=id; this.render(); },
+  // ---------- controle de pedidos (coluna "Pedido" das abas de benefício) ----------
+  PED_NOME:{prog:'progressão de regime',liv:'livramento condicional',ind:'indulto / comutação',presc:'extinção pela prescrição',ext:'extinção da pena',fd:'remição'},
+  pedRef(r,aba){ return ({prog:r.prog, liv:r.liv, ind:['i22','i24','c24','i25','c25'].map(k=>r[k]).join('|'), presc:(r.presc_ppe||'')+'|'+(r.presc_prox||''), ext:r.ext_termino, fd:r.fd_sit})[aba]||''; },
+  pedidoAbrir(id, aba){ const r=(this.dados.registros||[]).find(x=>x.id===id)||{}; const P=(r.pedidos||{})[aba]; const hoje=this.dados.hoje||'';
+    const mud=P&&P.ref&&P.ref!==this.pedRef(r,aba);
+    document.getElementById('modal').innerHTML=`<div class="box" style="width:480px"><h2>Pedido de ${this.PED_NOME[aba]||aba}</h2>
+      <p class="muted" style="margin:0 0 10px">${esc(r.nome)} · ${esc(r.proc)}${P?`<br>Marcado em ${esc(P.registrado)}${P.ref?` · situação na marcação: ${esc(P.ref.replace(/\|/g,' · '))}`:''}`:''}</p>
+      ${mud?`<p style="margin:0 0 10px;color:var(--a-tx);font-weight:600">⚠ A situação desta aba mudou depois do pedido (hoje: ${esc(this.pedRef(r,aba).replace(/\|/g,' · '))}). Confira se o pedido ainda vale ou se é o caso de um novo.</p>`:''}
+      <div style="display:grid;grid-template-columns:150px 1fr;gap:8px;align-items:center">
+        <label>Data do pedido</label><input id="ped_data" value="${esc(P?P.data:hoje)}" placeholder="dd/mm/aaaa" style="padding:7px 9px;border:1px solid var(--line);border-radius:8px;font:inherit">
+        <label>Observação</label><input id="ped_obs" value="${esc(P?P.obs:'')}" placeholder="ex.: mov. 123, indulto 2025, aguardando MP" style="padding:7px 9px;border:1px solid var(--line);border-radius:8px;font:inherit">
+      </div>
+      <div class="acts">${P?`<button class="btn" style="margin-right:auto;color:var(--r-tx)" onclick="ui.pedidoSalvar('${id}','${aba}',true)">Remover marcação</button>`:''}<button class="btn" onclick="ui.fecharModal()">Cancelar</button><button class="btn pri" onclick="ui.pedidoSalvar('${id}','${aba}')">${P?'Salvar':'Marcar pedido feito'}</button></div></div>`;
+    document.getElementById('modal').classList.add('on'); setTimeout(()=>{ const e=document.getElementById('ped_obs'); if(e) e.focus(); },50); },
+  async pedidoSalvar(id, aba, remover){ const r=(this.dados.registros||[]).find(x=>x.id===id)||{};
+    const data=remover?'':document.getElementById('ped_data').value.trim(), obs=remover?'':document.getElementById('ped_obs').value.trim();
+    if(!remover&&!/^\d{2}\/\d{2}\/\d{4}$/.test(data)){ this.toast('Use a data no formato dd/mm/aaaa.'); return; }
+    const res=await API().pedido(id, aba, data, obs, this.pedRef(r,aba)); if(res&&res.erro){ this.toast(res.erro); return; }
+    this.fecharModal(); if(res&&res.registros) this.carregar(res); if(res&&res.msg) this.toast(res.msg); },
   async darBaixa(id, chave, titulo){ const obs = prompt('Dar baixa no alerta:\n'+titulo.replace(/&#39;/g,"'")+'\n\nObservação (opcional: o que foi feito / por que não se aplica):',''); if(obs===null) return; await api('baixar_alerta', id, chave, titulo.replace(/&#39;/g,"'"), obs); this.aberto=id; this.render(); },
   async reabrir(id, chave){ await api('reabrir_alerta', id, chave); this.aberto=id; this.render(); },
   copiar(t){ const done=()=>this.toast('Copiado: '+t); if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(t).then(done).catch(()=>{ this._copiaFallback(t); done(); }); } else { this._copiaFallback(t); done(); } },
@@ -849,6 +877,9 @@ const ui = {
           ${r.falta_apurar?lin('Falta a apurar (12 meses)', `<span class="apurar">${esc(r.falta_det)}</span> <span class="muted">sem sanção reconhecida no RSPE</span>`):''}
         </div>
         <div class="sec"><h3>Pontos de atenção</h3>${ptsHtml}</div>
+        ${(()=>{ const P=r.pedidos||{}; const ks=['prog','liv','ind','presc','ext','fd'].filter(k=>P[k]); if(!ks.length) return '';
+          return `<div class="sec"><h3>Pedidos feitos</h3><div class="peds">${ks.map(k=>{ const x=P[k], mud=x.ref&&x.ref!==this.pedRef(r,k);
+            return `<div class="pedl"><span class="pck ok ${mud?'mud':''}" style="width:16px;height:16px;font-size:11px">✓</span><span class="pn">${this.PED_NOME[k].replace(/^./,c=>c.toUpperCase())}</span><b>${esc(x.data)}</b><span class="po">${esc(x.obs||'')}${mud?` <span style="color:var(--a-tx);font-weight:600">· ⚠ situação mudou depois do pedido</span>`:''}</span><span class="mini" onclick="ui.pedidoAbrir('${r.id}','${k}')">Editar</span></div>`; }).join('')}</div></div>`; })()}
         <div class="sec"><h3>Crimes em execução</h3><div class="kv one"><div>${crimes||'—'}</div></div></div>
         ${this.fichaHtml(r)}
         ${calc?`<div class="sec"><h3>Cálculos do programa</h3>${calc}</div>`:''}

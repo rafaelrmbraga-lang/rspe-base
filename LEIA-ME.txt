@@ -1,8 +1,8 @@
-RSPE BASE - SEEU  v6.16.11 (programa em abas)
+RSPE BASE - SEEU  v6.16.15 (programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-6.16.11. A documentação técnica completa (cada parâmetro, a regra, a norma e
+6.16.15. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -535,6 +535,42 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v6.16.15
+  - Coluna "Pedido" só com o ícone: caixa vazia (sem pedido) ou check verde
+    (pedido feito; amarelo se a situação da aba mudou depois). A data e a
+    observação aparecem na ficha do assistido, na seção "Pedidos feitos", com
+    o botão Editar. A coluna agora aparece também na aba Prescrição e em cada
+    sub-aba de decreto do Indulto.
+
+v6.16.14
+  - Controle de pedidos: coluna "Pedido" nas abas Progressão, Livramento,
+    Indulto / Comutação, Prescrição, Extinção e Ficha disciplinar. "Marcar"
+    registra a data do pedido e uma observação (ex.: mov. 123, decreto); a
+    coluna passa a mostrar "✓ dd/mm/aaaa". Se a situação da aba mudar depois
+    (RSPE novo), a marca fica amarela com ⚠ para conferir se o pedido ainda
+    vale. Filtro "Pedido já feito" / "Sem pedido" em cada aba; a coluna sai
+    também no Excel e no PDF. A marcação fica gravada na base.
+
+v6.16.13
+  - Base jurídica: a cópia de base_juridica.json deixada ao lado do programa
+    não esconde mais a base embutida. Vale a de versão mais recente, e o que
+    só existe na outra (como a tabela das contravenções) é completado a partir
+    dela. Antes, uma cópia antiga na pasta tinha prioridade e as tabelas novas
+    não eram lidas.
+  - Pena máxima em abstrato: quando o texto do tipo no RSPE vem ilegível
+    (pena por extenso, cortada), o programa recorre à tabela da base jurídica e,
+    para contravenção, ao teto de 5 anos do art. 10 da LCP - antes ficava "não
+    lida". Contravenção reconhecida também pelo nome da lei.
+
+v6.16.12
+  - Indulto 2022 com crime impeditivo: o art. 11, parágrafo único, decide
+    antes de qualquer ponto a verificar dos demais crimes. Pena do impeditivo
+    não cumprida integralmente em 25/12/2022 = "não atinge" (antes, se o único
+    crime não impeditivo estava a verificar, o resultado ficava A VERIFICAR).
+  - Auditoria: contravenção com pena aplicada muito acima do máximo cominado
+    (ex.: art. 35 da LCP com 3 anos e 6 meses) é apontada como provável erro de
+    tipificação no SEEU (conferir na sentença).
 
 v6.16.11
   - Base jurídica (2026-09-25b): tabela das contravenções conferida no texto
