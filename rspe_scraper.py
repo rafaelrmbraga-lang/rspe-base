@@ -2262,15 +2262,25 @@ def e_suspensao_livramento(i):
 
 
 def periodos_livramento(eventos, incidentes):
-    """Períodos de prova do livramento condicional concedido [(inicio, fim|None)]: terminam na revogação ou
-    suspensão decidida, na regressão concedida ou na interrupção posterior (a prescrição não corre e a pena se cumpre)."""
-    per = []
+    """Períodos de prova do livramento condicional [(inicio, fim|None)] - a pena se cumpre e a prescrição executória não
+    corre (STJ, HC 429.545). Início: o incidente de concessão ou, sem ele, a interrupção da custódia com motivo "livramento
+    condicional" (a saída da unidade para o período de prova). Fim: revogação ou suspensão decidida, regressão concedida,
+    fuga/evasão ou nova prisão (LEP, art. 145)."""
+    inicios = []
     for i in incidentes:
-        if not e_concessao_livramento(i):
-            continue
-        ini = to_date(i.get("data_referencia") or i.get("data_decisao") or i.get("complemento") or "")
-        if not ini:
-            continue
+        if e_concessao_livramento(i):
+            d = to_date(i.get("data_referencia") or i.get("data_decisao") or i.get("complemento") or "")
+            if d:
+                inicios.append(d)
+    for e in eventos:
+        mot = (e.get("motivo") or "").upper()
+        if "INTERRUP" in (e.get("tipo") or "").upper() and "LIVRAMENTO" in mot and not re.search(r"REVOG|SUSPE", mot):
+            d = to_date(e.get("data") or "")
+            # a saída para o livramento já coberta por um deferimento dos 60 dias anteriores não abre outro período
+            if d and not any(x <= d <= x + timedelta(days=60) for x in inicios):
+                inicios.append(d)
+    per = []
+    for ini in sorted(set(inicios)):
         fins = []
         for j in incidentes:
             t = ((j.get("tipo") or "") + " " + (j.get("complemento") or "")).upper()
@@ -2282,17 +2292,20 @@ def periodos_livramento(eventos, incidentes):
                 continue
             mot = (e.get("motivo") or "").upper()
             if "INTERRUP" in (e.get("tipo") or "").upper():
-                # a saída da unidade para o livramento é registrada como interrupção da custódia: é o início do período de
-                # prova, não o fim. Só encerra o livramento a interrupção por fuga/evasão ou a que vem bem depois do deferimento
+                # a saída da unidade para o livramento é o início do período de prova, não o fim: só encerra o livramento a
+                # interrupção por fuga/evasão ou a que vem bem depois do início, por outro motivo
                 if ini <= d <= ini + timedelta(days=60) and not RE_FUGA_EV.search(mot):
                     continue
-                if "LIVRAMENTO" in mot and not re.search(r"REVOG|SUSPE", mot):
+                if "LIVRAMENTO" in mot and not re.search(r"REVOGA|SUSPE", mot):
                     continue
                 fins.append(d)
             elif d > ini + timedelta(days=3) and re.search(r"PRIS|IN[ÍI]CIO|RECAPTURA", ((e.get("tipo") or "") + " " + mot).upper()):
                 fins.append(d)  # nova prisão durante o período de prova: o livramento fica suspenso (LEP, art. 145)
         fins = [d for d in fins if d and d > ini]
-        per.append((ini, min(fins) if fins else None))
+        fim = min(fins) if fins else None
+        if per and per[-1][1] is None:
+            per[-1] = (per[-1][0], ini)  # um livramento posterior pressupõe o fim do anterior
+        per.append((ini, fim))
     return per
 
 

@@ -34,7 +34,7 @@ import rspe_relatorio as rrel
 import rspe_indulto_tl as rtl
 
 APP = "RSPE Base"
-VERSAO = "6.16.34"
+VERSAO = "6.16.36"
 
 
 def pasta_app():
@@ -660,6 +660,13 @@ class Api:
                 rs.explicar_indicios_ficha(r, _f0, rv.HOJE)  # regressão/perda/pendente: a ficha explica?
             except Exception:
                 logging.getLogger("rspe").exception("faltas da ficha %s", _ch0)
+            # sexo para a concordância dos textos (SAP, fundamentações): o informado pelo operador; senão o cadastro da ficha
+            # (sexo biológico ou unidade feminina). Sem isso, o texto fica neutro; o nome não serve de indício
+            _sx = ((_dm.get("sexo") or {}).get("valor") or "")
+            if not _sx and _f0:
+                _sx = _f0.get("sexo") or ("F" if "FEMININ" in rs._sem_acento(_f0.get("unidade") or "").upper() else "")
+            r["_sexo"] = _sx
+            r["_sexo_fonte"] = "operador" if (_dm.get("sexo") or {}).get("valor") else ("ficha" if _sx else "")
             # data-base corrigida pelo operador ("dd/mm/aaaa|motivo"): refaz a previsão de progressão em todas as abas
             r.pop("_db_manual", None)
             if (_dm.get("data_base") or {}).get("valor"):
@@ -694,6 +701,7 @@ class Api:
                                   extras=[rv.item_falha("Ficha disciplinar ignorada: falha ao ler (%s)" % e, "falha-ficha")])
                 except Exception as e2:
                     m = rv.modelo_erro(r, e2, baixas.get(ch, {}))
+            m["sexo"], m["sexo_fonte"] = r.get("_sexo") or "", r.get("_sexo_fonte") or ""
             # baixas gravadas pelo título (até a 6.15.11): passam para a chave estável (tipo do ponto + crime)
             for it in m.get("aud_itens") or []:
                 if it.get("migrar_de"):
@@ -761,6 +769,8 @@ class Api:
             return {"erro": "Data inválida: use dd/mm/aaaa."}
         if valor and campo == "data_base" and not rs.to_date(valor.split("|")[0]):
             return {"erro": "Data-base inválida: use dd/mm/aaaa."}
+        if campo == "sexo" and valor not in ("", "M", "F"):
+            return {"erro": "Sexo inválido."}
         if campo.startswith("falta|") and valor not in ("", "sim", "nao"):
             return {"erro": "Decisão inválida sobre a falta."}
         if valor and campo.startswith("pena_max|") and not rs.pena_livre(valor):

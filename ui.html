@@ -645,7 +645,7 @@ const ui = {
     const base=(sd,pz,lim)=>`Para esse saldo, o prazo prescricional é o do art. 109, ${inc(sd)}, do Código Penal${inc(sd)==='VI'&&antiga?' (na redação anterior à Lei 12.234/2010, vigente à data do fato - 2 anos)':''}${mods.length?', '+mods.join(' e '):''}: ${pz}, que se esgotou em ${lim}`;
     const cab=`DA PRESCRIÇÃO DA PRETENSÃO EXECUTÓRIA - ${L.rotulo||L.crime}${L.proc_crim?' (autos '+L.proc_crim+')':''}\n`+
       `A condenação a ${L.pena} (fato em ${L.fato||'—'}; trânsito em julgado em ${L.ppe_termo||'—'}) teve o cumprimento interrompido pela ${evento} em ${s.evasao}. `+
-      `Nos termos do art. 113 do Código Penal, no caso de evadir-se o condenado ou de revogar-se o livramento condicional, a prescrição é regulada pelo tempo que resta da pena. `+
+      `Nos termos do art. 113 do Código Penal, no caso de evadir-se o condenado ou de revogar-se o livramento condicional, a prescrição é regulada pelo tempo que resta da pena, calculado para cada condenação isoladamente (CP, art. 119; STJ, AgRg no REsp 2.256.555). `+
       `Até essa data, a execução unificada registrava ${s.cumprido_desde_termo} dias de cumprimento${s.remicao?' e '+s.remicao+' dias remidos':''}`;
     let corpo='';
     if(s.resultado==='prescrita'){
@@ -710,6 +710,8 @@ const ui = {
   txtLinhas(txt){ const ls=Array.isArray(txt)?txt:String(txt||'').split('\n'); return ls.map(l=>l.trim()).filter(Boolean).map(l=>{ const m=l.match(/^([✓✔✘✗…?⚠])\s*/); if(m){ const ic=/[✓✔]/.test(m[1])?'✓':/[✘✗]/.test(m[1])?'✗':(m[1]==='?'?'?':'!'); l=ic+' '+l.slice(m[0].length); } else l='• '+l; return penaExt(l); }).join('\n'); },
   // fundamentação da prescrição no padrão do programa: título, fatos e fundamentos em um parágrafo, pedido (ou conclusão)
   fundPresc(s, parte){
+    if(parte==='pe' && s.ppe_fund) return s.ppe_fund;   // texto montado no servidor (o mesmo dos modelos de petição)
+    if(parte==='pp' && s.pp_fund) return s.pp_fund;
     const cab=(t)=>`DA PRESCRIÇÃO DA ${t} - ${s.rotulo||s.crime}${s.proc_crim?' (autos '+s.proc_crim+')':''}`;
     const mods=()=>{ const m=[]; if(s.art115) m.push('reduzido à metade em razão da idade (CP, art. 115)'); if(s.reinc&&parte==='pe') m.push('acrescido de 1/3 pela reincidência (CP, art. 110, caput)'); return m.length?', '+m.join(' e '):''; };
     const diasPena=t=>{ t=String(t||''); const g=re=>{ const m=t.match(re); return m?+m[1]:0; };
@@ -896,26 +898,34 @@ const ui = {
       <div class="acts">${P?`<button class="btn" style="margin-right:auto;color:var(--r-tx)" onclick="ui.pedidoSalvar('${id}','${aba}',true)">Remover marcação</button><button class="btn" onclick="ui.fecharModal();ui.abrirSAP('${id}')">Registro para o SAP</button>`:''}<button class="btn" onclick="ui.fecharModal()">Cancelar</button><button class="btn pri" onclick="ui.pedidoSalvar('${id}','${aba}')">${P?'Salvar':'Marcar pedido feito'}</button></div></div>`;
     document.getElementById('modal').classList.add('on'); setTimeout(()=>{ const e=document.getElementById('ped_obs'); if(e) e.focus(); },50); },
   // ---------- registro de atendimento para o SAP: o que foi constatado e o que foi feito, em texto corrido ----------
+  // concordância pelo sexo documentado (ficha do SIAPEN ou informado pelo operador); sem ele, texto neutro. O nome não é indício
+  gen(r){ const s=(r&&r.sexo)||''; return s==='F'?{ass:'a assistida',da:'da assistida',fav:'em favor da assistida'}:s==='M'?{ass:'o assistido',da:'do assistido',fav:'em favor do assistido'}:{ass:'a pessoa assistida',da:'da pessoa assistida',fav:'em favor da pessoa assistida'}; },
+  // texto corrido sem parênteses: "(x)" vira ", x"
+  semParen(t){ let x=String(t||''); for(let k=0;k<3;k++) x=x.replace(/\s*\(([^()]*)\)/g,', $1'); return x.replace(/,\s*,/g,',').replace(/\s+/g,' ').trim(); },
+  lista_e(a){ return a.length<2?(a[0]||''):a.slice(0,-1).join(', ')+' e '+a[a.length-1]; },
+  // ---------- registro de atendimento para o SAP: o que foi constatado e o que foi feito, em texto corrido ----------
   registroSAP(r, sel){ const lin=(r.presc_linhas||[]); const DEC={i22:'Decreto 11.302/2022',i24:'Decreto 12.338/2024',i25:'Decreto 12.790/2025',c24:'Decreto 12.338/2024',c25:'Decreto 12.790/2025'};
+    const G=this.gen(r), sp=t=>this.semParen(t), E=a=>this.lista_e(a), dt=v=>/^\d{2}\/\d{2}\/\d{4}$/.test(v||'');
     // só o que foi feito: cada providência marcada leva junto a constatação da aba correspondente
     const achado={
-      prog:()=>r.prog_cor==='vencido'?'direito à progressão de regime (requisito objetivo atingido em '+r.prog+')':'progressão de regime'+(/^\d{2}\/\d{2}\/\d{4}$/.test(r.prog||'')?' (requisito objetivo em '+r.prog+')':''),
-      liv:()=>r.liv_cor==='vencido'?'direito ao livramento condicional (requisito objetivo atingido em '+r.liv+')':'livramento condicional'+(/^\d{2}\/\d{2}\/\d{4}$/.test(r.liv||'')?' (requisito objetivo em '+r.liv+')':''),
+      prog:()=>r.prog_cor==='vencido'?'direito à progressão de regime, com o requisito objetivo atingido em '+r.prog:dt(r.prog)?'progressão de regime com requisito objetivo previsto para '+r.prog:'questão relativa à progressão de regime',
+      liv:()=>r.liv_cor==='vencido'?'direito ao livramento condicional, com o requisito objetivo atingido em '+r.liv:dt(r.liv)?'livramento condicional com requisito objetivo previsto para '+r.liv:'questão relativa ao livramento condicional',
       ind:()=>{ const i=['i22','i24','i25'].filter(k=>r[k+'_cor']==='verde').map(k=>DEC[k]), c=['c24','c25'].filter(k=>r[k+'_cor']==='verde').map(k=>DEC[k]);
-        const p=[i.length?'direito a indulto ('+i.join(', ')+')':'', c.length?'direito a comutação ('+c.join(', ')+')':''].filter(Boolean); return p.length?p.join(' e '):'possível direito a indulto/comutação'; },
-      presc:()=>{ const e=lin.filter(L=>L.ppe_cor==='vermelho').map(L=>L.rotulo||L.crime), u=lin.filter(L=>L.retro_cor==='vermelho').map(L=>L.rotulo||L.crime);
-        const p=[e.length?'possível prescrição da pretensão executória ('+e.join('; ')+')':'', u.length?'possível prescrição da pretensão punitiva ('+u.join('; ')+')':''].filter(Boolean); return p.length?p.join(' e '):'possível prescrição'; },
-      ext:()=>'possível extinção da pena'+(r.ext_sit?' ('+r.ext_sit+')':''),
+        const p=[i.length?'direito ao indulto pelo '+E(i):'', c.length?'direito à comutação pelo '+E(c):''].filter(Boolean); return p.length?p.join(' e '):'possível direito a indulto ou comutação'; },
+      presc:()=>{ const nm=L=>sp(String(L.rotulo||L.crime||'').replace(/\s*\((ação penal [^()]*)\)/i,' da $1')), e=lin.filter(L=>L.ppe_cor==='vermelho').map(nm), u=lin.filter(L=>L.retro_cor==='vermelho').map(nm);
+        const p=[e.length?'possível prescrição da pretensão executória quanto a '+E(e):'', u.length?'possível prescrição da pretensão punitiva quanto a '+E(u):''].filter(Boolean); return p.length?p.join(', bem como '):'possível prescrição'; },
+      ext:()=>'possível extinção da pena'+(r.ext_sit?', '+sp(r.ext_sit).replace(/^./,x=>x.toLowerCase()):''),
       fd:()=>{ const p=[]; if(/Remição a requerer/.test(r.fd_sit||'')) p.push('remição a requerer'); if(/Ausência de atestado|Último atestado/.test(r.fd_sit||'')) p.push('pendência de atestado de trabalho ou de certificação de estudo'); if(/Conferir remição/.test(r.fd_sit||'')) p.push('remição a conferir'); return p.join(' e ')||'remição a requerer'; }};
-    const NOME={prog:'progressão de regime',liv:'livramento condicional',ind:'indulto/comutação',presc:'extinção da punibilidade pela prescrição',ext:'extinção da pena',fd:'remição'};
+    const NOME={prog:'progressão de regime',liv:'livramento condicional',ind:'indulto ou comutação',presc:'extinção da punibilidade pela prescrição',ext:'extinção da pena',fd:'remição'};
     const P=r.pedidos||{}; const ks=Object.keys(P).filter(k=>achado[k]&&(!sel||sel.includes(k))).sort((a,b)=>this.tlD(P[a].data)-this.tlD(P[b].data));
-    if(!ks.length) return sel ? 'Selecione ao menos uma providência.' : `Execução penal nº ${r.proc} (${r.nome}): nenhuma providência registrada até ${this.dados.hoje||'esta data'}.`;
+    if(!ks.length) return sel ? 'Selecione ao menos uma providência.' : `Execução penal nº ${r.proc}, de ${r.nome}: nenhuma providência registrada até ${this.dados.hoje||'esta data'}.`;
     const c=ks.map(k=>achado[k]());
-    const f=ks.map(k=>{ const x=P[k], o=x.obs?' ('+x.obs+')':'';
-      if(x.tipo==='oficio') return 'foi expedido ofício à unidade prisional em '+x.data+(k==='fd'?', solicitando atestado de trabalho e/ou certificação de estudo':', referente a '+NOME[k])+o;
-      if(x.tipo==='outro') return 'em '+x.data+', '+(x.obs||'providência referente a '+NOME[k]);
-      return 'foi protocolado nos autos, em '+x.data+', pedido de '+NOME[k]+o; });
-    return `Em análise da execução penal nº ${r.proc} (${r.nome}), com base no RSPE de ${r.geracao||'data não informada'}, foi constatado que o(a) assistido(a) possuía: ${c.join('; ')}. Assim, ${f.join('; ')}.`; },
+    const f=ks.map(k=>{ const x=P[k], o=x.obs?', com a anotação: '+sp(x.obs):'';
+      if(x.tipo==='oficio') return 'em '+x.data+', foi expedido ofício à unidade prisional'+(k==='fd'?' solicitando atestado de trabalho ou certificação de estudo':' referente a '+NOME[k])+o;
+      if(x.tipo==='outro') return 'em '+x.data+', '+(x.obs?sp(x.obs):'providência referente a '+NOME[k]);
+      return 'em '+x.data+', foi protocolado nos autos pedido de '+NOME[k]+o; });
+    const ger=r.geracao?'do RSPE gerado em '+r.geracao:'do RSPE';
+    return `Execução penal nº ${r.proc}, de ${r.nome}. Na análise ${ger}, constatou-se ${G.fav}: ${c.join('; ')}. Providências: ${f.join('; ')}.`; },
   // escolha das providências que entram no registro: por padrão, as marcadas hoje (o atendimento do dia); sem nenhuma de hoje, todas
   abrirSAP(id){ const r=(this.dados.registros||[]).find(x=>x.id===id); if(!r) return; const P=r.pedidos||{};
     const NOME={prog:'Progressão de regime',liv:'Livramento condicional',ind:'Indulto / comutação',presc:'Prescrição',ext:'Extinção da pena',fd:'Remição'};
@@ -928,9 +938,17 @@ const ui = {
     document.getElementById('modal').innerHTML=`<div class="box" style="width:660px"><h2>Registro para o SAP</h2>
       <p class="muted" style="margin:0 0 8px">${esc(r.nome)} · ${esc(r.proc)} · só o que foi feito, cada providência com a constatação que a motivou. Pode editar antes de copiar.</p>
       ${lista}
+      <div style="display:flex;align-items:center;gap:8px;margin:0 0 8px;font-size:12.5px"><span class="muted">Tratamento</span>
+        <select id="sap_sexo" onchange="ui.sapSexo('${id}',this.value)" style="width:auto;flex:none;padding:4px 8px;border:1px solid var(--line);border-radius:6px;font:inherit">
+          <option value="M" ${r.sexo==='M'?'selected':''}>o assistido</option><option value="F" ${r.sexo==='F'?'selected':''}>a assistida</option><option value="" ${!r.sexo?'selected':''}>a pessoa assistida, sem sexo informado</option></select>
+        <span class="muted">${r.sexo_fonte==='ficha'?'· conforme a ficha do SIAPEN':r.sexo_fonte==='operador'?'· informado pelo operador':'· a ficha não informa; escolha para concordar o texto'}</span></div>
       <textarea id="sap_txt" style="width:100%;min-height:220px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font:inherit;line-height:1.55;resize:vertical;box-sizing:border-box">${esc(this.registroSAP(r, ks.length?sel0:null))}</textarea>
       <div class="acts"><button class="btn" onclick="ui.fecharModal()">Fechar</button><button class="btn pri" onclick="ui.copiarClip(ui.clip(document.getElementById('sap_txt').value))">Copiar texto</button></div></div>`;
     document.getElementById('modal').classList.add('on'); },
+  async sapSexo(id, v){ const r=(this.dados.registros||[]).find(x=>x.id===id); if(!r) return; r.sexo=v; r.sexo_fonte=v?'operador':'';
+    const S=this._sap; document.getElementById('sap_txt').value=this.registroSAP(r, S?S.sel:null);
+    const res=await API().dado_manual(id,'sexo',v); if(res&&res.erro){ this.toast(res.erro); return; }
+    if(res&&res.registros){ this.carregar(res); const S2=this._sap; this.abrirSAP(id); if(S2){ ['prog','liv','ind','presc','ext','fd'].forEach(k=>{ const e=document.getElementById('sap_'+k); if(e) e.checked=S2.sel.includes(k); }); this._sap.sel=S2.sel; const r2=(this.dados.registros||[]).find(x=>x.id===id); document.getElementById('sap_txt').value=this.registroSAP(r2, S2.sel); } } },
   sapToggle(k, on){ const S=this._sap; if(!S) return; S.sel=S.sel.filter(x=>x!==k); if(on) S.sel.push(k);
     const r=(this.dados.registros||[]).find(x=>x.id===S.id); document.getElementById('sap_txt').value=this.registroSAP(r, S.sel); },
   async pedidoSalvar(id, aba, remover){ const r=(this.dados.registros||[]).find(x=>x.id===id)||{};
