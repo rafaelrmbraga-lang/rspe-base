@@ -18,7 +18,9 @@ MESES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "a
 
 # (campo, descrição) - documentação para o usuário
 CAMPOS = [
-    ("nome", "nome do assistido"), ("processo", "nº da execução penal"), ("vara", "vara/juízo da execução"),
+    ("nome", "nome do assistido"),
+    ("assistido", "\"o assistido\" ou \"a assistida\", pelo sexo da ficha do SIAPEN ou informado; sem ele, \"a pessoa assistida\""),
+    ("sexo", "masculino ou feminino, se informado"), ("processo", "nº da execução penal"), ("vara", "vara/juízo da execução"),
     ("cpf", "CPF (RSPE)"), ("rg", "RG (RSPE)"), ("nome_mae", "nome da mãe"), ("data_nascimento", "data de nascimento"),
     ("regime", "regime atual"), ("regime_rspe", "regime como impresso no RSPE"),
     ("pena_total", "pena total"), ("pena_cumprida", "pena cumprida (RSPE)"), ("pena_remanescente", "pena remanescente"),
@@ -147,6 +149,8 @@ def campos(m, r, nome_base="", defensor=None):
                                    and (rs.to_date(e.get("data") or "") or date.min) > d_ev), "")
     d = {
         "nome": m.get("nome", ""), "processo": m.get("proc", ""), "vara": m.get("vara", ""),
+        "assistido": {"M": "o assistido", "F": "a assistida"}.get(r.get("_sexo") or m.get("sexo"), "a pessoa assistida"),
+        "sexo": {"M": "masculino", "F": "feminino"}.get(r.get("_sexo") or m.get("sexo"), ""),
         "cpf": r.get("cpf", ""), "rg": r.get("rg", ""), "nome_mae": r.get("nome_mae", ""), "data_nascimento": r.get("data_nascimento", ""),
         "regime": m.get("regime", ""), "regime_rspe": m.get("regime_rspe", ""),
         "pena_total": r.get("pena_total", ""), "pena_cumprida": r.get("pena_cumprida", ""), "pena_remanescente": r.get("pena_remanescente", ""),
@@ -337,7 +341,7 @@ def gerar_modelo_teste(pasta):
         row.cells[1].width = Cm(11)
     doc.add_paragraph("")
     doc.add_paragraph("Exemplo de condição (Jinja2): {% if falta_12m == 'Não consta' %}Sem indício de falta nos últimos 12 meses.{% else %}ATENÇÃO: {{falta_12m}}{% endif %}")
-    doc.add_paragraph("Exemplo de texto corrido: o sentenciado {{nome}}, execução nº {{processo}}, cumpre pena de {{pena_total}} em regime {{regime}}; data-base {{data_base}}, percentual {{fracao_progressao}}, progressão prevista para {{data_progressao}} ({{situacao_progressao}}).")
+    doc.add_paragraph("Exemplo de texto corrido: {{assistido}}, {{nome}}, execução nº {{processo}}, cumpre pena de {{pena_total}} em regime {{regime}}; data-base {{data_base}}, percentual {{fracao_progressao}}, progressão prevista para {{data_progressao}} ({{situacao_progressao}}).")
     doc.save(os.path.join(pasta, "Teste - todos os campos.docx"))
 
 
@@ -389,13 +393,13 @@ def gerar_modelo_exemplo(pasta_app, origem_padrao=None):
     doc.add_paragraph("Sentenciado: {{nome}}")
     doc.add_paragraph("")
     doc.add_paragraph("A DEFENSORIA PÚBLICA DO ESTADO DE MATO GROSSO DO SUL, por seu Defensor Público que esta subscreve, no exercício das atribuições institucionais, em favor de {{nome}}, vem requerer PROGRESSÃO DE REGIME, pelos fundamentos a seguir.")
-    doc.add_paragraph("O sentenciado cumpre pena total de {{pena_total}} em regime {{regime}}, com data-base em {{data_base}} e percentual de {{fracao_progressao}}; a data prevista para a progressão é {{data_progressao}} ({{situacao_progressao}}). Crimes: {{crimes}}. Falta nos últimos 12 meses: {{falta_12m}}.")
+    doc.add_paragraph("Consta que {{assistido}} cumpre pena total de {{pena_total}} em regime {{regime}}, com data-base em {{data_base}} e percentual de {{fracao_progressao}}; a data prevista para a progressão é {{data_progressao}} ({{situacao_progressao}}). Crimes: {{crimes}}. Falta nos últimos 12 meses: {{falta_12m}}.")
     doc.add_paragraph("{{ficha_conduta}}")
     doc.add_paragraph("Diante do exposto, requer a concessão da progressão ao regime subsequente, com a expedição do competente alvará.")
     doc.add_paragraph("")
     doc.add_paragraph("Campo Grande/MS, {{hoje_extenso}}.")
     doc.add_paragraph("")
-    doc.add_paragraph("Defensor(a) Público(a)")
+    doc.add_paragraph("Defensoria Pública")
     doc.save(os.path.join(p, "Exemplo - Pedido de progressao.docx"))
     gerar_modelo_teste(p)
     with open(os.path.join(p, "CAMPOS.txt"), "w", encoding="utf-8") as f:

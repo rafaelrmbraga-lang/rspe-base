@@ -536,6 +536,7 @@ def _decreto(D, ref, pub, C, cumprido, data_atinge, faltas, hoje, ultimo, em_cur
     k, kc = "indulto_%s" % ano, "comutacao_%s" % ano
     out = {"id": ano, "numero": num, "referencia": _f(ref), "publicacao": _f(pub), "cadastrado": bool(D.get("cadastrado")),
            "fonte": D.get("fonte", ""), "nota": D.get("nota", "")}
+    out["_sexo"] = r.get("_sexo") or ""
     txt_i = r.get(k)
     if not D.get("cadastrado") or txt_i is None:
         txt = "Decreto %s sem análise na aba Indulto / Comutação: resultado A VERIFICAR, sem aplicar por analogia outro decreto." % num
@@ -692,7 +693,7 @@ def _decreto(D, ref, pub, C, cumprido, data_atinge, faltas, hoje, ultimo, em_cur
     if num_i:
         ind.update({"pena_considerada_txt": _pena(num_i["pena"]), "cumprido_txt": _pena(num_i["cumprido"]),
                     "remanescente_txt": _pena(num_i["remanescente"]), "fonte": num_i.get("fonte", ""),
-                    "reinc": "reincidente" if num_i.get("reinc") else "primário"})
+                    "reinc": "reincidente" if num_i.get("reinc") else ("primária" if r.get("_sexo") == "F" else "primário")})
     out["indulto"] = ind
 
     # comutação: a da aba
@@ -756,6 +757,11 @@ def _hip_txt(t):
     return t[0].lower() + t[1:] if t.startswith("Requisito") else t
 
 
+def _assistido(out):
+    """Concordância pelo sexo documentado (ficha do SIAPEN ou operador); sem ele, neutro. Nunca pelo nome."""
+    return {"M": "o assistido", "F": "a assistida"}.get(out.get("_sexo"), "a pessoa assistida")
+
+
 def _fundamentacao(out, tipo, num_c=None):
     """Fundamentação pronta para a petição (botão "Copiar fundamentação"), no padrão do programa: título, um parágrafo com
     os fatos e os fundamentos (dispositivo entre parênteses) e o pedido. Usa só o que a aba já concluiu."""
@@ -769,9 +775,9 @@ def _fundamentacao(out, tipo, num_c=None):
     tit = "%s - %s%s" % ("DO INDULTO" if indulto else "DA COMUTAÇÃO", dec, (" (data de referência %s)" % ref) if ref else "")
     fatos = []
     if ind.get("cumprido_txt"):
-        fatos.append("Na data de referência do %s (%s), o(a) assistido(a)%s cumpria a pena de %s e havia cumprido %s, somados o tempo de "
+        fatos.append("Na data de referência do %s, %s, %s%s cumpria a pena de %s e havia cumprido %s, somados o tempo de "
                      "prisão, a detração (CP, art. 42) e a remição (LEP, art. 128)" % (
-                         dec, ref, (", " + ind["reinc"] + ",") if ind.get("reinc") else "", _pena_ext(ind.get("pena_considerada_txt", "")), _pena_ext(ind["cumprido_txt"])))
+                         dec, ref, _assistido(out), (", " + ind["reinc"] + ",") if ind.get("reinc") else "", _pena_ext(ind.get("pena_considerada_txt", "")), _pena_ext(ind["cumprido_txt"])))
     hip = [re.sub(r"\s*Não atendidos:.*$", "", c["texto"], flags=re.S) for c in x.get("checklist") or []
            if c["item"].startswith("Requisito objetivo") and c.get("estado") in ("ok", "q")]
     hip = [_hip_txt(_ext_txt(t)) for t in hip if t.strip()]

@@ -1,8 +1,8 @@
-RSPE BASE - SEEU  v6.16.35 (programa em abas)
+RSPE BASE - SEEU  v6.16.36 (programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-6.16.35. A documentação técnica completa (cada parâmetro, a regra, a norma e
+6.16.36. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -535,6 +535,24 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v6.16.36
+  - Registro para o SAP reescrito em texto corrido, direto e sem parênteses:
+    "Execução penal nº ..., de NOME. Na análise do RSPE gerado em ...,
+    constatou-se em favor do assistido: ... Providências: em dd/mm/aaaa, foi
+    protocolado nos autos pedido de ...". Observações entram como "com a
+    anotação: ..."; crimes como "art. 155 CP da ação penal ...".
+  - Concordância de gênero sem "o(a)": o sexo vem do cadastro da ficha do
+    SIAPEN ("Sexo Biológico") ou, sem o campo, da unidade feminina; o nome
+    nunca é usado como indício. Sem dado, o texto usa "a pessoa assistida".
+    No modal do SAP, o campo "Tratamento" permite informar ou corrigir (vale
+    para todo o programa). Fichas importadas antes desta versão: reimportar
+    a ficha para ler o sexo, ou escolher no campo.
+  - Fundamentação de indulto e comutação: "o assistido"/"a assistida",
+    "primário"/"primária" pela mesma regra.
+  - Petições: novos campos {{assistido}} ("o assistido", "a assistida" ou
+    "a pessoa assistida") e {{sexo}}; o modelo de exemplo assina "Defensoria
+    Pública".
 
 v6.16.35
   - Prescrição executória recalibrada pela jurisprudência (STF, STJ e TJMS):

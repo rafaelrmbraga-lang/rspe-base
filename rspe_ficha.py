@@ -147,6 +147,10 @@ def extrair(caminho):
     f["condenacao"] = (re.search(r"Condenação:\s*(.+)", cab) or [None, ""])[1].strip()
     f["unidade"] = (re.search(r"Unidade Penal:\s*(.+)", cab) or [None, ""])[1].strip()
     f["data_entrada"] = (re.search(r"Data Entrada:\s*(\d{2}/\d{2}/\d{4})", cab) or [None, ""])[1]
+    # sexo biológico do cadastro do SIAPEN ("M"/"F"): concordância de gênero nos textos (registro do SAP, fundamentações).
+    # Sem o campo, a unidade feminina basta; do nome nada se deduz
+    msx = re.search(r"Sexo(?: Biol[óo]gico)?:\s*(Masculino|Feminino)", cab, re.I)
+    f["sexo"] = msx.group(1)[0].upper() if msx else ("F" if re.search(r"FEMININ", rs._sem_acento(f["unidade"]).upper()) else "")
     mc = re.search(r"HIST[ÓO]RICO\s*-\s*CONDUTA:\s*([^\n]+)", t) or re.search(r"CONDUTA:\s*([A-ZÇÃÕÁÉÍÓÚÂÊÔ/ ]+)", t)
     f["conduta"] = (mc.group(1).strip() if mc else "")
     f["data_impressao"] = (re.search(r"Impresso em (\d{2}/\d{2}/\d{4})", texto_pdf(caminho)) or [None, ""])[1]
