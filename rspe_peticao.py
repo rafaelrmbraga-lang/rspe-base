@@ -59,6 +59,8 @@ CAMPOS = [
     ("fundamentacao_indulto_2024", "fundamentação do indulto 2024"), ("fundamentacao_comutacao_2024", "fundamentação da comutação 2024"),
     ("fundamentacao_indulto_2022", "fundamentação do indulto 2022"),
     ("fundamentacao_remicao", "fundamentação do pedido de remição (atestados sem remição no RSPE e estudo)"),
+    ("fundamentacao_prescricao", "fundamentação da prescrição (punitiva aparente ou executória do crime da petição)"),
+    ("fundamentacao_prescricao_todas", "fundamentação da prescrição de todos os crimes com prescrição aparente ou a verificar"),
     ("hoje", "data de hoje dd/mm/aaaa"), ("hoje_extenso", "data por extenso"), ("base", "nome da base aberta"),
 ]
 
@@ -207,6 +209,10 @@ def campos(m, r, nome_base="", defensor=None):
         "hoje_extenso": "%d de %s de %d" % (hoje.day, MESES[hoje.month - 1], hoje.year),
         "base": nome_base,
         "fundamentacao_remicao": m.get("fd_fund", ""),
+        # prescrição: a punitiva aparente tem precedência; senão, a executória do crime escolhido para a petição
+        "fundamentacao_prescricao": next((l.get("pp_fund") for l in m.get("presc_linhas", []) if l.get("pp_fund") and l.get("retro_cor") == "vermelho"), "")
+                                    or (presc.get("ppe_fund", "") if presc else ""),
+        "fundamentacao_prescricao_todas": "\n\n".join(x for l in m.get("presc_linhas", []) for x in (l.get("pp_fund") if l.get("retro_cor") == "vermelho" else "", l.get("ppe_fund")) if x),
     }
     # fundamentação do indulto/comutação no padrão do programa (a mesma do botão "Copiar fundamentação")
     try:
