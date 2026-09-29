@@ -34,7 +34,7 @@ import rspe_relatorio as rrel
 import rspe_indulto_tl as rtl
 
 APP = "RSPE Base"
-VERSAO = "6.16.43"
+VERSAO = "6.16.44"
 
 
 def pasta_app():
@@ -166,6 +166,12 @@ tratado como hediondo (CF, art. 5º, XL) nas frações e no livramento, e a Audi
 fato anterior à lei. No art. 1º dos decretos de indulto, a hediondez é aferida na data de cada decreto (STJ); a tese da
 irretroatividade (STF, 2ª Turma) aparece como "tese hed. superv.", com a corrente contrária (STF, 1ª Turma) no texto.
 <h4>Prescrição (arts. 109 a 119 do CP), crime a crime</h4>
+<b>Em resumo</b>: no topo do cálculo da executória, o resultado em linguagem simples (prazo e pena que o regula, por que prescreveu
+ou não, a situação hoje e o que conferir) e um quadro com cada fuga ou interrupção: retorno, tempo fora, saldo na fuga (e a origem:
+calculado pelos eventos, informado ou confirmado pelo SEEU), prazo, vencimento e resultado. <b>Saldo na fuga</b>: quando a fuga
+alcança o menor prazo do art. 109 e o saldo não foi informado nem confirmado pelo SEEU, o programa calcula o saldo crítico (até quanto
+de saldo a fuga já teria prescrito) e pede a pena remanescente na data da fuga ("A VERIFICAR: informe a pena remanescente"); o campo
+dessa fuga vem destacado em "informar saldo". Com prescrição aparente pelo saldo calculado, pede a confirmação antes de requerer.
 <b>Pretensão punitiva (retroativa e intercorrente, art. 110, § 1º)</b>: prazo pela pena aplicada (art. 109), metade se menor de 21 anos
 no fato ou maior de 70 na sentença (art. 115; salvo violência sexual contra a mulher, com aviso); intervalos fato→denúncia (só para
 fatos até 05/05/2010; Lei 12.234/2010, DOU e vigência em 06/05/2010), denúncia→sentença e sentença→trânsito final (a intercorrente vai

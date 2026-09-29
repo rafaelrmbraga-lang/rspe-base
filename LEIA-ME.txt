@@ -1,8 +1,8 @@
-RSPE BASE - SEEU  v6.16.43 (programa em abas)
+RSPE BASE - SEEU  v6.16.44 (programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-6.16.43. A documentação técnica completa (cada parâmetro, a regra, a norma e
+6.16.44. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -562,6 +562,21 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v6.16.44
+  - Prescrição executória, fuga e recaptura: quando a fuga dura o bastante
+    para alcançar o menor prazo do art. 109 (3 anos; 2 para fatos até
+    05/05/2010; com reincidência e art. 115) e o saldo na fuga só foi
+    calculado pelos eventos do RSPE, o programa calcula o saldo crítico (ex.:
+    "prescreveria se o saldo na fuga fosse de até 4 anos, prazo de 8 anos")
+    e pede a pena remanescente na data da fuga: "A VERIFICAR: informe a pena
+    remanescente na fuga de dd/mm/aaaa". O campo dessa fuga vem destacado no
+    formulário. Com prescrição aparente pelo saldo calculado, a memória pede
+    a confirmação do saldo antes de requerer.
+  - "Em resumo" no topo do cálculo da executória: resultado, prazo e saldo
+    que o regula, por que prescreveu ou não, situação hoje e o que conferir,
+    e um quadro das fugas/interrupções (retorno, tempo fora, saldo e origem,
+    prazo, vencimento, resultado). O resumo vai também no "Copiar cálculo".
 
 v6.16.43
   - Banco de teses: corrigido "Arquivo teses_execucao.json não encontrado"
