@@ -34,7 +34,7 @@ import rspe_relatorio as rrel
 import rspe_indulto_tl as rtl
 
 APP = "RSPE Base"
-VERSAO = "6.16.42"
+VERSAO = "6.16.43"
 
 
 def pasta_app():
@@ -219,13 +219,6 @@ iniciou, pena interrompida, não se aplica (cumprida / livramento / aberto), sem
 Prescrição: aparente, iminente / a verificar, não prescrita / não configurada, sem dados, extinta. Extinção: extinção cabível,
 término em até 30, 60 ou 90 dias, pena interrompida, sem previsão. Ficha disciplinar: remição a requerer, conferir remição / sem atestado
 / estudo, em ordem, sem ficha. Auditoria: com alertas, pontos a verificar, sem inconsistências. O número da execução é copiado com um clique.
-<h4>Acompanhamento</h4>
-<b>Pedidos feitos</b>: cada pedido marcado na coluna "Pedido" das abas (progressão, livramento, indulto/comutação, prescrição, extinção,
-ficha disciplinar) aparece com nome, número da execução, pedido, data e retorno. O retorno é lido nos incidentes do RSPE com data igual
-ou posterior à do pedido e do mesmo assunto: deferido, indeferido ou em análise no SEEU. Sem incidente, "sem retorno"; se o RSPE
-importado for anterior ao pedido, o aviso pede um RSPE atualizado. Pedido sem decisão há mais de 30 dias vem marcado "cobrar".
-Clique na linha para editar ou desmarcar o pedido. <b>Vencimentos</b>: progressão, livramento, prescrição executória e término da pena
-que vencem em até 7 ou 30 dias, e os já vencidos sem pedido, com a situação da aba e o pedido (se houver).
 <h4>Banco de teses</h4>
 Acórdãos do TJMS em execução penal favoráveis à defesa (recurso defensivo provido, recurso do MP desprovido, ordem concedida), triados
 pela ementa, com a tese em uma frase e o tema. Pesquise por palavras (todas devem constar da tese ou da ementa) e filtre por tema.
@@ -739,11 +732,6 @@ class Api:
                         logging.getLogger("rspe").exception("falha ao migrar baixa %s", ch)
             m["pedidos"] = peds.get(ch, {})  # pedidos já feitos, por aba (coluna "Pedido")
             try:
-                m["acomp"] = rv.acompanhamento(m["pedidos"], r, rv.HOJE)  # aba Acompanhamento: retorno de cada pedido
-            except Exception:
-                logging.getLogger("rspe").exception("acompanhamento %s", ch)
-                m["acomp"] = []
-            try:
                 m["faltas_itens"] = rs.faltas_editaveis(r.get("_incidentes", []), r.get("_eventos", []), rv.HOJE)
             except Exception:
                 m["faltas_itens"] = []
@@ -794,16 +782,20 @@ class Api:
 
     def teses(self):
         """Banco de teses da execução penal (aba Banco de teses): acórdãos favoráveis à defesa, triados pela ementa.
-        Um teses_execucao.json ao lado do programa tem prioridade sobre a cópia embutida (atualização sem novo exe)."""
-        for c in (os.path.join(pasta_app(), "teses_execucao.json"), recurso("teses_execucao.json")):
-            if os.path.isfile(c):
-                try:
-                    with open(c, encoding="utf-8") as f:
-                        return json.load(f)
-                except Exception as e:
-                    logging.getLogger("rspe").exception("banco de teses %s", c)
-                    return {"erro": "Falha ao ler %s: %s" % (os.path.basename(c), e)}
-        return {"erro": "Arquivo teses_execucao.json não encontrado."}
+        Um teses_execucao.json ao lado do programa tem prioridade sobre a cópia embutida (módulo rspe_teses)."""
+        c = os.path.join(pasta_app(), "teses_execucao.json")
+        if os.path.isfile(c):
+            try:
+                with open(c, encoding="utf-8") as f:
+                    return json.load(f)
+            except Exception:
+                logging.getLogger("rspe").exception("banco de teses %s", c)
+        try:
+            import rspe_teses
+            return rspe_teses.DADOS
+        except Exception as e:
+            logging.getLogger("rspe").exception("banco de teses embutido")
+            return {"erro": "Falha ao carregar o banco de teses: %s" % e}
 
     def abrir_url(self, url):
         """Abre no navegador o inteiro teor de um acórdão do banco de teses (só endereços http/https)."""

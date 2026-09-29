@@ -1020,66 +1020,6 @@ def nome_proprio(nome):
     return " ".join(out)
 
 
-# ---- aba Acompanhamento: retorno dos pedidos feitos (incidentes do RSPE posteriores à data do pedido) ----
-ACOMP_COBRAR_DIAS = 30  # pedido sem decisão há mais que isso: "cobrar"
-_ACOMP_INC = {
-    "prog": lambda t, c: ("PROGRESS" in t or ("ALTERA" in t and "REGIME" in t)) and "REGRESS" not in t + c and "FECHADO" not in c,
-    "liv": lambda t, c: "LIVRAMENTO" in t,
-    "ind": lambda t, c: "INDULTO" in t or "COMUTA" in t,
-    "presc": lambda t, c: "PRESCRI" in t or "EXTIN" in t,
-    "ext": lambda t, c: "EXTIN" in t,
-    "fd": lambda t, c: "REMI" in t,
-}
-ACOMP_NOME = {"prog": "Progressão de regime", "liv": "Livramento condicional", "ind": "Indulto / comutação",
-              "presc": "Extinção pela prescrição", "ext": "Extinção da pena", "fd": "Remição / atestado"}
-
-
-def acompanhamento(pedidos, r, hoje=None):
-    """Um item por pedido marcado (aba -> {data, obs, ref, tipo}): o retorno é o incidente do RSPE do mesmo assunto com
-    data igual ou posterior à do pedido (deferido, indeferido ou pendente de análise). Sem incidente: 'sem retorno',
-    com o aviso de que o RSPE importado é anterior ao pedido quando for o caso; parado há mais de ACOMP_COBRAR_DIAS
-    dias, o item vem marcado para cobrança."""
-    hoje = hoje or HOJE
-    out = []
-    ger = rs.to_date(r.get("data_geracao_rspe") or "")
-    for aba, P in (pedidos or {}).items():
-        dp = rs.to_date((P or {}).get("data") or "")
-        if not dp or aba not in _ACOMP_INC:
-            continue
-        achados = []
-        for i in r.get("_incidentes") or []:
-            if i.get("_ficha"):
-                continue
-            t = rs._sem_acento(i.get("tipo") or "").upper()
-            c = rs._sem_acento(i.get("complemento") or "").upper()
-            di = rs.to_date(i.get("data_decisao") or "") or rs.to_date(i.get("data_referencia") or "")
-            if di and di >= dp and _ACOMP_INC[aba](t, c):
-                achados.append((di, i))
-        achados.sort(key=lambda x: x[0])
-        dias = (hoje - dp).days
-        it = {"aba": aba, "pedido": ACOMP_NOME.get(aba, aba), "tipo": P.get("tipo") or "pedido", "data": rs.fmt(dp),
-              "obs": P.get("obs") or "", "ref": P.get("ref") or "", "dias": dias, "cobrar": False}
-        if achados:
-            di, i = achados[-1]
-            desc = " ".join(x for x in [(i.get("tipo") or "").strip(), (i.get("complemento") or "").strip()] if x)
-            if rs._pendente(i):
-                it.update(retorno="Em análise no SEEU (%s, %s)" % (desc, rs.fmt(di)), ret_cor="amarelo", ret="pendente",
-                          cobrar=dias > ACOMP_COBRAR_DIAS)
-            elif rs._negado(i):
-                it.update(retorno="Indeferido em %s (%s)" % (rs.fmt(di), desc), ret_cor="vermelho", ret="indeferido")
-            else:
-                it.update(retorno="Deferido em %s (%s)" % (rs.fmt(di), desc), ret_cor="verde", ret="deferido")
-        else:
-            txt = "Sem retorno no RSPE"
-            if ger and ger < dp:
-                txt += " — o RSPE importado (%s) é anterior ao pedido: importe um RSPE atualizado" % rs.fmt(ger)
-            elif ger:
-                txt += " de %s" % rs.fmt(ger)
-            it.update(retorno=txt, ret_cor="cinza", ret="sem", cobrar=dias > ACOMP_COBRAR_DIAS)
-        out.append(it)
-    return out
-
-
 def json_seguro(o):
     """Cópia do modelo que a tela consegue receber: Fraction vira número, date vira dd/mm/aaaa, tupla/conjunto vira lista.
     (A ponte com a tela serializa em JSON; um Fraction perdido derrubava a lista inteira.)"""

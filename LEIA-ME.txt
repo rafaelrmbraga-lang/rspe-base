@@ -1,8 +1,8 @@
-RSPE BASE - SEEU  v6.16.42 (programa em abas)
+RSPE BASE - SEEU  v6.16.43 (programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-6.16.42. A documentação técnica completa (cada parâmetro, a regra, a norma e
+6.16.43. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -523,14 +523,11 @@ PETIÇÕES (modelos .docx) - DESATIVADAS NESTA VERSÃO
   os modelos padrão está "Indulto 2023 - Decreto 11.846 - inciso XV", da
   unidade: o programa não analisa esse decreto.
 
-ACOMPANHAMENTO E BANCO DE TESES
-  Acompanhamento > Pedidos feitos: os pedidos marcados nas abas, com o
-  retorno lido nos incidentes do RSPE posteriores ao pedido (deferido,
-  indeferido, em análise, sem retorno) e a marca "cobrar" após 30 dias sem
-  decisão. Acompanhamento > Vencimentos: marcos que vencem em até 7 ou 30
-  dias e os vencidos sem pedido. Banco de teses: acórdãos do TJMS
-  favoráveis à defesa em execução penal (teses_execucao.json), com
-  pesquisa, filtro por tema e cópia da ementa com a referência.
+BANCO DE TESES
+  Aba "Banco de teses": acórdãos do TJMS favoráveis à defesa em execução
+  penal, com pesquisa, filtro por tema e cópia da ementa com a referência.
+  Os dados vão embutidos no programa (rspe_teses.py); um
+  teses_execucao.json ao lado do programa os substitui.
 
 ARQUIVOS
   rspe_app.py        janela, bases, importação em lote, pasta vigiada (API da interface)
@@ -545,7 +542,7 @@ ARQUIVOS
   rspe_export.py     exportação Excel e PDF
   rspe_peticao.py    petições por modelo .docx (desativadas)
   base_juridica.json base jurídica (editável)
-  teses_execucao.json banco de teses (acórdãos favoráveis à defesa; embutido)
+  rspe_teses.py      banco de teses (acórdãos favoráveis à defesa; embutido)
   modelos_padrao/    modelos .docx instalados na pasta "modelos"
   decretos/          textos dos decretos de indulto
   exemplo/           RSPEs de exemplo
@@ -565,6 +562,13 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v6.16.43
+  - Banco de teses: corrigido "Arquivo teses_execucao.json não encontrado"
+    no .exe (o build do GitHub não levava o arquivo). Os dados agora vão
+    num módulo do programa (rspe_teses.py), sempre embutido; um
+    teses_execucao.json ao lado do programa continua tendo prioridade.
+  - Aba Acompanhamento retirada (a marcação de pedido nas abas continua).
 
 v6.16.42
   - Aba nova "Acompanhamento":
