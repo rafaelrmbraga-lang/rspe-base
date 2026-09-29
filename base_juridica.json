@@ -1,5 +1,5 @@
 {
- "versao": "2026-09-29b",
+ "versao": "2026-09-29d",
  "descricao": "Base juridica do RSPE Base. Editavel: o programa le este arquivo ao abrir (copia ao lado do .exe tem prioridade sobre a embutida). Datas em AAAA-MM-DD. Fracoes como 'num/den' ou percentual 'NN%'.",
  "prescricao": {
   "art109_tabela": [
@@ -549,9 +549,11 @@
    }
   },
   "condicional_paragrafos": {
-   "_nota": "Artigos do CP em que a hediondez depende do parágrafo/inciso (Lei 8.072/90, art. 1º). Lista de '§X' ou '§X INCISO'; '§X' vale para qualquer inciso. Fora da lista = não hediondo. A época do fato é conferida à parte (tabela 'desde'). Casos especiais no código: 121 com 'extermínio' no tipo = hediondo, 121 § 6º = a verificar; 149-A § 1º, II = a verificar (só criança ou adolescente); 158 § 2º = hediondo só com morte e fato até 22/01/2020; 129 §§ 2º e 3º = a verificar (vítima).",
+   "_nota": "Artigos do CP em que a hediondez depende do parágrafo/inciso (Lei 8.072/90, art. 1º). Lista de '§X' ou '§X INCISO'; '§X' vale para qualquer inciso. Fora da lista = não hediondo. A época do fato é conferida à parte (tabela 'desde'). Casos especiais no código: 121 com 'extermínio' no tipo = hediondo, 121 § 6º = a verificar; 149-A § 1º, II = a verificar (só criança ou adolescente); 158 § 2º = hediondo só com morte e fato até 22/01/2020; 129 §§ 2º e 3º = a verificar (vítima). 121 §§ 2º-B e 2º-C: majorantes do homicídio qualificado dos incisos IX e X (hediondo); 121 § 2º-D (integrante de organização ultraviolenta, milícia ou grupo paramilitar, 20 a 40 anos): a verificar - a Lei 8.072 fala em 'homicídio qualificado'.",
    "121": [
-    "§2"
+    "§2",
+    "§2-B",
+    "§2-C"
    ],
    "155": [
     "§4-A"
@@ -583,7 +585,7 @@
    ]
   },
   "pendentes_de_confirmacao": {
-   "_nota": "Hediondez atribuída à 'Lei 15.487/2026' (vigência 07/08/2026) NÃO confirmada no texto compilado da Lei 8.072 (art. 1º, p. ú., VII traz só o § 1º do art. 240 e o art. 241-B do ECA). Retirada do cálculo até a confirmação; para reativar, conferir a lei e devolver as chaves a 'desde' e a paragrafo_unico['8069'].",
+   "_nota": "'Lei 15.487/2026' NÃO localizada: o texto vigente da Lei 8.072 (art. 1º, p. ú., VII), conferido em 29/09/2026, traz só o § 1º do art. 240 e o art. 241-B do ECA. Entradas mantidas fora do cálculo; para reativar, conferir a lei no Planalto e devolvê-las a 'desde' e a paragrafo_unico['8069'].",
    "entradas": {
     "8069:240": {
      "desde": "2026-08-07",
@@ -1268,6 +1270,13 @@
    "tese": "Reincidente não específico em crime com violência ou grave ameaça: por analogia in bonam partem, aplica-se o percentual do primário com violência (25%).",
    "nivel": "orientativo",
    "aplicacao": "Auditoria: item 'a verificar' quando o SEEU aplica 30% e a reincidência pode não ser em crime violento (fatos de 23/01/2020 a 07/05/2026)."
+  },
+  {
+   "tema": "RIBUP-MS (Decreto 12.140/2006), art. 133 - reabilitação da conduta e regressão",
+   "fonte": "TJMS",
+   "tese": "O prazo de reabilitação do art. 133 do RIBUP não se aplica quando a falta grave já gerou regressão de regime (bis in idem); o bom comportamento é readquirido na forma do art. 112, § 7º, da LEP.",
+   "nivel": "orientativo",
+   "aplicacao": "Ficha disciplinar: conduta má/péssima com falta recente que gerou regressão - item a verificar com a tese."
   }
  ],
  "reincidencia": {
@@ -1276,7 +1285,7 @@
   "art42_detracao": "computa-se na pena o tempo de prisão provisória"
  },
  "pena_maxima_abstrata": {
-  "_nota": "Pena máxima em abstrato, em anos (decimais = meses: 0,5 = 6 meses). Valor único ou lista por redação da lei [{'ate': 'aaaa-mm-dd', 'anos': X}, {'de': 'aaaa-mm-dd', 'anos': Y}], escolhida pela data do fato. Chave 'lei:artigo', 'lei:artigo §X' ou 'lei:artigo §X INCISO'. Usada quando o RSPE corta o texto do tipo: Decreto 11.302/2022 (art. 5º), prescrição da medida de segurança (inimputável) e conferência das contravenções. Art. 338-A: conferir a lei e a vigência.",
+  "_nota": "Pena máxima em abstrato, em anos (decimais = meses: 0,5 = 6 meses). Valor único ou lista por redação da lei [{'ate': 'aaaa-mm-dd', 'anos': X}, {'de': 'aaaa-mm-dd', 'anos': Y}], escolhida pela data do fato. Chave 'lei:artigo', 'lei:artigo §X' ou 'lei:artigo §X INCISO'. Usada quando o RSPE corta o texto do tipo: Decreto 11.302/2022 (art. 5º), prescrição da medida de segurança (inimputável) e conferência das contravenções. Art. 338-A (descumprimento de medida protetiva): reclusão de 2 a 5 anos, conferido no CP vigente.",
   "_nota_lcp": "Contravenções (Decreto-Lei 3.688/41, LCP), conferidas no texto compilado do Planalto: máximo da prisão simples de cada tipo; nos parágrafos com causa de aumento, o máximo com o aumento (19 §1: +1/2; 21 §1: +1/2; 21 §2: triplo, Lei 14.994/2024; 50 §1: +1/3). Revogados e só com multa ficam fora (arts. 27, 39, 60, 61, 65, 69). Art. 25: não recepcionado (STF, RE 583.523, Tema 113). Contravenção fora desta lista: o programa usa o teto de 5 anos do art. 10 da LCP.",
   "3688:18": 1,
   "3688:19": 0.5,
@@ -1631,6 +1640,35 @@
      "dispositivo": "art. 14 (reincidência até 25/12)"
     }
    }
+  ]
+ },
+ "remicao": {
+  "_nota": "Feriados nacionais e o estadual de MS (11/10, Lei estadual 10/1979) já são descontados dos dias de trabalho (seg-sex e seg-sáb). Acrescente aqui feriados municipais da unidade ou recessos, no formato 'MM-DD' (ex.: '08-26').",
+  "feriados_adicionais": []
+ },
+ "conduta_reabilitacao_meses": {
+  "_nota": "Prazo sem nova falta para reabilitar a conduta, pela gravidade da última falta. Grave: 12 meses do cumprimento da sanção (RIBUP, art. 133, III). Leve e média: prazos do art. 133, I e II, não confirmados - ajustar.",
+  "grave": 12,
+  "leve_media": 12
+ },
+ "ribup_ms": {
+  "norma": "Decreto Estadual (MS) nº 12.140, de 17/08/2006 - Regimento Interno Básico das Unidades Penais do Estado de Mato Grosso do Sul (RIBUP)",
+  "_nota": "Texto integral não localizado nas bases pesquisadas; os dispositivos abaixo foram conferidos pela transcrição em acórdãos do TJMS. Os prazos dos incisos I e II do art. 133 (faltas leves e médias) não foram confirmados.",
+  "art130_I": "Classificação do comportamento do preso (usada pelo juízo para aferir o requisito subjetivo).",
+  "art133_III": {
+   "regra": "Falta grave cometida em regime fechado ou semiaberto: reabilitação em 12 meses, contados do cumprimento da sanção disciplinar.",
+   "meses": 12
+  },
+  "art133_I_II": {
+   "regra": "Faltas leve e média: prazos próprios, não confirmados na pesquisa - ajustar aqui.",
+   "meses": null
+  },
+  "art136": "Nova falta disciplinar de qualquer natureza durante a reabilitação interrompe o prazo, que é acrescido (caput e parágrafo único).",
+  "padic": "O procedimento disciplinar (PADIC) segue o RIBUP (TJMS, 1604184-54.2022.8.12.0000).",
+  "jurisprudencia_tjms": [
+   "Prazo do art. 133 aplica-se ao regime em que a sanção foi imposta; se a falta grave gerou regressão, exigir a reabilitação para nova progressão é bis in idem (TJMS, 1603197-76.2026, 3ª Câm., 10/07/2026; 1604181-94.2025, 3ª Câm., 25/08/2025; 1604186-19.2025, 3ª Câm., 14/07/2025; 1605442-31.2024, 1ª Câm., 23/10/2024; 1603634-88.2024, 3ª Câm., 26/06/2024).",
+   "LEP, art. 112, § 7º: o bom comportamento é readquirido após 1 ano da falta ou antes, cumprido o requisito temporal da progressão (TJMS, 1603531-81.2024, 1ª Câm., 19/06/2024; 1607981-33.2025, 3ª Câm., 19/12/2025).",
+   "Sem regressão, o prazo de 12 meses do art. 133, III, e a interrupção do art. 136 foram aplicados para negar a progressão (TJMS, 0033766-70.2019, 2ª Seção Criminal, 17/08/2020; 1604184-54.2022, 1ª Câm., 14/10/2022)."
   ]
  }
 }

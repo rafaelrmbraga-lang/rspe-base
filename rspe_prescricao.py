@@ -334,6 +334,14 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
     periodos_det, extras, extras_lc = ctx["periodos_det"], ctx["extras"], ctx["extras_lc"]
     remicoes, ativos, crimes, TEMA_788 = ctx["remicoes"], ctx["ativos"], ctx["crimes"], ctx["TEMA_788"]
     em_custodia = ctx["em_custodia"]
+    # regime aberto com a data da fuga desconhecida: o operador informa o último comparecimento; o cumprimento termina nele
+    ult_ppl = rs.to_date(c.get("_ult_comp") or "")
+    if ult_ppl and ult_ppl > termo:
+        periodos_det = [(a, (ult_ppl if (a <= ult_ppl < (b or hoje)) else b), m, p) for a, b, m, p in periodos_det]
+        extras = [(a, (ult_ppl if (a <= ult_ppl < (b or hoje)) else b)) for a, b in extras]
+        em_custodia = em_custodia and not any(a <= ult_ppl for a, b in periodos_det if b == ult_ppl)
+    else:
+        ult_ppl = None
     proc_x = c.get("processo_criminal") or ""
     cab = ["Pena aplicada: %s (título executivo)." % L["pena"],
            "Termo inicial: %s." % termo_txt,
@@ -456,6 +464,12 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
     if rs.to_date(c.get("_novo_crime") or ""):
         novos.append((rs.to_date(c["_novo_crime"]), "informado pelo operador", True))
     novos.sort(key=lambda t: t[0])
+    # regime aberto com a data da fuga desconhecida: o operador informa o último comparecimento (ou a ausência à audiência de
+    # justificação), e a execução se tem por interrompida nessa data, não na do lançamento do SEEU (STF, HC 166.850; TJMS,
+    # 1603205-53.2026)
+    if ult_ppl:
+        corpo.append((ult_ppl, "Último comparecimento em %s (informado pelo operador): a execução se tem por interrompida nessa data, e não na "
+                               "do lançamento no SEEU (STF, HC 166.850; TJMS, 1603205-53.2026)." % rs.fmt(ult_ppl)))
     gaps = _gaps_sem_custodia(termo, hoje, cumpr)
     prescrita = correndo = verificar = None
     datas_ver = []  # evasões com resultado divergente
@@ -467,7 +481,7 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
         ref = hoje if aberto else g1
         fim_txt = "hoje" if g1 >= hoje else rs.fmt(g1)
         # interrupção por prisão em outro processo: a pessoa segue presa - o prazo não corre (art. 116, p. único)
-        _mot0 = _motivo_interrupcao(eventos, incidentes, g0) if g0 > termo else ""
+        _mot0 = _motivo_interrupcao(eventos, incidentes, g0) if (g0 > termo and not (ult_ppl and g0 == ult_ppl)) else ""
         if _mot0 and rs.RE_OUTRO_PROC.search(_mot0):
             lt(g0, g1 if g1 < hoje else None, "outro_motivo", "interrupção de %s (%s)" % (rs.fmt(g0), _mot0.lower()),
                "preso em outro processo: suspende o prazo (art. 116, p. único)")
@@ -529,6 +543,8 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
             corpo.append((g0, "De %s a %s preso ou em livramento por outro motivo: o prazo não corre (art. 116, p. único)." % (rs.fmt(g0), fim_txt)))
             continue
         motivo = _motivo_interrupcao(eventos, incidentes, g0) if g0 > termo else ""
+        if ult_ppl and g0 == ult_ppl:
+            motivo = "ABANDONO DO REGIME (último comparecimento em %s)" % rs.fmt(ult_ppl)
         cumprido_g0 = _dias_uniao(cumpr, termo, g0)
         rem_g0 = rem_ate(g0)
         if g0 == termo or not any(a <= g0 for a, _ in cumpr):
@@ -568,7 +584,7 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
             if not outras:
                 saldo_min = saldo_max = max(0, pena - cumprido_min_base)
                 rem_seeu = rs.pena_para_dias(r.get("pena_remanescente"))
-                if aberto and rem_seeu and len(ativos) == 1:
+                if aberto and rem_seeu and len(ativos) == 1 and not ult_ppl:  # com o último comparecimento, o remanescente do SEEU conta tempo que não houve
                     saldo_min = saldo_max = rem_seeu
                     fonte_saldo = " (pena remanescente do RSPE)"
             else:

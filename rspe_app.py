@@ -34,7 +34,7 @@ import rspe_relatorio as rrel
 import rspe_indulto_tl as rtl
 
 APP = "RSPE Base"
-VERSAO = "6.16.39"
+VERSAO = "6.16.42"
 
 
 def pasta_app():
@@ -66,6 +66,22 @@ def base_da_pasta(raiz, arquivo):
         partes = partes[1:]
     return _nome_seguro(partes[0]) if partes else None
 BASE_PADRAO = os.path.join(PASTA_BASES, "base_padrao.sqlite")
+
+def _ajuda_juris():
+    """Lista de jurisprudência da base jurídica (editável), exibida na Legenda: tese, nível e onde o programa a aplica."""
+    try:
+        lst = rg.jurisprudencia() or []
+    except Exception:
+        lst = []
+    if not lst:
+        return ""
+    esc = lambda t: str(t or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    itens = "".join("<li><b>%s</b>%s - %s%s</li>" % (esc(j.get("tema")), (" <i>(%s)</i>" % esc(j.get("nivel"))) if j.get("nivel") else "",
+                                                     esc(j.get("tese")), ("<br><span class=\"muted\">No programa: %s</span>" % esc(j.get("aplicacao"))) if j.get("aplicacao") else "")
+                    for j in lst if isinstance(j, dict))
+    return ("<h3>Jurisprudência da base jurídica (versão %s)</h3><p class=\"muted\">Referência das teses adotadas; editar a base altera esta lista. "
+            "As regras de cálculo ficam nas demais seções da base e no programa.</p><ul>%s</ul>" % (esc(rg.versao()), itens))
+
 
 AJUDA = """
 <h4>Cores</h4>
@@ -203,6 +219,18 @@ iniciou, pena interrompida, não se aplica (cumprida / livramento / aberto), sem
 Prescrição: aparente, iminente / a verificar, não prescrita / não configurada, sem dados, extinta. Extinção: extinção cabível,
 término em até 30, 60 ou 90 dias, pena interrompida, sem previsão. Ficha disciplinar: remição a requerer, conferir remição / sem atestado
 / estudo, em ordem, sem ficha. Auditoria: com alertas, pontos a verificar, sem inconsistências. O número da execução é copiado com um clique.
+<h4>Acompanhamento</h4>
+<b>Pedidos feitos</b>: cada pedido marcado na coluna "Pedido" das abas (progressão, livramento, indulto/comutação, prescrição, extinção,
+ficha disciplinar) aparece com nome, número da execução, pedido, data e retorno. O retorno é lido nos incidentes do RSPE com data igual
+ou posterior à do pedido e do mesmo assunto: deferido, indeferido ou em análise no SEEU. Sem incidente, "sem retorno"; se o RSPE
+importado for anterior ao pedido, o aviso pede um RSPE atualizado. Pedido sem decisão há mais de 30 dias vem marcado "cobrar".
+Clique na linha para editar ou desmarcar o pedido. <b>Vencimentos</b>: progressão, livramento, prescrição executória e término da pena
+que vencem em até 7 ou 30 dias, e os já vencidos sem pedido, com a situação da aba e o pedido (se houver).
+<h4>Banco de teses</h4>
+Acórdãos do TJMS em execução penal favoráveis à defesa (recurso defensivo provido, recurso do MP desprovido, ordem concedida), triados
+pela ementa, com a tese em uma frase e o tema. Pesquise por palavras (todas devem constar da tese ou da ementa) e filtre por tema.
+"Copiar ementa" leva a ementa com a referência (tribunal, classe, número, relator, órgão, julgamento). Um teses_execucao.json ao lado
+do programa substitui a cópia embutida. STJ e STF entrarão depois.
 <h4>Pasta vigiada</h4>
 Menu da base &gt; "Pasta vigiada…": escolha uma pasta mãe com uma subpasta por base (ex.: "2ª VEP", "1ª VEP", ou RSPE\\2ª VEP e
 FD\\2ª VEP). Os PDFs salvos numa subpasta entram sozinhos na base de mesmo nome, com o programa aberto; a base é criada se não
@@ -616,7 +644,7 @@ class Api:
         rv.HOJE = datetime.now().date()  # a data de referência acompanha o relógio (programa aberto após a meia-noite)
         if not self.base:
             return {"sem_base": True, "recentes": [{"caminho": p, "nome": os.path.splitext(os.path.basename(p))[0]} for p in self._recentes()],
-                    "hoje": rv.HOJE.strftime("%d/%m/%Y"), "abas": rv.ABAS, "rotulos": rv.ROTULO, "ajuda": AJUDA,
+                    "hoje": rv.HOJE.strftime("%d/%m/%Y"), "abas": rv.ABAS, "rotulos": rv.ROTULO, "ajuda": AJUDA + _ajuda_juris(),
                     "base_juridica": {"versao": rg.versao(), "origem": rg.origem()}, "registros": []}
         brutos = self.base.todos()
         baixas = self.base.baixas()
@@ -711,6 +739,11 @@ class Api:
                         logging.getLogger("rspe").exception("falha ao migrar baixa %s", ch)
             m["pedidos"] = peds.get(ch, {})  # pedidos já feitos, por aba (coluna "Pedido")
             try:
+                m["acomp"] = rv.acompanhamento(m["pedidos"], r, rv.HOJE)  # aba Acompanhamento: retorno de cada pedido
+            except Exception:
+                logging.getLogger("rspe").exception("acompanhamento %s", ch)
+                m["acomp"] = []
+            try:
                 m["faltas_itens"] = rs.faltas_editaveis(r.get("_incidentes", []), r.get("_eventos", []), rv.HOJE)
             except Exception:
                 m["faltas_itens"] = []
@@ -721,7 +754,7 @@ class Api:
             "hoje": rv.HOJE.strftime("%d/%m/%Y"),
             "abas": rv.ABAS,
             "rotulos": rv.ROTULO,
-            "ajuda": AJUDA,
+            "ajuda": AJUDA + _ajuda_juris(),
             "base_juridica": {"versao": rg.versao(), "origem": rg.origem()},
             # json_seguro: um Fraction ou date esquecido no modelo derrubava a lista inteira ("Object of type Fraction is not JSON serializable")
             "registros": rv.json_seguro([{k: v for k, v in m.items() if k != "_bruto"} for m in self._modelos]),
@@ -758,6 +791,27 @@ class Api:
         r = self.listar()
         r["msg"] = "Pedido registrado." if data else "Marcação de pedido removida."
         return r
+
+    def teses(self):
+        """Banco de teses da execução penal (aba Banco de teses): acórdãos favoráveis à defesa, triados pela ementa.
+        Um teses_execucao.json ao lado do programa tem prioridade sobre a cópia embutida (atualização sem novo exe)."""
+        for c in (os.path.join(pasta_app(), "teses_execucao.json"), recurso("teses_execucao.json")):
+            if os.path.isfile(c):
+                try:
+                    with open(c, encoding="utf-8") as f:
+                        return json.load(f)
+                except Exception as e:
+                    logging.getLogger("rspe").exception("banco de teses %s", c)
+                    return {"erro": "Falha ao ler %s: %s" % (os.path.basename(c), e)}
+        return {"erro": "Arquivo teses_execucao.json não encontrado."}
+
+    def abrir_url(self, url):
+        """Abre no navegador o inteiro teor de um acórdão do banco de teses (só endereços http/https)."""
+        if not re.match(r"^https?://", url or "", re.I):
+            return {"erro": "Endereço inválido."}
+        import webbrowser
+        webbrowser.open(url)
+        return {"msg": "Abrindo no navegador…"}
 
     def dado_manual(self, processo, campo, valor):
         """Dado objetivo que o RSPE não trouxe, informado pelo operador no alerta da Auditoria (data de nascimento,

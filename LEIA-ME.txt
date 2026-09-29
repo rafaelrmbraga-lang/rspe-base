@@ -1,8 +1,8 @@
-RSPE BASE - SEEU  v6.16.39 (programa em abas)
+RSPE BASE - SEEU  v6.16.42 (programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-6.16.39. A documentação técnica completa (cada parâmetro, a regra, a norma e
+6.16.42. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -523,6 +523,15 @@ PETIÇÕES (modelos .docx) - DESATIVADAS NESTA VERSÃO
   os modelos padrão está "Indulto 2023 - Decreto 11.846 - inciso XV", da
   unidade: o programa não analisa esse decreto.
 
+ACOMPANHAMENTO E BANCO DE TESES
+  Acompanhamento > Pedidos feitos: os pedidos marcados nas abas, com o
+  retorno lido nos incidentes do RSPE posteriores ao pedido (deferido,
+  indeferido, em análise, sem retorno) e a marca "cobrar" após 30 dias sem
+  decisão. Acompanhamento > Vencimentos: marcos que vencem em até 7 ou 30
+  dias e os vencidos sem pedido. Banco de teses: acórdãos do TJMS
+  favoráveis à defesa em execução penal (teses_execucao.json), com
+  pesquisa, filtro por tema e cópia da ementa com a referência.
+
 ARQUIVOS
   rspe_app.py        janela, bases, importação em lote, pasta vigiada (API da interface)
   ui.html            interface (abas, cartões, ficha, exportação)
@@ -536,6 +545,7 @@ ARQUIVOS
   rspe_export.py     exportação Excel e PDF
   rspe_peticao.py    petições por modelo .docx (desativadas)
   base_juridica.json base jurídica (editável)
+  teses_execucao.json banco de teses (acórdãos favoráveis à defesa; embutido)
   modelos_padrao/    modelos .docx instalados na pasta "modelos"
   decretos/          textos dos decretos de indulto
   exemplo/           RSPEs de exemplo
@@ -555,6 +565,65 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v6.16.42
+  - Aba nova "Acompanhamento":
+      * Pedidos feitos: cada pedido marcado na coluna "Pedido" das abas, com
+        nome, número da execução, pedido, data, dias desde o pedido,
+        observação e retorno. O retorno vem dos incidentes do RSPE do mesmo
+        assunto com data igual ou posterior à do pedido: deferido,
+        indeferido ou em análise no SEEU. Sem incidente: "sem retorno", com
+        aviso quando o RSPE importado é anterior ao pedido. Pedido sem
+        decisão há mais de 30 dias fica marcado "cobrar", e a contagem
+        aparece na aba. Clique na linha para editar ou desmarcar o pedido.
+      * Vencimentos: progressão, livramento, prescrição executória e término
+        da pena que vencem em até 7 ou 30 dias, e os já vencidos sem pedido,
+        com a situação da aba e o pedido feito (e o retorno).
+  - Aba nova "Banco de teses": 642 acórdãos do TJMS em execução penal
+    favoráveis à defesa (recurso defensivo provido, recurso do MP
+    desprovido, ordem concedida), triados pela ementa a partir do acervo de
+    7.096 decisões. Cada um traz a tese em uma frase e 1 a 3 temas.
+    Pesquisa por palavras (todas devem constar da tese ou da ementa), filtro
+    por tema, "Copiar ementa" (com a referência: tribunal, classe, número,
+    relator, órgão e datas), "Copiar referência" e "Abrir no e-SAJ". O
+    arquivo teses_execucao.json vai embutido no .exe; um arquivo com o
+    mesmo nome ao lado do programa o substitui. STJ e STF entrarão depois.
+
+v6.16.41
+  - RIBUP-MS (Decreto Estadual 12.140/2006) na base jurídica (seção
+    ribup_ms): art. 133, III (falta grave em regime fechado ou semiaberto:
+    reabilitação em 12 meses do cumprimento da sanção) e art. 136 (nova falta
+    interrompe e acresce o prazo), conferidos em acórdãos do TJMS; os prazos
+    das faltas leve e média (art. 133, I e II) não foram confirmados.
+  - Ficha disciplinar: conduta má/péssima com falta grave recente que já
+    gerou regressão - item novo: exigir o prazo do RIBUP para a nova
+    progressão é bis in idem, e a conduta se readquire pelo art. 112, § 7º,
+    da LEP (TJMS, 3ª e 1ª Câmaras). O item de conduta sem falta cita o RIBUP.
+
+v6.16.40
+  - Indulto (Decretos 2024/2025), com o sexo da ficha do SIAPEN:
+      * art. 10 (indulto das mulheres presas): III, c (60 anos ou mais, ou
+        menos de 21, crime sem violência, sem falta grave punida, 1/6 em 2024
+        e 1/8 em 2025) calculado; III, a, b e d (filhos, netos, deficiência)
+        a verificar; sexo não informado - a verificar "se mulher";
+      * art. 11 (comutação das mulheres): I (reincidente, pena até 8 anos sem
+        violência, 1/3 cumprido - 1/4) calculado e comparado com o art. 13
+        (vale a mais benéfica); II e III (filhos) a verificar com 1/5;
+      * § 2º, II a VI: o item indica a hipótese pelo sexo (II mulher, III
+        homem) e a ressalva do § 3º.
+  - Prescrição: regime aberto com a data da fuga desconhecida - o "último
+    comparecimento" informado em editar dados passa a valer também para a
+    privativa: a execução se tem por interrompida nessa data (STF, HC
+    166.850; TJMS, 1603205-53.2026), com o saldo refeito.
+  - Remição: feriado estadual de MS (11/10, Lei estadual 10/1979) descontado;
+    feriados municipais podem ser acrescentados na base (remicao.
+    feriados_adicionais).
+  - Conduta: prazo de reabilitação pela gravidade da última falta, editável
+    na base (conduta_reabilitacao_meses; padrão 12 meses).
+  - Base jurídica 2026-09-29c: "Lei 15.487/2026" conferida e não localizada
+    (ECA: só o § 1º do art. 240 e o art. 241-B); art. 338-A do CP conferido
+    (2 a 5 anos); homicídio §§ 2º-B e 2º-C hediondos, § 2º-D a verificar;
+    a jurisprudência da base aparece em "Legenda e método".
 
 v6.16.39
   - Indulto e comutação: no roubo (CP, art. 157), em qualquer forma, prevalece a

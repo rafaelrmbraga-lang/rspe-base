@@ -53,6 +53,12 @@ input{font:inherit}
 .tabs{display:flex;gap:4px;padding:14px 24px 0}
 .tab{padding:9px 16px;border-radius:10px;font-weight:600;color:var(--tx2);display:flex;align-items:center;gap:8px;transition:.15s}
 .tab:hover{background:#EAECF0;color:var(--tx)}.tab.on{background:var(--card);color:var(--pri);box-shadow:var(--shadow)}
+.tag.cobrar{background:var(--r-bg);color:var(--r-tx);border-color:transparent}
+.tesbar{display:flex;gap:14px;align-items:center;width:100%}.tesbar .search{flex:1;max-width:none}.tesbar input{width:100%}.tesfonte{white-space:nowrap}
+.teses{padding:6px 16px 16px}.tescnt{padding:8px 2px 10px;font-size:12.5px}
+.tese{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px;background:var(--card)}
+.tese .tt{font-weight:600;font-size:13.5px;line-height:1.4;margin-bottom:6px}.tese .tm{font-size:11.5px;margin-bottom:8px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.tese .te{font-size:12.5px;color:var(--tx2);line-height:1.5;white-space:pre-wrap;margin-bottom:8px}.tese .te.on{color:var(--tx)}
 .subtabs{display:none;gap:6px;padding:8px 24px 0;flex-wrap:wrap}.subtabs.on{display:flex}
 .subtabs button{padding:6px 14px;border-radius:999px;border:1px solid var(--line2);background:#fff;font-weight:600;font-size:12.5px;color:var(--tx2)}
 .subtabs button:hover{border-color:var(--pri);color:var(--pri)}.subtabs button.on{background:var(--pri);border-color:var(--pri);color:#fff}
@@ -422,7 +428,7 @@ const ui = {
       document.getElementById('recentes').innerHTML=(d.recentes||[]).map(r=>`<div onclick="api('abrir_base','${esc(r.caminho).replace(/\\/g,'\\\\')}')"><span>${esc(r.nome)}</span><small>${esc(r.caminho)}</small></div>`).join('')||'<div style="cursor:default;color:var(--tx3)">Nenhuma base recente</div>';
       document.getElementById('wfoot').textContent='Base jurídica '+(d.base_juridica?d.base_juridica.versao:'?')+' · '+d.hoje; this.dados.registros=[]; this.render(); return; }
     w.classList.remove('on'); document.getElementById('baseNome').textContent=d.base; document.getElementById('baseN').textContent=d.registros.length;
-    document.getElementById('hoje').textContent='Hoje '+d.hoje+(d.base_juridica?' · base jurídica '+d.base_juridica.versao:''); if(!this.dados.abas.find(a=>a.id===this.aba)) this.aba='geral'; this.render(); },
+    document.getElementById('hoje').textContent='Hoje '+d.hoje+(d.base_juridica?' · base jurídica '+d.base_juridica.versao:''); if(!this.dados.abas.concat(this.ABAS_EXTRA).find(a=>a.id===this.aba)) this.aba='geral'; this.render(); },
   async criarBase(){ const n=document.getElementById('novoNome').value.trim(); if(!n) return this.toast('Dê um nome à base.'); await api('nova_base', n); },
   prescModo:'pe',
   // sub-abas da aba Indulto / Comutação: um decreto por vez (colunas, cores, contagem e linha do tempo só dele)
@@ -448,7 +454,9 @@ const ui = {
   render(){
     const spec=this.spec(); const rs=this.visiveis();
     // abas
-    document.getElementById('tabs').innerHTML=this.dados.abas.map(a=>`<button class="tab ${a.id===this.aba?'on':''}" onclick="ui.irAba('${a.id}')">${a.titulo}${a.cor&&!a.sem_stats?`<span class="cnt">${this.contaCor(a,rs)}</span>`:''}</button>`).join('');
+    document.getElementById('tabs').innerHTML=this.dados.abas.concat(this.ABAS_EXTRA).map(a=>`<button class="tab ${a.id===this.aba?'on':''}" onclick="ui.irAba('${a.id}')">${a.titulo}${a.id==='acomp'?(this.acCobrar(rs)?`<span class="cnt">${this.acCobrar(rs)}</span>`:''):a.cor&&!a.sem_stats?`<span class="cnt">${this.contaCor(a,rs)}</span>`:''}</button>`).join('');
+    if(this.aba==='acomp'||this.aba==='teses'){ const selE=document.getElementById('filtro'); selE.parentElement.style.display='none'; selE.dataset.aba=''; document.getElementById('legenda').innerHTML='';
+      document.getElementById('modoWrap').style.display='none'; return this.aba==='acomp'?this.renderAcomp(rs):this.renderTeses(); }
     // resumo
     const st=document.getElementById('stats'); const rot=this.dados.rotulos[spec.legenda];
     if(!spec.cor || spec.sem_stats){ const nExt=rs.filter(r=>r.geral_cor==='azul').length; st.innerHTML=`<div class="info">${pl(rs.length,'assistido','assistidos')}${nExt?` · <span class="pill azul">${nExt} com pena extinta registrada</span>`:''}. As abas seguintes mostram cada marco com prazo, cor e falta nos últimos 12 meses.</div>`; }
@@ -965,6 +973,78 @@ const ui = {
   abaPedido(spec){ return !!(spec && (spec.cols||[]).some(c=>c[0]==='pedido')); },
   pedPendente(r,aba){ const P=(r.pedidos||{})[aba]; return !P || (P.ref && P.ref!==this.pedRef(r,aba)); },
   contaCor(a,rs){ rs=rs.filter(r=>this.pedPendente(r,a.id)); if(a.id==='ind') return rs.filter(r=>r.ind_sim).length || ''; const k = a.id==='presc' ? (this.prescModo!=='pp'?'presc_ppe_cor':'presc_retro_cor') : a.cor; return rs.filter(r=>r[k]==='vermelho'||r[k]==='vencido').length || ''; },
+  // ---- aba Acompanhamento: pedidos feitos e seu retorno no RSPE; marcos que vencem na semana / no mês ----
+  ABAS_EXTRA:[{id:'acomp',titulo:'Acompanhamento'},{id:'teses',titulo:'Banco de teses'}],
+  acModo:'ped', acFiltro:null, vcFiltro:'7',
+  acCobrar(rs){ return rs.reduce((n,r)=>n+(r.acomp||[]).filter(a=>a.cobrar).length,0); },
+  acTab(m){ this.acModo=m; this.acFiltro=null; this.render(); },
+  acLinhasPed(rs){ const L=[]; rs.forEach(r=>(r.acomp||[]).forEach(a=>L.push({r,a}))); return L; },
+  VC_MARCOS:[['prog','Progressão','prog','prog_dias','prog_sit','prog_cor'],['liv','Livramento','liv','liv_dias','liv_sit','liv_cor'],['presc','Prescrição executória','presc_prox','presc_dias','presc_ppe','presc_ppe_cor'],['ext','Término da pena','ext_termino','ext_dias','ext_sit','ext_cor']],
+  acLinhasVenc(rs){ const L=[]; rs.forEach(r=>this.VC_MARCOS.forEach(M=>{ const d=r[M[3]]; if(d===null||d===undefined||d==='') return; L.push({r,M,d:+d,P:(r.pedidos||{})[M[0]]}); })); return L; },
+  vcPassa(x,f){ return f==='venc'?(x.d<=0&&!x.P):f==='7'?(x.d>0&&x.d<=7):(x.d>0&&x.d<=30); },
+  renderAcomp(rs){
+    const stb=document.getElementById('subtabs'); stb.classList.add('on');
+    stb.innerHTML=[['ped','Pedidos feitos'],['venc','Vencimentos']].map(x=>`<button class="${this.acModo===x[0]?'on':''}" onclick="ui.acTab('${x[0]}')">${x[1]}</button>`).join('')
+      +`<span class="muted">${this.acModo==='ped'?'cada pedido marcado nas abas, com o retorno lido nos incidentes do RSPE posteriores à data do pedido':'progressão, livramento, prescrição e término que vencem nos próximos dias'}</span>`;
+    const st=document.getElementById('stats'); const card=document.getElementById('card');
+    const chip=(k,cls,n,rot,on)=>`<div class="stat ${cls} ${on?'on':''}" onclick="${k}"><i class="dot"></i><div><b>${n}</b><br><span>${rot}</span></div></div>`;
+    if(this.acModo==='ped'){
+      const L=this.acLinhasPed(rs); const cnt=f=>L.filter(x=>f(x.a)).length; const F=this.acFiltro;
+      const defs=[['cobrar','vermelho','Cobrar (parado há mais de 30 dias)',a=>a.cobrar],['pendente','amarelo','Em análise no SEEU',a=>a.ret==='pendente'],['deferido','verde','Deferido',a=>a.ret==='deferido'],['indeferido','laranja','Indeferido',a=>a.ret==='indeferido'],['sem','cinza','Sem retorno',a=>a.ret==='sem']];
+      st.innerHTML=defs.map(d=>chip(`ui.acFiltro=ui.acFiltro==='${d[0]}'?null:'${d[0]}';ui.render()`,d[1],cnt(d[3]),d[2],F===d[0])).join('');
+      let V=F?L.filter(x=>defs.find(d=>d[0]===F)[3](x.a)):L; V=[...V].sort((a,b)=>(b.a.cobrar-a.a.cobrar)||(b.a.dias-a.a.dias));
+      if(!L.length){ card.innerHTML=`<div class="empty"><div><b>Nenhum pedido marcado</b>Marque o pedido feito na coluna <em>Pedido</em> das abas Progressão, Livramento, Indulto, Prescrição, Extinção ou Ficha disciplinar. Ele aparece aqui com o retorno do RSPE.</div></div>`; return; }
+      if(!V.length){ card.innerHTML=`<div class="empty"><div><b>Nada neste filtro</b></div></div>`; return; }
+      const tr=V.map(({r,a})=>`<tr class="${a.cobrar?'vermelho':a.ret_cor}" onclick="ui.pedidoAbrir('${r.id}','${a.aba}')"><td class="first">${this.celNome(r)}</td><td class="nw">${this.celProc(r)}</td>
+        <td>${esc(a.pedido)}${a.tipo==='oficio'?' <span class="muted">(ofício)</span>':''}</td><td class="nw">${esc(a.data)}</td><td class="nw">${a.dias<0?'—':a.dias===1?'1 dia':a.dias+' dias'}</td>
+        <td><span class="pill ${a.ret_cor}">${esc(a.retorno)}</span>${a.cobrar?' <span class="tag cobrar">cobrar</span>':''}</td><td>${a.obs?esc(a.obs):'<span class="muted">—</span>'}</td></tr>`).join('');
+      card.innerHTML=`<table><thead><tr><th style="width:20%">Nome</th><th class="nw" style="width:1%">Nº da execução</th><th style="width:14%">Pedido feito</th><th class="nw" style="width:1%">Data do pedido</th><th class="nw" style="width:1%">Há</th><th style="width:34%">Retorno</th><th style="width:16%">Observação</th></tr></thead><tbody>${tr}</tbody></table>`;
+      return; }
+    const L=this.acLinhasVenc(rs); const F=this.vcFiltro||'7';
+    const defs=[['7','vermelho','Vencem em até 7 dias'],['30','amarelo','Vencem em até 30 dias'],['venc','laranja','Já vencidos e sem pedido']];
+    st.innerHTML=defs.map(d=>chip(`ui.vcFiltro='${d[0]}';ui.render()`,d[1],L.filter(x=>this.vcPassa(x,d[0])).length,d[2],F===d[0])).join('');
+    const V=L.filter(x=>this.vcPassa(x,F)).sort((a,b)=>a.d-b.d);
+    if(!V.length){ card.innerHTML=`<div class="empty"><div><b>Nada neste período</b>Nenhum marco de progressão, livramento, prescrição ou término ${F==='venc'?'vencido sem pedido':'no período'}.</div></div>`; return; }
+    const em=d=>d<=0?(d===0?'hoje':`vencido há ${-d===1?'1 dia':(-d)+' dias'}`):d===1?'amanhã':`em ${d} dias`;
+    const tr=V.map(({r,M,d,P})=>{ const ac=(r.acomp||[]).find(a=>a.aba===M[0]);
+      return `<tr class="${d<=7?'vermelho':'amarelo'}" onclick="ui.irAba('${M[0]}')"><td class="first">${this.celNome(r)}</td><td class="nw">${this.celProc(r)}</td><td>${M[1]}</td><td class="nw">${esc(r[M[2]]||'')}</td><td class="nw">${em(d)}</td>
+      <td>${r[M[4]]?`<span class="pill ${r[M[5]]||''}">${esc(r[M[4]])}</span>`:'<span class="muted">—</span>'}</td>
+      <td class="nw">${P?`<span class="pck ok" onclick="event.stopPropagation();ui.pedidoAbrir('${r.id}','${M[0]}')">✓</span> ${esc(P.data)}${ac?` · <span class="muted">${esc(({sem:'sem retorno',pendente:'em análise'})[ac.ret]||ac.ret)}</span>`:''}`:`<span class="mini" onclick="event.stopPropagation();ui.pedidoAbrir('${r.id}','${M[0]}')">Marcar pedido</span>`}</td></tr>`; }).join('');
+    card.innerHTML=`<table><thead><tr><th style="width:22%">Nome</th><th class="nw" style="width:1%">Nº da execução</th><th style="width:14%">Marco</th><th class="nw" style="width:1%">Data</th><th class="nw" style="width:1%">Vence</th><th style="width:30%">Situação na aba</th><th class="nw" style="width:1%">Pedido</th></tr></thead><tbody>${tr}</tbody></table>`;
+  },
+  celNome(r){ const svg='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>';
+    return `<span class="copy" title="Clique para copiar o nome" onclick="event.stopPropagation();ui.copiar(ui._clips[${this.clip(String(r.nome||''))}])">${esc(r.nome||'')}${svg}</span>`; },
+  celProc(r){ const svg='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>';
+    return `<span class="copy" title="Clique para copiar" onclick="event.stopPropagation();ui.copiar('${esc(String(r.proc||''))}')">${esc(r.proc||'')}${svg}</span>`; },
+  // ---- Banco de teses: acórdãos favoráveis à defesa (triagem por ementa), busca livre e filtro por tema ----
+  _teses:null, tesQ:'', tesTema:'', tesN:60, tesAberta:{},
+  async tesCarregar(){ if(this._teses) return; this._teses={itens:[],temas:[],carregando:true}; try{ const d=await API().teses(); this._teses=d&&d.itens?d:{itens:[],temas:[],erro:(d&&d.erro)||'Banco de teses indisponível.'}; }catch(e){ this._teses={itens:[],temas:[],erro:String(e)}; } this._tesIdx=null; if(this.aba==='teses') this.render(); },
+  tesNorm(t){ return String(t||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase(); },
+  tesFiltradas(){ const T=this._teses||{itens:[]}; if(!this._tesIdx) this._tesIdx=T.itens.map(x=>this.tesNorm([x.tese,x.ementa,x.proc,x.relator,x.orgao,x.classe,(x.temas||[]).join(' ')].join(' ')));
+    const ws=this.tesNorm(this.tesQ).split(/\s+/).filter(Boolean);
+    return T.itens.filter((x,i)=>(!this.tesTema||(x.temas||[]).includes(this.tesTema))&&ws.every(w=>this._tesIdx[i].includes(w))); },
+  tesBusca(v){ this.tesQ=v; this.tesN=60; this.tesLista(); },
+  tesCitacao(x){ return `(TJMS, ${x.classe} n. ${x.proc}${x.relator?', Rel. '+(/^(des|ju[ií]z)/i.test(x.relator)?'':'Des. ')+x.relator:''}${x.orgao?', '+x.orgao:''}${x.julg?', j. '+x.julg:''}${x.pub?', publ. '+x.pub:''})`; },
+  tesCopiar(i,modo){ const x=this._teses.itens[i]; const t=modo==='cit'?this.tesCitacao(x):(x.ementa.trim()+'\n'+this.tesCitacao(x)); this.copiarClip(this.clip(t)); },
+  renderTeses(){ if(!this._teses){ this.tesCarregar(); }
+    const T=this._teses||{itens:[],temas:[]};
+    document.getElementById('subtabs').classList.remove('on');
+    const opt=`<option value="">Todos os temas (${(T.itens||[]).length})</option>`+(T.temas||[]).map(t=>`<option value="${esc(t.tema)}" ${this.tesTema===t.tema?'selected':''}>${esc(t.tema)} (${t.n})</option>`).join('');
+    document.getElementById('stats').innerHTML=`<div class="tesbar"><div class="search has"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="tq" placeholder="Pesquisar nas teses e ementas (ex.: remição ENEM, falta grave bis in idem, data-base)" value="${esc(this.tesQ)}" oninput="ui.tesBusca(this.value)"></div>
+      <div class="sel"><select id="tesTema" onchange="ui.tesTema=this.value;ui.tesN=60;ui.tesLista()">${opt}</select></div>
+      <div class="tesfonte"><span class="tag ok">TJMS</span><span class="muted" title="STJ e STF serão acrescentados depois">STJ e STF em breve</span></div></div>`;
+    this.tesLista(); },
+  tesLista(){ const card=document.getElementById('card'); const T=this._teses||{itens:[]};
+    if(T.carregando){ card.innerHTML='<div class="empty"><div><b>Carregando o banco de teses…</b></div></div>'; return; }
+    if(T.erro){ card.innerHTML=`<div class="empty"><div><b>Banco de teses indisponível</b>${esc(T.erro)}</div></div>`; return; }
+    const V=this.tesFiltradas(); const idx=new Map(T.itens.map((x,i)=>[x,i]));
+    if(!V.length){ card.innerHTML=`<div class="empty"><div><b>Nenhuma tese encontrada</b>Tente outras palavras ou outro tema.</div></div>`; return; }
+    const h=V.slice(0,this.tesN).map(x=>{ const i=idx.get(x); const ab=this.tesAberta[x.id];
+      return `<div class="tese"><div class="tt">${esc(x.tese||'')}</div>
+      <div class="tm">${(x.temas||[]).map(t=>`<span class="tag">${esc(t)}</span>`).join(' ')} <span class="muted">${esc(x.classe)} · ${esc(x.proc)} · ${esc(x.orgao||'')} · ${esc(x.relator||'')} · j. ${esc(x.julg||'')}${x.resultado?' · '+esc(x.resultado):''}</span></div>
+      <div class="te ${ab?'on':''}">${esc(ab?x.ementa:(x.ementa.length>420?x.ementa.slice(0,420)+'…':x.ementa))}</div>
+      <div class="cp-row" style="gap:6px">${x.ementa.length>420?`<span class="mini" onclick="ui.tesAberta['${x.id}']=!ui.tesAberta['${x.id}'];ui.tesLista()">${ab?'Recolher ementa':'Ver ementa completa'}</span>`:''}<span class="mini pre" onclick="ui.tesCopiar(${i},'em')">Copiar ementa</span><span class="mini" onclick="ui.tesCopiar(${i},'cit')">Copiar referência</span>${x.link?`<span class="mini" title="Consulta do processo no e-SAJ do TJMS (inteiro teor do acórdão)" onclick="api('abrir_url','${esc(x.link)}')">Abrir no e-SAJ</span>`:''}</div></div>`; }).join('');
+    card.innerHTML=`<div class="teses"><div class="muted tescnt">${pl(V.length,'acórdão favorável à defesa','acórdãos favoráveis à defesa')}${this.tesTema?' em '+esc(this.tesTema):''}${this.tesQ?' para “'+esc(this.tesQ)+'”':''} · base ${esc(T.versao||'')}</div>${h}${V.length>this.tesN?`<div style="text-align:center;padding:12px"><span class="mini" onclick="ui.tesN+=60;ui.tesLista()">Mostrar mais (${V.length-this.tesN})</span></div>`:''}</div>`; },
   irAba(id){ this.aba=id; this.filtroCor=null; this.filtroSel='todas'; this.aberto=null; this.render(); },
   filtrarCor(c){ this.filtroCor = this.filtroCor===c ? null : c; this.render(); },
   filtrar(){ const q=document.getElementById('q'); this.filtro=q.value.trim().toLowerCase(); document.getElementById('search').classList.toggle('has',!!this.filtro); this.render(); },
@@ -1200,7 +1280,7 @@ const ui = {
         <div class="muted">${esc(S.saldo_rotulo||'')}</div>
         <div class="amd"><input data-s="a" value="${a}" placeholder="0"> ano(s) <input data-s="m" value="${m}" placeholder="0"> mês(es) <input data-s="d" value="${d}" placeholder="0"> dia(s)</div></div>`; }).join('');
     return `<div class="pf" id="${id}" onclick="event.stopPropagation()"><h5>${esc(L.rotulo||L.crime)} · preencher ou corrigir os dados <span class="muted">(em branco = dado importado do RSPE; o valor importado aparece como exemplo)</span></h5>
-      <div class="pf-g">${sel('modalidade','Modalidade da pena',[['','Privativa de liberdade (padrão)'],['PRD','Restritiva de direitos'+(o.convertida?' (o RSPE indica CONVERTIDA)':'')],['SURSIS','Sursis (suspensão condicional da pena)'],['MS','Medida de segurança (inimputável)'],['MS98','Medida de segurança substitutiva (semi-imputável, art. 98)']])}${inp('inicio_prd','Início efetivo da restritiva (1º dia de serviço)')}${inp('ultimo_comparecimento','Último comparecimento (restritiva)')}${inp('revogacao_sursis','Revogação do sursis')}${inp('novo_crime','Novo crime após o trânsito (data do fato)')}
+      <div class="pf-g">${sel('modalidade','Modalidade da pena',[['','Privativa de liberdade (padrão)'],['PRD','Restritiva de direitos'+(o.convertida?' (o RSPE indica CONVERTIDA)':'')],['SURSIS','Sursis (suspensão condicional da pena)'],['MS','Medida de segurança (inimputável)'],['MS98','Medida de segurança substitutiva (semi-imputável, art. 98)']])}${inp('inicio_prd','Início efetivo da restritiva (1º dia de serviço)')}${inp('ultimo_comparecimento','Último comparecimento (restritiva, ou regime aberto com fuga sem data)')}${inp('revogacao_sursis','Revogação do sursis')}${inp('novo_crime','Novo crime após o trânsito (data do fato)')}
         ${inp('fato','Data do fato')}${inp('denuncia','Recebimento da denúncia')}${inp('sentenca','Sentença')}${inp('acordao','Acórdão (se houver)')}${inp('transito_mp','Trânsito para a acusação')}${inp('transito','Trânsito final')}${inp('pena','Pena aplicada','ex.: 2a6m0d')}
         ${sel('reinc','Reincidente',[['','Conforme o RSPE'+(o.reinc?' ('+(o.reinc==='S'?'sim':'não')+')':' (não informado)')],['S','Sim'],['N','Não']])}
         ${sel('art115','Art. 115 (metade do prazo)',[['','Conforme o RSPE'+(o.nascimento?' (nasc. '+o.nascimento+')':' (sem data de nascimento)')],['sim','Aplicar: menor de 21 no fato ou maior de 70 na sentença'],['nao','Não aplicar']])}</div>
