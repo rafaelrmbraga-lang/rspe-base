@@ -1,8 +1,8 @@
-RSPE BASE - SEEU  v6.16.41 (programa em abas)
+RSPE BASE - SEEU  v6.16.42 (programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-6.16.41. A documentação técnica completa (cada parâmetro, a regra, a norma e
+6.16.42. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -523,6 +523,15 @@ PETIÇÕES (modelos .docx) - DESATIVADAS NESTA VERSÃO
   os modelos padrão está "Indulto 2023 - Decreto 11.846 - inciso XV", da
   unidade: o programa não analisa esse decreto.
 
+ACOMPANHAMENTO E BANCO DE TESES
+  Acompanhamento > Pedidos feitos: os pedidos marcados nas abas, com o
+  retorno lido nos incidentes do RSPE posteriores ao pedido (deferido,
+  indeferido, em análise, sem retorno) e a marca "cobrar" após 30 dias sem
+  decisão. Acompanhamento > Vencimentos: marcos que vencem em até 7 ou 30
+  dias e os vencidos sem pedido. Banco de teses: acórdãos do TJMS
+  favoráveis à defesa em execução penal (teses_execucao.json), com
+  pesquisa, filtro por tema e cópia da ementa com a referência.
+
 ARQUIVOS
   rspe_app.py        janela, bases, importação em lote, pasta vigiada (API da interface)
   ui.html            interface (abas, cartões, ficha, exportação)
@@ -536,6 +545,7 @@ ARQUIVOS
   rspe_export.py     exportação Excel e PDF
   rspe_peticao.py    petições por modelo .docx (desativadas)
   base_juridica.json base jurídica (editável)
+  teses_execucao.json banco de teses (acórdãos favoráveis à defesa; embutido)
   modelos_padrao/    modelos .docx instalados na pasta "modelos"
   decretos/          textos dos decretos de indulto
   exemplo/           RSPEs de exemplo
@@ -555,6 +565,29 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v6.16.42
+  - Aba nova "Acompanhamento":
+      * Pedidos feitos: cada pedido marcado na coluna "Pedido" das abas, com
+        nome, número da execução, pedido, data, dias desde o pedido,
+        observação e retorno. O retorno vem dos incidentes do RSPE do mesmo
+        assunto com data igual ou posterior à do pedido: deferido,
+        indeferido ou em análise no SEEU. Sem incidente: "sem retorno", com
+        aviso quando o RSPE importado é anterior ao pedido. Pedido sem
+        decisão há mais de 30 dias fica marcado "cobrar", e a contagem
+        aparece na aba. Clique na linha para editar ou desmarcar o pedido.
+      * Vencimentos: progressão, livramento, prescrição executória e término
+        da pena que vencem em até 7 ou 30 dias, e os já vencidos sem pedido,
+        com a situação da aba e o pedido feito (e o retorno).
+  - Aba nova "Banco de teses": 642 acórdãos do TJMS em execução penal
+    favoráveis à defesa (recurso defensivo provido, recurso do MP
+    desprovido, ordem concedida), triados pela ementa a partir do acervo de
+    7.096 decisões. Cada um traz a tese em uma frase e 1 a 3 temas.
+    Pesquisa por palavras (todas devem constar da tese ou da ementa), filtro
+    por tema, "Copiar ementa" (com a referência: tribunal, classe, número,
+    relator, órgão e datas), "Copiar referência" e "Abrir no e-SAJ". O
+    arquivo teses_execucao.json vai embutido no .exe; um arquivo com o
+    mesmo nome ao lado do programa o substitui. STJ e STF entrarão depois.
 
 v6.16.41
   - RIBUP-MS (Decreto Estadual 12.140/2006) na base jurídica (seção
