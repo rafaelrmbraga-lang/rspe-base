@@ -1,8 +1,8 @@
-RSPE BASE - SEEU  v6.16.36 (programa em abas)
+RSPE BASE - SEEU  v6.16.37 (programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-6.16.36. A documentação técnica completa (cada parâmetro, a regra, a norma e
+6.16.37. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -364,9 +364,29 @@ PRESCRIÇÃO (arts. 109 a 119 do CP, crime a crime)
   Livramento condicional concedido conta como cumprimento. Intervalo sem
   custódia depois do termo: começado por fuga, evasão, abandono ou revogação
   do livramento é evasão - o prazo corre pelo saldo da pena (art. 113); com o
-  motivo não informado, também, com aviso; começado por soltura sem culpa
-  (liberdade provisória, relaxamento, habeas corpus, alvará) ou sem início do
-  cumprimento, o prazo é o da pena aplicada (STJ, RHC 67.403).
+  motivo não informado, também, com aviso; qualquer outra interrupção
+  (soltura, descumprimento de condição, suspensão do livramento) ou a falta
+  de início do cumprimento seguem a pena aplicada, sem o art. 113 (STF, HC
+  236.292; STJ, RHC 67.403).
+  Contagem (CP, art. 10): o dia do começo entra no prazo, e a data mostrada é
+  o último dia (4 anos a partir de 10/03/2017 terminam em 09/03/2021).
+  Novo crime (art. 117, VI): o fato de outra condenação do RSPE praticado
+  depois do termo inicial - ou a data informada em "editar dados" - reinicia
+  todo o prazo na data do fato (STF, HC 230.334), salvo se a prescrição já se
+  consumara (STJ, RHC 168.441); sem trânsito da nova condenação, aviso (STJ,
+  REsp 2.117.844).
+  Modalidades em "editar dados": restritiva de direitos (prazo sempre pela
+  pena inteira - STF, HC 236.292; STJ, AgRg no HC 640.938; só o início
+  efetivo interrompe, não a audiência admonitória - STJ, AgRg no HC 956.128;
+  do último comparecimento corre de novo); sursis (não corre no período de
+  prova; revogado, corre da revogação - STF, HC 91.562; STJ, AgRg no HC
+  514.499); medida de segurança do inimputável (pena máxima em abstrato -
+  STJ, AgRg no REsp 1.667.508; Súmula 527) e do semi-imputável (pena
+  substituída - art. 98).
+  Imprescritíveis: racismo (Lei 7.716/1989) sai da conta; injúria do art.
+  140, § 3º, e arts. 359-L/359-M do CP ficam "a verificar" se o prazo
+  venceu (CF, art. 5º, XLII e XLIV; STF, HC 154.248). Multa: aviso do Tema
+  1.405/STJ (a prisão não suspende a prescrição da multa).
   Saldo na evasão: com uma só condenação, pena menos o cumprido desde o termo
   (ou a pena remanescente do RSPE, no trecho em aberto). Com várias
   condenações unificadas, o RSPE não informa como o tempo cumprido foi
@@ -535,6 +555,43 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v6.16.37
+  - Prescrição conferida com o "Guia da Prescrição na Execução Penal"
+    (jurisprudência de 29/09/2026); os 7 casos práticos do guia conferem:
+      * contagem pelo art. 10 do CP: a data mostrada é o último dia do prazo
+        (4 anos a partir de 10/03/2017 terminam em 09/03/2021);
+      * restritiva de direitos: prazo sempre pela pena inteira, sem o art.
+        113 (STF, HC 236.292; STJ, AgRg no HC 640.938); novo campo "início
+        efetivo" - só ele interrompe, não a audiência admonitória (STJ,
+        AgRg no HC 956.128); do último comparecimento corre de novo;
+      * novas modalidades em "editar dados": sursis (não corre no período de
+        prova; revogado, corre da revogação) e medida de segurança
+        (inimputável: pena máxima em abstrato, Súmula 527; semi-imputável,
+        art. 98: pena substituída);
+      * novo crime (art. 117, VI): o fato de outra condenação do RSPE depois
+        do termo inicial, ou a data informada, reinicia o prazo na data do
+        fato, salvo prescrição já consumada (STF, HC 230.334; STJ, RHC
+        168.441; REsp 2.117.844);
+      * suspensão do livramento marca o início da contagem (TJMS,
+        1600308-86.2025), pela pena aplicada;
+      * imprescritíveis: racismo sai da conta; injúria racial (art. 140,
+        § 3º) e arts. 359-L/359-M ficam "a verificar" se o prazo venceu;
+      * avisos novos na memória: corrente simultânea x sucessiva na fuga com
+        várias execuções (AgRg no REsp 2.256.555 x AgRg no RHC 150.075);
+        remição no saldo como tese; reincidência só se reconhecida na
+        sentença (RHC 6.611); multa pelo Tema 1.405/STJ;
+      * fundamentação da executória descreve a interrupção sem fuga, o novo
+        crime, a restritiva, o sursis e a medida de segurança.
+  - Falta grave: prescrição disciplinar de 3 anos (2 até 05/05/2010), do
+    fato ou, na fuga, da recaptura (STJ, AgRg no HC 779.723 e HC 527.625).
+    Falta pendente prescrita não impede indulto nem comutação; a fuga antiga
+    com recaptura recente continua na lista; alerta para falta homologada
+    depois de prescrita; o prazo aparece em cada falta a apurar.
+  - Auditoria: "não iniciou" e "cumprimento interrompido" corrigidos - pena
+    aplicada sem desconto da detração; restante só na fuga e na revogação.
+  - Base jurídica 2026-09-29: notas novas e corrigida a atribuição do AgRg
+    no RHC 150.075 (corrente sucessiva, desfavorável).
 
 v6.16.36
   - Registro para o SAP reescrito em texto corrido, direto e sem parênteses:

@@ -335,8 +335,33 @@ def auditar(r, hoje=None):
                        "(falta nos 12 meses, indulto, comutação, linha do tempo)." % (fi["texto"], (" " + fi["ficha"]) if fi.get("ficha") else
                        " Ficha disciplinar não importada: importá-la ajuda a explicar o indício."), "LEP, arts. 50 e 118; STJ, Tema 1195.",
                        tipo="falta-a-apurar", ref=fi["chave"])
+        if fi.get("presc_limite"):
+            it["detalhe"] += (" Prescrição da falta disciplinar: 3 anos%s (menor prazo do art. 109 do CP - STJ, AgRg no HC 779.723), até %s; "
+                              "depois disso não gera regressão, perda de remidos nem nova data-base." % (
+                                  " da recaptura em %s - a fuga é falta permanente (STJ, HC 527.625)" % fi["presc_termo"] if fi.get("presc_fuga") else " do fato",
+                                  fi["presc_limite"]))
+        elif fi.get("presc_fuga") and fi["data"]:
+            it["detalhe"] += " Sem recaptura registrada: a fuga é falta permanente, e a prescrição disciplinar só corre da recaptura (STJ, HC 527.625)."
         it["preencher"] = {"campo": "falta|" + fi["chave"], "rotulo": fi["texto"], "tipo": "falta", "data": fi["data"], "padrao": fi["padrao"], "decisao": dec}
         itens.append(it)
+    # falta homologada depois de consumada a prescrição disciplinar (3 anos do fato; na fuga, da recaptura): cabe pedir que
+    # a falta seja desconsiderada (regressão, perda de remidos, data-base)
+    for i in incidentes:
+        if i.get("_ficha") or not rs.RE_FALTA_PROPRIA.search(rs._rotulo_incidente(i)) or rs._negado(i) or rs._pendente(i):
+            continue
+        d_f, d_d = rs._data_fato_falta(i), rs.to_date(i.get("data_decisao") or "")
+        if not d_f or not d_d or d_d <= d_f:
+            continue
+        fuga = any("INTERRUP" in (e.get("tipo") or "").upper() and rs.RE_FUGA_EV.search(e.get("motivo") or "")
+                   and abs(((rs.to_date(e.get("data") or "") or date.min) - d_f).days) <= 3 for e in eventos)
+        termo_f, lim_f = rs.prescricao_disciplinar(d_f, fuga, eventos)
+        if lim_f and d_d > lim_f:
+            itens.append(_item("alerta", "Falta grave de %s homologada depois da prescrição disciplinar" % rs.fmt(d_f),
+                               "Homologação em %s; o prazo de %s contado %s terminou em %s. Falta prescrita não gera regressão, perda de dias "
+                               "remidos nem nova data-base: cabe pedir que seja desconsiderada." % (
+                                   rs.fmt(d_d), "2 anos" if d_f < date(2010, 5, 6) else "3 anos",
+                                   ("da recaptura em %s (fuga é falta permanente)" % rs.fmt(termo_f)) if fuga else "do fato", rs.fmt(lim_f)),
+                               "CP, art. 109, VI, por analogia; STJ, AgRg no HC 779.723 e HC 527.625.", tipo="falta-homologada-apos-prescricao", ref=rs.fmt(d_f)))
     # contravenção com pena aplicada acima do que a LCP permite: quase sempre erro de cadastro do tipo no SEEU
     # (ex.: art. 35 da LCP no lugar do art. 35 da Lei 11.343/06, associação para o tráfico)
     for c in ativos:
@@ -1016,7 +1041,8 @@ def auditar(r, hoje=None):
     import rspe_view as _rv2
     if _rv2.nao_iniciou(r):
         itens.append(_item("info", "Não iniciou o cumprimento da pena", "O RSPE não registra início de cumprimento definitivo (só prisão provisória encerrada, ou nenhuma). "
-                           "A prescrição executória corre pela pena integral (menos a detração) desde o trânsito.", "CP, arts. 112, I, e 113.", tipo="nao-iniciou-o-cumprimento-da-pena"))
+                           "A prescrição executória corre pela pena aplicada, sem desconto da detração, desde o trânsito (STJ, AgRg no HC 967.565; STF, RHC 85.026). "
+                           "Mandado de prisão expedido e não cumprido não interrompe (STJ, AgRg no RHC 74.996).", "CP, arts. 110, 112, I, e 117, V.", tipo="nao-iniciou-o-cumprimento-da-pena"))
     elif "SUSPENSA" in (r.get("situacao_cumprimento") or ""):
         itens.append(_item("info", "Execução suspensa: %s" % (r.get("situacao_cumprimento") or "").split("(", 1)[-1].rstrip(")"),
                            "O RSPE registra a interrupção por prisão em outro processo: a pessoa segue presa, e esta execução fica suspensa até o "
@@ -1024,7 +1050,9 @@ def auditar(r, hoje=None):
                            "(CP, art. 116, p. único). Conferir se a prisão no outro processo já foi convertida em cumprimento da pena unificada.",
                            "CP, art. 116, p. único; LEP, art. 111.", tipo="execucao-suspensa-preso-em-outro-processo"))
     elif "INTERROMPIDA" in (r.get("situacao_cumprimento") or ""):
-        itens.append(_item("info", "Cumprimento interrompido (último evento é interrupção)", "Verificar se há prisão posterior não lançada ou se o apenado está foragido/em liberdade; a prescrição executória corre pela pena restante.", "CP, arts. 112, II, e 113.", tipo="cumprimento-interrompido-ultimo-evento-e-interru"))
+        itens.append(_item("info", "Cumprimento interrompido (último evento é interrupção)", "Verificar se há prisão posterior não lançada ou se a pessoa está foragida ou em liberdade. A prescrição executória corre da interrupção: "
+                           "pelo restante da pena só na fuga e na revogação do livramento (art. 113); nas demais interrupções, pela pena aplicada "
+                           "(STF, HC 236.292; STJ, RHC 67.403).", "CP, arts. 112, II, e 113.", tipo="cumprimento-interrompido-ultimo-evento-e-interru"))
 
     itens = _agrupar_por_crime(itens)
     n_alerta = sum(1 for i in itens if i["nivel"] == "alerta")

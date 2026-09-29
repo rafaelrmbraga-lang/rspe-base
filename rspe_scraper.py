@@ -1160,8 +1160,47 @@ def corte_faltas(hoje=None):
     return min(hoje - timedelta(days=3 * 365), min(DECRETOS.values()) - timedelta(days=365))
 
 
+def prescricao_disciplinar(d_fato, fuga=False, eventos=None):
+    """(termo inicial, último dia) da prescrição da falta disciplinar: sem prazo na LEP, aplica-se o menor prazo do art. 109 do
+    CP - 3 anos, ou 2 para fatos até 05/05/2010 (STJ, AgRg no HC 779.723; HC 140.870), contado o dia do começo (CP, art. 10). A
+    fuga é falta permanente: o prazo corre da recaptura (STJ, HC 527.625); foragido, não corre -> (None, None)."""
+    if not d_fato:
+        return None, None
+    termo = d_fato
+    if fuga:
+        rec = [to_date(e.get("data") or "") for e in eventos or [] if "INTERRUP" not in (e.get("tipo") or "").upper()]
+        rec = [x for x in rec if x and x > d_fato]
+        if not rec:
+            return None, None
+        termo = min(rec)
+    anos = 2 if d_fato < date(2010, 5, 6) else 3
+    try:
+        fim = termo.replace(year=termo.year + anos)
+    except ValueError:
+        fim = termo.replace(year=termo.year + anos, day=28)
+    return termo, fim - timedelta(days=1)
+
+
+def falta_prescrita(d_fato, fuga, eventos, hoje=None):
+    """Falta ainda não reconhecida em juízo cuja prescrição disciplinar se consumou: não gera regressão, perda de remidos,
+    nova data-base nem impede benefício."""
+    _, lim = prescricao_disciplinar(d_fato, fuga, eventos)
+    return bool(lim and lim < (hoje or date.today()))
+
+
 def faltas_editaveis(incidentes, eventos, hoje=None):
-    return [x for x in _faltas_editaveis(incidentes, eventos) if not x["data"] or to_date(x["data"]) >= corte_faltas(hoje)]
+    """Indícios de falta que ainda importam: posteriores ao corte ou, na fuga, com a prescrição disciplinar ainda em curso
+    (conta da recaptura). Cada um leva o prazo da prescrição disciplinar."""
+    out = []
+    for x in _faltas_editaveis(incidentes, eventos):
+        d = to_date(x["data"]) if x["data"] else None
+        fuga = bool(RE_FUGA_EV.search(x["texto"] or ""))
+        termo, lim = prescricao_disciplinar(d, fuga, eventos)
+        x["presc_termo"], x["presc_limite"] = (fmt(termo) if termo else ""), (fmt(lim) if lim else "")
+        x["presc_fuga"] = fuga
+        if not d or d >= corte_faltas(hoje) or (fuga and not falta_prescrita(d, True, eventos, hoje)):
+            out.append(x)
+    return out
 
 
 def _faltas_editaveis(incidentes, eventos):
@@ -1225,7 +1264,8 @@ def faltas_da_ficha(r, ficha, hoje=None):
     for e in ficha.get("eventos") or []:
         t = e.get("texto") or ""
         d = to_date((e.get("data") or "").replace(".", "/"))
-        if (not d or d < corte_faltas(hoje) or not re.search(r"\bFUGA\b|EVADIU|EVAS[ÃA]O|FORAGID|N[ÃA]O RETORNOU|EMPREENDEU FUGA", t, re.I)
+        if (not d or (d < corte_faltas(hoje) and falta_prescrita(d, True, r.get("_eventos"), hoje))
+                or not re.search(r"\bFUGA\b|EVADIU|EVAS[ÃA]O|FORAGID|N[ÃA]O RETORNOU|EMPREENDEU FUGA", t, re.I)
                 or re.search(r"ABANDONO D[OE] (SERVI|TRABALHO|CURSO)", t, re.I)
                 or any(x and abs((x - d).days) <= 30 for x in fugas_r + datas)):
             continue
@@ -1298,7 +1338,7 @@ def aplicar_decisoes_falta(r, decisoes):
             i["_falta"] = v
 
 
-def indicios_falta(incidentes, ref, dias=365, eventos=None, ate=None):
+def indicios_falta(incidentes, ref, dias=365, eventos=None, ate=None, hoje=None):
     """Faltas nos 'dias' anteriores a ref (art. 6º dos decretos; CP, art. 83, III, b), pela data do FATO.
     Devolve [(texto, firme)]: firme = falta grave, homologação ou sanção CONCEDIDA (sanção reconhecida em juízo);
     não firme = pendente, regressão sem menção a falta, perda de remidos sem falta datada (a perda é datada pela
@@ -1321,11 +1361,13 @@ def indicios_falta(incidentes, ref, dias=365, eventos=None, ate=None):
                 if i.get("_falta") == "sim":
                     out.append(("%s (%s - falta grave confirmada pelo operador)" % (txt, fmt(d)), True))
                 elif i.get("_fuga_ficha"):
-                    out.append(("%s (%s - fuga: falta grave, LEP, art. 50, II)" % (txt, fmt(d)), True))
+                    if not falta_prescrita(d, True, eventos, hoje):
+                        out.append(("%s (%s - fuga: falta grave, LEP, art. 50, II)" % (txt, fmt(d)), True))
                 elif i.get("_ficha_falta") and _pendente(i):
                     out.append(("%s (%s - pendente no RSPE; ficha: %s)" % (txt, fmt(d), i["_ficha_falta"]["texto"][:90]), True))
                 elif _pendente(i):
-                    out.append(("%s (%s - pendente: só impede se a sanção for reconhecida em juízo)" % (txt, fmt(d)), False))
+                    if not falta_prescrita(d, bool(RE_FUGA_EV.search(txt)), eventos, hoje):
+                        out.append(("%s (%s - pendente: só impede se a sanção for reconhecida em juízo)" % (txt, fmt(d)), False))
                 else:
                     out.append(("%s (%s)" % (txt, fmt(d)), True))
             continue
@@ -1353,7 +1395,7 @@ def indicios_falta(incidentes, ref, dias=365, eventos=None, ate=None):
                 else:
                     out.append(("%s (%s; sem falta homologada no RSPE - pode ser soma de penas)" % (txt, fmt(d)), False))
             continue
-        if limite <= d <= fim:
+        if limite <= d <= fim and not falta_prescrita(d, bool(RE_FUGA_EV.search(txt)), eventos, hoje):
             out.append(("%s (%s%s)" % (txt, fmt(d), " - pendente" if _pendente(i) else ""), False))
     # fuga registrada só como evento: falta grave (LEP, art. 50, II), salvo decisão contrária do operador; descumprimento: a
     # apurar (LEP, art. 50, V). A homologação pode vir depois - STJ, Tema 1195
@@ -1366,8 +1408,9 @@ def indicios_falta(incidentes, ref, dias=365, eventos=None, ate=None):
             if e.get("_falta") == "sim":
                 out.append(("%s (%s - falta grave confirmada pelo operador)" % (t, fmt(d)), True))
             elif RE_FUGA_EV.search(t):
-                out.append(("%s (%s - fuga: falta grave, LEP, art. 50, II)" % (t, fmt(d)), True))
-            else:
+                if not falta_prescrita(d, True, eventos, hoje):
+                    out.append(("%s (%s - fuga: falta grave, LEP, art. 50, II)" % (t, fmt(d)), True))
+            elif not falta_prescrita(d, False, eventos, hoje):
                 out.append(("%s (%s; falta a apurar)" % (t, fmt(d)), False))
     return list(dict.fromkeys(out))
 
