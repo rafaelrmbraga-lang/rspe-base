@@ -1,8 +1,8 @@
-RSPE BASE - SEEU  v6.16.40 (programa em abas)
+RSPE BASE - SEEU  v6.16.41 (programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-6.16.40. A documentação técnica completa (cada parâmetro, a regra, a norma e
+6.16.41. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -555,6 +555,17 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v6.16.41
+  - RIBUP-MS (Decreto Estadual 12.140/2006) na base jurídica (seção
+    ribup_ms): art. 133, III (falta grave em regime fechado ou semiaberto:
+    reabilitação em 12 meses do cumprimento da sanção) e art. 136 (nova falta
+    interrompe e acresce o prazo), conferidos em acórdãos do TJMS; os prazos
+    das faltas leve e média (art. 133, I e II) não foram confirmados.
+  - Ficha disciplinar: conduta má/péssima com falta grave recente que já
+    gerou regressão - item novo: exigir o prazo do RIBUP para a nova
+    progressão é bis in idem, e a conduta se readquire pelo art. 112, § 7º,
+    da LEP (TJMS, 3ª e 1ª Câmaras). O item de conduta sem falta cita o RIBUP.
 
 v6.16.40
   - Indulto (Decretos 2024/2025), com o sexo da ficha do SIAPEN:

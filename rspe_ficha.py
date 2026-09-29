@@ -668,11 +668,23 @@ def _conduta_x_ficha(r, f, hoje=None):
                  and x.get("situacao") != "arquivada"]
     recente_r = [t for t, _ in rs.indicios_falta(r.get("_incidentes", []), hoje, dias=(hoje - lim).days, eventos=r.get("_eventos", []))]
     if recente_f or recente_r:
+        # falta recente que já gerou regressão: o prazo de reabilitação do RIBUP não se aplica à nova progressão (bis in idem)
+        _dfs = [_dp(x.get("data_fato") or x.get("data_registro") or "") for x in recente_f if x.get("grave")]
+        _regs = [rs.to_date(i.get("data_referencia") or i.get("data_decisao") or "") for i in r.get("_incidentes", [])
+                 if re.search(r"REGRESS", rs._rotulo_incidente(i), re.I) and not rs._negado(i)]
+        _com_reg = [d for d in _dfs if d and any(x and d <= x <= d + timedelta(days=180) for x in _regs)]
+        if _com_reg:
+            return [_item_rf("verificar", "Conduta na ficha: %s - falta grave de %s já gerou regressão" % (c.lower(), rs.fmt(max(_com_reg))),
+                             "A falta grave foi punida com a regressão de regime. Para a nova progressão, exigir o prazo de reabilitação do RIBUP "
+                             "(Decreto Estadual 12.140/2006, art. 133) é bis in idem; o bom comportamento se readquire pelo art. 112, § 7º, da LEP "
+                             "(após 1 ano da falta ou antes, cumprido o requisito temporal).",
+                             "LEP, art. 112, §§ 6º e 7º; RIBUP-MS, art. 133; TJMS, 1603197-76.2026 e 1604181-94.2025 (3ª Câm.), 1605442-31.2024 (1ª Câm.).")]
         return []
     return [_item_rf("verificar", "Conduta na ficha: %s, sem falta nos últimos %d meses" % (c.lower(), meses),
                      "Nem o RSPE nem a ficha registram falta de %s até hoje. A classificação da conduta pela unidade deveria ter sido reabilitada "
-                     "(prazo de reabilitação do regulamento disciplinar) - pedir o atestado de conduta atualizado: ele pesa no requisito subjetivo da "
-                     "progressão e do livramento." % rs.fmt(lim), "LEP, art. 112, § 1º; CP, art. 83, III.")]
+                     "(RIBUP-MS, Decreto Estadual 12.140/2006, art. 133: falta grave, 12 meses do cumprimento da sanção; nova falta interrompe - art. 136) "
+                     "- pedir o atestado de conduta atualizado: ele pesa no requisito subjetivo da progressão e do livramento." % rs.fmt(lim),
+                     "LEP, art. 112, §§ 1º e 7º; CP, art. 83, III; RIBUP-MS, arts. 133 e 136.")]
 
 
 def _regime_x_ficha(r, f):
