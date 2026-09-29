@@ -1,8 +1,8 @@
-RSPE BASE - SEEU  v6.16.39 (programa em abas)
+RSPE BASE - SEEU  v6.16.40 (programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-6.16.39. A documentação técnica completa (cada parâmetro, a regra, a norma e
+6.16.40. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -555,6 +555,31 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v6.16.40
+  - Indulto (Decretos 2024/2025), com o sexo da ficha do SIAPEN:
+      * art. 10 (indulto das mulheres presas): III, c (60 anos ou mais, ou
+        menos de 21, crime sem violência, sem falta grave punida, 1/6 em 2024
+        e 1/8 em 2025) calculado; III, a, b e d (filhos, netos, deficiência)
+        a verificar; sexo não informado - a verificar "se mulher";
+      * art. 11 (comutação das mulheres): I (reincidente, pena até 8 anos sem
+        violência, 1/3 cumprido - 1/4) calculado e comparado com o art. 13
+        (vale a mais benéfica); II e III (filhos) a verificar com 1/5;
+      * § 2º, II a VI: o item indica a hipótese pelo sexo (II mulher, III
+        homem) e a ressalva do § 3º.
+  - Prescrição: regime aberto com a data da fuga desconhecida - o "último
+    comparecimento" informado em editar dados passa a valer também para a
+    privativa: a execução se tem por interrompida nessa data (STF, HC
+    166.850; TJMS, 1603205-53.2026), com o saldo refeito.
+  - Remição: feriado estadual de MS (11/10, Lei estadual 10/1979) descontado;
+    feriados municipais podem ser acrescentados na base (remicao.
+    feriados_adicionais).
+  - Conduta: prazo de reabilitação pela gravidade da última falta, editável
+    na base (conduta_reabilitacao_meses; padrão 12 meses).
+  - Base jurídica 2026-09-29c: "Lei 15.487/2026" conferida e não localizada
+    (ECA: só o § 1º do art. 240 e o art. 241-B); art. 338-A do CP conferido
+    (2 a 5 anos); homicídio §§ 2º-B e 2º-C hediondos, § 2º-D a verificar;
+    a jurisprudência da base aparece em "Legenda e método".
 
 v6.16.39
   - Indulto e comutação: no roubo (CP, art. 157), em qualquer forma, prevalece a

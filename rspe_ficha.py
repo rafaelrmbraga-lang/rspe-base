@@ -654,13 +654,22 @@ def _conduta_x_ficha(r, f, hoje=None):
     c = (f.get("conduta") or "").upper()
     if not re.search(r"\bM[ÁA]\b|P[ÉE]SSIMA|RUIM", c):
         return []
-    lim = hoje - timedelta(days=365)
+    # prazo de reabilitação por gravidade da última falta (base jurídica: conduta_reabilitacao_meses; padrão 12 meses)
+    try:
+        import rspe_regras as _rg
+        pz = (_rg.carregar() or {}).get("conduta_reabilitacao_meses") or {}
+    except Exception:
+        pz = {}
+    ult_f = max((x for x in f.get("faltas", []) if x.get("situacao") != "arquivada" and _dp(x.get("data_fato") or x.get("data_registro") or "")),
+                key=lambda x: _dp(x.get("data_fato") or x.get("data_registro")), default=None)
+    meses = int(pz.get("grave" if (ult_f or {}).get("grave", True) else "leve_media", 12) or 12)
+    lim = hoje - timedelta(days=int(round(meses * 365 / 12.0)))
     recente_f = [x for x in f.get("faltas", []) if (_dp(x.get("data_fato") or x.get("data_registro") or "") or date.min) >= lim
                  and x.get("situacao") != "arquivada"]
-    recente_r = [t for t, _ in rs.indicios_falta(r.get("_incidentes", []), hoje, eventos=r.get("_eventos", []))]
+    recente_r = [t for t, _ in rs.indicios_falta(r.get("_incidentes", []), hoje, dias=(hoje - lim).days, eventos=r.get("_eventos", []))]
     if recente_f or recente_r:
         return []
-    return [_item_rf("verificar", "Conduta na ficha: %s, sem falta nos últimos 12 meses" % c.lower(),
+    return [_item_rf("verificar", "Conduta na ficha: %s, sem falta nos últimos %d meses" % (c.lower(), meses),
                      "Nem o RSPE nem a ficha registram falta de %s até hoje. A classificação da conduta pela unidade deveria ter sido reabilitada "
                      "(prazo de reabilitação do regulamento disciplinar) - pedir o atestado de conduta atualizado: ele pesa no requisito subjetivo da "
                      "progressão e do livramento." % rs.fmt(lim), "LEP, art. 112, § 1º; CP, art. 83, III.")]
@@ -917,6 +926,15 @@ def feriados(ano):
           date(ano, 11, 15), date(ano, 12, 25), _pascoa(ano) - timedelta(days=2)}
     if ano >= 2024:
         fs.add(date(ano, 11, 20))
+    fs.add(date(ano, 10, 11))  # feriado estadual de Mato Grosso do Sul (Lei estadual 10/1979: criação do Estado)
+    # feriados adicionais editáveis na base jurídica (municipais, ponto facultativo reconhecido na unidade): "MM-DD"
+    try:
+        import rspe_regras as _rg
+        for x in ((_rg.carregar() or {}).get("remicao") or {}).get("feriados_adicionais") or []:
+            mm, dd = (int(v) for v in str(x).split("-")[:2])
+            fs.add(date(ano, mm, dd))
+    except Exception:
+        pass
     return fs
 
 

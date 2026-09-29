@@ -34,7 +34,7 @@ import rspe_relatorio as rrel
 import rspe_indulto_tl as rtl
 
 APP = "RSPE Base"
-VERSAO = "6.16.39"
+VERSAO = "6.16.40"
 
 
 def pasta_app():
@@ -66,6 +66,22 @@ def base_da_pasta(raiz, arquivo):
         partes = partes[1:]
     return _nome_seguro(partes[0]) if partes else None
 BASE_PADRAO = os.path.join(PASTA_BASES, "base_padrao.sqlite")
+
+def _ajuda_juris():
+    """Lista de jurisprudência da base jurídica (editável), exibida na Legenda: tese, nível e onde o programa a aplica."""
+    try:
+        lst = rg.jurisprudencia() or []
+    except Exception:
+        lst = []
+    if not lst:
+        return ""
+    esc = lambda t: str(t or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    itens = "".join("<li><b>%s</b>%s - %s%s</li>" % (esc(j.get("tema")), (" <i>(%s)</i>" % esc(j.get("nivel"))) if j.get("nivel") else "",
+                                                     esc(j.get("tese")), ("<br><span class=\"muted\">No programa: %s</span>" % esc(j.get("aplicacao"))) if j.get("aplicacao") else "")
+                    for j in lst if isinstance(j, dict))
+    return ("<h3>Jurisprudência da base jurídica (versão %s)</h3><p class=\"muted\">Referência das teses adotadas; editar a base altera esta lista. "
+            "As regras de cálculo ficam nas demais seções da base e no programa.</p><ul>%s</ul>" % (esc(rg.versao()), itens))
+
 
 AJUDA = """
 <h4>Cores</h4>
@@ -616,7 +632,7 @@ class Api:
         rv.HOJE = datetime.now().date()  # a data de referência acompanha o relógio (programa aberto após a meia-noite)
         if not self.base:
             return {"sem_base": True, "recentes": [{"caminho": p, "nome": os.path.splitext(os.path.basename(p))[0]} for p in self._recentes()],
-                    "hoje": rv.HOJE.strftime("%d/%m/%Y"), "abas": rv.ABAS, "rotulos": rv.ROTULO, "ajuda": AJUDA,
+                    "hoje": rv.HOJE.strftime("%d/%m/%Y"), "abas": rv.ABAS, "rotulos": rv.ROTULO, "ajuda": AJUDA + _ajuda_juris(),
                     "base_juridica": {"versao": rg.versao(), "origem": rg.origem()}, "registros": []}
         brutos = self.base.todos()
         baixas = self.base.baixas()
@@ -721,7 +737,7 @@ class Api:
             "hoje": rv.HOJE.strftime("%d/%m/%Y"),
             "abas": rv.ABAS,
             "rotulos": rv.ROTULO,
-            "ajuda": AJUDA,
+            "ajuda": AJUDA + _ajuda_juris(),
             "base_juridica": {"versao": rg.versao(), "origem": rg.origem()},
             # json_seguro: um Fraction ou date esquecido no modelo derrubava a lista inteira ("Object of type Fraction is not JSON serializable")
             "registros": rv.json_seguro([{k: v for k, v in m.items() if k != "_bruto"} for m in self._modelos]),

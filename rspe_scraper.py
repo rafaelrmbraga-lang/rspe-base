@@ -778,6 +778,8 @@ def hediondo_condicional(c):
             return True  # homicídio em atividade típica de grupo de extermínio (Lei 8.072, art. 1º, I), ainda que simples
         if par == "6":
             return None  # § 6º: milícia ou grupo de extermínio - só o grupo de extermínio torna hediondo: a verificar
+        if par == "2-D":
+            return None  # § 2º-D (organização ultraviolenta, milícia, grupo paramilitar): forma qualificada autônoma - a verificar
     if art == "149-A" and par == "1" and inc == "II":
         return None  # § 1º, II abrange criança, adolescente, idoso e pessoa com deficiência; hediondo só contra criança ou adolescente (art. 1º, XII)
     if art == "158" and par == "2":
@@ -1973,7 +1975,7 @@ def impeditivo_verificar(c):
     if _cp and _a in ("149-A", "158", "121") and hediondo_condicional(c) is None and not e_hediondo(c):
         return {"149-A": "tráfico de pessoas (art. 149-A, § 1º, II): hediondo só contra criança ou adolescente (Lei 8.072, art. 1º, XII) - conferir a vítima",
                 "158": "extorsão com violência (art. 158, § 2º): hedionda só se resultou morte, em fato até 22/01/2020 - conferir o resultado",
-                "121": "homicídio com a majorante do § 6º: hediondo se em atividade típica de grupo de extermínio (Lei 8.072, art. 1º, I) - conferir"}[_a]
+                "121": "homicídio do § 6º ou do § 2º-D: hediondo se em atividade típica de grupo de extermínio ou se tido por qualificado (Lei 8.072, art. 1º, I) - conferir"}[_a]
     return ""
 
 
@@ -3021,12 +3023,36 @@ def analise_decretos(campos, crimes, eventos, incidentes, hoje):
             elif not pat_inc:
                 nao.append("XIV e XV: não se aplicam - exigem crime contra o patrimônio sem violência ou grave ameaça")
             verificar.append("XVI: saúde/deficiência - não aferível pelo RSPE (laudo médico)")
+            # art. 10: indulto especial das mulheres presas (sexo da ficha do SIAPEN ou informado pelo operador)
+            _sx = (campos.get("_sexo") or "").upper()
+            if _sx != "M" and custodia_ref and not any(vga_indulto(c) for c in ativos):
+                _fr10 = F(1, 8) if ano == "2025" else F(1, 6)
+                _pun = [i for i in incidentes if RE_FALTA_PROPRIA.search(_rotulo_incidente(i)) and not _negado(i) and not _pendente(i)
+                        and (_data_fato_falta(i) or date.max) <= ref]
+                _se = "" if _sx == "F" else " - se mulher (sexo não informado: importar a ficha ou informar no registro do SAP)"
+                if _pun:
+                    if _sx == "F":
+                        nao.append("Art. 10: exige não ter sido punida por falta grave (falta de %s)" % fmt(_data_fato_falta(_pun[-1])))
+                elif idade is not None and (idade >= 60 or idade < 21) and cumprido >= pena_total * _fr10:
+                    (possiveis if _sx == "F" else verificar).append(
+                        "Art. 10, III, c: mulher presa com %s, crime sem violência ou grave ameaça, sem falta grave punida, %s da pena cumprido%s - "
+                        "conferir se responde a outro processo por crime violento (inciso I)" % (pl(idade, "ano", "anos"), _fr10, _se))
+                elif _sx == "F":
+                    if cumprido >= pena_total * _fr10:
+                        verificar.append("Art. 10, III, a e b: mulher presa, crime sem violência, %s cumprido - cabe se for mãe de filho de até %d anos "
+                                         "(ou com deficiência) que dependa dos seus cuidados, ou avó responsável por neto nessas condições - conferir" % (
+                                             _fr10, 16 if ano == "2025" else 12))
+                    verificar.append("Art. 10, III, d: mulher presa com deficiência (Lei 13.146, art. 2º), crime sem violência - independe de fração: conferir")
             if meio and not possiveis:
-                verificar.append("§ 2º, II a VI: com a metade do lapso, alcançaria %s se for gestante ou mãe/responsável por filho de até %d anos "
-                                 "ou com deficiência, homem único responsável, imprescindível ao cuidado de pessoa com deficiência, pessoa com "
-                                 "deficiência ou participante de justiça restaurativa - dados que o RSPE não traz: conferir" % (
+                _sx2 = (campos.get("_sexo") or "").upper()
+                _qd = {"F": "gestante ou mãe de filho de até %d anos (ou com doença crônica grave ou deficiência) - inciso II" % (16 if ano == "2025" else 14),
+                       "M": "único responsável por filho de até %d anos (ou com doença crônica grave ou deficiência) - inciso III" % (16 if ano == "2025" else 14)}.get(
+                    _sx2, "gestante, mãe ou homem único responsável por filho de até %d anos (II e III)" % (16 if ano == "2025" else 14))
+                verificar.append("§ 2º, II a VI: com a metade do lapso, alcançaria %s se for %s; imprescindível ao cuidado de criança de até 12 anos (IV); "
+                                 "pessoa com deficiência (V); ou participante de justiça restaurativa (VI) - dados que o RSPE não traz: conferir. "
+                                 "II a IV não valem para crime com violência contra filho, criança ou adolescente (§ 3º)" % (
                                      "o requisito temporal de algum inciso" if any(not isinstance(x, str) for x in meio) else "os incisos " + ", ".join(dict.fromkeys(meio)),
-                                     16 if ano == "2025" else 14))
+                                     _qd))
             # ordena por inciso
             ordem_inc = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII", "XIII", "XIV", "XV", "XVI"]
             def _k(t):
@@ -3071,8 +3097,10 @@ def analise_decretos(campos, crimes, eventos, incidentes, hoje):
             # indulto só pelo XIV/XV de parte dos crimes: a pena dos demais segue e a comutação não fica prejudicada
             so_parcial = bool(possiveis) and all(" - alcança as penas de " in p for p in possiveis)
             if possiveis:
-                inc = ", ".join(p.split(":")[0].replace(" (parcial)", "") for p in possiveis)
-                out[k] = "POSSÍVEL: art. 9º, " + inc + (" | " + aviso if aviso else "")
+                _ps = [p.split(":")[0].replace(" (parcial)", "") for p in possiveis]
+                _i9 = [x for x in _ps if not x.startswith("Art.")]
+                inc = "; ".join(filter(None, [("art. 9º, " + ", ".join(_i9)) if _i9 else "", ", ".join(x.replace("Art.", "art.") for x in _ps if x.startswith("Art."))]))
+                out[k] = "POSSÍVEL: " + inc + (" | " + aviso if aviso else "")
                 out[k + "_status"] = "possivel"
             elif [v for v in verificar if not v.startswith("XVI")]:
                 _rot = []
@@ -3085,6 +3113,8 @@ def analise_decretos(campos, crimes, eventos, incidentes, hoje):
                         _rot.append("XIV, XV (VGA em branco)")
                     elif p.startswith("§ 2º"):
                         _rot.append("§ 2º, II a VI (metade do lapso)")
+                    elif p.startswith("Art. 10"):
+                        _rot.append("art. 10 (mulheres)")
                 inc = ", ".join(dict.fromkeys(_rot)) or "conferir"
                 out[k] = "A VERIFICAR: art. 9º, " + inc + (" | " + aviso if aviso else "")
                 out[k + "_status"] = "verificar"
@@ -3108,7 +3138,7 @@ def analise_decretos(campos, crimes, eventos, incidentes, hoje):
                 linhas.append("Roubo (%s): tratado com violência ou grave ameaça, elementar do tipo (CP, art. 157), embora o RSPE marque %s - "
                               "fora dos incisos I, II, XIV e XV." % (crimes_curto(_rb), "VGA em branco" if any(not (c.get("vga") or "").strip() for c in _rb) else "VGA = N"))
             linhas.append("Não aferíveis pelo RSPE: § 2º, II a VI (filhos, deficiência, justiça restaurativa) - se presentes, os lapsos I a XI caem pela metade; "
-                          "art. 10 (indulto especial para mulheres) e art. 11 (comutação para mulheres); art. 1º, § 1º (acordo de colaboração premiada "
+                          "arts. 10 e 11 (mulheres): hipóteses de filhos, netos e deficiência - aferidas pelo sexo da ficha do SIAPEN; art. 1º, § 1º (acordo de colaboração premiada "
                           "afasta indulto e comutação, qualquer que seja o crime); art. 1º, § 3º, II e III (RDD; estabelecimento de segurança máxima: "
                           "em 2024 só o indulto, em 2025 também a comutação) - a verificar nos autos.")
             linhas.append("Multa: indultável e não é óbice - incapacidade econômica presumida para assistido da Defensoria (art. 12, § 2º, I). "
@@ -3155,6 +3185,21 @@ def analise_decretos(campos, crimes, eventos, incidentes, hoje):
                 com_txt = "POSSÍVEL: art. 13 (%s do %s)" % (prop13, base13)
             else:
                 com_txt = "não atinge (%s até %s)" % (fmt_fr(*f13, par2=False), fmt(ref))
+            # art. 11: comutação das mulheres - não cumulativa com a do art. 13; vale a mais benéfica (art. 13, § 3º)
+            _sx = (campos.get("_sexo") or "").upper()
+            nota11 = []
+            if _sx == "F" and not vga:
+                _b11 = cumprido if cumprido > remanescente else remanescente
+                if reinc and pena_total <= 8 * DIAS_ANO and cumprido >= pena_total / 3 and not (ok13 and F(prop13) >= F(1, 4)):
+                    com_txt = ("A VERIFICAR" if ressalvas else "POSSÍVEL") + ": art. 11, I (1/4 do %s; mulher reincidente, pena até 8 anos sem violência, 1/3 cumprido)" % (
+                        "cumprido" if cumprido > remanescente else "remanescente") + ((" - " + "; ".join(x[0] for x in ressalvas)) if ressalvas else "")
+                    nota11.append("Art. 11, I: comutação de 1/4 (%s), mais benéfica que a do art. 13 (%s) - hipóteses não cumulativas." % (
+                        dias_para_pena(int(_b11 / 4)), prop13 if ok13 else "não atingida"))
+                if cumprido >= pena_total / 5:
+                    nota11.append("Art. 11, %s: se tiver filho menor de 16 anos (ou com deficiência ou doença crônica grave) que dependa dos seus cuidados, "
+                                  "comutação de %s (1/5 cumprido) - conferir." % ("III" if reinc else "II", "1/2" if reinc else "2/3"))
+                    if not com_txt.startswith(("POSSÍVEL", "A VERIFICAR")):
+                        com_txt = "A VERIFICAR: art. 11, %s (mulher com filho menor de 16 anos ou com deficiência)" % ("III" if reinc else "II")
             com_txt += (" | " + aviso if aviso else "")
             out[kc + "_se_indeferido"] = com_txt
             if possiveis and not so_parcial:
@@ -3192,7 +3237,7 @@ def analise_decretos(campos, crimes, eventos, incidentes, hoje):
                 cl13.append("Prejudicada: o indulto é cabível e prevalece (art. 13, § 5º).")
             elif so_parcial:
                 cl13.append("O indulto do inciso XV alcança só parte dos crimes; a comutação incide sobre a pena dos demais - recalcular sem as penas indultadas.")
-            out[kc + "_detalhe"] = "\n".join(cl13)
+            out[kc + "_detalhe"] = "\n".join(cl13 + ["? " + x for x in nota11])
             out[kc + "_explica"] = "\n".join(["Decreto %s, art. 13 · data de referência %s. Exige %s da pena cumprida (primário) ou %s (reincidente) e reduz a pena em %s%s." % (
                 NUM_DECRETO.get(ano, ano), fmt(ref), f13[0], f13[1], A("art13_comutacao", "proporcao", "1/5"),
                 (" (%s no § 2º)" % A("art13_comutacao", "proporcao_par2", "2/3")))] + cl13)
