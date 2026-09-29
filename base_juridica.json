@@ -1,5 +1,5 @@
 {
- "versao": "2026-09-25b",
+ "versao": "2026-09-29b",
  "descricao": "Base juridica do RSPE Base. Editavel: o programa le este arquivo ao abrir (copia ao lado do .exe tem prioridade sobre a embutida). Datas em AAAA-MM-DD. Fracoes como 'num/den' ou percentual 'NN%'.",
  "prescricao": {
   "art109_tabela": [
@@ -49,9 +49,12 @@
     "218",
     "218-A",
     "218-B",
-    "218-C"
+    "218-C",
+    "215-A",
+    "216-B"
    ],
-   "lei_15160_2025_vigencia": "2025-07-04"
+   "lei_15160_2025_vigencia": "2025-07-04",
+   "nota_215A_216B": "215-A e 216-B incluídos com aviso 'conferir a vítima': o alcance de 'violência sexual contra a mulher' nesses tipos é discutível."
   },
   "lei_12234_2010_vigencia": "2010-05-06",
   "tema_788_modulacao_data": "2020-11-12",
@@ -73,7 +76,20 @@
    "STJ, Súmula 191: a pronúncia é causa interruptiva da prescrição, ainda que o Tribunal do Júri venha a desclassificar o crime.",
    "Detração (CP, art. 42): a custódia provisória anterior ao trânsito é informativa na prescrição executória - não reduz a pena nem o prazo (STJ, AgRg no HC 967.565, 5ª T., 18/02/2025; RHC 67.403, 5ª T., 16/03/2017; HC 400.704, 5ª T., 22/08/2017). Se igual ou superior à pena do processo, a extinção pelo cumprimento (LEP, art. 66, II) é hipótese a verificar: a mesma prisão pode servir a várias condenações (LEP, art. 111).",
    "Art. 113 com várias condenações unificadas: a prescrição de cada condenação corre pelo seu saldo na evasão (CP, arts. 113 e 119; STJ, AgRg no REsp 2.256.555, 5ª T., 15/06/2026; RHC 35.425, 5ª T., 07/08/2014; HC 261.866, 5ª T., 11/02/2014). O RSPE não informa como o tempo cumprido foi imputado entre as condenações: o programa calcula o saldo entre dois limites (este crime imputado primeiro ou por último) e conclui 'A VERIFICAR' quando os limites divergem.",
-   "Ordem de imputação do cumprimento entre condenações: pelo art. 76 do CP, executa-se primeiro a pena mais grave (STJ, RHC 9.158, 5ª T., 16/12/1999); a orientação prevalente do STJ é a ordem cronológica do trânsito em julgado, salvo quando a ordem da gravidade for mais favorável (STJ, HC 627.646, 5ª T., 23/03/2021, citando o AgRg no REsp 1.858.048). Enquanto uma condenação é cumprida, a prescrição das demais fica suspensa (art. 116, p. único); após a fuga, corre pelo saldo de cada uma (STJ, AgRg no RHC 150.075, 5ª T., 09/08/2022). Controvérsia registrada: as duas ordens são mostradas como hipóteses."
+   "Ordem de imputação do cumprimento entre condenações: pelo art. 76 do CP, executa-se primeiro a pena mais grave (STJ, RHC 9.158, 5ª T., 16/12/1999); a orientação prevalente do STJ é a ordem cronológica do trânsito em julgado, salvo quando a ordem da gravidade for mais favorável (STJ, HC 627.646, 5ª T., 23/03/2021, citando o AgRg no REsp 1.858.048). Enquanto uma condenação é cumprida, a prescrição das demais fica suspensa (art. 116, p. único). Fuga com várias execuções: corrente simultânea, adotada pelo programa - cada condenação corre pelo seu saldo, nunca pela pena unificada (STJ, AgRg no REsp 2.256.555, 5ª T., 15/06/2026; HC 261.866, 5ª T., 11/02/2014); corrente sucessiva, desfavorável - só corre a execução em curso e as demais ficam suspensas (STJ, AgRg no RHC 150.075, 5ª T., 09/08/2022). As duas ordens de imputação são mostradas como hipóteses.",
+   "CP, art. 10: o dia do começo inclui-se no cômputo; o prazo termina na véspera do mesmo dia do ano (4 anos a partir de 10/03/2017 terminam em 09/03/2021). O programa mostra o último dia do prazo.",
+   "Pena que regula o prazo: a pena total aplicada, sem desconto da detração (STJ, AgRg no HC 967.565; STF, RHC 85.026; TJMS, 1604926-74.2025). O restante da pena só na fuga e na revogação do livramento (art. 113), lido de forma restritiva: não na restritiva descumprida ou convertida em prisão (STJ, AgRg no HC 640.938; TJMS, 1602956-10.2023) nem no descumprimento do semiaberto harmonizado (STF, HC 236.292, 2ª T., 22/09/2025).",
+   "Restritiva de direitos: interrompe só o efetivo início (1º comparecimento ao serviço ou atividade computada - STJ, AgRg no HC 956.128 e AgRg no HC 413.273); audiência admonitória e termo de compromisso não interrompem; audiência não realizada e mandado não cumprido também não (STJ, AgRg no RHC 74.996). Do último comparecimento, o prazo corre pela pena inteira (art. 112, II).",
+   "Sursis: no período de prova a prescrição não corre (STF, HC 91.562); revogado, corre da decisão que o revoga (art. 112, I, parte final; STJ, AgRg no HC 514.499), pela pena inteira.",
+   "Livramento suspenso e não revogado: a prescrição corre da suspensão (TJMS, 1600308-86.2025); a suspensão cautelar não interrompe. Regime aberto com data da fuga desconhecida: conta da ausência à audiência de justificação (STF, HC 166.850) ou do último comparecimento (TJMS, 1603205-53.2026).",
+   "Novo crime (art. 117, VI): interrompe na data do fato, não na da condenação (STF, HC 230.334; STJ, AgRg no HC 861.588); todo o prazo recomeça (art. 117, § 2º). O marco se confirma com o trânsito da nova condenação (STJ, REsp 2.117.844) e não opera se a prescrição já se consumara (STJ, RHC 168.441). Efeito pessoal (art. 117, § 1º).",
+   "Reincidência (+1/3, art. 110): pressupõe reincidência reconhecida na condenação; declarada a primariedade na sentença, a reincidência vista só na execução não aumenta o prazo (STJ, RHC 6.611); o Tema 1.208/STJ trata de benefícios. O decurso posterior do período depurador não afasta o aumento (TJMS, 1607078-95.2025). Na punitiva, a reincidência não influi (Súmula 220/STJ).",
+   "Art. 115: maior de 70 na data da sentença; completar 70 até o acórdão confirmatório não basta (STF, HC 235.274; STJ, AgRg no RHC 94.376). Vale também na executória e no cálculo pelo restante.",
+   "Multa (Tema 1.405/STJ, REsp 2.225.431, 3ª Seção, 11/03/2026): prazo do art. 114 do CP (2 anos se isolada; o da privativa se cumulada), com as causas de suspensão e interrupção da dívida ativa (Lei 6.830/1980; CTN, art. 174), sem as dos arts. 116 e 117 do CP; a prisão não suspende a prescrição da multa (STJ, REsp 2.268.643, 6ª T., 19/08/2026). Multa não paga por hipossuficiência não impede a extinção (STJ, Tema 931; STF, ADI 7.032).",
+   "Medida de segurança: do inimputável, prazo pela pena máxima em abstrato (STJ, AgRg no REsp 1.667.508; STF, HC 97.621), interrompido pelo início do cumprimento, com duração limitada ao máximo cominado (Súmula 527/STJ); do semi-imputável (art. 98), pela pena concreta substituída (STJ, HC 53.170).",
+   "Imprescritíveis: racismo (CF, art. 5º, XLII; Lei 7.716/1989), incluída a injúria racial (STF, HC 154.248, Plenário, 28/10/2021; RE 1.467.380, 2ª T., 28/10/2024), e a ação de grupos armados contra a ordem constitucional (CF, art. 5º, XLIV). Hediondos e tráfico prescrevem normalmente (art. 5º, XLIII).",
+   "Falta grave (prescrição disciplinar): menor prazo do art. 109 - 3 anos, ou 2 para faltas até 05/05/2010 (STJ, AgRg no HC 779.723; HC 140.870); do fato até a decisão que homologa; na fuga, falta permanente, conta da recaptura (STJ, HC 527.625). Falta prescrita não gera regressão, perda de remidos nem nova data-base.",
+   "Controvérsias registradas: regime aberto ou domiciliar como 'preso por outro motivo' (a defesa sustenta que o art. 116 exige prisão efetiva; o TJMS, 1607958-87.2025, cita julgados do STJ que estendem a regra); remição no restante após a fuga (LEP, art. 128 - tese favorável, sem precedente específico); acórdão confirmatório interrompe só a punitiva, não a executória (Tema 1.100/STJ)."
   ]
  },
  "progressao": {
@@ -289,6 +305,10 @@
     "3",
     "5",
     "6"
+   ],
+   "6368": [
+    "12",
+    "13"
    ]
   },
   "paragrafo_unico": {
@@ -298,7 +318,7 @@
     "3"
    ],
    "10826": {
-    "16": "só uso proibido (art. 16, § 2º)",
+    "16": "só uso proibido (art. 16, § 2º; caput com uso proibido em fatos até 22/01/2020) - uso restrito e numeração suprimida não são hediondos (Lei 13.964/2019 retroage; STJ, HC 575.933)",
     "17": "sempre",
     "18": "sempre"
    },
@@ -306,12 +326,8 @@
     "2": "só quando direcionada à prática de crime hediondo ou equiparado"
    },
    "8069": [
-    "240",
-    "241",
-    "241-A",
-    "241-B",
-    "241-D",
-    "244-A"
+    "240 §1",
+    "241-B"
    ],
    "15358": [
     "2 caput, §§ 1º e 3º",
@@ -346,7 +362,9 @@
    },
    "2848:158 §2": {
     "desde": "1990-07-26",
-    "lei": "Lei 8.072/90 (extorsão qualificada por morte)"
+    "lei": "Lei 8.072/90 (extorsão qualificada por morte)",
+    "ate": "2020-01-22",
+    "nota": "só com resultado morte; desde a Lei 13.964/2019, o art. 1º, III, refere o § 3º"
    },
    "2848:158 §3": {
     "desde": "2020-01-23",
@@ -484,10 +502,6 @@
     "desde": "2020-01-23",
     "lei": "Lei 13.964/2019 (ORCRIM voltada a hediondos)"
    },
-   "8069:240": {
-    "desde": "2026-08-07",
-    "lei": "Lei 15.487/2026"
-   },
    "8069:241-B": {
     "desde": "2024-01-15",
     "lei": "Lei 14.811/2024"
@@ -520,30 +534,22 @@
     "desde": "2024-01-15",
     "lei": "Lei 14.811/2024"
    },
-   "8069:241": {
-    "desde": "2026-08-07",
-    "lei": "Lei 15.487/2026"
-   },
-   "8069:241-A": {
-    "desde": "2026-08-07",
-    "lei": "Lei 15.487/2026"
-   },
-   "8069:241-D": {
-    "desde": "2026-08-07",
-    "lei": "Lei 15.487/2026"
-   },
-   "8069:244-A": {
-    "desde": "2026-08-07",
-    "lei": "Lei 15.487/2026"
-   },
    "2848:214": {
     "desde": "1990-07-26",
     "ate": "2009-08-09",
     "lei": "Lei 8.072/90, art. 1º, VI, redação original e da Lei 8.930/94: 'atentado violento ao pudor (art. 214 e sua combinação com o art. 223, caput e parágrafo único)'; tipo revogado pela Lei 12.015/2009 (conduta absorvida pelo art. 213)"
+   },
+   "6368:12": {
+    "desde": "1990-07-26",
+    "lei": "Lei 8.072/1990, art. 2º (tráfico equiparado)"
+   },
+   "6368:13": {
+    "desde": "1990-07-26",
+    "lei": "Lei 8.072/1990, art. 2º (tráfico equiparado)"
    }
   },
   "condicional_paragrafos": {
-   "_nota": "Artigos do CP em que a hediondez depende do parágrafo/inciso (Lei 8.072/90, art. 1º). Lista de '§X' ou '§X INCISO'; '§X' vale para qualquer inciso. Fora da lista = não hediondo. A época do fato é conferida à parte (tabela 'desde').",
+   "_nota": "Artigos do CP em que a hediondez depende do parágrafo/inciso (Lei 8.072/90, art. 1º). Lista de '§X' ou '§X INCISO'; '§X' vale para qualquer inciso. Fora da lista = não hediondo. A época do fato é conferida à parte (tabela 'desde'). Casos especiais no código: 121 com 'extermínio' no tipo = hediondo, 121 § 6º = a verificar; 149-A § 1º, II = a verificar (só criança ou adolescente); 158 § 2º = hediondo só com morte e fato até 22/01/2020; 129 §§ 2º e 3º = a verificar (vítima).",
    "121": [
     "§2"
    ],
@@ -575,6 +581,31 @@
     "§1-A",
     "§1-B"
    ]
+  },
+  "pendentes_de_confirmacao": {
+   "_nota": "Hediondez atribuída à 'Lei 15.487/2026' (vigência 07/08/2026) NÃO confirmada no texto compilado da Lei 8.072 (art. 1º, p. ú., VII traz só o § 1º do art. 240 e o art. 241-B do ECA). Retirada do cálculo até a confirmação; para reativar, conferir a lei e devolver as chaves a 'desde' e a paragrafo_unico['8069'].",
+   "entradas": {
+    "8069:240": {
+     "desde": "2026-08-07",
+     "lei": "Lei 15.487/2026"
+    },
+    "8069:241": {
+     "desde": "2026-08-07",
+     "lei": "Lei 15.487/2026"
+    },
+    "8069:241-A": {
+     "desde": "2026-08-07",
+     "lei": "Lei 15.487/2026"
+    },
+    "8069:241-D": {
+     "desde": "2026-08-07",
+     "lei": "Lei 15.487/2026"
+    },
+    "8069:244-A": {
+     "desde": "2026-08-07",
+     "lei": "Lei 15.487/2026"
+    }
+   }
   }
  },
  "vga_esperado": {
@@ -592,7 +623,7 @@
    "213",
    "214",
    "217-A",
-   "1"
+   "9455:1"
   ],
   "N": [
    "155",
@@ -607,18 +638,18 @@
    "311",
    "330",
    "334",
-   "33",
-   "35",
-   "28",
-   "14",
-   "16",
-   "12",
-   "2",
-   "244-B",
-   "10",
+   "11343:33",
+   "11343:35",
+   "11343:28",
+   "10826:14",
+   "10826:16",
+   "10826:12",
+   "12850:2",
+   "8069:244-B",
+   "9437:10",
    "180-A"
   ],
-  "nota": "Lista orientativa por artigo do CP (e arts. 33/35/28 da Lei 11.343, 12/14/16 da Lei 10.826, 2 da Lei 12.850, 1 da Lei 9.455). Art. 329 (resistencia) e 331 (desacato): VGA controvertido - verificar. 329 e 331 retirados da lista N (o tipo de resistência exige violência ou ameaça; desacato controvertido). Arts. 215, 218 e 218-B não têm violência nem grave ameaça no tipo; art. 150 depende do § 1º (fora das duas listas)."
+  "nota": "Artigo simples = Código Penal; 'lei:artigo' = lei especial (a busca confere a lei). Lista orientativa por artigo do CP (e arts. 33/35/28 da Lei 11.343, 12/14/16 da Lei 10.826, 2 da Lei 12.850, 1 da Lei 9.455). Art. 329 (resistencia) e 331 (desacato): VGA controvertido - verificar. 329 e 331 retirados da lista N (o tipo de resistência exige violência ou ameaça; desacato controvertido). Arts. 215, 218 e 218-B não têm violência nem grave ameaça no tipo; art. 150 depende do § 1º (fora das duas listas)."
  },
  "patrimonio_cp": {
   "de": 155,
@@ -1223,6 +1254,20 @@
    "nivel": "orientativo",
    "tese": "A detração não interfere no prazo prescricional; com a fuga, o prazo da prescrição executória regula-se pelo tempo restante da pena (CP, art. 113), contado da evasão.",
    "aplicacao": "A custódia anterior ao trânsito aparece na memória de cálculo como detração informativa; só o cumprimento posterior ao termo inicial entra no saldo da evasão."
+  },
+  {
+   "tema": "STJ Tema 1355 (repetitivo)",
+   "fonte": "STJ",
+   "tese": "Associação para o tráfico (Lei 11.343/06, art. 35): livramento condicional após 2/3 da pena (art. 44, p. ú.).",
+   "nivel": "repetitivo",
+   "aplicacao": "Referência (a lista não é lida pelo cálculo)."
+  },
+  {
+   "tema": "STJ AgRg no HC 675.062 (6ª T., 03/08/2021)",
+   "fonte": "STJ",
+   "tese": "Reincidente não específico em crime com violência ou grave ameaça: por analogia in bonam partem, aplica-se o percentual do primário com violência (25%).",
+   "nivel": "orientativo",
+   "aplicacao": "Auditoria: item 'a verificar' quando o SEEU aplica 30% e a reincidência pode não ser em crime violento (fatos de 23/01/2020 a 07/05/2026)."
   }
  ],
  "reincidencia": {
@@ -1231,7 +1276,7 @@
   "art42_detracao": "computa-se na pena o tempo de prisão provisória"
  },
  "pena_maxima_abstrata": {
-  "_nota": "Pena máxima em abstrato (anos; 0.5 = 6 meses) usada quando o RSPE corta o texto do tipo penal. Chave: 'lei:artigo' ou 'lei:artigo §X'. Só o Decreto 11.302/2022 (art. 5º) usa esta tabela. Edite/complete conforme necessário.",
+  "_nota": "Pena máxima em abstrato, em anos (decimais = meses: 0,5 = 6 meses). Valor único ou lista por redação da lei [{'ate': 'aaaa-mm-dd', 'anos': X}, {'de': 'aaaa-mm-dd', 'anos': Y}], escolhida pela data do fato. Chave 'lei:artigo', 'lei:artigo §X' ou 'lei:artigo §X INCISO'. Usada quando o RSPE corta o texto do tipo: Decreto 11.302/2022 (art. 5º), prescrição da medida de segurança (inimputável) e conferência das contravenções. Art. 338-A: conferir a lei e a vigência.",
   "_nota_lcp": "Contravenções (Decreto-Lei 3.688/41, LCP), conferidas no texto compilado do Planalto: máximo da prisão simples de cada tipo; nos parágrafos com causa de aumento, o máximo com o aumento (19 §1: +1/2; 21 §1: +1/2; 21 §2: triplo, Lei 14.994/2024; 50 §1: +1/3). Revogados e só com multa ficam fora (arts. 27, 39, 60, 61, 65, 69). Art. 25: não recepcionado (STF, RE 583.523, Tema 113). Contravenção fora desta lista: o programa usa o teto de 5 anos do art. 10 da LCP.",
   "3688:18": 1,
   "3688:19": 0.5,
@@ -1279,7 +1324,16 @@
   "2848:129 §2": 8,
   "2848:129 §3": 12,
   "2848:129 §6": 1,
-  "2848:129 §9": 3,
+  "2848:129 §9": [
+   {
+    "ate": "2024-10-09",
+    "anos": 3
+   },
+   {
+    "de": "2024-10-10",
+    "anos": 5
+   }
+  ],
   "2848:147": 0.5,
   "2848:148": 3,
   "2848:150": 0.25,
@@ -1338,9 +1392,28 @@
   "9503:306": 3,
   "9503:309": 1,
   "9503:310": 1,
-  "11340:24-A": 2,
+  "11340:24-A": [
+   {
+    "ate": "2024-10-09",
+    "anos": 2
+   },
+   {
+    "de": "2024-10-10",
+    "anos": 5
+   }
+  ],
   "8069:244-B": 4,
-  "12850:2": 8
+  "12850:2": 8,
+  "2848:157 §3 I": 18,
+  "2848:157 §3 II": 30,
+  "2848:129 §13": 5,
+  "2848:121-A": 40,
+  "2848:121-B": 40,
+  "2848:121 §2-D": 40,
+  "2848:129 §3-A": 40,
+  "2848:147-B": 2,
+  "2848:147-C": 3,
+  "2848:338-A": 5
  },
  "presuncoes": {
   "hipossuficiencia": {
@@ -1355,7 +1428,7 @@
   }
  },
  "decretos_linha": {
-  "_nota": "Parâmetros da linha do tempo de indulto e comutação (aba Indulto / Comutação). Nenhuma fração, janela, vedação ou data fica no código: cada decreto é cadastrado aqui. Decreto com 'cadastrado': false dá A VERIFICAR, nunca aplicação por analogia. hipoteses: a primeira que se aplica à pena considerada (vga true/false/null; pena_max_anos) define a fração. vedacoes.regra: art1_2024_2025 (listas art1_* de decretos_indulto) ou art7_2022. falta_grave.ate: 'publicacao' fecha a janela na publicação.",
+  "_nota": "Parâmetros da linha do tempo de indulto e comutação (aba Indulto / Comutação). A linha do tempo não decide: status, números e memória vêm da análise da aba (rspe_scraper). Desta seção a linha do tempo usa as datas, a regra de vedação que classifica cada crime, a janela da falta (só o desenho) e as hipóteses dos incisos I a III (só a projeção 'ainda não'). Ficam no código: o 2/3 do art. 7º, p. ú., o 100% do Decreto 2022 (art. 11, p. ú.), a janela de 365 dias do art. 6º e as tabelas ART1_*/ART7_2022_*. As frações da aba vêm de decretos_indulto.art9_incisos: ao editar uma fração, editar também 'hipoteses' aqui. Decreto com 'cadastrado': false dá A VERIFICAR, nunca aplicação por analogia.",
   "decretos": [
    {
     "id": "2022",
