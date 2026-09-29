@@ -117,7 +117,7 @@ def natureza(c, D, ref):
     else:
         return {"selo": "A_VERIFICAR", "motivo": "vedações do decreto não cadastradas", "dispositivo": "Decreto %s" % (num or "?")}
     lei, art = rs.num_lei(c.get("lei")), rs.num_art(c.get("artigo"))
-    if lei in ("2848", "") and art in rs.HEDIONDOS_CONDICIONAIS and rs.hediondo_condicional(c) is None and not rs.e_hediondo(c, ref):
+    if lei in ("2848", "") and art in rs.hediondos_condicionais() and rs.hediondo_condicional(c) is None and not rs.e_hediondo(c, ref):
         return {"selo": "A_VERIFICAR", "motivo": "a hediondez do art. %s depende de parágrafo, inciso ou majorante que o SEEU não informa" % art,
                 "dispositivo": "Lei 8.072/90, art. 1º; Decreto %s (vedação ao hediondo)" % num,
                 "se_sim": "forma hedionda: IMPEDITIVO", "se_nao": "forma simples: NÃO IMPEDITIVO"}
@@ -438,7 +438,7 @@ def linha(r, hoje=None):
         d0 = _d(e.get("data"))
         if d0 and RE_FUGA.search(tt) and e.get("_falta") != "nao" and not any(f["fato"] and abs((f["fato"] - d0).days) <= 1 for f in faltas):
             # fuga: falta grave (LEP, art. 50, II) - a homologação posterior não muda a data do fato (STJ, Tema 1195)
-            faltas.append({"fato": d0, "homol": None, "pendente": False, "fuga": True, "texto": tt + " (fuga: falta grave, LEP, art. 50, II)",
+            faltas.append({"fato": d0, "homol": None, "pendente": False, "fuga": True, "texto": tt + " (fuga: falta grave, LEP, art. 50, II - falta não homologada)",
                            "sub": "fuga (LEP, art. 50, II)"})
 
     # ---- decretos ----
@@ -628,7 +628,10 @@ def _decreto(D, ref, pub, C, cumprido, data_atinge, faltas, hoje, ultimo, em_cur
         firmes, verif = (num_i.get("falta_firme"), num_i.get("falta_verif")) if num_i else rs.falta_art6(incidentes, ref, eventos, pub)
         if firmes:
             est_f = "ko"
-            txt_f = ("Falta com sanção reconhecida dentro da janela (%s a %s): %s. Não cabe o indulto nem a comutação (%s)." % (
+            _nh = all("não homologada" in f for f in firmes)
+            txt_f = (("Falta grave dentro da janela (%s a %s), falta não homologada: %s. Tratada como impeditiva - não cabe o indulto nem a "
+                      "comutação (%s); a homologação pode ser posterior (STJ, Tema 1195)." if _nh else
+                      "Falta com sanção reconhecida dentro da janela (%s a %s): %s. Não cabe o indulto nem a comutação (%s).") % (
                 janela["ini"], janela["fim"], "; ".join(firmes), FG.get("dispositivo", "")))
         elif verif:
             est_f, txt_f = "q", "Falta na janela a verificar (só impede se a sanção for reconhecida em juízo): %s." % "; ".join(verif)

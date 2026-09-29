@@ -41,24 +41,42 @@ def carregar(forcar=False):
     global _BASE, _ORIGEM
     if _BASE is not None and not forcar:
         return _BASE
-    lidas = []
+    lidas, erros = [], []
+    embutida = os.path.abspath(_recurso("base_juridica.json"))
     for c in (os.path.join(_pasta_app(), "base_juridica.json"), _recurso("base_juridica.json")):
         if any(os.path.abspath(c) == os.path.abspath(x[0]) for x in lidas):
+            continue
+        if not os.path.exists(c):
             continue
         try:
             with open(c, encoding="utf-8") as f:
                 lidas.append((c, json.load(f)))
-        except Exception:
-            continue
+        except Exception as e:
+            erros.append("%s ignorada: JSON inválido (%s)" % (c, e))
     if not lidas:
-        _BASE, _ORIGEM = {}, "(não encontrada)"
+        _BASE, _ORIGEM = {}, "(não encontrada)" + ("; " + "; ".join(erros) if erros else "")
         return _BASE
     # a mais recente primeiro (versão 'aaaa-mm-dd' + sufixo; em empate, a cópia ao lado do executável)
     lidas.sort(key=lambda x: str(x[1].get("versao") or ""), reverse=True)
     _ORIGEM, _BASE = lidas[0]
+    # completa só a partir da base EMBUTIDA (tabela nova de uma versão do programa); uma cópia editável mais antiga não
+    # devolve o que a versão nova retirou
     for c, b in lidas[1:]:
-        _completar(_BASE, b)
+        if os.path.abspath(c) == embutida:
+            _completar(_BASE, b)
+    _sem_nulos(_BASE)  # chave com valor null na cópia editável = removida de propósito
+    if erros:
+        _ORIGEM = "%s (atenção: %s)" % (_ORIGEM, "; ".join(erros))
     return _BASE
+
+
+def _sem_nulos(d):
+    if isinstance(d, dict):
+        for k in [k for k, v in d.items() if v is None]:
+            del d[k]
+        for v in d.values():
+            _sem_nulos(v)
+    return d
 
 
 def origem():
@@ -271,12 +289,14 @@ def hediondos():
     return carregar().get("hediondos", {})
 
 
-def vga_esperado(artigo):
+def vga_esperado(artigo, lei=""):
+    """'S'/'N' pela lista da base: 'lei:artigo' para lei especial; artigo simples só vale para o Código Penal."""
     v = carregar().get("vga_esperado", {})
-    if artigo in v.get("S", []):
-        return "S"
-    if artigo in v.get("N", []):
-        return "N"
+    cp = lei in ("", "2848")
+    for rot in ("S", "N"):
+        lst = v.get(rot, [])
+        if ("%s:%s" % (lei, artigo)) in lst or (cp and artigo in lst):
+            return rot
     return None
 
 

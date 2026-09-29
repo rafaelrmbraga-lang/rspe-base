@@ -1,8 +1,8 @@
-RSPE BASE - SEEU  v6.16.37 (programa em abas)
+RSPE BASE - SEEU  v6.16.38 (programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-6.16.37. A documentação técnica completa (cada parâmetro, a regra, a norma e
+6.16.38. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -555,6 +555,52 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v6.16.38
+  - Correções da verificação da base jurídica (base 2026-09-29b):
+      * Indulto 2024/2025: VGA em branco em tipo que costuma ter violência
+        (roubo, extorsão...) não abre mais os incisos I e II nem dá XV
+        "POSSÍVEL": fica A VERIFICAR; tetos dos incisos XI a XIII lidos da
+        base (antes, 12 anos fixos); § 2º, II a VI: se a metade do lapso já
+        foi cumprida, item "a verificar" (gestante, mãe, responsável etc.);
+        lapsos em anos (IV, V, VI) pelo calendário; decreto só com datas na
+        base fica A VERIFICAR (nada por analogia); tabelas da base já na
+        primeira análise.
+      * Art. 6º: fuga ou falta sem homologação segue como NÃO CABE, com a
+        marcação "falta não homologada" no resultado, na ficha do assistido
+        e na linha do tempo.
+      * Hediondez: ECA - só o § 1º do art. 240 e o art. 241-B (a "Lei
+        15.487/2026" não foi confirmada: entradas guardadas em
+        hediondos.pendentes_de_confirmacao); art. 149-A, § 1º, II = a
+        verificar (só criança ou adolescente); art. 158, § 2º = hedionda só
+        com morte e fato até 22/01/2020; art. 16 da Lei 10.826 = só o uso
+        proibido (a Lei 13.964/2019 retroage); Lei 15.358, art. 2º = só
+        caput e §§ 1º e 3º; Lei 6.368/1976 (arts. 12 e 13) equiparada;
+        homicídio em grupo de extermínio; reservas do código iguais à base.
+      * Reincidência pela lei, igual na progressão e no livramento: marcação
+        do RSPE ou condenação anterior transitada antes do fato, fora a
+        depurada (CP, art. 64, I: mais de 5 anos da extinção). Itens novos:
+        "reincidente pela lei sem marcação" e "condenação depurada".
+      * Livramento: a vedação ao reincidente específico só quando o RSPE a
+        demonstra; alerta do art. 88 (livramento revogado por crime cometido
+        durante o período de prova).
+      * Progressão: frações comparadas com exatidão (1/6 x 16% não passa mais
+        como "confere"); reincidente em crime violento com 30% no SEEU:
+        "a verificar - 25% se a reincidência não for em crime violento"
+        (AgRg no HC 675.062); progressão especial da mulher (1/8) não
+        aparece quando a ficha informa sexo masculino.
+      * Pena: "12 meses" vale 1 ano (365 dias); pena máxima em abstrato com
+        redação por data do fato (art. 24-A da Lei 11.340 e art. 129, § 9º:
+        5 anos desde 10/10/2024), tipos novos na tabela, incisos do art. 157,
+        § 3º, e meses exatos (16,67 = 16 anos e 8 meses); medida de segurança
+        com fato posterior a 2022 pode informar a pena máxima na Auditoria.
+      * Prescrição: 215-A e 216-B na exceção da Lei 15.160 (aviso conferir);
+        detração conta o dia da prisão e o da soltura, como o SEEU.
+      * Base jurídica: chave com valor null na cópia editável = removida; uma
+        cópia editável antiga não devolve o que a versão nova retirou; JSON
+        inválido aparece como aviso na origem da base; vga_esperado confere
+        a lei ('9455:1', '11343:33'...); nota de decretos_linha corrigida;
+        Tema 1.355/STJ e AgRg no HC 675.062 na jurisprudência.
 
 v6.16.37
   - Prescrição conferida com o "Guia da Prescrição na Execução Penal"

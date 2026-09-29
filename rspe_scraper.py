@@ -136,6 +136,7 @@ def pena_para_dias(txt):
     if not m:
         return None
     a, me, d = (int(x) for x in m.groups())
+    a, me = a + me // 12, me % 12  # '12 meses' é 1 ano (365 dias), não 360: não cai de faixa no art. 109 nem na pena mínima
     return a * DIAS_ANO + me * 30 + d
 
 
@@ -247,11 +248,38 @@ def chave_pena_max(c):
     """Chave do tipo penal na tabela 'pena_maxima_abstrata' da base jurídica: 'lei:artigo' ou 'lei:artigo §X'."""
     t = c.get("tipo_penal") or ""
     lei, art = num_lei(c.get("lei")) or "2848", num_art(c.get("artigo"))
+    if re.search(r"CONTRAVEN", (c.get("lei") or "") + " " + (c.get("artigo") or ""), re.I):
+        lei = "3688"
     mp = re.match(r"§\s*(\d+[ºo°]?(?:-[A-Z])?|único)", t)
     chave = "%s:%s" % (lei, art)
     if mp:
         chave += " §" + mp.group(1).replace("º", "").replace("o", "").replace("°", "")
     return chave
+
+
+def _pena_max_vigente(v, fato):
+    """Valor da tabela pena_maxima_abstrata: número de anos, ou lista [{'anos', 'de', 'ate'}] com a pena de cada redação da lei,
+    escolhida pela data do fato (sem data: a redação mais recente)."""
+    if isinstance(v, list):
+        cands = [x for x in v if isinstance(x, dict) and x.get("anos") is not None]
+        if fato:
+            for x in cands:
+                de = to_date("/".join(reversed(x["de"].split("-")))) if x.get("de") else None
+                ate = to_date("/".join(reversed(x["ate"].split("-")))) if x.get("ate") else None
+                if (not de or fato >= de) and (not ate or fato <= ate):
+                    return x["anos"]
+        return cands[-1]["anos"] if cands else None
+    return v
+
+
+def anos_para_dias(v):
+    """Anos da tabela (decimais) -> dias na convenção do SEEU (ano 365, mês 30), com os meses arredondados quando o decimal
+    é uma aproximação (16,67 = 16 anos e 8 meses; 0,08 = 1 mês)."""
+    meses = float(v) * 12
+    if abs(meses - round(meses)) < 0.1:
+        meses = round(meses)
+    a = int(meses // 12)
+    return a * DIAS_ANO + int(round((meses - a * 12) * 30))
 
 
 def pena_livre(txt):
@@ -265,7 +293,9 @@ def pena_livre(txt):
     dd = re.search(r"(\d+)\s*(?:d\b|dia)", t)
     if not (a or m or dd):
         return None
-    return (int(a.group(1)) * DIAS_ANO if a else 0) + (int(m.group(1)) * 30 if m else 0) + (int(dd.group(1)) if dd else 0)
+    an, me = (int(a.group(1)) if a else 0), (int(m.group(1)) if m else 0)
+    an, me = an + me // 12, me % 12
+    return an * DIAS_ANO + me * 30 + (int(dd.group(1)) if dd else 0)
 
 
 def campo_data(texto, rotulo):
@@ -537,14 +567,89 @@ LEI_DO_TEMPO = {
 # ------------------------- triagem de vedação a indulto -------------------- #
 
 # Somente os que são hediondos em qualquer modalidade (sem depender do § / inciso):
-HEDIONDOS_SEMPRE = {"121-A", "121-B", "159", "213", "217-A", "218-B"}
-HEDIONDOS_CONDICIONAIS = {"121", "122", "129", "155", "157", "158", "273"}
+# reservas iguais à base jurídica (usadas só se a base não abrir): hediondos.lei_8072_art1_cp_sempre, equiparados e as chaves
+# de condicional_paragrafos / lei_8072_art1_cp_condicional
+HEDIONDOS_SEMPRE = {"121-A", "121-B", "159", "213", "214", "217-A", "218-B"}
+HEDIONDOS_CONDICIONAIS = {"121", "122", "129", "148", "149-A", "155", "157", "158", "267", "273"}
 EQUIPARADOS = {
-    "11343": {"33", "34", "36", "35"},          # tráfico (33 caput/§1º, 34, 36; 35 associação NÃO é hediondo, mas decretos vedam)
+    "11343": {"33", "34", "36"},                  # tráfico (33 caput/§1º, 34, 36); o 35 (associação) não é equiparado
+    "6368": {"12", "13"},                         # tráfico e maquinário na lei anterior (fatos até 07/10/2006)
     "9455": {"1"},                                # tortura
     "13260": {"2", "3", "5", "6"},                # terrorismo
-    "10826": {"16", "17", "18"},                  # Estatuto do Desarmamento (art. 16 §2º hediondo; 17/18 hediondos)
 }
+
+
+def hediondos_condicionais():
+    """Artigos do CP cuja hediondez depende do parágrafo/inciso, pela base (com a reserva do código)."""
+    try:
+        import rspe_regras as _rg
+        h = _rg.hediondos() or {}
+    except Exception:
+        h = {}
+    ks = {k for k in (h.get("condicional_paragrafos") or {}) if not k.startswith("_")} | set(h.get("lei_8072_art1_cp_condicional") or {})
+    return ks or HEDIONDOS_CONDICIONAIS
+
+
+def _itens_pu(regra):
+    """Lista do parágrafo único da base -> [(art, {parágrafos} ou None)]: '240 §1' -> ('240', {'1'}); '2 caput, §§ 1º e 3º' ->
+    ('2', {'', '1', '3'}); '241-B' -> ('241-B', None = o artigo inteiro)."""
+    out = []
+    for x in regra or []:
+        t = str(x).strip()
+        m = re.match(r"(\d+(?:-[A-Z])?)\s*(.*)$", t, re.I)
+        if not m:
+            continue
+        resto = m.group(2)
+        if not resto.strip():
+            out.append((m.group(1).upper(), None))
+            continue
+        pars = set()
+        if re.search(r"CAPUT", resto, re.I):
+            pars.add("")
+        pars |= {re.sub(r"[ºo°\s]", "", n).upper() for n in re.findall(r"(\d+\s*[ºo°]?(?:-[A-Z])?)", resto)}
+        out.append((m.group(1).upper(), {p.replace("º", "") for p in pars}))
+    return out
+
+
+def hediondo_pu(c, h=None):
+    """Lei 8.072, art. 1º, parágrafo único, pela base (hediondos.paragrafo_unico): (True/False/None, texto).
+    Lista: o artigo inteiro ou só os parágrafos indicados ('caput' conta). Dict: 'sempre' ou a regra especial do art. 16
+    da Lei 10.826 (só o uso proibido - § 2º desde a Lei 13.964/2019; o uso restrito e a numeração suprimida deixaram de ser
+    hediondos, e a lei mais benéfica retroage - STJ, HC 575.933). Parágrafo ilegível -> None."""
+    if h is None:
+        try:
+            import rspe_regras as _rg
+            h = _rg.hediondos() or {}
+        except Exception:
+            h = {}
+    lei, art = num_lei(c.get("lei")), num_art(c.get("artigo"))
+    regra = (h.get("paragrafo_unico") or {}).get(lei)
+    pi = paragrafo_inciso(c)
+    if lei == "10826" and art == "16":
+        tt = " ".join(str(c.get(k) or "") for k in ("tipo_penal", "artigo")).upper()
+        if pi and pi[0] == "2" or "PROIBID" in tt:
+            return True, ""
+        if pi is None:
+            return None, "art. 16 da Lei 10.826: hediondo só o uso proibido (§ 2º) - parágrafo ilegível no RSPE"
+        return False, ("art. 16 da Lei 10.826 (uso restrito ou numeração suprimida): não hediondo desde a Lei 13.964/2019, que retroage "
+                       "por ser mais benéfica (STJ, HC 575.933)")
+    if isinstance(regra, dict):
+        if art in regra:
+            return (True, "") if regra[art] == "sempre" else (None, "art. 1º, p. ú., Lei 8.072/90: " + regra[art])
+        return False, ""
+    if isinstance(regra, list):
+        for a_, pars in _itens_pu(regra):
+            if a_ != art:
+                continue
+            if pars is None:
+                return True, ""
+            if pi is None:
+                return None, "art. 1º, p. ú., Lei 8.072/90: hediondo só no %s - parágrafo ilegível no RSPE" % ", ".join(
+                    ("caput" if p == "" else "§ %sº" % p) for p in sorted(pars))
+            if pi[0] in pars:
+                return True, ""
+            return False, "art. 1º, p. ú., Lei 8.072/90: hediondo só no %s" % ", ".join(("caput" if p == "" else "§ %sº" % p) for p in sorted(pars))
+    return False, ""
 def num_lei(txt):
     m = re.search(r"(\d[\d.]*)\s*/\s*(\d{2,4})", txt or "")
     return m.group(1).replace(".", "") if m else ""
@@ -667,6 +772,21 @@ def hediondo_condicional(c):
     if qualificado_privilegiado(c):
         return False
     par, inc = pi
+    if art == "121":
+        tt = " ".join(str(c.get(k) or "") for k in ("tipo_penal", "artigo")).upper()
+        if "EXTERM" in tt:
+            return True  # homicídio em atividade típica de grupo de extermínio (Lei 8.072, art. 1º, I), ainda que simples
+        if par == "6":
+            return None  # § 6º: milícia ou grupo de extermínio - só o grupo de extermínio torna hediondo: a verificar
+    if art == "149-A" and par == "1" and inc == "II":
+        return None  # § 1º, II abrange criança, adolescente, idoso e pessoa com deficiência; hediondo só contra criança ou adolescente (art. 1º, XII)
+    if art == "158" and par == "2":
+        # extorsão com violência (§ 2º remete ao § 3º do art. 157): hedionda só se qualificada pela morte, e só até a Lei
+        # 13.964/2019, que passou a referir o § 3º (art. 1º, III)
+        fato = to_date(c.get("data_infracao") or "")
+        if fato and fato >= date(2020, 1, 23):
+            return False
+        return {"S": True, "N": False}.get(c.get("resultado_morte"))
     if art == "129":
         # Lei 8.072, art. 1º, I-A: só a lesão gravíssima (§ 2º) ou seguida de morte (§ 3º) contra agente de segurança,
         # membro do Judiciário, MP etc., ou em escola - a vítima não consta do RSPE: a verificar (None). O § 12 é só
@@ -794,6 +914,9 @@ def e_hediondo(c, ref=None):
         d, _ = hediondo_desde(c)
         if d and d > ref:
             return False
+    _hp = hediondo_pu(c)
+    if _hp[0] is False and _hp[1]:
+        return False  # parágrafo fora do rol do p. ú. (ex.: art. 16 da Lei 10.826 sem uso proibido; Lei 15.358, art. 2º, § 2º)
     if "HEDIONDO" in ((c.get("fracao_progressao") or "") + (c.get("fracao_livramento") or "")).upper():
         # selo do SEEU: vale (na data do decreto, só não vale se a lei que tornou o tipo hediondo é posterior à referência - tratado acima)
         lei_, art_ = num_lei(c.get("lei")), num_art(c.get("artigo"))
@@ -816,19 +939,14 @@ def e_hediondo(c, ref=None):
         if lei == "11343" and art == "33" and ("§ 4" in (c.get("tipo_penal") or "") or re.match(r"\s*§\s*[23](?!\d)", c.get("tipo_penal") or "")):
             return False  # § 4º: privilegiado (LEP 112, § 5º); §§ 2º e 3º: induzimento e uso compartilhado, fora do tráfico equiparado
         return True
-    pu = h.get("paragrafo_unico", {})
-    regra = pu.get(lei)
-    if isinstance(regra, dict):
-        return regra.get(art) == "sempre"
-    if isinstance(regra, list):
-        return art in [str(x).split()[0] for x in regra]
-    return False
+    return bool(hediondo_pu(c, h)[0])
 
 
 def triagem_indulto(crimes):
     """Devolve (situacao, motivos[]) — triagem pelo art. 1º dos Decretos 12.338/2024 e 12.790/2025 (mesmo rol).
     Só aponta vedação que o decreto prevê: violência ou grave ameaça, resultado morte e tráfico privilegiado não são
     impeditivos (a VGA só limita os incisos I a III do art. 9º; STJ, Tema 1336; STF, Tema 1400)."""
+    carregar_tabelas_decretos()  # tabelas da base já na primeira análise (antes, só depois de analise_decretos)
     motivos = []
     ref = max(DECRETOS.values()) if DECRETOS else date(2025, 12, 25)
     for c in crimes:
@@ -841,7 +959,7 @@ def triagem_indulto(crimes):
         imp = impeditivo_decreto(c, ref)
         if imp:
             motivos.append("art. 1º, %s: %s - %s" % (imp[0], imp[1], nome))
-        elif lei in ("2848", "") and art in HEDIONDOS_CONDICIONAIS and hediondo_condicional(c) is None:
+        elif lei in ("2848", "") and art in hediondos_condicionais() and hediondo_condicional(c) is None:
             motivos.append("possível hediondo conforme §/inciso (%s): conferir - %s" % (art, nome))
         v = impeditivo_verificar(c)
         if v:
@@ -1362,9 +1480,9 @@ def indicios_falta(incidentes, ref, dias=365, eventos=None, ate=None, hoje=None)
                     out.append(("%s (%s - falta grave confirmada pelo operador)" % (txt, fmt(d)), True))
                 elif i.get("_fuga_ficha"):
                     if not falta_prescrita(d, True, eventos, hoje):
-                        out.append(("%s (%s - fuga: falta grave, LEP, art. 50, II)" % (txt, fmt(d)), True))
+                        out.append(("%s (%s - fuga: falta grave, LEP, art. 50, II - falta não homologada)" % (txt, fmt(d)), True))
                 elif i.get("_ficha_falta") and _pendente(i):
-                    out.append(("%s (%s - pendente no RSPE; ficha: %s)" % (txt, fmt(d), i["_ficha_falta"]["texto"][:90]), True))
+                    out.append(("%s (%s - pendente no RSPE, falta não homologada; ficha: %s)" % (txt, fmt(d), i["_ficha_falta"]["texto"][:90]), True))
                 elif _pendente(i):
                     if not falta_prescrita(d, bool(RE_FUGA_EV.search(txt)), eventos, hoje):
                         out.append(("%s (%s - pendente: só impede se a sanção for reconhecida em juízo)" % (txt, fmt(d)), False))
@@ -1409,7 +1527,7 @@ def indicios_falta(incidentes, ref, dias=365, eventos=None, ate=None, hoje=None)
                 out.append(("%s (%s - falta grave confirmada pelo operador)" % (t, fmt(d)), True))
             elif RE_FUGA_EV.search(t):
                 if not falta_prescrita(d, True, eventos, hoje):
-                    out.append(("%s (%s - fuga: falta grave, LEP, art. 50, II)" % (t, fmt(d)), True))
+                    out.append(("%s (%s - fuga: falta grave, LEP, art. 50, II - falta não homologada)" % (t, fmt(d)), True))
             elif not falta_prescrita(d, False, eventos, hoje):
                 out.append(("%s (%s; falta a apurar)" % (t, fmt(d)), False))
     return list(dict.fromkeys(out))
@@ -1731,11 +1849,14 @@ def pena_maxima_abstrata(c):
         tab = (_rg.carregar() or {}).get("pena_maxima_abstrata", {})
     except Exception:
         tab = {}
-    mp = re.match(r"§\s*(\d+[ºo°]?(?:-[A-Z])?|único)", t)
+    mp = re.match(r"§\s*(\d+[ºo°]?(?:-[A-Z])?|único)\s*,?\s*([IVXL]+\b)?", t)
     chave = "%s:%s" % (lei, art)
     if mp:
         chave += " §" + mp.group(1).replace("º", "").replace("o", "").replace("°", "")
-    v = tab.get(chave)
+    v = tab.get("%s %s" % (chave, mp.group(2).upper())) if (mp and mp.group(2)) else None
+    if v is None:
+        v = tab.get(chave)
+    v = _pena_max_vigente(v, to_date(c.get("data_infracao") or ""))
     if v is None and (lei == "3688" or (not mp and t.upper().startswith("CAPUT"))):
         v = tab.get("%s:%s" % (lei, art))  # contravenção: o caput vale para os parágrafos sem aumento próprio
     if v is None and lei == "3688":
@@ -1746,8 +1867,7 @@ def pena_maxima_abstrata(c):
         return None
     c["_pena_max_fonte"] = "tabela"
     # anos inteiros de 365 dias e a fração em meses de 30 dias (convenção do SEEU): 0.25 = 3 meses = 90 dias
-    anos_ = int(float(v))
-    return anos_ * DIAS_ANO + int(round((float(v) - anos_) * 12 * 30))
+    return anos_para_dias(v)
 
 
 def _pena_max_do_texto(faixa):
@@ -1848,6 +1968,12 @@ def impeditivo_verificar(c):
     if num_art(c.get("artigo")) == "129" and num_lei(c.get("lei")) in ("2848", "") and hediondo_condicional(c) is None and not e_hediondo(c):
         return ("lesão gravíssima ou seguida de morte (art. 129, § 2º ou § 3º): hediondo só contra agente de segurança, membro do Judiciário, "
                 "do MP ou da Defensoria, ou em escola (Lei 8.072, art. 1º, I-A) - conferir a vítima")
+    _cp = num_lei(c.get("lei")) in ("2848", "") or ("PENAL" in (c.get("lei") or "").upper() and "MILITAR" not in (c.get("lei") or "").upper())
+    _a = num_art(c.get("artigo"))
+    if _cp and _a in ("149-A", "158", "121") and hediondo_condicional(c) is None and not e_hediondo(c):
+        return {"149-A": "tráfico de pessoas (art. 149-A, § 1º, II): hediondo só contra criança ou adolescente (Lei 8.072, art. 1º, XII) - conferir a vítima",
+                "158": "extorsão com violência (art. 158, § 2º): hedionda só se resultou morte, em fato até 22/01/2020 - conferir o resultado",
+                "121": "homicídio com a majorante do § 6º: hediondo se em atividade típica de grupo de extermínio (Lei 8.072, art. 1º, I) - conferir"}[_a]
     return ""
 
 
@@ -2547,6 +2673,13 @@ def analise_decretos(campos, crimes, eventos, incidentes, hoje):
     for ano, ref in DECRETOS.items():
         k = "indulto_%s" % ano
         kc = "comutacao_%s" % ano
+        if ano not in DECRETO_NUM:
+            # decreto só cadastrado nas datas da base: cada decreto tem requisitos próprios - nada por analogia
+            for kk in (k, kc):
+                out[kk] = "A VERIFICAR: decreto de %s sem regras cadastradas no programa" % ano
+                out[kk + "_status"] = "verificar"
+            out[k + "_detalhe"] = "O decreto de %s está na base jurídica só com as datas; seus requisitos não foram cadastrados. Analisar manualmente." % ano
+            continue
         posteriores = _posteriores(ref)
         ativos = [c for c in todos_ativos if c not in posteriores]
         pena_total = pena_total_geral
@@ -2615,7 +2748,7 @@ def analise_decretos(campos, crimes, eventos, incidentes, hoje):
         def _xv_sem_cumprimento(motivo, det_base):
             """Art. 9º, XV: não exige fração cumprida nem regime. Sem cumprimento na data, fica 'a verificar' (ponto
             controvertido): o STJ exige início do cumprimento nos incisos com fração (AgRg no HC 1.042.931)."""
-            pat = [c for c in ativos if crime_patrimonial(c) and c.get("vga") != "S"]
+            pat = [c for c in ativos if crime_patrimonial(c) and c.get("vga") != "S" and not vga_incerta(c)]
             if not pat or [c for c in ativos if impeditivo_decreto(c, ref)]:
                 return False
             if orcrim:
@@ -2701,12 +2834,19 @@ def analise_decretos(campos, crimes, eventos, incidentes, hoje):
 
         def avaliar(pena_total, cumprido, remanescente, vga, patrimonial, ativos):
             anos_pena = pena_total / float(DIAS_ANO)
+            _p2 = [False]
+            meio = []  # incisos que o § 2º, II a VI (metade do lapso), alcançaria
+
             def frac(nr, r, par2=True):
                 # § 2º do art. 9º reduz pela metade só os lapsos dos incisos I a XI (não XII, XIII nem o art. 13)
+                _p2[0] = par2
                 return (F(r) if reinc else F(nr)) * (red if par2 else 1)
 
             def tem(fr):
-                return cumprido >= pena_total * fr
+                ok = cumprido >= pena_total * fr
+                if not ok and _p2[0] and not meia and cumprido >= pena_total * fr / 2:
+                    meio.append(fr)
+                return ok
 
             def fmt_fr(nr, r, par2=True):
                 f = frac(nr, r, par2)
@@ -2731,6 +2871,11 @@ def analise_decretos(campos, crimes, eventos, incidentes, hoje):
             else:
                 f2 = (A("II", "fracao_primario", "1/3"), A("II", "fracao_reincidente", "1/2"))
                 (possiveis if tem(frac(*f2)) else nao).append("II: pena ≤ %s sem VGA, exige %s (%s)" % (pl(A("II", "pena_max_anos", 12), "ano", "anos"), fmt_fr(*f2), cump_txt))
+            inc_v = [c for c in ativos if vga_incerta(c)]
+            if not vga and inc_v:
+                for x in [x for x in possiveis if x.startswith(("I:", "II:"))]:
+                    possiveis.remove(x)
+                    verificar.append(x + " - VGA em branco no RSPE para %s, tipo que costuma ter violência ou grave ameaça: conferir na sentença" % crimes_curto(inc_v))
             # III
             if not vga:
                 nao.append("III: não se aplica - crime sem violência ou grave ameaça (ver I e II)")
@@ -2744,7 +2889,8 @@ def analise_decretos(campos, crimes, eventos, incidentes, hoje):
             # art. 5º: a remição conta para integralizar o requisito temporal (remições concedidas dentro do período contínuo)
             _pc = max(((ini, (fim if (fim and fim <= ref) else ref)) for ini, fim in periodos if ini <= ref), key=lambda x: (x[1] - x[0]).days, default=None)
             rem_cont = sum(n for d, n in remicoes if _pc and d and _pc[0] <= d <= _pc[1])
-            req = (A("IV", "anos_ininterruptos_reincidente", 20) if reinc else A("IV", "anos_ininterruptos_primario", 15)) * DIAS_ANO * red
+            anos_iv = (A("IV", "anos_ininterruptos_reincidente", 20) if reinc else A("IV", "anos_ininterruptos_primario", 15))
+            req = dias_anos(anos_iv * red, ref)
             # indícios de interrupção dentro do período contínuo (o SEEU só separa os períodos quando registra INTERRUPÇÃO):
             # nova prisão/recaptura sem interrupção registrada, ou incidente de fuga/evasão/não retorno
             sinais_iv = []
@@ -2762,12 +2908,15 @@ def analise_decretos(campos, crimes, eventos, incidentes, hoje):
                 pl(int(round(req / DIAS_ANO)), "ano", "anos"), dias_para_pena(continuo + rem_cont), (" = %s de custódia contínua desde %s + %s remidos, art. 5º" % (dias_para_pena(continuo), fmt(_pc[0]), pl(rem_cont, "dia", "dias"))) if rem_cont else (" desde %s" % fmt(_pc[0]) if _pc else ""))
             if continuo + rem_cont < req:
                 nao.append(txt_iv)
+                if not meia and continuo + rem_cont >= dias_anos(anos_iv / 2.0, ref):
+                    meio.append("IV")
             elif sinais_iv:
                 verificar.append(txt_iv + " - verificar se houve interrupção no período: " + "; ".join(dict.fromkeys(sinais_iv)))
             else:
                 possiveis.append(txt_iv)
             # V
-            req = (A("V", "anos_reincidente", 25) if reinc else A("V", "anos_primario", 20)) * DIAS_ANO * red
+            anos_v = (A("V", "anos_reincidente", 25) if reinc else A("V", "anos_primario", 20))
+            req = dias_anos(anos_v * red, ref)
             # anos de pena cumpridos na execução toda (penas somadas, art. 7º); no concurso com crime do art. 1º,
             # o parágrafo único só adia o indulto dos não impeditivos até 2/3 do impeditivo - não desconta esse tempo do V
             ct = max(cumprido, cumprido_ref)
@@ -2780,10 +2929,15 @@ def analise_decretos(campos, crimes, eventos, incidentes, hoje):
                         pl(A("V", "liberdade_max_anos", 2), "ano", "anos"), dias_para_pena(lib)))
             else:
                 nao.append("V: %s não ininterruptos (cumprido %s%s)" % (pl(int(round(req / DIAS_ANO)), "ano", "anos"), dias_para_pena(ct), obs_ct))
+                if not meia and ct >= dias_anos(anos_v / 2.0, ref):
+                    meio.append("V")
             # VI
-            req = (A("VI", "anos_semiaberto_reincidente", 15) if reinc else A("VI", "anos_semiaberto_primario", 10)) * DIAS_ANO * red
+            anos_vi = (A("VI", "anos_semiaberto_reincidente", 15) if reinc else A("VI", "anos_semiaberto_primario", 10))
+            req = dias_anos(anos_vi * red, ref)
             if semi and dreg:
                 t = (ref - dreg).days
+                if t < req and not meia and t >= dias_anos(anos_vi / 2.0, ref):
+                    meio.append("VI")
                 (possiveis if t >= req else nao).append("VI: %s ininterruptos no semiaberto (desde %s: %s)" % (pl(int(round(req / DIAS_ANO)), "ano", "anos"), fmt(dreg), dias_para_pena(t)))
             else:
                 nao.append("VI: exige semiaberto ininterrupto por %s" % pl(int(round(req / DIAS_ANO)), "ano", "anos"))
@@ -2812,8 +2966,8 @@ def analise_decretos(campos, crimes, eventos, incidentes, hoje):
             else:
                 nao.append("X: não se aplica - exige semiaberto com monitoramento há mais de 3 anos" + (" (semiaberto desde %s)" % fmt(dreg) if semi and dreg else ""))
             # XI
-            if anos_pena > 12:
-                nao.append("XI: não se aplica - pena superior a 12 anos")
+            if anos_pena > A("XI", "pena_max_anos", 12):
+                nao.append("XI: não se aplica - pena superior a %s" % pl(A("XI", "pena_max_anos", 12), "ano", "anos"))
             elif not (semi or aberto):
                 nao.append("XI: não se aplica - exige regime semiaberto ou aberto")
             elif not tem(frac(A("XI", "fracao_primario", "1/3"), A("XI", "fracao_reincidente", "1/2"))):
@@ -2827,24 +2981,28 @@ def analise_decretos(campos, crimes, eventos, incidentes, hoje):
                     verificar.append(txt + "verificar 5 saídas temporárias ou 12 meses de trabalho externo (RSPE registra %s até %s)" % (pl(len(sai_ref), "saída", "saídas"), fmt(ref)))
             # XII
             f12 = (A("XII", "fracao_primario_%s" % ano, "1/6" if ano == "2025" else "1/5"), A("XII", "fracao_reincidente_%s" % ano, "1/5" if ano == "2025" else "1/4"))
-            if anos_pena > 12:
-                nao.append("XII: não se aplica - pena superior a 12 anos")
+            if anos_pena > A("XII", "pena_max_anos", 12):
+                nao.append("XII: não se aplica - pena superior a %s" % pl(A("XII", "pena_max_anos", 12), "ano", "anos"))
             elif tem(frac(*f12, par2=False)):
                 verificar.append("XII: pena ≤ 12 anos, %s cumprido - verificar estudo por %s" % (
                     fmt_fr(*f12, par2=False), "18 meses nos 5 anos anteriores (reincidente)" if reinc else "12 meses nos 3 anos anteriores"))
             else:
                 nao.append("XII: exige %s cumprido (%s)" % (fmt_fr(*f12, par2=False), cump_txt))
             # XIII
-            if anos_pena > 12:
-                nao.append("XIII: não se aplica - pena superior a 12 anos")
+            if anos_pena > A("XIII", "pena_max_anos", 12):
+                nao.append("XIII: não se aplica - pena superior a %s" % pl(A("XIII", "pena_max_anos", 12), "ano", "anos"))
             elif tem(frac(A("XIII", "fracao_primario", "1/5"), A("XIII", "fracao_reincidente", "1/4"), par2=False)):
                 verificar.append("XIII: pena ≤ 12 anos, %s cumprido - verificar conclusão de curso certificado nos 3 anos anteriores" % fmt_fr(A("XIII", "fracao_primario", "1/5"), A("XIII", "fracao_reincidente", "1/4"), par2=False))
             else:
                 nao.append("XIII: exige %s cumprido (%s)" % (fmt_fr(A("XIII", "fracao_primario", "1/5"), A("XIII", "fracao_reincidente", "1/4"), par2=False), cump_txt))
             # XIV / XV: valem pelo crime (não têm teto de pena nem fração, salvo os 3 meses do XIV).
             # A soma do art. 7º serve aos incisos com teto/lapso; só o concurso com crime do art. 1º trava (art. 7º, p. ú.).
-            pat = [c for c in ativos if crime_patrimonial(c) and c.get("vga") != "S"]
+            pat = [c for c in ativos if crime_patrimonial(c) and c.get("vga") != "S" and not vga_incerta(c)]
+            pat_inc = [c for c in ativos if crime_patrimonial(c) and vga_incerta(c)]
             imp_conc = [c for c in ativos if impeditivo_decreto(c, ref)]
+            if pat_inc and not imp_conc:
+                verificar.append("XIV/XV: %s com VGA em branco no RSPE - o tipo costuma ter violência ou grave ameaça; os incisos exigem crime "
+                                 "patrimonial sem violência: conferir na sentença" % crimes_curto(pat_inc))
             if pat and not imp_conc:
                 parcial = "" if len(pat) == len(ativos) else " - alcança as penas de %s; as dos demais crimes (%s) seguem" % (
                     crimes_curto(pat), crimes_curto([c for c in ativos if c not in pat]))
@@ -2860,9 +3018,15 @@ def analise_decretos(campos, crimes, eventos, incidentes, hoje):
                                      "O art. 7º, parágrafo único, só trava o indulto no concurso com crime do art. 1º, e só até o cumprimento de 2/3 da pena dele.")
             elif pat and imp_conc:
                 nao.append("XIV e XV: concurso com crime do art. 1º (%s) - o indulto do crime não impeditivo só depois de 2/3 da pena do impeditivo (art. 7º, p. ú.)" % crimes_curto(imp_conc))
-            else:
+            elif not pat_inc:
                 nao.append("XIV e XV: não se aplicam - exigem crime contra o patrimônio sem violência ou grave ameaça")
             verificar.append("XVI: saúde/deficiência - não aferível pelo RSPE (laudo médico)")
+            if meio and not possiveis:
+                verificar.append("§ 2º, II a VI: com a metade do lapso, alcançaria %s se for gestante ou mãe/responsável por filho de até %d anos "
+                                 "ou com deficiência, homem único responsável, imprescindível ao cuidado de pessoa com deficiência, pessoa com "
+                                 "deficiência ou participante de justiça restaurativa - dados que o RSPE não traz: conferir" % (
+                                     "o requisito temporal de algum inciso" if any(not isinstance(x, str) for x in meio) else "os incisos " + ", ".join(dict.fromkeys(meio)),
+                                     16 if ano == "2025" else 14))
             # ordena por inciso
             ordem_inc = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII", "XIII", "XIV", "XV", "XVI"]
             def _k(t):
@@ -2911,7 +3075,17 @@ def analise_decretos(campos, crimes, eventos, incidentes, hoje):
                 out[k] = "POSSÍVEL: art. 9º, " + inc + (" | " + aviso if aviso else "")
                 out[k + "_status"] = "possivel"
             elif [v for v in verificar if not v.startswith("XVI")]:
-                inc = ", ".join(p.split(":")[0] for p in verificar if not p.startswith("XVI") and re.match(r"^[IVX]+(\s+e\s+[IVX]+)?:", p))
+                _rot = []
+                for p in verificar:
+                    if p.startswith("XVI"):
+                        continue
+                    if re.match(r"^[IVX]+(\s+e\s+[IVX]+)?:", p):
+                        _rot.append(p.split(":")[0])
+                    elif p.startswith("XIV/XV"):
+                        _rot.append("XIV, XV (VGA em branco)")
+                    elif p.startswith("§ 2º"):
+                        _rot.append("§ 2º, II a VI (metade do lapso)")
+                inc = ", ".join(dict.fromkeys(_rot)) or "conferir"
                 out[k] = "A VERIFICAR: art. 9º, " + inc + (" | " + aviso if aviso else "")
                 out[k + "_status"] = "verificar"
             else:
@@ -3148,15 +3322,20 @@ def analise_decretos(campos, crimes, eventos, incidentes, hoje):
         if not ff:
             continue
         faltas_txt = "; ".join(ff)
+        nao_hom = all("não homologada" in f for f in ff)
         txt = out.get(k) or ""
         triagem = txt.split(" | ")[0]
         nota = ("✘ Art. 6º: falta grave com sanção reconhecida nos 12 meses anteriores a 25/12/%s (%s): a declaração do indulto e da comutação "
-                "fica condicionada à inexistência dessa sanção - não cabe." % (ano, faltas_txt))
+                "fica condicionada à inexistência dessa sanção - não cabe." % (ano, faltas_txt)) if not nao_hom else (
+                "✘ Art. 6º: falta grave nos 12 meses anteriores a 25/12/%s (%s), ainda não homologada: tratada como impeditiva - não cabe. "
+                "O decreto exige sanção reconhecida em juízo; a homologação pode ser posterior (STJ, Tema 1195). Falta não homologada: conferir "
+                "o PAD e a audiência de justificação." % (ano, faltas_txt))
         for kk, nome in ((k, "a triagem"), (kc, "a comutação")):
             t = out.get(kk) or ""
             if not t or t.upper().startswith(("VEDAD", "NÃO SE APLICA", "CONCEDID", "INDEFERID", "NÃO CABE", "DECRETO SEM", "EXCLU")):
                 continue
-            out[kk] = "NÃO CABE (art. 6º): falta grave com sanção reconhecida nos 12 meses - %s" % faltas_txt
+            out[kk] = ("NÃO CABE (art. 6º): falta grave nos 12 meses, falta não homologada - %s" if nao_hom else
+                       "NÃO CABE (art. 6º): falta grave com sanção reconhecida nos 12 meses - %s") % faltas_txt
             out[kk + "_status"] = "nao"
             n2 = nota + " Sem a falta, %s seria: %s." % (nome, t.split(" | ")[0])
             for dk in (kk + "_detalhe", kk + "_explica"):
@@ -3175,6 +3354,29 @@ def e_remicao_concedida(i):
     if "REMI" not in t or re.search(r"PERD|REVOG", t):
         return False
     return (i.get("situacao") or "CONCEDIDO") == "CONCEDIDO"
+
+
+def vga_incerta(c):
+    """VGA em branco no RSPE em tipo que, pela base (vga_esperado), costuma ter violência ou grave ameaça (roubo, extorsão...)."""
+    if (c.get("vga") or "").strip().upper() in ("S", "N"):
+        return False
+    try:
+        import rspe_regras as _rg
+        lei = num_lei(c.get("lei"))
+        if lei in ("", "2848") or ("PENAL" in (c.get("lei") or "").upper() and "MILITAR" not in (c.get("lei") or "").upper()):
+            lei = "2848"
+        return _rg.vga_esperado(num_art(c.get("artigo")), lei) == "S"
+    except Exception:
+        return False
+
+
+def dias_anos(anos, ref):
+    """Dias de 'anos' (pode ser fracionário, ex.: 7,5) contados pelo calendário até ref, e não anos × 365."""
+    meses = int(round(float(anos) * 12))
+    y, m = divmod(ref.month - 1 - meses, 12)
+    ano, mes = ref.year + y, m + 1
+    dia = min(ref.day, [31, 29 if (ano % 4 == 0 and (ano % 100 != 0 or ano % 400 == 0)) else 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][mes - 1])
+    return (ref - date(ano, mes, dia)).days
 
 
 def falta_art6(incidentes, ref, eventos=None, publicacao=None):

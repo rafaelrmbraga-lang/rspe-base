@@ -332,7 +332,7 @@ def curto_indulto(txt):
     if base.startswith("VEDAD"):
         return "Vedado (art. 1º)"
     if base.startswith("NÃO CABE (art. 6º)"):
-        return "Não cabe · falta grave 12m (art. 6º)"
+        return "Não cabe · falta grave 12m (art. 6º)" + (" · falta não homologada" if "falta não homologada" in base else "")
     m = rs.re.match(r"POSSÍVEL \((.+?)\): (.*)$", base)
     if m:
         q = m.group(1)

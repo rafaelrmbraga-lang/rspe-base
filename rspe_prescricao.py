@@ -360,7 +360,7 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
         if a < termo:
             f = min(fim, termo)
             if liga:
-                detr += (f - a).days
+                detr += (f - a).days + (1 if (b and b < termo) else 0)  # conta o dia da prisão e o da soltura, como o SEEU (dias_cumpridos_ate)
                 lt(a, f, "provisoria", fonte, "prisão provisória anterior ao termo inicial: detração (CP, art. 42), informativa; não reduz a pena nem o prazo")
             else:
                 lt(a, f, "provisoria", fonte, "anterior ao termo inicial e registrada só para outro processo: sem efeito nesta prescrição")
