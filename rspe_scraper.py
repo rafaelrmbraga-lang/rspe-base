@@ -1927,7 +1927,7 @@ def exclusao_art7_2022(c):
         return None  # a verificar (impeditivo_verificar)
     if e_hediondo(c, DECRETO_2022_REF):
         if not e_hediondo(c):
-            if c.get("vga") == "S":
+            if vga_indulto(c):
                 # a tese da hediondez superveniente não aproveita: o crime é excluído também pela violência (inciso II)
                 return "II: praticado com violência ou grave ameaça"
             d, lei_h = hediondo_desde(c)
@@ -1938,8 +1938,8 @@ def exclusao_art7_2022(c):
         if lei == "11340":
             return "III, c: crime da Lei 11.340/06"
         return "II: com violência doméstica e familiar contra a mulher - %s" % vd[1]
-    if c.get("vga") == "S":
-        return "II: praticado com violência ou grave ameaça"
+    if vga_indulto(c):
+        return "II: praticado com violência ou grave ameaça" + (" (roubo: violência ou grave ameaça elementar do tipo)" if c.get("vga") != "S" else "")
     if lei in ART7_2022_LEIS:
         return ART7_2022_LEIS[lei]
     if codigo_penal and art in ART7_2022_CP:
@@ -2708,7 +2708,7 @@ def analise_decretos(campos, crimes, eventos, incidentes, hoje):
             if pena_total:
                 pena_total = max(1, pena_total - p_post)
             notas_post[ano] = (posteriores, nomes_post, p_post)
-        vga = any(c.get("vga") == "S" for c in ativos)
+        vga = any(vga_indulto(c) for c in ativos)
         reinc = any(c.get("reincidente_comum") == "S" or c.get("reincidente_especifico") == "S" for c in ativos)
         patrimonial = ativos and all(crime_patrimonial(c) for c in ativos)
         orcrim = any(c.get("comando_orcrim") == "S" for c in ativos)
@@ -2748,7 +2748,7 @@ def analise_decretos(campos, crimes, eventos, incidentes, hoje):
         def _xv_sem_cumprimento(motivo, det_base):
             """Art. 9º, XV: não exige fração cumprida nem regime. Sem cumprimento na data, fica 'a verificar' (ponto
             controvertido): o STJ exige início do cumprimento nos incisos com fração (AgRg no HC 1.042.931)."""
-            pat = [c for c in ativos if crime_patrimonial(c) and c.get("vga") != "S" and not vga_incerta(c)]
+            pat = [c for c in ativos if crime_patrimonial(c) and not vga_indulto(c) and not vga_incerta(c)]
             if not pat or [c for c in ativos if impeditivo_decreto(c, ref)]:
                 return False
             if orcrim:
@@ -2997,7 +2997,7 @@ def analise_decretos(campos, crimes, eventos, incidentes, hoje):
                 nao.append("XIII: exige %s cumprido (%s)" % (fmt_fr(A("XIII", "fracao_primario", "1/5"), A("XIII", "fracao_reincidente", "1/4"), par2=False), cump_txt))
             # XIV / XV: valem pelo crime (não têm teto de pena nem fração, salvo os 3 meses do XIV).
             # A soma do art. 7º serve aos incisos com teto/lapso; só o concurso com crime do art. 1º trava (art. 7º, p. ú.).
-            pat = [c for c in ativos if crime_patrimonial(c) and c.get("vga") != "S" and not vga_incerta(c)]
+            pat = [c for c in ativos if crime_patrimonial(c) and not vga_indulto(c) and not vga_incerta(c)]
             pat_inc = [c for c in ativos if crime_patrimonial(c) and vga_incerta(c)]
             imp_conc = [c for c in ativos if impeditivo_decreto(c, ref)]
             if pat_inc and not imp_conc:
@@ -3103,6 +3103,10 @@ def analise_decretos(campos, crimes, eventos, incidentes, hoje):
             linhas += [a + b for a, b in todos]
             if aviso:
                 linhas.append("⚠ " + aviso)
+            _rb = [c for c in ativos if roubo_cp(c) and c.get("vga") != "S"]
+            if _rb:
+                linhas.append("Roubo (%s): tratado com violência ou grave ameaça, elementar do tipo (CP, art. 157), embora o RSPE marque %s - "
+                              "fora dos incisos I, II, XIV e XV." % (crimes_curto(_rb), "VGA em branco" if any(not (c.get("vga") or "").strip() for c in _rb) else "VGA = N"))
             linhas.append("Não aferíveis pelo RSPE: § 2º, II a VI (filhos, deficiência, justiça restaurativa) - se presentes, os lapsos I a XI caem pela metade; "
                           "art. 10 (indulto especial para mulheres) e art. 11 (comutação para mulheres); art. 1º, § 1º (acordo de colaboração premiada "
                           "afasta indulto e comutação, qualquer que seja o crime); art. 1º, § 3º, II e III (RDD; estabelecimento de segurança máxima: "
@@ -3229,7 +3233,7 @@ def analise_decretos(campos, crimes, eventos, incidentes, hoje):
                     if cumprido >= exig:
                         cl = cumprido - exig
                         pena_liv = max(1, pena_total - pena_imp)
-                        r2 = avaliar(pena_liv, cl, max(0, pena_liv - cl), any(c.get("vga") == "S" for c in livres), all(crime_patrimonial(c) for c in livres), livres)
+                        r2 = avaliar(pena_liv, cl, max(0, pena_liv - cl), any(vga_indulto(c) for c in livres), all(crime_patrimonial(c) for c in livres), livres)
                         inc2 = ", ".join(x.split(":")[0] for x in r2[0])
                         f13 = (A("art13_comutacao", "fracao_primario", "1/5"), A("art13_comutacao", "fracao_reincidente", "1/4"))
                         com2 = r2[4](r2[3](*f13, par2=False))
@@ -3258,7 +3262,7 @@ def analise_decretos(campos, crimes, eventos, incidentes, hoje):
                 continue
             cl = cumprido - exig
             pena_liv = max(1, pena_total - pena_imp)
-            res = avaliar(pena_liv, cl, max(0, pena_liv - cl), any(c.get("vga") == "S" for c in livres), all(crime_patrimonial(c) for c in livres), livres)
+            res = avaliar(pena_liv, cl, max(0, pena_liv - cl), any(vga_indulto(c) for c in livres), all(crime_patrimonial(c) for c in livres), livres)
             concluir(*res[:3], pena_liv, cl, max(0, pena_liv - cl), *res[3:],
                      "tempo cumprido além de 2/3 do impeditivo: %s de %s cumpridos em %s, menos %s (2/3 de %s)" % (
                          dias_para_pena(cl), dias_para_pena(cumprido), fmt(ref), dias_para_pena(exig), dias_para_pena(pena_imp)))
@@ -3356,9 +3360,22 @@ def e_remicao_concedida(i):
     return (i.get("situacao") or "CONCEDIDO") == "CONCEDIDO"
 
 
+def roubo_cp(c):
+    """Roubo (CP, art. 157), em qualquer forma: a violência ou a grave ameaça é elementar do tipo."""
+    lei = num_lei(c.get("lei"))
+    cp = lei in ("2848", "") or ("PENAL" in (c.get("lei") or "").upper() and "MILITAR" not in (c.get("lei") or "").upper())
+    return cp and num_art(c.get("artigo")) == "157"
+
+
+def vga_indulto(c):
+    """Violência ou grave ameaça para o indulto e a comutação: a marcação do RSPE ou, no roubo (art. 157), sempre - a violência
+    ou a grave ameaça é elementar do tipo e prevalece sobre a marcação em branco ou 'N'."""
+    return c.get("vga") == "S" or roubo_cp(c)
+
+
 def vga_incerta(c):
     """VGA em branco no RSPE em tipo que, pela base (vga_esperado), costuma ter violência ou grave ameaça (roubo, extorsão...)."""
-    if (c.get("vga") or "").strip().upper() in ("S", "N"):
+    if (c.get("vga") or "").strip().upper() in ("S", "N") or roubo_cp(c):
         return False
     try:
         import rspe_regras as _rg

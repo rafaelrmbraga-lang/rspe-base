@@ -1,8 +1,8 @@
-RSPE BASE - SEEU  v6.16.38 (programa em abas)
+RSPE BASE - SEEU  v6.16.39 (programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-6.16.38. A documentação técnica completa (cada parâmetro, a regra, a norma e
+6.16.39. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -555,6 +555,13 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v6.16.39
+  - Indulto e comutação: no roubo (CP, art. 157), em qualquer forma, prevalece a
+    violência ou grave ameaça, elementar do tipo, ainda que o RSPE marque VGA
+    em branco ou "N": fora dos incisos I, II, XIV e XV (Decretos 2024/2025) e
+    excluído pelo art. 7º, II, do Decreto 2022. A memória do decreto registra
+    a regra; a linha do tempo classifica o crime com violência.
 
 v6.16.38
   - Correções da verificação da base jurídica (base 2026-09-29b):

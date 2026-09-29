@@ -111,7 +111,7 @@ def natureza(c, D, ref):
                     "se_sim": "hediondez na data do decreto (STJ): IMPEDITIVO", "se_nao": "na data do fato (irretroatividade): NÃO IMPEDITIVO"}
         if exc:
             return {"selo": "IMPEDITIVO", "motivo": exc.split(":", 1)[-1].strip(), "dispositivo": "Decreto %s, art. 7º, %s" % (num, exc.split(":")[0])}
-        if (c.get("vga") or "") not in ("S", "N"):
+        if (c.get("vga") or "") not in ("S", "N") and not rs.roubo_cp(c):
             return {"selo": "A_VERIFICAR", "motivo": "o SEEU não informa se houve violência ou grave ameaça",
                     "dispositivo": "Decreto %s, art. 7º, II" % num, "se_sim": "com VGA: IMPEDITIVO", "se_nao": "sem VGA: NÃO IMPEDITIVO"}
     else:
@@ -130,7 +130,7 @@ def natureza(c, D, ref):
 def _natureza_txt(c):
     if rs.e_hediondo(c):
         return "hediondo ou equiparado"
-    if (c.get("vga") or "") == "S":
+    if rs.vga_indulto(c):
         return "com violência ou grave ameaça"
     if (c.get("vga") or "") == "N":
         return "sem violência ou grave ameaça"
