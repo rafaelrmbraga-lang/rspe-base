@@ -34,7 +34,7 @@ import rspe_relatorio as rrel
 import rspe_indulto_tl as rtl
 
 APP = "RSPE Base"
-VERSAO = "6.16.43"
+VERSAO = "6.16.48"
 
 
 def pasta_app():
@@ -166,6 +166,12 @@ tratado como hediondo (CF, art. 5º, XL) nas frações e no livramento, e a Audi
 fato anterior à lei. No art. 1º dos decretos de indulto, a hediondez é aferida na data de cada decreto (STJ); a tese da
 irretroatividade (STF, 2ª Turma) aparece como "tese hed. superv.", com a corrente contrária (STF, 1ª Turma) no texto.
 <h4>Prescrição (arts. 109 a 119 do CP), crime a crime</h4>
+<b>Quadro da executória</b>: ao abrir o cálculo, só quatro linhas - resultado, período que decide (fuga, soltura sem fuga, sem
+início do cumprimento ou em cumprimento), saldo remanescente (com a origem; sem fuga é informativo, pois o prazo segue a pena aplicada)
+e prazo com o vencimento. "Ver cálculo completo e linha do tempo" abre o quadro das fugas, a memória de cálculo e a linha do tempo. <b>Saldo na fuga</b>: quando a fuga
+alcança o menor prazo do art. 109 e o saldo não foi informado nem confirmado pelo SEEU, o programa calcula o saldo crítico (até quanto
+de saldo a fuga já teria prescrito) e pede a pena remanescente na data da fuga ("A VERIFICAR: informe a pena remanescente"); o campo
+dessa fuga vem destacado em "informar saldo". Com prescrição aparente pelo saldo calculado, pede a confirmação antes de requerer.
 <b>Pretensão punitiva (retroativa e intercorrente, art. 110, § 1º)</b>: prazo pela pena aplicada (art. 109), metade se menor de 21 anos
 no fato ou maior de 70 na sentença (art. 115; salvo violência sexual contra a mulher, com aviso); intervalos fato→denúncia (só para
 fatos até 05/05/2010; Lei 12.234/2010, DOU e vigência em 06/05/2010), denúncia→sentença e sentença→trânsito final (a intercorrente vai
@@ -296,6 +302,8 @@ O tráfico privilegiado (art. 33, § 4º) não é hediondo nem impeditivo de ind
 Recurso desativado nesta versão (foco na exatidão dos cálculos). Os modelos e o cadastro de defensores permanecem no programa
 para reativação futura.
 <h4>Auditoria</h4>
+Cada alerta ou ponto a verificar traz o campo <b>Fundamentação</b>: até três parágrafos para a impugnação do cálculo (o erro, o correto com
+o fundamento e o pedido), só nos pontos favoráveis ao assistido. "Copiar todas as fundamentações" junta as dos pontos pendentes.
 Confronta o RSPE com a base jurídica (arquivo base_juridica.json, editável e versionado): soma das penas, cumprida + remanescente,
 remições, hediondez pelo rol da Lei 8.072/90 (e art. 112, § 5º, LEP para o tráfico privilegiado), marcação de VGA pelo tipo,
 percentual de progressão pela lei da data do fato (1/6 para crimes comuns até 22/01/2020 e para hediondos até 28/03/2007 - STJ Súmula 471;

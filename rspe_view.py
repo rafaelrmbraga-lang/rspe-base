@@ -789,6 +789,7 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
         else:
             it["nivel_cor"] = {"alerta": "vermelho", "verificar": "amarelo", "ok": "verde", "info": "cinza"}[it["nivel"]]
             it["nivel_txt"] = {"alerta": "Alerta", "verificar": "Verificar", "ok": "OK", "info": "Info"}[it["nivel"]]
+        it["fundamentacao"] = ra.fundamentacao(it, r)  # texto para a impugnação do cálculo (Auditoria > Copiar fundamentação)
     # recontagem sem os baixados
     n_al = sum(1 for i in aud["aud_itens"] if i["nivel"] == "alerta" and not i["baixado"])
     n_ve = sum(1 for i in aud["aud_itens"] if i["nivel"] == "verificar" and not i["baixado"])

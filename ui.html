@@ -58,6 +58,17 @@ input{font:inherit}
 .tese{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px;background:var(--card)}
 .tese .tt{font-weight:600;font-size:13.5px;line-height:1.4;margin-bottom:6px}.tese .tm{font-size:11.5px;margin-bottom:8px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .tese .te{font-size:12.5px;color:var(--tx2);line-height:1.5;white-space:pre-wrap;margin-bottom:8px}.tese .te.on{color:var(--tx)}
+.mb.rz{border-left:3px solid var(--pri);background:#F6FBF8}.mb.rz .rzl{font-size:13px;line-height:1.5;padding:2px 0;font-weight:400;color:var(--tx)}.mb.rz .rzl.r0{font-weight:700}
+.sd.alvo{border:2px solid var(--a-dot)!important;background:#FFF7E6}.alvo-txt{color:var(--a-tx);font-weight:600;font-size:12.5px;margin:4px 0}
+table.rz{margin-top:8px;width:100%}table.rz td,table.rz th{font-size:12px;vertical-align:top}
+.qd{border:1px solid var(--line);border-left:4px solid #98A2B3;border-radius:10px;background:#fff;padding:10px 14px;margin-top:6px}
+.qd.verm{border-left-color:var(--r-dot)}.qd.amb{border-left-color:var(--a-dot)}.qd.verde{border-left-color:var(--g-dot)}
+.qd .qr{display:flex;gap:12px;padding:4px 0;font-size:13.5px;line-height:1.45}.qd .qk{flex:0 0 170px;color:var(--tx2);font-weight:600}.qd .qv{flex:1;font-weight:400;color:var(--tx)}
+.qd.verm .qr:first-child .qv{color:var(--r-tx)}.qd.amb .qr:first-child .qv{color:var(--a-tx)}
+.qd .qa{margin-top:8px;padding:8px 10px;border-radius:8px;background:#FFF7E6;color:var(--a-tx);font-weight:600;font-size:12.5px}
+.calc-full{display:none}.calc-full.on{display:block}
+.ac-fund{margin-top:8px;border-top:1px dashed #e3e7ee;padding-top:6px}.ac-fh{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12.5px}
+.ac-lista .ac-ft,.ac-ft{display:none;font-weight:400!important;white-space:pre-wrap;font-weight:400;color:var(--tx);font-size:12.5px;line-height:1.5;background:#f8faf9;border:1px solid #e3e7ee;border-radius:8px;padding:8px 10px;margin-top:6px}.ac-lista .ac-ft.on,.ac-ft.on{display:block}
 .subtabs{display:none;gap:6px;padding:8px 24px 0;flex-wrap:wrap}.subtabs.on{display:flex}
 .subtabs button{padding:6px 14px;border-radius:999px;border:1px solid var(--line2);background:#fff;font-weight:600;font-size:12.5px;color:var(--tx2)}
 .subtabs button:hover{border-color:var(--pri);color:var(--pri)}.subtabs button.on{background:var(--pri);border-color:var(--pri);color:#fff}
@@ -544,12 +555,26 @@ const ui = {
       const sym={ok:'✓',ko:'✕',run:'!',q:'?',obs:'i',termo:'→',fim:'=',n:'·'}[k];
       return `<div class="ml ${k}"><span class="mi">${sym}</span><span class="mt">${penaExt(esc(l))}</span></div>`; }).join('');
     return `<div class="mb ${cls||''}">${titulo?`<div class="mh">${titulo}</div>`:''}${li}</div>`; },
+  // resumo da executória em linguagem simples + quadro das fugas (campos ppe_explica / ppe_fugas do cálculo)
+  resumoPPE(s){ const ex=s.ppe_explica||[], fu=s.ppe_fugas||[]; if(!ex.length&&!fu.length) return '';
+    const tab=fu.length?`<table class="lt rz"><thead><tr><th>Fuga / interrupção</th><th>Retorno</th><th>Tempo fora</th><th>Saldo na fuga</th><th>Prazo</th><th>Vencia em</th><th>Resultado</th></tr></thead><tbody>${fu.map(f=>`<tr><td>${esc(f.fuga)} <span class="muted">${esc(f.tipo.toLowerCase())}${f.motivo&&f.motivo!=='não consta'?' ('+esc(f.motivo)+')':''}</span></td><td>${esc(f.retorno)}</td><td>${esc(f.tempo)}</td><td>${penaExt(esc(f.saldo))}<div class="muted" style="font-size:11px">${esc(f.origem)}</div></td><td>${esc(f.prazo)}</td><td>${esc(f.vencia)}</td><td><span class="pill ${f.cor||'none'}">${esc(f.resultado)}</span></td></tr>`).join('')}</tbody></table>`:'';
+    if(!fu.length) return '';
+    return `<div class="mb rz"><div class="mh">Fugas e interrupções</div>${tab}</div>`; },
+  txtResumoPPE(s){ const Q=s.ppe_quadro, fu=s.ppe_fugas||[]; if(!Q) return '';
+    return 'Em resumo\n'+[['Resultado',Q.resultado],['Período que decide',Q.periodo],['Saldo remanescente',Q.saldo],['Prazo',Q.prazo],['Tese defensiva',Q.tese]].filter(x=>x[1]).map(x=>'• '+x[0]+': '+penaExt(x[1])).join('\n')+(Q.alerta?'\n• '+Q.alerta:'')+(fu.length?'\n'+fu.map(f=>`• ${f.tipo} em ${f.fuga}; retorno: ${f.retorno}; tempo fora: ${f.tempo}; saldo na fuga: ${penaExt(f.saldo)} (${f.origem}); prazo ${f.prazo}; vencia em ${f.vencia}: ${f.resultado}.`).join('\n'):''); },
   memoria(s,so){
     const bt=(parte,rot,f)=>`<span class="mini ${f?'pre':''}" onclick="event.stopPropagation();ui.copiarClip(${ui.clip(f?ui.fundPresc(s,parte):ui.txtPresc(s,parte))})">${rot}</span>`;
     const pp=so!=='pe', pe=so!=='pp';
     const cps=[(pp&&s.retro_detalhe)?bt('pp','Copiar fundamentação (punitiva)',1):'', (pe&&s.ppe_detalhe)?bt('pe','Copiar fundamentação (executória)',1):'',
                (pp&&s.retro_detalhe)?bt('pp','Copiar cálculo (punitiva)'):'', (pe&&s.ppe_detalhe)?bt('pe','Copiar cálculo (executória)'):''].filter(Boolean).join(' ');
-    return `<div class="mem"><div class="cp-row" style="gap:6px">${cps}</div>${pp?this.bloco('Pretensão punitiva',s.retro_detalhe,'pp'):''}${pe?this.bloco('Pretensão executória',s.ppe_detalhe,'pe'):''}${pe?this.linhaTempo(s):''}${this.bloco('Avisos',s.avisos&&s.avisos.length?s.avisos:'','av')}</div>`; },
+    // executória: o quadro simples primeiro; memória de cálculo, quadro das fugas e linha do tempo recolhidos em "ver cálculo completo"
+    const Q=pe&&s.ppe_quadro; const det=`${pe?this.resumoPPE(s):''}${pe?this.bloco('Pretensão executória - memória de cálculo',s.ppe_detalhe,'pe'):''}${pe?this.linhaTempo(s):''}`;
+    const exe=Q?`${this.quadroPPE(s)}<div class="cp-row" style="gap:6px;margin-top:8px"><span class="mini" onclick="event.stopPropagation();const d=this.closest('.mem').querySelector('.calc-full');d.classList.toggle('on');this.textContent=d.classList.contains('on')?'Ocultar cálculo completo':'Ver cálculo completo e linha do tempo'">Ver cálculo completo e linha do tempo</span>${cps}</div><div class="calc-full">${det}</div>`
+                :`<div class="cp-row" style="gap:6px">${cps}</div>${det}`;
+    return `<div class="mem">${pp&&!pe?`<div class="cp-row" style="gap:6px">${cps}</div>`:''}${pe?exe:''}${pp?this.bloco('Pretensão punitiva',s.retro_detalhe,'pp'):''}${this.bloco('Avisos',s.avisos&&s.avisos.length?s.avisos:'','av')}</div>`; },
+  quadroPPE(s){ const Q=s.ppe_quadro; const cor={vermelho:'verm',amarelo:'amb'}[Q.cor]||(/^Não/.test(Q.resultado)?'verde':'');
+    const lin=[['Resultado',`<b>${esc(Q.resultado)}</b>`],['Período que decide',esc(Q.periodo)],['Saldo remanescente',penaExt(esc(Q.saldo))],['Prazo',penaExt(esc(Q.prazo))],['Tese defensiva',Q.tese?penaExt(esc(Q.tese)):'']].filter(x=>x[1]&&x[1]!=='<b></b>');
+    return `<div class="qd ${cor}">${lin.map(x=>`<div class="qr"><span class="qk">${x[0]}</span><span class="qv">${x[1]}</span></div>`).join('')}${Q.alerta?`<div class="qa">⚠ ${esc(Q.alerta)}${Q.informar?` <span class="btn-sal" onclick="event.stopPropagation();ui.pfAbrir(this,${this.tlReg(s)},'saldo')">INFORMAR SALDO</span>`:''}</div>`:''}<div class="pf-holder"></div></div>`; },
   // linha do tempo da executória deste crime: cada período dos eventos classificado (prisão provisória, cumprimento, prisão por outro motivo, evasão, liberdade)
   LT_ROT:{provisoria:'Prisão provisória (detração)',cumprimento:'Cumprimento da pena',livramento:'Livramento condicional',outro_motivo:'Prisão por outro motivo',evasao:'Evasão',interrupcao:'Interrupção',liberdade:'Liberdade',suspensao:'Suspensão',prd:'Restritiva de direitos'},
   linhaTempo(s){ const lt=s.ppe_linha_tempo||[]; if(!lt.length) return '';
@@ -753,11 +778,13 @@ const ui = {
       `Pena: ${penaExt(s.pena||'—')} · Fato: ${s.fato||'—'} · R. Denúncia: ${s.denuncia||'—'} · Sentença: ${s.sentenca||'—'} · Trânsito: ${s.transito||'—'}`];
     const out=[cab.join('\n')];
     if(s.retro_detalhe&&parte!=='pe') out.push(`Pretensão punitiva (prazo ${s.prazo_ppp||'—'}): ${s.retro_status||''}\n`+this.txtLinhas(s.retro_detalhe));
-    if(s.ppe_detalhe&&parte!=='pp') out.push(`Pretensão executória (prazo ${s.prazo_ppe||'—'}): ${s.ppe_status||''}\n`+this.txtLinhas(s.ppe_detalhe));
+    if(s.ppe_detalhe&&parte!=='pp') out.push(`Pretensão executória (prazo ${s.prazo_ppe||'—'}): ${s.ppe_status||''}\n`+(this.txtResumoPPE(s)?this.txtResumoPPE(s)+'\n\nMemória de cálculo\n':'')+this.txtLinhas(s.ppe_detalhe));
     if(parte!=='pp'&&this.txtLinhaTempo(s)) out.push(this.txtLinhaTempo(s));
     if(s.avisos&&s.avisos.length&&!parte) out.push('Avisos\n'+this.txtLinhas(s.avisos));
     return out.join('\n\n'); },
   txtAud(s){ return `${s.nivel_txt} - ${s.titulo}`+(s.detalhe?'\n'+penaExt(s.detalhe):'')+(s.fundamento?'\nFundamento: '+penaExt(s.fundamento):''); },
+  txtImpugnacao(r){ const it=(r.aud_itens||[]).filter(s=>s.fundamentacao&&!s.baixado);
+    return it.map(s=>penaExt(s.fundamentacao)).join('\n\n'); },
   txtAudTodos(r){ const it=(r.aud_itens||[]).filter(s=>!s.baixado&&(s.nivel==='alerta'||s.nivel==='verificar'));
     return `Auditoria do RSPE - ${r.nome} (${r.proc}) - RSPE de ${r.geracao}\n\n`+(it.length?it.map(s=>this.txtAud(s)).join('\n\n'):'Nenhuma inconsistência pendente.'); },
   txtFicha(r){ const L=[];
@@ -788,11 +815,16 @@ const ui = {
       return `<div class="ac ${k}"><div class="ac-h"><span class="pill ${s.nivel_cor}">${esc(s.nivel_txt)}</span><b>${penaExt(esc(s.titulo))}</b><span class="ac-a">${bx}</span></div>
         ${s.detalhe?`<div class="ac-d">${paras(s.detalhe)}</div>`:''}
         ${s.fundamento?`<div class="ac-f">${penaExt(esc(s.fundamento))}</div>`:''}
+        ${s.fundamentacao&&!s.baixado?`<div class="ac-fund"><div class="ac-fh"><b>Fundamentação</b> <span class="muted">texto para a impugnação do cálculo</span>
+          <span class="mini pre" onclick="event.stopPropagation();ui.copiarClip(${ui.clip(penaExt(s.fundamentacao))})">Copiar fundamentação</span>
+          <span class="mini" onclick="event.stopPropagation();const b=this.closest('.ac-fund').querySelector('.ac-ft');b.classList.toggle('on');this.textContent=b.classList.contains('on')?'Ocultar texto':'Ver texto'">Ver texto</span></div>
+          <div class="ac-ft">${esc(penaExt(s.fundamentacao))}</div></div>`:''}
         ${s.baixado?`<div class="ac-f">Baixado${s.baixa_data?' em '+esc(s.baixa_data):''}${s.baixa_obs?' · '+esc(s.baixa_obs):''}</div>`:''}</div>`; };
     const cab=`<div class="ac-top"><div><b>${esc(r.nome)}</b> <span class="muted">· conferência dos números e datas do RSPE (frações, soma das penas, data-base, perda de remidos, reincidência) · ${esc(r.aud_base)}</span></div>
       <div class="ac-chips">${nA?`<span class="pill vermelho">${nA} ${nA===1?'alerta':'alertas'}</span>`:''}${nV?`<span class="pill amarelo">${nV} ${nV===1?'ponto a verificar':'pontos a verificar'}</span>`:''}${!nA&&!nV?'<span class="pill verde">Sem inconsistências</span>':''}
       ${(ocultos||this.mostrarTudo)?`<span class="mini" onclick="event.stopPropagation();ui.mostrarTudo=!ui.mostrarTudo;ui.render()">${this.mostrarTudo?'ocultar conferências OK':'ver '+pl(ocultos,'conferência OK / informativa','conferências OK / informativas')}</span>`:''}
       <span class="mini" onclick="event.stopPropagation();ui.copiarClip(${ui.clip(ui.txtAudTodos(r))})">Copiar pendências</span>
+      ${todos.some(x=>x.fundamentacao&&!x.baixado)?`<span class="mini pre" title="Fundamentações de todos os pontos pendentes, em sequência" onclick="event.stopPropagation();ui.copiarClip(${ui.clip(ui.txtImpugnacao(r))})">Copiar todas as fundamentações</span>`:''}
       <span class="mini" onclick="event.stopPropagation();ui.abrir('${r.id}')">Abrir ficha completa</span></div></div>`;
     return cab+(rows.length?`<div class="ac-lista">${rows.map(card).join('')}</div>`:'<div class="muted" style="padding:8px 2px">Nenhuma inconsistência pendente.</div>'); },
   prescCards(r){ const pe=this.prescModo!=='pp'; const todas=(r.presc_linhas||[]);
@@ -1233,7 +1265,8 @@ const ui = {
     const inp=(k,rot,ph)=>`<label>${rot}<input data-k="${k}" data-o="${esc(o[k]||'')}" class="${v[k]!==undefined?'ed':''}" value="${esc(val(k))}" placeholder="${esc(ph||'dd/mm/aaaa')}" oninput="this.classList.toggle('ed',this.value.trim()!==this.dataset.o)"></label>`;
     const sel=(k,rot,ops)=>`<label>${rot}<select data-k="${k}" class="${v[k]!==undefined?'ed':''}">${ops.map(x=>`<option value="${x[0]}"${(v[k]||'')===x[0]?' selected':''}>${x[1]}</option>`).join('')}</select></label>`;
     const sal=(L.ppe_saldos||[]).map(S=>{ const n=sd[S.evasao]; const a=n!=null?Math.floor(n/365):'', r=n!=null?n%365:0, m=n!=null?Math.min(Math.floor(r/30),11):'', d=n!=null?r-30*m:'';
-      return `<div class="sd" data-ev="${esc(S.evasao)}"><b>${S.rotulo_evento?'Último comparecimento':S.revogacao?'Revogação do livramento':'Fuga'} de ${esc(S.evasao)} - saldo da pena nesta data</b> <span class="muted">(não é o remanescente atual do SEEU; deixe em branco para o programa calcular)</span>
+      return `<div class="sd ${S.informar?'alvo':''}" data-ev="${esc(S.evasao)}"><b>${S.rotulo_evento?'Último comparecimento':S.revogacao?'Revogação do livramento':'Fuga'} de ${esc(S.evasao)} - saldo da pena nesta data</b> <span class="muted">(não é o remanescente atual do SEEU; deixe em branco para o programa calcular)</span>
+        ${S.informar?`<div class="alvo-txt">⚠ Este saldo decide o resultado: a fuga durou ${esc(S.informar.duracao)} e prescreveria com saldo ${esc(S.informar.saldo)} (prazo de ${esc(S.informar.prazo)}). Veja a pena remanescente no cálculo do SEEU desta data, no atestado de pena ou na decisão de regressão/recaptura.</div>`:''}
         <div class="muted">${esc(S.saldo_rotulo||'')}</div>
         <div class="amd"><input data-s="a" value="${a}" placeholder="0"> ano(s) <input data-s="m" value="${m}" placeholder="0"> mês(es) <input data-s="d" value="${d}" placeholder="0"> dia(s)</div></div>`; }).join('');
     return `<div class="pf" id="${id}" onclick="event.stopPropagation()"><h5>${esc(L.rotulo||L.crime)} · preencher ou corrigir os dados <span class="muted">(em branco = dado importado do RSPE; o valor importado aparece como exemplo)</span></h5>
@@ -1243,9 +1276,9 @@ const ui = {
         ${sel('art115','Art. 115 (metade do prazo)',[['','Conforme o RSPE'+(o.nascimento?' (nasc. '+o.nascimento+')':' (sem data de nascimento)')],['sim','Aplicar: menor de 21 no fato ou maior de 70 na sentença'],['nao','Não aplicar']])}</div>
       ${sal}
       <div class="acts">${L.ajustado?`<button class="btn" onclick="ui.pfSalvar('${id}',true)">Restaurar dados importados</button>`:''}<button class="btn" onclick="this.closest('.pf').parentElement.innerHTML=''">Cancelar</button><button class="btn pri" onclick="ui.pfSalvar('${id}')">Salvar e recalcular</button></div></div>`; },
-  pfAbrir(el, idx, foco){ const L=this._tl[idx]; const h=(el.closest('.ptl')||el.closest('tr').nextElementSibling.nextElementSibling.nextElementSibling).querySelector('.pf-holder');
-    if(h.innerHTML){ h.innerHTML=''; if(!el.closest('.ptl')) h.closest('tr').style.display='none'; return; } this._pfL=this._pfL||{}; h.innerHTML=this.pfForm(L, foco); const f=h.querySelector('.pf'); this._pfL[f.id]=L;
-    if(!el.closest('.ptl')) h.closest('tr').style.display=''; const alvo=foco==='saldo'?f.querySelector('.sd input'):f.querySelector('input'); if(alvo) alvo.focus(); },
+  pfAbrir(el, idx, foco){ const L=this._tl[idx]; const box=el.closest('.ptl')||el.closest('.mb.rz')||el.closest('.qd'); const h=(box||el.closest('tr').nextElementSibling.nextElementSibling.nextElementSibling).querySelector('.pf-holder');
+    if(h.innerHTML){ h.innerHTML=''; if(!box) h.closest('tr').style.display='none'; return; } this._pfL=this._pfL||{}; h.innerHTML=this.pfForm(L, foco); const f=h.querySelector('.pf'); this._pfL[f.id]=L;
+    if(!box) h.closest('tr').style.display=''; const alvo=foco==='saldo'?(f.querySelector('.sd.alvo input')||f.querySelector('.sd input')):f.querySelector('input'); if(alvo) alvo.focus(); },
   async pfSalvar(fid, restaurar){ const f=document.getElementById(fid); const L=this._pfL[fid]; const rid=this.ridDe(L); if(!f||!L||!rid) return;
     let dados=null;
     if(!restaurar){ const valores={}; f.querySelectorAll('[data-k]').forEach(e=>{ const k=e.dataset.k, x=e.value.trim(); if(x && x!==(e.dataset.o||'')) valores[k]=x; });

@@ -1,8 +1,8 @@
-RSPE BASE - SEEU  v6.16.43 (programa em abas)
+RSPE BASE - SEEU  v6.16.48 (programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-6.16.43. A documentação técnica completa (cada parâmetro, a regra, a norma e
+6.16.48. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -562,6 +562,99 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v6.16.48
+  - Auditoria, campo "Fundamentação": agora em parágrafos de fundamentação,
+    diretos (no máximo 3): (1) o erro apontado no cálculo, com os fatos do
+    RSPE (datas e números); (2) o correto e o fundamento legal e
+    jurisprudencial, redigido para cada tipo de ponto; (3) o pedido
+    específico (ex.: exclusão da alteração da data-base e recálculo; limite
+    da perda de remidos a 1/3; reconhecimento da prescrição). Sem cabeçalho de
+    petição. Só os pontos em que a correção favorece o assistido geram texto
+    (ex.: o alerta do art. 88 não gera). "Copiar todas as fundamentações"
+    junta as dos pontos pendentes, em sequência.
+
+v6.16.47
+  - Prescrição executória após a fuga (roteiro da Defensoria):
+      * a detração (prisão provisória antes do trânsito) é pena cumprida e
+        sai do saldo na fuga (art. 113: tempo que resta da pena); fora da fuga
+        o prazo segue a pena aplicada e a detração é só informativa;
+      * várias condenações: o tempo cumprido vai para a pena em execução pela
+        ordem do trânsito em julgado (STJ, HC 627.646), sem o desconto
+        simultâneo em todas as penas. O art. 76 do CP (mais grave primeiro)
+        aparece como "Tese defensiva" no quadro quando é mais favorável. O
+        saldo informado pelo operador continua prevalecendo.
+  - Auditoria: voltam os avisos de "Alteração de data-base sem falta grave
+    homologada no RSPE" para qualquer data (antes só apareciam depois da
+    última progressão e nos últimos 3 anos). Quando já houve progressão
+    depois, o aviso lembra que, retificada a data-base, a progressão retroage
+    à data dos requisitos (STJ, Tema 1165).
+  - Auditoria: campo "Fundamentação" em cada alerta ou ponto a verificar -
+    texto pronto para a impugnação do cálculo (o ponto, o que consta do RSPE,
+    o fundamento legal e o pedido de retificação), com "Copiar
+    fundamentação" e "Ver texto". "Copiar impugnação" junta todos os pontos
+    pendentes do assistido, numerados, com o número da execução e o nome.
+
+v6.16.46
+  Correções a partir da leitura da documentação oficial do SEEU (tabelas de
+  parâmetros e de tipificação penal, notas de versão e boletins):
+  - Motivos de interrupção da pena (tabela oficial do SEEU), na prescrição
+    executória:
+      * "Não consta" e "interrupção do cumprimento da pena" valem como motivo
+        ausente (tratada como fuga, com aviso para conferir);
+      * progressão ao regime aberto, cumprimento em outra comarca ou outro
+        estado, unificação, conversão do tipo de prisão, adequação pela LEP,
+        incompatibilidade de regime e substituição por restritiva: a execução
+        seguiu - não é liberdade e a prescrição não corre (com aviso). A
+        situação do cumprimento também deixa de aparecer como interrompida;
+      * início de prisão preventiva e internação em outros autos: preso em
+        outro processo, o prazo fica suspenso (art. 116, p. único);
+      * "benefício revogado/suspenso" e "descumprimento das condições":
+        procura o incidente de revogação do livramento na data; sem ele,
+        alerta para conferir qual benefício (se foi o livramento, o prazo é
+        pelo saldo - art. 113);
+      * óbito, cumprimento da pena, prescrição, indulto, perdão judicial,
+        pagamento de multa, fim da medida de segurança, arquivamento e
+        absolvição: execução encerrada, sem prescrição a correr depois.
+  - Latrocínio e roubo com lesão grave pela descrição oficial do SEEU
+    ("§ 3º - resulta morte (latrocínio)"): o parágrafo era lido como "3-R" e
+    o crime saía como não hediondo. Agora o resultado indica o inciso (morte
+    = II; lesão grave = I, hediondo só desde 23/01/2020). "Latrocínio" e
+    "Homicídio qualificado" sem o parágrafo impresso também são reconhecidos.
+  - Artigos com letra: a tabela do SEEU grava 217-A como "217", 149-A como
+    "149" etc. Pelo nome do tipo, o programa completa a letra (217-A, 218-A/
+    B/C, 149-A, 288-A, 147-A/B, 216-A, 215-A, 154-A, ECA 241-A a D, 244-A/B,
+    Lei 11.340 art. 24-A) e avisa na Auditoria para conferir na sentença.
+  - Auditoria: "RSPE emitido antes de correção do SEEU" - frações e cálculos
+    de pena (corrigidos em 15/05/2025), término pelo art. 75 (erro de 15 a
+    19/09/2025), comutação com crime impeditivo (31/10/2025) e campos de pena
+    comutada no relatório (30/07/2026). Pede um RSPE atualizado.
+
+v6.16.45
+  - Prescrição executória simplificada: ao abrir o cálculo aparece só um
+    quadro de quatro linhas - resultado, período que decide, saldo
+    remanescente e prazo (com o vencimento) - e, quando falta dado, um
+    alerta de uma linha com o botão "Informar saldo". Sem fuga (nunca
+    iniciou, ou solto por alvará), o saldo remanescente aparece como
+    informação (pena menos o cumprido e a detração); o prazo segue a pena
+    aplicada. O quadro das fugas, a memória de cálculo e a linha do tempo
+    ficam em "Ver cálculo completo e linha do tempo". O "Copiar cálculo"
+    começa pelo quadro.
+
+v6.16.44
+  - Prescrição executória, fuga e recaptura: quando a fuga dura o bastante
+    para alcançar o menor prazo do art. 109 (3 anos; 2 para fatos até
+    05/05/2010; com reincidência e art. 115) e o saldo na fuga só foi
+    calculado pelos eventos do RSPE, o programa calcula o saldo crítico (ex.:
+    "prescreveria se o saldo na fuga fosse de até 4 anos, prazo de 8 anos")
+    e pede a pena remanescente na data da fuga: "A VERIFICAR: informe a pena
+    remanescente na fuga de dd/mm/aaaa". O campo dessa fuga vem destacado no
+    formulário. Com prescrição aparente pelo saldo calculado, a memória pede
+    a confirmação do saldo antes de requerer.
+  - "Em resumo" no topo do cálculo da executória: resultado, prazo e saldo
+    que o regula, por que prescreveu ou não, situação hoje e o que conferir,
+    e um quadro das fugas/interrupções (retorno, tempo fora, saldo e origem,
+    prazo, vencimento, resultado). O resumo vai também no "Copiar cálculo".
 
 v6.16.43
   - Banco de teses: corrigido "Arquivo teses_execucao.json não encontrado"

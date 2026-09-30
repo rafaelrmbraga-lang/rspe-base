@@ -150,11 +150,29 @@ RE_REVOGA_LC = rs.re.compile(r"REVOGA[ÇC][ÃA]O D[OE] LIVRAMENTO|LIVRAMENTO[^\n
 RE_SEM_CULPA = rs.re.compile(r"LIBERDADE PROVIS|RELAXAMENTO|HABEAS|ALVAR|FINAL DA PRIS|REVOGA[ÇC][ÃA]O DA PRIS|REVOGA[ÇC][ÃA]O DA PREVENTIVA|PREVENTIVA REVOGADA|SOLTURA", rs.re.I)
 
 
+# motivos de interrupção da tabela oficial do SEEU (Tabelas de Parâmetros - Motivos de Interrupção/Extinção)
+RE_MOTIVO_VAZIO = rs.re.compile(r"^\s*(N[ÃA]O CONSTA|INTERRUP[ÇC][ÃA]O DO CUMPRIMENTO( DA PENA)?)\s*$", rs.re.I)
+RE_MOTIVO_GENERICO = rs.re.compile(r"BENEF[ÍI]CIO REVOGADO|BENEF[ÍI]CIO SUSPENSO|SUSPENS[ÃA]O DE BENEF[ÍI]CIO|DESCUMPRIMENTO DAS CONDI", rs.re.I)
+# a execução seguiu em outra modalidade ou lugar: não é liberdade (a prescrição não corre)
+RE_INTERRUP_CONTINUA = rs.RE_INTERRUP_CONTINUA
+# a execução terminou: depois disso não há prescrição a correr
+RE_INTERRUP_EXTINCAO = rs.re.compile(r"[ÓO]BITO|^\s*CUMPRIMENTO DA PENA\s*$|^\s*PRESCRI[ÇC][ÃA]O\s*$|^\s*INDULTO\s*$|PERD[ÃA]O JUDICIAL|"
+                                     r"PAGAMENTO DE MULTA|CUMPRIMENTO DA MEDIDA DE SEGURAN|ARQUIVAMENTO DOS AUTOS|ABSOLVI", rs.re.I)
+
+
 def _motivo_interrupcao(eventos, incidentes, g0):
-    """Motivo da interrupção do cumprimento em g0 (evento INTERRUPÇÃO na data, ou revogação do livramento)."""
+    """Motivo da interrupção do cumprimento em g0 (evento INTERRUPÇÃO na data, ou revogação do livramento). "Não consta" e a
+    interrupção sem causa valem como motivo ausente; "benefício revogado/suspenso" e "descumprimento das condições" buscam
+    nos incidentes da data se o benefício era o livramento (art. 113)."""
+    mot_ev = None
     for e in eventos:
         if "INTERRUP" in (e.get("tipo") or "").upper() and rs.to_date(e.get("data") or "") == g0:
-            return (e.get("motivo") or "").strip()
+            mot_ev = (e.get("motivo") or "").strip()
+            if RE_MOTIVO_VAZIO.search(mot_ev):
+                mot_ev = ""
+            break
+    if mot_ev and not RE_MOTIVO_GENERICO.search(mot_ev):
+        return mot_ev
     for i in incidentes:
         t = ((i.get("tipo") or "") + " " + (i.get("complemento") or "")).upper()
         if rs.e_revogacao_livramento(i):
@@ -166,7 +184,7 @@ def _motivo_interrupcao(eventos, incidentes, g0):
             d = rs.to_date(i.get("data_referencia") or i.get("data_decisao") or "")
             if d and abs((d - g0).days) <= 1:
                 return "SUSPENSÃO DO LIVRAMENTO"
-    return ""
+    return mot_ev or ""
 
 
 RE_CONTINUIDADE = re.compile(r"\bART\.?\s*71\b|CRIME CONTINUADO|CONTINUIDADE DELITIVA", re.I)
@@ -294,6 +312,26 @@ def _faixas_saldo(smin, smax):
             if smin <= v <= smax:
                 vals.add(v)
     return sorted(vals)
+
+
+def _dur(d0, d1):
+    """Tempo entre duas datas por extenso: '6 anos, 11 meses e 4 dias'."""
+    if not d0 or not d1 or d1 <= d0:
+        return "0 dia"
+    a, m = d1.year - d0.year, d1.month - d0.month
+    dd = d1.day - d0.day
+    if dd < 0:
+        m -= 1
+        dd += ((d1.replace(day=1) - timedelta(days=1)).day)
+    if m < 0:
+        a -= 1
+        m += 12
+    p = [rs.pl(a, "ano", "anos") if a else "", rs.pl(m, "mês", "meses") if m else "", rs.pl(dd, "dia", "dias") if dd else ""]
+    p = [x for x in p if x]
+    return " e ".join([", ".join(p[:-1]), p[-1]]) if len(p) > 1 else (p[0] if p else "0 dia")
+
+
+FAIXAS_TETO = ((0, 1, "inferior a 1 ano"), (1, 2, "de até 2 anos"), (2, 4, "de até 4 anos"), (4, 8, "de até 8 anos"), (8, 12, "de até 12 anos"), (12, None, "acima de 12 anos"))
 
 
 def _d(n):
@@ -427,8 +465,8 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
             corpo.append((a2, "Cumprimento de %s a %s (inferido da última alteração de regime; sem evento de início no RSPE - conferir)." % (rs.fmt(a2), fim_txt)))
     L["ppe_detracao_dias"] = detr
     if detr:
-        cab.append("Prisão provisória anterior ao termo inicial: %s (detração, CP, art. 42) - informativa; não reduz a pena nem o prazo "
-                   "(STJ, AgRg no HC 967.565; RHC 67.403)." % _d(detr))
+        cab.append("Prisão provisória anterior ao termo inicial: %s (detração, CP, art. 42). Não reduz o prazo contado pela pena aplicada "
+                   "(STJ, AgRg no HC 967.565; RHC 67.403); na fuga, é pena cumprida e sai do saldo (art. 113: tempo que resta da pena)." % _d(detr))
         pp = _pena_processo(r, c)
         if pp and detr >= pp:
             cab.append("⚠ A verificar: a detração (%s) iguala ou supera a pena do processo (%s). Se computada nesta condenação, cabe extinção pelo "
@@ -486,7 +524,25 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
             lt(g0, g1 if g1 < hoje else None, "outro_motivo", "interrupção de %s (%s)" % (rs.fmt(g0), _mot0.lower()),
                "preso em outro processo: suspende o prazo (art. 116, p. único)")
             corpo.append((g0, "De %s a %s preso em outro processo (%s): a prescrição não corre (art. 116, p. único)." % (rs.fmt(g0), fim_txt, _mot0.lower())))
+            if g1 >= hoje:
+                L["ppe_nao_corre"] = "preso em outro processo desde %s (%s)" % (rs.fmt(g0), _mot0.lower())
             continue
+        if _mot0 and RE_INTERRUP_CONTINUA.search(_mot0):
+            lt(g0, g1 if g1 < hoje else None, "cumprimento", "interrupção de %s (%s)" % (rs.fmt(g0), _mot0.lower()),
+               "a execução seguiu em outra modalidade ou lugar: conta como cumprimento e o prazo não corre (art. 117, V) - conferir")
+            corpo.append((g0, "De %s a %s: %s - a execução seguiu (outra modalidade ou lugar), não houve liberdade; a prescrição não corre "
+                              "(art. 117, V). Conferir se houve abandono depois." % (rs.fmt(g0), fim_txt, _mot0.lower())))
+            L["avisos"].append("interrupção em %s por \"%s\": tratada como continuidade do cumprimento - conferir" % (rs.fmt(g0), _mot0.lower()))
+            if g1 >= hoje:
+                L["ppe_nao_corre"] = "execução seguiu desde %s (%s)" % (rs.fmt(g0), _mot0.lower())
+            continue
+        if _mot0 and RE_INTERRUP_EXTINCAO.search(_mot0):
+            lt(g0, g1 if g1 < hoje else None, "outro_motivo", "interrupção de %s (%s)" % (rs.fmt(g0), _mot0.lower()),
+               "execução encerrada: depois disso não há prescrição a correr")
+            corpo.append((g0, "Execução encerrada em %s (%s): depois disso não há prescrição executória a correr - conferir a extinção nos autos." % (
+                rs.fmt(g0), _mot0.lower())))
+            L["ppe_encerrada"] = "%s (%s)" % (rs.fmt(g0), _mot0.lower())
+            break
 
         novos_g = [t for t in novos if g0 < t[0] < g1]
         interr_nc = []  # novos crimes que interromperam o prazo neste intervalo (o último vale)
@@ -563,6 +619,12 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
             lt(g0, g1 if g1 < hoje else None, "liberdade", "interrupção de %s (%s)" % (rs.fmt(g0), motivo.lower()),
                "interrupção sem evasão nem revogação do livramento: prazo pela pena aplicada, sem o art. 113 (STF, HC 236.292; STJ, RHC 67.403)"
                + ("; %s de suspensão" % _d(sd) if sd else ""))
+            if RE_MOTIVO_GENERICO.search(motivo):
+                L["avisos"].append("interrupção em %s por \"%s\" sem incidente de revogação do livramento na data: se o benefício era o livramento, "
+                                   "o prazo é pelo saldo (art. 113) - conferir qual benefício" % (rs.fmt(g0), motivo.lower()))
+                faltam.append("qual benefício foi revogado/suspenso em %s" % rs.fmt(g0))
+                L["ppe_alerta_extra"] = ("Confira qual benefício foi revogado/suspenso em %s: se foi o livramento, o prazo é pelo saldo da pena "
+                                         "(art. 113), e pode ser menor." % rs.fmt(g0))
             txt = "Interrupção sem evasão de %s a %s (%s): prazo de %s pela pena aplicada - o art. 113 vale só na evasão e na revogação do livramento (STF, HC 236.292; STJ, RHC 67.403)%s" % (
                 rs.fmt(g0), fim_txt, motivo.lower(), fmt_prazo(ppe_meses), ("; %s de suspensão (art. 116, p. único)" % _d(sd)) if sd else "")
             base = dict(g0=g0, g1=g1, meses=ppe_meses, base_dias=pena, cumprido=cumprido_g0, motivo=motivo, restante=False, limite=lim, evasao=False)
@@ -579,8 +641,35 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
             soma_outras = sum(px for _, px, _ in outras)
             inicio_exec = min([termo] + [tx for tx, _, _ in outras])
             cumprido_total = _dias_uniao(todos, inicio_exec, g0) + rem_g0
-            cumprido_min_base = cumprido_g0 + rem_g0
+            # detração (prisão provisória deste processo antes do termo): é pena cumprida (CP, art. 42) e sai do "tempo que resta
+            # da pena" do art. 113 (roteiro da Defensoria; fora da fuga, o prazo segue a pena aplicada e ela é só informativa)
+            cumprido_min_base = cumprido_g0 + rem_g0 + detr
             fonte_saldo = ""
+
+            def _hip(ordem):
+                """Saldo deste crime se o tempo cumprido for imputado na ordem dada: as penas anteriores na ordem recebem o
+                tempo primeiro; a detração deste processo é descontada da própria pena."""
+                antes = pos = 0
+                for i, (tx, px, x) in enumerate(ordem):
+                    if x is c:
+                        pos = i + 1
+                        break
+                    antes += px
+                s = min(pena, max(0, pena - detr - max(0, cumprido_total - antes)))
+                if s > 0:
+                    m = Fraction(prazo_base_anos(s, fato) * 12) * fator
+                    lim_h, _ = _limite(m)
+                    res = "prescrita" if lim_h < ref else "não prescrita"
+                else:
+                    m, lim_h, res = None, None, "nada a prescrever"
+                return {"posicao": pos, "de": len(ordem), "saldo": s, "prazo_meses": (int(m) if m is not None else None),
+                        "prazo": fmt_prazo(m) if m is not None else "", "limite": rs.fmt(lim_h) if lim_h else "", "resultado": res,
+                        "_lim": lim_h}
+
+            em_exec = outras + [(termo, pena, c)]
+            hip76 = _hip(sorted(em_exec, key=lambda t: (-t[1], t[0])))
+            hipcron = _hip(sorted(em_exec, key=lambda t: (t[0], -t[1])))
+            tese76 = None
             if not outras:
                 saldo_min = saldo_max = max(0, pena - cumprido_min_base)
                 rem_seeu = rs.pena_para_dias(r.get("pena_remanescente"))
@@ -588,8 +677,15 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
                     saldo_min = saldo_max = rem_seeu
                     fonte_saldo = " (pena remanescente do RSPE)"
             else:
-                saldo_min = max(0, pena - cumprido_min_base)
-                saldo_max = min(pena, max(0, pena - max(0, cumprido_total - soma_outras)))
+                # várias condenações: o tempo cumprido vai para a pena em execução, pela ordem do trânsito em julgado (STJ, HC 627.646,
+                # citando o AgRg no REsp 1.858.048); o art. 76 do CP (mais grave primeiro) fica como tese quando é mais favorável
+                saldo_min = saldo_max = hipcron["saldo"]
+                if hip76["saldo"] != hipcron["saldo"] and (
+                        (hip76["resultado"] == "prescrita" and hipcron["resultado"] != "prescrita")
+                        or (hip76["_lim"] and hipcron["_lim"] and hip76["_lim"] < hipcron["_lim"])
+                        or hip76["resultado"] == "nada a prescrever" and hipcron["resultado"] != "nada a prescrever"):
+                    tese76 = hip76
+            _det_txt = (" (descontados %s de detração - CP, art. 42)" % _d(detr)) if detr else ""
             # item 6.5: a origem do saldo fica sempre à vista; estimativa não passa por dado confirmado
             inf = (ctx.get("saldos_inf") or {}).get(rs.fmt(g0))
             if inf is not None:
@@ -601,35 +697,16 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
             elif fonte_saldo:
                 origem = "confirmado"
                 saldo_rotulo = "Saldo confirmado: %s (pena remanescente do SEEU)." % rs.dias_para_pena(saldo_max)
-            elif saldo_min == saldo_max:
+            elif outras:
+                origem = "calculado"
+                saldo_rotulo = ("Saldo calculado pela ordem do trânsito em julgado (STJ, HC 627.646): este crime é o %dº de %d em execução, "
+                                "e o tempo cumprido vai primeiro às penas que transitaram antes%s: %s." % (
+                                    hipcron["posicao"], hipcron["de"], _det_txt, rs.dias_para_pena(saldo_max)))
+            else:
                 origem = "calculado"
                 ini_c = min([a for a, _ in cumpr if a >= termo] or [termo])
-                saldo_rotulo = "Saldo calculado a partir dos eventos de %s e %s: %s." % (rs.fmt(ini_c), rs.fmt(g0), rs.dias_para_pena(saldo_max))
-            else:
-                origem = "nao_determinado"
-                saldo_rotulo = "Saldo não determinado pelos dados disponíveis (entre %s e %s)." % (rs.dias_para_pena(saldo_min), rs.dias_para_pena(saldo_max))
+                saldo_rotulo = "Saldo calculado a partir dos eventos de %s e %s%s: %s." % (rs.fmt(ini_c), rs.fmt(g0), _det_txt, rs.dias_para_pena(saldo_max))
 
-            def _hip(ordem):
-                """Saldo deste crime se o tempo cumprido for imputado na ordem dada (hipótese de referência)."""
-                antes = pos = 0
-                for i, (tx, px, x) in enumerate(ordem):
-                    if x is c:
-                        pos = i + 1
-                        break
-                    antes += px
-                s = min(pena, max(0, pena - max(0, cumprido_total - antes)))
-                if s > 0:
-                    m = Fraction(prazo_base_anos(s, fato) * 12) * fator
-                    lim_h, _ = _limite(m)
-                    res = "prescrita" if lim_h < ref else "não prescrita"
-                else:
-                    m, lim_h, res = None, None, "nada a prescrever"
-                return {"posicao": pos, "de": len(ordem), "saldo": s, "prazo_meses": (int(m) if m is not None else None),
-                        "prazo": fmt_prazo(m) if m is not None else "", "limite": rs.fmt(lim_h) if lim_h else "", "resultado": res}
-
-            em_exec = outras + [(termo, pena, c)]
-            hip76 = _hip(sorted(em_exec, key=lambda t: (-t[1], t[0])))
-            hipcron = _hip(sorted(em_exec, key=lambda t: (t[0], -t[1])))
             # faixas do art. 109 atravessadas por [saldo_min, saldo_max]
             # saldo zero (crime já cumprido nessa imputação) não vota: com toda faixa positiva prescrita, a pena deste crime
             # está extinta em qualquer imputação (cumprimento ou prescrição) e o resultado é "aparente"
@@ -653,6 +730,26 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
             lim_max, sd_max = _limite(mmax) if mmax is not None else (None, 0)
             sd = sd_max or sd_min
             resultado = "não prescrita" if not algum_p else ("prescrita" if not algum_n else "a verificar")
+            # a fuga alcançou o menor prazo possível do art. 109 e o saldo não foi informado nem confirmado pelo SEEU: o saldo
+            # real (remição, detração, soma de penas que o RSPE não mostra) pode mudar a faixa - pede a pena remanescente na fuga
+            informar = None
+            if origem in ("calculado", "nao_determinado"):
+                m1 = Fraction(prazo_base_anos(1, fato) * 12) * fator
+                if _limite(m1)[0] < ref:
+                    crit = None
+                    for lo, hi, rot_f in FAIXAS_TETO:
+                        piso = lo * rs.DIAS_ANO + (1 if lo else 0) if lo != 1 else rs.DIAS_ANO
+                        teto = pena if hi is None else min(pena, hi * rs.DIAS_ANO - (1 if hi == 1 else 0))
+                        if piso > pena:
+                            break
+                        mf = Fraction(prazo_base_anos(teto, fato) * 12) * fator
+                        lf, _ = _limite(mf)
+                        if lf < ref:
+                            crit = {"saldo": rot_f, "teto_dias": teto, "prazo": fmt_prazo(mf), "limite": rs.fmt(lf)}
+                        else:
+                            break
+                    if crit and crit["teto_dias"] < pena:
+                        informar = dict(crit, fuga=rs.fmt(g0), fim=fim_txt, duracao=_dur(g0, ref), aberto=aberto)
             S = {"evasao": rs.fmt(g0), "fim": fim_txt, "motivo": motivo.lower() if motivo else "não consta", "revogacao": revog, "e_evasao": e_evasao,
                  "cumprido_min": pena - saldo_max, "cumprido_max": pena - saldo_min, "cumprido_desde_termo": cumprido_g0, "remicao": rem_g0,
                  "cumprido_total": cumprido_total, "outras": len(outras), "soma_outras": soma_outras,
@@ -660,8 +757,10 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
                  "prazo_min": fmt_prazo(mmin) if mmin is not None else "", "prazo_max": fmt_prazo(mmax) if mmax is not None else "",
                  "prazo_min_meses": int(mmin) if mmin is not None else None, "prazo_max_meses": int(mmax) if mmax is not None else None,
                  "limite_min": rs.fmt(lim_min) if lim_min else "", "limite_max": rs.fmt(lim_max) if lim_max else "",
-                 "suspensao_dias": sd, "art76": hip76, "cronologica": hipcron, "faixas": faixas, "resultado": resultado,
-                 "saldo_origem": origem, "saldo_rotulo": saldo_rotulo,
+                 "suspensao_dias": sd, "art76": {k: v for k, v in hip76.items() if k != "_lim"},
+                 "cronologica": {k: v for k, v in hipcron.items() if k != "_lim"}, "faixas": faixas, "resultado": resultado,
+                 "tese76": ({k: v for k, v in tese76.items() if k != "_lim"} if (tese76 and inf is None) else None),
+                 "saldo_origem": origem, "saldo_rotulo": saldo_rotulo, "informar": informar,
                  "triagem": ("Prescrição confirmada pela análise do limite máximo de saldo." if resultado == "prescrita" and saldo_min != saldo_max else
                              "Não prescrito mesmo com o menor saldo possível." if resultado == "não prescrita" and saldo_min != saldo_max else
                              "O resultado depende do saldo efetivamente atribuído à condenação." if resultado == "a verificar" else "")}
@@ -684,15 +783,27 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
             txt = cabeca + fecho + ". " + saldo_rotulo + ((" " + S["triagem"]) if S["triagem"] else "")
             if resultado == "prescrita" and saldo_min == 0:
                 txt += " Pelo saldo mínimo (zero) a pena deste crime já estaria cumprida: extinta em qualquer imputação."
+            if informar:
+                txt += ("\n⚠ A fuga durou %s (de %s a %s): prescreveria se o saldo na data da fuga fosse %s (prazo de %s, vencido em %s). "
+                        "O saldo usado foi %s e pode não refletir remição, detração ou soma de penas que o RSPE não mostra: informe a pena "
+                        "remanescente na data da fuga (cálculo de pena do SEEU daquela data, atestado de pena ou decisão de regressão/recaptura)." % (
+                            informar["duracao"], informar["fuga"], informar["fim"], informar["saldo"], informar["prazo"], informar["limite"],
+                            "estimado entre dois limites" if origem == "nao_determinado" else "calculado pelos eventos do RSPE"))
             if motivo and not e_evasao:
                 txt += "\nMotivo da interrupção \"%s\": não é evasão nem revogação do livramento; fora delas o prazo se regula pela pena aplicada (STJ, RHC 67.403) - conferir." % motivo.lower()
             if outras:
-                txt += ("\nHipóteses de imputação: pela ordem do art. 76 do CP (mais grave primeiro), este crime seria o %dº de %d - saldo %s (%s%s); "
-                        "pela ordem cronológica do trânsito (STJ, HC 627.646), o %dº de %d - saldo %s (%s%s). O RSPE não informa a imputação adotada." % (
-                            hip76["posicao"], hip76["de"], _pena_ou_zero(hip76["saldo"]), hip76["resultado"],
-                            (", prazo %s até %s" % (hip76["prazo"], hip76["limite"])) if hip76["limite"] else "",
+                txt += ("\nImputação do tempo cumprido: adotada a ordem do trânsito em julgado (STJ, HC 627.646) - este crime é o %dº de %d, "
+                        "saldo %s (%s%s). Pelo art. 76 do CP (mais grave primeiro), seria o %dº de %d - saldo %s (%s%s). Se o cálculo do SEEU "
+                        "tiver feito outra imputação, informe o saldo." % (
                             hipcron["posicao"], hipcron["de"], _pena_ou_zero(hipcron["saldo"]), hipcron["resultado"],
-                            (", prazo %s até %s" % (hipcron["prazo"], hipcron["limite"])) if hipcron["limite"] else ""))
+                            (", prazo %s até %s" % (hipcron["prazo"], hipcron["limite"])) if hipcron["limite"] else "",
+                            hip76["posicao"], hip76["de"], _pena_ou_zero(hip76["saldo"]), hip76["resultado"],
+                            (", prazo %s até %s" % (hip76["prazo"], hip76["limite"])) if hip76["limite"] else ""))
+            if tese76 and inf is None:
+                txt += ("\nTese defensiva (art. 76 do CP): imputando o tempo cumprido à pena mais grave primeiro, o saldo deste crime seria %s, "
+                        "prazo %s%s - mais favorável que a ordem do trânsito." % (
+                            _pena_ou_zero(tese76["saldo"]), tese76["prazo"] or "nada a prescrever",
+                            (", %s em %s" % ("venceu" if tese76["resultado"] == "prescrita" else "vence", tese76["limite"])) if tese76["limite"] else ""))
             if outras:
                 txt += ("\nVárias execuções: adotada a corrente simultânea - depois da fuga, cada condenação corre pelo seu saldo, nunca pela pena "
                         "unificada (STJ, AgRg no REsp 2.256.555 e HC 261.866). Há corrente sucessiva, desfavorável: só corre a execução em curso e as "
@@ -711,7 +822,7 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
             base = dict(g0=g0, g1=g1, meses=(mmax if mmax is not None else ppe_meses), base_dias=max(saldo_max, 1), cumprido=pena - saldo_max, motivo=motivo,
                         restante=True, limite=lim_max, evasao=e_evasao, revog=revog, S=S)
             base["nc"] = _nota_nc(mmax)
-            if resultado == "a verificar":
+            if resultado == "a verificar" or (informar and resultado == "não prescrita"):
                 corpo.append((g0, "? " + txt))
                 datas_ver.append(rs.fmt(g0))
                 if verificar is None:
@@ -746,10 +857,16 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
     elif L["ppe_saldos"]:
         L["ppe_saldo_rotulo"] = L["ppe_saldos"][-1]["saldo_rotulo"]
         L["ppe_triagem"] = L["ppe_saldos"][-1].get("triagem") or ""
-    if verificar:
+    _inf_v = verificar and (verificar.get("S") or {}).get("informar") and verificar["S"]["resultado"] == "não prescrita"
+    if verificar and not _inf_v:
         faltam.insert(0, "cálculo de pena do SEEU com o saldo por condenação em %s" % " e em ".join(datas_ver))
         faltam.insert(1, "ordem de imputação do cumprimento entre as condenações adotada pelo juízo (CP, art. 76; LEP, art. 111)")
-    L["ppe_faltam"] = faltam if verificar else []
+    _infs = [S_["informar"] for S_ in L["ppe_saldos"] if S_.get("informar")]
+    for _i in _infs:
+        faltam.insert(0, "pena remanescente na data da fuga de %s (cálculo de pena do SEEU daquela data, atestado de pena ou decisão de "
+                         "regressão/recaptura): com saldo %s, a fuga de %s completou o prazo" % (_i["fuga"], _i["saldo"], _i["duracao"]))
+    L["ppe_informar"] = _infs
+    L["ppe_faltam"] = faltam if (verificar or _infs) else []
     _x = prescrita or verificar or correndo
     if _x:
         # para a petição: pena que regula o prazo (saldo máximo, quando há limites), cumprido correspondente e início da contagem
@@ -781,7 +898,22 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
         det.append("Conclusão: prescrição da pretensão executória aparente em %s.%s" % (
             rs.fmt(prescrita["limite"]), (" " + S["triagem"]) if S and S.get("triagem") else ""))
         det.append("Antes de requerer: conferir recaptura ou nova condenação não registradas no RSPE (interrompem - art. 117, V e VI).")
+        if S and S.get("informar"):
+            det.append("Antes de requerer: confirmar a pena remanescente na data da fuga de %s (saldo %s): a prescrição se mantém com saldo %s." % (
+                S["evasao"], "calculado pelos eventos do RSPE" if S.get("saldo_origem") == "calculado" else "não determinado", S["informar"]["saldo"]))
         L["ppe_triagem"] = (S or {}).get("triagem") or ""
+    elif _inf_v:
+        S = verificar["S"]
+        I = S["informar"]
+        L["ppe_status"] = "A VERIFICAR: informe a pena remanescente na fuga de %s" % I["fuga"]
+        L["ppe_cor"] = "amarelo"
+        L["ppe_resumo"] = ("Fuga de %s a %s (%s fora). Com o saldo %s, não prescreveu; prescreveria se o saldo na fuga fosse %s (prazo de %s, "
+                           "vencido em %s)." % (I["fuga"], I["fim"], I["duracao"], _pena_ou_zero(S["saldo_max"]) if S["saldo_min"] == S["saldo_max"] else
+                                                "entre %s e %s" % (_pena_ou_zero(S["saldo_min"]), _pena_ou_zero(S["saldo_max"])),
+                                                I["saldo"], I["prazo"], I["limite"]))
+        L["ppe_triagem"] = "O saldo na data da fuga decide: informe a pena remanescente em \"informar saldo\"."
+        det.append("Conclusão: A VERIFICAR - a fuga durou o bastante para prescrever com saldo %s; o saldo usado não foi informado nem confirmado "
+                   "pelo SEEU. Falta: %s." % (I["saldo"], "; ".join(faltam)))
     elif verificar:
         S = verificar["S"]
         L["ppe_status"] = "A VERIFICAR: saldo na evasão depende da imputação do cumprimento entre as condenações unificadas"
@@ -809,7 +941,13 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
                                                                   (" (pelo saldo máximo; pelo saldo mínimo, %s)" % S["limite_min"]) if S and S["limite_min"] and S["limite_min"] != S["limite_max"] else ""))
     else:
         L["ppe_cor"] = ""
-        if gaps:
+        if L.get("ppe_nao_corre") and not L.get("ppe_encerrada"):
+            L["ppe_status"] = "Não corre (%s)" % L["ppe_nao_corre"]
+            det.append("Conclusão: não corre - %s; nenhum intervalo de liberdade anterior completou o prazo." % L["ppe_nao_corre"])
+        elif L.get("ppe_encerrada"):
+            L["ppe_status"] = "Não corre (execução encerrada em %s)" % L["ppe_encerrada"]
+            det.append("Conclusão: execução encerrada em %s; não há prescrição executória a correr." % L["ppe_encerrada"])
+        elif gaps:
             L["ppe_status"] = "Não prescrita"
             det.append("Conclusão: nenhum intervalo de liberdade completou o prazo; não prescrita.")
         else:
@@ -876,6 +1014,158 @@ def _base_do_prazo(L):
         L["ppe_prazo_efetivo"] = L.get("prazo_ppe", "")
     else:
         L["ppe_base_txt"], L["ppe_prazo_efetivo"] = "", L.get("prazo_ppe", "")
+
+
+def _explicar(L, hoje):
+    """Resumo da executória em linguagem simples (topo da memória): resultado, pena que regula o prazo, por que prescreveu ou não,
+    o que acontece hoje e o que conferir; e uma linha por fuga/interrupção (ppe_fugas). Só lê o que o cálculo já apurou."""
+    st = L.get("ppe_status") or ""
+    fugas = []
+    for S in L.get("ppe_saldos") or []:
+        g0 = rs.to_date(S.get("evasao") or "")
+        fim = rs.to_date(S.get("fim") or "")
+        aberto = not fim
+        saldo = _pena_ou_zero(S["saldo_max"]) if S["saldo_min"] == S["saldo_max"] else "%s a %s" % (_pena_ou_zero(S["saldo_min"]), _pena_ou_zero(S["saldo_max"]))
+        prazo = S["prazo_max"] if (not S["prazo_min"] or S["prazo_min"] == S["prazo_max"]) else "%s a %s" % (S["prazo_min"], S["prazo_max"])
+        venc = S["limite_max"] if (not S["limite_min"] or S["limite_min"] == S["limite_max"]) else "%s a %s" % (S["limite_min"], S["limite_max"])
+        res = S.get("resultado")
+        if res == "prescrita":
+            txt, cor = ("prescreveu antes da recaptura" if not aberto else "prescreveu"), "vermelho"
+        elif res == "a verificar":
+            txt, cor = "a verificar (saldo por condenação)", "amarelo"
+        elif S.get("informar"):
+            txt, cor = "a verificar: informe o saldo na fuga", "amarelo"
+        elif aberto:
+            txt, cor = ("prazo em curso" if S["limite_max"] else "nada a prescrever"), ""
+        else:
+            txt, cor = "recaptura antes do vencimento: interrompeu (art. 117, V)", "verde"
+        fugas.append({"tipo": "Revogação do livramento" if S.get("revogacao") else ("Evasão" if S.get("e_evasao", True) else "Interrupção"),
+                      "motivo": S.get("motivo") or "", "fuga": S.get("evasao") or "", "retorno": S.get("fim") if fim else "não houve",
+                      "tempo": _dur(g0, fim or hoje), "saldo": saldo or "—", "origem": ORIGEM_TXT.get(S.get("saldo_origem"), "").replace("saldo ", ""),
+                      "prazo": prazo or "nada a prescrever", "vencia": venc or "—", "resultado": txt, "cor": cor})
+    L["ppe_fugas"] = fugas
+    ex = []
+    if not L.get("ppe_termo"):
+        L["ppe_explica"] = []
+        return
+    ex.append("Resultado: %s." % (st[0].lower() + st[1:] if st.startswith(("Não", "Prescrição")) else st))
+    Sd = next((S for S in (L.get("ppe_saldos") or []) if S.get("evasao") == L.get("ppe_inicio")), None)
+    if Sd:
+        sal = _pena_ou_zero(Sd["saldo_max"]) if Sd["saldo_min"] == Sd["saldo_max"] else "entre %s e %s" % (_pena_ou_zero(Sd["saldo_min"]), _pena_ou_zero(Sd["saldo_max"]))
+        ex.append("Prazo: %s (art. 109, pelo saldo da pena na fuga - art. 113). Saldo na %s de %s: %s (%s)." % (
+            L.get("ppe_prazo_efetivo") or "—", "revogação do livramento" if Sd.get("revogacao") else "fuga", Sd["evasao"], sal,
+            ORIGEM_TXT.get(Sd.get("saldo_origem"), "").replace("saldo ", "")))
+    elif L.get("ppe_base_txt"):
+        ex.append("Prazo: %s (art. 109), calculado sobre a %s." % (L.get("ppe_prazo_efetivo") or "—", L["ppe_base_txt"]))
+    n = len(fugas)
+    if L.get("ppe_cor") == "vermelho" and Sd and rs.to_date(Sd.get("fim") or ""):
+        ex.append("%s em %s (%s): com saldo %s, o prazo de %s venceu em %s, durante a fuga, antes da recaptura em %s. A recaptura posterior "
+                  "não reabre o prazo já consumado (arts. 113 e 117, V)." % (
+                      "Revogação do livramento" if Sd.get("revogacao") else "Fuga", Sd["evasao"], _dur(rs.to_date(Sd["evasao"]), rs.to_date(Sd["fim"])) + " fora",
+                      _pena_ou_zero(Sd["saldo_max"]), Sd["prazo_max"], Sd["limite_max"], Sd["fim"]))
+    elif L.get("ppe_resumo") and (L.get("ppe_cor") in ("vermelho", "amarelo") or L.get("ppe_correndo_ate")):
+        ex.append(L["ppe_resumo"])
+    elif n:
+        ex.append("%s depois do trânsito. Em %s, a recaptura (ou a retomada do cumprimento) veio antes de o prazo vencer e interrompeu a "
+                  "prescrição (art. 117, V); a cada nova fuga o prazo recomeça pelo saldo que restava (art. 113)." % (
+                      "Houve 1 fuga ou interrupção" if n == 1 else "Houve %d fugas ou interrupções" % n,
+                      "todas" if n > 1 else "cada uma"))
+    elif st.startswith("Não corre"):
+        ex.append("Desde o termo inicial (%s) a pena está em cumprimento, sem fuga: a prescrição executória não corre (arts. 116, p. único, e 117, V)." % L["ppe_termo"])
+    lt = L.get("ppe_linha_tempo") or []
+    ult = lt[-1] if lt else None
+    if ult and not ult.get("fim") and L.get("ppe_cor") != "vermelho":
+        if ult["tipo"] in ("cumprimento", "livramento"):
+            ex.append("Hoje: pena em cumprimento desde %s - o prazo não corre." % ult["inicio"])
+        elif ult["tipo"] == "outro_motivo":
+            ex.append("Hoje: preso por outro motivo desde %s - o prazo está suspenso (art. 116, p. único)." % ult["inicio"])
+        elif L.get("ppe_correndo_ate"):
+            ex.append("Hoje: fora do cumprimento desde %s - o prazo corre e vence em %s." % (ult["inicio"], L["ppe_correndo_ate"]))
+    if L.get("ppe_faltam") and L.get("ppe_cor") == "amarelo":
+        ex.append("Para concluir: " + "; ".join(L["ppe_faltam"]) + ".")
+    elif (Sd or (L.get("ppe_saldos") or [{}])[-1]).get("saldo_origem") == "calculado":
+        ex.append("Conferir: o saldo na fuga foi calculado pelos eventos do RSPE; se o cálculo do SEEU daquela data trouxer outro valor, informe-o.")
+    L["ppe_explica"] = ex
+
+
+def _quadro(L, hoje):
+    """Quadro simples da executória (o que o usuário vê primeiro): resultado, período que decide, pena que regula o prazo e
+    saldo remanescente, mais um alerta de uma linha quando falta dado. O cálculo completo e a linha do tempo ficam recolhidos."""
+    st, cor = L.get("ppe_status") or "", L.get("ppe_cor") or ""
+    if not L.get("ppe_termo"):
+        L["ppe_quadro"] = None
+        return
+    Q = {"resultado": st, "cor": cor, "periodo": "", "prazo": "", "saldo": "", "alerta": ""}
+    inc = (" (art. 109, %s)" % L["inciso109"]) if L.get("inciso109") else " (art. 109)"
+    Sd = next((S for S in (L.get("ppe_saldos") or []) if S.get("evasao") == L.get("ppe_inicio")), None)
+    if Sd is None and L.get("ppe_saldos") and not L.get("ppe_inicio"):
+        Sd = L["ppe_saldos"][-1]
+    venc = L.get("ppe_previsao") or L.get("ppe_correndo_ate") or ""
+    if cor == "vermelho":
+        vtxt = "venceu em %s" % venc
+    elif L.get("ppe_correndo_ate") or (Sd and not rs.to_date(Sd.get("fim") or "")):
+        vtxt = "vence em %s" % (venc or (Sd or {}).get("limite_max") or "—")
+    else:
+        vtxt = ""
+    if Sd:
+        g0, g1 = rs.to_date(Sd["evasao"]), rs.to_date(Sd.get("fim") or "")
+        rot = "Revogação do livramento" if Sd.get("revogacao") else ("Fuga" if Sd.get("e_evasao", True) else "Interrupção")
+        Q["periodo"] = ("%s de %s a %s (%s fora)" % (rot, Sd["evasao"], Sd["fim"], _dur(g0, g1)) if g1 else
+                        "%s em %s, sem recaptura (%s até hoje)" % (rot, Sd["evasao"], _dur(g0, hoje)))
+        sal = _pena_ou_zero(Sd["saldo_max"]) if Sd["saldo_min"] == Sd["saldo_max"] else "entre %s e %s" % (_pena_ou_zero(Sd["saldo_min"]), _pena_ou_zero(Sd["saldo_max"]))
+        org = ORIGEM_TXT.get(Sd.get("saldo_origem"), "").replace("saldo ", "")
+        prazo = Sd["prazo_max"] if (not Sd["prazo_min"] or Sd["prazo_min"] == Sd["prazo_max"]) else "%s a %s" % (Sd["prazo_min"], Sd["prazo_max"])
+        if not vtxt and g1:
+            vtxt = "venceria em %s; a recaptura veio antes e interrompeu (art. 117, V)" % Sd["limite_max"] if Sd["limite_max"] else ""
+        Q["prazo"] = "%s%s, contado da %s pelo saldo (art. 113)%s" % (prazo or "nada a prescrever", inc if Sd["saldo_min"] == Sd["saldo_max"] else "",
+                                                                       "revogação" if Sd.get("revogacao") else "fuga", (" → " + vtxt) if vtxt else "")
+        Q["saldo"] = "%s na %s de %s (%s)" % (sal, "revogação" if Sd.get("revogacao") else "fuga", Sd["evasao"], org)
+    elif st.startswith("Não corre") and (L.get("ppe_nao_corre") or L.get("ppe_encerrada")):
+        Q["periodo"] = L.get("ppe_nao_corre") or ("execução encerrada em " + L["ppe_encerrada"])
+        Q["prazo"] = "%s pela pena aplicada de %s; hoje o prazo não corre" % (L.get("prazo_ppe") or "—", L.get("pena", ""))
+    elif not (L.get("ppe_linha_tempo") and any(p["tipo"] in ("liberdade", "interrupcao", "evasao") for p in L["ppe_linha_tempo"])) and st.startswith("Não corre"):
+        ini = next((p["inicio"] for p in (L.get("ppe_linha_tempo") or []) if p["tipo"] in ("cumprimento", "livramento", "prd")), L["ppe_termo"])
+        Q["periodo"] = "em cumprimento desde %s, sem fuga" % ini
+        Q["prazo"] = "%s pela pena aplicada de %s; enquanto cumpre, o prazo não corre" % (L.get("prazo_ppe") or "—", L.get("pena", ""))
+    else:
+        ini = L.get("ppe_inicio") or L["ppe_termo"]
+        cump = L.get("ppe_cumprido_dias") or 0
+        if ini == L["ppe_termo"] or not cump:
+            Q["periodo"] = "sem início do cumprimento desde o trânsito (%s)" % L["ppe_termo"]
+        else:
+            Q["periodo"] = "cumprimento interrompido em %s (%s), sem fuga" % (ini, L.get("ppe_motivo") or "motivo não consta")
+        Q["prazo"] = "%s pela pena aplicada de %s%s" % (L.get("ppe_prazo_efetivo") or L.get("prazo_ppe") or "—", L.get("pena", ""), (" → " + vtxt) if vtxt else "")
+        pena_d = rs.pena_para_dias(L.get("pena_dias_txt") or "") or L.get("ppe_base_dias") or 0
+        rest = max(0, pena_d - cump - (L.get("ppe_detracao_dias") or 0))
+        if cump or L.get("ppe_detracao_dias"):
+            Q["saldo"] = "%s (pena menos %s%s) - informativo: sem fuga, o prazo segue a pena aplicada" % (
+                _pena_ou_zero(rest), ("%s cumpridos" % _d(cump)) if cump else "", (("%s de detração" % _d(L["ppe_detracao_dias"])) if L.get("ppe_detracao_dias") else "")
+                if not cump else (" e %s de detração" % _d(L["ppe_detracao_dias"]) if L.get("ppe_detracao_dias") else ""))
+        else:
+            Q["saldo"] = "a pena inteira (%s)" % L.get("pena", "")
+    infs = L.get("ppe_informar") or []
+    if infs:
+        I = infs[0]
+        if cor == "vermelho":
+            Q["alerta"] = ("Confirme o saldo na fuga de %s antes de requerer (calculado pelos eventos do RSPE): a prescrição se mantém com saldo %s."
+                           % (I["fuga"], I["saldo"]))
+        else:
+            Q["alerta"] = "Informe o saldo na fuga de %s: com saldo %s, a fuga de %s já teria prescrito (prazo de %s)." % (I["fuga"], I["saldo"], I["duracao"], I["prazo"])
+        Q["informar"] = True
+    elif cor == "amarelo" and L.get("ppe_faltam"):
+        Q["alerta"] = "Falta para concluir: " + L["ppe_faltam"][0] + "."
+        Q["informar"] = bool(L.get("ppe_saldos"))
+    elif Sd and Sd.get("saldo_origem") == "calculado" and cor == "vermelho":
+        Q["alerta"] = "Confirme o saldo na fuga (calculado pelos eventos do RSPE) antes de requerer."
+        Q["informar"] = True
+    _t76 = (Sd or {}).get("tese76") if Sd else None
+    if _t76:
+        Q["tese"] = ("Tese (art. 76 do CP, pena mais grave primeiro): saldo %s, prazo %s%s." % (
+            _pena_ou_zero(_t76["saldo"]), _t76["prazo"] or "nada a prescrever",
+            (", %s em %s" % ("prescrita" if _t76["resultado"] == "prescrita" else "vence", _t76["limite"])) if _t76["limite"] else ""))
+    if not Q["alerta"] and L.get("ppe_alerta_extra"):
+        Q["alerta"] = L["ppe_alerta_extra"]
+    L["ppe_quadro"] = Q
 
 
 def _exec(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, meia):
@@ -1534,6 +1824,8 @@ def analisar(r, hoje=None):
                         L["ppe_faltam"] = ["natureza do crime na sentença (%s)" % impr[1].split(":")[0]] + list(L.get("ppe_faltam") or [])
         L["ppe_detalhe"] = "\n".join(det)
         _base_do_prazo(L)
+        _explicar(L, hoje)
+        _quadro(L, hoje)
         linhas.append(L)
     # avisos próprios de cada crime identificam o crime e a ação penal (uma execução pode ter vários processos)
     geral = set(avisos_gerais)
