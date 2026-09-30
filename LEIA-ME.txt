@@ -611,6 +611,11 @@ v6.16.50
     comarca, as palavras-chave da ementa e a ementa em 3 linhas ("Ler ementa
     completa"); botões "Copiar ementa" e "Copiar referência". Saiu o botão do
     e-SAJ.
+  - Prescrição após a fuga com várias condenações: a prisão provisória
+    entrava duas vezes no saldo (no tempo cumprido que vai às penas pela ordem
+    do trânsito e, de novo, como detração de cada crime). Agora cada dia de
+    prisão conta uma vez só. A tese do art. 76 só aparece quando muda o
+    desfecho (prescreve por ela e não pela ordem do trânsito).
   - Mais rápido: marcar pedido, dar baixa, informar dado ou ajustar a
     prescrição refaz só o assistido alterado (antes, a base inteira); abrir a
     base também ficou cerca de 25% mais rápido.

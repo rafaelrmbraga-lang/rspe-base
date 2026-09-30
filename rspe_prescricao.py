@@ -669,7 +669,11 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
             outras = [(tx, px, x) for tx, px, x in outros_crimes if tx < g0]
             soma_outras = sum(px for _, px, _ in outras)
             inicio_exec = min([termo] + [tx for tx, _, _ in outras])
-            cumprido_total = _dias_uniao(todos, inicio_exec, g0) + rem_g0
+            # tempo cumprido da execução unificada, contado uma vez só: toda a custódia desde a primeira prisão (a provisória
+            # anterior aos trânsitos entra aqui como detração do total - CP, art. 42) mais a remição. Descontar de novo a
+            # detração de cada crime contava duas vezes o mesmo dia (ele já está no total que vai às penas pela ordem)
+            inicio_pool = min([a for a, _b in todos if a] + [inicio_exec])
+            cumprido_total = _dias_uniao(todos, inicio_pool, g0) + rem_g0
             # detração (prisão provisória deste processo antes do termo): é pena cumprida (CP, art. 42) e sai do "tempo que resta
             # da pena" do art. 113 (roteiro da Defensoria; fora da fuga, o prazo segue a pena aplicada e ela é só informativa)
             cumprido_min_base = cumprido_g0 + rem_g0 + detr
@@ -684,7 +688,7 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
                         pos = i + 1
                         break
                     antes += px
-                s = min(pena, max(0, pena - detr - max(0, cumprido_total - antes)))
+                s = min(pena, max(0, pena - max(0, cumprido_total - antes)))
                 if s > 0:
                     m = Fraction(prazo_base_anos(s, fato) * 12) * fator
                     lim_h, _ = _limite(m)
@@ -709,10 +713,11 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
                 # várias condenações: o tempo cumprido vai para a pena em execução, pela ordem do trânsito em julgado (STJ, HC 627.646,
                 # citando o AgRg no REsp 1.858.048); o art. 76 do CP (mais grave primeiro) fica como tese quando é mais favorável
                 saldo_min = saldo_max = hipcron["saldo"]
+                # a tese só aparece quando muda o desfecho: prescreve pelo art. 76 e não pela ordem do trânsito (ou nada resta a
+                # cumprir); um vencimento só mais cedo, mas depois da recaptura, não serve à defesa
                 if hip76["saldo"] != hipcron["saldo"] and (
                         (hip76["resultado"] == "prescrita" and hipcron["resultado"] != "prescrita")
-                        or (hip76["_lim"] and hipcron["_lim"] and hip76["_lim"] < hipcron["_lim"])
-                        or hip76["resultado"] == "nada a prescrever" and hipcron["resultado"] != "nada a prescrever"):
+                        or (hip76["resultado"] == "nada a prescrever" and hipcron["resultado"] not in ("nada a prescrever", "prescrita"))):
                     tese76 = hip76
             _det_txt = (" (descontados %s de detração - CP, art. 42)" % _d(detr)) if detr else ""
             # item 6.5: a origem do saldo fica sempre à vista; estimativa não passa por dado confirmado
@@ -730,7 +735,8 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
                 origem = "calculado"
                 saldo_rotulo = ("Saldo calculado pela ordem do trânsito em julgado (STJ, HC 627.646): este crime é o %dº de %d em execução, "
                                 "e o tempo cumprido vai primeiro às penas que transitaram antes%s: %s." % (
-                                    hipcron["posicao"], hipcron["de"], _det_txt, rs.dias_para_pena(saldo_max)))
+                                    hipcron["posicao"], hipcron["de"], (" (a prisão provisória entra uma vez só, no tempo cumprido total - CP, art. 42)" if detr else ""),
+                                    rs.dias_para_pena(saldo_max)))
             else:
                 origem = "calculado"
                 ini_c = min([a for a, _ in cumpr if a >= termo] or [termo])
