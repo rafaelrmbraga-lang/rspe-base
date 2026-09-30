@@ -1,8 +1,8 @@
-RSPE BASE - SEEU  v6.16.48 (programa em abas)
+RSPE BASE - SEEU  v6.16.49 (programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-6.16.48. A documentação técnica completa (cada parâmetro, a regra, a norma e
+6.16.49. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -562,6 +562,18 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v6.16.49
+  - Prescrição após a fuga: o pedido "informe a pena remanescente na fuga"
+    só aparece quando o saldo que daria prescrição é possível. Se nem todo o
+    tempo desde a primeira prisão, contado como cumprimento e com remição,
+    levaria a pena até esse saldo, o resultado fica pelo saldo calculado, sem
+    pedir verificação (ex.: pena de 5a4m com menos de 1 ano de prisão antes
+    da fuga não pode ter saldo de até 2 anos).
+  - Quadro da executória: quando, depois da fuga, a pessoa foi presa por
+    outro processo, o período mostra "preso por outro processo desde ... -
+    prazo suspenso (art. 116, p. único)", e o vencimento avisa que a data
+    avança enquanto durar essa prisão.
 
 v6.16.48
   - Auditoria, campo "Fundamentação": agora em parágrafos de fundamentação,
