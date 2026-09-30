@@ -57,26 +57,36 @@ input{font:inherit}
 .tab svg{width:17px;height:17px;flex:none;color:#667085}.tab.on svg{color:var(--pri)}
 .tab:hover{background:#EAECF0;color:var(--tx)}.tab.on{background:var(--card);color:var(--pri);box-shadow:var(--shadow)}
 .tesbar{display:flex;gap:14px;align-items:center;width:100%}.tesbar .search{flex:1;max-width:none}.tesbar input{width:100%}.tesfonte{white-space:nowrap}
-.jz{display:grid;grid-template-columns:240px 1fr;height:100%}
+.jz{display:grid;grid-template-columns:260px 1fr;height:100%}
 .jz-side{border-right:1px solid var(--line);padding:14px 10px;overflow:auto;background:#FBFCFD}
-.jz-h{margin:2px 10px 8px;font-size:11px;letter-spacing:.4px;text-transform:uppercase;color:var(--tx3);font-weight:600}
-.jz-t{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:8px;cursor:pointer;font-size:12.5px;color:var(--tx2);white-space:nowrap}
+.jz-h{margin:2px 8px 8px;font-size:11px;letter-spacing:.4px;text-transform:uppercase;color:var(--tx3);font-weight:600}
+.jz-t{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:9px;cursor:pointer;font-size:12.5px;color:var(--tx2);white-space:nowrap}
 .jz-t:hover{background:#F2F4F7;color:var(--tx)}.jz-t.on{background:var(--pri-soft);color:var(--pri);font-weight:700}
-.jz-t i{width:7px;height:7px;border-radius:50%;flex:none}.jz-t span{flex:1;overflow:hidden;text-overflow:ellipsis}.jz-t b{font-size:11px;font-weight:500;color:var(--tx3)}
-.jz-main{overflow:auto;padding:14px 22px 20px}
-.jz-head{margin:0 2px 12px;font-size:12.5px;color:var(--tx3)}.jz-head b{color:var(--tx);font-size:14px}
-.jz-c{position:relative;background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 18px 12px 20px;margin-bottom:12px}
-.jz-c::before{content:"";position:absolute;left:0;top:14px;bottom:14px;width:3px;border-radius:0 3px 3px 0;background:var(--ac)}
-.jz-r1{display:flex;align-items:center;gap:10px;font-size:11.5px;color:var(--tx3);margin-bottom:6px}.jz-r1 span:first-child{flex:1}
-.jz-res{font-weight:600;color:#067647}
-.jz-tt{font-size:14.5px;font-weight:700;line-height:1.45;color:#101828;margin-bottom:4px}
-.jz-meta{font-size:12px;color:var(--tx3);margin-bottom:10px}
-.jz-em{font-size:13px;line-height:1.6;color:#475467;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;margin-bottom:10px}
+.jz-t i{width:8px;height:8px;border-radius:3px;flex:none}.jz-t span{flex:1;overflow:hidden;text-overflow:ellipsis}
+.jz-t b{font-size:11px;font-weight:600;color:var(--tx3);background:#EEF0F3;border-radius:999px;padding:1px 7px}.jz-t.on b{background:#fff;color:var(--pri)}
+.jz-main{overflow:auto;padding:14px 20px 20px}
+.jz-head{display:flex;align-items:center;gap:10px;margin:0 2px 12px;font-size:12.5px;color:var(--tx3)}.jz-head b{color:var(--tx);font-size:14px}.jz-head .sp{flex:1}
+.jz-sort{border:1px solid var(--line2);border-radius:8px;padding:5px 9px;font:inherit;font-size:12px;background:#fff;color:var(--tx2);cursor:pointer}
+.jz-c{position:relative;background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 18px 12px 22px;margin-bottom:12px;box-shadow:0 1px 2px rgba(16,24,40,.04);transition:.15s}
+.jz-c:hover{border-color:#C9D1DB;box-shadow:0 4px 14px rgba(16,24,40,.07)}
+.jz-c::before{content:"";position:absolute;left:0;top:14px;bottom:14px;width:4px;border-radius:0 4px 4px 0;background:var(--ac)}
+.jz-r1{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.jz-tema{font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--bg2);color:var(--fg)}
+.jz-res{margin-left:auto;display:inline-flex;align-items:center;font-size:11.5px;font-weight:700;padding:3px 10px;border-radius:999px}
+.jz-res.prov{background:#E8F5EE;color:#067647}.jz-res.mp{background:#EAF2FF;color:#1D4ED8}
+.jz-dt{font-size:11.5px;color:var(--tx3);white-space:nowrap}
+.jz-tt{font-size:15px;font-weight:700;line-height:1.45;color:#101828;margin:2px 0 6px}
+.jz-meta{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--tx2);margin-bottom:10px}
+.jz-meta span{display:inline-flex;align-items:center;gap:5px}.jz-meta svg{width:13px;height:13px;color:var(--tx3)}
+.jz-kw{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px}.jz-kw span{font-size:11px;padding:2px 8px;border-radius:6px;background:#F2F4F7;color:#475467}
+.jz-em{font-size:13px;line-height:1.6;color:#475467;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;border-left:2px solid #EAECF0;padding-left:12px;margin:0 0 10px}
 .jz-em.on{display:block;white-space:pre-wrap}
-.jz-ac{display:flex;align-items:center;gap:8px}.jz-ac .sp{flex:1}
-.jz-lk{font-size:12.5px;font-weight:600;color:var(--pri);cursor:pointer}
-.jz-b{display:inline-flex;align-items:center;height:30px;padding:0 12px;border-radius:8px;border:1px solid var(--line2);background:#fff;font-size:12px;font-weight:600;color:var(--tx);cursor:pointer}
-.jz-b:hover{border-color:var(--pri);color:var(--pri)}.jz-b.pri{background:var(--pri);border-color:var(--pri);color:#fff}.jz-b.pri:hover{background:var(--pri2);color:#fff}
+.jz-ac{display:flex;align-items:center;gap:8px;border-top:1px solid #F2F4F7;padding-top:10px}.jz-ac .sp{flex:1}
+.jz-lk{font-size:12.5px;font-weight:600;color:var(--pri);cursor:pointer;display:inline-flex;align-items:center;gap:4px;white-space:nowrap}.jz-lk svg{width:15px;height:15px}
+.jz-b{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 12px;border-radius:8px;border:1px solid var(--line2);background:#fff;font-size:12px;font-weight:600;color:var(--tx);cursor:pointer}
+.jz-b:hover{border-color:var(--pri);color:var(--pri)}.jz-b.pri{background:var(--pri);border-color:var(--pri);color:#fff}.jz-b.pri:hover{color:#fff;background:var(--pri2)}.jz-b svg{width:14px;height:14px}
+.jz-src{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--tx3);white-space:nowrap}
+.jz-src b{background:#E8F5EE;color:#067647;border-radius:6px;padding:2px 8px;font-size:11px}.jz-src s{text-decoration:none;background:#F2F4F7;color:#98A2B3;border-radius:6px;padding:2px 8px;font-size:11px}
 .teses{padding:6px 16px 16px}.tescnt{padding:8px 2px 10px;font-size:12.5px}
 .tese{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px;background:var(--card)}
 .tese .tt{font-weight:600;font-size:13.5px;line-height:1.4;margin-bottom:6px}.tese .tm{font-size:11.5px;margin-bottom:8px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
@@ -1129,33 +1139,48 @@ const ui = {
   tesBusca(v){ this.tesQ=v; this.tesN=60; this.tesLista(); },
   tesCitacao(x){ return `(TJMS, ${x.classe} n. ${x.proc}${x.relator?', Rel. '+(/^(des|ju[ií]z)/i.test(x.relator)?'':'Des. ')+x.relator:''}${x.orgao?', '+x.orgao:''}${x.julg?', j. '+x.julg:''}${x.pub?', publ. '+x.pub:''})`; },
   tesCopiar(i,modo){ const x=this._teses.itens[i]; const t=modo==='cit'?this.tesCitacao(x):(x.ementa.trim()+'\n'+this.tesCitacao(x)); this.copiarClip(this.clip(t)); },
-  // Jurisprudências: temas à esquerda (clique filtra); cartões enxutos com tese, resultado, dados do acórdão e a ementa em 3 linhas
-  TES_COR:['#067647','#1D4ED8','#B54708','#7A5AF8','#C11574','#0E7090','#B42318','#4E5BA6'],
-  tesResultado(r){ r=r||''; if(/desprovid|improced|negad/i.test(r)) return 'Recurso do MP desprovido'; if(/parcial/i.test(r)) return 'Parcialmente provido'; if(/concedid/i.test(r)) return 'Ordem concedida'; return 'Provido'; },
-  tesCorpo(em){ const l=String(em||'').split('\n'); const h=l[0]||'', c=l.slice(1).join('\n').trim();
-    // o cabeçalho em maiúsculas (verbetes) fica só na ementa completa; na prévia, o texto corrido
-    return (c && !/[a-zà-ú]{4}/.test(h) ? c : String(em||'')).replace(/^I\.\s*CASO EM EXAME\s*/,'').trim(); },
+  // Jurisprudências: temas à esquerda (clique filtra); cartão com temas, resultado, tese, dados do acórdão, palavras-chave da ementa
+  // e a ementa em 3 linhas
+  TES_COR:['#067647','#1D4ED8','#B54708','#7A5AF8','#C11574','#0E7090','#B42318','#4E5BA6','#667085'],
+  TES_BG:['#E8F5EE','#EAF2FF','#FEF4D6','#F0EBFF','#FCE7F6','#E0F2F8','#FDE8E8','#EEF0FA','#F2F4F7'],
+  tesOrdem:'recentes',
+  tesIc(p){ return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`; },
+  tesResultado(r){ r=r||''; if(/desprovid|improced|negad/i.test(r)) return ['mp','Recurso do MP desprovido']; if(/parcial/i.test(r)) return ['prov','Parcialmente provido']; if(/concedid/i.test(r)) return ['prov','Ordem concedida']; return ['prov','Provido']; },
+  // cabeçalho em maiúsculas da ementa -> palavras-chave em letra normal; o texto corrido fica na prévia
+  tesPartes(em){ const lin=String(em||'').split('\n'); let head=lin[0]||'', corpo=lin.slice(1).join('\n').trim();
+    if(/[a-zà-ú]{4}/.test(head) || !corpo){ corpo=String(em||''); head=''; }
+    const ACR=/\b(lep|pad|cnj|mp|enem|encceja|stj|stf|cp|cpp|tjms|ii|iii|iv|vi|vii|viii)\b/gi, GEN=/^(DIREITO (PENAL|PROCESSUAL)|EXECUÇÃO PENAL$|AGRAVO|RECURSO|HABEAS|DECIS|MANUTEN|I\. CASO|PENAL E)/;
+    const fr=t=>{ t=t.trim().toLowerCase().replace(ACR,m=>m.toUpperCase()); return t.charAt(0).toUpperCase()+t.slice(1); };
+    const kw=head.split(/\s[–-]\s|\.\s+(?=[A-ZÁ-Ú]{3,})/).map(x=>x.replace(/\.$/,'').trim()).filter(x=>x&&x.length<70&&!GEN.test(x)).slice(0,6).map(fr);
+    return {kw, corpo:corpo.replace(/^I\.\s*CASO EM EXAME\s*/,'').trim()}; },
   renderTeses(){ if(!this._teses){ this.tesCarregar(); }
     document.getElementById('subtabs').classList.remove('on');
     document.getElementById('stats').innerHTML=`<div class="tesbar"><div class="search has"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="tq" placeholder="Pesquisar tese, ementa, relator ou número (ex.: remição ENEM, falta grave bis in idem)" value="${esc(this.tesQ)}" oninput="ui.tesBusca(this.value)"></div>
-      <div class="tesfonte"><span class="muted">Fonte</span> <span class="tag ok">TJMS</span><span class="muted" title="STJ e STF serão acrescentados depois">STJ e STF em breve</span></div></div>`;
+      <div class="jz-src">Fonte <b>TJMS</b><s title="em breve">STJ</s><s title="em breve">STF</s></div></div>`;
     this.tesLista(); },
   tesLista(manter){ const card=document.getElementById('card'); const T=this._teses||{itens:[]};
     if(T.carregando){ card.innerHTML='<div class="empty"><div><b>Carregando as jurisprudências…</b></div></div>'; return; }
     if(T.erro){ card.innerHTML=`<div class="empty"><div><b>Jurisprudências indisponíveis</b>${esc(T.erro)}</div></div>`; return; }
-    const temas=T.temas||[]; const cor={}; temas.forEach((t,i)=>cor[t.tema]=this.TES_COR[i%this.TES_COR.length]);
-    const V=this.tesFiltradas(); const idx=new Map(T.itens.map((x,i)=>[x,i]));
-    const side=`<div class="jz-side"><div class="jz-h">Temas</div><div class="jz-t ${!this.tesTema?'on':''}" onclick="ui.tesTema='';ui.tesN=60;ui.tesLista()"><span>Todos</span><b>${T.itens.length}</b></div>${temas.map(t=>`<div class="jz-t ${this.tesTema===t.tema?'on':''}" onclick="ui.tesTema=ui._clips[${this.clip(t.tema)}];ui.tesN=60;ui.tesLista()"><i style="background:${cor[t.tema]}"></i><span>${esc(t.tema)}</span><b>${t.n}</b></div>`).join('')}</div>`;
-    const cards=V.slice(0,this.tesN).map(x=>{ const i=idx.get(x); const ab=this.tesAberta[x.id]; const t0=(x.temas||[])[0];
-      return `<div class="jz-c" style="--ac:${cor[t0]||'#98A2B3'}"><div class="jz-r1"><span>${esc((x.temas||[]).join(' · '))}</span><span class="jz-res">${this.tesResultado(x.resultado)}</span></div>
+    const temas=T.temas||[]; const k={}; temas.forEach((t,i)=>k[t.tema]=i%this.TES_COR.length);
+    const dt=x=>{ const p=String(x.julg||'').split('/'); return p.length===3?+(p[2]+p[1]+p[0]):0; };
+    const V=this.tesFiltradas().slice().sort((a,b)=>this.tesOrdem==='antigos'?dt(a)-dt(b):dt(b)-dt(a)); const idx=new Map(T.itens.map((x,i)=>[x,i]));
+    const I={cam:this.tesIc('<path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1z"/><path d="M7 21h10M12 3v18"/>'),
+      rel:this.tesIc('<circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 12 0v1"/>'), doc:this.tesIc('<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/>'),
+      pin:this.tesIc('<path d="M12 21s-7-6.2-7-12a7 7 0 0 1 14 0c0 5.8-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/>'),
+      cp:this.tesIc('<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/>'), q:this.tesIc('<path d="M7 7h4v4H7zM13 7h4v4h-4z"/><path d="M7 11c0 3-1 5-3 6M13 11c0 3-1 5-3 6"/>'),
+      ch:this.tesIc('<path d="m6 9 6 6 6-6"/>'), up:this.tesIc('<path d="m18 15-6-6-6 6"/>')};
+    const side=`<div class="jz-side"><div class="jz-h">Temas</div><div class="jz-t ${!this.tesTema?'on':''}" onclick="ui.tesTema='';ui.tesN=60;ui.tesLista()"><i style="background:#98A2B3"></i><span>Todos</span><b>${T.itens.length}</b></div>${temas.map(t=>`<div class="jz-t ${this.tesTema===t.tema?'on':''}" onclick="ui.tesTema=ui._clips[${this.clip(t.tema)}];ui.tesN=60;ui.tesLista()"><i style="background:${this.TES_COR[k[t.tema]]}"></i><span>${esc(t.tema)}</span><b>${t.n}</b></div>`).join('')}</div>`;
+    const cards=V.slice(0,this.tesN).map(x=>{ const i=idx.get(x); const ab=this.tesAberta[x.id]; const P=this.tesPartes(x.ementa); const c0=k[(x.temas||[])[0]]??8; const [rc,rt]=this.tesResultado(x.resultado);
+      return `<div class="jz-c" style="--ac:${this.TES_COR[c0]}"><div class="jz-r1">${(x.temas||[]).map(t=>`<span class="jz-tema" style="--bg2:${this.TES_BG[k[t]??8]};--fg:${this.TES_COR[k[t]??8]}">${esc(t)}</span>`).join('')}<span class="jz-res ${rc}">${rt}</span>${x.julg?`<span class="jz-dt">j. ${esc(x.julg)}</span>`:''}</div>
         <div class="jz-tt">${esc(x.tese||'')}</div>
-        <div class="jz-meta">${esc(x.orgao||'')}${x.relator?' · Des. '+esc(x.relator):''} · ${esc(x.classe)} nº ${esc(x.proc)}${x.julg?' · j. '+esc(x.julg):''}</div>
-        <div class="jz-em ${ab?'on':''}">${esc(ab?x.ementa:this.tesCorpo(x.ementa))}</div>
-        <div class="jz-ac"><span class="jz-lk" onclick="ui.tesAberta['${x.id}']=!ui.tesAberta['${x.id}'];ui.tesLista(1)">${ab?'Recolher ementa':'Ler ementa completa'}</span><span class="sp"></span>
-          <span class="jz-b" onclick="ui.tesCopiar(${i},'cit')">Copiar referência</span><span class="jz-b pri" onclick="ui.tesCopiar(${i},'em')">Copiar ementa</span></div></div>`; }).join('');
+        <div class="jz-meta">${x.orgao?`<span>${I.cam}${esc(x.orgao)}</span>`:''}${x.relator?`<span>${I.rel}Des. ${esc(x.relator)}</span>`:''}<span>${I.doc}${esc(x.classe)} nº ${esc(x.proc)}</span>${x.comarca?`<span>${I.pin}${esc(x.comarca)}</span>`:''}</div>
+        ${P.kw.length?`<div class="jz-kw">${P.kw.map(w=>`<span>${esc(w)}</span>`).join('')}</div>`:''}
+        <div class="jz-em ${ab?'on':''}">${esc(ab?x.ementa:P.corpo)}</div>
+        <div class="jz-ac"><span class="jz-lk" onclick="ui.tesAberta['${x.id}']=!ui.tesAberta['${x.id}'];ui.tesLista(1)">${ab?'Recolher ementa '+I.up:'Ler ementa completa '+I.ch}</span><span class="sp"></span>
+          <span class="jz-b" onclick="ui.tesCopiar(${i},'cit')">${I.q}Copiar referência</span><span class="jz-b pri" onclick="ui.tesCopiar(${i},'em')">${I.cp}Copiar ementa</span></div></div>`; }).join('');
     const vazio=`<div class="empty"><div><b>Nenhum acórdão encontrado</b>Tente outras palavras ou outro tema.</div></div>`;
-    const sc=card.querySelector('.jz-main')?card.querySelector('.jz-main').scrollTop:0;
-    card.innerHTML=`<div class="jz">${side}<div class="jz-main"><div class="jz-head"><b>${V.length}</b> ${V.length===1?'acórdão favorável à defesa':'acórdãos favoráveis à defesa'}${this.tesTema?' em '+esc(this.tesTema):''}${this.tesQ?' para “'+esc(this.tesQ)+'”':''}</div>${V.length?cards:vazio}${V.length>this.tesN?`<div style="text-align:center;padding:12px"><span class="jz-b" onclick="ui.tesN+=60;ui.tesLista(1)">Mostrar mais (${V.length-this.tesN})</span></div>`:''}</div></div>`;
+    const m0=card.querySelector('.jz-main'), sc=m0?m0.scrollTop:0;
+    card.innerHTML=`<div class="jz">${side}<div class="jz-main"><div class="jz-head"><b>${V.length}</b> ${V.length===1?'acórdão favorável à defesa':'acórdãos favoráveis à defesa'}${this.tesTema?' em <b style="font-size:13px">'+esc(this.tesTema)+'</b>':''}${this.tesQ?' para “'+esc(this.tesQ)+'”':''}<span class="sp"></span><select class="jz-sort" onchange="ui.tesOrdem=this.value;ui.tesLista()"><option value="recentes" ${this.tesOrdem==='recentes'?'selected':''}>Mais recentes</option><option value="antigos" ${this.tesOrdem==='antigos'?'selected':''}>Mais antigos</option></select></div>${V.length?cards:vazio}${V.length>this.tesN?`<div style="text-align:center;padding:12px"><span class="jz-b" onclick="ui.tesN+=60;ui.tesLista(1)">Mostrar mais (${V.length-this.tesN})</span></div>`:''}</div></div>`;
     if(sc && manter) card.querySelector('.jz-main').scrollTop=sc; },
   irAba(id){ this.aba=id; this.filtroCor=null; this.filtroSel='todas'; this.aberto=null; this.render(); },
   filtrarCor(c){ this.filtroCor = this.filtroCor===c ? null : c; this.render(); },
