@@ -41,17 +41,19 @@ input{font:inherit}
 .search.has .x{display:block}.search .x:hover{background:#EEF0F3;color:var(--tx)}
 
 /* barra de ações */
-.bar{display:flex;align-items:center;gap:8px;padding:14px 24px 0}
+.bar{display:flex;align-items:center;gap:8px;padding:14px 24px 0;flex-wrap:wrap;row-gap:8px}
 .btn{display:inline-flex;align-items:center;gap:8px;padding:9px 14px;border-radius:10px;font-weight:600;font-size:13px;border:1px solid var(--line2);background:#fff;color:var(--tx);box-shadow:var(--shadow);transition:.15s}
 .btn:hover{background:#F9FAFB;border-color:#B8C0CC}.btn:active{transform:translateY(1px)}
 .btn.pri{background:var(--pri);border-color:var(--pri);color:#fff}.btn.pri:hover{background:var(--pri2)}
 .btn svg{width:16px;height:16px}
 .btn.ghost{border-color:transparent;box-shadow:none;background:transparent;color:var(--tx2)}.btn.ghost:hover{background:#EEF0F3;color:var(--tx)}
 .sep{width:1px;height:24px;background:var(--line);margin:0 6px}
+.bar .btn,.bar .letra{flex:none;white-space:nowrap}.bar .sel{min-width:110px;flex:0 1 auto}.bar .sel select{max-width:100%;width:auto;text-overflow:ellipsis}
 
 /* abas */
-.tabs{display:flex;gap:4px;padding:14px 24px 0}
-.tab{padding:9px 16px;border-radius:10px;font-weight:600;color:var(--tx2);display:flex;align-items:center;gap:8px;transition:.15s}
+.tabs{display:flex;gap:2px;padding:14px 24px 0;flex-wrap:wrap}
+.tab{padding:9px 12px;border-radius:10px;font-weight:600;color:var(--tx2);display:flex;align-items:center;gap:6px;transition:.15s;white-space:nowrap;flex:none}
+.tab svg{width:17px;height:17px;flex:none;color:#667085}.tab.on svg{color:var(--pri)}
 .tab:hover{background:#EAECF0;color:var(--tx)}.tab.on{background:var(--card);color:var(--pri);box-shadow:var(--shadow)}
 .tesbar{display:flex;gap:14px;align-items:center;width:100%}.tesbar .search{flex:1;max-width:none}.tesbar input{width:100%}.tesfonte{white-space:nowrap}
 .teses{padding:6px 16px 16px}.tescnt{padding:8px 2px 10px;font-size:12.5px}
@@ -76,11 +78,28 @@ table.rz{margin-top:8px;width:100%}table.rz td,table.rz th{font-size:12px;vertic
 .tab .cnt{font-size:11px;padding:1px 7px;border-radius:999px;background:#EAECF0;color:var(--tx2)}.tab.on .cnt{background:var(--pri-soft);color:var(--pri)}
 
 /* cartões de resumo */
-.stats{display:flex;gap:12px;padding:12px 24px 0}
-.stat{flex:1;min-width:0;display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--card);border:1px solid var(--line);border-radius:12px;cursor:pointer;transition:.15s}
-.stat:hover{border-color:#B8C0CC}.stat.on{border-color:var(--pri);box-shadow:0 0 0 3px var(--pri-soft)}
-.stat .dot{width:10px;height:10px;border-radius:50%;flex:none}
-.stat b{font-size:20px;font-weight:700;letter-spacing:-.3px}.stat span{color:var(--tx2);font-size:12.5px}
+.stats{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:10px 24px 0}
+.stat{flex:none;display:inline-flex;align-items:center;gap:8px;padding:6px 12px;background:var(--card);border:1px solid var(--line);border-radius:999px;cursor:pointer;transition:.15s;font-size:12.5px}
+.stat:hover{border-color:#B8C0CC}.stat.on{border-color:var(--pri);box-shadow:0 0 0 2px var(--pri-soft)}
+.stat .dot{width:9px;height:9px;border-radius:50%;flex:none}
+.stat b{font-size:14px;font-weight:700}.stat span{color:var(--tx2);font-size:12.5px}
+.stat.velho{border-color:#F5C57A;background:#FFFAF0}.stat.velho .dot{background:#F79009}.stat.velho.on{border-color:#F79009;box-shadow:0 0 0 2px #FDEAD0}
+.stats .info{padding:0 6px 0 0}
+.rs-old{display:inline-block;margin-left:8px;padding:1px 7px;border-radius:6px;font-size:10.5px;font-weight:700;background:#FFF1DB;color:#9A5B00;vertical-align:1px;white-space:nowrap}
+.letra{display:inline-flex;align-items:center;border:1px solid var(--line2);border-radius:10px;background:#fff;height:40px;padding:0 4px 0 12px;box-shadow:var(--shadow)}
+.letra .lb{font-size:12px;color:var(--tx3);margin-right:6px;white-space:nowrap}
+.letra button{display:inline-flex;align-items:center;justify-content:center;min-width:34px;height:32px;border-radius:8px;font-weight:700;color:var(--tx)}
+.letra button:hover{background:#F2F4F7}.letra button:disabled{color:#C0C6D0;background:none;cursor:default}.letra .s{font-size:12px}.letra .g{font-size:18px}
+.copia{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--tx3);margin-left:6px;white-space:nowrap;cursor:pointer}.copia:hover{color:var(--tx)}
+.copia i{width:8px;height:8px;border-radius:50%;background:var(--g-dot);display:inline-block}
+.hbtn{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border:1px solid var(--line);border-radius:8px;font-size:11.5px;font-weight:600;color:var(--tx2);background:#fff;cursor:pointer;margin-right:6px}
+.hbtn:hover{border-color:var(--pri);color:var(--pri)}.hbtn svg{width:14px;height:14px}
+table.hist{width:100%;border-collapse:collapse;margin-top:10px;font-size:13px;table-layout:fixed}table.hist td{overflow-wrap:anywhere}
+table.hist th{text-align:left;color:var(--tx3);font-size:11px;text-transform:uppercase;padding:6px 8px;border-bottom:1px solid var(--line);position:static;background:none;cursor:default;vertical-align:bottom}
+table.hist td{padding:7px 8px;border-bottom:1px solid #eef0f3;vertical-align:top;cursor:default;font-weight:400}table.hist td:first-child{color:var(--tx2);font-weight:600;white-space:nowrap}
+table.hist td.mud{background:#FFF7E6;font-weight:700}table.hist tr:hover td{background:inherit}table.hist tr:hover td.mud{background:#FFF7E6}
+table.hist .atual{display:inline-block;background:#E8F5EE;color:#067647;border-radius:6px;padding:1px 6px;font-size:10.5px;font-weight:700;text-transform:none;margin-left:4px}
+table.hist ul{margin:0;padding-left:16px}table.hist li{margin:1px 0}
 .stat.vermelho .dot{background:var(--r-dot)}.stat.laranja .dot{background:var(--o-dot)}.stat.amarelo .dot{background:var(--a-dot)}.stat.vencido .dot{background:var(--r-dot)}.stat.verde .dot{background:var(--g-dot)}.stat.cinza .dot{background:var(--c-dot)}.stat.azul .dot{background:var(--b-dot)}.stat.neutro .dot{background:#CBD5E1}
 .info{padding:12px 24px 0;color:var(--tx2);font-size:12.5px}
 
@@ -373,10 +392,12 @@ tr.sub td{padding:0 0 0 0;background:#FFFFFF;cursor:default}tr.sub:hover td{back
       <button onclick="api('salvar_base_como')">Salvar base como…</button>
       <button onclick="ui.abrirPasta()">Abrir pasta das bases</button>
       <button onclick="ui.modalVigia()">Pasta vigiada…</button>
+      <button onclick="ui.modalCopias()">Cópias de segurança…</button>
       <button onclick="api('fechar_base')">Fechar base</button>
       <button onclick="api('recarregar_base_juridica')">Recarregar base jurídica</button>
     </div>
   </div>
+  <span class="copia" id="copia" title="Cópia automática feita ao abrir a base (guarda as 10 últimas) · clique para ver ou restaurar" onclick="ui.modalCopias()"></span>
   <div class="spacer"></div>
   <div class="search" id="search">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
@@ -397,6 +418,7 @@ tr.sub td{padding:0 0 0 0;background:#FFFFFF;cursor:default}tr.sub:hover td{back
   <div class="sel"><select id="filtro" onchange="ui.filtroSel=this.value;ui.render()"></select></div>
   <div class="spacer"></div>
   <!-- modelos de petição desativados nesta versão (MODELOS_ATIVOS) -->
+  <span class="letra" title="Tamanho da letra (vale para todas as telas; fica gravado neste computador)"><span class="lb">Letra</span><button class="s" id="letraMenos" title="Diminuir" onclick="ui.letra(-1)">A</button><button class="g" id="letraMais" title="Aumentar" onclick="ui.letra(1)">A</button></span>
   <button class="btn ghost" onclick="ui.ajuda()">Legenda e método</button>
 </div>
 
@@ -407,7 +429,7 @@ tr.sub td{padding:0 0 0 0;background:#FFFFFF;cursor:default}tr.sub:hover td{back
 <div class="foot">
   <span id="legenda"></span>
   <span class="muted" id="hoje"></span>
-  <span class="muted">Clique na linha para abrir a ficha · clique no título da coluna para ordenar</span>
+  <span class="muted" id="dica">Clique na linha para abrir a ficha · clique no título da coluna para ordenar</span>
   <div class="prog" id="prog"><span id="progTxt">Importando…</span><div class="track"><div class="fill" id="progFill"></div></div></div>
 </div>
 
@@ -427,17 +449,24 @@ tr.sub td{padding:0 0 0 0;background:#FFFFFF;cursor:default}tr.sub:hover td{back
 <div class="toast" id="toast"></div>
 
 <script>
-const API = () => (window.pywebview && window.pywebview.api) || window.__mockApi;
+const API_ = () => (window.pywebview && window.pywebview.api) || window.__mockApi;
+// resposta parcial (só os assistidos alterados): troca-os na lista que a tela já tem, sem recarregar a base inteira
+function mesclar(r){ if(!r || !r.parcial) return r; const regs=(ui.dados.registros||[]).slice();
+  if(r.removido) { const i=regs.findIndex(x=>x.id===r.removido); if(i>=0) regs.splice(i,1); }
+  r.parcial.forEach(n=>{ const i=regs.findIndex(x=>x.id===n.id); if(i>=0) regs[i]=n; else regs.push(n); });
+  const o=Object.assign({}, ui.dados, r, {registros:regs}); delete o.parcial; delete o.removido; if(!('msg' in r)) delete o.msg; return o; }
+const API = () => { const b=API_(); if(!b) return b; return new Proxy(b,{get:(t,k)=>typeof t[k]==='function' ? (...a)=>Promise.resolve(t[k](...a)).then(mesclar) : t[k]}); };
 const MODELOS_ATIVOS = false; // petições a partir de modelos .docx: desativadas por ora (foco na matemática)
 async function api(m, ...a){ try{ const r = await API()[m](...a); if(r && r.registros) ui.carregar(r); else if(r && r.erro) ui.toast(r.erro); else if(r && r.msg) ui.toast(r.msg); return r; }catch(e){ ui.toast('Erro: '+e); } }
 
 const ui = {
   dados:{registros:[],abas:[],base:'',hoje:''}, aba:'geral', filtro:'', filtroCor:null, filtroSel:'todas', ordem:{}, sel:null, aberto:null,
   carregar(d){ this.dados=d; const w=document.getElementById('welcome');
-    if(d.sem_base){ w.classList.add('on'); document.getElementById('baseNome').textContent='—'; document.getElementById('baseN').textContent='0';
+    if(d.sem_base){ w.classList.add('on'); document.getElementById('copia').innerHTML=''; document.getElementById('baseNome').textContent='—'; document.getElementById('baseN').textContent='0';
       document.getElementById('recentes').innerHTML=(d.recentes||[]).map(r=>`<div onclick="api('abrir_base','${esc(r.caminho).replace(/\\/g,'\\\\')}')"><span>${esc(r.nome)}</span><small>${esc(r.caminho)}</small></div>`).join('')||'<div style="cursor:default;color:var(--tx3)">Nenhuma base recente</div>';
       document.getElementById('wfoot').textContent='Base jurídica '+(d.base_juridica?d.base_juridica.versao:'?')+' · '+d.hoje; this.dados.registros=[]; this.render(); return; }
     w.classList.remove('on'); document.getElementById('baseNome').textContent=d.base; document.getElementById('baseN').textContent=d.registros.length;
+    document.getElementById('copia').innerHTML=d.copia?`<i></i>cópia de segurança: ${esc(d.copia.quando)}`:'';
     document.getElementById('hoje').textContent='Hoje '+d.hoje+(d.base_juridica?' · base jurídica '+d.base_juridica.versao:''); if(!this.dados.abas.concat(this.ABAS_EXTRA).find(a=>a.id===this.aba)) this.aba='geral'; this.render(); },
   async criarBase(){ const n=document.getElementById('novoNome').value.trim(); if(!n) return this.toast('Dê um nome à base.'); await api('nova_base', n); },
   prescModo:'pe',
@@ -464,17 +493,20 @@ const ui = {
   render(){
     const spec=this.spec(); const rs=this.visiveis();
     // abas
-    document.getElementById('tabs').innerHTML=this.dados.abas.concat(this.ABAS_EXTRA).map(a=>`<button class="tab ${a.id===this.aba?'on':''}" onclick="ui.irAba('${a.id}')">${a.titulo}${a.cor&&!a.sem_stats?`<span class="cnt">${this.contaCor(a,rs)}</span>`:''}</button>`).join('');
+    document.getElementById('tabs').innerHTML=this.dados.abas.concat(this.ABAS_EXTRA).map(a=>`<button class="tab ${a.id===this.aba?'on':''}" title="${esc(a.titulo)}" onclick="ui.irAba('${a.id}')">${this.ICONE[a.id]?`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${this.ICONE[a.id]}</svg>`:''}${this.CURTO[a.id]||a.titulo}${a.cor&&!a.sem_stats?`<span class="cnt">${this.contaCor(a,rs)}</span>`:''}</button>`).join('');
+    document.getElementById('dica').textContent=this.DICA[this.aba]||'Clique na linha para abrir a ficha · clique no título da coluna para ordenar';
     if(this.aba==='teses'){ const selE=document.getElementById('filtro'); selE.parentElement.style.display='none'; selE.dataset.aba=''; document.getElementById('legenda').innerHTML='';
       document.getElementById('modoWrap').style.display='none'; return this.renderTeses(); }
     // resumo
     const st=document.getElementById('stats'); const rot=this.dados.rotulos[spec.legenda];
-    if(!spec.cor || spec.sem_stats){ const nExt=rs.filter(r=>r.geral_cor==='azul').length; st.innerHTML=`<div class="info">${pl(rs.length,'assistido','assistidos')}${nExt?` · <span class="pill azul">${nExt} com pena extinta registrada</span>`:''}. As abas seguintes mostram cada marco com prazo, cor e falta nos últimos 12 meses.</div>`; }
+    const nVelho=rs.filter(r=>this.idadeRSPE(r)>this.RSPE_VELHO).length; if(!nVelho) this.filtroVelho=false;
+    const chipVelho=nVelho?`<div class="stat velho ${this.filtroVelho?'on':''}" title="RSPE emitido há mais de ${this.RSPE_VELHO} dias: vale baixar um novo no SEEU · clique para filtrar" onclick="ui.filtroVelho=!ui.filtroVelho;ui.render()"><i class="dot"></i><b>${nVelho}</b><span>RSPE desatualizado (mais de ${this.RSPE_VELHO} dias)</span></div>`:'';
+    if(!spec.cor || spec.sem_stats){ const nExt=rs.filter(r=>r.geral_cor==='azul').length; st.innerHTML=`<div class="info">${pl(rs.length,'assistido','assistidos')}${nExt?` · <span class="pill azul">${nExt} com pena extinta registrada</span>`:''}. As abas seguintes mostram cada marco com prazo, cor e falta nos últimos 12 meses.</div>`+chipVelho; }
     else{ const cont={}; const temPed=this.abaPedido(spec); let nPed=0;
       // pedido feito (e a situação não mudou depois): sai da contagem da situação e entra em "Pedido feito"
       rs.forEach(r=>{ if(temPed && !this.pedPendente(r,spec.id)){ nPed++; return; } const c=this.cor(r,spec); cont[c]=(cont[c]||0)+1;});
-      st.innerHTML=Object.keys(rot).map(c=>`<div class="stat ${c||'neutro'} ${this.filtroCor===c?'on':''}" onclick="ui.filtrarCor('${c}')"><i class="dot"></i><div><b>${cont[c]||0}</b><br><span>${rot[c]}</span></div></div>`).join('')
-        +(temPed?`<div class="stat pedido ${this.filtroCor==='__ped'?'on':''}" onclick="ui.filtrarCor('__ped')"><i class="dot"></i><div><b>${nPed}</b><br><span>Pedido feito</span></div></div>`:''); }
+      st.innerHTML=Object.keys(rot).map(c=>`<div class="stat ${c||'neutro'} ${this.filtroCor===c?'on':''}" onclick="ui.filtrarCor('${c}')"><i class="dot"></i><b>${cont[c]||0}</b><span>${rot[c]}</span></div>`).join('')
+        +(temPed?`<div class="stat pedido ${this.filtroCor==='__ped'?'on':''}" onclick="ui.filtrarCor('__ped')"><i class="dot"></i><b>${nPed}</b><span>Pedido feito</span></div>`:'')+chipVelho; }
     // legenda
     document.getElementById('legenda').innerHTML=Object.keys(rot).filter(c=>c||spec.id==='presc').map(c=>`<span class="leg"><i style="background:${c?`var(--${({vermelho:'r',laranja:'o',amarelo:'a',vencido:'r',verde:'g',cinza:'c',azul:'b'})[c]}-dot)`:'#CBD5E1'}"></i>${rot[c]}</span>`).join('');
     // seletor de situação
@@ -488,7 +520,7 @@ const ui = {
     let linhas=rs; if(spec.cor && this.filtroCor!==null){ const tp=this.abaPedido(spec);
       linhas = this.filtroCor==='__ped' ? linhas.filter(r=>!this.pedPendente(r,spec.id))
              : linhas.filter(r=>this.cor(r,spec)===this.filtroCor && (!tp || this.pedPendente(r,spec.id))); }
-    linhas=linhas.filter(r=>this.passaFiltro(r,spec));
+    linhas=linhas.filter(r=>this.passaFiltro(r,spec)); if(this.filtroVelho) linhas=linhas.filter(r=>this.idadeRSPE(r)>this.RSPE_VELHO);
     const o=this.ordem[this.aba]; if(o){ linhas=[...linhas].sort((a,b)=>cmp(a[o.k],b[o.k])*(o.inv?-1:1)); }
     const card=document.getElementById('card');
     if(!this.dados.registros.length){ card.innerHTML=`<div class="empty"><div><b>Nenhum RSPE nesta base</b>Clique em <em>Importar PDFs</em> ou <em>Importar pasta</em>. Pode selecionar centenas de arquivos de uma vez.</div></div>`; return; }
@@ -500,7 +532,7 @@ const ui = {
     const tr=linhas.map(r=>{ const cor=this.cor(r,spec); const exp=spec.expansivel && this.aberto===r.id;
       const tds=spec.cols.map((c,i)=>{ let v=r[c[0]]??''; const pk=spec.pilulas[c[0]];
         if(c[0]==='proc'){ v=`<span class="copy" title="Clique para copiar" onclick="event.stopPropagation();ui.copiar('${esc(String(v))}')">${esc(v)}${svgCopy}</span>`; }
-        else if(c[0]==='nome'&&v){ v=`<span class="copy" title="Clique para copiar o nome" onclick="event.stopPropagation();ui.copiar(ui._clips[${this.clip(String(v))}])">${esc(v)}${svgCopy}</span>`; }
+        else if(c[0]==='nome'&&v){ const id_=this.idadeRSPE(r); v=`<span class="copy" title="Clique para copiar o nome" onclick="event.stopPropagation();ui.copiar(ui._clips[${this.clip(String(v))}])">${esc(v)}${svgCopy}</span>`+(id_>this.RSPE_VELHO?`<span class="rs-old" title="RSPE emitido em ${esc(r.geracao)}: vale baixar um novo no SEEU">RSPE de ${id_} dias</span>`:''); }
         else if(pk){ const pc = r[pk]||''; v = v ? `<span class="pill ${pc||'none'}">${esc(v)}</span>` : (/_sit$/.test(c[0]) ? '' : '<span class="muted">—</span>'); }
         else if(c[0]==='pedido'){ const P=(r.pedidos||{})[spec.id]; const mud=P&&P.ref&&P.ref!==this.pedRef(r,spec.id);
           // só o ícone: marcado = check; a data e a observação ficam na ficha do assistido (e na janela do clique)
@@ -512,7 +544,7 @@ const ui = {
         else { v = esc(v).replace('(est.)','<span class="est">(est.)</span>'); if(!v) v='<span class="muted">—</span>'; }
         if(i===0 && spec.expansivel) v=`<span class="chev">▶</span>${v}`;
         return `<td class="${i===0?'first':''} ${NW.has(c[0])?'nw':''} ${pk&&spec.id==='ind'?'pl':''}" title="${esc(String(r[c[0]+'_full']??r[c[0]]??''))}">${v}</td>`; }).join('');
-      const acao=`<td class="nw act">${spec.id==='ind'?`<span class="mini" title="Linha do tempo: crimes, impeditivos, pena cumprida em cada decreto, faltas na janela e resultado" onclick="event.stopPropagation();ui.indTL('${r.id}')">Verificar indulto/comutação</span> `:''}${spec.id==='ext'?`<span class="mini" title="Linha do tempo: períodos cumpridos, fugas, faltas, hoje e término da pena" onclick="event.stopPropagation();ui.extTL('${r.id}')">Linha do tempo</span> `:''}${MODELOS_ATIVOS?`<span class="mini" title="Preencher modelo .docx com os dados deste assistido" onclick="event.stopPropagation();ui.peticao('${r.id}')">Petição</span>`:''}${r.ficha_tem?'<span class="tag ok" title="Ficha disciplinar importada">ficha</span>':''}</td>`;
+      const acao=`<td class="nw act">${spec.id==='geral'?`<span class="hbtn" title="Histórico comparativo dos RSPE importados deste assistido" onclick="event.stopPropagation();ui.historico('${r.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg>Histórico · ${r.hist_n||1}</span>`:''}${spec.id==='ind'?`<span class="mini" title="Linha do tempo: crimes, impeditivos, pena cumprida em cada decreto, faltas na janela e resultado" onclick="event.stopPropagation();ui.indTL('${r.id}')">Verificar indulto/comutação</span> `:''}${spec.id==='ext'?`<span class="mini" title="Linha do tempo: períodos cumpridos, fugas, faltas, hoje e término da pena" onclick="event.stopPropagation();ui.extTL('${r.id}')">Linha do tempo</span> `:''}${MODELOS_ATIVOS?`<span class="mini" title="Preencher modelo .docx com os dados deste assistido" onclick="event.stopPropagation();ui.peticao('${r.id}')">Petição</span>`:''}${r.ficha_tem?'<span class="tag ok" title="Ficha disciplinar importada">ficha</span>':''}</td>`;
       let html=`<tr class="${cor} ${exp?'exp':''}" onclick="${spec.expansivel?`ui.expandir('${r.id}')`:`ui.abrir('${r.id}')`}">${tds}${acao}</tr>`;
       if(exp) html+=`<tr class="sub"><td colspan="${spec.cols.length+1}"><div class="subwrap">${this.subTabela(r,spec)}</div></td></tr>`;
       return html; }).join('');
@@ -1004,10 +1036,64 @@ const ui = {
   abaPedido(spec){ return !!(spec && (spec.cols||[]).some(c=>c[0]==='pedido')); },
   pedPendente(r,aba){ const P=(r.pedidos||{})[aba]; return !P || (P.ref && P.ref!==this.pedRef(r,aba)); },
   contaCor(a,rs){ rs=rs.filter(r=>this.pedPendente(r,a.id)); if(a.id==='ind') return rs.filter(r=>r.ind_sim).length || ''; const k = a.id==='presc' ? (this.prescModo!=='pp'?'presc_ppe_cor':'presc_retro_cor') : a.cor; return rs.filter(r=>r[k]==='vermelho'||r[k]==='vencido').length || ''; },
-  ABAS_EXTRA:[{id:'teses',titulo:'Banco de teses'}],
-  // ---- Banco de teses: acórdãos favoráveis à defesa (triagem por ementa), busca livre e filtro por tema ----
+  ABAS_EXTRA:[{id:'teses',titulo:'Jurisprudências'}],
+  // abas: ícone (traço fino; verde na aba aberta) e nome curto
+  ICONE:{
+    geral:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
+    prog:'<path d="M3 20h5v-5h5v-5h5V5h3"/>',
+    liv:'<path d="M13 4h3a2 2 0 0 1 2 2v14"/><path d="M2 20h3M13 20h9"/><path d="M10 12v.01"/><path d="M13 4.56v16.16a.5.5 0 0 1-.62.49L5 19.4V5.84a1 1 0 0 1 .76-.97l6-1.5A1 1 0 0 1 13 4.56z"/>',
+    ind:'<path d="M8 21h12a2 2 0 0 0 2-2v-2H10v2a2 2 0 1 1-4 0V5a2 2 0 1 0-4 0v3h4"/><path d="M19 17V5a2 2 0 0 0-2-2H4"/><path d="M11 8h5M11 12h5"/>',
+    presc:'<path d="M5 22h14M5 2h14"/><path d="M17 22v-4.17a2 2 0 0 0-.59-1.42L12 12l-4.41 4.41A2 2 0 0 0 7 17.83V22"/><path d="M7 2v4.17a2 2 0 0 0 .59 1.42L12 12l4.41-4.41A2 2 0 0 0 17 6.17V2"/>',
+    ext:'<circle cx="12" cy="12" r="10"/><path d="m8.5 12 2.5 2.5 4.5-5"/>',
+    fd:'<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4M12 16h4M8 11h.01M8 16h.01"/>',
+    aud:'<path d="M12 22s8-3.6 8-10V5l-8-3-8 3v7c0 6.4 8 10 8 10z"/><path d="m9 12 2 2 4-4"/>',
+    teses:'<path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1z"/><path d="M7 21h10M12 3v18M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/>'},
+  CURTO:{ind:'Indulto',fd:'Ficha',teses:'Jurisprudências'},
+  // rodapé: dica da aba aberta
+  DICA:{geral:'Clique na linha para abrir a ficha do assistido · "Histórico" compara os RSPE importados',
+    prog:'Clique no título da coluna para ordenar · a caixa em "Pedido" marca o pedido feito',
+    liv:'Clique no título da coluna para ordenar · a caixa em "Pedido" marca o pedido feito',
+    ind:'"Verificar indulto/comutação" abre a linha do tempo do decreto · as sub-abas mostram um decreto por vez',
+    presc:'Clique no assistido para ver o quadro de cada crime · "cálculo" abre o detalhe',
+    ext:'"Linha do tempo" mostra períodos, fugas e término',
+    fd:'Clique no assistido para ver trabalho, estudo e remição a atestar',
+    aud:'Cada alerta traz a fundamentação para copiar · "Dar baixa" tira o ponto da contagem',
+    teses:'Pesquise por palavras e filtre por tema · "Copiar ementa" leva a referência'},
+  // RSPE desatualizado: emitido há mais de 60 dias (etiqueta no nome e filtro na faixa de resumo)
+  RSPE_VELHO:60, filtroVelho:false,
+  idadeRSPE(r){ const g=(r.geracao||'').split('/').map(Number), h=(this.dados.hoje||'').split('/').map(Number); if(g.length!==3||h.length!==3||!g[2]||!h[2]) return null;
+    return Math.round((Date.UTC(h[2],h[1]-1,h[0])-Date.UTC(g[2],g[1]-1,g[0]))/864e5); },
+  // tamanho da letra: zoom da página inteira, gravado neste computador
+  LETRAS:[0.9,1,1.1,1.2,1.3],
+  letraAplicar(){ let z=1; try{ z=parseFloat(localStorage.getItem('rspe_letra'))||1; }catch(e){} if(!this.LETRAS.includes(z)) z=1;
+    document.documentElement.style.zoom=z; document.body.style.height=(100/z)+'vh';
+    const a=document.getElementById('letraMenos'), b=document.getElementById('letraMais'); if(a) a.disabled=z<=this.LETRAS[0]; if(b) b.disabled=z>=this.LETRAS[this.LETRAS.length-1]; return z; },
+  letra(d){ const z=this.letraAplicar(); const i=Math.max(0,Math.min(this.LETRAS.length-1,this.LETRAS.indexOf(z)+d)); try{ localStorage.setItem('rspe_letra',String(this.LETRAS[i])); }catch(e){} this.letraAplicar(); },
+  // histórico comparativo dos RSPE importados (aba Geral)
+  async historico(id){ const h=await API().historico(id); if(!h||h.erro){ this.toast((h&&h.erro)||'Histórico indisponível.'); return; }
+    const C=h.colunas||[]; const L=[['regime','Regime'],['pena_total','Pena total'],['pena_cumprida','Pena cumprida'],['remidos','Dias remidos (perdidos)'],['db','Data-base de progressão'],['prog','Previsão de progressão'],['liv','Previsão de livramento'],['termino','Término'],['falta','Faltas graves (12 meses)']];
+    const th=C.map((c,i)=>`<th title="${esc(c.arquivo||'')}${c.importado_em?' · importado em '+esc(c.importado_em):''}">RSPE de ${esc(c.geracao||'?')}${i===C.length-1?'<span class="atual">atual</span>':''}</th>`).join('');
+    const lin=L.map(([k,t])=>`<tr><td>${t}</td>${C.map((c,i)=>{ const v=c.campos[k]; const mud=i>0&&v!==C[i-1].campos[k]; return `<td class="${mud?'mud':''}">${v==='—'?'<span class="muted">—</span>':penaExt(esc(v))}</td>`; }).join('')}</tr>`).join('');
+    const lista=(xs,f)=>xs.length?`<ul>${xs.map(f).join('')}</ul>`:'<span class="muted">—</span>';
+    const inc=`<tr><td>Incidentes novos</td>${C.map((c,i)=>`<td>${i===0?'<span class="muted">—</span>':lista(c.novos,x=>`<li>${esc(x)}</li>`)}</td>`).join('')}</tr>`;
+    const ped=`<tr><td>Pedidos e retorno</td>${C.map(c=>`<td>${lista(c.pedidos,p=>`<li>${esc(p.txt)}${p.ret?`<br>${/^deferida/.test(p.ret)?`<b style="color:#067647">${esc(p.ret)}</b>`:/^indeferida/.test(p.ret)?`<b style="color:var(--r-tx)">${esc(p.ret)}</b>`:`<span class="muted">${esc(p.ret)}</span>`}`:''}</li>`)}</td>`).join('')}</tr>`;
+    document.getElementById('modal').innerHTML=`<div class="box" style="width:${Math.min(1180,360+C.length*190)}px;max-width:95vw"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px"><h2>Histórico de RSPE - ${esc(h.nome)}</h2><span class="muted" style="font-size:12.5px">Execução ${esc(h.processo)} · ${pl(C.length,'relatório importado','relatórios importados')}</span></div>
+      <p>${C.length>1?'Cada coluna é um RSPE, do mais antigo ao atual; em destaque, o que mudou em relação ao anterior.':'Só há um RSPE deste assistido na base. O histórico se forma a cada RSPE novo importado (e um PDF mais antigo também entra, sem substituir o atual).'}</p>
+      <div style="max-height:62vh;overflow:auto"><table class="hist"><thead><tr><th style="width:190px">Campo</th>${th}</tr></thead><tbody>${lin}${inc}${ped}</tbody></table></div>
+      <div class="acts" style="justify-content:space-between;align-items:center"><span class="muted" style="font-size:12px">Cada RSPE é lido com as regras desta versão, sem a ficha disciplinar e sem os ajustes feitos no programa.</span><button class="btn pri" onclick="ui.fecharModal()">Fechar</button></div></div>`;
+    document.getElementById('modal').classList.add('on'); },
+  // cópias de segurança da base (feitas ao abrir; as 10 últimas)
+  async modalCopias(){ document.querySelectorAll('.menu').forEach(m=>m.classList.remove('on')); const d=await API().copias_listar(); if(!d||d.erro){ this.toast((d&&d.erro)||'Sem cópias.'); return; }
+    const L=d.copias||[];
+    document.getElementById('modal').innerHTML=`<div class="box" style="width:560px"><h2>Cópias de segurança</h2><p>O programa copia a base cada vez que ela é aberta e guarda as ${L.length>10?L.length:10} últimas. Restaurar volta a base ao estado da cópia; a versão de agora também é guardada antes, para poder desfazer.</p>
+      <div class="help" style="max-height:48vh">${L.length?`<table class="hist" style="table-layout:auto"><thead><tr><th>Cópia de</th><th>Assistidos</th><th></th></tr></thead><tbody>${L.map((c,i)=>`<tr><td>${esc(c.quando)}${i===0?'<span class="atual">mais recente</span>':''}</td><td>${c.assistidos==null?'—':c.assistidos}</td><td style="text-align:right"><span class="mini" onclick="ui.restaurarCopia(ui._clips[${this.clip(c.arquivo)}],'${esc(c.quando)}')">Restaurar</span></td></tr>`).join('')}</tbody></table>`:'<span class="muted">Nenhuma cópia ainda: a primeira é feita na próxima abertura da base (base vazia não é copiada).</span>'}</div>
+      <p style="margin-top:10px;font-size:11.5px" class="muted">Pasta: ${esc(d.pasta||'')}</p>
+      <div class="acts"><button class="btn" onclick="ui.fecharModal()">Fechar</button></div></div>`;
+    document.getElementById('modal').classList.add('on'); },
+  async restaurarCopia(arq,quando){ if(!confirm('Restaurar a base para a cópia de '+quando+'?\n\nO estado atual também será guardado entre as cópias.')) return; this.fecharModal(); await api('copia_restaurar', arq); },
+  // ---- Jurisprudências: acórdãos favoráveis à defesa (triagem por ementa), busca livre e filtro por tema ----
   _teses:null, tesQ:'', tesTema:'', tesN:60, tesAberta:{},
-  async tesCarregar(){ if(this._teses) return; this._teses={itens:[],temas:[],carregando:true}; try{ const d=await API().teses(); this._teses=d&&d.itens?d:{itens:[],temas:[],erro:(d&&d.erro)||'Banco de teses indisponível.'}; }catch(e){ this._teses={itens:[],temas:[],erro:String(e)}; } this._tesIdx=null; if(this.aba==='teses') this.render(); },
+  async tesCarregar(){ if(this._teses) return; this._teses={itens:[],temas:[],carregando:true}; try{ const d=await API().teses(); this._teses=d&&d.itens?d:{itens:[],temas:[],erro:(d&&d.erro)||'Jurisprudências indisponíveis.'}; }catch(e){ this._teses={itens:[],temas:[],erro:String(e)}; } this._tesIdx=null; if(this.aba==='teses') this.render(); },
   tesNorm(t){ return String(t||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase(); },
   tesFiltradas(){ const T=this._teses||{itens:[]}; if(!this._tesIdx) this._tesIdx=T.itens.map(x=>this.tesNorm([x.tese,x.ementa,x.proc,x.relator,x.orgao,x.classe,(x.temas||[]).join(' ')].join(' ')));
     const ws=this.tesNorm(this.tesQ).split(/\s+/).filter(Boolean);
@@ -1019,13 +1105,13 @@ const ui = {
     const T=this._teses||{itens:[],temas:[]};
     document.getElementById('subtabs').classList.remove('on');
     const opt=`<option value="">Todos os temas (${(T.itens||[]).length})</option>`+(T.temas||[]).map(t=>`<option value="${esc(t.tema)}" ${this.tesTema===t.tema?'selected':''}>${esc(t.tema)} (${t.n})</option>`).join('');
-    document.getElementById('stats').innerHTML=`<div class="tesbar"><div class="search has"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="tq" placeholder="Pesquisar nas teses e ementas (ex.: remição ENEM, falta grave bis in idem, data-base)" value="${esc(this.tesQ)}" oninput="ui.tesBusca(this.value)"></div>
+    document.getElementById('stats').innerHTML=`<div class="tesbar"><div class="search has"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="tq" placeholder="Pesquisar nas jurisprudências e ementas (ex.: remição ENEM, falta grave bis in idem, data-base)" value="${esc(this.tesQ)}" oninput="ui.tesBusca(this.value)"></div>
       <div class="sel"><select id="tesTema" onchange="ui.tesTema=this.value;ui.tesN=60;ui.tesLista()">${opt}</select></div>
       <div class="tesfonte"><span class="tag ok">TJMS</span><span class="muted" title="STJ e STF serão acrescentados depois">STJ e STF em breve</span></div></div>`;
     this.tesLista(); },
   tesLista(){ const card=document.getElementById('card'); const T=this._teses||{itens:[]};
-    if(T.carregando){ card.innerHTML='<div class="empty"><div><b>Carregando o banco de teses…</b></div></div>'; return; }
-    if(T.erro){ card.innerHTML=`<div class="empty"><div><b>Banco de teses indisponível</b>${esc(T.erro)}</div></div>`; return; }
+    if(T.carregando){ card.innerHTML='<div class="empty"><div><b>Carregando as jurisprudências…</b></div></div>'; return; }
+    if(T.erro){ card.innerHTML=`<div class="empty"><div><b>Jurisprudências indisponíveis</b>${esc(T.erro)}</div></div>`; return; }
     const V=this.tesFiltradas(); const idx=new Map(T.itens.map((x,i)=>[x,i]));
     if(!V.length){ card.innerHTML=`<div class="empty"><div><b>Nenhuma tese encontrada</b>Tente outras palavras ou outro tema.</div></div>`; return; }
     const h=V.slice(0,this.tesN).map(x=>{ const i=idx.get(x); const ab=this.tesAberta[x.id];
@@ -1045,12 +1131,12 @@ const ui = {
   progresso(n,tot){ const p=document.getElementById('prog'); p.classList.add('on'); document.getElementById('progTxt').textContent=`Importando ${n} de ${tot}`; document.getElementById('progFill').style.width=(100*n/tot)+'%'; },
   importado(r){ document.getElementById('prog').classList.remove('on'); api('listar');
     const partes=[]; if(r.novos) partes.push(pl(r.novos,'novo','novos')); if(r.atualizados) partes.push(pl(r.atualizados,'atualizado','atualizados')+' por RSPE mais recente');
-    if(r.duplicados) partes.push(pl(r.duplicados,'duplicado ignorado','duplicados ignorados')); if(r.antigos) partes.push(pl(r.antigos,'mais antigo ignorado','mais antigos ignorados')); if(r.erros) partes.push(pl(r.erros,'falha','falhas')); if(r.fichas) partes.push(pl(r.fichas,'ficha disciplinar','fichas disciplinares')); if(r.incompletos) partes.push(`${r.incompletos} com dados incompletos (ver Auditoria)`);
+    if(r.duplicados) partes.push(pl(r.duplicados,'duplicado ignorado','duplicados ignorados')); if(r.historico) partes.push(pl(r.historico,'mais antigo guardado no histórico','mais antigos guardados no histórico')); if(r.antigos-(r.historico||0)>0) partes.push(pl(r.antigos-(r.historico||0),'mais antigo ignorado','mais antigos ignorados')); if(r.erros) partes.push(pl(r.erros,'falha','falhas')); if(r.fichas) partes.push(pl(r.fichas,'ficha disciplinar','fichas disciplinares')); if(r.incompletos) partes.push(`${r.incompletos} com dados incompletos (ver Auditoria)`);
     if(!partes.length) partes.push('nada importado');
     if(r.avisos && r.avisos.length){ this.modalAvisos(partes.join(' · '), r.avisos); } else { this.toast('Importação: '+partes.join(' · ')); } },
   modalAvisos(titulo, avisos){ document.getElementById('modal').innerHTML=`<div class="box" style="width:640px"><h2>Importação concluída</h2><p>${esc(titulo)}</p>
       <div class="help" style="max-height:50vh"><ul style="margin:0;padding-left:18px">${avisos.map(a=>`<li>${esc(a)}</li>`).join('')}</ul></div>
-      <p style="margin-top:10px">Dados incompletos = o programa não conseguiu ler algum campo essencial; o assistido entra na base com alerta na Auditoria. Duplicado = mesmo arquivo ou RSPE do mesmo processo com a mesma data de geração. Um RSPE mais recente do mesmo processo substitui o anterior; um mais antigo é ignorado. Lista completa em importacao_avisos.txt.</p>
+      <p style="margin-top:10px">Dados incompletos = o programa não conseguiu ler algum campo essencial; o assistido entra na base com alerta na Auditoria. Duplicado = mesmo arquivo ou RSPE do mesmo processo com a mesma data de geração. Um RSPE mais recente do mesmo processo substitui o atual; um mais antigo entra só no histórico (botão Histórico, na aba Geral), sem substituir o atual. Os anteriores ficam guardados. Lista completa em importacao_avisos.txt.</p>
       <div class="acts"><button class="btn pri" onclick="ui.fecharModal()">Fechar</button></div></div>`; document.getElementById('modal').classList.add('on'); },
   // ficha
   abrir(id){ const r=this.dados.registros.find(x=>x.id===id); if(!r) return; this.sel=id;
@@ -1515,6 +1601,7 @@ function dt(v){ const m=/^(\d{2})\/(\d{2})\/(\d{4})/.exec(String(v??'')); return
 window.addEventListener('resize',()=>{ clearTimeout(ui._rz); ui._rz=setTimeout(()=>{ if(document.getElementById('tlv').classList.contains('on')) (ui._tlvModo==='ext'?ui.renderExtTL():ui.renderTLV()); },200); });
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ ui.fecharDrawer(); ui.fecharModal(); ui.fecharTLV(); } });
 document.addEventListener('click',e=>ui.tlClick(e));
+ui.letraAplicar();
 window.addEventListener('pywebviewready', ()=>api('listar'));
 if(window.__mockApi) api('listar');
 </script>
