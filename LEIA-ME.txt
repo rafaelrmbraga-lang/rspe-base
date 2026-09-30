@@ -571,8 +571,8 @@ v6.16.50
     dos cartões grandes; o rodapé traz uma dica própria da aba aberta.
   - Botão "Letra" (A pequeno / A grande) na barra: muda o tamanho de tudo na
     tela e fica gravado neste computador.
-  - RSPE desatualizado: emitido há mais de 60 dias ganha a etiqueta laranja
-    "RSPE de N dias" no nome; o chip "RSPE desatualizado (mais de 60 dias)"
+  - RSPE desatualizado: emitido há mais de 60 dias ganha um "!" laranja ao
+    lado do nome (o mouse sobre ele mostra a data de emissão e os dias); o chip "RSPE desatualizado (mais de 60 dias)"
     da faixa de resumo filtra esses assistidos.
   - Cópia de segurança automática ao abrir a base (pasta "copias", ao lado da
     base), guardadas as 10 últimas. O topo mostra "cópia de segurança: hoje

@@ -48,7 +48,8 @@ input{font:inherit}
 .btn svg{width:16px;height:16px}
 .btn.ghost{border-color:transparent;box-shadow:none;background:transparent;color:var(--tx2)}.btn.ghost:hover{background:#EEF0F3;color:var(--tx)}
 .sep{width:1px;height:24px;background:var(--line);margin:0 6px}
-.bar .btn,.bar .letra{flex:none;white-space:nowrap}.bar .sel{min-width:110px;flex:0 1 auto}.bar .sel select{max-width:100%;width:auto;text-overflow:ellipsis}
+.bar .btn,.bar .letra{flex:none;white-space:nowrap}.bar .sel{flex:none}.bar .sel select{text-overflow:ellipsis}
+@media (max-width:1500px){.bar{gap:6px}.bar .btn{padding:9px 11px}.bar .btn.ghost{padding:9px 6px}.bar .sep{margin:0 2px}.bar .sel select{max-width:190px}}
 
 /* abas */
 .tabs{display:flex;gap:2px;padding:14px 24px 0;flex-wrap:wrap}
@@ -85,7 +86,7 @@ table.rz{margin-top:8px;width:100%}table.rz td,table.rz th{font-size:12px;vertic
 .stat b{font-size:14px;font-weight:700}.stat span{color:var(--tx2);font-size:12.5px}
 .stat.velho{border-color:#F5C57A;background:#FFFAF0}.stat.velho .dot{background:#F79009}.stat.velho.on{border-color:#F79009;box-shadow:0 0 0 2px #FDEAD0}
 .stats .info{padding:0 6px 0 0}
-.rs-old{display:inline-block;margin-left:8px;padding:1px 7px;border-radius:6px;font-size:10.5px;font-weight:700;background:#FFF1DB;color:#9A5B00;vertical-align:1px;white-space:nowrap}
+.rs-old{display:inline-flex;align-items:center;justify-content:center;margin-left:8px;width:18px;height:18px;border-radius:50%;font-size:12px;font-weight:800;background:#FFF1DB;color:#9A5B00;border:1px solid #F5C57A;vertical-align:1px;cursor:help;flex:none}
 .letra{display:inline-flex;align-items:center;border:1px solid var(--line2);border-radius:10px;background:#fff;height:40px;padding:0 4px 0 12px;box-shadow:var(--shadow)}
 .letra .lb{font-size:12px;color:var(--tx3);margin-right:6px;white-space:nowrap}
 .letra button{display:inline-flex;align-items:center;justify-content:center;min-width:34px;height:32px;border-radius:8px;font-weight:700;color:var(--tx)}
@@ -532,7 +533,7 @@ const ui = {
     const tr=linhas.map(r=>{ const cor=this.cor(r,spec); const exp=spec.expansivel && this.aberto===r.id;
       const tds=spec.cols.map((c,i)=>{ let v=r[c[0]]??''; const pk=spec.pilulas[c[0]];
         if(c[0]==='proc'){ v=`<span class="copy" title="Clique para copiar" onclick="event.stopPropagation();ui.copiar('${esc(String(v))}')">${esc(v)}${svgCopy}</span>`; }
-        else if(c[0]==='nome'&&v){ const id_=this.idadeRSPE(r); v=`<span class="copy" title="Clique para copiar o nome" onclick="event.stopPropagation();ui.copiar(ui._clips[${this.clip(String(v))}])">${esc(v)}${svgCopy}</span>`+(id_>this.RSPE_VELHO?`<span class="rs-old" title="RSPE emitido em ${esc(r.geracao)}: vale baixar um novo no SEEU">RSPE de ${id_} dias</span>`:''); }
+        else if(c[0]==='nome'&&v){ const id_=this.idadeRSPE(r); v=`<span class="copy" title="Clique para copiar o nome" onclick="event.stopPropagation();ui.copiar(ui._clips[${this.clip(String(v))}])">${esc(v)}${svgCopy}</span>`+(id_>this.RSPE_VELHO?`<span class="rs-old" title="RSPE desatualizado: emitido em ${esc(r.geracao)}, há ${id_} dias (mais de ${this.RSPE_VELHO}). Vale baixar um novo no SEEU." onclick="event.stopPropagation()">!</span>`:''); }
         else if(pk){ const pc = r[pk]||''; v = v ? `<span class="pill ${pc||'none'}">${esc(v)}</span>` : (/_sit$/.test(c[0]) ? '' : '<span class="muted">—</span>'); }
         else if(c[0]==='pedido'){ const P=(r.pedidos||{})[spec.id]; const mud=P&&P.ref&&P.ref!==this.pedRef(r,spec.id);
           // só o ícone: marcado = check; a data e a observação ficam na ficha do assistido (e na janela do clique)
