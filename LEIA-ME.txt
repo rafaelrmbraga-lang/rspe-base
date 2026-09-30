@@ -604,6 +604,11 @@ v6.16.50
   - "Informe a pena remanescente na fuga" com várias condenações: só é pedido
     se a ordem do trânsito ou o art. 76 deixarem saldo baixo o bastante para a
     prescrição; se nenhuma das duas deixa, não há o que conferir.
+  - Aba Jurisprudências com visual novo: temas numa coluna à esquerda (clique
+    filtra, com a quantidade), cartões com a tese em destaque, o resultado
+    (provido / recurso do MP desprovido), os dados do acórdão numa linha e a
+    ementa em 3 linhas ("Ler ementa completa"); botões "Copiar ementa" e
+    "Copiar referência". Saiu o botão do e-SAJ.
   - Mais rápido: marcar pedido, dar baixa, informar dado ou ajustar a
     prescrição refaz só o assistido alterado (antes, a base inteira); abrir a
     base também ficou cerca de 25% mais rápido.
@@ -739,7 +744,7 @@ v6.16.42
     7.096 decisões. Cada um traz a tese em uma frase e 1 a 3 temas.
     Pesquisa por palavras (todas devem constar da tese ou da ementa), filtro
     por tema, "Copiar ementa" (com a referência: tribunal, classe, número,
-    relator, órgão e datas), "Copiar referência" e "Abrir no e-SAJ". O
+    relator, órgão e datas) e "Copiar referência". O
     arquivo teses_execucao.json vai embutido no .exe; um arquivo com o
     mesmo nome ao lado do programa o substitui. STJ e STF entrarão depois.
 
