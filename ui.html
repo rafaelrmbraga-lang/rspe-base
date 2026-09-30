@@ -501,15 +501,16 @@ const ui = {
     // resumo
     const st=document.getElementById('stats'); const rot=this.dados.rotulos[spec.legenda];
     const nVelho=rs.filter(r=>this.idadeRSPE(r)>this.RSPE_VELHO).length; if(!nVelho) this.filtroVelho=false;
-    const chipVelho=nVelho?`<div class="stat velho ${this.filtroVelho?'on':''}" title="RSPE emitido há mais de ${this.RSPE_VELHO} dias: vale baixar um novo no SEEU · clique para filtrar" onclick="ui.filtroVelho=!ui.filtroVelho;ui.render()"><i class="dot"></i><b>${nVelho}</b><span>RSPE desatualizado (mais de ${this.RSPE_VELHO} dias)</span></div>`:'';
+    const chipVelho=nVelho?`<div class="stat velho ${this.filtroVelho?'on':''}" title="RSPE desatualizado: emitido há mais de ${this.RSPE_VELHO} dias. Vale baixar um novo no SEEU · clique para filtrar" onclick="ui.filtroVelho=!ui.filtroVelho;ui.render()"><i class="dot"></i><b>${nVelho}</b><span>RSPE antigo</span></div>`:'';
     if(!spec.cor || spec.sem_stats){ const nExt=rs.filter(r=>r.geral_cor==='azul').length; st.innerHTML=`<div class="info">${pl(rs.length,'assistido','assistidos')}${nExt?` · <span class="pill azul">${nExt} com pena extinta registrada</span>`:''}. As abas seguintes mostram cada marco com prazo, cor e falta nos últimos 12 meses.</div>`+chipVelho; }
     else{ const cont={}; const temPed=this.abaPedido(spec); let nPed=0;
       // pedido feito (e a situação não mudou depois): sai da contagem da situação e entra em "Pedido feito"
       rs.forEach(r=>{ if(temPed && !this.pedPendente(r,spec.id)){ nPed++; return; } const c=this.cor(r,spec); cont[c]=(cont[c]||0)+1;});
-      st.innerHTML=Object.keys(rot).map(c=>`<div class="stat ${c||'neutro'} ${this.filtroCor===c?'on':''}" onclick="ui.filtrarCor('${c}')"><i class="dot"></i><b>${cont[c]||0}</b><span>${rot[c]}</span></div>`).join('')
-        +(temPed?`<div class="stat pedido ${this.filtroCor==='__ped'?'on':''}" onclick="ui.filtrarCor('__ped')"><i class="dot"></i><b>${nPed}</b><span>Pedido feito</span></div>`:'')+chipVelho; }
+      const dica=(this.dados.rotulos_dica||{})[spec.legenda]||{};
+      st.innerHTML=Object.keys(rot).map(c=>`<div class="stat ${c||'neutro'} ${this.filtroCor===c?'on':''}" title="${esc(dica[c]||'')}" onclick="ui.filtrarCor('${c}')"><i class="dot"></i><b>${cont[c]||0}</b><span>${rot[c]}</span></div>`).join('')
+        +(temPed?`<div class="stat pedido ${this.filtroCor==='__ped'?'on':''}" title="Pedido feito (e a situação não mudou depois): sai da contagem da situação" onclick="ui.filtrarCor('__ped')"><i class="dot"></i><b>${nPed}</b><span>Feito</span></div>`:'')+chipVelho; }
     // legenda
-    document.getElementById('legenda').innerHTML=Object.keys(rot).filter(c=>c||spec.id==='presc').map(c=>`<span class="leg"><i style="background:${c?`var(--${({vermelho:'r',laranja:'o',amarelo:'a',vencido:'r',verde:'g',cinza:'c',azul:'b'})[c]}-dot)`:'#CBD5E1'}"></i>${rot[c]}</span>`).join('');
+    document.getElementById('legenda').innerHTML=Object.keys(rot).filter(c=>c||spec.id==='presc').map(c=>`<span class="leg" title="${esc(((this.dados.rotulos_dica||{})[spec.legenda]||{})[c]||'')}"><i style="background:${c?`var(--${({vermelho:'r',laranja:'o',amarelo:'a',vencido:'r',verde:'g',cinza:'c',azul:'b'})[c]}-dot)`:'#CBD5E1'}"></i>${rot[c]}</span>`).join('');
     // seletor de situação
     const selEl=document.getElementById('filtro');
     const stb=document.getElementById('subtabs'); stb.classList.toggle('on',this.aba==='ind'||this.aba==='presc');

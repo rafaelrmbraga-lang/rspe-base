@@ -236,7 +236,7 @@ RSPE (do mais antigo ao atual): regime, penas, dias remidos e perdidos, data-bas
 faltas graves, incidentes novos e os pedidos marcados com o retorno (o incidente decidido depois do pedido). O que mudou em relação
 ao RSPE anterior fica em destaque. Importar um PDF mais antigo o acrescenta ao histórico sem substituir o atual.
 <h4>RSPE desatualizado e cópias de segurança</h4>
-RSPE emitido há mais de 60 dias ganha um "!" laranja ao lado do nome (passe o mouse para ver a data e os dias); o chip "RSPE desatualizado" da faixa de resumo
+RSPE emitido há mais de 60 dias ganha um "!" laranja ao lado do nome (passe o mouse para ver a data e os dias); o chip "RSPE antigo" da faixa de resumo
 filtra esses assistidos. Ao abrir a base, o programa faz uma cópia de segurança (pasta "copias", ao lado da base) e guarda as
 10 últimas; o menu da base &gt; "Cópias de segurança…" mostra as cópias e restaura uma delas (a versão de agora também é copiada antes).
 O botão "Letra" (A pequeno / A grande) muda o tamanho de tudo na tela e fica gravado neste computador.
@@ -716,6 +716,7 @@ class Api:
             "hoje": rv.HOJE.strftime("%d/%m/%Y"),
             "abas": rv.ABAS,
             "rotulos": rv.ROTULO,
+            "rotulos_dica": rv.ROTULO_DICA,
             "ajuda": AJUDA + _ajuda_juris(),
             "base_juridica": {"versao": rg.versao(), "origem": rg.origem()},
             # json_seguro: um Fraction ou date esquecido no modelo derrubava a lista inteira ("Object of type Fraction is not JSON serializable")
