@@ -34,7 +34,7 @@ import rspe_relatorio as rrel
 import rspe_indulto_tl as rtl
 
 APP = "RSPE Base"
-VERSAO = "6.16.46"
+VERSAO = "6.16.47"
 
 
 def pasta_app():
@@ -302,6 +302,8 @@ O tráfico privilegiado (art. 33, § 4º) não é hediondo nem impeditivo de ind
 Recurso desativado nesta versão (foco na exatidão dos cálculos). Os modelos e o cadastro de defensores permanecem no programa
 para reativação futura.
 <h4>Auditoria</h4>
+Cada alerta ou ponto a verificar traz o campo <b>Fundamentação</b>: texto pronto para a impugnação do cálculo (o ponto, o que consta do
+RSPE, o fundamento e o pedido). "Copiar fundamentação" copia um ponto; "Copiar impugnação" junta todos os pendentes do assistido.
 Confronta o RSPE com a base jurídica (arquivo base_juridica.json, editável e versionado): soma das penas, cumprida + remanescente,
 remições, hediondez pelo rol da Lei 8.072/90 (e art. 112, § 5º, LEP para o tráfico privilegiado), marcação de VGA pelo tipo,
 percentual de progressão pela lei da data do fato (1/6 para crimes comuns até 22/01/2020 e para hediondos até 28/03/2007 - STJ Súmula 471;

@@ -870,19 +870,22 @@ def auditar(r, hoje=None):
         if not re.search(r"DATA[- ]BASE", i.get("tipo") or "", re.I) or i.get("situacao") != "CONCEDIDO":
             continue
         d = rs.to_date(i.get("data_referencia") or i.get("data_decisao") or "")
-        if not d or d < _lp or d < rs.corte_faltas(hoje):
+        if not d:
             continue
         if (any(x and d - timedelta(days=365) <= x <= d for x in _firmes) or any(x and abs((x - d).days) <= 30 for x in _regr)
                 or any(x and abs((x - d).days) <= 5 for x in _pris)):
             continue
         unif = bool(re.search(r"SOMA|UNIFICA|NOVA CONDENA|GUIA", t))
+        antiga = d < _lp  # já houve progressão depois: a alteração atrasou a progressão daquela época
         itens.append(_item("alerta" if unif else "verificar",
                            "Alteração de data-base em %s sem falta grave homologada no RSPE" % rs.fmt(d),
                            "%s (decisão de %s). Não há falta grave homologada nos 12 meses anteriores, regressão nem nova prisão nessa data. "
                            "A data-base só se altera por falta grave reconhecida em juízo, por regressão ou pela recaptura/nova prisão depois de "
-                           "interrupção; %s. Conferir o fundamento nos autos: sem ele, a data-base volta à anterior e a progressão se antecipa." % (
+                           "interrupção; %s. Conferir o fundamento nos autos: sem ele, a data-base volta à anterior e a progressão se antecipa.%s" % (
                                rs._rotulo_incidente(i), i.get("data_decisao") or "?",
-                               "a soma ou unificação de penas não altera a data-base (STJ, Tema 1006)" if unif else "falta pendente não pode mover a data-base"),
+                               "a soma ou unificação de penas não altera a data-base (STJ, Tema 1006)" if unif else "falta pendente não pode mover a data-base",
+                               (" Já houve progressão depois (%s): se a alteração a atrasou, retificada a data-base, a progressão retroage à data "
+                                "em que os requisitos estavam preenchidos (STJ, Tema 1165), o que antecipa as datas atuais." % rs.fmt(_lp)) if antiga else ""),
                            "LEP, arts. 112, § 6º, e 118; Súmula 534/STJ; STJ, Temas 1006 e 1165.",
                            tipo="alteracao-de-data-base-sem-falta-homologada", ref=rs.fmt(d)))
         _db_sem.append(d)
@@ -1165,3 +1168,41 @@ def auditar(r, hoje=None):
             "aud_resumo": " · ".join(x for x in (("%d alerta%s" % (n_alerta, "" if n_alerta == 1 else "s")) if n_alerta else "",
                                                  ("%d ponto%s a verificar" % (n_verif, "" if n_verif == 1 else "s")) if n_verif else "") if x) or "Sem inconsistências",
             "aud_base": "base jurídica %s" % rg.versao()}
+
+
+# ---- fundamentação para impugnação do cálculo (campo "Fundamentação" da Auditoria) ----
+# frases de orientação ao operador que não cabem na peça
+_RE_ORIENTACAO = re.compile(r"^(conferir|confira|importe|informe|verificar|verifique|o programa|clique|use |ver a aba|pedir|cabe impugnar|"
+                            r"cabe pedir|marque|preencha|decida|se for o caso, informe)", re.I)
+_SEM_FUND = re.compile(r"dados-ausentes|falha|artigo-nao-informado|artigo-reconhecido|artigo-completado|confere|^ficha-|rspe-anterior-a-correcao", re.I)
+
+
+def _frases(t):
+    return [x.strip() for x in re.split(r"(?<=[.;])\s+(?=[A-ZÁÉÍÓÚ(])", t or "") if x.strip()]
+
+
+def fundamentacao(it, r):
+    """Texto pronto para a impugnação do cálculo: título do ponto, o que consta do RSPE, o fundamento e o pedido. Só para os
+    pontos de alerta ou a verificar que dizem respeito ao cálculo (os avisos de leitura/ausência de dado não geram texto)."""
+    if it.get("nivel") not in ("alerta", "verificar") or _SEM_FUND.search(it.get("tipo") or ""):
+        return ""
+    corpo = [f for f in _frases(it.get("detalhe")) if not _RE_ORIENTACAO.search(f)]
+    # a frase já é uma só: a orientação ao operador vai até o fim dela
+    corpo = [re.sub(r"\s*[-:;,]\s*(conferir|verificar|confira|verifique)\b.*$", ".", f, flags=re.I) for f in corpo]
+    if not corpo:
+        return ""
+    ger = r.get("data_geracao_rspe") or ""
+    tit = re.sub(r"\s+", " ", it.get("titulo") or "").strip().rstrip(".")
+    txt = [tit.upper(), "",
+           "Do Relatório da Situação Processual Executória%s extrai-se o seguinte. %s" % (
+               (" emitido pelo SEEU em %s" % ger) if ger else "", " ".join(corpo))]
+    fund = (it.get("fundamento") or "").strip()
+    if fund:
+        txt += ["", "A matéria é regida por: %s%s" % (fund.rstrip("."), ".")]
+    if it.get("nivel") == "alerta":
+        txt += ["", "Diante disso, requer a Defensoria Pública a retificação do cálculo de pena quanto a este ponto, com a atualização das "
+                    "datas dos benefícios dele decorrentes."]
+    else:
+        txt += ["", "Diante disso, requer a Defensoria Pública o esclarecimento deste ponto e, confirmada a inconsistência, a retificação do "
+                    "cálculo de pena, com a atualização das datas dos benefícios dele decorrentes."]
+    return "\n".join(txt)

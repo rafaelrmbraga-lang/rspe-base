@@ -1,8 +1,8 @@
-RSPE BASE - SEEU  v6.16.46 (programa em abas)
+RSPE BASE - SEEU  v6.16.47 (programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-6.16.46. A documentação técnica completa (cada parâmetro, a regra, a norma e
+6.16.47. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -562,6 +562,27 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v6.16.47
+  - Prescrição executória após a fuga (roteiro da Defensoria):
+      * a detração (prisão provisória antes do trânsito) é pena cumprida e
+        sai do saldo na fuga (art. 113: tempo que resta da pena); fora da fuga
+        o prazo segue a pena aplicada e a detração é só informativa;
+      * várias condenações: o tempo cumprido vai para a pena em execução pela
+        ordem do trânsito em julgado (STJ, HC 627.646), sem o desconto
+        simultâneo em todas as penas. O art. 76 do CP (mais grave primeiro)
+        aparece como "Tese defensiva" no quadro quando é mais favorável. O
+        saldo informado pelo operador continua prevalecendo.
+  - Auditoria: voltam os avisos de "Alteração de data-base sem falta grave
+    homologada no RSPE" para qualquer data (antes só apareciam depois da
+    última progressão e nos últimos 3 anos). Quando já houve progressão
+    depois, o aviso lembra que, retificada a data-base, a progressão retroage
+    à data dos requisitos (STJ, Tema 1165).
+  - Auditoria: campo "Fundamentação" em cada alerta ou ponto a verificar -
+    texto pronto para a impugnação do cálculo (o ponto, o que consta do RSPE,
+    o fundamento legal e o pedido de retificação), com "Copiar
+    fundamentação" e "Ver texto". "Copiar impugnação" junta todos os pontos
+    pendentes do assistido, numerados, com o número da execução e o nome.
 
 v6.16.46
   Correções a partir da leitura da documentação oficial do SEEU (tabelas de
