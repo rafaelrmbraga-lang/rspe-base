@@ -638,7 +638,9 @@ const ui = {
     if(L.acordao) marcos.push({d:D(L.acordao),r:'Acórdão',t:'sentenca'});
     marcos.push({d:D(L.ppe_termo),r:'Trânsito (termo inicial)',t:'transito'});
     const faixas=lt.map(p=>({...p,a:D(p.inicio),b:p.fim?D(p.fim):HOJE,tipo:this.tlTipo(p)}));
-    faixas.forEach(p=>{ if(p.tipo==='evasao'||p.tipo==='interrupcao'){ marcos.push({d:p.a,r:p.rotulo||(p.tipo==='evasao'?'Fuga':'Interrupção'),t:'fuga',p}); marcos.push({d:p.b,r:p.fim?'Recaptura':'Hoje',t:'recaptura',p}); } });
+    // o fim da fuga pode não ser recaptura: a prisão em outro processo vira cumprimento quando aquela condenação transita
+    const fimFuga=d=>{ const q=faixas.find(z=>z.tipo==='cumprimento' && +z.a===+d && /^trânsito em julgado/.test(z.fonte||'')); return q?'Cumprimento (trânsito de outra condenação)':'Recaptura'; };
+    faixas.forEach(p=>{ if(p.tipo==='evasao'||p.tipo==='interrupcao'){ marcos.push({d:p.a,r:p.rotulo||(p.tipo==='evasao'?'Fuga':'Interrupção'),t:'fuga',p}); marcos.push({d:p.b,r:p.fim?fimFuga(p.b):'Hoje',t:'recaptura',p}); } });
     marcos.push({d:HOJE,r:'Situação atual',t:'hoje'});
     const evas=sal;
     // marcos numerados: na linha só o número; a legenda com nome e data fica abaixo da figura
@@ -679,11 +681,15 @@ const ui = {
       const cor=s.resultado==='prescrita'?'#B42318': s.resultado==='a verificar'?'#B54708':'#067647';
       const rot=(s.rotulo_evento||(s.revogacao?'revogação do livramento':(s.e_evasao===false?'interrupção':'fuga')))+' de '+s.evasao;
       svg+=`<g class="mk" data-k="s${k}"><line x1="${xa}" y1="${Y}" x2="${xa}" y2="${yc}" stroke="#B42318" stroke-dasharray="3 3"/><line x1="${xa}" y1="${yc}" x2="${Math.min(xb, xl||xb)}" y2="${yc}" stroke="${cor}" stroke-width="5" stroke-linecap="round"/><text x="${xa>PL+W-420?PL+W:xa}" y="${yc-14}" text-anchor="${xa>PL+W-420?'end':'start'}" font-size="10" fill="${cor}" font-weight="700">contagem da prescrição pelo saldo (art. 113) · ${esc(rot)}</text>`;
+      const xf=Math.min(xb, xl||xb);
+      faixas.filter(p=>p.tipo==='outro_motivo' && p.b>a && p.a<b).forEach(p=>{ const s0=Math.max(x(p.a),xa), s1=Math.min(x(p.b),xf); if(s1-s0<2) return;
+        svg+=`<line x1="${s0}" y1="${yc}" x2="${s1}" y2="${yc}" stroke="#fff" stroke-width="7"/><line x1="${s0}" y1="${yc}" x2="${s1}" y2="${yc}" stroke="#B692F6" stroke-width="5" stroke-dasharray="6 4"/>`
+          +(s1-s0>150?`<text x="${(s0+s1)/2}" y="${yc-8}" text-anchor="middle" font-size="9.5" fill="#6941C6" font-weight="700">prazo suspenso: preso por outro motivo (art. 116, p. único)</text>`:''); });
       const rt=[]; if(xlm && xlm<xb) rt.push({x:xlm,col:'#B42318',txt:`venceria ${s.limite_min} (saldo mín.)`,w:2,dash:''});
       const vistos=new Set([s.limite_min,s.limite_max]);
       (s.faixas||[]).forEach(f=>{ if(f.limite && f.prescrita && !vistos.has(f.limite)){ vistos.add(f.limite); rt.push({x:x(D(f.limite)),col:'#B42318',txt:`venceria ${f.limite} se o saldo fosse ${f.rotulo||amd(f.saldo)+' a '+amd(f.saldo_ate)}`,w:2,dash:'3 2'}); } });
-      if(xl) rt.push({x:xl,col:'#475467',txt:`venceria ${s.limite_max} (saldo máx.)`,w:2,dash:''});
-      rt.push({x:xb,col:'#067647',txt:(s.fim&&s.fim!=='hoje')?`recaptura ${s.fim} → interrompe (art. 117, V)`:'hoje',w:3,dash:'',b:true});
+      if(xl) rt.push({x:xl,col:'#475467',txt:(s.fim&&s.fim!=='hoje'&&lim>b)?`pelo saldo máx. venceria ${s.limite_max}: a recaptura veio antes`:`venceria ${s.limite_max} (saldo máx.)`,w:2,dash:''});
+      rt.push({x:xb,col:'#067647',txt:(s.fim&&s.fim!=='hoje')?`${fimFuga(b)==='Recaptura'?'recaptura':'cumprimento pela condenação transitada'} ${s.fim} → interrompe (art. 117, V)`:'hoje',w:3,dash:'',b:true});
       rt.sort((p,q)=>p.x-q.x); let lx=-9999, dy=22;
       rt.forEach(t=>{ dy=(t.x-lx<260)? dy+13 : 22; lx=t.x; const anchor=t.x>PL+W-150?'end':(t.x<PL+150?'start':'middle');
         svg+=`<line x1="${t.x}" y1="${yc-8}" x2="${t.x}" y2="${yc+8}" stroke="${t.col}" stroke-width="${t.w}" ${t.dash?`stroke-dasharray="${t.dash}"`:''}/><text x="${t.x}" y="${yc+dy}" text-anchor="${anchor}" font-size="9.5" fill="${t.col}" ${t.b?'font-weight="700"':''}>${esc(t.txt)}</text>`; });
@@ -758,7 +764,7 @@ const ui = {
       html=`<h4>Como cheguei aqui? · ${esc(T.r)}</h4><dl><dt>Evento utilizado</dt><dd>${esc(p.fonte)}</dd><dt>Período considerado</dt><dd>${esc(p.inicio)} → ${esc(p.fim||'hoje')}</dd><dt>Tratamento</dt><dd>${esc(T.r)}</dd><dt>Fundamento</dt><dd>${esc(FUND[tipo]||'')}</dd><dt>Efeito no cálculo</dt><dd>${penaExt(esc(p.efeito))}</dd></dl>`;
       if(tipo==='duvida') html+=`<p style="margin:6px 0 0;color:#B54708"><b>Atribuição não comprovada:</b> o SEEU registra prisão neste período só para outro processo; os dados disponíveis não permitem determinar quanto dele foi destinado a esta condenação. O período não é assumido como redução certa da pena: entra só como limite.</p>`;
     } else if(k[0]==='s'){ const s=(L.ppe_saldos||[])[+k.slice(1)];
-      html=`<h4>Contagem da prescrição · ${s.revogacao?'revogação do livramento':'fuga'} de ${esc(s.evasao)}</h4><dl><dt>Cumprido desde o termo</dt><dd>${dias(s.cumprido_desde_termo)}${s.remicao?' + '+s.remicao+' dias remidos (LEP, art. 128)':''}</dd><dt>Outras condenações em execução</dt><dd>${s.outras} (soma ${amd(s.soma_outras)})</dd><dt>Saldo deste crime</dt><dd>${amd(s.saldo_min)} a ${amd(s.saldo_max)}</dd><dt>Faixas do art. 109</dt><dd>${(s.faixas||[]).map(f=>`saldo ${amd(f.saldo)}${f.saldo_ate!==f.saldo?' a '+amd(f.saldo_ate):''} (${esc(f.rotulo||'')}) → ${f.meses? f.meses+' meses, '+(f.prescrita?'venceu':'não venceria')+' em '+f.limite : 'nada a prescrever'}`).join('<br>')}</dd><dt>Suspensão (art. 116)</dt><dd>${s.suspensao_dias? dias(s.suspensao_dias):'nenhuma'}</dd><dt>Fim do intervalo</dt><dd>${(s.fim&&s.fim!=='hoje')? 'recaptura em '+esc(s.fim)+' — interrompe (art. 117, V)':'em aberto'}</dd><dt>Resultado</dt><dd><b>${esc(s.resultado)}</b></dd></dl>`;
+      html=`<h4>Contagem da prescrição · ${s.revogacao?'revogação do livramento':'fuga'} de ${esc(s.evasao)}</h4><dl><dt>Cumprido desde o termo</dt><dd>${dias(s.cumprido_desde_termo)}${s.remicao?' + '+s.remicao+' dias remidos (LEP, art. 128)':''}</dd><dt>Outras condenações em execução</dt><dd>${s.outras} (soma ${amd(s.soma_outras)})</dd><dt>Saldo deste crime</dt><dd>${amd(s.saldo_min)} a ${amd(s.saldo_max)}</dd><dt>Faixas do art. 109</dt><dd>${(s.faixas||[]).map(f=>`saldo ${amd(f.saldo)}${f.saldo_ate!==f.saldo?' a '+amd(f.saldo_ate):''} (${esc(f.rotulo||'')}) → ${f.meses? f.meses+' meses, '+(f.prescrita?'venceu':'não venceria')+' em '+f.limite : 'nada a prescrever'}`).join('<br>')}</dd><dt>Suspensão (art. 116)</dt><dd>${s.suspensao_dias? dias(s.suspensao_dias):'nenhuma'}</dd><dt>Fim do intervalo</dt><dd>${(s.fim&&s.fim!=='hoje')? esc(s.fim_causa||'recaptura')+' em '+esc(s.fim)+' — interrompe (art. 117, V)':'em aberto'}</dd><dt>Resultado</dt><dd><b>${esc(s.resultado)}</b></dd></dl>`;
     } else { const ts=[...g.querySelectorAll('text')].map(t=>t.textContent); const [rot,dat]=ts.length>2?[ts[1],ts[2]]:[ts[0],ts[1]]; html=`<h4>Marco${ts.length>2?' '+esc(ts[0]):''}</h4><p>${esc(rot)} · ${esc(dat)}</p>`; }
     pop.querySelector('.pc').innerHTML=html; pop.classList.add('on');
     const r=tl.getBoundingClientRect(); pop.style.left=Math.max(0,Math.min(ev.clientX-r.left, r.width-380))+'px'; pop.style.top=(ev.clientY-r.top+12)+'px'; },
