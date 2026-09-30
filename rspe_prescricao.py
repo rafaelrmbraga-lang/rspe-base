@@ -748,7 +748,12 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
                             crit = {"saldo": rot_f, "teto_dias": teto, "prazo": fmt_prazo(mf), "limite": rs.fmt(lf)}
                         else:
                             break
-                    if crit and crit["teto_dias"] < pena:
+                    # só pede o saldo se o saldo crítico for possível: nem com todo o tempo desde a primeira prisão contado como
+                    # cumprimento (mais remição de 1 dia a cada 2) a pena cairia até ele -> não há o que verificar
+                    _ini_max = min([a for a, _b, _m, _p in periodos_det if a] + [termo])
+                    _dias_max = max(0, (g0 - _ini_max).days)
+                    _saldo_min_possivel = pena - _dias_max - max(rem_g0, _dias_max // 2)
+                    if crit and crit["teto_dias"] < pena and crit["teto_dias"] >= _saldo_min_possivel:
                         informar = dict(crit, fuga=rs.fmt(g0), fim=fim_txt, duracao=_dur(g0, ref), aberto=aberto)
             S = {"evasao": rs.fmt(g0), "fim": fim_txt, "motivo": motivo.lower() if motivo else "não consta", "revogacao": revog, "e_evasao": e_evasao,
                  "cumprido_min": pena - saldo_max, "cumprido_max": pena - saldo_min, "cumprido_desde_termo": cumprido_g0, "remicao": rem_g0,
@@ -1110,13 +1115,23 @@ def _quadro(L, hoje):
     if Sd:
         g0, g1 = rs.to_date(Sd["evasao"]), rs.to_date(Sd.get("fim") or "")
         rot = "Revogação do livramento" if Sd.get("revogacao") else ("Fuga" if Sd.get("e_evasao", True) else "Interrupção")
-        Q["periodo"] = ("%s de %s a %s (%s fora)" % (rot, Sd["evasao"], Sd["fim"], _dur(g0, g1)) if g1 else
-                        "%s em %s, sem recaptura (%s até hoje)" % (rot, Sd["evasao"], _dur(g0, hoje)))
+        # prisão por outro processo depois da fuga: o prazo fica suspenso (art. 116, p. único) - dizer já no período
+        _susp = [p for p in (L.get("ppe_linha_tempo") or []) if p.get("tipo") == "outro_motivo"
+                 and rs.to_date(p.get("inicio") or "") and rs.to_date(p["inicio"]) >= g0 and (not g1 or rs.to_date(p["inicio"]) < g1)]
+        if _susp and not g1:
+            s0 = _susp[-1]
+            Q["periodo"] = "%s em %s; preso por outro processo desde %s%s - prazo suspenso (art. 116, p. único)" % (
+                rot, Sd["evasao"], s0["inicio"], (" até " + s0["fim"]) if s0.get("fim") else "")
+        else:
+            Q["periodo"] = ("%s de %s a %s (%s fora)" % (rot, Sd["evasao"], Sd["fim"], _dur(g0, g1)) if g1 else
+                            "%s em %s, sem recaptura (%s até hoje)" % (rot, Sd["evasao"], _dur(g0, hoje)))
         sal = _pena_ou_zero(Sd["saldo_max"]) if Sd["saldo_min"] == Sd["saldo_max"] else "entre %s e %s" % (_pena_ou_zero(Sd["saldo_min"]), _pena_ou_zero(Sd["saldo_max"]))
         org = ORIGEM_TXT.get(Sd.get("saldo_origem"), "").replace("saldo ", "")
         prazo = Sd["prazo_max"] if (not Sd["prazo_min"] or Sd["prazo_min"] == Sd["prazo_max"]) else "%s a %s" % (Sd["prazo_min"], Sd["prazo_max"])
         if not vtxt and g1:
             vtxt = "venceria em %s; a recaptura veio antes e interrompeu (art. 117, V)" % Sd["limite_max"] if Sd["limite_max"] else ""
+        if _susp and not g1 and not _susp[-1].get("fim") and vtxt.startswith("vence"):
+            vtxt += " (a data avança enquanto durar a prisão por outro processo)"
         Q["prazo"] = "%s%s, contado da %s pelo saldo (art. 113)%s" % (prazo or "nada a prescrever", inc if Sd["saldo_min"] == Sd["saldo_max"] else "",
                                                                        "revogação" if Sd.get("revogacao") else "fuga", (" → " + vtxt) if vtxt else "")
         Q["saldo"] = "%s na %s de %s (%s)" % (sal, "revogação" if Sd.get("revogacao") else "fuga", Sd["evasao"], org)

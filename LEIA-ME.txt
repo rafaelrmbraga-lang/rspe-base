@@ -1,8 +1,8 @@
-RSPE BASE - SEEU  v6.16.48 (programa em abas)
+RSPE BASE - SEEU  v6.16.50 (programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-6.16.48. A documentação técnica completa (cada parâmetro, a regra, a norma e
+6.16.49. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -523,8 +523,8 @@ PETIÇÕES (modelos .docx) - DESATIVADAS NESTA VERSÃO
   os modelos padrão está "Indulto 2023 - Decreto 11.846 - inciso XV", da
   unidade: o programa não analisa esse decreto.
 
-BANCO DE TESES
-  Aba "Banco de teses": acórdãos do TJMS favoráveis à defesa em execução
+JURISPRUDÊNCIAS
+  Aba "Jurisprudências": acórdãos do TJMS favoráveis à defesa em execução
   penal, com pesquisa, filtro por tema e cópia da ementa com a referência.
   Os dados vão embutidos no programa (rspe_teses.py); um
   teses_execucao.json ao lado do programa os substitui.
@@ -542,7 +542,7 @@ ARQUIVOS
   rspe_export.py     exportação Excel e PDF
   rspe_peticao.py    petições por modelo .docx (desativadas)
   base_juridica.json base jurídica (editável)
-  rspe_teses.py      banco de teses (acórdãos favoráveis à defesa; embutido)
+  rspe_teses.py      jurisprudências (acórdãos favoráveis à defesa; embutido)
   modelos_padrao/    modelos .docx instalados na pasta "modelos"
   decretos/          textos dos decretos de indulto
   exemplo/           RSPEs de exemplo
@@ -562,6 +562,47 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v6.16.50
+  - Abas com ícone e nome curto, numa linha só: Geral, Progressão,
+    Livramento, Indulto, Prescrição, Extinção, Ficha, Auditoria e
+    Jurisprudências (antigo "Banco de teses").
+  - Resumo de cada aba em faixa compacta (bolinha, número e rótulo), no lugar
+    dos cartões grandes; o rodapé traz uma dica própria da aba aberta.
+  - Botão "Letra" (A pequeno / A grande) na barra: muda o tamanho de tudo na
+    tela e fica gravado neste computador.
+  - RSPE desatualizado: emitido há mais de 60 dias ganha um "!" laranja ao
+    lado do nome (o mouse sobre ele mostra a data de emissão e os dias); o
+    chip "RSPE antigo" da faixa de resumo filtra esses assistidos.
+  - Rótulos mais curtos no resumo de Progressão e Livramento: "Vencido",
+    "Sem prazo" (não se aplica, não iniciou ou interrompida) e "Feito" (pedido
+    feito); o mouse sobre o chip mostra a explicação.
+  - Cópia de segurança automática ao abrir a base (pasta "copias", ao lado da
+    base), guardadas as 10 últimas. O topo mostra "cópia de segurança: hoje
+    HH:MM"; o menu da base > "Cópias de segurança…" restaura uma delas (a
+    versão de agora também é copiada antes, para poder desfazer).
+  - Histórico de RSPE (aba Geral, botão "Histórico · N"): cada RSPE importado
+    fica guardado; a tabela compara, do mais antigo ao atual, regime, penas,
+    dias remidos (perdidos), data-base, previsões de progressão e livramento,
+    término, faltas graves, incidentes novos e pedidos com o retorno, com o
+    que mudou em destaque. Importar um PDF mais antigo o acrescenta ao
+    histórico sem substituir o atual. Bases antigas começam o histórico com o
+    RSPE que já tinham.
+  - Mais rápido: marcar pedido, dar baixa, informar dado ou ajustar a
+    prescrição refaz só o assistido alterado (antes, a base inteira); abrir a
+    base também ficou cerca de 25% mais rápido.
+
+v6.16.49
+  - Prescrição após a fuga: o pedido "informe a pena remanescente na fuga"
+    só aparece quando o saldo que daria prescrição é possível. Se nem todo o
+    tempo desde a primeira prisão, contado como cumprimento e com remição,
+    levaria a pena até esse saldo, o resultado fica pelo saldo calculado, sem
+    pedir verificação (ex.: pena de 5a4m com menos de 1 ano de prisão antes
+    da fuga não pode ter saldo de até 2 anos).
+  - Quadro da executória: quando, depois da fuga, a pessoa foi presa por
+    outro processo, o período mostra "preso por outro processo desde ... -
+    prazo suspenso (art. 116, p. único)", e o vencimento avisa que a data
+    avança enquanto durar essa prisão.
 
 v6.16.48
   - Auditoria, campo "Fundamentação": agora em parágrafos de fundamentação,

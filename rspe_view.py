@@ -30,8 +30,12 @@ CORES = {
     "azul": ("#DBEAFE", "#1D4ED8"),
     "": ("#FFFFFF", "#344054"),
 }
+# explicação dos rótulos curtos (aparece ao passar o mouse no quadro de resumo e na legenda)
+ROTULO_DICA = {
+    "lapso": {"vencido": "Lapso vencido: verificar se o pedido já cabe", "cinza": "Sem prazo: não se aplica, cumprimento não iniciado ou pena interrompida"},
+}
 ROTULO = {
-    "lapso": {"vencido": "Vencido · verificar", "laranja": "Até 30 dias", "amarelo": "Até 60 dias", "verde": "Até 90 dias", "cinza": "Não se aplica / não iniciou / interrompida"},
+    "lapso": {"vencido": "Vencido", "laranja": "Até 30 dias", "amarelo": "Até 60 dias", "verde": "Até 90 dias", "cinza": "Sem prazo"},
     "indulto": {"verde": "Possível", "amarelo": "A verificar", "cinza": "Não atinge"},
     "presc": {"vermelho": "Prescrição aparente", "amarelo": "Iminente / a verificar", "": "Não prescrita", "cinza": "Sem dados"},
     "presc_pp": {"vermelho": "Prescrição aparente", "": "Não configurada", "cinza": "Sem dados"},

@@ -35,6 +35,7 @@ import argparse
 import csv
 import json
 import os
+import functools
 import re
 import sys
 from datetime import date, datetime, timedelta
@@ -113,9 +114,14 @@ def pl(n, um, varios):
     return "%s %s" % (num_txt(n), um if n == 1 else varios)
 
 
+_RE_DATA_BR = re.compile(r"^(\d{1,2})/(\d{1,2})/(\d{4})$")
+
+
 def to_date(s):
+    # sem strptime: é chamada centenas de milhares de vezes ao abrir a base
     try:
-        return datetime.strptime(s.strip(), "%d/%m/%Y").date()
+        m = _RE_DATA_BR.match(s.strip())
+        return date(int(m.group(3)), int(m.group(2)), int(m.group(1))) if m else None
     except Exception:
         return None
 
@@ -1773,9 +1779,14 @@ def crime_patrimonial(c):
     return de <= int(m.group(1)) <= ate
 
 
-def _sem_acento(t):
+@functools.lru_cache(maxsize=20000)
+def _sem_acento_(t):
     import unicodedata
-    return "".join(ch for ch in unicodedata.normalize("NFD", t or "") if unicodedata.category(ch) != "Mn").upper()
+    return "".join(ch for ch in unicodedata.normalize("NFD", t) if unicodedata.category(ch) != "Mn").upper()
+
+
+def _sem_acento(t):
+    return _sem_acento_(t or "")
 
 
 RE_VD_FORTE = re.compile(r"VIOLENCIA DOMESTICA|MARIA DA PENHA|11\.?340|CONTRA A MULHER|SEXO FEMININO|FEMINICIDIO|VIOLENCIA DE GENERO")
