@@ -784,7 +784,7 @@ const ui = {
     return out.join('\n\n'); },
   txtAud(s){ return `${s.nivel_txt} - ${s.titulo}`+(s.detalhe?'\n'+penaExt(s.detalhe):'')+(s.fundamento?'\nFundamento: '+penaExt(s.fundamento):''); },
   txtImpugnacao(r){ const it=(r.aud_itens||[]).filter(s=>s.fundamentacao&&!s.baixado);
-    return `IMPUGNAÇÃO AO CÁLCULO DE PENA\nExecução nº ${r.proc||''} - ${r.nome||''}\n\n`+it.map((s,i)=>`${i+1}. `+penaExt(s.fundamentacao)).join('\n\n'); },
+    return it.map(s=>penaExt(s.fundamentacao)).join('\n\n'); },
   txtAudTodos(r){ const it=(r.aud_itens||[]).filter(s=>!s.baixado&&(s.nivel==='alerta'||s.nivel==='verificar'));
     return `Auditoria do RSPE - ${r.nome} (${r.proc}) - RSPE de ${r.geracao}\n\n`+(it.length?it.map(s=>this.txtAud(s)).join('\n\n'):'Nenhuma inconsistência pendente.'); },
   txtFicha(r){ const L=[];
@@ -824,7 +824,7 @@ const ui = {
       <div class="ac-chips">${nA?`<span class="pill vermelho">${nA} ${nA===1?'alerta':'alertas'}</span>`:''}${nV?`<span class="pill amarelo">${nV} ${nV===1?'ponto a verificar':'pontos a verificar'}</span>`:''}${!nA&&!nV?'<span class="pill verde">Sem inconsistências</span>':''}
       ${(ocultos||this.mostrarTudo)?`<span class="mini" onclick="event.stopPropagation();ui.mostrarTudo=!ui.mostrarTudo;ui.render()">${this.mostrarTudo?'ocultar conferências OK':'ver '+pl(ocultos,'conferência OK / informativa','conferências OK / informativas')}</span>`:''}
       <span class="mini" onclick="event.stopPropagation();ui.copiarClip(${ui.clip(ui.txtAudTodos(r))})">Copiar pendências</span>
-      ${todos.some(x=>x.fundamentacao&&!x.baixado)?`<span class="mini pre" title="Todos os pontos pendentes com fundamentação, em um texto só" onclick="event.stopPropagation();ui.copiarClip(${ui.clip(ui.txtImpugnacao(r))})">Copiar impugnação</span>`:''}
+      ${todos.some(x=>x.fundamentacao&&!x.baixado)?`<span class="mini pre" title="Fundamentações de todos os pontos pendentes, em sequência" onclick="event.stopPropagation();ui.copiarClip(${ui.clip(ui.txtImpugnacao(r))})">Copiar todas as fundamentações</span>`:''}
       <span class="mini" onclick="event.stopPropagation();ui.abrir('${r.id}')">Abrir ficha completa</span></div></div>`;
     return cab+(rows.length?`<div class="ac-lista">${rows.map(card).join('')}</div>`:'<div class="muted" style="padding:8px 2px">Nenhuma inconsistência pendente.</div>'); },
   prescCards(r){ const pe=this.prescModo!=='pp'; const todas=(r.presc_linhas||[]);

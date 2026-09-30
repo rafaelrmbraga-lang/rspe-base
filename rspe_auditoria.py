@@ -1171,10 +1171,179 @@ def auditar(r, hoje=None):
 
 
 # ---- fundamentação para impugnação do cálculo (campo "Fundamentação" da Auditoria) ----
+# Até 3 parágrafos: (1) o erro apontado no RSPE; (2) o correto e o fundamento; (3) o pedido. Só para os pontos em que a
+# correção favorece o assistido (os demais - p. ex., art. 88 - não geram texto de impugnação).
+FUND_TIPOS = {
+    "alteracao-de-data-base-sem-falta-homologada": (
+        "A data-base para nova progressão só se altera por falta grave reconhecida em juízo, pela regressão de regime ou pelo reinício do "
+        "cumprimento após interrupção (LEP, arts. 112, § 6º, e 118; Súmula 534/STJ). A soma ou unificação de penas não a altera (STJ, Tema "
+        "1006), e ela corresponde à data em que os requisitos foram preenchidos (STJ, Tema 1165). Sem fundamento idôneo, a alteração é indevida.",
+        "Requer-se a exclusão da alteração da data-base, com o restabelecimento da data-base anterior e o recálculo das datas de progressão e "
+        "livramento condicional."),
+    "data-base-coincide-com-a-soma-unificacao-das-pen": (
+        "A superveniência de nova condenação e a unificação ou soma das penas não alteram a data-base para a progressão, que permanece a da última "
+        "prisão ou do último benefício (STJ, Tema 1006; LEP, art. 111). A data fixada coincide com a unificação e, portanto, não se sustenta.",
+        "Requer-se a retificação da data-base, fixando-a na data da última prisão ou alteração de regime anterior à unificação, com o recálculo "
+        "das datas de progressão e livramento."),
+    "data-base-do-livramento-alterada-por-falta-grave": (
+        "A falta grave não interrompe o prazo para o livramento condicional (Súmula 441/STJ); ela repercute apenas no requisito subjetivo e na "
+        "progressão (LEP, art. 112, § 6º). A data-base do livramento não pode ser deslocada para a data da falta.",
+        "Requer-se a retificação da data-base do livramento condicional, afastando-se a interrupção pela falta grave, com o recálculo da data do "
+        "benefício."),
+    "data-base-movida-para-a-recaptura-sem-falta-homo": (
+        "A fuga só produz efeitos sobre a data-base depois de reconhecida como falta grave em procedimento regular, com homologação judicial "
+        "(LEP, arts. 50, II, 59 e 118; Súmula 533/STJ; Súmula 534/STJ). Sem falta homologada, a recaptura não reinicia a contagem para a progressão.",
+        "Requer-se o restabelecimento da data-base anterior à fuga, descontado o período de evasão, com o recálculo das datas dos benefícios."),
+    "inconsistencia-da-data-base-sem-prisao-alteracao": (
+        "A data-base deve corresponder a um marco previsto em lei: início do cumprimento, última prisão, última alteração de regime ou falta grave "
+        "homologada (LEP, arts. 112, § 6º, e 118; STJ, Temas 1006 e 1165). A data fixada não coincide com nenhum desses marcos.",
+        "Requer-se o esclarecimento do fundamento da data-base e, ausente marco legal, sua retificação para a data do último marco válido, com o "
+        "recálculo das datas dos benefícios."),
+    "capitulacao-criada-depois-do-fato": (
+        "A lei penal mais gravosa não retroage (CF, art. 5º, XL; CP, arts. 1º e 2º). A capitulação cadastrada foi criada depois do fato, e a "
+        "execução deve observar a lei vigente à época, inclusive quanto à hediondez, às frações de progressão e livramento e às vedações de "
+        "indulto e comutação.",
+        "Requer-se a retificação do cadastro da condenação, com a capitulação vigente na data do fato, e o recálculo das frações e datas dos "
+        "benefícios."),
+    "seeu-tratou-como-hediondo-mas-o-fato-e-anterior": (
+        "A hediondez decorre de lei posterior ao fato e não pode retroagir (CF, art. 5º, XL; CP, art. 2º). As frações de progressão e livramento "
+        "devem ser as de crime comum vigentes à época do fato.",
+        "Requer-se a exclusão da marcação de hediondo e o recálculo das frações e datas de progressão e livramento condicional."),
+    "seeu-tratou-como-hediondo-mas-o-tipo-nao-consta": (
+        "O rol dos crimes hediondos e equiparados é taxativo (Lei 8.072/1990, art. 1º; CF, art. 5º, XLIII), e o tipo desta condenação não "
+        "consta dele. A aplicação das frações próprias dos hediondos carece de base legal.",
+        "Requer-se a exclusão da marcação de hediondo e o recálculo das frações e datas de progressão e livramento condicional."),
+    "hediondez-posterior-ao-fato": (
+        "A lei que tornou o tipo hediondo é posterior ao fato e não retroage (CF, art. 5º, XL; CP, art. 2º). O crime deve ser tratado como comum "
+        "para fins de progressão e livramento.",
+        "Requer-se a exclusão da marcação de hediondo e o recálculo das frações e datas dos benefícios."),
+    "hediondez-posterior-ao-fato-indulto-comutacao-po": (
+        "A vedação de indulto e comutação alcança o crime hediondo segundo a lei vigente na data do decreto, mas a hediondez superveniente não "
+        "pode retroagir para agravar a situação do condenado por fato anterior (CF, art. 5º, XL; CP, art. 2º).",
+        "Requer-se o afastamento da vedação e a análise do indulto e da comutação com o crime considerado comum."),
+    "reincidencia-especifica-nao-demonstrada-no-rspe": (
+        "A reincidência específica exige condenação anterior transitada em julgado por crime da mesma natureza antes do novo fato (CP, arts. 63 "
+        "e 64). Não demonstrada, aplica-se o percentual do reincidente genérico ou do primário (LEP, art. 112; STJ, Temas 1084 e 1196; STF, "
+        "Tema 1169).",
+        "Requer-se a retificação do percentual de progressão, afastada a reincidência específica, com o recálculo das datas dos benefícios."),
+    "marcado-reincidente-sem-condenacao-anterior-tran": (
+        "A reincidência pressupõe condenação anterior transitada em julgado antes do novo fato e não alcançada pelo período depurador de cinco "
+        "anos (CP, arts. 63 e 64, I). Nenhuma condenação com essas características consta do RSPE.",
+        "Requer-se a exclusão da marcação de reincidente, ou a indicação da condenação anterior que a fundamenta, com o recálculo das frações e "
+        "datas dos benefícios."),
+    "condenacao-anterior-depurada": (
+        "Decorridos mais de cinco anos entre o cumprimento ou a extinção da pena anterior e o novo fato, a condenação não gera reincidência "
+        "(CP, art. 64, I).",
+        "Requer-se a exclusão da reincidência e o recálculo das frações e datas dos benefícios."),
+    "reincidente-vga-percentual-se-nao-especifica": (
+        "O percentual mais gravoso para crime com violência ou grave ameaça exige reincidência específica nesse tipo de crime (LEP, art. 112, IV); "
+        "na reincidência genérica aplica-se o percentual do primário (STJ, Tema 1084).",
+        "Requer-se a retificação do percentual de progressão para o do primário em crime com violência ou grave ameaça, com o recálculo das datas."),
+    "percentual-de-progressao-diverge": (
+        "O percentual de progressão decorre da natureza do crime, da reincidência e da lei vigente à época do fato (LEP, art. 112; CF, art. 5º, "
+        "XL). O percentual aplicado não corresponde a esses critérios.",
+        "Requer-se a retificação do percentual de progressão e o recálculo da data do benefício."),
+    "fracao-de-livramento-diverge": (
+        "A fração do livramento condicional é fixada pela natureza do crime e pela reincidência (CP, art. 83). A fração aplicada não corresponde "
+        "a esses critérios.",
+        "Requer-se a retificação da fração do livramento condicional e o recálculo da data do benefício."),
+    "comando-de-organizacao-criminosa-fato-em-75-so-s": (
+        "O percentual de 70% (LEP, art. 112, VI, b) exige que a condenação reconheça o comando de organização criminosa estruturada para crime "
+        "hediondo ou equiparado. Sem esse reconhecimento na sentença, aplica-se o percentual comum ao tipo.",
+        "Requer-se a retificação do percentual de progressão e o recálculo das datas dos benefícios."),
+    "livramento-vedado-pelo-seeu-1-1-so-se-a-organiza": (
+        "A vedação ao livramento condicional depende das hipóteses legais expressas (LEP, art. 112, VI e VIII; Lei 12.850/2013, art. 2º, § 9º), "
+        "que não constam da condenação.",
+        "Requer-se o afastamento da vedação e o cálculo da data do livramento condicional."),
+    "marcacao-de-violencia-grave-ameaca-diverge-do-ti": (
+        "A violência ou grave ameaça que agrava o percentual de progressão deve integrar o tipo penal ou constar da condenação (LEP, art. 112, "
+        "III e IV). A marcação não corresponde ao tipo.",
+        "Requer-se a retificação da marcação e o recálculo do percentual e das datas de progressão."),
+    "contravencao-pena-acima-do-maximo": (
+        "A pena não pode exceder o máximo cominado ao tipo (CF, art. 5º, XXXIX; CP, art. 1º).",
+        "Requer-se a conferência da pena com a sentença e sua retificação no cálculo."),
+    "cumprida-remanescente-pena-total": (
+        "A pena cumprida somada à remanescente deve corresponder à pena total; a divergência indica erro no cálculo, que repercute em todas as "
+        "datas de benefícios (LEP, arts. 66, III, a, e 111).",
+        "Requer-se a retificação do cálculo e a emissão de atestado de pena atualizado."),
+    "soma-das-penas-difere-da-pena-total": (
+        "A pena total da execução deve corresponder à soma das penas das condenações em execução (LEP, art. 111). A divergência altera todas "
+        "as frações e datas.",
+        "Requer-se a retificação da pena total e o recálculo das datas dos benefícios."),
+    "guia-sem-pena-calculada-pena-total-com": (
+        "Todas as condenações em execução devem integrar o cálculo, com a respectiva pena (LEP, arts. 105 e 111).",
+        "Requer-se a inclusão da pena no cálculo ou a exclusão da guia sem pena, com o recálculo das datas."),
+    "dias-remidos-incidentes-nao-fecham-com-o-saldo": (
+        "Os dias remidos declarados judicialmente integram a pena cumprida (LEP, arts. 126 e 128). O saldo do cálculo não corresponde à soma "
+        "das remições concedidas.",
+        "Requer-se a retificação do saldo de dias remidos e o recálculo das datas dos benefícios."),
+    "perda-de-dias-remidos-acima-de-1-3-falta-de": (
+        "A falta grave permite revogar até 1/3 do tempo remido (LEP, art. 127), limite que alcança apenas a remição adquirida até a infração "
+        "(STF, Tema 477).",
+        "Requer-se a limitação da perda a 1/3 dos dias remidos até a falta e a restituição do excedente, com o recálculo das datas."),
+    "perda-de-dias-remidos-em-duplicidade-falta-de": (
+        "Após cada falta, a contagem recomeça da data da infração, e a nova perda só alcança a remição adquirida depois da falta anterior (LEP, "
+        "art. 127). O desconto repetido sobre a mesma remição é vedado.",
+        "Requer-se a restituição dos dias remidos descontados em duplicidade e o recálculo das datas dos benefícios."),
+    "perda-de-remidos-sem-falta-grave-datada-no-rspe": (
+        "A perda de dias remidos exige falta grave reconhecida em decisão judicial (LEP, arts. 118 e 127; Súmula 533/STJ).",
+        "Requer-se a indicação da falta grave que fundamentou a perda e, inexistente, a restituição dos dias remidos."),
+    "falta-homologada-apos-prescricao": (
+        "A apuração da falta disciplinar prescreve em três anos (CP, art. 109, VI, por analogia; STJ). Homologada depois de consumada a "
+        "prescrição, a falta não produz efeitos.",
+        "Requer-se o reconhecimento da prescrição da falta e o afastamento de seus efeitos (regressão, perda de remidos e nova data-base)."),
+    "execucao-extinta-segundo-incidente-do-rspe": (
+        "Declarada a extinção da pena, a execução correspondente deve ser encerrada (LEP, art. 66, II; CP, art. 107).",
+        "Requer-se a baixa da condenação extinta no cálculo e o recálculo das datas dos benefícios remanescentes."),
+    "pena-integralmente-cumprida-com-execucao-ativa": (
+        "Cumprida integralmente a pena, impõe-se a declaração de sua extinção (LEP, arts. 66, II, e 109; CP, art. 82).",
+        "Requer-se a declaração da extinção da pena pelo integral cumprimento."),
+    "pena-cumprida-por-detracao": (
+        "O tempo de prisão provisória é computado na pena (CP, art. 42). Se igual ou superior à pena da condenação, a pena está cumprida.",
+        "Requer-se o cômputo da detração e a declaração da extinção da pena pelo cumprimento (LEP, art. 66, II)."),
+    "indulto-concedido-sem-baixa-no-calculo": (
+        "Concedido o indulto, a pena correspondente está extinta (CP, art. 107, II) e deve ser excluída do cálculo.",
+        "Requer-se a exclusão da pena indultada do cálculo e o recálculo das datas dos benefícios."),
+    "indulto-possivel-sem-incidente-no-rspe": (
+        "O indulto é direito do condenado que preenche os requisitos objetivos e subjetivos do decreto, e sua declaração independe de "
+        "requerimento prévio (LEP, arts. 187 a 193).",
+        "Requer-se a declaração do indulto, com a extinção da pena correspondente."),
+    "comutacao-possivel-sem-incidente-no-rspe": (
+        "Preenchidos os requisitos do decreto, a comutação é direito do condenado e deve ser declarada (LEP, arts. 187 a 193).",
+        "Requer-se a declaração da comutação, com o abatimento da pena e o recálculo das datas dos benefícios."),
+    "vencida-em-sem-decisao-posterior-no-rspe": (
+        "Implementado o requisito temporal, o benefício deve ser apreciado sem demora (LEP, arts. 66, III, e 112).",
+        "Requer-se a apreciação imediata do benefício."),
+    "prescricao-da-pretensao-executoria-aparente": (
+        "Esgotado o prazo do art. 109 do CP, contado do termo inicial do art. 112 (e, na fuga, regulado pelo tempo que resta da pena - art. 113), "
+        "sem causa interruptiva, a pretensão executória está prescrita (CP, arts. 107, IV, 110 e 117).",
+        "Requer-se o reconhecimento da prescrição da pretensão executória e a declaração da extinção da punibilidade quanto a essa condenação."),
+    "prescricao-da-pretensao-punitiva-aparente": (
+        "Transcorrido, entre os marcos interruptivos, prazo superior ao do art. 109 do CP calculado pela pena aplicada, a pretensão punitiva está "
+        "prescrita (CP, arts. 107, IV, e 110, § 1º).",
+        "Requer-se o reconhecimento da prescrição da pretensão punitiva e a declaração da extinção da punibilidade quanto a essa condenação."),
+    "prescricao-executoria-a-verificar-saldo-na-evasao": (
+        "Na fuga, a prescrição regula-se pelo tempo que resta da pena (CP, art. 113), apurado para cada condenação (CP, art. 119).",
+        "Requer-se a juntada do cálculo da pena remanescente na data da fuga e, consumado o prazo, o reconhecimento da prescrição da pretensão "
+        "executória."),
+    "menor-de-21-anos-no-fato-prescricao-pela-metade": (
+        "São reduzidos pela metade os prazos de prescrição quando o agente era menor de 21 anos na data do fato (CP, art. 115).",
+        "Requer-se a aplicação da redução do art. 115 do CP na contagem dos prazos prescricionais."),
+    "idade-para-o-indulto-lapsos-pela-metade": (
+        "Os decretos de indulto reduzem os lapsos em razão da idade do condenado, requisito a ser aferido na data do decreto.",
+        "Requer-se a análise do indulto e da comutação com os lapsos reduzidos pela idade."),
+    "idade-prisao-domiciliar-no-regime-aberto-lep-art": (
+        "O condenado maior de 70 anos em regime aberto tem direito ao recolhimento em residência particular (LEP, art. 117, I).",
+        "Requer-se a concessão da prisão domiciliar."),
+    "rspe-anterior-a-correcao-do-seeu": (
+        "O relatório foi emitido antes de correção do cálculo pelo próprio SEEU, e as datas dos benefícios devem refletir o cálculo corrigido "
+        "(LEP, art. 66, III).",
+        "Requer-se a atualização do cálculo e a emissão de novo atestado de pena."),
+}
 # frases de orientação ao operador que não cabem na peça
 _RE_ORIENTACAO = re.compile(r"^(conferir|confira|importe|informe|verificar|verifique|o programa|clique|use |ver a aba|pedir|cabe impugnar|"
-                            r"cabe pedir|marque|preencha|decida|se for o caso, informe)", re.I)
-_SEM_FUND = re.compile(r"dados-ausentes|falha|artigo-nao-informado|artigo-reconhecido|artigo-completado|confere|^ficha-|rspe-anterior-a-correcao", re.I)
+                            r"cabe pedir|marque|preencha|decida|se for o caso, informe|sem ele|sem esse)", re.I)
+_RE_DIREITO = re.compile(r"\b(CP|LEP|CF|STJ|STF|S[úu]mula|Tema|Lei \d|art\.)", re.I)
 
 
 def _frases(t):
@@ -1182,27 +1351,26 @@ def _frases(t):
 
 
 def fundamentacao(it, r):
-    """Texto pronto para a impugnação do cálculo: título do ponto, o que consta do RSPE, o fundamento e o pedido. Só para os
-    pontos de alerta ou a verificar que dizem respeito ao cálculo (os avisos de leitura/ausência de dado não geram texto)."""
-    if it.get("nivel") not in ("alerta", "verificar") or _SEM_FUND.search(it.get("tipo") or ""):
+    """Até 3 parágrafos para a impugnação do cálculo: o erro (fatos do RSPE), o correto com o fundamento, e o pedido."""
+    tipo = it.get("tipo") or ""
+    if it.get("nivel") not in ("alerta", "verificar") or tipo not in FUND_TIPOS:
         return ""
-    corpo = [f for f in _frases(it.get("detalhe")) if not _RE_ORIENTACAO.search(f)]
-    # a frase já é uma só: a orientação ao operador vai até o fim dela
-    corpo = [re.sub(r"\s*[-:;,]\s*(conferir|verificar|confira|verifique)\b.*$", ".", f, flags=re.I) for f in corpo]
-    if not corpo:
-        return ""
+    correto, pedido = FUND_TIPOS[tipo]
+    fr = [f for f in _frases(it.get("detalhe")) if not _RE_ORIENTACAO.search(f)]
+    fr = [re.sub(r"\s*[-:;,]\s*(conferir|verificar|confira|verifique)\b.*$", ".", f, flags=re.I).rstrip(";") for f in fr]
+    # só os fatos concretos (datas, números): sem a regra geral, que vai no segundo parágrafo
+    fatos = [f for f in fr if re.search(r"\d", f) and len(f) >= 45 and not _RE_DIREITO.search(f)
+             and not re.search(r"\b(s[óo] se|n[ãa]o pode|pode vir|pode ter|afeta|deve|devem)\b", f, re.I)
+             and not re.match(r"^[^.]{0,70}\(decis[ãa]o de [^)]*\)\.?$", f)][:2]
+    fatos = [f.replace("deste RSPE", "do RSPE") for f in fatos]
+    fatos = [f if f.endswith(".") else f + "." for f in fatos]
     ger = r.get("data_geracao_rspe") or ""
     tit = re.sub(r"\s+", " ", it.get("titulo") or "").strip().rstrip(".")
-    txt = [tit.upper(), "",
-           "Do Relatório da Situação Processual Executória%s extrai-se o seguinte. %s" % (
-               (" emitido pelo SEEU em %s" % ger) if ger else "", " ".join(corpo))]
-    fund = (it.get("fundamento") or "").strip()
-    if fund:
-        txt += ["", "A matéria é regida por: %s%s" % (fund.rstrip("."), ".")]
-    if it.get("nivel") == "alerta":
-        txt += ["", "Diante disso, requer a Defensoria Pública a retificação do cálculo de pena quanto a este ponto, com a atualização das "
-                    "datas dos benefícios dele decorrentes."]
-    else:
-        txt += ["", "Diante disso, requer a Defensoria Pública o esclarecimento deste ponto e, confirmada a inconsistência, a retificação do "
-                    "cálculo de pena, com a atualização das datas dos benefícios dele decorrentes."]
-    return "\n".join(txt)
+    erro = "O cálculo de pena (Relatório da Situação Processual Executória%s) contém a seguinte inconsistência: %s. %s" % (
+        (" emitido em %s" % ger) if ger else "", tit, " ".join(fatos))
+    erro = erro.strip()
+    fund = (it.get("fundamento") or "").strip().rstrip(".")
+    extra = ""
+    if fund and not any(x.strip() and x.strip() in correto for x in re.split(r";", fund)):
+        extra = (" Nesse sentido: %s." if _RE_DIREITO.search(fund) else " Fonte: %s.") % fund
+    return "\n\n".join([erro, correto + extra, pedido])

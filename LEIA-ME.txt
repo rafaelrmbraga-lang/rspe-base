@@ -1,8 +1,8 @@
-RSPE BASE - SEEU  v6.16.47 (programa em abas)
+RSPE BASE - SEEU  v6.16.48 (programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-6.16.47. A documentação técnica completa (cada parâmetro, a regra, a norma e
+6.16.48. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -562,6 +562,17 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v6.16.48
+  - Auditoria, campo "Fundamentação": agora em parágrafos de fundamentação,
+    diretos (no máximo 3): (1) o erro apontado no cálculo, com os fatos do
+    RSPE (datas e números); (2) o correto e o fundamento legal e
+    jurisprudencial, redigido para cada tipo de ponto; (3) o pedido
+    específico (ex.: exclusão da alteração da data-base e recálculo; limite
+    da perda de remidos a 1/3; reconhecimento da prescrição). Sem cabeçalho de
+    petição. Só os pontos em que a correção favorece o assistido geram texto
+    (ex.: o alerta do art. 88 não gera). "Copiar todas as fundamentações"
+    junta as dos pontos pendentes, em sequência.
 
 v6.16.47
   - Prescrição executória após a fuga (roteiro da Defensoria):
