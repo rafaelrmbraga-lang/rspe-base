@@ -426,7 +426,10 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
         if fim > termo:
             a2 = max(a, termo)
             fim_txt = rs.fmt(b) if b else "hoje"
-            if not liga and provisoria and a > termo:
+            # prisão registrada em processo desta execução já transitado (ex.: recaptura lançada como "prisão em flagrante" nos
+            # processos antigos): é cumprimento da pena unificada, não prisão por outro motivo
+            ja_transitado = any(tx_ <= a and any(_mesmo_processo(px_, q) for q in lst) for px_, tx_ in transitos_exec)
+            if not liga and provisoria and a > termo and not ja_transitado:
                 # evento de início do cumprimento (prisão definitiva, início de regime, recaptura) dentro da custódia: a partir
                 # dele a prisão é cumprimento da pena unificada
                 conv = min([d for d in inicios_cumpr if a < d < fim], default=None)
@@ -779,6 +782,10 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
                     _ini_max = min([a for a, _b, _m, _p in periodos_det if a] + [termo])
                     _dias_max = max(0, (g0 - _ini_max).days)
                     _saldo_min_possivel = pena - _dias_max - max(rem_g0, _dias_max // 2)
+                    if outras:
+                        # várias condenações: o tempo cumprido só alcança este crime nas imputações admitidas (ordem do trânsito ou
+                        # art. 76); se nenhuma delas deixa saldo tão baixo, não há o que pedir
+                        _saldo_min_possivel = max(_saldo_min_possivel, min(hip76["saldo"], hipcron["saldo"]))
                     if crit and crit["teto_dias"] < pena and crit["teto_dias"] >= _saldo_min_possivel:
                         informar = dict(crit, fuga=rs.fmt(g0), fim=fim_txt, duracao=_dur(g0, ref), aberto=aberto)
             _conv = next((x for x in LT if x["tipo"] == "cumprimento" and g1 < hoje and x["inicio"] == rs.fmt(g1)
