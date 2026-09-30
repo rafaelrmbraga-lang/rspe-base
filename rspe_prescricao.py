@@ -1017,6 +1017,72 @@ def _explicar(L, hoje):
     L["ppe_explica"] = ex
 
 
+def _quadro(L, hoje):
+    """Quadro simples da executória (o que o usuário vê primeiro): resultado, período que decide, pena que regula o prazo e
+    saldo remanescente, mais um alerta de uma linha quando falta dado. O cálculo completo e a linha do tempo ficam recolhidos."""
+    st, cor = L.get("ppe_status") or "", L.get("ppe_cor") or ""
+    if not L.get("ppe_termo"):
+        L["ppe_quadro"] = None
+        return
+    Q = {"resultado": st, "cor": cor, "periodo": "", "prazo": "", "saldo": "", "alerta": ""}
+    inc = (" (art. 109, %s)" % L["inciso109"]) if L.get("inciso109") else " (art. 109)"
+    Sd = next((S for S in (L.get("ppe_saldos") or []) if S.get("evasao") == L.get("ppe_inicio")), None)
+    if Sd is None and L.get("ppe_saldos") and not L.get("ppe_inicio"):
+        Sd = L["ppe_saldos"][-1]
+    venc = L.get("ppe_previsao") or L.get("ppe_correndo_ate") or ""
+    if cor == "vermelho":
+        vtxt = "venceu em %s" % venc
+    elif L.get("ppe_correndo_ate") or (Sd and not Sd.get("fim")):
+        vtxt = "vence em %s" % (venc or (Sd or {}).get("limite_max") or "—")
+    else:
+        vtxt = ""
+    if Sd:
+        g0, g1 = rs.to_date(Sd["evasao"]), rs.to_date(Sd.get("fim") or "")
+        rot = "Revogação do livramento" if Sd.get("revogacao") else ("Fuga" if Sd.get("e_evasao", True) else "Interrupção")
+        Q["periodo"] = ("%s de %s a %s (%s fora)" % (rot, Sd["evasao"], Sd["fim"], _dur(g0, g1)) if g1 else
+                        "%s em %s, sem recaptura (%s até hoje)" % (rot, Sd["evasao"], _dur(g0, hoje)))
+        sal = _pena_ou_zero(Sd["saldo_max"]) if Sd["saldo_min"] == Sd["saldo_max"] else "entre %s e %s" % (_pena_ou_zero(Sd["saldo_min"]), _pena_ou_zero(Sd["saldo_max"]))
+        org = ORIGEM_TXT.get(Sd.get("saldo_origem"), "").replace("saldo ", "")
+        prazo = Sd["prazo_max"] if (not Sd["prazo_min"] or Sd["prazo_min"] == Sd["prazo_max"]) else "%s a %s" % (Sd["prazo_min"], Sd["prazo_max"])
+        if not vtxt and g1:
+            vtxt = "venceria em %s; a recaptura veio antes e interrompeu (art. 117, V)" % Sd["limite_max"] if Sd["limite_max"] else ""
+        Q["prazo"] = "%s%s, contado da %s pelo saldo (art. 113)%s" % (prazo or "nada a prescrever", inc if Sd["saldo_min"] == Sd["saldo_max"] else "",
+                                                                       "revogação" if Sd.get("revogacao") else "fuga", (" → " + vtxt) if vtxt else "")
+        Q["saldo"] = "%s na %s de %s (%s)" % (sal, "revogação" if Sd.get("revogacao") else "fuga", Sd["evasao"], org)
+    elif not (L.get("ppe_linha_tempo") and any(p["tipo"] in ("liberdade", "interrupcao", "evasao") for p in L["ppe_linha_tempo"])) and st.startswith("Não corre"):
+        ini = next((p["inicio"] for p in (L.get("ppe_linha_tempo") or []) if p["tipo"] in ("cumprimento", "livramento", "prd")), L["ppe_termo"])
+        Q["periodo"] = "em cumprimento desde %s, sem fuga" % ini
+        Q["prazo"] = "%s pela pena aplicada de %s; enquanto cumpre, o prazo não corre" % (L.get("prazo_ppe") or "—", L.get("pena", ""))
+    else:
+        ini = L.get("ppe_inicio") or L["ppe_termo"]
+        cump = L.get("ppe_cumprido_dias") or 0
+        if ini == L["ppe_termo"] or not cump:
+            Q["periodo"] = "sem início do cumprimento desde o trânsito (%s)" % L["ppe_termo"]
+        else:
+            Q["periodo"] = "cumprimento interrompido em %s (%s), sem fuga" % (ini, L.get("ppe_motivo") or "motivo não consta")
+        Q["prazo"] = "%s pela pena aplicada de %s%s" % (L.get("ppe_prazo_efetivo") or L.get("prazo_ppe") or "—", L.get("pena", ""), (" → " + vtxt) if vtxt else "")
+        pena_d = rs.pena_para_dias(L.get("pena_dias_txt") or "") or L.get("ppe_base_dias") or 0
+        rest = max(0, pena_d - cump - (L.get("ppe_detracao_dias") or 0))
+        if cump or L.get("ppe_detracao_dias"):
+            Q["saldo"] = "%s (pena menos %s%s) - informativo: sem fuga, o prazo segue a pena aplicada" % (
+                _pena_ou_zero(rest), ("%s cumpridos" % _d(cump)) if cump else "", (("%s de detração" % _d(L["ppe_detracao_dias"])) if L.get("ppe_detracao_dias") else "")
+                if not cump else (" e %s de detração" % _d(L["ppe_detracao_dias"]) if L.get("ppe_detracao_dias") else ""))
+        else:
+            Q["saldo"] = "a pena inteira (%s)" % L.get("pena", "")
+    infs = L.get("ppe_informar") or []
+    if infs:
+        I = infs[0]
+        Q["alerta"] = "Informe o saldo na fuga de %s: com saldo %s, a fuga de %s já teria prescrito (prazo de %s)." % (I["fuga"], I["saldo"], I["duracao"], I["prazo"])
+        Q["informar"] = True
+    elif cor == "amarelo" and L.get("ppe_faltam"):
+        Q["alerta"] = "Falta para concluir: " + L["ppe_faltam"][0] + "."
+        Q["informar"] = bool(L.get("ppe_saldos"))
+    elif Sd and Sd.get("saldo_origem") == "calculado" and cor == "vermelho":
+        Q["alerta"] = "Confirme o saldo na fuga (calculado pelos eventos do RSPE) antes de requerer."
+        Q["informar"] = True
+    L["ppe_quadro"] = Q
+
+
 def _exec(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, meia):
     """Executória pela modalidade informada: privativa de liberdade (padrão, eventos do RSPE), restritiva de direitos, sursis ou
     medida de segurança (inimputável: pena máxima em abstrato; semi-imputável, art. 98: pena substituída)."""
@@ -1674,6 +1740,7 @@ def analisar(r, hoje=None):
         L["ppe_detalhe"] = "\n".join(det)
         _base_do_prazo(L)
         _explicar(L, hoje)
+        _quadro(L, hoje)
         linhas.append(L)
     # avisos próprios de cada crime identificam o crime e a ação penal (uma execução pode ter vários processos)
     geral = set(avisos_gerais)

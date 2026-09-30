@@ -1,8 +1,8 @@
-RSPE BASE - SEEU  v6.16.44 (programa em abas)
+RSPE BASE - SEEU  v6.16.45 (programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-6.16.44. A documentação técnica completa (cada parâmetro, a regra, a norma e
+6.16.45. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -562,6 +562,17 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v6.16.45
+  - Prescrição executória simplificada: ao abrir o cálculo aparece só um
+    quadro de quatro linhas - resultado, período que decide, saldo
+    remanescente e prazo (com o vencimento) - e, quando falta dado, um
+    alerta de uma linha com o botão "Informar saldo". Sem fuga (nunca
+    iniciou, ou solto por alvará), o saldo remanescente aparece como
+    informação (pena menos o cumprido e a detração); o prazo segue a pena
+    aplicada. O quadro das fugas, a memória de cálculo e a linha do tempo
+    ficam em "Ver cálculo completo e linha do tempo". O "Copiar cálculo"
+    começa pelo quadro.
 
 v6.16.44
   - Prescrição executória, fuga e recaptura: quando a fuga dura o bastante
