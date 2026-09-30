@@ -514,6 +514,45 @@ TIPOS_POR_DESCRICAO = [
 ]
 
 
+# A tabela de tipificação do SEEU guarda os artigos com letra só pelo número (217-A como "217", 149-A como "149"...).
+# Pelo nome do tipo no RSPE, completa a letra: (lei, número, padrão no nome/descrição sem acento, artigo com letra)
+LETRA_POR_NOME = [
+    ("2848", "217", r"VULNERAVEL|MENOR DE (14|CATORZE|QUATORZE)", "217-A"),
+    ("2848", "218", r"PROSTITUI|EXPLORACAO SEXUAL", "218-B"),
+    ("2848", "218", r"DIVULGA", "218-C"),
+    ("2848", "218", r"PRESENCA DE (ALGUEM )?MENOR|LASCIVIA MEDIANTE PRESENCA", "218-A"),
+    ("2848", "149", r"TRAFICO DE PESSOAS|AGENCIAR, ALICIAR", "149-A"),
+    ("2848", "288", r"MILICIA|PARAMILITAR", "288-A"),
+    ("2848", "147", r"PERSEGUI", "147-A"),
+    ("2848", "147", r"VIOLENCIA PSICOLOGICA", "147-B"),
+    ("2848", "216", r"ASSEDIO SEXUAL", "216-A"),
+    ("2848", "215", r"IMPORTUNACAO", "215-A"),
+    ("2848", "154", r"INVASAO DE DISPOSITIVO", "154-A"),
+    ("8069", "241", r"OFERECER, TROCAR, DISPONIBILIZAR|DISPONIBILIZAR, TRANSMITIR", "241-A"),
+    ("8069", "241", r"ADQUIRIR, POSSUIR OU ARMAZENAR", "241-B"),
+    ("8069", "241", r"SIMULAR A PARTICIPACAO", "241-C"),
+    ("8069", "241", r"ALICIAR, ASSEDIAR, INSTIGAR", "241-D"),
+    ("8069", "244", r"CORROMPER OU FACILITAR A CORRUPCAO|CORRUPCAO DE MENOR", "244-B"),
+    ("8069", "244", r"PROSTITUICAO OU (A )?EXPLORACAO SEXUAL", "244-A"),
+    ("11340", "24", r"MEDIDAS? PROTETIVAS?", "24-A"),
+]
+
+
+def completar_letra_artigo(c):
+    """RSPE com o artigo sem a letra (ex.: "ART 217: Estupro de vulnerável"): completa pela descrição (217-A) e anota
+    c["artigo_letra"]. Não mexe em artigo que já tem letra nem quando a descrição não indica o tipo com letra."""
+    art = num_art(c.get("artigo") or "")
+    if not art or "-" in art:
+        return
+    lei = num_lei(c.get("lei") or "") or "2848"
+    txt = _sem_acento(" ".join([c.get("artigo") or "", c.get("tipo_penal") or ""])).upper()
+    for l, n, rx, novo in LETRA_POR_NOME:
+        if l == lei and n == art and re.search(rx, txt):
+            c["artigo"] = re.sub(r"(ART\.?\s*)" + n + r"\b", r"\g<1>" + novo, c["artigo"], count=1, flags=re.I)
+            c["artigo_letra"] = "o RSPE traz o art. %s sem a letra; pela descrição do tipo, art. %s - conferir na sentença" % (n, novo)
+            return
+
+
 def inferir_artigo(c):
     """SEEU sem artigo ("Não informado"): reconhece o tipo pela descrição da pena. Marca c["artigo_inferido"]."""
     if num_art(c.get("artigo") or ""):
@@ -660,7 +699,7 @@ def num_art(txt):
     return m.group(1).upper() if m else ""
 
 
-RE_PARAGRAFO = re.compile(r"^\s*§\s*(\d+)\s*[ºo°]?\s*(-\s*[A-Z])?\s*,?\s*([IVXL]+\b)?", re.I)
+RE_PARAGRAFO = re.compile(r"^\s*§\s*(\d+)\s*[ºo°]?\s*(-\s*[A-Z](?![A-Za-zÀ-ú]))?\s*,?\s*([IVXL]+\b)?", re.I)  # "§ 2º-A" sim; "§ 3º - resulta" não
 
 
 def paragrafo_inciso(c):
@@ -670,10 +709,20 @@ def paragrafo_inciso(c):
     if not t:
         return None
     m = RE_PARAGRAFO.match(t)
+    tu = _sem_acento(t).upper()
+    art = num_art(c.get("artigo"))
     if m:
         par = m.group(1) + (m.group(2).replace(" ", "").upper() if m.group(2) else "")
-        return (par, (m.group(3) or "").upper())
-    tu = t.upper()
+        inc = (m.group(3) or "").upper()
+        # descrição oficial do SEEU sem o inciso ("§ 3º - resulta morte (latrocínio)"): o resultado indica o inciso
+        if art in ("157", "158") and par == "3" and not inc:
+            inc = "II" if re.search(r"MORTE|LATROC", tu) else ("I" if re.search(r"LESAO", tu) else "")
+        return (par, inc)
+    # descrição oficial sem o parágrafo impresso
+    if art == "157" and re.search(r"LATROC|RESULTA MORTE", tu):
+        return ("3", "II")
+    if art == "121" and re.search(r"HOMICIDIO QUALIFICADO|^QUALIFICADO", tu):
+        return ("2", "")
     if tu.startswith("CAPUT"):
         return ("", "")
     if tu.startswith("PAR") and "NICO" in tu[:20]:
@@ -815,14 +864,12 @@ def hediondo_desde(c):
         lei = "2848"
     if not art:
         return None, ""
-    t = (c.get("tipo_penal") or "").strip()
     chaves = []
-    mp = re.match(r"§\s*(\d+[ºo°]?(?:-[A-Z])?)\s*,?\s*([IVXL]+)?", t)
-    if mp:
-        par = mp.group(1).replace("º", "").replace("o", "").replace("°", "")
-        if mp.group(2):
-            chaves.append("%s:%s §%s %s" % (lei, art, par, mp.group(2)))
-        chaves.append("%s:%s §%s" % (lei, art, par))
+    pi = paragrafo_inciso(c)  # mesma leitura do parágrafo/inciso do resto do programa (inclui a descrição oficial do SEEU)
+    if pi and pi[0] and pi[0] != "pu":
+        if pi[1]:
+            chaves.append("%s:%s §%s %s" % (lei, art, pi[0], pi[1]))
+        chaves.append("%s:%s §%s" % (lei, art, pi[0]))
     chaves.append("%s:%s" % (lei, art))
     for k in chaves:
         v = tab.get(k)
@@ -1106,6 +1153,9 @@ def situacao_execucao(campos, eventos, incidentes, crimes, hoje):
     if (out["situacao_cumprimento"] != "EM CUMPRIMENTO" and ult and "INTERRUP" in (ult.get("tipo") or "").upper()
             and RE_OUTRO_PROC.search(ult.get("motivo") or "")):
         out["situacao_cumprimento"] = "PENA SUSPENSA (preso em outro processo desde %s)" % fmt(to_date(ult["data"]))
+    elif (out["situacao_cumprimento"] != "EM CUMPRIMENTO" and ult and "INTERRUP" in (ult.get("tipo") or "").upper()
+          and RE_INTERRUP_CONTINUA.search(ult.get("motivo") or "")):
+        out["situacao_cumprimento"] = "EM CUMPRIMENTO (execução seguiu desde %s: %s - conferir)" % (fmt(to_date(ult["data"])), (ult.get("motivo") or "").lower())
     fp = [parse_fracao(c.get("fracao_progressao")) for c in crimes if not c.get("extinto", "").upper().startswith("S")]
     fl = [parse_fracao(c.get("fracao_livramento")) for c in crimes if not c.get("extinto", "").upper().startswith("S")]
     fp = [f for f in fp if f]
@@ -1258,7 +1308,12 @@ def _data_fato_falta(i):
     return to_date(m.group(1)) if m else to_date(i.get("data_referencia") or i.get("data_decisao") or "")
 
 
-RE_OUTRO_PROC = re.compile(r"OUTRO PROCESSO|OUTRA EXECU|OUTRO FEITO|PRESO POR OUTRO|PRIS[ÃA]O EM OUTRO|OUTRA CONDENA", re.I)
+RE_OUTRO_PROC = re.compile(r"OUTRO PROCESSO|OUTRA EXECU|OUTRO FEITO|PRESO POR OUTRO|PRIS[ÃA]O EM OUTRO|OUTRA CONDENA|"
+                           r"IN[ÍI]CIO (DA )?PRIS[ÃA]O PREVENTIVA|OUTROS AUTOS", re.I)  # os dois últimos: tabela oficial de motivos do SEEU
+# motivos oficiais do SEEU em que a execução segue em outra modalidade ou lugar (não é liberdade nem fuga)
+RE_INTERRUP_CONTINUA = re.compile(r"PROGRESS[ÃA]O AO REGIME ABERTO|OUTRA COMARCA|OUTRO ESTADO|UNIFICA[ÇC][ÃA]O DAS PENAS|"
+                                  r"CONVERS[ÃA]O DO TIPO DE PRIS|ADEQUA[ÇC][ÃA]O PELA LEP|INCOMPATIBILIDADE DE REGIME|"
+                                  r"SUBSTITUI[ÇC][ÃA]O DA PENA POR PENA RESTRITIVA", re.I)
 RE_FUGA_EV = re.compile(r"FUGA|EVAS|ABANDON|FORAGID|N[ÃA]O RETORN", re.I)
 
 
@@ -3544,6 +3599,10 @@ def derivar(r, crimes, eventos, incidentes):
             c.pop("artigo_inferido", None)
             c.pop("lei_do_tempo", None)
         c.setdefault("artigo_rspe", c.get("artigo", ""))
+        if c.get("artigo_letra"):  # refaz com a regra atual
+            c["artigo"] = c.get("artigo_rspe") or c.get("artigo")
+            c.pop("artigo_letra", None)
+        completar_letra_artigo(c)
         inferir_artigo(c)
         c["hediondo_ou_equiparado"] = "S" if e_hediondo(c) else "N"
     aplicar_extincoes(r, crimes, incidentes)  # antes de tudo: o resto da análise considera só os crimes ativos

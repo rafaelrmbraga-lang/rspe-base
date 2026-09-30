@@ -1,8 +1,8 @@
-RSPE BASE - SEEU  v6.16.45 (programa em abas)
+RSPE BASE - SEEU  v6.16.46 (programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-6.16.45. A documentação técnica completa (cada parâmetro, a regra, a norma e
+6.16.46. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -562,6 +562,41 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v6.16.46
+  Correções a partir da leitura da documentação oficial do SEEU (tabelas de
+  parâmetros e de tipificação penal, notas de versão e boletins):
+  - Motivos de interrupção da pena (tabela oficial do SEEU), na prescrição
+    executória:
+      * "Não consta" e "interrupção do cumprimento da pena" valem como motivo
+        ausente (tratada como fuga, com aviso para conferir);
+      * progressão ao regime aberto, cumprimento em outra comarca ou outro
+        estado, unificação, conversão do tipo de prisão, adequação pela LEP,
+        incompatibilidade de regime e substituição por restritiva: a execução
+        seguiu - não é liberdade e a prescrição não corre (com aviso). A
+        situação do cumprimento também deixa de aparecer como interrompida;
+      * início de prisão preventiva e internação em outros autos: preso em
+        outro processo, o prazo fica suspenso (art. 116, p. único);
+      * "benefício revogado/suspenso" e "descumprimento das condições":
+        procura o incidente de revogação do livramento na data; sem ele,
+        alerta para conferir qual benefício (se foi o livramento, o prazo é
+        pelo saldo - art. 113);
+      * óbito, cumprimento da pena, prescrição, indulto, perdão judicial,
+        pagamento de multa, fim da medida de segurança, arquivamento e
+        absolvição: execução encerrada, sem prescrição a correr depois.
+  - Latrocínio e roubo com lesão grave pela descrição oficial do SEEU
+    ("§ 3º - resulta morte (latrocínio)"): o parágrafo era lido como "3-R" e
+    o crime saía como não hediondo. Agora o resultado indica o inciso (morte
+    = II; lesão grave = I, hediondo só desde 23/01/2020). "Latrocínio" e
+    "Homicídio qualificado" sem o parágrafo impresso também são reconhecidos.
+  - Artigos com letra: a tabela do SEEU grava 217-A como "217", 149-A como
+    "149" etc. Pelo nome do tipo, o programa completa a letra (217-A, 218-A/
+    B/C, 149-A, 288-A, 147-A/B, 216-A, 215-A, 154-A, ECA 241-A a D, 244-A/B,
+    Lei 11.340 art. 24-A) e avisa na Auditoria para conferir na sentença.
+  - Auditoria: "RSPE emitido antes de correção do SEEU" - frações e cálculos
+    de pena (corrigidos em 15/05/2025), término pelo art. 75 (erro de 15 a
+    19/09/2025), comutação com crime impeditivo (31/10/2025) e campos de pena
+    comutada no relatório (30/07/2026). Pede um RSPE atualizado.
 
 v6.16.45
   - Prescrição executória simplificada: ao abrir o cálculo aparece só um

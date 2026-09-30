@@ -103,6 +103,44 @@ def _reinc_especifica(c, crimes):
     return confirma, sem_transito, nao_hed
 
 
+# Correções de cálculo do SEEU com data conhecida (portal de documentação do SEEU: notas de versão e boletins). Um RSPE emitido
+# antes da correção pode trazer o valor antigo. (início, fim da janela, condição, título, detalhe, fonte)
+CORRECOES_SEEU = [
+    (None, date(2025, 5, 15), "sempre", "frações e cálculos de pena",
+     "Em 15/05/2025 o SEEU corrigiu \"erro nos cálculos de penas e frações\" (versão 14.2.1). As frações e datas previstas deste RSPE "
+     "podem ser anteriores à correção.", "Boletim Oficial do SEEU de 15/05/2025; notas da versão 14 (SEEU-30560)"),
+    (date(2025, 9, 15), date(2025, 9, 19), "sempre", "término da pena (art. 75 do CP)",
+     "Entre 15 e 19/09/2025 uma versão do SEEU com regra do art. 75 do CP gerou erros na calculadora, corrigidos em 19/09/2025. "
+     "O término e as datas previstas deste RSPE podem ter saído errados.", "Comunicado extraordinário do SEEU de 19/09/2025"),
+    (None, date(2025, 10, 31), "comutacao_impeditivo", "comutação com crime impeditivo",
+     "Até 31/10/2025 (versão 18.11.1) o SEEU não calculava sozinho a comutação quando havia pena por crime impeditivo somada a "
+     "crime comum; a fração deve incidir só sobre a parte comutável. Conferir o montante comutado.",
+     "Comunicado do SEEU de 31/10/2025 (Cálculo automatizado da comutação)"),
+    (None, date(2026, 7, 30), "comutacao", "campos de pena comutada no relatório",
+     "Em 30/07/2026 (versão 20.3.0) o SEEU corrigiu os campos do relatório de situação executória sobre pena comutada para delito "
+     "hediondo/impeditivo. Conferir os dados da comutação neste RSPE.", "Boletim Oficial do SEEU de 30/07/2026; notas da versão 20 (SEEU-43078)"),
+]
+
+
+def _correcoes_seeu(r, crimes, incidentes):
+    """Alerta de RSPE emitido antes de uma correção de cálculo do SEEU que o alcança."""
+    ger = rs.to_date(r.get("data_geracao_rspe") or "")
+    if not ger:
+        return []
+    comut = any("COMUTA" in (i.get("tipo") or "").upper() and i.get("situacao", "CONCEDIDO") == "CONCEDIDO" for i in incidentes)
+    impedit = any((c.get("hediondo_ou_equiparado") or "") == "S" for c in crimes)
+    out = []
+    for ini, fim, cond, titulo, detalhe, fonte in CORRECOES_SEEU:
+        if ger > fim or (ini and ger < ini):
+            continue
+        if cond == "comutacao" and not comut or cond == "comutacao_impeditivo" and not (comut and impedit):
+            continue
+        out.append(_item("verificar", "RSPE emitido antes de correção do SEEU: %s" % titulo,
+                         "RSPE emitido em %s. %s Importe um RSPE atualizado." % (rs.fmt(ger), detalhe), fonte,
+                         tipo="rspe-anterior-a-correcao-do-seeu", ref=titulo))
+    return out
+
+
 def _item(nivel, titulo, detalhe, fundamento="", tipo="", ref=""):
     """tipo: identificador fixo do ponto (não muda com números, datas ou agrupamento do título); ref: o crime, o ano
     ou a falta a que o ponto se refere. A baixa usa tipo + ref (o processo já separa as baixas)."""
@@ -546,6 +584,8 @@ def auditar(r, hoje=None):
                                "LEP, arts. 126 e 127.", tipo="dias-remidos-incidentes-nao-fecham-com-o-saldo"))
         if perdidos:
             itens.extend(_perda_remidos(incidentes, perdidos, eventos))
+    # RSPE anterior a correções de cálculo do SEEU
+    itens.extend(_correcoes_seeu(r, crimes, incidentes))
     # pena integralmente cumprida
     if pena_total and cumprida is not None and cumprida >= pena_total and "ATIVO" in (r.get("status_execucao") or "").upper():
         itens.append(_item("alerta", "Pena integralmente cumprida com execução ativa",
@@ -621,6 +661,11 @@ def auditar(r, hoje=None):
                 itens.append(_item("info", "%s: artigo reconhecido pela descrição do tipo" % nome,
                                    "O SEEU não registrou o artigo; a descrição \u201c%s\u201d corresponde a este tipo penal%s. Hediondez, VGA e frações foram conferidas com ele." % (
                                        _descricao_tipo(c), (", vigente na data do fato (%s)" % c.get("data_infracao")) if c.get("data_infracao") else ""), "", tipo="artigo-reconhecido-pela-descricao-do-tipo", ref=nome))
+        if art and c.get("artigo_letra"):
+            itens.append(_item("verificar", "%s: artigo completado pela descrição" % nome,
+                               "O RSPE traz o artigo sem a letra (a tabela de tipificação do SEEU grava assim); pela descrição \u201c%s\u201d, "
+                               "o tipo é o art. %s. Hediondez, VGA e frações foram conferidas com ele - conferir a capitulação na sentença." % (
+                                   _descricao_tipo(c), art), "", tipo="artigo-completado-pela-descricao", ref=nome))
         if not art:
             itens.append(_item("info", "%s: artigo não informado" % nome, "O SEEU não registrou o artigo e a descrição do tipo não foi reconhecida: \u201c%s\u201d." % _descricao_tipo(c), "Sem o artigo, hediondez, VGA e frações ficam sem conferência.", tipo="artigo-nao-informado", ref=nome))
         # lei do tempo: capitulação criada depois do fato (anacronismo do cadastro) e hediondez posterior ao fato

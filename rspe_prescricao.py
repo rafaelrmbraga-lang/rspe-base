@@ -150,11 +150,29 @@ RE_REVOGA_LC = rs.re.compile(r"REVOGA[ÇC][ÃA]O D[OE] LIVRAMENTO|LIVRAMENTO[^\n
 RE_SEM_CULPA = rs.re.compile(r"LIBERDADE PROVIS|RELAXAMENTO|HABEAS|ALVAR|FINAL DA PRIS|REVOGA[ÇC][ÃA]O DA PRIS|REVOGA[ÇC][ÃA]O DA PREVENTIVA|PREVENTIVA REVOGADA|SOLTURA", rs.re.I)
 
 
+# motivos de interrupção da tabela oficial do SEEU (Tabelas de Parâmetros - Motivos de Interrupção/Extinção)
+RE_MOTIVO_VAZIO = rs.re.compile(r"^\s*(N[ÃA]O CONSTA|INTERRUP[ÇC][ÃA]O DO CUMPRIMENTO( DA PENA)?)\s*$", rs.re.I)
+RE_MOTIVO_GENERICO = rs.re.compile(r"BENEF[ÍI]CIO REVOGADO|BENEF[ÍI]CIO SUSPENSO|SUSPENS[ÃA]O DE BENEF[ÍI]CIO|DESCUMPRIMENTO DAS CONDI", rs.re.I)
+# a execução seguiu em outra modalidade ou lugar: não é liberdade (a prescrição não corre)
+RE_INTERRUP_CONTINUA = rs.RE_INTERRUP_CONTINUA
+# a execução terminou: depois disso não há prescrição a correr
+RE_INTERRUP_EXTINCAO = rs.re.compile(r"[ÓO]BITO|^\s*CUMPRIMENTO DA PENA\s*$|^\s*PRESCRI[ÇC][ÃA]O\s*$|^\s*INDULTO\s*$|PERD[ÃA]O JUDICIAL|"
+                                     r"PAGAMENTO DE MULTA|CUMPRIMENTO DA MEDIDA DE SEGURAN|ARQUIVAMENTO DOS AUTOS|ABSOLVI", rs.re.I)
+
+
 def _motivo_interrupcao(eventos, incidentes, g0):
-    """Motivo da interrupção do cumprimento em g0 (evento INTERRUPÇÃO na data, ou revogação do livramento)."""
+    """Motivo da interrupção do cumprimento em g0 (evento INTERRUPÇÃO na data, ou revogação do livramento). "Não consta" e a
+    interrupção sem causa valem como motivo ausente; "benefício revogado/suspenso" e "descumprimento das condições" buscam
+    nos incidentes da data se o benefício era o livramento (art. 113)."""
+    mot_ev = None
     for e in eventos:
         if "INTERRUP" in (e.get("tipo") or "").upper() and rs.to_date(e.get("data") or "") == g0:
-            return (e.get("motivo") or "").strip()
+            mot_ev = (e.get("motivo") or "").strip()
+            if RE_MOTIVO_VAZIO.search(mot_ev):
+                mot_ev = ""
+            break
+    if mot_ev and not RE_MOTIVO_GENERICO.search(mot_ev):
+        return mot_ev
     for i in incidentes:
         t = ((i.get("tipo") or "") + " " + (i.get("complemento") or "")).upper()
         if rs.e_revogacao_livramento(i):
@@ -166,7 +184,7 @@ def _motivo_interrupcao(eventos, incidentes, g0):
             d = rs.to_date(i.get("data_referencia") or i.get("data_decisao") or "")
             if d and abs((d - g0).days) <= 1:
                 return "SUSPENSÃO DO LIVRAMENTO"
-    return ""
+    return mot_ev or ""
 
 
 RE_CONTINUIDADE = re.compile(r"\bART\.?\s*71\b|CRIME CONTINUADO|CONTINUIDADE DELITIVA", re.I)
@@ -506,7 +524,25 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
             lt(g0, g1 if g1 < hoje else None, "outro_motivo", "interrupção de %s (%s)" % (rs.fmt(g0), _mot0.lower()),
                "preso em outro processo: suspende o prazo (art. 116, p. único)")
             corpo.append((g0, "De %s a %s preso em outro processo (%s): a prescrição não corre (art. 116, p. único)." % (rs.fmt(g0), fim_txt, _mot0.lower())))
+            if g1 >= hoje:
+                L["ppe_nao_corre"] = "preso em outro processo desde %s (%s)" % (rs.fmt(g0), _mot0.lower())
             continue
+        if _mot0 and RE_INTERRUP_CONTINUA.search(_mot0):
+            lt(g0, g1 if g1 < hoje else None, "cumprimento", "interrupção de %s (%s)" % (rs.fmt(g0), _mot0.lower()),
+               "a execução seguiu em outra modalidade ou lugar: conta como cumprimento e o prazo não corre (art. 117, V) - conferir")
+            corpo.append((g0, "De %s a %s: %s - a execução seguiu (outra modalidade ou lugar), não houve liberdade; a prescrição não corre "
+                              "(art. 117, V). Conferir se houve abandono depois." % (rs.fmt(g0), fim_txt, _mot0.lower())))
+            L["avisos"].append("interrupção em %s por \"%s\": tratada como continuidade do cumprimento - conferir" % (rs.fmt(g0), _mot0.lower()))
+            if g1 >= hoje:
+                L["ppe_nao_corre"] = "execução seguiu desde %s (%s)" % (rs.fmt(g0), _mot0.lower())
+            continue
+        if _mot0 and RE_INTERRUP_EXTINCAO.search(_mot0):
+            lt(g0, g1 if g1 < hoje else None, "outro_motivo", "interrupção de %s (%s)" % (rs.fmt(g0), _mot0.lower()),
+               "execução encerrada: depois disso não há prescrição a correr")
+            corpo.append((g0, "Execução encerrada em %s (%s): depois disso não há prescrição executória a correr - conferir a extinção nos autos." % (
+                rs.fmt(g0), _mot0.lower())))
+            L["ppe_encerrada"] = "%s (%s)" % (rs.fmt(g0), _mot0.lower())
+            break
 
         novos_g = [t for t in novos if g0 < t[0] < g1]
         interr_nc = []  # novos crimes que interromperam o prazo neste intervalo (o último vale)
@@ -583,6 +619,12 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
             lt(g0, g1 if g1 < hoje else None, "liberdade", "interrupção de %s (%s)" % (rs.fmt(g0), motivo.lower()),
                "interrupção sem evasão nem revogação do livramento: prazo pela pena aplicada, sem o art. 113 (STF, HC 236.292; STJ, RHC 67.403)"
                + ("; %s de suspensão" % _d(sd) if sd else ""))
+            if RE_MOTIVO_GENERICO.search(motivo):
+                L["avisos"].append("interrupção em %s por \"%s\" sem incidente de revogação do livramento na data: se o benefício era o livramento, "
+                                   "o prazo é pelo saldo (art. 113) - conferir qual benefício" % (rs.fmt(g0), motivo.lower()))
+                faltam.append("qual benefício foi revogado/suspenso em %s" % rs.fmt(g0))
+                L["ppe_alerta_extra"] = ("Confira qual benefício foi revogado/suspenso em %s: se foi o livramento, o prazo é pelo saldo da pena "
+                                         "(art. 113), e pode ser menor." % rs.fmt(g0))
             txt = "Interrupção sem evasão de %s a %s (%s): prazo de %s pela pena aplicada - o art. 113 vale só na evasão e na revogação do livramento (STF, HC 236.292; STJ, RHC 67.403)%s" % (
                 rs.fmt(g0), fim_txt, motivo.lower(), fmt_prazo(ppe_meses), ("; %s de suspensão (art. 116, p. único)" % _d(sd)) if sd else "")
             base = dict(g0=g0, g1=g1, meses=ppe_meses, base_dias=pena, cumprido=cumprido_g0, motivo=motivo, restante=False, limite=lim, evasao=False)
@@ -876,7 +918,13 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
                                                                   (" (pelo saldo máximo; pelo saldo mínimo, %s)" % S["limite_min"]) if S and S["limite_min"] and S["limite_min"] != S["limite_max"] else ""))
     else:
         L["ppe_cor"] = ""
-        if gaps:
+        if L.get("ppe_nao_corre") and not L.get("ppe_encerrada"):
+            L["ppe_status"] = "Não corre (%s)" % L["ppe_nao_corre"]
+            det.append("Conclusão: não corre - %s; nenhum intervalo de liberdade anterior completou o prazo." % L["ppe_nao_corre"])
+        elif L.get("ppe_encerrada"):
+            L["ppe_status"] = "Não corre (execução encerrada em %s)" % L["ppe_encerrada"]
+            det.append("Conclusão: execução encerrada em %s; não há prescrição executória a correr." % L["ppe_encerrada"])
+        elif gaps:
             L["ppe_status"] = "Não prescrita"
             det.append("Conclusão: nenhum intervalo de liberdade completou o prazo; não prescrita.")
         else:
@@ -1049,6 +1097,9 @@ def _quadro(L, hoje):
         Q["prazo"] = "%s%s, contado da %s pelo saldo (art. 113)%s" % (prazo or "nada a prescrever", inc if Sd["saldo_min"] == Sd["saldo_max"] else "",
                                                                        "revogação" if Sd.get("revogacao") else "fuga", (" → " + vtxt) if vtxt else "")
         Q["saldo"] = "%s na %s de %s (%s)" % (sal, "revogação" if Sd.get("revogacao") else "fuga", Sd["evasao"], org)
+    elif st.startswith("Não corre") and (L.get("ppe_nao_corre") or L.get("ppe_encerrada")):
+        Q["periodo"] = L.get("ppe_nao_corre") or ("execução encerrada em " + L["ppe_encerrada"])
+        Q["prazo"] = "%s pela pena aplicada de %s; hoje o prazo não corre" % (L.get("prazo_ppe") or "—", L.get("pena", ""))
     elif not (L.get("ppe_linha_tempo") and any(p["tipo"] in ("liberdade", "interrupcao", "evasao") for p in L["ppe_linha_tempo"])) and st.startswith("Não corre"):
         ini = next((p["inicio"] for p in (L.get("ppe_linha_tempo") or []) if p["tipo"] in ("cumprimento", "livramento", "prd")), L["ppe_termo"])
         Q["periodo"] = "em cumprimento desde %s, sem fuga" % ini
@@ -1080,6 +1131,8 @@ def _quadro(L, hoje):
     elif Sd and Sd.get("saldo_origem") == "calculado" and cor == "vermelho":
         Q["alerta"] = "Confirme o saldo na fuga (calculado pelos eventos do RSPE) antes de requerer."
         Q["informar"] = True
+    if not Q["alerta"] and L.get("ppe_alerta_extra"):
+        Q["alerta"] = L["ppe_alerta_extra"]
     L["ppe_quadro"] = Q
 
 
