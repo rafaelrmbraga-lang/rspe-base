@@ -523,7 +523,7 @@ PETIÇÕES (modelos .docx) - DESATIVADAS NESTA VERSÃO
   os modelos padrão está "Indulto 2023 - Decreto 11.846 - inciso XV", da
   unidade: o programa não analisa esse decreto.
 
-BANCO DE TESES
+JURISPRUDÊNCIAS
   Aba "Jurisprudências": acórdãos do TJMS favoráveis à defesa em execução
   penal, com pesquisa, filtro por tema e cópia da ementa com a referência.
   Os dados vão embutidos no programa (rspe_teses.py); um
