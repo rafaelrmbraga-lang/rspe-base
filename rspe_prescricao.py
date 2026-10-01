@@ -40,7 +40,6 @@ import re
 from fractions import Fraction
 
 import rspe_scraper as rs
-import rspe_linha as rl
 import rspe_regras as rg
 
 
@@ -741,13 +740,13 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
             hipgrav = _hip(sorted(em_exec, key=lambda t: (-t[1], t[0])))
             tese76 = None
             risco_grav = ""
-            hlin = None  # saldo registrado pelo próprio SEEU na linha do tempo detalhada (ocorrência da fuga)
+            hlin = None  # (a leitura da linha do tempo detalhada saiu: o saldo vem do que o operador digita)
             _inf0 = (ctx.get("saldos_inf") or {}).get(rs.fmt(g0))
             _fonte0 = (ctx.get("saldos_fonte") or {}).get(rs.fmt(g0)) if _inf0 is not None else None
             _calc0 = _fonte0 in ("calculadora", "digitado")
             _kcalc = "dig" if _fonte0 == "digitado" else "calc"
             hcalc = None  # saldo apurado na calculadora (aba Prescrição > Calcular), com os dados conferidos pelo operador
-            if outras and _calc0 and not rl.saldo_na(r.get("_linha_seeu"), g0, proc_x, pena, 0):
+            if outras and _calc0:
                 s_c = max(0, min(pena, int(_inf0)))
                 if s_c > 0:
                     m_c = Fraction(prazo_base_anos(s_c, fato) * 12) * fator
@@ -757,23 +756,6 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
                 else:
                     hcalc = {"posicao": None, "de": len(em_exec), "saldo": 0, "prazo_meses": None, "prazo": "", "limite": "", "resultado": "nada a prescrever",
                              "_lim": None, "cumprida": pena}
-            _sn = None
-            if outras:
-                _irm = [x for x in crimes if _mesmo_processo(x.get("processo_criminal") or "", proc_x)]
-                _sn = rl.saldo_na(r.get("_linha_seeu"), g0, proc_x, pena, _irm.index(c) if c in _irm else 0)
-                if _sn and rs.to_date(_sn["data"]) and (g0 - rs.to_date(_sn["data"])).days > 31:
-                    _sn = None  # ocorrência muito anterior à fuga: o restante dela não é o da data da fuga
-            if _sn:
-                s_l = _sn["restante"]
-                if s_l > 0:
-                    m_l = Fraction(prazo_base_anos(s_l, fato) * 12) * fator
-                    lim_l, _ = _limite(m_l)
-                    hlin = {"posicao": None, "de": len(em_exec), "saldo": s_l, "prazo_meses": int(m_l), "prazo": fmt_prazo(m_l),
-                            "limite": rs.fmt(lim_l), "resultado": "prescrita" if lim_l < ref else "não prescrita", "_lim": lim_l,
-                            "cumprida": _sn["cumprida"], "pena_seeu": _sn["pena"], "ocorrencia": _sn["ocorrencia"], "data_ocorrencia": _sn["data"]}
-                else:
-                    hlin = {"posicao": None, "de": len(em_exec), "saldo": 0, "prazo_meses": None, "prazo": "", "limite": "", "resultado": "nada a prescrever",
-                            "_lim": None, "cumprida": _sn["cumprida"], "pena_seeu": _sn["pena"], "ocorrencia": _sn["ocorrencia"], "data_ocorrencia": _sn["data"]}
             if not outras:
                 saldo_min = saldo_max = max(0, pena - cumprido_min_base)
                 rem_seeu = rs.pena_para_dias(r.get("pena_remanescente"))
@@ -825,7 +807,7 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
             elif outras:
                 origem = "nao_determinado"
                 saldo_rotulo = ("Saldo não determinado: com %d condenações em execução na fuga, ele depende de como o SEEU imputou o tempo cumprido "
-                                "(%s) entre elas. Importe a linha do tempo detalhada do SEEU ou use a calculadora; até lá, só se afirma o que vale em "
+                                "(%s) entre elas. Informe o saldo de cada uma (aba Prescrição > Calcular); até lá, só se afirma o que vale em "
                                 "qualquer imputação (saldo entre %s e %s)." % (len(em_exec), _d(cumprido_total), _pena_ou_zero(saldo_min), _pena_ou_zero(saldo_max)))
             else:
                 origem = "calculado"
@@ -2157,6 +2139,15 @@ def analisar(r, hoje=None):
             glob[k] = rows if k in ("dig", "calc", "linha") else sorted(rows, key=lambda x: x["posicao"] or 0)
         for l, S in lst:
             S["global"], S["_chave"] = glob, l.get("chave_ajuste")
+    # os dados da calculadora são os mesmos para todas as condenações da fuga: vão uma vez só (na primeira)
+    _vistos_calc = set()
+    for l in linhas:
+        for S in l.get("ppe_saldos") or []:
+            if S.get("calc"):
+                if S.get("evasao") in _vistos_calc:
+                    S["calc"] = None
+                else:
+                    _vistos_calc.add(S.get("evasao"))
     for l in linhas:
         try:
             l["ppe_fund"], l["pp_fund"] = fundamentacao(l, "pe"), fundamentacao(l, "pp")
@@ -2170,8 +2161,6 @@ def analisar(r, hoje=None):
         "presc_prox": prox,
         "presc_dias": min(dias) if dias else None,
         "presc_obs": "; ".join(sorted(set(a for l in linhas for a in l["avisos"]))),
-        "presc_linha_seeu": ({"gerado": (r.get("_linha_seeu") or {}).get("gerado_em") or "", "importado": (r.get("_linha_seeu") or {}).get("importado") or ""}
-                             if r.get("_linha_seeu") else None),
     }
 
 

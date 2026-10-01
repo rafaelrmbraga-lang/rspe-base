@@ -764,28 +764,30 @@ v6.16.50
     coluna. O botão de quadro em cada linha (e "Enviar ao Quadro do Usuário"
     no painel do assistido) cria o cartão já com o assistido. Prazo vencido
     ou próximo acende o número ao lado do nome da aba.
-  - Prescrição após a fuga com várias condenações: o saldo de cada uma vem
-    da Linha do Tempo Detalhada do SEEU (PDF gerado na aba "Informações
-    adicionais"), que entra pelo "Importar PDFs" e fica guardada na
-    execução: na ocorrência da fuga, o restante registrado pelo SEEU é o
-    saldo do art. 113. A ordem do trânsito, o art. 76 e a pena maior
-    primeiro aparecem só como tese, quando dariam prescrição e a linha não.
-  - Sem a linha detalhada, o programa não estima: só afirma o que vale em
-    qualquer imputação (prescrita mesmo com a pena inteira, ou não prescrita
-    mesmo com todo o tempo imputado ao crime); no resto, "a verificar", sem
-    fundamentação, até importar a linha ou usar a calculadora.
-  - Aba Prescrição (executória), coluna "Cálculo da fuga": "Calcular" (ou
-    "Ver cálculo") na linha do assistido abre a janela da fuga. Nela se
-    importa a Linha do Tempo Detalhada do SEEU ou se informa o saldo, em
-    duas abas: "Digitar saldo" (o saldo de cada condenação na fuga, do
-    cálculo do SEEU daquela data, do atestado ou da decisão) e "Calcular
-    pela ordem" (o tempo cumprido até a fuga, já preenchido, vai à
-    condenação do topo da lista e passa à seguinte; a lista vem pela
-    fração e se reordena arrastando ou pelas setas). Feito o cálculo, cada condenação
-    aparece nos 4 critérios (linha do SEEU ou calculadora; ordem do
-    trânsito, art. 76 e pena maior como tese), com o botão de copiar a
-    fundamentação quando há prescrição. A linha importada prevalece sobre
-    a calculadora.
+  - Prescrição após a fuga com várias condenações: na aba Prescrição
+    (executória), a coluna "Cálculo da fuga" traz "Calcular" (ou "Ver
+    cálculo") na linha do assistido. Na janela, em cada fuga, digita-se o
+    saldo de cada condenação na data da fuga (cálculo do SEEU daquela data,
+    atestado ou decisão); campo em branco vale zero. Feito isso, cada
+    condenação aparece pelo saldo digitado e, como tese, pela ordem do
+    trânsito, pelo art. 76 e pela pena maior primeiro, com o botão de copiar
+    a fundamentação quando há prescrição. Sem o saldo, o programa não estima:
+    só afirma o que vale em qualquer imputação.
+  - A prescrição não aparece mais na ficha do assistido: fica só na aba.
+  - Linhas das abas: o clique na linha não abre mais a ficha. Ao lado de
+    cada assistido, o ícone de pessoa fica verde quando há ficha disciplinar
+    importada (sem cor quando não há), e um ícone próprio abre a ficha
+    completa.
+  - Indulto: a janela da linha do tempo perde as partes "Pena e tempo
+    cumprido" e "Linha do tempo"; o motivo e o botão "Verificar
+    indulto/comutação" ganham destaque; no lugar dos contadores, a legenda
+    das cores da aba.
+  - Importação em lote: os PDFs são lidos em processos paralelos (um por
+    núcleo) e a base grande é montada em paralelo; a ficha disciplinar é
+    reconhecida pela primeira página, com o título tolerante a espaços, e
+    vinculada pelo CPF, pelos autos (número da execução ou de ação penal da
+    execução) ou pelo nome, sem que diferença de grafia no nome da mãe a
+    afaste; fichas importadas antes do RSPE vinculam sozinhas no fim do lote.
   - Auditoria: novos alertas de lançamento no SEEU - progressão na data da
     decisão (Tema 1165), mais de um regime inicial, regime inicial depois da
     primeira prisão, alteração de data-base no lugar do incidente próprio

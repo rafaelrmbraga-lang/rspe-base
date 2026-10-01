@@ -49,8 +49,15 @@ def texto_pdf(caminho):
         return "\n".join(p.extract_text() or "" for p in pdf.pages)
 
 
+def texto_pagina1(caminho):
+    with pdfplumber.open(caminho) as pdf:
+        return (pdf.pages[0].extract_text() or "") if pdf.pages else ""
+
+
 def e_ficha(texto):
-    return "FICHA DISCIPLINAR" in texto.upper() and "SIAPEN" in texto.upper()
+    # tolerante a espaços e quebras de linha no título e ao cabeçalho do sistema (SIAPEN ou AGEPEN)
+    t = re.sub(r"\s+", " ", (texto or "").upper())
+    return bool(re.search(r"FICHA ?DISCIPLINAR", t)) and ("SIAPEN" in t or "AGEPEN" in t or "PENITENCI" in t)
 
 
 def _limpar(t):
