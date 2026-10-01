@@ -235,6 +235,19 @@ def avaliar_ficha(f, r, ctx, ini, hoje):
               and (rs.to_date(c.get("data_sentenca") or "") or date.min) <= pub]
     if not crimes:
         return dict(base, s="fora", mot="sem condenação até o decreto")
+    # mesma regra da análise detalhada (2022/2024/2025): os requisitos de tempo exigem cumprimento em curso na data -
+    # preso ou em livramento condicional; a prisão provisória anterior, encerrada antes da data, só entra como detração
+    if not (rs.em_custodia(ctx["periodos"], ref) or any(a <= ref and (b is None or b >= ref) for a, b in ctx["lc"])):
+        defin = [e for e in (r.get("_eventos") or []) if re.search(r"PRIS|IN[ÍI]CIO|RECAPTURA", ((e.get("tipo") or "") + " " + (e.get("motivo") or "")).upper())
+                 and not re.search(r"FLAGRANTE|PREVENTIV|TEMPOR|PROVIS", (e.get("motivo") or "").upper())
+                 and (rs.to_date(e.get("data") or "") or date.max) <= ref]
+        # prisão provisória que alcançou o trânsito em julgado virou cumprimento da pena (e a soltura/fuga depois o interrompeu)
+        trs = [d for d in (rs.to_date(c.get("transito_processo") or c.get("transito_mp") or "") for c in r.get("_crimes") or []) if d and d <= ref]
+        virou = any(a <= t and (b is None or b > t) for a, b in ctx["periodos"] for t in trs)
+        if defin or virou:
+            return dict(base, s="nao", mot="não se aplica: cumprimento interrompido em %s (não estava preso nem em livramento)" % rs.fmt(ref))
+        return dict(base, s="nao", mot="não se aplica: não iniciou o cumprimento até %s (a prisão anterior foi provisória: conta como detração, "
+                                      "não como início do cumprimento da pena)" % rs.fmt(ref))
     pena = sum(rs.pena_para_dias(c.get("pena_imposta") or c.get("pena_total_processo")) or 0 for c in crimes)
     cump, _orig = rs.cumprido_na_data(r, ctx["periodos"], ctx["rem"], ref, ctx["lc"])
     reinc = any(c.get("reincidente_comum") == "S" or c.get("reincidente_especifico") == "S" for c in crimes)

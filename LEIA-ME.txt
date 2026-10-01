@@ -708,6 +708,12 @@ v6.16.50
       com a nota de que há acórdãos do TJMS em sentido contrário; o decreto
       de 2022 voltou ao mapa e ao encaixe da aba Indulto (faltava a data de
       referência na tabela do motor).
+    * Mesma regra em todos os decretos: os requisitos de tempo exigem pena
+      em cumprimento na data de referência (preso ou em livramento). A
+      prisão provisória encerrada antes do decreto conta só como detração
+      ("não iniciou o cumprimento"); soltura ou fuga depois do trânsito dá
+      "cumprimento interrompido". O cabeçalho do encaixe passa a dizer
+      "primeira prisão" em vez de "início do cumprimento".
   - Quadro do Usuário: o botão "Enviar ao Quadro do Usuário", na ficha do
     assistido, abre uma janela para escrever o cartão (título, observação,
     etiqueta, prazo e coluna), já com o assistido. Nos cartões e na janela,

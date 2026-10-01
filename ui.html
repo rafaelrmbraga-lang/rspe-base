@@ -1307,7 +1307,7 @@ const ui = {
     if(!this.decSel){
       const tr=rs.map(r=>{ let h=`<tr class="${this.decAberto===r.id?'exp':''} ${r.fixado?'fix':''}"><td class="first" style="white-space:nowrap">${this.pinHtml(r)}<span class="nm" title="Ver o encaixe em cada decreto" onclick="event.stopPropagation();ui.decAberto=ui.decAberto==='${r.id}'?null:'${r.id}';ui.render()">${esc(r.nome)}</span></td><td class="nw">${this.cpProc(r)}</td><td>${this.decMapa(r)}</td><td class="nw">${this.decBtn(r)}${this.qbtnHtml(r)}</td><td>${this.decPed(r)}</td></tr>`;
         if(this.decAberto===r.id) h+=`<tr class="sub"><td colspan="5">${this.decEncaixe(r)}</td></tr>`; return h; }).join('');
-      main=`<div class="dc-top"><div class="tt"><b>Geral</b><small>todos os decretos, a partir do início do cumprimento de cada execução · clique no nome para ver o encaixe em cada decreto</small></div><span class="sp"></span>${selBen}</div>
+      main=`<div class="dc-top"><div class="tt"><b>Geral</b><small>todos os decretos, a partir da primeira prisão de cada execução · clique no nome para ver o encaixe em cada decreto</small></div><span class="sp"></span>${selBen}</div>
         <table><thead><tr><th style="width:18%">Nome</th><th class="nw" style="width:1%">Nº da execução</th><th>Decretos desde o início do cumprimento</th><th style="width:1%"></th><th style="width:1%">Pedido</th></tr></thead><tbody>${tr}</tbody></table>`;
     } else {
       const x0=D.find(x=>x.id===this.decSel); const i=D.indexOf(x0); const ORD=['cabe','ver','conc','indef','nao','imp','fora'];
@@ -1327,7 +1327,7 @@ const ui = {
       return `<tr><td><b>${esc(this.decRot(x))}</b><div class="muted" style="font-size:11px">Dec. ${esc(x.numero)}</div></td><td><span class="dres ${x.s}">${this.DEC_ROT[x.s]||x.s}</span></td><td>${esc(this.decBenTxt(x))}</td>
         <td>${x.exigido&&!['conc','indef','imp'].includes(x.s)?`<div class="dreq" title="Cumprido ${this.tlAmd(de.cumprido)} · exigido ${this.tlAmd(x.exigido)}"><span class="tr"><i style="width:${100*p}%;background:${ok?'#12B76A':'#98A2B3'}"></i><u></u></span><small>${ok?'atingido':'não atingido'}${x.fracao?' ('+esc(x.fracao)+')':''}</small></div>`:'<span class="muted">—</span>'}</td>
         <td class="muted" style="font-size:12px">${esc(x.mot||'')}${x.nota?`<div>${esc(x.nota)}</div>`:''}${x.ressalva?`<div style="color:var(--a-tx)">${esc(x.ressalva)}</div>`:''}</td></tr>`; }).join('');
-    return `<div class="enc"><div class="enc-h"><b>Encaixe nos decretos · ${this.cpNomeTxt(r)}</b><span>início do cumprimento ${esc(ini)} · ${pl(L.length,'decreto analisado','decretos analisados')} · ${L.filter(x=>x.s==='cabe').length} cabem · ${L.filter(x=>x.s==='conc').length} concedidos</span></div>
+    return `<div class="enc"><div class="enc-h"><b>Encaixe nos decretos · ${this.cpNomeTxt(r)}</b><span title="Primeira prisão registrada no RSPE: os decretos anteriores a ela não aparecem. Prisão provisória encerrada antes do decreto conta só como detração.">primeira prisão ${esc(ini)} · ${pl(L.length,'decreto analisado','decretos analisados')} · ${L.filter(x=>x.s==='cabe').length} cabem · ${L.filter(x=>x.s==='conc').length} concedidos</span></div>
       ${L.length?`<table><thead><tr><th style="width:150px">Decreto</th><th style="width:120px">Resultado</th><th style="width:200px">Benefício</th><th style="width:220px">Requisito de tempo na data de referência</th><th>Motivo</th></tr></thead><tbody>${lin}</tbody></table>`:'<span class="muted">Nenhum decreto desde o início do cumprimento.</span>'}</div>`; },
   // linha do tempo: seletor com os decretos do assistido; os de 2022, 2024 e 2025 têm a linha do tempo detalhada, os demais o quadro de requisitos
   tlvSeletor(){ const d=this._tlv; const r=(this.dados.registros||[]).find(x=>x.id===this._tlvId); if(!d||!r) return '';
@@ -1335,7 +1335,7 @@ const ui = {
     const ix=L.findIndex(x=>x.id===atual); const ant=L[ix+1], seg=L[ix-1];
     return `<div style="display:flex;align-items:center;gap:6px"><button class="btn" style="padding:6px 10px" ${ant?`onclick="ui.tlvIr('${ant.id}')"`:'disabled'}>‹</button>
       <select class="dc-sel" style="font-weight:700" onchange="ui.tlvIr(this.value)">${L.map(x=>`<option value="${x.id}" ${x.id===atual?'selected':''}>${esc(this.decRot(x))} · ${esc(this.DEC_ROT[x.s]||x.s)}</option>`).join('')}</select>
-      <button class="btn" style="padding:6px 10px" ${seg?`onclick="ui.tlvIr('${seg.id}')"`:'disabled'}>›</button><span class="muted" style="font-size:12px;margin-left:4px">${pl(L.length,'decreto','decretos')} desde o início do cumprimento (${esc((r.dec||{}).inicio||'—')})</span></div>`; },
+      <button class="btn" style="padding:6px 10px" ${seg?`onclick="ui.tlvIr('${seg.id}')"`:'disabled'}>›</button><span class="muted" style="font-size:12px;margin-left:4px">${pl(L.length,'decreto','decretos')} desde a primeira prisão (${esc((r.dec||{}).inicio||'—')})</span></div>`; },
   tlvIr(id){ const temDet=((this._tlv||{}).decretos||[]).some(x=>x.id===id); if(temDet){ this._tlvGen=null; this.tlvSel(id); } else { this._tlvGen=id; this.renderTLV(); } },
   tlvGeral(){ const r=(this.dados.registros||[]).find(x=>x.id===this._tlvId); const x=this.decDe(r||{}).find(y=>y.id===this._tlvGen); if(!x) return '';
     const de=x.detalhe||{}; const lin=(k,v)=>`<span>${k}</span><b style="font-weight:600">${v}</b>`;
