@@ -1365,7 +1365,7 @@ const ui = {
     if(!cards.length) o=0; else if(k<0) o=ord(cards.length-1)+1; else if(k===0) o=ord(0)-1; else o=(ord(k-1)+ord(k))/2;
     const c=Q.cartoes.find(x=>x.id===id); if(c){ c.coluna=col; c.ordem=o; this.renderQuadro(); }
     const q=await API().quadro_mover(id,col,o); if(q&&!q.erro){ this._qd=q; this.render(); } },
-  qdNovo(id,col){ const r=id?(this.dados.registros||[]).find(x=>x.id===id):null;
+  async qdNovo(id,col){ if(!this._qd) await this.qdCarregar(); const r=id?(this.dados.registros||[]).find(x=>x.id===id):null;
     const sug=r? ({prog:'Progressão: '+(r.prog_sit||r.prog||''),liv:'Livramento: '+(r.liv_sit||r.liv||''),ind:'Indulto/comutação',presc:'Prescrição: '+(r.presc_ppe||''),ext:'Extinção: '+(r.ext_sit||''),aud:'Auditoria: '+(r.aud_resumo||''),fd:'Ficha disciplinar: '+(r.fd_sit||'')})[this.aba]||'' : '';
     this.qdForm({id:'',processo:r?r.id:'',titulo:sug.replace(/:\s*$/,''),obs:'',prazo:'',etiqueta:'acompanhar',coluna:col||'fazer'}); },
   qdCopias(r){ return `<div class="qd-cp" onclick="event.stopPropagation()"><span title="Copiar o nome do assistido" onclick="ui.copiar(ui._clips[${this.clip(r.nome||'')}])">⧉ Nome</span><span title="Copiar o número do processo de execução" onclick="ui.copiar(ui._clips[${this.clip(r.proc||'')}])">⧉ Nº do processo</span></div>`; },
@@ -1398,7 +1398,7 @@ const ui = {
         <label>Etiqueta</label><div class="qd-ets">${Object.entries(this.QD_ET).map(([k,v])=>`<span class="${c.etiqueta===k?'on':''}" style="background:${v[1]}" onclick="ui._qdc.etiqueta='${k}';this.parentElement.querySelectorAll('span').forEach(x=>x.classList.remove('on'));this.classList.add('on')">${v[0]}</span>`).join('')}</div>
         <label>Coluna</label><select id="qd_col">${((this._qd||{}).colunas||[{id:'fazer',nome:'A fazer'}]).map(x=>`<option value="${x.id}" ${x.id===c.coluna?'selected':''}>${esc(x.nome)}</option>`).join('')}</select></div>
       <div class="acts" style="justify-content:space-between">${c.id?`<button class="btn" style="color:var(--r-tx)" onclick="ui.qdExcluir('${c.id}')">Excluir</button>`:'<span></span>'}<span style="display:flex;gap:8px"><button class="btn" onclick="ui.fecharModal()">Cancelar</button><button class="btn pri" onclick="ui.qdSalvar()">Gravar</button></span></div></div>`;
-    document.getElementById('modal').classList.add('on'); setTimeout(()=>{ const t=document.getElementById('qd_tit'); if(t) t.focus(); },50); },
+    document.getElementById('modal').classList.add('on'); setTimeout(()=>{ const t=document.getElementById(c.processo&&!c.id?'qd_obs':'qd_tit'); if(t) t.focus(); },50); },
   async qdSalvar(){ const c=this._qdc; c.processo=document.getElementById('qd_proc').value; c.titulo=document.getElementById('qd_tit').value; c.obs=document.getElementById('qd_obs').value;
     c.prazo=document.getElementById('qd_pz').value.trim(); const col=document.getElementById('qd_col').value; if(col!==c.coluna){ c.coluna=col; c.ordem=null; }
     const q=await API().quadro_gravar(c); if(!q||q.erro){ this.toast((q&&q.erro)||'Falha ao gravar.'); return; } this._qd=q; this.fecharModal(); this.toast(q.msg||'Gravado.'); this.render(); this.qdRefFicha(); },
@@ -1519,11 +1519,10 @@ const ui = {
     const calc=dets+cms+prs;
     document.getElementById('drawer').innerHTML=`
       <div class="dh"><div><h2><span class="copy" onclick="ui.copiar(ui._clips[${this.clip(r.nome||'')}])" title="Clique para copiar o nome">${esc(r.nome)} ⧉</span></h2><div class="sub"><span class="copy" onclick="ui.copiar('${esc(r.proc)}')" title="Clique para copiar">${esc(r.proc)} ⧉</span> · ${esc(r.regime||'regime não informado')}</div>
-        <div class="sub">RSPE de ${esc(r.geracao)} · <span class="mini" onclick="ui.copiarClip(${ui.clip(ui.txtFicha(r))})">Copiar resumo</span> <span class="mini pre" onclick="ui.abrirSAP('${r.id}')">Registro para o SAP</span> <span class="mini" onclick="const e=document.getElementById('fq_obs'); if(e){ e.scrollIntoView({behavior:'smooth',block:'center'}); e.focus(); }">Enviar ao Quadro do Usuário</span> <span class="mini" onclick="ui.fixar('${r.id}',${r.fixado?0:1})">${r.fixado?'Soltar':'Fixar no topo'}</span></div></div>
+        <div class="sub">RSPE de ${esc(r.geracao)} · <span class="mini" onclick="ui.copiarClip(${ui.clip(ui.txtFicha(r))})">Copiar resumo</span> <span class="mini pre" onclick="ui.abrirSAP('${r.id}')">Registro para o SAP</span> <span class="mini" onclick="ui.qdNovo('${r.id}')">Enviar ao Quadro do Usuário</span> <span class="mini" onclick="ui.fixar('${r.id}',${r.fixado?0:1})">${r.fixado?'Soltar':'Fixar no topo'}</span></div></div>
         <button class="close" onclick="ui.fecharDrawer()">✕</button></div>
       <div class="db">
         ${r.motivo_exec?`<div class="sec"><div class="aviso-exec">${esc(r.motivo_exec)}</div></div>`:''}
-        ${this.fichaQuadro(r)}
         <div class="sec"><div class="kv">${kv('Pena total',r.pena_total)}${kv('Cumprida',r.pena_cumprida)}${kv('Remanescente',r.pena_rem)}${kv('Término',dmot(r.termino,r.termino_motivo))}</div>
           <div class="dbbox ${r.db_cor||''}"><small>Data-base (progressão)</small><div><b>${esc(r.db||'—')}</b>${r.db_motivo?` <span class="dbm">- ${esc(r.db_motivo)}</span>`:''}
             <span class="mini" style="margin-left:6px" onclick="ui.editarDataBase('${r.id}')">${r.db_editada?'Alterar':'Editar'}</span>${r.db_editada?` <span class="mini" onclick="ui.editarDataBase('${r.id}',true)">Voltar ao SEEU</span>`:''}</div></div></div>

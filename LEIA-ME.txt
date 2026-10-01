@@ -702,9 +702,10 @@ v6.16.50
       SEEU; 2022, art. 7º, § 1º (comando de organização criminosa); janela do
       art. 6º em 12 meses de calendário, igual à linha do tempo; art. 10, II,
       pela data da punição.
-  - Quadro do Usuário na ficha do assistido: os cartões dele e um formulário
-    para criar o cartão ali mesmo (título, observação, etiqueta, prazo e
-    coluna). Nos cartões, botões para copiar o nome e o número do processo.
+  - Quadro do Usuário: o botão "Enviar ao Quadro do Usuário", na ficha do
+    assistido, abre uma janela para escrever o cartão (título, observação,
+    etiqueta, prazo e coluna), já com o assistido. Nos cartões e na janela,
+    botões para copiar o nome e o número do processo.
   - Assistidos fixados: o alfinete ao lado do nome (agora sempre visível)
     prende o assistido no topo de todas as abas, e a faixa "Fixados" o
     filtra com um clique, sem buscar o nome de novo. Ctrl+K (ou
