@@ -890,6 +890,10 @@ const ui = {
       ${ks.map(k=>{ const h=X.s.crits[k]; return `<div class="chk" style="justify-content:space-between;cursor:pointer;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px" onclick="ui.copiarClip(${this.clip(this.fundPrescEvasao(X.L, X.s, k))});ui.fecharModal()"><span><b>${esc(this.FUND_CRIT[k][0])}</b>${k==='seeu'?' <span class="px-tag">principal</span>':''}<br><span class="muted">${h.posicao}ª de ${h.de} · saldo ${esc(this.tlAmd(h.saldo))} · prazo ${esc(h.prazo)} · venceu em ${esc(h.limite)}</span></span><span class="jz-b pri">Copiar</span></div>`; }).join('')}
       <div class="acts"><button class="btn" onclick="ui.fecharModal()">Cancelar</button></div></div>`;
     document.getElementById('modal').classList.add('on'); },
+  fimTxt(s){ const m=s.fim_motivo||'', nc=s.fim_novo_crime||'', d=s.fim||'';
+    if(/flagrante/.test(m)) return `da prisão em flagrante de ${d}${nc?`, pela prática de novo crime (${nc})`:''}`;
+    if(m) return `da recaptura em ${d} (${m})${nc?`, com novo crime na mesma data (${nc})`:''}`;
+    return `da recaptura/reinício do cumprimento em ${d}`; },
   fundGlobal(s, k){ // análise de todas as condenações em execução na fuga, pelo critério k (mesmo texto do servidor)
     const G=((s.global||{})[k])||[]; if(G.length<2) return '';
     const h=(s.crits||{})[k]||{}; const este=G.find(x=>x.saldo===h.saldo&&x.posicao===h.posicao)||{};
@@ -908,7 +912,7 @@ const ui = {
     const inc=d=> d==null? '' : anos(d)<1?'VI':anos(d)<=2?'V':anos(d)<=4?'IV':anos(d)<=8?'III':anos(d)<=12?'II':'I';
     const f=this.tlD(L.fato||''), antiga=f && f<new Date(2010,4,6);
     const mods=[]; if(L.art115) mods.push('reduzido à metade em razão da idade (CP, art. 115)'); if(L.reinc) mods.push('acrescido de 1/3 pela reincidência (CP, art. 110, caput)');
-    const evento=s.revogacao?'revogação do livramento condicional':(s.e_evasao===false?'interrupção do cumprimento':'fuga');
+    const evento=s.revogacao?'revogação do livramento condicional':(s.e_evasao===false?'interrupção do cumprimento':'evasão (fuga) do condenado');
     const fim=(s.fim&&s.fim!=='hoje')? s.fim : null;
     const base=(sd,pz,lim)=>`Para esse saldo, o prazo prescricional é o do art. 109, ${inc(sd)}, do Código Penal${inc(sd)==='VI'&&antiga?' (na redação anterior à Lei 12.234/2010, vigente à data do fato - 2 anos)':''}${mods.length?', '+mods.join(' e '):''}: ${pz}, que se esgotou em ${lim}`;
     const cab=`DA PRESCRIÇÃO DA PRETENSÃO EXECUTÓRIA - ${L.rotulo||L.crime}${L.proc_crim&&!String(L.rotulo||'').includes(L.proc_crim)?' (autos '+L.proc_crim+')':''}\n`+
@@ -918,14 +922,14 @@ const ui = {
     let corpo='';
     if(s.resultado==='prescrita'){
       corpo=`, de modo que o saldo imputável a esta condenação era de, no máximo, ${amd(s.saldo_max)}. ${base(s.saldo_max, s.prazo_max, s.limite_max)}`+
-        (fim? `, antes da recaptura/reinício do cumprimento em ${fim}, causa interruptiva posterior (CP, art. 117, V).` : ', sem nova causa interruptiva (CP, art. 117).')+
+        (fim? `, antes ${this.fimTxt(s)}, que pôs fim à evasão e interrompeu a prescrição (CP, art. 117, V${s.fim_novo_crime?', e VI':''}).` : ', sem nova causa interruptiva (CP, art. 117).')+
         (s.saldo_min===0? ' Ainda que se considere integralmente cumprida esta pena na imputação do tempo, a solução é a mesma: extinção da punibilidade.' : '')+
         `\nOperou-se, portanto, a prescrição da pretensão executória, impondo-se a declaração da extinção da punibilidade quanto a esta condenação (CP, art. 107, IV, c/c art. 119), com as comunicações e anotações devidas.`;
     } else if(s.resultado==='a verificar' && s.limite_min){
       const hipOk=[s.art76&&s.art76.resultado==='prescrita'?'que coincide com a ordem do art. 76 do CP (reclusão antes de detenção)':'',
                    s.cronologica&&s.cronologica.resultado==='prescrita'?'que coincide com a ordem cronológica do trânsito em julgado (STJ, AgRg no REsp 1.858.048)':''].filter(Boolean);
       corpo=`. O RSPE não informa a imputação desse tempo entre as condenações unificadas. Na hipótese mais favorável - o tempo cumprido imputado primeiro a esta condenação${hipOk.length?', '+hipOk.join(' e '):''} -, o saldo era de ${amd(s.saldo_min)}. ${base(s.saldo_min, s.prazo_min||s.prazo_max, s.limite_min)}`+
-        (fim? `, antes da recaptura/reinício do cumprimento em ${fim} (CP, art. 117, V).` : '.')+
+        (fim? `, antes ${this.fimTxt(s)} (CP, art. 117, V).` : '.')+
         `\nAssim, requer-se a imputação do tempo cumprido na forma mais favorável e o reconhecimento da prescrição da pretensão executória, com a extinção da punibilidade quanto a esta condenação (CP, art. 107, IV, c/c art. 119).`;
     } else {
       corpo=`, com saldo ${s.saldo_min===s.saldo_max? 'de '+amd(s.saldo_max) : 'entre '+amd(s.saldo_min)+' e '+amd(s.saldo_max)} para esta condenação. Pelo saldo máximo, o prazo é de ${s.prazo_max||'—'}${s.limite_max?', com vencimento em '+s.limite_max:''}`+

@@ -837,7 +837,12 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
                         informar = dict(crit, fuga=rs.fmt(g0), fim=fim_txt, duracao=_dur(g0, ref), aberto=aberto)
             _conv = next((x for x in LT if x["tipo"] == "cumprimento" and g1 < hoje and x["inicio"] == rs.fmt(g1)
                           and x["fonte"].startswith("trânsito em julgado")), None)
-            S = {"evasao": rs.fmt(g0), "fim": fim_txt, "fim_causa": ("início do cumprimento pela " + _conv["fonte"].replace("trânsito em julgado da ", "", 1) + " (transitada)") if _conv else "", "motivo": motivo.lower() if motivo else "não consta", "revogacao": revog, "e_evasao": e_evasao,
+            # como a evasão terminou: o motivo do evento de prisão/reinício no fim do intervalo e, se houver, o novo crime da mesma data
+            _ev_fim = next((e for e in eventos if rs.to_date(e.get("data") or "") == g1 and "INTERRUP" not in (e.get("tipo") or "").upper()), None) if g1 < hoje else None
+            _nc_fim = next((x for x in crimes if x is not c and rs.to_date(x.get("data_infracao") or "") == g1), None) if g1 < hoje else None
+            S = {"evasao": rs.fmt(g0), "fim": fim_txt,
+                 "fim_motivo": ((_ev_fim.get("motivo") or "").lower() if _ev_fim else ""),
+                 "fim_novo_crime": ("%s, ação penal %s" % (rs.crimes_curto([_nc_fim]), _nc_fim.get("processo_criminal") or "não informada")) if _nc_fim else "", "fim_causa": ("início do cumprimento pela " + _conv["fonte"].replace("trânsito em julgado da ", "", 1) + " (transitada)") if _conv else "", "motivo": motivo.lower() if motivo else "não consta", "revogacao": revog, "e_evasao": e_evasao,
                  "cumprido_min": pena - saldo_max, "cumprido_max": pena - saldo_min, "cumprido_desde_termo": cumprido_g0, "remicao": rem_g0,
                  "cumprido_total": cumprido_total, "outras": len(outras), "soma_outras": soma_outras,
                  "saldo_min": saldo_min, "saldo_max": saldo_max, "fonte_saldo": fonte_saldo.strip(),
@@ -1533,6 +1538,16 @@ FUND_CRIT = {"seeu": "O critério adotado é a ordem em que o próprio SEEU impu
                      "antigo. É a imputação do cálculo oficial da execução, que o juízo homologa e que define, na data da fuga, quanto restava de cada pena."}
 
 
+def _fim_txt(S):
+    """Como terminou a evasão, para o texto: 'da prisão em flagrante de 26/10/2013, pela prática de novo crime (...)'."""
+    m, nc, d = S.get("fim_motivo") or "", S.get("fim_novo_crime") or "", S.get("fim") or ""
+    if "flagrante" in m:
+        return "da prisão em flagrante de %s%s" % (d, (", pela prática de novo crime (%s)" % nc) if nc else "")
+    if m:
+        return "da recaptura em %s (%s)%s" % (d, m, (", com novo crime na mesma data (%s)" % nc) if nc else "")
+    return "da recaptura/reinício do cumprimento em %s" % d
+
+
 def fund_global(S, k):
     """Análise de todas as condenações em execução na fuga, pelo critério k (mesmo texto da tela)."""
     G = (S.get("global") or {}).get(k) or []
@@ -1603,7 +1618,7 @@ def fundamentacao(L, parte):
     S = next((x for x in sal if x.get("resultado") == "prescrita"), None) or next((x for x in sal if x.get("resultado") == "a verificar" and x.get("limite_min")), None)
     st = L.get("ppe_status") or ""
     if S:
-        ev = "revogação do livramento condicional" if S.get("revogacao") else "fuga"
+        ev = "revogação do livramento condicional" if S.get("revogacao") else "evasão (fuga) do condenado"
         fim = S.get("fim") if S.get("fim") and S.get("fim") != "hoje" else ""
         cab2 = ("%s\nA condenação a %s (fato em %s; trânsito em julgado em %s) teve o cumprimento interrompido pela %s em %s. Nos termos do art. 113 do "
                 "Código Penal, no caso de evadir-se o condenado ou de revogar-se o livramento condicional, a prescrição é regulada pelo tempo que resta "
@@ -1626,7 +1641,7 @@ def fundamentacao(L, parte):
                    "executória, impondo-se a declaração da extinção da punibilidade quanto a esta condenação (CP, art. 107, IV, c/c art. 119), com as "
                    "comunicações e anotações devidas." % (
                        _ext(S.get("saldo_max")), base(S.get("saldo_max") or 0, S.get("prazo_max"), S.get("limite_max")),
-                       (", antes da recaptura/reinício do cumprimento em %s, causa interruptiva posterior (CP, art. 117, V)." % fim) if fim else ", sem nova causa interruptiva (CP, art. 117).",
+                       (", antes %s, que pôs fim à evasão e interrompeu a prescrição (CP, art. 117, V%s)." % (_fim_txt(S), ", e VI" if S.get("fim_novo_crime") else "")) if fim else ", sem nova causa interruptiva (CP, art. 117).",
                        " Ainda que se considere integralmente cumprida esta pena na imputação do tempo, a solução é a mesma: extinção da punibilidade." if not S.get("saldo_min") else ""))
         else:
             hip = [h for h, k in (("que coincide com a ordem do art. 76 do CP (reclusão antes de detenção)", "art76"),
@@ -1636,7 +1651,7 @@ def fundamentacao(L, parte):
                    "primeiro a esta condenação%s -, o saldo era de %s. %s%s\nAssim, requer-se a imputação do tempo cumprido na forma mais favorável e o "
                    "reconhecimento da prescrição da pretensão executória, com a extinção da punibilidade quanto a esta condenação (CP, art. 107, IV, c/c art. 119)." % (
                        (", " + " e ".join(hip)) if hip else "", _ext(S.get("saldo_min")), base(S.get("saldo_min") or 0, S.get("prazo_min") or S.get("prazo_max"), S.get("limite_min")),
-                       (", antes da recaptura/reinício do cumprimento em %s (CP, art. 117, V)." % fim) if fim else "."))
+                       (", antes %s (CP, art. 117, V)." % _fim_txt(S)) if fim else "."))
         if _g and txt.startswith(", de modo que"):
             txt = ".\nAssim," + txt[len(", de modo que"):]
         return cab2 + txt
