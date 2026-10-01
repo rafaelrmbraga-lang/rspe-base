@@ -441,6 +441,33 @@ tr.sub td{padding:0 0 0 0;background:#FFFFFF;cursor:default}tr.sub:hover td{back
 .tlv-det .calc{font-family:ui-monospace,Consolas,monospace;background:#F8F9FB;border-radius:6px;padding:4px 6px}
 .duv{display:flex;flex-direction:column;gap:5px}
 .duv div{background:#FFFAEB;border:1px solid #FEDF89;border-radius:8px;padding:6px 9px;font-size:12px;cursor:pointer}
+
+.fixbar{display:none;align-items:center;gap:6px;flex-wrap:wrap;padding:10px 24px 0;font-size:12px;color:var(--tx3)}.fixbar.on{display:flex}
+.fixbar .fx{display:inline-flex;align-items:center;gap:6px;padding:4px 6px 4px 10px;border-radius:999px;background:#FFF8E6;border:1px solid #F5D08A;color:#7A4A00;font-weight:700;cursor:pointer}
+.fixbar .fx.on{background:#FDB022;color:#fff;border-color:#FDB022}.fixbar .fx b{font-weight:400;opacity:.7;padding:0 4px;border-radius:50%}.fixbar .fx b:hover{opacity:1;background:rgba(0,0,0,.08)}
+.pin{display:inline-flex;width:20px;height:20px;align-items:center;justify-content:center;border-radius:6px;color:#C0C6D0;cursor:pointer;margin-right:4px;vertical-align:-4px;opacity:0;transition:.12s}
+tr:hover .pin{opacity:1}.pin:hover{background:#F2F4F7;color:#B54708}.pin.on{opacity:1;color:#F79009}.pin svg{width:14px;height:14px}
+tbody tr.fix td{background:#FFFCF2}
+.qbtn{display:inline-flex;align-items:center;justify-content:center;width:26px;height:24px;border:1px solid var(--line);border-radius:7px;background:#fff;color:var(--tx3);cursor:pointer;margin-left:4px;vertical-align:middle}.qbtn:hover{border-color:var(--pri);color:var(--pri)}.qbtn svg{width:14px;height:14px}
+.qd-board{display:flex;gap:14px;align-items:flex-start;padding:16px;height:100%;overflow:auto}
+.qd-col{flex:0 0 300px;background:#F2F4F7;border-radius:14px;padding:10px;display:flex;flex-direction:column;max-height:100%}
+.qd-col.drag{outline:2px dashed var(--pri);outline-offset:-2px;background:#E8F5EE}
+.qd-ch{display:flex;align-items:center;gap:8px;padding:2px 4px 10px}.qd-ch b{font-size:13px;flex:1;cursor:text}.qd-ch span{font-size:11.5px;color:var(--tx3);background:#fff;border-radius:999px;padding:1px 8px;font-weight:700}
+.qd-list{display:flex;flex-direction:column;gap:8px;overflow:auto;min-height:40px;padding-bottom:4px}
+.qd-card{background:#fff;border-radius:10px;padding:10px 12px;box-shadow:0 1px 2px rgba(16,24,40,.08);border:1px solid #EAECF0;cursor:grab;border-left:4px solid var(--et,#EAECF0)}
+.qd-card:hover{border-color:#C9D1DB}.qd-card.arr{opacity:.4}
+.qd-card .t{font-weight:700;font-size:13px;line-height:1.35;color:#101828}.qd-card .a{font-size:12px;color:var(--pri);font-weight:600;margin-top:3px;cursor:pointer}.qd-card .a small{color:var(--tx3);font-weight:400}
+.qd-card .o{font-size:12px;color:var(--tx2);margin-top:5px;white-space:pre-wrap;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.qd-card .f{display:flex;align-items:center;gap:6px;margin-top:8px;flex-wrap:wrap}
+.qd-pz{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#F2F4F7;color:#475467}
+.qd-pz.venc{background:#FDE8E8;color:#B42318}.qd-pz.prox{background:#FEF4D6;color:#B54708}
+.qd-et{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:999px;color:#fff}
+.qd-add{margin-top:8px;padding:8px 10px;border-radius:9px;color:var(--tx2);font-size:12.5px;font-weight:600;cursor:pointer;text-align:left}.qd-add:hover{background:#E4E7EC;color:var(--tx)}
+.qd-top{display:flex;align-items:center;gap:10px;width:100%}.qd-top .sp{flex:1}
+.qd-form{display:grid;grid-template-columns:120px 1fr;gap:9px;align-items:center}
+.qd-form input,.qd-form textarea,.qd-form select{padding:8px 10px;border:1px solid var(--line2);border-radius:9px;font:inherit;width:100%}
+.qd-form textarea{min-height:90px;resize:vertical}
+.qd-ets{display:flex;gap:6px;flex-wrap:wrap}.qd-ets span{padding:4px 10px;border-radius:999px;font-size:12px;font-weight:700;cursor:pointer;border:2px solid transparent;color:#fff}.qd-ets span.on{border-color:#101828}
 </style>
 </head>
 <body>
@@ -466,7 +493,7 @@ tr.sub td{padding:0 0 0 0;background:#FFFFFF;cursor:default}tr.sub:hover td{back
   <div class="spacer"></div>
   <div class="search" id="search">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-    <input id="q" placeholder="Buscar nome, processo, crime…" oninput="ui.filtrar()">
+    <input id="q" placeholder="Buscar nome, processo, crime… (Ctrl+K)" oninput="ui.filtrar()">
     <button class="x" onclick="ui.limparBusca()">✕</button>
   </div>
 </div>
@@ -489,6 +516,7 @@ tr.sub td{padding:0 0 0 0;background:#FFFFFF;cursor:default}tr.sub:hover td{back
 
 <div class="tabs" id="tabs"></div>
 <div class="subtabs" id="subtabs"></div>
+<div class="fixbar" id="fixbar"></div>
 <div class="stats" id="stats"></div>
 <div class="wrap"><div class="card" id="card"></div></div>
 <div class="foot">
@@ -530,7 +558,7 @@ const ui = {
     if(d.sem_base){ w.classList.add('on'); document.getElementById('copia').innerHTML=''; document.getElementById('baseNome').textContent='—'; document.getElementById('baseN').textContent='0';
       document.getElementById('recentes').innerHTML=(d.recentes||[]).map(r=>`<div onclick="api('abrir_base','${esc(r.caminho).replace(/\\/g,'\\\\')}')"><span>${esc(r.nome)}</span><small>${esc(r.caminho)}</small></div>`).join('')||'<div style="cursor:default;color:var(--tx3)">Nenhuma base recente</div>';
       document.getElementById('wfoot').textContent='Base jurídica '+(d.base_juridica?d.base_juridica.versao:'?')+' · '+d.hoje; this.dados.registros=[]; this.render(); return; }
-    w.classList.remove('on'); document.getElementById('baseNome').textContent=d.base; document.getElementById('baseN').textContent=d.registros.length;
+    w.classList.remove('on'); if(d.base!==this._qdBase){ this._qdBase=d.base; this._qd=null; this.qdCarregar().then(()=>this.render()); } document.getElementById('baseNome').textContent=d.base; document.getElementById('baseN').textContent=d.registros.length;
     document.getElementById('copia').innerHTML=d.copia?`<i></i>cópia de segurança: ${esc(d.copia.quando)}`:'';
     document.getElementById('hoje').textContent='Hoje '+d.hoje+(d.base_juridica?' · base jurídica '+d.base_juridica.versao:''); if(!this.dados.abas.concat(this.ABAS_EXTRA).find(a=>a.id===this.aba)) this.aba='geral'; this.render(); },
   async criarBase(){ const n=document.getElementById('novoNome').value.trim(); if(!n) return this.toast('Dê um nome à base.'); await api('nova_base', n); },
@@ -558,8 +586,10 @@ const ui = {
   render(){
     const spec=this.spec(); const rs=this.visiveis();
     // abas
-    document.getElementById('tabs').innerHTML=this.dados.abas.concat(this.ABAS_EXTRA).map(a=>`<button class="tab ${a.id===this.aba?'on':''}" title="${esc(a.titulo)}" onclick="ui.irAba('${a.id}')">${this.ICONE[a.id]?`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${this.ICONE[a.id]}</svg>`:''}${this.CURTO[a.id]||a.titulo}${a.cor&&!a.sem_stats?`<span class="cnt">${this.contaCor(a,rs)}</span>`:''}</button>`).join('');
+    document.getElementById('tabs').innerHTML=this.dados.abas.concat(this.ABAS_EXTRA).map(a=>`<button class="tab ${a.id===this.aba?'on':''}" title="${esc(a.titulo)}" onclick="ui.irAba('${a.id}')">${this.ICONE[a.id]?`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${this.ICONE[a.id]}</svg>`:''}${this.CURTO[a.id]||a.titulo}${a.cor&&!a.sem_stats?`<span class="cnt">${this.contaCor(a,rs)}</span>`:''}${a.id==='quadro'&&this.qdAlertas()?`<span class="cnt" style="background:#FDE8E8;color:#B42318" title="Cartões com prazo vencido ou para hoje">${this.qdAlertas()}</span>`:''}</button>`).join('');
     document.getElementById('dica').textContent=this.DICA[this.aba]||'Clique na linha para abrir a ficha · clique no título da coluna para ordenar';
+    this.renderFixados();
+    if(this.aba==='quadro'){ const selE=document.getElementById('filtro'); selE.parentElement.style.display='none'; selE.dataset.aba=''; document.getElementById('legenda').innerHTML=''; document.getElementById('subtabs').classList.remove('on'); document.getElementById('modoWrap').style.display='none'; return this.renderQuadro(); }
     if(this.aba==='teses'){ const selE=document.getElementById('filtro'); selE.parentElement.style.display='none'; selE.dataset.aba=''; document.getElementById('legenda').innerHTML='';
       document.getElementById('modoWrap').style.display='none'; return this.renderTeses(); }
     // resumo
@@ -588,6 +618,7 @@ const ui = {
              : linhas.filter(r=>this.cor(r,spec)===this.filtroCor && (!tp || this.pedPendente(r,spec.id))); }
     linhas=linhas.filter(r=>this.passaFiltro(r,spec)); if(this.filtroVelho) linhas=linhas.filter(r=>this.idadeRSPE(r)>this.RSPE_VELHO);
     const o=this.ordem[this.aba]; if(o){ linhas=[...linhas].sort((a,b)=>cmp(a[o.k],b[o.k])*(o.inv?-1:1)); }
+    linhas=[...linhas].sort((a,b)=>(b.fixado?1:0)-(a.fixado?1:0));
     const card=document.getElementById('card');
     if(!this.dados.registros.length){ card.innerHTML=`<div class="empty"><div><b>Nenhum RSPE nesta base</b>Clique em <em>Importar PDFs</em> ou <em>Importar pasta</em>. Pode selecionar centenas de arquivos de uma vez.</div></div>`; return; }
     if(!linhas.length){ card.innerHTML=`<div class="empty"><div><b>Nada encontrado</b>Ajuste a busca ou o filtro de situação.</div></div>`; return; }
@@ -598,7 +629,7 @@ const ui = {
     const tr=linhas.map(r=>{ const cor=this.cor(r,spec); const exp=spec.expansivel && this.aberto===r.id;
       const tds=spec.cols.map((c,i)=>{ let v=r[c[0]]??''; const pk=spec.pilulas[c[0]];
         if(c[0]==='proc'){ v=`<span class="copy" title="Clique para copiar" onclick="event.stopPropagation();ui.copiar('${esc(String(v))}')">${esc(v)}${svgCopy}</span>`; }
-        else if(c[0]==='nome'&&v){ const id_=this.idadeRSPE(r); v=`<span class="copy" title="Clique para copiar o nome" onclick="event.stopPropagation();ui.copiar(ui._clips[${this.clip(String(v))}])">${esc(v)}${svgCopy}</span>`+(id_>this.RSPE_VELHO?`<span class="rs-old" title="RSPE desatualizado: emitido em ${esc(r.geracao)}, há ${id_} dias (mais de ${this.RSPE_VELHO}). Vale baixar um novo no SEEU." onclick="event.stopPropagation()">!</span>`:''); }
+        else if(c[0]==='nome'&&v){ const id_=this.idadeRSPE(r); v=this.pinHtml(r)+`<span class="copy" title="Clique para copiar o nome" onclick="event.stopPropagation();ui.copiar(ui._clips[${this.clip(String(v))}])">${esc(v)}${svgCopy}</span>`+(id_>this.RSPE_VELHO?`<span class="rs-old" title="RSPE desatualizado: emitido em ${esc(r.geracao)}, há ${id_} dias (mais de ${this.RSPE_VELHO}). Vale baixar um novo no SEEU." onclick="event.stopPropagation()">!</span>`:''); }
         else if(pk){ const pc = r[pk]||''; v = v ? `<span class="pill ${pc||'none'}">${esc(v)}</span>` : (/_sit$/.test(c[0]) ? '' : '<span class="muted">—</span>'); }
         else if(c[0]==='pedido'){ const P=(r.pedidos||{})[spec.id]; const mud=P&&P.ref&&P.ref!==this.pedRef(r,spec.id);
           // só o ícone: marcado = check; a data e a observação ficam na ficha do assistido (e na janela do clique)
@@ -610,8 +641,8 @@ const ui = {
         else { v = esc(v).replace('(est.)','<span class="est">(est.)</span>'); if(!v) v='<span class="muted">—</span>'; }
         if(i===0 && spec.expansivel) v=`<span class="chev">▶</span>${v}`;
         return `<td class="${i===0?'first':''} ${NW.has(c[0])?'nw':''} ${pk&&spec.id==='ind'?'pl':''}" title="${esc(String(r[c[0]+'_full']??r[c[0]]??''))}">${v}</td>`; }).join('');
-      const acao=`<td class="nw act">${spec.id==='geral'?`<span class="hbtn" title="Histórico comparativo dos RSPE importados deste assistido" onclick="event.stopPropagation();ui.historico('${r.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg>Histórico · ${r.hist_n||1}</span>`:''}${spec.id==='ind'?`<span class="mini" title="Linha do tempo: crimes, impeditivos, pena cumprida em cada decreto, faltas na janela e resultado" onclick="event.stopPropagation();ui.indTL('${r.id}')">Verificar indulto/comutação</span> `:''}${spec.id==='ext'?`<span class="mini" title="Linha do tempo: períodos cumpridos, fugas, faltas, hoje e término da pena" onclick="event.stopPropagation();ui.extTL('${r.id}')">Linha do tempo</span> `:''}${MODELOS_ATIVOS?`<span class="mini" title="Preencher modelo .docx com os dados deste assistido" onclick="event.stopPropagation();ui.peticao('${r.id}')">Petição</span>`:''}${r.ficha_tem?'<span class="tag ok" title="Ficha disciplinar importada">ficha</span>':''}</td>`;
-      let html=`<tr class="${cor} ${exp?'exp':''}" onclick="${spec.expansivel?`ui.expandir('${r.id}')`:`ui.abrir('${r.id}')`}">${tds}${acao}</tr>`;
+      const acao=`<td class="nw act">${spec.id==='geral'?`<span class="hbtn" title="Histórico comparativo dos RSPE importados deste assistido" onclick="event.stopPropagation();ui.historico('${r.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg>Histórico · ${r.hist_n||1}</span>`:''}${spec.id==='ind'?`<span class="mini" title="Linha do tempo: crimes, impeditivos, pena cumprida em cada decreto, faltas na janela e resultado" onclick="event.stopPropagation();ui.indTL('${r.id}')">Verificar indulto/comutação</span> `:''}${spec.id==='ext'?`<span class="mini" title="Linha do tempo: períodos cumpridos, fugas, faltas, hoje e término da pena" onclick="event.stopPropagation();ui.extTL('${r.id}')">Linha do tempo</span> `:''}${MODELOS_ATIVOS?`<span class="mini" title="Preencher modelo .docx com os dados deste assistido" onclick="event.stopPropagation();ui.peticao('${r.id}')">Petição</span>`:''}${r.ficha_tem?'<span class="tag ok" title="Ficha disciplinar importada">ficha</span>':''}${this.qbtnHtml(r)}</td>`;
+      let html=`<tr class="${cor} ${exp?'exp':''} ${r.fixado?'fix':''}" onclick="${spec.expansivel?`ui.expandir('${r.id}')`:`ui.abrir('${r.id}')`}">${tds}${acao}</tr>`;
       if(exp) html+=`<tr class="sub"><td colspan="${spec.cols.length+1}"><div class="subwrap">${this.subTabela(r,spec)}</div></td></tr>`;
       return html; }).join('');
     card.innerHTML=`<table><thead class="${spec.expansivel?"exp":""}"><tr>${th}</tr></thead><tbody>${tr}</tbody></table>`;
@@ -1128,7 +1159,7 @@ const ui = {
   abaPedido(spec){ return !!(spec && (spec.cols||[]).some(c=>c[0]==='pedido')); },
   pedPendente(r,aba){ const P=(r.pedidos||{})[aba]; return !P || (P.ref && P.ref!==this.pedRef(r,aba)); },
   contaCor(a,rs){ rs=rs.filter(r=>this.pedPendente(r,a.id)); if(a.id==='ind') return rs.filter(r=>r.ind_sim).length || ''; const k = a.id==='presc' ? (this.prescModo!=='pp'?'presc_ppe_cor':'presc_retro_cor') : a.cor; return rs.filter(r=>r[k]==='vermelho'||r[k]==='vencido').length || ''; },
-  ABAS_EXTRA:[{id:'teses',titulo:'Jurisprudências'}],
+  ABAS_EXTRA:[{id:'teses',titulo:'Jurisprudências'},{id:'quadro',titulo:'Quadro do Usuário'}],
   // abas: ícone (traço fino; verde na aba aberta) e nome curto
   ICONE:{
     geral:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
@@ -1139,8 +1170,9 @@ const ui = {
     ext:'<circle cx="12" cy="12" r="10"/><path d="m8.5 12 2.5 2.5 4.5-5"/>',
     fd:'<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4M12 16h4M8 11h.01M8 16h.01"/>',
     aud:'<path d="M12 22s8-3.6 8-10V5l-8-3-8 3v7c0 6.4 8 10 8 10z"/><path d="m9 12 2 2 4-4"/>',
-    teses:'<path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1z"/><path d="M7 21h10M12 3v18M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/>'},
-  CURTO:{ind:'Indulto',fd:'Ficha',teses:'Jurisprudências'},
+    teses:'<path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1z"/><path d="M7 21h10M12 3v18M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/>',
+    quadro:'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 7v7M12 7v4M16 7v10"/>'},
+  CURTO:{ind:'Indulto',fd:'Ficha',teses:'Jurisprudências',quadro:'Quadro do Usuário'},
   // rodapé: dica da aba aberta
   DICA:{geral:'Clique na linha para abrir a ficha do assistido · "Histórico" compara os RSPE importados',
     prog:'Clique no título da coluna para ordenar · a caixa em "Pedido" marca o pedido feito',
@@ -1150,7 +1182,8 @@ const ui = {
     ext:'"Linha do tempo" mostra períodos, fugas e término',
     fd:'Clique no assistido para ver trabalho, estudo e remição a atestar',
     aud:'Cada alerta traz a fundamentação para copiar · "Dar baixa" tira o ponto da contagem',
-    teses:'Pesquise por palavras e filtre por tema · "Copiar ementa" leva a referência'},
+    teses:'Pesquise por palavras e filtre por tema · "Copiar ementa" leva a referência',
+    quadro:'Arraste os cartões entre as colunas · clique no cartão para editar · o ícone de quadro em cada linha envia o assistido para cá'},
   // RSPE desatualizado: emitido há mais de 60 dias (etiqueta no nome e filtro na faixa de resumo)
   RSPE_VELHO:60, filtroVelho:false,
   idadeRSPE(r){ const g=(r.geracao||'').split('/').map(Number), h=(this.dados.hoje||'').split('/').map(Number); if(g.length!==3||h.length!==3||!g[2]||!h[2]) return null;
@@ -1193,6 +1226,61 @@ const ui = {
   tesBusca(v){ this.tesQ=v; this.tesN=60; this.tesLista(); },
   tesCitacao(x){ return `(TJMS, ${x.classe} n. ${x.proc}${x.relator?', Rel. '+(/^(des|ju[ií]z)/i.test(x.relator)?'':'Des. ')+x.relator:''}${x.orgao?', '+x.orgao:''}${x.julg?', j. '+x.julg:''}${x.pub?', publ. '+x.pub:''})`; },
   tesCopiar(i,modo){ const x=this._teses.itens[i]; const t=modo==='cit'?this.tesCitacao(x):(x.ementa.trim()+'\n'+this.tesCitacao(x)); this.copiarClip(this.clip(t)); },
+  // ---- assistidos fixados: ficam no topo de todas as abas, com a faixa para achá-los com um clique ----
+  PIN_SVG:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M14.5 2.5 21.5 9.5l-2.1 2.1-1.4-1.4-3.6 3.6.7 4.2-2.1 2.1-3.9-3.9-4.6 4.6-1.4-1.4 4.6-4.6-3.9-3.9 2.1-2.1 4.2.7 3.6-3.6-1.4-1.4z"/></svg>',
+  pinHtml(r){ return `<span class="pin ${r.fixado?'on':''}" title="${r.fixado?'Fixado no topo de todas as abas · clique para soltar':'Fixar no topo de todas as abas'}" onclick="event.stopPropagation();ui.fixar('${r.id}',${r.fixado?0:1})">${this.PIN_SVG}</span>`; },
+  async fixar(id,on){ await api('fixar', id, !!on); if(this.sel===id && document.getElementById('drawer').classList.contains('on')) this.abrir(id); },
+  renderFixados(){ const el=document.getElementById('fixbar'); const F=(this.dados.registros||[]).filter(r=>r.fixado); el.classList.toggle('on',!!F.length);
+    el.innerHTML=F.length?`<span>${this.PIN_SVG.replace('<svg','<svg style="width:13px;height:13px;color:#F79009;vertical-align:-2px"')} Fixados:</span>`+F.map(r=>`<span class="fx ${this.filtro===r.proc.toLowerCase()?'on':''}" title="Mostrar só este assistido (clique de novo para mostrar todos)" onclick="ui.soEste('${esc(r.proc)}')">${esc(r.nome)}<b title="Soltar" onclick="event.stopPropagation();ui.fixar('${r.id}',0)">✕</b></span>`).join(''):''; },
+  soEste(proc){ const q=document.getElementById('q'); q.value = this.filtro===proc.toLowerCase() ? '' : proc; this.filtrar(); },
+  // ---- Quadro do Usuário (estilo Trello): colunas, cartões com assistido, observação, prazo e etiqueta ----
+  _qd:null,
+  QD_ET:{urgente:['Urgente','#D92D20'],atencao:['Atenção','#F79009'],acompanhar:['Acompanhar','#2E90FA'],pedido:['Pedido feito','#12B76A'],outro:['Outro','#7A5AF8']},
+  qbtnHtml(r){ return `<span class="qbtn" title="Enviar ao Quadro do Usuário" onclick="event.stopPropagation();ui.qdNovo('${r.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 7v7M12 7v4M16 7v10"/></svg></span>`; },
+  async qdCarregar(){ const q=await API().quadro(); if(q&&!q.erro){ this._qd=q; } return this._qd; },
+  qdPrazo(p){ const d=this.tlD(p||''); if(!p||isNaN(d)) return null; const h=this.tlHoje(); h.setHours(0,0,0,0); return Math.round((d-h)/864e5); },
+  qdAlertas(){ const Q=this._qd; if(!Q) return 0; const fim=(Q.colunas.slice(-1)[0]||{}).id; return Q.cartoes.filter(c=>c.coluna!==fim&&c.prazo&&this.qdPrazo(c.prazo)!==null&&this.qdPrazo(c.prazo)<=0).length; },
+  async renderQuadro(){ if(!this._qd) await this.qdCarregar(); const Q=this._qd||{colunas:[],cartoes:[]}; const R=this.dados.registros||[]; const q=this.filtro;
+    document.getElementById('stats').innerHTML=`<div class="qd-top"><span class="muted" style="font-size:12.5px">${pl(Q.cartoes.length,'cartão','cartões')}${this.qdAlertas()?` · <b style="color:#B42318">${pl(this.qdAlertas(),'prazo vencido ou para hoje','prazos vencidos ou para hoje')}</b>`:''}</span><span class="sp"></span><span class="jz-b" onclick="ui.qdColuna()">+ Coluna</span><span class="jz-b pri" onclick="ui.qdNovo()">+ Cartão</span></div>`;
+    const fim=(Q.colunas.slice(-1)[0]||{}).id;
+    const card=c=>{ const r=R.find(x=>x.id===c.processo); const d=this.qdPrazo(c.prazo); const et=this.QD_ET[c.etiqueta];
+      const txt=[c.titulo,c.obs,r?r.nome+' '+r.proc:''].join(' ').toLowerCase(); if(q && !txt.includes(q)) return '';
+      const pz=c.prazo?`<span class="qd-pz ${c.coluna!==fim&&d!==null?(d<0?'venc':d<=2?'prox':''):''}" title="Prazo">⏰ ${esc(c.prazo)}${c.coluna!==fim&&d!==null?(d<0?' · vencido':d===0?' · hoje':d===1?' · amanhã':''):''}</span>`:'';
+      return `<div class="qd-card" draggable="true" data-id="${c.id}" style="--et:${et?et[1]:'#EAECF0'}" ondragstart="ui.qdDrag(event,'${c.id}')" ondragend="this.classList.remove('arr')" onclick="ui.qdEditar('${c.id}')">
+        <div class="t">${esc(c.titulo||(r?r.nome:'Sem título'))}</div>${r?`<div class="a" onclick="event.stopPropagation();ui.abrir('${r.id}')">${esc(r.nome)} <small>· ${esc(r.proc)}</small></div>`:''}
+        ${c.obs?`<div class="o">${esc(c.obs)}</div>`:''}<div class="f">${et?`<span class="qd-et" style="background:${et[1]}">${et[0]}</span>`:''}${pz}</div></div>`; };
+    document.getElementById('card').innerHTML=`<div class="qd-board">${Q.colunas.map(col=>{ const cs=Q.cartoes.filter(c=>c.coluna===col.id).sort((a,b)=>a.ordem-b.ordem);
+      return `<div class="qd-col" data-col="${col.id}" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="ui.qdDrop(event,'${col.id}')">
+        <div class="qd-ch"><b title="Clique duas vezes para renomear" ondblclick="ui.qdColuna('${col.id}','${esc(col.nome)}')">${esc(col.nome)}</b><span>${cs.length}</span></div>
+        <div class="qd-list">${cs.map(card).join('')}</div><div class="qd-add" onclick="ui.qdNovo(null,'${col.id}')">+ Adicionar cartão</div></div>`; }).join('')}</div>`; },
+  qdDrag(ev,id){ ev.dataTransfer.setData('text/plain',id); ev.target.classList.add('arr'); },
+  async qdDrop(ev,col){ ev.preventDefault(); const el=ev.currentTarget; el.classList.remove('drag'); const id=ev.dataTransfer.getData('text/plain'); if(!id) return;
+    // posição: antes do cartão sob o mouse, ou no fim da coluna
+    const cards=[...el.querySelectorAll('.qd-card')].filter(x=>x.dataset.id!==id); const Q=this._qd; const ord=i=>(Q.cartoes.find(c=>c.id===cards[i].dataset.id)||{}).ordem;
+    let k=cards.findIndex(x=>{ const b=x.getBoundingClientRect(); return ev.clientY<b.top+b.height/2; }); let o;
+    if(!cards.length) o=0; else if(k<0) o=ord(cards.length-1)+1; else if(k===0) o=ord(0)-1; else o=(ord(k-1)+ord(k))/2;
+    const c=Q.cartoes.find(x=>x.id===id); if(c){ c.coluna=col; c.ordem=o; this.renderQuadro(); }
+    const q=await API().quadro_mover(id,col,o); if(q&&!q.erro){ this._qd=q; this.render(); } },
+  qdNovo(id,col){ const r=id?(this.dados.registros||[]).find(x=>x.id===id):null;
+    const sug=r? ({prog:'Progressão: '+(r.prog_sit||r.prog||''),liv:'Livramento: '+(r.liv_sit||r.liv||''),ind:'Indulto/comutação',presc:'Prescrição: '+(r.presc_ppe||''),ext:'Extinção: '+(r.ext_sit||''),aud:'Auditoria: '+(r.aud_resumo||''),fd:'Ficha disciplinar: '+(r.fd_sit||'')})[this.aba]||'' : '';
+    this.qdForm({id:'',processo:r?r.id:'',titulo:sug.replace(/:\s*$/,''),obs:'',prazo:'',etiqueta:'acompanhar',coluna:col||'fazer'}); },
+  async qdEditar(id){ if(!this._qd) await this.qdCarregar(); const c=this._qd.cartoes.find(x=>x.id===id); if(c) this.qdForm(Object.assign({},c)); },
+  qdForm(c){ this._qdc=c; const R=(this.dados.registros||[]).slice().sort((a,b)=>(a.nome||'').localeCompare(b.nome||''));
+    document.getElementById('modal').innerHTML=`<div class="box" style="width:620px"><h2>${c.id?'Editar cartão':'Novo cartão no Quadro do Usuário'}</h2><p>Processos para acompanhar de perto: observações, alertas com prazo e etiqueta.</p>
+      <div class="qd-form"><label>Assistido</label><select id="qd_proc"><option value="">— sem assistido (cartão livre) —</option>${R.map(r=>`<option value="${esc(r.id)}" ${r.id===c.processo?'selected':''}>${esc(r.nome)} · ${esc(r.proc)}</option>`).join('')}</select>
+        <label>Título</label><input id="qd_tit" value="${esc(c.titulo||'')}" placeholder="ex.: pedir progressão, cobrar atestado, acompanhar decisão do indulto">
+        <label>Observações</label><textarea id="qd_obs" placeholder="anotações, movimentações, o que falta">${esc(c.obs||'')}</textarea>
+        <label>Prazo / alerta</label><input id="qd_pz" value="${esc(c.prazo||'')}" placeholder="dd/mm/aaaa (o cartão fica em destaque no dia e depois)">
+        <label>Etiqueta</label><div class="qd-ets">${Object.entries(this.QD_ET).map(([k,v])=>`<span class="${c.etiqueta===k?'on':''}" style="background:${v[1]}" onclick="ui._qdc.etiqueta='${k}';this.parentElement.querySelectorAll('span').forEach(x=>x.classList.remove('on'));this.classList.add('on')">${v[0]}</span>`).join('')}</div>
+        <label>Coluna</label><select id="qd_col">${((this._qd||{}).colunas||[{id:'fazer',nome:'A fazer'}]).map(x=>`<option value="${x.id}" ${x.id===c.coluna?'selected':''}>${esc(x.nome)}</option>`).join('')}</select></div>
+      <div class="acts" style="justify-content:space-between">${c.id?`<button class="btn" style="color:var(--r-tx)" onclick="ui.qdExcluir('${c.id}')">Excluir</button>`:'<span></span>'}<span style="display:flex;gap:8px"><button class="btn" onclick="ui.fecharModal()">Cancelar</button><button class="btn pri" onclick="ui.qdSalvar()">Gravar</button></span></div></div>`;
+    document.getElementById('modal').classList.add('on'); setTimeout(()=>{ const t=document.getElementById('qd_tit'); if(t) t.focus(); },50); },
+  async qdSalvar(){ const c=this._qdc; c.processo=document.getElementById('qd_proc').value; c.titulo=document.getElementById('qd_tit').value; c.obs=document.getElementById('qd_obs').value;
+    c.prazo=document.getElementById('qd_pz').value.trim(); const col=document.getElementById('qd_col').value; if(col!==c.coluna){ c.coluna=col; c.ordem=null; }
+    const q=await API().quadro_gravar(c); if(!q||q.erro){ this.toast((q&&q.erro)||'Falha ao gravar.'); return; } this._qd=q; this.fecharModal(); this.toast(q.msg||'Gravado.'); this.render(); },
+  async qdExcluir(id){ if(!confirm('Excluir este cartão?')) return; const q=await API().quadro_excluir(id); if(q&&!q.erro){ this._qd=q; this.fecharModal(); this.render(); this.toast(q.msg); } },
+  async qdColuna(id,nome){ const n=prompt(id?'Novo nome da coluna (vazio exclui a coluna; os cartões vão para a primeira):':'Nome da nova coluna:', nome||''); if(n===null) return;
+    const q=await API().quadro_coluna(id||('c'+Date.now().toString(36)), n); if(q&&!q.erro){ this._qd=q; this.render(); } },
   // Jurisprudências: temas à esquerda (clique filtra); cartão com temas, resultado, tese, dados do acórdão, palavras-chave da ementa
   // e a ementa em 3 linhas
   TES_COR:['#067647','#1D4ED8','#B54708','#7A5AF8','#C11574','#0E7090','#B42318','#4E5BA6','#667085'],
@@ -1307,7 +1395,7 @@ const ui = {
     const calc=dets+cms+prs;
     document.getElementById('drawer').innerHTML=`
       <div class="dh"><div><h2><span class="copy" onclick="ui.copiar(ui._clips[${this.clip(r.nome||'')}])" title="Clique para copiar o nome">${esc(r.nome)} ⧉</span></h2><div class="sub"><span class="copy" onclick="ui.copiar('${esc(r.proc)}')" title="Clique para copiar">${esc(r.proc)} ⧉</span> · ${esc(r.regime||'regime não informado')}</div>
-        <div class="sub">RSPE de ${esc(r.geracao)} · <span class="mini" onclick="ui.copiarClip(${ui.clip(ui.txtFicha(r))})">Copiar resumo</span> <span class="mini pre" onclick="ui.abrirSAP('${r.id}')">Registro para o SAP</span></div></div>
+        <div class="sub">RSPE de ${esc(r.geracao)} · <span class="mini" onclick="ui.copiarClip(${ui.clip(ui.txtFicha(r))})">Copiar resumo</span> <span class="mini pre" onclick="ui.abrirSAP('${r.id}')">Registro para o SAP</span> <span class="mini" onclick="ui.qdNovo('${r.id}')">Enviar ao Quadro do Usuário</span> <span class="mini" onclick="ui.fixar('${r.id}',${r.fixado?0:1})">${r.fixado?'Soltar':'Fixar no topo'}</span></div></div>
         <button class="close" onclick="ui.fecharDrawer()">✕</button></div>
       <div class="db">
         ${r.motivo_exec?`<div class="sec"><div class="aviso-exec">${esc(r.motivo_exec)}</div></div>`:''}
@@ -1718,6 +1806,8 @@ window.addEventListener('resize',()=>{ clearTimeout(ui._rz); ui._rz=setTimeout((
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ ui.fecharDrawer(); ui.fecharModal(); ui.fecharTLV(); } });
 document.addEventListener('click',e=>ui.tlClick(e));
 ui.letraAplicar();
+// atalho para a busca de assistido (Ctrl+K ou /): em bases grandes, achar o nome sem rolar a lista
+document.addEventListener('keydown',e=>{ const t=(e.target&&e.target.tagName)||''; if(((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k')||(e.key==='/'&&!/INPUT|TEXTAREA|SELECT/.test(t))){ e.preventDefault(); const q=document.getElementById('q'); q.focus(); q.select(); } });
 window.addEventListener('pywebviewready', ()=>api('listar'));
 if(window.__mockApi) api('listar');
 </script>
