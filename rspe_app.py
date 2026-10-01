@@ -195,7 +195,7 @@ culpa (liberdade provisória, relaxamento, habeas corpus, alvará) ou sem iníci
 aberto). Com várias condenações unificadas, o RSPE não informa como o tempo cumprido foi imputado entre elas: o programa calcula
 dois limites - saldo mínimo (este crime imputado primeiro) e saldo máximo (este crime imputado por último, depois das outras
 condenações com trânsito anterior à evasão) - e mostra, como referência, a hipótese do art. 76 do CP (mais grave primeiro; STJ, RHC
-9.158) e a da ordem cronológica do trânsito (STJ, HC 627.646). O prazo (art. 109 sobre o saldo, +1/3, metade) é testado em cada
+9.158) e a da ordem cronológica do trânsito (STJ, AgRg no REsp 1.858.048). O prazo (art. 109 sobre o saldo, +1/3, metade) é testado em cada
 faixa do art. 109 atravessada pelos dois limites e a data-limite soma os dias de suspensão. Todas as faixas prescrevem:
 "Prescrição executória aparente" (data mais tardia); nenhuma: "Não prescrita"; divergem: "A VERIFICAR: saldo na evasão depende da
 imputação do cumprimento entre as condenações unificadas" (amarelo), com a lista do que falta (cálculo do SEEU com o saldo por

@@ -616,6 +616,19 @@ v6.16.50
     do trânsito e, de novo, como detração de cada crime). Agora cada dia de
     prisão conta uma vez só. A tese do art. 76 só aparece quando muda o
     desfecho (prescreve por ela e não pela ordem do trânsito).
+  - Reincidência na prescrição: se o RSPE marca o condenado como reincidente
+    mas todas as outras condenações dele transitaram depois do fato, o prazo
+    é calculado sem o +1/3 (CP, arts. 63 e 110), com alerta explicando o
+    motivo e o resultado que haveria com o +1/3. Com uma condenação só no
+    RSPE, segue a marcação (a condenação anterior pode já estar extinta).
+  - Imputação do tempo cumprido entre condenações (base jurídica 2026-10-01):
+    ordem cronológica do trânsito (STJ, AgRg no REsp 1.858.048, 5ª T.;
+    TJMS, 1604723-49.2024 e 0000230-65.2010), no lugar do HC 627.646. O art.
+    76 passa a ordenar pela espécie (reclusão antes de detenção), e a pena
+    maior primeiro (6ª T., AgRg no HC 1.075.773) vira a hipótese 3. Quando
+    a ordem cronológica dá prescrição e a da pena maior não, o programa avisa
+    o argumento que o MP pode usar e a resposta. A fundamentação para a
+    petição ganhou o parágrafo sobre o critério cronológico.
   - Mais rápido: marcar pedido, dar baixa, informar dado ou ajustar a
     prescrição refaz só o assistido alterado (antes, a base inteira); abrir a
     base também ficou cerca de 25% mais rápido.
