@@ -104,10 +104,12 @@ def _impeditivos(f, crimes, ref):
             priv = trafico and "§ 4" in (c.get("tipo_penal") or "")
             if priv and I.get("trafico_privilegiado_ressalvado"):
                 pass
-            # hediondez na data do fato e na do decreto (a superveniente não retroage - Lei 13.964/2019 e o roubo com arma de fogo:
-            # TJMS; decretos de 2003 a 2005: "crime hediondo praticado após a edição da Lei 8.072")
-            elif (rs.e_hediondo(c, None) and rs.e_hediondo(c, ref)) or (trafico and not priv):
-                out.append("%s: hediondo ou equiparado em %s" % (rot, rs.fmt(ref)))
+            # hediondez aferida na data do FATO: a hediondez superveniente não alcança o fato anterior (tese da
+            # irretroatividade; os decretos falam em "crime hediondo praticado após a edição da Lei 8.072/1990" e das leis que
+            # ampliaram o rol). Tráfico: equiparado desde a Lei 8.072/1990 (25/07/1990)
+            elif rs.e_hediondo(c, None) or (trafico and not priv and (rs.to_date(c.get("data_infracao") or "") or ref) >= date(1990, 7, 25)):
+                fato = rs.to_date(c.get("data_infracao") or "")
+                out.append("%s: hediondo ou equiparado na data do fato%s" % (rot, (" (%s)" % rs.fmt(fato)) if fato else ""))
                 continue
         for o in I.get("outros") or []:
             arts = [re.sub(r"\D", "", str(a)) for a in (o.get("artigos") or [])]
@@ -188,9 +190,12 @@ def avaliar_ficha(f, r, ctx, ini, hoje):
     falta_firme = falta_ind = []
     if F.get("meses"):
         # janela contada para trás a partir da publicação (como dizem os decretos), não da data de referência
-        ach = rs.indicios_falta(r.get("_incidentes") or [], pub, dias=int(F["meses"]) * 30, eventos=r.get("_eventos") or [], ate=pub)
-        falta_firme = [t for t, firme in ach if firme]
-        falta_ind = [t for t, firme in ach if not firme]
+        ach = rs.indicios_falta(r.get("_incidentes") or [], pub, dias=int(F["meses"]) * 30, eventos=r.get("_eventos") or [], ate=pub, hoje=pub)  # prescrição da falta aferida na data do decreto
+        # decreto que exige a falta apurada/homologada (ex.: "falta sem a devida apuração não impede"): a não homologada
+        # (fuga só registrada como evento) não impede - fica como ressalva
+        hom = F.get("exige_homologacao")
+        falta_firme = [t for t, firme in ach if firme and not (hom and "não homologada" in t)]
+        falta_ind = [t for t, firme in ach if not firme or (hom and "não homologada" in t)]
     regime = _regime_em(r, ref)
     em_lc = any(a <= ref and (b is None or b >= ref) for a, b in ctx["lc"])
     continuo = next(((ref - a).days + 1 for a, b in rs.uniao_periodos(ctx["periodos"]) if a <= ref and (b is None or b >= ref)), 0)
@@ -250,18 +255,23 @@ def avaliar_ficha(f, r, ctx, ini, hoje):
         # que o RSPE não mostra (pena substituída ou sursis, fração cumprida em prisão provisória, saídas, idade, filhos,
         # doença, estudo, reparação do dano, medida de segurança) tira a hipótese da conta automática
         o = rs._sem_acento(h.get("outros_requisitos") or "").lower()
-        if re.search(r"(?<!nao )(?<!nao foi )substituida por|\bou sursis|com sursis|prisao provisoria|saidas? tempor|anos de idade|filh|doen|gestan|"
+        if re.search(r"(?<!nao )(?<!nao foi )substituida por|\bou sursis|(?<!beneficiadas )(?<!beneficiados )com sursis|prisao provisoria|saidas? tempor|anos de idade|filh|doen|gestan|"
                      r"defici|estud|repara|medida de seguranca|trabalho externo", o):
             return False
         return any(h.get(k) is not None for k in ("pena_max_anos", "pena_min_anos", "fracao_nao_reincidente", "fracao_reincidente",
                                                    "anos_nao_reincidente", "anos_reincidente"))
+    hips = []  # todas as hipóteses calculadas, para a linha do tempo
     for h in f.get("indulto") or []:
         if not h.get("objetivo") or not _decisiva(h):
             continue
         ok, exig, mot = hip_ok(h)
+        hips.append({"tipo": "indulto", "dispositivo": h.get("dispositivo") or "", "ok": ok, "exigido": exig, "mot": mot, "texto": h.get("texto") or "",
+                     "fracao": (h.get("fracao_reincidente") if reinc else h.get("fracao_nao_reincidente")) or
+                               ("%s anos" % (h.get("anos_reincidente") if reinc else h.get("anos_nao_reincidente")) if (h.get("anos_reincidente") if reinc else h.get("anos_nao_reincidente")) else "")})
         if ok:
-            ind = (h, exig)
-            break
+            if ind is None:
+                ind = (h, exig)
+            continue
         if exig is not None and (ind_n is None or ind_n[1] is None or ind_n[1] > exig):
             ind_n = (h, exig, mot)
         elif ind_n is None:
@@ -274,12 +284,16 @@ def avaliar_ficha(f, r, ctx, ini, hoje):
         if not _decisiva(dict(hh, outros_requisitos=h.get("outros_requisitos") or "")):
             continue
         ok, exig, mot = hip_ok(hh)
+        hips.append({"tipo": "comutacao", "dispositivo": h.get("dispositivo") or "", "ok": ok, "exigido": exig, "mot": mot, "texto": h.get("texto") or "",
+                     "fracao": (hh["fracao_reincidente"] if reinc else hh["fracao_nao_reincidente"]) or "",
+                     "reducao": (h.get("reducao_reincidente") if reinc else h.get("reducao_nao_reincidente")) or ""})
         if ok:
-            com = (h, exig)
-            break
+            if com is None:
+                com = (h, exig)
+            continue
         if com_n is None:
             com_n = (h, exig, mot)
-    res = dict(base, detalhe=detalhe, regime=regime, nota=nota_conc)
+    res = dict(base, detalhe=detalhe, regime=regime, nota=nota_conc, hips=hips, falta_ind=falta_ind, falta_firme=falta_firme)
     imp_ind = bool(imp) and "comuta" not in afeta.replace("indulto e comuta", "")
     imp_com = bool(imp) and ("indulto e comuta" in afeta or "só comuta" in afeta or afeta.startswith("so comuta"))
     if falta_firme and "indulto" in (F.get("afeta") or "indulto e comutação"):
@@ -329,8 +343,9 @@ def _detalhado(ano, r):
     return dict(out, s="nao" if (ti or tc) else "fora", mot=ti or tc or "sem análise")
 
 
-def avaliar(r, hoje):
-    """Lista de resultados (do decreto mais antigo ao mais novo) para a aba Indulto."""
+def avaliar(r, hoje, completo=False):
+    """Lista de resultados (do decreto mais antigo ao mais novo) para a aba Indulto. completo=True mantém as hipóteses
+    calculadas e as faltas da janela (linha do tempo); sem ele, a lista fica leve."""
     ini = inicio_cumprimento(r)
     ctx = _ctx(r)
     dec = decididos(r)
@@ -362,4 +377,8 @@ def avaliar(r, hoje):
                                                                                "indeferido" if ben == "Indulto" else "indeferida",
                                                                                (" em " + d[1]) if d[1] else ""))
     out.sort(key=lambda x: (rs.to_date(x.get("ref") or "") or date.min))
+    if not completo:
+        for x in out:
+            for k in ("hips", "falta_ind", "falta_firme"):
+                x.pop(k, None)
     return {"inicio": rs.fmt(ini) if ini else "", "decretos": out}

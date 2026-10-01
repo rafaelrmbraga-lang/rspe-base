@@ -237,7 +237,8 @@ cumprimento informado no RSPE (verde cabe, cinza não cabe, vermelho impeditivo,
 para ver o encaixe em cada decreto. Clicando num decreto, setas passam de um a outro e os chips filtram. Concedidos e indeferidos
 vêm dos incidentes do RSPE. Só entram hipóteses que se resolvem pela conta (frações, pena, regime, reincidência, violência, falta);
 as que dependem de dado fora do RSPE (filhos, doença, idade, estudo, PRD/sursis) não são calculadas. "Verificar indulto/comutação"
-tem, no topo, o seletor dos decretos do assistido.
+tem, no topo, o seletor dos decretos do assistido; todos abrem a linha do tempo completa. Nos decretos de 2000 a 2023 a
+hediondez é aferida na data do fato.
 <h4>Fixados e Quadro do Usuário</h4>
 O alfinete ao lado do nome prende o assistido no topo de todas as abas; Ctrl+K ou "/" vai à busca. O Quadro do Usuário é um quadro
 de cartões (estilo Trello): envie um assistido pelo botão da linha, escreva observações, prazo e etiquetas e arraste entre colunas.

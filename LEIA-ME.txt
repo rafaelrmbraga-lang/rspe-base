@@ -651,18 +651,25 @@ v6.16.50
     barra, setas ‹ › passam de um decreto a outro; os chips (cabem, não
     cabem, já decididos, execução posterior) e o seletor filtram a lista.
   - "Verificar indulto/comutação" continua como antes e ganhou, no topo, a
-    escolha entre os decretos do assistido: 2022, 2024 e 2025 abrem a linha
-    do tempo detalhada; os demais, o quadro de requisitos (crimes na soma,
-    pena, cumprida na data, exigido, reincidência, violência).
+    escolha entre os decretos do assistido (setas ‹ › ou lista). Todos abrem
+    a linha do tempo completa: selo de cada crime, pena e tempo cumprido,
+    janela da falta, e o cartão do decreto com cada hipótese calculada
+    (atendida ou o que faltou), vedações, falta grave e alcance. Os outros
+    decretos aparecem na linha como marcadores com o ano; clique para abrir.
   - Os decretos de 2000 a 2023 são lidos de fichas na base jurídica
     (decretos_fichas): frações, faixas de pena, regime, reincidência,
     violência, crimes impeditivos (concurso: cumprida a fração do
     impeditivo, o benefício recai sobre os demais) e janela de falta grave.
+    Nesses decretos a hediondez é aferida na data do FATO (a hediondez
+    superveniente não alcança o fato anterior). A falta é contada até a
+    publicação, com a prescrição da falta aferida na data do decreto; nos
+    decretos que exigem a falta apurada, a fuga sem homologação não impede.
     Hipóteses que dependem de dado fora do RSPE (filhos, doença, idade,
     estudo, reparação do dano, PRD/sursis, prisão provisória) não são
     calculadas: só entram as que se resolvem pela conta.
-  - Assistidos fixados: o alfinete ao lado do nome prende o assistido no topo
-    de todas as abas, e a faixa "Fixados" o filtra com um clique. Ctrl+K (ou
+  - Assistidos fixados: o alfinete ao lado do nome (agora sempre visível)
+    prende o assistido no topo de todas as abas, e a faixa "Fixados" o
+    filtra com um clique, sem buscar o nome de novo. Ctrl+K (ou
     "/") vai direto à busca.
   - Nova aba "Quadro do Usuário", no estilo Trello: colunas A fazer, Em
     andamento, Aguardando e Concluído (renomeáveis; dá para criar outras);

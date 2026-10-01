@@ -24,6 +24,7 @@ import rspe_scraper as rs
 import rspe_regras as rg
 import rspe_prescricao as rp
 import rspe_view as rv
+import rspe_decretos as rd
 
 CORES = ["#2563EB", "#D97706", "#7C3AED", "#059669", "#DB2777", "#0891B2", "#65A30D", "#B42318", "#475467", "#9E77ED"]
 RE_PROV = re.compile(r"FLAGRANTE|PREVENTIV|TEMPOR|PROVIS", re.I)
@@ -451,6 +452,16 @@ def linha(r, hoje=None):
         if ini_exec and ref < ini_exec and not any(_d(x["fato"]) and _d(x["fato"]) <= ref for x in C):
             continue
         saida_dec.append(_decreto(D, ref, pub, C, cumprido, data_atinge, faltas, hoje, D is ult_cad, em_curso, duvidas, r, eventos, incidentes))
+    # demais decretos (2000 em diante, fichas da base jurídica): mesma linha do tempo, com o resultado do motor da aba Indulto
+    try:
+        fic = {f["id"]: f for f in rd.fichas()}
+        ger = [x for x in rd.avaliar(r, hoje, completo=True)["decretos"] if not x.get("detalhado") and x.get("s") not in ("fora", "futuro")]
+    except Exception:
+        fic, ger = {}, []
+    for x in ger:
+        if x["id"] in fic and not any(d["id"] == x["id"] for d in saida_dec):
+            saida_dec.append(_decreto_ficha(fic[x["id"]], x, C, cumprido, faltas))
+    saida_dec.sort(key=lambda d: _d(d["referencia"]) or date.min)
     for dd in saida_dec:
         marcos.append({"data": dd["referencia"], "tipo": "decreto", "rotulo": "Decreto %s" % dd["numero"], "sub": "data de referência", "crimes": ["GERAL"],
                        "efeito": dd["indulto"]["rotulo"], "decreto": dd["id"],
@@ -724,6 +735,142 @@ def _decreto(D, ref, pub, C, cumprido, data_atinge, faltas, hoje, ultimo, em_cur
                         "fracao": num_c.get("fracao", ""), "exigido": num_c.get("exigido"), "exigido_txt": _pena(num_c["exigido"]) if num_c.get("exigido") is not None else ""}
     ind["fundamentacao"] = _fundamentacao(out, "indulto")
     out["comutacao"]["fundamentacao"] = _fundamentacao(out, "comutacao", num_c)
+    return out
+
+
+def _decreto_ficha(f, x, C, cumprido, faltas):
+    """Cartão de um decreto lido da ficha da base jurídica (2000 a 2023), no mesmo formato de _decreto: o resultado e os
+    números são os do motor da aba Indulto (rspe_decretos), para que a aba e a linha do tempo nunca divirjam."""
+    ref = _d(x["ref"])
+    pub = _d(f.get("data_publicacao")) or ref
+    num, did = f.get("numero") or "s/n", f["id"]
+    rot_dec = ("Dia das Mães %s" % f.get("ano")) if f.get("tipo") == "dia_das_maes" else ""
+    fonte = "Decreto %s/%s (ficha da base jurídica)" % (num, f.get("ano"))
+    ign = [h for h in (f.get("indulto") or []) if not h.get("objetivo")]
+    nota = "; ".join(t for t in (rot_dec, x.get("nota") or "",
+                                 ("%d hipótese(s) dependem de dado que o RSPE não traz (idade, filhos, doença, estudo...) e não entram na conta"
+                                  % len(ign)) if ign else "") if t)
+    out = {"id": did, "numero": num, "referencia": _f(ref), "publicacao": _f(pub) if pub != ref else "", "cadastrado": True,
+           "fonte": fonte, "nota": nota, "generico": True}
+
+    def chk(item, estado, texto, det):
+        return {"item": item, "estado": estado, "texto": texto, "det": det}
+
+    # selo de cada crime (alcance e impeditivo, pela mesma função do motor)
+    fora, alc = [], []
+    disp_imp = (f.get("impeditivos") or {}).get("dispositivo", "")
+    for c in C:
+        cc = c["_c"]
+        fato, sent = _d(cc.get("data_infracao")), _d(cc.get("data_sentenca"))
+        if fato and fato > ref:
+            fora.append((c, "fato posterior à data do decreto (%s)" % _f(ref)))
+            c["selos"][did] = {"selo": "FORA", "motivo": "fato posterior a %s: não alcançado, não impede os demais" % _f(ref), "dispositivo": ""}
+            continue
+        if sent and sent > pub:
+            fora.append((c, "sentença posterior à publicação (%s)" % _f(pub)))
+            c["selos"][did] = {"selo": "FORA", "motivo": "sentença posterior à publicação: fora da soma", "dispositivo": ""}
+            continue
+        im = rd._impeditivos(f, [cc], ref)
+        c["selos"][did] = ({"selo": "IMPEDITIVO", "motivo": im[0].split(": ", 1)[-1], "dispositivo": "Decreto %s, %s" % (num, disp_imp)} if im else
+                           {"selo": "NAO_IMPEDITIVO", "motivo": "fora do rol de vedações do decreto", "dispositivo": "Decreto %s, %s" % (num, disp_imp)})
+        alc.append((c, c["selos"][did]))
+    out["fora"] = [{"crime": c["id"], "motivo": m} for c, m in fora]
+    cref = cumprido(ref)
+    out["cumprido"] = cref
+    out["cumprido_txt"] = {k: _pena(v) for k, v in cref.items() if isinstance(v, int)}
+    de = x.get("detalhe") or {}
+    ids = ", ".join(c["id"] for c, _ in alc)
+
+    # hipóteses calculadas
+    def hip_ck(h):
+        if h["ok"]:
+            t = "%s: atendida - cumpridos %s em %s%s" % (h["dispositivo"], _pena(de.get("cumprido") or 0), _f(ref),
+                                                          (" (exigido %s%s)" % (_pena(h["exigido"]), (", " + h["fracao"]) if h.get("fracao") else "")) if h.get("exigido") else "")
+        else:
+            t = "%s: não atendida - %s" % (h["dispositivo"], h["mot"])
+        return chk("Requisito objetivo / hipótese", "ok" if h["ok"] else "ko", t,
+                   _det(h.get("texto") or "", ids, "até %s" % _f(ref), "hipótese do decreto", "Decreto %s, %s" % (num, h["dispositivo"]),
+                        ("exigido %s%s; cumprido %s" % (_pena(h["exigido"]), (" (%s)" % h["fracao"]) if h.get("fracao") else "", _pena(de.get("cumprido") or 0)))
+                        if h.get("exigido") else "", "" if h["ok"] else h["mot"]))
+    comum = []
+    imp = [(c, n) for c, n in alc if n["selo"] == "IMPEDITIVO"]
+    if imp:
+        txt = "Crime impeditivo: " + "; ".join("%s (%s)" % (c["id"], n["motivo"]) for c, n in imp)
+        if x.get("nota"):
+            txt += ". Concurso: " + x["nota"]
+        est = "ok" if x.get("nota") else "ko"
+    else:
+        est, txt = "ok", "Nenhum crime alcançado está no rol de vedações (hediondez aferida na data do fato)."
+    comum.append(chk("Natureza dos crimes (vedações)", est, txt,
+                     _det("tipificação e lei do SEEU", ", ".join("%s: %s" % (c["id"], n["selo"].replace("_", " ")) for c, n in alc), "", "impeditivo / não impeditivo",
+                          "Decreto %s, %s" % (num, disp_imp), "", "hediondez pela data do fato: a superveniente não alcança o fato anterior")))
+    F = f.get("falta_grave") or {}
+    janela, faltas_out = None, []
+    if F.get("meses"):
+        j0 = pub - timedelta(days=int(F["meses"]) * 30)
+        janela = {"ini": _f(j0), "fim": _f(pub), "meses": int(F["meses"]), "dispositivo": F.get("dispositivo", ""), "informativa": False}
+        for fl in faltas:
+            if fl["fato"]:
+                dentro = j0 <= fl["fato"] <= pub
+                faltas_out.append({"fato": _f(fl["fato"]), "homol": _f(fl["homol"]), "texto": fl["texto"],
+                                   "estado": ("verificar" if fl["pendente"] else "impede") if dentro else "fora"})
+        if x.get("falta_firme"):
+            est_f, txt_f = "ko", "Falta grave nos %s meses anteriores à publicação (%s a %s): %s." % (F["meses"], janela["ini"], janela["fim"], "; ".join(x["falta_firme"]))
+        elif x.get("falta_ind"):
+            est_f, txt_f = "q", "Indício de falta na janela (%s a %s), sem sanção reconhecida: %s." % (janela["ini"], janela["fim"], "; ".join(x["falta_ind"]))
+        else:
+            est_f, txt_f = "ok", "Nenhuma falta grave nos %s meses anteriores à publicação (%s a %s)." % (F["meses"], janela["ini"], janela["fim"])
+    else:
+        est_f, txt_f = "ok", "O decreto não traz requisito de ausência de falta grave em período certo."
+    out["janela_falta"], out["faltas"] = janela, faltas_out
+    comum.append(chk("Requisito subjetivo (falta grave na janela)", est_f, txt_f,
+                     _det("incidentes de falta/sanção e eventos de fuga do SEEU", "GERAL", ("%s → %s" % (janela["ini"], janela["fim"])) if janela else "",
+                          "falta grave", (F.get("dispositivo") or "") + "; STJ, Súmula 535", "", "só o requisito subjetivo; o tempo cumprido não se altera")))
+    comum.append(chk("Fato anterior ao decreto", "ok",
+                     ("Todos os fatos alcançados são anteriores a %s." % _f(ref)) + ((" Fora da soma (não impedem): " + "; ".join("%s - %s" % (c["id"], m) for c, m in fora)) if fora else ""),
+                     _det("datas dos fatos e sentenças no SEEU", ids, "até %s" % _f(ref), "alcance do decreto", fonte, "", "crimes posteriores não entram na soma")))
+
+    hi = [h for h in x.get("hips") or [] if h["tipo"] == "indulto"]
+    hc = [h for h in x.get("hips") or [] if h["tipo"] == "comutacao"]
+    s, ben = x.get("s"), x.get("beneficio") or ""
+    disp = x.get("dispositivo") or ""
+    ind_ck = [hip_ck(h) for h in hi] + comum
+    com_ck = [hip_ck(h) for h in hc] + comum
+    if not hi:
+        ind_ck.insert(0, chk("Requisito objetivo / hipótese", "ko", "Nenhuma hipótese de indulto do decreto se resolve pelos dados do RSPE.", _det("", "", "", "", fonte, "", "")))
+    if s == "conc":
+        st_i, rot_i = ("concedido", x["mot"]) if ben == "Indulto" else ("prejudicada", "—")
+        st_c, rot_c = ("concedido", x["mot"]) if ben == "Comutação" else ("prejudicada", "—")
+    elif s == "indef":
+        st_i, rot_i = ("nao", x["mot"]) if ben == "Indulto" else ("nao", "Não cabe")
+        st_c, rot_c = ("nao", x["mot"]) if ben == "Comutação" else ("nao", "Não cabe")
+    elif s == "cabe" and ben == "Indulto":
+        st_i, rot_i = "cabe", "Cabe · %s" % disp
+        st_c, rot_c = "prejudicada", "Prejudicada (cabe o indulto)"
+    elif s == "cabe":
+        st_i, rot_i = "nao", "Não cabe"
+        st_c, rot_c = "cabe", "Cabe · %s%s" % (disp, (" · %s do remanescente" % x["reducao"]) if x.get("reducao") else "")
+    elif s == "imp":
+        st_i = st_c = "nao"
+        rot_i = rot_c = "Crime impeditivo"
+    elif s == "ver":
+        st_i = st_c = "verificar"
+        rot_i = rot_c = "A verificar"
+    else:
+        st_i, rot_i = "nao", "Não cabe"
+        st_c, rot_c = "nao", "Não cabe" if hc else "Sem comutação calculável"
+    if s == "nao" and x.get("mot") and not any(h["mot"] == x["mot"] for h in hi + hc):
+        # o motivo decisivo (falta, decreto restrito) em primeiro lugar
+        ind_ck.insert(0, chk("Motivo", "ko", x["mot"], _det("", "", "", "", fonte, "", x["mot"])))
+    reinc = "reincidente" if de.get("reincidente") else "primário"
+    ind = {"status": st_i, "rotulo": rot_i, "texto_aba": rot_i, "checklist": ind_ck, "projecao": None,
+           "pena_considerada_txt": _pena(de.get("pena") or 0), "cumprido_txt": _pena(de.get("cumprido") or 0),
+           "remanescente_txt": _pena(max(0, (de.get("pena") or 0) - (de.get("cumprido") or 0))), "fonte": "eventos do RSPE", "reinc": reinc}
+    hc_ok = next((h for h in hc if h["ok"]), hc[0] if hc else None)
+    com = {"status": st_c, "rotulo": rot_c, "texto_aba": rot_c if hc or s == "conc" else "", "checklist": com_ck if hc else [], "reducao": None,
+           "fracao": (hc_ok or {}).get("fracao", ""), "exigido": (hc_ok or {}).get("exigido"),
+           "exigido_txt": _pena(hc_ok["exigido"]) if hc_ok and hc_ok.get("exigido") is not None else ""}
+    out["indulto"], out["comutacao"], out["imputacao"] = ind, com, None
     return out
 
 
