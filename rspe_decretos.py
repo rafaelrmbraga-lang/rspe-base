@@ -96,6 +96,9 @@ def _regime_em(r, ref):
     return ""
 
 
+_HED_CACHE = {}  # hediondez na data do fato, por crime (a mesma em todos os decretos); limpo a cada avaliar()
+
+
 def _impeditivos(f, crimes, ref, pena_total=None):
     """Crimes da soma que o decreto veda (hediondos e equiparados na data do fato, tortura, terrorismo, tráfico e a lista
     própria do decreto)."""
@@ -121,7 +124,9 @@ def _impeditivos(f, crimes, ref, pena_total=None):
             fato = rs.to_date(c.get("data_infracao") or "")
             # hediondez aferida na data do FATO: a superveniente não alcança o fato anterior (os decretos falam em "crime
             # hediondo praticado após" a Lei 8.072/1990 e as que ampliaram o rol). Tráfico: equiparado desde 25/07/1990
-            if priv_vedado or (not priv and (rs.e_hediondo(c, None) or (trafico and (fato or ref) >= date(1990, 7, 25)))):
+            if id(c) not in _HED_CACHE:
+                _HED_CACHE[id(c)] = (c, rs.e_hediondo(c, None))
+            if priv_vedado or (not priv and (_HED_CACHE[id(c)][1] or (trafico and (fato or ref) >= date(1990, 7, 25)))):
                 out.append("%s: %s%s" % (rot, "tráfico privilegiado vedado pelo decreto" if priv_vedado else "hediondo ou equiparado na data do fato",
                                          (" (%s)" % rs.fmt(fato)) if fato and not priv_vedado else ""))
                 continue
@@ -235,6 +240,19 @@ def avaliar_ficha(f, r, ctx, ini, hoje):
               and (rs.to_date(c.get("data_sentenca") or "") or date.min) <= pub]
     if not crimes:
         return dict(base, s="fora", mot="sem condenação até o decreto")
+    # mesma regra da análise detalhada (2022/2024/2025): os requisitos de tempo exigem cumprimento em curso na data -
+    # preso ou em livramento condicional; a prisão provisória anterior, encerrada antes da data, só entra como detração
+    if not (rs.em_custodia(ctx["periodos"], ref) or any(a <= ref and (b is None or b >= ref) for a, b in ctx["lc"])):
+        defin = [e for e in (r.get("_eventos") or []) if re.search(r"PRIS|IN[ÍI]CIO|RECAPTURA", ((e.get("tipo") or "") + " " + (e.get("motivo") or "")).upper())
+                 and not re.search(r"FLAGRANTE|PREVENTIV|TEMPOR|PROVIS", (e.get("motivo") or "").upper())
+                 and (rs.to_date(e.get("data") or "") or date.max) <= ref]
+        # prisão provisória que alcançou o trânsito em julgado virou cumprimento da pena (e a soltura/fuga depois o interrompeu)
+        trs = [d for d in (rs.to_date(c.get("transito_processo") or c.get("transito_mp") or "") for c in r.get("_crimes") or []) if d and d <= ref]
+        virou = any(a <= t and (b is None or b > t) for a, b in ctx["periodos"] for t in trs)
+        if defin or virou:
+            return dict(base, s="nao", mot="não se aplica: cumprimento interrompido em %s (não estava preso nem em livramento)" % rs.fmt(ref))
+        return dict(base, s="nao", mot="não se aplica: não iniciou o cumprimento até %s (a prisão anterior foi provisória: conta como detração, "
+                                      "não como início do cumprimento da pena)" % rs.fmt(ref))
     pena = sum(rs.pena_para_dias(c.get("pena_imposta") or c.get("pena_total_processo")) or 0 for c in crimes)
     cump, _orig = rs.cumprido_na_data(r, ctx["periodos"], ctx["rem"], ref, ctx["lc"])
     reinc = any(c.get("reincidente_comum") == "S" or c.get("reincidente_especifico") == "S" for c in crimes)
@@ -468,6 +486,7 @@ def _detalhado(ano, r):
 def avaliar(r, hoje, completo=False):
     """Lista de resultados (do decreto mais antigo ao mais novo) para a aba Indulto. completo=True mantém as hipóteses
     calculadas e as faltas da janela (linha do tempo); sem ele, a lista fica leve."""
+    _HED_CACHE.clear()
     ini = inicio_cumprimento(r)
     ctx = _ctx(r)
     dec = decididos(r)

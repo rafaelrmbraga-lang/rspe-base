@@ -500,12 +500,12 @@ tbody tr.fix td{background:#FFFCF2}
 .dc-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 20px 10px;border-bottom:1px solid var(--line)}
 .dc-top .tt b{display:block;font-size:16px}.dc-top .tt small{font-size:12px;color:var(--tx3)}.dc-top .sp{flex:1}
 .dc-ch{display:inline-flex;align-items:center;padding:5px 12px;border-radius:999px;font-size:12.5px;font-weight:700}
-.dc-ch.c{background:#DDF5E7;color:#067647}.dc-ch.n{background:#EEF0F3;color:#475467}.dc-ch.f{background:#F9FAFB;color:#98A2B3;border:1px dashed #E4E7EC}.dc-ch.k{background:#EAF2FF;color:#1D4ED8}
+.dc-ch.c{background:#DDF5E7;color:#067647}.dc-ch.n{background:#FDE8E8;color:#B42318}.dc-ch.f{background:#F9FAFB;color:#98A2B3;border:1px dashed #E4E7EC}.dc-ch.k{background:#EAF2FF;color:#1D4ED8}
 .dc-sel{appearance:none;padding:7px 28px 7px 11px;border:1px solid var(--line2);border-radius:9px;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2398A2B3'/%3E%3C/svg%3E") no-repeat right 10px center;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer}
 .dc-nav{display:flex;gap:4px}.dc-nav button{width:32px;height:32px;border-radius:8px;border:1px solid var(--line2);background:#fff;font-size:16px;color:var(--tx2)}.dc-nav button:hover{background:#F2F4F7}
 .mx{display:inline-flex;gap:2px;vertical-align:middle;flex-wrap:wrap}
 .mx i{min-width:24px;height:22px;padding:0 3px;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;font-style:normal;font-size:10.5px;font-weight:700;color:#fff;cursor:default}
-.mx i.nao{color:#667085}
+.mx i.nao{color:#fff}
 .nm{cursor:pointer;color:var(--tx);border-bottom:1px dashed #98A2B3}.nm:hover{color:var(--pri);border-color:var(--pri)}
 .enc{background:#FBFCFD;padding:16px 20px 18px;cursor:default}
 .enc-h{display:flex;align-items:baseline;gap:12px;margin-bottom:12px;flex-wrap:wrap}.enc-h b{font-size:14px}.enc-h span{font-size:12px;color:var(--tx3)}
@@ -514,7 +514,7 @@ tbody tr.fix td{background:#FFFCF2}
 .enc table td{padding:10px 12px!important;border-bottom:1px solid #F2F4F7;font-size:12.5px;vertical-align:middle;font-weight:400!important;cursor:default}
 .enc tr:last-child td{border-bottom:0}.enc tr:hover td{background:inherit}
 .dres{display:inline-block;padding:2px 10px;border-radius:999px;font-size:11.5px;font-weight:700;white-space:nowrap}
-.dres.cabe{background:#DDF5E7;color:#067647}.dres.nao{background:#EEF0F3;color:#475467}.dres.imp{background:#FDE8E8;color:#B42318}.dres.conc{background:#EAF2FF;color:#1D4ED8}.dres.indef{background:#F0EBFF;color:#6941C6}.dres.ver{background:#FEF4D6;color:#B54708}.dres.fora{background:#F9FAFB;color:#98A2B3}
+.dres.cabe{background:#DDF5E7;color:#067647}.dres.nao{background:#FDE8E8;color:#B42318}.dres.imp{background:#FBD5D5;color:#912018}.dres.conc{background:#EAF2FF;color:#1D4ED8}.dres.indef{background:#F0EBFF;color:#6941C6}.dres.ver{background:#FEF4D6;color:#B54708}.dres.fora{background:#F9FAFB;color:#98A2B3}
 .dreq{display:flex;align-items:center;gap:10px}.dreq .tr{position:relative;width:140px;height:8px;border-radius:4px;background:#EEF0F3;flex:none}
 .dreq .tr i{position:absolute;left:0;top:0;bottom:0;border-radius:4px}.dreq .tr u{position:absolute;top:-3px;bottom:-3px;width:2px;background:#101828;left:66.6%}
 .dreq small{color:var(--tx2);white-space:nowrap}
@@ -852,15 +852,17 @@ const ui = {
   // painel abaixo da linha do tempo: resultado, conta da fuga, imputação (3 critérios), pontos de atenção e fundamentação recolhida
   prescPainel(L, idx, r, motivo, S){
     const amd=this.tlAmd.bind(this); const card=((this._tlCards||{})[idx]||[]).find(c=>c.s===S)||((this._tlCards||{})[idx]||[]).slice(-1)[0];
-    const fund=card? this.fundPrescEvasao(L, card.s) : ''; const ci=fund? this.clip(fund) : null;
+    const fk=card? this.fundCrits(card.s) : []; const fund=card? this.fundPrescEvasao(L, card.s, fk[0]) : ''; const ci=fund? this.clip(fund) : null;
+    this._fundCtx=this._fundCtx||{}; this._fundCtx[idx]={L, s:card&&card.s};
+    const cp=fk.length>1? `ui.fundEscolher(${idx})` : `ui.copiarClip(${ci})`;
     const tit={verm:'Prescrição aparente', amb:'A verificar', verde:'Não prescrita'}[r[0]]; const ic={verm:'!',amb:'?',verde:'✓'}[r[0]];
     const res=`<div class="px-res ${r[0]}"><span class="ic">${ic}</span><div class="tx"><b>${tit}${r[0]==='verm'&&L.ppe_previsao?' em '+esc(L.ppe_previsao):''}</b><span>${esc(r[0]==='verm'?(S&&S.evasao?'O prazo pelo saldo venceu durante a fuga de '+S.evasao+(S.fim&&S.fim!=='hoje'?', antes da '+(S.fim_causa||'recaptura')+' em '+S.fim:'')+'.':motivo):motivo.replace(/\.$/,'')+'.')}</span></div>
-      <div class="px-acts">${r[0]==='amb'?`<span class="jz-b" onclick="event.stopPropagation();ui.pfAbrir(this,${idx},'saldo')">Informar saldo</span>`:''}${ci!=null&&r[0]!=='verde'?`<span class="jz-b pri" onclick="event.stopPropagation();ui.copiarClip(${ci})">Copiar fundamentação</span>`:''}</div></div>`;
+      <div class="px-acts">${r[0]==='amb'?`<span class="jz-b" onclick="event.stopPropagation();ui.pfAbrir(this,${idx},'saldo')">Informar saldo</span>`:''}${ci!=null&&(r[0]!=='verde'||fk.length)?`<span class="jz-b pri" onclick="event.stopPropagation();${cp}">Copiar fundamentação${fk.length>1?' ▾':''}</span>`:''}</div></div>`;
     const conta=card? `<div class="px-box"><h5><i style="background:${card.cor}"></i>${esc(card.rot)}</h5>${card.li.map(([k,v],i)=>`<div class="px-kv ${['Saldo na fuga','Vencimento'].includes(k)?'hl':''}"><span>${esc(k)}</span><b>${penaExt(esc(v))}</b></div>`).join('')}</div>` : '';
     const pill=h=> h.resultado==='prescrita'?'<span class="px-pill p">prescrita</span>': h.resultado==='nada a prescrever'?'<span class="px-pill z">pena cumprida</span>':'<span class="px-pill n">não prescrita</span>';
     const lin=(h,nome,fonte,on)=> h? `<tr class="${on?'on':''}"><td class="crit"><b>${nome}${on?'<span class="px-tag">adotado</span>':''}</b><small>${fonte}</small></td><td>${h.posicao}º de ${h.de}</td><td>${amd(h.saldo)}</td><td>${esc(h.prazo||'—')}</td><td>${esc(h.limite||'—')}</td><td>${pill(h)}</td></tr>` : '';
-    const imp=S&&S.cronologica? `<div class="px-box"><h5>Imputação do tempo cumprido entre as condenações</h5><table class="px-tab"><thead><tr><th style="width:36%">Critério</th><th>Posição</th><th>Saldo na fuga</th><th>Prazo</th><th>Vence</th><th>Resultado</th></tr></thead><tbody>
-        ${lin(S.cronologica,'Ordem do trânsito em julgado','STJ 5ª T. (AgRg no REsp 1.858.048) e TJMS',true)}${lin(S.art76,'Art. 76 do CP (espécie)','reclusão antes de detenção',false)}${lin(S.gravidade,'Pena maior primeiro','STJ 6ª T. (AgRg no HC 1.075.773)',false)}</tbody></table></div>`
+    const imp=S&&S.seeu&&S.crits&&S.crits.seeu? `<div class="px-box"><h5>Imputação do tempo cumprido entre as condenações</h5><table class="px-tab"><thead><tr><th style="width:36%">Critério</th><th>Posição</th><th>Saldo na fuga</th><th>Prazo</th><th>Vence</th><th>Resultado</th></tr></thead><tbody>
+        ${lin(S.seeu,'Imputação do SEEU','art. 76: maior fração primeiro, cada condenação desde que entrou na execução',true)}${lin(S.cronologica,'Ordem do trânsito em julgado','STJ 5ª T. (AgRg no REsp 1.858.048) e TJMS',false)}${lin(S.art76,'Art. 76 do CP (espécie)','reclusão antes de detenção',false)}${lin(S.gravidade,'Pena maior primeiro','STJ 6ª T. (AgRg no HC 1.075.773)',false)}</tbody></table></div>`
       : (conta? '' : '');
     const at=[];
     if(S&&S.risco_grav) at.push(['m','⚖','Argumento possível do MP (6ª Turma)','e a resposta', S.risco_grav]);
@@ -870,20 +872,49 @@ const ui = {
     if(r[0]==='verm') at.push(['i','i','Antes de requerer','conferir nos autos','Conferir recaptura ou nova condenação não registradas no RSPE (interrompem - CP, art. 117, V e VI) e eventual perda de dias remidos pela fuga (LEP, art. 127).']);
     if(r[0]==='verde'&&L.ppe_previsao&&L.ppe_dias!=null) at.push(['a','!','Prazo em curso','vencimento', 'Vence em '+L.ppe_previsao+' ('+(L.ppe_dias===1?'falta 1 dia':'faltam '+L.ppe_dias+' dias')+').']);
     const ats=at.length? `<div class="px-at">${at.map(([c,k,t,e,d])=>`<details><summary><span class="k ${c}">${k}</span>${esc(t)}<em>ver ${esc(e)} ▾</em></summary><div class="d">${penaExt(esc(d))}</div></details>`).join('')}</div>` : '';
-    const fd=fund? `<details class="px-fd"><summary>Fundamentação para a petição<span class="sp"></span><span class="jz-b" onclick="event.preventDefault();event.stopPropagation();ui.copiarClip(${ci})">Copiar</span><span class="chev">▾</span></summary><div class="t">${fund.split('\n').filter(x=>x.trim()).map(p=>`<p>${esc(p)}</p>`).join('')}</div></details>` : '';
+    const fd=fund? `<details class="px-fd"><summary>Fundamentação para a petição<span class="sp"></span><span class="jz-b" onclick="event.preventDefault();event.stopPropagation();${cp}">Copiar${fk.length>1?' ▾':''}</span><span class="chev">▾</span></summary><div class="t">${fund.split('\n').filter(x=>x.trim()).map(p=>`<p>${esc(p)}</p>`).join('')}</div></details>` : '';
     return `${res}${conta||imp?`<div class="px-grid" style="${imp?'':'grid-template-columns:minmax(260px,420px)'}">${conta}${imp}</div>`:''}${ats}${fd}<div class="pf-holder"></div>`; },
   prescCardsFund(L, idx){
     const cards=(this._tlCards||{})[idx]||[]; if(!cards.length) return '';
     return cards.map(c=>{ const txt=this.fundPrescEvasao(L, c.s); const ci=this.clip(txt);
       return `<div class="ptl-cf"><div class="ptl-card" style="border-color:${c.cor}"><b style="color:${c.cor}">${esc(c.rot.toUpperCase())}</b>${c.li.map(([a,b])=>`<div class="r"><span>${esc(a)}:</span><span>${penaExt(esc(b))}</span></div>`).join('')}</div>
         <div class="ptl-fund"><div class="h"><b>Fundamentação para a petição</b><span class="mini pre" onclick="event.stopPropagation();ui.copiarClip(${ci})">Copiar</span></div><div class="t">${esc(txt).replace(/\n/g,'<br>')}</div></div></div>`; }).join(''); },
-  fundPrescEvasao(L, s){
+  FUND_CRIT:{seeu:['Imputação do SEEU','O critério adotado é o do próprio SEEU, que segue o art. 76 do Código Penal: o tempo cumprido é imputado primeiro à condenação mais grave - a de maior fração de progressão, hediondos e equiparados antes das comuns - e passa às menos graves; cada condenação, porém, só recebe o tempo cumprido depois de ingressar na execução (a data do fato ou, se anterior, a da primeira prisão), e o tempo anterior fica com as que já estavam em execução. É a imputação do cálculo oficial da execução, que o juízo homologa e que define, na data da fuga, quanto restava de cada pena.'],
+    cron:['Ordem do trânsito em julgado','O critério adotado é a ordem cronológica do trânsito em julgado: entre penas da mesma espécie não incide o art. 76 do Código Penal, que só distingue reclusão e detenção (STJ, AgRg no REsp 1.858.048, 5ª Turma, j. 25/08/2020), critério que o TJMS aplica na apuração da prescrição executória após a evasão (Agravo de Execução Penal 1604723-49.2024.8.12.0000, 2ª Câmara Criminal, j. 11/09/2024; 1ª Seção Criminal, 0000230-65.2010.8.12.0007).'],
+    art76:['Art. 76 do CP (espécie)','O critério adotado é o do art. 76 do Código Penal: no concurso de infrações, executa-se primeiro a pena mais grave, entendida como a de reclusão antes da de detenção; entre penas da mesma espécie, segue-se a ordem do trânsito em julgado (STJ, AgRg no REsp 1.858.048).'],
+    grav:['Pena maior primeiro','O critério adotado é o da pena mais grave primeiro, pelo seu tamanho (STJ, 6ª Turma, AgRg no HC 1.075.773).']},
+  fundCrits(s){ // critérios pelos quais esta condenação está prescrita (o SEEU primeiro)
+    return Object.keys(this.FUND_CRIT).filter(k=>((s&&s.crits)||{})[k]&&s.crits[k].resultado==='prescrita'); },
+  fundEscolher(idx){ const X=(this._fundCtx||{})[idx]; if(!X) return; const ks=this.fundCrits(X.s);
+    document.getElementById('modal').innerHTML=`<div class="box" style="width:600px"><h2>Qual fundamentação usar?</h2><p>Esta condenação está prescrita por mais de um critério de imputação do tempo cumprido. Escolha o critério da petição:</p>
+      ${ks.map(k=>{ const h=X.s.crits[k]; return `<div class="chk" style="justify-content:space-between;cursor:pointer;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px" onclick="ui.copiarClip(${this.clip(this.fundPrescEvasao(X.L, X.s, k))});ui.fecharModal()"><span><b>${esc(this.FUND_CRIT[k][0])}</b>${k==='seeu'?' <span class="px-tag">principal</span>':''}<br><span class="muted">${h.posicao}ª de ${h.de} · saldo ${esc(this.tlAmd(h.saldo))} · prazo ${esc(h.prazo)} · venceu em ${esc(h.limite)}</span></span><span class="jz-b pri">Copiar</span></div>`; }).join('')}
+      <div class="acts"><button class="btn" onclick="ui.fecharModal()">Cancelar</button></div></div>`;
+    document.getElementById('modal').classList.add('on'); },
+  fimTxt(s){ const m=s.fim_motivo||'', nc=s.fim_novo_crime||'', d=s.fim||'';
+    if(/flagrante/.test(m)) return `da prisão em flagrante de ${d}${nc?`, pela prática de novo crime (${nc})`:''}`;
+    if(m) return `da recaptura em ${d} (${m})${nc?`, com novo crime na mesma data (${nc})`:''}`;
+    return `da recaptura/reinício do cumprimento em ${d}`; },
+  fundGlobal(s, k){ // análise de todas as condenações em execução na fuga, pelo critério k (mesmo texto do servidor)
+    const G=((s.global||{})[k])||[]; if(G.length<2) return '';
+    const h=(s.crits||{})[k]||{}; const este=G.find(x=>x.saldo===h.saldo&&x.posicao===h.posicao)||{};
+    const pres=G.filter(x=>x.resultado==='prescrita'&&x!==este), nao=G.filter(x=>x.resultado!=='prescrita');
+    const nm=xs=>xs.map(x=>`${x.crime} (ação penal ${x.proc})`).join('; ');
+    const seeu=k==='seeu'&&G.every(x=>x.entrada), nd=n=>Number(n||0).toLocaleString('pt-BR');
+    let t=`${this.FUND_CRIT[k][1]}\nPor esse critério, o tempo cumprido da execução unificada até a fuga (${nd(s.cumprido_total)} dias, somados cumprimento, prisão provisória e remição) foi imputado às ${G.length} condenações então em execução nesta ordem:\n`+
+      G.map(x=>`${x.posicao}ª) ${x.crime} - ação penal ${x.proc}${x.fracao?', fração '+x.fracao:''}${seeu?', na execução desde '+x.entrada:''} - pena de ${x.pena}, ${seeu?'recebeu '+nd(x.recebido)+' dias, ':''}saldo de ${x.saldo_txt}${x.limite?`: prazo de ${x.prazo}, ${x.resultado==='prescrita'?'esgotado':'com vencimento'} em ${x.limite}`:': nada a prescrever'}`).join(';\n')+'.'+
+      (seeu? `\nA condenação aqui tratada ingressou na execução em ${este.entrada||'?'} e recebeu ${nd(este.recebido)} dias do tempo cumprido, restando-lhe ${este.saldo_txt||'—'} na data da fuga.`
+           : `\nA condenação aqui tratada era a ${este.posicao||'?'}ª nessa ordem${este.posicao===1?' e recebeu primeiro o tempo cumprido':': as anteriores absorveram o tempo cumprido antes dela'}, restando-lhe ${este.saldo_txt||'—'} na data da fuga.`);
+    if(pres.length) t+= pres.length===1? ` Pelo mesmo critério, também prescreveu a condenação por ${nm(pres)}, cujo saldo gerou prazo esgotado durante a fuga.` : ` Pelo mesmo critério, também prescreveram as condenações por ${nm(pres)}, cujos saldos geraram prazos esgotados durante a fuga.`;
+    if(nao.length) t+= nao.length===1? ` A condenação por ${nm(nao)} não prescreveu: com saldo maior, o prazo correspondente não se esgotou antes da recaptura.` : ` As demais condenações - ${nm(nao)} - não prescreveram: com saldos maiores, os prazos correspondentes não se esgotaram antes da recaptura.`;
+    return t; },
+  fundPrescEvasao(L, s0, k){ let s=s0;
+    if(k&&s0&&s0.crits&&s0.crits[k]){ const h=s0.crits[k]; s=Object.assign({}, s0, {saldo_min:h.saldo, saldo_max:h.saldo, prazo_max:h.prazo, prazo_min:h.prazo, limite_max:h.limite, limite_min:h.limite, resultado:h.resultado, imput_txt:'', _glob:this.fundGlobal(s0,k).trim().replace(/\.$/,'')}); }
     // texto pronto para a petição, com os fundamentos do cálculo da prescrição pelo saldo (CP, arts. 107, IV, 109, 110, 113, 115, 117)
     const amd=this.tlAmd.bind(this); const anos=d=>d/365;
     const inc=d=> d==null? '' : anos(d)<1?'VI':anos(d)<=2?'V':anos(d)<=4?'IV':anos(d)<=8?'III':anos(d)<=12?'II':'I';
     const f=this.tlD(L.fato||''), antiga=f && f<new Date(2010,4,6);
     const mods=[]; if(L.art115) mods.push('reduzido à metade em razão da idade (CP, art. 115)'); if(L.reinc) mods.push('acrescido de 1/3 pela reincidência (CP, art. 110, caput)');
-    const evento=s.revogacao?'revogação do livramento condicional':(s.e_evasao===false?'interrupção do cumprimento':'fuga');
+    const evento=s.revogacao?'revogação do livramento condicional':(s.e_evasao===false?'interrupção do cumprimento':'evasão (fuga) do condenado');
     const fim=(s.fim&&s.fim!=='hoje')? s.fim : null;
     const base=(sd,pz,lim)=>`Para esse saldo, o prazo prescricional é o do art. 109, ${inc(sd)}, do Código Penal${inc(sd)==='VI'&&antiga?' (na redação anterior à Lei 12.234/2010, vigente à data do fato - 2 anos)':''}${mods.length?', '+mods.join(' e '):''}: ${pz}, que se esgotou em ${lim}`;
     const cab=`DA PRESCRIÇÃO DA PRETENSÃO EXECUTÓRIA - ${L.rotulo||L.crime}${L.proc_crim&&!String(L.rotulo||'').includes(L.proc_crim)?' (autos '+L.proc_crim+')':''}\n`+
@@ -893,20 +924,24 @@ const ui = {
     let corpo='';
     if(s.resultado==='prescrita'){
       corpo=`, de modo que o saldo imputável a esta condenação era de, no máximo, ${amd(s.saldo_max)}. ${base(s.saldo_max, s.prazo_max, s.limite_max)}`+
-        (fim? `, antes da recaptura/reinício do cumprimento em ${fim}, causa interruptiva posterior (CP, art. 117, V).` : ', sem nova causa interruptiva (CP, art. 117).')+
+        (fim? `, antes ${this.fimTxt(s)}, que pôs fim à evasão e interrompeu a prescrição (CP, art. 117, V${s.fim_novo_crime?', e VI':''}).` : ', sem nova causa interruptiva (CP, art. 117).')+
         (s.saldo_min===0? ' Ainda que se considere integralmente cumprida esta pena na imputação do tempo, a solução é a mesma: extinção da punibilidade.' : '')+
         `\nOperou-se, portanto, a prescrição da pretensão executória, impondo-se a declaração da extinção da punibilidade quanto a esta condenação (CP, art. 107, IV, c/c art. 119), com as comunicações e anotações devidas.`;
     } else if(s.resultado==='a verificar' && s.limite_min){
       const hipOk=[s.art76&&s.art76.resultado==='prescrita'?'que coincide com a ordem do art. 76 do CP (reclusão antes de detenção)':'',
                    s.cronologica&&s.cronologica.resultado==='prescrita'?'que coincide com a ordem cronológica do trânsito em julgado (STJ, AgRg no REsp 1.858.048)':''].filter(Boolean);
       corpo=`. O RSPE não informa a imputação desse tempo entre as condenações unificadas. Na hipótese mais favorável - o tempo cumprido imputado primeiro a esta condenação${hipOk.length?', '+hipOk.join(' e '):''} -, o saldo era de ${amd(s.saldo_min)}. ${base(s.saldo_min, s.prazo_min||s.prazo_max, s.limite_min)}`+
-        (fim? `, antes da recaptura/reinício do cumprimento em ${fim} (CP, art. 117, V).` : '.')+
+        (fim? `, antes ${this.fimTxt(s)} (CP, art. 117, V).` : '.')+
         `\nAssim, requer-se a imputação do tempo cumprido na forma mais favorável e o reconhecimento da prescrição da pretensão executória, com a extinção da punibilidade quanto a esta condenação (CP, art. 107, IV, c/c art. 119).`;
     } else {
       corpo=`, com saldo ${s.saldo_min===s.saldo_max? 'de '+amd(s.saldo_max) : 'entre '+amd(s.saldo_min)+' e '+amd(s.saldo_max)} para esta condenação. Pelo saldo máximo, o prazo é de ${s.prazo_max||'—'}${s.limite_max?', com vencimento em '+s.limite_max:''}`+
         (fim? `, posterior à recaptura/reinício em ${fim}, que o interrompeu (CP, art. 117, V).` : '.')+(s.saldo_min===0?' Pelo saldo mínimo, a pena estaria integralmente cumprida (extinção pelo cumprimento - LEP, art. 66, II).':'')+
         `\nNão há prescrição a requerer por este período.`;
     }
+    if(s._glob){ // análise global: substitui a contagem só desta condenação e abre o parágrafo da conclusão
+      let c2=cab.replace(/ Até essa data, a execução unificada registrava [^.]*/,'').replace(/\.?$/,'.')+'\n'+s._glob;
+      let k2=corpo.startsWith(', de modo que')? '.\nAssim,'+corpo.slice(', de modo que'.length) : corpo;
+      return c2+k2; }
     return cab+corpo; },
   prescTimelineHtml(L){
     const idx=this.tlReg(L); const amd=this.tlAmd.bind(this), dias=this.tlDias.bind(this);
@@ -1282,7 +1317,7 @@ const ui = {
   tesCitacao(x){ return `(TJMS, ${x.classe} n. ${x.proc}${x.relator?', Rel. '+(/^(des|ju[ií]z)/i.test(x.relator)?'':'Des. ')+x.relator:''}${x.orgao?', '+x.orgao:''}${x.julg?', j. '+x.julg:''}${x.pub?', publ. '+x.pub:''})`; },
   tesCopiar(i,modo){ const x=this._teses.itens[i]; const t=modo==='cit'?this.tesCitacao(x):(x.ementa.trim()+'\n'+this.tesCitacao(x)); this.copiarClip(this.clip(t)); },
   // ---- aba Indulto: todos os decretos (2000 em diante), a partir do início do cumprimento informado no RSPE ----
-  DEC_COR:{cabe:'#12B76A',nao:'#E4E7EC',imp:'#F04438',conc:'#2E90FA',indef:'#7A5AF8',ver:'#F79009'},
+  DEC_COR:{cabe:'#12B76A',nao:'#F04438',imp:'#B42318',conc:'#2E90FA',indef:'#7A5AF8',ver:'#F79009'},
   DEC_ROT:{cabe:'Cabe',nao:'Não cabe',imp:'Impeditivo',conc:'Concedido',indef:'Indeferido',ver:'A verificar',fora:'Execução posterior'},
   decSel:null, decAberto:null, decBen:'todos', decMostrar:'todos',
   decLegenda(){ return ['cabe','nao','imp','conc','indef','ver'].map(k=>`<span class="leg"><i style="background:${this.DEC_COR[k]};border-radius:2px"></i>${this.DEC_ROT[k]}</span>`).join(''); },
@@ -1299,7 +1334,7 @@ const ui = {
   renderIndulto(rs){ rs=[...rs].sort((a,b)=>(b.fixado?1:0)-(a.fixado?1:0)); const D=this.decLista(this.dados.registros||[]);
     if(this.decSel && !D.find(x=>x.id===this.decSel)) this.decSel=null;
     const comDir=rs.filter(r=>this.decDe(r).some(x=>x.s==='cabe')).length;
-    document.getElementById('stats').innerHTML=`<div class="stat verde"><i class="dot"></i><b>${comDir}</b><span>Cabe em algum decreto</span></div><div class="stat cinza"><i class="dot"></i><b>${rs.length-comDir}</b><span>Não cabe em nenhum</span></div><div class="stat azul"><i class="dot"></i><b>${rs.filter(r=>this.decDe(r).some(x=>x.s==='conc')).length}</b><span>Com benefício concedido</span></div><div class="stat pedido"><i class="dot"></i><b>${rs.filter(r=>(r.pedidos||{}).ind).length}</b><span>Feito</span></div>`;
+    document.getElementById('stats').innerHTML=`<div class="stat verde"><i class="dot"></i><b>${comDir}</b><span>Cabe em algum decreto</span></div><div class="stat vermelho"><i class="dot"></i><b>${rs.length-comDir}</b><span>Não cabe em nenhum</span></div><div class="stat azul"><i class="dot"></i><b>${rs.filter(r=>this.decDe(r).some(x=>x.s==='conc')).length}</b><span>Com benefício concedido</span></div><div class="stat pedido"><i class="dot"></i><b>${rs.filter(r=>(r.pedidos||{}).ind).length}</b><span>Feito</span></div>`;
     const side=`<div class="dc-side"><div class="dc-it geral ${!this.decSel?'on':''}" onclick="ui.decSel=null;ui.render()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg><span>Geral</span></div><div class="dc-h">Decretos</div>${D.map(x=>{ const n=rs.filter(r=>this.decDe(r).some(y=>y.id===x.id&&y.s==='cabe')).length;
       return `<div class="dc-it ${this.decSel===x.id?'on':''} ${n?'':'vz'}" title="${esc(this.decRot(x))} · Decreto ${esc(x.numero)} · referência ${esc(x.ref)}" onclick="ui.decSel='${x.id}';ui.decAberto=null;ui.render()"><span>${esc(this.decRot(x))}</span><b class="${n?'':'z'}">${n}</b></div>`; }).join('')}</div>`;
     const selBen=`<select class="dc-sel" onchange="ui.decBen=this.value;ui.render()"><option value="todos" ${this.decBen==='todos'?'selected':''}>Indulto e comutação</option><option value="indulto" ${this.decBen==='indulto'?'selected':''}>Só indulto</option><option value="comutacao" ${this.decBen==='comutacao'?'selected':''}>Só comutação</option></select>`;
@@ -1307,8 +1342,8 @@ const ui = {
     if(!this.decSel){
       const tr=rs.map(r=>{ let h=`<tr class="${this.decAberto===r.id?'exp':''} ${r.fixado?'fix':''}"><td class="first" style="white-space:nowrap">${this.pinHtml(r)}<span class="nm" title="Ver o encaixe em cada decreto" onclick="event.stopPropagation();ui.decAberto=ui.decAberto==='${r.id}'?null:'${r.id}';ui.render()">${esc(r.nome)}</span></td><td class="nw">${this.cpProc(r)}</td><td>${this.decMapa(r)}</td><td class="nw">${this.decBtn(r)}${this.qbtnHtml(r)}</td><td>${this.decPed(r)}</td></tr>`;
         if(this.decAberto===r.id) h+=`<tr class="sub"><td colspan="5">${this.decEncaixe(r)}</td></tr>`; return h; }).join('');
-      main=`<div class="dc-top"><div class="tt"><b>Geral</b><small>todos os decretos, a partir do início do cumprimento de cada execução · clique no nome para ver o encaixe em cada decreto</small></div><span class="sp"></span>${selBen}</div>
-        <table><thead><tr><th style="width:18%">Nome</th><th class="nw" style="width:1%">Nº da execução</th><th>Decretos desde o início do cumprimento</th><th style="width:1%"></th><th style="width:1%">Pedido</th></tr></thead><tbody>${tr}</tbody></table>`;
+      main=`<div class="dc-top"><div class="tt"><b>Geral</b><small>todos os decretos, a partir da primeira prisão de cada execução · clique no nome para ver o encaixe em cada decreto</small></div><span class="sp"></span>${selBen}</div>
+        <table><thead><tr><th style="width:18%">Nome</th><th class="nw" style="width:1%">Nº da execução</th><th>Decretos desde a primeira prisão</th><th style="width:1%"></th><th style="width:1%">Pedido</th></tr></thead><tbody>${tr}</tbody></table>`;
     } else {
       const x0=D.find(x=>x.id===this.decSel); const i=D.indexOf(x0); const ORD=['cabe','ver','conc','indef','nao','imp','fora'];
       const L=rs.map(r=>({r,d:this.decDe(r).find(y=>y.id===x0.id)||{s:'fora',mot:'execução posterior ao decreto'}})).filter(x=>this.decMostrar==='todos'||x.d.s==='cabe').filter(x=>this.decBenOk(x.d))
@@ -1327,7 +1362,7 @@ const ui = {
       return `<tr><td><b>${esc(this.decRot(x))}</b><div class="muted" style="font-size:11px">Dec. ${esc(x.numero)}</div></td><td><span class="dres ${x.s}">${this.DEC_ROT[x.s]||x.s}</span></td><td>${esc(this.decBenTxt(x))}</td>
         <td>${x.exigido&&!['conc','indef','imp'].includes(x.s)?`<div class="dreq" title="Cumprido ${this.tlAmd(de.cumprido)} · exigido ${this.tlAmd(x.exigido)}"><span class="tr"><i style="width:${100*p}%;background:${ok?'#12B76A':'#98A2B3'}"></i><u></u></span><small>${ok?'atingido':'não atingido'}${x.fracao?' ('+esc(x.fracao)+')':''}</small></div>`:'<span class="muted">—</span>'}</td>
         <td class="muted" style="font-size:12px">${esc(x.mot||'')}${x.nota?`<div>${esc(x.nota)}</div>`:''}${x.ressalva?`<div style="color:var(--a-tx)">${esc(x.ressalva)}</div>`:''}</td></tr>`; }).join('');
-    return `<div class="enc"><div class="enc-h"><b>Encaixe nos decretos · ${this.cpNomeTxt(r)}</b><span>início do cumprimento ${esc(ini)} · ${pl(L.length,'decreto analisado','decretos analisados')} · ${L.filter(x=>x.s==='cabe').length} cabem · ${L.filter(x=>x.s==='conc').length} concedidos</span></div>
+    return `<div class="enc"><div class="enc-h"><b>Encaixe nos decretos · ${this.cpNomeTxt(r)}</b><span title="Primeira prisão registrada no RSPE: os decretos anteriores a ela não aparecem. Prisão provisória encerrada antes do decreto conta só como detração.">primeira prisão ${esc(ini)} · ${pl(L.length,'decreto analisado','decretos analisados')} · ${L.filter(x=>x.s==='cabe').length} cabem · ${L.filter(x=>x.s==='conc').length} concedidos</span></div>
       ${L.length?`<table><thead><tr><th style="width:150px">Decreto</th><th style="width:120px">Resultado</th><th style="width:200px">Benefício</th><th style="width:220px">Requisito de tempo na data de referência</th><th>Motivo</th></tr></thead><tbody>${lin}</tbody></table>`:'<span class="muted">Nenhum decreto desde o início do cumprimento.</span>'}</div>`; },
   // linha do tempo: seletor com os decretos do assistido; os de 2022, 2024 e 2025 têm a linha do tempo detalhada, os demais o quadro de requisitos
   tlvSeletor(){ const d=this._tlv; const r=(this.dados.registros||[]).find(x=>x.id===this._tlvId); if(!d||!r) return '';
@@ -1335,7 +1370,7 @@ const ui = {
     const ix=L.findIndex(x=>x.id===atual); const ant=L[ix+1], seg=L[ix-1];
     return `<div style="display:flex;align-items:center;gap:6px"><button class="btn" style="padding:6px 10px" ${ant?`onclick="ui.tlvIr('${ant.id}')"`:'disabled'}>‹</button>
       <select class="dc-sel" style="font-weight:700" onchange="ui.tlvIr(this.value)">${L.map(x=>`<option value="${x.id}" ${x.id===atual?'selected':''}>${esc(this.decRot(x))} · ${esc(this.DEC_ROT[x.s]||x.s)}</option>`).join('')}</select>
-      <button class="btn" style="padding:6px 10px" ${seg?`onclick="ui.tlvIr('${seg.id}')"`:'disabled'}>›</button><span class="muted" style="font-size:12px;margin-left:4px">${pl(L.length,'decreto','decretos')} desde o início do cumprimento (${esc((r.dec||{}).inicio||'—')})</span></div>`; },
+      <button class="btn" style="padding:6px 10px" ${seg?`onclick="ui.tlvIr('${seg.id}')"`:'disabled'}>›</button><span class="muted" style="font-size:12px;margin-left:4px">${pl(L.length,'decreto','decretos')} desde a primeira prisão (${esc((r.dec||{}).inicio||'—')})</span></div>`; },
   tlvIr(id){ const temDet=((this._tlv||{}).decretos||[]).some(x=>x.id===id); if(temDet){ this._tlvGen=null; this.tlvSel(id); } else { this._tlvGen=id; this.renderTLV(); } },
   tlvGeral(){ const r=(this.dados.registros||[]).find(x=>x.id===this._tlvId); const x=this.decDe(r||{}).find(y=>y.id===this._tlvGen); if(!x) return '';
     const de=x.detalhe||{}; const lin=(k,v)=>`<span>${k}</span><b style="font-weight:600">${v}</b>`;

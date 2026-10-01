@@ -1142,7 +1142,15 @@ def cumprido_na_data(campos, periodos, remicoes, ref, extras=None):
         if b > a:
             depois += (b - a).days
     rem_depois = sum(n for d, n in remicoes if d and ref < d <= ger)
-    return max(0, base - depois - rem_depois), "pena cumprida pelo SEEU em %s, descontados %s de cumprimento (custódia%s) e %s de remição posteriores a %s" % (
+    anc = max(0, base - depois - rem_depois)
+    # o SEEU registra mais tempo do que os eventos explicam (detração de outro processo, evento ausente): não se sabe QUANDO
+    # esse tempo ocorreu - não pode ser jogado para antes da data de referência. Até 'ref' vale só o que os eventos comprovam
+    ev = dias_cumpridos_ate(todos, remicoes, ref)
+    if anc > ev and (base - dias_cumpridos_ate(todos, remicoes, ger)) > 30:
+        return ev, ("custódia%s e remições até %s (dias de calendário); o SEEU registra %s a mais do que os eventos mostram, sem data - "
+                    "não entram antes da data de referência" % (" e livramento" if extras else "", fmt(ref),
+                                                               pl(base - dias_cumpridos_ate(todos, remicoes, ger), "dia", "dias")))
+    return anc, "pena cumprida pelo SEEU em %s, descontados %s de cumprimento (custódia%s) e %s de remição posteriores a %s" % (
         fmt(ger), pl(depois, "dia", "dias"), " e livramento" if extras else "", pl(rem_depois, "dia", "dias"), fmt(ref))
 
 
