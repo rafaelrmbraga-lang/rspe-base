@@ -719,9 +719,9 @@ v6.16.50
     abre a janela do pedido, com a observação do cartão, e o grava na aba do
     benefício. No sentido inverso, marcar o pedido na aba põe a etiqueta
     "Pedido feito" nos cartões do assistido daquele benefício. O cartão
-    mostra "✓ Pedido feito em dd/mm/aaaa", e a coluna "Pedido" das abas
-    passa a mostrar a data ao lado do ✓ (o mouse mostra a providência e a
-    observação).
+    mostra "✓ Pedido feito em dd/mm/aaaa"; a data, a providência e a
+    observação ficam na ficha do assistido ("Pedidos feitos"), e o mouse
+    sobre o ✓ da coluna "Pedido" também as mostra.
   - Assistidos fixados: o alfinete ao lado do nome (agora sempre visível)
     prende o assistido no topo de todas as abas, e a faixa "Fixados" o
     filtra com um clique, sem buscar o nome de novo. Ctrl+K (ou

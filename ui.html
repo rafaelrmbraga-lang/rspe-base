@@ -686,7 +686,7 @@ const ui = {
         else if(pk){ const pc = r[pk]||''; v = v ? `<span class="pill ${pc||'none'}">${esc(v)}</span>` : (/_sit$/.test(c[0]) ? '' : '<span class="muted">—</span>'); }
         else if(c[0]==='pedido'){ const P=(r.pedidos||{})[spec.id]; const mud=P&&P.ref&&P.ref!==this.pedRef(r,spec.id);
           // só o ícone: marcado = check; a data e a observação ficam na ficha do assistido (e na janela do clique)
-          v = P ? `<span class="pck-d" title="${esc(this.pedDica(P,mud))}" onclick="event.stopPropagation();ui.pedidoAbrir('${r.id}','${spec.id}')"><span class="pck ok ${mud?'mud':''}">✓</span>${esc(P.data)}</span>`
+          v = P ? `<span class="pck ok ${mud?'mud':''}" title="${esc(this.pedDica(P,mud))}" onclick="event.stopPropagation();ui.pedidoAbrir('${r.id}','${spec.id}')">✓</span>`
                 : `<span class="pck" title="Marcar pedido feito" onclick="event.stopPropagation();ui.pedidoAbrir('${r.id}','${spec.id}')"></span>`; }
         else if(c[0]==='conduta'){ v = r.conduta_ruim ? `<span class="falta">${esc(v)}</span>` : (r.ficha_tem ? esc(v) : `<span class="muted">${esc(v)}</span>`); }
         else if(c[0]==='falta'){ v = r.falta_sim ? `<span class="falta">Sim</span>` : (r.falta_apurar ? `<span class="apurar">A apurar</span>` : `<span class="muted">${esc(v)}</span>`);
@@ -1295,7 +1295,7 @@ const ui = {
   decMapa(r){ const L=this.decDe(r).filter(x=>x.s!=='fora'&&x.s!=='futuro'&&this.decBenOk(x)); if(!L.length) return '<span class="muted" style="font-size:12px">nenhum decreto desde o início do cumprimento</span>';
     return `<span class="mx">${L.map(x=>`<i class="${x.s}" title="${esc(this.decRot(x))} (${esc(x.numero)}): ${esc(this.DEC_ROT[x.s]||x.s)}${x.mot?' - '+esc(x.mot):''}" style="background:${this.DEC_COR[x.s]||'#E4E7EC'}">${this.decCurto(x)}</i>`).join('')}</span>`; },
   decBtn(r){ return `<span class="mini" title="Linha do tempo: crimes, impeditivos, pena cumprida em cada decreto, faltas na janela e resultado" onclick="event.stopPropagation();ui.indTL('${r.id}')">Verificar indulto/comutação</span>`; },
-  decPed(r){ const P=(r.pedidos||{}).ind; return P?`<span class="pck-d" title="${esc(this.pedDica(P,false))}" onclick="event.stopPropagation();ui.pedidoAbrir('${r.id}','ind')"><span class="pck ok">✓</span>${esc(P.data)}</span>`:`<span class="pck" title="Marcar pedido feito" onclick="event.stopPropagation();ui.pedidoAbrir('${r.id}','ind')"></span>`; },
+  decPed(r){ const P=(r.pedidos||{}).ind; return P?`<span class="pck ok" title="${esc(this.pedDica(P,false))}" onclick="event.stopPropagation();ui.pedidoAbrir('${r.id}','ind')">✓</span>`:`<span class="pck" title="Marcar pedido feito" onclick="event.stopPropagation();ui.pedidoAbrir('${r.id}','ind')"></span>`; },
   renderIndulto(rs){ rs=[...rs].sort((a,b)=>(b.fixado?1:0)-(a.fixado?1:0)); const D=this.decLista(this.dados.registros||[]);
     if(this.decSel && !D.find(x=>x.id===this.decSel)) this.decSel=null;
     const comDir=rs.filter(r=>this.decDe(r).some(x=>x.s==='cabe')).length;
