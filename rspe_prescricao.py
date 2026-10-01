@@ -1542,21 +1542,22 @@ def fund_global(S, k):
     este = next((x for x in G if x["saldo"] == h.get("saldo") and x["posicao"] == h.get("posicao")), {})
     pres = [x for x in G if x["resultado"] == "prescrita" and x is not este]
     nao = [x for x in G if x["resultado"] != "prescrita"]
-    t = ("%s Por esse critério, o tempo cumprido da execução unificada (%s dias, somados a prisão provisória e a remição) foi imputado às %d "
-         "condenações em execução na data da fuga nesta ordem: %s. A condenação aqui tratada era a %sª nessa ordem%s, restando-lhe %s na data da fuga." % (
-             FUND_CRIT[k], S.get("cumprido_total"), len(G), "; ".join(
-                 "%sª) %s (ação penal %s%s), pena de %s, saldo de %s%s" % (
+    t = ("%s\nPor esse critério, o tempo cumprido da execução unificada até a fuga (%s dias, somados cumprimento, prisão provisória e remição) "
+         "foi imputado às %d condenações então em execução nesta ordem:\n%s\nA condenação aqui tratada era a %sª nessa ordem%s, restando-lhe %s na data da fuga." % (
+             FUND_CRIT[k], "{:,}".format(S.get("cumprido_total") or 0).replace(",", "."), len(G), "\n".join(
+                 "%sª) %s - ação penal %s%s - pena de %s, saldo de %s%s;" % (
                      x["posicao"], x["crime"], x["proc"], (", fração " + x["fracao"]) if x.get("fracao") else "", x["pena"], x["saldo_txt"],
-                     (" - prazo de %s, %s em %s" % (x["prazo"], "esgotado" if x["resultado"] == "prescrita" else "vencendo", x["limite"])) if x["limite"]
-                     else " - nada a prescrever") for x in G),
-             este.get("posicao") or "?", ", e recebeu primeiro o tempo cumprido" if este.get("posicao") == 1 else
-             ", e as anteriores absorveram o tempo cumprido antes dela", este.get("saldo_txt") or "—"))
+                     (": prazo de %s, %s em %s" % (x["prazo"], "esgotado" if x["resultado"] == "prescrita" else "com vencimento", x["limite"])) if x["limite"]
+                     else ": nada a prescrever") for x in G).rstrip(";") + ".",
+             este.get("posicao") or "?", " e recebeu primeiro o tempo cumprido" if este.get("posicao") == 1 else
+             ": as anteriores absorveram o tempo cumprido antes dela", este.get("saldo_txt") or "—"))
+    _nm = lambda xs: "; ".join("%s (ação penal %s)" % (x["crime"], x["proc"]) for x in xs)
     if pres:
-        t += " Pelo mesmo critério, também prescreveram %s, cujos saldos geraram prazos esgotados durante a fuga." % ", ".join(
-            "%s (ação penal %s)" % (x["crime"], x["proc"]) for x in pres)
+        t += (" Pelo mesmo critério, também prescreveu a condenação por %s, cujo saldo gerou prazo esgotado durante a fuga." % _nm(pres) if len(pres) == 1 else
+              " Pelo mesmo critério, também prescreveram as condenações por %s, cujos saldos geraram prazos esgotados durante a fuga." % _nm(pres))
     if nao:
-        t += " As demais (%s) não prescreveram: com saldo maior, o prazo correspondente não se esgotou antes da recaptura." % ", ".join(
-            "%s (ação penal %s)" % (x["crime"], x["proc"]) for x in nao)
+        t += (" A condenação por %s não prescreveu: com saldo maior, o prazo correspondente não se esgotou antes da recaptura." % _nm(nao) if len(nao) == 1 else
+              " As demais condenações - %s - não prescreveram: com saldos maiores, os prazos correspondentes não se esgotaram antes da recaptura." % _nm(nao))
     return t
 
 
@@ -1613,7 +1614,9 @@ def fundamentacao(L, parte):
             cab2 += ". " + S["imput_txt"]
         _g = fund_global(S, "seeu")
         if _g:
-            cab2 += ". " + _g.rstrip(".")
+            # o total da análise global substitui a contagem só desta condenação, que confundiria a leitura
+            cab2 = rs.re.sub(r" Até essa data, a execução unificada registrava [^.]*", "", cab2)
+            cab2 = cab2.rstrip(".") + ".\n" + _g.rstrip(".")
 
         def base(sd, pz, lim):
             inc = _inc_de(sd)
@@ -1634,6 +1637,8 @@ def fundamentacao(L, parte):
                    "reconhecimento da prescrição da pretensão executória, com a extinção da punibilidade quanto a esta condenação (CP, art. 107, IV, c/c art. 119)." % (
                        (", " + " e ".join(hip)) if hip else "", _ext(S.get("saldo_min")), base(S.get("saldo_min") or 0, S.get("prazo_min") or S.get("prazo_max"), S.get("limite_min")),
                        (", antes da recaptura/reinício do cumprimento em %s (CP, art. 117, V)." % fim) if fim else "."))
+        if _g and txt.startswith(", de modo que"):
+            txt = ".\nAssim," + txt[len(", de modo que"):]
         return cab2 + txt
     inc = (L.get("inciso109") or "").replace("art. 109, ", "")
     prazo = fmt_prazo(L["ppe_meses"]) if L.get("ppe_meses") is not None else (L.get("prazo_ppe") or "").split(" (")[0]

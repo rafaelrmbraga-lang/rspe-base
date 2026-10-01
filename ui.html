@@ -890,18 +890,19 @@ const ui = {
       ${ks.map(k=>{ const h=X.s.crits[k]; return `<div class="chk" style="justify-content:space-between;cursor:pointer;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px" onclick="ui.copiarClip(${this.clip(this.fundPrescEvasao(X.L, X.s, k))});ui.fecharModal()"><span><b>${esc(this.FUND_CRIT[k][0])}</b>${k==='seeu'?' <span class="px-tag">principal</span>':''}<br><span class="muted">${h.posicao}ª de ${h.de} · saldo ${esc(this.tlAmd(h.saldo))} · prazo ${esc(h.prazo)} · venceu em ${esc(h.limite)}</span></span><span class="jz-b pri">Copiar</span></div>`; }).join('')}
       <div class="acts"><button class="btn" onclick="ui.fecharModal()">Cancelar</button></div></div>`;
     document.getElementById('modal').classList.add('on'); },
-  fundGlobal(s, k){ // análise de todas as condenações em execução na fuga, pelo critério k
+  fundGlobal(s, k){ // análise de todas as condenações em execução na fuga, pelo critério k (mesmo texto do servidor)
     const G=((s.global||{})[k])||[]; if(G.length<2) return '';
-    const este=G.find(x=>x.saldo===(s.crits[k]||{}).saldo&&x.posicao===(s.crits[k]||{}).posicao)||{};
-    const pres=G.filter(x=>x.resultado==='prescrita'), nao=G.filter(x=>x.resultado!=='prescrita');
-    return ` ${this.FUND_CRIT[k][1]} Por esse critério, o tempo cumprido da execução unificada (${s.cumprido_total} dias, somados a prisão provisória e a remição) foi imputado às ${G.length} condenações em execução na data da fuga nesta ordem: `+
-      G.map(x=>`${x.posicao}ª) ${x.crime} (ação penal ${x.proc}${x.fracao?', fração '+x.fracao:''}), pena de ${x.pena}, saldo de ${x.saldo_txt}${x.limite?` - prazo de ${x.prazo}, ${x.resultado==='prescrita'?'esgotado':'vencendo'} em ${x.limite}`:' - nada a prescrever'}`).join('; ')+
-      `. A condenação aqui tratada era a ${este.posicao||'?'}ª nessa ordem${este.posicao===1?', e recebeu primeiro o tempo cumprido':', e as anteriores absorveram o tempo cumprido antes dela'}, restando-lhe ${este.saldo_txt||'—'} na data da fuga. `+
-      (pres.length>1? `Pelo mesmo critério, também prescreveram ${pres.filter(x=>x!==este).map(x=>x.crime+' (ação penal '+x.proc+')').join(', ')}, cujos saldos geraram prazos esgotados durante a fuga. ` : '')+
-      (nao.length? `As demais (${nao.map(x=>x.crime+' (ação penal '+x.proc+')').join(', ')}) não prescreveram: com saldo maior, o prazo correspondente não se esgotou antes da recaptura. ` : '').replace(/ $/,'');
-  },
+    const h=(s.crits||{})[k]||{}; const este=G.find(x=>x.saldo===h.saldo&&x.posicao===h.posicao)||{};
+    const pres=G.filter(x=>x.resultado==='prescrita'&&x!==este), nao=G.filter(x=>x.resultado!=='prescrita');
+    const nm=xs=>xs.map(x=>`${x.crime} (ação penal ${x.proc})`).join('; ');
+    let t=`${this.FUND_CRIT[k][1]}\nPor esse critério, o tempo cumprido da execução unificada até a fuga (${Number(s.cumprido_total||0).toLocaleString('pt-BR')} dias, somados cumprimento, prisão provisória e remição) foi imputado às ${G.length} condenações então em execução nesta ordem:\n`+
+      G.map(x=>`${x.posicao}ª) ${x.crime} - ação penal ${x.proc}${x.fracao?', fração '+x.fracao:''} - pena de ${x.pena}, saldo de ${x.saldo_txt}${x.limite?`: prazo de ${x.prazo}, ${x.resultado==='prescrita'?'esgotado':'com vencimento'} em ${x.limite}`:': nada a prescrever'}`).join(';\n')+'.'+
+      `\nA condenação aqui tratada era a ${este.posicao||'?'}ª nessa ordem${este.posicao===1?' e recebeu primeiro o tempo cumprido':': as anteriores absorveram o tempo cumprido antes dela'}, restando-lhe ${este.saldo_txt||'—'} na data da fuga.`;
+    if(pres.length) t+= pres.length===1? ` Pelo mesmo critério, também prescreveu a condenação por ${nm(pres)}, cujo saldo gerou prazo esgotado durante a fuga.` : ` Pelo mesmo critério, também prescreveram as condenações por ${nm(pres)}, cujos saldos geraram prazos esgotados durante a fuga.`;
+    if(nao.length) t+= nao.length===1? ` A condenação por ${nm(nao)} não prescreveu: com saldo maior, o prazo correspondente não se esgotou antes da recaptura.` : ` As demais condenações - ${nm(nao)} - não prescreveram: com saldos maiores, os prazos correspondentes não se esgotaram antes da recaptura.`;
+    return t; },
   fundPrescEvasao(L, s0, k){ let s=s0;
-    if(k&&s0&&s0.crits&&s0.crits[k]){ const h=s0.crits[k]; s=Object.assign({}, s0, {saldo_min:h.saldo, saldo_max:h.saldo, prazo_max:h.prazo, prazo_min:h.prazo, limite_max:h.limite, limite_min:h.limite, resultado:h.resultado, imput_txt:this.fundGlobal(s0,k).trim().replace(/\.$/,'')}); }
+    if(k&&s0&&s0.crits&&s0.crits[k]){ const h=s0.crits[k]; s=Object.assign({}, s0, {saldo_min:h.saldo, saldo_max:h.saldo, prazo_max:h.prazo, prazo_min:h.prazo, limite_max:h.limite, limite_min:h.limite, resultado:h.resultado, imput_txt:'', _glob:this.fundGlobal(s0,k).trim().replace(/\.$/,'')}); }
     // texto pronto para a petição, com os fundamentos do cálculo da prescrição pelo saldo (CP, arts. 107, IV, 109, 110, 113, 115, 117)
     const amd=this.tlAmd.bind(this); const anos=d=>d/365;
     const inc=d=> d==null? '' : anos(d)<1?'VI':anos(d)<=2?'V':anos(d)<=4?'IV':anos(d)<=8?'III':anos(d)<=12?'II':'I';
@@ -931,6 +932,10 @@ const ui = {
         (fim? `, posterior à recaptura/reinício em ${fim}, que o interrompeu (CP, art. 117, V).` : '.')+(s.saldo_min===0?' Pelo saldo mínimo, a pena estaria integralmente cumprida (extinção pelo cumprimento - LEP, art. 66, II).':'')+
         `\nNão há prescrição a requerer por este período.`;
     }
+    if(s._glob){ // análise global: substitui a contagem só desta condenação e abre o parágrafo da conclusão
+      let c2=cab.replace(/ Até essa data, a execução unificada registrava [^.]*/,'').replace(/\.?$/,'.')+'\n'+s._glob;
+      let k2=corpo.startsWith(', de modo que')? '.\nAssim,'+corpo.slice(', de modo que'.length) : corpo;
+      return c2+k2; }
     return cab+corpo; },
   prescTimelineHtml(L){
     const idx=this.tlReg(L); const amd=this.tlAmd.bind(this), dias=this.tlDias.bind(this);
