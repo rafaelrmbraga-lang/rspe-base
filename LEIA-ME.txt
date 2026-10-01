@@ -629,6 +629,12 @@ v6.16.50
     a ordem cronológica dá prescrição e a da pena maior não, o programa avisa
     o argumento que o MP pode usar e a resposta. A fundamentação para a
     petição ganhou o parágrafo sobre o critério cronológico.
+  - Painel da prescrição (abaixo da linha do tempo) reorganizado: o resultado
+    numa faixa com "Copiar fundamentação"; ao lado, a conta da fuga e a tabela
+    de imputação do tempo (ordem do trânsito - adotada -, art. 76 por espécie e
+    pena maior primeiro); os pontos de atenção (argumento do MP, reincidência,
+    o que conferir antes de requerer) em linhas que abrem com um clique; e a
+    fundamentação para a petição recolhida, em parágrafos.
   - Mais rápido: marcar pedido, dar baixa, informar dado ou ajustar a
     prescrição refaz só o assistido alterado (antes, a base inteira); abrir a
     base também ficou cerca de 25% mais rápido.
