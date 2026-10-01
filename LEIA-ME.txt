@@ -764,6 +764,25 @@ v6.16.50
     coluna. O botão de quadro em cada linha (e "Enviar ao Quadro do Usuário"
     no painel do assistido) cria o cartão já com o assistido. Prazo vencido
     ou próximo acende o número ao lado do nome da aba.
+  - Prescrição após a fuga com várias condenações: o saldo de cada uma vem
+    da Linha do Tempo Detalhada do SEEU (PDF gerado na aba "Informações
+    adicionais"), que entra pelo "Importar PDFs" e fica guardada na
+    execução: na ocorrência da fuga, o restante registrado pelo SEEU é o
+    saldo do art. 113. A ordem do trânsito, o art. 76 e a pena maior
+    primeiro aparecem só como tese, quando dariam prescrição e a linha não.
+  - Sem a linha detalhada, o programa não estima: só afirma o que vale em
+    qualquer imputação (prescrita mesmo com a pena inteira, ou não prescrita
+    mesmo com todo o tempo imputado ao crime); no resto, "a verificar", sem
+    fundamentação, até importar a linha ou usar a calculadora.
+  - Calculadora do saldo na fuga (botão "Calculadora" no painel da
+    prescrição): condenações, início da contagem, gravidade, períodos de
+    custódia e remições vêm pré-preenchidos pelo RSPE e podem ser
+    corrigidos; o tempo vai à mais grave já iniciada e passa às seguintes.
+    "Gravar saldos" grava o saldo de todas as condenações daquela fuga.
+  - Auditoria: novos alertas de lançamento no SEEU - progressão na data da
+    decisão (Tema 1165), mais de um regime inicial, regime inicial depois da
+    primeira prisão, alteração de data-base no lugar do incidente próprio
+    (data-base fixa) e guia suspensa somada na pena total (Tema 1106).
 
 v6.16.49
   - Prescrição após a fuga: o pedido "informe a pena remanescente na fuga"
