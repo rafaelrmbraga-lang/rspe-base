@@ -169,6 +169,7 @@ tbody td>.muted,tbody td .fedit>.muted{color:var(--tx)}
 /* filtro de situação */
 .sel{position:relative}.sel select{appearance:none;max-width:260px;padding:9px 34px 9px 12px;border:1px solid var(--line2);border-radius:10px;background:#fff;font:inherit;font-weight:600;color:var(--tx);outline:none;cursor:pointer}
 .sel select:focus{border-color:var(--pri);box-shadow:0 0 0 3px var(--pri-soft)}.sel::after{content:"▾";position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--tx3);pointer-events:none}
+.cpn{display:inline-flex;vertical-align:-2px;margin-left:5px;color:#98A2B3;cursor:copy;border-radius:5px;padding:2px}.cpn:hover{background:var(--pri-soft);color:var(--pri)}.cpn svg{width:13px;height:13px}
 .copy{display:inline-flex;align-items:center;gap:6px;cursor:copy;border-radius:6px;padding:1px 4px;margin:-1px -4px}.copy:hover{background:var(--pri-soft);color:var(--pri)}.copy svg{width:13px;height:13px;opacity:0;transition:.15s}.copy:hover svg{opacity:1}
 tr.exp td{background:#EEF6F0!important}
 tr.sub td{padding:0 0 0 0;background:#FFFFFF;cursor:default}tr.sub:hover td{background:#FFFFFF}
@@ -464,6 +465,14 @@ tbody tr.fix td{background:#FFFCF2}
 .qd-et{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:999px;color:#fff}
 .qd-add{margin-top:8px;padding:8px 10px;border-radius:9px;color:var(--tx2);font-size:12.5px;font-weight:600;cursor:pointer;text-align:left}.qd-add:hover{background:#E4E7EC;color:var(--tx)}
 .qd-top{display:flex;align-items:center;gap:10px;width:100%}.qd-top .sp{flex:1}
+.qd-menu{position:fixed;z-index:200;display:none;min-width:190px;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 30px rgba(16,24,40,.18);padding:6px;font-size:13px}
+.qd-menu.on{display:block}.qd-menu .h{font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--tx3);padding:4px 10px 2px;font-weight:700}
+.qd-menu .i{padding:7px 10px;border-radius:7px;cursor:pointer}.qd-menu .i:hover{background:#F2F4F7}.qd-menu .i.at{color:var(--pri);font-weight:700}.qd-menu .i.r{color:var(--r-tx)}.qd-menu .s{height:1px;background:var(--line);margin:5px 4px}
+.qa-q{padding:8px 12px;border:1px solid var(--line2);border-radius:9px;font:inherit;width:100%;margin-bottom:10px}
+.qa-l{flex:1;min-height:80px;overflow:auto;display:flex;flex-direction:column;gap:8px}
+.qa-c{display:flex;gap:12px;align-items:flex-start;padding:10px 12px;border:1px solid #EAECF0;border-left:4px solid var(--et,#EAECF0);border-radius:10px;background:#fff}
+.qa-c .tx{flex:1;min-width:0;font-size:12.5px}.qa-c .tx b{font-size:13px}.qa-c .a{color:var(--pri);font-weight:600;margin-top:2px}.qa-c .a small{color:var(--tx3);font-weight:400}.qa-c .o{color:var(--tx2);white-space:pre-wrap;margin:4px 0}
+.qa-c .qa-ac{display:flex;flex-direction:column;gap:6px;align-items:flex-end}.qa-c select{padding:5px 8px;border:1px solid var(--line2);border-radius:8px;font:inherit;font-size:12px}
 .qd-cp{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}.qd-cp span{font-size:11px;font-weight:600;color:var(--tx2);background:#F2F4F7;border-radius:6px;padding:2px 7px;cursor:pointer}.qd-cp span:hover{background:#E4E7EC;color:var(--tx)}
 .fq{border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:#FBFCFD}
 .fq-h{display:flex;align-items:center;gap:8px;margin-bottom:8px}.fq-h b{font-size:13px}.fq-h .sp{flex:1}
@@ -1225,7 +1234,7 @@ const ui = {
     fd:'Clique no assistido para ver trabalho, estudo e remição a atestar',
     aud:'Cada alerta traz a fundamentação para copiar · "Dar baixa" tira o ponto da contagem',
     teses:'Pesquise por palavras e filtre por tema · "Copiar ementa" leva a referência',
-    quadro:'Arraste os cartões entre as colunas · clique no cartão para editar · o ícone de quadro em cada linha envia o assistido para cá'},
+    quadro:'Arraste os cartões entre as colunas · clique no cartão para editar · botão direito: mover ou arquivar · o ícone de quadro em cada linha envia o assistido para cá'},
   // RSPE desatualizado: emitido há mais de 60 dias (etiqueta no nome e filtro na faixa de resumo)
   RSPE_VELHO:60, filtroVelho:false,
   idadeRSPE(r){ const g=(r.geracao||'').split('/').map(Number), h=(this.dados.hoje||'').split('/').map(Number); if(g.length!==3||h.length!==3||!g[2]||!h[2]) return null;
@@ -1292,7 +1301,7 @@ const ui = {
     const selBen=`<select class="dc-sel" onchange="ui.decBen=this.value;ui.render()"><option value="todos" ${this.decBen==='todos'?'selected':''}>Indulto e comutação</option><option value="indulto" ${this.decBen==='indulto'?'selected':''}>Só indulto</option><option value="comutacao" ${this.decBen==='comutacao'?'selected':''}>Só comutação</option></select>`;
     let main='';
     if(!this.decSel){
-      const tr=rs.map(r=>{ let h=`<tr class="${this.decAberto===r.id?'exp':''} ${r.fixado?'fix':''}"><td class="first">${this.pinHtml(r)}<span class="nm" title="Ver o encaixe em cada decreto" onclick="event.stopPropagation();ui.decAberto=ui.decAberto==='${r.id}'?null:'${r.id}';ui.render()">${esc(r.nome)}</span></td><td class="nw">${esc(r.proc)}</td><td>${this.decMapa(r)}</td><td class="nw">${this.decBtn(r)}${this.qbtnHtml(r)}</td><td>${this.decPed(r)}</td></tr>`;
+      const tr=rs.map(r=>{ let h=`<tr class="${this.decAberto===r.id?'exp':''} ${r.fixado?'fix':''}"><td class="first" style="white-space:nowrap">${this.pinHtml(r)}<span class="nm" title="Ver o encaixe em cada decreto" onclick="event.stopPropagation();ui.decAberto=ui.decAberto==='${r.id}'?null:'${r.id}';ui.render()">${esc(r.nome)}</span></td><td class="nw">${this.cpProc(r)}</td><td>${this.decMapa(r)}</td><td class="nw">${this.decBtn(r)}${this.qbtnHtml(r)}</td><td>${this.decPed(r)}</td></tr>`;
         if(this.decAberto===r.id) h+=`<tr class="sub"><td colspan="5">${this.decEncaixe(r)}</td></tr>`; return h; }).join('');
       main=`<div class="dc-top"><div class="tt"><b>Geral</b><small>todos os decretos, a partir do início do cumprimento de cada execução · clique no nome para ver o encaixe em cada decreto</small></div><span class="sp"></span>${selBen}</div>
         <table><thead><tr><th style="width:18%">Nome</th><th class="nw" style="width:1%">Nº da execução</th><th>Decretos desde o início do cumprimento</th><th style="width:1%"></th><th style="width:1%">Pedido</th></tr></thead><tbody>${tr}</tbody></table>`;
@@ -1305,7 +1314,7 @@ const ui = {
           <div class="tt"><b>${esc(this.decRot(x0))}</b><small>Decreto ${esc(x0.numero)} · data de referência ${esc(x0.ref)}</small></div>
           <span class="dc-ch c">${c('cabe')} cabem</span><span class="dc-ch n">${c('nao')+c('imp')} não cabem</span>${c('conc')+c('indef')?`<span class="dc-ch k">${c('conc')+c('indef')} já decididos</span>`:''}<span class="dc-ch f">${c('fora')} execução posterior</span><span class="sp"></span>
           ${selBen}<select class="dc-sel" onchange="ui.decMostrar=this.value;ui.render()"><option value="todos" ${this.decMostrar==='todos'?'selected':''}>Todos</option><option value="cabe" ${this.decMostrar==='cabe'?'selected':''}>Só quem cabe</option></select></div>
-        <table><thead><tr><th style="width:18%">Nome</th><th class="nw" style="width:1%">Nº da execução</th><th>Resultado</th><th>Benefício</th><th>Motivo</th><th style="width:1%"></th><th style="width:1%">Pedido</th></tr></thead><tbody>${L.map(({r,d})=>`<tr class="${r.fixado?'fix':''}" style="${d.s==='fora'?'opacity:.5':''}" onclick="ui.abrir('${r.id}')"><td class="first">${this.pinHtml(r)}${esc(r.nome)}</td><td class="nw">${esc(r.proc)}</td><td><span class="dres ${d.s}">${this.DEC_ROT[d.s]||d.s}</span></td><td>${esc(this.decBenTxt(d))}</td><td class="muted" style="font-size:12px">${esc(d.mot||'')}${d.nota?`<div style="font-size:11.5px">${esc(d.nota)}</div>`:''}</td><td class="nw">${d.s==='fora'?'':this.decBtn(r)+this.qbtnHtml(r)}</td><td>${this.decPed(r)}</td></tr>`).join('')}</tbody></table>`;
+        <table><thead><tr><th style="width:18%">Nome</th><th class="nw" style="width:1%">Nº da execução</th><th>Resultado</th><th>Benefício</th><th>Motivo</th><th style="width:1%"></th><th style="width:1%">Pedido</th></tr></thead><tbody>${L.map(({r,d})=>`<tr class="${r.fixado?'fix':''}" style="${d.s==='fora'?'opacity:.5':''}" onclick="ui.abrir('${r.id}')"><td class="first" style="white-space:nowrap">${this.pinHtml(r)}${this.cpNomeTxt(r)}</td><td class="nw">${this.cpProc(r)}</td><td><span class="dres ${d.s}">${this.DEC_ROT[d.s]||d.s}</span></td><td>${esc(this.decBenTxt(d))}</td><td class="muted" style="font-size:12px">${esc(d.mot||'')}${d.nota?`<div style="font-size:11.5px">${esc(d.nota)}</div>`:''}</td><td class="nw">${d.s==='fora'?'':this.decBtn(r)+this.qbtnHtml(r)}</td><td>${this.decPed(r)}</td></tr>`).join('')}</tbody></table>`;
     }
     document.getElementById('card').innerHTML=`<div class="dc">${side}<div class="dc-main">${main}</div></div>`; },
   decBenTxt(d){ if(!['cabe','ver','conc','indef'].includes(d.s)) return '—'; return (d.beneficio||'')+(d.dispositivo?' · '+d.dispositivo:'')+(d.beneficio==='Comutação'&&d.reducao?' · '+d.reducao+' do remanescente':''); },
@@ -1314,7 +1323,7 @@ const ui = {
       return `<tr><td><b>${esc(this.decRot(x))}</b><div class="muted" style="font-size:11px">Dec. ${esc(x.numero)}</div></td><td><span class="dres ${x.s}">${this.DEC_ROT[x.s]||x.s}</span></td><td>${esc(this.decBenTxt(x))}</td>
         <td>${x.exigido&&!['conc','indef','imp'].includes(x.s)?`<div class="dreq" title="Cumprido ${this.tlAmd(de.cumprido)} · exigido ${this.tlAmd(x.exigido)}"><span class="tr"><i style="width:${100*p}%;background:${ok?'#12B76A':'#98A2B3'}"></i><u></u></span><small>${ok?'atingido':'não atingido'}${x.fracao?' ('+esc(x.fracao)+')':''}</small></div>`:'<span class="muted">—</span>'}</td>
         <td class="muted" style="font-size:12px">${esc(x.mot||'')}${x.nota?`<div>${esc(x.nota)}</div>`:''}${x.ressalva?`<div style="color:var(--a-tx)">${esc(x.ressalva)}</div>`:''}</td></tr>`; }).join('');
-    return `<div class="enc"><div class="enc-h"><b>Encaixe nos decretos · ${esc(r.nome)}</b><span>início do cumprimento ${esc(ini)} · ${pl(L.length,'decreto analisado','decretos analisados')} · ${L.filter(x=>x.s==='cabe').length} cabem · ${L.filter(x=>x.s==='conc').length} concedidos</span></div>
+    return `<div class="enc"><div class="enc-h"><b>Encaixe nos decretos · ${this.cpNomeTxt(r)}</b><span>início do cumprimento ${esc(ini)} · ${pl(L.length,'decreto analisado','decretos analisados')} · ${L.filter(x=>x.s==='cabe').length} cabem · ${L.filter(x=>x.s==='conc').length} concedidos</span></div>
       ${L.length?`<table><thead><tr><th style="width:150px">Decreto</th><th style="width:120px">Resultado</th><th style="width:200px">Benefício</th><th style="width:220px">Requisito de tempo na data de referência</th><th>Motivo</th></tr></thead><tbody>${lin}</tbody></table>`:'<span class="muted">Nenhum decreto desde o início do cumprimento.</span>'}</div>`; },
   // linha do tempo: seletor com os decretos do assistido; os de 2022, 2024 e 2025 têm a linha do tempo detalhada, os demais o quadro de requisitos
   tlvSeletor(){ const d=this._tlv; const r=(this.dados.registros||[]).find(x=>x.id===this._tlvId); if(!d||!r) return '';
@@ -1332,6 +1341,9 @@ const ui = {
       ${x.exigido?lin('Exigido'+(x.fracao?' ('+esc(x.fracao)+')':''), this.tlAmd(x.exigido)):''}${de.reincidente!=null?lin('Reincidente', de.reincidente?'sim':'não'):''}${de.vga!=null?lin('Violência ou grave ameaça', de.vga?'sim':'não'):''}${x.regime?lin('Regime na data', esc(x.regime)):''}${x.ressalva?lin('Atenção', esc(x.ressalva)):''}</div></div>`; },
   // ---- assistidos fixados: ficam no topo de todas as abas, com a faixa para achá-los com um clique ----
   PIN_SVG:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M14.5 2.5 21.5 9.5l-2.1 2.1-1.4-1.4-3.6 3.6.7 4.2-2.1 2.1-3.9-3.9-4.6 4.6-1.4-1.4 4.6-4.6-3.9-3.9 2.1-2.1 4.2.7 3.6-3.6-1.4-1.4z"/></svg>',
+  cpNomeTxt(r){ return `<span class="copy" title="Clique para copiar o nome" onclick="event.stopPropagation();ui.copiar(ui._clips[${this.clip(r.nome||'')}])">${esc(r.nome)}</span>`; },
+  cpNome(r){ return `<span class="cpn" title="Copiar o nome" onclick="event.stopPropagation();ui.copiar(ui._clips[${this.clip(r.nome||'')}])"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></span>`; },
+  cpProc(r){ return `<span class="copy" title="Clique para copiar" onclick="event.stopPropagation();ui.copiar(ui._clips[${this.clip(r.proc||'')}])">${esc(r.proc)}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></span>`; },
   pinHtml(r){ return `<span class="pin ${r.fixado?'on':''}" title="${r.fixado?'Fixado: aparece no topo e na faixa "Fixados" de todas as abas · clique para soltar':'Fixar este assistido: fica no topo e na faixa "Fixados" de todas as abas, sem precisar buscar de novo'}" onclick="event.stopPropagation();ui.fixar('${r.id}',${r.fixado?0:1})">${this.PIN_SVG}</span>`; },
   async fixar(id,on){ await api('fixar', id, !!on); if(this.sel===id && document.getElementById('drawer').classList.contains('on')) this.abrir(id); },
   renderFixados(){ const el=document.getElementById('fixbar'); const F=(this.dados.registros||[]).filter(r=>r.fixado); el.classList.toggle('on',!!F.length);
@@ -1343,20 +1355,48 @@ const ui = {
   qbtnHtml(r){ return `<span class="qbtn" title="Enviar ao Quadro do Usuário" onclick="event.stopPropagation();ui.qdNovo('${r.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 7v7M12 7v4M16 7v10"/></svg></span>`; },
   async qdCarregar(){ const q=await API().quadro(); if(q&&!q.erro){ this._qd=q; } return this._qd; },
   qdPrazo(p){ const d=this.tlD(p||''); if(!p||isNaN(d)) return null; const h=this.tlHoje(); h.setHours(0,0,0,0); return Math.round((d-h)/864e5); },
-  qdAlertas(){ const Q=this._qd; if(!Q) return 0; const fim=(Q.colunas.slice(-1)[0]||{}).id; return Q.cartoes.filter(c=>c.coluna!==fim&&c.prazo&&this.qdPrazo(c.prazo)!==null&&this.qdPrazo(c.prazo)<=0).length; },
+  qdAlertas(){ const Q=this._qd; if(!Q) return 0; const fim=(Q.colunas.slice(-1)[0]||{}).id; return Q.cartoes.filter(c=>!c.arquivado&&c.coluna!==fim&&c.prazo&&this.qdPrazo(c.prazo)!==null&&this.qdPrazo(c.prazo)<=0).length; },
   async renderQuadro(){ if(!this._qd) await this.qdCarregar(); const Q=this._qd||{colunas:[],cartoes:[]}; const R=this.dados.registros||[]; const q=this.filtro;
-    document.getElementById('stats').innerHTML=`<div class="qd-top"><span class="muted" style="font-size:12.5px">${pl(Q.cartoes.length,'cartão','cartões')}${this.qdAlertas()?` · <b style="color:#B42318">${pl(this.qdAlertas(),'prazo vencido ou para hoje','prazos vencidos ou para hoje')}</b>`:''}</span><span class="sp"></span><span class="jz-b" onclick="ui.qdColuna()">+ Coluna</span><span class="jz-b pri" onclick="ui.qdNovo()">+ Cartão</span></div>`;
+    const arq=Q.cartoes.filter(c=>c.arquivado).length;
+    document.getElementById('stats').innerHTML=`<div class="qd-top"><span class="muted" style="font-size:12.5px">${pl(Q.cartoes.length-arq,'cartão','cartões')}${this.qdAlertas()?` · <b style="color:#B42318">${pl(this.qdAlertas(),'prazo vencido ou para hoje','prazos vencidos ou para hoje')}</b>`:''}</span><span class="sp"></span><span class="jz-b" onclick="ui.qdColuna()">+ Coluna</span><span class="jz-b" onclick="ui.qdArquivados()" title="Cartões arquivados: saem do quadro e ficam aqui para consulta">Cartões arquivados${arq?' · '+arq:''}</span><span class="jz-b pri" onclick="ui.qdNovo()">+ Cartão</span></div>`;
     const fim=(Q.colunas.slice(-1)[0]||{}).id;
     const card=c=>{ const r=R.find(x=>x.id===c.processo); const d=this.qdPrazo(c.prazo); const et=this.QD_ET[c.etiqueta];
       const txt=[c.titulo,c.obs,r?r.nome+' '+r.proc:''].join(' ').toLowerCase(); if(q && !txt.includes(q)) return '';
       const pz=c.prazo?`<span class="qd-pz ${c.coluna!==fim&&d!==null?(d<0?'venc':d<=2?'prox':''):''}" title="Prazo">⏰ ${esc(c.prazo)}${c.coluna!==fim&&d!==null?(d<0?' · vencido':d===0?' · hoje':d===1?' · amanhã':''):''}</span>`:'';
-      return `<div class="qd-card" draggable="true" data-id="${c.id}" style="--et:${et?et[1]:'#EAECF0'}" ondragstart="ui.qdDrag(event,'${c.id}')" ondragend="this.classList.remove('arr')" onclick="ui.qdEditar('${c.id}')">
+      return `<div class="qd-card" draggable="true" data-id="${c.id}" style="--et:${et?et[1]:'#EAECF0'}" ondragstart="ui.qdDrag(event,'${c.id}')" ondragend="this.classList.remove('arr')" onclick="ui.qdEditar('${c.id}')" oncontextmenu="ui.qdMenu(event,'${c.id}')" title="Clique para editar · botão direito para mover ou arquivar">
         <div class="t">${esc(c.titulo||(r?r.nome:'Sem título'))}</div>${r?`<div class="a" onclick="event.stopPropagation();ui.abrir('${r.id}')">${esc(r.nome)} <small>· ${esc(r.proc)}</small></div>`:''}
         ${c.obs?`<div class="o">${esc(c.obs)}</div>`:''}${r?this.qdCopias(r):''}<div class="f">${et?`<span class="qd-et" style="background:${et[1]}">${et[0]}</span>`:''}${pz}</div></div>`; };
-    document.getElementById('card').innerHTML=`<div class="qd-board">${Q.colunas.map(col=>{ const cs=Q.cartoes.filter(c=>c.coluna===col.id).sort((a,b)=>a.ordem-b.ordem);
+    document.getElementById('card').innerHTML=`<div class="qd-board">${Q.colunas.map(col=>{ const cs=Q.cartoes.filter(c=>c.coluna===col.id&&!c.arquivado).sort((a,b)=>a.ordem-b.ordem);
       return `<div class="qd-col" data-col="${col.id}" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="ui.qdDrop(event,'${col.id}')">
         <div class="qd-ch"><b title="Clique duas vezes para renomear" ondblclick="ui.qdColuna('${col.id}','${esc(col.nome)}')">${esc(col.nome)}</b><span>${cs.length}</span></div>
         <div class="qd-list">${cs.map(card).join('')}</div><div class="qd-add" onclick="ui.qdNovo(null,'${col.id}')">+ Adicionar cartão</div></div>`; }).join('')}</div>`; },
+  // menu do botão direito: mover para outra coluna, arquivar, editar, excluir
+  qdMenu(ev,id){ ev.preventDefault(); ev.stopPropagation(); const Q=this._qd; const c=Q&&Q.cartoes.find(x=>x.id===id); if(!c) return;
+    let m=document.getElementById('qdMenu'); if(!m){ m=document.createElement('div'); m.id='qdMenu'; m.className='qd-menu'; document.body.appendChild(m);
+      document.addEventListener('click',()=>m.classList.remove('on')); document.addEventListener('keydown',e=>{ if(e.key==='Escape') m.classList.remove('on'); }); window.addEventListener('blur',()=>m.classList.remove('on')); }
+    m.innerHTML=`<div class="h">Mover para</div>${Q.colunas.map(col=>`<div class="i ${col.id===c.coluna?'at':''}" onclick="ui.qdMoverPara('${id}','${col.id}')">${col.id===c.coluna?'✓ ':''}${esc(col.nome)}</div>`).join('')}
+      <div class="s"></div><div class="i" onclick="ui.qdArquivar('${id}',1)">🗄 Arquivar</div><div class="i" onclick="ui.qdEditar('${id}')">✎ Editar</div><div class="i r" onclick="ui.qdExcluir('${id}')">✕ Excluir</div>`;
+    m.classList.add('on'); const w=m.offsetWidth, h=m.offsetHeight; m.style.left=Math.min(ev.clientX, innerWidth-w-8)+'px'; m.style.top=Math.min(ev.clientY, innerHeight-h-8)+'px'; },
+  async qdMoverPara(id,col){ const Q=this._qd; const c=Q.cartoes.find(x=>x.id===id); if(!c||c.coluna===col) return;
+    const o=Math.min(0,...Q.cartoes.filter(x=>x.coluna===col&&!x.arquivado).map(x=>x.ordem))-1; const q=await API().quadro_mover(id,col,o); if(q&&!q.erro){ this._qd=q; this.render(); this.qdRefFicha(); } },
+  async qdArquivar(id,on,col){ const q=await API().quadro_arquivar(id,!!on,col||null); if(!q||q.erro){ this.toast((q&&q.erro)||'Falha.'); return; } this._qd=q; this.toast(q.msg);
+    this.render(); this.qdRefFicha(); if(document.getElementById('qdArqLista')) this.qdArquivados(); else this.fecharModal(); },
+  qdArquivados(){ const Q=this._qd||{colunas:[],cartoes:[]}; const R=this.dados.registros||[]; const coln=id=>(Q.colunas.find(x=>x.id===id)||{}).nome||'—';
+    const q=(this._qdArqQ||'').toLowerCase();
+    const L=Q.cartoes.filter(c=>c.arquivado).filter(c=>{ const r=R.find(x=>x.id===c.processo); return !q||[c.titulo,c.obs,r?r.nome+' '+r.proc:c.processo].join(' ').toLowerCase().includes(q); })
+      .sort((a,b)=>this.qdData(b.arquivado)-this.qdData(a.arquivado));
+    const lin=L.map(c=>{ const r=R.find(x=>x.id===c.processo); const et=this.QD_ET[c.etiqueta];
+      return `<div class="qa-c" style="--et:${et?et[1]:'#EAECF0'}"><div class="tx"><b>${esc(c.titulo||(r?r.nome:'Sem título'))}</b>${r?`<div class="a">${esc(r.nome)} <small>· ${esc(r.proc)}</small></div>`:''}${c.obs?`<div class="o">${esc(c.obs)}</div>`:''}
+        <small class="muted">arquivado em ${esc(c.arquivado)} · estava em ${esc(coln(c.coluna))}${c.prazo?' · prazo '+esc(c.prazo):''}</small>${r?this.qdCopias(r):''}</div>
+        <div class="qa-ac"><select onchange="ui.qdArquivar('${c.id}',0,this.value)"><option value="">Devolver ao quadro…</option>${Q.colunas.map(col=>`<option value="${col.id}">${esc(col.nome)}</option>`).join('')}</select>
+        <span class="mini" onclick="ui.qdEditar('${c.id}')">Abrir</span> <span class="mini" style="color:var(--r-tx)" onclick="ui.qdExcluir('${c.id}')">Excluir</span></div></div>`; }).join('');
+    document.getElementById('modal').innerHTML=`<div class="box" style="width:760px;max-height:calc(100vh - 40px);display:flex;flex-direction:column"><h2>Cartões arquivados</h2>
+      <p>Saem do quadro, mas ficam guardados aqui para consulta. Para devolver, escolha a coluna.</p>
+      <input class="qa-q" placeholder="Buscar por título, observação, nome ou processo" value="${esc(this._qdArqQ||'')}" oninput="ui._qdArqQ=this.value;clearTimeout(ui._qaT);ui._qaT=setTimeout(()=>{ui.qdArquivados();const e=document.querySelector('.qa-q');if(e){e.focus();e.setSelectionRange(e.value.length,e.value.length);}},250)">
+      <div id="qdArqLista" class="qa-l">${lin||`<p class="muted">${q?'Nenhum cartão arquivado com esse texto.':'Nenhum cartão arquivado. Para arquivar, clique com o botão direito no cartão.'}</p>`}</div>
+      <div class="acts"><button class="btn pri" onclick="ui.fecharModal()">Fechar</button></div></div>`;
+    document.getElementById('modal').classList.add('on'); },
+  qdData(t){ const m=String(t||'').match(/(\d\d)\/(\d\d)\/(\d{4})(?: (\d\d):(\d\d))?/); return m?new Date(+m[3],m[2]-1,+m[1],+(m[4]||0),+(m[5]||0)):0; },
   qdDrag(ev,id){ ev.dataTransfer.setData('text/plain',id); ev.target.classList.add('arr'); },
   async qdDrop(ev,col){ ev.preventDefault(); const el=ev.currentTarget; el.classList.remove('drag'); const id=ev.dataTransfer.getData('text/plain'); if(!id) return;
     // posição: antes do cartão sob o mouse, ou no fim da coluna
@@ -1397,7 +1437,7 @@ const ui = {
         <label>Prazo / alerta</label><input id="qd_pz" value="${esc(c.prazo||'')}" placeholder="dd/mm/aaaa (o cartão fica em destaque no dia e depois)">
         <label>Etiqueta</label><div class="qd-ets">${Object.entries(this.QD_ET).map(([k,v])=>`<span class="${c.etiqueta===k?'on':''}" style="background:${v[1]}" onclick="ui._qdc.etiqueta='${k}';this.parentElement.querySelectorAll('span').forEach(x=>x.classList.remove('on'));this.classList.add('on')">${v[0]}</span>`).join('')}</div>
         <label>Coluna</label><select id="qd_col">${((this._qd||{}).colunas||[{id:'fazer',nome:'A fazer'}]).map(x=>`<option value="${x.id}" ${x.id===c.coluna?'selected':''}>${esc(x.nome)}</option>`).join('')}</select></div>
-      <div class="acts" style="justify-content:space-between">${c.id?`<button class="btn" style="color:var(--r-tx)" onclick="ui.qdExcluir('${c.id}')">Excluir</button>`:'<span></span>'}<span style="display:flex;gap:8px"><button class="btn" onclick="ui.fecharModal()">Cancelar</button><button class="btn pri" onclick="ui.qdSalvar()">Gravar</button></span></div></div>`;
+      <div class="acts" style="justify-content:space-between">${c.id?`<span style="display:flex;gap:8px"><button class="btn" style="color:var(--r-tx)" onclick="ui.qdExcluir('${c.id}')">Excluir</button>${c.arquivado?`<button class="btn" onclick="ui.qdArquivar('${c.id}',0)">Devolver ao quadro</button>`:`<button class="btn" onclick="ui.qdArquivar('${c.id}',1)">Arquivar</button>`}</span>`:'<span></span>'}<span style="display:flex;gap:8px"><button class="btn" onclick="ui.fecharModal()">Cancelar</button><button class="btn pri" onclick="ui.qdSalvar()">Gravar</button></span></div></div>`;
     document.getElementById('modal').classList.add('on'); setTimeout(()=>{ const t=document.getElementById(c.processo&&!c.id?'qd_obs':'qd_tit'); if(t) t.focus(); },50); },
   async qdSalvar(){ const c=this._qdc; c.processo=document.getElementById('qd_proc').value; c.titulo=document.getElementById('qd_tit').value; c.obs=document.getElementById('qd_obs').value;
     c.prazo=document.getElementById('qd_pz').value.trim(); const col=document.getElementById('qd_col').value; if(col!==c.coluna){ c.coluna=col; c.ordem=null; }
