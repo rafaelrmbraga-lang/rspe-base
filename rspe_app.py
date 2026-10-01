@@ -1174,7 +1174,7 @@ class Api:
             return {"erro": "Já existe na base uma linha do tempo gerada depois desta."}
         return self._atualizar(processo, "Linha do tempo detalhada importada: prescrição recalculada.")
 
-    def presc_saldos_calc(self, processo, fuga, saldos):
+    def presc_saldos_calc(self, processo, fuga, saldos, fonte="calculadora"):
         """Grava os saldos apurados na calculadora para a fuga: {chave_ajuste do crime: dias}. Cada saldo vale como informado,
         com a fonte "calculadora"; saldo vazio apaga o daquele crime."""
         if not self.base:
@@ -1190,13 +1190,13 @@ class Api:
                 sal.pop(fuga, None)
                 fon.pop(fuga, None)
             else:
-                sal[fuga], fon[fuga] = int(dias), "calculadora"
+                sal[fuga], fon[fuga] = int(dias), (fonte if fonte in ("calculadora", "digitado") else "calculadora")
             d["saldos"], d["saldo_fonte"] = sal, fon
             if not d["saldos"]:
                 d.pop("saldos")
                 d.pop("saldo_fonte")
             self.base.presc_ajuste_gravar(processo, ch, d or None)
-        return self._atualizar(processo, "Saldos da calculadora gravados: prescrição recalculada.")
+        return self._atualizar(processo, "Saldos gravados: prescrição recalculada.")
 
     def pedido(self, processo, aba, data, obs, ref, tipo="pedido"):
         """Marca (ou desmarca, com data vazia) o pedido já feito na aba: data do protocolo, observação livre e a situação

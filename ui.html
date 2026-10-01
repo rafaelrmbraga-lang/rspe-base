@@ -878,17 +878,18 @@ const ui = {
     return cards.map(c=>{ const txt=this.fundPrescEvasao(L, c.s); const ci=this.clip(txt);
       return `<div class="ptl-cf"><div class="ptl-card" style="border-color:${c.cor}"><b style="color:${c.cor}">${esc(c.rot.toUpperCase())}</b>${c.li.map(([a,b])=>`<div class="r"><span>${esc(a)}:</span><span>${penaExt(esc(b))}</span></div>`).join('')}</div>
         <div class="ptl-fund"><div class="h"><b>Fundamentação para a petição</b><span class="mini pre" onclick="event.stopPropagation();ui.copiarClip(${ci})">Copiar</span></div><div class="t">${esc(txt).replace(/\n/g,'<br>')}</div></div></div>`; }).join(''); },
-  FUND_CRIT:{calc:['Calculadora','O saldo de cada condenação na data da fuga foi apurado a partir dos períodos de prisão e das remições da execução, imputando-se o tempo cumprido primeiro à condenação mais grave e, em seguida, às menos graves (CP, art. 76), cada uma a partir do início do seu cumprimento.'],
+  FUND_CRIT:{dig:['Saldo do cálculo do SEEU','O saldo de cada condenação na data da fuga é o que constava do cálculo de pena da execução naquela data, condenação a condenação.'],
+    calc:['Calculadora','O saldo de cada condenação na data da fuga foi apurado a partir dos períodos de prisão e das remições da execução, imputando-se o tempo cumprido primeiro à condenação mais grave e, em seguida, às menos graves (CP, art. 76), cada uma a partir do início do seu cumprimento.'],
     linha:['Linha do tempo detalhada do SEEU','O saldo de cada condenação é o registrado pelo próprio SEEU, na linha do tempo detalhada da execução, na data da fuga: é a imputação do tempo cumprido feita pelo cálculo oficial, homologado pelo juízo, condenação a condenação.'],
     cron:['Ordem do trânsito em julgado (tese)','Adotada a ordem cronológica do trânsito em julgado: entre penas da mesma espécie não incide o art. 76 do Código Penal, que só distingue reclusão e detenção (STJ, AgRg no REsp 1.858.048, 5ª Turma), critério que o TJMS aplica na apuração da prescrição executória após a evasão (Agravo de Execução Penal 1604723-49.2024.8.12.0000; 0000230-65.2010.8.12.0007).'],
     art76:['Art. 76 do CP (tese)','Adotado o critério do art. 76 do Código Penal: executa-se primeiro a pena mais grave, a de reclusão antes da de detenção; entre penas da mesma espécie, a ordem do trânsito em julgado (STJ, AgRg no REsp 1.858.048).'],
     grav:['Pena maior primeiro (tese)','Adotado o critério da pena mais grave primeiro, pelo seu tamanho (STJ, 6ª Turma, AgRg no HC 1.075.773).']},
   fundCrits(s){ // prescrita pela linha do SEEU: só ela; senão, as teses pelas quais prescreveria
     const C=(s&&s.crits)||{}, p=s&&s.principal; if(p&&C[p]&&C[p].resultado==='prescrita') return [p];
-    return Object.keys(this.FUND_CRIT).filter(k=>k!=='linha'&&k!=='calc'&&C[k]&&C[k].resultado==='prescrita'); },
+    return Object.keys(this.FUND_CRIT).filter(k=>!['linha','calc','dig'].includes(k)&&C[k]&&C[k].resultado==='prescrita'); },
   fundEscolher(idx){ const X=(this._fundCtx||{})[idx]; if(!X) return; const ks=this.fundCrits(X.s);
     document.getElementById('modal').innerHTML=`<div class="box" style="width:600px"><h2>Qual fundamentação usar?</h2><p>Pela linha do tempo do SEEU esta condenação não prescreveu, mas prescreveria por mais de um critério de imputação defendido como tese. Escolha o da petição:</p>
-      ${ks.map(k=>{ const h=X.s.crits[k]; return `<div class="chk" style="justify-content:space-between;cursor:pointer;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px" onclick="ui.copiarClip(${this.clip(this.fundPrescEvasao(X.L, X.s, k))});ui.fecharModal()"><span><b>${esc(this.FUND_CRIT[k][0])}</b>${['linha','calc'].includes(k)?' <span class="px-tag">principal</span>':''}<br><span class="muted">${h.posicao?h.posicao+'ª de '+h.de+' · ':''}saldo ${esc(this.tlAmd(h.saldo))} · prazo ${esc(h.prazo)} · venceu em ${esc(h.limite)}</span></span><span class="jz-b pri">Copiar</span></div>`; }).join('')}
+      ${ks.map(k=>{ const h=X.s.crits[k]; return `<div class="chk" style="justify-content:space-between;cursor:pointer;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px" onclick="ui.copiarClip(${this.clip(this.fundPrescEvasao(X.L, X.s, k))});ui.fecharModal()"><span><b>${esc(this.FUND_CRIT[k][0])}</b>${['linha','calc','dig'].includes(k)?' <span class="px-tag">principal</span>':''}<br><span class="muted">${h.posicao?h.posicao+'ª de '+h.de+' · ':''}saldo ${esc(this.tlAmd(h.saldo))} · prazo ${esc(h.prazo)} · venceu em ${esc(h.limite)}</span></span><span class="jz-b pri">Copiar</span></div>`; }).join('')}
       <div class="acts"><button class="btn" onclick="ui.fecharModal()">Cancelar</button></div></div>`;
     document.getElementById('modal').classList.add('on'); },
   fimTxt(s){ const m=s.fim_motivo||'', nc=s.fim_novo_crime||'', d=s.fim||'';
@@ -899,8 +900,8 @@ const ui = {
     const G=((s.global||{})[k])||[]; if(G.length<2) return '';
     const h=(s.crits||{})[k]||{}; const este=G.find(x=>s._chave&&x.chave===s._chave)||G.find(x=>x.saldo===h.saldo&&x.posicao===h.posicao)||{};
     const pres=G.filter(x=>x.resultado==='prescrita'&&x!==este), nao=G.filter(x=>x.resultado!=='prescrita');
-    const nm=xs=>xs.map(x=>`${x.crime} (ação penal ${x.proc})`).join('; '); const lin=['linha','calc'].includes(k), pm=k==='linha'?'Pelos mesmos registros':(k==='calc'?'Pelo mesmo cálculo':'Pelo mesmo critério');
-    const abre=lin? (k==='linha'?`Na data da fuga, o SEEU registrava para as ${G.length} condenações então em execução:`:`Assim apurado, na data da fuga as ${G.length} condenações então em execução tinham:`) : `Por esse critério, o tempo cumprido da execução unificada até a fuga (${Number(s.cumprido_total||0).toLocaleString('pt-BR')} dias, somados cumprimento, prisão provisória e remição) seria imputado às ${G.length} condenações então em execução nesta ordem:`;
+    const nm=xs=>xs.map(x=>`${x.crime} (ação penal ${x.proc})`).join('; '); const lin=['linha','calc','dig'].includes(k), pm=['linha','dig'].includes(k)?'Pelos mesmos registros':(k==='calc'?'Pelo mesmo cálculo':'Pelo mesmo critério');
+    const abre=lin? (['linha','dig'].includes(k)?`Na data da fuga, o SEEU registrava para as ${G.length} condenações então em execução:`:`Assim apurado, na data da fuga as ${G.length} condenações então em execução tinham:`) : `Por esse critério, o tempo cumprido da execução unificada até a fuga (${Number(s.cumprido_total||0).toLocaleString('pt-BR')} dias, somados cumprimento, prisão provisória e remição) seria imputado às ${G.length} condenações então em execução nesta ordem:`;
     const fecho=lin? `A condenação aqui tratada tinha ${este.cumprida_txt||'nenhum dia'} cumpridos, restando-lhe ${este.saldo_txt||'—'} na data da fuga.` : `A condenação aqui tratada era a ${este.posicao||'?'}ª nessa ordem${este.posicao===1?' e recebeu primeiro o tempo cumprido':': as anteriores absorveram o tempo cumprido antes dela'}, restando-lhe ${este.saldo_txt||'—'} na data da fuga.`;
     let t=`${this.FUND_CRIT[k][1]}\n${abre}\n`+
       G.map((x,n)=>`${lin?(n+1):x.posicao+'ª'}) ${x.crime} - ação penal ${x.proc}${x.fracao?', fração '+x.fracao:''} - pena de ${x.pena}, ${lin?'cumprida '+(x.cumprida_txt||'nenhum dia')+', ':''}saldo de ${x.saldo_txt}${x.limite?`: prazo de ${x.prazo}, ${x.resultado==='prescrita'?'esgotado':'com vencimento'} em ${x.limite}`:': nada a prescrever'}`).join(';\n')+'.\n'+fecho;
@@ -916,7 +917,7 @@ const ui = {
     const th='style="text-align:left;font-size:11px;color:var(--tx2);padding:5px 6px"', td='style="padding:5px 6px;font-size:12px;border-top:1px solid var(--line);vertical-align:top"';
     let n=0; const blocos=Object.keys(F).map(ev=>{ const xs=F[ev]; const S0=xs[0].S; const pend=xs.some(x=>x.S.saldo_origem==='nao_determinado'); const varias=xs.some(x=>x.S.outras>0);
       const P=(xs.find(x=>x.S.principal)||{S:{}}).S.principal; const lin=r.presc_linha_seeu;
-      const fonte= P==='calc'? 'Saldos apurados na calculadora (dados conferidos pelo usuário). Importada a linha do tempo detalhada, ela prevalece.' : P==='linha'? `Saldos da linha do tempo detalhada do SEEU${lin?' gerada em '+esc(lin.gerado||'?')+(lin.importado?', importada em '+esc(lin.importado):''):''}.` : (varias? 'Sem a linha do tempo detalhada nem a calculadora, o saldo de cada condenação não está determinado.' : 'Uma única condenação em execução: saldo calculado pelos eventos do RSPE.');
+      const fonte= P==='dig'? 'Saldos do cálculo do SEEU na data da fuga, digitados pelo usuário. Importada a linha do tempo detalhada, ela prevalece.' : P==='calc'? 'Saldos calculados pela ordem conferida pelo usuário. Importada a linha do tempo detalhada, ela prevalece.' : P==='linha'? `Saldos da linha do tempo detalhada do SEEU${lin?' gerada em '+esc(lin.gerado||'?')+(lin.importado?', importada em '+esc(lin.importado):''):''}.` : (varias? 'Sem a linha do tempo detalhada nem a calculadora, o saldo de cada condenação não está determinado.' : 'Uma única condenação em execução: saldo calculado pelos eventos do RSPE.');
       const rows=xs.map(({L,S})=>{ const C=S.crits||{}; const hp=P&&C[P]? C[P] : (pend? null : {saldo:S.saldo_max, resultado:S.resultado, limite:S.limite_max});
         const ks=this.fundCrits(S); let bt='';
         if(!pend && (ks.length || S.resultado==='prescrita')){ const id=++n; this._pcFund[id]={L,s:S,ks};
@@ -924,47 +925,68 @@ const ui = {
         return `<tr><td ${td}><b>${esc(L.crime)}</b><br><span class="muted">${esc(L.proc_crim||'')} · pena ${esc(L.pena||'')}</span></td><td ${td}>${hp? esc(this.tlAmd(hp.saldo)) : '<span class="muted">não determinado</span>'}</td><td ${td}>${pend?'<span class="px-pill n">a verificar</span>':pill(hp)}</td>${varias?`<td ${td}>${pend?'—':pill(C.cron)}</td><td ${td}>${pend?'—':pill(C.art76)}</td><td ${td}>${pend?'—':pill(C.grav)}</td>`:''}<td ${td}>${bt}</td></tr>`; }).join('');
       return `<div class="px-box" style="margin-bottom:12px"><h5>${S0.revogacao?'Revogação do livramento':'Fuga'} de ${esc(ev)}${S0.fim&&S0.fim!=='hoje'?' · fim em '+esc(S0.fim):' · em curso'}</h5>
         <div style="font-size:12.5px;margin:4px 0 8px">${fonte}</div>
-        ${varias?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px"><span class="jz-b ${pend?'pri':''}" onclick="ui.pcLinha()">${lin?'Importar outra linha do tempo detalhada':'Importar linha do tempo detalhada (PDF)'}</span><span class="jz-b" onclick="ui.calcAbrir('${esc(ev)}')">${P==='calc'?'Rever a calculadora':'Preencher manualmente (calculadora)'}</span></div>`:''}
-        <table style="width:100%;border-collapse:collapse"><thead><tr><th ${th}>Condenação</th><th ${th}>Saldo na fuga</th><th ${th}>${P==='calc'?'Calculadora':P==='linha'?'Linha do SEEU':'Pelo saldo'}</th>${varias?`<th ${th}>Ordem do trânsito (tese)</th><th ${th}>Art. 76 (tese)</th><th ${th}>Pena maior (tese)</th>`:''}<th ${th}></th></tr></thead><tbody>${rows}</tbody></table>
+        ${varias?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px"><span class="jz-b ${pend?'pri':''}" onclick="ui.pcLinha()">${lin?'Importar outra linha do tempo detalhada':'Importar linha do tempo detalhada (PDF)'}</span><span class="jz-b" onclick="ui.calcAbrir('${esc(ev)}')">${P==='calc'||P==='dig'?'Rever o saldo informado':'Informar o saldo (calculadora)'}</span></div>`:''}
+        <table style="width:100%;border-collapse:collapse"><thead><tr><th ${th}>Condenação</th><th ${th}>Saldo na fuga</th><th ${th}>${P==='calc'?'Pela ordem':P==='dig'?'Saldo do SEEU':P==='linha'?'Linha do SEEU':'Pelo saldo'}</th>${varias?`<th ${th}>Ordem do trânsito (tese)</th><th ${th}>Art. 76 (tese)</th><th ${th}>Pena maior (tese)</th>`:''}<th ${th}></th></tr></thead><tbody>${rows}</tbody></table>
         ${pend?'<div style="font-size:12px;color:var(--tx2);margin-top:8px">Importe a linha do tempo detalhada (gerada na aba "Informações adicionais" do SEEU) ou preencha a calculadora: o cálculo nos 4 critérios e a fundamentação aparecem em seguida.</div>':''}</div>`; }).join('');
     document.getElementById('modal').innerHTML=`<div class="box" style="width:980px;max-height:90vh;overflow:auto"><h2>Prescrição executória após a fuga · ${esc(r.nome||'')}</h2><p>${esc(r.proc||r.id)} · o saldo da pena na data da fuga (CP, art. 113), condenação a condenação; os demais critérios de imputação aparecem como tese.</p>${blocos||'<p>Nenhuma fuga ou revogação de livramento registrada.</p>'}<div class="acts"><button class="btn" onclick="ui.fecharModal()">Fechar</button></div></div>`;
     document.getElementById('modal').classList.add('on'); },
   pcCopiar(id){ const X=this._pcFund[id]; if(!X) return; if(X.ks.length>1){ this._fundCtx=this._fundCtx||{}; this._fundCtx['pc']={L:X.L, s:X.s}; return this.fundEscolher('pc'); }
     this.copiarClip(this.clip(this.fundPrescEvasao(X.L, X.s, X.ks[0]))); },
   async pcLinha(){ const rid=this._pcRid; const d=await api('presc_importar_linha', rid); if(d&&!d.erro) this.prescCalc(rid); },
-  calcAbrir(ev){ const r=(this.dados.registros||[]).find(x=>x.id===this._pcRid); if(!r) return; const X=(this.calcFugas(r)[ev]||[]).find(x=>x.S.calc); if(!X) return;
-    const c=JSON.parse(JSON.stringify(X.S.calc)); c.conds.forEach(x=>{ x.este=false; }); this._calc={L:X.L, c};
-    c.conds.forEach(x=>{ x._pena=this.sqFmt(x.pena); x._grav=x.fracao||'0'; }); this.calcRender(); },
-  calcRender(res){ const C=this._calc; if(!C) return; const c=C.c; const inp=(v,w,on)=>`<input value="${esc(v??'')}" style="width:${w}px;padding:4px 6px;border:1px solid var(--line);border-radius:6px;font:inherit;font-size:12px" oninput="${on}">`;
-    const th='style="text-align:left;font-size:11px;color:var(--tx2);padding:4px 6px"', td='style="padding:3px 6px;font-size:12px;border-top:1px solid var(--line)"';
-    const rem=(arr,i)=>`<span style="cursor:pointer;color:#B42318" onclick="ui._calc.c.${arr}.splice(${i},1);ui.calcRender()">✕</span>`;
-    document.getElementById('modal').innerHTML=`<div class="box" style="width:860px;max-height:88vh;overflow:auto"><h2>Calculadora do saldo na fuga de ${esc(c.fuga)}</h2>
-      <p>Dados pré-preenchidos pelo RSPE: confira e corrija. Em cada período, o tempo cumprido vai primeiro à condenação de maior gravidade já iniciada (por padrão, a fração de progressão: art. 76 do CP); entre gravidades iguais, à de início mais recente; o que sobra passa à seguinte. Cada condenação só recebe o tempo cumprido a partir do seu início de contagem. Para simular outro critério, mude a gravidade.</p>
-      <table style="width:100%;border-collapse:collapse;margin-bottom:12px"><thead><tr><th ${th}>Condenação</th><th ${th}>Pena (a m d)</th><th ${th}>Início da contagem</th><th ${th}>Gravidade</th><th ${th}>Recebeu</th><th ${th}>Saldo na fuga</th></tr></thead><tbody>
-      ${c.conds.map((x,i)=>`<tr${x.este?' style="background:#F5F8FF"':''}><td ${td}>${esc(x.crime)}<br><span class="muted">${esc(x.proc)}${x.fato?' · fato '+esc(x.fato):''}</span></td><td ${td}>${inp(x._pena,80,`ui._calc.c.conds[${i}]._pena=this.value`)}</td><td ${td}>${inp(x.inicio,90,`ui._calc.c.conds[${i}].inicio=this.value`)}</td><td ${td}>${inp(x._grav,50,`ui._calc.c.conds[${i}]._grav=this.value`)}</td><td ${td}>${res?esc(this.tlAmd(res.rec[i])):'—'}</td><td ${td}><b>${res?esc(this.tlAmd(res.sal[i])):'—'}</b></td></tr>`).join('')}</tbody></table>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-        <div><b style="font-size:12.5px">Períodos de custódia/cumprimento até a fuga</b><table style="width:100%;border-collapse:collapse;margin-top:4px">${c.periodos.map((p,i)=>`<tr><td ${td}>${inp(p[0],90,`ui._calc.c.periodos[${i}][0]=this.value`)} a ${inp(p[1],90,`ui._calc.c.periodos[${i}][1]=this.value`)} ${rem('periodos',i)}</td></tr>`).join('')}</table><span class="jz-b" style="margin-top:6px" onclick="ui._calc.c.periodos.push(['','']);ui.calcRender()">+ período</span></div>
-        <div><b style="font-size:12.5px">Remições até a fuga</b><table style="width:100%;border-collapse:collapse;margin-top:4px">${c.remicoes.map((p,i)=>`<tr><td ${td}>${inp(p[0],90,`ui._calc.c.remicoes[${i}][0]=this.value`)} ${inp(p[1],50,`ui._calc.c.remicoes[${i}][1]=this.value`)} dias ${rem('remicoes',i)}</td></tr>`).join('')}</table><span class="jz-b" style="margin-top:6px" onclick="ui._calc.c.remicoes.push(['','']);ui.calcRender()">+ remição</span></div></div>
-      ${res?`<p style="margin-top:12px">Tempo cumprido até a fuga: <b>${res.total.toLocaleString('pt-BR')} dias</b> (custódia e remição).</p>`:''}
-      <div class="acts" style="margin-top:14px"><button class="btn" onclick="ui.prescCalc(ui._pcRid)">Voltar</button><button class="btn" onclick="ui.calcRodar()">Calcular</button>${res?`<button class="btn pri" onclick="ui.calcGravar()">Gravar saldos e recalcular</button>`:''}</div></div>`;
+  // calculadora simples, em duas abas: digitar o saldo (do cálculo do SEEU daquela data) ou calcular pela ordem (arrastar)
+  calcAbrir(ev){ const r=(this.dados.registros||[]).find(x=>x.id===this._pcRid); if(!r) return; const xs=this.calcFugas(r)[ev]||[]; const X=xs.find(x=>x.S.calc); if(!X) return;
+    const c=JSON.parse(JSON.stringify(X.S.calc)); const dia=t=>{ const m=/^(\d{2})\/(\d{2})\/(\d{4})$/.exec(String(t||'').trim()); return m? Math.round(Date.UTC(+m[3],+m[2]-1,+m[1])/864e5) : null; };
+    const gv=f=>{ const m=/^(\d+)\s*\/\s*(\d+)$/.exec(String(f||'')); return m? (+m[1])/(+m[2]||1) : 0; };
+    // saldo já gravado (digitado ou calculado) de cada condenação nesta fuga
+    c.conds.forEach(x=>{ const y=xs.find(z=>z.L.chave_ajuste===x.chave); x.sal0=(y&&y.S.saldo_origem==='informado')? y.S.saldo_max : null; x._ini=dia(x.inicio); });
+    c.ordem=c.conds.map((_,i)=>i).sort((i,j)=>(gv(c.conds[j].fracao)-gv(c.conds[i].fracao))||((c.conds[j]._ini||0)-(c.conds[i]._ini||0)));
+    c.total0=c.cumprido_total; c.total=c.cumprido_total; c.aba='dig'; c.dig=c.conds.map(x=>x.sal0==null? null : this.calcAmd(x.sal0));
+    this._calc={L:X.L, c, ev}; this.calcRender(); },
+  calcAmd(n){ n=Math.max(0,Math.round(n||0)); const a=Math.floor(n/365), r=n%365, m=Math.min(Math.floor(r/30),11); return [a,m,r-30*m]; },
+  calcOrdem(){ // saldo de cada condenação pela ordem da lista: o tempo vai à primeira e o que sobra passa à seguinte;
+    // cada uma só recebe o tempo cumprido depois do seu início (o tempo anterior fica com as que já estavam em execução)
+    const c=this._calc.c; const dia=t=>{ const m=/^(\d{2})\/(\d{2})\/(\d{4})$/.exec(String(t||'').trim()); return m? Math.round(Date.UTC(+m[3],+m[2]-1,+m[1])/864e5) : null; };
+    const fuga=dia(c.fuga); const per=c.periodos.map(p=>[dia(p[0]),dia(p[1])]).filter(p=>p[0]!=null&&p[1]!=null); const rem=c.remicoes.map(p=>[dia(p[0]),+p[1]||0]).filter(p=>p[0]!=null);
+    const ini=c.conds.map(x=>Math.min(dia(x.inicio)??fuga, fuga)); const ini0=Math.min(...ini, ...per.map(p=>p[0]));
+    const ate=t=>per.reduce((s,[a,b])=>s+Math.max(0,Math.min(b,t)-Math.max(a,ini0)),0)+rem.reduce((s,[d,n])=>s+(d<t?n:0),0);
+    const extra=(+c.total||0)-c.total0; // total corrigido à mão: a diferença entra no último trecho
+    const pos={}; c.ordem.forEach((i,k)=>pos[i]=k); const marcos=[...new Set(ini)].sort((a,b)=>a-b); const rec=c.conds.map(()=>0); let sobra=ate(marcos[0]);
+    marcos.forEach((m,k)=>{ let q=sobra+(k+1<marcos.length? ate(marcos[k+1]) : c.total0+extra)-ate(m);
+      c.ordem.filter(i=>ini[i]<=m).sort((i,j)=>pos[i]-pos[j]).forEach(i=>{ const d=Math.min(Math.max(0,c.conds[i].pena-rec[i]),Math.max(0,q)); rec[i]+=d; q-=d; }); sobra=q; });
+    return c.conds.map((x,i)=>Math.max(0,x.pena-rec[i])); },
+  calcRender(){ const C=this._calc; if(!C) return; const c=C.c; const amd=this.tlAmd.bind(this);
+    const tab=(id,t)=>`<span onclick="ui._calc.c.aba='${id}';ui.calcRender()" style="padding:8px 14px;cursor:pointer;border-bottom:2px solid ${c.aba===id?'var(--pri)':'transparent'};font-weight:${c.aba===id?700:500};color:${c.aba===id?'var(--pri)':'var(--tx2)'}">${t}</span>`;
+    const num=(v,i,k)=>`<input inputmode="numeric" value="${v??''}" style="width:42px;padding:6px;border:1px solid var(--line);border-radius:8px;font:inherit;text-align:center" oninput="ui.calcDig(${i},${k},this.value)">`;
+    const nome=x=>`<b>${esc(x.crime)}</b><div class="muted" style="font-size:11.5px">${esc(x.proc)} · pena ${esc(amd(x.pena))}${x.fracao?' · fração '+esc(x.fracao):''}</div>`;
+    let corpo='';
+    if(c.aba==='dig'){
+      corpo=`<p style="margin:12px 0">Informe o saldo de cada condenação na data da fuga, como consta no cálculo de pena do SEEU daquela data, no atestado de pena ou na decisão.</p>
+        <div>${c.conds.map((x,i)=>{ const v=c.dig[i]||[]; return `<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line)"><div style="flex:1">${nome(x)}</div><div style="white-space:nowrap">${num(v[0],i,0)} anos ${num(v[1],i,1)} meses ${num(v[2],i,2)} dias</div></div>`; }).join('')}</div>
+        <div style="margin-top:10px"><span class="jz-b" onclick="ui.calcSugerir()">Não tenho o saldo: sugerir pela ordem</span></div>`;
+    } else {
+      const sal=this.calcOrdem();
+      corpo=`<p style="margin:12px 0">O tempo cumprido vai primeiro à condenação do topo da lista; o que sobra passa à seguinte. A ordem já vem pela fração (mais grave primeiro, CP, art. 76). <b>Arraste</b> para mudar.</p>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">Tempo cumprido até a fuga: <input inputmode="numeric" value="${c.total}" style="width:80px;padding:6px;border:1px solid var(--line);border-radius:8px;font:inherit;text-align:right" onchange="ui._calc.c.total=+this.value.replace(/\D/g,'')||0;ui.calcRender()"> dias <span class="muted" style="font-size:11.5px">(prisões e remições do RSPE${c.total!==c.total0?'; o RSPE dá '+c.total0.toLocaleString('pt-BR'):''})</span></div>
+        <div id="calcLista">${c.ordem.map((i,k)=>{ const x=c.conds[i]; return `<div draggable="true" ondragstart="event.dataTransfer.setData('text','${k}')" ondragover="event.preventDefault()" ondrop="event.preventDefault();ui.calcMover(+event.dataTransfer.getData('text'),${k})" style="display:flex;align-items:center;gap:12px;padding:10px 12px;margin-bottom:6px;border:1px solid var(--line);border-radius:10px;background:var(--card);cursor:grab">
+          <span style="color:var(--tx3);font-size:18px">≡</span><b style="width:22px">${k+1}.</b><div style="flex:1">${nome(x)}</div>
+          <div style="text-align:right;white-space:nowrap"><span class="muted" style="font-size:11px">saldo na fuga</span><br><b>${esc(amd(sal[i]))}</b></div>
+          <span style="display:flex;flex-direction:column;gap:2px"><span class="mini" style="cursor:pointer" onclick="ui.calcMover(${k},${k-1})">▲</span><span class="mini" style="cursor:pointer" onclick="ui.calcMover(${k},${k+1})">▼</span></span></div>`; }).join('')}</div>
+        <details style="margin-top:8px"><summary style="cursor:pointer;font-size:12.5px;color:var(--tx2)">ajustar dados (início do cumprimento de cada condenação)</summary>
+          <div style="font-size:12px;margin:8px 0">Cada condenação só recebe o tempo cumprido a partir desta data (o fato ou, se anterior, a primeira prisão).</div>
+          ${c.conds.map((x,i)=>`<div style="display:flex;gap:10px;align-items:center;padding:4px 0"><span style="flex:1;font-size:12px">${esc(x.crime)} · ${esc(x.proc)}</span><input value="${esc(x.inicio)}" style="width:96px;padding:5px;border:1px solid var(--line);border-radius:8px;font:inherit;font-size:12px" onchange="ui._calc.c.conds[${i}].inicio=this.value;ui.calcRender()"></div>`).join('')}</details>`;
+    }
+    document.getElementById('modal').innerHTML=`<div class="box" style="width:760px;max-height:90vh;overflow:auto"><h2>Saldo na fuga de ${esc(c.fuga)}</h2>
+      <div style="display:flex;gap:4px;border-bottom:1px solid var(--line);margin-top:8px">${tab('dig','Digitar saldo')}${tab('ord','Calcular pela ordem')}</div>${corpo}
+      <div class="acts" style="margin-top:16px"><button class="btn" onclick="ui.prescCalc(ui._pcRid)">Voltar</button><button class="btn pri" onclick="ui.calcGravar()">${c.aba==='dig'?'Gravar saldos':'Usar estes saldos'}</button></div></div>`;
     document.getElementById('modal').classList.add('on'); },
-  calcRodar(){ const C=this._calc; if(!C) return; const c=C.c; const re=/^\d{2}\/\d{2}\/\d{4}$/;
-    const dia=t=>{ const m=/^(\d{2})\/(\d{2})\/(\d{4})$/.exec(String(t||'').trim()); return m? Math.round(Date.UTC(+m[3],+m[2]-1,+m[1])/864e5) : null; };
-    const fuga=dia(c.fuga); const grav=g=>{ const m=/^(\d+)\s*\/\s*(\d+)$/.exec(String(g).trim()); return m? (+m[1])/(+m[2]||1) : (parseFloat(String(g).replace(',','.'))||0); };
-    const conds=[]; for(const [i,x] of c.conds.entries()){ const p=this.sqAmd(x._pena), d=dia(x.inicio); if(p==null) return this.toast('Pena inválida na linha '+(i+1)+': use 2a6m0d.'); if(d==null) return this.toast('Início inválido na linha '+(i+1)+': use dd/mm/aaaa.'); conds.push({i, pena:p, ini:Math.min(d,fuga), g:grav(x._grav)}); }
-    const per=[]; for(const p of c.periodos){ if(!p[0]&&!p[1]) continue; const a=dia(p[0]), b=dia(p[1]); if(a==null||b==null) return this.toast('Período inválido: use dd/mm/aaaa a dd/mm/aaaa.'); if(b>a) per.push([a,Math.min(b,fuga)]); }
-    per.sort((x,y)=>x[0]-y[0]); const un=[]; per.forEach(p=>{ const u=un[un.length-1]; if(u&&p[0]<=u[1]) u[1]=Math.max(u[1],p[1]); else un.push([p[0],p[1]]); });
-    const rems=[]; for(const p of c.remicoes){ if(!p[0]&&!p[1]) continue; const d=dia(p[0]); if(d==null||!/^\d+$/.test(String(p[1]).trim())) return this.toast('Remição inválida: data dd/mm/aaaa e dias.'); if(d<=fuga) rems.push([d,+p[1]]); }
-    const ini0=Math.min(...un.map(p=>p[0]), ...conds.map(x=>x.ini));
-    const ate=t=>un.reduce((s,[a,b])=>s+Math.max(0,Math.min(b,t)-Math.max(a,ini0)),0)+rems.reduce((s,[d,n])=>s+(d<t?n:0),0);
-    const total=un.reduce((s,[a,b])=>s+Math.max(0,Math.min(b,fuga)-Math.max(a,ini0)),0)+rems.reduce((s,[d,n])=>s+n,0);
-    const marcos=[...new Set(conds.map(x=>x.ini))].sort((a,b)=>a-b); const rec=conds.map(()=>0); let sobra=ate(marcos[0]);
-    marcos.forEach((m,k)=>{ let q=sobra+(k+1<marcos.length? ate(marcos[k+1]) : total)-ate(m);
-      conds.filter(x=>x.ini<=m).sort((x,y)=>(y.g-x.g)||(y.ini-x.ini)).forEach(x=>{ const d=Math.min(Math.max(0,x.pena-rec[x.i]),q); rec[x.i]+=d; q-=d; }); sobra=q; });
-    C.res={rec, sal:conds.map(x=>Math.max(0,x.pena-rec[x.i])), total}; this.calcRender(C.res); },
-  async calcGravar(){ const C=this._calc; if(!C||!C.res) return; const rid=this.ridDe(C.L); if(!rid) return this.toast('Assistido não encontrado.');
-    const saldos={}; C.c.conds.forEach((x,i)=>{ if(x.chave) saldos[x.chave]=C.res.sal[i]; });
-    const d=await api('presc_saldos_calc', rid, C.c.fuga, saldos); if(d&&!d.erro) this.prescCalc(rid); },
+  calcDig(i,k,v){ const c=this._calc.c; c.dig[i]=c.dig[i]||[null,null,null]; c.dig[i][k]=String(v).replace(/\D/g,'')===''? null : +String(v).replace(/\D/g,''); },
+  calcMover(de,para){ const o=this._calc.c.ordem; if(para<0||para>=o.length||de===para) return; const [x]=o.splice(de,1); o.splice(para,0,x); this.calcRender(); },
+  calcSugerir(){ const c=this._calc.c; const sal=this.calcOrdem(); c.dig=sal.map(n=>this.calcAmd(n)); c.aba='ord'; this.calcRender(); },
+  async calcGravar(){ const C=this._calc; if(!C) return; const c=C.c; const rid=this._pcRid; const saldos={}; let fonte='calculadora';
+    if(c.aba==='dig'){ fonte='digitado'; for(const [i,x] of c.conds.entries()){ const v=c.dig[i]; if(!v||v.every(n=>n==null)) continue; saldos[x.chave]=(v[0]||0)*365+(v[1]||0)*30+(v[2]||0); }
+      if(!Object.keys(saldos).length) return this.toast('Informe o saldo de pelo menos uma condenação.'); }
+    else { const sal=this.calcOrdem(); c.conds.forEach((x,i)=>{ if(x.chave) saldos[x.chave]=sal[i]; }); }
+    const d=await api('presc_saldos_calc', rid, c.fuga, saldos, fonte); if(d&&!d.erro) this.prescCalc(rid); },
   fundPrescEvasao(L, s0, k){ let s=s0;
     if(k&&s0&&s0.crits&&s0.crits[k]){ const h=s0.crits[k]; s=Object.assign({}, s0, {saldo_min:h.saldo, saldo_max:h.saldo, prazo_max:h.prazo, prazo_min:h.prazo, limite_max:h.limite, limite_min:h.limite, resultado:h.resultado, imput_txt:'', _glob:this.fundGlobal(s0,k).trim().replace(/\.$/,'')}); }
     // texto pronto para a petição, com os fundamentos do cálculo da prescrição pelo saldo (CP, arts. 107, IV, 109, 110, 113, 115, 117)
