@@ -1,5 +1,5 @@
 {
- "versao": "2026-10-01",
+ "versao": "2026-10-01b",
  "descricao": "Base juridica do RSPE Base. Editavel: o programa le este arquivo ao abrir (copia ao lado do .exe tem prioridade sobre a embutida). Datas em AAAA-MM-DD. Fracoes como 'num/den' ou percentual 'NN%'.",
  "prescricao": {
   "art109_tabela": [
@@ -1771,7 +1771,8 @@
       "livramento condicional"
      ],
      "outros_requisitos": "livramento condicional concedido até 31/12/1999, não revogado; sem fração de pena exigida; se o crime for doloso com violência ou grave ameaça à pessoa: depende de o Juiz constatar condições pessoais que façam presumir que não voltará a delinquir (art. 1º, § 1º)",
-     "texto": "condenado à pena privativa de liberdade não superior a oito anos, beneficiado com livramento condicional até 31 de dezembro de 1999, e não tenha ocorrido sua revogação"
+     "texto": "condenado à pena privativa de liberdade não superior a oito anos, beneficiado com livramento condicional até 31 de dezembro de 1999, e não tenha ocorrido sua revogação",
+     "regime_ate": "31/12/1999"
     },
     {
      "dispositivo": "art. 1º, VII",
@@ -1792,7 +1793,7 @@
     },
     {
      "dispositivo": "art. 1º, VIII",
-     "objetivo": true,
+     "objetivo": false,
      "pena_max_anos": null,
      "pena_min_anos": null,
      "fracao_nao_reincidente": "1/2",
@@ -1804,7 +1805,7 @@
      "regime": [
       "aberto"
      ],
-     "outros_requisitos": "regime inicial aberto fixado na sentença; metade da pena cumprida em 31/12/2000 (data distinta da de referência geral); sem regressão; se o crime for doloso com violência ou grave ameaça à pessoa: depende de o Juiz constatar condições pessoais que façam presumir que não voltará a delinquir (art. 1º, § 1º)",
+     "outros_requisitos": "regime INICIAL aberto fixado na sentença (dado que o RSPE não traz; a progressão ao aberto não basta); metade da pena cumprida em 31/12/2000 (data distinta da de referência geral); sem regressão; se o crime for doloso com violência ou grave ameaça à pessoa: depende de o Juiz constatar condições pessoais que façam presumir que não voltará a delinquir (art. 1º, § 1º)",
      "texto": "condenado à pena privativa de liberdade a ser cumprida inicialmente em regime aberto, desde que, em 31 de dezembro de 2000, já tenha cumprido metade da pena, e não tenha havido posterior regressão, nos termos do art. 118 da Lei nº 7.210, de 1984"
     }
    ],
@@ -1831,7 +1832,9 @@
       "descricao": "homicídio doloso",
       "lei": "CP",
       "artigos": [
-       "121"
+       "121 caput",
+       "121, §1º",
+       "121, §2º"
       ]
      },
      {
@@ -1854,7 +1857,9 @@
      {
       "descricao": "crimes contra o Sistema Financeiro Nacional",
       "lei": "Lei 7.492/1986",
-      "artigos": []
+      "artigos": [
+       "2 a 23"
+      ]
      }
     ],
     "texto": "Os benefícios previstos neste Decreto não alcançam os: I - condenados por crimes hediondos ou por crime de tortura, terrorismo ou tráfico ilícito de entorpecentes e drogas afins; II - condenados por homicídio doloso; III - condenados por roubo qualificado (Código Penal, art. 157, § 2º); IV - condenados que, embora solventes, tenham deixado de reparar o dano; V - condenados por crimes definidos no Código Penal Militar que correspondam às hipóteses previstas nos incisos I, II e III deste artigo; VI - condenados por crimes contra o Sistema Financeiro Nacional (Lei nº 7.492/1986). Par. único: as restrições deste artigo, do § 1º do art. 1º e do art. 3º não se aplicam às hipóteses do inciso IV do art. 1º."
@@ -1862,7 +1867,7 @@
    "falta_grave": {
     "dispositivo": "art. 3º, I",
     "meses": 12,
-    "exige_homologacao": false,
+    "exige_homologacao": true,
     "afeta": "indulto e comutação",
     "texto": "Constituem também requisitos para concessão do indulto e da comutação que o condenado: I - não tenha cometido falta grave apurada na forma prevista na Lei nº 7.210, de 1984, durante os últimos doze meses de cumprimento da pena, computada a detração (art. 42 do Código Penal); II - não esteja sendo processado por outro crime praticado com violência ou grave ameaça contra a pessoa ou por aqueles descritos no art. 10 deste Decreto."
    },
@@ -1979,7 +1984,8 @@
       "livramento condicional"
      ],
      "outros_requisitos": "livramento condicional concedido até 31/12/2000, não revogado; sem fração de pena exigida; se o crime for doloso com violência ou grave ameaça à pessoa: depende de o Juiz constatar condições pessoais que façam presumir que não voltará a delinquir (art. 1º, § 1º)",
-     "texto": "condenado à pena privativa de liberdade não superior a oito anos, beneficiado com livramento condicional até 31 de dezembro de 2000, e não tenha ocorrido sua revogação"
+     "texto": "condenado à pena privativa de liberdade não superior a oito anos, beneficiado com livramento condicional até 31 de dezembro de 2000, e não tenha ocorrido sua revogação",
+     "regime_ate": "31/12/2000"
     },
     {
      "dispositivo": "art. 1º, VII",
@@ -2000,7 +2006,7 @@
     },
     {
      "dispositivo": "art. 1º, VIII",
-     "objetivo": true,
+     "objetivo": false,
      "pena_max_anos": null,
      "pena_min_anos": null,
      "fracao_nao_reincidente": "1/2",
@@ -2012,7 +2018,7 @@
      "regime": [
       "aberto"
      ],
-     "outros_requisitos": "regime inicial aberto fixado na sentença; metade da pena cumprida em 31/12/2001 (data distinta da de referência geral); sem regressão; se o crime for doloso com violência ou grave ameaça à pessoa: depende de o Juiz constatar condições pessoais que façam presumir que não voltará a delinquir (art. 1º, § 1º)",
+     "outros_requisitos": "regime INICIAL aberto fixado na sentença (dado que o RSPE não traz; a progressão ao aberto não basta); metade da pena cumprida em 31/12/2001 (data distinta da de referência geral); sem regressão; se o crime for doloso com violência ou grave ameaça à pessoa: depende de o Juiz constatar condições pessoais que façam presumir que não voltará a delinquir (art. 1º, § 1º)",
      "texto": "condenado à pena privativa de liberdade a ser cumprida inicialmente em regime aberto, desde que, em 31 de dezembro de 2001, já tenha cumprido metade da pena, e não tenha havido posterior regressão, nos termos do art. 118 da Lei nº 7.210, de 1984"
     }
    ],
@@ -2039,7 +2045,9 @@
       "descricao": "homicídio doloso",
       "lei": "CP",
       "artigos": [
-       "121"
+       "121 caput",
+       "121, §1º",
+       "121, §2º"
       ]
      },
      {
@@ -2062,7 +2070,9 @@
      {
       "descricao": "crimes contra o Sistema Financeiro Nacional",
       "lei": "Lei 7.492/1986",
-      "artigos": []
+      "artigos": [
+       "2 a 23"
+      ]
      }
     ],
     "texto": "Os benefícios previstos neste Decreto não alcançam os: I - condenados por crimes hediondos ou por crime de tortura, terrorismo ou tráfico ilícito de entorpecentes e drogas afins; II - condenados por homicídio doloso; III - condenados por roubo qualificado com o emprego de arma de fogo; IV - condenados que, embora solventes, tenham deixado de reparar o dano; V - condenados por crimes definidos no Código Penal Militar que correspondam às hipóteses previstas nos incisos I, II e III deste artigo; VI - condenados por crimes contra o Sistema Financeiro Nacional (Lei nº 7.492/1986). Par. único: as restrições deste artigo, do § 1º do art. 1º e do art. 3º não se aplicam às hipóteses do inciso IV do art. 1º."
@@ -2070,7 +2080,7 @@
    "falta_grave": {
     "dispositivo": "art. 3º, I",
     "meses": 12,
-    "exige_homologacao": false,
+    "exige_homologacao": true,
     "afeta": "indulto e comutação",
     "texto": "Constituem também requisitos para concessão do indulto e da comutação que o condenado: I - não tenha cometido falta grave apurada na forma prevista na Lei nº 7.210, de 1984, durante os últimos doze meses de cumprimento da pena, computada a detração (art. 42 do Código Penal); II - não esteja sendo processado por outro crime praticado com violência ou grave ameaça contra a pessoa ou por aqueles descritos no art. 10 deste Decreto."
    },
@@ -2217,7 +2227,8 @@
       "livramento condicional"
      ],
      "outros_requisitos": "livramento condicional concedido até 31/12/2001, não revogado, com metade do período de prova cumprida; se o crime for doloso com violência ou grave ameaça à pessoa: sem falta grave nos últimos 2 anos contados da publicação e avaliação judicial motivada de condições pessoais (art. 1º, § 1º)",
-     "texto": "condenado à pena privativa de liberdade não superior a oito anos, beneficiado com livramento condicional até 31 de dezembro de 2001, desde que tenha cumprido metade do período de prova e que não tenha ocorrido sua revogação"
+     "texto": "condenado à pena privativa de liberdade não superior a oito anos, beneficiado com livramento condicional até 31 de dezembro de 2001, desde que tenha cumprido metade do período de prova e que não tenha ocorrido sua revogação",
+     "regime_ate": "31/12/2001"
     },
     {
      "dispositivo": "art. 1º, VIII",
@@ -2238,7 +2249,7 @@
     },
     {
      "dispositivo": "art. 1º, IX",
-     "objetivo": true,
+     "objetivo": false,
      "pena_max_anos": null,
      "pena_min_anos": null,
      "fracao_nao_reincidente": "1/2",
@@ -2250,7 +2261,7 @@
      "regime": [
       "aberto"
      ],
-     "outros_requisitos": "regime inicial aberto; metade da pena cumprida em 31/12/2001 (não em 25/12/2002); sem regressão; se o crime for doloso com violência ou grave ameaça à pessoa: sem falta grave nos últimos 2 anos contados da publicação e avaliação judicial motivada de condições pessoais (art. 1º, § 1º)",
+     "outros_requisitos": "regime INICIAL aberto fixado na sentença (dado que o RSPE não traz; a progressão ao aberto não basta); metade da pena cumprida em 31/12/2001 (não em 25/12/2002); sem regressão; se o crime for doloso com violência ou grave ameaça à pessoa: sem falta grave nos últimos 2 anos contados da publicação e avaliação judicial motivada de condições pessoais (art. 1º, § 1º)",
      "texto": "condenado à pena privativa de liberdade a ser cumprida inicialmente em regime aberto, desde que, em 31 de dezembro de 2001, já tenha cumprido metade da pena e não tenha havido posterior regressão"
     },
     {
@@ -2303,17 +2314,22 @@
      {
       "descricao": "crimes contra o Sistema Financeiro Nacional",
       "lei": "Lei 7.492/1986",
-      "artigos": []
+      "artigos": [
+       "2 a 23"
+      ]
      }
     ],
-    "texto": "Os benefícios previstos neste Decreto não alcançam os: I - condenados por crime hediondo, de tortura e terrorismo; II - condenados por tráfico ilícito de entorpecentes e drogas afins; III - condenados que, embora solventes, tenham deixado de reparar o dano; IV - condenados por crimes definidos no Código Penal Militar que correspondam às hipóteses previstas nos incisos I, II e III deste artigo; e V - condenados por crimes contra o Sistema Financeiro Nacional (Lei nº 7.492/1986). § 1º As restrições deste artigo, do § 1º do art. 1º e do art. 3º não se aplicam às hipóteses do inciso V do art. 1º. § 2º Aos condenados a pena privativa de liberdade aplicada não superior a quatro anos, não se aplicam as restrições deste artigo, cumpridas, todavia, as demais exigências (art. 1º, inciso I, e art. 3º, incisos I e II)."
+    "texto": "Os benefícios previstos neste Decreto não alcançam os: I - condenados por crime hediondo, de tortura e terrorismo; II - condenados por tráfico ilícito de entorpecentes e drogas afins; III - condenados que, embora solventes, tenham deixado de reparar o dano; IV - condenados por crimes definidos no Código Penal Militar que correspondam às hipóteses previstas nos incisos I, II e III deste artigo; e V - condenados por crimes contra o Sistema Financeiro Nacional (Lei nº 7.492/1986). § 1º As restrições deste artigo, do § 1º do art. 1º e do art. 3º não se aplicam às hipóteses do inciso V do art. 1º. § 2º Aos condenados a pena privativa de liberdade aplicada não superior a quatro anos, não se aplicam as restrições deste artigo, cumpridas, todavia, as demais exigências (art. 1º, inciso I, e art. 3º, incisos I e II).",
+    "nao_aplica_pena_ate_anos": 4
    },
    "falta_grave": {
     "dispositivo": "art. 3º, I (e art. 1º, § 1º, I)",
     "meses": 12,
     "exige_homologacao": true,
     "afeta": "indulto e comutação",
-    "texto": "Art. 3º, I - não tenha sofrido sanção disciplinar por falta grave, apurada na forma do art. 59 e seguintes da Lei nº 7.210/1984, durante os últimos doze meses de cumprimento da pena, contados retroativamente a partir da publicação deste Decreto, computada a detração (art. 42 do Código Penal), ressalvado o disposto no art. 1º, § 1º. Art. 1º, § 1º, I - para crime doloso com violência ou grave ameaça à pessoa, o indulto fica subordinado à constatação de inexistência da prática de falta grave nos últimos dois anos, contados retroativamente da publicação deste Decreto."
+    "texto": "Art. 3º, I - não tenha sofrido sanção disciplinar por falta grave, apurada na forma do art. 59 e seguintes da Lei nº 7.210/1984, durante os últimos doze meses de cumprimento da pena, contados retroativamente a partir da publicação deste Decreto, computada a detração (art. 42 do Código Penal), ressalvado o disposto no art. 1º, § 1º. Art. 1º, § 1º, I - para crime doloso com violência ou grave ameaça à pessoa, o indulto fica subordinado à constatação de inexistência da prática de falta grave nos últimos dois anos, contados retroativamente da publicação deste Decreto.",
+    "meses_vga": 24,
+    "afeta_vga": "só indulto"
    },
    "comutacao_sucessiva": "permitida",
    "pena_multa": "inadimplência da pena pecuniária não impede indulto ou comutação (art. 5º)",
@@ -2450,7 +2466,9 @@
     "meses": 12,
     "exige_homologacao": true,
     "afeta": "indulto e comutação",
-    "texto": "Art. 3º, I - não tenha sofrido sanção disciplinar por falta grave, praticada nos últimos doze meses do cumprimento da pena, apurada na forma do art. 59 e seguintes da Lei nº 7.210/1984, contados retroativamente a partir da publicação deste Decreto, computada a detração (art. 42 CP), sendo que, em caso de crime praticado com violência ou grave ameaça contra a pessoa, a aferição temporal estende-se aos últimos vinte e quatro meses. Art. 1º, § 1º, I - para crime doloso com violência ou grave ameaça, o indulto depende da inexistência da prática de falta grave nos últimos vinte e quatro meses, contados retroativamente da publicação deste Decreto até a decisão judicial."
+    "texto": "Art. 3º, I - não tenha sofrido sanção disciplinar por falta grave, praticada nos últimos doze meses do cumprimento da pena, apurada na forma do art. 59 e seguintes da Lei nº 7.210/1984, contados retroativamente a partir da publicação deste Decreto, computada a detração (art. 42 CP), sendo que, em caso de crime praticado com violência ou grave ameaça contra a pessoa, a aferição temporal estende-se aos últimos vinte e quatro meses. Art. 1º, § 1º, I - para crime doloso com violência ou grave ameaça, o indulto depende da inexistência da prática de falta grave nos últimos vinte e quatro meses, contados retroativamente da publicação deste Decreto até a decisão judicial.",
+    "meses_vga": 24,
+    "afeta_vga": "indulto e comutação"
    },
    "comutacao_sucessiva": "permitida",
    "pena_multa": "inadimplência da pena de multa não impede indulto ou comutação (art. 5º)",
@@ -2618,14 +2636,14 @@
    "falta_grave": {
     "dispositivo": "art. 4º",
     "meses": 12,
-    "exige_homologacao": false,
+    "exige_homologacao": true,
     "afeta": "indulto e comutação",
     "texto": "A concessão do indulto ou da comutação fica subordinada à constatação de inexistência da prática de falta grave nos últimos doze meses de cumprimento de pena, apurada na forma do art. 59 e seguintes da Lei nº 7.210/1984, e, no caso de crime militar, da inexistência da falta disciplinar prevista nos regulamentos disciplinares, verificada nos últimos doze meses de cumprimento de pena, contados retroativamente à publicação deste Decreto."
    },
    "comutacao_sucessiva": "permitida",
    "pena_multa": "inadimplência da pena de multa não impede indulto ou comutação (art. 6º)",
    "observacoes": [
-    "Janela de falta grave (12 meses) contada retroativamente à publicação do decreto (DOU 03/12/2004), não à data de referência; fala em 'prática' de falta grave apurada na forma do art. 59 e ss. da LEP (sem exigir sanção/homologação expressa).",
+    "Janela de falta grave (12 meses) contada retroativamente à publicação do decreto (DOU 03/12/2004), não à data de referência; exige falta grave 'apurada na forma do art. 59 e seguintes' da LEP (procedimento disciplinar); falta só registrada, sem apuração, não impede.",
     "Sem distinção para crime com violência ou grave ameaça: não há § 1º restritivo no art. 1º (diferente de 2000-2003).",
     "Indulto CONDICIONAL: aperfeiçoa-se após 24 meses do termo (art. 12), com bom comportamento e sem indiciamento/processo por crime doloso (exceto menor potencial ofensivo) (arts. 10 e 11); condenação superveniente só a restritivas/multa/sursis não impede.",
     "Detração (art. 42 CP / art. 67 CPM) e remição (art. 126 LEP) computadas no requisito temporal (art. 3º).",
@@ -2787,14 +2805,14 @@
    "falta_grave": {
     "dispositivo": "art. 4º",
     "meses": 12,
-    "exige_homologacao": false,
+    "exige_homologacao": true,
     "afeta": "indulto e comutação",
     "texto": "A concessão do indulto ou da comutação fica subordinada à constatação de inexistência da prática de falta grave nos últimos doze meses de cumprimento de pena, apurada na forma do art. 59 e seguintes da Lei nº 7.210/1984, e, no caso de crime militar, da inexistência da falta disciplinar prevista nos regulamentos disciplinares, verificada nos últimos doze meses de cumprimento de pena, contados retroativamente à publicação deste Decreto."
    },
    "comutacao_sucessiva": "permitida",
    "pena_multa": "inadimplência da pena de multa, cumulada com pena privativa de liberdade, não impede indulto ou comutação (art. 6º)",
    "observacoes": [
-    "Janela de falta grave (12 meses) contada retroativamente à publicação do decreto (DOU 16/12/2005), não à data de referência; fala em 'prática' de falta grave apurada na forma do art. 59 e ss. da LEP (sem exigir sanção/homologação expressa).",
+    "Janela de falta grave (12 meses) contada retroativamente à publicação do decreto (DOU 16/12/2005), não à data de referência; exige falta grave 'apurada na forma do art. 59 e seguintes' da LEP (procedimento disciplinar); falta só registrada, sem apuração, não impede.",
     "Sem distinção para crime com violência ou grave ameaça: não há § 1º restritivo no art. 1º (diferente de 2000-2003).",
     "Indulto CONDICIONAL: aperfeiçoa-se após 24 meses do termo (art. 12), com bom comportamento e sem indiciamento/processo por crime doloso (exceto menor potencial ofensivo) (arts. 10 e 11); condenação superveniente só a restritivas/multa/sursis não impede.",
     "Detração (art. 42 CP / art. 67 CPM) e remição (art. 126 LEP) computadas no requisito temporal (art. 3º).",
@@ -2957,14 +2975,14 @@
    "falta_grave": {
     "dispositivo": "art. 4º",
     "meses": 12,
-    "exige_homologacao": false,
+    "exige_homologacao": true,
     "afeta": "indulto e comutação",
     "texto": "A concessão do indulto ou da comutação fica subordinada à constatação de inexistência da prática de falta grave nos últimos doze meses de cumprimento de pena, apurada na forma do art. 59 e seguintes da LEP, ... contados retroativamente à publicação deste Decreto."
    },
    "comutacao_sucessiva": "permitida",
    "pena_multa": "inadimplência da multa cumulada com PPL não impede indulto ou comutação (art. 6º)",
    "observacoes": [
-    "Janela de falta grave contada retroativamente à publicação do decreto (DOU 20/12/2006), não à data de referência; exige falta apurada na forma do art. 59 e ss. da LEP (sem menção expressa a homologação).",
+    "Janela de falta grave contada retroativamente à publicação do decreto (DOU 20/12/2006), não à data de referência; exige falta 'apurada na forma do art. 59 e seguintes da Lei nº 7.210' (procedimento disciplinar): falta só registrada, sem apuração, não impede (exige_homologacao=true).",
     "Penas somadas (art. 7º); havendo concurso com crime impeditivo, só há benefício após cumprimento integral da pena do crime impeditivo (art. 7º, par. único, c/c art. 76 do CP).",
     "Detração (art. 42 CP) e remição (art. 126 LEP) computadas para o requisito temporal (art. 3º).",
     "Hediondo só impede se praticado após a Lei 8.072/1990.",
@@ -3111,21 +3129,13 @@
    "impeditivos": {
     "dispositivo": "art. 8º",
     "hediondos_e_equiparados": true,
-    "trafico_privilegiado_ressalvado": null,
+    "trafico_privilegiado_ressalvado": false,
     "afeta": "indulto e comutação",
     "outros": [
      {
       "descricao": "crimes do Código Penal Militar correspondentes a tortura, terrorismo, tráfico ou hediondos",
       "lei": "CPM",
       "artigos": []
-     },
-     {
-      "descricao": "ressalva: não impedem os §§ 2º e 3º do art. 33 da Lei 11.343/2006",
-      "lei": "Lei 11.343/2006",
-      "artigos": [
-       "33, §2º",
-       "33, §3º"
-      ]
      }
     ],
     "texto": "Os benefícios previstos neste Decreto não alcançam os condenados: I - por crime de tortura, terrorismo ou tráfico ilícito de drogas, nos termos do art. 33 da Lei nº 11.343/2006, excetuadas as hipóteses previstas nos §§ 2º e 3º do artigo citado; II - por crime hediondo, praticado após a edição da Lei nº 8.072/1990, observadas as alterações posteriores; III - por crimes definidos no Código Penal Militar que correspondam aos delitos previstos nos incisos I e II. Par. único: as restrições deste artigo e do inciso I do art. 1º não se aplicam às hipóteses do inciso VI do art. 1º."
@@ -3141,7 +3151,7 @@
    "pena_multa": "inadimplência da multa cumulada com PPL não impede indulto ou comutação (art. 6º)",
    "observacoes": [
     "Janela de falta grave de 12 meses contada retroativamente à publicação do decreto (DOU 12/12/2007), não à data de referência; não menciona homologação.",
-    "Tráfico: vedação remete ao art. 33 da Lei 11.343/2006, EXCETUADOS os §§ 2º e 3º (induzimento ao uso e uso compartilhado); o § 4º (tráfico privilegiado) não é ressalvado expressamente.",
+    "Tráfico: vedação remete ao art. 33 da Lei 11.343/2006, EXCETUADOS só os §§ 2º e 3º (induzimento ao uso e uso compartilhado), que NÃO impedem; o § 4º (tráfico privilegiado) não está entre as exceções, logo fica vedado (trafico_privilegiado_ressalvado=false). Os arts. 34 a 37 não constam do art. 8º, I, deste decreto.",
     "Penas somadas (art. 7º); havendo concurso com crime impeditivo, só há benefício após cumprimento integral da pena do crime impeditivo (art. 7º, par. único, c/c art. 76 do CP).",
     "Detração (art. 42 CP) e remição (art. 126 LEP) computadas para o requisito temporal (art. 3º).",
     "Hediondo só impede se praticado após a Lei 8.072/1990.",
@@ -3326,15 +3336,6 @@
       "descricao": "crimes do Código Penal Militar correspondentes a tortura, terrorismo, tráfico ou hediondos",
       "lei": "CPM",
       "artigos": []
-     },
-     {
-      "descricao": "ressalva: não impedem os §§ 2º a 4º do art. 33 da Lei 11.343/2006, desde que a conduta não tenha configurado mercancia",
-      "lei": "Lei 11.343/2006",
-      "artigos": [
-       "33, §2º",
-       "33, §3º",
-       "33, §4º"
-      ]
      }
     ],
     "texto": "Os benefícios previstos neste Decreto não alcançam os condenados: I - por crime de tortura, terrorismo ou tráfico ilícito de drogas, nos termos do art. 33 da Lei nº 11.343/2006, excetuadas as hipóteses previstas nos §§ 2º ao 4º do artigo citado, desde que a conduta típica não tenha configurado a prática da mercancia; II - por crime hediondo, praticado após a edição da Lei nº 8.072/1990, observadas as alterações posteriores; III - por crimes definidos no Código Penal Militar que correspondam aos delitos previstos nos incisos I e II. Par. único: as restrições deste artigo e do inciso I do art. 1º não se aplicam às hipóteses do inciso VII do art. 1º."
@@ -3350,7 +3351,7 @@
    "pena_multa": "inadimplência da multa não impede indulto/comutação (art. 6º); indulto autônomo da multa não quitada se PPL cumprida até 25/12/2008 (art. 1º, VI)",
    "observacoes": [
     "Janela de falta grave de 12 meses contada retroativamente à publicação (DOU 23/12/2008); exige 'aplicação de sanção' por falta grave (interpretado como falta reconhecida/sancionada → exige_homologacao=true).",
-    "Tráfico privilegiado (§ 4º do art. 33 da Lei 11.343/2006) ressalvado da vedação, mas só se a conduta não configurou mercancia.",
+    "Tráfico: vedação só do art. 33 da Lei 11.343/2006; ressalvados os §§ 2º, 3º e 4º (induzimento, uso compartilhado e tráfico privilegiado), que NÃO impedem, 'desde que a conduta típica não tenha configurado a prática da mercancia' (art. 8º, I). Os arts. 34 a 37 não constam do art. 8º, I, deste decreto.",
     "Benefícios aplicáveis também a quem está em livramento condicional (art. 5º, III).",
     "Comutação deixou de exigir pena não substituída por restritivas (só veda sursis).",
     "Penas somadas (art. 7º); concurso com crime impeditivo: benefício só após cumprimento integral da pena do impeditivo (art. 76 CP).",
@@ -3529,7 +3530,7 @@
     },
     {
      "dispositivo": "art. 1º, IX",
-     "objetivo": true,
+     "objetivo": false,
      "pena_max_anos": null,
      "pena_min_anos": null,
      "fracao_nao_reincidente": "1/3",
@@ -3597,11 +3598,9 @@
       "artigos": []
      },
      {
-      "descricao": "crimes do CPM correspondentes, exceto uso de drogas do art. 290 do CPM",
+      "descricao": "crimes do CPM correspondentes, exceto uso de drogas do art. 290 do CPM (o art. 290 do CPM é ressalva, não vedação; artigos vazios de propósito)",
       "lei": "CPM",
-      "artigos": [
-       "290 (ressalvado)"
-      ]
+      "artigos": []
      }
     ],
     "texto": "Os benefícios previstos neste Decreto não alcançam as pessoas condenadas: I - por crime de tortura, terrorismo ou tráfico ilícito de drogas, nos termos dos arts. 33, caput e § 1º, e 34 a 37 da Lei nº 11.343/2006; II - por crime hediondo, praticado após a edição das Leis nºs 8.072/1990, 8.930/1994, 9.695/1998, 11.464/2007 e 12.015/2009, observadas, ainda, as alterações posteriores; III - por crimes definidos no CPM que correspondam aos delitos previstos nos incisos I e II, exceto quando configurada situação do uso de drogas disposto no art. 290 do CPM. Par. único: as restrições deste artigo e do inciso I do art. 1º não se aplicam às hipóteses previstas nos incisos VI, VII e VIII do art. 1º."
@@ -3826,7 +3825,7 @@
     },
     {
      "dispositivo": "art. 1º, XI",
-     "objetivo": true,
+     "objetivo": false,
      "pena_max_anos": null,
      "pena_min_anos": null,
      "fracao_nao_reincidente": "1/4",
@@ -3836,12 +3835,12 @@
      "ininterrupto": false,
      "violencia_grave_ameaca": "indiferente",
      "regime": null,
-     "outros_requisitos": "PPL substituída (art. 44 CP) ou com sursis; fração cumprida privada de liberdade (inclusive por conversão); não se aplicam as vedações do art. 8º nem os tetos dos incisos I e II (art. 8º, § 1º)",
+     "outros_requisitos": "PPL substituída por pena não privativa de liberdade (art. 44 CP) ou com sursis; fração cumprida privada de liberdade (inclusive por conversão); não se aplicam as vedações do art. 8º nem os tetos dos incisos I e II (art. 8º, § 1º)",
      "texto": "condenadas à pena privativa de liberdade, desde que substituída por pena não privativa de liberdade, na forma do art. 44 do Código Penal, ou ainda beneficiadas com a suspensão condicional da pena, que tenham cumprido, ainda que por conversão, privadas de liberdade, até 25 de dezembro de 2010, um quarto da pena, se não reincidentes, ou um terço, se reincidentes"
     },
     {
      "dispositivo": "art. 1º, XII",
-     "objetivo": true,
+     "objetivo": false,
      "pena_max_anos": null,
      "pena_min_anos": null,
      "fracao_nao_reincidente": "1/4",
@@ -3911,11 +3910,9 @@
       "artigos": []
      },
      {
-      "descricao": "crimes do CPM correspondentes, exceto uso de drogas do art. 290 do CPM",
+      "descricao": "crimes do CPM correspondentes, exceto uso de drogas do art. 290 do CPM (o art. 290 do CPM é ressalva, não vedação; artigos vazios de propósito)",
       "lei": "CPM",
-      "artigos": [
-       "290 (ressalvado)"
-      ]
+      "artigos": []
      },
      {
       "descricao": "para o inc. VI do art. 1º: crime praticado com violência ou grave ameaça contra o filho ou a filha",
@@ -4160,26 +4157,26 @@
     },
     {
      "dispositivo": "art. 1º, XII",
-     "objetivo": true,
+     "objetivo": false,
      "pena_max_anos": null,
      "pena_min_anos": null,
-     "fracao_nao_reincidente": "1/6",
-     "fracao_reincidente": "1/5",
+     "fracao_nao_reincidente": "1/4",
+     "fracao_reincidente": "1/3",
      "anos_nao_reincidente": null,
      "anos_reincidente": null,
      "ininterrupto": false,
      "violencia_grave_ameaca": "indiferente",
      "regime": null,
-     "outros_requisitos": "PPL substituída (art. 44 CP) ou com sursis; fração cumprida privada de liberdade (inclusive por conversão); não se aplicam as vedações do art. 8º nem os tetos dos incisos I e II (art. 8º, § 1º)",
+     "outros_requisitos": "PPL substituída por restritiva de direito (art. 44 CP) ou com sursis; fração cumprida privada de liberdade (inclusive por conversão); não se aplicam as vedações do art. 8º nem os tetos dos incisos I e II (art. 8º, § 1º)",
      "texto": "condenadas a pena privativa de liberdade, desde que substituída por pena restritiva de direito, na forma do art. 44 do Código Penal, ou ainda beneficiadas com a suspensão condicional da pena, que tenham cumprido, ainda que por conversão, privadas de liberdade, até 25 de dezembro de 2011, um quarto da pena, se não reincidentes, ou um terço, se reincidentes"
     },
     {
      "dispositivo": "art. 1º, XIII",
-     "objetivo": true,
+     "objetivo": false,
      "pena_max_anos": null,
      "pena_min_anos": null,
-     "fracao_nao_reincidente": null,
-     "fracao_reincidente": null,
+     "fracao_nao_reincidente": "1/6",
+     "fracao_reincidente": "1/5",
      "anos_nao_reincidente": null,
      "anos_reincidente": null,
      "ininterrupto": false,
@@ -4259,11 +4256,9 @@
       "artigos": []
      },
      {
-      "descricao": "crimes do CPM correspondentes, exceto uso de drogas do art. 290 do CPM",
+      "descricao": "crimes do CPM correspondentes, exceto uso de drogas do art. 290 do CPM (o art. 290 do CPM é ressalva, não vedação; artigos vazios de propósito)",
       "lei": "CPM",
-      "artigos": [
-       "290 (ressalvado)"
-      ]
+      "artigos": []
      },
      {
       "descricao": "para o inc. VI do art. 1º: crime praticado com violência ou grave ameaça contra filho ou filha",
@@ -4449,7 +4444,7 @@
     },
     {
      "dispositivo": "art. 1º, IX",
-     "objetivo": true,
+     "objetivo": false,
      "pena_max_anos": null,
      "pena_min_anos": null,
      "fracao_nao_reincidente": null,
@@ -4524,7 +4519,7 @@
     },
     {
      "dispositivo": "art. 1º, XII",
-     "objetivo": true,
+     "objetivo": false,
      "pena_max_anos": null,
      "pena_min_anos": null,
      "fracao_nao_reincidente": "1/4",
@@ -4542,7 +4537,7 @@
     },
     {
      "dispositivo": "art. 1º, XIII",
-     "objetivo": true,
+     "objetivo": false,
      "pena_max_anos": null,
      "pena_min_anos": null,
      "fracao_nao_reincidente": "1/6",
@@ -4675,7 +4670,7 @@
     "Tráfico privilegiado (§ 4º do art. 33) não é mencionado: a vedação cita apenas caput e § 1º do art. 33 e arts. 34 a 37.",
     "Comutação sucessiva: § 2º do art. 2º calcula nova comutação sobre o remanescente/período cumprido sem novo requisito temporal.",
     "Indulto não se estende às penas acessórias do CPM nem aos efeitos da condenação (art. 1º, § 1º).",
-    "Art. 1º, IX marcado como objetivo: depende só de a PPL cumulativa estar cumprida e haver multa pendente (dados que podem ou não constar do RSPE)."
+    "Art. 1º, IX, XII e XIII com objetivo=false: dependem de multa pendente, de substituição por PRD/sursis ou de prisão provisória, dados que o RSPE não traz (revisão grupo C)."
    ]
   },
   {
@@ -4924,7 +4919,7 @@
     },
     {
      "dispositivo": "art. 1º, XIII",
-     "objetivo": true,
+     "objetivo": false,
      "pena_max_anos": null,
      "pena_min_anos": null,
      "fracao_nao_reincidente": "1/4",
@@ -4942,7 +4937,7 @@
     },
     {
      "dispositivo": "art. 1º, XIV",
-     "objetivo": true,
+     "objetivo": false,
      "pena_max_anos": null,
      "pena_min_anos": null,
      "fracao_nao_reincidente": "1/6",
@@ -5091,7 +5086,8 @@
     "Benefícios relativos ao regime aberto aplicam-se ao regime aberto domiciliar (art. 12).",
     "Tráfico privilegiado (§ 4º do art. 33) não é mencionado: a vedação cita apenas caput e § 1º do art. 33 e arts. 34 a 37.",
     "Comutação sucessiva: § 2º do art. 2º (nova comutação sem novo requisito temporal) e art. 3º (concede as comutações de decretos anteriores não obtidas).",
-    "Indulto não se estende às penas acessórias do CPM nem aos efeitos da condenação (art. 1º, § 1º)."
+    "Indulto não se estende às penas acessórias do CPM nem aos efeitos da condenação (art. 1º, § 1º).",
+    "Incisos de PRD/sursis e de prisão provisória com objetivo=false: dependem de substituição por PRD/sursis ou de fração cumprida em prisão provisória, dados que o RSPE não traz (revisão grupo C)."
    ]
   },
   {
@@ -5340,7 +5336,7 @@
     },
     {
      "dispositivo": "art. 1º, XIII",
-     "objetivo": true,
+     "objetivo": false,
      "pena_max_anos": null,
      "pena_min_anos": null,
      "fracao_nao_reincidente": "1/4",
@@ -5358,7 +5354,7 @@
     },
     {
      "dispositivo": "art. 1º, XIV",
-     "objetivo": true,
+     "objetivo": false,
      "pena_max_anos": null,
      "pena_min_anos": null,
      "fracao_nao_reincidente": "1/6",
@@ -5507,7 +5503,8 @@
     "Benefícios relativos ao regime aberto aplicam-se ao regime aberto domiciliar (art. 12).",
     "Tráfico privilegiado (§ 4º do art. 33) não é mencionado: a vedação cita apenas caput e § 1º do art. 33 e arts. 34 a 37.",
     "Comutação sucessiva: § 2º do art. 2º (nova comutação sem novo requisito temporal) e art. 3º (concede as comutações de decretos anteriores não obtidas).",
-    "Indulto não se estende às penas acessórias do CPM nem aos efeitos da condenação (art. 1º, § 1º)."
+    "Indulto não se estende às penas acessórias do CPM nem aos efeitos da condenação (art. 1º, § 1º).",
+    "Incisos de PRD/sursis e de prisão provisória com objetivo=false: dependem de substituição por PRD/sursis ou de fração cumprida em prisão provisória, dados que o RSPE não traz (revisão grupo C)."
    ]
   },
   {
@@ -5771,7 +5768,7 @@
     },
     {
      "dispositivo": "art. 1º, XIV",
-     "objetivo": true,
+     "objetivo": false,
      "pena_max_anos": null,
      "pena_min_anos": null,
      "fracao_nao_reincidente": "1/4",
@@ -5789,7 +5786,7 @@
     },
     {
      "dispositivo": "art. 1º, XV",
-     "objetivo": true,
+     "objetivo": false,
      "pena_max_anos": null,
      "pena_min_anos": null,
      "fracao_nao_reincidente": "1/6",
@@ -5935,7 +5932,8 @@
     "meses": 12,
     "exige_homologacao": true,
     "afeta": "indulto e comutação",
-    "texto": "Condicionada à inexistência de sanção, reconhecida pelo juízo competente em audiência de justificação (contraditório e ampla defesa), por falta grave cometida nos doze meses de cumprimento da pena contados retroativamente a 25 de dezembro de 2015. § 1º notícia de falta grave após a publicação não suspende nem impede. § 2º restrições não se aplicam aos incisos XI e XII do art. 1º."
+    "texto": "Condicionada à inexistência de sanção, reconhecida pelo juízo competente em audiência de justificação (contraditório e ampla defesa), por falta grave cometida nos doze meses de cumprimento da pena contados retroativamente a 25 de dezembro de 2015. § 1º notícia de falta grave após a publicação não suspende nem impede. § 2º restrições não se aplicam aos incisos XI e XII do art. 1º.",
+    "contada_de": "referencia"
    },
    "comutacao_sucessiva": "permitida",
    "pena_multa": "Indulto/comutação da PPL ou PRD alcança a multa cumulativa; inadimplência não impede (art. 7º). Inciso XI indulta a multa cumulativa com PPL cumprida até 25/12/2015, se não superar o valor mínimo de inscrição na Dívida Ativa da União e houver incapacidade econômica.",
@@ -5950,7 +5948,8 @@
     "Comutação: art. 2º, caput (1/4 NR, 1/5 R) e § 3º (mulher sem violência com filho: 2/3 NR, 1/2 R). Comutação sucessiva: § 2º do art. 2º e art. 3º.",
     "Data de publicação: decreto assinado em 23/12/2015, publicado no DOU de 24/12/2015 (usado em data_publicacao).",
     "§ 2º do art. 1º: indulto dos incisos VI e VII não alcança crime com violência ou grave ameaça contra o filho ou a filha.",
-    "Indulto não se estende às penas acessórias do CPM nem aos efeitos da condenação (art. 1º, § 1º)."
+    "Indulto não se estende às penas acessórias do CPM nem aos efeitos da condenação (art. 1º, § 1º).",
+    "Incisos de PRD/sursis e de prisão provisória com objetivo=false: dependem de substituição por PRD/sursis ou de fração cumprida em prisão provisória, dados que o RSPE não traz (revisão grupo C)."
    ]
   },
   {
@@ -6166,6 +6165,190 @@
    ]
   },
   {
+   "id": "2017_maes",
+   "ano": 2017,
+   "numero": "s/n",
+   "data_publicacao": "13/04/2017",
+   "data_referencia": "14/05/2017",
+   "tipo": "dia_das_maes",
+   "publico": "mulheres",
+   "indulto": [
+    {
+     "dispositivo": "art. 1º, III, a",
+     "objetivo": false,
+     "pena_max_anos": null,
+     "pena_min_anos": null,
+     "fracao_nao_reincidente": "1/6",
+     "fracao_reincidente": "1/6",
+     "anos_nao_reincidente": null,
+     "anos_reincidente": null,
+     "ininterrupto": false,
+     "violencia_grave_ameaca": "vedada",
+     "regime": null,
+     "outros_requisitos": "filho até 12 anos ou com deficiência que necessite de seus cuidados; mulher presa; cumulativamente: não responder nem ter sido condenada por outro crime com violência ou grave ameaça (art. 1º, I) e não ter sido punida por falta grave (art. 1º, II)",
+     "texto": "mães condenadas à PPL por crimes sem violência ou grave ameaça, com filhos (nascidos ou não no sistema penitenciário) de até doze anos ou de qualquer idade se pessoa com deficiência (Lei 13.146/2015), que comprovadamente necessite de seus cuidados, desde que cumprido um sexto da pena"
+    },
+    {
+     "dispositivo": "art. 1º, III, b",
+     "objetivo": false,
+     "pena_max_anos": null,
+     "pena_min_anos": null,
+     "fracao_nao_reincidente": "1/6",
+     "fracao_reincidente": "1/6",
+     "anos_nao_reincidente": null,
+     "anos_reincidente": null,
+     "ininterrupto": false,
+     "violencia_grave_ameaca": "vedada",
+     "regime": null,
+     "outros_requisitos": "neto até 12 anos ou com deficiência sob sua responsabilidade; mulher presa; cumulativamente: não responder nem ter sido condenada por outro crime com violência ou grave ameaça (art. 1º, I) e não ter sido punida por falta grave (art. 1º, II)",
+     "texto": "avós condenadas à PPL por crimes sem violência ou grave ameaça, com netos de até doze anos ou de qualquer idade se pessoa com deficiência, que comprovadamente necessite de seus cuidados e esteja sob sua responsabilidade, desde que cumprido um sexto da pena"
+    },
+    {
+     "dispositivo": "art. 1º, III, c",
+     "objetivo": false,
+     "pena_max_anos": null,
+     "pena_min_anos": null,
+     "fracao_nao_reincidente": "1/6",
+     "fracao_reincidente": "1/6",
+     "anos_nao_reincidente": null,
+     "anos_reincidente": null,
+     "ininterrupto": false,
+     "violencia_grave_ameaca": "vedada",
+     "regime": null,
+     "outros_requisitos": "60 anos ou mais, ou menos de 21 anos; mulher presa; cumulativamente: não responder nem ter sido condenada por outro crime com violência ou grave ameaça (art. 1º, I) e não ter sido punida por falta grave (art. 1º, II)",
+     "texto": "mulheres condenadas à PPL por crimes sem violência ou grave ameaça, que tenham completado sessenta anos ou que não tenham vinte e um anos completos, desde que cumprido um sexto da pena"
+    },
+    {
+     "dispositivo": "art. 1º, III, d",
+     "objetivo": false,
+     "pena_max_anos": null,
+     "pena_min_anos": null,
+     "fracao_nao_reincidente": null,
+     "fracao_reincidente": null,
+     "anos_nao_reincidente": null,
+     "anos_reincidente": null,
+     "ininterrupto": false,
+     "violencia_grave_ameaca": "vedada",
+     "regime": null,
+     "outros_requisitos": "pessoa com deficiência; sem tempo de pena; mulher presa; cumulativamente: não responder nem ter sido condenada por outro crime com violência ou grave ameaça (art. 1º, I) e não ter sido punida por falta grave (art. 1º, II)",
+     "texto": "mulheres condenadas por crime sem violência ou grave ameaça, que sejam pessoa com deficiência (art. 2º do Estatuto da Pessoa com Deficiência)"
+    },
+    {
+     "dispositivo": "art. 1º, III, e",
+     "objetivo": false,
+     "pena_max_anos": null,
+     "pena_min_anos": null,
+     "fracao_nao_reincidente": null,
+     "fracao_reincidente": null,
+     "anos_nao_reincidente": null,
+     "anos_reincidente": null,
+     "ininterrupto": false,
+     "violencia_grave_ameaca": "indiferente",
+     "regime": null,
+     "outros_requisitos": "gestação de alto risco com laudo; sem tempo de pena; não exige expressamente crime sem violência nesta alínea, mas o art. 1º, I veda outro crime com violência; mulher presa; cumulativamente: não responder nem ter sido condenada por outro crime com violência ou grave ameaça (art. 1º, I) e não ter sido punida por falta grave (art. 1º, II)",
+     "texto": "gestantes cuja gravidez seja considerada de alto risco, condenadas à PPL, comprovada a condição por laudo médico de profissional designado pelo juízo"
+    },
+    {
+     "dispositivo": "art. 1º, III, f",
+     "objetivo": true,
+     "pena_max_anos": 8,
+     "pena_min_anos": null,
+     "fracao_nao_reincidente": "1/6",
+     "fracao_reincidente": "1/6",
+     "anos_nao_reincidente": null,
+     "anos_reincidente": null,
+     "ininterrupto": false,
+     "violencia_grave_ameaca": "indiferente",
+     "regime": null,
+     "outros_requisitos": "tráfico privilegiado (art. 33, § 4º, Lei 11.343/2006) reconhecido na sentença; mulher presa; cumulativamente: não responder nem ter sido condenada por outro crime com violência ou grave ameaça (art. 1º, I) e não ter sido punida por falta grave (art. 1º, II)",
+     "texto": "mulheres condenadas à PPL não superior a oito anos pelo crime do art. 33 da Lei 11.343/2006 com aplicação do redutor do § 4º (primariedade, bons antecedentes, não dedicação a atividades criminosas, não integração de organização criminosa reconhecidas na sentença), desde que cumprido um sexto da pena"
+    },
+    {
+     "dispositivo": "art. 1º, III, g e h",
+     "objetivo": true,
+     "pena_max_anos": 8,
+     "pena_min_anos": null,
+     "fracao_nao_reincidente": "1/4",
+     "fracao_reincidente": "1/3",
+     "anos_nao_reincidente": null,
+     "anos_reincidente": null,
+     "ininterrupto": false,
+     "violencia_grave_ameaca": "vedada",
+     "regime": null,
+     "outros_requisitos": "mulher presa; cumulativamente: não responder nem ter sido condenada por outro crime com violência ou grave ameaça (art. 1º, I) e não ter sido punida por falta grave (art. 1º, II)",
+     "texto": "g) mulheres condenadas à PPL não superior a oito anos por crime sem violência ou grave ameaça, desde que cumprido um quarto da pena, se não reincidentes; h) idem, um terço da pena, se reincidentes"
+    }
+   ],
+   "comutacao": [
+    {
+     "dispositivo": "art. 2º, I",
+     "reducao_nao_reincidente": null,
+     "reducao_reincidente": "1/4",
+     "cumprimento_min_nao_reincidente": null,
+     "cumprimento_min_reincidente": "1/3",
+     "pena_max_anos": 8,
+     "violencia_grave_ameaca": "vedada",
+     "outros_requisitos": "só reincidentes (o decreto não prevê esta hipótese para não reincidentes); mulher",
+     "texto": "em um quarto da pena, se reincidentes, quando se tratar de mulheres condenadas à sanção privativa de liberdade não superior a oito anos de reclusão por crime sem violência ou grave ameaça, desde que cumprido um terço da pena até 14 de maio de 2017"
+    },
+    {
+     "dispositivo": "art. 2º, II",
+     "reducao_nao_reincidente": "2/3",
+     "reducao_reincidente": null,
+     "cumprimento_min_nao_reincidente": "1/5",
+     "cumprimento_min_reincidente": null,
+     "pena_max_anos": null,
+     "violencia_grave_ameaca": "vedada",
+     "outros_requisitos": "não objetiva: filho menor de 16 anos ou com deficiência/doença crônica grave que necessite de seus cuidados; só não reincidentes",
+     "texto": "em dois terços, se não reincidentes, quando se tratar de mulheres condenadas por crime sem violência ou grave ameaça com filho menor de dezesseis anos ou de qualquer idade se pessoa com deficiência ou portador de doença crônica grave e que necessite de seus cuidados, desde que cumprido um quinto da pena até 14 de maio de 2017"
+    },
+    {
+     "dispositivo": "art. 2º, III",
+     "reducao_nao_reincidente": null,
+     "reducao_reincidente": "1/2",
+     "cumprimento_min_nao_reincidente": null,
+     "cumprimento_min_reincidente": "1/5",
+     "pena_max_anos": null,
+     "violencia_grave_ameaca": "vedada",
+     "outros_requisitos": "não objetiva: filho menor de 16 anos ou com deficiência/doença crônica grave; só reincidentes",
+     "texto": "à metade, se reincidentes, quando se tratar de mulheres condenadas por crime sem violência ou grave ameaça com filho menor de dezesseis anos ou de qualquer idade se pessoa com deficiência ou portador de doença crônica grave e que necessite de seus cuidados, desde que cumprido um quinto da pena até 14 de maio de 2017"
+    }
+   ],
+   "impeditivos": {
+    "dispositivo": "art. 1º, I",
+    "hediondos_e_equiparados": false,
+    "trafico_privilegiado_ressalvado": null,
+    "afeta": "só indulto",
+    "outros": [
+     {
+      "descricao": "estar respondendo ou ter sido condenada pela prática de outro crime cometido mediante violência ou grave ameaça (requisito cumulativo do indulto)",
+      "lei": "",
+      "artigos": []
+     }
+    ],
+    "texto": "O decreto não traz rol de crimes impeditivos (nem exclui hediondos expressamente). Única vedação: art. 1º, I - não estejam respondendo ou tenham sido condenadas pela prática de outro crime cometido mediante violência ou grave ameaça."
+   },
+   "falta_grave": {
+    "dispositivo": "art. 1º, II",
+    "meses": null,
+    "exige_homologacao": true,
+    "afeta": "só indulto",
+    "texto": "não tenham sido punidas com a prática de falta grave (sem janela temporal fixada)."
+   },
+   "comutacao_sucessiva": "nao_trata",
+   "pena_multa": "não trata",
+   "observacoes": [
+    "Decreto sem número, de 12/04/2017, publicado no DOU de 13/04/2017 e retificado em 19/04/2017.",
+    "Data de referência: 14/05/2017 (Dia das Mães), usada tanto para o indulto (art. 1º, caput) quanto para a comutação (art. 2º).",
+    "Indulto exige cumulativamente: (I) não responder nem ter condenação por outro crime com violência/grave ameaça; (II) não ter sido punida por falta grave (sem limite temporal); (III) enquadrar-se em uma das alíneas a-h.",
+    "Alíneas g e h são a mesma hipótese (PPL até 8 anos, sem violência) dividida por reincidência: fundidas numa entrada (1/4 NR, 1/3 R) para o motor não aplicar a alínea de um grupo a quem é do outro (campo de fração nulo = sem exigência de tempo no motor).",
+    "Alíneas a, b, c e f exigem 1/6 da pena sem distinguir reincidência (fração repetida nos dois campos).",
+    "Alínea f marcada objetiva por depender do tipo penal/redutor do § 4º constante da condenação; confirmar na sentença o reconhecimento dos requisitos do redutor.",
+    "Comutação: a falta grave e o art. 1º, I são requisitos só do indulto; a comutação (art. 2º) não repete essas vedações.",
+    "Art. 2º, p.u.: o juiz ajusta a execução (art. 192 LEP) e converte PPL em restritiva de direitos quando cabível."
+   ]
+  },
+  {
    "id": "2017",
    "ano": 2017,
    "numero": "9.246",
@@ -6231,7 +6414,7 @@
      "ininterrupto": false,
      "violencia_grave_ameaca": "indiferente",
      "regime": null,
-     "outros_requisitos": "tráfico privilegiado (art. 33, § 4º); homem; fração por sexo, sem distinção de reincidência",
+     "outros_requisitos": "tráfico privilegiado (art. 33, § 4º); homens; fração por sexo, sem distinção de reincidência",
      "texto": "até 25/12/2017, cumprido um quarto da pena, se homens, na hipótese do § 4º do art. 33 da Lei 11.343/2006, quando a PPL não for superior a oito anos"
     },
     {
@@ -6251,7 +6434,7 @@
     },
     {
      "dispositivo": "art. 1º, V",
-     "objetivo": true,
+     "objetivo": false,
      "pena_max_anos": null,
      "pena_min_anos": null,
      "fracao_nao_reincidente": "1/4",
@@ -6263,7 +6446,7 @@
      "regime": [
       "livramento condicional"
      ],
-     "outros_requisitos": "fração calculada sobre o PERÍODO DO LIVRAMENTO CONDICIONAL; pena remanescente na data de referência não superior a 8 anos (NR) / 6 anos (R)",
+     "outros_requisitos": "fração calculada sobre o PERÍODO DO LIVRAMENTO CONDICIONAL (não sobre a pena total); pena remanescente na data de referência não superior a 8 anos (NR) / 6 anos (R). Objetivo=false até o motor calcular a fração sobre o período de prova",
      "texto": "até 25/12/2017, cumprido um quarto do período do livramento condicional, se não reincidentes, ou um terço, se reincidentes, desde que a pena remanescente em 25/12/2017 não seja superior a oito anos (não reincidentes) e seis anos (reincidentes)"
     },
     {
@@ -6484,12 +6667,9 @@
       "artigos": []
      },
      {
-      "descricao": "crime com violência ou grave ameaça contra militares e agentes de segurança pública (arts. 142 e 144 CF), no exercício da função ou em decorrência dela",
+      "descricao": "crime com violência ou grave ameaça contra militares e agentes de segurança pública (arts. 142 e 144 CF), no exercício da função ou em decorrência dela (depende da vítima: não aferível pelo artigo; CF 142/144 não são tipos penais)",
       "lei": "CF",
-      "artigos": [
-       "142",
-       "144"
-      ]
+      "artigos": []
      },
      {
       "descricao": "pornografia infantil (arts. 240, 241 e 241-A, caput e § 1º)",
@@ -6523,218 +6703,20 @@
    "comutacao_sucessiva": "nao_trata",
    "pena_multa": "Indulto/comutação alcançam a multa cumulativa, ainda que haja inadimplência ou inscrição em Dívida Ativa da União, observados os valores de ato do Ministro da Fazenda (art. 10); o indulto independe do pagamento da multa (isolada ou cumulativa) ou de condenação pecuniária de qualquer natureza (art. 10, p.u.).",
    "observacoes": [
-    "Decreto objeto da ADI 5874 (dispositivos marcados 'Vide ADIN nº 5874': art. 1º, I; art. 2º, § 1º, I; art. 8º; art. 10; art. 11); o STF julgou a ação improcedente em 2019, mantendo o decreto.",
+    "ADI 5874: a cautelar de 28/12/2017 (recesso) suspendeu os dispositivos marcados 'Vide ADIN 5874' (art. 1º, I; art. 2º, § 1º, I; art. 8º; art. 10; art. 11); em 2018 o relator (Min. Barroso) passou a admitir o art. 1º, I com 1/3 da pena (v. Rcl 30263, 1ª T., 11/09/2018). O Plenário julgou a ação IMPROCEDENTE em 09/05/2019 (DJe 05/11/2020): a cautelar caiu e o decreto vale com o texto original desde 22/12/2017. A ficha usa o texto original (art. 1º, I: 1/5 NR e 1/3 R, sem teto de pena; art. 8º: PRD, aberto, sursis processual e LC); os requisitos continuam aferidos em 25/12/2017. Indeferimento proferido com base na cautelar (entre 28/12/2017 e 09/05/2019) não faz coisa julgada contra o texto restabelecido: o pedido pode ser renovado (STJ, AgRg no REsp 1.895.470, 5ª T., 09/11/2021, concedeu indulto pelo art. 1º, I após a improcedência).",
     "Art. 1º, I: indulto sem teto de pena para crimes sem violência/grave ameaça (1/5 NR, 1/3 R).",
     "Falta grave: janela de 12 meses contada retroativamente à data de PUBLICAÇÃO (22/12/2017). Impedimentos adicionais: RDD, SPF e descumprimento de condições de PAD/LC (art. 4º, II-IV) — atingem indulto e comutação.",
     "Art. 2º reduz as frações do art. 1º, I-III para pessoas em condição especial; interpretado como nova fração exigida (1/6-1/4; 1/4-1/3; 1/3-1/2), não como desconto. § 2º: filho/neto não inclui condenados por violência/grave ameaça contra filho ou neto ou por abuso sexual contra criança, adolescente ou pessoa com deficiência.",
     "Art. 5º (indulto especial de mulheres) não exige fração de pena cumprida; requisitos cumulativos: sem outro crime violento (respondendo ou condenada), sem falta grave em 12 meses, e uma das alíneas.",
     "Art. 8º: requisitos aplicáveis a quem teve PPL substituída por PRD, está em regime aberto, teve suspensão condicional do processo ou está em livramento condicional.",
     "Art. 11: cabível ainda que trânsito em julgado só para a acusação, recurso da acusação de qualquer natureza após a 2ª instância, outro processo sem condenação em 2ª instância (mesmo por crime do art. 3º), ou não expedida guia de recolhimento.",
-    "Penas unificadas ou somadas na forma do art. 111 LEP (art. 12). Em concurso com crime impeditivo (art. 3º), indulto/comutação do não impeditivo só após cumprir 2/3 da pena do impeditivo (art. 12, p.u.).",
+    "Penas unificadas ou somadas na forma do artigo 111 da LEP (artigo 12 do decreto). Em concurso com crime impeditivo, o indulto ou a comutação do crime não impeditivo só cabe depois de cumpridos dois terços da pena do crime impeditivo (artigo 12, parágrafo único)",
     "Comutação sucessiva: o decreto não repete a regra de recálculo sem novo requisito temporal; art. 7º, p.u. concede a comutação a quem não obteve as comutações de decretos anteriores, independentemente de pedido — registrado como 'nao_trata'.",
     "Art. 1º, IV usa fração por sexo (1/4 homens, 1/6 mulheres), sem distinção de reincidência; os campos de reincidente repetem a fração.",
     "Vedação do tráfico (art. 3º, II) não lista o art. 35 (associação).",
     "Não há dispositivo expresso sobre detração/remição nesse decreto.",
-    "Indulto/comutação não se estendem às penas acessórias do CPM nem aos efeitos da condenação (art. 9º)."
-   ]
-  },
-  {
-   "id": "2017_maes",
-   "ano": 2017,
-   "numero": "s/n",
-   "data_publicacao": "12/04/2017",
-   "data_referencia": "14/05/2017",
-   "tipo": "dia_das_maes",
-   "publico": "mulheres",
-   "indulto": [
-    {
-     "dispositivo": "art. 1º, III, a",
-     "objetivo": false,
-     "pena_max_anos": null,
-     "pena_min_anos": null,
-     "fracao_nao_reincidente": "1/6",
-     "fracao_reincidente": "1/6",
-     "anos_nao_reincidente": null,
-     "anos_reincidente": null,
-     "ininterrupto": false,
-     "violencia_grave_ameaca": "vedada",
-     "regime": null,
-     "outros_requisitos": "filho até 12 anos ou com deficiência que necessite de seus cuidados; mulher presa; cumulativamente: não responder nem ter sido condenada por outro crime com violência ou grave ameaça (art. 1º, I) e não ter sido punida por falta grave (art. 1º, II)",
-     "texto": "mães condenadas à PPL por crimes sem violência ou grave ameaça, com filhos (nascidos ou não no sistema penitenciário) de até doze anos ou de qualquer idade se pessoa com deficiência (Lei 13.146/2015), que comprovadamente necessite de seus cuidados, desde que cumprido um sexto da pena"
-    },
-    {
-     "dispositivo": "art. 1º, III, b",
-     "objetivo": false,
-     "pena_max_anos": null,
-     "pena_min_anos": null,
-     "fracao_nao_reincidente": "1/6",
-     "fracao_reincidente": "1/6",
-     "anos_nao_reincidente": null,
-     "anos_reincidente": null,
-     "ininterrupto": false,
-     "violencia_grave_ameaca": "vedada",
-     "regime": null,
-     "outros_requisitos": "neto até 12 anos ou com deficiência sob sua responsabilidade; mulher presa; cumulativamente: não responder nem ter sido condenada por outro crime com violência ou grave ameaça (art. 1º, I) e não ter sido punida por falta grave (art. 1º, II)",
-     "texto": "avós condenadas à PPL por crimes sem violência ou grave ameaça, com netos de até doze anos ou de qualquer idade se pessoa com deficiência, que comprovadamente necessite de seus cuidados e esteja sob sua responsabilidade, desde que cumprido um sexto da pena"
-    },
-    {
-     "dispositivo": "art. 1º, III, c",
-     "objetivo": false,
-     "pena_max_anos": null,
-     "pena_min_anos": null,
-     "fracao_nao_reincidente": "1/6",
-     "fracao_reincidente": "1/6",
-     "anos_nao_reincidente": null,
-     "anos_reincidente": null,
-     "ininterrupto": false,
-     "violencia_grave_ameaca": "vedada",
-     "regime": null,
-     "outros_requisitos": "60 anos ou mais, ou menos de 21 anos; mulher presa; cumulativamente: não responder nem ter sido condenada por outro crime com violência ou grave ameaça (art. 1º, I) e não ter sido punida por falta grave (art. 1º, II)",
-     "texto": "mulheres condenadas à PPL por crimes sem violência ou grave ameaça, que tenham completado sessenta anos ou que não tenham vinte e um anos completos, desde que cumprido um sexto da pena"
-    },
-    {
-     "dispositivo": "art. 1º, III, d",
-     "objetivo": false,
-     "pena_max_anos": null,
-     "pena_min_anos": null,
-     "fracao_nao_reincidente": null,
-     "fracao_reincidente": null,
-     "anos_nao_reincidente": null,
-     "anos_reincidente": null,
-     "ininterrupto": false,
-     "violencia_grave_ameaca": "vedada",
-     "regime": null,
-     "outros_requisitos": "pessoa com deficiência; sem tempo de pena; mulher presa; cumulativamente: não responder nem ter sido condenada por outro crime com violência ou grave ameaça (art. 1º, I) e não ter sido punida por falta grave (art. 1º, II)",
-     "texto": "mulheres condenadas por crime sem violência ou grave ameaça, que sejam pessoa com deficiência (art. 2º do Estatuto da Pessoa com Deficiência)"
-    },
-    {
-     "dispositivo": "art. 1º, III, e",
-     "objetivo": false,
-     "pena_max_anos": null,
-     "pena_min_anos": null,
-     "fracao_nao_reincidente": null,
-     "fracao_reincidente": null,
-     "anos_nao_reincidente": null,
-     "anos_reincidente": null,
-     "ininterrupto": false,
-     "violencia_grave_ameaca": "indiferente",
-     "regime": null,
-     "outros_requisitos": "gestação de alto risco com laudo; sem tempo de pena; não exige expressamente crime sem violência nesta alínea, mas o art. 1º, I veda outro crime com violência; mulher presa; cumulativamente: não responder nem ter sido condenada por outro crime com violência ou grave ameaça (art. 1º, I) e não ter sido punida por falta grave (art. 1º, II)",
-     "texto": "gestantes cuja gravidez seja considerada de alto risco, condenadas à PPL, comprovada a condição por laudo médico de profissional designado pelo juízo"
-    },
-    {
-     "dispositivo": "art. 1º, III, f",
-     "objetivo": true,
-     "pena_max_anos": 8,
-     "pena_min_anos": null,
-     "fracao_nao_reincidente": "1/6",
-     "fracao_reincidente": "1/6",
-     "anos_nao_reincidente": null,
-     "anos_reincidente": null,
-     "ininterrupto": false,
-     "violencia_grave_ameaca": "indiferente",
-     "regime": null,
-     "outros_requisitos": "tráfico privilegiado (art. 33, § 4º, Lei 11.343/2006) reconhecido na sentença; mulher presa; cumulativamente: não responder nem ter sido condenada por outro crime com violência ou grave ameaça (art. 1º, I) e não ter sido punida por falta grave (art. 1º, II)",
-     "texto": "mulheres condenadas à PPL não superior a oito anos pelo crime do art. 33 da Lei 11.343/2006 com aplicação do redutor do § 4º (primariedade, bons antecedentes, não dedicação a atividades criminosas, não integração de organização criminosa reconhecidas na sentença), desde que cumprido um sexto da pena"
-    },
-    {
-     "dispositivo": "art. 1º, III, g",
-     "objetivo": true,
-     "pena_max_anos": 8,
-     "pena_min_anos": null,
-     "fracao_nao_reincidente": "1/4",
-     "fracao_reincidente": null,
-     "anos_nao_reincidente": null,
-     "anos_reincidente": null,
-     "ininterrupto": false,
-     "violencia_grave_ameaca": "vedada",
-     "regime": null,
-     "outros_requisitos": "só não reincidentes; mulher presa; cumulativamente: não responder nem ter sido condenada por outro crime com violência ou grave ameaça (art. 1º, I) e não ter sido punida por falta grave (art. 1º, II)",
-     "texto": "mulheres condenadas à PPL não superior a oito anos por crime sem violência ou grave ameaça, desde que cumprido um quarto da pena, se não reincidentes"
-    },
-    {
-     "dispositivo": "art. 1º, III, h",
-     "objetivo": true,
-     "pena_max_anos": 8,
-     "pena_min_anos": null,
-     "fracao_nao_reincidente": null,
-     "fracao_reincidente": "1/3",
-     "anos_nao_reincidente": null,
-     "anos_reincidente": null,
-     "ininterrupto": false,
-     "violencia_grave_ameaca": "vedada",
-     "regime": null,
-     "outros_requisitos": "só reincidentes; mulher presa; cumulativamente: não responder nem ter sido condenada por outro crime com violência ou grave ameaça (art. 1º, I) e não ter sido punida por falta grave (art. 1º, II)",
-     "texto": "mulheres condenadas à PPL não superior a oito anos por crime sem violência ou grave ameaça, desde que cumprido um terço da pena, se reincidentes"
-    }
-   ],
-   "comutacao": [
-    {
-     "dispositivo": "art. 2º, I",
-     "reducao_nao_reincidente": null,
-     "reducao_reincidente": "1/4",
-     "cumprimento_min_nao_reincidente": null,
-     "cumprimento_min_reincidente": "1/3",
-     "pena_max_anos": 8,
-     "violencia_grave_ameaca": "vedada",
-     "outros_requisitos": "só reincidentes (o decreto não prevê esta hipótese para não reincidentes); mulher",
-     "texto": "em um quarto da pena, se reincidentes, quando se tratar de mulheres condenadas à sanção privativa de liberdade não superior a oito anos de reclusão por crime sem violência ou grave ameaça, desde que cumprido um terço da pena até 14 de maio de 2017"
-    },
-    {
-     "dispositivo": "art. 2º, II",
-     "reducao_nao_reincidente": "2/3",
-     "reducao_reincidente": null,
-     "cumprimento_min_nao_reincidente": "1/5",
-     "cumprimento_min_reincidente": null,
-     "pena_max_anos": null,
-     "violencia_grave_ameaca": "vedada",
-     "outros_requisitos": "não objetiva: filho menor de 16 anos ou com deficiência/doença crônica grave que necessite de seus cuidados; só não reincidentes",
-     "texto": "em dois terços, se não reincidentes, quando se tratar de mulheres condenadas por crime sem violência ou grave ameaça com filho menor de dezesseis anos ou de qualquer idade se pessoa com deficiência ou portador de doença crônica grave e que necessite de seus cuidados, desde que cumprido um quinto da pena até 14 de maio de 2017"
-    },
-    {
-     "dispositivo": "art. 2º, III",
-     "reducao_nao_reincidente": null,
-     "reducao_reincidente": "1/2",
-     "cumprimento_min_nao_reincidente": null,
-     "cumprimento_min_reincidente": "1/5",
-     "pena_max_anos": null,
-     "violencia_grave_ameaca": "vedada",
-     "outros_requisitos": "não objetiva: filho menor de 16 anos ou com deficiência/doença crônica grave; só reincidentes",
-     "texto": "à metade, se reincidentes, quando se tratar de mulheres condenadas por crime sem violência ou grave ameaça com filho menor de dezesseis anos ou de qualquer idade se pessoa com deficiência ou portador de doença crônica grave e que necessite de seus cuidados, desde que cumprido um quinto da pena até 14 de maio de 2017"
-    }
-   ],
-   "impeditivos": {
-    "dispositivo": "art. 1º, I",
-    "hediondos_e_equiparados": false,
-    "trafico_privilegiado_ressalvado": null,
-    "afeta": "só indulto",
-    "outros": [
-     {
-      "descricao": "estar respondendo ou ter sido condenada pela prática de outro crime cometido mediante violência ou grave ameaça (requisito cumulativo do indulto)",
-      "lei": "",
-      "artigos": []
-     }
-    ],
-    "texto": "O decreto não traz rol de crimes impeditivos (nem exclui hediondos expressamente). Única vedação: art. 1º, I - não estejam respondendo ou tenham sido condenadas pela prática de outro crime cometido mediante violência ou grave ameaça."
-   },
-   "falta_grave": {
-    "dispositivo": "art. 1º, II",
-    "meses": null,
-    "exige_homologacao": true,
-    "afeta": "só indulto",
-    "texto": "não tenham sido punidas com a prática de falta grave (sem janela temporal fixada)."
-   },
-   "comutacao_sucessiva": "nao_trata",
-   "pena_multa": "não trata",
-   "observacoes": [
-    "Decreto sem número, de 12/04/2017, publicado no DOU de 13/04/2017 e retificado em 19/04/2017.",
-    "Data de referência: 14/05/2017 (Dia das Mães), usada tanto para o indulto (art. 1º, caput) quanto para a comutação (art. 2º).",
-    "Indulto exige cumulativamente: (I) não responder nem ter condenação por outro crime com violência/grave ameaça; (II) não ter sido punida por falta grave (sem limite temporal); (III) enquadrar-se em uma das alíneas a-h.",
-    "Alíneas g e h são a mesma hipótese (PPL até 8 anos, sem violência) dividida por reincidência: 1/4 não reincidente, 1/3 reincidente.",
-    "Alíneas a, b, c e f exigem 1/6 da pena sem distinguir reincidência (fração repetida nos dois campos).",
-    "Alínea f marcada objetiva por depender do tipo penal/redutor do § 4º constante da condenação; confirmar na sentença o reconhecimento dos requisitos do redutor.",
-    "Comutação: a falta grave e o art. 1º, I são requisitos só do indulto; a comutação (art. 2º) não repete essas vedações.",
-    "Art. 2º, p.u.: o juiz ajusta a execução (art. 192 LEP) e converte PPL em restritiva de direitos quando cabível."
+    "Indulto/comutação não se estendem às penas acessórias do CPM nem aos efeitos da condenação (art. 9º).",
+    "Falta grave (art. 4º, I): STJ, Tema 1195 - o período de 12 meses caracteriza-se pela não ocorrência da falta nesse interstício, ainda que a apuração seja concluída depois (salvo inércia/mora estatal). Falta cometida na janela e homologada depois impede."
    ]
   },
   {
@@ -6852,34 +6834,19 @@
      "texto": "condenadas à PPL não superior a oito anos pelo crime do art. 33 da Lei 11.343/2006, com sentença que reconheceu primariedade, bons antecedentes, não dedicação a atividades criminosas e não integração de organização criminosa e aplicou o redutor do § 4º, desde que cumprido um sexto da pena"
     },
     {
-     "dispositivo": "art. 1º, II, h",
+     "dispositivo": "art. 1º, II, h e i",
      "objetivo": true,
      "pena_max_anos": 8,
      "pena_min_anos": null,
      "fracao_nao_reincidente": "1/4",
-     "fracao_reincidente": null,
-     "anos_nao_reincidente": null,
-     "anos_reincidente": null,
-     "ininterrupto": false,
-     "violencia_grave_ameaca": "vedada",
-     "regime": null,
-     "outros_requisitos": "só não reincidentes; mulher presa (inclui mulheres transexuais com alteração de registro - art. 4º); cumulativamente: não punida por falta grave nos últimos 12 meses (art. 1º, I)",
-     "texto": "condenadas à PPL não superior a oito anos por crime sem violência ou grave ameaça, desde que cumprido um quarto da pena, se não reincidentes"
-    },
-    {
-     "dispositivo": "art. 1º, II, i",
-     "objetivo": true,
-     "pena_max_anos": 8,
-     "pena_min_anos": null,
-     "fracao_nao_reincidente": null,
      "fracao_reincidente": "1/3",
      "anos_nao_reincidente": null,
      "anos_reincidente": null,
      "ininterrupto": false,
      "violencia_grave_ameaca": "vedada",
      "regime": null,
-     "outros_requisitos": "só reincidentes; mulher presa (inclui mulheres transexuais com alteração de registro - art. 4º); cumulativamente: não punida por falta grave nos últimos 12 meses (art. 1º, I)",
-     "texto": "condenadas à PPL não superior a oito anos por crime sem violência ou grave ameaça, desde que cumprido um terço da pena, se reincidentes"
+     "outros_requisitos": "mulher presa (inclui mulheres transexuais com alteração de registro - art. 4º); cumulativamente: não punida por falta grave nos últimos 12 meses (art. 1º, I)",
+     "texto": "h) condenadas à PPL não superior a oito anos por crime sem violência ou grave ameaça, desde que cumprido um quarto da pena, se não reincidentes; i) idem, um terço da pena, se reincidentes"
     },
     {
      "dispositivo": "art. 1º, II, j",
@@ -6998,7 +6965,7 @@
     "Decreto 9.370, de 11/05/2018, publicado no DOU de 11/05/2018 (edição extra).",
     "Data de referência: 13/05/2018 (Dia das Mães), usada para indulto (art. 1º) e comutação (art. 2º).",
     "Diferente de 2017, não há o requisito de não responder/não ter condenação por outro crime com violência; a falta grave passa a ter janela de 12 meses.",
-    "Alíneas h e i são a mesma hipótese (PPL até 8 anos, sem violência) dividida por reincidência: 1/4 não reincidente, 1/3 reincidente. Idem j e k para indígenas (1/5 e 1/3).",
+    "Alíneas h e i são a mesma hipótese (PPL até 8 anos, sem violência) dividida por reincidência: fundidas numa entrada (1/4 NR, 1/3 R) para o motor não aplicar a alínea de um grupo a quem é do outro. Idem j e k para indígenas (1/5 e 1/3), não objetivas.",
     "Alíneas a, b, c e g exigem 1/6 da pena sem distinguir reincidência (fração repetida nos dois campos).",
     "Alínea g marcada objetiva por depender do redutor do § 4º do art. 33 constante da condenação.",
     "Art. 4º: aplica-se às mulheres transexuais que tenham alcançado a alteração de gênero nos registros civis.",
@@ -7011,7 +6978,7 @@
    "id": "2019",
    "ano": 2019,
    "numero": "10.189",
-   "data_publicacao": "23/12/2019",
+   "data_publicacao": "24/12/2019",
    "data_referencia": "25/12/2019",
    "tipo": "natalino",
    "publico": "geral",
@@ -7954,7 +7921,8 @@
      {
       "descricao": "lavagem de dinheiro, exceto pena aplicada não superior a 4 anos",
       "lei": "Lei 9.613/1998",
-      "artigos": []
+      "artigos": [],
+      "exceto_pena_ate_anos": 4
      },
      {
       "descricao": "terrorismo",
@@ -7975,12 +7943,17 @@
        "317",
        "318",
        "319"
-      ]
+      ],
+      "exceto_pena_ate_anos": 4
      },
      {
       "descricao": "racismo",
       "lei": "Lei 7.716/1989",
-      "artigos": []
+      "artigos": [
+       "2-A",
+       "3 a 14",
+       "20"
+      ]
      },
      {
       "descricao": "redução a condição análoga à de escravo e tráfico de pessoas",
@@ -7993,17 +7966,25 @@
      {
       "descricao": "genocídio",
       "lei": "Lei 2.889/1956",
-      "artigos": []
+      "artigos": [
+       "1",
+       "2",
+       "3"
+      ]
      },
      {
       "descricao": "crimes contra o sistema financeiro, exceto pena aplicada não superior a 4 anos",
       "lei": "Lei 7.492/1986",
-      "artigos": []
+      "artigos": [],
+      "exceto_pena_ate_anos": 4
      },
      {
-      "descricao": "crimes em licitações e contratos, exceto pena aplicada não superior a 4 anos",
-      "lei": "Lei 14.133/2021",
-      "artigos": []
+      "descricao": "crimes em licitações e contratos (Lei 14.133/2021, que os inseriu no CP, arts. 337-E a 337-P), exceto pena aplicada não superior a 4 anos",
+      "lei": "CP",
+      "artigos": [
+       "337-E a 337-P"
+      ],
+      "exceto_pena_ate_anos": 4
      },
      {
       "descricao": "crimes do CPM correspondentes aos incisos I a X e XII a XVII",
@@ -8028,8 +8009,26 @@
       "artigos": []
      },
      {
-      "descricao": "organização criminosa e milícia privada",
-      "lei": "Lei 12.850/2013 e CP",
+      "descricao": "descumprimento de medida protetiva de urgência (Lei 11.340/2006, art. 24-A, incluído pela Lei 13.641/2018)",
+      "lei": "Lei 11.340/2006",
+      "artigos": [
+       "24-A"
+      ]
+     },
+     {
+      "descricao": "organização criminosa (Lei 12.850/2013: art. 2º e crimes dos arts. 18 a 21)",
+      "lei": "Lei 12.850/2013",
+      "artigos": [
+       "2",
+       "18",
+       "19",
+       "20",
+       "21"
+      ]
+     },
+     {
+      "descricao": "constituição de milícia privada (art. 288-A CP)",
+      "lei": "CP",
       "artigos": [
        "288-A"
       ]
@@ -8061,7 +8060,7 @@
      },
      {
       "descricao": "todo o decreto (§ 4º): quem celebrou colaboração premiada (Lei 12.850/2013)",
-      "lei": "Lei 12.850/2013",
+      "lei": "",
       "artigos": []
      }
     ],
@@ -8072,7 +8071,8 @@
     "meses": 12,
     "exige_homologacao": true,
     "afeta": "indulto e comutação",
-    "texto": "Condicionada à inexistência de sanção, reconhecida pelo juízo competente em audiência de justificação, por falta grave cometida nos doze meses de cumprimento da pena contados retroativamente a 25/12/2023. § 1º Falta grave posterior à publicação não impede. § 2º Não se aplica às hipóteses dos incisos X e XI do art. 2º."
+    "texto": "Condicionada à inexistência de sanção, reconhecida pelo juízo competente em audiência de justificação, por falta grave cometida nos doze meses de cumprimento da pena contados retroativamente a 25/12/2023. § 1º Falta grave posterior à publicação não impede. § 2º Não se aplica às hipóteses dos incisos X e XI do art. 2º.",
+    "contada_de": "referencia"
    },
    "comutacao_sucessiva": "permitida",
    "pena_multa": "indulto autônomo da multa (art. 2º, X) e extensão à multa cumulativa (art. 8º) se até o valor mínimo de execução fiscal da Fazenda Nacional ou sem capacidade econômica; inadimplência da multa não impede indulto/comutação (art. 8º, p.u.)",
@@ -8086,7 +8086,9 @@
     "Art. 3º, § 2º: comutação sucessiva permitida, sem novo requisito temporal.",
     "Art. 7º, II: recurso da acusação só impede se visar majorar a pena ou as condições do benefício.",
     "Art. 11: regras do regime aberto aplicam-se ao aberto domiciliar.",
-    "Art. 2º, XII a XIV não exigem expressamente crime sem violência/grave ameaça (marcados 'indiferente')."
+    "Art. 2º, XII a XIV não exigem expressamente crime sem violência/grave ameaça (marcados 'indiferente').",
+    "Vedações com ressalva 'exceto quando a pena aplicada não for superior a quatro anos' (art. 1º, III, V, IX e X: lavagem, arts. 312 a 319 CP, sistema financeiro, licitações): a ressalva é por crime (pena aplicada), e o motor ainda não a aplica - com pena aplicada até 4 anos o crime NÃO é impeditivo.",
+    "Art. 1º, XIV (violência contra a mulher): além do art. 24-A da Lei 11.340/2006, alcança crimes praticados contra a mulher no contexto dessas leis (ex.: CP 147-A, 215-A, 218-C; CE 326-B), o que depende da vítima e não é aferível só pelo artigo: conferir na sentença."
    ]
   }
  ]

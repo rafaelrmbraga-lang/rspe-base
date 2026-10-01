@@ -667,6 +667,44 @@ v6.16.50
     Hipóteses que dependem de dado fora do RSPE (filhos, doença, idade,
     estudo, reparação do dano, PRD/sursis, prisão provisória) não são
     calculadas: só entram as que se resolvem pela conta.
+  - Revisão dos decretos (2000 a 2025) contra o texto integral:
+    * fichas corrigidas (frações do art. 1º, XII e XIII, de 2011; ressalvas
+      que estavam como vedação em 2007 e 2008; homicídio culposo e
+      Sistema Financeiro em 2000 a 2002; datas de publicação de 2017 Mães e
+      2019; alíneas por reincidência no Dia das Mães; vedações de 2023 por
+      lei e artigo; hipóteses que dependem de PRD, sursis, prisão provisória
+      ou regime inicial aberto saem da conta);
+    * vedações lidas por artigo com letra (217-A), intervalo (239 a 244-B,
+      359-I a 359-R), parágrafo e inciso (157, § 2º, I); lei inteira quando
+      o decreto não lista artigos; "exceto pena aplicada até 4 anos" (2023)
+      e restrições afastadas para pena até 4 anos (2002, art. 7º, § 2º);
+    * tráfico: associação (art. 35) e §§ 2º e 3º do art. 33 não são
+      equiparados a hediondo; o privilegiado (§ 4º) só é vedado se o
+      decreto o vedar expressamente (STF, HC 118.533) e, havendo hipótese
+      própria (2017, art. 1º, IV), só ela se aplica; hediondos, tortura,
+      tráfico e terrorismo vedados também quando o decreto é omisso (CF,
+      art. 5º, XLIII);
+    * falta grave: 12 meses de calendário, contados da publicação ou da data
+      que o decreto indicar (2015 e 2023: 25/12); 24 meses para crime com
+      violência ou grave ameaça (2002 e 2003); falta que só afasta o indulto
+      não afasta a comutação; sem janela (Dia das Mães 2017), qualquer falta
+      punida até a data;
+    * livramento "concedido até 31 de dezembro" (2000 a 2002) conferido pela
+      data; quem já teve comutação dispensa novo requisito temporal quando o
+      decreto diz; regime não informado no RSPE, com o resto da conta
+      fechado, dá "A verificar" (custódia ininterrupta conta como fechado ou
+      semiaberto); incidente do Dia das Mães não se confunde com o natalino
+      do mesmo ano; indeferimento de 2017 apoiado na cautelar da ADI 5874
+      ganha a ressalva de que o pedido pode ser renovado;
+    * 2022/2024/2025: violência ou grave ameaça própria do tipo (ameaça,
+      lesão dolosa, homicídio doloso, extorsão, estupro...) prevalece sobre
+      a marcação "N"; tráfico privilegiado não vira hediondo pelo selo do
+      SEEU; 2022, art. 7º, § 1º (comando de organização criminosa); janela do
+      art. 6º em 12 meses de calendário, igual à linha do tempo; art. 10, II,
+      pela data da punição.
+  - Quadro do Usuário na ficha do assistido: os cartões dele e um formulário
+    para criar o cartão ali mesmo (título, observação, etiqueta, prazo e
+    coluna). Nos cartões, botões para copiar o nome e o número do processo.
   - Assistidos fixados: o alfinete ao lado do nome (agora sempre visível)
     prende o assistido no topo de todas as abas, e a faixa "Fixados" o
     filtra com um clique, sem buscar o nome de novo. Ctrl+K (ou

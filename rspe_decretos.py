@@ -67,6 +67,8 @@ def decididos(r):
             continue
         ano = anos[-1]
         num = (m.group(1) or "").strip(".") if m else ""
+        if re.search(r"MAES|DIA DAS M", txt) or num.replace(".", "") == "9370":
+            ano += "_maes"  # Dia das Mães (2017 s/n e 2018, nº 9.370): não se confunde com o natalino do mesmo ano
         sit = (i.get("situacao") or "").upper()
         s = "indef" if re.search(r"N[AÃ]O CONCEDID|INDEFERID|NEGAD", rs._sem_acento(sit)) else ("conc" if "CONCEDID" in sit else "")
         if not s:
@@ -92,24 +94,34 @@ def _regime_em(r, ref):
     return ""
 
 
-def _impeditivos(f, crimes, ref):
-    """Crimes da soma que o decreto veda (hediondos e equiparados na data, tortura, terrorismo, tráfico e a lista própria)."""
+def _impeditivos(f, crimes, ref, pena_total=None):
+    """Crimes da soma que o decreto veda (hediondos e equiparados na data do fato, tortura, terrorismo, tráfico e a lista
+    própria do decreto)."""
     I = f.get("impeditivos") or {}
     out = []
+    lim = I.get("nao_aplica_pena_ate_anos")
+    if lim and pena_total is not None and pena_total <= rs.dias_anos(lim, ref):
+        return []  # ex.: 2002, art. 7º, § 2º - as restrições não se aplicam à pena aplicada de até 4 anos
     for c in crimes:
         lei, art = rs.num_lei(c.get("lei")), rs.num_art(c.get("artigo"))
-        rot = rs.crimes_curto([c])
-        if I.get("hediondos_e_equiparados"):
-            trafico = lei in ("11343", "6368") and art in ("33", "12", "34", "13", "35", "14", "36", "37")
-            priv = trafico and "§ 4" in (c.get("tipo_penal") or "")
-            if priv and I.get("trafico_privilegiado_ressalvado"):
-                pass
-            # hediondez aferida na data do FATO: a hediondez superveniente não alcança o fato anterior (tese da
-            # irretroatividade; os decretos falam em "crime hediondo praticado após a edição da Lei 8.072/1990" e das leis que
-            # ampliaram o rol). Tráfico: equiparado desde a Lei 8.072/1990 (25/07/1990)
-            elif rs.e_hediondo(c, None) or (trafico and not priv and (rs.to_date(c.get("data_infracao") or "") or ref) >= date(1990, 7, 25)):
-                fato = rs.to_date(c.get("data_infracao") or "")
-                out.append("%s: hediondo ou equiparado na data do fato%s" % (rot, (" (%s)" % rs.fmt(fato)) if fato else ""))
+        rot = rs.crimes_curto([c]).strip()
+        pi = rs.paragrafo_inciso(c) or ("", "")
+        par = re.match(r"\d*", pi[0]).group(0)
+        # tráfico equiparado a hediondo: art. 12 (e 13) da Lei 6.368 e art. 33, caput e § 1º, da Lei 11.343. Fora: associação
+        # (art. 14 / art. 35 - o STJ não a equipara), os §§ 2º e 3º do art. 33 (induzimento e uso compartilhado) e o § 4º
+        # (privilegiado - STF, HC 118.533), salvo vedação expressa do decreto (trafico_privilegiado_ressalvado = false)
+        trafico = (lei == "6368" and art in ("12", "13")) or (lei == "11343" and art == "33" and par not in ("2", "3", "4"))
+        priv = _priv(c)
+        priv_vedado = priv and I.get("trafico_privilegiado_ressalvado") is False
+        # hediondos, tortura, tráfico e terrorismo: vedados pela própria lei (CF, art. 5º, XLIII; Lei 8.072, art. 2º, I), ainda
+        # que o decreto não os liste (ex.: Dia das Mães 2017 e 2018)
+        if True:
+            fato = rs.to_date(c.get("data_infracao") or "")
+            # hediondez aferida na data do FATO: a superveniente não alcança o fato anterior (os decretos falam em "crime
+            # hediondo praticado após" a Lei 8.072/1990 e as que ampliaram o rol). Tráfico: equiparado desde 25/07/1990
+            if priv_vedado or (not priv and (rs.e_hediondo(c, None) or (trafico and (fato or ref) >= date(1990, 7, 25)))):
+                out.append("%s: %s%s" % (rot, "tráfico privilegiado vedado pelo decreto" if priv_vedado else "hediondo ou equiparado na data do fato",
+                                         (" (%s)" % rs.fmt(fato)) if fato and not priv_vedado else ""))
                 continue
         for o in I.get("outros") or []:
             lt = str(o.get("lei") or "")
@@ -118,10 +130,26 @@ def _impeditivos(f, crimes, ref):
             leis = rs.num_lei(lt) if lt and not re.search(r"\bCP\b|PENAL", lt, re.I) else "2848"
             if not (lei == leis or (leis == "2848" and lei in ("", "2848"))):
                 continue
-            if art and any(_artigo_vedado(a, art, c) for a in (o.get("artigos") or [])):
+            if o.get("exceto_pena_ate_anos") and (rs.pena_para_dias(c.get("pena_imposta") or c.get("pena_total_processo")) or 0) <= rs.dias_anos(o["exceto_pena_ate_anos"], ref):
+                continue  # "exceto quando a pena aplicada não for superior a quatro anos" (ex.: 2023, art. 1º, III, V, IX e X)
+            arts = o.get("artigos") or []
+            if not arts and rs.num_lei(lt) and leis != "2848":
+                arts = [art]  # lei inteira vedada (ex.: tortura, terrorismo, lavagem)
+            if priv and not priv_vedado:
+                # privilegiado: só a vedação que cite o § 4º expressamente o alcança
+                arts = [a for a in arts if re.search(r"§\s*4", str(a))]
+            if art and any(_artigo_vedado(a, art, c) for a in arts):
                 out.append("%s: %s" % (rot, o.get("descricao") or "vedado pelo decreto"))
                 break
     return list(dict.fromkeys(out))
+
+
+def _priv(c):
+    """Tráfico privilegiado (Lei 11.343, art. 33, § 4º), pelo parágrafo lido do tipo penal."""
+    if rs.num_lei(c.get("lei")) != "11343" or rs.num_art(c.get("artigo")) != "33":
+        return False
+    pi = rs.paragrafo_inciso(c)
+    return bool((pi and pi[0] == "4") or "§ 4" in (c.get("tipo_penal") or ""))
 
 
 def _art_num(t):
@@ -143,7 +171,7 @@ def _artigo_vedado(entrada, art, c):
     m = re.match(r"\s*(\d+\s*(?:-\s*[A-Z])?)\s*[ºo°]?\s*a\s*(\d+\s*(?:-\s*[A-Z])?)", e, re.I)
     if m:  # intervalo de artigos
         lo, hi = _art_num(m.group(1)), _art_num(m.group(2))
-        return bool(lo and hi and lo[0] <= alvo[0] <= hi[0] and (alvo[0] < hi[0] or not hi[1] or alvo[1] <= hi[1]))
+        return bool(lo and hi and lo <= alvo <= (hi if hi[1] else (hi[0], "Z")))  # (359, "I") <= (359, "K") <= (359, "R")
     base = _art_num(e)
     if not base or base != alvo:
         return False
@@ -156,7 +184,13 @@ def _artigo_vedado(entrada, art, c):
     par = re.match(r"\d+", pi[0]).group(0) if pi and pi[0] and pi[0][0].isdigit() else ""
     if not pi:
         return caput  # parágrafo ilegível: a vedação do caput alcança; a de parágrafo, não
-    return (par in pars) if par else caput
+    if not par:
+        return caput
+    if par not in pars:
+        return False
+    # inciso indicado na vedação (ex.: "157, §2º, I"): o crime precisa estar nele, se o RSPE o informar
+    incs = set(x.upper() for x in re.findall(r"§\s*%s\s*[ºo°]?\s*,?\s*((?:[IVXL]+)(?:\s*(?:,|e)\s*[IVXL]+)*)\b" % par, resto) for x in re.findall(r"[IVXL]+", x))
+    return not (incs and pi[1] and pi[1].upper() not in incs)
 
 
 def _regra_concurso(f):
@@ -204,13 +238,17 @@ def avaliar_ficha(f, r, ctx, ini, hoje):
     reinc = any(c.get("reincidente_comum") == "S" or c.get("reincidente_especifico") == "S" for c in crimes)
     vga = any(rs.vga_indulto(c) for c in crimes)
     detalhe = {"pena": pena, "cumprido": cump, "reincidente": reinc, "vga": vga, "crimes": [rs.crimes_curto([c]) for c in crimes]}
-    imp = _impeditivos(f, crimes, ref)
+    imp = _impeditivos(f, crimes, ref, pena)
     nota_conc = ""
+    lim = (f.get("impeditivos") or {}).get("nao_aplica_pena_ate_anos")
+    if lim and pena <= rs.dias_anos(lim, ref) and _impeditivos(dict(f, impeditivos=dict(f["impeditivos"], nao_aplica_pena_ate_anos=None)), crimes, ref):
+        nota_conc = ("restrições do decreto afastadas para pena aplicada de até %s anos (%s); para hediondo ou tráfico, ponto controvertido "
+                     "diante da CF, art. 5º, XLIII" % (lim, (f.get("impeditivos") or {}).get("dispositivo") or "decreto"))
     if imp:
         # concurso com crime impeditivo: cumprida a fração exigida da pena dele, o benefício alcança os demais crimes, com o
         # tempo excedente imputado a eles
         frc = _regra_concurso(f)
-        imp_cr = [c for c in crimes if any(x.startswith(rs.crimes_curto([c]) + ":") for x in imp)]
+        imp_cr = [c for c in crimes if any(x.startswith(rs.crimes_curto([c]).strip() + ":") for x in imp)]
         resto = [c for c in crimes if c not in imp_cr]
         if frc is not None and resto:
             pena_imp = sum(rs.pena_para_dias(c.get("pena_imposta") or c.get("pena_total_processo")) or 0 for c in imp_cr)
@@ -227,58 +265,88 @@ def avaliar_ficha(f, r, ctx, ini, hoje):
     # falta grave na janela (até a publicação)
     F = f.get("falta_grave") or {}
     falta_firme = falta_ind = []
-    if F.get("meses"):
-        # janela contada para trás a partir da publicação (como dizem os decretos), não da data de referência
-        ach = rs.indicios_falta(r.get("_incidentes") or [], pub, dias=int(F["meses"]) * 30, eventos=r.get("_eventos") or [], ate=pub, hoje=pub)  # prescrição da falta aferida na data do decreto
+    f_meses, f_afeta = F.get("meses"), (F.get("afeta") or "indulto e comutação").lower()
+    if F.get("meses_vga") and vga:
+        # crime com violência ou grave ameaça: janela maior (2002, art. 1º, § 1º, I; 2003, art. 3º, I - 24 meses)
+        f_meses, f_afeta = F["meses_vga"], (F.get("afeta_vga") or f_afeta).lower()
+    if f_meses or (F.get("texto") and F.get("meses") is None and re.search(r"punid|falta grave", F.get("texto") or "", re.I)):
+        # janela de meses de calendário contada para trás da publicação (ou da data de referência, se o decreto assim
+        # disser: 2015, 2023); sem janela fixada (Dia das Mães 2017), qualquer falta punida até a data
+        base_f = ref if F.get("contada_de") == "referencia" else pub
+        dias_f = rs.dias_anos(float(f_meses) / 12, base_f) if f_meses else 36500
+        ach = rs.indicios_falta(r.get("_incidentes") or [], base_f, dias=dias_f, eventos=r.get("_eventos") or [], ate=min(pub, base_f), hoje=pub)  # prescrição da falta aferida na data do decreto
         # decreto que exige a falta apurada/homologada (ex.: "falta sem a devida apuração não impede"): a não homologada
         # (fuga só registrada como evento) não impede - fica como ressalva
         hom = F.get("exige_homologacao")
         falta_firme = [t for t, firme in ach if firme and not (hom and "não homologada" in t)]
         falta_ind = [t for t, firme in ach if not firme or (hom and "não homologada" in t)]
+    # comutação concedida por decreto anterior (incidente do RSPE)
+    com_ant = any(k[1] == "comutacao" and v[0] == "conc" and str(k[0])[:4].isdigit() and int(str(k[0])[:4]) < int(f.get("ano") or 0)
+                  for k, v in decididos(r).items())
     regime = _regime_em(r, ref)
     em_lc = any(a <= ref and (b is None or b >= ref) for a, b in ctx["lc"])
     continuo = next(((ref - a).days + 1 for a, b in rs.uniao_periodos(ctx["periodos"]) if a <= ref and (b is None or b >= ref)), 0)
 
-    def hip_ok(h):
-        """(atende, dias exigidos, motivo se não atende)."""
+    priv_proprio = any(re.search(r"trafico privilegiado", rs._sem_acento(h.get("outros_requisitos") or "").lower()) for h in f.get("indulto") or [])
+
+    def hip_ok(h, comut=False):
+        """(atende, dias exigidos, motivo se não atende); atende=None: a conta fecha, mas o RSPE não informa o regime."""
         o = rs._sem_acento(h.get("outros_requisitos") or "").lower()
         if re.search(r"\bmulher|\bcondenadas?\b(?! a)", o) and (r.get("_sexo") or "") != "F":
             return False, None, "hipótese só para mulheres"
         if re.search(r"\bhomens?\b", o) and (r.get("_sexo") or "") == "F":
             return False, None, "hipótese só para homens"
-        if re.search(r"trafico privilegiado|33,? ?§ ?4|§ ?4o? do art\.? 33", o + " " + rs._sem_acento(h.get("texto") or "").lower()) and not all(
-                rs.num_lei(c.get("lei")) == "11343" and "§ 4" in (c.get("tipo_penal") or "") for c in crimes):
+        h_priv = bool(re.search(r"trafico privilegiado|33,? ?§ ?4|§ ?4o? do art\.? 33", o + " " + rs._sem_acento(h.get("texto") or "").lower()))
+        if h_priv and not all(_priv(c) for c in crimes):
             return False, None, "hipótese só para o tráfico privilegiado"
-        rem_mode = "remanescente" in o
+        if not h_priv and not comut and priv_proprio and any(_priv(c) for c in crimes):
+            return False, None, "o tráfico privilegiado tem hipótese própria neste decreto"
+        rem_mode = "remanescente" in o and not comut  # na comutação, "remanescente" é a base da redução, não um teto
         if rem_mode and h.get("pena_max_anos") is None:
             nums = [int(x) for x in re.findall(r"(\d+)\s*anos", o)]
             if nums:
                 h = dict(h, pena_max_anos=(nums[1] if (reinc and len(nums) > 1) else nums[0]))
-        if h.get("pena_max_anos") is not None and rem_mode and pena - cump > float(h["pena_max_anos"]) * 365:
+        if h.get("pena_max_anos") is not None and rem_mode and pena - cump > rs.dias_anos(h["pena_max_anos"], ref):
             return False, None, "pena remanescente de %s acima de %s anos" % (rs.dias_para_pena(pena - cump), h["pena_max_anos"])
-        if h.get("pena_max_anos") is not None and not rem_mode and pena > float(h["pena_max_anos"]) * 365:
+        if h.get("pena_max_anos") is not None and not rem_mode and pena > rs.dias_anos(h["pena_max_anos"], ref):
             return False, None, "pena total de %s acima de %s anos" % (rs.dias_para_pena(pena), h["pena_max_anos"])
-        if h.get("pena_min_anos") is not None and pena <= float(h["pena_min_anos"]) * 365:
+        if h.get("pena_min_anos") is not None and pena <= rs.dias_anos(h["pena_min_anos"], ref):
             return False, None, "pena total não supera %s anos" % h["pena_min_anos"]
         if (h.get("violencia_grave_ameaca") or "") == "vedada" and vga:
             return False, None, "crime com violência ou grave ameaça"
         if (h.get("violencia_grave_ameaca") or "") == "exigida" and not vga:
             return False, None, "hipótese só para crime com violência ou grave ameaça"
         reg = [rs._sem_acento(x).lower() for x in (h.get("regime") or [])]
+        sem_regime = ""
         if reg and not regime and not any("livramento" in x for x in reg):
-            return False, None, "regime em %s não informado no RSPE (hipótese exige %s)" % (rs.fmt(ref), ", ".join(h["regime"]))
-        if reg and any("livramento" in x for x in reg) and not em_lc:
+            if h.get("ininterrupto") and continuo and all(re.match(r"fechado|semiaberto", x) for x in reg):
+                pass  # custódia ininterrupta sem incidente de regime: fechado (o inicial não gera incidente) ou semiaberto
+            else:
+                sem_regime = "regime em %s não informado no RSPE (hipótese exige %s)" % (rs.fmt(ref), ", ".join(h["regime"]))
+        lc_ate = rs.to_date(h.get("regime_ate") or "")
+        if lc_ate and any("livramento" in x for x in reg):
+            # "beneficiado com livramento condicional até 31 de dezembro de ...", sem revogação até a data de referência
+            if not any(a <= lc_ate and (b is None or b >= ref) for a, b in ctx["lc"]):
+                return False, None, "livramento condicional não concedido até %s (ou revogado)" % rs.fmt(lc_ate)
+        elif reg and any("livramento" in x for x in reg) and not em_lc:
             if not any(regime and (x.startswith(regime) or regime in x) for x in reg if "livramento" not in x):
                 return False, None, "não estava em livramento condicional em %s" % rs.fmt(ref)
         elif reg and regime and not any(x.startswith(regime) or regime in x for x in reg):
             return False, None, "regime em %s: %s (exigido %s)" % (rs.fmt(ref), regime, ", ".join(h["regime"]))
         fr = _fr(h.get("fracao_reincidente") if reinc else h.get("fracao_nao_reincidente"))
         anos = h.get("anos_reincidente") if reinc else h.get("anos_nao_reincidente")
+        fr_o = h.get("fracao_nao_reincidente") if reinc else h.get("fracao_reincidente")
+        anos_o = h.get("anos_nao_reincidente") if reinc else h.get("anos_reincidente")
+        if fr is None and anos is None and (fr_o or anos_o):
+            # a hipótese só traz requisito para a outra condição: não alcança este caso (não é "sem requisito de tempo")
+            return False, None, "hipótese só para %s" % ("não reincidentes" if reinc else "reincidentes")
         exig = None
         if fr is not None:
             exig = int(-(-pena * fr.numerator // fr.denominator))
         elif anos is not None:
-            exig = int(float(anos) * 365)
+            exig = rs.dias_anos(anos, ref)
+        if comut and exig and com_ant and re.search(r"novo requisito temporal|independentemente de novo", rs._sem_acento(h.get("texto") or "") + " " + o, re.I):
+            exig = 0  # já comutado em decreto anterior: a nova comutação dispensa novo requisito temporal
         base_c = cump
         if h.get("ininterrupto") and anos is not None:
             base_c = continuo  # anos ininterruptos: só a custódia contínua até a data (sem remição)
@@ -286,9 +354,11 @@ def avaliar_ficha(f, r, ctx, ini, hoje):
             if base_c is not cump:
                 return False, exig, "faltavam %s de custódia ininterrupta para %s anos em %s" % (_dias_txt(exig - base_c), anos, rs.fmt(ref))
             return False, exig, "faltavam %s para %s em %s" % (_dias_txt(exig - cump), str(fr) if fr is not None else "%s anos" % anos, rs.fmt(ref))
+        if sem_regime:
+            return None, exig, sem_regime
         return True, exig, ""
 
-    ind, ind_n = None, None   # hipótese atendida / a que chegou mais perto
+    ind, ind_n, ind_ver = None, None, None   # hipótese atendida / a que chegou mais perto / a que depende do regime
     def _decisiva(h):
         # a hipótese só decide se tem algum requisito numérico (pena, fração ou anos); só regime não basta. Requisito positivo
         # que o RSPE não mostra (pena substituída ou sursis, fração cumprida em prisão provisória, saídas, idade, filhos,
@@ -304,6 +374,9 @@ def avaliar_ficha(f, r, ctx, ini, hoje):
         if not h.get("objetivo") or not _decisiva(h):
             continue
         ok, exig, mot = hip_ok(h)
+        if ok is None:
+            ind_ver = ind_ver or (h, exig, mot)
+            ok = False
         hips.append({"tipo": "indulto", "dispositivo": h.get("dispositivo") or "", "ok": ok, "exigido": exig, "mot": mot, "texto": h.get("texto") or "",
                      "fracao": (h.get("fracao_reincidente") if reinc else h.get("fracao_nao_reincidente")) or
                                ("%s anos" % (h.get("anos_reincidente") if reinc else h.get("anos_nao_reincidente")) if (h.get("anos_reincidente") if reinc else h.get("anos_nao_reincidente")) else "")})
@@ -322,7 +395,8 @@ def avaliar_ficha(f, r, ctx, ini, hoje):
               "outros_requisitos": h.get("outros_requisitos") or "", "texto": h.get("texto") or ""}
         if not _decisiva(dict(hh, outros_requisitos=h.get("outros_requisitos") or "")):
             continue
-        ok, exig, mot = hip_ok(hh)
+        ok, exig, mot = hip_ok(dict(hh, texto=(h.get("texto") or "")), comut=True)
+        ok = bool(ok)
         hips.append({"tipo": "comutacao", "dispositivo": h.get("dispositivo") or "", "ok": ok, "exigido": exig, "mot": mot, "texto": h.get("texto") or "",
                      "fracao": (hh["fracao_reincidente"] if reinc else hh["fracao_nao_reincidente"]) or "",
                      "reducao": (h.get("reducao_reincidente") if reinc else h.get("reducao_nao_reincidente")) or ""})
@@ -335,15 +409,20 @@ def avaliar_ficha(f, r, ctx, ini, hoje):
     res = dict(base, detalhe=detalhe, regime=regime, nota=nota_conc, hips=hips, falta_ind=falta_ind, falta_firme=falta_firme)
     imp_ind = bool(imp) and "comuta" not in afeta.replace("indulto e comuta", "")
     imp_com = bool(imp) and ("indulto e comuta" in afeta or "só comuta" in afeta or afeta.startswith("so comuta"))
-    if falta_firme and "indulto" in (F.get("afeta") or "indulto e comutação"):
-        return dict(res, s="nao", mot="falta grave nos %s meses anteriores: %s" % (F.get("meses"), falta_firme[0]))
-    if ind and not imp_ind:
+    f_ind = bool(falta_firme) and "indulto" in f_afeta
+    f_com = bool(falta_firme) and ("comuta" in f_afeta)
+    mot_falta = "falta grave %s: %s" % (("nos %s meses anteriores" % f_meses) if f_meses else "punida até a data", falta_firme[0]) if falta_firme else ""
+    if f_ind and (f_com or not (com and not imp_com)):
+        return dict(res, s="nao", mot=mot_falta)
+    if ind and not imp_ind and not f_ind:
         h, exig = ind
         return dict(res, s="cabe", beneficio="Indulto", dispositivo=h.get("dispositivo") or "", exigido=exig,
                     fracao=(h.get("fracao_reincidente") if reinc else h.get("fracao_nao_reincidente")) or "",
                     mot=("cumpriu %s em %s" % (rs.dias_para_pena(cump), rs.fmt(ref))) + (" (exigido %s)" % rs.dias_para_pena(exig) if exig else ""),
                     ressalva=("falta a apurar na janela: %s" % falta_ind[0]) if falta_ind else "")
-    if com and not imp_com:
+    if ind_ver and not ind and not imp_ind and not f_ind:
+        return dict(res, s="ver", mot=ind_ver[2], dispositivo=ind_ver[0].get("dispositivo") or "", exigido=ind_ver[1])
+    if com and not imp_com and not f_com:
         h, exig = com
         red = h.get("reducao_reincidente") if reinc else h.get("reducao_nao_reincidente")
         return dict(res, s="cabe", beneficio="Comutação", dispositivo=h.get("dispositivo") or "", exigido=exig,
@@ -405,11 +484,15 @@ def avaliar(r, hoje, completo=False):
                                                                   "s": "fora", "mot": "execução posterior ao decreto", "detalhado": True}
             out.append(x)
     for x in out:
-        ano = str(x.get("ano") or "")
+        ano = str(x.get("id") or "")
         if x.get("s") in ("fora", "futuro"):
             continue
         d = dec.get((ano, "indulto")) or dec.get((ano, "comutacao"))
-        if d and (not x.get("tipo") == "dia_das_maes"):
+        if d and d[0] == "indef" and ano == "2017" and x.get("s") == "cabe":
+            # Decreto 9.246/2017: indeferimentos apoiados na cautelar da ADI 5874 (julgada improcedente em 09/05/2019) podem ser renovados
+            x["ressalva"] = "indeferido no RSPE em %s; a cautelar da ADI 5874 caiu (ação improcedente, 09/05/2019): o pedido pode ser renovado" % (d[1] or "?")
+            continue
+        if d:
             ben = "Indulto" if (ano, "indulto") in dec else "Comutação"
             x.update(s=d[0], beneficio=ben, mot="%s %s%s (incidente do RSPE)" % (ben, "concedido" if (d[0] == "conc" and ben == "Indulto") else
                                                                                "concedida" if d[0] == "conc" else
