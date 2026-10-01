@@ -17,6 +17,8 @@ import rspe_scraper as rs
 # análise detalhada já existente no programa (rspe_scraper): o motor só traduz o resultado
 DETALHADOS = {"2022": ("11.302", "indulto_2022", None), "2024": ("12.338", "indulto_2024", "comutacao_2024"),
               "2025": ("12.790", "indulto_2025", "comutacao_2025")}
+# datas de referência dos decretos detalhados (rs.DECRETOS só traz 2024 e 2025, os do rol do art. 1º)
+_REF_DET = {"2022": date(2022, 12, 25), "2024": date(2024, 12, 25), "2025": date(2025, 12, 25)}
 MAPA_STATUS = {"possivel": "cabe", "nao": "nao", "vedado": "imp", "verificar": "ver"}
 
 
@@ -443,11 +445,13 @@ def avaliar_ficha(f, r, ctx, ini, hoje):
 
 def _detalhado(ano, r):
     num, ki, kc = DETALHADOS[ano]
-    ref = rs.DECRETOS.get(ano)
+    ref = _REF_DET.get(ano)
     out = {"id": ano, "ano": int(ano), "numero": num, "ref": rs.fmt(ref) if ref else "25/12/%s" % ano, "tipo": "natalino", "detalhado": True}
     si = MAPA_STATUS.get(r.get(ki + "_status") or "", "")
     sc = MAPA_STATUS.get(r.get((kc or "") + "_status") or "", "") if kc else ""
     ti, tc = r.get(ki) or "", (r.get(kc) or "") if kc else ""
+    if re.match(r"não se aplica: não iniciou o cumprimento", ti):
+        ti += " (a prisão anterior foi provisória: conta como detração, não como início do cumprimento da pena)"
     if si == "cabe" or (not si and ti.upper().startswith("CABE")):
         return dict(out, s="cabe", beneficio="Indulto", mot=ti)
     if sc == "cabe":
@@ -478,7 +482,7 @@ def avaliar(r, hoje, completo=False):
                  "mot": "falha ao avaliar o decreto: %s" % e}
         out.append(x)
     for ano in DETALHADOS:
-        ref = rs.DECRETOS.get(ano)
+        ref = _REF_DET.get(ano)
         if ref and ref <= hoje:
             x = _detalhado(ano, r) if (ini and ini <= ref) else {"id": ano, "ano": int(ano), "numero": DETALHADOS[ano][0], "ref": rs.fmt(ref),
                                                                   "s": "fora", "mot": "execução posterior ao decreto", "detalhado": True}
