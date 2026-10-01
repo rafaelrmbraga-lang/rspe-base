@@ -706,6 +706,12 @@ v6.16.50
     assistido, abre uma janela para escrever o cartão (título, observação,
     etiqueta, prazo e coluna), já com o assistido. Nos cartões e na janela,
     botões para copiar o nome e o número do processo.
+  - Quadro do Usuário: botão direito no cartão abre o menu para movê-lo de
+    coluna, arquivar, editar ou excluir. O cartão arquivado sai do quadro e
+    fica em "Cartões arquivados" (ao lado de "+ Cartão"), com busca, data do
+    arquivamento e a coluna em que estava; dali pode ser aberto, excluído ou
+    devolvido ao quadro, na coluna escolhida. A janela do cartão também tem
+    o botão "Arquivar".
   - Assistidos fixados: o alfinete ao lado do nome (agora sempre visível)
     prende o assistido no topo de todas as abas, e a faixa "Fixados" o
     filtra com um clique, sem buscar o nome de novo. Ctrl+K (ou

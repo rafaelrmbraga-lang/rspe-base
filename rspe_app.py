@@ -416,6 +416,8 @@ class Base:
         self.con.execute("""CREATE TABLE IF NOT EXISTS quadro_colunas (id TEXT PRIMARY KEY, nome TEXT, ordem REAL)""")
         self.con.execute("""CREATE TABLE IF NOT EXISTS quadro_cartoes (id TEXT PRIMARY KEY, coluna TEXT, ordem REAL, processo TEXT,
             titulo TEXT, obs TEXT, prazo TEXT, etiqueta TEXT, criado TEXT, atualizado TEXT)""")
+        if "arquivado" not in [r[1] for r in self.con.execute("PRAGMA table_info(quadro_cartoes)").fetchall()]:
+            self.con.execute("ALTER TABLE quadro_cartoes ADD COLUMN arquivado TEXT DEFAULT ''")  # data do arquivamento ('' = no quadro)
         if not self.con.execute("SELECT 1 FROM quadro_colunas").fetchone():
             for i, (cid, nome) in enumerate((("fazer", "A fazer"), ("andamento", "Em andamento"), ("aguardando", "Aguardando decisão"), ("concluido", "Concluído"))):
                 self.con.execute("INSERT INTO quadro_colunas VALUES (?,?,?)", (cid, nome, i))
@@ -593,8 +595,9 @@ class Base:
     def quadro(self):
         with self.lock:
             cols = [{"id": i, "nome": n, "ordem": o} for i, n, o in self.con.execute("SELECT id, nome, ordem FROM quadro_colunas ORDER BY ordem").fetchall()]
-            cards = [dict(zip(("id", "coluna", "ordem", "processo", "titulo", "obs", "prazo", "etiqueta", "criado", "atualizado"), row))
-                     for row in self.con.execute("SELECT id, coluna, ordem, processo, titulo, obs, prazo, etiqueta, criado, atualizado FROM quadro_cartoes ORDER BY ordem").fetchall()]
+            cards = [dict(zip(("id", "coluna", "ordem", "processo", "titulo", "obs", "prazo", "etiqueta", "criado", "atualizado", "arquivado"), row))
+                     for row in self.con.execute("SELECT id, coluna, ordem, processo, titulo, obs, prazo, etiqueta, criado, atualizado, "
+                                                 "COALESCE(arquivado, '') FROM quadro_cartoes ORDER BY ordem").fetchall()]
         return {"colunas": cols, "cartoes": cards}
 
     def quadro_gravar(self, c):
@@ -602,7 +605,7 @@ class Base:
         agora = datetime.now().strftime("%d/%m/%Y %H:%M")
         with self.lock:
             cid = c.get("id") or uuid.uuid4().hex[:12]
-            ant = self.con.execute("SELECT criado, ordem, coluna FROM quadro_cartoes WHERE id=?", (cid,)).fetchone()
+            ant = self.con.execute("SELECT criado, ordem, coluna, COALESCE(arquivado, '') FROM quadro_cartoes WHERE id=?", (cid,)).fetchone()
             col = c.get("coluna") or (ant[2] if ant else "fazer")
             if c.get("ordem") is not None:
                 ordem = float(c["ordem"])
@@ -610,9 +613,11 @@ class Base:
                 ordem = ant[1]
             else:
                 ordem = (self.con.execute("SELECT MIN(ordem) FROM quadro_cartoes WHERE coluna=?", (col,)).fetchone()[0] or 0) - 1
-            self.con.execute("INSERT OR REPLACE INTO quadro_cartoes VALUES (?,?,?,?,?,?,?,?,?,?)",
+            arq = c["arquivado"] if "arquivado" in c else (ant[3] if ant else "")
+            self.con.execute("INSERT OR REPLACE INTO quadro_cartoes (id, coluna, ordem, processo, titulo, obs, prazo, etiqueta, criado, atualizado, "
+                             "arquivado) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
                              (cid, col, ordem, c.get("processo") or "", (c.get("titulo") or "").strip(), (c.get("obs") or "").strip(),
-                              (c.get("prazo") or "").strip(), c.get("etiqueta") or "", ant[0] if ant else agora, agora))
+                              (c.get("prazo") or "").strip(), c.get("etiqueta") or "", ant[0] if ant else agora, agora, arq or ""))
             self.con.commit()
         return cid
 
@@ -979,6 +984,21 @@ class Api:
         c.update(coluna=coluna, ordem=ordem)
         self.base.quadro_gravar(c)
         return self.base.quadro()
+
+    def quadro_arquivar(self, cid, on, coluna=None):
+        """Arquiva o cartão (sai do quadro e fica na lista "Cartões arquivados") ou o devolve ao quadro, na coluna indicada."""
+        if not self.base:
+            return {"erro": "Nenhuma base aberta."}
+        c = next((x for x in self.base.quadro()["cartoes"] if x["id"] == cid), None)
+        if not c:
+            return {"erro": "Cartão não encontrado."}
+        c["arquivado"] = datetime.now().strftime("%d/%m/%Y %H:%M") if on else ""
+        if not on and coluna and coluna != c["coluna"]:
+            c.update(coluna=coluna, ordem=None)
+        self.base.quadro_gravar(c)
+        q = self.base.quadro()
+        q["msg"] = "Cartão arquivado: consulte em \"Cartões arquivados\"." if on else "Cartão devolvido ao quadro."
+        return q
 
     def quadro_excluir(self, cid):
         if not self.base:
