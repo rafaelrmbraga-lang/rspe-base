@@ -280,7 +280,7 @@ tr.sub td{padding:0 0 0 0;background:#FFFFFF;cursor:default}tr.sub:hover td{back
 .provg{display:grid;grid-template-columns:3fr 2fr;gap:12px;margin-bottom:10px}.provg>div{border:1px solid var(--line);border-radius:9px;padding:8px 10px}.provg h4{margin:0 0 6px;font-size:12px;color:var(--tx2);text-transform:uppercase;letter-spacing:.3px}
 .provleg{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:11.5px;color:var(--tx2);margin-top:4px}.provleg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
 .provc{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12.5px;color:var(--tx2);margin-bottom:10px}.provc b{color:var(--tx)}
-.pck.ok{background:#17B26A;border-color:#17B26A}.pck.ok.mud{background:#F5A524;border-color:#F5A524}
+.pck.ok{background:#17B26A;border-color:#17B26A}.pck-d{display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;font-weight:600;color:var(--g-tx,#067647);white-space:nowrap}.pck-d:hover{text-decoration:underline}.pck.ok.mud{background:#F5A524;border-color:#F5A524}
 .fedit{cursor:pointer;border-radius:6px;padding:1px 4px;margin:-1px -4px}.fedit:hover{background:var(--pri-soft)}.fedit .fe{font-size:11px;color:var(--tx3)}
 .fl{display:grid;grid-template-columns:1fr 210px;gap:10px;align-items:center;border:1px solid var(--line);border-radius:9px;padding:8px 10px;font-size:12.5px}.fl.foco{border-color:var(--pri);box-shadow:0 0 0 2px var(--pri-soft)}.fl .fd span{color:var(--tx2)}
 .mini.pre{background:var(--pri);color:#fff;border-color:var(--pri)}.mini.pre:hover{opacity:.9;color:#fff}
@@ -462,6 +462,8 @@ tbody tr.fix td{background:#FFFCF2}
 .qd-card .f{display:flex;align-items:center;gap:6px;margin-top:8px;flex-wrap:wrap}
 .qd-pz{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#F2F4F7;color:#475467}
 .qd-pz.venc{background:#FDE8E8;color:#B42318}.qd-pz.prox{background:#FEF4D6;color:#B54708}
+.qd-ben{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:999px;background:#EEF4FF;color:#3538CD}
+.qd-ped{font-size:11.5px;font-weight:700;color:#067647;margin-top:5px}
 .qd-et{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:999px;color:#fff}
 .qd-add{margin-top:8px;padding:8px 10px;border-radius:9px;color:var(--tx2);font-size:12.5px;font-weight:600;cursor:pointer;text-align:left}.qd-add:hover{background:#E4E7EC;color:var(--tx)}
 .qd-top{display:flex;align-items:center;gap:10px;width:100%}.qd-top .sp{flex:1}
@@ -684,7 +686,7 @@ const ui = {
         else if(pk){ const pc = r[pk]||''; v = v ? `<span class="pill ${pc||'none'}">${esc(v)}</span>` : (/_sit$/.test(c[0]) ? '' : '<span class="muted">—</span>'); }
         else if(c[0]==='pedido'){ const P=(r.pedidos||{})[spec.id]; const mud=P&&P.ref&&P.ref!==this.pedRef(r,spec.id);
           // só o ícone: marcado = check; a data e a observação ficam na ficha do assistido (e na janela do clique)
-          v = P ? `<span class="pck ok ${mud?'mud':''}" title="${mud?'Pedido feito - a situação da aba mudou depois do pedido':'Pedido feito'}" onclick="event.stopPropagation();ui.pedidoAbrir('${r.id}','${spec.id}')">✓</span>`
+          v = P ? `<span class="pck-d" title="${esc(this.pedDica(P,mud))}" onclick="event.stopPropagation();ui.pedidoAbrir('${r.id}','${spec.id}')"><span class="pck ok ${mud?'mud':''}">✓</span>${esc(P.data)}</span>`
                 : `<span class="pck" title="Marcar pedido feito" onclick="event.stopPropagation();ui.pedidoAbrir('${r.id}','${spec.id}')"></span>`; }
         else if(c[0]==='conduta'){ v = r.conduta_ruim ? `<span class="falta">${esc(v)}</span>` : (r.ficha_tem ? esc(v) : `<span class="muted">${esc(v)}</span>`); }
         else if(c[0]==='falta'){ v = r.falta_sim ? `<span class="falta">Sim</span>` : (r.falta_apurar ? `<span class="apurar">A apurar</span>` : `<span class="muted">${esc(v)}</span>`);
@@ -1128,9 +1130,10 @@ const ui = {
     if(P.tipo==='data'&&!/^\d{2}\/\d{2}\/\d{4}$/.test(v.trim())){ this.toast('Use o formato dd/mm/aaaa.'); return; }
     await api('dado_manual', id, P.campo, v.trim()); this.aberto=id; this.render(); },
   // ---------- controle de pedidos (coluna "Pedido" das abas de benefício) ----------
+  pedDica(P,mud){ return `Pedido feito em ${P.data} · ${({pedido:'pedido nos autos',oficio:'ofício à unidade',outro:'outra providência'})[P.tipo]||'pedido'}${P.obs?' · '+P.obs:''}${mud?' · ⚠ a situação da aba mudou depois do pedido':''}`; },
   PED_NOME:{prog:'progressão de regime',liv:'livramento condicional',ind:'indulto / comutação',presc:'extinção pela prescrição',ext:'extinção da pena',fd:'remição'},
   pedRef(r,aba){ return ({prog:r.prog, liv:r.liv, ind:['i22','i24','c24','i25','c25'].map(k=>r[k]).join('|'), presc:(r.presc_ppe||'')+'|'+(r.presc_prox||''), ext:r.ext_termino, fd:r.fd_sit})[aba]||''; },
-  pedidoAbrir(id, aba){ const r=(this.dados.registros||[]).find(x=>x.id===id)||{}; const P=(r.pedidos||{})[aba]; const hoje=this.dados.hoje||'';
+  pedidoAbrir(id, aba, pre){ this._pedDepois=(pre&&pre.depois)||null; const r=(this.dados.registros||[]).find(x=>x.id===id)||{}; const P=(r.pedidos||{})[aba]; const hoje=this.dados.hoje||'';
     const mud=P&&P.ref&&P.ref!==this.pedRef(r,aba);
     document.getElementById('modal').innerHTML=`<div class="box" style="width:580px"><h2>Pedido de ${this.PED_NOME[aba]||aba}</h2>
       <p class="muted" style="margin:0 0 10px">${esc(r.nome)} · ${esc(r.proc)}${P?`<br>Marcado em ${esc(P.registrado)}${P.ref?` · situação na marcação: ${esc(P.ref.replace(/\|/g,' · '))}`:''}`:''}</p>
@@ -1138,7 +1141,7 @@ const ui = {
       <div style="display:grid;grid-template-columns:150px 1fr;gap:8px;align-items:center">
         <label>Providência</label><select id="ped_tipo" style="padding:7px 9px;border:1px solid var(--line);border-radius:8px;font:inherit">${[['pedido','Pedido protocolado nos autos'],['oficio','Ofício à unidade prisional'],['outro','Outra providência']].map(o=>`<option value="${o[0]}" ${((P&&P.tipo)||(aba==='fd'?'oficio':'pedido'))===o[0]?'selected':''}>${o[1]}</option>`).join('')}</select>
         <label>Data</label><input id="ped_data" value="${esc(P?P.data:hoje)}" placeholder="dd/mm/aaaa" style="padding:7px 9px;border:1px solid var(--line);border-radius:8px;font:inherit">
-        <label>Observação</label><input id="ped_obs" value="${esc(P?P.obs:'')}" placeholder="ex.: mov. 123, indulto 2025, aguardando MP" style="padding:7px 9px;border:1px solid var(--line);border-radius:8px;font:inherit">
+        <label>Observação</label><input id="ped_obs" value="${esc(P?P.obs:((pre&&pre.obs)||''))}" placeholder="ex.: mov. 123, indulto 2025, aguardando MP" style="padding:7px 9px;border:1px solid var(--line);border-radius:8px;font:inherit">
       </div>
       <div class="acts">${P?`<button class="btn" style="margin-right:auto;color:var(--r-tx)" onclick="ui.pedidoSalvar('${id}','${aba}',true)">Remover marcação</button><button class="btn" onclick="ui.fecharModal();ui.abrirSAP('${id}')">Registro para o SAP</button>`:''}<button class="btn" onclick="ui.fecharModal()">Cancelar</button><button class="btn pri" onclick="ui.pedidoSalvar('${id}','${aba}')">${P?'Salvar':'Marcar pedido feito'}</button></div></div>`;
     document.getElementById('modal').classList.add('on'); setTimeout(()=>{ const e=document.getElementById('ped_obs'); if(e) e.focus(); },50); },
@@ -1201,7 +1204,8 @@ const ui = {
     if(!remover&&!/^\d{2}\/\d{2}\/\d{4}$/.test(data)){ this.toast('Use a data no formato dd/mm/aaaa.'); return; }
     const tipo=remover?'':(document.getElementById('ped_tipo')||{}).value||'pedido';
     const res=await API().pedido(id, aba, data, obs, this.pedRef(r,aba), tipo); if(res&&res.erro){ this.toast(res.erro); return; }
-    this.fecharModal(); if(res&&res.registros) this.carregar(res); if(res&&res.msg) this.toast(res.msg); },
+    this.fecharModal(); if(res&&res.registros) this.carregar(res); if(res&&res.quadro) this._qd=res.quadro; if(res&&res.msg) this.toast(res.msg);
+    const dep=this._pedDepois; this._pedDepois=null; if(dep&&!remover) await dep(); else { this.render(); this.qdRefFicha(); } },
   async darBaixa(id, chave, titulo){ const obs = prompt('Dar baixa no alerta:\n'+titulo.replace(/&#39;/g,"'")+'\n\nObservação (opcional: o que foi feito / por que não se aplica):',''); if(obs===null) return; await api('baixar_alerta', id, chave, titulo.replace(/&#39;/g,"'"), obs); this.aberto=id; this.render(); },
   async reabrir(id, chave){ await api('reabrir_alerta', id, chave); this.aberto=id; this.render(); },
   copiar(t){ const done=()=>this.toast('Copiado: '+t); if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(t).then(done).catch(()=>{ this._copiaFallback(t); done(); }); } else { this._copiaFallback(t); done(); } },
@@ -1291,7 +1295,7 @@ const ui = {
   decMapa(r){ const L=this.decDe(r).filter(x=>x.s!=='fora'&&x.s!=='futuro'&&this.decBenOk(x)); if(!L.length) return '<span class="muted" style="font-size:12px">nenhum decreto desde o início do cumprimento</span>';
     return `<span class="mx">${L.map(x=>`<i class="${x.s}" title="${esc(this.decRot(x))} (${esc(x.numero)}): ${esc(this.DEC_ROT[x.s]||x.s)}${x.mot?' - '+esc(x.mot):''}" style="background:${this.DEC_COR[x.s]||'#E4E7EC'}">${this.decCurto(x)}</i>`).join('')}</span>`; },
   decBtn(r){ return `<span class="mini" title="Linha do tempo: crimes, impeditivos, pena cumprida em cada decreto, faltas na janela e resultado" onclick="event.stopPropagation();ui.indTL('${r.id}')">Verificar indulto/comutação</span>`; },
-  decPed(r){ const P=(r.pedidos||{}).ind; return P?`<span class="pck ok" title="Pedido feito" onclick="event.stopPropagation();ui.pedidoAbrir('${r.id}','ind')">✓</span>`:`<span class="pck" title="Marcar pedido feito" onclick="event.stopPropagation();ui.pedidoAbrir('${r.id}','ind')"></span>`; },
+  decPed(r){ const P=(r.pedidos||{}).ind; return P?`<span class="pck-d" title="${esc(this.pedDica(P,false))}" onclick="event.stopPropagation();ui.pedidoAbrir('${r.id}','ind')"><span class="pck ok">✓</span>${esc(P.data)}</span>`:`<span class="pck" title="Marcar pedido feito" onclick="event.stopPropagation();ui.pedidoAbrir('${r.id}','ind')"></span>`; },
   renderIndulto(rs){ rs=[...rs].sort((a,b)=>(b.fixado?1:0)-(a.fixado?1:0)); const D=this.decLista(this.dados.registros||[]);
     if(this.decSel && !D.find(x=>x.id===this.decSel)) this.decSel=null;
     const comDir=rs.filter(r=>this.decDe(r).some(x=>x.s==='cabe')).length;
@@ -1365,7 +1369,7 @@ const ui = {
       const pz=c.prazo?`<span class="qd-pz ${c.coluna!==fim&&d!==null?(d<0?'venc':d<=2?'prox':''):''}" title="Prazo">⏰ ${esc(c.prazo)}${c.coluna!==fim&&d!==null?(d<0?' · vencido':d===0?' · hoje':d===1?' · amanhã':''):''}</span>`:'';
       return `<div class="qd-card" draggable="true" data-id="${c.id}" style="--et:${et?et[1]:'#EAECF0'}" ondragstart="ui.qdDrag(event,'${c.id}')" ondragend="this.classList.remove('arr')" onclick="ui.qdEditar('${c.id}')" oncontextmenu="ui.qdMenu(event,'${c.id}')" title="Clique para editar · botão direito para mover ou arquivar">
         <div class="t">${esc(c.titulo||(r?r.nome:'Sem título'))}</div>${r?`<div class="a" onclick="event.stopPropagation();ui.abrir('${r.id}')">${esc(r.nome)} <small>· ${esc(r.proc)}</small></div>`:''}
-        ${c.obs?`<div class="o">${esc(c.obs)}</div>`:''}${r?this.qdCopias(r):''}<div class="f">${et?`<span class="qd-et" style="background:${et[1]}">${et[0]}</span>`:''}${pz}</div></div>`; };
+        ${c.obs?`<div class="o">${esc(c.obs)}</div>`:''}${this.qdPedTxt(c)}${r?this.qdCopias(r):''}<div class="f">${c.aba?`<span class="qd-ben">${esc(this.qdBen(c.aba))}</span>`:''}${et?`<span class="qd-et" style="background:${et[1]}">${et[0]}</span>`:''}${pz}</div></div>`; };
     document.getElementById('card').innerHTML=`<div class="qd-board">${Q.colunas.map(col=>{ const cs=Q.cartoes.filter(c=>c.coluna===col.id&&!c.arquivado).sort((a,b)=>a.ordem-b.ordem);
       return `<div class="qd-col" data-col="${col.id}" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="ui.qdDrop(event,'${col.id}')">
         <div class="qd-ch"><b title="Clique duas vezes para renomear" ondblclick="ui.qdColuna('${col.id}','${esc(col.nome)}')">${esc(col.nome)}</b><span>${cs.length}</span></div>
@@ -1375,19 +1379,29 @@ const ui = {
     let m=document.getElementById('qdMenu'); if(!m){ m=document.createElement('div'); m.id='qdMenu'; m.className='qd-menu'; document.body.appendChild(m);
       document.addEventListener('click',()=>m.classList.remove('on')); document.addEventListener('keydown',e=>{ if(e.key==='Escape') m.classList.remove('on'); }); window.addEventListener('blur',()=>m.classList.remove('on')); }
     m.innerHTML=`<div class="h">Mover para</div>${Q.colunas.map(col=>`<div class="i ${col.id===c.coluna?'at':''}" onclick="ui.qdMoverPara('${id}','${col.id}')">${col.id===c.coluna?'✓ ':''}${esc(col.nome)}</div>`).join('')}
-      <div class="s"></div><div class="i" onclick="ui.qdArquivar('${id}',1)">🗄 Arquivar</div><div class="i" onclick="ui.qdEditar('${id}')">✎ Editar</div><div class="i r" onclick="ui.qdExcluir('${id}')">✕ Excluir</div>`;
+      <div class="s"></div>${c.aba&&c.processo?`<div class="i" onclick="ui.qdMarcarPedido('${id}')">✓ ${this.qdPedido(c)?'Pedido feito em '+esc(this.qdPedido(c).data)+' (editar)':'Marcar pedido feito'}</div>`:''}<div class="i" onclick="ui.qdArquivar('${id}',1)">🗄 Arquivar</div><div class="i" onclick="ui.qdEditar('${id}')">✎ Editar</div><div class="i r" onclick="ui.qdExcluir('${id}')">✕ Excluir</div>`;
     m.classList.add('on'); const w=m.offsetWidth, h=m.offsetHeight; m.style.left=Math.min(ev.clientX, innerWidth-w-8)+'px'; m.style.top=Math.min(ev.clientY, innerHeight-h-8)+'px'; },
   async qdMoverPara(id,col){ const Q=this._qd; const c=Q.cartoes.find(x=>x.id===id); if(!c||c.coluna===col) return;
     const o=Math.min(0,...Q.cartoes.filter(x=>x.coluna===col&&!x.arquivado).map(x=>x.ordem))-1; const q=await API().quadro_mover(id,col,o); if(q&&!q.erro){ this._qd=q; this.render(); this.qdRefFicha(); } },
-  async qdArquivar(id,on,col){ const q=await API().quadro_arquivar(id,!!on,col||null); if(!q||q.erro){ this.toast((q&&q.erro)||'Falha.'); return; } this._qd=q; this.toast(q.msg);
+  async qdArquivar(id,on,col,direto){ const c0=((this._qd||{}).cartoes||[]).find(x=>x.id===id);
+    if(on&&!direto&&c0&&c0.aba&&c0.processo&&!this.qdPedido(c0)){ return this.qdPerguntaPedido(c0); }
+    const q=await API().quadro_arquivar(id,!!on,col||null); if(!q||q.erro){ this.toast((q&&q.erro)||'Falha.'); return; } this._qd=q; this.toast(q.msg);
     this.render(); this.qdRefFicha(); if(document.getElementById('qdArqLista')) this.qdArquivados(); else this.fecharModal(); },
+  qdPerguntaPedido(c){ const r=(this.dados.registros||[]).find(x=>x.id===c.processo)||{}; const ben=this.PED_NOME[c.aba]||c.aba;
+    document.getElementById('modal').innerHTML=`<div class="box" style="width:560px"><h2>Arquivar cartão</h2>
+      <p>${esc(r.nome||'')} · ${esc(r.proc||'')}<br>O pedido de <b>${esc(ben)}</b> foi feito? Se sim, ele fica registrado na aba, com a data.</p>
+      <div class="acts"><button class="btn" style="margin-right:auto" onclick="ui.fecharModal()">Cancelar</button><button class="btn" onclick="ui.qdArquivar('${c.id}',1,null,true)">Não, só arquivar</button>
+        <button class="btn pri" onclick="ui.pedidoAbrir('${c.processo}','${c.aba}',{obs:ui._qd.cartoes.find(x=>x.id==='${c.id}').obs,depois:()=>ui.qdArquivar('${c.id}',1,null,true)})">Sim, registrar o pedido</button></div></div>`;
+    document.getElementById('modal').classList.add('on'); },
+  qdMarcarPedido(id){ const c=((this._qd||{}).cartoes||[]).find(x=>x.id===id); if(!c) return; if(!c.aba||!c.processo){ this.toast('Escolha o assistido e o benefício do cartão (Editar).'); this.qdEditar(id); return; }
+    this.pedidoAbrir(c.processo, c.aba, {obs:c.obs}); },
   qdArquivados(){ const Q=this._qd||{colunas:[],cartoes:[]}; const R=this.dados.registros||[]; const coln=id=>(Q.colunas.find(x=>x.id===id)||{}).nome||'—';
     const q=(this._qdArqQ||'').toLowerCase();
     const L=Q.cartoes.filter(c=>c.arquivado).filter(c=>{ const r=R.find(x=>x.id===c.processo); return !q||[c.titulo,c.obs,r?r.nome+' '+r.proc:c.processo].join(' ').toLowerCase().includes(q); })
       .sort((a,b)=>this.qdData(b.arquivado)-this.qdData(a.arquivado));
     const lin=L.map(c=>{ const r=R.find(x=>x.id===c.processo); const et=this.QD_ET[c.etiqueta];
       return `<div class="qa-c" style="--et:${et?et[1]:'#EAECF0'}"><div class="tx"><b>${esc(c.titulo||(r?r.nome:'Sem título'))}</b>${r?`<div class="a">${esc(r.nome)} <small>· ${esc(r.proc)}</small></div>`:''}${c.obs?`<div class="o">${esc(c.obs)}</div>`:''}
-        <small class="muted">arquivado em ${esc(c.arquivado)} · estava em ${esc(coln(c.coluna))}${c.prazo?' · prazo '+esc(c.prazo):''}</small>${r?this.qdCopias(r):''}</div>
+        ${this.qdPedTxt(c)}<small class="muted">${c.aba?esc(this.qdBen(c.aba))+' · ':''}arquivado em ${esc(c.arquivado)} · estava em ${esc(coln(c.coluna))}${c.prazo?' · prazo '+esc(c.prazo):''}</small>${r?this.qdCopias(r):''}</div>
         <div class="qa-ac"><select onchange="ui.qdArquivar('${c.id}',0,this.value)"><option value="">Devolver ao quadro…</option>${Q.colunas.map(col=>`<option value="${col.id}">${esc(col.nome)}</option>`).join('')}</select>
         <span class="mini" onclick="ui.qdEditar('${c.id}')">Abrir</span> <span class="mini" style="color:var(--r-tx)" onclick="ui.qdExcluir('${c.id}')">Excluir</span></div></div>`; }).join('');
     document.getElementById('modal').innerHTML=`<div class="box" style="width:760px;max-height:calc(100vh - 40px);display:flex;flex-direction:column"><h2>Cartões arquivados</h2>
@@ -1407,7 +1421,9 @@ const ui = {
     const q=await API().quadro_mover(id,col,o); if(q&&!q.erro){ this._qd=q; this.render(); } },
   async qdNovo(id,col){ if(!this._qd) await this.qdCarregar(); const r=id?(this.dados.registros||[]).find(x=>x.id===id):null;
     const sug=r? ({prog:'Progressão: '+(r.prog_sit||r.prog||''),liv:'Livramento: '+(r.liv_sit||r.liv||''),ind:'Indulto/comutação',presc:'Prescrição: '+(r.presc_ppe||''),ext:'Extinção: '+(r.ext_sit||''),aud:'Auditoria: '+(r.aud_resumo||''),fd:'Ficha disciplinar: '+(r.fd_sit||'')})[this.aba]||'' : '';
-    this.qdForm({id:'',processo:r?r.id:'',titulo:sug.replace(/:\s*$/,''),obs:'',prazo:'',etiqueta:'acompanhar',coluna:col||'fazer'}); },
+    this.qdForm({id:'',processo:r?r.id:'',aba:this.PED_NOME[this.aba]?this.aba:'',titulo:sug.replace(/:\s*$/,''),obs:'',prazo:'',etiqueta:'acompanhar',coluna:col||'fazer'}); },
+  qdBen(a){ return ({prog:'Progressão',liv:'Livramento',ind:'Indulto/comutação',presc:'Prescrição',ext:'Extinção',fd:'Remição'})[a]||a; },
+  qdPedTxt(c){ const P=this.qdPedido(c); return P?`<div class="qd-ped" title="${esc(this.pedDica(P,false))}">✓ Pedido feito em ${esc(P.data)}</div>`:''; },
   qdCopias(r){ return `<div class="qd-cp" onclick="event.stopPropagation()"><span title="Copiar o nome do assistido" onclick="ui.copiar(ui._clips[${this.clip(r.nome||'')}])">⧉ Nome</span><span title="Copiar o número do processo de execução" onclick="ui.copiar(ui._clips[${this.clip(r.proc||'')}])">⧉ Nº do processo</span></div>`; },
   // ficha do assistido: os cartões dele no quadro e a criação de um cartão novo ali mesmo, com a observação
   fichaQuadro(r){ const Q=this._qd; if(!Q){ this.qdCarregar().then(()=>{ const el=document.getElementById('fq_'+r.id.replace(/\W/g,'')); if(el) el.outerHTML=this.fichaQuadro(r); }); }
@@ -1432,6 +1448,7 @@ const ui = {
     document.getElementById('modal').innerHTML=`<div class="box" style="width:620px"><h2>${c.id?'Editar cartão':'Novo cartão no Quadro do Usuário'}</h2><p>Processos para acompanhar de perto: observações, alertas com prazo e etiqueta.</p>
       <div class="qd-form"><label>Assistido</label><select id="qd_proc"><option value="">— sem assistido (cartão livre) —</option>${R.map(r=>`<option value="${esc(r.id)}" ${r.id===c.processo?'selected':''}>${esc(r.nome)} · ${esc(r.proc)}</option>`).join('')}</select>
         ${c.processo&&R.find(r=>r.id===c.processo)?`<span></span>${this.qdCopias(R.find(r=>r.id===c.processo)).replace('class="qd-cp"','class="qd-cp" style="margin:-4px 0 0"')}`:''}
+        <label>Benefício</label><select id="qd_aba"><option value="">Geral (sem benefício)</option>${Object.entries(this.PED_NOME).map(([k,v])=>`<option value="${k}" ${c.aba===k?'selected':''}>${esc(v.replace(/^./,x=>x.toUpperCase()))}</option>`).join('')}</select>
         <label>Título</label><input id="qd_tit" value="${esc(c.titulo||'')}" placeholder="ex.: pedir progressão, cobrar atestado, acompanhar decisão do indulto">
         <label>Observações</label><textarea id="qd_obs" placeholder="anotações, movimentações, o que falta">${esc(c.obs||'')}</textarea>
         <label>Prazo / alerta</label><input id="qd_pz" value="${esc(c.prazo||'')}" placeholder="dd/mm/aaaa (o cartão fica em destaque no dia e depois)">
@@ -1439,9 +1456,12 @@ const ui = {
         <label>Coluna</label><select id="qd_col">${((this._qd||{}).colunas||[{id:'fazer',nome:'A fazer'}]).map(x=>`<option value="${x.id}" ${x.id===c.coluna?'selected':''}>${esc(x.nome)}</option>`).join('')}</select></div>
       <div class="acts" style="justify-content:space-between">${c.id?`<span style="display:flex;gap:8px"><button class="btn" style="color:var(--r-tx)" onclick="ui.qdExcluir('${c.id}')">Excluir</button>${c.arquivado?`<button class="btn" onclick="ui.qdArquivar('${c.id}',0)">Devolver ao quadro</button>`:`<button class="btn" onclick="ui.qdArquivar('${c.id}',1)">Arquivar</button>`}</span>`:'<span></span>'}<span style="display:flex;gap:8px"><button class="btn" onclick="ui.fecharModal()">Cancelar</button><button class="btn pri" onclick="ui.qdSalvar()">Gravar</button></span></div></div>`;
     document.getElementById('modal').classList.add('on'); setTimeout(()=>{ const t=document.getElementById(c.processo&&!c.id?'qd_obs':'qd_tit'); if(t) t.focus(); },50); },
-  async qdSalvar(){ const c=this._qdc; c.processo=document.getElementById('qd_proc').value; c.titulo=document.getElementById('qd_tit').value; c.obs=document.getElementById('qd_obs').value;
+  async qdSalvar(){ const c=this._qdc; c.processo=document.getElementById('qd_proc').value; c.aba=document.getElementById('qd_aba').value; c.titulo=document.getElementById('qd_tit').value; c.obs=document.getElementById('qd_obs').value;
     c.prazo=document.getElementById('qd_pz').value.trim(); const col=document.getElementById('qd_col').value; if(col!==c.coluna){ c.coluna=col; c.ordem=null; }
-    const q=await API().quadro_gravar(c); if(!q||q.erro){ this.toast((q&&q.erro)||'Falha ao gravar.'); return; } this._qd=q; this.fecharModal(); this.toast(q.msg||'Gravado.'); this.render(); this.qdRefFicha(); },
+    const q=await API().quadro_gravar(c); if(!q||q.erro){ this.toast((q&&q.erro)||'Falha ao gravar.'); return; } this._qd=q; this.fecharModal(); this.toast(q.msg||'Gravado.'); this.render(); this.qdRefFicha();
+    // etiqueta "Pedido feito" num cartão de benefício ainda sem pedido: registra o pedido na aba (data, providência, observação)
+    if(c.etiqueta==='pedido'&&c.aba&&c.processo&&!this.qdPedido(c)) this.pedidoAbrir(c.processo, c.aba, {obs:c.obs}); },
+  qdPedido(c){ const r=(this.dados.registros||[]).find(x=>x.id===c.processo); return r&&c.aba?((r.pedidos||{})[c.aba]||null):null; },
   async qdExcluir(id){ if(!confirm('Excluir este cartão?')) return; const q=await API().quadro_excluir(id); if(q&&!q.erro){ this._qd=q; this.fecharModal(); this.render(); this.qdRefFicha(); this.toast(q.msg); } },
   async qdColuna(id,nome){ const n=prompt(id?'Novo nome da coluna (vazio exclui a coluna; os cartões vão para a primeira):':'Nome da nova coluna:', nome||''); if(n===null) return;
     const q=await API().quadro_coluna(id||('c'+Date.now().toString(36)), n); if(q&&!q.erro){ this._qd=q; this.render(); } },
