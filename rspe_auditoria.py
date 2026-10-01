@@ -842,12 +842,58 @@ def auditar(r, hoje=None):
         d = rs.to_date(i.get("data_referencia") or i.get("data_decisao") or "")
         if d and (ult is None or d > ult[0]):
             ult = (d, i)
-    for i in regs:
-        if "PROGRESS" in (i.get("complemento") or "").upper() and i.get("data_decisao") and i.get("data_decisao") == i.get("data_referencia"):
-            itens.append(_item("info", "Progressão com data-base igual à data da decisão (%s)" % i.get("data_decisao"),
-                               "A data-base da progressão seguinte deve ser a data em que os requisitos foram preenchidos, não a da decisão que a deferiu; se o lapso já estava vencido antes, a data-base pode ser anterior.",
-                               "STJ, Tema 1165 (REsp 1.973.589).", tipo="progressao-com-data-base-igual-a-data-da-decisao"))
-            break
+    # erros de lançamento que a capacitação CNJ/SEEU (10 e 11/06/2025) aponta como os mais comuns e que atrasam benefícios
+    _prog_dec = [i for i in regs if "PROGRESS" in (i.get("complemento") or "").upper() and i.get("data_decisao")
+                 and i.get("data_decisao") == i.get("data_referencia")]
+    # só pesa enquanto for a última data-base: depois de outra progressão, regressão, falta ou nova prisão, a data-base já mudou
+    _marcos_db = [rs.to_date(j.get("data_referencia") or j.get("data_decisao") or "") for j in regs]
+    _marcos_db += [rs.to_date(e.get("data") or "") for e in eventos if "INTERRUP" not in (e.get("tipo") or "").upper()]
+    _marcos_db += [rs._data_fato_falta(j) for j in incidentes if rs.RE_FALTA_PROPRIA.search(rs._rotulo_incidente(j)) and not rs._negado(j)]
+    for i in _prog_dec:
+        _di = rs.to_date(i.get("data_decisao"))
+        _depois = sorted(x for x in _marcos_db if x and _di and x > _di)
+        if _depois:
+            itens.append(_item("info", "Progressão lançada na data da decisão (%s) - já superada" % i.get("data_decisao"),
+                               "%s: a data de referência é a da decisão, mas a data-base mudou depois (%s), e o erro não pesa mais no cálculo "
+                               "atual; só atrasou o benefício seguinte daquela época." % (rs._rotulo_incidente(i), rs.fmt(_depois[0])),
+                               "STJ, Tema 1165.", tipo="progressao-na-decisao-superada", ref=i.get("data_decisao")))
+            continue
+        itens.append(_item("alerta", "Progressão lançada na data da decisão (%s)" % i.get("data_decisao"),
+                           "%s: a data de referência lançada é a própria data da decisão (%s). A decisão de progressão é declaratória: a "
+                           "data que vale - e que vira a data-base da progressão seguinte - é a do preenchimento dos requisitos, em regra a do "
+                           "requisito objetivo que o próprio SEEU apontava na pendência; só o exame criminológico posterior desloca essa data "
+                           "para o dia do exame favorável. Com a data da decisão, todo o tempo de espera pela decisão se perde para a próxima "
+                           "progressão. Conferir nos autos a data em que o lapso foi atingido." % (rs._rotulo_incidente(i), i.get("data_decisao")),
+                           "STJ, Tema 1165 (REsp 1.972.187); LEP, art. 112.", tipo="progressao-com-data-base-igual-a-data-da-decisao",
+                           ref=i.get("data_decisao")))
+    # regime inicial: um só por execução, na data da primeira prisão. Na data de uma prisão posterior, o SEEU desconta a detração
+    # antes da fração (forma mais gravosa); um segundo "regime inicial" (em vez de somatório) muda a data-base sem fundamento
+    _ri = sorted((rs.to_date(i.get("data_referencia") or i.get("data_decisao") or ""), i) for i in incidentes
+                 if i.get("situacao") == "CONCEDIDO" and "REGIME INICIAL" in rs._sem_acento((i.get("complemento") or "").upper())
+                 and rs.to_date(i.get("data_referencia") or i.get("data_decisao") or ""))
+    _ri = [(d, i) for d, i in _ri]
+    if len(_ri) > 1:
+        itens.append(_item("alerta", "Mais de um regime inicial lançado (%s)" % ", ".join(rs.fmt(d) for d, _ in _ri),
+                           "O RSPE registra %d incidentes de regime inicial: %s. Cada execução tem um só regime inicial; a chegada de nova guia "
+                           "gera somatório de penas e, se for o caso, fixação/alteração de regime pelo motivo condenação - não outro regime "
+                           "inicial. O regime inicial lançado de novo desloca a data-base para a data dele, sem falta grave nem progressão que o "
+                           "justifique, e atrasa a progressão." % (len(_ri), "; ".join("%s (%s)" % (rs.fmt(d), i.get("complemento") or "") for d, i in _ri)),
+                           "LEP, arts. 111 e 112; STJ, Tema 1006 (a unificação não altera a data-base).", tipo="mais-de-um-regime-inicial",
+                           ref=rs.fmt(_ri[-1][0])))
+    if _ri:
+        _d_ri = _ri[0][0]
+        _procs_exec = [c.get("processo_criminal") or "" for c in crimes]
+        _prim = [a for a, _b, _m, procs in rs.periodos_custodia_detalhe(eventos)
+                 if a and (not rs.lista_processos(procs) or any(rp._mesmo_processo(q, x) for q in rs.lista_processos(procs) for x in _procs_exec if x))]
+        if _prim and min(_prim) < _d_ri - timedelta(days=1):
+            itens.append(_item("alerta", "Regime inicial lançado em %s, depois da primeira prisão (%s)" % (rs.fmt(_d_ri), rs.fmt(min(_prim))),
+                               "A primeira prisão por processo desta execução é de %s e o regime inicial foi lançado em %s. Lançado depois da "
+                               "primeira prisão (na data de prisão posterior ou de decisão), o regime inicial faz o SEEU descontar a detração antes da fração (forma mais gravosa); "
+                               "lançado na data da primeira prisão, a detração conta como pena cumprida para todos os fins e as datas de "
+                               "progressão e livramento se antecipam. Se o juízo determinou a data da última prisão, o SEEU tem a opção "
+                               "\"diminuir a detração após os cálculos\", que mantém essa data sem agravar o cálculo." % (rs.fmt(min(_prim)), rs.fmt(_d_ri)),
+                               "CP, art. 42 (a detração é pena cumprida); LEP, art. 112.", tipo="regime-inicial-depois-da-primeira-prisao",
+                               ref=rs.fmt(_d_ri)))
     db_seeu = rs.to_date(r.get("data_base_seeu") or "")
     if db_seeu and ult and db_seeu < ult[0]:
         itens.append(_item("alerta", "Data-base de progressão anterior à última alteração de regime",
@@ -874,6 +920,21 @@ def auditar(r, hoje=None):
             continue
         if (any(x and d - timedelta(days=365) <= x <= d for x in _firmes) or any(x and abs((x - d).days) <= 30 for x in _regr)
                 or any(x and abs((x - d).days) <= 5 for x in _pris)):
+            # há fundamento, mas o lançamento é o incidente de exceção: em data-base fixa, nada do que vier depois a move
+            _dep = sorted(x for x in ([rs.to_date(j.get("data_referencia") or j.get("data_decisao") or "") for j in regs] + _firmes + _pris) if x and x > d)
+            _db = rs.to_date(r.get("data_base_seeu") or "")
+            fixa = bool(_dep and _db and abs((_db - d).days) <= 1)
+            itens.append(_item("alerta" if fixa else "verificar",
+                               ("Data-base presa na alteração de %s (data-base fixa?)" if fixa else "Alteração de data-base lançada em %s no lugar do incidente próprio") % rs.fmt(d),
+                               "%s (decisão de %s). A falta grave, a regressão e a prisão têm incidentes próprios (homologação de falta grave, "
+                               "fixação/alteração de regime, eventos), que o SEEU lê e atualiza sozinho; a alteração de data-base é exceção, para "
+                               "entendimento do juízo que o sistema não aplica. Lançada como fixa, trava o cálculo automático: progressão, "
+                               "regressão ou falta posteriores não movem mais a data-base. %s" % (
+                                   rs._rotulo_incidente(i), i.get("data_decisao") or "?",
+                                   ("Depois dela houve %s, mas a data-base impressa (%s) continua sendo a da alteração." % (
+                                       ", ".join(rs.fmt(x) for x in _dep[:3]), rs.fmt(_db))) if fixa else
+                                   "Conferir se a alteração é dinâmica e se a data corresponde ao marco correto."),
+                               "LEP, arts. 112, § 6º, e 118; STJ, Temas 709 e 1165.", tipo="alteracao-de-data-base-no-lugar-do-incidente", ref=rs.fmt(d)))
             continue
         unif = bool(re.search(r"SOMA|UNIFICA|NOVA CONDENA|GUIA", t))
         antiga = d < _lp  # já houve progressão depois: a alteração atrasou a progressão daquela época
@@ -1138,6 +1199,20 @@ def auditar(r, hoje=None):
     elif r.get("falta_12m") == "A APURAR" and not any(not fi["decisao"] for fi in rs.faltas_editaveis(incidentes, eventos, hoje)):
         itens.append(_item("verificar", "Indício de falta nos últimos 12 meses", r.get("falta_12m_detalhe", ""), "Reflexo em LC (CP, art. 83, III, b), indulto (art. 6º dos decretos) e progressão (LEP, art. 112, §§ 6º e 7º).", tipo="indicio-de-falta-nos-ultimos-12-meses"))
 
+    # guia suspensa ainda somada na pena total: sem a data da suspensão, o SEEU mantém a pena dela no total (pena maior, benefícios
+    # e término adiados). Caso típico: restritiva de direitos superveniente, suspensa durante a privativa (STJ, Tema 1106)
+    _susp = [c for c in ativos if (c.get("suspenso") or "").upper().startswith("S")]
+    if _susp and pena_total:
+        _ps = sum(rs.pena_para_dias(c.get("pena_imposta")) or 0 for c in _susp)
+        _sem = sum(rs.pena_para_dias(c.get("pena_imposta")) or 0 for c in ativos if c not in _susp)
+        if _ps and abs(pena_total - (_sem + _ps)) <= 3 and abs(pena_total - _sem) > 3:
+            itens.append(_item("alerta", "Guia suspensa somada na pena total (%s)" % ", ".join(sorted(set(_nome(c) for c in _susp))),
+                               "O RSPE marca como suspensa a condenação de %s (pena de %s), mas a pena total impressa (%s) é a soma com ela; sem "
+                               "ela, o total seria %s. Guia suspensa não está em execução: no SEEU, a suspensão só tira a pena do total quando "
+                               "lançada com a data. Enquanto somada, a pena maior adia progressão, livramento e término." % (
+                                   ", ".join(sorted(set(_nome(c) for c in _susp))), rs.dias_para_pena(_ps), rs.dias_para_pena(pena_total),
+                                   rs.dias_para_pena(_sem)),
+                               "STJ, Tema 1106; LEP, art. 111.", tipo="guia-suspensa-somada-na-pena-total"))
     # ---------------- 6. eventos / detração ----------------
     periodos = rs.periodos_custodia(eventos)
     if not periodos and (cumprida or 0) > 0:
@@ -1174,6 +1249,35 @@ def auditar(r, hoje=None):
 # Até 3 parágrafos: (1) o erro apontado no RSPE; (2) o correto e o fundamento; (3) o pedido. Só para os pontos em que a
 # correção favorece o assistido (os demais - p. ex., art. 88 - não geram texto de impugnação).
 FUND_TIPOS = {
+    "progressao-com-data-base-igual-a-data-da-decisao": (
+        "A decisão que defere a progressão de regime é declaratória: o termo inicial da progressão - e a data-base da seguinte - é a data em que "
+        "preenchidos os requisitos do art. 112 da LEP, não a data em que o benefício foi deferido (STJ, Tema 1165). O lançamento na data da decisão "
+        "faz o assistido perder, para a progressão seguinte, todo o tempo em que aguardou a decisão.",
+        "Requer-se a retificação do incidente de progressão, para que conste como data de referência a do preenchimento dos requisitos, com o "
+        "recálculo das datas de progressão e livramento condicional."),
+    "mais-de-um-regime-inicial": (
+        "Cada execução tem um único regime inicial; a superveniência de nova condenação gera a soma das penas e, sendo o caso, a fixação do "
+        "regime pela condenação (LEP, art. 111), sem alterar a data-base (STJ, Tema 1006). O lançamento de novo regime inicial desloca a "
+        "data-base sem fundamento legal.",
+        "Requer-se a exclusão do regime inicial lançado em duplicidade, substituindo-o pelo somatório de penas, com o restabelecimento da "
+        "data-base e o recálculo das datas dos benefícios."),
+    "regime-inicial-depois-da-primeira-prisao": (
+        "A detração é pena cumprida para todos os fins (CP, art. 42) e deve ser computada a partir da primeira prisão. Lançado o regime inicial "
+        "na data de prisão posterior, o cálculo desconta a detração antes da fração exigida para os benefícios, da forma mais gravosa ao "
+        "assistido.",
+        "Requer-se a retificação do regime inicial para a data da primeira prisão, com o cômputo da detração como pena cumprida e o recálculo "
+        "das datas de progressão e livramento condicional."),
+    "alteracao-de-data-base-no-lugar-do-incidente": (
+        "A data-base se altera pelos marcos legais - falta grave homologada, regressão e reinício do cumprimento (LEP, arts. 112, § 6º, e 118; "
+        "STJ, Tema 709) - e pela progressão, na data do preenchimento dos requisitos (STJ, Tema 1165). Fixada por incidente avulso, a data-base "
+        "deixa de acompanhar os marcos posteriores.",
+        "Requer-se a exclusão da alteração avulsa da data-base, com o lançamento dos incidentes próprios e o recálculo das datas dos benefícios "
+        "a partir do último marco legal."),
+    "guia-suspensa-somada-na-pena-total": (
+        "A pena restritiva de direitos superveniente à privativa de liberdade em execução não se unifica automaticamente com ela (STJ, Tema "
+        "1106): fica suspensa, fora da execução em curso, e não pode integrar a pena total que serve de base aos benefícios e ao término.",
+        "Requer-se a anotação da suspensão com a respectiva data, excluindo-se a pena suspensa do total em execução, com o recálculo das datas "
+        "de progressão, livramento condicional e término."),
     "alteracao-de-data-base-sem-falta-homologada": (
         "A data-base para nova progressão só se altera por falta grave reconhecida em juízo, pela regressão de regime ou pelo reinício do "
         "cumprimento após interrupção (LEP, arts. 112, § 6º, e 118; Súmula 534/STJ). A soma ou unificação de penas não a altera (STJ, Tema "
