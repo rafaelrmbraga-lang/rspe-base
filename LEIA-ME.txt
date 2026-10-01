@@ -702,6 +702,12 @@ v6.16.50
       SEEU; 2022, art. 7º, § 1º (comando de organização criminosa); janela do
       art. 6º em 12 meses de calendário, igual à linha do tempo; art. 10, II,
       pela data da punição.
+    * 2022: tráfico privilegiado (art. 33, § 4º) indultável pelo art. 5º
+      c/c art. 7º, VI, que o ressalva das exclusões (STJ, 6ª T., AgRg no HC
+      818.978 e 873.240; 5ª T., AgRg no REsp 2.113.265; STF, Rcl 72.176),
+      com a nota de que há acórdãos do TJMS em sentido contrário; o decreto
+      de 2022 voltou ao mapa e ao encaixe da aba Indulto (faltava a data de
+      referência na tabela do motor).
   - Quadro do Usuário: o botão "Enviar ao Quadro do Usuário", na ficha do
     assistido, abre uma janela para escrever o cartão (título, observação,
     etiqueta, prazo e coluna), já com o assistido. Nos cartões e na janela,
