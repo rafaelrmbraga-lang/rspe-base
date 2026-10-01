@@ -2115,6 +2115,15 @@ def analise_decreto_2022(campos, crimes, eventos, incidentes):
         if excl:
             linhas.append("✗ %s: excluído pelo art. 7º, %s" % (nome, excl))
             continue
+        if num_lei(c.get("lei")) == "11343" and num_art(c.get("artigo")) == "33" and "§ 4" in (c.get("tipo_penal") or "") and not (fato and fato > ref):
+            # tráfico privilegiado: o art. 7º, VI, ressalva o § 4º das exclusões - leitura conjunta com o art. 5º admite o indulto,
+            # embora a pena máxima em abstrato passe de 5 anos (STJ, 6ª T., AgRg no HC 818.978 e AgRg no HC 873.240;
+            # 5ª T., AgRg no REsp 2.113.265; STF, Rcl 72.176). Há acórdãos do TJMS em sentido contrário.
+            linhas.append("✓ %s: tráfico privilegiado (art. 33, § 4º) - indulto pelo art. 5º c/c art. 7º, VI, que ressalva o § 4º das exclusões "
+                          "(STJ, 6ª T., AgRg no HC 818.978 e AgRg no HC 873.240; 5ª T., AgRg no REsp 2.113.265; STF, Rcl 72.176) - "
+                          "há acórdãos do TJMS em sentido contrário (pena máxima em abstrato acima de 5 anos)" % nome)
+            alcanca.append(nome)
+            continue
         pm = pena_maxima_abstrata(c)
         vdc = vd_contexto(c, ativos)
         if vdc and pm is not None and pm <= 5 * DIAS_ANO and not (fato and fato > ref):
@@ -2240,7 +2249,11 @@ def analise_decreto_2022(campos, crimes, eventos, incidentes):
     elif not ativos:
         out["indulto_2022"], out["indulto_2022_status"] = "sem crimes ativos no RSPE", "nao"
     elif alcanca and len(alcanca) >= len([c for c in ativos]):
-        out["indulto_2022"] = "POSSÍVEL: art. 5º (todos os crimes com pena máxima ≤ 5 anos)"
+        _priv22 = any(num_lei(c.get("lei")) == "11343" and num_art(c.get("artigo")) == "33" and "§ 4" in (c.get("tipo_penal") or "") for c in ativos)
+        out["indulto_2022"] = ("POSSÍVEL: art. 5º c/c art. 7º, VI (tráfico privilegiado - STJ, AgRg no HC 818.978)" if _priv22 and all(
+            num_lei(c.get("lei")) == "11343" and "§ 4" in (c.get("tipo_penal") or "") for c in ativos) else
+            "POSSÍVEL: art. 5º (todos os crimes alcançados; tráfico privilegiado pelo art. 7º, VI - STJ)" if _priv22 else
+            "POSSÍVEL: art. 5º (todos os crimes com pena máxima ≤ 5 anos)")
         out["indulto_2022_status"] = "possivel"
     elif alcanca or (verificar and any(exclusao_art7_2022(c) for c in ativos)):
         # (com crime impeditivo, o art. 11, p. ú., decide antes do que ficou a verificar nos demais: pena do impeditivo
