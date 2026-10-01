@@ -721,6 +721,18 @@ v6.16.50
     registra mais tempo cumprido do que os eventos do RSPE explicam, essa
     diferença (sem data conhecida) não é mais lançada no começo da
     execução; até a data de referência vale só o que os eventos comprovam.
+  - Prescrição após a fuga, várias condenações: o critério principal de
+    imputação do tempo cumprido passa a ser a ordem do SEEU (a condenação
+    de maior fração de progressão primeiro - hediondos antes das comuns -
+    e, entre frações iguais, a de trânsito mais antigo), a mesma que o
+    cálculo do SEEU usa. Ordem do trânsito, art. 76 e pena maior primeiro
+    ficam como alternativas na tabela de critérios e como tese quando
+    favorecem a defesa.
+  - Fundamentação: explica o critério e analisa todas as condenações em
+    execução na data da fuga (ordem de imputação, saldo, prazo e
+    vencimento de cada uma), dizendo por que esta prescreveu e as demais
+    não. Quando a condenação está prescrita por mais de um critério,
+    "Copiar fundamentação" pergunta qual critério usar na petição.
   - Quadro do Usuário: o botão "Enviar ao Quadro do Usuário", na ficha do
     assistido, abre uma janela para escrever o cartão (título, observação,
     etiqueta, prazo e coluna), já com o assistido. Nos cartões e na janela,
