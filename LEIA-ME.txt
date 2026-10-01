@@ -717,21 +717,10 @@ v6.16.50
   - Indulto: "Não cabe" sempre em vermelho, qualquer que seja o motivo (o
     crime impeditivo fica num vermelho mais escuro); o chip "Não cabe em
     nenhum" também.
-  - Linha do Tempo Detalhada do SEEU: o PDF gerado pela aba "Informações
-    adicionais" entra pelo mesmo "Importar PDFs" e fica guardado na
-    execução. Dele o programa lê, ocorrência a ocorrência, a pena, a
-    cumprida e o restante de cada condenação - a imputação que o próprio
-    SEEU fazia do tempo cumprido.
-  - Prescrição após a fuga, várias condenações: novo critério "Imputação do
-    SEEU (linha do tempo detalhada)", adotado por padrão quando a linha do
-    tempo foi importada (o tempo já imputado na época não se redistribui
-    depois). Na tabela de critérios, o botão "usar" troca o critério
-    (SEEU, ordem do trânsito, art. 76, pena maior primeiro) e refaz a
-    prescrição de todas as condenações da execução; a escolha fica gravada.
-  - Análise global: o painel e a fundamentação mostram, na data da fuga,
-    todas as condenações em execução lado a lado (cumprido imputado, saldo,
-    prazo, vencimento e resultado) e explicam por que o critério foi
-    adotado.
+  - Pena cumprida numa data passada (indulto, comutação): quando o SEEU
+    registra mais tempo cumprido do que os eventos do RSPE explicam, essa
+    diferença (sem data conhecida) não é mais lançada no começo da
+    execução; até a data de referência vale só o que os eventos comprovam.
   - Quadro do Usuário: o botão "Enviar ao Quadro do Usuário", na ficha do
     assistido, abre uma janela para escrever o cartão (título, observação,
     etiqueta, prazo e coluna), já com o assistido. Nos cartões e na janela,

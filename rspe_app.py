@@ -27,7 +27,6 @@ import webview
 import rspe_scraper as rs
 import rspe_view as rv
 import rspe_ficha as rf
-import rspe_linha as rl
 import rspe_peticao as rpet
 import rspe_export as rx
 import rspe_regras as rg
@@ -414,8 +413,6 @@ class Base:
         self.con.execute("""INSERT OR IGNORE INTO rspe_historico SELECT processo, data_geracao, arquivo, importado_em, dados FROM assistidos""")
         # assistidos fixados (ficam no topo de todas as abas) e o Quadro do Usuário (cartões no estilo Trello)
         self.con.execute("CREATE TABLE IF NOT EXISTS fixados (processo TEXT PRIMARY KEY, data TEXT)")
-        # linha do tempo detalhada do SEEU (imputação do tempo cumprido entre as condenações, ocorrência a ocorrência)
-        self.con.execute("CREATE TABLE IF NOT EXISTS linhas_seeu (processo TEXT PRIMARY KEY, gerado TEXT, dados TEXT, importado TEXT)")
         self.con.execute("""CREATE TABLE IF NOT EXISTS quadro_colunas (id TEXT PRIMARY KEY, nome TEXT, ordem REAL)""")
         self.con.execute("""CREATE TABLE IF NOT EXISTS quadro_cartoes (id TEXT PRIMARY KEY, coluna TEXT, ordem REAL, processo TEXT,
             titulo TEXT, obs TEXT, prazo TEXT, etiqueta TEXT, criado TEXT, atualizado TEXT)""")
@@ -596,28 +593,6 @@ class Base:
             else:
                 self.con.execute("DELETE FROM fixados WHERE processo=?", (processo,))
             self.con.commit()
-
-    def linhas_seeu(self):
-        with self.lock:
-            rows = self.con.execute("SELECT processo, gerado, dados, importado FROM linhas_seeu").fetchall()
-        out = {}
-        for p, g, d, imp in rows:
-            try:
-                out[p] = dict(json.loads(d), importado=imp)
-            except Exception:
-                pass
-        return out
-
-    def gravar_linha_seeu(self, L):
-        """Grava a linha do tempo detalhada; não substitui uma gerada depois (devolve False nesse caso)."""
-        with self.lock:
-            ant = self.con.execute("SELECT gerado FROM linhas_seeu WHERE processo=?", (L["processo_execucao"],)).fetchone()
-            if ant and rs.to_date(ant[0] or "") and rs.to_date(L.get("gerado_em") or "") and rs.to_date(L["gerado_em"]) < rs.to_date(ant[0]):
-                return False
-            self.con.execute("INSERT OR REPLACE INTO linhas_seeu VALUES (?,?,?,?)", (L["processo_execucao"], L.get("gerado_em") or "",
-                                                                                   json.dumps(L, ensure_ascii=False), datetime.now().strftime("%d/%m/%Y %H:%M")))
-            self.con.commit()
-        return True
 
     def quadro(self):
         with self.lock:
@@ -851,7 +826,7 @@ class Api:
     def _contexto(self, brutos=None):
         """Tabelas auxiliares da base e a contagem de homônimos (a ficha guardada pelo nome só vale sem homônimo)."""
         ctx = {"baixas": self.base.baixas(), "fichas": self.base.fichas(), "manuais": self.base.manuais(),
-               "ajustes": self.base.presc_ajustes(), "dmanuais": self.base.dados_manuais(), "linhas": self.base.linhas_seeu(), "peds": self.base.pedidos(),
+               "ajustes": self.base.presc_ajustes(), "dmanuais": self.base.dados_manuais(), "peds": self.base.pedidos(),
                "hist_n": self.base.historico_n(), "fixados": self.base.fixados()}
         nomes = [r.get("nome", "") for r in brutos] if brutos is not None else self.base.nomes()
         h = {}
@@ -948,8 +923,6 @@ class Api:
             pass
         ch = r.get("processo_execucao") or r.get("arquivo")
         r["_presc_ajustes"] = ajustes.get(ch, {})  # dados de prescrição preenchidos/corrigidos pelo operador (só em memória)
-        r["_linha_seeu"] = (ctx.get("linhas") or {}).get(ch)  # linha do tempo detalhada do SEEU (imputação do tempo cumprido)
-        r["_presc_criterio"] = (_dm.get("presc_criterio") or {}).get("valor") or ""  # critério de imputação escolhido pelo operador
         _nn = _norm(r.get("nome", ""))
         ficha = _f0 if ch == _ch0 else (fichas.get(ch) or (fichas.get("nome:" + _nn) if _homonimos.get(_nn, 0) == 1 else None))
         # um registro com dado ilegível não pode derrubar a base: tenta sem a ficha e, se ainda falhar, mostra o
@@ -1149,16 +1122,6 @@ class Api:
         except Exception as e:
             logging.getLogger("rspe").exception("linha do tempo de indulto %s", id_)
             return {"erro": "Falha ao montar a linha do tempo: %s" % e}
-
-    def presc_criterio(self, processo, criterio):
-        """Critério de imputação do tempo cumprido entre as condenações (prescrição após a fuga): seeu, cron, art76 ou grav;
-        vazio volta ao padrão (o do SEEU, se a linha do tempo detalhada foi importada; senão a ordem do trânsito)."""
-        if not self.base:
-            return {"erro": "Nenhuma base aberta."}
-        if criterio not in ("", "seeu", "cron", "art76", "grav"):
-            return {"erro": "Critério desconhecido."}
-        self.base.dado_gravar(processo, "presc_criterio", criterio or None)
-        return self._atualizar(processo, "Critério de imputação alterado: prescrição recalculada." if criterio else "Critério de imputação de volta ao padrão.")
 
     def presc_ajuste(self, processo, chave, dados):
         """Grava (ou apaga, com dados vazios) os dados de prescrição preenchidos ou corrigidos pelo operador para um crime
@@ -1483,14 +1446,6 @@ class Api:
                 nome_arq = os.path.basename(a)
                 try:
                     r = fut.result()
-                    if r.get("tipo") == "linha_seeu":
-                        with lock:
-                            ok = base.gravar_linha_seeu(r)
-                            tem = base.existente(r["processo_execucao"])
-                        fichas_ok.append("%s: linha do tempo detalhada de %s (gerada em %s)%s" % (
-                            nome_arq, r["processo_execucao"], r.get("gerado_em") or "?",
-                            "" if ok else " - mais antiga que a da base, ignorada") + ("" if tem else " - SEM RSPE desta execução na base (fica guardada)"))
-                        continue
                     if r.get("tipo") == "ficha_disciplinar":
                         with lock:
                             proc, mesma_pessoa = self._vincular_ficha(r, base)
@@ -2000,10 +1955,6 @@ def _extrair_com_hash(caminho):
             txt = rf.texto_pdf(caminho)
         except Exception:
             raise e
-        if rl.e_linha(txt):
-            r = rl.extrair(caminho)
-            r["_hash"] = h.hexdigest()
-            return r
         if not rf.e_ficha(txt):
             raise e
         # é uma ficha disciplinar: uma falha na leitura dela não pode ser relatada como "não é um RSPE"
