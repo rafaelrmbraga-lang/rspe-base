@@ -96,6 +96,9 @@ def _regime_em(r, ref):
     return ""
 
 
+_HED_CACHE = {}  # hediondez na data do fato, por crime (a mesma em todos os decretos); limpo a cada avaliar()
+
+
 def _impeditivos(f, crimes, ref, pena_total=None):
     """Crimes da soma que o decreto veda (hediondos e equiparados na data do fato, tortura, terrorismo, tráfico e a lista
     própria do decreto)."""
@@ -121,7 +124,9 @@ def _impeditivos(f, crimes, ref, pena_total=None):
             fato = rs.to_date(c.get("data_infracao") or "")
             # hediondez aferida na data do FATO: a superveniente não alcança o fato anterior (os decretos falam em "crime
             # hediondo praticado após" a Lei 8.072/1990 e as que ampliaram o rol). Tráfico: equiparado desde 25/07/1990
-            if priv_vedado or (not priv and (rs.e_hediondo(c, None) or (trafico and (fato or ref) >= date(1990, 7, 25)))):
+            if id(c) not in _HED_CACHE:
+                _HED_CACHE[id(c)] = (c, rs.e_hediondo(c, None))
+            if priv_vedado or (not priv and (_HED_CACHE[id(c)][1] or (trafico and (fato or ref) >= date(1990, 7, 25)))):
                 out.append("%s: %s%s" % (rot, "tráfico privilegiado vedado pelo decreto" if priv_vedado else "hediondo ou equiparado na data do fato",
                                          (" (%s)" % rs.fmt(fato)) if fato and not priv_vedado else ""))
                 continue
@@ -481,6 +486,7 @@ def _detalhado(ano, r):
 def avaliar(r, hoje, completo=False):
     """Lista de resultados (do decreto mais antigo ao mais novo) para a aba Indulto. completo=True mantém as hipóteses
     calculadas e as faltas da janela (linha do tempo); sem ele, a lista fica leve."""
+    _HED_CACHE.clear()
     ini = inicio_cumprimento(r)
     ctx = _ctx(r)
     dec = decididos(r)
