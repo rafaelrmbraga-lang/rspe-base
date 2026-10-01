@@ -30,6 +30,7 @@ import rspe_ficha as rf
 import rspe_peticao as rpet
 import rspe_export as rx
 import rspe_regras as rg
+import rspe_decretos as rd
 import rspe_relatorio as rrel
 import rspe_indulto_tl as rtl
 
@@ -195,7 +196,7 @@ culpa (liberdade provisória, relaxamento, habeas corpus, alvará) ou sem iníci
 aberto). Com várias condenações unificadas, o RSPE não informa como o tempo cumprido foi imputado entre elas: o programa calcula
 dois limites - saldo mínimo (este crime imputado primeiro) e saldo máximo (este crime imputado por último, depois das outras
 condenações com trânsito anterior à evasão) - e mostra, como referência, a hipótese do art. 76 do CP (mais grave primeiro; STJ, RHC
-9.158) e a da ordem cronológica do trânsito (STJ, HC 627.646). O prazo (art. 109 sobre o saldo, +1/3, metade) é testado em cada
+9.158) e a da ordem cronológica do trânsito (STJ, AgRg no REsp 1.858.048). O prazo (art. 109 sobre o saldo, +1/3, metade) é testado em cada
 faixa do art. 109 atravessada pelos dois limites e a data-limite soma os dias de suspensão. Todas as faixas prescrevem:
 "Prescrição executória aparente" (data mais tardia); nenhuma: "Não prescrita"; divergem: "A VERIFICAR: saldo na evasão depende da
 imputação do cumprimento entre as condenações unificadas" (amarelo), com a lista do que falta (cálculo do SEEU com o saldo por
@@ -230,6 +231,17 @@ Acórdãos do TJMS em execução penal favoráveis à defesa (recurso defensivo 
 pela ementa, com a tese em uma frase e o tema. Pesquise por palavras (todas devem constar da tese ou da ementa) e filtre por tema.
 "Copiar ementa" leva a ementa com a referência (tribunal, classe, número, relator, órgão, julgamento). Um teses_execucao.json ao lado
 do programa substitui a cópia embutida. STJ e STF entrarão depois.
+<h4>Indulto: todos os decretos</h4>
+A barra lateral traz "Geral" e os decretos de 2025 a 2000. Em "Geral", cada linha mostra o mapa dos decretos desde o início do
+cumprimento informado no RSPE (verde cabe, cinza não cabe, vermelho impeditivo, azul concedido, roxo indeferido); clique no nome
+para ver o encaixe em cada decreto. Clicando num decreto, setas passam de um a outro e os chips filtram. Concedidos e indeferidos
+vêm dos incidentes do RSPE. Só entram hipóteses que se resolvem pela conta (frações, pena, regime, reincidência, violência, falta);
+as que dependem de dado fora do RSPE (filhos, doença, idade, estudo, PRD/sursis) não são calculadas. "Verificar indulto/comutação"
+tem, no topo, o seletor dos decretos do assistido; todos abrem a linha do tempo completa. Nos decretos de 2000 a 2023 a
+hediondez é aferida na data do fato.
+<h4>Fixados e Quadro do Usuário</h4>
+O alfinete ao lado do nome prende o assistido no topo de todas as abas; Ctrl+K ou "/" vai à busca. O Quadro do Usuário é um quadro
+de cartões (estilo Trello): envie um assistido pelo botão da linha, escreva observações, prazo e etiquetas e arraste entre colunas.
 <h4>Histórico de RSPE (aba Geral)</h4>
 Cada RSPE importado fica guardado na base. O botão "Histórico · N", na linha do assistido, abre uma tabela com uma coluna por
 RSPE (do mais antigo ao atual): regime, penas, dias remidos e perdidos, data-base, previsões de progressão e livramento, término,
@@ -399,6 +411,14 @@ class Base:
         self.con.execute("""CREATE TABLE IF NOT EXISTS rspe_historico (
             processo TEXT, data_geracao TEXT, arquivo TEXT, importado_em TEXT, dados TEXT, PRIMARY KEY (processo, data_geracao))""")
         self.con.execute("""INSERT OR IGNORE INTO rspe_historico SELECT processo, data_geracao, arquivo, importado_em, dados FROM assistidos""")
+        # assistidos fixados (ficam no topo de todas as abas) e o Quadro do Usuário (cartões no estilo Trello)
+        self.con.execute("CREATE TABLE IF NOT EXISTS fixados (processo TEXT PRIMARY KEY, data TEXT)")
+        self.con.execute("""CREATE TABLE IF NOT EXISTS quadro_colunas (id TEXT PRIMARY KEY, nome TEXT, ordem REAL)""")
+        self.con.execute("""CREATE TABLE IF NOT EXISTS quadro_cartoes (id TEXT PRIMARY KEY, coluna TEXT, ordem REAL, processo TEXT,
+            titulo TEXT, obs TEXT, prazo TEXT, etiqueta TEXT, criado TEXT, atualizado TEXT)""")
+        if not self.con.execute("SELECT 1 FROM quadro_colunas").fetchone():
+            for i, (cid, nome) in enumerate((("fazer", "A fazer"), ("andamento", "Em andamento"), ("aguardando", "Aguardando decisão"), ("concluido", "Concluído"))):
+                self.con.execute("INSERT INTO quadro_colunas VALUES (?,?,?)", (cid, nome, i))
         self.con.commit()
 
     def gravar_ficha(self, f, processo, mesma_pessoa=False):
@@ -556,6 +576,62 @@ class Base:
     def reabrir(self, processo, chave):
         with self.lock:
             self.con.execute("DELETE FROM baixas WHERE processo=? AND chave=?", (processo, chave))
+            self.con.commit()
+
+    def fixados(self):
+        with self.lock:
+            return {p: d for p, d in self.con.execute("SELECT processo, data FROM fixados").fetchall()}
+
+    def fixar(self, processo, on):
+        with self.lock:
+            if on:
+                self.con.execute("INSERT OR REPLACE INTO fixados VALUES (?,?)", (processo, datetime.now().strftime("%d/%m/%Y %H:%M")))
+            else:
+                self.con.execute("DELETE FROM fixados WHERE processo=?", (processo,))
+            self.con.commit()
+
+    def quadro(self):
+        with self.lock:
+            cols = [{"id": i, "nome": n, "ordem": o} for i, n, o in self.con.execute("SELECT id, nome, ordem FROM quadro_colunas ORDER BY ordem").fetchall()]
+            cards = [dict(zip(("id", "coluna", "ordem", "processo", "titulo", "obs", "prazo", "etiqueta", "criado", "atualizado"), row))
+                     for row in self.con.execute("SELECT id, coluna, ordem, processo, titulo, obs, prazo, etiqueta, criado, atualizado FROM quadro_cartoes ORDER BY ordem").fetchall()]
+        return {"colunas": cols, "cartoes": cards}
+
+    def quadro_gravar(self, c):
+        import uuid
+        agora = datetime.now().strftime("%d/%m/%Y %H:%M")
+        with self.lock:
+            cid = c.get("id") or uuid.uuid4().hex[:12]
+            ant = self.con.execute("SELECT criado, ordem, coluna FROM quadro_cartoes WHERE id=?", (cid,)).fetchone()
+            col = c.get("coluna") or (ant[2] if ant else "fazer")
+            if c.get("ordem") is not None:
+                ordem = float(c["ordem"])
+            elif ant and ant[2] == col:
+                ordem = ant[1]
+            else:
+                ordem = (self.con.execute("SELECT MIN(ordem) FROM quadro_cartoes WHERE coluna=?", (col,)).fetchone()[0] or 0) - 1
+            self.con.execute("INSERT OR REPLACE INTO quadro_cartoes VALUES (?,?,?,?,?,?,?,?,?,?)",
+                             (cid, col, ordem, c.get("processo") or "", (c.get("titulo") or "").strip(), (c.get("obs") or "").strip(),
+                              (c.get("prazo") or "").strip(), c.get("etiqueta") or "", ant[0] if ant else agora, agora))
+            self.con.commit()
+        return cid
+
+    def quadro_excluir(self, cid):
+        with self.lock:
+            self.con.execute("DELETE FROM quadro_cartoes WHERE id=?", (cid,))
+            self.con.commit()
+
+    def quadro_coluna(self, cid, nome):
+        with self.lock:
+            if nome:
+                if self.con.execute("SELECT 1 FROM quadro_colunas WHERE id=?", (cid,)).fetchone():
+                    self.con.execute("UPDATE quadro_colunas SET nome=? WHERE id=?", (nome, cid))
+                else:
+                    o = (self.con.execute("SELECT MAX(ordem) FROM quadro_colunas").fetchone()[0] or 0) + 1
+                    self.con.execute("INSERT INTO quadro_colunas VALUES (?,?,?)", (cid, nome, o))
+            else:
+                self.con.execute("DELETE FROM quadro_colunas WHERE id=?", (cid,))
+                self.con.execute("UPDATE quadro_cartoes SET coluna=(SELECT id FROM quadro_colunas ORDER BY ordem LIMIT 1) WHERE coluna=?", (cid,))
             self.con.commit()
 
     @property
@@ -735,7 +811,7 @@ class Api:
         """Tabelas auxiliares da base e a contagem de homônimos (a ficha guardada pelo nome só vale sem homônimo)."""
         ctx = {"baixas": self.base.baixas(), "fichas": self.base.fichas(), "manuais": self.base.manuais(),
                "ajustes": self.base.presc_ajustes(), "dmanuais": self.base.dados_manuais(), "peds": self.base.pedidos(),
-               "hist_n": self.base.historico_n()}
+               "hist_n": self.base.historico_n(), "fixados": self.base.fixados()}
         nomes = [r.get("nome", "") for r in brutos] if brutos is not None else self.base.nomes()
         h = {}
         for n in nomes:
@@ -854,13 +930,69 @@ class Api:
                 except Exception:
                     logging.getLogger("rspe").exception("falha ao migrar baixa %s", ch)
         m["pedidos"] = peds.get(ch, {})  # pedidos já feitos, por aba (coluna "Pedido")
-        m["hist_n"] = ctx["hist_n"].get(ch, 1)  # RSPEs guardados no histórico (botão "Histórico · N" da aba Geral)
+        m["hist_n"] = ctx["hist_n"].get(ch, 1)
+        m["fixado"] = ch in ctx["fixados"]
+        try:
+            m["dec"] = rv.json_seguro(rd.avaliar(m.get("_final") or r, rv.HOJE))  # aba Indulto: todos os decretos desde o início do cumprimento
+        except Exception:
+            logging.getLogger("rspe").exception("decretos %s", ch)
+            m["dec"] = {"inicio": "", "decretos": []}  # RSPEs guardados no histórico (botão "Histórico · N" da aba Geral)
         try:
             m["faltas_itens"] = rs.faltas_editaveis(r.get("_incidentes", []), r.get("_eventos", []), rv.HOJE)
         except Exception:
             m["faltas_itens"] = []
         m["_bruto"] = m.pop("_final", None) or r
         return m
+
+    def fixar(self, processo, on):
+        """Fixa (ou solta) o assistido: fica no topo de todas as abas, com a faixa de fixados para achá-lo rápido."""
+        if not self.base:
+            return {"erro": "Nenhuma base aberta."}
+        self.base.fixar(processo, bool(on))
+        return self._atualizar(processo, "Assistido fixado no topo das abas." if on else "Assistido solto.")
+
+    def quadro(self):
+        """Quadro do Usuário: colunas e cartões (processos acompanhados de perto, com observação, prazo e etiqueta)."""
+        if not self.base:
+            return {"erro": "Nenhuma base aberta."}
+        return self.base.quadro()
+
+    def quadro_gravar(self, cartao):
+        if not self.base:
+            return {"erro": "Nenhuma base aberta."}
+        cartao = dict(cartao or {})
+        if cartao.get("prazo") and not rs.to_date(cartao["prazo"]):
+            return {"erro": "Prazo inválido: use dd/mm/aaaa."}
+        if not (cartao.get("titulo") or "").strip() and not cartao.get("processo"):
+            return {"erro": "Dê um título ao cartão ou escolha um assistido."}
+        self.base.quadro_gravar(cartao)
+        q = self.base.quadro()
+        q["msg"] = "Cartão gravado no Quadro do Usuário."
+        return q
+
+    def quadro_mover(self, cid, coluna, ordem):
+        if not self.base:
+            return {"erro": "Nenhuma base aberta."}
+        c = next((x for x in self.base.quadro()["cartoes"] if x["id"] == cid), None)
+        if not c:
+            return {"erro": "Cartão não encontrado."}
+        c.update(coluna=coluna, ordem=ordem)
+        self.base.quadro_gravar(c)
+        return self.base.quadro()
+
+    def quadro_excluir(self, cid):
+        if not self.base:
+            return {"erro": "Nenhuma base aberta."}
+        self.base.quadro_excluir(cid)
+        q = self.base.quadro()
+        q["msg"] = "Cartão excluído."
+        return q
+
+    def quadro_coluna(self, cid, nome):
+        if not self.base:
+            return {"erro": "Nenhuma base aberta."}
+        self.base.quadro_coluna(cid, (nome or "").strip())
+        return self.base.quadro()
 
     HIST_ABAS = {"prog": ("Progressão", r"PROGRESS"), "liv": ("Livramento condicional", r"LIVRAMENTO"),
                  "ind": ("Indulto/comutação", r"INDULTO|COMUTA"), "presc": ("Prescrição", r"PRESCRI"),

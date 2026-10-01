@@ -25,7 +25,7 @@ Pretensão executória - art. 110, caput:
   no trecho em aberto); várias condenações unificadas -> o RSPE não informa a imputação do tempo cumprido:
   saldo mínimo (este crime imputado primeiro) e saldo máximo (imputado por último, depois das outras
   condenações com trânsito anterior à evasão), com as hipóteses do art. 76 (mais grave primeiro; STJ, RHC
-  9.158) e da ordem cronológica do trânsito (STJ, HC 627.646) como referência. O prazo (art. 109 sobre o
+  9.158) e da ordem cronológica do trânsito (STJ, AgRg no REsp 1.858.048) como referência. O prazo (art. 109 sobre o
   saldo, +1/3, metade) é testado em cada faixa do art. 109 atravessada por [saldo_min, saldo_max]; a
   data-limite soma os dias de suspensão. Todas as faixas prescritas -> aparente (data mais tardia); nenhuma
   -> não prescrita; divergentes -> "A VERIFICAR" com a lista do que falta. Cada crime pelo seu saldo (art.
@@ -273,6 +273,12 @@ def _mesmo_processo(a, b):
     if ka == kb:
         return True
     return min(len(ka), len(kb)) >= 5 and (ka.endswith(kb) or kb.endswith(ka))
+
+
+def _especie(c):
+    """0 reclusão (ou não informada), 1 detenção, 2 prisão simples - a 'pena mais grave' do art. 76 do CP é a espécie."""
+    t = rs._sem_acento(c.get("tipo_penal") or "")
+    return 1 if "DETENC" in t and "RECLUS" not in t else (2 if "PRISAO SIMPLES" in t else 0)
 
 
 def _dias_uniao(periodos, de, ate):
@@ -669,7 +675,11 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
             outras = [(tx, px, x) for tx, px, x in outros_crimes if tx < g0]
             soma_outras = sum(px for _, px, _ in outras)
             inicio_exec = min([termo] + [tx for tx, _, _ in outras])
-            cumprido_total = _dias_uniao(todos, inicio_exec, g0) + rem_g0
+            # tempo cumprido da execução unificada, contado uma vez só: toda a custódia desde a primeira prisão (a provisória
+            # anterior aos trânsitos entra aqui como detração do total - CP, art. 42) mais a remição. Descontar de novo a
+            # detração de cada crime contava duas vezes o mesmo dia (ele já está no total que vai às penas pela ordem)
+            inicio_pool = min([a for a, _b in todos if a] + [inicio_exec])
+            cumprido_total = _dias_uniao(todos, inicio_pool, g0) + rem_g0
             # detração (prisão provisória deste processo antes do termo): é pena cumprida (CP, art. 42) e sai do "tempo que resta
             # da pena" do art. 113 (roteiro da Defensoria; fora da fuga, o prazo segue a pena aplicada e ela é só informativa)
             cumprido_min_base = cumprido_g0 + rem_g0 + detr
@@ -684,7 +694,7 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
                         pos = i + 1
                         break
                     antes += px
-                s = min(pena, max(0, pena - detr - max(0, cumprido_total - antes)))
+                s = min(pena, max(0, pena - max(0, cumprido_total - antes)))
                 if s > 0:
                     m = Fraction(prazo_base_anos(s, fato) * 12) * fator
                     lim_h, _ = _limite(m)
@@ -696,9 +706,14 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
                         "_lim": lim_h}
 
             em_exec = outras + [(termo, pena, c)]
-            hip76 = _hip(sorted(em_exec, key=lambda t: (-t[1], t[0])))
+            # art. 76 do CP: "mais grave" é a espécie da pena (reclusão antes de detenção); entre penas da mesma espécie vale a ordem
+            # cronológica do trânsito (STJ, AgRg no REsp 1.858.048, 5ª T.; TJMS, 1604723-49.2024 e 0000230-65.2010)
+            hip76 = _hip(sorted(em_exec, key=lambda t: (_especie(t[2]), t[0], -t[1])))
             hipcron = _hip(sorted(em_exec, key=lambda t: (t[0], -t[1])))
+            # leitura da 6ª Turma (AgRg no HC 1.075.773): a pena maior primeiro, pelo tamanho
+            hipgrav = _hip(sorted(em_exec, key=lambda t: (-t[1], t[0])))
             tese76 = None
+            risco_grav = ""
             if not outras:
                 saldo_min = saldo_max = max(0, pena - cumprido_min_base)
                 rem_seeu = rs.pena_para_dias(r.get("pena_remanescente"))
@@ -706,14 +721,30 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
                     saldo_min = saldo_max = rem_seeu
                     fonte_saldo = " (pena remanescente do RSPE)"
             else:
-                # várias condenações: o tempo cumprido vai para a pena em execução, pela ordem do trânsito em julgado (STJ, HC 627.646,
-                # citando o AgRg no REsp 1.858.048); o art. 76 do CP (mais grave primeiro) fica como tese quando é mais favorável
+                # várias condenações: o tempo cumprido vai para a pena em execução pela ordem cronológica do trânsito em julgado (STJ,
+                # AgRg no REsp 1.858.048, 5ª T.; TJMS); o art. 76 (espécie) e a leitura da 6ª Turma (tamanho) ficam como tese quando
+                # mudam o desfecho a favor da defesa
                 saldo_min = saldo_max = hipcron["saldo"]
-                if hip76["saldo"] != hipcron["saldo"] and (
-                        (hip76["resultado"] == "prescrita" and hipcron["resultado"] != "prescrita")
-                        or (hip76["_lim"] and hipcron["_lim"] and hip76["_lim"] < hipcron["_lim"])
-                        or hip76["resultado"] == "nada a prescrever" and hipcron["resultado"] != "nada a prescrever"):
-                    tese76 = hip76
+
+                def _melhor(h):
+                    # muda o desfecho: prescreve por ela e não pela ordem do trânsito (ou nada resta a cumprir); um vencimento só mais
+                    # cedo, mas depois da recaptura, não serve à defesa
+                    return h["saldo"] != hipcron["saldo"] and (
+                        (h["resultado"] == "prescrita" and hipcron["resultado"] != "prescrita")
+                        or (h["resultado"] == "nada a prescrever" and hipcron["resultado"] not in ("nada a prescrever", "prescrita")))
+                if _melhor(hip76):
+                    tese76 = dict(hip76, fund="CP, art. 76: pena de reclusão antes da de detenção (STJ, AgRg no REsp 1.858.048, 5ª T.)")
+                elif _melhor(hipgrav):
+                    tese76 = dict(hipgrav, fund="pena mais grave primeiro (STJ, AgRg no HC 1.075.773, 6ª T., 16/09/2026 - divergente da 5ª Turma "
+                                                "e do TJMS, que aplicam a ordem cronológica entre penas da mesma espécie)")
+                if hipcron["resultado"] == "prescrita" and hipgrav["resultado"] != "prescrita":
+                    _esp = {_especie(x) for _t, _p, x in em_exec}
+                    risco_grav = ("O MP pode invocar a imputação à pena mais grave primeiro (STJ, AgRg no HC 1.075.773, 6ª T., 16/09/2026): nessa ordem "
+                                  "o saldo deste crime seria %s, sem prescrição. Resposta: %sa 5ª Turma e o TJMS aplicam a ordem cronológica do trânsito "
+                                  "(STJ, AgRg no REsp 1.858.048; TJMS, 1604723-49.2024 e 0000230-65.2010); e o próprio precedente da 6ª Turma veda "
+                                  "redistribuir o tempo cumprido - vale a imputação feita na época (conferir como o SEEU imputava antes da fuga)." % (
+                                      _pena_ou_zero(hipgrav["saldo"]),
+                                      "as penas em execução são todas de reclusão, e o art. 76 só se aplica entre espécies diferentes; " if _esp == {0} else ""))
             _det_txt = (" (descontados %s de detração - CP, art. 42)" % _d(detr)) if detr else ""
             # item 6.5: a origem do saldo fica sempre à vista; estimativa não passa por dado confirmado
             inf = (ctx.get("saldos_inf") or {}).get(rs.fmt(g0))
@@ -728,9 +759,10 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
                 saldo_rotulo = "Saldo confirmado: %s (pena remanescente do SEEU)." % rs.dias_para_pena(saldo_max)
             elif outras:
                 origem = "calculado"
-                saldo_rotulo = ("Saldo calculado pela ordem do trânsito em julgado (STJ, HC 627.646): este crime é o %dº de %d em execução, "
+                saldo_rotulo = ("Saldo calculado pela ordem cronológica do trânsito em julgado (STJ, AgRg no REsp 1.858.048; TJMS, 1604723-49.2024): este crime é o %dº de %d em execução, "
                                 "e o tempo cumprido vai primeiro às penas que transitaram antes%s: %s." % (
-                                    hipcron["posicao"], hipcron["de"], _det_txt, rs.dias_para_pena(saldo_max)))
+                                    hipcron["posicao"], hipcron["de"], (" (a prisão provisória entra uma vez só, no tempo cumprido total - CP, art. 42)" if detr else ""),
+                                    rs.dias_para_pena(saldo_max)))
             else:
                 origem = "calculado"
                 ini_c = min([a for a, _ in cumpr if a >= termo] or [termo])
@@ -798,6 +830,13 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
                  "prazo_min_meses": int(mmin) if mmin is not None else None, "prazo_max_meses": int(mmax) if mmax is not None else None,
                  "limite_min": rs.fmt(lim_min) if lim_min else "", "limite_max": rs.fmt(lim_max) if lim_max else "",
                  "suspensao_dias": sd, "art76": {k: v for k, v in hip76.items() if k != "_lim"},
+                 "gravidade": {k: v for k, v in hipgrav.items() if k != "_lim"} if outras else None, "risco_grav": risco_grav if inf is None else "",
+                 "imput_txt": (("Somados a prisão provisória e a remição, o tempo cumprido da execução unificada (%s) é imputado às condenações pela "
+                                "ordem cronológica do trânsito em julgado: entre penas da mesma espécie não incide o art. 76 do Código Penal, que só "
+                                "distingue reclusão e detenção (STJ, AgRg no REsp 1.858.048, 5ª Turma, j. 25/08/2020), critério que o TJMS aplica na "
+                                "apuração da prescrição executória após a evasão (Agravo de Execução Penal 1604723-49.2024.8.12.0000, 2ª Câmara "
+                                "Criminal, j. 11/09/2024; 1ª Seção Criminal, 0000230-65.2010.8.12.0007). Nessa ordem, esta condenação era a %dª de %d "
+                                "em execução") % (_d(cumprido_total), hipcron["posicao"], hipcron["de"])) if (outras and inf is None) else "",
                  "cronologica": {k: v for k, v in hipcron.items() if k != "_lim"}, "faixas": faixas, "resultado": resultado,
                  "tese76": ({k: v for k, v in tese76.items() if k != "_lim"} if (tese76 and inf is None) else None),
                  "saldo_origem": origem, "saldo_rotulo": saldo_rotulo, "informar": informar,
@@ -832,17 +871,20 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
             if motivo and not e_evasao:
                 txt += "\nMotivo da interrupção \"%s\": não é evasão nem revogação do livramento; fora delas o prazo se regula pela pena aplicada (STJ, RHC 67.403) - conferir." % motivo.lower()
             if outras:
-                txt += ("\nImputação do tempo cumprido: adotada a ordem do trânsito em julgado (STJ, HC 627.646) - este crime é o %dº de %d, "
-                        "saldo %s (%s%s). Pelo art. 76 do CP (mais grave primeiro), seria o %dº de %d - saldo %s (%s%s). Se o cálculo do SEEU "
-                        "tiver feito outra imputação, informe o saldo." % (
+                txt += ("\nImputação do tempo cumprido: adotada a ordem cronológica do trânsito em julgado (STJ, AgRg no REsp 1.858.048, 5ª T.; "
+                        "TJMS, 1604723-49.2024) - este crime é o %dº de %d, saldo %s (%s%s). Pelo art. 76 do CP (espécie: reclusão antes de detenção), "
+                        "seria o %dº de %d - saldo %s (%s%s). Pela pena maior primeiro (6ª T., AgRg no HC 1.075.773), seria o %dº de %d - saldo %s (%s). "
+                        "Se o cálculo do SEEU tiver feito outra imputação, informe o saldo." % (
                             hipcron["posicao"], hipcron["de"], _pena_ou_zero(hipcron["saldo"]), hipcron["resultado"],
                             (", prazo %s até %s" % (hipcron["prazo"], hipcron["limite"])) if hipcron["limite"] else "",
                             hip76["posicao"], hip76["de"], _pena_ou_zero(hip76["saldo"]), hip76["resultado"],
-                            (", prazo %s até %s" % (hip76["prazo"], hip76["limite"])) if hip76["limite"] else ""))
+                            (", prazo %s até %s" % (hip76["prazo"], hip76["limite"])) if hip76["limite"] else "",
+                            hipgrav["posicao"], hipgrav["de"], _pena_ou_zero(hipgrav["saldo"]), hipgrav["resultado"]))
+                if risco_grav and inf is None:
+                    txt += "\n⚠ " + risco_grav
             if tese76 and inf is None:
-                txt += ("\nTese defensiva (art. 76 do CP): imputando o tempo cumprido à pena mais grave primeiro, o saldo deste crime seria %s, "
-                        "prazo %s%s - mais favorável que a ordem do trânsito." % (
-                            _pena_ou_zero(tese76["saldo"]), tese76["prazo"] or "nada a prescrever",
+                txt += ("\nTese defensiva (%s): nessa imputação, o saldo deste crime seria %s, prazo %s%s - mais favorável que a ordem do trânsito." % (
+                            tese76["fund"], _pena_ou_zero(tese76["saldo"]), tese76["prazo"] or "nada a prescrever",
                             (", %s em %s" % ("venceu" if tese76["resultado"] == "prescrita" else "vence", tese76["limite"])) if tese76["limite"] else ""))
             if outras:
                 txt += ("\nVárias execuções: adotada a corrente simultânea - depois da fuga, cada condenação corre pelo seu saldo, nunca pela pena "
@@ -1210,11 +1252,15 @@ def _quadro(L, hoje):
         Q["informar"] = True
     _t76 = (Sd or {}).get("tese76") if Sd else None
     if _t76:
-        Q["tese"] = ("Tese (art. 76 do CP, pena mais grave primeiro): saldo %s, prazo %s%s." % (
-            _pena_ou_zero(_t76["saldo"]), _t76["prazo"] or "nada a prescrever",
+        Q["tese"] = ("Tese (%s): saldo %s, prazo %s%s." % (
+            _t76.get("fund") or "CP, art. 76", _pena_ou_zero(_t76["saldo"]), _t76["prazo"] or "nada a prescrever",
             (", %s em %s" % ("prescrita" if _t76["resultado"] == "prescrita" else "vence", _t76["limite"])) if _t76["limite"] else ""))
     if not Q["alerta"] and L.get("ppe_alerta_extra"):
         Q["alerta"] = L["ppe_alerta_extra"]
+    if Sd and Sd.get("risco_grav") and cor == "vermelho":
+        Q["risco"] = Sd["risco_grav"]
+    if L.get("ppe_reinc_aviso"):
+        Q["reinc"] = L["ppe_reinc_aviso"]
     L["ppe_quadro"] = Q
 
 
@@ -1515,6 +1561,8 @@ def fundamentacao(L, parte):
                 "da pena, calculado para cada condenação isoladamente (CP, art. 119; STJ, AgRg no REsp 2.256.555). Até essa data, a execução unificada "
                 "registrava %s dias de cumprimento%s" % (cab, L.get("pena", ""), L.get("fato") or "—", L.get("ppe_termo") or "—", ev, S.get("evasao", ""),
                                                          S.get("cumprido_desde_termo", 0), (" e %s dias remidos" % S["remicao"]) if S.get("remicao") else ""))
+        if S.get("imput_txt"):
+            cab2 += ". " + S["imput_txt"]
 
         def base(sd, pz, lim):
             inc = _inc_de(sd)
@@ -1527,8 +1575,8 @@ def fundamentacao(L, parte):
                        (", antes da recaptura/reinício do cumprimento em %s, causa interruptiva posterior (CP, art. 117, V)." % fim) if fim else ", sem nova causa interruptiva (CP, art. 117).",
                        " Ainda que se considere integralmente cumprida esta pena na imputação do tempo, a solução é a mesma: extinção da punibilidade." if not S.get("saldo_min") else ""))
         else:
-            hip = [h for h, k in (("que coincide com a ordem do art. 76 do CP (execução primeiro da pena mais grave)", "art76"),
-                                  ("que coincide com a ordem cronológica do trânsito em julgado (STJ, HC 627.646)", "cronologica"))
+            hip = [h for h, k in (("que coincide com a ordem do art. 76 do CP (reclusão antes de detenção)", "art76"),
+                                  ("que coincide com a ordem cronológica do trânsito em julgado (STJ, AgRg no REsp 1.858.048)", "cronologica"))
                    if (S.get(k) or {}).get("resultado") == "prescrita"]
             txt = (". O RSPE não informa a imputação desse tempo entre as condenações unificadas. Na hipótese mais favorável - o tempo cumprido imputado "
                    "primeiro a esta condenação%s -, o saldo era de %s. %s%s\nAssim, requer-se a imputação do tempo cumprido na forma mais favorável e o "
@@ -1656,6 +1704,23 @@ def analisar(r, hoje=None):
             o is not c and rs.to_date(o.get("transito_processo") or o.get("transito_mp") or "")
             and rs.to_date(o.get("transito_processo") or o.get("transito_mp")) < _fx for o in crimes))
         L["reinc_sem_base"] = reinc_sem_base
+        _trs = sorted(d_ for d_ in (rs.to_date(o.get("transito_processo") or o.get("transito_mp") or "") for o in crimes if o is not c) if d_)
+        # com outras condenações no RSPE, todas transitadas depois do fato, a reincidência marcada não tem base: calcula sem o +1/3
+        # (com alerta). Com uma condenação só, o RSPE não mostra o passado (condenação anterior já extinta): segue a reincidência
+        # marcada e confere a hipótese sem ela
+        reinc_afastada = bool(reinc_sem_base and _trs)
+        if reinc_afastada:
+            # o RSPE marca reincidência, mas nenhuma condenação dele transitou antes do fato: sem condenação anterior transitada não há
+            # reincidência (CP, art. 63) - o prazo é calculado sem o +1/3, com o alerta; o operador confirma em "editar dados" se houver
+            # condenação de outro processo fora deste RSPE
+            L["reinc"] = False
+            L["ppe_reinc_aviso"] = (
+                "Reincidência não aplicada: o RSPE marca o condenado como reincidente, mas nenhuma condenação deste RSPE transitou em julgado "
+                "antes do fato (%s)%s. Sem condenação anterior transitada não há reincidência (CP, art. 63), e o prazo foi calculado sem o +1/3 "
+                "(CP, art. 110). Se houver condenação de outro processo, fora deste RSPE, transitada antes do fato e dentro do período depurador "
+                "(CP, art. 64, I - conferir a certidão de antecedentes), informe a reincidência em \"editar dados\"." % (
+                    L["fato"], ("; a primeira transitou em %s" % rs.fmt(_trs[0])) if _trs else ""))
+            L["avisos"].append("reincidência marcada no RSPE sem condenação anterior transitada: prazo calculado sem o +1/3 (CP, arts. 63 e 110) - conferir a certidão de antecedentes")
         pena = rs.pena_para_dias(c.get("pena_imposta") or c.get("pena_total_processo"))
         if "CONVERTIDA" in (c.get("pena_total_processo") or "").upper():
             L["avisos"].append("pena originalmente substituída por restritiva de direitos (CONVERTIDA): o período de cumprimento da PRD não consta no RSPE e também suspende/interrompe a executória - conferir")
@@ -1823,7 +1888,9 @@ def analisar(r, hoje=None):
             variantes = []
             if reinc_desc:
                 variantes.append(("reincidência", not L["reinc"], meia))
-            if reinc_sem_base:
+            if reinc_afastada:
+                variantes.append(("reincidência afastada", True, meia))
+            elif reinc_sem_base:
                 variantes.append(("reincidência sem condenação anterior no RSPE", False, meia))
             if meia_desc:
                 variantes.append(("idade no fato/sentença (art. 115)", L["reinc"], not meia))
@@ -1836,7 +1903,13 @@ def analisar(r, hoje=None):
                 fx = ((1 + ACRESC) if rv_ else Fraction(1)) * (Fraction(1, 2) if mv_ else 1)
                 Lx["prazo_ppe"] = fmt_prazo(Fraction(base_meses) * fx) + (" (+1/3 reincidência)" if rv_ else "") + (" (½ art. 115)" if mv_ else "")
                 _exec(Lx, c, r, ctx, termo, termo_txt, pena, fato, fx, Fraction(base_meses) * fx, mv_)
-                if _classe(Lx) != _classe(L):
+                if nome_v == "reincidência afastada":
+                    # calculado sem a reincidência; a hipótese com ela só complementa o alerta (não vira A VERIFICAR)
+                    _base_do_prazo(Lx)
+                    L["ppe_reinc_aviso"] += (" Com o +1/3, o prazo seria %s: %s." % (
+                        Lx.get("ppe_prazo_efetivo") or Lx.get("prazo_ppe") or "—",
+                        "o resultado não muda" if _classe(Lx) == _classe(L) else "o resultado seria " + (Lx.get("ppe_status") or "").lower()))
+                elif _classe(Lx) != _classe(L):
                     difs.append((nome_v, Lx))
                 elif nome_v.startswith("reincidência sem"):
                     _base_do_prazo(Lx)

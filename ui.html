@@ -213,7 +213,7 @@ tr.sub td{padding:0 0 0 0;background:#FFFFFF;cursor:default}tr.sub:hover td{back
 .ptl-fund{border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:var(--bg);font-size:12px;line-height:1.5}
 .ptl-fund .h{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}.ptl-fund .t{color:var(--tx);font-weight:400}.ptl-card .r span{font-weight:400}.ptl-card .r span:last-child{font-weight:600}
 @media (max-width:900px){.ptl-cf{grid-template-columns:1fr}}
-.ptl-hip{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
+.ptl-hip{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;margin-top:8px}
 .ptl-hip .box{border:1px dashed #D0D5DD;border-radius:8px;padding:8px 10px;font-size:12px}.ptl-hip .box b{display:block;margin-bottom:2px}
 .ptl-res{display:flex;gap:14px;align-items:flex-start;border-left:4px solid #B54708;background:#FEF4D6;border-radius:8px;padding:10px 12px;margin-top:10px}
 .ptl-res.verm{border-color:#B42318;background:#FDE8E8}.ptl-res.verde{border-color:#067647;background:#DDF5E7}
@@ -222,6 +222,40 @@ tr.sub td{padding:0 0 0 0;background:#FFFFFF;cursor:default}tr.sub:hover td{back
 .ptl-pop.on{display:block}.ptl-pop h4{margin:0 0 6px;font-size:12.5px}.ptl-pop dl{margin:0;display:grid;grid-template-columns:110px 1fr;gap:2px 8px}.ptl-pop dt{color:var(--tx2)}.ptl-pop dd{margin:0}.ptl-pop .x{position:absolute;right:8px;top:6px;cursor:pointer;color:var(--tx3)}
 .why.on{font-weight:700;text-decoration:underline}
 .ptl-holder{margin-top:6px}
+.px-res{display:flex;align-items:center;gap:14px;border-radius:12px;padding:12px 16px;margin:12px 0 10px;border:1px solid;background:#fff}
+.px-res.verm{border-color:#F5B5B0;background:#FFF6F5}.px-res.amb{border-color:#F5D08A;background:#FFFBF0}.px-res.verde{border-color:#A6E1BF;background:#F4FBF7}
+.px-res .ic{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;flex:none;font-weight:800;color:#fff;font-size:15px}
+.px-res.verm .ic{background:#D92D20}.px-res.amb .ic{background:#F79009}.px-res.verde .ic{background:#12B76A}
+.px-res .tx{flex:1;min-width:0}.px-res .tx b{display:block;font-size:14px;color:#101828}.px-res .tx span{font-size:12.5px;color:var(--tx2)}
+.px-res .px-acts{display:flex;gap:8px;flex:none}
+.px-grid{display:grid;grid-template-columns:minmax(300px,380px) 1fr;gap:12px}
+@media (max-width:1000px){.px-grid{grid-template-columns:1fr}}
+.px-box{border:1px solid var(--line);border-radius:12px;background:#fff;padding:12px 14px}
+.px-box h5{margin:0 0 8px;font-size:11px;letter-spacing:.4px;text-transform:uppercase;color:var(--tx3);display:flex;align-items:center;gap:8px}
+.px-box h5 i{width:8px;height:8px;border-radius:50%;display:inline-block}
+.px-kv{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px solid #F2F4F7;font-size:12.5px}.px-kv:last-child{border-bottom:0}
+.px-kv span{color:var(--tx2);white-space:nowrap}.px-kv b{font-weight:600;text-align:right}.px-kv.hl b{font-size:13.5px;color:#101828}
+.px-tab{width:100%;border-collapse:collapse;font-size:12.5px}
+.px-tab th{text-align:left;font-size:10.5px;letter-spacing:.3px;text-transform:uppercase;color:var(--tx3);font-weight:600;padding:4px 8px;border-bottom:1px solid var(--line);position:static;background:none;cursor:default}
+.px-tab td{padding:8px;border-bottom:1px solid #F2F4F7;vertical-align:middle;cursor:default;font-weight:400!important}.px-tab tr:last-child td{border-bottom:0}
+.px-tab tr.on td{background:#F6FBF8}.px-tab tr:hover td{background:inherit}.px-tab tr.on:hover td{background:#F6FBF8}
+.px-tab .crit b{display:block;font-weight:600;color:var(--tx)}.px-tab td{white-space:nowrap}.px-tab td.crit{white-space:normal}.px-tab .crit small{color:var(--tx3);font-size:11px}
+.px-tag{display:inline-block;font-size:10px;font-weight:700;padding:1px 6px;border-radius:5px;background:#E8F5EE;color:#067647;margin-left:6px;vertical-align:1px}
+.px-pill{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.px-pill.p{background:#FDE8E8;color:#B42318}.px-pill.n{background:#EEF0F3;color:#475467}.px-pill.z{background:#EAF2FF;color:#1D4ED8}
+.px-at{margin-top:12px;display:flex;flex-direction:column;gap:6px}
+.px-at details{border:1px solid var(--line);border-radius:10px;background:#fff}
+.px-at summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:9px 12px;font-size:12.5px;font-weight:600;color:var(--tx)}
+.px-at summary::-webkit-details-marker{display:none}
+.px-at summary .k{width:22px;height:22px;border-radius:6px;display:grid;place-items:center;font-size:12px;flex:none}
+.px-at summary .k.a{background:#FEF4D6;color:#B54708}.px-at summary .k.i{background:#EAF2FF;color:#1D4ED8}.px-at summary .k.m{background:#F0EBFF;color:#6941C6}
+.px-at summary em{font-style:normal;font-weight:400;color:var(--tx3);margin-left:auto;font-size:11.5px}
+.px-at details[open] summary em{display:none}
+.px-at .d{padding:0 12px 10px 44px;font-size:12.5px;line-height:1.55;color:var(--tx2);font-weight:400}.px-res .tx span,.px-kv span,.px-tab small{font-weight:400}
+.px-fd{margin-top:12px;border:1px solid var(--line);border-radius:12px;background:#fff}
+.px-fd summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:11px 14px;font-size:13px;font-weight:700}
+.px-fd summary::-webkit-details-marker{display:none}.px-fd summary .sp{flex:1}.px-fd summary .chev{color:var(--tx3);transition:.15s}.px-fd[open] summary .chev{transform:rotate(180deg)}
+.px-fd .t{padding:2px 18px 16px;font-size:13px;line-height:1.7;color:#344054;font-weight:400}.px-fd .t p{margin:0 0 10px}.px-fd .t p:first-child{font-weight:700;color:#101828}
 .ptl-num{display:flex;flex-wrap:wrap;gap:6px 18px;margin:4px 0 8px;padding-left:14px;font-size:12.5px;color:var(--tx)}.ptl-num b{display:inline-flex;width:20px;height:20px;border-radius:50%;color:#fff;font-size:11px;align-items:center;justify-content:center;margin-right:6px}.ptl-num em{font-style:normal;color:var(--tx2)}
 .mem{display:grid;gap:12px;margin:10px 0 4px}
 .mb{background:#F9FAFB;border:1px solid #EEF0F3;border-radius:10px;padding:12px 16px 12px}
@@ -407,6 +441,74 @@ tr.sub td{padding:0 0 0 0;background:#FFFFFF;cursor:default}tr.sub:hover td{back
 .tlv-det .calc{font-family:ui-monospace,Consolas,monospace;background:#F8F9FB;border-radius:6px;padding:4px 6px}
 .duv{display:flex;flex-direction:column;gap:5px}
 .duv div{background:#FFFAEB;border:1px solid #FEDF89;border-radius:8px;padding:6px 9px;font-size:12px;cursor:pointer}
+
+.fixbar{display:none;align-items:center;gap:6px;flex-wrap:wrap;padding:10px 24px 0;font-size:12px;color:var(--tx3)}.fixbar.on{display:flex}
+.fixbar .fx{display:inline-flex;align-items:center;gap:6px;padding:4px 6px 4px 10px;border-radius:999px;background:#FFF8E6;border:1px solid #F5D08A;color:#7A4A00;font-weight:700;cursor:pointer}
+.fixbar .fx.on{background:#FDB022;color:#fff;border-color:#FDB022}.fixbar .fx b{font-weight:400;opacity:.7;padding:0 4px;border-radius:50%}.fixbar .fx b:hover{opacity:1;background:rgba(0,0,0,.08)}
+.pin{display:inline-flex;width:20px;height:20px;align-items:center;justify-content:center;border-radius:6px;color:#98A2B3;cursor:pointer;margin-right:4px;vertical-align:-4px;opacity:.7;transition:.12s}
+tr:hover .pin{opacity:1}.pin:hover{background:#F2F4F7;color:#B54708}.pin.on{opacity:1;color:#F79009}.pin svg{width:14px;height:14px}
+tbody tr.fix td{background:#FFFCF2}
+.qbtn{display:inline-flex;align-items:center;justify-content:center;width:26px;height:24px;border:1px solid var(--line);border-radius:7px;background:#fff;color:var(--tx3);cursor:pointer;margin-left:4px;vertical-align:middle}.qbtn:hover{border-color:var(--pri);color:var(--pri)}.qbtn svg{width:14px;height:14px}
+.qd-board{display:flex;gap:14px;align-items:flex-start;padding:16px;height:100%;overflow:auto}
+.qd-col{flex:0 0 300px;background:#F2F4F7;border-radius:14px;padding:10px;display:flex;flex-direction:column;max-height:100%}
+.qd-col.drag{outline:2px dashed var(--pri);outline-offset:-2px;background:#E8F5EE}
+.qd-ch{display:flex;align-items:center;gap:8px;padding:2px 4px 10px}.qd-ch b{font-size:13px;flex:1;cursor:text}.qd-ch span{font-size:11.5px;color:var(--tx3);background:#fff;border-radius:999px;padding:1px 8px;font-weight:700}
+.qd-list{display:flex;flex-direction:column;gap:8px;overflow:auto;min-height:40px;padding-bottom:4px}
+.qd-card{background:#fff;border-radius:10px;padding:10px 12px;box-shadow:0 1px 2px rgba(16,24,40,.08);border:1px solid #EAECF0;cursor:grab;border-left:4px solid var(--et,#EAECF0)}
+.qd-card:hover{border-color:#C9D1DB}.qd-card.arr{opacity:.4}
+.qd-card .t{font-weight:700;font-size:13px;line-height:1.35;color:#101828}.qd-card .a{font-size:12px;color:var(--pri);font-weight:600;margin-top:3px;cursor:pointer}.qd-card .a small{color:var(--tx3);font-weight:400}
+.qd-card .o{font-size:12px;color:var(--tx2);margin-top:5px;white-space:pre-wrap;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.qd-card .f{display:flex;align-items:center;gap:6px;margin-top:8px;flex-wrap:wrap}
+.qd-pz{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#F2F4F7;color:#475467}
+.qd-pz.venc{background:#FDE8E8;color:#B42318}.qd-pz.prox{background:#FEF4D6;color:#B54708}
+.qd-et{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:999px;color:#fff}
+.qd-add{margin-top:8px;padding:8px 10px;border-radius:9px;color:var(--tx2);font-size:12.5px;font-weight:600;cursor:pointer;text-align:left}.qd-add:hover{background:#E4E7EC;color:var(--tx)}
+.qd-top{display:flex;align-items:center;gap:10px;width:100%}.qd-top .sp{flex:1}
+.qd-cp{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}.qd-cp span{font-size:11px;font-weight:600;color:var(--tx2);background:#F2F4F7;border-radius:6px;padding:2px 7px;cursor:pointer}.qd-cp span:hover{background:#E4E7EC;color:var(--tx)}
+.fq{border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:#FBFCFD}
+.fq-h{display:flex;align-items:center;gap:8px;margin-bottom:8px}.fq-h b{font-size:13px}.fq-h .sp{flex:1}
+.fq-c{display:flex;gap:10px;align-items:flex-start;padding:7px 10px;border-radius:9px;background:#fff;border:1px solid #EAECF0;border-left:4px solid var(--et,#EAECF0);margin-bottom:6px;cursor:pointer;font-size:12.5px}
+.fq-c:hover{border-color:#C9D1DB}.fq-c .tx{flex:1;min-width:0}.fq-c .tx b{display:block}.fq-c .tx div{color:var(--tx2);white-space:pre-wrap;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}.fq-c small{color:var(--tx3);white-space:nowrap}
+.fq-n{display:grid;grid-template-columns:1fr 150px 130px;gap:8px;margin-top:6px}.fq-n textarea{grid-column:1/-1;min-height:64px;resize:vertical}
+.fq-n input,.fq-n textarea,.fq-n select{padding:7px 10px;border:1px solid var(--line2);border-radius:9px;font:inherit;width:100%;background:#fff}
+.fq-a{display:flex;align-items:center;gap:8px;margin-top:8px}.fq-a .sp{flex:1}
+.qd-form{display:grid;grid-template-columns:120px 1fr;gap:9px;align-items:center}
+.qd-form input,.qd-form textarea,.qd-form select{padding:8px 10px;border:1px solid var(--line2);border-radius:9px;font:inherit;width:100%}
+.qd-form textarea{min-height:90px;resize:vertical}
+.qd-ets{display:flex;gap:6px;flex-wrap:wrap}.qd-ets span{padding:4px 10px;border-radius:999px;font-size:12px;font-weight:700;cursor:pointer;border:2px solid transparent;color:#fff}.qd-ets span.on{border-color:#101828}
+
+.dc{display:grid;grid-template-columns:230px 1fr;height:100%}
+.dc-side{border-right:1px solid var(--line);overflow:auto;background:#FBFCFD;padding:12px 10px}
+.dc-h{margin:8px 10px 6px;font-size:11px;letter-spacing:.4px;text-transform:uppercase;color:var(--tx3);font-weight:600}
+.dc-it{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:9px;cursor:pointer;font-size:12.5px;color:var(--tx2)}
+.dc-it:hover{background:#F2F4F7;color:var(--tx)}.dc-it.on{background:var(--pri-soft);color:var(--pri);font-weight:700}
+.dc-it span{flex:1}.dc-it.vz{color:#98A2B3}.dc-it b{font-size:11px;padding:1px 8px;border-radius:999px;background:#DDF5E7;color:#067647}.dc-it b.z{background:#F2F4F7;color:#98A2B3}
+.dc-it.geral{font-weight:700;color:var(--tx)}.dc-it.geral svg{width:16px;height:16px}
+.dc-it small{font-size:10.5px;color:var(--tx3);font-weight:400}
+.dc-main{overflow:auto}
+.dc-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 20px 10px;border-bottom:1px solid var(--line)}
+.dc-top .tt b{display:block;font-size:16px}.dc-top .tt small{font-size:12px;color:var(--tx3)}.dc-top .sp{flex:1}
+.dc-ch{display:inline-flex;align-items:center;padding:5px 12px;border-radius:999px;font-size:12.5px;font-weight:700}
+.dc-ch.c{background:#DDF5E7;color:#067647}.dc-ch.n{background:#EEF0F3;color:#475467}.dc-ch.f{background:#F9FAFB;color:#98A2B3;border:1px dashed #E4E7EC}.dc-ch.k{background:#EAF2FF;color:#1D4ED8}
+.dc-sel{appearance:none;padding:7px 28px 7px 11px;border:1px solid var(--line2);border-radius:9px;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2398A2B3'/%3E%3C/svg%3E") no-repeat right 10px center;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer}
+.dc-nav{display:flex;gap:4px}.dc-nav button{width:32px;height:32px;border-radius:8px;border:1px solid var(--line2);background:#fff;font-size:16px;color:var(--tx2)}.dc-nav button:hover{background:#F2F4F7}
+.mx{display:inline-flex;gap:2px;vertical-align:middle;flex-wrap:wrap}
+.mx i{min-width:24px;height:22px;padding:0 3px;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;font-style:normal;font-size:10.5px;font-weight:700;color:#fff;cursor:default}
+.mx i.nao{color:#667085}
+.nm{cursor:pointer;color:var(--tx);border-bottom:1px dashed #98A2B3}.nm:hover{color:var(--pri);border-color:var(--pri)}
+.enc{background:#FBFCFD;padding:16px 20px 18px;cursor:default}
+.enc-h{display:flex;align-items:baseline;gap:12px;margin-bottom:12px;flex-wrap:wrap}.enc-h b{font-size:14px}.enc-h span{font-size:12px;color:var(--tx3)}
+.enc table{width:100%;border-collapse:separate;border-spacing:0;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.enc th{font-size:10.5px;text-transform:uppercase;letter-spacing:.3px;color:var(--tx3);text-align:left;padding:8px 12px;background:#F9FAFB;border-bottom:1px solid var(--line);position:static;cursor:default}
+.enc table td{padding:10px 12px!important;border-bottom:1px solid #F2F4F7;font-size:12.5px;vertical-align:middle;font-weight:400!important;cursor:default}
+.enc tr:last-child td{border-bottom:0}.enc tr:hover td{background:inherit}
+.dres{display:inline-block;padding:2px 10px;border-radius:999px;font-size:11.5px;font-weight:700;white-space:nowrap}
+.dres.cabe{background:#DDF5E7;color:#067647}.dres.nao{background:#EEF0F3;color:#475467}.dres.imp{background:#FDE8E8;color:#B42318}.dres.conc{background:#EAF2FF;color:#1D4ED8}.dres.indef{background:#F0EBFF;color:#6941C6}.dres.ver{background:#FEF4D6;color:#B54708}.dres.fora{background:#F9FAFB;color:#98A2B3}
+.dreq{display:flex;align-items:center;gap:10px}.dreq .tr{position:relative;width:140px;height:8px;border-radius:4px;background:#EEF0F3;flex:none}
+.dreq .tr i{position:absolute;left:0;top:0;bottom:0;border-radius:4px}.dreq .tr u{position:absolute;top:-3px;bottom:-3px;width:2px;background:#101828;left:66.6%}
+.dreq small{color:var(--tx2);white-space:nowrap}
+.tlv-gen{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin:12px 0}
+.tlv-gen h3{margin:0 0 4px;font-size:15px}.tlv-gen .kv{display:grid;grid-template-columns:220px 1fr;gap:6px 14px;font-size:13px;margin-top:12px}.tlv-gen .kv span{color:var(--tx2)}
 </style>
 </head>
 <body>
@@ -432,7 +534,7 @@ tr.sub td{padding:0 0 0 0;background:#FFFFFF;cursor:default}tr.sub:hover td{back
   <div class="spacer"></div>
   <div class="search" id="search">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-    <input id="q" placeholder="Buscar nome, processo, crime…" oninput="ui.filtrar()">
+    <input id="q" placeholder="Buscar nome, processo, crime… (Ctrl+K)" oninput="ui.filtrar()">
     <button class="x" onclick="ui.limparBusca()">✕</button>
   </div>
 </div>
@@ -455,6 +557,7 @@ tr.sub td{padding:0 0 0 0;background:#FFFFFF;cursor:default}tr.sub:hover td{back
 
 <div class="tabs" id="tabs"></div>
 <div class="subtabs" id="subtabs"></div>
+<div class="fixbar" id="fixbar"></div>
 <div class="stats" id="stats"></div>
 <div class="wrap"><div class="card" id="card"></div></div>
 <div class="foot">
@@ -496,7 +599,7 @@ const ui = {
     if(d.sem_base){ w.classList.add('on'); document.getElementById('copia').innerHTML=''; document.getElementById('baseNome').textContent='—'; document.getElementById('baseN').textContent='0';
       document.getElementById('recentes').innerHTML=(d.recentes||[]).map(r=>`<div onclick="api('abrir_base','${esc(r.caminho).replace(/\\/g,'\\\\')}')"><span>${esc(r.nome)}</span><small>${esc(r.caminho)}</small></div>`).join('')||'<div style="cursor:default;color:var(--tx3)">Nenhuma base recente</div>';
       document.getElementById('wfoot').textContent='Base jurídica '+(d.base_juridica?d.base_juridica.versao:'?')+' · '+d.hoje; this.dados.registros=[]; this.render(); return; }
-    w.classList.remove('on'); document.getElementById('baseNome').textContent=d.base; document.getElementById('baseN').textContent=d.registros.length;
+    w.classList.remove('on'); if(d.base!==this._qdBase){ this._qdBase=d.base; this._qd=null; this.qdCarregar().then(()=>this.render()); } document.getElementById('baseNome').textContent=d.base; document.getElementById('baseN').textContent=d.registros.length;
     document.getElementById('copia').innerHTML=d.copia?`<i></i>cópia de segurança: ${esc(d.copia.quando)}`:'';
     document.getElementById('hoje').textContent='Hoje '+d.hoje+(d.base_juridica?' · base jurídica '+d.base_juridica.versao:''); if(!this.dados.abas.concat(this.ABAS_EXTRA).find(a=>a.id===this.aba)) this.aba='geral'; this.render(); },
   async criarBase(){ const n=document.getElementById('novoNome').value.trim(); if(!n) return this.toast('Dê um nome à base.'); await api('nova_base', n); },
@@ -524,8 +627,11 @@ const ui = {
   render(){
     const spec=this.spec(); const rs=this.visiveis();
     // abas
-    document.getElementById('tabs').innerHTML=this.dados.abas.concat(this.ABAS_EXTRA).map(a=>`<button class="tab ${a.id===this.aba?'on':''}" title="${esc(a.titulo)}" onclick="ui.irAba('${a.id}')">${this.ICONE[a.id]?`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${this.ICONE[a.id]}</svg>`:''}${this.CURTO[a.id]||a.titulo}${a.cor&&!a.sem_stats?`<span class="cnt">${this.contaCor(a,rs)}</span>`:''}</button>`).join('');
+    document.getElementById('tabs').innerHTML=this.dados.abas.concat(this.ABAS_EXTRA).map(a=>`<button class="tab ${a.id===this.aba?'on':''}" title="${esc(a.titulo)}" onclick="ui.irAba('${a.id}')">${this.ICONE[a.id]?`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${this.ICONE[a.id]}</svg>`:''}${this.CURTO[a.id]||a.titulo}${a.cor&&!a.sem_stats?`<span class="cnt">${this.contaCor(a,rs)}</span>`:''}${a.id==='quadro'&&this.qdAlertas()?`<span class="cnt" style="background:#FDE8E8;color:#B42318" title="Cartões com prazo vencido ou para hoje">${this.qdAlertas()}</span>`:''}</button>`).join('');
     document.getElementById('dica').textContent=this.DICA[this.aba]||'Clique na linha para abrir a ficha · clique no título da coluna para ordenar';
+    this.renderFixados();
+    if(this.aba==='ind'){ const selE=document.getElementById('filtro'); selE.parentElement.style.display='none'; selE.dataset.aba=''; document.getElementById('legenda').innerHTML=this.decLegenda(); document.getElementById('subtabs').classList.remove('on'); document.getElementById('modoWrap').style.display='none'; return this.renderIndulto(rs); }
+    if(this.aba==='quadro'){ const selE=document.getElementById('filtro'); selE.parentElement.style.display='none'; selE.dataset.aba=''; document.getElementById('legenda').innerHTML=''; document.getElementById('subtabs').classList.remove('on'); document.getElementById('modoWrap').style.display='none'; return this.renderQuadro(); }
     if(this.aba==='teses'){ const selE=document.getElementById('filtro'); selE.parentElement.style.display='none'; selE.dataset.aba=''; document.getElementById('legenda').innerHTML='';
       document.getElementById('modoWrap').style.display='none'; return this.renderTeses(); }
     // resumo
@@ -554,6 +660,7 @@ const ui = {
              : linhas.filter(r=>this.cor(r,spec)===this.filtroCor && (!tp || this.pedPendente(r,spec.id))); }
     linhas=linhas.filter(r=>this.passaFiltro(r,spec)); if(this.filtroVelho) linhas=linhas.filter(r=>this.idadeRSPE(r)>this.RSPE_VELHO);
     const o=this.ordem[this.aba]; if(o){ linhas=[...linhas].sort((a,b)=>cmp(a[o.k],b[o.k])*(o.inv?-1:1)); }
+    linhas=[...linhas].sort((a,b)=>(b.fixado?1:0)-(a.fixado?1:0));
     const card=document.getElementById('card');
     if(!this.dados.registros.length){ card.innerHTML=`<div class="empty"><div><b>Nenhum RSPE nesta base</b>Clique em <em>Importar PDFs</em> ou <em>Importar pasta</em>. Pode selecionar centenas de arquivos de uma vez.</div></div>`; return; }
     if(!linhas.length){ card.innerHTML=`<div class="empty"><div><b>Nada encontrado</b>Ajuste a busca ou o filtro de situação.</div></div>`; return; }
@@ -564,7 +671,7 @@ const ui = {
     const tr=linhas.map(r=>{ const cor=this.cor(r,spec); const exp=spec.expansivel && this.aberto===r.id;
       const tds=spec.cols.map((c,i)=>{ let v=r[c[0]]??''; const pk=spec.pilulas[c[0]];
         if(c[0]==='proc'){ v=`<span class="copy" title="Clique para copiar" onclick="event.stopPropagation();ui.copiar('${esc(String(v))}')">${esc(v)}${svgCopy}</span>`; }
-        else if(c[0]==='nome'&&v){ const id_=this.idadeRSPE(r); v=`<span class="copy" title="Clique para copiar o nome" onclick="event.stopPropagation();ui.copiar(ui._clips[${this.clip(String(v))}])">${esc(v)}${svgCopy}</span>`+(id_>this.RSPE_VELHO?`<span class="rs-old" title="RSPE desatualizado: emitido em ${esc(r.geracao)}, há ${id_} dias (mais de ${this.RSPE_VELHO}). Vale baixar um novo no SEEU." onclick="event.stopPropagation()">!</span>`:''); }
+        else if(c[0]==='nome'&&v){ const id_=this.idadeRSPE(r); v=this.pinHtml(r)+`<span class="copy" title="Clique para copiar o nome" onclick="event.stopPropagation();ui.copiar(ui._clips[${this.clip(String(v))}])">${esc(v)}${svgCopy}</span>`+(id_>this.RSPE_VELHO?`<span class="rs-old" title="RSPE desatualizado: emitido em ${esc(r.geracao)}, há ${id_} dias (mais de ${this.RSPE_VELHO}). Vale baixar um novo no SEEU." onclick="event.stopPropagation()">!</span>`:''); }
         else if(pk){ const pc = r[pk]||''; v = v ? `<span class="pill ${pc||'none'}">${esc(v)}</span>` : (/_sit$/.test(c[0]) ? '' : '<span class="muted">—</span>'); }
         else if(c[0]==='pedido'){ const P=(r.pedidos||{})[spec.id]; const mud=P&&P.ref&&P.ref!==this.pedRef(r,spec.id);
           // só o ícone: marcado = check; a data e a observação ficam na ficha do assistido (e na janela do clique)
@@ -576,8 +683,8 @@ const ui = {
         else { v = esc(v).replace('(est.)','<span class="est">(est.)</span>'); if(!v) v='<span class="muted">—</span>'; }
         if(i===0 && spec.expansivel) v=`<span class="chev">▶</span>${v}`;
         return `<td class="${i===0?'first':''} ${NW.has(c[0])?'nw':''} ${pk&&spec.id==='ind'?'pl':''}" title="${esc(String(r[c[0]+'_full']??r[c[0]]??''))}">${v}</td>`; }).join('');
-      const acao=`<td class="nw act">${spec.id==='geral'?`<span class="hbtn" title="Histórico comparativo dos RSPE importados deste assistido" onclick="event.stopPropagation();ui.historico('${r.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg>Histórico · ${r.hist_n||1}</span>`:''}${spec.id==='ind'?`<span class="mini" title="Linha do tempo: crimes, impeditivos, pena cumprida em cada decreto, faltas na janela e resultado" onclick="event.stopPropagation();ui.indTL('${r.id}')">Verificar indulto/comutação</span> `:''}${spec.id==='ext'?`<span class="mini" title="Linha do tempo: períodos cumpridos, fugas, faltas, hoje e término da pena" onclick="event.stopPropagation();ui.extTL('${r.id}')">Linha do tempo</span> `:''}${MODELOS_ATIVOS?`<span class="mini" title="Preencher modelo .docx com os dados deste assistido" onclick="event.stopPropagation();ui.peticao('${r.id}')">Petição</span>`:''}${r.ficha_tem?'<span class="tag ok" title="Ficha disciplinar importada">ficha</span>':''}</td>`;
-      let html=`<tr class="${cor} ${exp?'exp':''}" onclick="${spec.expansivel?`ui.expandir('${r.id}')`:`ui.abrir('${r.id}')`}">${tds}${acao}</tr>`;
+      const acao=`<td class="nw act">${spec.id==='geral'?`<span class="hbtn" title="Histórico comparativo dos RSPE importados deste assistido" onclick="event.stopPropagation();ui.historico('${r.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg>Histórico · ${r.hist_n||1}</span>`:''}${spec.id==='ind'?`<span class="mini" title="Linha do tempo: crimes, impeditivos, pena cumprida em cada decreto, faltas na janela e resultado" onclick="event.stopPropagation();ui.indTL('${r.id}')">Verificar indulto/comutação</span> `:''}${spec.id==='ext'?`<span class="mini" title="Linha do tempo: períodos cumpridos, fugas, faltas, hoje e término da pena" onclick="event.stopPropagation();ui.extTL('${r.id}')">Linha do tempo</span> `:''}${MODELOS_ATIVOS?`<span class="mini" title="Preencher modelo .docx com os dados deste assistido" onclick="event.stopPropagation();ui.peticao('${r.id}')">Petição</span>`:''}${r.ficha_tem?'<span class="tag ok" title="Ficha disciplinar importada">ficha</span>':''}${this.qbtnHtml(r)}</td>`;
+      let html=`<tr class="${cor} ${exp?'exp':''} ${r.fixado?'fix':''}" onclick="${spec.expansivel?`ui.expandir('${r.id}')`:`ui.abrir('${r.id}')`}">${tds}${acao}</tr>`;
       if(exp) html+=`<tr class="sub"><td colspan="${spec.cols.length+1}"><div class="subwrap">${this.subTabela(r,spec)}</div></td></tr>`;
       return html; }).join('');
     card.innerHTML=`<table><thead class="${spec.expansivel?"exp":""}"><tr>${th}</tr></thead><tbody>${tr}</tbody></table>`;
@@ -637,7 +744,7 @@ const ui = {
                 :`<div class="cp-row" style="gap:6px">${cps}</div>${det}`;
     return `<div class="mem">${pp&&!pe?`<div class="cp-row" style="gap:6px">${cps}</div>`:''}${pe?exe:''}${pp?this.bloco('Pretensão punitiva',s.retro_detalhe,'pp'):''}${this.bloco('Avisos',s.avisos&&s.avisos.length?s.avisos:'','av')}</div>`; },
   quadroPPE(s){ const Q=s.ppe_quadro; const cor={vermelho:'verm',amarelo:'amb'}[Q.cor]||(/^Não/.test(Q.resultado)?'verde':'');
-    const lin=[['Resultado',`<b>${esc(Q.resultado)}</b>`],['Período que decide',esc(Q.periodo)],['Saldo remanescente',penaExt(esc(Q.saldo))],['Prazo',penaExt(esc(Q.prazo))],['Tese defensiva',Q.tese?penaExt(esc(Q.tese)):'']].filter(x=>x[1]&&x[1]!=='<b></b>');
+    const lin=[['Resultado',`<b>${esc(Q.resultado)}</b>`],['Período que decide',esc(Q.periodo)],['Saldo remanescente',penaExt(esc(Q.saldo))],['Prazo',penaExt(esc(Q.prazo))],['Tese defensiva',Q.tese?penaExt(esc(Q.tese)):''],['Imputação',Q.risco?esc(Q.risco):''],['Reincidência',Q.reinc?esc(Q.reinc):'']].filter(x=>x[1]&&x[1]!=='<b></b>');
     return `<div class="qd ${cor}">${lin.map(x=>`<div class="qr"><span class="qk">${x[0]}</span><span class="qv">${x[1]}</span></div>`).join('')}${Q.alerta?`<div class="qa">⚠ ${esc(Q.alerta)}${Q.informar?` <span class="btn-sal" onclick="event.stopPropagation();ui.pfAbrir(this,${this.tlReg(s)},'saldo')">INFORMAR SALDO</span>`:''}</div>`:''}<div class="pf-holder"></div></div>`; },
   // linha do tempo da executória deste crime: cada período dos eventos classificado (prisão provisória, cumprimento, prisão por outro motivo, evasão, liberdade)
   LT_ROT:{provisoria:'Prisão provisória (detração)',cumprimento:'Cumprimento da pena',livramento:'Livramento condicional',outro_motivo:'Prisão por outro motivo',evasao:'Evasão',interrupcao:'Interrupção',liberdade:'Liberdade',suspensao:'Suspensão',prd:'Restritiva de direitos'},
@@ -731,6 +838,29 @@ const ui = {
       (this._tlCards[idx]=this._tlCards[idx]||[]).push({rot, cor, li, s});
       svg+=`</g>`; yc+=95; });
     return svg+`</svg>`; },
+  // painel abaixo da linha do tempo: resultado, conta da fuga, imputação (3 critérios), pontos de atenção e fundamentação recolhida
+  prescPainel(L, idx, r, motivo, S){
+    const amd=this.tlAmd.bind(this); const card=((this._tlCards||{})[idx]||[]).find(c=>c.s===S)||((this._tlCards||{})[idx]||[]).slice(-1)[0];
+    const fund=card? this.fundPrescEvasao(L, card.s) : ''; const ci=fund? this.clip(fund) : null;
+    const tit={verm:'Prescrição aparente', amb:'A verificar', verde:'Não prescrita'}[r[0]]; const ic={verm:'!',amb:'?',verde:'✓'}[r[0]];
+    const res=`<div class="px-res ${r[0]}"><span class="ic">${ic}</span><div class="tx"><b>${tit}${r[0]==='verm'&&L.ppe_previsao?' em '+esc(L.ppe_previsao):''}</b><span>${esc(r[0]==='verm'?(S&&S.evasao?'O prazo pelo saldo venceu durante a fuga de '+S.evasao+(S.fim&&S.fim!=='hoje'?', antes da '+(S.fim_causa||'recaptura')+' em '+S.fim:'')+'.':motivo):motivo.replace(/\.$/,'')+'.')}</span></div>
+      <div class="px-acts">${r[0]==='amb'?`<span class="jz-b" onclick="event.stopPropagation();ui.pfAbrir(this,${idx},'saldo')">Informar saldo</span>`:''}${ci!=null&&r[0]!=='verde'?`<span class="jz-b pri" onclick="event.stopPropagation();ui.copiarClip(${ci})">Copiar fundamentação</span>`:''}</div></div>`;
+    const conta=card? `<div class="px-box"><h5><i style="background:${card.cor}"></i>${esc(card.rot)}</h5>${card.li.map(([k,v],i)=>`<div class="px-kv ${['Saldo na fuga','Vencimento'].includes(k)?'hl':''}"><span>${esc(k)}</span><b>${penaExt(esc(v))}</b></div>`).join('')}</div>` : '';
+    const pill=h=> h.resultado==='prescrita'?'<span class="px-pill p">prescrita</span>': h.resultado==='nada a prescrever'?'<span class="px-pill z">pena cumprida</span>':'<span class="px-pill n">não prescrita</span>';
+    const lin=(h,nome,fonte,on)=> h? `<tr class="${on?'on':''}"><td class="crit"><b>${nome}${on?'<span class="px-tag">adotado</span>':''}</b><small>${fonte}</small></td><td>${h.posicao}º de ${h.de}</td><td>${amd(h.saldo)}</td><td>${esc(h.prazo||'—')}</td><td>${esc(h.limite||'—')}</td><td>${pill(h)}</td></tr>` : '';
+    const imp=S&&S.cronologica? `<div class="px-box"><h5>Imputação do tempo cumprido entre as condenações</h5><table class="px-tab"><thead><tr><th style="width:36%">Critério</th><th>Posição</th><th>Saldo na fuga</th><th>Prazo</th><th>Vence</th><th>Resultado</th></tr></thead><tbody>
+        ${lin(S.cronologica,'Ordem do trânsito em julgado','STJ 5ª T. (AgRg no REsp 1.858.048) e TJMS',true)}${lin(S.art76,'Art. 76 do CP (espécie)','reclusão antes de detenção',false)}${lin(S.gravidade,'Pena maior primeiro','STJ 6ª T. (AgRg no HC 1.075.773)',false)}</tbody></table></div>`
+      : (conta? '' : '');
+    const at=[];
+    if(S&&S.risco_grav) at.push(['m','⚖','Argumento possível do MP (6ª Turma)','e a resposta', S.risco_grav]);
+    if(L.ppe_reinc_aviso) at.push(['a','!','Reincidência não aplicada no prazo','por quê', L.ppe_reinc_aviso]);
+    if(r[0]==='amb'&&L.ppe_faltam&&L.ppe_faltam.length) at.push(['a','?','Falta para concluir','o que conferir', L.ppe_faltam.join('; ')+'.']);
+    if(L.ppe_triagem&&r[0]!=='verde') at.push(['i','i','Como o resultado foi obtido','detalhe', L.ppe_triagem]);
+    if(r[0]==='verm') at.push(['i','i','Antes de requerer','conferir nos autos','Conferir recaptura ou nova condenação não registradas no RSPE (interrompem - CP, art. 117, V e VI) e eventual perda de dias remidos pela fuga (LEP, art. 127).']);
+    if(r[0]==='verde'&&L.ppe_previsao&&L.ppe_dias!=null) at.push(['a','!','Prazo em curso','vencimento', 'Vence em '+L.ppe_previsao+' ('+(L.ppe_dias===1?'falta 1 dia':'faltam '+L.ppe_dias+' dias')+').']);
+    const ats=at.length? `<div class="px-at">${at.map(([c,k,t,e,d])=>`<details><summary><span class="k ${c}">${k}</span>${esc(t)}<em>ver ${esc(e)} ▾</em></summary><div class="d">${penaExt(esc(d))}</div></details>`).join('')}</div>` : '';
+    const fd=fund? `<details class="px-fd"><summary>Fundamentação para a petição<span class="sp"></span><span class="jz-b" onclick="event.preventDefault();event.stopPropagation();ui.copiarClip(${ci})">Copiar</span><span class="chev">▾</span></summary><div class="t">${fund.split('\n').filter(x=>x.trim()).map(p=>`<p>${esc(p)}</p>`).join('')}</div></details>` : '';
+    return `${res}${conta||imp?`<div class="px-grid" style="${imp?'':'grid-template-columns:minmax(260px,420px)'}">${conta}${imp}</div>`:''}${ats}${fd}<div class="pf-holder"></div>`; },
   prescCardsFund(L, idx){
     const cards=(this._tlCards||{})[idx]||[]; if(!cards.length) return '';
     return cards.map(c=>{ const txt=this.fundPrescEvasao(L, c.s); const ci=this.clip(txt);
@@ -745,10 +875,10 @@ const ui = {
     const evento=s.revogacao?'revogação do livramento condicional':(s.e_evasao===false?'interrupção do cumprimento':'fuga');
     const fim=(s.fim&&s.fim!=='hoje')? s.fim : null;
     const base=(sd,pz,lim)=>`Para esse saldo, o prazo prescricional é o do art. 109, ${inc(sd)}, do Código Penal${inc(sd)==='VI'&&antiga?' (na redação anterior à Lei 12.234/2010, vigente à data do fato - 2 anos)':''}${mods.length?', '+mods.join(' e '):''}: ${pz}, que se esgotou em ${lim}`;
-    const cab=`DA PRESCRIÇÃO DA PRETENSÃO EXECUTÓRIA - ${L.rotulo||L.crime}${L.proc_crim?' (autos '+L.proc_crim+')':''}\n`+
+    const cab=`DA PRESCRIÇÃO DA PRETENSÃO EXECUTÓRIA - ${L.rotulo||L.crime}${L.proc_crim&&!String(L.rotulo||'').includes(L.proc_crim)?' (autos '+L.proc_crim+')':''}\n`+
       `A condenação a ${L.pena} (fato em ${L.fato||'—'}; trânsito em julgado em ${L.ppe_termo||'—'}) teve o cumprimento interrompido pela ${evento} em ${s.evasao}. `+
       `Nos termos do art. 113 do Código Penal, no caso de evadir-se o condenado ou de revogar-se o livramento condicional, a prescrição é regulada pelo tempo que resta da pena, calculado para cada condenação isoladamente (CP, art. 119; STJ, AgRg no REsp 2.256.555). `+
-      `Até essa data, a execução unificada registrava ${s.cumprido_desde_termo} dias de cumprimento${s.remicao?' e '+s.remicao+' dias remidos':''}`;
+      `Até essa data, a execução unificada registrava ${s.cumprido_desde_termo} dias de cumprimento${s.remicao?' e '+s.remicao+' dias remidos':''}`+(s.imput_txt?'. '+s.imput_txt:'');
     let corpo='';
     if(s.resultado==='prescrita'){
       corpo=`, de modo que o saldo imputável a esta condenação era de, no máximo, ${amd(s.saldo_max)}. ${base(s.saldo_max, s.prazo_max, s.limite_max)}`+
@@ -756,8 +886,8 @@ const ui = {
         (s.saldo_min===0? ' Ainda que se considere integralmente cumprida esta pena na imputação do tempo, a solução é a mesma: extinção da punibilidade.' : '')+
         `\nOperou-se, portanto, a prescrição da pretensão executória, impondo-se a declaração da extinção da punibilidade quanto a esta condenação (CP, art. 107, IV, c/c art. 119), com as comunicações e anotações devidas.`;
     } else if(s.resultado==='a verificar' && s.limite_min){
-      const hipOk=[s.art76&&s.art76.resultado==='prescrita'?'que coincide com a ordem do art. 76 do CP (execução primeiro da pena mais grave)':'',
-                   s.cronologica&&s.cronologica.resultado==='prescrita'?'que coincide com a ordem cronológica do trânsito em julgado (STJ, HC 627.646)':''].filter(Boolean);
+      const hipOk=[s.art76&&s.art76.resultado==='prescrita'?'que coincide com a ordem do art. 76 do CP (reclusão antes de detenção)':'',
+                   s.cronologica&&s.cronologica.resultado==='prescrita'?'que coincide com a ordem cronológica do trânsito em julgado (STJ, AgRg no REsp 1.858.048)':''].filter(Boolean);
       corpo=`. O RSPE não informa a imputação desse tempo entre as condenações unificadas. Na hipótese mais favorável - o tempo cumprido imputado primeiro a esta condenação${hipOk.length?', '+hipOk.join(' e '):''} -, o saldo era de ${amd(s.saldo_min)}. ${base(s.saldo_min, s.prazo_min||s.prazo_max, s.limite_min)}`+
         (fim? `, antes da recaptura/reinício do cumprimento em ${fim} (CP, art. 117, V).` : '.')+
         `\nAssim, requer-se a imputação do tempo cumprido na forma mais favorável e o reconhecimento da prescrição da pretensão executória, com a extinção da punibilidade quanto a esta condenação (CP, art. 107, IV, c/c art. 119).`;
@@ -775,16 +905,13 @@ const ui = {
     const motivo=r[1].includes('A VERIFICAR') ? (L.ppe_status.replace(/^A VERIFICAR:\s*/,'')||'não foi possível determinar, com os dados do SEEU, o saldo de pena atribuído a esta condenação na data da fuga') : r[1].includes('PRESCRITO')&&!r[1].includes('NÃO') ? L.ppe_status : !sal.length ? (L.ppe_correndo_ate ? 'prazo pela pena aplicada em curso, vence em '+L.ppe_correndo_ate : (L.ppe_status||'').toLowerCase()) : (ultima.fim&&ultima.fim!=='hoje' ? 'a recaptura ocorreu antes do vencimento calculado em todas as hipóteses de saldo' : 'o prazo ainda não venceu em nenhuma das hipóteses de saldo');
     const iminente=r[0]==='verde'&&L.ppe_previsao&&L.ppe_dias!=null ? `<div class="sr">⚠ Prazo em curso: vence em ${esc(L.ppe_previsao)} (${L.ppe_dias===1?'falta 1 dia':'faltam '+L.ppe_dias+' dias'}).</div>`:'';
     const antes=r[0]==='verm' ? '<div class="sr">Antes de requerer: conferir recaptura ou nova condenação não registradas no RSPE (interrompem - art. 117, V e VI).</div>':'';
-    const hip=ultima.art76? `<div class="ptl-hip"><div class="box"><b>Hipótese 1 · CP, art. 76 (pena mais grave primeiro)</b>Este crime seria o ${ultima.art76.posicao}º de ${ultima.art76.de} em execução. Saldo na fuga: ${amd(ultima.art76.saldo)} · prazo ${esc(ultima.art76.prazo||'—')} · ${ultima.art76.limite? 'venceria em '+ultima.art76.limite : ''} → <b style="display:inline">${esc(ultima.art76.resultado)}</b></div>
-      <div class="box"><b>Hipótese 2 · ordem cronológica do trânsito</b>Este crime seria o ${ultima.cronologica.posicao}º de ${ultima.cronologica.de}. Saldo na fuga: ${amd(ultima.cronologica.saldo)} · ${ultima.cronologica.prazo? 'prazo '+esc(ultima.cronologica.prazo)+' · venceria em '+ultima.cronologica.limite : 'nada a prescrever'} → <b style="display:inline">${esc(ultima.cronologica.resultado)}</b></div></div>`:'';
+    const hip=ultima.art76? `<div class="ptl-hip"><div class="box"><b>Hipótese 1 · CP, art. 76 (espécie: reclusão antes de detenção)</b>Este crime seria o ${ultima.art76.posicao}º de ${ultima.art76.de} em execução. Saldo na fuga: ${amd(ultima.art76.saldo)} · prazo ${esc(ultima.art76.prazo||'—')} · ${ultima.art76.limite? 'venceria em '+ultima.art76.limite : ''} → <b style="display:inline">${esc(ultima.art76.resultado)}</b></div>
+      <div class="box"><b>Hipótese 2 · ordem cronológica do trânsito (adotada: STJ 5ª T. e TJMS)</b>Este crime seria o ${ultima.cronologica.posicao}º de ${ultima.cronologica.de}. Saldo na fuga: ${amd(ultima.cronologica.saldo)} · ${ultima.cronologica.prazo? 'prazo '+esc(ultima.cronologica.prazo)+' · venceria em '+ultima.cronologica.limite : 'nada a prescrever'} → <b style="display:inline">${esc(ultima.cronologica.resultado)}</b></div>${ultima.gravidade?`<div class="box"><b>Hipótese 3 · pena maior primeiro (STJ 6ª T., AgRg no HC 1.075.773)</b>Este crime seria o ${ultima.gravidade.posicao}º de ${ultima.gravidade.de}. Saldo na fuga: ${amd(ultima.gravidade.saldo)} · ${ultima.gravidade.prazo? 'prazo '+esc(ultima.gravidade.prazo)+' · venceria em '+ultima.gravidade.limite : 'nada a prescrever'} → <b style="display:inline">${esc(ultima.gravidade.resultado)}</b></div>`:''}</div>${ultima.risco_grav?`<div class="sr" style="margin-top:6px">⚠ ${esc(ultima.risco_grav)}</div>`:''}`:'';
     const saldoTxt=ultima.saldo_min===ultima.saldo_max? amd(ultima.saldo_max) : 'entre '+amd(ultima.saldo_min)+' e '+amd(ultima.saldo_max);
     return `<div class="ptl" data-tl="${idx}"><div class="ptl-h"><span class="pill ${r[0]}">${sd}${r[1]}</span><span class="muted">${esc(L.rotulo||L.crime)} · pena ${penaExt(esc(L.pena||''))} · fato ${esc(L.fato||'—')} · trânsito ${esc(L.ppe_termo||'—')}</span></div>
      <div class="ptl-legend">${(()=>{ const ts=new Set((L.ppe_linha_tempo||[]).map(p=>this.tlTipo(p))); return [['cumprimento','i-cump','cumprimento da pena'],['evasao','i-fuga','fuga / evasão'],['interrupcao','i-fuga','interrupção'],['provisoria','i-prov','prisão provisória (detração)'],['outro_motivo','i-susp','suspensão (preso por outro motivo)'],['liberdade','i-lib','liberdade / sem início do cumprimento'],['livramento','i-lc','livramento'],['duvida','i-dup','atribuição não comprovada']].filter(z=>ts.has(z[0])).map(z=>`<span><i class="${z[1]}"></i>${z[2]}</span>`).join('')+(ts.has('prd')?'<span><i style="background:#D9D6FE;border:1px solid #7A5AF8"></i>restritiva de direitos</span>':''); })()}</div>
      ${(()=>{ const sv=this.prescTimelineSvg(L, idx); return `<div class="ptl-num">${(this._tlNum[idx]||[]).map(m=>`<span><b style="background:${({fato:'#475467',sentenca:'#475467',transito:'#2563EB',fuga:'#B42318',recaptura:'#067647',hoje:'#101828'})[m.t]}">${m.n}</b>${esc(m.r)} <em>${m.d.toLocaleDateString('pt-BR')}</em></span>`).join('')}</div><div class="ptl-tl">${sv}<div class="ptl-pop"><span class="x">✕</span><div class="pc"></div></div></div>`; })()}
-     ${this.prescCardsFund(L, idx)}
-     ${hip}
-     <div class="ptl-res ${r[0]}"><div><b>${sd}${r[1]}</b>${r[0]!=='verde'||!L.ppe_triagem?'Motivo: '+esc(motivo)+'.':''}${L.ppe_triagem?`<div class="tri">${esc(L.ppe_triagem)}</div>`:''}${L.ppe_saldo_rotulo?`<div class="sr">${esc(L.ppe_saldo_rotulo)}</div>`:''}${L.ppe_reinc_aviso?`<div class="sr">⚠ ${esc(L.ppe_reinc_aviso)}</div>`:''}${iminente}${antes}${r[0]==='amb'&&L.ppe_faltam&&L.ppe_faltam.length? `<div class="falta"><b style="display:inline">Falta para concluir:</b> ${esc(L.ppe_faltam.join('; '))}.</div>`:''}
-       ${r[0]==='amb'?`<div style="margin-top:8px"><span class="btn-sal" onclick="event.stopPropagation();ui.pfAbrir(this,${idx},'saldo')">CONFERIR / INFORMAR SALDO</span></div>`:''}<div class="pf-holder"></div></div></div></div>`; },
+     ${this.prescPainel(L, idx, r, motivo, ultima)}</div>`; },
   tlClick(ev){
     const x=ev.target.closest('.ptl-pop .x'); if(x){ x.closest('.ptl-pop').classList.remove('on'); return; }
     const g=ev.target.closest('.ptl .mk'); if(!g) return; ev.stopPropagation();
@@ -1074,7 +1201,7 @@ const ui = {
   abaPedido(spec){ return !!(spec && (spec.cols||[]).some(c=>c[0]==='pedido')); },
   pedPendente(r,aba){ const P=(r.pedidos||{})[aba]; return !P || (P.ref && P.ref!==this.pedRef(r,aba)); },
   contaCor(a,rs){ rs=rs.filter(r=>this.pedPendente(r,a.id)); if(a.id==='ind') return rs.filter(r=>r.ind_sim).length || ''; const k = a.id==='presc' ? (this.prescModo!=='pp'?'presc_ppe_cor':'presc_retro_cor') : a.cor; return rs.filter(r=>r[k]==='vermelho'||r[k]==='vencido').length || ''; },
-  ABAS_EXTRA:[{id:'teses',titulo:'Jurisprudências'}],
+  ABAS_EXTRA:[{id:'teses',titulo:'Jurisprudências'},{id:'quadro',titulo:'Quadro do Usuário'}],
   // abas: ícone (traço fino; verde na aba aberta) e nome curto
   ICONE:{
     geral:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
@@ -1085,8 +1212,9 @@ const ui = {
     ext:'<circle cx="12" cy="12" r="10"/><path d="m8.5 12 2.5 2.5 4.5-5"/>',
     fd:'<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4M12 16h4M8 11h.01M8 16h.01"/>',
     aud:'<path d="M12 22s8-3.6 8-10V5l-8-3-8 3v7c0 6.4 8 10 8 10z"/><path d="m9 12 2 2 4-4"/>',
-    teses:'<path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1z"/><path d="M7 21h10M12 3v18M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/>'},
-  CURTO:{ind:'Indulto',fd:'Ficha',teses:'Jurisprudências'},
+    teses:'<path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1z"/><path d="M7 21h10M12 3v18M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/>',
+    quadro:'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 7v7M12 7v4M16 7v10"/>'},
+  CURTO:{ind:'Indulto',fd:'Ficha',teses:'Jurisprudências',quadro:'Quadro do Usuário'},
   // rodapé: dica da aba aberta
   DICA:{geral:'Clique na linha para abrir a ficha do assistido · "Histórico" compara os RSPE importados',
     prog:'Clique no título da coluna para ordenar · a caixa em "Pedido" marca o pedido feito',
@@ -1096,7 +1224,8 @@ const ui = {
     ext:'"Linha do tempo" mostra períodos, fugas e término',
     fd:'Clique no assistido para ver trabalho, estudo e remição a atestar',
     aud:'Cada alerta traz a fundamentação para copiar · "Dar baixa" tira o ponto da contagem',
-    teses:'Pesquise por palavras e filtre por tema · "Copiar ementa" leva a referência'},
+    teses:'Pesquise por palavras e filtre por tema · "Copiar ementa" leva a referência',
+    quadro:'Arraste os cartões entre as colunas · clique no cartão para editar · o ícone de quadro em cada linha envia o assistido para cá'},
   // RSPE desatualizado: emitido há mais de 60 dias (etiqueta no nome e filtro na faixa de resumo)
   RSPE_VELHO:60, filtroVelho:false,
   idadeRSPE(r){ const g=(r.geracao||'').split('/').map(Number), h=(this.dados.hoje||'').split('/').map(Number); if(g.length!==3||h.length!==3||!g[2]||!h[2]) return null;
@@ -1139,6 +1268,143 @@ const ui = {
   tesBusca(v){ this.tesQ=v; this.tesN=60; this.tesLista(); },
   tesCitacao(x){ return `(TJMS, ${x.classe} n. ${x.proc}${x.relator?', Rel. '+(/^(des|ju[ií]z)/i.test(x.relator)?'':'Des. ')+x.relator:''}${x.orgao?', '+x.orgao:''}${x.julg?', j. '+x.julg:''}${x.pub?', publ. '+x.pub:''})`; },
   tesCopiar(i,modo){ const x=this._teses.itens[i]; const t=modo==='cit'?this.tesCitacao(x):(x.ementa.trim()+'\n'+this.tesCitacao(x)); this.copiarClip(this.clip(t)); },
+  // ---- aba Indulto: todos os decretos (2000 em diante), a partir do início do cumprimento informado no RSPE ----
+  DEC_COR:{cabe:'#12B76A',nao:'#E4E7EC',imp:'#F04438',conc:'#2E90FA',indef:'#7A5AF8',ver:'#F79009'},
+  DEC_ROT:{cabe:'Cabe',nao:'Não cabe',imp:'Impeditivo',conc:'Concedido',indef:'Indeferido',ver:'A verificar',fora:'Execução posterior'},
+  decSel:null, decAberto:null, decBen:'todos', decMostrar:'todos',
+  decLegenda(){ return ['cabe','nao','imp','conc','indef','ver'].map(k=>`<span class="leg"><i style="background:${this.DEC_COR[k]};border-radius:2px"></i>${this.DEC_ROT[k]}</span>`).join(''); },
+  decRot(x){ return x.tipo==='dia_das_maes'?'Dia das Mães '+x.ano:'Decreto de '+x.ano; },
+  decCurto(x){ return (x.tipo==='dia_das_maes'?'M':'')+String(x.ano).slice(2); },
+  decDe(r){ return ((r.dec||{}).decretos||[]); },
+  decLista(rs){ const m=new Map(); rs.forEach(r=>this.decDe(r).forEach(x=>{ if(!m.has(x.id)) m.set(x.id,x); }));
+    return [...m.values()].sort((a,b)=>this.tlD(b.ref)-this.tlD(a.ref)); },
+  decBenOk(x){ return this.decBen==='todos' || !x.beneficio || (this.decBen==='indulto'?x.beneficio==='Indulto':x.beneficio==='Comutação'); },
+  decMapa(r){ const L=this.decDe(r).filter(x=>x.s!=='fora'&&x.s!=='futuro'&&this.decBenOk(x)); if(!L.length) return '<span class="muted" style="font-size:12px">nenhum decreto desde o início do cumprimento</span>';
+    return `<span class="mx">${L.map(x=>`<i class="${x.s}" title="${esc(this.decRot(x))} (${esc(x.numero)}): ${esc(this.DEC_ROT[x.s]||x.s)}${x.mot?' - '+esc(x.mot):''}" style="background:${this.DEC_COR[x.s]||'#E4E7EC'}">${this.decCurto(x)}</i>`).join('')}</span>`; },
+  decBtn(r){ return `<span class="mini" title="Linha do tempo: crimes, impeditivos, pena cumprida em cada decreto, faltas na janela e resultado" onclick="event.stopPropagation();ui.indTL('${r.id}')">Verificar indulto/comutação</span>`; },
+  decPed(r){ const P=(r.pedidos||{}).ind; return P?`<span class="pck ok" title="Pedido feito" onclick="event.stopPropagation();ui.pedidoAbrir('${r.id}','ind')">✓</span>`:`<span class="pck" title="Marcar pedido feito" onclick="event.stopPropagation();ui.pedidoAbrir('${r.id}','ind')"></span>`; },
+  renderIndulto(rs){ rs=[...rs].sort((a,b)=>(b.fixado?1:0)-(a.fixado?1:0)); const D=this.decLista(this.dados.registros||[]);
+    if(this.decSel && !D.find(x=>x.id===this.decSel)) this.decSel=null;
+    const comDir=rs.filter(r=>this.decDe(r).some(x=>x.s==='cabe')).length;
+    document.getElementById('stats').innerHTML=`<div class="stat verde"><i class="dot"></i><b>${comDir}</b><span>Cabe em algum decreto</span></div><div class="stat cinza"><i class="dot"></i><b>${rs.length-comDir}</b><span>Não cabe em nenhum</span></div><div class="stat azul"><i class="dot"></i><b>${rs.filter(r=>this.decDe(r).some(x=>x.s==='conc')).length}</b><span>Com benefício concedido</span></div><div class="stat pedido"><i class="dot"></i><b>${rs.filter(r=>(r.pedidos||{}).ind).length}</b><span>Feito</span></div>`;
+    const side=`<div class="dc-side"><div class="dc-it geral ${!this.decSel?'on':''}" onclick="ui.decSel=null;ui.render()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg><span>Geral</span></div><div class="dc-h">Decretos</div>${D.map(x=>{ const n=rs.filter(r=>this.decDe(r).some(y=>y.id===x.id&&y.s==='cabe')).length;
+      return `<div class="dc-it ${this.decSel===x.id?'on':''} ${n?'':'vz'}" title="${esc(this.decRot(x))} · Decreto ${esc(x.numero)} · referência ${esc(x.ref)}" onclick="ui.decSel='${x.id}';ui.decAberto=null;ui.render()"><span>${esc(this.decRot(x))}</span><b class="${n?'':'z'}">${n}</b></div>`; }).join('')}</div>`;
+    const selBen=`<select class="dc-sel" onchange="ui.decBen=this.value;ui.render()"><option value="todos" ${this.decBen==='todos'?'selected':''}>Indulto e comutação</option><option value="indulto" ${this.decBen==='indulto'?'selected':''}>Só indulto</option><option value="comutacao" ${this.decBen==='comutacao'?'selected':''}>Só comutação</option></select>`;
+    let main='';
+    if(!this.decSel){
+      const tr=rs.map(r=>{ let h=`<tr class="${this.decAberto===r.id?'exp':''} ${r.fixado?'fix':''}"><td class="first">${this.pinHtml(r)}<span class="nm" title="Ver o encaixe em cada decreto" onclick="event.stopPropagation();ui.decAberto=ui.decAberto==='${r.id}'?null:'${r.id}';ui.render()">${esc(r.nome)}</span></td><td class="nw">${esc(r.proc)}</td><td>${this.decMapa(r)}</td><td class="nw">${this.decBtn(r)}${this.qbtnHtml(r)}</td><td>${this.decPed(r)}</td></tr>`;
+        if(this.decAberto===r.id) h+=`<tr class="sub"><td colspan="5">${this.decEncaixe(r)}</td></tr>`; return h; }).join('');
+      main=`<div class="dc-top"><div class="tt"><b>Geral</b><small>todos os decretos, a partir do início do cumprimento de cada execução · clique no nome para ver o encaixe em cada decreto</small></div><span class="sp"></span>${selBen}</div>
+        <table><thead><tr><th style="width:18%">Nome</th><th class="nw" style="width:1%">Nº da execução</th><th>Decretos desde o início do cumprimento</th><th style="width:1%"></th><th style="width:1%">Pedido</th></tr></thead><tbody>${tr}</tbody></table>`;
+    } else {
+      const x0=D.find(x=>x.id===this.decSel); const i=D.indexOf(x0); const ORD=['cabe','ver','conc','indef','nao','imp','fora'];
+      const L=rs.map(r=>({r,d:this.decDe(r).find(y=>y.id===x0.id)||{s:'fora',mot:'execução posterior ao decreto'}})).filter(x=>this.decMostrar==='todos'||x.d.s==='cabe').filter(x=>this.decBenOk(x.d))
+        .sort((a,b)=>(b.r.fixado?1:0)-(a.r.fixado?1:0)||ORD.indexOf(a.d.s)-ORD.indexOf(b.d.s));
+      const c=s_=>rs.filter(r=>((this.decDe(r).find(y=>y.id===x0.id)||{s:'fora'}).s)===s_).length;
+      main=`<div class="dc-top"><div class="dc-nav"><button title="Decreto anterior" onclick="ui.decSel='${(D[i+1]||x0).id}';ui.render()">‹</button><button title="Decreto seguinte" onclick="ui.decSel='${(D[i-1]||x0).id}';ui.render()">›</button></div>
+          <div class="tt"><b>${esc(this.decRot(x0))}</b><small>Decreto ${esc(x0.numero)} · data de referência ${esc(x0.ref)}</small></div>
+          <span class="dc-ch c">${c('cabe')} cabem</span><span class="dc-ch n">${c('nao')+c('imp')} não cabem</span>${c('conc')+c('indef')?`<span class="dc-ch k">${c('conc')+c('indef')} já decididos</span>`:''}<span class="dc-ch f">${c('fora')} execução posterior</span><span class="sp"></span>
+          ${selBen}<select class="dc-sel" onchange="ui.decMostrar=this.value;ui.render()"><option value="todos" ${this.decMostrar==='todos'?'selected':''}>Todos</option><option value="cabe" ${this.decMostrar==='cabe'?'selected':''}>Só quem cabe</option></select></div>
+        <table><thead><tr><th style="width:18%">Nome</th><th class="nw" style="width:1%">Nº da execução</th><th>Resultado</th><th>Benefício</th><th>Motivo</th><th style="width:1%"></th><th style="width:1%">Pedido</th></tr></thead><tbody>${L.map(({r,d})=>`<tr class="${r.fixado?'fix':''}" style="${d.s==='fora'?'opacity:.5':''}" onclick="ui.abrir('${r.id}')"><td class="first">${this.pinHtml(r)}${esc(r.nome)}</td><td class="nw">${esc(r.proc)}</td><td><span class="dres ${d.s}">${this.DEC_ROT[d.s]||d.s}</span></td><td>${esc(this.decBenTxt(d))}</td><td class="muted" style="font-size:12px">${esc(d.mot||'')}${d.nota?`<div style="font-size:11.5px">${esc(d.nota)}</div>`:''}</td><td class="nw">${d.s==='fora'?'':this.decBtn(r)+this.qbtnHtml(r)}</td><td>${this.decPed(r)}</td></tr>`).join('')}</tbody></table>`;
+    }
+    document.getElementById('card').innerHTML=`<div class="dc">${side}<div class="dc-main">${main}</div></div>`; },
+  decBenTxt(d){ if(!['cabe','ver','conc','indef'].includes(d.s)) return '—'; return (d.beneficio||'')+(d.dispositivo?' · '+d.dispositivo:'')+(d.beneficio==='Comutação'&&d.reducao?' · '+d.reducao+' do remanescente':''); },
+  decEncaixe(r){ const L=this.decDe(r).filter(x=>x.s!=='fora'&&x.s!=='futuro').slice().reverse(); const ini=(r.dec||{}).inicio||'—';
+    const lin=L.map(x=>{ const de=x.detalhe||{}; const ok=x.exigido&&de.cumprido>=x.exigido; const p=x.exigido?Math.min(1,(de.cumprido||0)/(x.exigido*1.5)):0;
+      return `<tr><td><b>${esc(this.decRot(x))}</b><div class="muted" style="font-size:11px">Dec. ${esc(x.numero)}</div></td><td><span class="dres ${x.s}">${this.DEC_ROT[x.s]||x.s}</span></td><td>${esc(this.decBenTxt(x))}</td>
+        <td>${x.exigido&&!['conc','indef','imp'].includes(x.s)?`<div class="dreq" title="Cumprido ${this.tlAmd(de.cumprido)} · exigido ${this.tlAmd(x.exigido)}"><span class="tr"><i style="width:${100*p}%;background:${ok?'#12B76A':'#98A2B3'}"></i><u></u></span><small>${ok?'atingido':'não atingido'}${x.fracao?' ('+esc(x.fracao)+')':''}</small></div>`:'<span class="muted">—</span>'}</td>
+        <td class="muted" style="font-size:12px">${esc(x.mot||'')}${x.nota?`<div>${esc(x.nota)}</div>`:''}${x.ressalva?`<div style="color:var(--a-tx)">${esc(x.ressalva)}</div>`:''}</td></tr>`; }).join('');
+    return `<div class="enc"><div class="enc-h"><b>Encaixe nos decretos · ${esc(r.nome)}</b><span>início do cumprimento ${esc(ini)} · ${pl(L.length,'decreto analisado','decretos analisados')} · ${L.filter(x=>x.s==='cabe').length} cabem · ${L.filter(x=>x.s==='conc').length} concedidos</span></div>
+      ${L.length?`<table><thead><tr><th style="width:150px">Decreto</th><th style="width:120px">Resultado</th><th style="width:200px">Benefício</th><th style="width:220px">Requisito de tempo na data de referência</th><th>Motivo</th></tr></thead><tbody>${lin}</tbody></table>`:'<span class="muted">Nenhum decreto desde o início do cumprimento.</span>'}</div>`; },
+  // linha do tempo: seletor com os decretos do assistido; os de 2022, 2024 e 2025 têm a linha do tempo detalhada, os demais o quadro de requisitos
+  tlvSeletor(){ const d=this._tlv; const r=(this.dados.registros||[]).find(x=>x.id===this._tlvId); if(!d||!r) return '';
+    const L=this.decDe(r).filter(x=>x.s!=='fora'&&x.s!=='futuro').slice().reverse(); const atual=this._tlvGen||this._tlvDec;
+    const ix=L.findIndex(x=>x.id===atual); const ant=L[ix+1], seg=L[ix-1];
+    return `<div style="display:flex;align-items:center;gap:6px"><button class="btn" style="padding:6px 10px" ${ant?`onclick="ui.tlvIr('${ant.id}')"`:'disabled'}>‹</button>
+      <select class="dc-sel" style="font-weight:700" onchange="ui.tlvIr(this.value)">${L.map(x=>`<option value="${x.id}" ${x.id===atual?'selected':''}>${esc(this.decRot(x))} · ${esc(this.DEC_ROT[x.s]||x.s)}</option>`).join('')}</select>
+      <button class="btn" style="padding:6px 10px" ${seg?`onclick="ui.tlvIr('${seg.id}')"`:'disabled'}>›</button><span class="muted" style="font-size:12px;margin-left:4px">${pl(L.length,'decreto','decretos')} desde o início do cumprimento (${esc((r.dec||{}).inicio||'—')})</span></div>`; },
+  tlvIr(id){ const temDet=((this._tlv||{}).decretos||[]).some(x=>x.id===id); if(temDet){ this._tlvGen=null; this.tlvSel(id); } else { this._tlvGen=id; this.renderTLV(); } },
+  tlvGeral(){ const r=(this.dados.registros||[]).find(x=>x.id===this._tlvId); const x=this.decDe(r||{}).find(y=>y.id===this._tlvGen); if(!x) return '';
+    const de=x.detalhe||{}; const lin=(k,v)=>`<span>${k}</span><b style="font-weight:600">${v}</b>`;
+    return `<div class="tlv-gen"><h3>${esc(this.decRot(x))} · Decreto ${esc(x.numero)} <span class="dres ${x.s}" style="vertical-align:2px">${this.DEC_ROT[x.s]||x.s}</span></h3><div class="muted" style="font-size:12.5px">data de referência ${esc(x.ref)}</div>
+      <div class="kv">${lin('Resultado', esc(x.mot||'—'))}${x.nota?lin('Concurso com crime impeditivo', esc(x.nota)):''}${this.decBenTxt(x)!=='—'?lin('Benefício', esc(this.decBenTxt(x))):''}
+      ${de.crimes?lin('Crimes na soma', esc(de.crimes.join('; '))):''}${de.pena?lin('Pena somada', this.tlAmd(de.pena)):''}${de.cumprido!=null?lin('Cumprida na data de referência', this.tlAmd(de.cumprido)):''}
+      ${x.exigido?lin('Exigido'+(x.fracao?' ('+esc(x.fracao)+')':''), this.tlAmd(x.exigido)):''}${de.reincidente!=null?lin('Reincidente', de.reincidente?'sim':'não'):''}${de.vga!=null?lin('Violência ou grave ameaça', de.vga?'sim':'não'):''}${x.regime?lin('Regime na data', esc(x.regime)):''}${x.ressalva?lin('Atenção', esc(x.ressalva)):''}</div></div>`; },
+  // ---- assistidos fixados: ficam no topo de todas as abas, com a faixa para achá-los com um clique ----
+  PIN_SVG:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M14.5 2.5 21.5 9.5l-2.1 2.1-1.4-1.4-3.6 3.6.7 4.2-2.1 2.1-3.9-3.9-4.6 4.6-1.4-1.4 4.6-4.6-3.9-3.9 2.1-2.1 4.2.7 3.6-3.6-1.4-1.4z"/></svg>',
+  pinHtml(r){ return `<span class="pin ${r.fixado?'on':''}" title="${r.fixado?'Fixado: aparece no topo e na faixa "Fixados" de todas as abas · clique para soltar':'Fixar este assistido: fica no topo e na faixa "Fixados" de todas as abas, sem precisar buscar de novo'}" onclick="event.stopPropagation();ui.fixar('${r.id}',${r.fixado?0:1})">${this.PIN_SVG}</span>`; },
+  async fixar(id,on){ await api('fixar', id, !!on); if(this.sel===id && document.getElementById('drawer').classList.contains('on')) this.abrir(id); },
+  renderFixados(){ const el=document.getElementById('fixbar'); const F=(this.dados.registros||[]).filter(r=>r.fixado); el.classList.toggle('on',!!F.length);
+    el.innerHTML=F.length?`<span>${this.PIN_SVG.replace('<svg','<svg style="width:13px;height:13px;color:#F79009;vertical-align:-2px"')} Fixados:</span>`+F.map(r=>`<span class="fx ${this.filtro===r.proc.toLowerCase()?'on':''}" title="Mostrar só este assistido (clique de novo para mostrar todos)" onclick="ui.soEste('${esc(r.proc)}')">${esc(r.nome)}<b title="Soltar" onclick="event.stopPropagation();ui.fixar('${r.id}',0)">✕</b></span>`).join(''):''; },
+  soEste(proc){ const q=document.getElementById('q'); q.value = this.filtro===proc.toLowerCase() ? '' : proc; this.filtrar(); },
+  // ---- Quadro do Usuário (estilo Trello): colunas, cartões com assistido, observação, prazo e etiqueta ----
+  _qd:null,
+  QD_ET:{urgente:['Urgente','#D92D20'],atencao:['Atenção','#F79009'],acompanhar:['Acompanhar','#2E90FA'],pedido:['Pedido feito','#12B76A'],outro:['Outro','#7A5AF8']},
+  qbtnHtml(r){ return `<span class="qbtn" title="Enviar ao Quadro do Usuário" onclick="event.stopPropagation();ui.qdNovo('${r.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 7v7M12 7v4M16 7v10"/></svg></span>`; },
+  async qdCarregar(){ const q=await API().quadro(); if(q&&!q.erro){ this._qd=q; } return this._qd; },
+  qdPrazo(p){ const d=this.tlD(p||''); if(!p||isNaN(d)) return null; const h=this.tlHoje(); h.setHours(0,0,0,0); return Math.round((d-h)/864e5); },
+  qdAlertas(){ const Q=this._qd; if(!Q) return 0; const fim=(Q.colunas.slice(-1)[0]||{}).id; return Q.cartoes.filter(c=>c.coluna!==fim&&c.prazo&&this.qdPrazo(c.prazo)!==null&&this.qdPrazo(c.prazo)<=0).length; },
+  async renderQuadro(){ if(!this._qd) await this.qdCarregar(); const Q=this._qd||{colunas:[],cartoes:[]}; const R=this.dados.registros||[]; const q=this.filtro;
+    document.getElementById('stats').innerHTML=`<div class="qd-top"><span class="muted" style="font-size:12.5px">${pl(Q.cartoes.length,'cartão','cartões')}${this.qdAlertas()?` · <b style="color:#B42318">${pl(this.qdAlertas(),'prazo vencido ou para hoje','prazos vencidos ou para hoje')}</b>`:''}</span><span class="sp"></span><span class="jz-b" onclick="ui.qdColuna()">+ Coluna</span><span class="jz-b pri" onclick="ui.qdNovo()">+ Cartão</span></div>`;
+    const fim=(Q.colunas.slice(-1)[0]||{}).id;
+    const card=c=>{ const r=R.find(x=>x.id===c.processo); const d=this.qdPrazo(c.prazo); const et=this.QD_ET[c.etiqueta];
+      const txt=[c.titulo,c.obs,r?r.nome+' '+r.proc:''].join(' ').toLowerCase(); if(q && !txt.includes(q)) return '';
+      const pz=c.prazo?`<span class="qd-pz ${c.coluna!==fim&&d!==null?(d<0?'venc':d<=2?'prox':''):''}" title="Prazo">⏰ ${esc(c.prazo)}${c.coluna!==fim&&d!==null?(d<0?' · vencido':d===0?' · hoje':d===1?' · amanhã':''):''}</span>`:'';
+      return `<div class="qd-card" draggable="true" data-id="${c.id}" style="--et:${et?et[1]:'#EAECF0'}" ondragstart="ui.qdDrag(event,'${c.id}')" ondragend="this.classList.remove('arr')" onclick="ui.qdEditar('${c.id}')">
+        <div class="t">${esc(c.titulo||(r?r.nome:'Sem título'))}</div>${r?`<div class="a" onclick="event.stopPropagation();ui.abrir('${r.id}')">${esc(r.nome)} <small>· ${esc(r.proc)}</small></div>`:''}
+        ${c.obs?`<div class="o">${esc(c.obs)}</div>`:''}${r?this.qdCopias(r):''}<div class="f">${et?`<span class="qd-et" style="background:${et[1]}">${et[0]}</span>`:''}${pz}</div></div>`; };
+    document.getElementById('card').innerHTML=`<div class="qd-board">${Q.colunas.map(col=>{ const cs=Q.cartoes.filter(c=>c.coluna===col.id).sort((a,b)=>a.ordem-b.ordem);
+      return `<div class="qd-col" data-col="${col.id}" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="ui.qdDrop(event,'${col.id}')">
+        <div class="qd-ch"><b title="Clique duas vezes para renomear" ondblclick="ui.qdColuna('${col.id}','${esc(col.nome)}')">${esc(col.nome)}</b><span>${cs.length}</span></div>
+        <div class="qd-list">${cs.map(card).join('')}</div><div class="qd-add" onclick="ui.qdNovo(null,'${col.id}')">+ Adicionar cartão</div></div>`; }).join('')}</div>`; },
+  qdDrag(ev,id){ ev.dataTransfer.setData('text/plain',id); ev.target.classList.add('arr'); },
+  async qdDrop(ev,col){ ev.preventDefault(); const el=ev.currentTarget; el.classList.remove('drag'); const id=ev.dataTransfer.getData('text/plain'); if(!id) return;
+    // posição: antes do cartão sob o mouse, ou no fim da coluna
+    const cards=[...el.querySelectorAll('.qd-card')].filter(x=>x.dataset.id!==id); const Q=this._qd; const ord=i=>(Q.cartoes.find(c=>c.id===cards[i].dataset.id)||{}).ordem;
+    let k=cards.findIndex(x=>{ const b=x.getBoundingClientRect(); return ev.clientY<b.top+b.height/2; }); let o;
+    if(!cards.length) o=0; else if(k<0) o=ord(cards.length-1)+1; else if(k===0) o=ord(0)-1; else o=(ord(k-1)+ord(k))/2;
+    const c=Q.cartoes.find(x=>x.id===id); if(c){ c.coluna=col; c.ordem=o; this.renderQuadro(); }
+    const q=await API().quadro_mover(id,col,o); if(q&&!q.erro){ this._qd=q; this.render(); } },
+  async qdNovo(id,col){ if(!this._qd) await this.qdCarregar(); const r=id?(this.dados.registros||[]).find(x=>x.id===id):null;
+    const sug=r? ({prog:'Progressão: '+(r.prog_sit||r.prog||''),liv:'Livramento: '+(r.liv_sit||r.liv||''),ind:'Indulto/comutação',presc:'Prescrição: '+(r.presc_ppe||''),ext:'Extinção: '+(r.ext_sit||''),aud:'Auditoria: '+(r.aud_resumo||''),fd:'Ficha disciplinar: '+(r.fd_sit||'')})[this.aba]||'' : '';
+    this.qdForm({id:'',processo:r?r.id:'',titulo:sug.replace(/:\s*$/,''),obs:'',prazo:'',etiqueta:'acompanhar',coluna:col||'fazer'}); },
+  qdCopias(r){ return `<div class="qd-cp" onclick="event.stopPropagation()"><span title="Copiar o nome do assistido" onclick="ui.copiar(ui._clips[${this.clip(r.nome||'')}])">⧉ Nome</span><span title="Copiar o número do processo de execução" onclick="ui.copiar(ui._clips[${this.clip(r.proc||'')}])">⧉ Nº do processo</span></div>`; },
+  // ficha do assistido: os cartões dele no quadro e a criação de um cartão novo ali mesmo, com a observação
+  fichaQuadro(r){ const Q=this._qd; if(!Q){ this.qdCarregar().then(()=>{ const el=document.getElementById('fq_'+r.id.replace(/\W/g,'')); if(el) el.outerHTML=this.fichaQuadro(r); }); }
+    const cs=Q?Q.cartoes.filter(c=>c.processo===r.id):[]; const coln=id=>((Q&&Q.colunas.find(x=>x.id===id))||{}).nome||id;
+    const sug=({prog:'Progressão: '+(r.prog_sit||r.prog||''),liv:'Livramento: '+(r.liv_sit||r.liv||''),ind:'Indulto/comutação',presc:'Prescrição: '+(r.presc_ppe||''),ext:'Extinção: '+(r.ext_sit||''),aud:'Auditoria: '+(r.aud_resumo||''),fd:'Ficha disciplinar: '+(r.fd_sit||'')})[this.aba]||'';
+    const lista=cs.map(c=>{ const et=this.QD_ET[c.etiqueta]; return `<div class="fq-c" style="--et:${et?et[1]:'#EAECF0'}" onclick="ui.qdEditar('${c.id}')" title="Abrir o cartão"><div class="tx"><b>${esc(c.titulo||'Sem título')}</b>${c.obs?`<div>${esc(c.obs)}</div>`:''}</div><small>${esc(coln(c.coluna))}${c.prazo?' · ⏰ '+esc(c.prazo):''}</small></div>`; }).join('');
+    const cols=((Q||{}).colunas||[{id:'fazer',nome:'A fazer'}]);
+    return `<div class="sec" id="fq_${r.id.replace(/\W/g,'')}"><h3>Quadro do Usuário</h3><div class="fq">
+      <div class="fq-h"><b>${cs.length?pl(cs.length,'cartão','cartões')+' deste assistido':'Nenhum cartão deste assistido'}</b><span class="sp"></span>${this.qdCopias(r).replace('class="qd-cp"','class="qd-cp" style="margin:0"')}</div>${lista}
+      <div class="fq-n"><input id="fq_tit" value="${esc(sug.replace(/:\s*$/,''))}" placeholder="Título do cartão (ex.: pedir progressão, cobrar atestado)">
+        <select id="fq_et">${Object.entries(this.QD_ET).map(([k,v])=>`<option value="${k}" ${k==='acompanhar'?'selected':''}>${v[0]}</option>`).join('')}</select>
+        <input id="fq_pz" placeholder="Prazo dd/mm/aaaa">
+        <textarea id="fq_obs" placeholder="Observação (o que acompanhar, o que falta, alerta…)"></textarea></div>
+      <div class="fq-a"><select id="fq_col" style="padding:7px 10px;border:1px solid var(--line2);border-radius:9px;font:inherit;background:#fff">${cols.map(x=>`<option value="${x.id}">${esc(x.nome)}</option>`).join('')}</select><span class="sp"></span><button class="btn pri" onclick="ui.fichaQdCriar('${r.id}')">Enviar ao quadro</button></div></div></div>`; },
+  async fichaQdCriar(id){ const v=k=>(document.getElementById(k)||{}).value||''; const r=(this.dados.registros||[]).find(x=>x.id===id);
+    const c={id:'',processo:id,titulo:v('fq_tit').trim()||(r?r.nome:''),obs:v('fq_obs').trim(),prazo:v('fq_pz').trim(),etiqueta:v('fq_et')||'acompanhar',coluna:v('fq_col')||'fazer',ordem:null};
+    const q=await API().quadro_gravar(c); if(!q||q.erro){ this.toast((q&&q.erro)||'Falha ao gravar.'); return; } this._qd=q; this.toast('Cartão criado no Quadro do Usuário.');
+    this.render(); this.qdRefFicha(); },
+  qdRefFicha(){ const r=(this.dados.registros||[]).find(x=>x.id===this.sel); const el=r&&document.getElementById('fq_'+r.id.replace(/\W/g,'')); if(el) el.outerHTML=this.fichaQuadro(r); },
+  async qdEditar(id){ if(!this._qd) await this.qdCarregar(); const c=this._qd.cartoes.find(x=>x.id===id); if(c) this.qdForm(Object.assign({},c)); },
+  qdForm(c){ this._qdc=c; const R=(this.dados.registros||[]).slice().sort((a,b)=>(a.nome||'').localeCompare(b.nome||''));
+    document.getElementById('modal').innerHTML=`<div class="box" style="width:620px"><h2>${c.id?'Editar cartão':'Novo cartão no Quadro do Usuário'}</h2><p>Processos para acompanhar de perto: observações, alertas com prazo e etiqueta.</p>
+      <div class="qd-form"><label>Assistido</label><select id="qd_proc"><option value="">— sem assistido (cartão livre) —</option>${R.map(r=>`<option value="${esc(r.id)}" ${r.id===c.processo?'selected':''}>${esc(r.nome)} · ${esc(r.proc)}</option>`).join('')}</select>
+        ${c.processo&&R.find(r=>r.id===c.processo)?`<span></span>${this.qdCopias(R.find(r=>r.id===c.processo)).replace('class="qd-cp"','class="qd-cp" style="margin:-4px 0 0"')}`:''}
+        <label>Título</label><input id="qd_tit" value="${esc(c.titulo||'')}" placeholder="ex.: pedir progressão, cobrar atestado, acompanhar decisão do indulto">
+        <label>Observações</label><textarea id="qd_obs" placeholder="anotações, movimentações, o que falta">${esc(c.obs||'')}</textarea>
+        <label>Prazo / alerta</label><input id="qd_pz" value="${esc(c.prazo||'')}" placeholder="dd/mm/aaaa (o cartão fica em destaque no dia e depois)">
+        <label>Etiqueta</label><div class="qd-ets">${Object.entries(this.QD_ET).map(([k,v])=>`<span class="${c.etiqueta===k?'on':''}" style="background:${v[1]}" onclick="ui._qdc.etiqueta='${k}';this.parentElement.querySelectorAll('span').forEach(x=>x.classList.remove('on'));this.classList.add('on')">${v[0]}</span>`).join('')}</div>
+        <label>Coluna</label><select id="qd_col">${((this._qd||{}).colunas||[{id:'fazer',nome:'A fazer'}]).map(x=>`<option value="${x.id}" ${x.id===c.coluna?'selected':''}>${esc(x.nome)}</option>`).join('')}</select></div>
+      <div class="acts" style="justify-content:space-between">${c.id?`<button class="btn" style="color:var(--r-tx)" onclick="ui.qdExcluir('${c.id}')">Excluir</button>`:'<span></span>'}<span style="display:flex;gap:8px"><button class="btn" onclick="ui.fecharModal()">Cancelar</button><button class="btn pri" onclick="ui.qdSalvar()">Gravar</button></span></div></div>`;
+    document.getElementById('modal').classList.add('on'); setTimeout(()=>{ const t=document.getElementById(c.processo&&!c.id?'qd_obs':'qd_tit'); if(t) t.focus(); },50); },
+  async qdSalvar(){ const c=this._qdc; c.processo=document.getElementById('qd_proc').value; c.titulo=document.getElementById('qd_tit').value; c.obs=document.getElementById('qd_obs').value;
+    c.prazo=document.getElementById('qd_pz').value.trim(); const col=document.getElementById('qd_col').value; if(col!==c.coluna){ c.coluna=col; c.ordem=null; }
+    const q=await API().quadro_gravar(c); if(!q||q.erro){ this.toast((q&&q.erro)||'Falha ao gravar.'); return; } this._qd=q; this.fecharModal(); this.toast(q.msg||'Gravado.'); this.render(); this.qdRefFicha(); },
+  async qdExcluir(id){ if(!confirm('Excluir este cartão?')) return; const q=await API().quadro_excluir(id); if(q&&!q.erro){ this._qd=q; this.fecharModal(); this.render(); this.qdRefFicha(); this.toast(q.msg); } },
+  async qdColuna(id,nome){ const n=prompt(id?'Novo nome da coluna (vazio exclui a coluna; os cartões vão para a primeira):':'Nome da nova coluna:', nome||''); if(n===null) return;
+    const q=await API().quadro_coluna(id||('c'+Date.now().toString(36)), n); if(q&&!q.erro){ this._qd=q; this.render(); } },
   // Jurisprudências: temas à esquerda (clique filtra); cartão com temas, resultado, tese, dados do acórdão, palavras-chave da ementa
   // e a ementa em 3 linhas
   TES_COR:['#067647','#1D4ED8','#B54708','#7A5AF8','#C11574','#0E7090','#B42318','#4E5BA6','#667085'],
@@ -1253,7 +1519,7 @@ const ui = {
     const calc=dets+cms+prs;
     document.getElementById('drawer').innerHTML=`
       <div class="dh"><div><h2><span class="copy" onclick="ui.copiar(ui._clips[${this.clip(r.nome||'')}])" title="Clique para copiar o nome">${esc(r.nome)} ⧉</span></h2><div class="sub"><span class="copy" onclick="ui.copiar('${esc(r.proc)}')" title="Clique para copiar">${esc(r.proc)} ⧉</span> · ${esc(r.regime||'regime não informado')}</div>
-        <div class="sub">RSPE de ${esc(r.geracao)} · <span class="mini" onclick="ui.copiarClip(${ui.clip(ui.txtFicha(r))})">Copiar resumo</span> <span class="mini pre" onclick="ui.abrirSAP('${r.id}')">Registro para o SAP</span></div></div>
+        <div class="sub">RSPE de ${esc(r.geracao)} · <span class="mini" onclick="ui.copiarClip(${ui.clip(ui.txtFicha(r))})">Copiar resumo</span> <span class="mini pre" onclick="ui.abrirSAP('${r.id}')">Registro para o SAP</span> <span class="mini" onclick="ui.qdNovo('${r.id}')">Enviar ao Quadro do Usuário</span> <span class="mini" onclick="ui.fixar('${r.id}',${r.fixado?0:1})">${r.fixado?'Soltar':'Fixar no topo'}</span></div></div>
         <button class="close" onclick="ui.fecharDrawer()">✕</button></div>
       <div class="db">
         ${r.motivo_exec?`<div class="sec"><div class="aviso-exec">${esc(r.motivo_exec)}</div></div>`:''}
@@ -1438,12 +1704,13 @@ const ui = {
     await api('presc_ajuste', rid, L.chave_ajuste, dados); this.toast(dados?'Dados gravados: prescrição recalculada.':'Dados importados restaurados.'); },
   // ---- linha do tempo de indulto e comutação: uma linha por assistido; a figura é a memória de cálculo ----
   async indTL(id){ this.toast('Montando a linha do tempo…'); const d=await api('indulto_linha', id); if(!d||d.erro) return; this._tlvModo='ind';
-    this._tlv=d; this._tlvDec=(this.indDec!=='todos'&&(d.decretos||[]).some(x=>x.id===this.indDec))?this.indDec:(d.ultimo_decreto||((d.decretos||[]).slice(-1)[0]||{}).id); this._tlvDets=[]; this.renderTLV();
+    this._tlv=d; this._tlvId=id; const sel=this.aba==='ind'?this.decSel:null; this._tlvGen=(sel&&!(d.decretos||[]).some(x=>x.id===sel))?sel:null;
+    this._tlvDec=(sel&&(d.decretos||[]).some(x=>x.id===sel))?sel:(this.indDec!=='todos'&&(d.decretos||[]).some(x=>x.id===this.indDec))?this.indDec:(d.ultimo_decreto||((d.decretos||[]).slice(-1)[0]||{}).id); this._tlvDets=[]; this.renderTLV();
     document.getElementById('tlv').classList.add('on'); },
   tlvF(d){ return d?`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`:''; },
   tlvLarg(t,px){ return String(t).length*px*0.58; },
   tlvCabe(opcoes,larg,px){ return opcoes.find(t=>t&&this.tlvLarg(t,px)<=larg)||''; },
-  fecharTLV(){ document.getElementById('tlv').classList.remove('on'); this._tlvModo=''; },
+  fecharTLV(){ document.getElementById('tlv').classList.remove('on'); this._tlvModo=''; this._tlvGen=null; },
   // ---------- linha do tempo da Extinção: o que já foi cumprido, as interrupções e o que falta até o término ----------
   async extTL(id){ this.toast('Montando a linha do tempo…'); const d=await api('indulto_linha', id); if(!d||d.erro) return;
     this._ext={d, m:(this.dados.registros||[]).find(x=>x.id===id)||{}}; this._tlvModo='ext'; this.renderExtTL();
@@ -1492,7 +1759,9 @@ const ui = {
     el.innerHTML=`<span class="x" onclick="document.getElementById('tlvDet').classList.remove('on')">✕</span><h4>Como cheguei aqui? · ${esc(x.titulo)}</h4><dl>${L.map(z=>`<dt>${z[0]}</dt><dd${z[0]==='Cálculo'?' class="calc"':''}>${penaExt(esc(z[1]))}</dd>`).join('')||'<dd class="muted">Sem dado adicional.</dd>'}</dl>`;
     el.classList.add('on'); },
   TLV_FX:{cumprimento:{f:'#17B26A',r:'Cumprimento (conta)'}, livramento:{f:'#84CAFF',r:'Livramento - período de prova (conta)'}, detracao:{f:'url(#tvDet)',r:'Prisão provisória / detração (conta, separada)'}, fuga:{f:'url(#tvFuga)',r:'Fuga / evasão (não conta)'}, liberdade:{f:'#EEF0F3',r:'Fora do cumprimento'}, nao_comprovado:{f:'url(#tvDup)',r:'Período não comprovado (não somado)'}},
-  renderTLV(){ const d=this._tlv; if(!d) return; this._tlvDets=[]; const D=(d.decretos||[]).find(x=>x.id===this._tlvDec)||{}; const cor={}; (d.crimes||[]).forEach(c=>cor[c.id]=c.cor);
+  renderTLV(){ this.renderTLV0(); const el=document.querySelector('#tlv .tlv-dec'); if(el && this._tlvId && this._tlvModo==='ind') el.innerHTML=this.tlvSeletor();
+    if(this._tlvGen && this._tlvModo==='ind'){ const b=document.querySelector('#tlv .tlv-body'); if(b) b.innerHTML=this.tlvGeral(); } },
+  renderTLV0(){ const d=this._tlv; if(!d) return; this._tlvDets=[]; const D=(d.decretos||[]).find(x=>x.id===this._tlvDec)||{}; const cor={}; (d.crimes||[]).forEach(c=>cor[c.id]=c.cor);
     const B=d.barra||{}; const cu=B.cumprido||{}; const ct=B.cumprido_txt||{};
     const icSelo={IMPEDITIVO:'✖ IMPEDITIVO',NAO_IMPEDITIVO:'✔ NÃO IMPEDITIVO',A_VERIFICAR:'⚠ A VERIFICAR',FORA:'— NÃO ALCANÇADO'};
     // 0. seletor de decreto e separação dos cálculos
@@ -1533,7 +1802,7 @@ const ui = {
     const blocos=[]; conta.forEach(z=>{ const u=blocos[blocos.length-1]; if(u&&z.a-u.b<=DIA*1.5){ if(z.b>u.b) u.b=z.b; u.fs.push(z.f); } else blocos.push({a:z.a, b:z.b, fs:[z.f]}); });
     const faltas=(d.marcos||[]).filter(m=>m.tipo==='falta');
     const datas=[...blocos.map(b=>b.a), ...faltas.map(m=>dt(m.data)), ...(d.decretos||[]).map(x=>dt(x.referencia))].filter(x=>x&&!isNaN(x));
-    (d.decretos||[]).forEach(x=>{ const p=(x.indulto||{}).projecao; if(p&&p.data) datas.push(dt(p.data)); if(x.imputacao&&x.imputacao.data) datas.push(dt(x.imputacao.data)); });
+    (d.decretos||[]).filter(vis).forEach(x=>{ const p=(x.indulto||{}).projecao; if(p&&p.data) datas.push(dt(p.data)); if(x.imputacao&&x.imputacao.data) datas.push(dt(x.imputacao.data)); });
     const t0=new Date(Math.min(...datas)); t0.setMonth(t0.getMonth()-3); const t1=new Date(Math.max(hoje,...datas)); t1.setMonth(t1.getMonth()+3);
     const TW=Math.max(760, Math.round((window.innerWidth||1400)-28-36-28-6)); const X=t=>40+(dt(t)-t0)/(t1-t0)*(TW-80); const Xd=dd=>40+(dd-t0)/(t1-t0)*(TW-80);
     const yB=112, yA=144; let svg='';
@@ -1554,7 +1823,10 @@ const ui = {
     for(let y=t0.getFullYear()+1;y<=t1.getFullYear();y++){ const xx=Xd(new Date(y,0,1)); svg+=`<line x1="${xx}" y1="${yA-4}" x2="${xx}" y2="${yA+4}" stroke="#344054"/><text x="${xx}" y="${yA+16}" text-anchor="middle" font-size="10.5" font-weight="600" fill="#98A2B3">${y}</text>`; }
     // decretos: linha na data de referência, com o cumprido naquela data
     let decDir=-1e9, decLin=0;
-    (d.decretos||[]).forEach(x=>{ const xx=X(x.referencia); const st=(x.indulto||{}).status||'verificar'; const c={cabe:'#067647',nao:'#B42318',verificar:'#B54708',ainda:'#1D4ED8'}[st]||'#475467';
+    const muitos=(d.decretos||[]).length>4;
+    (d.decretos||[]).forEach(x=>{ const xx=X(x.referencia); const sc=(x.comutacao||{}).status; let st=(x.indulto||{}).status||'verificar'; if(st!=='cabe'&&['cabe','concedido'].includes(sc)) st=sc; else if(st==='prejudicada'&&sc) st=sc; const c={cabe:'#067647',nao:'#B42318',verificar:'#B54708',ainda:'#1D4ED8',concedido:'#1D4ED8'}[st]||'#475467';
+      if(muitos&&x.id!==this._tlvDec){ const yl=x.id.includes('maes')?'M'+x.id.slice(2,4):x.id.slice(2,4); const tt=`Decreto ${x.numero} (${x.referencia}) · Indulto: ${(x.indulto||{}).rotulo||''} · Comutação: ${(x.comutacao||{}).rotulo||''} · clique para abrir`;
+        svg+=`<g class="ck" opacity=".6" onclick="ui.tlvIr('${x.id}')"><title>${esc(tt)}</title><line x1="${xx}" y1="${66}" x2="${xx}" y2="${yA+40}" stroke="${c}" stroke-width="1.2" stroke-dasharray="3 2"/><rect x="${xx-15}" y="48" width="30" height="18" rx="9" fill="${c}"/><text x="${xx}" y="61" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">${esc(yl)}</text></g>`; return; }
       const cum=(x.indulto||{}).cumprido_txt||(x.cumprido_txt||{}).total||'';
       const di=this.tlvReg(`Decreto ${x.numero}`, {evento:`Decreto ${x.numero} · publicação ${x.publicacao||'não cadastrada'} · data de referência ${x.referencia}`, crime:'GERAL', periodo:x.referencia, tratamento:'data de referência', fundamento:x.fonte||'', calculo:cum?`cumprido na data: ${cum}${(x.indulto||{}).fonte?' ('+x.indulto.fonte+')':''}`:'', efeito:`Indulto: ${(x.indulto||{}).rotulo||''} · Comutação: ${(x.comutacao||{}).rotulo||''}`});
       // caixas de decretos próximos se alternam em duas alturas para não se sobreporem
@@ -1583,7 +1855,7 @@ const ui = {
     const decs=(d.decretos||[]).filter(vis).map(x=>{ const i=x.indulto||{}, c=x.comutacao||{}; const oi=(i.checklist||[])[0]||{};
       const gi=i.cumprido_txt?`<div class="dc-g"><span class="k">Pena considerada</span><span class="v">${penaExt(esc(i.pena_considerada_txt||''))}${i.reinc?' · '+esc(i.reinc):''}</span><span></span><span class="k">Cumprido na data</span><span class="v" title="${esc(i.fonte||'')}">${penaExt(esc(i.cumprido_txt))}</span><span></span><span class="k">Remanescente</span><span class="v">${penaExt(esc(i.remanescente_txt||''))}</span><span></span>${i.projecao&&i.projecao.data?`<span class="k">Projeção</span><span class="v">${esc(i.projecao.hipotese)}: exige ${penaExt(esc(i.projecao.exigido_txt))} → ${esc(i.projecao.data)}</span><span></span>`:''}</div>`:'';
       const gc=c.exigido!=null?`<div class="dc-g"><span class="k">Requisito objetivo</span><span class="v">${esc(c.fracao||'')}</span><span></span><span class="k">Exigido</span><span class="v">${penaExt(esc(c.exigido_txt||''))}</span><span></span>${c.reducao?`<span class="k">Redução</span><span class="v">${esc(c.reducao.fracao)} de ${penaExt(esc(this.sqFmt(c.reducao.base_dias)))} = ${penaExt(esc(c.reducao.reducao_txt))}</span><span></span><span class="k">Remanescente</span><span class="v">${penaExt(esc(c.reducao.antes_txt))} → ${penaExt(esc(c.reducao.depois_txt))}</span><span></span>`:''}</div>`:'';
-      return `<div class="dc ${x.id===this._tlvDec?'sel':''}" id="dc_${x.id}"><div class="dc-h"><b>DECRETO Nº ${esc(x.numero)}</b> <span class="mu">· data de referência ${esc(x.referencia)}${x.publicacao?' · publicação '+esc(x.publicacao):''}</span>${x.nota?`<div class="mu" style="margin-top:2px">${esc(x.nota)}</div>`:''}</div>
+      return `<div class="dc ${x.id===this._tlvDec?'sel':''}" id="dc_${x.id}"><div class="dc-h"><b>DECRETO Nº ${esc(x.numero)}</b> <span class="mu">· data de referência ${esc(x.referencia)}${x.publicacao?' · publicação '+esc(x.publicacao):''}</span>${x.nota?`<div class="mu" style="margin-top:2px;text-transform:none;letter-spacing:0;font-weight:400">${esc(x.nota)}</div>`:''}</div>
         <div class="dc-s"><div class="t">Indulto <span class="stt ${i.status}">${esc(i.rotulo||'')}</span>${i.fundamentacao?`<button class="cpf" onclick="ui.copiarClip(${this.clip(i.fundamentacao)})" title="Copia o texto corrido da análise para colar na petição">⧉ Copiar fundamentação</button>`:''}</div>${gi}${lista(i.checklist,'Indulto '+x.numero)}</div>
         <div class="dc-s"><div class="t">Comutação <span class="stt ${c.status}">${esc(c.rotulo||'')}</span>${c.fundamentacao?`<button class="cpf" onclick="ui.copiarClip(${this.clip(c.fundamentacao)})" title="Copia o texto corrido da análise para colar na petição">⧉ Copiar fundamentação</button>`:''}</div>${gc}${lista(c.checklist,'Comutação '+x.numero)}</div></div>`; }).join('');
     // 10. resultado final
@@ -1664,6 +1936,8 @@ window.addEventListener('resize',()=>{ clearTimeout(ui._rz); ui._rz=setTimeout((
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ ui.fecharDrawer(); ui.fecharModal(); ui.fecharTLV(); } });
 document.addEventListener('click',e=>ui.tlClick(e));
 ui.letraAplicar();
+// atalho para a busca de assistido (Ctrl+K ou /): em bases grandes, achar o nome sem rolar a lista
+document.addEventListener('keydown',e=>{ const t=(e.target&&e.target.tagName)||''; if(((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k')||(e.key==='/'&&!/INPUT|TEXTAREA|SELECT/.test(t))){ e.preventDefault(); const q=document.getElementById('q'); q.focus(); q.select(); } });
 window.addEventListener('pywebviewready', ()=>api('listar'));
 if(window.__mockApi) api('listar');
 </script>

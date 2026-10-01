@@ -972,6 +972,8 @@ def e_hediondo(c, ref=None):
     _hp = hediondo_pu(c)
     if _hp[0] is False and _hp[1]:
         return False  # parágrafo fora do rol do p. ú. (ex.: art. 16 da Lei 10.826 sem uso proibido; Lei 15.358, art. 2º, § 2º)
+    if num_lei(c.get("lei")) == "11343" and num_art(c.get("artigo")) == "33" and "§ 4" in (c.get("tipo_penal") or ""):
+        return False  # tráfico privilegiado: não hediondo, ainda que o SEEU traga o selo (STF, HC 118.533; LEP, art. 112, § 5º)
     if "HEDIONDO" in ((c.get("fracao_progressao") or "") + (c.get("fracao_livramento") or "")).upper():
         # selo do SEEU: vale (na data do decreto, só não vale se a lei que tornou o tipo hediondo é posterior à referência - tratado acima)
         lei_, art_ = num_lei(c.get("lei")), num_art(c.get("artigo"))
@@ -2316,6 +2318,10 @@ def analise_decreto_2022(campos, crimes, eventos, incidentes):
         else:
             out["indulto_2022"] = "não atinge: pena máxima em abstrato superior a 5 anos (art. 5º)"
         out["indulto_2022_status"] = "nao"
+    if any(c.get("comando_orcrim") == "S" for c in ativos if c not in posteriores):
+        # art. 7º, § 1º: integrantes de facções criminosas - quem exerce o comando é integrante (o § 2º não afasta o § 1º)
+        out["indulto_2022"], out["indulto_2022_status"] = "VEDADO (art. 7º, § 1º): condenado por exercer comando de organização criminosa", "vedado"
+        linhas.append("✗ Art. 7º, § 1º: o RSPE registra condenação por exercer comando de organização criminosa (integrante de facção)")
     if posteriores and ativos:
         out["indulto_2022"] += " | fato posterior a 25/12/2022 (%s): pena segue em execução" % crimes_curto(posteriores)
     out["indulto_2022_detalhe"] = "Decreto 11.302/2022 - referência 25/12/2022\n" + "\n".join(linhas)
@@ -3094,7 +3100,7 @@ def analise_decretos(campos, crimes, eventos, incidentes, hoje):
             if _sx != "M" and custodia_ref and not any(vga_indulto(c) for c in ativos):
                 _fr10 = F(1, 8) if ano == "2025" else F(1, 6)
                 _pun = [i for i in incidentes if RE_FALTA_PROPRIA.search(_rotulo_incidente(i)) and not _negado(i) and not _pendente(i)
-                        and (_data_fato_falta(i) or date.max) <= ref]
+                        and (to_date(i.get("data_decisao") or "") or _data_fato_falta(i) or date.max) <= ref]  # "punidas até 25/12": data da punição
                 _se = "" if _sx == "F" else " - se mulher (sexo não informado: importar a ficha ou informar no registro do SAP)"
                 if _pun:
                     if _sx == "F":
@@ -3478,10 +3484,29 @@ def roubo_cp(c):
     return cp and num_art(c.get("artigo")) == "157"
 
 
+VGA_ELEMENTAR_CP = ("146", "147", "157", "158", "159", "213")  # violência ou grave ameaça no próprio tipo
+
+
+def vga_elementar(c):
+    """Tipo do CP em que a violência ou a grave ameaça é elementar: constrangimento ilegal, ameaça, roubo, extorsão,
+    extorsão mediante sequestro, estupro, lesão corporal dolosa e homicídio doloso (as formas culposas ficam fora)."""
+    lei = num_lei(c.get("lei"))
+    if not (lei in ("2848", "") or ("PENAL" in (c.get("lei") or "").upper() and "MILITAR" not in (c.get("lei") or "").upper())):
+        return False
+    art = num_art(c.get("artigo"))
+    if art in VGA_ELEMENTAR_CP:
+        return True
+    if art in ("121", "129"):
+        tp = _sem_acento(c.get("tipo_penal") or "").upper()
+        culposo = "CULPOS" in tp or re.match(r"\s*§\s*%s(?!\d)" % ("3" if art == "121" else "6"), c.get("tipo_penal") or "")
+        return not culposo
+    return False
+
+
 def vga_indulto(c):
-    """Violência ou grave ameaça para o indulto e a comutação: a marcação do RSPE ou, no roubo (art. 157), sempre - a violência
-    ou a grave ameaça é elementar do tipo e prevalece sobre a marcação em branco ou 'N'."""
-    return c.get("vga") == "S" or roubo_cp(c)
+    """Violência ou grave ameaça para o indulto e a comutação: a marcação do RSPE ou, nos tipos em que ela é elementar
+    (roubo, ameaça, lesão dolosa, homicídio doloso, extorsão, estupro...), sempre - prevalece sobre a marcação em branco ou 'N'."""
+    return c.get("vga") == "S" or roubo_cp(c) or vga_elementar(c)
 
 
 def vga_incerta(c):
@@ -3510,7 +3535,8 @@ def dias_anos(anos, ref):
 def falta_art6(incidentes, ref, eventos=None, publicacao=None):
     """(firmes, a_verificar): textos das faltas do art. 6º com sanção reconhecida e das que dependem de conferência.
     A janela vai até a publicação do decreto: falta posterior não impede (art. 6º, p. ú.)."""
-    ach = indicios_falta(incidentes, ref, eventos=eventos, ate=publicacao)
+    # 12 meses de calendário (como na linha do tempo), não 365 dias
+    ach = indicios_falta(incidentes, ref, dias=dias_anos(1, ref), eventos=eventos, ate=publicacao)
     return [t for t, f in ach if f], [t for t, f in ach if not f]
 
 

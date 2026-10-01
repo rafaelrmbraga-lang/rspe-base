@@ -611,9 +611,112 @@ v6.16.50
     comarca, as palavras-chave da ementa e a ementa em 3 linhas ("Ler ementa
     completa"); botões "Copiar ementa" e "Copiar referência". Saiu o botão do
     e-SAJ.
+  - Prescrição após a fuga com várias condenações: a prisão provisória
+    entrava duas vezes no saldo (no tempo cumprido que vai às penas pela ordem
+    do trânsito e, de novo, como detração de cada crime). Agora cada dia de
+    prisão conta uma vez só. A tese do art. 76 só aparece quando muda o
+    desfecho (prescreve por ela e não pela ordem do trânsito).
+  - Reincidência na prescrição: se o RSPE marca o condenado como reincidente
+    mas todas as outras condenações dele transitaram depois do fato, o prazo
+    é calculado sem o +1/3 (CP, arts. 63 e 110), com alerta explicando o
+    motivo e o resultado que haveria com o +1/3. Com uma condenação só no
+    RSPE, segue a marcação (a condenação anterior pode já estar extinta).
+  - Imputação do tempo cumprido entre condenações (base jurídica 2026-10-01):
+    ordem cronológica do trânsito (STJ, AgRg no REsp 1.858.048, 5ª T.;
+    TJMS, 1604723-49.2024 e 0000230-65.2010), no lugar do HC 627.646. O art.
+    76 passa a ordenar pela espécie (reclusão antes de detenção), e a pena
+    maior primeiro (6ª T., AgRg no HC 1.075.773) vira a hipótese 3. Quando
+    a ordem cronológica dá prescrição e a da pena maior não, o programa avisa
+    o argumento que o MP pode usar e a resposta. A fundamentação para a
+    petição ganhou o parágrafo sobre o critério cronológico.
+  - Painel da prescrição (abaixo da linha do tempo) reorganizado: o resultado
+    numa faixa com "Copiar fundamentação"; ao lado, a conta da fuga e a tabela
+    de imputação do tempo (ordem do trânsito - adotada -, art. 76 por espécie e
+    pena maior primeiro); os pontos de atenção (argumento do MP, reincidência,
+    o que conferir antes de requerer) em linhas que abrem com um clique; e a
+    fundamentação para a petição recolhida, em parágrafos.
   - Mais rápido: marcar pedido, dar baixa, informar dado ou ajustar a
     prescrição refaz só o assistido alterado (antes, a base inteira); abrir a
     base também ficou cerca de 25% mais rápido.
+  - Aba Indulto com todos os decretos de 2000 a 2025 (25 natalinos e os do
+    Dia das Mães de 2017 e 2018; não houve natalino em 2018). Barra lateral
+    fixa: "Geral" e um item por decreto, com o número de assistidos que cabem.
+    Em "Geral", a linha de cada assistido traz o mapa dos decretos desde o
+    início do cumprimento informado no RSPE (o número do processo não
+    conta): verde cabe, cinza não cabe, vermelho impeditivo, azul concedido,
+    roxo indeferido. Clicar no nome abre o "Encaixe nos decretos": resultado,
+    benefício (indulto ou comutação, com o artigo), requisito de tempo na
+    data de referência e motivo. Benefícios concedidos e indeferidos vêm dos
+    incidentes do RSPE e prevalecem sobre a conta. Ao clicar num decreto da
+    barra, setas ‹ › passam de um decreto a outro; os chips (cabem, não
+    cabem, já decididos, execução posterior) e o seletor filtram a lista.
+  - "Verificar indulto/comutação" continua como antes e ganhou, no topo, a
+    escolha entre os decretos do assistido (setas ‹ › ou lista). Todos abrem
+    a linha do tempo completa: selo de cada crime, pena e tempo cumprido,
+    janela da falta, e o cartão do decreto com cada hipótese calculada
+    (atendida ou o que faltou), vedações, falta grave e alcance. Os outros
+    decretos aparecem na linha como marcadores com o ano; clique para abrir.
+  - Os decretos de 2000 a 2023 são lidos de fichas na base jurídica
+    (decretos_fichas): frações, faixas de pena, regime, reincidência,
+    violência, crimes impeditivos (concurso: cumprida a fração do
+    impeditivo, o benefício recai sobre os demais) e janela de falta grave.
+    Nesses decretos a hediondez é aferida na data do FATO (a hediondez
+    superveniente não alcança o fato anterior). A falta é contada até a
+    publicação, com a prescrição da falta aferida na data do decreto; nos
+    decretos que exigem a falta apurada, a fuga sem homologação não impede.
+    Hipóteses que dependem de dado fora do RSPE (filhos, doença, idade,
+    estudo, reparação do dano, PRD/sursis, prisão provisória) não são
+    calculadas: só entram as que se resolvem pela conta.
+  - Revisão dos decretos (2000 a 2025) contra o texto integral:
+    * fichas corrigidas (frações do art. 1º, XII e XIII, de 2011; ressalvas
+      que estavam como vedação em 2007 e 2008; homicídio culposo e
+      Sistema Financeiro em 2000 a 2002; datas de publicação de 2017 Mães e
+      2019; alíneas por reincidência no Dia das Mães; vedações de 2023 por
+      lei e artigo; hipóteses que dependem de PRD, sursis, prisão provisória
+      ou regime inicial aberto saem da conta);
+    * vedações lidas por artigo com letra (217-A), intervalo (239 a 244-B,
+      359-I a 359-R), parágrafo e inciso (157, § 2º, I); lei inteira quando
+      o decreto não lista artigos; "exceto pena aplicada até 4 anos" (2023)
+      e restrições afastadas para pena até 4 anos (2002, art. 7º, § 2º);
+    * tráfico: associação (art. 35) e §§ 2º e 3º do art. 33 não são
+      equiparados a hediondo; o privilegiado (§ 4º) só é vedado se o
+      decreto o vedar expressamente (STF, HC 118.533) e, havendo hipótese
+      própria (2017, art. 1º, IV), só ela se aplica; hediondos, tortura,
+      tráfico e terrorismo vedados também quando o decreto é omisso (CF,
+      art. 5º, XLIII);
+    * falta grave: 12 meses de calendário, contados da publicação ou da data
+      que o decreto indicar (2015 e 2023: 25/12); 24 meses para crime com
+      violência ou grave ameaça (2002 e 2003); falta que só afasta o indulto
+      não afasta a comutação; sem janela (Dia das Mães 2017), qualquer falta
+      punida até a data;
+    * livramento "concedido até 31 de dezembro" (2000 a 2002) conferido pela
+      data; quem já teve comutação dispensa novo requisito temporal quando o
+      decreto diz; regime não informado no RSPE, com o resto da conta
+      fechado, dá "A verificar" (custódia ininterrupta conta como fechado ou
+      semiaberto); incidente do Dia das Mães não se confunde com o natalino
+      do mesmo ano; indeferimento de 2017 apoiado na cautelar da ADI 5874
+      ganha a ressalva de que o pedido pode ser renovado;
+    * 2022/2024/2025: violência ou grave ameaça própria do tipo (ameaça,
+      lesão dolosa, homicídio doloso, extorsão, estupro...) prevalece sobre
+      a marcação "N"; tráfico privilegiado não vira hediondo pelo selo do
+      SEEU; 2022, art. 7º, § 1º (comando de organização criminosa); janela do
+      art. 6º em 12 meses de calendário, igual à linha do tempo; art. 10, II,
+      pela data da punição.
+  - Quadro do Usuário: o botão "Enviar ao Quadro do Usuário", na ficha do
+    assistido, abre uma janela para escrever o cartão (título, observação,
+    etiqueta, prazo e coluna), já com o assistido. Nos cartões e na janela,
+    botões para copiar o nome e o número do processo.
+  - Assistidos fixados: o alfinete ao lado do nome (agora sempre visível)
+    prende o assistido no topo de todas as abas, e a faixa "Fixados" o
+    filtra com um clique, sem buscar o nome de novo. Ctrl+K (ou
+    "/") vai direto à busca.
+  - Nova aba "Quadro do Usuário", no estilo Trello: colunas A fazer, Em
+    andamento, Aguardando e Concluído (renomeáveis; dá para criar outras);
+    cartões com assistido, título, observações, prazo e etiquetas (Urgente,
+    Atenção, Acompanhar, Pedido feito, Outro); arrastar muda o cartão de
+    coluna. O botão de quadro em cada linha (e "Enviar ao Quadro do Usuário"
+    no painel do assistido) cria o cartão já com o assistido. Prazo vencido
+    ou próximo acende o número ao lado do nome da aba.
 
 v6.16.49
   - Prescrição após a fuga: o pedido "informe a pena remanescente na fuga"
