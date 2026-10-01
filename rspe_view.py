@@ -832,6 +832,7 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
         "presc_cor": presc["presc_cor"], "presc_retro": presc["presc_retro"], "presc_ppe": presc["presc_ppe"],
         "presc_prox": presc["presc_prox"], "presc_dias": presc["presc_dias"], "presc_obs": presc["presc_obs"],
         "presc_linhas": presc["presc_linhas"], "presc_n": len(presc["presc_linhas"]),
+        "presc_linha_seeu": presc.get("presc_linha_seeu"),
         "ind_status": [r.get("indulto_2022_status", ""), r.get("indulto_2024_status", ""), r.get("indulto_2025_status", "")],
         **ext,
         **rf.comparativo(r, ficha, HOJE, conferidos={k for k in baixas if k.startswith("fd:")}, manuais=manuais),
