@@ -418,6 +418,8 @@ class Base:
             titulo TEXT, obs TEXT, prazo TEXT, etiqueta TEXT, criado TEXT, atualizado TEXT)""")
         if "arquivado" not in [r[1] for r in self.con.execute("PRAGMA table_info(quadro_cartoes)").fetchall()]:
             self.con.execute("ALTER TABLE quadro_cartoes ADD COLUMN arquivado TEXT DEFAULT ''")  # data do arquivamento ('' = no quadro)
+        if "aba" not in [r[1] for r in self.con.execute("PRAGMA table_info(quadro_cartoes)").fetchall()]:
+            self.con.execute("ALTER TABLE quadro_cartoes ADD COLUMN aba TEXT DEFAULT ''")  # benefício do cartão (prog, liv, ind...)
         if not self.con.execute("SELECT 1 FROM quadro_colunas").fetchone():
             for i, (cid, nome) in enumerate((("fazer", "A fazer"), ("andamento", "Em andamento"), ("aguardando", "Aguardando decisão"), ("concluido", "Concluído"))):
                 self.con.execute("INSERT INTO quadro_colunas VALUES (?,?,?)", (cid, nome, i))
@@ -595,9 +597,9 @@ class Base:
     def quadro(self):
         with self.lock:
             cols = [{"id": i, "nome": n, "ordem": o} for i, n, o in self.con.execute("SELECT id, nome, ordem FROM quadro_colunas ORDER BY ordem").fetchall()]
-            cards = [dict(zip(("id", "coluna", "ordem", "processo", "titulo", "obs", "prazo", "etiqueta", "criado", "atualizado", "arquivado"), row))
+            cards = [dict(zip(("id", "coluna", "ordem", "processo", "titulo", "obs", "prazo", "etiqueta", "criado", "atualizado", "arquivado", "aba"), row))
                      for row in self.con.execute("SELECT id, coluna, ordem, processo, titulo, obs, prazo, etiqueta, criado, atualizado, "
-                                                 "COALESCE(arquivado, '') FROM quadro_cartoes ORDER BY ordem").fetchall()]
+                                                 "COALESCE(arquivado, ''), COALESCE(aba, '') FROM quadro_cartoes ORDER BY ordem").fetchall()]
         return {"colunas": cols, "cartoes": cards}
 
     def quadro_gravar(self, c):
@@ -605,7 +607,7 @@ class Base:
         agora = datetime.now().strftime("%d/%m/%Y %H:%M")
         with self.lock:
             cid = c.get("id") or uuid.uuid4().hex[:12]
-            ant = self.con.execute("SELECT criado, ordem, coluna, COALESCE(arquivado, '') FROM quadro_cartoes WHERE id=?", (cid,)).fetchone()
+            ant = self.con.execute("SELECT criado, ordem, coluna, COALESCE(arquivado, ''), COALESCE(aba, '') FROM quadro_cartoes WHERE id=?", (cid,)).fetchone()
             col = c.get("coluna") or (ant[2] if ant else "fazer")
             if c.get("ordem") is not None:
                 ordem = float(c["ordem"])
@@ -614,12 +616,21 @@ class Base:
             else:
                 ordem = (self.con.execute("SELECT MIN(ordem) FROM quadro_cartoes WHERE coluna=?", (col,)).fetchone()[0] or 0) - 1
             arq = c["arquivado"] if "arquivado" in c else (ant[3] if ant else "")
+            aba = c["aba"] if "aba" in c else (ant[4] if ant else "")
             self.con.execute("INSERT OR REPLACE INTO quadro_cartoes (id, coluna, ordem, processo, titulo, obs, prazo, etiqueta, criado, atualizado, "
-                             "arquivado) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                             "arquivado, aba) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
                              (cid, col, ordem, c.get("processo") or "", (c.get("titulo") or "").strip(), (c.get("obs") or "").strip(),
-                              (c.get("prazo") or "").strip(), c.get("etiqueta") or "", ant[0] if ant else agora, agora, arq or ""))
+                              (c.get("prazo") or "").strip(), c.get("etiqueta") or "", ant[0] if ant else agora, agora, arq or "", aba or ""))
             self.con.commit()
         return cid
+
+    def quadro_pedido_feito(self, processo, aba):
+        """Pedido marcado na aba: os cartões do mesmo assistido e benefício, no quadro, ganham a etiqueta "Pedido feito"."""
+        with self.lock:
+            n = self.con.execute("UPDATE quadro_cartoes SET etiqueta='pedido' WHERE processo=? AND aba=? AND COALESCE(arquivado, '')=''",
+                                 (processo, aba)).rowcount
+            self.con.commit()
+        return n
 
     def quadro_excluir(self, cid):
         with self.lock:
@@ -1129,7 +1140,11 @@ class Api:
         if data and not rs.to_date(data):
             return {"erro": "Data inválida: use dd/mm/aaaa."}
         self.base.pedido_gravar(processo, aba, {"data": data, "obs": (obs or "").strip(), "ref": ref or "", "tipo": tipo or "pedido"} if data else None)
-        return self._atualizar(processo, "Pedido registrado." if data else "Marcação de pedido removida.")
+        n = self.base.quadro_pedido_feito(processo, aba) if data else 0
+        out = self._atualizar(processo, ("Pedido registrado." + (" Cartão do Quadro marcado como \"Pedido feito\"." if n else "")) if data else "Marcação de pedido removida.")
+        if n and isinstance(out, dict):
+            out["quadro"] = self.base.quadro()
+        return out
 
     def teses(self):
         """Jurisprudências da execução penal (aba Jurisprudências): acórdãos favoráveis à defesa, triados pela ementa.
