@@ -30,6 +30,7 @@ import rspe_ficha as rf
 import rspe_peticao as rpet
 import rspe_export as rx
 import rspe_regras as rg
+import rspe_decretos as rd
 import rspe_relatorio as rrel
 import rspe_indulto_tl as rtl
 
@@ -230,6 +231,16 @@ Acórdãos do TJMS em execução penal favoráveis à defesa (recurso defensivo 
 pela ementa, com a tese em uma frase e o tema. Pesquise por palavras (todas devem constar da tese ou da ementa) e filtre por tema.
 "Copiar ementa" leva a ementa com a referência (tribunal, classe, número, relator, órgão, julgamento). Um teses_execucao.json ao lado
 do programa substitui a cópia embutida. STJ e STF entrarão depois.
+<h4>Indulto: todos os decretos</h4>
+A barra lateral traz "Geral" e os decretos de 2025 a 2000. Em "Geral", cada linha mostra o mapa dos decretos desde o início do
+cumprimento informado no RSPE (verde cabe, cinza não cabe, vermelho impeditivo, azul concedido, roxo indeferido); clique no nome
+para ver o encaixe em cada decreto. Clicando num decreto, setas passam de um a outro e os chips filtram. Concedidos e indeferidos
+vêm dos incidentes do RSPE. Só entram hipóteses que se resolvem pela conta (frações, pena, regime, reincidência, violência, falta);
+as que dependem de dado fora do RSPE (filhos, doença, idade, estudo, PRD/sursis) não são calculadas. "Verificar indulto/comutação"
+tem, no topo, o seletor dos decretos do assistido.
+<h4>Fixados e Quadro do Usuário</h4>
+O alfinete ao lado do nome prende o assistido no topo de todas as abas; Ctrl+K ou "/" vai à busca. O Quadro do Usuário é um quadro
+de cartões (estilo Trello): envie um assistido pelo botão da linha, escreva observações, prazo e etiquetas e arraste entre colunas.
 <h4>Histórico de RSPE (aba Geral)</h4>
 Cada RSPE importado fica guardado na base. O botão "Histórico · N", na linha do assistido, abre uma tabela com uma coluna por
 RSPE (do mais antigo ao atual): regime, penas, dias remidos e perdidos, data-base, previsões de progressão e livramento, término,
@@ -919,7 +930,12 @@ class Api:
                     logging.getLogger("rspe").exception("falha ao migrar baixa %s", ch)
         m["pedidos"] = peds.get(ch, {})  # pedidos já feitos, por aba (coluna "Pedido")
         m["hist_n"] = ctx["hist_n"].get(ch, 1)
-        m["fixado"] = ch in ctx["fixados"]  # RSPEs guardados no histórico (botão "Histórico · N" da aba Geral)
+        m["fixado"] = ch in ctx["fixados"]
+        try:
+            m["dec"] = rv.json_seguro(rd.avaliar(m.get("_final") or r, rv.HOJE))  # aba Indulto: todos os decretos desde o início do cumprimento
+        except Exception:
+            logging.getLogger("rspe").exception("decretos %s", ch)
+            m["dec"] = {"inicio": "", "decretos": []}  # RSPEs guardados no histórico (botão "Histórico · N" da aba Geral)
         try:
             m["faltas_itens"] = rs.faltas_editaveis(r.get("_incidentes", []), r.get("_eventos", []), rv.HOJE)
         except Exception:

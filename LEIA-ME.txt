@@ -638,6 +638,39 @@ v6.16.50
   - Mais rápido: marcar pedido, dar baixa, informar dado ou ajustar a
     prescrição refaz só o assistido alterado (antes, a base inteira); abrir a
     base também ficou cerca de 25% mais rápido.
+  - Aba Indulto com todos os decretos de 2000 a 2025 (25 natalinos e os do
+    Dia das Mães de 2017 e 2018; não houve natalino em 2018). Barra lateral
+    fixa: "Geral" e um item por decreto, com o número de assistidos que cabem.
+    Em "Geral", a linha de cada assistido traz o mapa dos decretos desde o
+    início do cumprimento informado no RSPE (o número do processo não
+    conta): verde cabe, cinza não cabe, vermelho impeditivo, azul concedido,
+    roxo indeferido. Clicar no nome abre o "Encaixe nos decretos": resultado,
+    benefício (indulto ou comutação, com o artigo), requisito de tempo na
+    data de referência e motivo. Benefícios concedidos e indeferidos vêm dos
+    incidentes do RSPE e prevalecem sobre a conta. Ao clicar num decreto da
+    barra, setas ‹ › passam de um decreto a outro; os chips (cabem, não
+    cabem, já decididos, execução posterior) e o seletor filtram a lista.
+  - "Verificar indulto/comutação" continua como antes e ganhou, no topo, a
+    escolha entre os decretos do assistido: 2022, 2024 e 2025 abrem a linha
+    do tempo detalhada; os demais, o quadro de requisitos (crimes na soma,
+    pena, cumprida na data, exigido, reincidência, violência).
+  - Os decretos de 2000 a 2023 são lidos de fichas na base jurídica
+    (decretos_fichas): frações, faixas de pena, regime, reincidência,
+    violência, crimes impeditivos (concurso: cumprida a fração do
+    impeditivo, o benefício recai sobre os demais) e janela de falta grave.
+    Hipóteses que dependem de dado fora do RSPE (filhos, doença, idade,
+    estudo, reparação do dano, PRD/sursis, prisão provisória) não são
+    calculadas: só entram as que se resolvem pela conta.
+  - Assistidos fixados: o alfinete ao lado do nome prende o assistido no topo
+    de todas as abas, e a faixa "Fixados" o filtra com um clique. Ctrl+K (ou
+    "/") vai direto à busca.
+  - Nova aba "Quadro do Usuário", no estilo Trello: colunas A fazer, Em
+    andamento, Aguardando e Concluído (renomeáveis; dá para criar outras);
+    cartões com assistido, título, observações, prazo e etiquetas (Urgente,
+    Atenção, Acompanhar, Pedido feito, Outro); arrastar muda o cartão de
+    coluna. O botão de quadro em cada linha (e "Enviar ao Quadro do Usuário"
+    no painel do assistido) cria o cartão já com o assistido. Prazo vencido
+    ou próximo acende o número ao lado do nome da aba.
 
 v6.16.49
   - Prescrição após a fuga: o pedido "informe a pena remanescente na fuga"
