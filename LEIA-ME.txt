@@ -774,11 +774,16 @@ v6.16.50
     qualquer imputação (prescrita mesmo com a pena inteira, ou não prescrita
     mesmo com todo o tempo imputado ao crime); no resto, "a verificar", sem
     fundamentação, até importar a linha ou usar a calculadora.
-  - Calculadora do saldo na fuga (botão "Calculadora" no painel da
-    prescrição): condenações, início da contagem, gravidade, períodos de
-    custódia e remições vêm pré-preenchidos pelo RSPE e podem ser
-    corrigidos; o tempo vai à mais grave já iniciada e passa às seguintes.
-    "Gravar saldos" grava o saldo de todas as condenações daquela fuga.
+  - Aba Prescrição (executória), coluna "Cálculo da fuga": "Calcular" (ou
+    "Ver cálculo") na linha do assistido abre a janela da fuga. Nela se
+    importa a Linha do Tempo Detalhada do SEEU ou se preenche a calculadora
+    (condenações, início da contagem, gravidade, períodos de custódia e
+    remições pré-preenchidos pelo RSPE; o tempo vai à mais grave já
+    iniciada e passa às seguintes). Feito o cálculo, cada condenação
+    aparece nos 4 critérios (linha do SEEU ou calculadora; ordem do
+    trânsito, art. 76 e pena maior como tese), com o botão de copiar a
+    fundamentação quando há prescrição. A linha importada prevalece sobre
+    a calculadora.
   - Auditoria: novos alertas de lançamento no SEEU - progressão na data da
     decisão (Tema 1165), mais de um regime inicial, regime inicial depois da
     primeira prisão, alteração de data-base no lugar do incidente próprio

@@ -742,6 +742,19 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
             tese76 = None
             risco_grav = ""
             hlin = None  # saldo registrado pelo próprio SEEU na linha do tempo detalhada (ocorrência da fuga)
+            _inf0 = (ctx.get("saldos_inf") or {}).get(rs.fmt(g0))
+            _calc0 = _inf0 is not None and (ctx.get("saldos_fonte") or {}).get(rs.fmt(g0)) == "calculadora"
+            hcalc = None  # saldo apurado na calculadora (aba Prescrição > Calcular), com os dados conferidos pelo operador
+            if outras and _calc0 and not rl.saldo_na(r.get("_linha_seeu"), g0, proc_x, pena, 0):
+                s_c = max(0, min(pena, int(_inf0)))
+                if s_c > 0:
+                    m_c = Fraction(prazo_base_anos(s_c, fato) * 12) * fator
+                    lim_c, _ = _limite(m_c)
+                    hcalc = {"posicao": None, "de": len(em_exec), "saldo": s_c, "prazo_meses": int(m_c), "prazo": fmt_prazo(m_c), "limite": rs.fmt(lim_c),
+                             "resultado": "prescrita" if lim_c < ref else "não prescrita", "_lim": lim_c, "cumprida": pena - s_c}
+                else:
+                    hcalc = {"posicao": None, "de": len(em_exec), "saldo": 0, "prazo_meses": None, "prazo": "", "limite": "", "resultado": "nada a prescrever",
+                             "_lim": None, "cumprida": pena}
             _sn = None
             if outras:
                 _irm = [x for x in crimes if _mesmo_processo(x.get("processo_criminal") or "", proc_x)]
@@ -765,15 +778,16 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
                 if aberto and rem_seeu and len(ativos) == 1 and not ult_ppl:  # com o último comparecimento, o remanescente do SEEU conta tempo que não houve
                     saldo_min = saldo_max = rem_seeu
                     fonte_saldo = " (pena remanescente do RSPE)"
-            elif hlin:
-                # várias condenações: o saldo é o que o próprio SEEU registrava na fuga (linha do tempo detalhada). Os critérios
-                # abstratos ficam só como tese defensiva, quando dariam prescrição e a imputação do SEEU não
-                saldo_min = saldo_max = hlin["saldo"]
+            elif hcalc or hlin:
+                # várias condenações: o saldo é o que o próprio SEEU registrava na fuga (linha do tempo detalhada) ou o apurado na
+                # calculadora. Os critérios abstratos ficam só como tese defensiva, quando dariam prescrição e o principal não
+                hp = hcalc or hlin
+                saldo_min = saldo_max = hp["saldo"]
 
                 def _melhor(h):
-                    return h["saldo"] != hlin["saldo"] and (
-                        (h["resultado"] == "prescrita" and hlin["resultado"] != "prescrita")
-                        or (h["resultado"] == "nada a prescrever" and hlin["resultado"] not in ("nada a prescrever", "prescrita")))
+                    return h["saldo"] != hp["saldo"] and (
+                        (h["resultado"] == "prescrita" and hp["resultado"] != "prescrita")
+                        or (h["resultado"] == "nada a prescrever" and hp["resultado"] not in ("nada a prescrever", "prescrita")))
                 if _melhor(hipcron):
                     tese76 = dict(hipcron, fund="ordem cronológica do trânsito em julgado (STJ, AgRg no REsp 1.858.048, 5ª T.; TJMS, 1604723-49.2024)")
                 elif _melhor(hip76):
@@ -789,6 +803,8 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
             _det_txt = (" (descontados %s de detração - CP, art. 42)" % _d(detr)) if detr else ""
             # item 6.5: a origem do saldo fica sempre à vista; estimativa não passa por dado confirmado
             inf = (ctx.get("saldos_inf") or {}).get(rs.fmt(g0))
+            if inf is not None and _calc0 and hlin:
+                inf = None  # a linha do tempo detalhada importada prevalece sobre a calculadora
             if inf is not None:
                 saldo_min = saldo_max = max(0, min(pena, int(inf)))
                 _calc = (ctx.get("saldos_fonte") or {}).get(rs.fmt(g0)) == "calculadora"
@@ -885,11 +901,13 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
                  "imput_txt": "",
                  "cumprido_total": cumprido_total,
                  "crits": {k: {k2: v2 for k2, v2 in h.items() if k2 != "_lim"} for k, h in
-                           (("linha", hlin), ("cron", hipcron), ("art76", hip76), ("grav", hipgrav))} if (outras and inf is None and hlin) else {},
+                           ((("calc", hcalc) if hcalc else ("linha", hlin)), ("cron", hipcron), ("art76", hip76), ("grav", hipgrav))}
+                           if (outras and (hcalc or (inf is None and hlin))) else {},
+                 "principal": "calc" if hcalc else ("linha" if (hlin and inf is None) else ""),
                  "linha_seeu": {k: v for k, v in hlin.items() if k != "_lim"} if hlin else None,
                  "calc": _calc_dados() if outras else None,
                  "cronologica": {k: v for k, v in hipcron.items() if k != "_lim"}, "faixas": faixas, "resultado": resultado,
-                 "tese76": ({k: v for k, v in tese76.items() if k != "_lim"} if (tese76 and inf is None) else None),
+                 "tese76": ({k: v for k, v in tese76.items() if k != "_lim"} if (tese76 and (inf is None or hcalc)) else None),
                  "saldo_origem": origem, "saldo_rotulo": saldo_rotulo, "informar": informar,
                  "triagem": ("Prescrição confirmada pela análise do limite máximo de saldo." if resultado == "prescrita" and saldo_min != saldo_max else
                              "Não prescrito mesmo com o menor saldo possível." if resultado == "não prescrita" and saldo_min != saldo_max else
@@ -1557,7 +1575,10 @@ def _inc_de(dias):
     return "VI" if y < 1 else "V" if y <= 2 else "IV" if y <= 4 else "III" if y <= 8 else "II" if y <= 12 else "I"
 
 
-FUND_CRIT = {"linha": "O saldo de cada condenação é o registrado pelo próprio SEEU, na linha do tempo detalhada da execução, na data da fuga: "
+FUND_CRIT = {"calc": "O saldo de cada condenação na data da fuga foi apurado a partir dos períodos de prisão e das remições da execução, "
+                     "imputando-se o tempo cumprido primeiro à condenação mais grave e, em seguida, às menos graves (CP, art. 76), cada uma "
+                     "a partir do início do seu cumprimento.",
+             "linha": "O saldo de cada condenação é o registrado pelo próprio SEEU, na linha do tempo detalhada da execução, na data da fuga: "
                       "é a imputação do tempo cumprido feita pelo cálculo oficial, homologado pelo juízo, condenação a condenação.",
              "cron": "Adotada a ordem cronológica do trânsito em julgado: entre penas da mesma espécie não incide o art. 76 do Código Penal, que só "
                      "distingue reclusão e detenção (STJ, AgRg no REsp 1.858.048, 5ª Turma), critério que o TJMS aplica na apuração da prescrição "
@@ -1587,11 +1608,12 @@ def fund_global(S, k):
         (x for x in G if x["saldo"] == h.get("saldo") and x["posicao"] == h.get("posicao")), {})
     pres = [x for x in G if x["resultado"] == "prescrita" and x is not este]
     nao = [x for x in G if x["resultado"] != "prescrita"]
-    lin = k == "linha"
+    lin = k in ("linha", "calc")
     if lin:
-        fecho = "A condenação aqui tratada registrava %s cumpridos, restando-lhe %s na data da fuga." % (
+        fecho = "A condenação aqui tratada tinha %s cumpridos, restando-lhe %s na data da fuga." % (
             este.get("cumprida_txt") or "nenhum dia", este.get("saldo_txt") or "—")
-        abre = "Na data da fuga, o SEEU registrava para as %d condenações então em execução:" % len(G)
+        abre = ("Na data da fuga, o SEEU registrava para as %d condenações então em execução:" if k == "linha" else
+                "Assim apurado, na data da fuga as %d condenações então em execução tinham:") % len(G)
     else:
         fecho = "A condenação aqui tratada era a %sª nessa ordem%s, restando-lhe %s na data da fuga." % (
             este.get("posicao") or "?", " e recebeu primeiro o tempo cumprido" if este.get("posicao") == 1 else
@@ -1606,7 +1628,7 @@ def fund_global(S, k):
             else ": nada a prescrever") for n, x in enumerate(G)).rstrip(";") + ".", fecho)
     _nm = lambda xs: "; ".join("%s (ação penal %s)" % (x["crime"], x["proc"]) for x in xs)
     if pres:
-        _pm = "Pelos mesmos registros" if lin else "Pelo mesmo critério"
+        _pm = "Pelos mesmos registros" if k == "linha" else ("Pelo mesmo cálculo" if k == "calc" else "Pelo mesmo critério")
         t += (" %s, também prescreveu a condenação por %s, cujo saldo gerou prazo esgotado durante a fuga." % (_pm, _nm(pres)) if len(pres) == 1 else
               " %s, também prescreveram as condenações por %s, cujos saldos geraram prazos esgotados durante a fuga." % (_pm, _nm(pres)))
     if nao:
@@ -1668,7 +1690,7 @@ def fundamentacao(L, parte):
                                                          S.get("cumprido_desde_termo", 0), (" e %s dias remidos" % S["remicao"]) if S.get("remicao") else ""))
         if S.get("imput_txt"):
             cab2 += ". " + S["imput_txt"]
-        _g = fund_global(S, "linha")
+        _g = fund_global(S, S.get("principal") or "linha")
         if _g:
             # o total da análise global substitui a contagem só desta condenação, que confundiria a leitura
             cab2 = rs.re.sub(r" Até essa data, a execução unificada registrava [^.]*", "", cab2)
@@ -2118,7 +2140,7 @@ def analisar(r, hoje=None):
                 por_fuga.setdefault(S["evasao"], []).append((l, S))
     for ev, lst in por_fuga.items():
         glob = {}
-        for k in ("linha", "cron", "art76", "grav"):
+        for k in ("calc", "linha", "cron", "art76", "grav"):
             rows = []
             for l, S in lst:
                 h = S["crits"].get(k)
@@ -2129,7 +2151,7 @@ def analisar(r, hoje=None):
                                  "cumprida_txt": _ext(h["cumprida"]) if h.get("cumprida") else "",
                                  "fracao": (next((c.get("fracao_progressao") for c in r.get("_crimes", []) if rs.crimes_curto([c]) == l.get("crime")
                                                   and c.get("processo_criminal") == l.get("proc_crim")), "") or "").split(" - ")[0]})
-            glob[k] = rows if k == "linha" else sorted(rows, key=lambda x: x["posicao"] or 0)
+            glob[k] = rows if k in ("calc", "linha") else sorted(rows, key=lambda x: x["posicao"] or 0)
         for l, S in lst:
             S["global"], S["_chave"] = glob, l.get("chave_ajuste")
     for l in linhas:
@@ -2145,6 +2167,8 @@ def analisar(r, hoje=None):
         "presc_prox": prox,
         "presc_dias": min(dias) if dias else None,
         "presc_obs": "; ".join(sorted(set(a for l in linhas for a in l["avisos"]))),
+        "presc_linha_seeu": ({"gerado": (r.get("_linha_seeu") or {}).get("gerado_em") or "", "importado": (r.get("_linha_seeu") or {}).get("importado") or ""}
+                             if r.get("_linha_seeu") else None),
     }
 
 

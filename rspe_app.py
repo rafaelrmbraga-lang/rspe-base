@@ -1157,6 +1157,23 @@ class Api:
         self.base.presc_ajuste_gravar(processo, chave, dados or None)
         return self._atualizar(processo)
 
+    def presc_importar_linha(self, processo):
+        """Aba Prescrição > Calcular: importa a Linha do Tempo Detalhada do SEEU (PDF) desta execução e refaz a análise."""
+        if not self.base:
+            return {"erro": "Nenhuma base aberta."}
+        arq = _um(self._janela.create_file_dialog(webview.OPEN_DIALOG, file_types=("Linha do Tempo Detalhada do SEEU (*.pdf)",)))
+        if not arq:
+            return None
+        try:
+            L = rl.extrair(arq)
+        except Exception as e:
+            return {"erro": "Não foi possível ler a linha do tempo detalhada: %s" % e}
+        if rs.chave_processo(L["processo_execucao"]) != rs.chave_processo(processo):
+            return {"erro": "Esta linha do tempo é da execução %s, não da %s." % (L["processo_execucao"], processo)}
+        if not self.base.gravar_linha_seeu(L):
+            return {"erro": "Já existe na base uma linha do tempo gerada depois desta."}
+        return self._atualizar(processo, "Linha do tempo detalhada importada: prescrição recalculada.")
+
     def presc_saldos_calc(self, processo, fuga, saldos):
         """Grava os saldos apurados na calculadora para a fuga: {chave_ajuste do crime: dias}. Cada saldo vale como informado,
         com a fonte "calculadora"; saldo vazio apaga o daquele crime."""

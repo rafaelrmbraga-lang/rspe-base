@@ -626,7 +626,7 @@ const ui = {
     if(!a||a.id!=='presc') return a;
     // prescrição: uma pretensão por vez (executória ou punitiva)
     const pe=this.prescModo!=='pp'; const b=Object.assign({},a);
-    b.cols=a.cols.filter(c=>['nome','proc'].includes(c[0])).concat(pe?[['presc_ppe','Pretensão executória',16],['presc_prox','Prescrição em',10]]:[['presc_retro','Pretensão punitiva',16]]).concat(a.cols.filter(c=>c[0]==='pedido'));
+    b.cols=a.cols.filter(c=>['nome','proc'].includes(c[0])).concat(pe?[['presc_ppe','Pretensão executória',16],['presc_prox','Prescrição em',10],['presc_calc','Cálculo da fuga',9]]:[['presc_retro','Pretensão punitiva',16]]).concat(a.cols.filter(c=>c[0]==='pedido'));
     b.cor=pe?'presc_ppe_cor':'presc_retro_cor'; b.legenda=pe?'presc':'presc_pp';
     b.pilulas=pe?{presc_ppe:'presc_ppe_cor'}:{presc_retro:'presc_retro_cor'};
     const base=a.sub_cols.filter(c=>['crime','proc_crim','pena','fato','denuncia','sentenca','transito'].includes(c[0]));
@@ -688,6 +688,8 @@ const ui = {
           // só o ícone: marcado = check; a data e a observação ficam na ficha do assistido (e na janela do clique)
           v = P ? `<span class="pck ok ${mud?'mud':''}" title="${esc(this.pedDica(P,mud))}" onclick="event.stopPropagation();ui.pedidoAbrir('${r.id}','${spec.id}')">✓</span>`
                 : `<span class="pck" title="Marcar pedido feito" onclick="event.stopPropagation();ui.pedidoAbrir('${r.id}','${spec.id}')"></span>`; }
+        else if(c[0]==='presc_calc'){ const e=this.calcEstado(r);
+          v = !e? '<span class="muted">—</span>' : `<span class="jz-b ${e==='pend'?'pri':''}" title="${e==='pend'?'Evasão com várias condenações: importe a linha do tempo detalhada do SEEU ou preencha a calculadora':'Ver o cálculo da fuga nos 4 critérios e a fundamentação'}" onclick="event.stopPropagation();ui.prescCalc('${r.id}')">${e==='pend'?'Calcular':'Ver cálculo'}</span>`; }
         else if(c[0]==='conduta'){ v = r.conduta_ruim ? `<span class="falta">${esc(v)}</span>` : (r.ficha_tem ? esc(v) : `<span class="muted">${esc(v)}</span>`); }
         else if(c[0]==='falta'){ v = r.falta_sim ? `<span class="falta">Sim</span>` : (r.falta_apurar ? `<span class="apurar">A apurar</span>` : `<span class="muted">${esc(v)}</span>`);
           if((r.faltas_itens||[]).length) v=`<span class="fedit" title="Ver e decidir as faltas (vale em todas as abas)" onclick="event.stopPropagation();ui.faltasModal('${r.id}')">${v} <span class="fe">✎</span></span>`; }
@@ -853,18 +855,18 @@ const ui = {
   prescPainel(L, idx, r, motivo, S){
     const amd=this.tlAmd.bind(this); const card=((this._tlCards||{})[idx]||[]).find(c=>c.s===S)||((this._tlCards||{})[idx]||[]).slice(-1)[0];
     const fk=card? this.fundCrits(card.s) : []; const fund=card? this.fundPrescEvasao(L, card.s, fk[0]) : ''; const ci=fund? this.clip(fund) : null;
-    this._fundCtx=this._fundCtx||{}; this._fundCtx[idx]={L, s:card&&card.s}; this._calcCtx=this._calcCtx||{}; this._calcCtx[idx]={L, S};
+    this._fundCtx=this._fundCtx||{}; this._fundCtx[idx]={L, s:card&&card.s};
     const cp=fk.length>1? `ui.fundEscolher(${idx})` : `ui.copiarClip(${ci})`;
     const tit={verm:'Prescrição aparente', amb:'A verificar', verde:'Não prescrita'}[r[0]]; const ic={verm:'!',amb:'?',verde:'✓'}[r[0]];
     const res=`<div class="px-res ${r[0]}"><span class="ic">${ic}</span><div class="tx"><b>${tit}${r[0]==='verm'&&L.ppe_previsao?' em '+esc(L.ppe_previsao):''}</b><span>${esc(r[0]==='verm'?(S&&S.evasao?'O prazo pelo saldo venceu durante a fuga de '+S.evasao+(S.fim&&S.fim!=='hoje'?', antes da '+(S.fim_causa||'recaptura')+' em '+S.fim:'')+'.':motivo):motivo.replace(/\.$/,'')+'.')}</span></div>
-      <div class="px-acts">${S&&S.calc?`<span class="jz-b" onclick="event.stopPropagation();ui.calcAbrir(${idx})">Calculadora</span>`:''}${r[0]==='amb'&&!(S&&S.calc)?`<span class="jz-b" onclick="event.stopPropagation();ui.pfAbrir(this,${idx},'saldo')">Informar saldo</span>`:''}${ci!=null&&(r[0]==='verm'||fk.length)?`<span class="jz-b pri" onclick="event.stopPropagation();${cp}">Copiar fundamentação${fk.length>1?' ▾':''}</span>`:''}</div></div>`;
+      <div class="px-acts">${r[0]==='amb'?`<span class="jz-b" onclick="event.stopPropagation();ui.pfAbrir(this,${idx},'saldo')">Informar saldo</span>`:''}${ci!=null&&(r[0]==='verm'||fk.length)?`<span class="jz-b pri" onclick="event.stopPropagation();${cp}">Copiar fundamentação${fk.length>1?' ▾':''}</span>`:''}</div></div>`;
     const conta=card? `<div class="px-box"><h5><i style="background:${card.cor}"></i>${esc(card.rot)}</h5>${card.li.map(([k,v],i)=>`<div class="px-kv ${['Saldo na fuga','Vencimento'].includes(k)?'hl':''}"><span>${esc(k)}</span><b>${penaExt(esc(v))}</b></div>`).join('')}</div>` : '';
     const pill=h=> h.resultado==='prescrita'?'<span class="px-pill p">prescrita</span>': h.resultado==='nada a prescrever'?'<span class="px-pill z">pena cumprida</span>':'<span class="px-pill n">não prescrita</span>';
     const lin=(h,nome,fonte,on)=> h? `<tr class="${on?'on':''}"><td class="crit"><b>${nome}${on?'<span class="px-tag">adotado</span>':'<span class="px-tag" style="background:#F2F4F7;color:#475467">tese</span>'}</b><small>${fonte}</small></td><td>${h.posicao?h.posicao+'º de '+h.de:'—'}</td><td>${amd(h.saldo)}</td><td>${esc(h.prazo||'—')}</td><td>${esc(h.limite||'—')}</td><td>${pill(h)}</td></tr>` : '';
     const C=(S&&S.crits)||{};
-    const imp=S&&S.linha_seeu&&C.linha? `<div class="px-box"><h5>Imputação do tempo cumprido entre as condenações</h5><table class="px-tab"><thead><tr><th style="width:36%">Critério</th><th>Posição</th><th>Saldo na fuga</th><th>Prazo</th><th>Vence</th><th>Resultado</th></tr></thead><tbody>
-        ${lin(C.linha,'Linha do tempo detalhada do SEEU','restante registrado em '+esc(S.linha_seeu.data_ocorrencia||''),true)}${lin(C.cron,'Ordem do trânsito em julgado','STJ 5ª T. (AgRg no REsp 1.858.048) e TJMS',false)}${lin(C.art76,'Art. 76 do CP (espécie)','reclusão antes de detenção',false)}${lin(C.grav,'Pena maior primeiro','STJ 6ª T. (AgRg no HC 1.075.773)',false)}</tbody></table></div>`
-      : (S&&S.saldo_origem==='nao_determinado'? `<div class="px-box"><h5>Saldo na fuga não determinado</h5><div style="font-size:12.5px;line-height:1.5">Com ${S.calc?S.calc.conds.length:'várias'} condenações em execução, o saldo de cada uma depende de como o SEEU imputou o tempo cumprido. Para concluir: importe a <b>Linha do Tempo Detalhada</b> do SEEU (PDF gerado na aba "Informações adicionais") em <b>Importar PDFs</b>, ou use a <b>calculadora</b>.${S.calc?`<div style="margin-top:8px"><span class="jz-b pri" onclick="event.stopPropagation();ui.calcAbrir(${idx})">Abrir calculadora</span></div>`:''}</div></div>` : '');
+    const P=S&&S.principal; const imp=P&&C[P]? `<div class="px-box"><h5>Imputação do tempo cumprido entre as condenações</h5><table class="px-tab"><thead><tr><th style="width:36%">Critério</th><th>Posição</th><th>Saldo na fuga</th><th>Prazo</th><th>Vence</th><th>Resultado</th></tr></thead><tbody>
+        ${lin(C[P],P==='calc'?'Calculadora (aba Prescrição)':'Linha do tempo detalhada do SEEU',P==='calc'?'saldo apurado com os dados conferidos':'restante registrado em '+esc((S.linha_seeu||{}).data_ocorrencia||''),true)}${lin(C.cron,'Ordem do trânsito em julgado','STJ 5ª T. (AgRg no REsp 1.858.048) e TJMS',false)}${lin(C.art76,'Art. 76 do CP (espécie)','reclusão antes de detenção',false)}${lin(C.grav,'Pena maior primeiro','STJ 6ª T. (AgRg no HC 1.075.773)',false)}</tbody></table></div>`
+      : '';
     const at=[];
     if(S&&S.risco_grav) at.push(['m','⚖','Argumento possível do MP (6ª Turma)','e a resposta', S.risco_grav]);
     if(L.ppe_reinc_aviso) at.push(['a','!','Reincidência não aplicada no prazo','por quê', L.ppe_reinc_aviso]);
@@ -874,22 +876,23 @@ const ui = {
     if(r[0]==='verde'&&L.ppe_previsao&&L.ppe_dias!=null) at.push(['a','!','Prazo em curso','vencimento', 'Vence em '+L.ppe_previsao+' ('+(L.ppe_dias===1?'falta 1 dia':'faltam '+L.ppe_dias+' dias')+').']);
     const ats=at.length? `<div class="px-at">${at.map(([c,k,t,e,d])=>`<details><summary><span class="k ${c}">${k}</span>${esc(t)}<em>ver ${esc(e)} ▾</em></summary><div class="d">${penaExt(esc(d))}</div></details>`).join('')}</div>` : '';
     const fd=fund&&(r[0]==='verm'||fk.length)? `<details class="px-fd"><summary>Fundamentação para a petição<span class="sp"></span><span class="jz-b" onclick="event.preventDefault();event.stopPropagation();${cp}">Copiar${fk.length>1?' ▾':''}</span><span class="chev">▾</span></summary><div class="t">${fund.split('\n').filter(x=>x.trim()).map(p=>`<p>${esc(p)}</p>`).join('')}</div></details>` : '';
-    return `${res}${conta||imp?`<div class="px-grid" style="${imp&&S&&S.linha_seeu?'grid-template-columns:1fr':(imp?'':'grid-template-columns:minmax(260px,420px)')}">${conta}${imp}</div>`:''}${ats}${fd}<div class="pf-holder"></div>`; },
+    return `${res}${conta||imp?`<div class="px-grid" style="${imp?'grid-template-columns:1fr':(imp?'':'grid-template-columns:minmax(260px,420px)')}">${conta}${imp}</div>`:''}${ats}${fd}<div class="pf-holder"></div>`; },
   prescCardsFund(L, idx){
     const cards=(this._tlCards||{})[idx]||[]; if(!cards.length) return '';
     return cards.map(c=>{ const txt=this.fundPrescEvasao(L, c.s); const ci=this.clip(txt);
       return `<div class="ptl-cf"><div class="ptl-card" style="border-color:${c.cor}"><b style="color:${c.cor}">${esc(c.rot.toUpperCase())}</b>${c.li.map(([a,b])=>`<div class="r"><span>${esc(a)}:</span><span>${penaExt(esc(b))}</span></div>`).join('')}</div>
         <div class="ptl-fund"><div class="h"><b>Fundamentação para a petição</b><span class="mini pre" onclick="event.stopPropagation();ui.copiarClip(${ci})">Copiar</span></div><div class="t">${esc(txt).replace(/\n/g,'<br>')}</div></div></div>`; }).join(''); },
-  FUND_CRIT:{linha:['Linha do tempo detalhada do SEEU','O saldo de cada condenação é o registrado pelo próprio SEEU, na linha do tempo detalhada da execução, na data da fuga: é a imputação do tempo cumprido feita pelo cálculo oficial, homologado pelo juízo, condenação a condenação.'],
+  FUND_CRIT:{calc:['Calculadora','O saldo de cada condenação na data da fuga foi apurado a partir dos períodos de prisão e das remições da execução, imputando-se o tempo cumprido primeiro à condenação mais grave e, em seguida, às menos graves (CP, art. 76), cada uma a partir do início do seu cumprimento.'],
+    linha:['Linha do tempo detalhada do SEEU','O saldo de cada condenação é o registrado pelo próprio SEEU, na linha do tempo detalhada da execução, na data da fuga: é a imputação do tempo cumprido feita pelo cálculo oficial, homologado pelo juízo, condenação a condenação.'],
     cron:['Ordem do trânsito em julgado (tese)','Adotada a ordem cronológica do trânsito em julgado: entre penas da mesma espécie não incide o art. 76 do Código Penal, que só distingue reclusão e detenção (STJ, AgRg no REsp 1.858.048, 5ª Turma), critério que o TJMS aplica na apuração da prescrição executória após a evasão (Agravo de Execução Penal 1604723-49.2024.8.12.0000; 0000230-65.2010.8.12.0007).'],
     art76:['Art. 76 do CP (tese)','Adotado o critério do art. 76 do Código Penal: executa-se primeiro a pena mais grave, a de reclusão antes da de detenção; entre penas da mesma espécie, a ordem do trânsito em julgado (STJ, AgRg no REsp 1.858.048).'],
     grav:['Pena maior primeiro (tese)','Adotado o critério da pena mais grave primeiro, pelo seu tamanho (STJ, 6ª Turma, AgRg no HC 1.075.773).']},
   fundCrits(s){ // prescrita pela linha do SEEU: só ela; senão, as teses pelas quais prescreveria
-    const C=(s&&s.crits)||{}; if(C.linha&&C.linha.resultado==='prescrita') return ['linha'];
-    return Object.keys(this.FUND_CRIT).filter(k=>k!=='linha'&&C[k]&&C[k].resultado==='prescrita'); },
+    const C=(s&&s.crits)||{}, p=s&&s.principal; if(p&&C[p]&&C[p].resultado==='prescrita') return [p];
+    return Object.keys(this.FUND_CRIT).filter(k=>k!=='linha'&&k!=='calc'&&C[k]&&C[k].resultado==='prescrita'); },
   fundEscolher(idx){ const X=(this._fundCtx||{})[idx]; if(!X) return; const ks=this.fundCrits(X.s);
     document.getElementById('modal').innerHTML=`<div class="box" style="width:600px"><h2>Qual fundamentação usar?</h2><p>Pela linha do tempo do SEEU esta condenação não prescreveu, mas prescreveria por mais de um critério de imputação defendido como tese. Escolha o da petição:</p>
-      ${ks.map(k=>{ const h=X.s.crits[k]; return `<div class="chk" style="justify-content:space-between;cursor:pointer;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px" onclick="ui.copiarClip(${this.clip(this.fundPrescEvasao(X.L, X.s, k))});ui.fecharModal()"><span><b>${esc(this.FUND_CRIT[k][0])}</b>${k==='linha'?' <span class="px-tag">principal</span>':''}<br><span class="muted">${h.posicao?h.posicao+'ª de '+h.de+' · ':''}saldo ${esc(this.tlAmd(h.saldo))} · prazo ${esc(h.prazo)} · venceu em ${esc(h.limite)}</span></span><span class="jz-b pri">Copiar</span></div>`; }).join('')}
+      ${ks.map(k=>{ const h=X.s.crits[k]; return `<div class="chk" style="justify-content:space-between;cursor:pointer;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px" onclick="ui.copiarClip(${this.clip(this.fundPrescEvasao(X.L, X.s, k))});ui.fecharModal()"><span><b>${esc(this.FUND_CRIT[k][0])}</b>${['linha','calc'].includes(k)?' <span class="px-tag">principal</span>':''}<br><span class="muted">${h.posicao?h.posicao+'ª de '+h.de+' · ':''}saldo ${esc(this.tlAmd(h.saldo))} · prazo ${esc(h.prazo)} · venceu em ${esc(h.limite)}</span></span><span class="jz-b pri">Copiar</span></div>`; }).join('')}
       <div class="acts"><button class="btn" onclick="ui.fecharModal()">Cancelar</button></div></div>`;
     document.getElementById('modal').classList.add('on'); },
   fimTxt(s){ const m=s.fim_motivo||'', nc=s.fim_novo_crime||'', d=s.fim||'';
@@ -900,16 +903,41 @@ const ui = {
     const G=((s.global||{})[k])||[]; if(G.length<2) return '';
     const h=(s.crits||{})[k]||{}; const este=G.find(x=>s._chave&&x.chave===s._chave)||G.find(x=>x.saldo===h.saldo&&x.posicao===h.posicao)||{};
     const pres=G.filter(x=>x.resultado==='prescrita'&&x!==este), nao=G.filter(x=>x.resultado!=='prescrita');
-    const nm=xs=>xs.map(x=>`${x.crime} (ação penal ${x.proc})`).join('; '); const lin=k==='linha', pm=lin?'Pelos mesmos registros':'Pelo mesmo critério';
-    const abre=lin? `Na data da fuga, o SEEU registrava para as ${G.length} condenações então em execução:` : `Por esse critério, o tempo cumprido da execução unificada até a fuga (${Number(s.cumprido_total||0).toLocaleString('pt-BR')} dias, somados cumprimento, prisão provisória e remição) seria imputado às ${G.length} condenações então em execução nesta ordem:`;
-    const fecho=lin? `A condenação aqui tratada registrava ${este.cumprida_txt||'nenhum dia'} cumpridos, restando-lhe ${este.saldo_txt||'—'} na data da fuga.` : `A condenação aqui tratada era a ${este.posicao||'?'}ª nessa ordem${este.posicao===1?' e recebeu primeiro o tempo cumprido':': as anteriores absorveram o tempo cumprido antes dela'}, restando-lhe ${este.saldo_txt||'—'} na data da fuga.`;
+    const nm=xs=>xs.map(x=>`${x.crime} (ação penal ${x.proc})`).join('; '); const lin=['linha','calc'].includes(k), pm=k==='linha'?'Pelos mesmos registros':(k==='calc'?'Pelo mesmo cálculo':'Pelo mesmo critério');
+    const abre=lin? (k==='linha'?`Na data da fuga, o SEEU registrava para as ${G.length} condenações então em execução:`:`Assim apurado, na data da fuga as ${G.length} condenações então em execução tinham:`) : `Por esse critério, o tempo cumprido da execução unificada até a fuga (${Number(s.cumprido_total||0).toLocaleString('pt-BR')} dias, somados cumprimento, prisão provisória e remição) seria imputado às ${G.length} condenações então em execução nesta ordem:`;
+    const fecho=lin? `A condenação aqui tratada tinha ${este.cumprida_txt||'nenhum dia'} cumpridos, restando-lhe ${este.saldo_txt||'—'} na data da fuga.` : `A condenação aqui tratada era a ${este.posicao||'?'}ª nessa ordem${este.posicao===1?' e recebeu primeiro o tempo cumprido':': as anteriores absorveram o tempo cumprido antes dela'}, restando-lhe ${este.saldo_txt||'—'} na data da fuga.`;
     let t=`${this.FUND_CRIT[k][1]}\n${abre}\n`+
       G.map((x,n)=>`${lin?(n+1):x.posicao+'ª'}) ${x.crime} - ação penal ${x.proc}${x.fracao?', fração '+x.fracao:''} - pena de ${x.pena}, ${lin?'cumprida '+(x.cumprida_txt||'nenhum dia')+', ':''}saldo de ${x.saldo_txt}${x.limite?`: prazo de ${x.prazo}, ${x.resultado==='prescrita'?'esgotado':'com vencimento'} em ${x.limite}`:': nada a prescrever'}`).join(';\n')+'.\n'+fecho;
     if(pres.length) t+= pres.length===1? ` ${pm}, também prescreveu a condenação por ${nm(pres)}, cujo saldo gerou prazo esgotado durante a fuga.` : ` ${pm}, também prescreveram as condenações por ${nm(pres)}, cujos saldos geraram prazos esgotados durante a fuga.`;
     if(nao.length) t+= nao.length===1? ` A condenação por ${nm(nao)} não prescreveu: com saldo maior, o prazo correspondente não se esgotou antes da recaptura.` : ` As demais condenações - ${nm(nao)} - não prescreveram: com saldos maiores, os prazos correspondentes não se esgotaram antes da recaptura.`;
     return t; },
-  // ---- calculadora do saldo na fuga (várias condenações, sem a linha do tempo detalhada): pré-preenchida pelo RSPE ----
-  calcAbrir(idx){ const X=(this._calcCtx||{})[idx]; if(!X||!X.S||!X.S.calc) return; const c=JSON.parse(JSON.stringify(X.S.calc)); this._calc={idx, L:X.L, c};
+  // ---- aba Prescrição > Calcular: a fuga de cada assistido nos 4 critérios, pela linha do tempo detalhada ou pela calculadora ----
+  calcFugas(r){ const F={}; (r.presc_linhas||[]).forEach(L=>(L.ppe_saldos||[]).forEach(S=>{ if(S.evasao) (F[S.evasao]=F[S.evasao]||[]).push({L,S}); })); return F; },
+  calcEstado(r){ const F=this.calcFugas(r), ks=Object.keys(F); if(!ks.length) return null;
+    return ks.some(k=>F[k].some(x=>x.S.saldo_origem==='nao_determinado'))? 'pend' : 'ok'; },
+  prescCalc(rid){ const r=(this.dados.registros||[]).find(x=>x.id===rid); if(!r) return; const F=this.calcFugas(r); this._pcRid=rid; this._pcFund={};
+    const pill=h=> !h? '<span class="muted">—</span>' : h.resultado==='prescrita'?`<span class="px-pill p">prescrita</span><br><small class="muted">venceu ${esc(h.limite||'')}</small>` : h.resultado==='nada a prescrever'?'<span class="px-pill z">pena cumprida</span>' : h.resultado==='a verificar'?'<span class="px-pill n">a verificar</span>' : `<span class="px-pill n">não prescrita</span>${h.limite?`<br><small class="muted">vence ${esc(h.limite)}</small>`:''}`;
+    const th='style="text-align:left;font-size:11px;color:var(--tx2);padding:5px 6px"', td='style="padding:5px 6px;font-size:12px;border-top:1px solid var(--line);vertical-align:top"';
+    let n=0; const blocos=Object.keys(F).map(ev=>{ const xs=F[ev]; const S0=xs[0].S; const pend=xs.some(x=>x.S.saldo_origem==='nao_determinado'); const varias=xs.some(x=>x.S.outras>0);
+      const P=(xs.find(x=>x.S.principal)||{S:{}}).S.principal; const lin=r.presc_linha_seeu;
+      const fonte= P==='calc'? 'Saldos apurados na calculadora (dados conferidos pelo usuário). Importada a linha do tempo detalhada, ela prevalece.' : P==='linha'? `Saldos da linha do tempo detalhada do SEEU${lin?' gerada em '+esc(lin.gerado||'?')+(lin.importado?', importada em '+esc(lin.importado):''):''}.` : (varias? 'Sem a linha do tempo detalhada nem a calculadora, o saldo de cada condenação não está determinado.' : 'Uma única condenação em execução: saldo calculado pelos eventos do RSPE.');
+      const rows=xs.map(({L,S})=>{ const C=S.crits||{}; const hp=P&&C[P]? C[P] : (pend? null : {saldo:S.saldo_max, resultado:S.resultado, limite:S.limite_max});
+        const ks=this.fundCrits(S); let bt='';
+        if(!pend && (ks.length || S.resultado==='prescrita')){ const id=++n; this._pcFund[id]={L,s:S,ks};
+          bt=`<span class="jz-b pri" style="white-space:nowrap" title="Copiar a fundamentação para a petição" onclick="ui.pcCopiar(${id})">${ks.length&&!(P&&ks[0]===P)?'Copiar tese':'Copiar'}${ks.length>1?' ▾':''}</span>`; }
+        return `<tr><td ${td}><b>${esc(L.crime)}</b><br><span class="muted">${esc(L.proc_crim||'')} · pena ${esc(L.pena||'')}</span></td><td ${td}>${hp? esc(this.tlAmd(hp.saldo)) : '<span class="muted">não determinado</span>'}</td><td ${td}>${pend?'<span class="px-pill n">a verificar</span>':pill(hp)}</td>${varias?`<td ${td}>${pend?'—':pill(C.cron)}</td><td ${td}>${pend?'—':pill(C.art76)}</td><td ${td}>${pend?'—':pill(C.grav)}</td>`:''}<td ${td}>${bt}</td></tr>`; }).join('');
+      return `<div class="px-box" style="margin-bottom:12px"><h5>${S0.revogacao?'Revogação do livramento':'Fuga'} de ${esc(ev)}${S0.fim&&S0.fim!=='hoje'?' · fim em '+esc(S0.fim):' · em curso'}</h5>
+        <div style="font-size:12.5px;margin:4px 0 8px">${fonte}</div>
+        ${varias?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px"><span class="jz-b ${pend?'pri':''}" onclick="ui.pcLinha()">${lin?'Importar outra linha do tempo detalhada':'Importar linha do tempo detalhada (PDF)'}</span><span class="jz-b" onclick="ui.calcAbrir('${esc(ev)}')">${P==='calc'?'Rever a calculadora':'Preencher manualmente (calculadora)'}</span></div>`:''}
+        <table style="width:100%;border-collapse:collapse"><thead><tr><th ${th}>Condenação</th><th ${th}>Saldo na fuga</th><th ${th}>${P==='calc'?'Calculadora':P==='linha'?'Linha do SEEU':'Pelo saldo'}</th>${varias?`<th ${th}>Ordem do trânsito (tese)</th><th ${th}>Art. 76 (tese)</th><th ${th}>Pena maior (tese)</th>`:''}<th ${th}></th></tr></thead><tbody>${rows}</tbody></table>
+        ${pend?'<div style="font-size:12px;color:var(--tx2);margin-top:8px">Importe a linha do tempo detalhada (gerada na aba "Informações adicionais" do SEEU) ou preencha a calculadora: o cálculo nos 4 critérios e a fundamentação aparecem em seguida.</div>':''}</div>`; }).join('');
+    document.getElementById('modal').innerHTML=`<div class="box" style="width:980px;max-height:90vh;overflow:auto"><h2>Prescrição executória após a fuga · ${esc(r.nome||'')}</h2><p>${esc(r.proc||r.id)} · o saldo da pena na data da fuga (CP, art. 113), condenação a condenação; os demais critérios de imputação aparecem como tese.</p>${blocos||'<p>Nenhuma fuga ou revogação de livramento registrada.</p>'}<div class="acts"><button class="btn" onclick="ui.fecharModal()">Fechar</button></div></div>`;
+    document.getElementById('modal').classList.add('on'); },
+  pcCopiar(id){ const X=this._pcFund[id]; if(!X) return; if(X.ks.length>1){ this._fundCtx=this._fundCtx||{}; this._fundCtx['pc']={L:X.L, s:X.s}; return this.fundEscolher('pc'); }
+    this.copiarClip(this.clip(this.fundPrescEvasao(X.L, X.s, X.ks[0]))); },
+  async pcLinha(){ const rid=this._pcRid; const d=await api('presc_importar_linha', rid); if(d&&!d.erro) this.prescCalc(rid); },
+  calcAbrir(ev){ const r=(this.dados.registros||[]).find(x=>x.id===this._pcRid); if(!r) return; const X=(this.calcFugas(r)[ev]||[]).find(x=>x.S.calc); if(!X) return;
+    const c=JSON.parse(JSON.stringify(X.S.calc)); c.conds.forEach(x=>{ x.este=false; }); this._calc={L:X.L, c};
     c.conds.forEach(x=>{ x._pena=this.sqFmt(x.pena); x._grav=x.fracao||'0'; }); this.calcRender(); },
   calcRender(res){ const C=this._calc; if(!C) return; const c=C.c; const inp=(v,w,on)=>`<input value="${esc(v??'')}" style="width:${w}px;padding:4px 6px;border:1px solid var(--line);border-radius:6px;font:inherit;font-size:12px" oninput="${on}">`;
     const th='style="text-align:left;font-size:11px;color:var(--tx2);padding:4px 6px"', td='style="padding:3px 6px;font-size:12px;border-top:1px solid var(--line)"';
@@ -922,7 +950,7 @@ const ui = {
         <div><b style="font-size:12.5px">Períodos de custódia/cumprimento até a fuga</b><table style="width:100%;border-collapse:collapse;margin-top:4px">${c.periodos.map((p,i)=>`<tr><td ${td}>${inp(p[0],90,`ui._calc.c.periodos[${i}][0]=this.value`)} a ${inp(p[1],90,`ui._calc.c.periodos[${i}][1]=this.value`)} ${rem('periodos',i)}</td></tr>`).join('')}</table><span class="jz-b" style="margin-top:6px" onclick="ui._calc.c.periodos.push(['','']);ui.calcRender()">+ período</span></div>
         <div><b style="font-size:12.5px">Remições até a fuga</b><table style="width:100%;border-collapse:collapse;margin-top:4px">${c.remicoes.map((p,i)=>`<tr><td ${td}>${inp(p[0],90,`ui._calc.c.remicoes[${i}][0]=this.value`)} ${inp(p[1],50,`ui._calc.c.remicoes[${i}][1]=this.value`)} dias ${rem('remicoes',i)}</td></tr>`).join('')}</table><span class="jz-b" style="margin-top:6px" onclick="ui._calc.c.remicoes.push(['','']);ui.calcRender()">+ remição</span></div></div>
       ${res?`<p style="margin-top:12px">Tempo cumprido até a fuga: <b>${res.total.toLocaleString('pt-BR')} dias</b> (custódia e remição).</p>`:''}
-      <div class="acts" style="margin-top:14px"><button class="btn" onclick="ui.fecharModal()">Fechar</button><button class="btn" onclick="ui.calcRodar()">Calcular</button>${res?`<button class="btn pri" onclick="ui.calcGravar()">Gravar saldos e recalcular</button>`:''}</div></div>`;
+      <div class="acts" style="margin-top:14px"><button class="btn" onclick="ui.prescCalc(ui._pcRid)">Voltar</button><button class="btn" onclick="ui.calcRodar()">Calcular</button>${res?`<button class="btn pri" onclick="ui.calcGravar()">Gravar saldos e recalcular</button>`:''}</div></div>`;
     document.getElementById('modal').classList.add('on'); },
   calcRodar(){ const C=this._calc; if(!C) return; const c=C.c; const re=/^\d{2}\/\d{2}\/\d{4}$/;
     const dia=t=>{ const m=/^(\d{2})\/(\d{2})\/(\d{4})$/.exec(String(t||'').trim()); return m? Math.round(Date.UTC(+m[3],+m[2]-1,+m[1])/864e5) : null; };
@@ -940,7 +968,7 @@ const ui = {
     C.res={rec, sal:conds.map(x=>Math.max(0,x.pena-rec[x.i])), total}; this.calcRender(C.res); },
   async calcGravar(){ const C=this._calc; if(!C||!C.res) return; const rid=this.ridDe(C.L); if(!rid) return this.toast('Assistido não encontrado.');
     const saldos={}; C.c.conds.forEach((x,i)=>{ if(x.chave) saldos[x.chave]=C.res.sal[i]; });
-    this.fecharModal(); await api('presc_saldos_calc', rid, C.c.fuga, saldos); this.toast('Saldos da calculadora gravados: prescrição recalculada.'); },
+    const d=await api('presc_saldos_calc', rid, C.c.fuga, saldos); if(d&&!d.erro) this.prescCalc(rid); },
   fundPrescEvasao(L, s0, k){ let s=s0;
     if(k&&s0&&s0.crits&&s0.crits[k]){ const h=s0.crits[k]; s=Object.assign({}, s0, {saldo_min:h.saldo, saldo_max:h.saldo, prazo_max:h.prazo, prazo_min:h.prazo, limite_max:h.limite, limite_min:h.limite, resultado:h.resultado, imput_txt:'', _glob:this.fundGlobal(s0,k).trim().replace(/\.$/,'')}); }
     // texto pronto para a petição, com os fundamentos do cálculo da prescrição pelo saldo (CP, arts. 107, IV, 109, 110, 113, 115, 117)
