@@ -1660,16 +1660,7 @@ const ui = {
         const exp=x[4]||x[1];
         return card(`Comutação ${x[0]} · ${x[3]||''}`, situacao(x[1]), lin, `<div class="mem">${ui.bloco('',exp,'pp')}</div>`,
           `Comutação ${x[0]}\n`+ui.txtLinhas(exp)); }).join('');
-    const prs=(r.presc_linhas||[]).filter(s=>s.ppe_cor==='vermelho'||s.ppe_cor==='amarelo'||s.retro_cor==='vermelho').map(s=>{
-        const exe=s.ppe_cor==='vermelho'||s.ppe_cor==='amarelo';
-        const det=exe?s.ppe_detalhe:s.retro_detalhe;
-        const lin=exe ? [s.ppe_resumo||semIcone(linhasDe(det,/^[✘✗…?]/)[0]||''), (s.ppe_faltam&&s.ppe_faltam.length)?'Falta: '+s.ppe_faltam.join('; ')+'.':'Antes de requerer: conferir se houve recaptura, prisão ou nova condenação não registradas no RSPE (interrompem a prescrição).'].filter(Boolean)
-                      : unicas(linhasDe(det,/^[✘✗]/).map(l=>semIcone(l).replace(/\s*\(prazo ([^,]+), vence ([^)]+)\)/,' - prazo de $1, vencido em $2'))).slice(0,3);
-        const h=card(`Prescrição ${exe?'executória':'punitiva'} · ${s.rotulo||s.crime}`, exe?s.ppe_status:s.retro_status, lin, ui.memoria(s), ui.txtPresc(s, exe?'pe':'pp'));
-        if(!(exe&&ui.tlTem(s))) return h;
-        const ti=ui.tlReg(s);
-        return h.replace('<details class="cc-d">', `<div class="cp-row" style="gap:6px;margin:4px 0"><span class="mini why" onclick="event.stopPropagation();ui.tlToggleDrawer(this,${ti})">linha do tempo</span></div><div class="ptl-holder" style="display:none"></div><details class="cc-d">`); }).join('');
-    const calc=dets+cms+prs;
+    const calc=dets+cms; // a prescrição fica só na aba Prescrição, não na ficha do assistido
     document.getElementById('drawer').innerHTML=`
       <div class="dh"><div><h2><span class="copy" onclick="ui.copiar(ui._clips[${this.clip(r.nome||'')}])" title="Clique para copiar o nome">${esc(r.nome)} ⧉</span></h2><div class="sub"><span class="copy" onclick="ui.copiar('${esc(r.proc)}')" title="Clique para copiar">${esc(r.proc)} ⧉</span> · ${esc(r.regime||'regime não informado')}</div>
         <div class="sub">RSPE de ${esc(r.geracao)} · <span class="mini" onclick="ui.copiarClip(${ui.clip(ui.txtFicha(r))})">Copiar resumo</span> <span class="mini pre" onclick="ui.abrirSAP('${r.id}')">Registro para o SAP</span> <span class="mini" onclick="ui.qdNovo('${r.id}')">Enviar ao Quadro do Usuário</span> <span class="mini" onclick="ui.fixar('${r.id}',${r.fixado?0:1})">${r.fixado?'Soltar':'Fixar no topo'}</span></div></div>
