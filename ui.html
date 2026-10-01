@@ -862,11 +862,7 @@ const ui = {
       <div class="px-acts">${r[0]==='amb'?`<span class="jz-b" onclick="event.stopPropagation();ui.pfAbrir(this,${idx},'saldo')">Informar saldo</span>`:''}${ci!=null&&(r[0]==='verm'||fk.length)?`<span class="jz-b pri" onclick="event.stopPropagation();${cp}">Copiar fundamentação${fk.length>1?' ▾':''}</span>`:''}</div></div>`;
     const conta=card? `<div class="px-box"><h5><i style="background:${card.cor}"></i>${esc(card.rot)}</h5>${card.li.map(([k,v],i)=>`<div class="px-kv ${['Saldo na fuga','Vencimento'].includes(k)?'hl':''}"><span>${esc(k)}</span><b>${penaExt(esc(v))}</b></div>`).join('')}</div>` : '';
     const pill=h=> h.resultado==='prescrita'?'<span class="px-pill p">prescrita</span>': h.resultado==='nada a prescrever'?'<span class="px-pill z">pena cumprida</span>':'<span class="px-pill n">não prescrita</span>';
-    const lin=(h,nome,fonte,on)=> h? `<tr class="${on?'on':''}"><td class="crit"><b>${nome}${on?'<span class="px-tag">adotado</span>':'<span class="px-tag" style="background:#F2F4F7;color:#475467">tese</span>'}</b><small>${fonte}</small></td><td>${h.posicao?h.posicao+'º de '+h.de:'—'}</td><td>${amd(h.saldo)}</td><td>${esc(h.prazo||'—')}</td><td>${esc(h.limite||'—')}</td><td>${pill(h)}</td></tr>` : '';
-    const C=(S&&S.crits)||{};
-    const P=S&&S.principal; const imp=P&&C[P]? `<div class="px-box"><h5>Imputação do tempo cumprido entre as condenações</h5><table class="px-tab"><thead><tr><th style="width:36%">Critério</th><th>Posição</th><th>Saldo na fuga</th><th>Prazo</th><th>Vence</th><th>Resultado</th></tr></thead><tbody>
-        ${lin(C[P],P==='calc'?'Calculadora (aba Prescrição)':'Linha do tempo detalhada do SEEU',P==='calc'?'saldo apurado com os dados conferidos':'restante registrado em '+esc((S.linha_seeu||{}).data_ocorrencia||''),true)}${lin(C.cron,'Ordem do trânsito em julgado','STJ 5ª T. (AgRg no REsp 1.858.048) e TJMS',false)}${lin(C.art76,'Art. 76 do CP (espécie)','reclusão antes de detenção',false)}${lin(C.grav,'Pena maior primeiro','STJ 6ª T. (AgRg no HC 1.075.773)',false)}</tbody></table></div>`
-      : '';
+    const imp=''; // a tabela dos critérios fica só na aba Prescrição (Calcular)
     const at=[];
     if(S&&S.risco_grav) at.push(['m','⚖','Argumento possível do MP (6ª Turma)','e a resposta', S.risco_grav]);
     if(L.ppe_reinc_aviso) at.push(['a','!','Reincidência não aplicada no prazo','por quê', L.ppe_reinc_aviso]);
