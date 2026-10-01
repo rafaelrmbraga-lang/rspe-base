@@ -112,12 +112,51 @@ def _impeditivos(f, crimes, ref):
                 out.append("%s: hediondo ou equiparado na data do fato%s" % (rot, (" (%s)" % rs.fmt(fato)) if fato else ""))
                 continue
         for o in I.get("outros") or []:
-            arts = [re.sub(r"\D", "", str(a)) for a in (o.get("artigos") or [])]
-            leis = rs.num_lei(o.get("lei") or "") if o.get("lei") and not re.search(r"\bCP\b|PENAL", str(o.get("lei")), re.I) else "2848"
-            if art and art in arts and (lei == leis or (leis == "2848" and lei in ("", "2848"))):
+            lt = str(o.get("lei") or "")
+            if re.search(r"\bCPM\b|MILITAR", lt, re.I):
+                continue  # Código Penal Militar: crimes que o SEEU estadual não executa
+            leis = rs.num_lei(lt) if lt and not re.search(r"\bCP\b|PENAL", lt, re.I) else "2848"
+            if not (lei == leis or (leis == "2848" and lei in ("", "2848"))):
+                continue
+            if art and any(_artigo_vedado(a, art, c) for a in (o.get("artigos") or [])):
                 out.append("%s: %s" % (rot, o.get("descricao") or "vedado pelo decreto"))
                 break
     return list(dict.fromkeys(out))
+
+
+def _art_num(t):
+    """'217-A' -> (217, 'A'); '33' -> (33, '')."""
+    m = re.match(r"\s*(\d+)(?:\s*-\s*([A-Z]))?", t or "", re.I)
+    return (int(m.group(1)), (m.group(2) or "").upper()) if m else None
+
+
+def _artigo_vedado(entrada, art, c):
+    """Se o crime (art do RSPE, ex.: '217-A', e parágrafo do tipo penal) está na entrada da lista de vedações do decreto:
+    '33', '217-A', '239 a 244-B' (intervalo), '33 caput', '33, §1º', '157, §2º, I', '1º § 2º'. Entrada com 'ressalvado'
+    não veda. Com parágrafo indicado, o crime precisa estar nele (o 'caput' vale para o crime sem parágrafo)."""
+    e = str(entrada)
+    if re.search(r"ressalv", e, re.I):
+        return False
+    alvo = _art_num(art)
+    if not alvo:
+        return False
+    m = re.match(r"\s*(\d+\s*(?:-\s*[A-Z])?)\s*[ºo°]?\s*a\s*(\d+\s*(?:-\s*[A-Z])?)", e, re.I)
+    if m:  # intervalo de artigos
+        lo, hi = _art_num(m.group(1)), _art_num(m.group(2))
+        return bool(lo and hi and lo[0] <= alvo[0] <= hi[0] and (alvo[0] < hi[0] or not hi[1] or alvo[1] <= hi[1]))
+    base = _art_num(e)
+    if not base or base != alvo:
+        return False
+    resto = re.sub(r"^\s*\d+\s*(?:-\s*[A-Z](?![a-z]))?\s*[ºo°]?", "", e, flags=re.I)
+    pars = set(re.findall(r"§\s*(\d+)", resto))
+    caput = bool(re.search(r"caput", resto, re.I))
+    if not pars and not caput:
+        return True  # artigo inteiro
+    pi = rs.paragrafo_inciso(c)
+    par = re.match(r"\d+", pi[0]).group(0) if pi and pi[0] and pi[0][0].isdigit() else ""
+    if not pi:
+        return caput  # parágrafo ilegível: a vedação do caput alcança; a de parágrafo, não
+    return (par in pars) if par else caput
 
 
 def _regra_concurso(f):
