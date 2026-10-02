@@ -515,7 +515,7 @@ tr.noclk{cursor:default}
 .enc th{font-size:10.5px;text-transform:uppercase;letter-spacing:.3px;color:var(--tx3);text-align:left;padding:8px 12px;background:#F9FAFB;border-bottom:1px solid var(--line);position:static;cursor:default}
 .enc table td{padding:10px 12px!important;border-bottom:1px solid #F2F4F7;font-size:12.5px;vertical-align:middle;font-weight:400!important;cursor:default}
 .enc tr:last-child td{border-bottom:0}.enc tr:hover td{background:inherit}
-.expl{background:#F8FAFF;border:1px solid #D6E4FF;border-radius:10px;padding:10px 14px;margin:6px 0 10px;font-size:12.5px;line-height:1.5}.expl>b{font-size:13px}.expl ol{margin:6px 0 0;padding-left:20px}.expl li{margin:3px 0;font-weight:400}.expl ul.sub{margin:2px 0 0;padding-left:18px;list-style:disc}.expl ul.sub li{margin:1px 0}details.expl summary{cursor:pointer;color:#1D4ED8}details.expl summary b{color:#101828}
+.expl{background:#F8FAFF;border:1px solid #D6E4FF;border-radius:10px;padding:10px 14px;margin:6px 0 10px;font-size:12.5px;line-height:1.5}.expl>b{font-size:13px}.expl ol{margin:6px 0 0;padding-left:20px}.expl li{margin:3px 0;font-weight:400}.expl ul.sub{margin:2px 0 0;padding-left:18px;list-style:disc}.expl ul.sub li{margin:1px 0}details.dobra>summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px}details.dobra>summary::-webkit-details-marker{display:none}details.dobra>summary::before{content:'▸';font-size:15px;color:#1D4ED8;transition:transform .15s}details.dobra[open]>summary::before{transform:rotate(90deg)}details.dobra>summary h3{margin:0!important}details.dobra>summary:hover h3{color:#1D4ED8}details.dobra[open]>summary{margin-bottom:10px}details.expl summary{cursor:pointer;color:#1D4ED8}details.expl summary b{color:#101828}
 .dmot{font-size:12.5px;color:#344054}.mini.dbtn{color:var(--pri);border-color:#A6D8BD;background:#F3FBF6;font-size:11.5px;padding:4px 10px}.mini.dbtn:hover{background:#E3F5EA}
 .dleg{display:flex;flex-wrap:wrap;align-items:center;gap:14px;font-size:12px;color:var(--tx2);padding:6px 2px}.dleg b{color:var(--tx);font-size:12px}.dleg span{display:inline-flex;align-items:center;gap:6px}.dleg i{width:10px;height:10px;border-radius:50%;display:inline-block}
 .dres{display:inline-block;padding:2px 10px;border-radius:999px;font-size:11.5px;font-weight:700;white-space:nowrap}
@@ -1849,7 +1849,7 @@ const ui = {
   // ---- linha do tempo de indulto e comutação: uma linha por assistido; a figura é a memória de cálculo ----
   async indTL(id){ this.toast('Montando a linha do tempo…'); await this.completo(id); const d=await api('indulto_linha', id); if(!d||d.erro) return; this._tlvModo='ind';
     this._tlv=d; this._tlvId=id; const sel=this.aba==='ind'?this.decSel:null; this._tlvGen=(sel&&!(d.decretos||[]).some(x=>x.id===sel))?sel:null;
-    this._tlvDec=(sel&&(d.decretos||[]).some(x=>x.id===sel))?sel:(this.indDec!=='todos'&&(d.decretos||[]).some(x=>x.id===this.indDec))?this.indDec:(d.ultimo_decreto||((d.decretos||[]).slice(-1)[0]||{}).id); this._tlvDets=[]; this.renderTLV();
+    this._tlvDec=(sel&&(d.decretos||[]).some(x=>x.id===sel))?sel:(this.indDec!=='todos'&&(d.decretos||[]).some(x=>x.id===this.indDec))?this.indDec:(d.ultimo_decreto||((d.decretos||[]).slice(-1)[0]||{}).id); this._tlvDets=[]; this._tlvAbre={}; this.renderTLV();
     document.getElementById('tlv').classList.add('on'); },
   tlvF(d){ return d?`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`:''; },
   tlvLarg(t,px){ return String(t).length*px*0.58; },
@@ -2013,8 +2013,8 @@ const ui = {
         <div class="tlv-sec"><h3>1 · Crimes <span class="muted" style="text-transform:none;letter-spacing:0">selo pelo Decreto ${esc(Dsel.numero||'')}</span></h3><div class="crs">${crs}</div></div>
         ${duv}
         <div class="tlv-sec"><h3>2 · Resultado</h3><div class="res">${res}</div></div>
-        <div class="tlv-sec"><h3>3 · ${todos?'Decretos':'Decreto '+esc(D.numero||'')}: comparativo com os incisos (exigido × cumprido na data de referência)</h3><div class="decs ${todos?'':'um'}">${decs}</div></div>
-        ${expl?`<div class="tlv-sec"><h3>4 · Como cheguei aqui</h3><div class="decs ${todos?'':'um'}">${expl}</div></div>`:''}
+        <details class="tlv-sec dobra" ${(this._tlvAbre||{}).cmp?'open':''} ontoggle="(ui._tlvAbre=ui._tlvAbre||{}).cmp=this.open"><summary><h3>3 · ${todos?'Decretos':'Decreto '+esc(D.numero||'')}: comparativo com os incisos (exigido × cumprido na data de referência)</h3></summary><div class="decs ${todos?'':'um'}">${decs}</div></details>
+        ${expl?`<details class="tlv-sec dobra" ${(this._tlvAbre||{}).expl?'open':''} ontoggle="(ui._tlvAbre=ui._tlvAbre||{}).expl=this.open"><summary><h3>4 · Como cheguei aqui</h3></summary><div class="decs ${todos?'':'um'}">${expl}</div></details>`:''}
       </div><div class="tlv-det" id="tlvDet"></div></div>`; },
   fecharModal(){ document.getElementById('modal').classList.remove('on'); },
   async exportar(fmt){ const ids=[...document.querySelectorAll('#modal input:checked')].map(i=>i.value); if(!ids.length) return this.toast('Marque ao menos uma aba.');

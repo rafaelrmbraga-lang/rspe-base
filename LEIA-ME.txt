@@ -796,7 +796,8 @@ v6.16.50
     SEEU, quando houver), o requisito, a imputação ao impeditivo, a falta
     grave, o resultado e o que conferir no SEEU. A janela fica na ordem:
     1 · Crimes, 2 · Resultado, 3 · Comparativo com os incisos do decreto e
-    4 · Como cheguei aqui.
+    4 · Como cheguei aqui. As partes 3 e 4 vêm fechadas e abrem pela
+    setinha; a escolha se mantém ao trocar de decreto.
   - Linhas das abas: o clique na linha não abre mais a ficha. Ao lado de
     cada assistido, o ícone de pessoa fica verde quando há ficha disciplinar
     importada (sem cor quando não há), e um ícone próprio abre a ficha
