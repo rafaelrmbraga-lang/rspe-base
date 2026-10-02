@@ -463,6 +463,10 @@ def linha(r, hoje=None):
             saida_dec.append(_decreto_ficha(fic[x["id"]], x, C, cumprido, faltas))
     saida_dec.sort(key=lambda d: _d(d["referencia"]) or date.min)
     for dd in saida_dec:
+        for tp in ("indulto", "comutacao"):
+            if (dd.get(tp) or {}).get("checklist"):
+                dd[tp]["explicacao"] = _explicacao(dd, tp, C, faixas, ini_exec, remicoes)
+    for dd in saida_dec:
         marcos.append({"data": dd["referencia"], "tipo": "decreto", "rotulo": "Decreto %s" % dd["numero"], "sub": "data de referência", "crimes": ["GERAL"],
                        "efeito": dd["indulto"]["rotulo"], "decreto": dd["id"],
                        "det": _det("Decreto %s - publicação %s, data de referência %s" % (dd["numero"], dd["publicacao"] or "não cadastrada", dd["referencia"]), "GERAL",
@@ -538,6 +542,105 @@ def _linhas_aba(txt):
         elif l.startswith("Não atendidos:"):
             out.append(("ko", l))
     return out
+
+
+_LEITURA = {"cumprimento": "conta como pena cumprida", "detracao": "conta (prisão provisória: detração, CP, art. 42)",
+            "livramento": "conta (livramento condicional)", "fuga": "não conta (fuga/evasão: o tempo fora não é pena cumprida)",
+            "liberdade": "não conta (fora do cumprimento)", "nao_comprovado": "não conta (o SEEU não comprova a que pena pertence)"}
+_SELO = {"IMPEDITIVO": "impeditivo", "NAO_IMPEDITIVO": "não impeditivo", "A_VERIFICAR": "a verificar", "FORA": "não alcançado"}
+
+
+def _explicacao(dd, tp, C, faixas, ini_exec, remicoes):
+    """Explicação didática, em passos numerados, de como o resultado do decreto foi obtido: a ordem dos crimes, quando o
+    cumprimento começou, cada período até a data de referência (conta ou não conta), a conta do cumprido, o requisito, a
+    falta grave, o resultado e o que conferir no SEEU se o resultado parecer errado."""
+    ref = _d(dd["referencia"])
+    B = dd.get(tp) or {}
+    passos = []
+    ordem = sorted(C, key=lambda x: (_d(x["fato"]) or date.max, x["id"]))
+    passos.append("Ordem dos crimes (do fato mais antigo ao mais recente), todos somados numa pena só (LEP, art. 111): " + "; ".join(
+        "%s - %s, processo %s, fato %s, trânsito %s, pena %s" % (x["id"], x["tipificacao"], x["proc"] or "-", x["fato"] or "não informado",
+                                                                x["transito"] or "não informado", x["pena"]) for x in ordem) + ".")
+    if ini_exec:
+        passos.append("Início do cumprimento: %s - é a data da primeira prisão ou do primeiro período de cumprimento registrado nos eventos "
+                      "do SEEU; a conta do tempo cumprido começa aí, para todos os crimes juntos." % _f(ini_exec))
+    fora = {f["crime"]: f["motivo"] for f in dd.get("fora") or []}
+    sel = []
+    for x in ordem:
+        s = (x.get("selos") or {}).get(dd["id"])
+        if x["id"] in fora:
+            sel.append("%s fica fora (%s)" % (x["id"], fora[x["id"]]))
+        elif s:
+            sel.append("%s: %s%s" % (x["id"], _SELO.get(s["selo"], s["selo"]), (" - " + (s["motivo"].split(" (")[0] if s["selo"] == "A_VERIFICAR" else s["motivo"]).split(" · ")[0][:180]) if s["selo"] != "NAO_IMPEDITIVO" else ""))
+    if sel:
+        passos.append("Quais crimes o Decreto %s alcança: " % dd["numero"] + "; ".join(sel) + ".")
+    soma, per = 0, []
+    for f in sorted(faixas, key=lambda f: _d(f["ini"])):
+        a, b = _d(f["ini"]), _d(f["fim"])
+        if not a or a > ref:
+            continue
+        b2 = min(b, ref) if b else ref
+        n = (b2 - a).days + 1
+        conta = f["tipo"] in CONTA
+        soma += n if conta else 0
+        cr = [c for c in f.get("crimes") or [] if c != "GERAL"]
+        per.append("%s a %s%s - %s: %s%s" % (_f(a), _f(b2), " (cortado na data de referência)" if b and b > ref else "",
+                                              rs.pl(n, "dia", "dias"), _LEITURA.get(f["tipo"], f["tipo"]), (" [crimes: %s]" % ", ".join(cr)) if cr else ""))
+    if per:
+        passos.append("Períodos até a data de referência (%s), na ordem em que aconteceram: " % dd["referencia"] + "; ".join(per) + ".")
+    rem = [(dt, n) for dt, n, k, _ in remicoes if dt and dt <= ref]
+    if rem:
+        passos.append("Remição até a data de referência (conta como pena cumprida - LEP, art. 128): " + "; ".join(
+            "%s %s%s" % ("+" if n > 0 else "−", rs.pl(abs(int(n)), "dia", "dias"), " em " + _f(dt)) for dt, n in rem) + ".")
+    cu, ct = dd.get("cumprido") or {}, dd.get("cumprido_txt") or {}
+    if cu:
+        conta = "A conta do tempo cumprido em %s: %s de cumprimento + %s de detração + %s de remição%s = %s. Fonte: %s." % (
+            dd["referencia"], ct.get("cumprimento"), ct.get("detracao"), ct.get("remicao"),
+            (" − %s de perda" % ct.get("perda")) if cu.get("perda") else "", ct.get("total"), cu.get("fonte") or "-")
+        if abs(cu.get("diferenca") or 0) > 30:
+            conta += " Somando só os períodos acima dá %s - diferença de %s em relação à pena cumprida do SEEU, que é a que vale." % (
+                ct.get("eventos"), rs.pl(abs(cu["diferenca"]), "dia", "dias"))
+        conta += " Falta grave não zera nem reinicia esta conta (STJ, Súmula 535)."
+        passos.append(conta)
+    req = [c for c in B.get("checklist") or [] if c["item"].startswith("Requisito objetivo") or c["item"] == "Ressalva"]
+    if B.get("pena_considerada_txt"):
+        passos.append("Pena considerada pelo decreto: %s (%s); cumprido na data: %s; faltavam: %s." % (
+            B["pena_considerada_txt"], B.get("reinc") or "-", B.get("cumprido_txt") or "-", B.get("remanescente_txt") or "-"))
+    if tp == "comutacao" and B.get("exigido_txt"):
+        passos.append("Requisito da comutação: %s da pena = %s exigidos." % (B.get("fracao") or "-", B["exigido_txt"]))
+    for c in req:
+        passos.append("%s %s: %s" % ({"ok": "✔", "ko": "✖"}.get(c["estado"], "?"), c["item"], c["texto"]))
+    I = dd.get("imputacao")
+    if I:
+        passos.append("Regra aplicada (crime impeditivo): o tempo cumprido é imputado primeiro a %s - %s de %s = %s; cumprido: %s. %s" % (
+            ", ".join(I["crimes_imp"]), I["fracao"], I["pena_imp_txt"], I["exigido_txt"], I["cumprido_total_txt"],
+            ("Só depois disso (%s%s) os demais crimes (%s) podem ser analisados." % (I["data"], ", projeção" if I["projecao"] else "", ", ".join(I["crimes_liv"])))
+            if I.get("imputado_liv", 0) <= 0 else "Sobram %s para %s." % (I["sobra_txt"], ", ".join(I["crimes_liv"]))))
+    if tp == "comutacao" and B.get("reducao"):
+        R = B["reducao"]
+        passos.append("A redução: %s de %s = %s; a pena remanescente passa de %s para %s." % (
+            R["fracao"], _pena(R["base_dias"]), R["reducao_txt"], R["antes_txt"], R["depois_txt"]))
+    J = dd.get("janela_falta")
+    if J:
+        fl = dd.get("faltas") or []
+        dentro = [f for f in fl if f["estado"] in ("impede", "verificar", "informativa")]
+        passos.append("Falta grave: o decreto olha os %d meses de %s a %s. %s" % (
+            J["meses"], J["ini"], J["fim"], ("Dentro desse período: " + "; ".join("%s (%s)" % (f["fato"], f["texto"]) for f in dentro) + ".") if dentro
+            else "Nenhuma falta nesse período" + (((" (a falta de %s fica fora e não pesa)" if len(fl) == 1 else " (as faltas de %s ficam fora e não pesam)")
+                                                    % ", ".join(f["fato"] for f in fl)) if fl else "") + "."))
+    passos.append("Resultado: %s.%s" % (B.get("rotulo") or "-", " A decisão já está registrada no SEEU; a conta acima serve para conferência."
+                                        if B.get("status") == "concedido" else ""))
+    conf = ["a data da primeira prisão (início do cumprimento) e se ela é desta execução"]
+    if any(f["tipo"] in ("fuga", "liberdade") for f in faixas if _d(f["ini"]) and _d(f["ini"]) <= ref):
+        conf.append("as datas de fuga/soltura e de recaptura/nova prisão (o tempo fora não conta)")
+    if any(f["tipo"] == "detracao" for f in faixas):
+        conf.append("se a prisão provisória lançada como detração é mesmo desta pena")
+    conf.append("as remições homologadas até %s" % dd["referencia"])
+    if any(((x.get("selos") or {}).get(dd["id"]) or {}).get("selo") == "A_VERIFICAR" for x in C):
+        conf.append("a natureza dos crimes marcados \"a verificar\" (parágrafo, inciso ou majorante na sentença)")
+    conf.append("as datas dos fatos e dos trânsitos em julgado (decidem quais crimes o decreto alcança)")
+    passos.append("Se o resultado parecer errado, confira no SEEU: " + "; ".join(conf) + ".")
+    return passos
 
 
 def _decreto(D, ref, pub, C, cumprido, data_atinge, faltas, hoje, ultimo, em_curso, duvidas, r, eventos, incidentes):
