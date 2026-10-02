@@ -121,7 +121,8 @@ def to_date(s):
     # sem strptime: é chamada centenas de milhares de vezes ao abrir a base
     try:
         m = _RE_DATA_BR.match(s.strip())
-        return date(int(m.group(3)), int(m.group(2)), int(m.group(1))) if m else None
+        # ano fora de 1900-2100: lixo de leitura (01/01/0001, 99/99/9999) - ignorado, para não estourar as contas de datas
+        return date(int(m.group(3)), int(m.group(2)), int(m.group(1))) if (m and 1900 <= int(m.group(3)) <= 2100) else None
     except Exception:
         return None
 
@@ -143,6 +144,8 @@ def pena_para_dias(txt):
         return None
     a, me, d = (int(x) for x in m.groups())
     a, me = a + me // 12, me % 12  # '12 meses' é 1 ano (365 dias), não 360: não cai de faixa no art. 109 nem na pena mínima
+    if a > 3000:
+        return None  # lixo de leitura (nenhuma pena chega a 3.000 anos): tratada como não lida, sem estourar as contas de datas
     return a * DIAS_ANO + me * 30 + d
 
 
@@ -207,7 +210,7 @@ def pct(fr):
 def pct_rotulo(txt):
     """'1/6 - Comum' -> '16,67% - Comum'; '3/5 (LEP ...)' -> '60% (LEP ...)'; percentuais ficam como estão."""
     t = txt or ""
-    return re.sub(r"^\s*(\d+)\s*/\s*(\d+)", lambda m: pct(Fraction(int(m.group(1)), int(m.group(2)))), t)
+    return re.sub(r"^\s*(\d+)\s*/\s*(\d+)", lambda m: pct(Fraction(int(m.group(1)), int(m.group(2)))) if int(m.group(2)) else m.group(0), t)
 
 
 def pct_texto(t):

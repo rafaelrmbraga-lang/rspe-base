@@ -33,7 +33,8 @@ def _d(txt):
 
 def _dp(txt):
     try:
-        return date(int(txt[6:10]), int(txt[3:5]), int(txt[0:2]))
+        d = date(int(txt[6:10]), int(txt[3:5]), int(txt[0:2]))
+        return d if 1900 <= d.year <= 2100 else None
     except Exception:
         return None
 

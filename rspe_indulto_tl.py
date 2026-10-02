@@ -410,7 +410,10 @@ def linha(r, hoje=None):
                     lo = mid + 1
             return date.fromordinal(lo), False
         if em_curso and alvo > agora:
-            return hoje + timedelta(days=int(alvo - agora)), True
+            try:
+                return hoje + timedelta(days=int(alvo - agora)), True
+            except OverflowError:
+                return None, False
         return None, False
 
     # ---- fatos, sentenças, trânsitos, unificações, regimes, faltas ----
@@ -533,7 +536,7 @@ def linha(r, hoje=None):
 
     resultado = _consolidado(saida_dec, C)
     return {"nome": rv.nome_proprio(r.get("nome", "")), "proc": r.get("processo_execucao", ""), "hoje": _f(hoje), "inicio": _f(ini_exec),
-            "crimes": C, "faixas": sorted(faixas, key=lambda f: _d(f["ini"])), "marcos": marcos, "barra": barra, "decretos": saida_dec,
+            "crimes": C, "faixas": sorted(faixas, key=lambda f: _d(f["ini"]) or date.min), "marcos": marcos, "barra": barra, "decretos": saida_dec,
             "resultado": resultado, "duvidas": duvidas, "em_curso": em_curso,
             "ultimo_decreto": ult_cad["id"] if ult_cad else ""}
 
@@ -593,7 +596,7 @@ def _explicacao(dd, tp, C, faixas, ini_exec, remicoes):
     if sel:
         passos.append("Quais crimes o Decreto %s alcança: " % dd["numero"] + "; ".join(sel) + ".")
     soma, per = 0, []
-    for f in sorted(faixas, key=lambda f: _d(f["ini"])):
+    for f in sorted(faixas, key=lambda f: _d(f["ini"]) or date.min):
         a, b = _d(f["ini"]), _d(f["fim"])
         if not a or a > ref:
             continue
