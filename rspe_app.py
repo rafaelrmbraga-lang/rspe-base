@@ -1479,6 +1479,8 @@ class Api:
                             pend_fichas.append((nome_arq, r))  # vinculada no fim, com todos os RSPE do lote já na base
                         continue
                     if not r.get("processo_execucao"):
+                        if r.get("nome") or r.get("_crimes") or r.get("data_geracao_rspe"):
+                            raise ValueError("RSPE sem o número da execução legível (a 1ª página falta ou está ilegível) - gere o PDF de novo no SEEU")
                         raise ValueError("não parece um RSPE do SEEU nem uma Ficha Disciplinar do SIAPEN")
                     with lock:
                         chave = r["processo_execucao"]

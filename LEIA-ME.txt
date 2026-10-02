@@ -631,6 +631,15 @@ v7.0.0
       deferimento (até 60 dias) não é dúvida; interrupção com livramento em
       curso = em cumprimento. Prisão provisória que alcançou o trânsito é
       início do cumprimento.
+  - Teste de estresse da leitura (layout atual): 21 mil variações do texto
+    real dos RSPE e das fichas (campo vazio, data ou pena absurda, fração
+    0/0, linha quebrada, seção ou página faltando, acentos, PDF cortado)
+    pelo fluxo completo do programa, e 40 assistidos assim abertos em todas
+    as abas com 2.394 cliques na tela. Corrigido o que derrubava a análise:
+    fração com denominador zero, datas fora de 1900-2100 (agora tratadas
+    como não lidas), penas acima de 3.000 anos (lixo de leitura) e projeção
+    de data além do calendário. RSPE sem a 1ª página: a importação diz
+    "sem o número da execução legível - gere o PDF de novo no SEEU".
   - Bateria de 592 casos hipotéticos (400 aleatórios, 53 casos-limite e 139
     com ficha disciplinar) rodada contra o programa; corrigidos: erro com
     fração "0/0" no RSPE, textos cortados no meio de "art.", parênteses

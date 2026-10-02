@@ -154,7 +154,9 @@ def pena_amd(txt):
     if not txt:
         return None
     m = RE_PENA_AMD.search(txt) or RE_PENA_EXT.search(txt)
-    return tuple(int(x) for x in m.groups()) if m else None
+    if not m or pena_para_dias(txt) is None:
+        return None  # mesma regra de pena_para_dias (lixo de leitura acima de 3.000 anos)
+    return tuple(int(x) for x in m.groups())
 
 
 def pena_extenso(txt):
