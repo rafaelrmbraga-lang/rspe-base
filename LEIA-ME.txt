@@ -633,7 +633,7 @@ v7.0.0
       início do cumprimento.
   - Relatório geral refeito como diagnóstico da base (dados crus, sem o
     controle de pedidos do programa), com gráficos de rosca (percentual na
-    fatia e legenda em colunas Nº e %; categoria única vira frase):
+    fatia e legenda em colunas Nº e %; categoria única sai como gráfico inteiro):
     1. Perfil da população - idade média, faixa etária, regime, pena, juízo
        da execução, unidade prisional (ficha) e incidência penal;
     2. Trabalho, conduta e disciplina - trabalham, estudam, PADICs em

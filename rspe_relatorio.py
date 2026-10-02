@@ -1175,7 +1175,7 @@ CINZA_OUTROS = "#C4C9D2"
 def _rosca(titulo, pares, largura, st, total_rot="", max_fatias=6, cores=None, nota="", ordenar=True, abaixo=False):
     """Gráfico de rosca com o total no centro e o percentual escrito em cada fatia de 8% ou mais; ao lado, a legenda em
     colunas alinhadas (categoria | quantidade | %). Até 6 fatias (8 com max_fatias) na ordem fixa da paleta, do maior ao menor;
-    o resto vai para "Outros" (cinza). Com uma só categoria, não há o que comparar: vira uma frase."""
+    o resto vai para "Outros" (cinza). Com uma só categoria, o gráfico sai inteiro (100%)."""
     from reportlab.graphics.shapes import Drawing, Wedge, String, Rect, Circle, Line
     from reportlab.lib import colors
     from reportlab.pdfbase.pdfmetrics import stringWidth
@@ -1196,11 +1196,6 @@ def _rosca(titulo, pares, largura, st, total_rot="", max_fatias=6, cores=None, n
     corpo = [Paragraph(_t(titulo), st["neg"])]
     if not tot:
         corpo.append(Paragraph("Sem dados.", st["mut"]))
-        return corpo
-    if len(pares) == 1:
-        corpo.append(Paragraph(_t("Todos os %d (%s): %s." % (tot, total_rot or "registros", pares[0][0])), st["cel"]))
-        if nota:
-            corpo.append(Paragraph(_t(nota), st["mut"]))
         return corpo
     D = (32 if largura > 300 else 27) * 2.835
     gap = 10
