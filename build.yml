@@ -30,8 +30,8 @@ jobs:
       - name: Compilar com PyInstaller
         run: >
           python -m PyInstaller --onefile --windowed --clean --name RSPE_Base
-          --icon rspe.ico --add-data "rspe.ico;." --add-data "ui.html;." --add-data "base_juridica.json;." --add-data "teses_execucao.json;."
-          --collect-data pdfminer --collect-data pdfplumber --collect-data reportlab --hidden-import reportlab.graphics.shapes --hidden-import rspe_relatorio
+          --icon rspe.ico --add-data "rspe.ico;." --add-data "ui.html;." --add-data "base_juridica.json;."
+          --collect-data pdfminer --collect-data pdfplumber --collect-data reportlab
           --collect-all webview
           --exclude-module docxtpl --exclude-module docx --exclude-module docx2pdf
           rspe_app.py
@@ -48,7 +48,7 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force pacote | Out-Null
           Copy-Item dist\RSPE_Base.exe pacote\
-          Copy-Item LEIA-ME.txt, RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf pacote\
+          Copy-Item LEIA-ME.txt, Criterios_de_analise_por_beneficio.pdf pacote\
           Compress-Archive -Path pacote\* -DestinationPath "RSPE_Base_v${{ steps.versao.outputs.v }}.zip"
 
       - name: Guardar o .exe (aba Actions)

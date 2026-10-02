@@ -1219,12 +1219,12 @@ const ui = {
     const r=await API().fd_adicionar(id,d); if(r&&r.erro){ this.toast(r.erro); return; } this.fecharModal(); if(r&&r.registros){ this.aberto=id; this.carregar(r); } if(r&&r.msg) this.toast(r.msg); },
   // ---------- decisão sobre indícios de falta: vale em todas as abas (falta 12 meses, indulto, comutação, linha do tempo, Auditoria) ----------
   faltasModal(id, foco){ const r=(this.dados.registros||[]).find(x=>x.id===id); if(!r) return; const its=(r.faltas_itens||[]).slice().sort((a,b)=>this.tlD(b.data||'01/01/1900')-this.tlD(a.data||'01/01/1900'));
-    const pad=f=>f.padrao==='falta'?'Falta grave (fuga - padrão)':'A apurar (padrão)';
+    const pad=f=>'A apurar (padrão)';
     const linhas=its.map((f,i)=>`<div class="fl ${('falta|'+f.chave)===foco?'foco':''}"><div class="fd"><b>${esc(f.data||'sem data')}</b> <span>${esc(f.texto)}</span></div>
       <select id="fal_${i}" data-ch="${esc(f.chave)}" data-v="${esc(f.decisao||'')}" style="padding:6px 8px;border:1px solid var(--line);border-radius:8px;font:inherit;font-size:12.5px">
         <option value="" ${!f.decisao?'selected':''}>${pad(f)}</option><option value="sim" ${f.decisao==='sim'?'selected':''}>Houve falta grave</option><option value="nao" ${f.decisao==='nao'?'selected':''}>Não houve falta grave</option></select></div>`).join('');
     document.getElementById('modal').innerHTML=`<div class="box" style="width:720px;max-height:calc(100vh - 40px);display:flex;flex-direction:column"><h2>Faltas · ${esc(r.nome)}</h2>
-      <p class="muted" style="margin:0 0 10px">Indícios de falta registrados no RSPE sem sanção reconhecida. Fuga é falta grave por padrão (LEP, art. 50, II). A decisão vale em todas as abas: falta nos 12 meses (progressão e livramento), indulto, comutação, linha do tempo e Auditoria.</p>
+      <p class="muted" style="margin:0 0 10px">Indícios de falta registrados no RSPE sem sanção reconhecida. A fuga é, em tese, falta grave (LEP, art. 50, II), mas só produz efeitos depois de reconhecida em juízo (Súmula 533/STJ): fica "A apurar" até você decidir. A decisão vale em todas as abas: falta nos 12 meses (progressão e livramento), indulto, comutação, linha do tempo e Auditoria.</p>
       <div style="overflow:auto;display:flex;flex-direction:column;gap:8px">${linhas||'<p class="muted">Nenhum indício de falta a decidir.</p>'}</div>
       <div class="acts"><button class="btn" onclick="ui.fecharModal()">Cancelar</button><button class="btn pri" onclick="ui.faltasSalvar('${id}',${its.length})">Salvar</button></div></div>`;
     document.getElementById('modal').classList.add('on'); const fo=document.querySelector('#modal .fl.foco'); if(fo) fo.scrollIntoView({block:'center'}); },

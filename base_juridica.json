@@ -1,5 +1,5 @@
 {
- "versao": "2026-10-01b",
+ "versao": "2026-10-02",
  "descricao": "Base juridica do RSPE Base. Editavel: o programa le este arquivo ao abrir (copia ao lado do .exe tem prioridade sobre a embutida). Datas em AAAA-MM-DD. Fracoes como 'num/den' ou percentual 'NN%'.",
  "prescricao": {
   "art109_tabela": [
@@ -1422,7 +1422,18 @@
   "2848:129 §3-A": 40,
   "2848:147-B": 2,
   "2848:147-C": 3,
-  "2848:338-A": 5
+  "2848:338-A": 5,
+  "2848:138": 2,
+  "2848:139": 1,
+  "2848:140": 0.5,
+  "2848:140 §2": 1,
+  "2848:140 §3": 3,
+  "2848:146": 1,
+  "2848:146 §1": 2,
+  "2848:147-A": 2,
+  "2848:333": 12,
+  "2848:354": 2,
+  "9503:305": 1
  },
  "presuncoes": {
   "hipossuficiencia": {

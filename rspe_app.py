@@ -87,8 +87,8 @@ def _ajuda_juris():
 
 AJUDA = """
 <h4>Cores</h4>
-Progressão e Livramento: <b>amarelo forte</b> = prazo vencido ("Vencido há N dias · verificar criminológico, indeferimento ou
-falta"; a dica mostra os pedidos do RSPE e, quando houver, o aviso sobre o exame criminológico, que é só dica: não muda a cor nem
+Progressão e Livramento: <b>amarelo forte</b> = prazo vencido ("Vencido há N dias · sem pedido no RSPE - requerer", "· pedido pendente no RSPE"
+ou "· indeferido em dd/mm/aaaa - conferir o motivo"); a dica mostra os pedidos do RSPE e, quando houver, o aviso sobre o exame criminológico, que é só dica: não muda a cor nem
 gera alerta). Prazos: <b>laranja</b> = vence em até 30 dias; <b>amarelo</b> = em até 60; <b>verde</b> = em até 90. Acima de 90 dias:
 "Em cumprimento", sem cor. <b>Cinza</b> = "Pena cumprida" ou "Não se aplica" (Progressão: em livramento, já no aberto, não iniciou, pena
 interrompida; Livramento: em livramento, não iniciou, pena interrompida - o motivo fica na ficha); <b>amarelo</b> também para "A verificar (livramento)"; <b>azul</b> = execução extinta.
@@ -1479,6 +1479,8 @@ class Api:
                             pend_fichas.append((nome_arq, r))  # vinculada no fim, com todos os RSPE do lote já na base
                         continue
                     if not r.get("processo_execucao"):
+                        if r.get("nome") or r.get("_crimes") or r.get("data_geracao_rspe"):
+                            raise ValueError("RSPE sem o número da execução legível (a 1ª página falta ou está ilegível) - gere o PDF de novo no SEEU")
                         raise ValueError("não parece um RSPE do SEEU nem uma Ficha Disciplinar do SIAPEN")
                     with lock:
                         chave = r["processo_execucao"]
