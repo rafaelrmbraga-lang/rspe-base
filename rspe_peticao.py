@@ -159,17 +159,18 @@ def campos(m, r, nome_base="", defensor=None):
         "situacao_progressao": m.get("prog_sit", ""), "fracao_livramento": m.get("frac_liv", ""), "data_livramento": _dm(m, "liv"),
         "situacao_livramento": m.get("liv_sit", ""),
         "crimes": m.get("crimes", ""),
-        "crimes_completo": "\n".join("%s, %s - pena %s - fato %s - trânsito %s (proc. %s)" % (
-            rs.lei_curta(c.get("lei")), c.get("artigo", ""), rs.pena_curta(c.get("pena_imposta")), c.get("data_infracao", ""),
-            c.get("transito_processo") or c.get("transito_mp") or "não informado", c.get("processo_criminal", "")) for c in crimes_ativos),
+        "crimes_completo": "\n".join("%s - pena %s - fato %s - trânsito %s%s" % (
+            rs.crimes_curto([c]) or "crime não informado", rs.pena_curta(c.get("pena_imposta")) or "não informada", c.get("data_infracao") or "não informado",
+            c.get("transito_processo") or c.get("transito_mp") or "não informado",
+            (" (proc. %s)" % c["processo_criminal"]) if c.get("processo_criminal") else "") for c in crimes_ativos),
         "falta_12m": m.get("falta_full") or m.get("falta", ""),  # "Sim · ...", "A apurar · ..." ou "Não consta"
         "indulto_2022": m.get("ind22", ""), "indulto_2024": m.get("ind24", ""), "indulto_2025": m.get("ind25", ""), "comutacao_2025": m.get("com25", ""),
         "indulto_analise_2025": m.get("det25", ""), "indulto_analise_2024": m.get("det24", ""),
         "prescricao_resumo": m.get("presc_ppe_full") or m.get("presc_ppe", ""),
         "prescricao_calculo": "\n\n".join(_calc_presc(l) for l in m.get("presc_linhas", [])
                                            if l.get("ppe_cor") in ("vermelho", "amarelo") or l.get("retro_cor") == "vermelho"),
-        "prescricao_tabela": "\n".join("%s (pena %s): punitiva - %s; executória - %s%s" % (
-            l.get("crime"), l.get("pena"), l.get("retro_status"), l.get("ppe_status"), (" (termo %s)" % l["ppe_termo"]) if l.get("ppe_termo") else "")
+        "prescricao_tabela": "\n".join("%s%s: punitiva - %s; executória - %s%s" % (
+            l.get("crime"), (" (pena %s)" % l["pena"]) if l.get("pena") else "", l.get("retro_status"), l.get("ppe_status"), (" (termo %s)" % l["ppe_termo"]) if l.get("ppe_termo") else "")
             for l in m.get("presc_linhas", [])),
         "extincao_hipoteses": m.get("ext_hipoteses", ""),
         "auditoria": "\n".join("[%s] %s%s" % (i.get("nivel_txt", ""), i.get("titulo", ""), (" - " + i["detalhe"]) if i.get("detalhe") else "")

@@ -4,7 +4,7 @@ Modelo de exibição: transforma o registro extraído (rspe_scraper) nos campos
 curtos que as abas, o Excel e o PDF mostram. Também define as abas/colunas.
 """
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from fractions import Fraction
 import hashlib
 import re
@@ -142,6 +142,10 @@ def nao_iniciou(r):
     inicios = [e for e in evs if re.search(r"PRIS|IN[ÍI]CIO|REIN[ÍI]CIO|RECAPTURA", ((e.get("tipo") or "") + " " + (e.get("motivo") or "")).upper())]
     definitivos = [e for e in inicios if not re.search(r"FLAGRANTE|PREVENTIV|TEMPOR|PROVIS", (e.get("motivo") or "").upper())]
     if definitivos:
+        return False
+    # prisão provisória que alcançou o trânsito em julgado: dali em diante, é cumprimento da pena (iniciou)
+    trs = [d for d in (rs.to_date(c.get("transito_processo") or c.get("transito_mp") or "") for c in r.get("_crimes", [])) if d]
+    if any(a <= t and (b is None or b > t) for a, b in rs.periodos_custodia(evs) for t in trs):
         return False
     # sem prisão definitiva: só "não iniciou" se não está preso agora (a última prisão provisória foi encerrada)
     ordem = sorted(evs, key=lambda e: rs.to_date(e.get("data") or "") or date.min)
@@ -311,6 +315,26 @@ def situacao(d, interrompida=False, rot="Pena interrompida"):
     return ("", "")  # acima de 90 dias: nada a fazer, nada a mostrar
 
 
+def _vencido_pedido(r, sc, d, palavra):
+    """Lapso vencido: diz o que o RSPE mostra depois da data - nenhum pedido (requerer), pedido pendente ou indeferido (aí, sim,
+    conferir criminológico, falta ou o motivo do indeferimento)."""
+    sit, cor = sc
+    if cor != "vencido" or not isinstance(d, date):
+        return sc
+    inc = [i for i in r.get("_incidentes", []) if palavra in ("%s %s" % (i.get("tipo", ""), i.get("complemento", ""))).upper()
+           and "DATA-BASE" not in (i.get("tipo") or "").upper() and (_data(i.get("data_decisao") or i.get("data_referencia") or "") or date.min) >= d]
+    pend = [i for i in inc if i.get("situacao") == "PENDENTE"]
+    neg = [i for i in inc if i.get("situacao") == "NÃO CONCEDIDO"]
+    base = sit.split(" · ")[0]
+    if pend:
+        return ("%s · pedido pendente no RSPE" % base, cor)
+    if neg:
+        return ("%s · indeferido em %s - conferir o motivo" % (base, neg[-1].get("data_decisao") or neg[-1].get("data_referencia") or "?"), cor)
+    if not inc:
+        return ("%s · sem pedido no RSPE - requerer" % base, cor)
+    return sc
+
+
 def pedidos(r, palavra):
     inc = [i for i in r.get("_incidentes", []) if palavra in ("%s %s" % (i.get("tipo", ""), i.get("complemento", ""))).upper()]
     if not inc:
@@ -447,9 +471,28 @@ def cor_indulto(r):
     return "cinza"
 
 
+def termino_calc(r):
+    """Término calculado quando o SEEU não o imprime e a pena está em cumprimento: data do RSPE + pena remanescente (ou pena
+    total - cumprida). None se interrompida, não iniciada, extinta ou sem números."""
+    if r.get("termino_previsao_seeu") or parada(r) or nao_iniciou(r) or execucao_extinta(r) or not r.get("_crimes") \
+            or not rs.pena_para_dias(r.get("pena_total")):
+        return None
+    ger = rs.to_date(r.get("data_geracao_rspe") or "")
+    rem = rs.pena_para_dias(r.get("pena_remanescente"))
+    if rem is None:
+        pt, pc = rs.pena_para_dias(r.get("pena_total")), rs.pena_para_dias(r.get("pena_cumprida"))
+        rem = (pt - pc) if (pt and pc is not None) else None
+    if not ger or rem is None or rem < 0:
+        return None
+    return ger + timedelta(days=rem)
+
+
 def termino(r):
     if r.get("termino_previsao_seeu"):
         return r["termino_previsao_seeu"]
+    tc = termino_calc(r)
+    if tc:
+        return "%s (calculado: data do RSPE + pena remanescente; o SEEU não imprime o término)" % rs.fmt(tc)
     if nao_iniciou(r):
         return "Não iniciou"
     return rotulo_parada(r, True) if parada(r) else "Não consta no RSPE"
@@ -460,22 +503,48 @@ def extincao(r, presc, interr):
     hip, cor, d_ref = [], "", None
     pt = rs.pena_para_dias(r.get("pena_total")) or 0
     cump = rs.pena_para_dias(r.get("pena_cumprida"))
+    if cump is None and pt and rs.pena_para_dias(r.get("pena_remanescente")) is not None:
+        cump = max(0, pt - rs.pena_para_dias(r.get("pena_remanescente")))  # pena cumprida = total - remanescente
     term = rs.to_date(r.get("termino_previsao_seeu") or "")
+    term_calc = False
+    if not term and termino_calc(r):
+        term, term_calc = termino_calc(r), True
     # 1) pena cumprida
     if pt and cump is not None and cump >= pt:
         hip.append("Pena integralmente cumprida (%s de %s): extinção pelo cumprimento (LEP, art. 66, II)" % (rs.dias_para_pena(cump), rs.dias_para_pena(pt)))
         cor, d_ref = "vermelho", HOJE
     elif term and term <= HOJE:
-        hip.append("Término da pena previsto para %s já alcançado" % rs.fmt(term))
+        hip.append("Término da pena %s %s já alcançado" % ("calculado (data do RSPE + pena remanescente) para" if term_calc else "previsto para", rs.fmt(term)))
         cor, d_ref = "vermelho", term
     # 2) livramento condicional: período de prova expirado sem revogação
     inc = r.get("_incidentes", [])
     _lc_ok, _ = rs.livramento_em_curso(r, inc)
-    lcs = [i for i in inc if rs.e_concessao_livramento(i)] if _lc_ok else []
+    lcs = [i for i in inc if rs.e_concessao_livramento(i)]
     if lcs:
         dlc = max((rs.to_date(i.get("data_referencia") or i.get("data_decisao") or i.get("complemento") or "") or date.min for i in lcs))
-        revog = any(rs.e_revogacao_livramento(j) and (rs.to_date(j.get("data_referencia") or j.get("data_decisao") or "") or date.min) > dlc for j in inc)
+        revs = [rs.to_date(j.get("data_referencia") or j.get("data_decisao") or "") or date.min for j in inc
+                if (rs.e_revogacao_livramento(j) or rs.e_suspensao_livramento(j))]
+        revog = any(d > dlc for d in revs)
+        # fim do período de prova = deferimento + pena remanescente no deferimento; revogação/suspensão decidida só depois
+        # desse fim não impede a extinção (CP, art. 90; Súmula 617/STJ)
+        fim_prova = None
+        if revog and dlc != date.min and pt:
+            try:
+                import rspe_decretos as _rd
+                cx = _rd._ctx(r)
+                c_dlc = rs.cumprido_na_data(r, cx["periodos"], cx["rem"], dlc)[0]
+                fim_prova = dlc + timedelta(days=max(0, pt - c_dlc))
+            except Exception:
+                fim_prova = None
+        if revog and fim_prova and fim_prova <= HOJE and all(d > fim_prova for d in revs if d > dlc):
+            hip.append("Livramento condicional desde %s: o período de prova terminou em %s (deferimento + pena remanescente), e a revogação/suspensão "
+                       "só foi decidida em %s, depois desse fim - extinção da pena (CP, art. 90; LEP, art. 146; Súmula 617/STJ)" % (
+                           rs.fmt(dlc), rs.fmt(fim_prova), rs.fmt(min(d for d in revs if d > dlc))))
+            cor = "vermelho"
+            revog = True
         duv = rs.duvidas_livramento(r, r.get("_eventos", []), inc, dlc if dlc != date.min else None) if not revog else []
+        if not _lc_ok and not revog:
+            duv = duv or ["livramento não está em curso no RSPE"]  # sem revogação, mas também sem LC vigente: fica na Auditoria
         # livramento com situação incerta: fica só na Auditoria (esta aba mostra apenas extinção pelo cumprimento)
         if dlc != date.min and not revog and duv:
             pass
@@ -487,7 +556,12 @@ def extincao(r, presc, interr):
     #    porque a mesma prisão pode servir a várias condenações (LEP, art. 111). Prescrição e indulto ficam nas próprias abas.
     a_verificar = False
     for l in presc.get("presc_linhas", []):
-        if l.get("ppe_detracao_cobre"):
+        if l.get("ppe_detracao_cobre") and l.get("ppe_detracao_exclusiva"):
+            hip.append("%s: custódia anterior ao trânsito de %s iguala ou supera a pena do processo (%s), e nenhuma outra condenação do RSPE tem "
+                       "fato anterior a essa prisão - a detração só pode ser imputada a este processo: extinção pelo cumprimento (CP, art. 42; "
+                       "LEP, art. 66, II)" % (l.get("rotulo") or l["crime"], rs.dias_para_pena(l.get("ppe_detracao_dias") or 0), l.get("ppe_pena_processo") or l["pena"]))
+            cor, d_ref = "vermelho", d_ref or HOJE
+        elif l.get("ppe_detracao_cobre"):
             hip.append("%s: a verificar - custódia anterior ao trânsito de %s iguala ou supera a pena do processo (%s); se computada nesta "
                        "condenação, extinção pelo cumprimento (CP, art. 42; LEP, arts. 66, II, e 111)" % (l.get("rotulo") or l["crime"], rs.dias_para_pena(l.get("ppe_detracao_dias") or 0), l.get("ppe_pena_processo") or l["pena"]))
             a_verificar = True
@@ -519,7 +593,7 @@ def extincao(r, presc, interr):
     return {
         "ext_hipoteses": "; ".join(hip) if hip else ("Não iniciou o cumprimento - sem previsão" if nao_iniciou(r) else ("" if not interr else rotulo_parada(r) + " - sem previsão")),
         "ext_cor": cor,
-        "ext_termino": rs.fmt(term) if term else ("Não iniciou" if nao_iniciou(r) else (rotulo_parada(r, True) if interr else "")),
+        "ext_termino": (rs.fmt(term) + (" (calculado)" if term_calc else "")) if term else ("Não iniciou" if nao_iniciou(r) else (rotulo_parada(r, True) if interr else "")),
         "ext_dias": (term - HOJE).days if term else None,
         "ext_sit": ("Pena extinta (registrada)" if ja_extinta else (("Extinção cabível" if cor == "vermelho" else situacao(term)[0].replace("Vence", "Término").replace("Em ", "Término em ")) if (term or cor == "vermelho") else "")),
         "ext_extintos": "; ".join(ext),
@@ -752,8 +826,8 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
     ptxt, pd = data_progressao(r)
     ltxt, ld = data_livramento(r)
     est = estado_execucao(r)
-    psit, pcor = situacao(pd, interr, rotulo_parada(r))
-    lsit, lcor = situacao(ld, interr, rotulo_parada(r))
+    psit, pcor = _vencido_pedido(r, situacao(pd, interr, rotulo_parada(r)), pd, "PROGRESS")
+    lsit, lcor = _vencido_pedido(r, situacao(ld, interr, rotulo_parada(r)), ld, "LIVRAMENTO")
     if est:
         psit, pcor = ({"extinta": "Pena extinta", "cumprida": "Pena cumprida", "lc": "Em livramento", "aberto": "Já no aberto", "lc_duvida": "A verificar (livramento)",
                        "nao_iniciou": "Não iniciou o cumprimento"}[est[0]],

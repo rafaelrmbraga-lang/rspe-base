@@ -565,6 +565,71 @@ HISTÓRICO DE VERSÕES
   comportamento atual é o descrito nas seções acima.
 
 v7.0.0
+  - Conferência de dados objetivos (base jurídica 2026-10-02): pontos que o
+    programa deixava "a verificar" ou decidia contra o assistido sem
+    necessidade agora são decididos pelos dados do RSPE e da ficha:
+    * Decretos de 2000 a 2023: hipóteses por idade (60/70 anos; menor de 21
+      ao tempo do crime) pela data de nascimento; regime inicial aberto pelo
+      regime da sentença (fração na data própria da hipótese, sem
+      regressão); sem incidente de regime, vale o da sentença; saídas
+      temporárias e avaliação das condições pessoais (crime com violência)
+      ficam "a verificar" quando o resto está atendido. Corrigido: o regime
+      aberto era aceito onde a hipótese exigia o semiaberto.
+    * Cumprimento interrompido na data do decreto (fuga, soltura): "a
+      verificar", com o tempo cumprido até a interrupção - o decreto exige a
+      fração cumprida até a data, não a custódia na data (todos os decretos).
+    * Fuga sem sanção reconhecida em juízo e falta pendente no RSPE: falta "a
+      apurar", que só impede se reconhecida (Súmula 533/STJ; Tema 1195); se a
+      ficha registra a homologação, o texto manda conferir a decisão.
+      Regressão a até 5 dias de soma/unificação não é indício de falta; a
+      data-base que coincide com essa regressão gera alerta (Tema 1006).
+    * Decreto 2022: VGA em branco - violência elementar impede; tipo sem
+      violência típica não. Trânsito para a acusação até 60 dias após a
+      sentença mostra que ela não recorreu (art. 9º). Notas de trânsito
+      somem quando o crime já veda.
+    * Tráfico sem parágrafo no SEEU: texto do caput com pena de 5 anos ou
+      mais é o caput; abaixo disso (só o § 4º explica), "a verificar".
+      "Matar alguém" é o caput do art. 121.
+    * Inciso IV (anos ininterruptos): prisão definitiva, início do
+      cumprimento, conversão e alteração de regime não são interrupção.
+    * Mapa do indulto: comutação certa com indulto "a verificar" aparece
+      como "cabe" (comutação), com a ressalva do indulto (antes, a
+      comutação POSSÍVEL do 2024/2025 sumia do mapa e do filtro "cabem").
+    * Prescrição: retomada do cumprimento depois da fuga só com livramento
+      concedido ou progressão; livramento de outra condenação não suspende
+      (solto, a prescrição corre - o art. 116, p. único, exige estar preso);
+      prisão anterior ao fato não é detração do crime; saldo mínimo limitado
+      ao tempo desde o fato; punitiva com data intermediária ausente
+      decidida pelos limites das datas conhecidas; "a verificar" diz o que
+      falta.
+    * Extinção: término calculado (data do RSPE + remanescente, com o rótulo
+      "calculado") quando o SEEU não imprime; livramento revogado só depois
+      do fim do período de prova é extinção (Súmula 617/STJ); detração que
+      cobre a pena do processo, sem outra condenação com fato anterior à
+      prisão, é extinção cabível.
+    * Penas máximas na base: arts. 138, 139, 140 (caput, §§ 2º e 3º), 146
+      (caput e § 1º), 147-A, 333 e 354 do CP e 305 do CTB.
+    * Auditoria: reincidente em crime com violência decidido pelas
+      condenações anteriores do RSPE (sem violência nelas: alerta, 25%);
+      alteração de data-base fundamentada ou já superada vira informação;
+      detração exclusiva vira alerta; idade (art. 115, lapsos do indulto)
+      informa que já está aplicada; maior de 70 no aberto: alerta de
+      domiciliar (LEP, art. 117, I); artigo completado pela descrição e pena
+      cumprida em liberdade sem evento de prisão: informação.
+    * Ficha: atestado abaixo da proporção é alerta (requerer a diferença);
+      "remição a requerer: ao menos N"; nome da mãe cortado no fim não é
+      divergência; conduta não reabilitada é alerta.
+    * Progressão/Livramento vencidos: "sem pedido no RSPE - requerer",
+      "pedido pendente" ou "indeferido em ... - conferir o motivo".
+    * Livramento: a interrupção "livramento condicional" logo após o
+      deferimento (até 60 dias) não é dúvida; interrupção com livramento em
+      curso = em cumprimento. Prisão provisória que alcançou o trânsito é
+      início do cumprimento.
+  - Bateria de 592 casos hipotéticos (400 aleatórios, 53 casos-limite e 139
+    com ficha disciplinar) rodada contra o programa; corrigidos: erro com
+    fração "0/0" no RSPE, textos cortados no meio de "art.", parênteses
+    vazios, ponto e espaço duplos, data da falta cortada no texto da ficha,
+    status da comutação ausente.
   - Abas com ícone e nome curto, numa linha só: Geral, Progressão,
     Livramento, Indulto, Prescrição, Extinção, Ficha, Auditoria e
     Jurisprudências (antigo "Banco de teses").
@@ -779,8 +844,8 @@ v7.0.0
     sendo suspensão. Depois de uma fuga, a prisão lançada só em outro
     processo (o flagrante pelo crime novo) passa a ser tratada como
     retomada do cumprimento apenas quando, depois dela, há ato que só existe
-    para quem cumpre pena nesta execução (livramento concedido, progressão,
-    regressão, remição, soma de penas); a interrupção cai na data desse ato
+    para quem cumpre pena nesta execução (livramento concedido ou
+    progressão - v7.0.0); a interrupção cai na data desse ato
     (art. 117, V), e a prescrição consumada antes do flagrante não se perde.
     Quem nunca iniciou o cumprimento não é alcançado. Quando a prescrição
     depende de um lançamento duvidoso, o resultado aparece como "Prescrição
@@ -1166,8 +1231,9 @@ v6.16.35
         concessão no RSPE; termina na revogação, suspensão, regressão, fuga ou
         nova prisão (LEP, art. 145);
       * livramento iniciado antes do trânsito de outra condenação é "livramento
-        por outro crime" para ela: a prescrição dela não corre (art. 116, p.
-        único; STJ, HC 429.545; STJ, Tema 1.367);
+        por outro crime" para ela: solto e sem cumprir aquela pena, a
+        prescrição dela corre (o art. 116, p. único, só suspende enquanto
+        preso - v7.0.0; STJ, Tema 1.367);
       * saldo calculado por condenação, isoladamente (CP, art. 119; STJ, AgRg no
         REsp 2.256.555; RHC 35.425; HC 627.646).
   - Fundamentação da prescrição montada no servidor (mesmo texto no botão, no

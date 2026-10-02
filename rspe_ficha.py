@@ -349,17 +349,24 @@ def confrontar(r, f, hoje=None):
                       "detalhe": "Atestado de %s trabalhados%s e nenhuma remição lançada no RSPE depois dele. Requerer a remição." % (_dias_txt(a["dias_trabalhados"]), per),
                       "fundamento": "LEP, art. 126, § 1º, II (1 dia a cada 3 trabalhados), e § 8º; Súmula 562/STJ, se o trabalho foi externo."})
     if not res["atestados_pendentes"] and res["diferenca"] >= 1:
-        itens.append({"nivel": "verificar",
-                      "titulo": "Remição a conferir: ficha ≈ %s × RSPE %s" % (_dias_txt(res["remidos_execucao"] + res["remidos_estudo"]), _dias_txt(res["homologados"])),
-                      "detalhe": "Os atestados e o estudo desta execução somam mais que as remições do RSPE. O RSPE não indica a origem de cada remição "
-                                 "(trabalho, estudo, ENCCEJA/ENEM, leitura), então a diferença real pode ser maior: conferir nas decisões de remição.",
+        itens.append({"nivel": "alerta",
+                      "titulo": "Remição a requerer: ao menos %s (ficha %s × RSPE %s)" % (_dias_txt(res["diferenca"]), _dias_txt(res["remidos_execucao"] + res["remidos_estudo"]),
+                                                                                     _dias_txt(res["homologados"])),
+                      "detalhe": "Os atestados e o estudo desta execução somam %s a mais que todas as remições do RSPE. Como as remições do RSPE podem incluir "
+                                 "outras origens (ENCCEJA/ENEM, leitura), a diferença real é no mínimo essa: requerer ao menos %s, com os atestados." % (
+                                     _dias_txt(res["diferenca"]), _dias_txt(res["diferenca"])),
                       "fundamento": "LEP, art. 126."})
     # 2) proporção 1/3 nos atestados
     for a in ats:
         esperado = a["dias_trabalhados"] / 3.0
         if a["dias_trabalhados"] and abs(esperado - a["dias_remidos"]) > 1:
-            itens.append({"nivel": "verificar", "titulo": "Atestado %s: %s trabalhados dariam %s remidos, consta %s" % (a.get("numero") or a["data"], _dias_txt(a["dias_trabalhados"]), _fmtn(esperado), _fmtn(a["dias_remidos"])),
-                          "detalhe": "Proporção legal: 1 dia de pena a cada 3 dias de trabalho.", "fundamento": "LEP, art. 126, § 1º, II."})
+            menos = a["dias_remidos"] < esperado
+            itens.append({"nivel": "alerta" if menos else "info",
+                          "titulo": "Atestado %s: %s trabalhados dariam %s remidos, consta %s%s" % (a.get("numero") or a["data"], _dias_txt(a["dias_trabalhados"]), _fmtn(esperado),
+                                                                                                 _fmtn(a["dias_remidos"]), " - requerer a diferença" if menos else " - a mais, favorece"),
+                          "detalhe": "Proporção legal: 1 dia de pena a cada 3 dias de trabalho.%s" % (
+                              " O atestado registra menos do que a proporção dá: requerer a retificação e a remição de %s." % _fmtn(esperado - a["dias_remidos"]) if menos else ""),
+                          "fundamento": "LEP, art. 126, § 1º, II."})
     # 3) trabalho sem atestado e baixas sem início registrado: um item cada, com a lista
     sem = [L for L in linhas if L["cor"] == "amarelo" and L["at"].startswith("sem atestado")]
     if sem:
@@ -541,7 +548,11 @@ def _identidade_x_ficha(r, f):
                             "A ficha vinculada pode ser de outra pessoa (homônimo) ou um dos cadastros está errado. Conferir antes de usar os dados da ficha.",
                             "Identificação do apenado (LEP, art. 106)."))
     m1, m2 = rs._sem_acento(r.get("nome_mae") or "").upper().split(), rs._sem_acento(f.get("nome_mae") or "").upper().split()
-    if m1 and m2 and m1 != m2:
+    def _truncado(a, b):
+        # o SEEU/a ficha cortam o nome no fim: o menor é o começo do maior (a última palavra pode estar cortada no meio)
+        a, b = (a, b) if len(" ".join(a)) <= len(" ".join(b)) else (b, a)
+        return len(a) >= 2 and " ".join(b).startswith(" ".join(a))
+    if m1 and m2 and m1 != m2 and not _truncado(m1, m2):
         out.append(_item_rf("alerta", "Mãe na ficha (%s) difere do RSPE (%s)" % ((f.get("nome_mae") or "").title(), (r.get("nome_mae") or "").title()),
                             "O nome da mãe é o critério para separar homônimos: a ficha vinculada provavelmente é de outra pessoa. Conferir antes de usar os "
                             "dados da ficha (remição, faltas, custódia) e, se for o caso, remover a ficha deste assistido.", "Identificação do apenado (LEP, art. 106)."))
@@ -640,7 +651,7 @@ def _fuga_x_ficha(r, f):
         if not any(abs((x - d).days) <= 30 for d in fugas_r):
             out.append(_item_rf("alerta", "Fuga/evasão em %s registrada na ficha e ausente no RSPE" % rs.fmt(x),
                                 "Ficha: %s. O RSPE não registra a interrupção nem a falta: conferir se houve fuga (falta grave - LEP, art. 50, II), a recaptura "
-                                "e a homologação. A fuga já entra como falta grave (falta nos 12 meses, indulto, comutação); se não houve, informe no item da fuga (Preencher)." % _br(t)[:180], "LEP, arts. 50, II, e 118; CP, art. 113."))
+                                "e a homologação. Sem PAD e homologação, a fuga fica como falta \"A apurar\" (Súmula 533/STJ); decida no item da fuga (Preencher)." % _br(t)[:180], "LEP, arts. 50, II, e 118; CP, art. 113."))
     ini_f = ev[0][0] if ev else None
     for d in fugas_r:
         if ini_f and d > ini_f and not any(abs((x - d).days) <= 30 for x, _ in fugas_f):
@@ -681,13 +692,13 @@ def _conduta_x_ficha(r, f, hoje=None):
                  if re.search(r"REGRESS", rs._rotulo_incidente(i), re.I) and not rs._negado(i)]
         _com_reg = [d for d in _dfs if d and any(x and d <= x <= d + timedelta(days=180) for x in _regs)]
         if _com_reg:
-            return [_item_rf("verificar", "Conduta na ficha: %s - falta grave de %s já gerou regressão" % (c.lower(), rs.fmt(max(_com_reg))),
+            return [_item_rf("alerta", "Conduta na ficha: %s - falta grave de %s já gerou regressão" % (c.lower(), rs.fmt(max(_com_reg))),
                              "A falta grave foi punida com a regressão de regime. Para a nova progressão, exigir o prazo de reabilitação do RIBUP "
                              "(Decreto Estadual 12.140/2006, art. 133) é bis in idem; o bom comportamento se readquire pelo art. 112, § 7º, da LEP "
                              "(após 1 ano da falta ou antes, cumprido o requisito temporal).",
                              "LEP, art. 112, §§ 6º e 7º; RIBUP-MS, art. 133; TJMS, 1603197-76.2026 e 1604181-94.2025 (3ª Câm.), 1605442-31.2024 (1ª Câm.).")]
         return []
-    return [_item_rf("verificar", "Conduta na ficha: %s, sem falta nos últimos %d meses" % (c.lower(), meses),
+    return [_item_rf("alerta", "Conduta na ficha: %s, sem falta nos últimos %d meses" % (c.lower(), meses),
                      "Nem o RSPE nem a ficha registram falta de %s até hoje. A classificação da conduta pela unidade deveria ter sido reabilitada "
                      "(RIBUP-MS, Decreto Estadual 12.140/2006, art. 133: falta grave, 12 meses do cumprimento da sanção; nova falta interrompe - art. 136) "
                      "- pedir o atestado de conduta atualizado: ele pesa no requisito subjetivo da progressão e do livramento." % rs.fmt(lim),
