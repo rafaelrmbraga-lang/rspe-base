@@ -631,19 +631,20 @@ v7.0.0
       deferimento (até 60 dias) não é dúvida; interrupção com livramento em
       curso = em cumprimento. Prisão provisória que alcançou o trânsito é
       início do cumprimento.
-  - Relatório geral refeito em três partes, com gráficos de rosca (pizza) no
-    lugar das barras: 1) quem são os internos - idade média, faixa etária,
-    regime, pena, vara (nome encurtado), crimes mais frequentes, perfil
-    criminal; 2) trabalho, conduta e disciplina - trabalham/estudam,
-    conduta carcerária, PADICs em trâmite e situação das faltas na ficha
-    (sem PADIC, em trâmite, punida, arquivada; tempo de resposta), faltas
-    graves no RSPE (homologadas, aguardando decisão), últimos 12 meses e
-    remição; 3) benefícios que podem ser aplicáveis - quadro-resumo
-    (prescrição, extinção, vencidos com a situação do pedido, indulto ou
-    comutação cabível e sem pedido, remição), prazos do SEEU por faixa,
-    indulto e comutação em todos os decretos do sistema, prescrição e
-    extinção; por fim, a conferência do cálculo (Auditoria). Saíram a fila
-    de prioridade e as faixas explicativas.
+  - Relatório geral refeito como diagnóstico da base (dados crus, sem o
+    controle de pedidos do programa), com gráficos de rosca (percentual na
+    fatia e legenda em colunas Nº e %; categoria única vira frase):
+    1. Perfil da população - idade média, faixa etária, regime, pena, juízo
+       da execução, unidade prisional (ficha) e incidência penal;
+    2. Trabalho, conduta e disciplina - trabalham, estudam, PADICs em
+       trâmite, faltas graves sem decisão judicial, conduta carcerária,
+       situação laboral, situação do PADIC (com tempo de resposta), faltas
+       graves no RSPE e pendências de remição;
+    3. Situação jurídico-executória - indicadores (prescrição executória e
+       punitiva, extinção, lapsos vencidos, indulto/comutação), prazos do
+       SEEU por faixa, indulto e comutação por decreto (todos os decretos do
+       sistema), prescrição executória e punitiva e extinção da pena;
+    4. Inconsistências do cálculo (Auditoria).
   - Registro para o SAP sem nenhum pedido marcado: texto padrão "Atendimento
     a [nome] referente aos autos [nº] na data de hoje (dd/mm/aaaa). A GR foi
     analisada e não se verificou cabível pedido sobre progressão,
