@@ -810,6 +810,12 @@ v6.16.50
     concretos do RSPE), por que está errado (fundamento), o prejuízo ao
     assistido (ex.: "60% no lugar de 40%: a progressão é postergada") e o
     pedido.
+    Quando o erro decorre da reincidência genérica (o cálculo não marca a
+    reincidência como específica), o texto explica: os 60% (LEP, art. 112,
+    VII) e a vedação do livramento (CP, art. 83, V) valem só para o
+    reincidente específico em crime hediondo; ao genérico, 40% (art. 112, V,
+    retroativo - STJ, Tema 1084; STF, Tema 1169) e 2/3 no livramento. Sem
+    parênteses aninhados e sem repetir no "Nesse sentido" o que já foi citado.
   - Indulto: o quadro "Resultado" ficou resumido - o status e o motivo em
     uma linha (ex.: "crime impeditivo (art. 1º): C4, C5, C8 (crime hediondo
     ou equiparado)"); o texto completo fica no comparativo com os incisos.

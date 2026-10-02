@@ -764,7 +764,8 @@ def auditar(r, hoje=None):
             if abs(Fraction(f_seeu) - Fraction(f_esp)) > Fraction(1, 2000):
                 itens.append(_item("alerta" if float(f_seeu) > float(f_esp) else "info",
                                ("%s: percentual de progressão do SEEU (%s) maior que o legal (%s)" if float(f_seeu) > float(f_esp) else "%s: percentual de progressão do SEEU (%s) menor que o esperado (%s) - favorece o apenado") % (nome, rs.pct_rotulo(c.get("fracao_progressao")), rs.pct_rotulo(rot)),
-                               "Fato em %s; %s; %s; %s. %s" % (rs.fmt(fato) if fato else "?", "reincidente" if reinc else "primário", "com VGA" if vga else "sem VGA",
+                               "Fato em %s; %s; %s; %s. %s" % (rs.fmt(fato) if fato else "?", ("reincidente genérico (o cálculo não marca reincidência específica)"
+                                                                if "reincidente genérico" in " ".join(obs) else "reincidente") if reinc else "primário", "com VGA" if vga else "sem VGA",
                                                                "hediondo" if hed else "comum", rs.pct_texto(" ".join(obs))),
                                "LEP, art. 112 (redação vigente na data do fato; lei posterior só retroage se mais benéfica - CF, art. 5º, XL; STJ Temas 1084, 1196 e 1354; STF Tema 1169).", tipo="percentual-de-progressao-diverge", ref=nome))
             elif esp_ok is False or vga_gen:
@@ -805,7 +806,9 @@ def auditar(r, hoje=None):
         elif fl_seeu is not None and abs(float(fl_seeu) - float(fl_esp)) > 0.005:
             itens.append(_item("alerta" if float(fl_seeu) > float(fl_esp) else "info",
                                ("%s: fração de livramento do SEEU (%s) maior que a legal (%s)" if float(fl_seeu) > float(fl_esp) else "%s: fração de livramento do SEEU (%s) menor que a esperada (%s) - favorece o apenado") % (nome, c.get("fracao_livramento"), rotl),
-                               "%s; %s." % ("reincidente" if reinc_ef else "primário", "hediondo/equiparado" if hed else ("art. 44, p. ú., Lei 11.343/06" if trafico else
+                               "%s; %s." % (("reincidente genérico (o cálculo não marca reincidência específica)" if hed and esp_ok is not True
+                                             and (c.get("reincidente_especifico") or "").upper() != "S" else "reincidente") if reinc_ef else "primário",
+                                            "hediondo/equiparado" if hed else ("art. 44, p. ú., Lei 11.343/06" if trafico else
                                                                                                   "tráfico de pessoas, art. 83, V, CP" if _trafico_pessoas(c) else "comum")), "CP, art. 83; Lei 11.343/06, art. 44, p. ú.", tipo="fracao-de-livramento-diverge", ref=nome))
         if lc_vedado:
             itens.append(_item("info", "%s: hediondo com resultado morte, fato em %s - livramento vedado" % (nome, rs.fmt(fato)),
@@ -1515,11 +1518,52 @@ def _fatos(it):
             continue  # regra geral sem data: vai no parágrafo do direito
         if re.match(r"^[^.]{0,70}\(decis[ãa]o de [^)]*\)\.?$", f) or len(f) < 20:
             continue
-        f = _abrev(f[0].upper() + f[1:])
+        f = _abrev(f[0].upper() + f[1:]).replace(" (o cálculo não marca reincidência específica)", "")
         if f.count(";") >= 1 and all(len(x.strip()) < 32 for x in f.rstrip(".").split(";")):
             f = "Dados da condenação no cálculo: " + f[0].lower() + f[1:]
         out.append(f if f.endswith(".") else f + ".")
     return out[:3]
+
+
+def _limpa_par(t):
+    """'(40% (Lei 13.964/2019 (Pacote Anticrime)))' -> '(40% - Lei 13.964/2019, Pacote Anticrime)'; '(2/3 (art. 83, V, CP))' -> '(2/3 - art. 83, V, CP)'."""
+    t = re.sub(r"\((\d+%|\d+/\d+) \(([^()]*?) \(([^()]*)\)\)\)", r"(\1 - \2, \3)", t)
+    return re.sub(r"\((\d+%|\d+/\d+) \(([^()]*)\)\)", r"(\1 - \2)", t)
+
+
+def _razao(tipo, it, tit):
+    """Por que o valor do cálculo está errado neste caso concreto (só onde o RSPE dá a razão)."""
+    det = it.get("detalhe") or ""
+    pc = re.findall(r"\((\d+%)", tit)
+    if tipo == "percentual-de-progressao-diverge" and "reincidente genérico" in det and len(pc) >= 2:
+        morte = "com morte" in det
+        return ("No caso, a reincidência é genérica: o próprio cálculo não a marca como específica, ou seja, a condenação anterior não foi por "
+                "crime hediondo. O percentual de %s é o do reincidente específico em crime hediondo%s; para o reincidente genérico, a Lei "
+                "13.964/2019 não prevê percentual próprio, e aplica-se o do primário, %s, que, por ser mais benéfico que a fração vigente na "
+                "data do fato, retroage (CF, art. 5º, XL; %s)." % (
+                    pc[0], " com resultado morte (LEP, art. 112, VIII)" if morte else " (LEP, art. 112, VII)",
+                    pc[1] + (" (LEP, art. 112, VI, a)" if morte else " (LEP, art. 112, V)"),
+                    "STJ, Tema 1196" if morte else "STJ, Tema 1084; STF, Tema 1169"))
+    if tipo == "fracao-de-livramento-diverge" and "reincidente genérico" in det and re.search(r"\(1/1\b", tit):
+        return ("No caso, a reincidência é genérica: o próprio cálculo não a marca como específica. A vedação do livramento condicional "
+                "alcança apenas o reincidente específico em crime hediondo ou equiparado (CP, art. 83, V, parte final); ao reincidente "
+                "genérico aplica-se a fração de 2/3 do mesmo inciso.")
+    return ""
+
+
+def _citacoes(fund, ja):
+    """Precedentes do campo fundamento que ainda não estão no texto (sem repetir a lei já citada)."""
+    out = []
+    for trib, corpo in re.findall(r"\b(STJ|STF),?\s+((?:Temas?|S[úu]mulas?|AgRg|HC|RHC|REsp|RE)\b[^;()]*?)(?=[;)]|$)", fund):
+        corpo = corpo.strip().rstrip(".")
+        nums = re.findall(r"\d[\d.]*", corpo)
+        novos = [n for n in nums if n not in ja]
+        if not nums or not novos:
+            continue
+        if re.match(r"Temas?\b", corpo) and len(novos) < len(nums):
+            corpo = ("Tema %s" if len(novos) == 1 else "Temas %s") % (", ".join(novos[:-1]) + " e " + novos[-1] if len(novos) > 1 else novos[0])
+        out.append("%s, %s" % (trib, corpo))
+    return "; ".join(out)
 
 
 def fundamentacao(it, r):
@@ -1531,7 +1575,7 @@ def fundamentacao(it, r):
     correto, pedido = FUND_TIPOS[tipo]
     ger = r.get("data_geracao_rspe") or ""
     rel = "o cálculo de pena (Relatório da Situação Processual Executória%s)" % ((" emitido em %s" % ger) if ger else "")
-    tit = re.sub(r"\s+", " ", it.get("titulo") or "").strip().rstrip(".")
+    tit = _limpa_par(re.sub(r"\s+", " ", it.get("titulo") or "").strip().rstrip("."))
     m = re.match(r"^Proc\. ([\d.\-]+) · ([^:]+): (.+)$", tit)
     if m:
         erro = "Na condenação do processo %s (%s), %s apresenta a seguinte inconsistência: %s." % (m.group(1), m.group(2).strip(), rel, m.group(3))
@@ -1541,10 +1585,13 @@ def fundamentacao(it, r):
     if fatos:
         erro += " " + " ".join(fatos)
     erro = _abrev(erro)
-    fund = (it.get("fundamento") or "").strip().rstrip(".")
-    extra = ""
-    if fund and not any(x.strip() and x.strip() in correto for x in re.split(r";", fund)):
-        extra = (" Nesse sentido: %s." if _RE_DIREITO.search(fund) else " Fonte: %s.") % fund
+    razao = _razao(tipo, it, tit)
+    extra = (" " + razao) if razao else ""
+    cit = "" if razao else _citacoes(it.get("fundamento") or "", correto + extra)
+    if cit:
+        extra += " Nesse sentido: %s." % cit
+    elif not _RE_DIREITO.search(it.get("fundamento") or "") and (it.get("fundamento") or "").strip():
+        extra += " Fonte: %s." % it["fundamento"].strip().rstrip(".")
     imp = next((t for rx, t in _IMPACTO if re.search(rx, tipo)), "")
     if imp:
         pc = re.findall(r"\((\d+%|\d+/\d+)", tit)
