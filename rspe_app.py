@@ -19,7 +19,8 @@ import subprocess
 import sys
 import threading
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
+from concurrent.futures.process import BrokenProcessPool
 from datetime import date, datetime
 
 import webview
@@ -27,7 +28,6 @@ import webview
 import rspe_scraper as rs
 import rspe_view as rv
 import rspe_ficha as rf
-import rspe_linha as rl
 import rspe_peticao as rpet
 import rspe_export as rx
 import rspe_regras as rg
@@ -90,8 +90,8 @@ AJUDA = """
 Progressão e Livramento: <b>amarelo forte</b> = prazo vencido ("Vencido há N dias · verificar criminológico, indeferimento ou
 falta"; a dica mostra os pedidos do RSPE e, quando houver, o aviso sobre o exame criminológico, que é só dica: não muda a cor nem
 gera alerta). Prazos: <b>laranja</b> = vence em até 30 dias; <b>amarelo</b> = em até 60; <b>verde</b> = em até 90. Acima de 90 dias:
-"Em cumprimento", sem cor. <b>Cinza</b> = "Pena cumprida" ou "Não se aplica" (em livramento, já no aberto, não iniciou, pena
-interrompida - o motivo fica na ficha); <b>amarelo</b> também para "A verificar (livramento)"; <b>azul</b> = execução extinta.
+"Em cumprimento", sem cor. <b>Cinza</b> = "Pena cumprida" ou "Não se aplica" (Progressão: em livramento, já no aberto, não iniciou, pena
+interrompida; Livramento: em livramento, não iniciou, pena interrompida - o motivo fica na ficha); <b>amarelo</b> também para "A verificar (livramento)"; <b>azul</b> = execução extinta.
 Extinção: <b>vermelho</b> = extinção cabível; <b>laranja</b>/<b>amarelo</b>/<b>verde</b> = término em até 30/60/90 dias; cinza = pena
 interrompida ou sem previsão; azul = extinta (registrada).
 Indulto/Comutação (células): <b>vermelho</b> = "Vedado (art. 1º)", "Vedado (art. 7º)", "Indeferido" ou "Falta" (falta com sanção
@@ -316,9 +316,9 @@ lista com busca e "Todos"/"Nenhum". Vale para os assistidos visíveis pela busca
 Na ficha do assistido, "Relatório em PDF" gera só o dele. A exportação Excel/PDF segue a mesma regra.
 <h4>Presunção de hipossuficiência (Defensoria)</h4>
 No indulto, a <b>multa</b> é indultável e não é óbice (Decretos 12.338/2024 e 12.790/2025, art. 12, § 2º, I - presunção expressa
-de incapacidade econômica para quem é assistido pela Defensoria). Na extinção da punibilidade, a multa pendente só não obsta se
-comprovada a impossibilidade de pagamento, ainda que parcelado (STF ADI 7.032, vinculante; STJ Tema 931, rev. 28/02/2024): instruir
-o pedido. A <b>reparação do dano</b> é dispensada no inciso XV do art. 9º (crime patrimonial sem VGA); no livramento (CP, art. 83,
+de incapacidade econômica para quem é assistido pela Defensoria). Na extinção da punibilidade, a multa pendente não obsta ante a
+alegada hipossuficiência, salvo decisão que indique concretamente a capacidade de pagamento (STJ Tema 931, rev. 28/02/2024); parte da
+jurisprudência, invocando a ADI 7.032 ("salvo comprovada impossibilidade"), exige prova (STJ, REsp 2.055.935): instruir o pedido por cautela. A <b>reparação do dano</b> é dispensada no inciso XV do art. 9º (crime patrimonial sem VGA); no livramento (CP, art. 83,
 IV, "salvo efetiva impossibilidade"), a impossibilidade deve ser demonstrada (STJ, AgRg no HC 799.167).
 O tráfico privilegiado (art. 33, § 4º) não é hediondo nem impeditivo de indulto (STF, SV 63 e Tema 1400; STJ Tema 1336).
 <h4>Petições a partir de modelos .docx</h4>
@@ -343,14 +343,15 @@ Os pontos têm quatro níveis: <b>Alerta</b> (divergência com efeito concreto p
 não traz, mas pode ter efeito), <b>Info</b> (registro sem efeito prático - fica oculto por padrão; "ver conferências OK / informativas")
 e <b>OK</b>. "Com alertas" = há ao menos um alerta; "pontos a verificar" = dependem de dado que o RSPE não traz. Nada é afirmado como
 erro: cada item traz o fundamento para conferência.
-<b>Dar baixa</b>: cada ponto pode ser baixado (com observação) quando já foi tratado ou não se aplica; ele sai da contagem,
-fica registrado na base com data e pode ser reaberto. A baixa é por processo, pelo tipo do ponto e pelo crime (ou ano do decreto,
+<b>Dar baixa</b>: cada ponto pode ser baixado (com o motivo, obrigatório) quando já foi tratado ou não se aplica; ele sai da linha
+e da contagem (sem pendências, a linha mostra "Guia em ordem") e fica no <b>Histórico de alertas</b> do assistido, com a data e o motivo,
+de onde pode ser reaberto. A baixa é por processo, pelo tipo do ponto e pelo crime (ou ano do decreto,
 ou falta) a que ele se refere: sobrevive à reimportação do RSPE e continua valendo quando o título muda (números, datas ou
 agrupamento de crimes). Baixas gravadas em versões anteriores passam sozinhas para a chave nova na primeira abertura. Os avisos
 "Ficha disciplinar ignorada" e "Falha ao analisar" contam como alerta e também podem ser baixados.
 <h4>Extinção</h4>
 Só a extinção pelo cumprimento: pena integralmente cumprida ou término previsto já alcançado (LEP, arts. 66, II, e 109); livramento
-condicional com período de prova expirado sem revogação (CP, arts. 89 e 90; LEP, art. 146); detração que iguala ou supera a pena do
+condicional com período de prova expirado sem revogação (CP, art. 90; LEP, art. 146; Súmula 617/STJ - observado o art. 89); detração que iguala ou supera a pena do
 processo, como hipótese "a verificar" (a mesma prisão pode servir a várias condenações - CP, art. 42; LEP, arts. 66, II, e 111).
 Prescrição e indulto ficam nas próprias abas; o livramento incerto não gera hipótese (fica na Auditoria). Situação: "Extinção
 cabível" (vermelho), "Término em N dias" (laranja até 30, amarelo até 60, verde até 90), "Em cumprimento" (acima de 90 dias), "Pena
@@ -366,6 +367,21 @@ Resumidos pelo artigo: "art. 33 Lei 11.343/06 (x2)". "n/i" = artigo não informa
 # --------------------------------------------------------------------------- #
 # banco local
 # --------------------------------------------------------------------------- #
+
+def _mesma_mae(a, b):
+    """Nomes da mãe (já normalizados) compatíveis: o RSPE corta nomes longos ("CARLA FERNANDA DA SILV") e há abreviações
+    ("CARLA F. DA SILVA"). Compatíveis quando iguais, quando um é o começo do outro, ou quando o primeiro e o último nome
+    conferem (um podendo ser o começo do outro). Ausente em um deles não decide (compatível)."""
+    if not a or not b or a == b or a.startswith(b) or b.startswith(a):
+        return True
+    lig = ("DE", "DA", "DO", "DAS", "DOS", "E")
+    ta = [x.strip(".") for x in a.split() if x.strip(".") not in lig]
+    tb = [x.strip(".") for x in b.split() if x.strip(".") not in lig]
+
+    def comp(x, y):
+        return bool(x and y) and (x == y or (min(len(x), len(y)) >= 3 and (x.startswith(y) or y.startswith(x))))
+    return bool(ta and tb) and comp(ta[0], tb[0]) and comp(ta[-1], tb[-1])
+
 
 def _norm(txt):
     import unicodedata
@@ -390,6 +406,12 @@ class Base:
             arquivo TEXT, importado_em TEXT, dados TEXT)""")
         self.con.execute("""CREATE TABLE IF NOT EXISTS baixas (
             processo TEXT, chave TEXT, titulo TEXT, obs TEXT, data TEXT, PRIMARY KEY (processo, chave))""")
+        # histórico das baixas e reaberturas de alertas da Auditoria (com o motivo), para consulta posterior
+        self.con.execute("""CREATE TABLE IF NOT EXISTS baixas_hist (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, processo TEXT, chave TEXT, titulo TEXT, obs TEXT, data TEXT, acao TEXT)""")
+        if not self.con.execute("SELECT 1 FROM baixas_hist LIMIT 1").fetchone():
+            self.con.execute("""INSERT INTO baixas_hist (processo, chave, titulo, obs, data, acao)
+                                SELECT processo, chave, titulo, obs, data, 'baixa' FROM baixas WHERE titulo != 'conferido (ficha disciplinar)'""")
         self.con.execute("""CREATE TABLE IF NOT EXISTS atestados_manuais (
             processo TEXT, id TEXT, dados TEXT, data TEXT, PRIMARY KEY (processo, id))""")
         self.con.execute("""CREATE TABLE IF NOT EXISTS fichas (
@@ -414,8 +436,6 @@ class Base:
         self.con.execute("""INSERT OR IGNORE INTO rspe_historico SELECT processo, data_geracao, arquivo, importado_em, dados FROM assistidos""")
         # assistidos fixados (ficam no topo de todas as abas) e o Quadro do Usuário (cartões no estilo Trello)
         self.con.execute("CREATE TABLE IF NOT EXISTS fixados (processo TEXT PRIMARY KEY, data TEXT)")
-        # linha do tempo detalhada do SEEU: pena, cumprida e restante de cada condenação, ocorrência a ocorrência (saldo na fuga)
-        self.con.execute("CREATE TABLE IF NOT EXISTS linhas_seeu (processo TEXT PRIMARY KEY, gerado TEXT, dados TEXT, importado TEXT)")
         self.con.execute("""CREATE TABLE IF NOT EXISTS quadro_colunas (id TEXT PRIMARY KEY, nome TEXT, ordem REAL)""")
         self.con.execute("""CREATE TABLE IF NOT EXISTS quadro_cartoes (id TEXT PRIMARY KEY, coluna TEXT, ordem REAL, processo TEXT,
             titulo TEXT, obs TEXT, prazo TEXT, etiqueta TEXT, criado TEXT, atualizado TEXT)""")
@@ -496,10 +516,29 @@ class Base:
                              (processo, chave, titulo, obs or "", datetime.now().strftime("%d/%m/%Y %H:%M")))
             self.con.commit()
 
+    def hist_add(self, processo, chave, titulo, obs, acao):
+        with self.lock:
+            self.con.execute("INSERT INTO baixas_hist (processo, chave, titulo, obs, data, acao) VALUES (?,?,?,?,?,?)",
+                             (processo, chave, titulo or "", obs or "", datetime.now().strftime("%d/%m/%Y %H:%M"), acao))
+            self.con.commit()
+
+    def hist_alertas(self, processo):
+        with self.lock:
+            rows = self.con.execute("SELECT id, chave, titulo, obs, data, acao FROM baixas_hist WHERE processo=? ORDER BY id DESC",
+                                    (processo,)).fetchall()
+            ativas = {ch for (ch,) in self.con.execute("SELECT chave FROM baixas WHERE processo=?", (processo,))}
+        vistos, out = set(), []
+        for i, ch, t, o, d, a in rows:
+            out.append({"chave": ch, "titulo": t, "obs": o, "data": d, "acao": a,
+                        "ativa": a == "baixa" and ch in ativas and ch not in vistos})
+            vistos.add(ch)
+        return out
+
     def migrar_baixa(self, processo, antiga, nova):
         with self.lock:
             if not self.con.execute("SELECT 1 FROM baixas WHERE processo=? AND chave=?", (processo, nova)).fetchone():
                 self.con.execute("UPDATE baixas SET chave=? WHERE processo=? AND chave=?", (nova, processo, antiga))
+                self.con.execute("UPDATE baixas_hist SET chave=? WHERE processo=? AND chave=?", (nova, processo, antiga))
             self.con.commit()
 
     def presc_ajustes(self):
@@ -596,28 +635,6 @@ class Base:
             else:
                 self.con.execute("DELETE FROM fixados WHERE processo=?", (processo,))
             self.con.commit()
-
-    def linhas_seeu(self):
-        with self.lock:
-            rows = self.con.execute("SELECT processo, gerado, dados, importado FROM linhas_seeu").fetchall()
-        out = {}
-        for p, g, d, imp in rows:
-            try:
-                out[p] = dict(json.loads(d), importado=imp)
-            except Exception:
-                pass
-        return out
-
-    def gravar_linha_seeu(self, L):
-        """Grava a linha do tempo detalhada; não substitui uma gerada depois (devolve False nesse caso)."""
-        with self.lock:
-            ant = self.con.execute("SELECT gerado FROM linhas_seeu WHERE processo=?", (L["processo_execucao"],)).fetchone()
-            if ant and rs.to_date(ant[0] or "") and rs.to_date(L.get("gerado_em") or "") and rs.to_date(L["gerado_em"]) < rs.to_date(ant[0]):
-                return False
-            self.con.execute("INSERT OR REPLACE INTO linhas_seeu VALUES (?,?,?,?)", (L["processo_execucao"], L.get("gerado_em") or "",
-                                                                                   json.dumps(L, ensure_ascii=False), datetime.now().strftime("%d/%m/%Y %H:%M")))
-            self.con.commit()
-        return True
 
     def quadro(self):
         with self.lock:
@@ -826,8 +843,26 @@ class Api:
         self._modelos = []
         self._json = {}
         self._hoje_modelos = rv.HOJE
-        for r in brutos:
-            self._modelos.append(self._montar(r, ctx))
+        res = None
+        if len(brutos) >= 80:
+            # base grande: cada assistido é montado num processo paralelo (a análise é pesada: ~45 ms por assistido)
+            try:
+                with ProcessPoolExecutor(max_workers=max(2, min(8, (os.cpu_count() or 2) - 1))) as ex:
+                    res = list(ex.map(_montar_proc, [(r, _ctx_de(ctx, r), rv.HOJE) for r in brutos], chunksize=10))
+            except Exception:
+                logging.getLogger("rspe").exception("montagem paralela indisponível; montando em sequência")
+                res = None
+        if res is not None:
+            for m, migrar in res:
+                for ch, de, para in migrar:
+                    try:
+                        self.base.migrar_baixa(ch, de, para)
+                    except Exception:
+                        logging.getLogger("rspe").exception("falha ao migrar baixa %s", ch)
+                self._modelos.append(m)
+        else:
+            for r in brutos:
+                self._modelos.append(self._montar(r, ctx))
         return {
             "base": self.base.nome,
             "hoje": rv.HOJE.strftime("%d/%m/%Y"),
@@ -837,9 +872,18 @@ class Api:
             "ajuda": AJUDA + _ajuda_juris(),
             "base_juridica": {"versao": rg.versao(), "origem": rg.origem()},
             # json_seguro: um Fraction ou date esquecido no modelo derrubava a lista inteira ("Object of type Fraction is not JSON serializable")
-            "registros": [self._json_de(m) for m in self._modelos],
+            # versão leve (sem os textos de prescrição e auditoria): a base grande chega à tela em segundos; o registro completo
+            # vem quando a ficha, a linha expandida ou o cálculo da fuga é aberto (Api.registro)
+            "registros": [_leve(self._json_de(m)) for m in self._modelos],
             "copia": self._copia_info(),
         }
+
+    def registro(self, processo):
+        """Registro completo de um assistido (a lista chega à tela na versão leve)."""
+        m = next((x for x in (self._modelos or []) if x.get("id") == processo), None)
+        if m is None:
+            return self._atualizar(processo)
+        return {"parcial": [self._json_de(m)]}
 
     def _json_de(self, m):
         """Registro pronto para a tela (sem o bruto), guardado até o assistido mudar."""
@@ -851,7 +895,7 @@ class Api:
     def _contexto(self, brutos=None):
         """Tabelas auxiliares da base e a contagem de homônimos (a ficha guardada pelo nome só vale sem homônimo)."""
         ctx = {"baixas": self.base.baixas(), "fichas": self.base.fichas(), "manuais": self.base.manuais(),
-               "ajustes": self.base.presc_ajustes(), "dmanuais": self.base.dados_manuais(), "linhas": self.base.linhas_seeu(), "peds": self.base.pedidos(),
+               "ajustes": self.base.presc_ajustes(), "dmanuais": self.base.dados_manuais(), "peds": self.base.pedidos(),
                "hist_n": self.base.historico_n(), "fixados": self.base.fixados()}
         nomes = [r.get("nome", "") for r in brutos] if brutos is not None else self.base.nomes()
         h = {}
@@ -888,102 +932,12 @@ class Api:
         return out
 
     def _montar(self, r, ctx):
-        """Modelo de um assistido (todas as abas) a partir do registro gravado e das tabelas auxiliares."""
-        baixas, fichas, manuais, ajustes = ctx["baixas"], ctx["fichas"], ctx["manuais"], ctx["ajustes"]
-        dmanuais, peds, _homonimos = ctx["dmanuais"], ctx["peds"], ctx["homonimos"]
-        # dados que o RSPE não trouxe: informados na Auditoria ou, para a data de nascimento, lidos da ficha disciplinar
-        _ch0 = r.get("processo_execucao") or r.get("arquivo")
-        _dm = dmanuais.get(_ch0, {})
-        _n0 = _norm(r.get("nome", ""))
-        _f0 = fichas.get(_ch0) or (fichas.get("nome:" + _n0) if _homonimos.get(_n0, 0) == 1 else None)
-        if _f0 and _f0 is not fichas.get(_ch0) and _norm(_f0.get("nome_mae") or "") and _norm(r.get("nome_mae") or "") \
-                and _norm(_f0.get("nome_mae")) != _norm(r.get("nome_mae")):
-            _f0 = None  # ficha de homônimo: a mãe não confere
-        r.pop("_nasc_fonte", None); r.pop("_nasc_data", None)
-        if _dm.get("data_nascimento"):
-            if r.get("data_nascimento") != _dm["data_nascimento"]["valor"]:
-                r["_nasc_rspe"] = r.get("data_nascimento") or ""
-            r["data_nascimento"] = _dm["data_nascimento"]["valor"]
-            r["_nasc_data"] = "/".join(_dm["data_nascimento"]["data"][:10].split("-")[::-1])
-            r["_nasc_fonte"] = "informada pelo operador"
-        elif not r.get("data_nascimento") and _f0 and (_f0.get("data_nascimento") or ""):
-            r["data_nascimento"] = _f0["data_nascimento"]
-            r["_nasc_fonte"] = "lida da ficha disciplinar do SIAPEN"
-            r["_nasc_data"] = ""
-        # RSPE x ficha: retomada do cumprimento omitida no RSPE é lançada pela ficha; divergência vira alerta
-        try:
-            rf.reconciliar_eventos(r, _f0)
-        except Exception:
-            logging.getLogger("rspe").exception("reconciliação com a ficha %s", _ch0)
-        # faltas graves da ficha disciplinar que o RSPE não traz: entram como falta a apurar
-        try:
-            rs.faltas_da_ficha(r, _f0, rv.HOJE)
-            rs.explicar_indicios_ficha(r, _f0, rv.HOJE)  # regressão/perda/pendente: a ficha explica?
-        except Exception:
-            logging.getLogger("rspe").exception("faltas da ficha %s", _ch0)
-        # sexo para a concordância dos textos (SAP, fundamentações): o informado pelo operador; senão o cadastro da ficha
-        # (sexo biológico ou unidade feminina). Sem isso, o texto fica neutro; o nome não serve de indício
-        _sx = ((_dm.get("sexo") or {}).get("valor") or "")
-        if not _sx and _f0:
-            _sx = _f0.get("sexo") or ("F" if "FEMININ" in rs._sem_acento(_f0.get("unidade") or "").upper() else "")
-        r["_sexo"] = _sx
-        r["_sexo_fonte"] = "operador" if (_dm.get("sexo") or {}).get("valor") else ("ficha" if _sx else "")
-        # data-base corrigida pelo operador ("dd/mm/aaaa|motivo"): refaz a previsão de progressão em todas as abas
-        r.pop("_db_manual", None)
-        if (_dm.get("data_base") or {}).get("valor"):
-            r["_db_manual"] = _dm["data_base"]["valor"]
-        # decisões do operador sobre indícios de falta (fuga, pendente, perda sem falta): valem em todas as abas
-        rs.aplicar_decisoes_falta(r, {k.split("|", 1)[1]: v["valor"] for k, v in _dm.items() if k.startswith("falta|")})
-        for _c in r.get("_crimes", []):
-            _c.pop("_pena_max_inf", None)
-            _v = _dm.get("pena_max|" + rs.chave_pena_max(_c))
-            if _v:
-                _c["_pena_max_inf"] = rs.pena_livre(_v["valor"])
-                _c["_pena_max_data"] = "/".join(_v["data"][:10].split("-")[::-1])
-        try:
-            imp = r.get("importado_em")
-            r = rs.reprocessar(r)  # análise refeita com as regras desta versão (a leitura do PDF fica como foi gravada)
-            r["importado_em"] = imp
-        except Exception:
-            pass
-        ch = r.get("processo_execucao") or r.get("arquivo")
-        r["_presc_ajustes"] = ajustes.get(ch, {})  # dados de prescrição preenchidos/corrigidos pelo operador (só em memória)
-        r["_linha_seeu"] = (ctx.get("linhas") or {}).get(ch)  # linha do tempo detalhada do SEEU (saldo de cada condenação na fuga)
-        _nn = _norm(r.get("nome", ""))
-        ficha = _f0 if ch == _ch0 else (fichas.get(ch) or (fichas.get("nome:" + _nn) if _homonimos.get(_nn, 0) == 1 else None))
-        # um registro com dado ilegível não pode derrubar a base: tenta sem a ficha e, se ainda falhar, mostra o
-        # registro com o aviso da falha
-        try:
-            m = rv.modelo(r, baixas.get(ch, {}), ficha, manuais.get(ch, []))
-        except Exception as e:
-            logging.getLogger("rspe").exception("falha ao montar %s", ch)
+        m, migrar = _montar_modelo(r, ctx)
+        for ch, de, para in migrar:
             try:
-                # o aviso entra antes da contagem: conta no resumo e na cor, e a baixa dele fica gravada
-                m = rv.modelo(r, baixas.get(ch, {}), None, manuais.get(ch, []),
-                              extras=[rv.item_falha("Ficha disciplinar ignorada: falha ao ler (%s)" % e, "falha-ficha")])
-            except Exception as e2:
-                m = rv.modelo_erro(r, e2, baixas.get(ch, {}))
-        m["sexo"], m["sexo_fonte"] = r.get("_sexo") or "", r.get("_sexo_fonte") or ""
-        # baixas gravadas pelo título (até a 6.15.11): passam para a chave estável (tipo do ponto + crime)
-        for it in m.get("aud_itens") or []:
-            if it.get("migrar_de"):
-                try:
-                    self.base.migrar_baixa(ch, it["migrar_de"], it["chave"])
-                except Exception:
-                    logging.getLogger("rspe").exception("falha ao migrar baixa %s", ch)
-        m["pedidos"] = peds.get(ch, {})  # pedidos já feitos, por aba (coluna "Pedido")
-        m["hist_n"] = ctx["hist_n"].get(ch, 1)
-        m["fixado"] = ch in ctx["fixados"]
-        try:
-            m["dec"] = rv.json_seguro(rd.avaliar(m.get("_final") or r, rv.HOJE))  # aba Indulto: todos os decretos desde o início do cumprimento
-        except Exception:
-            logging.getLogger("rspe").exception("decretos %s", ch)
-            m["dec"] = {"inicio": "", "decretos": []}  # RSPEs guardados no histórico (botão "Histórico · N" da aba Geral)
-        try:
-            m["faltas_itens"] = rs.faltas_editaveis(r.get("_incidentes", []), r.get("_eventos", []), rv.HOJE)
-        except Exception:
-            m["faltas_itens"] = []
-        m["_bruto"] = m.pop("_final", None) or r
+                self.base.migrar_baixa(ch, de, para)
+            except Exception:
+                logging.getLogger("rspe").exception("falha ao migrar baixa %s", ch)
         return m
 
     def fixar(self, processo, on):
@@ -1157,23 +1111,6 @@ class Api:
         self.base.presc_ajuste_gravar(processo, chave, dados or None)
         return self._atualizar(processo)
 
-    def presc_importar_linha(self, processo):
-        """Aba Prescrição > Calcular: importa a Linha do Tempo Detalhada do SEEU (PDF) desta execução e refaz a análise."""
-        if not self.base:
-            return {"erro": "Nenhuma base aberta."}
-        arq = _um(self._janela.create_file_dialog(webview.OPEN_DIALOG, file_types=("Linha do Tempo Detalhada do SEEU (*.pdf)",)))
-        if not arq:
-            return None
-        try:
-            L = rl.extrair(arq)
-        except Exception as e:
-            return {"erro": "Não foi possível ler a linha do tempo detalhada: %s" % e}
-        if rs.chave_processo(L["processo_execucao"]) != rs.chave_processo(processo):
-            return {"erro": "Esta linha do tempo é da execução %s, não da %s." % (L["processo_execucao"], processo)}
-        if not self.base.gravar_linha_seeu(L):
-            return {"erro": "Já existe na base uma linha do tempo gerada depois desta."}
-        return self._atualizar(processo, "Linha do tempo detalhada importada: prescrição recalculada.")
-
     def presc_saldos_calc(self, processo, fuga, saldos, fonte="calculadora"):
         """Grava os saldos apurados na calculadora para a fuga: {chave_ajuste do crime: dias}. Cada saldo vale como informado,
         com a fonte "calculadora"; saldo vazio apaga o daquele crime."""
@@ -1260,8 +1197,17 @@ class Api:
     def baixar_alerta(self, processo, chave, titulo, obs):
         if not self.base:
             return None
-        self.base.baixar(processo, chave, titulo, obs)
-        return self._atualizar(processo, "Alerta baixado.")
+        if not (obs or "").strip():
+            return {"erro": "Informe o motivo da baixa: ele fica no Histórico de alertas."}
+        self.base.baixar(processo, chave, titulo, obs.strip())
+        self.base.hist_add(processo, chave, titulo, obs.strip(), "baixa")
+        return self._atualizar(processo, "Alerta baixado: a guia segue em ordem e o motivo fica no Histórico de alertas.")
+
+    def historico_alertas(self, processo):
+        """Baixas e reaberturas de alertas da Auditoria deste assistido, da mais recente para a mais antiga."""
+        if not self.base:
+            return []
+        return self.base.hist_alertas(processo)
 
     # ---- ficha disciplinar: conferência e atestados fora da ficha ----
     def fd_conferir(self, processo, chave, marcar):
@@ -1291,7 +1237,9 @@ class Api:
     def reabrir_alerta(self, processo, chave):
         if not self.base:
             return None
+        h = next((x for x in self.base.hist_alertas(processo) if x["chave"] == chave), None)
         self.base.reabrir(processo, chave)
+        self.base.hist_add(processo, chave, (h or {}).get("titulo", ""), "", "reaberto")
         return self._atualizar(processo, "Alerta reaberto.")
 
     def remover(self, chave):
@@ -1500,34 +1448,35 @@ class Api:
         novos, atualizados, duplicados, antigos, erros = 0, 0, [], [], []
         historicos = 0
         fichas_ok = []
+        pend_fichas = []
         incompletos = []
         total = len(arqs)
         vistos = set()
         lock = threading.Lock()
         if not silencioso:
             self._js("ui.progresso(0,%d)" % total)
-        with ThreadPoolExecutor(max_workers=min(4, os.cpu_count() or 2)) as ex:
+        # lote grande: a leitura dos PDFs (pdfplumber, puro Python) vai para processos paralelos, um por núcleo; em lote pequeno
+        # ou se os processos não subirem, threads
+        ex = None
+        if len(arqs) >= 20:
+            try:
+                ex = ProcessPoolExecutor(max_workers=max(2, min(8, (os.cpu_count() or 2) - 1)))
+            except Exception:
+                ex = None
+        ex = ex or ThreadPoolExecutor(max_workers=min(4, os.cpu_count() or 2))
+        with ex:
             futs = {ex.submit(_extrair_com_hash, a): a for a in arqs}
             for n, fut in enumerate(as_completed(futs), 1):
                 a = futs[fut]
                 nome_arq = os.path.basename(a)
                 try:
-                    r = fut.result()
-                    if r.get("tipo") == "linha_seeu":
-                        with lock:
-                            ok = base.gravar_linha_seeu(r)
-                            tem = base.existente(r["processo_execucao"])
-                        fichas_ok.append("%s: linha do tempo detalhada de %s (gerada em %s)%s" % (
-                            nome_arq, r["processo_execucao"], r.get("gerado_em") or "?",
-                            "" if ok else " - mais antiga que a da base, ignorada") + ("" if tem else " - SEM RSPE desta execução na base (fica guardada)"))
-                        continue
+                    try:
+                        r = fut.result()
+                    except BrokenProcessPool:
+                        r = _extrair_com_hash(futs[fut])  # processos de leitura indisponíveis: lê aqui mesmo
                     if r.get("tipo") == "ficha_disciplinar":
                         with lock:
-                            proc, mesma_pessoa = self._vincular_ficha(r, base)
-                            if not base.gravar_ficha(r, proc, mesma_pessoa):
-                                antigos.append("%s: ficha de %s impressa em %s é mais antiga que a da base - ignorada" % (nome_arq, r.get("nome"), r.get("data_impressao") or "?"))
-                                continue
-                            fichas_ok.append("%s: ficha de %s %s" % (nome_arq, r.get("nome"), ("vinculada a " + proc) if proc else "SEM RSPE correspondente na base (fica guardada pelo nome)"))
+                            pend_fichas.append((nome_arq, r))  # vinculada no fim, com todos os RSPE do lote já na base
                         continue
                     if not r.get("processo_execucao"):
                         raise ValueError("não parece um RSPE do SEEU nem uma Ficha Disciplinar do SIAPEN")
@@ -1567,6 +1516,25 @@ class Api:
                     erros.append("%s: %s" % (nome_arq, e))
                 if not silencioso and (n % 3 == 0 or n == total):
                     self._js("ui.progresso(%d,%d)" % (n, total))
+        if True:  # fichas do lote e fichas que esperavam o RSPE
+            info = self._indice_vinculo(base)
+            for nome_arq, r in pend_fichas:
+                try:
+                    proc, mesma_pessoa = self._vincular_ficha(r, base, info)
+                    if not base.gravar_ficha(r, proc, mesma_pessoa):
+                        antigos.append("%s: ficha de %s impressa em %s é mais antiga que a da base - ignorada" % (nome_arq, r.get("nome"), r.get("data_impressao") or "?"))
+                        continue
+                    fichas_ok.append("%s: ficha de %s %s" % (nome_arq, r.get("nome"), ("vinculada a " + proc) if proc else
+                                                             "SEM RSPE correspondente na base (fica guardada pelo nome; vincula sozinha quando o RSPE entrar)"))
+                except Exception as e:
+                    erros.append("%s: %s" % (nome_arq, e))
+            # fichas de lotes anteriores que esperavam o RSPE
+            try:
+                nrev = self._revincular_fichas(base, info)
+                if nrev:
+                    fichas_ok.append("%s guardada(s) pelo nome agora vinculada(s) ao RSPE" % rs.pl(nrev, "ficha", "fichas"))
+            except Exception as e:
+                erros.append("revinculação de fichas: %s" % e)
         avisos = incompletos + duplicados + antigos + erros + fichas_ok
         if avisos:
             with open(os.path.join(pasta_app(), "importacao_avisos.txt"), "w", encoding="utf-8") as f:
@@ -1577,33 +1545,69 @@ class Api:
             self._js("ui.importado(%s)" % json.dumps(resumo, ensure_ascii=False))
         return resumo
 
-    def _vincular_ficha(self, f, base=None):
-        """(processo, mesma_pessoa): processo de execução da base ao qual a ficha pertence, pelos autos citados na ficha ou
-        pelo nome; mesma_pessoa = sem homônimo na base (a ficha guardada pelo nome pode ser comparada e migrada)."""
-        base = base or self.base
+    def _indice_vinculo(self, base):
+        """Dados de cada assistido para vincular fichas (lido uma vez por lote: a base pode ter centenas de RSPE)."""
         with base.lock:
             rows = base.con.execute("SELECT processo, nome, dados FROM assistidos").fetchall()
-        maes = {}
-        for p, _, d in rows:
+        info = {}
+        for p, n, d in rows:
             try:
-                maes[p] = _norm((json.loads(d) or {}).get("nome_mae") or "")
+                dd = json.loads(d) or {}
             except Exception:
-                maes[p] = ""
+                dd = {}
+            info[p] = {"nome": _norm(n), "mae": _norm(dd.get("nome_mae") or ""), "cpf": re.sub(r"\D", "", dd.get("cpf") or ""),
+                       "procs": {re.sub(r"\D", "", p)} | {re.sub(r"\D", "", c.get("processo_criminal") or "") for c in (dd.get("_crimes") or [])} - {""}}
+        return info
+
+    def _vincular_ficha(self, f, base=None, info=None):
+        """(processo, mesma_pessoa): processo de execução da base ao qual a ficha pertence. Ordem: CPF; autos citados na ficha
+        (número da execução ou de uma ação penal da execução); nome. mesma_pessoa = sem homônimo na base (a ficha guardada pelo
+        nome pode ser comparada e migrada). O nome da mãe só afasta quando é claramente outro (grafia, abreviação e acento
+        não contam)."""
+        base = base or self.base
+        if info is None:
+            info = self._indice_vinculo(base)
         mae_f = _norm(f.get("nome_mae") or "")
 
         def mae_ok(p):
-            # nome da mãe nos dois documentos e diferente = outra pessoa (homônimo); ausente em um deles = não decide
-            return not (mae_f and maes.get(p)) or maes[p] == mae_f
-        procs = {p for p, _, _ in rows}
+            return _mesma_mae(mae_f, info[p]["mae"])
         nn = _norm(f.get("nome", ""))
-        mesmos = [p for p, n, _ in rows if _norm(n) == nn]
+        # o RSPE também corta nomes longos: vale o nome igual ou um começo do outro (com tamanho que não confunda)
+        mesmos = [p for p in info if info[p]["nome"] == nn or (min(len(nn), len(info[p]["nome"])) >= 15
+                                                                and (nn.startswith(info[p]["nome"]) or info[p]["nome"].startswith(nn)))]
         mesmos_mae = [p for p in mesmos if mae_ok(p)]
-        for a in f.get("autos", []):
-            if a in procs and mae_ok(a):
-                # vinculada pelos autos: sem homônimo na base, a ficha guardada pelo nome é da mesma pessoa
-                return a, len(mesmos_mae) <= 1
+        cpf = re.sub(r"\D", "", f.get("cpf") or "")
+        if len(cpf) == 11:
+            por_cpf = [p for p in info if info[p]["cpf"] == cpf]
+            if len(por_cpf) == 1:
+                return por_cpf[0], len(mesmos_mae) <= 1
+        autos = {re.sub(r"\D", "", a) for a in f.get("autos", [])} - {""}
+        por_autos = [p for p in info if autos & info[p]["procs"] and mae_ok(p)]
+        if len(por_autos) == 1:
+            return por_autos[0], len(mesmos_mae) <= 1
         # pelo nome (e pela mãe): só quando resta um único assistido (com homônimos, a ficha fica guardada pelo nome)
         return (mesmos_mae[0], True) if len(mesmos_mae) == 1 else ("", False)
+
+    def _revincular_fichas(self, base=None, info=None):
+        """Fichas guardadas pelo nome (importadas antes do RSPE, no mesmo lote ou antes) passam ao processo quando ele existe."""
+        base = base or self.base
+        info = info if info is not None else self._indice_vinculo(base)
+        with base.lock:
+            rows = base.con.execute("SELECT chave, dados FROM fichas WHERE processo=''").fetchall()
+        n = 0
+        for ch, d in rows:
+            try:
+                f = json.loads(d)
+            except Exception:
+                continue
+            proc, mesma = self._vincular_ficha(f, base, info)
+            if proc:
+                with base.lock:
+                    base.con.execute("DELETE FROM fichas WHERE chave=?", (ch,))
+                    base.con.commit()
+                base.gravar_ficha(f, proc, mesma)
+                n += 1
+        return n
 
     # ---- pasta vigiada: <pasta mãe>/<nome da base>/*.pdf entra sozinho na base de mesmo nome ----
     def vigia_info(self):
@@ -2017,26 +2021,175 @@ def _ler_defensores():
         return []
 
 
+def _montar_modelo(r, ctx):
+    """Modelo de um assistido (todas as abas) a partir do registro gravado e das tabelas auxiliares. Função do módulo (sem
+    a base aberta), para montar a base grande em processos paralelos; devolve (modelo, baixas a migrar)."""
+    migrar = []
+    baixas, fichas, manuais, ajustes = ctx["baixas"], ctx["fichas"], ctx["manuais"], ctx["ajustes"]
+    dmanuais, peds, _homonimos = ctx["dmanuais"], ctx["peds"], ctx["homonimos"]
+    # dados que o RSPE não trouxe: informados na Auditoria ou, para a data de nascimento, lidos da ficha disciplinar
+    _ch0 = r.get("processo_execucao") or r.get("arquivo")
+    _dm = dmanuais.get(_ch0, {})
+    _n0 = _norm(r.get("nome", ""))
+    _f0 = fichas.get(_ch0) or (fichas.get("nome:" + _n0) if _homonimos.get(_n0, 0) == 1 else None)
+    if _f0 and _f0 is not fichas.get(_ch0) and not _mesma_mae(_norm(_f0.get("nome_mae") or ""), _norm(r.get("nome_mae") or "")):
+        _f0 = None  # ficha de homônimo: a mãe não confere
+    r.pop("_nasc_fonte", None); r.pop("_nasc_data", None)
+    if _dm.get("data_nascimento"):
+        if r.get("data_nascimento") != _dm["data_nascimento"]["valor"]:
+            r["_nasc_rspe"] = r.get("data_nascimento") or ""
+        r["data_nascimento"] = _dm["data_nascimento"]["valor"]
+        r["_nasc_data"] = "/".join(_dm["data_nascimento"]["data"][:10].split("-")[::-1])
+        r["_nasc_fonte"] = "informada pelo operador"
+    elif not r.get("data_nascimento") and _f0 and (_f0.get("data_nascimento") or ""):
+        r["data_nascimento"] = _f0["data_nascimento"]
+        r["_nasc_fonte"] = "lida da ficha disciplinar do SIAPEN"
+        r["_nasc_data"] = ""
+    # RSPE x ficha: retomada do cumprimento omitida no RSPE é lançada pela ficha; divergência vira alerta
+    try:
+        rf.reconciliar_eventos(r, _f0)
+    except Exception:
+        logging.getLogger("rspe").exception("reconciliação com a ficha %s", _ch0)
+    # faltas graves da ficha disciplinar que o RSPE não traz: entram como falta a apurar
+    try:
+        rs.faltas_da_ficha(r, _f0, rv.HOJE)
+        rs.explicar_indicios_ficha(r, _f0, rv.HOJE)  # regressão/perda/pendente: a ficha explica?
+    except Exception:
+        logging.getLogger("rspe").exception("faltas da ficha %s", _ch0)
+    # sexo para a concordância dos textos (SAP, fundamentações): o informado pelo operador; senão o cadastro da ficha
+    # (sexo biológico ou unidade feminina). Sem isso, o texto fica neutro; o nome não serve de indício
+    _sx = ((_dm.get("sexo") or {}).get("valor") or "")
+    if not _sx and _f0:
+        _sx = _f0.get("sexo") or ("F" if "FEMININ" in rs._sem_acento(_f0.get("unidade") or "").upper() else "")
+    r["_sexo"] = _sx
+    r["_sexo_fonte"] = "operador" if (_dm.get("sexo") or {}).get("valor") else ("ficha" if _sx else "")
+    # data-base corrigida pelo operador ("dd/mm/aaaa|motivo"): refaz a previsão de progressão em todas as abas
+    r.pop("_db_manual", None)
+    if (_dm.get("data_base") or {}).get("valor"):
+        r["_db_manual"] = _dm["data_base"]["valor"]
+    # decisões do operador sobre indícios de falta (fuga, pendente, perda sem falta): valem em todas as abas
+    rs.aplicar_decisoes_falta(r, {k.split("|", 1)[1]: v["valor"] for k, v in _dm.items() if k.startswith("falta|")})
+    for _c in r.get("_crimes", []):
+        _c.pop("_pena_max_inf", None)
+        _v = _dm.get("pena_max|" + rs.chave_pena_max(_c))
+        if _v:
+            _c["_pena_max_inf"] = rs.pena_livre(_v["valor"])
+            _c["_pena_max_data"] = "/".join(_v["data"][:10].split("-")[::-1])
+    try:
+        imp = r.get("importado_em")
+        r = rs.reprocessar(r)  # análise refeita com as regras desta versão (a leitura do PDF fica como foi gravada)
+        r["importado_em"] = imp
+    except Exception:
+        pass
+    ch = r.get("processo_execucao") or r.get("arquivo")
+    r["_presc_ajustes"] = ajustes.get(ch, {})  # dados de prescrição preenchidos/corrigidos pelo operador (só em memória)
+    _nn = _norm(r.get("nome", ""))
+    ficha = _f0 if ch == _ch0 else (fichas.get(ch) or (fichas.get("nome:" + _nn) if _homonimos.get(_nn, 0) == 1 else None))
+    # um registro com dado ilegível não pode derrubar a base: tenta sem a ficha e, se ainda falhar, mostra o
+    # registro com o aviso da falha
+    try:
+        m = rv.modelo(r, baixas.get(ch, {}), ficha, manuais.get(ch, []))
+    except Exception as e:
+        logging.getLogger("rspe").exception("falha ao montar %s", ch)
+        try:
+            # o aviso entra antes da contagem: conta no resumo e na cor, e a baixa dele fica gravada
+            m = rv.modelo(r, baixas.get(ch, {}), None, manuais.get(ch, []),
+                          extras=[rv.item_falha("Ficha disciplinar ignorada: falha ao ler (%s)" % e, "falha-ficha")])
+        except Exception as e2:
+            m = rv.modelo_erro(r, e2, baixas.get(ch, {}))
+    m["sexo"], m["sexo_fonte"] = r.get("_sexo") or "", r.get("_sexo_fonte") or ""
+    # baixas gravadas pelo título (até a 6.15.11): passam para a chave estável (tipo do ponto + crime)
+    for it in m.get("aud_itens") or []:
+        if it.get("migrar_de"):
+            migrar.append((ch, it["migrar_de"], it["chave"]))
+    m["pedidos"] = peds.get(ch, {})  # pedidos já feitos, por aba (coluna "Pedido")
+    m["hist_n"] = ctx["hist_n"].get(ch, 1)
+    m["fixado"] = ch in ctx["fixados"]
+    try:
+        m["dec"] = rv.json_seguro(rd.avaliar(m.get("_final") or r, rv.HOJE))  # aba Indulto: todos os decretos desde o início do cumprimento
+    except Exception:
+        logging.getLogger("rspe").exception("decretos %s", ch)
+        m["dec"] = {"inicio": "", "decretos": []}  # RSPEs guardados no histórico (botão "Histórico · N" da aba Geral)
+    try:
+        m["faltas_itens"] = rs.faltas_editaveis(r.get("_incidentes", []), r.get("_eventos", []), rv.HOJE)
+    except Exception:
+        m["faltas_itens"] = []
+    m["_bruto"] = m.pop("_final", None) or r
+    return m, migrar
+
+
+# campos de cada crime da prescrição que a lista usa (colunas, cores, "Calcular"); o resto vem com o registro completo
+_PRESC_LEVE = {"ppe_termo_txt", "crime", "rotulo", "proc_crim", "pena", "fato", "denuncia", "sentenca", "transito", "transito_mp", "acordao", "modalidade",
+               "ppe_status", "ppe_cor", "retro_status", "retro_cor", "prazo_ppe", "prazo_ppp", "ppe_termo", "ppe_previsao", "ppe_dias",
+               "chave_ajuste", "ajustado"}
+
+
+def _leve(j):
+    """Registro para a lista: sem os textos da prescrição (memória, linha do tempo, fundamentação) e sem os itens da auditoria."""
+    out = dict(j)
+    out["_leve"] = True
+    out["aud_itens"] = []
+    if isinstance(j.get("dec"), dict):
+        out["dec"] = dict(j["dec"], decretos=[{k: v for k, v in x.items() if k != "detalhe"} for x in (j["dec"].get("decretos") or [])])
+    out["presc_linhas"] = [dict({k: v for k, v in L.items() if k in _PRESC_LEVE},
+                                ppe_saldos=[{"evasao": S.get("evasao"), "saldo_origem": S.get("saldo_origem")} for S in (L.get("ppe_saldos") or [])])
+                           for L in (j.get("presc_linhas") or [])]
+    return out
+
+
+def _ctx_de(ctx, r):
+    """Fatia do contexto que interessa a um assistido (o processo paralelo não recebe as tabelas da base inteira)."""
+    ch = r.get("processo_execucao") or r.get("arquivo")
+    nn = _norm(r.get("nome", ""))
+    um = lambda d: {ch: d[ch]} if ch in d else {}
+    fichas = {}
+    for k in (ch, "nome:" + nn):
+        if k in ctx["fichas"]:
+            fichas[k] = ctx["fichas"][k]
+    fx = ctx["fixados"]
+    return {"baixas": um(ctx["baixas"]), "fichas": fichas, "manuais": um(ctx["manuais"]), "ajustes": um(ctx["ajustes"]),
+            "dmanuais": um(ctx["dmanuais"]), "peds": um(ctx["peds"]), "hist_n": um(ctx["hist_n"]),
+            "fixados": ({ch: fx[ch]} if ch in fx else {}) if isinstance(fx, dict) else ({ch} if ch in fx else set()),
+            "homonimos": {nn: ctx["homonimos"].get(nn, 0)}}
+
+
+def _montar_proc(args):
+    """Processo paralelo da montagem: (registro, fatia do contexto, data de hoje) -> (modelo, baixas a migrar)."""
+    r, sub, hoje = args
+    rv.HOJE = hoje
+    return _montar_modelo(r, sub)
+
+
 def _extrair_com_hash(caminho):
     h = hashlib.sha1()
     with open(caminho, "rb") as f:
         for bloco in iter(lambda: f.read(1 << 20), b""):
             h.update(bloco)
+    # a primeira página decide o tipo: a ficha disciplinar não passa pela leitura do RSPE (mais rápido no lote grande, e um
+    # erro qualquer na leitura do RSPE não esconde a ficha)
+    try:
+        p1 = rf.texto_pagina1(caminho)
+    except Exception:
+        p1 = ""
+    if rf.e_ficha(p1):
+        try:
+            r = rf.extrair(caminho)
+        except Exception as e2:
+            raise ValueError("ficha disciplinar do SIAPEN com falha na leitura (%s) - enviar o arquivo para correção" % e2)
+        r["_hash"] = h.hexdigest()
+        return r
     try:
         r = rs.extrair(caminho)
-    except ValueError as e:
-        # pode ser uma Ficha Disciplinar do SIAPEN
+    except Exception as e:
+        # pode ser uma Ficha Disciplinar do SIAPEN com o cabeçalho fora da primeira página
         try:
             txt = rf.texto_pdf(caminho)
         except Exception:
             raise e
-        if rl.e_linha(txt):
-            r = rl.extrair(caminho)
-            r["_hash"] = h.hexdigest()
-            return r
+        if not txt.strip():
+            raise ValueError("PDF sem texto (digitalizado ou imagem): gere o PDF direto do SEEU/SIAPEN, não escaneado")
         if not rf.e_ficha(txt):
             raise e
-        # é uma ficha disciplinar: uma falha na leitura dela não pode ser relatada como "não é um RSPE"
         try:
             r = rf.extrair(caminho)
         except Exception as e2:
@@ -2107,6 +2260,8 @@ def main():
 
 
 if __name__ == "__main__":
+    import multiprocessing
+    multiprocessing.freeze_support()  # executável (PyInstaller): os processos de leitura do lote reabrem o programa
     try:
         main()
     except Exception:

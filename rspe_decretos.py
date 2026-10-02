@@ -289,7 +289,8 @@ def avaliar_ficha(f, r, ctx, ini, hoje):
     if F.get("meses_vga") and vga:
         # crime com violência ou grave ameaça: janela maior (2002, art. 1º, § 1º, I; 2003, art. 3º, I - 24 meses)
         f_meses, f_afeta = F["meses_vga"], (F.get("afeta_vga") or f_afeta).lower()
-    if f_meses or (F.get("texto") and F.get("meses") is None and re.search(r"punid|falta grave", F.get("texto") or "", re.I)):
+    if f_meses or (F.get("texto") and F.get("meses") is None and re.search(r"punid", F.get("texto") or "", re.I)
+                   and not re.search(r"n[ãa]o trata", F.get("texto") or "", re.I)):
         # janela de meses de calendário contada para trás da publicação (ou da data de referência, se o decreto assim
         # disser: 2015, 2023); sem janela fixada (Dia das Mães 2017), qualquer falta punida até a data
         base_f = ref if F.get("contada_de") == "referencia" else pub
@@ -461,6 +462,23 @@ def avaliar_ficha(f, r, ctx, ini, hoje):
     return dict(res, s="nao", mot="nenhuma hipótese objetiva do decreto alcança o caso")
 
 
+def _tese_hediondez(f, r, x):
+    """Decreto que veda "hediondos" sem dizer "praticado após" a lei: o STJ afere a hediondez na data do decreto. O motor afere na
+    data do fato (tese da irretroatividade - STF, 2ª T.); se o benefício só cabe por ela, o resultado é A VERIFICAR (tese)."""
+    if x.get("s") != "cabe" or "praticado após" in ((f.get("impeditivos") or {}).get("texto") or "").lower():
+        return x
+    ref = rs.to_date(x.get("ref") or f.get("data_referencia") or "")
+    if not ref:
+        return x
+    sup = [c for c in r.get("_crimes") or [] if not (c.get("extinto") or "").upper().startswith("S")
+           and rs.to_date(c.get("data_infracao") or "") and rs.to_date(c.get("data_infracao")) <= ref
+           and rs.e_hediondo(c, ref) and not rs.e_hediondo(c, None)]
+    if not sup:
+        return x
+    return dict(x, s="ver", mot=("hediondez posterior ao fato (%s): pelo STJ, que a afere na data do decreto, é crime impeditivo; o benefício "
+                                 "(%s) só cabe pela tese da irretroatividade (STF, 2ª Turma) - %s" % (rs.crimes_curto(sup), x.get("beneficio") or "", x.get("mot") or "")))
+
+
 def _detalhado(ano, r):
     num, ki, kc = DETALHADOS[ano]
     ref = _REF_DET.get(ano)
@@ -496,6 +514,7 @@ def avaliar(r, hoje, completo=False):
             continue
         try:
             x = avaliar_ficha(f, r, ctx, ini, hoje)
+            x = _tese_hediondez(f, r, x)
         except Exception as e:  # uma ficha com dado ruim não derruba o assistido
             x = {"id": f["id"], "ano": f.get("ano"), "numero": f.get("numero") or "", "ref": f.get("data_referencia"), "s": "ver",
                  "mot": "falha ao avaliar o decreto: %s" % e}

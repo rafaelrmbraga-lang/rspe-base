@@ -368,9 +368,9 @@ def _incidentes(r):
 
 # ---------------------------------------------------------------- linha do tempo visual da prescrição executória (figura estática)
 TL_COR = {"provisoria": ("#98A2B3", "#FFFFFF"), "cumprimento": ("#34A853", "#34A853"), "evasao": ("#F04438", "#FDE8E8"), "interrupcao": ("#F04438", "#FDE8E8"),
-          "outro_motivo": ("#B692F6", "#B692F6"), "liberdade": ("#D0D5DD", "#EEF0F3"), "livramento": ("#84CAFF", "#84CAFF"), "duvida": ("#F79009", "#FEF4D6")}
+          "outro_motivo": ("#B692F6", "#B692F6"), "encerrada": ("#475467", "#EAECF0"), "liberdade": ("#D0D5DD", "#EEF0F3"), "livramento": ("#84CAFF", "#84CAFF"), "duvida": ("#F79009", "#FEF4D6")}
 TL_ROT = {"provisoria": "prisão provisória (detração)", "cumprimento": "cumprimento da pena", "evasao": "fuga / evasão", "interrupcao": "interrupção (motivo a conferir)",
-          "outro_motivo": "suspensão (preso por outro motivo)", "liberdade": "liberdade sem evasão", "livramento": "livramento", "duvida": "atribuição não comprovada"}
+          "outro_motivo": "suspensão (preso por outro motivo)", "encerrada": "execução encerrada", "liberdade": "liberdade sem evasão", "livramento": "livramento", "duvida": "atribuição não comprovada"}
 
 
 def _tl_tipo(p):
@@ -664,7 +664,7 @@ def relatorio_individual(m, caminho, nome_base):
     cd = [["Crime", "Pena", "Fato", "Hediondo", "VGA", "Reincid.", "Progressão", "Livramento"]]
     for c in m.get("crimes_det", []):
         ext = str(c.get("extinto") or "").upper().startswith("S")
-        reinc = {"S/S": "específico", "S/N": "comum", "N/S": "específico", "N/N": "primário"}.get(c.get("reinc") or "", c.get("reinc") or "")
+        reinc = {"S/S": "específico", "S/N": "genérico", "N/S": "específico", "N/N": "primário"}.get(c.get("reinc") or "", c.get("reinc") or "")
         fp = (c.get("frac_prog") or "—").split(" - ")[0]
         fl = (c.get("frac_liv") or "—").split(" - ")[0]
         cd.append([Paragraph("<b>%s</b> <font color='%s'>%s</font>%s" % (_t(c.get("nome_crime")), TX2, _t(c.get("dispositivo")), " <font color='%s'>· extinto</font>" % TX3 if ext else ""), st["cel"]),

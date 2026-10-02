@@ -40,7 +40,7 @@ ROTULO = {
     "presc": {"vermelho": "Prescrição aparente", "amarelo": "Iminente / a verificar", "": "Não prescrita", "cinza": "Sem dados"},
     "presc_pp": {"vermelho": "Prescrição aparente", "": "Não configurada", "cinza": "Sem dados"},
     "fd": {"vermelho": "Remição a requerer", "amarelo": "Conferir remição / ausência de atestado / último atestado há 6 meses", "verde": "Em ordem", "cinza": "Sem ficha"},
-    "aud": {"vermelho": "Com alertas", "amarelo": "Pontos a verificar", "verde": "Sem inconsistências", "azul": "Extinta"},
+    "aud": {"vermelho": "Com alertas", "amarelo": "Pontos a verificar", "verde": "Guia em ordem", "azul": "Extinta"},
     "ext": {"vermelho": "Extinção cabível", "laranja": "Término em até 30 dias", "amarelo": "Até 60 dias / a verificar", "verde": "Término em até 90 dias", "cinza": "Sem previsão / interrompida", "azul": "Extinta (registrada)"},
 }
 
@@ -65,7 +65,7 @@ FILTROS = {
         ("90", "Vence em até 90 dias"),
         ("naoiniciou", "Não iniciou o cumprimento"),
         ("interrompida", "Pena interrompida / suspensa"),
-        ("naoaplica", "Não se aplica (cumprida / livramento / aberto)"),
+        ("naoaplica", "Não se aplica (cumprida / livramento / aberto na progressão)"),
         ("semdata", "Sem data"),
     ],
     "indulto": [
@@ -92,7 +92,7 @@ FILTROS = {
         ("todas", "Todas"),
         ("atencao", "Com alertas"),
         ("verificar", "Pontos a verificar"),
-        ("ok", "Sem inconsistências"),
+        ("ok", "Guia em ordem"),
     ],
     "presc": [
         ("todas", "Todas"),
@@ -211,7 +211,7 @@ def _prog_pela_db_manual(r):
 
 DB_TIPOS = {  # itens da Auditoria sobre a data-base -> (cor, motivo)
     "data-base-coincide-com-a-soma-unificacao-das-pen": ("vermelho", "soma/unificação de penas - não altera a data-base (STJ, Tema 1006)"),
-    "data-base-de-progressao-anterior-a-ultima-altera": ("vermelho", "anterior à última alteração de regime"),
+    "data-base-de-progressao-anterior-a-ultima-altera": ("amarelo", "anterior à última alteração de regime - conferir se é a data da falta (Súmula 534/STJ) ou do preenchimento dos requisitos (STJ, Tema 1165)"),
     "data-base-movida-para-a-recaptura-sem-falta-homo": ("amarelo", "recaptura depois de fuga, sem falta homologada no RSPE"),
     "inconsistencia-da-data-base-sem-prisao-alteracao": ("amarelo", "sem prisão, alteração de regime ou falta grave homologada nessa data"),
 }
@@ -481,7 +481,7 @@ def extincao(r, presc, interr):
             pass
         elif dlc != date.min and not revog and term:
             if term <= HOJE:
-                hip.append("Livramento condicional desde %s com período de prova expirado em %s sem revogação (CP, arts. 89 e 90; LEP, art. 146)" % (rs.fmt(dlc), rs.fmt(term)))
+                hip.append("Livramento condicional desde %s com período de prova expirado em %s sem revogação (CP, art. 90; LEP, art. 146; Súmula 617/STJ), observado o art. 89 do CP (processo por crime cometido na vigência do livramento)" % (rs.fmt(dlc), rs.fmt(term)))
                 cor = "vermelho"
     # 3) detração que alcança toda a pena do processo (custódia provisória anterior ao trânsito): hipótese a verificar,
     #    porque a mesma prisão pode servir a várias condenações (LEP, art. 111). Prescrição e indulto ficam nas próprias abas.
@@ -493,7 +493,7 @@ def extincao(r, presc, interr):
             a_verificar = True
     # multa cominada: extinção exige prova da impossibilidade de pagamento (STF ADI 7.032)
     com_multa = any(re.search(r"\b(E|e)\s+Multa", c.get("tipo_penal") or "") for c in r.get("_crimes", []) if not c.get("extinto", "").upper().startswith("S"))
-    multa_txt = ("Multa cominada: extinção cabível se comprovada a impossibilidade de pagamento (STF ADI 7.032, vinculante; STJ Tema 931) - instruir com prova da hipossuficiência" if com_multa else "")
+    multa_txt = ("Multa cominada: o inadimplemento não obsta a extinção ante a alegada hipossuficiência, salvo decisão motivada que indique concretamente a possibilidade de pagamento (STJ, Tema 931, tese revista em 28/02/2024); há julgados exigindo prova da impossibilidade com base na ADI 7.032 (STJ, REsp 2.055.935) - por cautela, instruir com elementos da hipossuficiência" if com_multa else "")
     # crimes já extintos no RSPE
     ext = ["%s%s%s" % (rs.crimes_curto([c]).replace(" (extinto)", ""), (" · " + c["extincao_motivo"].lower()) if c.get("extincao_motivo") else "",
                        (" em " + c["data_extincao"]) if c.get("data_extincao") else "")
@@ -640,6 +640,8 @@ def presc_curto(txt, ppe=False):
         return ""
     if tl.startswith("aparente") or "aparente" in tl[:40]:
         return "Aparente"
+    if tl.startswith("possível"):
+        return "Conferir a guia"
     if tl.startswith("iminente"):
         return "Iminente"
     if tl.startswith("a verificar"):
@@ -696,7 +698,7 @@ def simplificar(m):
     m["presc_retro"], m["presc_ppe"] = presc_curto(m["presc_retro_full"]), presc_curto(m["presc_ppe_full"], ppe=True)
     m["presc_retro"] = m["presc_retro"] or "Sem dados"
     m["presc_ppe"] = m["presc_ppe"] or "Sem dados"
-    _pc = {"Aparente": "vermelho", "Iminente": "amarelo", "A verificar": "amarelo", "Extinta": "azul", "Sem dados": "cinza"}
+    _pc = {"Aparente": "vermelho", "Conferir a guia": "amarelo", "Iminente": "amarelo", "A verificar": "amarelo", "Extinta": "azul", "Sem dados": "cinza"}
     m["presc_retro_cor"], m["presc_ppe_cor"] = _pc.get(m["presc_retro"], ""), _pc.get(m["presc_ppe"], "")
     return m
 
@@ -807,9 +809,9 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
         partes.append(pl(n_al, "alerta", "alertas"))
     if n_ve:
         partes.append(pl(n_ve, "ponto a verificar", "pontos a verificar"))
-    aud["aud_resumo"] = " · ".join(partes) if partes else "Sem inconsistências"
-    if n_bx:
-        aud["aud_resumo"] += " · " + pl(n_bx, "baixado", "baixados")
+    # o que foi baixado não aparece na linha: fica no "Histórico de alertas", com o motivo da baixa
+    aud["aud_resumo"] = " · ".join(partes) if partes else "Guia em ordem"
+    aud["aud_baixados"] = n_bx
     aud["aud_info"] = n_info
     # coluna Falta: "Sim" só com sanção reconhecida; indício sem ela, "A apurar" (o detalhe fica na ficha do assistido)
     falta = (("Sim · " + (r.get("falta_12m_detalhe") or "")) if r.get("falta_12m") == "SIM" else
@@ -832,7 +834,6 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
         "presc_cor": presc["presc_cor"], "presc_retro": presc["presc_retro"], "presc_ppe": presc["presc_ppe"],
         "presc_prox": presc["presc_prox"], "presc_dias": presc["presc_dias"], "presc_obs": presc["presc_obs"],
         "presc_linhas": presc["presc_linhas"], "presc_n": len(presc["presc_linhas"]),
-        "presc_linha_seeu": presc.get("presc_linha_seeu"),
         "ind_status": [r.get("indulto_2022_status", ""), r.get("indulto_2024_status", ""), r.get("indulto_2025_status", "")],
         **ext,
         **rf.comparativo(r, ficha, HOJE, conferidos={k for k in baixas if k.startswith("fd:")}, manuais=manuais),
@@ -845,7 +846,7 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
                   if ficha else None),
         "aud_info": aud.get("aud_info", 0),
         "aud_cor": "azul" if execucao_extinta(r) else {"atencao": "vermelho", "verificar": "amarelo", "ok": "verde"}[aud["aud_status"]],
-        "aud_status": aud["aud_status"], "aud_resumo": aud["aud_resumo"], "aud_alertas": aud["aud_alertas"],
+        "aud_status": aud["aud_status"], "aud_resumo": aud["aud_resumo"], "aud_alertas": aud["aud_alertas"], "aud_baixados": aud.get("aud_baixados", 0),
         "aud_verificar": aud["aud_verificar"], "aud_itens": aud["aud_itens"], "aud_n": len(aud["aud_itens"]),
         "aud_base": aud["aud_base"],
         "frac_prog": rs.pct(r.get("fracao_progressao_aplicada", "")),

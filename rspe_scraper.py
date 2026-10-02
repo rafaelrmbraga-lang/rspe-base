@@ -1559,6 +1559,9 @@ def indicios_falta(incidentes, ref, dias=365, eventos=None, ate=None, hoje=None)
                 elif _pendente(i):
                     if not falta_prescrita(d, bool(RE_FUGA_EV.search(txt)), eventos, hoje):
                         out.append(("%s (%s - pendente: só impede se a sanção for reconhecida em juízo)" % (txt, fmt(d)), False))
+                elif not RE_DATA.search(i.get("complemento") or "") and (not i.get("data_referencia") or i.get("data_referencia") == i.get("data_decisao")):
+                    # sem a data do fato: a referência é a da própria decisão - não se presume que a falta foi cometida na janela
+                    out.append(("%s (data do fato não consta; decisão em %s - conferir se a falta foi cometida na janela)" % (txt, fmt(d)), False))
                 else:
                     out.append(("%s (%s)" % (txt, fmt(d)), True))
             continue
@@ -2017,7 +2020,9 @@ def exclusao_art7_2022(c):
             return "III, c: crime da Lei 11.340/06"
         return "II: com violência doméstica e familiar contra a mulher - %s" % vd[1]
     if vga_indulto(c):
-        return "II: praticado com violência ou grave ameaça" + (" (roubo: violência ou grave ameaça elementar do tipo)" if c.get("vga") != "S" else "")
+        return "II: praticado com violência ou grave ameaça" + (
+            (" (roubo: violência ou grave ameaça elementar do tipo)" if roubo_cp(c) else " (violência ou grave ameaça elementar do tipo, CP, art. %s)" % num_art(c.get("artigo")))
+            if c.get("vga") != "S" else "")
     if lei in ART7_2022_LEIS:
         return ART7_2022_LEIS[lei]
     if codigo_penal and art in ART7_2022_CP:
@@ -3390,13 +3395,51 @@ def analise_decretos(campos, crimes, eventos, incidentes, hoje):
             nomes = crimes_curto(livres)
             out[k + "_imp"] = {"pena_imp": pena_imp, "exigido": exig, "fracao": "2/3", "cumprido_total": cumprido}
             cab = "Crime impeditivo: " + "; ".join(imped)
+            # hediondez superveniente em concurso com impeditivo certo: pela tese da irretroatividade, os 2/3 incidem só sobre a pena
+            # dos impeditivos certos (imp_est); se por ela o requisito estiver cumprido, o resultado é tese - A VERIFICAR, não vedado
+            exig_t = int(sum(pena_para_dias(c.get("pena_imposta")) or 0 for c in imp_est) * 2 / 3) if (imp_sup and imp_est) else None
+            if imp_sup and imp_est:
+                out[k + "_imp"]["tese"] = {"pena_imp": sum(pena_para_dias(c.get("pena_imposta")) or 0 for c in imp_est), "exigido": exig_t,
+                                           "crimes": crimes_curto(imp_est), "sup": crimes_curto(imp_sup)}
+            _tese_ok = _com_t = False
+            if cumprido < exig and exig_t is not None and cumprido >= exig_t:
+                # pela tese, os crimes de hediondez superveniente entram com os não impeditivos: há inciso de indulto ou comutação?
+                livres_t = livres + imp_sup
+                pena_imp_t = out[k + "_imp"]["tese"]["pena_imp"]
+                cl_t = cumprido - exig_t
+                pena_liv_t = max(1, pena_total - pena_imp_t)
+                r_t = avaliar(pena_liv_t, cl_t, max(0, pena_liv_t - cl_t), any(vga_indulto(c) for c in livres_t), all(crime_patrimonial(c) for c in livres_t), livres_t)
+                f13t = (A("art13_comutacao", "fracao_primario", "1/5"), A("art13_comutacao", "fracao_reincidente", "1/4"))
+                _inc_t = ", ".join(x.split(":")[0] for x in r_t[0])
+                _com_t = bool(r_t[4](r_t[3](*f13t, par2=False)))
+                _tese_ok = bool(_inc_t)
+                out[k + "_imp"]["tese"]["resultado"] = ("indulto pelo art. 9º, %s" % _inc_t) if _inc_t else ("comutação possível" if _com_t else "nenhum inciso atingido")
+            if _tese_ok:
+                out[k] = ("A VERIFICAR (tese: hediondez superveniente) · art. 7º, p. ú.: pela corrente do STJ faltam %s para 2/3 do impeditivo; "
+                          "pela irretroatividade, os 2/3 só dos impeditivos certos (%s) estão cumpridos" % (dias_para_pena(exig - cumprido), crimes_curto(imp_est)))
+                out[k + "_status"] = "verificar"
+                out[kc] = "A VERIFICAR (tese: hediondez superveniente)"
+                out[k + "_detalhe"] = cab + ("\nArt. 7º, p. ú.: pela corrente do STJ (hediondez aferida na data do decreto), os crimes não impeditivos (%s) só "
+                                             "depois de cumpridos 2/3 da pena de todos os impeditivos (%s de %s); cumprido em %s: %s. Pela tese da "
+                                             "irretroatividade (STF, 2ª T., RHC 267.297 AgR), %s não é impeditivo, e os 2/3 incidem só sobre a pena de %s "
+                                             "(%s), já cumpridos; por essa tese: %s - conferir e, sendo o caso, sustentar a tese." % (
+                    nomes, dias_para_pena(exig), dias_para_pena(pena_imp), fmt(ref), dias_para_pena(cumprido), crimes_curto(imp_sup),
+                    crimes_curto(imp_est), dias_para_pena(exig_t), out[k + "_imp"]["tese"]["resultado"]))
+                continue
             if cumprido < exig:
                 out[k] = "VEDADO (art. 1º) · art. 7º, p. ú.: faltam %s para 2/3 do impeditivo" % dias_para_pena(exig - cumprido)
                 out[k + "_status"] = "vedado"
-                out[kc] = "VEDADA (art. 1º)"
+                out[kc] = "A VERIFICAR (tese: hediondez superveniente)" if _com_t else "VEDADA (art. 1º)"
                 out[k + "_detalhe"] = cab + ("\nArt. 7º, p. ú.: os crimes não impeditivos (%s) só depois de cumpridos 2/3 da pena dos impeditivos (%s de %s); cumprido em %s: %s. "
                                              "Os 2/3 se aferem sobre a pena do impeditivo, à parte (STJ, HC 1.066.254, 6ª T., 18/03/2026)." % (
                     nomes, dias_para_pena(exig), dias_para_pena(pena_imp), fmt(ref), dias_para_pena(cumprido)))
+                if exig_t is not None:
+                    _tr = out[k + "_imp"]["tese"]
+                    out[k + "_detalhe"] += (" Pela tese da irretroatividade da hediondez (STF, 2ª T., RHC 267.297 AgR), os 2/3 incidiriam só sobre a pena de %s "
+                                            "(%s)%s." % (
+                        _tr["crimes"], dias_para_pena(exig_t),
+                        (", já cumpridos, mas nenhum inciso de indulto é atingido: o indulto segue vedado" + ("; a comutação, por essa tese, seria possível (a verificar)" if _com_t else ""))
+                        if cumprido >= exig_t else ", ainda não cumpridos: o resultado não muda"))
                 continue
             cl = cumprido - exig
             pena_liv = max(1, pena_total - pena_imp)
@@ -3505,7 +3548,7 @@ def roubo_cp(c):
     return cp and num_art(c.get("artigo")) == "157"
 
 
-VGA_ELEMENTAR_CP = ("146", "147", "157", "158", "159", "213")  # violência ou grave ameaça no próprio tipo
+VGA_ELEMENTAR_CP = ("147", "157", "158", "159", "213")  # o art. 146 admite "qualquer outro meio": depende do campo VGA  # violência ou grave ameaça no próprio tipo
 
 
 def vga_elementar(c):

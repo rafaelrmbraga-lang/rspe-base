@@ -457,8 +457,9 @@ AUDITORIA
   inferior a 2 anos - são gerados mas ficam fora da aba e da contagem (o
   filtro é pelo tipo do ponto). Da ficha disciplinar, só fica o ponto
   "Perda de remidos pode alcançar remição anterior à falta ...".
-  Dar baixa (com observação): o ponto sai da contagem, fica gravado na base
-  com a data e pode ser reaberto. A baixa vale pelo tipo do ponto e pelo
+  Dar baixa (com o motivo, obrigatório): o ponto sai da linha e da contagem
+  (sem pendências, a linha mostra "Guia em ordem") e fica no "Histórico de
+  alertas" do assistido, com a data e o motivo, de onde pode ser reaberto. A baixa vale pelo tipo do ponto e pelo
   crime (ou ano do decreto, ou falta): sobrevive à reimportação e à mudança
   do título. Os avisos "Ficha disciplinar ignorada" e "Falha ao analisar"
   contam como alerta e podem ser baixados.
@@ -764,28 +765,99 @@ v6.16.50
     coluna. O botão de quadro em cada linha (e "Enviar ao Quadro do Usuário"
     no painel do assistido) cria o cartão já com o assistido. Prazo vencido
     ou próximo acende o número ao lado do nome da aba.
-  - Prescrição após a fuga com várias condenações: o saldo de cada uma vem
-    da Linha do Tempo Detalhada do SEEU (PDF gerado na aba "Informações
-    adicionais"), que entra pelo "Importar PDFs" e fica guardada na
-    execução: na ocorrência da fuga, o restante registrado pelo SEEU é o
-    saldo do art. 113. A ordem do trânsito, o art. 76 e a pena maior
-    primeiro aparecem só como tese, quando dariam prescrição e a linha não.
-  - Sem a linha detalhada, o programa não estima: só afirma o que vale em
-    qualquer imputação (prescrita mesmo com a pena inteira, ou não prescrita
-    mesmo com todo o tempo imputado ao crime); no resto, "a verificar", sem
-    fundamentação, até importar a linha ou usar a calculadora.
-  - Aba Prescrição (executória), coluna "Cálculo da fuga": "Calcular" (ou
-    "Ver cálculo") na linha do assistido abre a janela da fuga. Nela se
-    importa a Linha do Tempo Detalhada do SEEU ou se informa o saldo, em
-    duas abas: "Digitar saldo" (o saldo de cada condenação na fuga, do
-    cálculo do SEEU daquela data, do atestado ou da decisão) e "Calcular
-    pela ordem" (o tempo cumprido até a fuga, já preenchido, vai à
-    condenação do topo da lista e passa à seguinte; a lista vem pela
-    fração e se reordena arrastando ou pelas setas). Feito o cálculo, cada condenação
-    aparece nos 4 critérios (linha do SEEU ou calculadora; ordem do
-    trânsito, art. 76 e pena maior como tese), com o botão de copiar a
-    fundamentação quando há prescrição. A linha importada prevalece sobre
-    a calculadora.
+  - Prescrição após a fuga com várias condenações: na aba Prescrição
+    (executória), a coluna "Cálculo da fuga" traz "Calcular" (ou "Ver
+    cálculo") na linha do assistido. Na janela, em cada fuga, digita-se o
+    saldo de cada condenação na data da fuga (cálculo do SEEU daquela data,
+    atestado ou decisão); campo em branco vale zero. Feito isso, cada
+    condenação aparece pelo saldo digitado e, como tese, pela ordem do
+    trânsito, pelo art. 76 e pela pena maior primeiro, com o botão de copiar
+    a fundamentação quando há prescrição. Sem o saldo, o programa não estima:
+    só afirma o que vale em qualquer imputação.
+  - A prescrição não aparece mais na ficha do assistido: fica só na aba.
+  - Prescrição e lançamentos errados na guia: prisão e liberdade continuam
+    sendo suspensão. Depois de uma fuga, a prisão lançada só em outro
+    processo (o flagrante pelo crime novo) passa a ser tratada como
+    retomada do cumprimento apenas quando, depois dela, há ato que só existe
+    para quem cumpre pena nesta execução (livramento concedido, progressão,
+    regressão, remição, soma de penas); a interrupção cai na data desse ato
+    (art. 117, V), e a prescrição consumada antes do flagrante não se perde.
+    Quem nunca iniciou o cumprimento não é alcançado. Quando a prescrição
+    depende de um lançamento duvidoso, o resultado aparece como "Prescrição
+    possível - conferir a guia", em amarelo.
+  - "Como cheguei a este resultado": no "cálculo" de cada crime da aba
+    Prescrição, a explicação em passos numerados - cada período do RSPE e a
+    leitura feita, a regra aplicada, a conta, o resultado e o que conferir
+    na guia se ele parecer errado.
+  - Indulto/comutação: na janela "Verificar indulto/comutação", cada decreto
+    traz o mesmo "Como cheguei a este resultado" - a ordem dos crimes (fato,
+    trânsito, pena), o início do cumprimento, quais crimes o decreto alcança,
+    cada período até a data de referência (conta ou não conta, e de quais
+    crimes), as remições, a conta do tempo cumprido (e a diferença para o
+    SEEU, quando houver), o requisito, a imputação ao impeditivo, a falta
+    grave, o resultado e o que conferir no SEEU. A janela fica na ordem:
+    1 · Crimes, 2 · Resultado, 3 · Comparativo com os incisos do decreto e
+    4 · Como cheguei aqui. As partes 3 e 4 vêm fechadas e abrem pela
+    setinha; a escolha se mantém ao trocar de decreto.
+  - Auditoria: o alerta baixado sai da linha - sem pendências, ela mostra
+    "Guia em ordem". O motivo da baixa passou a ser obrigatório e fica no
+    novo botão "Histórico de alertas" (no detalhe do assistido), com a data,
+    o alerta e o motivo de cada baixa e reabertura; dali o alerta pode ser
+    reaberto. Os resolvidos por dado informado (data de nascimento, pena
+    máxima, decisão sobre falta) também aparecem no histórico.
+  - Auditoria: a fundamentação da impugnação ficou mais explicada, em 4
+    parágrafos curtos - o que o cálculo mostra (processo, crime e os dados
+    concretos do RSPE), por que está errado (fundamento), o prejuízo ao
+    assistido (ex.: "60% no lugar de 40%: a progressão é postergada") e o
+    pedido.
+    Quando o erro decorre da reincidência genérica (o cálculo não marca a
+    reincidência como específica), o texto explica: os 60% (LEP, art. 112,
+    VII) e a vedação do livramento (CP, art. 83, V) valem só para o
+    reincidente específico em crime hediondo; ao genérico, 40% (art. 112, V,
+    retroativo - STJ, Tema 1084; STF, Tema 1169) e 2/3 no livramento. Sem
+    parênteses aninhados e sem repetir no "Nesse sentido" o que já foi citado.
+  - Revisão jurídica geral das fundamentações (Prescrição, Auditoria,
+    Indulto/Comutação, Extinção, Ficha, petição e Legenda):
+    * Prescrição: o termo inicial na peça diz qual trânsito (para a
+      acusação até 12/11/2020; para ambas as partes depois - STF, Tema
+      788); sem o trânsito final e com trânsito para a acusação posterior a
+      12/11/2020, o resultado passa a A VERIFICAR. Detração descrita como
+      pena cumprida (abate do saldo na fuga, não do prazo pela pena
+      aplicada). Prisão por outro processo suspende; cumprimento desta pena
+      interrompe (arts. 112, II, e 117, V). Recaptura depois da consumação
+      não "interrompe". A peça só sai com resultado firme (vermelho); nas
+      teses de imputação pede primeiro a adoção do critério.
+    * Auditoria: precedentes e incisos conferidos (Tema 477 retirado; 75% e
+      organização ultraviolenta; art. 83, III, b, no livramento; Tema 941;
+      Súmula 534), teses apresentadas como tese, "reincidência genérica" só
+      quando nenhuma condenação anterior por hediondo transitada antes do
+      fato consta do RSPE.
+    * Indulto/comutação: com hediondez superveniente em concurso, o texto
+      mostra as duas correntes (STJ x irretroatividade); nos decretos que
+      não dizem "praticado após", a hediondez superveniente fica "a
+      verificar"; comutação concedida não prejudica o indulto; "não cabe"
+      traz o motivo decisivo; pedido parcial quando só os crimes não
+      impeditivos são alcançados; falta sem data do fato não é presumida na
+      janela; art. 146 do CP não é tratado como violência elementar.
+    * Extinção: multa pela tese revista do Tema 931/STJ; livramento com
+      período de prova expirado: CP, art. 90, e Súmula 617/STJ.
+  - Indulto: o quadro "Resultado" ficou resumido - o status e o motivo em
+    uma linha (ex.: "crime impeditivo (art. 1º): C4, C5, C8 (crime hediondo
+    ou equiparado)"); o texto completo fica no comparativo com os incisos.
+  - Linhas das abas: o clique na linha não abre mais a ficha. Ao lado de
+    cada assistido, o ícone de pessoa fica verde quando há ficha disciplinar
+    importada (sem cor quando não há), e um ícone próprio abre a ficha
+    completa.
+  - Indulto: a janela da linha do tempo perde as partes "Pena e tempo
+    cumprido" e "Linha do tempo"; o motivo e o botão "Verificar
+    indulto/comutação" ganham destaque; no lugar dos contadores, a legenda
+    das cores da aba.
+  - Importação em lote: os PDFs são lidos em processos paralelos (um por
+    núcleo) e a base grande é montada em paralelo; a ficha disciplinar é
+    reconhecida pela primeira página, com o título tolerante a espaços, e
+    vinculada pelo CPF, pelos autos (número da execução ou de ação penal da
+    execução) ou pelo nome, sem que diferença de grafia no nome da mãe a
+    afaste; fichas importadas antes do RSPE vinculam sozinhas no fim do lote.
   - Auditoria: novos alertas de lançamento no SEEU - progressão na data da
     decisão (Tema 1165), mais de um regime inicial, regime inicial depois da
     primeira prisão, alteração de data-base no lugar do incidente próprio

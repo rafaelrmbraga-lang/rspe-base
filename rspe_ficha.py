@@ -49,8 +49,15 @@ def texto_pdf(caminho):
         return "\n".join(p.extract_text() or "" for p in pdf.pages)
 
 
+def texto_pagina1(caminho):
+    with pdfplumber.open(caminho) as pdf:
+        return (pdf.pages[0].extract_text() or "") if pdf.pages else ""
+
+
 def e_ficha(texto):
-    return "FICHA DISCIPLINAR" in texto.upper() and "SIAPEN" in texto.upper()
+    # tolerante a espaços e quebras de linha no título e ao cabeçalho do sistema (SIAPEN ou AGEPEN)
+    t = re.sub(r"\s+", " ", (texto or "").upper())
+    return bool(re.search(r"FICHA ?DISCIPLINAR", t)) and ("SIAPEN" in t or "AGEPEN" in t or "PENITENCI" in t)
 
 
 def _limpar(t):
@@ -340,7 +347,7 @@ def confrontar(r, f, hoje=None):
         itens.append({"nivel": "alerta",
                       "titulo": "Remição a requerer: atestado nº %s (%s), %s remidos" % ((a.get("numero") or "s/n").split("/ST")[0], a["data"], _dias_txt(a["dias_remidos"])),
                       "detalhe": "Atestado de %s trabalhados%s e nenhuma remição lançada no RSPE depois dele. Requerer a remição." % (_dias_txt(a["dias_trabalhados"]), per),
-                      "fundamento": "LEP, arts. 126 (1 dia a cada 3 trabalhados) e 126, § 8º; Súmula 562 STJ."})
+                      "fundamento": "LEP, art. 126, § 1º, II (1 dia a cada 3 trabalhados), e § 8º; Súmula 562/STJ, se o trabalho foi externo."})
     if not res["atestados_pendentes"] and res["diferenca"] >= 1:
         itens.append({"nivel": "verificar",
                       "titulo": "Remição a conferir: ficha ≈ %s × RSPE %s" % (_dias_txt(res["remidos_execucao"] + res["remidos_estudo"]), _dias_txt(res["homologados"])),
@@ -591,7 +598,7 @@ def _pena_x_ficha(r, f):
         return []
     return [_item_rf("verificar", "Pena na ficha (%s) difere da pena total do RSPE (%s)" % ((f.get("condenacao") or "").lower(), rs.dias_para_pena(pr)),
                      "A unidade trabalha com outra pena: guia ou unificação não atualizada em um dos sistemas, ou condenação ainda não somada. "
-                     "Conferir a última unificação - a pena usada define benefícios, término e remição informados pela unidade.", "LEP, arts. 106, 111 e 66, V, a.")]
+                     "Conferir a última unificação - a pena usada define benefícios, término e remição informados pela unidade.", "LEP, arts. 66, III, a, 106 e 111.")]
 
 
 def _unidade_x_ficha(r, f):
@@ -644,7 +651,7 @@ def _fuga_x_ficha(r, f):
             if antes and depois and not livres:
                 out.append(_item_rf("verificar", "Fuga no RSPE em %s sem registro na ficha" % rs.fmt(d),
                                     "A ficha tem movimentação antes e depois dessa data sem saída, fuga ou evasão. Conferir se o evento do RSPE está correto: fuga "
-                                    "lançada por engano interrompe o cumprimento, move a data-base e impede indulto e comutação.", "LEP, arts. 50, II, e 118."))
+                                    "lançada por engano interrompe o cumprimento, move a data-base da progressão e pode impedir indulto e comutação (falta grave nos 12 meses anteriores ao decreto).", "LEP, arts. 50, II, e 118."))
     return out
 
 
@@ -1397,12 +1404,18 @@ def fundamentacao_remicao(res):
     if est_h >= 12:
         cursos = "; ".join("%s (%s%s)" % (e["curso"].title(), _br(e["inicio"]), (" a " + _br(e["fim"])) if e.get("fim") else " em diante")
                            for e in res.get("estudos_pendentes") or [])
-        par.append("Consta ainda matrícula em estudo sem remição no RSPE%s, com frequência estimada de %d horas, que corresponde a cerca de %s "
-                   "(LEP, art. 126, § 1º, I: 1 dia de pena a cada 12 horas de frequência escolar, divididas em no mínimo 3 dias), a comprovar por "
-                   "certidão da unidade." % ((": " + cursos) if cursos else "", est_h, rs.pl(est_d, "dia", "dias")))
-    ped = ("Requer-se a declaração da remição de %s%s, computados como pena cumprida para todos os fins (LEP, arts. 126, 128 e 129)%s." % (
-        _dias_txt(total) if ats else "", (" e dos dias correspondentes ao estudo" if est_h >= 12 else "") if ats else "os dias correspondentes ao estudo",
-        ", com a requisição da certidão de frequência escolar à unidade prisional" if est_h >= 12 else ""))
+        par.append("Consta ainda matrícula em estudo sem remição no RSPE%s, a ser comprovada por certidão de frequência da unidade, para a "
+                   "remição à razão de 1 dia de pena a cada 12 horas de frequência escolar, divididas em no mínimo 3 dias (LEP, art. 126, § 1º, I)."
+                   % ((": " + cursos) if cursos else ""))
+    if ats:
+        ped = ("Requer-se a declaração da remição de %s%s, computados como pena cumprida para todos os fins (LEP, arts. 126, 128 e 129), ouvidos "
+               "o Ministério Público e a defesa (LEP, art. 126, § 8º)%s." % (
+                   _dias_txt(total), " e dos dias correspondentes ao estudo" if est_h >= 12 else "",
+                   ", com a requisição da certidão de frequência escolar à unidade prisional" if est_h >= 12 else ""))
+    else:
+        ped = ("Requer-se a requisição da certidão de frequência escolar à unidade prisional e, com ela, a declaração da remição dos dias "
+               "correspondentes ao estudo, computados como pena cumprida para todos os fins (LEP, arts. 126, § 1º, I, 128 e 129), ouvidos o "
+               "Ministério Público e a defesa (LEP, art. 126, § 8º).")
     return "DA REMIÇÃO DE PENA\n" + " ".join(par) + "\n" + ped
 
 
