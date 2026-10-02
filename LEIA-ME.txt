@@ -846,7 +846,7 @@ v6.16.50
     amarelo se a situação mudou depois do pedido). Na Ficha, com todos os
     itens conferidos (✓), a situação passa a "Conferido".
   - Indulto: o pedido é marcado por decreto. No mapa do Geral, o decreto com
-    pedido feito ganha cor própria (magenta, "Pedido feito" na legenda); no
+    pedido feito ganha cor própria (preto, "Pedido feito" na legenda); no
     Geral, a marcação pergunta a qual decreto se refere; dentro de um
     decreto, marca aquele decreto.
   - Auditoria: o alerta de capitulação criada depois do fato diz o que foi

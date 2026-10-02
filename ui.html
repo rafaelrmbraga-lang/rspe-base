@@ -1409,7 +1409,7 @@ const ui = {
   tesCitacao(x){ return `(TJMS, ${x.classe} n. ${x.proc}${x.relator?', Rel. '+(/^(des|ju[ií]z)/i.test(x.relator)?'':'Des. ')+x.relator:''}${x.orgao?', '+x.orgao:''}${x.julg?', j. '+x.julg:''}${x.pub?', publ. '+x.pub:''})`; },
   tesCopiar(i,modo){ const x=this._teses.itens[i]; const t=modo==='cit'?this.tesCitacao(x):(x.ementa.trim()+'\n'+this.tesCitacao(x)); this.copiarClip(this.clip(t)); },
   // ---- aba Indulto: todos os decretos (2000 em diante), a partir do início do cumprimento informado no RSPE ----
-  DEC_COR:{cabe:'#12B76A',nao:'#F04438',imp:'#B42318',conc:'#2E90FA',indef:'#7A5AF8',ver:'#F79009',ped:'#C11574'},
+  DEC_COR:{cabe:'#12B76A',nao:'#F04438',imp:'#B42318',conc:'#2E90FA',indef:'#7A5AF8',ver:'#F79009',ped:'#101828'},
   DEC_ROT:{cabe:'Cabe',nao:'Não cabe',imp:'Impeditivo',conc:'Concedido',indef:'Indeferido',ver:'A verificar',fora:'Execução posterior',ped:'Pedido feito'},
   decSel:null, decAberto:null, decBen:'todos', decMostrar:'todos',
   decLegenda(){ return ['cabe','nao','imp','conc','indef','ver','ped'].map(k=>`<span class="leg"><i style="background:${this.DEC_COR[k]};border-radius:2px"></i>${this.DEC_ROT[k]}</span>`).join(''); },
