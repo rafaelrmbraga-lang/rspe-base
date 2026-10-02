@@ -640,10 +640,12 @@ v7.0.0
        trâmite, faltas graves sem decisão judicial, conduta carcerária,
        situação laboral, situação do PADIC (com tempo de resposta), faltas
        graves no RSPE e pendências de remição;
-    3. Situação jurídico-executória - indicadores (prescrição executória e
-       punitiva, extinção, lapsos vencidos, indulto/comutação), prazos do
-       SEEU por faixa, indulto e comutação por decreto (todos os decretos do
-       sistema), prescrição executória e punitiva e extinção da pena;
+    3. Situação jurídico-executória - cada quadro precedido de gráfico:
+       indicadores (colunas: prescrição executória e punitiva, extinção,
+       lapsos vencidos, indulto/comutação), prazos do SEEU por faixa (três
+       roscas), indulto e comutação por decreto (colunas; quadro resumido
+       aos decretos com resultado, os demais numa linha só), prescrição
+       executória e punitiva e extinção da pena (três roscas);
     4. Inconsistências do cálculo (Auditoria).
   - Registro para o SAP sem nenhum pedido marcado: texto padrão "Atendimento
     a [nome] referente aos autos [nº] na data de hoje (dd/mm/aaaa). A GR foi
