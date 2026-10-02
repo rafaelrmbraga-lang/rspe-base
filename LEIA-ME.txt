@@ -841,6 +841,14 @@ v6.16.50
       janela; art. 146 do CP não é tratado como violência elementar.
     * Extinção: multa pela tese revista do Tema 931/STJ; livramento com
       período de prova expirado: CP, art. 90, e Súmula 617/STJ.
+  - Pedido feito muda a situação: em Progressão, Livramento e Ficha, marcado
+    o pedido, a coluna Situação passa a "Pedido feito em dd/mm/aaaa" (azul;
+    amarelo se a situação mudou depois do pedido). Na Ficha, com todos os
+    itens conferidos (✓), a situação passa a "Conferido".
+  - Indulto: o pedido é marcado por decreto. No mapa do Geral, o decreto com
+    pedido feito ganha cor própria (magenta, "Pedido feito" na legenda); no
+    Geral, a marcação pergunta a qual decreto se refere; dentro de um
+    decreto, marca aquele decreto.
   - Auditoria: o alerta de capitulação criada depois do fato diz o que foi
     criado - tipo, qualificadora ou majorante, qual é (ex.: "majorante do
     art. 157, § 2º-A, I, do CP - emprego de arma de fogo, com aumento de

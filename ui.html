@@ -640,7 +640,12 @@ const ui = {
     b.sub_pilulas=pe?{ppe_status:'ppe_cor'}:{retro_status:'retro_cor'};
     return b; },
   visiveis(){ const q=this.filtro; let rs=this.dados.registros; if(q){ rs=rs.filter(r=>JSON.stringify(r).toLowerCase().includes(q)); } return rs; },
-  cor(r,spec){ return spec.cor ? (r[spec.cor]||'') : ''; },
+  cor(r,spec){ const x=this.sitPed(r,spec); if(x) return x.cor; return spec.cor ? (r[spec.cor]||'') : ''; },
+  // situação depois da providência: pedido marcado (Progressão, Livramento, Ficha) ou todos os itens da ficha conferidos
+  sitPed(r,spec){ if(!spec||!['prog','liv','fd'].includes(spec.id)) return null; const P=(r.pedidos||{})[spec.id];
+    if(P){ const mud=P.ref&&P.ref!==this.pedRef(r,spec.id); return {txt:'Pedido feito em '+P.data+(mud?' · situação mudou depois':''), cor:mud?'amarelo':'azul', dica:this.pedDica(P,mud)}; }
+    if(spec.id==='fd'&&r.fd_conf_tot&&(r.fd_conf_n||0)>=r.fd_conf_tot&&['vermelho','amarelo'].includes(r.fd_cor)) return {txt:'Conferido', cor:'verde', dica:'Todos os itens da ficha foram conferidos ('+r.fd_conf_n+' de '+r.fd_conf_tot+'). Situação antes da conferência: '+(r.fd_sit||'')};
+    return null; },
   render(){
     const spec=this.spec(); const rs=this.visiveis();
     // abas
@@ -689,6 +694,7 @@ const ui = {
       const tds=spec.cols.map((c,i)=>{ let v=r[c[0]]??''; const pk=spec.pilulas[c[0]];
         if(c[0]==='proc'){ v=`<span class="copy" title="Clique para copiar" onclick="event.stopPropagation();ui.copiar('${esc(String(v))}')">${esc(v)}${svgCopy}</span>`; }
         else if(c[0]==='nome'&&v){ const id_=this.idadeRSPE(r); v=this.pinHtml(r)+`<span class="copy" title="Clique para copiar o nome" onclick="event.stopPropagation();ui.copiar(ui._clips[${this.clip(String(v))}])">${esc(v)}${svgCopy}</span>`+(id_>this.RSPE_VELHO?`<span class="rs-old" title="RSPE desatualizado: emitido em ${esc(r.geracao)}, há ${id_} dias (mais de ${this.RSPE_VELHO}). Vale baixar um novo no SEEU." onclick="event.stopPropagation()">!</span>`:''); }
+        else if(pk && /_sit$/.test(c[0]) && this.sitPed(r,spec)){ const x=this.sitPed(r,spec); v=`<span class="pill ${x.cor}" title="${esc(x.dica)}">${esc(x.txt)}</span>`; }
         else if(pk){ const pc = r[pk]||''; v = v ? `<span class="pill ${pc||'none'}">${esc(v)}</span>` : (/_sit$/.test(c[0]) ? '' : '<span class="muted">—</span>'); }
         else if(c[0]==='pedido'){ const P=(r.pedidos||{})[spec.id]; const mud=P&&P.ref&&P.ref!==this.pedRef(r,spec.id);
           // só o ícone: marcado = check; a data e a observação ficam na ficha do assistido (e na janela do clique)
@@ -1236,16 +1242,20 @@ const ui = {
     if(P.tipo==='data'&&!/^\d{2}\/\d{2}\/\d{4}$/.test(v.trim())){ this.toast('Use o formato dd/mm/aaaa.'); return; }
     await api('dado_manual', id, P.campo, v.trim()); this.aberto=id; this.render(); },
   // ---------- controle de pedidos (coluna "Pedido" das abas de benefício) ----------
+  pedKeys(r){ const P=r.pedidos||{}; return ['prog','liv','ind'].concat(Object.keys(P).filter(k=>k.startsWith('ind_')).sort().reverse(),['presc','ext','fd']).filter(k=>P[k]); },
+  pedNome(k,r){ if(k.startsWith('ind_')){ const x=r&&this.decDe(r).find(y=>y.id===k.slice(4)); return 'indulto / comutação · '+(x?this.decRot(x)+' (Decreto '+x.numero+')':'decreto '+k.slice(4)); } return this.PED_NOME[k]||k; },
   pedDica(P,mud){ return `Pedido feito em ${P.data} · ${({pedido:'pedido nos autos',oficio:'ofício à unidade',outro:'outra providência'})[P.tipo]||'pedido'}${P.obs?' · '+P.obs:''}${mud?' · ⚠ a situação da aba mudou depois do pedido':''}`; },
   PED_NOME:{prog:'progressão de regime',liv:'livramento condicional',ind:'indulto / comutação',presc:'extinção pela prescrição',ext:'extinção da pena',fd:'remição'},
   pedRef(r,aba){ return ({prog:r.prog, liv:r.liv, ind:['i22','i24','c24','i25','c25'].map(k=>r[k]).join('|'), presc:(r.presc_ppe||'')+'|'+(r.presc_prox||''), ext:r.ext_termino, fd:r.fd_sit})[aba]||''; },
   pedidoAbrir(id, aba, pre){ this._pedDepois=(pre&&pre.depois)||null; const r=(this.dados.registros||[]).find(x=>x.id===id)||{}; const P=(r.pedidos||{})[aba]; const hoje=this.dados.hoje||'';
     const mud=P&&P.ref&&P.ref!==this.pedRef(r,aba);
-    document.getElementById('modal').innerHTML=`<div class="box" style="width:580px"><h2>Pedido de ${this.PED_NOME[aba]||aba}</h2>
+    document.getElementById('modal').innerHTML=`<div class="box" style="width:580px"><h2>Pedido de ${esc(this.pedNome(aba,r))}</h2>
       <p class="muted" style="margin:0 0 10px">${esc(r.nome)} · ${esc(r.proc)}${P?`<br>Marcado em ${esc(P.registrado)}${P.ref?` · situação na marcação: ${esc(P.ref.replace(/\|/g,' · '))}`:''}`:''}</p>
       ${mud?`<p style="margin:0 0 10px;color:var(--a-tx);font-weight:600">⚠ A situação desta aba mudou depois do pedido (hoje: ${esc(this.pedRef(r,aba).replace(/\|/g,' · '))}). Confira se o pedido ainda vale ou se é o caso de um novo.</p>`:''}
       <div style="display:grid;grid-template-columns:150px 1fr;gap:8px;align-items:center">
         <label>Providência</label><select id="ped_tipo" style="padding:7px 9px;border:1px solid var(--line);border-radius:8px;font:inherit">${[['pedido','Pedido protocolado nos autos'],['oficio','Ofício à unidade prisional'],['outro','Outra providência']].map(o=>`<option value="${o[0]}" ${((P&&P.tipo)||(aba==='fd'?'oficio':'pedido'))===o[0]?'selected':''}>${o[1]}</option>`).join('')}</select>
+        ${aba==='ind'&&!P?`<label>Decreto</label><select id="ped_dec" style="padding:7px 9px;border:1px solid var(--line);border-radius:8px;font:inherit">${(()=>{ const L=this.decDe(r).filter(x=>x.s!=='fora'&&x.s!=='futuro').slice().sort((a,b)=>this.tlD(b.ref)-this.tlD(a.ref)); const def=(L.find(x=>x.s==='cabe'||x.s==='ver')||L[0]||{}).id;
+          return L.map(x=>`<option value="${x.id}" ${x.id===def?'selected':''}>${esc(this.decRot(x))} · Decreto ${esc(x.numero)} · ${esc(this.DEC_ROT[x.s]||x.s)}</option>`).join(''); })()}</select>`:''}
         <label>Data</label><input id="ped_data" value="${esc(P?P.data:hoje)}" placeholder="dd/mm/aaaa" style="padding:7px 9px;border:1px solid var(--line);border-radius:8px;font:inherit">
         <label>Observação</label><input id="ped_obs" value="${esc(P?P.obs:((pre&&pre.obs)||''))}" placeholder="ex.: mov. 123, indulto 2025, aguardando MP" style="padding:7px 9px;border:1px solid var(--line);border-radius:8px;font:inherit">
       </div>
@@ -1271,6 +1281,8 @@ const ui = {
       ext:()=>'possível extinção da pena'+(r.ext_sit?', '+sp(r.ext_sit).replace(/^./,x=>x.toLowerCase()):''),
       fd:()=>{ const p=[]; if(/Remição a requerer/.test(r.fd_sit||'')) p.push('remição a requerer'); if(/Ausência de atestado|Último atestado/.test(r.fd_sit||'')) p.push('pendência de atestado de trabalho ou de certificação de estudo'); if(/Conferir remição/.test(r.fd_sit||'')) p.push('remição a conferir'); return p.join(' e ')||'remição a requerer'; }};
     const NOME={prog:'progressão de regime',liv:'livramento condicional',ind:'indulto ou comutação',presc:'extinção da punibilidade pela prescrição',ext:'extinção da pena',fd:'remição'};
+    Object.keys(r.pedidos||{}).filter(k=>k.startsWith('ind_')).forEach(k=>{ const x=this.decDe(r).find(y=>y.id===k.slice(4)); const dn=x?'Decreto '+x.numero:'decreto '+k.slice(4);
+      achado[k]=()=>'possível direito a indulto ou comutação pelo '+dn; NOME[k]='indulto ou comutação pelo '+dn; });
     const P=r.pedidos||{}; const ks=Object.keys(P).filter(k=>achado[k]&&(!sel||sel.includes(k))).sort((a,b)=>this.tlD(P[a].data)-this.tlD(P[b].data));
     if(!ks.length) return sel ? 'Selecione ao menos uma providência.' : `Execução penal nº ${r.proc}, de ${r.nome}: nenhuma providência registrada até ${this.dados.hoje||'esta data'}.`;
     const c=ks.map(k=>achado[k]());
@@ -1284,10 +1296,10 @@ const ui = {
   abrirSAP(id){ const r=(this.dados.registros||[]).find(x=>x.id===id); if(!r) return; const P=r.pedidos||{};
     const NOME={prog:'Progressão de regime',liv:'Livramento condicional',ind:'Indulto / comutação',presc:'Prescrição',ext:'Extinção da pena',fd:'Remição'};
     const TP={pedido:'pedido nos autos',oficio:'ofício à unidade prisional',outro:'outra providência'};
-    const ks=['prog','liv','ind','presc','ext','fd'].filter(k=>P[k]); const hoje=this.dados.hoje||'';
+    const ks=this.pedKeys(r); const hoje=this.dados.hoje||'';
     const deHoje=ks.filter(k=>(P[k].registrado||'').slice(0,10)===hoje||P[k].data===hoje); const sel0=deHoje.length?deHoje:ks;
     this._sap={id, sel:sel0.slice()};
-    const lista=ks.length?`<div class="sapl">${ks.map(k=>`<label><input type="checkbox" id="sap_${k}" ${sel0.includes(k)?'checked':''} onchange="ui.sapToggle('${k}',this.checked)"> <b>${NOME[k]}</b> <span class="muted">· ${TP[P[k].tipo]||''} · ${esc(P[k].data)}${P[k].obs?' · '+esc(P[k].obs):''}</span></label>`).join('')}</div>
+    const lista=ks.length?`<div class="sapl">${ks.map(k=>`<label><input type="checkbox" id="sap_${k}" ${sel0.includes(k)?'checked':''} onchange="ui.sapToggle('${k}',this.checked)"> <b>${NOME[k]||this.pedNome(k,r).replace(/^./,c=>c.toUpperCase())}</b> <span class="muted">· ${TP[P[k].tipo]||''} · ${esc(P[k].data)}${P[k].obs?' · '+esc(P[k].obs):''}</span></label>`).join('')}</div>
       <p class="muted" style="margin:6px 0 8px;font-size:12px">${deHoje.length&&deHoje.length<ks.length?'Marcadas as providências registradas hoje; inclua as anteriores se quiser.':'Desmarque o que não entra neste registro.'}</p>`:'';
     document.getElementById('modal').innerHTML=`<div class="box" style="width:660px"><h2>Registro para o SAP</h2>
       <p class="muted" style="margin:0 0 8px">${esc(r.nome)} · ${esc(r.proc)} · só o que foi feito, cada providência com a constatação que a motivou. Pode editar antes de copiar.</p>
@@ -1302,13 +1314,14 @@ const ui = {
   async sapSexo(id, v){ const r=(this.dados.registros||[]).find(x=>x.id===id); if(!r) return; r.sexo=v; r.sexo_fonte=v?'operador':'';
     const S=this._sap; document.getElementById('sap_txt').value=this.registroSAP(r, S?S.sel:null);
     const res=await API().dado_manual(id,'sexo',v); if(res&&res.erro){ this.toast(res.erro); return; }
-    if(res&&res.registros){ this.carregar(res); const S2=this._sap; this.abrirSAP(id); if(S2){ ['prog','liv','ind','presc','ext','fd'].forEach(k=>{ const e=document.getElementById('sap_'+k); if(e) e.checked=S2.sel.includes(k); }); this._sap.sel=S2.sel; const r2=(this.dados.registros||[]).find(x=>x.id===id); document.getElementById('sap_txt').value=this.registroSAP(r2, S2.sel); } } },
+    if(res&&res.registros){ this.carregar(res); const S2=this._sap; this.abrirSAP(id); if(S2){ this.pedKeys(r).forEach(k=>{ const e=document.getElementById('sap_'+k); if(e) e.checked=S2.sel.includes(k); }); this._sap.sel=S2.sel; const r2=(this.dados.registros||[]).find(x=>x.id===id); document.getElementById('sap_txt').value=this.registroSAP(r2, S2.sel); } } },
   sapToggle(k, on){ const S=this._sap; if(!S) return; S.sel=S.sel.filter(x=>x!==k); if(on) S.sel.push(k);
     const r=(this.dados.registros||[]).find(x=>x.id===S.id); document.getElementById('sap_txt').value=this.registroSAP(r, S.sel); },
   async pedidoSalvar(id, aba, remover){ const r=(this.dados.registros||[]).find(x=>x.id===id)||{};
     const data=remover?'':document.getElementById('ped_data').value.trim(), obs=remover?'':document.getElementById('ped_obs').value.trim();
     if(!remover&&!/^\d{2}\/\d{2}\/\d{4}$/.test(data)){ this.toast('Use a data no formato dd/mm/aaaa.'); return; }
     const tipo=remover?'':(document.getElementById('ped_tipo')||{}).value||'pedido';
+    const dsel=document.getElementById('ped_dec'); if(!remover&&aba==='ind'&&dsel&&dsel.value) aba='ind_'+dsel.value;  // pedido do indulto é por decreto
     const res=await API().pedido(id, aba, data, obs, this.pedRef(r,aba), tipo); if(res&&res.erro){ this.toast(res.erro); return; }
     this.fecharModal(); if(res&&res.registros) this.carregar(res); if(res&&res.quadro) this._qd=res.quadro; if(res&&res.msg) this.toast(res.msg);
     const dep=this._pedDepois; this._pedDepois=null; if(dep&&!remover) await dep(); else { this.render(); this.qdRefFicha(); } },
@@ -1326,7 +1339,7 @@ const ui = {
   _copiaFallback(t){ const ta=document.createElement('textarea'); ta.value=t; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(e){} ta.remove(); },
   // contador da aba: o que ainda pede providência - sai quem já teve o pedido marcado (volta se a situação da aba mudou depois)
   abaPedido(spec){ return !!(spec && (spec.cols||[]).some(c=>c[0]==='pedido')); },
-  pedPendente(r,aba){ const P=(r.pedidos||{})[aba]; return !P || (P.ref && P.ref!==this.pedRef(r,aba)); },
+  pedPendente(r,aba){ if(aba==='ind'&&Object.keys(r.pedidos||{}).some(k=>k.startsWith('ind_'))) return false; const P=(r.pedidos||{})[aba]; return !P || (P.ref && P.ref!==this.pedRef(r,aba)); },
   contaCor(a,rs){ rs=rs.filter(r=>this.pedPendente(r,a.id)); if(a.id==='ind') return rs.filter(r=>r.ind_sim).length || ''; const k = a.id==='presc' ? (this.prescModo!=='pp'?'presc_ppe_cor':'presc_retro_cor') : a.cor; return rs.filter(r=>r[k]==='vermelho'||r[k]==='vencido').length || ''; },
   ABAS_EXTRA:[{id:'teses',titulo:'Jurisprudências'},{id:'quadro',titulo:'Quadro do Usuário'}],
   // abas: ícone (traço fino; verde na aba aberta) e nome curto
@@ -1396,10 +1409,10 @@ const ui = {
   tesCitacao(x){ return `(TJMS, ${x.classe} n. ${x.proc}${x.relator?', Rel. '+(/^(des|ju[ií]z)/i.test(x.relator)?'':'Des. ')+x.relator:''}${x.orgao?', '+x.orgao:''}${x.julg?', j. '+x.julg:''}${x.pub?', publ. '+x.pub:''})`; },
   tesCopiar(i,modo){ const x=this._teses.itens[i]; const t=modo==='cit'?this.tesCitacao(x):(x.ementa.trim()+'\n'+this.tesCitacao(x)); this.copiarClip(this.clip(t)); },
   // ---- aba Indulto: todos os decretos (2000 em diante), a partir do início do cumprimento informado no RSPE ----
-  DEC_COR:{cabe:'#12B76A',nao:'#F04438',imp:'#B42318',conc:'#2E90FA',indef:'#7A5AF8',ver:'#F79009'},
-  DEC_ROT:{cabe:'Cabe',nao:'Não cabe',imp:'Impeditivo',conc:'Concedido',indef:'Indeferido',ver:'A verificar',fora:'Execução posterior'},
+  DEC_COR:{cabe:'#12B76A',nao:'#F04438',imp:'#B42318',conc:'#2E90FA',indef:'#7A5AF8',ver:'#F79009',ped:'#C11574'},
+  DEC_ROT:{cabe:'Cabe',nao:'Não cabe',imp:'Impeditivo',conc:'Concedido',indef:'Indeferido',ver:'A verificar',fora:'Execução posterior',ped:'Pedido feito'},
   decSel:null, decAberto:null, decBen:'todos', decMostrar:'todos',
-  decLegenda(){ return ['cabe','nao','imp','conc','indef','ver'].map(k=>`<span class="leg"><i style="background:${this.DEC_COR[k]};border-radius:2px"></i>${this.DEC_ROT[k]}</span>`).join(''); },
+  decLegenda(){ return ['cabe','nao','imp','conc','indef','ver','ped'].map(k=>`<span class="leg"><i style="background:${this.DEC_COR[k]};border-radius:2px"></i>${this.DEC_ROT[k]}</span>`).join(''); },
   decRot(x){ return x.tipo==='dia_das_maes'?'Dia das Mães '+x.ano:'Decreto de '+x.ano; },
   decCurto(x){ return (x.tipo==='dia_das_maes'?'M':'')+String(x.ano).slice(2); },
   decDe(r){ return ((r.dec||{}).decretos||[]); },
@@ -1407,14 +1420,19 @@ const ui = {
     return [...m.values()].sort((a,b)=>this.tlD(b.ref)-this.tlD(a.ref)); },
   decBenOk(x){ return this.decBen==='todos' || !x.beneficio || (this.decBen==='indulto'?x.beneficio==='Indulto':x.beneficio==='Comutação'); },
   decMapa(r){ const L=this.decDe(r).filter(x=>x.s!=='fora'&&x.s!=='futuro'&&this.decBenOk(x)); if(!L.length) return '<span class="muted" style="font-size:12px">nenhum decreto desde o início do cumprimento</span>';
-    return `<span class="mx">${L.map(x=>`<i class="${x.s}" title="${esc(this.decRot(x))} (${esc(x.numero)}): ${esc(this.DEC_ROT[x.s]||x.s)}${x.mot?' - '+esc(x.mot):''}" style="background:${this.DEC_COR[x.s]||'#E4E7EC'}">${this.decCurto(x)}</i>`).join('')}</span>`; },
+    const P=r.pedidos||{};
+    return `<span class="mx">${L.map(x=>{ const pd=P['ind_'+x.id]; return `<i class="${x.s}${pd?' ped':''}" title="${esc(this.decRot(x))} (${esc(x.numero)}): ${esc(this.DEC_ROT[x.s]||x.s)}${x.mot?' - '+esc(x.mot):''}${pd?' · PEDIDO FEITO em '+esc(pd.data):''}" style="background:${pd?this.DEC_COR.ped:(this.DEC_COR[x.s]||'#E4E7EC')}">${this.decCurto(x)}</i>`; }).join('')}</span>`; },
   async decAbrir(id){ if(this.decAberto===id){ this.decAberto=null; return this.render(); } await this.completo(id); this.decAberto=id; this.render(); },
   decBtn(r){ return `<span class="mini dbtn" title="Linha do tempo: crimes, impeditivos, pena cumprida em cada decreto, faltas na janela e resultado" onclick="event.stopPropagation();ui.indTL('${r.id}')">Verificar indulto/comutação</span>`; },
-  decPed(r){ const P=(r.pedidos||{}).ind; return P?`<span class="pck ok" title="${esc(this.pedDica(P,false))}" onclick="event.stopPropagation();ui.pedidoAbrir('${r.id}','ind')">✓</span>`:`<span class="pck" title="Marcar pedido feito" onclick="event.stopPropagation();ui.pedidoAbrir('${r.id}','ind')"></span>`; },
+  // pedido de indulto/comutação é por decreto (ind_<id>): no decreto aberto, o daquele decreto; no Geral, qualquer um (o clique pergunta o decreto)
+  decPed(r,decId){ const P=r.pedidos||{}; const k=decId?'ind_'+decId:null;
+    const ks=k?(P[k]?[k]:[]):Object.keys(P).filter(x=>x==='ind'||x.startsWith('ind_'));
+    const dica=ks.map(x=>this.pedNome(x,r)+': '+this.pedDica(P[x],false)).join(' | ');
+    return ks.length?`<span class="pck ok" title="${esc(dica)}" onclick="event.stopPropagation();ui.pedidoAbrir('${r.id}','${k||ks[0]}')">✓</span>`:`<span class="pck" title="Marcar pedido feito" onclick="event.stopPropagation();ui.pedidoAbrir('${r.id}','${k||'ind'}')"></span>`; },
   renderIndulto(rs){ rs=[...rs].sort((a,b)=>(b.fixado?1:0)-(a.fixado?1:0)); const D=this.decLista(this.dados.registros||[]);
     if(this.decSel && !D.find(x=>x.id===this.decSel)) this.decSel=null;
     // legenda das cores desta aba (os contadores antigos não filtravam nada)
-    document.getElementById('stats').innerHTML=`<div class="dleg"><b>Legenda</b>${['cabe','ver','conc','indef','nao','imp','fora'].map(k=>`<span><i style="background:${this.DEC_COR[k]||'#D0D5DD'}"></i>${this.DEC_ROT[k]}</span>`).join('')}</div>`;
+    document.getElementById('stats').innerHTML=`<div class="dleg"><b>Legenda</b>${['cabe','ver','conc','indef','nao','imp','fora','ped'].map(k=>`<span><i style="background:${this.DEC_COR[k]||'#D0D5DD'}"></i>${this.DEC_ROT[k]}</span>`).join('')}</div>`;
     const side=`<div class="dc-side"><div class="dc-it geral ${!this.decSel?'on':''}" onclick="ui.decSel=null;ui.render()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg><span>Geral</span></div><div class="dc-h">Decretos</div>${D.map(x=>{ const n=rs.filter(r=>this.decDe(r).some(y=>y.id===x.id&&y.s==='cabe')).length;
       return `<div class="dc-it ${this.decSel===x.id?'on':''} ${n?'':'vz'}" title="${esc(this.decRot(x))} · Decreto ${esc(x.numero)} · referência ${esc(x.ref)}" onclick="ui.decSel='${x.id}';ui.decAberto=null;ui.render()"><span>${esc(this.decRot(x))}</span><b class="${n?'':'z'}">${n}</b></div>`; }).join('')}</div>`;
     const selBen=`<select class="dc-sel" onchange="ui.decBen=this.value;ui.render()"><option value="todos" ${this.decBen==='todos'?'selected':''}>Indulto e comutação</option><option value="indulto" ${this.decBen==='indulto'?'selected':''}>Só indulto</option><option value="comutacao" ${this.decBen==='comutacao'?'selected':''}>Só comutação</option></select>`;
@@ -1433,7 +1451,7 @@ const ui = {
           <div class="tt"><b>${esc(this.decRot(x0))}</b><small>Decreto ${esc(x0.numero)} · data de referência ${esc(x0.ref)}</small></div>
           <span class="dc-ch c">${c('cabe')} cabem</span><span class="dc-ch n">${c('nao')+c('imp')} não cabem</span>${c('conc')+c('indef')?`<span class="dc-ch k">${c('conc')+c('indef')} já decididos</span>`:''}<span class="dc-ch f">${c('fora')} execução posterior</span><span class="sp"></span>
           ${selBen}<select class="dc-sel" onchange="ui.decMostrar=this.value;ui.render()"><option value="todos" ${this.decMostrar==='todos'?'selected':''}>Todos</option><option value="cabe" ${this.decMostrar==='cabe'?'selected':''}>Só quem cabe</option></select></div>
-        <table><thead><tr><th style="width:18%">Nome</th><th class="nw" style="width:1%">Nº da execução</th><th>Resultado</th><th>Benefício</th><th>Motivo</th><th style="width:1%"></th><th style="width:1%">Pedido</th></tr></thead><tbody>${L.map(({r,d})=>`<tr class="${r.fixado?'fix':''} noclk" style="${d.s==='fora'?'opacity:.5':''}"><td class="first" style="white-space:nowrap">${this.pinHtml(r)}${this.cpNomeTxt(r)}</td><td class="nw">${this.cpProc(r)}</td><td><span class="dres ${d.s}">${this.DEC_ROT[d.s]||d.s}</span></td><td>${esc(this.decBenTxt(d))}</td><td class="dmot">${esc(d.mot||'')}${d.nota?`<div style="font-size:12px">${esc(d.nota)}</div>`:''}</td><td class="nw">${d.s==='fora'?'':this.decBtn(r)}${this.fichaIcoHtml(r)}${this.qbtnHtml(r)}${this.abrirBtnHtml(r)}</td><td>${this.decPed(r)}</td></tr>`).join('')}</tbody></table>`;
+        <table><thead><tr><th style="width:18%">Nome</th><th class="nw" style="width:1%">Nº da execução</th><th>Resultado</th><th>Benefício</th><th>Motivo</th><th style="width:1%"></th><th style="width:1%">Pedido</th></tr></thead><tbody>${L.map(({r,d})=>`<tr class="${r.fixado?'fix':''} noclk" style="${d.s==='fora'?'opacity:.5':''}"><td class="first" style="white-space:nowrap">${this.pinHtml(r)}${this.cpNomeTxt(r)}</td><td class="nw">${this.cpProc(r)}</td><td><span class="dres ${d.s}">${this.DEC_ROT[d.s]||d.s}</span></td><td>${esc(this.decBenTxt(d))}</td><td class="dmot">${esc(d.mot||'')}${d.nota?`<div style="font-size:12px">${esc(d.nota)}</div>`:''}</td><td class="nw">${d.s==='fora'?'':this.decBtn(r)}${this.fichaIcoHtml(r)}${this.qbtnHtml(r)}${this.abrirBtnHtml(r)}</td><td>${this.decPed(r,x0.id)}</td></tr>`).join('')}</tbody></table>`;
     }
     document.getElementById('card').innerHTML=`<div class="dc">${side}<div class="dc-main">${main}</div></div>`; },
   decBenTxt(d){ if(!['cabe','ver','conc','indef'].includes(d.s)) return '—'; return (d.beneficio||'')+(d.dispositivo?' · '+d.dispositivo:'')+(d.beneficio==='Comutação'&&d.reducao?' · '+d.reducao+' do remanescente':''); },
@@ -1579,7 +1597,8 @@ const ui = {
     const q=await API().quadro_gravar(c); if(!q||q.erro){ this.toast((q&&q.erro)||'Falha ao gravar.'); return; } this._qd=q; this.fecharModal(); this.toast(q.msg||'Gravado.'); this.render(); this.qdRefFicha();
     // etiqueta "Pedido feito" num cartão de benefício ainda sem pedido: registra o pedido na aba (data, providência, observação)
     if(c.etiqueta==='pedido'&&c.aba&&c.processo&&!this.qdPedido(c)) this.pedidoAbrir(c.processo, c.aba, {obs:c.obs}); },
-  qdPedido(c){ const r=(this.dados.registros||[]).find(x=>x.id===c.processo); return r&&c.aba?((r.pedidos||{})[c.aba]||null):null; },
+  qdPedido(c){ const r=(this.dados.registros||[]).find(x=>x.id===c.processo); if(!r||!c.aba) return null; const P=r.pedidos||{};
+    if(P[c.aba]) return P[c.aba]; if(c.aba==='ind'){ const k=Object.keys(P).filter(x=>x.startsWith('ind_')).sort((a,b)=>this.tlD(P[b].data)-this.tlD(P[a].data))[0]; return k?P[k]:null; } return null; },
   async qdExcluir(id){ if(!confirm('Excluir este cartão?')) return; const q=await API().quadro_excluir(id); if(q&&!q.erro){ this._qd=q; this.fecharModal(); this.render(); this.qdRefFicha(); this.toast(q.msg); } },
   async qdColuna(id,nome){ const n=prompt(id?'Novo nome da coluna (vazio exclui a coluna; os cartões vão para a primeira):':'Nome da nova coluna:', nome||''); if(n===null) return;
     const q=await API().quadro_coluna(id||('c'+Date.now().toString(36)), n); if(q&&!q.erro){ this._qd=q; this.render(); } },
@@ -1706,9 +1725,9 @@ const ui = {
           ${r.falta_apurar?lin('Falta a apurar (12 meses)', `<span class="apurar">${esc(r.falta_det)}</span> <span class="muted">sem sanção reconhecida no RSPE</span>`):''}
         </div>
         <div class="sec"><h3>Pontos de atenção</h3>${ptsHtml}</div>
-        ${(()=>{ const P=r.pedidos||{}; const ks=['prog','liv','ind','presc','ext','fd'].filter(k=>P[k]); if(!ks.length) return '';
+        ${(()=>{ const P=r.pedidos||{}; const ks=this.pedKeys(r); if(!ks.length) return '';
           return `<div class="sec"><h3>Pedidos feitos</h3><div class="peds">${ks.map(k=>{ const x=P[k], mud=x.ref&&x.ref!==this.pedRef(r,k);
-            return `<div class="pedl"><span class="pck ok ${mud?'mud':''}" style="width:16px;height:16px;font-size:11px">✓</span><span class="pn">${this.PED_NOME[k].replace(/^./,c=>c.toUpperCase())}</span><b>${esc(x.data)}</b><span class="muted" style="white-space:nowrap">${({pedido:'pedido nos autos',oficio:'ofício à unidade',outro:'outra providência'})[x.tipo]||''}</span><span class="po">${esc(x.obs||'')}${mud?` <span style="color:var(--a-tx);font-weight:600">· ⚠ situação mudou depois do pedido</span>`:''}</span><span class="mini" onclick="ui.pedidoAbrir('${r.id}','${k}')">Editar</span></div>`; }).join('')}</div></div>`; })()}
+            return `<div class="pedl"><span class="pck ok ${mud?'mud':''}" style="width:16px;height:16px;font-size:11px">✓</span><span class="pn">${this.pedNome(k,r).replace(/^./,c=>c.toUpperCase())}</span><b>${esc(x.data)}</b><span class="muted" style="white-space:nowrap">${({pedido:'pedido nos autos',oficio:'ofício à unidade',outro:'outra providência'})[x.tipo]||''}</span><span class="po">${esc(x.obs||'')}${mud?` <span style="color:var(--a-tx);font-weight:600">· ⚠ situação mudou depois do pedido</span>`:''}</span><span class="mini" onclick="ui.pedidoAbrir('${r.id}','${k}')">Editar</span></div>`; }).join('')}</div></div>`; })()}
         <div class="sec"><h3>Crimes em execução</h3><div class="kv one"><div>${crimes||'—'}</div></div></div>
         ${this.fichaHtml(r)}
         ${calc?`<div class="sec"><h3>Cálculos do programa</h3>${calc}</div>`:''}
