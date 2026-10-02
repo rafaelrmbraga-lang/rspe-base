@@ -1031,7 +1031,7 @@
    "fonte": "STJ, REsp 2.024.901 e 2.090.454 (Tema 931, revisão), 3ª Seção, j. 28/02/2024, DJe 01/03/2024",
    "nivel": "repetitivo",
    "tese": "O inadimplemento da pena de multa, após cumprida a pena privativa de liberdade ou restritiva de direitos, não obsta a extinção da punibilidade, ante a alegada hipossuficiência do condenado, salvo se diversamente entender o juiz competente, em decisão suficientemente motivada, que indique concretamente a possibilidade de pagamento da sanção pecuniária.",
-   "aplicacao": "Aba Extinção: multa pendente é apontada; a extinção é cabível se comprovada a impossibilidade de pagamento (ADI 7.032). A mera assistência pela Defensoria foi tida por insuficiente pelo STJ (REsp 2.055.935)."
+   "aplicacao": "Aba Extinção: multa pendente é apontada. Pela tese revista, o inadimplemento não obsta a extinção ante a alegada hipossuficiência, salvo decisão motivada em sentido contrário; há julgados que, com base na ADI 7.032, exigem prova da impossibilidade (STJ, REsp 2.055.935): instruir o pedido por cautela."
   },
   {
    "tema": "Extinção - multa e ADI 7.032",
@@ -1426,9 +1426,9 @@
  },
  "presuncoes": {
   "hipossuficiencia": {
-   "regra": "Assistido da Defensoria Pública: presume-se a incapacidade econômica no indulto da multa e na reparação do dano. Na extinção com multa pendente, a ADI 7.032 exige prova da impossibilidade de pagamento.",
+   "regra": "Assistido da Defensoria Pública: presume-se a incapacidade econômica no indulto da multa e na reparação do dano. Na extinção com multa pendente, vale a tese revista do Tema 931/STJ (alegada hipossuficiência), com a cautela de instruir o pedido (ADI 7.032).",
    "efeitos": [
-    "multa pendente: a extinção da punibilidade exige prova da impossibilidade de pagamento, ainda que parcelado (STF ADI 7.032, vinculante; STJ Tema 931) - instruir o pedido; a mera assistência pela Defensoria foi tida por insuficiente (STJ, REsp 2.055.935)",
+    "multa pendente: não obsta a extinção ante a alegada hipossuficiência, salvo decisão motivada que indique concretamente a possibilidade de pagamento (STJ Tema 931, rev. 28/02/2024); há julgados exigindo prova com base na ADI 7.032 (STJ, REsp 2.055.935) - instruir o pedido por cautela",
     "multa é indultável e não é óbice ao indulto (Decretos 12.338/2024 e 12.790/2025, art. 12, § 2º, I)",
     "inciso XV do art. 9º dispensa a reparação do dano (art. 12, § 2º)",
     "reparação do dano (CP art. 83, IV) não bloqueia o livramento no programa, mas a efetiva impossibilidade deve ser demonstrada (o STJ exige prova: AgRg no HC 799.167) - instruir na petição"

@@ -664,7 +664,7 @@ def relatorio_individual(m, caminho, nome_base):
     cd = [["Crime", "Pena", "Fato", "Hediondo", "VGA", "Reincid.", "Progressão", "Livramento"]]
     for c in m.get("crimes_det", []):
         ext = str(c.get("extinto") or "").upper().startswith("S")
-        reinc = {"S/S": "específico", "S/N": "comum", "N/S": "específico", "N/N": "primário"}.get(c.get("reinc") or "", c.get("reinc") or "")
+        reinc = {"S/S": "específico", "S/N": "genérico", "N/S": "específico", "N/N": "primário"}.get(c.get("reinc") or "", c.get("reinc") or "")
         fp = (c.get("frac_prog") or "—").split(" - ")[0]
         fl = (c.get("frac_liv") or "—").split(" - ")[0]
         cd.append([Paragraph("<b>%s</b> <font color='%s'>%s</font>%s" % (_t(c.get("nome_crime")), TX2, _t(c.get("dispositivo")), " <font color='%s'>· extinto</font>" % TX3 if ext else ""), st["cel"]),

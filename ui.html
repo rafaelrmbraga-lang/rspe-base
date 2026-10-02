@@ -1262,7 +1262,7 @@ const ui = {
     const G=this.gen(r), sp=t=>this.semParen(t), E=a=>this.lista_e(a), dt=v=>/^\d{2}\/\d{2}\/\d{4}$/.test(v||'');
     // só o que foi feito: cada providência marcada leva junto a constatação da aba correspondente
     const achado={
-      prog:()=>r.prog_cor==='vencido'?'direito à progressão de regime, com o requisito objetivo atingido em '+r.prog:dt(r.prog)?'progressão de regime com requisito objetivo previsto para '+r.prog:'questão relativa à progressão de regime',
+      prog:()=>r.prog_cor==='vencido'?'requisito objetivo da progressão de regime atingido em '+r.prog:dt(r.prog)?'progressão de regime com requisito objetivo previsto para '+r.prog:'questão relativa à progressão de regime',
       liv:()=>r.liv_cor==='vencido'?'direito ao livramento condicional, com o requisito objetivo atingido em '+r.liv:dt(r.liv)?'livramento condicional com requisito objetivo previsto para '+r.liv:'questão relativa ao livramento condicional',
       ind:()=>{ const i=['i22','i24','i25'].filter(k=>r[k+'_cor']==='verde').map(k=>DEC[k]), c=['c24','c25'].filter(k=>r[k+'_cor']==='verde').map(k=>DEC[k]);
         const p=[i.length?'direito ao indulto pelo '+E(i):'', c.length?'direito à comutação pelo '+E(c):''].filter(Boolean); return p.length?p.join(' e '):'possível direito a indulto ou comutação'; },

@@ -223,7 +223,7 @@ def fracao_progressao_esperada(data_fato, hediondo, morte, vga, reincidente, rei
         # a Auditoria só pede reinc_especifico=False para hediondos: o RSPE não diz se a condenação anterior teve violência
         if reincidente and reinc_especifico is False and j.get("vga_reincidente_generico"):
             chave = "vga_reincidente_generico"
-            obs.append("reincidente genérico em crime com VGA: analogia in bonam partem (STJ Tema 1084)")
+            obs.append("reincidente não específico em crime com VGA: percentual do primário por analogia in bonam partem (STJ, AgRg no HC 675.062; ratio do Tema 1084)")
     else:
         chave = "comum_reincidente" if reincidente else "comum"
     valor = j.get(chave)
@@ -280,8 +280,8 @@ def fracao_livramento_esperada(hediondo, reincidente, trafico=False, trafico_pes
         return fr(l.get("hediondo", "2/3")), "2/3 (art. 83, V, CP%s)" % (
             "; art. 44, p. ú., Lei 11.343/06" if trafico else " - tráfico de pessoas" if (trafico_pessoas and not hediondo) else "")
     if reincidente:
-        return fr(l.get("comum_reincidente", "1/2")), "1/2 (art. 83, II, CP)"
-    return fr(l.get("comum_primario", "1/3")), "1/3 (art. 83, I, CP)"
+        return fr(l.get("comum_reincidente", "1/2")), "1/2 (art. 83, II, CP - reincidente em crime doloso)"
+    return fr(l.get("comum_primario", "1/3")), "1/3 (art. 83, I, CP - não reincidente em crime doloso e com bons antecedentes)"
 
 
 # ---------------------------------------------------------------- hediondos / VGA

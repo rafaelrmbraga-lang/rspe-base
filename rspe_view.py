@@ -65,7 +65,7 @@ FILTROS = {
         ("90", "Vence em até 90 dias"),
         ("naoiniciou", "Não iniciou o cumprimento"),
         ("interrompida", "Pena interrompida / suspensa"),
-        ("naoaplica", "Não se aplica (cumprida / livramento / aberto)"),
+        ("naoaplica", "Não se aplica (cumprida / livramento / aberto na progressão)"),
         ("semdata", "Sem data"),
     ],
     "indulto": [
@@ -211,7 +211,7 @@ def _prog_pela_db_manual(r):
 
 DB_TIPOS = {  # itens da Auditoria sobre a data-base -> (cor, motivo)
     "data-base-coincide-com-a-soma-unificacao-das-pen": ("vermelho", "soma/unificação de penas - não altera a data-base (STJ, Tema 1006)"),
-    "data-base-de-progressao-anterior-a-ultima-altera": ("vermelho", "anterior à última alteração de regime"),
+    "data-base-de-progressao-anterior-a-ultima-altera": ("amarelo", "anterior à última alteração de regime - conferir se é a data da falta (Súmula 534/STJ) ou do preenchimento dos requisitos (STJ, Tema 1165)"),
     "data-base-movida-para-a-recaptura-sem-falta-homo": ("amarelo", "recaptura depois de fuga, sem falta homologada no RSPE"),
     "inconsistencia-da-data-base-sem-prisao-alteracao": ("amarelo", "sem prisão, alteração de regime ou falta grave homologada nessa data"),
 }
@@ -481,7 +481,7 @@ def extincao(r, presc, interr):
             pass
         elif dlc != date.min and not revog and term:
             if term <= HOJE:
-                hip.append("Livramento condicional desde %s com período de prova expirado em %s sem revogação (CP, arts. 89 e 90; LEP, art. 146)" % (rs.fmt(dlc), rs.fmt(term)))
+                hip.append("Livramento condicional desde %s com período de prova expirado em %s sem revogação (CP, art. 90; LEP, art. 146; Súmula 617/STJ), observado o art. 89 do CP (processo por crime cometido na vigência do livramento)" % (rs.fmt(dlc), rs.fmt(term)))
                 cor = "vermelho"
     # 3) detração que alcança toda a pena do processo (custódia provisória anterior ao trânsito): hipótese a verificar,
     #    porque a mesma prisão pode servir a várias condenações (LEP, art. 111). Prescrição e indulto ficam nas próprias abas.
@@ -493,7 +493,7 @@ def extincao(r, presc, interr):
             a_verificar = True
     # multa cominada: extinção exige prova da impossibilidade de pagamento (STF ADI 7.032)
     com_multa = any(re.search(r"\b(E|e)\s+Multa", c.get("tipo_penal") or "") for c in r.get("_crimes", []) if not c.get("extinto", "").upper().startswith("S"))
-    multa_txt = ("Multa cominada: extinção cabível se comprovada a impossibilidade de pagamento (STF ADI 7.032, vinculante; STJ Tema 931) - instruir com prova da hipossuficiência" if com_multa else "")
+    multa_txt = ("Multa cominada: o inadimplemento não obsta a extinção ante a alegada hipossuficiência, salvo decisão motivada que indique concretamente a possibilidade de pagamento (STJ, Tema 931, tese revista em 28/02/2024); há julgados exigindo prova da impossibilidade com base na ADI 7.032 (STJ, REsp 2.055.935) - por cautela, instruir com elementos da hipossuficiência" if com_multa else "")
     # crimes já extintos no RSPE
     ext = ["%s%s%s" % (rs.crimes_curto([c]).replace(" (extinto)", ""), (" · " + c["extincao_motivo"].lower()) if c.get("extincao_motivo") else "",
                        (" em " + c["data_extincao"]) if c.get("data_extincao") else "")

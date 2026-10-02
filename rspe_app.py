@@ -90,8 +90,8 @@ AJUDA = """
 Progressão e Livramento: <b>amarelo forte</b> = prazo vencido ("Vencido há N dias · verificar criminológico, indeferimento ou
 falta"; a dica mostra os pedidos do RSPE e, quando houver, o aviso sobre o exame criminológico, que é só dica: não muda a cor nem
 gera alerta). Prazos: <b>laranja</b> = vence em até 30 dias; <b>amarelo</b> = em até 60; <b>verde</b> = em até 90. Acima de 90 dias:
-"Em cumprimento", sem cor. <b>Cinza</b> = "Pena cumprida" ou "Não se aplica" (em livramento, já no aberto, não iniciou, pena
-interrompida - o motivo fica na ficha); <b>amarelo</b> também para "A verificar (livramento)"; <b>azul</b> = execução extinta.
+"Em cumprimento", sem cor. <b>Cinza</b> = "Pena cumprida" ou "Não se aplica" (Progressão: em livramento, já no aberto, não iniciou, pena
+interrompida; Livramento: em livramento, não iniciou, pena interrompida - o motivo fica na ficha); <b>amarelo</b> também para "A verificar (livramento)"; <b>azul</b> = execução extinta.
 Extinção: <b>vermelho</b> = extinção cabível; <b>laranja</b>/<b>amarelo</b>/<b>verde</b> = término em até 30/60/90 dias; cinza = pena
 interrompida ou sem previsão; azul = extinta (registrada).
 Indulto/Comutação (células): <b>vermelho</b> = "Vedado (art. 1º)", "Vedado (art. 7º)", "Indeferido" ou "Falta" (falta com sanção
@@ -316,9 +316,9 @@ lista com busca e "Todos"/"Nenhum". Vale para os assistidos visíveis pela busca
 Na ficha do assistido, "Relatório em PDF" gera só o dele. A exportação Excel/PDF segue a mesma regra.
 <h4>Presunção de hipossuficiência (Defensoria)</h4>
 No indulto, a <b>multa</b> é indultável e não é óbice (Decretos 12.338/2024 e 12.790/2025, art. 12, § 2º, I - presunção expressa
-de incapacidade econômica para quem é assistido pela Defensoria). Na extinção da punibilidade, a multa pendente só não obsta se
-comprovada a impossibilidade de pagamento, ainda que parcelado (STF ADI 7.032, vinculante; STJ Tema 931, rev. 28/02/2024): instruir
-o pedido. A <b>reparação do dano</b> é dispensada no inciso XV do art. 9º (crime patrimonial sem VGA); no livramento (CP, art. 83,
+de incapacidade econômica para quem é assistido pela Defensoria). Na extinção da punibilidade, a multa pendente não obsta ante a
+alegada hipossuficiência, salvo decisão que indique concretamente a capacidade de pagamento (STJ Tema 931, rev. 28/02/2024); parte da
+jurisprudência, invocando a ADI 7.032 ("salvo comprovada impossibilidade"), exige prova (STJ, REsp 2.055.935): instruir o pedido por cautela. A <b>reparação do dano</b> é dispensada no inciso XV do art. 9º (crime patrimonial sem VGA); no livramento (CP, art. 83,
 IV, "salvo efetiva impossibilidade"), a impossibilidade deve ser demonstrada (STJ, AgRg no HC 799.167).
 O tráfico privilegiado (art. 33, § 4º) não é hediondo nem impeditivo de indulto (STF, SV 63 e Tema 1400; STJ Tema 1336).
 <h4>Petições a partir de modelos .docx</h4>
@@ -351,7 +351,7 @@ agrupamento de crimes). Baixas gravadas em versões anteriores passam sozinhas p
 "Ficha disciplinar ignorada" e "Falha ao analisar" contam como alerta e também podem ser baixados.
 <h4>Extinção</h4>
 Só a extinção pelo cumprimento: pena integralmente cumprida ou término previsto já alcançado (LEP, arts. 66, II, e 109); livramento
-condicional com período de prova expirado sem revogação (CP, arts. 89 e 90; LEP, art. 146); detração que iguala ou supera a pena do
+condicional com período de prova expirado sem revogação (CP, art. 90; LEP, art. 146; Súmula 617/STJ - observado o art. 89); detração que iguala ou supera a pena do
 processo, como hipótese "a verificar" (a mesma prisão pode servir a várias condenações - CP, art. 42; LEP, arts. 66, II, e 111).
 Prescrição e indulto ficam nas próprias abas; o livramento incerto não gera hipótese (fica na Auditoria). Situação: "Extinção
 cabível" (vermelho), "Término em N dias" (laranja até 30, amarelo até 60, verde até 90), "Em cumprimento" (acima de 90 dias), "Pena
