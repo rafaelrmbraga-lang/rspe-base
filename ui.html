@@ -766,8 +766,8 @@ const ui = {
     const cps=[(pp&&s.retro_detalhe)?bt('pp','Copiar fundamentação (punitiva)',1):'', (pe&&s.ppe_detalhe)?bt('pe','Copiar fundamentação (executória)',1):'',
                (pp&&s.retro_detalhe)?bt('pp','Copiar cálculo (punitiva)'):'', (pe&&s.ppe_detalhe)?bt('pe','Copiar cálculo (executória)'):''].filter(Boolean).join(' ');
     // executória: o quadro simples primeiro; memória de cálculo, quadro das fugas e linha do tempo recolhidos em "ver cálculo completo"
-    const Q=pe&&s.ppe_quadro; const det=`${pe?this.resumoPPE(s):''}${pe?this.bloco('Pretensão executória - memória de cálculo',s.ppe_detalhe,'pe'):''}${pe?this.linhaTempo(s):''}`;
-    const exe=Q?`${this.quadroPPE(s)}<div class="cp-row" style="gap:6px;margin-top:8px"><span class="mini" onclick="event.stopPropagation();const d=this.closest('.mem').querySelector('.calc-full');d.classList.toggle('on');this.textContent=d.classList.contains('on')?'Ocultar cálculo completo':'Ver cálculo completo e linha do tempo'">Ver cálculo completo e linha do tempo</span>${cps}</div><div class="calc-full">${det}</div>`
+    const Q=pe&&s.ppe_quadro; const det=`${pe?this.resumoPPE(s):''}${pe?this.bloco('Pretensão executória - memória de cálculo',s.ppe_detalhe,'pe'):''}`;
+    const exe=Q?`${this.quadroPPE(s)}<div class="cp-row" style="gap:6px;margin-top:8px"><span class="mini" onclick="event.stopPropagation();const d=this.closest('.mem').querySelector('.calc-full');d.classList.toggle('on');this.textContent=d.classList.contains('on')?'Ocultar cálculo completo':'Ver cálculo completo'">Ver cálculo completo</span>${cps}</div><div class="calc-full">${det}</div>`
                 :`<div class="cp-row" style="gap:6px">${cps}</div>${det}`;
     return `<div class="mem">${pp&&!pe?`<div class="cp-row" style="gap:6px">${cps}</div>`:''}${pe?exe:''}${pp?this.bloco('Pretensão punitiva',s.retro_detalhe,'pp'):''}${this.bloco('Avisos',s.avisos&&s.avisos.length?s.avisos:'','av')}</div>`; },
   quadroPPE(s){ const Q=s.ppe_quadro; const cor={vermelho:'verm',amarelo:'amb'}[Q.cor]||(/^Não/.test(Q.resultado)?'verde':'');
@@ -1161,7 +1161,7 @@ const ui = {
                    :[['Crime',14],['Pena',8],['Fato',7],['R. Denúncia',8],['Sentença',7],['Acórdão',7],['Trânsito',7],['Prazo PPP',11],['Retroativa / intercorrente',27]];
       const lin=xs.map(x=>{ const marcos=[x.crime,x.pena,x.fato,x.denuncia,x.sentenca,x.acordao,x.transito||x.transito_mp];
         const v=pe?marcos.concat([x.ppe_termo, {h:`${penaExt(esc(x.ppe_prazo_efetivo||x.prazo_ppe||'—'))}${x.ppe_base_txt?`<div class="muted" style="font-size:11px;line-height:1.3;margin-top:2px">sobre ${penaExt(esc(x.ppe_base_txt))}</div>`:''}`}]):marcos.concat([x.prazo_ppp]);
-        const tem=pe&&ui.tlTem(x); const ti=ui.tlReg(x);
+        const tem=false; const ti=ui.tlReg(x);  // sem linha do tempo na executória
         const verif=pe&&/^A VERIFICAR/.test(x.ppe_status||'');
         return `<tr class="${rel(x)?'':'fora'}">${v.map((y,j)=>`<td class="${j>=2&&j<=(pe?7:6)?'dt':''}">${y&&y.h!==undefined?y.h:penaExt(d(y))}${j===0&&x.ajustado?'<span class="aj" title="Dados preenchidos ou corrigidos pelo operador">✎ ajustado</span>':''}</td>`).join('')}<td>${x[st]?`<span class="pill ${x[sc]||'none'}">${esc(cur(x[st]))}</span>`:'—'}${verif?`<div style="margin-top:4px"><span class="btn-sal" onclick="event.stopPropagation();ui.pfAbrir(this,${ti},'saldo')">CONFERIR / INFORMAR SALDO</span></div>`:''}</td><td style="white-space:nowrap!important"><span class="why" onclick="event.stopPropagation();ui.tlToggle(this,'calc',${ti})">cálculo</span> · <span class="why" onclick="event.stopPropagation();ui.pfAbrir(this,${ti})">editar dados</span>${tem?` · <span class="why" onclick="event.stopPropagation();ui.tlToggle(this,'tl',${ti})">linha do tempo</span>`:''}</td></tr><tr style="display:none"><td colspan="${cols.length+1}">${pe?ui.explicaHtml(x):''}${ui.memoria(x, pe?'pe':'pp')}</td></tr><tr style="display:none"><td colspan="${cols.length+1}"></td></tr><tr style="display:none"><td colspan="${cols.length+1}"><div class="pf-holder"></div></td></tr>`; }).join('');
       return `<div class="pc"><div class="pc-h"><b>Ação penal ${esc(k)}</b><span class="pc-m">${pl(xs.length,'crime','crimes')}</span><span class="sp"></span>${pior[st]?`<span class="pill ${pior[sc]||'none'}">${esc(cur(pior[st]).split(' em ')[0])}</span>`:''}</div>
@@ -1284,7 +1284,7 @@ const ui = {
     Object.keys(r.pedidos||{}).filter(k=>k.startsWith('ind_')).forEach(k=>{ const x=this.decDe(r).find(y=>y.id===k.slice(4)); const dn=x?'Decreto '+x.numero:'decreto '+k.slice(4);
       achado[k]=()=>'possível direito a indulto ou comutação pelo '+dn; NOME[k]='indulto ou comutação pelo '+dn; });
     const P=r.pedidos||{}; const ks=Object.keys(P).filter(k=>achado[k]&&(!sel||sel.includes(k))).sort((a,b)=>this.tlD(P[a].data)-this.tlD(P[b].data));
-    if(!ks.length) return sel ? 'Selecione ao menos uma providência.' : `Execução penal nº ${r.proc}, de ${r.nome}: nenhuma providência registrada até ${this.dados.hoje||'esta data'}.`;
+    if(!ks.length) return sel ? 'Selecione ao menos uma providência.' : `Atendimento a ${r.nome} referente aos autos ${r.proc} na data de hoje${this.dados.hoje?' ('+this.dados.hoje+')':''}. A GR foi analisada e não se verificou cabível pedido sobre progressão, livramento, indulto, prescrição ou extinção no momento da análise.`;
     const c=ks.map(k=>achado[k]());
     const f=ks.map(k=>{ const x=P[k], o=x.obs?', com a anotação: '+sp(x.obs):'';
       if(x.tipo==='oficio') return 'em '+x.data+', foi expedido ofício à unidade prisional'+(k==='fd'?' solicitando atestado de trabalho ou certificação de estudo':' referente a '+NOME[k])+o;

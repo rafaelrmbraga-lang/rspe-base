@@ -207,19 +207,9 @@ igual ou maior que a pena do crime": a mesma prisão serve a várias condenaçõ
 maior que a pena do processo não é resultado de prescrição: vira aviso na memória e hipótese "a verificar" na aba Extinção.
 A "memória de cálculo" de cada crime mostra, nesta ordem: pena aplicada; termo inicial; prazo pela pena aplicada; prisão provisória
 (informativa); cada período (cumprimento, prisão por outro motivo, evasão com cumprido, saldo, prazo, vencimento e recaptura,
-liberdade sem evasão); conclusão. Abaixo dela, a tabela da linha do tempo do crime (Período | Classificação | Fonte | Efeito na prescrição).
-<b>Linha do tempo visual</b>: na linha de cada crime da aba Prescrição (e no cartão da prescrição executória da ficha do assistido),
-"cálculo" abre a memória em texto e "linha do tempo" abre a figura, um de cada vez (clicar de novo fecha). A figura é a memória de
-cálculo desenhada e não faz conta própria: eixo do fato à situação atual com os marcos (fato, sentença, trânsito, fuga, recaptura, hoje)
-e cada período classificado. Legenda das faixas: verde = cumprimento da pena; vermelho hachurado = fuga/evasão; listras cinza = prisão
-provisória (detração); roxo = suspensão (preso por outro motivo); cinza claro = liberdade sem evasão; azul claro = livramento; laranja
-hachurado com "?" = atribuição não comprovada (cumprimento registrado no SEEU só para outro processo: conta na execução unificada, mas
-a imputação a esta condenação não consta). Sob cada fuga, a linha de contagem pelo saldo (art. 113) com os vencimentos (saldo mínimo,
-faixa intermediária do art. 109, saldo máximo) e a recaptura, e o cartão com pena aplicada, cumprido, imputável ao crime, saldo, prazo e
-vencimento. Abaixo, os blocos "detração → saldo → prazo", as hipóteses de imputação (CP, art. 76 e ordem cronológica do trânsito) e o
-cartão do resultado (A VERIFICAR / PRESCRITO / Não reconhecida) com o motivo e "Falta para concluir". Clique em marco, faixa ou linha de
-contagem para o balão "Como cheguei aqui?" (evento do SEEU, período, tratamento, fundamento e efeito). O relatório individual traz a
-mesma figura, sem os balões.
+liberdade sem evasão); conclusão.
+Na linha de cada crime da aba Prescrição, "cálculo" abre a memória em texto e "editar dados" o formulário de ajuste; a
+pretensão executória não tem mais linha do tempo na tela (o relatório individual ainda traz a figura).
 <h4>Filtro de situação</h4>
 O seletor ao lado dos botões filtra a aba (a Geral não tem). Progressão e Livramento: vencidas, vence em até 30, 60 ou 90 dias, não
 iniciou, pena interrompida, não se aplica (cumprida / livramento / aberto), sem data. Indulto/Comutação: por benefício e resultado
