@@ -3066,6 +3066,23 @@ def analise_decretos(campos, crimes, eventos, incidentes, hoje):
             _xv_sem_cumprimento(motivo, out[k + "_detalhe"])
             continue
         if not em_cumprimento:
+            # só prisão provisória até a data (flagrante/preventiva, encerrada antes do trânsito): o cumprimento não começou - o período
+            # conta como detração, não como "cumprimento interrompido" (mesma regra dos decretos 2000-2023)
+            _def = [e for e in eventos if re.search(r"PRIS|IN[ÍI]CIO|RECAPTURA", ((e.get("tipo") or "") + " " + (e.get("motivo") or "")).upper())
+                    and not re.search(r"FLAGRANTE|PREVENTIV|TEMPOR|PROVIS", (e.get("motivo") or "").upper())
+                    and (to_date(e.get("data") or "") or date.max) <= ref]
+            _trs = [d for d in (to_date(c.get("transito_processo") or c.get("transito_mp") or "") for c in crimes) if d and d <= ref]
+            _virou = any(a <= t and (b is None or b > t) for a, b in periodos for t in _trs)
+            if any(ini <= ref for ini, _ in periodos) and not _def and not _virou:
+                det = ("Até %s só houve prisão provisória (%s), encerrada antes do trânsito em julgado: o cumprimento da pena não havia começado. "
+                       "O período conta como detração (CP, art. 42), não como cumprimento interrompido." % (
+                           fmt(ref), "; ".join("%s a %s" % (fmt(a), fmt(b) if b else "hoje") for a, b in periodos if a <= ref)))
+                out[k] = "não se aplica: não iniciou o cumprimento até %s (prisão anterior provisória: detração)" % fmt(ref)
+                out[k + "_status"] = "nao"
+                out[k + "_detalhe"] = det + nota_art2
+                out[kc] = "não se aplica: não iniciou o cumprimento até %s" % fmt(ref)
+                _xv_sem_cumprimento("não iniciou o cumprimento", det + nota_art2)
+                continue
             primeiro = min((ini for ini, _ in periodos), default=None)
             if not any(ini <= ref for ini, _ in periodos):
                 det = "Nenhum evento de prisão/início de cumprimento até %s (primeiro evento: %s)." % (fmt(ref), fmt(primeiro) or "nenhum")

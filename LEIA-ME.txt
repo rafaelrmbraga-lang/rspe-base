@@ -1004,6 +1004,12 @@ v7.0.0
     interrupção desde menos de 1 ano após a distribuição da ação penal: "Não
     corre: em cumprimento desde ..." (o menor prazo possível não cabe no
     intervalo).
+  - Indulto (linha do tempo, Decreto 11.302/2022): sentença posterior à
+    publicação não torna o crime "não alcançado" - só tira a pena da soma do
+    art. 11 (art. 4º); no art. 5º o crime conta isoladamente, como na aba.
+    Decretos com fração cumprida: quem até a data só teve prisão provisória
+    (flagrante/preventiva, solto antes do trânsito) não iniciou o
+    cumprimento - "não se aplica", e não "cumprimento interrompido / fuga".
   - Importação: quando o lote tem falha (arquivo não importado, campo não
     lido, análise que falhou), o aviso da importação traz o botão "PDF das
     falhas", com cada falha e a causa provável, para corrigir a leitura.
