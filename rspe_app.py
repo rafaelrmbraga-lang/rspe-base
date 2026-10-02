@@ -36,7 +36,7 @@ import rspe_relatorio as rrel
 import rspe_indulto_tl as rtl
 
 APP = "RSPE Base"
-VERSAO = "6.16.50"
+VERSAO = "7.0.0"
 
 
 def pasta_app():
@@ -670,7 +670,7 @@ class Base:
         """Pedido marcado na aba: os cartões do mesmo assistido e benefício, no quadro, ganham a etiqueta "Pedido feito"."""
         with self.lock:
             n = self.con.execute("UPDATE quadro_cartoes SET etiqueta='pedido' WHERE processo=? AND aba=? AND COALESCE(arquivado, '')=''",
-                                 (processo, aba)).rowcount
+                                 (processo, aba.split("_")[0] if aba.startswith("ind_") else aba)).rowcount
             self.con.commit()
         return n
 

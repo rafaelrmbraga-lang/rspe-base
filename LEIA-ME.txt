@@ -1,4 +1,4 @@
-RSPE BASE - SEEU  v6.16.50 (programa em abas)
+RSPE BASE - SEEU  v7.0.0 (programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
@@ -564,7 +564,7 @@ HISTÓRICO DE VERSÕES
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
 
-v6.16.50
+v7.0.0
   - Abas com ícone e nome curto, numa linha só: Geral, Progressão,
     Livramento, Indulto, Prescrição, Extinção, Ficha, Auditoria e
     Jurisprudências (antigo "Banco de teses").
@@ -841,6 +841,19 @@ v6.16.50
       janela; art. 146 do CP não é tratado como violência elementar.
     * Extinção: multa pela tese revista do Tema 931/STJ; livramento com
       período de prova expirado: CP, art. 90, e Súmula 617/STJ.
+  - Pedido feito muda a situação: em Progressão, Livramento e Ficha, marcado
+    o pedido, a coluna Situação passa a "Pedido feito em dd/mm/aaaa" (azul;
+    amarelo se a situação mudou depois do pedido). Na Ficha, com todos os
+    itens conferidos (✓), a situação passa a "Conferido".
+  - Indulto: o pedido é marcado por decreto. No mapa do Geral, o decreto com
+    pedido feito ganha cor própria (preto, "Pedido feito" na legenda); no
+    Geral, a marcação pergunta a qual decreto se refere; dentro de um
+    decreto, marca aquele decreto.
+  - Auditoria: o alerta de capitulação criada depois do fato diz o que foi
+    criado - tipo, qualificadora ou majorante, qual é (ex.: "majorante do
+    art. 157, § 2º-A, I, do CP - emprego de arma de fogo, com aumento de
+    2/3") - e o que valia na data do fato (ex.: "o emprego de arma era a
+    majorante do art. 157, § 2º, I").
   - Indulto: o quadro "Resultado" ficou resumido - o status e o motivo em
     uma linha (ex.: "crime impeditivo (art. 1º): C4, C5, C8 (crime hediondo
     ou equiparado)"); o texto completo fica no comparativo com os incisos.

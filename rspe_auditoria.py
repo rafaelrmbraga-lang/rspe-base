@@ -80,6 +80,28 @@ def _reincidencia_legal(c, crimes):
     return marc or bool(ants), marc, ants, dep
 
 
+def _cap_criada(c, desc):
+    """'A majorante cadastrada (art. 157, § 2º-A, I, do CP - emprego de arma de fogo, aumento de 2/3)'."""
+    disp = "art. %s%s" % (rs.num_art(c.get("artigo")) or "?", (", " + _par_inc(c)) if _par_inc(c) else "")
+    lei = rs.num_lei(c.get("lei"))
+    disp += ", do CP" if lei in ("2848", "") else (", da Lei %s" % rs.lei_fmt(lei) if hasattr(rs, "lei_fmt") else ", da Lei %s" % lei)
+    if not desc:
+        return "O tipo, a qualificadora ou a majorante cadastrados (%s)" % disp
+    nat, o_que, _ = desc
+    return "%s cadastrad%s (%s - %s)" % ({"tipo": "O tipo", "qualificadora": "A qualificadora", "majorante": "A majorante"}[nat],
+                                          "o" if nat == "tipo" else "a", disp, o_que)
+
+
+def _par_inc(c):
+    """'§ 2º-A, I' a partir do tipo penal do SEEU."""
+    m = re.match(r"\s*(§\s*\d+[ºo°]?(?:\s*-\s*[A-Z])?)\s*,?\s*([IVXL]+\b)?", c.get("tipo_penal") or "")
+    if not m:
+        return ""
+    par = re.sub(r"\s+", " ", m.group(1)).replace("§ ", "§ ").replace(" - ", "-")
+    par = re.sub(r"§\s*", "§ ", par)
+    return par + ((", " + m.group(2)) if m.group(2) else "")
+
+
 def _reinc_especifica(c, crimes):
     """Base da reincidência específica do art. 83, V, do CP no próprio RSPE: condenação anterior por hediondo,
     equiparado (tortura, tráfico de drogas, terrorismo) ou tráfico de pessoas (art. 149-A), transitada antes do fato.
@@ -670,13 +692,16 @@ def auditar(r, hoje=None):
             itens.append(_item("info", "%s: artigo não informado" % nome, "O SEEU não registrou o artigo e a descrição do tipo não foi reconhecida: \u201c%s\u201d." % _descricao_tipo(c), "Sem o artigo, hediondez, VGA e frações ficam sem conferência.", tipo="artigo-nao-informado", ref=nome))
         # lei do tempo: capitulação criada depois do fato (anacronismo do cadastro) e hediondez posterior ao fato
         _dc, _lc = rs.tipo_criado_em(c)
+        _desc = rs.tipo_criado_desc(c)
         _dh, _lh = rs.hediondo_desde(c)
         if fato and _dc and fato < _dc:
-            itens.append(_item("alerta", "%s: capitulação criada depois do fato (%s)" % (nome, rs.fmt(fato)),
-                               "O tipo, a qualificadora ou a majorante cadastrados foram criados pela %s, em vigor desde %s; o fato é de %s. "
+            itens.append(_item("alerta", "%s: %s criad%s depois do fato (%s)" % (
+                nome, ("%s (%s)" % (_desc[0], _desc[1].split(",")[0])) if _desc else "capitulação", "o" if (_desc and _desc[0] == "tipo") else "a", rs.fmt(fato)),
+                               "%s foi criad%s pela %s, em vigor desde %s; o fato é de %s.%s "
                                "A sentença usou a redação da época: o cadastro no SEEU está anacrônico. Conferir a capitulação da sentença - ela "
                                "decide a hediondez (%s), a fração de progressão e livramento e a vedação do indulto e da comutação." % (
-                                   _lc, rs.fmt(_dc), rs.fmt(fato),
+                                   _cap_criada(c, _desc), "o" if (_desc and _desc[0] == "tipo") else "a", _lc.split(" (")[0], rs.fmt(_dc), rs.fmt(fato),
+                                   (" Na data do fato, %s." % _desc[2]) if _desc else "",
                                    ("não era hediondo na data do fato: hediondez só desde %s" % rs.fmt(_dh)) if (_dh and fato < _dh) else "conferir"),
                                "CF, art. 5º, XL; CP, arts. 1º e 2º; Lei 8.072/90.", tipo="capitulacao-criada-depois-do-fato", ref=nome))
         elif fato and _dh and fato < _dh and not _hediondo_seeu(c) and rs.e_hediondo(c, date.today()):
@@ -1532,7 +1557,7 @@ def _fatos(it):
             continue
         if re.search(r"\b(s[óo] se|n[ãa]o pode|pode vir|pode ter|afeta|deve|devem|exce[çc][ãa]o)\b", f, re.I):
             continue
-        if _RE_DIREITO.search(f) and not re.search(r"\d{2}/\d{2}/\d{4}", f):
+        if _RE_DIREITO.search(f) and not re.search(r"\d{2}/\d{2}/\d{4}", f) and not f.startswith("Na data do fato"):
             continue  # regra geral sem data: vai no parágrafo do direito
         if re.match(r"^[^.]{0,70}\(decis[ãa]o de [^)]*\)\.?$", f) or len(f) < 20:
             continue
