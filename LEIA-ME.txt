@@ -1,4 +1,4 @@
-RSPE BASE - SEEU  v6.16.50 (programa em abas)
+RSPE BASE - SEEU  v7.0.0 (programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
@@ -564,7 +564,7 @@ HISTÓRICO DE VERSÕES
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
 
-v6.16.50
+v7.0.0
   - Abas com ícone e nome curto, numa linha só: Geral, Progressão,
     Livramento, Indulto, Prescrição, Extinção, Ficha, Auditoria e
     Jurisprudências (antigo "Banco de teses").
