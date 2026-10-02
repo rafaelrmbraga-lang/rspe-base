@@ -365,6 +365,9 @@ def auditar(r, hoje=None):
     hoje = hoje or date.today()
     itens = []
     crimes = r.get("_crimes", [])
+    # condenações das outras execuções da mesma pessoa (mesmo CPF) contam para a reincidência
+    crimes_pessoa = crimes + [o for o in (r.get("_outras_condenacoes") or [])
+                              if not any(rs.mesmo_processo(o.get("processo_criminal"), c.get("processo_criminal")) for c in crimes)]
     ativos = [c for c in crimes if not c.get("extinto", "").upper().startswith("S")]
     incidentes = r.get("_incidentes", [])
     eventos = r.get("_eventos", [])
@@ -373,12 +376,33 @@ def auditar(r, hoje=None):
     cumprida = rs.pena_para_dias(r.get("pena_cumprida"))
     reman = rs.pena_para_dias(r.get("pena_remanescente"))
 
+    # "Faltam dados": cada dado essencial que o programa não leu vira um alerta com o botão Preencher; o valor informado entra
+    # nos cálculos como se viesse do RSPE e o alerta passa a "Dado informado" (com a data)
     faltam = rs.campos_faltantes(r)
-    if faltam:
-        itens.append(_item("verificar", "Dados ausentes no RSPE: %s" % ", ".join(faltam),
-                           "O SEEU não imprimiu esses dados (guia sem cálculo, pena interrompida) ou o programa não conseguiu lê-los. Os cálculos deste assistido podem ficar incompletos; conferir o PDF."
-                           + (" Data do fato, pena, sentença e trânsito de cada crime: preencher em Prescrição → editar dados." if any("crime" in f for f in faltam) else ""),
-                           "", tipo="dados-ausentes-no-rspe"))
+    rot_campo = {v[0]: k for k, v in rs.CAMPOS_MANUAIS.items()}
+    for f_ in faltam:
+        campo = rot_campo.get(f_)
+        if campo:
+            it = _item("alerta", "Faltam dados: %s não lido do RSPE - informar" % f_,
+                       "O SEEU não imprimiu esse dado (guia sem cálculo, pena interrompida) ou o programa não conseguiu lê-lo. Sem ele, os "
+                       "cálculos deste assistido ficam incompletos. Informe pelo botão Preencher (%s), conferindo no PDF ou no SEEU." % rs.CAMPOS_MANUAIS[campo][2],
+                       "", tipo="faltam-dados-" + campo)
+            it["preencher"] = {"campo": "rspe|" + campo, "rotulo": "%s (%s)" % (f_[:1].upper() + f_[1:], rs.CAMPOS_MANUAIS[campo][2]),
+                               "tipo": rs.CAMPOS_MANUAIS[campo][1]}
+        else:
+            it = _item("alerta", "Faltam dados: %s - informar" % f_,
+                       "O programa não leu esse dado do crime no RSPE. Preencha em Prescrição → editar dados (data do fato, pena, sentença e trânsito "
+                       "de cada crime): o botão Preencher abre a aba.", "", tipo="faltam-dados-crime")
+            it["preencher"] = {"campo": "", "rotulo": f_, "tipo": "ir_presc"}
+        itens.append(it)
+    for campo, v in (r.get("_manuais") or {}).items():
+        rot = rs.CAMPOS_MANUAIS[campo][0]
+        it = _item("alerta", "Faltam dados: %s não lido do RSPE - informar" % rot, "", "", tipo="faltam-dados-" + campo)
+        it["preencher"] = {"campo": "rspe|" + campo, "rotulo": "%s (%s)" % (rot[:1].upper() + rot[1:], rs.CAMPOS_MANUAIS[campo][2]),
+                           "tipo": rs.CAMPOS_MANUAIS[campo][1]}
+        val = rs.pena_extenso(v["valor"]) if rs.CAMPOS_MANUAIS[campo][1] == "pena" else (v["valor"].lower() if campo == "regime_atual" else v["valor"])
+        it["auto_baixa"] = {"obs": "Dado informado pelo operador (%s): %s. Usado nos cálculos." % (rot, val), "data": v.get("data", "")}
+        itens.append(it)
     # dados objetivos que o RSPE não trouxe: o alerta pede o preenchimento (botão "Preencher" na Auditoria)
     if not nasc or r.get("_nasc_fonte"):
         it = _item("verificar", "Data de nascimento não consta no RSPE - informar",
@@ -628,7 +652,7 @@ def auditar(r, hoje=None):
         fato = rs.to_date(c.get("data_infracao") or "")
         # reincidência pela lei, a mesma na progressão e no livramento (CP, arts. 63 e 64, I): a marcação do RSPE ou condenação
         # anterior transitada antes do fato, fora a depurada
-        reinc_ef, marc, _ant, _dep = _reincidencia_legal(c, crimes)
+        reinc_ef, marc, _ant, _dep = _reincidencia_legal(c, crimes_pessoa)
         reinc = reinc_ef
         if not marc and _ant:
             itens.append(_item("verificar", "%s: reincidente pela lei, mas o RSPE não marca a reincidência" % nome,
@@ -649,7 +673,7 @@ def auditar(r, hoje=None):
         hed_lei, obs_h = _e_hediondo_lei(c)
         esp_ok = None  # reincidência específica em hediondo/tráfico: True confirmada no RSPE, False não aferível
         if reinc_esp and (hed_seeu or hed_lei or _trafico(c) or _trafico_pessoas(c)):
-            _conf, _semt, _naoh = _reinc_especifica(c, crimes)
+            _conf, _semt, _naoh = _reinc_especifica(c, crimes_pessoa)
             _pp = (rs.pct_rotulo(c.get("fracao_progressao")) or "?").split(" - ")[0]
             _fx = "%s e livramento %s" % (_pp, "vedado" if (_fr_seeu(c.get("fracao_livramento")) or 0) >= 1 else (c.get("fracao_livramento") or "?").split(" - ")[0])
             if _conf:
@@ -765,7 +789,7 @@ def auditar(r, hoje=None):
         if orcrim_uv:
             especial = None
         f_esp, rot, obs = rg.fracao_mais_benefica(fato, hed, morte, vga, reinc, especial=especial)
-        _conf_g, _semt_g, _ = _reinc_especifica(c, crimes) if (reinc and not reinc_esp and hed) else ([], [], [])
+        _conf_g, _semt_g, _ = _reinc_especifica(c, crimes_pessoa) if (reinc and not reinc_esp and hed) else ([], [], [])
         if reinc and not reinc_esp and hed and not _conf_g:
             # campo "reincidente específico" não marcado e nenhuma condenação anterior por hediondo transitada antes do fato no RSPE
             if not _semt_g:
@@ -783,7 +807,7 @@ def auditar(r, hoje=None):
                 and float(f_seeu) > float(rg.fr(_vg)) + 0.001):
             vga_gen = True
             # condenações anteriores do RSPE (transitadas antes deste fato, de outro processo): decidem a natureza da reincidência
-            _ant = [x for x in crimes if x is not c and fato and not rs.mesmo_processo(x.get("processo_criminal"), c.get("processo_criminal"))
+            _ant = [x for x in crimes_pessoa if x is not c and fato and not rs.mesmo_processo(x.get("processo_criminal"), c.get("processo_criminal"))
                     and (rs.to_date(x.get("transito_processo") or x.get("transito_mp") or "") or date.max) < fato]
             if _ant and any(rs.vga_indulto(x) for x in _ant):
                 vga_gen = False  # reincidente em crime violento: o percentual do SEEU está certo
@@ -872,7 +896,7 @@ def auditar(r, hoje=None):
                                "A lei da data do fato veda o livramento condicional nesta hipótese; o 1/1 do SEEU é o correto.", "LEP, art. 112, VI-A e VI, b e d.", tipo="fato-em-livramento-vedado", ref=nome))
         # reincidência: precisa de condenação anterior transitada antes do fato (consolidado após o laço)
         if marc and fato:
-            anteriores = [o for o in crimes if o is not c and rs.to_date(o.get("transito_processo") or o.get("transito_mp") or "") and rs.to_date(o.get("transito_processo") or o.get("transito_mp")) < fato]
+            anteriores = [o for o in crimes_pessoa if o is not c and rs.to_date(o.get("transito_processo") or o.get("transito_mp") or "") and rs.to_date(o.get("transito_processo") or o.get("transito_mp")) < fato]
             if not anteriores:
                 reinc_sem_base.append(fato)
         # idade
@@ -895,7 +919,8 @@ def auditar(r, hoje=None):
     ult = None
     for i in regs:
         d = rs.to_date(i.get("data_referencia") or i.get("data_decisao") or "")
-        if d and (ult is None or d > ult[0]):
+        # regressão cautelar não fixa data-base (só a definitiva, após a falta homologada)
+        if d and (ult is None or d > ult[0]) and "CAUTELAR" not in (i.get("complemento") or "").upper():
             ult = (d, i)
     # erros de lançamento que a capacitação CNJ/SEEU (10 e 11/06/2025) aponta como os mais comuns e que atrasam benefícios
     _prog_dec = [i for i in regs if "PROGRESS" in (i.get("complemento") or "").upper() and i.get("data_decisao")
@@ -923,9 +948,9 @@ def auditar(r, hoje=None):
                            ref=i.get("data_decisao")))
     # regime inicial: um só por execução, na data da primeira prisão. Na data de uma prisão posterior, o SEEU desconta a detração
     # antes da fração (forma mais gravosa); um segundo "regime inicial" (em vez de somatório) muda a data-base sem fundamento
-    _ri = sorted((rs.to_date(i.get("data_referencia") or i.get("data_decisao") or ""), i) for i in incidentes
-                 if i.get("situacao") == "CONCEDIDO" and "REGIME INICIAL" in rs._sem_acento((i.get("complemento") or "").upper())
-                 and rs.to_date(i.get("data_referencia") or i.get("data_decisao") or ""))
+    _ri = sorted(((rs.to_date(i.get("data_referencia") or i.get("data_decisao") or ""), i) for i in incidentes
+                  if i.get("situacao") == "CONCEDIDO" and "REGIME INICIAL" in rs._sem_acento((i.get("complemento") or "").upper())
+                  and rs.to_date(i.get("data_referencia") or i.get("data_decisao") or "")), key=lambda x: x[0])
     _ri = [(d, i) for d, i in _ri]
     if len(_ri) > 1:
         itens.append(_item("alerta", "Mais de um regime inicial lançado (%s)" % ", ".join(rs.fmt(d) for d, _ in _ri),
@@ -1172,7 +1197,7 @@ def auditar(r, hoje=None):
     _fr_seeu_max = max((_fr_seeu(c.get("fracao_progressao")) or 0 for c in ativos), default=0)
     if (ativos and not any(c.get("vga") == "S" for c in ativos)
             and not any(c.get("comando_orcrim") == "S" or rs.num_lei(c.get("lei")) == "12850" for c in ativos)
-            and not any(_reincidencia_legal(c, crimes)[0] for c in ativos) and r.get("_sexo") != "M"
+            and not any(_reincidencia_legal(c, crimes_pessoa)[0] for c in ativos) and r.get("_sexo") != "M"
             and _fr_seeu_max and float(_fr_seeu_max) > 0.125 + 0.001):
         # texto dos requisitos: o da base jurídica (progressao.art112_par3_mulheres), editável
         _txt18 = (rg.carregar() or {}).get("progressao", {}).get("art112_par3_mulheres") or (

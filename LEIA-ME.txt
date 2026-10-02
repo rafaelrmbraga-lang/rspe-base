@@ -978,6 +978,35 @@ v7.0.0
     decisão (Tema 1165), mais de um regime inicial, regime inicial depois da
     primeira prisão, alteração de data-base no lugar do incidente próprio
     (data-base fixa) e guia suspensa somada na pena total (Tema 1106).
+  - Mesma pessoa com mais de um RSPE (mesmo CPF; sem CPF, nome + mãe): a
+    lista mostra só a execução ativa; a extinta ou arquivada sai da lista,
+    mas a condenação dela conta para a reincidência (geral e específica) da
+    ativa, e a ficha disciplinar vinculada a ela vale para a ativa. Duas
+    execuções da mesma pessoa não contam como homônimos. No confronto ficha
+    x RSPE, progressão e livramento anteriores ao início desta execução e os
+    autos das outras execuções da pessoa não geram alerta.
+  - Auditoria: "Faltam dados" - cada dado essencial não lido do RSPE (nome,
+    data de geração, pena total, pena cumprida, regime, término) vira um
+    alerta com o campo para o operador informar; o dado informado entra nos
+    cálculos e o alerta fica como "Dado informado". Execução extinta ou
+    arquivada não pede esses dados, e os alertas de cálculo dela viram
+    informação. Regressão cautelar não fixa data-base (não dispara "data-base
+    anterior à última alteração de regime"). Saída da unidade com "Motivo:
+    Progressão" não gera alerta quando o RSPE traz o regime inicial ou o
+    início do cumprimento nesse regime na mesma data.
+  - Ficha: trabalho sem atestado com remição posterior no RSPE e nenhuma
+    outra fonte possível (outro trabalho, estudo ou atestado no período) -
+    a remição é atribuída a esse trabalho e descontada da estimativa a
+    requerer ("Pedir atestado (≈ N dias a requerer)").
+  - Prescrição executória: fuga encerrada pela recaptura mostra, em
+    destaque, o período analisado e a interrupção (CP, art. 117, V); a data
+    passa a "venceria em ...". Sem trânsito no RSPE, mas preso sem
+    interrupção desde menos de 1 ano após a distribuição da ação penal: "Não
+    corre: em cumprimento desde ..." (o menor prazo possível não cabe no
+    intervalo).
+  - Importação: quando o lote tem falha (arquivo não importado, campo não
+    lido, análise que falhou), o aviso da importação traz o botão "PDF das
+    falhas", com cada falha e a causa provável, para corrigir a leitura.
 
 v6.16.49
   - Prescrição após a fuga: o pedido "informe a pena remanescente na fuga"

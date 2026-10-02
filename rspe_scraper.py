@@ -1248,14 +1248,45 @@ def situacao_execucao(campos, eventos, incidentes, crimes, hoje):
     return out
 
 
+# dados do cabeçalho do RSPE que o operador pode informar quando não foram lidos: campo -> (rótulo, tipo, exemplo)
+CAMPOS_MANUAIS = {"nome": ("nome", "texto", "nome completo"), "data_geracao_rspe": ("data de geração", "data", "dd/mm/aaaa"),
+                  "pena_total": ("pena total", "pena", "ex.: 12 anos e 6 meses"), "pena_cumprida": ("pena cumprida", "pena", "ex.: 3 anos e 2 meses"),
+                  "regime_atual": ("regime atual", "regime", "fechado, semiaberto ou aberto"),
+                  "termino_previsao_seeu": ("término", "data", "dd/mm/aaaa")}
+
+
+def regime_manual(v):
+    u = _sem_acento(v or "").upper()
+    return "SEMIABERTO" if "SEMI" in u else "ABERTO" if "ABERTO" in u else "FECHADO" if "FECHADO" in u else ""
+
+
+def valor_manual(campo, v):
+    """Valor informado pelo operador no formato que o RSPE usaria."""
+    tipo = CAMPOS_MANUAIS[campo][1]
+    if tipo == "pena":
+        d = pena_livre(v)
+        return dias_para_pena(d) if d is not None else ""
+    if tipo == "data":
+        return fmt(to_date(v))
+    if tipo == "regime":
+        return regime_manual(v)
+    return (v or "").strip().upper()
+
+
 def campos_faltantes(r):
     """Dados essenciais que não foram lidos do RSPE (layout diferente, página faltando, guia sem cálculo)."""
     falta = []
+    ativos = [c for c in r.get("_crimes", []) if not c.get("extinto", "").upper().startswith("S")]
+    # execução extinta ou arquivada (todos os crimes extintos, incidente de extinção, processo "(ARQUIVADO)"): o SEEU zera a
+    # pena e não imprime regime nem término - não falta nada
+    encerrada = bool(r.get("execucao_extinta")) or (bool(r.get("_crimes")) and not ativos) or \
+        "ARQUIVAD" in _sem_acento(str(r.get("status_execucao") or r.get("status") or "")).upper()
     for k, rot in (("nome", "nome"), ("data_geracao_rspe", "data de geração"), ("pena_total", "pena total"),
                    ("pena_cumprida", "pena cumprida"), ("regime_atual", "regime atual")):
-        if not r.get(k):
+        if encerrada and k in ("pena_total", "pena_cumprida", "regime_atual"):
+            continue
+        if not r.get(k) or (k == "pena_total" and pena_para_dias(r.get(k)) == 0 and ativos):
             falta.append(rot)
-    ativos = [c for c in r.get("_crimes", []) if not c.get("extinto", "").upper().startswith("S")]
     if not r.get("_crimes"):
         falta.append("crimes")
     else:
@@ -1263,7 +1294,7 @@ def campos_faltantes(r):
             falta.append("pena de algum crime")
         if any(not c.get("data_infracao") for c in ativos):
             falta.append("data do fato de algum crime")
-    if not r.get("termino_previsao_seeu") and not re.search(r"INTERROMPIDA|SUSPENSA", r.get("situacao_cumprimento") or "") and not r.get("execucao_extinta"):
+    if not r.get("termino_previsao_seeu") and not re.search(r"INTERROMPIDA|SUSPENSA", r.get("situacao_cumprimento") or "") and not encerrada:
         falta.append("término")
     return falta
 

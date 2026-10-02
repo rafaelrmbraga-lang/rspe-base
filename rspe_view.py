@@ -854,6 +854,12 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
     # a Auditoria cuida da matemática do RSPE; o que já aparece nas outras abas (remição/ficha, indulto e
     # comutação, prescrição, prazos vencidos, extinção) não se repete aqui
     aud["aud_itens"] = list(extras or []) + [i for i in aud["aud_itens"] if so_matematica(i)]
+    if execucao_extinta(r):
+        # pena extinta: as divergências do cálculo não têm mais efeito para o assistido - ficam como informação
+        for i in aud["aud_itens"]:
+            if i["nivel"] in ("alerta", "verificar") and not str(i.get("tipo") or "").startswith(("falha", "pena-cumprida", "extin")):
+                i["nivel"] = "info"
+                i["titulo"] = i["titulo"] + " (execução extinta: sem efeito)"
     aud["aud_itens"].sort(key=lambda i: {"alerta": 0, "verificar": 1, "info": 2, "ok": 3}.get(i["nivel"], 9))
     for it in aud["aud_itens"]:
         it["chave"] = chave_item(it)

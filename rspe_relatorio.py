@@ -936,6 +936,7 @@ def estatisticas(modelos, hoje=None):
         if mm_ and float(mm_.group(1).replace(",", ".")) - float(mm_.group(2).replace(",", ".")) >= 1:
             E["rem_ass_pend"] += 1
         E["rem_ass_sem_at"] += bool(int(m.get("fd_sem_n") or 0))
+        E["rem_sem_desc"] = E.get("rem_sem_desc", 0) + int(m.get("fd_sem_pend") or 0)
 
     # ---- benefícios: prazos do SEEU e, nos vencidos, o que o RSPE mostra depois da data ----
     SEM = {"lc": "em livramento", "aberto": "já no aberto", "cumprida": "pena cumprida", "extinta": "pena extinta", "nao_iniciou": "não iniciou",
@@ -1451,7 +1452,9 @@ def relatorio_geral(modelos, caminho, nome_base, nominal=True):
                 nota=("A falta pendente mais antiga aguarda decisão há %s." % rs.pl(mp[-1], "dia", "dias")) if mp else ""))
     secao("2.5 Remição: pendências", "Pela ficha disciplinar: trabalho e estudo que ainda não viraram dias remidos no RSPE.")
     el.append(numeros([(E["rem_ass_pend"], "assistidos com atestado sem remição homologada"), (_num(E["rem_pend"]), "dias de pena atestados e não homologados"),
-                       (E["rem_ass_sem_at"], "assistidos trabalhando sem atestado"), (E["rem_trab"], "períodos de trabalho sem atestado"),
+                       (E["rem_ass_sem_at"], "assistidos trabalhando sem atestado",
+                        ("%d dias a requerer já descontada a remição do RSPE" % E.get("rem_sem_desc", 0)) if E.get("rem_sem_desc") else ""),
+                       (E["rem_trab"], "períodos de trabalho sem atestado"),
                        (E["rem_zero"], "assistidos sem nenhuma remição no RSPE", "toda a base")],
                       {0: "amarelo", 1: "amarelo", 2: "amarelo", 3: "amarelo"}))
 
@@ -1734,3 +1737,70 @@ def relatorio_providencias(linhas, todas, mes_sel, caminho, titulo, nome_base):
     doc.build(el, onFirstPage=fr, onLaterPages=fr)
     return caminho
 
+
+
+def relatorio_falhas(d, caminho, nome_base):
+    """PDF das falhas da importação: o que não entrou, o que não foi lido e o que não pôde ser analisado, com a causa."""
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.units import mm
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+    st = _estilos()
+    W = A4[0] - 32 * mm
+    el = [Paragraph(_t("Falhas da importação"), st["tit"]),
+          Paragraph(_t("%s · lote importado em %s · %s lidos" % (nome_base, d.get("quando", ""), rs.pl(d.get("arquivos", 0), "arquivo", "arquivos"))), st["sub"]),
+          Spacer(1, 8)]
+    n_pes = sum(len(p["itens"]) for p in d["pessoas"])
+    el.append(_tabela([["Arquivos não importados", "RSPE com campo não lido", "Ignorados", "Falhas na análise dos assistidos"],
+                       [str(len(d["erros"])), str(len(d["incompletos"])), str(len(d["ignorados"])), str(n_pes)]],
+                      [W / 4] * 4, st, zebra=False))
+
+    def causa_arquivo(msg):
+        u = msg.upper()
+        if "NÃO PARECE UM RSPE" in u:
+            return "O PDF não tem o cabeçalho do RSPE do SEEU nem o da Ficha Disciplinar do SIAPEN (outro documento, digitalização ou PDF protegido)."
+        if "NÚMERO DA EXECUÇÃO" in u:
+            return "A 1ª página falta ou o número do processo de execução está ilegível: gerar o RSPE de novo no SEEU."
+        if "PASSWORD" in u or "ENCRYPT" in u:
+            return "PDF protegido por senha."
+        if "EOF" in u or "PDFSYNTAX" in u or "STARTXREF" in u or "ROOT OBJECT" in u or "REALLY A PDF" in u:
+            return "Arquivo corrompido ou baixado pela metade: baixar de novo."
+        return "Erro na leitura do arquivo: enviar o PDF para análise."
+
+    el.append(Paragraph("1. Arquivos não importados", st["h2"]))
+    if d["erros"]:
+        dados = [["Arquivo", "Mensagem", "Causa provável"]]
+        for e in d["erros"]:
+            arq, _, msg = e.partition(": ")
+            dados.append([arq, msg, causa_arquivo(msg)])
+        el.append(_tabela(dados, [50 * mm, 60 * mm, W - 110 * mm], st))
+    else:
+        el.append(Paragraph("Nenhum.", st["mut"]))
+    el.append(Paragraph("2. RSPE importados com campo não lido", st["h2"]))
+    if d["incompletos"]:
+        dados = [["Arquivo", "Assistido", "Campos não lidos"]]
+        for e in d["incompletos"]:
+            arq, _, resto = e.partition(": ")
+            nome, _, campos = resto.partition(" - não foi possível ler ")
+            dados.append([arq, nome, campos])
+        el.append(_tabela(dados, [55 * mm, 50 * mm, W - 105 * mm], st))
+        el.append(Paragraph(_t("Causa: o campo não foi encontrado onde o layout do RSPE o traz (campo vazio no SEEU, página faltando ou texto "
+                               "quebrado na extração). O assistido entra na base com o alerta “Faltam dados” na Auditoria, onde o dado pode ser informado."), st["mut"]))
+    else:
+        el.append(Paragraph("Nenhum.", st["mut"]))
+    if d["ignorados"]:
+        el.append(Paragraph("3. Arquivos ignorados", st["h2"]))
+        dados = [["Arquivo", "Motivo"]] + [list(e.partition(": ")[::2]) for e in d["ignorados"]]
+        el.append(_tabela(dados, [60 * mm, W - 60 * mm], st))
+    el.append(Paragraph("%d. Falhas na análise dos assistidos do lote" % (4 if d["ignorados"] else 3), st["h2"]))
+    if d["pessoas"]:
+        dados = [["Assistido", "Falha", "Causa / detalhe"]]
+        for p in d["pessoas"]:
+            for tit, det in p["itens"]:
+                dados.append([Paragraph(_t(p["nome"]) + "<br/>" + _t(p["proc"]), st["cel"]), tit, det])
+        el.append(_tabela(dados, [45 * mm, 55 * mm, W - 100 * mm], st))
+    else:
+        el.append(Paragraph("Nenhuma.", st["mut"]))
+    doc = SimpleDocTemplate(caminho, pagesize=A4, leftMargin=16 * mm, rightMargin=16 * mm, topMargin=21 * mm, bottomMargin=20 * mm,
+                            title="Falhas da importação", author="RSPE Base")
+    fr = _moldura("Falhas da importação", nome_base, rodape="Falhas registradas na importação do lote. Enviar este PDF com os arquivos citados para a correção da leitura.")
+    doc.build(el, onFirstPage=fr, onLaterPages=fr)

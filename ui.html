@@ -929,7 +929,7 @@ const ui = {
   calcEstado(r){ const F=this.calcFugas(r), ks=Object.keys(F); if(!ks.length) return null;
     return ks.some(k=>F[k].some(x=>x.S.saldo_origem==='nao_determinado'))? 'pend' : 'ok'; },
   async prescCalc(rid){ const r=await this.completo(rid); if(!r) return; const F=this.calcFugas(r); this._pcRid=rid; this._pcFund={};
-    const pill=h=> !h? '<span class="muted">—</span>' : h.resultado==='prescrita'?`<span class="px-pill p">prescrita</span><br><small class="muted">venceu ${esc(h.limite||'')}</small>` : h.resultado==='nada a prescrever'?'<span class="px-pill z">pena cumprida</span>' : h.resultado==='a verificar'?'<span class="px-pill n">a verificar</span>' : `<span class="px-pill n">não prescrita</span>${h.limite?`<br><small class="muted">vence ${esc(h.limite)}</small>`:''}`;
+    const pill=(h,fim)=> !h? '<span class="muted">—</span>' : h.resultado==='prescrita'?`<span class="px-pill p">prescrita</span><br><small class="muted">venceu ${esc(h.limite||'')}</small>` : h.resultado==='nada a prescrever'?'<span class="px-pill z">pena cumprida</span>' : h.resultado==='a verificar'?'<span class="px-pill n">a verificar</span>' : (!h.limite&&h.saldo===0)?'<span class="px-pill z">sem saldo na fuga</span>' : `<span class="px-pill n">não prescrita</span>${h.limite?(fim&&fim!=='hoje'?`<br><small class="muted">venceria ${esc(h.limite)}; interrompida pela recaptura em ${esc(fim)} (CP, art. 117, V)</small>`:`<br><small class="muted">vence ${esc(h.limite)}</small>`):''}`;
     const th='style="text-align:left;font-size:11px;color:var(--tx2);padding:5px 6px"', td='style="padding:5px 6px;font-size:12px;border-top:1px solid var(--line);vertical-align:top"';
     let n=0; const blocos=Object.keys(F).map(ev=>{ const xs=F[ev]; const S0=xs[0].S; const pend=xs.some(x=>x.S.saldo_origem==='nao_determinado'); const varias=xs.some(x=>x.S.outras>0);
       const P=(xs.find(x=>x.S.principal)||{S:{}}).S.principal;
@@ -938,8 +938,11 @@ const ui = {
         const ks=this.fundCrits(S); let bt='';
         if(!pend && (ks.length || S.resultado==='prescrita')){ const id=++n; this._pcFund[id]={L,s:S,ks};
           bt=`<span class="jz-b pri" style="white-space:nowrap" title="Copiar a fundamentação para a petição" onclick="ui.pcCopiar(${id})">${ks.length&&!(P&&ks[0]===P)?'Copiar tese':'Copiar'}${ks.length>1?' ▾':''}</span>`; }
-        return `<tr><td ${td}><b>${esc(L.crime)}</b><br><span class="muted">${esc(L.proc_crim||'')} · pena ${esc(L.pena||'')}</span></td><td ${td}>${hp? esc(this.tlAmd(hp.saldo)) : '<span class="muted">não determinado</span>'}</td><td ${td}>${pend?'<span class="px-pill n">a verificar</span>':pill(hp)}</td>${varias?`<td ${td}>${pend?'—':pill(C.cron)}</td><td ${td}>${pend?'—':pill(C.art76)}</td><td ${td}>${pend?'—':pill(C.grav)}</td>`:''}<td ${td}>${bt}</td></tr>`; }).join('');
+        return `<tr><td ${td}><b>${esc(L.crime)}</b><br><span class="muted">${esc(L.proc_crim||'')} · pena ${esc(L.pena||'')}</span></td><td ${td}>${hp? esc(this.tlAmd(hp.saldo)) : '<span class="muted">não determinado</span>'}</td><td ${td}>${pend?'<span class="px-pill n">a verificar</span>':pill(hp,S0.fim)}</td>${varias?`<td ${td}>${pend?'—':pill(C.cron,S0.fim)}</td><td ${td}>${pend?'—':pill(C.art76,S0.fim)}</td><td ${td}>${pend?'—':pill(C.grav,S0.fim)}</td>`:''}<td ${td}>${bt}</td></tr>`; }).join('');
       return `<div class="px-box" style="margin-bottom:12px"><h5>${S0.revogacao?'Revogação do livramento':'Fuga'} de ${esc(ev)}${S0.fim&&S0.fim!=='hoje'?' · fim em '+esc(S0.fim):' · em curso'}</h5>
+        ${S0.fim&&S0.fim!=='hoje'? (xs.some(x=>x.S.resultado==='prescrita')
+          ? `<div style="margin:6px 0 8px;padding:8px 10px;border-radius:8px;background:#FEF3F2;border-left:4px solid #B42318;font-size:12.5px"><b>Período de ${esc(ev)} a ${esc(S0.fim)}.</b> O prazo pelo saldo venceu durante a fuga, antes da ${esc(S0.fim_causa||'recaptura')} em ${esc(S0.fim)}.</div>`
+          : `<div style="margin:6px 0 8px;padding:8px 10px;border-radius:8px;background:#EEF4FF;border-left:4px solid #3E4784;font-size:12.5px"><b>Fuga encerrada: ${esc(S0.fim_causa||'recaptura')} em ${esc(S0.fim)}.</b> A análise se refere só ao período de ${esc(ev)} a ${esc(S0.fim)}; a ${esc(S0.fim_causa||'recaptura')} interrompeu a prescrição (CP, art. 117, V) antes de o prazo vencer.</div>`) : ''}
         <div style="font-size:12.5px;margin:4px 0 8px">${fonte}</div>
         ${varias?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px"><span class="jz-b ${pend?'pri':''}" onclick="ui.calcAbrir('${esc(ev)}')">${P==='calc'||P==='dig'?'Alterar o saldo desta fuga':'Digitar o saldo desta fuga'}</span></div>`:''}
         <table style="width:100%;border-collapse:collapse"><thead><tr><th ${th}>Condenação</th><th ${th}>Saldo na fuga</th><th ${th}>${P==='calc'?'Pela ordem':P==='dig'?'Saldo do SEEU':P==='linha'?'Linha do SEEU':'Pelo saldo'}</th>${varias?`<th ${th}>Ordem do trânsito (tese)</th><th ${th}>Art. 76 (tese)</th><th ${th}>Pena maior (tese)</th>`:''}<th ${th}></th></tr></thead><tbody>${rows}</tbody></table>
@@ -1238,7 +1241,8 @@ const ui = {
     const mot=prompt('Motivo (ex.: início do cumprimento, falta homologada em ..., progressão em ...):', ''); if(mot===null) return;
     const res=await API().dado_manual(id,'data_base', d.trim()+'|'+mot.replace(/\|/g,'/').trim()); if(res&&res.erro){ this.toast(res.erro); return; }
     if(res&&res.registros) this.carregar(res); this.toast('Data-base gravada: previsão de progressão refeita em todas as abas.'); this.abrir(id); },
-  async preencher(id, ci){ const P=JSON.parse(this._clips[ci]||'{}'); if(P.tipo==='falta'){ this.faltasModal(id, P.campo); return; } const v=prompt(P.rotulo+':', ''); if(v===null||!v.trim()) return;
+  async preencher(id, ci){ const P=JSON.parse(this._clips[ci]||'{}'); if(P.tipo==='falta'){ this.faltasModal(id, P.campo); return; }
+    if(P.tipo==='ir_presc'){ this.irAba('presc'); this.aberto=id; this.render(); this.toast('Em cada crime, use "editar dados" para informar '+P.rotulo+'.'); return; } const v=prompt(P.rotulo+':', ''); if(v===null||!v.trim()) return;
     if(P.tipo==='data'&&!/^\d{2}\/\d{2}\/\d{4}$/.test(v.trim())){ this.toast('Use o formato dd/mm/aaaa.'); return; }
     await api('dado_manual', id, P.campo, v.trim()); this.aberto=id; this.render(); },
   // ---------- controle de pedidos (coluna "Pedido" das abas de benefício) ----------
@@ -1654,15 +1658,19 @@ const ui = {
   abrirPasta(){ api('abrir_pasta_bases'); },
   toast(t){ const e=document.getElementById('toast'); e.textContent=t; e.classList.add('on'); clearTimeout(this._t); this._t=setTimeout(()=>e.classList.remove('on'),3500); },
   progresso(n,tot){ const p=document.getElementById('prog'); p.classList.add('on'); document.getElementById('progTxt').textContent=`Importando ${n} de ${tot}`; document.getElementById('progFill').style.width=(100*n/tot)+'%'; },
-  importado(r){ document.getElementById('prog').classList.remove('on'); api('listar');
+  importado(r){ document.getElementById('prog').classList.remove('on'); const pL=api('listar');
     const partes=[]; if(r.novos) partes.push(pl(r.novos,'novo','novos')); if(r.atualizados) partes.push(pl(r.atualizados,'atualizado','atualizados')+' por RSPE mais recente');
     if(r.duplicados) partes.push(pl(r.duplicados,'duplicado ignorado','duplicados ignorados')); if(r.historico) partes.push(pl(r.historico,'mais antigo guardado no histórico','mais antigos guardados no histórico')); if(r.antigos-(r.historico||0)>0) partes.push(pl(r.antigos-(r.historico||0),'mais antigo ignorado','mais antigos ignorados')); if(r.erros) partes.push(pl(r.erros,'falha','falhas')); if(r.fichas) partes.push(pl(r.fichas,'ficha disciplinar','fichas disciplinares')); if(r.incompletos) partes.push(`${r.incompletos} com dados incompletos (ver Auditoria)`);
     if(!partes.length) partes.push('nada importado');
+    // falha registrada no lote (arquivo não importado, campo não lido, análise que falhou): oferece o PDF com as causas
+    pL.then(async()=>{ if(!await api('falhas_tem')) return; if(!document.getElementById('btFalhas')) this.modalAvisos(partes.join(' · '), ['Há falhas registradas na análise dos assistidos importados.']);
+      const b=document.getElementById('btFalhas'); if(b) b.style.display=''; });
     if(r.avisos && r.avisos.length){ this.modalAvisos(partes.join(' · '), r.avisos); } else { this.toast('Importação: '+partes.join(' · ')); } },
+  falhasPdf(){ api('falhas_pdf'); },
   modalAvisos(titulo, avisos){ document.getElementById('modal').innerHTML=`<div class="box" style="width:640px"><h2>Importação concluída</h2><p>${esc(titulo)}</p>
       <div class="help" style="max-height:50vh"><ul style="margin:0;padding-left:18px">${avisos.map(a=>`<li>${esc(a)}</li>`).join('')}</ul></div>
       <p style="margin-top:10px">Dados incompletos = o programa não conseguiu ler algum campo essencial; o assistido entra na base com alerta na Auditoria. Duplicado = mesmo arquivo ou RSPE do mesmo processo com a mesma data de geração. Um RSPE mais recente do mesmo processo substitui o atual; um mais antigo entra só no histórico (botão Histórico, na aba Geral), sem substituir o atual. Os anteriores ficam guardados. Lista completa em importacao_avisos.txt.</p>
-      <div class="acts"><button class="btn pri" onclick="ui.fecharModal()">Fechar</button></div></div>`; document.getElementById('modal').classList.add('on'); },
+      <div class="acts"><button class="btn" id="btFalhas" style="display:none" title="PDF com as falhas deste lote e as causas, para corrigir a leitura" onclick="ui.falhasPdf()">PDF das falhas</button><button class="btn pri" onclick="ui.fecharModal()">Fechar</button></div></div>`; document.getElementById('modal').classList.add('on'); },
   // ficha
   async abrir(id){ const r=await this.completo(id); if(!r) return; this.sel=id;
     const kv=(l,v)=>`<div><small>${l}</small>${esc(v||'—')}</div>`;
