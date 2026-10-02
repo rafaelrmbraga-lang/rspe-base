@@ -207,19 +207,9 @@ igual ou maior que a pena do crime": a mesma prisão serve a várias condenaçõ
 maior que a pena do processo não é resultado de prescrição: vira aviso na memória e hipótese "a verificar" na aba Extinção.
 A "memória de cálculo" de cada crime mostra, nesta ordem: pena aplicada; termo inicial; prazo pela pena aplicada; prisão provisória
 (informativa); cada período (cumprimento, prisão por outro motivo, evasão com cumprido, saldo, prazo, vencimento e recaptura,
-liberdade sem evasão); conclusão. Abaixo dela, a tabela da linha do tempo do crime (Período | Classificação | Fonte | Efeito na prescrição).
-<b>Linha do tempo visual</b>: na linha de cada crime da aba Prescrição (e no cartão da prescrição executória da ficha do assistido),
-"cálculo" abre a memória em texto e "linha do tempo" abre a figura, um de cada vez (clicar de novo fecha). A figura é a memória de
-cálculo desenhada e não faz conta própria: eixo do fato à situação atual com os marcos (fato, sentença, trânsito, fuga, recaptura, hoje)
-e cada período classificado. Legenda das faixas: verde = cumprimento da pena; vermelho hachurado = fuga/evasão; listras cinza = prisão
-provisória (detração); roxo = suspensão (preso por outro motivo); cinza claro = liberdade sem evasão; azul claro = livramento; laranja
-hachurado com "?" = atribuição não comprovada (cumprimento registrado no SEEU só para outro processo: conta na execução unificada, mas
-a imputação a esta condenação não consta). Sob cada fuga, a linha de contagem pelo saldo (art. 113) com os vencimentos (saldo mínimo,
-faixa intermediária do art. 109, saldo máximo) e a recaptura, e o cartão com pena aplicada, cumprido, imputável ao crime, saldo, prazo e
-vencimento. Abaixo, os blocos "detração → saldo → prazo", as hipóteses de imputação (CP, art. 76 e ordem cronológica do trânsito) e o
-cartão do resultado (A VERIFICAR / PRESCRITO / Não reconhecida) com o motivo e "Falta para concluir". Clique em marco, faixa ou linha de
-contagem para o balão "Como cheguei aqui?" (evento do SEEU, período, tratamento, fundamento e efeito). O relatório individual traz a
-mesma figura, sem os balões.
+liberdade sem evasão); conclusão.
+Na linha de cada crime da aba Prescrição, "cálculo" abre a memória em texto e "editar dados" o formulário de ajuste; a
+pretensão executória não tem linha do tempo (nem na tela nem no relatório individual).
 <h4>Filtro de situação</h4>
 O seletor ao lado dos botões filtra a aba (a Geral não tem). Progressão e Livramento: vencidas, vence em até 30, 60 ou 90 dias, não
 iniciou, pena interrompida, não se aplica (cumprida / livramento / aberto), sem data. Indulto/Comutação: por benefício e resultado
@@ -748,6 +738,19 @@ class Base:
         d["importado_em"] = row[1]
         return d
 
+    def nomes_pessoas(self):
+        """Nome, CPF e mãe de cada registro (contagem de homônimos sem ler a base inteira)."""
+        with self.lock:
+            rows = self.con.execute("SELECT nome, dados FROM assistidos").fetchall()
+        out = []
+        for n, d in rows:
+            try:
+                j = json.loads(d)
+            except Exception:
+                j = {}
+            out.append({"nome": n, "cpf": j.get("cpf") or "", "nome_mae": j.get("nome_mae") or ""})
+        return out
+
     def nomes(self):
         with self.lock:
             return [n for (n,) in self.con.execute("SELECT nome FROM assistidos").fetchall()]
@@ -863,6 +866,10 @@ class Api:
         else:
             for r in brutos:
                 self._modelos.append(self._montar(r, ctx))
+        _todos = self._modelos
+        self._modelos = _so_ativos(self._modelos, brutos)
+        _ids = {id(m) for m in self._modelos}
+        self._ocultos = [m for m in _todos if id(m) not in _ids]  # execuções extintas de quem tem outra ativa (fora da lista)
         return {
             "base": self.base.nome,
             "hoje": rv.HOJE.strftime("%d/%m/%Y"),
@@ -897,11 +904,18 @@ class Api:
         ctx = {"baixas": self.base.baixas(), "fichas": self.base.fichas(), "manuais": self.base.manuais(),
                "ajustes": self.base.presc_ajustes(), "dmanuais": self.base.dados_manuais(), "peds": self.base.pedidos(),
                "hist_n": self.base.historico_n(), "fixados": self.base.fixados()}
-        nomes = [r.get("nome", "") for r in brutos] if brutos is not None else self.base.nomes()
-        h = {}
-        for n in nomes:
-            h[_norm(n)] = h.get(_norm(n), 0) + 1
+        # homônimos contam pessoas, não RSPEs: duas execuções da mesma pessoa (mesmo CPF; sem CPF, nome + mãe) não impedem a ficha pelo nome
+        regs = brutos if brutos is not None else self.base.nomes_pessoas()
+        h, vistos = {}, set()
+        for r in regs:
+            k = _pessoa_chave(r)
+            if k and k in vistos:
+                continue
+            vistos.add(k)
+            h[_norm(r.get("nome", ""))] = h.get(_norm(r.get("nome", "")), 0) + 1
         ctx["homonimos"] = h
+        ctx["outras_cond"] = _outras_cond(brutos) if brutos is not None else {}
+        ctx["outros_procs"] = _outros_procs(brutos) if brutos is not None else {}
         return ctx
 
     def _atualizar(self, processo, msg=None):
@@ -919,7 +933,12 @@ class Api:
             self._modelos = [m for m in self._modelos if m.get("id") != processo]
             out = {"parcial": [], "removido": processo}
         else:
-            m = self._montar(r, self._contexto())
+            ctx = self._contexto()
+            k = _pessoa_chave(r)
+            if k:
+                _g = [r] + [o for o in self.base.todos() if o.get("processo_execucao") != processo and _pessoa_chave(o) == k]
+                ctx["outras_cond"], ctx["outros_procs"] = _outras_cond(_g), _outros_procs(_g)
+            m = self._montar(r, ctx)
             i = next((k for k, x in enumerate(self._modelos) if x.get("id") == m.get("id")), None)
             if i is None:
                 self._modelos.append(m)
@@ -1189,6 +1208,17 @@ class Api:
             return {"erro": "Sexo inválido."}
         if campo.startswith("falta|") and valor not in ("", "sim", "nao"):
             return {"erro": "Decisão inválida sobre a falta."}
+        if campo.startswith("rspe|"):
+            c = campo[5:]
+            if c not in rs.CAMPOS_MANUAIS:
+                return {"erro": "Campo inválido."}
+            tipo = rs.CAMPOS_MANUAIS[c][1]
+            if valor and tipo == "data" and not rs.to_date(valor):
+                return {"erro": "Data inválida: use dd/mm/aaaa."}
+            if valor and tipo == "pena" and not rs.pena_livre(valor):
+                return {"erro": "Pena inválida: use, por exemplo, 4 anos e 6 meses ou 4a6m0d."}
+            if valor and tipo == "regime" and not rs.regime_manual(valor):
+                return {"erro": "Regime inválido: fechado, semiaberto ou aberto."}
         if valor and campo.startswith("pena_max|") and not rs.pena_livre(valor):
             return {"erro": "Pena inválida: use, por exemplo, 3 meses, 1 ano e 6 meses ou 0a3m0d."}
         self.base.dado_gravar(processo, campo, valor)
@@ -1450,6 +1480,7 @@ class Api:
         fichas_ok = []
         pend_fichas = []
         incompletos = []
+        lote = []
         total = len(arqs)
         vistos = set()
         lock = threading.Lock()
@@ -1507,9 +1538,11 @@ class Api:
                                 antigos.append("%s: RSPE sem data de geração legível; a base já tem o de %s - ignorado" % (nome_arq, data_ex))
                                 continue
                             base.gravar(r)
+                            lote.append(chave)
                             atualizados += 1
                         else:
                             base.gravar(r)
+                            lote.append(chave)
                             novos += 1
                         faltam = rs.campos_faltantes(r)
                         if faltam:
@@ -1541,6 +1574,9 @@ class Api:
         if avisos:
             with open(os.path.join(pasta_app(), "importacao_avisos.txt"), "w", encoding="utf-8") as f:
                 f.write("\n".join(avisos))
+        # guardado para o PDF de falhas do lote (Api.falhas_pdf)
+        self._falhas_lote = {"quando": datetime.now().strftime("%d/%m/%Y %H:%M"), "erros": list(erros), "incompletos": list(incompletos),
+                             "ignorados": [a for a in antigos if "ignorad" in a], "processos": list(lote), "arquivos": len(arqs)}
         resumo = {"novos": novos, "atualizados": atualizados, "historico": historicos, "duplicados": len(duplicados), "antigos": len(antigos),
                   "erros": len(erros), "fichas": len(fichas_ok), "incompletos": len(incompletos), "avisos": avisos[:60]}
         if not silencioso:
@@ -1947,6 +1983,46 @@ class Api:
         _abrir(c)
         return {"caminho": c, "msg": "Relatório salvo."}
 
+    def _falhas_dados(self):
+        """Falhas do último lote importado: arquivos não importados, campos não lidos e falhas de análise/ficha dos assistidos do lote."""
+        F = getattr(self, "_falhas_lote", None)
+        if not F:
+            return None
+        procs = set(F["processos"])
+        pessoas = []
+        for m in (self._modelos or []) + (getattr(self, "_ocultos", None) or []):
+            if m.get("id") not in procs:
+                continue
+            its = [i for i in m.get("aud_itens") or [] if not i.get("baixado") and not i.get("auto_baixa")
+                   and ((i.get("tipo") or "").startswith(("falha", "faltam-dados")) or (i.get("titulo") or "").startswith("Faltam dados"))]
+            if its:
+                pessoas.append({"nome": m.get("nome", ""), "proc": m.get("proc", ""),
+                                "itens": [(i.get("titulo") or "", re.sub(r"<[^>]+>", "", i.get("detalhe") or "")) for i in its]})
+        return dict(F, pessoas=pessoas)
+
+    def falhas_tem(self):
+        """Há falha registrada no último lote? (a tela só oferece o PDF quando há)"""
+        d = self._falhas_dados()
+        return bool(d and (d["erros"] or d["incompletos"] or d["ignorados"] or d["pessoas"]))
+
+    def falhas_pdf(self):
+        """PDF das falhas do último lote importado, com a causa de cada uma, para corrigir a leitura."""
+        d = self._falhas_dados()
+        if not d:
+            return {"erro": "Nenhuma importação nesta sessão."}
+        nome = "%s - falhas da importação %s.pdf" % (self.base.nome, datetime.now().strftime("%Y-%m-%d %H%M"))
+        c = _um(self._janela.create_file_dialog(webview.SAVE_DIALOG, save_filename=nome, file_types=("PDF (*.pdf)",)))
+        if not c:
+            return None
+        if not c.lower().endswith(".pdf"):
+            c += ".pdf"
+        try:
+            rrel.relatorio_falhas(d, c, self.base.nome)
+        except Exception as e:
+            return {"erro": "Falha ao gerar o PDF: %s" % e}
+        _abrir(c)
+        return {"caminho": c, "msg": "PDF salvo."}
+
     def providencias_pdf(self, titulo, linhas, todas, mes):
         """Salva em PDF o relatório de providências (totais, gráficos e lista)."""
         if not self.base:
@@ -2032,10 +2108,15 @@ def _montar_modelo(r, ctx):
     # dados que o RSPE não trouxe: informados na Auditoria ou, para a data de nascimento, lidos da ficha disciplinar
     _ch0 = r.get("processo_execucao") or r.get("arquivo")
     _dm = dmanuais.get(_ch0, {})
+    r["_outras_condenacoes"] = (ctx.get("outras_cond") or {}).get(_ch0, [])
     _n0 = _norm(r.get("nome", ""))
     _f0 = fichas.get(_ch0) or (fichas.get("nome:" + _n0) if _homonimos.get(_n0, 0) == 1 else None)
     if _f0 and _f0 is not fichas.get(_ch0) and not _mesma_mae(_norm(_f0.get("nome_mae") or ""), _norm(r.get("nome_mae") or "")):
         _f0 = None  # ficha de homônimo: a mãe não confere
+    if not _f0:
+        # ficha vinculada a outra execução da mesma pessoa (mesmo CPF): a ficha é da pessoa, vale para a execução em curso
+        _fo = [fichas[o] for o in (ctx.get("outros_procs") or {}).get(_ch0, []) if fichas.get(o)]
+        _f0 = max(_fo, key=lambda f: rs.to_date(f.get("data_impressao") or "") or date.min) if _fo else None
     r.pop("_nasc_fonte", None); r.pop("_nasc_data", None)
     if _dm.get("data_nascimento"):
         if r.get("data_nascimento") != _dm["data_nascimento"]["valor"]:
@@ -2077,6 +2158,12 @@ def _montar_modelo(r, ctx):
         if _v:
             _c["_pena_max_inf"] = rs.pena_livre(_v["valor"])
             _c["_pena_max_data"] = "/".join(_v["data"][:10].split("-")[::-1])
+    # dados do cabeçalho que o RSPE não trouxe, informados pelo operador na Auditoria ("Faltam dados"): entram antes da análise
+    r.pop("_manuais", None)
+    for _k, _v in _dm.items():
+        if _k.startswith("rspe|") and _k[5:] in rs.CAMPOS_MANUAIS and _v.get("valor") and not r.get(_k[5:]):
+            r[_k[5:]] = rs.valor_manual(_k[5:], _v["valor"])
+            r.setdefault("_manuais", {})[_k[5:]] = {"valor": r[_k[5:]], "data": "/".join(_v["data"][:10].split("-")[::-1])}
     try:
         imp = r.get("importado_em")
         r = rs.reprocessar(r)  # análise refeita com as regras desta versão (a leitura do PDF fica como foi gravada)
@@ -2139,20 +2226,73 @@ def _leve(j):
     return out
 
 
+def _pessoa_chave(r):
+    """Mesma pessoa em RSPEs diferentes: CPF; sem CPF, nome + mãe."""
+    cpf = re.sub(r"\D", "", r.get("cpf") or "")
+    if len(cpf) == 11 and cpf != "0" * 11:
+        return "cpf:" + cpf
+    mae = _norm(r.get("nome_mae") or "")
+    return ("nm:%s|%s" % (_norm(r.get("nome", "")), mae)) if mae and r.get("nome") else None
+
+
+def _outras_cond(regs):
+    """{processo: condenações das outras execuções da mesma pessoa} - a condenação anterior que fundamenta a reincidência pode
+    estar noutro RSPE (execução arquivada ou extinta)."""
+    grupos = {}
+    for r in regs:
+        k = _pessoa_chave(r)
+        if k:
+            grupos.setdefault(k, []).append(r)
+    out = {}
+    for g in grupos.values():
+        if len(g) < 2:
+            continue
+        for r in g:
+            ch = r.get("processo_execucao") or r.get("arquivo")
+            out[ch] = [dict(c, _execucao=o.get("processo_execucao") or "") for o in g if o is not r for c in (o.get("_crimes") or [])]
+    return out
+
+
+def _outros_procs(regs):
+    """{processo: processos das outras execuções da mesma pessoa}."""
+    grupos = {}
+    for r in regs:
+        k = _pessoa_chave(r)
+        if k:
+            grupos.setdefault(k, []).append(r.get("processo_execucao") or r.get("arquivo"))
+    return {p: [o for o in g if o != p] for g in grupos.values() if len(g) > 1 for p in g}
+
+
+def _so_ativos(modelos, brutos):
+    """Mesma pessoa com mais de um RSPE: fica só a execução ativa (a extinta/arquivada sai da lista); sem nenhuma ativa, ficam todas."""
+    chave = {(b.get("processo_execucao") or b.get("arquivo")): _pessoa_chave(b) for b in brutos}
+    grupos = {}
+    for m in modelos:
+        k = chave.get(m.get("id"))
+        if k:
+            grupos.setdefault(k, []).append(m)
+    fora = set()
+    for g in grupos.values():
+        ativos = [m for m in g if m.get("estado_exec") != "extinta"]
+        if len(g) > 1 and ativos:
+            fora |= {id(m) for m in g if m.get("estado_exec") == "extinta"}
+    return [m for m in modelos if id(m) not in fora]
+
+
 def _ctx_de(ctx, r):
     """Fatia do contexto que interessa a um assistido (o processo paralelo não recebe as tabelas da base inteira)."""
     ch = r.get("processo_execucao") or r.get("arquivo")
     nn = _norm(r.get("nome", ""))
     um = lambda d: {ch: d[ch]} if ch in d else {}
     fichas = {}
-    for k in (ch, "nome:" + nn):
+    for k in [ch, "nome:" + nn] + list((ctx.get("outros_procs") or {}).get(ch, [])):
         if k in ctx["fichas"]:
             fichas[k] = ctx["fichas"][k]
     fx = ctx["fixados"]
     return {"baixas": um(ctx["baixas"]), "fichas": fichas, "manuais": um(ctx["manuais"]), "ajustes": um(ctx["ajustes"]),
             "dmanuais": um(ctx["dmanuais"]), "peds": um(ctx["peds"]), "hist_n": um(ctx["hist_n"]),
             "fixados": ({ch: fx[ch]} if ch in fx else {}) if isinstance(fx, dict) else ({ch} if ch in fx else set()),
-            "homonimos": {nn: ctx["homonimos"].get(nn, 0)}}
+            "homonimos": {nn: ctx["homonimos"].get(nn, 0)}, "outras_cond": um(ctx.get("outras_cond") or {}), "outros_procs": um(ctx.get("outros_procs") or {})}
 
 
 def _montar_proc(args):

@@ -2201,7 +2201,20 @@ def analisar(r, hoje=None):
         L["ppe_previsao"] = ""
         L["ppe_dias"] = None
         L["ppe_linha_tempo"], L["ppe_saldos"], L["ppe_faltam"] = [], [], []
-        if not termo:
+        # sem trânsito, mas preso sem interrupção desde pouco depois da distribuição da ação penal: o trânsito é posterior à
+        # distribuição, e o tempo até a prisão é menor que o menor prazo possível (1 ano: 2 anos do art. 109, VI, pela metade do art. 115)
+        _evs = sorted((d, rs._texto_evento(e)) for e in r.get("_eventos", []) for d in [rs.to_date(e.get("data") or "")] if d)
+        _ano = re.search(r"\d{7}-\d{2}\.(\d{4})\.", c.get("processo_criminal") or "")
+        _cump = None
+        if _evs and re.search(r"PRIS|IN[IÍ]CIO|RECAPTURA", _evs[-1][1].upper()) and not re.search(r"INTERRUP|FUGA|EVAS|SOLTURA|LIBERDADE", _evs[-1][1].upper()):
+            _cump = _evs[-1][0]
+        if not termo and _cump and _ano and (_cump - date(int(_ano.group(1)), 1, 1)).days < 365:
+            L["ppe_status"] = "Não corre: em cumprimento desde %s (CP, art. 117, V)" % rs.fmt(_cump)
+            L["ppe_cor"] = ""
+            det = ["Trânsito em julgado não consta no RSPE, mas a ação penal foi distribuída em %s e o cumprimento começou em %s, sem "
+                   "interrupção até hoje: o início do cumprimento interrompe a prescrição executória (CP, art. 117, V), e entre a distribuição "
+                   "e a prisão não houve tempo para o menor prazo do art. 109 (VI, reduzido pela metade no art. 115)." % (_ano.group(1), rs.fmt(_cump))]
+        elif not termo:
             L["ppe_status"] = "Verificar na ação penal: trânsito em julgado não consta no RSPE"
             L["ppe_cor"] = "cinza"
             det = ["Sem data de trânsito no RSPE: verificar na ação penal. Se a execução for provisória, a prescrição executória ainda não corre."]

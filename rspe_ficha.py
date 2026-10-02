@@ -592,6 +592,9 @@ def _processos_x_ficha(r, f):
     """Processos na ficha que não aparecem no RSPE: condenação não somada, prisão por outro processo, guia pendente."""
     rspe = {rs.chave_processo(c.get("processo_criminal") or "") for c in r.get("_crimes", [])}
     rspe.add(rs.chave_processo(r.get("processo_execucao") or ""))
+    for o in r.get("_outras_condenacoes") or []:  # processos das outras execuções da mesma pessoa (mesmo CPF)
+        rspe.add(rs.chave_processo(o.get("processo_criminal") or ""))
+        rspe.add(rs.chave_processo(o.get("_execucao") or ""))
     for e in r.get("_eventos", []) + r.get("_incidentes", []):
         for p in rs.lista_processos(e.get("processos") or ""):
             rspe.add(rs.chave_processo(p))
@@ -720,9 +723,11 @@ def _regime_x_ficha(r, f):
                         return True
         return False
     vistos = set()
+    # progressão/livramento anteriores ao primeiro evento desta execução são de outra (a ficha é da pessoa, não do processo)
+    _ini = min((d for d in (rs.to_date(ev.get("data") or "") for ev in r.get("_eventos", [])) if d), default=None)
     for e in f.get("eventos", []):
         x, u = _dp(e.get("data") or ""), (e.get("texto") or "").upper()
-        if not x:
+        if not x or (_ini and x < _ini):
             continue
         m = re.search(r"PROGRESS[ÃA]O DE REGIME PARA O\s+(SEMI[- ]?ABERTO|ABERTO)", u)
         if not m and re.search(r"MOTIVO:\s*PROGRESS", u):
@@ -730,7 +735,12 @@ def _regime_x_ficha(r, f):
             reg_d = classificar_unidade(dest.group(1))[0] if dest else None
             if reg_d in ("semiaberto", "aberto", "monitoramento"):
                 m = re.match(r"(.*)", "SEMIABERTO" if reg_d != "aberto" else "ABERTO")
-        if m and ("prog", m.group(1)) not in vistos and not no_rspe(r"PROGRESS", x):
+        # a ida para o regime pode estar no RSPE como regime inicial ou início do cumprimento nesse regime (a unidade registra
+        # "Motivo: Progressão de Regime" também na saída para o semiaberto de quem começou nele)
+        reg_m = re.sub(r"[- ]", "", m.group(1)) if m else ""
+        ev_rspe = m and any(re.search(reg_m, rs._sem_acento(((ev.get("tipo") or "") + " " + (ev.get("motivo") or "")).upper()).replace("-", "").replace(" ", ""))
+                            and rs.to_date(ev.get("data") or "") and abs((rs.to_date(ev["data"]) - x).days) <= 10 for ev in r.get("_eventos", []))
+        if m and ("prog", m.group(1)) not in vistos and not no_rspe(r"PROGRESS", x) and not no_rspe(reg_m.replace("SEMIABERTO", "SEMI-?ABERTO"), x) and not ev_rspe:
             vistos.add(("prog", m.group(1)))
             out.append(("Progressão para o %s registrada na ficha em %s e ausente no RSPE" % (m.group(1).lower().replace(" ", ""), rs.fmt(x)),
                         "A ficha registra o cumprimento da progressão (%s). Sem o incidente no RSPE, a data-base e as frações seguintes ficam erradas: "
@@ -1117,6 +1127,12 @@ def _dias_est(n, jor):
     return " · ≈ %s de trabalho (%s) ≈ %d remidos" % (rs.pl(n, "dia", "dias"), j, n // 3) if n else ""
 
 
+def _fim_linha(L, hoje):
+    """Fim do período de uma linha do quadro de trabalho ('dd.mm.aaaa a dd.mm.aaaa' ou '... em diante (em curso)')."""
+    ds = re.findall(r"\d{2}[./]\d{2}[./]\d{4}", L.get("per") or "")
+    return (_dp(ds[1].replace("/", ".")) if len(ds) > 1 else None) or hoje
+
+
 def quadro_trabalho(r, f, hoje=None):
     """Uma linha por emprego da ficha: período, atestado que o cobre, remição no RSPE e providência.
     Devolve (linhas, resumo)."""
@@ -1232,6 +1248,48 @@ def quadro_trabalho(r, f, hoje=None):
         linhas.append({"emp": re.sub(r"^(PP|CC|A1|R1)\s*-\s*", "", b["setor"]), "per": "início não registrado · baixa em %s%s" % (b["data"], ult), "dias": None, "_ini": db,
                        "at": "—", "sit": "Pedir período e atestado", "cor": "amarelo",
                        "sit_full": "A ficha registra a saída do setor, mas não a entrada: pedir à unidade o período trabalhado e o atestado."})
+    # trabalho sem atestado na ficha x remição já concedida no RSPE: se, depois do início do período, o RSPE concedeu remição e a
+    # ficha não mostra outra fonte no intervalo (outro trabalho, atestado ou estudo), a remição muito provavelmente é deste
+    # trabalho (o atestado está nos autos, só não foi lançado na ficha): desconta-se da estimativa
+    usadas = set()
+    sem_pend_total = 0
+    for it in sorted(sem_itens, key=lambda x: x["_a"] or date.min):
+        a0, b0 = it.get("_a"), it.get("_b")
+        Ls = next((L for L in linhas if L.get("emp") == it["emp"] and L.get("per") == it.get("per_k")), None)
+        if not (a0 and b0 and Ls and Ls.get("dias")):
+            continue
+        jor_k = next((k for k, v in JORNADA_TXT.items() if v == Ls.get("jornada")), "")
+        est = int(Ls["dias"]) // 3
+        cands = [i for i in incs if id(i) not in usadas and (i["ref"] or i["d"]) and a0 + timedelta(days=30) <= (i["ref"] or i["d"]) <= hoje]
+        atr = []
+        for i in cands:
+            dr = i["ref"] or i["d"]
+            outro_trab = any(L is not Ls and L.get("_ini") and L["_ini"] <= dr and not L.get("per", "").startswith("início não registrado")
+                             and _fim_linha(L, hoje) >= a0 for L in linhas if L.get("cor") != "cinza")
+            outro_at = any(a["_status"] != "anterior" and (_dp(a["data"]) or date.min) >= a0 - timedelta(days=30) and (_dp(a["data"]) or date.max) <= dr for a in ats)
+            outro_est = any(e["_status"] in ("sem_remicao", "conferir") and e["_ini"] and e["_ini"] <= dr and (e["_fim"] or hoje) >= a0 for e in ests)
+            if not (outro_trab or outro_at or outro_est):
+                atr.append(i)
+        if not atr:
+            if cands:
+                Ls["sit_full"] = ("O RSPE tem remição concedida depois do início deste trabalho (%s), mas a ficha mostra outra fonte no período "
+                                  "(outro trabalho, atestado ou estudo): conferir a origem na decisão antes de descontar." %
+                                  ", ".join(rs.fmt(i["ref"] or i["d"]) for i in cands))
+            continue
+        ja = sum(i["dias"] for i in atr)
+        for i in atr:
+            usadas.add(id(i))
+        pend_est = max(0, est - int(ja))
+        sem_pend_total += pend_est
+        datas_r = ("remição de %s" % rs.fmt(atr[0]["ref"] or atr[0]["d"])) if len(atr) == 1 else \
+            "remições de " + ", ".join("%s (%s dias)" % (rs.fmt(i["ref"] or i["d"]), _fmtn(i["dias"])) for i in atr)
+        Ls["sit"] = ("Pedir atestado (≈ %s a requerer)" % rs.pl(pend_est, "dia", "dias")) if pend_est else "Conferir: remição do RSPE cobre o período"
+        Ls["cor"] = "amarelo" if pend_est else "cinza"
+        Ls["sit_full"] = ("≈ %d remidos estimados − %s dias já remidos no RSPE (%s), provavelmente deste trabalho: a ficha não mostra outro trabalho, "
+                          "atestado ou estudo no período, e o RSPE não informa a origem da remição. Restam ≈ %s a requerer." % (
+                              est, _fmtn(ja), datas_r, rs.pl(pend_est, "dia", "dias")))
+        it["per"] = it["per"].replace(" ≈ %d remidos" % est, " ≈ %d remidos − %s já no RSPE = ≈ %d a requerer" % (est, _fmtn(ja), pend_est))
+        it["sit"] = Ls["sit"]
     linhas.sort(key=lambda L: L["_ini"] or date.min)
     tl = linha_unidades(f)
     for L in linhas:
@@ -1322,7 +1380,8 @@ def quadro_trabalho(r, f, hoje=None):
            "atestados_pendentes": pend, "atestados_parciais": [],
            "remidos_estudo": sum(e["_horas"] // 12 for e in est_exec), "estudos_pendentes": pend_est,
            "estudo_horas_pend": horas_pend, "estudo_dias_pend": horas_pend // 12,
-           "dias_a_atestar": a_atestar, "baixas": sum(1 for L in linhas if L["per"].startswith("início não registrado"))}
+           "dias_a_atestar": a_atestar, "baixas": sum(1 for L in linhas if L["per"].startswith("início não registrado")),
+           "sem_atestado_ja_remido": len(usadas), "sem_atestado_a_requerer": sem_pend_total}
     res["diferenca"] = res["remidos_execucao"] + res["remidos_estudo"] - res["homologados"]
     # ---- blocos da tela ----
     def _nome(x):
@@ -1526,7 +1585,8 @@ def comparativo(r, f, hoje=None, conferidos=None, manuais=None):
         (" · anteriores a esta execução: %s" % _dias_txt(res["remidos_anteriores"])) if res["remidos_anteriores"] else "")
     out["fd_fund"] = fundamentacao_remicao(res)
     out.update(fd_cor=cor, fd_sit=sit, fd_conduta=f.get("conduta") or "", fd_linhas=linhas,
-               fd_blocos=blocos, fd_conf_n=n_ok, fd_conf_tot=marcaveis, fd_sem_n=res.get("sem_n", 0))
+               fd_blocos=blocos, fd_conf_n=n_ok, fd_conf_tot=marcaveis, fd_sem_n=res.get("sem_n", 0),
+               fd_sem_pend=res.get("sem_atestado_a_requerer", 0))
     return out
 
 
