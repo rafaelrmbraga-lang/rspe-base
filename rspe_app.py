@@ -343,8 +343,9 @@ Os pontos têm quatro níveis: <b>Alerta</b> (divergência com efeito concreto p
 não traz, mas pode ter efeito), <b>Info</b> (registro sem efeito prático - fica oculto por padrão; "ver conferências OK / informativas")
 e <b>OK</b>. "Com alertas" = há ao menos um alerta; "pontos a verificar" = dependem de dado que o RSPE não traz. Nada é afirmado como
 erro: cada item traz o fundamento para conferência.
-<b>Dar baixa</b>: cada ponto pode ser baixado (com observação) quando já foi tratado ou não se aplica; ele sai da contagem,
-fica registrado na base com data e pode ser reaberto. A baixa é por processo, pelo tipo do ponto e pelo crime (ou ano do decreto,
+<b>Dar baixa</b>: cada ponto pode ser baixado (com o motivo, obrigatório) quando já foi tratado ou não se aplica; ele sai da linha
+e da contagem (sem pendências, a linha mostra "Guia em ordem") e fica no <b>Histórico de alertas</b> do assistido, com a data e o motivo,
+de onde pode ser reaberto. A baixa é por processo, pelo tipo do ponto e pelo crime (ou ano do decreto,
 ou falta) a que ele se refere: sobrevive à reimportação do RSPE e continua valendo quando o título muda (números, datas ou
 agrupamento de crimes). Baixas gravadas em versões anteriores passam sozinhas para a chave nova na primeira abertura. Os avisos
 "Ficha disciplinar ignorada" e "Falha ao analisar" contam como alerta e também podem ser baixados.
@@ -405,6 +406,12 @@ class Base:
             arquivo TEXT, importado_em TEXT, dados TEXT)""")
         self.con.execute("""CREATE TABLE IF NOT EXISTS baixas (
             processo TEXT, chave TEXT, titulo TEXT, obs TEXT, data TEXT, PRIMARY KEY (processo, chave))""")
+        # histórico das baixas e reaberturas de alertas da Auditoria (com o motivo), para consulta posterior
+        self.con.execute("""CREATE TABLE IF NOT EXISTS baixas_hist (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, processo TEXT, chave TEXT, titulo TEXT, obs TEXT, data TEXT, acao TEXT)""")
+        if not self.con.execute("SELECT 1 FROM baixas_hist LIMIT 1").fetchone():
+            self.con.execute("""INSERT INTO baixas_hist (processo, chave, titulo, obs, data, acao)
+                                SELECT processo, chave, titulo, obs, data, 'baixa' FROM baixas WHERE titulo != 'conferido (ficha disciplinar)'""")
         self.con.execute("""CREATE TABLE IF NOT EXISTS atestados_manuais (
             processo TEXT, id TEXT, dados TEXT, data TEXT, PRIMARY KEY (processo, id))""")
         self.con.execute("""CREATE TABLE IF NOT EXISTS fichas (
@@ -509,10 +516,29 @@ class Base:
                              (processo, chave, titulo, obs or "", datetime.now().strftime("%d/%m/%Y %H:%M")))
             self.con.commit()
 
+    def hist_add(self, processo, chave, titulo, obs, acao):
+        with self.lock:
+            self.con.execute("INSERT INTO baixas_hist (processo, chave, titulo, obs, data, acao) VALUES (?,?,?,?,?,?)",
+                             (processo, chave, titulo or "", obs or "", datetime.now().strftime("%d/%m/%Y %H:%M"), acao))
+            self.con.commit()
+
+    def hist_alertas(self, processo):
+        with self.lock:
+            rows = self.con.execute("SELECT id, chave, titulo, obs, data, acao FROM baixas_hist WHERE processo=? ORDER BY id DESC",
+                                    (processo,)).fetchall()
+            ativas = {ch for (ch,) in self.con.execute("SELECT chave FROM baixas WHERE processo=?", (processo,))}
+        vistos, out = set(), []
+        for i, ch, t, o, d, a in rows:
+            out.append({"chave": ch, "titulo": t, "obs": o, "data": d, "acao": a,
+                        "ativa": a == "baixa" and ch in ativas and ch not in vistos})
+            vistos.add(ch)
+        return out
+
     def migrar_baixa(self, processo, antiga, nova):
         with self.lock:
             if not self.con.execute("SELECT 1 FROM baixas WHERE processo=? AND chave=?", (processo, nova)).fetchone():
                 self.con.execute("UPDATE baixas SET chave=? WHERE processo=? AND chave=?", (nova, processo, antiga))
+                self.con.execute("UPDATE baixas_hist SET chave=? WHERE processo=? AND chave=?", (nova, processo, antiga))
             self.con.commit()
 
     def presc_ajustes(self):
@@ -1171,8 +1197,17 @@ class Api:
     def baixar_alerta(self, processo, chave, titulo, obs):
         if not self.base:
             return None
-        self.base.baixar(processo, chave, titulo, obs)
-        return self._atualizar(processo, "Alerta baixado.")
+        if not (obs or "").strip():
+            return {"erro": "Informe o motivo da baixa: ele fica no Histórico de alertas."}
+        self.base.baixar(processo, chave, titulo, obs.strip())
+        self.base.hist_add(processo, chave, titulo, obs.strip(), "baixa")
+        return self._atualizar(processo, "Alerta baixado: a guia segue em ordem e o motivo fica no Histórico de alertas.")
+
+    def historico_alertas(self, processo):
+        """Baixas e reaberturas de alertas da Auditoria deste assistido, da mais recente para a mais antiga."""
+        if not self.base:
+            return []
+        return self.base.hist_alertas(processo)
 
     # ---- ficha disciplinar: conferência e atestados fora da ficha ----
     def fd_conferir(self, processo, chave, marcar):
@@ -1202,7 +1237,9 @@ class Api:
     def reabrir_alerta(self, processo, chave):
         if not self.base:
             return None
+        h = next((x for x in self.base.hist_alertas(processo) if x["chave"] == chave), None)
         self.base.reabrir(processo, chave)
+        self.base.hist_add(processo, chave, (h or {}).get("titulo", ""), "", "reaberto")
         return self._atualizar(processo, "Alerta reaberto.")
 
     def remover(self, chave):

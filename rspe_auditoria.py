@@ -1454,27 +1454,100 @@ def _frases(t):
     return [x.strip() for x in re.split(r"(?<=[.;])\s+(?=[A-ZÁÉÍÓÚ(])", t or "") if x.strip()]
 
 
+# prejuízo concreto de cada tipo de erro (terceiro parágrafo da impugnação): o que o erro causa ao assistido
+_IMPACTO = [
+    (r"percentual-de-progressao|reincidente-vga|comando-de-organizacao|reincidencia-especifica",
+     "Com isso, exige-se para a progressão mais pena cumprida do que a lei determina{pct}: a data do benefício é postergada e o assistido "
+     "permanece em regime mais gravoso que o devido."),
+    (r"fracao-de-livramento|livramento-vedado",
+     "Com isso, o livramento condicional é postergado ou impedido{pct}, e o assistido permanece preso além do tempo exigido em lei."),
+    (r"hediondez-posterior-ao-fato-indulto",
+     "Com isso, o indulto e a comutação são afastados por uma vedação que não existia na data do fato."),
+    (r"capitulacao|hediond",
+     "O erro repercute em todo o cálculo: aplica as frações de crime hediondo na progressão e no livramento e veda o indulto e a "
+     "comutação que a lei da época permitiria."),
+    (r"reincidente-sem|depurada",
+     "A reincidência indevida eleva as frações de progressão, livramento, indulto e comutação e retarda todos os benefícios."),
+    (r"violencia-grave-ameaca",
+     "A marcação indevida eleva o percentual de progressão e posterga a data do benefício."),
+    (r"data-base|regime-inicial|progressao-com-data-base",
+     "Com isso, despreza-se tempo de pena já cumprido para a progressão seguinte, que é postergada pelo mesmo período."),
+    (r"guia-suspensa|soma-das-penas|cumprida-remanescente|guia-sem-pena",
+     "Com a pena total incorreta, todas as frações - progressão, livramento, indulto e comutação - e a data do término são calculadas "
+     "sobre base errada."),
+    (r"remidos",
+     "Os dias remidos descontados indevidamente deixam de contar como pena cumprida e retardam todos os benefícios e o término da pena."),
+    (r"falta-homologada-apos-prescricao",
+     "A falta prescrita continua a produzir efeitos - regressão, perda de dias remidos e nova data-base - que não podem subsistir."),
+    (r"extinta|integralmente|cumprida-por-detracao|indulto-concedido",
+     "O assistido segue submetido à execução de pena já extinta ou cumprida, com reflexo indevido nas demais condenações e nos benefícios."),
+    (r"indulto-possivel|comutacao-possivel",
+     "Sem a declaração, a execução prossegue sobre pena que o decreto já alcançou."),
+    (r"vencida",
+     "Cada dia sem apreciação é cumprido em situação mais gravosa que a devida."),
+    (r"prescricao-da|prescricao-executoria",
+     "A execução prossegue sobre pena cuja pretensão o Estado já não detém."),
+    (r"rspe-anterior",
+     "As datas de benefícios informadas no relatório não refletem o cálculo corrigido."),
+]
+_ABREV = [(r"\bsem VGA\b", "sem violência ou grave ameaça"), (r"\bcom VGA\b", "com violência ou grave ameaça"), (r"\bVGA\b", "violência ou grave ameaça"),
+          (r"\bdeste RSPE\b", "do RSPE")]
+
+
+def _abrev(t):
+    for a, b in _ABREV:
+        t = re.sub(a, b, t)
+    return t
+
+
+def _fatos(it):
+    """Fatos concretos do detalhe (datas, números, dados da condenação), sem as orientações ao operador nem a regra geral."""
+    out = []
+    for f in [y for x in _frases(it.get("detalhe")) for y in re.split(r"(?<=\.)\s+(?=[a-z])", x)]:
+        if _RE_ORIENTACAO.search(f):
+            continue
+        f = re.sub(r"\s*[-:;,]\s*(conferir|verificar|confira|verifique)\b.*$", ".", f, flags=re.I).rstrip(";").strip()
+        if not re.search(r"\d", f) and not re.search(r"\b(reincidente|prim[áa]ri[oa]|hediondo|anacr[ôo]nico|reda[çc][ãa]o da [ée]poca)\b", f, re.I):
+            continue
+        if re.search(r"\b(s[óo] se|n[ãa]o pode|pode vir|pode ter|afeta|deve|devem|exce[çc][ãa]o)\b", f, re.I):
+            continue
+        if _RE_DIREITO.search(f) and not re.search(r"\d{2}/\d{2}/\d{4}", f):
+            continue  # regra geral sem data: vai no parágrafo do direito
+        if re.match(r"^[^.]{0,70}\(decis[ãa]o de [^)]*\)\.?$", f) or len(f) < 20:
+            continue
+        f = _abrev(f[0].upper() + f[1:])
+        if f.count(";") >= 1 and all(len(x.strip()) < 32 for x in f.rstrip(".").split(";")):
+            f = "Dados da condenação no cálculo: " + f[0].lower() + f[1:]
+        out.append(f if f.endswith(".") else f + ".")
+    return out[:3]
+
+
 def fundamentacao(it, r):
-    """Até 3 parágrafos para a impugnação do cálculo: o erro (fatos do RSPE), o correto com o fundamento, e o pedido."""
+    """Impugnação do cálculo em 4 parágrafos curtos: (1) o que o cálculo mostra, com os dados concretos do RSPE; (2) por que está
+    errado, com o fundamento; (3) o prejuízo ao assistido; (4) o pedido."""
     tipo = it.get("tipo") or ""
     if it.get("nivel") not in ("alerta", "verificar") or tipo not in FUND_TIPOS:
         return ""
     correto, pedido = FUND_TIPOS[tipo]
-    fr = [f for f in _frases(it.get("detalhe")) if not _RE_ORIENTACAO.search(f)]
-    fr = [re.sub(r"\s*[-:;,]\s*(conferir|verificar|confira|verifique)\b.*$", ".", f, flags=re.I).rstrip(";") for f in fr]
-    # só os fatos concretos (datas, números): sem a regra geral, que vai no segundo parágrafo
-    fatos = [f for f in fr if re.search(r"\d", f) and len(f) >= 45 and not _RE_DIREITO.search(f)
-             and not re.search(r"\b(s[óo] se|n[ãa]o pode|pode vir|pode ter|afeta|deve|devem)\b", f, re.I)
-             and not re.match(r"^[^.]{0,70}\(decis[ãa]o de [^)]*\)\.?$", f)][:2]
-    fatos = [f.replace("deste RSPE", "do RSPE") for f in fatos]
-    fatos = [f if f.endswith(".") else f + "." for f in fatos]
     ger = r.get("data_geracao_rspe") or ""
+    rel = "o cálculo de pena (Relatório da Situação Processual Executória%s)" % ((" emitido em %s" % ger) if ger else "")
     tit = re.sub(r"\s+", " ", it.get("titulo") or "").strip().rstrip(".")
-    erro = "O cálculo de pena (Relatório da Situação Processual Executória%s) contém a seguinte inconsistência: %s. %s" % (
-        (" emitido em %s" % ger) if ger else "", tit, " ".join(fatos))
-    erro = erro.strip()
+    m = re.match(r"^Proc\. ([\d.\-]+) · ([^:]+): (.+)$", tit)
+    if m:
+        erro = "Na condenação do processo %s (%s), %s apresenta a seguinte inconsistência: %s." % (m.group(1), m.group(2).strip(), rel, m.group(3))
+    else:
+        erro = "%s apresenta a seguinte inconsistência: %s." % (rel[0].upper() + rel[1:], tit[0].lower() + tit[1:] if tit[:2] != tit[:2].upper() else tit)
+    fatos = [f for f in _fatos(it) if f.rstrip(".") not in tit]
+    if fatos:
+        erro += " " + " ".join(fatos)
+    erro = _abrev(erro)
     fund = (it.get("fundamento") or "").strip().rstrip(".")
     extra = ""
     if fund and not any(x.strip() and x.strip() in correto for x in re.split(r";", fund)):
         extra = (" Nesse sentido: %s." if _RE_DIREITO.search(fund) else " Fonte: %s.") % fund
-    return "\n\n".join([erro, correto + extra, pedido])
+    imp = next((t for rx, t in _IMPACTO if re.search(rx, tipo)), "")
+    if imp:
+        pc = re.findall(r"\((\d+%|\d+/\d+)", tit)
+        pct = (" (%s no lugar de %s)" % (pc[0], pc[1])) if len(pc) >= 2 else ""
+        imp = imp.format(pct=pct)
+    return "\n\n".join(x for x in (erro, correto + extra, imp, pedido) if x)

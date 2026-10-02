@@ -40,7 +40,7 @@ ROTULO = {
     "presc": {"vermelho": "Prescrição aparente", "amarelo": "Iminente / a verificar", "": "Não prescrita", "cinza": "Sem dados"},
     "presc_pp": {"vermelho": "Prescrição aparente", "": "Não configurada", "cinza": "Sem dados"},
     "fd": {"vermelho": "Remição a requerer", "amarelo": "Conferir remição / ausência de atestado / último atestado há 6 meses", "verde": "Em ordem", "cinza": "Sem ficha"},
-    "aud": {"vermelho": "Com alertas", "amarelo": "Pontos a verificar", "verde": "Sem inconsistências", "azul": "Extinta"},
+    "aud": {"vermelho": "Com alertas", "amarelo": "Pontos a verificar", "verde": "Guia em ordem", "azul": "Extinta"},
     "ext": {"vermelho": "Extinção cabível", "laranja": "Término em até 30 dias", "amarelo": "Até 60 dias / a verificar", "verde": "Término em até 90 dias", "cinza": "Sem previsão / interrompida", "azul": "Extinta (registrada)"},
 }
 
@@ -92,7 +92,7 @@ FILTROS = {
         ("todas", "Todas"),
         ("atencao", "Com alertas"),
         ("verificar", "Pontos a verificar"),
-        ("ok", "Sem inconsistências"),
+        ("ok", "Guia em ordem"),
     ],
     "presc": [
         ("todas", "Todas"),
@@ -809,9 +809,9 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
         partes.append(pl(n_al, "alerta", "alertas"))
     if n_ve:
         partes.append(pl(n_ve, "ponto a verificar", "pontos a verificar"))
-    aud["aud_resumo"] = " · ".join(partes) if partes else "Sem inconsistências"
-    if n_bx:
-        aud["aud_resumo"] += " · " + pl(n_bx, "baixado", "baixados")
+    # o que foi baixado não aparece na linha: fica no "Histórico de alertas", com o motivo da baixa
+    aud["aud_resumo"] = " · ".join(partes) if partes else "Guia em ordem"
+    aud["aud_baixados"] = n_bx
     aud["aud_info"] = n_info
     # coluna Falta: "Sim" só com sanção reconhecida; indício sem ela, "A apurar" (o detalhe fica na ficha do assistido)
     falta = (("Sim · " + (r.get("falta_12m_detalhe") or "")) if r.get("falta_12m") == "SIM" else
@@ -846,7 +846,7 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
                   if ficha else None),
         "aud_info": aud.get("aud_info", 0),
         "aud_cor": "azul" if execucao_extinta(r) else {"atencao": "vermelho", "verificar": "amarelo", "ok": "verde"}[aud["aud_status"]],
-        "aud_status": aud["aud_status"], "aud_resumo": aud["aud_resumo"], "aud_alertas": aud["aud_alertas"],
+        "aud_status": aud["aud_status"], "aud_resumo": aud["aud_resumo"], "aud_alertas": aud["aud_alertas"], "aud_baixados": aud.get("aud_baixados", 0),
         "aud_verificar": aud["aud_verificar"], "aud_itens": aud["aud_itens"], "aud_n": len(aud["aud_itens"]),
         "aud_base": aud["aud_base"],
         "frac_prog": rs.pct(r.get("fracao_progressao_aplicada", "")),

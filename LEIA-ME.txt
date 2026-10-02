@@ -457,8 +457,9 @@ AUDITORIA
   inferior a 2 anos - são gerados mas ficam fora da aba e da contagem (o
   filtro é pelo tipo do ponto). Da ficha disciplinar, só fica o ponto
   "Perda de remidos pode alcançar remição anterior à falta ...".
-  Dar baixa (com observação): o ponto sai da contagem, fica gravado na base
-  com a data e pode ser reaberto. A baixa vale pelo tipo do ponto e pelo
+  Dar baixa (com o motivo, obrigatório): o ponto sai da linha e da contagem
+  (sem pendências, a linha mostra "Guia em ordem") e fica no "Histórico de
+  alertas" do assistido, com a data e o motivo, de onde pode ser reaberto. A baixa vale pelo tipo do ponto e pelo
   crime (ou ano do decreto, ou falta): sobrevive à reimportação e à mudança
   do título. Os avisos "Ficha disciplinar ignorada" e "Falha ao analisar"
   contam como alerta e podem ser baixados.
@@ -798,6 +799,17 @@ v6.16.50
     1 · Crimes, 2 · Resultado, 3 · Comparativo com os incisos do decreto e
     4 · Como cheguei aqui. As partes 3 e 4 vêm fechadas e abrem pela
     setinha; a escolha se mantém ao trocar de decreto.
+  - Auditoria: o alerta baixado sai da linha - sem pendências, ela mostra
+    "Guia em ordem". O motivo da baixa passou a ser obrigatório e fica no
+    novo botão "Histórico de alertas" (no detalhe do assistido), com a data,
+    o alerta e o motivo de cada baixa e reabertura; dali o alerta pode ser
+    reaberto. Os resolvidos por dado informado (data de nascimento, pena
+    máxima, decisão sobre falta) também aparecem no histórico.
+  - Auditoria: a fundamentação da impugnação ficou mais explicada, em 4
+    parágrafos curtos - o que o cálculo mostra (processo, crime e os dados
+    concretos do RSPE), por que está errado (fundamento), o prejuízo ao
+    assistido (ex.: "60% no lugar de 40%: a progressão é postergada") e o
+    pedido.
   - Indulto: o quadro "Resultado" ficou resumido - o status e o motivo em
     uma linha (ex.: "crime impeditivo (art. 1º): C4, C5, C8 (crime hediondo
     ou equiparado)"); o texto completo fica no comparativo com os incisos.

@@ -1100,7 +1100,8 @@ const ui = {
     const pts=(r.aud_itens||[]).filter(i=>!i.baixado&&(i.nivel==='alerta'||i.nivel==='verificar'));
     if(pts.length) L.push('\nPontos de atenção\n'+pts.map(i=>'• '+i.titulo).join('\n'));
     return penaExt(L.join('\n')); },
-  audCards(r){ let rows=r.aud_itens||[]; const todos=rows; if(!this.mostrarTudo) rows=todos.filter(s=>s.baixado||(s.nivel!=='info'&&s.nivel!=='ok'));
+  audCards(r){ const todos=(r.aud_itens||[]).filter(s=>!s.baixado); let rows=todos; if(!this.mostrarTudo) rows=todos.filter(s=>s.nivel!=='info'&&s.nivel!=='ok');
+    const nBx=(r.aud_itens||[]).filter(s=>s.baixado).length;
     const ocultos=todos.length-rows.length;
     const nA=todos.filter(s=>s.nivel==='alerta'&&!s.baixado).length, nV=todos.filter(s=>s.nivel==='verificar'&&!s.baixado).length;
     const paras=t=>String(t||'').split(/(?<=[.;])\s+(?=[A-ZÁÉÍÓÚ(])/).filter(x=>x.trim()).map(x=>`<p>${penaExt(esc(x))}</p>`).join('');
@@ -1115,12 +1116,24 @@ const ui = {
           <div class="ac-ft">${esc(penaExt(s.fundamentacao))}</div></div>`:''}
         ${s.baixado?`<div class="ac-f">Baixado${s.baixa_data?' em '+esc(s.baixa_data):''}${s.baixa_obs?' · '+esc(s.baixa_obs):''}</div>`:''}</div>`; };
     const cab=`<div class="ac-top"><div><b>${esc(r.nome)}</b> <span class="muted">· conferência dos números e datas do RSPE (frações, soma das penas, data-base, perda de remidos, reincidência) · ${esc(r.aud_base)}</span></div>
-      <div class="ac-chips">${nA?`<span class="pill vermelho">${nA} ${nA===1?'alerta':'alertas'}</span>`:''}${nV?`<span class="pill amarelo">${nV} ${nV===1?'ponto a verificar':'pontos a verificar'}</span>`:''}${!nA&&!nV?'<span class="pill verde">Sem inconsistências</span>':''}
+      <div class="ac-chips">${nA?`<span class="pill vermelho">${nA} ${nA===1?'alerta':'alertas'}</span>`:''}${nV?`<span class="pill amarelo">${nV} ${nV===1?'ponto a verificar':'pontos a verificar'}</span>`:''}${!nA&&!nV?'<span class="pill verde">Guia em ordem</span>':''}
       ${(ocultos||this.mostrarTudo)?`<span class="mini" onclick="event.stopPropagation();ui.mostrarTudo=!ui.mostrarTudo;ui.render()">${this.mostrarTudo?'ocultar conferências OK':'ver '+pl(ocultos,'conferência OK / informativa','conferências OK / informativas')}</span>`:''}
       <span class="mini" onclick="event.stopPropagation();ui.copiarClip(${ui.clip(ui.txtAudTodos(r))})">Copiar pendências</span>
       ${todos.some(x=>x.fundamentacao&&!x.baixado)?`<span class="mini pre" title="Fundamentações de todos os pontos pendentes, em sequência" onclick="event.stopPropagation();ui.copiarClip(${ui.clip(ui.txtImpugnacao(r))})">Copiar todas as fundamentações</span>`:''}
+      <span class="mini" title="Alertas baixados e reabertos, com o motivo de cada baixa" onclick="event.stopPropagation();ui.historicoAlertas('${r.id}')">Histórico de alertas${nBx?' ('+nBx+')':''}</span>
       <span class="mini" onclick="event.stopPropagation();ui.abrir('${r.id}')">Abrir ficha completa</span></div></div>`;
-    return cab+(rows.length?`<div class="ac-lista">${rows.map(card).join('')}</div>`:'<div class="muted" style="padding:8px 2px">Nenhuma inconsistência pendente.</div>'); },
+    return cab+(rows.length?`<div class="ac-lista">${rows.map(card).join('')}</div>`:`<div class="muted" style="padding:8px 2px">Guia em ordem: nenhum alerta pendente.${nBx?' Os alertas baixados estão no Histórico de alertas.':''}</div>`); },
+  // histórico das baixas (motivo e data) e reaberturas; os alertas resolvidos por dado informado também aparecem aqui
+  async historicoAlertas(id){ const r=await this.completo(id); if(!r) return; const H=await API().historico_alertas(id)||[];
+    const auto=(r.aud_itens||[]).filter(s=>s.baixado&&s.auto_baixa);
+    const th='style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);font-size:12px;color:var(--tx2)"', td='style="padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top;font-size:12.5px"'; const tdn=td.replace('font-size','white-space:nowrap;font-size');
+    const linhas=H.map(h=>`<tr><td ${tdn} class="dt">${esc(h.data||'—')}</td><td ${tdn}><span class="pill ${h.acao==='baixa'?(h.ativa?'cinza':'none'):'amarelo'}">${h.acao==='baixa'?(h.ativa?'Baixado':'Baixado · reaberto depois'):'Reaberto'}</span></td><td ${td}>${penaExt(esc(h.titulo||''))}</td><td ${td}>${h.acao==='baixa'?esc(h.obs||'— sem motivo registrado (baixa anterior a esta versão)'):'—'}</td><td ${tdn}>${h.ativa?`<span class="mini" onclick="ui.reabrirHist('${id}','${h.chave}')">Reabrir</span>`:''}</td></tr>`).join('');
+    const la=auto.map(s=>`<tr><td ${td}>${esc(s.baixa_data||'—')}</td><td ${td}><span class="pill verde">Dado informado</span></td><td ${td}>${penaExt(esc(s.titulo))}</td><td ${td}>${esc(s.baixa_obs||'')}</td><td ${td}>${s.preencher?`<span class="mini" onclick="ui.fecharModal();ui.preencher('${id}',${ui.clip(JSON.stringify(s.preencher))})">Alterar</span>`:''}</td></tr>`).join('');
+    document.getElementById('modal').innerHTML=`<div class="box" style="width:980px;max-height:90vh;overflow:auto"><h2>Histórico de alertas · ${esc(r.nome||'')}</h2><p>${esc(r.proc||r.id)} · alertas da Auditoria baixados (com o motivo informado) e reabertos, do mais recente ao mais antigo. Os baixados não aparecem na linha da aba: a guia segue "em ordem".</p>
+      ${(linhas||la)?`<table style="width:100%;border-collapse:collapse;margin-top:8px"><thead><tr><th ${th}>Data</th><th ${th}>Situação</th><th ${th}>Alerta</th><th ${th}>Motivo da baixa</th><th ${th}></th></tr></thead><tbody>${linhas}${la}</tbody></table>`:'<p class="muted">Nenhum alerta baixado para este assistido.</p>'}
+      <div class="acts"><button class="btn" onclick="ui.fecharModal()">Fechar</button></div></div>`;
+    document.getElementById('modal').classList.add('on'); },
+  async reabrirHist(id, chave){ await this.reabrir(id, chave); this.historicoAlertas(id); },
   // "Como cheguei a este resultado": passos numerados, em linguagem simples, para conferir e corrigir pela guia
   explicaHtml(x){ const P=x.ppe_explicacao||[]; if(!P.length) return '';
     return `<div class="expl"><b>Como cheguei a este resultado</b><ol>${P.map(p=>`<li>${penaExt(esc(p)).replace(/^(Regra aplicada:|A conta:|Resultado:|Se o resultado parecer errado, confira na guia:)/,'<b>$1</b>')}</li>`).join('')}</ol></div>`; },
@@ -1295,7 +1308,15 @@ const ui = {
     const res=await API().pedido(id, aba, data, obs, this.pedRef(r,aba), tipo); if(res&&res.erro){ this.toast(res.erro); return; }
     this.fecharModal(); if(res&&res.registros) this.carregar(res); if(res&&res.quadro) this._qd=res.quadro; if(res&&res.msg) this.toast(res.msg);
     const dep=this._pedDepois; this._pedDepois=null; if(dep&&!remover) await dep(); else { this.render(); this.qdRefFicha(); } },
-  async darBaixa(id, chave, titulo){ const obs = prompt('Dar baixa no alerta:\n'+titulo.replace(/&#39;/g,"'")+'\n\nObservação (opcional: o que foi feito / por que não se aplica):',''); if(obs===null) return; await api('baixar_alerta', id, chave, titulo.replace(/&#39;/g,"'"), obs); this.aberto=id; this.render(); },
+  // dar baixa: o motivo é obrigatório e fica no Histórico de alertas; o alerta sai da linha e a guia passa a "em ordem"
+  darBaixa(id, chave, titulo){ const t=titulo.replace(/&#39;/g,"'"); this._bx={id, chave, t};
+    document.getElementById('modal').innerHTML=`<div class="box" style="width:620px"><h2>Dar baixa no alerta</h2><p style="margin:8px 0 10px"><b>${penaExt(esc(t))}</b></p>
+      <label style="font-size:12.5px;color:var(--tx2)">Motivo da baixa (obrigatório) - o que foi feito ou por que não se aplica. Fica no Histórico de alertas para consulta.</label>
+      <textarea id="bxObs" rows="4" style="width:100%;margin-top:6px;padding:8px;border:1px solid var(--line);border-radius:8px;font:inherit" oninput="document.getElementById('bxOk').disabled=!this.value.trim()" placeholder="Ex.: conferida a sentença - capitulação correta; impugnação protocolada em 10/10/2026; juízo já retificou o cálculo..."></textarea>
+      <div class="acts"><button class="btn" onclick="ui.fecharModal()">Cancelar</button><button class="btn pri" id="bxOk" disabled onclick="ui.darBaixaOk()">Dar baixa</button></div></div>`;
+    document.getElementById('modal').classList.add('on'); setTimeout(()=>{ const e=document.getElementById('bxObs'); if(e) e.focus(); },0); },
+  async darBaixaOk(){ const B=this._bx; const obs=(document.getElementById('bxObs')||{}).value||''; if(!B||!obs.trim()) return;
+    this.fecharModal(); await api('baixar_alerta', B.id, B.chave, B.t, obs.trim()); this.aberto=B.id; this.render(); },
   async reabrir(id, chave){ await api('reabrir_alerta', id, chave); this.aberto=id; this.render(); },
   copiar(t){ const done=()=>this.toast('Copiado: '+t); if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(t).then(done).catch(()=>{ this._copiaFallback(t); done(); }); } else { this._copiaFallback(t); done(); } },
   _copiaFallback(t){ const ta=document.createElement('textarea'); ta.value=t; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(e){} ta.remove(); },
@@ -1325,7 +1346,7 @@ const ui = {
     presc:'Clique no assistido para ver o quadro de cada crime · "cálculo" abre o detalhe',
     ext:'"Linha do tempo" mostra períodos, fugas e término',
     fd:'Clique no assistido para ver trabalho, estudo e remição a atestar',
-    aud:'Cada alerta traz a fundamentação para copiar · "Dar baixa" tira o ponto da contagem',
+    aud:'Cada alerta traz a fundamentação para copiar · "Dar baixa" (com o motivo) tira o alerta da linha · os baixados ficam no "Histórico de alertas"',
     teses:'Pesquise por palavras e filtre por tema · "Copiar ementa" leva a referência',
     quadro:'Arraste os cartões entre as colunas · clique no cartão para editar · botão direito: mover ou arquivar · o ícone de quadro em cada linha envia o assistido para cá'},
   // RSPE desatualizado: emitido há mais de 60 dias (etiqueta no nome e filtro na faixa de resumo)
