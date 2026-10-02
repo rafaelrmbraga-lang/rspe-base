@@ -774,6 +774,12 @@ def simplificar(m):
     m["presc_ppe"] = m["presc_ppe"] or "Sem dados"
     _pc = {"Aparente": "vermelho", "Conferir a guia": "amarelo", "Iminente": "amarelo", "A verificar": "amarelo", "Extinta": "azul", "Sem dados": "cinza"}
     m["presc_retro_cor"], m["presc_ppe_cor"] = _pc.get(m["presc_retro"], ""), _pc.get(m["presc_ppe"], "")
+    # dados conferidos/corrigidos pelo operador sem prescrição: verde
+    if any(L.get("ajustado") for L in m.get("presc_linhas") or []):
+        if m["presc_ppe"] == "Não prescrita" and not m["presc_ppe_cor"]:
+            m["presc_ppe_cor"] = "verde"
+        if m["presc_retro"] == "Não configurada" and not m["presc_retro_cor"]:
+            m["presc_retro_cor"] = "verde"
     return m
 
 

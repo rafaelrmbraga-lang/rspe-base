@@ -371,6 +371,8 @@ tr.sub td{padding:0 0 0 0;background:#FFFFFF;cursor:default}tr.sub:hover td{back
 .pf label{display:flex;flex-direction:column;gap:3px;color:var(--tx2);font-weight:600;font-size:11.5px}
 .pf input,.pf select{font:inherit;font-size:12.5px;padding:5px 7px;border:1px solid var(--line2);border-radius:6px;background:#fff;color:var(--tx)}
 .pf input.ed,.pf select.ed{background:#FEF4D6;border-color:#F5A524}
+.pf-volta{float:right;font-weight:600;font-size:11px;color:#175CD3;cursor:pointer;margin-left:6px}
+.pf-volta:hover{text-decoration:underline}
 .pf .sd{margin-top:10px;padding:8px 10px;border:1px dashed #F5A524;border-radius:8px;background:#FFFAEB}
 .pf .sd .amd{display:flex;gap:6px;align-items:center;margin-top:4px}.pf .sd .amd input{width:62px}
 .pf .acts{display:flex;gap:8px;margin-top:10px;justify-content:flex-end}
@@ -1151,7 +1153,7 @@ const ui = {
   explicaHtml(x){ const P=x.ppe_explicacao||[]; if(!P.length) return '';
     return `<div class="expl"><b>Como cheguei a este resultado</b><ol>${P.map(p=>`<li>${penaExt(esc(p)).replace(/^(Regra aplicada:|A conta:|Resultado:|Se o resultado parecer errado, confira na guia:)/,'<b>$1</b>')}</li>`).join('')}</ol></div>`; },
   prescCards(r){ const pe=this.prescModo!=='pp'; const todas=(r.presc_linhas||[]);
-    const rel=s=>pe?(s.ppe_cor==='vermelho'||s.ppe_cor==='amarelo'||/^Verificar na ação penal/.test(s.ppe_status||'')):(s.retro_cor==='vermelho'||/^Verificar na ação penal/.test(s.retro_status||''));
+    const rel=s=>s.ajustado||(pe?(s.ppe_cor==='vermelho'||s.ppe_cor==='amarelo'||/^Verificar na ação penal/.test(s.ppe_status||'')):(s.retro_cor==='vermelho'||/^Verificar na ação penal/.test(s.retro_status||'')));
     const grupos={}; todas.filter(rel).forEach(s=>{ const k=s.proc_crim||'não informada'; (grupos[k]=grupos[k]||[]).push(s); });
     const um=(xs,k)=>{ const v=[...new Set(xs.map(x=>x[k]||''))]; return v.length===1?v[0]:null; };
     const d=v=>v?esc(v):'—'; const cur=t=>String(t||'').replace(/^Prescrição (executória|da pretensão punitiva|retroativa|intercorrente) aparente/,'Prescrição aparente');
@@ -1172,7 +1174,7 @@ const ui = {
     const abrir=`<div style="text-align:right;margin-top:8px"><span class="mini" onclick="event.stopPropagation();ui.abrir('${r.id}')">Abrir ficha completa</span></div>`;
     return cards?`<div class="pc-wrap">${cards}</div>${abrir}`:`<div class="muted">Nenhum crime com prescrição ${pe?'executória aparente ou iminente':'da pretensão punitiva aparente'} nem datas a verificar.</div>`; },
   subTabela(r,spec){ if(spec.id==='aud') return this.audCards(r); if(spec.id==='presc') return this.prescCards(r); const cols=spec.sub_cols; let rows=r[spec.sub]||[]; const tot=cols.reduce((s,c)=>s+c[2],0)+6;
-    if(spec.id==='presc'){ const pe=this.prescModo!=='pp'; rows=[...rows].sort((x,y)=>String(x.proc_crim||'').localeCompare(String(y.proc_crim||''))); rows=rows.filter(s=>pe?(s.ppe_cor==='vermelho'||s.ppe_cor==='amarelo'||/^Verificar na ação penal/.test(s.ppe_status||'')):(s.retro_cor==='vermelho'||/^Verificar na ação penal/.test(s.retro_status||''))); }
+    if(spec.id==='presc'){ const pe=this.prescModo!=='pp'; rows=[...rows].sort((x,y)=>String(x.proc_crim||'').localeCompare(String(y.proc_crim||''))); rows=rows.filter(s=>s.ajustado||(pe?(s.ppe_cor==='vermelho'||s.ppe_cor==='amarelo'||/^Verificar na ação penal/.test(s.ppe_status||'')):(s.retro_cor==='vermelho'||/^Verificar na ação penal/.test(s.retro_status||'')))); }
     let ocultos=0; if(spec.id==='aud' && !this.mostrarTudo){ const all=rows; rows=all.filter(s=>s.baixado||(s.nivel!=='info'&&s.nivel!=='ok')); ocultos=all.length-rows.length; }
     const cg='';
     const calc=!!spec.sub_calc, baixa=!!spec.sub_baixa; const head=`<tr>${cols.map(c=>`<th style="width:${(100*c[2]/tot).toFixed(1)}%">${c[1]}</th>`).join('')}${(calc||baixa)?'<th></th>':''}</tr>`;
@@ -1872,8 +1874,10 @@ const ui = {
   ridDe(L){ const r=(this.dados.registros||[]).find(x=>(x.presc_linhas||[]).includes(L)); return r?r.id:null; },
   pfForm(L, foco){ const o=L.orig||{}, v=((L.ajuste||{}).valores)||{}, sd=((L.ajuste||{}).saldos)||{}; const id='pf'+Math.random().toString(36).slice(2,8);
     const val=k=>v[k]!==undefined?v[k]:(o[k]||'');
-    const inp=(k,rot,ph)=>`<label>${rot}<input data-k="${k}" data-o="${esc(o[k]||'')}" class="${v[k]!==undefined?'ed':''}" value="${esc(val(k))}" placeholder="${esc(ph||'dd/mm/aaaa')}" oninput="this.classList.toggle('ed',this.value.trim()!==this.dataset.o)"></label>`;
-    const sel=(k,rot,ops)=>`<label>${rot}<select data-k="${k}" class="${v[k]!==undefined?'ed':''}">${ops.map(x=>`<option value="${x[0]}"${(v[k]||'')===x[0]?' selected':''}>${x[1]}</option>`).join('')}</select></label>`;
+    // ↺ volta o campo ao dado importado do RSPE (desfaz um valor digitado errado; vale ao salvar)
+    const volta=k=>`<span class="pf-volta" title="Voltar ao dado importado do RSPE" style="display:${v[k]!==undefined?'inline':'none'}" onclick="const i=this.parentElement.querySelector('[data-k]'); i.value=i.dataset.o||''; i.classList.remove('ed'); this.style.display='none'">↺ importado</span>`;
+    const inp=(k,rot,ph)=>`<label>${rot}${volta(k)}<input data-k="${k}" data-o="${esc(o[k]||'')}" class="${v[k]!==undefined?'ed':''}" value="${esc(val(k))}" placeholder="${esc(ph||'dd/mm/aaaa')}" oninput="const e=this.value.trim()!==this.dataset.o; this.classList.toggle('ed',e); this.parentElement.querySelector('.pf-volta').style.display=e?'inline':'none'"></label>`;
+    const sel=(k,rot,ops)=>`<label>${rot}${volta(k)}<select data-k="${k}" data-o="" class="${v[k]!==undefined?'ed':''}" onchange="const e=this.value!==''; this.classList.toggle('ed',e); this.parentElement.querySelector('.pf-volta').style.display=e?'inline':'none'">${ops.map(x=>`<option value="${x[0]}"${(v[k]||'')===x[0]?' selected':''}>${x[1]}</option>`).join('')}</select></label>`;
     const sal=(L.ppe_saldos||[]).map(S=>{ const n=sd[S.evasao]; const a=n!=null?Math.floor(n/365):'', r=n!=null?n%365:0, m=n!=null?Math.min(Math.floor(r/30),11):'', d=n!=null?r-30*m:'';
       return `<div class="sd ${S.informar?'alvo':''}" data-ev="${esc(S.evasao)}"><b>${S.rotulo_evento?'Último comparecimento':S.revogacao?'Revogação do livramento':'Fuga'} de ${esc(S.evasao)} - saldo da pena nesta data</b> <span class="muted">(não é o remanescente atual do SEEU; deixe em branco para o programa calcular)</span>
         ${S.informar?`<div class="alvo-txt">⚠ Este saldo decide o resultado: a fuga durou ${esc(S.informar.duracao)} e prescreveria com saldo ${esc(S.informar.saldo)} (prazo de ${esc(S.informar.prazo)}). Veja a pena remanescente no cálculo do SEEU desta data, no atestado de pena ou na decisão de regressão/recaptura.</div>`:''}
@@ -1881,7 +1885,7 @@ const ui = {
         <div class="amd"><input data-s="a" value="${a}" placeholder="0"> ano(s) <input data-s="m" value="${m}" placeholder="0"> mês(es) <input data-s="d" value="${d}" placeholder="0"> dia(s)</div></div>`; }).join('');
     return `<div class="pf" id="${id}" onclick="event.stopPropagation()"><h5>${esc(L.rotulo||L.crime)} · preencher ou corrigir os dados <span class="muted">(em branco = dado importado do RSPE; o valor importado aparece como exemplo)</span></h5>
       <div class="pf-g">${sel('modalidade','Modalidade da pena',[['','Privativa de liberdade (padrão)'],['PRD','Restritiva de direitos'+(o.convertida?' (o RSPE indica CONVERTIDA)':'')],['SURSIS','Sursis (suspensão condicional da pena)'],['MS','Medida de segurança (inimputável)'],['MS98','Medida de segurança substitutiva (semi-imputável, art. 98)']])}${inp('inicio_prd','Início efetivo da restritiva (1º dia de serviço)')}${inp('ultimo_comparecimento','Último comparecimento (restritiva, ou regime aberto com fuga sem data)')}${inp('revogacao_sursis','Revogação do sursis')}${inp('novo_crime','Novo crime após o trânsito (data do fato)')}
-        ${inp('fato','Data do fato')}${inp('denuncia','Recebimento da denúncia')}${inp('sentenca','Sentença')}${inp('acordao','Acórdão (se houver)')}${inp('transito_mp','Trânsito para a acusação')}${inp('transito','Trânsito final')}${inp('pena','Pena aplicada','ex.: 2a6m0d')}
+        ${inp('fato','Data do fato')}${inp('denuncia','Recebimento da denúncia')}${inp('sentenca','Sentença')}${inp('acordao','Acórdão (se houver)')}${inp('transito_mp','Trânsito para a acusação')}${inp('transito','Trânsito final')}${inp('pena','Pena aplicada','ex.: 2a6m0d')}${inp('susp366_ini','Suspensão do art. 366 do CPP - início')}${inp('susp366_fim','Suspensão do art. 366 - fim (retomada; em branco = ainda suspenso)')}
         ${sel('reinc','Reincidente',[['','Conforme o RSPE'+(o.reinc?' ('+(o.reinc==='S'?'sim':'não')+')':' (não informado)')],['S','Sim'],['N','Não']])}
         ${sel('art115','Art. 115 (metade do prazo)',[['','Conforme o RSPE'+(o.nascimento?' (nasc. '+o.nascimento+')':' (sem data de nascimento)')],['sim','Aplicar: menor de 21 no fato ou maior de 70 na sentença'],['nao','Não aplicar']])}</div>
       ${sal}
@@ -1893,7 +1897,8 @@ const ui = {
     let dados=null;
     if(!restaurar){ const valores={}; f.querySelectorAll('[data-k]').forEach(e=>{ const k=e.dataset.k, x=e.value.trim(); if(x && x!==(e.dataset.o||'')) valores[k]=x; });
       if(valores.modalidade==='PRD'&&!valores.ultimo_comparecimento&&!valores.inicio_prd&&!(L.ultimo_comparecimento)) this.toast('Restritiva sem início efetivo nem último comparecimento: o prazo corre pela pena aplicada desde o trânsito (a audiência admonitória não interrompe).');
-      for(const k of ['fato','denuncia','sentenca','acordao','transito_mp','transito','ultimo_comparecimento','inicio_prd','revogacao_sursis','novo_crime']) if(valores[k] && !/^\d{2}\/\d{2}\/\d{4}$/.test(valores[k])) return this.toast('Data inválida em "'+k+'": use dd/mm/aaaa.');
+      if(valores.susp366_fim&&!valores.susp366_ini) return this.toast('Informe o início da suspensão do art. 366.');
+      for(const k of ['fato','denuncia','sentenca','acordao','transito_mp','transito','ultimo_comparecimento','inicio_prd','revogacao_sursis','novo_crime','susp366_ini','susp366_fim']) if(valores[k] && !/^\d{2}\/\d{2}\/\d{4}$/.test(valores[k])) return this.toast('Data inválida em "'+k+'": use dd/mm/aaaa.');
       if(valores.pena && this.sqAmd(valores.pena)==null) return this.toast('Pena inválida: use o formato 2a6m0d.');
       const saldos={}; f.querySelectorAll('.sd').forEach(b=>{ const g=q=>b.querySelector(`[data-s="${q}"]`).value.trim(); if(g('a')===''&&g('m')===''&&g('d')==='') return; saldos[b.dataset.ev]=(+g('a')||0)*365+(+g('m')||0)*30+(+g('d')||0); });
       if(Object.keys(valores).length||Object.keys(saldos).length) dados={valores,saldos}; }

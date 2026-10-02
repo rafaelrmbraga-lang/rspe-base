@@ -588,9 +588,15 @@ def _identidade_x_ficha(r, f):
                             "RSPE: %s. Conferir se a ficha é desta pessoa." % (r.get("nome") or "").title(), "Identificação do apenado (LEP, art. 106)."))
     d1, d2 = rs.to_date(r.get("_nasc_rspe") or ("" if r.get("_nasc_fonte") else r.get("data_nascimento")) or ""), _dp(f.get("data_nascimento") or "")
     if d1 and d2 and d1 != d2:
-        out.append(_item_rf("alerta", "Nascimento na ficha (%s) difere do RSPE (%s)" % (rs.fmt(d2), rs.fmt(d1)),
-                            "A data decide a redução do prazo prescricional (CP, art. 115: menor de 21 no fato, maior de 70 na sentença) e as hipóteses de "
-                            "indulto por idade. Conferir no documento de identidade e informar a correta na Auditoria.", "CP, art. 115; decretos de indulto."))
+        it = _item_rf("alerta", "Nascimento na ficha (%s) difere do RSPE (%s)" % (rs.fmt(d2), rs.fmt(d1)),
+                      "A data decide a redução do prazo prescricional (CP, art. 115: menor de 21 no fato, maior de 70 na sentença) e as hipóteses de "
+                      "indulto por idade. Conferir no documento de identidade e informar a correta pelo botão Preencher.", "CP, art. 115; decretos de indulto.")
+        it["preencher"] = {"campo": "data_nascimento", "rotulo": "Data de nascimento correta (dd/mm/aaaa)", "tipo": "data"}
+        if r.get("_nasc_fonte") == "informada pelo operador":
+            # o operador já informou a data correta: o alerta sai da contagem, com o dado usado
+            it["auto_baixa"] = {"obs": "Data de nascimento informada pelo operador: %s (RSPE: %s; ficha: %s). Usada nos cálculos." % (
+                r.get("data_nascimento") or "", rs.fmt(d1), rs.fmt(d2)), "data": r.get("_nasc_data") or ""}
+        out.append(it)
     return out
 
 

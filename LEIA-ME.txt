@@ -1018,6 +1018,14 @@ v7.0.0
     de 4 dias por mês concedida depois da petição. Atestado (ou a soma das
     funções de um mesmo atestado) com remição de igual número de dias no RSPE
     até 120 dias depois: "Remido no RSPE: N dias em dd/mm/aaaa".
+  - Prescrição > editar dados: campos da suspensão do art. 366 do CPP
+    (início e fim; fim em branco = ainda suspenso) - os dias suspensos não
+    correm nos intervalos da pretensão punitiva, limitados ao prazo da pena
+    máxima cominada (STJ, Súmula 415). Cada campo editado tem "↺ importado"
+    para voltar ao dado do RSPE. Linha com dados editados e sem prescrição
+    fica verde e continua na tela para nova edição.
+  - Auditoria: divergência de nascimento ficha x RSPE com botão Preencher;
+    informada a data, o alerta baixa sozinho.
   - Importação: quando o lote tem falha (arquivo não importado, campo não
     lido, análise que falhou), o aviso da importação traz o botão "PDF das
     falhas", com cada falha e a causa provável, para corrigir a leitura.
