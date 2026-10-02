@@ -1097,6 +1097,25 @@ TITULO = {"cabe": "CABE", "nao": "NÃO CABE", "verificar": "A VERIFICAR", "ainda
           "prejudicada": "PREJUDICADA"}
 
 
+def _motivo_curto(c, d, C, vedado=False):
+    """Motivo do resultado em uma linha, para bater o olho: o texto completo fica no comparativo com os incisos."""
+    if c["item"].startswith("Natureza"):
+        imp = vedado or c["estado"] == "ko"
+        grupos = {}
+        for x in C:
+            s = (x.get("selos") or {}).get(d["id"]) or {}
+            if s.get("selo") == ("IMPEDITIVO" if imp else "A_VERIFICAR"):
+                m = re.split(r" \(| - | · ", s.get("motivo") or "")[0].strip() or "natureza"
+                grupos.setdefault(m, []).append(x["id"])
+        if grupos:
+            g = "; ".join("%s (%s)" % (", ".join(ids), m) for m, ids in grupos.items())
+            return ("crime impeditivo: " if imp else "natureza a verificar: ") + g
+    t = c["texto"]
+    m = re.match(r"(.{20,}?)(?:: |\. |; )", t)
+    t = m.group(1) if m and len(t) > 140 else t
+    return t if len(t) <= 160 else t[:157].rsplit(" ", 1)[0] + "..."
+
+
 def _consolidado(decs, C):
     """Um cartão por decreto (indulto e comutação), com o resultado da aba e o motivo decisivo."""
     cards = []
@@ -1109,11 +1128,12 @@ def _consolidado(decs, C):
             tit = TITULO.get(st, "")
             if st == "cabe":
                 tit = "CABE INDULTO" if tipo == "indulto" else "CABE COMUTAÇÃO"
-            linhas = ["Resultado da aba: %s" % x.get("rotulo", "")]
+            rot = x.get("rotulo", "")
+            linhas = [rot.replace("Concedido · ", "Concedido em ")] if rot and rot.upper() != tit else []
             red = x.get("reducao")
             if red:
                 linhas.append("Fração %s sobre a pena %s; remanescente passa de %s para %s." % (red["fracao"], red["base"], red["antes_txt"], red["depois_txt"]))
-            if st != "cabe":
+            if st not in ("cabe", "concedido"):
                 ck = x.get("checklist") or []
                 ordem = ("q", "ko") if st == "verificar" else ("ko", "q")
                 mot = [c for c in ck if c["estado"] == ordem[0]] + [c for c in ck if c["estado"] == ordem[1]]
@@ -1121,7 +1141,15 @@ def _consolidado(decs, C):
                 mot.sort(key=lambda c: 0 if (c["texto"].startswith("Art. 6º") or c["item"].startswith("Requisito subjetivo")) else
                          (1 if c["item"].startswith("Natureza") else 2))
                 if mot:
-                    linhas.append("Motivo: %s" % mot[0]["texto"])
+                    ved = bool(re.search(r"vedad|impeditiv|exclu", rot, re.I))
+                    if ved:
+                        mot.sort(key=lambda c: 0 if c["item"].startswith("Natureza") else 1)
+                    mc = _motivo_curto(mot[0], d, C, ved)
+                    if mc.startswith("crime impeditivo") and linhas and re.search(r"impeditiv|vedad|exclu", linhas[0], re.I):
+                        dp = re.search(r"\((art\.[^)]*)\)", linhas.pop(0))
+                        if dp:
+                            mc = mc.replace("crime impeditivo:", "crime impeditivo (%s):" % dp.group(1), 1)
+                    linhas.append("Motivo: %s" % mc)
             if x.get("projecao") and x["projecao"].get("data"):
                 linhas.append("Atinge o requisito objetivo (%s) em %s." % (x["projecao"].get("hipotese", ""), x["projecao"]["data"]))
             cards.append({"decreto": d["numero"], "tipo": tipo, "status": st, "titulo": tit, "linhas": linhas,

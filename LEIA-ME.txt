@@ -798,6 +798,9 @@ v6.16.50
     1 · Crimes, 2 · Resultado, 3 · Comparativo com os incisos do decreto e
     4 · Como cheguei aqui. As partes 3 e 4 vêm fechadas e abrem pela
     setinha; a escolha se mantém ao trocar de decreto.
+  - Indulto: o quadro "Resultado" ficou resumido - o status e o motivo em
+    uma linha (ex.: "crime impeditivo (art. 1º): C4, C5, C8 (crime hediondo
+    ou equiparado)"); o texto completo fica no comparativo com os incisos.
   - Linhas das abas: o clique na linha não abre mais a ficha. Ao lado de
     cada assistido, o ícone de pessoa fica verde quando há ficha disciplinar
     importada (sem cor quando não há), e um ícone próprio abre a ficha
