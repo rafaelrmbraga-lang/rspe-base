@@ -841,6 +841,11 @@ v6.16.50
       janela; art. 146 do CP não é tratado como violência elementar.
     * Extinção: multa pela tese revista do Tema 931/STJ; livramento com
       período de prova expirado: CP, art. 90, e Súmula 617/STJ.
+  - Auditoria: o alerta de capitulação criada depois do fato diz o que foi
+    criado - tipo, qualificadora ou majorante, qual é (ex.: "majorante do
+    art. 157, § 2º-A, I, do CP - emprego de arma de fogo, com aumento de
+    2/3") - e o que valia na data do fato (ex.: "o emprego de arma era a
+    majorante do art. 157, § 2º, I").
   - Indulto: o quadro "Resultado" ficou resumido - o status e o motivo em
     uma linha (ex.: "crime impeditivo (art. 1º): C4, C5, C8 (crime hediondo
     ou equiparado)"); o texto completo fica no comparativo com os incisos.
