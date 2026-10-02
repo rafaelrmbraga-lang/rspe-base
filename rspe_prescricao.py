@@ -2225,7 +2225,7 @@ def analisar(r, hoje=None):
         _cump = None
         if _evs and re.search(r"PRIS|IN[IÍ]CIO|RECAPTURA", _evs[-1][1].upper()) and not re.search(r"INTERRUP|FUGA|EVAS|SOLTURA|LIBERDADE", _evs[-1][1].upper()):
             _cump = _evs[-1][0]
-        if not termo and _cump and _ano and (_cump - date(int(_ano.group(1)), 1, 1)).days < 365:
+        if not termo and _cump and _ano and 1900 <= int(_ano.group(1)) <= 2100 and (_cump - date(int(_ano.group(1)), 1, 1)).days < 365:
             L["ppe_status"] = "Não corre: em cumprimento desde %s (CP, art. 117, V)" % rs.fmt(_cump)
             L["ppe_cor"] = ""
             det = ["Trânsito em julgado não consta no RSPE, mas a ação penal foi distribuída em %s e o cumprimento começou em %s, sem "

@@ -1026,6 +1026,11 @@ v7.0.0
     fica verde e continua na tela para nova edição.
   - Auditoria: divergência de nascimento ficha x RSPE com botão Preencher;
     informada a data, o alerta baixa sozinho.
+  - Guia sem pena calculada e sem nenhum evento nem incidente no SEEU (pena
+    não iniciada no sistema): a Auditoria não pede pena total, cumprida,
+    regime e término ("Faltam dados"); um aviso único explica que o SEEU não
+    calcula esses dados antes do início do cumprimento e traz a soma das
+    penas das condenações.
   - Importação: quando o lote tem falha (arquivo não importado, campo não
     lido, análise que falhou), o aviso da importação traz o botão "PDF das
     falhas", com cada falha e a causa provável, para corrigir a leitura.
