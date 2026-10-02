@@ -121,6 +121,18 @@ def natureza(c, D, ref):
     else:
         return {"selo": "A_VERIFICAR", "motivo": "vedações do decreto não cadastradas", "dispositivo": "Decreto %s" % (num or "?")}
     lei, art = rs.num_lei(c.get("lei")), rs.num_art(c.get("artigo"))
+    if lei in ("2848", "") and art == "129" and rs.hediondo_condicional(c) is None and not rs.e_hediondo(c, ref):
+        # lesão gravíssima/seguida de morte: o parágrafo está no SEEU; falta a vítima (agente - Lei 8.072, art. 1º, I-A)
+        fato = rs.to_date(c.get("data_infracao") or "")
+        ant = bool(fato and fato < date(2015, 7, 7))
+        return {"selo": "A_VERIFICAR",
+                "motivo": "lesão gravíssima ou seguida de morte: hedionda só contra agente de segurança, membro do Judiciário, do MP ou da "
+                          "Defensoria (Lei 8.072, art. 1º, I-A) - o SEEU não informa a vítima" +
+                          ("; fato anterior à Lei 13.142/2015 (vigência 07/07/2015), que criou essa hediondez" if ant else ""),
+                "dispositivo": "Lei 8.072/90, art. 1º, I-A; Decreto %s (vedação ao hediondo)" % num,
+                "se_sim": ("vítima agente: IMPEDITIVO pelo STJ (hediondez aferida na data do decreto) · tese defensiva: irretroatividade "
+                           "(STF, 2ª T., RHC 267.297 AgR e HC 273.296 AgR) - NÃO IMPEDITIVO") if ant else "vítima agente: IMPEDITIVO",
+                "se_nao": "outra vítima: NÃO IMPEDITIVO"}
     if lei in ("2848", "") and art in rs.hediondos_condicionais() and rs.hediondo_condicional(c) is None and not rs.e_hediondo(c, ref):
         return {"selo": "A_VERIFICAR", "motivo": "a hediondez do art. %s depende de parágrafo, inciso ou majorante que o SEEU não informa" % art,
                 "dispositivo": "Lei 8.072/90, art. 1º; Decreto %s (vedação ao hediondo)" % num,

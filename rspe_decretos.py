@@ -585,6 +585,12 @@ def _tese_hediondez(f, r, x):
     sup = [c for c in r.get("_crimes") or [] if not (c.get("extinto") or "").upper().startswith("S")
            and rs.to_date(c.get("data_infracao") or "") and rs.to_date(c.get("data_infracao")) <= ref
            and rs.e_hediondo(c, ref) and not rs.e_hediondo(c, None)]
+    # lesão gravíssima/seguida de morte (art. 129, §§ 2º e 3º): hedionda só contra agente (Lei 13.142/2015) - o RSPE não diz a vítima
+    les = [c for c in r.get("_crimes") or [] if ref >= date(2015, 7, 7) and not (c.get("extinto") or "").upper().startswith("S")
+           and rs.num_art(c.get("artigo")) == "129" and rs.num_lei(c.get("lei")) in ("2848", "") and rs.hediondo_condicional(c) is None
+           and (rs.to_date(c.get("data_infracao") or "") or date.min) <= ref]
+    if les and not sup:
+        return dict(x, s="ver", mot="%s: %s - %s" % (rs.crimes_curto(les), rs.impeditivo_verificar(les[0]), x.get("mot") or ""))
     if not sup:
         return x
     return dict(x, s="ver", mot=("hediondez posterior ao fato (%s): pelo STJ, que a afere na data do decreto, é crime impeditivo; o benefício "

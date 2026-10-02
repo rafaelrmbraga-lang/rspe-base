@@ -2146,6 +2146,12 @@ def impeditivo_verificar(c):
     if num_lei(c.get("lei")) == "1001" or "MILITAR" in (c.get("lei") or "").upper():
         return "crime militar (CPM): só impede se corresponder a crime do art. 1º, I a XVIII (Decretos 2024 e 2025, XIX) ou do art. 7º, I a V (Decreto 2022, VII) - conferir"
     if num_art(c.get("artigo")) == "129" and num_lei(c.get("lei")) in ("2848", "") and hediondo_condicional(c) is None and not e_hediondo(c):
+        fato = to_date(c.get("data_infracao") or "")
+        if fato and fato < date(2015, 7, 7):
+            return ("lesão gravíssima ou seguida de morte (art. 129, § 2º ou § 3º) com fato anterior à Lei 13.142/2015 (vigência 07/07/2015): "
+                    "se a vítima era agente de segurança, membro do Judiciário, do MP ou da Defensoria (Lei 8.072, art. 1º, I-A), o STJ afere a "
+                    "hediondez na data do decreto e o crime impede · tese defensiva: irretroatividade (STF, 2ª T., RHC 267.297 AgR e HC 273.296 "
+                    "AgR; monocráticas do STF; TJMS, 2ª Câm. Crim.); outra vítima: não impede - conferir a vítima")
         return ("lesão gravíssima ou seguida de morte (art. 129, § 2º ou § 3º): hediondo só contra agente de segurança, membro do Judiciário, "
                 "do MP ou da Defensoria, ou em escola (Lei 8.072, art. 1º, I-A) - conferir a vítima")
     _cp = num_lei(c.get("lei")) in ("2848", "") or ("PENAL" in (c.get("lei") or "").upper() and "MILITAR" not in (c.get("lei") or "").upper())

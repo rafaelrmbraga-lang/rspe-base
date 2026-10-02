@@ -590,6 +590,12 @@ v7.0.0
     * Tráfico sem parágrafo no SEEU: texto do caput com pena de 5 anos ou
       mais é o caput; abaixo disso (só o § 4º explica), "a verificar".
       "Matar alguém" é o caput do art. 121.
+    * Lesão gravíssima ou seguida de morte (art. 129, §§ 2º e 3º): o SEEU
+      não informa a vítima (hedionda só contra agente - Lei 13.142/2015):
+      "a verificar" em todos os decretos desde 2015; com fato anterior a
+      07/07/2015, mostra as duas correntes, como no roubo - STJ (hediondez
+      na data do decreto, impede) e a tese defensiva da irretroatividade
+      (STF, 2ª T., RHC 267.297 AgR e HC 273.296 AgR).
     * Inciso IV (anos ininterruptos): prisão definitiva, início do
       cumprimento, conversão e alteração de regime não são interrupção.
     * Mapa do indulto: comutação certa com indulto "a verificar" aparece
