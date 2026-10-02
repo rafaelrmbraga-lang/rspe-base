@@ -1010,6 +1010,14 @@ v7.0.0
     Decretos com fração cumprida: quem até a data só teve prisão provisória
     (flagrante/preventiva, solto antes do trânsito) não iniciou o
     cumprimento - "não se aplica", e não "cumprimento interrompido / fuga".
+  - Ficha: atestado com várias funções ("função X (período) totalizando N
+    dias trabalhados e R remidos; função Y ...") vira uma entrada por função;
+    lê também "N dias de trabalho e R dias de tempo de remição". Relatórios
+    de leitura peticionados entram no quadro de Estudo (meses citados, até 4
+    dias por obra - Res. CNJ 391/2021) e são cruzados com a remição do RSPE
+    de 4 dias por mês concedida depois da petição. Atestado (ou a soma das
+    funções de um mesmo atestado) com remição de igual número de dias no RSPE
+    até 120 dias depois: "Remido no RSPE: N dias em dd/mm/aaaa".
   - Importação: quando o lote tem falha (arquivo não importado, campo não
     lido, análise que falhou), o aviso da importação traz o botão "PDF das
     falhas", com cada falha e a causa provável, para corrigir a leitura.

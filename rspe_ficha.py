@@ -239,8 +239,21 @@ def extrair(caminho):
         # números por extenso entre parênteses ("157 (CENTO E CINQUENTA E SETE) DIAS") atrapalham a leitura
         u = re.sub(r"\(\s*[A-ZÁÉÍÓÚÂÊÔÃÕÇ ]+\s*\)", " ", u)
         u = re.sub(r"\s+", " ", u)
-        m = re.search(r"(\d+)\s*DIAS TRABALHADOS\s*E\s*([\d.,]+)\s*(?:DIAS\s*)?REMIDOS", u)
+        m = (re.search(r"(\d+)\s*DIAS TRABALHADOS\s*E\s*([\d.,]+)\s*(?:DIAS\s*)?REMIDOS", u)
+             or re.search(r"(\d+)\s*DIAS DE TRABALHO\s*E\s*([\d.,]+)\s*DIAS DE (?:TEMPO DE )?REMI[ÇC][ÃA]O", u))
         if not m:
+            continue
+        # um atestado com várias funções, cada uma com período e totais próprios: "FUNÇÃO X (dd/mm/aaaa A dd/mm/aaaa) TOTALIZANDO
+        # N DIAS TRABALHADOS E R DIAS REMIDOS; FUNÇÃO Y (...)" - vira uma entrada por função (casa com cada emprego da ficha)
+        funcs = list(re.finditer(r"FUN[ÇC][ÃA]O\s+([^(;]+?)\s*\(\s*(\d{2}/\d{2}/\d{2,4})\s*(?:A|À|ATÉ|-)\s*(\d{2}/\d{2}/\d{2,4})\s*\)\s*,?\s*"
+                                 r"(?:TOTALIZANDO\s*)?(\d+)\s*DIAS TRABALHADOS\s*E\s*([\d.,]+)\s*(?:DIAS\s*)?REMIDOS", u))
+        if len(funcs) > 1:
+            nn = re.search(r"ATESTADO DE TRABALHO(?:\s+PRISIONAL)?\W{0,3}\s*N\s*[.ºO°]*\s*([\w./-]+?)[,.;]?(?:\s|$)", u)
+            for fm in funcs:
+                atest.append({"data": e["data"], "numero": nn.group(1) if nn else "", "dias_trabalhados": int(fm.group(4)),
+                              "dias_remidos": _num(fm.group(5)), "periodo_inicio": fm.group(2), "periodo_fim": fm.group(3),
+                              "empresa": fm.group(1).strip(" ,-"), "autos": (re.search(r"AUTOS N?[ºO°]?\s*([\d.-]+)", u) or [None, ""])[1],
+                              "trechos": [], "parte": "%d de %d" % (funcs.index(fm) + 1, len(funcs))})
             continue
         n = re.search(r"ATESTADO DE TRABALHO(?:\s+PRISIONAL)?(?:\s+[A-Z]{2,8})?\W{0,3}\s*N\s*[.ºO°]*\s*([\w./-]+?)[,.;]?(?:\s|$)", u)
         _AT = r"\s*(?:À|Á|A|ATÉ|-)\s*"
@@ -279,6 +292,18 @@ def extrair(caminho):
         if mx and re.search(r"CERTIFICAD|APROVA|PETICION|DECLARA", u):
             exames.append({"exame": mx.group(1) + ((" " + mx.group(2)) if mx.group(2) else ""), "data": e["data"]})
     f["exames"] = exames
+    # relatórios de leitura peticionados (remição pela leitura - Res. CNJ 391/2021, art. 5º: 4 dias por obra, até 12 obras por
+    # ano): os meses citados em cada petição
+    leituras = []
+    for e in eventos:
+        u = re.sub(r"\s+", " ", e["texto"].upper())
+        if not re.search(r"RELAT[ÓO]RIOS? DE LEITURA|RESENHA", u):
+            continue
+        meses = []
+        for g in re.finditer(r"((?:\d{1,2}\s*(?:,|\bE\b)\s*)*\d{1,2})\s+DE\s+(\d{4})", u):
+            meses += ["%02d/%s" % (int(x), g.group(2)) for x in re.findall(r"\d{1,2}", g.group(1)) if 1 <= int(x) <= 12]
+        leituras.append({"data": e["data"], "meses": meses})
+    f["leituras"] = leituras
     f["dias_trabalhados_atestados"] = sum(a["dias_trabalhados"] for a in atest)
     f["dias_remidos_atestados"] = round(sum(a["dias_remidos"] for a in atest), 2)
 
@@ -1043,6 +1068,23 @@ def vincular(r, f, hoje=None):
             a["_status"] = "sem_remicao"
         else:
             a["_status"] = "conferir"
+    # atestado (ou as funções de um mesmo atestado, somadas) com remição no RSPE de igual número de dias concedida logo depois
+    # (até 120 dias): o vínculo é certo o bastante para dispensar a conferência
+    grupos, usados_i = {}, set()
+    for a in ats:
+        if a["_status"] == "conferir":
+            grupos.setdefault((a.get("numero") or id(a), a["data"]), []).append(a)
+    for g in sorted(grupos.values(), key=lambda g: _dp(g[0]["data"]) or date.min):
+        d0, soma = _dp(g[0]["data"]), sum(x["dias_remidos"] for x in g)
+        if not d0 or soma <= 0:
+            continue
+        c = [i for i in incs if id(i) not in usados_i and (i["d"] or i["ref"]) and d0 - timedelta(days=5) <= (i["d"] or i["ref"]) <= d0 + timedelta(days=120)
+             and abs((i["dias"] or 0) - soma) < 1]
+        if c:
+            i = min(c, key=lambda i: i["d"] or i["ref"])
+            usados_i.add(id(i))
+            for x in g:
+                x["_status"], x["_rem_match"] = "remido", (i["dias"], i["d"] or i["ref"], len(g) > 1)
     for e in ests:
         e["_rem_depois"] = _depois(e["_ini"])
         if not e["_ini"] or (e.get("fim") and not e["_fim"]) or (e["_fim"] and e["_fim"] < e["_ini"]):
@@ -1056,6 +1098,12 @@ def vincular(r, f, hoje=None):
         else:
             e["_status"] = "conferir"
     return ats, incs, ini, ests
+
+
+def _rem_txt(a):
+    """'Remido no RSPE: 44 dias em 04/09/2019' (com a soma das funções, quando o atestado tem várias)."""
+    dias, d, varias = a["_rem_match"]
+    return "Remido no RSPE: %s em %s%s" % (rs.pl(round(dias), "dia", "dias"), rs.fmt(d), " (soma das funções do atestado)" if varias else "")
 
 
 def _cobertura(t, ats):
@@ -1197,6 +1245,9 @@ def quadro_trabalho(r, f, hoje=None):
                 L["cor"] = "vermelho"
             elif all(x["_status"] == "anterior" for x in xs):
                 L["sit"], L["cor"] = "Anterior a esta execução", "cinza"
+            elif all(x["_status"] in ("remido", "anterior") for x in xs):
+                L["sit"], L["cor"] = _rem_txt(next(x for x in xs if x["_status"] == "remido")), "verde"
+                L["sit_full"] = "Remição do RSPE com o mesmo número de dias do atestado, concedida logo depois dele."
             else:
                 L["sit"], L["cor"] = "Conferir homologação", "cinza"
                 L["sit_full"] = "O RSPE tem remições posteriores ao atestado, mas não indica a origem de cada uma: conferir na decisão."
@@ -1231,7 +1282,8 @@ def quadro_trabalho(r, f, hoje=None):
         if id(a) in usados:
             continue
         per = ("%s a %s" % (a["periodo_inicio"], a["periodo_fim"])) if a.get("periodo_inicio") else "período não informado"
-        st = {"anterior": ("Anterior a esta execução", "cinza"), "conferir": ("Conferir homologação", "cinza")}.get(
+        st = {"anterior": ("Anterior a esta execução", "cinza"), "conferir": ("Conferir homologação", "cinza"),
+              "remido": (_rem_txt(a) if a["_status"] == "remido" else "", "verde")}.get(
             a["_status"], ("Requerer remição (%s)" % _dias_txt(a["dias_remidos"]), "vermelho"))
         linhas.append({"emp": a.get("empresa") or "emprego não identificado na ficha", "per": per, "dias": a["dias_trabalhados"], "_ini": _d(a.get("periodo_inicio") or "") or _dp(a["data"]),
                        "at": at_txt(a), "at_full": at_full(a), "sit": st[0], "cor": st[1]})
@@ -1251,7 +1303,17 @@ def quadro_trabalho(r, f, hoje=None):
     # trabalho sem atestado na ficha x remição já concedida no RSPE: se, depois do início do período, o RSPE concedeu remição e a
     # ficha não mostra outra fonte no intervalo (outro trabalho, atestado ou estudo), a remição muito provavelmente é deste
     # trabalho (o atestado está nos autos, só não foi lançado na ficha): desconta-se da estimativa
-    usadas = set()
+    # relatório de leitura x remição do RSPE: 4 dias por mês/obra peticionado, concedidos depois da petição
+    lei_rem = {}
+    for x in sorted(f.get("leituras") or [], key=lambda x: _dp(x["data"]) or date.min):
+        d, n = _dp(x["data"]), len(x.get("meses") or [])
+        if not (d and n):
+            continue
+        c = [i for i in incs if id(i) not in {id(v) for v in lei_rem.values()} and abs((i["dias"] or 0) - 4 * n) < 0.5
+             and (i["d"] or i["ref"]) and d <= (i["d"] or i["ref"]) <= d + timedelta(days=240)]
+        if c:
+            lei_rem[x["data"]] = min(c, key=lambda i: i["d"] or i["ref"])
+    usadas = {id(i) for i in lei_rem.values()}  # remição da leitura não é atribuída a trabalho sem atestado
     sem_pend_total = 0
     for it in sorted(sem_itens, key=lambda x: x["_a"] or date.min):
         a0, b0 = it.get("_a"), it.get("_b")
@@ -1267,7 +1329,8 @@ def quadro_trabalho(r, f, hoje=None):
             outro_trab = any(L is not Ls and L.get("_ini") and L["_ini"] <= dr and not L.get("per", "").startswith("início não registrado")
                              and _fim_linha(L, hoje) >= a0 for L in linhas if L.get("cor") != "cinza")
             outro_at = any(a["_status"] != "anterior" and (_dp(a["data"]) or date.min) >= a0 - timedelta(days=30) and (_dp(a["data"]) or date.max) <= dr for a in ats)
-            outro_est = any(e["_status"] in ("sem_remicao", "conferir") and e["_ini"] and e["_ini"] <= dr and (e["_fim"] or hoje) >= a0 for e in ests)
+            outro_est = (any(e["_status"] in ("sem_remicao", "conferir") and e["_ini"] and e["_ini"] <= dr and (e["_fim"] or hoje) >= a0 for e in ests)
+                         or any(a0 <= (_dp(x["data"]) or date.min) <= dr and x["data"] not in lei_rem for x in f.get("leituras") or []))
             if not (outro_trab or outro_at or outro_est):
                 atr.append(i)
         if not atr:
@@ -1413,7 +1476,8 @@ def quadro_trabalho(r, f, hoje=None):
         pend = a["_status"] == "sem_remicao"
         blocos.append({"tipo": "atestado", "chave": "fd:at:%s:%s" % (num, a["data"]), "_ord": its[0]["_a"] if its and its[0]["_a"] else _dp(a["data"]),
                        "titulo": "Atestado nº %s" % num, "info": "%s trabalhados · %s remidos" % (a["dias_trabalhados"], _fmtn(a["dias_remidos"])),
-                       "sit": ("Requerer remição" if pend else "Conferir homologação"), "cor": ("vermelho" if pend else "cinza"),
+                       "sit": ("Requerer remição" if pend else _rem_txt(a) if a["_status"] == "remido" else "Conferir homologação"),
+                       "cor": ("vermelho" if pend else "verde" if a["_status"] == "remido" else "cinza"),
                        "remidos": a["dias_remidos"],
                        "itens": [{"emp": i["emp"], "un": i["un"], "per": i["per"]} for i in its]})
     blocos.sort(key=lambda b: b["_ord"] or date.min)
@@ -1426,7 +1490,8 @@ def quadro_trabalho(r, f, hoje=None):
         blocos.append({"tipo": "sem", "titulo": "Sem atestado na ficha", "info": "procurar nos autos ou pedir à unidade", "itens": sem})
     est = [L for L in linhas if L["emp"].startswith("Estudo")]
     exs = [x for x in f.get("exames", []) if not ini_exec or (_dp(x["data"]) or date.max) >= ini_exec]
-    if est or exs:
+    lei = [x for x in f.get("leituras", []) if not ini_exec or (_dp(x["data"]) or date.max) >= ini_exec]
+    if est or exs or lei:
         blocos.append({"tipo": "estudo", "titulo": "Estudo", "info": "certidão de frequência", "itens": [
             {"emp": L["emp"].replace("Estudo · ", ""), "un": L.get("un") or "—", "per": "%s · %s" % (L["per"], L["at"]),
              "sit": ("Requerer remição" if L["sit"].startswith("Requerer") else ("Conferir homologação" if L["sit"].startswith("Conferir") else L["sit"]))
@@ -1435,7 +1500,16 @@ def quadro_trabalho(r, f, hoje=None):
              "chave": "fd:est:%s:%s" % (_norm(L["emp"]), L["per"])} for L in est] + [
             {"emp": x["exame"], "un": unidade_periodo(tl, _dp(x["data"]), _dp(x["data"]))[0], "per": "certificado registrado em %s" % _br(x["data"]),
              "sit": "Conferir homologação · se certificou a conclusão do ensino, verificar o acréscimo de 1/3 (LEP, art. 126, § 5º)", "cor": "cinza",
-             "chave": "fd:exa:%s:%s" % (_norm(x["exame"]), x["data"])} for x in exs]})
+             "chave": "fd:exa:%s:%s" % (_norm(x["exame"]), x["data"])} for x in exs] + [
+            {"emp": "Leitura" + (" (%s)" % ", ".join(x["meses"]) if x["meses"] else ""), "un": unidade_periodo(tl, _dp(x["data"]), _dp(x["data"]))[0],
+             "per": "relatórios peticionados em %s%s" % (_br(x["data"]), (" · %s · até %d dias (4 por obra)" % (
+                 rs.pl(len(x["meses"]), "mês", "meses"), 4 * len(x["meses"]))) if x["meses"] else ""),
+             "sit": ("Remida no RSPE: %s em %s" % (rs.pl(round(lei_rem[x["data"]]["dias"]), "dia", "dias"), rs.fmt(lei_rem[x["data"]]["d"] or lei_rem[x["data"]]["ref"]))
+                     if x["data"] in lei_rem else
+                     "Conferir homologação: sem remição de %s no RSPE após a petição (Res. CNJ 391/2021, art. 5º: 4 dias por obra, até 12 por ano)" % rs.pl(4 * len(x["meses"]), "dia", "dias")
+                     if x["meses"] else "Conferir homologação · remição pela leitura (Res. CNJ 391/2021, art. 5º: 4 dias por obra, até 12 por ano)"),
+             "cor": "verde" if x["data"] in lei_rem else "amarelo",
+             "chave": "fd:lei:%s" % x["data"]} for x in lei]})
     for b in blocos:
         b.pop("_ord", None)
     res["blocos"] = blocos
