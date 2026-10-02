@@ -1898,7 +1898,7 @@ const ui = {
       </div></div>`; },
   tlvExpl(B,fechado,tit){ const P=(B||{}).explicacao||[]; if(!P.length) return '';
     return `<details class="expl" ${fechado?'':'open'}><summary><b>${tit?tit+' · ':''}Como cheguei a este resultado</b></summary><ol>${P.map(p=>{ const m=/^(Ordem dos crimes|Quais crimes|Períodos até|Remição até)[^:]*:\s*/.exec(p); if(m){ const it=p.slice(m[0].length).replace(/\.$/,'').split('; '); return `<li><b>${esc(m[0].trim())}</b><ul class="sub">${it.map(t=>`<li>${penaExt(esc(t)).replace(/: (não conta[^\[]*)/,': <span style="color:#B42318">$1</span>')}</li>`).join('')}</ul></li>`; } return `<li>${penaExt(esc(p)).replace(/^(Ordem dos crimes[^:]*:|Início do cumprimento:|Quais crimes o Decreto [^ ]+ alcança:|Períodos até a data de referência[^:]*:|Remição até a data de referência[^:]*:|A conta do tempo cumprido[^:]*:|Pena considerada pelo decreto:|Requisito da comutação:|Regra aplicada \(crime impeditivo\):|A redução:|Falta grave:|Resultado:|Se o resultado parecer errado, confira no SEEU:)/,'<b>$1</b>')}</li>`; }).join('')}</ol></details>`; },
-  tlvSel(id){ this._tlvDec=id; this.renderTLV(); },
+  tlvSel(id){ if(id==='todos') return; this._tlvDec=id; this.renderTLV(); },
   tlvReg(titulo,det){ this._tlvDets.push({titulo,det}); return this._tlvDets.length-1; },
   tlvDet(i){ const x=this._tlvDets[i]; if(!x) return; const d=x.det||{}; const el=document.getElementById('tlvDet');
     const L=[['Evento/dado utilizado',d.evento],['Crime/processo',d.crime],['Período considerado',d.periodo],['Tratamento',d.tratamento],['Fundamento',d.fundamento],['Cálculo',d.calculo],['Efeito',d.efeito]].filter(z=>z[1]);
