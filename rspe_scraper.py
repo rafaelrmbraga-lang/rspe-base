@@ -916,6 +916,54 @@ TIPO_CRIADO = {
     "12850:2": ("2013-09-19", "Lei 12.850/2013 (antes, quadrilha - CP, art. 288)"),
     "11340:24-A": ("2018-04-04", "Lei 13.641/2018"),
 }
+# o que exatamente foi criado (tipo, qualificadora ou majorante), em palavras, e o que valia na data do fato - para o alerta dizer
+# ao usuário o que conferir, sem ele ter de pesquisar. Chave mais específica primeiro (com o inciso)
+TIPO_CRIADO_DESC = {
+    "2848:157 §2-A I": ("majorante", "emprego de arma de fogo, com aumento de 2/3",
+                        "o emprego de arma era a majorante do art. 157, § 2º, I (aumento de 1/3 até a metade)"),
+    "2848:157 §2-A II": ("majorante", "destruição ou rompimento de obstáculo com explosivo, com aumento de 2/3",
+                         "não havia majorante própria: valiam as do art. 157, § 2º (aumento de 1/3 até a metade)"),
+    "2848:157 §2-A": ("majorante", "emprego de arma de fogo ou de explosivo, com aumento de 2/3",
+                      "o emprego de arma era a majorante do art. 157, § 2º, I (aumento de 1/3 até a metade)"),
+    "2848:157 §2 VI": ("majorante", "subtração de substâncias explosivas ou de acessórios para sua fabricação", "não havia essa majorante"),
+    "2848:157 §2 VII": ("majorante", "violência ou grave ameaça com emprego de arma branca",
+                        "de 24/04/2018 a 22/01/2020 a arma branca não majorava o roubo; antes de 24/04/2018 entrava no art. 157, § 2º, I"),
+    "2848:157 §2-B": ("majorante", "emprego de arma de fogo de uso restrito ou proibido, com pena em dobro",
+                      "a arma de fogo majorava pelo art. 157, § 2º-A, I (desde 24/04/2018) ou pelo § 2º, I (antes)"),
+    "2848:155 §4-A": ("qualificadora", "emprego de explosivo ou artefato análogo", "não havia essa qualificadora: conferir as do § 4º"),
+    "2848:155 §4-B": ("qualificadora", "furto mediante fraude por dispositivo eletrônico ou informático",
+                      "a fraude qualificava pelo art. 155, § 4º, II"),
+    "2848:155 §4-C": ("majorante", "aumento do § 4º-B (servidor fora do território nacional ou vítima idosa ou vulnerável)", "não havia essa majorante"),
+    "2848:155 §7": ("qualificadora", "subtração de substâncias explosivas ou de acessórios para sua fabricação", "não havia essa qualificadora"),
+    "2848:171 §2-A": ("qualificadora", "fraude eletrônica", "valia o estelionato do caput"),
+    "2848:121 §2 VI": ("qualificadora", "feminicídio", "o fato podia ser qualificado por outro inciso do § 2º, conforme a sentença"),
+    "2848:121 §2 VII": ("qualificadora", "homicídio contra agente de segurança pública ou seus familiares",
+                        "o fato podia ser qualificado por outro inciso do § 2º, conforme a sentença"),
+    "2848:121-A": ("tipo", "feminicídio como crime autônomo", "o feminicídio era a qualificadora do art. 121, § 2º, VI"),
+    "2848:147-A": ("tipo", "perseguição", "não havia esse tipo (a conduta podia ser contravenção - LCP, art. 65)"),
+    "2848:147-B": ("tipo", "violência psicológica contra a mulher", "não havia esse tipo"),
+    "2848:149-A": ("tipo", "tráfico de pessoas", "valiam os arts. 231 e 231-A do CP"),
+    "2848:215-A": ("tipo", "importunação sexual", "a conduta podia ser contravenção (LCP, art. 61)"),
+    "2848:217-A": ("tipo", "estupro de vulnerável", "valiam os arts. 213 e 214 c/c o art. 224 do CP"),
+    "2848:218-B": ("tipo", "favorecimento da prostituição ou exploração sexual de vulnerável", "valia o art. 228 do CP"),
+    "2848:218-C": ("tipo", "divulgação de cena de estupro ou de sexo sem consentimento", "não havia esse tipo"),
+    "11343:33": ("tipo", "tráfico de drogas (Lei 11.343/2006)", "valia o art. 12 da Lei 6.368/76"),
+    "11343:35": ("tipo", "associação para o tráfico (Lei 11.343/2006)", "valia o art. 14 da Lei 6.368/76"),
+    "10826:12": ("tipo", "posse irregular de arma de fogo de uso permitido", "valia a Lei 9.437/97"),
+    "10826:14": ("tipo", "porte ilegal de arma de fogo de uso permitido", "valia a Lei 9.437/97"),
+    "10826:16": ("tipo", "posse ou porte de arma de fogo de uso restrito", "valia a Lei 9.437/97"),
+    "10826:17": ("tipo", "comércio ilegal de arma de fogo", "valia a Lei 9.437/97"),
+    "12850:2": ("tipo", "organização criminosa", "valia a quadrilha ou bando (CP, art. 288)"),
+    "11340:24-A": ("tipo", "descumprimento de medida protetiva de urgência", "não havia esse tipo"),
+}
+
+
+def tipo_criado_desc(c):
+    """(natureza, o que é, o que valia antes) do tipo/qualificadora/majorante capitulado e criado depois do Código."""
+    for k in _chaves_tipo(c):
+        if k in TIPO_CRIADO_DESC:
+            return TIPO_CRIADO_DESC[k]
+    return None
 
 
 def _chaves_tipo(c):
