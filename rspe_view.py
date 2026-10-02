@@ -640,6 +640,8 @@ def presc_curto(txt, ppe=False):
         return ""
     if tl.startswith("aparente") or "aparente" in tl[:40]:
         return "Aparente"
+    if tl.startswith("possível"):
+        return "Conferir a guia"
     if tl.startswith("iminente"):
         return "Iminente"
     if tl.startswith("a verificar"):
@@ -696,7 +698,7 @@ def simplificar(m):
     m["presc_retro"], m["presc_ppe"] = presc_curto(m["presc_retro_full"]), presc_curto(m["presc_ppe_full"], ppe=True)
     m["presc_retro"] = m["presc_retro"] or "Sem dados"
     m["presc_ppe"] = m["presc_ppe"] or "Sem dados"
-    _pc = {"Aparente": "vermelho", "Iminente": "amarelo", "A verificar": "amarelo", "Extinta": "azul", "Sem dados": "cinza"}
+    _pc = {"Aparente": "vermelho", "Conferir a guia": "amarelo", "Iminente": "amarelo", "A verificar": "amarelo", "Extinta": "azul", "Sem dados": "cinza"}
     m["presc_retro_cor"], m["presc_ppe_cor"] = _pc.get(m["presc_retro"], ""), _pc.get(m["presc_ppe"], "")
     return m
 

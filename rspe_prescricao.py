@@ -382,6 +382,59 @@ def _fracao_prog(c):
         return 0
 
 
+_SIMPLES = {"provisoria": "prisão provisória antes do trânsito: conta como pena cumprida (detração) e não muda o prazo da prescrição",
+            "cumprimento": "cumprindo pena nesta execução: enquanto dura, a prescrição não corre, e o início do cumprimento a interrompe "
+                           "(CP, art. 117, V)",
+            "livramento": "livramento condicional: é cumprimento de pena; a prescrição não corre",
+            "outro_motivo": "preso por outro motivo: a prescrição fica suspensa - parada, sem zerar (CP, art. 116, p. único)",
+            "liberdade": "fora da prisão e sem cumprir pena: a prescrição corre"}
+
+
+def _explicacao(L, LT, x, termo, duv):
+    """Explicação didática, em passos numerados, de como o resultado foi obtido: o que o RSPE mostra (cada período e a leitura
+    feita), a regra aplicada, a conta e o que conferir na guia se o resultado parecer errado."""
+    passos = ["O termo inicial da prescrição desta condenação é %s (trânsito em julgado)." % rs.fmt(termo)]
+    for p in LT:
+        if p.get("tipo") not in _SIMPLES:
+            continue
+        passos.append("%s%s - %s. Leitura: %s." % (p["inicio"], (" a " + p["fim"]) if p.get("fim") else " até hoje", p["fonte"], _SIMPLES[p["tipo"]]))
+    for r_ in L.get("ppe_retomadas") or []:
+        passos.append("Regra aplicada: depois da fuga, a %s de %s foi lançada só no processo %s. Isso sozinho seria suspensão; mas em %s "
+                      "houve %s - ato que só existe para quem está cumprindo pena aqui. Por isso tratei %s como retomada do cumprimento, "
+                      "que interrompe a prescrição (art. 117, V); entre a prisão e esse ato, o prazo ficou suspenso." % (
+                          r_["motivo"], r_["flagrante"], r_["processo"], r_["data"], r_["ato"], r_["data"]))
+    S = x.get("S") if x else None
+    if x:
+        if S:
+            saldo = S["saldo_max"] if S["saldo_min"] == S["saldo_max"] else None
+            passos.append("A conta: na %s de %s, o saldo da pena era %s (%s). Pelo art. 113, o prazo se regula por esse saldo: %s%s%s. %s" % (
+                "revogação do livramento" if S.get("revogacao") else "fuga", S["evasao"],
+                _ext(saldo) if saldo is not None else "entre %s e %s" % (_ext(S["saldo_min"]), _ext(S["saldo_max"])),
+                (S.get("saldo_rotulo") or "").split(":")[0].rstrip(".").lower(),
+                S.get("prazo_max") or "-", _mods(L),
+                ("; %s de suspensão somados ao prazo" % _d(S["suspensao_dias"])) if S.get("suspensao_dias") else "",
+                ("O prazo terminou em %s." % S["limite_max"]) if S.get("limite_max") else ""))
+        else:
+            passos.append("A conta: sem fuga nem revogação do livramento, o prazo se regula pela pena aplicada (%s): %s%s, contado de %s; "
+                          "terminou em %s." % (L.get("pena") or "-", fmt_prazo(x["meses"]), _mods(L), rs.fmt(x["g0"]), rs.fmt(x["limite"])))
+    passos.append("Resultado: %s." % (L.get("ppe_status") or "-"))
+    conf = []
+    for d_ in duv:
+        if d_.get("soltura"):
+            conf.append("a soltura de %s, lançada pela prisão do processo %s: se a pessoa seguiu cumprindo pena nesta execução (regime, "
+                        "livramento), essa soltura não abriu prazo e a prescrição não ocorreu" % (d_["inicio"], d_["processo"]))
+        else:
+            conf.append("a %s de %s (processo %s): se foi a recaptura desta execução lançada no processo errado, ela interrompeu o prazo e a "
+                        "prescrição não ocorreu" % (d_["motivo"], d_["inicio"], d_["processo"]))
+    for r_ in L.get("ppe_retomadas") or []:
+        conf.append("o ato de %s (%s): se for de outra pena, a retomada não existiu e o resultado muda" % (r_["data"], r_["ato"]))
+    if S and S.get("saldo_origem") in ("calculado", "nao_determinado"):
+        conf.append("o saldo da pena na data da fuga, no cálculo do SEEU daquela data")
+    conf.append("recaptura, prisão ou nova condenação que não estejam no RSPE (interrompem - art. 117, V e VI)")
+    passos.append("Se o resultado parecer errado, confira na guia: " + "; ".join(conf) + ".")
+    return passos
+
+
 def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, meia):
     """Prescrição da pretensão executória de um crime com termo inicial (arts. 112, 113, 116, p. único, 117, V, e 119 do CP):
     classifica cada período dos eventos em relação a este crime (prisão provisória = detração informativa; cumprimento da
@@ -424,6 +477,28 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
         tx_ = rs.to_date(cx.get("transito_processo") or "") or rs.to_date(cx.get("transito_mp") or "")
         if px_ and tx_ and not _mesmo_processo(px_, proc_x):
             transitos_exec.append((px_, tx_))
+    # retomada do cumprimento (regra das três travas): depois de uma evasão, uma prisão lançada só em outro processo (o flagrante
+    # pelo crime novo) continua sendo suspensão; o que interrompe é a prova de que a pessoa voltou a cumprir pena NESTA execução
+    # - livramento concedido, progressão, regressão, remição, soma de penas - e a interrupção cai na data desse ato, não na
+    # do flagrante. Liberdade provisória, preventiva, mandado ou guia sem início de cumprimento não contam
+    retomadas = []
+    for i_ in incidentes:
+        if rs._negado(i_) or rs._pendente(i_):
+            continue
+        t_ = rs._sem_acento(((i_.get("tipo") or "") + " | " + (i_.get("complemento") or "")).upper())
+        if re.search(r"REVOGA|SUSPENS|PERD|CAUTELAR", t_):
+            continue
+        m_ = re.search(r"LIVRAMENTO|PROGRESS|REGRESS|SOMAT|UNIFICA|REMI[CÇ]", t_)
+        d_ = rs.to_date(i_.get("data_referencia") or i_.get("data_decisao") or "")
+        if m_ and d_:
+            nome_ = {"LIVRAMENTO": "livramento condicional", "PROGRESS": "progressão de regime", "REGRESS": "regressão de regime",
+                     "SOMAT": "soma das penas", "UNIFICA": "unificação das penas"}.get(m_.group(0), "remição")
+            retomadas.append((d_, "%s em %s nesta execução" % (nome_, rs.fmt(d_))))
+    retomadas.sort()
+    # interrupções do cumprimento em ordem: a trava 1 olha a última antes da prisão (precisa ser a fuga, sem cumprimento depois)
+    interrup_ev = sorted((d, bool(RE_EVASAO.search(e.get("motivo") or ""))) for d, e in ((rs.to_date(e.get("data") or ""), e) for e in eventos
+                                                                                       if "INTERRUP" in (e.get("tipo") or "").upper()) if d)
+    L["ppe_retomadas"], L["ppe_susp_duvida"] = [], []
     for (a, b, motivo, procs) in periodos_det:
         lst = rs.lista_processos(procs)
         liga = (not lst) or any(_mesmo_processo(proc_x, p) for p in lst)
@@ -453,6 +528,17 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
                     conv = conv_tr[0]
                 else:
                     conv_tr = None
+                # trava 1: só depois de uma evasão desta execução (quem nunca iniciou a pena não "retoma" nada)
+                conv_ret = None
+                _ult_int = [ev_ for d_, ev_ in interrup_ev if termo <= d_ < a]
+                if _ult_int and _ult_int[-1]:
+                    conv_ret = next(((d_, t_) for d_, t_ in retomadas if a < d_ < fim), None)
+                    if conv_ret and conv is not None and conv <= conv_ret[0]:
+                        conv_ret = None
+                    if conv_ret:
+                        conv, conv_tr = conv_ret[0], None
+                if not conv:
+                    L["ppe_susp_duvida"].append({"inicio": rs.fmt(a2), "fim": rs.fmt(b) if b else "", "motivo": mot, "processo": procs})
                 s_fim = conv or b
                 s_fim_txt = rs.fmt(s_fim) if s_fim else "hoje"
                 susp.append((a2, s_fim))
@@ -470,6 +556,19 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
                            "e a prescrição não corre")
                         corpo.append((conv, "Trânsito em julgado da condenação do processo %s em %s: a prisão nele passa a ser cumprimento da pena "
                                             "unificada (LEP, art. 111) - interrompe (art. 117, V)." % (conv_tr[1], rs.fmt(conv))))
+                        faltam.pop()
+                        continue
+                    if conv_ret:
+                        L["ppe_retomadas"].append({"flagrante": rs.fmt(a2), "motivo": mot, "processo": procs, "data": rs.fmt(conv), "ato": conv_ret[1],
+                                                   "fim": rs.fmt(b) if b else ""})
+                        lt(conv, b, "cumprimento", "retomada do cumprimento nesta execução: %s" % conv_ret[1],
+                           "depois da fuga, a %s de %s foi lançada só no processo %s, mas em %s houve %s: a pessoa voltou a cumprir pena "
+                           "nesta execução - interrompe (art. 117, V) nessa data; até ela, a prisão por outro processo só suspendia o prazo - "
+                           "conferir na guia" % (mot, rs.fmt(a2), procs, rs.fmt(conv), conv_ret[1]))
+                        corpo.append((conv, "Retomada do cumprimento em %s (%s): a %s de %s, lançada só no processo %s, é tratada como fim da "
+                                            "fuga a partir desse ato - interrompe (art. 117, V); conferir na guia." % (rs.fmt(conv), conv_ret[1], mot, rs.fmt(a2), procs)))
+                        L["avisos"].append("%s de %s lançada só no processo %s, mas em %s houve %s: tratada como retomada do cumprimento "
+                                           "(interrompe a prescrição nessa data) - conferir na guia" % (mot, rs.fmt(a2), procs, rs.fmt(conv), conv_ret[1]))
                         faltam.pop()
                         continue
                     ev_conv = next(e for e in eventos if rs.to_date(e.get("data") or "") == conv and "INTERRUP" not in (e.get("tipo") or "").upper())
@@ -1082,6 +1181,26 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
         else:
             L["ppe_status"] = "Não corre (em cumprimento)"
             det.append("Conclusão: não corre (em cumprimento).")
+    # regra 2: prescrição que depende de um lançamento duvidoso - uma prisão depois da fuga, lançada só em outro processo, antes
+    # de o prazo vencer. Se ela foi a recaptura desta execução (lançada no processo errado), não houve prescrição: conferir a guia
+    duv = []
+    if prescrita:
+        _g0, _lim = prescrita["g0"], prescrita["limite"]
+        duv = [x for x in L["ppe_susp_duvida"] if prescrita.get("S") and rs.to_date(x["inicio"]) and _g0 < rs.to_date(x["inicio"]) <= _lim]
+        # soltura logo depois de uma retomada inferida: a prisão era de outro processo; se a pessoa seguiu cumprindo pena nesta
+        # execução, essa soltura não abriu prazo
+        for r_ in L["ppe_retomadas"]:
+            if r_.get("fim") and r_["fim"] == rs.fmt(prescrita["g0"]):
+                duv.append({"motivo": "soltura", "inicio": r_["fim"], "processo": r_["processo"], "soltura": True})
+        if duv:
+            L["ppe_status"] = "Prescrição possível em %s - conferir a guia" % rs.fmt(_lim)
+            L["ppe_cor"] = "amarelo"
+            det.append("Conferir a guia: %s." % ("a soltura de %s encerrou uma prisão do processo %s depois da retomada do cumprimento nesta "
+                                                 "execução; se a pessoa seguiu cumprindo pena aqui, a prescrição não ocorreu" % (duv[0]["inicio"], duv[0]["processo"])
+                                                 if duv[0].get("soltura") else
+                                                 "a %s de %s foi lançada só no processo %s, antes de o prazo vencer; se ela foi a recaptura desta "
+                                                 "execução, a prescrição não ocorreu" % (duv[0]["motivo"], duv[0]["inicio"], duv[0]["processo"])))
+    L["ppe_explicacao"] = _explicacao(L, LT, prescrita or verificar or correndo, termo, duv) if (prescrita or verificar) else []
     if L["reinc"]:
         det.append("Reincidência do RSPE aplicada (+1/3, art. 110, caput). O aumento pressupõe a reincidência reconhecida na condenação: se a sentença "
                    "declarou o réu primário, a reincidência apurada só na execução não aumenta o prazo (STJ, RHC 6.611); o Tema 1.208/STJ trata de "
@@ -2096,7 +2215,8 @@ def analisar(r, hoje=None):
     retro = [l for l in linhas if l.get("retro_cor") == "vermelho"]
     ppe_red = [l for l in linhas if l.get("ppe_cor") == "vermelho"]
     ppe_ver = [l for l in linhas if (l.get("ppe_status") or "").startswith("A VERIFICAR")]
-    ppe_amb = [l for l in linhas if l.get("ppe_cor") == "amarelo" and l not in ppe_ver]
+    ppe_pos = [l for l in linhas if (l.get("ppe_status") or "").startswith("Prescrição possível")]
+    ppe_amb = [l for l in linhas if l.get("ppe_cor") == "amarelo" and l not in ppe_ver and l not in ppe_pos]
     if retro:
         resumo_retro = "Aparente: " + "; ".join(l["rotulo"] for l in retro)
     elif linhas and all(l.get("retro_cor") == "cinza" or (l.get("retro_status") or "").startswith("Verificar") for l in linhas):
@@ -2106,6 +2226,8 @@ def analisar(r, hoje=None):
     partes = []
     if ppe_red:
         partes.append("Aparente: " + "; ".join(("%s em %s" % (l["rotulo"], l["ppe_previsao"])) if l.get("ppe_previsao") else l["rotulo"] for l in ppe_red))
+    if ppe_pos:
+        partes.append("Possível - conferir a guia: " + "; ".join("%s em %s" % (l["rotulo"], l["ppe_previsao"]) for l in ppe_pos))
     if ppe_amb:
         partes.append("Iminente: " + "; ".join("%s em %s" % (l["rotulo"], l["ppe_previsao"]) for l in ppe_amb))
     if ppe_ver:

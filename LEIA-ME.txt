@@ -774,6 +774,20 @@ v6.16.50
     a fundamentação quando há prescrição. Sem o saldo, o programa não estima:
     só afirma o que vale em qualquer imputação.
   - A prescrição não aparece mais na ficha do assistido: fica só na aba.
+  - Prescrição e lançamentos errados na guia: prisão e liberdade continuam
+    sendo suspensão. Depois de uma fuga, a prisão lançada só em outro
+    processo (o flagrante pelo crime novo) passa a ser tratada como
+    retomada do cumprimento apenas quando, depois dela, há ato que só existe
+    para quem cumpre pena nesta execução (livramento concedido, progressão,
+    regressão, remição, soma de penas); a interrupção cai na data desse ato
+    (art. 117, V), e a prescrição consumada antes do flagrante não se perde.
+    Quem nunca iniciou o cumprimento não é alcançado. Quando a prescrição
+    depende de um lançamento duvidoso, o resultado aparece como "Prescrição
+    possível - conferir a guia", em amarelo.
+  - "Como cheguei a este resultado": no "cálculo" de cada crime da aba
+    Prescrição, a explicação em passos numerados - cada período do RSPE e a
+    leitura feita, a regra aplicada, a conta, o resultado e o que conferir
+    na guia se ele parecer errado.
   - Linhas das abas: o clique na linha não abre mais a ficha. Ao lado de
     cada assistido, o ícone de pessoa fica verde quando há ficha disciplinar
     importada (sem cor quando não há), e um ícone próprio abre a ficha
