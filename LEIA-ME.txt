@@ -631,6 +631,20 @@ v7.0.0
       deferimento (até 60 dias) não é dúvida; interrupção com livramento em
       curso = em cumprimento. Prisão provisória que alcançou o trânsito é
       início do cumprimento.
+  - Relatório geral refeito, mais didático e focado nos números: panorama do
+    que pede providência (prescrição/extinção, benefícios vencidos e sem
+    pedido, indulto/comutação cabível sem pedido, faltas graves, remição);
+    fila de prioridade; prazos de progressão, livramento e término por
+    faixa, com os vencidos separados em sem pedido / pendente / indeferido /
+    pedido marcado; faltas graves no RSPE (homologadas, pendentes,
+    afastadas, últimos 12 meses) e PADICs da ficha (sem PADIC, aguardando
+    julgamento, punida, arquivada, tempo de resposta); indulto e comutação
+    em todos os decretos do sistema (uma linha por decreto: cabe, sem
+    pedido, verificar, não cabe, vedado, concedido, indeferido, pedido
+    feito); prescrição e extinção; remição; Auditoria (alertas e pontos a
+    verificar agrupados por tipo, sem datas no título); perfil da base; e,
+    no modo nominal, a fila com os nomes em anexo. Cada seção traz uma linha
+    de leitura ("o que o número diz e o que fazer").
   - Registro para o SAP sem nenhum pedido marcado: texto padrão "Atendimento
     a [nome] referente aos autos [nº] na data de hoje (dd/mm/aaaa). A GR foi
     analisada e não se verificou cabível pedido sobre progressão,
