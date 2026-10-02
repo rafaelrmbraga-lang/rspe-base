@@ -636,8 +636,8 @@ v7.0.0
     analisada e não se verificou cabível pedido sobre progressão,
     livramento, indulto, prescrição ou extinção no momento da análise."
   - Prescrição executória sem a linha do tempo na tela: a linha de cada
-    crime fica com "cálculo" e "editar dados" (o relatório individual ainda
-    traz a figura).
+    crime fica com "cálculo" e "editar dados"; o relatório individual em PDF
+    também deixa de trazer a figura (fica o cálculo: detração, saldo e prazo).
   - Teste de estresse da leitura (layout atual): 21 mil variações do texto
     real dos RSPE e das fichas (campo vazio, data ou pena absurda, fração
     0/0, linha quebrada, seção ou página faltando, acentos, PDF cortado)

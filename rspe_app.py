@@ -209,7 +209,7 @@ A "memória de cálculo" de cada crime mostra, nesta ordem: pena aplicada; termo
 (informativa); cada período (cumprimento, prisão por outro motivo, evasão com cumprido, saldo, prazo, vencimento e recaptura,
 liberdade sem evasão); conclusão.
 Na linha de cada crime da aba Prescrição, "cálculo" abre a memória em texto e "editar dados" o formulário de ajuste; a
-pretensão executória não tem mais linha do tempo na tela (o relatório individual ainda traz a figura).
+pretensão executória não tem linha do tempo (nem na tela nem no relatório individual).
 <h4>Filtro de situação</h4>
 O seletor ao lado dos botões filtra a aba (a Geral não tem). Progressão e Livramento: vencidas, vence em até 30, 60 ou 90 dias, não
 iniciou, pena interrompida, não se aplica (cumprida / livramento / aberto), sem data. Indulto/Comutação: por benefício e resultado

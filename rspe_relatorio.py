@@ -725,16 +725,14 @@ def relatorio_individual(m, caminho, nome_base):
                                    ("LEFTPADDING", (0, 0), (-1, -1), 8), ("TOPPADDING", (0, 0), (-1, -1), 5), ("BOTTOMPADDING", (0, 0), (-1, -1), 6)]))
         el.append(KeepTogether(bloco))
         el.append(Spacer(1, 6))
-    # 8) prescrição executória por crime: figura da linha do tempo (memória de cálculo visual) dos crimes com evasão,
-    #    prescrição aparente ou a verificar; todos os números vêm de ppe_linha_tempo / ppe_saldos
+    # 8) prescrição executória por crime (sem a figura da linha do tempo): detração, saldo na fuga e prazo dos crimes com
+    #    evasão, prescrição aparente ou a verificar; todos os números vêm de ppe_linha_tempo / ppe_saldos
     pres = [L for L in m.get("presc_linhas", []) if L.get("ppe_linha_tempo") and L.get("ppe_saldos") and (
         L.get("ppe_cor") in ("vermelho", "amarelo") or any(x.get("tipo") in ("evasao", "interrupcao") for x in L["ppe_linha_tempo"]))]
     if pres:
-        cabeca_secao = [Paragraph("Prescrição executória: linha do tempo por crime", st["h2"]),
-                        Paragraph(_t("Eixo do fato à situação atual com cada período dos eventos do RSPE classificado em relação ao crime; abaixo, a contagem da "
-                                     "prescrição pelo saldo em cada fuga (CP, art. 113) e o cartão com a pena aplicada, o cumprido, o saldo, o prazo e o vencimento. "
-                                     "Com mais de uma condenação, o saldo fica entre dois limites, conforme a imputação do tempo cumprido."), st["mut"]),
-                        legenda_prescricao(W, st)]
+        cabeca_secao = [Paragraph("Prescrição executória: cálculo por crime", st["h2"]),
+                        Paragraph(_t("Para cada crime com fuga, prescrição aparente ou a verificar: detração, saldo da pena na fuga (CP, art. 113) e prazo. "
+                                     "Com mais de uma condenação, o saldo fica entre dois limites, conforme a imputação do tempo cumprido."), st["mut"])]
         hoje_rel = rv.HOJE
         for L in pres:
             sal = L.get("ppe_saldos") or []
@@ -745,7 +743,7 @@ def relatorio_individual(m, caminho, nome_base):
                                                                                                                   _t(L.get("fato") or "—"), _t(L.get("ppe_termo") or "—")), st["cel"])]],
                               colWidths=[W * 0.14, W * 0.84])
             cab_crime.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "MIDDLE"), ("LEFTPADDING", (0, 0), (-1, -1), 0), ("TOPPADDING", (0, 0), (-1, -1), 6), ("BOTTOMPADDING", (0, 0), (-1, -1), 2)]))
-            el.append(KeepTogether(cabeca_secao + [cab_crime, figura_prescricao(L, W, hoje_rel)]))
+            el.append(KeepTogether(cabeca_secao + [cab_crime]))
             cabeca_secao = []
             smin, smax = ref_s.get("saldo_min", 0), ref_s.get("saldo_max", 0)
             saldo_txt = _tl_amd(smax) if smin == smax else "entre %s e %s" % (_tl_amd(smin), _tl_amd(smax))
