@@ -1031,6 +1031,32 @@ v7.0.0
     regime e término ("Faltam dados"); um aviso único explica que o SEEU não
     calcula esses dados antes do início do cumprimento e traz a soma das
     penas das condenações.
+  - Ficha > remição pelo trabalho: nova conciliação atestado x remição
+    (rspe_remicao.py), lida dos eventos da ficha já gravados (sem reimportar):
+    * vínculos por setor como máquina de estados (aberto do início até a
+      baixa; um novo setor não encerra o anterior; "Horta" = AGS Prestadora,
+      variações de Paiva Lingerie juntas); a baixa só é antecipada com prova
+      em atestado ("baixa tardia na ficha"); sem prova, "vínculos
+      sobrepostos" para conferir; nunca "baixa sem início";
+    * atestados com regex tolerante ("n 143/2018", "nº183/PDIB"), vários
+      segmentos somados (041/2020 = 75/25 + 312/104), atestado em lote ou
+      sem período com os períodos inferidos dos vínculos entre a última
+      cobertura e a emissão; trabalhados que não cabem no período: "possível
+      erro de ano", com o início provável;
+    * casamento com as remições do RSPE (só "REMIÇÃO"): número, dias iguais
+      após truncar a fração, ordem cronológica; a cobertura vem do período do
+      atestado; a data de referência só é checada (>= fim do período e <=
+      decisão), sem janela; remição sem atestado na ficha = "atestado não
+      registrado" (períodos inferidos até a data de referência), salvo se
+      casar com ENCCEJA/ENEM ou leitura;
+    * status: Conciliado, Atestado emitido não lançado (verificar
+      peticionamento no SEEU), Sem atestado (pedir atestado, com estimativa
+      seg.-sáb. só aí), Lacuna (verificar se houve trabalho), Divergência de
+      dias; resíduo de fração acumulado (trabalhados/3 exato);
+    * tela: A) tabela conciliada, B) pendências por data, C) alertas de
+      qualidade; o ✓ "Conferir homologação" é o checklist manual. "+
+      Adicionar atestado" aceita trechos (setor; início; fim; trabalhados;
+      remidos) e a data de emissão. Teste: python teste_remicao.py.
   - Importação: quando o lote tem falha (arquivo não importado, campo não
     lido, análise que falhou), o aviso da importação traz o botão "PDF das
     falhas", com cada falha e a causa provável, para corrigir a leitura.

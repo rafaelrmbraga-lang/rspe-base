@@ -39,7 +39,7 @@ ROTULO = {
     "indulto": {"verde": "Possível", "amarelo": "A verificar", "cinza": "Não atinge"},
     "presc": {"vermelho": "Prescrição aparente", "amarelo": "Iminente / a verificar", "": "Não prescrita", "cinza": "Sem dados"},
     "presc_pp": {"vermelho": "Prescrição aparente", "": "Não configurada", "cinza": "Sem dados"},
-    "fd": {"vermelho": "Remição a requerer", "amarelo": "Conferir remição / ausência de atestado / último atestado há 6 meses", "verde": "Em ordem", "cinza": "Sem ficha"},
+    "fd": {"vermelho": "Remição a requerer / atestado não lançado", "amarelo": "Conferir remição / ausência de atestado / último atestado há 6 meses", "verde": "Em ordem", "cinza": "Sem ficha"},
     "aud": {"vermelho": "Com alertas", "amarelo": "Pontos a verificar", "verde": "Guia em ordem", "azul": "Extinta"},
     "ext": {"vermelho": "Extinção cabível", "laranja": "Término em até 30 dias", "amarelo": "Até 60 dias / a verificar", "verde": "Término em até 90 dias", "cinza": "Sem previsão / interrompida", "azul": "Extinta (registrada)"},
 }
@@ -853,7 +853,7 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
         presc["presc_ppe"] = "Pena extinta (registrada no RSPE)"
     if ficha:
         try:
-            aud["aud_itens"] = rf.confrontar(r, ficha, HOJE) + aud["aud_itens"]
+            aud["aud_itens"] = rf.confrontar(r, ficha, HOJE, manuais) + aud["aud_itens"]
         except Exception as e:
             aud["aud_itens"].insert(0, {"nivel": "verificar", "titulo": "Ficha disciplinar: falha ao confrontar (%s)" % e, "detalhe": "", "fundamento": "",
                                         "tipo": "falha-confronto", "ref": ""})
