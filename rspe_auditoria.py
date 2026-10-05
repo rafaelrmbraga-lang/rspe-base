@@ -388,6 +388,27 @@ def auditar(r, hoje=None):
                            "já está presa por estes processos, pedir o início do cumprimento e o cálculo de pena (a prisão desde então conta como "
                            "detração ou cumprimento)." % ((" Soma das penas das condenações: %s." % rs.pena_extenso(rs.dias_para_pena(_soma))) if _soma else ""),
                            "LEP, arts. 105, 106 e 111; CP, art. 42.", tipo="pena-nao-iniciada-seeu"))
+    if rs.interrompida_no_seeu(r) and not rs.sem_inicio_seeu(r) and (not r.get("regime_atual") or not r.get("termino_previsao_seeu")):
+        # o SEEU deixa de imprimir regime e término enquanto o cumprimento está interrompido (fuga, evasão, soltura sem reinício)
+        _ult = [(None, e) for e in sorted([e for e in r.get("_eventos", []) if not e.get("_ficha")], key=lambda e: rs.to_date(e.get("data") or "") or date.min)]
+        _u = _ult[-1][1] if _ult else {}
+        itens.append(_item("info", "Pena interrompida no SEEU: regime atual e término não impressos",
+                           "O último evento do RSPE é %s%s (%s): enquanto não houver reinício lançado no SEEU, o sistema não imprime %s. Não é falha "
+                           "de leitura. Se a pessoa já está presa (ficha ou autos), pedir o lançamento do reinício/recaptura no SEEU." % (
+                               (_u.get("tipo") or "interrupção").lower(), (" - " + _u.get("motivo").lower()) if _u.get("motivo") else "", _u.get("data") or "?",
+                               " nem ".join(x for x, v in (("o regime atual", r.get("regime_atual")), ("o término", r.get("termino_previsao_seeu"))) if not v)),
+                           "LEP, arts. 111 e 112.", tipo="pena-interrompida-seeu"))
+    if rs.sem_condenacao_seeu(r):
+        itens.append(_item("verificar", "Execução sem condenação cadastrada no SEEU",
+                           "O RSPE só traz o cabeçalho, com a pena total zerada, sem nenhum processo criminal, evento ou incidente: a guia não foi "
+                           "cadastrada no SEEU. Não é falha de leitura. Pedir a juntada e o cadastro da guia de recolhimento e o cálculo de pena.",
+                           "LEP, arts. 105, 106 e 107.", tipo="execucao-sem-condenacao-seeu"))
+    elif rs.sem_crime_seeu(r):
+        itens.append(_item("verificar", "Condenação sem crime cadastrado no SEEU",
+                           "O processo criminal está no RSPE (pena %s), mas sem nenhum crime lançado (artigo, data do fato e pena imposta). Não é "
+                           "falha de leitura. Sem os crimes, frações, prescrição e decretos não são calculados: pedir a correção do cadastro da guia "
+                           "no SEEU." % (r.get("pena_total") or "?"),
+                           "LEP, arts. 105 e 106, § 1º.", tipo="condenacao-sem-crime-seeu"))
     rot_campo = {v[0]: k for k, v in rs.CAMPOS_MANUAIS.items()}
     for f_ in faltam:
         campo = rot_campo.get(f_)
@@ -574,7 +595,8 @@ def auditar(r, hoje=None):
     if not pena_total and ativos and not rs.sem_inicio_seeu(r):  # pena não iniciada no SEEU: aviso próprio ("Pena não iniciada")
         soma_at = sum(rs.pena_para_dias(c.get("pena_imposta")) or 0 for c in ativos)
         itens.append(_item("alerta", "Guia sem pena calculada: pena total %s com %s" % (r.get("pena_total") or "em branco", rs.pl(len(ativos), "condenação ativa", "condenações ativas")),
-                           "As condenações ativas somam %s%s. Sem cálculo de pena, regime atual, marcos e término não constam; conferir se as guias foram unificadas/calculadas no SEEU." % (
+                           "As condenações ativas somam %s%s. Sem cálculo de pena, o SEEU não imprime pena cumprida, regime atual, marcos nem término - não é falha "
+                           "de leitura. Pedir a unificação/cálculo das penas no SEEU." % (
                                rs.dias_para_pena(soma_at), "" if r.get("regime_atual") else "; Regime Atual em branco"),
                            "LEP, arts. 66, III, a, e 111.", tipo="guia-sem-pena-calculada-pena-total-com"))
 

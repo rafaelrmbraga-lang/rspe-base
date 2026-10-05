@@ -87,8 +87,8 @@ def _ajuda_juris():
 
 AJUDA = """
 <h4>Cores</h4>
-Progressão e Livramento: <b>amarelo forte</b> = prazo vencido ("Vencido há N dias · sem pedido no RSPE - requerer", "· pedido pendente no RSPE"
-ou "· indeferido em dd/mm/aaaa - conferir o motivo"); a dica mostra os pedidos do RSPE e, quando houver, o aviso sobre o exame criminológico, que é só dica: não muda a cor nem
+Progressão e Livramento: <b>amarelo forte</b> = prazo vencido ("Vencido há N dias · sem pedido no RSPE - requerer" quando não há pedido,
+exame criminológico nem falta nos 12 meses; nos demais casos, "· verificar criminológico, indeferimento ou falta"); a dica mostra os pedidos do RSPE e, quando houver, o aviso sobre o exame criminológico, que é só dica: não muda a cor nem
 gera alerta). Prazos: <b>laranja</b> = vence em até 30 dias; <b>amarelo</b> = em até 60; <b>verde</b> = em até 90. Acima de 90 dias:
 "Em cumprimento", sem cor. <b>Cinza</b> = "Pena cumprida" ou "Não se aplica" (Progressão: em livramento, já no aberto, não iniciou, pena
 interrompida; Livramento: em livramento, não iniciou, pena interrompida - o motivo fica na ficha); <b>amarelo</b> também para "A verificar (livramento)"; <b>azul</b> = execução extinta.
@@ -1989,21 +1989,33 @@ class Api:
         if not F:
             return None
         procs = set(F["processos"])
-        pessoas = []
+        pessoas, faltam = [], []
         for m in (self._modelos or []) + (getattr(self, "_ocultos", None) or []):
             if m.get("id") not in procs:
                 continue
-            its = [i for i in m.get("aud_itens") or [] if not i.get("baixado") and not i.get("auto_baixa")
-                   and ((i.get("tipo") or "").startswith(("falha", "faltam-dados")) or (i.get("titulo") or "").startswith("Faltam dados"))]
-            if its:
+            its = [i for i in m.get("aud_itens") or [] if not i.get("baixado") and not i.get("auto_baixa")]
+            # dado não lido: uma linha por assistido, com todos os campos (a causa vai uma vez só no PDF)
+            campos = [re.sub(r"^Faltam dados:\s*|\s*(não lido do RSPE)?\s*-\s*informar$", "", i.get("titulo") or "")
+                      for i in its if (i.get("tipo") or "").startswith("faltam-dados") or (i.get("titulo") or "").startswith("Faltam dados")]
+            if campos:
+                faltam.append({"nome": m.get("nome", ""), "proc": m.get("proc", ""), "campos": campos})
+            falhas = [i for i in its if (i.get("tipo") or "").startswith("falha")]
+            if falhas:
                 pessoas.append({"nome": m.get("nome", ""), "proc": m.get("proc", ""),
-                                "itens": [(i.get("titulo") or "", re.sub(r"<[^>]+>", "", i.get("detalhe") or "")) for i in its]})
-        return dict(F, pessoas=pessoas)
+                                "itens": [(i.get("titulo") or "", re.sub(r"<[^>]+>", "", i.get("detalhe") or "")) for i in falhas]})
+        # arquivo de cada assistido com dado não lido (lista da importação), pelo nome
+        arq = {}
+        for e in F.get("incompletos") or []:
+            a, _, resto = e.partition(": ")
+            arq.setdefault(_norm(resto.split(" - não foi possível ler ")[0]), a)
+        for x in faltam:
+            x["arquivo"] = arq.get(_norm(x["nome"]), "")
+        return dict(F, pessoas=pessoas, faltam=faltam)
 
     def falhas_tem(self):
         """Há falha registrada no último lote? (a tela só oferece o PDF quando há)"""
         d = self._falhas_dados()
-        return bool(d and (d["erros"] or d["incompletos"] or d["ignorados"] or d["pessoas"]))
+        return bool(d and (d["erros"] or d["faltam"] or d["ignorados"] or d["pessoas"]))
 
     def falhas_pdf(self):
         """PDF das falhas do último lote importado, com a causa de cada uma, para corrigir a leitura."""
