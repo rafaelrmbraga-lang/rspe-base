@@ -1057,6 +1057,26 @@ v7.0.0
       qualidade; o ✓ "Conferir homologação" é o checklist manual. "+
       Adicionar atestado" aceita trechos (setor; início; fim; trabalhados;
       remidos) e a data de emissão. Teste: python teste_remicao.py.
+  - Indulto e comutação - condenação na data da publicação do decreto (STJ,
+    5ª e 6ª Turmas, e TJMS: o requisito se afere na publicação e exige o
+    trânsito ao menos para a acusação; AgRg no HC 633.240, AgRg no HC
+    864.086, AgRg nos EDcl no HC 991.402; TJMS 1603224-59.2026 e
+    1602410-47.2026), em todos os decretos da base:
+    * fato posterior à data de referência: não alcançado;
+    * sentença posterior à publicação: não alcançado (STJ, AgRg no HC
+      441.551 e 919.210) - inclusive no art. 5º do Decreto 11.302/2022;
+    * trânsito pendente só para a defesa: alcança;
+    * trânsito para a acusação posterior à publicação: Decreto 11.302/2022
+      - não alcançado (art. 12); 2024/2025 - a verificar (art. 2º, II);
+      2000-2023 - a verificar, com a regra de cada decreto (campo
+      "transito" da ficha: admite recurso da acusação que não vise majorar
+      a pena - 2000, 2001, 2012-2015, 2023; dispensa só o trânsito para a
+      defesa - 2002-2007; admite recurso da acusação após a 2ª instância -
+      2017, 2019, 2020; veda recurso da acusação após a 2ª instância -
+      2021; não trata - 2008-2011, 2016 e Dia das Mães);
+    * trânsito não informado no RSPE: a verificar.
+    Coluna: "Não alcançado" (sentença ou trânsito posterior), com o motivo
+    na ficha.
   - Importação: quando o lote tem falha (arquivo não importado, campo não
     lido, análise que falhou), o aviso da importação traz o botão "PDF das
     falhas", com cada falha e a causa provável, para corrigir a leitura.

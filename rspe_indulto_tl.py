@@ -708,17 +708,10 @@ def _decreto(D, ref, pub, C, cumprido, data_atinge, faltas, hoje, ultimo, em_cur
             fora.append((x, "fato posterior à data do decreto (%s)" % _f(ref)))
             x["selos"][ano] = {"selo": "FORA", "motivo": "fato posterior a %s: não alcançado, não impede os demais" % _f(ref), "dispositivo": (D.get("regra_fato") or {}).get("dispositivo", "")}
             continue
-        if sent and sent > lim_pub and str(ano).startswith("2022"):
-            # Decreto 11.302/2022: a sentença posterior à publicação só tira a pena da soma do art. 11 (art. 4º); no art. 5º cada
-            # crime conta isoladamente e o art. 9º dispensa o trânsito - a mesma regra da aba Indulto (o crime é alcançado)
-            nat = dict(natureza(c, D, ref))
-            nat["motivo"] = ((nat.get("motivo") or "") + " · sentença posterior à publicação (%s): fora da soma do art. 11; conta isoladamente no art. 5º" % _f(lim_pub)).lstrip(" ·")
-            x["selos"][ano] = nat
-            alc.append((x, nat))
-            continue
         if sent and sent > lim_pub:
             fora.append((x, "sentença posterior à publicação (%s)" % _f(lim_pub)))
-            x["selos"][ano] = {"selo": "FORA", "motivo": "sentença posterior à publicação: fora da soma", "dispositivo": (D.get("regra_fato") or {}).get("dispositivo", "")}
+            x["selos"][ano] = {"selo": "FORA", "motivo": "sentença posterior à publicação (%s): não havia condenação na data - não alcançado "
+                                                         "(STJ, AgRg no HC 441.551 e AgRg no HC 919.210)" % _f(lim_pub), "dispositivo": (D.get("regra_fato") or {}).get("dispositivo", "")}
             continue
         nat = natureza(c, D, ref)
         x["selos"][ano] = nat

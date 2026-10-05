@@ -406,6 +406,8 @@ def curto_indulto(txt):
     m = rs.re.search(r"cumprido (\S+) de ([0-9amd]+)", base)
     if m:
         return "Não atinge (%s de %s)" % (m.group(1), m.group(2)) + falta
+    if base.startswith("não atinge") and ("posterior à publicação" in base):
+        return "Não alcançado · condenação sem trânsito para a acusação na publicação" + falta if "trânsito" in base else "Não alcançado · sentença posterior à publicação" + falta
     if base.startswith("não atinge"):
         return "Não atinge" + falta
     return base + falta
@@ -704,6 +706,8 @@ def sim_nao(txt, cor):
         return "Prejudicada", "cinza"
     if t.startswith("Não se aplica (sem condenação"):
         return "Não se aplica", "cinza"  # nenhuma condenação na publicação do decreto (o motivo fica na ficha)
+    if t.startswith("Não alcançado"):
+        return "Não alcançado", "cinza"  # sentença ou trânsito para a acusação posterior à publicação (o motivo fica na ficha)
     return "Não atinge", "cinza"
 
 

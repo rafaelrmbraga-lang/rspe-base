@@ -1834,12 +1834,12 @@ def texto_art2_ii(crs, lim):
     if crs and all(_sem_recurso_acusacao(c) for c in crs):
         return ("sentença anterior à publicação do decreto (%s), com trânsito só depois (%s); o trânsito para a acusação logo após a sentença "
                 "mostra que ela não recorreu - pelo art. 2º, II, o decreto alcança (TJMG, 9ª Câm. Crim., 1294534-24.2025). Em sentido contrário, "
-                "o STJ exige os requisitos na data da publicação (AgRg no HC 864.086, 5ª T., 18/12/2023) - a verificar" % (
+                "o STJ exige os requisitos na data da publicação, com trânsito ao menos para a acusação (AgRg no HC 864.086, 5ª T., 18/12/2023; AgRg no HC 633.240, 6ª T., 15/06/2021; AgRg nos EDcl no HC 991.402, 6ª T., 29/04/2026) - a verificar" % (
                     fmt(lim), "; ".join("%s, sentença em %s, trânsito para a acusação em %s" % (
                         crimes_curto([c]), fmt(to_date(c.get("data_sentenca") or "")), fmt(to_date(c.get("transito_mp") or ""))) for c in crs)))
     return ("sentença anterior à publicação do decreto (%s), com trânsito para a acusação só depois (%s). Se não havia recurso da acusação, "
             "ou se ele não visava majorar a pena, o decreto alcança (art. 2º, II; TJMG, 9ª Câm. Crim., 1294534-24.2025). Em sentido contrário, "
-            "o STJ exige os requisitos na data da publicação (AgRg no HC 864.086, 5ª T., 18/12/2023) - a verificar" % (
+            "o STJ exige os requisitos na data da publicação, com trânsito ao menos para a acusação (AgRg no HC 864.086, 5ª T., 18/12/2023; AgRg no HC 633.240, 6ª T., 15/06/2021; AgRg nos EDcl no HC 991.402, 6ª T., 29/04/2026) - a verificar" % (
                 fmt(lim), "; ".join("%s, trânsito em %s" % (crimes_curto([c]), c.get("transito_mp") or c.get("transito_processo")) for c in crs)))
 
 
@@ -2275,6 +2275,26 @@ def analise_decreto_2022(campos, crimes, eventos, incidentes):
         if excl:
             linhas.append("✗ %s: excluído pelo art. 7º, %s" % (nome, excl))
             continue
+        # condenação na publicação (22/12/2022): sentença anterior e trânsito para a acusação até essa data - o art. 12 exige que
+        # não haja recurso da acusação pendente, o que pressupõe o trânsito para o MP até a publicação (STJ e TJMS)
+        _pub = DECRETOS_PUB.get("2022")
+        _ds, _tm, _tp = to_date(c.get("data_sentenca") or ""), to_date(c.get("transito_mp") or ""), to_date(c.get("transito_processo") or "")
+        if _ds and _ds > _pub:
+            linhas.append("✗ %s: sentença de %s, posterior à publicação do decreto (%s) - não havia condenação na data: não alcançado "
+                          "(STJ, AgRg no HC 441.551 e AgRg no HC 919.210; art. 12: trânsito para a acusação até a publicação - AgRg nos EDcl no HC 991.402)" % (
+                              nome, fmt(_ds), fmt(_pub)))
+            continue
+        if _tm and _tm > _pub:
+            linhas.append("✗ %s: trânsito para a acusação em %s, depois da publicação do decreto (%s) - o art. 12 exige que não haja recurso da acusação "
+                          "pendente, o que pressupõe o trânsito para o Ministério Público até a publicação (STJ, AgRg nos EDcl no HC 991.402, 6ª T., "
+                          "29/04/2026; TJMS, 3ª Câm. Crim., 1603224-59.2026, e 1ª Câm. Crim., 1602410-47.2026)" % (nome, fmt(_tm), fmt(_pub)))
+            continue
+        if not _tm and not (_tp and _tp <= _pub):
+            linhas.append("? %s: %s - conferir se havia trânsito para a acusação em %s (art. 12; STJ, AgRg nos EDcl no HC 991.402)" % (
+                nome, ("trânsito em %s, depois da publicação, e o RSPE não traz o trânsito para a acusação" % fmt(_tp)) if _tp else "trânsito em julgado não consta no RSPE",
+                fmt(_pub)))
+            verificar.append(nome)
+            continue
         if num_lei(c.get("lei")) == "11343" and num_art(c.get("artigo")) == "33" and "§ 4" in (c.get("tipo_penal") or "") and not (fato and fato > ref):
             # tráfico privilegiado: o art. 7º, VI, ressalva o § 4º das exclusões - leitura conjunta com o art. 5º admite o indulto,
             # embora a pena máxima em abstrato passe de 5 anos (STJ, 6ª T., AgRg no HC 818.978 e AgRg no HC 873.240;
@@ -2496,7 +2516,14 @@ def analise_decreto_2022(campos, crimes, eventos, incidentes):
         elif all(exclusao_art7_2022(c) for c in ativos):
             out["indulto_2022"] = "excluído (art. 7º)"
         else:
-            out["indulto_2022"] = "não atinge: pena máxima em abstrato superior a 5 anos (art. 5º)"
+            # o motivo que de fato afastou cada crime (sentença posterior, trânsito para a acusação posterior, pena máxima)
+            _sent = any("posterior à publicação do decreto" in l and l.startswith("✗") and "sentença de" in l for l in linhas)
+            _trans = any(l.startswith("✗") and "trânsito para a acusação em" in l for l in linhas)
+            _pm = any(l.startswith("✗") and "supera 5 anos" in l for l in linhas)
+            mot = [m for m, ok in (("sentença posterior à publicação (STJ, AgRg no HC 441.551)", _sent),
+                                   ("trânsito para a acusação posterior à publicação (art. 12; STJ, AgRg nos EDcl no HC 991.402)", _trans),
+                                   ("pena máxima em abstrato superior a 5 anos (art. 5º)", _pm)) if ok]
+            out["indulto_2022"] = "não atinge: " + ("; ".join(mot) if mot else "pena máxima em abstrato superior a 5 anos (art. 5º)")
         out["indulto_2022_status"] = "nao"
     if any(c.get("comando_orcrim") == "S" for c in ativos if c not in posteriores):
         # art. 7º, § 1º: integrantes de facções criminosas - quem exerce o comando é integrante (o § 2º não afasta o § 1º)
