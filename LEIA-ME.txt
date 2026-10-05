@@ -1077,6 +1077,23 @@ v7.0.0
     * trânsito não informado no RSPE: a verificar.
     Coluna: "Não alcançado" (sentença ou trânsito posterior), com o motivo
     na ficha.
+  - Auditoria, percentual de progressão: a violência ou grave ameaça conta
+    também quando é elementar do tipo (ameaça, roubo, extorsão, estupro,
+    lesão e homicídio dolosos), mesmo que o RSPE marque "N" (STJ, HC
+    1.032.430, 6ª T., 11/03/2026). Ameaça (art. 147): 25% para o primário
+    (TJMG, TJRS, TJSP); a tese contrária (TJSP, 7ª Câm.) fica no texto.
+  - Base jurídica 2026-10-05: fichas dos decretos 2000-2023 conferidas com o
+    texto oficial do Planalto - trânsito em julgado de 2002 a 2011 corrigido
+    (admitem trânsito só para a acusação e recurso da acusação que não vise
+    majorar a pena); Dia das Mães 2017/2018 com o art. 3º, § 4º e a janela
+    da falta contada até a data de referência; 2023, art. 2º, XVI (5 meses);
+    2002, art. 1º, VII (livramento) fora da conta automática - exige metade
+    do período de prova, que o RSPE não traz.
+  - Remição: sinônimos de setor na base jurídica (remicao.setores_sinonimos);
+    a lógica antiga de vínculo atestado x remição foi removida (o trabalho
+    vem só da conciliação; em caso de falha, aviso para conferir).
+  - Testes: python testes.py (remição e indulto) - o build_exe.bat e o
+    build.yml não geram o .exe se algum falhar.
   - Importação: quando o lote tem falha (arquivo não importado, campo não
     lido, análise que falhou), o aviso da importação traz o botão "PDF das
     falhas", com cada falha e a causa provável, para corrigir a leitura.

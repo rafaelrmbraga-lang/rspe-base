@@ -24,9 +24,20 @@ import rspe_scraper as rs
 DT = r"(\d{2}/\d{2}/\d{2,4})"
 SEPD = r"\s*(?:A|À|ATÉ|ATE|-)\s*"
 
-# nomes de setor que a ficha e os atestados usam para o mesmo vínculo (a horta da PDIB é da AGS Prestadora)
-ALIAS = [(r"\bHORTA\b|\bAGS\b", "AGS", "Ags Prestadora - Me (Horta)"),
-         (r"\bPAIVA\b", "PAIVA", "Paiva Lingerie")]
+# nomes de setor que a ficha e os atestados usam para o mesmo vínculo: base jurídica, remicao.setores_sinonimos (editável sem
+# mexer no programa); a lista abaixo só vale se a base não trouxer nenhuma
+ALIAS_PADRAO = [(r"\bHORTA\b|\bAGS\b", "AGS", "Ags Prestadora - Me (Horta)"),
+                (r"\bPAIVA\b", "PAIVA", "Paiva Lingerie")]
+
+
+def sinonimos():
+    try:
+        import rspe_regras as rg
+        lst = (rg.carregar().get("remicao") or {}).get("setores_sinonimos") or []
+        out = [(x["padrao"], x["chave"], x.get("nome") or x["chave"]) for x in lst if x.get("padrao") and x.get("chave")]
+        return out or ALIAS_PADRAO
+    except Exception:
+        return ALIAS_PADRAO
 
 
 def _sa(t):
@@ -70,7 +81,7 @@ def setor_chave(nome):
     u = re.sub(r"^(?:NA\s+|NO\s+)?(?:FUNCAO|SETOR(?: DE TRABALHO)?(?: DE)?|EMPRESA)\s+", "", u)
     u = re.sub(r"^(?:PP|CC|A1|R1)\s*-\s*", "", u).strip(" ,.;:-")
     u = re.sub(r"^EMPRESA\s+", "", u)
-    for pad, ch, disp in ALIAS:
+    for pad, ch, disp in sinonimos():
         if re.search(pad, u):
             return ch, disp
     ch = re.sub(r"\W", "", u)[:12] or "?"

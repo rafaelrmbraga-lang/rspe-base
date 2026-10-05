@@ -9,6 +9,14 @@ REM ============================================================
 cd /d "%~dp0"
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
+REM testes de regressão: se algum falhar, o .exe não é gerado
+python testes.py
+if errorlevel 1 (
+    echo.
+    echo TESTES FALHARAM - o .exe nao foi gerado.
+    pause
+    exit /b 1
+)
 python -m PyInstaller --onefile --windowed --clean --name RSPE_Base ^
     --icon rspe.ico --add-data "rspe.ico;." --add-data "ui.html;." --add-data "base_juridica.json;." ^
     --collect-data pdfminer --collect-data pdfplumber --collect-data reportlab --hidden-import reportlab.graphics.shapes --hidden-import rspe_relatorio --hidden-import rspe_remicao ^

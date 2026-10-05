@@ -27,6 +27,9 @@ jobs:
       - name: Conferir que o código importa
         run: python -c "import rspe_scraper, rspe_view, rspe_auditoria, rspe_prescricao, rspe_export, rspe_ficha, rspe_remicao; print('ok')"
 
+      - name: Testes de regressão (falha aqui = não gera o .exe)
+        run: python testes.py
+
       - name: Compilar com PyInstaller
         run: >
           python -m PyInstaller --onefile --windowed --clean --name RSPE_Base
