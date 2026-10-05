@@ -1281,6 +1281,16 @@ def sem_inicio_seeu(r):
         and not [i for i in r.get("_incidentes", []) if not i.get("_ficha")]
 
 
+def interrompida_no_seeu(r):
+    """Cumprimento interrompido no próprio SEEU (último evento do RSPE é interrupção: fuga, evasão, soltura...): o SEEU não
+    imprime regime atual nem término até o reinício. Os eventos acrescentados pela ficha (reinício pela ficha) não contam."""
+    if re.search(r"INTERROMPIDA|SUSPENSA", r.get("situacao_cumprimento") or ""):
+        return True
+    own = sorted([e for e in r.get("_eventos", []) if not e.get("_ficha")], key=lambda e: to_date(e.get("data") or "") or date.min)
+    own = [(None, e) for e in own]
+    return bool(own) and "INTERRUP" in _sem_acento(own[-1][1].get("tipo") or "").upper()
+
+
 def campos_faltantes(r):
     """Dados essenciais que não foram lidos do RSPE (layout diferente, página faltando, guia sem cálculo)."""
     falta = []
@@ -1293,16 +1303,18 @@ def campos_faltantes(r):
                    ("pena_cumprida", "pena cumprida"), ("regime_atual", "regime atual")):
         if (encerrada or sem_inicio_seeu(r)) and k in ("pena_total", "pena_cumprida", "regime_atual"):
             continue
+        if k == "regime_atual" and interrompida_no_seeu(r):
+            continue  # pena interrompida no SEEU: o regime só volta a ser impresso no reinício
         if not r.get(k) or (k == "pena_total" and pena_para_dias(r.get(k)) == 0 and ativos):
             falta.append(rot)
-    if not r.get("_crimes"):
+    if not r.get("_crimes") and not encerrada:
         falta.append("crimes")
     else:
         if any(not c.get("pena_imposta") for c in ativos):
             falta.append("pena de algum crime")
         if any(not c.get("data_infracao") for c in ativos):
             falta.append("data do fato de algum crime")
-    if not r.get("termino_previsao_seeu") and not re.search(r"INTERROMPIDA|SUSPENSA", r.get("situacao_cumprimento") or "") and not encerrada and not sem_inicio_seeu(r):
+    if not r.get("termino_previsao_seeu") and not interrompida_no_seeu(r) and not encerrada and not sem_inicio_seeu(r):
         falta.append("término")
     return falta
 

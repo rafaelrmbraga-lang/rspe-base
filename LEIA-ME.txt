@@ -1097,6 +1097,13 @@ v7.0.0
   - Importação: quando o lote tem falha (arquivo não importado, campo não
     lido, análise que falhou), o aviso da importação traz o botão "PDF das
     falhas", com cada falha e a causa provável, para corrigir a leitura.
+  - Pena interrompida no SEEU (situação ou último evento "interrupção"): o
+    RSPE não imprime regime atual nem término; deixam de ser cobrados como
+    dado não lido e a Auditoria informa o motivo. Crimes não são cobrados de
+    execução encerrada.
+  - PDF das falhas: resumo de assistidos com dado não lido, contagem por
+    campo, tabela Assistido / Arquivo / Campos (causa dita uma vez) e, à
+    parte, as falhas de importação e de análise.
 
 v6.16.49
   - Prescrição após a fuga: o pedido "informe a pena remanescente na fuga"

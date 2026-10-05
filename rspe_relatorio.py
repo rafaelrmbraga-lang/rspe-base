@@ -1750,9 +1750,14 @@ def relatorio_falhas(d, caminho, nome_base):
           Paragraph(_t("%s · lote importado em %s · %s lidos" % (nome_base, d.get("quando", ""), rs.pl(d.get("arquivos", 0), "arquivo", "arquivos"))), st["sub"]),
           Spacer(1, 8)]
     n_pes = sum(len(p["itens"]) for p in d["pessoas"])
-    el.append(_tabela([["Arquivos não importados", "RSPE com campo não lido", "Ignorados", "Falhas na análise dos assistidos"],
-                       [str(len(d["erros"])), str(len(d["incompletos"])), str(len(d["ignorados"])), str(n_pes)]],
+    faltam = d.get("faltam") or []
+    el.append(_tabela([["Arquivos não importados", "Assistidos com dado não lido", "Ignorados", "Falhas na análise"],
+                       [str(len(d["erros"])), str(len(faltam)), str(len(d["ignorados"])), str(n_pes)]],
                       [W / 4] * 4, st, zebra=False))
+    if faltam:
+        cont = Counter(c for x in faltam for c in x["campos"])
+        el.append(Spacer(1, 4))
+        el.append(Paragraph(_t("Dados não lidos, por campo: " + " · ".join("%s %d" % (k, v) for k, v in cont.most_common())), st["mut"]))
 
     def causa_arquivo(msg):
         u = msg.upper()
@@ -1775,23 +1780,24 @@ def relatorio_falhas(d, caminho, nome_base):
         el.append(_tabela(dados, [50 * mm, 60 * mm, W - 110 * mm], st))
     else:
         el.append(Paragraph("Nenhum.", st["mut"]))
-    el.append(Paragraph("2. RSPE importados com campo não lido", st["h2"]))
-    if d["incompletos"]:
-        dados = [["Arquivo", "Assistido", "Campos não lidos"]]
-        for e in d["incompletos"]:
-            arq, _, resto = e.partition(": ")
-            nome, _, campos = resto.partition(" - não foi possível ler ")
-            dados.append([arq, nome, campos])
-        el.append(_tabela(dados, [55 * mm, 50 * mm, W - 105 * mm], st))
-        el.append(Paragraph(_t("Causa: o campo não foi encontrado onde o layout do RSPE o traz (campo vazio no SEEU, página faltando ou texto "
-                               "quebrado na extração). O assistido entra na base com o alerta “Faltam dados” na Auditoria, onde o dado pode ser informado."), st["mut"]))
+    el.append(Paragraph("2. Dados não lidos do RSPE", st["h2"]))
+    if faltam:
+        dados = [["Assistido", "Arquivo", "Campos não lidos"]]
+        for x in sorted(faltam, key=lambda x: x["nome"]):
+            dados.append([Paragraph(_t(x["nome"]) + "<br/>" + _t(x["proc"]), st["cel"]), x.get("arquivo") or "—", ", ".join(x["campos"])])
+        el.append(_tabela(dados, [62 * mm, 55 * mm, W - 117 * mm], st))
+        el.append(Spacer(1, 4))
+        el.append(Paragraph(_t("Causa: o campo não está onde o layout do RSPE o traz - em branco no SEEU, página faltando ou texto quebrado na "
+                               "extração. Não entram aqui os casos em que o SEEU deixa o campo em branco de propósito (pena não iniciada, pena "
+                               "interrompida por fuga ou evasão, execução extinta ou arquivada): esses têm aviso próprio na Auditoria. Cada assistido "
+                               "da lista tem o alerta \u201cFaltam dados\u201d na Auditoria, onde o dado pode ser informado."), st["mut"]))
     else:
         el.append(Paragraph("Nenhum.", st["mut"]))
     if d["ignorados"]:
         el.append(Paragraph("3. Arquivos ignorados", st["h2"]))
         dados = [["Arquivo", "Motivo"]] + [list(e.partition(": ")[::2]) for e in d["ignorados"]]
         el.append(_tabela(dados, [60 * mm, W - 60 * mm], st))
-    el.append(Paragraph("%d. Falhas na análise dos assistidos do lote" % (4 if d["ignorados"] else 3), st["h2"]))
+    el.append(Paragraph("%d. Falhas na análise dos assistidos do lote" % (4 if d["ignorados"] else 3), st["h2"]))  # erro do programa, não dado faltando
     if d["pessoas"]:
         dados = [["Assistido", "Falha", "Causa / detalhe"]]
         for p in d["pessoas"]:

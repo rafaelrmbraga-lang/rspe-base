@@ -388,6 +388,16 @@ def auditar(r, hoje=None):
                            "já está presa por estes processos, pedir o início do cumprimento e o cálculo de pena (a prisão desde então conta como "
                            "detração ou cumprimento)." % ((" Soma das penas das condenações: %s." % rs.pena_extenso(rs.dias_para_pena(_soma))) if _soma else ""),
                            "LEP, arts. 105, 106 e 111; CP, art. 42.", tipo="pena-nao-iniciada-seeu"))
+    if rs.interrompida_no_seeu(r) and not rs.sem_inicio_seeu(r) and (not r.get("regime_atual") or not r.get("termino_previsao_seeu")):
+        # o SEEU deixa de imprimir regime e término enquanto o cumprimento está interrompido (fuga, evasão, soltura sem reinício)
+        _ult = [(None, e) for e in sorted([e for e in r.get("_eventos", []) if not e.get("_ficha")], key=lambda e: rs.to_date(e.get("data") or "") or date.min)]
+        _u = _ult[-1][1] if _ult else {}
+        itens.append(_item("info", "Pena interrompida no SEEU: regime atual e término não impressos",
+                           "O último evento do RSPE é %s%s (%s): enquanto não houver reinício lançado no SEEU, o sistema não imprime %s. Não é falha "
+                           "de leitura. Se a pessoa já está presa (ficha ou autos), pedir o lançamento do reinício/recaptura no SEEU." % (
+                               (_u.get("tipo") or "interrupção").lower(), (" - " + _u.get("motivo").lower()) if _u.get("motivo") else "", _u.get("data") or "?",
+                               " nem ".join(x for x, v in (("o regime atual", r.get("regime_atual")), ("o término", r.get("termino_previsao_seeu"))) if not v)),
+                           "LEP, arts. 111 e 112.", tipo="pena-interrompida-seeu"))
     rot_campo = {v[0]: k for k, v in rs.CAMPOS_MANUAIS.items()}
     for f_ in faltam:
         campo = rot_campo.get(f_)
