@@ -2120,10 +2120,27 @@ def analisar(r, hoje=None):
                                "a intercorrente seguiu correndo - verificar na ação penal" % rs.fmt(tmp))
         det = []
         pior = None
+        # suspensão do processo e do prazo (CPP, art. 366), informada em "editar dados": os dias suspensos não correm; o período
+        # de suspensão se limita ao prazo regulado pela pena máxima cominada (STJ, Súmula 415)
+        _v366 = ((c.get("_ajuste") or {}).get("valores") or {})
+        s_ini, s_fim = rs.to_date(_v366.get("susp366_ini") or ""), rs.to_date(_v366.get("susp366_fim") or "")
+        if s_ini:
+            s_fim = s_fim or hoje
+            _pm = rs.pena_maxima_abstrata(c)
+            if _pm:
+                _teto = ultimo_dia(s_ini, Fraction(prazo_base_anos(_pm, fato) * 12) * (Fraction(1, 2) if meia else 1))
+                if s_fim > _teto:
+                    det.append("Suspensão do art. 366 do CPP limitada a %s (prazo pela pena máxima cominada de %s - STJ, Súmula 415): o prazo "
+                               "voltou a correr em %s." % (rs.fmt(_teto), rs.dias_para_pena(_pm), rs.fmt(_teto)))
+                    s_fim = _teto
+            det.append("Suspensão do processo e do prazo (CPP, art. 366): %s a %s%s - informada pelo operador." % (
+                rs.fmt(s_ini), rs.fmt(s_fim), "" if _v366.get("susp366_fim") else " (ainda suspenso)"))
         for nome, a, b in intervalos:
-            limite = ultimo_dia(a, ppp_meses)
+            ov = max(0, (min(b, s_fim) - max(a, s_ini)).days) if s_ini else 0
+            limite = ultimo_dia(a, ppp_meses) + timedelta(days=ov)
             ok = b > limite  # o marco seguinte veio depois do último dia do prazo (CP, art. 10)
-            det.append("%s%s: %s a %s = %s (prazo %s, vence %s)" % ("✘ " if ok else "✔ ", nome, rs.fmt(a), rs.fmt(b), fmt_prazo(_meses(a, b)), L["prazo_ppp"], rs.fmt(limite)))
+            det.append("%s%s: %s a %s = %s (prazo %s%s, vence %s)" % ("✘ " if ok else "✔ ", nome, rs.fmt(a), rs.fmt(b), fmt_prazo(_meses(a, b)), L["prazo_ppp"],
+                                                                     (" + %s suspensos, art. 366" % rs.pl(ov, "dia", "dias")) if ov else "", rs.fmt(limite)))
             if ok and pior is None:
                 pior = nome  # o primeiro intervalo em que o prazo se completou
         faltando = [n for n, v in (("data do fato", fato), ("recebimento da denúncia", den), ("sentença", sent), ("trânsito em julgado", tpr or tmp)) if not v]
@@ -2208,7 +2225,7 @@ def analisar(r, hoje=None):
         _cump = None
         if _evs and re.search(r"PRIS|IN[IÍ]CIO|RECAPTURA", _evs[-1][1].upper()) and not re.search(r"INTERRUP|FUGA|EVAS|SOLTURA|LIBERDADE", _evs[-1][1].upper()):
             _cump = _evs[-1][0]
-        if not termo and _cump and _ano and (_cump - date(int(_ano.group(1)), 1, 1)).days < 365:
+        if not termo and _cump and _ano and 1900 <= int(_ano.group(1)) <= 2100 and (_cump - date(int(_ano.group(1)), 1, 1)).days < 365:
             L["ppe_status"] = "Não corre: em cumprimento desde %s (CP, art. 117, V)" % rs.fmt(_cump)
             L["ppe_cor"] = ""
             det = ["Trânsito em julgado não consta no RSPE, mas a ação penal foi distribuída em %s e o cumprimento começou em %s, sem "
@@ -2343,6 +2360,13 @@ def analisar(r, hoje=None):
         resumo_ppe = "Não prescrita" if any(l.get("ppe_cor") != "cinza" for l in linhas) else "; ".join(sorted(set(l["ppe_status"] for l in linhas)))
     else:
         resumo_ppe = ""
+    # dados conferidos pelo operador e resultado sem prescrição: verde (confirmado), e a linha continua na tela para nova edição
+    for l in linhas:
+        if l.get("ajustado"):
+            if (l.get("ppe_status") or "").lower().startswith(("não prescrita", "não corre")) and not l.get("ppe_cor"):
+                l["ppe_cor"] = "verde"
+            if (l.get("retro_status") or "").lower().startswith("não configurada") and not l.get("retro_cor"):
+                l["retro_cor"] = "verde"
     dias = [l["ppe_dias"] for l in linhas if l.get("ppe_dias") is not None]
     # análise global para a fundamentação: em cada fuga, todas as condenações em execução, por critério de imputação
     por_fuga = {}

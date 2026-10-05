@@ -25,13 +25,16 @@ jobs:
           python -m pip install -r requirements.txt
 
       - name: Conferir que o código importa
-        run: python -c "import rspe_scraper, rspe_view, rspe_auditoria, rspe_prescricao, rspe_export, rspe_ficha; print('ok')"
+        run: python -c "import rspe_scraper, rspe_view, rspe_auditoria, rspe_prescricao, rspe_export, rspe_ficha, rspe_remicao; print('ok')"
+
+      - name: Testes de regressão (falha aqui = não gera o .exe)
+        run: python testes.py
 
       - name: Compilar com PyInstaller
         run: >
           python -m PyInstaller --onefile --windowed --clean --name RSPE_Base
           --icon rspe.ico --add-data "rspe.ico;." --add-data "ui.html;." --add-data "base_juridica.json;."
-          --collect-data pdfminer --collect-data pdfplumber --collect-data reportlab --hidden-import reportlab.graphics.shapes --hidden-import rspe_relatorio
+          --collect-data pdfminer --collect-data pdfplumber --collect-data reportlab --hidden-import reportlab.graphics.shapes --hidden-import rspe_relatorio --hidden-import rspe_remicao
           --collect-all webview
           --exclude-module docxtpl --exclude-module docx --exclude-module docx2pdf
           rspe_app.py

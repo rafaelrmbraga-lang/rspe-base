@@ -252,7 +252,54 @@ def avaliar_ficha(f, r, ctx, ini, hoje):
                                   % (x.get("mot") or "", ref_t))
         elif x.get("s") == "nao":
             x["mot"] = "cumprimento interrompido em %s (não estava preso nem em livramento); %s" % (ref_t, x.get("mot") or "")
+    if x.get("s") == "cabe":
+        tr = transito_pendente(f, r)
+        if tr:
+            x.update(s="ver", mot="%s; %s" % (x.get("mot") or "", tr) if x.get("mot") else tr)
     return x
+
+
+# condenação sem trânsito em julgado para a acusação até a publicação do decreto: o STJ e o TJMS aferem o requisito objetivo
+# na data da publicação e exigem o trânsito ao menos para a acusação (ou a ausência de recurso dela, nos termos de cada decreto)
+STJ_TRANSITO = ("STJ: o requisito se afere na publicação e exige o trânsito ao menos para a acusação (AgRg no HC 633.240, 6ª T., 15/06/2021; "
+                "AgRg no HC 864.086, 5ª T., 18/12/2023; AgRg nos EDcl no HC 991.402, 6ª T., 29/04/2026)")
+
+
+def transito_pendente(f, r):
+    """Texto do 'a verificar' quando alguma condenação alcançada pelo decreto (fato até a referência e sentença até a
+    publicação) não tinha trânsito para a acusação na publicação; '' se todas tinham. A regra de cada decreto vem da ficha
+    (transito.regra): nao_majorar, sem_transito_defesa, pos_2grau, vedado_pos_2grau, nao_trata."""
+    ref = rs.to_date(f["data_referencia"])
+    pub = rs.to_date(f.get("data_publicacao") or "") or ref
+    T = f.get("transito") or {}
+    regra, disp = T.get("regra") or "nao_trata", T.get("dispositivo") or ""
+    crimes = [c for c in (r.get("_crimes") or []) if not (c.get("extinto") or "").upper().startswith("S")
+              and (rs.to_date(c.get("data_infracao") or "") or date.min) <= ref
+              and (rs.to_date(c.get("data_sentenca") or "") or date.min) <= pub]
+    pend, sem_dado = [], []
+    for c in crimes:
+        tm, tp = rs.to_date(c.get("transito_mp") or ""), rs.to_date(c.get("transito_processo") or "")
+        if (tm and tm <= pub) or (not tm and tp and tp <= pub):
+            continue
+        (pend if (tm or tp) else sem_dado).append(c)
+    if not pend and not sem_dado:
+        return ""
+    partes = []
+    if sem_dado:
+        partes.append("trânsito em julgado não consta no RSPE (%s): conferir se havia trânsito para a acusação em %s" % (rs.crimes_curto(sem_dado), rs.fmt(pub)))
+    if pend:
+        lst = "; ".join("%s, sentença %s, trânsito para a acusação %s%s" % (
+            rs.crimes_curto([c]), c.get("data_sentenca") or "não informada", c.get("transito_mp") or c.get("transito_processo") or "?",
+            " (logo após a sentença: a acusação não recorreu)" if rs._sem_recurso_acusacao(c) else "") for c in pend)
+        regra_txt = {
+            "nao_majorar": "o decreto (%s) admite o benefício com recurso da acusação que não vise majorar a pena - alcança se a acusação não recorreu ou o recurso não buscava aumentar a pena" % disp,
+            "sem_transito_defesa": "o decreto (%s) dispensa só o trânsito para a defesa - sem trânsito para a acusação na publicação, não alcança pelo STJ" % disp,
+            "pos_2grau": "o decreto (%s) admite o benefício com recurso da acusação após a 2ª instância - alcança se, na publicação, a acusação só recorria aos tribunais superiores" % disp,
+            "vedado_pos_2grau": "o decreto (%s) VEDA o indulto se havia recurso da acusação de qualquer natureza após a 2ª instância - conferir se havia recurso da acusação na publicação" % disp,
+            "nao_trata": "o decreto não trata do trânsito em julgado nem do recurso da acusação",
+        }.get(regra, "")
+        partes.append("trânsito para a acusação depois da publicação (%s): %s (%s)" % (rs.fmt(pub), lst, regra_txt))
+    return "A VERIFICAR - " + "; ".join(partes) + ". " + STJ_TRANSITO
 
 
 def _avaliar_ficha(f, r, ctx, ini, hoje):
@@ -269,7 +316,8 @@ def _avaliar_ficha(f, r, ctx, ini, hoje):
               and (rs.to_date(c.get("data_infracao") or "") or date.min) <= ref
               and (rs.to_date(c.get("data_sentenca") or "") or date.min) <= pub]
     if not crimes:
-        return dict(base, s="fora", mot="sem condenação até o decreto")
+        return dict(base, s="fora", mot="sem condenação até o decreto (sentença posterior à publicação não é alcançada: STJ, AgRg no HC 441.551 e AgRg no HC 919.210)"
+                    if any((rs.to_date(c.get("data_sentenca") or "") or date.min) > pub for c in (r.get("_crimes") or [])) else "sem condenação até o decreto")
     # mesma regra da análise detalhada (2022/2024/2025): os requisitos de tempo exigem cumprimento em curso na data -
     # preso ou em livramento condicional; a prisão provisória anterior, encerrada antes da data, só entra como detração
     if not (rs.em_custodia(ctx["periodos"], ref) or any(a <= ref and (b is None or b >= ref) for a, b in ctx["lc"])):

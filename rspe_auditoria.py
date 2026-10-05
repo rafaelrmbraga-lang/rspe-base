@@ -379,6 +379,15 @@ def auditar(r, hoje=None):
     # "Faltam dados": cada dado essencial que o programa não leu vira um alerta com o botão Preencher; o valor informado entra
     # nos cálculos como se viesse do RSPE e o alerta passa a "Dado informado" (com a data)
     faltam = rs.campos_faltantes(r)
+    if rs.sem_inicio_seeu(r):
+        # guia sem evento nem incidente no SEEU: os campos de cálculo vêm vazios porque a pena não foi iniciada no sistema
+        _soma = sum(rs.pena_para_dias(c.get("pena_imposta")) or 0 for c in r.get("_crimes", []) if not c.get("extinto", "").upper().startswith("S"))
+        itens.append(_item("verificar", "Pena não iniciada no SEEU: sem cálculo de pena",
+                           "O RSPE não tem nenhum evento (prisão/início do cumprimento) nem incidente: a guia não teve o cumprimento iniciado no SEEU, "
+                           "por isso não traz pena total, pena cumprida, regime atual nem término - não são dados faltando na leitura.%s Se a pessoa "
+                           "já está presa por estes processos, pedir o início do cumprimento e o cálculo de pena (a prisão desde então conta como "
+                           "detração ou cumprimento)." % ((" Soma das penas das condenações: %s." % rs.pena_extenso(rs.dias_para_pena(_soma))) if _soma else ""),
+                           "LEP, arts. 105, 106 e 111; CP, art. 42.", tipo="pena-nao-iniciada-seeu"))
     rot_campo = {v[0]: k for k, v in rs.CAMPOS_MANUAIS.items()}
     for f_ in faltam:
         campo = rot_campo.get(f_)
@@ -562,7 +571,7 @@ def auditar(r, hoje=None):
                 _nome(c), c["extincao_fonte"], c.get("extinto_rspe") or "?"),
                 "O programa tratou o crime como extinto (não entra na soma das penas, nas frações nem na prescrição). Conferir se o SEEU precisa ser atualizado.",
                 "LEP, art. 66, II; CP, art. 107.", tipo="extincao-registrada-mas-a-linha-do-crime-diz-ext", ref=_nome(c)))
-    if not pena_total and ativos:
+    if not pena_total and ativos and not rs.sem_inicio_seeu(r):  # pena não iniciada no SEEU: aviso próprio ("Pena não iniciada")
         soma_at = sum(rs.pena_para_dias(c.get("pena_imposta")) or 0 for c in ativos)
         itens.append(_item("alerta", "Guia sem pena calculada: pena total %s com %s" % (r.get("pena_total") or "em branco", rs.pl(len(ativos), "condenação ativa", "condenações ativas")),
                            "As condenações ativas somam %s%s. Sem cálculo de pena, regime atual, marcos e término não constam; conferir se as guias foram unificadas/calculadas no SEEU." % (
@@ -667,7 +676,10 @@ def auditar(r, hoje=None):
                                    " O RSPE marca reincidência: conferir se há outra condenação não listada; se não houver, as frações são de primário." if marc else ""),
                                "CP, art. 64, I.", tipo="condenacao-anterior-depurada", ref=nome))
         reinc_esp = c.get("reincidente_especifico") == "S"
-        vga = c.get("vga") == "S"
+        # violência ou grave ameaça: a marcação do RSPE ou a elementar do tipo (ameaça, roubo, extorsão, estupro, lesão e homicídio
+        # dolosos) - o percentual do art. 112 segue as elementares do tipo da condenação (STJ, HC 1.032.430, 6ª T., 11/03/2026)
+        vga_tipo = rs.vga_elementar(c) and c.get("vga") != "S"
+        vga = c.get("vga") == "S" or rs.vga_elementar(c)
         morte = c.get("resultado_morte") == "S"
         hed_seeu = _hediondo_seeu(c)
         hed_lei, obs_h = _e_hediondo_lei(c)
@@ -838,7 +850,12 @@ def auditar(r, hoje=None):
                                ("%s: percentual de progressão do SEEU (%s) maior que o legal (%s)" if float(f_seeu) > float(f_esp) else "%s: percentual de progressão do SEEU (%s) menor que o esperado (%s) - favorece o apenado") % (nome, rs.pct_rotulo(c.get("fracao_progressao")), rs.pct_rotulo(rot)),
                                ("Fato em %s; %s; %s; %s. %s" % (rs.fmt(fato) if fato else "?", ("reincidente genérico (o cálculo não marca reincidência específica)"
                                                                 if "reincidente genérico" in " ".join(obs) else "reincidente") if reinc else "primário", "com VGA" if vga else "sem VGA",
-                                                               "hediondo" if hed else "comum", rs.pct_texto(" ".join(obs)))).strip(),
+                                                               "hediondo" if hed else "comum", rs.pct_texto(" ".join(obs)))).strip() + (
+                                   " Violência ou grave ameaça elementar do tipo (o RSPE não a marca): o percentual segue as elementares do tipo da condenação "
+                                   "(STJ, HC 1.032.430, 6ª T., 11/03/2026)." if vga_tipo else "") + (
+                                   " Ameaça (art. 147): a grave ameaça é elementar - 25% para o primário (TJMG, 6ª Câm., 0104039-06.2026; TJRS, 7ª Câm., "
+                                   "8000046-39.2026; TJSP, 4ª Câm., 0007776-29.2025); em sentido contrário, TJSP, 7ª Câm., 0014444-50.2024 (tese defensiva)."
+                                   if art == "147" and _cp else ""),
                                "LEP, art. 112 (redação vigente na data do fato; lei posterior só retroage se mais benéfica - CF, art. 5º, XL; STJ Temas 1084, 1196 e 1354; STF Tema 1169).", tipo="percentual-de-progressao-diverge", ref=nome))
             elif esp_ok is False or vga_gen:
                 pass  # o alerta de reincidência específica / o item dos 25% já tratam do percentual

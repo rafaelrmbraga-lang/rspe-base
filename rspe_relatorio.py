@@ -216,7 +216,7 @@ def _etiqueta_indulto(celula, cor):
     if not c:
         return ("—", "")
     mapa = {"Sim": ("Cabível", "verde"), "Verificar": ("A verificar", "amarelo"), "Falta": ("Falta grave", "vermelho"),
-            "Não atinge": ("Não cabe", "cinza"), "Concedido": ("Concedido", "azul"), "Indeferido": ("Indeferido", "vermelho"),
+            "Não atinge": ("Não cabe", "cinza"), "Não alcançado": ("Não alcançado", "cinza"), "Concedido": ("Concedido", "azul"), "Indeferido": ("Indeferido", "vermelho"),
             "Prejudicada": ("Prejudicada", "cinza"), "Fato posterior": ("Fato posterior", "cinza"), "Não se aplica": ("Não se aplica", "cinza")}
     if c in mapa:
         return mapa[c]

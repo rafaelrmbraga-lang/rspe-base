@@ -1004,6 +1004,96 @@ v7.0.0
     interrupção desde menos de 1 ano após a distribuição da ação penal: "Não
     corre: em cumprimento desde ..." (o menor prazo possível não cabe no
     intervalo).
+  - Indulto (linha do tempo, Decreto 11.302/2022): sentença posterior à
+    publicação não torna o crime "não alcançado" - só tira a pena da soma do
+    art. 11 (art. 4º); no art. 5º o crime conta isoladamente, como na aba.
+    Decretos com fração cumprida: quem até a data só teve prisão provisória
+    (flagrante/preventiva, solto antes do trânsito) não iniciou o
+    cumprimento - "não se aplica", e não "cumprimento interrompido / fuga".
+  - Ficha: atestado com várias funções ("função X (período) totalizando N
+    dias trabalhados e R remidos; função Y ...") vira uma entrada por função;
+    lê também "N dias de trabalho e R dias de tempo de remição". Relatórios
+    de leitura peticionados entram no quadro de Estudo (meses citados, até 4
+    dias por obra - Res. CNJ 391/2021) e são cruzados com a remição do RSPE
+    de 4 dias por mês concedida depois da petição. Atestado (ou a soma das
+    funções de um mesmo atestado) com remição de igual número de dias no RSPE
+    até 120 dias depois: "Remido no RSPE: N dias em dd/mm/aaaa".
+  - Prescrição > editar dados: campos da suspensão do art. 366 do CPP
+    (início e fim; fim em branco = ainda suspenso) - os dias suspensos não
+    correm nos intervalos da pretensão punitiva, limitados ao prazo da pena
+    máxima cominada (STJ, Súmula 415). Cada campo editado tem "↺ importado"
+    para voltar ao dado do RSPE. Linha com dados editados e sem prescrição
+    fica verde e continua na tela para nova edição.
+  - Auditoria: divergência de nascimento ficha x RSPE com botão Preencher;
+    informada a data, o alerta baixa sozinho.
+  - Guia sem pena calculada e sem nenhum evento nem incidente no SEEU (pena
+    não iniciada no sistema): a Auditoria não pede pena total, cumprida,
+    regime e término ("Faltam dados"); um aviso único explica que o SEEU não
+    calcula esses dados antes do início do cumprimento e traz a soma das
+    penas das condenações.
+  - Ficha > remição pelo trabalho: nova conciliação atestado x remição
+    (rspe_remicao.py), lida dos eventos da ficha já gravados (sem reimportar):
+    * vínculos por setor como máquina de estados (aberto do início até a
+      baixa; um novo setor não encerra o anterior; "Horta" = AGS Prestadora,
+      variações de Paiva Lingerie juntas); a baixa só é antecipada com prova
+      em atestado ("baixa tardia na ficha"); sem prova, "vínculos
+      sobrepostos" para conferir; nunca "baixa sem início";
+    * atestados com regex tolerante ("n 143/2018", "nº183/PDIB"), vários
+      segmentos somados (041/2020 = 75/25 + 312/104), atestado em lote ou
+      sem período com os períodos inferidos dos vínculos entre a última
+      cobertura e a emissão; trabalhados que não cabem no período: "possível
+      erro de ano", com o início provável;
+    * casamento com as remições do RSPE (só "REMIÇÃO"): número, dias iguais
+      após truncar a fração, ordem cronológica; a cobertura vem do período do
+      atestado; a data de referência só é checada (>= fim do período e <=
+      decisão), sem janela; remição sem atestado na ficha = "atestado não
+      registrado" (períodos inferidos até a data de referência), salvo se
+      casar com ENCCEJA/ENEM ou leitura;
+    * status: Conciliado, Atestado emitido não lançado (verificar
+      peticionamento no SEEU), Sem atestado (pedir atestado, com estimativa
+      seg.-sáb. só aí), Lacuna (verificar se houve trabalho), Divergência de
+      dias; resíduo de fração acumulado (trabalhados/3 exato);
+    * tela: A) tabela conciliada, B) pendências por data, C) alertas de
+      qualidade; o ✓ "Conferir homologação" é o checklist manual. "+
+      Adicionar atestado" aceita trechos (setor; início; fim; trabalhados;
+      remidos) e a data de emissão. Teste: python teste_remicao.py.
+  - Indulto e comutação - condenação na data da publicação do decreto (STJ,
+    5ª e 6ª Turmas, e TJMS: o requisito se afere na publicação e exige o
+    trânsito ao menos para a acusação; AgRg no HC 633.240, AgRg no HC
+    864.086, AgRg nos EDcl no HC 991.402; TJMS 1603224-59.2026 e
+    1602410-47.2026), em todos os decretos da base:
+    * fato posterior à data de referência: não alcançado;
+    * sentença posterior à publicação: não alcançado (STJ, AgRg no HC
+      441.551 e 919.210) - inclusive no art. 5º do Decreto 11.302/2022;
+    * trânsito pendente só para a defesa: alcança;
+    * trânsito para a acusação posterior à publicação: Decreto 11.302/2022
+      - não alcançado (art. 12); 2024/2025 - a verificar (art. 2º, II);
+      2000-2023 - a verificar, com a regra de cada decreto (campo
+      "transito" da ficha: admite recurso da acusação que não vise majorar
+      a pena - 2000, 2001, 2012-2015, 2023; dispensa só o trânsito para a
+      defesa - 2002-2007; admite recurso da acusação após a 2ª instância -
+      2017, 2019, 2020; veda recurso da acusação após a 2ª instância -
+      2021; não trata - 2008-2011, 2016 e Dia das Mães);
+    * trânsito não informado no RSPE: a verificar.
+    Coluna: "Não alcançado" (sentença ou trânsito posterior), com o motivo
+    na ficha.
+  - Auditoria, percentual de progressão: a violência ou grave ameaça conta
+    também quando é elementar do tipo (ameaça, roubo, extorsão, estupro,
+    lesão e homicídio dolosos), mesmo que o RSPE marque "N" (STJ, HC
+    1.032.430, 6ª T., 11/03/2026). Ameaça (art. 147): 25% para o primário
+    (TJMG, TJRS, TJSP); a tese contrária (TJSP, 7ª Câm.) fica no texto.
+  - Base jurídica 2026-10-05: fichas dos decretos 2000-2023 conferidas com o
+    texto oficial do Planalto - trânsito em julgado de 2002 a 2011 corrigido
+    (admitem trânsito só para a acusação e recurso da acusação que não vise
+    majorar a pena); Dia das Mães 2017/2018 com o art. 3º, § 4º e a janela
+    da falta contada até a data de referência; 2023, art. 2º, XVI (5 meses);
+    2002, art. 1º, VII (livramento) fora da conta automática - exige metade
+    do período de prova, que o RSPE não traz.
+  - Remição: sinônimos de setor na base jurídica (remicao.setores_sinonimos);
+    a lógica antiga de vínculo atestado x remição foi removida (o trabalho
+    vem só da conciliação; em caso de falha, aviso para conferir).
+  - Testes: python testes.py (remição e indulto) - o build_exe.bat e o
+    build.yml não geram o .exe se algum falhar.
   - Importação: quando o lote tem falha (arquivo não importado, campo não
     lido, análise que falhou), o aviso da importação traz o botão "PDF das
     falhas", com cada falha e a causa provável, para corrigir a leitura.

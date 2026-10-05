@@ -710,7 +710,8 @@ def _decreto(D, ref, pub, C, cumprido, data_atinge, faltas, hoje, ultimo, em_cur
             continue
         if sent and sent > lim_pub:
             fora.append((x, "sentença posterior à publicação (%s)" % _f(lim_pub)))
-            x["selos"][ano] = {"selo": "FORA", "motivo": "sentença posterior à publicação: fora da soma", "dispositivo": (D.get("regra_fato") or {}).get("dispositivo", "")}
+            x["selos"][ano] = {"selo": "FORA", "motivo": "sentença posterior à publicação (%s): não havia condenação na data - não alcançado "
+                                                         "(STJ, AgRg no HC 441.551 e AgRg no HC 919.210)" % _f(lim_pub), "dispositivo": (D.get("regra_fato") or {}).get("dispositivo", "")}
             continue
         nat = natureza(c, D, ref)
         x["selos"][ano] = nat

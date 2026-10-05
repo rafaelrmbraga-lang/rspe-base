@@ -39,7 +39,7 @@ ROTULO = {
     "indulto": {"verde": "Possível", "amarelo": "A verificar", "cinza": "Não atinge"},
     "presc": {"vermelho": "Prescrição aparente", "amarelo": "Iminente / a verificar", "": "Não prescrita", "cinza": "Sem dados"},
     "presc_pp": {"vermelho": "Prescrição aparente", "": "Não configurada", "cinza": "Sem dados"},
-    "fd": {"vermelho": "Remição a requerer", "amarelo": "Conferir remição / ausência de atestado / último atestado há 6 meses", "verde": "Em ordem", "cinza": "Sem ficha"},
+    "fd": {"vermelho": "Remição a requerer / atestado não lançado", "amarelo": "Conferir remição / ausência de atestado / último atestado há 6 meses", "verde": "Em ordem", "cinza": "Sem ficha"},
     "aud": {"vermelho": "Com alertas", "amarelo": "Pontos a verificar", "verde": "Guia em ordem", "azul": "Extinta"},
     "ext": {"vermelho": "Extinção cabível", "laranja": "Término em até 30 dias", "amarelo": "Até 60 dias / a verificar", "verde": "Término em até 90 dias", "cinza": "Sem previsão / interrompida", "azul": "Extinta (registrada)"},
 }
@@ -406,6 +406,8 @@ def curto_indulto(txt):
     m = rs.re.search(r"cumprido (\S+) de ([0-9amd]+)", base)
     if m:
         return "Não atinge (%s de %s)" % (m.group(1), m.group(2)) + falta
+    if base.startswith("não atinge") and ("posterior à publicação" in base):
+        return "Não alcançado · condenação sem trânsito para a acusação na publicação" + falta if "trânsito" in base else "Não alcançado · sentença posterior à publicação" + falta
     if base.startswith("não atinge"):
         return "Não atinge" + falta
     return base + falta
@@ -704,6 +706,8 @@ def sim_nao(txt, cor):
         return "Prejudicada", "cinza"
     if t.startswith("Não se aplica (sem condenação"):
         return "Não se aplica", "cinza"  # nenhuma condenação na publicação do decreto (o motivo fica na ficha)
+    if t.startswith("Não alcançado"):
+        return "Não alcançado", "cinza"  # sentença ou trânsito para a acusação posterior à publicação (o motivo fica na ficha)
     return "Não atinge", "cinza"
 
 
@@ -774,6 +778,12 @@ def simplificar(m):
     m["presc_ppe"] = m["presc_ppe"] or "Sem dados"
     _pc = {"Aparente": "vermelho", "Conferir a guia": "amarelo", "Iminente": "amarelo", "A verificar": "amarelo", "Extinta": "azul", "Sem dados": "cinza"}
     m["presc_retro_cor"], m["presc_ppe_cor"] = _pc.get(m["presc_retro"], ""), _pc.get(m["presc_ppe"], "")
+    # dados conferidos/corrigidos pelo operador sem prescrição: verde
+    if any(L.get("ajustado") for L in m.get("presc_linhas") or []):
+        if m["presc_ppe"] == "Não prescrita" and not m["presc_ppe_cor"]:
+            m["presc_ppe_cor"] = "verde"
+        if m["presc_retro"] == "Não configurada" and not m["presc_retro_cor"]:
+            m["presc_retro_cor"] = "verde"
     return m
 
 
@@ -847,7 +857,7 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
         presc["presc_ppe"] = "Pena extinta (registrada no RSPE)"
     if ficha:
         try:
-            aud["aud_itens"] = rf.confrontar(r, ficha, HOJE) + aud["aud_itens"]
+            aud["aud_itens"] = rf.confrontar(r, ficha, HOJE, manuais) + aud["aud_itens"]
         except Exception as e:
             aud["aud_itens"].insert(0, {"nivel": "verificar", "titulo": "Ficha disciplinar: falha ao confrontar (%s)" % e, "detalhe": "", "fundamento": "",
                                         "tipo": "falha-confronto", "ref": ""})

@@ -1,5 +1,5 @@
 {
- "versao": "2026-10-02",
+ "versao": "2026-10-05",
  "descricao": "Base juridica do RSPE Base. Editavel: o programa le este arquivo ao abrir (copia ao lado do .exe tem prioridade sobre a embutida). Datas em AAAA-MM-DD. Fracoes como 'num/den' ou percentual 'NN%'.",
  "prescricao": {
   "art109_tabela": [
@@ -1231,10 +1231,10 @@
   },
   {
    "tema": "Indulto - trânsito para a acusação posterior à publicação (art. 2º, II)",
-   "fonte": "STJ, AgRg no HC 864.086, 5ª T., Rel. Joel Ilan Paciornik, j. 18/12/2023 (Decreto 9.246/2017); TJMG, 4ª Câm. Crim., 4465602-88.2025 (28/01/2026); em sentido contrário, TJMG, 9ª Câm. Crim., 1294534-24.2025 (24/09/2025)",
+   "fonte": "STJ, AgRg no HC 633.240, 6ª T., Rel. Antonio Saldanha Palheiro, j. 15/06/2021 (Decreto 8.172/2013, art. 6º); STJ, AgRg no HC 864.086, 5ª T., Rel. Joel Ilan Paciornik, j. 18/12/2023 (Decreto 9.246/2017); STJ, AgRg nos EDcl no HC 991.402, 6ª T., Rel. Rogerio Schietti Cruz, j. 29/04/2026 (Decreto 11.302/2022, art. 12); STJ, AREsp 2.696.582, 5ª T., j. 10/12/2024; TJMS, 3ª Câm. Crim., 1603224-59.2026.8.12.0000 (13/07/2026); TJMS, 1ª Câm. Crim., 1602410-47.2026.8.12.0000 (29/06/2026); trânsito para a acusação anterior e para a defesa posterior: TJMS, 1ª Câm. Crim., 1600175-78.2024.8.12.0000 (07/02/2024), e 3ª Câm. Crim., 0026990-83.2021.8.12.0001 (18/03/2024); em sentido contrário (Decreto 12.338/2024): TJMG, 9ª Câm. Crim., 1294534-24.2025 (24/09/2025)",
    "nivel": "orientativo",
-   "tese": "Os requisitos do indulto devem estar preenchidos na data da publicação do decreto (STJ). Em sentido contrário: o Decreto 12.338/2024 não exige o trânsito em julgado da condenação (TJMG, 9ª Câm.).",
-   "aplicacao": "Sentença anterior à publicação e trânsito para a acusação só depois: o crime fica na análise, com status 'A VERIFICAR (art. 2º, II)' e as duas correntes; só a sentença posterior à publicação tira o crime da soma."
+   "tese": "O requisito objetivo se afere na data da publicação do decreto e exige a condenação com trânsito em julgado ao menos para a acusação (ou, nos decretos que o dizem, sem recurso da acusação que vise majorar a pena) - STJ, 5ª e 6ª Turmas, e TJMS. No Decreto 11.302/2022, o art. 12 pressupõe o trânsito para o MP até a publicação. O trânsito pendente só para a defesa não impede. Em sentido contrário, só o TJMG (9ª Câm.), para o Decreto 12.338/2024.",
+   "aplicacao": "Sentença posterior à publicação: não alcançado (todos os decretos). Sentença anterior e trânsito para a acusação posterior: Decreto 11.302/2022 - não alcançado (art. 12); Decretos 2024/2025 - a verificar (art. 2º, II); decretos 2000-2023 - a verificar, com a regra do próprio decreto (campo 'transito' da ficha: nao_majorar, sem_transito_defesa, pos_2grau, vedado_pos_2grau, nao_trata). Trânsito só para a defesa pendente: alcança. Trânsito não informado: a verificar."
   },
   {
    "tema": "Prescrição executória - evasão com várias condenações: saldo por condenação",
@@ -1655,7 +1655,22 @@
  },
  "remicao": {
   "_nota": "Feriados nacionais e o estadual de MS (11/10, Lei estadual 10/1979) já são descontados dos dias de trabalho (seg-sex e seg-sáb). Acrescente aqui feriados municipais da unidade ou recessos, no formato 'MM-DD' (ex.: '08-26').",
-  "feriados_adicionais": []
+  "feriados_adicionais": [],
+  "setores_sinonimos": [
+   {
+    "padrao": "\\bHORTA\\b|\\bAGS\\b",
+    "chave": "AGS",
+    "nome": "Ags Prestadora - Me (Horta)",
+    "unidade": "PDIB (Dois Irmãos do Buriti)"
+   },
+   {
+    "padrao": "\\bPAIVA\\b",
+    "chave": "PAIVA",
+    "nome": "Paiva Lingerie",
+    "unidade": "PDIB (Dois Irmãos do Buriti)"
+   }
+  ],
+  "_nota_sinonimos": "Nomes de setor que a ficha e os atestados usam para o mesmo vínculo de trabalho (conciliação atestado x remição). 'padrao': expressão regular aplicada ao nome sem acento e em maiúsculas; 'chave': identificador comum; 'nome': como aparece na tela. Acrescente uma linha para cada unidade/setor."
  },
  "conduta_reabilitacao_meses": {
   "_nota": "Prazo sem nova falta para reabilitar a conduta, pela gravidade da última falta. Grave: 12 meses do cumprimento da sanção (RIBUP, art. 133, III). Leve e média: prazos do art. 133, I e II, não confirmados - ajustar.",
@@ -1894,7 +1909,12 @@
     "Hediondos vedados sem ressalva de data do fato; não há menção a tráfico privilegiado (anterior à Lei 11.343/2006).",
     "Indulto não alcança penas acessórias do CPM nem efeitos da condenação (art. 1º, § 2º).",
     "Datas de corte distintas: sursis, livramento condicional e progressão ao aberto até 31/12/1999 (incisos V a VII); regime inicial aberto com metade cumprida em 31/12/2000 (inciso VIII)."
-   ]
+   ],
+   "transito": {
+    "regra": "nao_majorar",
+    "dispositivo": "art. 7º",
+    "texto": "Aplicável mesmo sem trânsito em julgado para a defesa ou com recurso da acusação que não vise alterar a pena (art. 7º)."
+   }
   },
   {
    "id": "2001",
@@ -2107,7 +2127,12 @@
     "Hediondos vedados sem ressalva de data do fato; não há menção a tráfico privilegiado (anterior à Lei 11.343/2006).",
     "Indulto não alcança penas acessórias do CPM nem efeitos da condenação (art. 1º, § 2º).",
     "Datas de corte distintas: sursis, livramento condicional e progressão ao aberto até 31/12/2000 (incisos V a VII); regime inicial aberto com metade cumprida em 31/12/2001 (inciso VIII)."
-   ]
+   ],
+   "transito": {
+    "regra": "nao_majorar",
+    "dispositivo": "art. 7º",
+    "texto": "Aplicável mesmo sem trânsito em julgado para a defesa ou com recurso da acusação que não vise alterar a pena (art. 7º)."
+   }
   },
   {
    "id": "2002",
@@ -2225,7 +2250,7 @@
     },
     {
      "dispositivo": "art. 1º, VII",
-     "objetivo": true,
+     "objetivo": false,
      "pena_max_anos": 8,
      "pena_min_anos": null,
      "fracao_nao_reincidente": null,
@@ -2237,7 +2262,7 @@
      "regime": [
       "livramento condicional"
      ],
-     "outros_requisitos": "livramento condicional concedido até 31/12/2001, não revogado, com metade do período de prova cumprida; se o crime for doloso com violência ou grave ameaça à pessoa: sem falta grave nos últimos 2 anos contados da publicação e avaliação judicial motivada de condições pessoais (art. 1º, § 1º)",
+     "outros_requisitos": "livramento condicional concedido até 31/12/2001, não revogado, com metade do período de prova cumprida; se o crime for doloso com violência ou grave ameaça à pessoa: sem falta grave nos últimos 2 anos contados da publicação e avaliação judicial motivada de condições pessoais (art. 1º, § 1º); exige metade do período de prova do livramento cumprida (dado que o RSPE não traz - conferir)",
      "texto": "condenado à pena privativa de liberdade não superior a oito anos, beneficiado com livramento condicional até 31 de dezembro de 2001, desde que tenha cumprido metade do período de prova e que não tenha ocorrido sua revogação",
      "regime_ate": "31/12/2001"
     },
@@ -2353,9 +2378,14 @@
     "Requisito adicional (art. 3º, II): não estar sendo processado por outro crime com violência ou grave ameaça contra a pessoa ou por crime do art. 7º.",
     "Homicídio doloso e roubo qualificado deixaram de ser impeditivos (estavam em 2000/2001).",
     "Hediondos vedados sem ressalva quanto à data do fato; não trata de tráfico privilegiado.",
-    "Aplicável mesmo sem trânsito em julgado para a defesa (art. 4º). Indulto não alcança penas acessórias do CPM nem efeitos da condenação (art. 1º, § 2º).",
-    "Datas de corte distintas: sursis, LC e progressão ao aberto até 31/12/2001; regime inicial aberto com metade cumprida em 31/12/2001."
-   ]
+    "Datas de corte distintas: sursis, LC e progressão ao aberto até 31/12/2001; regime inicial aberto com metade cumprida em 31/12/2001.",
+    "Aplicável ainda que a sentença tenha transitado em julgado só para a acusação (sem prejuízo do recurso da defesa) ou haja recurso da acusação que não vise alterar a pena ou as condições do benefício (art. 4º, I e II)."
+   ],
+   "transito": {
+    "regra": "nao_majorar",
+    "dispositivo": "art. 4º",
+    "texto": "Aplicável ainda que a sentença tenha transitado em julgado só para a acusação (sem prejuízo do recurso da defesa) ou haja recurso da acusação que não vise alterar a pena ou as condições do benefício (art. 4º, I e II)."
+   }
   },
   {
    "id": "2003",
@@ -2491,8 +2521,13 @@
     "Hediondo só impede se praticado após a Lei 8.072/1990. Não trata de tráfico privilegiado.",
     "Concurso com crime impeditivo: sem benefício enquanto não cumprida integralmente a pena do crime impeditivo (art. 6º, par. único, c/c art. 76 CP); penas somam-se (art. 6º).",
     "Diferente de 2000-2002, não há hipóteses de sursis, PRD, livramento condicional, regime aberto ou saídas temporárias; também não há impeditivo por não reparação do dano nem por crime contra o SFN.",
-    "Aplicável mesmo sem trânsito em julgado para a defesa (art. 4º). Indulto não alcança penas acessórias do CPM nem efeitos da condenação (art. 1º, § 2º)."
-   ]
+    "Aplicável ainda que a sentença tenha transitado em julgado só para a acusação (sem prejuízo do recurso da defesa) ou haja recurso da acusação que não vise majorar a pena ou as condições do benefício (art. 4º, I e II)."
+   ],
+   "transito": {
+    "regra": "nao_majorar",
+    "dispositivo": "art. 4º",
+    "texto": "Aplicável ainda que a sentença tenha transitado em julgado só para a acusação (sem prejuízo do recurso da defesa) ou haja recurso da acusação que não vise majorar a pena ou as condições do benefício (art. 4º, I e II)."
+   }
   },
   {
    "id": "2004",
@@ -2660,8 +2695,13 @@
     "Detração (art. 42 CP / art. 67 CPM) e remição (art. 126 LEP) computadas no requisito temporal (art. 3º).",
     "Concurso com crime impeditivo: sem benefício enquanto não cumprida integralmente a pena do crime impeditivo (art. 7º, par. único, c/c art. 76 CP); penas somam-se (art. 7º).",
     "Hediondo só impede se praticado após a Lei 8.072/1990. Não trata de tráfico privilegiado.",
-    "Aplicável mesmo sem trânsito em julgado para a defesa (art. 5º). Indulto não alcança penas acessórias do CPM nem efeitos da condenação (art. 1º, par. único)."
-   ]
+    "Aplicável ainda que a sentença tenha transitado em julgado só para a acusação (sem prejuízo do recurso da defesa) ou haja recurso da acusação que não vise majorar a pena ou as condições do benefício (art. 5º, I e II)."
+   ],
+   "transito": {
+    "regra": "nao_majorar",
+    "dispositivo": "art. 5º",
+    "texto": "Aplicável ainda que a sentença tenha transitado em julgado só para a acusação (sem prejuízo do recurso da defesa) ou haja recurso da acusação que não vise majorar a pena ou as condições do benefício (art. 5º, I e II)."
+   }
   },
   {
    "id": "2005",
@@ -2829,9 +2869,14 @@
     "Detração (art. 42 CP / art. 67 CPM) e remição (art. 126 LEP) computadas no requisito temporal (art. 3º).",
     "Concurso com crime impeditivo: sem benefício enquanto não cumprida integralmente a pena do crime impeditivo (art. 7º, par. único, c/c art. 76 CP); penas somam-se (art. 7º).",
     "Hediondo só impede se praticado após a Lei 8.072/1990. Não trata de tráfico privilegiado.",
-    "Aplicável mesmo sem trânsito em julgado para a defesa (art. 5º). Indulto não alcança penas acessórias do CPM nem efeitos da condenação (art. 1º, par. único).",
-    "Inciso V passou a ter faixa de pena (>6 e ≤15 anos) e fração (1/3 primário, 1/2 reincidente), além das 5 saídas temporárias até 25/12/2005 (em 2004 não havia faixa nem fração)."
-   ]
+    "Inciso V passou a ter faixa de pena (>6 e ≤15 anos) e fração (1/3 primário, 1/2 reincidente), além das 5 saídas temporárias até 25/12/2005 (em 2004 não havia faixa nem fração).",
+    "Aplicável ainda que a sentença tenha transitado em julgado só para a acusação (sem prejuízo do recurso da defesa) ou haja recurso da acusação que não vise majorar a pena ou as condições do benefício (art. 5º, I e II)."
+   ],
+   "transito": {
+    "regra": "nao_majorar",
+    "dispositivo": "art. 5º",
+    "texto": "Aplicável ainda que a sentença tenha transitado em julgado só para a acusação (sem prejuízo do recurso da defesa) ou haja recurso da acusação que não vise majorar a pena ou as condições do benefício (art. 5º, I e II)."
+   }
   },
   {
    "id": "2006",
@@ -2998,8 +3043,13 @@
     "Detração (art. 42 CP) e remição (art. 126 LEP) computadas para o requisito temporal (art. 3º).",
     "Hediondo só impede se praticado após a Lei 8.072/1990.",
     "Indulto não alcança penas acessórias do CPM nem efeitos da condenação (art. 1º, par. único).",
-    "Aplicável mesmo sem trânsito em julgado para a defesa (art. 5º)."
-   ]
+    "Aplicável ainda que a sentença tenha transitado em julgado só para a acusação (sem prejuízo do recurso da defesa) ou haja recurso da acusação que não vise majorar a pena ou as condições do benefício (art. 5º, I e II)."
+   ],
+   "transito": {
+    "regra": "nao_majorar",
+    "dispositivo": "art. 5º",
+    "texto": "Aplicável ainda que a sentença tenha transitado em julgado só para a acusação (sem prejuízo do recurso da defesa) ou haja recurso da acusação que não vise majorar a pena ou as condições do benefício (art. 5º, I e II)."
+   }
   },
   {
    "id": "2007",
@@ -3168,8 +3218,13 @@
     "Hediondo só impede se praticado após a Lei 8.072/1990.",
     "Inc. V passou a exigir 2/5 (primário) ou 3/5 (reincidente) e pena entre 6 e 12 anos.",
     "Indulto não alcança penas acessórias do CPM nem efeitos da condenação (art. 1º, par. único).",
-    "Aplicável mesmo sem trânsito em julgado para a defesa (art. 5º)."
-   ]
+    "Aplicável ainda que a sentença tenha transitado em julgado só para a acusação (sem prejuízo do recurso da defesa) ou haja recurso da acusação que não vise majorar a pena ou as condições do benefício (art. 5º, I e II)."
+   ],
+   "transito": {
+    "regra": "nao_majorar",
+    "dispositivo": "art. 5º",
+    "texto": "Aplicável ainda que a sentença tenha transitado em julgado só para a acusação (sem prejuízo do recurso da defesa) ou haja recurso da acusação que não vise majorar a pena ou as condições do benefício (art. 5º, I e II)."
+   }
   },
   {
    "id": "2008",
@@ -3368,8 +3423,14 @@
     "Penas somadas (art. 7º); concurso com crime impeditivo: benefício só após cumprimento integral da pena do impeditivo (art. 76 CP).",
     "Detração (art. 42 CP) e remição (art. 126 LEP) computadas para o requisito temporal (art. 3º).",
     "Hediondo só impede se praticado após a Lei 8.072/1990.",
-    "Indulto não alcança penas acessórias do CPM nem efeitos da condenação (art. 1º, par. único)."
-   ]
+    "Indulto não alcança penas acessórias do CPM nem efeitos da condenação (art. 1º, par. único).",
+    "Aplicável ainda que a sentença tenha transitado em julgado só para a acusação (sem prejuízo do recurso da defesa) ou haja recurso da acusação que não vise majorar a pena ou as condições do benefício (art. 5º, I e II)."
+   ],
+   "transito": {
+    "regra": "nao_majorar",
+    "dispositivo": "art. 5º",
+    "texto": "Aplicável ainda que a sentença tenha transitado em julgado só para a acusação (sem prejuízo do recurso da defesa) ou haja recurso da acusação que não vise majorar a pena ou as condições do benefício (art. 5º, I e II)."
+   }
   },
   {
    "id": "2009",
@@ -3636,8 +3697,14 @@
     "Benefícios aplicáveis também a quem está em livramento condicional (art. 5º, III).",
     "Vedações do art. 8º e teto do inc. I não se aplicam aos incisos VI, VII e VIII.",
     "Detração (art. 42 CP) e remição (art. 126 LEP) computadas para o requisito temporal (art. 3º).",
-    "Indulto não alcança penas acessórias do CPM nem efeitos da condenação."
-   ]
+    "Indulto não alcança penas acessórias do CPM nem efeitos da condenação.",
+    "Aplicável ainda que a sentença tenha transitado em julgado só para a acusação (sem prejuízo do recurso da defesa) ou haja recurso da acusação que não vise majorar a pena ou as condições do benefício (art. 5º, I e II)."
+   ],
+   "transito": {
+    "regra": "nao_majorar",
+    "dispositivo": "art. 5º",
+    "texto": "Aplicável ainda que a sentença tenha transitado em julgado só para a acusação (sem prejuízo do recurso da defesa) ou haja recurso da acusação que não vise majorar a pena ou as condições do benefício (art. 5º, I e II)."
+   }
   },
   {
    "id": "2010",
@@ -3953,8 +4020,14 @@
     "Responder a outro processo, mesmo por crime do art. 8º, não impede (art. 5º, IV); livramento condicional não impede (art. 5º, III).",
     "Basta o preenchimento dos requisitos do decreto (art. 9º) — vedação de exigências extras.",
     "Comutação: base de cálculo é o maior entre remanescente e período já cumprido (art. 2º, § 1º).",
-    "Detração e remição computadas para o requisito temporal (art. 3º)."
-   ]
+    "Detração e remição computadas para o requisito temporal (art. 3º).",
+    "Aplicável ainda que a sentença tenha transitado em julgado só para a acusação (sem prejuízo do recurso da defesa) ou haja recurso da acusação que não vise majorar a pena ou as condições do benefício (art. 5º, I e II)."
+   ],
+   "transito": {
+    "regra": "nao_majorar",
+    "dispositivo": "art. 5º",
+    "texto": "Aplicável ainda que a sentença tenha transitado em julgado só para a acusação (sem prejuízo do recurso da defesa) ou haja recurso da acusação que não vise majorar a pena ou as condições do benefício (art. 5º, I e II)."
+   }
   },
   {
    "id": "2011",
@@ -4300,8 +4373,14 @@
     "Responder a outro processo, mesmo por crime do art. 8º, não impede (art. 5º, IV); livramento condicional não impede (art. 5º, III).",
     "Basta o preenchimento dos requisitos do decreto (art. 9º).",
     "Comutação: base de cálculo é o maior entre remanescente e período já cumprido (art. 2º, § 1º).",
-    "Detração e remição computadas para o requisito temporal (art. 3º)."
-   ]
+    "Detração e remição computadas para o requisito temporal (art. 3º).",
+    "Aplicável ainda que a sentença tenha transitado em julgado só para a acusação (sem prejuízo do recurso da defesa) ou haja recurso da acusação que não vise majorar a pena ou as condições do benefício (art. 5º, I e II)."
+   ],
+   "transito": {
+    "regra": "nao_majorar",
+    "dispositivo": "art. 5º",
+    "texto": "Aplicável ainda que a sentença tenha transitado em julgado só para a acusação (sem prejuízo do recurso da defesa) ou haja recurso da acusação que não vise majorar a pena ou as condições do benefício (art. 5º, I e II)."
+   }
   },
   {
    "id": "2012",
@@ -4682,7 +4761,12 @@
     "Comutação sucessiva: § 2º do art. 2º calcula nova comutação sobre o remanescente/período cumprido sem novo requisito temporal.",
     "Indulto não se estende às penas acessórias do CPM nem aos efeitos da condenação (art. 1º, § 1º).",
     "Art. 1º, IX, XII e XIII com objetivo=false: dependem de multa pendente, de substituição por PRD/sursis ou de prisão provisória, dados que o RSPE não traz (revisão grupo C)."
-   ]
+   ],
+   "transito": {
+    "regra": "nao_majorar",
+    "dispositivo": "art. 5º",
+    "texto": "Cabível ainda que: trânsito em julgado só para a acusação; recurso da acusação que não vise majorar pena; livramento condicional; outro processo em curso, mesmo por crime do art. 8º (art. 5º)."
+   }
   },
   {
    "id": "2013",
@@ -5099,7 +5183,12 @@
     "Comutação sucessiva: § 2º do art. 2º (nova comutação sem novo requisito temporal) e art. 3º (concede as comutações de decretos anteriores não obtidas).",
     "Indulto não se estende às penas acessórias do CPM nem aos efeitos da condenação (art. 1º, § 1º).",
     "Incisos de PRD/sursis e de prisão provisória com objetivo=false: dependem de substituição por PRD/sursis ou de fração cumprida em prisão provisória, dados que o RSPE não traz (revisão grupo C)."
-   ]
+   ],
+   "transito": {
+    "regra": "nao_majorar",
+    "dispositivo": "art. 6º",
+    "texto": "Cabível ainda que: trânsito em julgado só para a acusação; recurso da acusação que não vise majorar pena; livramento condicional; outro processo em curso, mesmo por crime do art. 9º; não expedida guia de recolhimento (art. 6º)."
+   }
   },
   {
    "id": "2014",
@@ -5516,7 +5605,12 @@
     "Comutação sucessiva: § 2º do art. 2º (nova comutação sem novo requisito temporal) e art. 3º (concede as comutações de decretos anteriores não obtidas).",
     "Indulto não se estende às penas acessórias do CPM nem aos efeitos da condenação (art. 1º, § 1º).",
     "Incisos de PRD/sursis e de prisão provisória com objetivo=false: dependem de substituição por PRD/sursis ou de fração cumprida em prisão provisória, dados que o RSPE não traz (revisão grupo C)."
-   ]
+   ],
+   "transito": {
+    "regra": "nao_majorar",
+    "dispositivo": "art. 6º",
+    "texto": "Cabível ainda que: trânsito em julgado só para a acusação; recurso da acusação que não vise majorar pena; livramento condicional; outro processo em curso, mesmo por crime do art. 9º; não expedida guia de recolhimento (art. 6º)."
+   }
   },
   {
    "id": "2015",
@@ -5961,7 +6055,12 @@
     "§ 2º do art. 1º: indulto dos incisos VI e VII não alcança crime com violência ou grave ameaça contra o filho ou a filha.",
     "Indulto não se estende às penas acessórias do CPM nem aos efeitos da condenação (art. 1º, § 1º).",
     "Incisos de PRD/sursis e de prisão provisória com objetivo=false: dependem de substituição por PRD/sursis ou de fração cumprida em prisão provisória, dados que o RSPE não traz (revisão grupo C)."
-   ]
+   ],
+   "transito": {
+    "regra": "nao_majorar",
+    "dispositivo": "art. 6º",
+    "texto": "Cabível ainda que: trânsito em julgado só para a acusação; recurso da acusação que não vise majorar pena; livramento condicional; outro processo em curso, mesmo por crime do art. 9º; não expedida guia de recolhimento (art. 6º)."
+   }
   },
   {
    "id": "2016",
@@ -6173,7 +6272,12 @@
     "Art. 4º: tráfico privilegiado indultável só nas hipóteses do § 1º do art. 1º, com 1/4 da pena cumprida (sem distinção de reincidência).",
     "Não há dispositivo sobre detração, remição ou regime aberto domiciliar; não reproduz o rol 'cabível ainda que' dos decretos anteriores.",
     "Indulto não se estende às penas acessórias do CPM nem aos efeitos da condenação (art. 8º)."
-   ]
+   ],
+   "transito": {
+    "regra": "nao_trata",
+    "dispositivo": "",
+    "texto": "o decreto não trata do trânsito em julgado nem do recurso da acusação"
+   }
   },
   {
    "id": "2017_maes",
@@ -6344,7 +6448,8 @@
     "meses": null,
     "exige_homologacao": true,
     "afeta": "só indulto",
-    "texto": "não tenham sido punidas com a prática de falta grave (sem janela temporal fixada)."
+    "texto": "não tenham sido punidas com a prática de falta grave (sem janela temporal fixada).",
+    "contada_de": "referencia"
    },
    "comutacao_sucessiva": "nao_trata",
    "pena_multa": "não trata",
@@ -6357,7 +6462,12 @@
     "Alínea f marcada objetiva por depender do tipo penal/redutor do § 4º constante da condenação; confirmar na sentença o reconhecimento dos requisitos do redutor.",
     "Comutação: a falta grave e o art. 1º, I são requisitos só do indulto; a comutação (art. 2º) não repete essas vedações.",
     "Art. 2º, p.u.: o juiz ajusta a execução (art. 192 LEP) e converte PPL em restritiva de direitos quando cabível."
-   ]
+   ],
+   "transito": {
+    "regra": "sem_transito_defesa",
+    "dispositivo": "art. 3º, § 4º",
+    "texto": "Art. 3º, § 4º: o juiz do processo de conhecimento pode conceder os benefícios quando a sentença tiver transitado em julgado para a acusação (dispensado o trânsito para a defesa); o decreto não admite expressamente recurso da acusação."
+   }
   },
   {
    "id": "2017",
@@ -6728,7 +6838,12 @@
     "Não há dispositivo expresso sobre detração/remição nesse decreto.",
     "Indulto/comutação não se estendem às penas acessórias do CPM nem aos efeitos da condenação (art. 9º).",
     "Falta grave (art. 4º, I): STJ, Tema 1195 - o período de 12 meses caracteriza-se pela não ocorrência da falta nesse interstício, ainda que a apuração seja concluída depois (salvo inércia/mora estatal). Falta cometida na janela e homologada depois impede."
-   ]
+   ],
+   "transito": {
+    "regra": "pos_2grau",
+    "dispositivo": "Art. 11",
+    "texto": "Art. 11: cabível ainda que trânsito em julgado só para a acusação, recurso da acusação de qualquer natureza após a 2ª instância, outro processo sem condenação em 2ª instância (mesmo por crime do art. 3º), ou não expedida guia de recolhimento."
+   }
   },
   {
    "id": "2018_maes",
@@ -6968,7 +7083,8 @@
     "meses": 12,
     "exige_homologacao": true,
     "afeta": "só indulto",
-    "texto": "não tenham sido punidas com a prática de falta grave, nos últimos doze meses (contados até 13/05/2018)."
+    "texto": "não tenham sido punidas com a prática de falta grave, nos últimos doze meses (contados até 13/05/2018).",
+    "contada_de": "referencia"
    },
    "comutacao_sucessiva": "nao_trata",
    "pena_multa": "não trata",
@@ -6983,7 +7099,12 @@
     "Art. 5º: indulto a mulheres em medida de segurança (incisos I e II), independentemente de cessação de periculosidade; não exige falta grave/12 meses expressamente no texto do art. 5º.",
     "A janela de 12 meses da falta grave: o texto diz 'nos últimos doze meses', no contexto do caput 'até o dia 13 de maio de 2018'.",
     "Art. 2º, p.u.: o juiz ajusta a execução (art. 192 LEP) e converte PPL em restritiva de direitos quando cabível."
-   ]
+   ],
+   "transito": {
+    "regra": "sem_transito_defesa",
+    "dispositivo": "art. 3º, § 4º",
+    "texto": "Art. 3º, § 4º: o juiz do processo de conhecimento pode conceder os benefícios quando a sentença tiver transitado em julgado para a acusação (dispensado o trânsito para a defesa); o decreto não admite expressamente recurso da acusação."
+   }
   },
   {
    "id": "2019",
@@ -7193,7 +7314,12 @@
     "Art. 8º: em concurso com crime impeditivo, o indulto do crime não impeditivo só após cumprida a pena do crime impeditivo.",
     "Art. 7º: não se estende às penas acessórias do CPM, aos efeitos da condenação e à multa.",
     "No art. 3º (militares em GLO) o decreto de 2019 não fixa data-limite de condenação."
-   ]
+   ],
+   "transito": {
+    "regra": "pos_2grau",
+    "dispositivo": "Art. 6º",
+    "texto": "Art. 6º: cabível ainda que haja trânsito em julgado só para a acusação, recurso da acusação após 2ª instância, livramento condicional, réu em outro processo, ou sem guia de recolhimento."
+   }
   },
   {
    "id": "2020",
@@ -7402,7 +7528,12 @@
     "Art. 6º: cabível ainda que haja trânsito em julgado só para a acusação, recurso da acusação após 2ª instância, livramento condicional, réu em outro processo, ou sem guia de recolhimento.",
     "Art. 8º: em concurso com crime impeditivo, o indulto do crime não impeditivo só após cumprida a pena do crime impeditivo.",
     "Art. 7º: não se estende às penas acessórias do CPM, aos efeitos da condenação e à multa."
-   ]
+   ],
+   "transito": {
+    "regra": "pos_2grau",
+    "dispositivo": "Art. 6º",
+    "texto": "Art. 6º: cabível ainda que haja trânsito em julgado só para a acusação, recurso da acusação após 2ª instância, livramento condicional, réu em outro processo, ou sem guia de recolhimento."
+   }
   },
   {
    "id": "2021",
@@ -7599,7 +7730,12 @@
     "Art. 9º: concedido pelo juízo do conhecimento quando condenação primária e sem recurso da acusação.",
     "O decreto não trata de falta grave, RDD ou SPF.",
     "Todas as hipóteses marcadas violencia='vedada' porque o art. 4º, II exclui genericamente crimes praticados mediante violência ou grave ameaça contra a pessoa."
-   ]
+   ],
+   "transito": {
+    "regra": "vedado_pos_2grau",
+    "dispositivo": "Art. 6º, p.u.",
+    "texto": "Art. 6º, p.u.: indulto NÃO será concedido se houver recurso da acusação de qualquer natureza após o julgamento em segunda instância."
+   }
   },
   {
    "id": "2023",
@@ -7885,8 +8021,8 @@
      "pena_min_anos": null,
      "fracao_nao_reincidente": null,
      "fracao_reincidente": null,
-     "anos_nao_reincidente": null,
-     "anos_reincidente": null,
+     "anos_nao_reincidente": 0.4167,
+     "anos_reincidente": 0.4167,
      "ininterrupto": false,
      "violencia_grave_ameaca": "vedada",
      "regime": null,
@@ -8100,7 +8236,12 @@
     "Art. 2º, XII a XIV não exigem expressamente crime sem violência/grave ameaça (marcados 'indiferente').",
     "Vedações com ressalva 'exceto quando a pena aplicada não for superior a quatro anos' (art. 1º, III, V, IX e X: lavagem, arts. 312 a 319 CP, sistema financeiro, licitações): a ressalva é por crime (pena aplicada), e o motor ainda não a aplica - com pena aplicada até 4 anos o crime NÃO é impeditivo.",
     "Art. 1º, XIV (violência contra a mulher): além do art. 24-A da Lei 11.340/2006, alcança crimes praticados contra a mulher no contexto dessas leis (ex.: CP 147-A, 215-A, 218-C; CE 326-B), o que depende da vítima e não é aferível só pelo artigo: conferir na sentença."
-   ]
+   ],
+   "transito": {
+    "regra": "nao_majorar",
+    "dispositivo": "Art. 7º, II",
+    "texto": "Art. 7º, II: recurso da acusação só impede se visar majorar a pena ou as condições do benefício."
+   }
   }
  ]
 }

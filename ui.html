@@ -371,6 +371,8 @@ tr.sub td{padding:0 0 0 0;background:#FFFFFF;cursor:default}tr.sub:hover td{back
 .pf label{display:flex;flex-direction:column;gap:3px;color:var(--tx2);font-weight:600;font-size:11.5px}
 .pf input,.pf select{font:inherit;font-size:12.5px;padding:5px 7px;border:1px solid var(--line2);border-radius:6px;background:#fff;color:var(--tx)}
 .pf input.ed,.pf select.ed{background:#FEF4D6;border-color:#F5A524}
+.pf-volta{float:right;font-weight:600;font-size:11px;color:#175CD3;cursor:pointer;margin-left:6px}
+.pf-volta:hover{text-decoration:underline}
 .pf .sd{margin-top:10px;padding:8px 10px;border:1px dashed #F5A524;border-radius:8px;background:#FFFAEB}
 .pf .sd .amd{display:flex;gap:6px;align-items:center;margin-top:4px}.pf .sd .amd input{width:62px}
 .pf .acts{display:flex;gap:8px;margin-top:10px;justify-content:flex-end}
@@ -1151,7 +1153,7 @@ const ui = {
   explicaHtml(x){ const P=x.ppe_explicacao||[]; if(!P.length) return '';
     return `<div class="expl"><b>Como cheguei a este resultado</b><ol>${P.map(p=>`<li>${penaExt(esc(p)).replace(/^(Regra aplicada:|A conta:|Resultado:|Se o resultado parecer errado, confira na guia:)/,'<b>$1</b>')}</li>`).join('')}</ol></div>`; },
   prescCards(r){ const pe=this.prescModo!=='pp'; const todas=(r.presc_linhas||[]);
-    const rel=s=>pe?(s.ppe_cor==='vermelho'||s.ppe_cor==='amarelo'||/^Verificar na ação penal/.test(s.ppe_status||'')):(s.retro_cor==='vermelho'||/^Verificar na ação penal/.test(s.retro_status||''));
+    const rel=s=>s.ajustado||(pe?(s.ppe_cor==='vermelho'||s.ppe_cor==='amarelo'||/^Verificar na ação penal/.test(s.ppe_status||'')):(s.retro_cor==='vermelho'||/^Verificar na ação penal/.test(s.retro_status||'')));
     const grupos={}; todas.filter(rel).forEach(s=>{ const k=s.proc_crim||'não informada'; (grupos[k]=grupos[k]||[]).push(s); });
     const um=(xs,k)=>{ const v=[...new Set(xs.map(x=>x[k]||''))]; return v.length===1?v[0]:null; };
     const d=v=>v?esc(v):'—'; const cur=t=>String(t||'').replace(/^Prescrição (executória|da pretensão punitiva|retroativa|intercorrente) aparente/,'Prescrição aparente');
@@ -1172,7 +1174,7 @@ const ui = {
     const abrir=`<div style="text-align:right;margin-top:8px"><span class="mini" onclick="event.stopPropagation();ui.abrir('${r.id}')">Abrir ficha completa</span></div>`;
     return cards?`<div class="pc-wrap">${cards}</div>${abrir}`:`<div class="muted">Nenhum crime com prescrição ${pe?'executória aparente ou iminente':'da pretensão punitiva aparente'} nem datas a verificar.</div>`; },
   subTabela(r,spec){ if(spec.id==='aud') return this.audCards(r); if(spec.id==='presc') return this.prescCards(r); const cols=spec.sub_cols; let rows=r[spec.sub]||[]; const tot=cols.reduce((s,c)=>s+c[2],0)+6;
-    if(spec.id==='presc'){ const pe=this.prescModo!=='pp'; rows=[...rows].sort((x,y)=>String(x.proc_crim||'').localeCompare(String(y.proc_crim||''))); rows=rows.filter(s=>pe?(s.ppe_cor==='vermelho'||s.ppe_cor==='amarelo'||/^Verificar na ação penal/.test(s.ppe_status||'')):(s.retro_cor==='vermelho'||/^Verificar na ação penal/.test(s.retro_status||''))); }
+    if(spec.id==='presc'){ const pe=this.prescModo!=='pp'; rows=[...rows].sort((x,y)=>String(x.proc_crim||'').localeCompare(String(y.proc_crim||''))); rows=rows.filter(s=>s.ajustado||(pe?(s.ppe_cor==='vermelho'||s.ppe_cor==='amarelo'||/^Verificar na ação penal/.test(s.ppe_status||'')):(s.retro_cor==='vermelho'||/^Verificar na ação penal/.test(s.retro_status||'')))); }
     let ocultos=0; if(spec.id==='aud' && !this.mostrarTudo){ const all=rows; rows=all.filter(s=>s.baixado||(s.nivel!=='info'&&s.nivel!=='ok')); ocultos=all.length-rows.length; }
     const cg='';
     const calc=!!spec.sub_calc, baixa=!!spec.sub_baixa; const head=`<tr>${cols.map(c=>`<th style="width:${(100*c[2]/tot).toFixed(1)}%">${c[1]}</th>`).join('')}${(calc||baixa)?'<th></th>':''}</tr>`;
@@ -1191,7 +1193,22 @@ const ui = {
     const vazio = (spec.id==='presc' && !rows.length) ? `<tr><td colspan="${cols.length+1}" class="muted">Nenhum crime com prescrição ${ui.prescModo==='pp'?'da pretensão punitiva aparente':'executória aparente ou iminente'} nem datas faltando.</td></tr>` : '';
     if(spec.id==='fd' && r.ficha_tem) return `<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:8px"><span>${cab}</span><span style="white-space:nowrap">${r.fd_conf_tot?`<span class="muted" style="font-size:12.5px;margin-right:10px">Conferidos <b style="color:var(--g-tx)">${r.fd_conf_n||0}</b> de ${r.fd_conf_tot}</span>`:''}${r.fd_fund?`<span class="mini pre" onclick="event.stopPropagation();ui.copiarClip(${ui.clip(r.fd_fund)})">Copiar fundamentação</span> `:''}<span class="mini" onclick="event.stopPropagation();ui.fdAdicionar('${r.id}')">+ Adicionar atestado</span> <span class="mini" onclick="event.stopPropagation();ui.abrir('${r.id}')">Abrir ficha completa</span></span></div>${this.fdTabela(r)}`;
     return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><span>${cab}</span><span class="mini" onclick="event.stopPropagation();ui.abrir('${r.id}')">Abrir ficha completa</span></div><table class="subtab">${cg}${head}${body}${vazio}</table>`; },
-  fdTabela(r){ const B=r.fd_blocos||[]; if(!B.length) return '<p class="muted">Nenhum trabalho ou estudo nesta execução.</p>';
+  // conciliação atestado x remição: (A) tabela, (B) pendências acionáveis, (C) alertas de qualidade dos dados
+  fdConc(r){ const C=r.fd_conc; if(!C) return ''; const pill=(t,c)=>t?`<span class="pill ${c||'cinza'}">${esc(t)}</span>`:'';
+    const tk=(on,ch)=>`<span class="tk ${on?'on':''}" title="${on?'Conferido - clique para desfazer':'Conferir homologação: marcar como conferido'}" onclick="event.stopPropagation();ui.fdConferir('${r.id}','${esc(ch).replace(/'/g,'&#39;')}',${!on})"></span>`;
+    const th='style="text-align:left;font-size:11px;color:var(--tx2);padding:6px 8px;background:var(--bg2,#F2F4F7)"', td='style="padding:6px 8px;font-size:12.5px;border-top:1px solid var(--line);vertical-align:top"';
+    const rows=(C.tabela||[]).map(t=>`<tr class="${t.ok?'ok':''}"><td ${td}><b>${esc(t.atestado)}</b>${t.emissao?`<br><span class="muted">emitido ${esc(t.emissao)}</span>`:''}${t.nota?`<br><span class="muted" style="font-size:11px">${esc(t.nota)}</span>`:''}</td>
+      <td ${td}>${(t.segs||[]).map(x=>`<div>${esc(x.setor)} · ${esc(x.per)}${x.inferido?' <span class="muted">(inferido)</span>':''}${x.corrigido?` <span style="color:#B54708">(ano corrigido; ${esc(x.corrigido)})</span>`:''}${x.trab!=null&&x.trab!==''&&!x.inferido?` <span class="muted">${x.trab}/${String(x.rem).replace('.',',')}</span>`:''}</div>`).join('')}</td>
+      <td ${td}>${t.trab!=null?t.trab:'—'}</td><td ${td}>${esc(t.rem)}</td><td ${td}>${esc(t.rspe)}</td><td ${td}>${esc(t.decisao)}</td><td ${td}>${esc(t.ref)}</td><td ${td}>${pill(t.rot,t.cor)}</td><td ${td} class="c">${tk(!!t.ok,t.chave)}</td></tr>`).join('');
+    const pend=(C.pend||[]).map(p=>`<li><b>${esc(p.data)}</b> · ${pill(p.status==='NAO_LANCADO'?'Atestado não lançado':p.status==='SEM_ATESTADO'?'Sem atestado':p.status==='LACUNA'?'Lacuna':'Divergência de dias',p.cor)} ${esc(p.texto)} → <b>${esc(p.acao)}</b></li>`).join('');
+    const al=(C.alertas||[]).map(a=>`<li><span class="muted">${esc(a.tipo)}:</span> ${esc(a.texto)}</li>`).join('');
+    return `<div style="font-weight:700;font-size:12.5px;margin:4px 0 6px">A) Atestados × remições do RSPE</div>
+      <table class="fdt" style="width:100%;border-collapse:collapse;table-layout:fixed"><colgroup><col style="width:13%"><col style="width:31%"><col style="width:5%"><col style="width:7%"><col style="width:9%"><col style="width:8%"><col style="width:8%"><col style="width:15%"><col style="width:4%"></colgroup><tr><th ${th}>Atestado</th><th ${th}>Setores e períodos</th><th ${th}>Trab.</th><th ${th}>Remidos</th><th ${th}>Remição no RSPE</th><th ${th}>Decisão</th><th ${th}>Data ref.</th><th ${th}>Status</th><th ${th} class="c" title="Conferir homologação (checklist manual)">✓</th></tr>${rows||`<tr><td ${td} colspan="9" class="muted">Nenhum atestado de trabalho.</td></tr>`}</table>
+      <div style="font-weight:700;font-size:12.5px;margin:12px 0 4px">B) Pendências</div>${pend?`<ul style="margin:0;padding-left:18px;font-size:12.5px;line-height:1.7">${pend}</ul>`:'<div class="muted" style="font-size:12.5px">Nenhuma pendência de trabalho.</div>'}
+      ${al?`<div style="font-weight:700;font-size:12.5px;margin:12px 0 4px">C) Alertas de qualidade dos dados</div><ul style="margin:0;padding-left:18px;font-size:12px;line-height:1.6">${al}</ul>`:''}
+      <div class="muted" style="font-size:11.5px;margin:8px 0 14px;font-weight:400">Status automáticos pela conciliação (número do atestado, dias iguais após truncar a fração, ordem cronológica). A coluna ✓ é o checklist manual "Conferir homologação".</div>`; },
+  fdTabela(r){ const conc=this.fdConc(r); const B=r.fd_blocos||[]; if(!B.length) return conc||'<p class="muted">Nenhum trabalho ou estudo nesta execução.</p>';
+    if(conc&&!B.length) return conc;
     const tk=(on,ch)=>ch?`<span class="tk ${on?'on':''}" title="${on?'Conferido - clique para desfazer':'Marcar como conferido'}" onclick="event.stopPropagation();ui.fdConferir('${r.id}','${esc(ch).replace(/'/g,'&#39;')}',${!on})"></span>`:'';
     const pill=(t,c)=>t?`<span class="pill ${c||'cinza'}">${esc(t)}</span>`:'';
     const rows=B.map(b=>{ const bok=!!b.ok;
@@ -1200,7 +1217,7 @@ const ui = {
         const ac=b.tipo==='manual'?`<span class="mini" title="Remover" onclick="event.stopPropagation();ui.fdRemover('${r.id}','${i.id}')">✕</span>`:tk(!!i.ok,i.chave);
         return `<tr class="fdi ${ok?'ok':''}"><td>${esc(i.emp)}</td><td>${esc(i.un||'—')}</td><td>${esc(i.per||'')}</td><td>${dir}</td><td class="c">${ac}</td></tr>`; }).join('');
       return hd+its; }).join('');
-    return `<table class="fdt"><colgroup><col style="width:33%"><col style="width:10%"><col style="width:25%"><col style="width:26%"><col style="width:6%"></colgroup>
+    return conc+`<table class="fdt"><colgroup><col style="width:33%"><col style="width:10%"><col style="width:25%"><col style="width:26%"><col style="width:6%"></colgroup>
       <tr><th>Emprego / estudo</th><th>Unidade</th><th>Período</th><th>O que conferir</th><th class="c">✓</th></tr>${rows}</table>
       <div class="muted" style="font-size:11.5px;margin-top:8px;font-weight:400">"Conferir homologação": ver na decisão se o atestado entrou numa remição do RSPE (o RSPE não diz a origem de cada remição). Clique no círculo para marcar como conferido.</div>`; },
   async fdConferir(id,chave,marcar){ const r=await API().fd_conferir(id,chave.replace(/&#39;/g,"'"),marcar); if(r&&r.registros){ this.aberto=id; this.carregar(r); } },
@@ -1215,10 +1232,12 @@ const ui = {
         ${inp('inicio','Início (dd/mm/aaaa)')}${inp('fim','Fim (dd/mm/aaaa)')}
         ${inp('trabalhados','Dias trabalhados')}${inp('horas','Horas de estudo')}
         ${inp('remidos','Dias remidos')}${inp('unidade','Unidade (opcional)')}
+        ${inp('emissao','Emissão do atestado (dd/mm/aaaa)')}<span></span>
+        <div style="grid-column:1/3"><textarea id="fdm_trechos" rows="3" placeholder="Trechos do atestado, um por linha: setor; início; fim; trabalhados; remidos&#10;ex.: Horta; 14/11/2023; 17/12/2023" style="width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:8px;font:inherit;box-sizing:border-box"></textarea></div>
       </div>
       <div class="acts"><button class="btn" onclick="ui.fecharModal()">Cancelar</button><button class="btn pri" onclick="ui.fdSalvar('${id}')">Adicionar</button></div></div>`;
     document.getElementById('modal').classList.add('on'); },
-  async fdSalvar(id){ const d={}; ['tipo','numero','descricao','inicio','fim','trabalhados','horas','remidos','unidade'].forEach(k=>{ const e=document.getElementById('fdm_'+k); d[k]=e?e.value:''; });
+  async fdSalvar(id){ const d={}; ['tipo','numero','descricao','inicio','fim','trabalhados','horas','remidos','unidade','emissao','trechos'].forEach(k=>{ const e=document.getElementById('fdm_'+k); d[k]=e?e.value:''; });
     const r=await API().fd_adicionar(id,d); if(r&&r.erro){ this.toast(r.erro); return; } this.fecharModal(); if(r&&r.registros){ this.aberto=id; this.carregar(r); } if(r&&r.msg) this.toast(r.msg); },
   // ---------- decisão sobre indícios de falta: vale em todas as abas (falta 12 meses, indulto, comutação, linha do tempo, Auditoria) ----------
   faltasModal(id, foco){ const r=(this.dados.registros||[]).find(x=>x.id===id); if(!r) return; const its=(r.faltas_itens||[]).slice().sort((a,b)=>this.tlD(b.data||'01/01/1900')-this.tlD(a.data||'01/01/1900'));
@@ -1872,8 +1891,10 @@ const ui = {
   ridDe(L){ const r=(this.dados.registros||[]).find(x=>(x.presc_linhas||[]).includes(L)); return r?r.id:null; },
   pfForm(L, foco){ const o=L.orig||{}, v=((L.ajuste||{}).valores)||{}, sd=((L.ajuste||{}).saldos)||{}; const id='pf'+Math.random().toString(36).slice(2,8);
     const val=k=>v[k]!==undefined?v[k]:(o[k]||'');
-    const inp=(k,rot,ph)=>`<label>${rot}<input data-k="${k}" data-o="${esc(o[k]||'')}" class="${v[k]!==undefined?'ed':''}" value="${esc(val(k))}" placeholder="${esc(ph||'dd/mm/aaaa')}" oninput="this.classList.toggle('ed',this.value.trim()!==this.dataset.o)"></label>`;
-    const sel=(k,rot,ops)=>`<label>${rot}<select data-k="${k}" class="${v[k]!==undefined?'ed':''}">${ops.map(x=>`<option value="${x[0]}"${(v[k]||'')===x[0]?' selected':''}>${x[1]}</option>`).join('')}</select></label>`;
+    // ↺ volta o campo ao dado importado do RSPE (desfaz um valor digitado errado; vale ao salvar)
+    const volta=k=>`<span class="pf-volta" title="Voltar ao dado importado do RSPE" style="display:${v[k]!==undefined?'inline':'none'}" onclick="const i=this.parentElement.querySelector('[data-k]'); i.value=i.dataset.o||''; i.classList.remove('ed'); this.style.display='none'">↺ importado</span>`;
+    const inp=(k,rot,ph)=>`<label>${rot}${volta(k)}<input data-k="${k}" data-o="${esc(o[k]||'')}" class="${v[k]!==undefined?'ed':''}" value="${esc(val(k))}" placeholder="${esc(ph||'dd/mm/aaaa')}" oninput="const e=this.value.trim()!==this.dataset.o; this.classList.toggle('ed',e); this.parentElement.querySelector('.pf-volta').style.display=e?'inline':'none'"></label>`;
+    const sel=(k,rot,ops)=>`<label>${rot}${volta(k)}<select data-k="${k}" data-o="" class="${v[k]!==undefined?'ed':''}" onchange="const e=this.value!==''; this.classList.toggle('ed',e); this.parentElement.querySelector('.pf-volta').style.display=e?'inline':'none'">${ops.map(x=>`<option value="${x[0]}"${(v[k]||'')===x[0]?' selected':''}>${x[1]}</option>`).join('')}</select></label>`;
     const sal=(L.ppe_saldos||[]).map(S=>{ const n=sd[S.evasao]; const a=n!=null?Math.floor(n/365):'', r=n!=null?n%365:0, m=n!=null?Math.min(Math.floor(r/30),11):'', d=n!=null?r-30*m:'';
       return `<div class="sd ${S.informar?'alvo':''}" data-ev="${esc(S.evasao)}"><b>${S.rotulo_evento?'Último comparecimento':S.revogacao?'Revogação do livramento':'Fuga'} de ${esc(S.evasao)} - saldo da pena nesta data</b> <span class="muted">(não é o remanescente atual do SEEU; deixe em branco para o programa calcular)</span>
         ${S.informar?`<div class="alvo-txt">⚠ Este saldo decide o resultado: a fuga durou ${esc(S.informar.duracao)} e prescreveria com saldo ${esc(S.informar.saldo)} (prazo de ${esc(S.informar.prazo)}). Veja a pena remanescente no cálculo do SEEU desta data, no atestado de pena ou na decisão de regressão/recaptura.</div>`:''}
@@ -1881,7 +1902,7 @@ const ui = {
         <div class="amd"><input data-s="a" value="${a}" placeholder="0"> ano(s) <input data-s="m" value="${m}" placeholder="0"> mês(es) <input data-s="d" value="${d}" placeholder="0"> dia(s)</div></div>`; }).join('');
     return `<div class="pf" id="${id}" onclick="event.stopPropagation()"><h5>${esc(L.rotulo||L.crime)} · preencher ou corrigir os dados <span class="muted">(em branco = dado importado do RSPE; o valor importado aparece como exemplo)</span></h5>
       <div class="pf-g">${sel('modalidade','Modalidade da pena',[['','Privativa de liberdade (padrão)'],['PRD','Restritiva de direitos'+(o.convertida?' (o RSPE indica CONVERTIDA)':'')],['SURSIS','Sursis (suspensão condicional da pena)'],['MS','Medida de segurança (inimputável)'],['MS98','Medida de segurança substitutiva (semi-imputável, art. 98)']])}${inp('inicio_prd','Início efetivo da restritiva (1º dia de serviço)')}${inp('ultimo_comparecimento','Último comparecimento (restritiva, ou regime aberto com fuga sem data)')}${inp('revogacao_sursis','Revogação do sursis')}${inp('novo_crime','Novo crime após o trânsito (data do fato)')}
-        ${inp('fato','Data do fato')}${inp('denuncia','Recebimento da denúncia')}${inp('sentenca','Sentença')}${inp('acordao','Acórdão (se houver)')}${inp('transito_mp','Trânsito para a acusação')}${inp('transito','Trânsito final')}${inp('pena','Pena aplicada','ex.: 2a6m0d')}
+        ${inp('fato','Data do fato')}${inp('denuncia','Recebimento da denúncia')}${inp('sentenca','Sentença')}${inp('acordao','Acórdão (se houver)')}${inp('transito_mp','Trânsito para a acusação')}${inp('transito','Trânsito final')}${inp('pena','Pena aplicada','ex.: 2a6m0d')}${inp('susp366_ini','Suspensão do art. 366 do CPP - início')}${inp('susp366_fim','Suspensão do art. 366 - fim (retomada; em branco = ainda suspenso)')}
         ${sel('reinc','Reincidente',[['','Conforme o RSPE'+(o.reinc?' ('+(o.reinc==='S'?'sim':'não')+')':' (não informado)')],['S','Sim'],['N','Não']])}
         ${sel('art115','Art. 115 (metade do prazo)',[['','Conforme o RSPE'+(o.nascimento?' (nasc. '+o.nascimento+')':' (sem data de nascimento)')],['sim','Aplicar: menor de 21 no fato ou maior de 70 na sentença'],['nao','Não aplicar']])}</div>
       ${sal}
@@ -1893,7 +1914,8 @@ const ui = {
     let dados=null;
     if(!restaurar){ const valores={}; f.querySelectorAll('[data-k]').forEach(e=>{ const k=e.dataset.k, x=e.value.trim(); if(x && x!==(e.dataset.o||'')) valores[k]=x; });
       if(valores.modalidade==='PRD'&&!valores.ultimo_comparecimento&&!valores.inicio_prd&&!(L.ultimo_comparecimento)) this.toast('Restritiva sem início efetivo nem último comparecimento: o prazo corre pela pena aplicada desde o trânsito (a audiência admonitória não interrompe).');
-      for(const k of ['fato','denuncia','sentenca','acordao','transito_mp','transito','ultimo_comparecimento','inicio_prd','revogacao_sursis','novo_crime']) if(valores[k] && !/^\d{2}\/\d{2}\/\d{4}$/.test(valores[k])) return this.toast('Data inválida em "'+k+'": use dd/mm/aaaa.');
+      if(valores.susp366_fim&&!valores.susp366_ini) return this.toast('Informe o início da suspensão do art. 366.');
+      for(const k of ['fato','denuncia','sentenca','acordao','transito_mp','transito','ultimo_comparecimento','inicio_prd','revogacao_sursis','novo_crime','susp366_ini','susp366_fim']) if(valores[k] && !/^\d{2}\/\d{2}\/\d{4}$/.test(valores[k])) return this.toast('Data inválida em "'+k+'": use dd/mm/aaaa.');
       if(valores.pena && this.sqAmd(valores.pena)==null) return this.toast('Pena inválida: use o formato 2a6m0d.');
       const saldos={}; f.querySelectorAll('.sd').forEach(b=>{ const g=q=>b.querySelector(`[data-s="${q}"]`).value.trim(); if(g('a')===''&&g('m')===''&&g('d')==='') return; saldos[b.dataset.ev]=(+g('a')||0)*365+(+g('m')||0)*30+(+g('d')||0); });
       if(Object.keys(valores).length||Object.keys(saldos).length) dados={valores,saldos}; }

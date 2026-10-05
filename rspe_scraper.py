@@ -1273,6 +1273,14 @@ def valor_manual(campo, v):
     return (v or "").strip().upper()
 
 
+def sem_inicio_seeu(r):
+    """Guia sem nenhum evento nem incidente lançado no SEEU (a ficha pode ter acrescentado a prisão): o cumprimento não foi
+    iniciado no sistema e o SEEU não calcula pena total, cumprida, regime nem término."""
+    return bool(r.get("_crimes")) and not pena_para_dias(r.get("pena_total")) \
+        and not [e for e in r.get("_eventos", []) if not e.get("_ficha")] \
+        and not [i for i in r.get("_incidentes", []) if not i.get("_ficha")]
+
+
 def campos_faltantes(r):
     """Dados essenciais que não foram lidos do RSPE (layout diferente, página faltando, guia sem cálculo)."""
     falta = []
@@ -1283,7 +1291,7 @@ def campos_faltantes(r):
         "ARQUIVAD" in _sem_acento(str(r.get("status_execucao") or r.get("status") or "")).upper()
     for k, rot in (("nome", "nome"), ("data_geracao_rspe", "data de geração"), ("pena_total", "pena total"),
                    ("pena_cumprida", "pena cumprida"), ("regime_atual", "regime atual")):
-        if encerrada and k in ("pena_total", "pena_cumprida", "regime_atual"):
+        if (encerrada or sem_inicio_seeu(r)) and k in ("pena_total", "pena_cumprida", "regime_atual"):
             continue
         if not r.get(k) or (k == "pena_total" and pena_para_dias(r.get(k)) == 0 and ativos):
             falta.append(rot)
@@ -1294,7 +1302,7 @@ def campos_faltantes(r):
             falta.append("pena de algum crime")
         if any(not c.get("data_infracao") for c in ativos):
             falta.append("data do fato de algum crime")
-    if not r.get("termino_previsao_seeu") and not re.search(r"INTERROMPIDA|SUSPENSA", r.get("situacao_cumprimento") or "") and not encerrada:
+    if not r.get("termino_previsao_seeu") and not re.search(r"INTERROMPIDA|SUSPENSA", r.get("situacao_cumprimento") or "") and not encerrada and not sem_inicio_seeu(r):
         falta.append("término")
     return falta
 
@@ -1826,12 +1834,12 @@ def texto_art2_ii(crs, lim):
     if crs and all(_sem_recurso_acusacao(c) for c in crs):
         return ("sentença anterior à publicação do decreto (%s), com trânsito só depois (%s); o trânsito para a acusação logo após a sentença "
                 "mostra que ela não recorreu - pelo art. 2º, II, o decreto alcança (TJMG, 9ª Câm. Crim., 1294534-24.2025). Em sentido contrário, "
-                "o STJ exige os requisitos na data da publicação (AgRg no HC 864.086, 5ª T., 18/12/2023) - a verificar" % (
+                "o STJ exige os requisitos na data da publicação, com trânsito ao menos para a acusação (AgRg no HC 864.086, 5ª T., 18/12/2023; AgRg no HC 633.240, 6ª T., 15/06/2021; AgRg nos EDcl no HC 991.402, 6ª T., 29/04/2026) - a verificar" % (
                     fmt(lim), "; ".join("%s, sentença em %s, trânsito para a acusação em %s" % (
                         crimes_curto([c]), fmt(to_date(c.get("data_sentenca") or "")), fmt(to_date(c.get("transito_mp") or ""))) for c in crs)))
     return ("sentença anterior à publicação do decreto (%s), com trânsito para a acusação só depois (%s). Se não havia recurso da acusação, "
             "ou se ele não visava majorar a pena, o decreto alcança (art. 2º, II; TJMG, 9ª Câm. Crim., 1294534-24.2025). Em sentido contrário, "
-            "o STJ exige os requisitos na data da publicação (AgRg no HC 864.086, 5ª T., 18/12/2023) - a verificar" % (
+            "o STJ exige os requisitos na data da publicação, com trânsito ao menos para a acusação (AgRg no HC 864.086, 5ª T., 18/12/2023; AgRg no HC 633.240, 6ª T., 15/06/2021; AgRg nos EDcl no HC 991.402, 6ª T., 29/04/2026) - a verificar" % (
                 fmt(lim), "; ".join("%s, trânsito em %s" % (crimes_curto([c]), c.get("transito_mp") or c.get("transito_processo")) for c in crs)))
 
 
@@ -2267,6 +2275,26 @@ def analise_decreto_2022(campos, crimes, eventos, incidentes):
         if excl:
             linhas.append("✗ %s: excluído pelo art. 7º, %s" % (nome, excl))
             continue
+        # condenação na publicação (22/12/2022): sentença anterior e trânsito para a acusação até essa data - o art. 12 exige que
+        # não haja recurso da acusação pendente, o que pressupõe o trânsito para o MP até a publicação (STJ e TJMS)
+        _pub = DECRETOS_PUB.get("2022")
+        _ds, _tm, _tp = to_date(c.get("data_sentenca") or ""), to_date(c.get("transito_mp") or ""), to_date(c.get("transito_processo") or "")
+        if _ds and _ds > _pub:
+            linhas.append("✗ %s: sentença de %s, posterior à publicação do decreto (%s) - não havia condenação na data: não alcançado "
+                          "(STJ, AgRg no HC 441.551 e AgRg no HC 919.210; art. 12: trânsito para a acusação até a publicação - AgRg nos EDcl no HC 991.402)" % (
+                              nome, fmt(_ds), fmt(_pub)))
+            continue
+        if _tm and _tm > _pub:
+            linhas.append("✗ %s: trânsito para a acusação em %s, depois da publicação do decreto (%s) - o art. 12 exige que não haja recurso da acusação "
+                          "pendente, o que pressupõe o trânsito para o Ministério Público até a publicação (STJ, AgRg nos EDcl no HC 991.402, 6ª T., "
+                          "29/04/2026; TJMS, 3ª Câm. Crim., 1603224-59.2026, e 1ª Câm. Crim., 1602410-47.2026)" % (nome, fmt(_tm), fmt(_pub)))
+            continue
+        if not _tm and not (_tp and _tp <= _pub):
+            linhas.append("? %s: %s - conferir se havia trânsito para a acusação em %s (art. 12; STJ, AgRg nos EDcl no HC 991.402)" % (
+                nome, ("trânsito em %s, depois da publicação, e o RSPE não traz o trânsito para a acusação" % fmt(_tp)) if _tp else "trânsito em julgado não consta no RSPE",
+                fmt(_pub)))
+            verificar.append(nome)
+            continue
         if num_lei(c.get("lei")) == "11343" and num_art(c.get("artigo")) == "33" and "§ 4" in (c.get("tipo_penal") or "") and not (fato and fato > ref):
             # tráfico privilegiado: o art. 7º, VI, ressalva o § 4º das exclusões - leitura conjunta com o art. 5º admite o indulto,
             # embora a pena máxima em abstrato passe de 5 anos (STJ, 6ª T., AgRg no HC 818.978 e AgRg no HC 873.240;
@@ -2488,7 +2516,14 @@ def analise_decreto_2022(campos, crimes, eventos, incidentes):
         elif all(exclusao_art7_2022(c) for c in ativos):
             out["indulto_2022"] = "excluído (art. 7º)"
         else:
-            out["indulto_2022"] = "não atinge: pena máxima em abstrato superior a 5 anos (art. 5º)"
+            # o motivo que de fato afastou cada crime (sentença posterior, trânsito para a acusação posterior, pena máxima)
+            _sent = any("posterior à publicação do decreto" in l and l.startswith("✗") and "sentença de" in l for l in linhas)
+            _trans = any(l.startswith("✗") and "trânsito para a acusação em" in l for l in linhas)
+            _pm = any(l.startswith("✗") and "supera 5 anos" in l for l in linhas)
+            mot = [m for m, ok in (("sentença posterior à publicação (STJ, AgRg no HC 441.551)", _sent),
+                                   ("trânsito para a acusação posterior à publicação (art. 12; STJ, AgRg nos EDcl no HC 991.402)", _trans),
+                                   ("pena máxima em abstrato superior a 5 anos (art. 5º)", _pm)) if ok]
+            out["indulto_2022"] = "não atinge: " + ("; ".join(mot) if mot else "pena máxima em abstrato superior a 5 anos (art. 5º)")
         out["indulto_2022_status"] = "nao"
     if any(c.get("comando_orcrim") == "S" for c in ativos if c not in posteriores):
         # art. 7º, § 1º: integrantes de facções criminosas - quem exerce o comando é integrante (o § 2º não afasta o § 1º)
@@ -3066,6 +3101,23 @@ def analise_decretos(campos, crimes, eventos, incidentes, hoje):
             _xv_sem_cumprimento(motivo, out[k + "_detalhe"])
             continue
         if not em_cumprimento:
+            # só prisão provisória até a data (flagrante/preventiva, encerrada antes do trânsito): o cumprimento não começou - o período
+            # conta como detração, não como "cumprimento interrompido" (mesma regra dos decretos 2000-2023)
+            _def = [e for e in eventos if re.search(r"PRIS|IN[ÍI]CIO|RECAPTURA", ((e.get("tipo") or "") + " " + (e.get("motivo") or "")).upper())
+                    and not re.search(r"FLAGRANTE|PREVENTIV|TEMPOR|PROVIS", (e.get("motivo") or "").upper())
+                    and (to_date(e.get("data") or "") or date.max) <= ref]
+            _trs = [d for d in (to_date(c.get("transito_processo") or c.get("transito_mp") or "") for c in crimes) if d and d <= ref]
+            _virou = any(a <= t and (b is None or b > t) for a, b in periodos for t in _trs)
+            if any(ini <= ref for ini, _ in periodos) and not _def and not _virou:
+                det = ("Até %s só houve prisão provisória (%s), encerrada antes do trânsito em julgado: o cumprimento da pena não havia começado. "
+                       "O período conta como detração (CP, art. 42), não como cumprimento interrompido." % (
+                           fmt(ref), "; ".join("%s a %s" % (fmt(a), fmt(b) if b else "hoje") for a, b in periodos if a <= ref)))
+                out[k] = "não se aplica: não iniciou o cumprimento até %s (prisão anterior provisória: detração)" % fmt(ref)
+                out[k + "_status"] = "nao"
+                out[k + "_detalhe"] = det + nota_art2
+                out[kc] = "não se aplica: não iniciou o cumprimento até %s" % fmt(ref)
+                _xv_sem_cumprimento("não iniciou o cumprimento", det + nota_art2)
+                continue
             primeiro = min((ini for ini, _ in periodos), default=None)
             if not any(ini <= ref for ini, _ in periodos):
                 det = "Nenhum evento de prisão/início de cumprimento até %s (primeiro evento: %s)." % (fmt(ref), fmt(primeiro) or "nenhum")
