@@ -869,7 +869,7 @@ class Api:
         _todos = self._modelos
         self._modelos = _so_ativos(self._modelos, brutos)
         _ids = {id(m) for m in self._modelos}
-        self._ocultos = [m for m in _todos if id(m) not in _ids]  # execuções extintas de quem tem outra ativa (fora da lista)
+        self._ocultos = [m for m in _todos if id(m) not in _ids]  # outras execuções de quem tem mais de um RSPE (fora da lista)
         return {
             "base": self.base.nome,
             "hoje": rv.HOJE.strftime("%d/%m/%Y"),
@@ -916,6 +916,7 @@ class Api:
         ctx["homonimos"] = h
         ctx["outras_cond"] = _outras_cond(brutos) if brutos is not None else {}
         ctx["outros_procs"] = _outros_procs(brutos) if brutos is not None else {}
+        ctx["outras_exec"] = _outras_exec(brutos) if brutos is not None else {}
         return ctx
 
     def _atualizar(self, processo, msg=None):
@@ -937,14 +938,20 @@ class Api:
             k = _pessoa_chave(r)
             if k:
                 _g = [r] + [o for o in self.base.todos() if o.get("processo_execucao") != processo and _pessoa_chave(o) == k]
-                ctx["outras_cond"], ctx["outros_procs"] = _outras_cond(_g), _outros_procs(_g)
+                ctx["outras_cond"], ctx["outros_procs"], ctx["outras_exec"] = _outras_cond(_g), _outros_procs(_g), _outras_exec(_g)
             m = self._montar(r, ctx)
             i = next((k for k, x in enumerate(self._modelos) if x.get("id") == m.get("id")), None)
-            if i is None:
-                self._modelos.append(m)
+            oc = getattr(self, "_ocultos", None) or []
+            j = next((k for k, x in enumerate(oc) if x.get("id") == m.get("id")), None)
+            if i is None and j is not None:
+                oc[j] = m  # execução que não é a principal da pessoa: continua fora da lista
+                out = {"parcial": []}
             else:
-                self._modelos[i] = m
-            out = {"parcial": [self._json_de(m)]}
+                if i is None:
+                    self._modelos.append(m)
+                else:
+                    self._modelos[i] = m
+                out = {"parcial": [self._json_de(m)]}
         out["copia"] = self._copia_info()
         if msg:
             out["msg"] = msg
@@ -2121,6 +2128,7 @@ def _montar_modelo(r, ctx):
     _ch0 = r.get("processo_execucao") or r.get("arquivo")
     _dm = dmanuais.get(_ch0, {})
     r["_outras_condenacoes"] = (ctx.get("outras_cond") or {}).get(_ch0, [])
+    r["_outras_execucoes"] = (ctx.get("outras_exec") or {}).get(_ch0, [])
     _n0 = _norm(r.get("nome", ""))
     _f0 = fichas.get(_ch0) or (fichas.get("nome:" + _n0) if _homonimos.get(_n0, 0) == 1 else None)
     if _f0 and _f0 is not fichas.get(_ch0) and not _mesma_mae(_norm(_f0.get("nome_mae") or ""), _norm(r.get("nome_mae") or "")):
@@ -2275,19 +2283,53 @@ def _outros_procs(regs):
     return {p: [o for o in g if o != p] for g in grupos.values() if len(g) > 1 for p in g}
 
 
-def _so_ativos(modelos, brutos):
-    """Mesma pessoa com mais de um RSPE: fica só a execução ativa (a extinta/arquivada sai da lista); sem nenhuma ativa, ficam todas."""
-    chave = {(b.get("processo_execucao") or b.get("arquivo")): _pessoa_chave(b) for b in brutos}
+def _exec_encerrada(b):
+    st = _norm(b.get("status_execucao") or "").upper()
+    return bool(rv.execucao_extinta(b)) or "ARQUIV" in st or "BAIXAD" in st
+
+
+def _rank_exec(b):
+    """Execução principal da pessoa: não encerrada > com condenação cadastrada > com pena calculada > mais eventos e incidentes no
+    SEEU > RSPE mais recente."""
+    ativos = [c for c in b.get("_crimes") or [] if not (c.get("extinto") or "").upper().startswith("S")]
+    mov = len([e for e in b.get("_eventos") or [] if not e.get("_ficha")]) + len([i for i in b.get("_incidentes") or [] if not i.get("_ficha")])
+    return (not _exec_encerrada(b), bool(ativos), bool(rs.pena_para_dias(b.get("pena_total"))), mov,
+            rs.to_date(b.get("data_geracao_rspe") or "") or date.min)
+
+
+def _outras_exec(regs):
+    """{processo: resumo das outras execuções da mesma pessoa} - para o aviso da Auditoria na execução que fica na lista."""
+    grupos = {}
+    for r in regs:
+        k = _pessoa_chave(r)
+        if k:
+            grupos.setdefault(k, []).append(r)
+    out = {}
+    for g in grupos.values():
+        if len(g) < 2:
+            continue
+        for r in g:
+            out[r.get("processo_execucao") or r.get("arquivo")] = [
+                {"processo": o.get("processo_execucao") or o.get("arquivo"), "status": o.get("status_execucao") or "",
+                 "encerrada": _exec_encerrada(o), "crimes": o.get("crimes_curto") or "", "geracao": o.get("data_geracao_rspe") or "",
+                 "tem_crime": any(not (c.get("extinto") or "").upper().startswith("S") for c in o.get("_crimes") or [])}
+                for o in g if o is not r]
+    return out
+
+
+def _so_ativos(modelos, brutos=None):
+    """Mesma pessoa com mais de um RSPE: fica uma linha só, a da execução principal (_rank_exec); as outras saem da lista e são
+    citadas no aviso da Auditoria da principal."""
     grupos = {}
     for m in modelos:
-        k = chave.get(m.get("id"))
+        k = _pessoa_chave(m.get("_bruto") or {})
         if k:
             grupos.setdefault(k, []).append(m)
     fora = set()
     for g in grupos.values():
-        ativos = [m for m in g if m.get("estado_exec") != "extinta"]
-        if len(g) > 1 and ativos:
-            fora |= {id(m) for m in g if m.get("estado_exec") == "extinta"}
+        if len(g) > 1:
+            princ = max(g, key=lambda m: _rank_exec(m.get("_bruto") or {}))
+            fora |= {id(m) for m in g if m is not princ}
     return [m for m in modelos if id(m) not in fora]
 
 
@@ -2304,7 +2346,8 @@ def _ctx_de(ctx, r):
     return {"baixas": um(ctx["baixas"]), "fichas": fichas, "manuais": um(ctx["manuais"]), "ajustes": um(ctx["ajustes"]),
             "dmanuais": um(ctx["dmanuais"]), "peds": um(ctx["peds"]), "hist_n": um(ctx["hist_n"]),
             "fixados": ({ch: fx[ch]} if ch in fx else {}) if isinstance(fx, dict) else ({ch} if ch in fx else set()),
-            "homonimos": {nn: ctx["homonimos"].get(nn, 0)}, "outras_cond": um(ctx.get("outras_cond") or {}), "outros_procs": um(ctx.get("outros_procs") or {})}
+            "homonimos": {nn: ctx["homonimos"].get(nn, 0)}, "outras_cond": um(ctx.get("outras_cond") or {}), "outros_procs": um(ctx.get("outros_procs") or {}),
+            "outras_exec": um(ctx.get("outras_exec") or {})}
 
 
 def _montar_proc(args):
