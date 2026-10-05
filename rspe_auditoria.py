@@ -398,6 +398,21 @@ def auditar(r, hoje=None):
                                (_u.get("tipo") or "interrupção").lower(), (" - " + _u.get("motivo").lower()) if _u.get("motivo") else "", _u.get("data") or "?",
                                " nem ".join(x for x, v in (("o regime atual", r.get("regime_atual")), ("o término", r.get("termino_previsao_seeu"))) if not v)),
                            "LEP, arts. 111 e 112.", tipo="pena-interrompida-seeu"))
+    _oe = r.get("_outras_execucoes") or []
+    if _oe:
+        _at = [o for o in _oe if not o["encerrada"] and o["tem_crime"]]
+        _desc = "; ".join("%s (%s%s)" % (o["processo"], (o["status"] or "?").lower(),
+                                         (", " + o["crimes"]) if o["crimes"] else (", sem condenação cadastrada" if not o["tem_crime"] else ""))
+                          for o in _oe)
+        if _at:
+            itens.append(_item("verificar", "Mais de uma execução ativa no SEEU para a mesma pessoa",
+                               "Outras execuções com condenação ativa: %s. A lista mostra só esta (a mais completa). As penas da mesma pessoa "
+                               "devem ser somadas ou unificadas numa só execução: pedir a unificação, ou a baixa da execução redistribuída." % _desc,
+                               "LEP, arts. 66, III, a, e 111; CP, art. 75.", tipo="outras-execucoes-ativas"))
+        else:
+            itens.append(_item("info", "Outras execuções da mesma pessoa fora da lista",
+                               "Também há RSPE de: %s. Ficam fora da lista porque não têm pena ativa a acompanhar; esta é a execução em "
+                               "andamento." % _desc, "", tipo="outras-execucoes"))
     if rs.sem_condenacao_seeu(r):
         itens.append(_item("verificar", "Execução sem condenação cadastrada no SEEU",
                            "O RSPE só traz o cabeçalho, com a pena total zerada, sem nenhum processo criminal, evento ou incidente: a guia não foi "

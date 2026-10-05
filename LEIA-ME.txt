@@ -1117,6 +1117,15 @@ v7.0.0
     cálculo de pena (pena total zerada com condenações ativas: o alerta
     "Guia sem pena calculada" já explica - pena total, cumprida, regime e
     término deixam de ser cobrados).
+  - Mesma pessoa com mais de um RSPE (mesmo CPF; sem CPF, nome e mãe): a
+    lista mostra uma linha só, a da execução principal - não encerrada >
+    com condenação cadastrada > com pena calculada > mais eventos e
+    incidentes > RSPE mais recente. As outras saem da lista e aparecem na
+    Auditoria da principal: "Outras execuções da mesma pessoa fora da
+    lista" (informativo, quando são arquivadas, extintas ou sem condenação)
+    ou "Mais de uma execução ativa no SEEU para a mesma pessoa" (a
+    verificar, quando outra também tem condenação ativa: pedir a unificação
+    ou a baixa da redistribuída - LEP, arts. 66, III, a, e 111).
 
 v6.16.49
   - Prescrição após a fuga: o pedido "informe a pena remanescente na fuga"
