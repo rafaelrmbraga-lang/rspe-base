@@ -1217,6 +1217,8 @@ def situacao_execucao(campos, eventos, incidentes, crimes, hoje):
     out = {}
     periodos = periodos_custodia(eventos)
     out["situacao_cumprimento"] = "EM CUMPRIMENTO" if em_custodia(periodos, hoje) else "PENA INTERROMPIDA (sem evento de reinício)"
+    if not eventos and not crimes:
+        out["situacao_cumprimento"] = "SEM CONDENAÇÃO CADASTRADA NO SEEU"
     # interrupção por prisão em outro processo: a execução fica suspensa com a pessoa presa (não é liberdade nem fuga)
     ult = max((e for e in eventos if to_date(e.get("data") or "")), key=lambda e: to_date(e["data"]), default=None)
     if (out["situacao_cumprimento"] != "EM CUMPRIMENTO" and ult and "INTERRUP" in (ult.get("tipo") or "").upper()
@@ -1281,6 +1283,24 @@ def sem_inicio_seeu(r):
         and not [i for i in r.get("_incidentes", []) if not i.get("_ficha")]
 
 
+def sem_condenacao_seeu(r):
+    """RSPE sem nenhum processo criminal cadastrado (só o cabeçalho, pena 0a0m0d): não há crime, pena nem cálculo a ler."""
+    return r.get("_rspe_sem_processo") is True and not r.get("_crimes")
+
+
+def sem_crime_seeu(r):
+    """Processo criminal cadastrado no SEEU sem nenhum crime (tipificação e pena imposta) lançado: o RSPE não traz os crimes."""
+    return r.get("_rspe_sem_crime") is True and not r.get("_crimes")
+
+
+def sem_calculo_seeu(r):
+    """Guia com condenações ativas e cumprimento iniciado, mas sem cálculo de pena no SEEU (pena total 0a0m0d, sem regime atual nem
+    término): os campos de cálculo não existem no RSPE."""
+    ativos = [c for c in r.get("_crimes", []) if not c.get("extinto", "").upper().startswith("S")]
+    return bool(ativos) and not pena_para_dias(r.get("pena_total")) and not sem_inicio_seeu(r) \
+        and any(pena_para_dias(c.get("pena_imposta")) for c in ativos)
+
+
 def interrompida_no_seeu(r):
     """Cumprimento interrompido no próprio SEEU (último evento do RSPE é interrupção: fuga, evasão, soltura...): o SEEU não
     imprime regime atual nem término até o reinício. Os eventos acrescentados pela ficha (reinício pela ficha) não contam."""
@@ -1301,20 +1321,21 @@ def campos_faltantes(r):
         "ARQUIVAD" in _sem_acento(str(r.get("status_execucao") or r.get("status") or "")).upper()
     for k, rot in (("nome", "nome"), ("data_geracao_rspe", "data de geração"), ("pena_total", "pena total"),
                    ("pena_cumprida", "pena cumprida"), ("regime_atual", "regime atual")):
-        if (encerrada or sem_inicio_seeu(r)) and k in ("pena_total", "pena_cumprida", "regime_atual"):
+        if (encerrada or sem_inicio_seeu(r) or sem_calculo_seeu(r) or sem_condenacao_seeu(r)) and k in ("pena_total", "pena_cumprida", "regime_atual"):
             continue
         if k == "regime_atual" and interrompida_no_seeu(r):
             continue  # pena interrompida no SEEU: o regime só volta a ser impresso no reinício
         if not r.get(k) or (k == "pena_total" and pena_para_dias(r.get(k)) == 0 and ativos):
             falta.append(rot)
-    if not r.get("_crimes") and not encerrada:
+    if not r.get("_crimes") and not encerrada and not sem_condenacao_seeu(r) and not sem_crime_seeu(r):
         falta.append("crimes")
     else:
         if any(not c.get("pena_imposta") for c in ativos):
             falta.append("pena de algum crime")
         if any(not c.get("data_infracao") for c in ativos):
             falta.append("data do fato de algum crime")
-    if not r.get("termino_previsao_seeu") and not interrompida_no_seeu(r) and not encerrada and not sem_inicio_seeu(r):
+    if not r.get("termino_previsao_seeu") and not interrompida_no_seeu(r) and not encerrada and not sem_inicio_seeu(r) \
+            and not sem_calculo_seeu(r) and not sem_condenacao_seeu(r):
         falta.append("término")
     return falta
 
@@ -3888,6 +3909,8 @@ def extrair(caminho):
         "rg": _campo_rg(cab),
         "nome_mae": campo(cab, "Nome da Mãe"),
         "data_nascimento": _nascimento(cab),
+        "_rspe_sem_processo": not crim.strip(),
+        "_rspe_sem_crime": bool(crim.strip()) and not re.search(r"Pena Imposta", crim),
         "regime_atual": campo(calc, "Regime Atual"),
         "pena_total": campo(calc, "Pena Total Imposta"),
         "pena_cumprida": campo(calc, "Pena Cumprida Até Data Atual"),

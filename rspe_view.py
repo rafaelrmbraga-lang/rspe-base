@@ -316,22 +316,17 @@ def situacao(d, interrompida=False, rot="Pena interrompida"):
 
 
 def _vencido_pedido(r, sc, d, palavra):
-    """Lapso vencido: diz o que o RSPE mostra depois da data - nenhum pedido (requerer), pedido pendente ou indeferido (aí, sim,
-    conferir criminológico, falta ou o motivo do indeferimento)."""
+    """Lapso vencido sem pedido no RSPE depois da data, sem exame criminológico e sem falta nos 12 meses: "sem pedido no RSPE
+    - requerer". Nos demais casos fica o texto geral (verificar criminológico, indeferimento ou falta)."""
     sit, cor = sc
     if cor != "vencido" or not isinstance(d, date):
         return sc
     inc = [i for i in r.get("_incidentes", []) if palavra in ("%s %s" % (i.get("tipo", ""), i.get("complemento", ""))).upper()
            and "DATA-BASE" not in (i.get("tipo") or "").upper() and (_data(i.get("data_decisao") or i.get("data_referencia") or "") or date.min) >= d]
-    pend = [i for i in inc if i.get("situacao") == "PENDENTE"]
-    neg = [i for i in inc if i.get("situacao") == "NÃO CONCEDIDO"]
-    base = sit.split(" · ")[0]
-    if pend:
-        return ("%s · pedido pendente no RSPE" % base, cor)
-    if neg:
-        return ("%s · indeferido em %s - conferir o motivo" % (base, neg[-1].get("data_decisao") or neg[-1].get("data_referencia") or "?"), cor)
-    if not inc:
-        return ("%s · sem pedido no RSPE - requerer" % base, cor)
+    crim = palavra == "PROGRESS" and any("CRIMINOL" in ("%s %s" % (i.get("tipo", ""), i.get("complemento", ""))).upper()
+                                         for i in r.get("_incidentes", []))
+    if not inc and not crim and r.get("falta_12m") not in ("SIM", "A APURAR"):
+        return ("%s · sem pedido no RSPE - requerer" % sit.split(" · ")[0], cor)
     return sc
 
 

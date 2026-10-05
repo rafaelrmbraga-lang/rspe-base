@@ -1104,6 +1104,19 @@ v7.0.0
   - PDF das falhas: resumo de assistidos com dado não lido, contagem por
     campo, tabela Assistido / Arquivo / Campos (causa dita uma vez) e, à
     parte, as falhas de importação e de análise.
+  - Prazo vencido (Progressão e Livramento): "sem pedido no RSPE - requerer"
+    quando não há pedido no RSPE depois do vencimento, nem exame
+    criminológico, nem falta nos 12 meses; nos demais casos, "verificar
+    criminológico, indeferimento ou falta". Saíram as variantes "pedido
+    pendente no RSPE" e "indeferido em ... - conferir o motivo" (a dica da
+    linha continua listando os pedidos).
+  - Dados que o SEEU não tem (não são falha de leitura, não vão para o PDF
+    das falhas): execução sem nenhuma condenação cadastrada (aviso
+    "Execução sem condenação cadastrada no SEEU"); processo criminal sem
+    crime lançado ("Condenação sem crime cadastrado no SEEU"); guia sem
+    cálculo de pena (pena total zerada com condenações ativas: o alerta
+    "Guia sem pena calculada" já explica - pena total, cumprida, regime e
+    término deixam de ser cobrados).
 
 v6.16.49
   - Prescrição após a fuga: o pedido "informe a pena remanescente na fuga"
