@@ -1126,6 +1126,16 @@ v7.0.0
     ou "Mais de uma execução ativa no SEEU para a mesma pessoa" (a
     verificar, quando outra também tem condenação ativa: pedir a unificação
     ou a baixa da redistribuída - LEP, arts. 66, III, a, e 111).
+  - Jurisprudências: base nova (acervo_jurisprudencia.db de 06/10/2026, 30.227
+    decisões do TJMS, STJ e STF). Triagem pela ementa, só as favoráveis à
+    defesa: 1.076 decisões (TJMS 893, STJ 94, STF 89; acórdãos 985,
+    monocráticas 91). No STF/STJ ficou só a decisão cujo texto mostra o
+    resultado favorável (dispositivo ou conclusão da própria decisão); trecho
+    só com relatório, precedente transcrito ou despacho administrativo saiu.
+    Filtros por tribunal (TJMS/STJ/STF) e por decisão (acórdão/monocrática),
+    combinados com tema e pesquisa; citação no formato de cada tribunal; botão
+    "abrir no tribunal" com o inteiro teor. Um teses_execucao.json antigo na
+    pasta não substitui mais a base embutida se for de versão anterior.
 
 v6.16.49
   - Prescrição após a fuga: o pedido "informe a pena remanescente na fuga"

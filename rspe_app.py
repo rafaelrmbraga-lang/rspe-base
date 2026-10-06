@@ -1177,21 +1177,25 @@ class Api:
         return out
 
     def teses(self):
-        """Jurisprudências da execução penal (aba Jurisprudências): acórdãos favoráveis à defesa, triados pela ementa.
-        Um teses_execucao.json ao lado do programa tem prioridade sobre a cópia embutida (módulo rspe_teses)."""
+        """Jurisprudências da execução penal (aba Jurisprudências): decisões do TJMS, STJ e STF favoráveis à defesa, triadas pela
+        ementa. Um teses_execucao.json ao lado do programa só substitui a cópia embutida (módulo rspe_teses) se for de versão igual
+        ou mais nova - um arquivo antigo esquecido na pasta não esconde a base atual."""
+        emb = None
+        try:
+            import rspe_teses
+            emb = rspe_teses.DADOS
+        except Exception:
+            logging.getLogger("rspe").exception("banco de teses embutido")
         c = os.path.join(pasta_app(), "teses_execucao.json")
         if os.path.isfile(c):
             try:
                 with open(c, encoding="utf-8") as f:
-                    return json.load(f)
+                    ext = json.load(f)
+                if not emb or str(ext.get("versao") or "") >= str(emb.get("versao") or ""):
+                    return ext
             except Exception:
                 logging.getLogger("rspe").exception("banco de teses %s", c)
-        try:
-            import rspe_teses
-            return rspe_teses.DADOS
-        except Exception as e:
-            logging.getLogger("rspe").exception("banco de teses embutido")
-            return {"erro": "Falha ao carregar as jurisprudências: %s" % e}
+        return emb or {"erro": "Falha ao carregar as jurisprudências."}
 
     def abrir_url(self, url):
         """Abre no navegador o inteiro teor de um acórdão das jurisprudências (só endereços http/https)."""
