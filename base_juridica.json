@@ -1,5 +1,5 @@
 {
- "versao": "2026-10-05",
+ "versao": "2026-10-06",
  "descricao": "Base juridica do RSPE Base. Editavel: o programa le este arquivo ao abrir (copia ao lado do .exe tem prioridade sobre a embutida). Datas em AAAA-MM-DD. Fracoes como 'num/den' ou percentual 'NN%'.",
  "prescricao": {
   "art109_tabela": [
@@ -1433,7 +1433,41 @@
   "2848:147-A": 2,
   "2848:333": 12,
   "2848:354": 2,
-  "9503:305": 1
+  "9503:305": 1,
+  "11343:28": 0.4167,
+  "2848:217": [
+   {
+    "ate": "2005-03-28",
+    "anos": 4
+   }
+  ],
+  "2848:157 §1": 10,
+  "2848:148 §1": 5,
+  "2848:217-A §1": 15,
+  "8069:243": 4,
+  "2848:121 §1": 16.6667,
+  "2848:180-A": 5,
+  "8069:241-B": 4,
+  "9503:311": 1,
+  "2848:218-B §2": 10,
+  "12850:2 §2": 12,
+  "12850:2 §3": 8,
+  "8069:244-A §1": 10,
+  "2848:349-A": 1,
+  "10826:18": [
+   {
+    "ate": "2020-01-22",
+    "anos": 8
+   },
+   {
+    "de": "2020-01-23",
+    "anos": 16
+   }
+  ],
+  "10826:16 §1": 6,
+  "2848:136": 1,
+  "2848:306": 6,
+  "_nota_2026_10_06": "Acréscimos de 06/10/2026 (tipos sem pena lida em base real): art. 28 da Lei 11.343/06 sem pena privativa - usado o maior prazo das medidas (5 meses, art. 28, §§ 3º e 4º; a prescrição é de 2 anos, art. 30); 157 § 1º, 217-A § 1º, 218-B § 2º, 244-A § 1º (ECA) e 16 § 1º (Estatuto do Desarmamento): mesmas penas do caput; 121 § 1º: máximo do caput reduzido de 1/6; Lei 12.850/13, art. 2º, § 2º: aumento até a metade (arma de fogo); § 3º é agravante e não altera o máximo; art. 18 da Lei 10.826/03: 4 a 8 anos até a Lei 13.964/2019, 8 a 16 depois; art. 217 do CP (sedução) revogado em 2005 (Lei 11.106)."
  },
  "presuncoes": {
   "hipossuficiencia": {

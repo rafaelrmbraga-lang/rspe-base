@@ -1150,6 +1150,46 @@ v7.0.0
     jurisprudência do e-SAJ filtrada pelo número do acórdão (o PDF fica no
     ícone do resultado). Sem link de inteiro teor (8 decisões do STJ), o botão
     diz "Abrir processo".
+  - Mesma pessoa em RSPEs diferentes: agora basta um identificador em comum -
+    CPF, RJI (13 dígitos, que o SEEU imprime no lugar do CPF), nome + data de
+    nascimento ou nome + mãe. Antes, um RSPE com CPF e outro com RJI da mesma
+    pessoa apareciam em duas linhas.
+  - RSPE sem nenhum evento de prisão lançado no SEEU (prisão só pela ficha):
+    regime atual e término não são mais cobrados como "dado não lido" - o
+    SEEU não os calcula sem o evento; o alerta "RSPE sem evento de prisão"
+    continua.
+  - Auditoria, "Data-base de progressão anterior à última alteração de regime":
+    não sai mais quando a última alteração é regressão por falta grave e a
+    data-base é a da falta (Súmula 534/STJ) - na base real, 45 -> 14.
+  - Fração de livramento 1/1 em crime que não é hediondo: o alerta explica que
+    o SEEU passa a tratar o crime como hediondo e trava indulto e comutação
+    (lançamento comum para "revogar" livramento na implantação).
+  - Ficha: trabalho atual em curso há até 90 dias não é mais "Ausência de
+    atestado" - aparece como "Em curso" (atestado do período ainda não
+    emitido); "Trabalho a atestar" continua Sim.
+  - Rebaixados para informativo: "Processos na ficha que o RSPE não lista" e
+    "Marcado reincidente sem condenação anterior transitada no RSPE" (na base
+    real, 45% e 34% dos assistidos: a ficha lista inquéritos encerrados e a
+    condenação anterior costuma estar em outra execução).
+  - Pena máxima em abstrato: 19 tipos acrescentados à base jurídica
+    (2026-10-06) - todos os casos "não lida" da base real resolvidos.
+  - Aula NUSPEN 2026 (SEEU/TJMS), aplicada à Auditoria:
+    * "prisão definitiva" de quem já estava preso (mandado cumprido para a
+      guia nova) e regime fixado por "Somatório de Penas" não justificam a
+      data-base: sai o alerta do Tema 1006 (caso Baltazar);
+    * remição de período anterior à última progressão lançada depois dela -
+      pedir recálculo (a data da progressão é fixa no SEEU);
+    * indulto/comutação lançados na data da decisão, e não na do decreto,
+      com outro processo em execução;
+    * incidente de unificação usado como soma de penas;
+    * pena cumprida do SEEU mais de 60 dias abaixo da custódia dos eventos +
+      remição ("limbo" de vinculação, indulto parcial);
+    * comutação sem os processos impeditivos marcados;
+    * detração do recolhimento noturno lançada como remição;
+    * textos: regime inicial na última prisão (campo "diminuir a detração
+      após os cálculos", não a alteração de data-base); fuga reconsiderada
+      (trocar para "descumprimento das condições"); indulto com impeditivo
+      (a linha do tempo do SEEU é só informativa - aviso do CNJ).
 
 v6.16.49
   - Prescrição após a fuga: o pedido "informe a pena remanescente na fuga"

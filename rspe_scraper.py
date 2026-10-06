@@ -1283,6 +1283,12 @@ def sem_inicio_seeu(r):
         and not [i for i in r.get("_incidentes", []) if not i.get("_ficha")]
 
 
+def sem_evento_seeu(r):
+    """Nenhum evento de prisão/início lançado no próprio SEEU (os da ficha não contam): o SEEU não calcula regime atual nem
+    término - a Auditoria já avisa "RSPE sem evento de prisão"."""
+    return not [e for e in r.get("_eventos", []) if not e.get("_ficha")]
+
+
 def sem_condenacao_seeu(r):
     """RSPE sem nenhum processo criminal cadastrado (só o cabeçalho, pena 0a0m0d): não há crime, pena nem cálculo a ler."""
     return r.get("_rspe_sem_processo") is True and not r.get("_crimes")
@@ -1323,8 +1329,8 @@ def campos_faltantes(r):
                    ("pena_cumprida", "pena cumprida"), ("regime_atual", "regime atual")):
         if (encerrada or sem_inicio_seeu(r) or sem_calculo_seeu(r) or sem_condenacao_seeu(r)) and k in ("pena_total", "pena_cumprida", "regime_atual"):
             continue
-        if k == "regime_atual" and interrompida_no_seeu(r):
-            continue  # pena interrompida no SEEU: o regime só volta a ser impresso no reinício
+        if k == "regime_atual" and (interrompida_no_seeu(r) or sem_evento_seeu(r)):
+            continue  # pena interrompida ou sem prisão lançada no SEEU: o regime só é impresso com o cumprimento em curso
         if not r.get(k) or (k == "pena_total" and pena_para_dias(r.get(k)) == 0 and ativos):
             falta.append(rot)
     if not r.get("_crimes") and not encerrada and not sem_condenacao_seeu(r) and not sem_crime_seeu(r):
@@ -1335,6 +1341,7 @@ def campos_faltantes(r):
         if any(not c.get("data_infracao") for c in ativos):
             falta.append("data do fato de algum crime")
     if not r.get("termino_previsao_seeu") and not interrompida_no_seeu(r) and not encerrada and not sem_inicio_seeu(r) \
+            and not sem_evento_seeu(r) \
             and not sem_calculo_seeu(r) and not sem_condenacao_seeu(r):
         falta.append("término")
     return falta
@@ -2520,7 +2527,7 @@ def analise_decreto_2022(campos, crimes, eventos, incidentes):
                 # STJ, HC 930.896); o que sobra do cumprido é o tempo que vale para os demais crimes
                 out["indulto_2022_imp"] = {"pena_imp": pena_imp, "exigido": pena_imp, "fracao": "100%", "cumprido_total": cump22}
             if cump22 is not None and pena_imp and cump22 < pena_imp:
-                linhas.append("✗ Art. 11, p. ú.: o crime não impeditivo só é indultado depois de cumprida a pena do impeditivo. Impeditivos: %s; soma %s; cumprido em 25/12/2022: %s - faltavam %s." % (
+                linhas.append("✗ Art. 11, p. ú.: o crime não impeditivo só é indultado depois de cumprida a pena do impeditivo. Impeditivos: %s; soma %s; cumprido em 25/12/2022: %s - faltavam %s. A conta é pela pena cumprida no total, e não pela ordem da linha do tempo do SEEU, que o CNJ avisa ser só informativa." % (
                     procs, dias_para_pena(pena_imp), dias_para_pena(cump22), dias_para_pena(pena_imp - cump22)))
                 out["indulto_2022"] = "não atinge: pena dos crimes impeditivos não cumprida até 25/12/2022 (art. 11, p. ú.)"
                 out["indulto_2022_status"] = "nao"

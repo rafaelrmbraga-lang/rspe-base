@@ -623,7 +623,7 @@ def _processos_x_ficha(r, f):
     fora = [p for p in f.get("autos") or [] if re.match(r"\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}$", p) and rs.chave_processo(p) not in rspe]
     if not fora:
         return []
-    return [_item_rf("verificar", "Processos na ficha que o RSPE não lista: %d" % len(fora),
+    return [_item_rf("info", "Processos na ficha que o RSPE não lista: %d" % len(fora),
                      "%s. Podem ser ações penais com condenação ainda não somada a esta execução (guia pendente - LEP, art. 111), prisões por outro "
                      "processo (suspensão) ou inquéritos/preventivas já encerrados. Conferir no SEEU e nos sistemas do TJ se há pena a unificar ou prisão "
                      "que deva ser computada." % "; ".join(fora), "LEP, art. 111; CP, art. 42.")]
@@ -1254,7 +1254,8 @@ def quadro_trabalho(r, f, hoje=None, manuais=None):
     livres = sum(x["dias"] for x in C["remicoes"] if x["usada"] is None)
     res["diferenca"] = max(0, res["remidos_estudo"] - livres) if res["remidos_estudo"] else 0
     res["sem_n"] = len(sem_p)
-    res["sem_atestado_a_requerer"] = sum(x["est"] // 3 for x in C["sem_atestado"])
+    res["em_curso_n"] = len([p for p in C["pendencias"] if p["status"] == "EM_CURSO"])
+    res["sem_atestado_a_requerer"] = sum(x["est"] // 3 for x in C["sem_atestado"] if not (x["em_curso"] and (x["fim"] - x["ini"]).days <= 90))
     res["baixas"] = 0
     # linhas (Excel, relatório e Auditoria): uma por atestado conciliado + as pendências de trabalho
     nov = []
@@ -1263,9 +1264,10 @@ def quadro_trabalho(r, f, hoje=None, manuais=None):
                     "at": "%s · %s remidos" % (t["atestado"], t["rem"]), "sit": t["rot"] + (" - verificar peticionamento no SEEU" if t["status"] == "NAO_LANCADO" else ""),
                     "cor": {"verde": "verde", "vermelho": "vermelho"}.get(t["cor"], "amarelo"), "un": "—"})
     for p_ in C["pendencias"]:
-        if p_["status"] in ("SEM_ATESTADO", "LACUNA"):
-            nov.append({"emp": p_["texto"].split(",")[0] if p_["status"] == "SEM_ATESTADO" else "Lacuna", "per": p_["texto"], "dias": "—",
-                        "at": "sem atestado" if p_["status"] == "SEM_ATESTADO" else "—", "sit": p_["acao"], "cor": "amarelo", "un": "—"})
+        if p_["status"] in ("SEM_ATESTADO", "LACUNA", "EM_CURSO"):
+            nov.append({"emp": p_["texto"].split(",")[0] if p_["status"] in ("SEM_ATESTADO", "EM_CURSO") else "Lacuna", "per": p_["texto"], "dias": "—",
+                        "at": "sem atestado" if p_["status"] == "SEM_ATESTADO" else "em curso" if p_["status"] == "EM_CURSO" else "—",
+                        "sit": p_["acao"], "cor": p_.get("cor") or "amarelo", "un": "—"})
     linhas = [L for L in linhas if L["emp"].startswith("Estudo")] + nov
     return linhas, res
 
@@ -1375,7 +1377,7 @@ def comparativo(r, f, hoje=None, conferidos=None, manuais=None):
     out["fd_remidos"] = "%s / %s" % (_fmtn(ficha_total), _fmtn(res["homologados"]))
     # colunas objetivas: Sim / Não (o detalhe vai para o cabeçalho da linha expandida)
     out["fd_estudo"] = "Sim" if res["estudo_horas_pend"] >= 12 else "Não"
-    out["fd_atestar"] = "Sim" if res.get("sem_n") else "Não"
+    out["fd_atestar"] = "Sim" if (res.get("sem_n") or res.get("em_curso_n")) else "Não"
     # situação: diz o que falta, sem rodeio (remição não homologada, trabalho sem atestado, estudo, baixa sem início)
     partes = []
     nh = res["pendentes"] or 0

@@ -356,7 +356,9 @@ def _avaliar_ficha(f, r, ctx, ini, hoje):
             pena_imp = sum(rs.pena_para_dias(c.get("pena_imposta") or c.get("pena_total_processo")) or 0 for c in imp_cr)
             exig_imp = int(-(-pena_imp * frc.numerator // frc.denominator))
             if cump >= exig_imp:
-                nota_conc = "cumpridos %s da pena do crime impeditivo (%s); benefício sobre os demais crimes" % (str(frc) if frc != 1 else "a íntegra", rs.dias_para_pena(exig_imp))
+                nota_conc = ("cumpridos %s da pena do crime impeditivo (%s); benefício sobre os demais crimes - conta pela pena cumprida, "
+                             "não pela ordem da linha do tempo do SEEU, que é só informativa (aviso do CNJ no próprio sistema)") % (
+                                 str(frc) if frc != 1 else "a íntegra", rs.dias_para_pena(exig_imp))
                 crimes, imp = resto, []
                 pena = sum(rs.pena_para_dias(c.get("pena_imposta") or c.get("pena_total_processo")) or 0 for c in crimes)
                 cump = cump - exig_imp
