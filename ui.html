@@ -1884,6 +1884,7 @@ const ui = {
         <div class="muted" id="rel_conta" style="font-size:12px;margin:5px 0 0 2px"></div>
       </div>
       <label class="chk"><input type="checkbox" id="rel_ger" checked>Relatório geral da base</label>
+      <label class="chk"><input type="checkbox" id="rel_rem">Remição detalhada (origem de cada dia a remir, por unidade e por assistido)</label>
       <label class="chk"><input type="checkbox" id="rel_pla" checked>Planilha (Excel, todas as abas)</label>
       <label class="chk"><input type="checkbox" id="rel_nom" checked>Fila de prioridade com o nome dos assistidos</label>
       <p class="muted" style="font-size:12px">Triagem: não substitui o Atestado de Pena. Datas de progressão, livramento e término são as do SEEU.</p>
@@ -1897,10 +1898,10 @@ const ui = {
     document.querySelectorAll('#rel_pessoas .relitem').forEach(el=>{ el.style.display = !q || el.dataset.b.includes(q) ? '' : 'none'; }); },
   relMarcar(v){ document.querySelectorAll('#rel_pessoas .relitem').forEach(el=>{ if(el.style.display!=='none') el.querySelector('.relp').checked=v; }); this.relConta(); },
   relLista(){ const on=document.getElementById('rel_ind').checked; document.getElementById('rel_sel').style.display = on ? '' : 'none'; },
-  async gerarRelatorios(){ const v=id=>document.getElementById(id).checked; const op=[v('rel_ind'),v('rel_ger'),v('rel_pla'),v('rel_nom')];
-    if(!op[0]&&!op[1]&&!op[2]) return this.toast('Marque ao menos uma saída.');
+  async gerarRelatorios(){ const v=id=>document.getElementById(id).checked; const op=[v('rel_ind'),v('rel_ger'),v('rel_pla'),v('rel_nom'),v('rel_rem')];
+    if(!op[0]&&!op[1]&&!op[2]&&!op[4]) return this.toast('Marque ao menos uma saída.');
     const sel=this.relSelecionados(); if(op[0] && !sel.length) return this.toast('Escolha ao menos um assistido para o relatório individual.');
-    this.fecharModal(); this.toast('Gerando relatórios…'); const r=await API().relatorios(this.visiveis().map(x=>x.id), op[0], op[1], op[2], op[3], sel);
+    this.fecharModal(); this.toast('Gerando relatórios…'); const r=await API().relatorios(this.visiveis().map(x=>x.id), op[0], op[1], op[2], op[3], sel, op[4]);
     if(r && r.msg){ this.toast(r.msg); } else if(r && r.erro){ this.toast(r.erro); } },
   async relatorioUm(id){ const r=await API().relatorio_um(id); if(r && r.caminho){ this.toast('Relatório: '+r.caminho); } else if(r && r.erro){ this.toast(r.erro); } },
   // ---- pena em dias <-> 'XaYmZd' (convenção do SEEU: ano 365, mês 30) ----

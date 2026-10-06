@@ -1,4 +1,4 @@
-RSPE BASE - SEEU  v7.1.1 (programa em abas)
+RSPE BASE - SEEU  v7.2.0 (programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
@@ -563,6 +563,27 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v7.2.0
+  - Relatórios: nova opção "Remição detalhada" (PDF em paisagem). Diz de
+    onde vem cada dia a remir, para o pedido de providências:
+    * atestado emitido sem remição no RSPE (dias exatos do atestado);
+    * atestado com remição menor no RSPE (a diferença);
+    * trabalho sem atestado - atestado a expedir (estimativa seg.-sáb. ÷ 3,
+      sem feriados; vínculos simultâneos não contam o mesmo dia duas vezes);
+    * estudo sem remição - certidão a expedir (12 h = 1 dia);
+    * leitura peticionada sem remição (4 dias por obra);
+    * trabalho em curso há até 90 dias (informado à parte, fora do total);
+    * lacunas entre atestados (sem dias: verificar se houve trabalho).
+    Traz o quadro por origem (assistidos, itens, dias, como foi calculado
+    e providência), o quadro por unidade prisional e, por assistido (ordem
+    alfabética), cada atestado ou período com os dias e a providência.
+  - Relatório geral, 2.5 Remição: os números passam a ser os da mesma conta
+    por origem. O número antigo ("dias atestados e não homologados") era a
+    diferença ficha x RSPE e somava a estimativa de todo o estudo da ficha,
+    inclusive o já remido; por isso ficava inflado.
+  - Relatório individual: quadro "A remir por origem" na seção de remição.
+  - Números do relatório com separador de milhar (50.331).
 
 v7.1.1
   - Ficha x RSPE, mãe diferente: a comparação passou a seguir a mesma regra

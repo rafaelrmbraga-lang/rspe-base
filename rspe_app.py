@@ -36,7 +36,7 @@ import rspe_relatorio as rrel
 import rspe_indulto_tl as rtl
 
 APP = "RSPE Base"
-VERSAO = "7.1.1"
+VERSAO = "7.2.0"
 
 
 def pasta_app():
@@ -2189,14 +2189,14 @@ class Api:
         return {"caminho": c, "msg": "PDF salvo."}
 
     # ---- relatórios (PDF) ----
-    def relatorios(self, ids, individual, geral, planilha, nominal, ids_individual=None):
+    def relatorios(self, ids, individual, geral, planilha, nominal, ids_individual=None, remicao=False):
         """Gera, numa pasta escolhida, a subpasta 'Relatorios <data hora>' com o relatório geral, os individuais e a planilha."""
         if not self.base:
             return {"erro": "Nenhuma base aberta."}
         modelos = [m for m in self._modelos if m["id"] in set(ids)]
         if not modelos:
             return {"erro": "Nada para gerar."}
-        if not (individual or geral or planilha):
+        if not (individual or geral or planilha or remicao):
             return {"erro": "Marque ao menos uma saída."}
         pasta = _um(self._janela.create_file_dialog(webview.FOLDER_DIALOG))
         if not pasta:
@@ -2205,7 +2205,7 @@ class Api:
             sel = set(ids_individual) if ids_individual else None
             individuais = [m for m in modelos if m["id"] in sel] if sel is not None else modelos
             destino, n, erros = rrel.gerar(modelos, pasta, self.base.nome, individual=individual, geral=geral, nominal=nominal,
-                                           individuais=individuais)
+                                           individuais=individuais, remicao=remicao)
             if planilha:
                 rx.exportar_xlsx(modelos, os.path.join(destino, "%s - planilha.xlsx" % self.base.nome),
                                  ["geral", "prog", "liv", "ind", "presc", "ext", "fd", "aud", "completo"])

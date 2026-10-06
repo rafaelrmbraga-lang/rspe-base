@@ -7,6 +7,7 @@ Extrai: identificação, conduta, períodos de trabalho (setor/empresa), atestad
 restabelecimento e recusa de trabalho. Compara os dias remidos atestados com o saldo do RSPE
 (LEP, arts. 126 a 128) e a existência de falta grave (LEP, art. 50; CP, art. 83, III, b).
 """
+import math
 import re
 from datetime import date, timedelta
 
@@ -1296,7 +1297,85 @@ def quadro_trabalho(r, f, hoje=None, manuais=None):
                         "at": "sem atestado" if p_["status"] == "SEM_ATESTADO" else "em curso" if p_["status"] == "EM_CURSO" else "—",
                         "sit": p_["acao"], "cor": p_.get("cor") or "amarelo", "un": "—"})
     linhas = [L for L in linhas if L["emp"].startswith("Estudo")] + nov
+    res["rem_det"] = remicao_detalhada(C, pend_est, lei, lei_rem, res, hoje)
     return linhas, res
+
+
+# origens da remição pendente, na ordem do relatório detalhado: (chave, rótulo, providência)
+ORIGENS_REMICAO = [
+    ("nao_lancado", "Atestado emitido, sem remição no RSPE", "verificar o peticionamento no SEEU e requerer a homologação"),
+    ("divergencia", "Atestado com remição menor no RSPE (diferença)", "conferir a decisão e requerer a diferença"),
+    ("sem_atestado", "Trabalho sem atestado (atestado a expedir)", "pedir o atestado à unidade prisional"),
+    ("estudo", "Estudo sem remição (certidão a expedir)", "requisitar a certidão de frequência e requerer a remição"),
+    ("leitura", "Leitura peticionada sem remição no RSPE", "conferir a homologação da remição pela leitura"),
+    ("em_curso", "Trabalho em curso há até 90 dias (atestado ainda não devido)", "acompanhar e pedir o atestado ao fim do período"),
+]
+
+
+def remicao_detalhada(C, pend_est, lei, lei_rem, res, hoje):
+    """Dias a remir por origem, com os itens (atestado, período, dias): base do relatório detalhado e do pedido de
+    providências. Atestados: dias do próprio atestado; trabalho sem atestado e em curso: estimativa seg.-sáb. / 3;
+    estudo: 12 h por dia (horas declaradas ou estimadas); leitura: 4 dias por obra. Lacunas não têm dias (a conferir)."""
+    import rspe_remicao as rrm
+    det = {k: {"dias": 0, "itens": []} for k, _r, _p in ORIGENS_REMICAO}
+    det["lacunas"] = {"dias": 0, "itens": []}
+    for a in (C or {}).get("atestados", []):
+        ss = [s for s in a["segs"] if s["ini"]]
+        fs = [s["fim"] for s in ss if s["fim"]]
+        per = ("%s a %s" % (rrm._f(min(s["ini"] for s in ss)), rrm._f(max(fs)) if fs else "?")) if ss else "período não informado"
+        ref = ("Atestado nº %s" % a["numero"]) if a["numero"] else "Atestado s/n"
+        setor = "; ".join(dict.fromkeys(s["setor"] for s in a["segs"] if s.get("setor"))) or ""
+        if a["status"] == "NAO_LANCADO" and a["rem"]:
+            det["nao_lancado"]["itens"].append({"ref": ref, "data": rrm._f(a["emissao"]), "setor": setor, "per": per,
+                                                "base": "%s trabalhados" % a["trab"] if a["trab"] else "", "dias": a["rem"], "estimado": False})
+            det["nao_lancado"]["dias"] += a["rem"]
+        elif a["status"] == "DIVERGENCIA" and a["rem"] and a.get("remicao"):
+            dif = math.floor(a["rem"] + 1e-9) - int(a["remicao"]["dias"])
+            if dif >= 1:
+                det["divergencia"]["itens"].append({"ref": ref, "data": rrm._f(a["emissao"]), "setor": setor, "per": per,
+                                                    "base": "atestado %s × RSPE %s (%s)" % (_fmtn(a["rem"]), int(a["remicao"]["dias"]), rrm._f(a["remicao"]["decisao"])),
+                                                    "dias": dif, "estimado": False})
+                det["divergencia"]["dias"] += dif
+    # vínculos simultâneos (dois setores no mesmo período) não somam o mesmo dia duas vezes: o total vem da união dos dias
+    uniao = {"sem_atestado": set(), "em_curso": set()}
+    for x in (C or {}).get("sem_atestado", []):
+        k = "em_curso" if x["em_curso"] and (x["fim"] - x["ini"]).days <= 90 else "sem_atestado"
+        det[k]["itens"].append({"ref": x["setor"] or "trabalho", "data": "", "setor": x["setor"] or "",
+                                "per": "%s a %s" % (rrm._f(x["ini"]), "hoje (em curso)" if x["em_curso"] else rrm._f(x["fim"])),
+                                "base": "≈ %s (seg.-sáb.)" % rs.pl(x["est"], "dia trabalhado", "dias trabalhados"), "dias": x["est"] // 3, "estimado": True})
+        fer = set()
+        for y in range(x["ini"].year, x["fim"].year + 1):
+            fer |= feriados(y)
+        d = x["ini"]
+        while d <= x["fim"]:
+            if d.weekday() < 6 and d not in fer:
+                uniao[k].add(d)
+            d += timedelta(days=1)
+    em = uniao["em_curso"] - uniao["sem_atestado"]
+    det["sem_atestado"]["dias"], det["em_curso"]["dias"] = len(uniao["sem_atestado"]) // 3, len(em) // 3
+    for k in uniao:
+        if sum(i["dias"] for i in det[k]["itens"]) > det[k]["dias"] + 1:
+            det[k]["sobreposicao"] = True  # períodos simultâneos: o total é menor que a soma das linhas
+    for e in pend_est:
+        fim = rrm._f(e["_fim"]) if e.get("_fim") else "hoje (matrícula ativa)"
+        det["estudo"]["itens"].append({"ref": "Estudo · %s" % (e.get("curso") or "").title(), "data": "", "setor": "",
+                                       "per": "%s a %s" % (rrm._f(e["_ini"]), fim) if e.get("_ini") else "período não informado",
+                                       "base": ("%d h declaradas" % e["_horas"]) if e.get("_declaradas") else "≈ %d h" % e["_horas"],
+                                       "dias": e["_horas"] // 12, "estimado": not e.get("_declaradas")})
+    det["estudo"]["dias"] = res.get("estudo_dias_pend") or 0  # sem contar duas vezes os dias com duas matrículas
+    for x in lei:
+        if x["data"] in lei_rem:
+            continue
+        n = len(x.get("meses") or [])
+        det["leitura"]["itens"].append({"ref": "Leitura" + (" (%s)" % ", ".join(x["meses"]) if n else ""), "data": _br(x["data"]), "setor": "",
+                                        "per": "relatórios peticionados em %s" % _br(x["data"]), "base": rs.pl(n, "obra", "obras") if n else "obras não informadas",
+                                        "dias": 4 * n, "estimado": False})
+        det["leitura"]["dias"] += 4 * n
+    for p_ in (C or {}).get("pendencias", []):
+        if p_["status"] == "LACUNA":
+            det["lacunas"]["itens"].append({"ref": "Lacuna", "data": "", "setor": "", "per": p_["texto"], "base": "", "dias": 0, "estimado": False})
+    det["total"] = sum(det[k]["dias"] for k, _r, _p in ORIGENS_REMICAO if k != "em_curso")
+    return det
 
 
 def _dias_txt(v):
@@ -1464,7 +1543,7 @@ def comparativo(r, f, hoje=None, conferidos=None, manuais=None):
     out["fd_fund"] = fundamentacao_remicao(res)
     out.update(fd_cor=cor, fd_sit=sit, fd_conduta=f.get("conduta") or "", fd_linhas=linhas,
                fd_blocos=blocos, fd_conf_n=n_ok, fd_conf_tot=marcaveis, fd_sem_n=res.get("sem_n", 0),
-               fd_sem_pend=res.get("sem_atestado_a_requerer", 0))
+               fd_sem_pend=res.get("sem_atestado_a_requerer", 0), fd_rem_det=res.get("rem_det"))
     return out
 
 
