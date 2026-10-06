@@ -450,6 +450,7 @@ tr.sub td{padding:0 0 0 0;background:#FFFFFF;cursor:default}tr.sub:hover td{back
 .fixbar{display:none;align-items:center;gap:6px;flex-wrap:wrap;padding:10px 24px 0;font-size:12px;color:var(--tx3)}.fixbar.on{display:flex}
 .fixbar .fx{display:inline-flex;align-items:center;gap:6px;padding:4px 6px 4px 10px;border-radius:999px;background:#FFF8E6;border:1px solid #F5D08A;color:#7A4A00;font-weight:700;cursor:pointer}
 .fixbar .fx.on{background:#FDB022;color:#fff;border-color:#FDB022}.fixbar .fx b{font-weight:400;opacity:.7;padding:0 4px;border-radius:50%}.fixbar .fx b:hover{opacity:1;background:rgba(0,0,0,.08)}
+.nmc{display:inline-flex;align-items:flex-start;gap:2px;min-width:230px}.nmc .pin{flex:none;margin-top:-1px;vertical-align:0}
 .pin{display:inline-flex;width:20px;height:20px;align-items:center;justify-content:center;border-radius:6px;color:#98A2B3;cursor:pointer;margin-right:4px;vertical-align:-4px;opacity:.7;transition:.12s}
 tr:hover .pin{opacity:1}.pin:hover{background:#F2F4F7;color:#B54708}.pin.on{opacity:1;color:#F79009}.pin svg{width:14px;height:14px}
 tbody tr.fix td{background:#FFFCF2}
@@ -699,7 +700,7 @@ const ui = {
     const tr=linhas.map(r=>{ const cor=this.cor(r,spec); const exp=spec.expansivel && this.aberto===r.id;
       const tds=spec.cols.map((c,i)=>{ let v=r[c[0]]??''; const pk=spec.pilulas[c[0]];
         if(c[0]==='proc'){ v=`<span class="copy" title="Clique para copiar" onclick="event.stopPropagation();ui.copiar('${esc(String(v))}')">${esc(v)}${svgCopy}</span>`; }
-        else if(c[0]==='nome'&&v){ const id_=this.idadeRSPE(r); v=this.pinHtml(r)+`<span class="copy" title="Clique para copiar o nome" onclick="event.stopPropagation();ui.copiar(ui._clips[${this.clip(String(v))}])">${esc(v)}${svgCopy}</span>`+(id_>this.RSPE_VELHO?`<span class="rs-old" title="RSPE desatualizado: emitido em ${esc(r.geracao)}, há ${id_} dias (mais de ${this.RSPE_VELHO}). Vale baixar um novo no SEEU." onclick="event.stopPropagation()">!</span>`:''); }
+        else if(c[0]==='nome'&&v){ const id_=this.idadeRSPE(r); v=`<span class="nmc">`+this.pinHtml(r)+`<span class="copy" title="Clique para copiar o nome" onclick="event.stopPropagation();ui.copiar(ui._clips[${this.clip(String(v))}])">${esc(v)}${svgCopy}</span>`+(id_>this.RSPE_VELHO?`<span class="rs-old" title="RSPE desatualizado: emitido em ${esc(r.geracao)}, há ${id_} dias (mais de ${this.RSPE_VELHO}). Vale baixar um novo no SEEU." onclick="event.stopPropagation()">!</span>`:'')+`</span>`; }
         else if(pk && /_sit$/.test(c[0]) && this.sitPed(r,spec)){ const x=this.sitPed(r,spec); v=`<span class="pill ${x.cor}" title="${esc(x.dica)}">${esc(x.txt)}</span>`; }
         else if(pk){ const pc = r[pk]||''; v = v ? `<span class="pill ${pc||'none'}">${esc(v)}</span>` : (/_sit$/.test(c[0]) ? '' : '<span class="muted">—</span>'); }
         else if(c[0]==='pedido'){ const P=(r.pedidos||{})[spec.id]; const mud=P&&P.ref&&P.ref!==this.pedRef(r,spec.id);
