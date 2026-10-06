@@ -700,7 +700,7 @@ def relatorio_individual(m, caminho, nome_base):
                 if its:
                     est = k in ("sem_atestado", "em_curso") or (k == "estudo" and any(i["estimado"] for i in its))
                     lin.append([r_, ("≈ " if est else "") + _num(D[k]["dias"]) if D[k]["dias"] else "—",
-                                "; ".join("%s, %s%s" % (i["ref"], i["per"], (" (%s%s)" % ("≈ " if i["estimado"] else "", _num(i["dias"]))) if i["dias"] else "") for i in its), p_])
+                                "; ".join("%s, %s, %s%s" % (i["ref"], i.get("unidade") or "—", i["per"], (" (%s%s)" % ("≈ " if i["estimado"] else "", _num(i["dias"]))) if i["dias"] else "") for i in its), p_])
             el.append(_tabela(lin, [W * 0.22, W * 0.08, W * 0.46, W * 0.24], st))
         ln = [L for L in m.get("fd_linhas", []) if L.get("cor") in ("vermelho", "amarelo")]
         if ln:
@@ -1662,7 +1662,8 @@ def remicao_por_origem(modelos):
 
 def relatorio_remicao(modelos, caminho, nome_base, nominal=True):
     """PDF da remição detalhada: de onde vem cada dia a remir (atestado emitido e não lançado, diferença, trabalho sem
-    atestado, estudo, leitura), por origem, por unidade prisional e por assistido - base do pedido de providências."""
+    atestado, estudo, leitura), por origem, por unidade prisional em que o trabalho ou o estudo aconteceu (com os assistidos
+    de cada unidade, para o ofício) e por assistido - base do pedido de providências."""
     import rspe_ficha as rf
     from reportlab.lib.pagesizes import A4, landscape
     from reportlab.lib.units import mm
@@ -1715,53 +1716,91 @@ def relatorio_remicao(modelos, caminho, nome_base, nominal=True):
                            "(o número exato sai do atestado ou da certidão a expedir). Vínculos simultâneos não contam o mesmo dia duas vezes. "
                            "Remição já lançada no RSPE e atestados anteriores a esta execução ficam de fora."), st["mut"]))
 
-    # 2) por unidade prisional (ofícios)
+    # 2) por unidade prisional: onde o trabalho, o estudo ou a leitura aconteceu (entradas em unidade penal da ficha)
+    ks = [k for k, _r, _p in ORI if k != "em_curso"]
     por_un = {}
     for m in com:
         D = m["fd_rem_det"]
-        if D["total"] < 1:
-            continue
-        u = _rotulo_unidade((m.get("ficha") or {}).get("unidade") or "") or "Unidade não informada"
-        x = por_un.setdefault(u, {"ass": 0, "total": 0, **{k: 0 for k, _r, _p in ORI}})
-        x["ass"] += 1
-        x["total"] += D["total"]
-        for k, _r, _p in ORI:
-            x[k] += D[k]["dias"]
+        for k in ks:
+            for u, v in D[k]["por_un"].items():
+                if v:
+                    x = por_un.setdefault(u, {"ass": set(), "total": 0, **{kk: 0 for kk in ks}})
+                    x["ass"].add(m.get("id"))
+                    x[k] += v
+                    x["total"] += v
     if por_un:
         el.append(CondPageBreak(40 * mm))
-        el.append(Paragraph("2. Por unidade prisional (unidade atual na ficha)", st["h2"]))
-        ks = [k for k, _r, _p in ORI if k != "em_curso"]
+        el.append(Paragraph("2. Por unidade prisional (onde o trabalho, o estudo ou a leitura aconteceu)", st["h2"]))
+        el.append(Paragraph(_t("A unidade de cada período vem das entradas em unidade penal registradas na ficha; o período que atravessa uma "
+                               "transferência é dividido entre as unidades. Atestado: unidade em que o período atestado terminou. "
+                               "\"Unidade não identificada\": período anterior à primeira entrada registrada na ficha."), st["mut"]))
+        el.append(Spacer(1, 4))
         cab = ["Unidade", "Assistidos", "Atestado sem remição", "Diferença", "Trabalho sem atestado", "Estudo", "Leitura", "Total"]
         dados = [cab]
-        for u, x in sorted(por_un.items(), key=lambda kv: -kv[1]["total"]):
-            dados.append([Paragraph(_t(u), peqn), Paragraph(str(x["ass"]), dir_)] + [Paragraph(_t(_num(int(x[k]))), dir_) for k in ks] +
+        for u, x in sorted(por_un.items(), key=lambda kv: (kv[0] == rf.SEM_UNIDADE, -kv[1]["total"])):
+            dados.append([Paragraph(_t(u), peqn), Paragraph(str(len(x["ass"])), dir_)] + [Paragraph(_t(_num(int(x[k]))), dir_) for k in ks] +
                          [Paragraph(_t(_num(int(x["total"]))), dirn)])
-        lw = (W - 70 * mm - 20 * mm) / (len(ks) + 1)
-        el.append(_tabela(dados, [70 * mm, 20 * mm] + [lw] * (len(ks) + 1), st))
+        lw = (W - 80 * mm - 20 * mm) / (len(ks) + 1)
+        el.append(_tabela(dados, [80 * mm, 20 * mm] + [lw] * (len(ks) + 1), st))
 
-    # 3) por assistido
+    # 3) por unidade: assistidos e itens (base do ofício a cada unidade)
+    if nominal and por_un:
+        el.append(CondPageBreak(60 * mm))
+        el.append(Paragraph("3. Por unidade prisional: assistidos e o que pedir a cada uma", st["h2"]))
+        larg3 = [52 * mm, 44 * mm, 40 * mm, 46 * mm, 44 * mm, 16 * mm, W - 242 * mm]
+        for u, x in sorted(por_un.items(), key=lambda kv: (kv[0] == rf.SEM_UNIDADE, -kv[1]["total"])):
+            linhas = []
+            for m in sorted(com, key=lambda m: rs._sem_acento(m.get("nome") or "").upper()):
+                D = m["fd_rem_det"]
+                for k, r_, _p in ORI:
+                    if k == "em_curso":
+                        continue
+                    for i in D[k]["itens"]:
+                        if i["unidade"] == u and i["dias"]:
+                            linhas.append((m, r_, i))
+            if not linhas:
+                continue
+            tit = Paragraph("<b>%s</b> · %s · %s" % (_t(u), rs.pl(len(x["ass"]), "assistido", "assistidos"), _t("%s dias a remir" % _num(int(x["total"])))),
+                            ParagraphStyle("pu", parent=st["cel"], fontSize=8.8, leading=12, textColor=C(NAVY)))
+            dados = [["Assistido", "Nº da execução", "Origem", "Referência", "Período", "Dias", "Pedir"]]
+            ant = None
+            for m, r_, i in linhas:
+                novo = m.get("id") != ant
+                ant = m.get("id")
+                dados.append([Paragraph(_t(m.get("nome") or ""), peqn) if novo else "", Paragraph(_t(m.get("proc") or m.get("id") or ""), peq) if novo else "",
+                              Paragraph(_t(r_), peq), Paragraph(_t(i["ref"] + ((" · " + i["data"]) if i.get("data") else "")), peq), Paragraph(_t(i["per"]), peq),
+                              Paragraph(_t(("≈ " if i.get("estimado") else "") + _num(i["dias"])), dir_),
+                              Paragraph(_t({"sem_atestado": "atestado de trabalho", "estudo": "certidão de frequência", "leitura": "conferir homologação",
+                                            "nao_lancado": "verificar peticionamento", "divergencia": "requerer a diferença"}.get(
+                                  next(k for k, rr, _pp in ORI if rr == r_), "")), peq)])
+            el.append(KeepTogether([Spacer(1, 8), tit, Spacer(1, 3), _tabela(dados[:5], larg3, st, zebra=False)]))
+            if len(dados) > 5:
+                el.append(_tabela([dados[0]] + dados[5:], larg3, st, zebra=False))
+
+    # 4) por assistido
     if nominal and pend:
         el.append(CondPageBreak(60 * mm))
-        el.append(Paragraph("3. Por assistido (ordem alfabética)", st["h2"]))
-        el.append(Paragraph(_t("Cada linha diz de onde vem o dia a remir e a providência. \"≈\" = estimativa do programa."), st["mut"]))
-        larg = [52 * mm, 48 * mm, 52 * mm, 52 * mm, 18 * mm, W - 222 * mm]
+        el.append(Paragraph("4. Por assistido (ordem alfabética)", st["h2"]))
+        el.append(Paragraph(_t("Cada linha diz de onde vem o dia a remir, em que unidade e a providência. \"≈\" = estimativa do programa."), st["mut"]))
+        larg = [40 * mm, 48 * mm, 40 * mm, 44 * mm, 40 * mm, 16 * mm, W - 228 * mm]
         for m in pend:
             D = m["fd_rem_det"]
             un = _rotulo_unidade((m.get("ficha") or {}).get("unidade") or "") or "unidade não informada"
-            tit = Paragraph("<b>%s</b> · %s · %s · <b>%s %s a remir</b>%s · remidos no RSPE: %s" % (
+            tit = Paragraph("<b>%s</b> · %s · hoje em %s · <b>%s %s a remir</b>%s · remidos no RSPE: %s" % (
                 _t(m.get("nome") or ""), _t(m.get("proc") or m.get("id") or ""), _t(un), _num(D["total"]), "dia" if D["total"] == 1 else "dias",
                 _t(" (+ ≈ %s do trabalho em curso)" % rs.pl(int(D["em_curso"]["dias"]), "dia", "dias")) if D["em_curso"]["dias"] else "",
                 _t((m.get("remidos") or "—").split(" (")[0])), ParagraphStyle("pt", parent=st["cel"], fontSize=8.4, leading=11.5))
-            dados = [["Origem", "Referência", "Período", "Base do cálculo", "Dias", "Providência"]]
+            dados = [["Origem", "Unidade", "Referência", "Período", "Base do cálculo", "Dias", "Providência"]]
             for k, r, p_ in ORI + [("lacunas", "Lacuna entre atestados", "verificar com a unidade se houve trabalho")]:
                 its = D[k]["itens"]
                 for n_, i in enumerate(its):
-                    dados.append([Paragraph(_t(r), peqn) if n_ == 0 else "", Paragraph(_t(i["ref"] + ((" · emitido em %s" % i["data"]) if i.get("data") and k in ("nao_lancado", "divergencia") else "")), peq),
+                    dados.append([Paragraph(_t(r), peqn) if n_ == 0 else "", Paragraph(_t(i.get("unidade") or "—"), peq),
+                                  Paragraph(_t(i["ref"] + ((" · emitido em %s" % i["data"]) if i.get("data") and k in ("nao_lancado", "divergencia") else "")), peq),
                                   Paragraph(_t(i["per"]), peq), Paragraph(_t(i.get("base") or "—"), peq),
                                   Paragraph(_t(("≈ " if i.get("estimado") else "") + _num(i["dias"]) if i["dias"] else "—"), dir_),
                                   Paragraph(_t(p_ if n_ == 0 else ""), peq)])
                 if len(its) > 1 and D[k]["dias"] and k != "lacunas":
-                    dados.append(["", "", "", Paragraph(_t("subtotal" + (" (sem contar duas vezes os dias simultâneos)" if D[k].get("sobreposicao") or k == "estudo" else "")), peq),
+                    dados.append(["", "", "", "", Paragraph(_t("subtotal" + (" (sem contar duas vezes os dias simultâneos)" if D[k].get("sobreposicao") else "")), peq),
                                   Paragraph(_t(("≈ " if k in ("sem_atestado", "em_curso", "estudo") else "") + _num(D[k]["dias"])), dirn), ""])
             el.append(KeepTogether([Spacer(1, 8), tit, Spacer(1, 3), _tabela(dados[:6], larg, st, zebra=False)]))
             if len(dados) > 6:

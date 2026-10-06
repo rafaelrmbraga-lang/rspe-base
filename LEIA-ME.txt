@@ -1,4 +1,4 @@
-RSPE BASE - SEEU  v7.2.0 (programa em abas)
+RSPE BASE - SEEU  v7.2.1 (programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
@@ -563,6 +563,23 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v7.2.1
+  - Remição detalhada: cada dia a remir sai com a unidade prisional em que o
+    trabalho, o estudo ou a leitura aconteceu (entradas em unidade penal da
+    ficha), e não mais só a unidade atual. O período que atravessa uma
+    transferência é dividido entre as unidades; o atestado fica na unidade
+    em que o período atestado terminou. Sem entrada registrada antes do
+    período: "Unidade não identificada na ficha".
+    * Quadro por unidade passa a usar essa unidade.
+    * Nova seção "Por unidade prisional: assistidos e o que pedir a cada
+      uma" (assistido, execução, origem, período, dias e o que pedir),
+      base do ofício a cada unidade.
+    * Na lista por assistido, coluna Unidade em cada linha.
+    * Grafias diferentes da mesma unidade na ficha (sigla, abreviação, nome
+      antigo: CT/Centro de Triagem, IPCG, PTRAN, EPJFC, Albergado CG etc.)
+      viram um nome só.
+  - Relatório individual: a unidade entra em "A remir por origem".
 
 v7.2.0
   - Relatórios: nova opção "Remição detalhada" (PDF em paisagem). Diz de

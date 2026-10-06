@@ -1297,7 +1297,7 @@ def quadro_trabalho(r, f, hoje=None, manuais=None):
                         "at": "sem atestado" if p_["status"] == "SEM_ATESTADO" else "em curso" if p_["status"] == "EM_CURSO" else "—",
                         "sit": p_["acao"], "cor": p_.get("cor") or "amarelo", "un": "—"})
     linhas = [L for L in linhas if L["emp"].startswith("Estudo")] + nov
-    res["rem_det"] = remicao_detalhada(C, pend_est, lei, lei_rem, res, hoje)
+    res["rem_det"] = remicao_detalhada(C, pend_est, lei, lei_rem, res, hoje, tl)
     return linhas, res
 
 
@@ -1312,68 +1312,170 @@ ORIGENS_REMICAO = [
 ]
 
 
-def remicao_detalhada(C, pend_est, lei, lei_rem, res, hoje):
-    """Dias a remir por origem, com os itens (atestado, período, dias): base do relatório detalhado e do pedido de
-    providências. Atestados: dias do próprio atestado; trabalho sem atestado e em curso: estimativa seg.-sáb. / 3;
-    estudo: 12 h por dia (horas declaradas ou estimadas); leitura: 4 dias por obra. Lacunas não têm dias (a conferir)."""
+SEM_UNIDADE = "Unidade não identificada na ficha"
+
+# grafias da mesma unidade na ficha (sigla, abreviação, nome antigo): um nome só no relatório por unidade
+UNIDADES_CANON = [
+    (r"^CT$|CENTRO DE TRIAGEM", "Centro de Triagem Anísio Lima"),
+    (r"^CPAIG$|AGROINDUSTRIAL DA GAMELEIRA", "Centro Penal Agroindustrial da Gameleira"),
+    (r"GAMELEIRA II\b", "Penitenciária Estadual Masculina de Regime Fechado da Gameleira II"),
+    (r"(PENIT\.? EST\.? MASC\.?|PENITENCI[AÁ]RIA ESTADUAL MASCULINA) DE REGIME FECHADO DA GAMELEIRA$",
+     "Penitenciária Estadual Masculina de Regime Fechado da Gameleira"),
+    (r"^EPJFC$|JAIR FERREIRA DE CARVALHO", "Estabelecimento Penal Jair Ferreira de Carvalho"),
+    (r"^EPRACA$|REGIME ABERTO E CASA (DO )?ALBERGADO", "Estabelecimento Penal de Regime Aberto e Casa do Albergado de Campo Grande"),
+    (r"^IPCG$|INSTITUTO PENAL DE CAMPO GRANDE", "Instituto Penal de Campo Grande"),
+    (r"^PTRAN$|PRES[IÍ]DIO DE TR[AÂ]NSITO", "Presídio de Trânsito de Campo Grande"),
+    (r"MONITORAMENTO VIRTUAL", "Unidade Mista de Monitoramento Virtual Estadual de Campo Grande"),
+    (r"RICARDO BRAND[AÃ]O", "Unidade Penal Ricardo Brandão"),
+    (r"(E\.?P\.?M\.?|ESTABELECIMENTO PENAL MASCULINO) DE (REG\.?|REGIME) SEMIABERTO E ABERTO DE DOURADOS",
+     "Estabelecimento Penal Masculino de Regime Semiaberto e Aberto de Dourados"),
+    (r"REGIME SEMIABERTO E ABERTO (DE )?AQUIDAUANA", "Estabelecimento Penal de Regime Semiaberto e Aberto de Aquidauana"),
+    (r"SEMIABERTO, ABERTO E ASS.* PONTA POR[AÃ]", "Estabelecimento Penal de Regime Semiaberto, Aberto e Assistência ao Albergado de Ponta Porã"),
+    (r"SEMIABERTO, ABERTO E ASS.* AMAMBAI", "Estabelecimento Penal de Regime Semiaberto, Aberto e Assistência ao Albergado de Amambai"),
+    (r"COL[OÔ]NIA PENAL.*TR[EÊ]S LAGOAS", "Colônia Penal e Industrial de Três Lagoas"),
+]
+
+
+def nome_unidade(nome):
+    """Nome da unidade como o relatório mostra: a grafia canônica (UNIDADES_CANON) ou o nome da ficha em caixa de título."""
+    u = rs._sem_acento(re.sub(r"\s+", " ", (nome or "").strip())).upper()
+    if not u:
+        return SEM_UNIDADE
+    for rx, nm in UNIDADES_CANON:
+        if re.search(rx, u):
+            return nm
+    lig = ("DE", "DO", "DA", "DOS", "DAS", "E")
+    return " ".join(w.lower() if w in lig and k else w.capitalize() for k, w in enumerate((nome or "").strip().upper().split()))
+
+
+def _segmentos_unidade(tl, a, b):
+    """Divide o período a..b pelas entradas em unidade penal da ficha: [(unidade, início, fim)]. Antes da primeira entrada
+    registrada (ou sem nenhuma), a unidade fica "não identificada"."""
+    if not a:
+        return [(SEM_UNIDADE, a, b)]
+    b = b or a
+    out, atual, ini = [], SEM_UNIDADE, a
+    for d, u in tl or []:
+        u = nome_unidade(u)
+        if d <= a:
+            atual = u
+        elif d <= b:
+            if u != atual:
+                out.append((atual, ini, d - timedelta(days=1)))
+                atual, ini = u, d
+    out.append((atual, ini, b))
+    return [x for x in out if x[1] <= x[2]]
+
+
+def _unidade_em(tl, d):
+    u = SEM_UNIDADE
+    for e, x in tl or []:
+        if d and e <= d:
+            u = nome_unidade(x)
+    return u
+
+
+def remicao_detalhada(C, pend_est, lei, lei_rem, res, hoje, tl=None):
+    """Dias a remir por origem e por unidade prisional, com os itens (atestado, período, dias): base do relatório detalhado
+    e do pedido de providências. A unidade vem das entradas em unidade penal da ficha; o período que atravessa uma
+    transferência é dividido entre as unidades. Atestados: dias do próprio atestado, na unidade em que o período terminou
+    (a que emitiu); trabalho sem atestado e em curso: estimativa seg.-sáb. (sem feriados) / 3; estudo: 12 h por dia (horas
+    declaradas ou estimadas); leitura: 4 dias por obra, na unidade da petição. Lacunas não têm dias (a conferir)."""
     import rspe_remicao as rrm
-    det = {k: {"dias": 0, "itens": []} for k, _r, _p in ORIGENS_REMICAO}
-    det["lacunas"] = {"dias": 0, "itens": []}
+    det = {k: {"dias": 0, "itens": [], "por_un": {}} for k, _r, _p in ORIGENS_REMICAO}
+    det["lacunas"] = {"dias": 0, "itens": [], "por_un": {}}
+
+    def add(k, item):
+        det[k]["itens"].append(item)
+        pu = det[k]["por_un"]
+        pu[item["unidade"]] = pu.get(item["unidade"], 0) + (item["dias"] or 0)
     for a in (C or {}).get("atestados", []):
         ss = [s for s in a["segs"] if s["ini"]]
         fs = [s["fim"] for s in ss if s["fim"]]
         per = ("%s a %s" % (rrm._f(min(s["ini"] for s in ss)), rrm._f(max(fs)) if fs else "?")) if ss else "período não informado"
         ref = ("Atestado nº %s" % a["numero"]) if a["numero"] else "Atestado s/n"
         setor = "; ".join(dict.fromkeys(s["setor"] for s in a["segs"] if s.get("setor"))) or ""
+        un = _unidade_em(tl, max(fs) if fs else a["emissao"])
+        pela = " → ".join(dict.fromkeys(u for u, _x, _y in _segmentos_unidade(tl, min(s["ini"] for s in ss), max(fs)))) if ss and fs else un
+        base = "%s trabalhados" % a["trab"] if a["trab"] else ""
+        if pela != un:
+            base = (base + "; " if base else "") + "período em " + pela
         if a["status"] == "NAO_LANCADO" and a["rem"]:
-            det["nao_lancado"]["itens"].append({"ref": ref, "data": rrm._f(a["emissao"]), "setor": setor, "per": per,
-                                                "base": "%s trabalhados" % a["trab"] if a["trab"] else "", "dias": a["rem"], "estimado": False})
-            det["nao_lancado"]["dias"] += a["rem"]
+            add("nao_lancado", {"ref": ref, "data": rrm._f(a["emissao"]), "setor": setor, "per": per, "unidade": un,
+                                "base": base, "dias": a["rem"], "estimado": False})
         elif a["status"] == "DIVERGENCIA" and a["rem"] and a.get("remicao"):
             dif = math.floor(a["rem"] + 1e-9) - int(a["remicao"]["dias"])
             if dif >= 1:
-                det["divergencia"]["itens"].append({"ref": ref, "data": rrm._f(a["emissao"]), "setor": setor, "per": per,
-                                                    "base": "atestado %s × RSPE %s (%s)" % (_fmtn(a["rem"]), int(a["remicao"]["dias"]), rrm._f(a["remicao"]["decisao"])),
-                                                    "dias": dif, "estimado": False})
-                det["divergencia"]["dias"] += dif
-    # vínculos simultâneos (dois setores no mesmo período) não somam o mesmo dia duas vezes: o total vem da união dos dias
-    uniao = {"sem_atestado": set(), "em_curso": set()}
+                add("divergencia", {"ref": ref, "data": rrm._f(a["emissao"]), "setor": setor, "per": per, "unidade": un,
+                                    "base": "atestado %s × RSPE %s (%s)" % (_fmtn(a["rem"]), int(a["remicao"]["dias"]), rrm._f(a["remicao"]["decisao"])),
+                                    "dias": dif, "estimado": False})
+    # trabalho sem atestado e em curso: um item por unidade; vínculos simultâneos não somam o mesmo dia duas vezes
+    uniao = {"sem_atestado": {}, "em_curso": {}}
     for x in (C or {}).get("sem_atestado", []):
         k = "em_curso" if x["em_curso"] and (x["fim"] - x["ini"]).days <= 90 else "sem_atestado"
-        det[k]["itens"].append({"ref": x["setor"] or "trabalho", "data": "", "setor": x["setor"] or "",
-                                "per": "%s a %s" % (rrm._f(x["ini"]), "hoje (em curso)" if x["em_curso"] else rrm._f(x["fim"])),
-                                "base": "≈ %s (seg.-sáb.)" % rs.pl(x["est"], "dia trabalhado", "dias trabalhados"), "dias": x["est"] // 3, "estimado": True})
         fer = set()
         for y in range(x["ini"].year, x["fim"].year + 1):
             fer |= feriados(y)
-        d = x["ini"]
-        while d <= x["fim"]:
-            if d.weekday() < 6 and d not in fer:
-                uniao[k].add(d)
-            d += timedelta(days=1)
-    em = uniao["em_curso"] - uniao["sem_atestado"]
-    det["sem_atestado"]["dias"], det["em_curso"]["dias"] = len(uniao["sem_atestado"]) // 3, len(em) // 3
+        for un, a0, b0 in _segmentos_unidade(tl, x["ini"], x["fim"]):
+            dias = set()
+            d = a0
+            while d <= b0:
+                if d.weekday() < 6 and d not in fer:
+                    dias.add(d)
+                d += timedelta(days=1)
+            if not dias:
+                continue
+            uniao[k].setdefault(un, set()).update(dias)
+            if len(dias) < 3:
+                continue  # sobra de 1 ou 2 dias no corte da transferência: não chega a 1 dia remido (fica só na conta da unidade)
+            em = x["em_curso"] and b0 == x["fim"]
+            det[k]["itens"].append({"ref": x["setor"] or "trabalho", "data": "", "setor": x["setor"] or "", "unidade": un,
+                                    "per": "%s a %s" % (rrm._f(a0), "hoje (em curso)" if em else rrm._f(b0)),
+                                    "base": "≈ %s (seg.-sáb.)" % rs.pl(len(dias), "dia trabalhado", "dias trabalhados"), "dias": len(dias) // 3, "estimado": True})
+    ja = set().union(*uniao["sem_atestado"].values()) if uniao["sem_atestado"] else set()
     for k in uniao:
+        for un, dias in uniao[k].items():
+            if k == "em_curso":
+                dias = dias - ja
+            det[k]["por_un"][un] = len(dias) // 3
+        det[k]["dias"] = sum(det[k]["por_un"].values())
         if sum(i["dias"] for i in det[k]["itens"]) > det[k]["dias"] + 1:
             det[k]["sobreposicao"] = True  # períodos simultâneos: o total é menor que a soma das linhas
+    # estudo: horas por unidade (declaradas: proporcionais aos dias úteis de cada unidade)
     for e in pend_est:
-        fim = rrm._f(e["_fim"]) if e.get("_fim") else "hoje (matrícula ativa)"
-        det["estudo"]["itens"].append({"ref": "Estudo · %s" % (e.get("curso") or "").title(), "data": "", "setor": "",
-                                       "per": "%s a %s" % (rrm._f(e["_ini"]), fim) if e.get("_ini") else "período não informado",
-                                       "base": ("%d h declaradas" % e["_horas"]) if e.get("_declaradas") else "≈ %d h" % e["_horas"],
-                                       "dias": e["_horas"] // 12, "estimado": not e.get("_declaradas")})
-    det["estudo"]["dias"] = res.get("estudo_dias_pend") or 0  # sem contar duas vezes os dias com duas matrículas
+        ini, fim = e.get("_ini"), e.get("_fim") or hoje
+        segs = _segmentos_unidade(tl, ini, fim) if ini else [(SEM_UNIDADE, None, None)]
+        du_tot = sum(_dias_uteis(a0, b0) for _u, a0, b0 in segs if a0) or 1
+        for un, a0, b0 in segs:
+            du = _dias_uteis(a0, b0) if a0 else 0
+            h = int(round(e["_horas"] * du / du_tot)) if (e.get("_declaradas") or not a0) and len(segs) > 1 else (e["_horas"] if len(segs) == 1 else du * HORAS_DIA_ESTUDO)
+            if h < 12:
+                continue
+            add("estudo", {"ref": "Estudo · %s" % (e.get("curso") or "").title(), "data": "", "setor": "", "unidade": un,
+                           "per": "%s a %s" % (rrm._f(a0), rrm._f(b0) if (b0 != hoje or e.get("_fim")) else "hoje (matrícula ativa)") if a0 else "período não informado",
+                           "base": ("%d h declaradas" % h) if e.get("_declaradas") else "≈ %d h" % h, "dias": h // 12, "estimado": not e.get("_declaradas")})
+    if det["estudo"]["itens"] and sum(det["estudo"]["por_un"].values()) > (res.get("estudo_dias_pend") or 0) + 1:
+        # duas matrículas ao mesmo tempo: o total segue a conta sem dias repetidos, proporcional por unidade
+        tot, alvo = sum(det["estudo"]["por_un"].values()), res.get("estudo_dias_pend") or 0
+        det["estudo"]["por_un"] = {u: v * alvo // tot for u, v in det["estudo"]["por_un"].items()}
+        det["estudo"]["sobreposicao"] = True
+    det["estudo"]["dias"] = sum(det["estudo"]["por_un"].values())
     for x in lei:
         if x["data"] in lei_rem:
             continue
         n = len(x.get("meses") or [])
-        det["leitura"]["itens"].append({"ref": "Leitura" + (" (%s)" % ", ".join(x["meses"]) if n else ""), "data": _br(x["data"]), "setor": "",
-                                        "per": "relatórios peticionados em %s" % _br(x["data"]), "base": rs.pl(n, "obra", "obras") if n else "obras não informadas",
-                                        "dias": 4 * n, "estimado": False})
-        det["leitura"]["dias"] += 4 * n
+        add("leitura", {"ref": "Leitura" + (" (%s)" % ", ".join(x["meses"]) if n else ""), "data": _br(x["data"]), "setor": "",
+                        "unidade": _unidade_em(tl, _dp(x["data"])),
+                        "per": "relatórios peticionados em %s" % _br(x["data"]), "base": rs.pl(n, "obra", "obras") if n else "obras não informadas",
+                        "dias": 4 * n, "estimado": False})
+    det["leitura"]["dias"] = sum(det["leitura"]["por_un"].values())
+    det["nao_lancado"]["dias"] = sum(det["nao_lancado"]["por_un"].values())
+    det["divergencia"]["dias"] = sum(det["divergencia"]["por_un"].values())
     for p_ in (C or {}).get("pendencias", []):
         if p_["status"] == "LACUNA":
-            det["lacunas"]["itens"].append({"ref": "Lacuna", "data": "", "setor": "", "per": p_["texto"], "base": "", "dias": 0, "estimado": False})
+            ds = re.findall(r"\d{2}/\d{2}/\d{4}", p_["texto"])
+            add("lacunas", {"ref": "Lacuna", "data": "", "setor": "", "per": p_["texto"], "base": "", "dias": 0, "estimado": False,
+                            "unidade": " → ".join(dict.fromkeys(u for u, _a, _b in _segmentos_unidade(tl, _dp(ds[0]), _dp(ds[1])))) if len(ds) >= 2 else SEM_UNIDADE})
     det["total"] = sum(det[k]["dias"] for k, _r, _p in ORIGENS_REMICAO if k != "em_curso")
     return det
 
