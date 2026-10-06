@@ -2527,7 +2527,7 @@ def analise_decreto_2022(campos, crimes, eventos, incidentes):
                 # STJ, HC 930.896); o que sobra do cumprido é o tempo que vale para os demais crimes
                 out["indulto_2022_imp"] = {"pena_imp": pena_imp, "exigido": pena_imp, "fracao": "100%", "cumprido_total": cump22}
             if cump22 is not None and pena_imp and cump22 < pena_imp:
-                linhas.append("✗ Art. 11, p. ú.: o crime não impeditivo só é indultado depois de cumprida a pena do impeditivo. Impeditivos: %s; soma %s; cumprido em 25/12/2022: %s - faltavam %s." % (
+                linhas.append("✗ Art. 11, p. ú.: o crime não impeditivo só é indultado depois de cumprida a pena do impeditivo. Impeditivos: %s; soma %s; cumprido em 25/12/2022: %s - faltavam %s. A conta é pela pena cumprida no total, e não pela ordem da linha do tempo do SEEU, que o CNJ avisa ser só informativa." % (
                     procs, dias_para_pena(pena_imp), dias_para_pena(cump22), dias_para_pena(pena_imp - cump22)))
                 out["indulto_2022"] = "não atinge: pena dos crimes impeditivos não cumprida até 25/12/2022 (art. 11, p. ú.)"
                 out["indulto_2022_status"] = "nao"

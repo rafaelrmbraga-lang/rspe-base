@@ -623,7 +623,7 @@ def _processos_x_ficha(r, f):
     fora = [p for p in f.get("autos") or [] if re.match(r"\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}$", p) and rs.chave_processo(p) not in rspe]
     if not fora:
         return []
-    return [_item_rf("verificar", "Processos na ficha que o RSPE não lista: %d" % len(fora),
+    return [_item_rf("info", "Processos na ficha que o RSPE não lista: %d" % len(fora),
                      "%s. Podem ser ações penais com condenação ainda não somada a esta execução (guia pendente - LEP, art. 111), prisões por outro "
                      "processo (suspensão) ou inquéritos/preventivas já encerrados. Conferir no SEEU e nos sistemas do TJ se há pena a unificar ou prisão "
                      "que deva ser computada." % "; ".join(fora), "LEP, art. 111; CP, art. 42.")]
