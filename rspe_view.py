@@ -192,7 +192,7 @@ def data_progressao(r):
     if r.get("progressao_previsao_seeu"):
         nova = _prog_pela_db_manual(r)
         if nova:
-            return (rs.fmt(nova), nova)
+            return (rs.fmt(nova) + "*", nova)  # * = recalculada pelo programa (data-base informada)
         return (r["progressao_previsao_seeu"], _data(r["progressao_previsao_seeu"]))
     return _sem_data(r)
 
@@ -489,7 +489,7 @@ def termino(r):
         return r["termino_previsao_seeu"]
     tc = termino_calc(r)
     if tc:
-        return "%s (calculado: data do RSPE + pena remanescente; o SEEU não imprime o término)" % rs.fmt(tc)
+        return "%s*" % rs.fmt(tc)  # * = calculado pelo programa (explicação em calc_notas, rodapé e ficha)
     if nao_iniciou(r):
         return "Não iniciou"
     return rotulo_parada(r, True) if parada(r) else "Não consta no RSPE"
@@ -590,7 +590,7 @@ def extincao(r, presc, interr):
     return {
         "ext_hipoteses": "; ".join(hip) if hip else ("Não iniciou o cumprimento - sem previsão" if nao_iniciou(r) else ("" if not interr else rotulo_parada(r) + " - sem previsão")),
         "ext_cor": cor,
-        "ext_termino": (rs.fmt(term) + (" (calculado)" if term_calc else "")) if term else ("Não iniciou" if nao_iniciou(r) else (rotulo_parada(r, True) if interr else "")),
+        "ext_termino": (rs.fmt(term) + ("*" if term_calc else "")) if term else ("Não iniciou" if nao_iniciou(r) else (rotulo_parada(r, True) if interr else "")),
         "ext_dias": (term - HOJE).days if term else None,
         "ext_sit": ("Pena extinta (registrada)" if ja_extinta else (("Extinção cabível" if cor == "vermelho" else situacao(term)[0].replace("Vence", "Término").replace("Em ", "Término em ")) if (term or cor == "vermelho") else "")),
         "ext_extintos": "; ".join(ext),
@@ -997,6 +997,15 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
     m = simplificar(m)
     if dbi.get("db_editada") and r.get("progressao_previsao_seeu") and _prog_pela_db_manual(r):
         m["prog_motivo"] = "recalculada pela data-base informada (%s); SEEU: %s" % (dbi["db"], r["progressao_previsao_seeu"])
+    # * nas colunas: valor calculado pelo programa, não impresso pelo SEEU - a explicação vai ao rodapé e à ficha
+    notas = {}
+    if not r.get("termino_previsao_seeu") and termino_calc(r):
+        notas["termino"] = ("Término*: calculado pelo programa - data de geração do RSPE (%s) + pena remanescente (%s); o SEEU não "
+                            "imprimiu o término." % (r.get("data_geracao_rspe") or "?", r.get("pena_remanescente") or "?"))
+    if dbi.get("db_editada") and r.get("progressao_previsao_seeu") and _prog_pela_db_manual(r):
+        notas["prog"] = ("Progressão*: recalculada pelo programa com a data-base informada (%s); a data do SEEU é %s."
+                         % (dbi["db"], r["progressao_previsao_seeu"]))
+    m["calc_notas"] = notas
     m["_final"] = r  # o registro com o que a ficha resolveu (incisos IV, XI a XIII): base da linha do tempo, igual à aba
     return m
 

@@ -1,4 +1,4 @@
-RSPE BASE - SEEU  v7.0.0 (programa em abas)
+RSPE BASE - SEEU  v7.1.0 (programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
@@ -564,6 +564,281 @@ HISTÓRICO DE VERSÕES
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
 
+v7.1.0
+  - Indulto e comutação nos decretos (complemento da 7.0.0):
+    * Lesão gravíssima ou seguida de morte (art. 129, §§ 2º e 3º): o SEEU
+      não informa a vítima (hedionda só contra agente - Lei 13.142/2015):
+      "a verificar" em todos os decretos desde 2015; com fato anterior a
+      07/07/2015, mostra as duas correntes, como no roubo - STJ (hediondez
+      na data do decreto, impede) e a tese defensiva da irretroatividade
+      (STF, 2ª T., RHC 267.297 AgR e HC 273.296 AgR).
+  - Relatório geral refeito como diagnóstico da base (dados crus, sem o
+    controle de pedidos do programa), com gráficos de rosca (percentual na
+    fatia e legenda em colunas Nº e %; categoria única sai como gráfico inteiro):
+    1. Perfil da população - idade média, faixa etária, regime, pena, juízo
+       da execução, unidade prisional (ficha) e incidência penal;
+    2. Trabalho, conduta e disciplina - trabalham, estudam, PADICs em
+       trâmite, faltas graves sem decisão judicial, conduta carcerária,
+       situação laboral, situação do PADIC (com tempo de resposta), faltas
+       graves no RSPE e pendências de remição;
+    3. Situação jurídico-executória - cada quadro precedido de gráfico:
+       indicadores (colunas: prescrição executória e punitiva, extinção,
+       lapsos vencidos, indulto/comutação), prazos do SEEU por faixa (três
+       roscas), indulto e comutação por decreto (colunas; quadro resumido
+       aos decretos com resultado, os demais numa linha só), prescrição
+       executória e punitiva e extinção da pena (três roscas);
+    4. Inconsistências do cálculo (Auditoria).
+  - Registro para o SAP sem nenhum pedido marcado: texto padrão "Atendimento
+    a [nome] referente aos autos [nº] na data de hoje (dd/mm/aaaa). A GR foi
+    analisada e não se verificou cabível pedido sobre progressão,
+    livramento, indulto, prescrição ou extinção no momento da análise."
+  - Prescrição executória sem a linha do tempo na tela: a linha de cada
+    crime fica com "cálculo" e "editar dados"; o relatório individual em PDF
+    também deixa de trazer a figura (fica o cálculo: detração, saldo e prazo).
+  - Teste de estresse da leitura (layout atual): 21 mil variações do texto
+    real dos RSPE e das fichas (campo vazio, data ou pena absurda, fração
+    0/0, linha quebrada, seção ou página faltando, acentos, PDF cortado)
+    pelo fluxo completo do programa, e 40 assistidos assim abertos em todas
+    as abas com 2.394 cliques na tela. Corrigido o que derrubava a análise:
+    fração com denominador zero, datas fora de 1900-2100 (agora tratadas
+    como não lidas), penas acima de 3.000 anos (lixo de leitura) e projeção
+    de data além do calendário. RSPE sem a 1ª página: a importação diz
+    "sem o número da execução legível - gere o PDF de novo no SEEU".
+  - Mesma pessoa com mais de um RSPE (mesmo CPF; sem CPF, nome + mãe): a
+    lista mostra só a execução ativa; a extinta ou arquivada sai da lista,
+    mas a condenação dela conta para a reincidência (geral e específica) da
+    ativa, e a ficha disciplinar vinculada a ela vale para a ativa. Duas
+    execuções da mesma pessoa não contam como homônimos. No confronto ficha
+    x RSPE, progressão e livramento anteriores ao início desta execução e os
+    autos das outras execuções da pessoa não geram alerta.
+  - Auditoria: "Faltam dados" - cada dado essencial não lido do RSPE (nome,
+    data de geração, pena total, pena cumprida, regime, término) vira um
+    alerta com o campo para o operador informar; o dado informado entra nos
+    cálculos e o alerta fica como "Dado informado". Execução extinta ou
+    arquivada não pede esses dados, e os alertas de cálculo dela viram
+    informação. Regressão cautelar não fixa data-base (não dispara "data-base
+    anterior à última alteração de regime"). Saída da unidade com "Motivo:
+    Progressão" não gera alerta quando o RSPE traz o regime inicial ou o
+    início do cumprimento nesse regime na mesma data.
+  - Ficha: trabalho sem atestado com remição posterior no RSPE e nenhuma
+    outra fonte possível (outro trabalho, estudo ou atestado no período) -
+    a remição é atribuída a esse trabalho e descontada da estimativa a
+    requerer ("Pedir atestado (≈ N dias a requerer)").
+  - Prescrição executória: fuga encerrada pela recaptura mostra, em
+    destaque, o período analisado e a interrupção (CP, art. 117, V); a data
+    passa a "venceria em ...". Sem trânsito no RSPE, mas preso sem
+    interrupção desde menos de 1 ano após a distribuição da ação penal: "Não
+    corre: em cumprimento desde ..." (o menor prazo possível não cabe no
+    intervalo).
+  - Indulto (linha do tempo, Decreto 11.302/2022): sentença posterior à
+    publicação não torna o crime "não alcançado" - só tira a pena da soma do
+    art. 11 (art. 4º); no art. 5º o crime conta isoladamente, como na aba.
+    Decretos com fração cumprida: quem até a data só teve prisão provisória
+    (flagrante/preventiva, solto antes do trânsito) não iniciou o
+    cumprimento - "não se aplica", e não "cumprimento interrompido / fuga".
+  - Ficha: atestado com várias funções ("função X (período) totalizando N
+    dias trabalhados e R remidos; função Y ...") vira uma entrada por função;
+    lê também "N dias de trabalho e R dias de tempo de remição". Relatórios
+    de leitura peticionados entram no quadro de Estudo (meses citados, até 4
+    dias por obra - Res. CNJ 391/2021) e são cruzados com a remição do RSPE
+    de 4 dias por mês concedida depois da petição. Atestado (ou a soma das
+    funções de um mesmo atestado) com remição de igual número de dias no RSPE
+    até 120 dias depois: "Remido no RSPE: N dias em dd/mm/aaaa".
+  - Prescrição > editar dados: campos da suspensão do art. 366 do CPP
+    (início e fim; fim em branco = ainda suspenso) - os dias suspensos não
+    correm nos intervalos da pretensão punitiva, limitados ao prazo da pena
+    máxima cominada (STJ, Súmula 415). Cada campo editado tem "↺ importado"
+    para voltar ao dado do RSPE. Linha com dados editados e sem prescrição
+    fica verde e continua na tela para nova edição.
+  - Auditoria: divergência de nascimento ficha x RSPE com botão Preencher;
+    informada a data, o alerta baixa sozinho.
+  - Guia sem pena calculada e sem nenhum evento nem incidente no SEEU (pena
+    não iniciada no sistema): a Auditoria não pede pena total, cumprida,
+    regime e término ("Faltam dados"); um aviso único explica que o SEEU não
+    calcula esses dados antes do início do cumprimento e traz a soma das
+    penas das condenações.
+  - Ficha > remição pelo trabalho: nova conciliação atestado x remição
+    (rspe_remicao.py), lida dos eventos da ficha já gravados (sem reimportar):
+    * vínculos por setor como máquina de estados (aberto do início até a
+      baixa; um novo setor não encerra o anterior; "Horta" = AGS Prestadora,
+      variações de Paiva Lingerie juntas); a baixa só é antecipada com prova
+      em atestado ("baixa tardia na ficha"); sem prova, "vínculos
+      sobrepostos" para conferir; nunca "baixa sem início";
+    * atestados com regex tolerante ("n 143/2018", "nº183/PDIB"), vários
+      segmentos somados (041/2020 = 75/25 + 312/104), atestado em lote ou
+      sem período com os períodos inferidos dos vínculos entre a última
+      cobertura e a emissão; trabalhados que não cabem no período: "possível
+      erro de ano", com o início provável;
+    * casamento com as remições do RSPE (só "REMIÇÃO"): número, dias iguais
+      após truncar a fração, ordem cronológica; a cobertura vem do período do
+      atestado; a data de referência só é checada (>= fim do período e <=
+      decisão), sem janela; remição sem atestado na ficha = "atestado não
+      registrado" (períodos inferidos até a data de referência), salvo se
+      casar com ENCCEJA/ENEM ou leitura;
+    * status: Conciliado, Atestado emitido não lançado (verificar
+      peticionamento no SEEU), Sem atestado (pedir atestado, com estimativa
+      seg.-sáb. só aí), Lacuna (verificar se houve trabalho), Divergência de
+      dias; resíduo de fração acumulado (trabalhados/3 exato);
+    * tela: A) tabela conciliada, B) pendências por data, C) alertas de
+      qualidade; o ✓ "Conferir homologação" é o checklist manual. "+
+      Adicionar atestado" aceita trechos (setor; início; fim; trabalhados;
+      remidos) e a data de emissão. Teste: python teste_remicao.py.
+  - Indulto e comutação - condenação na data da publicação do decreto (STJ,
+    5ª e 6ª Turmas, e TJMS: o requisito se afere na publicação e exige o
+    trânsito ao menos para a acusação; AgRg no HC 633.240, AgRg no HC
+    864.086, AgRg nos EDcl no HC 991.402; TJMS 1603224-59.2026 e
+    1602410-47.2026), em todos os decretos da base:
+    * fato posterior à data de referência: não alcançado;
+    * sentença posterior à publicação: não alcançado (STJ, AgRg no HC
+      441.551 e 919.210) - inclusive no art. 5º do Decreto 11.302/2022;
+    * trânsito pendente só para a defesa: alcança;
+    * trânsito para a acusação posterior à publicação: Decreto 11.302/2022
+      - não alcançado (art. 12); 2024/2025 - a verificar (art. 2º, II);
+      2000-2023 - a verificar, com a regra de cada decreto (campo
+      "transito" da ficha: admite recurso da acusação que não vise majorar
+      a pena - 2000, 2001, 2012-2015, 2023; dispensa só o trânsito para a
+      defesa - 2002-2007; admite recurso da acusação após a 2ª instância -
+      2017, 2019, 2020; veda recurso da acusação após a 2ª instância -
+      2021; não trata - 2008-2011, 2016 e Dia das Mães);
+    * trânsito não informado no RSPE: a verificar.
+    Coluna: "Não alcançado" (sentença ou trânsito posterior), com o motivo
+    na ficha.
+  - Auditoria, percentual de progressão: a violência ou grave ameaça conta
+    também quando é elementar do tipo (ameaça, roubo, extorsão, estupro,
+    lesão e homicídio dolosos), mesmo que o RSPE marque "N" (STJ, HC
+    1.032.430, 6ª T., 11/03/2026). Ameaça (art. 147): 25% para o primário
+    (TJMG, TJRS, TJSP); a tese contrária (TJSP, 7ª Câm.) fica no texto.
+  - Base jurídica 2026-10-05: fichas dos decretos 2000-2023 conferidas com o
+    texto oficial do Planalto - trânsito em julgado de 2002 a 2011 corrigido
+    (admitem trânsito só para a acusação e recurso da acusação que não vise
+    majorar a pena); Dia das Mães 2017/2018 com o art. 3º, § 4º e a janela
+    da falta contada até a data de referência; 2023, art. 2º, XVI (5 meses);
+    2002, art. 1º, VII (livramento) fora da conta automática - exige metade
+    do período de prova, que o RSPE não traz.
+  - Remição: sinônimos de setor na base jurídica (remicao.setores_sinonimos);
+    a lógica antiga de vínculo atestado x remição foi removida (o trabalho
+    vem só da conciliação; em caso de falha, aviso para conferir).
+  - Testes: python testes.py (remição e indulto) - o build_exe.bat e o
+    build.yml não geram o .exe se algum falhar.
+  - Importação: quando o lote tem falha (arquivo não importado, campo não
+    lido, análise que falhou), o aviso da importação traz o botão "PDF das
+    falhas", com cada falha e a causa provável, para corrigir a leitura.
+  - Pena interrompida no SEEU (situação ou último evento "interrupção"): o
+    RSPE não imprime regime atual nem término; deixam de ser cobrados como
+    dado não lido e a Auditoria informa o motivo. Crimes não são cobrados de
+    execução encerrada.
+  - PDF das falhas: resumo de assistidos com dado não lido, contagem por
+    campo, tabela Assistido / Arquivo / Campos (causa dita uma vez) e, à
+    parte, as falhas de importação e de análise.
+  - Prazo vencido (Progressão e Livramento): "sem pedido no RSPE - requerer"
+    quando não há pedido no RSPE depois do vencimento, nem exame
+    criminológico, nem falta nos 12 meses; nos demais casos, "verificar
+    criminológico, indeferimento ou falta". Saíram as variantes "pedido
+    pendente no RSPE" e "indeferido em ... - conferir o motivo" (a dica da
+    linha continua listando os pedidos).
+  - Dados que o SEEU não tem (não são falha de leitura, não vão para o PDF
+    das falhas): execução sem nenhuma condenação cadastrada (aviso
+    "Execução sem condenação cadastrada no SEEU"); processo criminal sem
+    crime lançado ("Condenação sem crime cadastrado no SEEU"); guia sem
+    cálculo de pena (pena total zerada com condenações ativas: o alerta
+    "Guia sem pena calculada" já explica - pena total, cumprida, regime e
+    término deixam de ser cobrados).
+  - Mesma pessoa com mais de um RSPE (mesmo CPF; sem CPF, nome e mãe): a
+    lista mostra uma linha só, a da execução principal - não encerrada >
+    com condenação cadastrada > com pena calculada > mais eventos e
+    incidentes > RSPE mais recente. As outras saem da lista e aparecem na
+    Auditoria da principal: "Outras execuções da mesma pessoa fora da
+    lista" (informativo, quando são arquivadas, extintas ou sem condenação)
+    ou "Mais de uma execução ativa no SEEU para a mesma pessoa" (a
+    verificar, quando outra também tem condenação ativa: pedir a unificação
+    ou a baixa da redistribuída - LEP, arts. 66, III, a, e 111).
+  - Jurisprudências: base nova (acervo_jurisprudencia.db de 06/10/2026, 30.227
+    decisões do TJMS, STJ e STF). Triagem pela ementa, só as favoráveis à
+    defesa: 1.076 decisões (TJMS 893, STJ 94, STF 89; acórdãos 985,
+    monocráticas 91). No STF/STJ ficou só a decisão cujo texto mostra o
+    resultado favorável (dispositivo ou conclusão da própria decisão); trecho
+    só com relatório, precedente transcrito ou despacho administrativo saiu.
+    Filtros por tribunal (TJMS/STJ/STF) e por decisão (acórdão/monocrática),
+    combinados com tema e pesquisa; citação no formato de cada tribunal; botão
+    "abrir no tribunal" com o inteiro teor. Um teses_execucao.json antigo na
+    pasta não substitui mais a base embutida se for de versão anterior.
+  - Jurisprudências atualizadas (acervo de 06/10/2026, 62.847 decisões; 32.620
+    novas triadas): 2.266 decisões favoráveis à defesa - TJMS 1.499, STJ 527,
+    STF 240 (acórdãos 2.055, monocráticas 211). No STF/STJ, a regra rígida
+    (só a decisão cujo texto mostra o resultado favorável) já entrou na
+    primeira leitura.
+  - Jurisprudências, rótulo do resultado: "Recurso do MP desprovido" só quando a
+    ementa cita o Ministério Público; recurso da defesa desprovido com habeas
+    corpus concedido de ofício vira "Ordem concedida de ofício"; os demais
+    desprovimentos favoráveis, "Favorável à defesa".
+  - Jurisprudências: botão "Inteiro teor" no lugar de "abrir no tribunal" - STJ
+    abre o PDF do acórdão; STF, a decisão completa no portal; TJMS, a
+    jurisprudência do e-SAJ filtrada pelo número do acórdão (o PDF fica no
+    ícone do resultado). Sem link de inteiro teor (8 decisões do STJ), o botão
+    diz "Abrir processo".
+  - Mesma pessoa em RSPEs diferentes: agora basta um identificador em comum -
+    CPF, RJI (13 dígitos, que o SEEU imprime no lugar do CPF), nome + data de
+    nascimento ou nome + mãe. Antes, um RSPE com CPF e outro com RJI da mesma
+    pessoa apareciam em duas linhas.
+  - RSPE sem nenhum evento de prisão lançado no SEEU (prisão só pela ficha):
+    regime atual e término não são mais cobrados como "dado não lido" - o
+    SEEU não os calcula sem o evento; o alerta "RSPE sem evento de prisão"
+    continua.
+  - Auditoria, "Data-base de progressão anterior à última alteração de regime":
+    não sai mais quando a última alteração é regressão por falta grave e a
+    data-base é a da falta (Súmula 534/STJ) - na base real, 45 -> 14.
+  - Fração de livramento 1/1 em crime que não é hediondo: o alerta explica que
+    o SEEU passa a tratar o crime como hediondo e trava indulto e comutação
+    (lançamento comum para "revogar" livramento na implantação).
+  - Ficha: trabalho atual em curso há até 90 dias não é mais "Ausência de
+    atestado" - aparece como "Em curso" (atestado do período ainda não
+    emitido); "Trabalho a atestar" continua Sim.
+  - Rebaixados para informativo: "Processos na ficha que o RSPE não lista" e
+    "Marcado reincidente sem condenação anterior transitada no RSPE" (na base
+    real, 45% e 34% dos assistidos: a ficha lista inquéritos encerrados e a
+    condenação anterior costuma estar em outra execução).
+  - Pena máxima em abstrato: 19 tipos acrescentados à base jurídica
+    (2026-10-06) - todos os casos "não lida" da base real resolvidos.
+  - Aula NUSPEN 2026 (SEEU/TJMS), aplicada à Auditoria:
+    * "prisão definitiva" de quem já estava preso (mandado cumprido para a
+      guia nova) e regime fixado por "Somatório de Penas" não justificam a
+      data-base: sai o alerta do Tema 1006 (caso Baltazar);
+    * remição de período anterior à última progressão lançada depois dela -
+      pedir recálculo (a data da progressão é fixa no SEEU);
+    * indulto/comutação lançados na data da decisão, e não na do decreto,
+      com outro processo em execução;
+    * incidente de unificação usado como soma de penas;
+    * pena cumprida do SEEU mais de 60 dias abaixo da custódia dos eventos +
+      remição ("limbo" de vinculação, indulto parcial);
+    * comutação sem os processos impeditivos marcados;
+    * detração do recolhimento noturno lançada como remição;
+    * textos: regime inicial na última prisão (campo "diminuir a detração
+      após os cálculos", não a alteração de data-base); fuga reconsiderada
+      (trocar para "descumprimento das condições"); indulto com impeditivo
+      (a linha do tempo do SEEU é só informativa - aviso do CNJ).
+  - Ficha disciplinar x RSPE: a ficha guardada pelo nome passa a vincular
+    também com grafia diferente (Fretez/Fretes, Cezar/Cesar, Sousa/Souza,
+    Sant' Anna) ou com erro no nome da mãe, quando CPF, autos ou nascimento
+    confirmam a mesma pessoa; homônimo com o mesmo CPF da ficha recebe a ficha.
+    Na base teste2, 12 dos 13 "sem ficha" foram vinculados; o 13º (Ademar,
+    TJMG) é outra pessoa (CPF e nascimento diferentes da ficha).
+  - Auditoria: "Homônimo na base" (dados lado a lado; botão "Mesma pessoa"
+    junta as execuções numa linha) e "Ficha disciplinar de nome parecido não
+    vinculada" (botão "Vincular ficha"), só quando CPF e nascimento não
+    resolvem a dúvida.
+  - Relatório geral: conduta "Sem lapso", "Responde PADIC" e "Outra anotação"
+    no lugar de "Não informada" (vazio fica "Não informada"); unidade com nome
+    longo mantém a cidade ("... de CG"); dias atestados sem casas decimais.
+  - Janelas grandes (ex.: prescrição após a fuga): a barra com "Fechar" fica
+    presa ao pé da janela, sem precisar rolar até o fim.
+  - Ordem padrão das listas: alfabética pelo nome; clicar no título da coluna
+    continua ordenando por ela.
+  - Valores calculados pelo programa ganham * na coluna (ex.: término
+    "13/09/2033*" quando o SEEU não imprime o término; progressão
+    recalculada pela data-base informada). O rodapé da aba explica o * e a
+    ficha do assistido mostra o cálculo (data do RSPE + pena remanescente,
+    ou a data-base usada e a data do SEEU).
+
 v7.0.0
   - Conferência de dados objetivos (base jurídica 2026-10-02): pontos que o
     programa deixava "a verificar" ou decidia contra o assistido sem
@@ -590,12 +865,6 @@ v7.0.0
     * Tráfico sem parágrafo no SEEU: texto do caput com pena de 5 anos ou
       mais é o caput; abaixo disso (só o § 4º explica), "a verificar".
       "Matar alguém" é o caput do art. 121.
-    * Lesão gravíssima ou seguida de morte (art. 129, §§ 2º e 3º): o SEEU
-      não informa a vítima (hedionda só contra agente - Lei 13.142/2015):
-      "a verificar" em todos os decretos desde 2015; com fato anterior a
-      07/07/2015, mostra as duas correntes, como no roubo - STJ (hediondez
-      na data do decreto, impede) e a tese defensiva da irretroatividade
-      (STF, 2ª T., RHC 267.297 AgR e HC 273.296 AgR).
     * Inciso IV (anos ininterruptos): prisão definitiva, início do
       cumprimento, conversão e alteração de regime não são interrupção.
     * Mapa do indulto: comutação certa com indulto "a verificar" aparece
@@ -631,38 +900,6 @@ v7.0.0
       deferimento (até 60 dias) não é dúvida; interrupção com livramento em
       curso = em cumprimento. Prisão provisória que alcançou o trânsito é
       início do cumprimento.
-  - Relatório geral refeito como diagnóstico da base (dados crus, sem o
-    controle de pedidos do programa), com gráficos de rosca (percentual na
-    fatia e legenda em colunas Nº e %; categoria única sai como gráfico inteiro):
-    1. Perfil da população - idade média, faixa etária, regime, pena, juízo
-       da execução, unidade prisional (ficha) e incidência penal;
-    2. Trabalho, conduta e disciplina - trabalham, estudam, PADICs em
-       trâmite, faltas graves sem decisão judicial, conduta carcerária,
-       situação laboral, situação do PADIC (com tempo de resposta), faltas
-       graves no RSPE e pendências de remição;
-    3. Situação jurídico-executória - cada quadro precedido de gráfico:
-       indicadores (colunas: prescrição executória e punitiva, extinção,
-       lapsos vencidos, indulto/comutação), prazos do SEEU por faixa (três
-       roscas), indulto e comutação por decreto (colunas; quadro resumido
-       aos decretos com resultado, os demais numa linha só), prescrição
-       executória e punitiva e extinção da pena (três roscas);
-    4. Inconsistências do cálculo (Auditoria).
-  - Registro para o SAP sem nenhum pedido marcado: texto padrão "Atendimento
-    a [nome] referente aos autos [nº] na data de hoje (dd/mm/aaaa). A GR foi
-    analisada e não se verificou cabível pedido sobre progressão,
-    livramento, indulto, prescrição ou extinção no momento da análise."
-  - Prescrição executória sem a linha do tempo na tela: a linha de cada
-    crime fica com "cálculo" e "editar dados"; o relatório individual em PDF
-    também deixa de trazer a figura (fica o cálculo: detração, saldo e prazo).
-  - Teste de estresse da leitura (layout atual): 21 mil variações do texto
-    real dos RSPE e das fichas (campo vazio, data ou pena absurda, fração
-    0/0, linha quebrada, seção ou página faltando, acentos, PDF cortado)
-    pelo fluxo completo do programa, e 40 assistidos assim abertos em todas
-    as abas com 2.394 cliques na tela. Corrigido o que derrubava a análise:
-    fração com denominador zero, datas fora de 1900-2100 (agora tratadas
-    como não lidas), penas acima de 3.000 anos (lixo de leitura) e projeção
-    de data além do calendário. RSPE sem a 1ª página: a importação diz
-    "sem o número da execução legível - gere o PDF de novo no SEEU".
   - Bateria de 592 casos hipotéticos (400 aleatórios, 53 casos-limite e 139
     com ficha disciplinar) rodada contra o programa; corrigidos: erro com
     fração "0/0" no RSPE, textos cortados no meio de "art.", parênteses
@@ -978,235 +1215,6 @@ v7.0.0
     decisão (Tema 1165), mais de um regime inicial, regime inicial depois da
     primeira prisão, alteração de data-base no lugar do incidente próprio
     (data-base fixa) e guia suspensa somada na pena total (Tema 1106).
-  - Mesma pessoa com mais de um RSPE (mesmo CPF; sem CPF, nome + mãe): a
-    lista mostra só a execução ativa; a extinta ou arquivada sai da lista,
-    mas a condenação dela conta para a reincidência (geral e específica) da
-    ativa, e a ficha disciplinar vinculada a ela vale para a ativa. Duas
-    execuções da mesma pessoa não contam como homônimos. No confronto ficha
-    x RSPE, progressão e livramento anteriores ao início desta execução e os
-    autos das outras execuções da pessoa não geram alerta.
-  - Auditoria: "Faltam dados" - cada dado essencial não lido do RSPE (nome,
-    data de geração, pena total, pena cumprida, regime, término) vira um
-    alerta com o campo para o operador informar; o dado informado entra nos
-    cálculos e o alerta fica como "Dado informado". Execução extinta ou
-    arquivada não pede esses dados, e os alertas de cálculo dela viram
-    informação. Regressão cautelar não fixa data-base (não dispara "data-base
-    anterior à última alteração de regime"). Saída da unidade com "Motivo:
-    Progressão" não gera alerta quando o RSPE traz o regime inicial ou o
-    início do cumprimento nesse regime na mesma data.
-  - Ficha: trabalho sem atestado com remição posterior no RSPE e nenhuma
-    outra fonte possível (outro trabalho, estudo ou atestado no período) -
-    a remição é atribuída a esse trabalho e descontada da estimativa a
-    requerer ("Pedir atestado (≈ N dias a requerer)").
-  - Prescrição executória: fuga encerrada pela recaptura mostra, em
-    destaque, o período analisado e a interrupção (CP, art. 117, V); a data
-    passa a "venceria em ...". Sem trânsito no RSPE, mas preso sem
-    interrupção desde menos de 1 ano após a distribuição da ação penal: "Não
-    corre: em cumprimento desde ..." (o menor prazo possível não cabe no
-    intervalo).
-  - Indulto (linha do tempo, Decreto 11.302/2022): sentença posterior à
-    publicação não torna o crime "não alcançado" - só tira a pena da soma do
-    art. 11 (art. 4º); no art. 5º o crime conta isoladamente, como na aba.
-    Decretos com fração cumprida: quem até a data só teve prisão provisória
-    (flagrante/preventiva, solto antes do trânsito) não iniciou o
-    cumprimento - "não se aplica", e não "cumprimento interrompido / fuga".
-  - Ficha: atestado com várias funções ("função X (período) totalizando N
-    dias trabalhados e R remidos; função Y ...") vira uma entrada por função;
-    lê também "N dias de trabalho e R dias de tempo de remição". Relatórios
-    de leitura peticionados entram no quadro de Estudo (meses citados, até 4
-    dias por obra - Res. CNJ 391/2021) e são cruzados com a remição do RSPE
-    de 4 dias por mês concedida depois da petição. Atestado (ou a soma das
-    funções de um mesmo atestado) com remição de igual número de dias no RSPE
-    até 120 dias depois: "Remido no RSPE: N dias em dd/mm/aaaa".
-  - Prescrição > editar dados: campos da suspensão do art. 366 do CPP
-    (início e fim; fim em branco = ainda suspenso) - os dias suspensos não
-    correm nos intervalos da pretensão punitiva, limitados ao prazo da pena
-    máxima cominada (STJ, Súmula 415). Cada campo editado tem "↺ importado"
-    para voltar ao dado do RSPE. Linha com dados editados e sem prescrição
-    fica verde e continua na tela para nova edição.
-  - Auditoria: divergência de nascimento ficha x RSPE com botão Preencher;
-    informada a data, o alerta baixa sozinho.
-  - Guia sem pena calculada e sem nenhum evento nem incidente no SEEU (pena
-    não iniciada no sistema): a Auditoria não pede pena total, cumprida,
-    regime e término ("Faltam dados"); um aviso único explica que o SEEU não
-    calcula esses dados antes do início do cumprimento e traz a soma das
-    penas das condenações.
-  - Ficha > remição pelo trabalho: nova conciliação atestado x remição
-    (rspe_remicao.py), lida dos eventos da ficha já gravados (sem reimportar):
-    * vínculos por setor como máquina de estados (aberto do início até a
-      baixa; um novo setor não encerra o anterior; "Horta" = AGS Prestadora,
-      variações de Paiva Lingerie juntas); a baixa só é antecipada com prova
-      em atestado ("baixa tardia na ficha"); sem prova, "vínculos
-      sobrepostos" para conferir; nunca "baixa sem início";
-    * atestados com regex tolerante ("n 143/2018", "nº183/PDIB"), vários
-      segmentos somados (041/2020 = 75/25 + 312/104), atestado em lote ou
-      sem período com os períodos inferidos dos vínculos entre a última
-      cobertura e a emissão; trabalhados que não cabem no período: "possível
-      erro de ano", com o início provável;
-    * casamento com as remições do RSPE (só "REMIÇÃO"): número, dias iguais
-      após truncar a fração, ordem cronológica; a cobertura vem do período do
-      atestado; a data de referência só é checada (>= fim do período e <=
-      decisão), sem janela; remição sem atestado na ficha = "atestado não
-      registrado" (períodos inferidos até a data de referência), salvo se
-      casar com ENCCEJA/ENEM ou leitura;
-    * status: Conciliado, Atestado emitido não lançado (verificar
-      peticionamento no SEEU), Sem atestado (pedir atestado, com estimativa
-      seg.-sáb. só aí), Lacuna (verificar se houve trabalho), Divergência de
-      dias; resíduo de fração acumulado (trabalhados/3 exato);
-    * tela: A) tabela conciliada, B) pendências por data, C) alertas de
-      qualidade; o ✓ "Conferir homologação" é o checklist manual. "+
-      Adicionar atestado" aceita trechos (setor; início; fim; trabalhados;
-      remidos) e a data de emissão. Teste: python teste_remicao.py.
-  - Indulto e comutação - condenação na data da publicação do decreto (STJ,
-    5ª e 6ª Turmas, e TJMS: o requisito se afere na publicação e exige o
-    trânsito ao menos para a acusação; AgRg no HC 633.240, AgRg no HC
-    864.086, AgRg nos EDcl no HC 991.402; TJMS 1603224-59.2026 e
-    1602410-47.2026), em todos os decretos da base:
-    * fato posterior à data de referência: não alcançado;
-    * sentença posterior à publicação: não alcançado (STJ, AgRg no HC
-      441.551 e 919.210) - inclusive no art. 5º do Decreto 11.302/2022;
-    * trânsito pendente só para a defesa: alcança;
-    * trânsito para a acusação posterior à publicação: Decreto 11.302/2022
-      - não alcançado (art. 12); 2024/2025 - a verificar (art. 2º, II);
-      2000-2023 - a verificar, com a regra de cada decreto (campo
-      "transito" da ficha: admite recurso da acusação que não vise majorar
-      a pena - 2000, 2001, 2012-2015, 2023; dispensa só o trânsito para a
-      defesa - 2002-2007; admite recurso da acusação após a 2ª instância -
-      2017, 2019, 2020; veda recurso da acusação após a 2ª instância -
-      2021; não trata - 2008-2011, 2016 e Dia das Mães);
-    * trânsito não informado no RSPE: a verificar.
-    Coluna: "Não alcançado" (sentença ou trânsito posterior), com o motivo
-    na ficha.
-  - Auditoria, percentual de progressão: a violência ou grave ameaça conta
-    também quando é elementar do tipo (ameaça, roubo, extorsão, estupro,
-    lesão e homicídio dolosos), mesmo que o RSPE marque "N" (STJ, HC
-    1.032.430, 6ª T., 11/03/2026). Ameaça (art. 147): 25% para o primário
-    (TJMG, TJRS, TJSP); a tese contrária (TJSP, 7ª Câm.) fica no texto.
-  - Base jurídica 2026-10-05: fichas dos decretos 2000-2023 conferidas com o
-    texto oficial do Planalto - trânsito em julgado de 2002 a 2011 corrigido
-    (admitem trânsito só para a acusação e recurso da acusação que não vise
-    majorar a pena); Dia das Mães 2017/2018 com o art. 3º, § 4º e a janela
-    da falta contada até a data de referência; 2023, art. 2º, XVI (5 meses);
-    2002, art. 1º, VII (livramento) fora da conta automática - exige metade
-    do período de prova, que o RSPE não traz.
-  - Remição: sinônimos de setor na base jurídica (remicao.setores_sinonimos);
-    a lógica antiga de vínculo atestado x remição foi removida (o trabalho
-    vem só da conciliação; em caso de falha, aviso para conferir).
-  - Testes: python testes.py (remição e indulto) - o build_exe.bat e o
-    build.yml não geram o .exe se algum falhar.
-  - Importação: quando o lote tem falha (arquivo não importado, campo não
-    lido, análise que falhou), o aviso da importação traz o botão "PDF das
-    falhas", com cada falha e a causa provável, para corrigir a leitura.
-  - Pena interrompida no SEEU (situação ou último evento "interrupção"): o
-    RSPE não imprime regime atual nem término; deixam de ser cobrados como
-    dado não lido e a Auditoria informa o motivo. Crimes não são cobrados de
-    execução encerrada.
-  - PDF das falhas: resumo de assistidos com dado não lido, contagem por
-    campo, tabela Assistido / Arquivo / Campos (causa dita uma vez) e, à
-    parte, as falhas de importação e de análise.
-  - Prazo vencido (Progressão e Livramento): "sem pedido no RSPE - requerer"
-    quando não há pedido no RSPE depois do vencimento, nem exame
-    criminológico, nem falta nos 12 meses; nos demais casos, "verificar
-    criminológico, indeferimento ou falta". Saíram as variantes "pedido
-    pendente no RSPE" e "indeferido em ... - conferir o motivo" (a dica da
-    linha continua listando os pedidos).
-  - Dados que o SEEU não tem (não são falha de leitura, não vão para o PDF
-    das falhas): execução sem nenhuma condenação cadastrada (aviso
-    "Execução sem condenação cadastrada no SEEU"); processo criminal sem
-    crime lançado ("Condenação sem crime cadastrado no SEEU"); guia sem
-    cálculo de pena (pena total zerada com condenações ativas: o alerta
-    "Guia sem pena calculada" já explica - pena total, cumprida, regime e
-    término deixam de ser cobrados).
-  - Mesma pessoa com mais de um RSPE (mesmo CPF; sem CPF, nome e mãe): a
-    lista mostra uma linha só, a da execução principal - não encerrada >
-    com condenação cadastrada > com pena calculada > mais eventos e
-    incidentes > RSPE mais recente. As outras saem da lista e aparecem na
-    Auditoria da principal: "Outras execuções da mesma pessoa fora da
-    lista" (informativo, quando são arquivadas, extintas ou sem condenação)
-    ou "Mais de uma execução ativa no SEEU para a mesma pessoa" (a
-    verificar, quando outra também tem condenação ativa: pedir a unificação
-    ou a baixa da redistribuída - LEP, arts. 66, III, a, e 111).
-  - Jurisprudências: base nova (acervo_jurisprudencia.db de 06/10/2026, 30.227
-    decisões do TJMS, STJ e STF). Triagem pela ementa, só as favoráveis à
-    defesa: 1.076 decisões (TJMS 893, STJ 94, STF 89; acórdãos 985,
-    monocráticas 91). No STF/STJ ficou só a decisão cujo texto mostra o
-    resultado favorável (dispositivo ou conclusão da própria decisão); trecho
-    só com relatório, precedente transcrito ou despacho administrativo saiu.
-    Filtros por tribunal (TJMS/STJ/STF) e por decisão (acórdão/monocrática),
-    combinados com tema e pesquisa; citação no formato de cada tribunal; botão
-    "abrir no tribunal" com o inteiro teor. Um teses_execucao.json antigo na
-    pasta não substitui mais a base embutida se for de versão anterior.
-  - Jurisprudências atualizadas (acervo de 06/10/2026, 62.847 decisões; 32.620
-    novas triadas): 2.266 decisões favoráveis à defesa - TJMS 1.499, STJ 527,
-    STF 240 (acórdãos 2.055, monocráticas 211). No STF/STJ, a regra rígida
-    (só a decisão cujo texto mostra o resultado favorável) já entrou na
-    primeira leitura.
-  - Jurisprudências, rótulo do resultado: "Recurso do MP desprovido" só quando a
-    ementa cita o Ministério Público; recurso da defesa desprovido com habeas
-    corpus concedido de ofício vira "Ordem concedida de ofício"; os demais
-    desprovimentos favoráveis, "Favorável à defesa".
-  - Jurisprudências: botão "Inteiro teor" no lugar de "abrir no tribunal" - STJ
-    abre o PDF do acórdão; STF, a decisão completa no portal; TJMS, a
-    jurisprudência do e-SAJ filtrada pelo número do acórdão (o PDF fica no
-    ícone do resultado). Sem link de inteiro teor (8 decisões do STJ), o botão
-    diz "Abrir processo".
-  - Mesma pessoa em RSPEs diferentes: agora basta um identificador em comum -
-    CPF, RJI (13 dígitos, que o SEEU imprime no lugar do CPF), nome + data de
-    nascimento ou nome + mãe. Antes, um RSPE com CPF e outro com RJI da mesma
-    pessoa apareciam em duas linhas.
-  - RSPE sem nenhum evento de prisão lançado no SEEU (prisão só pela ficha):
-    regime atual e término não são mais cobrados como "dado não lido" - o
-    SEEU não os calcula sem o evento; o alerta "RSPE sem evento de prisão"
-    continua.
-  - Auditoria, "Data-base de progressão anterior à última alteração de regime":
-    não sai mais quando a última alteração é regressão por falta grave e a
-    data-base é a da falta (Súmula 534/STJ) - na base real, 45 -> 14.
-  - Fração de livramento 1/1 em crime que não é hediondo: o alerta explica que
-    o SEEU passa a tratar o crime como hediondo e trava indulto e comutação
-    (lançamento comum para "revogar" livramento na implantação).
-  - Ficha: trabalho atual em curso há até 90 dias não é mais "Ausência de
-    atestado" - aparece como "Em curso" (atestado do período ainda não
-    emitido); "Trabalho a atestar" continua Sim.
-  - Rebaixados para informativo: "Processos na ficha que o RSPE não lista" e
-    "Marcado reincidente sem condenação anterior transitada no RSPE" (na base
-    real, 45% e 34% dos assistidos: a ficha lista inquéritos encerrados e a
-    condenação anterior costuma estar em outra execução).
-  - Pena máxima em abstrato: 19 tipos acrescentados à base jurídica
-    (2026-10-06) - todos os casos "não lida" da base real resolvidos.
-  - Aula NUSPEN 2026 (SEEU/TJMS), aplicada à Auditoria:
-    * "prisão definitiva" de quem já estava preso (mandado cumprido para a
-      guia nova) e regime fixado por "Somatório de Penas" não justificam a
-      data-base: sai o alerta do Tema 1006 (caso Baltazar);
-    * remição de período anterior à última progressão lançada depois dela -
-      pedir recálculo (a data da progressão é fixa no SEEU);
-    * indulto/comutação lançados na data da decisão, e não na do decreto,
-      com outro processo em execução;
-    * incidente de unificação usado como soma de penas;
-    * pena cumprida do SEEU mais de 60 dias abaixo da custódia dos eventos +
-      remição ("limbo" de vinculação, indulto parcial);
-    * comutação sem os processos impeditivos marcados;
-    * detração do recolhimento noturno lançada como remição;
-    * textos: regime inicial na última prisão (campo "diminuir a detração
-      após os cálculos", não a alteração de data-base); fuga reconsiderada
-      (trocar para "descumprimento das condições"); indulto com impeditivo
-      (a linha do tempo do SEEU é só informativa - aviso do CNJ).
-  - Ficha disciplinar x RSPE: a ficha guardada pelo nome passa a vincular
-    também com grafia diferente (Fretez/Fretes, Cezar/Cesar, Sousa/Souza,
-    Sant' Anna) ou com erro no nome da mãe, quando CPF, autos ou nascimento
-    confirmam a mesma pessoa; homônimo com o mesmo CPF da ficha recebe a ficha.
-    Na base teste2, 12 dos 13 "sem ficha" foram vinculados; o 13º (Ademar,
-    TJMG) é outra pessoa (CPF e nascimento diferentes da ficha).
-  - Auditoria: "Homônimo na base" (dados lado a lado; botão "Mesma pessoa"
-    junta as execuções numa linha) e "Ficha disciplinar de nome parecido não
-    vinculada" (botão "Vincular ficha"), só quando CPF e nascimento não
-    resolvem a dúvida.
-  - Relatório geral: conduta "Sem lapso", "Responde PADIC" e "Outra anotação"
-    no lugar de "Não informada" (vazio fica "Não informada"); unidade com nome
-    longo mantém a cidade ("... de CG"); dias atestados sem casas decimais.
-  - Janelas grandes (ex.: prescrição após a fuga): a barra com "Fechar" fica
-    presa ao pé da janela, sem precisar rolar até o fim.
-  - Ordem padrão das listas: alfabética pelo nome; clicar no título da coluna
-    continua ordenando por ela.
 
 v6.16.49
   - Prescrição após a fuga: o pedido "informe a pena remanescente na fuga"

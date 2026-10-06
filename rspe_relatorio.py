@@ -1063,7 +1063,7 @@ def estatisticas(modelos, hoje=None):
     E["presc_crimes"] = sum(1 for m in modelos for L in (m.get("presc_linhas") or []) if L.get("ppe_cor") == "vermelho")
     E["ext_cabivel"] = sum(1 for m in modelos if m.get("ext_cor") == "vermelho")
     E["ext_verificar"] = sum(1 for m in modelos if m.get("ext_cor") == "amarelo")
-    E["term_calc"] = sum(1 for m in modelos if "(calculado)" in (m.get("ext_termino_motivo") or m.get("ext_termino") or ""))
+    E["term_calc"] = sum(1 for m in modelos if (m.get("ext_termino") or "").endswith("*"))
     E["ext_registrada"] = sum(1 for m in modelos if m.get("ext_cor") == "azul")
 
     # ---- remição ----

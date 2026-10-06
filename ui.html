@@ -450,6 +450,7 @@ tr.sub td{padding:0 0 0 0;background:#FFFFFF;cursor:default}tr.sub:hover td{back
 .fixbar{display:none;align-items:center;gap:6px;flex-wrap:wrap;padding:10px 24px 0;font-size:12px;color:var(--tx3)}.fixbar.on{display:flex}
 .fixbar .fx{display:inline-flex;align-items:center;gap:6px;padding:4px 6px 4px 10px;border-radius:999px;background:#FFF8E6;border:1px solid #F5D08A;color:#7A4A00;font-weight:700;cursor:pointer}
 .fixbar .fx.on{background:#FDB022;color:#fff;border-color:#FDB022}.fixbar .fx b{font-weight:400;opacity:.7;padding:0 4px;border-radius:50%}.fixbar .fx b:hover{opacity:1;background:rgba(0,0,0,.08)}
+.calcn{margin:8px 0 2px;padding:7px 10px;border-radius:8px;background:#F9FAFB;border-left:3px solid #98A2B3;font-size:12px;color:var(--tx2)}
 .nmc{display:inline-flex;align-items:flex-start;gap:2px;min-width:230px}.nmc .pin{flex:none;margin-top:-1px;vertical-align:0}
 .pin{display:inline-flex;width:20px;height:20px;align-items:center;justify-content:center;border-radius:6px;color:#98A2B3;cursor:pointer;margin-right:4px;vertical-align:-4px;opacity:.7;transition:.12s}
 tr:hover .pin{opacity:1}.pin:hover{background:#F2F4F7;color:#B54708}.pin.on{opacity:1;color:#F79009}.pin svg{width:14px;height:14px}
@@ -673,7 +674,8 @@ const ui = {
       st.innerHTML=Object.keys(rot).map(c=>`<div class="stat ${c||'neutro'} ${this.filtroCor===c?'on':''}" title="${esc(dica[c]||'')}" onclick="ui.filtrarCor('${c}')"><i class="dot"></i><b>${cont[c]||0}</b><span>${rot[c]}</span></div>`).join('')
         +(temPed?`<div class="stat pedido ${this.filtroCor==='__ped'?'on':''}" title="Pedido feito (e a situação não mudou depois): sai da contagem da situação" onclick="ui.filtrarCor('__ped')"><i class="dot"></i><b>${nPed}</b><span>Feito</span></div>`:'')+chipVelho; }
     // legenda
-    document.getElementById('legenda').innerHTML=Object.keys(rot).filter(c=>c||spec.id==='presc').map(c=>`<span class="leg" title="${esc(((this.dados.rotulos_dica||{})[spec.legenda]||{})[c]||'')}"><i style="background:${c?`var(--${({vermelho:'r',laranja:'o',amarelo:'a',vencido:'r',verde:'g',cinza:'c',azul:'b'})[c]}-dot)`:'#CBD5E1'}"></i>${rot[c]}</span>`).join('');
+    document.getElementById('legenda').innerHTML=Object.keys(rot).filter(c=>c||spec.id==='presc').map(c=>`<span class="leg" title="${esc(((this.dados.rotulos_dica||{})[spec.legenda]||{})[c]||'')}"><i style="background:${c?`var(--${({vermelho:'r',laranja:'o',amarelo:'a',vencido:'r',verde:'g',cinza:'c',azul:'b'})[c]}-dot)`:'#CBD5E1'}"></i>${rot[c]}</span>`).join('')
+      + (rs.some(r=>r.calc_notas&&Object.keys(r.calc_notas).length)?`<span class="leg" style="font-weight:600">* calculado pelo programa: o SEEU não imprimiu o dado (ou ele foi recalculado com dado informado) - o cálculo está na ficha do assistido</span>`:'');
     // seletor de situação
     const selEl=document.getElementById('filtro');
     const stb=document.getElementById('subtabs'); stb.classList.toggle('on',this.aba==='ind'||this.aba==='presc');
@@ -1755,6 +1757,7 @@ const ui = {
       <div class="db">
         ${r.motivo_exec?`<div class="sec"><div class="aviso-exec">${esc(r.motivo_exec)}</div></div>`:''}
         <div class="sec"><div class="kv">${kv('Pena total',r.pena_total)}${kv('Cumprida',r.pena_cumprida)}${kv('Remanescente',r.pena_rem)}${kv('Término',dmot(r.termino,r.termino_motivo))}</div>
+          ${r.calc_notas&&Object.keys(r.calc_notas).length?`<div class="calcn">${Object.values(r.calc_notas).map(t=>`<div>${esc(t)}</div>`).join('')}</div>`:''}
           <div class="dbbox ${r.db_cor||''}"><small>Data-base (progressão)</small><div><b>${esc(r.db||'—')}</b>${r.db_motivo?` <span class="dbm">- ${esc(r.db_motivo)}</span>`:''}
             <span class="mini" style="margin-left:6px" onclick="ui.editarDataBase('${r.id}')">${r.db_editada?'Alterar':'Editar'}</span>${r.db_editada?` <span class="mini" onclick="ui.editarDataBase('${r.id}',true)">Voltar ao SEEU</span>`:''}</div></div></div>
         <div class="sec"><h3>Benefícios</h3>
