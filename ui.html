@@ -315,12 +315,12 @@ tr.sub td{padding:0 0 0 0;background:#FFFFFF;cursor:default}tr.sub:hover td{back
 
 /* modal */
 .modal{position:fixed;inset:0;display:none;place-items:center;z-index:30}.modal.on{display:grid}
-.box{width:440px;background:var(--card);border-radius:16px;box-shadow:var(--shadow2);padding:22px 24px;animation:pop .18s}
+.box{width:440px;max-width:96vw;max-height:94vh;overflow:auto;background:var(--card);border-radius:16px;box-shadow:var(--shadow2);padding:22px 24px;animation:pop .18s}
 @keyframes pop{from{transform:scale(.96);opacity:0}to{transform:none;opacity:1}}
 .box h2{margin:0 0 4px;font-size:16px}.box p{margin:0 0 14px;color:var(--tx2);font-size:12.5px}
 .chk{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:10px;cursor:pointer}.chk:hover{background:#F5F7FB}
 .chk input{width:16px;height:16px;accent-color:var(--pri)}
-.box .acts{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+.box .acts{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;position:sticky;bottom:-22px;z-index:3;background:var(--card);padding:10px 0 2px;margin-bottom:-2px;box-shadow:0 -8px 10px -8px rgba(16,24,40,.12)}
 .help{font-size:13px;line-height:1.55;color:var(--tx2);max-height:60vh;overflow:auto}.box .acts{flex:none}.help h4{margin:14px 0 4px;color:var(--tx);font-size:13px}.help h4:first-child{margin-top:0}
 
 /* tela inicial (sem base) */
@@ -450,6 +450,8 @@ tr.sub td{padding:0 0 0 0;background:#FFFFFF;cursor:default}tr.sub:hover td{back
 .fixbar{display:none;align-items:center;gap:6px;flex-wrap:wrap;padding:10px 24px 0;font-size:12px;color:var(--tx3)}.fixbar.on{display:flex}
 .fixbar .fx{display:inline-flex;align-items:center;gap:6px;padding:4px 6px 4px 10px;border-radius:999px;background:#FFF8E6;border:1px solid #F5D08A;color:#7A4A00;font-weight:700;cursor:pointer}
 .fixbar .fx.on{background:#FDB022;color:#fff;border-color:#FDB022}.fixbar .fx b{font-weight:400;opacity:.7;padding:0 4px;border-radius:50%}.fixbar .fx b:hover{opacity:1;background:rgba(0,0,0,.08)}
+.calcn{margin:8px 0 2px;padding:7px 10px;border-radius:8px;background:#F9FAFB;border-left:3px solid #98A2B3;font-size:12px;color:var(--tx2)}
+.nmc{display:inline-flex;align-items:flex-start;gap:2px;min-width:230px}.nmc .pin{flex:none;margin-top:-1px;vertical-align:0}
 .pin{display:inline-flex;width:20px;height:20px;align-items:center;justify-content:center;border-radius:6px;color:#98A2B3;cursor:pointer;margin-right:4px;vertical-align:-4px;opacity:.7;transition:.12s}
 tr:hover .pin{opacity:1}.pin:hover{background:#F2F4F7;color:#B54708}.pin.on{opacity:1;color:#F79009}.pin svg{width:14px;height:14px}
 tbody tr.fix td{background:#FFFCF2}
@@ -672,7 +674,8 @@ const ui = {
       st.innerHTML=Object.keys(rot).map(c=>`<div class="stat ${c||'neutro'} ${this.filtroCor===c?'on':''}" title="${esc(dica[c]||'')}" onclick="ui.filtrarCor('${c}')"><i class="dot"></i><b>${cont[c]||0}</b><span>${rot[c]}</span></div>`).join('')
         +(temPed?`<div class="stat pedido ${this.filtroCor==='__ped'?'on':''}" title="Pedido feito (e a situação não mudou depois): sai da contagem da situação" onclick="ui.filtrarCor('__ped')"><i class="dot"></i><b>${nPed}</b><span>Feito</span></div>`:'')+chipVelho; }
     // legenda
-    document.getElementById('legenda').innerHTML=Object.keys(rot).filter(c=>c||spec.id==='presc').map(c=>`<span class="leg" title="${esc(((this.dados.rotulos_dica||{})[spec.legenda]||{})[c]||'')}"><i style="background:${c?`var(--${({vermelho:'r',laranja:'o',amarelo:'a',vencido:'r',verde:'g',cinza:'c',azul:'b'})[c]}-dot)`:'#CBD5E1'}"></i>${rot[c]}</span>`).join('');
+    document.getElementById('legenda').innerHTML=Object.keys(rot).filter(c=>c||spec.id==='presc').map(c=>`<span class="leg" title="${esc(((this.dados.rotulos_dica||{})[spec.legenda]||{})[c]||'')}"><i style="background:${c?`var(--${({vermelho:'r',laranja:'o',amarelo:'a',vencido:'r',verde:'g',cinza:'c',azul:'b'})[c]}-dot)`:'#CBD5E1'}"></i>${rot[c]}</span>`).join('')
+      + (rs.some(r=>r.calc_notas&&Object.keys(r.calc_notas).length)?`<span class="leg" style="font-weight:600">* calculado pelo programa: o SEEU não imprimiu o dado (ou ele foi recalculado com dado informado) - o cálculo está na ficha do assistido</span>`:'');
     // seletor de situação
     const selEl=document.getElementById('filtro');
     const stb=document.getElementById('subtabs'); stb.classList.toggle('on',this.aba==='ind'||this.aba==='presc');
@@ -685,7 +688,9 @@ const ui = {
       linhas = this.filtroCor==='__ped' ? linhas.filter(r=>!this.pedPendente(r,spec.id))
              : linhas.filter(r=>this.cor(r,spec)===this.filtroCor && (!tp || this.pedPendente(r,spec.id))); }
     linhas=linhas.filter(r=>this.passaFiltro(r,spec)); if(this.filtroVelho) linhas=linhas.filter(r=>this.idadeRSPE(r)>this.RSPE_VELHO);
-    const o=this.ordem[this.aba]; if(o){ linhas=[...linhas].sort((a,b)=>cmp(a[o.k],b[o.k])*(o.inv?-1:1)); }
+    // ordem padrão: alfabética pelo nome (acento e maiúscula não contam); clicar no título da coluna ordena por ela
+    const o=this.ordem[this.aba]; linhas = o ? [...linhas].sort((a,b)=>cmp(a[o.k],b[o.k])*(o.inv?-1:1))
+      : [...linhas].sort((a,b)=>String(a.nome||'').localeCompare(String(b.nome||''),'pt',{sensitivity:'base'})||String(a.id||'').localeCompare(String(b.id||'')));
     linhas=[...linhas].sort((a,b)=>(b.fixado?1:0)-(a.fixado?1:0));
     const card=document.getElementById('card');
     if(!this.dados.registros.length){ card.innerHTML=`<div class="empty"><div><b>Nenhum RSPE nesta base</b>Clique em <em>Importar PDFs</em> ou <em>Importar pasta</em>. Pode selecionar centenas de arquivos de uma vez.</div></div>`; return; }
@@ -697,7 +702,7 @@ const ui = {
     const tr=linhas.map(r=>{ const cor=this.cor(r,spec); const exp=spec.expansivel && this.aberto===r.id;
       const tds=spec.cols.map((c,i)=>{ let v=r[c[0]]??''; const pk=spec.pilulas[c[0]];
         if(c[0]==='proc'){ v=`<span class="copy" title="Clique para copiar" onclick="event.stopPropagation();ui.copiar('${esc(String(v))}')">${esc(v)}${svgCopy}</span>`; }
-        else if(c[0]==='nome'&&v){ const id_=this.idadeRSPE(r); v=this.pinHtml(r)+`<span class="copy" title="Clique para copiar o nome" onclick="event.stopPropagation();ui.copiar(ui._clips[${this.clip(String(v))}])">${esc(v)}${svgCopy}</span>`+(id_>this.RSPE_VELHO?`<span class="rs-old" title="RSPE desatualizado: emitido em ${esc(r.geracao)}, há ${id_} dias (mais de ${this.RSPE_VELHO}). Vale baixar um novo no SEEU." onclick="event.stopPropagation()">!</span>`:''); }
+        else if(c[0]==='nome'&&v){ const id_=this.idadeRSPE(r); v=`<span class="nmc">`+this.pinHtml(r)+`<span class="copy" title="Clique para copiar o nome" onclick="event.stopPropagation();ui.copiar(ui._clips[${this.clip(String(v))}])">${esc(v)}${svgCopy}</span>`+(id_>this.RSPE_VELHO?`<span class="rs-old" title="RSPE desatualizado: emitido em ${esc(r.geracao)}, há ${id_} dias (mais de ${this.RSPE_VELHO}). Vale baixar um novo no SEEU." onclick="event.stopPropagation()">!</span>`:'')+`</span>`; }
         else if(pk && /_sit$/.test(c[0]) && this.sitPed(r,spec)){ const x=this.sitPed(r,spec); v=`<span class="pill ${x.cor}" title="${esc(x.dica)}">${esc(x.txt)}</span>`; }
         else if(pk){ const pc = r[pk]||''; v = v ? `<span class="pill ${pc||'none'}">${esc(v)}</span>` : (/_sit$/.test(c[0]) ? '' : '<span class="muted">—</span>'); }
         else if(c[0]==='pedido'){ const P=(r.pedidos||{})[spec.id]; const mud=P&&P.ref&&P.ref!==this.pedRef(r,spec.id);
@@ -1123,7 +1128,7 @@ const ui = {
     const nA=todos.filter(s=>s.nivel==='alerta'&&!s.baixado).length, nV=todos.filter(s=>s.nivel==='verificar'&&!s.baixado).length;
     const paras=t=>String(t||'').split(/(?<=[.;])\s+(?=[A-ZÁÉÍÓÚ(])/).filter(x=>x.trim()).map(x=>`<p>${penaExt(esc(x))}</p>`).join('');
     const card=s=>{ const k=s.baixado?'bx':s.nivel;
-      const bx = (s.preencher&&(!s.baixado||s.auto_baixa)?`<span class="mini ${s.baixado?'':'pre'}" onclick="event.stopPropagation();ui.preencher('${r.id}',${ui.clip(JSON.stringify(s.preencher))})">${s.baixado?'Alterar':'Preencher'}</span> `:'')+`<span class="mini" onclick="event.stopPropagation();ui.copiarClip(${ui.clip(ui.txtAud(s))})">Copiar</span> `+(s.baixado&&s.auto_baixa?'':s.baixado ? `<span class="mini" onclick="event.stopPropagation();ui.reabrir('${r.id}','${s.chave}')">Reabrir</span>` : (s.nivel==='ok'||s.nivel==='info' ? '' : `<span class="mini" onclick="event.stopPropagation();ui.darBaixa('${r.id}','${s.chave}','${esc(s.titulo).replace(/'/g,'&#39;')}')">Dar baixa</span>`));
+      const bx = (s.preencher&&(!s.baixado||s.auto_baixa)?`<span class="mini ${s.baixado?'':'pre'}" onclick="event.stopPropagation();ui.preencher('${r.id}',${ui.clip(JSON.stringify(s.preencher))})">${s.baixado?'Alterar':(s.preencher.tipo==='vincular_ficha'?'Vincular ficha':s.preencher.tipo==='mesma_pessoa'?'Mesma pessoa':'Preencher')}</span> `:'')+`<span class="mini" onclick="event.stopPropagation();ui.copiarClip(${ui.clip(ui.txtAud(s))})">Copiar</span> `+(s.baixado&&s.auto_baixa?'':s.baixado ? `<span class="mini" onclick="event.stopPropagation();ui.reabrir('${r.id}','${s.chave}')">Reabrir</span>` : (s.nivel==='ok'||s.nivel==='info' ? '' : `<span class="mini" onclick="event.stopPropagation();ui.darBaixa('${r.id}','${s.chave}','${esc(s.titulo).replace(/'/g,'&#39;')}')">Dar baixa</span>`));
       return `<div class="ac ${k}"><div class="ac-h"><span class="pill ${s.nivel_cor}">${esc(s.nivel_txt)}</span><b>${penaExt(esc(s.titulo))}</b><span class="ac-a">${bx}</span></div>
         ${s.detalhe?`<div class="ac-d">${paras(s.detalhe)}</div>`:''}
         ${s.fundamento?`<div class="ac-f">${penaExt(esc(s.fundamento))}</div>`:''}
@@ -1263,6 +1268,8 @@ const ui = {
     const res=await API().dado_manual(id,'data_base', d.trim()+'|'+mot.replace(/\|/g,'/').trim()); if(res&&res.erro){ this.toast(res.erro); return; }
     if(res&&res.registros) this.carregar(res); this.toast('Data-base gravada: previsão de progressão refeita em todas as abas.'); this.abrir(id); },
   async preencher(id, ci){ const P=JSON.parse(this._clips[ci]||'{}'); if(P.tipo==='falta'){ this.faltasModal(id, P.campo); return; }
+    if(P.tipo==='vincular_ficha'){ if(!confirm('Vincular esta ficha disciplinar a este assistido? Confira CPF, nascimento e mãe no aviso.')) return; await api('vincular_ficha', id, P.campo); this.aberto=id; return; }
+    if(P.tipo==='mesma_pessoa'){ if(!confirm('Marcar os dois assistidos como a mesma pessoa? As execuções passam a uma linha só.')) return; await api('mesma_pessoa', id, P.campo); return; }
     if(P.tipo==='ir_presc'){ this.irAba('presc'); this.aberto=id; this.render(); this.toast('Em cada crime, use "editar dados" para informar '+P.rotulo+'.'); return; } const v=prompt(P.rotulo+':', ''); if(v===null||!v.trim()) return;
     if(P.tipo==='data'&&!/^\d{2}\/\d{2}\/\d{4}$/.test(v.trim())){ this.toast('Use o formato dd/mm/aaaa.'); return; }
     await api('dado_manual', id, P.campo, v.trim()); this.aberto=id; this.render(); },
@@ -1750,6 +1757,7 @@ const ui = {
       <div class="db">
         ${r.motivo_exec?`<div class="sec"><div class="aviso-exec">${esc(r.motivo_exec)}</div></div>`:''}
         <div class="sec"><div class="kv">${kv('Pena total',r.pena_total)}${kv('Cumprida',r.pena_cumprida)}${kv('Remanescente',r.pena_rem)}${kv('Término',dmot(r.termino,r.termino_motivo))}</div>
+          ${r.calc_notas&&Object.keys(r.calc_notas).length?`<div class="calcn">${Object.values(r.calc_notas).map(t=>`<div>${esc(t)}</div>`).join('')}</div>`:''}
           <div class="dbbox ${r.db_cor||''}"><small>Data-base (progressão)</small><div><b>${esc(r.db||'—')}</b>${r.db_motivo?` <span class="dbm">- ${esc(r.db_motivo)}</span>`:''}
             <span class="mini" style="margin-left:6px" onclick="ui.editarDataBase('${r.id}')">${r.db_editada?'Alterar':'Editar'}</span>${r.db_editada?` <span class="mini" onclick="ui.editarDataBase('${r.id}',true)">Voltar ao SEEU</span>`:''}</div></div></div>
         <div class="sec"><h3>Benefícios</h3>
