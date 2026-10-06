@@ -1,4 +1,4 @@
-RSPE BASE - SEEU  v7.1.0 (programa em abas)
+RSPE BASE - SEEU  v7.1.1 (programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
@@ -563,6 +563,21 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v7.1.1
+  - Ficha x RSPE, mãe diferente: a comparação passou a seguir a mesma regra
+    do vínculo (ignora "da/de/dos", nome cortado, abreviação, sobrenome em
+    outra ordem e erro de digitação) e não alerta quando um dos lados traz
+    "não informado". Ex.: "Luzia Silva" x "Luzia da Silva" não é mais
+    alerta. Nas bases de teste, 73 alertas caíram para 12 (os que restam
+    são nomes de fato diferentes). O texto diz "pode ser de outra pessoa".
+  - Botão "Desvincular ficha" nos alertas de CPF, mãe ou nome diferentes
+    entre a ficha e o RSPE: a ficha sai da análise do assistido (remição,
+    faltas, custódia), não volta a ser vinculada a ele nem é oferecida
+    como candidata, e continua na base para outro assistido. A Auditoria
+    registra o desvínculo (informativas) com o botão "Desfazer".
+  - O aviso de homônimo na base não some mais quando só um assistido é
+    refeito (dar baixa, preencher, fixar).
 
 v7.1.0
   - Indulto e comutação nos decretos (complemento da 7.0.0):
