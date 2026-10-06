@@ -1644,6 +1644,31 @@ FUND_TIPOS = {
         "Tema 1169).",
         "Requer-se o afastamento da reincidência específica, com a retificação da fração do livramento condicional e, se for o caso, do "
         "percentual de progressão, e o recálculo das datas dos benefícios."),
+    "remicao-preterita-apos-progressao": (
+        "A remição é pena cumprida e tem natureza declaratória: os dias remidos contam desde o período trabalhado ou estudado, e não da "
+        "decisão que os declara (LEP, arts. 126, § 8º, e 128). Lançada depois da progressão, cuja data fica fixa no sistema, a remição de "
+        "período anterior não antecipa essa data sem recálculo.",
+        "Requer-se o lançamento da remição na data de referência do atestado e o recálculo da data da progressão e dos benefícios seguintes."),
+    "indulto-lancado-na-data-da-decisao": (
+        "A sentença que concede indulto ou comutação é declaratória: o benefício existe desde a data fixada no decreto (LEP, art. 192). "
+        "Lançado na data da decisão, entra tarde na ordem de cumprimento e reduz indevidamente a pena cumprida atribuída aos demais processos.",
+        "Requer-se a retificação da data do benefício para a do decreto e o recálculo da pena cumprida e dos benefícios."),
+    "unificacao-como-soma": (
+        "A unificação de penas destina-se ao reconhecimento de concurso formal ou crime continuado (CP, arts. 70 e 71); a superveniência de "
+        "nova condenação gera soma das penas (LEP, art. 111), que não altera a data-base (STJ, Tema 1006).",
+        "Requer-se a substituição do incidente de unificação pelo de somatório de penas, com o restabelecimento da data-base e o recálculo."),
+    "pena-cumprida-menor-que-custodia": (
+        "A pena cumprida corresponde ao tempo de prisão registrado nos eventos, acrescido da remição (CP, art. 42; LEP, art. 126). A pena "
+        "cumprida informada no cálculo é inferior a essa soma, o que indica processo sem vinculação na linha do tempo ou desconto indevido.",
+        "Requer-se a conferência das vinculações dos processos aos eventos de prisão e a retificação da pena cumprida, com o recálculo."),
+    "comutacao-sem-impeditivos": (
+        "O cálculo da comutação em concurso com crime impeditivo exige considerar a pena do impeditivo (pedágio) antes de aplicar a fração "
+        "sobre os demais crimes; lançado sem os processos impeditivos, o cálculo automático não observa esse parâmetro.",
+        "Requer-se a conferência e, se for o caso, o recálculo da comutação com todos os processos abrangidos pela decisão."),
+    "detracao-como-remicao": (
+        "O período de recolhimento domiciliar noturno ou de monitoração eletrônica é detração (CP, art. 42; STJ, Tema 1155) e integra a "
+        "pena cumprida para todos os fins; não pode ser lançado como remição, sujeita à perda de até 1/3 por falta grave (LEP, art. 127).",
+        "Requer-se o relançamento do período como detração, na aba de eventos, e o recálculo."),
     "marcado-reincidente-sem-condenacao-anterior-tran": (
         "A reincidência pressupõe condenação anterior transitada em julgado antes do novo fato e não alcançada pelo período depurador de cinco "
         "anos (CP, arts. 63 e 64, I). Nenhuma condenação com essas características consta do RSPE.",
