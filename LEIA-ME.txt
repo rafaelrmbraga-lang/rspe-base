@@ -1141,6 +1141,10 @@ v7.0.0
     STF 240 (acórdãos 2.055, monocráticas 211). No STF/STJ, a regra rígida
     (só a decisão cujo texto mostra o resultado favorável) já entrou na
     primeira leitura.
+  - Jurisprudências, rótulo do resultado: "Recurso do MP desprovido" só quando a
+    ementa cita o Ministério Público; recurso da defesa desprovido com habeas
+    corpus concedido de ofício vira "Ordem concedida de ofício"; os demais
+    desprovimentos favoráveis, "Favorável à defesa".
 
 v6.16.49
   - Prescrição após a fuga: o pedido "informe a pena remanescente na fuga"
