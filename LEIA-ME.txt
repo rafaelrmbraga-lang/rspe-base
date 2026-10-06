@@ -1150,6 +1150,14 @@ v7.0.0
     jurisprudência do e-SAJ filtrada pelo número do acórdão (o PDF fica no
     ícone do resultado). Sem link de inteiro teor (8 decisões do STJ), o botão
     diz "Abrir processo".
+  - Mesma pessoa em RSPEs diferentes: agora basta um identificador em comum -
+    CPF, RJI (13 dígitos, que o SEEU imprime no lugar do CPF), nome + data de
+    nascimento ou nome + mãe. Antes, um RSPE com CPF e outro com RJI da mesma
+    pessoa apareciam em duas linhas.
+  - RSPE sem nenhum evento de prisão lançado no SEEU (prisão só pela ficha):
+    regime atual e término não são mais cobrados como "dado não lido" - o
+    SEEU não os calcula sem o evento; o alerta "RSPE sem evento de prisão"
+    continua.
 
 v6.16.49
   - Prescrição após a fuga: o pedido "informe a pena remanescente na fuga"

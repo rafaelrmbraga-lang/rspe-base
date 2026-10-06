@@ -748,7 +748,8 @@ class Base:
                 j = json.loads(d)
             except Exception:
                 j = {}
-            out.append({"nome": n, "cpf": j.get("cpf") or "", "nome_mae": j.get("nome_mae") or ""})
+            out.append({"nome": n, "cpf": j.get("cpf") or "", "nome_mae": j.get("nome_mae") or "",
+                        "data_nascimento": j.get("data_nascimento") or ""})
         return out
 
     def nomes(self):
@@ -906,13 +907,12 @@ class Api:
                "hist_n": self.base.historico_n(), "fixados": self.base.fixados()}
         # homônimos contam pessoas, não RSPEs: duas execuções da mesma pessoa (mesmo CPF; sem CPF, nome + mãe) não impedem a ficha pelo nome
         regs = brutos if brutos is not None else self.base.nomes_pessoas()
-        h, vistos = {}, set()
+        regs = list(regs)
+        repetidos = {id(r) for g in _grupos_pessoa(regs) for r in g[1:]}  # mesma pessoa conta uma vez
+        h = {}
         for r in regs:
-            k = _pessoa_chave(r)
-            if k and k in vistos:
-                continue
-            vistos.add(k)
-            h[_norm(r.get("nome", ""))] = h.get(_norm(r.get("nome", "")), 0) + 1
+            if id(r) not in repetidos:
+                h[_norm(r.get("nome", ""))] = h.get(_norm(r.get("nome", "")), 0) + 1
         ctx["homonimos"] = h
         ctx["outras_cond"] = _outras_cond(brutos) if brutos is not None else {}
         ctx["outros_procs"] = _outros_procs(brutos) if brutos is not None else {}
@@ -935,9 +935,10 @@ class Api:
             out = {"parcial": [], "removido": processo}
         else:
             ctx = self._contexto()
-            k = _pessoa_chave(r)
+            k = _chaves_pessoa(r)
             if k:
-                _g = [r] + [o for o in self.base.todos() if o.get("processo_execucao") != processo and _pessoa_chave(o) == k]
+                _g = [r] + [o for o in self.base.todos() if o.get("processo_execucao") != processo]
+                _g = next((g for g in _grupos_pessoa(_g) if any(x is r for x in g)), [r])
                 ctx["outras_cond"], ctx["outros_procs"], ctx["outras_exec"] = _outras_cond(_g), _outros_procs(_g), _outras_exec(_g)
             m = self._montar(r, ctx)
             i = next((k for k, x in enumerate(self._modelos) if x.get("id") == m.get("id")), None)
@@ -2259,18 +2260,54 @@ def _pessoa_chave(r):
     return ("nm:%s|%s" % (_norm(r.get("nome", "")), mae)) if mae and r.get("nome") else None
 
 
+def _chaves_pessoa(r):
+    """Identificadores da pessoa num RSPE: CPF (11 dígitos), RJI (13 dígitos, quando o SEEU imprime o registro judicial no lugar
+    do CPF), nome + nascimento e nome + mãe (início do nome, porque o RSPE às vezes corta o nome da mãe)."""
+    ks = []
+    doc = re.sub(r"\D", "", r.get("cpf") or "")
+    if len(doc) == 11 and doc != "0" * 11:
+        ks.append("cpf:" + doc)
+    elif len(doc) == 13:
+        ks.append("rji:" + doc)
+    nome = _norm(r.get("nome") or "")
+    if nome:
+        if rs.to_date(r.get("data_nascimento") or ""):
+            ks.append("nn:%s|%s" % (nome, r["data_nascimento"]))
+        mae = _norm(r.get("nome_mae") or "")
+        if len(mae) >= 8:
+            ks.append("nm:%s|%s" % (nome, mae[:18]))
+    return ks
+
+
+def _grupos_pessoa(regs):
+    """Agrupa os RSPEs da mesma pessoa: basta um identificador em comum (o mesmo CPF; ou o mesmo nome com a mesma data de
+    nascimento ou a mesma mãe) - um RSPE com CPF e outro com RJI, da mesma pessoa, ficam juntos. Devolve listas com 2 ou mais."""
+    regs = list(regs)
+    pai = list(range(len(regs)))
+
+    def raiz(i):
+        while pai[i] != i:
+            pai[i] = pai[pai[i]]
+            i = pai[i]
+        return i
+    vistos = {}
+    for i, r in enumerate(regs):
+        for k in _chaves_pessoa(r):
+            if k in vistos:
+                pai[raiz(i)] = raiz(vistos[k])
+            else:
+                vistos[k] = i
+    g = {}
+    for i, r in enumerate(regs):
+        g.setdefault(raiz(i), []).append(r)
+    return [v for v in g.values() if len(v) > 1]
+
+
 def _outras_cond(regs):
     """{processo: condenações das outras execuções da mesma pessoa} - a condenação anterior que fundamenta a reincidência pode
     estar noutro RSPE (execução arquivada ou extinta)."""
-    grupos = {}
-    for r in regs:
-        k = _pessoa_chave(r)
-        if k:
-            grupos.setdefault(k, []).append(r)
     out = {}
-    for g in grupos.values():
-        if len(g) < 2:
-            continue
+    for g in _grupos_pessoa(regs):
         for r in g:
             ch = r.get("processo_execucao") or r.get("arquivo")
             out[ch] = [dict(c, _execucao=o.get("processo_execucao") or "") for o in g if o is not r for c in (o.get("_crimes") or [])]
@@ -2279,12 +2316,8 @@ def _outras_cond(regs):
 
 def _outros_procs(regs):
     """{processo: processos das outras execuções da mesma pessoa}."""
-    grupos = {}
-    for r in regs:
-        k = _pessoa_chave(r)
-        if k:
-            grupos.setdefault(k, []).append(r.get("processo_execucao") or r.get("arquivo"))
-    return {p: [o for o in g if o != p] for g in grupos.values() if len(g) > 1 for p in g}
+    grupos = [[r.get("processo_execucao") or r.get("arquivo") for r in g] for g in _grupos_pessoa(regs)]
+    return {p: [o for o in g if o != p] for g in grupos for p in g}
 
 
 def _exec_encerrada(b):
@@ -2303,15 +2336,8 @@ def _rank_exec(b):
 
 def _outras_exec(regs):
     """{processo: resumo das outras execuções da mesma pessoa} - para o aviso da Auditoria na execução que fica na lista."""
-    grupos = {}
-    for r in regs:
-        k = _pessoa_chave(r)
-        if k:
-            grupos.setdefault(k, []).append(r)
     out = {}
-    for g in grupos.values():
-        if len(g) < 2:
-            continue
+    for g in _grupos_pessoa(regs):
         for r in g:
             out[r.get("processo_execucao") or r.get("arquivo")] = [
                 {"processo": o.get("processo_execucao") or o.get("arquivo"), "status": o.get("status_execucao") or "",
@@ -2324,13 +2350,10 @@ def _outras_exec(regs):
 def _so_ativos(modelos, brutos=None):
     """Mesma pessoa com mais de um RSPE: fica uma linha só, a da execução principal (_rank_exec); as outras saem da lista e são
     citadas no aviso da Auditoria da principal."""
-    grupos = {}
-    for m in modelos:
-        k = _pessoa_chave(m.get("_bruto") or {})
-        if k:
-            grupos.setdefault(k, []).append(m)
+    por_bruto = {id(m.get("_bruto")): m for m in modelos if m.get("_bruto")}
     fora = set()
-    for g in grupos.values():
+    for gb in _grupos_pessoa([m["_bruto"] for m in modelos if m.get("_bruto")]):
+        g = [por_bruto[id(b)] for b in gb]
         if len(g) > 1:
             princ = max(g, key=lambda m: _rank_exec(m.get("_bruto") or {}))
             fora |= {id(m) for m in g if m is not princ}
