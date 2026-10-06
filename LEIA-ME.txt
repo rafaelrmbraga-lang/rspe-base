@@ -1190,6 +1190,23 @@ v7.0.0
       após os cálculos", não a alteração de data-base); fuga reconsiderada
       (trocar para "descumprimento das condições"); indulto com impeditivo
       (a linha do tempo do SEEU é só informativa - aviso do CNJ).
+  - Ficha disciplinar x RSPE: a ficha guardada pelo nome passa a vincular
+    também com grafia diferente (Fretez/Fretes, Cezar/Cesar, Sousa/Souza,
+    Sant' Anna) ou com erro no nome da mãe, quando CPF, autos ou nascimento
+    confirmam a mesma pessoa; homônimo com o mesmo CPF da ficha recebe a ficha.
+    Na base teste2, 12 dos 13 "sem ficha" foram vinculados; o 13º (Ademar,
+    TJMG) é outra pessoa (CPF e nascimento diferentes da ficha).
+  - Auditoria: "Homônimo na base" (dados lado a lado; botão "Mesma pessoa"
+    junta as execuções numa linha) e "Ficha disciplinar de nome parecido não
+    vinculada" (botão "Vincular ficha"), só quando CPF e nascimento não
+    resolvem a dúvida.
+  - Relatório geral: conduta "Sem lapso", "Responde PADIC" e "Outra anotação"
+    no lugar de "Não informada" (vazio fica "Não informada"); unidade com nome
+    longo mantém a cidade ("... de CG"); dias atestados sem casas decimais.
+  - Janelas grandes (ex.: prescrição após a fuga): a barra com "Fechar" fica
+    presa ao pé da janela, sem precisar rolar até o fim.
+  - Ordem padrão das listas: alfabética pelo nome; clicar no título da coluna
+    continua ordenando por ela.
 
 v6.16.49
   - Prescrição após a fuga: o pedido "informe a pena remanescente na fuga"

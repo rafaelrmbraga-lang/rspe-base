@@ -521,6 +521,28 @@ def auditar(r, hoje=None):
                                "Também há RSPE de: %s. Ficam fora da lista porque não têm pena ativa a acompanhar; esta é a execução em "
                                "andamento." % _desc, "", tipo="outras-execucoes"))
     itens += _lancamentos_seeu(r, crimes, ativos, [i for i in incidentes if not i.get("_ficha")], eventos)
+    # homônimo na base e ficha de nome parecido não vinculada: dados lado a lado e a opção de vincular (o operador decide)
+    _dig = lambda x: re.sub(r"\D", "", x or "")
+    for o in r.get("_homonimos_base") or []:
+        dif = [x for x, a_, b_ in (("CPF", _dig(r.get("cpf")), _dig(o["cpf"])), ("nascimento", r.get("data_nascimento"), o["nasc"])) if a_ and b_ and a_ != b_]
+        it = _item("info" if dif else "verificar", "Homônimo na base: %s (%s)" % (o["processo"], "pessoa diferente pelo " + " e ".join(dif) if dif else "conferir se é a mesma pessoa"),
+                   "Este RSPE: CPF %s, nascimento %s, mãe %s. Outro assistido com o mesmo nome (%s, %s): CPF %s, nascimento %s, mãe %s. %s" % (
+                       r.get("cpf") or "—", r.get("data_nascimento") or "—", r.get("nome_mae") or "—", o["processo"] + ((" e " + ", ".join(o.get("outros"))) if o.get("outros") else ""), o["vara"] or "—",
+                       o["cpf"] or "—", o["nasc"] or "—", o["mae"] or "—",
+                       "Com %s diferente%s, são pessoas diferentes e ficam em linhas separadas." % (" e ".join(dif), "s" if len(dif) > 1 else "")
+                       if dif else "Sem CPF e nascimento para comparar: se for a mesma pessoa, use \"Mesma pessoa\" para juntar as execuções numa linha."),
+                   "", tipo="homonimo-na-base", ref=o["processo"])
+        it["preencher"] = {"campo": o["processo"], "rotulo": "Mesma pessoa", "tipo": "mesma_pessoa"}
+        itens.append(it)
+    for fc in r.get("_fichas_cand") or []:
+        it = _item("verificar", "Ficha disciplinar de nome parecido não vinculada (%s)" % fc["nome"],
+                   "A ficha de %s (impressa em %s) não foi vinculada porque CPF, autos e nascimento não confirmam a mesma pessoa. Ficha: CPF %s, "
+                   "nascimento %s, mãe %s. RSPE: CPF %s, nascimento %s, mãe %s. Se for a mesma pessoa, use \"Vincular ficha\"." % (
+                       fc["nome"], fc["impressa"] or "—", fc["cpf"] or "—", fc["nasc"] or "—", fc["mae"] or "—",
+                       r.get("cpf") or "—", r.get("data_nascimento") or "—", r.get("nome_mae") or "—"),
+                   "", tipo="ficha-nao-vinculada", ref=fc["chave"])
+        it["preencher"] = {"campo": fc["chave"], "rotulo": "Vincular ficha", "tipo": "vincular_ficha"}
+        itens.append(it)
     if rs.sem_condenacao_seeu(r):
         itens.append(_item("verificar", "Execução sem condenação cadastrada no SEEU",
                            "O RSPE só traz o cabeçalho, com a pena total zerada, sem nenhum processo criminal, evento ou incidente: a guia não foi "

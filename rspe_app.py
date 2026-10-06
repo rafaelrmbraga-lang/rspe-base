@@ -370,7 +370,73 @@ def _mesma_mae(a, b):
 
     def comp(x, y):
         return bool(x and y) and (x == y or (min(len(x), len(y)) >= 3 and (x.startswith(y) or y.startswith(x))))
-    return bool(ta and tb) and comp(ta[0], tb[0]) and comp(ta[-1], tb[-1])
+    if bool(ta and tb) and comp(ta[0], tb[0]) and comp(ta[-1], tb[-1]):
+        return True
+    # erro de digitação ou ordem trocada ("FIGUEIRREDO", "RUTE"/"RUTH", "SOUSA"/"SOUZA", "NUNES BARBOSA"/"BARBOSA NUNES")
+    import difflib
+    if sorted(ta) == sorted(tb) or difflib.SequenceMatcher(None, " ".join(ta), " ".join(tb)).ratio() >= 0.88:
+        return True
+    return False
+
+
+def _so_digitos(x):
+    return re.sub(r"\D", "", x or "")
+
+
+def _ficha_prova(f, r):
+    """A ficha é desta pessoa por dado objetivo: mesmo CPF, autos da ficha com o número desta execução (ou de uma ação penal
+    dela) ou mesma data de nascimento com nome parecido."""
+    cpf_f, cpf_r = _so_digitos(f.get("cpf")), _so_digitos(r.get("cpf"))
+    if len(cpf_f) == 11 and cpf_f == cpf_r:
+        return True
+    autos = {_so_digitos(a) for a in f.get("autos") or []} - {""}
+    procs = {_so_digitos(r.get("processo_execucao"))} | {_so_digitos(c.get("processo_criminal")) for c in r.get("_crimes") or []}
+    if autos & (procs - {""}):
+        return True
+    import difflib
+    return bool(f.get("data_nascimento") and f.get("data_nascimento") == r.get("data_nascimento")
+                and difflib.SequenceMatcher(None, _norm(f.get("nome")), _norm(r.get("nome"))).ratio() >= 0.9)
+
+
+def _ficha_alternativa(fichas, r):
+    """Ficha guardada pelo nome que não casou pela grafia exata (Fretez/Fretes, Cezar/Cesar, Sousa/Souza) ou que ficou de fora por
+    homônimo: vale só com prova objetiva (CPF, autos ou nascimento - _ficha_prova) e nome parecido; havendo mais de uma, a mais
+    recente."""
+    import difflib
+    nn = _norm(r.get("nome"))
+    if not nn:
+        return None
+    cand = []
+    for k, f in fichas.items():
+        if not k.startswith("nome:") or not isinstance(f, dict):
+            continue
+        nf = _norm(f.get("nome") or k[5:])
+        if nf[:1] != nn[:1]:
+            continue
+        mesmo_cpf = len(_so_digitos(f.get("cpf"))) == 11 and _so_digitos(f.get("cpf")) == _so_digitos(r.get("cpf"))
+        if (mesmo_cpf or difflib.SequenceMatcher(None, nf, nn).ratio() >= 0.85) and _ficha_prova(f, r):
+            cand.append(f)
+    return max(cand, key=lambda f: rs.to_date(f.get("data_impressao") or "") or date.min) if cand else None
+
+
+def _fichas_candidatas(fichas, r):
+    """Fichas guardadas pelo nome, de nome igual ou parecido, que não vincularam por falta de prova (CPF, autos ou nascimento):
+    vão para a Auditoria, com os dados lado a lado, para o operador vincular se for a mesma pessoa."""
+    import difflib
+    nn = _norm(r.get("nome"))
+    out = []
+    for k, f in fichas.items():
+        if not k.startswith("nome:") or k.startswith("nome:~") or not isinstance(f, dict):
+            continue
+        nf = _norm(f.get("nome") or k[5:])
+        cf, cr = _so_digitos(f.get("cpf")), _so_digitos(r.get("cpf"))
+        if (len(cf) == 11 and len(cr) == 11 and cf != cr) or (f.get("data_nascimento") and r.get("data_nascimento")
+                                                              and f["data_nascimento"] != r["data_nascimento"]):
+            continue  # CPF ou nascimento diferentes: é de outra pessoa, não há dúvida a resolver
+        if nf[:1] == nn[:1] and difflib.SequenceMatcher(None, nf, nn).ratio() >= 0.85:
+            out.append({"chave": k, "nome": f.get("nome") or "", "cpf": f.get("cpf") or "", "nasc": f.get("data_nascimento") or "",
+                        "mae": f.get("nome_mae") or "", "impressa": f.get("data_impressao") or ""})
+    return out[:3]
 
 
 def _norm(txt):
@@ -719,13 +785,22 @@ class Base:
         with self.lock:
             return dict(self.con.execute("SELECT processo, COUNT(*) FROM rspe_historico GROUP BY processo").fetchall())
 
+    def pessoa_man(self):
+        """{processo: identificador comum} dos assistidos que o operador marcou como a mesma pessoa (Auditoria, homônimo)."""
+        with self.lock:
+            rows = self.con.execute("SELECT processo, valor FROM dados_manuais WHERE campo='mesma_pessoa'").fetchall()
+        return {p: v for p, v in rows if v}
+
     def todos(self):
         with self.lock:
             rows = self.con.execute("SELECT dados, importado_em FROM assistidos ORDER BY nome").fetchall()
+        man = self.pessoa_man()
         out = []
         for dados, imp in rows:
             d = json.loads(dados)
             d["importado_em"] = imp
+            if d.get("processo_execucao") in man:
+                d["_pessoa_man"] = man[d["processo_execucao"]]
             out.append(d)
         return out
 
@@ -736,12 +811,16 @@ class Base:
             return None
         d = json.loads(row[0])
         d["importado_em"] = row[1]
+        man = self.pessoa_man()
+        if processo in man:
+            d["_pessoa_man"] = man[processo]
         return d
 
     def nomes_pessoas(self):
         """Nome, CPF e mãe de cada registro (contagem de homônimos sem ler a base inteira)."""
         with self.lock:
             rows = self.con.execute("SELECT nome, dados FROM assistidos").fetchall()
+        man = self.pessoa_man()
         out = []
         for n, d in rows:
             try:
@@ -749,7 +828,8 @@ class Base:
             except Exception:
                 j = {}
             out.append({"nome": n, "cpf": j.get("cpf") or "", "nome_mae": j.get("nome_mae") or "",
-                        "data_nascimento": j.get("data_nascimento") or ""})
+                        "data_nascimento": j.get("data_nascimento") or "", "processo_execucao": j.get("processo_execucao") or "",
+                        "_pessoa_man": man.get(j.get("processo_execucao") or "", "")})
         return out
 
     def nomes(self):
@@ -917,6 +997,7 @@ class Api:
         ctx["outras_cond"] = _outras_cond(brutos) if brutos is not None else {}
         ctx["outros_procs"] = _outros_procs(brutos) if brutos is not None else {}
         ctx["outras_exec"] = _outras_exec(brutos) if brutos is not None else {}
+        ctx["homon_det"] = _homonimos_det(brutos) if brutos is not None else {}
         return ctx
 
     def _atualizar(self, processo, msg=None):
@@ -1235,6 +1316,34 @@ class Api:
             return {"erro": "Pena inválida: use, por exemplo, 3 meses, 1 ano e 6 meses ou 0a3m0d."}
         self.base.dado_gravar(processo, campo, valor)
         return self._atualizar(processo, "Dado gravado; análise refeita." if valor else "Dado informado apagado.")
+
+    def vincular_ficha(self, processo, chave):
+        """Vincula ao assistido a ficha guardada pelo nome (Auditoria: ficha de nome parecido que não vinculou sozinha)."""
+        if not self.base:
+            return {"erro": "Nenhuma base aberta."}
+        with self.base.lock:
+            row = self.base.con.execute("SELECT dados FROM fichas WHERE chave=?", (chave,)).fetchone()
+        if not row:
+            return {"erro": "Ficha não encontrada (já vinculada?)."}
+        f = json.loads(row[0])
+        self.base.gravar_ficha(f, processo, True)
+        with self.base.lock:
+            self.base.con.execute("DELETE FROM fichas WHERE chave=? AND chave!=?", (chave, processo))
+            self.base.con.commit()
+        r = self.listar()
+        r["msg"] = "Ficha vinculada; análise refeita."
+        return r
+
+    def mesma_pessoa(self, processo, outro):
+        """Marca dois assistidos (homônimos) como a mesma pessoa: passam a uma linha só, como os RSPEs do mesmo CPF."""
+        if not self.base:
+            return {"erro": "Nenhuma base aberta."}
+        gid = min(processo, outro)
+        self.base.dado_gravar(processo, "mesma_pessoa", gid)
+        self.base.dado_gravar(outro, "mesma_pessoa", gid)
+        r = self.listar()
+        r["msg"] = "Marcados como a mesma pessoa; análise refeita."
+        return r
 
     def baixar_alerta(self, processo, chave, titulo, obs):
         if not self.base:
@@ -2134,14 +2243,20 @@ def _montar_modelo(r, ctx):
     _dm = dmanuais.get(_ch0, {})
     r["_outras_condenacoes"] = (ctx.get("outras_cond") or {}).get(_ch0, [])
     r["_outras_execucoes"] = (ctx.get("outras_exec") or {}).get(_ch0, [])
+    r["_homonimos_base"] = (ctx.get("homon_det") or {}).get(_ch0, [])
     _n0 = _norm(r.get("nome", ""))
     _f0 = fichas.get(_ch0) or (fichas.get("nome:" + _n0) if _homonimos.get(_n0, 0) == 1 else None)
-    if _f0 and _f0 is not fichas.get(_ch0) and not _mesma_mae(_norm(_f0.get("nome_mae") or ""), _norm(r.get("nome_mae") or "")):
-        _f0 = None  # ficha de homônimo: a mãe não confere
+    if _f0 and _f0 is not fichas.get(_ch0) and not _mesma_mae(_norm(_f0.get("nome_mae") or ""), _norm(r.get("nome_mae") or "")) \
+            and not _ficha_prova(_f0, r):
+        _f0 = None  # ficha de homônimo: a mãe não confere (nem CPF, autos ou nascimento)
     if not _f0:
         # ficha vinculada a outra execução da mesma pessoa (mesmo CPF): a ficha é da pessoa, vale para a execução em curso
         _fo = [fichas[o] for o in (ctx.get("outros_procs") or {}).get(_ch0, []) if fichas.get(o)]
         _f0 = max(_fo, key=lambda f: rs.to_date(f.get("data_impressao") or "") or date.min) if _fo else None
+    if not _f0:
+        # ficha guardada pelo nome com grafia diferente ou bloqueada por homônimo: só com CPF, autos ou nascimento conferindo
+        _f0 = fichas.get("nome:~alt") or _ficha_alternativa(fichas, r)
+    r["_fichas_cand"] = [] if _f0 else (fichas["~cands"] if "~cands" in fichas else _fichas_candidatas(fichas, r))
     r.pop("_nasc_fonte", None); r.pop("_nasc_data", None)
     if _dm.get("data_nascimento"):
         if r.get("data_nascimento") != _dm["data_nascimento"]["valor"]:
@@ -2263,7 +2378,7 @@ def _pessoa_chave(r):
 def _chaves_pessoa(r):
     """Identificadores da pessoa num RSPE: CPF (11 dígitos), RJI (13 dígitos, quando o SEEU imprime o registro judicial no lugar
     do CPF), nome + nascimento e nome + mãe (início do nome, porque o RSPE às vezes corta o nome da mãe)."""
-    ks = []
+    ks = ["man:" + r["_pessoa_man"]] if r.get("_pessoa_man") else []
     doc = re.sub(r"\D", "", r.get("cpf") or "")
     if len(doc) == 11 and doc != "0" * 11:
         ks.append("cpf:" + doc)
@@ -2301,6 +2416,37 @@ def _grupos_pessoa(regs):
     for i, r in enumerate(regs):
         g.setdefault(raiz(i), []).append(r)
     return [v for v in g.values() if len(v) > 1]
+
+
+def _homonimos_det(regs):
+    """{processo: outros assistidos com o mesmo nome que o programa trata como pessoas diferentes} - para o aviso da Auditoria,
+    com os dados lado a lado e a opção de marcar como a mesma pessoa."""
+    regs = list(regs)
+    gid = {}
+    for n, g in enumerate(_grupos_pessoa(regs)):
+        for r in g:
+            gid[id(r)] = n
+    por_nome = {}
+    for r in regs:
+        por_nome.setdefault(_norm(r.get("nome") or ""), []).append(r)
+    out = {}
+    for nome, rr in por_nome.items():
+        if not nome or len(rr) < 2:
+            continue
+        for r in rr:
+            outros = [o for o in rr if o is not r and (gid.get(id(o), "o%d" % id(o)) != gid.get(id(r), "r%d" % id(r)))]
+            pessoas = {}
+            for o in outros:  # uma entrada por pessoa (as execuções dela juntas, a principal primeiro)
+                pessoas.setdefault(gid.get(id(o), "o%d" % id(o)), []).append(o)
+            if pessoas:
+                out[r.get("processo_execucao") or r.get("arquivo")] = []
+                for g in pessoas.values():
+                    o = max(g, key=_rank_exec)
+                    out[r.get("processo_execucao") or r.get("arquivo")].append(
+                        {"processo": o.get("processo_execucao") or "", "cpf": o.get("cpf") or "", "nasc": o.get("data_nascimento") or "",
+                         "mae": o.get("nome_mae") or "", "vara": o.get("vara") or "", "status": o.get("status_execucao") or "",
+                         "outros": [x.get("processo_execucao") or "" for x in g if x is not o]})
+    return out
 
 
 def _outras_cond(regs):
@@ -2369,12 +2515,18 @@ def _ctx_de(ctx, r):
     for k in [ch, "nome:" + nn] + list((ctx.get("outros_procs") or {}).get(ch, [])):
         if k in ctx["fichas"]:
             fichas[k] = ctx["fichas"][k]
+    if ch not in ctx["fichas"]:
+        alt = _ficha_alternativa(ctx["fichas"], r)
+        if alt:
+            fichas["nome:~alt"] = alt
+        else:
+            fichas["~cands"] = _fichas_candidatas(ctx["fichas"], r)
     fx = ctx["fixados"]
     return {"baixas": um(ctx["baixas"]), "fichas": fichas, "manuais": um(ctx["manuais"]), "ajustes": um(ctx["ajustes"]),
             "dmanuais": um(ctx["dmanuais"]), "peds": um(ctx["peds"]), "hist_n": um(ctx["hist_n"]),
             "fixados": ({ch: fx[ch]} if ch in fx else {}) if isinstance(fx, dict) else ({ch} if ch in fx else set()),
             "homonimos": {nn: ctx["homonimos"].get(nn, 0)}, "outras_cond": um(ctx.get("outras_cond") or {}), "outros_procs": um(ctx.get("outros_procs") or {}),
-            "outras_exec": um(ctx.get("outras_exec") or {})}
+            "outras_exec": um(ctx.get("outras_exec") or {}), "homon_det": um(ctx.get("homon_det") or {})}
 
 
 def _montar_proc(args):

@@ -850,8 +850,11 @@ def _rotulo_unidade(t):
     t = re.sub(r"\s+", " ", (t or "").strip())
     if not t:
         return "não informada"
-    return " ".join(w if w in ("CPAIG", "PTRAN", "EPJFC", "IPCG") or w[:1].isdigit() else w.lower() if w.upper() in ("DE", "DO", "DA", "DOS", "DAS", "E")
-                    else w.title() for w in t.split())[:60]
+    t = " ".join(w if w in ("CPAIG", "PTRAN", "EPJFC", "IPCG") or w[:1].isdigit() else w.lower() if w.upper() in ("DE", "DO", "DA", "DOS", "DAS", "E")
+                 else w.title() for w in t.split())
+    if len(t) > 50:
+        t = re.sub(r"\bde Campo Grande\b", "de CG", t)  # nome longo: a cidade não pode sumir no corte ("...de Campo Gra")
+    return t if len(t) <= 56 else t[:40].rstrip() + "… " + t[-14:].lstrip()
 
 
 def _rotulo_vara(t):
@@ -914,9 +917,11 @@ def estatisticas(modelos, hoje=None):
         if not m.get("ficha_tem"):
             continue
         c = rs._sem_acento(((m.get("ficha") or {}).get("conduta") or m.get("fd_conduta") or "").strip()).upper()
-        # só as classificações do regulamento; texto que não é uma delas (leitura errada da ficha) fica "Não informada"
+        # classificações do regulamento; sem classificação, o motivo da ficha (sem lapso, PADIC); vazio = "Não informada"
+        # a ficha sem classificação traz o motivo: "SEM LAPSO" (sem tempo para avaliação) ou "RESPONDE PADIC/<unidade>"
         cond[{"OTIMA": "Ótima", "EXCELENTE": "Excelente", "BOA": "Boa", "REGULAR": "Regular", "MA": "Má", "PESSIMA": "Péssima", "RUIM": "Má",
-              "NEUTRA": "Neutra"}.get(c, "Não informada")] += 1
+              "NEUTRA": "Neutra"}.get(c) or ("Sem lapso" if c.startswith("SEM LAPSO") else "Responde PADIC" if "PADIC" in c
+                                             else "Não informada" if not c else "Outra anotação")] += 1
         em_curso = [L for L in (m.get("fd_linhas") or []) if "em curso" in (L.get("per") or "")]
         if any("(externo)" in (L.get("emp") or "").lower() for L in em_curso):
             trab["Trabalha (externo)"] += 1
@@ -1433,8 +1438,9 @@ def relatorio_geral(modelos, caminho, nome_base, nominal=True):
                        (F["firme12"], "assistidos com falta grave nos últimos 12 meses", "sanção reconhecida em juízo")],
                       {2: "amarelo", 3: "amarelo", 4: "laranja"}))
     el.append(Spacer(1, 10))
-    ordem_c = ["Excelente", "Ótima", "Boa", "Neutra", "Regular", "Má", "Péssima", "Não informada"]
-    cores_c = {"Excelente": "#008300", "Ótima": "#1baf7a", "Boa": "#2a78d6", "Neutra": "#4a3aa7", "Regular": "#eda100", "Má": "#eb6834", "Péssima": "#e34948"}
+    ordem_c = ["Excelente", "Ótima", "Boa", "Neutra", "Regular", "Má", "Péssima", "Sem lapso", "Responde PADIC", "Outra anotação", "Não informada"]
+    cores_c = {"Excelente": "#008300", "Ótima": "#1baf7a", "Boa": "#2a78d6", "Neutra": "#4a3aa7", "Regular": "#eda100", "Má": "#eb6834", "Péssima": "#e34948",
+               "Sem lapso": "#98a2b3", "Responde PADIC": "#b42318", "Outra anotação": "#d0d5dd"}
     lado(_rosca("2.1 Conduta carcerária", [(k, E["conduta"].get(k, 0)) for k in ordem_c], RW, st, "com ficha", max_fatias=8, cores=cores_c, ordenar=False),
          _rosca("2.2 Situação laboral", [(k, E["trabalho"].get(k, 0)) for k in ("Trabalha (interno)", "Trabalha (externo)", "Não trabalha")], RW, st, "com ficha",
                 cores={"Trabalha (interno)": "#2a78d6", "Trabalha (externo)": "#1baf7a", "Não trabalha": "#eb6834"}, ordenar=False))
@@ -1451,7 +1457,7 @@ def relatorio_geral(modelos, caminho, nome_base, nominal=True):
                 cores={"Homologadas": "#2a78d6", "Sem decisão (pendentes)": "#eb6834", "Não homologadas ou afastadas": "#1baf7a"},
                 nota=("A falta pendente mais antiga aguarda decisão há %s." % rs.pl(mp[-1], "dia", "dias")) if mp else ""))
     secao("2.5 Remição: pendências", "Pela ficha disciplinar: trabalho e estudo que ainda não viraram dias remidos no RSPE.")
-    el.append(numeros([(E["rem_ass_pend"], "assistidos com atestado sem remição homologada"), (_num(E["rem_pend"]), "dias de pena atestados e não homologados"),
+    el.append(numeros([(E["rem_ass_pend"], "assistidos com atestado sem remição homologada"), (_num(int(E["rem_pend"])), "dias de pena atestados e não homologados"),
                        (E["rem_ass_sem_at"], "assistidos trabalhando sem atestado",
                         ("%d dias a requerer já descontada a remição do RSPE" % E.get("rem_sem_desc", 0)) if E.get("rem_sem_desc") else ""),
                        (E["rem_trab"], "períodos de trabalho sem atestado"),

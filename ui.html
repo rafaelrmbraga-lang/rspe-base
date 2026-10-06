@@ -315,12 +315,12 @@ tr.sub td{padding:0 0 0 0;background:#FFFFFF;cursor:default}tr.sub:hover td{back
 
 /* modal */
 .modal{position:fixed;inset:0;display:none;place-items:center;z-index:30}.modal.on{display:grid}
-.box{width:440px;background:var(--card);border-radius:16px;box-shadow:var(--shadow2);padding:22px 24px;animation:pop .18s}
+.box{width:440px;max-width:96vw;max-height:94vh;overflow:auto;background:var(--card);border-radius:16px;box-shadow:var(--shadow2);padding:22px 24px;animation:pop .18s}
 @keyframes pop{from{transform:scale(.96);opacity:0}to{transform:none;opacity:1}}
 .box h2{margin:0 0 4px;font-size:16px}.box p{margin:0 0 14px;color:var(--tx2);font-size:12.5px}
 .chk{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:10px;cursor:pointer}.chk:hover{background:#F5F7FB}
 .chk input{width:16px;height:16px;accent-color:var(--pri)}
-.box .acts{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+.box .acts{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;position:sticky;bottom:-22px;z-index:3;background:var(--card);padding:10px 0 2px;margin-bottom:-2px;box-shadow:0 -8px 10px -8px rgba(16,24,40,.12)}
 .help{font-size:13px;line-height:1.55;color:var(--tx2);max-height:60vh;overflow:auto}.box .acts{flex:none}.help h4{margin:14px 0 4px;color:var(--tx);font-size:13px}.help h4:first-child{margin-top:0}
 
 /* tela inicial (sem base) */
@@ -685,7 +685,9 @@ const ui = {
       linhas = this.filtroCor==='__ped' ? linhas.filter(r=>!this.pedPendente(r,spec.id))
              : linhas.filter(r=>this.cor(r,spec)===this.filtroCor && (!tp || this.pedPendente(r,spec.id))); }
     linhas=linhas.filter(r=>this.passaFiltro(r,spec)); if(this.filtroVelho) linhas=linhas.filter(r=>this.idadeRSPE(r)>this.RSPE_VELHO);
-    const o=this.ordem[this.aba]; if(o){ linhas=[...linhas].sort((a,b)=>cmp(a[o.k],b[o.k])*(o.inv?-1:1)); }
+    // ordem padrão: alfabética pelo nome (acento e maiúscula não contam); clicar no título da coluna ordena por ela
+    const o=this.ordem[this.aba]; linhas = o ? [...linhas].sort((a,b)=>cmp(a[o.k],b[o.k])*(o.inv?-1:1))
+      : [...linhas].sort((a,b)=>String(a.nome||'').localeCompare(String(b.nome||''),'pt',{sensitivity:'base'})||String(a.id||'').localeCompare(String(b.id||'')));
     linhas=[...linhas].sort((a,b)=>(b.fixado?1:0)-(a.fixado?1:0));
     const card=document.getElementById('card');
     if(!this.dados.registros.length){ card.innerHTML=`<div class="empty"><div><b>Nenhum RSPE nesta base</b>Clique em <em>Importar PDFs</em> ou <em>Importar pasta</em>. Pode selecionar centenas de arquivos de uma vez.</div></div>`; return; }
@@ -1123,7 +1125,7 @@ const ui = {
     const nA=todos.filter(s=>s.nivel==='alerta'&&!s.baixado).length, nV=todos.filter(s=>s.nivel==='verificar'&&!s.baixado).length;
     const paras=t=>String(t||'').split(/(?<=[.;])\s+(?=[A-ZÁÉÍÓÚ(])/).filter(x=>x.trim()).map(x=>`<p>${penaExt(esc(x))}</p>`).join('');
     const card=s=>{ const k=s.baixado?'bx':s.nivel;
-      const bx = (s.preencher&&(!s.baixado||s.auto_baixa)?`<span class="mini ${s.baixado?'':'pre'}" onclick="event.stopPropagation();ui.preencher('${r.id}',${ui.clip(JSON.stringify(s.preencher))})">${s.baixado?'Alterar':'Preencher'}</span> `:'')+`<span class="mini" onclick="event.stopPropagation();ui.copiarClip(${ui.clip(ui.txtAud(s))})">Copiar</span> `+(s.baixado&&s.auto_baixa?'':s.baixado ? `<span class="mini" onclick="event.stopPropagation();ui.reabrir('${r.id}','${s.chave}')">Reabrir</span>` : (s.nivel==='ok'||s.nivel==='info' ? '' : `<span class="mini" onclick="event.stopPropagation();ui.darBaixa('${r.id}','${s.chave}','${esc(s.titulo).replace(/'/g,'&#39;')}')">Dar baixa</span>`));
+      const bx = (s.preencher&&(!s.baixado||s.auto_baixa)?`<span class="mini ${s.baixado?'':'pre'}" onclick="event.stopPropagation();ui.preencher('${r.id}',${ui.clip(JSON.stringify(s.preencher))})">${s.baixado?'Alterar':(s.preencher.tipo==='vincular_ficha'?'Vincular ficha':s.preencher.tipo==='mesma_pessoa'?'Mesma pessoa':'Preencher')}</span> `:'')+`<span class="mini" onclick="event.stopPropagation();ui.copiarClip(${ui.clip(ui.txtAud(s))})">Copiar</span> `+(s.baixado&&s.auto_baixa?'':s.baixado ? `<span class="mini" onclick="event.stopPropagation();ui.reabrir('${r.id}','${s.chave}')">Reabrir</span>` : (s.nivel==='ok'||s.nivel==='info' ? '' : `<span class="mini" onclick="event.stopPropagation();ui.darBaixa('${r.id}','${s.chave}','${esc(s.titulo).replace(/'/g,'&#39;')}')">Dar baixa</span>`));
       return `<div class="ac ${k}"><div class="ac-h"><span class="pill ${s.nivel_cor}">${esc(s.nivel_txt)}</span><b>${penaExt(esc(s.titulo))}</b><span class="ac-a">${bx}</span></div>
         ${s.detalhe?`<div class="ac-d">${paras(s.detalhe)}</div>`:''}
         ${s.fundamento?`<div class="ac-f">${penaExt(esc(s.fundamento))}</div>`:''}
@@ -1263,6 +1265,8 @@ const ui = {
     const res=await API().dado_manual(id,'data_base', d.trim()+'|'+mot.replace(/\|/g,'/').trim()); if(res&&res.erro){ this.toast(res.erro); return; }
     if(res&&res.registros) this.carregar(res); this.toast('Data-base gravada: previsão de progressão refeita em todas as abas.'); this.abrir(id); },
   async preencher(id, ci){ const P=JSON.parse(this._clips[ci]||'{}'); if(P.tipo==='falta'){ this.faltasModal(id, P.campo); return; }
+    if(P.tipo==='vincular_ficha'){ if(!confirm('Vincular esta ficha disciplinar a este assistido? Confira CPF, nascimento e mãe no aviso.')) return; await api('vincular_ficha', id, P.campo); this.aberto=id; return; }
+    if(P.tipo==='mesma_pessoa'){ if(!confirm('Marcar os dois assistidos como a mesma pessoa? As execuções passam a uma linha só.')) return; await api('mesma_pessoa', id, P.campo); return; }
     if(P.tipo==='ir_presc'){ this.irAba('presc'); this.aberto=id; this.render(); this.toast('Em cada crime, use "editar dados" para informar '+P.rotulo+'.'); return; } const v=prompt(P.rotulo+':', ''); if(v===null||!v.trim()) return;
     if(P.tipo==='data'&&!/^\d{2}\/\d{2}\/\d{4}$/.test(v.trim())){ this.toast('Use o formato dd/mm/aaaa.'); return; }
     await api('dado_manual', id, P.campo, v.trim()); this.aberto=id; this.render(); },
