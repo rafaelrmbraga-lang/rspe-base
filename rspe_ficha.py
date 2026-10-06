@@ -552,6 +552,32 @@ def classificar_unidade(nome):
     return None, ""
 
 
+def mesma_mae(a, b):
+    """Nomes da mãe (já normalizados) compatíveis: o RSPE corta nomes longos ("CARLA FERNANDA DA SILV") e há abreviações
+    ("CARLA F. DA SILVA"). Compatíveis quando iguais, quando um é o começo do outro, ou quando o primeiro e o último nome
+    conferem (um podendo ser o começo do outro). Ausente em um deles não decide (compatível)."""
+    if not a or not b or a == b or a.startswith(b) or b.startswith(a):
+        return True
+    lig = ("DE", "DA", "DO", "DAS", "DOS", "E")
+    ta = [x.strip(".") for x in a.split() if x.strip(".") not in lig]
+    tb = [x.strip(".") for x in b.split() if x.strip(".") not in lig]
+
+    def comp(x, y):
+        return bool(x and y) and (x == y or (min(len(x), len(y)) >= 3 and (x.startswith(y) or y.startswith(x))))
+    if bool(ta and tb) and comp(ta[0], tb[0]) and comp(ta[-1], tb[-1]):
+        return True
+    # erro de digitação ou ordem trocada ("FIGUEIRREDO", "RUTE"/"RUTH", "SOUSA"/"SOUZA", "NUNES BARBOSA"/"BARBOSA NUNES")
+    import difflib
+    if sorted(ta) == sorted(tb) or difflib.SequenceMatcher(None, " ".join(ta), " ".join(tb)).ratio() >= 0.88:
+        return True
+    return False
+
+
+def assinatura_ficha(f):
+    """Identifica a ficha (nome, CPF e nascimento) para o operador desvinculá-la de um assistido."""
+    return "%s|%s|%s" % (" ".join(rs._sem_acento(f.get("nome") or "").upper().split()), re.sub(r"\D", "", f.get("cpf") or ""), f.get("data_nascimento") or "")
+
+
 def _item_rf(nivel, titulo, detalhe, fundamento):
     return {"nivel": nivel, "titulo": titulo, "detalhe": detalhe, "fundamento": fundamento, "tipo": "rspe-x-ficha"}
 
@@ -564,15 +590,13 @@ def _identidade_x_ficha(r, f):
         out.append(_item_rf("alerta", "CPF da ficha (%s) difere do RSPE (%s)" % (f.get("cpf"), r.get("cpf")),
                             "A ficha vinculada pode ser de outra pessoa (homônimo) ou um dos cadastros está errado. Conferir antes de usar os dados da ficha.",
                             "Identificação do apenado (LEP, art. 106)."))
-    m1, m2 = rs._sem_acento(r.get("nome_mae") or "").upper().split(), rs._sem_acento(f.get("nome_mae") or "").upper().split()
-    def _truncado(a, b):
-        # o SEEU/a ficha cortam o nome no fim: o menor é o começo do maior (a última palavra pode estar cortada no meio)
-        a, b = (a, b) if len(" ".join(a)) <= len(" ".join(b)) else (b, a)
-        return len(a) >= 2 and " ".join(b).startswith(" ".join(a))
-    if m1 and m2 and m1 != m2 and not _truncado(m1, m2):
+    m1, m2 = " ".join(rs._sem_acento(r.get("nome_mae") or "").upper().split()), " ".join(rs._sem_acento(f.get("nome_mae") or "").upper().split())
+    # mesma regra do vínculo: ignora "da/de/dos", nome cortado no fim, abreviação e erro de digitação
+    _sem = lambda x: re.fullmatch(r"(NAO )?(INFORMAD[OA]|CONSTA|DECLARAD[OA])|IGNORAD[OA]|DESCONHECID[OA]|N/?I|-+", x or "")
+    if m1 and m2 and not _sem(m1) and not _sem(m2) and not mesma_mae(m1, m2):
         out.append(_item_rf("alerta", "Mãe na ficha (%s) difere do RSPE (%s)" % ((f.get("nome_mae") or "").title(), (r.get("nome_mae") or "").title()),
-                            "O nome da mãe é o critério para separar homônimos: a ficha vinculada provavelmente é de outra pessoa. Conferir antes de usar os "
-                            "dados da ficha (remição, faltas, custódia) e, se for o caso, remover a ficha deste assistido.", "Identificação do apenado (LEP, art. 106)."))
+                            "O nome da mãe é o critério para separar homônimos: a ficha vinculada pode ser de outra pessoa. Conferir antes de usar os "
+                            "dados da ficha (remição, faltas, custódia) e, se não for desta pessoa, usar \"Desvincular ficha\".", "Identificação do apenado (LEP, art. 106)."))
     n1, n2 = rs._sem_acento(r.get("nome") or "").upper().split(), rs._sem_acento(f.get("nome") or "").upper().split()
     if n1 and n2 and (n1[0] != n2[0] or n1[-1] != n2[-1]):
         out.append(_item_rf("alerta", "Nome na ficha (%s) difere do RSPE" % (f.get("nome") or "").title(),
@@ -588,6 +612,9 @@ def _identidade_x_ficha(r, f):
             it["auto_baixa"] = {"obs": "Data de nascimento informada pelo operador: %s (RSPE: %s; ficha: %s). Usada nos cálculos." % (
                 r.get("data_nascimento") or "", rs.fmt(d1), rs.fmt(d2)), "data": r.get("_nasc_data") or ""}
         out.append(it)
+    for it in out:
+        if not it.get("preencher"):  # CPF, mãe ou nome diferentes: o operador pode tirar a ficha deste assistido
+            it["preencher"] = {"campo": assinatura_ficha(f), "rotulo": "Desvincular ficha", "tipo": "desvincular_ficha"}
     return out
 
 

@@ -543,6 +543,12 @@ def auditar(r, hoje=None):
                    "", tipo="ficha-nao-vinculada", ref=fc["chave"])
         it["preencher"] = {"campo": fc["chave"], "rotulo": "Vincular ficha", "tipo": "vincular_ficha"}
         itens.append(it)
+    if r.get("_ficha_recusada"):
+        it = _item("info", "Ficha disciplinar desvinculada pelo operador em %s" % r["_ficha_recusada"],
+                   "A ficha que não era desta pessoa ficou de fora da análise (remição, faltas e custódia) e não volta a ser vinculada a ela. "
+                   "Se o desvínculo foi engano, use \"Desfazer\".", "", tipo="ficha-desvinculada")
+        it["preencher"] = {"campo": "", "rotulo": "Desfazer", "tipo": "revincular_ficha"}
+        itens.append(it)
     if rs.sem_condenacao_seeu(r):
         itens.append(_item("verificar", "Execução sem condenação cadastrada no SEEU",
                            "O RSPE só traz o cabeçalho, com a pena total zerada, sem nenhum processo criminal, evento ou incidente: a guia não foi "

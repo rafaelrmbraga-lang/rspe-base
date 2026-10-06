@@ -36,7 +36,7 @@ import rspe_relatorio as rrel
 import rspe_indulto_tl as rtl
 
 APP = "RSPE Base"
-VERSAO = "7.1.0"
+VERSAO = "7.1.1"
 
 
 def pasta_app():
@@ -358,25 +358,7 @@ Resumidos pelo artigo: "art. 33 Lei 11.343/06 (x2)". "n/i" = artigo não informa
 # banco local
 # --------------------------------------------------------------------------- #
 
-def _mesma_mae(a, b):
-    """Nomes da mãe (já normalizados) compatíveis: o RSPE corta nomes longos ("CARLA FERNANDA DA SILV") e há abreviações
-    ("CARLA F. DA SILVA"). Compatíveis quando iguais, quando um é o começo do outro, ou quando o primeiro e o último nome
-    conferem (um podendo ser o começo do outro). Ausente em um deles não decide (compatível)."""
-    if not a or not b or a == b or a.startswith(b) or b.startswith(a):
-        return True
-    lig = ("DE", "DA", "DO", "DAS", "DOS", "E")
-    ta = [x.strip(".") for x in a.split() if x.strip(".") not in lig]
-    tb = [x.strip(".") for x in b.split() if x.strip(".") not in lig]
-
-    def comp(x, y):
-        return bool(x and y) and (x == y or (min(len(x), len(y)) >= 3 and (x.startswith(y) or y.startswith(x))))
-    if bool(ta and tb) and comp(ta[0], tb[0]) and comp(ta[-1], tb[-1]):
-        return True
-    # erro de digitação ou ordem trocada ("FIGUEIRREDO", "RUTE"/"RUTH", "SOUSA"/"SOUZA", "NUNES BARBOSA"/"BARBOSA NUNES")
-    import difflib
-    if sorted(ta) == sorted(tb) or difflib.SequenceMatcher(None, " ".join(ta), " ".join(tb)).ratio() >= 0.88:
-        return True
-    return False
+_mesma_mae = rf.mesma_mae
 
 
 def _so_digitos(x):
@@ -1017,9 +999,12 @@ class Api:
         else:
             ctx = self._contexto()
             k = _chaves_pessoa(r)
+            _todos = [r] + [o for o in self.base.todos() if o.get("processo_execucao") != processo]
+            # homônimos (mesmo nome, outra pessoa): sem isto, o aviso sumia ao refazer só este assistido
+            _hd = _homonimos_det(_todos).get(processo)
+            ctx["homon_det"] = {processo: _hd} if _hd else {}
             if k:
-                _g = [r] + [o for o in self.base.todos() if o.get("processo_execucao") != processo]
-                _g = next((g for g in _grupos_pessoa(_g) if any(x is r for x in g)), [r])
+                _g = next((g for g in _grupos_pessoa(_todos) if any(x is r for x in g)), [r])
                 ctx["outras_cond"], ctx["outros_procs"], ctx["outras_exec"] = _outras_cond(_g), _outros_procs(_g), _outras_exec(_g)
             m = self._montar(r, ctx)
             i = next((k for k, x in enumerate(self._modelos) if x.get("id") == m.get("id")), None)
@@ -1332,6 +1317,36 @@ class Api:
             self.base.con.commit()
         r = self.listar()
         r["msg"] = "Ficha vinculada; análise refeita."
+        return r
+
+    def desvincular_ficha(self, processo, assinatura):
+        """Tira de um assistido a ficha que é de outra pessoa (alerta de CPF, mãe ou nome na Auditoria). A ficha fica na base,
+        guardada pelo nome, e pode ser vinculada a outro assistido; "Desfazer" (revincular_ficha) devolve o vínculo."""
+        if not self.base:
+            return {"erro": "Nenhuma base aberta."}
+        atual = (self.base.dados_manuais().get(processo, {}).get("ficha_recusada") or {}).get("valor") or ""
+        self.base.dado_gravar(processo, "ficha_recusada", "\n".join(sorted((set(atual.split("\n")) | {assinatura}) - {""})))
+        with self.base.lock:
+            row = self.base.con.execute("SELECT dados FROM fichas WHERE chave=?", (processo,)).fetchone()
+            f = json.loads(row[0]) if row else None
+            if f and rf.assinatura_ficha(f) == assinatura:
+                # gravada no processo deste assistido: volta a ser guardada pelo nome (sem apagar a ficha mais nova do nome)
+                ch = "nome:" + _norm(f.get("nome", ""))
+                if not self.base.con.execute("SELECT 1 FROM fichas WHERE chave=?", (ch,)).fetchone():
+                    self.base.con.execute("UPDATE fichas SET chave=?, processo='' WHERE chave=?", (ch, processo))
+                else:
+                    self.base.con.execute("DELETE FROM fichas WHERE chave=?", (processo,))
+                self.base.con.commit()
+        r = self.listar()
+        r["msg"] = "Ficha desvinculada deste assistido; análise refeita sem ela."
+        return r
+
+    def revincular_ficha(self, processo):
+        if not self.base:
+            return {"erro": "Nenhuma base aberta."}
+        self.base.dado_gravar(processo, "ficha_recusada", "")
+        r = self.listar()
+        r["msg"] = "Desvínculo desfeito; análise refeita."
         return r
 
     def mesma_pessoa(self, processo, outro):
@@ -2256,7 +2271,13 @@ def _montar_modelo(r, ctx):
     if not _f0:
         # ficha guardada pelo nome com grafia diferente ou bloqueada por homônimo: só com CPF, autos ou nascimento conferindo
         _f0 = fichas.get("nome:~alt") or _ficha_alternativa(fichas, r)
-    r["_fichas_cand"] = [] if _f0 else (fichas["~cands"] if "~cands" in fichas else _fichas_candidatas(fichas, r))
+    # fichas desvinculadas pelo operador (Auditoria): não voltam a este assistido, nem como candidatas
+    _rec = set(((_dm.get("ficha_recusada") or {}).get("valor") or "").split("\n")) - {""}
+    if _f0 and rf.assinatura_ficha(_f0) in _rec:
+        _f0 = None
+    r["_ficha_recusada"] = "/".join((_dm["ficha_recusada"]["data"] or "")[:10].split("-")[::-1]) if _rec else ""
+    r["_fichas_cand"] = [] if _f0 else [c for c in (fichas["~cands"] if "~cands" in fichas else _fichas_candidatas(fichas, r))
+                                        if rf.assinatura_ficha({"nome": c["nome"], "cpf": c["cpf"], "data_nascimento": c["nasc"]}) not in _rec]
     r.pop("_nasc_fonte", None); r.pop("_nasc_data", None)
     if _dm.get("data_nascimento"):
         if r.get("data_nascimento") != _dm["data_nascimento"]["valor"]:
