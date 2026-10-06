@@ -517,6 +517,12 @@ def conciliar(r, f, hoje=None, manuais=None, ini_exec=None, excluir_remicoes=Non
             n = _dias_seg_sab(x0, x1)
             em_curso = v["fim"] is None and x1 == hoje
             sem.append({"setor": v["setor"], "ini": x0, "fim": x1, "em_curso": em_curso, "est": n})
+            if em_curso and (x1 - x0).days <= 90:
+                # trabalho atual há até 90 dias: o atestado do período ainda não costuma ter sido emitido - não é ausência
+                pend.append({"data": x0, "status": "EM_CURSO", "texto": "%s, desde %s: trabalho em curso, atestado do período ainda não emitido "
+                             "(estimativa seg.-sáb.: ≈ %s, ≈ %d remidos)" % (v["setor"], _f(x0), rs.pl(n, "dia", "dias"), n // 3),
+                             "acao": "Acompanhar (pedir o atestado ao fim do trimestre)", "cor": "verde"})
+                continue
             pend.append({"data": x0, "status": "SEM_ATESTADO", "texto": "%s, %s a %s: sem atestado nem remição (estimativa seg.-sáb.: ≈ %s, ≈ %d remidos)" % (
                 v["setor"], _f(x0), "hoje (em curso)" if em_curso else _f(x1), rs.pl(n, "dia", "dias"), n // 3), "acao": "Pedir atestado", "cor": "amarelo"})
 

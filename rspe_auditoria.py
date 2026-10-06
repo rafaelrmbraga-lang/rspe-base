@@ -937,7 +937,11 @@ def auditar(r, hoje=None):
                                              if hed and esp_ok is not True
                                              and (c.get("reincidente_especifico") or "").upper() != "S" else "reincidente") if reinc_ef else "primário",
                                             "hediondo/equiparado" if hed else ("art. 44, p. ú., Lei 11.343/06" if trafico else
-                                                                                                  "tráfico de pessoas, art. 83, V, CP" if _trafico_pessoas(c) else "comum")), "CP, art. 83; Lei 11.343/06, art. 44, p. ú.", tipo="fracao-de-livramento-diverge", ref=nome))
+                                                                                                  "tráfico de pessoas, art. 83, V, CP" if _trafico_pessoas(c) else "comum")) + (
+                                   " A fração 1/1 só cabe a hediondo de reincidente específico; lançada em crime comum (muitas vezes para "
+                                   "\"revogar\" o livramento na implantação do processo, em vez do incidente próprio), o SEEU trata o crime como "
+                                   "hediondo e trava indulto e comutação: pedir a correção da fração." if (c.get("fracao_livramento") or "").startswith("1/1") and not hed else ""),
+                               "CP, art. 83; Lei 11.343/06, art. 44, p. ú.", tipo="fracao-de-livramento-diverge", ref=nome))
         if lc_vedado:
             itens.append(_item("info", "%s: hediondo com resultado morte, fato em %s - livramento vedado" % (nome, rs.fmt(fato)),
                                ("O RSPE aplica 1/1 no livramento, como manda a lei da data do fato (LEP, art. 112, VI, a, e VIII, na redação da %s). "
@@ -1029,7 +1033,11 @@ def auditar(r, hoje=None):
                                "CP, art. 42 (a detração é pena cumprida); LEP, art. 112.", tipo="regime-inicial-depois-da-primeira-prisao",
                                ref=rs.fmt(_d_ri)))
     db_seeu = rs.to_date(r.get("data_base_seeu") or "")
-    if db_seeu and ult and db_seeu < ult[0]:
+    # regressão por falta grave: a data-base é a da falta (Súmula 534/STJ), anterior à data em que a regressão foi lançada
+    _falta_db = db_seeu and ult and "REGRESS" in (ult[1].get("complemento") or "").upper() and any(
+        d and abs((d - db_seeu).days) <= 1 for d in [rs._data_fato_falta(i) for i in incidentes if rs.RE_FALTA_PROPRIA.search(rs._rotulo_incidente(i))
+                                                       and not rs._negado(i) and not rs._pendente(i)])
+    if db_seeu and ult and db_seeu < ult[0] and not _falta_db:
         itens.append(_item("alerta", "Data-base de progressão anterior à última alteração de regime",
                            "Data-base impressa: %s; última alteração de regime: %s (%s)." % (rs.fmt(db_seeu), rs.fmt(ult[0]), ult[1].get("complemento")),
                            "LEP, art. 112, § 6º (falta grave reinicia pela remanescente); STJ Tema 1006 (a unificação de penas não altera a data-base); STJ Tema 1165 (data-base é a do preenchimento dos requisitos, não a da decisão).", tipo="data-base-de-progressao-anterior-a-ultima-altera"))

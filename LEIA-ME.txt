@@ -1158,6 +1158,15 @@ v7.0.0
     regime atual e término não são mais cobrados como "dado não lido" - o
     SEEU não os calcula sem o evento; o alerta "RSPE sem evento de prisão"
     continua.
+  - Auditoria, "Data-base de progressão anterior à última alteração de regime":
+    não sai mais quando a última alteração é regressão por falta grave e a
+    data-base é a da falta (Súmula 534/STJ) - na base real, 45 -> 14.
+  - Fração de livramento 1/1 em crime que não é hediondo: o alerta explica que
+    o SEEU passa a tratar o crime como hediondo e trava indulto e comutação
+    (lançamento comum para "revogar" livramento na implantação).
+  - Ficha: trabalho atual em curso há até 90 dias não é mais "Ausência de
+    atestado" - aparece como "Em curso" (atestado do período ainda não
+    emitido); "Trabalho a atestar" continua Sim.
 
 v6.16.49
   - Prescrição após a fuga: o pedido "informe a pena remanescente na fuga"
