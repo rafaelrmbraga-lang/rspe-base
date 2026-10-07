@@ -646,7 +646,10 @@ v7.4.0
     as 2.266 já curadas. Precisão medida em duas amostras lidas uma a uma:
     93% a 97%. As novas aparecem com a marca "triagem automática" e a
     decisão completa é aberta sob demanda; a busca também procura no texto
-    integral. Arquivo novo embutido no .exe: teses_auto.bin (19 MB).
+    integral. Arquivo novo embutido no .exe: teses_auto.bin (19 MB); o
+    build do GitHub (.github/workflows/build.yml) foi atualizado para
+    incluí-lo. Se faltar, a aba avisa e mostra só as decisões curadas (o
+    arquivo também pode ficar ao lado do APTO.exe).
   - Tela inicial: nome APTO em destaque, acima do quadro.
   - Jurisprudências: o botão "Inteiro teor" das decisões monocráticas do STJ
     abre a própria decisão no portal do STJ (registro + data de publicação),
