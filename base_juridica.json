@@ -1,5 +1,5 @@
 {
- "versao": "2026-10-07",
+ "versao": "2026-10-07b",
  "descricao": "Base juridica do RSPE Base. Editavel: o programa le este arquivo ao abrir (copia ao lado do .exe tem prioridade sobre a embutida). Datas em AAAA-MM-DD. Fracoes como 'num/den' ou percentual 'NN%'.",
  "prescricao": {
   "art109_tabela": [
@@ -549,11 +549,12 @@
    }
   },
   "condicional_paragrafos": {
-   "_nota": "Artigos do CP em que a hediondez depende do parágrafo/inciso (Lei 8.072/90, art. 1º). Lista de '§X' ou '§X INCISO'; '§X' vale para qualquer inciso. Fora da lista = não hediondo. A época do fato é conferida à parte (tabela 'desde'). Casos especiais no código: 121 com 'extermínio' no tipo = hediondo, 121 § 6º = a verificar; 149-A § 1º, II = a verificar (só criança ou adolescente); 158 § 2º = hediondo só com morte e fato até 22/01/2020; 129 §§ 2º e 3º = a verificar (vítima). 121 §§ 2º-B e 2º-C: majorantes do homicídio qualificado dos incisos IX e X (hediondo); 121 § 2º-D (integrante de organização ultraviolenta, milícia ou grupo paramilitar, 20 a 40 anos): a verificar - a Lei 8.072 fala em 'homicídio qualificado'.",
+   "_nota": "Artigos do CP em que a hediondez depende do parágrafo/inciso (Lei 8.072/90, art. 1º). Lista de '§X' ou '§X INCISO'; '§X' vale para qualquer inciso. Fora da lista = não hediondo. A época do fato é conferida à parte (tabela 'desde'). Casos especiais no código: 121 com 'extermínio' no tipo = hediondo, 121 § 6º = a verificar; 149-A § 1º, II = a verificar (só criança ou adolescente); 158 § 2º = hediondo só com morte e fato até 22/01/2020; 129 §§ 2º e 3º = a verificar (vítima). 121 §§ 2º-B e 2º-C: majorantes do homicídio qualificado dos incisos IX e X (hediondo); 121 § 7º: aumento do feminicídio, que só incide no feminicídio qualificado (§ 2º, VI) - hediondo; 121 § 2º-D (integrante de organização ultraviolenta, milícia ou grupo paramilitar, 20 a 40 anos): a verificar - a Lei 8.072 fala em 'homicídio qualificado'.",
    "121": [
     "§2",
     "§2-B",
-    "§2-C"
+    "§2-C",
+    "§7"
    ],
    "155": [
     "§4-A"
