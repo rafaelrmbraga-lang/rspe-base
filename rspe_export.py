@@ -113,19 +113,14 @@ def exportar_pdf(modelos, saida, nome_base, abas):
     def moldura(canvas, doc):
         canvas.saveState()
         # marca + título discreto no topo
-        canvas.setFillColor(C(PRI))
-        canvas.roundRect(ML, H - 13 * mm, 7 * mm, 7 * mm, 1.8 * mm, stroke=0, fill=1)
-        canvas.setStrokeColor(colors.white)
-        canvas.setLineWidth(1.1)
-        for i, w in enumerate((3.6, 3.6, 2.4)):
-            y = H - 8.2 * mm - i * 1.6 * mm
-            canvas.line(ML + 1.7 * mm, y, ML + 1.7 * mm + w * mm, y)
+        from rspe_relatorio import _selo
+        _selo(canvas, ML, H - 14.2 * mm, 9.2 * mm)
         canvas.setFillColor(C(NAVY))
         canvas.setFont("Helvetica-Bold", 11)
-        canvas.drawString(ML + 9.5 * mm, H - 11 * mm, "APTO")
+        canvas.drawString(ML + 11.5 * mm, H - 11 * mm, "APTO")
         canvas.setFont("Helvetica", 8.5)
         canvas.setFillColor(C(TX2))
-        canvas.drawString(ML + 31 * mm, H - 11 * mm, "Execução penal · SEEU")
+        canvas.drawString(ML + 33 * mm, H - 11 * mm, "Execução penal · SEEU")
         canvas.drawRightString(W - ML, H - 11 * mm, "%s   ·   %s" % (nome_base, gerado))
         canvas.setStrokeColor(C(LINE))
         canvas.setLineWidth(0.6)

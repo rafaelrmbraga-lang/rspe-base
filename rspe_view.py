@@ -1011,6 +1011,86 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
     return m
 
 
+# ---------------- prioridade: do mais grave (liberdade imediata) ao mais simples ----------------
+PRIO_NIVEIS = {1: ("Crítica", "vermelho"), 2: ("Alta", "laranja"), 3: ("Média", "amarelo"), 4: ("Atenção", "amarelo"), 5: ("Rotina", "verde"),
+               6: ("Em ordem", "cinza"), 7: ("Extinta / arquivada", "azul")}
+
+
+def prioridade(m):
+    """(nível, motivos, dias de atraso): 1 crítica - a pena pode já não ser devida (extinção cabível, prescrição aparente, indulto
+    cabível sem decisão); 2 alta - benefício vencido sem decisão (progressão, livramento) ou comutação cabível; 3 média - remição a
+    requerer, término ou benefício em até 30 dias; 4 atenção - indulto/comutação a verificar, prescrição iminente, benefício em até
+    90 dias, erro de cálculo na Auditoria; 5 rotina - pontos a verificar; 6 em ordem; 7 execução extinta ou arquivada no SEEU."""
+    if m.get("estado_exec") == "extinta" or m.get("geral_cor") == "azul" or "ARQUIV" in (m.get("status_exec") or ""):
+        return 7, ["execução %s no SEEU" % ("arquivada" if "ARQUIV" in (m.get("status_exec") or "") else "extinta")], 0
+    mot = {k: [] for k in range(1, 6)}
+    atraso = 0
+    if m.get("ext_cor") == "vermelho":
+        es = (m.get("ext_sit") or "").strip()
+        mot[1].append("extinção cabível" + ((" (%s)" % es) if es and es.lower() != "extinção cabível" else ""))
+    if m.get("presc_ppe_cor") == "vermelho":
+        mot[1].append("prescrição executória aparente")
+    if m.get("presc_retro_cor") == "vermelho":
+        mot[1].append("prescrição punitiva aparente")
+    for k, ano in (("i25", 2025), ("i24", 2024), ("i22", 2022)):
+        if m.get(k) == "Sim":
+            mot[1].append("indulto %d cabível" % ano)
+    sem_estado = not m.get("estado_exec")
+    for k, rot in (("prog", "progressão"), ("liv", "livramento")):
+        d = m.get(k + "_dias")
+        if sem_estado and d is not None and d <= 0 and m.get(k + "_cor") == "vencido":
+            mot[2].append("%s %s há %s" % (rot, "vencida" if k == "prog" else "vencido", rs.pl(-d, "dia", "dias")))
+            atraso = max(atraso, -d)
+        elif sem_estado and d is not None and 0 < d <= 30:
+            mot[3].append("%s em %s" % (rot, rs.pl(d, "dia", "dias")))
+        elif sem_estado and d is not None and 30 < d <= 90:
+            mot[4].append("%s em %d dias" % (rot, d))
+    for k, ano in (("c25", 2025), ("c24", 2024)):
+        if m.get(k) == "Sim":
+            mot[2].append("comutação %d cabível" % ano)
+    D = m.get("fd_rem_det") or {}
+    rem = int(D.get("total") or 0) if isinstance(D, dict) else 0
+    if m.get("fd_cor") == "vermelho" and rem >= 1:
+        mot[3].append("remição a requerer (≈ %s)" % rs.pl(rem, "dia", "dias"))
+    elif m.get("fd_cor") == "vermelho":
+        mot[3].append("remição a requerer")
+    ed = m.get("ext_dias")
+    if m.get("ext_cor") in ("laranja",) or (ed is not None and 0 <= ed <= 30 and m.get("ext_cor") != "vermelho"):
+        mot[3].append("término em %s" % rs.pl(ed, "dia", "dias") if ed is not None else "término próximo")
+    for k, rot in (("i25", "indulto 2025"), ("c25", "comutação 2025"), ("i24", "indulto 2024"), ("c24", "comutação 2024")):
+        if m.get(k) == "Verificar":
+            mot[4].append(rot + " a verificar")
+    if m.get("presc_ppe_cor") == "amarelo":
+        mot[4].append("prescrição executória iminente / a verificar")
+    if m.get("aud_status") == "atencao":
+        mot[4].append(rs.pl(int(m.get("aud_alertas") or 0), "alerta", "alertas") + " na Auditoria")
+    if m.get("aud_status") == "verificar":
+        mot[5].append("pontos a verificar na Auditoria")
+    if m.get("fd_cor") == "amarelo":
+        mot[5].append("conferir remição / atestado")
+    if m.get("falta_apurar"):
+        mot[5].append("falta a apurar")
+    for n in range(1, 6):
+        if mot[n]:
+            if n == 1:  # dentro das críticas: extinção, prescrição executória, indulto, prescrição punitiva
+                peso = min(next((i for i, p_ in enumerate(("extinção", "prescrição executória", "indulto", "prescrição punitiva")) if x.startswith(p_)), 4)
+                           for x in mot[1])
+                atraso = (4 - peso) * 100000 + atraso
+            return n, mot[n] + [x for k in range(n + 1, 6) for x in mot[k]][:6], atraso
+    return 6, [], 0
+
+
+def aplicar_prioridade(m):
+    n, mot, atraso = prioridade(m)
+    rot, cor = PRIO_NIVEIS[n]
+    m["prio_n"], m["prio"], m["prio_cor"] = n, "%d · %s" % (n, rot), cor
+    m["prio_mot"] = "; ".join(mot[:2]) + (" (+%d)" % (len(mot) - 2) if len(mot) > 2 else "")
+    m["prio_mot_full"] = "; ".join(mot)
+    m["prio_ord"] = "%d|%06d|%s" % (n, 999999 - min(atraso, 999999), rs._sem_acento(m.get("nome") or "").upper())
+    return m
+
+
+
 def item_falha(titulo, tipo="falha"):
     it = {"nivel": "alerta", "titulo": titulo, "detalhe": "Conferir o PDF: um dado ilegível impediu parte da análise.", "fundamento": "",
           "tipo": tipo, "ref": "", "baixado": False, "nivel_cor": "vermelho", "nivel_txt": "Alerta"}

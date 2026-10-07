@@ -1,4 +1,4 @@
-APTO - Auditoria de Prazos e Tempo de cumprimento Organizada  v7.4.0
+APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.4.0
 (antigo RSPE Base; SEEU, programa em abas)
 =========================================
 
@@ -568,8 +568,11 @@ HISTÓRICO DE VERSÕES
 
 v7.4.0
   - Nome: o programa passa a se chamar APTO (Auditoria de Prazos e Tempo de
-    cumprimento Organizada). O executável é APTO.exe; bases, modelos e
+    Cumprimento Organizada). O executável é APTO.exe; bases, modelos e
     configurações continuam na mesma pasta e abrem sem reimportar.
+  - Marca: selo institucional com a ampulheta-A. Selo cheio (verde) no ícone
+    do APTO.exe e no cabeçalho do programa; selo clássico na tela inicial e no
+    cabeçalho dos relatórios em PDF (arquivo apto_selo.png, embutido no .exe).
   - Tela de carregamento ao abrir uma base existente (recentes ou "Abrir
     base existente…"), com a etapa em curso: abrindo o arquivo, cópia de
     segurança, cálculo dos assistidos, montagem da tela.

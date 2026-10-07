@@ -105,6 +105,14 @@ def _estilos():
     }
 
 
+def _selo(canvas, x, y, lado):
+    """Selo do APTO no cabeçalho dos PDFs (apto_selo.png, junto do programa ou do .exe)."""
+    import sys
+    p = os.path.join(getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__))), "apto_selo.png")
+    if os.path.exists(p):
+        canvas.drawImage(p, x, y, lado, lado, mask="auto")
+
+
 def _moldura(titulo, nome_base, rodape=AVISO, pagina=None):
     from reportlab.lib import colors
     from reportlab.lib.pagesizes import A4
@@ -117,19 +125,13 @@ def _moldura(titulo, nome_base, rodape=AVISO, pagina=None):
 
     def desenhar(canvas, doc):
         canvas.saveState()
-        canvas.setFillColor(C(PRI))
-        canvas.roundRect(ML, H - 13 * mm, 7 * mm, 7 * mm, 1.8 * mm, stroke=0, fill=1)
-        canvas.setStrokeColor(colors.white)
-        canvas.setLineWidth(1.1)
-        for i, w in enumerate((3.6, 3.6, 2.4)):
-            y = H - 8.2 * mm - i * 1.6 * mm
-            canvas.line(ML + 1.7 * mm, y, ML + 1.7 * mm + w * mm, y)
+        _selo(canvas, ML, H - 14.2 * mm, 9.2 * mm)
         canvas.setFillColor(C(NAVY))
         canvas.setFont(f["b"], 10.5)
-        canvas.drawString(ML + 9.5 * mm, H - 11 * mm, "APTO")
+        canvas.drawString(ML + 11.5 * mm, H - 11 * mm, "APTO")
         canvas.setFont(f["n"], 8.2)
         canvas.setFillColor(C(TX2))
-        canvas.drawString(ML + 9.5 * mm + canvas.stringWidth("APTO", f["b"], 10.5) + 3 * mm, H - 11 * mm, "· " + titulo)
+        canvas.drawString(ML + 11.5 * mm + canvas.stringWidth("APTO", f["b"], 10.5) + 3 * mm, H - 11 * mm, "· " + titulo)
         canvas.drawRightString(W - ML, H - 11 * mm, "%s · emitido em %s" % (nome_base, gerado))
         canvas.setStrokeColor(C(LINE))
         canvas.setLineWidth(0.6)
@@ -1991,6 +1993,112 @@ def _amostra(linhas, frac=0.1, semente=2026):
     n = max(1, int(round(len(pend) * frac))) if pend else 0
     sel = set(random.Random(semente).sample(pend, n)) if n else set()
     return [L for L in linhas if L["Nº da execução"] in sel]
+
+
+# ---------------------------------------------------------------- prioridade das remições
+PRIO_REM = {1: ("Crítica", "vermelho", "a remição já alcança o término da pena (extinção / liberdade)"),
+            2: ("Muito alta", "laranja", "a remição antecipa para já a progressão ou o livramento"),
+            3: ("Alta", "amarelo", "atestados prontos sem remição (dias exatos), 30 dias ou mais"),
+            4: ("Média", "verde", "trabalho sem atestado (estimativa), 30 dias ou mais"),
+            5: ("Baixa", "cinza", "menos de 30 dias, ou só estudo e leitura")}
+
+
+def prioridade_remicao(m):
+    """(nível, efeito, dias exatos, estimados, educação, total) da remição a requerer de um assistido; None se não há o que remir."""
+    D = m.get("fd_rem_det") or {}
+    if not isinstance(D, dict) or not D:
+        return None
+    g = lambda k: float((D.get(k) or {}).get("dias") or 0)
+    exatos = g("nao_lancado") + g("emitido") + g("divergencia")
+    estim = g("sem_atestado")
+    edu = g("estudo") + g("leitura")
+    total = float(D.get("total") or 0)
+    if total < 1:
+        return None
+    ativo = not m.get("estado_exec")
+    alvos = []
+    if m.get("ext_dias") is not None and m["ext_dias"] > 0:
+        alvos.append(("término", m["ext_dias"]))
+    if ativo:
+        for k, rot in (("prog_dias", "progressão"), ("liv_dias", "livramento")):
+            if m.get(k) is not None and m[k] > 0:
+                alvos.append((rot, m[k]))
+    efeito, nivel = [], None
+    for rot, d in alvos:
+        if exatos >= d:
+            efeito.append("%s em %d dias: os atestados prontos (%s dias) já a alcançam" % (rot, d, _num(int(exatos))))
+        elif total >= d:
+            efeito.append("%s em %d dias: alcançada com a estimativa (%s dias), se confirmado o trabalho" % (rot, d, _num(int(total))))
+        else:
+            continue
+        nivel = min(nivel or 9, 1 if rot == "término" else 2)
+    if nivel is None:
+        nivel = 3 if exatos >= 30 else 4 if estim >= 30 else 5
+        prox = min(alvos, key=lambda x: x[1]) if alvos else None
+        if prox:
+            efeito.append("antecipa a %s (em %d dias) em até %s dias" % (prox[0], prox[1], _num(int(total))))
+    certo = any("atestados prontos" in e for e in efeito) or (nivel == 3)
+    return nivel, "; ".join(efeito), exatos, estim, edu, total, certo
+
+
+def relatorio_prioridade_remicao(modelos, caminho, nome_base):
+    """PDF: assistidos com remição a requerer, do mais grave ao mais simples (efeito sobre término, progressão e livramento;
+    depois o volume de dias exatos e estimados)."""
+    from reportlab.lib.pagesizes import A4, landscape
+    from reportlab.lib.units import mm
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+    st = _estilos()
+    st["h2"].keepWithNext = 1
+    W = landscape(A4)[0] - 28 * mm
+    linhas, fora = [], []
+    for m in modelos:
+        p = prioridade_remicao(m)
+        if not p:
+            continue
+        if m.get("estado_exec") == "extinta" or "ARQUIV" in (m.get("status_exec") or ""):
+            fora.append((m, p))
+        else:
+            linhas.append((m, p))
+    linhas.sort(key=lambda x: (x[1][0], 0 if x[1][6] else 1, -x[1][5], rs._sem_acento(x[0].get("nome") or "").upper()))
+    cont = Counter(p[0] for _, p in linhas)
+    el = [Paragraph("Prioridade das remições", st["tit"]),
+          Paragraph(_t("%s · %s com remição a requerer, do mais grave ao mais simples · gerado em %s" % (
+              nome_base, rs.pl(len(linhas), "assistido", "assistidos"), datetime.now().strftime("%d/%m/%Y %H:%M"))), st["sub"]), Spacer(1, 8)]
+    dados = [["Nível", "Critério", "Assistidos", "Dias a remir"]]
+    for n, (rot, cor, crit) in PRIO_REM.items():
+        dados.append([_pilula("%d · %s" % (n, rot), cor, st), crit, str(cont.get(n, 0)),
+                      _num(int(sum(p[5] for _, p in linhas if p[0] == n)))])
+    el.append(_tabela(dados, [32 * mm, W - 92 * mm, 26 * mm, 34 * mm], st))
+    el.append(Spacer(1, 4))
+    el.append(Paragraph(_t("Dias exatos: atestados peticionados ou emitidos sem remição no RSPE (e a diferença de remição menor). Estimativa: "
+                           "trabalho sem atestado na ficha (seg.-sáb. ÷ 3). Educação: estudo e leitura. A remição conta como pena cumprida (LEP, "
+                           "art. 128): os dias a remir reduzem o tempo até o término e até os benefícios. Dentro de cada nível, o maior volume "
+                           "de dias vem primeiro. Conferir nos autos (SEEU) antes do pedido."), st["mut"]))
+    for n, (rot, cor, crit) in PRIO_REM.items():
+        L = [(m, p) for m, p in linhas if p[0] == n]
+        if not L:
+            continue
+        el.append(Paragraph("%d · %s - %s (%s)" % (n, rot, crit, rs.pl(len(L), "assistido", "assistidos")), st["h2"]))
+        dados = [["Assistido", "Execução", "Regime", "Exatos", "Estimativa", "Educação", "Total", "Efeito sobre os prazos"]]
+        for m, p in L:
+            dados.append([Paragraph(_t(nome_rel(m)), st["neg"]), Paragraph(_t(m.get("proc") or m.get("id") or ""), st["cel"]),
+                          m.get("regime") or "—", _num(int(p[2])) if p[2] else "—", ("≈ " + _num(int(p[3]))) if p[3] else "—",
+                          ("≈ " + _num(int(p[4]))) if p[4] else "—", _num(int(p[5])), Paragraph(_t(p[1] or "—"), st["cel"])])
+        el.append(_tabela(dados, [46 * mm, 49 * mm, 18 * mm, 15 * mm, 21 * mm, 20 * mm, 15 * mm, W - 184 * mm], st,
+                          cores_linha={i + 1: cor for i in range(len(L))}))
+    if fora:
+        el.append(Paragraph("Execução extinta ou arquivada no SEEU (%s)" % rs.pl(len(fora), "assistido", "assistidos"), st["h2"]))
+        el.append(Paragraph(_t("A remição deve ser pedida no processo em que a pena está em execução (transferência, unificação ou nova guia) - "
+                               "conferir no SEEU."), st["mut"]))
+        dados = [["Assistido", "Execução", "Situação", "Total"]]
+        for m, p in sorted(fora, key=lambda x: -x[1][5]):
+            dados.append([Paragraph(_t(nome_rel(m)), st["neg"]), m.get("proc") or "", (m.get("status_exec") or "").title(), _num(int(p[5]))])
+        el.append(_tabela(dados, [90 * mm, 50 * mm, 50 * mm, W - 190 * mm], st))
+    doc = SimpleDocTemplate(caminho, pagesize=landscape(A4), leftMargin=14 * mm, rightMargin=14 * mm, topMargin=21 * mm, bottomMargin=16 * mm,
+                            title="Prioridade das remições", author="APTO")
+    fr = _moldura("Prioridade das remições", nome_base, rodape="Triagem pela ficha disciplinar e pelo RSPE: atestados com dias exatos; "
+                  "trabalho sem atestado e estudo, estimativa. Conferir nos autos (SEEU) antes do pedido.", pagina=landscape(A4))
+    doc.build(el, onFirstPage=fr, onLaterPages=fr)
 
 
 def planilha_remicao_xlsx(modelos, caminho, nome_base):
