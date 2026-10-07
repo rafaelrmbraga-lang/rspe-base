@@ -648,7 +648,7 @@ def so_matematica(it):
     """Itens que ficam na Auditoria: conferência dos números e datas do RSPE."""
     if it.get("origem") == "ficha":
         # perda de dias remidos é conta do RSPE; cumprimento parado no RSPE x custódia na ficha é contradição do RSPE
-        return it["titulo"].startswith("Perda de remidos") or it.get("tipo") == "rspe-x-ficha"
+        return it["titulo"].startswith("Perda de remidos") or it.get("tipo") in ("rspe-x-ficha", "remicao-referencia-tardia")
     return it.get("tipo") not in AUD_OUTRAS_ABAS
 
 

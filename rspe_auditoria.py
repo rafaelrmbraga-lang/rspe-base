@@ -456,6 +456,64 @@ def _lancamentos_seeu(r, crimes, ativos, incidentes, eventos):
                              "sobra. Sem marcar %s, o SEEU calcula sem esse parâmetro. Conferir o cálculo (a fração aplicada aparece no incidente) "
                              "e pedir o recálculo." % ", ".join(sorted(sem)),
                              "Decretos de indulto e comutação (pedágio do crime impeditivo); LEP, art. 192.", tipo="comutacao-sem-impeditivos"))
+    # G - data de referência do semiaberto mantida depois de fato que reduziu a pena com efeito anterior a ela (comutação ou indulto de
+    # decreto anterior, prescrição, extinção por indulto/graça): o SEEU não refaz a primeira progressão sozinho
+    if prog and "SEMI" in rs._sem_acento((r.get("regime_atual") or "").upper()):
+        up = max(prog, key=lambda i: D(i["data_referencia"]))
+        if "SEMI" in rs._sem_acento((up.get("complemento") or "").upper()):
+            sref, sdec = D(up["data_referencia"]), D(up["data_decisao"])
+            fatos = []
+            for i in conc:
+                t = rs._sem_acento(((i.get("tipo") or "") + " " + (i.get("complemento") or "")).upper())
+                dd = D(i.get("data_decisao")) or D(i.get("data_referencia"))
+                if not dd or dd <= sdec:
+                    continue
+                m = re.search(r"DE\s+(\d{4})\b", t)
+                dec = date(int(m.group(1)), 12, 25) if m else None
+                if t.startswith(("COMUTA", "INDULTO")) and dec and dec < sref:
+                    fatos.append("%s (decreto de %s, decidida em %s)" % ("comutação" if t.startswith("COMUTA") else "indulto", dec.year, rs.fmt(dd)))
+                elif t.startswith("EXTIN") and re.search(r"PRESCRI", t):
+                    fatos.append("extinção por prescrição de %s (decidida em %s)" % (i.get("processos") or "processo", rs.fmt(dd)))
+                elif t.startswith("EXTIN") and re.search(r"INDULT|GRACA|ANISTIA", t):
+                    fatos.append("extinção por indulto, graça ou anistia de %s (decidida em %s; conferir se o decreto é anterior a %s)" % (
+                        i.get("processos") or "processo", rs.fmt(dd), rs.fmt(sref)))
+            if fatos:
+                fr = _fr_seeu(r.get("fracao_progressao_aplicada"))
+                out.append(_item("verificar", "Data de referência do semiaberto (%s) não refeita depois da redução da pena: pedir o recálculo" % rs.fmt(sref),
+                                 "A progressão ao semiaberto foi lançada com referência em %s e decidida em %s. Depois disso: %s. A pena sobre a "
+                                 "qual a primeira progressão foi calculada mudou, mas a data de referência lançada continua a mesma e passa a "
+                                 "servir de data-base para o aberto: o SEEU não a recalcula sozinho. Refeita a conta com a pena atual (%s) e a fração aplicada (%s), a "
+                                 "referência do semiaberto se antecipa e, com ela, a progressão ao aberto. Pedir o recálculo da primeira "
+                                 "progressão, a nova data de referência e o recálculo das seguintes." % (
+                                     rs.fmt(sref), rs.fmt(sdec), "; ".join(fatos),
+                                     rs.pena_extenso(r.get("pena_total")) if rs.pena_para_dias(r.get("pena_total")) else "a do RSPE", fr or "a do RSPE"),
+                                 "LEP, arts. 111 e 112; CP, art. 42; STJ, Tema 1165 (a data da progressão é a do preenchimento dos requisitos).",
+                                 tipo="semiaberto-referencia-desatualizada", ref=rs.fmt(sref)))
+    # H - comutações fora da ordem dos decretos: a de decreto anterior altera o saldo sobre o qual se calcula a do decreto seguinte
+    _cs = []
+    for i in conc:
+        if (i.get("tipo") or "").upper().startswith("COMUTA"):
+            m = re.search(r"DE\s+(\d{4})\s*$", rs._sem_acento((i.get("complemento") or "").upper().strip()))
+            if m and D(i.get("data_referencia")):
+                _cs.append((int(m.group(1)), D(i["data_referencia"]), i))
+    _inv = [(a, b) for a in _cs for b in _cs if a[0] < b[0] and a[1] > b[1]]
+    _tard = [(a, b) for a in _cs for b in _cs if a[0] < b[0] and a[1] > date(b[0], 12, 25) and (a, b) not in _inv]
+    for a, b in (_inv or _tard)[:1]:
+        mesma = a[1] == b[1]
+        out.append(_item("alerta" if _inv else "verificar",
+                         ("Comutações fora da ordem dos decretos: a de %d foi lançada depois da de %d" % (a[0], b[0]) if _inv else
+                          "Comutações de %d e %d lançadas na mesma data (%s): conferir se a de %d foi calculada sobre o saldo após a de %d" % (
+                              a[0], b[0], rs.fmt(a[1]), b[0], a[0]) if mesma else
+                          "Comutação do decreto de %d lançada depois de 25/12/%d: o cálculo da comutação seguinte não a considera" % (a[0], b[0])),
+                         "Comutação do decreto de %d lançada em %s; comutação do decreto de %d lançada em %s. A comutação reconhecida pelo "
+                         "decreto anterior reduz o saldo de pena, e a do decreto seguinte deve ser calculada sobre o saldo que resulta dela. %s "
+                         "Pedir a conferência da ordem e o recálculo das comutações afetadas, com o saldo de pena após cada uma." % (
+                             a[0], rs.fmt(a[1]), b[0], rs.fmt(b[1]),
+                             "Lançadas fora da ordem, a comutação de %d foi calculada sem o efeito da de %d." % (b[0], a[0]) if _inv else
+                             "Lançadas no mesmo dia, a ordem de cálculo não aparece no RSPE." if mesma else
+                             "Lançada depois de 25/12/%d, a comutação de %d fica fora do saldo considerado na data do decreto seguinte." % (b[0], a[0])),
+                         "Decretos de indulto e comutação (a comutação incide sobre o saldo de pena na data do decreto); LEP, art. 192; CP, art. 107, II.",
+                         tipo="comutacoes-fora-de-ordem", ref="%d-%d" % (a[0], b[0])))
     # F - detração do recolhimento noturno (Tema 1155) lançada como remição
     for i in conc:
         if (i.get("tipo") or "").upper().startswith("REMI") and re.search(r"NOTURN|1\.?155|DETRA|RECOLHIMENTO|MONITORA",
@@ -826,6 +884,10 @@ def auditar(r, hoje=None):
                            "Cumprida %s ≥ total %s: cabe extinção da pena." % (rs.dias_para_pena(cumprida), rs.dias_para_pena(pena_total)), "LEP, art. 109; CP, art. 107.", tipo="pena-integralmente-cumprida-com-execucao-ativa"))
 
     reinc_sem_base = []
+    # livramento já concedido ou revogado nesta execução: o 1/1 no crime comum costuma ser a revogação lançada no lugar errado
+    _lc_hist = ("revogado" if any(rs.e_revogacao_livramento(j) for j in incidentes) else
+                "concedido antes" if any((j.get("situacao") or "CONCEDIDO") == "CONCEDIDO" and "LIVRAMENTO" in ((j.get("tipo") or "") + " " + (j.get("complemento") or "")).upper()
+                                         and not re.search(r"REVOG|SUSP|INDEF|NEG", ((j.get("tipo") or "") + " " + (j.get("complemento") or "")).upper()) for j in incidentes) else "")
     # ---------------- 2. crime a crime: hediondez, VGA, frações ----------------
     for c in ativos:
         nome = _nome(c)
@@ -1065,6 +1127,17 @@ def auditar(r, hoje=None):
                                "Desde 25/03/2026, o art. 112, VI, b, da LEP veda o livramento ao comando de organização criminosa ultraviolenta. "
                                "O RSPE não informa essa qualificação: sem ela, vale a fração de livramento do crime (%s)." % rotl,
                                "LEP, art. 112, VI, b (redação da Lei 15.358/2026); CP, art. 83.", tipo="livramento-vedado-pelo-seeu-1-1-so-se-a-organiza", ref=nome))
+        elif fl_seeu is not None and float(fl_seeu) >= 1 and float(fl_esp) < 1 and _lc_hist and not hed:
+            # revogação do livramento registrada como 1/1 no cadastro do crime, em vez do incidente próprio vinculado ao livramento
+            itens.append(_item("alerta", "%s: fração de livramento 1/1 lançada no crime, com livramento %s" % (nome, _lc_hist),
+                               "A fração legal de livramento deste crime é %s, mas o cadastro da condenação traz 1/1. Havendo livramento %s, "
+                               "o 1/1 no desmembramento do crime costuma ser o registro da revogação feito no lugar errado: o SEEU tem "
+                               "incidente próprio de revogação, vinculado ao livramento concedido (com a opção \"não gerar prejuízos ao "
+                               "apenado de acordo com o art. 86 do Código Penal\"). Lançado no crime, o 1/1 faz o SEEU tratá-lo como "
+                               "hediondo e impeditivo no indulto e na comutação (\"Não comutado - Impeditivo\"), sem previsão no decreto. Pedir a "
+                               "correção: fração legal no crime e revogação pelo incidente próprio, preservados os efeitos da revogação." % (rotl, _lc_hist),
+                               "CP, arts. 83, 86 e 88; LEP, arts. 140 a 145; decretos de indulto e comutação (rol de impeditivos).",
+                               tipo="livramento-1-1-pela-revogacao", ref=nome))
         elif fl_seeu is not None and abs(float(fl_seeu) - float(fl_esp)) > 0.005:
             itens.append(_item("alerta" if float(fl_seeu) > float(fl_esp) else "info",
                                ("%s: fração de livramento do SEEU (%s) maior que a legal (%s)" if float(fl_seeu) > float(fl_esp) else "%s: fração de livramento do SEEU (%s) menor que a esperada (%s) - favorece o apenado") % (nome, c.get("fracao_livramento"), rotl),
@@ -1157,8 +1230,22 @@ def auditar(r, hoje=None):
     if _ri:
         _d_ri = _ri[0][0]
         _procs_exec = [c.get("processo_criminal") or "" for c in crimes]
-        _prim = [a for a, _b, _m, procs in rs.periodos_custodia_detalhe(eventos)
-                 if a and (not rs.lista_processos(procs) or any(rp._mesmo_processo(q, x) for q in rs.lista_processos(procs) for x in _procs_exec if x))]
+        _per = [(a, b) for a, b, _m, procs in rs.periodos_custodia_detalhe(eventos)
+                if a and (not rs.lista_processos(procs) or any(rp._mesmo_processo(q, x) for q in rs.lista_processos(procs) for x in _procs_exec if x))]
+        _prim = [a for a, _b in _per]
+        # as duas contas: detração antes da fração ((P - d) x f) e fração sobre a pena total (P x f - d); diferença d x (1 - f)
+        _contas = ""
+        _P, _f = pena_total, _fr_seeu(r.get("fracao_progressao_aplicada"))
+        _det = sum((min(b or _d_ri, _d_ri) - a).days for a, b in _per if a < _d_ri)
+        if _P and _f and 0 < _f < 1 and _det > 0:
+            _A, _B = round((_P - _det) * _f), round(_P * _f) - _det
+            _ext = lambda n: rs.pena_extenso(rs.dias_para_pena(max(0, n)))
+            _contas = (" As duas contas, na pena total atual (%s), com a fração aplicada pelo SEEU (%s) e %s de prisão provisória antes "
+                       "do regime inicial: detração antes da fração, (pena − detração) × fração = %s; fração sobre a pena total, "
+                       "pena × fração − detração = %s. Diferença: detração × (1 − fração) = %s a mais para a primeira progressão "
+                       "pela forma mais gravosa." % (
+                           _ext(_P), _f, rs.pl(_det, "dia", "dias"), _ext(_A),
+                           _ext(_B) if _B > 0 else "nada (o lapso já estava cumprido na data do regime inicial)", _ext(_A - max(_B, 0))))
         if _prim and min(_prim) < _d_ri - timedelta(days=1):
             itens.append(_item("alerta", "Regime inicial lançado em %s, depois da primeira prisão (%s)" % (rs.fmt(_d_ri), rs.fmt(min(_prim))),
                                "A primeira prisão por processo desta execução é de %s e o regime inicial foi lançado em %s. Lançado depois da "
@@ -1167,8 +1254,9 @@ def auditar(r, hoje=None):
                                "progressão e livramento se antecipam. Se o juízo determinou a data da última prisão, o SEEU tem a opção "
                                "\"diminuir a detração após os cálculos\", que mantém essa data sem agravar o cálculo (aparece como \"Sim\" em vermelho no "
                                "cálculo); o incidente de alteração de data-base não serve para isso, porque aplica efeito de falta grave "
-                               "(interrompe a contagem)." % (rs.fmt(min(_prim)), rs.fmt(_d_ri)),
-                               "CP, art. 42 (a detração é pena cumprida); LEP, art. 112.", tipo="regime-inicial-depois-da-primeira-prisao",
+                               "(interrompe a contagem).%s" % (rs.fmt(min(_prim)), rs.fmt(_d_ri), _contas),
+                               "CP, art. 42 (a detração é pena cumprida); LEP, art. 112; STJ, AgRg no AREsp 2.956.206; STJ, AgRg no HC 719.763.",
+                               tipo="regime-inicial-depois-da-primeira-prisao",
                                ref=rs.fmt(_d_ri)))
     db_seeu = rs.to_date(r.get("data_base_seeu") or "")
     # regressão por falta grave: a data-base é a da falta (Súmula 534/STJ), anterior à data em que a regressão foi lançada
@@ -1603,11 +1691,59 @@ FUND_TIPOS = {
         "Requer-se a exclusão do regime inicial lançado em duplicidade, substituindo-o pelo somatório de penas, com o restabelecimento da "
         "data-base e o recálculo das datas dos benefícios."),
     "regime-inicial-depois-da-primeira-prisao": (
-        "A detração é pena cumprida para todos os fins (CP, art. 42) e deve ser computada a partir da primeira prisão. Lançado o regime inicial "
-        "na data de prisão posterior, o cálculo desconta a detração antes da fração exigida para os benefícios, da forma mais gravosa ao "
-        "assistido.",
-        "Requer-se a retificação do regime inicial para a data da primeira prisão, com o cômputo da detração como pena cumprida e o recálculo "
-        "das datas de progressão e livramento condicional."),
+        "O tempo de prisão provisória é pena efetivamente cumprida e computa-se na pena privativa de liberdade (CP, art. 42); não é redutor "
+        "da base sobre a qual incide a fração do requisito objetivo. A ordem das operações altera o resultado: descontada a detração antes "
+        "da fração, (pena − detração) × fração, exige-se mais tempo do que pela incidência da fração sobre a pena total com posterior "
+        "consideração da detração, pena × fração − detração; a diferença é de detração × (1 − fração). A data adotada como marco, primeira "
+        "ou última prisão, não deve mudar o resultado quando a detração é lida como tempo cumprido; o que o altera é o lançamento do regime "
+        "inicial em data posterior à primeira prisão, que leva o SEEU a operar a forma mais gravosa. O Superior Tribunal de Justiça "
+        "reconhece que a fração do art. 112 da LEP incide sobre o total da pena, antes da detração (STJ, AgRg no AREsp 2.956.206, Sexta "
+        "Turma, j. 18/03/2026; STJ, AgRg no HC 719.763, Sexta Turma, j. 29/03/2022; STJ, AREsp 3.228.879, decisão monocrática, DJEN "
+        "27/05/2026).",
+        "Requer-se a revisão da metodologia, para que a fração do requisito objetivo incida sobre a pena total e o período de prisão "
+        "provisória seja considerado depois, como pena cumprida (CP, art. 42; LEP, arts. 66, III, c, e 112), com a retificação do regime "
+        "inicial para a data da primeira prisão ou o uso da opção do SEEU \"diminuir a detração após os cálculos\", e a apresentação de "
+        "cálculo retificado e discriminado (pena considerada, fração aplicada, detração reconhecida e data de implementação do requisito)."),
+    "remicao-referencia-tardia": (
+        "A remição tem natureza declaratória: a decisão reconhece dias decorrentes de trabalho ou estudo já realizado, e os dias remidos "
+        "são pena cumprida (LEP, arts. 126, § 8º, e 128). A data da decisão não é o marco do período remido, e a linha do tempo da execução "
+        "deve refletir o período em que a atividade foi efetivamente realizada. A referência tardia não é mero erro cadastral: retira os "
+        "dias da pena cumprida em data que importa para a aferição de direitos, como o tempo exigido pelos decretos de indulto e comutação. "
+        "A demora na prestação jurisdicional não pode impedir a fruição de direito reconhecido tardiamente (STF, ARE 1.497.973 AgR/PR, "
+        "Segunda Turma, j. 07/05/2025, DJe 30/05/2025, que determinou a reanálise do indulto após a inclusão de dias remidos reconhecidos "
+        "depois).",
+        "Requer-se a correção da data de referência dos dias remidos para o período em que a atividade foi realizada, a retificação da "
+        "linha do tempo e novo cálculo de pena, com a reanálise dos direitos afetados, especialmente indulto e comutação, e a apresentação "
+        "do cálculo discriminado (períodos de atividade, dias remidos e reflexos no cumprimento)."),
+    "livramento-1-1-pela-revogacao": (
+        "A revogação do livramento condicional deve ser registrada pelo incidente próprio, vinculado ao livramento concedido, que aplica aos "
+        "crimes vinculados os efeitos legais da revogação (CP, arts. 86 a 88; LEP, arts. 140 a 145), com a opção de não gerar prejuízo ao "
+        "apenado quando o caso se enquadra na ressalva do art. 86 do Código Penal. Cadastrada a fração de 1/1 diretamente no crime, o "
+        "sistema passa a tratá-lo como se a fração decorresse da natureza do delito e o identifica como impeditivo na análise de indulto e "
+        "comutação (\"Não comutado - Impeditivo\"), sem que o decreto o preveja. Um erro de cadastro não pode produzir restrição a direito "
+        "previsto em decreto.",
+        "Requer-se a conferência do lançamento da revogação do livramento condicional e, confirmado o cadastro da fração de 1/1 no crime, "
+        "sua correção pelo incidente próprio de revogação vinculado ao livramento concedido, preservados os efeitos jurídicos da revogação, "
+        "com o afastamento do impedimento indevido e novo cálculo de indulto e comutação, discriminando os crimes atingidos e a fração "
+        "aplicada."),
+    "semiaberto-referencia-desatualizada": (
+        "A data de referência da progressão ao semiaberto é o resultado do cálculo da primeira progressão sobre a pena então considerada e "
+        "passa a servir de marco para as progressões seguintes. Alterada a quantidade de pena por fato com efeito anterior a essa data - "
+        "comutação ou indulto de decreto anterior, prescrição ou extinção da punibilidade de um dos processos -, o cálculo que a originou "
+        "também se altera, e o SEEU não refaz a referência sozinho. A progressão é devida na data em que preenchidos os requisitos (STJ, "
+        "Tema 1165), e a manutenção de referência formada sobre pena que deixou de existir posterga indevidamente o requisito objetivo da "
+        "progressão seguinte (LEP, art. 112).",
+        "Requer-se a revisão do cálculo da primeira progressão com a pena atual, a retificação da data de referência do semiaberto, o "
+        "recálculo das progressões seguintes e a apresentação de cálculo discriminado (pena considerada, fração aplicada, nova data de "
+        "referência e reflexos na progressão ao aberto)."),
+    "comutacoes-fora-de-ordem": (
+        "A comutação reconhecida com base em um decreto reduz o saldo de pena, e o direito previsto no decreto seguinte deve ser apurado "
+        "sobre o saldo que dela resulta. Por isso, havendo direito a comutações de mais de um decreto, os cálculos devem seguir a ordem "
+        "cronológica dos decretos: apura-se e aplica-se primeiro a do decreto anterior e, a partir do saldo resultante, a do decreto "
+        "seguinte. A inversão dessa ordem não é formalidade de cadastro: altera a pena considerada e o resultado do cálculo.",
+        "Requer-se a conferência da ordem de cálculo das comutações, o recálculo das afetadas segundo a ordem cronológica dos decretos e a "
+        "apresentação de cálculo discriminado, indicando, para cada decreto, a pena considerada, a fração aplicada, a pena comutada e o "
+        "saldo remanescente."),
     "alteracao-de-data-base-no-lugar-do-incidente": (
         "A data-base se altera pelos marcos legais - falta grave homologada, regressão e reinício do cumprimento (LEP, arts. 112, § 6º, e 118; "
         "STJ, Tema 709) - e pela progressão, na data do preenchimento dos requisitos (STJ, Tema 1165). Fixada por incidente avulso, a data-base "
@@ -1917,6 +2053,7 @@ _TIT_PECA = {
     "cumprida-remanescente-pena-total": "a soma da pena cumprida com a remanescente não corresponde à pena total",
     "soma-das-penas-difere-da-pena-total": "a soma das penas das condenações não corresponde à pena total",
     "alteracao-de-data-base-no-lugar-do-incidente": "a data-base foi fixada por alteração avulsa, que não acompanha os marcos legais posteriores",
+    "semiaberto-referencia-desatualizada": "a data de referência do semiaberto não foi refeita depois de fato que reduziu a pena",
 }
 
 
@@ -1988,7 +2125,7 @@ def fundamentacao(it, r):
         erro = "Na condenação do processo %s (%s), %s %s: %s." % (m.group(1), m.group(2).strip(), rel, verbo, m.group(3))
     else:
         erro = "%s %s: %s." % (rel[0].upper() + rel[1:], verbo, tit[0].lower() + tit[1:] if tit[:2] != tit[:2].upper() else tit)
-    fatos = [f for f in _fatos(it) if f.rstrip(".") not in tit]
+    fatos = [f for f in _fatos(it) if f.rstrip(".") not in tit and not f.startswith("Cautela")]
     if tipo == "hediondez-posterior-ao-fato-indulto-comutacao-po":
         fatos = ["O crime não era hediondo na data do fato e passou a sê-lo por lei posterior."]
     if fatos:

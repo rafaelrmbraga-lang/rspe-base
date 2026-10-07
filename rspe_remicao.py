@@ -27,7 +27,8 @@ SEPD = r"\s*(?:A|À|ATÉ|ATE|-)\s*"
 # nomes de setor que a ficha e os atestados usam para o mesmo vínculo: base jurídica, remicao.setores_sinonimos (editável sem
 # mexer no programa); a lista abaixo só vale se a base não trouxer nenhuma
 ALIAS_PADRAO = [(r"\bHORTA\b|\bAGS\b", "AGS", "Ags Prestadora - Me (Horta)"),
-                (r"\bPAIVA\b", "PAIVA", "Paiva Lingerie")]
+                (r"\bPAIVA\b", "PAIVA", "Paiva Lingerie"),
+                (r"\bPRENDE ?BEM\b|\bPRENDEBEM|\bPRENDEDORES\b", "PRENDEBEM", "Prendebem (prendedores)")]
 
 
 def sinonimos():
@@ -276,6 +277,19 @@ def vinculos(eventos, hoje):
                 v.update(fim=d, fim_ficha=d, motivo_fim="saída/transferência/evasão", por_saida=True, txt_fim="%s - %s" % (_f(d), e.get("texto", "")))
                 fechados.append(v)
     out = fechados + list(abertos.values())
+    # setor desativado no SIAPEN ("XXDESATIVADO6098"): é o código antigo de um setor real; aberto no mesmo dia de outro setor
+    # ("passa a trabalhar no setor X"), os dois são um vínculo só - fica o nome real, com as datas do registro desativado
+    for v in [v for v in out if re.match(r"XX ?DESATIV", _sa(v["setor"]))]:
+        par = [w for w in out if w is not v and not re.match(r"XX ?DESATIV", _sa(w["setor"])) and abs((w["ini"] - v["ini"]).days) <= 1]
+        if len(par) == 1:
+            w = par[0]
+            v.update(chave=w["chave"], setor=w["setor"], setor_desativado=True)
+            if w["fim"] is None or w["fim"] == v["fim"]:  # o outro registro ficou aberto ou fecha junto: duplicado
+                out.remove(w)
+                if abertos.get(w["chave"]) is w:
+                    del abertos[w["chave"]]
+        else:
+            v["setor"] = "Setor desativado no SIAPEN (%s)" % v["setor"]
     for v in fechados:
         if re.search(r"A?DEQUACAO DO MAPA", _sa(v.get("motivo_fim"))):
             # baixa por "adequação do mapa do SIAPEN": correção de cadastro, não fim de trabalho - o que sobra sem atestado fica a conferir
@@ -396,7 +410,11 @@ def atestados(eventos):
             if mp:
                 segs.append({"setor_txt": setor, "ini": _dt(mp.group(1)), "fim": _dt(mp.group(2)), "trab": trab, "rem": rem, "inferido": False})
             else:
-                # atestado em lote / sem período: os setores citados ("setor de A e B") delimitam a inferência
+                # atestado em lote / sem período: os setores citados ("setor de A, B e C") delimitam a inferência; a lista
+                # vai até "com N dias" (a vírgula separa setores, não encerra o nome)
+                ml = re.search(r"(?:NA FUNCAO|FUNCAO|SETOR(?:ES)?(?: DE)?|NA EMPRESA)\s+(.+?)(?:\s+COM\s+[\d.,]+\s*DIAS|\s+NAO RESTANDO|\s+\(|\.\s|\.$|$)", u)
+                if ml:
+                    setor = ml.group(1).strip()
                 nomes = [x.strip() for x in re.split(r"\s+E\s+|,", setor) if x.strip()] if setor else []
                 segs = [{"setor_txt": n, "ini": None, "fim": None, "trab": None, "rem": None, "inferido": True} for n in nomes] or \
                        [{"setor_txt": "", "ini": None, "fim": None, "trab": None, "rem": None, "inferido": True}]
@@ -716,6 +734,19 @@ def conciliar(r, f, hoje=None, manuais=None, ini_exec=None, excluir_remicoes=Non
 
     # ---- Etapa 6: trabalho sem atestado nem remição (estimativa) ----
     cob = sorted([(s["ini"], s["fim"]) for a in ats for s in a["segs"] if s["ini"] and s["fim"]])
+    # o que cobre o vínculo até a véspera do trecho livre: explica de onde vem a data de início (que não está na ficha)
+    cob_doc = {}
+    for a in ats:
+        for s_ in a["segs"]:
+            if s_["fim"]:
+                x = a.get("remicao") or {}
+                cob_doc[s_["fim"]] = (("remição de %s lançada no RSPE em %s, sem atestado na ficha (o programa a atribuiu a este trabalho até "
+                                       "a data de referência)" % (rs.pl(int(a["rem"] or 0), "dia", "dias"), _f(x.get("decisao") or a["emissao"])))
+                                      if a["origem"] == "rspe" else "atestado %s, até %s" % (a["numero"] or "s/n", _f(s_["fim"])))
+
+    def _origem_ini(v, x0):
+        o = cob_doc.get(x0 - timedelta(days=1)) if x0 > v["ini"] else None
+        return (" [início em %s: antes disso, %s]" % (_f(x0), o)) if o else ""
     sem = []
     for v in vinc:
         a0, b0 = v["ini"], v["fim"] or hoje
@@ -760,7 +791,7 @@ def conciliar(r, f, hoje=None, manuais=None, ini_exec=None, excluir_remicoes=Non
                     v["setor"], _f(x0), "hoje" if em_curso else _f(x1), v["duvida"], rs.pl(n // 3, "dia remido", "dias remidos")),
                     "acao": "Conferir com a unidade se houve trabalho no período", "cor": "cinza"})
                 continue
-            sem.append({"setor": v["setor"], "ini": x0, "fim": x1, "em_curso": em_curso, "est": n,
+            sem.append({"setor": v["setor"], "ini": x0, "fim": x1, "em_curso": em_curso, "est": n, "origem": _origem_ini(v, x0).strip(" []"),
                         "trecho": " | ".join(x for x in (v.get("txt_ini"), v.get("txt_fim")) if x)})
             if em_curso and (x1 - x0).days <= 90:
                 # trabalho atual há até 90 dias: o atestado do período ainda não costuma ter sido emitido - não é ausência
@@ -768,8 +799,9 @@ def conciliar(r, f, hoje=None, manuais=None, ini_exec=None, excluir_remicoes=Non
                              "(estimativa seg.-sáb.: ≈ %s, ≈ %d remidos)" % (v["setor"], _f(x0), rs.pl(n, "dia", "dias"), n // 3),
                              "acao": "Acompanhar (pedir o atestado ao fim do trimestre)", "cor": "verde"})
                 continue
-            pend.append({"data": x0, "status": "SEM_ATESTADO", "texto": "%s, %s a %s: sem atestado nem remição (estimativa seg.-sáb.: ≈ %s, ≈ %d remidos)" % (
-                v["setor"], _f(x0), "hoje (em curso)" if em_curso else _f(x1), rs.pl(n, "dia", "dias"), n // 3), "acao": "Pedir atestado", "cor": "amarelo"})
+            pend.append({"data": x0, "status": "SEM_ATESTADO", "texto": "%s, %s a %s: sem atestado nem remição (estimativa seg.-sáb.: ≈ %s, ≈ %d remidos)%s" % (
+                v["setor"], _f(x0), "hoje (em curso)" if em_curso else _f(x1), rs.pl(n, "dia", "dias"), n // 3, _origem_ini(v, x0)),
+                "acao": "Pedir atestado", "cor": "amarelo"})
 
     # ---- pendências dos atestados ----
     for a in ats:

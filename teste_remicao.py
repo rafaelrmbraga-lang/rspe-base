@@ -59,3 +59,24 @@ assert st["033/2025"] == ("CONCILIADO", "102 dias"), st
 assert any(a["tipo"] == "baixa tardia" and "Ags" in a["texto"] and "10/08/2024" in a["texto"] and "17/12/2023" in a["texto"] for a in C["alertas"]), C["alertas"]
 assert any(p["status"] == "LACUNA" and p["texto"].startswith("29/06/2024 a 09/08/2024") for p in C["pendencias"]), C["pendencias"]
 print("ok: conciliação atestado x remição (caso-modelo, com e sem o atestado 033/2025 informado)")
+
+# atestado em lote com vários setores ("setor de A, B e C com N dias") e setor desativado no SIAPEN ("XXDESATIVADO")
+EV2 = [
+    ("18.01.2026", "TRABALHO: Iniciou atividade laboral, no setor de trabalho XXDESATIVADO6098, conforme documento CI 003/26/ST/PDIB/AGEPEN/MS."),
+    ("18.01.2026", "SETOR DE TRABALHO: NESTA DATA PASSA A TRABALHAR NO SETOR PRENDEDORES PRENDEBEM"),
+    ("04.05.2026", "TRABALHO: Deixa de trabalhar, no setor de trabalho XXDESATIVADO6098, conforme documento N/C, motivo: MUDANÇA DE ATIVIDADE"),
+    ("04.05.2026", "Liberação do Setor de Trabalho - Doc.: N/C Motivo: MUDANÇA DE ATIVIDADE"),
+    ("05.05.2026", "TRABALHO: Iniciou atividade laboral, no setor de trabalho POLIGONAL ENGENHARIA LTDA, conforme documento N/C."),
+    ("10.06.2026", "TRABALHO: Deixa de trabalhar, no setor de trabalho POLIGONAL ENGENHARIA LTDA, conforme documento N/C, motivo: N/C."),
+    ("10.06.2026", "TRABALHO: Iniciou atividade laboral, no setor de trabalho FAXINA, conforme documento N/C."),
+    ("14.07.2026", "TRABALHO, nesta data foi emitido atestado de trabalho nº227/PDIB/AGEPEN/MS setor de PRENDE BEM, POLIGONAL ENGENHARIA LTDA e FAXINA com 50 dias de remição."),
+]
+F2 = {"data_impressao": "20/07/2026", "eventos": [{"data": d, "texto": t} for d, t in EV2]}
+R2 = {"_incidentes": [{"tipo": "REMIÇÃO", "complemento": "50 Dia(s) Remido(s)", "data_decisao": "16/07/2026", "data_referencia": "14/07/2026", "situacao": "CONCEDIDO"}]}
+C2 = rr.conciliar(R2, F2, date(2026, 7, 20))
+v2 = [(v["setor"], v["ini"], v["fim"]) for v in C2["vinculos"]]
+assert ("Prendebem (prendedores)", date(2026, 1, 18), date(2026, 5, 4)) in v2 and not any("DESATIV" in s.upper() for s, _, _ in v2), v2
+a227 = [a for a in C2["atestados"] if a["numero"].startswith("227")][0]
+assert [s["setor"] for s in a227["segs"]] == ["Prendebem (prendedores)", "Poligonal Engenharia Ltda", "Faxina"], a227["segs"]
+assert not [p for p in C2["pendencias"] if p["status"] in ("SEM_ATESTADO", "A_CONFERIR") and p["data"] < date(2026, 7, 14)], C2["pendencias"]
+print("ok: atestado com vários setores e setor desativado no SIAPEN")

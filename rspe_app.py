@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-RSPE Base - SEEU
+APTO - Auditoria de Prazos e Tempo de cumprimento Organizada (SEEU)
 =================
 Janela nativa (pywebview) com interface em HTML (ui.html). A leitura dos PDFs
 está em rspe_scraper.py, os campos exibidos em rspe_view.py e as exportações
@@ -35,8 +35,8 @@ import rspe_decretos as rd
 import rspe_relatorio as rrel
 import rspe_indulto_tl as rtl
 
-APP = "RSPE Base"
-VERSAO = "7.3.1"
+APP = "APTO"
+VERSAO = "7.4.0"
 
 
 def pasta_app():
@@ -1429,16 +1429,29 @@ class Api:
         with self._imp_lock:
             return self._trocar_base_(caminho)
 
+    def _etapa(self, texto):
+        """Mostra a etapa na tela de carregamento (a tela já fica visível enquanto a base abre)."""
+        self._js("window.ui && ui.carregando && ui.carregando(%s)" % json.dumps(texto))
+
     def _trocar_base_(self, caminho):
         if self.base:
             self.base.fechar()
+        self._etapa("Abrindo o arquivo da base…")
         self.base = Base(caminho)
         self._salvar_config()
+        self._etapa("Fazendo a cópia de segurança…")
         try:
             self._fazer_copia()
         except Exception:
             logging.getLogger("rspe").exception("cópia de segurança de %s", caminho)
-        return self.listar()
+        try:
+            n = len(self.base.nomes())
+        except Exception:
+            n = 0
+        self._etapa("Calculando prazos e benefícios de %s…" % rs.pl(n, "assistido", "assistidos") if n else "Calculando prazos e benefícios…")
+        r = self.listar()
+        self._etapa("Montando a tela…")
+        return r
 
     # ---- cópias de segurança: uma a cada abertura da base, guardadas as 10 últimas ----
     COPIAS_MAX = 10
@@ -1541,7 +1554,7 @@ class Api:
                 return {"erro": "Já existe uma base chamada '%s'. Escolha outro nome ou abra a existente." % seguro}
         else:
             c = _um(self._janela.create_file_dialog(webview.SAVE_DIALOG, directory=PASTA_BASES, save_filename="Nova base.sqlite",
-                                                   file_types=("Base RSPE (*.sqlite)",)))
+                                                   file_types=("Base APTO (*.sqlite)",)))
             if not c:
                 return None
             if not c.lower().endswith(".sqlite"):
@@ -1550,11 +1563,16 @@ class Api:
                 os.remove(c)
         return self._trocar_base(c)
 
+    def escolher_base(self):
+        """Só o diálogo de arquivo: a tela mostra o carregamento depois que o arquivo é escolhido."""
+        os.makedirs(PASTA_BASES, exist_ok=True)
+        return _um(self._janela.create_file_dialog(webview.OPEN_DIALOG, directory=PASTA_BASES, file_types=("Base APTO (*.sqlite)",)))
+
     def abrir_base(self, caminho=None):
         if caminho and os.path.exists(caminho):
             return self._trocar_base(caminho)
         os.makedirs(PASTA_BASES, exist_ok=True)
-        c = _um(self._janela.create_file_dialog(webview.OPEN_DIALOG, directory=PASTA_BASES, file_types=("Base RSPE (*.sqlite)",)))
+        c = _um(self._janela.create_file_dialog(webview.OPEN_DIALOG, directory=PASTA_BASES, file_types=("Base APTO (*.sqlite)",)))
         return self._trocar_base(c) if c else None
 
     def fechar_base(self):
@@ -1572,7 +1590,7 @@ class Api:
         if not self.base:
             return {"erro": "Nenhuma base aberta."}
         c = _um(self._janela.create_file_dialog(webview.SAVE_DIALOG, directory=PASTA_BASES,
-                                               save_filename=self.base.nome + ".sqlite", file_types=("Base RSPE (*.sqlite)",)))
+                                               save_filename=self.base.nome + ".sqlite", file_types=("Base APTO (*.sqlite)",)))
         if not c:
             return None
         if not c.lower().endswith(".sqlite"):
@@ -1627,6 +1645,12 @@ class Api:
         pend_fichas = []
         incompletos = []
         lote = []
+        registro = []  # uma linha por arquivo: o que entrou, como foi lido e, se não entrou ou entrou incompleto, a causa provável
+
+        def reg(arq, tipo, nome, proc, resultado, leitura="completa", obs=None):
+            with lock:
+                registro.append({"arquivo": arq, "tipo": tipo, "nome": nome or "", "proc": proc or "", "resultado": resultado,
+                                 "leitura": leitura, "obs": list(obs or [])})
         total = len(arqs)
         vistos = set()
         lock = threading.Lock()
@@ -1663,6 +1687,8 @@ class Api:
                         chave = r["processo_execucao"]
                         if r["_hash"] in vistos:
                             duplicados.append("%s: arquivo repetido no mesmo lote" % nome_arq)
+                            registro.append({"arquivo": nome_arq, "tipo": "RSPE", "nome": r.get("nome") or "", "proc": chave, "resultado": "repetido no lote",
+                                             "leitura": "—", "obs": ["o mesmo arquivo veio duas vezes; só a primeira conta"]})
                             continue
                         vistos.add(r["_hash"])
                         ex_ = base.existente(chave)
@@ -1671,9 +1697,13 @@ class Api:
                             if hash_ex == r["_hash"] or (data_ex and data_ex == r.get("data_geracao_rspe")):
                                 base.arquivar(r)
                                 duplicados.append("%s: RSPE de %s já está na base (%s)" % (nome_arq, r.get("data_geracao_rspe"), r.get("nome")))
+                                registro.append({"arquivo": nome_arq, "tipo": "RSPE", "nome": r.get("nome") or "", "proc": chave, "resultado": "já na base",
+                                                 "leitura": "—", "obs": ["RSPE de %s, igual ao que a base já tem" % (r.get("data_geracao_rspe") or "?")]})
                                 continue
                             d_ex, d_novo = rs.to_date(data_ex or ""), rs.to_date(r.get("data_geracao_rspe") or "")
                             if d_ex and d_novo and d_novo < d_ex:
+                                registro.append({"arquivo": nome_arq, "tipo": "RSPE", "nome": r.get("nome") or "", "proc": chave, "resultado": "histórico",
+                                                 "leitura": "—", "obs": ["RSPE de %s, mais antigo que o da base (%s): guardado no histórico" % (r.get("data_geracao_rspe"), data_ex)]})
                                 if base.arquivar(r):
                                     historicos += 1
                                     antigos.append("%s: RSPE de %s é mais antigo que o da base (%s) - guardado no histórico, sem substituir o atual" % (nome_arq, r.get("data_geracao_rspe"), data_ex))
@@ -1682,6 +1712,8 @@ class Api:
                                 continue
                             if d_ex and not d_novo:
                                 antigos.append("%s: RSPE sem data de geração legível; a base já tem o de %s - ignorado" % (nome_arq, data_ex))
+                                registro.append({"arquivo": nome_arq, "tipo": "RSPE", "nome": r.get("nome") or "", "proc": chave, "resultado": "ignorado",
+                                                 "leitura": "parcial", "obs": ["data de geração do RSPE ilegível (rodapé cortado): sem ela não dá para saber se é mais novo que o da base (%s)" % data_ex]})
                                 continue
                             base.gravar(r)
                             lote.append(chave)
@@ -1693,8 +1725,12 @@ class Api:
                         faltam = rs.campos_faltantes(r)
                         if faltam:
                             incompletos.append("%s: %s - não foi possível ler %s" % (nome_arq, r.get("nome") or "?", ", ".join(faltam)))
+                        obs, parcial = _leitura_rspe(r, faltam)
+                        registro.append({"arquivo": nome_arq, "tipo": "RSPE", "nome": r.get("nome") or "", "proc": chave,
+                                         "resultado": "atualizado" if ex_ else "novo", "leitura": "parcial" if parcial else "completa", "obs": obs})
                 except Exception as e:
                     erros.append("%s: %s" % (nome_arq, e))
+                    reg(nome_arq, "?", "", "", "não importado", "falhou", [str(e)])
                 if not silencioso and (n % 3 == 0 or n == total):
                     self._js("ui.progresso(%d,%d)" % (n, total))
         if True:  # fichas do lote e fichas que esperavam o RSPE
@@ -1702,13 +1738,19 @@ class Api:
             for nome_arq, r in pend_fichas:
                 try:
                     proc, mesma_pessoa = self._vincular_ficha(r, base, info)
+                    obs, parcial = rf.leitura_parcial(r)
                     if not base.gravar_ficha(r, proc, mesma_pessoa):
                         antigos.append("%s: ficha de %s impressa em %s é mais antiga que a da base - ignorada" % (nome_arq, r.get("nome"), r.get("data_impressao") or "?"))
+                        reg(nome_arq, "Ficha", r.get("nome"), proc, "ignorada", "parcial" if parcial else "completa",
+                            ["impressa em %s, mais antiga que a ficha da base" % (r.get("data_impressao") or "?")] + obs)
                         continue
+                    reg(nome_arq, "Ficha", r.get("nome"), proc, "vinculada" if proc else "sem RSPE na base", "parcial" if parcial else "completa",
+                        obs + ([] if proc else ["guardada pelo nome: vincula sozinha quando o RSPE entrar (CPF, autos ou nome sem homônimo)"]))
                     fichas_ok.append("%s: ficha de %s %s" % (nome_arq, r.get("nome"), ("vinculada a " + proc) if proc else
                                                              "SEM RSPE correspondente na base (fica guardada pelo nome; vincula sozinha quando o RSPE entrar)"))
                 except Exception as e:
                     erros.append("%s: %s" % (nome_arq, e))
+                    reg(nome_arq, "Ficha", r.get("nome"), "", "não importado", "falhou", [str(e)])
             # fichas de lotes anteriores que esperavam o RSPE
             try:
                 nrev = self._revincular_fichas(base, info)
@@ -1716,13 +1758,16 @@ class Api:
                     fichas_ok.append("%s guardada(s) pelo nome agora vinculada(s) ao RSPE" % rs.pl(nrev, "ficha", "fichas"))
             except Exception as e:
                 erros.append("revinculação de fichas: %s" % e)
-        avisos = incompletos + duplicados + antigos + erros + fichas_ok
+        parciais = ["%s: ficha de %s - leitura parcial: %s" % (x["arquivo"], x["nome"] or "?", "; ".join(x["obs"]))
+                    for x in registro if x["tipo"] == "Ficha" and x["leitura"] == "parcial"]
+        avisos = incompletos + parciais + duplicados + antigos + erros + fichas_ok
         if avisos:
             with open(os.path.join(pasta_app(), "importacao_avisos.txt"), "w", encoding="utf-8") as f:
                 f.write("\n".join(avisos))
         # guardado para o PDF de falhas do lote (Api.falhas_pdf)
         self._falhas_lote = {"quando": datetime.now().strftime("%d/%m/%Y %H:%M"), "erros": list(erros), "incompletos": list(incompletos),
-                             "ignorados": [a for a in antigos if "ignorad" in a], "processos": list(lote), "arquivos": len(arqs)}
+                             "ignorados": [a for a in antigos if "ignorad" in a], "processos": list(lote), "arquivos": len(arqs),
+                             "registro": sorted(registro, key=lambda x: x["arquivo"].lower())}
         resumo = {"novos": novos, "atualizados": atualizados, "historico": historicos, "duplicados": len(duplicados), "antigos": len(antigos),
                   "erros": len(erros), "fichas": len(fichas_ok), "incompletos": len(incompletos), "avisos": avisos[:60]}
         if not silencioso:
@@ -2159,16 +2204,15 @@ class Api:
         return dict(F, pessoas=pessoas, faltam=faltam)
 
     def falhas_tem(self):
-        """Há falha registrada no último lote? (a tela só oferece o PDF quando há)"""
-        d = self._falhas_dados()
-        return bool(d and (d["erros"] or d["faltam"] or d["ignorados"] or d["pessoas"]))
+        """Há lote importado nesta sessão? (o registro da importação em PDF vale para todo lote, com ou sem falha)"""
+        return bool(getattr(self, "_falhas_lote", None))
 
     def falhas_pdf(self):
-        """PDF das falhas do último lote importado, com a causa de cada uma, para corrigir a leitura."""
+        """PDF do registro do último lote importado: resumo, falhas com a causa e o registro de cada arquivo."""
         d = self._falhas_dados()
         if not d:
             return {"erro": "Nenhuma importação nesta sessão."}
-        nome = "%s - falhas da importação %s.pdf" % (self.base.nome, datetime.now().strftime("%Y-%m-%d %H%M"))
+        nome = "%s - registro da importação %s.pdf" % (self.base.nome, datetime.now().strftime("%Y-%m-%d %H%M"))
         c = _um(self._janela.create_file_dialog(webview.SAVE_DIALOG, save_filename=nome, file_types=("PDF (*.pdf)",)))
         if not c:
             return None
@@ -2567,6 +2611,27 @@ def _montar_proc(args):
     return _montar_modelo(r, sub)
 
 
+def _leitura_rspe(r, faltam):
+    """Leitura do RSPE para o registro da importação: (observações, parcial). Campo vazio porque o SEEU não o tem (sem processo,
+    sem crime, pena não iniciada) é observação, não leitura parcial."""
+    obs, parcial = [], False
+    if faltam:
+        obs.append("não lido: %s - campo em branco no SEEU, página faltando ou texto quebrado na extração" % ", ".join(faltam))
+        parcial = True
+    if rs.sem_condenacao_seeu(r):
+        obs.append("o SEEU não tem processo criminal cadastrado nesta execução (o RSPE só traz o cabeçalho): não é falha de leitura")
+    elif rs.sem_crime_seeu(r):
+        obs.append("processo criminal cadastrado sem crimes lançados no SEEU: não é falha de leitura")
+    elif not r.get("_crimes"):
+        obs.append("nenhuma condenação lida: quadro de processos criminais ausente ou fora do layout")
+        parcial = True
+    if rs.sem_inicio_seeu(r):
+        obs.append("sem eventos nem incidentes: pena não iniciada no SEEU")
+    elif not [e for e in r.get("_eventos") or [] if not e.get("_ficha")]:
+        obs.append("nenhum evento de prisão/soltura lido: conferir a aba Eventos no SEEU ou se faltam páginas")
+    return obs, parcial
+
+
 def _extrair_com_hash(caminho):
     h = hashlib.sha1()
     with open(caminho, "rb") as f:
@@ -2635,7 +2700,7 @@ def _preparar_log():
         logging.basicConfig(filename=caminho, level=logging.WARNING,
                             format="%(asctime)s %(levelname)s %(name)s: %(message)s")
         logging.getLogger("pywebview").setLevel(logging.WARNING)
-        logging.warning("RSPE Base %s iniciado", VERSAO)
+        logging.warning("APTO %s iniciado", VERSAO)
     except Exception:
         pass
 

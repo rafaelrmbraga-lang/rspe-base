@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<title>RSPE Base</title>
+<title>APTO</title>
 <style>
 :root{
   --bg:#F4F6FA; --card:#FFFFFF; --line:#E6E9EF; --line2:#D0D5DD;
@@ -326,6 +326,12 @@ tr.sub td{padding:0 0 0 0;background:#FFFFFF;cursor:default}tr.sub:hover td{back
 /* tela inicial (sem base) */
 .welcome{position:fixed;inset:0;background:var(--bg);display:none;place-items:center;z-index:25}
 .welcome.on{display:grid}
+.loading{position:fixed;inset:0;background:var(--bg);display:none;place-items:center;z-index:40}
+.loading.on{display:grid}
+.lbox{width:420px;background:var(--card);border-radius:18px;box-shadow:var(--shadow2);padding:28px 30px;text-align:center}
+.lbox b{display:block;font-size:17px;margin:14px 0 4px}.lbox p{margin:0;color:var(--tx2);min-height:20px}.lbox small{display:block;margin-top:12px;color:var(--tx3)}
+.spin{width:38px;height:38px;margin:0 auto;border-radius:50%;border:4px solid #D1E7D8;border-top-color:#00602C;animation:gira .9s linear infinite}
+@keyframes gira{to{transform:rotate(360deg)}}
 .wbox{width:560px;background:var(--card);border-radius:18px;box-shadow:var(--shadow2);padding:28px 30px}
 .wbox h1{margin:0 0 4px;font-size:22px;letter-spacing:-.3px}.wbox p{margin:0 0 18px;color:var(--tx2)}
 .wrow{display:flex;gap:8px;margin-bottom:10px}.wrow input{flex:1;padding:10px 12px;border:1px solid var(--line2);border-radius:10px;font:inherit;outline:none}
@@ -537,13 +543,13 @@ tr.noclk{cursor:default}
 
 <div class="top">
   <div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M5 7h14M5 12h14M5 17h9"/></svg></div>
-  <div class="brand"><b>RSPE Base</b><span>Execução penal · SEEU</span></div>
+  <div class="brand"><b>APTO</b><span>Execução penal · SEEU</span></div>
   <div class="base rel">
     <span>Base</span><b id="baseNome">—</b><span class="n" id="baseN">0</span>
     <button onclick="ui.menu('mBase')">▾</button>
     <div class="menu" id="mBase">
       <button onclick="api('nova_base')">Nova base…</button>
-      <button onclick="api('abrir_base')">Abrir base…</button>
+      <button onclick="ui.abrirBase()">Abrir base…</button>
       <button onclick="api('salvar_base_como')">Salvar base como…</button>
       <button onclick="ui.abrirPasta()">Abrir pasta das bases</button>
       <button onclick="ui.modalVigia()">Pasta vigiada…</button>
@@ -593,13 +599,14 @@ tr.noclk{cursor:default}
 <aside class="drawer" id="drawer"></aside>
 
 <div class="welcome" id="welcome"><div class="wbox">
-  <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px"><div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M5 7h14M5 12h14M5 17h9"/></svg></div><div><h1>RSPE Base</h1><p style="margin:0">Execução penal · SEEU</p></div></div>
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px"><div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M5 7h14M5 12h14M5 17h9"/></svg></div><div><h1>APTO</h1><p style="margin:0">Auditoria de Prazos e Tempo de cumprimento Organizada · SEEU</p></div></div>
   <p>Nenhuma base carregada. Crie uma base nova (uma por comarca ou unidade) ou abra uma existente.</p>
   <div class="wrow"><input id="novoNome" placeholder="Nome da nova base (ex.: Comarca de Dourados, PED Máxima)" onkeydown="if(event.key==='Enter')ui.criarBase()"><button class="btn pri" onclick="ui.criarBase()">Criar base</button></div>
-  <div class="wrow"><button class="btn" style="flex:1;justify-content:center" onclick="api('abrir_base')">Abrir base existente…</button></div>
+  <div class="wrow"><button class="btn" style="flex:1;justify-content:center" onclick="ui.abrirBase()">Abrir base existente…</button></div>
   <div class="recent" id="recentes"></div>
   <div class="wfoot" id="wfoot"></div>
 </div></div>
+<div class="loading" id="loading" role="status" aria-live="polite"><div class="lbox"><div class="spin"></div><b id="loadTit">Abrindo a base</b><p id="loadEtapa">Aguarde…</p><small id="loadTempo"></small></div></div>
 <div class="modal" id="modal"></div>
 <div class="tlv" id="tlv"></div>
 <div class="toast" id="toast"></div>
@@ -620,11 +627,21 @@ const ui = {
   carregar(d){ this.dados=d; const w=document.getElementById('welcome');
     if(this.aberto){ const ra=(d.registros||[]).find(x=>x.id===this.aberto); if(ra&&ra._leve) setTimeout(()=>this.completo(ra.id),0); }
     if(d.sem_base){ w.classList.add('on'); document.getElementById('copia').innerHTML=''; document.getElementById('baseNome').textContent='—'; document.getElementById('baseN').textContent='0';
-      document.getElementById('recentes').innerHTML=(d.recentes||[]).map(r=>`<div onclick="api('abrir_base','${esc(r.caminho).replace(/\\/g,'\\\\')}')"><span>${esc(r.nome)}</span><small>${esc(r.caminho)}</small></div>`).join('')||'<div style="cursor:default;color:var(--tx3)">Nenhuma base recente</div>';
+      document.getElementById('recentes').innerHTML=(d.recentes||[]).map(r=>`<div onclick="ui.abrirBase('${esc(r.caminho).replace(/\\/g,'\\\\')}','${esc(r.nome).replace(/'/g,"\\'")}')"><span>${esc(r.nome)}</span><small>${esc(r.caminho)}</small></div>`).join('')||'<div style="cursor:default;color:var(--tx3)">Nenhuma base recente</div>';
       document.getElementById('wfoot').textContent='Base jurídica '+(d.base_juridica?d.base_juridica.versao:'?')+' · '+d.hoje; this.dados.registros=[]; this.render(); return; }
     w.classList.remove('on'); if(d.base!==this._qdBase){ this._qdBase=d.base; this._qd=null; this.qdCarregar().then(()=>this.render()); } document.getElementById('baseNome').textContent=d.base; document.getElementById('baseN').textContent=d.registros.length;
     document.getElementById('copia').innerHTML=d.copia?`<i></i>cópia de segurança: ${esc(d.copia.quando)}`:'';
     document.getElementById('hoje').textContent='Hoje '+d.hoje+(d.base_juridica?' · base jurídica '+d.base_juridica.versao:''); if(!this.dados.abas.concat(this.ABAS_EXTRA).find(a=>a.id===this.aba)) this.aba='geral'; this.render(); },
+  // tela de carregamento: aparece assim que a base é escolhida e mostra a etapa (o Python avisa cada uma)
+  carregando(txt){ const e=document.getElementById('loadEtapa'); if(e) e.textContent=txt; },
+  async abrirBase(caminho, nome){
+    if(!caminho){ try{ caminho=await API().escolher_base(); }catch(e){ return this.toast('Erro: '+e); } if(!caminho) return; }
+    if(!nome) nome=String(caminho).split(/[\\/]/).pop().replace(/\.sqlite$/i,'');
+    const L=document.getElementById('loading'), t0=Date.now();
+    document.getElementById('loadTit').textContent='Abrindo a base '+nome; this.carregando('Aguarde…'); L.classList.add('on');
+    const tm=setInterval(()=>{ const s=Math.round((Date.now()-t0)/1000); document.getElementById('loadTempo').textContent=s>=3?s+' s · bases grandes podem levar mais de um minuto':''; },1000);
+    try{ await new Promise(r=>requestAnimationFrame(()=>setTimeout(r,30))); await api('abrir_base', caminho); }
+    finally{ clearInterval(tm); setTimeout(()=>{ L.classList.remove('on'); document.getElementById('loadTempo').textContent=''; },50); } },
   async criarBase(){ const n=document.getElementById('novoNome').value.trim(); if(!n) return this.toast('Dê um nome à base.'); await api('nova_base', n); },
   prescModo:'pe',
   // sub-abas da aba Indulto / Comutação: um decreto por vez (colunas, cores, contagem e linha do tempo só dele)
@@ -1701,15 +1718,14 @@ const ui = {
     const partes=[]; if(r.novos) partes.push(pl(r.novos,'novo','novos')); if(r.atualizados) partes.push(pl(r.atualizados,'atualizado','atualizados')+' por RSPE mais recente');
     if(r.duplicados) partes.push(pl(r.duplicados,'duplicado ignorado','duplicados ignorados')); if(r.historico) partes.push(pl(r.historico,'mais antigo guardado no histórico','mais antigos guardados no histórico')); if(r.antigos-(r.historico||0)>0) partes.push(pl(r.antigos-(r.historico||0),'mais antigo ignorado','mais antigos ignorados')); if(r.erros) partes.push(pl(r.erros,'falha','falhas')); if(r.fichas) partes.push(pl(r.fichas,'ficha disciplinar','fichas disciplinares')); if(r.incompletos) partes.push(`${r.incompletos} com dados incompletos (ver Auditoria)`);
     if(!partes.length) partes.push('nada importado');
-    // falha registrada no lote (arquivo não importado, campo não lido, análise que falhou): oferece o PDF com as causas
-    pL.then(async()=>{ if(!await api('falhas_tem')) return; if(!document.getElementById('btFalhas')) this.modalAvisos(partes.join(' · '), ['Há falhas registradas na análise dos assistidos importados.']);
-      const b=document.getElementById('btFalhas'); if(b) b.style.display=''; });
-    if(r.avisos && r.avisos.length){ this.modalAvisos(partes.join(' · '), r.avisos); } else { this.toast('Importação: '+partes.join(' · ')); } },
+    // todo lote tem o registro da importação em PDF (arquivo a arquivo, com leitura parcial e causa provável)
+    this.modalAvisos(partes.join(' · '), (r.avisos&&r.avisos.length)?r.avisos:['Sem avisos: todos os arquivos foram lidos e importados.']);
+    pL.then(async()=>{ if(!await api('falhas_tem')) return; const b=document.getElementById('btFalhas'); if(b) b.style.display=''; }); },
   falhasPdf(){ api('falhas_pdf'); },
   modalAvisos(titulo, avisos){ document.getElementById('modal').innerHTML=`<div class="box" style="width:640px"><h2>Importação concluída</h2><p>${esc(titulo)}</p>
       <div class="help" style="max-height:50vh"><ul style="margin:0;padding-left:18px">${avisos.map(a=>`<li>${esc(a)}</li>`).join('')}</ul></div>
       <p style="margin-top:10px">Dados incompletos = o programa não conseguiu ler algum campo essencial; o assistido entra na base com alerta na Auditoria. Duplicado = mesmo arquivo ou RSPE do mesmo processo com a mesma data de geração. Um RSPE mais recente do mesmo processo substitui o atual; um mais antigo entra só no histórico (botão Histórico, na aba Geral), sem substituir o atual. Os anteriores ficam guardados. Lista completa em importacao_avisos.txt.</p>
-      <div class="acts"><button class="btn" id="btFalhas" style="display:none" title="PDF com as falhas deste lote e as causas, para corrigir a leitura" onclick="ui.falhasPdf()">PDF das falhas</button><button class="btn pri" onclick="ui.fecharModal()">Fechar</button></div></div>`; document.getElementById('modal').classList.add('on'); },
+      <div class="acts"><button class="btn" id="btFalhas" style="display:none" title="PDF com o registro completo deste lote: cada arquivo, como foi lido, falhas e causa provável" onclick="ui.falhasPdf()">Registro da importação (PDF)</button><button class="btn pri" onclick="ui.fecharModal()">Fechar</button></div></div>`; document.getElementById('modal').classList.add('on'); },
   // ficha
   async abrir(id){ const r=await this.completo(id); if(!r) return; this.sel=id;
     const kv=(l,v)=>`<div><small>${l}</small>${esc(v||'—')}</div>`;

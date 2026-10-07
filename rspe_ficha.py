@@ -182,7 +182,9 @@ def _estudos(eventos):
 
 
 def extrair(caminho):
-    t = texto_pdf(caminho)
+    with pdfplumber.open(caminho) as pdf:
+        pags = [p.extract_text() or "" for p in pdf.pages]
+    t = "\n".join(pags)
     if not e_ficha(t):
         raise ValueError("não é uma Ficha Disciplinar do SIAPEN")
     t = _limpar(t)
@@ -191,6 +193,7 @@ def extrair(caminho):
     f["nome"] = (re.search(r"Nome:\s*(.+?)\s+RGI:", cab) or [None, ""])[1].strip() if re.search(r"Nome:\s*(.+?)\s+RGI:", cab) else ""
     f["rgi"] = (re.search(r"RGI:\s*(\d+)", cab) or [None, ""])[1]
     f["cpf"] = (re.search(r"CPF:\s*([\d.\-]+\d)", cab) or [None, ""])[1]
+    f["cpf_em_branco"] = not f["cpf"] and bool(re.search(r"CPF:\s*(?:CIN:|RG:|N/C\b|N[AÃ]O INFORMADO|$)", cab, re.M))
     f["data_nascimento"] = (re.search(r"Data Nascimento:\s*(\d{2}/\d{2}/\d{4})", cab) or [None, ""])[1]
     # filiação "MÃE \\ PAI" (a mãe vem primeiro no SIAPEN): confronto de identidade com o nome da mãe do RSPE (homônimos)
     mfi = re.search(r"Filia[çc][ãa]o:\s*(.+?)(?:\s+N[ºo°]\s*Pront|\n|$)", cab)
@@ -207,7 +210,8 @@ def extrair(caminho):
     f["sexo"] = msx.group(1)[0].upper() if msx else ("F" if re.search(r"FEMININ", rs._sem_acento(f["unidade"]).upper()) else "")
     mc = re.search(r"HIST[ÓO]RICO\s*-\s*CONDUTA:\s*([^\n]+)", t) or re.search(r"CONDUTA:\s*([A-ZÇÃÕÁÉÍÓÚÂÊÔ/ ]+)", t)
     f["conduta"] = (mc.group(1).strip() if mc else "")
-    f["data_impressao"] = (re.search(r"Impresso em (\d{2}/\d{2}/\d{4})", texto_pdf(caminho)) or [None, ""])[1]
+    f["data_impressao"] = (re.search(r"Impresso em (\d{2}/\d{2}/\d{4})", "\n".join(pags)) or [None, ""])[1]
+    f["paginas"], f["paginas_sem_texto"] = len(pags), [i + 1 for i, x in enumerate(pags) if len(x.strip()) < 20]
     autos = sorted(set(re.findall(r"\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}", t)))
     f["autos"] = autos
 
@@ -514,6 +518,52 @@ def _itens_conciliacao(C):
     return out
 
 
+def _referencia_remicao(r, C):
+    """Remição lançada com referência muito depois do fim do trabalho (em geral, na data da decisão), com um marco no meio:
+    o 25/12 de um decreto de indulto/comutação ou uma progressão. Só aí a referência tardia tira os dias da conta; nos
+    demais casos ela não muda nada e não gera alerta (fundamentação: remição é declaratória - LEP, art. 126, § 8º, e 128)."""
+    out = []
+    D = lambda s_: rs.to_date(s_ or "")
+    anos = sorted({int(m.group(1)) for k in r for m in [re.match(r"(?:indulto|comutacao)_(\d{4})$", k)] if m and r.get(k)})
+    marcos = [(date(a, 12, 25), "do decreto de 25/12/%d" % a) for a in anos]
+    for i in r.get("_incidentes") or []:
+        if (i.get("situacao") or "CONCEDIDO") == "CONCEDIDO" and "REGIME" in (i.get("tipo") or "").upper() \
+                and "PROGRESS" in (i.get("complemento") or "").upper() and D(i.get("data_referencia")):
+            marcos.append((D(i["data_referencia"]), "da progressão de %s (%s)" % (i["data_referencia"], (i.get("complemento") or "").strip())))
+    if not marcos:
+        return out
+    db = D(r.get("data_base_seeu"))
+    for a in C.get("atestados") or []:
+        x = a.get("remicao")
+        segs = [s_ for s_ in a.get("segs") or [] if not s_.get("inferido") and s_.get("ini") and s_.get("fim")]
+        if not x or a.get("origem") == "rspe" or not segs or not x.get("ref"):
+            continue
+        ini_p, fim_p = min(s_["ini"] for s_ in segs), max(s_["fim"] for s_ in segs)
+        if (x["ref"] - fim_p).days <= 30:
+            continue
+        ms = sorted(m for m in marcos if fim_p < m[0] < x["ref"])
+        if not ms:
+            continue
+        dias = int(x.get("dias") or 0)
+        na_dec = x.get("decisao") and abs((x["ref"] - x["decisao"]).days) <= 3
+        cautela = ""
+        if db and fim_p < db <= x["ref"]:
+            cautela = (" Cautela: a data-base atual (%s) fica entre o fim do trabalho e a referência lançada. Retificada a referência, os dias "
+                       "passam para antes da data-base e deixam de contar para a próxima progressão: pedir a retificação junto com o "
+                       "recálculo do benefício que ela antecipa (o decreto ou a progressão acima), e só se o ganho compensar." % rs.fmt(db))
+        out.append({"nivel": "alerta",
+                    "titulo": "Remição de %s (atestado %s) lançada em %s%s; o trabalho terminou em %s, antes %s" % (
+                        rs.pl(dias, "dia", "dias"), a.get("numero") or "s/n", rs.fmt(x["ref"]), " (data da decisão)" if na_dec else "",
+                        rs.fmt(fim_p), " e ".join(m[1] for m in ms)),
+                    "detalhe": "Período trabalhado de %s a %s, conforme a ficha; o SEEU lançou os dias remidos com referência em %s. Assim, eles "
+                               "ficam fora da pena cumprida na data %s. Pedir a retificação da data de referência para o fim do período "
+                               "trabalhado e a reanálise do benefício afetado.%s" % (
+                                   rs.fmt(ini_p), rs.fmt(fim_p), rs.fmt(x["ref"]), " e na ".join(m[1] for m in ms), cautela),
+                    "fundamento": "LEP, arts. 126, § 8º, e 128 (a remição é pena cumprida e a decisão é declaratória); STF, ARE 1.497.973 AgR/PR.",
+                    "tipo": "remicao-referencia-tardia", "ref": rs.fmt(x["ref"])})
+    return out
+
+
 def confrontar(r, f, hoje=None, manuais=None):
     """Compara ficha (f) com o registro do RSPE (r). Devolve lista de itens no formato da auditoria:
     {nivel, titulo, detalhe, fundamento}."""
@@ -525,6 +575,7 @@ def confrontar(r, f, hoje=None, manuais=None):
     C = res.get("conc")
     if C:
         itens.extend(_itens_conciliacao(C))
+        itens.extend(_referencia_remicao(r, C))
     else:
         itens.append(_item_rf("verificar", "Remição pelo trabalho: falha na conciliação atestado x remição (%s)" % res.get("conc_erro", "?"),
                               "Conferir os atestados da ficha e as remições do RSPE manualmente.", "LEP, art. 126."))
@@ -555,6 +606,39 @@ def confrontar(r, f, hoje=None, manuais=None):
         it["origem"] = "ficha"
         it["titulo"], it["detalhe"] = _br(it["titulo"]), _br(it.get("detalhe") or "")
     return itens
+
+
+def leitura_parcial(f):
+    """Leitura da ficha para o registro da importação: (observações, parcial). Campo que o próprio SIAPEN deixa em branco
+    (ex.: "CPF:" vazio no cabeçalho) é observação, não leitura parcial."""
+    out, parcial = [], False
+    sem = f.get("paginas_sem_texto") or []
+    if sem:
+        out.append("%s sem texto (%s de %d): imagem ou digitalização - o histórico dessas páginas não foi lido; gerar a ficha de novo no SIAPEN" % (
+            "página" if len(sem) == 1 else "páginas", ", ".join(map(str, sem[:12])) + ("…" if len(sem) > 12 else ""), f.get("paginas") or 0))
+        parcial = True
+    if not f.get("cpf") and f.get("cpf_em_branco"):
+        out.append("CPF em branco no SIAPEN (não é falha de leitura): o vínculo ao RSPE usa os autos e o nome")
+    falta = [n for k, n in (("nome", "nome"), ("cpf", "CPF"), ("nome_mae", "filiação"), ("unidade", "unidade"), ("data_impressao", "data de impressão"))
+             if not f.get(k) and not (k == "cpf" and f.get("cpf_em_branco"))]
+    if falta:
+        out.append("não lido: %s - %s" % (", ".join(falta), "cabeçalho cortado ou fora do layout" if "nome" in falta or "CPF" in falta
+                                          else "última página ausente (sem o rodapé 'Impresso em')" if falta == ["data de impressão"] else "campo em branco no SIAPEN ou fora do layout"))
+        parcial = True
+    evs = f.get("eventos") or []
+    if not evs:
+        out.append("histórico vazio: nenhum registro datado lido (ficha sem histórico ou texto fora do layout)")
+        parcial = True
+    else:
+        ds = [d for d in (_dp(e.get("data") or "") for e in evs) if d]
+        imp = _dp(f.get("data_impressao") or "")
+        if len(ds) < len(evs):
+            out.append("%d de %d registros do histórico sem data legível" % (len(evs) - len(ds), len(evs)))
+            parcial = True
+        if imp and ds and (imp - max(ds)).days > 365 * 2:
+            out.append("último registro do histórico em %s, mais de 2 anos antes da impressão (%s): conferir se faltam páginas" % (
+                max(ds).strftime("%d/%m/%Y"), imp.strftime("%d/%m/%Y")))
+    return out, parcial
 
 
 def custodia_apos(f, d):
@@ -1577,7 +1661,8 @@ def remicao_detalhada(C, pend_est, lei, lei_rem, res, hoje, tl=None, cursos=None
             em = x["em_curso"] and b0 == x["fim"]
             det[k]["itens"].append({"ref": x["setor"] or "trabalho", "data": "", "setor": x["setor"] or "", "unidade": un,
                                     "per": "%s a %s" % (rrm._f(a0), "hoje (em curso)" if em else rrm._f(b0)),
-                                    "base": ("≈ %s (seg.-sáb.)" % rs.pl(len(dias), "dia trabalhado", "dias trabalhados")) + ((" · " + x["duvida"]) if x.get("duvida") else ""),
+                                    "base": ("≈ %s (seg.-sáb.)" % rs.pl(len(dias), "dia trabalhado", "dias trabalhados")) + ((" · " + x["duvida"]) if x.get("duvida") else "")
+                                            + ((" · " + x["origem"]) if x.get("origem") and a0 == x["ini"] else ""),
                                     "dias": len(dias) // 3, "estimado": True, "texto": x.get("trecho", "")})
     ja = set().union(*uniao["sem_atestado"].values()) if uniao["sem_atestado"] else set()
     ja2 = ja | (set().union(*uniao["em_curso"].values()) if uniao["em_curso"] else set())

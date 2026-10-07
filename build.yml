@@ -1,4 +1,4 @@
-name: Gerar RSPE_Base.exe
+name: Gerar APTO.exe
 
 # Roda a cada envio para a branch main e também manualmente (aba Actions > "Run workflow").
 on:
@@ -32,7 +32,7 @@ jobs:
 
       - name: Compilar com PyInstaller
         run: >
-          python -m PyInstaller --onefile --windowed --clean --name RSPE_Base
+          python -m PyInstaller --onefile --windowed --clean --name APTO
           --icon rspe.ico --add-data "rspe.ico;." --add-data "ui.html;." --add-data "base_juridica.json;."
           --collect-data pdfminer --collect-data pdfplumber --collect-data reportlab --hidden-import reportlab.graphics.shapes --hidden-import rspe_relatorio --hidden-import rspe_remicao
           --collect-all webview
@@ -50,14 +50,14 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force pacote | Out-Null
-          Copy-Item dist\RSPE_Base.exe pacote\
+          Copy-Item dist\APTO.exe pacote\
           Copy-Item LEIA-ME.txt, RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf pacote\
-          Compress-Archive -Path pacote\* -DestinationPath "RSPE_Base_v${{ steps.versao.outputs.v }}.zip"
+          Compress-Archive -Path pacote\* -DestinationPath "APTO_v${{ steps.versao.outputs.v }}.zip"
 
       - name: Guardar o .exe (aba Actions)
         uses: actions/upload-artifact@v4
         with:
-          name: RSPE_Base_v${{ steps.versao.outputs.v }}
+          name: APTO_v${{ steps.versao.outputs.v }}
           path: pacote/*
           retention-days: 30
 
@@ -65,7 +65,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.versao.outputs.v }}
-          name: RSPE Base v${{ steps.versao.outputs.v }}
-          body: "Gerado automaticamente a partir do commit ${{ github.sha }}. Baixe o .zip, extraia e rode RSPE_Base.exe (Windows 10/11)."
-          files: RSPE_Base_v${{ steps.versao.outputs.v }}.zip
+          name: APTO v${{ steps.versao.outputs.v }}
+          body: "Gerado automaticamente a partir do commit ${{ github.sha }}. Baixe o .zip, extraia e rode APTO.exe (Windows 10/11)."
+          files: APTO_v${{ steps.versao.outputs.v }}.zip
           make_latest: true

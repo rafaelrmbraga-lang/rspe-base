@@ -126,10 +126,10 @@ def _moldura(titulo, nome_base, rodape=AVISO, pagina=None):
             canvas.line(ML + 1.7 * mm, y, ML + 1.7 * mm + w * mm, y)
         canvas.setFillColor(C(NAVY))
         canvas.setFont(f["b"], 10.5)
-        canvas.drawString(ML + 9.5 * mm, H - 11 * mm, "RSPE Base")
+        canvas.drawString(ML + 9.5 * mm, H - 11 * mm, "APTO")
         canvas.setFont(f["n"], 8.2)
         canvas.setFillColor(C(TX2))
-        canvas.drawString(ML + 9.5 * mm + canvas.stringWidth("RSPE Base", f["b"], 10.5) + 3 * mm, H - 11 * mm, "· " + titulo)
+        canvas.drawString(ML + 9.5 * mm + canvas.stringWidth("APTO", f["b"], 10.5) + 3 * mm, H - 11 * mm, "· " + titulo)
         canvas.drawRightString(W - ML, H - 11 * mm, "%s · emitido em %s" % (nome_base, gerado))
         canvas.setStrokeColor(C(LINE))
         canvas.setLineWidth(0.6)
@@ -800,7 +800,7 @@ def relatorio_individual(m, caminho, nome_base):
     if faltam:
         el.append(Paragraph(_t("Campos ausentes no RSPE: %s." % ", ".join(faltam)), st["mut"]))
     doc = SimpleDocTemplate(caminho, pagesize=A4, leftMargin=16 * mm, rightMargin=16 * mm, topMargin=21 * mm, bottomMargin=20 * mm,
-                            title="Relatório individual - %s" % m.get("nome"), author="RSPE Base")
+                            title="Relatório individual - %s" % m.get("nome"), author="APTO")
     fr_ = _moldura("Relatório individual", nome_base)
     doc.build(el, onFirstPage=fr_, onLaterPages=fr_)
     return caminho
@@ -1605,7 +1605,7 @@ def relatorio_geral(modelos, caminho, nome_base, nominal=True):
     if len(tb) > 1:
         el.append(KeepTogether([_tabela(tb, [W * 0.85, W * 0.15], st)]))
     doc = SimpleDocTemplate(caminho, pagesize=A4, leftMargin=16 * mm, rightMargin=16 * mm, topMargin=21 * mm, bottomMargin=20 * mm,
-                            title="Relatório geral - %s" % nome_base, author="RSPE Base")
+                            title="Relatório geral - %s" % nome_base, author="APTO")
     fr = _moldura("Relatório geral", nome_base)
     doc.build(el, onFirstPage=fr, onLaterPages=fr)
     return caminho
@@ -1870,7 +1870,7 @@ def relatorio_remicao(modelos, caminho, nome_base, nominal=True):
             else:
                 el.append(Paragraph(_t("Nada a remir além do que já está no processo."), st["mut"]))
     doc = SimpleDocTemplate(caminho, pagesize=PG, leftMargin=16 * mm, rightMargin=16 * mm, topMargin=21 * mm, bottomMargin=20 * mm,
-                            title="Remição detalhada", author="RSPE Base")
+                            title="Remição detalhada", author="APTO")
     fr = _moldura("Remição detalhada", nome_base,
                            "Triagem pela ficha disciplinar e pelo RSPE: atestados com dias exatos; trabalho sem atestado e estudo, estimativa. Conferir nos autos (SEEU) antes do pedido.", pagina=PG)
     doc.build(el, onFirstPage=fr, onLaterPages=fr)
@@ -2147,7 +2147,7 @@ def planilha_remicao_pdf(modelos, caminho, nome_base):
         grupo.append(x)
     fecha()
     doc = SimpleDocTemplate(caminho, pagesize=PG, leftMargin=12 * mm, rightMargin=12 * mm, topMargin=21 * mm, bottomMargin=18 * mm,
-                            title="Conferência da remição", author="RSPE Base")
+                            title="Conferência da remição", author="APTO")
     fr = _moldura("Conferência da remição", nome_base, "Ficha disciplinar (SIAPEN) x RSPE (SEEU): atestados com dias exatos; \"≈\" = estimativa. "
                   "Conferir nos autos antes do pedido.", pagina=PG)
     doc.build(el, onFirstPage=fr, onLaterPages=fr)
@@ -2276,25 +2276,36 @@ def relatorio_providencias(linhas, todas, mes_sel, caminho, titulo, nome_base):
     else:
         el.append(Paragraph("Nenhuma providência no período.", st["mut"]))
     doc = SimpleDocTemplate(caminho, pagesize=A4, leftMargin=16 * mm, rightMargin=16 * mm, topMargin=21 * mm, bottomMargin=20 * mm,
-                            title=titulo, author="RSPE Base")
-    fr = _moldura("Relatório de providências", nome_base, rodape="Providências registradas no RSPE Base (coluna Pedido). Conferir nos autos e no SAP.")
+                            title=titulo, author="APTO")
+    fr = _moldura("Relatório de providências", nome_base, rodape="Providências registradas no APTO (coluna Pedido). Conferir nos autos e no SAP.")
     doc.build(el, onFirstPage=fr, onLaterPages=fr)
     return caminho
 
 
 
 def relatorio_falhas(d, caminho, nome_base):
-    """PDF das falhas da importação: o que não entrou, o que não foi lido e o que não pôde ser analisado, com a causa."""
+    """PDF do registro da importação: resumo do lote, falhas (o que não entrou, o que não foi lido, o que não pôde ser analisado,
+    com a causa) e o registro completo, arquivo a arquivo (resultado, leitura completa ou parcial e o que pode ter ocorrido)."""
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.units import mm
     from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
     st = _estilos()
     W = A4[0] - 32 * mm
-    el = [Paragraph(_t("Falhas da importação"), st["tit"]),
+    reg = d.get("registro") or []
+    el = [Paragraph(_t("Registro da importação"), st["tit"]),
           Paragraph(_t("%s · lote importado em %s · %s lidos" % (nome_base, d.get("quando", ""), rs.pl(d.get("arquivos", 0), "arquivo", "arquivos"))), st["sub"]),
           Spacer(1, 8)]
     n_pes = sum(len(p["itens"]) for p in d["pessoas"])
     faltam = d.get("faltam") or []
+    if reg:
+        cr = Counter(x["resultado"] for x in reg)
+        cl = Counter(x["leitura"] for x in reg)
+        el.append(_tabela([["Arquivos", "RSPE", "Fichas", "Leitura completa", "Leitura parcial", "Não lidos"],
+                           [str(len(reg)), str(sum(1 for x in reg if x["tipo"] == "RSPE")), str(sum(1 for x in reg if x["tipo"] == "Ficha")),
+                            str(cl.get("completa", 0)), str(cl.get("parcial", 0)), str(cl.get("falhou", 0))]], [W / 6] * 6, st, zebra=False))
+        el.append(Spacer(1, 4))
+        el.append(Paragraph(_t("Resultado: " + " · ".join("%s %d" % (k, v) for k, v in cr.most_common())), st["mut"]))
+        el.append(Spacer(1, 6))
     el.append(_tabela([["Arquivos não importados", "Assistidos com dado não lido", "Ignorados", "Falhas na análise"],
                        [str(len(d["erros"])), str(len(faltam)), str(len(d["ignorados"])), str(n_pes)]],
                       [W / 4] * 4, st, zebra=False))
@@ -2305,7 +2316,7 @@ def relatorio_falhas(d, caminho, nome_base):
 
     def causa_arquivo(msg):
         u = msg.upper()
-        if "NÃO PARECE UM RSPE" in u:
+        if "NÃO PARECE UM RSPE" in u or "NÃO É UM RSPE" in u:
             return "O PDF não tem o cabeçalho do RSPE do SEEU nem o da Ficha Disciplinar do SIAPEN (outro documento, digitalização ou PDF protegido)."
         if "NÚMERO DA EXECUÇÃO" in u:
             return "A 1ª página falta ou o número do processo de execução está ilegível: gerar o RSPE de novo no SEEU."
@@ -2350,7 +2361,38 @@ def relatorio_falhas(d, caminho, nome_base):
         el.append(_tabela(dados, [45 * mm, 55 * mm, W - 100 * mm], st))
     else:
         el.append(Paragraph("Nenhuma.", st["mut"]))
+    n_sec = 5 if d["ignorados"] else 4
+    LEIT = {"completa": "ok", "parcial": "PARCIAL", "falhou": "NÃO LIDO"}
+
+    def linhas(regs):
+        dados = [["Arquivo", "Assistido", "Resultado", "Leitura", "Observações e causa provável"]]
+        for x in regs:
+            obs = list(x["obs"])
+            if x["leitura"] == "falhou":
+                obs = obs + [causa_arquivo(obs[0] if obs else "")]
+            dados.append([Paragraph(_t(x["arquivo"]), st["cel"]),
+                          Paragraph(_t(x["nome"] or "—") + ("<br/>" + _t(x["proc"]) if x["proc"] else ""), st["cel"]),
+                          Paragraph(_t("%s · %s" % (x["tipo"] if x["tipo"] != "?" else "arquivo", x["resultado"])), st["cel"]),
+                          LEIT.get(x["leitura"], x["leitura"]), Paragraph(_t("; ".join(obs) or "—"), st["cel"])])
+        return _tabela(dados, [36 * mm, 42 * mm, 22 * mm, 20 * mm, W - 120 * mm], st)
+    com_obs = [x for x in reg if x["obs"] or x["leitura"] != "completa"]
+    el.append(Paragraph("%d. Leitura parcial e observações" % n_sec, st["h2"]))
+    if com_obs:
+        el.append(Paragraph(_t("Arquivos com algum campo ou página não lido (PARCIAL), não lidos, ou com observação sem efeito na leitura "
+                               "(campo que o próprio SEEU ou SIAPEN deixa em branco, ficha à espera do RSPE)."), st["mut"]))
+        el.append(Spacer(1, 4))
+        el.append(linhas(sorted(com_obs, key=lambda x: ({"falhou": 0, "parcial": 1}.get(x["leitura"], 2), x["arquivo"].lower()))))
+    else:
+        el.append(Paragraph("Nenhum.", st["mut"]))
+    el.append(Paragraph("%d. Registro completo, arquivo a arquivo" % (n_sec + 1), st["h2"]))
+    if reg:
+        el.append(Paragraph(_t("Leitura ok: todos os campos esperados foram lidos. PARCIAL: algum campo ou página não foi lido (a causa provável "
+                               "vem ao lado). NÃO LIDO: o arquivo não entrou."), st["mut"]))
+        el.append(Spacer(1, 4))
+        el.append(linhas(reg))
+    else:
+        el.append(Paragraph("Registro por arquivo indisponível (lote importado em versão anterior do programa).", st["mut"]))
     doc = SimpleDocTemplate(caminho, pagesize=A4, leftMargin=16 * mm, rightMargin=16 * mm, topMargin=21 * mm, bottomMargin=20 * mm,
-                            title="Falhas da importação", author="RSPE Base")
-    fr = _moldura("Falhas da importação", nome_base, rodape="Falhas registradas na importação do lote. Enviar este PDF com os arquivos citados para a correção da leitura.")
+                            title="Registro da importação", author="APTO")
+    fr = _moldura("Registro da importação", nome_base, rodape="Registro da importação do lote. Enviar este PDF com os arquivos citados para a correção da leitura.")
     doc.build(el, onFirstPage=fr, onLaterPages=fr)

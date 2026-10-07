@@ -1,4 +1,5 @@
-RSPE BASE - SEEU  v7.3.1 (programa em abas)
+APTO - Auditoria de Prazos e Tempo de cumprimento Organizada  v7.4.0
+(antigo RSPE Base; SEEU, programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
@@ -29,7 +30,8 @@ bases recentes (até 8). Arrastar PDFs sobre o .exe cria uma base
 "Importação <data>".
 
 ATUALIZAR O PROGRAMA
-  Substitua só o RSPE_Base.exe e mantenha, ao lado dele, a pasta "bases"
+  Substitua só o executável (a partir da 7.4.0, APTO.exe; apague o antigo
+  RSPE_Base.exe) e mantenha, ao lado dele, a pasta "bases"
   (e a pasta "modelos", o rspe_config.json e o defensores.json, se usar).
   Não é preciso refazer nem reimportar a base: ao abrir, o programa refaz a
   análise de todos os assistidos com as regras da versão nova (a leitura do
@@ -225,7 +227,7 @@ CRIMES
 COMO GERAR O .EXE (uma vez, em um Windows com Python instalado)
   1. Instale o Python 3.9+ (python.org) marcando "Add python.exe to PATH".
   2. Duplo clique em build_exe.bat.
-  3. Copie dist\RSPE_Base.exe para onde quiser (não precisa de Python).
+  3. Copie dist\APTO.exe para onde quiser (não precisa de Python).
 
 LEITURA DOS CAMPOS
   * Campo em branco = não consta no RSPE. Nada é inventado nem presumido.
@@ -563,6 +565,65 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v7.4.0
+  - Nome: o programa passa a se chamar APTO (Auditoria de Prazos e Tempo de
+    cumprimento Organizada). O executável é APTO.exe; bases, modelos e
+    configurações continuam na mesma pasta e abrem sem reimportar.
+  - Tela de carregamento ao abrir uma base existente (recentes ou "Abrir
+    base existente…"), com a etapa em curso: abrindo o arquivo, cópia de
+    segurança, cálculo dos assistidos, montagem da tela.
+  - Auditoria - cinco conferências novas, com "Copiar fundamentação" a partir
+    dos modelos de impugnação do NUSPEN:
+    * Remição com referência tardia (ficha x RSPE): o trabalho terminou antes
+      de um 25/12 de decreto de indulto/comutação ou de uma progressão, e o
+      SEEU lançou os dias depois dele (em geral na data da decisão). Só
+      nesses casos há prejuízo e alerta; quando a data-base atual fica entre
+      o fim do trabalho e a referência, o alerta avisa a cautela (a
+      retificação isolada tiraria os dias da próxima progressão). STF, ARE
+      1.497.973 AgR/PR.
+    * Detração: o alerta do regime inicial lançado depois da primeira prisão
+      mostra as duas contas - (pena - detração) x fração e pena x fração -
+      detração - e a diferença, detração x (1 - fração). STJ, AgRg no AREsp
+      2.956.206 e AgRg no HC 719.763 (Sexta Turma); AREsp 3.228.879
+      (monocrática). Obs.: o "AgRg no AREsp 3.228.879/MS, j. 04/08/2026"
+      citado no modelo não foi localizado; a fundamentação cita a decisão
+      monocrática do mesmo processo, conferida.
+    * Fração 1/1 de livramento no crime comum, com livramento já concedido
+      ou revogado: revogação lançada no cadastro do crime em vez do incidente
+      próprio, o que gera "Não comutado - Impeditivo".
+    * Data de referência do semiaberto não refeita depois de fato que reduziu
+      a pena com efeito anterior a ela (comutação ou indulto de decreto
+      anterior, prescrição, extinção por indulto/graça), decidido depois da
+      progressão.
+    * Comutações fora da ordem dos decretos (a de decreto anterior lançada
+      depois da do seguinte) e comutação anterior lançada depois do 25/12 do
+      decreto seguinte.
+  - Registro da importação (PDF): em todo lote, não só quando há falha.
+    Traz o resumo (arquivos, RSPE, fichas, leitura completa, parcial, não
+    lidos), as falhas com a causa e o registro de cada arquivo: resultado
+    (novo, atualizado, histórico, já na base, ficha vinculada ou sem RSPE,
+    ignorado, não importado), leitura completa ou PARCIAL e o que pode ter
+    ocorrido (página sem texto, campo não lido, histórico vazio ou que para
+    anos antes da impressão, condenação não lida, campo que o próprio SEEU
+    deixa em branco).
+  - Remição (casos Allan Cézar, Arnaldo e Carlos Henrique):
+    * atestado em lote com vários setores ("setor de PRENDE BEM, FAXINA E
+      PAIVA LANGUERIE com 253 dias de remição"): a lista inteira passa a ser
+      lida (antes parava na primeira vírgula e atribuía tudo ao 1º setor, e
+      os demais saíam como "sem atestado");
+    * "PRENDE BEM", "PRENDEBEM/PDIB" e "PRENDEDORES PRENDEBEM" são o mesmo
+      setor (sinônimo novo na base jurídica);
+    * setor desativado no SIAPEN ("XXDESATIVADO6098") aberto no mesmo dia de
+      outro setor é o mesmo vínculo: fica o nome real, com as datas do
+      registro desativado (antes, dois vínculos e um "a conferir");
+    * trecho sem atestado que começa no meio de um vínculo diz de onde vem a
+      data de início (ex.: "antes disso, remição de 91 dias lançada no RSPE
+      em 14/12/2021, sem atestado na ficha").
+    Efeito na base da PDIB: "trabalho sem atestado" de 26.846 para 25.711
+    dias; "a conferir" de 2.223 para 1.940.
+  - Testes: teste_auditoria_calculo.py (os alertas acima) entra no build;
+    teste_remicao.py ganha o caso do atestado com vários setores.
 
 v7.3.1
   - Faltas da ficha (conferido nas 653 fichas da PDIB: 328 de 328 resultados
