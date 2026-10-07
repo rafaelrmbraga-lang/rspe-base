@@ -768,6 +768,28 @@ def conciliar(r, f, hoje=None, manuais=None, ini_exec=None, excluir_remicoes=Non
             or next((x for x in cand if int(math.floor(a["rem"] + 1e-9)) == int(math.floor(x["dias"] + 1e-9))), None)
         if x:
             x["usada"], a["remicao"], a["status"] = a["id"], x, "CONCILIADO"
+    # (b2) uma remição para dois ou três atestados (o juízo decidiu os pedidos juntos): a soma dos dias fecha com a remição, e os
+    # atestados foram emitidos até a decisão (no máximo 400 dias antes)
+    from itertools import combinations
+    for x in rems:
+        if not livre(x) or not x["decisao"]:
+            continue
+        sol = [a for a in ats if not a["remicao"] and a["rem"] is not None
+               and x["decisao"] - timedelta(days=400) <= a["emissao"] <= x["decisao"] + timedelta(days=5)]
+        achou = None
+        for n in (2, 3):
+            for comb in combinations(sol, n):
+                s_ = sum(a["rem"] for a in comb)
+                if int(x["dias"]) in (int(math.floor(s_ + 1e-9)), sum(int(math.floor(a["rem"] + 1e-9)) for a in comb)):
+                    achou = comb
+                    break
+            if achou or len(sol) > 12:
+                break
+        if achou:
+            x["usada"] = "+".join(a["id"] for a in achou)
+            for a in achou:
+                a["remicao"], a["status"] = x, "CONCILIADO"
+                a["remicao_conjunta"] = len(achou)
     # (c) ordem cronológica: remição sem par exato entre esta emissão e a próxima -> divergência de dias
     for k, a in enumerate(ats):
         if a["remicao"] or a["rem"] is None:
