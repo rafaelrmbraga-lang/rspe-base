@@ -926,6 +926,7 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
         "conduta_ruim": bool(ficha and re.search(r"RESPONDE|REGULAR|\bM[ÁA]\b|P[ÉE]SSIMA|RUIM", (ficha.get("conduta") or "").upper())),
         "conduta": ((ficha.get("conduta") or "não informada na ficha").title().replace("Padic", "PADIC").replace("Ipcg", "IPCG").replace("Otima", "Ótima").replace("Pessima", "Péssima") if ficha else "Sem ficha"),
         "ficha_tem": bool(ficha),
+        "status_exec": (r.get("status_execucao") or "").strip().upper(),
         "ficha": ({k: ficha.get(k) for k in ("nome", "rgi", "cpf", "unidade", "data_entrada", "data_prisao", "conduta", "data_impressao", "trabalho", "atestados",
                                              "dias_trabalhados_atestados", "dias_remidos_atestados", "faltas", "regressoes", "restabelecimentos", "recusa_trabalho", "isolamentos", "estudo", "autos", "importado_em")}
                   if ficha else None),

@@ -1665,6 +1665,19 @@ def remicao_por_origem(modelos):
     return O
 
 
+def nome_rel(m):
+    """Nome do assistido nos relatórios de remição: o do RSPE (SEEU) e, quando a ficha (SIAPEN) traz outra grafia, também o da
+    ficha - é por ele que o arquivo costuma estar nomeado; execução arquivada no SEEU vem marcada."""
+    n = m.get("nome") or ""
+    fn = ((m.get("ficha") or {}).get("nome") or "").strip()
+    norm = lambda t: re.sub(r"[^A-Z]", "", rs._sem_acento(t).upper())
+    if fn and norm(fn) != norm(n):
+        n += " (na ficha: %s)" % fn.title()
+    if "ARQUIV" in (m.get("status_exec") or ""):
+        n += " [execução ARQUIVADA no SEEU]"
+    return n
+
+
 def relatorio_remicao(modelos, caminho, nome_base, nominal=True):
     """PDF da remição detalhada: de onde vem cada dia a remir (atestado emitido e não lançado, diferença, trabalho sem
     atestado, estudo, leitura), por origem, por unidade prisional em que o trabalho ou o estudo aconteceu (com os assistidos
@@ -1708,6 +1721,19 @@ def relatorio_remicao(modelos, caminho, nome_base, nominal=True):
                             ("BACKGROUND", (0, 0), (-1, -1), C(ZEBRA)), ("LEFTPADDING", (0, 0), (-1, -1), 8),
                             ("TOPPADDING", (0, 0), (-1, 0), 7), ("BOTTOMPADDING", (0, 1), (-1, 1), 7), ("VALIGN", (0, 0), (-1, -1), "TOP")]))
     el.append(tb)
+    arqv = [m for m in pend if "ARQUIV" in (m.get("status_exec") or "")]
+    difn = [m for m in pend if "(na ficha:" in nome_rel(m)]
+    if arqv or difn:
+        el.append(Spacer(1, 6))
+    if arqv:
+        el.append(Paragraph(_t("Atenção: %s com execução ARQUIVADA no SEEU (pena zerada no RSPE), com %s dias no total acima: %s. A remição deve "
+                               "ser pedida no processo em que a pena está em execução (transferência de comarca, unificação ou nova guia) - "
+                               "conferir no SEEU. Estão marcadas pelo nome." % (
+                                   rs.pl(len(arqv), "assistido", "assistidos"), _num(int(sum(m["fd_rem_det"]["total"] for m in arqv))),
+                                   ", ".join(m.get("nome") or "" for m in arqv))), st["mut"]))
+    if difn:
+        el.append(Paragraph(_t("%s com o nome no RSPE (SEEU) diferente do nome na ficha (SIAPEN), vinculados pelo CPF ou pelos autos: o nome da "
+                               "ficha vem entre parênteses, pois o arquivo costuma estar nomeado por ele." % rs.pl(len(difn), "assistido", "assistidos")), st["mut"]))
 
     # 1) por origem
     el.append(Paragraph("1. Por origem", st["h2"]))
@@ -1775,7 +1801,7 @@ def relatorio_remicao(modelos, caminho, nome_base, nominal=True):
             for m, r_, i in linhas:
                 novo = m.get("id") != ant
                 ant = m.get("id")
-                dados.append([Paragraph(_t(m.get("nome") or ""), peqn) if novo else "", Paragraph(_t(m.get("proc") or m.get("id") or ""), peq) if novo else "",
+                dados.append([Paragraph(_t(nome_rel(m)), peqn) if novo else "", Paragraph(_t(m.get("proc") or m.get("id") or ""), peq) if novo else "",
                               Paragraph(_t(r_), peq), Paragraph(_t(i["ref"] + ((" · " + i["data"]) if i.get("data") else "")), peq), Paragraph(_t(i["per"]), peq),
                               Paragraph(_t(("≈ " if i.get("estimado") else "") + _num(i["dias"])), dir_),
                               Paragraph(_t({"sem_atestado": "atestado de trabalho", "estudo": "certidão de frequência", "leitura": "conferir homologação",
@@ -1805,7 +1831,7 @@ def relatorio_remicao(modelos, caminho, nome_base, nominal=True):
             T = (m.get("fd_conc") or {}).get("tabela") or []
             un = _rotulo_unidade((m.get("ficha") or {}).get("unidade") or "") or "unidade não informada"
             tit = Paragraph("<b>%s</b> · %s · hoje em %s · <b>%s %s a remir</b>%s" % (
-                _t(m.get("nome") or ""), _t(m.get("proc") or m.get("id") or ""), _t(un), _num(D["total"]), "dia" if D["total"] == 1 else "dias",
+                _t(nome_rel(m)), _t(m.get("proc") or m.get("id") or ""), _t(un), _num(D["total"]), "dia" if D["total"] == 1 else "dias",
                 _t(" (+ ≈ %s do trabalho em curso)" % rs.pl(int(D["em_curso"]["dias"]), "dia", "dias")) if D["em_curso"]["dias"] else ""),
                 ParagraphStyle("pt", parent=st["cel"], fontSize=8.4, leading=11.5))
             blocos = [Spacer(1, 9), tit]
@@ -1917,7 +1943,7 @@ def linhas_conferencia(modelos):
     com = sorted([m for m in modelos if m.get("ficha_tem") and m.get("fd_rem_det")], key=lambda m: rs._sem_acento(m.get("nome") or "").upper())
     for m in com:
         D = m["fd_rem_det"]
-        base = {"Assistido": m.get("nome") or "", "Nº da execução": m.get("proc") or m.get("id") or "",
+        base = {"Assistido": nome_rel(m), "Nº da execução": m.get("proc") or m.get("id") or "",
                 "Unidade atual": _rotulo_unidade((m.get("ficha") or {}).get("unidade") or "")}
         dif = {i["ref"]: i for i in D["divergencia"]["itens"]}
         for t in (m.get("fd_conc") or {}).get("tabela") or []:
