@@ -1,4 +1,4 @@
-RSPE BASE - SEEU  v7.3.0 (programa em abas)
+RSPE BASE - SEEU  v7.3.1 (programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
@@ -563,6 +563,30 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v7.3.1
+  - Faltas da ficha (conferido nas 653 fichas da PDIB: 328 de 328 resultados
+    de PADIC agora batem com o texto da ficha; antes, 184):
+    * resultado "foi sancionado" (ciência do resultado), "absolvido" e
+      "foi extinto o processo" passam a ser lidos; absolvição e extinção
+      contam como falta sem efeito (como a arquivada);
+    * natureza do Conselho ("falta de natureza média/leve"): a falta
+      desclassificada deixa de ser grave;
+    * o mesmo fato registrado duas vezes (linha repetida ou duas infrações
+      do mesmo dia) é uma falta só (antes contava em dobro);
+    * resultado casado pela data do fato e pelo número do PADIC; "não será
+      instaurado procedimento" não é mais lido como instauração.
+  - Remição: coluna "Autos do peticionamento" (autos citados na ficha;
+    aviso quando são outros autos, não os da execução; "autos não indicados
+    na ficha" quando o lançamento não diz). "Trabalho sem atestado" passa a
+    "Trabalho sem atestado na ficha nem remição no RSPE", com a providência
+    de conferir nos autos se há atestado juntado e não lançado na ficha (o
+    programa não o vê; lançar em "+ Adicionar atestado"). Atestado lançado
+    pela equipe conta como juntado.
+  - Planilha de conferência: na aba "Amostra 10%", listas de seleção para
+    Conferido (S/N), Resultado (Confere/Não confere) e Motivo da divergência
+    (padronizado); nova aba "Taxa de acerto" calcula sozinha o acerto por
+    situação e conta os motivos.
 
 v7.3.0
   Revisão da leitura da ficha disciplinar com as 653 fichas da PDIB (texto

@@ -224,7 +224,7 @@ def extrair(caminho):
 
 
 # versão das regras de leitura dos eventos: a ficha guardada na base com versão anterior é relida a partir dos eventos ao abrir
-VERSAO_LEITURA = 2
+VERSAO_LEITURA = 3
 
 
 def _limpar_evento(txt):
@@ -404,34 +404,73 @@ def derivar(f, eventos):
         if re.search(r"REGISTRO DE FALTA|LAN[ÇC]AMENTO DE FALTA|FALTA GRAVE", u) and "ARQUIV" not in u and "INSTAURA" not in u and "ISOLADO" not in u:
             art = re.search(r"INFRING\w*\s*(?:EM TESE)?\s*O?\s*ART\.?\s*(\d+)[, ]*\s*(?:INCISO|INC\.?)?\s*([IVXL]+)?", u) or re.search(r"ART\.?\s*(\d+)[, ]*\s*(?:INCISO|INC\.?)?\s*([IVXL]+)?", u)
             cometida = re.search(r"COMETIDA EM\s*(\d{2}/\d{2}/\d{4})", u)
-            faltas.append({"data_registro": e["data"], "data_fato": cometida.group(1) if cometida else e["data"],
+            dfato = cometida.group(1) if cometida else e["data"]
+            mesma = next((x for x in faltas if x["data_fato"].replace(".", "/") == dfato.replace(".", "/")), None)
+            if mesma:
+                # o mesmo fato registrado de novo (linha repetida ou outra infração do mesmo dia): uma falta só
+                if e["texto"] not in mesma["texto"]:
+                    mesma["texto"] += " | " + e["texto"]
+                mesma["grave"] = mesma["grave"] or bool(art and art.group(1) in ("50", "52")) or "FALTA GRAVE" in u
+                continue
+            faltas.append({"data_registro": e["data"], "data_fato": dfato,
                            "artigo": ("art. %s%s da LEP" % (art.group(1), (", " + art.group(2)) if art.group(2) else "")) if art else "",
                            "grave": bool(art and art.group(1) in ("50", "52")) or "FALTA GRAVE" in u,
                            "texto": e["texto"], "situacao": "registrada", "padic": "", "resultado": ""})
+    # andamento e resultado do PADIC / CD simplificada: casados com a falta pela data do fato ("referente ao fato ocorrido em",
+    # "cometida em"), pelo número do PADIC ou, na instauração sem data, pela falta registrada mais próxima; vale o último resultado
+    def _nd(x):
+        return (x or "").replace(".", "/")
+
+    def _num_padic(u):
+        mp = re.search(r"(?:PADIC|CD SIMPLIFICADA)\s*(?:/\s*[\w-]+\s*)?N[ºO°]?\s*([\d][\d./-]+\d)", u)
+        return re.sub(r"\D", "", mp.group(1)) if mp else ""
     for e in eventos:
-        u = e["texto"].upper()
+        u = rs._sem_acento(e["texto"]).upper()
+        if not re.search(r"CONSELHO DISCIPLINAR|APLICACAO DE SANCAO", u) or re.search(r"REGISTRO DE FALTA|LANCAMENTO DE FALTA|ISOLADO", u):
+            continue
         m = re.search(r"OCORRIDO EM\s*(\d{2}/\d{2}/\d{4})|COMETIDA EM\s*(\d{2}/\d{2}/\d{4})", u)
+        npad = _num_padic(u)
         alvo = None
         if m:
             dt = m.group(1) or m.group(2)
-            alvo = next((x for x in faltas if x["data_fato"] == dt), None)
-        if alvo is None and faltas and ("PADIC" in u or "ARQUIV" in u or "HOMOLOG" in u):
-            alvo = min(faltas, key=lambda x: abs((_dp(e["data"]) - _dp(x["data_registro"])).days) if _dp(e["data"]) and _dp(x["data_registro"]) else 9999)
+            alvo = next((x for x in faltas if _nd(x["data_fato"]) == dt), None) or next((x for x in faltas if _nd(x["data_registro"]) == dt), None)
+        if alvo is None and npad:
+            alvo = next((x for x in faltas if x.get("padic_num") == npad), None)
+        if alvo is None and faltas and re.match(r"CONSELHO DISCIPLINAR:\s*INSTAURACAO", u):
+            cand = [x for x in faltas if x["situacao"] == "registrada" and _dp(x["data_registro"]) and _dp(e["data"])
+                    and 0 <= (_dp(e["data"]) - _dp(x["data_registro"])).days <= 120]
+            alvo = cand[-1] if cand else None
         if not alvo:
             continue
-        mp = re.search(r"PADIC\s*/?\s*\w*\s*N[ºO°]?\s*([\d./-]+)", u)
-        if "INSTAURA" in u:
-            alvo["situacao"] = "PADIC instaurado"
-            if mp:
-                alvo["padic"] = mp.group(1)
-        if "ARQUIV" in u:
-            alvo["situacao"] = "arquivada"
-            alvo["resultado"] = e["texto"]
-            alvo["data_resultado"] = e["data"]
-        elif re.search(r"HOMOLOG|RECONHEC|PUNI[ÇC][ÃA]O|SAN[ÇC][ÃA]O", u):
-            alvo["situacao"] = "homologada/punida"
-            alvo["resultado"] = e["texto"]
-            alvo["data_resultado"] = e["data"]
+        if npad:
+            alvo["padic_num"] = npad
+        instaura = bool(re.match(r"CONSELHO DISCIPLINAR:\s*INSTAURACAO", u))
+        if instaura:
+            if alvo["situacao"] == "registrada":
+                alvo["situacao"] = "PADIC instaurado"
+            mp = re.search(r"(?:PADIC|CD SIMPLIFICADA)\s*(?:/\s*[\w-]+\s*)?N[ºO°]?\s*([\d./-]+)", u)
+            if mp and mp.group(1).strip("./-"):
+                alvo["padic"] = mp.group(1).strip("./-")
+            continue
+        if not re.search(r"CIENCIA DO RESULTADO|CONCLUSO|ARQUIVADO|EXTINTO|APLICACAO DE SANCAO|DECISAO DO CONSELHO", u):
+            continue
+        if re.search(r"ABSOLVID", u):
+            tipo = "absolvido"
+        elif re.search(r"EXTINT", u):
+            tipo = "extinto"
+        elif re.search(r"ARQUIVAD", u):
+            tipo = "arquivado"
+        elif re.search(r"SANCIONAD|SANCAO|COMETEU FALTA|RECONHEC|PUNICAO|HOMOLOG", u):
+            tipo = "sancionado"
+        else:
+            continue
+        alvo["resultado"], alvo["data_resultado"], alvo["resultado_tipo"] = e["texto"], e["data"], tipo
+        # absolvição e extinção do processo contam como a falta arquivada: não produzem efeito
+        alvo["situacao"] = "homologada/punida" if tipo == "sancionado" else "arquivada"
+        mn = re.search(r"NATUREZA\s+(GRAVE|MEDIA|LEVE)", u)
+        if tipo == "sancionado" and mn:
+            alvo["natureza"] = mn.group(1).lower()
+            alvo["grave"] = mn.group(1) == "GRAVE"  # o Conselho pode desclassificar para média ou leve
     f["faltas"] = faltas
 
     # ---- outros marcos relevantes ----
@@ -1408,7 +1447,7 @@ ORIGENS_REMICAO = [
     ("nao_lancado", "Atestado peticionado no SEEU, sem remição no RSPE", "requerer a apreciação (vista às partes e decisão)"),
     ("emitido", "Atestado emitido, sem peticionamento registrado na ficha", "verificar a juntada nos autos e pedir o peticionamento à unidade"),
     ("divergencia", "Atestado com remição menor no RSPE (diferença)", "conferir a decisão e requerer a diferença"),
-    ("sem_atestado", "Trabalho sem atestado (atestado a expedir)", "pedir o atestado à unidade prisional"),
+    ("sem_atestado", "Trabalho sem atestado na ficha nem remição no RSPE", "conferir nos autos se há atestado juntado (o SEEU pode ter atestado não lançado na ficha); se não houver, pedir o atestado à unidade"),
     ("estudo", "Estudo sem remição (certidão a expedir)", "requisitar a certidão de frequência e requerer a remição"),
     ("leitura", "Leitura peticionada sem remição no RSPE", "conferir a homologação da remição pela leitura"),
     ("em_curso", "Trabalho em curso há até 90 dias (atestado ainda não devido)", "acompanhar e pedir o atestado ao fim do período"),

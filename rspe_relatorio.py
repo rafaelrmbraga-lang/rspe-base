@@ -1687,7 +1687,8 @@ def relatorio_remicao(modelos, caminho, nome_base, nominal=True):
     prov = dict((k, p_) for k, _r, p_ in ORI)
     COMO = {"nao_lancado": "dias remidos do próprio atestado; a ficha registra o peticionamento no SEEU",
             "emitido": "dias remidos do próprio atestado; a ficha registra só a emissão (a juntada se confere nos autos)", "divergencia": "dias do atestado (sem a fração) menos os da remição lançada",
-            "sem_atestado": "estimativa: dias seg.-sáb. do vínculo sem atestado, sem feriados, ÷ 3 (LEP, art. 126, § 1º, II)",
+            "sem_atestado": "estimativa: dias seg.-sáb. do vínculo sem atestado, sem feriados, ÷ 3 (LEP, art. 126, § 1º, II). Atestado juntado no SEEU e não "
+                            "lançado na ficha não é visto pelo programa: este número tende a ser maior que o real (lance o atestado em \"Adicionar atestado\" na aba Ficha)",
             "estudo": "12 horas de frequência = 1 dia (LEP, art. 126, § 1º, I); horas declaradas ou estimadas",
             "leitura": "4 dias por obra (Res. CNJ 391/2021, art. 5º)", "em_curso": "estimativa, como no trabalho sem atestado",
             "a_conferir": "sem dias no total: vínculo aberto sem baixa na ficha (registro duplicado ou baixa esquecida); a estimativa só vale se a unidade confirmar o trabalho"}
@@ -1884,15 +1885,18 @@ SIT_REM = {
     "rspe_sem_ficha": ("No RSPE, sem atestado na ficha", "azul", "DBEAFE"),
     "peticionado": ("Peticionado no SEEU, sem remição no RSPE", "vermelho", "FDE8E8"),
     "emitido": ("Emitido, sem peticionamento na ficha", "laranja", "FFEAD5"),
-    "sem_atestado": ("Trabalho sem atestado", "laranja", "FFEAD5"),
+    "sem_atestado": ("Trabalho sem atestado na ficha nem remição", "laranja", "FFEAD5"),
     "estudo": ("Estudo sem remição", "amarelo", "FEF4D6"),
     "leitura": ("Leitura sem remição", "amarelo", "FEF4D6"),
     "em_curso": ("Em curso (até 90 dias)", "cinza", "EEF0F3"),
     "a_conferir": ("A conferir (sem dias no total)", "cinza", "EEF0F3"),
     "lacunas": ("Lacuna entre atestados", "cinza", "EEF0F3"),
 }
+MOTIVOS_DIVERGENCIA = ["Atestado juntado nos autos e não lançado na ficha", "Peticionado e aguardando decisão", "Remição já declarada no processo",
+                       "Vínculo duplicado ou sem baixa", "Período não trabalhado", "Diferença no número de dias", "Atestado de outros autos",
+                       "Erro de leitura da ficha", "Outro (descrever na observação)"]
 COLS_REM = ["Assistido", "Nº da execução", "Unidade atual", "Situação", "Unidade onde ocorreu", "Setor / curso / documento", "Início", "Fim",
-            "Atestado nº", "Emitido em", "Peticionado em", "Dias trabalhados / horas", "Remidos na ficha", "Remição no RSPE", "Dias a remir",
+            "Atestado nº", "Emitido em", "Peticionado em", "Autos do peticionamento", "Dias trabalhados / horas", "Remidos na ficha", "Remição no RSPE", "Dias a remir",
             "Estimativa", "Providência", "Trecho da ficha"]
 
 
@@ -1930,10 +1934,14 @@ def linhas_conferencia(modelos):
                                      "Início": min(datas, key=lambda d: d[6:] + d[3:5] + d[:2]) if datas else "",
                                      "Fim": max(datas, key=lambda d: d[6:] + d[3:5] + d[:2]) if datas else "",
                                      "Atestado nº": "" if fora else num, "Emitido em": t.get("emissao") or "", "Peticionado em": t.get("peticionado") or "",
+                                     "Autos do peticionamento": ((t.get("autos") or "") + (" (outros autos - não esta execução)" if t.get("autos_outros") else "")) if t.get("autos")
+                                     else ("autos não indicados na ficha" if t.get("peticionado") and not str(t.get("peticionado")).startswith("nos autos") else ""),
                                      "Dias trabalhados / horas": t.get("trab") or "", "Remidos na ficha": "" if fora else _n_br(t["rem"]),
                                      "Remição no RSPE": ("%s · decisão %s" % (t["rspe"], t["decisao"])) if t["rspe"] not in ("—", "") else "",
                                      "Dias a remir": arem or "", "Estimativa": "",
-                                     "Providência": {"peticionado": prov["nao_lancado"], "emitido": prov["emitido"], "processo_dif": prov["divergencia"]}.get(k, ""),
+                                     "Providência": ("conferir: a ficha registra o peticionamento em outros autos (%s)" % t.get("autos")) if k == "peticionado" and t.get("autos_outros") else
+                                     ("conferir nos autos se foi juntado (a ficha não indica os autos) e requerer a apreciação" if k == "peticionado" and not t.get("autos") else
+                                      {"peticionado": prov["nao_lancado"], "emitido": prov["emitido"], "processo_dif": prov["divergencia"]}.get(k, "")),
                                      "Trecho da ficha": t.get("texto") or ""}))
         for k in ("sem_atestado", "em_curso", "a_conferir", "estudo", "leitura", "lacunas"):
             for i in D[k]["itens"]:
@@ -1942,6 +1950,7 @@ def linhas_conferencia(modelos):
                                          "Setor / curso / documento": i["ref"], "Início": datas[0] if datas else "",
                                          "Fim": (datas[1] if len(datas) > 1 else ("hoje (em curso)" if "em curso" in i["per"] or "ativa" in i["per"] else "")),
                                          "Atestado nº": "", "Emitido em": "", "Peticionado em": i.get("data") if k == "leitura" or "peticionado" in i["per"] else "",
+                                         "Autos do peticionamento": "",
                                          "Dias trabalhados / horas": i.get("base") or "", "Remidos na ficha": "", "Remição no RSPE": "",
                                          "Dias a remir": ("(≈ %s, fora do total)" % _num(i["dias"]) if i["dias"] else "") if k in rf.FORA_DO_TOTAL else (i["dias"] or ""),
                                          "Estimativa": "≈" if i.get("estimado") and k not in rf.FORA_DO_TOTAL else "",
@@ -1966,7 +1975,7 @@ def planilha_remicao_xlsx(modelos, caminho, nome_base):
     wb = Workbook()
     neg, cab_fill = Font(bold=True, color="FFFFFF"), PatternFill("solid", fgColor="00602C")
     larg = {"Assistido": 30, "Nº da execução": 26, "Unidade atual": 28, "Situação": 30, "Unidade onde ocorreu": 32, "Setor / curso / documento": 28,
-            "Início": 11, "Fim": 14, "Atestado nº": 13, "Emitido em": 11, "Peticionado em": 13, "Dias trabalhados / horas": 26, "Remidos na ficha": 10,
+            "Início": 11, "Fim": 14, "Atestado nº": 13, "Emitido em": 11, "Peticionado em": 13, "Autos do peticionamento": 30, "Dias trabalhados / horas": 26, "Remidos na ficha": 10,
             "Remição no RSPE": 24, "Dias a remir": 10, "Estimativa": 9, "Providência": 40, "Trecho da ficha": 90}
 
     def aba(ws, linhas, extra=()):
@@ -2024,7 +2033,55 @@ def planilha_remicao_xlsx(modelos, caminho, nome_base):
         ws.append([u, len(a), round(d, 2)])
     ws.column_dimensions["A"].width, ws.column_dimensions["B"].width, ws.column_dimensions["C"].width, ws.column_dimensions["D"].width = 60, 16, 22, 14
     aba(wb.create_sheet("Conferência"), L)
-    aba(wb.create_sheet("Amostra 10%"), _amostra(L), ("Conferido nos autos (S/N)", "Observação"))
+    # amostra: a equipe marca se conferiu, se confere e, quando não, o motivo padronizado - a aba "Taxa de acerto" calcula sozinha
+    am = wb.create_sheet("Amostra 10%")
+    extra = ("Conferido nos autos (S/N)", "Resultado", "Motivo da divergência", "Observação")
+    aba(am, _amostra(L), extra)
+    from openpyxl.worksheet.datavalidation import DataValidation
+    n0 = len(COLS_REM)
+    cS, cR, cM = (get_column_letter(n0 + i) for i in (1, 2, 3))
+    ult = max(2, am.max_row)
+    ls = wb.create_sheet("Listas")  # opções das listas de seleção (o Excel limita a lista digitada a 255 caracteres)
+    for mv in MOTIVOS_DIVERGENCIA:
+        ls.append([mv])
+    ls.sheet_state = "hidden"
+    for col, lista in ((cS, '"S,N"'), (cR, '"Confere,Não confere"'), (cM, "Listas!$A$1:$A$%d" % len(MOTIVOS_DIVERGENCIA))):
+        dv = DataValidation(type="list", formula1=lista, allow_blank=True)
+        am.add_data_validation(dv)
+        dv.add("%s2:%s%d" % (col, col, ult + 200))
+    for i, c in enumerate(extra, 1):
+        am.column_dimensions[get_column_letter(n0 + i)].width = (40 if c.startswith("Motivo") else 30 if c == "Observação" else 16)
+    tx = wb.create_sheet("Taxa de acerto")
+    tx.append(["Taxa de acerto da ferramenta na amostra (preenchida pela equipe na aba \"Amostra 10%\")"])
+    tx["A1"].font = Font(bold=True, size=12)
+    tx.append(["A amostra foi sorteada entre assistidos com pendência: mede se o que a ferramenta aponta está certo (precisão), não se ela deixa casos de fora."])
+    tx.append([])
+    tx.append(["Situação apontada", "Linhas na amostra", "Conferidas (S)", "Confere", "Não confere", "Taxa de acerto"])
+    for c in range(1, 7):
+        tx.cell(row=tx.max_row, column=c).font, tx.cell(row=tx.max_row, column=c).fill = neg, cab_fill
+    rng = lambda col: "'Amostra 10%%'!$%s$2:$%s$%d" % (col, col, ult + 200)
+    for k, (rot, _c, cor) in SIT_REM.items():
+        r_ = tx.max_row + 1
+        tx.append([rot, '=COUNTIF(%s,A%d)' % (rng("D"), r_), '=COUNTIFS(%s,A%d,%s,"S")' % (rng("D"), r_, rng(cS)),
+                   '=COUNTIFS(%s,A%d,%s,"Confere")' % (rng("D"), r_, rng(cR)), '=COUNTIFS(%s,A%d,%s,"Não confere")' % (rng("D"), r_, rng(cR)),
+                   '=IF((D%d+E%d)>0,D%d/(D%d+E%d),"")' % (r_, r_, r_, r_, r_)])
+        tx.cell(row=r_, column=1).fill = PatternFill("solid", fgColor=cor)
+        tx.cell(row=r_, column=6).number_format = "0.0%"
+    r_ = tx.max_row + 1
+    tx.append(["Total", "=SUM(B5:B%d)" % (r_ - 1), "=SUM(C5:C%d)" % (r_ - 1), "=SUM(D5:D%d)" % (r_ - 1), "=SUM(E5:E%d)" % (r_ - 1),
+               '=IF((D%d+E%d)>0,D%d/(D%d+E%d),"")' % (r_, r_, r_, r_, r_)])
+    tx.cell(row=r_, column=1).font = Font(bold=True)
+    tx.cell(row=r_, column=6).number_format = "0.0%"
+    tx.append([])
+    tx.append(["Motivo da divergência", "Ocorrências"])
+    for c in range(1, 3):
+        tx.cell(row=tx.max_row, column=c).font, tx.cell(row=tx.max_row, column=c).fill = neg, cab_fill
+    for mv in MOTIVOS_DIVERGENCIA:
+        r_ = tx.max_row + 1
+        tx.append([mv, '=COUNTIF(%s,A%d)' % (rng(cM), r_)])
+    tx.column_dimensions["A"].width, tx.column_dimensions["F"].width = 58, 14
+    for c in "BCDE":
+        tx.column_dimensions[c].width = 16
     lg = wb.create_sheet("Legenda")
     for k, (rot, _c, cor) in SIT_REM.items():
         lg.append([rot])
@@ -2033,7 +2090,10 @@ def planilha_remicao_xlsx(modelos, caminho, nome_base):
     for t in ("Atestado: dias exatos do documento. \"≈\" = estimativa do programa (trabalho sem atestado: dias seg.-sáb., sem feriados, ÷ 3; estudo: 12 h = 1 dia).",
               "\"A conferir\": vínculo ou matrícula sem baixa na ficha e com registro posterior que indica que terminou - não entra no total.",
               "\"Emitido, sem peticionamento na ficha\": a ficha registra só a emissão; a juntada se confere nos autos.",
-              "Amostra 10%: assistidos sorteados entre os que têm pendência (sorteio fixo), para conferência nos autos."):
+              "Amostra 10%: assistidos sorteados entre os que têm pendência (sorteio fixo), para conferência nos autos. Preencha S/N, Resultado e, quando "
+              "não confere, o Motivo (listas de seleção); a aba \"Taxa de acerto\" calcula sozinha o acerto por situação e conta os motivos.",
+              "A amostra mede se o que a ferramenta aponta está certo (precisão); não mede o que ela deixa de fora.",
+              "Atestado juntado no SEEU e não lançado na ficha não é visto pelo programa: lance-o em \"+ Adicionar atestado\" na aba Ficha e gere de novo."):
         lg.append([t])
     lg.column_dimensions["A"].width = 140
     wb.save(caminho)

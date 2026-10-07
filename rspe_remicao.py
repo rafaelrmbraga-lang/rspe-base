@@ -344,6 +344,11 @@ def _atp(u, d, e):
             "lote": any(s["inferido"] for s in segs), "origem": "ficha", "texto": e.get("texto", ""), "tipo_doc": "ATP"}
 
 
+def _procs_r(r):
+    """Números da execução e das ações penais do RSPE (para saber se o atestado foi peticionado nestes autos)."""
+    return [r.get("processo_execucao")] + [c.get("processo_criminal") for c in r.get("_crimes") or []]
+
+
 def atestados(eventos):
     """Atestados de trabalho da ficha, um por documento, com os segmentos (setor, período, trabalhados, remidos)."""
     out = []
@@ -405,6 +410,8 @@ def atestados(eventos):
     for a in out:
         u = _sa(a["texto"])
         a["peticionado"] = _f(a["emissao"]) if re.search(r"PETICION|PROTOCOLAD|ENVIAD\w* (?:VIA|AO|PARA|NO)|JUNTAD", u) else ""
+        ma = re.search(r"\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}", u)
+        a["autos"] = ma.group(0) if ma else ""
     for e in eventos:
         u = re.sub(r"\s+", " ", _sa(e.get("texto")))
         if not re.search(r"PETICION|PROTOCOLAD", u):
@@ -461,7 +468,9 @@ def atestados_manuais(manuais):
             segs = [{"setor_txt": "", "chave": None, "setor": "", "ini": None, "fim": None, "trab": None, "rem": None, "inferido": True}]
         num = (d.get("numero") or "").strip()
         out.append({"id": "man:%s" % m_.get("id"), "numero": num, "emissao": emi, "segs": segs, "trab": trab, "rem": rem,
-                    "lote": any(s["inferido"] for s in segs), "origem": "operador", "texto": d.get("descricao") or ""})
+                    "lote": any(s["inferido"] for s in segs), "origem": "operador", "texto": "Informado pela equipe: " + (d.get("descricao") or ""),
+                    # lançado pela equipe a partir dos autos: está juntado (peticionado), mesmo sem registro na ficha
+                    "peticionado": "nos autos (informado pela equipe)", "autos": ""})
     return out
 
 
@@ -812,7 +821,9 @@ def conciliar(r, f, hoje=None, manuais=None, ini_exec=None, excluir_remicoes=Non
                        "trab": a["trab"], "rem": _fmtn(a["rem"]) if a["rem"] is not None else "—",
                        "rspe": rs.pl(int(x["dias"]), "dia", "dias") if x else "—", "decisao": _f(x["decisao"]) if x else "—", "ref": _f(x["ref"]) if x else "—",
                        "status": a["status"], "rot": rot[a["status"]][0], "cor": rot[a["status"]][1], "nota": nota,
-                       "peticionado": a.get("peticionado", ""), "texto": a.get("texto", ""),
+                       "peticionado": a.get("peticionado", ""), "texto": a.get("texto", ""), "autos": a.get("autos", ""),
+                       "autos_outros": bool(a.get("autos")) and not any(re.sub(r"\D", "", a["autos"]) == re.sub(r"\D", "", x or "")
+                                                                         for x in _procs_r(r)),
                        "chave": "fd:at:%s:%s" % (a["numero"] or "s/n", _f(a["emissao"]).replace("/", "."))})
     alertas.sort(key=lambda x: x["data"] or date.min)
     return {"tabela": tabela, "pendencias": pend, "alertas": alertas, "vinculos": vinc, "atestados": ats, "remicoes": rems,
