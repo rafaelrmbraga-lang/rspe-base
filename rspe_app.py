@@ -1264,6 +1264,8 @@ class Api:
             import zlib
             Api._auto = {"cab": {}, "itens": []}
             c = recurso("teses_auto.bin")
+            if not os.path.isfile(c) and os.path.isfile(os.path.join(pasta_app(), "teses_auto.bin")):
+                c = os.path.join(pasta_app(), "teses_auto.bin")  # cópia ao lado do .exe
             try:
                 with open(c, "rb") as f:
                     b = f.read()
@@ -1340,7 +1342,8 @@ class Api:
             if m and re.match(r"\d{2}/\d{2}/\d{4}$", i.get("pub") or ""):
                 i["link"] = "https://processo.stj.jus.br/processo/monocraticas/decisoes/?num_registro=%s&dt_publicacao=%s" % (m.group(1), i["pub"])
         if not A.get("itens"):
-            return d
+            return dict(d, aviso="Arquivo teses_auto.bin não encontrado junto do programa: aparecem só as decisões curadas. Gere o .exe com o "
+                                 "build atual (que inclui o arquivo) ou copie teses_auto.bin para a pasta do APTO.exe.")
         ja = {((i.get("tribunal") or "TJMS"), re.sub(r"\D", "", i.get("proc") or "")) for i in d["itens"]}
         novos = [i for i in A["itens"] if (i["tribunal"], re.sub(r"\D", "", i["proc"])) not in ja]
         threading.Thread(target=self._teses_indice, daemon=True).start()  # índice da busca no texto integral, em segundo plano
