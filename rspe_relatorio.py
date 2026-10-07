@@ -105,6 +105,14 @@ def _estilos():
     }
 
 
+def _selo(canvas, x, y, lado):
+    """Selo do APTO no cabeçalho dos PDFs (apto_selo.png, junto do programa ou do .exe)."""
+    import sys
+    p = os.path.join(getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__))), "apto_selo.png")
+    if os.path.exists(p):
+        canvas.drawImage(p, x, y, lado, lado, mask="auto")
+
+
 def _moldura(titulo, nome_base, rodape=AVISO, pagina=None):
     from reportlab.lib import colors
     from reportlab.lib.pagesizes import A4
@@ -117,19 +125,13 @@ def _moldura(titulo, nome_base, rodape=AVISO, pagina=None):
 
     def desenhar(canvas, doc):
         canvas.saveState()
-        canvas.setFillColor(C(PRI))
-        canvas.roundRect(ML, H - 13 * mm, 7 * mm, 7 * mm, 1.8 * mm, stroke=0, fill=1)
-        canvas.setStrokeColor(colors.white)
-        canvas.setLineWidth(1.1)
-        for i, w in enumerate((3.6, 3.6, 2.4)):
-            y = H - 8.2 * mm - i * 1.6 * mm
-            canvas.line(ML + 1.7 * mm, y, ML + 1.7 * mm + w * mm, y)
+        _selo(canvas, ML, H - 14.2 * mm, 9.2 * mm)
         canvas.setFillColor(C(NAVY))
         canvas.setFont(f["b"], 10.5)
-        canvas.drawString(ML + 9.5 * mm, H - 11 * mm, "APTO")
+        canvas.drawString(ML + 11.5 * mm, H - 11 * mm, "APTO")
         canvas.setFont(f["n"], 8.2)
         canvas.setFillColor(C(TX2))
-        canvas.drawString(ML + 9.5 * mm + canvas.stringWidth("APTO", f["b"], 10.5) + 3 * mm, H - 11 * mm, "· " + titulo)
+        canvas.drawString(ML + 11.5 * mm + canvas.stringWidth("APTO", f["b"], 10.5) + 3 * mm, H - 11 * mm, "· " + titulo)
         canvas.drawRightString(W - ML, H - 11 * mm, "%s · emitido em %s" % (nome_base, gerado))
         canvas.setStrokeColor(C(LINE))
         canvas.setLineWidth(0.6)

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-APTO - Auditoria de Prazos e Tempo de cumprimento Organizada (SEEU)
+APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada (SEEU)
 =================
 Janela nativa (pywebview) com interface em HTML (ui.html). A leitura dos PDFs
 está em rspe_scraper.py, os campos exibidos em rspe_view.py e as exportações
