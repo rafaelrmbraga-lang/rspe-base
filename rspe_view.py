@@ -786,8 +786,21 @@ def chave_item(it):
     """Chave da baixa: tipo do ponto + crime/ano/falta (estável quando o título muda por números ou agrupamento).
     Item sem tipo (ficha disciplinar) usa o título, como antes."""
     if it.get("tipo"):
-        return "t:" + hashlib.sha1(("%s|%s" % (it["tipo"], it.get("ref") or "")).encode("utf-8")).hexdigest()[:12]
+        ref = it.get("ref") or ""
+        if not ref and it["tipo"] in TIPOS_REF_TITULO:
+            ref = _ref_titulo(it["titulo"])
+        return "t:" + hashlib.sha1(("%s|%s" % (it["tipo"], ref)).encode("utf-8")).hexdigest()[:12]
     return hashlib.sha1(it["titulo"].encode("utf-8")).hexdigest()[:12]
+
+
+# tipos com vários pontos distintos por assistido e sem ref própria (confronto RSPE x ficha: fuga, prisão, regime, processos):
+# a chave leva o título, só com as datas (sem contagens de dias, que mudam), para a baixa de um não esconder os outros
+TIPOS_REF_TITULO = ("rspe-x-ficha",)
+
+
+def _ref_titulo(titulo):
+    t = titulo.replace(" (execução extinta: sem efeito)", "")
+    return re.sub(r"(?<![\d/])\d+(?![\d/])", "#", t)
 
 
 def baixa_de(it, baixas):
@@ -798,6 +811,12 @@ def baixa_de(it, baixas):
     antiga = hashlib.sha1(it["titulo"].encode("utf-8")).hexdigest()[:12]
     if antiga != chave_item(it) and antiga in baixas:
         return baixas[antiga], antiga
+    if it.get("tipo") in TIPOS_REF_TITULO and not it.get("ref"):
+        # até a 7.4.0 a chave era só o tipo (uma para todos os pontos do assistido): vale para o ponto cujo título foi baixado
+        antiga = "t:" + hashlib.sha1(("%s|" % it["tipo"]).encode("utf-8")).hexdigest()[:12]
+        b = baixas.get(antiga)
+        if b and _ref_titulo(b.get("titulo") or "") == _ref_titulo(it["titulo"]):
+            return b, antiga
     return None, ""
 
 

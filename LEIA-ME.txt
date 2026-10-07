@@ -570,6 +570,32 @@ v7.4.0
   - Nome: o programa passa a se chamar APTO (Auditoria de Prazos e Tempo de
     Cumprimento Organizada). O executável é APTO.exe; bases, modelos e
     configurações continuam na mesma pasta e abrem sem reimportar.
+  - Correções da conferência dos relatórios da base 08.10 (as fichas já
+    importadas são relidas sozinhas ao abrir a base):
+    . datas da ficha no formato dd.mm.aaaa passam a ser lidas em todo o
+      programa. Antes, as faltas graves da ficha sem registro no SEEU não
+      entravam como "falta a apurar" (só as fugas entravam), e o relatório
+      geral mostrava "0 faltas sem julgamento há mais de 60 dias";
+    . falta registrada com "RESPONDE PROCESSO - PADIC", "RESPONDE CD
+      SIMPLIFICADA" ou "RESPONDE /unidade" conta como PADIC instaurado;
+      ciência do resultado registrada como lançamento próprio (fichas
+      antigas: "foi sancionado", "condenado no procedimento", "foi concluído
+      o PADIC") é o julgamento da falta, não falta nova; "retorna ao
+      comportamento BOM" e avisos da escola não são falta;
+    . relatório geral: as faltas graves e fugas da ficha sem registro no SEEU
+      saem em número próprio ("a apurar"), fora do quadro de faltas do RSPE;
+      "PADICs em trâmite" passa a "faltas com PADIC instaurado, sem resultado
+      lançado na ficha";
+    . Auditoria: a baixa de um alerta do confronto RSPE x ficha (fuga, prisão,
+      regime, processos) não esconde mais os outros alertas do mesmo tipo do
+      assistido; a baixa antiga continua valendo para o alerta baixado;
+    . remição: "1.359 dias trabalhados" (milhar com ponto) e "TEMPO DE
+      REMIÇÃO: 50 DIAS" eram lidos como 359 e 5; atestado com remidos acima
+      de 1/3 dos dias trabalhados (erro de digitação da ficha) usa 1/3 na
+      conta e gera alerta;
+    . dias a remir arredondados (não truncados) e com a soma exata: total,
+      quadro por origem e quadro por unidade (agora com linha de total)
+      fecham entre si.
   - Marca: selo institucional com a ampulheta-A. Selo cheio (verde) no ícone
     do APTO.exe e no cabeçalho do programa; selo clássico na tela inicial e no
     cabeçalho dos relatórios em PDF (arquivo apto_selo.png, embutido no .exe).

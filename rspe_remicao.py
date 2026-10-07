@@ -65,9 +65,16 @@ def _f(d):
 
 def _num(t):
     try:
-        return float(str(t).replace(".", "").replace(",", ".")) if re.search(r",\d", str(t)) else float(str(t))
+        s = str(t).strip(" .,")
+        if re.search(r",\d", s) or re.fullmatch(r"\d{1,3}(?:\.\d{3})+", s):
+            return float(s.replace(".", "").replace(",", "."))  # "140,33" ou "1.359" (milhar)
+        return float(s)
     except ValueError:
         return 0.0
+
+
+# dias trabalhados com milhar ("1.359 DIAS TRABALHADOS")
+NDIAS = r"(\d{1,3}(?:\.\d{3})+|\d+)"
 
 
 def _fmtn(v):
@@ -347,9 +354,9 @@ def vinculos(eventos, hoje):
 RE_AT = re.compile(r"ATESTADO(?:\s+DE\s+TRABALHO)?(?:\s+PRISIONAL)?\s*(?:N\s*[.ºO°]?|Nº|N°|NO\.?)?\s*[.:]?\s*(\d{1,4})(?:\s*/\s*(\d{4}|[A-Z]{2,8}))?")
 # trecho do atestado: "função X (d a d) [totalizando|sendo] N dia(s) trabalhado(s) e R (dias) remidos"; o segundo trecho pode vir
 # sem o nome da função ("; (d a d) N dias ...") - herda o setor do anterior
-RE_SEG = re.compile(r"([^,;()]{0,60}?)\s*\(\s*" + DT + SEPD + DT + r"\s*\)\s*,?\s*(?:TOTALIZANDO\s*|SENDO\s*)?(\d+)\s*DIAS?\s*TRABALHAD[OA]S?\s*E\s*([\d.,]+)\s*(?:DIAS?\s*)?REMID[OA]S?")
-RE_TOT = [re.compile(r"(\d+)\s*DIAS?\s*TRABALHAD[OA]S?\s*E\s*([\d.,]+)\s*(?:DIAS?\s*)?(?:DE\s+)?REMI"),
-          re.compile(r"(\d+)\s*DIAS DE TRABALHO\s*E\s*([\d.,]+)\s*DIAS DE (?:TEMPO DE )?REMICAO")]
+RE_SEG = re.compile(r"([^,;()]{0,60}?)\s*\(\s*" + DT + SEPD + DT + r"\s*\)\s*,?\s*(?:TOTALIZANDO\s*|SENDO\s*)?" + NDIAS + r"\s*DIAS?\s*TRABALHAD[OA]S?\s*E\s*([\d.,]+)\s*(?:DIAS?\s*)?REMID[OA]S?")
+RE_TOT = [re.compile(NDIAS + r"\s*DIAS?\s*TRABALHAD[OA]S?\s*E\s*([\d.,]+)\s*(?:DIAS?\s*)?(?:DE\s+)?REMI"),
+          re.compile(NDIAS + r"\s*DIAS DE TRABALHO\s*E\s*([\d.,]+)\s*DIAS DE (?:TEMPO DE )?REMICAO")]
 RE_SO_REM = re.compile(r"(?:COM\s*)?([\d.,]+)\s*DIAS\s*DE\s*REMICAO")
 
 
@@ -363,8 +370,8 @@ def _atp(u, d, e):
     """ATP (atestado de trabalho prisional) do SIAPEN: "EMITIDO ATP Nº 105/2023; SETOR; DATA INICIAL: d; DATA FINAL: d; [SETOR:
     DATA INICIAL ...]; TEMPO DE TRABALHO COMPUTADO NO PERÍODO: N DIAS TRABALHADOS; TEMPO DE REMIÇÃO: R DIAS REMIDOS"."""
     mn = re.search(r"\bATP\s*N\S*\s*(\d{1,4})\s*/\s*(\d{2,4})", u)
-    mt = re.search(r"TEMPO DE TRABALHO[^:]*:\s*(\d+)\s*DIAS", u) or re.search(r"(\d+)\s*DIAS?\s*TRABALHAD", u)
-    mr = re.search(r"TEMPO DE REMICAO[^:]*:\s*([\d.,]+?)0?\s*DIAS", u) or re.search(r"([\d.,]+)\s*(?:DIAS?\s*)?REMIDOS", u)
+    mt = re.search(r"TEMPO DE TRABALHO[^:]*:\s*" + NDIAS + r"\s*DIAS", u) or re.search(NDIAS + r"\s*DIAS?\s*TRABALHAD", u)
+    mr = re.search(r"TEMPO DE REMICAO[^:]*:\s*([\d.,]+)\s*DIAS", u) or re.search(r"([\d.,]+)\s*(?:DIAS?\s*)?REMIDOS", u)
     if not mr:
         return None
     segs = []
@@ -378,7 +385,7 @@ def _atp(u, d, e):
         mp = re.search(r"PERIODO\s*(?:DE\s*)?" + DT + SEPD + DT, u)  # "referente ao período de d a d"
         if mp:
             segs.append({"setor_txt": "", "ini": _dt(mp.group(1)), "fim": _dt(mp.group(2)), "trab": None, "rem": None, "inferido": False})
-    trab = int(mt.group(1)) if mt else None
+    trab = int(_num(mt.group(1))) if mt else None
     rem = _num(mr.group(1))
     if len(segs) == 1:
         segs[0].update(trab=trab, rem=rem)
@@ -424,14 +431,14 @@ def atestados(eventos):
             nome = _limpa_setor(re.sub(r"^.*?(?:NO SISTEMA SEEU|AUTOS N?[ºO°]?\s*[\d.-]+)\s*,?", "", m.group(1)))
             if not nome and segs:
                 nome = segs[-1]["setor_txt"]
-            segs.append({"setor_txt": nome, "ini": _dt(m.group(2)), "fim": _dt(m.group(3)), "trab": int(m.group(4)), "rem": _num(m.group(5)), "inferido": False})
+            segs.append({"setor_txt": nome, "ini": _dt(m.group(2)), "fim": _dt(m.group(3)), "trab": int(_num(m.group(4))), "rem": _num(m.group(5)), "inferido": False})
         trab = rem = None
         if segs:
             trab, rem = sum(s["trab"] for s in segs), round(sum(s["rem"] for s in segs), 2)
         else:
             mt = next((x for x in (p.search(u) for p in RE_TOT) if x), None)
             if mt:
-                trab, rem = int(mt.group(1)), _num(mt.group(2))
+                trab, rem = int(_num(mt.group(1))), _num(mt.group(2))
             else:
                 ms = RE_SO_REM.search(u)
                 if not ms:
@@ -615,9 +622,17 @@ def conciliar(r, f, hoje=None, manuais=None, ini_exec=None, excluir_remicoes=Non
         fs = [s["fim"] for s in a["segs"] if s["fim"]]
         if fs:
             fim_ant = max(fs + ([fim_ant] if fim_ant else []))
+        for s in a["segs"]:
+            if s.get("trab") and s.get("rem") is not None and s["rem"] > s["trab"] / 3.0 + 1:
+                s["rem_ficha"], s["rem"] = s["rem"], round(s["trab"] / 3.0, 2)
         if a["trab"] and a["rem"] is not None and abs(a["trab"] / 3.0 - a["rem"]) > 1:
-            alerta("proporção", "Atestado %s: %s trabalhados dariam %s remidos (1 a cada 3), consta %s." % (
-                a["numero"] or "s/n", a["trab"], _fmtn(a["trab"] / 3.0), _fmtn(a["rem"])), a["emissao"])
+            maior = a["rem"] > a["trab"] / 3.0 + 1
+            alerta("proporção", "Atestado %s: %s trabalhados dariam %s remidos (1 a cada 3), consta %s%s." % (
+                a["numero"] or "s/n", a["trab"], _fmtn(a["trab"] / 3.0), _fmtn(a["rem"]),
+                " - a conta usa 1/3 dos dias trabalhados (LEP, art. 126, § 1º, II): conferir o atestado" if maior else ""), a["emissao"])
+            if maior:
+                # remidos acima de 1/3 dos dias trabalhados: erro de digitação da ficha ("171 trabalhados e 171 remidos")
+                a["rem_ficha"], a["rem"] = a["rem"], round(a["trab"] / 3.0, 2)
 
     # ---- Etapa 3: casamento atestado x remição ----
     def livre(x):

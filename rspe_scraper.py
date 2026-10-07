@@ -114,7 +114,8 @@ def pl(n, um, varios):
     return "%s %s" % (num_txt(n), um if n == 1 else varios)
 
 
-_RE_DATA_BR = re.compile(r"^(\d{1,2})/(\d{1,2})/(\d{4})$")
+# dd/mm/aaaa (SEEU) ou dd.mm.aaaa (ficha do SIAPEN), com o mesmo separador nas duas posições
+_RE_DATA_BR = re.compile(r"^(\d{1,2})([/.])(\d{1,2})\2(\d{4})$")
 
 
 def to_date(s):
@@ -122,7 +123,7 @@ def to_date(s):
     try:
         m = _RE_DATA_BR.match(s.strip())
         # ano fora de 1900-2100: lixo de leitura (01/01/0001, 99/99/9999) - ignorado, para não estourar as contas de datas
-        return date(int(m.group(3)), int(m.group(2)), int(m.group(1))) if (m and 1900 <= int(m.group(3)) <= 2100) else None
+        return date(int(m.group(4)), int(m.group(3)), int(m.group(1))) if (m and 1900 <= int(m.group(4)) <= 2100) else None
     except Exception:
         return None
 

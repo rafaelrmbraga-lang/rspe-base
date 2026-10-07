@@ -181,6 +181,17 @@ def _estudos(eventos):
     return out
 
 
+# registro que é o julgamento de uma falta (fichas até ~2021): "foi sancionado", "CONDENADO por unanimidade no Procedimento",
+# "foi concluído o PADIC ... pelo cometimento de falta grave", "ciência do resultado", "conclusão: praticou falta grave", regressão
+_RE_RESULTADO = (r"SANCIONAD|\bCONDENADO POR\b|FOI CONCLUIDO O PADIC|CONCLUSAO:\s*PRATICOU|CIENTE DO RESULTADO|CIENCIA DO RESULTADO|"
+                 r"CIENCIA DA DECISAO/CONCLUSAO|^REGRESSAO DE REGIME")
+# data do fato no registro do resultado
+_RE_FATO_RES = (r"(?:NA DATA DE|DATA DOS FATOS,? EM|FATO OCORRIDO (?:NO DIA|EM)|DO FATO OCORRIDO NO DIA|A CONTAR DA DATA DE|A CONTAR DE)\s*"
+                r"(\d{2}/\d{2}/\d{4})")
+# não é falta: retorno da conduta depois de cumprida a sanção; aviso do setor de educação
+_RE_NAO_FALTA = r"RETORNA (?:AO COMPORTAMENTO|O PARECER|SUA CONDUTA)|^EDUCACAO:"
+
+
 def extrair(caminho):
     with pdfplumber.open(caminho) as pdf:
         pags = [p.extract_text() or "" for p in pdf.pages]
@@ -228,7 +239,7 @@ def extrair(caminho):
 
 
 # versão das regras de leitura dos eventos: a ficha guardada na base com versão anterior é relida a partir dos eventos ao abrir
-VERSAO_LEITURA = 3
+VERSAO_LEITURA = 5
 
 
 def _limpar_evento(txt):
@@ -316,18 +327,18 @@ def derivar(f, eventos):
         # números por extenso entre parênteses ("157 (CENTO E CINQUENTA E SETE) DIAS") atrapalham a leitura
         u = re.sub(r"\(\s*[A-ZÁÉÍÓÚÂÊÔÃÕÇ ]+\s*\)", " ", u)
         u = re.sub(r"\s+", " ", u)
-        m = (re.search(r"(\d+)\s*DIAS TRABALHADOS\s*E\s*([\d.,]+)\s*(?:DIAS\s*)?REMIDOS", u)
-             or re.search(r"(\d+)\s*DIAS DE TRABALHO\s*E\s*([\d.,]+)\s*DIAS DE (?:TEMPO DE )?REMI[ÇC][ÃA]O", u))
+        m = (re.search(r"(\d{1,3}(?:\.\d{3})+|\d+)\s*DIAS TRABALHADOS\s*E\s*([\d.,]+)\s*(?:DIAS\s*)?REMIDOS", u)
+             or re.search(r"(\d{1,3}(?:\.\d{3})+|\d+)\s*DIAS DE TRABALHO\s*E\s*([\d.,]+)\s*DIAS DE (?:TEMPO DE )?REMI[ÇC][ÃA]O", u))
         if not m:
             continue
         # um atestado com várias funções, cada uma com período e totais próprios: "FUNÇÃO X (dd/mm/aaaa A dd/mm/aaaa) TOTALIZANDO
         # N DIAS TRABALHADOS E R DIAS REMIDOS; FUNÇÃO Y (...)" - vira uma entrada por função (casa com cada emprego da ficha)
         funcs = list(re.finditer(r"FUN[ÇC][ÃA]O\s+([^(;]+?)\s*\(\s*(\d{2}/\d{2}/\d{2,4})\s*(?:A|À|ATÉ|-)\s*(\d{2}/\d{2}/\d{2,4})\s*\)\s*,?\s*"
-                                 r"(?:TOTALIZANDO\s*)?(\d+)\s*DIAS TRABALHADOS\s*E\s*([\d.,]+)\s*(?:DIAS\s*)?REMIDOS", u))
+                                 r"(?:TOTALIZANDO\s*)?(\d{1,3}(?:\.\d{3})+|\d+)\s*DIAS TRABALHADOS\s*E\s*([\d.,]+)\s*(?:DIAS\s*)?REMIDOS", u))
         if len(funcs) > 1:
             nn = re.search(r"ATESTADO DE TRABALHO(?:\s+PRISIONAL)?\W{0,3}\s*N\s*[.ºO°]*\s*([\w./-]+?)[,.;]?(?:\s|$)", u)
             for fm in funcs:
-                atest.append({"data": e["data"], "numero": nn.group(1) if nn else "", "dias_trabalhados": int(fm.group(4)),
+                atest.append({"data": e["data"], "numero": nn.group(1) if nn else "", "dias_trabalhados": int(fm.group(4).replace(".", "")),
                               "dias_remidos": _num(fm.group(5)), "periodo_inicio": fm.group(2), "periodo_fim": fm.group(3),
                               "empresa": fm.group(1).strip(" ,-"), "autos": (re.search(r"AUTOS N?[ºO°]?\s*([\d.-]+)", u) or [None, ""])[1],
                               "trechos": [], "parte": "%d de %d" % (funcs.index(fm) + 1, len(funcs))})
@@ -353,7 +364,7 @@ def derivar(f, eventos):
             pf = max(trechos, key=lambda t: _d(t["fim"]) or date.min)["fim"]
         atest.append({
             "data": e["data"], "numero": n.group(1) if n else "",
-            "dias_trabalhados": int(m.group(1)), "dias_remidos": _num(m.group(2)),
+            "dias_trabalhados": int(m.group(1).replace(".", "")), "dias_remidos": _num(m.group(2)),
             "periodo_inicio": pi, "periodo_fim": pf,
             "empresa": emp.group(1).strip(" ,-") if emp else "",
             "autos": (re.search(r"AUTOS N[ºO°]?\s*([\d.-]+)", u) or [None, ""])[1],
@@ -406,6 +417,28 @@ def derivar(f, eventos):
         if "CONSELHO DISCIPLINAR" not in u and "FALTA DISCIPLINAR" not in u and "FALTA GRAVE" not in u:
             continue
         if re.search(r"REGISTRO DE FALTA|LAN[ÇC]AMENTO DE FALTA|FALTA GRAVE", u) and "ARQUIV" not in u and "INSTAURA" not in u and "ISOLADO" not in u:
+            us = rs._sem_acento(u)
+            if re.search(_RE_NAO_FALTA, us):
+                continue  # volta da conduta após a sanção, aviso da escola: não é falta nova
+            if re.search(_RE_RESULTADO, us) and (re.search(r"CONSELHO DISCIPLINAR|APLICACAO DE SANCAO", us) or re.search(r"ABSOLVID|EXTINT", us)):
+                continue  # resultado no formato do Conselho Disciplinar ou absolvição/extinção: tratado com os andamentos do PADIC, abaixo
+            if re.search(_RE_RESULTADO, us):
+                # ficha antiga: a ciência do resultado (sanção, condenação no PADIC, regressão) vem como registro próprio - é o
+                # julgamento de uma falta, não outra falta; casa com a falta do mesmo fato ou vira a falta já julgada
+                mf = re.search(_RE_FATO_RES, us)
+                dfr = mf.group(1) if mf else e["data"]
+                alvo = next((x for x in faltas if x["data_fato"].replace(".", "/") == dfr.replace(".", "/")), None)
+                art = re.search(r"ART\.?\s*(50|52)\b", us)
+                if alvo is None:
+                    alvo = {"data_registro": e["data"], "data_fato": dfr, "artigo": ("art. %s da LEP" % art.group(1)) if art else "",
+                            "grave": bool(art) or "FALTA GRAVE" in us, "texto": e["texto"], "padic": "", "resultado": ""}
+                    faltas.append(alvo)
+                elif e["texto"] not in alvo["texto"]:
+                    alvo["texto"] += " | " + e["texto"]
+                alvo["grave"] = alvo["grave"] or "FALTA GRAVE" in us
+                alvo["resultado"], alvo["data_resultado"], alvo["resultado_tipo"] = e["texto"], e["data"], "sancionado"
+                alvo["situacao"] = "homologada/punida"
+                continue
             art = re.search(r"INFRING\w*\s*(?:EM TESE)?\s*O?\s*ART\.?\s*(\d+)[, ]*\s*(?:INCISO|INC\.?)?\s*([IVXL]+)?", u) or re.search(r"ART\.?\s*(\d+)[, ]*\s*(?:INCISO|INC\.?)?\s*([IVXL]+)?", u)
             cometida = re.search(r"COMETIDA EM\s*(\d{2}/\d{2}/\d{4})", u)
             dfato = cometida.group(1) if cometida else e["data"]
@@ -419,7 +452,9 @@ def derivar(f, eventos):
             faltas.append({"data_registro": e["data"], "data_fato": dfato,
                            "artigo": ("art. %s%s da LEP" % (art.group(1), (", " + art.group(2)) if art.group(2) else "")) if art else "",
                            "grave": bool(art and art.group(1) in ("50", "52")) or "FALTA GRAVE" in u,
-                           "texto": e["texto"], "situacao": "registrada", "padic": "", "resultado": ""})
+                           "texto": e["texto"], "padic": "", "resultado": "",
+                           # "RESPONDE PROCESSO - PADIC/...", "RESPONDE CD SIMPLIFICADA/..." ou "RESPONDE /PDIB": o registro já abre o processo
+                           "situacao": "PADIC instaurado" if re.search(r"RESPONDE\s*(?:PROCESSO|CD SIMPLIFICADA|/)", u) else "registrada"})
     # andamento e resultado do PADIC / CD simplificada: casados com a falta pela data do fato ("referente ao fato ocorrido em",
     # "cometida em"), pelo número do PADIC ou, na instauração sem data, pela falta registrada mais próxima; vale o último resultado
     def _nd(x):
@@ -441,7 +476,8 @@ def derivar(f, eventos):
         if alvo is None and npad:
             alvo = next((x for x in faltas if x.get("padic_num") == npad), None)
         if alvo is None and faltas and re.match(r"CONSELHO DISCIPLINAR:\s*INSTAURACAO", u):
-            cand = [x for x in faltas if x["situacao"] == "registrada" and _dp(x["data_registro"]) and _dp(e["data"])
+            cand = [x for x in faltas if (x["situacao"] == "registrada" or (x["situacao"] == "PADIC instaurado" and not x["padic"]))
+                    and _dp(x["data_registro"]) and _dp(e["data"])
                     and 0 <= (_dp(e["data"]) - _dp(x["data_registro"])).days <= 120]
             alvo = cand[-1] if cand else None
         if not alvo:

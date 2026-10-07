@@ -2,7 +2,7 @@
 import subprocess
 import sys
 
-TESTES = ["teste_remicao.py", "teste_indulto_transito.py", "teste_auditoria_calculo.py"]
+TESTES = ["teste_remicao.py", "teste_indulto_transito.py", "teste_auditoria_calculo.py", "teste_leitura_ficha.py"]
 falhas = [t for t in TESTES if subprocess.call([sys.executable, t]) != 0]
 if falhas:
     print("FALHOU: " + ", ".join(falhas))
