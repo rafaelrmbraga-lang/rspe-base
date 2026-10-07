@@ -2152,7 +2152,9 @@ def analisar(r, hoje=None):
             L["retro_status"] = "Prescrição da pretensão punitiva aparente (%s)" % pior
             L["retro_cor"] = "vermelho"
             if juri and pior == "denúncia → sentença":
-                L["retro_status"] += " - conferir pronúncia"
+                # júri: a pronúncia e o acórdão que a confirma interrompem o prazo e não constam do RSPE - a verificar
+                L["retro_status"] = "A VERIFICAR: prescrição da pretensão punitiva aparente (%s) - conferir a pronúncia" % pior
+                L["retro_cor"] = "amarelo"
                 det.append("⚠ A verificar: crime do júri - a pronúncia e a decisão que a confirma interrompem o prazo (CP, art. 117, II e III), ainda que o "
                            "júri desclassifique o crime (STJ, Súmula 191); as datas não constam do RSPE.")
         elif faltando and _limites_ok(fato, den, sent, tpr or tmp, rs.to_date(r.get("data_geracao_rspe") or "") or hoje, ppp_meses, det):
@@ -2359,8 +2361,12 @@ def analisar(r, hoje=None):
     ppe_ver = [l for l in linhas if (l.get("ppe_status") or "").startswith("A VERIFICAR")]
     ppe_pos = [l for l in linhas if (l.get("ppe_status") or "").startswith("Prescrição possível")]
     ppe_amb = [l for l in linhas if l.get("ppe_cor") == "amarelo" and l not in ppe_ver and l not in ppe_pos]
+    retro_ver = [l for l in linhas if l.get("retro_cor") == "amarelo"]
     if retro:
         resumo_retro = "Aparente: " + "; ".join(l["rotulo"] for l in retro)
+    elif retro_ver:
+        # aparente pelas datas do RSPE, mas dependente de dado que ele não traz (pronúncia no júri, datas incoerentes, imprescritibilidade)
+        resumo_retro = "A verificar: " + "; ".join(l["rotulo"] for l in retro_ver)
     elif linhas and all(l.get("retro_cor") == "cinza" or (l.get("retro_status") or "").startswith("Verificar") for l in linhas):
         resumo_retro = "sem dados: verificar na ação penal"
     else:

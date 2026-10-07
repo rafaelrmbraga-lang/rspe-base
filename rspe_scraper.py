@@ -949,12 +949,17 @@ def hediondo_desde(c):
                 if not (fato and fato < d and n < len(chaves) - 1 and (k.count(" ") >= 2 or k in CAPITULACAO_ANTERIOR)):
                     return achado
             elif fato and d <= fato:
-                return d, v.get("lei", "") + " (na época do fato, capitulação anterior à de %s)" % achado[1].split(" (")[0]
+                return d, v.get("lei", "") + " (na época do fato, capitulação anterior à de %s%s)" % (
+                    achado[1].split(" (")[0], NOTA_CAPITULACAO.get("%s:%s" % (lei, art), ""))
     return achado or (None, "")
 
 
 # tipo autônomo que substituiu uma qualificadora já hedionda: para fato anterior à lei nova, vale a capitulação anterior
-CAPITULACAO_ANTERIOR = {"2848:121-A": ["2848:121 §2 VI", "2848:121 §2"]}
+CAPITULACAO_ANTERIOR = {"2848:121-A": ["2848:121 §2 VI", "2848:121 §2"],
+                        # estupro de vulnerável antes da Lei 12.015/2009: era o art. 213 ou 214 c/c 224 (violência presumida), hediondo
+                        "2848:217-A": ["2848:213", "2848:214"]}
+NOTA_CAPITULACAO = {"2848:217-A": "; estupro e atentado violento ao pudor anteriores à Lei 12.015/2009, ainda que na forma simples "
+                                  "e com violência presumida, são hediondos - STJ, Tema Repetitivo 581"}
 
 
 # tipo, qualificadora ou majorante criados por lei posterior ao Código: a capitulação com fato anterior à criação é

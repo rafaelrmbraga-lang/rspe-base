@@ -1596,14 +1596,14 @@ def relatorio_geral(modelos, caminho, nome_base, nominal=True):
     ret = Counter()
     for m in modelos:
         c_ = m.get("presc_retro_cor")
-        ret["Aparente" if c_ == "vermelho" else "Sem dados no RSPE" if c_ == "cinza" else "Não configurada"] += 1
-    cor_p = {"Aparente": "#e34948", "Iminente ou a verificar": "#eda100", "Não prescrita": "#1baf7a", "Não configurada": "#1baf7a"}
+        ret["Aparente" if c_ == "vermelho" else "A verificar" if c_ == "amarelo" else "Sem dados no RSPE" if c_ == "cinza" else "Não configurada"] += 1
+    cor_p = {"Aparente": "#e34948", "Iminente ou a verificar": "#eda100", "A verificar": "#eda100", "Não prescrita": "#1baf7a", "Não configurada": "#1baf7a"}
     demais = max(0, E["n"] - E["ext_cabivel"] - E["ext_verificar"] - E["ext_registrada"])
     W3 = W / 3.0 - 8
     trio = [_rosca("Pretensão executória", [("Aparente", pres.get("aparente", 0)), ("Iminente ou a verificar", pres.get("iminente / a verificar", 0)),
                                             ("Não prescrita", pres.get("não prescrita", 0)), ("Sem dados no RSPE", pres.get("sem dados", 0))],
                    W3, st, "assistidos", cores=cor_p, ordenar=False, abaixo=True),
-            _rosca("Pretensão punitiva", [("Aparente", ret.get("Aparente", 0)), ("Não configurada", ret.get("Não configurada", 0)),
+            _rosca("Pretensão punitiva", [("Aparente", ret.get("Aparente", 0)), ("A verificar", ret.get("A verificar", 0)), ("Não configurada", ret.get("Não configurada", 0)),
                                           ("Sem dados no RSPE", ret.get("Sem dados no RSPE", 0))], W3, st, "assistidos", cores=cor_p, ordenar=False, abaixo=True),
             _rosca("Extinção da pena", [("Extinção cabível", E["ext_cabivel"]), ("Até 60 dias ou a verificar", E["ext_verificar"]),
                                         ("Já extinta (RSPE)", E["ext_registrada"]), ("Em cumprimento ou sem previsão", demais)],
