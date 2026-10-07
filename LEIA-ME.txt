@@ -3,7 +3,7 @@ APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.4.0
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-6.16.49. A documentação técnica completa (cada parâmetro, a regra, a norma e
+7.4.0. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -101,7 +101,8 @@ ABAS (colunas)
                prova do livramento expirado sem revogação, detração que
                alcança toda a pena do crime. Prescrição e indulto ficam nas
                próprias abas. A multa cominada aparece na ficha do assistido
-               (extinção cabível se comprovada a impossibilidade de pagamento).
+               (o inadimplemento não obsta a extinção ante a alegada
+               hipossuficiência - STJ, Tema 931, tese revista).
   Ficha        Nome, Nº, Trabalho atual, Remidos ficha / RSPE, Trabalho a
   disciplinar  atestar (em períodos), Estudo a requerer, Situação. Clicar
                expande os blocos por atestado.
@@ -127,8 +128,8 @@ SITUAÇÃO NAS ABAS DE PRAZO
      no RSPE", "Pena interrompida", "Não iniciou") fica na ficha.
   Extinção: "Extinção cabível" (vermelho), "Término em N dias" (laranja até
   30, amarelo até 60, verde até 90), "Em cumprimento" (sem cor, acima de 90
-  dias), "Pena extinta (registrada)" (azul), "Não se aplica" (cinza: pena
-  interrompida ou sem previsão).
+  dias), "Pena extinta (registrada)" (azul), "Sem previsão / interrompida"
+  (cinza).
 
 FILTROS
   Seletor "Situação" ao lado dos botões (a aba Geral não tem):
@@ -145,7 +146,7 @@ FILTROS
      interrompida, sem previsão.
    - Ficha disciplinar: remição a requerer, conferir remição / sem atestado /
      estudo, em ordem, sem ficha.
-   - Auditoria: com alertas, pontos a verificar, sem inconsistências.
+   - Auditoria: com alertas, pontos a verificar, guia em ordem, extinta.
   Os cartões de resumo também filtram (pela cor). O número da execução é
   copiado com um clique (na tabela ou na ficha).
 
@@ -328,7 +329,8 @@ INDULTO E COMUTAÇÃO
   * Sem cumprimento em curso na data (não iniciou, interrompida), indulto e
     comutação "não se aplicam" (célula "Não atinge"), salvo o XV, que fica
     "a verificar".
-  * Art. 13 (comutação): 1/5 do remanescente (2/3 para o § 2º) para quem
+  * Art. 13 (comutação): 1/5 do remanescente, ou do cumprido quando este
+    for maior (§ 1º), (2/3 para o § 2º) para quem
     cumpriu a fração; "Prejudicada" quando o indulto do mesmo decreto é
     possível (§ 5º).
   * Decreto 11.302/2022 (referência 25/12/2022): art. 5º (crime com pena
@@ -511,8 +513,10 @@ BASE JURÍDICA (base_juridica.json)
 PRESUNÇÃO DE HIPOSSUFICIÊNCIA (Defensoria)
   No indulto, a multa é indultável e não é óbice (Decretos 12.338/2024 e
   12.790/2025, art. 12, § 2º, I: incapacidade presumida para o assistido da
-  Defensoria). Na extinção, a multa pendente só não obsta se comprovada a
-  impossibilidade de pagamento (STF ADI 7.032; STJ Tema 931): instruir o
+  Defensoria). Na extinção, o inadimplemento da multa não obsta ante a
+  alegada hipossuficiência, salvo decisão que indique concretamente a
+  possibilidade de pagamento (STJ, Tema 931, tese revista em 28/02/2024); há
+  julgados exigindo prova com base na ADI 7.032: por cautela, instruir o
   pedido. Reparação do dano dispensada no inciso XV do art. 9º; no
   livramento (CP, art. 83, IV), a impossibilidade deve ser demonstrada.
   Tráfico privilegiado não é hediondo nem impeditivo (STF, SV 63 e Tema
