@@ -336,7 +336,7 @@ def extrair(caminho):
 
 
 # versão das regras de leitura dos eventos: a ficha guardada na base com versão anterior é relida a partir dos eventos ao abrir
-VERSAO_LEITURA = 7
+VERSAO_LEITURA = 8
 
 
 def _limpar_evento(txt):
@@ -487,7 +487,7 @@ def derivar(f, eventos):
         memp = re.search(r"CICLO.*EMPRESTIMO DO LIVRO\D{0,5}(\d{2})/(\d{2})/(\d{4})", us)
         if memp:  # "Ciclo Outubro/ Novembro 2022 - Data do Empréstimo do Livro 07/10/2022": uma obra, no mês do empréstimo
             meses = ["%s/%s" % (memp.group(2), memp.group(3))]
-        for g in ([] if memp else re.finditer(r"((?:\d{1,2}\s*(?:,|\bE\b)\s*)*\d{1,2})\s*DE\s+(\d{4})", u)):  # "meses 02,03,04 e 05de 2026"
+        for g in ([] if memp else re.finditer(r"((?:\d{1,2}\s*(?:,|\bE\b|\bE(?=\d))\s*)*\d{1,2})\s*DE\s+(\d{4})", u)):  # "meses 02,03,04 e 05de 2026", "06 e07"
             meses += ["%02d/%s" % (int(x), g.group(2)) for x in re.findall(r"\d{1,2}", g.group(1)) if 1 <= int(x) <= 12]
         _M = r"(?:JANEIRO|FEVEREIRO|MARCO|ABRIL|MAIO|JUNHO|JULHO|AGOSTO|SETEMBRO|OUTUBRO|NOVEMBRO|DEZEMBRO)"
         if not meses:  # meses por extenso: "mês de novembro e dezembro de 2022 e março de 2023", "mês de Julho 2022", "Ciclo Outubro/ Novembro 2022"
@@ -1509,12 +1509,8 @@ HORAS_DIA_ESTUDO = 4  # estimativa: as certidões da EJA atestam 400 h em 100 di
 
 
 def _dias_uteis(a, b):
-    n, d = 0, a
-    while d <= b:
-        if d.weekday() < 5:
-            n += 1
-        d += timedelta(days=1)
-    return n
+    """Dias letivos estimados: segunda a sexta, sem os feriados (como na estimativa do trabalho)."""
+    return dias_trabalho(a, b, "seg-sex")
 
 
 def jornada_do_texto(txt):
@@ -1698,17 +1694,23 @@ def quadro_trabalho(r, f, hoje=None, manuais=None):
     linhas = []
     tl = linha_unidades(f)
     # relatório de leitura x remição do RSPE: 4 dias por mês/obra peticionado, concedidos depois da petição
-    lei_rem = {}
-    for x in sorted(f.get("leituras") or [], key=lambda x: _dp(x["data"]) or date.min):
-        d, n = _dp(x["data"]), len(x.get("meses") or []) or x.get("obras") or 0
-        if not (d and n):
-            continue
-        c = [i for i in incs if id(i) not in {id(v) for v in lei_rem.values()} and abs((i["dias"] or 0) - 4 * n) < 0.5
-             and (i["d"] or i["ref"]) and d <= (i["d"] or i["ref"]) <= d + timedelta(days=240)]
-        if c:
-            lei_rem[x["data"]] = min(c, key=lambda i: i["d"] or i["ref"])
+    lei_rem, lei_parc = {}, {}
+    for parcial in (False, True):
+        # 1ª passada: 4 dias por obra exatos; 2ª: remição menor, múltipla de 4 (obra não aprovada): casa e a diferença fica a conferir
+        for x in sorted(f.get("leituras") or [], key=lambda x: _dp(x["data"]) or date.min):
+            d, n = _dp(x["data"]), len(x.get("meses") or []) or x.get("obras") or 0
+            if not (d and n) or x["data"] in lei_rem:
+                continue
+            c = [i for i in incs if id(i) not in {id(v) for v in lei_rem.values()}
+                 and (0 < (i["dias"] or 0) < 4 * n and abs((i["dias"] or 0) / 4.0 - round((i["dias"] or 0) / 4.0)) < 0.01 if parcial
+                      else abs((i["dias"] or 0) - 4 * n) < 0.5)
+                 and (i["d"] or i["ref"]) and d <= (i["d"] or i["ref"]) <= d + timedelta(days=240)]
+            if c:
+                lei_rem[x["data"]] = min(c, key=lambda i: i["d"] or i["ref"])
+                if parcial:
+                    lei_parc[x["data"]] = 4 * n - int(round(lei_rem[x["data"]]["dias"]))
     # estudo (LEP, art. 126, § 1º, I: 1 dia a cada 12 h de frequência, divididas em no mínimo 3 dias)
-    pend_est, conf_est, est_duv = [], [], []
+    pend_est, conf_est, est_duv, est_curso = [], [], [], []
     ult_rem = max((max(i["d"] or date.min, i["ref"] or date.min) for i in incs), default=None)
     for e in ests:
         if e["_status"] == "anterior":
@@ -1738,6 +1740,11 @@ def quadro_trabalho(r, f, hoje=None, manuais=None):
                            and (o["_fim"] or hoje) >= (e["_fim"] or hoje) and not e["_declaradas"]), None)
             if dentro:
                 L["sit"], L["cor"] = "Já contada na matrícula de %s" % _br(dentro["inicio"]), "cinza"
+            elif not e["_fim"] and e["_ini"] and (hoje - e["_ini"]).days <= 90 and not e["_declaradas"]:
+                # matrícula aberta há até 90 dias: a certidão do período ainda não é devida (como o trabalho em curso), fora do total
+                L["sit"], L["cor"] = "Em curso há até 90 dias (≈ %s): acompanhar" % rs.pl(dias_e, "dia", "dias"), "verde"
+                L["sit_full"] = "Matrícula aberta em %s: a certidão de frequência do período ainda não costuma ter sido expedida." % _br(e["inicio"])
+                est_curso.append(dict(e, _em_curso=True))
             elif e["_status"] == "sem_remicao":
                 L["sit"], L["cor"] = "Requerer remição (≈ %s)" % rs.pl(dias_e, "dia", "dias"), "amarelo"
                 L["sit_full"] = "Nenhuma remição lançada no RSPE depois do início do estudo: requerer a certidão de frequência e a remição."
@@ -1748,6 +1755,13 @@ def quadro_trabalho(r, f, hoje=None, manuais=None):
                 if ult_rem and e["_ini"] and not e["_declaradas"] and fim_e2 > ult_rem:
                     ini2 = max(e["_ini"], ult_rem + timedelta(days=1))
                     h2 = _dias_uteis(ini2, fim_e2) * HORAS_DIA_ESTUDO
+                    if h2 >= 12 and not e["_fim"] and (fim_e2 - ini2).days <= 90:
+                        # matrícula ativa e só até 90 dias depois da última remição: a certidão desse trecho ainda não é devida
+                        est_curso.append(dict(e, _ini=ini2, _horas=h2, _em_curso=True))
+                        L["sit"], L["cor"] = ("Conferir homologação; após %s, em curso há até 90 dias (≈ %s)" % (rs.fmt(ult_rem), rs.pl(h2 // 12, "dia", "dias"))), "cinza"
+                        conf_est.append(e)
+                        linhas.append(L)
+                        continue
                     if h2 >= 12:
                         pend_est.append(dict(e, _ini=ini2, _horas=h2))
                         L["sit"], L["cor"] = ("Requerer remição após %s (≈ %s)" % (rs.fmt(ult_rem), rs.pl(h2 // 12, "dia", "dias"))), "amarelo"
@@ -1761,13 +1775,17 @@ def quadro_trabalho(r, f, hoje=None, manuais=None):
     # horas pendentes sem contar duas vezes os dias em que houve duas matrículas ao mesmo tempo
     dias_pend = set()
     horas_decl = 0
+    fer_e, anos_e = set(), set()
     for e in pend_est:
         if e["_declaradas"]:
             horas_decl += e["_horas"]
             continue
         d, fim_e = e["_ini"], e["_fim"] or hoje
         while d and d <= fim_e:
-            if d.weekday() < 5:
+            if d.year not in anos_e:
+                anos_e.add(d.year)
+                fer_e |= feriados(d.year)
+            if d.weekday() < 5 and d not in fer_e:
                 dias_pend.add(d)
             d += timedelta(days=1)
     horas_pend = horas_decl + len(dias_pend) * HORAS_DIA_ESTUDO
@@ -1796,11 +1814,12 @@ def quadro_trabalho(r, f, hoje=None, manuais=None):
             {"emp": "Leitura" + (" (%s)" % ", ".join(x["meses"]) if x["meses"] else ""), "un": unidade_periodo(tl, _dp(x["data"]), _dp(x["data"]))[0],
              "per": "relatórios peticionados em %s%s" % (_br(x["data"]), (" · %s · até %d dias (4 por obra)" % (
                  rs.pl(len(x["meses"]), "mês", "meses"), 4 * len(x["meses"]))) if x["meses"] else ""),
-             "sit": ("Remida no RSPE: %s em %s" % (rs.pl(round(lei_rem[x["data"]]["dias"]), "dia", "dias"), rs.fmt(lei_rem[x["data"]]["d"] or lei_rem[x["data"]]["ref"]))
+             "sit": ("Remida no RSPE: %s em %s%s" % (rs.pl(round(lei_rem[x["data"]]["dias"]), "dia", "dias"), rs.fmt(lei_rem[x["data"]]["d"] or lei_rem[x["data"]]["ref"]),
+                                                    (" · menos que os %d da petição: conferir a decisão (obra não aprovada?)" % (lei_parc[x["data"]] + round(lei_rem[x["data"]]["dias"]))) if x["data"] in lei_parc else "")
                      if x["data"] in lei_rem else
                      "Conferir homologação: sem remição de %s no RSPE após a petição (Res. CNJ 391/2021, art. 5º: 4 dias por obra, até 12 por ano)" % rs.pl(4 * len(x["meses"]), "dia", "dias")
                      if x["meses"] else "Conferir homologação · remição pela leitura (Res. CNJ 391/2021, art. 5º: 4 dias por obra, até 12 por ano)"),
-             "cor": "verde" if x["data"] in lei_rem else "amarelo",
+             "cor": "verde" if x["data"] in lei_rem and x["data"] not in lei_parc else "amarelo",
              "chave": "fd:lei:%s" % x["data"]} for x in lei]})
     res["blocos"] = blocos
     # ---- conciliação atestado x remição (rspe_remicao): substitui a parte de trabalho do quadro ----
@@ -1828,7 +1847,7 @@ def quadro_trabalho(r, f, hoje=None, manuais=None):
         return {"numero": a["numero"], "data": rrm._f(a["emissao"]), "dias_trabalhados": a["trab"] or 0, "dias_remidos": a["rem"] or 0,
                 "periodo_inicio": rrm._f(min(x["ini"] for x in ss)) if ss else "", "periodo_fim": rrm._f(max(x["fim"] for x in ss)) if ss else ""}
     res["atestados_pendentes"] = [_compat(a) for a in nl]
-    res["pendentes"] = sum(a["rem"] or 0 for a in nl)
+    res["pendentes"] = sum(a.get("rem_pend", a["rem"]) or 0 for a in nl)
     res["remidos_execucao"] = sum(a["rem"] or 0 for a in vivos if a["origem"] != "rspe")
     livres = sum(x["dias"] for x in C["remicoes"] if x["usada"] is None)
     res["diferenca"] = max(0, res["remidos_estudo"] - livres) if res["remidos_estudo"] else 0
@@ -1840,7 +1859,8 @@ def quadro_trabalho(r, f, hoje=None, manuais=None):
     nov = []
     for t in C["tabela"]:
         nov.append({"emp": "; ".join(dict.fromkeys(x["setor"] for x in t["segs"])), "per": "; ".join(x["per"] for x in t["segs"]), "dias": t["trab"] or "—",
-                    "at": "%s · %s remidos" % (t["atestado"], t["rem"]), "sit": t["rot"] + (" - verificar peticionamento no SEEU" if t["status"] == "NAO_LANCADO" else ""),
+                    "at": "%s · %s remidos" % (t["atestado"], t["rem"]), "sit": t["rot"] + (((" - peticionado em %s: requerer a apreciação" % t["peticionado"]) if t.get("peticionado")
+                                                         else " - verificar peticionamento no SEEU") if t["status"] == "NAO_LANCADO" else ""),
                     "cor": {"verde": "verde", "vermelho": "vermelho"}.get(t["cor"], "amarelo"), "un": "—"})
     for p_ in C["pendencias"]:
         if p_["status"] in ("SEM_ATESTADO", "LACUNA", "EM_CURSO", "A_CONFERIR"):
@@ -1849,7 +1869,7 @@ def quadro_trabalho(r, f, hoje=None, manuais=None):
                         "sit": p_["acao"], "cor": p_.get("cor") or "amarelo", "un": "—"})
     linhas = [L for L in linhas if L["emp"].startswith("Estudo")] + nov
     cps = [x for x in f.get("cursos_peticionados") or [] if not ini_exec or (_dp(x["data"]) or date.max) >= ini_exec]
-    res["rem_det"] = remicao_detalhada(C, pend_est, lei, lei_rem, res, hoje, tl, cps, est_duv)
+    res["rem_det"] = remicao_detalhada(C, pend_est, lei, lei_rem, res, hoje, tl, cps, est_duv, lei_parc, est_curso)
     return linhas, res
 
 
@@ -1861,7 +1881,7 @@ ORIGENS_REMICAO = [
     ("sem_atestado", "Trabalho sem atestado na ficha nem remição no RSPE", "conferir nos autos se há atestado juntado (o SEEU pode ter atestado não lançado na ficha); se não houver, pedir o atestado à unidade"),
     ("estudo", "Estudo sem remição (certidão a expedir)", "requisitar a certidão de frequência e requerer a remição"),
     ("leitura", "Leitura peticionada sem remição no RSPE", "conferir a homologação da remição pela leitura"),
-    ("em_curso", "Trabalho em curso há até 90 dias (atestado ainda não devido)", "acompanhar e pedir o atestado ao fim do período"),
+    ("em_curso", "Trabalho ou estudo em curso há até 90 dias (atestado ou certidão ainda não devidos)", "acompanhar e pedir o atestado ou a certidão ao fim do período"),
     ("a_conferir", "Vínculo sem baixa na ficha (registro duplicado ou baixa esquecida)", "conferir com a unidade se houve trabalho no período"),
 ]
 FORA_DO_TOTAL = ("em_curso", "a_conferir")  # informados à parte: não entram no total a remir
@@ -1930,7 +1950,7 @@ def _unidade_em(tl, d):
     return u
 
 
-def remicao_detalhada(C, pend_est, lei, lei_rem, res, hoje, tl=None, cursos=None, est_duv=None):
+def remicao_detalhada(C, pend_est, lei, lei_rem, res, hoje, tl=None, cursos=None, est_duv=None, lei_parc=None, est_curso=None):
     """Dias a remir por origem e por unidade prisional, com os itens (atestado, período, dias): base do relatório detalhado
     e do pedido de providências. A unidade vem das entradas em unidade penal da ficha; o período que atravessa uma
     transferência é dividido entre as unidades. Atestados: dias do próprio atestado, na unidade em que o período terminou
@@ -1956,10 +1976,13 @@ def remicao_detalhada(C, pend_est, lei, lei_rem, res, hoje, tl=None, cursos=None
         if pela != un:
             base = (base + "; " if base else "") + "período em " + pela
         if a["status"] == "NAO_LANCADO" and a["rem"]:
+            if "rem_pend" in a:  # cumulativo: a parte já remida por outros atestados não se pede de novo
+                base = (base + "; " if base else "") + "%s remidos no atestado, ≈ %s fora do período já remido (atestados %s)" % (
+                    _fmtn(a["rem"]), _fmtn(a["rem_pend"]), ", ".join(a["cobertos_por"]))
             add("nao_lancado" if a.get("peticionado") else "emitido",
                 {"ref": ref, "data": rrm._f(a["emissao"]), "setor": setor, "per": per, "unidade": un,
                  "base": base + (("; " if base else "") + "peticionado em %s" % a["peticionado"] if a.get("peticionado") else ""),
-                 "dias": a["rem"], "estimado": False, "texto": a.get("texto", "")})
+                 "dias": a.get("rem_pend", a["rem"]), "estimado": "rem_pend" in a, "texto": a.get("texto", "")})
         elif a["status"] == "DIVERGENCIA" and a["rem"] and a.get("remicao"):
             dif = math.floor(a["rem"] + 1e-9) - int(a["remicao"]["dias"])
             if dif >= 1:
@@ -1968,16 +1991,21 @@ def remicao_detalhada(C, pend_est, lei, lei_rem, res, hoje, tl=None, cursos=None
                                     "dias": dif, "estimado": False})
     # trabalho sem atestado e em curso: um item por unidade; vínculos simultâneos não somam o mesmo dia duas vezes
     uniao = {"sem_atestado": {}, "em_curso": {}, "a_conferir": {}}
-    for x in (C or {}).get("sem_atestado", []):
-        k = "a_conferir" if x.get("duvida") else "em_curso" if x["em_curso"] and (x["fim"] - x["ini"]).days <= 90 else "sem_atestado"
+
+    def _k(x):
+        return "a_conferir" if x.get("duvida") else "em_curso" if x["em_curso"] and (x["fim"] - x["ini"]).days <= 90 else "sem_atestado"
+    contados = set()  # dias já contados num item anterior (vínculo simultâneo): o item mostra só os dias novos, com aviso
+    for x in sorted((C or {}).get("sem_atestado", []), key=lambda x: (["sem_atestado", "em_curso", "a_conferir"].index(_k(x)), x["ini"])):
+        k = _k(x)
         fer = set()
         for y in range(x["ini"].year, x["fim"].year + 1):
             fer |= feriados(y)
+        aus = {d for c0, c1, _m in x.get("ausencias") or [] for d in rrm._dias_set(c0, c1)}  # isolamento, saída temporária
         for un, a0, b0 in _segmentos_unidade(tl, x["ini"], x["fim"]):
             dias = set()
             d = a0
             while d <= b0:
-                if d.weekday() < 6 and d not in fer:
+                if d.weekday() < 6 and d not in fer and d not in aus:
                     dias.add(d)
                 d += timedelta(days=1)
             if not dias:
@@ -1986,11 +2014,17 @@ def remicao_detalhada(C, pend_est, lei, lei_rem, res, hoje, tl=None, cursos=None
             if len(dias) < 3:
                 continue  # sobra de 1 ou 2 dias no corte da transferência: não chega a 1 dia remido (fica só na conta da unidade)
             em = x["em_curso"] and b0 == x["fim"]
+            novos = dias - contados
+            contados |= dias
+            simult = len(dias) - len(novos)
             det[k]["itens"].append({"ref": x["setor"] or "trabalho", "data": "", "setor": x["setor"] or "", "unidade": un,
                                     "per": "%s a %s" % (rrm._f(a0), "hoje (em curso)" if em else rrm._f(b0)),
-                                    "base": ("≈ %s (seg.-sáb.)" % rs.pl(len(dias), "dia trabalhado", "dias trabalhados")) + ((" · " + x["duvida"]) if x.get("duvida") else "")
-                                            + ((" · " + x["origem"]) if x.get("origem") and a0 == x["ini"] else ""),
-                                    "dias": len(dias) // 3, "estimado": True, "texto": x.get("trecho", "")})
+                                    "base": ("≈ %s (seg.-sáb.)" % rs.pl(len(dias), "dia trabalhado", "dias trabalhados"))
+                                            + ((" · %s simultâneos a outro vínculo, já contados" % rs.pl(simult, "dia", "dias")) if simult else "")
+                                            + ((" · " + x["duvida"]) if x.get("duvida") else "")
+                                            + ((" · " + x["origem"]) if x.get("origem") and a0 == x["ini"] else "")
+                                            + ("".join(" · sem %s de %s a %s" % (m_, rrm._f(c0), rrm._f(c1)) for c0, c1, m_ in x.get("ausencias") or [] if a0 <= c1 and c0 <= b0)),
+                                    "dias": len(novos) // 3, "estimado": True, "texto": x.get("trecho", "")})
     ja = set().union(*uniao["sem_atestado"].values()) if uniao["sem_atestado"] else set()
     ja2 = ja | (set().union(*uniao["em_curso"].values()) if uniao["em_curso"] else set())
     for k in uniao:
@@ -2003,8 +2037,8 @@ def remicao_detalhada(C, pend_est, lei, lei_rem, res, hoje, tl=None, cursos=None
         det[k]["dias"] = sum(det[k]["por_un"].values())
         if sum(i["dias"] for i in det[k]["itens"]) > det[k]["dias"] + 1:
             det[k]["sobreposicao"] = True  # períodos simultâneos: o total é menor que a soma das linhas
-    # estudo: horas por unidade (declaradas: proporcionais aos dias úteis de cada unidade)
-    for e in pend_est:
+    # estudo: horas por unidade (declaradas: proporcionais aos dias úteis de cada unidade); matrícula em curso há até 90 dias à parte
+    for e in list(pend_est) + list(est_curso or []):
         ini, fim = e.get("_ini"), e.get("_fim") or hoje
         segs = _segmentos_unidade(tl, ini, fim) if ini else [(SEM_UNIDADE, None, None)]
         du_tot = sum(_dias_uteis(a0, b0) for _u, a0, b0 in segs if a0) or 1
@@ -2013,7 +2047,7 @@ def remicao_detalhada(C, pend_est, lei, lei_rem, res, hoje, tl=None, cursos=None
             h = int(round(e["_horas"] * du / du_tot)) if (e.get("_declaradas") or not a0) and len(segs) > 1 else (e["_horas"] if len(segs) == 1 else du * HORAS_DIA_ESTUDO)
             if h < 12:
                 continue
-            add("estudo", {"ref": "Estudo · %s" % (e.get("curso") or "").title(), "data": "", "setor": "", "unidade": un,
+            add("em_curso" if e.get("_em_curso") else "estudo", {"ref": "Estudo · %s" % (e.get("curso") or "").title(), "data": "", "setor": "", "unidade": un,
                            "per": "%s a %s" % (rrm._f(a0), rrm._f(b0) if (b0 != hoje or e.get("_fim")) else "hoje (matrícula ativa)") if a0 else "período não informado",
                            "base": ("%d h declaradas" % h) if e.get("_declaradas") else "≈ %d h" % h, "dias": h // 12, "estimado": not e.get("_declaradas")})
     if det["estudo"]["itens"] and sum(det["estudo"]["por_un"].values()) > (res.get("estudo_dias_pend") or 0) + 1:
@@ -2028,6 +2062,7 @@ def remicao_detalhada(C, pend_est, lei, lei_rem, res, hoje, tl=None, cursos=None
                                        "per": "peticionado no SEEU em %s" % _br(x["data"]), "base": "carga horária não informada na ficha",
                                        "dias": 0, "estimado": False})
     det["estudo"]["dias"] = sum(det["estudo"]["por_un"].values())
+    det["em_curso"]["dias"] = sum(det["em_curso"]["por_un"].values())  # + matrícula em curso há até 90 dias
     for e in est_duv or []:
         det["a_conferir"]["itens"].append({"ref": "Estudo · %s" % (e.get("curso") or "").title(), "data": "", "setor": "",
                                            "unidade": _unidade_em(tl, e.get("_ini")),
@@ -2035,6 +2070,14 @@ def remicao_detalhada(C, pend_est, lei, lei_rem, res, hoje, tl=None, cursos=None
                                            "base": "sem registro escolar desde %s: horas não estimadas" % _br(e.get("ult_registro_edu") or e.get("inicio") or ""),
                                            "dias": 0, "estimado": False})
     for x in lei:
+        if x["data"] in (lei_parc or {}) and lei_parc[x["data"]] > 0:
+            # remida em parte: a diferença (obras da petição sem remição) fica a requerer/conferir
+            add("leitura", {"ref": "Leitura" + (" (%s)" % ", ".join(x["meses"]) if x.get("meses") else ""), "data": _br(x["data"]), "setor": "",
+                            "unidade": _unidade_em(tl, _dp(x["data"])), "per": "relatórios peticionados em %s" % _br(x["data"]),
+                            "base": "remidos %s no RSPE em %s; diferença das obras da petição" % (
+                                _fmtn(lei_rem[x["data"]]["dias"]), rs.fmt(lei_rem[x["data"]]["d"] or lei_rem[x["data"]]["ref"])),
+                            "dias": lei_parc[x["data"]], "estimado": False})
+            continue
         if x["data"] in lei_rem:
             continue
         n = len(x.get("meses") or []) or x.get("obras") or 0
@@ -2165,7 +2208,9 @@ def comparativo(r, f, hoje=None, conferidos=None, manuais=None):
     partes = []
     nh = res["pendentes"] or 0
     if nh:
-        partes.append("Atestado emitido não lançado no RSPE (%s remidos) - verificar peticionamento no SEEU" % _fmtn(nh))
+        # "verificar peticionamento" só quando a ficha não registra o peticionamento de algum atestado pendente
+        sem_pet = any(a["status"] == "NAO_LANCADO" and not a.get("peticionado") for a in ((res.get("conc") or {}).get("atestados") or []))
+        partes.append("Atestado emitido não lançado no RSPE (%s remidos) - %s" % (_fmtn(nh), "verificar peticionamento no SEEU" if sem_pet else "peticionado: requerer a apreciação"))
     elif res["diferenca"] >= 1:
         partes.append("Conferir remição: ficha %s%s × RSPE %s" % ("≈ " if res["remidos_estudo"] else "", _dias_txt(ficha_total), _dias_txt(res["homologados"])))
     if res.get("sem_n"):
