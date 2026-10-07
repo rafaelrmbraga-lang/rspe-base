@@ -1268,6 +1268,12 @@ def quadro_trabalho(r, f, hoje=None, manuais=None):
                        "sit": "Falha na conciliação da remição (%s): conferir a ficha e o RSPE" % e})
         return linhas, res
     res["conc"] = C
+    # unidade de cada atestado da conferência (a do fim do período atestado; sem período, a da emissão)
+    _por_id = {a["id"]: a for a in C["atestados"]}
+    for t_ in C["tabela"]:
+        a_ = _por_id.get(t_["id"])
+        fs_ = [s["fim"] for s in (a_ or {}).get("segs", []) if s.get("fim")]
+        t_["unidade"] = _unidade_em(tl, max(fs_) if fs_ else (a_ or {}).get("emissao")) if a_ else SEM_UNIDADE
     vivos = [a for a in C["atestados"] if a["status"] != "ANTERIOR"]
     nl = [a for a in vivos if a["status"] == "NAO_LANCADO"]
     sem_p = [p for p in C["pendencias"] if p["status"] == "SEM_ATESTADO"]

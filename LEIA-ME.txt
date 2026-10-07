@@ -1,4 +1,4 @@
-RSPE BASE - SEEU  v7.2.1 (programa em abas)
+RSPE BASE - SEEU  v7.2.2 (programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
@@ -563,6 +563,17 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v7.2.2
+  - Remição detalhada, seção por assistido: antes do que falta remir, a
+    conferência ficha x RSPE de cada atestado da execução (unidade, período,
+    dias trabalhados, remidos na ficha, remição no RSPE com a decisão), em
+    cores: verde = já está no processo; vermelho = atestado emitido sem
+    remição no RSPE; amarelo = lançado com dias diferentes; azul = remição no
+    RSPE sem atestado registrado na ficha. No topo, a comparação: dias
+    remidos na ficha, no processo, fora do processo e o saldo do RSPE.
+    Entram todos os assistidos com atestado ou remição, não só os com
+    pendência.
 
 v7.2.1
   - Remição detalhada: cada dia a remir sai com a unidade prisional em que o

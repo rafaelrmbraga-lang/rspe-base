@@ -1777,20 +1777,72 @@ def relatorio_remicao(modelos, caminho, nome_base, nominal=True):
             if len(dados) > 5:
                 el.append(_tabela([dados[0]] + dados[5:], larg3, st, zebra=False))
 
-    # 4) por assistido
-    if nominal and pend:
+    # 4) por assistido: a conferência ficha x RSPE (o que já está no processo e o que não está) e o que falta remir
+    conf = sorted([m for m in com if (m.get("fd_conc") or {}).get("tabela") or m["fd_rem_det"]["total"] >= 1
+                   or any(m["fd_rem_det"][k]["itens"] for k in ("em_curso", "lacunas"))],
+                  key=lambda m: rs._sem_acento(m.get("nome") or "").upper())
+    if nominal and conf:
         el.append(CondPageBreak(60 * mm))
-        el.append(Paragraph("4. Por assistido (ordem alfabética)", st["h2"]))
-        el.append(Paragraph(_t("Cada linha diz de onde vem o dia a remir, em que unidade e a providência. \"≈\" = estimativa do programa."), st["mut"]))
+        el.append(Paragraph("4. Por assistido (ordem alfabética): conferência ficha x RSPE e o que falta remir", st["h2"]))
+        el.append(Paragraph(_t("Primeiro quadro: cada atestado da ficha e a remição correspondente no RSPE. Verde = já está no processo (remição "
+                               "lançada no RSPE); vermelho = atestado emitido sem remição no RSPE; amarelo = lançado com dias diferentes; azul = remição "
+                               "no RSPE sem atestado registrado na ficha. Segundo quadro: o que ainda falta remir, por origem e unidade. "
+                               "\"≈\" = estimativa do programa."), st["mut"]))
         larg = [40 * mm, 48 * mm, 40 * mm, 44 * mm, 40 * mm, 16 * mm, W - 228 * mm]
-        for m in pend:
+        largc = [40 * mm, 52 * mm, 48 * mm, 20 * mm, 22 * mm, 38 * mm, W - 220 * mm]
+        cor_st = {"CONCILIADO": "verde", "NAO_LANCADO": "vermelho", "DIVERGENCIA": "amarelo"}
+        rot_st = {"CONCILIADO": "No processo", "NAO_LANCADO": "Não está no processo", "DIVERGENCIA": "No processo, dias diferentes"}
+        for m in conf:
             D = m["fd_rem_det"]
+            T = (m.get("fd_conc") or {}).get("tabela") or []
             un = _rotulo_unidade((m.get("ficha") or {}).get("unidade") or "") or "unidade não informada"
-            tit = Paragraph("<b>%s</b> · %s · hoje em %s · <b>%s %s a remir</b>%s · remidos no RSPE: %s" % (
+            tit = Paragraph("<b>%s</b> · %s · hoje em %s · <b>%s %s a remir</b>%s" % (
                 _t(m.get("nome") or ""), _t(m.get("proc") or m.get("id") or ""), _t(un), _num(D["total"]), "dia" if D["total"] == 1 else "dias",
-                _t(" (+ ≈ %s do trabalho em curso)" % rs.pl(int(D["em_curso"]["dias"]), "dia", "dias")) if D["em_curso"]["dias"] else "",
-                _t((m.get("remidos") or "—").split(" (")[0])), ParagraphStyle("pt", parent=st["cel"], fontSize=8.4, leading=11.5))
-            dados = [["Origem", "Unidade", "Referência", "Período", "Base do cálculo", "Dias", "Providência"]]
+                _t(" (+ ≈ %s do trabalho em curso)" % rs.pl(int(D["em_curso"]["dias"]), "dia", "dias")) if D["em_curso"]["dias"] else ""),
+                ParagraphStyle("pt", parent=st["cel"], fontSize=8.4, leading=11.5))
+            blocos = [Spacer(1, 9), tit]
+            if T:
+                def _n(x):
+                    try:
+                        return float(str(x).replace(".", "").replace(",", "."))
+                    except Exception:
+                        return 0.0
+                fic = sum(_n(t["rem"]) for t in T if t["status"] != "ANTERIOR" and not t["atestado"].startswith("Atestado não registrado"))
+                dentro = sum(_n(t["rem"]) for t in T if t["status"] in ("CONCILIADO", "DIVERGENCIA") and not t["atestado"].startswith("Atestado não registrado"))
+                fora = sum(_n(t["rem"]) for t in T if t["status"] == "NAO_LANCADO")
+                nr = [t for t in T if t["atestado"].startswith("Atestado não registrado")]
+                n_v = sum(1 for t in T if t["status"] == "NAO_LANCADO")
+                n_r = sum(1 for t in T if t["status"] in ("CONCILIADO", "DIVERGENCIA") and t not in nr)
+                res_ = Paragraph("%s · %s · %s%s · RSPE: %s" % (
+                    _t("Ficha: %s em atestados desta execução" % ("%s dias remidos" % _num(fic))),
+                    '<font color="%s"><b>%s</b></font>' % (COR["verde"][1], _t("no processo: %s dias (%s)" % (_num(dentro), rs.pl(n_r, "atestado", "atestados")))),
+                    '<font color="%s"><b>%s</b></font>' % (COR["vermelho"][1], _t("fora do processo: %s dias (%s)" % (_num(fora), rs.pl(n_v, "atestado", "atestados")))),
+                    (' · <font color="%s"><b>%s</b></font>' % (COR["azul"][1], _t("no RSPE sem atestado na ficha: %s dias (%s)" % (
+                        _num(sum(_n(t["rem"]) for t in nr)), rs.pl(len(nr), "remição", "remições"))))) if nr else "",
+                    _t((m.get("remidos") or "—"))), ParagraphStyle("rs", parent=st["cel"], fontSize=7.9, leading=10.5))
+                dc = [["Atestado", "Unidade", "Período", "Dias trab.", "Remidos (ficha)", "Remição no RSPE", "Situação"]]
+                cores = {}
+                for t in T:
+                    fora_ficha = t["atestado"].startswith("Atestado não registrado")
+                    cor = "azul" if fora_ficha else cor_st.get(t["status"], "cinza")
+                    sit = "No processo, sem atestado na ficha" if fora_ficha else rot_st.get(t["status"], t.get("rot") or "")
+                    dc.append([Paragraph(_t(t["atestado"] + ((" · " + t["emissao"]) if t.get("emissao") else "")), peq),
+                               Paragraph(_t(t.get("unidade") or "—"), peq),
+                               Paragraph(_t("; ".join(x["per"] for x in t["segs"]) or "—"), peq),
+                               Paragraph(_t(str(t["trab"] or "—")), dir_), Paragraph(_t(t["rem"]), dir_),
+                               Paragraph(_t(("%s · decisão %s" % (t["rspe"], t["decisao"])) if t["rspe"] not in ("—", "") else "—"), peq),
+                               _pilula(sit, cor, st)])
+                    cores[len(dc) - 1] = cor
+                blocos += [Spacer(1, 2), res_, Spacer(1, 3), _tabela(dc[:5], largc, st, zebra=False, cores_linha={k: v for k, v in cores.items() if k < 5})]
+                resto_c = [dc[0]] + dc[5:]
+                cores_r = {k - 4: v for k, v in cores.items() if k >= 5}
+            else:
+                blocos += [Spacer(1, 2), Paragraph(_t("Nenhum atestado de trabalho desta execução na ficha."), st["mut"])]
+                resto_c, cores_r = None, {}
+            el.append(KeepTogether(blocos))
+            if resto_c and len(resto_c) > 1:
+                el.append(_tabela(resto_c, largc, st, zebra=False, cores_linha=cores_r))
+            dados = [["Falta remir: origem", "Unidade", "Referência", "Período", "Base do cálculo", "Dias", "Providência"]]
             for k, r, p_ in ORI + [("lacunas", "Lacuna entre atestados", "verificar com a unidade se houve trabalho")]:
                 its = D[k]["itens"]
                 for n_, i in enumerate(its):
@@ -1802,9 +1854,11 @@ def relatorio_remicao(modelos, caminho, nome_base, nominal=True):
                 if len(its) > 1 and D[k]["dias"] and k != "lacunas":
                     dados.append(["", "", "", "", Paragraph(_t("subtotal" + (" (sem contar duas vezes os dias simultâneos)" if D[k].get("sobreposicao") else "")), peq),
                                   Paragraph(_t(("≈ " if k in ("sem_atestado", "em_curso", "estudo") else "") + _num(D[k]["dias"])), dirn), ""])
-            el.append(KeepTogether([Spacer(1, 8), tit, Spacer(1, 3), _tabela(dados[:6], larg, st, zebra=False)]))
-            if len(dados) > 6:
-                el.append(_tabela([dados[0]] + dados[6:], larg, st, zebra=False))
+            if len(dados) > 1:
+                el.append(Spacer(1, 4))
+                el.append(_tabela(dados, larg, st, zebra=False))
+            else:
+                el.append(Paragraph(_t("Nada a remir além do que já está no processo."), st["mut"]))
     doc = SimpleDocTemplate(caminho, pagesize=PG, leftMargin=16 * mm, rightMargin=16 * mm, topMargin=21 * mm, bottomMargin=20 * mm,
                             title="Remição detalhada", author="RSPE Base")
     fr = _moldura("Remição detalhada", nome_base,
