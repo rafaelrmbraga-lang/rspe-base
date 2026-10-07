@@ -829,13 +829,17 @@ class Base:
             return [n for (n,) in self.con.execute("SELECT nome FROM assistidos").fetchall()]
 
     def existente(self, processo):
-        """(data_geracao, hash) do registro já gravado para o processo, ou None."""
+        """(data_geracao, hash) do registro já gravado para o processo, ou None. O hash vem vazio quando o registro foi lido por
+        versão anterior da leitura do PDF: ("", ""), e o mesmo RSPE, importado de novo, substitui o gravado (vale a leitura corrigida)."""
         with self.lock:
             row = self.con.execute("SELECT data_geracao, dados FROM assistidos WHERE processo=?", (processo,)).fetchone()
         if not row:
             return None
         try:
-            h = json.loads(row[1]).get("_hash", "")
+            d = json.loads(row[1])
+            if (d.get("versao_leitura_rspe") or 1) < rs.VERSAO_LEITURA_RSPE:
+                return ("", "")  # leitura antiga: o mesmo RSPE substitui o gravado
+            h = d.get("_hash", "")
         except Exception:
             h = ""
         return (row[0], h)
