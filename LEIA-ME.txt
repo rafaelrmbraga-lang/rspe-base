@@ -1,9 +1,9 @@
-APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.4.0
+APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.5.0
 (antigo RSPE Base; SEEU, programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-7.4.0. A documentação técnica completa (cada parâmetro, a regra, a norma e
+7.5.0. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -569,6 +569,49 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v7.5.0
+  - Revisão geral (jurídica e do sistema), conferida na base 08.10 (595
+    RSPEs e 653 fichas). As fichas já importadas são relidas sozinhas.
+  - Prescrição e extinção: fundamentação afirmativa só com resultado firme;
+    término calculado pelo calendário e com a custódia quando o SEEU não
+    calculou (custódia que já alcança a pena: extinção pelo cumprimento a
+    verificar); atos de execução durante a "fuga" (progressão, remição,
+    domiciliar) e fuga lançada com a pessoa solta tratados; art. 28 da Lei
+    11.343/06 em 2 anos (art. 30); detração sem tempo de outra condenação
+    transitada; livramento revogado sem desconto do período de prova (CP,
+    art. 88); Tema 788 só após a modulação; multa cumulada x alternativa;
+    idade incoerente (menor de 18 no fato) e pena convertida em restritiva
+    ficam "a verificar".
+  - Indulto e comutação (2000-2025): roubo com lesão grave (art. 157, § 3º,
+    I) anterior a 23/01/2020 não é hediondo; crime extinto sem data busca a
+    data no incidente de indulto/extinção; sentença posterior ao trânsito,
+    pena cumprida zerada pelo SEEU com custódia nos eventos, crime doloso na
+    janela da falta (LEP, art. 52) e Decreto 9.246/2017, art. 4º, II a IV,
+    ficam "a verificar"; regressão cautelar sem homologação não é falta
+    reconhecida; textos sem rótulos C1/C2, sem repetições e com a conclusão
+    certa no art. 7º, p. ú.; linha do tempo igual à aba.
+  - Auditoria: feminicídio aumentado (art. 121, § 7º) e art. 217 revogado;
+    reincidência específica não demonstrada (2007-2020) com 40% (Tema 1084)
+    e 50% com morte (Tema 1196); contravenção e art. 28 da Lei de Drogas não
+    geram reincidência; alerta de pena de prisão por porte para consumo;
+    guia suspensa fora da soma das penas e sem pedido contra o assistido;
+    custódia comparada com o saldo de remidos; confronto com a ficha sem
+    fugas, prisões e livramentos de outras execuções ou de períodos de
+    soltura; fuga no RSPE na data de alvará de soltura; datas impossíveis
+    no cadastro; remição em duplicidade; identidade com tolerância de
+    grafia; multa com a presunção relativa de hipossuficiência pela
+    Defensoria (STJ, AgRg no REsp 2.267.208); regime inicial com a
+    divergência entre as Turmas.
+  - Remição: vínculo de trabalho não se estende sobre fuga, soltura,
+    livramento, aberto ou transferência; remição conjunta e arredondamento
+    casam também por trabalhados / 3; atestado substituído, sobreposto ou
+    sem período tratados; isolamento e saída temporária descontados; estudo
+    sem feriados e matrícula recente em curso; leitura "meses 06 e07".
+  - Modelos de petição (desligados nesta versão) corrigidos: fundamentos
+    dos decretos, datas, falta grave, vara, gênero e redação.
+  - Legendas da tela completas (vermelho e azul no indulto; azul nos prazos
+    e na prescrição) e CP, art. 90 no período de livramento.
 
 v7.4.0
   - Nome: o programa passa a se chamar APTO (Auditoria de Prazos e Tempo de
