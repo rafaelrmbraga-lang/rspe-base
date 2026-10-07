@@ -6,12 +6,12 @@ from datetime import datetime
 import rspe_scraper as rs
 import rspe_view as rv
 
-NAVY = "#1F2937"
+NAVY = "#0B3B22"
 PRI = "#00602C"
-TX2 = "#475467"
-LINE = "#E6E9EF"
-ZEBRA = "#F9FAFB"
-DOT = {"vermelho": "#E5484D", "laranja": "#F97316", "amarelo": "#F5A524", "vencido": "#E5484D", "verde": "#17B26A", "cinza": "#98A2B3", "azul": "#2563EB"}
+TX2 = "#5F6662"
+LINE = "#D5DAD6"
+ZEBRA = "#FAFBFA"
+DOT = {"vermelho": "#A33A36", "laranja": "#B5651D", "amarelo": "#C49A3A", "vencido": "#A33A36", "verde": "#2F7A4F", "cinza": "#AEB5B0", "azul": "#4A6A8A"}
 
 
 def exportar_xlsx(modelos, saida, abas):
@@ -110,37 +110,22 @@ def exportar_pdf(modelos, saida, nome_base, abas):
     gerado = datetime.now().strftime("%d/%m/%Y %H:%M")
     C = colors.HexColor
 
-    def moldura(canvas, doc):
-        canvas.saveState()
-        # marca + título discreto no topo
-        from rspe_relatorio import _selo
-        _selo(canvas, ML, H - 14.2 * mm, 9.2 * mm)
-        canvas.setFillColor(C(NAVY))
-        canvas.setFont("Helvetica-Bold", 11)
-        canvas.drawString(ML + 11.5 * mm, H - 11 * mm, "APTO")
-        canvas.setFont("Helvetica", 8.5)
-        canvas.setFillColor(C(TX2))
-        canvas.drawString(ML + 33 * mm, H - 11 * mm, "Execução penal · SEEU")
-        canvas.drawRightString(W - ML, H - 11 * mm, "%s   ·   %s" % (nome_base, gerado))
-        canvas.setStrokeColor(C(LINE))
-        canvas.setLineWidth(0.6)
-        canvas.line(ML, H - 15.5 * mm, W - ML, H - 15.5 * mm)
-        # rodapé
-        canvas.setFillColor(C("#98A2B3"))
-        canvas.setFont("Helvetica", 7.2)
-        canvas.drawString(ML, 7.5 * mm, "Datas conforme o SEEU (RSPE); indulto, comutação e prescrição calculados pelo programa.  "
-                                        "Falta (12 meses) = indícios no RSPE, conferir o PAD.  Indulto: Decretos 11.302/2022, 12.338/2024 e 12.790/2025.")
-        canvas.drawRightString(W - ML, 7.5 * mm, "página %d" % doc.page)
-        canvas.restoreState()
+    import rspe_relatorio as _rr
+    _f = _rr._fontes()
+    # mesmo cabeçalho e rodapé dos relatórios (selo, APTO, filete verde, "página X de Y")
+    moldura = _rr._moldura("Execução penal · SEEU", nome_base, pagina=landscape(A4),
+                           rodape="Datas conforme o SEEU (RSPE); indulto, comutação e prescrição calculados pelo programa. Falta (12 meses) = indícios "
+                                  "no RSPE, conferir o PAD. Indulto: Decretos 11.302/2022, 12.338/2024 e 12.790/2025.")
 
+    ML = 16 * mm
     doc = SimpleDocTemplate(saida, pagesize=landscape(A4), leftMargin=ML, rightMargin=ML,
-                            topMargin=21 * mm, bottomMargin=14 * mm, title="APTO - %s" % nome_base, author="APTO")
-    st_cel = ParagraphStyle("cel", fontName="Helvetica", fontSize=7.6, leading=9.4, textColor=C("#101828"))
-    st_neg = ParagraphStyle("neg", parent=st_cel, fontName="Helvetica-Bold")
-    st_mut = ParagraphStyle("mut", parent=st_cel, textColor=C("#98A2B3"))
-    st_cab = ParagraphStyle("cab", fontName="Helvetica-Bold", fontSize=6.9, leading=8.5, textColor=C(TX2))
-    st_tit = ParagraphStyle("tit", fontName="Helvetica-Bold", fontSize=17, leading=21, textColor=C(NAVY))
-    st_sub = ParagraphStyle("sub", fontName="Helvetica", fontSize=8.5, leading=11, textColor=C(TX2))
+                            topMargin=21 * mm, bottomMargin=18 * mm, title="APTO - %s" % nome_base, author="APTO")
+    st_cel = ParagraphStyle("cel", fontName=_f["n"], fontSize=7.8, leading=9.6, textColor=C("#262B28"))
+    st_neg = ParagraphStyle("neg", parent=st_cel, fontName=_f["b"])
+    st_mut = ParagraphStyle("mut", parent=st_cel, textColor=C("#7B827E"))
+    st_cab = ParagraphStyle("cab", fontName=_f["sb"], fontSize=7.2, leading=8.8, textColor=C(TX2))
+    st_tit = ParagraphStyle("tit", fontName=_f["serifb"], fontSize=18, leading=22, textColor=C(NAVY))
+    st_sub = ParagraphStyle("sub", fontName=_f["n"], fontSize=8.6, leading=11, textColor=C(TX2))
     largura = W - 2 * ML
     el = []
     primeiro = True
@@ -169,7 +154,7 @@ def exportar_pdf(modelos, saida, nome_base, abas):
             for i, (c, nome) in enumerate(rot.items()):
                 if aid in ("ind",) and c == "":
                     continue
-                texto = '<font color="%s">●</font>  <b>%d</b>  <font color="%s">%s</font>' % (DOT.get(c, "#CBD5E1"), cont.get(c, 0), TX2, nome)
+                texto = '<font color="%s">●</font>  <b>%d</b>  <font color="%s">%s</font>' % (DOT.get(c, "#C8CEC8"), cont.get(c, 0), TX2, nome)
                 cel.append(Paragraph(texto, ParagraphStyle("st", parent=st_cel, fontSize=9, leading=11)))
                 larg.append(largura / max(4, len(rot)) - 2 * mm)
                 est += [("BOX", (i, 0), (i, 0), 0.5, C(LINE)), ("BACKGROUND", (i, 0), (i, 0), colors.white)]
@@ -180,10 +165,9 @@ def exportar_pdf(modelos, saida, nome_base, abas):
         # tabela
         pesos = [c[2] + (6 if c[0] == "proc" else 3 if c[0] == "regime" else 0) for c in cols]
         larguras = [largura * p / sum(pesos) for p in pesos]
-        dados = [[Paragraph(c[1].upper(), st_cab) for c in cols]]
+        dados = [[Paragraph(c[1], st_cab) for c in cols]]
         estilo = [
-            ("BACKGROUND", (0, 0), (-1, 0), C("#F2F4F7")),
-            ("LINEBELOW", (0, 0), (-1, 0), 0.8, C("#D0D5DD")),
+            ("LINEBELOW", (0, 0), (-1, 0), 1.1, C(PRI)),
             ("VALIGN", (0, 0), (-1, -1), "TOP"),
             ("LINEBELOW", (0, 1), (-1, -1), 0.4, C(LINE)),
             ("LEFTPADDING", (0, 0), (-1, -1), 5), ("RIGHTPADDING", (0, 0), (-1, -1), 5),
@@ -199,13 +183,13 @@ def exportar_pdf(modelos, saida, nome_base, abas):
                 pk = pil.get(k)
                 if pk and v:
                     pc = ("vermelho" if v.startswith("Sim") else "verde") if k == "imp" else m.get(pk, "")
-                    v = '<font color="%s">●</font> <b><font color="%s">%s</font></b>' % (DOT.get(pc, "#CBD5E1"), rv.CORES[pc][1], v)
+                    v = '<font color="%s">●</font> <b><font color="%s">%s</font></b>' % (DOT.get(pc, "#C8CEC8"), rv.CORES[pc][1], v)
                 elif k == "falta" and m.get("falta_sim"):
                     v = '<b><font color="%s">%s</font></b>' % (rv.CORES["vermelho"][1], v)
                 elif k == "falta" and m.get("falta_apurar"):
                     v = '<b><font color="%s">%s</font></b>' % (rv.CORES["amarelo"][1], v)
                 elif not v:
-                    v = '<font color="#98A2B3">—</font>'
+                    v = '<font color="#AEB5B0">—</font>'
                 linha.append(Paragraph(v, st_neg if j == 0 else st_cel))
             dados.append(linha)
             if cor:
@@ -221,7 +205,7 @@ def exportar_pdf(modelos, saida, nome_base, abas):
         el.append(Spacer(1, 8))
         leg = "     ".join('<font color="%s">●</font> <font color="%s">%s</font>' % (DOT[c], TX2, n) for c, n in rot.items() if c)
         el.append(Paragraph(leg, ParagraphStyle("leg", parent=st_cel, fontSize=8)))
-    doc.build(el, onFirstPage=moldura, onLaterPages=moldura)
+    doc.build(el, onFirstPage=moldura, onLaterPages=moldura, canvasmaker=_rr._canvas_numerado())
 
 
 def exportar_providencias(linhas, saida, titulo):

@@ -21,13 +21,13 @@ ALERTAS_DIAS = [(30, "laranja"), (60, "amarelo"), (90, "verde")]
 
 # cores (tom moderno): (fundo suave, texto forte)
 CORES = {
-    "vermelho": ("#FDE8E8", "#B42318"),
-    "laranja": ("#FFEAD5", "#C4320A"),
-    "amarelo": ("#FEF4D6", "#B54708"),
-    "vencido": ("#FDE8E8", "#B42318"),
-    "verde": ("#DDF5E7", "#067647"),
-    "cinza": ("#EEF0F3", "#5B6470"),
-    "azul": ("#DBEAFE", "#1D4ED8"),
+    "vermelho": ("#F6E4E3", "#8E2424"),
+    "laranja": ("#F7EADB", "#8A4A12"),
+    "amarelo": ("#F5EDDA", "#7A5410"),
+    "vencido": ("#F6E4E3", "#8E2424"),
+    "verde": ("#E3EFE7", "#1F5B39"),
+    "cinza": ("#ECEEEB", "#5F6662"),
+    "azul": ("#E6ECF2", "#334E68"),
     "": ("#FFFFFF", "#344054"),
 }
 # explicação dos rótulos curtos (aparece ao passar o mouse no quadro de resumo e na legenda)

@@ -17,22 +17,28 @@ import rspe_scraper as rs
 import rspe_view as rv
 import rspe_prescricao as rp
 
-NAVY = "#1F2937"
+NAVY = "#0B3B22"   # títulos: verde-escuro do selo
 PRI = "#00602C"
-TX = "#101828"
-TX2 = "#475467"
-TX3 = "#98A2B3"
-LINE = "#E6E9EF"
-ZEBRA = "#F9FAFB"
-COR = {"vermelho": ("#FDE8E8", "#B42318"), "laranja": ("#FFEAD5", "#C4320A"), "amarelo": ("#FEF4D6", "#B54708"),
-       "vencido": ("#FDE8E8", "#B42318"), "verde": ("#DDF5E7", "#067647"), "cinza": ("#EEF0F3", "#5B6470"),
-       "azul": ("#DBEAFE", "#1D4ED8"), "": ("#FFFFFF", TX)}
+TX = "#262B28"     # grafite
+TX2 = "#5F6662"
+TX3 = "#7B827E"
+LINE = "#D5DAD6"
+ZEBRA = "#FAFBFA"
+COR = {"vermelho": ("#F6E4E3", "#8E2424"), "laranja": ("#F7EADB", "#8A4A12"), "amarelo": ("#F5EDDA", "#7A5410"),
+       "vencido": ("#F6E4E3", "#8E2424"), "verde": ("#E3EFE7", "#1F5B39"), "cinza": ("#ECEEEB", "#5F6662"),
+       "azul": ("#E6ECF2", "#334E68"), "": ("#FFFFFF", TX)}
 AVISO = ("Triagem automatizada a partir do RSPE (SEEU) e da ficha disciplinar (SIAPEN). Não substitui o Atestado de Pena. "
          "Progressão, livramento e término são as datas do SEEU; indulto, comutação, prescrição e remição a requerer são "
          "cálculos do programa e devem ser conferidos.")
 
 # ---------------------------------------------------------------- fontes (acentos e símbolos)
-_FONTE = {"n": "Helvetica", "b": "Helvetica-Bold", "unicode": False}
+_FONTE = {"n": "Helvetica", "b": "Helvetica-Bold", "sb": "Helvetica-Bold", "serif": "Times-Bold", "serifb": "Times-Bold",
+          "marca": "Times-Bold", "unicode": False, "sem_alerta": False}
+
+
+def _pasta_fontes():
+    import sys
+    return os.path.join(getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__))), "fontes")
 
 
 def _fontes():
@@ -40,18 +46,27 @@ def _fontes():
         return _FONTE
     from reportlab.pdfbase import pdfmetrics
     from reportlab.pdfbase.ttfonts import TTFont
-    pares = [(r"C:\Windows\Fonts\arial.ttf", r"C:\Windows\Fonts\arialbd.ttf"),
-             ("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"),
-             ("/Library/Fonts/Arial.ttf", "/Library/Fonts/Arial Bold.ttf")]
-    for n, b in pares:
-        if os.path.exists(n) and os.path.exists(b):
-            try:
-                pdfmetrics.registerFont(TTFont("RelN", n))
-                pdfmetrics.registerFont(TTFont("RelB", b))
-                _FONTE.update(n="RelN", b="RelB", unicode=True)
-                break
-            except Exception:
-                pass
+    pf = _pasta_fontes()
+    arqs = {"n": "SourceSans3-Regular.ttf", "sb": "SourceSans3-SemiBold.ttf", "b": "SourceSans3-Bold.ttf",
+            "serif": "SourceSerif4-SemiBold.ttf", "serifb": "SourceSerif4-Bold.ttf", "marca": "Cinzel-Bold.ttf"}
+    try:
+        # identidade dos relatórios: texto em Source Sans, títulos em Source Serif, a marca em Cinzel (fontes do programa)
+        for k, arq in arqs.items():
+            pdfmetrics.registerFont(TTFont("Apto-" + k, os.path.join(pf, arq)))
+        _FONTE.update({k: "Apto-" + k for k in arqs}, unicode=True, sem_alerta=True)  # a Source Sans não tem o "⚠"
+    except Exception:
+        pares = [(r"C:\Windows\Fonts\arial.ttf", r"C:\Windows\Fonts\arialbd.ttf"),
+                 ("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"),
+                 ("/Library/Fonts/Arial.ttf", "/Library/Fonts/Arial Bold.ttf")]
+        for n, b in pares:
+            if os.path.exists(n) and os.path.exists(b):
+                try:
+                    pdfmetrics.registerFont(TTFont("RelN", n))
+                    pdfmetrics.registerFont(TTFont("RelB", b))
+                    _FONTE.update(n="RelN", b="RelB", sb="RelB", serif="RelB", serifb="RelB", marca="RelB", unicode=True)
+                    break
+                except Exception:
+                    pass
     _FONTE["ok"] = True
     return _FONTE
 
@@ -82,6 +97,8 @@ def _t(txt):
     """Texto seguro para a fonte e para o mini-HTML do Paragraph."""
     s = str(txt if txt is not None else "")
     s = rv.re.sub(r"(-?)\b(\d+)a(\d+)m(\d+)d\b", lambda m: rs.pena_extenso("%sa%sm%sd" % (m.group(2), m.group(3), m.group(4))), s)
+    if _FONTE.get("sem_alerta"):
+        s = s.replace("⚠", "!")
     if not _FONTE.get("unicode"):
         for a, b in (("≈", "~"), ("≥", ">="), ("≤", "<="), ("✓", "ok"), ("✔", "ok"), ("✘", "x"), ("✗", "x"), ("⚠", "!"), ("→", "->"), ("…", "...")):
             s = s.replace(a, b)
@@ -103,19 +120,19 @@ def _estilos():
     from reportlab.lib.styles import ParagraphStyle
     f = _fontes()
     C = colors.HexColor
-    base = ParagraphStyle("base", fontName=f["n"], fontSize=8.6, leading=12, textColor=C(TX))
+    base = ParagraphStyle("base", fontName=f["n"], fontSize=8.8, leading=12.2, textColor=C(TX))
     return {
         "C": C,
-        "tit": ParagraphStyle("tit", parent=base, fontName=f["b"], fontSize=17, leading=21, textColor=C(NAVY)),
+        "tit": ParagraphStyle("tit", parent=base, fontName=f["serifb"], fontSize=18, leading=22, textColor=C(NAVY)),
         "sub": ParagraphStyle("sub", parent=base, fontSize=9, leading=12.5, textColor=C(TX2)),
-        "h2": ParagraphStyle("h2", parent=base, fontName=f["b"], fontSize=10.5, leading=14, textColor=C(NAVY), spaceBefore=14, spaceAfter=6),
+        "h2": ParagraphStyle("h2", parent=base, fontName=f["serif"], fontSize=11, leading=14.5, textColor=C(NAVY), spaceBefore=14, spaceAfter=6),
         "cel": ParagraphStyle("cel", parent=base, fontSize=8.2, leading=11),
         "neg": ParagraphStyle("neg", parent=base, fontName=f["b"], fontSize=8.2, leading=11),
-        "cab": ParagraphStyle("cab", parent=base, fontName=f["b"], fontSize=7.2, leading=9, textColor=C(TX2)),
+        "cab": ParagraphStyle("cab", parent=base, fontName=f["sb"], fontSize=7.4, leading=9.2, textColor=C(TX2)),
         "mut": ParagraphStyle("mut", parent=base, fontSize=7.8, leading=10.5, textColor=C(TX3)),
-        "rot": ParagraphStyle("rot", parent=base, fontSize=7.2, leading=9, textColor=C(TX3)),
+        "rot": ParagraphStyle("rot", parent=base, fontSize=7.6, leading=9.4, textColor=C(TX)),
         "val": ParagraphStyle("val", parent=base, fontName=f["b"], fontSize=10, leading=13),
-        "num": ParagraphStyle("num", parent=base, fontName=f["b"], fontSize=20, leading=23, textColor=C(NAVY)),
+        "num": ParagraphStyle("num", parent=base, fontName=f["serif"], fontSize=20, leading=23, textColor=C(TX)),
         "p": base,
     }
 
@@ -142,23 +159,37 @@ def _moldura(titulo, nome_base, rodape=AVISO, pagina=None):
 
     def desenhar(canvas, doc):
         canvas.saveState()
-        _selo(canvas, ML, H - 14.2 * mm, 9.2 * mm)
-        canvas.setFillColor(C(NAVY))
-        canvas.setFont(f["b"], 10.5)
-        canvas.drawString(ML + 11.5 * mm, H - 11 * mm, "APTO")
-        canvas.setFont(f["n"], 8.2)
+        # cabeçalho: selo, APTO (fonte da marca) e o título; à direita a base e a emissão; filete verde
+        _selo(canvas, ML, H - 14.6 * mm, 9.6 * mm)
+        canvas.setFillColor(C(PRI))
+        canvas.setFont(f["marca"], 11)
+        x = ML + 12 * mm
+        canvas.saveState()
+        to = canvas.beginText(x, H - 11 * mm)
+        to.setFont(f["marca"], 11)
+        to.setCharSpace(1.6)
+        to.textOut("APTO")
+        canvas.drawText(to)
+        canvas.restoreState()
+        x += canvas.stringWidth("APTO", f["marca"], 11) + 4 * 1.6 + 3.2 * mm
+        canvas.setFont(f["n"], 8.4)
         canvas.setFillColor(C(TX2))
-        canvas.drawString(ML + 11.5 * mm + canvas.stringWidth("APTO", f["b"], 10.5) + 3 * mm, H - 11 * mm, "· " + titulo)
-        canvas.drawRightString(W - ML, H - 11 * mm, "%s · emitido em %s" % (nome_base, gerado))
+        canvas.drawString(x, H - 11 * mm, titulo)
+        canvas.setFont(f["n"], 7.6)
+        canvas.drawRightString(W - ML, H - 9.6 * mm, "Base %s" % nome_base)
+        canvas.drawRightString(W - ML, H - 12.8 * mm, "emitido em %s" % gerado)
+        canvas.setStrokeColor(C(PRI))
+        canvas.setLineWidth(1.1)
+        canvas.line(ML, H - 15.8 * mm, W - ML, H - 15.8 * mm)
+        # rodapé: filete, aviso em até 3 linhas; "página X de Y" fica com o _CanvasNumerado
         canvas.setStrokeColor(C(LINE))
-        canvas.setLineWidth(0.6)
-        canvas.line(ML, H - 15.5 * mm, W - ML, H - 15.5 * mm)
+        canvas.setLineWidth(0.5)
+        canvas.line(ML, 14 * mm, W - ML, 14 * mm)
         canvas.setFillColor(C(TX3))
         canvas.setFont(f["n"], 6.6)
-        # rodapé em até 2 linhas
         palavras, linhas, atual = rodape.split(), [], ""
         for p in palavras:
-            if canvas.stringWidth(atual + " " + p, f["n"], 6.6) > (W - 2 * ML - 22 * mm):
+            if canvas.stringWidth(atual + " " + p, f["n"], 6.6) > (W - 2 * ML - 28 * mm):
                 linhas.append(atual)
                 atual = p
             else:
@@ -166,9 +197,108 @@ def _moldura(titulo, nome_base, rodape=AVISO, pagina=None):
         linhas.append(atual)
         for i, l in enumerate(linhas[:3]):
             canvas.drawString(ML, 10.5 * mm - i * 3 * mm, l if f["unicode"] else l.replace("≈", "~"))
-        canvas.drawRightString(W - ML, 10.5 * mm, "página %d" % doc.page)
         canvas.restoreState()
     return desenhar
+
+
+def _moldura_capa(rodape=AVISO):
+    """Página de capa: só o aviso no rodapé, sem o cabeçalho."""
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.units import mm
+
+    def desenhar(canvas, doc):
+        f = _fontes()
+        W = A4[0]
+        canvas.saveState()
+        canvas.setStrokeColor(colors.HexColor(LINE))
+        canvas.setLineWidth(0.5)
+        canvas.line(16 * mm, 14 * mm, W - 16 * mm, 14 * mm)
+        canvas.setFont(f["n"], 6.6)
+        canvas.setFillColor(colors.HexColor(TX3))
+        canvas.drawString(16 * mm, 10.5 * mm, "Triagem automatizada a partir do RSPE (SEEU) e da ficha disciplinar (SIAPEN). Não substitui o Atestado de Pena.")
+        canvas.restoreState()
+    return desenhar
+
+
+def _capa(titulo, nome_base, linhas, W, st):
+    """Capa: selo, APTO, nome por extenso, filete, título, base e dados do lote; a página seguinte começa o corpo."""
+    import sys
+    from reportlab.platypus import Spacer, Paragraph, Image, PageBreak, Flowable
+    from reportlab.lib.styles import ParagraphStyle
+    from reportlab.lib.units import mm
+    f = _fontes()
+    C = st["C"]
+
+    class _Marca(Flowable):
+        def __init__(self, larg):
+            Flowable.__init__(self)
+            self.width, self.height = larg, 16 * mm
+
+        def draw(self):
+            to = self.canv.beginText()
+            to.setFont(f["marca"], 34)
+            to.setCharSpace(9)
+            larg = self.canv.stringWidth("APTO", f["marca"], 34) + 3 * 9
+            to.setTextOrigin((self.width - larg) / 2.0, 3 * mm)
+            to.setFillColor(C(PRI))
+            to.textOut("APTO")
+            self.canv.saveState()
+            self.canv.drawText(to)
+            self.canv.restoreState()
+
+    class _Filete(Flowable):
+        def __init__(self, larg):
+            Flowable.__init__(self)
+            self.width, self.height = larg, 2
+
+        def draw(self):
+            self.canv.setStrokeColor(C(PRI))
+            self.canv.setLineWidth(1.2)
+            self.canv.line(self.width / 2.0 - 12 * mm, 1, self.width / 2.0 + 12 * mm, 1)
+    centro = lambda nome, **k: ParagraphStyle(nome, parent=st["p"], alignment=1, **k)
+    el = [Spacer(1, 42 * mm)]
+    p = os.path.join(getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__))), "apto_selo.png")
+    if os.path.exists(p):
+        el.append(Image(p, 40 * mm, 40 * mm))
+    el += [Spacer(1, 7 * mm), _Marca(W),
+           Paragraph("Auditoria de Prazos e Tempo de Cumprimento Organizada", centro("cs", fontSize=10.5, leading=14, textColor=C(TX2))),
+           Spacer(1, 14 * mm), _Filete(W), Spacer(1, 10 * mm),
+           Paragraph(_t(titulo), centro("ct", fontName=f["serifb"], fontSize=24, leading=29, textColor=C(NAVY))),
+           Paragraph(_t(nome_base), centro("cb", fontName=f["serif"], fontSize=15, leading=20, textColor=C(TX))),
+           Spacer(1, 9 * mm)]
+    el += [Paragraph(_t(l), centro("cl", fontSize=10, leading=16, textColor=C(TX2))) for l in linhas]
+    el.append(PageBreak())
+    return el
+
+
+def _canvas_numerado():
+    """Canvas que guarda as páginas e, ao fechar, escreve "página X de Y" no rodapé de cada uma."""
+    from reportlab.pdfgen.canvas import Canvas
+    from reportlab.lib import colors
+    from reportlab.lib.units import mm
+
+    class _CanvasNumerado(Canvas):
+        def __init__(self, *a, **k):
+            Canvas.__init__(self, *a, **k)
+            self._paginas = []
+
+        def showPage(self):
+            self._paginas.append(dict(self.__dict__))
+            self._startPage()
+
+        def save(self):
+            n = len(self._paginas)
+            f = _fontes()
+            for estado in self._paginas:
+                self.__dict__.update(estado)
+                W = self._pagesize[0]
+                self.setFont(f["n"], 7.2)
+                self.setFillColor(colors.HexColor(TX3))
+                self.drawRightString(W - 16 * mm, 10.5 * mm, "página %d de %d" % (self._pageNumber, n))
+                Canvas.showPage(self)
+            Canvas.save(self)
+    return _CanvasNumerado
 
 
 def _tabela(dados, larguras, st, cab=True, cores_linha=None, zebra=True, pad=6):
@@ -184,7 +314,7 @@ def _tabela(dados, larguras, st, cab=True, cores_linha=None, zebra=True, pad=6):
            ("TOPPADDING", (0, 0), (-1, -1), 5), ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
            ("LINEBELOW", (0, 0), (-1, -1), 0.4, C(LINE))]
     if cab:
-        est += [("BACKGROUND", (0, 0), (-1, 0), C("#F2F4F7")), ("LINEBELOW", (0, 0), (-1, 0), 0.6, C("#D0D5DD"))]
+        est += [("LINEBELOW", (0, 0), (-1, 0), 1.1, C(PRI))]
     if zebra:
         for i in range(1 if cab else 0, len(linhas)):
             if (i % 2 == 0) == cab:
@@ -387,8 +517,8 @@ def _incidentes(r):
 
 
 # ---------------------------------------------------------------- linha do tempo visual da prescrição executória (figura estática)
-TL_COR = {"provisoria": ("#98A2B3", "#FFFFFF"), "cumprimento": ("#34A853", "#34A853"), "evasao": ("#F04438", "#FDE8E8"), "interrupcao": ("#F04438", "#FDE8E8"),
-          "outro_motivo": ("#B692F6", "#B692F6"), "encerrada": ("#475467", "#EAECF0"), "liberdade": ("#D0D5DD", "#EEF0F3"), "livramento": ("#84CAFF", "#84CAFF"), "duvida": ("#F79009", "#FEF4D6")}
+TL_COR = {"provisoria": ("#AEB5B0", "#FFFFFF"), "cumprimento": ("#2F7A4F", "#2F7A4F"), "evasao": ("#A33A36", "#F6E4E3"), "interrupcao": ("#A33A36", "#F6E4E3"),
+          "outro_motivo": ("#B3A8C9", "#B3A8C9"), "encerrada": ("#5F6662", "#E7E9E5"), "liberdade": ("#CDD2CC", "#ECEEEB"), "livramento": ("#A9BDD0", "#A9BDD0"), "duvida": ("#B5651D", "#F5EDDA")}
 TL_ROT = {"provisoria": "prisão provisória (detração)", "cumprimento": "cumprimento da pena", "evasao": "fuga / evasão", "interrupcao": "interrupção (motivo a conferir)",
           "outro_motivo": "suspensão (preso por outro motivo)", "encerrada": "execução encerrada", "liberdade": "liberdade sem evasão", "livramento": "livramento", "duvida": "atribuição não comprovada"}
 
@@ -456,7 +586,7 @@ def figura_prescricao(L, W, hoje=None):
     dr.add(g)
     yy = lambda y: H - y            # coordenadas de cima para baixo
     # eixo
-    g.add(Line(PL, yy(Y0), PL + Wx, yy(Y0), strokeColor=C("#D0D5DD"), strokeWidth=1.2))
+    g.add(Line(PL, yy(Y0), PL + Wx, yy(Y0), strokeColor=C("#CDD2CC"), strokeWidth=1.2))
     # faixas
     faixas = []
     for p in lt:
@@ -469,28 +599,28 @@ def figura_prescricao(L, W, hoje=None):
         x1, x2 = x(a), max(x(b), x(a) + 1.5)
         g.add(Rect(x1, yy(Y0 + 7), x2 - x1, 14, fillColor=C(fill), strokeColor=C(cor), strokeWidth=0.6, rx=1.5, ry=1.5))
         if tipo in ("evasao", "interrupcao"):
-            _hachura(g, x1, yy(Y0 + 7), x2 - x1, 14, "#F04438")
+            _hachura(g, x1, yy(Y0 + 7), x2 - x1, 14, "#A33A36")
         elif tipo == "duvida":
-            _hachura(g, x1, yy(Y0 + 7), x2 - x1, 14, "#F79009")
-            g.add(String((x1 + x2) / 2, yy(Y0 + 2.5), "?", fontName=FB, fontSize=8, fillColor=C("#B54708"), textAnchor="middle"))
+            _hachura(g, x1, yy(Y0 + 7), x2 - x1, 14, "#B5651D")
+            g.add(String((x1 + x2) / 2, yy(Y0 + 2.5), "?", fontName=FB, fontSize=8, fillColor=C("#7A5410"), textAnchor="middle"))
         elif tipo == "provisoria":
             t = 0.0
             while t < x2 - x1:
-                g.add(Line(x1 + t, yy(Y0 + 7), x1 + t, yy(Y0 - 7), strokeColor=C("#98A2B3"), strokeWidth=1.2))
+                g.add(Line(x1 + t, yy(Y0 + 7), x1 + t, yy(Y0 - 7), strokeColor=C("#AEB5B0"), strokeWidth=1.2))
                 t += 3.0
         if x2 - x1 > 34:
-            g.add(String((x1 + x2) / 2, yy(Y0 + 20), _tl_dias((b - a).days), fontName=FN, fontSize=5.5, fillColor=C("#475467"), textAnchor="middle"))
+            g.add(String((x1 + x2) / 2, yy(Y0 + 20), _tl_dias((b - a).days), fontName=FN, fontSize=5.5, fillColor=C("#5F6662"), textAnchor="middle"))
     # marcos
-    marcos = [(D(L.get("fato")) or D(L.get("ppe_termo")) or hoje, "Fato", "#475467")]
+    marcos = [(D(L.get("fato")) or D(L.get("ppe_termo")) or hoje, "Fato", "#5F6662")]
     if D(L.get("sentenca")):
-        marcos.append((D(L.get("sentenca")), "Sentença", "#475467"))
+        marcos.append((D(L.get("sentenca")), "Sentença", "#5F6662"))
     if D(L.get("ppe_termo")):
-        marcos.append((D(L.get("ppe_termo")), "Trânsito (termo)", "#2563EB"))
+        marcos.append((D(L.get("ppe_termo")), "Trânsito (termo)", "#4A6A8A"))
     for a, b, tipo, p in faixas:
         if tipo in ("evasao", "interrupcao"):
-            marcos.append((a, "Fuga" if tipo == "evasao" else "Interrupção", "#B42318"))
-            marcos.append((b, "Recaptura" if p.get("fim") else "Hoje", "#067647"))
-    marcos.append((hoje, "Situação atual", "#101828"))
+            marcos.append((a, "Fuga" if tipo == "evasao" else "Interrupção", "#8E2424"))
+            marcos.append((b, "Recaptura" if p.get("fim") else "Hoje", "#1F5B39"))
+    marcos.append((hoje, "Situação atual", "#262B28"))
     marcos.sort(key=lambda m: m[0])
     tiers = [-999.0, -999.0, -999.0]
     for d, rot, cor in marcos:
@@ -502,7 +632,7 @@ def figura_prescricao(L, W, hoje=None):
         g.add(Circle(cx, yy(Y0), 3, fillColor=colors.white, strokeColor=C(cor), strokeWidth=1.3))
         anchor = "start" if cx < PL + 20 else ("end" if cx > PL + Wx - 20 else "middle")
         g.add(String(cx, yy(ty), rot, fontName=FB, fontSize=5.6, fillColor=C(cor), textAnchor=anchor))
-        g.add(String(cx, yy(ty + 6.5), rs.fmt(d), fontName=FN, fontSize=5.4, fillColor=C("#475467"), textAnchor=anchor))
+        g.add(String(cx, yy(ty + 6.5), rs.fmt(d), fontName=FN, fontSize=5.4, fillColor=C("#5F6662"), textAnchor=anchor))
     # linha de contagem e cartão por fuga
     yc = Y0 + 46
     for s in sal:
@@ -513,23 +643,23 @@ def figura_prescricao(L, W, hoje=None):
         xa, xb = x(a), x(b)
         lim = D(s.get("limite_max")) if s.get("limite_max") else None
         limn = D(s.get("limite_min")) if s.get("limite_min") else None
-        cor = {"prescrita": "#B42318", "a verificar": "#B54708"}.get(s.get("resultado"), "#067647")
+        cor = {"prescrita": "#8E2424", "a verificar": "#7A5410"}.get(s.get("resultado"), "#1F5B39")
         rot = ("revogação do livramento" if s.get("revogacao") else ("interrupção" if s.get("e_evasao") is False else "fuga")) + " de " + s.get("evasao", "")
-        g.add(Line(xa, yy(Y0), xa, yy(yc), strokeColor=C("#B42318"), strokeWidth=0.5, strokeDashArray=[1.5, 1.5]))
+        g.add(Line(xa, yy(Y0), xa, yy(yc), strokeColor=C("#8E2424"), strokeWidth=0.5, strokeDashArray=[1.5, 1.5]))
         g.add(Line(xa, yy(yc), min(xb, x(lim) if lim else xb), yy(yc), strokeColor=C(cor), strokeWidth=2.6, strokeLineCap=1))
         ax = xa > PL + Wx - 190
         g.add(String(PL + Wx if ax else xa, yy(yc - 7), "contagem da prescrição pelo saldo (art. 113) · " + rot, fontName=FB, fontSize=5.4, fillColor=C(cor), textAnchor="end" if ax else "start"))
         rotulos = []
         if limn and x(limn) < xb:
-            rotulos.append((x(limn), "#B42318", "venceria %s (saldo mín.)" % s["limite_min"], 1.0, False))
+            rotulos.append((x(limn), "#8E2424", "venceria %s (saldo mín.)" % s["limite_min"], 1.0, False))
         vistos = {s.get("limite_min"), s.get("limite_max")}
         for fx in s.get("faixas") or []:
             if fx.get("limite") and fx.get("prescrita") and fx["limite"] not in vistos:
                 vistos.add(fx["limite"])
-                rotulos.append((x(D(fx["limite"])), "#B42318", "venceria %s se o saldo fosse %s" % (fx["limite"], fx.get("rotulo") or ""), 1.0, True))
+                rotulos.append((x(D(fx["limite"])), "#8E2424", "venceria %s se o saldo fosse %s" % (fx["limite"], fx.get("rotulo") or ""), 1.0, True))
         if lim:
-            rotulos.append((x(lim), "#475467", "venceria %s (saldo máx.)" % s["limite_max"], 1.0, False))
-        rotulos.append((xb, "#067647", ("recaptura %s → interrompe (art. 117, V)" % s["fim"]) if (s.get("fim") and s.get("fim") != "hoje") else "hoje", 1.6, False))
+            rotulos.append((x(lim), "#5F6662", "venceria %s (saldo máx.)" % s["limite_max"], 1.0, False))
+        rotulos.append((xb, "#1F5B39", ("recaptura %s → interrompe (art. 117, V)" % s["fim"]) if (s.get("fim") and s.get("fim") != "hoje") else "hoje", 1.6, False))
         rotulos.sort(key=lambda t: t[0])
         lx, dy = -9999.0, 11.0
         for tx, tcor, txt, tw, dash in rotulos:
@@ -557,8 +687,8 @@ def figura_prescricao(L, W, hoje=None):
               ("Prazo (art. 113)", ("%s a %s" % (s["prazo_min"], s["prazo_max"])) if (s.get("prazo_min") and s.get("prazo_min") != s.get("prazo_max")) else (s.get("prazo_max") or "nada a prescrever")),
               ("Vencimento", venc)]
         for j, (ra, rb) in enumerate(li):
-            g.add(String(cxx + 5, yy(cy + 18 + j * 8.6), ra + ":", fontName=FN, fontSize=5.4, fillColor=C("#475467")))
-            g.add(String(cxx + cw - 5, yy(cy + 18 + j * 8.6), rb, fontName=FB, fontSize=5.4, fillColor=C("#101828"), textAnchor="end"))
+            g.add(String(cxx + 5, yy(cy + 18 + j * 8.6), ra + ":", fontName=FN, fontSize=5.4, fillColor=C("#5F6662")))
+            g.add(String(cxx + cw - 5, yy(cy + 18 + j * 8.6), rb, fontName=FB, fontSize=5.4, fillColor=C("#262B28"), textAnchor="end"))
         yc += 118
     return dr
 
@@ -799,7 +929,7 @@ def relatorio_individual(m, caminho, nome_base):
                        Paragraph("<b>Hipótese 2 · ordem cronológica do trânsito</b><br/>Este crime seria o %dº de %d. Saldo na fuga: %s · %s → <b>%s</b>" % (
                                      hcr["posicao"], hcr["de"], _tl_amd(hcr["saldo"]), ("prazo %s · venceria em %s" % (_t(hcr["prazo"]), hcr["limite"])) if hcr.get("prazo") else "nada a prescrever", _t(hcr["resultado"])), st["cel"])]]
                 th = Table(hp, colWidths=[W * 0.49, W * 0.49], hAlign="LEFT")
-                th.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP"), ("BOX", (0, 0), (0, 0), 0.5, C("#D0D5DD")), ("BOX", (1, 0), (1, 0), 0.5, C("#D0D5DD")),
+                th.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP"), ("BOX", (0, 0), (0, 0), 0.5, C("#CDD2CC")), ("BOX", (1, 0), (1, 0), 0.5, C("#CDD2CC")),
                                         ("TOPPADDING", (0, 0), (-1, -1), 4), ("BOTTOMPADDING", (0, 0), (-1, -1), 4)]))
                 el.append(Spacer(1, 4))
                 el.append(th)
@@ -821,7 +951,7 @@ def relatorio_individual(m, caminho, nome_base):
     doc = SimpleDocTemplate(caminho, pagesize=A4, leftMargin=16 * mm, rightMargin=16 * mm, topMargin=21 * mm, bottomMargin=20 * mm,
                             title="Relatório individual - %s" % m.get("nome"), author="APTO")
     fr_ = _moldura("Relatório individual", nome_base)
-    doc.build(el, onFirstPage=fr_, onLaterPages=fr_)
+    doc.build(el, onFirstPage=fr_, onLaterPages=fr_, canvasmaker=_canvas_numerado())
     return caminho
 
 
@@ -1216,8 +1346,8 @@ def _barras(pares, st, largura, cor=PRI, max_itens=10):
 
 
 # paleta categórica (ordem fixa, validada: CVD e visão normal) e cinza reservado para "Outros"/"sem dado"
-CAT = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#4a3aa7", "#e34948"]
-CINZA_OUTROS = "#C4C9D2"
+CAT = ["#0B3B22", "#3E8E62", "#C9A55C", "#7FB894", "#8A5D0E", "#4A6A8A", "#B08497", "#A33A36"]
+CINZA_OUTROS = "#C6CBC6"
 
 
 def _rosca(titulo, pares, largura, st, total_rot="", max_fatias=6, cores=None, nota="", ordenar=True, abaixo=False):
@@ -1309,7 +1439,7 @@ def _rosca(titulo, pares, largura, st, total_rot="", max_fatias=6, cores=None, n
     y = (h - D - 16) if abaixo else (h - 9)
     for txt, xr in (("Nº", col_n), ("%", col_p)):
         d.add(String(leg_x + xr - stringWidth(txt, f["b"], 6.6), y, txt, fontName=f["b"], fontSize=6.6, fillColor=colors.HexColor(TX2)))
-    d.add(Line(leg_x, y - 3, leg_x + leg_w - 2, y - 3, strokeColor=colors.HexColor("#D0D5DD"), strokeWidth=0.5))
+    d.add(Line(leg_x, y - 3, leg_x + leg_w - 2, y - 3, strokeColor=colors.HexColor("#CDD2CC"), strokeWidth=0.5))
     y -= 13
     for (rot, v), ls in zip(pares, rotulos):
         d.add(Rect(leg_x, y, 7, 7, fillColor=colors.HexColor(cor_de[rot]), strokeColor=None, rx=1.5, ry=1.5))
@@ -1360,8 +1490,8 @@ def _colunas(titulo, categorias, series, largura, st, altura=120, sufixo="", not
     alt = altura - 6
     for k in range(1, 5):  # grade recessiva
         yy = y0 + alt * k / 4.0
-        d.add(Line(0, yy, largura, yy, strokeColor=colors.HexColor("#EEF0F3"), strokeWidth=0.4))
-    d.add(Line(0, y0, largura, y0, strokeColor=colors.HexColor("#D0D5DD"), strokeWidth=0.6))
+        d.add(Line(0, yy, largura, yy, strokeColor=colors.HexColor("#ECEEEB"), strokeWidth=0.4))
+    d.add(Line(0, y0, largura, y0, strokeColor=colors.HexColor("#CDD2CC"), strokeWidth=0.6))
     bw = min(passo * 0.56, 34)
     for i, cat in enumerate(categorias):
         x = 3 + passo * i + (passo - bw) / 2.0
@@ -1405,7 +1535,7 @@ def relatorio_geral(modelos, caminho, nome_base, nominal=True):
     nf = E["com_ficha"]
     el = []
     pct = lambda x, base=n: ("%d%%" % round(100.0 * x / base)) if base else "—"
-    st_parte = ParagraphStyle("parte", parent=st["tit"], fontSize=13, leading=17, textColor=C(PRI), spaceBefore=4)
+    st_parte = ParagraphStyle("parte", parent=st["tit"], fontSize=15, leading=19, textColor=C(NAVY), spaceBefore=4)
     RW = W / 2.0 - 10
 
     def numeros(lista, cores=None):
@@ -1414,7 +1544,7 @@ def relatorio_geral(modelos, caminho, nome_base, nominal=True):
             v, rot = it[0], it[1]
             det = it[2] if len(it) > 2 else ""
             cor = (cores or {}).get(k)
-            num = Paragraph('<font color="%s">%s</font>' % (COR[cor][1], _t(str(v))) if cor else _t(str(v)), st["num"])
+            num = Paragraph(_t(str(v)), st["num"])  # número em grafite: a cor fica para as etiquetas, não para o destaque
             cel.append([num, Paragraph(_t(rot), st["rot"])] + ([Paragraph(_t(det), st["mut"])] if det else []))
         t = Table([cel], colWidths=[W / len(lista)] * len(lista))
         t.setStyle(TableStyle([("LINEABOVE", (0, 0), (-1, 0), 0.6, C(LINE)), ("LINEBELOW", (0, 0), (-1, 0), 0.6, C(LINE)),
@@ -1425,7 +1555,7 @@ def relatorio_geral(modelos, caminho, nome_base, nominal=True):
     def parte(num, titulo, sub=""):
         el.append(CondPageBreak(110 * mm))  # o título da parte não fica sozinho no pé da página
         el.append(Spacer(1, 6))
-        el.append(Paragraph(_t("%s. %s" % (num, titulo)), st_parte))
+        el.append(Paragraph('<font color="%s">%s</font>&nbsp;&nbsp;%s' % (PRI, num, _t(titulo)), st_parte))
         if sub:
             el.append(Paragraph(_t(sub), st["mut"]))
         el.append(Spacer(1, 6))
@@ -1443,9 +1573,14 @@ def relatorio_geral(modelos, caminho, nome_base, nominal=True):
                                ("TOPPADDING", (0, 0), (-1, -1), 0), ("BOTTOMPADDING", (0, 0), (-1, -1), 12)]))
         el.append(t)
 
+    # ------------------------------------------------------------ capa
+    p0, p1 = E["periodo"]
+    el += _capa("Relatório geral da base", nome_base, [
+        "%s · %d com ficha disciplinar (SIAPEN)" % (rs.pl(E["n"], "assistido", "assistidos"), nf),
+        "RSPEs gerados entre %s e %s" % (rs.fmt(p0) or "?", rs.fmt(p1) or "?"),
+        "Emitido em %s" % datetime.now().strftime("%d/%m/%Y")], W, st)
     # ------------------------------------------------------------ cabeçalho
     el.append(Paragraph(_t("Relatório geral da base · %s" % nome_base), st["tit"]))
-    p0, p1 = E["periodo"]
     el.append(Paragraph(_t("Diagnóstico de %s · RSPEs gerados entre %s e %s · %d com ficha disciplinar (SIAPEN) · emitido em %s" % (
         rs.pl(E["n"], "assistido", "assistidos"), rs.fmt(p0) or "?", rs.fmt(p1) or "?", nf, datetime.now().strftime("%d/%m/%Y"))), st["sub"]))
 
@@ -1481,22 +1616,22 @@ def relatorio_geral(modelos, caminho, nome_base, nominal=True):
                       {2: "amarelo", 3: "amarelo", 4: "laranja"}))
     el.append(Spacer(1, 10))
     ordem_c = ["Excelente", "Ótima", "Boa", "Neutra", "Regular", "Má", "Péssima", "Sem lapso", "Responde PADIC", "Outra anotação", "Não informada"]
-    cores_c = {"Excelente": "#008300", "Ótima": "#1baf7a", "Boa": "#2a78d6", "Neutra": "#4a3aa7", "Regular": "#eda100", "Má": "#eb6834", "Péssima": "#e34948",
-               "Sem lapso": "#98a2b3", "Responde PADIC": "#b42318", "Outra anotação": "#d0d5dd"}
+    cores_c = {"Excelente": "#0B3B22", "Ótima": "#1F6B43", "Boa": "#3E8E62", "Neutra": "#6B5B8A", "Regular": "#C9A55C", "Má": "#8A5D0E", "Péssima": "#8E2424",
+               "Sem lapso": "#AEB5B0", "Responde PADIC": "#C9A55C", "Outra anotação": "#CDD2CC"}
     lado(_rosca("2.1 Conduta carcerária", [(k, E["conduta"].get(k, 0)) for k in ordem_c], RW, st, "com ficha", max_fatias=8, cores=cores_c, ordenar=False),
          _rosca("2.2 Situação laboral", [(k, E["trabalho"].get(k, 0)) for k in ("Trabalha (interno)", "Trabalha (externo)", "Não trabalha")], RW, st, "com ficha",
-                cores={"Trabalha (interno)": "#2a78d6", "Trabalha (externo)": "#1baf7a", "Não trabalha": "#eb6834"}, ordenar=False))
+                cores={"Trabalha (interno)": "#1F6B43", "Trabalha (externo)": "#7FB894", "Não trabalha": "#AEB5B0"}, ordenar=False))
     resp = ("Tempo de resposta do PADIC (do fato à decisão): mediana de %s. " % rs.pl(F["padic_resp_mediana"], "dia", "dias")) if F["padic_resp_mediana"] is not None else ""
     mp = sorted(F["pend_dias"])
     lado(_rosca("2.3 Faltas na ficha: situação do PADIC", [("Registrada, sem PADIC instaurado", P.get("registrada", 0)), ("PADIC instaurado, sem resultado na ficha", P.get("PADIC instaurado", 0)),
                                                           ("Julgada: sanção aplicada", P.get("homologada/punida", 0)), ("Julgada: arquivada ou absolvido", P.get("arquivada", 0))],
                 RW, st, "faltas", ordenar=False,
-                cores={"Registrada, sem PADIC instaurado": "#eda100", "PADIC instaurado, sem resultado na ficha": "#eb6834", "Julgada: sanção aplicada": "#2a78d6",
-                       "Julgada: arquivada ou absolvido": "#1baf7a"},
+                cores={"Registrada, sem PADIC instaurado": "#AEB5B0", "PADIC instaurado, sem resultado na ficha": "#C9A55C", "Julgada: sanção aplicada": "#0B3B22",
+                       "Julgada: arquivada ou absolvido": "#7FB894"},
                 nota=resp + "%s sem julgamento há mais de 60 dias do fato." % rs.pl(F["padic_abertos60"], "falta", "faltas")),
          _rosca("2.4 Faltas graves no RSPE: decisão judicial", [("Homologadas", F["rspe_hom"]), ("Sem decisão (pendentes)", F["rspe_pend"]),
                                                                 ("Não homologadas ou afastadas", F["rspe_neg"])], RW, st, "faltas", ordenar=False,
-                cores={"Homologadas": "#2a78d6", "Sem decisão (pendentes)": "#eb6834", "Não homologadas ou afastadas": "#1baf7a"},
+                cores={"Homologadas": "#0B3B22", "Sem decisão (pendentes)": "#C9A55C", "Não homologadas ou afastadas": "#7FB894"},
                 nota=(("A falta pendente mais antiga aguarda decisão há %s do fato. " % rs.pl(mp[-1], "dia", "dias")) if mp else "") +
                      ("Fora do quadro: %s da ficha sem registro no SEEU." % rs.pl(F["ficha_sem_seeu"], "falta grave ou fuga", "faltas graves ou fugas")
                       if F["ficha_sem_seeu"] else "")))
@@ -1525,7 +1660,7 @@ def relatorio_geral(modelos, caminho, nome_base, nominal=True):
     curtos = ["Prescrição executória", "Prescrição punitiva", "Extinção cabível", "Progressão vencida", "Livramento vencido",
               "Indulto/comutação cabível", "Indulto/comutação a verificar"]
     el.append(KeepTogether(_colunas("3.1 Indicadores: assistidos em cada situação (% da base)", curtos,
-                                    [("% da base", [round(100.0 * x[2] / n) for x in indic], "#2a78d6")], W, st, altura=105, sufixo="%",
+                                    [("% da base", [round(100.0 * x[2] / n) for x in indic], "#3E8E62")], W, st, altura=105, sufixo="%",
                                     nota="Um mesmo assistido pode estar em mais de um indicador.")))
     el.append(Spacer(1, 6))
     tb = [["Indicador", "Assistidos", "% da base", "Observação"]]
@@ -1539,8 +1674,8 @@ def relatorio_geral(modelos, caminho, nome_base, nominal=True):
     secao("3.2 Prazos de progressão, livramento e término", "Assistidos por faixa de prazo, de hoje até a data prevista no SEEU.")
     grupos = [("Vencido", ["vencido"]), ("Até 90 dias", ["até 30 dias", "até 60 dias", "até 90 dias"]), ("91 a 180 dias", ["até 180 dias"]),
               ("Mais de 180 dias", ["mais de 180 dias"]), ("Pena parada", ["interrompida"]), ("Não se aplica", ["não se aplica"]), ("Sem data no RSPE", ["sem data no RSPE"])]
-    cor_g = {"Vencido": "#e34948", "Até 90 dias": "#eda100", "91 a 180 dias": "#2a78d6", "Mais de 180 dias": "#1baf7a", "Pena parada": "#4a3aa7",
-             "Não se aplica": "#98A2B3", "Sem data no RSPE": "#D0D5DD"}
+    cor_g = {"Vencido": "#A33A36", "Até 90 dias": "#C9A55C", "91 a 180 dias": "#3E8E62", "Mais de 180 dias": "#1F6B43", "Pena parada": "#6B5B8A",
+             "Não se aplica": "#AEB5B0", "Sem data no RSPE": "#CDD2CC"}
     W3 = W / 3.0 - 8
     trio = []
     for rot in ("Progressão", "Livramento condicional", "Término da pena"):
@@ -1570,8 +1705,8 @@ def relatorio_geral(modelos, caminho, nome_base, nominal=True):
     if graf:
         el.append(KeepTogether(_colunas("Assistidos com indulto ou comutação cabível, a verificar ou concedido, por decreto",
                                         [("%s%s" % (r["ano"], " Mães" if "maes" in str(r["id"]) else "")) for r in graf],
-                                        [("Cabe", [r["cabe"] for r in graf], "#1baf7a"), ("A verificar", [r["ver"] for r in graf], "#eda100"),
-                                         ("Concedido (RSPE)", [r["conc"] for r in graf], "#2a78d6")], W, st, altura=100)))
+                                        [("Cabe", [r["cabe"] for r in graf], "#1F6B43"), ("A verificar", [r["ver"] for r in graf], "#C9A55C"),
+                                         ("Concedido (RSPE)", [r["conc"] for r in graf], "#3E8E62")], W, st, altura=100)))
         el.append(Spacer(1, 6))
     # quadro resumido: uma linha por decreto com algum resultado favorável ou decisão no RSPE; os demais, numa linha só
     rel = [r for r in com_alc if r["cabe"] + r["ver"] + r["conc"] + r["indef"]]
@@ -1597,7 +1732,7 @@ def relatorio_geral(modelos, caminho, nome_base, nominal=True):
     for m in modelos:
         c_ = m.get("presc_retro_cor")
         ret["Aparente" if c_ == "vermelho" else "A verificar" if c_ == "amarelo" else "Sem dados no RSPE" if c_ == "cinza" else "Não configurada"] += 1
-    cor_p = {"Aparente": "#e34948", "Iminente ou a verificar": "#eda100", "A verificar": "#eda100", "Não prescrita": "#1baf7a", "Não configurada": "#1baf7a"}
+    cor_p = {"Aparente": "#A33A36", "Iminente ou a verificar": "#C9A55C", "A verificar": "#C9A55C", "Não prescrita": "#1F6B43", "Não configurada": "#1F6B43"}
     demais = max(0, E["n"] - E["ext_cabivel"] - E["ext_verificar"] - E["ext_registrada"])
     W3 = W / 3.0 - 8
     trio = [_rosca("Pretensão executória", [("Aparente", pres.get("aparente", 0)), ("Iminente ou a verificar", pres.get("iminente / a verificar", 0)),
@@ -1608,8 +1743,8 @@ def relatorio_geral(modelos, caminho, nome_base, nominal=True):
             _rosca("Extinção da pena", [("Extinção cabível", E["ext_cabivel"]), ("Até 60 dias ou a verificar", E["ext_verificar"]),
                                         ("Já extinta (RSPE)", E["ext_registrada"]), ("Em cumprimento ou sem previsão", demais)],
                    W3, st, "assistidos", ordenar=False, abaixo=True,
-                   cores={"Extinção cabível": "#e34948", "Até 60 dias ou a verificar": "#eda100", "Já extinta (RSPE)": "#2a78d6",
-                          "Em cumprimento ou sem previsão": "#1baf7a"})]
+                   cores={"Extinção cabível": "#A33A36", "Até 60 dias ou a verificar": "#C9A55C", "Já extinta (RSPE)": "#3E8E62",
+                          "Em cumprimento ou sem previsão": "#1F6B43"})]
     t3 = Table([trio], colWidths=[W / 3.0] * 3)
     t3.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP"), ("LEFTPADDING", (0, 0), (-1, -1), 0), ("RIGHTPADDING", (0, 0), (-1, -1), 8)]))
     el.append(t3)
@@ -1637,7 +1772,7 @@ def relatorio_geral(modelos, caminho, nome_base, nominal=True):
     doc = SimpleDocTemplate(caminho, pagesize=A4, leftMargin=16 * mm, rightMargin=16 * mm, topMargin=21 * mm, bottomMargin=20 * mm,
                             title="Relatório geral - %s" % nome_base, author="APTO")
     fr = _moldura("Relatório geral", nome_base)
-    doc.build(el, onFirstPage=fr, onLaterPages=fr)
+    doc.build(el, onFirstPage=_moldura_capa(), onLaterPages=fr, canvasmaker=_canvas_numerado())
     return caminho
 
 
@@ -1943,7 +2078,7 @@ def relatorio_remicao(modelos, caminho, nome_base, nominal=True):
                             title="Remição detalhada", author="APTO")
     fr = _moldura("Remição detalhada", nome_base,
                            "Triagem pela ficha disciplinar e pelo RSPE: atestados com dias exatos; trabalho sem atestado e estudo, estimativa. Conferir nos autos (SEEU) antes do pedido.", pagina=PG)
-    doc.build(el, onFirstPage=fr, onLaterPages=fr)
+    doc.build(el, onFirstPage=fr, onLaterPages=fr, canvasmaker=_canvas_numerado())
     return caminho
 
 
@@ -2140,7 +2275,7 @@ def relatorio_prioridade_remicao(modelos, caminho, nome_base):
                             title="Prioridade das remições", author="APTO")
     fr = _moldura("Prioridade das remições", nome_base, rodape="Triagem pela ficha disciplinar e pelo RSPE: atestados com dias exatos; "
                   "trabalho sem atestado e estudo, estimativa. Conferir nos autos (SEEU) antes do pedido.", pagina=landscape(A4))
-    doc.build(el, onFirstPage=fr, onLaterPages=fr)
+    doc.build(el, onFirstPage=fr, onLaterPages=fr, canvasmaker=_canvas_numerado())
 
 
 def planilha_remicao_xlsx(modelos, caminho, nome_base):
@@ -2326,13 +2461,13 @@ def planilha_remicao_pdf(modelos, caminho, nome_base):
                             title="Conferência da remição", author="APTO")
     fr = _moldura("Conferência da remição", nome_base, "Ficha disciplinar (SIAPEN) x RSPE (SEEU): atestados com dias exatos; \"≈\" = estimativa. "
                   "Conferir nos autos antes do pedido.", pagina=PG)
-    doc.build(el, onFirstPage=fr, onLaterPages=fr)
+    doc.build(el, onFirstPage=fr, onLaterPages=fr, canvasmaker=_canvas_numerado())
     return caminho
 
 
 # ---------------------------------------------------------------- relatório de providências
-TIPOS_PROV = [("Pedido nos autos", "#00602C", "pedidos nos autos"), ("Ofício à unidade prisional", "#0BA5EC", "ofícios à unidade prisional"),
-              ("Outra providência", "#98A2B3", "outras providências")]
+TIPOS_PROV = [("Pedido nos autos", "#00602C", "pedidos nos autos"), ("Ofício à unidade prisional", "#5B7C9C", "ofícios à unidade prisional"),
+              ("Outra providência", "#AEB5B0", "outras providências")]
 _MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"]
 
 
@@ -2454,7 +2589,7 @@ def relatorio_providencias(linhas, todas, mes_sel, caminho, titulo, nome_base):
     doc = SimpleDocTemplate(caminho, pagesize=A4, leftMargin=16 * mm, rightMargin=16 * mm, topMargin=21 * mm, bottomMargin=20 * mm,
                             title=titulo, author="APTO")
     fr = _moldura("Relatório de providências", nome_base, rodape="Providências registradas no APTO (coluna Pedido). Conferir nos autos e no SAP.")
-    doc.build(el, onFirstPage=fr, onLaterPages=fr)
+    doc.build(el, onFirstPage=fr, onLaterPages=fr, canvasmaker=_canvas_numerado())
     return caminho
 
 
@@ -2571,4 +2706,4 @@ def relatorio_falhas(d, caminho, nome_base):
     doc = SimpleDocTemplate(caminho, pagesize=A4, leftMargin=16 * mm, rightMargin=16 * mm, topMargin=21 * mm, bottomMargin=20 * mm,
                             title="Registro da importação", author="APTO")
     fr = _moldura("Registro da importação", nome_base, rodape="Registro da importação do lote. Enviar este PDF com os arquivos citados para a correção da leitura.")
-    doc.build(el, onFirstPage=fr, onLaterPages=fr)
+    doc.build(el, onFirstPage=fr, onLaterPages=fr, canvasmaker=_canvas_numerado())
