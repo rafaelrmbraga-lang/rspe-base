@@ -3926,8 +3926,20 @@ def _extinta_depois(out, crimes, ano, ref):
                and (to_date(c.get("data_infracao") or "") or date.max) <= ref]
     if not ext_dep:
         return
-    nota_e = ("pena extinta depois de %s (%s): em %s ainda estava em execução e não entrou nesta conta - refazer a análise com ela" % (
-        fmt(ref), "; ".join("%s, extinta em %s" % (crimes_curto([c]), c.get("data_extincao")) for c in ext_dep), fmt(ref)))
+    por_data = {}
+    for c in ext_dep:
+        por_data.setdefault((c.get("data_extincao"), c.get("extincao_motivo") or ""), []).append(c)
+    partes = []
+    for (d_, mot), cs in por_data.items():
+        arts = ", ".join(dict.fromkeys(re.sub(r"\s*\(extinto\)", "", crimes_curto([c])) for c in cs))
+        partes.append("%s extint%s em %s%s (%s)" % (pl(len(cs), "pena", "penas"), "a" if len(cs) == 1 else "as", d_,
+                                                    (" por " + mot.lower()) if mot else "", arts))
+    if all(re.search(r"INDULT|GRA[ÇC]A|ANISTIA", (mot or "").upper()) for (_, mot) in por_data):
+        # extinção por indulto/graça depois do decreto: em geral é a aplicação deste mesmo decreto
+        nota_e = "%s, depois de %s: conferir se a extinção foi por este decreto" % ("; ".join(partes), fmt(ref))
+    else:
+        nota_e = ("%s, depois de %s: em %s ainda estava em execução e não entrou nesta conta - refazer a análise com ela" % (
+            "; ".join(partes), fmt(ref), fmt(ref)))
     for kk in ("indulto_%s" % ano, "comutacao_%s" % ano):
         u = (out.get(kk) or "").upper()
         if not u or u.startswith(("CONCEDID", "INDEFERID", "VEDAD", "A VERIFICAR")):
