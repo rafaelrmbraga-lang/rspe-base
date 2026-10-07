@@ -1,4 +1,4 @@
-RSPE BASE - SEEU  v7.2.2 (programa em abas)
+RSPE BASE - SEEU  v7.3.0 (programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
@@ -563,6 +563,56 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v7.3.0
+  Revisão da leitura da ficha disciplinar com as 653 fichas da PDIB (texto
+  bruto de cada PDF confrontado com o que o programa leu). As fichas já
+  guardadas na base são relidas a partir dos eventos ao abrir a base (não é
+  preciso reimportar).
+  - Atestados:
+    * "dia trabalhados", "trabalhado", "sendo N dias", segundo trecho sem o
+      nome da função e ano com 5 dígitos ("04/04/02025"): antes um trecho
+      se perdia (ex.: atestado 129/2023 lido com 28 em vez de 77,33 dias);
+    * ATP ("Emitido ATP nº 105/2023; ... DATA INICIAL ...; TEMPO DE
+      REMIÇÃO: 42 dias") passa a ser lido como atestado (antes ignorado);
+    * atestado retificado substitui o anterior de mesmo número; lançamento
+      repetido conta uma vez;
+    * etapa de cada atestado: peticionado no SEEU (ou protocolado) x só
+      emitido pela unidade, inclusive pelo peticionamento lançado depois.
+  - Vínculos de trabalho: novas redações de início ("iniciou suas
+    atividades laborais", "inicia atividade laboral externa/interna",
+    "cadastrado", "passa a laborar/prestar serviço", "reiniciou"),
+    remanejamento ("remanejado para o setor X" encerra o anterior),
+    desligamento sem setor ("desligado do trabalho", "afastado do
+    trabalho", "não retornou do trabalho") e "tornar sem efeito o
+    lançamento do dia X"; regra de reserva para o texto livre das unidades.
+    "Liberação do Setor de Trabalho" encerra os vínculos abertos quando não
+    vem junto da baixa de um setor no mesmo dia. Setor "Escola" lançado
+    como trabalho passa a estudo.
+  - Sem dias quando há dúvida ("a conferir", fora do total): vínculo sem
+    baixa com registro posterior de início em outro setor ou liberação
+    (ex.: "Ajudante" aberto no mesmo dia do "Prendebem" e nunca baixado);
+    baixa por "adequação do mapa do SIAPEN"; matrícula escolar aberta há
+    mais de um ano sem nenhum registro escolar.
+  - Estudo: "curso" só como palavra (antes "incurso" virava curso);
+    curso citado sem período nem carga horária não vira período aberto;
+    cursos de qualificação peticionados (ex.: Instituto Avelar) entram como
+    documento peticionado, sem estimativa; novas redações de início e fim
+    (setor escolar, rol de alunos, passa a frequentar, deixa de estudar);
+    "desistência escolar" registrada como série encerra a matrícula; nova
+    matrícula em outra série encerra a anterior.
+  - Leitura: atestado de remição pela leitura com título do livro conta
+    1 obra; lista "LIVRO: A, B e C" conta as obras; meses por extenso.
+  - Cabeçalho de página ("RSS (8002969) em: 02/10/2026") não gruda mais no
+    texto do evento.
+  - Relatórios, opção "Remição detalhada": além do relatório (PDF), gera a
+    planilha de conferência ficha x RSPE em Excel e em PDF - uma linha por
+    atestado ou período, com situação em cor (no processo; peticionado sem
+    remição; só emitido; trabalho sem atestado; estudo; leitura; em curso;
+    a conferir; lacuna), unidade onde ocorreu, datas, nº do atestado,
+    emissão, peticionamento, dias, remição no RSPE, providência e o trecho
+    da ficha que comprova; abas Resumo, Conferência, Amostra 10% (sorteio
+    fixo, com colunas para marcar a conferência nos autos) e Legenda.
 
 v7.2.2
   - Remição detalhada, seção por assistido: antes do que falta remir, a

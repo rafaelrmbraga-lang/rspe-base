@@ -36,7 +36,7 @@ import rspe_relatorio as rrel
 import rspe_indulto_tl as rtl
 
 APP = "RSPE Base"
-VERSAO = "7.2.2"
+VERSAO = "7.3.0"
 
 
 def pasta_app():
@@ -523,13 +523,23 @@ class Base:
         entregue a outro RSPE pelo nome)."""
         with self.lock:
             rows = self.con.execute("SELECT chave, processo, nome_norm, importado_em, dados FROM fichas").fetchall()
-        out = {}
+        out, relidas = {}, []
         for ch, p, nn, imp, dados in rows:
             f = json.loads(dados)
+            if f.get("versao_leitura") != rf.VERSAO_LEITURA:
+                try:
+                    rf.atualizar(f)  # regras de leitura novas: refaz a partir dos eventos guardados, sem reimportar o PDF
+                    relidas.append((json.dumps(f, ensure_ascii=False), ch))
+                except Exception:
+                    logging.getLogger("rspe").exception("falha ao reler a ficha %s", ch)
             f["importado_em"] = imp
             out[ch] = f
             if nn and not p:
                 out.setdefault("nome:" + nn, f)
+        if relidas:
+            with self.lock:
+                self.con.executemany("UPDATE fichas SET dados=? WHERE chave=?", relidas)
+                self.con.commit()
         return out
 
     def remover_ficha(self, chave, nome_norm=None):

@@ -71,6 +71,10 @@ def _limpar(t):
             continue
         if re.search(r"Confidencial ::|Responsável:|Projeto SIAPEN|^RUA:|^CEP:|^FONE:|^\d{2}:\d{2}:\d{2}$|^RRMB|^\d{2}:\d{2}: ", u):
             continue
+        # login de quem imprimiu, no topo de cada página ("RSS (8002969) em: 02/10/2026"): sozinho ou colado no fim da linha
+        u = re.sub(r"\s*\b[A-Z0-9]{2,12}\s*\(\d{5,}\)\s*em:\s*\d{2}/\d{2}/\d{4}(?:\s+\d{2}:\d{2}(?::\d{2})?)?\s*$", "", u)
+        if not u:
+            continue
         out.append(u)
     return "\n".join(out)
 
@@ -89,17 +93,53 @@ def _estudos(eventos):
         p["fim"], p["motivo_fim"] = data, motivo
         abertos.remove(p)
 
+    def abrir(nome, data, turno=""):
+        for p in [p for p in abertos if not p.get("livre")]:
+            fechar(p, data, "nova matrícula" if p["curso"] == nome else "nova matrícula em outra série")
+        p = {"curso": nome, "turma": "", "turno": turno, "inicio": data, "fim": "", "motivo_fim": "", "horas": None}
+        abertos.append(p); out.append(p)
+
     for e in eventos:
         u = e["texto"].upper()
-        if "EDUCA" not in u and "CURSO" not in u:
+        us = rs._sem_acento(u)
+        if not re.search(r"EDUCA|\bCURSO\b|ESCOLA|ESTUD|ALUNOS", us):
             continue
-        if "TRABALHO" in u and "CURSO" not in u:
+        if re.search(r"PETICIONAD|PROTOCOLAD|ENTREGUE|PARECER|ATESTADO DE PERMANENCIA|CERTIFICADO|CERTIDAO", us):
+            continue  # documento (certidão, certificado, curso peticionado): não abre nem fecha período
+        # setor de trabalho "Escola" (estudo lançado como trabalho)
+        mt_ = re.search(r"TRABALHO: (INICIOU ATIVIDADE LABORAL|DEIXA DE TRABALHAR), NO SETOR DE TRABALHO (ESCOLA[^,]*?)\s*,", us)
+        if mt_:
+            if mt_.group(1).startswith("INICIOU"):
+                abrir(mt_.group(2).strip().title(), e["data"])
+            else:
+                for p in [p for p in abertos if p["curso"].upper() == mt_.group(2).strip()]:
+                    fechar(p, e["data"], "deixou a escola")
+            continue
+        if "TRABALHO" in u and not re.search(r"\bCURSO\b", us):
+            continue
+        # início em texto livre: setor escolar / setor educacional / rol de alunos / atividades escolares
+        mi = re.search(r"INICIOU NO SETOR ESCOLAR|PASSA A FREQUENTAR O SETOR EDUCACIONAL(?: NO| NA)?\s*([^,.]*)|INCLUIDO NO ROL DE ALUNOS[^,;]*?(?:MATRICULADO NA|[,;]\s*NA)\s+([^,.]+)|"
+                       r"COMECOU SUAS ATIVIDADES ESCOLARES|INICIA ATIVIDADES (?:ESCOLARES|PEDAGOGICAS)", us)
+        if mi:
+            nome = next((g for g in mi.groups() if g and g.strip()), "") or "Setor escolar"
+            abrir(nome.strip(" .-").upper(), e["data"])
+            continue
+        if re.search(r"DEIXA DE (?:ESTUDAR|FREQUENTAR O SETOR DE EDUCA)", us):
+            for p in list(abertos):
+                fechar(p, e["data"], "deixou de estudar")
             continue
         m = re.search(r"MATR[ÍI]CULOU-SE NA S[ÉE]RIE:\s*(.+?)\s+TURMA:\s*(.*?)\s*PER[ÍI]ODO:\s*(.*)$", u)
+        if m and re.search(r"DESISTENCIA|AFASTADO|TRANSFERID|EVADID", rs._sem_acento(m.group(1))):
+            # o SIAPEN registra a desistência como "série": é o fim da matrícula
+            for p in list(abertos):
+                fechar(p, e["data"], m.group(1).strip(" .-").lower())
+            continue
         if m:
             serie = m.group(1).strip(" .-")
             for p in [p for p in abertos if p["curso"] == serie]:
                 fechar(p, e["data"], "nova matrícula na mesma série")
+            for p in [p for p in abertos if not p.get("livre")]:
+                fechar(p, e["data"], "nova matrícula em outra série")  # o aluno cursa uma série por vez
             p = {"curso": serie, "turma": m.group(2).strip(" .") , "turno": m.group(3).strip(" ."), "inicio": e["data"], "fim": "", "motivo_fim": "", "horas": None}
             abertos.append(p); out.append(p)
             continue
@@ -114,7 +154,7 @@ def _estudos(eventos):
             for p in list(abertos):
                 fechar(p, e["data"], "concluído" if "CONCLU" in u else "matrícula cancelada" + (" (saída da unidade)" if "SA" in u and "PRES" in u else ""))
             continue
-        if "CURSO" in u:
+        if re.search(r"\bCURSO\b", us):
             h = re.search(r"(\d+)\s*(?:H\b|HORAS)", u)
             per = re.search(r"(\d{1,2})\s+DE\s+([A-ZÇ]+)\s+(?:DE\s+)?(\d{4})\s+(?:A|À|ATÉ)\s+(\d{1,2})\s+DE\s+([A-ZÇ]+)\s+(?:DE\s+)?(\d{4})", u)
             ini, fim = e["data"], ""
@@ -131,8 +171,13 @@ def _estudos(eventos):
                 out.remove(p)
                 if p in abertos:
                     abertos.remove(p)
-            out.append({"curso": nome, "turma": "", "turno": "", "inicio": ini, "fim": fim, "motivo_fim": "período do curso" if fim else "",
+            if not fim and not h:
+                continue  # curso citado sem período nem carga horária: não há o que contar (evita período aberto até hoje)
+            out.append({"curso": nome, "turma": "", "turno": "", "inicio": ini, "fim": fim or ini, "motivo_fim": "período do curso" if fim else "carga horária declarada",
                         "horas": int(h.group(1)) if h else None, "livre": True})
+    ult = max((_dp(e["data"]) for e in eventos if re.search(r"EDUCA|ESCOLA|ESTUD|FREQUENCIA|MATRICUL", rs._sem_acento(e["texto"].upper())) and _dp(e["data"])), default=None)
+    for p in abertos:
+        p["ult_registro_edu"] = ult.strftime("%d.%m.%Y") if ult else ""
     return out
 
 
@@ -174,6 +219,33 @@ def extrair(caminho):
         d, txt = partes[i], " ".join(partes[i + 1].split())
         eventos.append({"data": d, "d": _dp(d), "texto": txt})
     f["eventos"] = [{"data": e["data"], "texto": e["texto"]} for e in eventos]
+    f["versao_leitura"] = VERSAO_LEITURA
+    return derivar(f, eventos)
+
+
+# versão das regras de leitura dos eventos: a ficha guardada na base com versão anterior é relida a partir dos eventos ao abrir
+VERSAO_LEITURA = 2
+
+
+def _limpar_evento(txt):
+    """Tira do texto do evento o cabeçalho de página que a leitura antiga deixou grudado ("RSS (8002969) em: 02/10/2026")."""
+    return re.sub(r"\s*\b[A-Z0-9]{2,12}\s*\(\d{5,}\)\s*em:\s*\d{2}/\d{2}/\d{4}(?:\s+\d{2}:\d{2}(?::\d{2})?)?", "", txt or "").strip()
+
+
+def atualizar(f):
+    """Ficha guardada com regras de leitura antigas: limpa os eventos e refaz trabalho, atestados, estudo, leitura e faltas
+    a partir deles (sem reimportar o PDF). Devolve a própria ficha."""
+    if not isinstance(f, dict) or f.get("versao_leitura") == VERSAO_LEITURA or not f.get("eventos"):
+        return f
+    for e in f["eventos"]:
+        e["texto"] = _limpar_evento(e.get("texto"))
+    eventos = [{"data": e["data"], "d": _dp(e["data"]), "texto": e["texto"]} for e in f["eventos"]]
+    f["versao_leitura"] = VERSAO_LEITURA
+    return derivar(f, eventos)
+
+
+def derivar(f, eventos):
+    """Campos da ficha que vêm dos eventos do histórico (trabalho, atestados, exames, leitura, faltas, estudo)."""
 
     # ---- trabalho ----
     trabalho, aberto, baixas_orfas = [], None, []
@@ -295,16 +367,31 @@ def extrair(caminho):
     f["exames"] = exames
     # relatórios de leitura peticionados (remição pela leitura - Res. CNJ 391/2021, art. 5º: 4 dias por obra, até 12 obras por
     # ano): os meses citados em cada petição
-    leituras = []
+    leituras, cursos_pet = [], []
     for e in eventos:
         u = re.sub(r"\s+", " ", e["texto"].upper())
-        if not re.search(r"RELAT[ÓO]RIOS? DE LEITURA|RESENHA", u):
+        us = rs._sem_acento(u)
+        if re.search(r"PETICIONAD\w* (?:OS |O )?CURSOS? DE QUALIFICACAO", us):
+            mm = re.search(r"REFERENTES? AOS? M[EÊ]S(?:ES)?\s+(.+?)\s+DE\s+(\d{4})", us)
+            cursos_pet.append({"data": e["data"], "texto": e["texto"],
+                               "meses": ["%02d/%s" % (int(x), mm.group(2)) for x in re.findall(r"\d{1,2}", mm.group(1)) if 1 <= int(x) <= 12] if mm else []})
+            continue
+        if not re.search(r"RELATORIOS? DE LEITURA|RESENHA|REMICAO P(?:OR|ELA) LEITURA", us):
+            continue
+        if re.search(r"PARTICIPOU DO PROJETO", us) and not re.search(r"LIVRO|RELATORIO|MES", us):
             continue
         meses = []
         for g in re.finditer(r"((?:\d{1,2}\s*(?:,|\bE\b)\s*)*\d{1,2})\s+DE\s+(\d{4})", u):
             meses += ["%02d/%s" % (int(x), g.group(2)) for x in re.findall(r"\d{1,2}", g.group(1)) if 1 <= int(x) <= 12]
-        leituras.append({"data": e["data"], "meses": meses})
+        if not meses:  # meses por extenso: "referente ao mês de novembro e dezembro de 2022 e março de 2023"
+            for g in re.finditer(r"((?:(?:JANEIRO|FEVEREIRO|MARCO|ABRIL|MAIO|JUNHO|JULHO|AGOSTO|SETEMBRO|OUTUBRO|NOVEMBRO|DEZEMBRO)\s*(?:,|\bE\b)?\s*)+)\s*DE\s+(\d{4})", us):
+                meses += ["%02d/%s" % (MESES[x], g.group(2)) for x in re.findall(r"[A-Z]+", g.group(1)) if x in MESES]
+        # obras: o título do livro (um atestado de leitura por obra) ou a lista "LIVRO: A, B E C"
+        ml = re.search(r"LIVROS?:\s*(.+?)(?:;|AUTOS|$)", us)
+        obras = 1 if re.search(r"TITULO DO LIVRO", us) else (len([x for x in re.split(r",|\bE\b", ml.group(1)) if x.strip()]) if ml else 0)
+        leituras.append({"data": e["data"], "meses": meses, "obras": obras, "texto": e["texto"]})
     f["leituras"] = leituras
+    f["cursos_peticionados"] = cursos_pet
     f["dias_trabalhados_atestados"] = sum(a["dias_trabalhados"] for a in atest)
     f["dias_remidos_atestados"] = round(sum(a["dias_remidos"] for a in atest), 2)
 
@@ -1097,6 +1184,9 @@ def vincular(r, f, hoje=None):
             e["_status"] = "anterior"
         elif ((e["_fim"] or hoje) - (e["_ini"] or hoje)).days + 1 < 3:  # período inclusivo: 01 a 03 = 3 dias
             e["_status"] = "curto"  # a lei exige as 12 h divididas em pelo menos 3 dias
+        elif not e["_fim"] and (hoje - max(e["_ini"], _dp(e.get("ult_registro_edu") or "") or e["_ini"])).days > 365:
+            # matrícula aberta há mais de um ano sem cancelamento, renovação nem outro registro escolar: não se estima
+            e["_status"] = "duvida"
         elif not e["_rem_depois"]:
             e["_status"] = "sem_remicao"
         else:
@@ -1160,7 +1250,7 @@ def quadro_trabalho(r, f, hoje=None, manuais=None):
     # relatório de leitura x remição do RSPE: 4 dias por mês/obra peticionado, concedidos depois da petição
     lei_rem = {}
     for x in sorted(f.get("leituras") or [], key=lambda x: _dp(x["data"]) or date.min):
-        d, n = _dp(x["data"]), len(x.get("meses") or [])
+        d, n = _dp(x["data"]), len(x.get("meses") or []) or x.get("obras") or 0
         if not (d and n):
             continue
         c = [i for i in incs if id(i) not in {id(v) for v in lei_rem.values()} and abs((i["dias"] or 0) - 4 * n) < 0.5
@@ -1168,7 +1258,7 @@ def quadro_trabalho(r, f, hoje=None, manuais=None):
         if c:
             lei_rem[x["data"]] = min(c, key=lambda i: i["d"] or i["ref"])
     # estudo (LEP, art. 126, § 1º, I: 1 dia a cada 12 h de frequência, divididas em no mínimo 3 dias)
-    pend_est, conf_est = [], []
+    pend_est, conf_est, est_duv = [], [], []
     ult_rem = max((max(i["d"] or date.min, i["ref"] or date.min) for i in incs), default=None)
     for e in ests:
         if e["_status"] == "anterior":
@@ -1188,6 +1278,11 @@ def quadro_trabalho(r, f, hoje=None, manuais=None):
             L["sit_full"] = "Data de início ou de fim do estudo ilegível na ficha (%s): conferir o período na certidão de frequência." % _br(per)
         elif e["_status"] == "curto":
             L["sit"], L["cor"] = "Menos de 3 dias de frequência: as 12 h precisam estar divididas em pelo menos 3 dias (LEP, art. 126, § 1º, I)", "cinza"
+        elif e["_status"] == "duvida":
+            L["sit"], L["cor"] = "A conferir: matrícula aberta sem registro escolar há mais de um ano", "cinza"
+            L["sit_full"] = ("A ficha não registra cancelamento, conclusão nem outra matrícula desde %s: conferir com a unidade se houve "
+                             "frequência (o programa não estima horas)." % _br(e.get("ult_registro_edu") or e["inicio"]))
+            est_duv.append(e)
         else:
             dentro = next((o for o in ests if o is not e and o["_status"] in ("sem_remicao", "conferir") and o["_ini"] and e["_ini"] and o["_ini"] <= e["_ini"]
                            and (o["_fim"] or hoje) >= (e["_fim"] or hoje) and not e["_declaradas"]), None)
@@ -1289,7 +1384,7 @@ def quadro_trabalho(r, f, hoje=None, manuais=None):
     res["diferenca"] = max(0, res["remidos_estudo"] - livres) if res["remidos_estudo"] else 0
     res["sem_n"] = len(sem_p)
     res["em_curso_n"] = len([p for p in C["pendencias"] if p["status"] == "EM_CURSO"])
-    res["sem_atestado_a_requerer"] = sum(x["est"] // 3 for x in C["sem_atestado"] if not (x["em_curso"] and (x["fim"] - x["ini"]).days <= 90))
+    res["sem_atestado_a_requerer"] = sum(x["est"] // 3 for x in C["sem_atestado"] if not x.get("duvida") and not (x["em_curso"] and (x["fim"] - x["ini"]).days <= 90))
     res["baixas"] = 0
     # linhas (Excel, relatório e Auditoria): uma por atestado conciliado + as pendências de trabalho
     nov = []
@@ -1298,24 +1393,28 @@ def quadro_trabalho(r, f, hoje=None, manuais=None):
                     "at": "%s · %s remidos" % (t["atestado"], t["rem"]), "sit": t["rot"] + (" - verificar peticionamento no SEEU" if t["status"] == "NAO_LANCADO" else ""),
                     "cor": {"verde": "verde", "vermelho": "vermelho"}.get(t["cor"], "amarelo"), "un": "—"})
     for p_ in C["pendencias"]:
-        if p_["status"] in ("SEM_ATESTADO", "LACUNA", "EM_CURSO"):
-            nov.append({"emp": p_["texto"].split(",")[0] if p_["status"] in ("SEM_ATESTADO", "EM_CURSO") else "Lacuna", "per": p_["texto"], "dias": "—",
-                        "at": "sem atestado" if p_["status"] == "SEM_ATESTADO" else "em curso" if p_["status"] == "EM_CURSO" else "—",
+        if p_["status"] in ("SEM_ATESTADO", "LACUNA", "EM_CURSO", "A_CONFERIR"):
+            nov.append({"emp": p_["texto"].split(",")[0] if p_["status"] in ("SEM_ATESTADO", "EM_CURSO", "A_CONFERIR") else "Lacuna", "per": p_["texto"], "dias": "—",
+                        "at": "sem atestado" if p_["status"] == "SEM_ATESTADO" else "em curso" if p_["status"] == "EM_CURSO" else "a conferir" if p_["status"] == "A_CONFERIR" else "—",
                         "sit": p_["acao"], "cor": p_.get("cor") or "amarelo", "un": "—"})
     linhas = [L for L in linhas if L["emp"].startswith("Estudo")] + nov
-    res["rem_det"] = remicao_detalhada(C, pend_est, lei, lei_rem, res, hoje, tl)
+    cps = [x for x in f.get("cursos_peticionados") or [] if not ini_exec or (_dp(x["data"]) or date.max) >= ini_exec]
+    res["rem_det"] = remicao_detalhada(C, pend_est, lei, lei_rem, res, hoje, tl, cps, est_duv)
     return linhas, res
 
 
 # origens da remição pendente, na ordem do relatório detalhado: (chave, rótulo, providência)
 ORIGENS_REMICAO = [
-    ("nao_lancado", "Atestado emitido, sem remição no RSPE", "verificar o peticionamento no SEEU e requerer a homologação"),
+    ("nao_lancado", "Atestado peticionado no SEEU, sem remição no RSPE", "requerer a apreciação (vista às partes e decisão)"),
+    ("emitido", "Atestado emitido, sem peticionamento registrado na ficha", "verificar a juntada nos autos e pedir o peticionamento à unidade"),
     ("divergencia", "Atestado com remição menor no RSPE (diferença)", "conferir a decisão e requerer a diferença"),
     ("sem_atestado", "Trabalho sem atestado (atestado a expedir)", "pedir o atestado à unidade prisional"),
     ("estudo", "Estudo sem remição (certidão a expedir)", "requisitar a certidão de frequência e requerer a remição"),
     ("leitura", "Leitura peticionada sem remição no RSPE", "conferir a homologação da remição pela leitura"),
     ("em_curso", "Trabalho em curso há até 90 dias (atestado ainda não devido)", "acompanhar e pedir o atestado ao fim do período"),
+    ("a_conferir", "Vínculo sem baixa na ficha (registro duplicado ou baixa esquecida)", "conferir com a unidade se houve trabalho no período"),
 ]
+FORA_DO_TOTAL = ("em_curso", "a_conferir")  # informados à parte: não entram no total a remir
 
 
 SEM_UNIDADE = "Unidade não identificada na ficha"
@@ -1381,7 +1480,7 @@ def _unidade_em(tl, d):
     return u
 
 
-def remicao_detalhada(C, pend_est, lei, lei_rem, res, hoje, tl=None):
+def remicao_detalhada(C, pend_est, lei, lei_rem, res, hoje, tl=None, cursos=None, est_duv=None):
     """Dias a remir por origem e por unidade prisional, com os itens (atestado, período, dias): base do relatório detalhado
     e do pedido de providências. A unidade vem das entradas em unidade penal da ficha; o período que atravessa uma
     transferência é dividido entre as unidades. Atestados: dias do próprio atestado, na unidade em que o período terminou
@@ -1407,8 +1506,10 @@ def remicao_detalhada(C, pend_est, lei, lei_rem, res, hoje, tl=None):
         if pela != un:
             base = (base + "; " if base else "") + "período em " + pela
         if a["status"] == "NAO_LANCADO" and a["rem"]:
-            add("nao_lancado", {"ref": ref, "data": rrm._f(a["emissao"]), "setor": setor, "per": per, "unidade": un,
-                                "base": base, "dias": a["rem"], "estimado": False})
+            add("nao_lancado" if a.get("peticionado") else "emitido",
+                {"ref": ref, "data": rrm._f(a["emissao"]), "setor": setor, "per": per, "unidade": un,
+                 "base": base + (("; " if base else "") + "peticionado em %s" % a["peticionado"] if a.get("peticionado") else ""),
+                 "dias": a["rem"], "estimado": False, "texto": a.get("texto", "")})
         elif a["status"] == "DIVERGENCIA" and a["rem"] and a.get("remicao"):
             dif = math.floor(a["rem"] + 1e-9) - int(a["remicao"]["dias"])
             if dif >= 1:
@@ -1416,9 +1517,9 @@ def remicao_detalhada(C, pend_est, lei, lei_rem, res, hoje, tl=None):
                                     "base": "atestado %s × RSPE %s (%s)" % (_fmtn(a["rem"]), int(a["remicao"]["dias"]), rrm._f(a["remicao"]["decisao"])),
                                     "dias": dif, "estimado": False})
     # trabalho sem atestado e em curso: um item por unidade; vínculos simultâneos não somam o mesmo dia duas vezes
-    uniao = {"sem_atestado": {}, "em_curso": {}}
+    uniao = {"sem_atestado": {}, "em_curso": {}, "a_conferir": {}}
     for x in (C or {}).get("sem_atestado", []):
-        k = "em_curso" if x["em_curso"] and (x["fim"] - x["ini"]).days <= 90 else "sem_atestado"
+        k = "a_conferir" if x.get("duvida") else "em_curso" if x["em_curso"] and (x["fim"] - x["ini"]).days <= 90 else "sem_atestado"
         fer = set()
         for y in range(x["ini"].year, x["fim"].year + 1):
             fer |= feriados(y)
@@ -1437,12 +1538,16 @@ def remicao_detalhada(C, pend_est, lei, lei_rem, res, hoje, tl=None):
             em = x["em_curso"] and b0 == x["fim"]
             det[k]["itens"].append({"ref": x["setor"] or "trabalho", "data": "", "setor": x["setor"] or "", "unidade": un,
                                     "per": "%s a %s" % (rrm._f(a0), "hoje (em curso)" if em else rrm._f(b0)),
-                                    "base": "≈ %s (seg.-sáb.)" % rs.pl(len(dias), "dia trabalhado", "dias trabalhados"), "dias": len(dias) // 3, "estimado": True})
+                                    "base": ("≈ %s (seg.-sáb.)" % rs.pl(len(dias), "dia trabalhado", "dias trabalhados")) + ((" · " + x["duvida"]) if x.get("duvida") else ""),
+                                    "dias": len(dias) // 3, "estimado": True, "texto": x.get("trecho", "")})
     ja = set().union(*uniao["sem_atestado"].values()) if uniao["sem_atestado"] else set()
+    ja2 = ja | (set().union(*uniao["em_curso"].values()) if uniao["em_curso"] else set())
     for k in uniao:
         for un, dias in uniao[k].items():
             if k == "em_curso":
                 dias = dias - ja
+            elif k == "a_conferir":
+                dias = dias - ja2
             det[k]["por_un"][un] = len(dias) // 3
         det[k]["dias"] = sum(det[k]["por_un"].values())
         if sum(i["dias"] for i in det[k]["itens"]) > det[k]["dias"] + 1:
@@ -1465,24 +1570,37 @@ def remicao_detalhada(C, pend_est, lei, lei_rem, res, hoje, tl=None):
         tot, alvo = sum(det["estudo"]["por_un"].values()), res.get("estudo_dias_pend") or 0
         det["estudo"]["por_un"] = {u: v * alvo // tot for u, v in det["estudo"]["por_un"].items()}
         det["estudo"]["sobreposicao"] = True
+    for x in cursos or []:
+        # curso de qualificação peticionado no SEEU: a ficha não traz a carga horária - sem dias, para conferir a remição
+        det["estudo"]["itens"].append({"ref": "Curso de qualificação peticionado" + (" (%s)" % ", ".join(x["meses"]) if x.get("meses") else ""),
+                                       "data": _br(x["data"]), "setor": "", "unidade": _unidade_em(tl, _dp(x["data"])),
+                                       "per": "peticionado no SEEU em %s" % _br(x["data"]), "base": "carga horária não informada na ficha",
+                                       "dias": 0, "estimado": False})
     det["estudo"]["dias"] = sum(det["estudo"]["por_un"].values())
+    for e in est_duv or []:
+        det["a_conferir"]["itens"].append({"ref": "Estudo · %s" % (e.get("curso") or "").title(), "data": "", "setor": "",
+                                           "unidade": _unidade_em(tl, e.get("_ini")),
+                                           "per": "matrícula desde %s, sem cancelamento" % rrm._f(e["_ini"]) if e.get("_ini") else "período não informado",
+                                           "base": "sem registro escolar desde %s: horas não estimadas" % _br(e.get("ult_registro_edu") or e.get("inicio") or ""),
+                                           "dias": 0, "estimado": False})
     for x in lei:
         if x["data"] in lei_rem:
             continue
-        n = len(x.get("meses") or [])
-        add("leitura", {"ref": "Leitura" + (" (%s)" % ", ".join(x["meses"]) if n else ""), "data": _br(x["data"]), "setor": "",
+        n = len(x.get("meses") or []) or x.get("obras") or 0
+        add("leitura", {"ref": "Leitura" + (" (%s)" % ", ".join(x["meses"]) if x.get("meses") else ""), "data": _br(x["data"]), "setor": "",
                         "unidade": _unidade_em(tl, _dp(x["data"])),
                         "per": "relatórios peticionados em %s" % _br(x["data"]), "base": rs.pl(n, "obra", "obras") if n else "obras não informadas",
                         "dias": 4 * n, "estimado": False})
     det["leitura"]["dias"] = sum(det["leitura"]["por_un"].values())
     det["nao_lancado"]["dias"] = sum(det["nao_lancado"]["por_un"].values())
+    det["emitido"]["dias"] = sum(det["emitido"]["por_un"].values())
     det["divergencia"]["dias"] = sum(det["divergencia"]["por_un"].values())
     for p_ in (C or {}).get("pendencias", []):
         if p_["status"] == "LACUNA":
             ds = re.findall(r"\d{2}/\d{2}/\d{4}", p_["texto"])
             add("lacunas", {"ref": "Lacuna", "data": "", "setor": "", "per": p_["texto"], "base": "", "dias": 0, "estimado": False,
                             "unidade": " → ".join(dict.fromkeys(u for u, _a, _b in _segmentos_unidade(tl, _dp(ds[0]), _dp(ds[1])))) if len(ds) >= 2 else SEM_UNIDADE})
-    det["total"] = sum(det[k]["dias"] for k, _r, _p in ORIGENS_REMICAO if k != "em_curso")
+    det["total"] = sum(det[k]["dias"] for k, _r, _p in ORIGENS_REMICAO if k not in FORA_DO_TOTAL)
     return det
 
 
