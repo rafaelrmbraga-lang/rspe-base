@@ -2104,6 +2104,9 @@ def complementar_decretos(r, f, hoje=None):
             rot = " (%s)" % mrot.group(1)
         elif "Art. 7º, p. ú.: 2/3 da pena dos impeditivos cumpridos" in det:
             rot = " (crimes não impeditivos, art. 7º, p. ú.)"
+        if mrot and antes.startswith("A VERIFICAR") and not ressalva:
+            # "A VERIFICAR (tese: hediondez superveniente)" ou "(art. 2º, II)": motivo que a ficha não resolve - segue a verificar
+            ressalva = mrot.group(1)
         if poss and ressalva:
             # a ficha confirma o requisito, mas a ressalva continua: segue "a verificar"
             r[k] = "A VERIFICAR%s: art. 9º, %s%s" % (rot, ", ".join(dict.fromkeys(poss + verif)), aviso)
@@ -2116,7 +2119,7 @@ def complementar_decretos(r, f, hoje=None):
                 r[kc] = "prejudicada: indulto cabível (art. 13, § 5º)"
             concl = "possível pelo art. 9º, %s (conferido na ficha disciplinar)." % ", ".join(poss)
         elif verif:
-            r[k] = "A VERIFICAR: art. 9º, %s%s" % (", ".join(verif), aviso)
+            r[k] = "A VERIFICAR%s: art. 9º, %s%s" % (rot, ", ".join(verif), aviso)
             r[k + "_status"] = "verificar"
             concl = "a verificar (%s)." % ", ".join(verif)
         else:
