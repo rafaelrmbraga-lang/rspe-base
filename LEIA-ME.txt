@@ -651,6 +651,12 @@ v7.4.0
     incluí-lo. Se faltar, a aba avisa e mostra só as decisões curadas (o
     arquivo também pode ficar ao lado do APTO.exe).
   - Tela inicial: nome APTO em destaque, acima do quadro.
+  - Remição detalhada e planilha de conferência: quando o nome no RSPE (SEEU)
+    difere do nome na ficha (SIAPEN) - vinculados pelo CPF ou pelos autos -,
+    o nome da ficha vem entre parênteses, pois o arquivo costuma estar
+    nomeado por ele (ex.: "Wilson Marcondes (na ficha: Ilson Marcondes)");
+    execução ARQUIVADA no SEEU vem marcada no nome e avisada no topo do
+    relatório (a remição se pede no processo em que a pena está em execução).
   - Jurisprudências: o botão "Inteiro teor" das decisões monocráticas do STJ
     abre a própria decisão no portal do STJ (registro + data de publicação),
     não a pesquisa do processo.
