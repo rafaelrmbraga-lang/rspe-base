@@ -921,7 +921,8 @@ def _decreto_ficha(f, x, C, cumprido, faltas):
             fora.append((c, "sentença posterior à publicação (%s)" % _f(pub)))
             c["selos"][did] = {"selo": "FORA", "motivo": "sentença posterior à publicação: fora da soma", "dispositivo": ""}
             continue
-        im = rd._impeditivos(f, [cc], ref)
+        vv = []  # violência contra a mulher que o RSPE não confirma: a verificar
+        im = rd._impeditivos(f, [cc], ref, ver=vv, contexto=[y["_c"] for y in C])
         _apos = "praticado após" in ((f.get("impeditivos") or {}).get("texto") or "").lower()
         _disp = ("Decreto %s, %s" % (num, disp_imp)) if disp_imp else "Lei 8.072/90, art. 2º, I; CF, art. 5º, XLIII (o decreto não lista os hediondos)"
         if im and "hediondo" in im[0] and not disp_imp:
@@ -929,6 +930,9 @@ def _decreto_ficha(f, x, C, cumprido, faltas):
         if not im and not _apos and rs.e_hediondo(cc, ref) and not rs.e_hediondo(cc, None):
             c["selos"][did] = {"selo": "A_VERIFICAR", "motivo": "hediondez posterior ao fato: o STJ a afere na data do decreto (impeditivo); tese "
                                                                 "defensiva: irretroatividade (STF, 2ª T.)", "dispositivo": _disp}
+        elif not im and vv:
+            c["selos"][did] = {"selo": "A_VERIFICAR", "motivo": "violência contra a mulher não confirmada pelo RSPE (%s): se houve, é impeditivo"
+                                                                % vv[0].split(": ", 1)[-1], "dispositivo": _disp}
         else:
             c["selos"][did] = ({"selo": "IMPEDITIVO", "motivo": im[0].split(": ", 1)[-1], "dispositivo": _disp} if im else
                                {"selo": "NAO_IMPEDITIVO", "motivo": "fora do rol de vedações do decreto", "dispositivo": _disp})

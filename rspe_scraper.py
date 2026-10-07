@@ -2078,7 +2078,9 @@ def violencia_domestica(c):
         return ("sim", "crime da Lei 11.340/06")
     if RE_VD_FORTE.search(vara) or "VIOLENCIA DOMESTICA" in vara or ("DOMESTICA" in vara and "MULHER" in vara):
         return ("sim", "condenado por: %s" % (c.get("vara_condenacao") or "vara de violência doméstica"))
-    if RE_VD_FORTE.search(tipo):
+    _par = re.match(r"\s*§\s*(\d+)", c.get("tipo_penal") or "")
+    if RE_VD_FORTE.search(tipo) and not (art == "129" and _par and _par.group(1) in ("9", "10", "11")):
+        # o rótulo "Violência Doméstica" do art. 129, §§ 9º a 11, não diz o sexo da vítima: cai no "provável" abaixo
         return ("sim", "tipo penal indica violência contra a mulher")
     if art == "129" and (lei in ("2848", "") or "PENAL" in (c.get("lei") or "").upper()):
         m = re.match(r"\s*§\s*(\d+)", c.get("tipo_penal") or "")
@@ -2685,6 +2687,7 @@ def analise_decreto_2022(campos, crimes, eventos, incidentes):
     ex.append("Conclusão: " + {"possivel": ("indulto possível pelo art. 4º (idade)." if art4_ok else "indulto possível pelo art. 5º."), "verificar": "a verificar - " + out.get("indulto_2022", "").replace("A VERIFICAR: ", "") + "."}.get(
         st22, (out.get("indulto_2022") or "não atinge").split(" | ")[0] + "."))
     out["indulto_2022_explica"] = "\n".join(ex)
+    _extinta_depois(out, crimes, "2022", ref)
     return out
 
 
@@ -3541,6 +3544,11 @@ def analise_decretos(campos, crimes, eventos, incidentes, hoje):
             if vd_prov:
                 # art. 1º, XVII (violência contra a mulher): só se confirma com a vítima - nem nega, nem concede
                 ressalvas.append(("confirmar se houve violência contra a mulher (art. 1º, XVII)", "; ".join(dict.fromkeys(vd_prov))))
+            # crime comum de violência doméstica (ameaça, lesão...) numa execução com condenação por violência doméstica: a vítima
+            # e o contexto não constam do RSPE - a verificar, como no Decreto 2022
+            vd_ctx = [v for v in (vd_contexto(c, ativos) for c in ativos) if v]
+            if vd_ctx:
+                ressalvas.append(("confirmar se houve violência contra a mulher (art. 1º, XVII)", "; ".join(dict.fromkeys(vd_ctx))))
             if art2:
                 ressalvas.append(("conferir recurso da acusação (art. 2º, II)", texto_art2_ii(art2, publicacao)))
             for txt_v in dict.fromkeys(cpm):
@@ -3901,7 +3909,27 @@ def analise_decretos(campos, crimes, eventos, incidentes, hoje):
         for kk in ("indulto_%s_detalhe" % ano, "comutacao_%s_detalhe" % ano):
             if kk in out:
                 out[kk] = (out.get(kk) or "") + "\n? " + nota
+    for ano, ref in DECRETOS.items():
+        _extinta_depois(out, crimes, ano, ref)
     return out
+
+
+def _extinta_depois(out, crimes, ano, ref):
+    """Pena extinta DEPOIS da data do decreto (fato anterior): estava em execução na data e fica fora da análise, que usa só os
+    crimes ativos - o resultado sem ela não se sustenta: a verificar, com a pena a incluir."""
+    ext_dep = [c for c in crimes if c.get("extinto", "").upper().startswith("S") and (to_date(c.get("data_extincao") or "") or date.min) > ref
+               and (to_date(c.get("data_infracao") or "") or date.max) <= ref]
+    if not ext_dep:
+        return
+    nota_e = ("pena extinta depois de %s (%s): em %s ainda estava em execução e não entrou nesta conta - refazer a análise com ela" % (
+        fmt(ref), "; ".join("%s, extinta em %s" % (crimes_curto([c]), c.get("data_extincao")) for c in ext_dep), fmt(ref)))
+    for kk in ("indulto_%s" % ano, "comutacao_%s" % ano):
+        u = (out.get(kk) or "").upper()
+        if not u or u.startswith(("CONCEDID", "INDEFERID", "VEDAD", "A VERIFICAR")):
+            continue
+        out[kk] = "A VERIFICAR: %s | antes: %s" % (nota_e, out[kk].split(" | ")[0])
+        out[kk + "_status"] = "verificar"
+        out[kk + "_detalhe"] = (out.get(kk + "_detalhe") or "") + "\n? " + nota_e[0].upper() + nota_e[1:] + "."
 
 
 def e_remicao_concedida(i):
