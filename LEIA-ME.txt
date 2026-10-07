@@ -622,6 +622,32 @@ v7.4.0
       em 14/12/2021, sem atestado na ficha").
     Efeito na base da PDIB: "trabalho sem atestado" de 26.846 para 25.711
     dias; "a conferir" de 2.223 para 1.940.
+  - Remição - revisão de leitura nas 653 fichas da PDIB (verificador próprio):
+    * atestado com a lista de empresas e períodos ("EMPRESA UFMS 15/07/2019
+      09/08/2019 - AT CONSTRUCOES 23/01/2023 19/05/2023 - ..."), comum no
+      CPAIG: cada empresa entra com o seu período (antes, só o 1º nome);
+    * atestado com setores e datas de início ("BARBEIRO DESDE 18/11/2022,
+      POLIGONAL 28/02/2024 ... A ESTA DATA"): cada setor da sua data até a
+      véspera do seguinte;
+    * erro de digitação no setor do atestado ("PLIGONAL", "POLIGNAL",
+      "DEPRENDE BEM") e nome parcial ("SETOR JURIDICO" x "Auxiliar
+      Jurídico") passam a casar com o vínculo da ficha;
+    * assinatura no fim do atestado ("AG. GIMENES - SETOR DE TRABALHO -
+      IPCG") não é mais lida como setor; datas com ponto (09.09.2016) e
+      aspas no texto (´ATESTADO DE TRABALHO´) são lidas;
+    * atestado que cita setor sem nenhum início de trabalho na ficha gera
+      aviso (5 casos na PDIB: falta de registro na própria ficha).
+  - Jurisprudências: triagem nova do acervo atualizado (07/10/2026), só
+    decisões favoráveis à defesa em execução penal, com filtro rigoroso
+    pelo dispositivo (fora: HC indeferido liminarmente, reconsideração para
+    negar, recurso da acusação provido, dosimetria e regime inicial da
+    sentença, prisão cautelar, nulidades da ação penal). Entram 12.459
+    decisões do STJ (12.309 monocráticas e 150 acórdãos), somando 14.725 com
+    as 2.266 já curadas. Precisão medida em duas amostras lidas uma a uma:
+    93% a 97%. As novas aparecem com a marca "triagem automática" e a
+    decisão completa é aberta sob demanda; a busca também procura no texto
+    integral. Arquivo novo embutido no .exe: teses_auto.bin (19 MB).
+  - Tela inicial: nome APTO em destaque.
   - Testes: teste_auditoria_calculo.py (os alertas acima) entra no build;
     teste_remicao.py ganha o caso do atestado com vários setores.
 

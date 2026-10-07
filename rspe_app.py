@@ -1253,6 +1253,63 @@ class Api:
             out["quadro"] = self.base.quadro()
         return out
 
+    # ---- jurisprudências da triagem automática (teses_auto.bin): índice leve para a tela; texto integral sob demanda ----
+    _auto = None
+    _auto_txt = None
+    _auto_norm = None
+
+    def _teses_auto(self):
+        if Api._auto is None:
+            import struct
+            import zlib
+            Api._auto = {"cab": {}, "itens": []}
+            c = recurso("teses_auto.bin")
+            try:
+                with open(c, "rb") as f:
+                    b = f.read()
+                if b[:8] == b"APTOTES1":
+                    na, nb = struct.unpack("<II", b[8:16])
+                    Api._auto = json.loads(zlib.decompress(b[16:16 + na]).decode("utf-8"))
+                    Api._auto["_z"] = b[16 + na:16 + na + nb]
+                    Api._auto["resumos"] = {i["id"]: i.pop("ementa", "") for i in Api._auto["itens"]}
+            except Exception:
+                logging.getLogger("rspe").exception("jurisprudências automáticas %s", c)
+        return Api._auto
+
+    def _teses_textos(self):
+        if Api._auto_txt is None:
+            import zlib
+            z = self._teses_auto().get("_z")
+            Api._auto_txt = json.loads(zlib.decompress(z).decode("utf-8")) if z else {}
+        return Api._auto_txt
+
+    def tese_texto(self, id_):
+        """Texto integral (como veio do acervo) de uma decisão da triagem automática."""
+        return {"id": id_, "texto": self._teses_textos().get(id_, "")}
+
+    @staticmethod
+    def _norm_busca(t):
+        import unicodedata
+        return " " + re.sub(r"\s+", " ", unicodedata.normalize("NFD", t or "").encode("ascii", "ignore").decode().lower()) + " "
+
+    def _teses_indice(self):
+        if Api._auto_norm is None:
+            Api._auto_norm = [(k, self._norm_busca(t)) for k, t in self._teses_textos().items()]
+        return Api._auto_norm
+
+    def teses_buscar(self, q):
+        """Ids das decisões da triagem automática cujo texto integral tem todas as palavras da busca (começo de palavra; sem
+        acento e caixa)."""
+        ws = [" " + w for w in self._norm_busca(q).split() if len(w) >= 2]
+        if not ws:
+            return []
+        return [k for k, t in self._teses_indice() if all(w in t for w in ws)][:5000]
+
+    def teses_resumos(self, ids):
+        """Resumo (EMENTA do fim da decisão ou o começo do texto) das decisões da triagem automática pedidas pela tela."""
+        R = self._teses_auto().get("resumos") or {}
+        return {i: R.get(i, "") for i in (ids or [])[:200]}
+
     def teses(self):
         """Jurisprudências da execução penal (aba Jurisprudências): decisões do TJMS, STJ e STF favoráveis à defesa, triadas pela
         ementa. Um teses_execucao.json ao lado do programa só substitui a cópia embutida (módulo rspe_teses) se for de versão igual
@@ -1269,10 +1326,28 @@ class Api:
                 with open(c, encoding="utf-8") as f:
                     ext = json.load(f)
                 if not emb or str(ext.get("versao") or "") >= str(emb.get("versao") or ""):
-                    return ext
+                    return self._juntar_auto(ext)
             except Exception:
                 logging.getLogger("rspe").exception("banco de teses %s", c)
-        return emb or {"erro": "Falha ao carregar as jurisprudências."}
+        return self._juntar_auto(emb) if emb else {"erro": "Falha ao carregar as jurisprudências."}
+
+    def _juntar_auto(self, d):
+        """Base curada + triagem automática (sem repetir processo já curado)."""
+        A = self._teses_auto()
+        if not A.get("itens"):
+            return d
+        ja = {((i.get("tribunal") or "TJMS"), re.sub(r"\D", "", i.get("proc") or "")) for i in d["itens"]}
+        novos = [i for i in A["itens"] if (i["tribunal"], re.sub(r"\D", "", i["proc"])) not in ja]
+        threading.Thread(target=self._teses_indice, daemon=True).start()  # índice da busca no texto integral, em segundo plano
+        itens = d["itens"] + novos
+        cont = {}
+        for i in itens:
+            for t in i.get("temas") or []:
+                cont[t] = cont.get(t, 0) + 1
+        temas = [{"tema": t, "n": n} for t, n in sorted(cont.items(), key=lambda z: (z[0] == "Outros", -z[1]))]
+        trib = [t for t in ("TJMS", "STJ", "STF") if any((i.get("tribunal") or "TJMS") == t for i in itens)]
+        return dict(d, itens=itens, temas=temas, tribunais=trib, total=len(itens), n_auto=len(novos),
+                    fonte=d.get("fonte", "") + " · " + (A.get("cab") or {}).get("fonte", ""))
 
     def abrir_url(self, url):
         """Abre no navegador o inteiro teor de um acórdão das jurisprudências (só endereços http/https)."""

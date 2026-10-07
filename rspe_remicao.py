@@ -21,7 +21,7 @@ from datetime import date, timedelta
 
 import rspe_scraper as rs
 
-DT = r"(\d{2}/\d{2}/\d{2,4})"
+DT = r"(\d{2}[./]\d{2}[./]\d{2,4})"
 SEPD = r"\s*(?:A|À|ATÉ|ATE|-)\s*"
 
 # nomes de setor que a ficha e os atestados usam para o mesmo vínculo: base jurídica, remicao.setores_sinonimos (editável sem
@@ -88,6 +88,40 @@ def setor_chave(nome):
     ch = re.sub(r"\W", "", u)[:12] or "?"
     disp = " ".join(w.capitalize() if len(w) > 2 else w.lower() for w in u.split()) or "Setor não identificado"
     return ch, disp
+
+
+def setor_parecido(a, b):
+    """Nome de setor citado no atestado x vínculo da ficha, tolerando erro de digitação ("PLIGONAL", "POLIGNAL") e sufixo
+    ("FAXINA LTDA" x "FAXINA DO CORREDOR"): mesma chave, começo comum de 5 letras ou grafia 80% igual."""
+    if mesmo_setor(a, b):
+        return True
+    if not a or not b:
+        return False
+    import difflib
+    pre = len(__import__("os").path.commonprefix([a, b]))
+    return pre >= 5 or (min(len(a), len(b)) >= 6 and difflib.SequenceMatcher(None, a[:10], b[:10]).ratio() >= 0.8)
+
+
+_GENERICAS = {"EMPRESA", "SETOR", "TRABALHO", "SERVICOS", "SERVICO", "GERAIS", "MANUTENCAO", "PREDIAL", "AUXILIAR", "LTDA", "OFICINA", "FUNCAO",
+              "PAVILHAO", "INTERNO", "EXTERNO"}
+
+
+def palavra_comum(a, b):
+    """Nomes de setor com uma palavra própria em comum ("SETOR JURIDICO" x "Auxiliar Juridico"; "PINTOR" x "Manutenção Predial - Pintor")."""
+    pa = {w for w in re.findall(r"[A-Z]{5,}", _sa(a)) if w not in _GENERICAS}
+    pb = {w for w in re.findall(r"[A-Z]{5,}", _sa(b)) if w not in _GENERICAS}
+    return bool(pa & pb)
+
+
+def _nomes_lista(setor):
+    """Setores de uma lista do atestado ("PRENDE BEM, FAXINA E COZINHA"), sem o que não é nome de setor."""
+    out = []
+    for x in re.split(r"\s+E\s+|,", setor or ""):
+        x = re.sub(r"^(?:DE|DA|DO|NO|NA)\s+|^DE(?=PRENDE)", "", x.strip(" .;:-()"))
+        if not x or re.match(r"^(TRABALHO\b|IPCG\b|AG\.|\d|TOTALIZANDO)", x) or re.search(r"\bDIAS?\b", x):
+            continue
+        out.append(x)
+    return out
 
 
 def mesmo_setor(a, b):
@@ -321,6 +355,7 @@ RE_SO_REM = re.compile(r"(?:COM\s*)?([\d.,]+)\s*DIAS\s*DE\s*REMICAO")
 
 def _limpa_setor(t):
     t = re.sub(r"^.*?\b(?:FUNCAO|SETOR DE|SETOR|NA EMPRESA|EMPRESA)\s+", "", t.strip(" ,.;:-"))
+    t = re.sub(r"\s+(?:NO|DO|NUM) PERIODO\b.*$|\s+DESDE\b.*$", "", t)
     return t.strip(" ,.;:-")
 
 
@@ -369,6 +404,7 @@ def atestados(eventos):
     for e in eventos:
         d = _dt(e.get("data"))
         u = re.sub(r"\s+", " ", _sa(e.get("texto")))
+        u = re.sub(r"[´`]", "", u)  # ´ATESTADO DE TRABALHO´ Nº ...
         u = re.sub(r"\(\s*[A-Z ]{6,}\s*\)", " ", u)  # números por extenso entre parênteses
         u = re.sub(r"\b(\d{2}/\d{2}/)0(\d{4})\b", r"\1\2", u)  # ano digitado com 5 dígitos ("04/04/02025")
         if not d:
@@ -407,15 +443,34 @@ def atestados(eventos):
             ms_ = re.search(r"(?:NA FUNCAO|FUNCAO|SETOR(?: DE)?|NA EMPRESA)\s+(.+?)(?:\s+\(|\s+DE\s+\d|\s+\d{2}/|,|\.|\s+NAO RESTANDO|\s+COM\s+\d|$)", u)
             if ms_:
                 setor = ms_.group(1).strip()
+            trecho = re.split(r"\s*,?\s*TOTALIZANDO|\s+COM\s+[\d.,]+\s*DIAS|\s+NAO RESTANDO", u.split("ATESTADO", 1)[-1])[0]
+            lst = [] if mp else re.findall(r"(?:^|-|,|EMPRESA|SETOR(?: DE)?)\s*([A-Z][A-Z0-9&.' ]{1,40}?)\s+(\d{2}/\d{2}/\d{4})\s+(?:A\s+|ATE\s+)?(\d{2}/\d{2}/\d{4})", trecho)
+            ini_lst = [] if mp or lst else re.findall(r"(?:^|,|\bE\b|SETOR(?: DE)?)\s*([A-Z][A-Z ]{2,40}?)\s+(?:DESDE\s+)?(\d{2}/\d{2}/?\d{4})(?!\s*(?:A|ATE|-)\s*\d)", trecho)
             if mp:
                 segs.append({"setor_txt": setor, "ini": _dt(mp.group(1)), "fim": _dt(mp.group(2)), "trab": trab, "rem": rem, "inferido": False})
+            elif lst and all(_dt(a_) and _dt(b_) and _dt(a_) <= _dt(b_) for _, a_, b_ in lst):
+                # lista "EMPRESA A d1 d2 - EMPRESA B d3 d4": cada empresa com o seu período
+                for n_, a_, b_ in lst:
+                    segs.append({"setor_txt": _limpa_setor(n_), "ini": _dt(a_), "fim": _dt(b_), "trab": None, "rem": None, "inferido": False})
+                if len(segs) == 1:
+                    segs[0].update(trab=trab, rem=rem)
+            elif len(ini_lst) >= 2:
+                # lista "SETOR A DESDE d1, SETOR B d2 ... A ESTA DATA": cada setor da sua data até a véspera do seguinte
+                ds = [(_limpa_setor(re.sub(r"^(?:E|DE)\s+", "", n_)), _dt(re.sub(r"(\d{2}/\d{2})/?(\d{4})", r"\1/\2", d_))) for n_, d_ in ini_lst]
+                ds = [x for x in ds if x[1]]
+                for k_, (n_, d_) in enumerate(ds):
+                    f_ = (ds[k_ + 1][1] - timedelta(days=1)) if k_ + 1 < len(ds) else d
+                    if f_ >= d_:
+                        segs.append({"setor_txt": n_, "ini": d_, "fim": f_, "trab": None, "rem": None, "inferido": False})
+            if segs:
+                pass
             else:
                 # atestado em lote / sem período: os setores citados ("setor de A, B e C") delimitam a inferência; a lista
                 # vai até "com N dias" (a vírgula separa setores, não encerra o nome)
-                ml = re.search(r"(?:NA FUNCAO|FUNCAO|SETOR(?:ES)?(?: DE)?|NA EMPRESA)\s+(.+?)(?:\s+COM\s+[\d.,]+\s*DIAS|\s+NAO RESTANDO|\s+\(|\.\s|\.$|$)", u)
+                ml = re.search(r"(?:NA FUNCAO|FUNCAO|SETOR(?:ES)?(?: DE)?|NA EMPRESA)\s*(.+?)(?:\s+COM\s+[\d.,]+\s*DIAS|\s+NAO RESTANDO|\s*,?\s*TOTALIZANDO|\s+\d+\s*DIAS|\s+REFERENTE|\s+\(|\.\s|\.$|$)", u)
                 if ml:
                     setor = ml.group(1).strip()
-                nomes = [x.strip() for x in re.split(r"\s+E\s+|,", setor) if x.strip()] if setor else []
+                nomes = _nomes_lista(setor)
                 segs = [{"setor_txt": n, "ini": None, "fim": None, "trab": None, "rem": None, "inferido": True} for n in nomes] or \
                        [{"setor_txt": "", "ini": None, "fim": None, "trab": None, "rem": None, "inferido": True}]
         for s in segs:
@@ -660,13 +715,17 @@ def conciliar(r, f, hoje=None, manuais=None, ini_exec=None, excluir_remicoes=Non
         if ini_exec and w0 < ini_exec:
             w0 = max(w0, min([v["ini"] for v in vinc if (v["fim"] or hoje) >= ini_exec] or [ini_exec]))
         w1 = a["emissao"]
-        nomes = {s["chave"] for s in a["segs"] if s["chave"]}
+        nomes = {s["chave"]: s.get("setor_txt") or "" for s in a["segs"] if s["chave"]}
         novos = []
         for v in vinc:
             a0, b0 = max(v["ini"], w0), min(v["fim"] or hoje, w1)
-            if a0 <= b0 and (not nomes or any(mesmo_setor(v["chave"], n) for n in nomes)):
+            if a0 <= b0 and (not nomes or any(setor_parecido(v["chave"], n) or palavra_comum(v["setor"], t) for n, t in nomes.items())):
                 for y0, y1 in _menos(a0, b0, E):
                     novos.append({"setor_txt": v["setor"], "chave": v["chave"], "setor": v["setor"], "ini": y0, "fim": y1, "trab": None, "rem": None, "inferido": True})
+        sem_v = [t for n, t in nomes.items() if not any(setor_parecido(v["chave"], n) or palavra_comum(v["setor"], t) for v in vinc)]
+        if sem_v and a["origem"] != "rspe":
+            alerta("setor sem vínculo", "Atestado %s de %s cita %s sem início de trabalho registrado na ficha: o período desse setor não aparece "
+                   "na ficha - conferir o atestado." % (a["numero"] or "s/n", _f(a["emissao"]), ", ".join(sem_v)), a["emissao"])
         if a["origem"] == "rspe" and not novos:
             # remição sem atestado e sem trabalho no período: origem não identificada (estudo, leitura, ENCCEJA...)
             a["status"], a["sem_origem"] = "SEM_ORIGEM", True

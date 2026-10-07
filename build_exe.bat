@@ -18,7 +18,7 @@ if errorlevel 1 (
     exit /b 1
 )
 python -m PyInstaller --onefile --windowed --clean --name APTO ^
-    --icon rspe.ico --add-data "rspe.ico;." --add-data "ui.html;." --add-data "base_juridica.json;." ^
+    --icon rspe.ico --add-data "rspe.ico;." --add-data "ui.html;." --add-data "base_juridica.json;." --add-data "teses_auto.bin;." ^
     --collect-data pdfminer --collect-data pdfplumber --collect-data reportlab --hidden-import reportlab.graphics.shapes --hidden-import rspe_relatorio --hidden-import rspe_remicao ^
     --collect-all webview ^
     --exclude-module docxtpl --exclude-module docx --exclude-module docx2pdf ^
