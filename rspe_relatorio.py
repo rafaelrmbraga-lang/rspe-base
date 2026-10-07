@@ -109,6 +109,8 @@ def _selo(canvas, x, y, lado):
     """Selo do APTO no cabeçalho dos PDFs (apto_selo.png, junto do programa ou do .exe)."""
     import sys
     p = os.path.join(getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__))), "apto_selo.png")
+    if not os.path.exists(p):
+        p = os.path.join(os.path.dirname(os.path.abspath(sys.executable if getattr(sys, "frozen", False) else __file__)), "apto_selo.png")
     if os.path.exists(p):
         canvas.drawImage(p, x, y, lado, lado, mask="auto")
 
