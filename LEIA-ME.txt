@@ -651,23 +651,6 @@ v7.4.0
     incluí-lo. Se faltar, a aba avisa e mostra só as decisões curadas (o
     arquivo também pode ficar ao lado do APTO.exe).
   - Tela inicial: nome APTO em destaque, acima do quadro.
-  - Prioridade (aba Geral): cada assistido recebe um nível, do mais grave ao
-    mais simples, com o motivo; a lista vem ordenada por ele (no mesmo nível,
-    o maior atraso primeiro) e o filtro escolhe o nível:
-      1 Crítica - extinção cabível, prescrição (executória ou punitiva)
-        aparente ou indulto cabível sem decisão;
-      2 Alta - progressão ou livramento vencidos, comutação cabível;
-      3 Média - remição a requerer, término ou benefício em até 30 dias;
-      4 Atenção - indulto/comutação a verificar, prescrição iminente,
-        benefício em até 90 dias, alertas da Auditoria;
-      5 Rotina - pontos a verificar, conferir remição, falta a apurar;
-      6 Em ordem; 7 execução extinta ou arquivada no SEEU.
-  - Relatórios > Remição detalhada gera também "Prioridade das remições"
-    (PDF): 1 a remição já alcança o término; 2 antecipa para já a
-    progressão ou o livramento; 3 atestados prontos (dias exatos) de 30 dias
-    ou mais; 4 trabalho sem atestado (estimativa) de 30 dias ou mais; 5 o
-    restante. Mostra dias exatos, estimados e de educação e o efeito sobre
-    os prazos; execuções arquivadas ficam à parte.
   - Remição detalhada e planilha de conferência: quando o nome no RSPE (SEEU)
     difere do nome na ficha (SIAPEN) - vinculados pelo CPF ou pelos autos -,
     o nome da ficha vem entre parênteses, pois o arquivo costuma estar

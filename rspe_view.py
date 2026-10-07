@@ -50,17 +50,6 @@ def _dias(m, k):
 
 
 FILTROS = {
-    "geral": [
-        ("todas", "Todas as prioridades"),
-        ("p:1", "1 · Crítica: extinção, prescrição ou indulto cabível"),
-        ("p:2", "2 · Alta: benefício vencido ou comutação cabível"),
-        ("p:3", "3 · Média: remição, término ou benefício em até 30 dias"),
-        ("p:4", "4 · Atenção: a verificar, até 90 dias, alertas"),
-        ("p:5", "5 · Rotina: pontos a verificar"),
-        ("p:6", "6 · Em ordem"),
-        ("p:7", "7 · Extinta / arquivada"),
-        ("p:1-2", "Críticas e altas (1 e 2)"),
-    ],
     "fd": [
         ("todas", "Todas"),
         ("impeditivo", "Remição a requerer"),
@@ -1019,7 +1008,6 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
                          % (dbi["db"], r["progressao_previsao_seeu"]))
     m["calc_notas"] = notas
     m["_final"] = r  # o registro com o que a ficha resolveu (incisos IV, XI a XIII): base da linha do tempo, igual à aba
-    aplicar_prioridade(m)
     return m
 
 
@@ -1129,8 +1117,6 @@ def modelo_erro(r, erro, baixas=None):
               "aud_info": 0, "presc_linhas": [], "presc_n": 0, "fd_linhas": [], "fd_blocos": [], "ind_status": [], "crimes_det": [], "incidentes": [],
               "ficha_tem": False, "ficha": None, "falta_sim": False, "falta_apurar": False, "falta_det": "", "interrompida": False, "estado_exec": "", "ind_sim": False,
               "arquivo": r.get("arquivo", ""), "geracao": r.get("data_geracao_rspe", ""), "erro": str(erro)})
-    m.update(prio_n=4, prio="4 · Atenção", prio_cor="amarelo", prio_mot="falha ao analisar o RSPE - conferir o PDF",
-             prio_ord="4|999999|" + rs._sem_acento(m.get("nome") or "").upper())
     return m
 
 
@@ -1140,9 +1126,9 @@ PRESC_SUB = [("crime", "Crime", 12), ("proc_crim", "Ação penal", 15), ("pena",
              ("prazo_ppe", "Prazo PPE", 11), ("ppe_termo", "Termo inicial", 9), ("ppe_status", "Executória", 22)]
 ABAS = [
     {"id": "geral", "titulo": "Geral", "cor": "geral_cor", "legenda": "lapso", "sem_stats": True,
-     "cols": [("nome", "Nome", 20), ("proc", "Nº da execução", 15), ("prio", "Prioridade", 10), ("prio_mot", "Motivo da prioridade", 40),
-              ("regime", "Regime", 8), ("prog", "Progressão", 10), ("liv", "Livramento", 10), ("termino", "Término", 9)],
-     "pilulas": {"prio": "prio_cor"}},
+     "cols": [("nome", "Nome", 22), ("proc", "Nº da execução", 17), ("regime", "Regime", 9),
+              ("prog", "Progressão", 15), ("liv", "Livramento", 15), ("termino", "Término", 10)],
+     "pilulas": {}},
     {"id": "prog", "titulo": "Progressão", "cor": "prog_cor", "legenda": "lapso",
      "cols": [("nome", "Nome", 22), ("proc", "Nº da execução", 18), ("regime", "Regime", 9),
               ("prog", "Data da progressão", 14), ("prog_sit", "Situação", 16), ("conduta", "Conduta (ficha)", 12), ("falta", "Falta (12 meses)", 14)],
@@ -1182,7 +1168,7 @@ ABA_POR_ID = {a["id"]: a for a in ABAS}
 ABAS_PEDIDO = ("prog", "liv", "ind", "presc", "ext", "fd")
 for _a in ABAS:
     # a aba Geral não tem prazo próprio (não há campo de dias): sem filtro de situação
-    _a["filtros"] = FILTROS["geral"] if _a["id"] == "geral" else list(FILTROS.get(_a["id"], FILTROS["indulto"] if _a["id"] == "ind" else FILTROS["lapso"]))
+    _a["filtros"] = [] if _a["id"] == "geral" else list(FILTROS.get(_a["id"], FILTROS["indulto"] if _a["id"] == "ind" else FILTROS["lapso"]))
     if _a["id"] in ABAS_PEDIDO:
         # controle de pedidos: coluna "Pedido" (feito em dd/mm/aaaa ou botão para marcar) e filtro
         _a["cols"] = list(_a["cols"]) + [("pedido", "Pedido", 9)]

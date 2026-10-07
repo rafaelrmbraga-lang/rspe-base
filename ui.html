@@ -324,7 +324,6 @@ tr.sub td{padding:0 0 0 0;background:#FFFFFF;cursor:default}tr.sub:hover td{back
 .help{font-size:13px;line-height:1.55;color:var(--tx2);max-height:60vh;overflow:auto}.box .acts{flex:none}.help h4{margin:14px 0 4px;color:var(--tx);font-size:13px}.help h4:first-child{margin-top:0}
 
 /* tela inicial (sem base) */
-td.pmot{min-width:260px;font-size:12.5px;color:var(--tx2)}
 .welcome{position:fixed;inset:0;background:var(--bg);display:none;place-items:center;z-index:25}
 .welcome.on{display:grid}
 .loading{position:fixed;inset:0;background:var(--bg);display:none;place-items:center;z-index:40}
@@ -714,8 +713,7 @@ const ui = {
              : linhas.filter(r=>this.cor(r,spec)===this.filtroCor && (!tp || this.pedPendente(r,spec.id))); }
     linhas=linhas.filter(r=>this.passaFiltro(r,spec)); if(this.filtroVelho) linhas=linhas.filter(r=>this.idadeRSPE(r)>this.RSPE_VELHO);
     // ordem padrão: alfabética pelo nome (acento e maiúscula não contam); clicar no título da coluna ordena por ela
-    // aba Geral: ordem padrão pela prioridade (mais grave primeiro; no mesmo nível, o atraso maior e depois o nome)
-    const o=this.ordem[this.aba]||(this.aba==='geral'?{k:'prio_ord',inv:false}:null); linhas = o ? [...linhas].sort((a,b)=>cmp(a[o.k],b[o.k])*(o.inv?-1:1))
+    const o=this.ordem[this.aba]; linhas = o ? [...linhas].sort((a,b)=>cmp(a[o.k],b[o.k])*(o.inv?-1:1))
       : [...linhas].sort((a,b)=>String(a.nome||'').localeCompare(String(b.nome||''),'pt',{sensitivity:'base'})||String(a.id||'').localeCompare(String(b.id||'')));
     linhas=[...linhas].sort((a,b)=>(b.fixado?1:0)-(a.fixado?1:0));
     const card=document.getElementById('card');
@@ -723,7 +721,7 @@ const ui = {
     if(!linhas.length){ card.innerHTML=`<div class="empty"><div><b>Nada encontrado</b>Ajuste a busca ou o filtro de situação.</div></div>`; return; }
     const NW=new Set(['proc','regime','frac_prog','frac_liv','dbase','termino','presc_prox','presc_n','ext_termino','pena_total','pena_cumprida']);
     const tot=spec.cols.reduce((s,c)=>s+c[2],0);
-    const th=spec.cols.map(c=>`<th class="${NW.has(c[0])?'nw':''}" style="${NW.has(c[0])?'width:1%':'width:'+(100*c[2]/tot).toFixed(2)+'%'}" onclick="ui.ordenar('${c[0]}')">${c[1]}${o&&(o.k===c[0]||(c[0]==='prio'&&o.k==='prio_ord'))?`<span class="arr">${o.inv?'▼':'▲'}</span>`:''}</th>`).join('')+'<th class="nw" style="width:1%"></th>';
+    const th=spec.cols.map(c=>`<th class="${NW.has(c[0])?'nw':''}" style="${NW.has(c[0])?'width:1%':'width:'+(100*c[2]/tot).toFixed(2)+'%'}" onclick="ui.ordenar('${c[0]}')">${c[1]}${o&&o.k===c[0]?`<span class="arr">${o.inv?'▼':'▲'}</span>`:''}</th>`).join('')+'<th class="nw" style="width:1%"></th>';
     const svgCopy='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>';
     const tr=linhas.map(r=>{ const cor=this.cor(r,spec); const exp=spec.expansivel && this.aberto===r.id;
       const tds=spec.cols.map((c,i)=>{ let v=r[c[0]]??''; const pk=spec.pilulas[c[0]];
@@ -742,7 +740,7 @@ const ui = {
           if((r.faltas_itens||[]).length) v=`<span class="fedit" title="Ver e decidir as faltas (vale em todas as abas)" onclick="event.stopPropagation();ui.faltasModal('${r.id}')">${v} <span class="fe">✎</span></span>`; }
         else { v = esc(v).replace('(est.)','<span class="est">(est.)</span>'); if(!v) v='<span class="muted">—</span>'; }
         if(i===0 && spec.expansivel) v=`<span class="chev">▶</span>${v}`;
-        return `<td class="${i===0?'first':''} ${NW.has(c[0])?'nw':''} ${pk&&spec.id==='ind'?'pl':''} ${c[0]==='prio_mot'?'pmot':''} ${c[0]==='prio'?'nw':''}" title="${esc(String(r[c[0]+'_full']??r[c[0]]??''))}">${v}</td>`; }).join('');
+        return `<td class="${i===0?'first':''} ${NW.has(c[0])?'nw':''} ${pk&&spec.id==='ind'?'pl':''}" title="${esc(String(r[c[0]+'_full']??r[c[0]]??''))}">${v}</td>`; }).join('');
       const acao=`<td class="nw act">${spec.id==='geral'?`<span class="hbtn" title="Histórico comparativo dos RSPE importados deste assistido" onclick="event.stopPropagation();ui.historico('${r.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg>Histórico · ${r.hist_n||1}</span>`:''}${spec.id==='ind'?`<span class="mini" title="Linha do tempo: crimes, impeditivos, pena cumprida em cada decreto, faltas na janela e resultado" onclick="event.stopPropagation();ui.indTL('${r.id}')">Verificar indulto/comutação</span> `:''}${spec.id==='ext'?`<span class="mini" title="Linha do tempo: períodos cumpridos, fugas, faltas, hoje e término da pena" onclick="event.stopPropagation();ui.extTL('${r.id}')">Linha do tempo</span> `:''}${MODELOS_ATIVOS?`<span class="mini" title="Preencher modelo .docx com os dados deste assistido" onclick="event.stopPropagation();ui.peticao('${r.id}')">Petição</span>`:''}${this.fichaIcoHtml(r)}${this.qbtnHtml(r)}${this.abrirBtnHtml(r)}</td>`;
       let html=`<tr class="${cor} ${exp?'exp':''} ${r.fixado?'fix':''} ${spec.expansivel?'':'noclk'}" ${spec.expansivel?`onclick="ui.expandir('${r.id}')"`:''}>${tds}${acao}</tr>`;
       if(exp) html+=`<tr class="sub"><td colspan="${spec.cols.length+1}"><div class="subwrap">${this.subTabela(r,spec)}</div></td></tr>`;
@@ -750,7 +748,6 @@ const ui = {
     card.innerHTML=`<table><thead class="${spec.expansivel?"exp":""}"><tr>${th}</tr></thead><tbody>${tr}</tbody></table>`;
   },
   passaFiltro(r,spec){ const f=this.filtroSel||'todas'; if(f==='todas') return true;
-    if(f.startsWith('p:')){ const [a,b]=f.slice(2).split('-').map(Number); return r.prio_n>=a && r.prio_n<=(b||a); }
     if(f.startsWith('b:')){ const p=f.split(':'); const ks=p[1]==='*'?['i22','i24','c24','i25','c25']:[p[1]];
       if(p[2]==='Fato posterior') return ks.some(k=>r[k]==='Fato posterior'||/fato posterior/i.test(String(r[k+'_txt']||'')));
       return ks.some(k=>r[k]===p[2]); }
@@ -1728,7 +1725,7 @@ const ui = {
   filtrarCor(c){ this.filtroCor = this.filtroCor===c ? null : c; this.render(); },
   filtrar(){ const q=document.getElementById('q'); this.filtro=q.value.trim().toLowerCase(); document.getElementById('search').classList.toggle('has',!!this.filtro); this.render(); },
   limparBusca(){ document.getElementById('q').value=''; this.filtrar(); },
-  ordenar(k){ const o=this.ordem[this.aba]; if(k==='prio') k='prio_ord'; this.ordem[this.aba]={k, inv: o&&o.k===k?!o.inv:false}; this.render(); },
+  ordenar(k){ const o=this.ordem[this.aba]; this.ordem[this.aba]={k, inv: o&&o.k===k?!o.inv:false}; this.render(); },
   menu(id){ const m=document.getElementById(id); m.classList.toggle('on'); setTimeout(()=>document.addEventListener('click',()=>m.classList.remove('on'),{once:true}),0); },
   abrirPasta(){ api('abrir_pasta_bases'); },
   toast(t){ const e=document.getElementById('toast'); e.textContent=t; e.classList.add('on'); clearTimeout(this._t); this._t=setTimeout(()=>e.classList.remove('on'),3500); },
@@ -1919,7 +1916,7 @@ const ui = {
         <div class="muted" id="rel_conta" style="font-size:12px;margin:5px 0 0 2px"></div>
       </div>
       <label class="chk"><input type="checkbox" id="rel_ger" checked>Relatório geral da base</label>
-      <label class="chk"><input type="checkbox" id="rel_rem">Remição detalhada: relatório (PDF), prioridade das remições (PDF) e planilha de conferência ficha x RSPE (Excel e PDF)</label>
+      <label class="chk"><input type="checkbox" id="rel_rem">Remição detalhada: relatório (PDF) e planilha de conferência ficha x RSPE (Excel e PDF)</label>
       <label class="chk"><input type="checkbox" id="rel_pla" checked>Planilha (Excel, todas as abas)</label>
       <label class="chk"><input type="checkbox" id="rel_nom" checked>Fila de prioridade com o nome dos assistidos</label>
       <p class="muted" style="font-size:12px">Triagem: não substitui o Atestado de Pena. Datas de progressão, livramento e término são as do SEEU.</p>

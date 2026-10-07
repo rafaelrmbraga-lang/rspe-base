@@ -1627,8 +1627,7 @@ def gerar(modelos, pasta, nome_base, individual=True, geral=True, nominal=True, 
         nb = re.sub(r"[^\w\- ]", "", nome_base)
         for nome, fn in (("remição detalhada", lambda: relatorio_remicao(modelos, os.path.join(destino, "Remicao detalhada - %s.pdf" % nb), nome_base, nominal)),
                          ("planilha de conferência (Excel)", lambda: planilha_remicao_xlsx(modelos, os.path.join(destino, "Conferencia da remicao - %s.xlsx" % nb), nome_base)),
-                         ("planilha de conferência (PDF)", lambda: planilha_remicao_pdf(modelos, os.path.join(destino, "Conferencia da remicao - %s.pdf" % nb), nome_base)),
-                         ("prioridade das remições", lambda: relatorio_prioridade_remicao(modelos, os.path.join(destino, "Prioridade das remicoes - %s.pdf" % nb), nome_base))):
+                         ("planilha de conferência (PDF)", lambda: planilha_remicao_pdf(modelos, os.path.join(destino, "Conferencia da remicao - %s.pdf" % nb), nome_base))):
             try:
                 fn()
             except Exception as e:
