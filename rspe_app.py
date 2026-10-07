@@ -1334,6 +1334,11 @@ class Api:
     def _juntar_auto(self, d):
         """Base curada + triagem automática (sem repetir processo já curado)."""
         A = self._teses_auto()
+        for i in d["itens"] + A.get("itens", []):
+            # monocrática do STJ: o link do acervo é a pesquisa do processo; o inteiro teor é a página da decisão (registro + publicação)
+            m = re.search(r"processo\.stj\.jus\.br/processo/pesquisa/\?num_registro=(\d{12})", i.get("link") or "")
+            if m and re.match(r"\d{2}/\d{2}/\d{4}$", i.get("pub") or ""):
+                i["link"] = "https://processo.stj.jus.br/processo/monocraticas/decisoes/?num_registro=%s&dt_publicacao=%s" % (m.group(1), i["pub"])
         if not A.get("itens"):
             return d
         ja = {((i.get("tribunal") or "TJMS"), re.sub(r"\D", "", i.get("proc") or "")) for i in d["itens"]}

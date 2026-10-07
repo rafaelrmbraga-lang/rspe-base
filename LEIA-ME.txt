@@ -647,7 +647,10 @@ v7.4.0
     93% a 97%. As novas aparecem com a marca "triagem automática" e a
     decisão completa é aberta sob demanda; a busca também procura no texto
     integral. Arquivo novo embutido no .exe: teses_auto.bin (19 MB).
-  - Tela inicial: nome APTO em destaque.
+  - Tela inicial: nome APTO em destaque, acima do quadro.
+  - Jurisprudências: o botão "Inteiro teor" das decisões monocráticas do STJ
+    abre a própria decisão no portal do STJ (registro + data de publicação),
+    não a pesquisa do processo.
   - Testes: teste_auditoria_calculo.py (os alertas acima) entra no build;
     teste_remicao.py ganha o caso do atestado com vários setores.
 

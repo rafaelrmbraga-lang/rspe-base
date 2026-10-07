@@ -332,12 +332,13 @@ tr.sub td{padding:0 0 0 0;background:#FFFFFF;cursor:default}tr.sub:hover td{back
 .lbox b{display:block;font-size:17px;margin:14px 0 4px}.lbox p{margin:0;color:var(--tx2);min-height:20px}.lbox small{display:block;margin-top:12px;color:var(--tx3)}
 .spin{width:38px;height:38px;margin:0 auto;border-radius:50%;border:4px solid #D1E7D8;border-top-color:#00602C;animation:gira .9s linear infinite}
 @keyframes gira{to{transform:rotate(360deg)}}
-.wbox{width:560px;background:var(--card);border-radius:18px;box-shadow:var(--shadow2);padding:0 30px 26px;overflow:hidden}
-.whead{margin:0 -30px 22px;padding:26px 30px 24px;background:linear-gradient(135deg,#00602C 0%,#0B7A3E 100%);color:#fff;display:flex;align-items:center;gap:16px}
-.whead .wlogo{width:48px;height:48px;border-radius:13px;background:rgba(255,255,255,.16);display:grid;place-items:center;flex:none}
-.whead .wlogo svg{width:26px;height:26px}
-.wbox .whead h1{margin:0;font-size:34px;line-height:1;letter-spacing:3px;font-weight:800;color:#fff}
-.wbox .whead p{margin:6px 0 0!important;color:rgba(255,255,255,.86)!important;font-size:13px;letter-spacing:.2px}
+.wbox{width:560px;background:var(--card);border-radius:18px;box-shadow:var(--shadow2);padding:26px 30px}
+.wcol{display:flex;flex-direction:column;align-items:center;gap:28px}
+.wmarca{display:flex;flex-direction:column;align-items:center;text-align:center}
+.wmarca .wlogo{width:76px;height:76px;border-radius:22px;background:linear-gradient(135deg,#00602C,#0B7A3E);display:grid;place-items:center;box-shadow:0 10px 28px rgba(0,96,44,.28);margin-bottom:16px}
+.wmarca .wlogo svg{width:40px;height:40px}
+.wmarca h1{margin:0;font-size:68px;line-height:1;font-weight:800;letter-spacing:8px;color:#00602C;padding-left:8px}
+.wmarca p{margin:10px 0 0;color:var(--tx2);font-size:15px;letter-spacing:.3px}
 .wbox h1{margin:0 0 4px;font-size:22px;letter-spacing:-.3px}.wbox p{margin:0 0 18px;color:var(--tx2)}
 .wrow{display:flex;gap:8px;margin-bottom:10px}.wrow input{flex:1;padding:10px 12px;border:1px solid var(--line2);border-radius:10px;font:inherit;outline:none}
 .wrow input:focus{border-color:var(--pri);box-shadow:0 0 0 3px var(--pri-soft)}
@@ -603,14 +604,15 @@ tr.noclk{cursor:default}
 <div class="veil" id="veil" onclick="ui.fecharDrawer()"></div>
 <aside class="drawer" id="drawer"></aside>
 
-<div class="welcome" id="welcome"><div class="wbox">
-  <div class="whead"><div class="wlogo"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M5 7h14M5 12h14M5 17h9"/></svg></div><div><h1>APTO</h1><p>Auditoria de Prazos e Tempo de cumprimento Organizada · SEEU</p></div></div>
+<div class="welcome" id="welcome"><div class="wcol">
+  <div class="wmarca"><div class="wlogo"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M5 7h14M5 12h14M5 17h9"/></svg></div><h1>APTO</h1><p>Auditoria de Prazos e Tempo de cumprimento Organizada · SEEU</p></div>
+  <div class="wbox">
   <p>Nenhuma base carregada. Crie uma base nova (uma por comarca ou unidade) ou abra uma existente.</p>
   <div class="wrow"><input id="novoNome" placeholder="Nome da nova base (ex.: Comarca de Dourados, PED Máxima)" onkeydown="if(event.key==='Enter')ui.criarBase()"><button class="btn pri" onclick="ui.criarBase()">Criar base</button></div>
   <div class="wrow"><button class="btn" style="flex:1;justify-content:center" onclick="ui.abrirBase()">Abrir base existente…</button></div>
   <div class="recent" id="recentes"></div>
   <div class="wfoot" id="wfoot"></div>
-</div></div>
+</div></div></div>
 <div class="loading" id="loading" role="status" aria-live="polite"><div class="lbox"><div class="spin"></div><b id="loadTit">Abrindo a base</b><p id="loadEtapa">Aguarde…</p><small id="loadTempo"></small></div></div>
 <div class="modal" id="modal"></div>
 <div class="tlv" id="tlv"></div>
@@ -1712,7 +1714,7 @@ const ui = {
         ${P.kw.length?`<div class="jz-kw">${P.kw.map(w=>`<span>${esc(w)}</span>`).join('')}</div>`:''}
         <div class="jz-em ${ab?'on':''}">${esc(ab?(x.auto?(this._tesTxt[x.id]||this.tesEm(x)):x.ementa):P.corpo)}</div>
         <div class="jz-ac"><span class="jz-lk" onclick="ui.tesAbrir('${x.id}')">${ab?(x.auto?'Recolher decisão ':'Recolher ementa ')+I.up:(x.auto?'Ler decisão completa ':'Ler ementa completa ')+I.ch}</span><span class="sp"></span>
-          ${x.link?(()=>{ const it=/GetInteiroTeor|cjsg|stf\.jus\.br/.test(x.link); const dica=/cjsg/.test(x.link)?'Abre a jurisprudência do TJMS já filtrada por este acórdão: clique no ícone do inteiro teor (PDF)':/GetInteiroTeor/.test(x.link)?'Abre o PDF do acórdão no STJ':/stf\.jus/.test(x.link)?'Abre a decisão completa no portal do STF':'Abre o processo no tribunal (inteiro teor não disponível por link direto)';
+          ${x.link?(()=>{ const it=/GetInteiroTeor|cjsg|stf\.jus\.br|monocraticas\/decisoes/.test(x.link); const dica=/cjsg/.test(x.link)?'Abre a jurisprudência do TJMS já filtrada por este acórdão: clique no ícone do inteiro teor (PDF)':/GetInteiroTeor/.test(x.link)?'Abre o PDF do acórdão no STJ':/monocraticas\/decisoes/.test(x.link)?'Abre a decisão monocrática no STJ (inteiro teor)':/stf\.jus/.test(x.link)?'Abre a decisão completa no portal do STF':'Abre o processo no tribunal (inteiro teor não disponível por link direto)';
             return `<span class="jz-b" title="${dica}" onclick="api('abrir_url',ui._clips[${this.clip(x.link)}])">${I.doc}${it?'Inteiro teor':'Abrir processo'}</span>`; })():''}
           <span class="jz-b" onclick="ui.tesCopiar(${i},'cit')">${I.q}Copiar referência</span><span class="jz-b pri" onclick="ui.tesCopiar(${i},'em')">${I.cp}Copiar ementa</span></div></div>`; }).join('');
     const vazio=`<div class="empty"><div><b>Nenhuma decisão encontrada</b>Tente outras palavras, outro tema ou outro filtro.</div></div>`;
