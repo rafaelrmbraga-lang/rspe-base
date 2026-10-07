@@ -1,4 +1,5 @@
-RSPE BASE - SEEU  v7.1.1 (programa em abas)
+APTO - Auditoria de Prazos e Tempo de cumprimento Organizada  v7.4.0
+(antigo RSPE Base; SEEU, programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
@@ -29,7 +30,8 @@ bases recentes (até 8). Arrastar PDFs sobre o .exe cria uma base
 "Importação <data>".
 
 ATUALIZAR O PROGRAMA
-  Substitua só o RSPE_Base.exe e mantenha, ao lado dele, a pasta "bases"
+  Substitua só o executável (a partir da 7.4.0, APTO.exe; apague o antigo
+  RSPE_Base.exe) e mantenha, ao lado dele, a pasta "bases"
   (e a pasta "modelos", o rspe_config.json e o defensores.json, se usar).
   Não é preciso refazer nem reimportar a base: ao abrir, o programa refaz a
   análise de todos os assistidos com as regras da versão nova (a leitura do
@@ -225,7 +227,7 @@ CRIMES
 COMO GERAR O .EXE (uma vez, em um Windows com Python instalado)
   1. Instale o Python 3.9+ (python.org) marcando "Add python.exe to PATH".
   2. Duplo clique em build_exe.bat.
-  3. Copie dist\RSPE_Base.exe para onde quiser (não precisa de Python).
+  3. Copie dist\APTO.exe para onde quiser (não precisa de Python).
 
 LEITURA DOS CAMPOS
   * Campo em branco = não consta no RSPE. Nada é inventado nem presumido.
@@ -563,6 +565,217 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v7.4.0
+  - Nome: o programa passa a se chamar APTO (Auditoria de Prazos e Tempo de
+    cumprimento Organizada). O executável é APTO.exe; bases, modelos e
+    configurações continuam na mesma pasta e abrem sem reimportar.
+  - Tela de carregamento ao abrir uma base existente (recentes ou "Abrir
+    base existente…"), com a etapa em curso: abrindo o arquivo, cópia de
+    segurança, cálculo dos assistidos, montagem da tela.
+  - Auditoria - cinco conferências novas, com "Copiar fundamentação" a partir
+    dos modelos de impugnação do NUSPEN:
+    * Remição com referência tardia (ficha x RSPE): o trabalho terminou antes
+      de um 25/12 de decreto de indulto/comutação ou de uma progressão, e o
+      SEEU lançou os dias depois dele (em geral na data da decisão). Só
+      nesses casos há prejuízo e alerta; quando a data-base atual fica entre
+      o fim do trabalho e a referência, o alerta avisa a cautela (a
+      retificação isolada tiraria os dias da próxima progressão). STF, ARE
+      1.497.973 AgR/PR.
+    * Detração: o alerta do regime inicial lançado depois da primeira prisão
+      mostra as duas contas - (pena - detração) x fração e pena x fração -
+      detração - e a diferença, detração x (1 - fração). STJ, AgRg no AREsp
+      2.956.206 e AgRg no HC 719.763 (Sexta Turma); AREsp 3.228.879
+      (monocrática). Obs.: o "AgRg no AREsp 3.228.879/MS, j. 04/08/2026"
+      citado no modelo não foi localizado; a fundamentação cita a decisão
+      monocrática do mesmo processo, conferida.
+    * Fração 1/1 de livramento no crime comum, com livramento já concedido
+      ou revogado: revogação lançada no cadastro do crime em vez do incidente
+      próprio, o que gera "Não comutado - Impeditivo".
+    * Data de referência do semiaberto não refeita depois de fato que reduziu
+      a pena com efeito anterior a ela (comutação ou indulto de decreto
+      anterior, prescrição, extinção por indulto/graça), decidido depois da
+      progressão.
+    * Comutações fora da ordem dos decretos (a de decreto anterior lançada
+      depois da do seguinte) e comutação anterior lançada depois do 25/12 do
+      decreto seguinte.
+  - Registro da importação (PDF): em todo lote, não só quando há falha.
+    Traz o resumo (arquivos, RSPE, fichas, leitura completa, parcial, não
+    lidos), as falhas com a causa e o registro de cada arquivo: resultado
+    (novo, atualizado, histórico, já na base, ficha vinculada ou sem RSPE,
+    ignorado, não importado), leitura completa ou PARCIAL e o que pode ter
+    ocorrido (página sem texto, campo não lido, histórico vazio ou que para
+    anos antes da impressão, condenação não lida, campo que o próprio SEEU
+    deixa em branco).
+  - Remição (casos Allan Cézar, Arnaldo e Carlos Henrique):
+    * atestado em lote com vários setores ("setor de PRENDE BEM, FAXINA E
+      PAIVA LANGUERIE com 253 dias de remição"): a lista inteira passa a ser
+      lida (antes parava na primeira vírgula e atribuía tudo ao 1º setor, e
+      os demais saíam como "sem atestado");
+    * "PRENDE BEM", "PRENDEBEM/PDIB" e "PRENDEDORES PRENDEBEM" são o mesmo
+      setor (sinônimo novo na base jurídica);
+    * setor desativado no SIAPEN ("XXDESATIVADO6098") aberto no mesmo dia de
+      outro setor é o mesmo vínculo: fica o nome real, com as datas do
+      registro desativado (antes, dois vínculos e um "a conferir");
+    * trecho sem atestado que começa no meio de um vínculo diz de onde vem a
+      data de início (ex.: "antes disso, remição de 91 dias lançada no RSPE
+      em 14/12/2021, sem atestado na ficha").
+    Efeito na base da PDIB: "trabalho sem atestado" de 26.846 para 25.711
+    dias; "a conferir" de 2.223 para 1.940.
+  - Remição - revisão de leitura nas 653 fichas da PDIB (verificador próprio):
+    * atestado com a lista de empresas e períodos ("EMPRESA UFMS 15/07/2019
+      09/08/2019 - AT CONSTRUCOES 23/01/2023 19/05/2023 - ..."), comum no
+      CPAIG: cada empresa entra com o seu período (antes, só o 1º nome);
+    * atestado com setores e datas de início ("BARBEIRO DESDE 18/11/2022,
+      POLIGONAL 28/02/2024 ... A ESTA DATA"): cada setor da sua data até a
+      véspera do seguinte;
+    * erro de digitação no setor do atestado ("PLIGONAL", "POLIGNAL",
+      "DEPRENDE BEM") e nome parcial ("SETOR JURIDICO" x "Auxiliar
+      Jurídico") passam a casar com o vínculo da ficha;
+    * assinatura no fim do atestado ("AG. GIMENES - SETOR DE TRABALHO -
+      IPCG") não é mais lida como setor; datas com ponto (09.09.2016) e
+      aspas no texto (´ATESTADO DE TRABALHO´) são lidas;
+    * atestado que cita setor sem nenhum início de trabalho na ficha gera
+      aviso (5 casos na PDIB: falta de registro na própria ficha).
+  - Jurisprudências: triagem nova do acervo atualizado (07/10/2026), só
+    decisões favoráveis à defesa em execução penal, com filtro rigoroso
+    pelo dispositivo (fora: HC indeferido liminarmente, reconsideração para
+    negar, recurso da acusação provido, dosimetria e regime inicial da
+    sentença, prisão cautelar, nulidades da ação penal). Entram 12.459
+    decisões do STJ (12.309 monocráticas e 150 acórdãos), somando 14.725 com
+    as 2.266 já curadas. Precisão medida em duas amostras lidas uma a uma:
+    93% a 97%. As novas aparecem com a marca "triagem automática" e a
+    decisão completa é aberta sob demanda; a busca também procura no texto
+    integral. Arquivo novo embutido no .exe: teses_auto.bin (19 MB).
+  - Tela inicial: nome APTO em destaque, acima do quadro.
+  - Jurisprudências: o botão "Inteiro teor" das decisões monocráticas do STJ
+    abre a própria decisão no portal do STJ (registro + data de publicação),
+    não a pesquisa do processo.
+  - Testes: teste_auditoria_calculo.py (os alertas acima) entra no build;
+    teste_remicao.py ganha o caso do atestado com vários setores.
+
+v7.3.1
+  - Faltas da ficha (conferido nas 653 fichas da PDIB: 328 de 328 resultados
+    de PADIC agora batem com o texto da ficha; antes, 184):
+    * resultado "foi sancionado" (ciência do resultado), "absolvido" e
+      "foi extinto o processo" passam a ser lidos; absolvição e extinção
+      contam como falta sem efeito (como a arquivada);
+    * natureza do Conselho ("falta de natureza média/leve"): a falta
+      desclassificada deixa de ser grave;
+    * o mesmo fato registrado duas vezes (linha repetida ou duas infrações
+      do mesmo dia) é uma falta só (antes contava em dobro);
+    * resultado casado pela data do fato e pelo número do PADIC; "não será
+      instaurado procedimento" não é mais lido como instauração.
+  - Remição: coluna "Autos do peticionamento" (autos citados na ficha;
+    aviso quando são outros autos, não os da execução; "autos não indicados
+    na ficha" quando o lançamento não diz). "Trabalho sem atestado" passa a
+    "Trabalho sem atestado na ficha nem remição no RSPE", com a providência
+    de conferir nos autos se há atestado juntado e não lançado na ficha (o
+    programa não o vê; lançar em "+ Adicionar atestado"). Atestado lançado
+    pela equipe conta como juntado.
+  - Planilha de conferência: na aba "Amostra 10%", listas de seleção para
+    Conferido (S/N), Resultado (Confere/Não confere) e Motivo da divergência
+    (padronizado); nova aba "Taxa de acerto" calcula sozinha o acerto por
+    situação e conta os motivos.
+
+v7.3.0
+  Revisão da leitura da ficha disciplinar com as 653 fichas da PDIB (texto
+  bruto de cada PDF confrontado com o que o programa leu). As fichas já
+  guardadas na base são relidas a partir dos eventos ao abrir a base (não é
+  preciso reimportar).
+  - Atestados:
+    * "dia trabalhados", "trabalhado", "sendo N dias", segundo trecho sem o
+      nome da função e ano com 5 dígitos ("04/04/02025"): antes um trecho
+      se perdia (ex.: atestado 129/2023 lido com 28 em vez de 77,33 dias);
+    * ATP ("Emitido ATP nº 105/2023; ... DATA INICIAL ...; TEMPO DE
+      REMIÇÃO: 42 dias") passa a ser lido como atestado (antes ignorado);
+    * atestado retificado substitui o anterior de mesmo número; lançamento
+      repetido conta uma vez;
+    * etapa de cada atestado: peticionado no SEEU (ou protocolado) x só
+      emitido pela unidade, inclusive pelo peticionamento lançado depois.
+  - Vínculos de trabalho: novas redações de início ("iniciou suas
+    atividades laborais", "inicia atividade laboral externa/interna",
+    "cadastrado", "passa a laborar/prestar serviço", "reiniciou"),
+    remanejamento ("remanejado para o setor X" encerra o anterior),
+    desligamento sem setor ("desligado do trabalho", "afastado do
+    trabalho", "não retornou do trabalho") e "tornar sem efeito o
+    lançamento do dia X"; regra de reserva para o texto livre das unidades.
+    "Liberação do Setor de Trabalho" encerra os vínculos abertos quando não
+    vem junto da baixa de um setor no mesmo dia. Setor "Escola" lançado
+    como trabalho passa a estudo.
+  - Sem dias quando há dúvida ("a conferir", fora do total): vínculo sem
+    baixa com registro posterior de início em outro setor ou liberação
+    (ex.: "Ajudante" aberto no mesmo dia do "Prendebem" e nunca baixado);
+    baixa por "adequação do mapa do SIAPEN"; matrícula escolar aberta há
+    mais de um ano sem nenhum registro escolar.
+  - Estudo: "curso" só como palavra (antes "incurso" virava curso);
+    curso citado sem período nem carga horária não vira período aberto;
+    cursos de qualificação peticionados (ex.: Instituto Avelar) entram como
+    documento peticionado, sem estimativa; novas redações de início e fim
+    (setor escolar, rol de alunos, passa a frequentar, deixa de estudar);
+    "desistência escolar" registrada como série encerra a matrícula; nova
+    matrícula em outra série encerra a anterior.
+  - Leitura: atestado de remição pela leitura com título do livro conta
+    1 obra; lista "LIVRO: A, B e C" conta as obras; meses por extenso.
+  - Cabeçalho de página ("RSS (8002969) em: 02/10/2026") não gruda mais no
+    texto do evento.
+  - Relatórios, opção "Remição detalhada": além do relatório (PDF), gera a
+    planilha de conferência ficha x RSPE em Excel e em PDF - uma linha por
+    atestado ou período, com situação em cor (no processo; peticionado sem
+    remição; só emitido; trabalho sem atestado; estudo; leitura; em curso;
+    a conferir; lacuna), unidade onde ocorreu, datas, nº do atestado,
+    emissão, peticionamento, dias, remição no RSPE, providência e o trecho
+    da ficha que comprova; abas Resumo, Conferência, Amostra 10% (sorteio
+    fixo, com colunas para marcar a conferência nos autos) e Legenda.
+
+v7.2.2
+  - Remição detalhada, seção por assistido: antes do que falta remir, a
+    conferência ficha x RSPE de cada atestado da execução (unidade, período,
+    dias trabalhados, remidos na ficha, remição no RSPE com a decisão), em
+    cores: verde = já está no processo; vermelho = atestado emitido sem
+    remição no RSPE; amarelo = lançado com dias diferentes; azul = remição no
+    RSPE sem atestado registrado na ficha. No topo, a comparação: dias
+    remidos na ficha, no processo, fora do processo e o saldo do RSPE.
+    Entram todos os assistidos com atestado ou remição, não só os com
+    pendência.
+
+v7.2.1
+  - Remição detalhada: cada dia a remir sai com a unidade prisional em que o
+    trabalho, o estudo ou a leitura aconteceu (entradas em unidade penal da
+    ficha), e não mais só a unidade atual. O período que atravessa uma
+    transferência é dividido entre as unidades; o atestado fica na unidade
+    em que o período atestado terminou. Sem entrada registrada antes do
+    período: "Unidade não identificada na ficha".
+    * Quadro por unidade passa a usar essa unidade.
+    * Nova seção "Por unidade prisional: assistidos e o que pedir a cada
+      uma" (assistido, execução, origem, período, dias e o que pedir),
+      base do ofício a cada unidade.
+    * Na lista por assistido, coluna Unidade em cada linha.
+    * Grafias diferentes da mesma unidade na ficha (sigla, abreviação, nome
+      antigo: CT/Centro de Triagem, IPCG, PTRAN, EPJFC, Albergado CG etc.)
+      viram um nome só.
+  - Relatório individual: a unidade entra em "A remir por origem".
+
+v7.2.0
+  - Relatórios: nova opção "Remição detalhada" (PDF em paisagem). Diz de
+    onde vem cada dia a remir, para o pedido de providências:
+    * atestado emitido sem remição no RSPE (dias exatos do atestado);
+    * atestado com remição menor no RSPE (a diferença);
+    * trabalho sem atestado - atestado a expedir (estimativa seg.-sáb. ÷ 3,
+      sem feriados; vínculos simultâneos não contam o mesmo dia duas vezes);
+    * estudo sem remição - certidão a expedir (12 h = 1 dia);
+    * leitura peticionada sem remição (4 dias por obra);
+    * trabalho em curso há até 90 dias (informado à parte, fora do total);
+    * lacunas entre atestados (sem dias: verificar se houve trabalho).
+    Traz o quadro por origem (assistidos, itens, dias, como foi calculado
+    e providência), o quadro por unidade prisional e, por assistido (ordem
+    alfabética), cada atestado ou período com os dias e a providência.
+  - Relatório geral, 2.5 Remição: os números passam a ser os da mesma conta
+    por origem. O número antigo ("dias atestados e não homologados") era a
+    diferença ficha x RSPE e somava a estimativa de todo o estudo da ficha,
+    inclusive o já remido; por isso ficava inflado.
+  - Relatório individual: quadro "A remir por origem" na seção de remição.
+  - Números do relatório com separador de milhar (50.331).
 
 v7.1.1
   - Ficha x RSPE, mãe diferente: a comparação passou a seguir a mesma regra

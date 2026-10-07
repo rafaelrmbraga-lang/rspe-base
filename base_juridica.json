@@ -1,5 +1,5 @@
 {
- "versao": "2026-10-06",
+ "versao": "2026-10-07",
  "descricao": "Base juridica do RSPE Base. Editavel: o programa le este arquivo ao abrir (copia ao lado do .exe tem prioridade sobre a embutida). Datas em AAAA-MM-DD. Fracoes como 'num/den' ou percentual 'NN%'.",
  "prescricao": {
   "art109_tabela": [
@@ -1701,6 +1701,12 @@
     "padrao": "\\bPAIVA\\b",
     "chave": "PAIVA",
     "nome": "Paiva Lingerie",
+    "unidade": "PDIB (Dois Irmãos do Buriti)"
+   },
+   {
+    "padrao": "\\bPRENDE ?BEM\\b|\\bPRENDEBEM|\\bPRENDEDORES\\b",
+    "chave": "PRENDEBEM",
+    "nome": "Prendebem (prendedores)",
     "unidade": "PDIB (Dois Irmãos do Buriti)"
    }
   ],

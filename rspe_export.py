@@ -122,7 +122,7 @@ def exportar_pdf(modelos, saida, nome_base, abas):
             canvas.line(ML + 1.7 * mm, y, ML + 1.7 * mm + w * mm, y)
         canvas.setFillColor(C(NAVY))
         canvas.setFont("Helvetica-Bold", 11)
-        canvas.drawString(ML + 9.5 * mm, H - 11 * mm, "RSPE Base")
+        canvas.drawString(ML + 9.5 * mm, H - 11 * mm, "APTO")
         canvas.setFont("Helvetica", 8.5)
         canvas.setFillColor(C(TX2))
         canvas.drawString(ML + 31 * mm, H - 11 * mm, "Execução penal · SEEU")
@@ -139,7 +139,7 @@ def exportar_pdf(modelos, saida, nome_base, abas):
         canvas.restoreState()
 
     doc = SimpleDocTemplate(saida, pagesize=landscape(A4), leftMargin=ML, rightMargin=ML,
-                            topMargin=21 * mm, bottomMargin=14 * mm, title="RSPE Base - %s" % nome_base, author="RSPE Base")
+                            topMargin=21 * mm, bottomMargin=14 * mm, title="APTO - %s" % nome_base, author="APTO")
     st_cel = ParagraphStyle("cel", fontName="Helvetica", fontSize=7.6, leading=9.4, textColor=C("#101828"))
     st_neg = ParagraphStyle("neg", parent=st_cel, fontName="Helvetica-Bold")
     st_mut = ParagraphStyle("mut", parent=st_cel, textColor=C("#98A2B3"))

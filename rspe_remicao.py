@@ -21,13 +21,14 @@ from datetime import date, timedelta
 
 import rspe_scraper as rs
 
-DT = r"(\d{2}/\d{2}/\d{2,4})"
+DT = r"(\d{2}[./]\d{2}[./]\d{2,4})"
 SEPD = r"\s*(?:A|À|ATÉ|ATE|-)\s*"
 
 # nomes de setor que a ficha e os atestados usam para o mesmo vínculo: base jurídica, remicao.setores_sinonimos (editável sem
 # mexer no programa); a lista abaixo só vale se a base não trouxer nenhuma
 ALIAS_PADRAO = [(r"\bHORTA\b|\bAGS\b", "AGS", "Ags Prestadora - Me (Horta)"),
-                (r"\bPAIVA\b", "PAIVA", "Paiva Lingerie")]
+                (r"\bPAIVA\b", "PAIVA", "Paiva Lingerie"),
+                (r"\bPRENDE ?BEM\b|\bPRENDEBEM|\bPRENDEDORES\b", "PRENDEBEM", "Prendebem (prendedores)")]
 
 
 def sinonimos():
@@ -89,6 +90,40 @@ def setor_chave(nome):
     return ch, disp
 
 
+def setor_parecido(a, b):
+    """Nome de setor citado no atestado x vínculo da ficha, tolerando erro de digitação ("PLIGONAL", "POLIGNAL") e sufixo
+    ("FAXINA LTDA" x "FAXINA DO CORREDOR"): mesma chave, começo comum de 5 letras ou grafia 80% igual."""
+    if mesmo_setor(a, b):
+        return True
+    if not a or not b:
+        return False
+    import difflib
+    pre = len(__import__("os").path.commonprefix([a, b]))
+    return pre >= 5 or (min(len(a), len(b)) >= 6 and difflib.SequenceMatcher(None, a[:10], b[:10]).ratio() >= 0.8)
+
+
+_GENERICAS = {"EMPRESA", "SETOR", "TRABALHO", "SERVICOS", "SERVICO", "GERAIS", "MANUTENCAO", "PREDIAL", "AUXILIAR", "LTDA", "OFICINA", "FUNCAO",
+              "PAVILHAO", "INTERNO", "EXTERNO"}
+
+
+def palavra_comum(a, b):
+    """Nomes de setor com uma palavra própria em comum ("SETOR JURIDICO" x "Auxiliar Juridico"; "PINTOR" x "Manutenção Predial - Pintor")."""
+    pa = {w for w in re.findall(r"[A-Z]{5,}", _sa(a)) if w not in _GENERICAS}
+    pb = {w for w in re.findall(r"[A-Z]{5,}", _sa(b)) if w not in _GENERICAS}
+    return bool(pa & pb)
+
+
+def _nomes_lista(setor):
+    """Setores de uma lista do atestado ("PRENDE BEM, FAXINA E COZINHA"), sem o que não é nome de setor."""
+    out = []
+    for x in re.split(r"\s+E\s+|,", setor or ""):
+        x = re.sub(r"^(?:DE|DA|DO|NO|NA)\s+|^DE(?=PRENDE)", "", x.strip(" .;:-()"))
+        if not x or re.match(r"^(TRABALHO\b|IPCG\b|AG\.|\d|TOTALIZANDO)", x) or re.search(r"\bDIAS?\b", x):
+            continue
+        out.append(x)
+    return out
+
+
 def mesmo_setor(a, b):
     """Mesma chave, ou uma é o começo da outra ("POLIGONAL" x "POLIGONALENG")."""
     if not a or not b:
@@ -104,51 +139,204 @@ RE_INI = [re.compile(r"INICIOU ATIVIDADES? LABORA(?:L|IS),?\s*(?:NO SETOR DE TRA
 RE_FIM = [re.compile(r"DEIXA DE TRABALHAR,?\s*NO SETOR DE TRABALHO\s*(.+?)(?:,\s*CONFORME|\s+CONFORME|$)"),
           re.compile(r"ENCERROU ATIVIDADES? LABORA(?:L|IS),?\s*NO SETOR(?: DE)?\s*(.+?)(?:,|$)")]
 RE_SAIDA = re.compile(r"SAIDA DA UNIDADE PENAL|EVASAO|TRANSFERENCIA|\bFUGA\b")
+_FIMNOME = r"(?:\s+CONVENIAD|\s+CUMPRINDO|\s+CONFORME|\s+DELIBERAD|\s+UTILIZANDO|\s+APENAS|\s+POR\s|\s+A PEDIDO|\s+DEVIDO|\s+COM\s|,|\.|\(|/INTERNAMENTE|$)"
+# outras redações do SIAPEN (levantadas nas fichas da PDIB, IPCG, CPAIG, PED, EPJFC): início, troca de setor e fim
+RE_INI2 = [re.compile(r"(?:RE)?INICIOU SUAS ATIVIDADES LABORAIS,?\s*NO SETOR(?: DE| DA| DO)?\s+(.+?)" + _FIMNOME),
+           re.compile(r"\bINICIA ATIVIDADE LABORAL(?: EXTERNA| INTERNA| EXTERNAMENTE| INTERNAMENTE)?\s+(?:NA EMPRESA|NO SETOR(?: DE| DA| DO)?|NA|NO)\s+(.+?)" + _FIMNOME),
+           re.compile(r"CADASTRADO NA ATIVIDADE LABORAL(?: EXTERNA| INTERNA)?\s+NA EMPRESA\s+(.+?)" + _FIMNOME),
+           re.compile(r"PASSA A TRABALHAR N[AO]\s+(?:SETOR(?: DE| DA| DO)?\s+|EMPRESA\s+)?(.+?)" + _FIMNOME),
+           re.compile(r"PASS(?:A|OU) A EXERCER (?:SUAS )?ATIVIDADES? LABORA(?:L|IS)\s+N[AO]\s+(?:SETOR(?: DE| DA| DO)?\s+|EMPRESA\s+)?(.+?)" + _FIMNOME),
+           re.compile(r"\bINICIA(?:-| )SE SUAS ATIVIDADES? LABORA(?:L|IS),?\s*N[AO]\s+(.+?)" + _FIMNOME),
+           re.compile(r"\b(?:RE)?INICIA (?:A |O )?(?:TRABALHO LABORAL|ATIVIDADES? LABORA(?:L|IS))(?: EXTERNA| INTERNA)?\s+(?:NA EMPRESA|NO SETOR(?: DE| DA| DO)?|NA|NO)\s+(.+?)" + _FIMNOME),
+           re.compile(r"(?:FOI )?CADASTRADO NO SETOR(?: DE| DA| DO)?\s+(.+?)" + _FIMNOME),
+           re.compile(r"PASSA A (?:LABORAR|PRESTAR SERVICO|PRESTAR SERVICOS)\s+N[AO]\s+(?:SETOR(?: DE| DA| DO)?\s+|EMPRESA\s+)?(.+?)" + _FIMNOME),
+           re.compile(r"PASSA PRESTAR SERVICOS?\s+N[AO]\s+(?:SETOR(?: DE| DA| DO)?\s+)?(.+?)" + _FIMNOME),
+           re.compile(r"INICIOU OS TRABALHOS NO SETOR(?: DE| DA| DO)?\s+(.+?)" + _FIMNOME),
+           re.compile(r"FOI INTEGRADO AO SETOR DE TRABALHO\s+(.+?)" + _FIMNOME)]
+# "Sem efeito. Reeducando continua trabalhando na empresa X": desfaz o desligamento anterior do mesmo setor
+RE_CONTINUA = re.compile(r"SEM EFEITO\.?\s*(?:O\s+)?(?:REEDUCANDO|INTERNO|CUSTODIADO) CONTINUA TRABALHANDO N[AO]\s+(?:EMPRESA\s+|SETOR(?: DE)?\s+)?(.+?)" + _FIMNOME)
+RE_REMANEJ = [re.compile(r"REMANEJADO E INICIA ATIVIDADE LABORAL(?: EXTERNA| INTERNA)?\s+NA EMPRESA\s+(.+?)" + _FIMNOME),
+              re.compile(r"REMANEJADO DE ATIVIDADE LABORAL ONDE DESE?MPENHARA LABOR NA EMPRESA\s+(.+?)" + _FIMNOME),
+              re.compile(r"REMANEJADO (?:DE ATIVIDADE LABORAL )?(?:DO SETOR (?:DE |DA |DO )?.+? )?PARA (?:O SETOR(?: DE| DA| DO)?|A EMPRESA|ATIVIDADE LABORAL(?: EXTERNA| INTERNA)? NA EMPRESA)\s+(.+?)" + _FIMNOME),
+              re.compile(r"REMANEJADO (?:INTERNAMENTE |EXTERNAMENTE )?PARA (?:A |O )?(?:ATIVIDADE (?:EXTERNA|INTERNA) NA (?:EMP\.?|EMPRESA)\s+|EMPRESA\s+)?(?!CELA|SOLARIO|RAIO|ALA\b|PAVILHAO)(.+?)" + _FIMNOME)]
+RE_FIM2 = [re.compile(r"DESLIGADO (?:DE |DA )?(?:SUAS? )?ATIVIDADES? LABORA(?:L|IS),?\s*(?:DO|NO) SETOR(?: DE| DA| DO)?\s+(.+?)" + _FIMNOME),
+           re.compile(r"DESLIGADO DO SETOR(?: DE| DA| DO)?\s+(.+?)" + _FIMNOME),
+           re.compile(r"DEIXA DE TRABALHAR NO SETOR(?: DE| DA| DO)?\s+(.+?)" + _FIMNOME),
+           re.compile(r"EXCLUIDO DO SETOR(?: DE| DA| DO)?\s+(.+?)" + _FIMNOME)]
+# fim sem setor: encerra todos os vínculos abertos
+RE_FIM_GERAL = re.compile(r"NAO RETORNOU DO TRABALHO|DESLIGA[DG]O DO TRABALHO|DESLIGAMENTO DO (?:LABOR|TRABALHO)|AFASTOU-SE DO TRABALHO|SOLICITOU AFASTAMENTO DO SETOR DE TRABALHO|DESLIGADO DO TRABALHO|DESLIGADO (?:DE |DA )?(?:SUAS? )?ATIVIDADES? LABORA(?:L|IS)(?!,?\s*(?:DO|NO) SETOR)|AFASTADO DO TRABALHO")
+RE_LIBERACAO = re.compile(r"^LIBERACAO DO SETOR DE TRABALHO")
+RE_SEM_EFEITO = re.compile(r"TORNAR SEM EFEITO O LANCAMENTO DO DIA\s+(\d{2}/\d{2}/\d{2,4}),?\s*REFERENTE AO SETOR DE TRABALHO")
+# regra de reserva para o texto livre das unidades (cada época e unidade escreve de um jeito): verbo de início/fim + palavra de
+# trabalho; escola, curso, cela, saúde e prisão domiciliar ficam de fora
+_NAO_TRAB = re.compile(r"EDUCA|PEDAGOG|SAUDE|ESCOLA|CURSO|MATRICULA|(?:DA|PARA|PARA A|NA) CELA (?!LIVRE)|CELA [IVX]+\b|CELA \d|PRISAO DOMICILIAR|PERNOITE|ADVERTENCIA|NAO RETORNOU|TESTE DE TRABALHO")
+_PALAVRA_TRAB = r"(?:ATIVIDADES?\s+(?:LABORA(?:L|IS|TIVA)|INTRAMUROS)|TRABALHO|LABOR|SETOR|QUADRO|SERVICOS?|FUNCAO|EMPRESA|EMPREITEIRA|PRODUCAO|CONVENIO)"
+RE_INI_RESERVA = re.compile(r"\b(?:INICI\w*|REINICI\w*|RETORN\w*|PASSA A (?:FAZER PARTE|EXERCER|TRABALHAR|DESEMPENHAR|DESENVOLVER|PRESTAR|LABORAR)|PASSA AO|PASSOU A \w+|"
+                            r"CADASTRAD\w*|INTEGRAD\w*|REMANEJAD\w*)\b.{0,60}?" + _PALAVRA_TRAB)
+RE_FIM_RESERVA = re.compile(r"\b(?:DESLIGA[DG]\w*|AFAST\w*|DEIXA (?:DE (?:TRABALHAR|LABORAR|FAZER PARTE|EXERCER|PRESTAR)|ATIVIDADE)|EXCLUID\w*)\b")
+_SETOR_EM = [r"\bPARA (?:O |A )?(?:SETOR(?: DE| DA| DO)?\s+|EMPRESA\s+|OFICINA DE\s+|FUNCAO DE\s+)?(.+?)", r"\bPASSA AO TRABALHO (?:INTERNO|EXTERNO)?\s*[-/]?\s*(.+?)",
+             r"\b(?:N[OA]|AO|DO|DA) SETOR(?: DE| DA| DO)?\s+(.+?)", r"\bNA EMPRESA\s+(.+?)", r"\bNA EMPREITEIRA\s+(.+?)",
+             r"\bFUNCAO DE\s+(.+?)", r"\bNA PRODUCAO DE\s+(.+?)", r"\bNO CONVENIO\s+(.+?)", r"\bNA OFICINA DE\s+(.+?)"]
+
+
+def _setor_livre(u, remanejo=False):
+    """Nome do setor num lançamento em texto livre (no remanejamento, o setor de destino, depois de "PARA")."""
+    for rx in (_SETOR_EM if remanejo else _SETOR_EM[1:]):
+        m = re.search(rx + r"(?:\s+CONVENIAD|\s+CUMPRINDO|\s+CONFORME|\s+DELIBERAD|\s+POR\s|\s+A PEDIDO|\s+DEVIDO|\s+EM VIRTUDE|\s+APOS|"
+                           r"\s+COM\s|\s+E PASSA|,|\.|\(|$)", u)
+        if m and m.group(1).strip() and len(m.group(1).strip()) <= 60:
+            return m.group(1).strip()
+    return ""
+
+
+RE_OUTROS = RE_INI2 + RE_REMANEJ + RE_FIM2 + [RE_FIM_GERAL, RE_LIBERACAO, RE_SEM_EFEITO, RE_CONTINUA, RE_INI_RESERVA, RE_FIM_RESERVA]
 
 
 def vinculos(eventos, hoje):
     """Vínculos por setor: aberto no início, fechado na baixa do mesmo setor. Um novo início em OUTRO setor não fecha o
     anterior (nada se encerra por inferência); novo início no MESMO setor fecha o anterior na véspera (sem baixa na ficha).
-    Baixa sem vínculo aberto: estende o último vínculo do setor encerrado por saída; sem nenhum, fica registrada como
-    alerta (nunca como linha "baixa sem início")."""
+    O remanejamento ("remanejado para o setor X") encerra os vínculos abertos e abre o novo; o desligamento sem setor
+    ("desligado do trabalho", "afastado do trabalho") encerra todos; a "Liberação do Setor de Trabalho" encerra todos só
+    quando não vem junto da baixa de um setor no mesmo dia. Lançamento tornado sem efeito ("tornar sem efeito o lançamento
+    do dia X, referente ao setor de trabalho") é ignorado. Baixa sem vínculo aberto: estende o último vínculo do setor
+    encerrado por saída; sem nenhum, fica registrada como alerta (nunca como linha "baixa sem início").
+    Vínculo que fica aberto até hoje sem nenhuma baixa recebe "duvida" quando foi aberto no mesmo dia de outro setor
+    (provável registro duplicado) ou quando, depois dele, houve início em outro setor ou liberação do trabalho: desde essa
+    data o período não entra em dias (fica "a conferir")."""
     abertos, fechados, avisos = {}, [], []
+    anulados = set()
+    for e in eventos:
+        m = RE_SEM_EFEITO.search(_sa(e.get("texto")))
+        if m and _dt(m.group(1)):
+            anulados.add(_dt(m.group(1)))
+    eventos = [e for e in eventos if not (_dt(e.get("data")) in anulados and re.search(r"TRABALH|LABORA|SETOR", _sa(e.get("texto"))))]
+    baixa_no_dia = {_dt(e.get("data")) for e in eventos if any(p.search(_sa(e.get("texto"))) for p in RE_FIM + RE_FIM2)}
+    marcos = []  # (data, motivo): inícios e liberações que tornam duvidoso um vínculo esquecido aberto
+
+    def abrir(ch, disp, d, txt=""):
+        if re.match(r"ESCOLA|EDUCA|ESTUD", _sa(disp)):
+            return  # setor "Escola" lançado como trabalho: é estudo (lido em rspe_ficha._estudos)
+        ch = next((k for k in abertos if mesmo_setor(k, ch)), ch)
+        if ch in abertos:
+            v = abertos.pop(ch)
+            v.update(fim=d - timedelta(days=1), motivo_fim="sem baixa na ficha (novo início no mesmo setor)", sem_baixa=True)
+            fechados.append(v)
+        abertos[ch] = {"chave": ch, "setor": disp, "ini": d, "fim": None, "motivo_fim": "", "fim_ficha": None, "txt_ini": "%s - %s" % (_f(d), txt)}
+        marcos.append((d, "início em %s" % disp, ch))
+
+    def fechar_todos(d, motivo, txt=""):
+        for ch in list(abertos):
+            v = abertos.pop(ch)
+            v.update(fim=d, fim_ficha=d, motivo_fim=motivo, txt_fim="%s - %s" % (_f(d), txt) if txt else "")
+            fechados.append(v)
+
     for e in eventos:
         d, u = _dt(e.get("data")), _sa(e.get("texto"))
         if not d:
             continue
-        m = next((x for x in (p.search(u) for p in RE_INI) if x), None)
+        cela = u.startswith("MUDANCA DE CELA")
+        m = RE_CONTINUA.search(u)
         if m:
-            ch, disp = setor_chave(m.group(1))
-            ch = next((k for k in abertos if mesmo_setor(k, ch)), ch)
-            if ch in abertos:
-                v = abertos.pop(ch)
-                v.update(fim=d - timedelta(days=1), motivo_fim="sem baixa na ficha (novo início no mesmo setor)", sem_baixa=True)
-                fechados.append(v)
-            abertos[ch] = {"chave": ch, "setor": disp, "ini": d, "fim": None, "motivo_fim": "", "fim_ficha": None}
+            ch, _disp = setor_chave(m.group(1))
+            ult = [v for v in fechados if mesmo_setor(v["chave"], ch)]
+            if ult and not any(mesmo_setor(k, ch) for k in abertos):
+                v = ult[-1]
+                fechados.remove(v)
+                v.update(fim=None, fim_ficha=None, motivo_fim="", por_saida=False)
+                abertos[v["chave"]] = v
             continue
-        m = next((x for x in (p.search(u) for p in RE_FIM) if x), None)
-        if m:
+        m = None if (cela or re.search(r"\bCELA\b(?! LIVRE)|SOLARIO", u) and "SETOR" not in u) else next((x for x in (p.search(u) for p in RE_REMANEJ) if x), None)
+        if m and m.group(1).strip():
+            fechar_todos(d - timedelta(days=1), "remanejado para outro setor", e.get("texto", ""))
+            ch, disp = setor_chave(m.group(1))
+            abrir(ch, disp, d, e.get("texto", ""))
+            continue
+        m = next((x for x in (p.search(u) for p in RE_INI + ([] if cela else RE_INI2)) if x), None)
+        if m and m.group(1).strip():
+            ch, disp = setor_chave(m.group(1))
+            abrir(ch, disp, d, e.get("texto", ""))
+            continue
+        m = next((x for x in (p.search(u) for p in RE_FIM + ([] if cela else RE_FIM2)) if x), None)
+        if m and m.group(1).strip():
             ch, disp = setor_chave(m.group(1))
             mm = re.search(r"MOTIVO:\s*(.+?)\s*\.?\s*$", u)
             mot = (mm.group(1).strip(" .") if mm else "") or "baixa"
             ch = next((k for k in abertos if mesmo_setor(k, ch)), ch)
             if ch in abertos:
                 v = abertos.pop(ch)
-                v.update(fim=d, fim_ficha=d, motivo_fim=mot)
+                v.update(fim=d, fim_ficha=d, motivo_fim=mot, txt_fim="%s - %s" % (_f(d), e.get("texto", "")))
                 fechados.append(v)
             else:
                 ult = [v for v in fechados if mesmo_setor(v["chave"], ch)]
                 if ult and ult[-1].get("por_saida"):
-                    ult[-1].update(fim=d, fim_ficha=d, motivo_fim=mot, por_saida=False)
+                    ult[-1].update(fim=d, fim_ficha=d, motivo_fim=mot, por_saida=False, txt_fim="%s - %s" % (_f(d), e.get("texto", "")))
                 elif not ult:
                     avisos.append({"tipo": "baixa_sem_inicio", "data": d, "setor": disp})
+            continue
+        if not cela and RE_FIM_GERAL.search(u):
+            fechar_todos(d, "desligado do trabalho", e.get("texto", ""))
+            continue
+        if not cela and not _NAO_TRAB.search(u):
+            # texto livre: "deixa de trabalhar como barbeiro e passa a desempenhar a função de cela livre" = fim + início
+            fim_ = RE_FIM_RESERVA.search(u)
+            ini_ = RE_INI_RESERVA.search(u)
+            if fim_ and (not ini_ or fim_.start() < ini_.start()):
+                nome = _setor_livre(u[:ini_.start()] if ini_ else u)
+                ch = setor_chave(nome)[0] if nome else None
+                alvo = [k for k in abertos if ch and mesmo_setor(k, ch)] or ([] if ch else list(abertos))
+                for k in alvo:
+                    v = abertos.pop(k)
+                    v.update(fim=d, fim_ficha=d, motivo_fim="desligado do trabalho", txt_fim="%s - %s" % (_f(d), e.get("texto", "")))
+                    fechados.append(v)
+                if not ini_:
+                    continue
+            if ini_:
+                rem = "REMANEJAD" in ini_.group(0)
+                nome = _setor_livre(u[ini_.start():], rem)
+                if nome:
+                    if rem:
+                        fechar_todos(d - timedelta(days=1), "remanejado para outro setor", e.get("texto", ""))
+                    ch, disp = setor_chave(nome)
+                    abrir(ch, disp, d, e.get("texto", ""))
+                    continue
+        if RE_LIBERACAO.search(u):
+            mm = re.search(r"MOTIVO:\s*(.+?)\s*\.?\s*$", u)
+            if d not in baixa_no_dia:
+                fechar_todos(d, "liberação do setor de trabalho" + ((": " + mm.group(1).strip(" .").lower()) if mm else ""), e.get("texto", ""))
+            marcos.append((d, "liberação do setor de trabalho", None))
             continue
         if abertos and RE_SAIDA.search(u):
             for ch in list(abertos):
                 v = abertos.pop(ch)
-                v.update(fim=d, fim_ficha=d, motivo_fim="saída/transferência/evasão", por_saida=True)
+                v.update(fim=d, fim_ficha=d, motivo_fim="saída/transferência/evasão", por_saida=True, txt_fim="%s - %s" % (_f(d), e.get("texto", "")))
                 fechados.append(v)
     out = fechados + list(abertos.values())
+    # setor desativado no SIAPEN ("XXDESATIVADO6098"): é o código antigo de um setor real; aberto no mesmo dia de outro setor
+    # ("passa a trabalhar no setor X"), os dois são um vínculo só - fica o nome real, com as datas do registro desativado
+    for v in [v for v in out if re.match(r"XX ?DESATIV", _sa(v["setor"]))]:
+        par = [w for w in out if w is not v and not re.match(r"XX ?DESATIV", _sa(w["setor"])) and abs((w["ini"] - v["ini"]).days) <= 1]
+        if len(par) == 1:
+            w = par[0]
+            v.update(chave=w["chave"], setor=w["setor"], setor_desativado=True)
+            if w["fim"] is None or w["fim"] == v["fim"]:  # o outro registro ficou aberto ou fecha junto: duplicado
+                out.remove(w)
+                if abertos.get(w["chave"]) is w:
+                    del abertos[w["chave"]]
+        else:
+            v["setor"] = "Setor desativado no SIAPEN (%s)" % v["setor"]
+    for v in fechados:
+        if re.search(r"A?DEQUACAO DO MAPA", _sa(v.get("motivo_fim"))):
+            # baixa por "adequação do mapa do SIAPEN": correção de cadastro, não fim de trabalho - o que sobra sem atestado fica a conferir
+            v["duvida"], v["duvida_desde"] = "baixa por adequação do mapa do SIAPEN (correção de cadastro)", v["ini"]
+    for v in abertos.values():
+        dep = [(d, mot) for d, mot, ch in marcos if d > v["ini"] and ch != v["chave"]]
+        if not dep:
+            continue  # nada depois do início: é o trabalho atual
+        if any(w is not v and w["ini"] == v["ini"] for w in out):
+            v["duvida"], v["duvida_desde"] = ("aberto no mesmo dia de outro setor, sem baixa na ficha, e depois houve %s em %s (provável registro "
+                                              "duplicado)" % (dep[0][1], _f(dep[0][0]))), v["ini"]
+        else:
+            v["duvida"], v["duvida_desde"] = "sem baixa na ficha; depois houve %s em %s" % (dep[0][1], _f(dep[0][0])), dep[0][0]
     out.sort(key=lambda v: v["ini"])
     return out, avisos
 
@@ -157,15 +345,57 @@ def vinculos(eventos, hoje):
 # Etapa 2 - atestados
 # --------------------------------------------------------------------------- #
 RE_AT = re.compile(r"ATESTADO(?:\s+DE\s+TRABALHO)?(?:\s+PRISIONAL)?\s*(?:N\s*[.ºO°]?|Nº|N°|NO\.?)?\s*[.:]?\s*(\d{1,4})(?:\s*/\s*(\d{4}|[A-Z]{2,8}))?")
-RE_SEG = re.compile(r"([^,;()]{2,60}?)\s*\(\s*" + DT + SEPD + DT + r"\s*\)\s*,?\s*(?:TOTALIZANDO\s*)?(\d+)\s*DIAS\s*TRABALHADOS\s*E\s*([\d.,]+)\s*(?:DIAS\s*)?REMIDOS")
-RE_TOT = [re.compile(r"(\d+)\s*DIAS\s*TRABALHADOS\s*E\s*([\d.,]+)\s*(?:DIAS\s*)?(?:DE\s+)?REMI"),
+# trecho do atestado: "função X (d a d) [totalizando|sendo] N dia(s) trabalhado(s) e R (dias) remidos"; o segundo trecho pode vir
+# sem o nome da função ("; (d a d) N dias ...") - herda o setor do anterior
+RE_SEG = re.compile(r"([^,;()]{0,60}?)\s*\(\s*" + DT + SEPD + DT + r"\s*\)\s*,?\s*(?:TOTALIZANDO\s*|SENDO\s*)?(\d+)\s*DIAS?\s*TRABALHAD[OA]S?\s*E\s*([\d.,]+)\s*(?:DIAS?\s*)?REMID[OA]S?")
+RE_TOT = [re.compile(r"(\d+)\s*DIAS?\s*TRABALHAD[OA]S?\s*E\s*([\d.,]+)\s*(?:DIAS?\s*)?(?:DE\s+)?REMI"),
           re.compile(r"(\d+)\s*DIAS DE TRABALHO\s*E\s*([\d.,]+)\s*DIAS DE (?:TEMPO DE )?REMICAO")]
 RE_SO_REM = re.compile(r"(?:COM\s*)?([\d.,]+)\s*DIAS\s*DE\s*REMICAO")
 
 
 def _limpa_setor(t):
     t = re.sub(r"^.*?\b(?:FUNCAO|SETOR DE|SETOR|NA EMPRESA|EMPRESA)\s+", "", t.strip(" ,.;:-"))
+    t = re.sub(r"\s+(?:NO|DO|NUM) PERIODO\b.*$|\s+DESDE\b.*$", "", t)
     return t.strip(" ,.;:-")
+
+
+def _atp(u, d, e):
+    """ATP (atestado de trabalho prisional) do SIAPEN: "EMITIDO ATP Nº 105/2023; SETOR; DATA INICIAL: d; DATA FINAL: d; [SETOR:
+    DATA INICIAL ...]; TEMPO DE TRABALHO COMPUTADO NO PERÍODO: N DIAS TRABALHADOS; TEMPO DE REMIÇÃO: R DIAS REMIDOS"."""
+    mn = re.search(r"\bATP\s*N\S*\s*(\d{1,4})\s*/\s*(\d{2,4})", u)
+    mt = re.search(r"TEMPO DE TRABALHO[^:]*:\s*(\d+)\s*DIAS", u) or re.search(r"(\d+)\s*DIAS?\s*TRABALHAD", u)
+    mr = re.search(r"TEMPO DE REMICAO[^:]*:\s*([\d.,]+?)0?\s*DIAS", u) or re.search(r"([\d.,]+)\s*(?:DIAS?\s*)?REMIDOS", u)
+    if not mr:
+        return None
+    segs = []
+    for m in re.finditer(r"(?:^|;|-|:)\s*([A-Z][A-Z /]{3,40}?)?\s*[;:-]?\s*DATA(?: INICIAL)?\s*:?\s*(\d{2}[./]\d{2}[./]\d{2,4})\s*;?\s*DATA FINAL\s*:?\s*(\d{2}[./]\d{2}[./]\d{2,4})", u):
+        nome = (m.group(1) or "").strip(" ;:-")
+        nome = "" if not nome or nome.startswith(("EMITIDO", "ATP")) else nome
+        if not nome:
+            nome = (segs[-1]["setor_txt"] if segs else (re.search(r"ATP\s*N\S*\s*[\d/]+\s*[;:-]?\s*([A-Z][A-Z /]{3,40}?)\s*[;:-]", u) or [None, ""])[1])
+        segs.append({"setor_txt": (nome or "").strip(), "ini": _dt(m.group(2)), "fim": _dt(m.group(3)), "trab": None, "rem": None, "inferido": False})
+    if not segs:
+        mp = re.search(r"PERIODO\s*(?:DE\s*)?" + DT + SEPD + DT, u)  # "referente ao período de d a d"
+        if mp:
+            segs.append({"setor_txt": "", "ini": _dt(mp.group(1)), "fim": _dt(mp.group(2)), "trab": None, "rem": None, "inferido": False})
+    trab = int(mt.group(1)) if mt else None
+    rem = _num(mr.group(1))
+    if len(segs) == 1:
+        segs[0].update(trab=trab, rem=rem)
+    if not segs:
+        segs = [{"setor_txt": "", "ini": None, "fim": None, "trab": None, "rem": None, "inferido": True}]
+    for s in segs:
+        if s["ini"] is None and not s["inferido"]:
+            s["inferido"] = True  # data ilegível na ficha ("26/06/224"): período inferido
+        s["chave"], s["setor"] = setor_chave(s["setor_txt"]) if s["setor_txt"] else (None, "")
+    num = (mn.group(1).zfill(3) + "/" + mn.group(2)) if mn else ""
+    return {"id": "at:%s:%s" % (num or "s/n", _f(d)), "numero": num, "emissao": d, "segs": segs, "trab": trab, "rem": rem,
+            "lote": any(s["inferido"] for s in segs), "origem": "ficha", "texto": e.get("texto", ""), "tipo_doc": "ATP"}
+
+
+def _procs_r(r):
+    """Números da execução e das ações penais do RSPE (para saber se o atestado foi peticionado nestes autos)."""
+    return [r.get("processo_execucao")] + [c.get("processo_criminal") for c in r.get("_crimes") or []]
 
 
 def atestados(eventos):
@@ -174,8 +404,17 @@ def atestados(eventos):
     for e in eventos:
         d = _dt(e.get("data"))
         u = re.sub(r"\s+", " ", _sa(e.get("texto")))
+        u = re.sub(r"[´`]", "", u)  # ´ATESTADO DE TRABALHO´ Nº ...
         u = re.sub(r"\(\s*[A-Z ]{6,}\s*\)", " ", u)  # números por extenso entre parênteses
-        if "ATESTADO" not in u or not d:
+        u = re.sub(r"\b(\d{2}/\d{2}/)0(\d{4})\b", r"\1\2", u)  # ano digitado com 5 dígitos ("04/04/02025")
+        if not d:
+            continue
+        if re.search(r"\bATP\s*N\S*\s*\d", u):
+            a = _atp(u, d, e)
+            if a:
+                out.append(a)
+            continue
+        if "ATESTADO" not in u:
             continue
         if re.search(r"ATESTADO DE (?:PENA|CONDUTA|MATRICULA|FREQUENCIA|SAUDE|OBITO)|ATESTADO MEDICO", u):
             continue
@@ -183,6 +422,8 @@ def atestados(eventos):
         segs = []
         for m in RE_SEG.finditer(u):
             nome = _limpa_setor(re.sub(r"^.*?(?:NO SISTEMA SEEU|AUTOS N?[ºO°]?\s*[\d.-]+)\s*,?", "", m.group(1)))
+            if not nome and segs:
+                nome = segs[-1]["setor_txt"]
             segs.append({"setor_txt": nome, "ini": _dt(m.group(2)), "fim": _dt(m.group(3)), "trab": int(m.group(4)), "rem": _num(m.group(5)), "inferido": False})
         trab = rem = None
         if segs:
@@ -202,11 +443,34 @@ def atestados(eventos):
             ms_ = re.search(r"(?:NA FUNCAO|FUNCAO|SETOR(?: DE)?|NA EMPRESA)\s+(.+?)(?:\s+\(|\s+DE\s+\d|\s+\d{2}/|,|\.|\s+NAO RESTANDO|\s+COM\s+\d|$)", u)
             if ms_:
                 setor = ms_.group(1).strip()
+            trecho = re.split(r"\s*,?\s*TOTALIZANDO|\s+COM\s+[\d.,]+\s*DIAS|\s+NAO RESTANDO", u.split("ATESTADO", 1)[-1])[0]
+            lst = [] if mp else re.findall(r"(?:^|-|,|EMPRESA|SETOR(?: DE)?)\s*([A-Z][A-Z0-9&.' ]{1,40}?)\s+(\d{2}/\d{2}/\d{4})\s+(?:A\s+|ATE\s+)?(\d{2}/\d{2}/\d{4})", trecho)
+            ini_lst = [] if mp or lst else re.findall(r"(?:^|,|\bE\b|SETOR(?: DE)?)\s*([A-Z][A-Z ]{2,40}?)\s+(?:DESDE\s+)?(\d{2}/\d{2}/?\d{4})(?!\s*(?:A|ATE|-)\s*\d)", trecho)
             if mp:
                 segs.append({"setor_txt": setor, "ini": _dt(mp.group(1)), "fim": _dt(mp.group(2)), "trab": trab, "rem": rem, "inferido": False})
+            elif lst and all(_dt(a_) and _dt(b_) and _dt(a_) <= _dt(b_) for _, a_, b_ in lst):
+                # lista "EMPRESA A d1 d2 - EMPRESA B d3 d4": cada empresa com o seu período
+                for n_, a_, b_ in lst:
+                    segs.append({"setor_txt": _limpa_setor(n_), "ini": _dt(a_), "fim": _dt(b_), "trab": None, "rem": None, "inferido": False})
+                if len(segs) == 1:
+                    segs[0].update(trab=trab, rem=rem)
+            elif len(ini_lst) >= 2:
+                # lista "SETOR A DESDE d1, SETOR B d2 ... A ESTA DATA": cada setor da sua data até a véspera do seguinte
+                ds = [(_limpa_setor(re.sub(r"^(?:E|DE)\s+", "", n_)), _dt(re.sub(r"(\d{2}/\d{2})/?(\d{4})", r"\1/\2", d_))) for n_, d_ in ini_lst]
+                ds = [x for x in ds if x[1]]
+                for k_, (n_, d_) in enumerate(ds):
+                    f_ = (ds[k_ + 1][1] - timedelta(days=1)) if k_ + 1 < len(ds) else d
+                    if f_ >= d_:
+                        segs.append({"setor_txt": n_, "ini": d_, "fim": f_, "trab": None, "rem": None, "inferido": False})
+            if segs:
+                pass
             else:
-                # atestado em lote / sem período: os setores citados ("setor de A e B") delimitam a inferência
-                nomes = [x.strip() for x in re.split(r"\s+E\s+|,", setor) if x.strip()] if setor else []
+                # atestado em lote / sem período: os setores citados ("setor de A, B e C") delimitam a inferência; a lista
+                # vai até "com N dias" (a vírgula separa setores, não encerra o nome)
+                ml = re.search(r"(?:NA FUNCAO|FUNCAO|SETOR(?:ES)?(?: DE)?|NA EMPRESA)\s*(.+?)(?:\s+COM\s+[\d.,]+\s*DIAS|\s+NAO RESTANDO|\s*,?\s*TOTALIZANDO|\s+\d+\s*DIAS|\s+REFERENTE|\s+\(|\.\s|\.$|$)", u)
+                if ml:
+                    setor = ml.group(1).strip()
+                nomes = _nomes_lista(setor)
                 segs = [{"setor_txt": n, "ini": None, "fim": None, "trab": None, "rem": None, "inferido": True} for n in nomes] or \
                        [{"setor_txt": "", "ini": None, "fim": None, "trab": None, "rem": None, "inferido": True}]
         for s in segs:
@@ -214,6 +478,36 @@ def atestados(eventos):
         num = (mn.group(1).zfill(3) + ("/" + mn.group(2) if mn.group(2) else "")) if mn else ""
         out.append({"id": "at:%s:%s" % (num or "s/n", _f(d)), "numero": num, "emissao": d, "segs": segs, "trab": trab, "rem": rem,
                     "lote": any(s["inferido"] for s in segs), "origem": "ficha", "texto": e.get("texto", "")})
+    # etapa do documento: "peticionado" no SEEU (ou protocolado/enviado aos autos) x só "emitido" pela unidade; um
+    # peticionamento registrado depois com o mesmo número também conta
+    for a in out:
+        u = _sa(a["texto"])
+        a["peticionado"] = _f(a["emissao"]) if re.search(r"PETICION|PROTOCOLAD|ENVIAD\w* (?:VIA|AO|PARA|NO)|JUNTAD", u) else ""
+        ma = re.search(r"\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}", u)
+        a["autos"] = ma.group(0) if ma else ""
+    for e in eventos:
+        u = re.sub(r"\s+", " ", _sa(e.get("texto")))
+        if not re.search(r"PETICION|PROTOCOLAD", u):
+            continue
+        mn = RE_AT.search(u) or re.search(r"\bATP\s*N\S*\s*(\d{1,4})(?:\s*/\s*(\d{2,4}))?", u)
+        if not mn:
+            continue
+        n0 = mn.group(1).lstrip("0")
+        for a in out:
+            if not a["peticionado"] and a["numero"] and a["numero"].split("/")[0].lstrip("0") == n0 and _dt(e.get("data")) and _dt(e.get("data")) >= a["emissao"]:
+                a["peticionado"] = _f(_dt(e.get("data")))
+    # atestado retificado: o novo substitui o anterior de mesmo número (não soma)
+    for a in [a for a in out if re.search(r"RETIFICAD", _sa(a["texto"])) and a["numero"]]:
+        for b in [b for b in out if b is not a and b["numero"] == a["numero"] and b["emissao"] <= a["emissao"]]:
+            out.remove(b)
+            a["peticionado"] = a["peticionado"] or b.get("peticionado", "")
+    vistos, uniq = set(), []
+    for a in out:  # o mesmo lançamento repetido na ficha (mesma data e mesmo texto) é um atestado só
+        k = (a["emissao"], re.sub(r"\s+", " ", a["texto"]).strip())
+        if k not in vistos:
+            vistos.add(k)
+            uniq.append(a)
+    out = uniq
     out.sort(key=lambda a: a["emissao"])
     return out
 
@@ -247,7 +541,9 @@ def atestados_manuais(manuais):
             segs = [{"setor_txt": "", "chave": None, "setor": "", "ini": None, "fim": None, "trab": None, "rem": None, "inferido": True}]
         num = (d.get("numero") or "").strip()
         out.append({"id": "man:%s" % m_.get("id"), "numero": num, "emissao": emi, "segs": segs, "trab": trab, "rem": rem,
-                    "lote": any(s["inferido"] for s in segs), "origem": "operador", "texto": d.get("descricao") or ""})
+                    "lote": any(s["inferido"] for s in segs), "origem": "operador", "texto": "Informado pela equipe: " + (d.get("descricao") or ""),
+                    # lançado pela equipe a partir dos autos: está juntado (peticionado), mesmo sem registro na ficha
+                    "peticionado": "nos autos (informado pela equipe)", "autos": ""})
     return out
 
 
@@ -419,13 +715,17 @@ def conciliar(r, f, hoje=None, manuais=None, ini_exec=None, excluir_remicoes=Non
         if ini_exec and w0 < ini_exec:
             w0 = max(w0, min([v["ini"] for v in vinc if (v["fim"] or hoje) >= ini_exec] or [ini_exec]))
         w1 = a["emissao"]
-        nomes = {s["chave"] for s in a["segs"] if s["chave"]}
+        nomes = {s["chave"]: s.get("setor_txt") or "" for s in a["segs"] if s["chave"]}
         novos = []
         for v in vinc:
             a0, b0 = max(v["ini"], w0), min(v["fim"] or hoje, w1)
-            if a0 <= b0 and (not nomes or any(mesmo_setor(v["chave"], n) for n in nomes)):
+            if a0 <= b0 and (not nomes or any(setor_parecido(v["chave"], n) or palavra_comum(v["setor"], t) for n, t in nomes.items())):
                 for y0, y1 in _menos(a0, b0, E):
                     novos.append({"setor_txt": v["setor"], "chave": v["chave"], "setor": v["setor"], "ini": y0, "fim": y1, "trab": None, "rem": None, "inferido": True})
+        sem_v = [t for n, t in nomes.items() if not any(setor_parecido(v["chave"], n) or palavra_comum(v["setor"], t) for v in vinc)]
+        if sem_v and a["origem"] != "rspe":
+            alerta("setor sem vínculo", "Atestado %s de %s cita %s sem início de trabalho registrado na ficha: o período desse setor não aparece "
+                   "na ficha - conferir o atestado." % (a["numero"] or "s/n", _f(a["emissao"]), ", ".join(sem_v)), a["emissao"])
         if a["origem"] == "rspe" and not novos:
             # remição sem atestado e sem trabalho no período: origem não identificada (estudo, leitura, ENCCEJA...)
             a["status"], a["sem_origem"] = "SEM_ORIGEM", True
@@ -493,6 +793,19 @@ def conciliar(r, f, hoje=None, manuais=None, ini_exec=None, excluir_remicoes=Non
 
     # ---- Etapa 6: trabalho sem atestado nem remição (estimativa) ----
     cob = sorted([(s["ini"], s["fim"]) for a in ats for s in a["segs"] if s["ini"] and s["fim"]])
+    # o que cobre o vínculo até a véspera do trecho livre: explica de onde vem a data de início (que não está na ficha)
+    cob_doc = {}
+    for a in ats:
+        for s_ in a["segs"]:
+            if s_["fim"]:
+                x = a.get("remicao") or {}
+                cob_doc[s_["fim"]] = (("remição de %s lançada no RSPE em %s, sem atestado na ficha (o programa a atribuiu a este trabalho até "
+                                       "a data de referência)" % (rs.pl(int(a["rem"] or 0), "dia", "dias"), _f(x.get("decisao") or a["emissao"])))
+                                      if a["origem"] == "rspe" else "atestado %s, até %s" % (a["numero"] or "s/n", _f(s_["fim"])))
+
+    def _origem_ini(v, x0):
+        o = cob_doc.get(x0 - timedelta(days=1)) if x0 > v["ini"] else None
+        return (" [início em %s: antes disso, %s]" % (_f(x0), o)) if o else ""
     sem = []
     for v in vinc:
         a0, b0 = v["ini"], v["fim"] or hoje
@@ -511,20 +824,43 @@ def conciliar(r, f, hoje=None, manuais=None, ini_exec=None, excluir_remicoes=Non
                 if c1 < x1:
                     nv.append((c1 + timedelta(days=1), x1))
             livres = nv
-        for x0, x1 in livres:
+        dd = v.get("duvida_desde")
+        if dd:
+            # vínculo esquecido aberto: a partir da dúvida o período fica "a conferir" (sem dias no total)
+            nv = []
+            for x0, x1 in livres:
+                if x1 < dd:
+                    nv.append((x0, x1, False))
+                elif x0 >= dd:
+                    nv.append((x0, x1, True))
+                else:
+                    nv += [(x0, dd - timedelta(days=1), False), (dd, x1, True)]
+            livres3 = nv
+        else:
+            livres3 = [(x0, x1, False) for x0, x1 in livres]
+        for x0, x1, duv in livres3:
             if (x1 - x0).days < 1:
                 continue
             n = _dias_seg_sab(x0, x1)
             em_curso = v["fim"] is None and x1 == hoje
-            sem.append({"setor": v["setor"], "ini": x0, "fim": x1, "em_curso": em_curso, "est": n})
+            if duv:
+                sem.append({"setor": v["setor"], "ini": x0, "fim": x1, "em_curso": em_curso, "est": n, "duvida": v["duvida"],
+                            "trecho": " | ".join(x for x in (v.get("txt_ini"), v.get("txt_fim")) if x)})
+                pend.append({"data": x0, "status": "A_CONFERIR", "texto": "%s, %s a %s: %s - sem dias no total (≈ %s se houve trabalho)" % (
+                    v["setor"], _f(x0), "hoje" if em_curso else _f(x1), v["duvida"], rs.pl(n // 3, "dia remido", "dias remidos")),
+                    "acao": "Conferir com a unidade se houve trabalho no período", "cor": "cinza"})
+                continue
+            sem.append({"setor": v["setor"], "ini": x0, "fim": x1, "em_curso": em_curso, "est": n, "origem": _origem_ini(v, x0).strip(" []"),
+                        "trecho": " | ".join(x for x in (v.get("txt_ini"), v.get("txt_fim")) if x)})
             if em_curso and (x1 - x0).days <= 90:
                 # trabalho atual há até 90 dias: o atestado do período ainda não costuma ter sido emitido - não é ausência
                 pend.append({"data": x0, "status": "EM_CURSO", "texto": "%s, desde %s: trabalho em curso, atestado do período ainda não emitido "
                              "(estimativa seg.-sáb.: ≈ %s, ≈ %d remidos)" % (v["setor"], _f(x0), rs.pl(n, "dia", "dias"), n // 3),
                              "acao": "Acompanhar (pedir o atestado ao fim do trimestre)", "cor": "verde"})
                 continue
-            pend.append({"data": x0, "status": "SEM_ATESTADO", "texto": "%s, %s a %s: sem atestado nem remição (estimativa seg.-sáb.: ≈ %s, ≈ %d remidos)" % (
-                v["setor"], _f(x0), "hoje (em curso)" if em_curso else _f(x1), rs.pl(n, "dia", "dias"), n // 3), "acao": "Pedir atestado", "cor": "amarelo"})
+            pend.append({"data": x0, "status": "SEM_ATESTADO", "texto": "%s, %s a %s: sem atestado nem remição (estimativa seg.-sáb.: ≈ %s, ≈ %d remidos)%s" % (
+                v["setor"], _f(x0), "hoje (em curso)" if em_curso else _f(x1), rs.pl(n, "dia", "dias"), n // 3, _origem_ini(v, x0)),
+                "acao": "Pedir atestado", "cor": "amarelo"})
 
     # ---- pendências dos atestados ----
     for a in ats:
@@ -532,8 +868,11 @@ def conciliar(r, f, hoje=None, manuais=None, ini_exec=None, excluir_remicoes=Non
             if ini_exec and all(s["fim"] and s["fim"] < ini_exec for s in a["segs"]):
                 a["status"] = "ANTERIOR"
                 continue
-            pend.append({"data": a["emissao"], "status": "NAO_LANCADO", "texto": "Atestado %s de %s (%s remidos) sem remição no RSPE" % (
-                a["numero"] or "s/n", _f(a["emissao"]), _fmtn(a["rem"])), "acao": "verificar peticionamento no SEEU", "cor": "vermelho"})
+            pend.append({"data": a["emissao"], "status": "NAO_LANCADO", "texto": "Atestado %s de %s (%s remidos) sem remição no RSPE%s" % (
+                a["numero"] or "s/n", _f(a["emissao"]), _fmtn(a["rem"]),
+                (" - peticionado no SEEU em %s" % a["peticionado"]) if a.get("peticionado") else " - sem registro de peticionamento na ficha"),
+                "acao": "requerer a apreciação (vista às partes e decisão)" if a.get("peticionado") else "verificar a juntada nos autos e pedir o peticionamento à unidade",
+                "cor": "vermelho"})
         elif a["status"] == "DIVERGENCIA":
             pend.append({"data": a["emissao"], "status": "DIVERGENCIA", "texto": "Atestado %s: %s remidos x remição de %s no RSPE (%s)" % (
                 a["numero"] or "s/n", _fmtn(a["rem"]), rs.pl(int(a["remicao"]["dias"]), "dia", "dias"), _f(a["remicao"]["decisao"])),
@@ -573,6 +912,9 @@ def conciliar(r, f, hoje=None, manuais=None, ini_exec=None, excluir_remicoes=Non
                        "trab": a["trab"], "rem": _fmtn(a["rem"]) if a["rem"] is not None else "—",
                        "rspe": rs.pl(int(x["dias"]), "dia", "dias") if x else "—", "decisao": _f(x["decisao"]) if x else "—", "ref": _f(x["ref"]) if x else "—",
                        "status": a["status"], "rot": rot[a["status"]][0], "cor": rot[a["status"]][1], "nota": nota,
+                       "peticionado": a.get("peticionado", ""), "texto": a.get("texto", ""), "autos": a.get("autos", ""),
+                       "autos_outros": bool(a.get("autos")) and not any(re.sub(r"\D", "", a["autos"]) == re.sub(r"\D", "", x or "")
+                                                                         for x in _procs_r(r)),
                        "chave": "fd:at:%s:%s" % (a["numero"] or "s/n", _f(a["emissao"]).replace("/", "."))})
     alertas.sort(key=lambda x: x["data"] or date.min)
     return {"tabela": tabela, "pendencias": pend, "alertas": alertas, "vinculos": vinc, "atestados": ats, "remicoes": rems,

@@ -1,8 +1,8 @@
-"""Roda os testes de regressão do RSPE Base; sai com erro se algum falhar (o build não gera o .exe). Rodar: python testes.py"""
+"""Roda os testes de regressão do APTO; sai com erro se algum falhar (o build não gera o .exe). Rodar: python testes.py"""
 import subprocess
 import sys
 
-TESTES = ["teste_remicao.py", "teste_indulto_transito.py"]
+TESTES = ["teste_remicao.py", "teste_indulto_transito.py", "teste_auditoria_calculo.py"]
 falhas = [t for t in TESTES if subprocess.call([sys.executable, t]) != 0]
 if falhas:
     print("FALHOU: " + ", ".join(falhas))

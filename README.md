@@ -1,4 +1,4 @@
-# RSPE Base
+# APTO — Auditoria de Prazos e Tempo de cumprimento Organizada
 
 Lê em lote os Relatórios da Situação Processual Executória (RSPE) do SEEU e organiza, por assistido,
 progressão, livramento, indulto/comutação, prescrição, extinção, ficha disciplinar e auditoria.
