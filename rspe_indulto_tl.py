@@ -311,7 +311,7 @@ def linha(r, hoje=None):
         marcos.append({"data": _f(a), "tipo": "livramento", "rotulo": "Livramento condicional", "sub": "período de prova", "crimes": ["GERAL"],
                        "efeito": "o período de prova conta como pena cumprida",
                        "det": _det("livramento condicional concedido em %s" % _f(a), "GERAL", "%s → %s" % (_f(a), _f(b) or "hoje"), "cumprimento (período de prova)",
-                                   "CP, arts. 83 e 89; LEP, art. 146; decretos 2024/2025, art. 2º, III", "", "soma no tempo cumprido")})
+                                   "CP, arts. 83 e 90; LEP, art. 146; decretos 2024/2025, art. 2º, III", "", "soma no tempo cumprido")})
 
     # interrupções: fuga/evasão (não conta) e demais
     faixas_dias = dias.faixas()
