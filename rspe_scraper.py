@@ -946,7 +946,8 @@ def hediondo_desde(c):
                 achado = (d, v.get("lei", ""))
                 # inciso ou tipo criado depois do fato (feminicídio, art. 121, § 2º, VI, de 2015; art. 121-A, de 2024): anacronismo
                 # do cadastro - na época, o fato era a qualificadora/tipo anterior, que já era hediondo; vale a data dela
-                if not (fato and fato < d and n < len(chaves) - 1 and (k.count(" ") >= 2 or k in CAPITULACAO_ANTERIOR)):
+                # (salvo forma que já existia e não era hedionda: roubo com lesão grave, art. 157, § 3º, I - a de 1990 é só o latrocínio)
+                if not (fato and fato < d and n < len(chaves) - 1 and (k.count(" ") >= 2 or k in CAPITULACAO_ANTERIOR)) or k in FORMA_ANTERIOR_COMUM:
                     return achado
             elif fato and d <= fato:
                 return d, v.get("lei", "") + " (na época do fato, capitulação anterior à de %s%s)" % (
@@ -954,6 +955,10 @@ def hediondo_desde(c):
     return achado or (None, "")
 
 
+# forma qualificada que existia antes da lei que a tornou hedionda (não é anacronismo do cadastro): fato anterior não é hediondo,
+# sem cair na chave mais genérica (roubo com lesão grave, art. 157, § 3º, I: hediondo só desde a Lei 13.964/2019; a chave
+# "157 §3", de 1990, é o latrocínio)
+FORMA_ANTERIOR_COMUM = {"2848:157 §3 I"}
 # tipo autônomo que substituiu uma qualificadora já hedionda: para fato anterior à lei nova, vale a capitulação anterior
 CAPITULACAO_ANTERIOR = {"2848:121-A": ["2848:121 §2 VI", "2848:121 §2"],
                         # estupro de vulnerável antes da Lei 12.015/2009: era o art. 213 ou 214 c/c 224 (violência presumida), hediondo
@@ -1773,12 +1778,20 @@ def aplicar_decisoes_falta(r, decisoes):
             i["_falta"] = v
 
 
-def indicios_falta(incidentes, ref, dias=365, eventos=None, ate=None, hoje=None):
+def _texto_ficha(t, n):
+    """Texto da ficha para o motivo: sem campo vazio ("Destino: ,") e cortado no limite de palavra."""
+    t = re.sub(r",\s*[^,:]{1,30}:\s*(?=,|\.\.\.|$)", "", t or "")
+    return _corta(t.replace("...", "").strip(), n)
+
+
+def indicios_falta(incidentes, ref, dias=365, eventos=None, ate=None, hoje=None, crimes=None, inicio=None):
     """Faltas nos 'dias' anteriores a ref (art. 6º dos decretos; CP, art. 83, III, b), pela data do FATO.
     Devolve [(texto, firme)]: firme = falta grave, homologação ou sanção CONCEDIDA (sanção reconhecida em juízo);
-    não firme = pendente, regressão sem menção a falta, perda de remidos sem falta datada (a perda é datada pela
-    decisão, não pelo fato), fuga ou descumprimento só registrados como evento. Incidente não concedido não conta.
-    ate: último dia da janela (art. 6º, p. ú.: falta posterior à publicação do decreto não impede); padrão = ref."""
+    não firme = pendente, regressão sem menção a falta (ou cautelar, sem a homologação na ficha), perda de remidos sem falta
+    datada (a perda é datada pela decisão, não pelo fato), fuga ou descumprimento só registrados como evento. Incidente não
+    concedido não conta. ate: último dia da janela (art. 6º, p. ú.: falta posterior à publicação do decreto não impede);
+    padrão = ref. crimes/inicio: crime doloso com fato na janela, depois do início do cumprimento, é falta grave (LEP, art.
+    52) se reconhecido - a apurar."""
     limite = ref - timedelta(days=dias)
     fim = ate or ref
     proprias = [i for i in incidentes if RE_FALTA_PROPRIA.search(_rotulo_incidente(i)) and not _negado(i)]
@@ -1802,15 +1815,18 @@ def indicios_falta(incidentes, ref, dias=365, eventos=None, ate=None, hoje=None)
                     _ff = i["_ficha_falta"]
                     out.append(("%s (%s - pendente no RSPE, sem sanção reconhecida em juízo%s; ficha: %s)" % (
                         txt, fmt(d), ("; a ficha registra a sanção homologada pelo juízo em %s - conferir a decisão no SEEU" % _ff["homologada"])
-                        if _ff.get("homologada") else "", _corta(_ff["texto"], 90)), False))
+                        if _ff.get("homologada") else "", _texto_ficha(_ff["texto"], 90)), False))
                 elif _pendente(i):
                     if not falta_prescrita(d, bool(RE_FUGA_EV.search(txt)), eventos, hoje):
-                        out.append(("%s (%s - pendente: só impede se a sanção for reconhecida em juízo)" % (txt, fmt(d)), False))
+                        # a ficha a dá como homologada/punida, mas o SEEU não registra a sanção: não se afirma as duas coisas
+                        out.append(("%s (%s - %s: só impede se a sanção for reconhecida em juízo)" % (
+                            re.sub(r"\s*-\s*homologada/punida\s*$", "", txt), fmt(d),
+                            "a ficha a registra como punida, mas o SEEU não traz a homologação" if re.search(r"homologada/punida\s*$", txt) else "pendente"), False))
                 elif not RE_DATA.search(i.get("complemento") or "") and (not i.get("data_referencia") or i.get("data_referencia") == i.get("data_decisao")):
                     # sem a data do fato: a referência é a da própria decisão - não se presume que a falta foi cometida na janela
                     out.append(("%s (data do fato não consta; decisão em %s - conferir se a falta foi cometida na janela)" % (txt, fmt(d)), False))
                 else:
-                    out.append(("%s (%s)" % (txt, fmt(d)), True))
+                    out.append((txt if fmt(d) in txt else "%s (%s)" % (txt, fmt(d)), True))  # sem repetir a data que o rótulo já traz
             continue
         d = to_date(i.get("data_referencia") or i.get("data_decisao") or "")
         if not d:
@@ -1820,10 +1836,14 @@ def indicios_falta(incidentes, ref, dias=365, eventos=None, ate=None, hoje=None)
                 out.append(("%s (%s - falta grave confirmada pelo operador)" % (txt, fmt(d)), True))
             continue
         if i.get("_ficha_falta"):
-            # a ficha registra a falta que motivou a regressão/perda: falta grave pela data do fato na ficha
+            # a ficha registra a falta que motivou a regressão/perda: falta grave pela data do fato na ficha. Regressão CAUTELAR
+            # não é sanção reconhecida em audiência de justificação (art. 6º): sem a homologação na ficha, fica a apurar
             x = to_date(i["_ficha_falta"]["data"])
             if x and limite <= x <= fim:
-                out.append(("%s (%s) - ficha: %s em %s" % (txt, fmt(d), _corta(i["_ficha_falta"]["texto"], 90), fmt(x)), True))
+                caut = bool(re.search(r"CAUTELAR", txt, re.I)) and not i["_ficha_falta"].get("homologada")
+                out.append(("%s (%s) - ficha: %s em %s%s" % (txt, fmt(d), _texto_ficha(i["_ficha_falta"]["texto"], 90), fmt(x),
+                                                            " - regressão cautelar, sem sanção reconhecida em juízo: só impede se a falta for homologada"
+                                                            if caut else ""), not caut))
             continue
         if re.search(r"PERD|REGRESS", txt, re.I):
             # perda de remidos e regressão decorrem da falta: só se descartam se houver falta homologada nos 12 meses
@@ -1858,6 +1878,10 @@ def indicios_falta(incidentes, ref, dias=365, eventos=None, ate=None, hoje=None)
                     out.append(("%s (%s - fuga: em tese falta grave (LEP, art. 50, II), sem sanção reconhecida em juízo - só impede se reconhecida (Súmula 533/STJ; STJ, Tema 1195))" % (t, fmt(d)), False))
             elif not falta_prescrita(d, False, eventos, hoje):
                 out.append(("%s (%s; falta a apurar)" % (t, fmt(d)), False))
+    for c in crimes or []:
+        d = to_date(c.get("data_infracao") or "")
+        if d and inicio and inicio <= d and limite <= d <= fim and not re.search(r"CULPOS", (c.get("tipo_penal") or "") + " " + (c.get("artigo") or ""), re.I):
+            out.append(("%s com fato em %s, durante a execução (crime doloso: falta grave se reconhecida - LEP, art. 52)" % (crimes_curto([c]), fmt(d)), False))
     return list(dict.fromkeys(out))
 
 

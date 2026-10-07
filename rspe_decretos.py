@@ -112,20 +112,59 @@ def _regime_inicial(r, crimes, ref):
     return regs.pop() if len(regs) == 1 else ""
 
 
-def _em_execucao(c, ref):
+def _data_extincao(r, c):
+    """Data da extinção da pena do crime: a do RSPE ou, sem ela, a do incidente de INDULTO ou EXTINÇÃO concedido que cita o
+    processo (o SEEU marca o processo "(Indultada)"/"(Extinta)" sem data). None se nada no RSPE a informa."""
+    d = rs.to_date(c.get("data_extincao") or "")
+    if d or r is None:
+        return d
+    ds = []
+    for i in r.get("_incidentes") or []:
+        t = (i.get("tipo") or "").strip().upper()
+        if not re.match(r"INDULTO|EXTIN", t) or (i.get("situacao") or "CONCEDIDO") != "CONCEDIDO":
+            continue
+        if any(rs.mesmo_processo(c.get("processo_criminal"), p) for p in rs.lista_processos(i.get("processos") or "")):
+            ds.append(rs.to_date((i.get("data_decisao") or i.get("data_referencia") or "") if t.startswith("INDULTO")
+                                 else (i.get("data_referencia") or i.get("data_decisao") or "")))
+    ds = [x for x in ds if x]
+    return min(ds) if ds else None
+
+
+def _em_execucao(c, ref, r=None):
     """Pena em execução na data do decreto: crime não extinto, ou extinto DEPOIS dela (a extinção posterior não tira a pena
-    do alcance do decreto). Extinto sem data no RSPE: fica fora, como antes."""
+    do alcance do decreto). Extinto sem data (nem no RSPE nem no incidente que cita o processo): em execução nos decretos
+    anteriores ao RSPE - a verificar (_ext_sem_data), sem tirar a pena da soma."""
     if not (c.get("extinto") or "").upper().startswith("S"):
         return True
-    d = rs.to_date(c.get("data_extincao") or "")
-    return bool(d and d > ref)
+    d = _data_extincao(r, c)
+    if d:
+        return d > ref
+    ger = rs.to_date((r or {}).get("data_geracao_rspe") or "")
+    return bool(r is not None and ger and ref < ger)
+
+
+def _ext_sem_data(r, crimes):
+    """Crimes da soma extintos sem data no RSPE (considerados em execução na data do decreto)."""
+    return [c for c in crimes if (c.get("extinto") or "").upper().startswith("S") and not _data_extincao(r, c)]
+
+
+def _transito_min(c):
+    ts = [d for d in (rs.to_date(c.get("transito_mp") or ""), rs.to_date(c.get("transito_processo") or "")) if d]
+    return min(ts) if ts else None
+
+
+def _sentenca_incoerente(c):
+    """Data da sentença posterior ao trânsito em julgado (dado incoerente do SEEU: no júri, o trânsito pode ser o da pronúncia)."""
+    s, t = rs.to_date(c.get("data_sentenca") or ""), _transito_min(c)
+    return bool(s and t and s > t)
 
 
 def _alcancados(r, ref, pub):
-    """Crimes que o decreto alcança: fato até a data de referência, sentença até a publicação e pena em execução na data."""
-    return [c for c in (r.get("_crimes") or []) if _em_execucao(c, ref)
+    """Crimes que o decreto alcança: fato até a data de referência, sentença até a publicação e pena em execução na data.
+    Sentença posterior ao trânsito (dado incoerente): vale o trânsito, e o resultado fica a verificar (_sent_incoerente)."""
+    return [c for c in (r.get("_crimes") or []) if _em_execucao(c, ref, r)
             and (rs.to_date(c.get("data_infracao") or "") or date.min) <= ref
-            and (rs.to_date(c.get("data_sentenca") or "") or date.min) <= pub]
+            and ((rs.to_date(c.get("data_sentenca") or "") or date.min) <= pub or (_sentenca_incoerente(c) and _transito_min(c) <= pub))]
 
 
 def _fora_do_decreto(r, ref, pub):
@@ -133,7 +172,7 @@ def _fora_do_decreto(r, ref, pub):
     extinção registrada até a data. Extinto sem data no RSPE não decide (pode ter sido extinto depois)."""
     def fora(c):
         ext = (c.get("extinto") or "").upper().startswith("S")
-        d_ext = rs.to_date(c.get("data_extincao") or "")
+        d_ext = _data_extincao(r, c)
         return ((rs.to_date(c.get("data_infracao") or "") or date.min) > ref or (rs.to_date(c.get("data_sentenca") or "") or date.min) > pub
                 or bool(ext and d_ext and d_ext <= ref))
     return bool(r.get("_crimes")) and all(fora(c) for c in r.get("_crimes") or [])
@@ -150,14 +189,23 @@ def _vd(c):
     return v
 
 
+ANCORA_ZERADA = "pela âncora do SEEU o cumprido nesta data dá zero"
+
+
 def _cumprido(r, ctx, ref):
     """Pena cumprida na data (rs.cumprido_na_data, ancorada no SEEU). RSPE com a pena total zerada (execução extinta depois da
     data, caso dos crimes extintos após o decreto, ou cálculo ausente no SEEU): a âncora não vale - soma custódia, livramento e
-    remições até a data."""
+    remições até a data. Âncora que zera (o SEEU atual não conta o tempo das penas já extintas nem o das interrupções) com 180
+    dias ou mais de custódia pelos eventos: vale a conta pelos eventos, que pode sobrar (livramento revogado) - a verificar."""
+    todos = rs.uniao_periodos(list(ctx["periodos"]) + list(ctx["lc"]))
     if not rs.pena_para_dias(r.get("pena_total")):
-        todos = rs.uniao_periodos(list(ctx["periodos"]) + list(ctx["lc"]))
         return rs.dias_cumpridos_ate(todos, ctx["rem"], ref), "custódia e livramento + remições até a data (o RSPE traz a pena zerada)"
-    return rs.cumprido_na_data(r, ctx["periodos"], ctx["rem"], ref, ctx["lc"])
+    c, fonte = rs.cumprido_na_data(r, ctx["periodos"], ctx["rem"], ref, ctx["lc"])
+    if c == 0:
+        ev = rs.dias_cumpridos_ate(todos, ctx["rem"], ref)
+        if ev >= 180:
+            return ev, "%s; pelos eventos (custódia e livramento + remições), %s" % (ANCORA_ZERADA, rs.dias_para_pena(ev))
+    return c, fonte
 
 
 def _lc_duvida(r, ctx, ref):
@@ -329,8 +377,23 @@ def avaliar_ficha(f, r, ctx, ini, hoje):
             x.update(s="ver", mot="%s; o cumprimento estava interrompido em %s (não estava preso nem em livramento): o decreto exige a fração "
                                   "cumprida até a data, não a custódia na data - conferir se a interrupção (fuga) foi punida como falta grave"
                                   % (x.get("mot") or "", ref_t))
-        elif x.get("s") == "nao":
+        elif x.get("s") in ("nao", "ver"):
             x["mot"] = "cumprimento interrompido em %s (não estava preso nem em livramento); %s" % (ref_t, x.get("mot") or "")
+    # dados do RSPE que deixam o resultado em dúvida: o favorável vira A VERIFICAR; nos de soma (extinção sem data, sentença
+    # incoerente), o desfavorável leva a ressalva - a pena pode não estar na soma -, e o crime impeditivo de sentença incoerente
+    # (a condenação pode ser posterior ao decreto) também vira A VERIFICAR
+    inc_rot = x.pop("_sent_inc_rot", None) or []
+    for k, soma in (("_ext_sd", True), ("_sent_inc", True), ("_anc0", False), ("_art52", False), ("_descump", False)):
+        t = x.pop(k, "")
+        if not t:
+            continue
+        if x.get("s") == "cabe" or (k == "_sent_inc" and x.get("s") == "imp" and any(("%s:" % y) in (x.get("mot") or "") for y in inc_rot)):
+            x.update(s="ver", mot="%s; A VERIFICAR - %s" % (x.get("mot") or "", t))
+            fr = (x.get("ressalva") or "").split("; indulto a verificar", 1)
+            if fr[0].startswith("falta a apurar na janela: ") and fr[0][len("falta a apurar na janela: "):] in t:
+                x["ressalva"] = ("indulto a verificar" + fr[1]) if len(fr) > 1 else ""  # a mesma falta já está no motivo
+        elif soma and x.get("s") in ("nao", "imp"):
+            x["ressalva"] = "; ".join(y for y in (x.get("ressalva") or "", "A VERIFICAR - " + t) if y)
     if x.get("s") == "cabe":
         tr = transito_pendente(f, r)
         if tr:
@@ -397,7 +460,7 @@ def _avaliar_ficha(f, r, ctx, ini, hoje):
         return dict(base, s="fora", mot="execução posterior ao decreto")
     if (f.get("publico") == "mulheres") and (r.get("_sexo") or "") != "F":
         return dict(base, s="fora", mot="decreto só para mulheres" + ("" if r.get("_sexo") else " (sexo não informado)"))
-    crimes = _alcancados(r, ref, pub)
+    crimes = crimes0 = _alcancados(r, ref, pub)
     if not crimes:
         return dict(base, s="fora", mot="sem condenação até o decreto (sentença posterior à publicação não é alcançada: STJ, AgRg no HC 441.551 e AgRg no HC 919.210)"
                     if any((rs.to_date(c.get("data_sentenca") or "") or date.min) > pub for c in (r.get("_crimes") or [])) else "sem condenação até o decreto")
@@ -418,8 +481,21 @@ def _avaliar_ficha(f, r, ctx, ini, hoje):
     else:
         interrompido = False
     base["_interr"] = interrompido
+    sd = _ext_sem_data(r, crimes)
+    if sd:
+        base["_ext_sd"] = ("pena extinta sem data no RSPE (%s): considerada em execução em %s, anterior ao RSPE - conferir no incidente "
+                           "de indulto ou extinção a data em que se extinguiu" % (rs.crimes_curto(sd), rs.fmt(ref)))
+    inc = [c for c in crimes if _sentenca_incoerente(c) and rs.to_date(c.get("data_sentenca") or "") > pub]  # na soma só pelo trânsito
+    if inc:
+        base["_sent_inc_rot"] = [rs.crimes_curto([c]).strip() for c in inc]
+        base["_sent_inc"] = ("sentença posterior ao trânsito em julgado no RSPE (%s): dado incoerente - considerada a condenação pelo "
+                             "trânsito; conferir as datas da sentença e do trânsito (no júri, o trânsito pode ser o da pronúncia)" % "; ".join(
+                                 "%s, sentença %s, trânsito %s" % (rs.crimes_curto([c]), c.get("data_sentenca"), rs.fmt(_transito_min(c))) for c in inc))
     pena = sum(rs.pena_para_dias(c.get("pena_imposta") or c.get("pena_total_processo")) or 0 for c in crimes)
     cump, _orig = _cumprido(r, ctx, ref)
+    if _orig.startswith(ANCORA_ZERADA):
+        base["_anc0"] = ("%s (o SEEU atual não conta o tempo das penas já extintas nem o das interrupções): usado o cumprido pelos eventos, "
+                         "%s - conferir, pois os eventos podem contar a mais (livramento revogado)" % (ANCORA_ZERADA, rs.dias_para_pena(cump)))
     reinc = any(c.get("reincidente_comum") == "S" or c.get("reincidente_especifico") == "S" for c in crimes)
     vga = any(rs.vga_indulto(c) for c in crimes)
     detalhe = {"pena": pena, "cumprido": cump, "reincidente": reinc, "vga": vga, "crimes": [rs.crimes_curto([c]) for c in crimes]}
@@ -448,6 +524,8 @@ def _avaliar_ficha(f, r, ctx, ini, hoje):
                 pena = sum(rs.pena_para_dias(c.get("pena_imposta") or c.get("pena_total_processo")) or 0 for c in crimes)
                 cump = cump - exig_imp
                 vga = any(rs.vga_indulto(c) for c in crimes)
+                # números depois do concurso (os da conta das hipóteses), para a linha do tempo mostrar os mesmos da aba
+                detalhe.update(pena_conc=pena, cumprido_conc=cump, exigido_imp=exig_imp)
             else:
                 imp = imp + ["faltavam %s para %s da pena do impeditivo (concurso)" % (_dias_txt(exig_imp - cump), str(frc) if frc != 1 else "a íntegra")]
     afeta = ((f.get("impeditivos") or {}).get("afeta") or "indulto e comutação").lower()
@@ -464,12 +542,33 @@ def _avaliar_ficha(f, r, ctx, ini, hoje):
         # disser: 2015, 2023); sem janela fixada (Dia das Mães 2017), qualquer falta punida até a data
         base_f = ref if F.get("contada_de") == "referencia" else pub
         dias_f = rs.dias_anos(float(f_meses) / 12, base_f) if f_meses else 36500
-        ach = rs.indicios_falta(r.get("_incidentes") or [], base_f, dias=dias_f, eventos=r.get("_eventos") or [], ate=min(pub, base_f), hoje=pub)  # prescrição da falta aferida na data do decreto
+        ach = rs.indicios_falta(r.get("_incidentes") or [], base_f, dias=dias_f, eventos=r.get("_eventos") or [], ate=min(pub, base_f), hoje=pub,  # prescrição da falta aferida na data do decreto
+                                crimes=r.get("_crimes") or [], inicio=ini)
         # decreto que exige a falta apurada/homologada (ex.: "falta sem a devida apuração não impede"): a não homologada
         # (fuga só registrada como evento) não impede - fica como ressalva
         hom = F.get("exige_homologacao")
         falta_firme = [t for t, firme in ach if firme and not (hom and "não homologada" in t)]
         falta_ind = [t for t, firme in ach if not firme or (hom and "não homologada" in t)]
+        a52 = [t for t in falta_ind if "LEP, art. 52" in t]
+        if a52:
+            base["_art52"] = "crime doloso na janela da falta grave (%s): %s" % (F.get("dispositivo") or "decreto", "; ".join(a52))
+    # Decreto 9.246/2017, art. 4º, II a IV: veda a quem passou pelo RDD ou pelo Sistema Penitenciário Federal ou descumpriu as
+    # condições da prisão domiciliar ou do livramento, a qualquer tempo - só com indício no RSPE, e como a verificar
+    if re.search(r"descumpri\w*\s+(?:as\s+)?condi", F.get("texto") or "", re.I):
+        disp_d = re.search(r"\((art\.\s*\d+º?,\s*[IVX]+\s*a\s*[IVX]+)\)", F.get("texto") or "")
+        ind_d = ["livramento condicional de %s encerrado em %s (revogação, suspensão, regressão ou nova prisão)" % (rs.fmt(a), rs.fmt(b))
+                 for a, b in ctx["lc"] if b and b <= pub]
+        ind_d += ["%s em %s" % (" ".join(((e.get("tipo") or "") + " " + (e.get("motivo") or "")).split()).lower(), e.get("data"))
+                  for e in r.get("_eventos") or [] if re.search(r"DESCUMPRI|REVOGAD", (e.get("motivo") or "").upper())
+                  and (rs.to_date(e.get("data") or "") or date.max) <= pub]
+        ind_d += ["%s em %s" % (rs._rotulo_incidente(i), i.get("data_referencia") or i.get("data_decisao"))
+                  for i in r.get("_incidentes") or [] if (i.get("situacao") or "") == "CONCEDIDO"
+                  and re.search(r"\bRDD\b|DIFERENCIADO|PENITENCIARI[OA] FEDERAL", rs._sem_acento((i.get("tipo") or "") + " " + (i.get("complemento") or "")).upper())
+                  and (rs.to_date(i.get("data_referencia") or i.get("data_decisao") or "") or date.max) <= pub]
+        if ind_d:
+            base["_descump"] = ("%s veda a quem descumpriu as condições do livramento ou da prisão domiciliar ou passou pelo RDD ou pelo Sistema "
+                                "Penitenciário Federal, a qualquer tempo - indício no RSPE: %s; conferir" % (
+                                    (disp_d.group(1) if disp_d else (F.get("dispositivo") or "o decreto")), "; ".join(list(dict.fromkeys(ind_d))[:3])))
     # comutação concedida por decreto anterior (incidente do RSPE)
     com_ant = any(k[1] == "comutacao" and v[0] == "conc" and str(k[0])[:4].isdigit() and int(str(k[0])[:4]) < int(f.get("ano") or 0)
                   for k, v in decididos(r).items())
@@ -672,11 +771,13 @@ def _avaliar_ficha(f, r, ctx, ini, hoje):
             continue
         if com_n is None:
             com_n = (h, exig, mot)
-    res = dict(base, detalhe=detalhe, regime=regime, nota=nota_conc, hips=hips, falta_ind=falta_ind, falta_firme=falta_firme)
+    res = dict(base, detalhe=detalhe, regime=regime, nota=nota_conc, hips=hips, falta_ind=falta_ind, falta_firme=falta_firme,
+               alc=[n for n, c in enumerate(r.get("_crimes") or []) if any(c is y for y in crimes0)])
     imp_ind = bool(imp) and "comuta" not in afeta.replace("indulto e comuta", "")
     imp_com = bool(imp) and ("indulto e comuta" in afeta or "só comuta" in afeta or afeta.startswith("so comuta"))
     f_ind = bool(falta_firme) and "indulto" in f_afeta
     f_com = bool(falta_firme) and ("comuta" in f_afeta)
+    res["ind_ver"] = bool(ind_ver and not ind and not imp_ind and not f_ind)  # hipótese de indulto a verificar (linha do tempo)
     mot_falta = "falta grave %s: %s" % (("nos %s meses anteriores" % f_meses) if f_meses else "punida até a data", falta_firme[0]) if falta_firme else ""
     if f_ind and (f_com or not (com and not imp_com)):
         return dict(res, s="nao", mot=mot_falta)
@@ -717,11 +818,11 @@ def _tese_hediondez(f, r, x):
     ref = rs.to_date(x.get("ref") or f.get("data_referencia") or "")
     if not ref:
         return x
-    sup = [c for c in r.get("_crimes") or [] if _em_execucao(c, ref)
+    sup = [c for c in r.get("_crimes") or [] if _em_execucao(c, ref, r)
            and rs.to_date(c.get("data_infracao") or "") and rs.to_date(c.get("data_infracao")) <= ref
            and rs.e_hediondo(c, ref) and not rs.e_hediondo(c, None)]
     # lesão gravíssima/seguida de morte (art. 129, §§ 2º e 3º): hedionda só contra agente (Lei 13.142/2015) - o RSPE não diz a vítima
-    les = [c for c in r.get("_crimes") or [] if ref >= date(2015, 7, 7) and _em_execucao(c, ref)
+    les = [c for c in r.get("_crimes") or [] if ref >= date(2015, 7, 7) and _em_execucao(c, ref, r)
            and rs.num_art(c.get("artigo")) == "129" and rs.num_lei(c.get("lei")) in ("2848", "") and rs.hediondo_condicional(c) is None
            and (rs.to_date(c.get("data_infracao") or "") or date.min) <= ref]
     if les and not sup:
@@ -848,6 +949,6 @@ def avaliar(r, hoje, completo=False):
     out.sort(key=lambda x: (rs.to_date(x.get("ref") or "") or date.min))
     if not completo:
         for x in out:
-            for k in ("hips", "falta_ind", "falta_firme"):
+            for k in ("hips", "falta_ind", "falta_firme", "alc"):
                 x.pop(k, None)
     return {"inicio": rs.fmt(ini) if ini else "", "decretos": out}
