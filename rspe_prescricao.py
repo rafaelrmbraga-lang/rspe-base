@@ -1797,6 +1797,9 @@ def fundamentacao(L, parte):
     def red(inc):
         return " (redação anterior à Lei 12.234/2010, vigente à data do fato - 2 anos)" if (antiga and inc == "VI") else ""
     if parte == "pp":
+        # só com resultado firme (vermelho): linha "a verificar" (júri, datas incoerentes) não recebe texto afirmativo
+        if L.get("retro_cor") != "vermelho":
+            return ""
         m = rs.re.search(r"✘\s*(.+?):\s*(\d{2}/\d{2}/\d{4}) a (\d{2}/\d{2}/\d{4}) = (.+?) \(prazo (.+?), vence (\d{2}/\d{2}/\d{4})\)", L.get("retro_detalhe") or "")
         if not m:
             return ""
@@ -1865,7 +1868,7 @@ def fundamentacao(L, parte):
         return cab2 + txt
     inc = (L.get("inciso109") or "").replace("art. 109, ", "")
     prazo = fmt_prazo(L["ppe_meses"]) if L.get("ppe_meses") is not None else (L.get("prazo_ppe") or "").split(" (")[0]
-    if not rs.re.search(r"aparente", st, rs.re.I):
+    if L.get("ppe_cor") != "vermelho" or not rs.re.search(r"aparente", st, rs.re.I):
         return ""
     d = (rs.re.search(r"\d{2}/\d{2}/\d{4}", st) or [None])[0] if rs.re.search(r"\d{2}/\d{2}/\d{4}", st) else ""
     reg = "o do art. 109, %s, do Código Penal%s%s: %s" % (inc or "—", red(inc), mods(True), prazo or "—")

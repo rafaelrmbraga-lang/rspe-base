@@ -1161,7 +1161,7 @@ const ui = {
     const antiga=(()=>{ const f=this.tlD(s.fato||''); return f&&f<new Date(2010,4,6); })();
     if(parte==='pp'){
       const m=(s.retro_detalhe||'').match(/✘\s*(.+?):\s*(\d{2}\/\d{2}\/\d{4}) a (\d{2}\/\d{2}\/\d{4}) = (.+?) \(prazo (.+?), vence (\d{2}\/\d{2}\/\d{4})\)/);
-      if(!m) return cab('PRETENSÃO PUNITIVA')+`\nPela pena aplicada (${penaExt(s.pena||'—')}), o prazo é de ${s.prazo_ppp||'—'} (CP, arts. 109 e 110, § 1º). Situação: ${s.retro_status||'—'}.`;
+      if(!m || s.retro_cor!=='vermelho') return cab('PRETENSÃO PUNITIVA')+`\nPela pena aplicada (${penaExt(s.pena||'—')}), o prazo é de ${s.prazo_ppp||'—'} (CP, arts. 109 e 110, § 1º). Situação: ${s.retro_status||'—'}.`;
       const [,nome,a,b,dur,prazo,vence]=m;
       const marco={'fato → denúncia':['a data do fato','','o recebimento da denúncia','CP, art. 117, I','retroativa - CP, art. 110, § 1º, na redação anterior à Lei 12.234/2010'],
         'denúncia → sentença':['o recebimento da denúncia','CP, art. 117, I','a sentença condenatória','CP, art. 117, IV','retroativa - CP, art. 110, § 1º'],
@@ -1179,7 +1179,7 @@ const ui = {
     const st=s.ppe_status||''; const prazo=(s.prazo_ppe||'').replace(/\s*\(.*$/,'');
     const base=`A condenação a ${penaExt(s.pena||'—')} (fato em ${s.fato||'—'}) teve como termo inicial da prescrição da pretensão executória ${s.ppe_termo_txt||('o trânsito em julgado em '+(s.ppe_termo||'—'))}. `+
       `Regulada pela pena aplicada (CP, art. 110, caput), o prazo é o do art. 109, ${inc||'—'}${antiga&&/VI/.test(inc)?' (redação anterior à Lei 12.234/2010)':''}${mods()}: ${prazo||'—'}`;
-    if(/aparente/i.test(st)) return cab('PRETENSÃO EXECUTÓRIA')+'\n'+base+`, que se esgotou em ${(st.match(/\d{2}\/\d{2}\/\d{4}/)||[''])[0]}, sem causa interruptiva no período (CP, art. 117, V e VI).`+
+    if(s.ppe_cor==='vermelho' && /aparente/i.test(st)) return cab('PRETENSÃO EXECUTÓRIA')+'\n'+base+`, que se esgotou em ${(st.match(/\d{2}\/\d{2}\/\d{4}/)||[''])[0]}, sem causa interruptiva no período (CP, art. 117, V e VI).`+
       `\nOperou-se a prescrição da pretensão executória, requerendo-se a declaração da extinção da punibilidade (CP, art. 107, IV).`;
     return cab('PRETENSÃO EXECUTÓRIA')+'\n'+base+'. Situação: '+st+(s.ppe_previsao?' (vencimento em '+s.ppe_previsao+')':'')+'.'; },
   txtPresc(s,parte){ const cab=[`Prescrição - ${s.crime}${s.proc_crim?' (processo '+s.proc_crim+')':''}`,
