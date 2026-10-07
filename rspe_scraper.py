@@ -240,6 +240,13 @@ def campo(texto, rotulo, flags=re.I):
     return m.group(1).strip() if m else ""
 
 
+def campo_sn(texto, rotulo):
+    """'S'/'N' de um campo Sim/Não do crime ("Violência ou grave ameaça: S"): exige os dois-pontos e o valor S/N logo depois -
+    a descrição do tipo ("mediante violência ou grave ameaça, a ter...") e o rótulo seguinte (campo em branco) não contam."""
+    m = re.search(re.escape(rotulo) + r"[ \t]*:[ \t]*(S(?:im)?|N(?:[ãa]o)?)\b", texto, re.I)
+    return m.group(1)[:1].upper() if m else ""
+
+
 def _campo_rg(texto):
     """RG: rótulo isolado em maiúsculas (evita casar "rg" dentro do nome, como em JORGE)."""
     m = re.search(r"(?<![A-Za-zÀ-ÿ])RG(?![A-Za-zÀ-ÿ])[ \t]*:?[ \t]*(.*)", texto)
@@ -398,6 +405,45 @@ def outros(titulo):
 # blocos "Tipo: ... / Complemento: ... / Data ..."
 # --------------------------------------------------------------------------- #
 
+# versão da leitura do PDF do RSPE: registro gravado por versão anterior com sinal de leitura que mudou pede reimportação
+# (2: campos Sim/Não do crime e "Processos Selecionados" em várias linhas)
+VERSAO_LEITURA_RSPE = 2
+_TIPOS_COM_PROCESSOS = ("SOMAT", "LIVRAMENTO", "COMUTA", "INDULTO", "EXTIN")
+
+
+def reimportar_motivos(r):
+    """Por que o registro, lido por versão anterior do programa, deve ser reimportado (o PDF não fica na base)."""
+    if (r.get("versao_leitura_rspe") or 1) >= VERSAO_LEITURA_RSPE:
+        return []
+    out = []
+    ruins = [c for c in r.get("_crimes") or [] if any((c.get(k) or "") not in ("", "S", "N") for k in ("vga", "resultado_morte", "reincidente_especifico"))]
+    if ruins:
+        out.append("violência ou grave ameaça mal lida em %s" % pl(len(ruins), "crime", "crimes"))
+    vaz = [i for i in r.get("_incidentes") or [] if not i.get("_ficha") and not (i.get("processos") or "").strip()
+           and any(x in (i.get("tipo") or "").upper() for x in _TIPOS_COM_PROCESSOS)]
+    if vaz:
+        out.append("lista de processos de %s possivelmente perdida (somatório, livramento, indulto, comutação ou extinção)" % pl(len(vaz), "incidente", "incidentes"))
+    return out
+
+
+def _processos_bloco(p):
+    """'Processos Selecionados' do incidente: a lista longa quebra linha e o leitor do PDF põe parte dos números acima do
+    rótulo e parte abaixo - vale todo número de processo do bloco, fora das linhas de tipo, motivo e complemento."""
+    rotulo = campo(p, "Processos Selecionados")
+    # linhas que são só lista de números ("0000340-35.2013.8.12.0015, 00013812320028120015 (Extinta),"), acima ou abaixo do rótulo
+    item = r"(?:\d[\d.-]{9,}\d)(?:\s*\([^)]{1,20}\))?"
+    soltas = [l.strip() for l in p.splitlines() if re.fullmatch(r"\s*%s(?:\s*,\s*%s)*\s*,?\s*" % (item, item), l)]
+    partes = [x.strip(" ,") for x in [rotulo] + soltas if x.strip(" ,")]
+    vistos, out = set(), []
+    for x in ", ".join(partes).split(","):
+        x = x.strip()
+        k = re.sub(r"\D", "", x.split("(")[0])
+        if x and k not in vistos:
+            vistos.add(k)
+            out.append(x)
+    return ", ".join(out)
+
+
 def blocos_tipo(trecho):
     """Divide um trecho em blocos que começam por 'Tipo:'."""
     partes = re.split(r"(?m)^(?=Tipo\s*:)", trecho)
@@ -413,7 +459,7 @@ def blocos_tipo(trecho):
             "data": campo_data(p, "Data:") if re.search(r"(?m)^Data\s*:", p) else "",
             "data_decisao": "",
             "data_referencia": "",
-            "processos": campo(p, "Processos Selecionados"),
+            "processos": _processos_bloco(p),
         }
         m = re.search(r"Data Decis[ãa]o\s*:\s*(\d{2}/\d{2}/\d{4})?", p)
         if m and m.group(1):
@@ -467,17 +513,20 @@ def parse_crimes(trecho):
             c["tipo_penal"] = " ".join(m.group(1).split()) if m else campo(lei, "Pena")
             c["pena_imposta"] = campo(lei, "Pena Imposta")
             c["data_infracao"] = campo_data(lei, "Data da infração")
-            c["vga"] = campo(lei, "Violência ou grave ameaça")[:1].upper()
-            c["resultado_morte"] = campo(lei, "Resultado morte")[:1].upper()
-            c["reincidente_comum"] = campo(lei, "Reincidente comum").strip()[:1].upper()
+            c["vga"] = campo_sn(lei, "Violência ou grave ameaça")
+            c["resultado_morte"] = campo_sn(lei, "Resultado morte")
+            c["reincidente_comum"] = campo_sn(lei, "Reincidente comum")
             if c["reincidente_comum"] not in ("S", "N"):
                 c["reincidente_comum"] = ""
-            c["reincidente_especifico"] = campo(lei, "Reincidente específico")[:1].upper()
-            c["comando_orcrim"] = campo(lei, "Condenado por exercer comando de organização criminosa")[:1].upper()
+            c["reincidente_especifico"] = campo_sn(lei, "Reincidente específico")
+            c["comando_orcrim"] = campo_sn(lei, "Condenado por exercer comando de organização criminosa")
             c["fracao_progressao"] = campo(lei, "Fração adotada no cálculo para progressão de regime")
             c["fracao_livramento"] = campo(lei, "Fração adotada no cálculo para livramento condicional")
             c["extinto"] = campo(lei, "Extinto")[:3]
-            c["suspenso"] = re.sub(r"\s*Data de suspens.*", "", campo(lei, "Suspenso"))[:3]
+            _de = re.search(r"Data da extin[çc][ãa]o\s*:\s*(\d{2}/\d{2}/\d{4})", lei)
+            if _de:
+                c["data_extincao"] = _de.group(1)
+            c["suspenso"] = {"S": "Sim", "N": "Não"}.get(campo_sn(lei, "Suspenso"), "")
             c["artigo_rspe"] = c["artigo"]
             inferir_artigo(c)
             c["hediondo_ou_equiparado"] = "S" if e_hediondo(c) else "N"
@@ -883,14 +932,29 @@ def hediondo_desde(c):
             chaves.append("%s:%s §%s %s" % (lei, art, pi[0], pi[1]))
         chaves.append("%s:%s §%s" % (lei, art, pi[0]))
     chaves.append("%s:%s" % (lei, art))
-    for k in chaves:
+    chaves += CAPITULACAO_ANTERIOR.get("%s:%s" % (lei, art), [])
+    fato = to_date(c.get("data_infracao") or "")
+    achado = None
+    for n, k in enumerate(chaves):
         v = tab.get(k)
         if isinstance(v, dict) and v.get("desde"):
             try:
-                return datetime.strptime(v["desde"], "%Y-%m-%d").date(), v.get("lei", "")
+                d = datetime.strptime(v["desde"], "%Y-%m-%d").date()
             except Exception:
                 return None, ""
-    return None, ""
+            if achado is None:
+                achado = (d, v.get("lei", ""))
+                # inciso ou tipo criado depois do fato (feminicídio, art. 121, § 2º, VI, de 2015; art. 121-A, de 2024): anacronismo
+                # do cadastro - na época, o fato era a qualificadora/tipo anterior, que já era hediondo; vale a data dela
+                if not (fato and fato < d and n < len(chaves) - 1 and (k.count(" ") >= 2 or k in CAPITULACAO_ANTERIOR)):
+                    return achado
+            elif fato and d <= fato:
+                return d, v.get("lei", "") + " (na época do fato, capitulação anterior à de %s)" % achado[1].split(" (")[0]
+    return achado or (None, "")
+
+
+# tipo autônomo que substituiu uma qualificadora já hedionda: para fato anterior à lei nova, vale a capitulação anterior
+CAPITULACAO_ANTERIOR = {"2848:121-A": ["2848:121 §2 VI", "2848:121 §2"]}
 
 
 # tipo, qualificadora ou majorante criados por lei posterior ao Código: a capitulação com fato anterior à criação é
@@ -1008,6 +1072,24 @@ def hediondo_na_epoca(c):
     return True if d else None
 
 
+def _rol_hediondo(c, h, lei, art):
+    """Pelo rol da base jurídica, sem o selo do SEEU: True (hediondo), False (tipo fora do rol) ou None (depende de dado ilegível)."""
+    if not art:
+        return None
+    if lei in ("2848", "") or ("PENAL" in (c.get("lei") or "").upper() and "MILITAR" not in (c.get("lei") or "").upper()):
+        if art in h.get("lei_8072_art1_cp_sempre", HEDIONDOS_SEMPRE):
+            return True
+        if art in (h.get("condicional_paragrafos") or {}):
+            return hediondo_condicional(c)
+        return False
+    eq = h.get("equiparados", EQUIPARADOS)
+    if lei in eq and art in eq[lei]:
+        return True
+    if lei in (h.get("paragrafo_unico") or {}):
+        return hediondo_pu(c, h)[0]
+    return False
+
+
 def e_hediondo(c, ref=None):
     """Hediondez pelo rótulo do SEEU ou pelo rol da base jurídica (Lei 8.072/90, art. 1º).
     ref=None: lei da época do FATO (frações de progressão/livramento - irretroatividade).
@@ -1028,17 +1110,21 @@ def e_hediondo(c, ref=None):
         return False  # parágrafo fora do rol do p. ú. (ex.: art. 16 da Lei 10.826 sem uso proibido; Lei 15.358, art. 2º, § 2º)
     if num_lei(c.get("lei")) == "11343" and num_art(c.get("artigo")) == "33" and "§ 4" in (c.get("tipo_penal") or ""):
         return False  # tráfico privilegiado: não hediondo, ainda que o SEEU traga o selo (STF, HC 118.533; LEP, art. 112, § 5º)
-    if "HEDIONDO" in ((c.get("fracao_progressao") or "") + (c.get("fracao_livramento") or "")).upper():
-        # selo do SEEU: vale (na data do decreto, só não vale se a lei que tornou o tipo hediondo é posterior à referência - tratado acima)
-        lei_, art_ = num_lei(c.get("lei")), num_art(c.get("artigo"))
-        if not (lei_ == "11343" and art_ in ("35", "37") and "HEDIONDO" not in (c.get("fracao_progressao") or "").upper()):
-            return True
     try:
         import rspe_regras as _rg
         h = _rg.hediondos()
     except Exception:
         h = {}
     lei, art = num_lei(c.get("lei")), num_art(c.get("artigo"))
+    if "HEDIONDO" in ((c.get("fracao_progressao") or "") + (c.get("fracao_livramento") or "")).upper():
+        # selo do SEEU: vale (na data do decreto, só não vale se a lei que tornou o tipo hediondo é posterior à referência - tratado
+        # acima), salvo em tipo que o rol da Lei 8.072 nunca alcança (art. 211, 155, Lei 10.826 arts. 12 e 14...): aí o rótulo da
+        # fração descreve a pessoa ("1/1 - Hediondo Reincidente") ou é erro de cadastro, não a natureza do crime. O homicídio simples
+        # fica com o selo (pode ser o praticado em atividade típica de grupo de extermínio - art. 1º, I)
+        if not (lei == "11343" and art in ("35", "37") and "HEDIONDO" not in (c.get("fracao_progressao") or "").upper()):
+            # art. 217 "(Revogado)" com selo e fato posterior a 2009: cadastro do SEEU no lugar do 217-A - o selo vale
+            if art == "121" or (art == "217" and "REVOGADO" in (c.get("artigo") or "").upper()) or _rol_hediondo(c, h, lei, art) is not False:
+                return True
     if not art:
         return False
     if lei in ("2848", "") or ("PENAL" in (c.get("lei") or "").upper() and "MILITAR" not in (c.get("lei") or "").upper()):
@@ -2646,6 +2732,12 @@ def aplicar_decisoes_decretos(r, incidentes):
                 r[chave + "_detalhe"] = ("Decisão registrada no RSPE (%s em %s). Triagem do programa: %s\n" % (sit.lower(), dt, calc.split(" | ")[0])) + (r.get(chave + "_detalhe") or "")
 
 
+def ativos_depois(crimes, d):
+    """Algum crime com fato posterior à data d (não pode ter sido alcançado por extinção nessa data)."""
+    dd = to_date(d or "")
+    return bool(dd and any((to_date(c.get("data_infracao") or "") or date.min) > dd for c in crimes))
+
+
 def aplicar_extincoes(r, crimes, incidentes):
     """Leva em conta as extinções que o RSPE registra fora da linha "Extinto:" do crime:
     - "(Extinta)" ao lado do número do processo criminal;
@@ -2653,6 +2745,7 @@ def aplicar_extincoes(r, crimes, incidentes):
     Marca o crime como extinto (extinto_rspe guarda o valor original para a auditoria)."""
     ext_inc = [i for i in incidentes if "EXTIN" in (i.get("tipo") or "").upper() and i.get("situacao", "CONCEDIDO") == "CONCEDIDO"]
     geral = []
+    r["_extincao_duvidosa"] = []
     for c in crimes:
         c["extinto_rspe"] = c.get("extinto_rspe", c.get("extinto", ""))  # valor original do RSPE (a análise pode ser refeita)
         c["extinto"] = c["extinto_rspe"]
@@ -2702,6 +2795,11 @@ def aplicar_extincoes(r, crimes, incidentes):
                         c["data_extincao"] = d
                     c["extincao_motivo"] = motivo
                     c["extincao_fonte"] = (c["extincao_fonte"] + "; " if c["extincao_fonte"] else "") + "incidente EXTINÇÃO (%s%s)" % (motivo, " em " + d if d else "")
+        elif ("ATIV" in (r.get("status_execucao") or "").upper() and (pena_para_dias(r.get("pena_remanescente")) or 0) > 0
+              and ((r.get("versao_leitura_rspe") or 1) < VERSAO_LEITURA_RSPE or ativos_depois(crimes, d))):
+            # execução ATIVA com pena a cumprir: a extinção sem processo listado não é da execução inteira (lista perdida na
+            # leitura antiga, ou crimes com fato posterior à extinção) - não se extingue nada; a Auditoria pede conferência
+            r.setdefault("_extincao_duvidosa", []).append("%s%s" % (motivo, " em " + d if d else ""))
         else:
             geral.append("%s%s" % (motivo, " em " + d if d else ""))
     if geral:
@@ -3904,6 +4002,7 @@ def extrair(caminho):
     numero = m.group(0) if m else numero
 
     r = {
+        "versao_leitura_rspe": VERSAO_LEITURA_RSPE,
         "arquivo": os.path.basename(caminho),
         "tribunal": tribunal,
         "comarca": comarca,
@@ -3969,7 +4068,11 @@ def derivar(r, crimes, eventos, incidentes):
     inc_conc = [i for i in incidentes if i.get("situacao") == "CONCEDIDO"]
     inc_neg = [i for i in incidentes if i.get("situacao") == "NÃO CONCEDIDO"]
     inc_pend = [i for i in incidentes if i.get("situacao") == "PENDENTE"]
+    r["_reimportar"] = reimportar_motivos(r)
     for c in crimes:
+        for k in ("vga", "resultado_morte", "reincidente_especifico", "comando_orcrim"):
+            if (c.get(k) or "") not in ("", "S", "N"):
+                c[k] = ""  # leitura antiga pegou a descrição do tipo (","): fica sem informação até a reimportação
         if c.get("artigo_inferido"):  # artigo reconhecido pela descrição: refaz com a regra atual
             c["artigo"] = c.get("artigo_rspe") or "Não informado"
             c.pop("artigo_inferido", None)

@@ -541,6 +541,16 @@ def auditar(r, hoje=None):
     cumprida = rs.pena_para_dias(r.get("pena_cumprida"))
     reman = rs.pena_para_dias(r.get("pena_remanescente"))
 
+    if r.get("_reimportar"):
+        itens.append(_item("verificar", "Reimportar o RSPE: leitura feita por versão anterior do programa",
+                           "Este RSPE foi lido antes de uma correção de leitura do PDF (%s). Reimporte o PDF (Importar PDFs ou Importar pasta) para "
+                           "refazer a leitura; enquanto isso, confira esses pontos no RSPE." % "; ".join(r["_reimportar"]),
+                           "", tipo="reimportar-rspe"))
+    for d_ in r.get("_extincao_duvidosa") or []:
+        itens.append(_item("verificar", "Extinção sem processo listado com a execução ativa: %s" % d_,
+                           "O RSPE registra EXTINÇÃO concedida sem processo selecionado, mas a execução segue ATIVA e com pena remanescente. "
+                           "O programa não trata a execução inteira como extinta: conferir no SEEU quais processos a extinção alcançou.",
+                           "CP, art. 107; LEP, art. 66, II.", tipo="extincao-sem-processos", ref=d_))
     # "Faltam dados": cada dado essencial que o programa não leu vira um alerta com o botão Preencher; o valor informado entra
     # nos cálculos como se viesse do RSPE e o alerta passa a "Dado informado" (com a data)
     faltam = rs.campos_faltantes(r)

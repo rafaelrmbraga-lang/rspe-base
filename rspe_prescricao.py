@@ -2295,6 +2295,27 @@ def analisar(r, hoje=None):
             L["ppe_faltam"] = ["data do trânsito em julgado para ambas as partes (termo inicial pelo STF, Tema 788)"] + list(L.get("ppe_faltam") or [])
             det.append("Conclusão ajustada: A VERIFICAR - o trânsito para a acusação é posterior a 12/11/2020 e o trânsito para ambas as partes "
                        "não consta do RSPE; contado deste, o prazo termina depois.")
+        # datas do RSPE em ordem impossível (trânsito antes da sentença, sentença antes da denúncia ou do fato, idade incompatível):
+        # erro de cadastro - a conclusão que dependa delas fica a verificar na ação penal
+        _nasc = rs.to_date(r.get("data_nascimento") or "")
+        incoer = [txt for cond, txt in (
+            (fato and den and den < fato, "denúncia (%s) antes do fato (%s)" % (rs.fmt(den), rs.fmt(fato)) if fato and den else ""),
+            (fato and sent and sent < fato, "sentença (%s) antes do fato (%s)" % (rs.fmt(sent), rs.fmt(fato)) if fato and sent else ""),
+            (den and sent and sent < den, "sentença (%s) antes da denúncia (%s)" % (rs.fmt(sent), rs.fmt(den)) if den and sent else ""),
+            (sent and (tpr or tmp) and (tpr or tmp) < sent, "trânsito (%s) antes da sentença (%s)" % (rs.fmt(tpr or tmp), rs.fmt(sent)) if sent and (tpr or tmp) else ""),
+            (_nasc and fato and (fato - _nasc).days < 12 * 365, "idade de %d anos na data do fato (nascimento %s)" % ((fato - _nasc).days // 365, rs.fmt(_nasc)) if _nasc and fato else ""))
+            if cond]
+        if incoer:
+            _txt = "datas incoerentes no RSPE: %s - erro de cadastro; conferir na ação penal" % "; ".join(incoer)
+            L["avisos"].append(_txt)
+            det.append("⚠ " + _txt[0].upper() + _txt[1:] + ".")
+            for k in ("ppe", "retro"):
+                if L.get(k + "_cor") == "vermelho":
+                    L[k + "_status"] = "A VERIFICAR: %s aparente, mas calculada sobre datas incoerentes do RSPE" % ("prescrição executória" if k == "ppe" else "prescrição punitiva")
+                    L[k + "_cor"] = "amarelo"
+                    if k == "ppe":
+                        L["ppe_previsao"], L["ppe_dias"] = "", None
+                        L["ppe_faltam"] = ["datas corretas da ação penal (%s)" % "; ".join(incoer)] + list(L.get("ppe_faltam") or [])
         if impr:
             L["avisos"].append(impr[1])
             det.append("⚠ " + impr[1][0].upper() + impr[1][1:] + ".")
