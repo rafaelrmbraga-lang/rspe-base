@@ -1476,7 +1476,7 @@ def relatorio_geral(modelos, caminho, nome_base, nominal=True):
     el.append(numeros([(trab_n, "trabalham", (pct(trab_n, nf) + " dos com ficha") if nf else ""),
                        (E["estudo"], "estudam", (pct(E["estudo"], nf) + " dos com ficha") if nf else ""),
                        (P.get("PADIC instaurado", 0), "faltas com PADIC instaurado", "sem resultado lançado na ficha"),
-                       (F["ficha_sem_seeu"], "faltas graves e fugas da ficha sem registro no SEEU", "a apurar · " + rs.pl(F["ficha_sem_seeu_ass"], "assistido", "assistidos")),
+                       (F["ficha_sem_seeu"], "faltas graves e fugas da ficha sem registro no SEEU", rs.pl(F["ficha_sem_seeu_ass"], "assistido", "assistidos")),
                        (F["firme12"], "assistidos com falta grave nos últimos 12 meses", "sanção reconhecida em juízo")],
                       {2: "amarelo", 3: "amarelo", 4: "laranja"}))
     el.append(Spacer(1, 10))
@@ -1498,7 +1498,7 @@ def relatorio_geral(modelos, caminho, nome_base, nominal=True):
                                                                 ("Não homologadas ou afastadas", F["rspe_neg"])], RW, st, "faltas", ordenar=False,
                 cores={"Homologadas": "#2a78d6", "Sem decisão (pendentes)": "#eb6834", "Não homologadas ou afastadas": "#1baf7a"},
                 nota=(("A falta pendente mais antiga aguarda decisão há %s do fato. " % rs.pl(mp[-1], "dia", "dias")) if mp else "") +
-                     ("Fora do quadro: %s da ficha sem registro no SEEU (a apurar)." % rs.pl(F["ficha_sem_seeu"], "falta grave ou fuga", "faltas graves ou fugas")
+                     ("Fora do quadro: %s da ficha sem registro no SEEU." % rs.pl(F["ficha_sem_seeu"], "falta grave ou fuga", "faltas graves ou fugas")
                       if F["ficha_sem_seeu"] else "")))
     secao("2.5 Remição: pendências", "Pela ficha disciplinar x RSPE: dias que ainda não viraram remição no RSPE, pela origem. "
           "O detalhe por assistido e por unidade está no relatório \"Remição detalhada\".")

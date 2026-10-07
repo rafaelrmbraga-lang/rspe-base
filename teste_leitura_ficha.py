@@ -39,14 +39,16 @@ f = {"eventos": [
     {"data": "26.02.2025", "texto": "CONSELHO DISCIPLINAR: REGISTRO DE FALTA DISCIPLINAR COM FULCRO NO ART. 60 DA LEI Nº 7.210, POR TER INFRINGINDO EM TESE O ART 50, INCISO VI DA LEP.. RESPONDE PROCESSO - PADIC/PDIB."},
     {"data": "11.04.2013", "texto": "REGISTRO DE FALTA DISCIPLINAR: FALTA GRAVE, ART. 50, INCISO VII DA LEP."},
     {"data": "11.09.2013", "texto": "Tomou ciencia do Padic n. 31/606.780/2013, Falta Grave, foi sancionado a 22 dias de isolamento e teve sua conduta carceraria rebaixada para Má por 12 meses a contar da data de 11/04/2013."},
-    {"data": "07.10.2015", "texto": "Nesta data após ter cumprido a CD em falta grave retorna ao comportamento BOM."}]}
+    {"data": "07.10.2015", "texto": "Nesta data após ter cumprido a CD em falta grave retorna ao comportamento BOM."},
+    {"data": "14.07.2025", "texto": "CONSELHO DISCIPLINAR: REGISTRO DE FALTA DISCIPLINAR COM FULCRO NO ART. 60 DA LEI Nº 7.210 DE 11 DE JULHO DE 1984 (LEI DE EXECUÇÃO PENAL), POR TER INFRINGINDO EM TESE O ART 79, INCISOS I, III, XV E XVI; 102, INCISO XXII, E 103, INCISO III E XXXVII DO RIBUP E ARTIGOS 39, INCISOS I E VI E 50, INCISO VI E VII, DA LEP.. RESPONDE PROCESSO - PADIC/PDIB."}]}
 try:
     rf.atualizar(f)
 except Exception:
     pass
-fal = sorted(f.get("faltas") or [], key=lambda x: x["data_fato"])
-ok(len(fal) == 2, "faltas: %d (esperado 2: a de 2013, já julgada, e a de 2025)" % len(fal))
-if len(fal) == 2:
+fal = sorted(f.get("faltas") or [], key=lambda x: rs.to_date(x["data_fato"].replace(".", "/")))
+ok(len(fal) == 3, "faltas: %d (esperado 3: a de 2013, já julgada, e as duas de 2025)" % len(fal))
+if len(fal) == 3:
+    ok(fal[2]["data_fato"] == "14.07.2025" and fal[2]["grave"], "falta que cita o art. 50 da LEP depois de artigos do RIBUP é grave")
     ok(fal[0]["data_fato"] == "11.04.2013" and fal[0]["situacao"] == "homologada/punida", "julgamento casado com a falta de 2013")
     ok(fal[1]["situacao"] == "PADIC instaurado", "registro com PADIC é PADIC instaurado")
 

@@ -181,6 +181,19 @@ def _estudos(eventos):
     return out
 
 
+def _arts_lep(u):
+    """Artigos da LEP citados no lançamento ("... ART 79 ... DO RIBUP E ARTIGOS 39, INCISOS I E VI E 50, INCISO VI E VII, DA LEP"):
+    os números arábicos entre o último "ART" e cada menção à LEP (os incisos vêm em romanos). O art. 50 (e o 52) é falta grave,
+    ainda que o primeiro artigo citado seja do regimento (RIBUP)."""
+    out = set()
+    for m in re.finditer(r"\b(?:DA|DO|NA)\s+(?:LEP\b|LEI\s*(?:N\W{0,3}\s*)?7\.?210|LEI DE EXECU)", u):
+        antes = u[max(0, m.start() - 160):m.start()]
+        k = antes.rfind("ART")
+        if k >= 0:
+            out |= set(re.findall(r"\b(\d{1,3})\b", re.sub(r"\d{1,2}/\d{1,2}/\d{2,4}|\d+\.\d{3}", " ", antes[k:])))
+    return out
+
+
 # registro que é o julgamento de uma falta (fichas até ~2021): "foi sancionado", "CONDENADO por unanimidade no Procedimento",
 # "foi concluído o PADIC ... pelo cometimento de falta grave", "ciência do resultado", "conclusão: praticou falta grave", regressão
 _RE_RESULTADO = (r"SANCIONAD|\bCONDENADO POR\b|FOI CONCLUIDO O PADIC|CONCLUSAO:\s*PRATICOU|CIENTE DO RESULTADO|CIENCIA DO RESULTADO|"
@@ -239,7 +252,7 @@ def extrair(caminho):
 
 
 # versão das regras de leitura dos eventos: a ficha guardada na base com versão anterior é relida a partir dos eventos ao abrir
-VERSAO_LEITURA = 5
+VERSAO_LEITURA = 6
 
 
 def _limpar_evento(txt):
@@ -447,11 +460,11 @@ def derivar(f, eventos):
                 # o mesmo fato registrado de novo (linha repetida ou outra infração do mesmo dia): uma falta só
                 if e["texto"] not in mesma["texto"]:
                     mesma["texto"] += " | " + e["texto"]
-                mesma["grave"] = mesma["grave"] or bool(art and art.group(1) in ("50", "52")) or "FALTA GRAVE" in u
+                mesma["grave"] = mesma["grave"] or bool(art and art.group(1) in ("50", "52")) or "FALTA GRAVE" in u or bool(_arts_lep(u) & {"50", "52"})
                 continue
             faltas.append({"data_registro": e["data"], "data_fato": dfato,
                            "artigo": ("art. %s%s da LEP" % (art.group(1), (", " + art.group(2)) if art.group(2) else "")) if art else "",
-                           "grave": bool(art and art.group(1) in ("50", "52")) or "FALTA GRAVE" in u,
+                           "grave": bool(art and art.group(1) in ("50", "52")) or "FALTA GRAVE" in u or bool(_arts_lep(u) & {"50", "52"}),
                            "texto": e["texto"], "padic": "", "resultado": "",
                            # "RESPONDE PROCESSO - PADIC/...", "RESPONDE CD SIMPLIFICADA/..." ou "RESPONDE /PDIB": o registro já abre o processo
                            "situacao": "PADIC instaurado" if re.search(r"RESPONDE\s*(?:PROCESSO|CD SIMPLIFICADA|/)", u) else "registrada"})
