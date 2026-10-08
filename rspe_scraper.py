@@ -323,6 +323,23 @@ def campo_data(texto, rotulo):
     return m.group(1) if m else ""
 
 
+def _previsao_seeu(calc, rotulos):
+    """(data, observação, nota) da previsão de progressão/livramento do cálculo do SEEU. Valor só entre parênteses
+    ("(Regime aberto desde …)") é a observação, sem data; "data (nota)" ("02/06/2029 (Indeferido em 10/01/2026)",
+    "(Existe falta grave nos últimos 12 meses em …)", "(Em trâmite desde …)") dá a data e a nota."""
+    v = next((campo(calc, r) for r in rotulos if campo(calc, r)), "")
+    if v.startswith("("):
+        return "", re.sub(r"[()]", "", v).strip(), ""
+    data = next((campo_data(calc, r) for r in rotulos if campo_data(calc, r)), "")
+    m = re.search(r"\d{2}/\d{2}/\d{4}\s*\((.+)\)\s*$", v)
+    return data, "", (" ".join(m.group(1).split()) if m else "")
+
+
+def _sem_nao_informado(v):
+    """Campo do cabeçalho com "Não informado" (Nome da Mãe, RG): fica em branco - não é dado."""
+    return "" if re.fullmatch(r"n[ãa]o\s+informad[oa]\.?", (v or "").strip(), re.I) else (v or "")
+
+
 # --------------------------------------------------------------------------- #
 # leitura do PDF
 # --------------------------------------------------------------------------- #
@@ -350,6 +367,25 @@ def _comarca_fora_do_padrao(linha, vara=""):
         resto = mv.group(1).strip() if mv else resto
     resto = re.sub(r"^(?:COMARCA\s+D[AEO]S?\s+(?=\S)|(?:\d+ª\s+)?SUBSE[ÇC][ÃA]O JUDICI[ÁA]RIA\s+DE\s+|FORO\s+DE\s+)", "", resto, flags=re.I)
     return tribunal, resto.strip()
+
+
+# J.TR do número CNJ (Res. CNJ 65/2008): 8 = Justiça Estadual (TR = UF na ordem alfabética do nome), 4 = Justiça Federal (TR = região)
+_UF_TJ = ("AC", "AL", "AP", "AM", "BA", "CE", "DFT", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS",
+          "RO", "RR", "SC", "SE", "SP", "TO")
+
+
+def tribunal_do_numero(numero):
+    """Sigla do tribunal pelo J.TR do número CNJ ("0012960-96.2014.8.22.0005" -> "TJRO"): usada quando o cabeçalho do RSPE
+    traz só "COMARCA DE X", sem a sigla. Outros ramos (militar, eleitoral, trabalho) ficam em branco."""
+    m = re.search(r"\d{7}-\d{2}\.\d{4}\.(\d)\.(\d{2})\.\d{4}", numero or "")
+    if not m:
+        return ""
+    j, tr = m.group(1), int(m.group(2))
+    if j == "8" and 1 <= tr <= len(_UF_TJ):
+        return "TJ" + _UF_TJ[tr - 1]
+    if j == "4" and 1 <= tr <= 6:
+        return "TRF%d" % tr
+    return ""
 
 
 def ler_pdf(caminho):
@@ -427,8 +463,10 @@ def outros(titulo):
 
 # versão da leitura do PDF do RSPE: registro gravado por versão anterior com sinal de leitura que mudou pede reimportação
 # (2: campos Sim/Não do crime e "Processos Selecionados" em várias linhas; 3: número de processo partido no fim da linha,
-# comarca fora do padrão "TJxx - COMARCA DE" e ação penal sem tipificação)
-VERSAO_LEITURA_RSPE = 3
+# comarca fora do padrão "TJxx - COMARCA DE" e ação penal sem tipificação; 4: todos os marcadores da situação do processo
+# criminal, vara em duas linhas, pena e regime da medida de segurança sem rótulo, nota depois da data prevista de progressão e
+# livramento, bloco de sentença repetido, tribunal pelo número CNJ e "Não informado" fora da mãe e do RG)
+VERSAO_LEITURA_RSPE = 4
 _TIPOS_COM_PROCESSOS = ("SOMAT", "LIVRAMENTO", "COMUTA", "INDULTO", "EXTIN")
 
 
@@ -438,8 +476,10 @@ def reimportar_motivos(r):
     if v >= VERSAO_LEITURA_RSPE:
         return []
     out = []
+    if v >= 3:
+        return _motivos_v4(r)
     if v >= 2:
-        return out + _motivos_v3(r)
+        return out + _motivos_v3(r) + _motivos_v4(r)
     ruins = [c for c in r.get("_crimes") or [] if any((c.get(k) or "") not in ("", "S", "N") for k in ("vga", "resultado_morte", "reincidente_especifico"))]
     if ruins:
         out.append("violência ou grave ameaça mal lida em %s" % pl(len(ruins), "crime", "crimes"))
@@ -447,7 +487,32 @@ def reimportar_motivos(r):
            and any(x in (i.get("tipo") or "").upper() for x in _TIPOS_COM_PROCESSOS)]
     if vaz:
         out.append("lista de processos de %s possivelmente perdida (somatório, livramento, indulto, comutação ou extinção)" % pl(len(vaz), "incidente", "incidentes"))
-    return out + _motivos_v3(r)
+    return out + _motivos_v3(r) + _motivos_v4(r)
+
+
+def _motivos_v4(r):
+    """Correções de leitura da versão 4. A nota depois da data prevista e a primeira linha da vara longa não ficavam no
+    registro (não há sinal para procurar): todo registro anterior recebe o aviso; os demais pontos, quando há sinal."""
+    out = ["nota do SEEU depois da data prevista de progressão ou livramento (indeferimento, falta grave nos últimos 12 meses, "
+           "pedido em trâmite) e vara de condenação em duas linhas não eram lidas"]
+    cr = r.get("_crimes") or []
+    com = sorted({c.get("processo_criminal") or "?" for c in cr if (c.get("processo_situacao") or "").upper().startswith("COMUTAD")})
+    if com:
+        out.append("situação do processo criminal %s pode ter perdido a marca \"(Extinta)\" ou \"(Indultada)\" antes de \"(Comutada)\""
+                   % ", ".join(com))
+    ms = sorted({c.get("processo_criminal") or "?" for c in cr if not (c.get("pena_total_processo") or "").strip()}
+                | {a.get("processo_criminal") or "?" for a in r.get("_acoes_sem_crime") or [] if not (a.get("pena_total_processo") or "").strip()})
+    if ms:
+        out.append("pena total da ação %s em branco (medida de segurança sem rótulo no RSPE)" % ", ".join(ms))
+    vistos, dup = set(), set()
+    for c in cr:
+        k = tuple(c.get(x) or "" for x in ("processo_criminal", "lei", "artigo_rspe", "tipo_penal", "pena_imposta", "data_infracao"))
+        if k in vistos:
+            dup.add(k[0])
+        vistos.add(k)
+    if dup:
+        out.append("crime repetido na ação %s (bloco de sentença repetido pelo SEEU ou concurso: conferir)" % ", ".join(sorted(dup)))
+    return out
 
 
 def _motivos_v3(r):
@@ -537,6 +602,35 @@ def acoes_sem_crime(trecho):
     return out
 
 
+def _vara_condenacao(proc):
+    """Juízo/Vara de condenação. O nome longo quebra em duas linhas e o leitor do PDF põe a primeira acima do rótulo
+    ("6477 - 2º Juizado de Violência Doméstica ... e Vara de" / "Juízo/Vara de condenação: Crimes Contra Crianças ..."):
+    a linha de cima, sem rótulo, entre "Tipo:" e o rótulo, é a primeira parte."""
+    m = re.search(r"(?m)^(?:(?P<antes>[^\n:]+)\n)?Ju[íi]zo/Vara de condena[çc][ãa]o[ \t]*:?[ \t]*(?P<v>.*)$", proc)
+    if not m:
+        return campo(proc, "Juízo/Vara de condenação")
+    v, antes = m.group("v").strip(), (m.group("antes") or "").strip()
+    if antes and not re.match(r"(?:N[úu]mero|Tipo)\b", antes, re.I):
+        v = (antes + " " + v).strip()
+    return v
+
+
+def _sem_sentenca_repetida(proc):
+    """O SEEU às vezes repete, na mesma ação, o bloco da sentença ("Pena total: … / Regime … / DESMEMBRAMENTO(S) / Lei: …")
+    idêntico ao anterior: a repetição não é outro crime (RAUL DA SILVA FAINELO, 0000794-74.2015). Bloco diferente fica."""
+    partes = re.split(r"(?m)^(?=Pena total\s*:)", proc)
+    if len(partes) <= 2:
+        return proc
+    vistos, out = set(), [partes[0]]
+    for p in partes[1:]:
+        k = " ".join(p.split())
+        if k in vistos:
+            continue
+        vistos.add(k)
+        out.append(p)
+    return "".join(out)
+
+
 def parse_crimes(trecho, sem_crime=None):
     """Trecho de PROCESSOS CRIMINAIS -> lista de dicts (um por lei/artigo). sem_crime: lista que recebe as ações sem "Lei:"."""
     crimes = []
@@ -546,12 +640,14 @@ def parse_crimes(trecho, sem_crime=None):
         if not proc.startswith("N"):
             continue
         _num = campo(proc, "Número")
-        _msit = re.search(r"\(([^)]*)\)\s*$", _num)
+        # todos os marcadores ao lado do número: "(Extinta)(Comutada)" -> "Extinta, Comutada" (o primeiro decide a extinção)
+        _msit = re.search(r"(?:\([^)]*\)\s*)+$", _num)
+        proc = _sem_sentenca_repetida(proc)
         base = {
-            "processo_criminal": re.sub(r"\s*\([^)]*\)\s*$", "", _num).strip(),
-            "processo_situacao": (_msit.group(1).strip() if _msit else ""),
+            "processo_criminal": re.sub(r"(?:\s*\([^)]*\))+\s*$", "", _num).strip(),
+            "processo_situacao": (", ".join(x.strip() for x in re.findall(r"\(([^)]*)\)", _msit.group(0)) if x.strip()) if _msit else ""),
             "tipo_processo": campo(proc, "Tipo"),
-            "vara_condenacao": campo(proc, "Juízo/Vara de condenação"),
+            "vara_condenacao": _vara_condenacao(proc),
             "data_denuncia": campo_data(proc, "Data do recebimento da denúncia"),
             "data_sentenca": campo_data(proc, "Data da Sentença"),
             "transito_mp": campo_data(proc, "Data do trânsito em julgado do Ministério Público"),
@@ -559,6 +655,15 @@ def parse_crimes(trecho, sem_crime=None):
             "pena_total_processo": campo(proc, "Pena total"),
             "regime_sentenca": campo(proc, "Regime imposto na sentença/acórdão"),
         }
+        if not base["pena_total_processo"] and not re.search(r"(?m)^Pena total\s*:", proc):
+            # medida de segurança: o SEEU imprime "1a0m0d - MEDIDA DE SEGURANÇA" e o regime ("Indefinido", "Aberto") sem rótulo,
+            # nas linhas logo abaixo de "SENTENÇA/ACÓRDÃO/RECURSO"
+            ms = re.search(r"(?m)^SENTEN[ÇC]A/AC[ÓO]RD[ÃA]O/RECURSO.*\n(\d+a\d+m\d+d\b.*)(?:\n(.*))?", proc)
+            if ms:
+                base["pena_total_processo"] = ms.group(1).strip()
+                rg_ = (ms.group(2) or "").strip()
+                if rg_ and not base["regime_sentenca"] and not re.match(r"DESMEMBRAMENTO|Lei\s*:|N[úu]mero\s*:", rg_, re.I) and ":" not in rg_:
+                    base["regime_sentenca"] = rg_
         m = RE_CNJ.search(base["processo_criminal"])
         if m:
             base["processo_criminal"] = m.group(0)
@@ -2943,11 +3048,13 @@ def aplicar_extincoes(r, crimes, incidentes):
         c.pop("indulto_duvida", None)
         c.pop("indultado_rspe", None)
         sit_p = (c.get("processo_situacao") or "").upper()
-        if sit_p.startswith("EXTINT") or sit_p.startswith("INDULTAD"):
-            # "(Indultada)": a pena do processo foi extinta pelo indulto (CP, art. 107, II)
+        _marc = [x.strip() for x in sit_p.split(",")]  # "(Extinta)(Comutada)" é gravado "Extinta, Comutada"
+        if any(x.startswith(("EXTINT", "INDULTAD")) for x in _marc):
+            # "(Indultada)": a pena do processo foi extinta pelo indulto (CP, art. 107, II); a comutação marcada ao lado
+            # ("(Indultada)(Comutada)") não tira a marca de extinção que o próprio RSPE dá ao processo
             c["extinto"] = "Sim"
-            c["extincao_fonte"] = "processo marcado \"(%s)\" no RSPE" % c["processo_situacao"]
-            if sit_p.startswith("INDULTAD"):
+            c["extincao_fonte"] = "processo marcado \"(%s)\" no RSPE" % c["processo_situacao"].replace(", ", ")(")
+            if any(x.startswith("INDULTAD") for x in _marc):
                 c["extincao_motivo"] = "indulto"
     # indulto concedido no RSPE com processos selecionados: extingue a pena desses processos (CP, art. 107, II)
     for i in incidentes:
@@ -2962,7 +3069,8 @@ def aplicar_extincoes(r, crimes, incidentes):
                        and (to_date(j.get("data_decisao") or j.get("data_referencia") or "") or date.min) > (d_ind or date.max)]
             for c in crimes:
                 k = chave_processo(c.get("processo_criminal"))
-                if procs and k in procs and any(mesmo_processo(c.get("processo_criminal"), x) for j in com_dep for x in lista_processos(j.get("processos") or "")):
+                # (o processo marcado "(Indultada)"/"(Extinta)" no próprio RSPE não fica em dúvida: o RSPE já registra a extinção)
+                if procs and k in procs and not c.get("extincao_fonte", "").startswith("processo marcado") and any(mesmo_processo(c.get("processo_criminal"), x) for j in com_dep for x in lista_processos(j.get("processos") or "")):
                     c["indulto_duvida"] = {"data": d, "decreto": dec.group(1) if dec else "",
                                            "comutacao": next(j.get("data_decisao") or j.get("data_referencia") for j in com_dep
                                                              if any(mesmo_processo(c.get("processo_criminal"), x) for x in lista_processos(j.get("processos") or "")))}
@@ -4283,6 +4391,10 @@ def extrair(caminho):
         status = m.group(1)
     m = RE_CNJ.search(numero)
     numero = m.group(0) if m else numero
+    if not tribunal:
+        tribunal = tribunal_do_numero(numero)  # cabeçalho "COMARCA DE X" sem a sigla do tribunal
+    prev_prog = _previsao_seeu(calc, ("Data prevista para progressão de regime",))
+    prev_liv = _previsao_seeu(calc, ("Data prevista livramento condicional", "Data prevista para livramento condicional"))
 
     r = {
         "versao_leitura_rspe": VERSAO_LEITURA_RSPE,
@@ -4296,8 +4408,8 @@ def extrair(caminho):
         "numero_antigo": campo(cab, "Número Antigo"),
         "nome": campo(cab, "Nome:"),
         "cpf": campo(cab, "CPF"),
-        "rg": _campo_rg(cab),
-        "nome_mae": campo(cab, "Nome da Mãe"),
+        "rg": _sem_nao_informado(_campo_rg(cab)),
+        "nome_mae": _sem_nao_informado(campo(cab, "Nome da Mãe")),
         "data_nascimento": _nascimento(cab),
         "_rspe_sem_processo": not crim.strip(),
         "_rspe_sem_crime": bool(crim.strip()) and not re.search(r"Pena Imposta", crim),
@@ -4309,16 +4421,15 @@ def extrair(caminho):
         "total_interrupcoes": campo(calc, "Total Interrupções"),
         "saldo_remidos": campo(calc, "Saldo dias Remidos"),
         # previsões que o SEEU imprime em alguns modelos de RSPE
-        "progressao_previsao_seeu": "" if campo(calc, "Data prevista para progressão de regime").startswith("(")
-            else campo_data(calc, "Data prevista para progressão de regime"),
-        "progressao_obs_seeu": re.sub(r"[()]", "", campo(calc, "Data prevista para progressão de regime")).strip()
-            if campo(calc, "Data prevista para progressão de regime").startswith("(") else "",
+        "progressao_previsao_seeu": prev_prog[0],
+        "progressao_obs_seeu": prev_prog[1],
+        # nota do SEEU depois da data prevista ("02/06/2029 (Indeferido em 10/01/2026)"): só exibida - o efeito jurídico é do usuário
+        "progressao_nota": prev_prog[2],
         "data_base_seeu": campo_data(calc, "Data-base adotada no cálculo para progresso regime")
             or campo_data(calc, "Data-base adotada no cálculo para progressão de regime"),
-        "livramento_previsao_seeu": "" if (campo(calc, "Data prevista livramento condicional") or campo(calc, "Data prevista para livramento condicional")).startswith("(")
-            else (campo_data(calc, "Data prevista livramento condicional") or campo_data(calc, "Data prevista para livramento condicional")),
-        "livramento_obs_seeu": re.sub(r"[()]", "", campo(calc, "Data prevista livramento condicional") or campo(calc, "Data prevista para livramento condicional")).strip()
-            if (campo(calc, "Data prevista livramento condicional") or campo(calc, "Data prevista para livramento condicional")).startswith("(") else "",
+        "livramento_previsao_seeu": prev_liv[0],
+        "livramento_obs_seeu": prev_liv[1],
+        "livramento_nota": prev_liv[2],
         "livramento_data_base_seeu": campo_data(calc, "Data-base adotada no cálculo para livramento condicional"),
         "termino_previsao_seeu": campo_data(calc, "Data prevista para o Término da Pena"),
     }

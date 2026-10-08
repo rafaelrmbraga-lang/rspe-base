@@ -325,9 +325,20 @@ def _vencido_pedido(r, sc, d, palavra):
            and "DATA-BASE" not in (i.get("tipo") or "").upper() and (_data(i.get("data_decisao") or i.get("data_referencia") or "") or date.min) >= d]
     crim = palavra == "PROGRESS" and any("CRIMINOL" in ("%s %s" % (i.get("tipo", ""), i.get("complemento", ""))).upper()
                                          for i in r.get("_incidentes", []))
-    if not inc and not crim and r.get("falta_12m") not in ("SIM", "A APURAR"):
+    # nota do cálculo do SEEU "(Em trâmite desde …)" ao lado da data prevista: há pedido em trâmite
+    nota = r.get("progressao_nota" if palavra == "PROGRESS" else "livramento_nota") or ""
+    tramite = bool(re.match(r"em tr[âa]mite", nota, re.I))
+    if not inc and not crim and not tramite and r.get("falta_12m") not in ("SIM", "A APURAR"):
         return ("%s · sem pedido no RSPE - requerer" % sit.split(" · ")[0], cor)
     return sc
+
+
+def _com_nota(sit, nota):
+    """Situação da progressão/livramento com a nota que o SEEU imprime depois da data prevista ("Indeferido em …",
+    "Existe falta grave nos últimos 12 meses em …", "Em trâmite desde …"): só exibida - o efeito jurídico fica com o usuário."""
+    if not nota:
+        return sit
+    return ("%s · RSPE: %s" % (sit, nota)) if sit else "RSPE: %s" % nota
 
 
 def pedidos(r, palavra):
@@ -931,6 +942,12 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
                       "amarelo" if est[0] == "lc_duvida" else "azul" if est[0] == "extinta" else "cinza")
         if est[0] in ("extinta", "cumprida", "lc", "lc_duvida", "nao_iniciou"):
             lsit, lcor = (psit, pcor)
+    # nota do SEEU depois da data prevista: exibida junto da data que veio do SEEU (sem mudar a cor nem o prazo)
+    if not est and r.get("progressao_previsao_seeu"):
+        psit = _com_nota(psit, r.get("progressao_nota"))
+    if not (est and est[0] in ("extinta", "cumprida", "lc", "lc_duvida", "nao_iniciou")) and r.get("livramento_previsao_seeu") \
+            and ltxt == r.get("livramento_previsao_seeu"):
+        lsit = _com_nota(lsit, r.get("livramento_nota"))
     presc = rp.analisar(r, HOJE, ficha)
     aud = ra.auditar(r, HOJE)
     try:
