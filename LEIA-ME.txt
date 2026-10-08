@@ -695,8 +695,6 @@ v7.7.0
     está a 1-60 dias da progressão, sem crime com violência ou grave ameaça,
     trabalhando e com conduta Boa ou Ótima. Clicar abre o pedido da
     progressão. Ver "Progressão antecipada".
-  - Ao passar o mouse, a linha fica no mesmo cinza-claro em todas as
-    situações (não tinge mais de amarelo, vermelho ou verde).
 
 v7.6.0
   - Terceira e quarta revisões gerais (base 08.10 inteira: 595 RSPEs, 653
