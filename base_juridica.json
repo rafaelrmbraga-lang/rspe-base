@@ -1,5 +1,5 @@
 {
- "versao": "2026-10-07b",
+ "versao": "2026-10-08c",
  "descricao": "Base juridica do RSPE Base. Editavel: o programa le este arquivo ao abrir (copia ao lado do .exe tem prioridade sobre a embutida). Datas em AAAA-MM-DD. Fracoes como 'num/den' ou percentual 'NN%'.",
  "prescricao": {
   "art109_tabela": [
@@ -251,6 +251,8 @@
     ]
    }
   ],
+  "lei_10792_2003_vigencia": "2003-12-02",
+  "_nota_lei_10792": "Lei 10.792/2003 (nova redação do art. 112 da LEP), publicada e em vigor em 02/12/2003: fato anterior usa a redação original de 1984 no rótulo do dispositivo. As datas de vigência das demais redações (Leis 11.464/2007, 13.964/2019, 15.358/2026 e 15.402/2026) são lidas do campo \"de\" das janelas de regimes_vigencia.",
   "art112_par5": "Trafico privilegiado (art. 33, par. 4, Lei 11.343/06) nao e hediondo para fins de progressao.",
   "art112_par6": "Falta grave interrompe o prazo; reinicio pela pena remanescente.",
   "art112_par3_mulheres": "1/8 (LEP, art. 112, §§ 3º e 4º): gestante, mãe ou responsável por criança ou pessoa com deficiência, cumulativamente: sem violência ou grave ameaça; crime não cometido contra filho ou dependente; 1/8 cumprido no regime anterior; primária e com bom comportamento; sem integrar organização criminosa. Novo crime doloso ou falta grave revoga o benefício (§ 4º). O RSPE não informa sexo nem filhos: a Auditoria só aponta como informação."

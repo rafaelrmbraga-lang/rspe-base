@@ -208,15 +208,20 @@ def _prog_pela_db_manual(r):
     except Exception:
         fr = Fraction(0)
     if not 0 < fr < 1:
-        fr = rs.parse_fracao(max((c.get("fracao_progressao") or "" for c in r.get("_crimes", [])), default="")) or Fraction(1, 6)
+        # a maior fração pelo VALOR (o max() do texto punha "40% ..." acima de "3/5 ...")
+        fr = max((f_ for f_ in (rs.parse_fracao(c.get("fracao_progressao") or "") for c in r.get("_crimes", [])
+                                if not (c.get("extinto") or "").upper().startswith("S")) if f_), default=None) or Fraction(1, 6)
     from datetime import timedelta as _td
     return prev - _td(days=round(float((1 - fr) * (db0 - novo).days)))
 
 
 DB_TIPOS = {  # itens da Auditoria sobre a data-base -> (cor, motivo)
     "data-base-coincide-com-a-soma-unificacao-das-pen": ("vermelho", "soma/unificação de penas - não altera a data-base (STJ, Tema 1006)"),
-    "data-base-de-progressao-anterior-a-ultima-altera": ("amarelo", "anterior à última alteração de regime - conferir se é a data da falta (Súmula 534/STJ) ou do preenchimento dos requisitos (STJ, Tema 1165)"),
+    # a Auditoria diz "favorável ao assistido, sem pedido": a caixa não fica amarela
+    "data-base-de-progressao-anterior-a-ultima-altera": ("", "anterior à última alteração de regime - favorável ao assistido, sem pedido"),
     "data-base-movida-para-a-recaptura-sem-falta-homo": ("amarelo", "recaptura depois de fuga, sem falta homologada no RSPE"),
+    "data-base-na-guia-nova-de-quem-ja-estava-preso": ("vermelho", "início da guia nova com a pessoa já presa - a condenação nova não altera a data-base (STJ, Tema 1006)"),
+    "data-base-na-data-do-fato-de-condenacao": ("amarelo", "data do fato de condenação desta execução - provável crime durante o cumprimento tratado como falta grave (Súmulas 526 e 534/STJ); conferir"),
     "inconsistencia-da-data-base-sem-prisao-alteracao": ("amarelo", "sem prisão, alteração de regime ou falta grave homologada nessa data"),
 }
 
@@ -239,12 +244,23 @@ def data_base_info(r, itens, ficha=None):
         t = it.get("tipo") or ""
         if t in DB_TIPOS:
             c, m = DB_TIPOS[t]
+            if it.get("nivel") in ("info", "ok"):
+                c = ""  # rebaixado (aberto, livramento): sem efeito na progressão
             if not cor or c == "vermelho":
                 cor, mot = c, m
         elif t == "alteracao-de-data-base-sem-falta-homologada" and it.get("ref") == rs.fmt(d0):
+            if it.get("nivel") not in ("alerta", "verificar"):
+                if not cor:
+                    mot = "alteração de data-base sem falta homologada - sem efeito atual"
+                continue
             c = "vermelho" if it.get("nivel") == "alerta" else "amarelo"
             if not cor or c == "vermelho":
                 cor, mot = c, ("alteração de data-base por soma/unificação (STJ, Tema 1006)" if c == "vermelho" else "alteração de data-base sem falta homologada")
+        elif t == "alteracao-de-data-base-no-lugar-do-incidente" and it.get("ref") == rs.fmt(d0) and not cor:
+            mot = ("alteração de data-base fixa, anterior aos marcos posteriores - favorável ao assistido" if "favorável" in (it.get("titulo") or "")
+                   else "alteração de data-base lançada no lugar do incidente próprio, com fundamento na data")
+        elif t == "falta-homologada-apos-prescricao" and "data-base impressa" in (it.get("detalhe") or ""):
+            cor, mot = "vermelho", "falta grave homologada depois da prescrição disciplinar - não move a data-base"
         elif t == "data-base-confere-com-o-rspe" and not cor:
             mot = it.get("titulo", "").split(": ", 1)[-1]
     # falta não homologada na data: não move a data-base
