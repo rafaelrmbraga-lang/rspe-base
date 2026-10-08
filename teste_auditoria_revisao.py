@@ -272,6 +272,19 @@ r = reg([crime()], [inc(AR, "Fechado - Regime Inicial", "", "19/11/2020"), inc(A
 pt = por_tipo(r)
 ok("data-base-do-livramento-igual-a-da-progressao" in pt and "data-base-do-livramento-alterada-por-falta-grave" not in pt, "A16: %s" % list(pt))
 
+# âncora das asserções negativas (A25): todo tipo testado com "not in" (ou num conjunto que não pode aparecer) precisa existir
+# como identificador em rspe_auditoria ou rspe_ficha; se for renomeado, a asserção negativa passaria sem testar nada
+import os
+import re
+_aqui = open(os.path.abspath(__file__), encoding="utf-8").read()
+_neg = set(re.findall(r'"([a-z0-9]+(?:-[a-z0-9]+){2,})" not in', _aqui))
+for _cj in re.findall(r"ok\(not \{([^}]*)\} & set", _aqui):
+    _neg |= set(re.findall(r'"([a-z0-9]+(?:-[a-z0-9]+){2,})"', _cj))
+_mods = open(ra.__file__, encoding="utf-8").read() + open(rf.__file__, encoding="utf-8").read()
+ok(len(_neg) >= 10, "âncora: poucas asserções negativas encontradas (%d)" % len(_neg))
+for _t in sorted(_neg):
+    ok('"%s"' % _t in _mods, "âncora: o tipo %s não existe mais em rspe_auditoria/rspe_ficha (a asserção negativa não testa nada)" % _t)
+
 if falhas:
     print("FALHOU (revisão da auditoria):\n  " + "\n  ".join(falhas))
     sys.exit(1)

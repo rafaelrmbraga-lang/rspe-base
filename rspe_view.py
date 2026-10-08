@@ -252,7 +252,10 @@ def data_base_info(r, itens, ficha=None):
         if rs.RE_FALTA_PROPRIA.search(rs._rotulo_incidente(i)) and rs._pendente(i) and i.get("_falta") != "sim":
             x = rs._data_fato_falta(i)
             if x and abs((x - d0).days) <= 1:
-                cor, mot = "vermelho", "falta sem homologação (%s) - falta pendente não move a data-base" % rs._rotulo_incidente(i)[:60]
+                # rótulo inteiro (com a data da infração): o corte em 60 caracteres parava logo antes da data
+                _ri = rs._rotulo_incidente(i)
+                _ri = _ri if len(_ri) <= 140 else _ri[:139].rstrip() + "…"
+                cor, mot = "vermelho", "falta sem homologação (%s) - falta pendente não move a data-base" % _ri
     # suspeita: a ficha explica?
     if cor == "amarelo" and ficha:
         ev = [(rf._dp(e.get("data") or ""), e.get("texto") or "") for e in ficha.get("eventos", [])]

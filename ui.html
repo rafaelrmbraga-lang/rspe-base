@@ -789,7 +789,11 @@ const ui = {
     // tabela
     let linhas=this.filtrarSituacao(rs,spec);
     // ordem padrão: alfabética pelo nome (acento e maiúscula não contam); clicar no título da coluna ordena por ela
-    const o=this.ordem[this.aba]; linhas = o ? [...linhas].sort((a,b)=>cmp(a[o.k],b[o.k])*(o.inv?-1:1))
+    // coluna de situação ("Vencido há 11 dias", "Em 2 dias"): ordena pelo número de dias, não pelo texto
+    const o=this.ordem[this.aba]; const kd=o&&({prog_sit:'prog_dias',liv_sit:'liv_dias',ext_sit:'ext_dias',presc_ppe:'presc_dias'})[o.k];
+    const cmpO=(a,b)=>{ if(kd){ const x=typeof a[kd]==='number'?a[kd]:null, y=typeof b[kd]==='number'?b[kd]:null;
+        if(x!==null&&y!==null&&x!==y) return x-y; if(x!==null&&y===null) return -1; if(x===null&&y!==null) return 1; } return cmp(a[o.k],b[o.k]); };
+    linhas = o ? [...linhas].sort((a,b)=>cmpO(a,b)*(o.inv?-1:1))
       : [...linhas].sort((a,b)=>String(a.nome||'').localeCompare(String(b.nome||''),'pt',{sensitivity:'base'})||String(a.id||'').localeCompare(String(b.id||'')));
     linhas=[...linhas].sort((a,b)=>(b.fixado?1:0)-(a.fixado?1:0));
     const card=document.getElementById('card');
@@ -840,8 +844,8 @@ const ui = {
     switch(f){
       case 'vencidas': return spec.id==='ext' ? cor==='vermelho' : (d!==null && d<0);
       case '30': return d!==null && d>=0 && d<=30;
-      case '60': return d!==null && d>0 && d<=60;
-      case '90': return d!==null && d>0 && d<=90;
+      case '60': return d!==null && d>=0 && d<=60;
+      case '90': return d!==null && d>=0 && d<=90;
       case 'interrompida': return !!r.interrompida && !r.estado_exec;
       case 'naoiniciou': return r.estado_exec==='nao_iniciou';
       case 'naoaplica': return !!r.estado_exec && r.estado_exec!=='nao_iniciou';
@@ -1483,7 +1487,9 @@ const ui = {
   // contador da aba: o que ainda pede providência - sai quem já teve o pedido marcado (volta se a situação da aba mudou depois)
   abaPedido(spec){ return !!(spec && (spec.cols||[]).some(c=>c[0]==='pedido')); },
   pedPendente(r,aba){ if(aba==='ind'&&Object.keys(r.pedidos||{}).some(k=>k.startsWith('ind_'))) return false; const P=(r.pedidos||{})[aba]; return !P || (P.ref && P.ref!==this.pedRef(r,aba)); },
-  contaCor(a,rs){ rs=rs.filter(r=>this.pedPendente(r,a.id)); if(a.id==='ind') return rs.filter(r=>r.ind_sim).length || ''; const k = a.id==='presc' ? (this.prescModo!=='pp'?'presc_ppe_cor':'presc_retro_cor') : a.cor; return rs.filter(r=>r[k]==='vermelho'||r[k]==='vencido').length || ''; },
+  contaCor(a,rs){ rs=rs.filter(r=>this.pedPendente(r,a.id)); if(a.id==='ind') return rs.filter(r=>r.ind_sim).length || ''; const k = a.id==='presc' ? (this.prescModo!=='pp'?'presc_ppe_cor':'presc_retro_cor') : a.cor;
+    // mesma regra dos cartões (ui.cor): o pedido com a situação mudada depois conta onde o cartão o mostra
+    const corDe=r=>a.id==='presc'?r[k]:this.cor(r,a); return rs.filter(r=>{ const c=corDe(r); return c==='vermelho'||c==='vencido'; }).length || ''; },
   ABAS_EXTRA:[{id:'teses',titulo:'Jurisprudências'},{id:'quadro',titulo:'Quadro do Usuário'}],
   // abas: ícone (traço fino; verde na aba aberta) e nome curto
   ICONE:{
@@ -1502,7 +1508,7 @@ const ui = {
   DICA:{geral:'O ícone ↗ ao lado do assistido abre a ficha completa · "Histórico" compara os RSPE importados',
     prog:'Clique no título da coluna para ordenar · a caixa em "Pedido" marca o pedido feito',
     liv:'Clique no título da coluna para ordenar · a caixa em "Pedido" marca o pedido feito',
-    ind:'"Verificar indulto/comutação" abre a linha do tempo do decreto · as sub-abas mostram um decreto por vez',
+    ind:'"Verificar indulto/comutação" abre a linha do tempo do decreto · os decretos ficam na barra lateral (um por vez ou Geral) · o seletor escolhe indulto, comutação ou os dois',
     presc:'Clique no assistido para ver o quadro de cada crime · "cálculo" abre o detalhe',
     ext:'"Linha do tempo" mostra períodos, fugas e término',
     fd:'Clique no assistido para ver trabalho, estudo e remição a atestar',
@@ -2004,7 +2010,7 @@ const ui = {
   async provPDF(){ const P=this._prov; if(!P||!P.L.length) return; const r=await API().providencias_pdf(P.titulo, P.L, P.todas, P.mes==='todos'?'':P.mes); if(r&&r.erro) this.toast(r.erro); else if(r&&r.msg) this.toast(r.msg); },
   async provExcel(){ const P=this._prov; if(!P||!P.L.length) return; const r=await API().providencias_xlsx(P.titulo, P.L); if(r&&r.erro) this.toast(r.erro); else if(r&&r.msg) this.toast(r.msg); },
   modalRelatorios(){ const vis=this.visiveis(), n=vis.length;
-    const lista=vis.map(r=>`<label class="chk relitem" style="padding:5px 9px;font-size:12.5px" data-b="${esc((r.nome+' '+r.proc).toLowerCase())}"><input type="checkbox" class="relp" value="${esc(r.id)}" checked onchange="ui.relConta()"><span>${esc(r.nome)} <span class="muted" style="font-size:11.5px">· ${esc(r.proc)}</span></span></label>`).join('');
+    const lista=vis.map(r=>`<label class="chk relitem" style="padding:5px 9px;font-size:12.5px" data-b="${esc(semAcento(r.nome+' '+r.proc))}" data-d="${esc('|'+[r.proc,r.id].map(x=>String(x||'').replace(/\D/g,'')).join('|')+'|')}"><input type="checkbox" class="relp" value="${esc(r.id)}" checked onchange="ui.relConta()"><span>${esc(r.nome)} <span class="muted" style="font-size:11.5px">· ${esc(r.proc)}</span></span></label>`).join('');
     document.getElementById('modal').innerHTML=`<div class="box" style="width:520px"><h2>Relatórios em PDF</h2><p>${pl(n,'assistido','assistidos')}${this.filtro?(n===1?' filtrado':' filtrados')+' pela busca':''}. Os arquivos vão para uma pasta nova com a data e a hora.</p>
       <label class="chk"><input type="checkbox" id="rel_ind" checked onchange="ui.relLista()">Relatórios individuais (um PDF por assistido)</label>
       <div id="rel_sel" style="margin:0 0 6px 26px">
@@ -2018,7 +2024,7 @@ const ui = {
       <label class="chk"><input type="checkbox" id="rel_ger" checked>Relatório geral da base</label>
       <label class="chk"><input type="checkbox" id="rel_rem">Remição detalhada: relatório (PDF) e planilha de conferência ficha x RSPE (Excel e PDF)</label>
       <label class="chk"><input type="checkbox" id="rel_pla" checked>Planilha (Excel, todas as abas)</label>
-      <label class="chk"><input type="checkbox" id="rel_nom" checked>Fila de prioridade com o nome dos assistidos</label>
+      <label class="chk"><input type="checkbox" id="rel_nom" checked>Remição detalhada com o nome dos assistidos</label>
       <p class="muted" style="font-size:12px">Triagem: não substitui o Atestado de Pena. Datas de progressão, livramento e término são as do SEEU.</p>
       <div class="acts"><button class="btn" style="margin-right:auto" onclick="ui.modalProvidencias()">Relatório de providências</button><button class="btn" onclick="ui.fecharModal()">Cancelar</button><button class="btn pri" onclick="ui.gerarRelatorios()">Gerar</button></div></div>`;
     document.getElementById('modal').classList.add('on'); this.relConta(); },
@@ -2026,8 +2032,9 @@ const ui = {
   relConta(){ const c=document.getElementById('rel_conta'); if(!c) return;
     const tot=document.querySelectorAll('#rel_pessoas .relp').length, m=this.relSelecionados().length;
     c.textContent = m===tot ? `Todos os ${tot} assistidos` : `${m} de ${tot} assistidos selecionados`; },
-  relFiltrar(){ const q=(document.getElementById('rel_busca').value||'').trim().toLowerCase();
-    document.querySelectorAll('#rel_pessoas .relitem').forEach(el=>{ el.style.display = !q || el.dataset.b.includes(q) ? '' : 'none'; }); },
+  // como a busca principal: sem acento e sem caixa; número também só com dígitos
+  relFiltrar(){ const q=semAcento((document.getElementById('rel_busca').value||'').trim()); const qd=/\d/.test(q)&&/^[\d.\-\/\s]+$/.test(q)?q.replace(/\D/g,''):'';
+    document.querySelectorAll('#rel_pessoas .relitem').forEach(el=>{ el.style.display = !q || el.dataset.b.includes(q) || (qd && (el.dataset.d||'').includes(qd)) ? '' : 'none'; }); },
   relMarcar(v){ document.querySelectorAll('#rel_pessoas .relitem').forEach(el=>{ if(el.style.display!=='none') el.querySelector('.relp').checked=v; }); this.relConta(); },
   relLista(){ const on=document.getElementById('rel_ind').checked; document.getElementById('rel_sel').style.display = on ? '' : 'none'; },
   async gerarRelatorios(){ const v=id=>document.getElementById(id).checked; const op=[v('rel_ind'),v('rel_ger'),v('rel_pla'),v('rel_nom'),v('rel_rem')];
@@ -2270,7 +2277,7 @@ const ui = {
       <table class="subtab"><tr><td style="width:110px">Pasta mãe</td><td>${r.pasta?esc(r.pasta):'—'}</td></tr><tr><td>Situação</td><td>${st}</td></tr><tr><td>Última entrada</td><td>${r.ultima?esc(r.ultima):'—'}</td></tr></table>
       <h3 style="margin:10px 0 4px;font-size:13px">Subpastas</h3><div class="help" style="max-height:170px;overflow:auto">${subs}</div>
       ${r.pasta&&semPasta.length?`<p class="muted" style="margin:6px 0 0">Bases sem pasta: ${semPasta.map(esc).join(', ')}.</p>`:''}
-      <p class="muted" style="margin:6px 0 0">PDF solto na pasta mãe é ignorado. Arquivo já lido não é lido de novo, salvo se for substituído. Nada é apagado nem movido.</p>
+      <p class="muted" style="margin:6px 0 0">PDF solto na pasta mãe é ignorado. Arquivo já lido não é lido de novo, salvo se for substituído; o que deu erro é tentado de novo (até 3 vezes) e o aviso cita o arquivo. Nada é apagado nem movido.</p>
       <div class="acts" style="flex-wrap:wrap"><button class="btn" onclick="API().vigia_escolher().then(x=>x&&ui.modalVigia(x))">${r.pasta?'Trocar pasta mãe…':'Escolher pasta mãe…'}</button>
       ${r.pasta?`<button class="btn" onclick="API().vigia_ativar(${!r.ativa}).then(x=>ui.modalVigia(x))">${r.ativa?'Desativar':'Ativar'}</button>
       <button class="btn" onclick="API().vigia_criar_pastas().then(x=>ui.modalVigia(x))">Criar pastas das bases</button>
@@ -2314,7 +2321,7 @@ const PF_ROT={fato:'Data do fato',denuncia:'Recebimento da denúncia',sentenca:'
 function semAcento(s){ return String(s??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(); }
 function jsa(s){ return esc("'"+String(s??'').replace(/\\/g,'\\\\').replace(/'/g,'\\x27').replace(/\r/g,'\\r').replace(/\n/g,'\\n').replace(/[\u2028\u2029]/g,c=>'\\u'+c.charCodeAt(0).toString(16))+"'"); }
 function esc(s){ return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
-function cmp(a,b){ const da=dt(a), db=dt(b); if(da&&db) return da-db; if(da) return -1; if(db) return 1; return String(a??'').localeCompare(String(b??''),'pt'); }
+function cmp(a,b){ const da=dt(a), db=dt(b); if(da&&db) return da-db; if(da) return -1; if(db) return 1; return String(a??'').localeCompare(String(b??''),'pt',{numeric:true}); }
 function dt(v){ const m=/^(\d{2})\/(\d{2})\/(\d{4})/.exec(String(v??'')); return m? new Date(+m[3],+m[2]-1,+m[1]).getTime():null; }
 window.addEventListener('resize',()=>{ clearTimeout(ui._rz); ui._rz=setTimeout(()=>{ if(document.getElementById('tlv').classList.contains('on')) (ui._tlvModo==='ext'?ui.renderExtTL():ui.renderTLV()); },200); });
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ ui.fecharDrawer(); ui.fecharModal(); ui.fecharTLV(); } });
