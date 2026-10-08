@@ -2180,6 +2180,30 @@ PRIO_REM = {1: ("Crítica", "vermelho", "a remição já alcança o término da 
             5: ("Baixa", "cinza", "menos de 30 dias, ou só estudo e leitura")}
 
 
+def livramento_travado_por_falta(m):
+    """Data do livramento do SEEU fixada pela falta grave nos últimos 12 meses (CP, art. 83, III, "b"): o SEEU imprime "(Existe
+    falta grave nos últimos 12 meses em d)" e a previsão é d + 12 meses. Reconhece pelo texto ou pela coincidência da previsão
+    com a falta homologada (data de referência) ou com a recaptura/interrupção de 12 meses antes. A remição não antecipa essa data."""
+    r = m.get("_bruto") or {}
+    if re.search(r"FALTA GRAVE NOS", rs._sem_acento(r.get("livramento_obs_seeu") or "").upper()):
+        return True
+    d = rs.to_date(r.get("livramento_previsao_seeu") or "") or rs.to_date(m.get("liv") or "")
+    if not d:
+        return False
+    try:
+        d0 = d.replace(year=d.year - 1)
+    except ValueError:
+        d0 = d - timedelta(days=365)
+    datas = {rs.to_date(r.get("data_base_seeu") or "")}  # a falta também reinicia a data-base da progressão
+    for i in r.get("_incidentes") or []:
+        if "FALTA GRAVE" in rs._sem_acento(i.get("tipo") or "").upper() and i.get("situacao") in ("CONCEDIDO", "PENDENTE"):
+            datas |= {rs.to_date(i.get(k) or "") for k in ("data_referencia", "complemento")}
+    for e in r.get("_eventos") or []:
+        if re.search(r"RECAPTURA|FUGA|EVAS|DESCUMPRIMENTO", rs._sem_acento((e.get("motivo") or "") + " " + (e.get("tipo") or "")).upper()):
+            datas.add(rs.to_date(e.get("data") or ""))
+    return d0 in datas
+
+
 def prioridade_remicao(m):
     """(nível, efeito, dias exatos, estimados, educação, total) da remição a requerer de um assistido; None se não há o que remir."""
     D = m.get("fd_rem_det") or {}
@@ -2196,9 +2220,13 @@ def prioridade_remicao(m):
     alvos = []
     if m.get("ext_dias") is not None and m["ext_dias"] > 0:
         alvos.append(("término", m["ext_dias"]))
+    travado = False
     if ativo:
         for k, rot in (("prog_dias", "progressão"), ("liv_dias", "livramento")):
             if m.get(k) is not None and m[k] > 0:
+                if rot == "livramento" and livramento_travado_por_falta(m):
+                    travado = True  # a data do livramento é a do fim da quarentena da falta grave: a remição não a antecipa
+                    continue
                 alvos.append((rot, m[k]))
     efeito, nivel = [], None
     for rot, d in alvos:
@@ -2214,6 +2242,8 @@ def prioridade_remicao(m):
         prox = min(alvos, key=lambda x: x[1]) if alvos else None
         if prox:
             efeito.append("antecipa a %s (em %d dias) em até %s dias" % (prox[0], prox[1], _dias(total)))
+    if travado:
+        efeito.append("livramento (em %d dias) travado pela falta grave nos últimos 12 meses: a remição não o antecipa" % m["liv_dias"])
     certo = any("atestados prontos" in e for e in efeito) or (nivel == 3)
     return nivel, "; ".join(efeito), exatos, estim, edu, total, certo
 
