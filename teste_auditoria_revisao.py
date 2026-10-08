@@ -109,7 +109,7 @@ ok(it and "diferença 0a11m25d" in it[0]["detalhe"] and not ra.fundamentacao(it[
 # 8. regime inicial depois da primeira prisão com diferença menor que 10 dias: informativo
 evs = [ev("PRISÃO/INÍCIO DE CUMPRIMENTO", "PRISÃO EM FLAGRANTE", "29/11/2016"), ev("INTERRUPÇÃO", "SOLTURA", "30/11/2016", ""),
        ev("PRISÃO/INÍCIO DE CUMPRIMENTO", "PRISÃO DEFINITIVA", "07/02/2024")]
-it = [i for i in itens(reg([crime()], [inc("FIXAÇÃO/ALTERAÇÃO DE REGIME", "Fechado - Regime Inicial", "", "07/02/2024")], evs, data_base_seeu="07/02/2024"))
+it = [i for i in itens(reg([crime(data_infracao="20/11/2016")], [inc("FIXAÇÃO/ALTERAÇÃO DE REGIME", "Fechado - Regime Inicial", "", "07/02/2024")], evs, data_base_seeu="07/02/2024"))
       if i["tipo"] == "regime-inicial-depois-da-primeira-prisao"]
 ok(it and it[0]["nivel"] == "info" and "2.248.958" in it[0]["detalhe"] and "Houve soltura" in it[0]["detalhe"], "regime inicial: %s" % it)
 
