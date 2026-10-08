@@ -104,7 +104,10 @@ _a8 = ([crime("02/07/2012", "26/08/2013", "14 ano(s), 0 mês(es) e 0 dia(s)", pr
         ev("28/06/2026", "INÍCIO DO CUMPRIMENTO REGIME SEMIABERTO", proc=P)])
 l = linha(reg(*_a8, [inc("LIVRAMENTO CONDICIONAL", "28/12/2020", "28/12/2020", "25/11/2022"),
                      inc("REVOGAÇÃO DE LIVRAMENTO CONDICIONAL", "", "01/08/2024")], nasc="09/06/1992"))
-confere(l["ppe_status"] == "Não prescrita" and "art. 88" in l["ppe_detalhe"], "A8: período de prova fora do saldo: %s" % l["ppe_status"])
+# rev. 4 (A5): com o teto da remição em 2/3 dos dias (mais a leitura), um saldo inferior a 1 ano passa a ser possível nesta fuga
+# longa, e o programa pede a pena remanescente (antes, com 1/2, concluía "não prescrita")
+confere(l["ppe_status"] in ("Não prescrita", "A VERIFICAR: informe a pena remanescente na fuga de 01/08/2024") and "art. 88" in l["ppe_detalhe"],
+        "A8: período de prova fora do saldo: %s" % l["ppe_status"])
 l = linha(reg(*_a8, [inc("LIVRAMENTO CONDICIONAL", "28/12/2020", "28/12/2020", "25/11/2022")], nasc="09/06/1992"))
 confere("pressupõe a revogação" in l["ppe_detalhe"] and "não se desconta do saldo (CP, art. 88" not in l["ppe_detalhe"],
         "A8: sem revogação registrada, o art. 88 não se aplica: %s" % l["ppe_status"])

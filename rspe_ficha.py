@@ -779,7 +779,7 @@ def _referencia_remicao(r, C):
     anos = sorted({int(m.group(1)) for k in r for m in [re.match(r"(?:indulto|comutacao)_(\d{4})$", k)] if m and r.get(k) and not _imposs(str(r[k]))})
     marcos = [(date(a, 12, 25), "do decreto de 25/12/%d" % a) for a in anos]
     for i in r.get("_incidentes") or []:
-        if (i.get("situacao") or "CONCEDIDO") == "CONCEDIDO" and "REGIME" in (i.get("tipo") or "").upper() \
+        if (i.get("situacao") or "CONCEDIDO") == "CONCEDIDO" and rs.e_incidente_regime(i) \
                 and "PROGRESS" in (i.get("complemento") or "").upper() and D(i.get("data_referencia")):
             marcos.append((D(i["data_referencia"]), "da progressão de %s (%s)" % (i["data_referencia"], (i.get("complemento") or "").strip())))
     if not marcos:
@@ -958,6 +958,11 @@ def reconciliar_eventos(r, f):
             if ok and fora:
                 mm = re.search(r"PROCEDENTE:\s*([^,]+)", t, re.I)
                 rua = bool(RE_ENTRADA_RUA.search(t))
+                # a "Data Prisão" da ficha, poucos dias antes da entrada na unidade (delegacia, audiência de custódia), é o início
+                # da custódia: o reinício vai nela, para o confronto da prisão com a ficha não alertar contra o próprio lançamento
+                _xp = _dp(f.get("data_prisao") or "")
+                if _xp and d < _xp < x and (x - _xp).days <= 30:
+                    x = _xp
                 r["_eventos"].append({"tipo": "REINÍCIO", "motivo": "%s (lançado pela ficha SIAPEN)" % ("RECAPTURA" if rua else "ENTRADA NO SISTEMA PRISIONAL"),
                                       "complemento": "", "data": rs.fmt(x), "data_decisao": "", "data_referencia": "", "processos": "", "_ficha": True})
                 r["_eventos"].sort(key=lambda e2: rs.to_date(e2.get("data") or "") or date.min)
@@ -1139,8 +1144,11 @@ def _prisao_x_ficha(r, f):
     if not depois:
         return []  # parado no RSPE depois dessa data: tratado na retomada
     s = min(depois)
-    if any(x < y < s and RE_SAIDA_LIVRE.search(t) for y, t in ((_dp(e.get("data") or ""), e.get("texto") or "") for e in f.get("eventos", [])) if y):
-        return []  # a ficha registra soltura no intervalo: não é custódia contínua até o início no RSPE
+    if any(x < y < s and (RE_SAIDA_LIVRE.search(t) or re.search(r"SALVO[- ]CONDUTO|TRANSFER[ÊE]NCIA PARA (O )?ESTADO", t, re.I))
+           for y, t in ((_dp(e.get("data") or ""), e.get("texto") or "") for e in f.get("eventos", [])) if y):
+        # a ficha registra soltura (ou saída para outro estado, com salvo-conduto) no intervalo: não é custódia contínua até o
+        # início no RSPE
+        return []
     # o início pode ser o reinício que o programa lançou a partir da ficha (evento _ficha), não um registro do RSPE
     pela_ficha = any(e.get("_ficha") and rs.to_date(e.get("data") or "") == s for e in evs)
     return [_item_rf("alerta", ("Prisão em %s na ficha; cômputo só a partir de %s, reinício lançado pela ficha (%s sem cômputo)" if pela_ficha else
@@ -1316,7 +1324,8 @@ def _conduta_x_ficha(r, f, hoje=None):
 def _regime_x_ficha(r, f):
     """Progressão, regressão e livramento que a ficha registra (cumprimento da decisão na unidade) e o RSPE não traz."""
     out = []
-    incs = [i for i in r.get("_incidentes", []) if not i.get("_ficha") and not rs._negado(i)]
+    # a alteração de data-base ("... DE PROGRESSÃO DE REGIME/LIVRAMENTO CONDICIONAL") não é progressão, regressão nem livramento
+    incs = [i for i in r.get("_incidentes", []) if not i.get("_ficha") and not rs._negado(i) and not rs.e_alteracao_data_base(i)]
     def no_rspe(padrao, x, dias=45):
         for i in incs:
             t = ((i.get("tipo") or "") + " " + (i.get("complemento") or "")).upper()
@@ -1328,13 +1337,26 @@ def _regime_x_ficha(r, f):
         return False
     def prog_antes(reg_m, x):
         # a ida à unidade costuma vir meses depois da decisão: progressão para o mesmo regime decidida até ~1 ano antes
-        # (ou até 45 dias depois) é a mesma
+        # (ou até 90 dias depois: decisão lançada no SEEU depois da transferência) é a mesma
         for i in incs:
             t = rs._sem_acento(((i.get("tipo") or "") + " " + (i.get("complemento") or "")).upper()).replace("-", "").replace(" ", "")
             if "PROGRESS" in t and reg_m in t:
                 for c in ("data_referencia", "data_decisao"):
                     d = rs.to_date(i.get(c) or "")
-                    if d and x - timedelta(days=380) <= d <= x + timedelta(days=45):
+                    if d and x - timedelta(days=380) <= d <= x + timedelta(days=90):
+                        return True
+        return False
+
+    def regr_perto(x):
+        # a ficha registra a regressão na saída para a unidade (às vezes meses depois da decisão), na ciência da decisão, no
+        # mandado de prisão, no parecer do alvará ou na proposta do conselho disciplinar (antes da decisão): regressão do RSPE
+        # (cautelar ou definitiva) decidida até ~1 ano antes ou até ~8 meses depois é a mesma
+        for i in incs:
+            t = ((i.get("tipo") or "") + " " + (i.get("complemento") or "")).upper()
+            if "REGRESS" in t:
+                for c in ("data_referencia", "data_decisao"):
+                    d = rs.to_date(i.get(c) or "")
+                    if d and x - timedelta(days=380) <= d <= x + timedelta(days=240):
                         return True
         return False
 
@@ -1343,7 +1365,7 @@ def _regime_x_ficha(r, f):
         # somatório) até essa data
         ult = None
         for i in incs:
-            if "REGIME" not in (i.get("tipo") or "").upper() or (i.get("situacao") or "CONCEDIDO") != "CONCEDIDO":
+            if not rs.e_incidente_regime(i) or (i.get("situacao") or "CONCEDIDO") != "CONCEDIDO":
                 continue
             d = rs.to_date(i.get("data_referencia") or i.get("data_decisao") or "")
             reg = re.match(r"\s*(SEMI-?ABERTO|ABERTO|FECHADO)", rs._sem_acento((i.get("complemento") or "").upper()))
@@ -1364,9 +1386,12 @@ def _regime_x_ficha(r, f):
                            and abs((rs.to_date(e["data"]) - x).days) <= 45 for e in r.get("_eventos", []))
     _evs = sorted((e for e in r.get("_eventos", []) if rs.to_date(e.get("data") or "")), key=lambda e: rs.to_date(e["data"]))
     _per = rs.periodos_custodia(_evs) if _evs else []
+    # registro da ficha em período que o RSPE trata como liberdade (fuga sem recaptura, soltura): progressão, regressão ou
+    # livramento ali são de outra execução (a ficha é da pessoa, não do processo)
+    _fora = lambda x: bool(_per) and not any(a - timedelta(days=1) <= x and (b is None or x <= b + timedelta(days=1)) for a, b in _per)
     for e in f.get("eventos", []):
         x, u = _dp(e.get("data") or ""), (e.get("texto") or "").upper()
-        if not x or (_ini and x < _ini):
+        if not x or (_ini and x < _ini) or _fora(x):
             continue
         m = re.search(r"PROGRESS[ÃA]O DE REGIME PARA O\s+(SEMI[- ]?ABERTO|ABERTO)", u)
         if not m and re.search(r"MOTIVO:\s*PROGRESS", u):
@@ -1392,12 +1417,12 @@ def _regime_x_ficha(r, f):
         # ao monitoramento depois de progressão ou reconsideração)
         _dest = re.search(r"DESTINO:\s*([^,]+)", u)
         _dest_brando = bool(_dest) and classificar_unidade(_dest.group(1))[0] == "monitoramento"
-        if re.search(r"REGRESS[ÃA]O", u) and "regr" not in vistos and not no_rspe(r"REGRESS", x) and not _dest_brando:
+        if re.search(r"REGRESS[ÃA]O", u) and "regr" not in vistos and not regr_perto(x) and not _dest_brando:
             vistos.add("regr")
             out.append(("Regressão registrada na ficha em %s e ausente no RSPE" % rs.fmt(x),
                         "Ficha: %s. Conferir se houve decisão de regressão (e a falta que a motivou) e o lançamento no SEEU." % _br(e["texto"])[:160]))
         if re.search(r"MOTIVO:\s*LIVRAMENTO CONDICIONAL|BENEFICIADO COM (O )?LIVRAMENTO", u) and "lc" not in vistos and not no_rspe(r"LIVRAMENTO", x) \
-                and not _lc_ev(x) and not (_per and not any(a - timedelta(days=1) <= x and (b is None or x <= b + timedelta(days=1)) for a, b in _per)):
+                and not _lc_ev(x):
             vistos.add("lc")
             out.append(("Livramento condicional registrado na ficha em %s e ausente no RSPE" % rs.fmt(x),
                         "Ficha: %s. Sem o incidente no RSPE, o período de prova não é contado: pedir o lançamento no SEEU." % _br(e["texto"])[:160]))

@@ -1269,7 +1269,7 @@ const ui = {
   explicaHtml(x){ const P=x.ppe_explicacao||[]; if(!P.length) return '';
     return `<div class="expl"><b>Como cheguei a este resultado</b><ol>${P.map(p=>`<li>${penaExt(esc(p)).replace(/^(Regra aplicada:|A conta:|Resultado:|Se o resultado parecer errado, confira na guia:)/,'<b>$1</b>')}</li>`).join('')}</ol></div>`; },
   prescCards(r){ const pe=this.prescModo!=='pp'; const todas=(r.presc_linhas||[]);
-    const rel=s=>s.ajustado||(pe?(s.ppe_cor==='vermelho'||s.ppe_cor==='amarelo'||/^Verificar na ação penal/.test(s.ppe_status||'')):(s.retro_cor==='vermelho'||/^Verificar na ação penal/.test(s.retro_status||'')));
+    const rel=s=>s.ajustado||(pe?(s.ppe_cor==='vermelho'||s.ppe_cor==='amarelo'||/^Verificar na ação penal/.test(s.ppe_status||'')):(s.retro_cor==='vermelho'||s.retro_cor==='amarelo'||/^Verificar na ação penal/.test(s.retro_status||'')));
     const grupos={}; todas.filter(rel).forEach(s=>{ const k=s.proc_crim||'não informada'; (grupos[k]=grupos[k]||[]).push(s); });
     const um=(xs,k)=>{ const v=[...new Set(xs.map(x=>x[k]||''))]; return v.length===1?v[0]:null; };
     const d=v=>v?esc(v):'—'; const cur=t=>String(t||'').replace(/^Prescrição (executória|da pretensão punitiva|retroativa|intercorrente) aparente/,'Prescrição aparente');
@@ -1288,9 +1288,9 @@ const ui = {
       return `<div class="pc"><div class="pc-h"><b>Ação penal ${esc(k)}</b><span class="pc-m">${pl(xs.length,'crime','crimes')}</span><span class="sp"></span>${pior[st]?`<span class="pill ${pior[sc]||'none'}">${esc(cur(pior[st]).split(' em ')[0])}</span>`:''}</div>
         <table><thead><tr>${cols.map(c=>`<th style="width:${c[1]}%">${c[0]}</th>`).join('')}<th style="width:300px"></th></tr></thead><tbody>${lin}</tbody></table></div>`; }).join('');
     const abrir=`<div style="text-align:right;margin-top:8px"><span class="mini" onclick="event.stopPropagation();ui.abrir(${jsa(r.id)})">Abrir ficha completa</span></div>`;
-    return cards?`<div class="pc-wrap">${cards}</div>${abrir}`:`<div class="muted">Nenhum crime com prescrição ${pe?'executória aparente ou iminente':'da pretensão punitiva aparente'} nem datas a verificar.</div>`; },
+    return cards?`<div class="pc-wrap">${cards}</div>${abrir}`:`<div class="muted">Nenhum crime com prescrição ${pe?'executória aparente ou iminente':'da pretensão punitiva aparente ou a verificar'} nem datas a verificar.</div>`; },
   subTabela(r,spec){ if(spec.id==='aud') return this.audCards(r); if(spec.id==='presc') return this.prescCards(r); const cols=spec.sub_cols; let rows=r[spec.sub]||[]; const tot=cols.reduce((s,c)=>s+c[2],0)+6;
-    if(spec.id==='presc'){ const pe=this.prescModo!=='pp'; rows=[...rows].sort((x,y)=>String(x.proc_crim||'').localeCompare(String(y.proc_crim||''))); rows=rows.filter(s=>s.ajustado||(pe?(s.ppe_cor==='vermelho'||s.ppe_cor==='amarelo'||/^Verificar na ação penal/.test(s.ppe_status||'')):(s.retro_cor==='vermelho'||/^Verificar na ação penal/.test(s.retro_status||'')))); }
+    if(spec.id==='presc'){ const pe=this.prescModo!=='pp'; rows=[...rows].sort((x,y)=>String(x.proc_crim||'').localeCompare(String(y.proc_crim||''))); rows=rows.filter(s=>s.ajustado||(pe?(s.ppe_cor==='vermelho'||s.ppe_cor==='amarelo'||/^Verificar na ação penal/.test(s.ppe_status||'')):(s.retro_cor==='vermelho'||s.retro_cor==='amarelo'||/^Verificar na ação penal/.test(s.retro_status||'')))); }
     let ocultos=0; if(spec.id==='aud' && !this.mostrarTudo){ const all=rows; rows=all.filter(s=>s.baixado||(s.nivel!=='info'&&s.nivel!=='ok')); ocultos=all.length-rows.length; }
     const cg='';
     const calc=!!spec.sub_calc, baixa=!!spec.sub_baixa; const head=`<tr>${cols.map(c=>`<th style="width:${(100*c[2]/tot).toFixed(1)}%">${c[1]}</th>`).join('')}${(calc||baixa)?'<th></th>':''}</tr>`;

@@ -1512,10 +1512,16 @@ def situacao_execucao(campos, eventos, incidentes, crimes, hoje):
     fl = [f for f in fl if f]
     out["fracao_progressao_aplicada"] = str(max(fp)) if fp else ""
     out["fracao_livramento_aplicada"] = str(max(fl)) if fl else ""
-    # data-base: última FIXAÇÃO/ALTERAÇÃO DE REGIME (data de referência)
+    # data-base (quando o SEEU não a imprime): última fixação/alteração de regime CONCEDIDA ou alteração de data-base da
+    # progressão (data de referência). Progressão negada ou pendente não move a data-base; a regressão cautelar e o regime
+    # fixado pela soma/unificação também não (STJ, Tema 1006); a alteração de data-base só do livramento é de outro prazo
     data_base = None
     for i in incidentes:
-        if "REGIME" in (i.get("tipo") or "").upper():
+        if i.get("situacao") != "CONCEDIDO":
+            continue
+        _cp = _sem_acento(i.get("complemento") or "").upper()
+        if (e_incidente_regime(i) and not re.search(r"CAUTELAR|SOMAT|UNIFICA", _cp)) or (
+                e_alteracao_data_base(i) and not e_data_base_so_livramento(i)):
             d = to_date(i.get("data_referencia") or i.get("data_decisao") or "")
             if d and (data_base is None or d > data_base):
                 data_base = d
@@ -1709,8 +1715,28 @@ def pena_curta(txt):
 RE_FALTA = re.compile(r"FALTA|REGRESS|PERDA|PERDID|FUGA|EVAS|SAN[ÇC][ÃA]O|RDD|DISCIPLIN|ISOLAMENTO", re.I)
 
 
+def e_alteracao_data_base(i):
+    """'ALTERAÇÃO DE DATA-BASE DE PROGRESSÃO DE REGIME/LIVRAMENTO CONDICIONAL': só muda a data-base; não é progressão,
+    regressão nem fixação de regime (o tipo contém "REGIME", mas o regime não muda)."""
+    t = (i.get("tipo") or "").upper()
+    return "DATA-BASE" in t or "DATA BASE" in t
+
+
+def e_data_base_so_livramento(i):
+    """Alteração de data-base cujo complemento é só o livramento condicional: não mexe na data-base da progressão."""
+    comp = _sem_acento(i.get("complemento") or "").upper()
+    return e_alteracao_data_base(i) and "LIVRAMENTO" in comp and "PROGRESS" not in comp
+
+
+def e_incidente_regime(i):
+    """Fixação/alteração de regime (regime inicial, progressão, regressão, somatório), sem a alteração de data-base."""
+    return "REGIME" in (i.get("tipo") or "").upper() and not e_alteracao_data_base(i)
+
+
 def _rotulo_incidente(i):
     tipo, comp = i.get("tipo", ""), i.get("complemento", "")
+    if e_alteracao_data_base(i):
+        return "Alteração de data-base" + ((" (%s)" % " ".join(comp.split())) if comp.strip() else "")
     if "REGIME" in tipo.upper() and comp:
         return " ".join(comp.split())
     return " ".join(("%s %s" % (tipo, comp)).split())
@@ -4499,7 +4525,7 @@ def derivar(r, crimes, eventos, incidentes):
     r["reincidente"] = "S" if any(c["reincidente_comum"] == "S" or c["reincidente_especifico"] == "S" for c in crimes) else "N"
 
     # histórico de regime / progressões
-    reg = [i for i in inc_conc if "REGIME" in i["tipo"].upper()]
+    reg = [i for i in inc_conc if e_incidente_regime(i)]  # a alteração de data-base não é progressão nem regime
     r["historico_regime"] = " | ".join(
         "%s (ref. %s, dec. %s)" % (i["complemento"], i["data_referencia"] or "-", i["data_decisao"] or "-") for i in reg)
     prog = [i for i in reg if "PROGRESS" in i["complemento"].upper()]

@@ -178,6 +178,36 @@ def regime_progressao(data_fato):
     return None
 
 
+def vigencia_lei(trecho, padrao):
+    """Início de vigência de uma redação do art. 112 lido das janelas da base jurídica (regimes_vigencia): o 'de' da primeira
+    janela cujo rótulo cita a lei (trecho, ex.: '15.358'). Se a data for corrigida na base, textos e regras acompanham."""
+    for j in carregar().get("progressao", {}).get("regimes_vigencia", []):
+        if trecho in (j.get("lei") or "") and d(j.get("de") or ""):
+            return d(j["de"])
+    return padrao
+
+
+def data_lei_11464():
+    return vigencia_lei("11.464", date(2007, 3, 29))
+
+
+def data_lei_13964():
+    return vigencia_lei("13.964", date(2020, 1, 23))
+
+
+def data_lei_15358():
+    return vigencia_lei("15.358", date(2026, 3, 25))
+
+
+def data_lei_15402():
+    return vigencia_lei("15.402", date(2026, 5, 8))
+
+
+def data_lei_10792():
+    """Lei 10.792/2003 (nova redação do art. 112 da LEP): antes dela, a redação original de 1984."""
+    return d(carregar().get("progressao", {}).get("lei_10792_2003_vigencia", "2003-12-02")) or date(2003, 12, 2)
+
+
 ESPECIAIS = {  # hipóteses próprias do art. 112 (chave na janela de vigência -> descrição)
     "feminicidio_primario": "feminicídio, primário (LEP, art. 112, VI-A de 10/10/2024 a 24/03/2026; VI, d, desde 25/03/2026)",
     "milicia": "constituição de milícia privada (LEP, art. 112, VI, c)",
@@ -214,10 +244,10 @@ def fracao_progressao_esperada(data_fato, hediondo, morte, vga, reincidente, rei
             if reincidente and reinc_especifico is False and j.get("hediondo_reincidente_generico"):
                 chave = "hediondo_reincidente_generico"
                 obs.append("reincidente genérico em hediondo: STJ Tema 1084 / STF Tema 1169" + (
-                    " (analogia na redação da Lei 15.358/2026, sem precedente específico - conferir)" if (d(j.get("de", "")) or date.min) >= date(2026, 3, 25) else ""))
+                    " (analogia na redação da Lei 15.358/2026, sem precedente específico - conferir)" if (d(j.get("de", "")) or date.min) >= data_lei_15358() else ""))
             elif reincidente and reinc_especifico is None and j.get("hediondo_reincidente_generico"):
                 obs.append("se a reincidência for genérica (não em hediondo), aplica-se %s (STJ Tema 1084; STF Tema 1169%s)" % (
-                    j["hediondo_reincidente_generico"], "; por analogia na redação da Lei 15.358/2026" if (d(j.get("de", "")) or date.min) >= date(2026, 3, 25) else ""))
+                    j["hediondo_reincidente_generico"], "; por analogia na redação da Lei 15.358/2026" if (d(j.get("de", "")) or date.min) >= data_lei_15358() else ""))
     elif vga:
         chave = "vga_reincidente" if reincidente else "vga_primario"
         # a Auditoria só pede reinc_especifico=False para hediondos: o RSPE não diz se a condenação anterior teve violência
@@ -281,7 +311,7 @@ def fracao_livramento_esperada(hediondo, reincidente, trafico=False, trafico_pes
             "; art. 44, p. ú., Lei 11.343/06" if trafico else " - tráfico de pessoas" if (trafico_pessoas and not hediondo) else "")
     if reincidente:
         return fr(l.get("comum_reincidente", "1/2")), "1/2 (art. 83, II, CP - reincidente em crime doloso)"
-    return fr(l.get("comum_primario", "1/3")), "1/3 (art. 83, I, CP - não reincidente em crime doloso e com bons antecedentes)"
+    return fr(l.get("comum_primario", "1/3")), "1/3 (art. 83, I, CP - não reincidente em crime doloso; os maus antecedentes não afastam o 1/3)"
 
 
 # ---------------------------------------------------------------- hediondos / VGA
