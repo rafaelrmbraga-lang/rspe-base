@@ -80,3 +80,10 @@ a227 = [a for a in C2["atestados"] if a["numero"].startswith("227")][0]
 assert [s["setor"] for s in a227["segs"]] == ["Prendebem (prendedores)", "Poligonal Engenharia Ltda", "Faxina"], a227["segs"]
 assert not [p for p in C2["pendencias"] if p["status"] in ("SEM_ATESTADO", "A_CONFERIR") and p["data"] < date(2026, 7, 14)], C2["pendencias"]
 print("ok: atestado com vários setores e setor desativado no SIAPEN")
+
+# âncora das asserções negativas (A25): os nomes testados com "not any(...)" existem no módulo; se um tipo, ação ou status for
+# renomeado, a asserção negativa passaria sem testar nada - aqui ela falha
+_src = open(rr.__file__, encoding="utf-8").read()
+_nomes = ['"baixa sem início"', '"ref"', '"Pedir atestado"', '"SEM_ATESTADO"', '"A_CONFERIR"']
+assert all(n in _src for n in _nomes), [n for n in _nomes if n not in _src]
+print("ok: nomes das asserções negativas existem em rspe_remicao")

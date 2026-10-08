@@ -83,13 +83,19 @@ def _dias(x):
     return _num(round(float(x or 0)))
 
 
-def _arred_coluna(vals):
-    """Arredonda uma coluna de dias mantendo a soma igual ao total arredondado (maiores restos): a tabela fecha."""
-    alvo = round(sum(vals))
+def _arred_coluna(vals, alvo=None):
+    """Arredonda uma coluna de dias mantendo a soma igual ao total arredondado (maiores restos): a tabela fecha. Com alvo, a
+    soma fica igual a ele (o total já exibido em outro quadro do mesmo PDF)."""
+    alvo = round(sum(vals)) if alvo is None else int(alvo)
     base = [int(v) for v in vals]
     resto = sorted(range(len(vals)), key=lambda i: -(vals[i] - base[i]))
     for i in resto[:max(0, alvo - sum(base))]:
         base[i] += 1
+    for i in reversed(resto):  # alvo abaixo da soma truncada (diferença de centésimos): tira dos menores restos
+        if sum(base) <= alvo:
+            break
+        if base[i] > 0:
+            base[i] -= 1
     return base
 
 
@@ -343,8 +349,12 @@ def _etiqueta_prazo(sit, cor, dias, ped=""):
     sl = s.lower()
     if not s or s in ("—",):
         return ("Não consta no RSPE", "cinza", "")
-    if sl.startswith("vencid") or sl.startswith("lapso") or sl.startswith("extinção cabível"):
-        return ("Vencido", "vermelho", s if "verificar" in sl else "")
+    # complemento da situação da tela ("Vencido há 16 dias · sem pedido no RSPE - requerer"): vai para a observação
+    resto = s.split(" · ", 1)[1].strip() if " · " in s else ""
+    if sl.startswith("extinção cabível"):
+        return ("Extinção cabível", "vermelho", s if "verificar" in sl else resto)
+    if sl.startswith("vencid") or sl.startswith("lapso"):
+        return ("Vencido", "vermelho", s if "verificar" in sl else resto)
     if sl.startswith("a verificar") or sl.startswith("extinção a verificar"):
         return ("A verificar", "amarelo", s if sl.startswith("a verificar") else "")
     if sl.startswith("em cumprimento") or sl.startswith("em ") or sl.startswith("vence") or sl.startswith("término"):
@@ -796,7 +806,7 @@ def relatorio_individual(m, caminho, nome_base):
     rot, cor, obs = _etiqueta_prazo(m.get("ext_sit"), m.get("ext_cor"), m.get("ext_dias"))
     hip = m.get("ext_hipoteses") if m.get("ext_hipoteses") not in (None, "", "—") else ""
     add("Término da pena", dm("termino") and (dm("termino") + (" (calculado)" if term_calc else "")), rot, cor,
-        hip.split(";")[0] if m.get("ext_cor") in ("vermelho", "amarelo") and hip else "")
+        hip.split(";")[0] if m.get("ext_cor") in ("vermelho", "amarelo") and hip else (obs if cor == "vermelho" else ""))
     if m.get("falta") and m.get("falta") not in ("Não consta", "—"):
         fc = "vermelho" if m["falta"].startswith("Sim") else "amarelo"
         add("Falta grave (12 meses)", "", "Sim" if fc == "vermelho" else "A apurar", fc, (m.get("falta_full") or m.get("falta") or "").split(" · ", 1)[-1][:120])
@@ -808,8 +818,10 @@ def relatorio_individual(m, caminho, nome_base):
             rot, cor = _etiqueta_indulto(m.get(kc), m.get(kc + "_cor"))
             add("Comutação %s" % ano, dec[ano] + ", art. 13", rot, cor, _obs_indulto(m.get(kc + "_full")))
     pr, pe = m.get("presc_retro"), m.get("presc_ppe")
-    if m.get("presc_retro_cor") == "vermelho":
-        add("Prescrição punitiva", "", "Aparente", "vermelho", (m.get("presc_retro_full") or "").replace("Aparente: ", ""))
+    if m.get("presc_retro_cor") in ("vermelho", "amarelo"):
+        # "A verificar": aparente pelas datas do RSPE, mas depende de marco que ele não traz (pronúncia, acórdão, datas incoerentes)
+        add("Prescrição punitiva", "", "Aparente" if m["presc_retro_cor"] == "vermelho" else "A verificar", m["presc_retro_cor"],
+            re.sub(r"^(Aparente|A verificar)\s*:\s*", "", m.get("presc_retro_full") or ""))
     if m.get("presc_ppe_cor") in ("vermelho", "amarelo"):
         # o rótulo é o da tela: "Iminente" só quando a prescrição está mesmo próxima; o mais comum é "A verificar"
         add("Prescrição executória", "", "Aparente" if m["presc_ppe_cor"] == "vermelho" else (pe or "A verificar"), m["presc_ppe_cor"],
@@ -1105,7 +1117,9 @@ def estatisticas(modelos, hoje=None):
             trab["Trabalha (interno)"] += 1
         else:
             trab["Não trabalha"] += 1
-        estudo += not str(m.get("fd_estudo") or "Não").strip().lower().startswith("não")
+        # estuda = matrícula ativa na ficha (estudo em curso), como "trabalha" = trabalho em curso; "Estudo a requerer"
+        # (fd_estudo) é outra coisa: horas de estudo pendentes de remição
+        estudo += any((L.get("emp") or "").startswith("Estudo") and "matrícula ativa" in (L.get("per") or "") for L in (m.get("fd_linhas") or []))
     E["conduta"], E["trabalho"], E["estudo"] = cond, trab, estudo
     E["unidade"] = Counter(_rotulo_unidade(((m.get("ficha") or {}).get("unidade") or "")) for m in modelos if m.get("ficha_tem"))
     # remição: o que está pendente (assistidos e dias), pela ficha
@@ -1635,7 +1649,7 @@ def relatorio_geral(modelos, caminho, nome_base, nominal=True):
     P = F["padic"]
     trab_n = E["trabalho"].get("Trabalha (interno)", 0) + E["trabalho"].get("Trabalha (externo)", 0)
     el.append(numeros([(trab_n, "trabalham", (pct(trab_n, nf) + " dos com ficha") if nf else ""),
-                       (E["estudo"], "estudam", (pct(E["estudo"], nf) + " dos com ficha") if nf else ""),
+                       (E["estudo"], "estudam", (pct(E["estudo"], nf) + " dos com ficha · matrícula ativa") if nf else "matrícula ativa na ficha"),
                        (P.get("PADIC instaurado", 0), "faltas com PADIC instaurado", "sem resultado lançado na ficha"),
                        (F["ficha_sem_seeu"], "faltas graves e fugas da ficha sem registro no SEEU", rs.pl(F["ficha_sem_seeu_ass"], "assistido", "assistidos")),
                        (F["firme12"], "assistidos com falta grave nos últimos 12 meses", "sanção reconhecida em juízo")],
@@ -1666,7 +1680,9 @@ def relatorio_geral(modelos, caminho, nome_base, nominal=True):
     O = E["rem_orig"]
     # as três parcelas fecham o total: atestados (peticionados, só emitidos e diferença), trabalho sem atestado, estudo e leitura
     el.append(numeros([(O["ass"], "assistidos com remição a requerer (com a estimativa)",
-                        "%s com dias exatos (atestado ou leitura) · %s sem nenhuma remição no RSPE (toda a base)" % (O["ass_exatos"], E["rem_zero"])),
+                        # mesma contagem do cartão vermelho "Remição a requerer" da aba Ficha disciplinar (a diferença de dias, amarela
+                        # na aba como "Conferir remição", não entra)
+                        "%s em vermelho na aba Ficha (remição a requerer / atestado não lançado) · %s sem nenhuma remição no RSPE (toda a base)" % (E["rem_req"], E["rem_zero"])),
                        (_num(O["r_total"]), "dias a remir (todas as origens)"),
                        (_num(O["r"]["nao_lancado"] + O["r"]["emitido"] + O["r"]["divergencia"]), "dias de atestados sem remição ou com remição menor",
                         "%s peticionados · %s só emitidos · %s de diferença" % (_num(O["r"]["nao_lancado"]), _num(O["r"]["emitido"]), _num(O["r"]["divergencia"]))),
@@ -1818,8 +1834,16 @@ def gerar(modelos, pasta, nome_base, individual=True, geral=True, nominal=True, 
     """Cria <pasta>/Relatorios <data hora>/ com o geral e a subpasta Individuais. O geral e a estatística usam
     'modelos'; os PDFs individuais, 'individuais' (quando informado, os assistidos escolhidos).
     Devolve (pasta, n_individuais, erros)."""
-    destino = os.path.join(pasta, "Relatorios %s" % datetime.now().strftime("%Y-%m-%d %Hh%M"))
-    os.makedirs(destino, exist_ok=True)
+    # pasta nova a cada geração: duas gerações no mesmo minuto não se misturam (a 2ª vai para "... (2)")
+    base_dest = os.path.join(pasta, "Relatorios %s" % datetime.now().strftime("%Y-%m-%d %Hh%M"))
+    destino, n = base_dest, 1
+    while True:
+        try:
+            os.makedirs(destino)
+            break
+        except FileExistsError:
+            n += 1
+            destino = "%s (%d)" % (base_dest, n)
     erros, n = [], 0
     if geral:
         try:
@@ -1983,7 +2007,9 @@ def relatorio_remicao(modelos, caminho, nome_base, nominal=True):
     # dias inteiros por coluna, com a soma de cada coluna igual ao total da origem no quadro 1 (a tabela fecha)
     _uns = list(por_un)
     for k in ks:
-        for u, v in zip(_uns, _arred_coluna([por_un[u][k] for u in _uns])):
+        _v = [por_un[u][k] for u in _uns]
+        # mesma soma do quadro 1 quando as unidades cobrem a origem inteira (sem isso, 6.112 lá e 6.111 aqui)
+        for u, v in zip(_uns, _arred_coluna(_v, O["r"][k] if abs(sum(_v) - O["dias"][k]) < 1 else None)):
             por_un[u]["r_" + k] = v
     for u in _uns:
         por_un[u]["r_total"] = sum(por_un[u]["r_" + k] for k in ks)
@@ -2722,10 +2748,21 @@ def relatorio_falhas(d, caminho, nome_base):
             return "O PDF não tem o cabeçalho do RSPE do SEEU nem o da Ficha Disciplinar do SIAPEN (outro documento, digitalização ou PDF protegido)."
         if "NÚMERO DA EXECUÇÃO" in u:
             return "A 1ª página falta ou o número do processo de execução está ilegível: gerar o RSPE de novo no SEEU."
-        if "PASSWORD" in u or "ENCRYPT" in u:
+        if "PASSWORD" in u or "ENCRYPT" in u or "SENHA" in u:
             return "PDF protegido por senha."
-        if "EOF" in u or "PDFSYNTAX" in u or "STARTXREF" in u or "ROOT OBJECT" in u or "REALLY A PDF" in u:
-            return "Arquivo corrompido ou baixado pela metade: baixar de novo."
+        # a mensagem já chega traduzida (rspe_app._msg_erro_pdf); os termos em inglês ficam para mensagens não traduzidas
+        if "CORROMPIDO" in u or "INCOMPLETO" in u or "EOF" in u or "PDFSYNTAX" in u or "STARTXREF" in u:
+            return "Arquivo corrompido ou baixado pela metade: baixar ou gerar o PDF de novo."
+        if "NÃO É PDF VÁLIDO" in u or "ROOT OBJECT" in u or "REALLY A PDF" in u:
+            return "O arquivo não é um PDF válido (vazio ou de outro tipo com a extensão .pdf): gerar o PDF de novo no SEEU."
+        if "SEM PERMISSÃO" in u or "PERMISSION" in u:
+            return "Arquivo aberto em outro programa ou sem permissão de leitura: fechar o programa e importar de novo."
+        if "NÃO ENCONTRADO" in u:
+            return "O arquivo foi movido ou apagado durante a importação: importar de novo."
+        if "SEM TEXTO" in u:
+            return "PDF digitalizado (imagem, sem texto): gerar o PDF direto do SEEU/SIAPEN, não escaneado."
+        if "FICHA DISCIPLINAR" in u and "FALHA NA LEITURA" in u:
+            return "Ficha disciplinar com falha na leitura: enviar o PDF para correção."
         return "Erro na leitura do arquivo: enviar o PDF para análise."
 
     el.append(Paragraph("1. Arquivos não importados", st["h2"]))

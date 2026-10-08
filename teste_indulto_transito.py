@@ -36,7 +36,7 @@ assert o["indulto_2022_status"] == "nao" and "sentença posterior" in o["indulto
 o = dec22(crime("10/01/2020", "10/10/2022", "10/01/2023"))  # trânsito para a acusação posterior: art. 12
 assert o["indulto_2022_status"] == "nao" and "art. 12" in o["indulto_2022"], o["indulto_2022"]
 o = dec22(crime("10/01/2020", "10/10/2022", "10/11/2022", "10/02/2023"))  # só a defesa pendente: alcança
-assert o["indulto_2022_status"] != "nao", o["indulto_2022"]
+assert o["indulto_2022_status"] == "possivel", o["indulto_2022"]
 
 # violência ou grave ameaça elementar do tipo (ameaça, roubo) - mesmo com o RSPE marcando "N"
 assert rs.vga_elementar(crime("10/01/2020", "", "", artigo="ART 147: Ameaça", tipo="CAPUT: Ameaçar alguém"))

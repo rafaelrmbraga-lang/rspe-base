@@ -1,5 +1,5 @@
 {
- "versao": "2026-10-07b",
+ "versao": "2026-10-08i",
  "descricao": "Base juridica do RSPE Base. Editavel: o programa le este arquivo ao abrir (copia ao lado do .exe tem prioridade sobre a embutida). Datas em AAAA-MM-DD. Fracoes como 'num/den' ou percentual 'NN%'.",
  "prescricao": {
   "art109_tabela": [
@@ -251,6 +251,8 @@
     ]
    }
   ],
+  "lei_10792_2003_vigencia": "2003-12-02",
+  "_nota_lei_10792": "Lei 10.792/2003 (nova redação do art. 112 da LEP), publicada e em vigor em 02/12/2003: fato anterior usa a redação original de 1984 no rótulo do dispositivo. As datas de vigência das demais redações (Leis 11.464/2007, 13.964/2019, 15.358/2026 e 15.402/2026) são lidas do campo \"de\" das janelas de regimes_vigencia.",
   "art112_par5": "Trafico privilegiado (art. 33, par. 4, Lei 11.343/06) nao e hediondo para fins de progressao.",
   "art112_par6": "Falta grave interrompe o prazo; reinicio pela pena remanescente.",
   "art112_par3_mulheres": "1/8 (LEP, art. 112, §§ 3º e 4º): gestante, mãe ou responsável por criança ou pessoa com deficiência, cumulativamente: sem violência ou grave ameaça; crime não cometido contra filho ou dependente; 1/8 cumprido no regime anterior; primária e com bom comportamento; sem integrar organização criminosa. Novo crime doloso ou falta grave revoga o benefício (§ 4º). O RSPE não informa sexo nem filhos: a Auditoria só aponta como informação."
@@ -6702,6 +6704,51 @@
      "texto": "redução do tempo do art. 1º, III para pessoa do art. 2º: um terço da pena, se não reincidente, e metade, se reincidente, nos crimes com grave ameaça ou violência com PPL superior a quatro e até oito anos"
     },
     {
+     "dispositivo": "art. 2º, § 1º, I (c/c art. 2º, II, e art. 1º, I)",
+     "objetivo": false,
+     "pena_max_anos": null,
+     "pena_min_anos": null,
+     "fracao_nao_reincidente": "1/6",
+     "fracao_reincidente": "1/4",
+     "anos_nao_reincidente": null,
+     "anos_reincidente": null,
+     "ininterrupto": false,
+     "violencia_grave_ameaca": "vedada",
+     "regime": null,
+     "outros_requisitos": "70 anos de idade completos até 25/12/2017 (art. 2º, II: idade igual ou superior a setenta anos), aferida pela data de nascimento do RSPE; frações reduzidas do art. 2º, § 1º, I",
+     "texto": "art. 2º, II, c/c § 1º, I: para a pessoa com idade igual ou superior a setenta anos, o tempo do art. 1º, I, é reduzido para 1/6 da pena, se não reincidente, e 1/4, se reincidente"
+    },
+    {
+     "dispositivo": "art. 2º, § 1º, II (c/c art. 2º, II, e art. 1º, II)",
+     "objetivo": false,
+     "pena_max_anos": 4,
+     "pena_min_anos": null,
+     "fracao_nao_reincidente": "1/4",
+     "fracao_reincidente": "1/3",
+     "anos_nao_reincidente": null,
+     "anos_reincidente": null,
+     "ininterrupto": false,
+     "violencia_grave_ameaca": "exigida",
+     "regime": null,
+     "outros_requisitos": "70 anos de idade completos até 25/12/2017 (art. 2º, II: idade igual ou superior a setenta anos), aferida pela data de nascimento do RSPE; frações reduzidas do art. 2º, § 1º, II",
+     "texto": "art. 2º, II, c/c § 1º, II: para a pessoa com idade igual ou superior a setenta anos, o tempo do art. 1º, II, é reduzido para 1/4 da pena, se não reincidente, e 1/3, se reincidente"
+    },
+    {
+     "dispositivo": "art. 2º, § 1º, III (c/c art. 2º, II, e art. 1º, III)",
+     "objetivo": false,
+     "pena_max_anos": 8,
+     "pena_min_anos": 4,
+     "fracao_nao_reincidente": "1/3",
+     "fracao_reincidente": "1/2",
+     "anos_nao_reincidente": null,
+     "anos_reincidente": null,
+     "ininterrupto": false,
+     "violencia_grave_ameaca": "exigida",
+     "regime": null,
+     "outros_requisitos": "70 anos de idade completos até 25/12/2017 (art. 2º, II: idade igual ou superior a setenta anos), aferida pela data de nascimento do RSPE; frações reduzidas do art. 2º, § 1º, III",
+     "texto": "art. 2º, II, c/c § 1º, III: para a pessoa com idade igual ou superior a setenta anos, o tempo do art. 1º, III, é reduzido para 1/3 da pena, se não reincidente, e 1/2, se reincidente"
+    },
+    {
      "dispositivo": "art. 5º, III, a",
      "objetivo": false,
      "pena_max_anos": null,
@@ -8073,6 +8120,17 @@
    ],
    "comutacao": [
     {
+     "dispositivo": "art. 3º, § 3º, I",
+     "reducao_nao_reincidente": "1/2",
+     "reducao_reincidente": "1/3",
+     "cumprimento_min_nao_reincidente": "1/5",
+     "cumprimento_min_reincidente": "1/4",
+     "pena_max_anos": null,
+     "violencia_grave_ameaca": "vedada",
+     "outros_requisitos": "65 anos de idade completos até 25/12/2023 (art. 3º, § 3º, I: pessoas maiores de sessenta e cinco anos), aferida pela data de nascimento do RSPE; crime sem violência ou grave ameaça. Cumprimento mínimo não repetido no § 3º: assumido o do caput (1/5 e 1/4)",
+     "texto": "a comutação será de metade, se não reincidentes, e um terço, se reincidentes, nos crimes sem violência ou grave ameaça a pessoa, para: I - pessoas maiores de sessenta e cinco anos"
+    },
+    {
      "dispositivo": "art. 3º, caput",
      "reducao_nao_reincidente": "1/4",
      "reducao_reincidente": "1/5",
@@ -8084,15 +8142,15 @@
      "texto": "comutação da pena remanescente, aferida em 25/12/2023, de um quarto, se não reincidentes, e de um quinto, se reincidentes, às pessoas condenadas a PPL, não beneficiadas com sursis, que até a referida data tenham cumprido um quinto da pena, se não reincidentes, ou um quarto, se reincidentes, e que não preencham os requisitos para o indulto. § 1º: cálculo sobre o período cumprido se este, descontadas comutações anteriores, for superior ao remanescente. § 2º: quem já teve comutação anterior tem a nova calculada sem novo requisito temporal"
     },
     {
-     "dispositivo": "art. 3º, § 3º",
+     "dispositivo": "art. 3º, § 3º, II a IV",
      "reducao_nao_reincidente": "1/2",
      "reducao_reincidente": "1/3",
      "cumprimento_min_nao_reincidente": "1/5",
      "cumprimento_min_reincidente": "1/4",
      "pena_max_anos": null,
      "violencia_grave_ameaca": "vedada",
-     "outros_requisitos": "não objetiva: idade > 65 anos, ou mulher com filho com doença crônica grave/deficiência, ou mulher imprescindível a criança < 12 anos, ou pessoa com deficiência. Cumprimento mínimo não repetido no § 3º: assumido o do caput (1/5 e 1/4)",
-     "texto": "a comutação será de metade, se não reincidentes, e um terço, se reincidentes, nos crimes sem violência ou grave ameaça a pessoa, para: I - maiores de sessenta e cinco anos; II - mulheres com filhos de qualquer idade com doença crônica grave ou deficiência; III - mulheres imprescindíveis aos cuidados de criança menor de doze anos; IV - pessoas com deficiência (art. 2º Lei 13.146/2015)"
+     "outros_requisitos": "não objetiva: mulher com filho com doença crônica grave/deficiência, ou mulher imprescindível a criança < 12 anos, ou pessoa com deficiência (o inciso I, maiores de 65 anos, tem hipótese própria). Cumprimento mínimo não repetido no § 3º: assumido o do caput (1/5 e 1/4)",
+     "texto": "a comutação será de metade, se não reincidentes, e um terço, se reincidentes, nos crimes sem violência ou grave ameaça a pessoa, para: II - mulheres com filhos de qualquer idade com doença crônica grave ou deficiência; III - mulheres imprescindíveis aos cuidados de criança menor de doze anos; IV - pessoas com deficiência (art. 2º Lei 13.146/2015)"
     }
    ],
    "impeditivos": {
@@ -8182,7 +8240,8 @@
      {
       "descricao": "crime ambiental atribuído a pessoa jurídica",
       "lei": "Lei 9.605/1998",
-      "artigos": []
+      "artigos": [],
+      "so_pessoa_juridica": true
      },
      {
       "descricao": "crimes contra o Estado Democrático de Direito",
@@ -8275,7 +8334,7 @@
     "Art. 7º, II: recurso da acusação só impede se visar majorar a pena ou as condições do benefício.",
     "Art. 11: regras do regime aberto aplicam-se ao aberto domiciliar.",
     "Art. 2º, XII a XIV não exigem expressamente crime sem violência/grave ameaça (marcados 'indiferente').",
-    "Vedações com ressalva 'exceto quando a pena aplicada não for superior a quatro anos' (art. 1º, III, V, IX e X: lavagem, arts. 312 a 319 CP, sistema financeiro, licitações): a ressalva é por crime (pena aplicada), e o motor ainda não a aplica - com pena aplicada até 4 anos o crime NÃO é impeditivo.",
+    "Vedações com ressalva 'exceto quando a pena aplicada não for superior a quatro anos' (art. 1º, III, V, IX e X: lavagem, arts. 312 a 319 CP, sistema financeiro, licitações): a ressalva é por crime (pena aplicada), e o motor a aplica (exceto_pena_ate_anos) - com pena aplicada até 4 anos o crime NÃO é impeditivo.",
     "Art. 1º, XIV (violência contra a mulher): além do art. 24-A da Lei 11.340/2006, alcança crimes praticados contra a mulher no contexto dessas leis (ex.: CP 147-A, 215-A, 218-C; CE 326-B), o que depende da vítima e não é aferível só pelo artigo: conferir na sentença."
    ],
    "transito": {

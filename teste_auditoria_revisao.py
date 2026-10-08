@@ -109,7 +109,7 @@ ok(it and "diferença 0a11m25d" in it[0]["detalhe"] and not ra.fundamentacao(it[
 # 8. regime inicial depois da primeira prisão com diferença menor que 10 dias: informativo
 evs = [ev("PRISÃO/INÍCIO DE CUMPRIMENTO", "PRISÃO EM FLAGRANTE", "29/11/2016"), ev("INTERRUPÇÃO", "SOLTURA", "30/11/2016", ""),
        ev("PRISÃO/INÍCIO DE CUMPRIMENTO", "PRISÃO DEFINITIVA", "07/02/2024")]
-it = [i for i in itens(reg([crime()], [inc("FIXAÇÃO/ALTERAÇÃO DE REGIME", "Fechado - Regime Inicial", "", "07/02/2024")], evs, data_base_seeu="07/02/2024"))
+it = [i for i in itens(reg([crime(data_infracao="20/11/2016")], [inc("FIXAÇÃO/ALTERAÇÃO DE REGIME", "Fechado - Regime Inicial", "", "07/02/2024")], evs, data_base_seeu="07/02/2024"))
       if i["tipo"] == "regime-inicial-depois-da-primeira-prisao"]
 ok(it and it[0]["nivel"] == "info" and "2.248.958" in it[0]["detalhe"] and "Houve soltura" in it[0]["detalhe"], "regime inicial: %s" % it)
 
@@ -271,6 +271,19 @@ r = reg([crime()], [inc(AR, "Fechado - Regime Inicial", "", "19/11/2020"), inc(A
         data_base_seeu="10/12/2024", livramento_data_base_seeu="10/12/2024")
 pt = por_tipo(r)
 ok("data-base-do-livramento-igual-a-da-progressao" in pt and "data-base-do-livramento-alterada-por-falta-grave" not in pt, "A16: %s" % list(pt))
+
+# âncora das asserções negativas (A25): todo tipo testado com "not in" (ou num conjunto que não pode aparecer) precisa existir
+# como identificador em rspe_auditoria ou rspe_ficha; se for renomeado, a asserção negativa passaria sem testar nada
+import os
+import re
+_aqui = open(os.path.abspath(__file__), encoding="utf-8").read()
+_neg = set(re.findall(r'"([a-z0-9]+(?:-[a-z0-9]+){2,})" not in', _aqui))
+for _cj in re.findall(r"ok\(not \{([^}]*)\} & set", _aqui):
+    _neg |= set(re.findall(r'"([a-z0-9]+(?:-[a-z0-9]+){2,})"', _cj))
+_mods = open(ra.__file__, encoding="utf-8").read() + open(rf.__file__, encoding="utf-8").read()
+ok(len(_neg) >= 10, "âncora: poucas asserções negativas encontradas (%d)" % len(_neg))
+for _t in sorted(_neg):
+    ok('"%s"' % _t in _mods, "âncora: o tipo %s não existe mais em rspe_auditoria/rspe_ficha (a asserção negativa não testa nada)" % _t)
 
 if falhas:
     print("FALHOU (revisão da auditoria):\n  " + "\n  ".join(falhas))
