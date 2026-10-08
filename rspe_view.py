@@ -1159,8 +1159,9 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
     m["calc_notas"] = notas
     try:
         m.update(saida_temporaria(r, ficha, m, est, interr))
+        m.update(progressao_antecipada(r, ficha, m, est, interr))
     except Exception:
-        m.update(st_ok=False, st_itens=[])
+        m.update(st_ok=False, st_itens=[], pa_ok=False, pa_itens=[])
     m["_final"] = r  # o registro com o que a ficha resolveu (incisos IV, XI a XIII): base da linha do tempo, igual à aba
     return m
 
@@ -1344,6 +1345,15 @@ LEI_14843 = date(2024, 4, 11)   # Lei 14.843/2024 (vigência na publicação): s
 LEI_13964 = date(2020, 1, 23)   # Lei 13.964/2019: vedação ao hediondo com resultado morte (art. 122, § 2º)
 
 
+def _trabalho_atual(ficha, m):
+    """Trabalho em curso pela ficha (o externo conta): texto, ou "" sem trabalho."""
+    trab = m.get("fd_trab") or ""
+    if trab and not trab.startswith("sem "):
+        return trab
+    ext = [t for t in (ficha or {}).get("trabalho", []) if t.get("externo") and not t.get("fim") and not t.get("so_lancamento")]
+    return ("%s (trabalho externo) desde %s" % ((ext[-1].get("setor") or "empresa").title(), ext[-1].get("inicio"))) if ext else ""
+
+
 def _pena_dias(t):
     """'4a8m23d' -> dias na convenção do SEEU (ano de 365, mês de 30)."""
     mm = re.match(r"\s*(\d+)a(\d+)m(\d+)d", t or "")
@@ -1408,11 +1418,7 @@ def saida_temporaria(r, ficha, m, est=None, interr=False, hoje=None):
         add(cond in ("OTIMA", "BOA") and fal not in ("SIM", "A APURAR"),
             "Conduta %s%s" % ((ficha.get("conduta") or "não informada").title().replace("Otima", "Ótima"),
                               "" if fal not in ("SIM", "A APURAR") else " · falta nos últimos 12 meses: %s" % fal.lower()))
-        trab = m.get("fd_trab") or ""
-        if not trab or trab.startswith("sem "):
-            # trabalho externo também é trabalho (art. 122 não distingue): o vínculo externo aberto vale
-            ext = [t for t in ficha.get("trabalho", []) if t.get("externo") and not t.get("fim") and not t.get("so_lancamento")]
-            trab = ("%s (trabalho externo) desde %s" % ((ext[-1].get("setor") or "empresa").title(), ext[-1].get("inicio"))) if ext else ""
+        trab = _trabalho_atual(ficha, m)  # o trabalho externo também conta
         add(bool(trab), "Trabalhando: " + trab if trab else "Sem trabalho em curso na ficha")
         sts = rf.saidas_temporarias_retorno(ficha.get("eventos", []))
         if not sts:
@@ -1435,6 +1441,48 @@ def saida_temporaria(r, ficha, m, est=None, interr=False, hoje=None):
             add(None, "Ficha impressa em %s (há %d dias, mais de 90): conferir conduta e trabalho atuais" % (rs.fmt(imp), (hoje - imp).days))
     ok = all(x["ok"] is True for x in it)
     return {"st_ok": ok, "st_itens": it, "st_quase": (not ok) and all(x["ok"] is not False for x in it)}
+
+
+def progressao_antecipada(r, ficha, m, est=None, interr=False, hoje=None):
+    """Pedido de progressão antecipada (faltando de 1 a 60 dias para a data do SEEU; a antecipação vem sendo deferida pelos
+    juízos de MS): regime fechado ou semiaberto em curso, crimes sem violência nem grave ameaça (marcação do RSPE), trabalho em
+    curso (o externo conta) e conduta Boa/Ótima sem falta nos 12 meses. pa_ok só com todos os requisitos; pa_quase quando nenhum falha e algum fica
+    a conferir; pa_itens = [{ok, txt}]."""
+    hoje = hoje or HOJE
+    it = []
+    add = lambda ok, txt: it.append({"ok": ok, "txt": txt})
+    reg = (r.get("regime_atual") or "").replace(" - ATIVO", "")
+    ativo = (r.get("status_execucao") or "").strip().upper() in ("", "ATIVO") and not est and not interr
+    rg = reg.upper()
+    add((rg.startswith("FECHADO") or rg.startswith("SEMI")) and ativo,
+        "Regime %s, cumprimento em curso" % reg.lower() if (rg.startswith("FECHADO") or rg.startswith("SEMI")) and ativo else
+        "Regime: %s%s" % (reg or "não informado", "" if ativo else " (cumprimento não está em curso)"))
+    n = m.get("prog_dias")
+    add(n is not None and 0 < n <= 60,
+        "Progressão prevista para %s: faltam %s" % (m.get("prog") or "?", rs.pl(n, "dia", "dias")) if n is not None and n > 0 else
+        ("Progressão: lapso já atingido (%s)" % (m.get("prog") or "") if n is not None else "Progressão sem data no RSPE"))
+    crimes = [c for c in r.get("_crimes", []) if (c.get("extinto") or "").startswith("N") and (c.get("tipo_processo") or "").upper() != "OUTRAS ACOES"]
+    vga = [c for c in crimes if c.get("vga") == "S"]
+    sem = [c for c in crimes if c.get("vga") not in ("S", "N")]
+    if vga:
+        add(False, "Crime com violência ou grave ameaça: " + "; ".join("%s (%s)" % ((c.get("artigo") or "").split(":")[0].title(), c.get("data_infracao") or "?") for c in vga))
+    else:
+        add(None if (sem or not crimes) else True, "Nenhum crime com violência ou grave ameaça" + (" (crime sem a marcação no RSPE: conferir)" if sem or not crimes else ""))
+    if not ficha:
+        add(None, "Sem ficha disciplinar: conduta e trabalho não conferidos")
+    else:
+        cond = rs._sem_acento(ficha.get("conduta") or "").upper().strip()
+        fal = r.get("falta_12m")
+        add(cond in ("OTIMA", "BOA") and fal not in ("SIM", "A APURAR"),
+            "Conduta %s%s" % ((ficha.get("conduta") or "não informada").title().replace("Otima", "Ótima"),
+                              "" if fal not in ("SIM", "A APURAR") else " · falta nos últimos 12 meses: %s" % fal.lower()))
+        trab = _trabalho_atual(ficha, m)
+        add(bool(trab), "Trabalhando: " + trab if trab else "Sem trabalho em curso na ficha")
+        imp = rs.to_date((ficha.get("data_impressao") or "").split()[0].replace(".", "/"))
+        if imp and (hoje - imp).days > 90:
+            add(None, "Ficha impressa em %s (há %d dias, mais de 90): conferir conduta e trabalho atuais" % (rs.fmt(imp), (hoje - imp).days))
+    ok = all(x["ok"] is True for x in it)
+    return {"pa_ok": ok, "pa_itens": it, "pa_quase": (not ok) and all(x["ok"] is not False for x in it)}
 
 
 def nome_proprio(nome):

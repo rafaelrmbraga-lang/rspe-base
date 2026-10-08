@@ -88,7 +88,8 @@ ABAS (colunas)
                as abas, na ficha do assistido e no Quadro): verde = elegível
                para pedir saída temporária; amarelo = requisitos atendidos com
                ponto a conferir; verde preenchido = pedido feito (ver "Saída
-               temporária").
+               temporária"). Ícone azul de degraus = elegível para pedir a
+               progressão antecipada (ver "Progressão antecipada").
   Progressão   Nome, Nº, Regime, Data da progressão, Situação, Conduta
                (ficha), Falta (12 meses). A fração e a data-base não são
                colunas: estão na ficha do assistido, no resumo copiado, no
@@ -656,6 +657,23 @@ SAÍDA TEMPORÁRIA (ícone ao lado do nome, aba Geral)
   O ícone indica o pedido; a concessão depende de decisão do juízo da
   execução.
 
+PROGRESSÃO ANTECIPADA (ícone azul de degraus ao lado do nome)
+  Destaca quem pode pedir a progressão antes da data do SEEU (os juízos do
+  estado vêm antecipando a progressão). Aparece nos mesmos lugares do ícone
+  da saída temporária. Requisitos:
+  - regime fechado ou semiaberto, com o cumprimento em curso;
+  - progressão prevista para daqui a 1 a 60 dias (o lapso já atingido fica
+    na aba Progressão como vencido);
+  - nenhum crime não extinto com violência ou grave ameaça (marcação do
+    RSPE);
+  - conduta Boa ou Ótima na ficha, sem falta nos últimos 12 meses;
+  - trabalho em curso na ficha (o externo conta).
+  Amarelo: nada falha, mas algo fica a conferir (ficha impressa há mais de
+  90 dias, sem ficha importada, crime sem a marcação de violência no RSPE).
+  Clicar abre o pedido da progressão, o mesmo da coluna "Pedido" da aba
+  Progressão: com o pedido marcado, o ícone fica azul preenchido e o pedido
+  entra no Registro para o SAP como progressão.
+
 PROBLEMAS
   Se o programa não abrir ou travar, veja o arquivo rspe_log.txt criado ao
   lado do .exe: ele registra os erros (o .exe roda sem console). Envie esse
@@ -673,6 +691,12 @@ v7.7.0
     requisitos ao passar o mouse, em todas as abas, na ficha do assistido e
     no Quadro. Clicar no ícone registra o pedido feito (verde preenchido) e
     abre o Registro para o SAP. Ver "Saída temporária".
+  - Progressão antecipada: ícone azul de degraus ao lado do nome para quem
+    está a 1-60 dias da progressão, sem crime com violência ou grave ameaça,
+    trabalhando e com conduta Boa ou Ótima. Clicar abre o pedido da
+    progressão. Ver "Progressão antecipada".
+  - Ao passar o mouse, a linha fica no mesmo cinza-claro em todas as
+    situações (não tinge mais de amarelo, vermelho ou verde).
 
 v7.6.0
   - Terceira e quarta revisões gerais (base 08.10 inteira: 595 RSPEs, 653

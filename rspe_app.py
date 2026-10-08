@@ -261,6 +261,11 @@ trabalho em curso (o externo conta); 45 dias entre o retorno da última saída e
 nada falha, mas algo fica a conferir (ficha com mais de 90 dias, sem ficha, unidade não reconhecida, 5 saídas ou mais no ano). Passe o
 mouse no ícone para ver cada requisito. O ícone aparece em todas as abas, na ficha do assistido e no Quadro. Clicar nele registra o
 pedido feito: o ícone fica verde preenchido e o Registro para o SAP abre com a saída temporária; clicar de novo edita ou remove a marcação.
+<h4>Progressão antecipada (ícone azul de degraus)</h4>
+Destaca quem pode pedir a progressão antes da data do SEEU: regime fechado ou semiaberto em curso; progressão prevista para daqui a 1 a 60
+dias; nenhum crime não extinto com violência ou grave ameaça (marcação do RSPE); conduta Boa ou Ótima, sem falta nos 12 meses; trabalho em
+curso (o externo conta). Amarelo: algo fica a conferir (ficha com mais de 90 dias, sem ficha, crime sem a marcação de violência). Clicar
+abre o pedido da progressão (o mesmo da coluna "Pedido" da aba Progressão); com o pedido marcado, o ícone fica azul preenchido.
 <h4>RSPE desatualizado e cópias de segurança</h4>
 RSPE emitido há mais de 60 dias ganha um "!" laranja ao lado do nome (passe o mouse para ver a data e os dias); o chip "RSPE antigo" da faixa de resumo
 filtra esses assistidos. Ao abrir a base, o programa faz uma cópia de segurança (pasta "copias", ao lado da base) e guarda as
