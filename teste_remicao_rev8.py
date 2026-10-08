@@ -177,7 +177,7 @@ D["lacunas"] = {"dias": 0, "itens": [], "por_un": {}}
 for k, v in (("emitido", 10.5), ("divergencia", 3), ("sem_atestado", 20), ("estudo", 4), ("leitura", 8)):
     D[k] = {"dias": v, "itens": [{"dias": v}], "por_un": {"U": v}}
 D["total"] = 45.5
-O = rrel.remicao_por_origem([{"ficha_tem": True, "fd_rem_det": D}])
+O = rrel.remicao_por_origem([{"ficha_tem": True, "fd_rem_det": D, "fd_cor": "vermelho"}])  # dias exatos = vermelho da aba (rev9)
 ok(O["r"]["nao_lancado"] + O["r"]["emitido"] + O["r"]["divergencia"] + O["r"]["sem_atestado"] + O["r"]["estudo"] + O["r"]["leitura"] == O["r_total"]
    and O["ass_exatos"] == 1, "quadro 2.5 não fecha: %s" % O["r"])
 

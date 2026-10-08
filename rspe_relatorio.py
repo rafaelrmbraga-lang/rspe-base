@@ -1864,8 +1864,9 @@ def remicao_por_origem(modelos):
                 O["itens"][k] += len(D[k]["itens"])
                 O["dias"][k] += D[k]["dias"]
         O["ass"] += D["total"] >= 1
-        # com dias exatos (atestado sem remição, diferença, leitura peticionada): a parte que não depende de estimativa
-        O["ass_exatos"] += sum(D[k]["dias"] for k in ("nao_lancado", "emitido", "divergencia", "leitura")) >= 1
+        # com dias exatos: o mesmo critério do vermelho da aba Ficha (atestado sem remição no RSPE, inclusive o sem os dias na ficha,
+        # leitura peticionada sem remição, estudo com horas declaradas) - a diferença de dias é amarela ("Conferir remição") e não entra
+        O["ass_exatos"] += m.get("fd_cor") == "vermelho"
         O["total"] += D["total"]
     # dias inteiros para exibir: cada origem arredondada, com a soma igual ao total exibido (o quadro fecha)
     dentro = [k for k in ks if k != "lacunas" and k not in rf.FORA_DO_TOTAL]
@@ -1885,6 +1886,8 @@ def nome_rel(m):
         n += " (na ficha: %s)" % fn.title()
     if "ARQUIV" in (m.get("status_exec") or ""):
         n += " [execução ARQUIVADA no SEEU]"
+    elif m.get("estado_exec") in ("extinta", "cumprida"):
+        n += " [pena EXTINTA no RSPE]"
     return n
 
 
@@ -1922,7 +1925,8 @@ def relatorio_remicao(modelos, caminho, nome_base, nominal=True):
     el = [Paragraph("Remição detalhada", st["tit"]),
           Paragraph(_t("%s · origem de cada dia a remir, pela ficha disciplinar (SIAPEN) x RSPE · %s com ficha de %s na seleção" % (
               nome_base, rs.pl(O["com_ficha"], "assistido", "assistidos"), len(modelos))), st["sub"]), Spacer(1, 10)]
-    nums = [(O["ass"], "assistidos com remição a requerer (com a estimativa; %s com dias exatos)" % O["ass_exatos"]),
+    nums = [(O["ass"], "assistidos com remição a requerer (com a estimativa; %s em vermelho na aba Ficha: atestado, leitura ou estudo com horas "
+                       "declaradas sem remição no RSPE)" % O["ass_exatos"]),
             (_num(O["r_total"]), "dias a remir (sem o trabalho em curso)"),
             (_num(O["r"]["nao_lancado"] + O["r"]["emitido"] + O["r"]["divergencia"]), "de atestados sem remição ou com remição menor"),
             (_num(O["r"]["sem_atestado"]), "de trabalho sem atestado (estimativa)"),
@@ -1933,14 +1937,16 @@ def relatorio_remicao(modelos, caminho, nome_base, nominal=True):
                             ("BACKGROUND", (0, 0), (-1, -1), C(ZEBRA)), ("LEFTPADDING", (0, 0), (-1, -1), 8),
                             ("TOPPADDING", (0, 0), (-1, 0), 7), ("BOTTOMPADDING", (0, 1), (-1, 1), 7), ("VALIGN", (0, 0), (-1, -1), "TOP")]))
     el.append(tb)
-    arqv = [m for m in pend if "ARQUIV" in (m.get("status_exec") or "")]
+    # execução arquivada ou com a pena extinta (registrada no RSPE), com dias a remir: a remição vai para outro processo ou perdeu o objeto
+    arqv = [m for m in pend if ("ARQUIV" in (m.get("status_exec") or "") or m.get("estado_exec") in ("extinta", "cumprida"))
+            and (m.get("fd_rem_det") or {}).get("total", 0) >= 1]
     difn = [m for m in pend if "(na ficha:" in nome_rel(m)]
     if arqv or difn:
         el.append(Spacer(1, 6))
     if arqv:
-        el.append(Paragraph(_t("Atenção: %s com execução ARQUIVADA no SEEU (pena zerada no RSPE), com %s dias no total acima: %s. A remição deve "
-                               "ser pedida no processo em que a pena está em execução (transferência de comarca, unificação ou nova guia) - "
-                               "conferir no SEEU. Estão marcadas pelo nome." % (
+        el.append(Paragraph(_t("Atenção: %s com execução ARQUIVADA no SEEU ou com a pena EXTINTA registrada no RSPE, com %s dias no total acima: %s. "
+                               "A remição deve ser pedida no processo em que a pena está em execução (transferência de comarca, unificação ou nova "
+                               "guia); com a pena extinta, só se houver outra execução - conferir no SEEU. Estão marcadas pelo nome." % (
                                    rs.pl(len(arqv), "assistido", "assistidos"), _dias(sum(m["fd_rem_det"]["total"] for m in arqv)),
                                    ", ".join(m.get("nome") or "" for m in arqv))), st["mut"]))
     if difn:
@@ -2046,7 +2052,7 @@ def relatorio_remicao(modelos, caminho, nome_base, nominal=True):
         larg = [40 * mm, 48 * mm, 40 * mm, 44 * mm, 40 * mm, 16 * mm, W - 228 * mm]
         largc = [40 * mm, 52 * mm, 48 * mm, 20 * mm, 22 * mm, 38 * mm, W - 220 * mm]
         cor_st = {"CONCILIADO": "verde", "NAO_LANCADO": "vermelho", "DIVERGENCIA": "amarelo"}
-        rot_st = {"CONCILIADO": "No processo", "NAO_LANCADO": "Não está no processo", "DIVERGENCIA": "No processo, dias diferentes"}
+        rot_st = {"CONCILIADO": "No processo", "NAO_LANCADO": "Sem remição no RSPE", "DIVERGENCIA": "No processo, dias diferentes"}
         for m in conf:
             D = m["fd_rem_det"]
             T = (m.get("fd_conc") or {}).get("tabela") or []
@@ -2071,7 +2077,7 @@ def relatorio_remicao(modelos, caminho, nome_base, nominal=True):
                 res_ = Paragraph("%s · %s · %s%s · RSPE: %s" % (
                     _t("Ficha: %s em atestados desta execução" % ("%s dias remidos" % _num(fic))),
                     '<font color="%s"><b>%s</b></font>' % (COR["verde"][1], _t("no processo: %s dias (%s)" % (_num(dentro), rs.pl(n_r, "atestado", "atestados")))),
-                    '<font color="%s"><b>%s</b></font>' % (COR["vermelho"][1], _t("fora do processo: %s dias (%s)" % (_num(fora), rs.pl(n_v, "atestado", "atestados")))),
+                    '<font color="%s"><b>%s</b></font>' % (COR["vermelho"][1], _t("sem remição no RSPE: %s dias (%s)" % (_num(fora), rs.pl(n_v, "atestado", "atestados")))),
                     (' · <font color="%s"><b>%s</b></font>' % (COR["azul"][1], _t("no RSPE sem atestado na ficha: %s dias (%s)" % (
                         _num(sum(_n(t["rem"]) for t in nr)), rs.pl(len(nr), "remição", "remições"))))) if nr else "",
                     _t((m.get("remidos") or "—"))), ParagraphStyle("rs", parent=st["cel"], fontSize=7.9, leading=10.5))
@@ -2082,7 +2088,7 @@ def relatorio_remicao(modelos, caminho, nome_base, nominal=True):
                     cor = "azul" if fora_ficha else "cinza" if t.get("cor") == "cinza" else cor_st.get(t["status"], "cinza")
                     sit = "No processo, sem atestado na ficha" if fora_ficha else t["rot"] if t.get("cor") == "cinza" else rot_st.get(t["status"], t.get("rot") or "")
                     if t["status"] == "NAO_LANCADO" and t.get("cor") != "cinza":
-                        sit += " · peticionado em %s" % t["peticionado"] if t.get("peticionado") else " · só emitido (sem peticionamento na ficha)"
+                        sit += " · peticionado em %s, aguardando decisão" % t["peticionado"] if t.get("peticionado") else " · só emitido (sem peticionamento na ficha)"
                     dc.append([Paragraph(_t(t["atestado"] + ((" · " + t["emissao"]) if t.get("emissao") else "")), peq),
                                Paragraph(_t(t.get("unidade") or "—"), peq),
                                Paragraph(_t("; ".join(x["per"] for x in t["segs"]) or "—"), peq),
