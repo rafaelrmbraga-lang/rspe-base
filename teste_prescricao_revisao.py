@@ -96,13 +96,18 @@ l = linha(reg([crime("01/01/2012", "01/01/2014", "10 ano(s), 0 mês(es) e 0 dia(
               [ev("06/05/2016", "PRISÃO EM FLAGRANTE", proc="%s, %s" % (P1, P2))]), P2)
 confere(not l.get("ppe_detracao_dias") and not l.get("ppe_detracao_cobre"), "A7: detração inflada: %s" % l.get("ppe_detracao_dias"))
 
-# A8: livramento revogado - o período de prova não se desconta do saldo (CP, art. 88) (Dalvam Conceição Cruz de Souza)
+# A8: livramento revogado - o período de prova não se desconta do saldo (CP, art. 88) (Dalvam Conceição Cruz de Souza). Revisão 2 (A6):
+# o art. 88 só se aplica com a revogação registrada; sem ela, o período de prova conta como cumprimento (como no SEEU)
 P = "0002175-07.2012.8.12.0011"
-l = linha(reg([crime("02/07/2012", "26/08/2013", "14 ano(s), 0 mês(es) e 0 dia(s)", proc=P, artigo="ART 121: Matar alguem:")],
-              [ev("04/07/2012", "PRISÃO PROVISÓRIA", proc=P), ev("01/08/2024", "INTERRUPÇÃO DO CUMPRIMENTO DA PENA", tipo="INTERRUPÇÃO"),
-               ev("28/06/2026", "INÍCIO DO CUMPRIMENTO REGIME SEMIABERTO", proc=P)],
-              [inc("LIVRAMENTO CONDICIONAL", "28/12/2020", "28/12/2020", "25/11/2022")], nasc="09/06/1992"))
+_a8 = ([crime("02/07/2012", "26/08/2013", "14 ano(s), 0 mês(es) e 0 dia(s)", proc=P, artigo="ART 121: Matar alguem:")],
+       [ev("04/07/2012", "PRISÃO PROVISÓRIA", proc=P), ev("01/08/2024", "INTERRUPÇÃO DO CUMPRIMENTO DA PENA", tipo="INTERRUPÇÃO"),
+        ev("28/06/2026", "INÍCIO DO CUMPRIMENTO REGIME SEMIABERTO", proc=P)])
+l = linha(reg(*_a8, [inc("LIVRAMENTO CONDICIONAL", "28/12/2020", "28/12/2020", "25/11/2022"),
+                     inc("REVOGAÇÃO DE LIVRAMENTO CONDICIONAL", "", "01/08/2024")], nasc="09/06/1992"))
 confere(l["ppe_status"] == "Não prescrita" and "art. 88" in l["ppe_detalhe"], "A8: período de prova fora do saldo: %s" % l["ppe_status"])
+l = linha(reg(*_a8, [inc("LIVRAMENTO CONDICIONAL", "28/12/2020", "28/12/2020", "25/11/2022")], nasc="09/06/1992"))
+confere("pressupõe a revogação" in l["ppe_detalhe"] and "não se desconta do saldo (CP, art. 88" not in l["ppe_detalhe"],
+        "A8: sem revogação registrada, o art. 88 não se aplica: %s" % l["ppe_status"])
 
 # A9: só o trânsito final, anterior a 12/11/2020: sem "Tema 788" como fundamento do termo; aviso de contagem conservadora
 l = linha(reg([crime("01/01/2010", "06/09/2012", "8 ano(s), 0 mês(es) e 0 dia(s)", tmp="")], [ev("01/01/2013", "PRISÃO DEFINITIVA")]))
