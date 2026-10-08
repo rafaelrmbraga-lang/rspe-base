@@ -14,6 +14,14 @@ ZEBRA = "#FAFBFA"
 DOT = {"vermelho": "#A33A36", "laranja": "#B5651D", "amarelo": "#C49A3A", "vencido": "#A33A36", "verde": "#2F7A4F", "cinza": "#AEB5B0", "azul": "#4A6A8A"}
 
 
+def _sem_formula(ws):
+    """O openpyxl grava como fórmula todo texto que começa com "=": nome, crime, motivo (do PDF) ou observação digitada
+    viraria fórmula no Excel. A última linha da folha fica toda como texto."""
+    for cell in ws[ws.max_row]:
+        if isinstance(cell.value, str) and cell.value.startswith("="):
+            cell.data_type = "s"
+
+
 def exportar_xlsx(modelos, saida, abas):
     from openpyxl import Workbook
     from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
@@ -33,6 +41,7 @@ def exportar_xlsx(modelos, saida, abas):
         pil = dict(spec["pilulas"], **spec.get("sub_pilulas", {}))
         for m in modelos_aba:
             ws.append([m.get(k + "_full", m.get(k, "")) for k, _, _ in cols])
+            _sem_formula(ws)
             cor = m.get(spec["cor"], "") if spec["cor"] else ""
             for cell in ws[ws.max_row]:
                 cell.alignment = Alignment(wrap_text=True, vertical="top")
@@ -59,6 +68,7 @@ def exportar_xlsx(modelos, saida, abas):
         for m in modelos:
             r = m["_bruto"]
             ws.append([r.get(c, "") for c in rs.COLUNAS])
+            _sem_formula(ws)
         ws.freeze_panes = "B2"
     wb.save(saida)
 
@@ -148,18 +158,27 @@ def _linhas_export(spec, modelos):
     if not spec.get("sub"):
         return spec["cols"], modelos
     datas = {"fato", "denuncia", "sentenca", "transito", "ppe_termo"}
-    cols = [("nome", "Nome", 16), ("proc", "Nº da execução", 14)] + [(k, t, 12 if k in datas else p) for k, t, p in spec["sub_cols"]] + (
+    # Ficha disciplinar: como na aba, as colunas do assistido (trabalho a atestar, estudo a requerer, situação) com a cor da
+    # situação dele, e uma linha também para quem não tem item (em ordem, sem ficha); a cor do item fica na pílula da coluna
+    fd = spec["id"] == "fd"
+    pai = [c for c in spec["cols"] if c[0] in ("fd_atestar", "fd_estudo", "fd_sit")] if fd else []
+    cols = [("nome", "Nome", 16), ("proc", "Nº da execução", 14)] + pai + [(k, t, 12 if k in datas else p) for k, t, p in spec["sub_cols"]] + (
         [("pedido", "Pedido", 10)] if any(c[0] == "pedido" for c in spec["cols"]) else [])
     linhas = []
     for m in modelos:
-        for s in m.get(spec["sub"], []):
+        subs = m.get(spec["sub"]) or []
+        for s in subs:
             d = dict(m)
             d.update(s)
-            if spec.get("sub_cor"):
+            if fd:
+                pass  # a cor da linha é a da situação do assistido (fd_cor), como na aba
+            elif spec.get("sub_cor"):
                 d[spec["cor"]] = s.get(spec["sub_cor"]) or ""
             elif "cor" in s:
                 d[spec["cor"]] = s.get("cor") or ""
             linhas.append(d)
+        if fd and not subs:
+            linhas.append(dict(m))
     return cols, linhas
 
 
@@ -316,6 +335,7 @@ def exportar_providencias(linhas, saida, titulo):
         cell.alignment = Alignment(vertical="center")
     for L in linhas:
         ws.append([L.get("data", ""), L.get("nome", ""), L.get("proc", ""), L.get("assunto", ""), L.get("tipo", ""), L.get("obs", ""), L.get("registrado", "")])
+        _sem_formula(ws)
     for col, w in zip("ABCDEFG", (12, 34, 28, 26, 26, 40, 17)):
         ws.column_dimensions[col].width = w
     ws.freeze_panes = "A5"
@@ -333,6 +353,7 @@ def exportar_providencias(linhas, saida, titulo):
     for a in assuntos:
         q = [sum(1 for L in linhas if L.get("assunto") == a and L.get("tipo") == t) for t in tipos]
         rs_.append([a] + q + [sum(q)])
+        _sem_formula(rs_)
     q = [sum(1 for L in linhas if L.get("tipo") == t) for t in tipos]
     rs_.append(["Total"] + q + [sum(q)])
     for cell in rs_[rs_.max_row]:
