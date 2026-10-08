@@ -259,7 +259,8 @@ fato anterior a 11/04/2024 (a condenação por fato a partir dessa data só não
 cumprida (primário) ou 1/4 (reincidente), contado o tempo no fechado (Súmula 40 do STJ); conduta Boa ou Ótima, sem falta nos 12 meses;
 trabalho em curso (o externo conta); 45 dias entre o retorno da última saída e o novo pedido (sem o registro do retorno, 7 dias da saída). Ícone amarelo:
 nada falha, mas algo fica a conferir (ficha com mais de 90 dias, sem ficha, unidade não reconhecida, 5 saídas ou mais no ano). Passe o
-mouse no ícone para ver cada requisito.
+mouse no ícone para ver cada requisito. O ícone aparece em todas as abas, na ficha do assistido e no Quadro. Clicar nele registra o
+pedido feito: o ícone fica verde preenchido e o Registro para o SAP abre com a saída temporária; clicar de novo edita ou remove a marcação.
 <h4>RSPE desatualizado e cópias de segurança</h4>
 RSPE emitido há mais de 60 dias ganha um "!" laranja ao lado do nome (passe o mouse para ver a data e os dias); o chip "RSPE antigo" da faixa de resumo
 filtra esses assistidos. Ao abrir a base, o programa faz uma cópia de segurança (pasta "copias", ao lado da base) e guarda as
