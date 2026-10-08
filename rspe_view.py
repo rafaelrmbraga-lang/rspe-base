@@ -1367,10 +1367,16 @@ def saida_temporaria(r, ficha, m, est=None, interr=False, hoje=None):
     datas = [(rs.to_date(c.get("data_infracao") or ""), c) for c in crimes]
     antes = [d for d, c in datas if d and d < LEI_14843]
     sem_data = [c for d, c in datas if not d]
+    # condenação com fato a partir de 11/04/2024 (vigência da Lei 14.843/2024) só não impede quando cumprida em conjunto com
+    # condenação mais antiga, não extinta; sendo a única (ou só havendo condenações novas), a saída temporária é vedada
+    novos = [d for d, c in datas if d and d >= LEI_14843]
     if antes:
-        add(True, "Fato anterior à Lei 14.843/2024 (%s): rege a redação anterior do art. 122 (irretroatividade, CF, art. 5º, XL)" % rs.fmt(min(antes)))
+        add(True, "Fato anterior à Lei 14.843/2024 (%s): rege a redação anterior do art. 122 (irretroatividade, CF, art. 5º, XL)%s" % (
+            rs.fmt(min(antes)), "; a condenação por fato a partir de 11/04/2024 é cumprida em conjunto com ela e não impede" if novos else ""))
     else:
-        add(None if sem_data else False, "Nenhuma condenação com fato anterior a 11/04/2024" + (" (há crime sem data do fato)" if sem_data else ""))
+        add(None if sem_data else False,
+            ("Só há condenação por fato a partir de 11/04/2024 (%s), sem condenação mais antiga em cumprimento: vedada pela Lei 14.843/2024" % rs.fmt(min(novos))
+             if novos else "Nenhuma condenação em cumprimento com fato anterior a 11/04/2024") + (" (há crime sem data do fato)" if sem_data else ""))
     ved = []
     for d, c in datas:
         nm = (c.get("artigo") or "").split(":")[0].title()
@@ -1415,10 +1421,12 @@ def saida_temporaria(r, ficha, m, est=None, interr=False, hoje=None):
             sai, ret = sts[-1]
             base = ret or (sai + timedelta(days=7) if sai else None)
             dias = (hoje - base).days
-            add(dias >= 45 if ret else (None if dias < 45 else True),
-                "Última saída: %s%s · %s desde %s (art. 124, § 3º: 45 dias)" % (
+            # 45 dias entre o retorno da última saída e o novo pedido (art. 124, § 3º); sem o retorno registrado, 7 dias da saída
+            add(dias >= 45,
+                "Última saída: %s%s · %s desde %s (art. 124, § 3º: 45 dias)%s" % (
                     rs.fmt(sai) if sai else "sem registro da saída", (", retorno em %s" % rs.fmt(ret)) if ret else ", retorno não registrado (contado 7 dias da saída)",
-                    rs.pl(dias, "dia", "dias"), "o retorno" if ret else "o fim presumido"))
+                    rs.pl(dias, "dia", "dias"), "o retorno" if ret else "o fim presumido",
+                    "" if dias >= 45 else " · novo pedido a partir de %s" % rs.fmt(base + timedelta(days=45))))
         no_ano = [x for x in sts if (x[0] or x[1]).year == hoje.year]
         if len(no_ano) >= 5:
             add(None, "%d saídas temporárias em %d: conferir o limite anual (art. 124, caput: até 5 por ano; STJ, Tema 445: até 35 dias no ano)" % (len(no_ano), hoje.year))

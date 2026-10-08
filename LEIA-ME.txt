@@ -632,15 +632,18 @@ SAÍDA TEMPORÁRIA (ícone ao lado do nome, aba Geral)
   - regime semiaberto no RSPE, com o cumprimento em curso;
   - unidade da ficha disciplinar de regime semiaberto;
   - ao menos uma condenação não extinta com fato anterior a 11/04/2024
-    (irretroatividade da Lei 14.843/2024); crime posterior não impede;
+    (irretroatividade da Lei 14.843/2024); a condenação por fato a partir de
+    11/04/2024 não impede quando cumprida em conjunto com a mais antiga;
+    sendo a única, impede;
   - nenhum crime hediondo com resultado morte de fato a partir de
     23/01/2020 (art. 122, § 2º, Lei 13.964/2019);
   - 1/6 da pena cumprida (primário) ou 1/4 (reincidente), contado todo o
     tempo cumprido, inclusive no fechado (art. 123, II; Súmula 40 do STJ);
   - conduta Boa ou Ótima na ficha, sem falta nos últimos 12 meses;
   - trabalho em curso na ficha (o trabalho externo conta);
-  - 45 dias desde o retorno da última saída temporária (art. 124, § 3º);
-    sem o registro do retorno, conta-se 7 dias da saída.
+  - 45 dias entre o retorno da última saída temporária e o novo pedido
+    (art. 124, § 3º); sem o registro do retorno, conta-se 7 dias da saída.
+    Antes disso o ícone não aparece; o quadro informa a data do novo pedido.
   Ícone amarelo: nada falha, mas algo fica a conferir: ficha impressa há
   mais de 90 dias, sem ficha importada, unidade não reconhecida ou 5 saídas
   ou mais no ano (art. 124, caput; STJ, Tema 445).

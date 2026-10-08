@@ -79,6 +79,18 @@ ok(st(rspe(), ficha(eventos=[sai("10.08.2026"), ret("17.08.2026")]))["st_ok"], "
 x = st(rspe(), ficha(eventos=[sai("10.08.2026")]))
 ok(x["st_ok"] and "7 dias" in " ".join(i["txt"] for i in x["st_itens"]), "sem retorno: 7 dias da saída: %s" % x)
 ok(not st(rspe(), ficha(eventos=[sai("20.08.2026")]))["st_ok"], "sem retorno, saída recente")
+# fato em 11/04/2024 (dia da vigência) já é da lei nova: sozinho, impede; com condenação antiga em cumprimento, não impede
+x = st(rspe(_crimes=[crime("11/04/2024")]), ficha())
+ok(not x["st_ok"] and not x["st_quase"] and "vedada pela Lei 14.843" in " ".join(i["txt"] for i in x["st_itens"]), "fato em 11/04/2024 sozinho: %s" % x)
+ok(st(rspe(_crimes=[crime("10/04/2024")]), ficha())["st_ok"], "fato em 10/04/2024 é anterior")
+ok(st(rspe(_crimes=[crime("10/05/2019"), crime("11/04/2024")]), ficha())["st_ok"], "novo com antigo em cumprimento")
+ok(not st(rspe(_crimes=[crime("10/05/2019", ext="Sim"), crime("11/04/2024")]), ficha())["st_ok"], "antigo extinto: o novo fica sozinho")
+# 45 dias exatos do retorno ao pedido: cabe; 44: não, com a data do novo pedido
+ok(st(rspe(), ficha(eventos=[sai("17.08.2026"), ret("24.08.2026")]))["st_ok"], "retorno há 45 dias")
+x = st(rspe(), ficha(eventos=[sai("18.08.2026"), ret("25.08.2026")]))
+ok(not x["st_ok"] and not x["st_quase"] and "a partir de 09/10/2026" in " ".join(i["txt"] for i in x["st_itens"]), "retorno há 44 dias: %s" % x)
+x = st(rspe(), ficha(eventos=[sai("20.08.2026")]))
+ok(not x["st_ok"] and not x["st_quase"], "sem retorno, saída recente: não aparece (nem amarelo): %s" % x)
 # amarelo: ficha com mais de 90 dias; sem ficha; limite anual
 x = st(rspe(), ficha(data_impressao="01.05.2026"))
 ok(not x["st_ok"] and x["st_quase"], "ficha antiga = amarelo: %s" % x)
