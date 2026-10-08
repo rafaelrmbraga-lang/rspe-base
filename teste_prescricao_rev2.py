@@ -137,7 +137,8 @@ evs6 = [ev("01/01/2009", "PRISÃO DEFINITIVA", proc=P), ev("30/05/2010", "LIVRAM
 c6 = crime("01/01/2006", "01/12/2008", "7 ano(s), 8 mês(es) e 0 dia(s)", proc=P, artigo="ART 157: Roubo")
 l = linha(reg([c6], evs6, [inc("LIVRAMENTO CONDICIONAL", "", "30/05/2010"), inc("REVOGAÇÃO DE LIVRAMENTO CONDICIONAL", "", "07/02/2012")]))
 S6 = next((S for S in l["ppe_saldos"] if S["evasao"] == "07/02/2012"), None)
-confere(S6 and S6["cumprido_desde_termo"] == 514 + 616 and "não se desconta do saldo (CP, art. 88" in l["ppe_detalhe"], "A6: prisão real no período de prova apagada: %s" % (S6 and S6["cumprido_desde_termo"]))
+# rev. 4 (A6): cada período conta o dia da prisão e o da soltura, como o SEEU (antes, 514 + 616)
+confere(S6 and S6["cumprido_desde_termo"] == 515 + 617 and "não se desconta do saldo (CP, art. 88" in l["ppe_detalhe"], "A6: prisão real no período de prova apagada: %s" % (S6 and S6["cumprido_desde_termo"]))
 l = linha(reg([c6], evs6, [inc("LIVRAMENTO CONDICIONAL", "", "30/05/2010")]))
 confere("não se desconta do saldo (CP, art. 88" not in l["ppe_detalhe"], "A6: art. 88 aplicado sem revogação registrada")
 
