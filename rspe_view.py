@@ -518,6 +518,9 @@ def termino_calc(r):
     if not ger or rem is None or rem < 0:
         return None
     cs = custodia_sem_calculo(r)
+    if rem == 0 and not cs:
+        return None  # pena já cumprida: a data em que se esgotou não consta (a data do RSPE seria falsa); fica na Extinção
+
     if cs and cs["desde"]:
         return _soma_pena(cs["desde"], rem) - timedelta(days=cs["antes"])
     return _soma_pena(ger, rem) - timedelta(days=cs["antes"] if cs else 0)
@@ -531,6 +534,8 @@ def termino(r):
         return "%s*" % rs.fmt(tc)  # * = calculado pelo programa (explicação em calc_notas, rodapé e ficha)
     if nao_iniciou(r):
         return "Não iniciou"
+    if not parada(r) and not execucao_extinta(r) and rs.pena_para_dias(r.get("pena_remanescente")) == 0 and rs.pena_para_dias(r.get("pena_total")):
+        return "Pena cumprida (até %s)" % (r.get("data_geracao_rspe") or "?")
     return rotulo_parada(r, True) if parada(r) else "Não consta no RSPE"
 
 
@@ -640,7 +645,7 @@ def extincao(r, presc, interr):
     return {
         "ext_hipoteses": "; ".join(hip) if hip else ("Não iniciou o cumprimento - sem previsão" if nao_iniciou(r) else ("" if not interr else rotulo_parada(r) + " - sem previsão")),
         "ext_cor": cor,
-        "ext_termino": (rs.fmt(term) + ("*" if term_calc else "")) if term else ("Não iniciou" if nao_iniciou(r) else (rotulo_parada(r, True) if interr else "")),
+        "ext_termino": (rs.fmt(term) + ("*" if term_calc else "")) if term else ("Não iniciou" if nao_iniciou(r) else (rotulo_parada(r, True) if interr else (termino(r) if termino(r).startswith("Pena cumprida") else ""))),
         "ext_dias": (term - HOJE).days if term else None,
         "ext_sit": ("Pena extinta (registrada)" if ja_extinta else ("Extinção a verificar" if (cust_ver and cor != "vermelho") else ("Extinção cabível" if cor == "vermelho" else situacao(term)[0].replace("Vence", "Término").replace("Em ", "Término em ")) if (term or cor == "vermelho") else "")),
         "ext_extintos": "; ".join(ext),

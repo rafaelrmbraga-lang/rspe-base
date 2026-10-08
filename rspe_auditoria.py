@@ -1250,6 +1250,8 @@ def auditar(r, hoje=None):
             _imp.setdefault(p_, []).append("sentença em %s antes do fato (%s)" % (rs.fmt(s_), rs.fmt(f_)))
         if s_ and t_ and t_ < s_:
             _imp.setdefault(p_, []).append("trânsito em julgado em %s antes da sentença (%s)" % (rs.fmt(t_), rs.fmt(s_)))
+        if f_ and t_ and t_ < f_ and not (s_ and s_ < f_):
+            _imp.setdefault(p_, []).append("trânsito em julgado em %s antes do fato (%s)" % (rs.fmt(t_), rs.fmt(f_)))
     for p_, ps in _imp.items():
         itens.append(_item("verificar", "Data impossível no cadastro: %s" % p_,
                            "Proc. %s: %s. Uma das datas está errada no SEEU; conferir a sentença e a certidão de trânsito e pedir a correção (a data "
