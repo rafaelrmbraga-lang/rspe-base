@@ -758,7 +758,7 @@ const ui = {
   render(){
     const spec=this.spec(); const rs=this.visiveis();
     // abas
-    document.getElementById('tabs').innerHTML=this.dados.abas.concat(this.ABAS_EXTRA).map(a=>`<button class="tab ${a.id===this.aba?'on':''}" title="${esc(a.titulo)}" onclick="ui.irAba('${a.id}')">${this.ICONE[a.id]?`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${this.ICONE[a.id]}</svg>`:''}${this.CURTO[a.id]||a.titulo}${a.cor&&!a.sem_stats?`<span class="cnt">${this.contaCor(a,rs)}</span>`:''}${a.id==='quadro'&&this.qdAlertas()?`<span class="cnt" style="background:#F6E4E3;color:#8E2424" title="Cartões com prazo vencido ou para hoje">${this.qdAlertas()}</span>`:''}</button>`).join('');
+    document.getElementById('tabs').innerHTML=this.dados.abas.concat(this.ABAS_EXTRA).map(a=>`<button class="tab ${a.id===this.aba?'on':''}" title="${esc(a.titulo)}" onclick="ui.irAba('${a.id}')">${this.ICONE[a.id]?`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${this.ICONE[a.id]}</svg>`:''}${this.CURTO[a.id]||a.titulo}${a.cor&&!a.sem_stats?`<span class="cnt"${a.id==='ind'?' title="Assistidos com indulto ou comutação cabível em ao menos um decreto (2000 a 2025), com ou sem pedido - o mesmo número do relatório geral"':''}>${this.contaCor(a,rs)}</span>`:''}${a.id==='quadro'&&this.qdAlertas()?`<span class="cnt" style="background:#F6E4E3;color:#8E2424" title="Cartões com prazo vencido ou para hoje">${this.qdAlertas()}</span>`:''}</button>`).join('');
     document.getElementById('dica').textContent=this.DICA[this.aba]||'O ícone ↗ ao lado do assistido abre a ficha completa · clique no título da coluna para ordenar';
     this.renderFixados();
     if(this.aba==='ind'){ const selE=document.getElementById('filtro'); selE.parentElement.style.display='none'; selE.dataset.aba=''; document.getElementById('legenda').innerHTML=this.decLegenda(); document.getElementById('subtabs').classList.remove('on'); document.getElementById('modoWrap').style.display='none'; return this.renderIndulto(rs); }
@@ -1483,7 +1483,10 @@ const ui = {
   // contador da aba: o que ainda pede providência - sai quem já teve o pedido marcado (volta se a situação da aba mudou depois)
   abaPedido(spec){ return !!(spec && (spec.cols||[]).some(c=>c[0]==='pedido')); },
   pedPendente(r,aba){ if(aba==='ind'&&Object.keys(r.pedidos||{}).some(k=>k.startsWith('ind_'))) return false; const P=(r.pedidos||{})[aba]; return !P || (P.ref && P.ref!==this.pedRef(r,aba)); },
-  contaCor(a,rs){ rs=rs.filter(r=>this.pedPendente(r,a.id)); if(a.id==='ind') return rs.filter(r=>r.ind_sim).length || ''; const k = a.id==='presc' ? (this.prescModo!=='pp'?'presc_ppe_cor':'presc_retro_cor') : a.cor; return rs.filter(r=>r[k]==='vermelho'||r[k]==='vencido').length || ''; },
+  // aba Indulto: o mesmo critério do relatório geral (quadro "Indulto ou comutação cabível em ao menos um decreto"): assistidos com
+  // algum decreto "cabe" (2000 a 2025), com ou sem pedido - o rótulo do contador diz isso
+  contaInd(rs){ return rs.filter(r=>this.decDe(r).some(x=>x.s==='cabe')).length; },
+  contaCor(a,rs){ if(a.id==='ind') return this.contaInd(rs) || ''; rs=rs.filter(r=>this.pedPendente(r,a.id)); const k = a.id==='presc' ? (this.prescModo!=='pp'?'presc_ppe_cor':'presc_retro_cor') : a.cor; return rs.filter(r=>r[k]==='vermelho'||r[k]==='vencido').length || ''; },
   ABAS_EXTRA:[{id:'teses',titulo:'Jurisprudências'},{id:'quadro',titulo:'Quadro do Usuário'}],
   // abas: ícone (traço fino; verde na aba aberta) e nome curto
   ICONE:{

@@ -2542,7 +2542,10 @@ def complementar_decretos(r, f, hoje=None):
         verif = [m.group(1) for m in re.finditer(r"^\? ([IVX]+):", det, re.M) if m.group(1) not in ("XVI",)]
         antes = r.get(k) or ""
         # NÃO CABE (art. 6º, falta grave nos 12 meses): a ficha não reabre - a falta afasta o indulto qualquer que seja o inciso
-        if antes.startswith(("CONCEDIDO", "INDEFERIDO", "não se aplica", "VEDAD", "excluído", "NÃO CABE")) or r.get(k + "_status") in ("vedado",):
+        # "A VERIFICAR: ... | antes: ..." (pena extinta depois do decreto) e tempo cumprido incerto: a dúvida não é de inciso - a
+        # ficha não a resolve, e o resultado não volta a "POSSÍVEL"
+        if (antes.startswith(("CONCEDIDO", "INDEFERIDO", "não se aplica", "VEDAD", "excluído", "NÃO CABE", "A VERIFICAR: tempo cumprido incerto"))
+                or " | antes: " in antes or r.get(k + "_status") in ("vedado",)):
             r[k + "_explica"] = exp
             continue
         # avisos da análise (falta do art. 6º, livramento incerto etc.) seguem na célula depois de " | "
@@ -2563,7 +2566,7 @@ def complementar_decretos(r, f, hoje=None):
             concl = "a verificar (%s) - %s." % (", ".join(dict.fromkeys(poss + verif)), ressalva)
         elif poss:
             r[k] = "POSSÍVEL%s: art. 9º, %s%s" % (rot, ", ".join(poss), aviso)
-            r[k + "_status"] = "possivel"
+            r[k + "_status"] = rs.status_texto_decreto(r[k])  # falta do art. 6º a verificar no aviso: a verificar (critério único)
             if (r.get(kc) or "").startswith("POSSÍVEL"):
                 r[kc] = "prejudicada: indulto cabível (art. 13, § 5º)"
             concl = "possível pelo art. 9º, %s (conferido na ficha disciplinar)." % ", ".join(poss)

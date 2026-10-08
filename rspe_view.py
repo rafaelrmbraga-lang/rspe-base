@@ -383,15 +383,18 @@ def curto_indulto(txt):
         return "Vedado (art. 1º)"
     if base.startswith("NÃO CABE (art. 6º)"):
         return "Não cabe · falta grave 12m (art. 6º)" + (" · falta não homologada" if "falta não homologada" in base else "")
+    # possível com falta do art. 6º a verificar: o rótulo já diz "A verificar" (a célula, o texto exportado e a linha do tempo
+    # dizem a mesma coisa; os incisos atendidos vêm depois)
+    _pv = "A verificar" if "falta a verificar" in falta else "Possível"
     m = rs.re.match(r"POSSÍVEL \((.+?)\): (.*)$", base)
     if m:
         q = m.group(1)
-        rot = "Possível"
+        rot = _pv
         extra = " · só crimes não impeditivos (art. 7º, p. ú.)" if "art. 7º" in q else ""
         extra += " · tese: hed. superveniente" if "hediondez" in q else ""
         return "%s · %s%s%s" % (rot, m.group(2).replace("art. 9º, ", ""), extra, falta)
     if base.startswith("POSSÍVEL"):
-        return base.replace("POSSÍVEL: ", "Possível · ").split("; § 5º")[0].replace("art. 5º (todos os crimes com pena máxima ≤ 5 anos)", "art. 5º (pena máx. ≤ 5 anos)") + falta
+        return base.replace("POSSÍVEL: ", _pv + " · ").split("; § 5º")[0].replace("art. 5º (todos os crimes com pena máxima ≤ 5 anos)", "art. 5º (pena máx. ≤ 5 anos)") + falta
     if base.startswith("A VERIFICAR"):
         m = rs.re.match(r"A VERIFICAR(?: \((.+?)\))?: (.*)$", base)
         if m:
@@ -944,6 +947,7 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
             r["_lc_confirmado"] = True
             try:
                 # refaz os três decretos antes de reaplicar as decisões do RSPE (sem isso, a de 2022 seria aplicada duas vezes)
+                rs.limpar_decretos(r)  # sem isso, a chave que a reanálise não grava (ex.: _explica) ficava da análise anterior
                 r.update(rs.analise_decretos(r, r.get("_crimes", []), r.get("_eventos", []), r.get("_incidentes", []), None))
                 r.update(rs.analise_decreto_2022(r, r.get("_crimes", []), r.get("_eventos", []), r.get("_incidentes", [])))
                 rs.aplicar_decisoes_decretos(r, r.get("_incidentes", []))
