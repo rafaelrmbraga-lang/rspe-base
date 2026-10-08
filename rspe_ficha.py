@@ -1108,6 +1108,12 @@ def _prisao_x_ficha(r, f):
     evs = sorted((e for e in r.get("_eventos", []) if rs.to_date(e.get("data") or "")), key=lambda e: rs.to_date(e["data"]))
     if not x or not evs:
         return []
+    # prisão anterior a todos os fatos desta execução: é de outro processo e não pode ser detraída (CP, art. 42 - vedada a
+    # "conta-corrente" de pena)
+    _fatos = [rs.to_date(c.get("data_infracao") or "") for c in r.get("_crimes", [])]
+    _fatos = [d for d in _fatos if d]
+    if _fatos and x < min(_fatos):
+        return []
     per = rs.periodos_custodia(evs)
     if any(a - timedelta(days=2) <= x and (b is None or x < b) for a, b in per):
         return []
@@ -1302,6 +1308,35 @@ def _regime_x_ficha(r, f):
                     if d and abs((d - x).days) <= dias:
                         return True
         return False
+    def prog_antes(reg_m, x):
+        # a ida à unidade costuma vir meses depois da decisão: progressão para o mesmo regime decidida até ~1 ano antes
+        # (ou até 45 dias depois) é a mesma
+        for i in incs:
+            t = rs._sem_acento(((i.get("tipo") or "") + " " + (i.get("complemento") or "")).upper()).replace("-", "").replace(" ", "")
+            if "PROGRESS" in t and reg_m in t:
+                for c in ("data_referencia", "data_decisao"):
+                    d = rs.to_date(i.get(c) or "")
+                    if d and x - timedelta(days=380) <= d <= x + timedelta(days=45):
+                        return True
+        return False
+
+    def regime_rspe_em(x):
+        # regime em que o RSPE põe a pessoa na data x: o do último incidente de regime (inicial, progressão, regressão,
+        # somatório) até essa data
+        ult = None
+        for i in incs:
+            if "REGIME" not in (i.get("tipo") or "").upper() or (i.get("situacao") or "CONCEDIDO") != "CONCEDIDO":
+                continue
+            d = rs.to_date(i.get("data_referencia") or i.get("data_decisao") or "")
+            reg = re.match(r"\s*(SEMI-?ABERTO|ABERTO|FECHADO)", rs._sem_acento((i.get("complemento") or "").upper()))
+            if d and reg and d <= x and (ult is None or d >= ult[0]):
+                ult = (d, reg.group(1).replace("-", ""))
+        return ult[1] if ult else None
+
+    def evento_rspe(x, dias=10):
+        # evento do RSPE na mesma data (reinício, recaptura, início no regime): a transferência acompanha esse evento
+        return any(rs.to_date(ev.get("data") or "") and abs((rs.to_date(ev["data"]) - x).days) <= dias
+                   for ev in r.get("_eventos", []) if not ev.get("_ficha"))
     vistos = set()
     # progressão/livramento anteriores ao primeiro evento desta execução são de outra (a ficha é da pessoa, não do processo)
     _ini = min((d for d in (rs.to_date(ev.get("data") or "") for ev in r.get("_eventos", [])) if d), default=None)
@@ -1326,12 +1361,20 @@ def _regime_x_ficha(r, f):
         reg_m = re.sub(r"[- ]", "", m.group(1)) if m else ""
         ev_rspe = m and any(re.search(reg_m, rs._sem_acento(((ev.get("tipo") or "") + " " + (ev.get("motivo") or "")).upper()).replace("-", "").replace(" ", ""))
                             and rs.to_date(ev.get("data") or "") and abs((rs.to_date(ev["data"]) - x).days) <= 10 for ev in r.get("_eventos", []))
-        if m and ("prog", m.group(1)) not in vistos and not no_rspe(r"PROGRESS", x) and not no_rspe(reg_m.replace("SEMIABERTO", "SEMI-?ABERTO"), x) and not ev_rspe:
+        # já no regime pelo RSPE (regime inicial ou progressão anterior), progressão decidida até ~1 ano antes ou evento do RSPE
+        # na mesma data: a transferência na ficha é o cumprimento do que o RSPE já registra
+        _ja = m and (regime_rspe_em(x) in ((reg_m,) if reg_m == "ABERTO" else (reg_m, "ABERTO")) or prog_antes(reg_m, x) or evento_rspe(x))
+        if m and ("prog", m.group(1)) not in vistos and not no_rspe(r"PROGRESS", x) and not no_rspe(reg_m.replace("SEMIABERTO", "SEMI-?ABERTO"), x) and not ev_rspe \
+                and not _ja:
             vistos.add(("prog", m.group(1)))
             out.append(("Progressão para o %s registrada na ficha em %s e ausente no RSPE" % (m.group(1).lower().replace(" ", ""), rs.fmt(x)),
                         "A ficha registra o cumprimento da progressão (%s). Sem o incidente no RSPE, a data-base e as frações seguintes ficam erradas: "
                         "conferir a decisão e pedir o lançamento no SEEU." % _br(e["texto"])[:160]))
-        if re.search(r"REGRESS[ÃA]O", u) and "regr" not in vistos and not no_rspe(r"REGRESS", x):
+        # saída para o monitoramento eletrônico não é regressão (a unidade registra "Motivo: Regressão de Regime" também na ida
+        # ao monitoramento depois de progressão ou reconsideração)
+        _dest = re.search(r"DESTINO:\s*([^,]+)", u)
+        _dest_brando = bool(_dest) and classificar_unidade(_dest.group(1))[0] == "monitoramento"
+        if re.search(r"REGRESS[ÃA]O", u) and "regr" not in vistos and not no_rspe(r"REGRESS", x) and not _dest_brando:
             vistos.add("regr")
             out.append(("Regressão registrada na ficha em %s e ausente no RSPE" % rs.fmt(x),
                         "Ficha: %s. Conferir se houve decisão de regressão (e a falta que a motivou) e o lançamento no SEEU." % _br(e["texto"])[:160]))

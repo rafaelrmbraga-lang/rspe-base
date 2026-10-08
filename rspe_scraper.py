@@ -1131,7 +1131,11 @@ def e_hediondo(c, ref=None):
         # acima), salvo em tipo que o rol da Lei 8.072 nunca alcança (art. 211, 155, Lei 10.826 arts. 12 e 14...): aí o rótulo da
         # fração descreve a pessoa ("1/1 - Hediondo Reincidente") ou é erro de cadastro, não a natureza do crime. O homicídio simples
         # fica com o selo (pode ser o praticado em atividade típica de grupo de extermínio - art. 1º, I)
-        if not (lei == "11343" and art in ("35", "37") and "HEDIONDO" not in (c.get("fracao_progressao") or "").upper()):
+        # art. 33, §§ 2º e 3º, da Lei 11.343/06 (induzimento e uso compartilhado): fora do tráfico equiparado, ainda com o selo
+        # (a mesma exceção do rol - base_juridica: "art. 33, §§ 2º, 3º e 4º fora")
+        if lei == "11343" and art == "33" and re.match(r"\s*§\s*[23](?!\d)", c.get("tipo_penal") or ""):
+            pass
+        elif not (lei == "11343" and art in ("35", "37") and "HEDIONDO" not in (c.get("fracao_progressao") or "").upper()):
             # art. 217 "(Revogado)" com selo e fato posterior a 2009: cadastro do SEEU no lugar do 217-A - o selo vale
             if art == "121" or (art == "217" and "REVOGADO" in (c.get("artigo") or "").upper()) or _rol_hediondo(c, h, lei, art) is not False:
                 return True
