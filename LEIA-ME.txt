@@ -1,9 +1,9 @@
-APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.5.0
+APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.5.1
 (antigo RSPE Base; SEEU, programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-7.5.0. A documentação técnica completa (cada parâmetro, a regra, a norma e
+7.5.1. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -597,6 +597,38 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v7.5.1
+  - Segunda revisão geral, sobre a base 08.10 inteira (595 RSPEs, 653 fichas).
+  - Prescrição: novo crime com data do fato incoerente, intercorrente com
+    indício de acórdão e crime conexo ao do júri ficam "a verificar"; as
+    prisões registradas na ficha entram na conta; art. 88 só com revogação
+    registrada; prisão por outro processo aparece como "Não corre"; textos
+    sem contradição (art. 117, V e VI; art. 30 da Lei 11.343/06).
+  - Indulto e comutação: aba, linha do tempo, colunas e relatório com o mesmo
+    resultado; comutação cabível não some com o indulto indeferido; uma
+    decisão não esconde a outra; falta grave firme não vira "a verificar";
+    execução arquivada ou extinta não "cabe"; inciso XIII só com curso
+    concluído e certificado; SEEU sem cálculo em 2022/2024/2025 conta pelos
+    eventos ("a verificar"); vedação do art. 7º, p. ú., antes do
+    "cumprimento interrompido"; contador de "a verificar" na aba.
+  - Auditoria: data-base favorável ao assistido não gera pedido de
+    impugnação; porte para consumo só com pena de prisão efetiva; menos
+    alertas falsos do confronto com a ficha (progressão, regime inicial,
+    detração); pena acima do máximo do tipo como aviso de cadastro; um
+    alerta só por erro de reincidência; ação penal sem crime cadastrado no
+    RSPE passa a ser apontada.
+  - Remição: remição sem atestado cobre só o trabalho que remiu (o resto volta
+    à estimativa); planilha e relatório com a mesma conta; atestados
+    "PROTOCOLADO", por extenso e abreviados lidos; atestado substituto e
+    atestado só com período tratados; status da aba Ficha coerente.
+  - Coerência: exportação e gaveta da Prescrição separam executória e
+    punitiva (os números batem com a tela); "Pena interrompida/suspensa",
+    "Extinção a verificar", "Vence hoje" e término calculado com o mesmo
+    rótulo em tela e relatórios; pedido de indulto por decreto reconhecido na
+    exportação e no histórico; exportar com o filtro da aba; navegação por
+    teclado; leitura de processos com número partido e de comarcas fora do
+    padrão (reimportar os RSPEs para valer nos registros antigos).
 
 v7.5.0
   - Revisão geral (jurídica e do sistema), conferida na base 08.10 (595

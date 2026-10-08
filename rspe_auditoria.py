@@ -1360,6 +1360,16 @@ def auditar(r, hoje=None):
                            "Proc. %s: %s. Uma das datas está errada no SEEU; conferir a sentença e a certidão de trânsito e pedir a correção (a data "
                            "do fato decide a lei aplicável, e o trânsito, a reincidência pela lei e a prescrição)." % (p_, "; ".join(sorted(set(ps)))),
                            "CP, arts. 2º, 63 e 112; LEP, art. 106.", tipo="data-impossivel-no-cadastro", ref=p_))
+    # ação penal sem tipificação ("Lei:") no RSPE: a pena dela fica fora de todas as contas do programa
+    for a_ in r.get("_acoes_sem_crime") or []:
+        p_ = a_.get("processo_criminal") or "?"
+        itens.append(_item("alerta", "Ação penal sem crime cadastrado no RSPE: %s" % p_,
+                           "Proc. %s (pena %s%s%s): o RSPE não traz a tipificação (\"Lei:\") desta condenação, e a pena dela fica fora dos "
+                           "cálculos do programa (progressão, livramento, indulto, prescrição). Conferir no SEEU se o crime foi cadastrado e pedir a "
+                           "correção do cadastro." % (p_, a_.get("pena_total_processo") or "não informada",
+                                                      (", regime " + a_["regime_sentenca"]) if a_.get("regime_sentenca") else "",
+                                                      (", sentença em " + a_["data_sentenca"]) if a_.get("data_sentenca") else ""),
+                           "LEP, arts. 66, III, e 111.", tipo="acao-penal-sem-crime-cadastrado", ref=p_))
     for i in incidentes:
         if "FALTA GRAVE" in (i.get("tipo") or "").upper() and not i.get("_ficha"):
             f_, d_ = rs._data_fato_falta(i), rs.to_date(i.get("data_decisao") or "")
@@ -2029,7 +2039,7 @@ def auditar(r, hoje=None):
     itens.sort(key=lambda i: ordem[i["nivel"]])
     return {"aud_status": status, "aud_itens": itens, "aud_alertas": n_alerta, "aud_verificar": n_verif,
             "aud_resumo": " · ".join(x for x in (("%d alerta%s" % (n_alerta, "" if n_alerta == 1 else "s")) if n_alerta else "",
-                                                 ("%d ponto%s a verificar" % (n_verif, "" if n_verif == 1 else "s")) if n_verif else "") if x) or "Sem inconsistências",
+                                                 ("%d ponto%s a verificar" % (n_verif, "" if n_verif == 1 else "s")) if n_verif else "") if x) or "Guia em ordem",
             "aud_base": "base jurídica %s" % rg.versao()}
 
 
