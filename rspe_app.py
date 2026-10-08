@@ -38,7 +38,7 @@ import rspe_relatorio as rrel
 import rspe_indulto_tl as rtl
 
 APP = "APTO"
-VERSAO = "7.5.1"
+VERSAO = "7.6.0"
 
 
 def pasta_app():

@@ -1,9 +1,9 @@
-APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.5.1
+APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.6.0
 (antigo RSPE Base; SEEU, programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-7.5.1. A documentação técnica completa (cada parâmetro, a regra, a norma e
+7.6.0. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -632,6 +632,36 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v7.6.0
+  - Terceira e quarta revisões gerais (base 08.10 inteira: 595 RSPEs, 653
+    fichas). Reimportar RSPEs e fichas para valerem as novas leituras.
+  - Leitura das fichas: extração por fonte e posição (lançamentos de fichas
+    antigas não se perdem; rodapé fora); entrada vinda de delegacia
+    reconhecida; transferência por determinação judicial não é soltura;
+    falta com "Lei nº 7.210", nº do PADIC e PAD em texto livre lidos; saídas
+    temporárias, trabalho externo e estudo corrigidos para os incisos XI e XII.
+  - Leitura do RSPE: todos os marcadores da ação ("Indultada", "Comutada"),
+    vara em duas linhas, medida de segurança, nota da data prevista
+    ("Indeferido em", "Em trâmite desde", "falta grave nos últimos 12
+    meses"), sentença repetida, tribunal.
+  - Prescrição: a fuga do RSPE encerra a custódia da ficha; restritiva,
+    sursis e medida de segurança com novo crime e prisão por outro processo;
+    acórdão e júri conexo; punitiva "a verificar" visível; textos e citações.
+  - Indulto e comutação: crime doloso na janela da falta em 2024/2025;
+    regra única do tempo cumprido; alteração de data-base não é regime;
+    comutação sem pena a comutar; hipóteses por idade (2017, 2023); tetos em
+    anos de 365 dias; contador da aba = relatório.
+  - Auditoria: alteração de data-base não é progressão; data-base da guia
+    nova de quem já estava preso (Tema 1006); limite do art. 75 do CP;
+    hediondez pela fração, não pelo rótulo; falta prescrita fora das contas.
+  - Remição: trabalho encerrado por transferência, evasão e soltura também
+    na ficha antiga; baixa com outra grafia; registros duplicados; origem da
+    data final de cada trecho; pedido pronto com o valor da remição
+    detalhada.
+  - Sistema: RSPE antigo não substitui o atual; lista sem duplicados;
+    remover/vincular ficha seguros; restauração de cópia antiga; Excel sem
+    fórmulas; teste do sistema (base, importação, exportação, cópias).
 
 v7.5.1
   - Segunda revisão geral, sobre a base 08.10 inteira (595 RSPEs, 653 fichas).
