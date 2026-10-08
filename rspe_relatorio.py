@@ -1723,9 +1723,13 @@ def relatorio_geral(modelos, caminho, nome_base, nominal=True):
         tb.append([Paragraph(_t("Demais %s (%s)" % (rs.pl(len(resto), "decreto", "decretos"), ("%s a %s" % (anos[0], anos[-1])) if anos else "")), st["cel"]),
                    "0", "0", "0", "0", str(sum(r["nao"] + r["imp"] for r in resto))])
     el.append(_tabela(tb, [W * 0.3, W * 0.12, W * 0.13, W * 0.15, W * 0.15, W * 0.15], st, cores_linha=cores, pad=4))
-    sem = [("%s%s" % (r["ano"], " (Dia das Mães)" if "maes" in str(r["id"]) else "")) for r in E["decretos"] if r not in com_alc]
+    # os do Dia das Mães são só para mulheres: sem assistida alcançada, o motivo é esse, e não a data da execução
+    sem = [str(r["ano"]) for r in E["decretos"] if r not in com_alc and "maes" not in str(r["id"])]
+    sem_m = [str(r["ano"]) for r in E["decretos"] if r not in com_alc and "maes" in str(r["id"])]
     if sem:
-        el.append(Paragraph(_t("Decretos que não alcançam nenhum assistido (execução iniciada depois): %s." % ", ".join(sem)), st["mut"]))
+        el.append(Paragraph(_t("Decretos que não alcançam nenhum assistido (execução iniciada depois ou sem condenação até o decreto): %s." % ", ".join(sem)), st["mut"]))
+    if sem_m:
+        el.append(Paragraph(_t("Decretos do Dia das Mães (só para mulheres) sem nenhuma assistida alcançada: %s." % ", ".join(sem_m)), st["mut"]))
 
     secao("3.4 Prescrição e extinção da pena")
     ret = Counter()
