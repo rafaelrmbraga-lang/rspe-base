@@ -38,7 +38,7 @@ ROTULO = {
     "lapso": {"vencido": "Vencido", "laranja": "Até 30 dias", "amarelo": "Até 60 dias / a verificar", "verde": "Até 90 dias", "cinza": "Sem prazo", "azul": "Extinta"},
     "indulto": {"verde": "Possível", "amarelo": "A verificar", "vermelho": "Crime impeditivo / vedado", "cinza": "Não atinge", "azul": "Extinta"},
     "presc": {"vermelho": "Prescrição aparente", "amarelo": "Iminente / a verificar", "": "Não prescrita", "cinza": "Sem dados", "azul": "Extinta"},
-    "presc_pp": {"vermelho": "Prescrição aparente", "": "Não configurada", "cinza": "Sem dados"},
+    "presc_pp": {"vermelho": "Prescrição aparente", "amarelo": "A verificar", "": "Não configurada", "cinza": "Sem dados"},
     "fd": {"vermelho": "Remição a requerer / atestado não lançado", "amarelo": "Conferir remição / ausência de atestado / último atestado há 6 meses", "verde": "Em ordem", "cinza": "Sem ficha"},
     "aud": {"vermelho": "Com alertas", "amarelo": "Pontos a verificar", "verde": "Guia em ordem", "azul": "Extinta"},
     "ext": {"vermelho": "Extinção cabível", "laranja": "Término em até 30 dias", "amarelo": "Até 60 dias / a verificar", "verde": "Término em até 90 dias", "cinza": "Sem previsão / interrompida", "azul": "Extinta (registrada)"},
@@ -492,6 +492,7 @@ def custodia_sem_calculo(r):
     f0 = min(fatos) if fatos else None
     procs = [c.get("processo_criminal") for c in ativos if c.get("processo_criminal")]
     antes, desde, duvida = 0, None, False
+    fechados = []
     for a, b, _mot, p in rs.periodos_custodia_detalhe(r.get("_eventos", [])):
         if f0 and (b or HOJE) <= f0:
             continue  # prisão encerrada antes do fato: não é detração (CP, art. 42)
@@ -503,7 +504,9 @@ def custodia_sem_calculo(r):
         if b is None:
             desde = a
         else:
-            antes += (b - a).days
+            fechados.append((a, b))
+    # conta o dia da prisão e o da soltura, como o SEEU (rs.dias_cumpridos_ate); períodos contíguos contam o dia comum uma vez
+    antes = sum((b - a).days + 1 for a, b in rs.uniao_periodos(fechados))
     return {"antes": antes, "desde": desde, "duvida": duvida} if (antes or desde) else None
 
 
@@ -588,7 +591,7 @@ def extincao(r, presc, interr):
                 import rspe_decretos as _rd
                 cx = _rd._ctx(r)
                 c_dlc = rs.cumprido_na_data(r, cx["periodos"], cx["rem"], dlc)[0]
-                fim_prova = dlc + timedelta(days=max(0, pt - c_dlc))
+                fim_prova = _soma_pena(dlc, max(0, pt - c_dlc))  # pelo calendário, como o término do SEEU
             except Exception:
                 fim_prova = None
         if revog and fim_prova and fim_prova <= HOJE and all(d > fim_prova for d in revs if d > dlc):
@@ -620,8 +623,13 @@ def extincao(r, presc, interr):
             hip.append("%s: a verificar - custódia anterior ao trânsito de %s iguala ou supera a pena do processo (%s); se computada nesta "
                        "condenação, extinção pelo cumprimento (CP, art. 42; LEP, arts. 66, II, e 111)" % (l.get("rotulo") or l["crime"], rs.dias_para_pena(l.get("ppe_detracao_dias") or 0), l.get("ppe_pena_processo") or l["pena"]))
             a_verificar = True
-    # multa cominada: extinção exige prova da impossibilidade de pagamento (STF ADI 7.032)
-    com_multa = any(re.search(r"\b(E|e)\s+Multa", c.get("tipo_penal") or "") for c in r.get("_crimes", []) if not c.get("extinto", "").upper().startswith("S"))
+        if l.get("ppe_saldo_zero"):
+            # única condenação em execução: pelo tempo cumprido nos eventos do RSPE, a pena se esgotou antes da fuga
+            hip.append("%s: a verificar - pelos eventos do RSPE, a pena estava integralmente cumprida na fuga de %s (saldo calculado zero): "
+                       "extinção pelo cumprimento a conferir no cálculo do SEEU (LEP, art. 66, II)" % (l.get("rotulo") or l["crime"], l["ppe_saldo_zero"]))
+            a_verificar = True
+    # multa cominada: o inadimplemento não obsta a extinção, salvo prova concreta da capacidade de pagar (STJ, Tema 931 revisto)
+    com_multa = any(re.search(r"\bE\s+MULTA", (c.get("tipo_penal") or "").upper()) for c in r.get("_crimes", []) if not c.get("extinto", "").upper().startswith("S"))
     multa_txt = ("Multa cominada: o inadimplemento não obsta a extinção ante a alegada hipossuficiência, salvo decisão motivada que indique concretamente a possibilidade de pagamento (STJ, Tema 931, tese revista em 28/02/2024); a assistência pela Defensoria gera presunção relativa de hipossuficiência, e a ADI 7.032 não superou o Tema 931 (STJ, AgRg no REsp 2.267.208, 6ª Turma, 16/09/2026); há julgados da 5ª Turma exigindo prova da impossibilidade (STJ, REsp 2.055.935) - por cautela, instruir com elementos da hipossuficiência" if com_multa else "")
     # crimes já extintos no RSPE
     ext = ["%s%s%s" % (rs.crimes_curto([c]).replace(" (extinto)", ""), (" · " + c["extincao_motivo"].lower()) if c.get("extincao_motivo") else "",
@@ -774,7 +782,8 @@ def presc_curto(txt, ppe=False):
     if tl.startswith("aparente") or "aparente" in tl[:40]:
         return "Aparente"
     if tl.startswith("possível"):
-        return "Conferir a guia"
+        # "Possível - conferir a ficha" (prisão só na ficha SIAPEN) ou "- conferir a guia"
+        return "Conferir a ficha" if ("ficha" in tl[:40] and "guia" not in tl[:40]) else "Conferir a guia"
     if tl.startswith("iminente"):
         return "Iminente"
     if tl.startswith("a verificar"):
@@ -844,7 +853,7 @@ def simplificar(m):
         m["presc_ppe"] = "Não prescrita (há crimes sem dados)"
         m["presc_ppe_full"] = "%s · %s sem os dados do cálculo (%s): conferir na ação penal" % (
             m["presc_ppe_full"] or "Não prescrita", rs.pl(len(_sem), "crime", "crimes"), "; ".join(sorted({L.get("crime") or "?" for L in _sem})))
-    _pc = {"Aparente": "vermelho", "Conferir a guia": "amarelo", "Iminente": "amarelo", "A verificar": "amarelo", "Extinta": "azul", "Sem dados": "cinza"}
+    _pc = {"Aparente": "vermelho", "Conferir a guia": "amarelo", "Conferir a ficha": "amarelo", "Iminente": "amarelo", "A verificar": "amarelo", "Extinta": "azul", "Sem dados": "cinza"}
     m["presc_retro_cor"], m["presc_ppe_cor"] = _pc.get(m["presc_retro"], ""), _pc.get(m["presc_ppe"], "")
     # dados conferidos/corrigidos pelo operador sem prescrição: verde
     if any(L.get("ajustado") for L in m.get("presc_linhas") or []):
@@ -1163,6 +1172,9 @@ def prioridade(m):
             mot[4].append(rot + " a verificar")
     if m.get("presc_ppe_cor") == "amarelo":
         mot[4].append("prescrição executória iminente / a verificar")
+    if m.get("presc_retro_cor") == "amarelo":
+        # punitiva aparente pelas datas do RSPE, mas dependente de marco que ele não traz (pronúncia, acórdão, datas incoerentes)
+        mot[4].append("prescrição punitiva a verificar")
     if m.get("aud_status") == "atencao":
         mot[4].append(rs.pl(int(m.get("aud_alertas") or 0), "alerta", "alertas") + " na Auditoria")
     if m.get("aud_status") == "verificar":

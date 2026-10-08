@@ -808,8 +808,10 @@ def relatorio_individual(m, caminho, nome_base):
             rot, cor = _etiqueta_indulto(m.get(kc), m.get(kc + "_cor"))
             add("Comutação %s" % ano, dec[ano] + ", art. 13", rot, cor, _obs_indulto(m.get(kc + "_full")))
     pr, pe = m.get("presc_retro"), m.get("presc_ppe")
-    if m.get("presc_retro_cor") == "vermelho":
-        add("Prescrição punitiva", "", "Aparente", "vermelho", (m.get("presc_retro_full") or "").replace("Aparente: ", ""))
+    if m.get("presc_retro_cor") in ("vermelho", "amarelo"):
+        # "A verificar": aparente pelas datas do RSPE, mas depende de marco que ele não traz (pronúncia, acórdão, datas incoerentes)
+        add("Prescrição punitiva", "", "Aparente" if m["presc_retro_cor"] == "vermelho" else "A verificar", m["presc_retro_cor"],
+            re.sub(r"^(Aparente|A verificar)\s*:\s*", "", m.get("presc_retro_full") or ""))
     if m.get("presc_ppe_cor") in ("vermelho", "amarelo"):
         # o rótulo é o da tela: "Iminente" só quando a prescrição está mesmo próxima; o mais comum é "A verificar"
         add("Prescrição executória", "", "Aparente" if m["presc_ppe_cor"] == "vermelho" else (pe or "A verificar"), m["presc_ppe_cor"],
