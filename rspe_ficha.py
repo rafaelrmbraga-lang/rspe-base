@@ -356,6 +356,10 @@ def _pagina_historico(p, k):
     10 pt que vem na camada de texto, cortado na impressão (só a 1ª linha aparece), e que embaralhava as linhas do lançamento
     (devolvido à parte, sem virar lançamento); e o rodapé (endereço e telefone em 7 pt, "Nome: ... Projeto SIAPEN" e a 2ª linha
     de um nome comprido). Na 1ª página, o cabeçalho (acima de "HISTÓRICO") fica inteiro. Devolve (texto, linhas ocultas)."""
+    chars = getattr(p, "chars", None)
+    if not chars:
+        # página sem a posição dos caracteres (PDF sem camada de caracteres ou leitor simplificado): o texto corrido
+        return p.extract_text() or "", []
     topo = 0
     if k == 0:
         w = next((w for w in p.extract_words() if w["text"].startswith("HISTÓRICO")), None)
@@ -398,6 +402,8 @@ def _data_prisao_chars(p):
     """Data da prisão pelos caracteres da 1ª página: os da linha do valor (mesmo topo) entre "Data Prisão:" e "Procedência:", sem a
     célula vizinha que a camada de texto intercala ("ROCHA0,73/7045 /I2P0A2C4ARAI" = "07/05/2024" + "ROCHA, 374 IPACARAI")."""
     import collections
+    if not getattr(p, "chars", None):
+        return ""
     neg = [c for c in p.chars if "BOLD" in (c.get("fontname") or "").upper()]
     txt = "".join(c["text"] for c in neg)
     i, j = txt.find("Data Prisão:"), txt.find("Procedência:")
@@ -427,7 +433,7 @@ def extrair(caminho):
             vis.append(v)
             ocultas += o
     t = _limpar("\n".join(vis))
-    f = {"arquivo": caminho, "tipo": "ficha_disciplinar"}
+    f = {"arquivo": caminho, "tipo": "ficha_disciplinar", "_versao_extracao": VERSAO_EXTRACAO}
     cab = t.split("HISTÓRICO")[0]
     f["nome"] = (re.search(r"Nome:\s*(.+?)\s+RGI:", cab) or [None, ""])[1].strip() if re.search(r"Nome:\s*(.+?)\s+RGI:", cab) else ""
     f["rgi"] = (re.search(r"RGI:\s*(\d+)", cab) or [None, ""])[1]
@@ -477,6 +483,8 @@ def extrair(caminho):
 # número, instauração), "LEI Nº 7.210", trabalho externo pela empresa, estudo encerrado na saída da unidade, isolamentos, dias só por
 # extenso entre parênteses, atestado sem dias nem período)
 VERSAO_LEITURA = 10
+# versão da extração do PDF (camada de caracteres): a mesma ficha extraída por versão anterior é extraída de novo ao reimportar
+VERSAO_EXTRACAO = 2
 
 
 def _limpar_evento(txt):

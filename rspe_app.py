@@ -2220,8 +2220,9 @@ class Api:
                 g = json.loads(d) or {}
             except Exception:
                 continue
-            if g.get("_hash") == f.get("_hash") and (g.get("data_impressao") or "") == (f.get("data_impressao") or ""):
-                return True
+            if (g.get("_hash") == f.get("_hash") and (g.get("data_impressao") or "") == (f.get("data_impressao") or "")
+                    and (g.get("_versao_extracao") or 1) >= (f.get("_versao_extracao") or 1)):
+                return True  # extraída por versão anterior: grava de novo (leitura melhor do mesmo arquivo)
         return False
 
     def _indice_vinculo(self, base):
