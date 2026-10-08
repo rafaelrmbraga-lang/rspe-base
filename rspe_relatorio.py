@@ -345,15 +345,17 @@ def _etiqueta_prazo(sit, cor, dias, ped=""):
         return ("Não consta no RSPE", "cinza", "")
     if sl.startswith("vencid") or sl.startswith("lapso") or sl.startswith("extinção cabível"):
         return ("Vencido", "vermelho", s if "verificar" in sl else "")
-    if sl.startswith("a verificar"):
-        return ("A verificar", "amarelo", s)
+    if sl.startswith("a verificar") or sl.startswith("extinção a verificar"):
+        return ("A verificar", "amarelo", s if sl.startswith("a verificar") else "")
     if sl.startswith("em cumprimento") or sl.startswith("em ") or sl.startswith("vence") or sl.startswith("término"):
         if dias is not None and 0 <= dias <= 90:
-            return ("Vence em %s" % rs.pl(dias, "dia", "dias"), cor if cor in ("laranja", "amarelo", "verde") else "amarelo", "")
+            return ("Vence hoje" if dias == 0 else "Vence em %s" % rs.pl(dias, "dia", "dias"), cor if cor in ("laranja", "amarelo", "verde") else "amarelo", "")
         if dias is not None and dias > 90:
             return ("Em cumprimento", "", "faltam %s" % rs.pl(dias, "dia", "dias"))
         return ("Em cumprimento", "", "")
-    if sl.startswith("não se aplica") or sl.startswith("não consta") or sl.startswith("pena interrompida") or sl.startswith("não iniciou"):
+    if sl.startswith("pena interrompida") or sl.startswith("pena suspensa"):
+        return (s.split(" (")[0], "cinza", "")
+    if sl.startswith("não se aplica") or sl.startswith("não consta") or sl.startswith("não iniciou"):
         return (s.split(" (")[0], "cinza", "")
     if sl.startswith("pena extinta"):
         return ("Extinta", "azul", "")
@@ -366,7 +368,7 @@ def _etiqueta_indulto(celula, cor):
     if not c:
         return ("—", "")
     mapa = {"Sim": ("Cabível", "verde"), "Verificar": ("A verificar", "amarelo"), "Falta": ("Falta grave", "vermelho"),
-            "Não atinge": ("Não cabe", "cinza"), "Não alcançado": ("Não alcançado", "cinza"), "Concedido": ("Concedido", "azul"), "Indeferido": ("Indeferido", "vermelho"),
+            "Não atinge": ("Não atinge", "cinza"), "Não alcançado": ("Não alcançado", "cinza"), "Concedido": ("Concedido", "azul"), "Indeferido": ("Indeferido", "vermelho"),
             "Prejudicada": ("Prejudicada", "cinza"), "Fato posterior": ("Fato posterior", "cinza"), "Não se aplica": ("Não se aplica", "cinza")}
     if c in mapa:
         return mapa[c]
@@ -441,6 +443,7 @@ def _titulo_alerta(titulo):
         else:
             buf += ch
     frase = re.sub(r"\s{2,}", " ", "".join(corpo)).strip(" -–:;,")
+    frase = re.sub(r"\s+([,.;:])", r"\1", frase)  # o parêntese sai do meio da frase: "decisão (14/05/2024), não" -> "decisão, não"
     linhas = []
     for lab, val in dados:
         lab = lab.strip(",;:").lower()
@@ -748,12 +751,13 @@ def relatorio_individual(m, caminho, nome_base):
     el.append(Spacer(1, 10))
 
     # 2) bloco visual da pena
+    term_calc = str(m.get("termino") or "").endswith("*")  # o SEEU não imprimiu o término: data calculada pelo programa
     def caixa(rot, val):
         return [Paragraph(_t(rot), st["rot"]), Paragraph(_t(val or "—"), st["val"])]
     q = [("Regime atual", m.get("regime") + ((" · " + m["motivo_exec"]) if m.get("motivo_exec") else "")), ("Pena total", m.get("pena_total")),
          ("Cumprida", m.get("pena_cumprida")), ("Remanescente", m.get("pena_rem")),
          ("Dias remidos (saldo do RSPE)", (m.get("remidos") or "").split(" (")[0]), ("Data-base", m.get("dbase")),
-         ("Término (SEEU)", m.get("termino") if m.get("termino") not in (None, "", "—") else (m.get("termino_motivo") or "—")),
+         ("Término (calculado*)" if term_calc else "Término (SEEU)", m.get("termino") if m.get("termino") not in (None, "", "—") else (m.get("termino_motivo") or "—")),
          ("Conduta (ficha disciplinar)", m.get("conduta"))]
     grade = [[caixa(*x) for x in q[i:i + 4]] for i in range(0, len(q), 4)]
     tq = Table(grade, colWidths=[W / 4.0] * 4)
@@ -761,6 +765,9 @@ def relatorio_individual(m, caminho, nome_base):
                             ("INNERGRID", (0, 0), (-1, -1), 0.6, C(LINE)), ("BACKGROUND", (0, 0), (-1, -1), C(ZEBRA)),
                             ("TOPPADDING", (0, 0), (-1, -1), 7), ("BOTTOMPADDING", (0, 0), (-1, -1), 8), ("LEFTPADDING", (0, 0), (-1, -1), 8)]))
     el.append(tq)
+    if term_calc:
+        nota = (m.get("calc_notas") or {}).get("termino") or "; ".join((m.get("calc_notas") or {}).values())
+        el.append(Paragraph(_t(nota or "Término*: calculado pelo programa - o SEEU não imprimiu o término."), st["mut"]))
 
     # 3) benefícios: tabela enxuta com etiquetas
     el.append(Paragraph("Benefícios", st["h2"]))
@@ -776,7 +783,7 @@ def relatorio_individual(m, caminho, nome_base):
         return v if v and v != "—" else ""
 
     rot, cor, obs = _etiqueta_prazo(m.get("prog_sit"), m.get("prog_cor"), m.get("prog_dias"))
-    if not dm("prog") and not obs:
+    if not dm("prog") and not obs and (m.get("prog_motivo") or "").split(" (")[0] != rot:
         obs = m.get("prog_motivo") or ""
     if m.get("ped_prog"):
         obs = (obs + " · " if obs else "") + "pedido no RSPE: " + m["ped_prog"]
@@ -784,9 +791,12 @@ def relatorio_individual(m, caminho, nome_base):
     rot, cor, obs = _etiqueta_prazo(m.get("liv_sit"), m.get("liv_cor"), m.get("liv_dias"))
     fl = m.get("frac_liv") or ""
     fl = "livramento vedado (1/1)" if fl.strip() in ("1", "1/1") else fl
-    add("Livramento condicional", dm("liv") and (dm("liv") + " · " + fl), rot, cor, obs or (m.get("liv_motivo") or "" if not dm("liv") else ""))
+    add("Livramento condicional", dm("liv") and (dm("liv") + " · " + fl), rot, cor,
+        obs or (m.get("liv_motivo") or "" if not dm("liv") and (m.get("liv_motivo") or "").split(" (")[0] != rot else ""))
     rot, cor, obs = _etiqueta_prazo(m.get("ext_sit"), m.get("ext_cor"), m.get("ext_dias"))
-    add("Término da pena", dm("termino"), rot, cor, (m.get("ext_hipoteses") or "").split(";")[0] if m.get("ext_cor") == "vermelho" else "")
+    hip = m.get("ext_hipoteses") if m.get("ext_hipoteses") not in (None, "", "—") else ""
+    add("Término da pena", dm("termino") and (dm("termino") + (" (calculado)" if term_calc else "")), rot, cor,
+        hip.split(";")[0] if m.get("ext_cor") in ("vermelho", "amarelo") and hip else "")
     if m.get("falta") and m.get("falta") not in ("Não consta", "—"):
         fc = "vermelho" if m["falta"].startswith("Sim") else "amarelo"
         add("Falta grave (12 meses)", "", "Sim" if fc == "vermelho" else "A apurar", fc, (m.get("falta_full") or m.get("falta") or "").split(" · ", 1)[-1][:120])
@@ -801,12 +811,14 @@ def relatorio_individual(m, caminho, nome_base):
     if m.get("presc_retro_cor") == "vermelho":
         add("Prescrição punitiva", "", "Aparente", "vermelho", (m.get("presc_retro_full") or "").replace("Aparente: ", ""))
     if m.get("presc_ppe_cor") in ("vermelho", "amarelo"):
-        add("Prescrição executória", "", "Aparente" if m["presc_ppe_cor"] == "vermelho" else "Iminente", m["presc_ppe_cor"],
-            re.sub(r"^(Aparente|Iminente): ", "", m.get("presc_ppe_full") or ""))
+        # o rótulo é o da tela: "Iminente" só quando a prescrição está mesmo próxima; o mais comum é "A verificar"
+        add("Prescrição executória", "", "Aparente" if m["presc_ppe_cor"] == "vermelho" else (pe or "A verificar"), m["presc_ppe_cor"],
+            re.sub(r"^(Aparente|Iminente|A verificar|Possível)\s*[:-]\s*", "", m.get("presc_ppe_full") or "", flags=re.I))
     elif pe and pe not in ("Não prescrita", "Sem dados"):
         add("Prescrição executória", "", pe, m.get("presc_ppe_cor") or "", "")
     el.append(_tabela(ben, [W * 0.22, W * 0.18, W * 0.16, W * 0.44], st, cores_linha=cores))
-    el.append(Paragraph(_t("Progressão, livramento e término: datas do SEEU impressas no RSPE. Indulto, comutação, prescrição e falta: cálculo do programa, a conferir. "
+    el.append(Paragraph(_t("Progressão, livramento e término: datas do SEEU impressas no RSPE%s. Indulto, comutação, prescrição e falta: cálculo do programa, a conferir. " % (
+        " (o término marcado com * foi calculado pelo programa, porque o RSPE não o imprime)" if term_calc else "")) + _t(
                            "Fundamentos e memória de cálculo: no programa, na ficha do assistido."), st["mut"]))
 
     # 4) condenações
@@ -974,7 +986,7 @@ def _faixa_pena(dias):
 def _prazo(d):
     if d is None:
         return None
-    if d <= 0:
+    if d < 0:  # vence hoje (0 dia) fica em "até 30 dias", como na tela ("Vence hoje", laranja) e no filtro "Vencidas"
         return "vencido"
     for lim in (30, 60, 90, 180):
         if d <= lim:
@@ -1118,21 +1130,34 @@ def estatisticas(modelos, hoje=None):
         est = (m.get("estado_exec") or "")
         if est in SEM:
             return "não se aplica"
-        if re.search(r"interrompid|suspens", (m.get(campo_sit) or "").lower()):
+        if m.get("interrompida") or re.search(r"interrompid|suspens", (m.get(campo_sit) or "").lower()):
             return "interrompida"
         return "sem data no RSPE"
     E["faixas"] = {}
     E["venc"] = {}
     for rot, kd, ks, kp, cor in (("Progressão", "prog_dias", "prog_sit", "prog", "prog_cor"), ("Livramento condicional", "liv_dias", "liv_sit", "liv", "liv_cor")):
         E["faixas"][rot] = Counter(faixa(m, kd, ks) for m in modelos)
-        v = [m for m in modelos if m.get(cor) == "vencido" or (m.get(kd) is not None and m.get(kd) <= 0 and not m.get("estado_exec"))]
+        v = [m for m in modelos if m.get(cor) == "vencido" or (m.get(kd) is not None and m.get(kd) < 0 and not m.get("estado_exec"))]
         E["venc"][rot] = {"total": len(v),
                           "sem_pedido": sum(1 for m in v if "sem pedido" in (m.get(ks) or "") and not (m.get("pedidos") or {}).get(kp)),
                           "pendente": sum(1 for m in v if "pendente" in (m.get(ks) or "")),
                           "indeferido": sum(1 for m in v if "indeferido" in (m.get(ks) or "")),
                           "marcado": sum(1 for m in v if (m.get("pedidos") or {}).get(kp))}
-    E["faixas"]["Término da pena"] = Counter((_prazo(m.get("ext_dias")) or "mais de 180 dias") if m.get("ext_dias") is not None else
-                                             ("não se aplica" if m.get("estado_exec") in SEM else "sem data no RSPE") for m in modelos)
+    def faixa_term(m):
+        # término: a mesma leitura da aba Extinção (cor e situação), para o quadro 3.2 bater com o 3.4
+        c, d = m.get("ext_cor"), m.get("ext_dias")
+        if c == "vermelho":
+            return "vencido"  # extinção cabível
+        if c == "azul":
+            return "não se aplica"  # extinta (registrada)
+        if (m.get("ext_sit") or "").startswith("Extinção a verificar"):
+            return "a verificar"
+        if d is not None:
+            return "até 30 dias" if d < 0 else (_prazo(d) or "mais de 180 dias")
+        if m.get("interrompida") and not m.get("estado_exec"):
+            return "interrompida"
+        return "não se aplica" if m.get("estado_exec") in SEM else "sem data no RSPE"
+    E["faixas"]["Término da pena"] = Counter(faixa_term(m) for m in modelos)
     E["venc_assist"] = sum(1 for m in modelos if m.get("prog_cor") == "vencido" or m.get("liv_cor") == "vencido")
     E["venc_sem_pedido"] = sum(1 for m in modelos if any(m.get(c) == "vencido" and "sem pedido" in (m.get(s_) or "") and not (m.get("pedidos") or {}).get(k)
                                                           for c, s_, k in (("prog_cor", "prog_sit", "prog"), ("liv_cor", "liv_sit", "liv"))))
@@ -1229,7 +1254,8 @@ def estatisticas(modelos, hoje=None):
 
     # ---- prescrição e extinção ----
     E["presc"] = Counter(("aparente" if m.get("presc_ppe_cor") == "vermelho" else "iminente / a verificar" if m.get("presc_ppe_cor") == "amarelo" else
-                          "sem dados" if m.get("presc_ppe_cor") == "cinza" else "não prescrita") for m in modelos)
+                          "sem dados" if m.get("presc_ppe_cor") == "cinza" else "extinta" if m.get("presc_ppe_cor") == "azul" else "não prescrita")
+                         for m in modelos)
     E["presc_punitiva"] = sum(1 for m in modelos if m.get("presc_retro_cor") == "vermelho")
     E["presc_crimes"] = sum(1 for m in modelos for L in (m.get("presc_linhas") or []) if L.get("ppe_cor") == "vermelho")
     E["ext_cabivel"] = sum(1 for m in modelos if m.get("ext_cor") == "vermelho")
@@ -1675,9 +1701,9 @@ def relatorio_geral(modelos, caminho, nome_base, nominal=True):
     el.append(_tabela(tb, [W * 0.5, W * 0.13, W * 0.13, W * 0.24], st, cores_linha=cores))
 
     secao("3.2 Prazos de progressão, livramento e término", "Assistidos por faixa de prazo, de hoje até a data prevista no SEEU.")
-    grupos = [("Vencido", ["vencido"]), ("Até 90 dias", ["até 30 dias", "até 60 dias", "até 90 dias"]), ("91 a 180 dias", ["até 180 dias"]),
+    grupos = [("Vencido", ["vencido"]), ("A verificar", ["a verificar"]), ("Até 90 dias", ["até 30 dias", "até 60 dias", "até 90 dias"]), ("91 a 180 dias", ["até 180 dias"]),
               ("Mais de 180 dias", ["mais de 180 dias"]), ("Pena parada", ["interrompida"]), ("Não se aplica", ["não se aplica"]), ("Sem data no RSPE", ["sem data no RSPE"])]
-    cor_g = {"Vencido": "#A33A36", "Até 90 dias": "#C9A55C", "91 a 180 dias": "#3E8E62", "Mais de 180 dias": "#1F6B43", "Pena parada": "#6B5B8A",
+    cor_g = {"Vencido": "#A33A36", "A verificar": "#E0C27A", "Até 90 dias": "#C9A55C", "91 a 180 dias": "#3E8E62", "Mais de 180 dias": "#1F6B43", "Pena parada": "#6B5B8A",
              "Não se aplica": "#AEB5B0", "Sem data no RSPE": "#CDD2CC"}
     W3 = W / 3.0 - 8
     trio = []
@@ -1689,14 +1715,16 @@ def relatorio_geral(modelos, caminho, nome_base, nominal=True):
     t3.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP"), ("LEFTPADDING", (0, 0), (-1, -1), 0), ("RIGHTPADDING", (0, 0), (-1, -1), 8)]))
     el.append(t3)
     el.append(Spacer(1, 6))
-    fx = ["vencido", "até 30 dias", "até 60 dias", "até 90 dias", "até 180 dias", "mais de 180 dias", "interrompida", "não se aplica", "sem data no RSPE"]
-    cab = ["", "Vencido", "≤ 30 dias", "31 a 60", "61 a 90", "91 a 180", "> 180 dias", "Pena parada", "Não se aplica", "Sem data"]
+    fx = ["vencido", "a verificar", "até 30 dias", "até 60 dias", "até 90 dias", "até 180 dias", "mais de 180 dias", "interrompida", "não se aplica", "sem data no RSPE"]
+    cab = ["", "Vencido", "A verificar", "≤ 30 dias", "31 a 60", "61 a 90", "91 a 180", "> 180 dias", "Pena parada", "Não se aplica", "Sem data"]
     tb = [cab]
     for rot in ("Progressão", "Livramento condicional", "Término da pena"):
         c = E["faixas"].get(rot, Counter())
         tb.append([Paragraph(_t(rot), st["neg"])] + [str(c.get(k, 0)) for k in fx])
-    el.append(KeepTogether([_tabela(tb, [W * 0.19] + [W * 0.09] * 9, st, pad=4)]))
-    el.append(Paragraph(_t("Pena parada: foragido (interrompida) ou preso por outro processo (suspensa). Não se aplica: em livramento, já no regime aberto, "
+    el.append(KeepTogether([_tabela(tb, [W * 0.18] + [W * 0.082] * 10, st, pad=4)]))
+    el.append(Paragraph(_t("Vencido: a data prevista já passou (a que vence hoje entra em \"≤ 30 dias\", como na tela); no término, é a extinção cabível "
+                           "da aba Extinção. A verificar: extinção a verificar (custódia ou detração que pode alcançar a pena). "
+                           "Pena parada: foragido (interrompida) ou preso por outro processo (suspensa). Não se aplica: em livramento, já no regime aberto, "
                            "pena cumprida ou extinta, ou cumprimento não iniciado."), st["mut"]))
 
     secao("3.3 Indulto e comutação por decreto",
@@ -1738,15 +1766,18 @@ def relatorio_geral(modelos, caminho, nome_base, nominal=True):
     ret = Counter()
     for m in modelos:
         c_ = m.get("presc_retro_cor")
-        ret["Aparente" if c_ == "vermelho" else "A verificar" if c_ == "amarelo" else "Sem dados no RSPE" if c_ == "cinza" else "Não configurada"] += 1
-    cor_p = {"Aparente": "#A33A36", "Iminente ou a verificar": "#C9A55C", "A verificar": "#C9A55C", "Não prescrita": "#1F6B43", "Não configurada": "#1F6B43"}
+        ret["Aparente" if c_ == "vermelho" else "A verificar" if c_ == "amarelo" else "Sem dados no RSPE" if c_ == "cinza" else
+            "Já extinta (RSPE)" if c_ == "azul" else "Não configurada"] += 1
+    cor_p = {"Aparente": "#A33A36", "Iminente ou a verificar": "#C9A55C", "A verificar": "#C9A55C", "Não prescrita": "#1F6B43", "Não configurada": "#1F6B43",
+             "Já extinta (RSPE)": "#4A6A8A"}
     demais = max(0, E["n"] - E["ext_cabivel"] - E["ext_verificar"] - E["ext_registrada"])
     W3 = W / 3.0 - 8
     trio = [_rosca("Pretensão executória", [("Aparente", pres.get("aparente", 0)), ("Iminente ou a verificar", pres.get("iminente / a verificar", 0)),
-                                            ("Não prescrita", pres.get("não prescrita", 0)), ("Sem dados no RSPE", pres.get("sem dados", 0))],
+                                            ("Não prescrita", pres.get("não prescrita", 0)), ("Sem dados no RSPE", pres.get("sem dados", 0)),
+                                            ("Já extinta (RSPE)", pres.get("extinta", 0))],
                    W3, st, "assistidos", cores=cor_p, ordenar=False, abaixo=True),
             _rosca("Pretensão punitiva", [("Aparente", ret.get("Aparente", 0)), ("A verificar", ret.get("A verificar", 0)), ("Não configurada", ret.get("Não configurada", 0)),
-                                          ("Sem dados no RSPE", ret.get("Sem dados no RSPE", 0))], W3, st, "assistidos", cores=cor_p, ordenar=False, abaixo=True),
+                                          ("Sem dados no RSPE", ret.get("Sem dados no RSPE", 0)), ("Já extinta (RSPE)", ret.get("Já extinta (RSPE)", 0))], W3, st, "assistidos", cores=cor_p, ordenar=False, abaixo=True),
             _rosca("Extinção da pena", [("Extinção cabível", E["ext_cabivel"]), ("Até 60 dias ou a verificar", E["ext_verificar"]),
                                         ("Já extinta (RSPE)", E["ext_registrada"]), ("Em cumprimento ou sem previsão", demais)],
                    W3, st, "assistidos", ordenar=False, abaixo=True,

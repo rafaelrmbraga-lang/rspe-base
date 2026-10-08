@@ -88,20 +88,25 @@ def _ajuda_juris():
 
 AJUDA = """
 <h4>Cores</h4>
-Progressão e Livramento: <b>amarelo forte</b> = prazo vencido ("Vencido há N dias · sem pedido no RSPE - requerer" quando não há pedido,
+Progressão e Livramento: <b>vermelho</b> = prazo vencido ("Vencido há N dias · sem pedido no RSPE - requerer" quando não há pedido,
 exame criminológico nem falta nos 12 meses; nos demais casos, "· verificar criminológico, indeferimento ou falta"); a dica mostra os pedidos do RSPE e, quando houver, o aviso sobre o exame criminológico, que é só dica: não muda a cor nem
-gera alerta). Prazos: <b>laranja</b> = vence em até 30 dias; <b>amarelo</b> = em até 60; <b>verde</b> = em até 90. Acima de 90 dias:
-"Em cumprimento", sem cor. <b>Cinza</b> = "Pena cumprida" ou "Não se aplica" (Progressão: em livramento, já no aberto, não iniciou, pena
-interrompida; Livramento: em livramento, não iniciou, pena interrompida - o motivo fica na ficha); <b>amarelo</b> também para "A verificar (livramento)"; <b>azul</b> = execução extinta.
-Extinção: <b>vermelho</b> = extinção cabível; <b>laranja</b>/<b>amarelo</b>/<b>verde</b> = término em até 30/60/90 dias; cinza = pena
-interrompida ou sem previsão; azul = extinta (registrada).
+gera alerta). Prazos: <b>laranja</b> = vence em até 30 dias ("Vence hoje" também: conta em "Até 30 dias" e no filtro "Vence em até 30
+dias", não em "Vencidas", aqui e no relatório geral); <b>amarelo</b> = em até 60; <b>verde</b> = em até 90. Acima de 90 dias:
+"Em cumprimento", sem cor. <b>Cinza</b> = "Pena cumprida", "Pena interrompida" (foragido), "Pena suspensa" (preso em outro processo) ou
+"Não se aplica" (Progressão: em livramento, já no aberto, não iniciou; Livramento: em livramento, não iniciou - o motivo fica na ficha);
+<b>amarelo</b> também para "A verificar (livramento)"; <b>azul</b> = execução extinta.
+Extinção: <b>vermelho</b> = extinção cabível; <b>amarelo</b> = "Extinção a verificar" (o motivo aparece ao passar o mouse e na ficha);
+<b>laranja</b>/<b>amarelo</b>/<b>verde</b> = término em até 30/60/90 dias; cinza = pena interrompida/suspensa ou sem previsão; azul =
+extinta (registrada).
 Indulto/Comutação (células): <b>vermelho</b> = "Vedado (art. 1º)", "Vedado (art. 7º)", "Indeferido" ou "Falta" (falta com sanção
 reconhecida nos 12 meses); <b>verde</b> = "Sim" (possível, também quando depende de tese defensiva, indicada no texto); <b>amarelo</b> =
-"Verificar" (inclusive falta a apurar e a controvérsia do art. 2º, II); <b>cinza</b> = "Não atinge", "Não se aplica" (nenhuma
+"Verificar" (inclusive falta a apurar e a controvérsia do art. 2º, II); <b>cinza</b> = "Não atinge" (a fração não foi cumprida),
+"Não alcançado" (sentença ou trânsito para a acusação posterior à publicação do decreto), "Não se aplica" (nenhuma
 condenação na publicação do decreto), "Fato posterior" ou "Prejudicada"; <b>azul</b> = "Concedido" no RSPE.
 Prescrição: vermelho = aparente; amarelo = iminente (executória em até 180 dias) ou "A VERIFICAR" (saldo na evasão que depende da
-imputação do cumprimento entre condenações); sem cor = não prescrita; cinza = sem dados; azul = extinta. Clique num cartão de resumo
-para filtrar pela cor.
+imputação do cumprimento entre condenações); sem cor = não prescrita ("Não prescrita (há crimes sem dados)" quando algum crime não tem o
+trânsito ou a pena no RSPE - conferir na ação penal); cinza = sem dados; azul = extinta. A tela, a exportação e o relatório mostram
+cada pretensão (executória e punitiva) com a sua cor. Clique num cartão de resumo para filtrar pela cor.
 <h4>Datas e cálculos</h4>
 Progressão, livramento e término são os impressos pelo SEEU no RSPE; o programa não os recalcula. Sem data no RSPE, a tabela mostra
 "—" e o motivo ("Não consta no RSPE", "Pena interrompida", "Não iniciou") fica na ficha. O programa calcula indulto e comutação,
@@ -212,12 +217,15 @@ liberdade sem evasão); conclusão.
 Na linha de cada crime da aba Prescrição, "cálculo" abre a memória em texto e "editar dados" o formulário de ajuste; a
 pretensão executória não tem linha do tempo (nem na tela nem no relatório individual).
 <h4>Filtro de situação</h4>
-O seletor ao lado dos botões filtra a aba (a Geral não tem). Progressão e Livramento: vencidas, vence em até 30, 60 ou 90 dias, não
-iniciou, pena interrompida, não se aplica (cumprida / livramento / aberto), sem data. Indulto/Comutação: por benefício e resultado
+O seletor ao lado dos botões filtra a aba (a Geral não tem). Progressão e Livramento: vencidas (data já passada), vence em até 30
+(inclui "Vence hoje"), 60 ou 90 dias, não iniciou, pena interrompida / suspensa, não se aplica (cumprida / livramento / aberto), sem data. Indulto/Comutação: por benefício e resultado
 ("Indulto 2024 · Sim", "Comutação 2025 · Verificar" etc.), fato posterior à data do decreto, falta nos 12 meses e crime impeditivo.
 Prescrição: aparente, iminente / a verificar, não prescrita / não configurada, sem dados, extinta. Extinção: extinção cabível,
 término em até 30, 60 ou 90 dias, pena interrompida, sem previsão. Ficha disciplinar: remição a requerer, conferir remição / sem atestado
-/ estudo, em ordem, sem ficha. Auditoria: com alertas, pontos a verificar, sem inconsistências. O número da execução é copiado com um clique.
+/ estudo, em ordem, sem ficha. Auditoria: com alertas, pontos a verificar, guia em ordem. O número da execução é copiado com um clique.
+Ao exportar com um filtro de situação (ou cartão de cor) ativo, a janela oferece "Aplicar o filtro de situação" (marcado): saem só os
+assistidos que a tabela mostra; desmarcado, sai tudo o que a busca mostra. Teclado: Tab percorre cartões, linhas, ícones e botões, e
+Enter (ou espaço) aciona o que estiver em foco.
 <h4>Jurisprudências</h4>
 Acórdãos do TJMS em execução penal favoráveis à defesa (recurso defensivo provido, recurso do MP desprovido, ordem concedida), triados
 pela ementa, com a tese em uma frase e o tema. Pesquise por palavras (todas devem constar da tese ou da ementa) e filtre por tema.
@@ -261,9 +269,11 @@ trabalhados do atestado; a coluna "Dias" mostra os dias corridos do período, s�
 estimado em 4 h por dia útil (1 dia remido a cada 12 h); início ou fim ilegível = "Conferir datas". O RSPE não diz de onde vem cada
 remição (trabalho, estudo, ENCCEJA/ENEM, leitura), então o programa não liga remição a atestado: aponta "Requerer remição" só quando não
 há nenhuma remição lançada no RSPE depois do atestado (ou depois do período de estudo); os demais ficam "conferir a homologação", com as
-somas e a lista das remições do RSPE no cabeçalho. Trabalho anterior à 1ª prisão do RSPE fica só no resumo. As faltas da ficha não
-entram na coluna Falta nem no indulto; na Auditoria, só no ponto "Perda de remidos pode alcançar remição anterior à falta" (desconto
-em duplicidade, LEP, art. 127).
+somas e a lista das remições do RSPE no cabeçalho. Trabalho anterior à 1ª prisão do RSPE fica só no resumo. As faltas graves da ficha
+que o RSPE não traz (não arquivadas) e a fuga registrada só na ficha entram como falta "A apurar" ("FALTA GRAVE NA FICHA DISCIPLINAR
+(SIAPEN)"): aparecem na coluna Falta e pesam no indulto e na comutação (a verificar, art. 6º), até você decidir no ✎ da coluna Falta
+se é falta grave; a ficha também explica a regressão ou a perda de remidos do RSPE. Na Auditoria, a ficha entra no ponto "Perda de
+remidos pode alcançar remição anterior à falta" (desconto em duplicidade, LEP, art. 127).
 <h4>Regras de leitura</h4>
 Quem não tem início de cumprimento definitivo no RSPE (só prisão provisória encerrada, ou nenhuma) aparece como "Não iniciou o
 cumprimento", e não como regime aberto ou pena interrompida. Livramento suspenso ou revogado em incidente posterior aparece como tal.
@@ -345,8 +355,9 @@ Só a extinção pelo cumprimento: pena integralmente cumprida ou término previ
 condicional com período de prova expirado sem revogação (CP, art. 90; LEP, art. 146; Súmula 617/STJ - observado o art. 89); detração que iguala ou supera a pena do
 processo, como hipótese "a verificar" (a mesma prisão pode servir a várias condenações - CP, art. 42; LEP, arts. 66, II, e 111).
 Prescrição e indulto ficam nas próprias abas; o livramento incerto não gera hipótese (fica na Auditoria). Situação: "Extinção
-cabível" (vermelho), "Término em N dias" (laranja até 30, amarelo até 60, verde até 90), "Em cumprimento" (acima de 90 dias), "Pena
-extinta (registrada)" (azul), "Não se aplica" (cinza: pena interrompida ou sem previsão).
+cabível" (vermelho), "Extinção a verificar" (amarelo, com o motivo: custódia ou detração que pode alcançar a pena), "Término em N dias"
+(laranja até 30, amarelo até 60, verde até 90), "Em cumprimento" (acima de 90 dias), "Pena extinta (registrada)" (azul), "Pena
+interrompida" ou "Pena suspensa" (cinza) e "Não se aplica" (cinza: sem previsão).
 <h4>Base jurídica</h4>
 O arquivo base_juridica.json ao lado do programa tem prioridade sobre a cópia embutida. Para atualizar (novo decreto, nova fração,
 nova tese), edite o arquivo e use "Base ▾ → Recarregar base jurídica". A versão em uso aparece na aba Auditoria.
@@ -1257,7 +1268,8 @@ class Api:
     def historico(self, processo):
         """Histórico comparativo dos RSPEs importados do assistido (aba Geral): uma coluna por RSPE, do mais antigo ao
         atual, com os campos que costumam mudar e o que mudou em relação ao anterior. Cada RSPE é lido com as regras
-        desta versão (a mesma análise do atual), sem a ficha disciplinar e sem os ajustes do operador."""
+        desta versão, sem a ficha disciplinar e sem os ajustes do operador; a coluna do RSPE atual é a mesma da tela (com a ficha
+        e os ajustes), para o Histórico não contradizer as abas."""
         if not self.base:
             return {"erro": "Nenhuma base aberta."}
         hs = self.base.historico(processo)
@@ -1266,13 +1278,17 @@ class Api:
         peds = self.base.pedidos().get(processo, {})
         cols = []
         ant_inc = None
-        for h in hs:
+        m_tela = next((x for x in self._modelos if x.get("id") == processo), None)
+        for n_h, h in enumerate(hs):
             r = h["dados"]
-            try:
-                m = rv.modelo(rs.reprocessar(json.loads(json.dumps(r))), {}, None, [])
-            except Exception:
-                logging.getLogger("rspe").exception("histórico %s %s", processo, h["geracao"])
-                m = {}
+            if n_h == len(hs) - 1 and m_tela and (m_tela.get("geracao") or "") == (h["geracao"] or ""):
+                m = m_tela  # RSPE atual: o modelo da tela (ficha disciplinar, data-base e dados informados pelo operador)
+            else:
+                try:
+                    m = rv.modelo(rs.reprocessar(json.loads(json.dumps(r))), {}, None, [])
+                except Exception:
+                    logging.getLogger("rspe").exception("histórico %s %s", processo, h["geracao"])
+                    m = {}
             rem, perd = rs.saldo_remidos_num(r.get("saldo_remidos") or "")
             incs = r.get("_incidentes") or []
             chaves = ["|".join(str(i.get(k) or "") for k in ("tipo", "situacao", "complemento", "data_decisao", "data_referencia")) for i in incs]
@@ -1296,7 +1312,7 @@ class Api:
             dp = rs.to_date(p.get("data") or "")
             if not dp:
                 continue
-            nome, rx_ = self.HIST_ABAS.get(aba, (aba, None))
+            nome, rx_ = self.HIST_ABAS.get(aba) or ((rx.nome_pedido(aba), r"INDULTO|COMUTA") if aba.startswith("ind_") else (aba, None))
             col = next((c for c in cols if (rs.to_date(c["geracao"]) or date.min) >= dp), None)
             txt = "%s pedida em %s" % (nome, p["data"])
             if col is None:

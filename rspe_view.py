@@ -795,21 +795,28 @@ def simplificar(m):
     m["prog"], m["liv"], m["termino"] = so_data(m["prog"]), so_data(m["liv"]), so_data(m["termino"])
     m["ext_termino_motivo"] = m.get("ext_termino", "")
     m["ext_termino"] = so_data(m.get("ext_termino", "")) if m.get("ext_termino") else TRACO
+    # pena parada (foragido ou preso em outro processo): um rótulo só em todas as abas, no filtro e no relatório
+    parada_rot = m.get("parada_rot") if (m.get("interrompida") and not m.get("estado_exec")) else ""
     for k in ("prog", "liv"):
         sit, cor = m.get(k + "_sit", ""), m.get(k + "_cor", "")
         if cor == "cinza" and not sit.startswith("Pena cumprida"):
             m[k + "_sit_full"] = m.get(k + "_sit_full") or sit
-            m[k + "_sit"] = "Não se aplica"
+            m[k + "_sit"] = parada_rot or "Não se aplica"
     for k in ("prog", "liv"):
         if not m.get(k + "_sit") and re.match(r"^\d{2}/\d{2}/\d{4}", m.get(k) or ""):
             m[k + "_sit"] = "Em cumprimento"
     if re.search(r"sem previsão\s*$", m.get("ext_hipoteses") or ""):
         m["ext_motivo"], m["ext_hipoteses"] = m["ext_hipoteses"], TRACO
     if not m.get("ext_sit"):
-        if re.match(r"^\d{2}/\d{2}/\d{4}", m.get("ext_termino") or ""):
+        if m.get("ext_cor") == "amarelo":
+            # hipótese a verificar (detração que pode alcançar a pena de um processo): o motivo vai junto, não "Em cumprimento"
+            m["ext_sit"] = "Extinção a verificar"
+        elif re.match(r"^\d{2}/\d{2}/\d{4}", m.get("ext_termino") or ""):
             m["ext_sit"] = "Em cumprimento"
         elif m.get("ext_cor") == "cinza":
-            m["ext_sit"] = "Não se aplica"
+            m["ext_sit"] = parada_rot or "Não se aplica"
+    if m.get("ext_sit") == "Extinção a verificar" and m.get("ext_hipoteses") not in (None, "", TRACO):
+        m["ext_sit_full"] = "Extinção a verificar · " + m["ext_hipoteses"]
     # indulto e comutação
     m["imp_curto"] = "Sim" if (m.get("imp") or "").startswith("Sim") else ("Não" if m.get("imp") else "")
     for k in ("i22", "i24", "c24", "i25", "c25"):
@@ -831,6 +838,12 @@ def simplificar(m):
     m["presc_retro"], m["presc_ppe"] = presc_curto(m["presc_retro_full"]), presc_curto(m["presc_ppe_full"], ppe=True)
     m["presc_retro"] = m["presc_retro"] or "Sem dados"
     m["presc_ppe"] = m["presc_ppe"] or "Sem dados"
+    # "Não prescrita" só vale para os crimes com dado: com crime sem trânsito ou sem pena no RSPE, o rótulo diz isso
+    _sem = [L for L in m.get("presc_linhas") or [] if L.get("ppe_cor") == "cinza"]
+    if m["presc_ppe"] == "Não prescrita" and _sem:
+        m["presc_ppe"] = "Não prescrita (há crimes sem dados)"
+        m["presc_ppe_full"] = "%s · %s sem os dados do cálculo (%s): conferir na ação penal" % (
+            m["presc_ppe_full"] or "Não prescrita", rs.pl(len(_sem), "crime", "crimes"), "; ".join(sorted({L.get("crime") or "?" for L in _sem})))
     _pc = {"Aparente": "vermelho", "Conferir a guia": "amarelo", "Iminente": "amarelo", "A verificar": "amarelo", "Extinta": "azul", "Sem dados": "cinza"}
     m["presc_retro_cor"], m["presc_ppe_cor"] = _pc.get(m["presc_retro"], ""), _pc.get(m["presc_ppe"], "")
     # dados conferidos/corrigidos pelo operador sem prescrição: verde
@@ -918,7 +931,7 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
                       "amarelo" if est[0] == "lc_duvida" else "azul" if est[0] == "extinta" else "cinza")
         if est[0] in ("extinta", "cumprida", "lc", "lc_duvida", "nao_iniciou"):
             lsit, lcor = (psit, pcor)
-    presc = rp.analisar(r, HOJE)
+    presc = rp.analisar(r, HOJE, ficha)
     aud = ra.auditar(r, HOJE)
     try:
         dbi = data_base_info(r, aud["aud_itens"], ficha)
@@ -995,6 +1008,7 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
         "prog": ptxt, "prog_sit": psit, "prog_cor": pcor, "prog_dias": _dias_para(pd),
         "prog_sit_full": _vencido_full(r, psit, pcor, "PROGRESS"), "liv_sit_full": _vencido_full(r, lsit, lcor, "LIVRAMENTO"),
         "liv_dias": _dias_para(ld), "interrompida": interr, "estado_exec": est[0] if est else "",
+        "parada_rot": rotulo_parada(r).split(" (")[0] if interr else "",
         "presc_cor": presc["presc_cor"], "presc_retro": presc["presc_retro"], "presc_ppe": presc["presc_ppe"],
         "presc_prox": presc["presc_prox"], "presc_dias": presc["presc_dias"], "presc_obs": presc["presc_obs"],
         "presc_linhas": presc["presc_linhas"], "presc_n": len(presc["presc_linhas"]),

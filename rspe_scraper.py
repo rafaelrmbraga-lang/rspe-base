@@ -334,6 +334,24 @@ CABECALHO = (
 )
 
 
+def _comarca_fora_do_padrao(linha, vara=""):
+    """Cabeçalho sem o formato "TJxx - COMARCA DE ...": "COMARCA DE JI-PARANÁ", "COMARCA DA ILHA DE SÃO LUÍS", "TJMG - TIMOTEO",
+    "SJMS - 2ª SUBSEÇÃO JUDICIÁRIA DE DOURADOS", "DEECRIM - DEPARTAMENTO ESTADUAL ..." (a cidade vem na linha da vara:
+    "DEECRIM 2ª RAJ - ARAÇATUBA"). Devolve (tribunal, comarca)."""
+    t = (linha or "").strip()
+    if not t or re.search(r"RELAT[ÓO]RIO|PROCESSO ELETR", t, re.I):
+        return "", ""
+    tribunal, resto = "", t
+    m = re.match(r"([A-Z]{2,8})\s+-\s+(.+)", t)
+    if m:
+        tribunal, resto = m.group(1), m.group(2).strip()
+    if re.match(r"DEPARTAMENTO\b", resto, re.I):
+        mv = re.search(r"\s-\s*([^-]+)$", vara or "")
+        resto = mv.group(1).strip() if mv else resto
+    resto = re.sub(r"^(?:COMARCA\s+D[AEO]S?\s+(?=\S)|(?:\d+ª\s+)?SUBSE[ÇC][ÃA]O JUDICI[ÁA]RIA\s+DE\s+|FORO\s+DE\s+)", "", resto, flags=re.I)
+    return tribunal, resto.strip()
+
+
 def ler_pdf(caminho):
     """Devolve (texto_limpo, vara, comarca, tribunal, data_geracao)."""
     paginas = []
@@ -350,6 +368,8 @@ def ler_pdf(caminho):
     m = re.match(r"(\S+)\s*-\s*COMARCA DE\s*(.+)", tribunal_comarca, re.I)
     if m:
         tribunal, comarca = m.group(1), m.group(2).strip()
+    elif re.search(r"PODER JUDICI", linhas[0] if linhas else "", re.I):
+        tribunal, comarca = _comarca_fora_do_padrao(tribunal_comarca, vara)
 
     geracao = ""
     m = re.search(r"Gerado em:\s*(\d{2}/\d{2}/\d{4})", bruto)
@@ -406,16 +426,20 @@ def outros(titulo):
 # --------------------------------------------------------------------------- #
 
 # versão da leitura do PDF do RSPE: registro gravado por versão anterior com sinal de leitura que mudou pede reimportação
-# (2: campos Sim/Não do crime e "Processos Selecionados" em várias linhas)
-VERSAO_LEITURA_RSPE = 2
+# (2: campos Sim/Não do crime e "Processos Selecionados" em várias linhas; 3: número de processo partido no fim da linha,
+# comarca fora do padrão "TJxx - COMARCA DE" e ação penal sem tipificação)
+VERSAO_LEITURA_RSPE = 3
 _TIPOS_COM_PROCESSOS = ("SOMAT", "LIVRAMENTO", "COMUTA", "INDULTO", "EXTIN")
 
 
 def reimportar_motivos(r):
     """Por que o registro, lido por versão anterior do programa, deve ser reimportado (o PDF não fica na base)."""
-    if (r.get("versao_leitura_rspe") or 1) >= VERSAO_LEITURA_RSPE:
+    v = r.get("versao_leitura_rspe") or 1
+    if v >= VERSAO_LEITURA_RSPE:
         return []
     out = []
+    if v >= 2:
+        return out + _motivos_v3(r)
     ruins = [c for c in r.get("_crimes") or [] if any((c.get(k) or "") not in ("", "S", "N") for k in ("vga", "resultado_morte", "reincidente_especifico"))]
     if ruins:
         out.append("violência ou grave ameaça mal lida em %s" % pl(len(ruins), "crime", "crimes"))
@@ -423,20 +447,50 @@ def reimportar_motivos(r):
            and any(x in (i.get("tipo") or "").upper() for x in _TIPOS_COM_PROCESSOS)]
     if vaz:
         out.append("lista de processos de %s possivelmente perdida (somatório, livramento, indulto, comutação ou extinção)" % pl(len(vaz), "incidente", "incidentes"))
-    return out
+    return out + _motivos_v3(r)
+
+
+def _motivos_v3(r):
+    """Sinais da correção de leitura da versão 3 no registro gravado antes dela."""
+    out = []
+    # número partido no fim da linha: sobrou só o pedaço final ("71.2019.8.12.0015") na lista de processos do incidente
+    part = [i for i in r.get("_incidentes") or [] if not i.get("_ficha")
+            and any(re.fullmatch(r"\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}", x.split("(")[0].strip()) for x in (i.get("processos") or "").split(","))]
+    if part:
+        out.append("número de processo partido na lista de %s" % pl(len(part), "incidente", "incidentes"))
+    return out  # comarca fora do padrão: só o cabeçalho dos relatórios; a reimportação a preenche, sem alerta
 
 
 def _processos_bloco(p):
     """'Processos Selecionados' do incidente: a lista longa quebra linha e o leitor do PDF põe parte dos números acima do
-    rótulo e parte abaixo - vale todo número de processo do bloco, fora das linhas de tipo, motivo e complemento."""
-    rotulo = campo(p, "Processos Selecionados")
-    # linhas que são só lista de números ("0000340-35.2013.8.12.0015, 00013812320028120015 (Extinta),"), acima ou abaixo do rótulo
+    rótulo e parte abaixo - vale todo número de processo do bloco, fora das linhas de tipo, motivo e complemento. O número
+    partido no fim da linha ("…, 0002458-" / "Processos Selecionados:" / "71.2019.8.12.0015") é remontado, na ordem do texto."""
+    # linhas que são só lista de números ("0000340-35.2013.8.12.0015, 00013812320028120015 (Extinta),"), acima ou abaixo do rótulo;
+    # a última pode terminar num número partido ("0002458-")
     item = r"(?:\d[\d.-]{9,}\d)(?:\s*\([^)]{1,20}\))?"
-    soltas = [l.strip() for l in p.splitlines() if re.fullmatch(r"\s*%s(?:\s*,\s*%s)*\s*,?\s*" % (item, item), l)]
-    partes = [x.strip(" ,") for x in [rotulo] + soltas if x.strip(" ,")]
+    parcial = r"\d{7}-[\d.]{0,15}"
+    lista = re.compile(r"\s*(?:%s\s*,\s*)*(?:%s|%s)\s*,?\s*" % (item, item, parcial))
+    # com vírgula, a linha também aceita os números antigos curtos ("9583051, 001036000613, 0009138-")
+    curto = r"(?:\d[\d.-]{4,}\d)(?:\s*\([^)]{1,20}\))?"
+    lista_curta = re.compile(r"\s*(?:%s\s*,\s*)+(?:%s|%s)?\s*,?\s*" % (curto, curto, parcial))
+    pedacos = []
+    for l in p.splitlines():
+        m = re.match(r"\s*Processos Selecionados[ \t]*:?[ \t]*(.*)", l, re.I)
+        if m:
+            pedacos.append(m.group(1).strip())
+        elif lista.fullmatch(l) or lista_curta.fullmatch(l):
+            pedacos.append(l.strip())
+    toks = [x.strip() for x in ", ".join(x.strip(" ,") for x in pedacos if x.strip(" ,")).split(",") if x.strip()]
+    junt = []
+    for x in toks:
+        # pedaço final de um número partido: cola no anterior quando os dois formam um número CNJ
+        if junt and re.fullmatch(r"\d{7}-[\d.]*", junt[-1]) and not RE_CNJ.fullmatch(junt[-1]) \
+                and RE_CNJ.fullmatch(junt[-1] + x.split("(")[0].strip()):
+            junt[-1] = junt[-1] + x
+            continue
+        junt.append(x)
     vistos, out = set(), []
-    for x in ", ".join(partes).split(","):
-        x = x.strip()
+    for x in junt:
         k = re.sub(r"\D", "", x.split("(")[0])
         if x and k not in vistos:
             vistos.add(k)
@@ -475,8 +529,16 @@ def blocos_tipo(trecho):
 # crimes
 # --------------------------------------------------------------------------- #
 
-def parse_crimes(trecho):
-    """Trecho de PROCESSOS CRIMINAIS -> lista de dicts (um por lei/artigo)."""
+def acoes_sem_crime(trecho):
+    """Ações penais do trecho de PROCESSOS CRIMINAIS sem nenhum bloco "Lei:" (sem tipificação): número, pena total, regime e
+    sentença. O registro guarda a lista em "_acoes_sem_crime" (a pena delas fica fora das contas: aviso na Auditoria)."""
+    out = []
+    parse_crimes(trecho, out)
+    return out
+
+
+def parse_crimes(trecho, sem_crime=None):
+    """Trecho de PROCESSOS CRIMINAIS -> lista de dicts (um por lei/artigo). sem_crime: lista que recebe as ações sem "Lei:"."""
     crimes = []
     processos = re.split(r"(?m)^(?=N[úu]mero\s*:)", trecho)
     for proc in processos:
@@ -502,6 +564,11 @@ def parse_crimes(trecho):
             base["processo_criminal"] = m.group(0)
 
         leis = re.split(r"(?m)^(?=Lei\s*:)", proc)
+        if sem_crime is not None and not any(x.strip().startswith("Lei") for x in leis) and base["processo_criminal"]:
+            # ação penal sem tipificação (nenhum bloco "Lei:"): o crime não nasce, mas a ação fica registrada para o aviso
+            sem_crime.append({"processo_criminal": base["processo_criminal"], "pena_total_processo": base["pena_total_processo"],
+                                     "regime_sentenca": base["regime_sentenca"], "data_sentenca": base["data_sentenca"],
+                                     "vara_condenacao": base["vara_condenacao"], "tipo_processo": base["tipo_processo"]})
         for lei in leis:
             lei = lei.strip()
             if not lei.startswith("Lei"):
@@ -2919,7 +2986,7 @@ def aplicar_extincoes(r, crimes, incidentes):
                     c["extincao_motivo"] = motivo
                     c["extincao_fonte"] = (c["extincao_fonte"] + "; " if c["extincao_fonte"] else "") + "incidente EXTINÇÃO (%s%s)" % (motivo, " em " + d if d else "")
         elif ("ATIV" in (r.get("status_execucao") or "").upper() and (pena_para_dias(r.get("pena_remanescente")) or 0) > 0
-              and ((r.get("versao_leitura_rspe") or 1) < VERSAO_LEITURA_RSPE or ativos_depois(crimes, d))):
+              and ((r.get("versao_leitura_rspe") or 1) < 2 or ativos_depois(crimes, d))):  # < 2: lista perdida na leitura da versão 1
             # execução ATIVA com pena a cumprir: a extinção sem processo listado não é da execução inteira (lista perdida na
             # leitura antiga, ou crimes com fato posterior à extinção) - não se extingue nada; a Auditoria pede conferência
             r.setdefault("_extincao_duvidosa", []).append("%s%s" % (motivo, " em " + d if d else ""))
@@ -4234,6 +4301,7 @@ def extrair(caminho):
         "data_nascimento": _nascimento(cab),
         "_rspe_sem_processo": not crim.strip(),
         "_rspe_sem_crime": bool(crim.strip()) and not re.search(r"Pena Imposta", crim),
+        "_acoes_sem_crime": acoes_sem_crime(crim),
         "regime_atual": campo(calc, "Regime Atual"),
         "pena_total": campo(calc, "Pena Total Imposta"),
         "pena_cumprida": campo(calc, "Pena Cumprida Até Data Atual"),
