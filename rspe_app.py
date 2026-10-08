@@ -38,7 +38,7 @@ import rspe_relatorio as rrel
 import rspe_indulto_tl as rtl
 
 APP = "APTO"
-VERSAO = "7.6.0"
+VERSAO = "7.7.0"
 
 
 def pasta_app():
@@ -252,6 +252,20 @@ Cada RSPE importado fica guardado na base. O botão "Histórico · N", na linha 
 RSPE (do mais antigo ao atual): regime, penas, dias remidos e perdidos, data-base, previsões de progressão e livramento, término,
 faltas graves, incidentes novos e os pedidos marcados com o retorno (o incidente decidido depois do pedido). O que mudou em relação
 ao RSPE anterior fica em destaque. Importar um PDF mais antigo o acrescenta ao histórico sem substituir o atual.
+<h4>Saída temporária (ícone ao lado do nome)</h4>
+Ícone verde ao lado do nome, na aba Geral: elegível para pedir saída temporária (LEP, arts. 122 a 125, na redação anterior à Lei
+14.843/2024). Requisitos: semiaberto no RSPE com o cumprimento em curso; unidade de semiaberto na ficha; ao menos uma condenação com
+fato anterior a 11/04/2024 (a condenação por fato a partir dessa data só não impede quando cumprida em conjunto com a mais antiga); nenhum hediondo com resultado morte de fato a partir de 23/01/2020; 1/6 da pena
+cumprida (primário) ou 1/4 (reincidente), contado o tempo no fechado (Súmula 40 do STJ); conduta Boa ou Ótima, sem falta nos 12 meses;
+trabalho em curso (o externo conta); 45 dias entre o retorno da última saída e o novo pedido (sem o registro do retorno, 7 dias da saída). Ícone amarelo:
+nada falha, mas algo fica a conferir (ficha com mais de 90 dias, sem ficha, unidade não reconhecida, 5 saídas ou mais no ano). Passe o
+mouse no ícone para ver cada requisito. O ícone aparece em todas as abas, na ficha do assistido e no Quadro. Clicar nele registra o
+pedido feito: o ícone fica verde preenchido e o Registro para o SAP abre com a saída temporária; clicar de novo edita ou remove a marcação.
+<h4>Progressão antecipada (ícone azul de degraus)</h4>
+Destaca quem pode pedir a progressão antes da data do SEEU: regime fechado ou semiaberto em curso; progressão prevista para daqui a 1 a 60
+dias; nenhum crime não extinto com violência ou grave ameaça (marcação do RSPE); conduta Boa ou Ótima, sem falta nos 12 meses; trabalho em
+curso (o externo conta). Amarelo: algo fica a conferir (ficha com mais de 90 dias, sem ficha, crime sem a marcação de violência). Clicar
+abre o pedido da progressão (o mesmo da coluna "Pedido" da aba Progressão); com o pedido marcado, o ícone fica azul preenchido.
 <h4>RSPE desatualizado e cópias de segurança</h4>
 RSPE emitido há mais de 60 dias ganha um "!" laranja ao lado do nome (passe o mouse para ver a data e os dias); o chip "RSPE antigo" da faixa de resumo
 filtra esses assistidos. Ao abrir a base, o programa faz uma cópia de segurança (pasta "copias", ao lado da base) e guarda as

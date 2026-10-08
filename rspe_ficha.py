@@ -2768,6 +2768,28 @@ def saidas_temporarias(eventos):
     return [a for a, _b in out]
 
 
+def saidas_temporarias_retorno(eventos):
+    """Saídas temporárias da ficha com a data do retorno: [(saída ou None, retorno ou None)]. Mesmos formatos de
+    saidas_temporarias; o retorno lançado até 10 dias depois da saída fecha a mesma saída."""
+    ds = []
+    for e in eventos or []:
+        d = _dp(e.get("data") or "")
+        u = re.sub(r"\s+", " ", rs._sem_acento(e.get("texto") or "").upper())
+        if not d or re.match(r"MUDANCA DE CELA", u) or re.search(r"NAO (?:PODE |PODERA )?SAIR|NAO SAIU|NAO USUFRU|NAO LIBERAR|NAO FOI LIBERAD", u):
+            continue
+        if re.search(r"(?:SAIDA|RETORNO) CONFIRMAD[OA] DO BENEFICIO DE:\s*SAIDA TEMPOR|SAIDA DA UNIDADE PENAL:.*MOTIVO:\s*SAIDA TEMPOR|"
+                     r"\bSAIU\b.{0,40}\bEM SAIDA TEMPOR|RETORN\w* (?:DE|DA|DO BENEFICIO DE) SAIDA TEMPOR|RETORNO DE SAIDA TEMPOR", u):
+            ds.append((d, bool(re.search(r"RETORN", u))))
+    out = []  # [saída, retorno]
+    for d, ret in sorted(ds, key=lambda x: (x[0], x[1])):
+        if out and out[-1][0] and not out[-1][1] and (d - out[-1][0]).days <= 10:
+            if ret:
+                out[-1][1] = d
+            continue  # a mesma saída lançada de novo
+        out.append([None, d] if ret else [d, None])
+    return [tuple(x) for x in out]
+
+
 def complementar_decretos(r, f, hoje=None):
     """Decretos 12.338/2024 e 12.790/2025, art. 9º, XI, XII e XIII: o RSPE não traz saídas temporárias, trabalho externo,
     estudo nem curso concluído; a ficha traz. Resolve pela ficha os incisos que o cálculo deixou "a verificar"

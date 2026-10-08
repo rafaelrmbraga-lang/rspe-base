@@ -129,7 +129,7 @@ def nome_pedido(k):
     if k.startswith("ind_"):
         return "Indulto/comutação %s" % k[4:]
     return {"prog": "Progressão", "liv": "Livramento condicional", "ind": "Indulto/comutação", "presc": "Prescrição", "ext": "Extinção da pena",
-            "fd": "Remição"}.get(k, k)
+            "fd": "Remição", "st": "Saída temporária"}.get(k, k)
 
 
 def _txt_pedido(P):
