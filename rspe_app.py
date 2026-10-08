@@ -8,6 +8,7 @@ está em rspe_scraper.py, os campos exibidos em rspe_view.py e as exportações
 em rspe_export.py. Bases locais (.sqlite) ficam na pasta "bases".
 """
 
+import contextlib
 import hashlib
 import json
 import logging
@@ -37,7 +38,7 @@ import rspe_relatorio as rrel
 import rspe_indulto_tl as rtl
 
 APP = "APTO"
-VERSAO = "7.5.0"
+VERSAO = "7.6.0"
 
 
 def pasta_app():
@@ -88,20 +89,25 @@ def _ajuda_juris():
 
 AJUDA = """
 <h4>Cores</h4>
-Progressão e Livramento: <b>amarelo forte</b> = prazo vencido ("Vencido há N dias · sem pedido no RSPE - requerer" quando não há pedido,
+Progressão e Livramento: <b>vermelho</b> = prazo vencido ("Vencido há N dias · sem pedido no RSPE - requerer" quando não há pedido,
 exame criminológico nem falta nos 12 meses; nos demais casos, "· verificar criminológico, indeferimento ou falta"); a dica mostra os pedidos do RSPE e, quando houver, o aviso sobre o exame criminológico, que é só dica: não muda a cor nem
-gera alerta). Prazos: <b>laranja</b> = vence em até 30 dias; <b>amarelo</b> = em até 60; <b>verde</b> = em até 90. Acima de 90 dias:
-"Em cumprimento", sem cor. <b>Cinza</b> = "Pena cumprida" ou "Não se aplica" (Progressão: em livramento, já no aberto, não iniciou, pena
-interrompida; Livramento: em livramento, não iniciou, pena interrompida - o motivo fica na ficha); <b>amarelo</b> também para "A verificar (livramento)"; <b>azul</b> = execução extinta.
-Extinção: <b>vermelho</b> = extinção cabível; <b>laranja</b>/<b>amarelo</b>/<b>verde</b> = término em até 30/60/90 dias; cinza = pena
-interrompida ou sem previsão; azul = extinta (registrada).
+gera alerta). Prazos: <b>laranja</b> = vence em até 30 dias ("Vence hoje" também: conta em "Até 30 dias" e no filtro "Vence em até 30
+dias", não em "Vencidas", aqui e no relatório geral); <b>amarelo</b> = em até 60; <b>verde</b> = em até 90. Acima de 90 dias:
+"Em cumprimento", sem cor. <b>Cinza</b> = "Pena cumprida", "Pena interrompida" (foragido), "Pena suspensa" (preso em outro processo) ou
+"Não se aplica" (Progressão: em livramento, já no aberto, não iniciou; Livramento: em livramento, não iniciou - o motivo fica na ficha);
+<b>amarelo</b> também para "A verificar (livramento)"; <b>azul</b> = execução extinta.
+Extinção: <b>vermelho</b> = extinção cabível; <b>amarelo</b> = "Extinção a verificar" (o motivo aparece ao passar o mouse e na ficha);
+<b>laranja</b>/<b>amarelo</b>/<b>verde</b> = término em até 30/60/90 dias; cinza = pena interrompida/suspensa ou sem previsão; azul =
+extinta (registrada).
 Indulto/Comutação (células): <b>vermelho</b> = "Vedado (art. 1º)", "Vedado (art. 7º)", "Indeferido" ou "Falta" (falta com sanção
 reconhecida nos 12 meses); <b>verde</b> = "Sim" (possível, também quando depende de tese defensiva, indicada no texto); <b>amarelo</b> =
-"Verificar" (inclusive falta a apurar e a controvérsia do art. 2º, II); <b>cinza</b> = "Não atinge", "Não se aplica" (nenhuma
+"Verificar" (inclusive falta a apurar e a controvérsia do art. 2º, II); <b>cinza</b> = "Não atinge" (a fração não foi cumprida),
+"Não alcançado" (sentença ou trânsito para a acusação posterior à publicação do decreto), "Não se aplica" (nenhuma
 condenação na publicação do decreto), "Fato posterior" ou "Prejudicada"; <b>azul</b> = "Concedido" no RSPE.
 Prescrição: vermelho = aparente; amarelo = iminente (executória em até 180 dias) ou "A VERIFICAR" (saldo na evasão que depende da
-imputação do cumprimento entre condenações); sem cor = não prescrita; cinza = sem dados; azul = extinta. Clique num cartão de resumo
-para filtrar pela cor.
+imputação do cumprimento entre condenações); sem cor = não prescrita ("Não prescrita (há crimes sem dados)" quando algum crime não tem o
+trânsito ou a pena no RSPE - conferir na ação penal); cinza = sem dados; azul = extinta. A tela, a exportação e o relatório mostram
+cada pretensão (executória e punitiva) com a sua cor. Clique num cartão de resumo para filtrar pela cor.
 <h4>Datas e cálculos</h4>
 Progressão, livramento e término são os impressos pelo SEEU no RSPE; o programa não os recalcula. Sem data no RSPE, a tabela mostra
 "—" e o motivo ("Não consta no RSPE", "Pena interrompida", "Não iniciou") fica na ficha. O programa calcula indulto e comutação,
@@ -161,7 +167,8 @@ doméstica, tortura, lavagem, ORCRIM, terrorismo, crimes sexuais (215 a 218-C), 
 exceto o § 4º) e ECA 240-244-B; art. 9º dispensa o trânsito em julgado. A pena máxima é lida do tipo penal impresso no RSPE; quando o
 SEEU corta o texto, usa-se a tabela editável "pena_maxima_abstrata" da base jurídica (indicado na análise). O trecho relativo a
 agentes de segurança e militares (arts. 2º, 3º e 6º) não é avaliado; o art. 8º exclui PRD, multa e suspensão condicional do processo (pena marcada
-"CONVERTIDA" fica "a verificar"); crime militar, "a verificar" (art. 7º, VII). O Decreto 11.846/2023 não é analisado.
+"CONVERTIDA" fica "a verificar"); crime militar, "a verificar" (art. 7º, VII). O Decreto 11.846/2023 entra só no mapa da aba Indulto
+(todos os decretos, com as hipóteses que se resolvem pela conta) e no relatório geral; não tem análise inciso por inciso nem coluna própria.
 <b>Hediondez pela época do fato</b>: a tabela "hediondos.desde" da base jurídica guarda a data em que cada tipo passou a ser
 hediondo (Lei 8.072/90 e alterações - 8.930/94, 9.695/98, 12.015/2009, 13.104 e 13.142/2015, 13.497/2017,
 12.978/2014, 13.964/2019, 14.811 e 14.994/2024, 15.134 e 15.159/2025, 15.358, 15.384 e 15.487/2026). Fato anterior à data não é
@@ -212,20 +219,26 @@ liberdade sem evasão); conclusão.
 Na linha de cada crime da aba Prescrição, "cálculo" abre a memória em texto e "editar dados" o formulário de ajuste; a
 pretensão executória não tem linha do tempo (nem na tela nem no relatório individual).
 <h4>Filtro de situação</h4>
-O seletor ao lado dos botões filtra a aba (a Geral não tem). Progressão e Livramento: vencidas, vence em até 30, 60 ou 90 dias, não
-iniciou, pena interrompida, não se aplica (cumprida / livramento / aberto), sem data. Indulto/Comutação: por benefício e resultado
-("Indulto 2024 · Sim", "Comutação 2025 · Verificar" etc.), fato posterior à data do decreto, falta nos 12 meses e crime impeditivo.
+O seletor ao lado dos botões filtra a aba (a Geral, o Indulto, as Jurisprudências e o Quadro não têm). Progressão e Livramento: vencidas (data já passada), vence em até 30,
+60 ou 90 dias (os três incluem "Vence hoje"), não iniciou, pena interrompida / suspensa, não se aplica (cumprida / livramento / aberto), sem data. Indulto/Comutação:
+o seletor fica oculto; a barra lateral escolhe o decreto, os chips filtram o resultado e o seletor do topo escolhe indulto, comutação ou os dois.
 Prescrição: aparente, iminente / a verificar, não prescrita / não configurada, sem dados, extinta. Extinção: extinção cabível,
 término em até 30, 60 ou 90 dias, pena interrompida, sem previsão. Ficha disciplinar: remição a requerer, conferir remição / sem atestado
-/ estudo, em ordem, sem ficha. Auditoria: com alertas, pontos a verificar, sem inconsistências. O número da execução é copiado com um clique.
+/ estudo, em ordem, sem ficha. Auditoria: com alertas, pontos a verificar, guia em ordem. O número da execução é copiado com um clique.
+Na coluna Situação, a situação que pede ação vem com o complemento "sem pedido no RSPE - requerer" (prazo vencido e nenhum pedido
+do benefício lançado no RSPE). Clicar no título da coluna Situação ordena pelos dias (do mais vencido ao mais distante).
+Ao exportar com um filtro de situação (ou cartão de cor) ativo, a janela oferece "Aplicar o filtro de situação" (marcado): saem só os
+assistidos que a tabela mostra; desmarcado, sai tudo o que a busca mostra. Teclado: Tab percorre cartões, linhas, ícones e botões, e
+Enter (ou espaço) aciona o que estiver em foco.
 <h4>Jurisprudências</h4>
-Acórdãos do TJMS em execução penal favoráveis à defesa (recurso defensivo provido, recurso do MP desprovido, ordem concedida), triados
-pela ementa, com a tese em uma frase e o tema. Pesquise por palavras (todas devem constar da tese ou da ementa) e filtre por tema.
+Decisões do TJMS, do STJ e do STF em execução penal favoráveis à defesa (recurso defensivo provido, recurso do MP desprovido, ordem
+concedida; acórdãos e decisões monocráticas), triadas pela ementa, com a tese em uma frase e o tema, mais as decisões do STJ da triagem
+automática (texto integral pesquisável). Pesquise por palavras (todas devem constar da tese ou da ementa), filtre por tema e por tribunal.
 "Copiar ementa" leva a ementa com a referência (tribunal, classe, número, relator, órgão, julgamento). Um teses_execucao.json ao lado
-do programa substitui a cópia embutida. STJ e STF entrarão depois.
+do programa substitui a cópia embutida só se for de versão igual ou mais nova (um arquivo antigo esquecido na pasta é ignorado).
 <h4>Indulto: todos os decretos</h4>
-A barra lateral traz "Geral" e os decretos de 2025 a 2000. Em "Geral", cada linha mostra o mapa dos decretos desde o início do
-cumprimento informado no RSPE (verde cabe, cinza não cabe, vermelho impeditivo, azul concedido, roxo indeferido); clique no nome
+A barra lateral traz "Geral" e os decretos de 2025 a 2000. Em "Geral", cada linha mostra o mapa dos decretos a partir da primeira
+prisão registrada no RSPE (verde cabe, cinza não cabe, vermelho impeditivo, azul concedido, roxo indeferido); clique no nome
 para ver o encaixe em cada decreto. Clicando num decreto, setas passam de um a outro e os chips filtram. Concedidos e indeferidos
 vêm dos incidentes do RSPE. Só entram hipóteses que se resolvem pela conta (frações, pena, regime, reincidência, violência, falta);
 as que dependem de dado fora do RSPE (filhos, doença, idade, estudo, PRD/sursis) não são calculadas. "Verificar indulto/comutação"
@@ -247,7 +260,9 @@ O botão "Letra" (A pequeno / A grande) muda o tamanho de tudo na tela e fica gr
 <h4>Pasta vigiada</h4>
 Menu da base &gt; "Pasta vigiada…": escolha uma pasta mãe com uma subpasta por base (ex.: "2ª VEP", "1ª VEP", ou RSPE\\2ª VEP e
 FD\\2ª VEP). Os PDFs salvos numa subpasta entram sozinhos na base de mesmo nome, com o programa aberto; a base é criada se não
-existir. PDF solto na pasta mãe é ignorado; nada é apagado ou movido.
+existir. PDF solto na pasta mãe é ignorado; nada é apagado ou movido. O arquivo lido não é lido de novo, salvo se for substituído;
+o que deu erro (aberto em outro programa, copiado pela metade) é tentado de novo nas próximas verificações (até 3 vezes; depois, só
+quando o arquivo for substituído), e o aviso cita o arquivo.
 <h4>Ficha disciplinar (SIAPEN/AGEPEN)</h4>
 Importe o PDF da Ficha Disciplinar pelo mesmo botão "Importar PDFs": o programa reconhece o documento e o vincula ao RSPE pelos autos
 citados na ficha. Sem esse vínculo, a ficha fica guardada pelo nome e vale para o assistido de mesmo nome só se houver um único na base
@@ -261,9 +276,11 @@ trabalhados do atestado; a coluna "Dias" mostra os dias corridos do período, s�
 estimado em 4 h por dia útil (1 dia remido a cada 12 h); início ou fim ilegível = "Conferir datas". O RSPE não diz de onde vem cada
 remição (trabalho, estudo, ENCCEJA/ENEM, leitura), então o programa não liga remição a atestado: aponta "Requerer remição" só quando não
 há nenhuma remição lançada no RSPE depois do atestado (ou depois do período de estudo); os demais ficam "conferir a homologação", com as
-somas e a lista das remições do RSPE no cabeçalho. Trabalho anterior à 1ª prisão do RSPE fica só no resumo. As faltas da ficha não
-entram na coluna Falta nem no indulto; na Auditoria, só no ponto "Perda de remidos pode alcançar remição anterior à falta" (desconto
-em duplicidade, LEP, art. 127).
+somas e a lista das remições do RSPE no cabeçalho. Trabalho anterior à 1ª prisão do RSPE fica só no resumo. As faltas graves da ficha
+que o RSPE não traz (não arquivadas) e a fuga registrada só na ficha entram como falta "A apurar" ("FALTA GRAVE NA FICHA DISCIPLINAR
+(SIAPEN)"): aparecem na coluna Falta e pesam no indulto e na comutação (a verificar, art. 6º), até você decidir no ✎ da coluna Falta
+se é falta grave; a ficha também explica a regressão ou a perda de remidos do RSPE. Na Auditoria, a ficha entra no ponto "Perda de
+remidos pode alcançar remição anterior à falta" (desconto em duplicidade, LEP, art. 127).
 <h4>Regras de leitura</h4>
 Quem não tem início de cumprimento definitivo no RSPE (só prisão provisória encerrada, ou nenhuma) aparece como "Não iniciou o
 cumprimento", e não como regime aberto ou pena interrompida. Livramento suspenso ou revogado em incidente posterior aparece como tal.
@@ -300,11 +317,13 @@ Para levar ao Word: "Copiar resumo" (ficha do assistido), "Copiar pretensão pun
 <h4>Relatórios em PDF</h4>
 O botão <b>Relatórios</b> gera, numa pasta com a data e a hora: um PDF por assistido (bloco da pena, tabela de benefícios com
 etiquetas e observação, condenações, linha do tempo em eventos e incidentes, remição, um bloco por alerta em frases curtas com o
-fundamento em lista e, para os crimes com evasão, prescrição aparente ou a verificar, a figura da linha do tempo da prescrição
-executória com o cartão de saldo de cada fuga, as hipóteses de imputação e o resultado), o relatório geral da base (perfil, benefícios, remição, alertas e fila de prioridade, com a prescrição
-punitiva e a executória em linhas separadas) e a planilha. No próprio botão dá para escolher de quem sai o relatório individual, na
-lista com busca e "Todos"/"Nenhum". Vale para os assistidos visíveis pela busca (o filtro de situação e os cartões não restringem).
-Na ficha do assistido, "Relatório em PDF" gera só o dele. A exportação Excel/PDF segue a mesma regra.
+fundamento em lista e, para os crimes com evasão, prescrição aparente ou a verificar, o cálculo da prescrição executória por crime,
+em texto e tabela - detração, saldo de cada fuga, hipóteses de imputação e resultado; sem figura de linha do tempo), o relatório geral da base (perfil,
+benefícios, remição e alertas, com a prescrição punitiva e a executória em linhas separadas) e a planilha. No próprio botão dá para escolher
+de quem sai o relatório individual, na lista com busca (sem acento; o número também só com dígitos) e "Todos"/"Nenhum". "Remição
+detalhada com o nome dos assistidos" decide se o PDF da remição detalhada traz os nomes. Vale para os assistidos visíveis pela busca
+(o filtro de situação e os cartões não restringem). Na ficha do assistido, "Relatório em PDF" gera só o dele. A exportação Excel/PDF
+segue a busca e, se marcado na janela de exportação, o filtro de situação.
 <h4>Presunção de hipossuficiência (Defensoria)</h4>
 No indulto, a <b>multa</b> é indultável e não é óbice (Decretos 12.338/2024 e 12.790/2025, art. 12, § 2º, I - presunção expressa
 de incapacidade econômica para quem é assistido pela Defensoria). Na extinção da punibilidade, a multa pendente não obsta ante a
@@ -345,8 +364,9 @@ Só a extinção pelo cumprimento: pena integralmente cumprida ou término previ
 condicional com período de prova expirado sem revogação (CP, art. 90; LEP, art. 146; Súmula 617/STJ - observado o art. 89); detração que iguala ou supera a pena do
 processo, como hipótese "a verificar" (a mesma prisão pode servir a várias condenações - CP, art. 42; LEP, arts. 66, II, e 111).
 Prescrição e indulto ficam nas próprias abas; o livramento incerto não gera hipótese (fica na Auditoria). Situação: "Extinção
-cabível" (vermelho), "Término em N dias" (laranja até 30, amarelo até 60, verde até 90), "Em cumprimento" (acima de 90 dias), "Pena
-extinta (registrada)" (azul), "Não se aplica" (cinza: pena interrompida ou sem previsão).
+cabível" (vermelho), "Extinção a verificar" (amarelo, com o motivo: custódia ou detração que pode alcançar a pena), "Término em N dias"
+(laranja até 30, amarelo até 60, verde até 90), "Em cumprimento" (acima de 90 dias), "Pena extinta (registrada)" (azul), "Pena
+interrompida" ou "Pena suspensa" (cinza) e "Não se aplica" (cinza: sem previsão).
 <h4>Base jurídica</h4>
 O arquivo base_juridica.json ao lado do programa tem prioridade sobre a cópia embutida. Para atualizar (novo decreto, nova fração,
 nova tese), edite o arquivo e use "Base ▾ → Recarregar base jurídica". A versão em uso aparece na aba Auditoria.
@@ -438,6 +458,20 @@ _NOMES_RESERVADOS = {"CON", "PRN", "AUX", "NUL"} | {"COM%d" % i for i in range(1
 
 def _nome_reservado(nome):
     return (nome or "").split(".")[0].strip().upper() in _NOMES_RESERVADOS
+
+
+def _msg_erro_base(caminho, e):
+    """Mensagem em português para a falha ao abrir uma base."""
+    t = str(e).lower()
+    nome = os.path.basename(caminho or "")
+    if "readonly" in t or "read-only" in t or isinstance(e, PermissionError):
+        return ("A base %s está somente para leitura (arquivo ou pasta sem permissão de gravação, ou mídia protegida): copie-a para uma "
+                "pasta com gravação e abra a cópia." % nome)
+    if "locked" in t:
+        return "A base %s está em uso por outro programa ou computador. Feche-a lá e tente de novo." % nome
+    if "unable to open" in t:
+        return "Não foi possível abrir a base %s: a pasta não existe ou não permite gravação." % nome
+    return "Não foi possível abrir a base %s: %s" % (nome, e)
 
 
 def _mesmo_arquivo(a, b):
@@ -646,6 +680,7 @@ class Base:
                 except Exception:
                     logging.getLogger("rspe").exception("falha ao reler a ficha %s", ch)
             f["importado_em"] = imp
+            f["_chave"] = ch  # chave da linha na tabela fichas: "Remover ficha" apaga exatamente a ficha exibida
             out[ch] = f
             if nn and not p:
                 out.setdefault("nome:" + nn, f)
@@ -655,13 +690,12 @@ class Base:
                 self.con.commit()
         return out
 
-    def remover_ficha(self, chave, nome_norm=None):
-        """Remove a ficha do processo; sem ela, a ficha guardada pelo nome (a que o assistido recebe sem homônimo)."""
+    def remover_ficha(self, chave):
+        """Remove a ficha gravada sob a chave indicada (processo ou "nome:..."); devolve quantas linhas saíram."""
         with self.lock:
-            cur = self.con.execute("DELETE FROM fichas WHERE chave=? OR processo=?", (chave, chave))
-            if not cur.rowcount and nome_norm:
-                self.con.execute("DELETE FROM fichas WHERE chave=?", ("nome:" + nome_norm,))
+            cur = self.con.execute("DELETE FROM fichas WHERE chave=?", (chave,))
             self.con.commit()
+            return cur.rowcount
 
     def baixas(self):
         with self.lock:
@@ -954,20 +988,21 @@ class Base:
             return [n for (n,) in self.con.execute("SELECT nome FROM assistidos").fetchall()]
 
     def existente(self, processo):
-        """(data_geracao, hash) do registro já gravado para o processo, ou None. O hash vem vazio quando o registro foi lido por
-        versão anterior da leitura do PDF: ("", ""), e o mesmo RSPE, importado de novo, substitui o gravado (vale a leitura corrigida)."""
+        """(data_geracao, hash, leitura_antiga) do registro já gravado para o processo, ou None. leitura_antiga = o registro foi
+        lido por versão anterior da leitura do PDF: o mesmo RSPE (mesma data), importado de novo, substitui o gravado (vale a
+        leitura corrigida); um RSPE mais antigo continua indo para o histórico, sem substituir o atual."""
         with self.lock:
             row = self.con.execute("SELECT data_geracao, dados FROM assistidos WHERE processo=?", (processo,)).fetchone()
         if not row:
             return None
+        antiga = False
         try:
             d = json.loads(row[1])
-            if (d.get("versao_leitura_rspe") or 1) < rs.VERSAO_LEITURA_RSPE:
-                return ("", "")  # leitura antiga: o mesmo RSPE substitui o gravado
+            antiga = (d.get("versao_leitura_rspe") or 1) < rs.VERSAO_LEITURA_RSPE
             h = d.get("_hash", "")
         except Exception:
             h = ""
-        return (row[0], h)
+        return (row[0], h, antiga)
 
     def remover(self, processo):
         with self.lock:
@@ -992,11 +1027,37 @@ class Api:
         self.base = None          # o programa abre sem base carregada
         self._modelos = []
         self._json = {}
-        self._imp_lock = threading.RLock()   # uma importação por vez (manual ou pela pasta vigiada)
+        # uma trava por arquivo de base: a importação (manual ou pela pasta vigiada) numa base não deixa fechá-la, trocá-la ou
+        # restaurá-la no meio do lote, mas não segura as operações em outra base
+        self._travas = {}
+        # uma montagem da lista por vez (pasta vigiada, importação e a tela podem pedir ao mesmo tempo): sem ela, duas montagens
+        # simultâneas somavam os assistidos na mesma lista
+        self._lista_lock = threading.RLock()
+        self._travas_mx = threading.Lock()
         self._vigia_thread = None
         self._vigia_tam = {}
         self._vigia_ultima = ""
+        self._vigia_falhas = {}  # caminho -> (assinatura, tentativas com erro)
         rg.carregar()
+
+    def _trava(self, caminho):
+        """Trava (RLock) do arquivo de base: a mesma para o mesmo arquivo, qualquer que seja a grafia do caminho."""
+        k = os.path.normcase(os.path.abspath(caminho or "")) if caminho else ""
+        with self._travas_mx:
+            return self._travas.setdefault(k, threading.RLock())
+
+    @contextlib.contextmanager
+    def _travar(self, *caminhos):
+        """Trava vários arquivos de base em ordem fixa (sem impasse entre duas operações que travam os mesmos arquivos)."""
+        ks = sorted({os.path.normcase(os.path.abspath(c)) for c in caminhos if c})
+        ts = [self._trava(k) for k in ks]
+        for t in ts:
+            t.acquire()
+        try:
+            yield
+        finally:
+            for t in reversed(ts):
+                t.release()
 
     # ---- configuração (só a lista de bases recentes) ----
     def _recentes(self):
@@ -1040,13 +1101,14 @@ class Api:
     def listar(self):
         # no pywebview cada chamada roda numa thread: se a base for fechada ou trocada no meio da montagem, monta de novo
         # com a base atual (ou a tela inicial), em vez de devolver AttributeError/ProgrammingError à tela
-        b0 = self.base
-        try:
-            return self._listar()
-        except (AttributeError, sqlite3.ProgrammingError):
-            if self.base is b0:
-                raise
-            return self._listar()
+        with self._lista_lock:
+            b0 = self.base
+            try:
+                return self._listar()
+            except (AttributeError, sqlite3.ProgrammingError):
+                if self.base is b0:
+                    raise
+                return self._listar()
 
     def _listar(self):
         rv.HOJE = datetime.now().date()  # a data de referência acompanha o relógio (programa aberto após a meia-noite)
@@ -1056,9 +1118,8 @@ class Api:
                     "base_juridica": {"versao": rg.versao(), "origem": rg.origem()}, "registros": []}
         brutos = self.base.todos()
         ctx = self._contexto(brutos)
-        self._modelos = []
-        self._json = {}
-        self._hoje_modelos = rv.HOJE
+        # a lista é montada à parte e só substitui a atual no fim: exportar, relatórios e registro não leem uma lista pela metade
+        modelos = []
         res = None
         if len(brutos) >= 80:
             # base grande: cada assistido é montado num processo paralelo (a análise é pesada: ~45 ms por assistido)
@@ -1075,14 +1136,16 @@ class Api:
                         self.base.migrar_baixa(ch, de, para)
                     except Exception:
                         logging.getLogger("rspe").exception("falha ao migrar baixa %s", ch)
-                self._modelos.append(m)
+                modelos.append(m)
         else:
             for r in brutos:
-                self._modelos.append(self._montar(r, ctx))
-        _todos = self._modelos
-        self._modelos = _so_ativos(self._modelos, brutos)
-        _ids = {id(m) for m in self._modelos}
-        self._ocultos = [m for m in _todos if id(m) not in _ids]  # outras execuções de quem tem mais de um RSPE (fora da lista)
+                modelos.append(self._montar(r, ctx))
+        ativos = _so_ativos(modelos, brutos)
+        _ids = {id(m) for m in ativos}
+        self._json = {}
+        self._hoje_modelos = rv.HOJE
+        self._modelos = ativos
+        self._ocultos = [m for m in modelos if id(m) not in _ids]  # outras execuções de quem tem mais de um RSPE (fora da lista)
         return {
             "base": self.base.nome,
             "hoje": rv.HOJE.strftime("%d/%m/%Y"),
@@ -1135,6 +1198,10 @@ class Api:
     def _atualizar(self, processo, msg=None):
         """Refaz só o assistido alterado (marcar pedido, baixar alerta, dado informado...) em vez da base inteira:
         a tela recebe apenas esse registro e o troca na lista que já tem."""
+        with self._lista_lock:
+            return self._atualizar_(processo, msg)
+
+    def _atualizar_(self, processo, msg=None):
         if not self._modelos or getattr(self, "_hoje_modelos", None) != datetime.now().date():
             r = self.listar()
             if msg:
@@ -1257,7 +1324,8 @@ class Api:
     def historico(self, processo):
         """Histórico comparativo dos RSPEs importados do assistido (aba Geral): uma coluna por RSPE, do mais antigo ao
         atual, com os campos que costumam mudar e o que mudou em relação ao anterior. Cada RSPE é lido com as regras
-        desta versão (a mesma análise do atual), sem a ficha disciplinar e sem os ajustes do operador."""
+        desta versão, sem a ficha disciplinar e sem os ajustes do operador; a coluna do RSPE atual é a mesma da tela (com a ficha
+        e os ajustes), para o Histórico não contradizer as abas."""
         if not self.base:
             return {"erro": "Nenhuma base aberta."}
         hs = self.base.historico(processo)
@@ -1266,13 +1334,17 @@ class Api:
         peds = self.base.pedidos().get(processo, {})
         cols = []
         ant_inc = None
-        for h in hs:
+        m_tela = next((x for x in self._modelos if x.get("id") == processo), None)
+        for n_h, h in enumerate(hs):
             r = h["dados"]
-            try:
-                m = rv.modelo(rs.reprocessar(json.loads(json.dumps(r))), {}, None, [])
-            except Exception:
-                logging.getLogger("rspe").exception("histórico %s %s", processo, h["geracao"])
-                m = {}
+            if n_h == len(hs) - 1 and m_tela and (m_tela.get("geracao") or "") == (h["geracao"] or ""):
+                m = m_tela  # RSPE atual: o modelo da tela (ficha disciplinar, data-base e dados informados pelo operador)
+            else:
+                try:
+                    m = rv.modelo(rs.reprocessar(json.loads(json.dumps(r))), {}, None, [])
+                except Exception:
+                    logging.getLogger("rspe").exception("histórico %s %s", processo, h["geracao"])
+                    m = {}
             rem, perd = rs.saldo_remidos_num(r.get("saldo_remidos") or "")
             incs = r.get("_incidentes") or []
             chaves = ["|".join(str(i.get(k) or "") for k in ("tipo", "situacao", "complemento", "data_decisao", "data_referencia")) for i in incs]
@@ -1296,9 +1368,11 @@ class Api:
             dp = rs.to_date(p.get("data") or "")
             if not dp:
                 continue
-            nome, rx_ = self.HIST_ABAS.get(aba, (aba, None))
+            nome, rx_ = self.HIST_ABAS.get(aba) or ((rx.nome_pedido(aba), r"INDULTO|COMUTA") if aba.startswith("ind_") else (aba, None))
             col = next((c for c in cols if (rs.to_date(c["geracao"]) or date.min) >= dp), None)
-            txt = "%s pedida em %s" % (nome, p["data"])
+            # "Progressão: pedido em ..." / "Remição (ofício): ofício em ...": sem concordância de gênero com o nome do benefício
+            _tp = {"oficio": "ofício", "outro": "providência"}.get(p.get("tipo") or "", "pedido")
+            txt = "%s: %s em %s" % (nome, _tp, p["data"])
             if col is None:
                 cols[-1]["pedidos"].append({"txt": txt + " · aguardando RSPE posterior", "ret": ""})
                 continue
@@ -1552,7 +1626,12 @@ class Api:
         if not row:
             return {"erro": "Ficha não encontrada (já vinculada?)."}
         f = json.loads(row[0])
-        self.base.gravar_ficha(f, processo, True)
+        if not self.base.gravar_ficha(f, processo, True):
+            # o assistido já tem ficha impressa depois: a escolhida fica na base (guardada pelo nome), sem vínculo
+            with self.base.lock:
+                ex = self.base.con.execute("SELECT data_impressao FROM fichas WHERE chave=?", (processo,)).fetchone()
+            return {"erro": "O assistido já tem ficha impressa em %s; a escolhida (impressa em %s) não foi vinculada." % (
+                (ex[0] if ex else "") or "data mais recente", f.get("data_impressao") or "data não lida")}
         with self.base.lock:
             self.base.con.execute("DELETE FROM fichas WHERE chave=? AND chave!=?", (chave, processo))
             self.base.con.commit()
@@ -1660,7 +1739,8 @@ class Api:
 
     # ---- bases ----
     def _trocar_base(self, caminho):
-        with self._imp_lock:
+        # trava a base que fecha e a que abre; importação em outra base não segura a troca
+        with self._travar(caminho, self.base.caminho if self.base else None):
             return self._trocar_base_(caminho)
 
     def _etapa(self, texto):
@@ -1677,7 +1757,7 @@ class Api:
             nova = Base(caminho)
         except Exception as e:
             logging.getLogger("rspe").exception("abrir base %s", caminho)
-            return {"erro": "Não foi possível abrir a base %s: %s" % (os.path.basename(caminho), e)}
+            return {"erro": _msg_erro_base(caminho, e)}
         velha, self.base = self.base, nova
         self._modelos, self._json = [], {}
         if velha:
@@ -1771,7 +1851,7 @@ class Api:
         """Volta a base para uma cópia de segurança. Antes, a base atual também é copiada (a restauração pode ser desfeita)."""
         if not self.base:
             return {"erro": "Nenhuma base aberta."}
-        with self._imp_lock:
+        with self._trava(self.base.caminho):
             alvo = next((c for c, _ in self._copias() if os.path.basename(c) == arquivo), None)
             if not alvo:
                 return {"erro": "Cópia não encontrada."}
@@ -1785,6 +1865,26 @@ class Api:
                     src.backup(self.base.con)
             finally:
                 src.close()
+            # a cópia pode ser de versão anterior (sem as colunas novas): a base é reaberta, o que refaz as migrações
+            velha = self.base
+            try:
+                self.base = Base(velha.caminho)
+            except Exception as e:
+                logging.getLogger("rspe").exception("reabrir a base restaurada")
+                self.base = None
+                self._modelos, self._json = [], {}
+                try:
+                    velha.fechar()
+                except Exception:
+                    pass
+                r = self.listar()
+                r["erro"] = _msg_erro_base(velha.caminho, e)
+                return r
+            try:
+                velha.fechar()
+            except Exception:
+                logging.getLogger("rspe").exception("fechar a conexão anterior à restauração")
+            self._modelos, self._json = [], {}
             r = self.listar()
             r["msg"] = "Base restaurada para a cópia de %s. A versão anterior ficou guardada entre as cópias." % \
                        datetime.strptime(re.search(r"_(\d{8}_\d{6})\.sqlite$", arquivo).group(1), "%Y%m%d_%H%M%S").strftime("%d/%m/%Y %H:%M")
@@ -1817,7 +1917,7 @@ class Api:
                 motivo = _checar_arquivo_base(c)
                 if motivo:
                     return {"erro": motivo.replace("Ele não foi aberto", "Ele não foi substituído")}
-                with self._imp_lock:
+                with self._trava(c):
                     try:
                         os.remove(c)
                     except OSError as e:
@@ -1838,15 +1938,18 @@ class Api:
 
     def fechar_base(self):
         # importação em andamento (manual ou pela pasta vigiada): não fecha a base debaixo dela
-        if not self._imp_lock.acquire(timeout=2):
-            return {"erro": "Há uma importação em andamento nesta base. Aguarde terminar para fechá-la."}
+        if not self.base:
+            return self.listar()
+        trava = self._trava(self.base.caminho)
+        if not trava.acquire(timeout=2):
+            return {"erro": "Há uma importação em andamento na base %s. Aguarde terminar para fechá-la." % self.base.nome}
         try:
             velha, self.base = self.base, None
             self._modelos, self._json = [], {}
             if velha:
                 velha.fechar()
         finally:
-            self._imp_lock.release()
+            trava.release()
         return self.listar()
 
     def recarregar_base_juridica(self):
@@ -1862,11 +1965,30 @@ class Api:
             return None
         if not c.lower().endswith(".sqlite"):
             c += ".sqlite"
-        if os.path.abspath(c) == os.path.abspath(self.base.caminho):
+        if _mesmo_arquivo(c, self.base.caminho):
             return {"msg": "A base já está salva neste arquivo."}
-        self.base.con.commit()
-        shutil.copyfile(self.base.caminho, c)
+        if _nome_reservado(os.path.basename(c)):
+            return {"erro": "O nome '%s' é reservado pelo Windows. Escolha outro nome para a base." % os.path.basename(c)}
+        # o diálogo já perguntou se substitui; só um arquivo do APTO (ou vazio) é substituído, como em "Nova base"
+        motivo = _checar_arquivo_base(c)
+        if motivo:
+            return {"erro": motivo.replace("Ele não foi aberto", "Ele não foi substituído")}
+        # cópia íntegra pela API de backup do SQLite, com a base travada (a pasta vigiada pode estar gravando nela)
+        try:
+            with self._travar(self.base.caminho, c):
+                dst = sqlite3.connect(c)
+                try:
+                    with self.base.lock:
+                        self.base.con.commit()
+                        self.base.con.backup(dst)
+                finally:
+                    dst.close()
+        except Exception as e:
+            logging.getLogger("rspe").exception("salvar base como %s", c)
+            return {"erro": "Não foi possível salvar a base em %s: %s" % (os.path.basename(c), e)}
         r = self._trocar_base(c)
+        if r.get("erro"):
+            return r
         r["msg"] = "Base salva: " + os.path.basename(c)
         return r
 
@@ -1879,7 +2001,7 @@ class Api:
     def importar_pdfs(self):
         if not self.base:
             return {"erro": "Crie ou abra uma base antes de importar."}
-        arqs = self._janela.create_file_dialog(webview.OPEN_DIALOG, allow_multiple=True, file_types=("RSPE em PDF (*.pdf)",))
+        arqs = self._janela.create_file_dialog(webview.OPEN_DIALOG, allow_multiple=True, file_types=("RSPE ou Ficha Disciplinar (*.pdf)",))
         if arqs:
             self._importar(list(arqs))
         return None
@@ -1902,8 +2024,14 @@ class Api:
         threading.Thread(target=self._worker, args=(arqs,), daemon=True).start()
 
     def _worker(self, arqs, base=None, silencioso=False):
-        with self._imp_lock:
-            return self._worker_(arqs, base or self.base, silencioso)
+        for _ in range(3):
+            b = base or self.base
+            with self._trava(b.caminho if b else None):
+                # importação manual: a base pode ter sido trocada entre o clique e a trava; vale a base aberta agora
+                if base is None and b is not self.base:
+                    continue
+                return self._worker_(arqs, b, silencioso)
+        return self._worker_(arqs, self.base, silencioso)
 
     def _worker_(self, arqs, base, silencioso):
         """Importa o lote. A tela sempre recebe ui.importado (mesmo se a importação falhar no meio), senão a barra
@@ -1934,6 +2062,7 @@ class Api:
         incompletos = []
         lote = []
         registro = []  # uma linha por arquivo: o que entrou, como foi lido e, se não entrou ou entrou incompleto, a causa provável
+        falhos = []  # caminho dos arquivos que não foram lidos (a pasta vigiada tenta de novo na próxima varredura)
 
         def reg(arq, tipo, nome, proc, resultado, leitura="completa", obs=None):
             with lock:
@@ -1965,7 +2094,14 @@ class Api:
                         r = _extrair_com_hash(futs[fut])  # processos de leitura indisponíveis: lê aqui mesmo
                     if r.get("tipo") == "ficha_disciplinar":
                         with lock:
-                            pend_fichas.append((nome_arq, r))  # vinculada no fim, com todos os RSPE do lote já na base
+                            if r.get("_hash") and r["_hash"] in vistos:
+                                duplicados.append("%s: arquivo repetido no mesmo lote" % nome_arq)
+                                registro.append({"arquivo": nome_arq, "tipo": "Ficha", "nome": r.get("nome") or "", "proc": "", "resultado": "repetido no lote",
+                                                 "leitura": "—", "obs": ["o mesmo arquivo veio duas vezes; só a primeira conta"]})
+                                continue
+                            if r.get("_hash"):
+                                vistos.add(r["_hash"])
+                            pend_fichas.append((nome_arq, r, a))  # vinculada no fim, com todos os RSPE do lote já na base
                         continue
                     if not r.get("processo_execucao"):
                         if r.get("nome") or r.get("_crimes") or r.get("data_geracao_rspe"):
@@ -1981,15 +2117,16 @@ class Api:
                         vistos.add(r["_hash"])
                         ex_ = base.existente(chave)
                         if ex_:
-                            data_ex, hash_ex = ex_
-                            if hash_ex == r["_hash"] or (data_ex and data_ex == r.get("data_geracao_rspe")):
+                            data_ex, hash_ex, leitura_antiga = ex_
+                            mesmo = hash_ex == r["_hash"] or (data_ex and data_ex == r.get("data_geracao_rspe"))
+                            if mesmo and not leitura_antiga:
                                 base.arquivar(r)
                                 duplicados.append("%s: RSPE de %s já está na base (%s)" % (nome_arq, r.get("data_geracao_rspe"), r.get("nome")))
                                 registro.append({"arquivo": nome_arq, "tipo": "RSPE", "nome": r.get("nome") or "", "proc": chave, "resultado": "já na base",
                                                  "leitura": "—", "obs": ["RSPE de %s, igual ao que a base já tem" % (r.get("data_geracao_rspe") or "?")]})
                                 continue
                             d_ex, d_novo = rs.to_date(data_ex or ""), rs.to_date(r.get("data_geracao_rspe") or "")
-                            if d_ex and d_novo and d_novo < d_ex:
+                            if d_ex and d_novo and d_novo < d_ex and not mesmo:
                                 registro.append({"arquivo": nome_arq, "tipo": "RSPE", "nome": r.get("nome") or "", "proc": chave, "resultado": "histórico",
                                                  "leitura": "—", "obs": ["RSPE de %s, mais antigo que o da base (%s): guardado no histórico" % (r.get("data_geracao_rspe"), data_ex)]})
                                 if base.arquivar(r):
@@ -1998,7 +2135,7 @@ class Api:
                                 else:
                                     duplicados.append("%s: RSPE de %s já está no histórico (%s)" % (nome_arq, r.get("data_geracao_rspe"), r.get("nome")))
                                 continue
-                            if d_ex and not d_novo:
+                            if d_ex and not d_novo and not mesmo:
                                 antigos.append("%s: RSPE sem data de geração legível; a base já tem o de %s - ignorado" % (nome_arq, data_ex))
                                 registro.append({"arquivo": nome_arq, "tipo": "RSPE", "nome": r.get("nome") or "", "proc": chave, "resultado": "ignorado",
                                                  "leitura": "parcial", "obs": ["data de geração do RSPE ilegível (rodapé cortado): sem ela não dá para saber se é mais novo que o da base (%s)" % data_ex]})
@@ -2018,16 +2155,21 @@ class Api:
                                          "resultado": "atualizado" if ex_ else "novo", "leitura": "parcial" if parcial else "completa", "obs": obs})
                 except Exception as e:
                     me = _msg_erro_pdf(e)
+                    falhos.append(a)
                     erros.append("%s: %s" % (nome_arq, me))
                     reg(nome_arq, "?", "", "", "não importado", "falhou", [me])
                 if not silencioso and (n % 3 == 0 or n == total):
                     self._js("ui.progresso(%d,%d)" % (n, total))
         if True:  # fichas do lote e fichas que esperavam o RSPE
             info = self._indice_vinculo(base)
-            for nome_arq, r in pend_fichas:
+            for nome_arq, r, a in pend_fichas:
                 try:
                     proc, mesma_pessoa = self._vincular_ficha(r, base, info)
                     obs, parcial = rf.leitura_parcial(r)
+                    if r.get("_hash") and self._ficha_ja_na_base(base, r, proc):
+                        duplicados.append("%s: ficha de %s impressa em %s já está na base" % (nome_arq, r.get("nome"), r.get("data_impressao") or "?"))
+                        reg(nome_arq, "Ficha", r.get("nome"), proc, "já na base", "—", ["a mesma ficha (mesmo arquivo) já foi importada"])
+                        continue
                     if not base.gravar_ficha(r, proc, mesma_pessoa):
                         antigos.append("%s: ficha de %s impressa em %s é mais antiga que a da base - ignorada" % (nome_arq, r.get("nome"), r.get("data_impressao") or "?"))
                         reg(nome_arq, "Ficha", r.get("nome"), proc, "ignorada", "parcial" if parcial else "completa",
@@ -2038,6 +2180,7 @@ class Api:
                     fichas_ok.append("%s: ficha de %s %s" % (nome_arq, r.get("nome"), ("vinculada a " + proc) if proc else
                                                              "SEM RSPE correspondente na base (fica guardada pelo nome; vincula sozinha quando o RSPE entrar)"))
                 except Exception as e:
+                    falhos.append(a)
                     erros.append("%s: %s" % (nome_arq, e))
                     reg(nome_arq, "Ficha", r.get("nome"), "", "não importado", "falhou", [str(e)])
             # fichas de lotes anteriores que esperavam o RSPE
@@ -2063,8 +2206,24 @@ class Api:
                              "ignorados": [a for a in antigos if "ignorad" in a], "processos": list(lote), "arquivos": len(arqs),
                              "registro": sorted(registro, key=lambda x: x["arquivo"].lower()), "base_nome": getattr(base, "nome", "")}
         resumo = {"novos": novos, "atualizados": atualizados, "historico": historicos, "duplicados": len(duplicados), "antigos": len(antigos),
-                  "erros": len(erros), "fichas": len(fichas_ok), "incompletos": len(incompletos), "avisos": avisos[:60]}
+                  "erros": len(erros), "fichas": len(fichas_ok), "incompletos": len(incompletos), "avisos": avisos[:60],
+                  "falhos": falhos, "erros_txt": list(erros)}
         return resumo
+
+    @staticmethod
+    def _ficha_ja_na_base(base, f, proc):
+        """A mesma ficha (mesmo arquivo: mesmo hash e mesma data de impressão) já gravada no processo ou pelo nome."""
+        with base.lock:
+            rows = base.con.execute("SELECT dados FROM fichas WHERE chave=? OR chave=?", (proc or "", "nome:" + _norm(f.get("nome", "")))).fetchall()
+        for (d,) in rows:
+            try:
+                g = json.loads(d) or {}
+            except Exception:
+                continue
+            if (g.get("_hash") == f.get("_hash") and (g.get("data_impressao") or "") == (f.get("data_impressao") or "")
+                    and (g.get("_versao_extracao") or 1) >= (f.get("_versao_extracao") or 1)):
+                return True  # extraída por versão anterior: grava de novo (leitura melhor do mesmo arquivo)
+        return False
 
     def _indice_vinculo(self, base):
         """Dados de cada assistido para vincular fichas (lido uma vez por lote: a base pode ter centenas de RSPE)."""
@@ -2199,6 +2358,8 @@ class Api:
         self._vigia_thread = threading.Thread(target=self._vigia_loop, daemon=True)
         self._vigia_thread.start()
 
+    VIGIA_TENTATIVAS = 3  # tentativas de um PDF com erro antes de a pasta vigiada desistir dele (até ser substituído)
+
     def _vigia_loop(self):
         while True:
             try:
@@ -2246,8 +2407,8 @@ class Api:
             os.makedirs(PASTA_BASES, exist_ok=True)
             caminho = os.path.join(PASTA_BASES, b + ".sqlite")
             nova = not os.path.exists(caminho)
-            # a base é escolhida já com o lock: assim ela não é trocada nem fechada entre a escolha e a importação
-            with self._imp_lock:
+            # a base é escolhida já com a trava do arquivo: assim ela não é trocada nem fechada entre a escolha e a importação
+            with self._trava(caminho):
                 aberta = bool(self.base) and _mesmo_arquivo(self.base.caminho, caminho)
                 if not aberta:
                     motivo = _checar_arquivo_base(caminho)
@@ -2260,8 +2421,21 @@ class Api:
                 finally:
                     if not aberta:
                         base.fechar()
+            # só fica marcado como lido o que entrou (ou foi duplicado/ignorado): o arquivo com erro (aberto em outro programa,
+            # lido no meio da cópia) é tentado de novo na próxima varredura; lote interrompido não marca nada
+            falhos = set(res.get("falhos") or []) if not res.get("interrompida") else {p for p, _ in itens}
+            desiste = []
             for p, sig in itens:
-                estado[p] = sig
+                if p not in falhos:
+                    estado[p] = sig
+                    self._vigia_falhas.pop(p, None)
+                elif not res.get("interrompida"):
+                    # erro que não passa (PDF corrompido, que não é RSPE): depois de 3 tentativas, só volta se o arquivo for substituído
+                    n_ = (self._vigia_falhas.get(p, (None, 0))[1] + 1) if self._vigia_falhas.get(p, (None,))[0] == sig else 1
+                    self._vigia_falhas[p] = (sig, n_)
+                    if n_ >= self.VIGIA_TENTATIVAS:
+                        estado[p] = sig
+                        desiste.append(os.path.basename(p))
             try:
                 with open(VIGIA_ESTADO, "w", encoding="utf-8") as f:
                     json.dump(estado, f, ensure_ascii=False)
@@ -2272,7 +2446,13 @@ class Api:
                 if res.get(k):
                     partes.append("%d %s" % (res[k], rot[0] if res[k] == 1 else rot[1]))
             self._vigia_ultima = "%s · %s: %s" % (datetime.now().strftime("%d/%m %H:%M"), b, ", ".join(partes) or "nada novo")
-            self._js("ui.toast(%s)" % json.dumps("Pasta vigiada · base %s%s: %s" % (b, " (criada agora)" if nova else "", ", ".join(partes) or "nada novo"), ensure_ascii=False))
+            err = ""
+            if res.get("erros"):
+                err = " · " + "; ".join((res.get("erros_txt") or [])[:2]) + (" (e mais %d)" % (len(res["erros_txt"]) - 2) if len(res.get("erros_txt") or []) > 2 else "")
+                if not res.get("interrompida"):
+                    err += (" · %s: não será lido de novo até ser substituído" % ", ".join(desiste)) if desiste else \
+                        " · será tentado de novo na próxima verificação"
+            self._js("ui.toast(%s)" % json.dumps("Pasta vigiada · base %s%s: %s%s" % (b, " (criada agora)" if nova else "", ", ".join(partes) or "nada novo", err), ensure_ascii=False))
             if aberta:
                 self._js("api('listar')")
         if soltos and imediato:
@@ -2317,6 +2497,17 @@ class Api:
                         "campos": len(usados), "desconhecidos": sorted(u for u in usados if u not in conhecidos)})
         return {"pasta": pasta, "modelos": out}
 
+    @staticmethod
+    def _caminho_modelo(nome):
+        """Caminho do modelo dentro da pasta de modelos, ou None: o nome vem da tela e não pode sair da pasta ("..\\", caminho
+        absoluto, outra extensão)."""
+        pasta = os.path.abspath(rpet.pasta_modelos(pasta_app()))
+        n = os.path.basename((nome or "").replace("\\", "/"))
+        if not n or n != (nome or "") or n in (".", "..") or not n.lower().endswith(".docx"):
+            return None
+        c = os.path.abspath(os.path.join(pasta, n))
+        return c if os.path.dirname(c) == pasta else None
+
     def modelo_campos(self):
         return [list(x) for x in rpet.CAMPOS]
 
@@ -2336,25 +2527,33 @@ class Api:
         a = _um(self._janela.create_file_dialog(webview.OPEN_DIALOG, file_types=("Modelo Word (*.docx)",)))
         if not a:
             return None
-        shutil.copy2(a, os.path.join(rpet.pasta_modelos(pasta_app()), nome))
+        c = self._caminho_modelo(nome)
+        if not c:
+            return {"erro": "Nome de modelo inválido."}
+        shutil.copy2(a, c)
         return {"msg": "Modelo substituído: %s" % nome}
 
     def modelo_renomear(self, nome, novo):
-        pasta = rpet.pasta_modelos(pasta_app())
         novo = re.sub(r"[\\/:*?\"<>|]", "", novo).strip()
         if not novo:
             return {"erro": "Nome inválido."}
         if not novo.lower().endswith(".docx"):
             novo += ".docx"
+        de, para = self._caminho_modelo(nome), self._caminho_modelo(novo)
+        if not de or not para:
+            return {"erro": "Nome de modelo inválido."}
         try:
-            os.rename(os.path.join(pasta, nome), os.path.join(pasta, novo))
+            os.rename(de, para)
         except Exception as e:
             return {"erro": "Não foi possível renomear: %s" % e}
         return {"msg": "Renomeado para %s" % novo}
 
     def modelo_excluir(self, nome):
+        c = self._caminho_modelo(nome)
+        if not c:
+            return {"erro": "Nome de modelo inválido."}
         try:
-            os.remove(os.path.join(rpet.pasta_modelos(pasta_app()), nome))
+            os.remove(c)
         except Exception as e:
             return {"erro": "Não foi possível excluir: %s" % e}
         return {"msg": "Modelo excluído."}
@@ -2375,7 +2574,10 @@ class Api:
         return {"msg": "Modelo criado e aberto no Word: %s" % nome}
 
     def modelo_abrir(self, nome):
-        _abrir(os.path.join(rpet.pasta_modelos(pasta_app()), nome))
+        c = self._caminho_modelo(nome)
+        if not c or not os.path.isfile(c):
+            return {"erro": "Modelo não encontrado."}
+        _abrir(c)
         return {"msg": "Abrindo no Word. Salve e feche para usar."}
 
     def modelo_pasta(self):
@@ -2390,8 +2592,8 @@ class Api:
             return {"erro": "Assistido não encontrado."}
         if m.get("erro"):
             return {"erro": "Registro não analisado (%s): conferir o PDF antes de gerar a petição." % m["erro"]}
-        caminho_modelo = os.path.join(rpet.pasta_modelos(pasta_app()), modelo)
-        if not os.path.exists(caminho_modelo):
+        caminho_modelo = self._caminho_modelo(modelo)
+        if not caminho_modelo or not os.path.exists(caminho_modelo):
             return {"erro": "Modelo não encontrado: %s" % modelo}
         defs = _ler_defensores()
         defensor = None
@@ -2424,9 +2626,17 @@ class Api:
     def remover_ficha(self, chave):
         if not self.base:
             return None
-        m = next((x for x in self._modelos if x.get("id") == chave), None)
-        self.base.remover_ficha(chave, _norm(m.get("nome", "")) if m else None)
-        return self.listar()
+        m = next((x for x in list(self._modelos) + list(getattr(self, "_ocultos", None) or []) if x.get("id") == chave), None)
+        fch = (m or {}).get("ficha_chave") or ""
+        if not fch:
+            return {"erro": "Este assistido não tem ficha disciplinar vinculada."}
+        if not self.base.remover_ficha(fch):
+            return {"erro": "A ficha não foi encontrada na base (já removida?)."}
+        r = self.listar()
+        # a ficha exibida pode vir da outra execução da mesma pessoa (mesmo CPF): sai de lá também, e o texto diz isso
+        r["msg"] = "Ficha disciplinar removida." + ("" if fch == chave or fch.startswith("nome:") else
+                                                    " Ela estava vinculada à outra execução da mesma pessoa (%s) e saiu de lá também." % fch)
+        return r
 
     # ---- exportação ----
     def exportar(self, formato, abas, ids):
@@ -2715,6 +2925,7 @@ def _montar_modelo(r, ctx):
         except Exception as e2:
             m = rv.modelo_erro(r, e2, baixas.get(ch, {}))
     m["sexo"], m["sexo_fonte"] = r.get("_sexo") or "", r.get("_sexo_fonte") or ""
+    m["ficha_chave"] = (ficha or {}).get("_chave") or ""  # de onde veio a ficha exibida (processo, outra execução ou nome)
     # baixas gravadas pelo título (até a 6.15.11): passam para a chave estável (tipo do ponto + crime)
     for it in m.get("aud_itens") or []:
         if it.get("migrar_de"):

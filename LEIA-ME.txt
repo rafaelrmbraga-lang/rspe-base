@@ -1,13 +1,13 @@
-APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.5.0
+APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.6.0
 (antigo RSPE Base; SEEU, programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-7.5.0. A documentação técnica completa (cada parâmetro, a regra, a norma e
+7.6.0. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
-Janela com oito abas (interface em HTML dentro de uma janela nativa; no
+Janela com dez abas (interface em HTML dentro de uma janela nativa; no
 Windows 10/11 usa o WebView2 que já vem no sistema), alimentada pelos RSPE
 (PDF) dos assistidos e, se houver, pela Ficha Disciplinar do SIAPEN. Aceita
 centenas de PDFs de uma vez ("Importar PDFs…" com seleção múltipla, "Importar
@@ -15,7 +15,8 @@ pasta…" varrendo subpastas, ou arrastando PDFs/pasta sobre o .exe).
   - Datas de progressão, livramento e término: as impressas pelo SEEU no
     RSPE. O programa não as recalcula.
   - Cálculos do programa: indulto e comutação (Decretos 11.302/2022,
-    12.338/2024 e 12.790/2025), prescrição (punitiva e executória, crime a
+    12.338/2024 e 12.790/2025, inciso por inciso; os demais decretos, de
+    2000 a 2025, no mapa da aba Indulto), prescrição (punitiva e executória, crime a
     crime), extinção pelo cumprimento, estado da execução (não iniciou,
     interrompida, em livramento, no aberto, cumprida, extinta), falta nos 12
     meses, remição a requerer (ficha disciplinar x RSPE, estudo estimado) e
@@ -59,7 +60,10 @@ PASTA VIGIADA (menu da base > "Pasta vigiada…")
   - Se a base ainda não existir, é criada no primeiro PDF.
   - "Criar pastas das bases" cria uma subpasta para cada base existente.
   - PDF solto na pasta mãe é ignorado. PDF já lido não é lido de novo,
-    salvo se o arquivo for substituído. Nada é apagado nem movido.
+    salvo se o arquivo for substituído. PDF com erro (aberto em outro
+    programa, copiado pela metade) é tentado de novo nas próximas
+    verificações, até 3 vezes; depois, só quando for substituído. O aviso
+    cita o arquivo. Nada é apagado nem movido.
   - Vale a mesma regra de duplicados da importação manual.
   - O arquivo pasta_vigiada_estado.json (ao lado do .exe) guarda o que já
     foi lido; apagá-lo faz a pasta ser relida (os repetidos são ignorados).
@@ -69,10 +73,13 @@ DUPLICADOS
    - arquivo repetido no lote, ou RSPE do mesmo processo com a mesma data de
      geração (ou o mesmo conteúdo) já na base  -> ignorado como duplicado;
    - RSPE mais recente do mesmo processo  -> substitui o anterior (atualizado);
-   - RSPE mais antigo que o da base, ou sem data de geração legível quando a
-     base já tem RSPE datado do processo  -> ignorado.
+   - RSPE mais antigo que o da base  -> guardado no histórico (botão
+     "Histórico" da aba Geral), sem substituir o atual;
+   - RSPE sem data de geração legível quando a base já tem RSPE datado do
+     processo  -> ignorado.
   Ficha disciplinar impressa antes da já gravada (ou sem data legível) é
-  ignorada. O resumo aparece ao fim da importação e a lista fica em
+  ignorada; a mesma ficha repetida no lote ou já importada (mesmo arquivo)
+  conta como duplicada. O resumo aparece ao fim da importação e a lista fica em
   importacao_avisos.txt.
 
 ABAS (colunas)
@@ -85,11 +92,13 @@ ABAS (colunas)
   Livramento   Nome, Nº, Data do livramento, Situação, Conduta (ficha), Falta
                (12 meses). Pena total inferior a 2 anos: "Não cabível: pena <
                2 anos (art. 83 CP)".
-  Indulto /    Nome, Nº, Impeditivo (art. 1º), Indulto 2022, Indulto 2024,
-  Comutação    Comutação 2024, Indulto 2025, Comutação 2025. Não há coluna de
-               crimes nem de falta: a falta do art. 6º aparece na própria
-               célula ("Falta"). A célula mostra o resumo; passe o mouse (ou
-               abra a ficha) para o texto completo.
+  Indulto /    Mapa dos decretos (2000 a 2025) a partir da primeira prisão
+  Comutação    registrada no RSPE: barra lateral com "Geral" e cada decreto,
+               chips que filtram o resultado e seletor "Indulto e comutação /
+               Só indulto / Só comutação". As linhas não têm cor própria; a
+               cor está em cada decreto do mapa. As colunas Impeditivo (art.
+               1º), Indulto 2022, Indulto 2024, Comutação 2024, Indulto 2025
+               e Comutação 2025 saem na exportação (Excel e PDF).
   Prescrição   Nome, Nº, Pretensão punitiva, Pretensão executória, Prescrição
                em. Clicar na linha abre cartões por ação penal, uma pretensão
                por vez (seletor executória/punitiva ao lado do filtro), só com
@@ -107,70 +116,92 @@ ABAS (colunas)
   disciplinar  atestar (em períodos), Estudo a requerer, Situação. Clicar
                expande os blocos por atestado.
   Auditoria    Nome, Nº, Resultado da auditoria ("1 alerta", "2 pontos a
-               verificar", combinação dos dois, "... · 1 baixado" ou "Sem
-               inconsistências"). Clicar expande os pontos, com o que foi
-               encontrado e o fundamento. Nada é afirmado como erro.
+               verificar", combinação dos dois, ou "Guia em ordem"; o que
+               foi baixado sai da linha e fica no Histórico de alertas).
+               Clicar expande os pontos, com o que foi encontrado e o
+               fundamento. Nada é afirmado como erro.
 
 SITUAÇÃO NAS ABAS DE PRAZO
   Progressão e Livramento:
+   - "Vencido há N dias · sem pedido no RSPE - requerer" (vermelho) quando
+     o lapso venceu e não há pedido do benefício lançado no RSPE depois da
+     data, nem exame criminológico, nem falta nos 12 meses;
    - "Vencido há N dias · verificar criminológico, indeferimento ou falta"
-     (amarelo forte); a dica traz os pedidos do RSPE e, na progressão com
+     (vermelho); a dica traz os pedidos do RSPE e, na progressão com
      exame criminológico, o aviso da irretroatividade da Lei 14.843/2024
      (só na dica: não muda a cor nem gera alerta).
    - "Vence hoje" / "Em N dias" (laranja até 30, amarelo até 60, verde até
-     90); acima de 90 dias, "Em cumprimento", sem cor.
+     90); acima de 90 dias, "Em cumprimento", sem cor. "Vence hoje" conta
+     em "Até 30 dias" (cartão, filtro e relatório geral), não em "Vencido".
    - "Pena cumprida" (cinza); "Pena extinta" (azul); "A verificar
-     (livramento)" (amarelo) quando o livramento está incerto; os demais
-     casos sem prazo (em livramento, já no aberto, não iniciou,
-     interrompida) aparecem como "Não se aplica" (cinza), com o motivo na
+     (livramento)" (amarelo) quando o livramento está incerto; "Pena
+     interrompida" (foragido) ou "Pena suspensa" (preso em outro processo),
+     em cinza, o mesmo rótulo na tabela, na ficha, no filtro e nos
+     relatórios; os demais casos sem prazo (em livramento, já no aberto,
+     não iniciou) aparecem como "Não se aplica" (cinza), com o motivo na
      ficha.
    - Sem data no RSPE, a coluna da data mostra "—" e o motivo ("Não consta
      no RSPE", "Pena interrompida", "Não iniciou") fica na ficha.
-  Extinção: "Extinção cabível" (vermelho), "Término em N dias" (laranja até
-  30, amarelo até 60, verde até 90), "Em cumprimento" (sem cor, acima de 90
-  dias), "Pena extinta (registrada)" (azul), "Sem previsão / interrompida"
-  (cinza).
+  Extinção: "Extinção cabível" (vermelho), "Extinção a verificar" (amarelo:
+  custódia ou detração que pode alcançar a pena; o motivo aparece ao passar
+  o mouse, na ficha e no relatório individual), "Término em N dias" (laranja
+  até 30, amarelo até 60, verde até 90), "Em cumprimento" (sem cor, acima de
+  90 dias), "Pena extinta (registrada)" (azul), "Pena interrompida" / "Pena
+  suspensa" ou "Não se aplica" (cinza, sem previsão).
 
 FILTROS
-  Seletor "Situação" ao lado dos botões (a aba Geral não tem):
-   - Progressão e Livramento: vencidas; vence em até 30, 60 ou 90 dias; não
-     iniciou o cumprimento; pena interrompida; não se aplica (cumprida /
+  Seletor "Situação" ao lado dos botões (as abas Geral, Indulto,
+  Jurisprudências e Quadro não têm):
+   - Progressão e Livramento: vencidas (data já passada); vence em até 30,
+     60 ou 90 dias (os três incluem "Vence hoje"); não iniciou o
+     cumprimento; pena interrompida / suspensa; não se aplica (cumprida /
      livramento / aberto); sem data.
-   - Indulto/Comutação: por benefício e resultado ("Indulto 2025 · Sim",
-     "Comutação 2024 · Verificar" etc.), fato posterior à data do decreto,
-     falta nos 12 meses (célula "Falta") e crime impeditivo (coluna
-     Impeditivo).
+   - Indulto/Comutação: o seletor fica oculto; a barra lateral escolhe o
+     decreto, os chips filtram o resultado e o seletor do topo escolhe
+     indulto, comutação ou os dois.
    - Prescrição: aparente, iminente / a verificar, não prescrita / não
      configurada, sem dados, extinta.
    - Extinção: extinção cabível, término em até 30, 60 ou 90 dias, pena
      interrompida, sem previsão.
    - Ficha disciplinar: remição a requerer, conferir remição / sem atestado /
      estudo, em ordem, sem ficha.
-   - Auditoria: com alertas, pontos a verificar, guia em ordem, extinta.
+   - Auditoria: com alertas, pontos a verificar, guia em ordem.
   Os cartões de resumo também filtram (pela cor). O número da execução é
   copiado com um clique (na tabela ou na ficha).
 
 CORES
-  Progressão / Livramento: amarelo forte = vencido; laranja = vence em até 30
-  dias; amarelo = em até 60; verde = em até 90; cinza = não se aplica ou pena
-  cumprida; azul = extinta.
-  Indulto (células): vermelho = "Vedado (art. 1º)", "Vedado (art. 7º)",
+  Progressão / Livramento: vermelho = vencido; laranja = vence em até 30
+  dias (inclusive hoje); amarelo = em até 60; verde = em até 90; cinza = não
+  se aplica, pena interrompida / suspensa ou pena cumprida; azul = extinta.
+  Indulto (células da exportação e da análise na ficha): vermelho = "Vedado (art. 1º)", "Vedado (art. 7º)",
   "Indeferido" ou "Falta" (falta com sanção reconhecida); verde = "Sim"
   (possível, também por tese indicada no texto); amarelo = "Verificar"; cinza =
-  "Não atinge", "Não se aplica" (nenhuma condenação na publicação do
-  decreto), "Fato posterior" ou "Prejudicada"; azul = "Concedido" no RSPE.
-  Cor da linha do Indulto: verde se algum benefício é possível ("Sim"); vermelha
-  se há crime impeditivo e nenhum possível; amarela se há algo a verificar;
-  cinza nos demais casos; azul se a execução está extinta.
+  "Não atinge" (fração não cumprida), "Não alcançado" (sentença ou trânsito
+  para a acusação posterior à publicação do decreto), "Não se aplica"
+  (nenhuma condenação na publicação do decreto), "Fato posterior" ou
+  "Prejudicada"; azul = "Concedido" no RSPE. O relatório individual usa os
+  mesmos rótulos ("Não atinge", não "Não cabe").
+  Na tela do Indulto as linhas não têm cor: a cor está em cada decreto do
+  mapa (verde cabe, cinza não cabe, vermelho impeditivo, azul concedido,
+  roxo indeferido). Na exportação, a cor da linha do Indulto é verde se algum
+  benefício é possível ("Sim"); vermelha se há crime impeditivo e nenhum
+  possível; amarela se há algo a verificar; cinza nos demais casos; azul se a
+  execução está extinta.
   Prescrição: vermelho = aparente; amarelo = iminente (executória em até 180
   dias) ou "A VERIFICAR" (saldo na evasão que depende da imputação do
-  cumprimento entre condenações); sem cor = não prescrita / não configurada;
-  cinza = sem dados; azul = extinta.
+  cumprimento entre condenações); sem cor = não prescrita / não configurada
+  ("Não prescrita (há crimes sem dados)" quando algum crime não tem trânsito
+  ou pena no RSPE - conferir na ação penal); cinza = sem dados; azul =
+  extinta. A tela mostra uma pretensão por vez; a exportação (Excel e PDF)
+  também sai em duas abas, "Prescrição - pretensão executória" e
+  "Prescrição - pretensão punitiva", cada uma com a sua cor e contagem; na
+  ficha do assistido, a executória com a sua cor e, se aparente ou a
+  verificar, a punitiva logo abaixo.
   Ficha disciplinar: vermelho = remição a requerer; amarelo = conferir remição,
   trabalho sem atestado, estudo a requerer ou trabalho sem início registrado;
   verde = em ordem; cinza = sem ficha.
-  Auditoria: vermelho = com alertas; amarelo = pontos a verificar; verde = sem
-  inconsistências; azul = execução extinta.
+  Auditoria: vermelho = com alertas; amarelo = pontos a verificar; verde =
+  guia em ordem; azul = execução extinta.
   Falta (12 meses): "Sim" (vermelho) só com sanção reconhecida; indício sem
   ela = "A apurar" (amarelo), com o detalhe na ficha do assistido.
   Execução extinta registrada no RSPE: azul em Geral, Progressão, Livramento,
@@ -191,23 +222,32 @@ CLIQUES E FICHA DO ASSISTIDO
   atestados e faltas disciplinares, com "Remover ficha") e, recolhidos, os
   cálculos do programa (indulto e comutação possíveis ou a verificar,
   prescrição aparente ou iminente). Clique no título da
-  coluna para ordenar. A busca filtra todas as abas.
+  coluna para ordenar (a coluna Situação ordena pelos dias, do mais
+  vencido ao mais distante). A busca filtra todas as abas.
 
 EXPORTAR
   Ao clicar em Exportar Excel / Exportar PDF, uma janela pergunta QUAIS abas
   exportar (no PDF vem marcada só a aba que está aberta; no Excel, todas mais a
-  aba "Completo" com todos os campos). Só a busca restringe o que sai: o
-  filtro de situação e o cartão de cor não. Nas colunas vai o texto completo
+  aba "Completo" com todos os campos). A busca restringe o que sai; com um
+  filtro de situação, cartão de cor ou "RSPE antigo" ativo na aba aberta, a
+  janela traz "Aplicar o filtro de situação da aba ..." (marcado): saem só
+  os assistidos que a tabela mostra, em todas as abas marcadas; desmarcado,
+  sai tudo o que a busca mostra. Os cartões de resumo contam como os da
+  tela (quem tem o pedido marcado entra em "Pedido feito"). Na coluna
+  "Pedido" do Indulto sai cada decreto pedido ("Indulto/comutação 2025:
+  feito em ..."). Nas colunas vai o texto completo
   (ex.: "Sim · <indícios>" na falta). O PDF sai em paisagem, com cabeçalho,
   resumo por cor, tabela colorida, legenda e numeração de página.
 
 RELATÓRIOS EM PDF
-  O botão "Relatórios" gera, numa pasta "Relatorios <data hora>": um PDF por
-  assistido escolhido (lista com busca e "Todos"/"Nenhum"), o relatório geral
-  da base (perfil, benefícios, remição, alertas e fila de prioridade, com a
-  prescrição punitiva e a executória em linhas separadas) e, se marcada, a
-  planilha. Vale para os assistidos visíveis pela busca. Na ficha do
-  assistido, "Relatório em PDF" gera só o dele.
+  O botão "Relatórios" gera, numa pasta "Relatorios <data hora>" (gerado de
+  novo no mesmo minuto, "... (2)"): um PDF por assistido escolhido (lista
+  com busca sem acento e "Todos"/"Nenhum"), o relatório geral da base
+  (perfil, benefícios, remição e alertas, com a prescrição punitiva e a
+  executória em linhas separadas), se marcada a remição detalhada ("Remição
+  detalhada com o nome dos assistidos" decide se ela traz os nomes) e, se
+  marcada, a planilha. Vale para os assistidos visíveis pela busca. Na ficha
+  do assistido, "Relatório em PDF" gera só o dele.
   O relatório individual traz: cabeçalho e bloco da pena (regime, pena
   total, cumprida, remanescente, remidos, data-base, término, conduta);
   tabela de benefícios com etiqueta curta e observação (progressão,
@@ -216,10 +256,11 @@ RELATÓRIOS EM PDF
   do tempo em duas tabelas (eventos de cumprimento e incidentes); remição da
   ficha disciplinar; um bloco por alerta ou ponto a verificar, em frases
   curtas, com o fundamento em lista; e, para os crimes com evasão, prescrição
-  aparente ou a verificar, a figura da linha do tempo da prescrição
-  executória (a mesma da tela, sem os balões): eixo com faixas e marcos,
-  linha de contagem e cartão por fuga, blocos detração → saldo → prazo,
-  hipóteses de imputação e cartão do resultado.
+  aparente ou a verificar, o cálculo da prescrição executória por crime, em
+  texto e tabela (detração → saldo de cada fuga → prazo, hipóteses de
+  imputação e resultado), sem figura de linha do tempo. Na tabela de
+  benefícios, a observação repete o complemento da tela ("sem pedido no
+  RSPE - requerer") e o término mostra "Extinção cabível" como na aba.
 
 CRIMES
   Mostrados só pelo artigo: "art. 33 Lei 11.343/06 (x2)", "art. 180 CP".
@@ -257,8 +298,12 @@ LEITURA DOS CAMPOS
     datado entram sem limite de tempo. "Sim" só com falta de sanção
     reconhecida (homologação ou sanção concedida); os demais indícios
     aparecem como "A apurar". Incidente negado não conta. "Não consta" não
-    garante ausência de falta: conferir o PAD. A ficha disciplinar não
-    alimenta esta coluna.
+    garante ausência de falta: conferir o PAD. A ficha disciplinar também
+    alimenta esta coluna: falta grave da ficha que o RSPE não traz (não
+    arquivada) e fuga registrada só na ficha entram como "A apurar"
+    ("FALTA GRAVE NA FICHA DISCIPLINAR (SIAPEN)"), até a decisão do
+    operador no ✎ da coluna; a ficha também explica regressão ou perda
+    de remidos do RSPE.
   * Não iniciou: sem início de cumprimento definitivo no RSPE (só prisão
     provisória encerrada, ou nenhuma), o assistido aparece como "Não iniciou
     o cumprimento", e não como regime aberto ou pena interrompida.
@@ -338,8 +383,10 @@ INDULTO E COMUTAÇÃO
     (exclusões), art. 11, p. ú. (crime excluído em concurso), art. 9º
     (sentença anterior e trânsito depois), art. 8º (pena convertida "a
     verificar"), art. 15 (PSC, aviso).
-  * O programa não analisa o Decreto 11.846/2023 (o modelo de petição do
-    inciso XV desse decreto é só um modelo da unidade).
+  * O Decreto 11.846/2023 entra só no mapa da aba Indulto (todos os
+    decretos, com as hipóteses que se resolvem pela conta) e no relatório
+    geral; não tem análise inciso por inciso nem coluna própria (o modelo
+    de petição do inciso XV desse decreto é só um modelo da unidade).
   * A ficha do assistido traz a análise inciso por inciso.
 
 PRESCRIÇÃO (arts. 109 a 119 do CP, crime a crime)
@@ -488,9 +535,11 @@ FICHA DISCIPLINAR (SIAPEN/AGEPEN)
   (dias corridos do período). O círculo marca o item como conferido.
   O RSPE não diz de onde vem cada remição: o programa aponta "Requerer
   remição" só quando não há remição lançada no RSPE depois do atestado (ou
-  do estudo); os demais ficam "conferir a homologação". As faltas da ficha não
-  entram na coluna Falta nem no indulto; só servem ao ponto de perda de
-  remidos em duplicidade da Auditoria.
+  do estudo); os demais ficam "conferir a homologação". As faltas graves da
+  ficha que o RSPE não traz entram na coluna Falta como "A apurar" e, por
+  isso, no indulto e na comutação (a verificar, art. 6º), até a decisão do
+  operador; na Auditoria, servem ao ponto de perda de remidos em
+  duplicidade.
 
 BASE JURÍDICA (base_juridica.json)
   Arquivo editável e versionado com os parâmetros de cálculo: tabela do art.
@@ -528,13 +577,17 @@ PETIÇÕES (modelos .docx) - DESATIVADAS NESTA VERSÃO
   quando o gerenciador é aberto pela primeira vez), o gerenciador e o cadastro de defensores continuam no
   programa, mas os botões foram ocultados (MODELOS_ATIVOS em ui.html). Entre
   os modelos padrão está "Indulto 2023 - Decreto 11.846 - inciso XV", da
-  unidade: o programa não analisa esse decreto.
+  unidade: esse decreto aparece só no mapa da aba Indulto.
 
 JURISPRUDÊNCIAS
-  Aba "Jurisprudências": acórdãos do TJMS favoráveis à defesa em execução
-  penal, com pesquisa, filtro por tema e cópia da ementa com a referência.
-  Os dados vão embutidos no programa (rspe_teses.py); um
-  teses_execucao.json ao lado do programa os substitui.
+  Aba "Jurisprudências": decisões do TJMS, do STJ e do STF favoráveis à
+  defesa em execução penal (acórdãos e decisões monocráticas), com
+  pesquisa, filtro por tema e por tribunal e cópia da ementa com a
+  referência, mais as decisões do STJ da triagem automática
+  (teses_auto.bin, texto integral pesquisável). Os dados vão embutidos no
+  programa (rspe_teses.py e teses_auto.bin); um teses_execucao.json ao lado
+  do programa substitui a base curada só se for de versão igual ou mais
+  nova (um arquivo antigo esquecido na pasta é ignorado).
 
 ARQUIVOS
   rspe_app.py        janela, bases, importação em lote, pasta vigiada (API da interface)
@@ -549,15 +602,25 @@ ARQUIVOS
   rspe_export.py     exportação Excel e PDF
   rspe_peticao.py    petições por modelo .docx (desativadas)
   base_juridica.json base jurídica (editável)
-  rspe_teses.py      jurisprudências (acórdãos favoráveis à defesa; embutido)
-  modelos_padrao/    modelos .docx instalados na pasta "modelos"
-  decretos/          textos dos decretos de indulto
-  exemplo/           RSPEs de exemplo
-  rspe.ico, build_exe.bat, requirements.txt   ícone, geração do .exe, bibliotecas
+  rspe_remicao.py    remição (ficha x RSPE)
+  rspe_decretos.py   decretos de indulto de 2000 a 2025 (mapa da aba Indulto)
+  rspe_indulto_tl.py linha do tempo do indulto e da comutação
+  rspe_teses.py      jurisprudências curadas (decisões favoráveis à defesa; embutido)
+  teses_auto.bin     jurisprudências da triagem automática (embutido)
+  fontes/            fontes dos relatórios em PDF (com a licença)
+  apto_selo.png      selo da tela e dos relatórios
+  *.docx             modelos de petição da unidade (desativados)
+  testes.py, teste_*.py   testes de regressão (o build não gera o .exe se falharem);
+                     teste_sistema.py é a fumaça do sistema (base, importação,
+                     exportação, relatórios, cópias); com APTO_TESTE_PDFS
+                     apontando para uma pasta com 2 ou 3 PDFs reais (fora do
+                     repositório: dados pessoais), importa também esses PDFs
+  rspe.ico, build_exe.bat, build.yml, requirements.txt   ícone, geração do .exe, bibliotecas
   RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf   documentação técnica
-  Criados ao lado do .exe: bases/, modelos/, rspe_config.json (bases
-  recentes e pasta vigiada), pasta_vigiada_estado.json, defensores.json,
-  importacao_avisos.txt, rspe_log.txt.
+  Criados ao lado do .exe: bases/ (com copias/, as cópias de segurança),
+  rspe_config.json (bases recentes e pasta vigiada),
+  pasta_vigiada_estado.json, importacao_avisos.txt, rspe_log.txt; só com
+  as petições ativas: modelos/ e defensores.json.
 
 PROBLEMAS
   Se o programa não abrir ou travar, veja o arquivo rspe_log.txt criado ao
@@ -569,6 +632,68 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v7.6.0
+  - Terceira e quarta revisões gerais (base 08.10 inteira: 595 RSPEs, 653
+    fichas). Reimportar RSPEs e fichas para valerem as novas leituras.
+  - Leitura das fichas: extração por fonte e posição (lançamentos de fichas
+    antigas não se perdem; rodapé fora); entrada vinda de delegacia
+    reconhecida; transferência por determinação judicial não é soltura;
+    falta com "Lei nº 7.210", nº do PADIC e PAD em texto livre lidos; saídas
+    temporárias, trabalho externo e estudo corrigidos para os incisos XI e XII.
+  - Leitura do RSPE: todos os marcadores da ação ("Indultada", "Comutada"),
+    vara em duas linhas, medida de segurança, nota da data prevista
+    ("Indeferido em", "Em trâmite desde", "falta grave nos últimos 12
+    meses"), sentença repetida, tribunal.
+  - Prescrição: a fuga do RSPE encerra a custódia da ficha; restritiva,
+    sursis e medida de segurança com novo crime e prisão por outro processo;
+    acórdão e júri conexo; punitiva "a verificar" visível; textos e citações.
+  - Indulto e comutação: crime doloso na janela da falta em 2024/2025;
+    regra única do tempo cumprido; alteração de data-base não é regime;
+    comutação sem pena a comutar; hipóteses por idade (2017, 2023); tetos em
+    anos de 365 dias; contador da aba = relatório.
+  - Auditoria: alteração de data-base não é progressão; data-base da guia
+    nova de quem já estava preso (Tema 1006); limite do art. 75 do CP;
+    hediondez pela fração, não pelo rótulo; falta prescrita fora das contas.
+  - Remição: trabalho encerrado por transferência, evasão e soltura também
+    na ficha antiga; baixa com outra grafia; registros duplicados; origem da
+    data final de cada trecho; pedido pronto com o valor da remição
+    detalhada.
+  - Sistema: RSPE antigo não substitui o atual; lista sem duplicados;
+    remover/vincular ficha seguros; restauração de cópia antiga; Excel sem
+    fórmulas; teste do sistema (base, importação, exportação, cópias).
+
+v7.5.1
+  - Segunda revisão geral, sobre a base 08.10 inteira (595 RSPEs, 653 fichas).
+  - Prescrição: novo crime com data do fato incoerente, intercorrente com
+    indício de acórdão e crime conexo ao do júri ficam "a verificar"; as
+    prisões registradas na ficha entram na conta; art. 88 só com revogação
+    registrada; prisão por outro processo aparece como "Não corre"; textos
+    sem contradição (art. 117, V e VI; art. 30 da Lei 11.343/06).
+  - Indulto e comutação: aba, linha do tempo, colunas e relatório com o mesmo
+    resultado; comutação cabível não some com o indulto indeferido; uma
+    decisão não esconde a outra; falta grave firme não vira "a verificar";
+    execução arquivada ou extinta não "cabe"; inciso XIII só com curso
+    concluído e certificado; SEEU sem cálculo em 2022/2024/2025 conta pelos
+    eventos ("a verificar"); vedação do art. 7º, p. ú., antes do
+    "cumprimento interrompido"; contador de "a verificar" na aba.
+  - Auditoria: data-base favorável ao assistido não gera pedido de
+    impugnação; porte para consumo só com pena de prisão efetiva; menos
+    alertas falsos do confronto com a ficha (progressão, regime inicial,
+    detração); pena acima do máximo do tipo como aviso de cadastro; um
+    alerta só por erro de reincidência; ação penal sem crime cadastrado no
+    RSPE passa a ser apontada.
+  - Remição: remição sem atestado cobre só o trabalho que remiu (o resto volta
+    à estimativa); planilha e relatório com a mesma conta; atestados
+    "PROTOCOLADO", por extenso e abreviados lidos; atestado substituto e
+    atestado só com período tratados; status da aba Ficha coerente.
+  - Coerência: exportação e gaveta da Prescrição separam executória e
+    punitiva (os números batem com a tela); "Pena interrompida/suspensa",
+    "Extinção a verificar", "Vence hoje" e término calculado com o mesmo
+    rótulo em tela e relatórios; pedido de indulto por decreto reconhecido na
+    exportação e no histórico; exportar com o filtro da aba; navegação por
+    teclado; leitura de processos com número partido e de comarcas fora do
+    padrão (reimportar os RSPEs para valer nos registros antigos).
 
 v7.5.0
   - Revisão geral (jurídica e do sistema), conferida na base 08.10 (595

@@ -46,7 +46,8 @@ r = {"_eventos": [{"data": "02/01/2022", "tipo": "PRISÃO/INÍCIO DE CUMPRIMENTO
                   {"data": "03/07/2023", "tipo": "PRISÃO/INÍCIO DE CUMPRIMENTO", "motivo": "RECAPTURA/REINÍCIO DE CUMPRIMENTO"}], "_incidentes": []}
 C = rrm.conciliar(r, f, date(2023, 12, 30))
 per = [(x["ini"], x["fim"]) for x in C["sem_atestado"]]
-ok(per == [(date(2023, 1, 2), date(2023, 4, 2)), (date(2023, 7, 3), date(2023, 12, 30))], "E1: fuga não cortou a estimativa: %s" % per)
+# (rev9: depois da recaptura a mesma vaga não é retomada sem novo início na ficha - o vínculo termina na véspera da fuga)
+ok(per == [(date(2023, 1, 2), date(2023, 4, 2))], "E1: fuga não cortou a estimativa: %s" % per)
 # interrupção por prisão em outro processo: o preso segue na unidade (sem corte)
 r["_eventos"][1]["motivo"] = "INTERRUPÇÃO POR PRISÃO EM OUTRO PROCESSO"
 ok(len(rrm.conciliar(r, f, date(2023, 12, 30))["sem_atestado"]) == 1, "E1: interrupção por prisão em outro processo não corta")
@@ -125,8 +126,10 @@ r = {"_eventos": [{"data": "01/01/2020", "tipo": "PRISÃO/INÍCIO DE CUMPRIMENTO
      "_incidentes": [rem(24, "28/08/2026"), rem(8, "11/03/2026")]}
 _L, res = rf.quadro_trabalho(r, fl, HOJE)
 D = res["rem_det"]
-ok(D["leitura"]["dias"] == 4 and not res["conc"]["atestados"], "E8: leitura parcial (12 x 8) e 24 da leitura: leitura %s, trabalho %s" % (
-    D["leitura"]["dias"], [a["rem"] for a in res["conc"]["atestados"]]))
+# (rev9: a leitura remida em parte fica a conferir na decisão, fora do total - não é "sem remição")
+ok(D["leitura"]["dias"] == 0 and sum(i["dias"] for i in D["a_conferir"]["itens"] if i["ref"].startswith("Leitura")) == 4 and not res["conc"]["atestados"],
+   "E8: leitura parcial (12 x 8) e 24 da leitura: leitura %s, a conferir %s, trabalho %s" % (
+    D["leitura"]["dias"], D["a_conferir"]["itens"], [a["rem"] for a in res["conc"]["atestados"]]))
 
 # ---- E9: isolamento dentro do trabalho sem atestado sai da estimativa ----
 ev = [("01.02.2019", "TRABALHO: Iniciou atividade laboral, no setor de trabalho QUALLY PELES, conforme documento 1."),

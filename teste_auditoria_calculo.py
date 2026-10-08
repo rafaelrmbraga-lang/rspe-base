@@ -17,9 +17,9 @@ def crime(fl="2/3 - Comum Reincidente", fp="2/5 - Art.112, V, da LEP", art="ART 
             "reincidente_comum": "N", "reincidente_especifico": "N", "comando_orcrim": "N", "fracao_progressao": fp, "fracao_livramento": fl}
 
 
-def reg(incs, eventos=None, crimes=None, regime="Semiaberto - ATIVO"):
+def reg(incs, eventos=None, crimes=None, regime="Semiaberto - ATIVO", db="01/03/2024"):
     return {"nome": "Teste", "regime_atual": regime, "pena_total": "10a0m0d", "pena_cumprida": "3a0m0d", "pena_remanescente": "7a0m0d",
-            "fracao_progressao_aplicada": "2/5", "data_geracao_rspe": "01/10/2026", "data_base_seeu": "01/03/2024",
+            "fracao_progressao_aplicada": "2/5", "data_geracao_rspe": "01/10/2026", "data_base_seeu": db,
             "_crimes": crimes or [crime()], "_incidentes": incs, "_eventos": eventos or []}
 
 
@@ -31,7 +31,7 @@ def tipos(r):
 ev = [{"tipo": "PRISÃO/INÍCIO DE CUMPRIMENTO", "motivo": "PRISÃO EM FLAGRANTE", "data": "01/01/2020", "processos": "0000001-11.2020.8.12.0001"},
       {"tipo": "INTERRUPÇÃO", "motivo": "SOLTURA", "data": "01/04/2020", "processos": ""},
       {"tipo": "PRISÃO/INÍCIO DE CUMPRIMENTO", "motivo": "MANDADO", "data": "01/01/2021", "processos": "0000001-11.2020.8.12.0001"}]
-t = tipos(reg([inc("FIXAÇÃO/ALTERAÇÃO DE REGIME", "Fechado - Regime Inicial", "", "01/01/2021")], ev, regime="Fechado - ATIVO"))
+t = tipos(reg([inc("FIXAÇÃO/ALTERAÇÃO DE REGIME", "Fechado - Regime Inicial", "", "01/01/2021")], ev, regime="Fechado - ATIVO", db="01/01/2021"))
 it = t["regime-inicial-depois-da-primeira-prisao"]
 assert "91 dias de prisão provisória" in it["detalhe"] and "(1 − fração) = 1 mês e 25 dias" in it["detalhe"], it["detalhe"]
 assert "AgRg no AREsp 2.956.206" in ra.fundamentacao(it, reg([]))

@@ -76,7 +76,8 @@ confere((rd._vd(c9) or ("",))[0] == "provavel", "(6) art. 129, § 9º tomado com
 
 # (7) Decreto 2023: violência contra a mulher em crime do Código Penal (Gilmar da Silva Oliveira, 6004104-22.2020.8.12.0001;
 # Justo de Almeida Guilhen, 0002043-88.2019.8.12.0015)
-r = {"pena_total": "4a0m0d", "_eventos": [preso("01/01/2020")], "_incidentes": [],
+# (preso em 2022: com a pena inteira cumprida em 2023 não há o que comutar - a comutação sem objeto não cabe)
+r = {"pena_total": "4a0m0d", "_eventos": [preso("01/01/2022")], "_incidentes": [],
      "_crimes": [crime("01/01/2019", "01/06/2019", "01/07/2019", pena="3 ano(s), 6 mês(es) e 0 dia(s)"), c9]}
 x = dec(r, "2023")
 confere(x["s"] == "ver" and "violência contra a mulher" in x.get("mot", ""), "(7) 2023, art. 129 § 9º: devia ficar a verificar, %s" % x)
@@ -214,8 +215,311 @@ cart = rtl._decreto_ficha(F["2013"], xv, [], lambda ref: {"total": 0}, [], [])
 confere(cart["indulto"]["status"] == "nao" and cart["comutacao"]["status"] == "verificar", "(22) cartão: %s / %s" % (
     cart["indulto"]["status"], cart["comutacao"]["status"]))
 
+# ---------------------------------------------------------------------------------------------------------------------------
+# 2ª rodada da revisão do indulto (08/10/2026): A1 a A15 e coerência A2, A11 e A13
+import rspe_view as rv
+
+
+def preso_fuga(desde, fuga, volta=None):
+    ev = [preso(desde), {"tipo": "INTERRUPÇÃO", "motivo": "FUGA", "data": fuga, "processos": ""}]
+    return ev + ([preso(volta, "RECAPTURA")] if volta else [])
+
+
+# (23) indulto indeferido no RSPE: a comutação do _se_indeferido volta com o status do texto (Claudemir Germano, José Cirso,
+# Rafael Martins, 2024; Mauro Spanamberg, 2025)
+r = {"pena_total": "10a0m0d", "_eventos": [preso("01/01/2015")], "_crimes": [crime("01/01/2014", "01/06/2014", "01/07/2014", pena="10 ano(s), 0 mês(es) e 0 dia(s)")],
+     "indulto_2024": "POSSÍVEL: art. 9º, I", "indulto_2024_status": "possivel",
+     "comutacao_2024": "prejudicada: indulto cabível (art. 13, § 5º)", "comutacao_2024_status": "nao",
+     "comutacao_2024_se_indeferido": "POSSÍVEL: art. 13 (1/5 do cumprido)",
+     "_incidentes": [incidente("INDULTO", "DECRETO Nº 12.338, DE 23 DE DEZEMBRO DE 2024", "12/07/2025", "NÃO CONCEDIDO")]}
+rs.aplicar_decisoes_decretos(r, r["_incidentes"])
+confere(r["comutacao_2024_status"] == "possivel", "(23) status da comutação não acompanhou o texto: %s" % r["comutacao_2024_status"])
+x = dec(r, "2024")
+confere(x["s"] == "cabe" and x.get("beneficio") == "Comutação", "(23) aba escondeu a comutação: %s" % x)
+r2 = dict(r, comutacao_2024="POSSÍVEL: art. 13 (1/5 do cumprido) | falta a verificar (art. 6º: só impede se ...): X", comutacao_2024_status="possivel")
+confere(dec(r2, "2024")["s"] == "ver", "(23) comutação com falta a verificar devia ficar a verificar: %s" % dec(r2, "2024"))
+
+# (24) decisão de um benefício não esconde o outro: comutação concedida e indulto indeferido = concedido (Luciano Nascimento,
+# 2024); comutação indeferida e indulto a verificar = a verificar (Wellington Ribeiro de Souza, 2025)
+base24 = {"pena_total": "10a0m0d", "_eventos": [preso("01/01/2015")], "_crimes": [crime("01/01/2014", "01/06/2014", "01/07/2014", pena="10 ano(s), 0 mês(es) e 0 dia(s)")]}
+r = dict(base24, indulto_2024="INDEFERIDO no RSPE em 26/06/2026", indulto_2024_status="nao", comutacao_2024="CONCEDIDO no RSPE em 26/06/2026",
+         comutacao_2024_status="nao", _incidentes=[incidente("INDULTO", "DECRETO Nº 12.338, DE 23 DE DEZEMBRO DE 2024", "26/06/2026", "NÃO CONCEDIDO"),
+                                                   incidente("COMUTAÇÃO", "DECRETO Nº 12.338, DE 23 DE DEZEMBRO DE 2024", "26/06/2026")])
+x = dec(r, "2024")
+confere(x["s"] == "conc" and x.get("beneficio") == "Comutação" and "indulto indeferido" in (x.get("ressalva") or ""), "(24) comutação concedida sumiu: %s" % x)
+r = dict(base24, indulto_2025="A VERIFICAR: art. 9º, § 2º, II a VI (metade do lapso)", indulto_2025_status="verificar",
+         comutacao_2025="INDEFERIDO no RSPE em 04/08/2026", comutacao_2025_status="nao",
+         _incidentes=[incidente("COMUTAÇÃO", "DECRETO Nº 12.790, DE 23 DE DEZEMBRO DE 2025", "04/08/2026", "NÃO CONCEDIDO")])
+x = dec(r, "2025")
+confere(x["s"] == "ver" and x.get("beneficio") == "Indulto" and "comutação indeferida" in (x.get("ressalva") or ""), "(24) indulto a verificar sumiu: %s" % x)
+x = dec(dict(base, _incidentes=[incidente("COMUTAÇÃO", "DECRETO Nº 11.846, DE 22 DE DEZEMBRO DE 2023", "06/02/2025", "NÃO CONCEDIDO")]), "2023")
+confere(x["s"] == "cabe" and x.get("beneficio") == "Indulto", "(24) 2023: comutação indeferida escondeu o indulto cabível: %s" % x)
+
+# (25) um só critério para a falta a verificar: aba, linha do tempo e colunas dizem "a verificar" (Chelton 2025, Gilio 2024...)
+txt = "POSSÍVEL: art. 9º, XV | falta a verificar (art. 6º: só impede se a sanção for reconhecida em juízo; STJ, Tema 1195): FALTA X"
+x = dec(dict(base24, _incidentes=[], indulto_2025=txt, indulto_2025_status="possivel", comutacao_2025="prejudicada: indulto cabível (art. 13, § 5º)"), "2025")
+confere(x["s"] == "ver", "(25) aba: falta a verificar devia dar a verificar, %s" % x)
+confere(rtl._st_aba(txt) == "verificar", "(25) linha do tempo: %s" % rtl._st_aba(txt))
+confere(rv.sim_nao(rv.curto_indulto(txt), rv.cor_texto_indulto(txt))[0] == "Verificar", "(25) coluna: %s" % (rv.sim_nao(rv.curto_indulto(txt), rv.cor_texto_indulto(txt)),))
+confere(rs.status_texto_decreto(txt) == "verificar", "(25) status pelo texto: %s" % rs.status_texto_decreto(txt))
+
+# (26) pena extinta depois do decreto não converte "NÃO CABE (art. 6º)", "não se aplica" nem "sem crimes ativos" em A VERIFICAR
+# (Martimiano 2024, Antonio Leonardo 2024, Ezequiel 2024); em 2022, a pena extinta de crime fora do art. 7º não muda o
+# resultado dos demais (Jair Bernardes, Anderson Severino)
+cx = crime("01/01/2020", "01/06/2020", "01/07/2020", extinto="Sim", data_extincao="01/03/2026")
+for t in ("NÃO CABE (art. 6º): falta grave com sanção reconhecida nos 12 meses - X", "não se aplica: não iniciou o cumprimento até 25/12/2024",
+          "sem crimes ativos no RSPE", "sem pena no RSPE"):
+    o = {"indulto_2024": t, "indulto_2024_status": "nao"}
+    rs._extinta_depois(o, [cx], "2024", date(2024, 12, 25))
+    confere(o["indulto_2024"] == t, "(26) %r virou %r" % (t, o["indulto_2024"]))
+o = {"indulto_2022": "POSSÍVEL: art. 5º para art. 155 CP", "indulto_2022_status": "possivel"}
+rs._extinta_depois(o, [crime("01/01/2020", "01/06/2020", "01/07/2020", artigo="ART 14: Porte ilegal de arma de fogo de uso permitido",
+                             lei="10826/03 - Estatuto do Desarmamento", tipo="CAPUT: Portar, Reclusão: 2 a 4 anos E Multa",
+                             extinto="Sim", data_extincao="01/03/2024")], "2022", date(2022, 12, 25))
+confere(o["indulto_2022"].startswith("POSSÍVEL"), "(26) 2022: pena extinta fora do art. 7º mudou o resultado: %s" % o["indulto_2022"])
+o = {"indulto_2024": "não atinge (cumprido 1a0m0d de 6a0m0d até 25/12/2024)", "indulto_2024_status": "nao"}
+rs._extinta_depois(o, [cx], "2024", date(2024, 12, 25))
+confere(o["indulto_2024"].startswith("A VERIFICAR"), "(26) 2024: 'não atinge' com pena extinta depois devia ficar a verificar: %s" % o["indulto_2024"])
+
+# (27) execução arquivada ou com todas as penas extintas: nenhum "cabe" (Rubens Aquino 2023, João Vitor Vitoy, Wilson Marcondes)
+r = {"pena_total": "0a0m0d", "status_execucao": "ARQUIVADO", "_eventos": [preso("01/01/2020")], "_incidentes": [],
+     "_crimes": [crime("01/01/2019", "01/06/2019", "01/07/2019", pena="0 ano(s), 2 mês(es) e 0 dia(s)", artigo="ART 329: Resistência",
+                       tipo="CAPUT: Opor-se, Detenção: 2 meses a 2 anos")]}
+for ano in ("2020", "2021", "2023"):
+    confere(dec(r, ano)["s"] not in ("cabe", "ver"), "(27) execução arquivada com resultado favorável em %s: %s" % (ano, dec(r, ano)))
+o = {"indulto_2024": "POSSÍVEL: art. 9º, I", "indulto_2024_status": "possivel", "comutacao_2024": "prejudicada: indulto cabível (art. 13, § 5º)"}
+rs._sem_objeto(o, {"status_execucao": "ARQUIVADO"}, [], "2024")
+confere(o["indulto_2024_status"] == "nao" and o["indulto_2024"].startswith("não se aplica: execução arquivada") and o["comutacao_2024"].startswith("não se aplica"),
+        "(27) 2024 em execução arquivada: %s" % o)
+
+# (28) inciso XIII só com conclusão certificada: ENEM peticionado fica a verificar; ENCCEJA com certificado, como antes (Kelven 2025)
+def _r13():
+    return {"_eventos": [preso("01/01/2020")], "indulto_2025": "A VERIFICAR: art. 9º, XIII", "indulto_2025_status": "verificar",
+            "indulto_2025_detalhe": "Situação em 25/12/2025: regime Fechado · primário\n? XIII: pena ≤ 12 anos, 1/5 cumprido - verificar conclusão de curso certificado nos 3 anos anteriores"}
+for txt13, ex13, novo, esperado in (("Peticionado Certificado do Enem 2024 no Sistema SEEU nos autos nº 1", "ENEM 2024", False, "?"),
+                                    ("Peticionado Certificado do ENCCEJA 2024 no Sistema SEEU nos autos nº 1", "ENCCEJA 2024", True, "✔"),
+                                    ("Peticionado a declaração parcial de proficiência para ens. fund. - ENCCEJA/2024", "ENCCEJA", False, "?")):
+    for com_marca in (True, False):  # ficha lida nesta versão (com a marca) e ficha gravada antes (sem ela)
+        ex = {"exame": ex13, "data": "11.04.2025"}
+        if com_marca:
+            ex["certificado"] = novo
+        r = _r13()
+        rf.complementar_decretos(r, {"eventos": [{"data": "11.04.2025", "texto": txt13.upper()}], "exames": [ex], "trabalho": [], "estudos": []}, HOJE)
+        lin = [l for l in r["indulto_2025_detalhe"].split("\n") if " XIII:" in l]
+        confere(lin and lin[0].startswith(esperado), "(28) %s (marca %s): %s" % (txt13[:40], com_marca, lin))
+
+# (29) SEEU sem cálculo (cumprida zero e remanescente igual à pena) ou pena total zerada: o cumprido vem dos eventos e o
+# favorável fica a verificar (Davi Antonio Vigil e Murilo Alves de Souza 2025; Cláudio de Anunciação 2022/2024/2025)
+r = {"nome": "T", "pena_total": "0a1m0d", "pena_cumprida": "0a0m0d", "pena_remanescente": "0a1m0d", "data_geracao_rspe": "01/12/2025",
+     "status_execucao": "ATIVO", "regime_atual": "Fechado - ATIVO", "_eventos": [preso("30/11/2025")],
+     "_incidentes": [incidente("FIXAÇÃO/ALTERAÇÃO DE REGIME", "Fechado - Regime inicial", "30/11/2025")],
+     "_crimes": [crime("01/01/2024", "01/06/2025", "01/07/2025", pena="0 ano(s), 1 mês(es) e 0 dia(s)")]}
+r = rs.reprocessar(r)
+confere(r["indulto_2025_status"] == "verificar" and "não traz o cálculo" in r["indulto_2025"], "(29) SEEU sem cálculo: %s" % r["indulto_2025"])
+r = dict(r, pena_total="0a0m0d", pena_remanescente="0a0m0d")
+r = rs.reprocessar(r)
+confere(r["indulto_2025_status"] == "verificar" and not r["indulto_2025"].startswith("sem pena"), "(29) pena total zerada: %s" % r["indulto_2025"])
+
+# (30) concurso com impeditivo e cumprimento interrompido: o art. 7º, p. ú., veda antes da dúvida da interrupção (Alex Rodrigues
+# de Souza, Brehndo, Márcio de Souza Alves, 2024/2025)
+traf = crime("01/01/2023", "01/06/2023", "01/07/2023", artigo="ART 33: Tráfico de drogas", lei="11343/06 - Lei de Drogas",
+             tipo="CAPUT: Importar, exportar, Reclusão: 5 a 15 anos E Multa", pena="6 ano(s), 0 mês(es) e 0 dia(s)", proc="0000002-00.2023.8.12.0001")
+r = {"nome": "T", "pena_total": "7a0m0d", "pena_cumprida": "1a0m0d", "pena_remanescente": "6a0m0d", "data_geracao_rspe": "01/10/2026",
+     "status_execucao": "ATIVO", "regime_atual": "Fechado - ATIVO", "_crimes": [traf, crime("01/01/2023", "01/06/2023", "01/07/2023")],
+     "_eventos": preso_fuga("01/07/2023", "01/10/2024", "01/01/2026"), "_incidentes": [incidente("FIXAÇÃO/ALTERAÇÃO DE REGIME", "Fechado - Regime inicial", "01/07/2023")]}
+r = rs.reprocessar(r)
+confere(r["indulto_2024_status"] == "vedado" and "art. 7º, p. ú." in r["indulto_2024"], "(30) interrupção escondeu a vedação: %s" % r["indulto_2024"])
+
+# (31) concurso: a memória descreve a violência dos crimes não impeditivos, não a de todos (Chelton 2024)
+est = crime("01/01/2010", "01/06/2010", "01/07/2010", artigo="ART 213: Estupro", tipo="CAPUT: Constranger alguém, mediante violência ou grave ameaça, Reclusão: 6 a 10 anos",
+            pena="6 ano(s), 0 mês(es) e 0 dia(s)", proc="0000003-00.2010.8.12.0001")
+est["vga"] = "S"
+r = {"nome": "T", "pena_total": "7a0m0d", "pena_cumprida": "6a0m0d", "pena_remanescente": "1a0m0d", "data_geracao_rspe": "25/12/2024",
+     "status_execucao": "ATIVO", "regime_atual": "Fechado - ATIVO", "_crimes": [est, crime("01/01/2010", "01/06/2010", "01/07/2010")],
+     "_eventos": [preso("01/01/2019")], "_incidentes": [incidente("FIXAÇÃO/ALTERAÇÃO DE REGIME", "Fechado - Regime inicial", "01/01/2019")]}
+r = rs.reprocessar(r)
+sit = next((l for l in (r.get("indulto_2024_detalhe") or "").split("\n") if l.startswith("Situação em")), "")
+confere("Art. 7º, p. ú.: 2/3" in (r.get("indulto_2024_detalhe") or "") and "VGA" not in sit and not r["indulto_2024_num"]["vga"],
+        "(31) memória do concurso com a violência do impeditivo: %r / %s" % (sit, r.get("indulto_2024")))
+
+# (32) 2022: crime com pena máxima acima de 5 anos não vai para a conferência do trânsito (Aldo Pereira de Souza)
+o = rs.analise_decreto_2022({"pena_total": "3a0m0d"}, [crime("01/01/2020", "01/06/2020", "01/07/2020"),
+                                                       crime("01/01/2020", None, None, tipo="§ 4º: Furto qualificado, Reclusão: 2 a 8 anos E Multa",
+                                                             proc="0000004-00.2020.8.12.0001")], [], [])
+confere(o["indulto_2022_status"] == "possivel" and "conferir" not in o["indulto_2022"], "(32) 2022: %s" % o["indulto_2022"])
+
+# (33) textos da petição: dias acima de 30 viram mês, "da pena cumprida", ficha sem reticências no meio do texto
+confere(rtl._pena_ext("4a11m33d") == "5 anos e 3 dias" and rtl._pena_ext("1a2m31d") == "1 ano, 3 meses e 1 dia", "(33) %s / %s" % (
+    rtl._pena_ext("4a11m33d"), rtl._pena_ext("1a2m31d")))
+t = rs._texto_ficha("Saída da Unidade Penal: ESTABELECIMENTO PENAL DE REGIME SEMIABERTO E ABERTO DE AQUIDAUANA, Destino: , Motivo: Evasão do "
+                    "estabelecimento sem autorização judicial durante o período noturno de recolhimento", 90)
+confere("..." not in t and "Destino: ," not in t, "(33) texto da ficha: %s" % t)
+out = {"numero": "12.338/2024", "referencia": "25/12/2024", "id": "2024", "indulto": {},
+       "comutacao": {"status": "cabe", "checklist": [], "reducao": {"fracao": "1/5", "base": "cumprido", "reducao_txt": "0a6m0d", "antes_txt": "3a0m0d",
+                                                                   "depois_txt": "2a6m0d"}}}
+t = rtl._fundamentacao(out, "comutacao")
+confere("da pena cumprida" in t and "da pena cumprido" not in t, "(33) concordância: %s" % t)
+
+# (34) cartão de 2000 a 2023 em concurso: o cabeçalho traz os números da conta das hipóteses (Claudemir 2023)
+xc = dict(xv, s="cabe", beneficio="Indulto", detalhe={"pena": 5800, "cumprido": 3833, "pena_conc": 1450, "cumprido_conc": 956, "exigido_imp": 2877})
+cart = rtl._decreto_ficha(F["2023"], xc, [], lambda ref: {"total": 0}, [], [])
+confere(cart["indulto"]["pena_considerada_txt"] == rtl._pena(1450) and cart["indulto"]["cumprido_txt"] == rtl._pena(956),
+        "(34) cabeçalho com os números de antes do concurso: %s / %s" % (cart["indulto"]["pena_considerada_txt"], cart["indulto"]["cumprido_txt"]))
+
+# ---- rev. 08/10 (3ª e 4ª revisões de indulto e comutação) ----
+import rspe_scraper as rs
+import rspe_view as rv
+import rspe_indulto_tl as rtl
+
+
+def ev_(d, tipo="PRISÃO/INÍCIO DE CUMPRIMENTO", mot="PRISÃO DEFINITIVA"):
+    return {"tipo": tipo, "motivo": mot, "data": d, "processos": ""}
+
+
+def reg_(crimes, eventos, pena_total, cumprida, incid=None, ger="05/10/2026", nasc="01/01/1980", rem=""):
+    return {"nome": "T", "processo_execucao": "X", "pena_total": pena_total, "pena_cumprida": cumprida, "pena_remanescente": rem,
+            "data_geracao_rspe": ger, "termino_previsao_seeu": "", "data_nascimento": nasc, "_sexo": "M", "status_execucao": "ATIVO",
+            "regime_atual": "Fechado - ATIVO", "_crimes": crimes, "_eventos": eventos, "_incidentes": incid or []}
+
+
+# (35) 2024/2025: crime doloso com fato na janela, cometido durante a execução, fica a verificar (LEP, art. 52); o fato que deu início
+# à própria custódia (flagrante no mesmo dia) não conta
+c1 = crime("01/01/2020", "01/06/2021", "01/07/2021", pena="2 ano(s), 0 mês(es) e 0 dia(s)")
+c2 = crime("01/09/2024", "01/03/2025", "01/04/2025", artigo="ART 157: Roubo", tipo="CAPUT: Subtrair coisa móvel alheia, mediante grave ameaça",
+           pena="5 ano(s), 4 mês(es) e 0 dia(s)", proc="0000009-00.2024.8.12.0001")
+r = reg_([c1, c2], [ev_("01/01/2024")], "7a4m0d", "", incid=[incidente("FIXAÇÃO/ALTERAÇÃO DE REGIME", "Aberto - Progressão de Regime", "01/06/2024")])
+o = rs.analise_decretos(r, r["_crimes"], r["_eventos"], r["_incidentes"], HOJE)
+confere("LEP, art. 52" in o["indulto_2024"] and rs.status_texto_decreto(o["indulto_2024"]) != "possivel",
+        "(35) crime doloso na janela de 2024 não ficou a verificar: %s" % o["indulto_2024"][:300])
+ff, fv = rs.falta_art6([], date(2024, 12, 25), [ev_("10/03/2024", mot="PRISÃO EM FLAGRANTE")], date(2024, 12, 23),
+                       crimes=[crime("10/03/2024", "01/06/2024", "01/07/2024")])
+confere(not ff and not fv, "(35) o fato que deu início à custódia contou como falta: %s" % fv)
+
+# (36) "ALTERAÇÃO DE DATA-BASE DE PROGRESSÃO DE REGIME/LIVRAMENTO CONDICIONAL" não é regime (Fernando de Lima Oliveira, 2025)
+incs = [incidente("FIXAÇÃO/ALTERAÇÃO DE REGIME", "Aberto - Progressão de Regime", "26/11/2024"),
+        incidente("ALTERAÇÃO DE DATA-BASE DE PROGRESSÃO DE REGIME/LIVRAMENTO CONDICIONAL", "Progressão de Regime", "01/12/2024")]
+confere(rs._regime_em(incs, date(2025, 12, 25), "Aberto - ATIVO")[0] == "Aberto" and rd._regime_em({"_incidentes": incs}, date(2025, 12, 25)) == "aberto",
+        "(36) data-base lida como regime: %s / %s" % (rs._regime_em(incs, date(2025, 12, 25), "Aberto - ATIVO")[0], rd._regime_em({"_incidentes": incs}, date(2025, 12, 25))))
+
+# (37) 2023, art. 1º, XII: só o crime ambiental de pessoa jurídica é vedado
+amb = crime("01/01/2020", "01/06/2021", "01/08/2021", lei="9605/98 - Lei de Crimes Ambientais", artigo="ART 38: Destruir floresta",
+            tipo="CAPUT: Destruir ou danificar floresta", pena="1 ano(s), 6 mês(es) e 0 dia(s)")
+x = dec(reg_([amb], [preso("01/06/2023")], "1a6m0d", "0a3m0d"), "2023")
+confere(x["s"] != "imp", "(37) crime ambiental de pessoa física vedado em 2023: %s" % x.get("mot"))
+
+# (38) teto "não superior a 8 anos" na convenção do SEEU (365/30): 8a0m2d passa de 8 anos
+c8 = crime("01/01/2020", "01/06/2021", "01/08/2021", tipo="§ 4º, I: qualificado", pena="8 ano(s), 0 mês(es) e 2 dia(s)")
+x = dec(reg_([c8], [preso("01/10/2021")], "8a0m2d", "5a0m0d"), "2023")
+confere(not (x["s"] == "cabe" and x.get("dispositivo") == "art. 2º, I"), "(38) 8a0m2d tratada como até 8 anos: %s %s" % (x["s"], x.get("dispositivo")))
+
+# (39) inciso IV de 2024: interrupção e reinício no mesmo dia não cortam a continuidade; lapso pela metade sem arredondar
+c40 = crime("01/01/2007", "01/03/2008", "01/04/2008", pena="40 ano(s), 0 mês(es) e 0 dia(s)")
+evs = [ev_("01/01/2008"), ev_("01/01/2015", "INTERRUPÇÃO", "TRANSFERÊNCIA"), ev_("01/01/2015", "REINÍCIO", "TRANSFERÊNCIA")]
+o = rs.analise_decretos(reg_([c40], evs, "40a0m0d", "18a0m0d"), [c40], evs, [], HOJE)
+confere(any(l.startswith("✔ IV:") for l in o["indulto_2024_detalhe"].split("\n")), "(39) IV cortado pela transferência: %s" % [
+    l for l in o["indulto_2024_detalhe"].split("\n") if "IV:" in l[:6]])
+c30 = crime("01/01/2016", "01/03/2017", "01/04/2017", artigo="ART 157: Roubo", tipo="§ 2º, II: concurso de pessoas", pena="30 ano(s), 0 mês(es) e 0 dia(s)")
+c30["vga"] = "S"
+o = rs.analise_decretos(reg_([c30], [ev_("01/01/2017")], "30a0m0d", "9a0m0d", ger="25/12/2025", nasc="01/01/1950"), [c30], [ev_("01/01/2017")], [], HOJE)
+confere("IV: 7 anos e 6 meses ininterruptos" in o["indulto_2024_detalhe"], "(39) lapso do § 2º arredondado: %s" % [
+    l for l in o["indulto_2024_detalhe"].split("\n") if "IV:" in l[:6]])
+
+# (40) comutação de 2024: o exigido da memória é a fração arredondada para cima, e o ✔/✘ acompanha a decisão
+cr = crime("01/01/2023", "01/03/2024", "01/04/2024", artigo="ART 157: Roubo", tipo="CAPUT: Subtrair coisa móvel alheia, mediante grave ameaça",
+           pena="2 ano(s), 8 mês(es) e 11 dia(s)")
+cr["vga"] = "S"
+o = rs.analise_decretos(reg_([cr], [ev_("13/06/2024")], "2a8m11d", "0a6m16d", ger="25/12/2024"), [cr], [ev_("13/06/2024")], [], HOJE)
+confere(o["comutacao_2024_num"]["exigido"] == 197 and "✘ Requisito" in o["comutacao_2024_detalhe"], "(40) %s / %s" % (
+    o["comutacao_2024_num"], o["comutacao_2024_detalhe"][:200]))
+
+# (41) 2/3 do impeditivo arredondados para cima nos dois motores
+confere(rs._dois_tercos(1000) == 667, "(41) 2/3 de 1000 = %s" % rs._dois_tercos(1000))
+
+# (42) execução encerrada: a comutação refeita depois do indulto indeferido também não tem objeto
+cx = crime("01/01/2020", "01/03/2021", "01/04/2021", pena="10 ano(s), 0 mês(es) e 0 dia(s)", extinto="Sim", data_extincao="01/06/2025")
+r = reg_([cx], [ev_("01/06/2021"), ev_("01/06/2025", "INTERRUPÇÃO", "EXTINÇÃO DA PENA")], "0a0m0d", "0a0m0d",
+         incid=[incidente("INDULTO", "DECRETO Nº 11.846, DE 22 DE DEZEMBRO DE 2023", "01/03/2024", "NÃO CONCEDIDO")])
+x = dec(r, "2023")
+confere(x["s"] not in ("cabe", "ver"), "(42) comutação ressuscitada em execução encerrada: %s %s" % (x["s"], x.get("mot")))
+
+# (43) comutação sem pena remanescente (pena inteira cumprida na data): não cabe
+x = dec(reg_([crime("01/01/2019", "01/06/2019", "01/07/2019", pena="3 ano(s), 6 mês(es) e 0 dia(s)"),
+              crime("01/01/2019", "01/06/2019", "01/07/2019", artigo="ART 129: Lesão corporal", tipo="CAPUT: Ofender a integridade",
+                    pena="0 ano(s), 6 mês(es) e 0 dia(s)", proc="0000002-00.2019.8.12.0001")], [preso("01/01/2020")], "4a0m0d", ""), "2023")
+confere(not (x["s"] in ("cabe", "ver") and x.get("beneficio") == "Comutação"), "(43) comutação sem remanescente: %s %s" % (x["s"], x.get("mot")))
+
+# (44) decretos de 2000 a 2023: falta na janela ainda não reconhecida em juízo deixa o favorável A VERIFICAR (critério único)
+cf = crime("01/01/2017", "01/06/2017", "01/07/2017", pena="4 ano(s), 0 mês(es) e 0 dia(s)")
+r = reg_([cf], [preso("01/01/2018"), ev_("01/06/2023", "INTERRUPÇÃO", "FUGA"), ev_("10/06/2023", "REINÍCIO", "RECAPTURA")], "4a0m0d", "")
+x = dec(r, "2023")
+confere(x["s"] == "ver" and "falta" in (x.get("mot") or ""), "(44) falta na janela ficou como ressalva de um 'cabe': %s %s" % (x["s"], x.get("mot")))
+
+# (45) só o inciso XV (crime a crime, sem tempo cumprido): a dúvida do cumprido não o torna "a verificar"
+c13 = crime("01/01/2024", "01/03/2025", "01/04/2025", tipo="§ 4º, I: qualificado", pena="13 ano(s), 0 mês(es) e 0 dia(s)")
+r = reg_([c13], [ev_("01/06/2025")], "13a0m0d", "0a0m0d", rem="13a0m0d")
+o = rs.analise_decretos(r, [c13], r["_eventos"], [], HOJE)
+confere(o["indulto_2025"].startswith("POSSÍVEL: art. 9º, XV"), "(45) XV a verificar só pelo cumprido: %s" % o["indulto_2025"][:200])
+
+# (46) fundamentação: a falta a verificar aparece uma vez e o pedido fica condicionado a ela não ser reconhecida
+out = {"numero": "12.790/2025", "referencia": "25/12/2025", "id": "2025", "indulto": {
+    "status": "verificar", "rotulo": "A verificar", "checklist": [
+        {"item": "Requisito objetivo / hipótese", "estado": "ok", "texto": "I: pena ≤ 8 anos sem VGA, exige 1/5", "det": {}},
+        {"item": "Ressalva", "estado": "q", "texto": "falta a verificar (art. 6º: só impede se a sanção for reconhecida em juízo; STJ, Tema 1195): FUGA (01/06/2025)", "det": {}},
+        {"item": "Requisito subjetivo (falta grave na janela)", "estado": "q", "texto": "Falta na janela a verificar (só impede se a sanção for reconhecida em juízo): FUGA (01/06/2025).", "det": {}}]}}
+t = rtl._fundamentacao(out, "indulto")
+confere(t.count("FUGA (01/06/2025)") == 1 and "Confirmado, requer-se" not in t and "não reconhecida em juízo a falta" in t.lower(), "(46) %s" % t)
+
+# (47) célula x texto exportado: possível com falta a verificar sai "A verificar"
+txt = "POSSÍVEL: art. 9º, I | falta a verificar (art. 6º: só impede se a sanção for reconhecida em juízo; STJ, Tema 1195): FUGA (01/06/2025)"
+confere(rv.curto_indulto(txt).startswith("A verificar") and rv.sim_nao(rv.curto_indulto(txt), rv.cor_texto_indulto(txt))[0] == "Verificar",
+        "(47) %s" % rv.curto_indulto(txt))
+
+# (48) decisões do RSPE: a concessão prevalece sobre um pedido pendente lançado depois; "INDEFERIDO" também é indeferimento
+r = {"indulto_2024": "POSSÍVEL: art. 9º, I", "indulto_2024_status": "possivel"}
+rs.aplicar_decisoes_decretos(r, [incidente("INDULTO", "DECRETO Nº 12.338, DE 23 DE DEZEMBRO DE 2024", "01/03/2025", "CONCEDIDO"),
+                                 incidente("INDULTO", "DECRETO Nº 12.338, DE 23 DE DEZEMBRO DE 2024", "01/04/2025", "PENDENTE")])
+confere(r["indulto_2024"].startswith("CONCEDIDO"), "(48) pendente apagou a concessão: %s" % r["indulto_2024"])
+r = {"indulto_2024": "POSSÍVEL: art. 9º, I", "indulto_2024_status": "possivel"}
+rs.aplicar_decisoes_decretos(r, [incidente("INDULTO", "DECRETO Nº 12.338, DE 23 DE DEZEMBRO DE 2024", "01/03/2025", "INDEFERIDO")])
+confere(r["indulto_2024"].startswith("INDEFERIDO"), "(48) INDEFERIDO não lido: %s" % r["indulto_2024"])
+
+# (49) 2022: "acima de 5 anos" só quando há crime fora pela pena máxima, não pela data da sentença
+o = rs.analise_decreto_2022({"pena_total": "2a0m0d"}, [crime("01/01/2020", "01/06/2020", "01/07/2020"),
+                                                       crime("01/01/2021", "01/03/2023", "01/04/2023", proc="0000005-00.2021.8.12.0001")], [], [])
+confere("acima de 5 anos" not in o["indulto_2022"], "(49) %s" % o["indulto_2022"])
+
+# (50) eventos acima da pena da execução não servem: o cumprido não passa do teto e o resultado fica a verificar
+x = rs.cumprido_decreto_info({"pena_total": "1a0m0d", "pena_cumprida": "0a0m0d", "pena_remanescente": "1a0m0d", "_crimes": [crime("01/01/2019", "01/06/2019", "01/07/2019")]},
+                             [(date(2020, 1, 1), None)], [], date(2023, 12, 25))
+confere(x["origem"] == "estouro" and x["dias"] == 365, "(50) %s" % x)
+# âncora muito abaixo dos eventos (degrau entre decretos): vale a conta pelos eventos, a verificar
+x = rs.cumprido_decreto_info({"pena_total": "10a0m0d", "pena_cumprida": "0a1m0d", "data_geracao_rspe": "25/12/2025", "termino_previsao_seeu": "",
+                              "_crimes": [crime("01/01/2019", "01/06/2019", "01/07/2019", pena="10 ano(s), 0 mês(es) e 0 dia(s)")]},
+                             [(date(2020, 1, 1), None)], [], date(2024, 12, 25))
+confere(x["origem"] == "ancora" and x["dias"] > 1500, "(50) degrau da âncora: %s" % x)
+
+# (51) a reanálise apaga as chaves antigas dos decretos (o _explica antigo não sobrevive)
+r = {"indulto_2024_explica": "velho", "comutacao_2025_detalhe": "velho", "indulto_comutacao_triagem": "fica"}
+rs.limpar_decretos(r)
+confere(r == {"indulto_comutacao_triagem": "fica"}, "(51) %s" % r)
+
+# (52) tráfico (art. 33) sem caput/§ 1º nem § 4º legível: a verificar, não vedado (a regra de 2022 a 2025)
+ct = crime("01/01/2020", "01/06/2021", "01/08/2021", lei="11343/06 - Lei de Drogas", artigo="ART 33: Tráfico de drogas", tipo="",
+           pena="1 ano(s), 8 mês(es) e 0 dia(s)")
+x = dec(reg_([ct], [preso("01/10/2021")], "1a8m0d", ""), "2023")
+confere(x["s"] == "ver" and "tráfico" in (x.get("mot") or ""), "(52) tráfico de parágrafo ilegível: %s %s" % (x["s"], x.get("mot")))
+
+# (53) 2023, art. 3º, § 3º, I: comutação de metade para maior de 65 anos (crime sem violência)
+c10 = crime("01/01/2019", "01/06/2019", "01/07/2019", tipo="§ 4º, I: qualificado", pena="13 ano(s), 0 mês(es) e 0 dia(s)")
+x = dec(dict(reg_([c10], [preso("01/01/2020")], "13a0m0d", ""), data_nascimento="01/01/1955"), "2023")
+confere(x.get("beneficio") == "Comutação" and x.get("dispositivo") == "art. 3º, § 3º, I" and x.get("reducao") == "1/2",
+        "(53) 66 anos: %s %s %s" % (x.get("beneficio"), x.get("dispositivo"), x.get("reducao")))
+
 if falhas:
     print("FALHOU: indulto - auditoria\n  " + "\n  ".join(falhas))
     sys.exit(1)
 print("ok: indulto - auditoria (tese, indeferimento x comutação, violência contra a mulher, extinção posterior e sem data, livramento, execução posterior, "
-      "lesão grave do roubo, sentença incoerente, âncora zerada, crime doloso na janela, art. 4º de 2017, regressão cautelar, textos da petição)")
+      "lesão grave do roubo, sentença incoerente, âncora zerada, crime doloso na janela, art. 4º de 2017, regressão cautelar, textos da petição; "
+      "rev. 08/10: comutação com indulto indeferido, decisões cruzadas, falta a verificar, extinta depois, execução encerrada, inciso XIII, SEEU sem cálculo, "
+      "vedação antes da interrupção, VGA do concurso, trânsito x teto em 2022; 3ª/4ª revisões: crime doloso na janela, data-base, teto 365, IV contínuo, "
+      "comutação sem remanescente, critério único da falta, XV, textos, decisões, eventos acima da pena, tráfico ilegível, 65 anos)")

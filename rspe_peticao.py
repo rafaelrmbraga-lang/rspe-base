@@ -320,7 +320,8 @@ def campos(m, r, nome_base="", defensor=None):
         "prescricao_termo": presc.get("ppe_inicio") or presc.get("ppe_termo", ""),
         "prescricao_pena_base_extenso": pena_extenso(rs.dias_para_pena(presc["ppe_base_dias"])) if presc.get("ppe_base_dias") else (presc.get("pena") or ""),
         "prescricao_cumprido_extenso": (pena_extenso(rs.dias_para_pena(presc["ppe_cumprido_dias"])) if presc.get("ppe_cumprido_dias") else "nenhum dia"),
-        "prescricao_prazo_integral": _rp.fmt_prazo(presc["ppe_meses_integral"]) if presc.get("ppe_meses_integral") else "",
+        # prazo do art. 109 antes da redução do art. 115 (sem o +1/3 da reincidência, que não é do art. 109)
+        "prescricao_prazo_integral": _rp.fmt_prazo(presc["ppe_meses_art109"]) if presc.get("ppe_meses_art109") else "",
         "prescricao_prazo_art109": _rp.fmt_prazo(presc["ppe_meses_art109"]) if presc.get("ppe_meses_art109") else "",
         "prescricao_reincidencia": "S" if presc.get("reinc") else "N",
         "prescricao_prazo_reduzido": _rp.fmt_prazo(presc["ppe_meses"]) if (presc.get("ppe_meses") and presc.get("art115")) else "",

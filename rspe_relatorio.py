@@ -83,13 +83,19 @@ def _dias(x):
     return _num(round(float(x or 0)))
 
 
-def _arred_coluna(vals):
-    """Arredonda uma coluna de dias mantendo a soma igual ao total arredondado (maiores restos): a tabela fecha."""
-    alvo = round(sum(vals))
+def _arred_coluna(vals, alvo=None):
+    """Arredonda uma coluna de dias mantendo a soma igual ao total arredondado (maiores restos): a tabela fecha. Com alvo, a
+    soma fica igual a ele (o total já exibido em outro quadro do mesmo PDF)."""
+    alvo = round(sum(vals)) if alvo is None else int(alvo)
     base = [int(v) for v in vals]
     resto = sorted(range(len(vals)), key=lambda i: -(vals[i] - base[i]))
     for i in resto[:max(0, alvo - sum(base))]:
         base[i] += 1
+    for i in reversed(resto):  # alvo abaixo da soma truncada (diferença de centésimos): tira dos menores restos
+        if sum(base) <= alvo:
+            break
+        if base[i] > 0:
+            base[i] -= 1
     return base
 
 
@@ -343,17 +349,23 @@ def _etiqueta_prazo(sit, cor, dias, ped=""):
     sl = s.lower()
     if not s or s in ("—",):
         return ("Não consta no RSPE", "cinza", "")
-    if sl.startswith("vencid") or sl.startswith("lapso") or sl.startswith("extinção cabível"):
-        return ("Vencido", "vermelho", s if "verificar" in sl else "")
-    if sl.startswith("a verificar"):
-        return ("A verificar", "amarelo", s)
+    # complemento da situação da tela ("Vencido há 16 dias · sem pedido no RSPE - requerer"): vai para a observação
+    resto = s.split(" · ", 1)[1].strip() if " · " in s else ""
+    if sl.startswith("extinção cabível"):
+        return ("Extinção cabível", "vermelho", s if "verificar" in sl else resto)
+    if sl.startswith("vencid") or sl.startswith("lapso"):
+        return ("Vencido", "vermelho", s if "verificar" in sl else resto)
+    if sl.startswith("a verificar") or sl.startswith("extinção a verificar"):
+        return ("A verificar", "amarelo", s if sl.startswith("a verificar") else "")
     if sl.startswith("em cumprimento") or sl.startswith("em ") or sl.startswith("vence") or sl.startswith("término"):
         if dias is not None and 0 <= dias <= 90:
-            return ("Vence em %s" % rs.pl(dias, "dia", "dias"), cor if cor in ("laranja", "amarelo", "verde") else "amarelo", "")
+            return ("Vence hoje" if dias == 0 else "Vence em %s" % rs.pl(dias, "dia", "dias"), cor if cor in ("laranja", "amarelo", "verde") else "amarelo", "")
         if dias is not None and dias > 90:
             return ("Em cumprimento", "", "faltam %s" % rs.pl(dias, "dia", "dias"))
         return ("Em cumprimento", "", "")
-    if sl.startswith("não se aplica") or sl.startswith("não consta") or sl.startswith("pena interrompida") or sl.startswith("não iniciou"):
+    if sl.startswith("pena interrompida") or sl.startswith("pena suspensa"):
+        return (s.split(" (")[0], "cinza", "")
+    if sl.startswith("não se aplica") or sl.startswith("não consta") or sl.startswith("não iniciou"):
         return (s.split(" (")[0], "cinza", "")
     if sl.startswith("pena extinta"):
         return ("Extinta", "azul", "")
@@ -366,7 +378,7 @@ def _etiqueta_indulto(celula, cor):
     if not c:
         return ("—", "")
     mapa = {"Sim": ("Cabível", "verde"), "Verificar": ("A verificar", "amarelo"), "Falta": ("Falta grave", "vermelho"),
-            "Não atinge": ("Não cabe", "cinza"), "Não alcançado": ("Não alcançado", "cinza"), "Concedido": ("Concedido", "azul"), "Indeferido": ("Indeferido", "vermelho"),
+            "Não atinge": ("Não atinge", "cinza"), "Não alcançado": ("Não alcançado", "cinza"), "Concedido": ("Concedido", "azul"), "Indeferido": ("Indeferido", "vermelho"),
             "Prejudicada": ("Prejudicada", "cinza"), "Fato posterior": ("Fato posterior", "cinza"), "Não se aplica": ("Não se aplica", "cinza")}
     if c in mapa:
         return mapa[c]
@@ -441,6 +453,7 @@ def _titulo_alerta(titulo):
         else:
             buf += ch
     frase = re.sub(r"\s{2,}", " ", "".join(corpo)).strip(" -–:;,")
+    frase = re.sub(r"\s+([,.;:])", r"\1", frase)  # o parêntese sai do meio da frase: "decisão (14/05/2024), não" -> "decisão, não"
     linhas = []
     for lab, val in dados:
         lab = lab.strip(",;:").lower()
@@ -748,12 +761,13 @@ def relatorio_individual(m, caminho, nome_base):
     el.append(Spacer(1, 10))
 
     # 2) bloco visual da pena
+    term_calc = str(m.get("termino") or "").endswith("*")  # o SEEU não imprimiu o término: data calculada pelo programa
     def caixa(rot, val):
         return [Paragraph(_t(rot), st["rot"]), Paragraph(_t(val or "—"), st["val"])]
     q = [("Regime atual", m.get("regime") + ((" · " + m["motivo_exec"]) if m.get("motivo_exec") else "")), ("Pena total", m.get("pena_total")),
          ("Cumprida", m.get("pena_cumprida")), ("Remanescente", m.get("pena_rem")),
          ("Dias remidos (saldo do RSPE)", (m.get("remidos") or "").split(" (")[0]), ("Data-base", m.get("dbase")),
-         ("Término (SEEU)", m.get("termino") if m.get("termino") not in (None, "", "—") else (m.get("termino_motivo") or "—")),
+         ("Término (calculado*)" if term_calc else "Término (SEEU)", m.get("termino") if m.get("termino") not in (None, "", "—") else (m.get("termino_motivo") or "—")),
          ("Conduta (ficha disciplinar)", m.get("conduta"))]
     grade = [[caixa(*x) for x in q[i:i + 4]] for i in range(0, len(q), 4)]
     tq = Table(grade, colWidths=[W / 4.0] * 4)
@@ -761,6 +775,9 @@ def relatorio_individual(m, caminho, nome_base):
                             ("INNERGRID", (0, 0), (-1, -1), 0.6, C(LINE)), ("BACKGROUND", (0, 0), (-1, -1), C(ZEBRA)),
                             ("TOPPADDING", (0, 0), (-1, -1), 7), ("BOTTOMPADDING", (0, 0), (-1, -1), 8), ("LEFTPADDING", (0, 0), (-1, -1), 8)]))
     el.append(tq)
+    if term_calc:
+        nota = (m.get("calc_notas") or {}).get("termino") or "; ".join((m.get("calc_notas") or {}).values())
+        el.append(Paragraph(_t(nota or "Término*: calculado pelo programa - o SEEU não imprimiu o término."), st["mut"]))
 
     # 3) benefícios: tabela enxuta com etiquetas
     el.append(Paragraph("Benefícios", st["h2"]))
@@ -776,7 +793,7 @@ def relatorio_individual(m, caminho, nome_base):
         return v if v and v != "—" else ""
 
     rot, cor, obs = _etiqueta_prazo(m.get("prog_sit"), m.get("prog_cor"), m.get("prog_dias"))
-    if not dm("prog") and not obs:
+    if not dm("prog") and not obs and (m.get("prog_motivo") or "").split(" (")[0] != rot:
         obs = m.get("prog_motivo") or ""
     if m.get("ped_prog"):
         obs = (obs + " · " if obs else "") + "pedido no RSPE: " + m["ped_prog"]
@@ -784,9 +801,12 @@ def relatorio_individual(m, caminho, nome_base):
     rot, cor, obs = _etiqueta_prazo(m.get("liv_sit"), m.get("liv_cor"), m.get("liv_dias"))
     fl = m.get("frac_liv") or ""
     fl = "livramento vedado (1/1)" if fl.strip() in ("1", "1/1") else fl
-    add("Livramento condicional", dm("liv") and (dm("liv") + " · " + fl), rot, cor, obs or (m.get("liv_motivo") or "" if not dm("liv") else ""))
+    add("Livramento condicional", dm("liv") and (dm("liv") + " · " + fl), rot, cor,
+        obs or (m.get("liv_motivo") or "" if not dm("liv") and (m.get("liv_motivo") or "").split(" (")[0] != rot else ""))
     rot, cor, obs = _etiqueta_prazo(m.get("ext_sit"), m.get("ext_cor"), m.get("ext_dias"))
-    add("Término da pena", dm("termino"), rot, cor, (m.get("ext_hipoteses") or "").split(";")[0] if m.get("ext_cor") == "vermelho" else "")
+    hip = m.get("ext_hipoteses") if m.get("ext_hipoteses") not in (None, "", "—") else ""
+    add("Término da pena", dm("termino") and (dm("termino") + (" (calculado)" if term_calc else "")), rot, cor,
+        hip.split(";")[0] if m.get("ext_cor") in ("vermelho", "amarelo") and hip else (obs if cor == "vermelho" else ""))
     if m.get("falta") and m.get("falta") not in ("Não consta", "—"):
         fc = "vermelho" if m["falta"].startswith("Sim") else "amarelo"
         add("Falta grave (12 meses)", "", "Sim" if fc == "vermelho" else "A apurar", fc, (m.get("falta_full") or m.get("falta") or "").split(" · ", 1)[-1][:120])
@@ -798,15 +818,19 @@ def relatorio_individual(m, caminho, nome_base):
             rot, cor = _etiqueta_indulto(m.get(kc), m.get(kc + "_cor"))
             add("Comutação %s" % ano, dec[ano] + ", art. 13", rot, cor, _obs_indulto(m.get(kc + "_full")))
     pr, pe = m.get("presc_retro"), m.get("presc_ppe")
-    if m.get("presc_retro_cor") == "vermelho":
-        add("Prescrição punitiva", "", "Aparente", "vermelho", (m.get("presc_retro_full") or "").replace("Aparente: ", ""))
+    if m.get("presc_retro_cor") in ("vermelho", "amarelo"):
+        # "A verificar": aparente pelas datas do RSPE, mas depende de marco que ele não traz (pronúncia, acórdão, datas incoerentes)
+        add("Prescrição punitiva", "", "Aparente" if m["presc_retro_cor"] == "vermelho" else "A verificar", m["presc_retro_cor"],
+            re.sub(r"^(Aparente|A verificar)\s*:\s*", "", m.get("presc_retro_full") or ""))
     if m.get("presc_ppe_cor") in ("vermelho", "amarelo"):
-        add("Prescrição executória", "", "Aparente" if m["presc_ppe_cor"] == "vermelho" else "Iminente", m["presc_ppe_cor"],
-            re.sub(r"^(Aparente|Iminente): ", "", m.get("presc_ppe_full") or ""))
+        # o rótulo é o da tela: "Iminente" só quando a prescrição está mesmo próxima; o mais comum é "A verificar"
+        add("Prescrição executória", "", "Aparente" if m["presc_ppe_cor"] == "vermelho" else (pe or "A verificar"), m["presc_ppe_cor"],
+            re.sub(r"^(Aparente|Iminente|A verificar|Possível)\s*[:-]\s*", "", m.get("presc_ppe_full") or "", flags=re.I))
     elif pe and pe not in ("Não prescrita", "Sem dados"):
         add("Prescrição executória", "", pe, m.get("presc_ppe_cor") or "", "")
     el.append(_tabela(ben, [W * 0.22, W * 0.18, W * 0.16, W * 0.44], st, cores_linha=cores))
-    el.append(Paragraph(_t("Progressão, livramento e término: datas do SEEU impressas no RSPE. Indulto, comutação, prescrição e falta: cálculo do programa, a conferir. "
+    el.append(Paragraph(_t("Progressão, livramento e término: datas do SEEU impressas no RSPE%s. Indulto, comutação, prescrição e falta: cálculo do programa, a conferir. " % (
+        " (o término marcado com * foi calculado pelo programa, porque o RSPE não o imprime)" if term_calc else "")) + _t(
                            "Fundamentos e memória de cálculo: no programa, na ficha do assistido."), st["mut"]))
 
     # 4) condenações
@@ -974,7 +998,7 @@ def _faixa_pena(dias):
 def _prazo(d):
     if d is None:
         return None
-    if d <= 0:
+    if d < 0:  # vence hoje (0 dia) fica em "até 30 dias", como na tela ("Vence hoje", laranja) e no filtro "Vencidas"
         return "vencido"
     for lim in (30, 60, 90, 180):
         if d <= lim:
@@ -1093,7 +1117,9 @@ def estatisticas(modelos, hoje=None):
             trab["Trabalha (interno)"] += 1
         else:
             trab["Não trabalha"] += 1
-        estudo += not str(m.get("fd_estudo") or "Não").strip().lower().startswith("não")
+        # estuda = matrícula ativa na ficha (estudo em curso), como "trabalha" = trabalho em curso; "Estudo a requerer"
+        # (fd_estudo) é outra coisa: horas de estudo pendentes de remição
+        estudo += any((L.get("emp") or "").startswith("Estudo") and "matrícula ativa" in (L.get("per") or "") for L in (m.get("fd_linhas") or []))
     E["conduta"], E["trabalho"], E["estudo"] = cond, trab, estudo
     E["unidade"] = Counter(_rotulo_unidade(((m.get("ficha") or {}).get("unidade") or "")) for m in modelos if m.get("ficha_tem"))
     # remição: o que está pendente (assistidos e dias), pela ficha
@@ -1118,21 +1144,34 @@ def estatisticas(modelos, hoje=None):
         est = (m.get("estado_exec") or "")
         if est in SEM:
             return "não se aplica"
-        if re.search(r"interrompid|suspens", (m.get(campo_sit) or "").lower()):
+        if m.get("interrompida") or re.search(r"interrompid|suspens", (m.get(campo_sit) or "").lower()):
             return "interrompida"
         return "sem data no RSPE"
     E["faixas"] = {}
     E["venc"] = {}
     for rot, kd, ks, kp, cor in (("Progressão", "prog_dias", "prog_sit", "prog", "prog_cor"), ("Livramento condicional", "liv_dias", "liv_sit", "liv", "liv_cor")):
         E["faixas"][rot] = Counter(faixa(m, kd, ks) for m in modelos)
-        v = [m for m in modelos if m.get(cor) == "vencido" or (m.get(kd) is not None and m.get(kd) <= 0 and not m.get("estado_exec"))]
+        v = [m for m in modelos if m.get(cor) == "vencido" or (m.get(kd) is not None and m.get(kd) < 0 and not m.get("estado_exec"))]
         E["venc"][rot] = {"total": len(v),
                           "sem_pedido": sum(1 for m in v if "sem pedido" in (m.get(ks) or "") and not (m.get("pedidos") or {}).get(kp)),
                           "pendente": sum(1 for m in v if "pendente" in (m.get(ks) or "")),
                           "indeferido": sum(1 for m in v if "indeferido" in (m.get(ks) or "")),
                           "marcado": sum(1 for m in v if (m.get("pedidos") or {}).get(kp))}
-    E["faixas"]["Término da pena"] = Counter((_prazo(m.get("ext_dias")) or "mais de 180 dias") if m.get("ext_dias") is not None else
-                                             ("não se aplica" if m.get("estado_exec") in SEM else "sem data no RSPE") for m in modelos)
+    def faixa_term(m):
+        # término: a mesma leitura da aba Extinção (cor e situação), para o quadro 3.2 bater com o 3.4
+        c, d = m.get("ext_cor"), m.get("ext_dias")
+        if c == "vermelho":
+            return "vencido"  # extinção cabível
+        if c == "azul":
+            return "não se aplica"  # extinta (registrada)
+        if (m.get("ext_sit") or "").startswith("Extinção a verificar"):
+            return "a verificar"
+        if d is not None:
+            return "até 30 dias" if d < 0 else (_prazo(d) or "mais de 180 dias")
+        if m.get("interrompida") and not m.get("estado_exec"):
+            return "interrompida"
+        return "não se aplica" if m.get("estado_exec") in SEM else "sem data no RSPE"
+    E["faixas"]["Término da pena"] = Counter(faixa_term(m) for m in modelos)
     E["venc_assist"] = sum(1 for m in modelos if m.get("prog_cor") == "vencido" or m.get("liv_cor") == "vencido")
     E["venc_sem_pedido"] = sum(1 for m in modelos if any(m.get(c) == "vencido" and "sem pedido" in (m.get(s_) or "") and not (m.get("pedidos") or {}).get(k)
                                                           for c, s_, k in (("prog_cor", "prog_sit", "prog"), ("liv_cor", "liv_sit", "liv"))))
@@ -1229,7 +1268,8 @@ def estatisticas(modelos, hoje=None):
 
     # ---- prescrição e extinção ----
     E["presc"] = Counter(("aparente" if m.get("presc_ppe_cor") == "vermelho" else "iminente / a verificar" if m.get("presc_ppe_cor") == "amarelo" else
-                          "sem dados" if m.get("presc_ppe_cor") == "cinza" else "não prescrita") for m in modelos)
+                          "sem dados" if m.get("presc_ppe_cor") == "cinza" else "extinta" if m.get("presc_ppe_cor") == "azul" else "não prescrita")
+                         for m in modelos)
     E["presc_punitiva"] = sum(1 for m in modelos if m.get("presc_retro_cor") == "vermelho")
     E["presc_crimes"] = sum(1 for m in modelos for L in (m.get("presc_linhas") or []) if L.get("ppe_cor") == "vermelho")
     E["ext_cabivel"] = sum(1 for m in modelos if m.get("ext_cor") == "vermelho")
@@ -1609,7 +1649,7 @@ def relatorio_geral(modelos, caminho, nome_base, nominal=True):
     P = F["padic"]
     trab_n = E["trabalho"].get("Trabalha (interno)", 0) + E["trabalho"].get("Trabalha (externo)", 0)
     el.append(numeros([(trab_n, "trabalham", (pct(trab_n, nf) + " dos com ficha") if nf else ""),
-                       (E["estudo"], "estudam", (pct(E["estudo"], nf) + " dos com ficha") if nf else ""),
+                       (E["estudo"], "estudam", (pct(E["estudo"], nf) + " dos com ficha · matrícula ativa") if nf else "matrícula ativa na ficha"),
                        (P.get("PADIC instaurado", 0), "faltas com PADIC instaurado", "sem resultado lançado na ficha"),
                        (F["ficha_sem_seeu"], "faltas graves e fugas da ficha sem registro no SEEU", rs.pl(F["ficha_sem_seeu_ass"], "assistido", "assistidos")),
                        (F["firme12"], "assistidos com falta grave nos últimos 12 meses", "sanção reconhecida em juízo")],
@@ -1638,12 +1678,17 @@ def relatorio_geral(modelos, caminho, nome_base, nominal=True):
     secao("2.5 Remição: pendências", "Pela ficha disciplinar x RSPE: dias que ainda não viraram remição no RSPE, pela origem. "
           "O detalhe por assistido e por unidade está no relatório \"Remição detalhada\".")
     O = E["rem_orig"]
-    el.append(numeros([(O["ass"], "assistidos com remição a requerer", "%s sem nenhuma remição no RSPE (toda a base)" % E["rem_zero"]),
+    # as três parcelas fecham o total: atestados (peticionados, só emitidos e diferença), trabalho sem atestado, estudo e leitura
+    el.append(numeros([(O["ass"], "assistidos com remição a requerer (com a estimativa)",
+                        # mesma contagem do cartão vermelho "Remição a requerer" da aba Ficha disciplinar (a diferença de dias, amarela
+                        # na aba como "Conferir remição", não entra)
+                        "%s em vermelho na aba Ficha (remição a requerer / atestado não lançado) · %s sem nenhuma remição no RSPE (toda a base)" % (E["rem_req"], E["rem_zero"])),
                        (_num(O["r_total"]), "dias a remir (todas as origens)"),
-                       (_num(O["r"]["nao_lancado"] + O["r"]["emitido"]), "dias de atestados sem remição no RSPE",
-                        "%s peticionados · %s só emitidos" % (_num(O["r"]["nao_lancado"]), _num(O["r"]["emitido"]))),
+                       (_num(O["r"]["nao_lancado"] + O["r"]["emitido"] + O["r"]["divergencia"]), "dias de atestados sem remição ou com remição menor",
+                        "%s peticionados · %s só emitidos · %s de diferença" % (_num(O["r"]["nao_lancado"]), _num(O["r"]["emitido"]), _num(O["r"]["divergencia"]))),
                        (_num(O["r"]["sem_atestado"]), "dias de trabalho sem atestado (estimativa)", rs.pl(O["n"]["sem_atestado"], "assistido", "assistidos")),
-                       (_num(O["r"]["estudo"]), "dias de estudo sem remição (≈)", rs.pl(O["n"]["estudo"], "assistido", "assistidos"))],
+                       (_num(O["r"]["estudo"] + O["r"]["leitura"]), "dias de estudo (≈) e leitura sem remição",
+                        "%s de estudo · %s de leitura (exatos)" % (_num(O["r"]["estudo"]), _num(O["r"]["leitura"])))],
                       {0: "amarelo", 1: "amarelo", 2: "vermelho", 3: "amarelo", 4: "amarelo"}))
 
     # ============================================================ 3. situação jurídico-executória
@@ -1672,9 +1717,9 @@ def relatorio_geral(modelos, caminho, nome_base, nominal=True):
     el.append(_tabela(tb, [W * 0.5, W * 0.13, W * 0.13, W * 0.24], st, cores_linha=cores))
 
     secao("3.2 Prazos de progressão, livramento e término", "Assistidos por faixa de prazo, de hoje até a data prevista no SEEU.")
-    grupos = [("Vencido", ["vencido"]), ("Até 90 dias", ["até 30 dias", "até 60 dias", "até 90 dias"]), ("91 a 180 dias", ["até 180 dias"]),
+    grupos = [("Vencido", ["vencido"]), ("A verificar", ["a verificar"]), ("Até 90 dias", ["até 30 dias", "até 60 dias", "até 90 dias"]), ("91 a 180 dias", ["até 180 dias"]),
               ("Mais de 180 dias", ["mais de 180 dias"]), ("Pena parada", ["interrompida"]), ("Não se aplica", ["não se aplica"]), ("Sem data no RSPE", ["sem data no RSPE"])]
-    cor_g = {"Vencido": "#A33A36", "Até 90 dias": "#C9A55C", "91 a 180 dias": "#3E8E62", "Mais de 180 dias": "#1F6B43", "Pena parada": "#6B5B8A",
+    cor_g = {"Vencido": "#A33A36", "A verificar": "#E0C27A", "Até 90 dias": "#C9A55C", "91 a 180 dias": "#3E8E62", "Mais de 180 dias": "#1F6B43", "Pena parada": "#6B5B8A",
              "Não se aplica": "#AEB5B0", "Sem data no RSPE": "#CDD2CC"}
     W3 = W / 3.0 - 8
     trio = []
@@ -1686,14 +1731,16 @@ def relatorio_geral(modelos, caminho, nome_base, nominal=True):
     t3.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP"), ("LEFTPADDING", (0, 0), (-1, -1), 0), ("RIGHTPADDING", (0, 0), (-1, -1), 8)]))
     el.append(t3)
     el.append(Spacer(1, 6))
-    fx = ["vencido", "até 30 dias", "até 60 dias", "até 90 dias", "até 180 dias", "mais de 180 dias", "interrompida", "não se aplica", "sem data no RSPE"]
-    cab = ["", "Vencido", "≤ 30 dias", "31 a 60", "61 a 90", "91 a 180", "> 180 dias", "Pena parada", "Não se aplica", "Sem data"]
+    fx = ["vencido", "a verificar", "até 30 dias", "até 60 dias", "até 90 dias", "até 180 dias", "mais de 180 dias", "interrompida", "não se aplica", "sem data no RSPE"]
+    cab = ["", "Vencido", "A verificar", "≤ 30 dias", "31 a 60", "61 a 90", "91 a 180", "> 180 dias", "Pena parada", "Não se aplica", "Sem data"]
     tb = [cab]
     for rot in ("Progressão", "Livramento condicional", "Término da pena"):
         c = E["faixas"].get(rot, Counter())
         tb.append([Paragraph(_t(rot), st["neg"])] + [str(c.get(k, 0)) for k in fx])
-    el.append(KeepTogether([_tabela(tb, [W * 0.19] + [W * 0.09] * 9, st, pad=4)]))
-    el.append(Paragraph(_t("Pena parada: foragido (interrompida) ou preso por outro processo (suspensa). Não se aplica: em livramento, já no regime aberto, "
+    el.append(KeepTogether([_tabela(tb, [W * 0.18] + [W * 0.082] * 10, st, pad=4)]))
+    el.append(Paragraph(_t("Vencido: a data prevista já passou (a que vence hoje entra em \"≤ 30 dias\", como na tela); no término, é a extinção cabível "
+                           "da aba Extinção. A verificar: extinção a verificar (custódia ou detração que pode alcançar a pena). "
+                           "Pena parada: foragido (interrompida) ou preso por outro processo (suspensa). Não se aplica: em livramento, já no regime aberto, "
                            "pena cumprida ou extinta, ou cumprimento não iniciado."), st["mut"]))
 
     secao("3.3 Indulto e comutação por decreto",
@@ -1723,23 +1770,30 @@ def relatorio_geral(modelos, caminho, nome_base, nominal=True):
         tb.append([Paragraph(_t("Demais %s (%s)" % (rs.pl(len(resto), "decreto", "decretos"), ("%s a %s" % (anos[0], anos[-1])) if anos else "")), st["cel"]),
                    "0", "0", "0", "0", str(sum(r["nao"] + r["imp"] for r in resto))])
     el.append(_tabela(tb, [W * 0.3, W * 0.12, W * 0.13, W * 0.15, W * 0.15, W * 0.15], st, cores_linha=cores, pad=4))
-    sem = [("%s%s" % (r["ano"], " (Dia das Mães)" if "maes" in str(r["id"]) else "")) for r in E["decretos"] if r not in com_alc]
+    # os do Dia das Mães são só para mulheres: sem assistida alcançada, o motivo é esse, e não a data da execução
+    sem = [str(r["ano"]) for r in E["decretos"] if r not in com_alc and "maes" not in str(r["id"])]
+    sem_m = [str(r["ano"]) for r in E["decretos"] if r not in com_alc and "maes" in str(r["id"])]
     if sem:
-        el.append(Paragraph(_t("Decretos que não alcançam nenhum assistido (execução iniciada depois): %s." % ", ".join(sem)), st["mut"]))
+        el.append(Paragraph(_t("Decretos que não alcançam nenhum assistido (execução iniciada depois ou sem condenação até o decreto): %s." % ", ".join(sem)), st["mut"]))
+    if sem_m:
+        el.append(Paragraph(_t("Decretos do Dia das Mães (só para mulheres) sem nenhuma assistida alcançada: %s." % ", ".join(sem_m)), st["mut"]))
 
     secao("3.4 Prescrição e extinção da pena")
     ret = Counter()
     for m in modelos:
         c_ = m.get("presc_retro_cor")
-        ret["Aparente" if c_ == "vermelho" else "A verificar" if c_ == "amarelo" else "Sem dados no RSPE" if c_ == "cinza" else "Não configurada"] += 1
-    cor_p = {"Aparente": "#A33A36", "Iminente ou a verificar": "#C9A55C", "A verificar": "#C9A55C", "Não prescrita": "#1F6B43", "Não configurada": "#1F6B43"}
+        ret["Aparente" if c_ == "vermelho" else "A verificar" if c_ == "amarelo" else "Sem dados no RSPE" if c_ == "cinza" else
+            "Já extinta (RSPE)" if c_ == "azul" else "Não configurada"] += 1
+    cor_p = {"Aparente": "#A33A36", "Iminente ou a verificar": "#C9A55C", "A verificar": "#C9A55C", "Não prescrita": "#1F6B43", "Não configurada": "#1F6B43",
+             "Já extinta (RSPE)": "#4A6A8A"}
     demais = max(0, E["n"] - E["ext_cabivel"] - E["ext_verificar"] - E["ext_registrada"])
     W3 = W / 3.0 - 8
     trio = [_rosca("Pretensão executória", [("Aparente", pres.get("aparente", 0)), ("Iminente ou a verificar", pres.get("iminente / a verificar", 0)),
-                                            ("Não prescrita", pres.get("não prescrita", 0)), ("Sem dados no RSPE", pres.get("sem dados", 0))],
+                                            ("Não prescrita", pres.get("não prescrita", 0)), ("Sem dados no RSPE", pres.get("sem dados", 0)),
+                                            ("Já extinta (RSPE)", pres.get("extinta", 0))],
                    W3, st, "assistidos", cores=cor_p, ordenar=False, abaixo=True),
             _rosca("Pretensão punitiva", [("Aparente", ret.get("Aparente", 0)), ("A verificar", ret.get("A verificar", 0)), ("Não configurada", ret.get("Não configurada", 0)),
-                                          ("Sem dados no RSPE", ret.get("Sem dados no RSPE", 0))], W3, st, "assistidos", cores=cor_p, ordenar=False, abaixo=True),
+                                          ("Sem dados no RSPE", ret.get("Sem dados no RSPE", 0)), ("Já extinta (RSPE)", ret.get("Já extinta (RSPE)", 0))], W3, st, "assistidos", cores=cor_p, ordenar=False, abaixo=True),
             _rosca("Extinção da pena", [("Extinção cabível", E["ext_cabivel"]), ("Até 60 dias ou a verificar", E["ext_verificar"]),
                                         ("Já extinta (RSPE)", E["ext_registrada"]), ("Em cumprimento ou sem previsão", demais)],
                    W3, st, "assistidos", ordenar=False, abaixo=True,
@@ -1780,8 +1834,16 @@ def gerar(modelos, pasta, nome_base, individual=True, geral=True, nominal=True, 
     """Cria <pasta>/Relatorios <data hora>/ com o geral e a subpasta Individuais. O geral e a estatística usam
     'modelos'; os PDFs individuais, 'individuais' (quando informado, os assistidos escolhidos).
     Devolve (pasta, n_individuais, erros)."""
-    destino = os.path.join(pasta, "Relatorios %s" % datetime.now().strftime("%Y-%m-%d %Hh%M"))
-    os.makedirs(destino, exist_ok=True)
+    # pasta nova a cada geração: duas gerações no mesmo minuto não se misturam (a 2ª vai para "... (2)")
+    base_dest = os.path.join(pasta, "Relatorios %s" % datetime.now().strftime("%Y-%m-%d %Hh%M"))
+    destino, n = base_dest, 1
+    while True:
+        try:
+            os.makedirs(destino)
+            break
+        except FileExistsError:
+            n += 1
+            destino = "%s (%d)" % (base_dest, n)
     erros, n = [], 0
     if geral:
         try:
@@ -1814,7 +1876,7 @@ def remicao_por_origem(modelos):
     """Totais da remição pendente por origem (rspe_ficha.remicao_detalhada de cada assistido com ficha)."""
     import rspe_ficha as rf
     ks = [k for k, _r, _p in rf.ORIGENS_REMICAO] + ["lacunas"]
-    O = {"dias": {k: 0 for k in ks}, "n": {k: 0 for k in ks}, "itens": {k: 0 for k in ks}, "ass": 0, "total": 0, "com_ficha": 0}
+    O = {"dias": {k: 0 for k in ks}, "n": {k: 0 for k in ks}, "itens": {k: 0 for k in ks}, "ass": 0, "ass_exatos": 0, "total": 0, "com_ficha": 0}
     for m in modelos:
         D = m.get("fd_rem_det")
         if not m.get("ficha_tem") or not D:
@@ -1826,6 +1888,9 @@ def remicao_por_origem(modelos):
                 O["itens"][k] += len(D[k]["itens"])
                 O["dias"][k] += D[k]["dias"]
         O["ass"] += D["total"] >= 1
+        # com dias exatos: o mesmo critério do vermelho da aba Ficha (atestado sem remição no RSPE, inclusive o sem os dias na ficha,
+        # leitura peticionada sem remição, estudo com horas declaradas) - a diferença de dias é amarela ("Conferir remição") e não entra
+        O["ass_exatos"] += m.get("fd_cor") == "vermelho"
         O["total"] += D["total"]
     # dias inteiros para exibir: cada origem arredondada, com a soma igual ao total exibido (o quadro fecha)
     dentro = [k for k in ks if k != "lacunas" and k not in rf.FORA_DO_TOTAL]
@@ -1845,6 +1910,8 @@ def nome_rel(m):
         n += " (na ficha: %s)" % fn.title()
     if "ARQUIV" in (m.get("status_exec") or ""):
         n += " [execução ARQUIVADA no SEEU]"
+    elif m.get("estado_exec") in ("extinta", "cumprida"):
+        n += " [pena EXTINTA no RSPE]"
     return n
 
 
@@ -1882,23 +1949,28 @@ def relatorio_remicao(modelos, caminho, nome_base, nominal=True):
     el = [Paragraph("Remição detalhada", st["tit"]),
           Paragraph(_t("%s · origem de cada dia a remir, pela ficha disciplinar (SIAPEN) x RSPE · %s com ficha de %s na seleção" % (
               nome_base, rs.pl(O["com_ficha"], "assistido", "assistidos"), len(modelos))), st["sub"]), Spacer(1, 10)]
-    nums = [(O["ass"], "assistidos com remição a requerer"), (_num(O["r_total"]), "dias a remir (sem o trabalho em curso)"),
-            (_num(O["r"]["nao_lancado"] + O["r"]["emitido"]), "de atestados sem remição (peticionados e só emitidos)"), (_num(O["r"]["sem_atestado"]), "de trabalho sem atestado (estimativa)"),
-            (_num(O["r"]["estudo"]), "de estudo sem remição (≈)")]
+    nums = [(O["ass"], "assistidos com remição a requerer (com a estimativa; %s em vermelho na aba Ficha: atestado, leitura ou estudo com horas "
+                       "declaradas sem remição no RSPE)" % O["ass_exatos"]),
+            (_num(O["r_total"]), "dias a remir (sem o trabalho em curso)"),
+            (_num(O["r"]["nao_lancado"] + O["r"]["emitido"] + O["r"]["divergencia"]), "de atestados sem remição ou com remição menor"),
+            (_num(O["r"]["sem_atestado"]), "de trabalho sem atestado (estimativa)"),
+            (_num(O["r"]["estudo"] + O["r"]["leitura"]), "de estudo (≈) e leitura sem remição")]
     cel = [[Paragraph(_t(str(n)), st["num"]) for n, _ in nums], [Paragraph(_t(r), st["rot"]) for _, r in nums]]
     tb = Table(cel, colWidths=[W / len(nums)] * len(nums))
     tb.setStyle(TableStyle([("BOX", (0, 0), (-1, -1), 0.6, C(LINE)), ("INNERGRID", (0, 0), (-1, -1), 0.6, C(LINE)),
                             ("BACKGROUND", (0, 0), (-1, -1), C(ZEBRA)), ("LEFTPADDING", (0, 0), (-1, -1), 8),
                             ("TOPPADDING", (0, 0), (-1, 0), 7), ("BOTTOMPADDING", (0, 1), (-1, 1), 7), ("VALIGN", (0, 0), (-1, -1), "TOP")]))
     el.append(tb)
-    arqv = [m for m in pend if "ARQUIV" in (m.get("status_exec") or "")]
+    # execução arquivada ou com a pena extinta (registrada no RSPE), com dias a remir: a remição vai para outro processo ou perdeu o objeto
+    arqv = [m for m in pend if ("ARQUIV" in (m.get("status_exec") or "") or m.get("estado_exec") in ("extinta", "cumprida"))
+            and (m.get("fd_rem_det") or {}).get("total", 0) >= 1]
     difn = [m for m in pend if "(na ficha:" in nome_rel(m)]
     if arqv or difn:
         el.append(Spacer(1, 6))
     if arqv:
-        el.append(Paragraph(_t("Atenção: %s com execução ARQUIVADA no SEEU (pena zerada no RSPE), com %s dias no total acima: %s. A remição deve "
-                               "ser pedida no processo em que a pena está em execução (transferência de comarca, unificação ou nova guia) - "
-                               "conferir no SEEU. Estão marcadas pelo nome." % (
+        el.append(Paragraph(_t("Atenção: %s com execução ARQUIVADA no SEEU ou com a pena EXTINTA registrada no RSPE, com %s dias no total acima: %s. "
+                               "A remição deve ser pedida no processo em que a pena está em execução (transferência de comarca, unificação ou nova "
+                               "guia); com a pena extinta, só se houver outra execução - conferir no SEEU. Estão marcadas pelo nome." % (
                                    rs.pl(len(arqv), "assistido", "assistidos"), _dias(sum(m["fd_rem_det"]["total"] for m in arqv)),
                                    ", ".join(m.get("nome") or "" for m in arqv))), st["mut"]))
     if difn:
@@ -1935,7 +2007,9 @@ def relatorio_remicao(modelos, caminho, nome_base, nominal=True):
     # dias inteiros por coluna, com a soma de cada coluna igual ao total da origem no quadro 1 (a tabela fecha)
     _uns = list(por_un)
     for k in ks:
-        for u, v in zip(_uns, _arred_coluna([por_un[u][k] for u in _uns])):
+        _v = [por_un[u][k] for u in _uns]
+        # mesma soma do quadro 1 quando as unidades cobrem a origem inteira (sem isso, 6.112 lá e 6.111 aqui)
+        for u, v in zip(_uns, _arred_coluna(_v, O["r"][k] if abs(sum(_v) - O["dias"][k]) < 1 else None)):
             por_un[u]["r_" + k] = v
     for u in _uns:
         por_un[u]["r_total"] = sum(por_un[u]["r_" + k] for k in ks)
@@ -2004,7 +2078,7 @@ def relatorio_remicao(modelos, caminho, nome_base, nominal=True):
         larg = [40 * mm, 48 * mm, 40 * mm, 44 * mm, 40 * mm, 16 * mm, W - 228 * mm]
         largc = [40 * mm, 52 * mm, 48 * mm, 20 * mm, 22 * mm, 38 * mm, W - 220 * mm]
         cor_st = {"CONCILIADO": "verde", "NAO_LANCADO": "vermelho", "DIVERGENCIA": "amarelo"}
-        rot_st = {"CONCILIADO": "No processo", "NAO_LANCADO": "Não está no processo", "DIVERGENCIA": "No processo, dias diferentes"}
+        rot_st = {"CONCILIADO": "No processo", "NAO_LANCADO": "Sem remição no RSPE", "DIVERGENCIA": "No processo, dias diferentes"}
         for m in conf:
             D = m["fd_rem_det"]
             T = (m.get("fd_conc") or {}).get("tabela") or []
@@ -2022,14 +2096,14 @@ def relatorio_remicao(modelos, caminho, nome_base, nominal=True):
                         return 0.0
                 fic = sum(_n(t["rem"]) for t in T if t["status"] != "ANTERIOR" and not t["atestado"].startswith("Atestado não registrado"))
                 dentro = sum(_n(t["rem"]) for t in T if t["status"] in ("CONCILIADO", "DIVERGENCIA") and not t["atestado"].startswith("Atestado não registrado"))
-                fora = sum(_n(t["rem"]) for t in T if t["status"] == "NAO_LANCADO")
+                fora = sum(_n(t["rem"]) for t in T if t["status"] == "NAO_LANCADO" and t.get("cor") != "cinza")
                 nr = [t for t in T if t["atestado"].startswith("Atestado não registrado")]
-                n_v = sum(1 for t in T if t["status"] == "NAO_LANCADO")
+                n_v = sum(1 for t in T if t["status"] == "NAO_LANCADO" and t.get("cor") != "cinza")
                 n_r = sum(1 for t in T if t["status"] in ("CONCILIADO", "DIVERGENCIA") and t not in nr)
                 res_ = Paragraph("%s · %s · %s%s · RSPE: %s" % (
                     _t("Ficha: %s em atestados desta execução" % ("%s dias remidos" % _num(fic))),
                     '<font color="%s"><b>%s</b></font>' % (COR["verde"][1], _t("no processo: %s dias (%s)" % (_num(dentro), rs.pl(n_r, "atestado", "atestados")))),
-                    '<font color="%s"><b>%s</b></font>' % (COR["vermelho"][1], _t("fora do processo: %s dias (%s)" % (_num(fora), rs.pl(n_v, "atestado", "atestados")))),
+                    '<font color="%s"><b>%s</b></font>' % (COR["vermelho"][1], _t("sem remição no RSPE: %s dias (%s)" % (_num(fora), rs.pl(n_v, "atestado", "atestados")))),
                     (' · <font color="%s"><b>%s</b></font>' % (COR["azul"][1], _t("no RSPE sem atestado na ficha: %s dias (%s)" % (
                         _num(sum(_n(t["rem"]) for t in nr)), rs.pl(len(nr), "remição", "remições"))))) if nr else "",
                     _t((m.get("remidos") or "—"))), ParagraphStyle("rs", parent=st["cel"], fontSize=7.9, leading=10.5))
@@ -2037,10 +2111,10 @@ def relatorio_remicao(modelos, caminho, nome_base, nominal=True):
                 cores = {}
                 for t in T:
                     fora_ficha = t["atestado"].startswith("Atestado não registrado")
-                    cor = "azul" if fora_ficha else cor_st.get(t["status"], "cinza")
-                    sit = "No processo, sem atestado na ficha" if fora_ficha else rot_st.get(t["status"], t.get("rot") or "")
-                    if t["status"] == "NAO_LANCADO":
-                        sit += " · peticionado em %s" % t["peticionado"] if t.get("peticionado") else " · só emitido (sem peticionamento na ficha)"
+                    cor = "azul" if fora_ficha else "cinza" if t.get("cor") == "cinza" else cor_st.get(t["status"], "cinza")
+                    sit = "No processo, sem atestado na ficha" if fora_ficha else t["rot"] if t.get("cor") == "cinza" else rot_st.get(t["status"], t.get("rot") or "")
+                    if t["status"] == "NAO_LANCADO" and t.get("cor") != "cinza":
+                        sit += " · peticionado em %s, aguardando decisão" % t["peticionado"] if t.get("peticionado") else " · só emitido (sem peticionamento na ficha)"
                     dc.append([Paragraph(_t(t["atestado"] + ((" · " + t["emissao"]) if t.get("emissao") else "")), peq),
                                Paragraph(_t(t.get("unidade") or "—"), peq),
                                Paragraph(_t("; ".join(x["per"] for x in t["segs"]) or "—"), peq),
@@ -2086,7 +2160,8 @@ def relatorio_remicao(modelos, caminho, nome_base, nominal=True):
 # situação de cada linha: (rótulo, cor da faixa no PDF, cor de fundo no Excel)
 SIT_REM = {
     "processo": ("No processo", "verde", "DDF5E7"),
-    "processo_dif": ("No processo, dias diferentes", "amarelo", "FEF4D6"),
+    "processo_dif": ("No processo, remição menor que o atestado", "amarelo", "FEF4D6"),
+    "processo_maior": ("No processo, remição igual ou maior que o atestado", "verde", "DDF5E7"),
     "rspe_sem_ficha": ("No RSPE, sem atestado na ficha", "azul", "DBEAFE"),
     "peticionado": ("Peticionado no SEEU, sem remição no RSPE", "vermelho", "FDE8E8"),
     "emitido": ("Emitido, sem peticionamento na ficha", "laranja", "FFEAD5"),
@@ -2124,16 +2199,23 @@ def linhas_conferencia(modelos):
         D = m["fd_rem_det"]
         base = {"Assistido": nome_rel(m), "Nº da execução": m.get("proc") or m.get("id") or "",
                 "Unidade atual": _rotulo_unidade((m.get("ficha") or {}).get("unidade") or "")}
-        dif = {i["ref"]: i for i in D["divergencia"]["itens"]}
+        # dias a remir de cada atestado: os mesmos da remição detalhada (parte fora do período já remido, teto do possível, diferença)
+        valor = {}
+        for k_ in ("nao_lancado", "emitido", "divergencia"):
+            for i in D[k_]["itens"]:
+                valor.setdefault((i["ref"], i.get("data") or ""), []).append(i["dias"])
         for t in (m.get("fd_conc") or {}).get("tabela") or []:
             if t["status"] == "ANTERIOR":
                 continue
             fora = t["atestado"].startswith("Atestado não registrado")
-            k = "rspe_sem_ficha" if fora else {"CONCILIADO": "processo", "DIVERGENCIA": "processo_dif"}.get(t["status"]) or (
+            ref_ = t["atestado"].replace(" (informado por você)", "")
+            vs = valor.get((ref_, t.get("emissao") or ""))
+            v_ = vs.pop(0) if vs else None
+            k = "rspe_sem_ficha" if fora else {"CONCILIADO": "processo", "DIVERGENCIA": "processo_dif" if v_ else "processo_maior"}.get(t["status"]) or (
                 "peticionado" if t.get("peticionado") else "emitido")
             datas = [x for sg in t["segs"] for x in re.findall(r"\d{2}/\d{2}/\d{4}", sg["per"])]
             num = re.sub(r"^Atestado (?:nº )?", "", t["atestado"]).replace("(informado por você)", "").strip()
-            arem = _n_br(t["rem"]) if k in ("peticionado", "emitido") else (dif.get("Atestado nº %s" % num) or {}).get("dias", 0) if k == "processo_dif" else 0
+            arem = (v_ or 0) if k in ("peticionado", "emitido", "processo_dif") else 0
             out.append(dict(base, **{"_k": k, "Situação": SIT_REM[k][0], "Unidade onde ocorreu": t.get("unidade") or "",
                                      "Setor / curso / documento": "; ".join(dict.fromkeys(sg["setor"] for sg in t["segs"])),
                                      "Início": min(datas, key=lambda d: d[6:] + d[3:5] + d[:2]) if datas else "",
@@ -2141,7 +2223,7 @@ def linhas_conferencia(modelos):
                                      "Atestado nº": "" if fora else num, "Emitido em": t.get("emissao") or "", "Peticionado em": t.get("peticionado") or "",
                                      "Autos do peticionamento": ((t.get("autos") or "") + (" (outros autos - não esta execução)" if t.get("autos_outros") else "")) if t.get("autos")
                                      else ("autos não indicados na ficha" if t.get("peticionado") and not str(t.get("peticionado")).startswith("nos autos") else ""),
-                                     "Dias trabalhados / horas": t.get("trab") or "", "Remidos na ficha": "" if fora else _n_br(t["rem"]),
+                                     "Dias trabalhados / horas": t.get("trab") or "", "Remidos na ficha": "" if fora or t["rem"] in ("—", "") else _n_br(t["rem"]),
                                      "Remição no RSPE": ("%s · decisão %s" % (t["rspe"], t["decisao"])) if t["rspe"] not in ("—", "") else "",
                                      "Dias a remir": arem or "", "Estimativa": "",
                                      "Providência": ("conferir: a ficha registra o peticionamento em outros autos (%s)" % t.get("autos")) if k == "peticionado" and t.get("autos_outros") else
@@ -2166,7 +2248,7 @@ def linhas_conferencia(modelos):
 def _amostra(linhas, frac=0.1, semente=2026):
     """10% dos assistidos com pendência (sorteio fixo, para a mesma base dar a mesma amostra)."""
     import random
-    pend = sorted({L["Nº da execução"] for L in linhas if L["_k"] not in ("processo", "rspe_sem_ficha", "processo_dif")})
+    pend = sorted({L["Nº da execução"] for L in linhas if L["_k"] not in ("processo", "processo_maior", "rspe_sem_ficha", "processo_dif")})
     n = max(1, int(round(len(pend) * frac))) if pend else 0
     sel = set(random.Random(semente).sample(pend, n)) if n else set()
     return [L for L in linhas if L["Nº da execução"] in sel]
@@ -2230,10 +2312,11 @@ def prioridade_remicao(m):
                 alvos.append((rot, m[k]))
     efeito, nivel = [], None
     for rot, d in alvos:
+        fem = rot == "progressão"  # "a progressão" x "o livramento", "o término"
         if exatos >= d:
-            efeito.append("%s em %d dias: os atestados prontos (%s dias) já a alcançam" % (rot, d, _dias(exatos)))
+            efeito.append("%s em %d dias: os atestados prontos (%s dias) já %s alcançam" % (rot, d, _dias(exatos), "a" if fem else "o"))
         elif total >= d:
-            efeito.append("%s em %d dias: alcançada com a estimativa (%s dias), se confirmado o trabalho" % (rot, d, _dias(total)))
+            efeito.append("%s em %d dias: %s com a estimativa (%s dias), se confirmado o trabalho" % (rot, d, "alcançada" if fem else "alcançado", _dias(total)))
         else:
             continue
         nivel = min(nivel or 9, 1 if rot == "término" else 2)
@@ -2355,7 +2438,11 @@ def planilha_remicao_xlsx(modelos, caminho, nome_base):
         ws.cell(row=ws.max_row, column=1).fill = PatternFill("solid", fgColor=cor)
     ws.append(["Total a remir", "", O["ass"], round(O["total"], 2)])
     ws.cell(row=ws.max_row, column=1).font = Font(bold=True)
-    ws.append(["Períodos simultâneos (dois setores no mesmo dia) contam uma vez no total; por isso a soma das linhas da aba Conferência pode ser maior."])
+    ws.append(["Períodos simultâneos (dois setores no mesmo dia) contam uma vez no total; por isso a soma das linhas da aba Conferência pode ser maior. "
+               "No trabalho sem atestado, cada linha arredonda o seu período (÷ 3) e os trechos de 1 ou 2 dias no corte de uma transferência "
+               "só entram no total da unidade: a soma das linhas pode ficar um pouco abaixo do total."])
+    ws.append(["As linhas e os itens são os mesmos do relatório \"Remição detalhada\": atestado lançado na ficha sem os dias e atestado cujo "
+               "período já foi remido entram com 0 dias (para conferir), e \"No processo, remição igual ou maior\" não tem dias a remir."])
     ws.append([])
     ws.append(["Unidade onde ocorreu", "Assistidos com pendência", "Dias a remir (sem em curso e a conferir)"])
     for c in range(1, 4):
@@ -2661,10 +2748,21 @@ def relatorio_falhas(d, caminho, nome_base):
             return "O PDF não tem o cabeçalho do RSPE do SEEU nem o da Ficha Disciplinar do SIAPEN (outro documento, digitalização ou PDF protegido)."
         if "NÚMERO DA EXECUÇÃO" in u:
             return "A 1ª página falta ou o número do processo de execução está ilegível: gerar o RSPE de novo no SEEU."
-        if "PASSWORD" in u or "ENCRYPT" in u:
+        if "PASSWORD" in u or "ENCRYPT" in u or "SENHA" in u:
             return "PDF protegido por senha."
-        if "EOF" in u or "PDFSYNTAX" in u or "STARTXREF" in u or "ROOT OBJECT" in u or "REALLY A PDF" in u:
-            return "Arquivo corrompido ou baixado pela metade: baixar de novo."
+        # a mensagem já chega traduzida (rspe_app._msg_erro_pdf); os termos em inglês ficam para mensagens não traduzidas
+        if "CORROMPIDO" in u or "INCOMPLETO" in u or "EOF" in u or "PDFSYNTAX" in u or "STARTXREF" in u:
+            return "Arquivo corrompido ou baixado pela metade: baixar ou gerar o PDF de novo."
+        if "NÃO É PDF VÁLIDO" in u or "ROOT OBJECT" in u or "REALLY A PDF" in u:
+            return "O arquivo não é um PDF válido (vazio ou de outro tipo com a extensão .pdf): gerar o PDF de novo no SEEU."
+        if "SEM PERMISSÃO" in u or "PERMISSION" in u:
+            return "Arquivo aberto em outro programa ou sem permissão de leitura: fechar o programa e importar de novo."
+        if "NÃO ENCONTRADO" in u:
+            return "O arquivo foi movido ou apagado durante a importação: importar de novo."
+        if "SEM TEXTO" in u:
+            return "PDF digitalizado (imagem, sem texto): gerar o PDF direto do SEEU/SIAPEN, não escaneado."
+        if "FICHA DISCIPLINAR" in u and "FALHA NA LEITURA" in u:
+            return "Ficha disciplinar com falha na leitura: enviar o PDF para correção."
         return "Erro na leitura do arquivo: enviar o PDF para análise."
 
     el.append(Paragraph("1. Arquivos não importados", st["h2"]))

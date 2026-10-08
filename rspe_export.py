@@ -14,6 +14,14 @@ ZEBRA = "#FAFBFA"
 DOT = {"vermelho": "#A33A36", "laranja": "#B5651D", "amarelo": "#C49A3A", "vencido": "#A33A36", "verde": "#2F7A4F", "cinza": "#AEB5B0", "azul": "#4A6A8A"}
 
 
+def _sem_formula(ws):
+    """O openpyxl grava como fórmula todo texto que começa com "=": nome, crime, motivo (do PDF) ou observação digitada
+    viraria fórmula no Excel. A última linha da folha fica toda como texto."""
+    for cell in ws[ws.max_row]:
+        if isinstance(cell.value, str) and cell.value.startswith("="):
+            cell.data_type = "s"
+
+
 def exportar_xlsx(modelos, saida, abas):
     from openpyxl import Workbook
     from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
@@ -21,11 +29,8 @@ def exportar_xlsx(modelos, saida, abas):
     fino = Side(style="thin", color=LINE.lstrip("#"))
     wb = Workbook()
     wb.remove(wb.active)
-    for aid in abas:
-        if aid == "completo" or aid not in rv.ABA_POR_ID:
-            continue
-        spec = rv.ABA_POR_ID[aid]
-        ws = wb.create_sheet(spec["titulo"].replace("/", "-")[:31])
+    for spec in [sp for aid in abas if aid != "completo" for sp in specs_export(aid)]:
+        ws = wb.create_sheet((spec.get("folha") or spec["titulo"]).replace("/", "-")[:31])
         cols, modelos_aba = _linhas_export(spec, modelos)
         ws.append([c[1] for c in cols])
         for cell in ws[1]:
@@ -36,6 +41,7 @@ def exportar_xlsx(modelos, saida, abas):
         pil = dict(spec["pilulas"], **spec.get("sub_pilulas", {}))
         for m in modelos_aba:
             ws.append([m.get(k + "_full", m.get(k, "")) for k, _, _ in cols])
+            _sem_formula(ws)
             cor = m.get(spec["cor"], "") if spec["cor"] else ""
             for cell in ws[ws.max_row]:
                 cell.alignment = Alignment(wrap_text=True, vertical="top")
@@ -62,17 +68,86 @@ def exportar_xlsx(modelos, saida, abas):
         for m in modelos:
             r = m["_bruto"]
             ws.append([r.get(c, "") for c in rs.COLUNAS])
+            _sem_formula(ws)
         ws.freeze_panes = "B2"
     wb.save(saida)
 
 
+def specs_export(aid):
+    """Abas como a tela as mostra. A Prescrição sai em duas, uma por pretensão (executória e punitiva), com a cor, os cartões
+    e as colunas de cada uma - a tela também mostra uma pretensão por vez; a cor da aba (presc_cor) mistura as duas."""
+    if aid not in rv.ABA_POR_ID:
+        return []
+    a = rv.ABA_POR_ID[aid]
+    if aid != "presc":
+        return [a]
+    base = [c for c in a["cols"] if c[0] in ("nome", "proc")]
+    ped = [c for c in a["cols"] if c[0] == "pedido"]
+    sub_base = [c for c in a["sub_cols"] if c[0] in ("crime", "proc_crim", "pena", "fato", "denuncia", "sentenca", "transito")]
+    pe = dict(a, id="presc", aba="presc", titulo="Prescrição - pretensão executória", folha="Prescrição executória", cor="presc_ppe_cor", legenda="presc",
+              cols=base + [("presc_ppe", "Pretensão executória", 16), ("presc_prox", "Prescrição em", 10)] + ped,
+              pilulas={"presc_ppe": "presc_ppe_cor"}, sub_cor="ppe_cor",
+              sub_cols=sub_base + [c for c in a["sub_cols"] if c[0] in ("prazo_ppe", "ppe_termo", "ppe_status")], sub_pilulas={"ppe_status": "ppe_cor"})
+    pp = dict(a, id="presc", aba="presc", titulo="Prescrição - pretensão punitiva", folha="Prescrição punitiva", cor="presc_retro_cor", legenda="presc_pp",
+              cols=base + [("presc_retro", "Pretensão punitiva", 16)] + ped,
+              pilulas={"presc_retro": "presc_retro_cor"}, sub_cor="retro_cor",
+              sub_cols=sub_base + [c for c in a["sub_cols"] if c[0] in ("prazo_ppp", "retro_status")], sub_pilulas={"retro_status": "retro_cor"})
+    return [pe, pp]
+
+
+def _ped_ref(m, aba):
+    """Mesma referência da tela (ui.pedRef): o pedido marcado vale enquanto a situação da aba não mudar."""
+    return {"prog": m.get("prog"), "liv": m.get("liv"), "ind": "|".join(str(m.get(k) or "") for k in ("i22", "i24", "c24", "i25", "c25")),
+            "presc": (m.get("presc_ppe") or "") + "|" + (m.get("presc_prox") or ""), "ext": m.get("ext_termino"), "fd": m.get("fd_sit")}.get(aba) or ""
+
+
+def pedido_pendente(m, aba):
+    """Como na tela (ui.pedPendente): sem pedido marcado, ou a situação mudou depois dele."""
+    P = m.get("pedidos") or {}
+    if aba == "ind" and any(k.startswith("ind_") for k in P):
+        return False
+    p = P.get(aba)
+    return (not p) or bool(p.get("ref") and p.get("ref") != _ped_ref(m, aba))
+
+
+def contagem_cartoes(spec, modelos):
+    """Cartões de resumo da aba, contados como na tela: por cor; quem já teve o pedido marcado (e a situação não mudou) sai da
+    cor e entra em "Feito"."""
+    tem_ped = any(c[0] == "pedido" for c in spec["cols"])
+    cont = {}
+    for m in modelos:
+        if tem_ped and not pedido_pendente(m, spec["id"]):
+            cont["__ped"] = cont.get("__ped", 0) + 1
+            continue
+        c = m.get(spec["cor"], "")
+        cont[c] = cont.get(c, 0) + 1
+    return cont
+
+
+def nome_pedido(k):
+    """Nome legível da providência: 'ind_2025' -> 'Indulto/comutação 2025'."""
+    if k.startswith("ind_"):
+        return "Indulto/comutação %s" % k[4:]
+    return {"prog": "Progressão", "liv": "Livramento condicional", "ind": "Indulto/comutação", "presc": "Prescrição", "ext": "Extinção da pena",
+            "fd": "Remição"}.get(k, k)
+
+
+def _txt_pedido(P):
+    return "feito em %s%s" % (P.get("data", ""), (" (%s)" % P["obs"]) if P.get("obs") else "")
+
+
 def _com_pedido(spec, modelos):
-    """Coluna "Pedido": 'feito em dd/mm/aaaa (observação)' da aba, ou vazio."""
+    """Coluna "Pedido": 'feito em dd/mm/aaaa (observação)' da aba, ou vazio. No indulto, o pedido é marcado por decreto
+    (ind_<ano>): sai um por decreto, com o ano."""
     out = []
     for m in modelos:
-        P = (m.get("pedidos") or {}).get(spec["id"])
+        PP = m.get("pedidos") or {}
+        P = PP.get(spec["id"])
         d = dict(m)
-        d["pedido"] = ("feito em %s%s" % (P.get("data", ""), (" (%s)" % P["obs"]) if P.get("obs") else "")) if P else ""
+        txt = [_txt_pedido(P)] if P else []
+        if spec["id"] == "ind":
+            txt += ["%s: %s" % (nome_pedido(k), _txt_pedido(PP[k])) for k in sorted((k for k in PP if k.startswith("ind_") and PP[k]), reverse=True)]
+        d["pedido"] = "; ".join(txt)
         out.append(d)
     return out
 
@@ -83,18 +158,27 @@ def _linhas_export(spec, modelos):
     if not spec.get("sub"):
         return spec["cols"], modelos
     datas = {"fato", "denuncia", "sentenca", "transito", "ppe_termo"}
-    cols = [("nome", "Nome", 16), ("proc", "Nº da execução", 14)] + [(k, t, 12 if k in datas else p) for k, t, p in spec["sub_cols"]] + (
+    # Ficha disciplinar: como na aba, as colunas do assistido (trabalho a atestar, estudo a requerer, situação) com a cor da
+    # situação dele, e uma linha também para quem não tem item (em ordem, sem ficha); a cor do item fica na pílula da coluna
+    fd = spec["id"] == "fd"
+    pai = [c for c in spec["cols"] if c[0] in ("fd_atestar", "fd_estudo", "fd_sit")] if fd else []
+    cols = [("nome", "Nome", 16), ("proc", "Nº da execução", 14)] + pai + [(k, t, 12 if k in datas else p) for k, t, p in spec["sub_cols"]] + (
         [("pedido", "Pedido", 10)] if any(c[0] == "pedido" for c in spec["cols"]) else [])
     linhas = []
     for m in modelos:
-        for s in m.get(spec["sub"], []):
+        subs = m.get(spec["sub"]) or []
+        for s in subs:
             d = dict(m)
             d.update(s)
-            if spec["id"] == "presc":
-                d[spec["cor"]] = s.get("ppe_cor") if s.get("ppe_cor") == "vermelho" or s.get("retro_cor") != "vermelho" else s.get("retro_cor")
+            if fd:
+                pass  # a cor da linha é a da situação do assistido (fd_cor), como na aba
+            elif spec.get("sub_cor"):
+                d[spec["cor"]] = s.get(spec["sub_cor"]) or ""
             elif "cor" in s:
                 d[spec["cor"]] = s.get("cor") or ""
             linhas.append(d)
+        if fd and not subs:
+            linhas.append(dict(m))
     return cols, linhas
 
 
@@ -145,9 +229,9 @@ def exportar_pdf(modelos, saida, nome_base, abas, progresso=None):
     largura = W - 2 * ML
     el = []
     primeiro = True
-    abas_ok = [a for a in abas if a in rv.ABA_POR_ID]
-    for n_aba, aid in enumerate(abas_ok):
-        spec = rv.ABA_POR_ID[aid]
+    abas_ok = [sp for a in abas for sp in specs_export(a)]
+    for n_aba, spec in enumerate(abas_ok):
+        aid = spec["id"]
         if progresso:
             progresso("Exportando PDF: preparando %s (%d de %d)…" % (spec["titulo"], n_aba + 1, len(abas_ok)), 0.3 * n_aba / max(1, len(abas_ok)))
         cols, modelos_aba = _linhas_export(spec, modelos)
@@ -162,18 +246,15 @@ def exportar_pdf(modelos, saida, nome_base, abas, progresso=None):
         # cartões de resumo
         rot = rv.ROTULO[spec["legenda"]]
         if spec["cor"]:
-            cont = {}
-            for m in modelos:
-                c = m.get(spec["cor"], "")
-                cont[c] = cont.get(c, 0) + 1
+            cont = contagem_cartoes(spec, modelos)
+            itens = list(rot.items()) + ([("__ped", "Pedido feito")] if cont.get("__ped") else [])
             cel, larg, est = [], [], [("VALIGN", (0, 0), (-1, -1), "MIDDLE"), ("TOPPADDING", (0, 0), (-1, -1), 6),
                                      ("BOTTOMPADDING", (0, 0), (-1, -1), 6), ("LEFTPADDING", (0, 0), (-1, -1), 8)]
-            for i, (c, nome) in enumerate(rot.items()):
-                if aid in ("ind",) and c == "":
-                    continue
-                texto = '<font color="%s">●</font>  <b>%d</b>  <font color="%s">%s</font>' % (DOT.get(c, "#C8CEC8"), cont.get(c, 0), TX2, nome)
+            itens = [x for x in itens if not (aid in ("ind",) and x[0] == "")]
+            for i, (c, nome) in enumerate(itens):
+                texto = '<font color="%s">●</font>  <b>%d</b>  <font color="%s">%s</font>' % (DOT.get(c, "#4A6A8A" if c == "__ped" else "#C8CEC8"), cont.get(c, 0), TX2, nome)
                 cel.append(Paragraph(texto, ParagraphStyle("st", parent=st_cel, fontSize=9, leading=11)))
-                larg.append(largura / max(4, len(rot)) - 2 * mm)
+                larg.append(largura / max(4, len(itens)) - 2 * mm)
                 est += [("BOX", (i, 0), (i, 0), 0.5, C(LINE)), ("BACKGROUND", (i, 0), (i, 0), colors.white)]
             t = Table([cel], colWidths=larg, hAlign="LEFT", spaceAfter=8)
             t.setStyle(TableStyle(est))
@@ -254,6 +335,7 @@ def exportar_providencias(linhas, saida, titulo):
         cell.alignment = Alignment(vertical="center")
     for L in linhas:
         ws.append([L.get("data", ""), L.get("nome", ""), L.get("proc", ""), L.get("assunto", ""), L.get("tipo", ""), L.get("obs", ""), L.get("registrado", "")])
+        _sem_formula(ws)
     for col, w in zip("ABCDEFG", (12, 34, 28, 26, 26, 40, 17)):
         ws.column_dimensions[col].width = w
     ws.freeze_panes = "A5"
@@ -271,6 +353,7 @@ def exportar_providencias(linhas, saida, titulo):
     for a in assuntos:
         q = [sum(1 for L in linhas if L.get("assunto") == a and L.get("tipo") == t) for t in tipos]
         rs_.append([a] + q + [sum(q)])
+        _sem_formula(rs_)
     q = [sum(1 for L in linhas if L.get("tipo") == t) for t in tipos]
     rs_.append(["Total"] + q + [sum(q)])
     for cell in rs_[rs_.max_row]:

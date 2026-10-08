@@ -388,7 +388,9 @@ def linha(r, hoje=None):
         per = -sum(n for dt, n, k, _ in remicoes if dt and dt <= ref and n < 0)
         ev_tot = c["cumprimento"] + c["livramento"] + c["detracao"] + rem - per
         try:
-            tot, fonte = rs.cumprido_na_data(r, per_seeu, rem_seeu, ref, lc_seeu)
+            # a mesma regra da aba (todos os decretos): âncora do SEEU; pelos eventos quando o SEEU não traz o cálculo ou a âncora
+            # zera ou fica abaixo da metade deles; teto na pena da execução (rs.cumprido_decreto_info)
+            tot, fonte, _av = rs.cumprido_decreto(r, per_seeu, rem_seeu, ref, lc_seeu, r.get("_crimes") or [])
         except Exception:
             tot, fonte = None, ""
         if tot is None:
@@ -475,17 +477,24 @@ def linha(r, hoje=None):
     # ---- decretos ----
     ult_cad = max((D for D in decretos if D.get("cadastrado")), key=lambda D: _d(D.get("referencia")) or date.min, default=None)
     saida_dec = []
+    try:
+        aba = rd.avaliar(r, hoje, completo=True)["decretos"]
+    except Exception:
+        aba = []
+    # decretos que a aba Indulto mostra (resultado ou decisão do RSPE): a linha do tempo também os mostra, ainda que todas as penas
+    # estejam extintas hoje (sem crime ativo, o início do cumprimento recalculado ficaria depois do decreto)
+    na_aba = {str(x.get("id")) for x in aba if x.get("s") not in ("fora", "futuro")}
     for D in sorted(decretos, key=lambda D: _d(D.get("referencia")) or date.min):
         ref, pub = _d(D.get("referencia")), _d(D.get("publicacao"))
         if not ref or ref > hoje:
             continue
-        if ini_exec and ref < ini_exec and not any(_d(x["fato"]) and _d(x["fato"]) <= ref for x in CA):
+        if ini_exec and ref < ini_exec and not any(_d(x["fato"]) and _d(x["fato"]) <= ref for x in CA) and str(D.get("id")) not in na_aba:
             continue
         saida_dec.append(_decreto(D, ref, pub, CA, cumprido, data_atinge, faltas, hoje, D is ult_cad, em_curso, duvidas, r, eventos, incidentes))
     # demais decretos (2000 em diante, fichas da base jurídica): mesma linha do tempo, com o resultado do motor da aba Indulto
     try:
         fic = {f["id"]: f for f in rd.fichas()}
-        ger = [x for x in rd.avaliar(r, hoje, completo=True)["decretos"] if not x.get("detalhado") and x.get("s") not in ("fora", "futuro")]
+        ger = [x for x in aba if not x.get("detalhado") and x.get("s") not in ("fora", "futuro")]
     except Exception:
         fic, ger = {}, []
     for x in ger:
@@ -555,7 +564,10 @@ def _st_aba(txt):
     t = txt or ""
     if t.startswith("prejudicada"):
         return "prejudicada"
-    return {"verde": "cabe", "amarelo": "verificar", "azul": "concedido"}.get(rv.cor_texto_indulto(t), "nao")
+    st = {"verde": "cabe", "amarelo": "verificar", "azul": "concedido"}.get(rv.cor_texto_indulto(t), "nao")
+    if st == "cabe" and rs.falta_a_verificar(t):
+        return "verificar"  # falta do art. 6º a verificar: o mesmo critério da aba, das colunas e dos relatórios
+    return st
 
 
 ICONE = {"✔": "ok", "✓": "ok", "✘": "ko", "✗": "ko", "?": "q", "⚠": "q"}
@@ -628,8 +640,9 @@ def _explicacao(dd, tp, C, faixas, ini_exec, remicoes):
             dd["referencia"], ct.get("cumprimento"), ct.get("detracao"), ct.get("remicao"),
             (" − %s de perda" % ct.get("perda")) if cu.get("perda") else "", ct.get("total"), cu.get("fonte") or "-")
         if abs(cu.get("diferenca") or 0) > 30:
-            conta += " Somando só os períodos acima dá %s - diferença de %s em relação à pena cumprida do SEEU, que é a que vale." % (
-                ct.get("eventos"), rs.pl(abs(cu["diferenca"]), "dia", "dias"))
+            conta += (" Somando só os períodos acima dá %s - diferença de %s em relação ao total acima, que é o que a aba usa%s." % (
+                ct.get("eventos"), rs.pl(abs(cu["diferenca"]), "dia", "dias"),
+                "" if "eventos" in (cu.get("fonte") or "") else " (a pena cumprida do SEEU)"))
         conta += " Falta grave não zera nem reinicia esta conta (STJ, Súmula 535)."
         passos.append(conta)
     req = [c for c in B.get("checklist") or [] if c["item"].startswith("Requisito objetivo") or c["item"] == "Ressalva"]
@@ -785,7 +798,7 @@ def _decreto(D, ref, pub, C, cumprido, data_atinge, faltas, hoje, ultimo, em_cur
                 "%s%s" % (f["fato"], (", homologada em %s" % f["homol"]) if f["homol"] else ", sem homologação") for f in reg))) if reg
             else " Nenhuma falta registrada nos %d meses anteriores." % janela["meses"])
     else:
-        firmes, verif = (num_i.get("falta_firme"), num_i.get("falta_verif")) if num_i else rs.falta_art6(incidentes, ref, eventos, pub)
+        firmes, verif = (num_i.get("falta_firme"), num_i.get("falta_verif")) if num_i else rs.falta_art6(incidentes, ref, eventos, pub, crimes=r.get("_crimes") or [])
         if firmes:
             est_f = "ko"
             _nh = all("não homologada" in f for f in firmes)
@@ -796,7 +809,7 @@ def _decreto(D, ref, pub, C, cumprido, data_atinge, faltas, hoje, ultimo, em_cur
         elif verif:
             est_f, txt_f = "q", "Falta na janela a verificar (só impede se a sanção for reconhecida em juízo): %s." % "; ".join(verif)
         else:
-            est_f, txt_f = "ok", "Nenhuma falta grave dentro da janela de %d meses (%s a %s)." % (janela["meses"], janela["ini"], janela["fim"])
+            est_f, txt_f = "ok", "Nenhuma falta grave nem crime doloso durante a execução dentro da janela de %d meses (%s a %s)." % (janela["meses"], janela["ini"], janela["fim"])
     checklist.append(chk("Requisito subjetivo (falta grave%s)" % (": não exigido" if FG and FG.get("exige") is False else " na janela"), est_f, txt_f,
                          _det("incidentes de falta/sanção e eventos de fuga do SEEU", "GERAL", ("%s → %s" % (janela["ini"], janela["fim"])) if janela else "", "falta grave",
                               ((janela or {}).get("dispositivo", "") + "; STJ, Tema 1195; STJ, Súmula 535").strip("; "), "",
@@ -806,14 +819,21 @@ def _decreto(D, ref, pub, C, cumprido, data_atinge, faltas, hoje, ultimo, em_cur
                          ("Todos os fatos alcançados são anteriores a %s." % _f(ref)) + ((" Fora da soma (não impedem): " + "; ".join("%s - %s" % (x["id"], m) for x, m in fora)) if fora else ""),
                          _det("datas dos fatos e sentenças no SEEU", ", ".join(x["id"] for x, _ in alc), "até %s" % _f(ref), "alcance do decreto",
                               (D.get("regra_fato") or {}).get("dispositivo", ""), "", "crimes posteriores não entram na soma nem impedem os anteriores")))
-    semtr = [x for x, _ in alc if not _d(x["transito"]) or _d(x["transito"]) > lim_pub]
-    checklist.append(chk("Condenação na data (trânsito/recurso da acusação)", "q" if semtr else "ok",
+    # trânsito para a acusação primeiro (como rspe_decretos.transito_pendente): com ele até a publicação, o trânsito final
+    # posterior (só a defesa recorreu) não pende de nada
+    _trx = lambda x: _d(x["_c"].get("transito_mp")) or _d(x["transito"])
+    for x, _ in alc:
+        x["_tr_acus"] = _trx(x)
+    semtr = [dict(x, transito=_f(x["_tr_acus"]) or "") for x, _ in alc if not x["_tr_acus"] or x["_tr_acus"] > lim_pub]
+    for x, _ in alc:
+        x.pop("_tr_acus", None)
+    checklist.append(chk("Condenação na data (trânsito/recurso da acusação)", ("ko" if ano == "2022" and any(_d(x["transito"]) for x in semtr) else "q") if semtr else "ok",
                          ("%s%s - %s (%s) - conferir." % (
                              ("Trânsito não informado no RSPE: %s" % ", ".join(x["id"] for x in semtr if not _d(x["transito"]))) if any(not _d(x["transito"]) for x in semtr) else "",
                              (("%sTrânsito posterior a %s: %s" % ("; " if any(not _d(x["transito"]) for x in semtr) else "", _f(lim_pub),
                                                                   ", ".join(x["id"] for x in semtr if _d(x["transito"])))) if any(_d(x["transito"]) for x in semtr) else ""),
-                             ("o decreto alcança a condenação ainda sem trânsito para a defesa, salvo recurso da acusação, de qualquer natureza, após o "
-                              "julgamento em 2º grau" if ano == "2022" else
+                             ("pela regra aplicada na aba, a condenação sem trânsito para a acusação na publicação não é alcançada (STJ, AgRg nos EDcl no "
+                              "HC 991.402); o art. 9º dispensa só o trânsito para a defesa" if ano == "2022" else
                               "o decreto alcança a condenação se houve trânsito para a acusação ou se o recurso da acusação não visa majorar a pena nem "
                               "alterar as condições exigidas para o benefício"),
                              (D.get("regra_transito") or {}).get("dispositivo", "decreto")))
@@ -878,7 +898,8 @@ def _decreto(D, ref, pub, C, cumprido, data_atinge, faltas, hoje, ultimo, em_cur
         return out
     st_c = _st_aba(txt_c)
     num_c = r.get(kc + "_num") or {}
-    ck = [chk("Requisito objetivo / hipótese" if e != "q" or not t.startswith("FALTA") else "Ressalva", e, t,
+    # linhas "?" que não são hipótese da comutação (trânsito, falta a apurar, avisos): ressalva, fora da frase da hipótese
+    ck = [chk("Requisito objetivo / hipótese" if e != "q" or re.match(r"^(Requisito|Art\. 1[13]\b)", t) else "Ressalva", e, t,
               _det("memória da análise da aba Indulto / Comutação", "", "até %s" % _f(ref), "comutação", "Decreto %s, art. 13" % num, t, "mesmo cálculo da aba"))
           for e, t in _linhas_aba(r.get(kc + "_detalhe"))]
     ck += [c for c in checklist if not c["item"].startswith("Requisito objetivo") and c["item"] != "Ressalva"]
@@ -935,8 +956,8 @@ def _decreto_ficha(f, x, C, cumprido, faltas, crimes_all=None):
             fora.append((c, "sentença posterior à publicação (%s)" % _f(pub)))
             c["selos"][did] = {"selo": "FORA", "motivo": "sentença posterior à publicação: fora da soma", "dispositivo": ""}
             continue
-        vv = []  # violência contra a mulher que o RSPE não confirma: a verificar
-        im = rd._impeditivos(f, [cc], ref, ver=vv, contexto=[y["_c"] for y in C])
+        vv, ti_ = [], []  # violência contra a mulher que o RSPE não confirma / tráfico de parágrafo ilegível: a verificar
+        im = rd._impeditivos(f, [cc], ref, ver=vv, contexto=[y["_c"] for y in C], incerto=ti_)
         _apos = "praticado após" in ((f.get("impeditivos") or {}).get("texto") or "").lower()
         _disp = ("Decreto %s, %s" % (num, disp_imp)) if disp_imp else "Lei 8.072/90, art. 2º, I; CF, art. 5º, XLIII (o decreto não lista os hediondos)"
         if im and "hediondo" in im[0] and not disp_imp:
@@ -944,6 +965,8 @@ def _decreto_ficha(f, x, C, cumprido, faltas, crimes_all=None):
         if not im and not _apos and rs.e_hediondo(cc, ref) and not rs.e_hediondo(cc, None):
             c["selos"][did] = {"selo": "A_VERIFICAR", "motivo": "hediondez posterior ao fato: o STJ a afere na data do decreto (impeditivo); tese "
                                                                 "defensiva: irretroatividade (STF, 2ª T.)", "dispositivo": _disp}
+        elif not im and ti_:
+            c["selos"][did] = {"selo": "A_VERIFICAR", "motivo": ti_[0].split(": ", 1)[-1], "dispositivo": _disp}
         elif not im and vv:
             c["selos"][did] = {"selo": "A_VERIFICAR", "motivo": "violência contra a mulher não confirmada pelo RSPE (%s): se houve, é impeditivo"
                                                                 % vv[0].split(": ", 1)[-1], "dispositivo": _disp}
@@ -980,8 +1003,7 @@ def _decreto_ficha(f, x, C, cumprido, faltas, crimes_all=None):
             txt += ". Concurso: " + x["nota"]
         est = "ok" if x.get("nota") else "ko"
     elif any(n["selo"] == "A_VERIFICAR" for c, n in alc):
-        est, txt = "q", "Hediondez posterior ao fato: %s - o STJ afere a hediondez na data do decreto (impeditivo); pela tese da irretroatividade "\
-                        "(STF, 2ª T.), não impede." % ", ".join(c["id"] for c, n in alc if n["selo"] == "A_VERIFICAR")
+        est, txt = "q", "Natureza a verificar: " + "; ".join("%s - %s" % (c["id"], n["motivo"]) for c, n in alc if n["selo"] == "A_VERIFICAR")
     else:
         est, txt = "ok", "Nenhum crime alcançado está no rol de vedações."
     comum.append(chk("Natureza dos crimes (vedações)", est, txt,
@@ -992,19 +1014,21 @@ def _decreto_ficha(f, x, C, cumprido, faltas, crimes_all=None):
     if F.get("meses"):
         base_f = ref if F.get("contada_de") == "referencia" else pub
         j0 = _meses_antes(base_f, int(F["meses"]))
-        janela = {"ini": _f(j0), "fim": _f(base_f), "meses": int(F["meses"]), "dispositivo": F.get("dispositivo", ""), "informativa": False}
+        j1 = min(pub, base_f)  # o motor fecha a janela na publicação: falta posterior a ela não impede
+        janela = {"ini": _f(j0), "fim": _f(j1), "meses": int(F["meses"]), "dispositivo": F.get("dispositivo", ""), "informativa": False}
+        _ant = "anteriores à data de referência" if F.get("contada_de") == "referencia" else "anteriores à publicação"
         for fl in faltas:
             if fl["fato"]:
-                dentro = j0 <= fl["fato"] <= base_f
+                dentro = j0 <= fl["fato"] <= j1
                 faltas_out.append({"fato": _f(fl["fato"]), "homol": _f(fl["homol"]), "texto": fl["texto"],
                                    "estado": ("verificar" if fl["pendente"] else "impede") if dentro else "fora"})
         if x.get("falta_firme"):
-            est_f, txt_f = "ko", "Falta grave nos %s meses anteriores à publicação (%s a %s): %s." % (F["meses"], janela["ini"], janela["fim"], "; ".join(x["falta_firme"]))
+            est_f, txt_f = "ko", "Falta grave nos %s meses %s (%s a %s): %s." % (F["meses"], _ant, janela["ini"], janela["fim"], "; ".join(x["falta_firme"]))
         elif x.get("falta_ind"):
-            est_f, txt_f = "q", "Indício de falta na janela (%s a %s), sem sanção reconhecida: %s." % (janela["ini"], janela["fim"], "; ".join(x["falta_ind"]))
+            est_f, txt_f = "q", "Falta na janela a verificar (%s a %s), sem sanção reconhecida em juízo - só impede se reconhecida: %s." % (janela["ini"], janela["fim"], "; ".join(x["falta_ind"]))
         else:
-            est_f, txt_f = "ok", "Nenhuma falta grave nos %s meses anteriores à %s (%s a %s)." % (
-                F["meses"], "data de referência" if F.get("contada_de") == "referencia" else "publicação", janela["ini"], janela["fim"])
+            est_f, txt_f = "ok", "Nenhuma falta grave nem crime doloso durante a execução nos %s meses %s (%s a %s)." % (
+                F["meses"], _ant, janela["ini"], janela["fim"])
     elif F.get("texto") and re.search(r"punid", F.get("texto") or "", re.I) and not re.search(r"n[ãa]o trata", F.get("texto") or "", re.I):
         if x.get("falta_firme"):
             est_f, txt_f = "ko", "Requisito: não ter sido punido por falta grave (sem janela temporal): %s." % "; ".join(x["falta_firme"])
@@ -1059,9 +1083,12 @@ def _decreto_ficha(f, x, C, cumprido, faltas, crimes_all=None):
         # o motivo decisivo (falta, decreto restrito) em primeiro lugar
         ind_ck.insert(0, chk("Motivo", "ko", x["mot"], _det("", "", "", "", fonte, "", x["mot"])))
     reinc = "reincidente" if de.get("reincidente") else "primário"
+    # concurso com impeditivo: o cabeçalho mostra os números da conta das hipóteses (depois da fração do impeditivo), os mesmos da aba
+    p_h, c_h = de.get("pena_conc", de.get("pena") or 0), de.get("cumprido_conc", de.get("cumprido") or 0)
     ind = {"status": st_i, "rotulo": rot_i, "texto_aba": rot_i, "checklist": ind_ck, "projecao": None,
-           "pena_considerada_txt": _pena(de.get("pena") or 0), "cumprido_txt": _pena(de.get("cumprido") or 0),
-           "remanescente_txt": _pena(max(0, (de.get("pena") or 0) - (de.get("cumprido") or 0))), "fonte": "eventos do RSPE", "reinc": reinc}
+           "pena_considerada_txt": _pena(p_h), "cumprido_txt": _pena(c_h), "remanescente_txt": _pena(max(0, p_h - c_h)),
+           "fonte": (de.get("fonte") or "eventos do RSPE") + ((" - crimes não impeditivos (pena total %s, cumprido total %s)%s" % (
+               _pena(de.get("pena") or 0), _pena(de.get("cumprido") or 0), conc_txt)) if "pena_conc" in de else ""), "reinc": reinc}
     hc_ok = next((h for h in hc if h["ok"]), hc[0] if hc else None)
     com = {"status": st_c, "rotulo": rot_c, "texto_aba": rot_c if hc or s == "conc" else "", "checklist": com_ck if hc else [], "reducao": None,
            "fracao": (hc_ok or {}).get("fracao", ""), "exigido": (hc_ok or {}).get("exigido"),
@@ -1076,6 +1103,12 @@ def _pena_ext(t):
     if not m:
         return t or ""
     a, me, d = (int(x) for x in m.groups())
+    # a convenção do SEEU (ano de 365 e mês de 30 dias) deixa sobrar até 34 dias; no texto corrido da petição, os dias acima
+    # de 30 viram mês, e os 12 meses viram ano (4 anos, 11 meses e 33 dias -> 5 anos e 3 dias)
+    if d >= 30:
+        me, d = me + d // 30, d % 30
+    if me >= 12:
+        a, me = a + me // 12, me % 12
     p = [("%d ano%s" % (a, "s" if a != 1 else "")) if a else "", ("%d %s" % (me, "meses" if me != 1 else "mês")) if me else "",
          ("%d dia%s" % (d, "s" if d != 1 else "")) if d else ""]
     p = [x for x in p if x]
@@ -1170,12 +1203,21 @@ def _fundamentacao(out, tipo, num_c=None, nomes=None):
                             ("; por essa tese: %s" % T["resultado"]) if T.get("resultado") else ""))
     # requisitos atendidos, em uma frase cada, com o dispositivo
     req, pend = [], []
+    falta_q = False  # falta do art. 6º a verificar (o pedido fica condicionado a ela NÃO ser reconhecida)
+    _subj = any(c["item"].startswith("Requisito subjetivo") for c in x.get("checklist") or [])
     for c in x.get("checklist") or []:
         if c["item"].startswith("Requisito objetivo"):
             continue
         if c["item"] == "Ressalva" and re.match(r"^(FALTA nos|Art\. 6º)", c["texto"]):
             continue
         t = _ext_txt(c["texto"]).strip()
+        if c["item"] == "Ressalva" and _subj:
+            # a falta do art. 6º já vem no item do requisito subjetivo: sem repeti-la na ressalva (aviso da aba)
+            t = re.sub(r"(?:^|;\s*)(?:FALTA nos 12 meses|falta a verificar) \(art\. 6º.*$", "", t, flags=re.S).strip()
+            if not t:
+                continue
+        if c["item"].startswith("Requisito subjetivo") and c.get("estado") == "q":
+            falta_q = True
         t = re.sub(r"\s*Não cabe o indulto nem a comutação.*$", "", t, flags=re.S)
         t = re.sub(r"Data da infração: (\S+) \(\1\)", r"fato em \1", t).strip().rstrip(".")
         fnd = _fund_curto((c.get("det") or {}).get("fundamento", ""))
@@ -1211,7 +1253,7 @@ def _fundamentacao(out, tipo, num_c=None, nomes=None):
             ped = ("Preenchidos os requisitos, requer-se a declaração da comutação da pena%s%s (%s, art. 13; LEP, art. 192)." % (
                 (" dos crimes não impeditivos (%s)" % _liv) if parcial else "",
                 (": redução de %s da pena %s (%s), passando a pena remanescente de %s para %s" % (
-                    red["fracao"], red["base"], _pena_ext(red["reducao_txt"]), _pena_ext(red["antes_txt"]), _pena_ext(red["depois_txt"]))) if red else "", dec))
+                    red["fracao"], {"cumprido": "cumprida"}.get(red["base"], red["base"]), _pena_ext(red["reducao_txt"]), _pena_ext(red["antes_txt"]), _pena_ext(red["depois_txt"]))) if red else "", dec))
     elif st == "ainda" and x.get("projecao"):
         pj = x["projecao"]
         ped = ("Requisito objetivo não atingido até %s, data-limite do %s: não cabe por este decreto. A fração (%s, %s) seria alcançada em %s, "
@@ -1219,8 +1261,12 @@ def _fundamentacao(out, tipo, num_c=None, nomes=None):
                    ref, dec, pj.get("hipotese", ""), _pena_ext(pj.get("exigido_txt", "")), pj.get("data", "")))
     elif st == "verificar":
         conf = [re.search(r"a conferir: (.+?)(?=; exige|; cumprido|\)$|$)", h).group(1).rstrip(".") for h in hip if "a conferir:" in h]
-        ped = "A conferir nos autos: %s. Confirmado, requer-se %s." % (
+        _out = len(pend + conf) > (1 if falta_q else 0)
+        _cond = "; ".join(t for t in ("confirmados esses pontos" if (_out or not falta_q) else "",
+                                      "não reconhecida em juízo a falta apontada na janela do art. 6º (só a sanção reconhecida impede)" if falta_q else "") if t)
+        ped = "A conferir nos autos: %s. %s, requer-se %s." % (
             "; ".join(pend + conf) if (pend or conf) else re.sub(r"^A verificar\s*(?:·|:|-)\s*", "", _ext_txt(x.get("rotulo", "")), flags=re.I).rstrip("."),
+            (_cond[0].upper() + _cond[1:]).replace("; não reconhecida", " e não reconhecida"),
             ("a concessão do indulto quanto às penas de %s, com a declaração da extinção da punibilidade em relação a elas (CP, art. 107, II; LEP, art. 192)" % _liv
              if parcial else "a concessão do indulto, com a declaração da extinção da punibilidade (CP, art. 107, II; LEP, art. 192)") if indulto
             else "a declaração da comutação da pena%s (%s, art. 13; LEP, art. 192)" % ((" dos crimes não impeditivos (%s)" % _liv) if parcial else "", dec))
