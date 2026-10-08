@@ -181,6 +181,24 @@ O = rrel.remicao_por_origem([{"ficha_tem": True, "fd_rem_det": D}])
 ok(O["r"]["nao_lancado"] + O["r"]["emitido"] + O["r"]["divergencia"] + O["r"]["sem_atestado"] + O["r"]["estudo"] + O["r"]["leitura"] == O["r_total"]
    and O["ass_exatos"] == 1, "quadro 2.5 não fecha: %s" % O["r"])
 
+# ---- feedback do usuário: troca de setor logo depois do atestado (Rodarte) e fim do vínculo explicado (Dilson) ----
+f = F([("07.12.2022", INI % "PRENDEBEM"),
+       ("23.03.2025", "Peticionado Atestado de Trabalho n 39/2025, no Sistema SEEU, Autos 1, função Prendedor Prendebem (07/12/2022 a 12/03/2025) sendo 591 dias trabalhados e 197 remidos."),
+       ("27.03.2025", INI % "ARTESANATO"), ("27.03.2025", FIM % "PRENDEBEM")])
+C = rrm.conciliar(R(ini="01/06/2022"), f, HOJE)
+pend = [p for p in C["pendencias"] if "Prendebem" in p["texto"] or "PRENDEBEM" in p["texto"].upper()]
+ok(pend and all(p["status"] == "A_CONFERIR" for p in pend if "13/03/2025" in p["texto"]),
+   "troca de setor: os dias entre o fim do atestado e a baixa administrativa deviam ficar a conferir: %s" % [p["texto"][:90] for p in pend])
+f = F([("13.11.2025", INI % "PRENDEDORES DE ROUPA"),
+       ("30.06.2026", "EMITIDO ATP Nº 135/2026; PRENDEDORES DE ROUPA: DATA 13/11/2025; DATA FINAL: 30/06/2026; TEMPO DE TRABALHO COMPUTADO NO PERÍODO: 197 DIAS TRABALHADOS; TEMPO DE REMIÇÃO: 65,66 DIAS REMIDOS."),
+       ("05.08.2026", "TRABALHO: Deixa de trabalhar, no setor de trabalho PRENDEDORES DE ROUPA, conforme documento CI, motivo: Saída da Unidade Penal.")])
+C = rrm.conciliar(R(ini="12/08/2025"), f, HOJE)
+pend = [p for p in C["pendencias"] if p["status"] == "SEM_ATESTADO"]
+ok(pend and "fim em 05/08/2026" in pend[0]["texto"] and "Saída da Unidade Penal" in pend[0]["texto"],
+   "fim do vínculo sem a origem na ficha: %s" % [p["texto"] for p in pend])
+nl = [p for p in C["pendencias"] if p["status"] == "NAO_LANCADO"]
+ok(nl and "se juntado, requerer a apreciação" in nl[0]["acao"], "atestado não lançado sem a orientação de conferir a juntada")
+
 if falhas:
     print("FALHOU (remição rev8):\n  " + "\n  ".join(falhas))
     sys.exit(1)

@@ -1460,6 +1460,23 @@ def conciliar(r, f, hoje=None, manuais=None, ini_exec=None, excluir_remicoes=Non
     def _origem_ini(v, x0):
         o = cob_doc.get(x0 - timedelta(days=1)) if x0 > v["ini"] else None
         return (" [início em %s: antes disso, %s]" % (_f(x0), o)) if o else ""
+
+    def _origem_fim(v, x1):
+        # de onde vem a data final do trecho: a baixa do setor na ficha (o operador confere sem abrir a ficha)
+        tf = v.get("txt_fim") or ""
+        if not v["fim"] or not tf or (v["fim"] - x1).days > 1:
+            return ""
+        m_ = re.search(r"motivo:\s*([^.|]+)", tf, re.I)
+        return " [fim em %s: ficha registra \"deixa de trabalhar\"%s]" % (_f(v["fim"]), (" - motivo: " + m_.group(1).strip()) if m_ else "")
+
+    def _troca_logo_apos_atestado(v, x0, x1):
+        # poucos dias entre o fim do atestado e a baixa do setor, que coincide com o início de outro setor (troca de função) ou
+        # vem sem motivo: a baixa costuma ser só administrativa - os dias ficam "a conferir", fora do total
+        if not v["fim"] or (x1 - x0).days > 20 or not cob_doc.get(x0 - timedelta(days=1), "").startswith("atestado"):
+            return False
+        troca = any(w is not v and w["ini"] and abs((w["ini"] - v["fim"]).days) <= 1 for w in vinc)
+        sem_motivo = bool(re.search(r"motivo:\s*N/?C\b", v.get("txt_fim") or "", re.I))
+        return troca or sem_motivo
     sem = []
     fora = fora_da_unidade(r, hoje, f)
     aus = ausencias_ficha(evs)
@@ -1508,11 +1525,16 @@ def conciliar(r, f, hoje=None, manuais=None, ini_exec=None, excluir_remicoes=Non
             ex_ = _aus(x0, x1)
             n = max(0, _dias_seg_sab(x0, x1) - len({d for c0, c1, _m in ex_ for d in _dias_set(c0, c1)}))
             em_curso = v["fim"] is None and x1 == hoje
+            duvida_ = v.get("duvida")
+            if not duv and not em_curso and _troca_logo_apos_atestado(v, x0, x1):
+                duv = True
+                duvida_ = ("dias entre o fim do %s e a baixa do setor na ficha (%s), que coincide com troca de setor ou vem sem motivo - "
+                         "a baixa costuma ser só administrativa" % (cob_doc[x0 - timedelta(days=1)], _f(v["fim"])))
             if duv:
-                sem.append({"setor": v["setor"], "ini": x0, "fim": x1, "em_curso": em_curso, "est": n, "duvida": v["duvida"],
+                sem.append({"setor": v["setor"], "ini": x0, "fim": x1, "em_curso": em_curso, "est": n, "duvida": duvida_,
                             "trecho": " | ".join(x for x in (v.get("txt_ini"), v.get("txt_fim")) if x)})
                 pend.append({"data": x0, "status": "A_CONFERIR", "texto": "%s, %s a %s: %s - sem dias no total (≈ %s se houve trabalho)" % (
-                    v["setor"], _f(x0), "hoje" if em_curso else _f(x1), v["duvida"], rs.pl(n // 3, "dia remido", "dias remidos")),
+                    v["setor"], _f(x0), "hoje" if em_curso else _f(x1), duvida_, rs.pl(n // 3, "dia remido", "dias remidos")),
                     "acao": "Conferir com a unidade se houve trabalho no período", "cor": "cinza"})
                 continue
             sem.append({"setor": v["setor"], "ini": x0, "fim": x1, "em_curso": em_curso, "est": n, "origem": _origem_ini(v, x0).strip(" []"),
@@ -1523,8 +1545,9 @@ def conciliar(r, f, hoje=None, manuais=None, ini_exec=None, excluir_remicoes=Non
                              "(estimativa seg.-sáb.: ≈ %s, ≈ %d remidos)" % (v["setor"], _f(x0), rs.pl(n, "dia", "dias"), n // 3),
                              "acao": "Acompanhar (pedir o atestado ao fim do trimestre)", "cor": "verde"})
                 continue
-            pend.append({"data": x0, "status": "SEM_ATESTADO", "texto": "%s, %s a %s: sem atestado nem remição (estimativa seg.-sáb.: ≈ %s, ≈ %d remidos)%s" % (
-                v["setor"], _f(x0), "hoje (em curso)" if em_curso else _f(x1), rs.pl(n, "dia", "dias"), n // 3, _origem_ini(v, x0)),
+            pend.append({"data": x0, "status": "SEM_ATESTADO", "texto": "%s, %s a %s: sem atestado nem remição (estimativa seg.-sáb.: ≈ %s, ≈ %d remidos)%s%s" % (
+                v["setor"], _f(x0), "hoje (em curso)" if em_curso else _f(x1), rs.pl(n, "dia", "dias"), n // 3, _origem_ini(v, x0),
+                "" if em_curso else _origem_fim(v, x1)),
                 "acao": "Pedir atestado", "cor": "amarelo"})
 
     # ---- atestado sem remição sobreposto a período já remido (cumulativo): só a parte não coberta fica pendente ----
@@ -1568,7 +1591,8 @@ def conciliar(r, f, hoje=None, manuais=None, ini_exec=None, excluir_remicoes=Non
                 ("; ≈ %s fora do período já remido (%s)" % (_fmtn(a["rem_pend"]), ", ".join(a["cobertos_por"]))) if "rem_pend" in a else "",
                 (" - peticionado no SEEU em %s" % a["peticionado"]) if a.get("peticionado") else " - sem registro de peticionamento na ficha"),
                 "acao": "conferir na decisão anterior os dias já remidos (nada a requerer)" if a["zerado"] else
-                "requerer a apreciação (vista às partes e decisão)" if a.get("peticionado") else "verificar a juntada nos autos e pedir o peticionamento à unidade",
+                "requerer a apreciação (vista às partes e decisão)" if a.get("peticionado") else
+                "conferir nos autos: se juntado, requerer a apreciação; se não, pedir o peticionamento à unidade",
                 "cor": "cinza" if a["zerado"] else "vermelho"})
         elif a["status"] == "DIVERGENCIA":
             pend.append({"data": a["emissao"], "status": "DIVERGENCIA", "texto": "Atestado %s: %s remidos x remição de %s no RSPE (%s)" % (

@@ -1923,7 +1923,7 @@ def quadro_trabalho(r, f, hoje=None, manuais=None):
     for t in C["tabela"]:
         nov.append({"emp": "; ".join(dict.fromkeys(x["setor"] for x in t["segs"])), "per": "; ".join(x["per"] for x in t["segs"]), "dias": t["trab"] or "—",
                     "at": "%s · %s remidos" % (t["atestado"], t["rem"]), "sit": t["rot"] + (((" - peticionado em %s: requerer a apreciação" % t["peticionado"]) if t.get("peticionado")
-                                                         else " - verificar peticionamento no SEEU") if t["status"] == "NAO_LANCADO" and t["cor"] != "cinza" else ""),
+                                                         else " - sem peticionamento na ficha: conferir nos autos (se juntado, requerer a apreciação)") if t["status"] == "NAO_LANCADO" and t["cor"] != "cinza" else ""),
                     "cor": {"verde": "verde", "vermelho": "vermelho", "cinza": "cinza"}.get(t["cor"], "amarelo"), "un": "—"})
     for p_ in C["pendencias"]:
         if p_["status"] in ("SEM_ATESTADO", "LACUNA", "EM_CURSO", "A_CONFERIR"):
@@ -2295,7 +2295,7 @@ def comparativo(r, f, hoje=None, conferidos=None, manuais=None):
         sem_pet = any(a["status"] == "NAO_LANCADO" and not a.get("peticionado") for a in ((res.get("conc") or {}).get("atestados") or []))
         partes.append("Atestado emitido não lançado no RSPE (%s) - %s" % (
             " + ".join(x for x in (("%s remidos" % _fmtn(nh)) if nh >= 1 else "", rs.pl(nl_sd, "atestado sem os dias na ficha", "atestados sem os dias na ficha") if nl_sd else "") if x),
-            "verificar peticionamento no SEEU" if sem_pet else "peticionado: requerer a apreciação"))
+            "conferir nos autos (se juntado, requerer a apreciação)" if sem_pet else "peticionado: requerer a apreciação"))
     elif res["diferenca"] >= 1:
         partes.append("Conferir remição: ficha %s%s × RSPE %s" % ("≈ " if res["remidos_estudo"] else "", _dias_txt(ficha_total), _dias_txt(res["homologados"])))
     if lei_d >= 1:
