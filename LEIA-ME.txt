@@ -607,7 +607,23 @@ v7.5.0
     livramento, aberto ou transferência; remição conjunta e arredondamento
     casam também por trabalhados / 3; atestado substituído, sobreposto ou
     sem período tratados; isolamento e saída temporária descontados; estudo
-    sem feriados e matrícula recente em curso; leitura "meses 06 e07".
+    sem feriados e matrícula recente em curso; leitura "meses 06 e07";
+    remição decidida antes da data registrada na ficha, lançada em várias
+    linhas ou que junta atestados casa com o atestado; remição grande não é
+    atribuída a período curto (teste de capacidade); atestado acima do
+    possível conta só o teto, com alerta; a prioridade não diz que a
+    remição alcança livramento travado por falta grave nos últimos 12 meses.
+  - Sistema: apóstrofo em nomes não quebra mais os botões; avisos de
+    confirmação aparecem; PDF da aba Auditoria exporta (com andamento);
+    arquivo que não é base é recusado sem travar o programa; "Nova base"
+    não apaga a base aberta; fechar a base durante a importação é recusado;
+    a importação sempre termina com o resumo; quadro não fica sem colunas;
+    datas e números validados no ajuste da prescrição e no atestado manual;
+    busca só em nome, nº, processos e crimes, sem acento; mensagens de PDF
+    inválido em português.
+  - Término: pena já cumprida (remanescente zero) mostra "Pena cumprida",
+    sem usar a data do RSPE como término; trânsito anterior ao fato é
+    apontado como data impossível no cadastro.
   - Modelos de petição (desligados nesta versão) corrigidos: fundamentos
     dos decretos, datas, falta grave, vara, gênero e redação.
   - Legendas da tela completas (vermelho e azul no indulto; azul nos prazos
