@@ -1,9 +1,9 @@
-APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.4.0
+APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.5.0
 (antigo RSPE Base; SEEU, programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-6.16.49. A documentação técnica completa (cada parâmetro, a regra, a norma e
+7.5.0. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -101,7 +101,8 @@ ABAS (colunas)
                prova do livramento expirado sem revogação, detração que
                alcança toda a pena do crime. Prescrição e indulto ficam nas
                próprias abas. A multa cominada aparece na ficha do assistido
-               (extinção cabível se comprovada a impossibilidade de pagamento).
+               (o inadimplemento não obsta a extinção ante a alegada
+               hipossuficiência - STJ, Tema 931, tese revista).
   Ficha        Nome, Nº, Trabalho atual, Remidos ficha / RSPE, Trabalho a
   disciplinar  atestar (em períodos), Estudo a requerer, Situação. Clicar
                expande os blocos por atestado.
@@ -127,8 +128,8 @@ SITUAÇÃO NAS ABAS DE PRAZO
      no RSPE", "Pena interrompida", "Não iniciou") fica na ficha.
   Extinção: "Extinção cabível" (vermelho), "Término em N dias" (laranja até
   30, amarelo até 60, verde até 90), "Em cumprimento" (sem cor, acima de 90
-  dias), "Pena extinta (registrada)" (azul), "Não se aplica" (cinza: pena
-  interrompida ou sem previsão).
+  dias), "Pena extinta (registrada)" (azul), "Sem previsão / interrompida"
+  (cinza).
 
 FILTROS
   Seletor "Situação" ao lado dos botões (a aba Geral não tem):
@@ -145,7 +146,7 @@ FILTROS
      interrompida, sem previsão.
    - Ficha disciplinar: remição a requerer, conferir remição / sem atestado /
      estudo, em ordem, sem ficha.
-   - Auditoria: com alertas, pontos a verificar, sem inconsistências.
+   - Auditoria: com alertas, pontos a verificar, guia em ordem, extinta.
   Os cartões de resumo também filtram (pela cor). O número da execução é
   copiado com um clique (na tabela ou na ficha).
 
@@ -328,7 +329,8 @@ INDULTO E COMUTAÇÃO
   * Sem cumprimento em curso na data (não iniciou, interrompida), indulto e
     comutação "não se aplicam" (célula "Não atinge"), salvo o XV, que fica
     "a verificar".
-  * Art. 13 (comutação): 1/5 do remanescente (2/3 para o § 2º) para quem
+  * Art. 13 (comutação): 1/5 do remanescente, ou do cumprido quando este
+    for maior (§ 1º), (2/3 para o § 2º) para quem
     cumpriu a fração; "Prejudicada" quando o indulto do mesmo decreto é
     possível (§ 5º).
   * Decreto 11.302/2022 (referência 25/12/2022): art. 5º (crime com pena
@@ -511,8 +513,10 @@ BASE JURÍDICA (base_juridica.json)
 PRESUNÇÃO DE HIPOSSUFICIÊNCIA (Defensoria)
   No indulto, a multa é indultável e não é óbice (Decretos 12.338/2024 e
   12.790/2025, art. 12, § 2º, I: incapacidade presumida para o assistido da
-  Defensoria). Na extinção, a multa pendente só não obsta se comprovada a
-  impossibilidade de pagamento (STF ADI 7.032; STJ Tema 931): instruir o
+  Defensoria). Na extinção, o inadimplemento da multa não obsta ante a
+  alegada hipossuficiência, salvo decisão que indique concretamente a
+  possibilidade de pagamento (STJ, Tema 931, tese revista em 28/02/2024); há
+  julgados exigindo prova com base na ADI 7.032: por cautela, instruir o
   pedido. Reparação do dano dispensada no inciso XV do art. 9º; no
   livramento (CP, art. 83, IV), a impossibilidade deve ser demonstrada.
   Tráfico privilegiado não é hediondo nem impeditivo (STF, SV 63 e Tema
@@ -566,10 +570,119 @@ HISTÓRICO DE VERSÕES
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
 
+v7.5.0
+  - Revisão geral (jurídica e do sistema), conferida na base 08.10 (595
+    RSPEs e 653 fichas). As fichas já importadas são relidas sozinhas.
+  - Prescrição e extinção: fundamentação afirmativa só com resultado firme;
+    término calculado pelo calendário e com a custódia quando o SEEU não
+    calculou (custódia que já alcança a pena: extinção pelo cumprimento a
+    verificar); atos de execução durante a "fuga" (progressão, remição,
+    domiciliar) e fuga lançada com a pessoa solta tratados; art. 28 da Lei
+    11.343/06 em 2 anos (art. 30); detração sem tempo de outra condenação
+    transitada; livramento revogado sem desconto do período de prova (CP,
+    art. 88); Tema 788 só após a modulação; multa cumulada x alternativa;
+    idade incoerente (menor de 18 no fato) e pena convertida em restritiva
+    ficam "a verificar".
+  - Indulto e comutação (2000-2025): roubo com lesão grave (art. 157, § 3º,
+    I) anterior a 23/01/2020 não é hediondo; crime extinto sem data busca a
+    data no incidente de indulto/extinção; sentença posterior ao trânsito,
+    pena cumprida zerada pelo SEEU com custódia nos eventos, crime doloso na
+    janela da falta (LEP, art. 52) e Decreto 9.246/2017, art. 4º, II a IV,
+    ficam "a verificar"; regressão cautelar sem homologação não é falta
+    reconhecida; textos sem rótulos C1/C2, sem repetições e com a conclusão
+    certa no art. 7º, p. ú.; linha do tempo igual à aba.
+  - Auditoria: feminicídio aumentado (art. 121, § 7º) e art. 217 revogado;
+    reincidência específica não demonstrada (2007-2020) com 40% (Tema 1084)
+    e 50% com morte (Tema 1196); contravenção e art. 28 da Lei de Drogas não
+    geram reincidência; alerta de pena de prisão por porte para consumo;
+    guia suspensa fora da soma das penas e sem pedido contra o assistido;
+    custódia comparada com o saldo de remidos; confronto com a ficha sem
+    fugas, prisões e livramentos de outras execuções ou de períodos de
+    soltura; fuga no RSPE na data de alvará de soltura; datas impossíveis
+    no cadastro; remição em duplicidade; identidade com tolerância de
+    grafia; multa com a presunção relativa de hipossuficiência pela
+    Defensoria (STJ, AgRg no REsp 2.267.208); regime inicial com a
+    divergência entre as Turmas.
+  - Remição: vínculo de trabalho não se estende sobre fuga, soltura,
+    livramento, aberto ou transferência; remição conjunta e arredondamento
+    casam também por trabalhados / 3; atestado substituído, sobreposto ou
+    sem período tratados; isolamento e saída temporária descontados; estudo
+    sem feriados e matrícula recente em curso; leitura "meses 06 e07";
+    remição decidida antes da data registrada na ficha, lançada em várias
+    linhas ou que junta atestados casa com o atestado; remição grande não é
+    atribuída a período curto (teste de capacidade); atestado acima do
+    possível conta só o teto, com alerta; a prioridade não diz que a
+    remição alcança livramento travado por falta grave nos últimos 12 meses.
+  - Sistema: apóstrofo em nomes não quebra mais os botões; avisos de
+    confirmação aparecem; PDF da aba Auditoria exporta (com andamento);
+    arquivo que não é base é recusado sem travar o programa; "Nova base"
+    não apaga a base aberta; fechar a base durante a importação é recusado;
+    a importação sempre termina com o resumo; quadro não fica sem colunas;
+    datas e números validados no ajuste da prescrição e no atestado manual;
+    busca só em nome, nº, processos e crimes, sem acento; mensagens de PDF
+    inválido em português.
+  - Término: pena já cumprida (remanescente zero) mostra "Pena cumprida",
+    sem usar a data do RSPE como término; trânsito anterior ao fato é
+    apontado como data impossível no cadastro.
+  - Modelos de petição (desligados nesta versão) corrigidos: fundamentos
+    dos decretos, datas, falta grave, vara, gênero e redação.
+  - Legendas da tela completas (vermelho e azul no indulto; azul nos prazos
+    e na prescrição) e CP, art. 90 no período de livramento.
+
 v7.4.0
   - Nome: o programa passa a se chamar APTO (Auditoria de Prazos e Tempo de
     Cumprimento Organizada). O executável é APTO.exe; bases, modelos e
     configurações continuam na mesma pasta e abrem sem reimportar.
+  - Correções da conferência dos relatórios da base 08.10 (as fichas já
+    importadas são relidas sozinhas ao abrir a base):
+    . datas da ficha no formato dd.mm.aaaa passam a ser lidas em todo o
+      programa. Antes, as faltas graves da ficha sem registro no SEEU não
+      entravam como "falta a apurar" (só as fugas entravam), e o relatório
+      geral mostrava "0 faltas sem julgamento há mais de 60 dias";
+    . falta registrada com "RESPONDE PROCESSO - PADIC", "RESPONDE CD
+      SIMPLIFICADA" ou "RESPONDE /unidade" conta como PADIC instaurado;
+      ciência do resultado registrada como lançamento próprio (fichas
+      antigas: "foi sancionado", "condenado no procedimento", "foi concluído
+      o PADIC") é o julgamento da falta, não falta nova; "retorna ao
+      comportamento BOM" e avisos da escola não são falta;
+    . relatório geral: as faltas graves e fugas da ficha sem registro no SEEU
+      saem em número próprio ("a apurar"), fora do quadro de faltas do RSPE;
+      "PADICs em trâmite" passa a "faltas com PADIC instaurado, sem resultado
+      lançado na ficha";
+    . Auditoria: a baixa de um alerta do confronto RSPE x ficha (fuga, prisão,
+      regime, processos) não esconde mais os outros alertas do mesmo tipo do
+      assistido; a baixa antiga continua valendo para o alerta baixado;
+    . remição: "1.359 dias trabalhados" (milhar com ponto) e "TEMPO DE
+      REMIÇÃO: 50 DIAS" eram lidos como 359 e 5; atestado com remidos acima
+      de 1/3 dos dias trabalhados (erro de digitação da ficha) usa 1/3 na
+      conta e gera alerta;
+    . dias a remir arredondados (não truncados) e com a soma exata: total,
+      quadro por origem e quadro por unidade (agora com linha de total)
+      fecham entre si.
+  - Segunda conferência (auditoria completa da base 08.10):
+    . RSPE: "violência ou grave ameaça" e demais campos Sim/Não lidos só do
+      próprio campo; "Processos Selecionados" em várias linhas lidos
+      inteiros; data da extinção do crime. Uma extinção sem processo listado
+      não extingue mais a execução ATIVA inteira. Estas correções valem ao
+      REIMPORTAR os RSPEs (a base guarda a leitura, não o PDF): a Auditoria
+      marca "Reimportar o RSPE" onde a leitura antiga pode estar errada.
+    . Hediondez: feminicídio (art. 121, § 2º, VI, ou art. 121-A) com fato
+      anterior à lei que o criou usa a capitulação da época (homicídio
+      qualificado, hediondo desde 1994); o rótulo "hediondo" da fração do
+      SEEU não vale para crime fora do rol da Lei 8.072.
+    . Prescrição: datas do RSPE em ordem impossível (trânsito antes da
+      sentença etc.) ou idade incompatível deixam a prescrição aparente
+      "a verificar".
+    . Indulto e comutação: indulto indeferido não esconde a comutação; art.
+      129, § 9º, e contexto de violência doméstica pedem confirmar a vítima
+      (2023, 2024 e 2025); pena extinta depois da data do decreto entra na
+      análise (ou deixa a verificar); livramento com indício de revogação a
+      verificar; "sem condenação até o decreto" é "fora" em todos os decretos.
+    . Ficha: atestados em mais redações (só remidos, "Remissão", "e/ou",
+      "(180) dias", vários períodos, DT/DR, ATP sem "Nº"), atestado de estudo
+      ou leitura fora do trabalho, faltas antigas e resultados do PADIC,
+      artigo da falta (LEP ou RIBUP), estudo, leitura, vínculos de trabalho e
+      falsas fugas. Fichas relidas sozinhas ao abrir a base.
   - Marca: selo institucional com a ampulheta-A. Selo cheio (verde) no ícone
     do APTO.exe e no cabeçalho do programa; selo clássico na tela inicial e no
     cabeçalho dos relatórios em PDF (arquivo apto_selo.png, embutido no .exe).

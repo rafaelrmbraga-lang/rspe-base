@@ -21,13 +21,13 @@ ALERTAS_DIAS = [(30, "laranja"), (60, "amarelo"), (90, "verde")]
 
 # cores (tom moderno): (fundo suave, texto forte)
 CORES = {
-    "vermelho": ("#FDE8E8", "#B42318"),
-    "laranja": ("#FFEAD5", "#C4320A"),
-    "amarelo": ("#FEF4D6", "#B54708"),
-    "vencido": ("#FDE8E8", "#B42318"),
-    "verde": ("#DDF5E7", "#067647"),
-    "cinza": ("#EEF0F3", "#5B6470"),
-    "azul": ("#DBEAFE", "#1D4ED8"),
+    "vermelho": ("#F6E4E3", "#8E2424"),
+    "laranja": ("#F7EADB", "#8A4A12"),
+    "amarelo": ("#F5EDDA", "#7A5410"),
+    "vencido": ("#F6E4E3", "#8E2424"),
+    "verde": ("#E3EFE7", "#1F5B39"),
+    "cinza": ("#ECEEEB", "#5F6662"),
+    "azul": ("#E6ECF2", "#334E68"),
     "": ("#FFFFFF", "#344054"),
 }
 # explicação dos rótulos curtos (aparece ao passar o mouse no quadro de resumo e na legenda)
@@ -35,9 +35,9 @@ ROTULO_DICA = {
     "lapso": {"vencido": "Lapso vencido: verificar se o pedido já cabe", "cinza": "Sem prazo: não se aplica, cumprimento não iniciado ou pena interrompida"},
 }
 ROTULO = {
-    "lapso": {"vencido": "Vencido", "laranja": "Até 30 dias", "amarelo": "Até 60 dias", "verde": "Até 90 dias", "cinza": "Sem prazo"},
-    "indulto": {"verde": "Possível", "amarelo": "A verificar", "cinza": "Não atinge"},
-    "presc": {"vermelho": "Prescrição aparente", "amarelo": "Iminente / a verificar", "": "Não prescrita", "cinza": "Sem dados"},
+    "lapso": {"vencido": "Vencido", "laranja": "Até 30 dias", "amarelo": "Até 60 dias / a verificar", "verde": "Até 90 dias", "cinza": "Sem prazo", "azul": "Extinta"},
+    "indulto": {"verde": "Possível", "amarelo": "A verificar", "vermelho": "Crime impeditivo / vedado", "cinza": "Não atinge", "azul": "Extinta"},
+    "presc": {"vermelho": "Prescrição aparente", "amarelo": "Iminente / a verificar", "": "Não prescrita", "cinza": "Sem dados", "azul": "Extinta"},
     "presc_pp": {"vermelho": "Prescrição aparente", "": "Não configurada", "cinza": "Sem dados"},
     "fd": {"vermelho": "Remição a requerer / atestado não lançado", "amarelo": "Conferir remição / ausência de atestado / último atestado há 6 meses", "verde": "Em ordem", "cinza": "Sem ficha"},
     "aud": {"vermelho": "Com alertas", "amarelo": "Pontos a verificar", "verde": "Guia em ordem", "azul": "Extinta"},
@@ -468,9 +468,45 @@ def cor_indulto(r):
     return "cinza"
 
 
+def _soma_pena(d, dias):
+    """d + pena pelo calendário, como o SEEU: anos e meses (ano de 365 e mês de 30 na conversão), depois os dias."""
+    a, resto = divmod(dias, rs.DIAS_ANO)
+    m, dd = divmod(resto, 30)
+    return rp.soma_meses(d, a * 12 + m) + timedelta(days=dd)
+
+
+def custodia_sem_calculo(r):
+    """SEEU sem o cálculo da pena (cumprida zero e remanescente igual à pena total): custódia dos eventos do RSPE e da ficha
+    SIAPEN a partir do primeiro fato, como na aba Prescrição. Devolve {"antes": dias de custódia encerrada, "desde": início da
+    custódia em curso, "duvida": custódia sem processo indicado (ficha) - pode ser de outro processo} ou None."""
+    pt, pc, rem = (rs.pena_para_dias(r.get(k)) for k in ("pena_total", "pena_cumprida", "pena_remanescente"))
+    if not pt or pc not in (None, 0) or rem != pt:
+        return None
+    ativos = [c for c in r.get("_crimes", []) if not (c.get("extinto") or "").upper().startswith("S")]
+    fatos = [d for d in (rs.to_date(c.get("data_infracao") or "") for c in ativos) if d]
+    f0 = min(fatos) if fatos else None
+    procs = [c.get("processo_criminal") for c in ativos if c.get("processo_criminal")]
+    antes, desde, duvida = 0, None, False
+    for a, b, _mot, p in rs.periodos_custodia_detalhe(r.get("_eventos", [])):
+        if f0 and (b or HOJE) <= f0:
+            continue  # prisão encerrada antes do fato: não é detração (CP, art. 42)
+        lst = rs.lista_processos(p)
+        if lst and not any(rp._mesmo_processo(q, x) for q in lst for x in procs):
+            continue  # registrada só para outro processo
+        duvida = duvida or not lst
+        a = max(a, f0) if f0 else a
+        if b is None:
+            desde = a
+        else:
+            antes += (b - a).days
+    return {"antes": antes, "desde": desde, "duvida": duvida} if (antes or desde) else None
+
+
 def termino_calc(r):
     """Término calculado quando o SEEU não o imprime e a pena está em cumprimento: data do RSPE + pena remanescente (ou pena
-    total - cumprida). None se interrompida, não iniciada, extinta ou sem números."""
+    total - cumprida), somada pelo calendário como no SEEU. Se o SEEU não fez o cálculo (cumprida zero), conta a custódia dos
+    eventos e da ficha (custodia_sem_calculo): início da custódia em curso + pena, menos a custódia anterior. None se
+    interrompida, não iniciada, extinta ou sem números."""
     if r.get("termino_previsao_seeu") or parada(r) or nao_iniciou(r) or execucao_extinta(r) or not r.get("_crimes") \
             or not rs.pena_para_dias(r.get("pena_total")):
         return None
@@ -481,7 +517,13 @@ def termino_calc(r):
         rem = (pt - pc) if (pt and pc is not None) else None
     if not ger or rem is None or rem < 0:
         return None
-    return ger + timedelta(days=rem)
+    cs = custodia_sem_calculo(r)
+    if rem == 0 and not cs:
+        return None  # pena já cumprida: a data em que se esgotou não consta (a data do RSPE seria falsa); fica na Extinção
+
+    if cs and cs["desde"]:
+        return _soma_pena(cs["desde"], rem) - timedelta(days=cs["antes"])
+    return _soma_pena(ger, rem) - timedelta(days=cs["antes"] if cs else 0)
 
 
 def termino(r):
@@ -492,6 +534,8 @@ def termino(r):
         return "%s*" % rs.fmt(tc)  # * = calculado pelo programa (explicação em calc_notas, rodapé e ficha)
     if nao_iniciou(r):
         return "Não iniciou"
+    if not parada(r) and not execucao_extinta(r) and rs.pena_para_dias(r.get("pena_remanescente")) == 0 and rs.pena_para_dias(r.get("pena_total")):
+        return "Pena cumprida (até %s)" % (r.get("data_geracao_rspe") or "?")
     return rotulo_parada(r, True) if parada(r) else "Não consta no RSPE"
 
 
@@ -506,12 +550,21 @@ def extincao(r, presc, interr):
     term_calc = False
     if not term and termino_calc(r):
         term, term_calc = termino_calc(r), True
+    # término calculado sobre a custódia (o SEEU não fez o cálculo): já alcançado, é hipótese a verificar - a custódia da
+    # ficha ou sem processo indicado pode ser de outro processo
+    cust = custodia_sem_calculo(r) if term_calc else None
+    cust_ver = bool(cust and term <= HOJE)
     # 1) pena cumprida
     if pt and cump is not None and cump >= pt:
         hip.append("Pena integralmente cumprida (%s de %s): extinção pelo cumprimento (LEP, art. 66, II)" % (rs.dias_para_pena(cump), rs.dias_para_pena(pt)))
         cor, d_ref = "vermelho", HOJE
+    elif cust_ver:
+        hip.append("A verificar: o SEEU não calculou a pena cumprida, mas a custódia%s alcança a pena (%s) - término calculado em %s: "
+                   "extinção pelo cumprimento a verificar (LEP, art. 66, II)%s" % (
+                       (" desde %s" % rs.fmt(cust["desde"])) if cust["desde"] else "", rs.dias_para_pena(pt), rs.fmt(term),
+                       "; a custódia não indica processo (ficha SIAPEN) e pode ser de outro - conferir" if cust["duvida"] else ""))
     elif term and term <= HOJE:
-        hip.append("Término da pena %s %s já alcançado" % ("calculado (data do RSPE + pena remanescente) para" if term_calc else "previsto para", rs.fmt(term)))
+        hip.append("Término da pena %s %s já alcançado" % ("calculado (data do RSPE + pena remanescente, pelo calendário) para" if term_calc else "previsto para", rs.fmt(term)))
         cor, d_ref = "vermelho", term
     # 2) livramento condicional: período de prova expirado sem revogação
     inc = r.get("_incidentes", [])
@@ -564,7 +617,7 @@ def extincao(r, presc, interr):
             a_verificar = True
     # multa cominada: extinção exige prova da impossibilidade de pagamento (STF ADI 7.032)
     com_multa = any(re.search(r"\b(E|e)\s+Multa", c.get("tipo_penal") or "") for c in r.get("_crimes", []) if not c.get("extinto", "").upper().startswith("S"))
-    multa_txt = ("Multa cominada: o inadimplemento não obsta a extinção ante a alegada hipossuficiência, salvo decisão motivada que indique concretamente a possibilidade de pagamento (STJ, Tema 931, tese revista em 28/02/2024); há julgados exigindo prova da impossibilidade com base na ADI 7.032 (STJ, REsp 2.055.935) - por cautela, instruir com elementos da hipossuficiência" if com_multa else "")
+    multa_txt = ("Multa cominada: o inadimplemento não obsta a extinção ante a alegada hipossuficiência, salvo decisão motivada que indique concretamente a possibilidade de pagamento (STJ, Tema 931, tese revista em 28/02/2024); a assistência pela Defensoria gera presunção relativa de hipossuficiência, e a ADI 7.032 não superou o Tema 931 (STJ, AgRg no REsp 2.267.208, 6ª Turma, 16/09/2026); há julgados da 5ª Turma exigindo prova da impossibilidade (STJ, REsp 2.055.935) - por cautela, instruir com elementos da hipossuficiência" if com_multa else "")
     # crimes já extintos no RSPE
     ext = ["%s%s%s" % (rs.crimes_curto([c]).replace(" (extinto)", ""), (" · " + c["extincao_motivo"].lower()) if c.get("extincao_motivo") else "",
                        (" em " + c["data_extincao"]) if c.get("data_extincao") else "")
@@ -587,12 +640,14 @@ def extincao(r, presc, interr):
             cor = "cinza"
         if a_verificar and cor in ("", "cinza", "verde"):
             cor = "amarelo"
+        if cust_ver:
+            cor = "amarelo"
     return {
         "ext_hipoteses": "; ".join(hip) if hip else ("Não iniciou o cumprimento - sem previsão" if nao_iniciou(r) else ("" if not interr else rotulo_parada(r) + " - sem previsão")),
         "ext_cor": cor,
-        "ext_termino": (rs.fmt(term) + ("*" if term_calc else "")) if term else ("Não iniciou" if nao_iniciou(r) else (rotulo_parada(r, True) if interr else "")),
+        "ext_termino": (rs.fmt(term) + ("*" if term_calc else "")) if term else ("Não iniciou" if nao_iniciou(r) else (rotulo_parada(r, True) if interr else (termino(r) if termino(r).startswith("Pena cumprida") else ""))),
         "ext_dias": (term - HOJE).days if term else None,
-        "ext_sit": ("Pena extinta (registrada)" if ja_extinta else (("Extinção cabível" if cor == "vermelho" else situacao(term)[0].replace("Vence", "Término").replace("Em ", "Término em ")) if (term or cor == "vermelho") else "")),
+        "ext_sit": ("Pena extinta (registrada)" if ja_extinta else ("Extinção a verificar" if (cust_ver and cor != "vermelho") else ("Extinção cabível" if cor == "vermelho" else situacao(term)[0].replace("Vence", "Término").replace("Em ", "Término em ")) if (term or cor == "vermelho") else "")),
         "ext_extintos": "; ".join(ext),
         "ext_multa": multa_txt,
         "ext_n": len(hip),
@@ -786,8 +841,21 @@ def chave_item(it):
     """Chave da baixa: tipo do ponto + crime/ano/falta (estável quando o título muda por números ou agrupamento).
     Item sem tipo (ficha disciplinar) usa o título, como antes."""
     if it.get("tipo"):
-        return "t:" + hashlib.sha1(("%s|%s" % (it["tipo"], it.get("ref") or "")).encode("utf-8")).hexdigest()[:12]
+        ref = it.get("ref") or ""
+        if not ref and it["tipo"] in TIPOS_REF_TITULO:
+            ref = _ref_titulo(it["titulo"])
+        return "t:" + hashlib.sha1(("%s|%s" % (it["tipo"], ref)).encode("utf-8")).hexdigest()[:12]
     return hashlib.sha1(it["titulo"].encode("utf-8")).hexdigest()[:12]
+
+
+# tipos com vários pontos distintos por assistido e sem ref própria (confronto RSPE x ficha: fuga, prisão, regime, processos):
+# a chave leva o título, só com as datas (sem contagens de dias, que mudam), para a baixa de um não esconder os outros
+TIPOS_REF_TITULO = ("rspe-x-ficha",)
+
+
+def _ref_titulo(titulo):
+    t = titulo.replace(" (execução extinta: sem efeito)", "")
+    return re.sub(r"(?<![\d/])\d+(?![\d/])", "#", t)
 
 
 def baixa_de(it, baixas):
@@ -798,6 +866,12 @@ def baixa_de(it, baixas):
     antiga = hashlib.sha1(it["titulo"].encode("utf-8")).hexdigest()[:12]
     if antiga != chave_item(it) and antiga in baixas:
         return baixas[antiga], antiga
+    if it.get("tipo") in TIPOS_REF_TITULO and not it.get("ref"):
+        # até a 7.4.0 a chave era só o tipo (uma para todos os pontos do assistido): vale para o ponto cujo título foi baixado
+        antiga = "t:" + hashlib.sha1(("%s|" % it["tipo"]).encode("utf-8")).hexdigest()[:12]
+        b = baixas.get(antiga)
+        if b and _ref_titulo(b.get("titulo") or "") == _ref_titulo(it["titulo"]):
+            return b, antiga
     return None, ""
 
 
@@ -1001,8 +1075,16 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
     # * nas colunas: valor calculado pelo programa, não impresso pelo SEEU - a explicação vai ao rodapé e à ficha
     notas = {}
     if not r.get("termino_previsao_seeu") and termino_calc(r):
-        notas["termino"] = ("Término*: calculado pelo programa - data de geração do RSPE (%s) + pena remanescente (%s); o SEEU não "
-                            "imprimiu o término." % (r.get("data_geracao_rspe") or "?", r.get("pena_remanescente") or "?"))
+        _cs = custodia_sem_calculo(r)
+        if _cs:
+            notas["termino"] = ("Término*: calculado pelo programa - o SEEU não calculou a pena cumprida nem imprimiu o término; contada a "
+                                "custódia dos eventos%s (pena %s, pelo calendário)%s." % (
+                                    (" desde %s" % rs.fmt(_cs["desde"])) if _cs["desde"] else "", r.get("pena_total") or "?",
+                                    (" mais %s de custódia anterior" % rs.dias_para_pena(_cs["antes"])) if _cs["antes"] else "") +
+                                (" A custódia não indica processo (ficha SIAPEN): conferir se é desta execução." if _cs["duvida"] else ""))
+        else:
+            notas["termino"] = ("Término*: calculado pelo programa - data de geração do RSPE (%s) + pena remanescente (%s), pelo calendário; "
+                                "o SEEU não imprimiu o término." % (r.get("data_geracao_rspe") or "?", r.get("pena_remanescente") or "?"))
     if dbi.get("db_editada") and r.get("progressao_previsao_seeu") and _prog_pela_db_manual(r):
         notas["prog"] = ("Progressão*: recalculada pelo programa com a data-base informada (%s); a data do SEEU é %s."
                          % (dbi["db"], r["progressao_previsao_seeu"]))

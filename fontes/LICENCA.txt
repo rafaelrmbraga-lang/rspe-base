@@ -1,0 +1,5 @@
+Fontes usadas nos relatórios em PDF do APTO:
+- Source Sans 3 e Source Serif 4 (Adobe) - SIL Open Font License 1.1
+- Cinzel (Natanael Gama) - SIL Open Font License 1.1
+Texto da licença: https://openfontlicense.org (as fontes podem ser usadas, embutidas e redistribuídas livremente,
+inclusive em programas, desde que não sejam vendidas sozinhas).

@@ -20,16 +20,24 @@ MESES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "a
 CAMPOS = [
     ("nome", "nome do assistido"),
     ("assistido", "\"o assistido\" ou \"a assistida\", pelo sexo da ficha do SIAPEN ou informado; sem ele, \"a pessoa assistida\""),
-    ("sexo", "masculino ou feminino, se informado"), ("processo", "nº da execução penal"), ("vara", "vara/juízo da execução"),
+    ("sexo", "masculino ou feminino, se informado"),
+    ("sentenciado", "\"o sentenciado\" ou \"a sentenciada\" (sem sexo informado, masculino)"), ("Sentenciado", "\"O sentenciado\" ou \"A sentenciada\", para início de frase"),
+    ("do_sentenciado", "\"do sentenciado\" ou \"da sentenciada\""), ("o_a", "desinência de gênero: \"o\" ou \"a\" (ex.: qualificad{{o_a}}, evadid{{o_a}})"),
+    ("processo", "nº da execução penal"), ("vara", "vara/juízo da execução, sem o prefixo do tribunal (\"TJMS - \")"),
+    ("vara_uf", "UF da vara (pelo prefixo do SEEU ou pela comarca de MS no nome); vazio se não identificada"),
+    ("vara_estado", "\"ESTADO DE MATO GROSSO DO SUL\" ou o da UF da vara; vazio se não identificada"),
     ("cpf", "CPF (RSPE)"), ("rg", "RG (RSPE)"), ("nome_mae", "nome da mãe"), ("data_nascimento", "data de nascimento"),
-    ("regime", "regime atual"), ("regime_rspe", "regime como impresso no RSPE"),
+    ("regime", "regime atual em minúsculas (fechado, semiaberto, aberto, livramento condicional); vazio se incerto"), ("regime_rspe", "regime como impresso no RSPE"),
     ("pena_total", "pena total"), ("pena_cumprida", "pena cumprida (RSPE)"), ("pena_remanescente", "pena remanescente"),
     ("remidos", "saldo de dias remidos"), ("termino", "término previsto"),
-    ("data_base", "data-base da progressão"), ("fracao_progressao", "percentual de progressão"), ("data_progressao", "data da progressão (SEEU/estimada)"),
-    ("situacao_progressao", "situação da progressão"), ("fracao_livramento", "fração do livramento"), ("data_livramento", "data do livramento"),
+    ("data_base", "data-base da progressão"), ("fracao_progressao", "percentual de progressão"), ("data_progressao", "data da progressão (SEEU/estimada), só se houver data; vazio se não houver"),
+    ("progressao_requisito", "\"preencheu o requisito objetivo em dd/mm/aaaa\" (data passada), \"preencherá ... em\" (futura) ou vazio"),
+    ("situacao_progressao", "situação da progressão"), ("fracao_livramento", "fração do livramento"), ("data_livramento", "data do livramento, só se houver data; vazio se não houver"),
+    ("livramento_requisito", "como progressao_requisito, para o livramento condicional"),
     ("situacao_livramento", "situação do livramento"),
     ("crimes", "crimes ativos, só os artigos"), ("crimes_completo", "crimes ativos com descrição, pena e datas (uma linha por crime)"),
-    ("falta_12m", "indício de falta nos últimos 12 meses"),
+    ("falta_12m", "indício de falta nos últimos 12 meses (\"Não consta\", \"Sim · ...\" ou \"A apurar · ...\")"),
+    ("falta_grave_frase", "\"não há registro de falta grave nos últimos 12 meses\" quando falta_12m é \"Não consta\"; vazio se há falta ou falta a apurar"),
     ("indulto_2022", "resultado Decreto 11.302/2022"), ("indulto_2024", "resultado Decreto 12.338/2024"), ("indulto_2025", "resultado Decreto 12.790/2025"),
     ("comutacao_2025", "resultado comutação 2025"), ("indulto_analise_2025", "análise inciso por inciso 2025"), ("indulto_analise_2024", "análise inciso por inciso 2024"),
     ("prescricao_resumo", "resumo da prescrição (executória)"), ("prescricao_tabela", "prescrição crime a crime (texto)"),
@@ -42,17 +50,24 @@ CAMPOS = [
     ("pena_total_extenso", "pena total por extenso (X anos, Y meses e Z dias)"), ("pena_cumprida_extenso", "pena cumprida por extenso"),
     ("pena_remanescente_extenso", "pena remanescente por extenso"),
     ("processos_criminais", "números dos processos criminais ativos"),
+    ("processos_patrimoniais", "processos criminais ativos de crime contra o patrimônio sem violência ou grave ameaça (CP, arts. 155 a 180, exceto 157 a 159)"),
     ("data_evasao", "evasão que inicia a prescrição executória do crime escolhido (vazio se não houve); sem prescrição executória calculada, a última evasão"), ("data_recaptura", "recaptura/reinício após essa evasão ou revogação"),
     ("data_revogacao", "revogação do livramento que inicia a prescrição executória do crime escolhido (vazio se não houve)"),
     ("prescricao_prazo", "prazo da prescrição executória do crime em análise, já com a metade do art. 115 se aplicável (ex.: 4 anos)"),
     ("prescricao_prazo_integral", "prazo do art. 109 antes da redução do art. 115 (ex.: 8 anos)"),
     ("prescricao_prazo_reduzido", "prazo reduzido de metade pelo art. 115 (vazio se não se aplica)"),
-    ("prescricao_crime", "crime usado na petição de prescrição"), ("prescricao_termo", "início da contagem da prescrição executória desse crime"),
+    ("prescricao_crime", "crime usado na petição de prescrição: o da linha vermelha (prescrição executória aparente); sem ela, o da linha \"A VERIFICAR\"; sem nenhuma, vazio"),
+    ("prescricao_pena", "pena aplicada a esse crime"), ("prescricao_termo", "início da contagem da prescrição executória desse crime"),
     ("prescricao_pena_base_extenso", "pena que regula o prazo (restante, na evasão; aplicada, nos demais casos)"),
     ("prescricao_cumprido_extenso", "pena cumprida nesse crime até o início da contagem"),
     ("prescricao_inciso", "inciso do art. 109 do CP que corresponde à pena (ex.: V)"),
     ("prescricao_prazo_art109", "prazo do inciso do art. 109, sem o aumento da reincidência nem a metade do art. 115 (ex.: 4 anos)"),
-    ("prescricao_reincidencia", "'S' se o prazo tem o aumento de 1/3 da reincidência (art. 110, caput)"), ("prescricao_data", "data em que a prescrição executória se consuma"),
+    ("prescricao_reincidencia", "'S' se o prazo tem o aumento de 1/3 da reincidência (art. 110, caput)"), ("prescricao_data", "data em que a prescrição executória se consumou (só com linha vermelha; vazio nos demais casos)"),
+    ("prescricao_a_verificar", "texto \"a verificar: ...\" quando o crime escolhido está A VERIFICAR (vazio se vermelho ou sem crime)"),
+    ("prescricao_faltam", "dados que faltam para concluir a prescrição desse crime"),
+    ("prescricao_saldo_min_extenso", "saldo mínimo da pena na evasão (imputação do cumprimento entre condenações unificadas)"),
+    ("prescricao_saldo_max_extenso", "saldo máximo da pena na evasão"),
+    ("prescricao_data_min", "data em que o prazo termina pelo saldo mínimo"), ("prescricao_data_max", "data em que o prazo termina pelo saldo máximo"),
     ("art115", "'S' se o art. 115 do CP (menor de 21 / maior de 70) se aplica ao crime da petição"),
     ("defensor", "nome do defensor selecionado"), ("defensor_cargo", "cargo do defensor (ex.: Defensor Público)"),
     ("defensor_matricula", "matrícula/identificação do defensor"), ("defensor_email", "e-mail do defensor"),
@@ -61,10 +76,18 @@ CAMPOS = [
     ("fundamentacao_indulto_2024", "fundamentação do indulto 2024"), ("fundamentacao_comutacao_2024", "fundamentação da comutação 2024"),
     ("fundamentacao_indulto_2022", "fundamentação do indulto 2022"),
     ("fundamentacao_remicao", "fundamentação do pedido de remição (atestados sem remição no RSPE e estudo)"),
-    ("fundamentacao_prescricao", "fundamentação da prescrição (punitiva aparente ou executória do crime da petição)"),
-    ("fundamentacao_prescricao_todas", "fundamentação da prescrição de todos os crimes com prescrição aparente ou a verificar"),
+    ("fundamentacao_prescricao", "fundamentação da prescrição (punitiva aparente ou executória do crime da petição; só linha vermelha, senão vazio)"),
+    ("fundamentacao_prescricao_todas", "fundamentação da prescrição de todos os crimes com linha vermelha (punitiva ou executória)"),
     ("hoje", "data de hoje dd/mm/aaaa"), ("hoje_extenso", "data por extenso"), ("base", "nome da base aberta"),
 ]
+# a linha do tempo do indulto traz também os decretos anteriores (2000 a 2023): campos() preenche a fundamentação de cada um
+_JA = {k for k, _ in CAMPOS}
+for _ano in range(2025, 1999, -1):
+    for _k, _rot in (("indulto", "indulto"), ("comutacao", "comutação")):
+        if "fundamentacao_%s_%d" % (_k, _ano) not in _JA:
+            CAMPOS.append(("fundamentacao_%s_%d" % (_k, _ano), "fundamentação da %s do decreto de %d (vazio se o decreto não se aplica)" % (
+                _rot.replace("indulto", "concessão do indulto"), _ano)))
+del _JA
 
 
 
@@ -72,6 +95,93 @@ def _dm(m, k):
     """Data do SEEU ou, sem ela, o motivo (não iniciou, interrompida, aberto...)."""
     v = m.get(k)
     return v if v and v != "—" else (m.get(k + "_motivo") or "")
+
+
+def _data(m, k):
+    """Só a data (dd/mm/aaaa) do campo; texto ("Já em regime aberto", "Não consta no RSPE"...) vira vazio,
+    para a petição nunca dizer "preencheu o requisito em Não consta no RSPE"."""
+    v = (m.get(k) or "").strip()
+    return v if rs.to_date(v) else ""
+
+
+def _requisito(data_txt, hoje):
+    """Frase do requisito objetivo pela data: passada -> "preencheu", futura -> "preencherá"; sem data, vazio."""
+    d = rs.to_date(data_txt) if data_txt else None
+    if not d:
+        return ""
+    return ("preencheu o requisito objetivo em %s" if d <= hoje else "preencherá o requisito objetivo em %s") % data_txt
+
+
+# UF pelo prefixo do órgão no SEEU ("TJMS - ", "SJMS - ", "TJMG - ") ou, sem ele, pela comarca de MS no nome da vara
+_ESTADOS = {"AC": "DO ACRE", "AL": "DE ALAGOAS", "AP": "DO AMAPÁ", "AM": "DO AMAZONAS", "BA": "DA BAHIA", "CE": "DO CEARÁ",
+            "DF": "DO DISTRITO FEDERAL", "ES": "DO ESPÍRITO SANTO", "GO": "DE GOIÁS", "MA": "DO MARANHÃO", "MT": "DE MATO GROSSO",
+            "MS": "DE MATO GROSSO DO SUL", "MG": "DE MINAS GERAIS", "PA": "DO PARÁ", "PB": "DA PARAÍBA", "PR": "DO PARANÁ",
+            "PE": "DE PERNAMBUCO", "PI": "DO PIAUÍ", "RJ": "DO RIO DE JANEIRO", "RN": "DO RIO GRANDE DO NORTE",
+            "RS": "DO RIO GRANDE DO SUL", "RO": "DE RONDÔNIA", "RR": "DE RORAIMA", "SC": "DE SANTA CATARINA", "SE": "DE SERGIPE",
+            "SP": "DE SÃO PAULO", "TO": "DO TOCANTINS"}
+# sem o prefixo, a UF vem da comarca (o nº CNJ da execução não serve: a execução transferida mantém o nº da origem)
+_COMARCAS_MS = ("AGUA CLARA", "AMAMBAI", "ANASTACIO", "ANAURILANDIA", "ANGELICA", "APARECIDA DO TABOADO", "AQUIDAUANA", "BANDEIRANTES",
+                "BATAGUASSU", "BATAYPORA", "BELA VISTA", "BONITO", "BRASILANDIA", "CAARAPO", "CAMAPUA", "CAMPO GRANDE", "CASSILANDIA",
+                "CHAPADAO DO SUL", "CORUMBA", "COSTA RICA", "COXIM", "DEODAPOLIS", "DOIS IRMAOS DO BURITI", "DOURADOS", "ELDORADO",
+                "FATIMA DO SUL", "GLORIA DE DOURADOS", "IGUATEMI", "INOCENCIA", "ITAPORA", "ITAQUIRAI", "IVINHEMA", "JARDIM", "LADARIO",
+                "MARACAJU", "MIRANDA", "MUNDO NOVO", "NAVIRAI", "NIOAQUE", "NOVA ALVORADA DO SUL", "NOVA ANDRADINA", "PARANAIBA",
+                "PEDRO GOMES", "PONTA PORA", "PORTO MURTINHO", "RIBAS DO RIO PARDO", "RIO BRILHANTE", "RIO NEGRO",
+                "RIO VERDE DE MATO GROSSO", "SAO GABRIEL DO OESTE", "SETE QUEDAS", "SIDROLANDIA", "SONORA", "TERENOS", "TRES LAGOAS")
+
+
+def _sem_acento(t):
+    import unicodedata
+    return "".join(ch for ch in unicodedata.normalize("NFD", t or "") if unicodedata.category(ch) != "Mn").upper()
+_RE_PREF_VARA = re.compile(r"^\s*(?:TJ|SJ|TRF)([A-Z]{2})?\s*-\s*", re.I)
+
+
+def vara_limpa(vara):
+    """(vara sem o prefixo do tribunal e sem "DE DE", UF da vara ou "" se não identificada)."""
+    v = vara or ""
+    uf = ""
+    mm = _RE_PREF_VARA.match(v)
+    if mm:
+        uf = (mm.group(1) or "").upper()
+        v = v[mm.end():]
+    v = re.sub(r"\b(DE|DA|DO)\s+\1\b", r"\1", v, flags=re.I).strip()
+    if uf not in _ESTADOS:
+        sa = _sem_acento(v)
+        uf = "MS" if any(re.search(r"\b%s\b" % c, sa) for c in _COMARCAS_MS) else ""
+    return v, uf
+
+
+# crimes contra o patrimônio (CP, arts. 155 a 180) praticados sem violência ou grave ameaça (indulto 2023, art. 2º, XV)
+_COM_VIOLENCIA_PATR = {157, 158, 159}
+
+
+def _patrimonial_sem_violencia(c):
+    rot = rs.crimes_curto([c]) or ""
+    mm = re.match(r"art\.\s*(\d+)\b.*\bCP\b", rot)
+    if not mm:
+        return False
+    a = int(mm.group(1))
+    return 155 <= a <= 180 and a not in _COM_VIOLENCIA_PATR and (c.get("vga") or "").upper() != "S"
+
+
+def _a_verificar(presc, S):
+    """Texto "a verificar: ..." da linha A VERIFICAR (vazio nos demais casos). Na dúvida do saldo na evasão, traz os limites."""
+    st = presc.get("ppe_status") or ""
+    if not st.startswith("A VERIFICAR"):
+        return ""
+    if "imputação" in st and S and S.get("evasao") and S.get("saldo_max") is not None:
+        smin = pena_extenso(rs.dias_para_pena(S["saldo_min"])) if S.get("saldo_min") else "zero"
+        smax = pena_extenso(rs.dias_para_pena(S["saldo_max"])) if S.get("saldo_max") else "zero"
+        return ("a verificar: o saldo da pena na evasão de %s depende da imputação do cumprimento entre as condenações unificadas (%s)" % (
+            S["evasao"], ("saldo de %s" % smax) if smin == smax else ("saldo entre %s e %s" % (smin, smax))))
+    return "a verificar: " + (st.split(":", 1)[1].strip() if ":" in st else st[len("A VERIFICAR"):].strip())
+
+
+def _regime_limpo(rg):
+    """Regime atual em minúsculas para o texto corrido; "Livramento? (RSPE: ...)" (incerto) e vazio viram ""."""
+    rg = (rg or "").strip()
+    if not rg or rg.endswith("?") or "?" in rg:
+        return ""
+    return rg.lower()
 
 
 def _calc_presc(l):
@@ -133,10 +243,15 @@ def campos(m, r, nome_base="", defensor=None):
                 if "INTERRUP" not in (e2.get("tipo") or "").upper():
                     data_recaptura = e2.get("data", "")
                     break
-    # prescrição executória: crime com prazo mais próximo (ou vermelho)
-    pl = [l for l in m.get("presc_linhas", []) if l.get("prazo_ppe")]
-    pl.sort(key=lambda l: (0 if l.get("ppe_cor") == "vermelho" else 1, l.get("ppe_dias") if l.get("ppe_dias") is not None else 10**6))
+    # prescrição executória: só o crime com linha vermelha (prescrição aparente, com data); sem ela, a linha "A VERIFICAR"
+    # (a petição usa então o texto condicional de prescricao_a_verificar, sem afirmar a prescrição nem a data);
+    # sem nenhuma das duas, os campos do crime ficam vazios
+    pl = [l for l in m.get("presc_linhas", []) if l.get("prazo_ppe") and l.get("ppe_cor") == "vermelho" and rs.to_date(l.get("ppe_previsao") or "")]
+    if not pl:
+        pl = [l for l in m.get("presc_linhas", []) if l.get("prazo_ppe") and (l.get("ppe_status") or "").startswith("A VERIFICAR")]
+    pl.sort(key=lambda l: l.get("ppe_dias") if l.get("ppe_dias") is not None else 10**6)
     presc = pl[0] if pl else {}
+    presc_verm = presc.get("ppe_cor") == "vermelho"
     _S = (presc.get("ppe_saldos") or [{}])[-1] if presc else {}
     if presc:
         # a evasão da petição é a do crime escolhido: sem evasão no início da contagem (ou sem prazo correndo), o texto usa o
@@ -147,23 +262,33 @@ def campos(m, r, nome_base="", defensor=None):
         if d_ev:
             data_recaptura = next((e.get("data", "") for e in ev if "INTERRUP" not in (e.get("tipo") or "").upper()
                                    and (rs.to_date(e.get("data") or "") or date.min) > d_ev), "")
+    _vara, _uf = vara_limpa(m.get("vara", ""))
+    _falta = m.get("falta_full") or m.get("falta", "")
+    _fem = (r.get("_sexo") or m.get("sexo")) == "F"  # sem sexo informado, mantém o masculino do texto padrão
     d = {
-        "nome": m.get("nome", ""), "processo": m.get("proc", ""), "vara": m.get("vara", ""),
+        "nome": m.get("nome", ""), "processo": m.get("proc", ""), "vara": _vara, "vara_uf": _uf,
+        "vara_estado": ("ESTADO " + _ESTADOS[_uf]) if _uf else "",
         "assistido": {"M": "o assistido", "F": "a assistida"}.get(r.get("_sexo") or m.get("sexo"), "a pessoa assistida"),
         "sexo": {"M": "masculino", "F": "feminino"}.get(r.get("_sexo") or m.get("sexo"), ""),
+        "sentenciado": "a sentenciada" if _fem else "o sentenciado", "Sentenciado": "A sentenciada" if _fem else "O sentenciado",
+        "do_sentenciado": "da sentenciada" if _fem else "do sentenciado", "o_a": "a" if _fem else "o",
         "cpf": r.get("cpf", ""), "rg": r.get("rg", ""), "nome_mae": r.get("nome_mae", ""), "data_nascimento": r.get("data_nascimento", ""),
-        "regime": m.get("regime", ""), "regime_rspe": m.get("regime_rspe", ""),
+        "regime": _regime_limpo(m.get("regime")), "regime_rspe": m.get("regime_rspe", ""),
         "pena_total": r.get("pena_total", ""), "pena_cumprida": r.get("pena_cumprida", ""), "pena_remanescente": r.get("pena_remanescente", ""),
         "remidos": r.get("saldo_remidos", ""), "termino": _dm(m, "termino"),
-        "data_base": m.get("dbase", ""), "fracao_progressao": m.get("frac_prog", ""), "data_progressao": _dm(m, "prog"),
-        "situacao_progressao": m.get("prog_sit", ""), "fracao_livramento": m.get("frac_liv", ""), "data_livramento": _dm(m, "liv"),
+        "data_base": m.get("dbase", ""), "fracao_progressao": m.get("frac_prog", ""), "data_progressao": _data(m, "prog"),
+        "progressao_requisito": _requisito(_data(m, "prog"), hoje),
+        "situacao_progressao": m.get("prog_sit", ""), "fracao_livramento": m.get("frac_liv", ""), "data_livramento": _data(m, "liv"),
+        "livramento_requisito": _requisito(_data(m, "liv"), hoje),
         "situacao_livramento": m.get("liv_sit", ""),
         "crimes": m.get("crimes", ""),
         "crimes_completo": "\n".join("%s - pena %s - fato %s - trânsito %s%s" % (
             rs.crimes_curto([c]) or "crime não informado", rs.pena_curta(c.get("pena_imposta")) or "não informada", c.get("data_infracao") or "não informado",
             c.get("transito_processo") or c.get("transito_mp") or "não informado",
             (" (proc. %s)" % c["processo_criminal"]) if c.get("processo_criminal") else "") for c in crimes_ativos),
-        "falta_12m": m.get("falta_full") or m.get("falta", ""),  # "Sim · ...", "A apurar · ..." ou "Não consta"
+        "falta_12m": _falta,  # "Sim · ...", "A apurar · ..." ou "Não consta"
+        # frase pronta só quando não há indício de falta ("Sim" ou "A apurar" -> vazio: o modelo usa a ressalva)
+        "falta_grave_frase": "não há registro de falta grave nos últimos 12 meses" if _falta.startswith("Não consta") else "",
         "indulto_2022": m.get("ind22", ""), "indulto_2024": m.get("ind24", ""), "indulto_2025": m.get("ind25", ""), "comutacao_2025": m.get("com25", ""),
         "indulto_analise_2025": m.get("det25", ""), "indulto_analise_2024": m.get("det24", ""),
         "prescricao_resumo": m.get("presc_ppe_full") or m.get("presc_ppe", ""),
@@ -186,9 +311,12 @@ def campos(m, r, nome_base="", defensor=None):
         "pena_cumprida_extenso": pena_extenso(r.get("pena_cumprida", "")),
         "pena_remanescente_extenso": pena_extenso(r.get("pena_remanescente", "")),
         "processos_criminais": ", ".join(sorted(set(c.get("processo_criminal", "") for c in crimes_ativos if c.get("processo_criminal")))),
+        "processos_patrimoniais": ", ".join(sorted(set(c.get("processo_criminal", "") for c in crimes_ativos
+                                                       if c.get("processo_criminal") and _patrimonial_sem_violencia(c)))),
         "data_evasao": data_evasao, "data_recaptura": data_recaptura, "data_revogacao": data_revogacao,
         "prescricao_prazo": _rp.fmt_prazo(presc["ppe_meses"]) if presc.get("ppe_meses") else (presc.get("prazo_ppe") or "").split(" (")[0],
         "prescricao_crime": presc.get("rotulo") or presc.get("crime", ""),
+        "prescricao_pena": presc.get("pena", ""),
         "prescricao_termo": presc.get("ppe_inicio") or presc.get("ppe_termo", ""),
         "prescricao_pena_base_extenso": pena_extenso(rs.dias_para_pena(presc["ppe_base_dias"])) if presc.get("ppe_base_dias") else (presc.get("pena") or ""),
         "prescricao_cumprido_extenso": (pena_extenso(rs.dias_para_pena(presc["ppe_cumprido_dias"])) if presc.get("ppe_cumprido_dias") else "nenhum dia"),
@@ -197,15 +325,13 @@ def campos(m, r, nome_base="", defensor=None):
         "prescricao_reincidencia": "S" if presc.get("reinc") else "N",
         "prescricao_prazo_reduzido": _rp.fmt_prazo(presc["ppe_meses"]) if (presc.get("ppe_meses") and presc.get("art115")) else "",
         "prescricao_inciso": presc.get("inciso109", ""),
-        "prescricao_data": presc.get("ppe_previsao", ""),
+        "prescricao_data": presc.get("ppe_previsao", "") if presc_verm else "",
         # saldo na evasão entre dois limites (imputação do cumprimento entre condenações unificadas): a petição usa o saldo máximo
         "prescricao_saldo_min_extenso": pena_extenso(rs.dias_para_pena(_S["saldo_min"])) if _S and _S.get("saldo_min") else ("nenhum dia" if _S else ""),
         "prescricao_saldo_max_extenso": pena_extenso(rs.dias_para_pena(_S["saldo_max"])) if _S and _S.get("saldo_max") else "",
         "prescricao_data_min": _S.get("limite_min", "") if _S else "",
         "prescricao_data_max": _S.get("limite_max", "") if _S else "",
-        "prescricao_a_verificar": ("a verificar: o saldo da pena na evasão de %s depende da imputação do cumprimento entre as condenações unificadas (saldo entre %s e %s)" % (
-            _S["evasao"], pena_extenso(rs.dias_para_pena(_S["saldo_min"])) if _S.get("saldo_min") else "zero", pena_extenso(rs.dias_para_pena(_S["saldo_max"]))))
-        if (presc.get("ppe_status") or "").startswith("A VERIFICAR") and _S else "",
+        "prescricao_a_verificar": _a_verificar(presc, _S),
         "prescricao_faltam": "; ".join(presc.get("ppe_faltam") or []),
         "art115": "S" if presc.get("art115") else "N",  # da linha usada na petição (o prazo reduzido vem dela)
         "defensor": defensor.get("nome", ""), "defensor_cargo": defensor.get("cargo", "") or ("Defensor Público" if defensor else ""),
@@ -215,9 +341,11 @@ def campos(m, r, nome_base="", defensor=None):
         "base": nome_base,
         "fundamentacao_remicao": m.get("fd_fund", ""),
         # prescrição: a punitiva aparente tem precedência; senão, a executória do crime escolhido para a petição
+        # só linha vermelha: a fundamentação afirma a prescrição ("Operou-se..."); a linha "A VERIFICAR" não entra
         "fundamentacao_prescricao": next((l.get("pp_fund") for l in m.get("presc_linhas", []) if l.get("pp_fund") and l.get("retro_cor") == "vermelho"), "")
-                                    or (presc.get("ppe_fund", "") if presc else ""),
-        "fundamentacao_prescricao_todas": "\n\n".join(x for l in m.get("presc_linhas", []) for x in (l.get("pp_fund") if l.get("retro_cor") == "vermelho" else "", l.get("ppe_fund")) if x),
+                                    or (presc.get("ppe_fund", "") if presc_verm else ""),
+        "fundamentacao_prescricao_todas": "\n\n".join(x for l in m.get("presc_linhas", []) for x in (
+            l.get("pp_fund") if l.get("retro_cor") == "vermelho" else "", l.get("ppe_fund") if l.get("ppe_cor") == "vermelho" else "") if x),
     }
     # fundamentação do indulto/comutação no padrão do programa (a mesma do botão "Copiar fundamentação")
     try:
@@ -277,12 +405,24 @@ def preencher(modelo, saida, dados):
         return False, "instale docxtpl ou python-docx (pip install docxtpl)"
     doc = docx.Document(modelo)
     rx = re.compile(r"\{\{\s*(\w+)\s*\}\}")
+    try:
+        import jinja2
+    except ImportError:
+        jinja2 = None
 
     def sub_par(p):
         txt = "".join(run.text for run in p.runs)
-        if "{{" not in txt:
+        if "{{" not in txt and "{%" not in txt:
             return
-        novo = rx.sub(lambda mm: dados.get(mm.group(1), mm.group(0)), txt)
+        novo = None
+        if "{%" in txt and jinja2:
+            # os modelos da unidade usam {% if %} dentro do parágrafo (data, falta grave, UF da vara): resolve por parágrafo
+            try:
+                novo = jinja2.Template(txt).render(dados)
+            except Exception:
+                novo = None
+        if novo is None:
+            novo = rx.sub(lambda mm: dados.get(mm.group(1), mm.group(0)), txt)
         if novo != txt and p.runs:
             p.runs[0].text = novo
             for run in p.runs[1:]:
