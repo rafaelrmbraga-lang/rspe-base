@@ -464,7 +464,10 @@ def derivar(f, eventos):
         u = e["texto"].upper()
         mx = re.search(r"\b(ENCCEJA|ENEM)\b\s*(\d{4})?", u)
         if mx and re.search(r"CERTIFICAD|APROVA|PETICION|DECLARA", u):
-            exames.append({"exame": mx.group(1) + ((" " + mx.group(2)) if mx.group(2) else ""), "data": e["data"]})
+            # conclusão certificada (art. 9º, XIII, dos Decretos 2024/2025): só o certificado do ENCCEJA; o ENEM não certifica a
+            # conclusão desde 2017, e a declaração parcial ou a aprovação por área não é conclusão
+            cert = mx.group(1) == "ENCCEJA" and "CERTIFICAD" in u and not re.search(r"PARCIAL|NA AREA|NA ÁREA|POR AREA|POR ÁREA", u)
+            exames.append({"exame": mx.group(1) + ((" " + mx.group(2)) if mx.group(2) else ""), "data": e["data"], "certificado": cert})
     f["exames"] = exames
     # relatórios de leitura peticionados (remição pela leitura - Res. CNJ 391/2021, art. 5º: 4 dias por obra, até 12 obras por
     # ano): os meses citados em cada petição
@@ -2418,12 +2421,24 @@ def complementar_decretos(r, f, hoje=None):
         # XIII: curso concluído durante a execução (ENCCEJA/ENEM certificado, ou curso concluído na ficha)
         # XIII: conclusão durante a execução e nos 3 anos anteriores à data do decreto
         j13 = ref - timedelta(days=3 * 365)
-        conc = [x for x in f.get("exames", []) if j13 <= (_dp(x["data"]) or date.min) <= ref and (not ini_exec or (_dp(x["data"]) or date.min) >= ini_exec)]
+        exs13 = [x for x in f.get("exames", []) if j13 <= (_dp(x["data"]) or date.min) <= ref and (not ini_exec or (_dp(x["data"]) or date.min) >= ini_exec)]
+        def _cert(x):
+            if "certificado" in x:
+                return x["certificado"]
+            # ficha gravada antes desta versão (sem a marca): pelo texto do registro do mesmo dia
+            us = [e["texto"].upper() for e in ev if e.get("data") == x["data"] and x["exame"].split()[0] in (e.get("texto") or "").upper()]
+            return x["exame"].startswith("ENCCEJA") and any("CERTIFICAD" in u and not re.search(r"PARCIAL|NA AREA|NA ÁREA|POR AREA|POR ÁREA", u) for u in us)
+        conc = [x for x in exs13 if _cert(x)]
+        exs_ver = [x for x in exs13 if x not in conc]  # ENEM ou ENCCEJA sem certificado de conclusão: a verificar
         conc += [{"exame": e["curso"].title(), "data": e.get("fim")} for a, b, e in estudos
                  if "CONCLU" in (e.get("motivo_fim") or "").upper() and j13 <= b <= ref and (not ini_exec or a >= ini_exec)]
         livres = [e for a, b, e in estudos if e.get("horas") and j13 <= b <= ref and (not ini_exec or a >= ini_exec) and "CONCLU" not in (e.get("motivo_fim") or "").upper()]
         if conc:
             res["XIII"] = (True, "ficha: %s" % "; ".join("%s (certificado registrado em %s)" % (x["exame"], _br(x["data"] or "")) for x in conc))
+        elif exs_ver:
+            res["XIII"] = (None, "ficha: %s - conferir se houve conclusão de curso certificada (o ENEM não certifica a conclusão do ensino médio "
+                                 "desde 2017; petição, declaração parcial ou aprovação por área não é certificado de conclusão)" % "; ".join(
+                                     "%s em %s" % (x["exame"], _br(x["data"] or "")) for x in exs_ver))
         elif livres:
             res["XIII"] = (None, "ficha: curso %s (%d h, %s a %s) - conferir se é profissionalizante com certificado" % (
                 livres[0]["curso"].title(), livres[0]["horas"], _br(livres[0]["inicio"]), _br(livres[0]["fim"])))

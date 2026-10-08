@@ -458,12 +458,17 @@ def compacto_impeditivo(txt):
 def cor_indulto(r):
     if execucao_extinta(r):
         return "azul"
-    st = {r.get("indulto_2022_status"), r.get("indulto_2024_status"), r.get("indulto_2025_status")}
+    # indulto e comutação dos três decretos, com o mesmo critério das colunas (falta a verificar = a verificar): a linha não
+    # fica vermelha com uma célula "Sim" (comutação cabível com o indulto vedado)
+    st = set()
+    for k in ("indulto_2022", "indulto_2024", "indulto_2025", "comutacao_2024", "comutacao_2025"):
+        s = r.get(k + "_status") or rs.status_texto_decreto(r.get(k))
+        st.add("verificar" if (s == "possivel" and rs.falta_a_verificar(r.get(k))) else s)
     if "possivel" in st:
         return "verde"  # mesmo com crime impeditivo: art. 7º, p. ú., ou tese da hediondez superveniente
     if r.get("indulto_crime_impeditivo") == "SIM":
         return "vermelho"
-    if "verificar" in st or "POSSÍVEL" in (r.get("comutacao_2025", "") + r.get("comutacao_2024", "")):
+    if "verificar" in st:
         return "amarelo"
     return "cinza"
 

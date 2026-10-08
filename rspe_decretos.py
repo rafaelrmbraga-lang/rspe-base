@@ -190,6 +190,7 @@ def _vd(c):
 
 
 ANCORA_ZERADA = "pela âncora do SEEU o cumprido nesta data dá zero"
+SEM_CALCULO = "o SEEU não traz o cálculo da pena (pena total zerada, ou cumprida zero com o remanescente igual à pena)"
 
 
 def _cumprido(r, ctx, ref):
@@ -198,8 +199,11 @@ def _cumprido(r, ctx, ref):
     remições até a data. Âncora que zera (o SEEU atual não conta o tempo das penas já extintas nem o das interrupções) com 180
     dias ou mais de custódia pelos eventos: vale a conta pelos eventos, que pode sobrar (livramento revogado) - a verificar."""
     todos = rs.uniao_periodos(list(ctx["periodos"]) + list(ctx["lc"]))
-    if not rs.pena_para_dias(r.get("pena_total")):
-        return rs.dias_cumpridos_ate(todos, ctx["rem"], ref), "custódia e livramento + remições até a data (o RSPE traz a pena zerada)"
+    if rs.sem_calculo_decreto(r):
+        # pena total zerada ou cumprida zero com o remanescente igual à pena (o SEEU não fez o cálculo, como na aba Extinção):
+        # conta pelos eventos, sem limite mínimo - e o favorável fica a verificar (_anc0)
+        ev = rs.dias_cumpridos_ate(todos, ctx["rem"], ref)
+        return ev, "%s; pelos eventos (custódia e livramento + remições), %s" % (SEM_CALCULO, rs.dias_para_pena(ev))
     c, fonte = rs.cumprido_na_data(r, ctx["periodos"], ctx["rem"], ref, ctx["lc"])
     if c == 0:
         ev = rs.dias_cumpridos_ate(todos, ctx["rem"], ref)
@@ -496,6 +500,8 @@ def _avaliar_ficha(f, r, ctx, ini, hoje):
     if _orig.startswith(ANCORA_ZERADA):
         base["_anc0"] = ("%s (o SEEU atual não conta o tempo das penas já extintas nem o das interrupções): usado o cumprido pelos eventos, "
                          "%s - conferir, pois os eventos podem contar a mais (livramento revogado)" % (ANCORA_ZERADA, rs.dias_para_pena(cump)))
+    elif _orig.startswith(SEM_CALCULO) and cump:
+        base["_anc0"] = "%s: usado o cumprido pelos eventos do RSPE, %s até %s - conferir" % (SEM_CALCULO, rs.dias_para_pena(cump), rs.fmt(ref))
     reinc = any(c.get("reincidente_comum") == "S" or c.get("reincidente_especifico") == "S" for c in crimes)
     vga = any(rs.vga_indulto(c) for c in crimes)
     detalhe = {"pena": pena, "cumprido": cump, "reincidente": reinc, "vga": vga, "crimes": [rs.crimes_curto([c]) for c in crimes]}
@@ -845,6 +851,11 @@ def _detalhado(ano, r):
         u = tc.upper()
         sc = ("imp" if u.startswith("VEDAD") else "cabe" if u.startswith("POSSÍVEL") else "ver" if u.startswith("A VERIFICAR")
               else "nao" if re.match(r"N[ÃA]O|SEM PENA", u) else "")
+    # falta do art. 6º a verificar: o favorável fica A VERIFICAR (o mesmo critério das colunas, da linha do tempo e dos relatórios)
+    if si == "cabe" and rs.falta_a_verificar(ti):
+        si = "ver"
+    if sc == "cabe" and rs.falta_a_verificar(tc):
+        sc = "ver"
     if re.match(r"não se aplica: não iniciou o cumprimento", ti):
         ti += " (a prisão anterior foi provisória: conta como detração, não como início do cumprimento da pena)"
     if si == "cabe" or (not si and ti.upper().startswith("CABE")):
@@ -869,6 +880,8 @@ def _comutacao_sem_indulto(ano, x, r, f, ctx, ini, hoje):
         if not sc and tc:
             u = tc.upper()
             sc = "cabe" if u.startswith("POSSÍVEL") else "ver" if u.startswith("A VERIFICAR") else ""
+        if sc == "cabe" and rs.falta_a_verificar(tc):
+            sc = "ver"
         if sc in ("cabe", "ver") and not tc.upper().startswith("PREJUDICADA"):
             return dict(x, s=sc, beneficio="Comutação", mot=tc, ressalva="")
         return None
@@ -881,6 +894,37 @@ def _comutacao_sem_indulto(ano, x, r, f, ctx, ini, hoje):
     if y.get("s") in ("cabe", "ver") and (y.get("beneficio") == "Comutação" or y.get("s") == "ver"):
         return dict(y, beneficio="Comutação")
     return None
+
+
+def _indulto_sem_comutacao(ano, x, r, f, ctx, ini, hoje):
+    """Resultado do indulto do decreto (cabe ou a verificar), para quando só a comutação foi indeferida no RSPE; None se não cabe."""
+    if x.get("detalhado"):
+        ki = DETALHADOS[ano][1]
+        ti = r.get(ki) or ""
+        si = MAPA_STATUS.get(r.get(ki + "_status") or "", "")
+        if si == "cabe" and rs.falta_a_verificar(ti):
+            si = "ver"
+        if si in ("cabe", "ver"):
+            return dict(x, s=si, beneficio="Indulto", mot=ti, ressalva="")
+        return None
+    if not f or not (f.get("indulto") or []):
+        return None
+    try:
+        y = _tese_hediondez(f, r, avaliar_ficha(dict(f, comutacao=[]), r, ctx, ini, hoje))  # só as hipóteses de indulto
+    except Exception:
+        return None
+    if y.get("s") in ("cabe", "ver"):
+        return dict(y, beneficio="Indulto")
+    return None
+
+
+def _sem_objeto(r, x):
+    """Execução encerrada (arquivada, extinta ou com todas as penas extintas): o resultado favorável calculado não tem objeto."""
+    mot = rs.execucao_encerrada(r)
+    if mot and x.get("s") in ("cabe", "ver"):
+        x.update(s="nao", mot="não se aplica: %s - sem pena a cumprir (triagem sem o encerramento: %s)" % (mot, x.get("mot") or ""),
+                 beneficio="", ressalva="")
+    return x
 
 
 def avaliar(r, hoje, completo=False):
@@ -898,7 +942,7 @@ def avaliar(r, hoje, completo=False):
         fx[f["id"]] = f
         try:
             x = avaliar_ficha(f, r, ctx, ini, hoje)
-            x = _tese_hediondez(f, r, x)
+            x = _sem_objeto(r, _tese_hediondez(f, r, x))
         except Exception as e:  # uma ficha com dado ruim não derruba o assistido
             x = {"id": f["id"], "ano": f.get("ano"), "numero": f.get("numero") or "", "ref": f.get("data_referencia"), "s": "ver",
                  "mot": "falha ao avaliar o decreto: %s" % e}
@@ -908,7 +952,7 @@ def avaliar(r, hoje, completo=False):
         if ref and ref <= hoje:
             fora = {"id": ano, "ano": int(ano), "numero": DETALHADOS[ano][0], "ref": rs.fmt(ref), "s": "fora", "detalhado": True}
             pub = rs.DECRETOS_PUB.get(ano) or ref
-            x = _detalhado(ano, r)
+            x = _sem_objeto(r, _detalhado(ano, r))
             if (ano, "indulto") in dec or (ano, "comutacao") in dec:
                 pass  # decisão registrada no RSPE: prevalece (aplicada abaixo)
             elif _fora_do_decreto(r, ref, pub):
@@ -927,7 +971,8 @@ def avaliar(r, hoje, completo=False):
         if x.get("s") == "futuro" or (x.get("s") == "fora" and not dec.get((ano, "indulto")) and not dec.get((ano, "comutacao"))):
             continue
         di, dc = dec.get((ano, "indulto")), dec.get((ano, "comutacao"))
-        d = di or dc
+        # concessão de um dos dois prevalece (o quadro conta o melhor resultado); a de indulto, se houver as duas
+        d = next((y for y in (di, dc) if y and y[0] == "conc"), None) or di or dc
         if d and d[0] == "indef" and ano == "2017" and x.get("s") == "cabe":
             # Decreto 9.246/2017: indeferimentos apoiados na cautelar da ADI 5874 (julgada improcedente em 09/05/2019) podem ser renovados
             x["ressalva"] = "indeferido no RSPE em %s; a cautelar da ADI 5874 caiu (ação improcedente, 09/05/2019): o pedido pode ser renovado" % (d[1] or "?")
@@ -940,12 +985,26 @@ def avaliar(r, hoje, completo=False):
                 x.update(y, ressalva="; ".join(t for t in ("indulto indeferido no RSPE%s; a comutação não foi decidida" % ((" em " + di[1]) if di[1] else ""),
                                                            y.get("ressalva") or "") if t))
                 continue
+        if dc and dc[0] == "indef" and not di:
+            # comutação indeferida e indulto não decidido: o indulto cabível (ou a verificar) continua a valer
+            y = _indulto_sem_comutacao(ano, x, r, fx.get(ano), ctx, ini, hoje)
+            if y:
+                x.clear()
+                x.update(y, ressalva="; ".join(t for t in ("comutação indeferida no RSPE%s; o indulto não foi decidido" % ((" em " + dc[1]) if dc[1] else ""),
+                                                           y.get("ressalva") or "") if t))
+                continue
         if d:
-            ben = "Indulto" if (ano, "indulto") in dec else "Comutação"
+            ben = "Indulto" if d is di else "Comutação"
+            outro = dc if d is di else di
             x.update(s=d[0], beneficio=ben, mot="%s %s%s (incidente do RSPE)" % (ben, "concedido" if (d[0] == "conc" and ben == "Indulto") else
                                                                                "concedida" if d[0] == "conc" else
                                                                                "indeferido" if ben == "Indulto" else "indeferida",
                                                                                (" em " + d[1]) if d[1] else ""))
+            if outro:
+                # a outra decisão do mesmo decreto também consta (ex.: comutação concedida e indulto indeferido)
+                x["ressalva"] = "%s no RSPE%s" % (
+                    ("comutação concedida" if outro[0] == "conc" else "comutação indeferida") if ben == "Indulto" else
+                    ("indulto concedido" if outro[0] == "conc" else "indulto indeferido"), (" em " + outro[1]) if outro[1] else "")
     out.sort(key=lambda x: (rs.to_date(x.get("ref") or "") or date.min))
     if not completo:
         for x in out:
