@@ -19,6 +19,7 @@ import subprocess
 import sys
 import threading
 import time
+import urllib.parse
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
 from concurrent.futures.process import BrokenProcessPool
 from datetime import date, datetime
@@ -431,6 +432,118 @@ def fmt_(d):
     return d.strftime("%d/%m/%Y") if d else ""
 
 
+# nomes que o Windows reserva para dispositivos (um arquivo "CON.sqlite" não pode ser criado nem aberto lá)
+_NOMES_RESERVADOS = {"CON", "PRN", "AUX", "NUL"} | {"COM%d" % i for i in range(1, 10)} | {"LPT%d" % i for i in range(1, 10)}
+
+
+def _nome_reservado(nome):
+    return (nome or "").split(".")[0].strip().upper() in _NOMES_RESERVADOS
+
+
+def _mesmo_arquivo(a, b):
+    try:
+        return bool(a and b) and os.path.normcase(os.path.abspath(a)) == os.path.normcase(os.path.abspath(b))
+    except Exception:
+        return False
+
+
+_PRESC_DATAS = {"fato": "Data do fato", "denuncia": "Recebimento da denúncia", "sentenca": "Sentença", "acordao": "Acórdão",
+                "transito_mp": "Trânsito para a acusação", "transito": "Trânsito final", "ultimo_comparecimento": "Último comparecimento",
+                "inicio_prd": "Início efetivo da restritiva", "revogacao_sursis": "Revogação do sursis",
+                "novo_crime": "Novo crime após o trânsito", "susp366_ini": "Suspensão do art. 366 - início",
+                "susp366_fim": "Suspensão do art. 366 - fim"}
+
+
+def _int_nao_neg(v):
+    """Inteiro >= 0 a partir de número ou texto só com dígitos; None se não for."""
+    if isinstance(v, bool):
+        return None
+    if isinstance(v, int):
+        return v if v >= 0 else None
+    if isinstance(v, float):
+        return int(v) if v >= 0 and v == int(v) else None
+    t = str(v or "").strip()
+    return int(t) if t.isdigit() else None
+
+
+def _validar_presc_ajuste(dados):
+    """Mensagem de erro (ou None) para os dados de prescrição digitados: datas que existam no calendário, saldos inteiros."""
+    if not dados:
+        return None
+    if not isinstance(dados, dict):
+        return "Dados inválidos."
+    for k, v in (dados.get("valores") or {}).items():
+        if k in _PRESC_DATAS and str(v or "").strip() and not rs.to_date(str(v)):
+            return "Data inválida em \"%s\": %s não existe no calendário (use dd/mm/aaaa)." % (_PRESC_DATAS[k], v)
+    for ev, dias in (dados.get("saldos") or {}).items():
+        if _int_nao_neg(dias) is None:
+            return "Saldo inválido na data %s: informe dias inteiros, sem sinal." % ev
+    return None
+
+
+_RE_NUM_NN = re.compile(r"^\d{1,6}([.,]\d{1,2})?$")
+
+
+def _validar_atestado_manual(d):
+    """Mensagem de erro (ou None) do atestado digitado em "+ Adicionar atestado": datas que existam, números não negativos."""
+    rot = {"inicio": "Início", "fim": "Fim", "emissao": "Emissão do atestado"}
+    for k in ("inicio", "fim", "emissao"):
+        if d.get(k) and not rs.to_date(d[k]):
+            return "Data inválida em \"%s\": %s (use dd/mm/aaaa, uma data que exista)." % (rot[k], d[k])
+    ini, fim = rs.to_date(d.get("inicio") or ""), rs.to_date(d.get("fim") or "")
+    if ini and fim and fim < ini:
+        return "O fim (%s) é anterior ao início (%s)." % (d["fim"], d["inicio"])
+    if d.get("trabalhados") and not d["trabalhados"].isdigit():
+        return "Dias trabalhados inválidos: %s (use um número inteiro, sem sinal)." % d["trabalhados"]
+    for k, r in (("remidos", "Dias remidos"), ("horas", "Horas de estudo")):
+        if d.get(k) and not _RE_NUM_NN.match(d[k]):
+            return "%s inválido(s): %s (use um número, sem sinal; vírgula para decimais)." % (r, d[k])
+    for i, ln in enumerate((d.get("trechos") or "").splitlines(), 1):
+        if not ln.strip():
+            continue
+        p = [x.strip() for x in ln.split(";")]
+        if len(p) < 3 or not rs.to_date(p[1]) or not rs.to_date(p[2]):
+            return "Trecho %d inválido: use setor; início; fim; trabalhados; remidos (datas dd/mm/aaaa que existam)." % i
+        if rs.to_date(p[2]) < rs.to_date(p[1]):
+            return "Trecho %d: o fim é anterior ao início." % i
+        if len(p) > 3 and p[3] and not p[3].isdigit():
+            return "Trecho %d: dias trabalhados inválidos (%s)." % (i, p[3])
+        if len(p) > 4 and p[4] and not _RE_NUM_NN.match(p[4]):
+            return "Trecho %d: dias remidos inválidos (%s)." % (i, p[4])
+    return None
+
+
+def _checar_arquivo_base(caminho):
+    """None se o arquivo pode ser aberto como base do APTO (inexistente, vazio, SQLite sem tabelas ou com a tabela
+    'assistidos'); senão, o motivo em português. Assim um arquivo de outro programa não recebe as tabelas do APTO."""
+    if not os.path.exists(caminho):
+        return None
+    if os.path.isdir(caminho):
+        return "O caminho escolhido é uma pasta, não uma base do APTO."
+    try:
+        if os.path.getsize(caminho) == 0:
+            return None
+        with open(caminho, "rb") as f:
+            cab = f.read(16)
+    except OSError as e:
+        return "Não foi possível ler o arquivo: %s" % e
+    if cab != b"SQLite format 3\x00":
+        return "O arquivo escolhido não é uma base do APTO (não é um banco de dados SQLite)."
+    try:
+        con = sqlite3.connect(caminho, timeout=5)
+        try:
+            tabelas = {r[0] for r in con.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()}
+        finally:
+            con.close()
+    except sqlite3.DatabaseError as e:
+        return "O arquivo escolhido está corrompido ou não é uma base do APTO (%s)." % e
+    tabelas = {t for t in tabelas if not t.startswith("sqlite_")}
+    if tabelas and "assistidos" not in tabelas:
+        return ("O arquivo escolhido é um banco de dados de outro programa (tabelas: %s). Ele não foi aberto, para não ser alterado."
+                % ", ".join(sorted(tabelas)[:6]))
+    return None
+
+
 class Base:
     _serializable = False   # impede o pywebview de percorrer este objeto ao expor a Api
 
@@ -686,6 +799,14 @@ class Base:
 
     def quadro(self):
         with self.lock:
+            # cartões sem coluna (coluna excluída numa versão anterior, que deixava a última ser excluída): vão para a
+            # primeira coluna; sem coluna nenhuma, a "A fazer" volta
+            orfaos = "(coluna IS NULL OR coluna NOT IN (SELECT id FROM quadro_colunas))"
+            if self.con.execute("SELECT 1 FROM quadro_cartoes WHERE " + orfaos + " LIMIT 1").fetchone():
+                if not self.con.execute("SELECT 1 FROM quadro_colunas").fetchone():
+                    self.con.execute("INSERT OR IGNORE INTO quadro_colunas VALUES ('fazer', 'A fazer', 0)")
+                self.con.execute("UPDATE quadro_cartoes SET coluna=(SELECT id FROM quadro_colunas ORDER BY ordem LIMIT 1) WHERE " + orfaos)
+                self.con.commit()
             cols = [{"id": i, "nome": n, "ordem": o} for i, n, o in self.con.execute("SELECT id, nome, ordem FROM quadro_colunas ORDER BY ordem").fetchall()]
             cards = [dict(zip(("id", "coluna", "ordem", "processo", "titulo", "obs", "prazo", "etiqueta", "criado", "atualizado", "arquivado", "aba"), row))
                      for row in self.con.execute("SELECT id, coluna, ordem, processo, titulo, obs, prazo, etiqueta, criado, atualizado, "
@@ -736,9 +857,13 @@ class Base:
                     o = (self.con.execute("SELECT MAX(ordem) FROM quadro_colunas").fetchone()[0] or 0) + 1
                     self.con.execute("INSERT INTO quadro_colunas VALUES (?,?,?)", (cid, nome, o))
             else:
+                if not self.con.execute("SELECT 1 FROM quadro_colunas WHERE id<>?", (cid,)).fetchone():
+                    # sem outra coluna os cartões ficariam sem lugar (coluna NULL) e sumiriam do quadro
+                    return "O quadro precisa de ao menos uma coluna: crie outra antes de excluir esta (ou só renomeie)."
                 self.con.execute("DELETE FROM quadro_colunas WHERE id=?", (cid,))
                 self.con.execute("UPDATE quadro_cartoes SET coluna=(SELECT id FROM quadro_colunas ORDER BY ordem LIMIT 1) WHERE coluna=?", (cid,))
             self.con.commit()
+        return None
 
     @property
     def nome(self):
@@ -913,6 +1038,17 @@ class Api:
 
     # ---- dados ----
     def listar(self):
+        # no pywebview cada chamada roda numa thread: se a base for fechada ou trocada no meio da montagem, monta de novo
+        # com a base atual (ou a tela inicial), em vez de devolver AttributeError/ProgrammingError à tela
+        b0 = self.base
+        try:
+            return self._listar()
+        except (AttributeError, sqlite3.ProgrammingError):
+            if self.base is b0:
+                raise
+            return self._listar()
+
+    def _listar(self):
         rv.HOJE = datetime.now().date()  # a data de referência acompanha o relógio (programa aberto após a meia-noite)
         if not self.base:
             return {"sem_base": True, "recentes": [{"caminho": p, "nome": os.path.splitext(os.path.basename(p))[0]} for p in self._recentes()],
@@ -1109,7 +1245,9 @@ class Api:
     def quadro_coluna(self, cid, nome):
         if not self.base:
             return {"erro": "Nenhuma base aberta."}
-        self.base.quadro_coluna(cid, (nome or "").strip())
+        erro = self.base.quadro_coluna(cid, (nome or "").strip())
+        if erro:
+            return {"erro": erro}
         return self.base.quadro()
 
     HIST_ABAS = {"prog": ("Progressão", r"PROGRESS"), "liv": ("Livramento condicional", r"LIVRAMENTO"),
@@ -1215,6 +1353,9 @@ class Api:
         (datas, pena, reincidência, art. 115, saldo na data da fuga) e refaz a análise."""
         if not self.base:
             return {"erro": "Nenhuma base aberta."}
+        erro = _validar_presc_ajuste(dados)
+        if erro:
+            return {"erro": erro}
         self.base.presc_ajuste_gravar(processo, chave, dados or None)
         return self._atualizar(processo)
 
@@ -1225,6 +1366,9 @@ class Api:
             return {"erro": "Nenhuma base aberta."}
         if not rs.to_date(fuga or ""):
             return {"erro": "Data da fuga inválida."}
+        for dias in (saldos or {}).values():
+            if not (dias is None or str(dias).strip() == "") and _int_nao_neg(dias) is None:
+                return {"erro": "Saldo inválido (%s): informe dias inteiros, sem sinal nem vírgula." % dias}
         atuais = self.base.presc_ajustes().get(processo, {})
         for ch, dias in (saldos or {}).items():
             d = dict(atuais.get(ch) or {})
@@ -1234,7 +1378,7 @@ class Api:
                 sal.pop(fuga, None)
                 fon.pop(fuga, None)
             else:
-                sal[fuga], fon[fuga] = int(dias), (fonte if fonte in ("calculadora", "digitado") else "calculadora")
+                sal[fuga], fon[fuga] = _int_nao_neg(dias), (fonte if fonte in ("calculadora", "digitado") else "calculadora")
             d["saldos"], d["saldo_fonte"] = sal, fon
             if not d["saldos"]:
                 d.pop("saldos")
@@ -1488,6 +1632,9 @@ class Api:
         dados = {k: str(v or "").strip() for k, v in (dados or {}).items()}
         if not (dados.get("remidos") or dados.get("trabalhados") or dados.get("horas")):
             return {"erro": "Informe ao menos os dias remidos, os dias trabalhados ou as horas."}
+        erro = _validar_atestado_manual(dados)
+        if erro:
+            return {"erro": erro}
         self.base.manual_gravar(processo, dados)
         return self._atualizar(processo, "Adicionado.")
 
@@ -1521,10 +1668,23 @@ class Api:
         self._js("window.ui && ui.carregando && ui.carregando(%s)" % json.dumps(texto))
 
     def _trocar_base_(self, caminho):
-        if self.base:
-            self.base.fechar()
+        # a base atual só é fechada depois que a nova abriu: se a nova falhar, o programa continua com a atual
         self._etapa("Abrindo o arquivo da base…")
-        self.base = Base(caminho)
+        motivo = _checar_arquivo_base(caminho)
+        if motivo:
+            return {"erro": motivo}
+        try:
+            nova = Base(caminho)
+        except Exception as e:
+            logging.getLogger("rspe").exception("abrir base %s", caminho)
+            return {"erro": "Não foi possível abrir a base %s: %s" % (os.path.basename(caminho), e)}
+        velha, self.base = self.base, nova
+        self._modelos, self._json = [], {}
+        if velha:
+            try:
+                velha.fechar()
+            except Exception:
+                logging.getLogger("rspe").exception("fechar a base anterior")
         self._salvar_config()
         self._etapa("Fazendo a cópia de segurança…")
         try:
@@ -1599,7 +1759,7 @@ class Api:
         out = []
         for c, d in self._copias():
             try:
-                con = sqlite3.connect("file:%s?mode=ro" % c.replace("\\", "/"), uri=True)
+                con = sqlite3.connect("file:%s?mode=ro" % urllib.parse.quote(c.replace("\\", "/"), safe="/:"), uri=True)
                 n = con.execute("SELECT COUNT(*) FROM assistidos").fetchone()[0]
                 con.close()
             except Exception:
@@ -1635,7 +1795,9 @@ class Api:
         os.makedirs(PASTA_BASES, exist_ok=True)
         nome = (nome or "").strip()
         if nome:
-            seguro = "".join(ch for ch in nome if ch not in '\\/:*?"<>|').strip() or "Nova base"
+            seguro = "".join(ch for ch in nome if ch not in '\\/:*?"<>|').strip().rstrip(".").strip() or "Nova base"
+            if _nome_reservado(seguro):
+                return {"erro": "O nome '%s' é reservado pelo Windows. Escolha outro nome para a base." % seguro}
             c = os.path.join(PASTA_BASES, seguro + ".sqlite")
             if os.path.exists(c):
                 return {"erro": "Já existe uma base chamada '%s'. Escolha outro nome ou abra a existente." % seguro}
@@ -1646,8 +1808,20 @@ class Api:
                 return None
             if not c.lower().endswith(".sqlite"):
                 c += ".sqlite"
+            if _nome_reservado(os.path.basename(c)):
+                return {"erro": "O nome '%s' é reservado pelo Windows. Escolha outro nome para a base." % os.path.basename(c)}
+            if self.base and _mesmo_arquivo(c, self.base.caminho):
+                return {"erro": "Esse arquivo é a base aberta agora: escolha outro nome para a nova base (a base aberta não foi alterada)."}
             if os.path.exists(c):
-                os.remove(c)
+                # o diálogo já perguntou se substitui; só um arquivo do APTO (ou vazio) é apagado
+                motivo = _checar_arquivo_base(c)
+                if motivo:
+                    return {"erro": motivo.replace("Ele não foi aberto", "Ele não foi substituído")}
+                with self._imp_lock:
+                    try:
+                        os.remove(c)
+                    except OSError as e:
+                        return {"erro": "Não foi possível substituir %s (o arquivo está em uso?): %s" % (os.path.basename(c), e)}
         return self._trocar_base(c)
 
     def escolher_base(self):
@@ -1663,10 +1837,16 @@ class Api:
         return self._trocar_base(c) if c else None
 
     def fechar_base(self):
-        if self.base:
-            self.base.fechar()
-        self.base = None
-        self._modelos = []
+        # importação em andamento (manual ou pela pasta vigiada): não fecha a base debaixo dela
+        if not self._imp_lock.acquire(timeout=2):
+            return {"erro": "Há uma importação em andamento nesta base. Aguarde terminar para fechá-la."}
+        try:
+            velha, self.base = self.base, None
+            self._modelos, self._json = [], {}
+            if velha:
+                velha.fechar()
+        finally:
+            self._imp_lock.release()
         return self.listar()
 
     def recarregar_base_juridica(self):
@@ -1726,6 +1906,27 @@ class Api:
             return self._worker_(arqs, base or self.base, silencioso)
 
     def _worker_(self, arqs, base, silencioso):
+        """Importa o lote. A tela sempre recebe ui.importado (mesmo se a importação falhar no meio), senão a barra
+        "Importando N de N" ficaria presa."""
+        resumo = None
+        try:
+            if base is None:
+                raise RuntimeError("nenhuma base aberta")
+            resumo = self._lote_(arqs, base, silencioso)
+        except Exception as e:
+            logging.getLogger("rspe").exception("importação interrompida")
+            msg = "Importação interrompida: %s" % ("a base foi fechada durante a importação" if isinstance(e, sqlite3.ProgrammingError) else e)
+            resumo = {"novos": 0, "atualizados": 0, "historico": 0, "duplicados": 0, "antigos": 0, "erros": len(arqs), "fichas": 0,
+                      "incompletos": 0, "avisos": [msg + ". Os arquivos já gravados ficam na base; importe de novo os que faltarem."],
+                      "interrompida": True}
+        finally:
+            if not silencioso:
+                self._js("ui.importado(%s)" % json.dumps(resumo or {"novos": 0, "atualizados": 0, "erros": len(arqs),
+                                                                    "avisos": ["Importação interrompida."], "interrompida": True},
+                                                         ensure_ascii=False))
+        return resumo
+
+    def _lote_(self, arqs, base, silencioso):
         novos, atualizados, duplicados, antigos, erros = 0, 0, [], [], []
         historicos = 0
         fichas_ok = []
@@ -1816,8 +2017,9 @@ class Api:
                         registro.append({"arquivo": nome_arq, "tipo": "RSPE", "nome": r.get("nome") or "", "proc": chave,
                                          "resultado": "atualizado" if ex_ else "novo", "leitura": "parcial" if parcial else "completa", "obs": obs})
                 except Exception as e:
-                    erros.append("%s: %s" % (nome_arq, e))
-                    reg(nome_arq, "?", "", "", "não importado", "falhou", [str(e)])
+                    me = _msg_erro_pdf(e)
+                    erros.append("%s: %s" % (nome_arq, me))
+                    reg(nome_arq, "?", "", "", "não importado", "falhou", [me])
                 if not silencioso and (n % 3 == 0 or n == total):
                     self._js("ui.progresso(%d,%d)" % (n, total))
         if True:  # fichas do lote e fichas que esperavam o RSPE
@@ -1849,16 +2051,19 @@ class Api:
                     for x in registro if x["tipo"] == "Ficha" and x["leitura"] == "parcial"]
         avisos = incompletos + parciais + duplicados + antigos + erros + fichas_ok
         if avisos:
-            with open(os.path.join(pasta_app(), "importacao_avisos.txt"), "w", encoding="utf-8") as f:
-                f.write("\n".join(avisos))
+            # pasta do programa sem permissão de gravação (Arquivos de Programas, rede somente leitura): o arquivo é só uma
+            # cópia dos avisos, que a tela mostra de qualquer forma
+            try:
+                with open(os.path.join(pasta_app(), "importacao_avisos.txt"), "w", encoding="utf-8") as f:
+                    f.write("\n".join(avisos))
+            except Exception as e:
+                logging.getLogger("rspe").warning("importacao_avisos.txt não gravado: %s", e)
         # guardado para o PDF de falhas do lote (Api.falhas_pdf)
         self._falhas_lote = {"quando": datetime.now().strftime("%d/%m/%Y %H:%M"), "erros": list(erros), "incompletos": list(incompletos),
                              "ignorados": [a for a in antigos if "ignorad" in a], "processos": list(lote), "arquivos": len(arqs),
-                             "registro": sorted(registro, key=lambda x: x["arquivo"].lower())}
+                             "registro": sorted(registro, key=lambda x: x["arquivo"].lower()), "base_nome": getattr(base, "nome", "")}
         resumo = {"novos": novos, "atualizados": atualizados, "historico": historicos, "duplicados": len(duplicados), "antigos": len(antigos),
                   "erros": len(erros), "fichas": len(fichas_ok), "incompletos": len(incompletos), "avisos": avisos[:60]}
-        if not silencioso:
-            self._js("ui.importado(%s)" % json.dumps(resumo, ensure_ascii=False))
         return resumo
 
     def _indice_vinculo(self, base):
@@ -2041,13 +2246,20 @@ class Api:
             os.makedirs(PASTA_BASES, exist_ok=True)
             caminho = os.path.join(PASTA_BASES, b + ".sqlite")
             nova = not os.path.exists(caminho)
-            aberta = bool(self.base) and os.path.normcase(os.path.abspath(self.base.caminho)) == os.path.normcase(os.path.abspath(caminho))
-            base = self.base if aberta else Base(caminho)
-            try:
-                res = self._worker([p for p, _ in itens], base=base, silencioso=True)
-            finally:
+            # a base é escolhida já com o lock: assim ela não é trocada nem fechada entre a escolha e a importação
+            with self._imp_lock:
+                aberta = bool(self.base) and _mesmo_arquivo(self.base.caminho, caminho)
                 if not aberta:
-                    base.fechar()
+                    motivo = _checar_arquivo_base(caminho)
+                    if motivo:
+                        logging.getLogger("rspe").warning("pasta vigiada: %s ignorada: %s", caminho, motivo)
+                        continue
+                base = self.base if aberta else Base(caminho)
+                try:
+                    res = self._worker([p for p, _ in itens], base=base, silencioso=True)
+                finally:
+                    if not aberta:
+                        base.fechar()
             for p, sig in itens:
                 estado[p] = sig
             try:
@@ -2231,13 +2443,26 @@ class Api:
             return None
         if not c.lower().endswith("." + formato):
             c += "." + formato
+        ult = [0.0]
+
+        def progresso(txt, frac):
+            # a aba Auditoria de uma base grande leva perto de um minuto: a barra mostra a etapa e a página
+            agora = time.time()
+            if agora - ult[0] < 0.3:
+                return
+            ult[0] = agora
+            self._js("window.ui && ui.trabalho && ui.trabalho(%s, %s)" % (json.dumps(txt, ensure_ascii=False), "null" if frac is None else "%.3f" % frac))
         try:
             if formato == "xlsx":
+                progresso("Exportando Excel…", 0.1)
                 rx.exportar_xlsx(modelos, c, abas)
             else:
-                rx.exportar_pdf(modelos, c, self.base.nome, abas)
+                rx.exportar_pdf(modelos, c, self.base.nome, abas, progresso=progresso)
         except Exception as e:
+            logging.getLogger("rspe").exception("exportar %s", formato)
             return {"erro": "Falha ao exportar: %s" % e}
+        finally:
+            self._js("window.ui && ui.trabalho && ui.trabalho(null)")
         _abrir(c)
         return {"caminho": c}
 
@@ -2299,14 +2524,15 @@ class Api:
         d = self._falhas_dados()
         if not d:
             return {"erro": "Nenhuma importação nesta sessão."}
-        nome = "%s - registro da importação %s.pdf" % (self.base.nome, datetime.now().strftime("%Y-%m-%d %H%M"))
+        nb = self.base.nome if self.base else (getattr(self, "_falhas_lote", None) or {}).get("base_nome") or "APTO"
+        nome = "%s - registro da importação %s.pdf" % (nb, datetime.now().strftime("%Y-%m-%d %H%M"))
         c = _um(self._janela.create_file_dialog(webview.SAVE_DIALOG, save_filename=nome, file_types=("PDF (*.pdf)",)))
         if not c:
             return None
         if not c.lower().endswith(".pdf"):
             c += ".pdf"
         try:
-            rrel.relatorio_falhas(d, c, self.base.nome)
+            rrel.relatorio_falhas(d, c, nb)
         except Exception as e:
             return {"erro": "Falha ao gerar o PDF: %s" % e}
         _abrir(c)
@@ -2755,6 +2981,23 @@ def _extrair_com_hash(caminho):
             raise ValueError("ficha disciplinar do SIAPEN com falha na leitura (%s) - enviar o arquivo para correção" % e2)
     r["_hash"] = h.hexdigest()
     return r
+
+
+def _msg_erro_pdf(e):
+    """Mensagem em português para as falhas técnicas de leitura do PDF (pdfminer/pdfplumber falam em inglês)."""
+    t = str(e) or e.__class__.__name__
+    tl = t.lower()
+    nome = e.__class__.__name__
+    if nome in ("PSEOF",) or "unexpected eof" in tl or "eof marker" in tl or "startxref" in tl or "truncated" in tl:
+        return "PDF corrompido ou incompleto (o download pode ter sido interrompido): gere ou baixe o PDF de novo"
+    if "no /root object" in tl or "really a pdf" in tl or "not a pdf" in tl or nome in ("PDFSyntaxError", "PdfminerException", "PDFNoValidXRef") \
+            or "invalid pdf" in tl or "no valid xref" in tl:
+        return "arquivo não é PDF válido (vazio ou de outro tipo com a extensão .pdf): gere o PDF de novo no SEEU"
+    if isinstance(e, (PermissionError,)):
+        return "sem permissão para ler o arquivo (está aberto em outro programa?)"
+    if isinstance(e, FileNotFoundError):
+        return "arquivo não encontrado (foi movido ou apagado durante a importação)"
+    return t
 
 
 def _um(x):

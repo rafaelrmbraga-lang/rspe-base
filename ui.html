@@ -695,14 +695,15 @@ function mesclar(r){ if(!r || !r.parcial) return r; const regs=(ui.dados.registr
   const o=Object.assign({}, ui.dados, r, {registros:regs}); delete o.parcial; delete o.removido; if(!('msg' in r)) delete o.msg; return o; }
 const API = () => { const b=API_(); if(!b) return b; return new Proxy(b,{get:(t,k)=>typeof t[k]==='function' ? (...a)=>Promise.resolve(t[k](...a)).then(mesclar) : t[k]}); };
 const MODELOS_ATIVOS = false; // petições a partir de modelos .docx: desativadas por ora (foco na matemática)
-async function api(m, ...a){ try{ const r = await API()[m](...a); if(r && r.registros) ui.carregar(r); else if(r && r.erro) ui.toast(r.erro); else if(r && r.msg) ui.toast(r.msg); return r; }catch(e){ ui.toast('Erro: '+e); } }
+// a mensagem da resposta (r.msg) aparece também quando ela traz a lista atualizada (baixa, fixar, dado gravado, restaurar cópia...)
+async function api(m, ...a){ try{ const r = await API()[m](...a); if(r && r.registros) ui.carregar(r); if(r && r.erro) ui.toast(r.erro); else if(r && r.msg) ui.toast(r.msg); return r; }catch(e){ ui.toast('Erro: '+e); } }
 
 const ui = {
   dados:{registros:[],abas:[],base:'',hoje:''}, aba:'geral', filtro:'', filtroCor:null, filtroSel:'todas', ordem:{}, sel:null, aberto:null,
   carregar(d){ this.dados=d; const w=document.getElementById('welcome');
     if(this.aberto){ const ra=(d.registros||[]).find(x=>x.id===this.aberto); if(ra&&ra._leve) setTimeout(()=>this.completo(ra.id),0); }
     if(d.sem_base){ w.classList.add('on'); document.getElementById('copia').innerHTML=''; document.getElementById('baseNome').textContent='—'; document.getElementById('baseN').textContent='0';
-      document.getElementById('recentes').innerHTML=(d.recentes||[]).map(r=>`<div onclick="ui.abrirBase('${esc(r.caminho).replace(/\\/g,'\\\\')}','${esc(r.nome).replace(/'/g,"\\'")}')"><span>${esc(r.nome)}</span><small>${esc(r.caminho)}</small></div>`).join('')||'<div style="cursor:default;color:var(--tx3)">Nenhuma base recente</div>';
+      document.getElementById('recentes').innerHTML=(d.recentes||[]).map(r=>`<div onclick="ui.abrirBase(${jsa(r.caminho)},${jsa(r.nome)})"><span>${esc(r.nome)}</span><small>${esc(r.caminho)}</small></div>`).join('')||'<div style="cursor:default;color:var(--tx3)">Nenhuma base recente</div>';
       document.getElementById('wfoot').textContent='Base jurídica '+(d.base_juridica?d.base_juridica.versao:'?')+' · '+d.hoje; this.dados.registros=[]; this.render(); return; }
     w.classList.remove('on'); if(d.base!==this._qdBase){ this._qdBase=d.base; this._qd=null; this.qdCarregar().then(()=>this.render()); } document.getElementById('baseNome').textContent=d.base; document.getElementById('baseN').textContent=d.registros.length;
     document.getElementById('copia').innerHTML=d.copia?`<i></i>cópia de segurança: ${esc(d.copia.quando)}`:'';
@@ -737,7 +738,15 @@ const ui = {
     b.sub_cols=base.concat(a.sub_cols.filter(c=>pe?['prazo_ppe','ppe_termo','ppe_status'].includes(c[0]):['prazo_ppp','retro_status'].includes(c[0])));
     b.sub_pilulas=pe?{ppe_status:'ppe_cor'}:{retro_status:'retro_cor'};
     return b; },
-  visiveis(){ const q=this.filtro; let rs=this.dados.registros; if(q){ rs=rs.filter(r=>JSON.stringify(r).toLowerCase().includes(q)); } return rs; },
+  // busca: nome, nº da execução, processos criminais e crimes (sem acento, sem diferença de maiúsculas); número também sem pontuação
+  _bTxt:new WeakMap(),
+  buscaTxt(r){ let t=this._bTxt.get(r); if(t) return t;
+    const cr=(r.crimes_det||[]), pl=(r.presc_linhas||[]);
+    const v=[r.nome,r.proc,r.id,r.crimes].concat(cr.map(c=>[c.nome_crime,c.dispositivo,c.desc,c.proc].join(' ')), pl.map(l=>[l.crime,l.proc_crim].join(' '))).join(' | ');
+    const pr=[r.proc,r.id].concat(cr.map(c=>c.proc), pl.map(l=>l.proc_crim)).map(x=>String(x||'').replace(/\D/g,'')).filter(Boolean);
+    t={txt:semAcento(v), dig:'|'+pr.join('|')+'|'}; this._bTxt.set(r,t); return t; },
+  visiveis(){ const q=semAcento(this.filtro); let rs=this.dados.registros; if(q){ const qd=/\d/.test(q)&&/^[\d.\-\/\s]+$/.test(q)?q.replace(/\D/g,''):'';
+      rs=rs.filter(r=>{ const b=this.buscaTxt(r); return b.txt.includes(q) || (qd && b.dig.includes(qd)); }); } return rs; },
   cor(r,spec){ const x=this.sitPed(r,spec); if(x) return x.cor; return spec.cor ? (r[spec.cor]||'') : ''; },
   // situação depois da providência: pedido marcado (Progressão, Livramento, Ficha) ou todos os itens da ficha conferidos
   sitPed(r,spec){ if(!spec||!['prog','liv','fd'].includes(spec.id)) return null; const P=(r.pedidos||{})[spec.id];
@@ -793,24 +802,24 @@ const ui = {
     const svgCopy='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>';
     const tr=linhas.map(r=>{ const cor=this.cor(r,spec); const exp=spec.expansivel && this.aberto===r.id;
       const tds=spec.cols.map((c,i)=>{ let v=r[c[0]]??''; const pk=spec.pilulas[c[0]];
-        if(c[0]==='proc'){ v=`<span class="copy" title="Clique para copiar" onclick="event.stopPropagation();ui.copiar('${esc(String(v))}')">${esc(v)}${svgCopy}</span>`; }
+        if(c[0]==='proc'){ v=`<span class="copy" title="Clique para copiar" onclick="event.stopPropagation();ui.copiar(${jsa(v)})">${esc(v)}${svgCopy}</span>`; }
         else if(c[0]==='nome'&&v){ const id_=this.idadeRSPE(r); v=`<span class="nmc">`+this.pinHtml(r)+`<span class="copy" title="Clique para copiar o nome" onclick="event.stopPropagation();ui.copiar(ui._clips[${this.clip(String(v))}])">${esc(v)}${svgCopy}</span>`+(id_>this.RSPE_VELHO?`<span class="rs-old" title="RSPE desatualizado: emitido em ${esc(r.geracao)}, há ${id_} dias (mais de ${this.RSPE_VELHO}). Vale baixar um novo no SEEU." onclick="event.stopPropagation()">!</span>`:'')+`</span>`; }
         else if(pk && /_sit$/.test(c[0]) && this.sitPed(r,spec)){ const x=this.sitPed(r,spec); v=`<span class="pill ${x.cor}" title="${esc(x.dica)}">${esc(x.txt)}</span>`; }
         else if(pk){ const pc = r[pk]||''; v = v ? `<span class="pill ${pc||'none'}">${esc(v)}</span>` : (/_sit$/.test(c[0]) ? '' : '<span class="muted">—</span>'); }
         else if(c[0]==='pedido'){ const P=(r.pedidos||{})[spec.id]; const mud=P&&P.ref&&P.ref!==this.pedRef(r,spec.id);
           // só o ícone: marcado = check; a data e a observação ficam na ficha do assistido (e na janela do clique)
-          v = P ? `<span class="pck ok ${mud?'mud':''}" title="${esc(this.pedDica(P,mud))}" onclick="event.stopPropagation();ui.pedidoAbrir('${r.id}','${spec.id}')">✓</span>`
-                : `<span class="pck" title="Marcar pedido feito" onclick="event.stopPropagation();ui.pedidoAbrir('${r.id}','${spec.id}')"></span>`; }
+          v = P ? `<span class="pck ok ${mud?'mud':''}" title="${esc(this.pedDica(P,mud))}" onclick="event.stopPropagation();ui.pedidoAbrir(${jsa(r.id)},'${spec.id}')">✓</span>`
+                : `<span class="pck" title="Marcar pedido feito" onclick="event.stopPropagation();ui.pedidoAbrir(${jsa(r.id)},'${spec.id}')"></span>`; }
         else if(c[0]==='presc_calc'){ const e=this.calcEstado(r);
-          v = !e? '<span class="muted">—</span>' : `<span class="jz-b ${e==='pend'?'pri':''}" title="${e==='pend'?'Evasão com várias condenações: digite o saldo de cada uma na data da fuga':'Ver o cálculo da fuga nos 4 critérios e a fundamentação'}" onclick="event.stopPropagation();ui.prescCalc('${r.id}')">${e==='pend'?'Calcular':'Ver cálculo'}</span>`; }
+          v = !e? '<span class="muted">—</span>' : `<span class="jz-b ${e==='pend'?'pri':''}" title="${e==='pend'?'Evasão com várias condenações: digite o saldo de cada uma na data da fuga':'Ver o cálculo da fuga nos 4 critérios e a fundamentação'}" onclick="event.stopPropagation();ui.prescCalc(${jsa(r.id)})">${e==='pend'?'Calcular':'Ver cálculo'}</span>`; }
         else if(c[0]==='conduta'){ v = r.conduta_ruim ? `<span class="falta">${esc(v)}</span>` : (r.ficha_tem ? esc(v) : `<span class="muted">${esc(v)}</span>`); }
         else if(c[0]==='falta'){ v = r.falta_sim ? `<span class="falta">Sim</span>` : (r.falta_apurar ? `<span class="apurar">A apurar</span>` : `<span class="muted">${esc(v)}</span>`);
-          if((r.faltas_itens||[]).length) v=`<span class="fedit" title="Ver e decidir as faltas (vale em todas as abas)" onclick="event.stopPropagation();ui.faltasModal('${r.id}')">${v} <span class="fe">✎</span></span>`; }
+          if((r.faltas_itens||[]).length) v=`<span class="fedit" title="Ver e decidir as faltas (vale em todas as abas)" onclick="event.stopPropagation();ui.faltasModal(${jsa(r.id)})">${v} <span class="fe">✎</span></span>`; }
         else { v = esc(v).replace('(est.)','<span class="est">(est.)</span>'); if(!v) v='<span class="muted">—</span>'; }
         if(i===0 && spec.expansivel) v=`<span class="chev">▶</span>${v}`;
         return `<td class="${i===0?'first':''} ${NW.has(c[0])?'nw':''} ${pk&&spec.id==='ind'?'pl':''}" title="${esc(String(r[c[0]+'_full']??r[c[0]]??''))}">${v}</td>`; }).join('');
-      const acao=`<td class="nw act">${spec.id==='geral'?`<span class="hbtn" title="Histórico comparativo dos RSPE importados deste assistido" onclick="event.stopPropagation();ui.historico('${r.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg>Histórico · ${r.hist_n||1}</span>`:''}${spec.id==='ind'?`<span class="mini" title="Linha do tempo: crimes, impeditivos, pena cumprida em cada decreto, faltas na janela e resultado" onclick="event.stopPropagation();ui.indTL('${r.id}')">Verificar indulto/comutação</span> `:''}${spec.id==='ext'?`<span class="mini" title="Linha do tempo: períodos cumpridos, fugas, faltas, hoje e término da pena" onclick="event.stopPropagation();ui.extTL('${r.id}')">Linha do tempo</span> `:''}${MODELOS_ATIVOS?`<span class="mini" title="Preencher modelo .docx com os dados deste assistido" onclick="event.stopPropagation();ui.peticao('${r.id}')">Petição</span>`:''}${this.fichaIcoHtml(r)}${this.qbtnHtml(r)}${this.abrirBtnHtml(r)}</td>`;
-      let html=`<tr class="${cor} ${exp?'exp':''} ${r.fixado?'fix':''} ${spec.expansivel?'':'noclk'}" ${spec.expansivel?`onclick="ui.expandir('${r.id}')"`:''}>${tds}${acao}</tr>`;
+      const acao=`<td class="nw act">${spec.id==='geral'?`<span class="hbtn" title="Histórico comparativo dos RSPE importados deste assistido" onclick="event.stopPropagation();ui.historico(${jsa(r.id)})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg>Histórico · ${r.hist_n||1}</span>`:''}${spec.id==='ind'?`<span class="mini" title="Linha do tempo: crimes, impeditivos, pena cumprida em cada decreto, faltas na janela e resultado" onclick="event.stopPropagation();ui.indTL(${jsa(r.id)})">Verificar indulto/comutação</span> `:''}${spec.id==='ext'?`<span class="mini" title="Linha do tempo: períodos cumpridos, fugas, faltas, hoje e término da pena" onclick="event.stopPropagation();ui.extTL(${jsa(r.id)})">Linha do tempo</span> `:''}${MODELOS_ATIVOS?`<span class="mini" title="Preencher modelo .docx com os dados deste assistido" onclick="event.stopPropagation();ui.peticao(${jsa(r.id)})">Petição</span>`:''}${this.fichaIcoHtml(r)}${this.qbtnHtml(r)}${this.abrirBtnHtml(r)}</td>`;
+      let html=`<tr class="${cor} ${exp?'exp':''} ${r.fixado?'fix':''} ${spec.expansivel?'':'noclk'}" ${spec.expansivel?`onclick="ui.expandir(${jsa(r.id)})"`:''}>${tds}${acao}</tr>`;
       if(exp) html+=`<tr class="sub"><td colspan="${spec.cols.length+1}"><div class="subwrap">${this.subTabela(r,spec)}</div></td></tr>`;
       return html; }).join('');
     card.innerHTML=`<table><thead class="${spec.expansivel?"exp":""}"><tr>${th}</tr></thead><tbody>${tr}</tbody></table>`;
@@ -1045,7 +1054,7 @@ const ui = {
           ? `<div style="margin:6px 0 8px;padding:8px 10px;border-radius:8px;background:#FAF0EF;border-left:4px solid #8E2424;font-size:12.5px"><b>Período de ${esc(ev)} a ${esc(S0.fim)}.</b> O prazo pelo saldo venceu durante a fuga, antes da ${esc(S0.fim_causa||'recaptura')} em ${esc(S0.fim)}.</div>`
           : `<div style="margin:6px 0 8px;padding:8px 10px;border-radius:8px;background:#EEF2F6;border-left:4px solid #3E4784;font-size:12.5px"><b>Fuga encerrada: ${esc(S0.fim_causa||'recaptura')} em ${esc(S0.fim)}.</b> A análise se refere só ao período de ${esc(ev)} a ${esc(S0.fim)}; a ${esc(S0.fim_causa||'recaptura')} interrompeu a prescrição (CP, art. 117, V) antes de o prazo vencer.</div>`) : ''}
         <div style="font-size:12.5px;margin:4px 0 8px">${fonte}</div>
-        ${varias?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px"><span class="jz-b ${pend?'pri':''}" onclick="ui.calcAbrir('${esc(ev)}')">${P==='calc'||P==='dig'?'Alterar o saldo desta fuga':'Digitar o saldo desta fuga'}</span></div>`:''}
+        ${varias?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px"><span class="jz-b ${pend?'pri':''}" onclick="ui.calcAbrir(${jsa(ev)})">${P==='calc'||P==='dig'?'Alterar o saldo desta fuga':'Digitar o saldo desta fuga'}</span></div>`:''}
         <table style="width:100%;border-collapse:collapse"><thead><tr><th ${th}>Condenação</th><th ${th}>Saldo na fuga</th><th ${th}>${P==='calc'?'Pela ordem':P==='dig'?'Saldo do SEEU':P==='linha'?'Linha do SEEU':'Pelo saldo'}</th>${varias?`<th ${th}>Ordem do trânsito (tese)</th><th ${th}>Art. 76 (tese)</th><th ${th}>Pena maior (tese)</th>`:''}<th ${th}></th></tr></thead><tbody>${rows}</tbody></table>
         ${pend?'<div style="font-size:12px;color:var(--tx2);margin-top:8px">Digite o saldo de cada condenação nesta fuga: o cálculo nos 4 critérios e a fundamentação aparecem em seguida.</div>':''}</div>`; }).join('');
     document.getElementById('modal').innerHTML=`<div class="box" style="width:980px;max-height:90vh;overflow:auto"><h2>Prescrição executória após a fuga · ${esc(r.nome||'')}</h2><p>${esc(r.proc||r.id)} · o saldo da pena na data da fuga (CP, art. 113), condenação a condenação; os demais critérios de imputação aparecem como tese.</p>${blocos||'<p>Nenhuma fuga ou revogação de livramento registrada.</p>'}<div class="acts"><button class="btn" onclick="ui.fecharModal()">Fechar</button></div></div>`;
@@ -1220,7 +1229,7 @@ const ui = {
     const nA=todos.filter(s=>s.nivel==='alerta'&&!s.baixado).length, nV=todos.filter(s=>s.nivel==='verificar'&&!s.baixado).length;
     const paras=t=>String(t||'').split(/(?<=[.;])\s+(?=[A-ZÁÉÍÓÚ(])/).filter(x=>x.trim()).map(x=>`<p>${penaExt(esc(x))}</p>`).join('');
     const card=s=>{ const k=s.baixado?'bx':s.nivel;
-      const bx = (s.preencher&&(!s.baixado||s.auto_baixa)?`<span class="mini ${s.baixado?'':'pre'}" onclick="event.stopPropagation();ui.preencher('${r.id}',${ui.clip(JSON.stringify(s.preencher))})">${s.baixado?'Alterar':(s.preencher.tipo==='vincular_ficha'?'Vincular ficha':s.preencher.tipo==='mesma_pessoa'?'Mesma pessoa':s.preencher.tipo==='desvincular_ficha'?'Desvincular ficha':s.preencher.tipo==='revincular_ficha'?'Desfazer':'Preencher')}</span> `:'')+`<span class="mini" onclick="event.stopPropagation();ui.copiarClip(${ui.clip(ui.txtAud(s))})">Copiar</span> `+(s.baixado&&s.auto_baixa?'':s.baixado ? `<span class="mini" onclick="event.stopPropagation();ui.reabrir('${r.id}','${s.chave}')">Reabrir</span>` : (s.nivel==='ok'||s.nivel==='info' ? '' : `<span class="mini" onclick="event.stopPropagation();ui.darBaixa('${r.id}','${s.chave}','${esc(s.titulo).replace(/'/g,'&#39;')}')">Dar baixa</span>`));
+      const bx = (s.preencher&&(!s.baixado||s.auto_baixa)?`<span class="mini ${s.baixado?'':'pre'}" onclick="event.stopPropagation();ui.preencher(${jsa(r.id)},${ui.clip(JSON.stringify(s.preencher))})">${s.baixado?'Alterar':(s.preencher.tipo==='vincular_ficha'?'Vincular ficha':s.preencher.tipo==='mesma_pessoa'?'Mesma pessoa':s.preencher.tipo==='desvincular_ficha'?'Desvincular ficha':s.preencher.tipo==='revincular_ficha'?'Desfazer':'Preencher')}</span> `:'')+`<span class="mini" onclick="event.stopPropagation();ui.copiarClip(${ui.clip(ui.txtAud(s))})">Copiar</span> `+(s.baixado&&s.auto_baixa?'':s.baixado ? `<span class="mini" onclick="event.stopPropagation();ui.reabrir(${jsa(r.id)},'${s.chave}')">Reabrir</span>` : (s.nivel==='ok'||s.nivel==='info' ? '' : `<span class="mini" onclick="event.stopPropagation();ui.darBaixa(${jsa(r.id)},'${s.chave}',${jsa(s.titulo)})">Dar baixa</span>`));
       return `<div class="ac ${k}"><div class="ac-h"><span class="pill ${s.nivel_cor}">${esc(s.nivel_txt)}</span><b>${penaExt(esc(s.titulo))}</b><span class="ac-a">${bx}</span></div>
         ${s.detalhe?`<div class="ac-d">${paras(s.detalhe)}</div>`:''}
         ${s.fundamento?`<div class="ac-f">${penaExt(esc(s.fundamento))}</div>`:''}
@@ -1234,15 +1243,15 @@ const ui = {
       ${(ocultos||this.mostrarTudo)?`<span class="mini" onclick="event.stopPropagation();ui.mostrarTudo=!ui.mostrarTudo;ui.render()">${this.mostrarTudo?'ocultar conferências OK':'ver '+pl(ocultos,'conferência OK / informativa','conferências OK / informativas')}</span>`:''}
       <span class="mini" onclick="event.stopPropagation();ui.copiarClip(${ui.clip(ui.txtAudTodos(r))})">Copiar pendências</span>
       ${todos.some(x=>x.fundamentacao&&!x.baixado)?`<span class="mini pre" title="Fundamentações de todos os pontos pendentes, em sequência" onclick="event.stopPropagation();ui.copiarClip(${ui.clip(ui.txtImpugnacao(r))})">Copiar todas as fundamentações</span>`:''}
-      <span class="mini" title="Alertas baixados e reabertos, com o motivo de cada baixa" onclick="event.stopPropagation();ui.historicoAlertas('${r.id}')">Histórico de alertas${nBx?' ('+nBx+')':''}</span>
-      <span class="mini" onclick="event.stopPropagation();ui.abrir('${r.id}')">Abrir ficha completa</span></div></div>`;
+      <span class="mini" title="Alertas baixados e reabertos, com o motivo de cada baixa" onclick="event.stopPropagation();ui.historicoAlertas(${jsa(r.id)})">Histórico de alertas${nBx?' ('+nBx+')':''}</span>
+      <span class="mini" onclick="event.stopPropagation();ui.abrir(${jsa(r.id)})">Abrir ficha completa</span></div></div>`;
     return cab+(rows.length?`<div class="ac-lista">${rows.map(card).join('')}</div>`:`<div class="muted" style="padding:8px 2px">Guia em ordem: nenhum alerta pendente.${nBx?' Os alertas baixados estão no Histórico de alertas.':''}</div>`); },
   // histórico das baixas (motivo e data) e reaberturas; os alertas resolvidos por dado informado também aparecem aqui
   async historicoAlertas(id){ const r=await this.completo(id); if(!r) return; const H=await API().historico_alertas(id)||[];
     const auto=(r.aud_itens||[]).filter(s=>s.baixado&&s.auto_baixa);
     const th='style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);font-size:12px;color:var(--tx2)"', td='style="padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top;font-size:12.5px"'; const tdn=td.replace('font-size','white-space:nowrap;font-size');
-    const linhas=H.map(h=>`<tr><td ${tdn} class="dt">${esc(h.data||'—')}</td><td ${tdn}><span class="pill ${h.acao==='baixa'?(h.ativa?'cinza':'none'):'amarelo'}">${h.acao==='baixa'?(h.ativa?'Baixado':'Baixado · reaberto depois'):'Reaberto'}</span></td><td ${td}>${penaExt(esc(h.titulo||''))}</td><td ${td}>${h.acao==='baixa'?esc(h.obs||'— sem motivo registrado (baixa anterior a esta versão)'):'—'}</td><td ${tdn}>${h.ativa?`<span class="mini" onclick="ui.reabrirHist('${id}','${h.chave}')">Reabrir</span>`:''}</td></tr>`).join('');
-    const la=auto.map(s=>`<tr><td ${td}>${esc(s.baixa_data||'—')}</td><td ${td}><span class="pill verde">Dado informado</span></td><td ${td}>${penaExt(esc(s.titulo))}</td><td ${td}>${esc(s.baixa_obs||'')}</td><td ${td}>${s.preencher?`<span class="mini" onclick="ui.fecharModal();ui.preencher('${id}',${ui.clip(JSON.stringify(s.preencher))})">Alterar</span>`:''}</td></tr>`).join('');
+    const linhas=H.map(h=>`<tr><td ${tdn} class="dt">${esc(h.data||'—')}</td><td ${tdn}><span class="pill ${h.acao==='baixa'?(h.ativa?'cinza':'none'):'amarelo'}">${h.acao==='baixa'?(h.ativa?'Baixado':'Baixado · reaberto depois'):'Reaberto'}</span></td><td ${td}>${penaExt(esc(h.titulo||''))}</td><td ${td}>${h.acao==='baixa'?esc(h.obs||'— sem motivo registrado (baixa anterior a esta versão)'):'—'}</td><td ${tdn}>${h.ativa?`<span class="mini" onclick="ui.reabrirHist(${jsa(id)},'${h.chave}')">Reabrir</span>`:''}</td></tr>`).join('');
+    const la=auto.map(s=>`<tr><td ${td}>${esc(s.baixa_data||'—')}</td><td ${td}><span class="pill verde">Dado informado</span></td><td ${td}>${penaExt(esc(s.titulo))}</td><td ${td}>${esc(s.baixa_obs||'')}</td><td ${td}>${s.preencher?`<span class="mini" onclick="ui.fecharModal();ui.preencher(${jsa(id)},${ui.clip(JSON.stringify(s.preencher))})">Alterar</span>`:''}</td></tr>`).join('');
     document.getElementById('modal').innerHTML=`<div class="box" style="width:980px;max-height:90vh;overflow:auto"><h2>Histórico de alertas · ${esc(r.nome||'')}</h2><p>${esc(r.proc||r.id)} · alertas da Auditoria baixados (com o motivo informado) e reabertos, do mais recente ao mais antigo. Os baixados não aparecem na linha da aba: a guia segue "em ordem".</p>
       ${(linhas||la)?`<table style="width:100%;border-collapse:collapse;margin-top:8px"><thead><tr><th ${th}>Data</th><th ${th}>Situação</th><th ${th}>Alerta</th><th ${th}>Motivo da baixa</th><th ${th}></th></tr></thead><tbody>${linhas}${la}</tbody></table>`:'<p class="muted">Nenhum alerta baixado para este assistido.</p>'}
       <div class="acts"><button class="btn" onclick="ui.fecharModal()">Fechar</button></div></div>`;
@@ -1270,7 +1279,7 @@ const ui = {
         return `<tr class="${rel(x)?'':'fora'}">${v.map((y,j)=>`<td class="${j>=2&&j<=(pe?7:6)?'dt':''}">${y&&y.h!==undefined?y.h:penaExt(d(y))}${j===0&&x.ajustado?'<span class="aj" title="Dados preenchidos ou corrigidos pelo operador">✎ ajustado</span>':''}</td>`).join('')}<td>${x[st]?`<span class="pill ${x[sc]||'none'}">${esc(cur(x[st]))}</span>`:'—'}${verif?`<div style="margin-top:4px"><span class="btn-sal" onclick="event.stopPropagation();ui.pfAbrir(this,${ti},'saldo')">CONFERIR / INFORMAR SALDO</span></div>`:''}</td><td style="white-space:nowrap!important"><span class="why" onclick="event.stopPropagation();ui.tlToggle(this,'calc',${ti})">cálculo</span> · <span class="why" onclick="event.stopPropagation();ui.pfAbrir(this,${ti})">editar dados</span>${tem?` · <span class="why" onclick="event.stopPropagation();ui.tlToggle(this,'tl',${ti})">linha do tempo</span>`:''}</td></tr><tr style="display:none"><td colspan="${cols.length+1}">${pe?ui.explicaHtml(x):''}${ui.memoria(x, pe?'pe':'pp')}</td></tr><tr style="display:none"><td colspan="${cols.length+1}"></td></tr><tr style="display:none"><td colspan="${cols.length+1}"><div class="pf-holder"></div></td></tr>`; }).join('');
       return `<div class="pc"><div class="pc-h"><b>Ação penal ${esc(k)}</b><span class="pc-m">${pl(xs.length,'crime','crimes')}</span><span class="sp"></span>${pior[st]?`<span class="pill ${pior[sc]||'none'}">${esc(cur(pior[st]).split(' em ')[0])}</span>`:''}</div>
         <table><thead><tr>${cols.map(c=>`<th style="width:${c[1]}%">${c[0]}</th>`).join('')}<th style="width:300px"></th></tr></thead><tbody>${lin}</tbody></table></div>`; }).join('');
-    const abrir=`<div style="text-align:right;margin-top:8px"><span class="mini" onclick="event.stopPropagation();ui.abrir('${r.id}')">Abrir ficha completa</span></div>`;
+    const abrir=`<div style="text-align:right;margin-top:8px"><span class="mini" onclick="event.stopPropagation();ui.abrir(${jsa(r.id)})">Abrir ficha completa</span></div>`;
     return cards?`<div class="pc-wrap">${cards}</div>${abrir}`:`<div class="muted">Nenhum crime com prescrição ${pe?'executória aparente ou iminente':'da pretensão punitiva aparente'} nem datas a verificar.</div>`; },
   subTabela(r,spec){ if(spec.id==='aud') return this.audCards(r); if(spec.id==='presc') return this.prescCards(r); const cols=spec.sub_cols; let rows=r[spec.sub]||[]; const tot=cols.reduce((s,c)=>s+c[2],0)+6;
     if(spec.id==='presc'){ const pe=this.prescModo!=='pp'; rows=[...rows].sort((x,y)=>String(x.proc_crim||'').localeCompare(String(y.proc_crim||''))); rows=rows.filter(s=>s.ajustado||(pe?(s.ppe_cor==='vermelho'||s.ppe_cor==='amarelo'||/^Verificar na ação penal/.test(s.ppe_status||'')):(s.retro_cor==='vermelho'||/^Verificar na ação penal/.test(s.retro_status||'')))); }
@@ -1282,7 +1291,7 @@ const ui = {
         else v=penaExt(esc(v))||'<span class="muted">—</span>';
         return `<td${c[0]==='proc_crim'?' style="white-space:nowrap"':''}${s[c[0]+'_full']?` title="${esc(s[c[0]+'_full'])}"`:''}>${v}</td>`; }).join('');
       const det=(s.retro_detalhe?'PRETENSÃO PUNITIVA\n'+s.retro_detalhe+'\n\n':'')+(s.ppe_detalhe?'PRETENSÃO EXECUTÓRIA\n'+s.ppe_detalhe:'')+(s.avisos&&s.avisos.length?'\n\nAVISOS\n'+s.avisos.join('\n'):'');
-      if(baixa){ const bx = s.baixado ? `<span class="mini" onclick="event.stopPropagation();ui.reabrir('${r.id}','${s.chave}')">Reabrir</span>` : (s.nivel==='ok' ? '' : `<span class="mini" onclick="event.stopPropagation();ui.darBaixa('${r.id}','${s.chave}','${esc(s.titulo).replace(/'/g,'&#39;')}')">Dar baixa</span>`);
+      if(baixa){ const bx = s.baixado ? `<span class="mini" onclick="event.stopPropagation();ui.reabrir(${jsa(r.id)},'${s.chave}')">Reabrir</span>` : (s.nivel==='ok' ? '' : `<span class="mini" onclick="event.stopPropagation();ui.darBaixa(${jsa(r.id)},'${s.chave}',${jsa(s.titulo)})">Dar baixa</span>`);
         const obs = s.baixado ? `<div class="muted" style="font-size:11.5px;margin-top:3px">baixado${s.baixa_data?' em '+esc(s.baixa_data):''}${s.baixa_obs?' · '+esc(s.baixa_obs):''}</div>` : '';
         let n=0; const tds2 = tds.replace(/<\/td>/g, m=>{ n++; return n===3 ? obs+m : m; });
         return `<tr class="${s.baixado?'bx':''}">${tds2}<td style="white-space:nowrap">${bx}</td></tr>`; }
@@ -1290,11 +1299,11 @@ const ui = {
       return `<tr>${tds}<td><span class="why" onclick="event.stopPropagation();const n=this.closest('tr').nextElementSibling;n.style.display=n.style.display==='none'?'':'none'">cálculo</span></td></tr><tr style="display:none"><td colspan="${cols.length+1}">${ui.memoria(s, spec.id==='presc'?(ui.prescModo==='pp'?'pp':'pe'):null)}</td></tr>`; }).join('');
     const cab = spec.id==='aud' ? `<b>${esc(r.nome)}</b> <span class="muted">· ${esc(r.aud_resumo)} · conferido com a ${esc(r.aud_base)} · alertas apontam o que demanda atenção, não afirmam erro</span>${(ocultos||this.mostrarTudo)?` · <span class="mini" onclick="event.stopPropagation();ui.mostrarTudo=!ui.mostrarTudo;ui.render()">${this.mostrarTudo?'ocultar informativos e OK':'mostrar '+pl(ocultos,'informativo','informativos')+'/OK'}</span>`:''}${r.ficha_resumo?`<div class="muted" style="margin-top:3px">Ficha disciplinar: ${esc(r.ficha_resumo)}</div>`:''}` : spec.id==='fd' ? (r.ficha_tem?`<b class="fdsit ${esc(r.fd_cor||'')}">${esc(r.fd_sit_det||'Em ordem')}</b> <span class="muted">· ficha disciplinar (SIAPEN) impressa em ${esc((r.ficha||{}).data_impressao||'?')}</span>`:'<span class="muted">Sem ficha disciplinar importada: importe o PDF da ficha (SIAPEN) pelo botão Importar PDFs.</span>')+`${r.ficha_tem&&r.fd_remicoes?`<div class="muted" style="font-size:12px;margin-top:3px">${esc(r.fd_remicoes)}</div>`:''}` : `<b>${esc(r.nome)}</b> <span class="muted">· ${pl((r.presc_linhas||[]).length,'crime','crimes')}, ${rows.length} ${ui.prescModo==='pp'?'com prescrição da pretensão punitiva aparente':'com prescrição executória aparente ou iminente'} ou datas a verificar na ação penal · cada crime prescreve isoladamente (art. 119)${r.presc_obs?' · '+esc(r.presc_obs):''}</span>`;
     const vazio = (spec.id==='presc' && !rows.length) ? `<tr><td colspan="${cols.length+1}" class="muted">Nenhum crime com prescrição ${ui.prescModo==='pp'?'da pretensão punitiva aparente':'executória aparente ou iminente'} nem datas faltando.</td></tr>` : '';
-    if(spec.id==='fd' && r.ficha_tem) return `<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:8px"><span>${cab}</span><span style="white-space:nowrap">${r.fd_conf_tot?`<span class="muted" style="font-size:12.5px;margin-right:10px">Conferidos <b style="color:var(--g-tx)">${r.fd_conf_n||0}</b> de ${r.fd_conf_tot}</span>`:''}${r.fd_fund?`<span class="mini pre" onclick="event.stopPropagation();ui.copiarClip(${ui.clip(r.fd_fund)})">Copiar fundamentação</span> `:''}<span class="mini" onclick="event.stopPropagation();ui.fdAdicionar('${r.id}')">+ Adicionar atestado</span> <span class="mini" onclick="event.stopPropagation();ui.abrir('${r.id}')">Abrir ficha completa</span></span></div>${this.fdTabela(r)}`;
-    return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><span>${cab}</span><span class="mini" onclick="event.stopPropagation();ui.abrir('${r.id}')">Abrir ficha completa</span></div><table class="subtab">${cg}${head}${body}${vazio}</table>`; },
+    if(spec.id==='fd' && r.ficha_tem) return `<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:8px"><span>${cab}</span><span style="white-space:nowrap">${r.fd_conf_tot?`<span class="muted" style="font-size:12.5px;margin-right:10px">Conferidos <b style="color:var(--g-tx)">${r.fd_conf_n||0}</b> de ${r.fd_conf_tot}</span>`:''}${r.fd_fund?`<span class="mini pre" onclick="event.stopPropagation();ui.copiarClip(${ui.clip(r.fd_fund)})">Copiar fundamentação</span> `:''}<span class="mini" onclick="event.stopPropagation();ui.fdAdicionar(${jsa(r.id)})">+ Adicionar atestado</span> <span class="mini" onclick="event.stopPropagation();ui.abrir(${jsa(r.id)})">Abrir ficha completa</span></span></div>${this.fdTabela(r)}`;
+    return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><span>${cab}</span><span class="mini" onclick="event.stopPropagation();ui.abrir(${jsa(r.id)})">Abrir ficha completa</span></div><table class="subtab">${cg}${head}${body}${vazio}</table>`; },
   // conciliação atestado x remição: (A) tabela, (B) pendências acionáveis, (C) alertas de qualidade dos dados
   fdConc(r){ const C=r.fd_conc; if(!C) return ''; const pill=(t,c)=>t?`<span class="pill ${c||'cinza'}">${esc(t)}</span>`:'';
-    const tk=(on,ch)=>`<span class="tk ${on?'on':''}" title="${on?'Conferido - clique para desfazer':'Conferir homologação: marcar como conferido'}" onclick="event.stopPropagation();ui.fdConferir('${r.id}','${esc(ch).replace(/'/g,'&#39;')}',${!on})"></span>`;
+    const tk=(on,ch)=>`<span class="tk ${on?'on':''}" title="${on?'Conferido - clique para desfazer':'Conferir homologação: marcar como conferido'}" onclick="event.stopPropagation();ui.fdConferir(${jsa(r.id)},${jsa(ch)},${!on})"></span>`;
     const th='style="text-align:left;font-size:11px;color:var(--tx2);padding:6px 8px;background:var(--bg2,#F1F2EF)"', td='style="padding:6px 8px;font-size:12.5px;border-top:1px solid var(--line);vertical-align:top"';
     const rows=(C.tabela||[]).map(t=>`<tr class="${t.ok?'ok':''}"><td ${td}><b>${esc(t.atestado)}</b>${t.emissao?`<br><span class="muted">emitido ${esc(t.emissao)}</span>`:''}${t.nota?`<br><span class="muted" style="font-size:11px">${esc(t.nota)}</span>`:''}</td>
       <td ${td}>${(t.segs||[]).map(x=>`<div>${esc(x.setor)} · ${esc(x.per)}${x.inferido?' <span class="muted">(inferido)</span>':''}${x.corrigido?` <span style="color:#7A5410">(ano corrigido; ${esc(x.corrigido)})</span>`:''}${x.trab!=null&&x.trab!==''&&!x.inferido?` <span class="muted">${x.trab}/${String(x.rem).replace('.',',')}</span>`:''}</div>`).join('')}</td>
@@ -1308,18 +1317,18 @@ const ui = {
       <div class="muted" style="font-size:11.5px;margin:8px 0 14px;font-weight:400">Status automáticos pela conciliação (número do atestado, dias iguais após truncar a fração, ordem cronológica). A coluna ✓ é o checklist manual "Conferir homologação".</div>`; },
   fdTabela(r){ const conc=this.fdConc(r); const B=r.fd_blocos||[]; if(!B.length) return conc||'<p class="muted">Nenhum trabalho ou estudo nesta execução.</p>';
     if(conc&&!B.length) return conc;
-    const tk=(on,ch)=>ch?`<span class="tk ${on?'on':''}" title="${on?'Conferido - clique para desfazer':'Marcar como conferido'}" onclick="event.stopPropagation();ui.fdConferir('${r.id}','${esc(ch).replace(/'/g,'&#39;')}',${!on})"></span>`:'';
+    const tk=(on,ch)=>ch?`<span class="tk ${on?'on':''}" title="${on?'Conferido - clique para desfazer':'Marcar como conferido'}" onclick="event.stopPropagation();ui.fdConferir(${jsa(r.id)},${jsa(ch)},${!on})"></span>`:'';
     const pill=(t,c)=>t?`<span class="pill ${c||'cinza'}">${esc(t)}</span>`:'';
     const rows=B.map(b=>{ const bok=!!b.ok;
       const hd=`<tr class="fdb ${bok?'ok':''}"><td colspan="3">${esc(b.titulo)} <span class="n">· ${esc(b.info||'')}</span></td><td>${b.tipo==='atestado'?pill(b.sit,b.cor):''}</td><td class="c">${b.tipo==='atestado'?tk(bok,b.chave):''}</td></tr>`;
       const its=(b.itens||[]).map(i=>{ const ok=bok||!!i.ok; const dir=b.tipo==='atestado'?'':(b.tipo==='manual'?`<span class="muted">${esc(i.sit)}</span>`:pill(i.sit,i.cor));
-        const ac=b.tipo==='manual'?`<span class="mini" title="Remover" onclick="event.stopPropagation();ui.fdRemover('${r.id}','${i.id}')">✕</span>`:tk(!!i.ok,i.chave);
+        const ac=b.tipo==='manual'?`<span class="mini" title="Remover" onclick="event.stopPropagation();ui.fdRemover(${jsa(r.id)},${jsa(i.id)})">✕</span>`:tk(!!i.ok,i.chave);
         return `<tr class="fdi ${ok?'ok':''}"><td>${esc(i.emp)}</td><td>${esc(i.un||'—')}</td><td>${esc(i.per||'')}</td><td>${dir}</td><td class="c">${ac}</td></tr>`; }).join('');
       return hd+its; }).join('');
     return conc+`<table class="fdt"><colgroup><col style="width:33%"><col style="width:10%"><col style="width:25%"><col style="width:26%"><col style="width:6%"></colgroup>
       <tr><th>Emprego / estudo</th><th>Unidade</th><th>Período</th><th>O que conferir</th><th class="c">✓</th></tr>${rows}</table>
       <div class="muted" style="font-size:11.5px;margin-top:8px;font-weight:400">"Conferir homologação": ver na decisão se o atestado entrou numa remição do RSPE (o RSPE não diz a origem de cada remição). Clique no círculo para marcar como conferido.</div>`; },
-  async fdConferir(id,chave,marcar){ const r=await API().fd_conferir(id,chave.replace(/&#39;/g,"'"),marcar); if(r&&r.registros){ this.aberto=id; this.carregar(r); } },
+  async fdConferir(id,chave,marcar){ const r=await API().fd_conferir(id,chave,marcar); if(r&&r.registros){ this.aberto=id; this.carregar(r); } },
   async fdRemover(id,mid){ if(!confirm('Remover este lançamento?')) return; const r=await API().fd_remover(id,mid); if(r&&r.registros){ this.aberto=id; this.carregar(r); } if(r&&r.msg) this.toast(r.msg); },
   fdAdicionar(id){ const inp=(k,ph,w)=>`<input id="fdm_${k}" placeholder="${ph}" style="width:${w||'100%'};padding:7px 9px;border:1px solid var(--line);border-radius:8px;font:inherit;box-sizing:border-box">`;
     document.getElementById('modal').innerHTML=`<div class="box" style="width:520px"><h2>Adicionar atestado ou remição</h2>
@@ -1334,7 +1343,7 @@ const ui = {
         ${inp('emissao','Emissão do atestado (dd/mm/aaaa)')}<span></span>
         <div style="grid-column:1/3"><textarea id="fdm_trechos" rows="3" placeholder="Trechos do atestado, um por linha: setor; início; fim; trabalhados; remidos&#10;ex.: Horta; 14/11/2023; 17/12/2023" style="width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:8px;font:inherit;box-sizing:border-box"></textarea></div>
       </div>
-      <div class="acts"><button class="btn" onclick="ui.fecharModal()">Cancelar</button><button class="btn pri" onclick="ui.fdSalvar('${id}')">Adicionar</button></div></div>`;
+      <div class="acts"><button class="btn" onclick="ui.fecharModal()">Cancelar</button><button class="btn pri" onclick="ui.fdSalvar(${jsa(id)})">Adicionar</button></div></div>`;
     document.getElementById('modal').classList.add('on'); },
   async fdSalvar(id){ const d={}; ['tipo','numero','descricao','inicio','fim','trabalhados','horas','remidos','unidade','emissao','trechos'].forEach(k=>{ const e=document.getElementById('fdm_'+k); d[k]=e?e.value:''; });
     const r=await API().fd_adicionar(id,d); if(r&&r.erro){ this.toast(r.erro); return; } this.fecharModal(); if(r&&r.registros){ this.aberto=id; this.carregar(r); } if(r&&r.msg) this.toast(r.msg); },
@@ -1347,7 +1356,7 @@ const ui = {
     document.getElementById('modal').innerHTML=`<div class="box" style="width:720px;max-height:calc(100vh - 40px);display:flex;flex-direction:column"><h2>Faltas · ${esc(r.nome)}</h2>
       <p class="muted" style="margin:0 0 10px">Indícios de falta registrados no RSPE sem sanção reconhecida. A fuga é, em tese, falta grave (LEP, art. 50, II), mas só produz efeitos depois de reconhecida em juízo (Súmula 533/STJ): fica "A apurar" até você decidir. A decisão vale em todas as abas: falta nos 12 meses (progressão e livramento), indulto, comutação, linha do tempo e Auditoria.</p>
       <div style="overflow:auto;display:flex;flex-direction:column;gap:8px">${linhas||'<p class="muted">Nenhum indício de falta a decidir.</p>'}</div>
-      <div class="acts"><button class="btn" onclick="ui.fecharModal()">Cancelar</button><button class="btn pri" onclick="ui.faltasSalvar('${id}',${its.length})">Salvar</button></div></div>`;
+      <div class="acts"><button class="btn" onclick="ui.fecharModal()">Cancelar</button><button class="btn pri" onclick="ui.faltasSalvar(${jsa(id)},${its.length})">Salvar</button></div></div>`;
     document.getElementById('modal').classList.add('on'); const fo=document.querySelector('#modal .fl.foco'); if(fo) fo.scrollIntoView({block:'center'}); },
   async faltasSalvar(id, n){ let res=null; for(let i=0;i<n;i++){ const e=document.getElementById('fal_'+i); if(!e||e.value===e.dataset.v) continue;
       res=await API().dado_manual(id, 'falta|'+e.dataset.ch, e.value); if(res&&res.erro){ this.toast(res.erro); return; } }
@@ -1385,7 +1394,7 @@ const ui = {
         <label>Data</label><input id="ped_data" value="${esc(P?P.data:hoje)}" placeholder="dd/mm/aaaa" style="padding:7px 9px;border:1px solid var(--line);border-radius:8px;font:inherit">
         <label>Observação</label><input id="ped_obs" value="${esc(P?P.obs:((pre&&pre.obs)||''))}" placeholder="ex.: mov. 123, indulto 2025, aguardando MP" style="padding:7px 9px;border:1px solid var(--line);border-radius:8px;font:inherit">
       </div>
-      <div class="acts">${P?`<button class="btn" style="margin-right:auto;color:var(--r-tx)" onclick="ui.pedidoSalvar('${id}','${aba}',true)">Remover marcação</button><button class="btn" onclick="ui.fecharModal();ui.abrirSAP('${id}')">Registro para o SAP</button>`:''}<button class="btn" onclick="ui.fecharModal()">Cancelar</button><button class="btn pri" onclick="ui.pedidoSalvar('${id}','${aba}')">${P?'Salvar':'Marcar pedido feito'}</button></div></div>`;
+      <div class="acts">${P?`<button class="btn" style="margin-right:auto;color:var(--r-tx)" onclick="ui.pedidoSalvar(${jsa(id)},${jsa(aba)},true)">Remover marcação</button><button class="btn" onclick="ui.fecharModal();ui.abrirSAP(${jsa(id)})">Registro para o SAP</button>`:''}<button class="btn" onclick="ui.fecharModal()">Cancelar</button><button class="btn pri" onclick="ui.pedidoSalvar(${jsa(id)},${jsa(aba)})">${P?'Salvar':'Marcar pedido feito'}</button></div></div>`;
     document.getElementById('modal').classList.add('on'); setTimeout(()=>{ const e=document.getElementById('ped_obs'); if(e) e.focus(); },50); },
   // ---------- registro de atendimento para o SAP: o que foi constatado e o que foi feito, em texto corrido ----------
   // concordância pelo sexo documentado (ficha do SIAPEN ou informado pelo operador); sem ele, texto neutro. O nome não é indício
@@ -1431,7 +1440,7 @@ const ui = {
       <p class="muted" style="margin:0 0 8px">${esc(r.nome)} · ${esc(r.proc)} · só o que foi feito, cada providência com a constatação que a motivou. Pode editar antes de copiar.</p>
       ${lista}
       <div style="display:flex;align-items:center;gap:8px;margin:0 0 8px;font-size:12.5px"><span class="muted">Tratamento</span>
-        <select id="sap_sexo" onchange="ui.sapSexo('${id}',this.value)" style="width:auto;flex:none;padding:4px 8px;border:1px solid var(--line);border-radius:6px;font:inherit">
+        <select id="sap_sexo" onchange="ui.sapSexo(${jsa(id)},this.value)" style="width:auto;flex:none;padding:4px 8px;border:1px solid var(--line);border-radius:6px;font:inherit">
           <option value="M" ${r.sexo==='M'?'selected':''}>o assistido</option><option value="F" ${r.sexo==='F'?'selected':''}>a assistida</option><option value="" ${!r.sexo?'selected':''}>a pessoa assistida, sem sexo informado</option></select>
         <span class="muted">${r.sexo_fonte==='ficha'?'· conforme a ficha do SIAPEN':r.sexo_fonte==='operador'?'· informado pelo operador':'· a ficha não informa; escolha para concordar o texto'}</span></div>
       <textarea id="sap_txt" style="width:100%;min-height:220px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font:inherit;line-height:1.55;resize:vertical;box-sizing:border-box">${esc(this.registroSAP(r, ks.length?sel0:null))}</textarea>
@@ -1452,7 +1461,7 @@ const ui = {
     this.fecharModal(); if(res&&res.registros) this.carregar(res); if(res&&res.quadro) this._qd=res.quadro; if(res&&res.msg) this.toast(res.msg);
     const dep=this._pedDepois; this._pedDepois=null; if(dep&&!remover) await dep(); else { this.render(); this.qdRefFicha(); } },
   // dar baixa: o motivo é obrigatório e fica no Histórico de alertas; o alerta sai da linha e a guia passa a "em ordem"
-  darBaixa(id, chave, titulo){ const t=titulo.replace(/&#39;/g,"'"); this._bx={id, chave, t};
+  darBaixa(id, chave, titulo){ const t=String(titulo||''); this._bx={id, chave, t};
     document.getElementById('modal').innerHTML=`<div class="box" style="width:620px"><h2>Dar baixa no alerta</h2><p style="margin:8px 0 10px"><b>${penaExt(esc(t))}</b></p>
       <label style="font-size:12.5px;color:var(--tx2)">Motivo da baixa (obrigatório) - o que foi feito ou por que não se aplica. Fica no Histórico de alertas para consulta.</label>
       <textarea id="bxObs" rows="4" style="width:100%;margin-top:6px;padding:8px;border:1px solid var(--line);border-radius:8px;font:inherit" oninput="document.getElementById('bxOk').disabled=!this.value.trim()" placeholder="Ex.: conferida a sentença - capitulação correta; impugnação protocolada em 10/10/2026; juízo já retificou o cálculo..."></textarea>
@@ -1519,7 +1528,7 @@ const ui = {
   async modalCopias(){ document.querySelectorAll('.menu').forEach(m=>m.classList.remove('on')); const d=await API().copias_listar(); if(!d||d.erro){ this.toast((d&&d.erro)||'Sem cópias.'); return; }
     const L=d.copias||[];
     document.getElementById('modal').innerHTML=`<div class="box" style="width:560px"><h2>Cópias de segurança</h2><p>O programa copia a base cada vez que ela é aberta e guarda as ${L.length>10?L.length:10} últimas. Restaurar volta a base ao estado da cópia; a versão de agora também é guardada antes, para poder desfazer.</p>
-      <div class="help" style="max-height:48vh">${L.length?`<table class="hist" style="table-layout:auto"><thead><tr><th>Cópia de</th><th>Assistidos</th><th></th></tr></thead><tbody>${L.map((c,i)=>`<tr><td>${esc(c.quando)}${i===0?'<span class="atual">mais recente</span>':''}</td><td>${c.assistidos==null?'—':c.assistidos}</td><td style="text-align:right"><span class="mini" onclick="ui.restaurarCopia(ui._clips[${this.clip(c.arquivo)}],'${esc(c.quando)}')">Restaurar</span></td></tr>`).join('')}</tbody></table>`:'<span class="muted">Nenhuma cópia ainda: a primeira é feita na próxima abertura da base (base vazia não é copiada).</span>'}</div>
+      <div class="help" style="max-height:48vh">${L.length?`<table class="hist" style="table-layout:auto"><thead><tr><th>Cópia de</th><th>Assistidos</th><th></th></tr></thead><tbody>${L.map((c,i)=>`<tr><td>${esc(c.quando)}${i===0?'<span class="atual">mais recente</span>':''}</td><td>${c.assistidos==null?'—':c.assistidos}</td><td style="text-align:right"><span class="mini" onclick="ui.restaurarCopia(ui._clips[${this.clip(c.arquivo)}],${jsa(c.quando)})">Restaurar</span></td></tr>`).join('')}</tbody></table>`:'<span class="muted">Nenhuma cópia ainda: a primeira é feita na próxima abertura da base (base vazia não é copiada).</span>'}</div>
       <p style="margin-top:10px;font-size:11.5px" class="muted">Pasta: ${esc(d.pasta||'')}</p>
       <div class="acts"><button class="btn" onclick="ui.fecharModal()">Fechar</button></div></div>`;
     document.getElementById('modal').classList.add('on'); },
@@ -1562,12 +1571,12 @@ const ui = {
     const P=r.pedidos||{};
     return `<span class="mx">${L.map(x=>{ const pd=P['ind_'+x.id]; return `<i class="${x.s}${pd?' ped':''}" title="${esc(this.decRot(x))} (${esc(x.numero)}): ${esc(this.DEC_ROT[x.s]||x.s)}${x.mot?' - '+esc(x.mot):''}${pd?' · PEDIDO FEITO em '+esc(pd.data):''}" style="background:${pd?this.DEC_COR.ped:(this.DEC_COR[x.s]||'#E2E5E0')}">${this.decCurto(x)}</i>`; }).join('')}</span>`; },
   async decAbrir(id){ if(this.decAberto===id){ this.decAberto=null; return this.render(); } await this.completo(id); this.decAberto=id; this.render(); },
-  decBtn(r){ return `<span class="mini dbtn" title="Linha do tempo: crimes, impeditivos, pena cumprida em cada decreto, faltas na janela e resultado" onclick="event.stopPropagation();ui.indTL('${r.id}')">Verificar indulto/comutação</span>`; },
+  decBtn(r){ return `<span class="mini dbtn" title="Linha do tempo: crimes, impeditivos, pena cumprida em cada decreto, faltas na janela e resultado" onclick="event.stopPropagation();ui.indTL(${jsa(r.id)})">Verificar indulto/comutação</span>`; },
   // pedido de indulto/comutação é por decreto (ind_<id>): no decreto aberto, o daquele decreto; no Geral, qualquer um (o clique pergunta o decreto)
   decPed(r,decId){ const P=r.pedidos||{}; const k=decId?'ind_'+decId:null;
     const ks=k?(P[k]?[k]:[]):Object.keys(P).filter(x=>x==='ind'||x.startsWith('ind_'));
     const dica=ks.map(x=>this.pedNome(x,r)+': '+this.pedDica(P[x],false)).join(' | ');
-    return ks.length?`<span class="pck ok" title="${esc(dica)}" onclick="event.stopPropagation();ui.pedidoAbrir('${r.id}','${k||ks[0]}')">✓</span>`:`<span class="pck" title="Marcar pedido feito" onclick="event.stopPropagation();ui.pedidoAbrir('${r.id}','${k||'ind'}')"></span>`; },
+    return ks.length?`<span class="pck ok" title="${esc(dica)}" onclick="event.stopPropagation();ui.pedidoAbrir(${jsa(r.id)},'${k||ks[0]}')">✓</span>`:`<span class="pck" title="Marcar pedido feito" onclick="event.stopPropagation();ui.pedidoAbrir(${jsa(r.id)},'${k||'ind'}')"></span>`; },
   renderIndulto(rs){ rs=[...rs].sort((a,b)=>(b.fixado?1:0)-(a.fixado?1:0)); const D=this.decLista(this.dados.registros||[]);
     if(this.decSel && !D.find(x=>x.id===this.decSel)) this.decSel=null;
     // legenda das cores desta aba (os contadores antigos não filtravam nada)
@@ -1577,7 +1586,7 @@ const ui = {
     const selBen=`<select class="dc-sel" onchange="ui.decBen=this.value;ui.render()"><option value="todos" ${this.decBen==='todos'?'selected':''}>Indulto e comutação</option><option value="indulto" ${this.decBen==='indulto'?'selected':''}>Só indulto</option><option value="comutacao" ${this.decBen==='comutacao'?'selected':''}>Só comutação</option></select>`;
     let main='';
     if(!this.decSel){
-      const tr=rs.map(r=>{ let h=`<tr class="${this.decAberto===r.id?'exp':''} ${r.fixado?'fix':''}"><td class="first" style="white-space:nowrap">${this.pinHtml(r)}<span class="nm" title="Ver o encaixe em cada decreto" onclick="event.stopPropagation();ui.decAbrir('${r.id}')">${esc(r.nome)}</span></td><td class="nw">${this.cpProc(r)}</td><td>${this.decMapa(r)}</td><td class="nw">${this.decBtn(r)}${this.fichaIcoHtml(r)}${this.qbtnHtml(r)}${this.abrirBtnHtml(r)}</td><td>${this.decPed(r)}</td></tr>`;
+      const tr=rs.map(r=>{ let h=`<tr class="${this.decAberto===r.id?'exp':''} ${r.fixado?'fix':''}"><td class="first" style="white-space:nowrap">${this.pinHtml(r)}<span class="nm" title="Ver o encaixe em cada decreto" onclick="event.stopPropagation();ui.decAbrir(${jsa(r.id)})">${esc(r.nome)}</span></td><td class="nw">${this.cpProc(r)}</td><td>${this.decMapa(r)}</td><td class="nw">${this.decBtn(r)}${this.fichaIcoHtml(r)}${this.qbtnHtml(r)}${this.abrirBtnHtml(r)}</td><td>${this.decPed(r)}</td></tr>`;
         if(this.decAberto===r.id) h+=`<tr class="sub"><td colspan="5">${this.decEncaixe(r)}</td></tr>`; return h; }).join('');
       main=`<div class="dc-top"><div class="tt"><b>Geral</b><small>todos os decretos, a partir da primeira prisão de cada execução · clique no nome para ver o encaixe em cada decreto</small></div><span class="sp"></span>${selBen}</div>
         <table><thead><tr><th style="width:18%">Nome</th><th class="nw" style="width:1%">Nº da execução</th><th>Decretos desde a primeira prisão</th><th style="width:1%"></th><th style="width:1%">Pedido</th></tr></thead><tbody>${tr}</tbody></table>`;
@@ -1620,41 +1629,41 @@ const ui = {
   cpNomeTxt(r){ return `<span class="copy" title="Clique para copiar o nome" onclick="event.stopPropagation();ui.copiar(ui._clips[${this.clip(r.nome||'')}])">${esc(r.nome)}</span>`; },
   cpNome(r){ return `<span class="cpn" title="Copiar o nome" onclick="event.stopPropagation();ui.copiar(ui._clips[${this.clip(r.nome||'')}])"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></span>`; },
   cpProc(r){ return `<span class="copy" title="Clique para copiar" onclick="event.stopPropagation();ui.copiar(ui._clips[${this.clip(r.proc||'')}])">${esc(r.proc)}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></span>`; },
-  pinHtml(r){ return `<span class="pin ${r.fixado?'on':''}" title="${r.fixado?'Fixado: aparece no topo e na faixa "Fixados" de todas as abas · clique para soltar':'Fixar este assistido: fica no topo e na faixa "Fixados" de todas as abas, sem precisar buscar de novo'}" onclick="event.stopPropagation();ui.fixar('${r.id}',${r.fixado?0:1})">${this.PIN_SVG}</span>`; },
+  pinHtml(r){ return `<span class="pin ${r.fixado?'on':''}" title="${r.fixado?'Fixado: aparece no topo e na faixa "Fixados" de todas as abas · clique para soltar':'Fixar este assistido: fica no topo e na faixa "Fixados" de todas as abas, sem precisar buscar de novo'}" onclick="event.stopPropagation();ui.fixar(${jsa(r.id)},${r.fixado?0:1})">${this.PIN_SVG}</span>`; },
   async fixar(id,on){ await api('fixar', id, !!on); if(this.sel===id && document.getElementById('drawer').classList.contains('on')) this.abrir(id); },
   renderFixados(){ const el=document.getElementById('fixbar'); const F=(this.dados.registros||[]).filter(r=>r.fixado); el.classList.toggle('on',!!F.length);
-    el.innerHTML=F.length?`<span>${this.PIN_SVG.replace('<svg','<svg style="width:13px;height:13px;color:#B5651D;vertical-align:-2px"')} Fixados:</span>`+F.map(r=>`<span class="fx ${this.filtro===r.proc.toLowerCase()?'on':''}" title="Mostrar só este assistido (clique de novo para mostrar todos)" onclick="ui.soEste('${esc(r.proc)}')">${esc(r.nome)}<b title="Soltar" onclick="event.stopPropagation();ui.fixar('${r.id}',0)">✕</b></span>`).join(''):''; },
+    el.innerHTML=F.length?`<span>${this.PIN_SVG.replace('<svg','<svg style="width:13px;height:13px;color:#B5651D;vertical-align:-2px"')} Fixados:</span>`+F.map(r=>`<span class="fx ${this.filtro===r.proc.toLowerCase()?'on':''}" title="Mostrar só este assistido (clique de novo para mostrar todos)" onclick="ui.soEste(${jsa(r.proc)})">${esc(r.nome)}<b title="Soltar" onclick="event.stopPropagation();ui.fixar(${jsa(r.id)},0)">✕</b></span>`).join(''):''; },
   soEste(proc){ const q=document.getElementById('q'); q.value = this.filtro===proc.toLowerCase() ? '' : proc; this.filtrar(); },
   // ---- Quadro do Usuário (estilo Trello): colunas, cartões com assistido, observação, prazo e etiqueta ----
   _qd:null,
   QD_ET:{urgente:['Urgente','#D92D20'],atencao:['Atenção','#B5651D'],acompanhar:['Acompanhar','#5B7C9C'],pedido:['Pedido feito','#2F7A4F'],outro:['Outro','#6B5B8A']},
   // ficha disciplinar: pessoa (cabeça e tórax) verde quando importada, sem cor quando não há
   fichaIcoHtml(r){ return `<span class="fico ${r.ficha_tem?'ok':''}" title="${r.ficha_tem?'Ficha disciplinar importada':'Sem ficha disciplinar importada'}" onclick="event.stopPropagation()"><svg viewBox="0 0 24 24" fill="${r.ficha_tem?'currentColor':'none'}" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7.5" r="3.8"/><path d="M4.5 21c0-4.2 3.4-7.2 7.5-7.2s7.5 3 7.5 7.2z"/></svg></span>`; },
-  abrirBtnHtml(r){ return `<span class="qbtn" title="Abrir a ficha completa do assistido" onclick="event.stopPropagation();ui.abrir('${r.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3h7v7"/><path d="M21 3l-9 9"/><path d="M19 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5"/></svg></span>`; },
-  qbtnHtml(r){ return `<span class="qbtn" title="Enviar ao Quadro do Usuário" onclick="event.stopPropagation();ui.qdNovo('${r.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 7v7M12 7v4M16 7v10"/></svg></span>`; },
+  abrirBtnHtml(r){ return `<span class="qbtn" title="Abrir a ficha completa do assistido" onclick="event.stopPropagation();ui.abrir(${jsa(r.id)})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3h7v7"/><path d="M21 3l-9 9"/><path d="M19 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5"/></svg></span>`; },
+  qbtnHtml(r){ return `<span class="qbtn" title="Enviar ao Quadro do Usuário" onclick="event.stopPropagation();ui.qdNovo(${jsa(r.id)})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 7v7M12 7v4M16 7v10"/></svg></span>`; },
   async qdCarregar(){ const q=await API().quadro(); if(q&&!q.erro){ this._qd=q; } return this._qd; },
   qdPrazo(p){ const d=this.tlD(p||''); if(!p||isNaN(d)) return null; const h=this.tlHoje(); h.setHours(0,0,0,0); return Math.round((d-h)/864e5); },
   qdAlertas(){ const Q=this._qd; if(!Q) return 0; const fim=(Q.colunas.slice(-1)[0]||{}).id; return Q.cartoes.filter(c=>!c.arquivado&&c.coluna!==fim&&c.prazo&&this.qdPrazo(c.prazo)!==null&&this.qdPrazo(c.prazo)<=0).length; },
-  async renderQuadro(){ if(!this._qd) await this.qdCarregar(); const Q=this._qd||{colunas:[],cartoes:[]}; const R=this.dados.registros||[]; const q=this.filtro;
+  async renderQuadro(){ if(!this._qd) await this.qdCarregar(); const Q=this._qd||{colunas:[],cartoes:[]}; const R=this.dados.registros||[]; const q=semAcento(this.filtro);
     const arq=Q.cartoes.filter(c=>c.arquivado).length;
     document.getElementById('stats').innerHTML=`<div class="qd-top"><span class="muted" style="font-size:12.5px">${pl(Q.cartoes.length-arq,'cartão','cartões')}${this.qdAlertas()?` · <b style="color:#8E2424">${pl(this.qdAlertas(),'prazo vencido ou para hoje','prazos vencidos ou para hoje')}</b>`:''}</span><span class="sp"></span><span class="jz-b" onclick="ui.qdColuna()">+ Coluna</span><span class="jz-b" onclick="ui.qdArquivados()" title="Cartões arquivados: saem do quadro e ficam aqui para consulta">Cartões arquivados${arq?' · '+arq:''}</span><span class="jz-b pri" onclick="ui.qdNovo()">+ Cartão</span></div>`;
     const fim=(Q.colunas.slice(-1)[0]||{}).id;
     const card=c=>{ const r=R.find(x=>x.id===c.processo); const d=this.qdPrazo(c.prazo); const et=this.QD_ET[c.etiqueta];
-      const txt=[c.titulo,c.obs,r?r.nome+' '+r.proc:''].join(' ').toLowerCase(); if(q && !txt.includes(q)) return '';
+      const txt=semAcento([c.titulo,c.obs,r?r.nome+' '+r.proc:''].join(' ')); if(q && !txt.includes(q)) return '';
       const pz=c.prazo?`<span class="qd-pz ${c.coluna!==fim&&d!==null?(d<0?'venc':d<=2?'prox':''):''}" title="Prazo">⏰ ${esc(c.prazo)}${c.coluna!==fim&&d!==null?(d<0?' · vencido':d===0?' · hoje':d===1?' · amanhã':''):''}</span>`:'';
-      return `<div class="qd-card" draggable="true" data-id="${c.id}" style="--et:${et?et[1]:'#E7E9E5'}" ondragstart="ui.qdDrag(event,'${c.id}')" ondragend="this.classList.remove('arr')" onclick="ui.qdEditar('${c.id}')" oncontextmenu="ui.qdMenu(event,'${c.id}')" title="Clique para editar · botão direito para mover ou arquivar">
-        <div class="t">${esc(c.titulo||(r?r.nome:'Sem título'))}</div>${r?`<div class="a" onclick="event.stopPropagation();ui.abrir('${r.id}')">${esc(r.nome)} <small>· ${esc(r.proc)}</small></div>`:''}
+      return `<div class="qd-card" draggable="true" data-id="${c.id}" style="--et:${et?et[1]:'#E7E9E5'}" ondragstart="ui.qdDrag(event,${jsa(c.id)})" ondragend="this.classList.remove('arr')" onclick="ui.qdEditar(${jsa(c.id)})" oncontextmenu="ui.qdMenu(event,${jsa(c.id)})" title="Clique para editar · botão direito para mover ou arquivar">
+        <div class="t">${esc(c.titulo||(r?r.nome:'Sem título'))}</div>${r?`<div class="a" onclick="event.stopPropagation();ui.abrir(${jsa(r.id)})">${esc(r.nome)} <small>· ${esc(r.proc)}</small></div>`:''}
         ${c.obs?`<div class="o">${esc(c.obs)}</div>`:''}${this.qdPedTxt(c)}${r?this.qdCopias(r):''}<div class="f">${c.aba?`<span class="qd-ben">${esc(this.qdBen(c.aba))}</span>`:''}${et?`<span class="qd-et" style="background:${et[1]}">${et[0]}</span>`:''}${pz}</div></div>`; };
     document.getElementById('card').innerHTML=`<div class="qd-board">${Q.colunas.map(col=>{ const cs=Q.cartoes.filter(c=>c.coluna===col.id&&!c.arquivado).sort((a,b)=>a.ordem-b.ordem);
-      return `<div class="qd-col" data-col="${col.id}" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="ui.qdDrop(event,'${col.id}')">
-        <div class="qd-ch"><b title="Clique duas vezes para renomear" ondblclick="ui.qdColuna('${col.id}','${esc(col.nome)}')">${esc(col.nome)}</b><span>${cs.length}</span></div>
-        <div class="qd-list">${cs.map(card).join('')}</div><div class="qd-add" onclick="ui.qdNovo(null,'${col.id}')">+ Adicionar cartão</div></div>`; }).join('')}</div>`; },
+      return `<div class="qd-col" data-col="${col.id}" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="ui.qdDrop(event,${jsa(col.id)})">
+        <div class="qd-ch"><b title="Clique duas vezes para renomear" ondblclick="ui.qdColuna(${jsa(col.id)},${jsa(col.nome)})">${esc(col.nome)}</b><span>${cs.length}</span></div>
+        <div class="qd-list">${cs.map(card).join('')}</div><div class="qd-add" onclick="ui.qdNovo(null,${jsa(col.id)})">+ Adicionar cartão</div></div>`; }).join('')}</div>`; },
   // menu do botão direito: mover para outra coluna, arquivar, editar, excluir
   qdMenu(ev,id){ ev.preventDefault(); ev.stopPropagation(); const Q=this._qd; const c=Q&&Q.cartoes.find(x=>x.id===id); if(!c) return;
     let m=document.getElementById('qdMenu'); if(!m){ m=document.createElement('div'); m.id='qdMenu'; m.className='qd-menu'; document.body.appendChild(m);
       document.addEventListener('click',()=>m.classList.remove('on')); document.addEventListener('keydown',e=>{ if(e.key==='Escape') m.classList.remove('on'); }); window.addEventListener('blur',()=>m.classList.remove('on')); }
-    m.innerHTML=`<div class="h">Mover para</div>${Q.colunas.map(col=>`<div class="i ${col.id===c.coluna?'at':''}" onclick="ui.qdMoverPara('${id}','${col.id}')">${col.id===c.coluna?'✓ ':''}${esc(col.nome)}</div>`).join('')}
-      <div class="s"></div>${c.aba&&c.processo?`<div class="i" onclick="ui.qdMarcarPedido('${id}')">✓ ${this.qdPedido(c)?'Pedido feito em '+esc(this.qdPedido(c).data)+' (editar)':'Marcar pedido feito'}</div>`:''}<div class="i" onclick="ui.qdArquivar('${id}',1)">🗄 Arquivar</div><div class="i" onclick="ui.qdEditar('${id}')">✎ Editar</div><div class="i r" onclick="ui.qdExcluir('${id}')">✕ Excluir</div>`;
+    m.innerHTML=`<div class="h">Mover para</div>${Q.colunas.map(col=>`<div class="i ${col.id===c.coluna?'at':''}" onclick="ui.qdMoverPara(${jsa(id)},${jsa(col.id)})">${col.id===c.coluna?'✓ ':''}${esc(col.nome)}</div>`).join('')}
+      <div class="s"></div>${c.aba&&c.processo?`<div class="i" onclick="ui.qdMarcarPedido(${jsa(id)})">✓ ${this.qdPedido(c)?'Pedido feito em '+esc(this.qdPedido(c).data)+' (editar)':'Marcar pedido feito'}</div>`:''}<div class="i" onclick="ui.qdArquivar(${jsa(id)},1)">🗄 Arquivar</div><div class="i" onclick="ui.qdEditar(${jsa(id)})">✎ Editar</div><div class="i r" onclick="ui.qdExcluir(${jsa(id)})">✕ Excluir</div>`;
     m.classList.add('on'); const w=m.offsetWidth, h=m.offsetHeight; m.style.left=Math.min(ev.clientX, innerWidth-w-8)+'px'; m.style.top=Math.min(ev.clientY, innerHeight-h-8)+'px'; },
   async qdMoverPara(id,col){ const Q=this._qd; const c=Q.cartoes.find(x=>x.id===id); if(!c||c.coluna===col) return;
     const o=Math.min(0,...Q.cartoes.filter(x=>x.coluna===col&&!x.arquivado).map(x=>x.ordem))-1; const q=await API().quadro_mover(id,col,o); if(q&&!q.erro){ this._qd=q; this.render(); this.qdRefFicha(); } },
@@ -1665,20 +1674,20 @@ const ui = {
   qdPerguntaPedido(c){ const r=(this.dados.registros||[]).find(x=>x.id===c.processo)||{}; const ben=this.PED_NOME[c.aba]||c.aba;
     document.getElementById('modal').innerHTML=`<div class="box" style="width:560px"><h2>Arquivar cartão</h2>
       <p>${esc(r.nome||'')} · ${esc(r.proc||'')}<br>O pedido de <b>${esc(ben)}</b> foi feito? Se sim, ele fica registrado na aba, com a data.</p>
-      <div class="acts"><button class="btn" style="margin-right:auto" onclick="ui.fecharModal()">Cancelar</button><button class="btn" onclick="ui.qdArquivar('${c.id}',1,null,true)">Não, só arquivar</button>
-        <button class="btn pri" onclick="ui.pedidoAbrir('${c.processo}','${c.aba}',{obs:ui._qd.cartoes.find(x=>x.id==='${c.id}').obs,depois:()=>ui.qdArquivar('${c.id}',1,null,true)})">Sim, registrar o pedido</button></div></div>`;
+      <div class="acts"><button class="btn" style="margin-right:auto" onclick="ui.fecharModal()">Cancelar</button><button class="btn" onclick="ui.qdArquivar(${jsa(c.id)},1,null,true)">Não, só arquivar</button>
+        <button class="btn pri" onclick="ui.pedidoAbrir(${jsa(c.processo)},${jsa(c.aba)},{obs:ui._qd.cartoes.find(x=>x.id===${jsa(c.id)}).obs,depois:()=>ui.qdArquivar(${jsa(c.id)},1,null,true)})">Sim, registrar o pedido</button></div></div>`;
     document.getElementById('modal').classList.add('on'); },
   qdMarcarPedido(id){ const c=((this._qd||{}).cartoes||[]).find(x=>x.id===id); if(!c) return; if(!c.aba||!c.processo){ this.toast('Escolha o assistido e o benefício do cartão (Editar).'); this.qdEditar(id); return; }
     this.pedidoAbrir(c.processo, c.aba, {obs:c.obs}); },
   qdArquivados(){ const Q=this._qd||{colunas:[],cartoes:[]}; const R=this.dados.registros||[]; const coln=id=>(Q.colunas.find(x=>x.id===id)||{}).nome||'—';
-    const q=(this._qdArqQ||'').toLowerCase();
-    const L=Q.cartoes.filter(c=>c.arquivado).filter(c=>{ const r=R.find(x=>x.id===c.processo); return !q||[c.titulo,c.obs,r?r.nome+' '+r.proc:c.processo].join(' ').toLowerCase().includes(q); })
+    const q=semAcento(this._qdArqQ||'');
+    const L=Q.cartoes.filter(c=>c.arquivado).filter(c=>{ const r=R.find(x=>x.id===c.processo); return !q||semAcento([c.titulo,c.obs,r?r.nome+' '+r.proc:c.processo].join(' ')).includes(q); })
       .sort((a,b)=>this.qdData(b.arquivado)-this.qdData(a.arquivado));
     const lin=L.map(c=>{ const r=R.find(x=>x.id===c.processo); const et=this.QD_ET[c.etiqueta];
       return `<div class="qa-c" style="--et:${et?et[1]:'#E7E9E5'}"><div class="tx"><b>${esc(c.titulo||(r?r.nome:'Sem título'))}</b>${r?`<div class="a">${esc(r.nome)} <small>· ${esc(r.proc)}</small></div>`:''}${c.obs?`<div class="o">${esc(c.obs)}</div>`:''}
         ${this.qdPedTxt(c)}<small class="muted">${c.aba?esc(this.qdBen(c.aba))+' · ':''}arquivado em ${esc(c.arquivado)} · estava em ${esc(coln(c.coluna))}${c.prazo?' · prazo '+esc(c.prazo):''}</small>${r?this.qdCopias(r):''}</div>
-        <div class="qa-ac"><select onchange="ui.qdArquivar('${c.id}',0,this.value)"><option value="">Devolver ao quadro…</option>${Q.colunas.map(col=>`<option value="${col.id}">${esc(col.nome)}</option>`).join('')}</select>
-        <span class="mini" onclick="ui.qdEditar('${c.id}')">Abrir</span> <span class="mini" style="color:var(--r-tx)" onclick="ui.qdExcluir('${c.id}')">Excluir</span></div></div>`; }).join('');
+        <div class="qa-ac"><select onchange="ui.qdArquivar(${jsa(c.id)},0,this.value)"><option value="">Devolver ao quadro…</option>${Q.colunas.map(col=>`<option value="${col.id}">${esc(col.nome)}</option>`).join('')}</select>
+        <span class="mini" onclick="ui.qdEditar(${jsa(c.id)})">Abrir</span> <span class="mini" style="color:var(--r-tx)" onclick="ui.qdExcluir(${jsa(c.id)})">Excluir</span></div></div>`; }).join('');
     document.getElementById('modal').innerHTML=`<div class="box" style="width:760px;max-height:calc(100vh - 40px);display:flex;flex-direction:column"><h2>Cartões arquivados</h2>
       <p>Saem do quadro, mas ficam guardados aqui para consulta. Para devolver, escolha a coluna.</p>
       <input class="qa-q" placeholder="Buscar por título, observação, nome ou processo" value="${esc(this._qdArqQ||'')}" oninput="ui._qdArqQ=this.value;clearTimeout(ui._qaT);ui._qaT=setTimeout(()=>{ui.qdArquivados();const e=document.querySelector('.qa-q');if(e){e.focus();e.setSelectionRange(e.value.length,e.value.length);}},250)">
@@ -1704,7 +1713,7 @@ const ui = {
   fichaQuadro(r){ const Q=this._qd; if(!Q){ this.qdCarregar().then(()=>{ const el=document.getElementById('fq_'+r.id.replace(/\W/g,'')); if(el) el.outerHTML=this.fichaQuadro(r); }); }
     const cs=Q?Q.cartoes.filter(c=>c.processo===r.id):[]; const coln=id=>((Q&&Q.colunas.find(x=>x.id===id))||{}).nome||id;
     const sug=({prog:'Progressão: '+(r.prog_sit||r.prog||''),liv:'Livramento: '+(r.liv_sit||r.liv||''),ind:'Indulto/comutação',presc:'Prescrição: '+(r.presc_ppe||''),ext:'Extinção: '+(r.ext_sit||''),aud:'Auditoria: '+(r.aud_resumo||''),fd:'Ficha disciplinar: '+(r.fd_sit||'')})[this.aba]||'';
-    const lista=cs.map(c=>{ const et=this.QD_ET[c.etiqueta]; return `<div class="fq-c" style="--et:${et?et[1]:'#E7E9E5'}" onclick="ui.qdEditar('${c.id}')" title="Abrir o cartão"><div class="tx"><b>${esc(c.titulo||'Sem título')}</b>${c.obs?`<div>${esc(c.obs)}</div>`:''}</div><small>${esc(coln(c.coluna))}${c.prazo?' · ⏰ '+esc(c.prazo):''}</small></div>`; }).join('');
+    const lista=cs.map(c=>{ const et=this.QD_ET[c.etiqueta]; return `<div class="fq-c" style="--et:${et?et[1]:'#E7E9E5'}" onclick="ui.qdEditar(${jsa(c.id)})" title="Abrir o cartão"><div class="tx"><b>${esc(c.titulo||'Sem título')}</b>${c.obs?`<div>${esc(c.obs)}</div>`:''}</div><small>${esc(coln(c.coluna))}${c.prazo?' · ⏰ '+esc(c.prazo):''}</small></div>`; }).join('');
     const cols=((Q||{}).colunas||[{id:'fazer',nome:'A fazer'}]);
     return `<div class="sec" id="fq_${r.id.replace(/\W/g,'')}"><h3>Quadro do Usuário</h3><div class="fq">
       <div class="fq-h"><b>${cs.length?pl(cs.length,'cartão','cartões')+' deste assistido':'Nenhum cartão deste assistido'}</b><span class="sp"></span>${this.qdCopias(r).replace('class="qd-cp"','class="qd-cp" style="margin:0"')}</div>${lista}
@@ -1712,7 +1721,7 @@ const ui = {
         <select id="fq_et">${Object.entries(this.QD_ET).map(([k,v])=>`<option value="${k}" ${k==='acompanhar'?'selected':''}>${v[0]}</option>`).join('')}</select>
         <input id="fq_pz" placeholder="Prazo dd/mm/aaaa">
         <textarea id="fq_obs" placeholder="Observação (o que acompanhar, o que falta, alerta…)"></textarea></div>
-      <div class="fq-a"><select id="fq_col" style="padding:7px 10px;border:1px solid var(--line2);border-radius:9px;font:inherit;background:#fff">${cols.map(x=>`<option value="${x.id}">${esc(x.nome)}</option>`).join('')}</select><span class="sp"></span><button class="btn pri" onclick="ui.fichaQdCriar('${r.id}')">Enviar ao quadro</button></div></div></div>`; },
+      <div class="fq-a"><select id="fq_col" style="padding:7px 10px;border:1px solid var(--line2);border-radius:9px;font:inherit;background:#fff">${cols.map(x=>`<option value="${x.id}">${esc(x.nome)}</option>`).join('')}</select><span class="sp"></span><button class="btn pri" onclick="ui.fichaQdCriar(${jsa(r.id)})">Enviar ao quadro</button></div></div></div>`; },
   async fichaQdCriar(id){ const v=k=>(document.getElementById(k)||{}).value||''; const r=(this.dados.registros||[]).find(x=>x.id===id);
     const c={id:'',processo:id,titulo:v('fq_tit').trim()||(r?r.nome:''),obs:v('fq_obs').trim(),prazo:v('fq_pz').trim(),etiqueta:v('fq_et')||'acompanhar',coluna:v('fq_col')||'fazer',ordem:null};
     const q=await API().quadro_gravar(c); if(!q||q.erro){ this.toast((q&&q.erro)||'Falha ao gravar.'); return; } this._qd=q; this.toast('Cartão criado no Quadro do Usuário.');
@@ -1729,7 +1738,7 @@ const ui = {
         <label>Prazo / alerta</label><input id="qd_pz" value="${esc(c.prazo||'')}" placeholder="dd/mm/aaaa (o cartão fica em destaque no dia e depois)">
         <label>Etiqueta</label><div class="qd-ets">${Object.entries(this.QD_ET).map(([k,v])=>`<span class="${c.etiqueta===k?'on':''}" style="background:${v[1]}" onclick="ui._qdc.etiqueta='${k}';this.parentElement.querySelectorAll('span').forEach(x=>x.classList.remove('on'));this.classList.add('on')">${v[0]}</span>`).join('')}</div>
         <label>Coluna</label><select id="qd_col">${((this._qd||{}).colunas||[{id:'fazer',nome:'A fazer'}]).map(x=>`<option value="${x.id}" ${x.id===c.coluna?'selected':''}>${esc(x.nome)}</option>`).join('')}</select></div>
-      <div class="acts" style="justify-content:space-between">${c.id?`<span style="display:flex;gap:8px"><button class="btn" style="color:var(--r-tx)" onclick="ui.qdExcluir('${c.id}')">Excluir</button>${c.arquivado?`<button class="btn" onclick="ui.qdArquivar('${c.id}',0)">Devolver ao quadro</button>`:`<button class="btn" onclick="ui.qdArquivar('${c.id}',1)">Arquivar</button>`}</span>`:'<span></span>'}<span style="display:flex;gap:8px"><button class="btn" onclick="ui.fecharModal()">Cancelar</button><button class="btn pri" onclick="ui.qdSalvar()">Gravar</button></span></div></div>`;
+      <div class="acts" style="justify-content:space-between">${c.id?`<span style="display:flex;gap:8px"><button class="btn" style="color:var(--r-tx)" onclick="ui.qdExcluir(${jsa(c.id)})">Excluir</button>${c.arquivado?`<button class="btn" onclick="ui.qdArquivar(${jsa(c.id)},0)">Devolver ao quadro</button>`:`<button class="btn" onclick="ui.qdArquivar(${jsa(c.id)},1)">Arquivar</button>`}</span>`:'<span></span>'}<span style="display:flex;gap:8px"><button class="btn" onclick="ui.fecharModal()">Cancelar</button><button class="btn pri" onclick="ui.qdSalvar()">Gravar</button></span></div></div>`;
     document.getElementById('modal').classList.add('on'); setTimeout(()=>{ const t=document.getElementById(c.processo&&!c.id?'qd_obs':'qd_tit'); if(t) t.focus(); },50); },
   async qdSalvar(){ const c=this._qdc; c.processo=document.getElementById('qd_proc').value; c.aba=document.getElementById('qd_aba').value; c.titulo=document.getElementById('qd_tit').value; c.obs=document.getElementById('qd_obs').value;
     c.prazo=document.getElementById('qd_pz').value.trim(); const col=document.getElementById('qd_col').value; if(col!==c.coluna){ c.coluna=col; c.ordem=null; }
@@ -1740,7 +1749,8 @@ const ui = {
     if(P[c.aba]) return P[c.aba]; if(c.aba==='ind'){ const k=Object.keys(P).filter(x=>x.startsWith('ind_')).sort((a,b)=>this.tlD(P[b].data)-this.tlD(P[a].data))[0]; return k?P[k]:null; } return null; },
   async qdExcluir(id){ if(!confirm('Excluir este cartão?')) return; const q=await API().quadro_excluir(id); if(q&&!q.erro){ this._qd=q; this.fecharModal(); this.render(); this.qdRefFicha(); this.toast(q.msg); } },
   async qdColuna(id,nome){ const n=prompt(id?'Novo nome da coluna (vazio exclui a coluna; os cartões vão para a primeira):':'Nome da nova coluna:', nome||''); if(n===null) return;
-    const q=await API().quadro_coluna(id||('c'+Date.now().toString(36)), n); if(q&&!q.erro){ this._qd=q; this.render(); } },
+    if(!id&&!n.trim()) return;
+    const q=await API().quadro_coluna(id||('c'+Date.now().toString(36)), n); if(q&&q.erro){ this.toast(q.erro); return; } if(q){ this._qd=q; this.render(); if(q.msg) this.toast(q.msg); } },
   // Jurisprudências: temas à esquerda (clique filtra); cartão com temas, resultado, tese, dados do acórdão, palavras-chave da ementa
   // e a ementa em 3 linhas
   TES_COR:['#1F5B39','#334E68','#7A5410','#6B5B8A','#C11574','#0E7090','#8E2424','#4E5BA6','#6B726D'],
@@ -1759,7 +1769,7 @@ const ui = {
     document.getElementById('subtabs').classList.remove('on');
     document.getElementById('stats').innerHTML=`<div class="tesbar"><div class="search has"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="tq" placeholder="Pesquisar tese, ementa, relator ou número (ex.: remição ENEM, falta grave bis in idem)" value="${esc(this.tesQ)}" oninput="ui.tesBusca(this.value)"></div>
       <div class="jz-src">${(()=>{ const T=this._teses||{itens:[]}; const n=(k,v)=>T.itens.filter(x=>(k==='t'?(x.tribunal||'TJMS'):(x.tipo||'Acórdão'))===v).length;
-        const b=(k,v,rot)=>`<span class="jz-f ${this[k]===v?'on':''}" onclick="ui.tesFiltro('${k}','${v}')">${rot}${v?` <i>${n(k==='tesTrib'?'t':'p',v)}</i>`:''}</span>`;
+        const b=(k,v,rot)=>`<span class="jz-f ${this[k]===v?'on':''}" onclick="ui.tesFiltro(${jsa(k)},${jsa(v)})">${rot}${v?` <i>${n(k==='tesTrib'?'t':'p',v)}</i>`:''}</span>`;
         return `Tribunal ${b('tesTrib','','Todos')}${['TJMS','STJ','STF'].map(v=>b('tesTrib',v,v)).join('')}<span style="width:10px"></span>Decisão ${b('tesTipo','','Todas')}${b('tesTipo','Acórdão','Acórdão')}${b('tesTipo','Monocrática','Monocrática')}`; })()}</div></div>`;
     this.tesLista(); },
   tesLista(manter){ const card=document.getElementById('card'); const T=this._teses||{itens:[]};
@@ -1798,15 +1808,20 @@ const ui = {
   abrirPasta(){ api('abrir_pasta_bases'); },
   toast(t){ const e=document.getElementById('toast'); e.textContent=t; e.classList.add('on'); clearTimeout(this._t); this._t=setTimeout(()=>e.classList.remove('on'),3500); },
   progresso(n,tot){ const p=document.getElementById('prog'); p.classList.add('on'); document.getElementById('progTxt').textContent=`Importando ${n} de ${tot}`; document.getElementById('progFill').style.width=(100*n/tot)+'%'; },
+  // barra de andamento de tarefas longas (exportar PDF/Excel): texto e fração; trabalho(null) esconde
+  trabalho(t,f){ const p=document.getElementById('prog'); if(!t){ p.classList.remove('on'); return; } p.classList.add('on'); document.getElementById('progTxt').textContent=t; if(f!=null) document.getElementById('progFill').style.width=Math.round(100*f)+'%'; },
   importado(r){ document.getElementById('prog').classList.remove('on'); const pL=api('listar');
     const partes=[]; if(r.novos) partes.push(pl(r.novos,'novo','novos')); if(r.atualizados) partes.push(pl(r.atualizados,'atualizado','atualizados')+' por RSPE mais recente');
     if(r.duplicados) partes.push(pl(r.duplicados,'duplicado ignorado','duplicados ignorados')); if(r.historico) partes.push(pl(r.historico,'mais antigo guardado no histórico','mais antigos guardados no histórico')); if(r.antigos-(r.historico||0)>0) partes.push(pl(r.antigos-(r.historico||0),'mais antigo ignorado','mais antigos ignorados')); if(r.erros) partes.push(pl(r.erros,'falha','falhas')); if(r.fichas) partes.push(pl(r.fichas,'ficha disciplinar','fichas disciplinares')); if(r.incompletos) partes.push(`${r.incompletos} com dados incompletos (ver Auditoria)`);
     if(!partes.length) partes.push('nada importado');
     // todo lote tem o registro da importação em PDF (arquivo a arquivo, com leitura parcial e causa provável)
-    this.modalAvisos(partes.join(' · '), (r.avisos&&r.avisos.length)?r.avisos:['Sem avisos: todos os arquivos foram lidos e importados.']);
-    pL.then(async()=>{ if(!await api('falhas_tem')) return; const b=document.getElementById('btFalhas'); if(b) b.style.display=''; }); },
+    const mostrar=()=>{ this.modalAvisos(partes.join(' · '), (r.avisos&&r.avisos.length)?r.avisos:['Sem avisos: todos os arquivos foram lidos e importados.'], r.interrompida);
+      pL.then(async()=>{ if(!await api('falhas_tem')) return; const b=document.getElementById('btFalhas'); if(b) b.style.display=''; }); };
+    // janela com formulário aberta (pedido, atestado, cartão…): o resumo espera ela fechar, para não apagar o que está sendo digitado
+    const M=document.getElementById('modal'); if(M.classList.contains('on') && M.querySelector('input:not([type=checkbox]):not([type=radio]),textarea,select')){ this._impPend=mostrar; this.toast((r.interrompida?'Importação interrompida':'Importação concluída')+': '+partes.join(' · ')+'. O resumo aparece ao fechar esta janela.'); return; }
+    mostrar(); },
   falhasPdf(){ api('falhas_pdf'); },
-  modalAvisos(titulo, avisos){ document.getElementById('modal').innerHTML=`<div class="box" style="width:640px"><h2>Importação concluída</h2><p>${esc(titulo)}</p>
+  modalAvisos(titulo, avisos, interrompida){ document.getElementById('modal').innerHTML=`<div class="box" style="width:640px"><h2>${interrompida?'Importação interrompida':'Importação concluída'}</h2><p>${esc(titulo)}</p>
       <div class="help" style="max-height:50vh"><ul style="margin:0;padding-left:18px">${avisos.map(a=>`<li>${esc(a)}</li>`).join('')}</ul></div>
       <p style="margin-top:10px">Dados incompletos = o programa não conseguiu ler algum campo essencial; o assistido entra na base com alerta na Auditoria. Duplicado = mesmo arquivo ou RSPE do mesmo processo com a mesma data de geração. Um RSPE mais recente do mesmo processo substitui o atual; um mais antigo entra só no histórico (botão Histórico, na aba Geral), sem substituir o atual. Os anteriores ficam guardados. Lista completa em importacao_avisos.txt.</p>
       <div class="acts"><button class="btn" id="btFalhas" style="display:none" title="PDF com o registro completo deste lote: cada arquivo, como foi lido, falhas e causa provável" onclick="ui.falhasPdf()">Registro da importação (PDF)</button><button class="btn pri" onclick="ui.fecharModal()">Fechar</button></div></div>`; document.getElementById('modal').classList.add('on'); },
@@ -1853,15 +1868,15 @@ const ui = {
           `Comutação ${x[0]}\n`+ui.txtLinhas(exp)); }).join('');
     const calc=dets+cms; // a prescrição fica só na aba Prescrição, não na ficha do assistido
     document.getElementById('drawer').innerHTML=`
-      <div class="dh"><div><h2><span class="copy" onclick="ui.copiar(ui._clips[${this.clip(r.nome||'')}])" title="Clique para copiar o nome">${esc(r.nome)} ⧉</span></h2><div class="sub"><span class="copy" onclick="ui.copiar('${esc(r.proc)}')" title="Clique para copiar">${esc(r.proc)} ⧉</span> · ${esc(r.regime||'regime não informado')}</div>
-        <div class="sub">RSPE de ${esc(r.geracao)} · <span class="mini" onclick="ui.copiarClip(${ui.clip(ui.txtFicha(r))})">Copiar resumo</span> <span class="mini pre" onclick="ui.abrirSAP('${r.id}')">Registro para o SAP</span> <span class="mini" onclick="ui.qdNovo('${r.id}')">Enviar ao Quadro do Usuário</span> <span class="mini" onclick="ui.fixar('${r.id}',${r.fixado?0:1})">${r.fixado?'Soltar':'Fixar no topo'}</span></div></div>
+      <div class="dh"><div><h2><span class="copy" onclick="ui.copiar(ui._clips[${this.clip(r.nome||'')}])" title="Clique para copiar o nome">${esc(r.nome)} ⧉</span></h2><div class="sub"><span class="copy" onclick="ui.copiar(${jsa(r.proc)})" title="Clique para copiar">${esc(r.proc)} ⧉</span> · ${esc(r.regime||'regime não informado')}</div>
+        <div class="sub">RSPE de ${esc(r.geracao)} · <span class="mini" onclick="ui.copiarClip(${ui.clip(ui.txtFicha(r))})">Copiar resumo</span> <span class="mini pre" onclick="ui.abrirSAP(${jsa(r.id)})">Registro para o SAP</span> <span class="mini" onclick="ui.qdNovo(${jsa(r.id)})">Enviar ao Quadro do Usuário</span> <span class="mini" onclick="ui.fixar(${jsa(r.id)},${r.fixado?0:1})">${r.fixado?'Soltar':'Fixar no topo'}</span></div></div>
         <button class="close" onclick="ui.fecharDrawer()">✕</button></div>
       <div class="db">
         ${r.motivo_exec?`<div class="sec"><div class="aviso-exec">${esc(r.motivo_exec)}</div></div>`:''}
         <div class="sec"><div class="kv">${kv('Pena total',r.pena_total)}${kv('Cumprida',r.pena_cumprida)}${kv('Remanescente',r.pena_rem)}${kv('Término',dmot(r.termino,r.termino_motivo))}</div>
           ${r.calc_notas&&Object.keys(r.calc_notas).length?`<div class="calcn">${Object.values(r.calc_notas).map(t=>`<div>${esc(t)}</div>`).join('')}</div>`:''}
           <div class="dbbox ${r.db_cor||''}"><small>Data-base (progressão)</small><div><b>${esc(r.db||'—')}</b>${r.db_motivo?` <span class="dbm">- ${esc(r.db_motivo)}</span>`:''}
-            <span class="mini" style="margin-left:6px" onclick="ui.editarDataBase('${r.id}')">${r.db_editada?'Alterar':'Editar'}</span>${r.db_editada?` <span class="mini" onclick="ui.editarDataBase('${r.id}',true)">Voltar ao SEEU</span>`:''}</div></div></div>
+            <span class="mini" style="margin-left:6px" onclick="ui.editarDataBase(${jsa(r.id)})">${r.db_editada?'Alterar':'Editar'}</span>${r.db_editada?` <span class="mini" onclick="ui.editarDataBase(${jsa(r.id)},true)">Voltar ao SEEU</span>`:''}</div></div></div>
         <div class="sec"><h3>Benefícios</h3>
           ${lin('Progressão', r.prog&&r.prog!=='—'?dataSit(r.prog, r.prog_sit, r.prog_cor):esc(r.prog_motivo||'—'))}
           ${lin('Livramento', r.liv&&r.liv!=='—'?dataSit(r.liv, r.liv_sit, r.liv_cor):esc(r.liv_motivo||'—'))}
@@ -1875,11 +1890,11 @@ const ui = {
         <div class="sec"><h3>Pontos de atenção</h3>${ptsHtml}</div>
         ${(()=>{ const P=r.pedidos||{}; const ks=this.pedKeys(r); if(!ks.length) return '';
           return `<div class="sec"><h3>Pedidos feitos</h3><div class="peds">${ks.map(k=>{ const x=P[k], mud=x.ref&&x.ref!==this.pedRef(r,k);
-            return `<div class="pedl"><span class="pck ok ${mud?'mud':''}" style="width:16px;height:16px;font-size:11px">✓</span><span class="pn">${this.pedNome(k,r).replace(/^./,c=>c.toUpperCase())}</span><b>${esc(x.data)}</b><span class="muted" style="white-space:nowrap">${({pedido:'pedido nos autos',oficio:'ofício à unidade',outro:'outra providência'})[x.tipo]||''}</span><span class="po">${esc(x.obs||'')}${mud?` <span style="color:var(--a-tx);font-weight:600">· ⚠ situação mudou depois do pedido</span>`:''}</span><span class="mini" onclick="ui.pedidoAbrir('${r.id}','${k}')">Editar</span></div>`; }).join('')}</div></div>`; })()}
+            return `<div class="pedl"><span class="pck ok ${mud?'mud':''}" style="width:16px;height:16px;font-size:11px">✓</span><span class="pn">${this.pedNome(k,r).replace(/^./,c=>c.toUpperCase())}</span><b>${esc(x.data)}</b><span class="muted" style="white-space:nowrap">${({pedido:'pedido nos autos',oficio:'ofício à unidade',outro:'outra providência'})[x.tipo]||''}</span><span class="po">${esc(x.obs||'')}${mud?` <span style="color:var(--a-tx);font-weight:600">· ⚠ situação mudou depois do pedido</span>`:''}</span><span class="mini" onclick="ui.pedidoAbrir(${jsa(r.id)},'${k}')">Editar</span></div>`; }).join('')}</div></div>`; })()}
         <div class="sec"><h3>Crimes em execução</h3><div class="kv one"><div>${crimes||'—'}</div></div></div>
         ${this.fichaHtml(r)}
         ${calc?`<div class="sec"><h3>Cálculos do programa</h3>${calc}</div>`:''}
-        <div class="sec"><span class="mini" onclick="ui.relatorioUm('${r.id}')">Relatório em PDF</span> <span class="mini" style="color:var(--r-tx)" onclick="ui.confirmarRemocao('${r.id}')">Remover este assistido da base</span></div>
+        <div class="sec"><span class="mini" onclick="ui.relatorioUm(${jsa(r.id)})">Relatório em PDF</span> <span class="mini" style="color:var(--r-tx)" onclick="ui.confirmarRemocao(${jsa(r.id)})">Remover este assistido da base</span></div>
       </div>`;
     document.getElementById('drawer').classList.add('on'); document.getElementById('veil').classList.add('on'); },
   fecharDrawer(){ document.getElementById('drawer').classList.remove('on'); document.getElementById('veil').classList.remove('on'); },
@@ -1903,7 +1918,7 @@ const ui = {
       <h4 style="margin:10px 0 4px;font-size:12px;color:var(--tx2)">Atestados de trabalho / remição</h4><ul class="tl">${at}</ul>
       <h4 style="margin:10px 0 4px;font-size:12px;color:var(--tx2)">Faltas disciplinares</h4><ul class="tl">${fal}</ul>
       ${outros?`<h4 style="margin:10px 0 4px;font-size:12px;color:var(--tx2)">Regressão, restabelecimento, isolamento, recusa de trabalho</h4><ul class="tl">${outros}</ul>`:''}
-      <div style="margin-top:8px"><span class="mini" onclick="ui.removerFicha('${r.id}')">Remover ficha</span></div></div>`; },
+      <div style="margin-top:8px"><span class="mini" onclick="ui.removerFicha(${jsa(r.id)})">Remover ficha</span></div></div>`; },
   async removerFicha(id){ if(confirm('Remover a ficha disciplinar vinculada a '+id+'?')){ await api('remover_ficha',id); this.abrir(id); } },
   async peticao(id){ const r=this.dados.registros.find(x=>x.id===id); if(!r) return; const lm=await API().listar_modelos(); const ms=(lm&&lm.modelos)||[]; const defs=(lm&&lm.defensores)||[]; if(!ms.length){ this.toast('Nenhum modelo .docx na pasta "modelos" ao lado do programa.'); return; }
     if(!defs.length){ this.toast('Cadastre ao menos um defensor (botão "Defensores") antes de gerar a petição.'); this.defensores(); return; }
@@ -1912,7 +1927,7 @@ const ui = {
       <div style="overflow:auto;flex:1;min-height:120px;border:1px solid #ECEEEB;border-radius:10px;padding:4px">${ms.map(m=>`<label class="chk"><input type="radio" name="mod" value="${esc(m)}">${esc(m.replace(/\.docx$/i,''))}</label>`).join('')}</div>
       <div style="margin-top:8px"><small class="muted">Quem assina</small><br><select id="defsel" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:10px;font:inherit;margin-top:4px">${defs.map((d,i)=>`<option value="${i}" ${i===padrao?'selected':''}>${esc(d.nome)} · ${esc(d.cargo||'Defensor Público')}</option>`).join('')}</select></div>
       <label class="chk" style="margin-top:6px"><input type="checkbox" id="pdfsim" checked>gerar também em PDF (requer Word instalado)</label>
-      <div class="acts"><button class="btn" onclick="ui.fecharModal()">Cancelar</button><button class="btn pri" onclick="ui.gerarPeticao('${r.id}')">Gerar</button></div></div>`;
+      <div class="acts"><button class="btn" onclick="ui.fecharModal()">Cancelar</button><button class="btn pri" onclick="ui.gerarPeticao(${jsa(r.id)})">Gerar</button></div></div>`;
     box.classList.add('on'); const first=box.querySelector('input[name=mod]'); if(first) first.checked=true; },
   async gerarPeticao(id){ const m=document.querySelector('input[name=mod]:checked'); if(!m) return; const pdf=document.getElementById('pdfsim').checked; this.fecharModal(); this.toast('Gerando petição…');
     const ds=document.getElementById('defsel'); const di=ds?parseInt(ds.value):null;
@@ -2028,7 +2043,7 @@ const ui = {
         ${sel('reinc','Reincidente',[['','Conforme o RSPE'+(o.reinc?' ('+(o.reinc==='S'?'sim':'não')+')':' (não informado)')],['S','Sim'],['N','Não']])}
         ${sel('art115','Art. 115 (metade do prazo)',[['','Conforme o RSPE'+(o.nascimento?' (nasc. '+o.nascimento+')':' (sem data de nascimento)')],['sim','Aplicar: menor de 21 no fato ou maior de 70 na sentença'],['nao','Não aplicar']])}</div>
       ${sal}
-      <div class="acts">${L.ajustado?`<button class="btn" onclick="ui.pfSalvar('${id}',true)">Restaurar dados importados</button>`:''}<button class="btn" onclick="this.closest('.pf').parentElement.innerHTML=''">Cancelar</button><button class="btn pri" onclick="ui.pfSalvar('${id}')">Salvar e recalcular</button></div></div>`; },
+      <div class="acts">${L.ajustado?`<button class="btn" onclick="ui.pfSalvar(${jsa(id)},true)">Restaurar dados importados</button>`:''}<button class="btn" onclick="this.closest('.pf').parentElement.innerHTML=''">Cancelar</button><button class="btn pri" onclick="ui.pfSalvar(${jsa(id)})">Salvar e recalcular</button></div></div>`; },
   pfAbrir(el, idx, foco){ const L=this._tl[idx]; const box=el.closest('.ptl')||el.closest('.mb.rz')||el.closest('.qd'); const h=(box||el.closest('tr').nextElementSibling.nextElementSibling.nextElementSibling).querySelector('.pf-holder');
     if(h.innerHTML){ h.innerHTML=''; if(!box) h.closest('tr').style.display='none'; return; } this._pfL=this._pfL||{}; h.innerHTML=this.pfForm(L, foco); const f=h.querySelector('.pf'); this._pfL[f.id]=L;
     if(!box) h.closest('tr').style.display=''; const alvo=foco==='saldo'?(f.querySelector('.sd.alvo input')||f.querySelector('.sd input')):f.querySelector('input'); if(alvo) alvo.focus(); },
@@ -2037,11 +2052,12 @@ const ui = {
     if(!restaurar){ const valores={}; f.querySelectorAll('[data-k]').forEach(e=>{ const k=e.dataset.k, x=e.value.trim(); if(x && x!==(e.dataset.o||'')) valores[k]=x; });
       if(valores.modalidade==='PRD'&&!valores.ultimo_comparecimento&&!valores.inicio_prd&&!(L.ultimo_comparecimento)) this.toast('Restritiva sem início efetivo nem último comparecimento: o prazo corre pela pena aplicada desde o trânsito (a audiência admonitória não interrompe).');
       if(valores.susp366_fim&&!valores.susp366_ini) return this.toast('Informe o início da suspensão do art. 366.');
-      for(const k of ['fato','denuncia','sentenca','acordao','transito_mp','transito','ultimo_comparecimento','inicio_prd','revogacao_sursis','novo_crime','susp366_ini','susp366_fim']) if(valores[k] && !/^\d{2}\/\d{2}\/\d{4}$/.test(valores[k])) return this.toast('Data inválida em "'+k+'": use dd/mm/aaaa.');
+      for(const k of ['fato','denuncia','sentenca','acordao','transito_mp','transito','ultimo_comparecimento','inicio_prd','revogacao_sursis','novo_crime','susp366_ini','susp366_fim']) if(valores[k] && !dataOk(valores[k])) return this.toast('Data inválida em "'+(PF_ROT[k]||k)+'": '+valores[k]+' não existe no calendário (use dd/mm/aaaa).');
       if(valores.pena && this.sqAmd(valores.pena)==null) return this.toast('Pena inválida: use o formato 2a6m0d.');
-      const saldos={}; f.querySelectorAll('.sd').forEach(b=>{ const g=q=>b.querySelector(`[data-s="${q}"]`).value.trim(); if(g('a')===''&&g('m')===''&&g('d')==='') return; saldos[b.dataset.ev]=(+g('a')||0)*365+(+g('m')||0)*30+(+g('d')||0); });
+      let salRuim=false; const saldos={}; f.querySelectorAll('.sd').forEach(b=>{ const g=q=>b.querySelector(`[data-s="${q}"]`).value.trim(); if(g('a')===''&&g('m')===''&&g('d')==='') return; if(![g('a'),g('m'),g('d')].every(x=>/^\d*$/.test(x))) salRuim=true; saldos[b.dataset.ev]=(+g('a')||0)*365+(+g('m')||0)*30+(+g('d')||0); });
+      if(salRuim) return this.toast('Saldo inválido: use só números inteiros (anos, meses e dias), sem sinal nem vírgula.');
       if(Object.keys(valores).length||Object.keys(saldos).length) dados={valores,saldos}; }
-    await api('presc_ajuste', rid, L.chave_ajuste, dados); this.toast(dados?'Dados gravados: prescrição recalculada.':'Dados importados restaurados.'); },
+    const r=await api('presc_ajuste', rid, L.chave_ajuste, dados); if(r&&!r.erro) this.toast(dados?'Dados gravados: prescrição recalculada.':'Dados importados restaurados.'); },
   // ---- linha do tempo de indulto e comutação: uma linha por assistido; a figura é a memória de cálculo ----
   async indTL(id){ this.toast('Montando a linha do tempo…'); await this.completo(id); const d=await api('indulto_linha', id); if(!d||d.erro) return; this._tlvModo='ind';
     this._tlv=d; this._tlvId=id; const sel=this.aba==='ind'?this.decSel:null; this._tlvGen=(sel&&!(d.decretos||[]).some(x=>x.id===sel))?sel:null;
@@ -2212,13 +2228,15 @@ const ui = {
         <details class="tlv-sec dobra" ${(this._tlvAbre||{}).cmp?'open':''} ontoggle="(ui._tlvAbre=ui._tlvAbre||{}).cmp=this.open"><summary><h3>3 · ${todos?'Decretos':'Decreto '+esc(D.numero||'')}: comparativo com os incisos (exigido × cumprido na data de referência)</h3></summary><div class="decs ${todos?'':'um'}">${decs}</div></details>
         ${expl?`<details class="tlv-sec dobra" ${(this._tlvAbre||{}).expl?'open':''} ontoggle="(ui._tlvAbre=ui._tlvAbre||{}).expl=this.open"><summary><h3>4 · Como cheguei aqui</h3></summary><div class="decs ${todos?'':'um'}">${expl}</div></details>`:''}
       </div><div class="tlv-det" id="tlvDet"></div></div>`; },
-  fecharModal(){ document.getElementById('modal').classList.remove('on'); },
+  fecharModal(){ const M=document.getElementById('modal'); M.classList.remove('on');
+    // resumo de importação que esperava: aparece agora, a não ser que outra janela tenha sido aberta em seguida
+    if(this._impPend) setTimeout(()=>{ if(M.classList.contains('on')||!this._impPend) return; const f=this._impPend; this._impPend=null; f(); },0); },
   async exportar(fmt){ const ids=[...document.querySelectorAll('#modal input:checked')].map(i=>i.value); if(!ids.length) return this.toast('Marque ao menos uma aba.');
     this.fecharModal(); const vis=this.visiveis().map(r=>r.id); const r=await API().exportar(fmt, ids, vis);
     if(r && r.caminho){ this.toast('Exportado: '+r.caminho); } else if(r && r.erro){ this.toast(r.erro); } },
   async modelos(){ const info=await API().modelos_info(); if(!info){ return; }
     const lista=(info.modelos||[]).map(m=>`<div class="chk" style="justify-content:space-between;cursor:default"><span><b>${esc(m.nome.replace(/\.docx$/i,''))}</b> <span class="muted">· ${esc(m.modificado)} · ${pl(m.campos,'campo','campos')}${m.desconhecidos&&m.desconhecidos.length?' · <span style="color:var(--r-tx)">campos desconhecidos: '+esc(m.desconhecidos.join(', '))+'</span>':''}</span></span>
-        <span style="white-space:nowrap"><span class="mini" onclick="ui.modeloAcao('abrir','${esc(m.nome)}')" title="Abre no Word para editar; salve e feche">Editar</span> <span class="mini" onclick="ui.modeloAcao('substituir','${esc(m.nome)}')">Substituir</span> <span class="mini" onclick="ui.modeloAcao('renomear','${esc(m.nome)}')">Renomear</span> <span class="mini" style="color:var(--r-tx)" onclick="ui.modeloAcao('excluir','${esc(m.nome)}')">Excluir</span></span></div>`).join('')||'<p class="muted">Nenhum modelo ainda.</p>';
+        <span style="white-space:nowrap"><span class="mini" onclick="ui.modeloAcao('abrir',${jsa(m.nome)})" title="Abre no Word para editar; salve e feche">Editar</span> <span class="mini" onclick="ui.modeloAcao('substituir',${jsa(m.nome)})">Substituir</span> <span class="mini" onclick="ui.modeloAcao('renomear',${jsa(m.nome)})">Renomear</span> <span class="mini" style="color:var(--r-tx)" onclick="ui.modeloAcao('excluir',${jsa(m.nome)})">Excluir</span></span></div>`).join('')||'<p class="muted">Nenhum modelo ainda.</p>';
     document.getElementById('modal').innerHTML=`<div class="box" style="width:720px;max-height:calc(100vh - 40px);display:flex;flex-direction:column"><h2>Modelos de petição (.docx)</h2>
       <p class="muted" style="margin:0 0 8px">Pasta: ${esc(info.pasta)}. Escreva os campos no Word como {{nome}}, {{processo}}, {{vara}}… (lista completa no CAMPOS.txt ou em "Ver campos").</p>
       <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap"><button class="btn pri" onclick="ui.modeloAcao('adicionar')">Adicionar modelos…</button><button class="btn" onclick="ui.modeloAcao('novo')">Criar modelo em branco…</button><button class="btn" onclick="ui.modeloAcao('pasta')">Abrir pasta</button><button class="btn" onclick="ui.modeloAcao('campos')">Ver campos</button><button class="btn" onclick="ui.modeloAcao('restaurar')" title="Recoloca os modelos da unidade que foram excluídos, sem alterar os existentes">Restaurar modelos da unidade</button></div>
@@ -2271,6 +2289,12 @@ const ui = {
 function curtoInd(t){ return (t||'').split(' | ')[0]; }
 function penaExt(t){ return String(t).replace(/(-?)\b(\d+)a(\d+)m(\d+)d\b/g,(m0,sg,a,mm,d)=>{ a=+a; mm=+mm; d=+d; const p=[]; if(a)p.push(a+(a>1?' anos':' ano')); if(mm)p.push(mm+(mm>1?' meses':' mês')); if(d)p.push(d+(d>1?' dias':' dia')); if(!p.length) return '0 dia'; return sg+(p.length===1?p[0]:p.slice(0,-1).join(', ')+' e '+p[p.length-1]); }); }
 function pl(n,a,b){ return n+' '+(n===1?a:b); }
+// texto dentro de string JS num atributo on*="...": aspa simples vira \x27 (o HTML decodifica &#39; antes de o JS rodar)
+// data dd/mm/aaaa que existe no calendário (31/31/2020 e 29/02/2023 não), no intervalo que o programa aceita (1900 a 2100)
+function dataOk(s){ const m=/^(\d{2})\/(\d{2})\/(\d{4})$/.exec(String(s||'').trim()); if(!m) return false; const d=+m[1], me=+m[2], a=+m[3]; if(a<1900||a>2100||me<1||me>12||d<1) return false; return d<=new Date(a,me,0).getDate(); }
+const PF_ROT={fato:'Data do fato',denuncia:'Recebimento da denúncia',sentenca:'Sentença',acordao:'Acórdão',transito_mp:'Trânsito para a acusação',transito:'Trânsito final',ultimo_comparecimento:'Último comparecimento',inicio_prd:'Início efetivo da restritiva',revogacao_sursis:'Revogação do sursis',novo_crime:'Novo crime após o trânsito',susp366_ini:'Suspensão do art. 366 - início',susp366_fim:'Suspensão do art. 366 - fim'};
+function semAcento(s){ return String(s??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(); }
+function jsa(s){ return esc("'"+String(s??'').replace(/\\/g,'\\\\').replace(/'/g,'\\x27').replace(/\r/g,'\\r').replace(/\n/g,'\\n').replace(/[\u2028\u2029]/g,c=>'\\u'+c.charCodeAt(0).toString(16))+"'"); }
 function esc(s){ return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 function cmp(a,b){ const da=dt(a), db=dt(b); if(da&&db) return da-db; if(da) return -1; if(db) return 1; return String(a??'').localeCompare(String(b??''),'pt'); }
 function dt(v){ const m=/^(\d{2})\/(\d{2})\/(\d{4})/.exec(String(v??'')); return m? new Date(+m[3],+m[2]-1,+m[1]).getTime():null; }

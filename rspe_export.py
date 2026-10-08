@@ -98,7 +98,23 @@ def _linhas_export(spec, modelos):
     return cols, linhas
 
 
-def exportar_pdf(modelos, saida, nome_base, abas):
+# célula muito longa (auditoria com dezenas de alertas): cortada no PDF, para a linha caber numa página. O texto completo
+# continua no programa e no Excel.
+PDF_MAX_LINHAS = 38
+PDF_CORTE = " […] (texto cortado no PDF; completo no programa e no Excel)"
+
+
+def _cortar_celula(v, larg_pt, fonte=7.8):
+    """Corta o texto que passaria de PDF_MAX_LINHAS linhas na coluna (quebras de linha viram espaço no PDF)."""
+    limite = max(12, int(larg_pt / (fonte * 0.5))) * PDF_MAX_LINHAS
+    if len(v) <= limite:
+        return v
+    return v[:max(0, limite - len(PDF_CORTE))].rstrip() + PDF_CORTE
+
+
+def exportar_pdf(modelos, saida, nome_base, abas, progresso=None):
+    """progresso(texto, fração) é chamado a cada aba e a cada página montada (a aba Auditoria de uma base grande leva
+    perto de um minuto)."""
     from reportlab.lib import colors
     from reportlab.lib.pagesizes import A4, landscape
     from reportlab.lib.styles import ParagraphStyle
@@ -129,10 +145,11 @@ def exportar_pdf(modelos, saida, nome_base, abas):
     largura = W - 2 * ML
     el = []
     primeiro = True
-    for aid in abas:
-        if aid not in rv.ABA_POR_ID:
-            continue
+    abas_ok = [a for a in abas if a in rv.ABA_POR_ID]
+    for n_aba, aid in enumerate(abas_ok):
         spec = rv.ABA_POR_ID[aid]
+        if progresso:
+            progresso("Exportando PDF: preparando %s (%d de %d)…" % (spec["titulo"], n_aba + 1, len(abas_ok)), 0.3 * n_aba / max(1, len(abas_ok)))
         cols, modelos_aba = _linhas_export(spec, modelos)
         pil = dict(spec["pilulas"], **spec.get("sub_pilulas", {}))
         if not primeiro:
@@ -178,7 +195,7 @@ def exportar_pdf(modelos, saida, nome_base, abas):
             linha = []
             cor = m.get(spec["cor"], "") if spec["cor"] else ""
             for j, (k, _, _) in enumerate(cols):
-                v = str(m.get(k + "_full", m.get(k, "")) or "")
+                v = _cortar_celula(str(m.get(k + "_full", m.get(k, "")) or ""), larguras[j] - 10)
                 v = v.replace("&", "&amp;").replace("<", "&lt;")
                 pk = pil.get(k)
                 if pk and v:
@@ -197,7 +214,11 @@ def exportar_pdf(modelos, saida, nome_base, abas):
                 estilo.append(("LINEBEFORE", (0, i), (0, i), 2.2, C(DOT[cor])))
             elif i % 2 == 0:
                 estilo.append(("BACKGROUND", (0, i), (-1, i), C(ZEBRA)))
-        t = Table(dados, colWidths=larguras, repeatRows=1)
+        try:
+            # splitInRow: uma linha mais alta que a página é dividida entre páginas, em vez de derrubar a exportação
+            t = Table(dados, colWidths=larguras, repeatRows=1, splitInRow=1)
+        except TypeError:  # reportlab antigo, sem splitInRow: o corte das células já faz a linha caber
+            t = Table(dados, colWidths=larguras, repeatRows=1)
         t.setStyle(TableStyle(estilo))
         el.append(t)
 
@@ -205,6 +226,12 @@ def exportar_pdf(modelos, saida, nome_base, abas):
         el.append(Spacer(1, 8))
         leg = "     ".join('<font color="%s">●</font> <font color="%s">%s</font>' % (DOT[c], TX2, n) for c, n in rot.items() if c)
         el.append(Paragraph(leg, ParagraphStyle("leg", parent=st_cel, fontSize=8)))
+    if progresso:
+        def _cb(tipo, valor):
+            if tipo == "PAGE":
+                progresso("Exportando PDF: página %s…" % valor, min(0.97, 0.3 + 0.67 * valor / (valor + 80.0)))
+        doc.setProgressCallBack(_cb)
+        progresso("Exportando PDF: montando as páginas…", 0.3)
     doc.build(el, onFirstPage=moldura, onLaterPages=moldura, canvasmaker=_rr._canvas_numerado())
 
 
