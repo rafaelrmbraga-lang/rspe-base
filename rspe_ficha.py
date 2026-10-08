@@ -1977,12 +1977,18 @@ def remicao_detalhada(C, pend_est, lei, lei_rem, res, hoje, tl=None, cursos=None
             base = (base + "; " if base else "") + "período em " + pela
         if a["status"] == "NAO_LANCADO" and a["rem"]:
             if "rem_pend" in a:  # cumulativo: a parte já remida por outros atestados não se pede de novo
-                base = (base + "; " if base else "") + "%s remidos no atestado, ≈ %s fora do período já remido (atestados %s)" % (
+                base = (base + "; " if base else "") + "%s remidos no atestado, ≈ %s fora do período já remido (%s)" % (
                     _fmtn(a["rem"]), _fmtn(a["rem_pend"]), ", ".join(a["cobertos_por"]))
+            dias_ = a.get("rem_pend", a["rem"])
+            if a.get("teto") is not None and dias_ > a["teto"]:
+                # remidos acima do possível no período (rspe_remicao: plausibilidade): conta só o possível, a conferir no atestado
+                base = (base + "; " if base else "") + "%s remidos no atestado, acima do máximo possível no período (≈ %s): conferir o atestado" % (
+                    _fmtn(dias_), a["teto"])
+                dias_ = a["teto"]
             add("nao_lancado" if a.get("peticionado") else "emitido",
                 {"ref": ref, "data": rrm._f(a["emissao"]), "setor": setor, "per": per, "unidade": un,
                  "base": base + (("; " if base else "") + "peticionado em %s" % a["peticionado"] if a.get("peticionado") else ""),
-                 "dias": a.get("rem_pend", a["rem"]), "estimado": "rem_pend" in a, "texto": a.get("texto", "")})
+                 "dias": dias_, "estimado": "rem_pend" in a or a.get("teto") is not None, "texto": a.get("texto", "")})
         elif a["status"] == "DIVERGENCIA" and a["rem"] and a.get("remicao"):
             dif = math.floor(a["rem"] + 1e-9) - int(a["remicao"]["dias"])
             if dif >= 1:
