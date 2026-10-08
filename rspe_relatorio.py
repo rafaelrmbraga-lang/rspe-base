@@ -1638,12 +1638,15 @@ def relatorio_geral(modelos, caminho, nome_base, nominal=True):
     secao("2.5 Remição: pendências", "Pela ficha disciplinar x RSPE: dias que ainda não viraram remição no RSPE, pela origem. "
           "O detalhe por assistido e por unidade está no relatório \"Remição detalhada\".")
     O = E["rem_orig"]
-    el.append(numeros([(O["ass"], "assistidos com remição a requerer", "%s sem nenhuma remição no RSPE (toda a base)" % E["rem_zero"]),
+    # as três parcelas fecham o total: atestados (peticionados, só emitidos e diferença), trabalho sem atestado, estudo e leitura
+    el.append(numeros([(O["ass"], "assistidos com remição a requerer (com a estimativa)",
+                        "%s com dias exatos (atestado ou leitura) · %s sem nenhuma remição no RSPE (toda a base)" % (O["ass_exatos"], E["rem_zero"])),
                        (_num(O["r_total"]), "dias a remir (todas as origens)"),
-                       (_num(O["r"]["nao_lancado"] + O["r"]["emitido"]), "dias de atestados sem remição no RSPE",
-                        "%s peticionados · %s só emitidos" % (_num(O["r"]["nao_lancado"]), _num(O["r"]["emitido"]))),
+                       (_num(O["r"]["nao_lancado"] + O["r"]["emitido"] + O["r"]["divergencia"]), "dias de atestados sem remição ou com remição menor",
+                        "%s peticionados · %s só emitidos · %s de diferença" % (_num(O["r"]["nao_lancado"]), _num(O["r"]["emitido"]), _num(O["r"]["divergencia"]))),
                        (_num(O["r"]["sem_atestado"]), "dias de trabalho sem atestado (estimativa)", rs.pl(O["n"]["sem_atestado"], "assistido", "assistidos")),
-                       (_num(O["r"]["estudo"]), "dias de estudo sem remição (≈)", rs.pl(O["n"]["estudo"], "assistido", "assistidos"))],
+                       (_num(O["r"]["estudo"] + O["r"]["leitura"]), "dias de estudo (≈) e leitura sem remição",
+                        "%s de estudo · %s de leitura (exatos)" % (_num(O["r"]["estudo"]), _num(O["r"]["leitura"])))],
                       {0: "amarelo", 1: "amarelo", 2: "vermelho", 3: "amarelo", 4: "amarelo"}))
 
     # ============================================================ 3. situação jurídico-executória
@@ -1818,7 +1821,7 @@ def remicao_por_origem(modelos):
     """Totais da remição pendente por origem (rspe_ficha.remicao_detalhada de cada assistido com ficha)."""
     import rspe_ficha as rf
     ks = [k for k, _r, _p in rf.ORIGENS_REMICAO] + ["lacunas"]
-    O = {"dias": {k: 0 for k in ks}, "n": {k: 0 for k in ks}, "itens": {k: 0 for k in ks}, "ass": 0, "total": 0, "com_ficha": 0}
+    O = {"dias": {k: 0 for k in ks}, "n": {k: 0 for k in ks}, "itens": {k: 0 for k in ks}, "ass": 0, "ass_exatos": 0, "total": 0, "com_ficha": 0}
     for m in modelos:
         D = m.get("fd_rem_det")
         if not m.get("ficha_tem") or not D:
@@ -1830,6 +1833,8 @@ def remicao_por_origem(modelos):
                 O["itens"][k] += len(D[k]["itens"])
                 O["dias"][k] += D[k]["dias"]
         O["ass"] += D["total"] >= 1
+        # com dias exatos (atestado sem remição, diferença, leitura peticionada): a parte que não depende de estimativa
+        O["ass_exatos"] += sum(D[k]["dias"] for k in ("nao_lancado", "emitido", "divergencia", "leitura")) >= 1
         O["total"] += D["total"]
     # dias inteiros para exibir: cada origem arredondada, com a soma igual ao total exibido (o quadro fecha)
     dentro = [k for k in ks if k != "lacunas" and k not in rf.FORA_DO_TOTAL]
@@ -1886,9 +1891,11 @@ def relatorio_remicao(modelos, caminho, nome_base, nominal=True):
     el = [Paragraph("Remição detalhada", st["tit"]),
           Paragraph(_t("%s · origem de cada dia a remir, pela ficha disciplinar (SIAPEN) x RSPE · %s com ficha de %s na seleção" % (
               nome_base, rs.pl(O["com_ficha"], "assistido", "assistidos"), len(modelos))), st["sub"]), Spacer(1, 10)]
-    nums = [(O["ass"], "assistidos com remição a requerer"), (_num(O["r_total"]), "dias a remir (sem o trabalho em curso)"),
-            (_num(O["r"]["nao_lancado"] + O["r"]["emitido"]), "de atestados sem remição (peticionados e só emitidos)"), (_num(O["r"]["sem_atestado"]), "de trabalho sem atestado (estimativa)"),
-            (_num(O["r"]["estudo"]), "de estudo sem remição (≈)")]
+    nums = [(O["ass"], "assistidos com remição a requerer (com a estimativa; %s com dias exatos)" % O["ass_exatos"]),
+            (_num(O["r_total"]), "dias a remir (sem o trabalho em curso)"),
+            (_num(O["r"]["nao_lancado"] + O["r"]["emitido"] + O["r"]["divergencia"]), "de atestados sem remição ou com remição menor"),
+            (_num(O["r"]["sem_atestado"]), "de trabalho sem atestado (estimativa)"),
+            (_num(O["r"]["estudo"] + O["r"]["leitura"]), "de estudo (≈) e leitura sem remição")]
     cel = [[Paragraph(_t(str(n)), st["num"]) for n, _ in nums], [Paragraph(_t(r), st["rot"]) for _, r in nums]]
     tb = Table(cel, colWidths=[W / len(nums)] * len(nums))
     tb.setStyle(TableStyle([("BOX", (0, 0), (-1, -1), 0.6, C(LINE)), ("INNERGRID", (0, 0), (-1, -1), 0.6, C(LINE)),
@@ -2026,9 +2033,9 @@ def relatorio_remicao(modelos, caminho, nome_base, nominal=True):
                         return 0.0
                 fic = sum(_n(t["rem"]) for t in T if t["status"] != "ANTERIOR" and not t["atestado"].startswith("Atestado não registrado"))
                 dentro = sum(_n(t["rem"]) for t in T if t["status"] in ("CONCILIADO", "DIVERGENCIA") and not t["atestado"].startswith("Atestado não registrado"))
-                fora = sum(_n(t["rem"]) for t in T if t["status"] == "NAO_LANCADO")
+                fora = sum(_n(t["rem"]) for t in T if t["status"] == "NAO_LANCADO" and t.get("cor") != "cinza")
                 nr = [t for t in T if t["atestado"].startswith("Atestado não registrado")]
-                n_v = sum(1 for t in T if t["status"] == "NAO_LANCADO")
+                n_v = sum(1 for t in T if t["status"] == "NAO_LANCADO" and t.get("cor") != "cinza")
                 n_r = sum(1 for t in T if t["status"] in ("CONCILIADO", "DIVERGENCIA") and t not in nr)
                 res_ = Paragraph("%s · %s · %s%s · RSPE: %s" % (
                     _t("Ficha: %s em atestados desta execução" % ("%s dias remidos" % _num(fic))),
@@ -2041,9 +2048,9 @@ def relatorio_remicao(modelos, caminho, nome_base, nominal=True):
                 cores = {}
                 for t in T:
                     fora_ficha = t["atestado"].startswith("Atestado não registrado")
-                    cor = "azul" if fora_ficha else cor_st.get(t["status"], "cinza")
-                    sit = "No processo, sem atestado na ficha" if fora_ficha else rot_st.get(t["status"], t.get("rot") or "")
-                    if t["status"] == "NAO_LANCADO":
+                    cor = "azul" if fora_ficha else "cinza" if t.get("cor") == "cinza" else cor_st.get(t["status"], "cinza")
+                    sit = "No processo, sem atestado na ficha" if fora_ficha else t["rot"] if t.get("cor") == "cinza" else rot_st.get(t["status"], t.get("rot") or "")
+                    if t["status"] == "NAO_LANCADO" and t.get("cor") != "cinza":
                         sit += " · peticionado em %s" % t["peticionado"] if t.get("peticionado") else " · só emitido (sem peticionamento na ficha)"
                     dc.append([Paragraph(_t(t["atestado"] + ((" · " + t["emissao"]) if t.get("emissao") else "")), peq),
                                Paragraph(_t(t.get("unidade") or "—"), peq),
@@ -2090,7 +2097,8 @@ def relatorio_remicao(modelos, caminho, nome_base, nominal=True):
 # situação de cada linha: (rótulo, cor da faixa no PDF, cor de fundo no Excel)
 SIT_REM = {
     "processo": ("No processo", "verde", "DDF5E7"),
-    "processo_dif": ("No processo, dias diferentes", "amarelo", "FEF4D6"),
+    "processo_dif": ("No processo, remição menor que o atestado", "amarelo", "FEF4D6"),
+    "processo_maior": ("No processo, remição igual ou maior que o atestado", "verde", "DDF5E7"),
     "rspe_sem_ficha": ("No RSPE, sem atestado na ficha", "azul", "DBEAFE"),
     "peticionado": ("Peticionado no SEEU, sem remição no RSPE", "vermelho", "FDE8E8"),
     "emitido": ("Emitido, sem peticionamento na ficha", "laranja", "FFEAD5"),
@@ -2128,16 +2136,23 @@ def linhas_conferencia(modelos):
         D = m["fd_rem_det"]
         base = {"Assistido": nome_rel(m), "Nº da execução": m.get("proc") or m.get("id") or "",
                 "Unidade atual": _rotulo_unidade((m.get("ficha") or {}).get("unidade") or "")}
-        dif = {i["ref"]: i for i in D["divergencia"]["itens"]}
+        # dias a remir de cada atestado: os mesmos da remição detalhada (parte fora do período já remido, teto do possível, diferença)
+        valor = {}
+        for k_ in ("nao_lancado", "emitido", "divergencia"):
+            for i in D[k_]["itens"]:
+                valor.setdefault((i["ref"], i.get("data") or ""), []).append(i["dias"])
         for t in (m.get("fd_conc") or {}).get("tabela") or []:
             if t["status"] == "ANTERIOR":
                 continue
             fora = t["atestado"].startswith("Atestado não registrado")
-            k = "rspe_sem_ficha" if fora else {"CONCILIADO": "processo", "DIVERGENCIA": "processo_dif"}.get(t["status"]) or (
+            ref_ = t["atestado"].replace(" (informado por você)", "")
+            vs = valor.get((ref_, t.get("emissao") or ""))
+            v_ = vs.pop(0) if vs else None
+            k = "rspe_sem_ficha" if fora else {"CONCILIADO": "processo", "DIVERGENCIA": "processo_dif" if v_ else "processo_maior"}.get(t["status"]) or (
                 "peticionado" if t.get("peticionado") else "emitido")
             datas = [x for sg in t["segs"] for x in re.findall(r"\d{2}/\d{2}/\d{4}", sg["per"])]
             num = re.sub(r"^Atestado (?:nº )?", "", t["atestado"]).replace("(informado por você)", "").strip()
-            arem = _n_br(t["rem"]) if k in ("peticionado", "emitido") else (dif.get("Atestado nº %s" % num) or {}).get("dias", 0) if k == "processo_dif" else 0
+            arem = (v_ or 0) if k in ("peticionado", "emitido", "processo_dif") else 0
             out.append(dict(base, **{"_k": k, "Situação": SIT_REM[k][0], "Unidade onde ocorreu": t.get("unidade") or "",
                                      "Setor / curso / documento": "; ".join(dict.fromkeys(sg["setor"] for sg in t["segs"])),
                                      "Início": min(datas, key=lambda d: d[6:] + d[3:5] + d[:2]) if datas else "",
@@ -2145,7 +2160,7 @@ def linhas_conferencia(modelos):
                                      "Atestado nº": "" if fora else num, "Emitido em": t.get("emissao") or "", "Peticionado em": t.get("peticionado") or "",
                                      "Autos do peticionamento": ((t.get("autos") or "") + (" (outros autos - não esta execução)" if t.get("autos_outros") else "")) if t.get("autos")
                                      else ("autos não indicados na ficha" if t.get("peticionado") and not str(t.get("peticionado")).startswith("nos autos") else ""),
-                                     "Dias trabalhados / horas": t.get("trab") or "", "Remidos na ficha": "" if fora else _n_br(t["rem"]),
+                                     "Dias trabalhados / horas": t.get("trab") or "", "Remidos na ficha": "" if fora or t["rem"] in ("—", "") else _n_br(t["rem"]),
                                      "Remição no RSPE": ("%s · decisão %s" % (t["rspe"], t["decisao"])) if t["rspe"] not in ("—", "") else "",
                                      "Dias a remir": arem or "", "Estimativa": "",
                                      "Providência": ("conferir: a ficha registra o peticionamento em outros autos (%s)" % t.get("autos")) if k == "peticionado" and t.get("autos_outros") else
@@ -2170,7 +2185,7 @@ def linhas_conferencia(modelos):
 def _amostra(linhas, frac=0.1, semente=2026):
     """10% dos assistidos com pendência (sorteio fixo, para a mesma base dar a mesma amostra)."""
     import random
-    pend = sorted({L["Nº da execução"] for L in linhas if L["_k"] not in ("processo", "rspe_sem_ficha", "processo_dif")})
+    pend = sorted({L["Nº da execução"] for L in linhas if L["_k"] not in ("processo", "processo_maior", "rspe_sem_ficha", "processo_dif")})
     n = max(1, int(round(len(pend) * frac))) if pend else 0
     sel = set(random.Random(semente).sample(pend, n)) if n else set()
     return [L for L in linhas if L["Nº da execução"] in sel]
@@ -2234,10 +2249,11 @@ def prioridade_remicao(m):
                 alvos.append((rot, m[k]))
     efeito, nivel = [], None
     for rot, d in alvos:
+        fem = rot == "progressão"  # "a progressão" x "o livramento", "o término"
         if exatos >= d:
-            efeito.append("%s em %d dias: os atestados prontos (%s dias) já a alcançam" % (rot, d, _dias(exatos)))
+            efeito.append("%s em %d dias: os atestados prontos (%s dias) já %s alcançam" % (rot, d, _dias(exatos), "a" if fem else "o"))
         elif total >= d:
-            efeito.append("%s em %d dias: alcançada com a estimativa (%s dias), se confirmado o trabalho" % (rot, d, _dias(total)))
+            efeito.append("%s em %d dias: %s com a estimativa (%s dias), se confirmado o trabalho" % (rot, d, "alcançada" if fem else "alcançado", _dias(total)))
         else:
             continue
         nivel = min(nivel or 9, 1 if rot == "término" else 2)
@@ -2359,7 +2375,11 @@ def planilha_remicao_xlsx(modelos, caminho, nome_base):
         ws.cell(row=ws.max_row, column=1).fill = PatternFill("solid", fgColor=cor)
     ws.append(["Total a remir", "", O["ass"], round(O["total"], 2)])
     ws.cell(row=ws.max_row, column=1).font = Font(bold=True)
-    ws.append(["Períodos simultâneos (dois setores no mesmo dia) contam uma vez no total; por isso a soma das linhas da aba Conferência pode ser maior."])
+    ws.append(["Períodos simultâneos (dois setores no mesmo dia) contam uma vez no total; por isso a soma das linhas da aba Conferência pode ser maior. "
+               "No trabalho sem atestado, cada linha arredonda o seu período (÷ 3) e os trechos de 1 ou 2 dias no corte de uma transferência "
+               "só entram no total da unidade: a soma das linhas pode ficar um pouco abaixo do total."])
+    ws.append(["As linhas e os itens são os mesmos do relatório \"Remição detalhada\": atestado lançado na ficha sem os dias e atestado cujo "
+               "período já foi remido entram com 0 dias (para conferir), e \"No processo, remição igual ou maior\" não tem dias a remir."])
     ws.append([])
     ws.append(["Unidade onde ocorreu", "Assistidos com pendência", "Dias a remir (sem em curso e a conferir)"])
     for c in range(1, 4):
