@@ -1,9 +1,9 @@
-APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.6.0
+APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.7.0
 (antigo RSPE Base; SEEU, programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-7.6.0. A documentação técnica completa (cada parâmetro, a regra, a norma e
+7.7.0. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -84,7 +84,9 @@ DUPLICADOS
 
 ABAS (colunas)
   Geral        Nome, Nº da execução, Regime, Progressão, Livramento, Término.
-               Linha azul = execução extinta.
+               Linha azul = execução extinta. Ícone verde ao lado do nome =
+               elegível para pedir saída temporária; amarelo = requisitos
+               atendidos com ponto a conferir (ver "Saída temporária").
   Progressão   Nome, Nº, Regime, Data da progressão, Situação, Conduta
                (ficha), Falta (12 meses). A fração e a data-base não são
                colunas: estão na ficha do assistido, no resumo copiado, no
@@ -622,6 +624,29 @@ ARQUIVOS
   pasta_vigiada_estado.json, importacao_avisos.txt, rspe_log.txt; só com
   as petições ativas: modelos/ e defensores.json.
 
+SAÍDA TEMPORÁRIA (ícone ao lado do nome, aba Geral)
+  Indica quem pode pedir a saída temporária para visita à família e
+  atividades de retorno ao convívio social (LEP, arts. 122 a 125, na redação
+  anterior à Lei 14.843/2024). Passe o mouse no ícone para ver cada requisito
+  com o dado que o comprova. Requisitos:
+  - regime semiaberto no RSPE, com o cumprimento em curso;
+  - unidade da ficha disciplinar de regime semiaberto;
+  - ao menos uma condenação não extinta com fato anterior a 11/04/2024
+    (irretroatividade da Lei 14.843/2024); crime posterior não impede;
+  - nenhum crime hediondo com resultado morte de fato a partir de
+    23/01/2020 (art. 122, § 2º, Lei 13.964/2019);
+  - 1/6 da pena cumprida (primário) ou 1/4 (reincidente), contado todo o
+    tempo cumprido, inclusive no fechado (art. 123, II; Súmula 40 do STJ);
+  - conduta Boa ou Ótima na ficha, sem falta nos últimos 12 meses;
+  - trabalho em curso na ficha (o trabalho externo conta);
+  - 45 dias desde o retorno da última saída temporária (art. 124, § 3º);
+    sem o registro do retorno, conta-se 7 dias da saída.
+  Ícone amarelo: nada falha, mas algo fica a conferir: ficha impressa há
+  mais de 90 dias, sem ficha importada, unidade não reconhecida ou 5 saídas
+  ou mais no ano (art. 124, caput; STJ, Tema 445).
+  O ícone indica o pedido; a concessão depende de decisão do juízo da
+  execução.
+
 PROBLEMAS
   Se o programa não abrir ou travar, veja o arquivo rspe_log.txt criado ao
   lado do .exe: ele registra os erros (o .exe roda sem console). Envie esse
@@ -632,6 +657,11 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v7.7.0
+  - Saída temporária: ícone ao lado do nome na aba Geral (verde = elegível;
+    amarelo = requisitos atendidos com ponto a conferir), com o quadro dos
+    requisitos ao passar o mouse. Ver "Saída temporária".
 
 v7.6.0
   - Terceira e quarta revisões gerais (base 08.10 inteira: 595 RSPEs, 653

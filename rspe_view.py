@@ -1157,6 +1157,10 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
         notas["prog"] = ("Progressão*: recalculada pelo programa com a data-base informada (%s); a data do SEEU é %s."
                          % (dbi["db"], r["progressao_previsao_seeu"]))
     m["calc_notas"] = notas
+    try:
+        m.update(saida_temporaria(r, ficha, m, est, interr))
+    except Exception:
+        m.update(st_ok=False, st_itens=[])
     m["_final"] = r  # o registro com o que a ficha resolveu (incisos IV, XI a XIII): base da linha do tempo, igual à aba
     return m
 
@@ -1331,6 +1335,98 @@ for _a in ABAS:
 
 _PARTICULAS = {"da", "de", "do", "das", "dos", "e", "di", "du", "del", "della", "van", "von", "y"}
 _ROMANOS = re.compile(r"^(i{1,3}|iv|v|vi{1,3}|ix|x)$", re.I)
+
+
+# --------------------------------------------------------------------------- #
+# saída temporária (LEP, arts. 122 a 125): indicador ao lado do nome
+# --------------------------------------------------------------------------- #
+LEI_14843 = date(2024, 4, 11)   # Lei 14.843/2024 (vigência na publicação): saída temporária só para estudo
+LEI_13964 = date(2020, 1, 23)   # Lei 13.964/2019: vedação ao hediondo com resultado morte (art. 122, § 2º)
+
+
+def _pena_dias(t):
+    """'4a8m23d' -> dias na convenção do SEEU (ano de 365, mês de 30)."""
+    mm = re.match(r"\s*(\d+)a(\d+)m(\d+)d", t or "")
+    return int(mm.group(1)) * 365 + int(mm.group(2)) * 30 + int(mm.group(3)) if mm else None
+
+
+def saida_temporaria(r, ficha, m, est=None, interr=False, hoje=None):
+    """Requisitos da saída temporária para visita à família e atividades de retorno ao convívio social (LEP, art. 122, I e III,
+    na redação anterior à Lei 14.843/2024): st_ok só quando todos estão preenchidos; st_quase quando nenhum falha mas algum
+    fica a conferir (ficha com mais de 90 dias, sem ficha, unidade não reconhecida, limite anual); st_itens = [{ok, txt}]
+    (ok None = a conferir). Trabalho externo conta como trabalho."""
+    hoje = hoje or HOJE
+    it = []
+    add = lambda ok, txt: it.append({"ok": ok, "txt": txt})
+    reg = (r.get("regime_atual") or "").replace(" - ATIVO", "")
+    ativo = (r.get("status_execucao") or "").strip().upper() in ("", "ATIVO") and not est and not interr
+    add("SEMIABERTO" in reg.upper() and ativo,
+        "Regime semiaberto, cumprimento em curso" if "SEMIABERTO" in reg.upper() and ativo else
+        "Regime: %s%s" % (reg or "não informado", "" if ativo else " (cumprimento não está em curso)"))
+    crimes = [c for c in r.get("_crimes", []) if (c.get("extinto") or "").startswith("N") and (c.get("tipo_processo") or "").upper() != "OUTRAS ACOES"]
+    datas = [(rs.to_date(c.get("data_infracao") or ""), c) for c in crimes]
+    antes = [d for d, c in datas if d and d < LEI_14843]
+    sem_data = [c for d, c in datas if not d]
+    if antes:
+        add(True, "Fato anterior à Lei 14.843/2024 (%s): rege a redação anterior do art. 122 (irretroatividade, CF, art. 5º, XL)" % rs.fmt(min(antes)))
+    else:
+        add(None if sem_data else False, "Nenhuma condenação com fato anterior a 11/04/2024" + (" (há crime sem data do fato)" if sem_data else ""))
+    ved = []
+    for d, c in datas:
+        nm = (c.get("artigo") or "").split(":")[0].title()
+        if d and d >= LEI_13964 and c.get("hediondo_ou_equiparado") == "S" and c.get("resultado_morte") == "S":
+            ved.append("%s de %s: hediondo com resultado morte (art. 122, § 2º, Lei 13.964/2019)" % (nm, rs.fmt(d)))
+    # a vedação da Lei 14.843/2024 (hediondo ou com violência/grave ameaça) não alcança a condenação anterior a ela: crime
+    # novo não impede (decisão do usuário); fica só a do hediondo com resultado morte, vigente desde a Lei 13.964/2019
+    add(not ved, "Sem hediondo com resultado morte (art. 122, § 2º)" if not ved else "Vedação: " + "; ".join(ved))
+    cump, tot = _pena_dias(r.get("pena_cumprida")), _pena_dias(r.get("pena_total"))
+    reinc = (r.get("reincidente") or "").upper().startswith("S") or any(
+        (c.get("reincidente_comum") == "S" or c.get("reincidente_especifico") == "S") for c in crimes)
+    fr = Fraction(1, 4) if reinc else Fraction(1, 6)
+    if cump is None or not tot:
+        add(None, "Pena cumprida não informada no RSPE")
+    else:
+        add(cump >= tot * fr, "%s da pena cumprida (%s): %s de %s (art. 123, II; Súmula 40 do STJ)" % (
+            "1/4" if reinc else "1/6", "reincidente" if reinc else "primário", r.get("pena_cumprida"), r.get("pena_total")))
+    if not ficha:
+        add(None, "Sem ficha disciplinar: conduta, trabalho e saídas anteriores não conferidos")
+    else:
+        un = ficha.get("unidade") or ""
+        tipo_un, rot_un = rf.classificar_unidade(un)
+        add(True if tipo_un == "semiaberto" else (None if not tipo_un else False),
+            "Unidade de semiaberto: %s" % (rot_un or un.title()) if tipo_un == "semiaberto" else
+            ("Unidade não reconhecida: %s" % (un.title() or "não informada") if not tipo_un else
+             "Unidade de regime %s: %s (a saída temporária pressupõe o cumprimento no semiaberto)" % (tipo_un, rot_un or un.title())))
+        cond = rs._sem_acento(ficha.get("conduta") or "").upper().strip()
+        fal = r.get("falta_12m")
+        add(cond in ("OTIMA", "BOA") and fal not in ("SIM", "A APURAR"),
+            "Conduta %s%s" % ((ficha.get("conduta") or "não informada").title().replace("Otima", "Ótima"),
+                              "" if fal not in ("SIM", "A APURAR") else " · falta nos últimos 12 meses: %s" % fal.lower()))
+        trab = m.get("fd_trab") or ""
+        if not trab or trab.startswith("sem "):
+            # trabalho externo também é trabalho (art. 122 não distingue): o vínculo externo aberto vale
+            ext = [t for t in ficha.get("trabalho", []) if t.get("externo") and not t.get("fim") and not t.get("so_lancamento")]
+            trab = ("%s (trabalho externo) desde %s" % ((ext[-1].get("setor") or "empresa").title(), ext[-1].get("inicio"))) if ext else ""
+        add(bool(trab), "Trabalhando: " + trab if trab else "Sem trabalho em curso na ficha")
+        sts = rf.saidas_temporarias_retorno(ficha.get("eventos", []))
+        if not sts:
+            add(True, "Nenhuma saída temporária anterior na ficha")
+        else:
+            sai, ret = sts[-1]
+            base = ret or (sai + timedelta(days=7) if sai else None)
+            dias = (hoje - base).days
+            add(dias >= 45 if ret else (None if dias < 45 else True),
+                "Última saída: %s%s · %s desde %s (art. 124, § 3º: 45 dias)" % (
+                    rs.fmt(sai) if sai else "sem registro da saída", (", retorno em %s" % rs.fmt(ret)) if ret else ", retorno não registrado (contado 7 dias da saída)",
+                    rs.pl(dias, "dia", "dias"), "o retorno" if ret else "o fim presumido"))
+        no_ano = [x for x in sts if (x[0] or x[1]).year == hoje.year]
+        if len(no_ano) >= 5:
+            add(None, "%d saídas temporárias em %d: conferir o limite anual (art. 124, caput: até 5 por ano; STJ, Tema 445: até 35 dias no ano)" % (len(no_ano), hoje.year))
+        imp = rs.to_date((ficha.get("data_impressao") or "").split()[0].replace(".", "/"))
+        if imp and (hoje - imp).days > 90:
+            add(None, "Ficha impressa em %s (há %d dias, mais de 90): conferir conduta e trabalho atuais" % (rs.fmt(imp), (hoje - imp).days))
+    ok = all(x["ok"] is True for x in it)
+    return {"st_ok": ok, "st_itens": it, "st_quase": (not ok) and all(x["ok"] is not False for x in it)}
 
 
 def nome_proprio(nome):
