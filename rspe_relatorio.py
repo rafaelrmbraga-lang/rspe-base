@@ -2920,7 +2920,7 @@ def _geo_mapa(U, mapa, larg, f, C, sel=""):
 
 
 def _geo_pizzas_unidade(u, larg, f, C):
-    """Três pizzas da última inspeção: presos por regime, provisórios x condenados e ocupação (vagas x excedente)."""
+    """Duas pizzas da última inspeção: presos por regime e provisórios x condenados."""
     from reportlab.graphics.shapes import Drawing, Rect, String
     from reportlab.graphics.charts.piecharts import Pie
     S = u.get("serie") or []
@@ -2934,9 +2934,6 @@ def _geo_pizzas_unidade(u, larg, f, C):
     grupos = [("Por regime", [("Provisórios", x.get("provisorios"), "#9CBFA9"), ("Fechado", x.get("fechado"), "#1D5A3B"), ("Semiaberto", x.get("semiaberto"), "#4E8C66"),
                               ("Aberto", x.get("aberto"), "#C9DDD0"), ("Outros", max(0, x["pop"] - soma), "#7C8C82")]),
               ("Provisórios", [("Provisórios", x.get("provisorios"), "#A3201D"), ("Condenados", max(0, x["pop"] - (x.get("provisorios") or 0)), "#1D5A3B")])]
-    if cap:
-        grupos.append(("Ocupação", [("Nas vagas", min(cap, x["pop"]), "#1D5A3B"), ("Além das vagas", max(0, x["pop"] - cap), "#A3201D"),
-                                    ("Vagas livres", max(0, cap - x["pop"]), "#C9DDD0")]))
     W, H = larg, 52 * 2.835
     d = Drawing(W, H)
     col = W / len(grupos)
@@ -2960,6 +2957,77 @@ def _geo_pizzas_unidade(u, larg, f, C):
             d.add(String(x0 + 89, yy + 0.5, "%s: %s (%d%%)" % (n, fmt(v), round(100 * v / tot)), fontName=f["n"], fontSize=6.5, fillColor=C(TX)))
     d.add(String(4, 4, "Inspeção de %s · %s presos%s" % (x.get("ciclo") or "", fmt(x["pop"]), (" · %s vagas" % fmt(cap)) if cap else ""),
                  fontName=f["n"], fontSize=6.5, fillColor=C("#767C82")))
+    return d
+
+
+def _geo_colunas_unidade(u, larg, f, C):
+    """Colunas no tempo, uma por inspeção: crescimento de apenados (por regime, com a variação desde a anterior) e ocupação
+    (presos nas vagas e além delas, linha das vagas e taxa de cada mês; vagas da inspeção mais recente)."""
+    from reportlab.graphics.shapes import Drawing, Rect, String, Line
+    S = [x for x in (u.get("serie") or []) if x.get("pop") is not None]
+    if not S:
+        return None
+    fmt = lambda n: "{:,}".format(int(n or 0)).replace(",", ".")
+    cap = u.get("capacidade") or 0
+    W, H = larg, 70 * 2.835
+    d = Drawing(W, H)
+    larg_g = (W - 14) / 2
+    yB, yT = 24, H - 40
+
+    def grafico(x0, tit, cols, segs, linha):
+        mx = max([c["tot"] for c in cols] + [linha or 0, 1]) * 1.15
+        Y = lambda v: yB + (yT - yB) * v / mx
+        d.add(String(x0 + 2, H - 9, tit, fontName=f["b"], fontSize=7.5, fillColor=C(NAVY)))
+        lx = x0 + 2
+        for n, cor in [(n, c) for k, n, c in segs if any((cc["v"].get(k) or 0) > 0 for cc in cols)] + ([("Vagas", None)] if linha else []):
+            if cor:
+                d.add(Rect(lx, H - 21, 5.5, 5.5, fillColor=C(cor), strokeColor=None))
+            else:
+                d.add(Line(lx, H - 18.2, lx + 9, H - 18.2, strokeColor=C(TX), strokeWidth=0.9, strokeDashArray=[2.5, 2]))
+                lx += 3.5
+            d.add(String(lx + 8, H - 20.5, n, fontName=f["n"], fontSize=6.2, fillColor=C(TX)))
+            lx += 8 + len(n) * 3.2 + 8
+        d.add(Line(x0, yB, x0 + larg_g, yB, strokeColor=C("#7C8C82"), strokeWidth=0.6))
+        slot = larg_g / len(cols)
+        bw = min(34, slot * 0.58)
+        for i, c in enumerate(cols):
+            cx = x0 + slot * (i + 0.5)
+            y = yB
+            for k, n, cor in segs:
+                v = c["v"].get(k) or 0
+                if v <= 0:
+                    continue
+                h = (yT - yB) * v / mx
+                d.add(Rect(cx - bw / 2, y, bw, h, fillColor=C(cor), strokeColor=C("#FFFFFF"), strokeWidth=0.6))
+                y += h
+            d.add(String(cx, Y(c["tot"]) + 3, fmt(c["tot"]), fontName=f["b"], fontSize=6.3, fillColor=C(TX), textAnchor="middle"))
+            if c.get("topo"):
+                d.add(String(cx, Y(c["tot"]) + 11, c["topo"], fontName=f["n"], fontSize=6, fillColor=C(c.get("cor") or "#4F555A"), textAnchor="middle"))
+            d.add(String(cx, yB - 9, c["rot"], fontName=f["n"], fontSize=6, fillColor=C("#4F555A"), textAnchor="middle"))
+        if linha:
+            d.add(Line(x0, Y(linha), x0 + larg_g, Y(linha), strokeColor=C(TX), strokeWidth=0.9, strokeDashArray=[2.5, 2]))
+
+    def rot(c):
+        m = c.split("/")
+        return (m[0][:3] + "/" + m[1][-2:]) if len(m) == 2 else c
+    sn = lambda n: ("+" if n > 0 else "") + fmt(n)
+    cols = []
+    for i, x in enumerate(S):
+        so = sum((x.get(k) or 0) for k in ("provisorios", "fechado", "semiaberto", "aberto"))
+        dd = None if i == 0 else (x["pop"] or 0) - (S[i - 1]["pop"] or 0)
+        cols.append({"rot": rot(x["ciclo"]), "tot": x["pop"] or 0, "topo": "" if dd is None else sn(dd), "cor": "#A3201D" if (dd or 0) > 0 else None,
+                     "v": {"provisorios": x.get("provisorios"), "fechado": x.get("fechado"), "semiaberto": x.get("semiaberto"), "aberto": x.get("aberto"),
+                           "outros": max(0, (x["pop"] or 0) - so)}})
+    grafico(0, "Crescimento de apenados", cols,
+            [("provisorios", "Provisórios", "#9CBFA9"), ("fechado", "Fechado", "#1D5A3B"), ("semiaberto", "Semiaberto", "#4E8C66"),
+             ("aberto", "Aberto", "#C9DDD0"), ("outros", "Outros", "#7C8C82")], None)
+    cols = [{"rot": rot(x["ciclo"]), "tot": x["pop"] or 0, "topo": ("%d%%" % round(100 * (x["pop"] or 0) / cap)) if cap else "",
+             "cor": "#A3201D" if cap and (x["pop"] or 0) > cap else None,
+             "v": {"dentro": min(x["pop"] or 0, cap), "alem": max(0, (x["pop"] or 0) - cap)} if cap else {"dentro": x["pop"] or 0}} for x in S]
+    grafico(larg_g + 14, "Ocupação", cols, [("dentro", "Nas vagas", "#1D5A3B"), ("alem", "Além das vagas", "#A3201D")], cap or None)
+    d.add(String(2, 2, "Uma coluna por inspeção. Crescimento: acima, a variação desde a inspeção anterior. Ocupação: acima, a taxa do mês"
+                 + ("; vagas da inspeção mais recente (%s)." % fmt(cap) if cap else "; capacidade não informada."),
+                 fontName=f["n"], fontSize=6, fillColor=C("#767C82")))
     return d
 
 
@@ -3169,7 +3237,10 @@ def relatorio_unidade_prisional(u, atualizado, assistidos, caminho, nome_base):
                                     _tabela(linhas, [W - 60 * mm, 60 * mm], st, pad=4)]))
     graf = _geo_pizzas_unidade(u, W, _fontes(), C)
     if graf is not None:
-        el.append(KeepTogether([Paragraph("Composição e ocupação", st["h2"]), graf]))
+        el.append(KeepTogether([Paragraph("Composição na última inspeção", st["h2"]), graf]))
+    graf = _geo_colunas_unidade(u, W, _fontes(), C)
+    if graf is not None:
+        el.append(KeepTogether([Paragraph("Crescimento e ocupação ao longo das inspeções", st["h2"]), graf]))
     S = u.get("serie") or []
     if len(S) > 1 and S[0].get("pop"):
         a, b = S[0], S[-1]

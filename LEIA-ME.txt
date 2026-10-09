@@ -725,8 +725,9 @@ DADOS PRISIONAIS (aba ao lado do Quadro do Usuário)
     estabelecimentos foi constatado, com a resposta e o mês da inspeção; e
     cada estabelecimento com a lista dos seus problemas); e, no detalhe de
     cada estabelecimento, "Relatório da unidade" (ocupação, situação e
-    perfil, servidores, todas as respostas por tema, pizzas da composição e
-    da ocupação, crescimento de apenados, tabela da evolução e os
+    perfil, servidores, todas as respostas por tema, pizzas da composição,
+    colunas do crescimento de apenados e da ocupação ao longo das
+    inspeções, tabela da evolução e os
     assistidos da base custodiados nela, com o regime pelo RSPE).
   - Se o servidor do CNJ recusar pedidos, o programa tenta de novo; o que
     ainda faltar mantém o dado baixado antes e o aviso pede nova
