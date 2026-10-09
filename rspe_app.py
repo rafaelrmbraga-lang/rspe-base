@@ -36,6 +36,8 @@ import rspe_regras as rg
 import rspe_decretos as rd
 import rspe_relatorio as rrel
 import rspe_indulto_tl as rtl
+import rspe_geopresidios as rgeo
+import rspe_mapa_ms as rmapa
 
 APP = "APTO"
 VERSAO = "7.7.0"
@@ -266,6 +268,12 @@ Destaca quem pode pedir a progressão antes da data do SEEU: regime fechado ou s
 dias; nenhum crime não extinto com violência ou grave ameaça (marcação do RSPE); conduta Boa ou Ótima, sem falta nos 12 meses; trabalho em
 curso (o externo conta). Amarelo: algo fica a conferir (ficha com mais de 90 dias, sem ficha, crime sem a marcação de violência). Clicar
 abre o pedido da progressão (o mesmo da coluna "Pedido" da aba Progressão); com o pedido marcado, o ícone fica azul preenchido.
+<h4>Dados prisionais (Geopresídios/CNJ)</h4>
+Aba ao lado do Quadro do Usuário. Pela API pública do Geopresídios/CNIEP (CNJ), traz para cada unidade de MS a última inspeção judicial
+mensal do tema "Aspectos gerais": vagas, presos por regime, perfil e servidores. "Baixar/Atualizar dados" busca tudo (cerca de 1 minuto,
+com internet) e guarda ao lado do programa. No mapa, cada círculo é uma cidade: tamanho pelo número de presos, cor pela ocupação (verde até
+100%, laranja até 149%, vermelho a partir de 150%); o mouse lista as unidades e o clique filtra a cidade. Mostra também os assistidos da
+base em cada unidade (pela ficha do SIAPEN) e quantos estão no semiaberto ou no aberto pelo RSPE em unidade de regime fechado (SV 56).
 <h4>RSPE desatualizado e cópias de segurança</h4>
 RSPE emitido há mais de 60 dias ganha um "!" laranja ao lado do nome (passe o mouse para ver a data e os dias); o chip "RSPE antigo" da faixa de resumo
 filtra esses assistidos. Ao abrir a base, o programa faz uma cópia de segurança (pasta "copias", ao lado da base) e guarda as
@@ -1547,6 +1555,76 @@ class Api:
         """Resumo (EMENTA do fim da decisão ou o começo do texto) das decisões da triagem automática pedidas pela tela."""
         R = self._teses_auto().get("resumos") or {}
         return {i: R.get(i, "") for i in (ids or [])[:200]}
+
+    # ---- dados prisionais de MS (Geopresídios/CNJ): guardados ao lado do programa, atualizados só pelo botão ----
+    def _geo_arq(self):
+        return os.path.join(pasta_app(), "geopresidios_ms.json")
+
+    def _geo_assistidos(self, unidades):
+        """Assistidos da base aberta em cada unidade, pela unidade da ficha disciplinar (SIAPEN), e quantos deles estão no
+        semiaberto ou no aberto pelo RSPE (confronto com a população informada na inspeção)."""
+        def toks(n):
+            return {t.rstrip("S") for t in rgeo.chave_unidade(n)}
+        cont = {}
+        for m in self._modelos or []:
+            un = ((m.get("ficha") or {}).get("unidade") or "").strip()
+            if un:
+                c = cont.setdefault(un, [0, 0])
+                c[0] += 1
+                if re.match(r"(SEMI|ABERTO)", (m.get("regime_rspe") or "").upper()):
+                    c[1] += 1
+        for u in unidades:
+            tu = toks(u["nome"])
+            u["assistidos"] = u["assistidos_semi"] = 0
+            for un, (n, ns) in cont.items():
+                tf = toks(un)
+                if tu and len(tu & tf) >= max(2, 0.7 * min(len(tu), len(tf))):
+                    u["assistidos"] += n
+                    u["assistidos_semi"] += ns
+        # números idênticos aos de outra unidade (formulário possivelmente copiado): conferir
+        ass = {}
+        for u in unidades:
+            if u.get("inspecao") and (u.get("capacidade") or u.get("fechado") or u.get("provisorios")):
+                ass.setdefault((u.get("capacidade"), u.get("provisorios"), u.get("fechado"), u.get("semiaberto"), u.get("aberto")), []).append(u)
+        for g in ass.values():
+            for u in g:
+                u["igual_a"] = [x["nome"] for x in g if x is not u] if len(g) > 1 else []
+
+    @staticmethod
+    def _geo_pontos(unidades):
+        """Posição de cada unidade no mapa: coordenadas da cidade dadas pelo Geopresídios; sem elas, o centro do município
+        citado no nome da unidade ("... de Sidrolândia"). O nome da cidade segue o do IBGE (com acentos)."""
+        mun = rmapa.MAPA["municipios"]
+        por_nome = {rgeo._sem_acento(m["nome"]): k for k, m in mun.items()}
+        for u in unidades:
+            if u.get("ibge") in mun:
+                u["cidade"] = mun[u["ibge"]]["nome"]
+            if u.get("lat") is not None and u.get("lon") is not None:
+                u["x"], u["y"] = rmapa.ponto(u["lat"], u["lon"])
+                continue
+            nm = rgeo._sem_acento(u["nome"] + " " + (u.get("endereco") or ""))
+            k = next((k for n, k in sorted(por_nome.items(), key=lambda x: -len(x[0])) if re.search(r"\b%s\b" % re.escape(n), nm)), None)
+            if k:
+                xy = [float(v) for v in re.findall(r"-?\d+(?:\.\d+)?", mun[k]["d"])]
+                u["x"], u["y"] = round(sum(xy[0::2]) / len(xy[0::2]), 1), round(sum(xy[1::2]) / len(xy[1::2]), 1)
+                u["cidade"], u["ibge"] = mun[k]["nome"], k
+
+    def geo_dados(self):
+        d = rgeo.carregar(self._geo_arq())
+        if d:
+            self._geo_assistidos(d["unidades"])
+            self._geo_pontos(d["unidades"])
+        return {"geo": d, "mapa": rmapa.MAPA}
+
+    def geo_atualizar(self, todas=False):
+        try:
+            d = rgeo.atualizar(self._geo_arq(), bool(todas))
+        except Exception as ex:
+            logging.getLogger("rspe").exception("Geopresídios")
+            return {"erro": "Não foi possível baixar os dados do Geopresídios (%s). Confira a conexão com a internet." % str(ex)[:120]}
+        self._geo_assistidos(d["unidades"])
+        self._geo_pontos(d["unidades"])
+        return {"geo": d, "mapa": rmapa.MAPA, "msg": "Dados prisionais atualizados (%d unidades)." % len(d["unidades"])}
 
     def teses(self):
         """Jurisprudências da execução penal (aba Jurisprudências): decisões do TJMS, STJ e STF favoráveis à defesa, triadas pela
