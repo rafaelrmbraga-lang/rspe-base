@@ -2867,25 +2867,83 @@ def _geo_nome(n):
 
 
 def _geo_mapa(U, mapa, larg, f, C, sel=""):
-    """Mapa de MS: municípios com estabelecimento em verde-escuro (o escolhido mais escuro e contornado)."""
+    """Mapa de MS: um círculo verde-escuro por cidade (tamanho pelo número de presos); municípios com estabelecimento tingidos."""
+    import math
     import re as _re
-    from reportlab.graphics.shapes import Drawing, Polygon, String
+    from reportlab.graphics.shapes import Drawing, Polygon, Circle, String
     P = mapa["proj"]
     esc = larg / P["W"]
     H = P["H"] * esc
     d = Drawing(P["W"] * esc, H)
-    pop = {}
+    cid, com = {}, set()
     for u in U:
         if u.get("ibge"):
-            pop[u["ibge"]] = pop.get(u["ibge"], 0) + _geo_pop(u)
+            com.add(u["ibge"])
+        if u.get("cidade"):
+            cid[u["cidade"]] = cid.get(u["cidade"], 0) + _geo_pop(u)
+    pos = {m["nome"]: m["c"] for m in mapa["municipios"].values()}
     for k, m in mapa["municipios"].items():
-        cor = "#0E3A24" if (sel and m["nome"] == sel) else "#1D5A3B" if k in pop else "#E3E7E4"
         for anel in _re.findall(r"M([^Z]+)Z", m["d"]):
             xy = [float(v) for v in _re.findall(r"-?\d+(?:\.\d+)?", anel)]
             pts = []
             for i in range(0, len(xy) - 1, 2):
                 pts += [xy[i] * esc, H - xy[i + 1] * esc]
-            d.add(Polygon(pts, fillColor=C(cor), strokeColor=C("#FFFFFF"), strokeWidth=0.5))
+            d.add(Polygon(pts, fillColor=C("#D5E2D9" if k in com else "#E9ECEA"), strokeColor=C("#FFFFFF"), strokeWidth=0.5))
+    mx = max(list(cid.values()) + [1])
+    for nome, pop in sorted(cid.items(), key=lambda x: -x[1]):
+        if nome not in pos:
+            continue
+        x, y = pos[nome]
+        r = (7 + 26 * math.sqrt(pop / mx)) * esc
+        escolhido = sel and nome == sel
+        d.add(Circle(x * esc, H - y * esc, r, fillColor=C("#0B2E1C" if escolhido else "#1D5A3B"), strokeColor=C("#FFFFFF"), strokeWidth=0.8))
+        if pop >= 700 or escolhido:
+            d.add(String(x * esc + r + 2, H - y * esc - 2.5, nome, fontName=f["b"], fontSize=6.5, fillColor=C(TX)))
+    return d
+
+
+def _geo_grafico_unidade(u, larg, f, C):
+    """Presos por regime em cada ciclo de inspeção (barras empilhadas) e a linha das vagas."""
+    from reportlab.graphics.shapes import Drawing, Rect, Line, String
+    S = u.get("serie") or []
+    if not S:
+        return None
+    H = 62 * 2.835  # ~62 mm
+    W = larg
+    L, R, T, B = 34, 8, 16, 34
+    import math
+    cap = u.get("capacidade") or 0
+    topo = max([cap] + [x.get("pop") or 0 for x in S]) or 1
+    p10 = 10 ** math.floor(math.log10(topo / 4))
+    passo_y = next((m * p10 for m in (1, 2, 5, 10) if m * p10 * 4 >= topo), p10 * 10)
+    mx = passo_y * 4 * 1.08
+    y = lambda v: B + (H - T - B) * v / mx
+    d = Drawing(W, H)
+    passo = (W - L - R) / len(S)
+    bw = min(40, passo * 0.55)
+    regs = [("provisorios", "Provisórios", "#9CBFA9"), ("fechado", "Fechado", "#1D5A3B"), ("semiaberto", "Semiaberto", "#4E8C66"), ("aberto", "Aberto", "#C9DDD0")]
+    fmt = lambda n: "{:,}".format(int(n)).replace(",", ".")
+    for i in range(5):
+        v = passo_y * i
+        d.add(Line(L, y(v), W - R, y(v), strokeColor=C("#E3E7E4"), strokeWidth=0.5))
+        d.add(String(L - 3, y(v) - 2.5, fmt(v), fontName=f["n"], fontSize=6, fillColor=C("#767C82"), textAnchor="end"))
+    for i, x in enumerate(S):
+        cx = L + passo * i + passo / 2
+        base = 0
+        for k, _, cor in regs:
+            v = x.get(k) or 0
+            if v:
+                d.add(Rect(cx - bw / 2, y(base), bw, y(base + v) - y(base), fillColor=C(cor), strokeColor=None))
+                base += v
+        d.add(String(cx, y(x.get("pop") or base) + 3, fmt(x.get("pop") or base), fontName=f["b"], fontSize=6.5, fillColor=C(TX), textAnchor="middle"))
+        d.add(String(cx, B - 10, x.get("ciclo") or "", fontName=f["n"], fontSize=6.3, fillColor=C("#4F555A"), textAnchor="middle"))
+    if cap:
+        d.add(Line(L, y(cap), W - R, y(cap), strokeColor=C("#A3201D"), strokeWidth=1, strokeDashArray=[4, 3]))
+        d.add(Line(L + 285, 7.5, L + 305, 7.5, strokeColor=C("#A3201D"), strokeWidth=1, strokeDashArray=[4, 3]))
+        d.add(String(L + 309, 5, "vagas: %s" % fmt(cap), fontName=f["b"], fontSize=6.5, fillColor=C("#A3201D")))
+    for i, (_, nome, cor) in enumerate(regs):
+        d.add(Rect(L + i * 70, 4, 7, 7, fillColor=C(cor), strokeColor=None))
+        d.add(String(L + i * 70 + 10, 5, nome, fontName=f["n"], fontSize=6.5, fillColor=C("#4F555A")))
     return d
 
 
@@ -2929,7 +2987,7 @@ def relatorio_prisional(dados, mapa, caminho, nome_base, cidade="", cats=None):
     # mapa
     if mapa:
         el += [Paragraph("Mapa", st["h2"]), _geo_mapa(U if not cidade else _geo_sel(dados, "", cats), mapa, min(W, 120 * mm), f, C, cidade),
-               Paragraph(_t("Em verde-escuro, os municípios com estabelecimento%s." % (" (%s em destaque)" % cidade if cidade else "")), st["mut"])]
+               Paragraph(_t("Cada círculo é uma cidade, com o tamanho pelo número de presos%s." % (" (%s em destaque)" % cidade if cidade else "")), st["mut"])]
     # ranking
     from reportlab.lib.styles import ParagraphStyle
     peq = ParagraphStyle("geo_peq", parent=st["cel"], fontSize=7.4, leading=9.6)
@@ -3093,6 +3151,9 @@ def relatorio_unidade_prisional(u, atualizado, assistidos, caminho, nome_base):
         if len(linhas) > 1:
             el.append(KeepTogether([Paragraph(_t("%s · inspeção de %s" % (rgeo.TEMAS[int(t)], T.get("ciclo") or "")), st["h2"]),
                                     _tabela(linhas, [W - 60 * mm, 60 * mm], st, pad=4)]))
+    graf = _geo_grafico_unidade(u, W, _fontes(), C)
+    if graf is not None:
+        el.append(KeepTogether([Paragraph("Presos por regime e vagas", st["h2"]), graf]))
     if len(u.get("serie") or []) > 1:
         linhas = [["Ciclo da inspeção", "Presos", "Provisórios", "Fechado", "Semiaberto", "Aberto"]]
         for x in u["serie"]:

@@ -681,10 +681,14 @@ DADOS PRISIONAIS (aba ao lado do Quadro do Usuário)
   servidores). O botão "Baixar/Atualizar dados" busca tudo (cerca de 2
   minutos, com internet); os dados ficam guardados ao lado do programa
   (geopresidios_ms.json) e valem para qualquer base.
-  - Mapa do estado: os municípios com estabelecimento dos tipos marcados
-    ficam em verde-escuro (o escolhido, mais escuro). Passar o mouse lista
-    os estabelecimentos com presos, vagas e ocupação; clicar filtra a
+  - Mapa do estado: um círculo verde-escuro por cidade com estabelecimento
+    dos tipos marcados, com o tamanho pelo número de presos. Passar o mouse
+    lista os estabelecimentos com presos, vagas e ocupação; clicar filtra a
     cidade.
+  - Unidade: escolhida na lista "Unidade" ou com um clique na linha da
+    tabela, troca o mapa pelo gráfico dela (presos por regime em cada
+    inspeção e a linha das vagas); o painel passa a mostrar só ela, com
+    os botões "Detalhe da unidade" e "Relatório da unidade (PDF)".
   - Tipos (marque um ou mais): unidades penais, delegacias e cadeias,
     unidades militares, Polícia Federal e outras. O download traz sempre
     todos os estabelecimentos de MS; o mapa, os indicadores, as condições,
@@ -713,7 +717,8 @@ DADOS PRISIONAIS (aba ao lado do Quadro do Usuário)
     estabelecimentos foi constatado, com a resposta e o mês da inspeção; e
     cada estabelecimento com a lista dos seus problemas); e, no detalhe de
     cada estabelecimento, "Relatório da unidade" (ocupação, situação e
-    perfil, servidores, todas as respostas por tema, evolução e os
+    perfil, servidores, todas as respostas por tema, gráfico e tabela da
+    evolução e os
     assistidos da base custodiados nela, com o regime pelo RSPE).
   - Se o servidor do CNJ recusar pedidos, o programa tenta de novo; o que
     ainda faltar mantém o dado baixado antes e o aviso pede nova

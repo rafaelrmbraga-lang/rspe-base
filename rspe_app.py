@@ -271,8 +271,9 @@ abre o pedido da progressão (o mesmo da coluna "Pedido" da aba Progressão); co
 <h4>Dados prisionais (Geopresídios/CNJ)</h4>
 Aba ao lado do Quadro do Usuário. Pela API pública do Geopresídios/CNIEP (CNJ), traz para cada unidade de MS a última inspeção judicial
 mensal do tema "Aspectos gerais": vagas, presos por regime, perfil e servidores. "Baixar/Atualizar dados" busca tudo (cerca de 2 minutos,
-com internet) e guarda ao lado do programa. No mapa, os municípios com estabelecimento dos tipos marcados (unidades penais, delegacias e
-cadeias, unidades militares, Polícia Federal e outras) ficam em verde-escuro; o mouse lista os estabelecimentos e o clique filtra a cidade.
+com internet) e guarda ao lado do programa. No mapa, um círculo verde-escuro por cidade com estabelecimento dos tipos marcados (unidades
+penais, delegacias e cadeias, unidades militares, Polícia Federal e outras), com o tamanho pelo número de presos; o mouse lista os
+estabelecimentos e o clique filtra a cidade. Escolher a unidade (lista ou tabela) troca o mapa pelo gráfico dela (presos por regime e vagas).
 Relatórios em PDF: geral, condições por unidade (em quais estabelecimentos foi constatado cada problema) e, no detalhe, o da unidade. Mostra também os assistidos da
 base em cada unidade (pela ficha do SIAPEN) e quantos estão no semiaberto ou no aberto pelo RSPE em unidade de regime fechado (SV 56).
 Condições constatadas nos demais temas (habitabilidade, assistências, segurança e saúde): quantas unidades têm cada problema; clicar filtra
