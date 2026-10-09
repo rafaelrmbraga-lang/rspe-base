@@ -40,7 +40,7 @@ import rspe_geopresidios as rgeo
 import rspe_mapa_ms as rmapa
 
 APP = "APTO"
-VERSAO = "7.7.0"
+VERSAO = "7.8.0"
 
 
 def pasta_app():
