@@ -40,8 +40,13 @@ ok(ind["rem_leitura"]["ruim"] and ind["defensores"]["n"] == 2 and ind["trab_remi
    and ind["defensoria"]["ruim"], "assistências: %s" % ind)
 ind = rgeo._indicadores({"respostas": [R("400005.3", "Sim*"), R("400010", "NA")]}, 4)
 ok(ind["forcas_especiais"] == {"v": "Sim", "ruim": True} and "procedimento" not in ind, "segurança (asterisco e NA): %s" % ind)
+ok(not rgeo._indicadores({"respostas": [R("200028", "Não informado")]}, 2)["refeicoes"]["ruim"], "\"Não informado\" não é problema")
 ok(rgeo.ordem_ciclo("Julho/2026") == (2026, 7) and rgeo.ordem_ciclo("Março/26") == (2026, 3) and rgeo.ordem_ciclo("?") == (0, 0), "ciclos")
 ok(all(ch in rgeo.PROBLEMA for ch, t, q, rot, ruim in rgeo.INDICADORES if ruim), "toda constatação tem a frase do problema")
+# tipo do estabelecimento
+ok([rgeo.categoria(n) for n in ("PRESIDIO MILITAR ESTADUAL", "INSTITUTO PENAL DE CAMPO GRANDE", "1ª DELEGACIA DE POLÍCIA DE CORUMBÁ",
+                                "GRUPO DOS FUZILEIROS NAVAIS DE LADÁRIO", "SUPERINTENDÊNCIA REGIONAL DA POLÍCIA FEDERAL", "PENITENCIÁRIA FEDERAL EM CAMPO GRANDE")]
+   == ["militar", "penal", "delegacia", "militar", "outra", "penal"], "categorias")
 # unidades penais x delegacias e militares
 ok(rgeo.RE_PENAL.search(rgeo._sem_acento("PENITENCIÁRIA DE DOIS IRMÃOS DO BURITI")), "penitenciária")
 ok(rgeo.RE_PENAL.search(rgeo._sem_acento("CENTRO DE DETENÇÃO PROVISÓRIA DE IGUATEMI")), "CDP")
@@ -84,6 +89,18 @@ arq = os.path.join(tempfile.mkdtemp(), "dp.pdf")
 rrel.relatorio_prisional(D, rmapa.MAPA, arq, "teste")
 txt = open(arq, "rb").read()
 ok(txt.startswith(b"%PDF") and len(txt) > 5000, "PDF dos dados prisionais")
+
+# relatório da unidade (com os assistidos da base) e relatório de condições por unidade
+lista = a._geo_lista({"nome": "PENITENCIÁRIA DE DOIS IRMÃOS DO BURITI"})
+ok(len(lista) == 2 and {x["regime"] for x in lista} == {"Semiaberto", "Fechado"}, "assistidos na unidade: %s" % lista)
+U0 = dict(D["unidades"][0], destinacao="Cumprimento de pena em regime fechado", cat="penal")
+arq2 = os.path.join(tempfile.mkdtemp(), "un.pdf")
+rrel.relatorio_unidade_prisional(U0, "09/10/2026", [{"nome": "Fulano", "proc": "1", "regime": "Semiaberto"}], arq2, "teste")
+ok(open(arq2, "rb").read(4) == b"%PDF", "PDF da unidade")
+arq3 = os.path.join(tempfile.mkdtemp(), "cond.pdf")
+rrel.relatorio_condicoes_prisional(D, arq3, "teste", "", ["penal"])
+ok(open(arq3, "rb").read(4) == b"%PDF", "PDF das condições por unidade")
+ok(len(rrel._geo_sel(dict(D, unidades=D["unidades"] + [{"nome": "1ª DELEGACIA", "cat": "delegacia"}]), "", ["penal"])) == 2, "filtro por tipo")
 
 if falhas:
     print("FALHOU (Geopresídios):\n  " + "\n  ".join(falhas))

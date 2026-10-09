@@ -672,9 +672,8 @@ thead th{font-weight:700;background:#F0F1F2;color:#333;border-bottom:1px solid #
 .geo-wrap{padding:0}.geo-top2{display:grid;grid-template-columns:minmax(380px,46%) 1fr;gap:18px;padding:16px 18px;border-bottom:1px solid var(--line)}
 .geo-mapbox{background:#FAFBFA;border:1px solid var(--line);border-radius:4px;padding:8px}
 .geo-map{width:100%;height:auto;max-height:520px;display:block}
-.geo-map .gm{fill:#E9ECEA;stroke:#fff;stroke-width:1.2}.geo-map .gm.tem{fill:#DCE6DF}.geo-map .gm:hover{fill:#D3DCD6}
-.geo-map .gb{cursor:pointer}.geo-map .gb circle{fill-opacity:.82;stroke:#fff;stroke-width:2}.geo-map .gb:hover circle{fill-opacity:1;stroke:#212529}
-.geo-map .gb.sel circle{fill-opacity:1;stroke:#212529;stroke-width:3}
+.geo-map .gm{fill:#E3E7E4;stroke:#fff;stroke-width:1.2}.geo-map .gm.tem{fill:#1D5A3B;cursor:pointer}.geo-map .gm.tem:hover{fill:#2E7A52}.geo-map .gm.sel{fill:#0B2E1C;stroke:#0B2E1C;stroke-width:3}
+.geo-tipos{display:flex;flex-wrap:wrap;gap:16px;align-items:center;padding:10px 18px 0;font-size:12.5px}
 .geo-map text{font:600 19px Arial,"Liberation Sans",sans-serif;fill:#212529;text-anchor:start;paint-order:stroke;stroke:#fff;stroke-width:4px;pointer-events:none}
 .geo-side{display:flex;flex-direction:column;gap:12px}
 .geo-sel{font-size:14px}.geo-sel b{font-size:16px;color:var(--pri2)}
@@ -1777,16 +1776,19 @@ const ui = {
   qdPrazo(p){ const d=this.tlD(p||''); if(!p||isNaN(d)) return null; const h=this.tlHoje(); h.setHours(0,0,0,0); return Math.round((d-h)/864e5); },
   qdAlertas(){ const Q=this._qd; if(!Q) return 0; const fim=(Q.colunas.slice(-1)[0]||{}).id; return Q.cartoes.filter(c=>!c.arquivado&&c.coluna!==fim&&c.prazo&&this.qdPrazo(c.prazo)!==null&&this.qdPrazo(c.prazo)<=0).length; },
   // ---------- Dados prisionais (Geopresídios/CNJ): última inspeção mensal de cada unidade de MS, no mapa do estado ----------
-  _geo:null, _mapa:null, _geoInd:[], geoOrd:{k:'ocup',inv:true}, geoTodas:false, geoCid:'', geoFiltroInd:'',
+  _geo:null, _mapa:null, _geoInd:[], geoOrd:{k:'ocup',inv:true}, geoCats:['penal'], _geoCatNome:{}, geoCid:'', geoFiltroInd:'',
   geoVelha(u){ if(!u.inspecao) return false; const d=new Date(u.inspecao.data+'T00:00:00'); return (Date.now()-d.getTime())/864e5>183; },
   geoPop(u){ if(u.pop!=null) return u.pop; return ['provisorios','fechado','semiaberto','aberto','medida_seguranca','prisao_civil'].reduce((s,k)=>s+(u[k]||0),0); },
   geoOcup(u){ const c=u.capacidade||0; return c>0? this.geoPop(u)/c : null; },
   geoCor(o){ return o==null?'cinza':o>=1.5?'vermelho':o>=1.0?'laranja':'verde'; },
   GEO_HEX:{vermelho:'#A3201D',laranja:'#C2620A',verde:'#2B8048',cinza:'#9AA0A6'},
-  async geoCarregar(){ const r=await API().geo_dados(); this._geo=(r&&r.geo)||null; this._mapa=(r&&r.mapa)||null; this._geoInd=(r&&r.ind)||[]; this._geoOk=true; },
-  async geoAtualizar(){ const b=document.getElementById('geoBt'); if(b){ b.disabled=true; b.textContent='Baixando do Geopresídios… (cerca de 1 minuto)'; }
-    const r=await api('geo_atualizar', this.geoTodas); if(r&&r.geo){ this._geo=r.geo; this._mapa=r.mapa||this._mapa; this._geoInd=r.ind||this._geoInd; } this.render(); },
-  geoPdf(){ api('geo_pdf', this.geoTodas, this.geoCid||''); },
+  async geoCarregar(){ const r=await API().geo_dados(); this._geo=(r&&r.geo)||null; this._mapa=(r&&r.mapa)||null; this._geoInd=(r&&r.ind)||[]; this._geoCatNome=(r&&r.cats)||{}; this._geoOk=true; },
+  async geoAtualizar(){ const b=document.getElementById('geoBt'); if(b){ b.disabled=true; b.textContent='Baixando do Geopresídios… (cerca de 2 minutos)'; }
+    const r=await api('geo_atualizar'); if(r&&r.geo){ this._geo=r.geo; this._mapa=r.mapa||this._mapa; this._geoInd=r.ind||this._geoInd; } this.render(); },
+  geoPdf(tipo){ api('geo_pdf', this.geoCats, this.geoCid||'', tipo||'geral'); },
+  geoPdfUnidade(id){ api('geo_pdf_unidade', id); },
+  geoCat(u){ return u.cat||(u.penal?'penal':'outra'); },
+  geoCatToggle(c){ const S=new Set(this.geoCats); if(S.has(c)) S.delete(c); else S.add(c); if(!S.size) S.add(c); this.geoCats=[...S]; this.geoCid=''; this.geoFiltroInd=''; this.render(); },
   geoIndFiltro(k){ this.geoFiltroInd=(this.geoFiltroInd===k?'':k); this.render(); },
   geoRuim(u,k){ const I=this._geoInd.find(x=>x.k===k); const t=I&&((u.temas||{})[I.tema]||{}).ind; return !!(t&&t[k]&&t[k].ruim); },
   geoTem(u,k){ const I=this._geoInd.find(x=>x.k===k); const t=I&&((u.temas||{})[I.tema]||{}).ind; return !!(t&&t[k]); },
@@ -1796,9 +1798,9 @@ const ui = {
     return `<svg width="${w}" height="${h}" style="vertical-align:middle"><polyline points="${pts}" fill="none" stroke="var(--pri)" stroke-width="1.6"/></svg>`; },
   geoOrdenar(k){ this.geoOrd={k, inv:this.geoOrd.k===k?!this.geoOrd.inv:(k!=='nome')}; this.render(); },
   geoCidade(c){ this.geoCid=(this.geoCid===c?'':c); this.stPop(null); this.render(); },
-  geoUnidades(){ const q=semAcento(this.filtro||''); return ((this._geo||{}).unidades||[]).filter(u=>(this.geoTodas||u.penal)&&(!q||semAcento(u.nome+' '+(u.cidade||'')).includes(q))); },
+  geoUnidades(){ const q=semAcento(this.filtro||''); return ((this._geo||{}).unidades||[]).filter(u=>this.geoCats.includes(this.geoCat(u))&&(!q||semAcento(u.nome+' '+(u.cidade||'')).includes(q))); },
   // agrupa por cidade (o Geopresídios dá a coordenada da cidade, não da unidade)
-  geoCidades(U){ const C={}; U.forEach(u=>{ if(u.x==null) return; const k=u.cidade||'?'; const c=C[k]=C[k]||{nome:k,x:u.x,y:u.y,us:[],pop:0,cap:0,popC:0};
+  geoCidades(U){ const C={}; U.forEach(u=>{ if(!u.cidade) return; const k=u.cidade; const c=C[k]=C[k]||{nome:k,x:u.x,y:u.y,us:[],pop:0,cap:0,popC:0};
       c.us.push(u); if(u.inspecao){ const p=this.geoPop(u); c.pop+=p; if(u.capacidade>0){ c.cap+=u.capacidade; c.popC+=p; } } });
     return Object.values(C).map(c=>Object.assign(c,{ocup:c.cap?c.popC/c.cap:null})); },
   geoTip(ev,nome){ const c=this.geoCidades(this.geoUnidades()).find(x=>x.nome===nome); if(!c) return; const fmt=n=>Number(n).toLocaleString('pt-BR');
@@ -1806,17 +1808,18 @@ const ui = {
     el.innerHTML=`<b>${esc(c.nome)}</b>`+c.us.map(u=>{ const o=this.geoOcup(u); return `<div><span style="flex:1">${esc(this.geoNome(u.nome))}</span><span style="white-space:nowrap;color:${this.GEO_HEX[this.geoCor(o)]}">${u.inspecao?`${fmt(this.geoPop(u))}/${u.capacidade?fmt(u.capacidade):'?'} · ${o==null?'—':Math.round(o*100)+'%'}`:'sem inspeção'}</span></div>`; }).join('')+`<small>Clique para ver só as unidades de ${esc(c.nome)}.</small>`;
     const r=ev.target.getBoundingClientRect(); el.style.left=Math.min(r.right+8, innerWidth-470)+'px'; const h=el.offsetHeight; el.style.top=Math.max(8,Math.min(r.top-10, innerHeight-h-8))+'px'; },
   geoNome(n){ return n.replace(/ESTABELECIMENTO PENAL/i,'EP').toLowerCase().replace(/(^|\s)(\S)/g,(m,a,b)=>a+b.toUpperCase()).replace(/\b(De|Da|Do|Das|Dos|E|Ao|À)\b/g,w=>w.toLowerCase()).replace(/\bEp\b/,'EP'); },
-  geoMapaSvg(U){ const M=this._mapa; if(!M) return ''; const P=M.proj, C=this.geoCidades(U), mx=Math.max(1,...C.map(c=>c.pop));
-    const comU=new Set(U.map(u=>u.ibge));
-    const mun=Object.entries(M.municipios).map(([k,m])=>`<path d="${m.d}" class="gm${comU.has(k)?' tem':''}"><title>${esc(m.nome)}</title></path>`).join('');
-    const bol=C.sort((a,b)=>b.pop-a.pop).map(c=>{ const r=7+26*Math.sqrt(c.pop/mx), cor=this.GEO_HEX[this.geoCor(c.ocup)], sel=this.geoCid===c.nome;
-      return `<g class="gb${sel?' sel':''}" onclick="ui.geoCidade(${jsa(c.nome)})" onmouseenter="ui.geoTip(event,${jsa(c.nome)})" onmouseleave="ui.stPop(null)"><circle cx="${c.x}" cy="${c.y}" r="${r.toFixed(1)}" fill="${cor}"/>${c.pop>=700||sel?(C.some(d=>d!==c&&d.x>c.x&&d.x-c.x<190&&Math.abs(d.y-c.y)<40)?`<text x="${(c.x-r-6).toFixed(1)}" y="${(c.y+6).toFixed(1)}" style="text-anchor:end">${esc(c.nome)}</text>`:`<text x="${(c.x+r+6).toFixed(1)}" y="${(c.y+6).toFixed(1)}">${esc(c.nome)}</text>`):''}</g>`; }).join('');
-    return `<svg viewBox="0 0 ${P.W} ${P.H}" class="geo-map">${mun}${bol}</svg>`; },
+  // mapa: municípios com estabelecimento (dos tipos marcados) em verde-escuro; o escolhido mais escuro e contornado
+  geoMapaSvg(U){ const M=this._mapa; if(!M) return ''; const P=M.proj, C=this.geoCidades(U), por={}; C.forEach(c=>{ por[c.nome]=c; });
+    const mun=Object.entries(M.municipios).map(([k,m])=>{ const c=por[m.nome]; if(!c) return `<path d="${m.d}" class="gm"><title>${esc(m.nome)}</title></path>`;
+      return `<path d="${m.d}" class="gm tem${this.geoCid===m.nome?' sel':''}" onclick="ui.geoCidade(${jsa(m.nome)})" onmouseenter="ui.geoTip(event,${jsa(m.nome)})" onmouseleave="ui.stPop(null)"/>`; }).join('');
+    const top=new Set(C.filter(c=>c.pop>0).sort((a,b)=>b.pop-a.pop).slice(0,7).map(c=>c.nome)); if(this.geoCid) top.add(this.geoCid);
+    const rot=Object.values(M.municipios).filter(m=>top.has(m.nome)).map(m=>`<text x="${m.c[0]}" y="${m.c[1]+6}">${esc(m.nome)}</text>`).join('');
+    return `<svg viewBox="0 0 ${P.W} ${P.H}" class="geo-map">${mun}${rot}</svg>`; },
   async renderGeo(){ if(!this._geoOk) await this.geoCarregar(); const G=this._geo; const fmt=n=>n==null?'—':Number(n).toLocaleString('pt-BR'), pct=o=>o==null?'—':Math.round(o*100)+'%';
     document.getElementById('stats').innerHTML=`<div class="geo-head"><div><b>Sistema prisional de Mato Grosso do Sul</b><span class="muted">${G?`Geopresídios/CNIEP (CNJ): inspeções judiciais mensais de cada unidade (população da mais recente; vagas e perfil do tema "Aspectos gerais"; condições dos demais temas) · baixado em ${esc(G.atualizado)} · <a href="#" onclick="event.preventDefault();api('abrir_url','${esc(G.fonte||'https://geopresidios.cnj.jus.br/')}')">geopresidios.cnj.jus.br</a>`:'Dados da API pública do Geopresídios (CNJ), guardados neste computador.'}</span></div>
-      <div class="geo-acts">${G?`<label class="chk" style="font-size:12.5px"><input type="checkbox" ${this.geoTodas?'checked':''} onchange="ui.geoTodas=this.checked;ui.render()"> Incluir delegacias, cadeias e unidades militares</label>`:''}${G?`<button class="btn" onclick="ui.geoPdf()" title="Relatório em PDF do estado ou da cidade escolhida no mapa">Relatório PDF</button>`:''}<button class="btn ${G?'':'pri'}" id="geoBt" onclick="ui.geoAtualizar()">${G?'Atualizar dados':'Baixar dados do Geopresídios (MS)'}</button></div></div>`;
-    document.getElementById('legenda').innerHTML=`<span class="leg"><i style="background:var(--g-dot)"></i>até 100% da capacidade</span><span class="leg"><i style="background:var(--o-dot)"></i>100% a 149%</span><span class="leg"><i style="background:var(--r-dot)"></i>150% ou mais</span><span class="leg">No mapa, o círculo é a cidade: tamanho pelo número de presos, cor pela ocupação · clique na cidade para filtrar e na unidade para o perfil</span>`;
-    if(!G){ document.getElementById('card').innerHTML=`<div class="empty"><div><b>Dados prisionais de MS</b>Clique em "Baixar dados do Geopresídios (MS)". Leva cerca de 1 minuto; os dados ficam guardados neste computador e só são baixados de novo quando você pedir.</div></div>`; return; }
+      <div class="geo-acts">${G?`<button class="btn" onclick="ui.geoPdf('geral')" title="Indicadores, mapa, ocupação, condições e evolução - do estado ou da cidade escolhida no mapa, pelos tipos marcados">Relatório geral (PDF)</button><button class="btn" onclick="ui.geoPdf('condicoes')" title="Em quais estabelecimentos foi constatado cada problema, e os problemas de cada um">Condições por unidade (PDF)</button>`:''}<button class="btn ${G?'':'pri'}" id="geoBt" onclick="ui.geoAtualizar()">${G?'Atualizar dados':'Baixar dados do Geopresídios (MS)'}</button></div></div>`;
+    document.getElementById('legenda').innerHTML=`<span class="leg"><i style="background:#1D5A3B"></i>município com estabelecimento dos tipos marcados</span><span class="leg">Ocupação: <b style="color:var(--g-tx)">até 100%</b> · <b style="color:var(--o-tx)">100% a 149%</b> · <b style="color:var(--r-tx)">150% ou mais</b></span><span class="leg">Clique no município para filtrar e no estabelecimento para o detalhe e o relatório</span>`;
+    if(!G){ document.getElementById('card').innerHTML=`<div class="empty"><div><b>Dados prisionais de MS</b>Clique em "Baixar dados do Geopresídios (MS)". Leva cerca de 2 minutos; os dados ficam guardados neste computador e só são baixados de novo quando você pedir.</div></div>`; return; }
     const Utodas=this.geoUnidades(), U=this.geoCid?Utodas.filter(u=>u.cidade===this.geoCid):Utodas; const Ut=this.geoFiltroInd?U.filter(u=>this.geoRuim(u,this.geoFiltroInd)):U;
     const comI=U.filter(u=>u.inspecao), comCap=comI.filter(u=>u.capacidade>0);
     const pop=comI.reduce((s,u)=>s+this.geoPop(u),0), popC=comCap.reduce((s,u)=>s+this.geoPop(u),0), cap=comCap.reduce((s,u)=>s+u.capacidade,0), soma=k=>comI.reduce((s,u)=>s+(u[k]||0),0);
@@ -1846,7 +1849,9 @@ const ui = {
         <td class="nw">${u.servidores_seguranca?`${fmt(u.servidores_seguranca)} <span class="muted">(${Math.round(this.geoPop(u)/u.servidores_seguranca)} presos/agente)</span>`:'—'}</td>
         <td class="nw">${(u.serie||[]).length>1?(()=>{ const s0=u.serie[0].pop, s1=u.serie[u.serie.length-1].pop, v=s0?Math.round(100*(s1-s0)/s0):0; return `${this.geoSpark(u.serie,70,22)} <span style="color:${v>0?'var(--r-tx)':v<0?'var(--g-tx)':'var(--tx3)'}" title="${esc(u.serie.map(x=>x.ciclo+': '+fmt(x.pop)).join(' · '))}">${v>0?'+':''}${v}%</span>`; })():'—'}</td>
         <td class="nw">${u.pop_ciclo?esc(u.pop_ciclo):u.inspecao?(this.geoVelha(u)?`<span style="color:var(--a-tx)" title="Inspeção com mais de 6 meses">${esc(u.inspecao.ciclo)}</span>`:esc(u.inspecao.ciclo)):'<span class="muted">sem inspeção</span>'}</td></tr>`; }).join('');
-    document.getElementById('card').innerHTML=`<div class="geo-wrap"><div class="geo-top2"><div class="geo-mapbox">${this.geoMapaSvg(Utodas)}</div>${lado}</div>
+    const todosU=((this._geo||{}).unidades||[]), nCat=c=>todosU.filter(u=>this.geoCat(u)===c).length;
+    const tipos=`<div class="geo-tipos"><span class="muted">Mostrar:</span>${Object.entries(this._geoCatNome).map(([c,n])=>`<label class="chk"><input type="checkbox" ${this.geoCats.includes(c)?'checked':''} onchange="ui.geoCatToggle('${c}')"> ${esc(n)} <span class="muted">(${nCat(c)})</span></label>`).join('')}${G.falhas?`<span style="color:var(--a-tx);margin-left:auto">${G.falhas} relatórios não baixados: atualize de novo</span>`:''}</div>`;
+    document.getElementById('card').innerHTML=`<div class="geo-wrap">${tipos}<div class="geo-top2"><div class="geo-mapbox">${this.geoMapaSvg(Utodas)}</div>${lado}</div>
       <table><thead><tr>${th('nome','Unidade')}${th('cidade','Cidade')}${th('classificacao','Tipo')}${th('capacidade','Vagas',1)}${th('pop','Presos',1)}${th('ocup','Ocupação',1)}${th('provisorios','Provisórios',1)}${th('fechado','Fechado',1)}${th('semiaberto','Semiaberto',1)}${th('aberto','Aberto',1)}${th('servidores_seguranca','Agentes de segurança',1)}<th class="nw">Evolução</th>${th('insp','Dados de',1)}</tr></thead><tbody>${tr}</tbody></table>${this.geoFiltroInd?`<div class="muted" style="padding:8px 14px;font-size:12.5px">Mostrando só as unidades com "${esc((this._geoInd.find(x=>x.k===this.geoFiltroInd)||{}).problema||'')}" · <span class="mini" onclick="ui.geoIndFiltro('')">mostrar todas</span></div>`:''}</div>`; },
   geoDet(id){ const u=((this._geo||{}).unidades||[]).find(x=>x.id===id); if(!u) return; const fmt=n=>n==null?'—':Number(n).toLocaleString('pt-BR');
     const lin=(t,v)=>`<tr><td>${t}</td><td class="nw" style="text-align:right">${fmt(v)}</td></tr>`;
@@ -1859,7 +1864,7 @@ const ui = {
           +(I.defensores?`<tr><td>Defensores/as que atuam na unidade</td><td style="text-align:right">${fmt(I.defensores.n)}</td></tr>`:'')+(I.trab_remicao?`<tr><td>Trabalhando com cômputo para remição</td><td style="text-align:right">${fmt(I.trab_remicao.n)}</td></tr>`:'')+(I.escola?`<tr><td>Inscritos na educação escolar</td><td style="text-align:right">${fmt(I.escola.n)}</td></tr>`:'');
         return linhas?`<table class="geo-det" style="margin-top:12px"><thead><tr><th colspan="2">${esc(NOME)} <span class="muted" style="font-weight:400">· inspeção de ${esc(T.ciclo)}</span></th></tr></thead><tbody>${linhas}</tbody></table>`:''; }).join('')}
       ${(u.serie||[]).length>1?`<table class="geo-det" style="margin-top:12px"><thead><tr><th>Evolução (ciclo da inspeção)</th><th style="text-align:right">Presos</th><th style="text-align:right">Provisórios</th><th style="text-align:right">Fechado</th><th style="text-align:right">Semiaberto</th><th style="text-align:right">Aberto</th></tr></thead><tbody>${u.serie.map(x=>`<tr><td>${esc(x.ciclo)}</td><td style="text-align:right">${fmt(x.pop)}</td><td style="text-align:right">${fmt(x.provisorios)}</td><td style="text-align:right">${fmt(x.fechado)}</td><td style="text-align:right">${fmt(x.semiaberto)}</td><td style="text-align:right">${fmt(x.aberto)}</td></tr>`).join('')}</tbody></table>`:''}
-      <div class="acts"><button class="btn" onclick="ui.fecharModal()">Fechar</button></div></div>`;
+      <div class="acts"><button class="btn" style="margin-right:auto" onclick="ui.geoPdfUnidade(${u.id})">Relatório da unidade (PDF)</button><button class="btn" onclick="ui.fecharModal()">Fechar</button></div></div>`;
     document.getElementById('modal').classList.add('on'); },
   async renderQuadro(){ if(!this._qd) await this.qdCarregar(); const Q=this._qd||{colunas:[],cartoes:[]}; const R=this.dados.registros||[]; const q=semAcento(this.filtro);
     const arq=Q.cartoes.filter(c=>c.arquivado).length;

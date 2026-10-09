@@ -678,13 +678,17 @@ DADOS PRISIONAIS (aba ao lado do Quadro do Usuário)
   Retrato do sistema prisional de MS pela API pública do Geopresídios/CNIEP
   (CNJ): para cada unidade, a última inspeção judicial mensal do tema
   "Aspectos gerais" (vagas, presos por regime, perfil da população e
-  servidores). O botão "Baixar/Atualizar dados" busca tudo (cerca de 1
-  minuto, com internet); os dados ficam guardados ao lado do programa
+  servidores). O botão "Baixar/Atualizar dados" busca tudo (cerca de 2
+  minutos, com internet); os dados ficam guardados ao lado do programa
   (geopresidios_ms.json) e valem para qualquer base.
-  - Mapa do estado: um círculo por cidade com unidade penal, com tamanho
-    pelo número de presos e cor pela ocupação (verde até 100%, laranja até
-    149%, vermelho a partir de 150%). Passar o mouse lista as unidades;
-    clicar filtra a cidade.
+  - Mapa do estado: os municípios com estabelecimento dos tipos marcados
+    ficam em verde-escuro (o escolhido, mais escuro). Passar o mouse lista
+    os estabelecimentos com presos, vagas e ocupação; clicar filtra a
+    cidade.
+  - Tipos (marque um ou mais): unidades penais, delegacias e cadeias,
+    unidades militares, Polícia Federal e outras. O download traz sempre
+    todos os estabelecimentos de MS; o mapa, os indicadores, as condições,
+    a tabela e os relatórios seguem os tipos marcados.
   - Indicadores: presos, vagas, ocupação e déficit, provisórios, fechado,
     semiaberto e aberto (do estado ou da cidade escolhida).
   - Assistidos desta base em cada unidade, pela unidade da ficha do SIAPEN,
@@ -694,8 +698,6 @@ DADOS PRISIONAIS (aba ao lado do Quadro do Usuário)
     unidade, o perfil da população e os servidores). Avisos: unidade sem
     inspeção ou sem capacidade, números idênticos aos de outra unidade
     (formulário possivelmente copiado) e inspeção com mais de 6 meses.
-  - Por padrão, só as unidades penais; a opção "Incluir delegacias, cadeias
-    e unidades militares" mostra as demais.
   - Condições constatadas: pela última inspeção de cada tema (rodízio
     mensal: habitabilidade, assistências, segurança e saúde), quantas
     unidades têm cada problema (sem cinco refeições diárias, remição pela
@@ -705,8 +707,17 @@ DADOS PRISIONAIS (aba ao lado do Quadro do Usuário)
     repetem o quadro de presos), o que dá a série dos últimos meses: no
     painel (soma do estado ou da cidade) e em cada unidade (linha e
     percentual na tabela; mês a mês no detalhe).
-  - Relatório PDF: indicadores, mapa, ocupação por unidade, condições
-    constatadas e evolução, do estado ou da cidade escolhida no mapa.
+  - Relatórios em PDF (dos tipos marcados e da cidade escolhida no mapa):
+    "Relatório geral" (indicadores, mapa, ocupação por unidade, condições e
+    evolução); "Condições por unidade" (para cada problema, em quais
+    estabelecimentos foi constatado, com a resposta e o mês da inspeção; e
+    cada estabelecimento com a lista dos seus problemas); e, no detalhe de
+    cada estabelecimento, "Relatório da unidade" (ocupação, situação e
+    perfil, servidores, todas as respostas por tema, evolução e os
+    assistidos da base custodiados nela, com o regime pelo RSPE).
+  - Se o servidor do CNJ recusar pedidos, o programa tenta de novo; o que
+    ainda faltar mantém o dado baixado antes e o aviso pede nova
+    atualização.
 
 PROBLEMAS
   Se o programa não abrir ou travar, veja o arquivo rspe_log.txt criado ao

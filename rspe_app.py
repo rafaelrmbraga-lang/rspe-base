@@ -270,9 +270,10 @@ curso (o externo conta). Amarelo: algo fica a conferir (ficha com mais de 90 dia
 abre o pedido da progressão (o mesmo da coluna "Pedido" da aba Progressão); com o pedido marcado, o ícone fica azul preenchido.
 <h4>Dados prisionais (Geopresídios/CNJ)</h4>
 Aba ao lado do Quadro do Usuário. Pela API pública do Geopresídios/CNIEP (CNJ), traz para cada unidade de MS a última inspeção judicial
-mensal do tema "Aspectos gerais": vagas, presos por regime, perfil e servidores. "Baixar/Atualizar dados" busca tudo (cerca de 1 minuto,
-com internet) e guarda ao lado do programa. No mapa, cada círculo é uma cidade: tamanho pelo número de presos, cor pela ocupação (verde até
-100%, laranja até 149%, vermelho a partir de 150%); o mouse lista as unidades e o clique filtra a cidade. Mostra também os assistidos da
+mensal do tema "Aspectos gerais": vagas, presos por regime, perfil e servidores. "Baixar/Atualizar dados" busca tudo (cerca de 2 minutos,
+com internet) e guarda ao lado do programa. No mapa, os municípios com estabelecimento dos tipos marcados (unidades penais, delegacias e
+cadeias, unidades militares, Polícia Federal e outras) ficam em verde-escuro; o mouse lista os estabelecimentos e o clique filtra a cidade.
+Relatórios em PDF: geral, condições por unidade (em quais estabelecimentos foi constatado cada problema) e, no detalhe, o da unidade. Mostra também os assistidos da
 base em cada unidade (pela ficha do SIAPEN) e quantos estão no semiaberto ou no aberto pelo RSPE em unidade de regime fechado (SV 56).
 Condições constatadas nos demais temas (habitabilidade, assistências, segurança e saúde): quantas unidades têm cada problema; clicar filtra
 a tabela. Evolução da população nos últimos meses (painel, tabela e detalhe). "Relatório PDF": o estado ou a cidade escolhida no mapa.
@@ -1562,11 +1563,29 @@ class Api:
     def _geo_arq(self):
         return os.path.join(pasta_app(), "geopresidios_ms.json")
 
+    @staticmethod
+    def _geo_toks(n):
+        return {t.rstrip("S") for t in rgeo.chave_unidade(n)}
+
+    @staticmethod
+    def _geo_casa(tu, tf):
+        """Mesma unidade: ao menos 70% das palavras do nome mais curto (e no mínimo duas) em comum."""
+        return bool(tu and tf) and len(tu & tf) >= max(2, 0.7 * min(len(tu), len(tf)))
+
+    def _geo_lista(self, u):
+        """Assistidos da base custodiados na unidade (pela ficha), com o regime do RSPE."""
+        tu = self._geo_toks(u["nome"])
+        out = []
+        for m in self._modelos or []:
+            un = ((m.get("ficha") or {}).get("unidade") or "").strip()
+            if un and self._geo_casa(tu, self._geo_toks(un)):
+                out.append({"nome": m.get("nome") or "", "proc": m.get("proc") or "", "regime": m.get("regime_rspe") or ""})
+        return sorted(out, key=lambda x: x["nome"])
+
     def _geo_assistidos(self, unidades):
         """Assistidos da base aberta em cada unidade, pela unidade da ficha disciplinar (SIAPEN), e quantos deles estão no
         semiaberto ou no aberto pelo RSPE (confronto com a população informada na inspeção)."""
-        def toks(n):
-            return {t.rstrip("S") for t in rgeo.chave_unidade(n)}
+        toks = self._geo_toks
         cont = {}
         for m in self._modelos or []:
             un = ((m.get("ficha") or {}).get("unidade") or "").strip()
@@ -1579,8 +1598,7 @@ class Api:
             tu = toks(u["nome"])
             u["assistidos"] = u["assistidos_semi"] = 0
             for un, (n, ns) in cont.items():
-                tf = toks(un)
-                if tu and len(tu & tf) >= max(2, 0.7 * min(len(tu), len(tf))):
+                if self._geo_casa(tu, toks(un)):
                     u["assistidos"] += n
                     u["assistidos_semi"] += ns
         # números idênticos aos de outra unidade (formulário possivelmente copiado): conferir
@@ -1599,6 +1617,9 @@ class Api:
         mun = rmapa.MAPA["municipios"]
         por_nome = {rgeo._sem_acento(m["nome"]): k for k, m in mun.items()}
         for u in unidades:
+            if not u.get("cat"):
+                u["cat"] = rgeo.categoria(u["nome"])
+            u["penal"] = u["cat"] == "penal"
             if u.get("ibge") in mun:
                 u["cidade"] = mun[u["ibge"]]["nome"]
             if u.get("lat") is not None and u.get("lon") is not None:
@@ -1616,22 +1637,29 @@ class Api:
         return [{"k": ch, "tema": t, "rot": rot, "problema": rgeo.PROBLEMA.get(ch, ""), "alerta": bool(ruim)}
                 for ch, t, q, rot, ruim in rgeo.INDICADORES]
 
+    @staticmethod
+    def geo_categorias():
+        return rgeo.CATEGORIAS
+
     def geo_dados(self):
         d = rgeo.carregar(self._geo_arq())
         if d:
             self._geo_assistidos(d["unidades"])
             self._geo_pontos(d["unidades"])
-        return {"geo": d, "mapa": rmapa.MAPA, "ind": self._geo_ind()}
+        return {"geo": d, "mapa": rmapa.MAPA, "ind": self._geo_ind(), "cats": rgeo.CATEGORIAS}
 
     def geo_atualizar(self, todas=False):
         try:
-            d = rgeo.atualizar(self._geo_arq(), bool(todas))
+            d = rgeo.atualizar(self._geo_arq())
         except Exception as ex:
             logging.getLogger("rspe").exception("Geopresídios")
             return {"erro": "Não foi possível baixar os dados do Geopresídios (%s). Confira a conexão com a internet." % str(ex)[:120]}
         self._geo_assistidos(d["unidades"])
         self._geo_pontos(d["unidades"])
-        return {"geo": d, "mapa": rmapa.MAPA, "ind": self._geo_ind(), "msg": "Dados prisionais atualizados (%d unidades)." % len(d["unidades"])}
+        msg = "Dados prisionais atualizados (%d estabelecimentos)." % len(d["unidades"])
+        if d.get("falhas"):
+            msg += " %d relatórios de inspeção não foram baixados (o servidor do CNJ recusou): clique em Atualizar de novo." % d["falhas"]
+        return {"geo": d, "mapa": rmapa.MAPA, "ind": self._geo_ind(), "cats": rgeo.CATEGORIAS, "msg": msg}
 
     def teses(self):
         """Jurisprudências da execução penal (aba Jurisprudências): decisões do TJMS, STJ e STF favoráveis à defesa, triadas pela
@@ -2847,24 +2875,56 @@ class Api:
         _abrir(c)
         return {"caminho": c, "msg": "PDF salvo."}
 
-    def geo_pdf(self, todas=False, cidade=""):
-        """Salva em PDF os dados prisionais de MS (ou da cidade escolhida no mapa): indicadores, mapa, ocupação por unidade,
-        condições constatadas e evolução."""
+    def _geo_pdf_destino(self, nome):
+        c = _um(self._janela.create_file_dialog(webview.SAVE_DIALOG, save_filename=nome, file_types=("PDF (*.pdf)",)))
+        if c and not c.lower().endswith(".pdf"):
+            c += ".pdf"
+        return c
+
+    def _geo_carregar_pdf(self):
         d = rgeo.carregar(self._geo_arq())
+        if d:
+            self._geo_pontos(d["unidades"])
+            self._geo_assistidos(d["unidades"])
+        return d
+
+    def geo_pdf(self, cats=None, cidade="", tipo="geral"):
+        """Relatório em PDF dos dados prisionais, pelos tipos de estabelecimento marcados e pela cidade escolhida no mapa.
+        tipo "geral": indicadores, mapa, ocupação, condições e evolução; "condicoes": em quais unidades foi constatado cada
+        problema e os problemas de cada unidade."""
+        d = self._geo_carregar_pdf()
         if not d:
             return {"erro": "Baixe os dados do Geopresídios antes de gerar o relatório."}
-        self._geo_pontos(d["unidades"])
-        d["todas"] = bool(todas)
-        nome = "Dados prisionais de MS%s - %s.pdf" % ((" - " + cidade) if cidade else "", datetime.now().strftime("%d-%m-%Y"))
-        c = _um(self._janela.create_file_dialog(webview.SAVE_DIALOG, save_filename=nome, file_types=("PDF (*.pdf)",)))
+        cats = [c for c in (cats or ["penal"]) if c in rgeo.CATEGORIAS] or ["penal"]
+        rot = "Condições por unidade" if tipo == "condicoes" else "Dados prisionais de MS"
+        c = self._geo_pdf_destino("%s%s - %s.pdf" % (rot, (" - " + cidade) if cidade else "", datetime.now().strftime("%d-%m-%Y")))
         if not c:
             return None
-        if not c.lower().endswith(".pdf"):
-            c += ".pdf"
         try:
-            rrel.relatorio_prisional(d, rmapa.MAPA, c, self.base.nome if self.base else "", cidade or "")
+            if tipo == "condicoes":
+                rrel.relatorio_condicoes_prisional(d, c, self.base.nome if self.base else "", cidade or "", cats)
+            else:
+                rrel.relatorio_prisional(d, rmapa.MAPA, c, self.base.nome if self.base else "", cidade or "", cats)
         except Exception as e:
             logging.getLogger("rspe").exception("relatório prisional")
+            return {"erro": "Falha ao gerar o PDF: %s" % e}
+        _abrir(c)
+        return {"caminho": c, "msg": "PDF salvo."}
+
+    def geo_pdf_unidade(self, uid):
+        """Relatório em PDF de uma unidade: identificação, ocupação, situação e perfil, servidores, todas as condições
+        constatadas por tema, evolução e os assistidos da base custodiados nela."""
+        d = self._geo_carregar_pdf()
+        u = next((x for x in (d or {}).get("unidades", []) if x.get("id") == uid), None)
+        if not u:
+            return {"erro": "Unidade não encontrada nos dados baixados."}
+        c = self._geo_pdf_destino("%s - %s.pdf" % (re.sub(r"[^\w\s-]", "", u["nome"]).strip()[:80], datetime.now().strftime("%d-%m-%Y")))
+        if not c:
+            return None
+        try:
+            rrel.relatorio_unidade_prisional(u, d.get("atualizado", ""), self._geo_lista(u), c, self.base.nome if self.base else "")
+        except Exception as e:
+            logging.getLogger("rspe").exception("relatório da unidade")
             return {"erro": "Falha ao gerar o PDF: %s" % e}
         _abrir(c)
         return {"caminho": c, "msg": "PDF salvo."}

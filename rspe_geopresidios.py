@@ -15,8 +15,12 @@ SITE = "https://geopresidios.cnj.jus.br/"
 UF = "MS"
 TEMA_GERAL = 1  # Aspectos Gerais: estrutura, ocupação, população prisional e servidores penais
 
-# unidades do sistema penitenciário (AGEPEN e federal); as demais são delegacias, cadeias e unidades militares
-RE_PENAL = re.compile(r"PENITENCI|PRESIDIO|ESTABELECIMENTO PENAL|CENTRO PENAL|COLONIA PENAL|CENTRO DE DETENCAO|TRIAGEM|UNIDADE PENAL")
+# tipo do estabelecimento pelo nome: unidades penais (AGEPEN e federal), delegacias e cadeias, unidades militares e as demais
+RE_MILITAR = re.compile(r"REGIMENTO|BATALH|COMPANHIA|BASE AEREA|BASE DE ADMIN|ALA \d|COMANDO|GRUPO DE ARTILHARIA|EXERCITO|FUZILEIROS|PRESIDIO MILITAR")
+RE_PENAL = re.compile(r"PENITENCI|PRESIDIO|ESTABELECIMENTO PENAL|CENTRO PENAL|COLONIA PENAL|CENTRO DE DETENCAO|TRIAGEM|UNIDADE PENAL|INSTITUTO PENAL")
+RE_DELEGACIA = re.compile(r"DELEGACIA|\bDEAM\b|\bDEFURV\b|\bDP\b|DEPAC|CEPOL|GARRAS|DERF|CADEIA")
+CATEGORIAS = {"penal": "Unidades penais", "delegacia": "Delegacias e cadeias", "militar": "Unidades militares", "outra": "Polícia Federal e outras"}
+
 
 # questão do formulário -> campo
 QUESTOES = {
@@ -90,11 +94,31 @@ def _sem_acento(s):
     return "".join(c for c in unicodedata.normalize("NFD", s or "") if unicodedata.category(c) != "Mn").upper()
 
 
-def _get(caminho, params=None, timeout=90):
+def categoria(nome):
+    n = _sem_acento(nome)
+    return "militar" if RE_MILITAR.search(n) else "penal" if RE_PENAL.search(n) else "delegacia" if RE_DELEGACIA.search(n) else "outra"
+
+
+def _get(caminho, params=None, timeout=90, tentativas=6):
+    """GET na API; repete com espera crescente quando o servidor limita os pedidos (429) ou falha (5xx, conexão)."""
+    import random
+    import time
+    import urllib.error
     url = API + caminho + ("?" + urllib.parse.urlencode(params) if params else "")
     req = urllib.request.Request(url, headers={"Accept": "application/json", "User-Agent": "APTO"})
-    with urllib.request.urlopen(req, timeout=timeout) as r:
-        return json.loads(r.read().decode("utf-8"))
+    for n in range(tentativas):
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                return json.loads(r.read().decode("utf-8"))
+        except urllib.error.HTTPError as ex:
+            if ex.code != 429 and ex.code < 500 or n == tentativas - 1:
+                raise
+            espera = ex.headers.get("Retry-After") if ex.headers else None
+            time.sleep(float(espera) if espera and espera.isdigit() else min(30, 2 ** n) + random.random())
+        except (urllib.error.URLError, TimeoutError, ConnectionError):
+            if n == tentativas - 1:
+                raise
+            time.sleep(min(30, 2 ** n) + random.random())
 
 
 def _num(v):
@@ -149,7 +173,9 @@ def _indicadores(rel, tema):
         if v is None or v.upper() in ("NA", "NONE"):
             continue
         vv = v.replace("*", "").strip()
-        out[ch] = {"v": vv, "ruim": bool(ruim and re.search(ruim, _sem_acento(vv)))}
+        # "Não informado" / "Não se aplica" não são constatação de problema
+        sem = re.match(r"NAO (INFORMAD|SE APLICA|VERIFICAD)", _sem_acento(vv))
+        out[ch] = {"v": vv, "ruim": bool(ruim and not sem and re.search(ruim, _sem_acento(vv)))}
     for ch, (q, perg) in NUM_TEMA.items():
         if q[0] != str(tema) or q not in resp:
             continue
@@ -163,8 +189,9 @@ def _indicadores(rel, tema):
 
 
 def atualizar(destino, todas=False, aviso=None):
-    """Baixa o cadastro e as inspeções e, para cada unidade de MS, o relatório da última inspeção do tema 1.
-    Grava o resultado em `destino` e o devolve. `todas`: inclui delegacias, cadeias e unidades militares."""
+    """Baixa o cadastro e as inspeções e, para cada estabelecimento de MS (unidades penais, delegacias, cadeias e unidades
+    militares), o relatório da última inspeção de cada tema. Grava o resultado em `destino` e o devolve. `todas` fica por
+    compatibilidade: o download traz sempre todos e a tela filtra pelo tipo."""
     aviso = aviso or (lambda *_: None)
     aviso("cadastro de estabelecimentos")
     estabs = [e for e in _get("/geopresidios/estabelecimentos") if e.get("dsc_uf") == UF and e.get("flg_ativo") == "S"]
@@ -180,9 +207,15 @@ def atualizar(destino, todas=False, aviso=None):
         ch = (i["seq_estabelecimento"], i.get("tema_id"))
         if ch not in ult or i["data_inicio"] > ult[ch]["data_inicio"]:
             ult[ch] = i
-    sel = [e for e in estabs if todas or RE_PENAL.search(_sem_acento(e["dsc_identificacao"]))]
+    sel = estabs  # todos os estabelecimentos de MS; a tela filtra pelo tipo (unidades penais, delegacias, militares, outras)
     pedidos = [i for (sq, t), i in ult.items() if any(e["seq_estabelecimento"] == sq for e in sel)]
     rels, feitos = {}, [0]
+    antigo = {}  # inspeção -> dados já baixados antes (usados se o relatório desta vez falhar)
+    for u0 in (carregar(destino) or {}).get("unidades", []):
+        for t0, T0 in (u0.get("temas") or {}).items():
+            antigo[T0.get("id")] = ("tema", u0, t0)
+        if u0.get("inspecao"):
+            antigo[u0["inspecao"].get("id")] = ("geral", u0, "1")
 
     def baixa(i):
         try:
@@ -192,13 +225,14 @@ def atualizar(destino, todas=False, aviso=None):
         feitos[0] += 1
         aviso("relatórios: %d de %d" % (feitos[0], len(pedidos)))
     from concurrent.futures import ThreadPoolExecutor
-    with ThreadPoolExecutor(max_workers=6) as ex:
+    with ThreadPoolExecutor(max_workers=4) as ex:  # mais que isso, o servidor do CNJ passa a recusar (429)
         list(ex.map(baixa, pedidos))
-    unidades = []
+    unidades, falhas = [], [0]
     for e in sorted(sel, key=lambda x: x["dsc_identificacao"]):
         sq = e["seq_estabelecimento"]
         u = {"id": sq, "nome": re.sub(r"\s+", " ", e["dsc_identificacao"]).strip(), "endereco": e.get("dsc_endereco") or "",
-             "penal": bool(RE_PENAL.search(_sem_acento(e["dsc_identificacao"]))), "inspecao": None, "temas": {}, "serie": []}
+             "cat": categoria(e["dsc_identificacao"]), "inspecao": None, "temas": {}, "serie": []}
+        u["penal"] = u["cat"] == "penal"
         g = geo.get(sq) or {}
         try:
             u.update(cidade=(g.get("dsc_cidade") or "").title(), ibge=str(g.get("codigo_ibge") or ""), lat=float(g["lat"]), lon=float(g["lon"]))
@@ -209,7 +243,14 @@ def atualizar(destino, todas=False, aviso=None):
             rel = rels.get(i["id"]) if i else None
             if not rel or rel.get("erro"):
                 if rel and rel.get("erro"):
-                    u["erro"] = rel["erro"]
+                    velho = antigo.get(i["id"])
+                    if velho and velho[0] == "tema":
+                        u["temas"][str(t)] = velho[1]["temas"][velho[2]]
+                    elif velho:
+                        u.update({k: velho[1].get(k) for k in list(QUESTOES.values()) + list(TEXTO.values()) + ["servidores", "servidores_seguranca", "inspecao"]})
+                    else:
+                        falhas[0] += 1
+                        u["erro"] = rel["erro"]
                 continue
             info = {"id": i["id"], "data": i["data_inicio"][:10], "ciclo": i.get("ciclo") or ""}
             if t == TEMA_GERAL:
@@ -227,7 +268,8 @@ def atualizar(destino, todas=False, aviso=None):
             u.update(provisorios=a["provisorios"], fechado=a["fechado"], semiaberto=a["semiaberto"], aberto=a["aberto"],
                      pop=a["pop"], pop_ciclo=a["ciclo"], pop_data=a["data"])
         unidades.append(u)
-    dados = {"atualizado": datetime.now().strftime("%d/%m/%Y %H:%M"), "fonte": SITE, "uf": UF, "todas": todas, "unidades": unidades}
+    dados = {"atualizado": datetime.now().strftime("%d/%m/%Y %H:%M"), "fonte": SITE, "uf": UF, "todas": True, "unidades": unidades,
+             "falhas": falhas[0]}
     tmp = destino + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(dados, f, ensure_ascii=False)
