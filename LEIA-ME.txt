@@ -695,6 +695,10 @@ v7.7.0
     está a 1-60 dias da progressão, sem crime com violência ou grave ameaça,
     trabalhando e com conduta Boa ou Ótima. Clicar abre o pedido da
     progressão. Ver "Progressão antecipada".
+  - Visual mais sóbrio: fonte Arial (a mesma do SEEU e do PJe), negrito só
+    no nome, na aba ativa e no botão principal, verde Defensoria mais
+    fechado, cores de situação de documento (sem tons pastel), sem
+    bolinhas, cápsulas e sombras.
 
 v7.6.0
   - Terceira e quarta revisões gerais (base 08.10 inteira: 595 RSPEs, 653
