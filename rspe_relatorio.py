@@ -2972,14 +2972,14 @@ def _geo_colunas_unidade(u, larg, f, C):
     W, H = larg, 70 * 2.835
     d = Drawing(W, H)
     larg_g = (W - 14) / 2
-    yB, yT = 24, H - 40
+    yB, yT = 32, H - 40
 
     def grafico(x0, tit, cols, segs, linha):
         mx = max([c["tot"] for c in cols] + [linha or 0, 1]) * 1.15
         Y = lambda v: yB + (yT - yB) * v / mx
         d.add(String(x0 + 2, H - 9, tit, fontName=f["b"], fontSize=7.5, fillColor=C(NAVY)))
         lx = x0 + 2
-        for n, cor in [(n, c) for k, n, c in segs if any((cc["v"].get(k) or 0) > 0 for cc in cols)] + ([("Vagas", None)] if linha else []):
+        for n, cor in [(n, c) for k, n, c in segs if any((cc["v"].get(k) or 0) > 0 for cc in cols)] + ([("Vagas existentes", None)] if linha else []):
             if cor:
                 d.add(Rect(lx, H - 21, 5.5, 5.5, fillColor=C(cor), strokeColor=None))
             else:
@@ -2987,8 +2987,9 @@ def _geo_colunas_unidade(u, larg, f, C):
                 lx += 3.5
             d.add(String(lx + 8, H - 20.5, n, fontName=f["n"], fontSize=6.2, fillColor=C(TX)))
             lx += 8 + len(n) * 3.2 + 8
-        d.add(Line(x0, yB, x0 + larg_g, yB, strokeColor=C("#7C8C82"), strokeWidth=0.6))
-        slot = larg_g / len(cols)
+        lp = larg_g - (24 if linha else 0)
+        d.add(Line(x0, yB, x0 + lp, yB, strokeColor=C("#7C8C82"), strokeWidth=0.6))
+        slot = lp / len(cols)
         bw = min(34, slot * 0.58)
         for i, c in enumerate(cols):
             cx = x0 + slot * (i + 0.5)
@@ -3003,9 +3004,11 @@ def _geo_colunas_unidade(u, larg, f, C):
             d.add(String(cx, Y(c["tot"]) + 3, fmt(c["tot"]), fontName=f["b"], fontSize=6.3, fillColor=C(TX), textAnchor="middle"))
             if c.get("topo"):
                 d.add(String(cx, Y(c["tot"]) + 11, c["topo"], fontName=f["n"], fontSize=6, fillColor=C(c.get("cor") or "#4F555A"), textAnchor="middle"))
-            d.add(String(cx, yB - 9, c["rot"], fontName=f["n"], fontSize=6, fillColor=C("#4F555A"), textAnchor="middle"))
+            d.add(String(cx, yB - 8, c["rot"], fontName=f["n"], fontSize=6, fillColor=C("#4F555A"), textAnchor="middle"))
         if linha:
-            d.add(Line(x0, Y(linha), x0 + larg_g, Y(linha), strokeColor=C(TX), strokeWidth=0.9, strokeDashArray=[2.5, 2]))
+            d.add(Line(x0, Y(linha), x0 + lp, Y(linha), strokeColor=C(TX), strokeWidth=0.9, strokeDashArray=[2.5, 2]))
+            d.add(String(x0 + lp + 3, Y(linha) + 0.5, fmt(linha), fontName=f["b"], fontSize=6.3, fillColor=C(TX)))
+            d.add(String(x0 + lp + 3, Y(linha) - 7, "vagas", fontName=f["n"], fontSize=6, fillColor=C(TX)))
 
     def rot(c):
         m = c.split("/")
@@ -3015,18 +3018,23 @@ def _geo_colunas_unidade(u, larg, f, C):
     for i, x in enumerate(S):
         so = sum((x.get(k) or 0) for k in ("provisorios", "fechado", "semiaberto", "aberto"))
         dd = None if i == 0 else (x["pop"] or 0) - (S[i - 1]["pop"] or 0)
-        cols.append({"rot": rot(x["ciclo"]), "tot": x["pop"] or 0, "topo": "" if dd is None else sn(dd), "cor": "#A3201D" if (dd or 0) > 0 else None,
+        cols.append({"rot": rot(x["ciclo"]), "tot": x["pop"] or 0, "topo": "" if dd is None else sn(dd) + " no mês", "cor": "#A3201D" if (dd or 0) > 0 else None,
                      "v": {"provisorios": x.get("provisorios"), "fechado": x.get("fechado"), "semiaberto": x.get("semiaberto"), "aberto": x.get("aberto"),
                            "outros": max(0, (x["pop"] or 0) - so)}})
     grafico(0, "Crescimento de apenados", cols,
             [("provisorios", "Provisórios", "#9CBFA9"), ("fechado", "Fechado", "#1D5A3B"), ("semiaberto", "Semiaberto", "#4E8C66"),
-             ("aberto", "Aberto", "#C9DDD0"), ("outros", "Outros", "#7C8C82")], None)
+             ("aberto", "Aberto", "#C9DDD0"), ("outros", "Outros", "#7C8C82")], cap or None)
     cols = [{"rot": rot(x["ciclo"]), "tot": x["pop"] or 0, "topo": ("%d%%" % round(100 * (x["pop"] or 0) / cap)) if cap else "",
              "cor": "#A3201D" if cap and (x["pop"] or 0) > cap else None,
              "v": {"dentro": min(x["pop"] or 0, cap), "alem": max(0, (x["pop"] or 0) - cap)} if cap else {"dentro": x["pop"] or 0}} for x in S]
     grafico(larg_g + 14, "Ocupação", cols, [("dentro", "Nas vagas", "#1D5A3B"), ("alem", "Além das vagas", "#A3201D")], cap or None)
-    d.add(String(2, 2, "Uma coluna por inspeção. Crescimento: acima, a variação desde a inspeção anterior. Ocupação: acima, a taxa do mês"
-                 + ("; vagas da inspeção mais recente (%s)." % fmt(cap) if cap else "; capacidade não informada."),
+    if cap:
+        exc = lambda x: max(0, (x["pop"] or 0) - cap)
+        d.add(String(2, 9, "Acima das %s vagas existentes (linha tracejada): %s presos em %s e %s em %s." % (fmt(cap), fmt(exc(S[0])), S[0]["ciclo"], fmt(exc(S[-1])), S[-1]["ciclo"])
+                     if len(S) > 1 else "Acima das %s vagas existentes (linha tracejada): %s presos." % (fmt(cap), fmt(exc(S[-1]))),
+                     fontName=f["b"], fontSize=6.5, fillColor=C(TX)))
+    d.add(String(2, 0, "Uma coluna por inspeção. Crescimento: acima, a variação desde a inspeção anterior. Ocupação: acima, a taxa do mês"
+                 + ("; vagas da inspeção mais recente." if cap else "; capacidade não informada."),
                  fontName=f["n"], fontSize=6, fillColor=C("#767C82")))
     return d
 
