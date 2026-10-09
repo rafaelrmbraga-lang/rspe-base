@@ -784,7 +784,7 @@ async function api(m, ...a){ try{ const r = await API()[m](...a); if(r && r.regi
 
 const ui = {
   dados:{registros:[],abas:[],base:'',hoje:''}, aba:'geral', filtro:'', filtroCor:null, filtroSel:'todas', ordem:{}, sel:null, aberto:null,
-  carregar(d){ this.dados=d; const w=document.getElementById('welcome');
+  carregar(d){ this.dados=d; if(!this._geoChecado){ this._geoChecado=true; Promise.resolve(API().geo_precisa()).then(p=>{ if(p) this.geoAtualizar(true); }).catch(()=>{}); } const w=document.getElementById('welcome');
     if(this.aberto){ const ra=(d.registros||[]).find(x=>x.id===this.aberto); if(ra&&ra._leve) setTimeout(()=>this.completo(ra.id),0); }
     if(d.sem_base){ w.classList.add('on'); document.getElementById('copia').innerHTML=''; document.getElementById('baseNome').textContent='—'; document.getElementById('baseN').textContent='0';
       document.getElementById('recentes').innerHTML=(d.recentes||[]).map(r=>`<div onclick="ui.abrirBase(${jsa(r.caminho)},${jsa(r.nome)})"><span>${esc(r.nome)}</span><small>${esc(r.caminho)}</small></div>`).join('')||'<div style="cursor:default;color:var(--tx3)">Nenhuma base recente</div>';
@@ -1791,8 +1791,11 @@ const ui = {
   geoCor(o){ return o==null?'cinza':o>=1.5?'vermelho':o>=1.0?'laranja':'verde'; },
   GEO_HEX:{vermelho:'#A3201D',laranja:'#C2620A',verde:'#2B8048',cinza:'#9AA0A6'},
   async geoCarregar(){ const r=await API().geo_dados(); this._geo=(r&&r.geo)||null; this._mapa=(r&&r.mapa)||null; this._geoInd=(r&&r.ind)||[]; this._geoCatNome=(r&&r.cats)||{}; this._geoOk=true; },
-  async geoAtualizar(){ const b=document.getElementById('geoBt'); if(b){ b.disabled=true; b.textContent='Baixando do Geopresídios… (cerca de 2 minutos)'; }
-    const r=await api('geo_atualizar'); if(r&&r.geo){ this._geo=r.geo; this._mapa=r.mapa||this._mapa; this._geoInd=r.ind||this._geoInd; } this.render(); },
+  async geoAtualizar(auto){ if(this._geoBaixando) return; this._geoBaixando=true; if(this.aba==='geo') this.render();
+    let r; try{ r=await API().geo_atualizar(); }catch(e){ r={erro:String(e)}; } this._geoBaixando=false;
+    if(r&&r.geo){ this._geo=r.geo; this._mapa=r.mapa||this._mapa; this._geoInd=r.ind||this._geoInd; this._geoCatNome=r.cats||this._geoCatNome; this._geoOk=true; }
+    if(r&&r.erro) this.toast(auto?`Atualização automática dos dados prisionais não concluída: ${r.erro}${this._geo?' Seguem os dados de '+this._geo.atualizado+'.':''}`:r.erro); else if(r&&r.msg) this.toast(r.msg);
+    if(this.aba==='geo') this.render(); },
   geoPdf(tipo){ api('geo_pdf', this.geoCats, this.geoCid||'', tipo||'geral'); },
   geoPdfUnidade(id){ api('geo_pdf_unidade', id); },
   geoCat(u){ return u.cat||(u.penal?'penal':'outra'); },
@@ -1902,7 +1905,7 @@ const ui = {
     return bt+svg; },
   async renderGeo(){ if(!this._geoOk) await this.geoCarregar(); const G=this._geo; const fmt=n=>n==null?'—':Number(n).toLocaleString('pt-BR'), pct=o=>o==null?'—':Math.round(o*100)+'%';
     document.getElementById('stats').innerHTML=`<div class="geo-head"><div><b>Sistema prisional de Mato Grosso do Sul</b><span class="muted">${G?`Geopresídios/CNIEP (CNJ): inspeções judiciais mensais de cada unidade (população da mais recente; vagas e perfil do tema "Aspectos gerais"; condições dos demais temas) · baixado em ${esc(G.atualizado)} · <a href="#" onclick="event.preventDefault();api('abrir_url','${esc(G.fonte||'https://geopresidios.cnj.jus.br/')}')">geopresidios.cnj.jus.br</a>`:'Dados da API pública do Geopresídios (CNJ), guardados neste computador.'}</span></div>
-      <div class="geo-acts">${G?`<button class="btn" onclick="ui.geoPdf('geral')" title="Indicadores, mapa, ocupação, condições e evolução - do estado ou da cidade escolhida no mapa, pelos tipos marcados">Relatório geral (PDF)</button><button class="btn" onclick="ui.geoPdf('condicoes')" title="Em quais estabelecimentos foi constatado cada problema, e os problemas de cada um">Condições por unidade (PDF)</button>`:''}<button class="btn ${G?'':'pri'}" id="geoBt" onclick="ui.geoAtualizar()">${G?'Atualizar dados':'Baixar dados do Geopresídios (MS)'}</button></div></div>`;
+      <div class="geo-acts">${G?`<button class="btn" onclick="ui.geoPdf('geral')" title="Indicadores, mapa, ocupação, condições e evolução - do estado ou da cidade escolhida no mapa, pelos tipos marcados">Relatório geral (PDF)</button><button class="btn" onclick="ui.geoPdf('condicoes')" title="Em quais estabelecimentos foi constatado cada problema, e os problemas de cada um">Condições por unidade (PDF)</button>`:''}<button class="btn ${G?'':'pri'}" id="geoBt" onclick="ui.geoAtualizar()" ${this._geoBaixando?'disabled':''} title="Os dados são baixados sozinhos quando têm 30 dias ou mais">${this._geoBaixando?'Atualizando… (cerca de 2 minutos)':G?'Atualizar dados':'Baixar dados do Geopresídios (MS)'}</button></div></div>`;
     document.getElementById('legenda').innerHTML=`<span class="leg"><i style="background:#1D5A3B"></i>no mapa, o círculo é a cidade, com o tamanho pelo número de presos</span><span class="leg">Ocupação: <b style="color:var(--g-tx)">até 100%</b> · <b style="color:var(--o-tx)">100% a 149%</b> · <b style="color:var(--r-tx)">150% ou mais</b></span><span class="leg">Clique na cidade para filtrar; escolha a unidade (lista ou tabela) para o gráfico, o detalhe e o relatório</span>`;
     if(!G){ document.getElementById('card').innerHTML=`<div class="empty"><div><b>Dados prisionais de MS</b>Clique em "Baixar dados do Geopresídios (MS)". Leva cerca de 2 minutos; os dados ficam guardados neste computador e só são baixados de novo quando você pedir.</div></div>`; return; }
     const Utodas=this.geoUnidades(), Ucid=this.geoCid?Utodas.filter(u=>u.cidade===this.geoCid):Utodas, Usel=this.geoUnid!=null?Utodas.find(u=>u.id===this.geoUnid):null; if(this.geoUnid!=null&&!Usel) this.geoUnid=null; const U=Usel?[Usel]:Ucid; const Ut=this.geoFiltroInd?U.filter(u=>this.geoRuim(u,this.geoFiltroInd)):U;

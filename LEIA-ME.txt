@@ -678,9 +678,12 @@ DADOS PRISIONAIS (aba ao lado do Quadro do Usuário)
   Retrato do sistema prisional de MS pela API pública do Geopresídios/CNIEP
   (CNJ): para cada unidade, a última inspeção judicial mensal do tema
   "Aspectos gerais" (vagas, presos por regime, perfil da população e
-  servidores). O botão "Baixar/Atualizar dados" busca tudo (cerca de 2
-  minutos, com internet); os dados ficam guardados ao lado do programa
-  (geopresidios_ms.json) e valem para qualquer base.
+  servidores). Os dados são baixados sozinhos, em segundo plano, ao
+  abrir uma base, quando nunca foram baixados ou têm 30 dias ou mais
+  (cerca de 2 minutos, com internet); enquanto isso, a aba segue com os
+  dados anteriores. Sem internet, o programa avisa e continua com o que
+  tem. O botão "Atualizar dados" baixa na hora. Os dados ficam guardados
+  ao lado do programa (geopresidios_ms.json) e valem para qualquer base.
   - Mapa do estado: um círculo verde-escuro por cidade com estabelecimento
     dos tipos marcados, com o tamanho pelo número de presos. Passar o mouse
     lista os estabelecimentos com presos, vagas e ocupação; clicar filtra a
@@ -755,6 +758,8 @@ v7.8.0
     apenados e da ocupação);
     relatórios geral, de condições por unidade e da unidade. Ver "Dados
     prisionais".
+  - Dados prisionais atualizados sozinhos, em segundo plano, quando têm
+    30 dias ou mais (ou nunca foram baixados).
   - Visual mais sóbrio: fonte Arial (a mesma do SEEU e do PJe), negrito só
     no nome, na aba ativa e no botão principal, verde Defensoria mais
     fechado, cores de situação de documento (sem tons pastel), sem
