@@ -1,9 +1,9 @@
-APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.8.0
+APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.8.1
 (antigo RSPE Base; SEEU, programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-7.8.0. A documentação técnica completa (cada parâmetro, a regra, a norma e
+7.8.1. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -747,6 +747,10 @@ HISTÓRICO DE VERSÕES
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
 
+v7.8.1
+  - Dados prisionais atualizados sozinhos, em segundo plano, quando têm
+    30 dias ou mais (ou nunca foram baixados).
+
 v7.8.0
   - Aba Dados prisionais: sistema prisional de MS pelo Geopresídios (CNJ),
     com mapa interativo do estado, indicadores, condições constatadas nas
@@ -758,8 +762,6 @@ v7.8.0
     apenados e da ocupação);
     relatórios geral, de condições por unidade e da unidade. Ver "Dados
     prisionais".
-  - Dados prisionais atualizados sozinhos, em segundo plano, quando têm
-    30 dias ou mais (ou nunca foram baixados).
   - Visual mais sóbrio: fonte Arial (a mesma do SEEU e do PJe), negrito só
     no nome, na aba ativa e no botão principal, verde Defensoria mais
     fechado, cores de situação de documento (sem tons pastel), sem
