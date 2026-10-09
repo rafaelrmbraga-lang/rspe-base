@@ -274,6 +274,8 @@ mensal do tema "Aspectos gerais": vagas, presos por regime, perfil e servidores.
 com internet) e guarda ao lado do programa. No mapa, cada círculo é uma cidade: tamanho pelo número de presos, cor pela ocupação (verde até
 100%, laranja até 149%, vermelho a partir de 150%); o mouse lista as unidades e o clique filtra a cidade. Mostra também os assistidos da
 base em cada unidade (pela ficha do SIAPEN) e quantos estão no semiaberto ou no aberto pelo RSPE em unidade de regime fechado (SV 56).
+Condições constatadas nos demais temas (habitabilidade, assistências, segurança e saúde): quantas unidades têm cada problema; clicar filtra
+a tabela. Evolução da população nos últimos meses (painel, tabela e detalhe). "Relatório PDF": o estado ou a cidade escolhida no mapa.
 <h4>RSPE desatualizado e cópias de segurança</h4>
 RSPE emitido há mais de 60 dias ganha um "!" laranja ao lado do nome (passe o mouse para ver a data e os dias); o chip "RSPE antigo" da faixa de resumo
 filtra esses assistidos. Ao abrir a base, o programa faz uma cópia de segurança (pasta "copias", ao lado da base) e guarda as
@@ -1609,12 +1611,17 @@ class Api:
                 u["x"], u["y"] = round(sum(xy[0::2]) / len(xy[0::2]), 1), round(sum(xy[1::2]) / len(xy[1::2]), 1)
                 u["cidade"], u["ibge"] = mun[k]["nome"], k
 
+    @staticmethod
+    def _geo_ind():
+        return [{"k": ch, "tema": t, "rot": rot, "problema": rgeo.PROBLEMA.get(ch, ""), "alerta": bool(ruim)}
+                for ch, t, q, rot, ruim in rgeo.INDICADORES]
+
     def geo_dados(self):
         d = rgeo.carregar(self._geo_arq())
         if d:
             self._geo_assistidos(d["unidades"])
             self._geo_pontos(d["unidades"])
-        return {"geo": d, "mapa": rmapa.MAPA}
+        return {"geo": d, "mapa": rmapa.MAPA, "ind": self._geo_ind()}
 
     def geo_atualizar(self, todas=False):
         try:
@@ -1624,7 +1631,7 @@ class Api:
             return {"erro": "Não foi possível baixar os dados do Geopresídios (%s). Confira a conexão com a internet." % str(ex)[:120]}
         self._geo_assistidos(d["unidades"])
         self._geo_pontos(d["unidades"])
-        return {"geo": d, "mapa": rmapa.MAPA, "msg": "Dados prisionais atualizados (%d unidades)." % len(d["unidades"])}
+        return {"geo": d, "mapa": rmapa.MAPA, "ind": self._geo_ind(), "msg": "Dados prisionais atualizados (%d unidades)." % len(d["unidades"])}
 
     def teses(self):
         """Jurisprudências da execução penal (aba Jurisprudências): decisões do TJMS, STJ e STF favoráveis à defesa, triadas pela
@@ -2836,6 +2843,28 @@ class Api:
         try:
             rrel.relatorio_falhas(d, c, nb)
         except Exception as e:
+            return {"erro": "Falha ao gerar o PDF: %s" % e}
+        _abrir(c)
+        return {"caminho": c, "msg": "PDF salvo."}
+
+    def geo_pdf(self, todas=False, cidade=""):
+        """Salva em PDF os dados prisionais de MS (ou da cidade escolhida no mapa): indicadores, mapa, ocupação por unidade,
+        condições constatadas e evolução."""
+        d = rgeo.carregar(self._geo_arq())
+        if not d:
+            return {"erro": "Baixe os dados do Geopresídios antes de gerar o relatório."}
+        self._geo_pontos(d["unidades"])
+        d["todas"] = bool(todas)
+        nome = "Dados prisionais de MS%s - %s.pdf" % ((" - " + cidade) if cidade else "", datetime.now().strftime("%d-%m-%Y"))
+        c = _um(self._janela.create_file_dialog(webview.SAVE_DIALOG, save_filename=nome, file_types=("PDF (*.pdf)",)))
+        if not c:
+            return None
+        if not c.lower().endswith(".pdf"):
+            c += ".pdf"
+        try:
+            rrel.relatorio_prisional(d, rmapa.MAPA, c, self.base.nome if self.base else "", cidade or "")
+        except Exception as e:
+            logging.getLogger("rspe").exception("relatório prisional")
             return {"erro": "Falha ao gerar o PDF: %s" % e}
         _abrir(c)
         return {"caminho": c, "msg": "PDF salvo."}

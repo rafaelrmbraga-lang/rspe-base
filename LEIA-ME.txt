@@ -696,6 +696,17 @@ DADOS PRISIONAIS (aba ao lado do Quadro do Usuário)
     (formulário possivelmente copiado) e inspeção com mais de 6 meses.
   - Por padrão, só as unidades penais; a opção "Incluir delegacias, cadeias
     e unidades militares" mostra as demais.
+  - Condições constatadas: pela última inspeção de cada tema (rodízio
+    mensal: habitabilidade, assistências, segurança e saúde), quantas
+    unidades têm cada problema (sem cinco refeições diárias, remição pela
+    leitura não reconhecida, médicos abaixo do adequado, "procedimento",
+    forças especiais etc.). Clicar filtra a tabela.
+  - Evolução: a população vem da inspeção mais recente (todos os temas
+    repetem o quadro de presos), o que dá a série dos últimos meses: no
+    painel (soma do estado ou da cidade) e em cada unidade (linha e
+    percentual na tabela; mês a mês no detalhe).
+  - Relatório PDF: indicadores, mapa, ocupação por unidade, condições
+    constatadas e evolução, do estado ou da cidade escolhida no mapa.
 
 PROBLEMAS
   Se o programa não abrir ou travar, veja o arquivo rspe_log.txt criado ao
@@ -719,8 +730,10 @@ v7.7.0
     trabalhando e com conduta Boa ou Ótima. Clicar abre o pedido da
     progressão. Ver "Progressão antecipada".
   - Aba Dados prisionais: sistema prisional de MS pelo Geopresídios (CNJ),
-    com mapa interativo do estado, indicadores, tabela das unidades e os
-    assistidos da base em cada unidade. Ver "Dados prisionais".
+    com mapa interativo do estado, indicadores, condições constatadas nas
+    inspeções (habitabilidade, assistências, segurança e saúde), evolução
+    da população, relatório em PDF, tabela das unidades e os assistidos da
+    base em cada unidade. Ver "Dados prisionais".
   - Visual mais sóbrio: fonte Arial (a mesma do SEEU e do PJe), negrito só
     no nome, na aba ativa e no botão principal, verde Defensoria mais
     fechado, cores de situação de documento (sem tons pastel), sem

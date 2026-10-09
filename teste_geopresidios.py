@@ -26,6 +26,22 @@ u = rgeo._extrair(rel)
 ok(u["capacidade"] == 1181 and u["semiaberto"] == 1613 and u["fechado"] == 2 and u["idosos"] == 45, "extrair números: %s" % u)
 ok(u["servidores"] == 65 and u["servidores_seguranca"] == 28, "servidores: %s" % u)
 ok(u["classificacao"].startswith("Colônia") and "semiaberto" in u["destinacao"], "textos: %s" % u)
+# população de qualquer tema (o número da questão leva o tema na frente) e indicadores dos demais temas
+p = rgeo._populacao({"respostas": [R("400902", 10), R("400903", 100), R("400904", 5), R("400905", 0), R("400906", 2)]}, 4)
+ok(p == {"provisorios": 10, "fechado": 100, "semiaberto": 5, "aberto": 0, "pop": 117}, "população do tema 4: %s" % p)
+ok(rgeo._populacao({"respostas": [R("100903", 9)]}, 4) is None, "população de outro tema não entra")
+ind = rgeo._indicadores({"respostas": [R("200028", "Não"), R("200006", "Não"), R("200014", "Não há regularidade no fornecimento"),
+                                       R("200004", "Regular")]}, 2)
+ok(ind["refeicoes"]["ruim"] and not ind["agua_racion"]["ruim"] and ind["vestuario"]["ruim"] and not ind["sanitarios"]["ruim"], "habitabilidade: %s" % ind)
+ind = rgeo._indicadores({"respostas": [R("300064", "Não"), R("300043", 2), R("300087", 552, "Com cômputo para remição da pena"),
+                                       R("300087", 9, "Sem cômputo"), R("300072", 115, "Alfabetização"), R("300072", 200, "Fundamental"),
+                                       R("300044", "Não há atendimento periódico presencial")]}, 3)
+ok(ind["rem_leitura"]["ruim"] and ind["defensores"]["n"] == 2 and ind["trab_remicao"]["n"] == 552 and ind["escola"]["n"] == 315
+   and ind["defensoria"]["ruim"], "assistências: %s" % ind)
+ind = rgeo._indicadores({"respostas": [R("400005.3", "Sim*"), R("400010", "NA")]}, 4)
+ok(ind["forcas_especiais"] == {"v": "Sim", "ruim": True} and "procedimento" not in ind, "segurança (asterisco e NA): %s" % ind)
+ok(rgeo.ordem_ciclo("Julho/2026") == (2026, 7) and rgeo.ordem_ciclo("Março/26") == (2026, 3) and rgeo.ordem_ciclo("?") == (0, 0), "ciclos")
+ok(all(ch in rgeo.PROBLEMA for ch, t, q, rot, ruim in rgeo.INDICADORES if ruim), "toda constatação tem a frase do problema")
 # unidades penais x delegacias e militares
 ok(rgeo.RE_PENAL.search(rgeo._sem_acento("PENITENCIÁRIA DE DOIS IRMÃOS DO BURITI")), "penitenciária")
 ok(rgeo.RE_PENAL.search(rgeo._sem_acento("CENTRO DE DETENÇÃO PROVISÓRIA DE IGUATEMI")), "CDP")
@@ -53,6 +69,21 @@ a._geo_assistidos(V)
 ok(V[0]["assistidos"] == 2 and V[0]["assistidos_semi"] == 1, "assistidos na PDIB: %s" % V[0])
 ok(V[1]["assistidos"] == 0, "Dourados sem assistidos: %s" % V[1])
 ok(V[0]["igual_a"] == [V[1]["nome"]], "números idênticos de outra unidade: %s" % V[0].get("igual_a"))
+
+# relatório em PDF com dados sintéticos (mapa, ranking, condições e evolução)
+import os, tempfile
+import rspe_relatorio as rrel
+D = {"atualizado": "09/10/2026 10:00", "unidades": []}
+for n, (cid, cap, s0, s1) in enumerate([("Campo Grande", 100, 150, 180), ("Dourados", 200, 190, 210)]):
+    D["unidades"].append({"id": n, "nome": "PENITENCIARIA TESTE %d" % n, "penal": True, "cidade": cid, "x": 400 + 50 * n, "y": 500, "capacidade": cap,
+                          "pop": s1, "fechado": s1, "provisorios": 0, "semiaberto": 0, "aberto": 0, "pop_ciclo": "Setembro/2026",
+                          "inspecao": {"data": "2026-06-30", "ciclo": "Junho/2026"},
+                          "temas": {"2": {"ciclo": "Julho/2026", "ind": {"refeicoes": {"v": "Não", "ruim": True}}}},
+                          "serie": [{"ciclo": "Junho/2026", "data": "2026-06-30", "pop": s0}, {"ciclo": "Setembro/2026", "data": "2026-09-29", "pop": s1}]})
+arq = os.path.join(tempfile.mkdtemp(), "dp.pdf")
+rrel.relatorio_prisional(D, rmapa.MAPA, arq, "teste")
+txt = open(arq, "rb").read()
+ok(txt.startswith(b"%PDF") and len(txt) > 5000, "PDF dos dados prisionais")
 
 if falhas:
     print("FALHOU (Geopresídios):\n  " + "\n  ".join(falhas))

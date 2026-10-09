@@ -2835,3 +2835,136 @@ def relatorio_falhas(d, caminho, nome_base):
                             title="Registro da importação", author="APTO")
     fr = _moldura("Registro da importação", nome_base, rodape="Registro da importação do lote. Enviar este PDF com os arquivos citados para a correção da leitura.")
     doc.build(el, onFirstPage=fr, onLaterPages=fr, canvasmaker=_canvas_numerado())
+
+
+# --------------------------------------------------------------------------- #
+# Dados prisionais de MS (Geopresídios/CNJ)
+# --------------------------------------------------------------------------- #
+
+def _geo_pop(u):
+    if u.get("pop") is not None:
+        return u["pop"]
+    return sum((u.get(k) or 0) for k in ("provisorios", "fechado", "semiaberto", "aberto", "medida_seguranca", "prisao_civil"))
+
+
+def relatorio_prisional(dados, mapa, caminho, nome_base, cidade=""):
+    """PDF do sistema prisional de MS pelo Geopresídios: indicadores, mapa (círculo por cidade: tamanho pelos presos, cor pela
+    ocupação), ranking de ocupação, condições constatadas nas inspeções e evolução da população nos últimos meses."""
+    import math
+    import re as _re
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.units import mm
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, KeepTogether
+    from reportlab.graphics.shapes import Drawing, Polygon, Circle, String
+    import rspe_geopresidios as rgeo
+    st = _estilos()
+    f = _fontes()
+    C = st["C"]
+    W = A4[0] - 32 * mm
+    U = [u for u in dados.get("unidades") or [] if u.get("penal") or dados.get("todas")]
+    if cidade:
+        U = [u for u in U if u.get("cidade") == cidade]
+    comI = [u for u in U if u.get("inspecao") or u.get("serie")]
+    comCap = [u for u in comI if (u.get("capacidade") or 0) > 0]
+    pop = sum(_geo_pop(u) for u in comI)
+    popC, cap = sum(_geo_pop(u) for u in comCap), sum(u["capacidade"] for u in comCap)
+    soma = lambda k: sum((u.get(k) or 0) for u in comI)
+    fmt = lambda n: "—" if n is None else "{:,}".format(int(n)).replace(",", ".")
+    pct = lambda o: "—" if o is None else "%d%%" % round(o * 100)
+    cor_oc = lambda o: "#9AA0A6" if o is None else "#A3201D" if o >= 1.5 else "#C2620A" if o >= 1.0 else "#2B8048"
+    titulo = "Sistema prisional de Mato Grosso do Sul" + (" · %s" % cidade if cidade else "")
+    el = [Paragraph(_t(titulo), st["tit"]),
+          Paragraph(_t("Geopresídios/CNIEP (CNJ): inspeções judiciais mensais de cada unidade · dados baixados em %s · %d unidades%s"
+                       % (dados.get("atualizado", "?"), len(U), "" if dados.get("todas") else " penais (sem delegacias, cadeias e unidades militares)")), st["sub"]),
+          Spacer(1, 8)]
+    nums = [(fmt(pop), "pessoas presas"), (fmt(cap), "vagas"), (pct(popC / cap if cap else None), "taxa de ocupação"),
+            (fmt(max(0, popC - cap)), "déficit de vagas"), (fmt(soma("provisorios")), "provisórios")]
+    cel = [[Paragraph(_t(n), st["num"]) for n, _ in nums], [Paragraph(_t(r), st["rot"]) for _, r in nums]]
+    tb = Table(cel, colWidths=[W / len(nums)] * len(nums))
+    tb.setStyle(TableStyle([("BOX", (0, 0), (-1, -1), 0.6, C(LINE)), ("INNERGRID", (0, 0), (-1, -1), 0.6, C(LINE)),
+                            ("BACKGROUND", (0, 0), (-1, -1), C(ZEBRA)), ("LEFTPADDING", (0, 0), (-1, -1), 8),
+                            ("TOPPADDING", (0, 0), (-1, 0), 7), ("BOTTOMPADDING", (0, 1), (-1, 1), 7), ("VALIGN", (0, 0), (-1, -1), "TOP")]))
+    el += [tb, Paragraph(_t("Regimes: fechado %s · semiaberto %s · aberto %s. A população é a da inspeção mais recente de cada unidade; a capacidade, "
+                            "a do tema \"Aspectos gerais\". Unidades sem capacidade informada ficam fora da taxa." % (fmt(soma("fechado")), fmt(soma("semiaberto")), fmt(soma("aberto")))), st["mut"])]
+    # mapa
+    if mapa and not cidade:
+        P = mapa["proj"]
+        esc = min(W, 120 * mm) / P["W"]
+        d = Drawing(P["W"] * esc, P["H"] * esc)
+        H = P["H"] * esc
+        for m in mapa["municipios"].values():
+            for anel in _re.findall(r"M([^Z]+)Z", m["d"]):
+                xy = [float(v) for v in _re.findall(r"-?\d+(?:\.\d+)?", anel)]
+                pts = []
+                for i in range(0, len(xy) - 1, 2):
+                    pts += [xy[i] * esc, H - xy[i + 1] * esc]
+                d.add(Polygon(pts, fillColor=C("#E9ECEA"), strokeColor=C("#FFFFFF"), strokeWidth=0.5))
+        cid = {}
+        for u in comI:
+            if u.get("x") is None:
+                continue
+            c = cid.setdefault(u.get("cidade") or "?", {"x": u["x"], "y": u["y"], "pop": 0, "popC": 0, "cap": 0})
+            p = _geo_pop(u)
+            c["pop"] += p
+            if (u.get("capacidade") or 0) > 0:
+                c["popC"] += p
+                c["cap"] += u["capacidade"]
+        mx = max([c["pop"] for c in cid.values()] or [1])
+        for nome, c in sorted(cid.items(), key=lambda x: -x[1]["pop"]):
+            r = (7 + 26 * math.sqrt(c["pop"] / mx)) * esc
+            d.add(Circle(c["x"] * esc, H - c["y"] * esc, r, fillColor=C(cor_oc(c["popC"] / c["cap"] if c["cap"] else None)), strokeColor=C("#FFFFFF"), strokeWidth=0.8))
+            if c["pop"] >= 700:
+                d.add(String(c["x"] * esc + r + 2, H - c["y"] * esc - 2.5, nome, fontName=f["b"], fontSize=6.5, fillColor=C(TX)))
+        el += [Paragraph("Mapa", st["h2"]), d,
+               Paragraph(_t("Cada círculo é uma cidade: tamanho pelo número de presos; cor pela ocupação (verde até 100%, laranja de 100% a 149%, vermelho a partir de 150%)."), st["mut"])]
+    # ranking
+    from reportlab.lib.styles import ParagraphStyle
+    peq = ParagraphStyle("geo_peq", parent=st["cel"], fontSize=7.4, leading=9.6)
+    cabp = ParagraphStyle("geo_cab", parent=st["cab"], fontSize=7.4, leading=9.6)
+
+    def nome_u(n):
+        n = _re.sub(r"(?i)^ESTABELECIMENTO PENAL", "EP", n).title().replace("Ep ", "EP ", 1)
+        return _re.sub(r"\b(De|Da|Do|Das|Dos|E|Ao|À|Em)\b", lambda m: m.group(1).lower(), n)
+    L = sorted(comI, key=lambda u: -((_geo_pop(u) / u["capacidade"]) if (u.get("capacidade") or 0) > 0 else -1))
+    linhas = [["Unidade", "Cidade", "Vagas", "Presos", "Ocupação", "Provis.", "Fechado", "Semiab.", "Aberto", "Dados de"]]
+    for u in L:
+        oc = _geo_pop(u) / u["capacidade"] if (u.get("capacidade") or 0) > 0 else None
+        linhas.append([nome_u(u["nome"]), u.get("cidade") or "", fmt(u.get("capacidade")), fmt(_geo_pop(u)),
+                       '<font color="%s"><b>%s</b></font>' % (cor_oc(oc), pct(oc)), fmt(u.get("provisorios")), fmt(u.get("fechado")),
+                       fmt(u.get("semiaberto")), fmt(u.get("aberto")), u.get("pop_ciclo") or (u.get("inspecao") or {}).get("ciclo", "")])
+    linhas = [[Paragraph(_t(c) if not c.startswith("<font") else c, cabp if i == 0 else peq) for c in l] for i, l in enumerate(linhas)]
+    el += [Paragraph("Ocupação por unidade", st["h2"]),
+           _tabela(linhas, [46 * mm, 23 * mm, 11 * mm, 12 * mm, 14 * mm, 12 * mm, 13 * mm, 13 * mm, 11 * mm, W - 155 * mm], st, pad=4)]
+    # condições constatadas nas inspeções
+    linhas = [["Constatação nas inspeções", "Unidades", "Tema"]]
+    for ch, t, q, rot, ruim in rgeo.INDICADORES:
+        if not ruim:
+            continue
+        com = [u for u in comI if ch in ((u.get("temas") or {}).get(str(t)) or {}).get("ind", {})]
+        ruins = [u for u in com if u["temas"][str(t)]["ind"][ch].get("ruim")]
+        if ruins:
+            linhas.append([rgeo.PROBLEMA.get(ch, rot), "%d de %d" % (len(ruins), len(com)), rgeo.TEMAS[t]])
+    if len(linhas) > 1:
+        linhas = [linhas[0]] + sorted(linhas[1:], key=lambda l: -int(l[1].split()[0]))
+        el += [Paragraph("Condições constatadas", st["h2"]), _tabela(linhas, [W - 70 * mm, 22 * mm, 48 * mm], st),
+               Paragraph(_t("Pela última inspeção de cada tema (rodízio mensal), nas unidades que responderam à questão."), st["mut"])]
+    # evolução: soma por ciclo de inspeção, só nos ciclos em que ao menos 80% das unidades informaram
+    ciclos = {}
+    for u in comI:
+        for s_ in u.get("serie") or []:
+            ciclos.setdefault(s_["ciclo"], {})[u["id"]] = s_["pop"]
+    bons = sorted([c for c, v in ciclos.items() if len(v) >= 0.8 * len(comI)], key=rgeo.ordem_ciclo)
+    if len(bons) >= 2:
+        linhas = [["Ciclo da inspeção", "Unidades com dado", "Presos (soma)"]]
+        for c in bons:
+            linhas.append([c, str(len(ciclos[c])), fmt(sum(ciclos[c].values()))])
+        ids = set(ciclos[bons[0]]) & set(ciclos[bons[-1]])
+        a, b = sum(ciclos[bons[0]][i] for i in ids), sum(ciclos[bons[-1]][i] for i in ids)
+        el += [KeepTogether([Paragraph("Evolução da população", st["h2"]), _tabela(linhas, [50 * mm, 40 * mm, 40 * mm], st),
+                             Paragraph(_t("Nas %d unidades com dado nos dois ciclos: de %s presos em %s para %s em %s (%s%d%%)."
+                                          % (len(ids), fmt(a), bons[0], fmt(b), bons[-1], "+" if b >= a else "", round(100 * (b - a) / a) if a else 0)), st["mut"])])]
+    doc = SimpleDocTemplate(caminho, pagesize=A4, leftMargin=16 * mm, rightMargin=16 * mm, topMargin=21 * mm, bottomMargin=20 * mm,
+                            title=titulo, author="APTO")
+    fr = _moldura("Dados prisionais de MS", nome_base, rodape="Fonte: Geopresídios/CNIEP (CNJ), geopresidios.cnj.jus.br. Dados declarados nas inspeções judiciais mensais.")
+    doc.build(el, onFirstPage=fr, onLaterPages=fr, canvasmaker=_canvas_numerado())
+    return caminho
