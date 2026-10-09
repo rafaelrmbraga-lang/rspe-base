@@ -40,7 +40,7 @@ import rspe_geopresidios as rgeo
 import rspe_mapa_ms as rmapa
 
 APP = "APTO"
-VERSAO = "7.8.1"
+VERSAO = "7.8.2"
 GEO_AUTO_DIAS = 30           # dados prisionais: baixados de novo sozinhos quando têm 30 dias ou mais
 _GEO_LOCK = threading.Lock()  # um download do Geopresídios por vez (automático ou pelo botão)
 
