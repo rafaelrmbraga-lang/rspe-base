@@ -1,9 +1,9 @@
-APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.8.1
+APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.8.2
 (antigo RSPE Base; SEEU, programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-7.8.1. A documentação técnica completa (cada parâmetro, a regra, a norma e
+7.8.2. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -697,9 +697,10 @@ DADOS PRISIONAIS (aba ao lado do Quadro do Usuário)
     vagas e a taxa de cada mês; as vagas são as da inspeção mais recente).
     O painel passa a mostrar só ela, com os botões "Detalhe da
     unidade" e "Relatório da unidade (PDF)".
-  - Nomes das cidades no mapa: das maiores e da escolhida, cada um na
-    posição (direita, esquerda, acima, abaixo) em que não cobre outro nome
-    nem outro círculo; os demais aparecem ao passar o mouse.
+  - Nomes das cidades: o mapa da tela mostra só os círculos; o nome do
+    município aparece ao passar o mouse (no círculo, com os
+    estabelecimentos). No PDF, os nomes das maiores cidades ficam fixos,
+    onde não cobrem outro nome nem outro círculo.
   - Tipos (marque um ou mais): unidades penais, delegacias e cadeias,
     unidades militares, Polícia Federal e outras. O download traz sempre
     todos os estabelecimentos de MS; o mapa, os indicadores, as condições,
@@ -746,6 +747,10 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v7.8.2
+  - Mapa da tela só com os círculos; o nome do município aparece ao passar
+    o mouse.
 
 v7.8.1
   - Dados prisionais atualizados sozinhos, em segundo plano, quando têm
