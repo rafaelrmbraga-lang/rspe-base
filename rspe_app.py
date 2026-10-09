@@ -273,8 +273,8 @@ Aba ao lado do Quadro do Usuário. Pela API pública do Geopresídios/CNIEP (CNJ
 mensal do tema "Aspectos gerais": vagas, presos por regime, perfil e servidores. "Baixar/Atualizar dados" busca tudo (cerca de 2 minutos,
 com internet) e guarda ao lado do programa. No mapa, um círculo verde-escuro por cidade com estabelecimento dos tipos marcados (unidades
 penais, delegacias e cadeias, unidades militares, Polícia Federal e outras), com o tamanho pelo número de presos; o mouse lista os
-estabelecimentos e o clique filtra a cidade. Escolher a unidade (lista ou tabela) troca o mapa pelo gráfico em pizza dela: por regime, provisórios, crescimento de apenados, ocupação,
-perfil e condições, com o mês da inspeção escolhível.
+estabelecimentos e o clique filtra a cidade. Escolher a unidade (lista ou tabela) troca o mapa pelo gráfico dela: em pizza, por regime, provisórios (mês escolhível), perfil
+e condições; em colunas, uma por inspeção, o crescimento de apenados e a ocupação (com a linha das vagas).
 Relatórios em PDF: geral, condições por unidade (em quais estabelecimentos foi constatado cada problema) e, no detalhe, o da unidade. Mostra também os assistidos da
 base em cada unidade (pela ficha do SIAPEN) e quantos estão no semiaberto ou no aberto pelo RSPE em unidade de regime fechado (SV 56).
 Condições constatadas nos demais temas (habitabilidade, assistências, segurança e saúde): quantas unidades têm cada problema; clicar filtra

@@ -686,11 +686,13 @@ DADOS PRISIONAIS (aba ao lado do Quadro do Usuário)
     lista os estabelecimentos com presos, vagas e ocupação; clicar filtra a
     cidade.
   - Unidade: escolhida na lista "Unidade" ou com um clique na linha da
-    tabela, troca o mapa pelo gráfico em pizza dela, com as visões: por
-    regime, provisórios (x condenados), crescimento de apenados (desde a
-    primeira inspeção da série, com a variação por regime), ocupação
-    (vagas x excedente), perfil e condições; o mês da inspeção pode ser
-    escolhido. O painel passa a mostrar só ela, com os botões "Detalhe da
+    tabela, troca o mapa pelo gráfico dela, com as visões: em pizza, por
+    regime, provisórios (x condenados; o mês da inspeção pode ser
+    escolhido), perfil e condições; em colunas, uma por inspeção, o
+    crescimento de apenados (por regime, com a variação desde a inspeção
+    anterior) e a ocupação (presos nas vagas e além delas, a linha das
+    vagas e a taxa de cada mês; as vagas são as da inspeção mais recente).
+    O painel passa a mostrar só ela, com os botões "Detalhe da
     unidade" e "Relatório da unidade (PDF)".
   - Nomes das cidades no mapa: das maiores e da escolhida, cada um na
     posição (direita, esquerda, acima, abaixo) em que não cobre outro nome
@@ -747,8 +749,9 @@ v7.8.0
     inspeções (habitabilidade, assistências, segurança e saúde), evolução
     da população, relatório em PDF, tabela das unidades e os assistidos da
     base em cada unidade; filtro por tipo (unidades penais, delegacias,
-    militares, outras); gráfico em pizza da unidade escolhida (regime,
-    provisórios, crescimento de apenados, ocupação, perfil, condições);
+    militares, outras); gráfico da unidade escolhida (pizzas de regime,
+    provisórios, perfil e condições; colunas no tempo do crescimento de
+    apenados e da ocupação);
     relatórios geral, de condições por unidade e da unidade. Ver "Dados
     prisionais".
   - Visual mais sóbrio: fonte Arial (a mesma do SEEU e do PJe), negrito só
