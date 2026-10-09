@@ -686,9 +686,15 @@ DADOS PRISIONAIS (aba ao lado do Quadro do Usuário)
     lista os estabelecimentos com presos, vagas e ocupação; clicar filtra a
     cidade.
   - Unidade: escolhida na lista "Unidade" ou com um clique na linha da
-    tabela, troca o mapa pelo gráfico dela (presos por regime em cada
-    inspeção e a linha das vagas); o painel passa a mostrar só ela, com
-    os botões "Detalhe da unidade" e "Relatório da unidade (PDF)".
+    tabela, troca o mapa pelo gráfico em pizza dela, com as visões: por
+    regime, provisórios (x condenados), crescimento de apenados (desde a
+    primeira inspeção da série, com a variação por regime), ocupação
+    (vagas x excedente), perfil e condições; o mês da inspeção pode ser
+    escolhido. O painel passa a mostrar só ela, com os botões "Detalhe da
+    unidade" e "Relatório da unidade (PDF)".
+  - Nomes das cidades no mapa: das maiores e da escolhida, cada um na
+    posição (direita, esquerda, acima, abaixo) em que não cobre outro nome
+    nem outro círculo; os demais aparecem ao passar o mouse.
   - Tipos (marque um ou mais): unidades penais, delegacias e cadeias,
     unidades militares, Polícia Federal e outras. O download traz sempre
     todos os estabelecimentos de MS; o mapa, os indicadores, as condições,
@@ -717,8 +723,8 @@ DADOS PRISIONAIS (aba ao lado do Quadro do Usuário)
     estabelecimentos foi constatado, com a resposta e o mês da inspeção; e
     cada estabelecimento com a lista dos seus problemas); e, no detalhe de
     cada estabelecimento, "Relatório da unidade" (ocupação, situação e
-    perfil, servidores, todas as respostas por tema, gráfico e tabela da
-    evolução e os
+    perfil, servidores, todas as respostas por tema, pizzas da composição e
+    da ocupação, crescimento de apenados, tabela da evolução e os
     assistidos da base custodiados nela, com o regime pelo RSPE).
   - Se o servidor do CNJ recusar pedidos, o programa tenta de novo; o que
     ainda faltar mantém o dado baixado antes e o aviso pede nova

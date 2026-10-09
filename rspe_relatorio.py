@@ -2890,60 +2890,76 @@ def _geo_mapa(U, mapa, larg, f, C, sel=""):
                 pts += [xy[i] * esc, H - xy[i + 1] * esc]
             d.add(Polygon(pts, fillColor=C("#D5E2D9" if k in com else "#E9ECEA"), strokeColor=C("#FFFFFF"), strokeWidth=0.5))
     mx = max(list(cid.values()) + [1])
+    bol = []
     for nome, pop in sorted(cid.items(), key=lambda x: -x[1]):
         if nome not in pos:
             continue
         x, y = pos[nome]
-        r = (7 + 26 * math.sqrt(pop / mx)) * esc
-        escolhido = sel and nome == sel
-        d.add(Circle(x * esc, H - y * esc, r, fillColor=C("#0B2E1C" if escolhido else "#1D5A3B"), strokeColor=C("#FFFFFF"), strokeWidth=0.8))
-        if pop >= 700 or escolhido:
-            d.add(String(x * esc + r + 2, H - y * esc - 2.5, nome, fontName=f["b"], fontSize=6.5, fillColor=C(TX)))
+        bol.append((nome, x * esc, H - y * esc, (7 + 26 * math.sqrt(pop / mx)) * esc))
+    for nome, x, y, r in bol:
+        d.add(Circle(x, y, r, fillColor=C("#0B2E1C" if (sel and nome == sel) else "#1D5A3B"), strokeColor=C("#FFFFFF"), strokeWidth=0.8))
+    # nomes das maiores cidades (e da escolhida): direita, esquerda, acima ou abaixo, sem cobrir outro nome nem outro círculo
+    from reportlab.pdfbase.pdfmetrics import stringWidth
+    caixas = []
+    cruza = lambda a, b: a[0] < b[0] + b[2] and b[0] < a[0] + a[2] and a[1] < b[1] + b[3] and b[1] < a[1] + a[3]
+    for i, (nome, x, y, r) in enumerate(bol):
+        if i >= 9 and not (sel and nome == sel):
+            continue
+        w, h = stringWidth(nome, f["b"], 6.5) + 2, 8
+        for bx, by, anc in ((x + r + 2, y - 3, "start"), (x - r - 2 - w, y - 3, "end"), (x - w / 2, y + r + 1.5, "middle"), (x - w / 2, y - r - 1.5 - h, "middle")):
+            caixa = (bx, by, w, h)
+            if bx < 0 or bx + w > P["W"] * esc or by < 0 or by + h > H:
+                continue
+            if any(cruza(caixa, c) for c in caixas) or any(cruza(caixa, (x2 - r2, y2 - r2, 2 * r2, 2 * r2)) for n2, x2, y2, r2 in bol if n2 != nome):
+                continue
+            caixas.append(caixa)
+            tx = bx if anc == "start" else bx + w if anc == "end" else bx + w / 2
+            d.add(String(tx, by + 2, nome, fontName=f["b"], fontSize=6.5, fillColor=C(TX), textAnchor=anc))
+            break
     return d
 
 
-def _geo_grafico_unidade(u, larg, f, C):
-    """Presos por regime em cada ciclo de inspeção (barras empilhadas) e a linha das vagas."""
-    from reportlab.graphics.shapes import Drawing, Rect, Line, String
+def _geo_pizzas_unidade(u, larg, f, C):
+    """Três pizzas da última inspeção: presos por regime, provisórios x condenados e ocupação (vagas x excedente)."""
+    from reportlab.graphics.shapes import Drawing, Rect, String
+    from reportlab.graphics.charts.piecharts import Pie
     S = u.get("serie") or []
-    if not S:
+    x = S[-1] if S else ({"pop": _geo_pop(u), "provisorios": u.get("provisorios"), "fechado": u.get("fechado"), "semiaberto": u.get("semiaberto"),
+                          "aberto": u.get("aberto"), "ciclo": (u.get("inspecao") or {}).get("ciclo", "")} if u.get("inspecao") else None)
+    if not x or not x.get("pop"):
         return None
-    H = 62 * 2.835  # ~62 mm
-    W = larg
-    L, R, T, B = 34, 8, 16, 34
-    import math
+    fmt = lambda n: "{:,}".format(int(n or 0)).replace(",", ".")
+    soma = sum((x.get(k) or 0) for k in ("provisorios", "fechado", "semiaberto", "aberto"))
     cap = u.get("capacidade") or 0
-    topo = max([cap] + [x.get("pop") or 0 for x in S]) or 1
-    p10 = 10 ** math.floor(math.log10(topo / 4))
-    passo_y = next((m * p10 for m in (1, 2, 5, 10) if m * p10 * 4 >= topo), p10 * 10)
-    mx = passo_y * 4 * 1.08
-    y = lambda v: B + (H - T - B) * v / mx
-    d = Drawing(W, H)
-    passo = (W - L - R) / len(S)
-    bw = min(40, passo * 0.55)
-    regs = [("provisorios", "Provisórios", "#9CBFA9"), ("fechado", "Fechado", "#1D5A3B"), ("semiaberto", "Semiaberto", "#4E8C66"), ("aberto", "Aberto", "#C9DDD0")]
-    fmt = lambda n: "{:,}".format(int(n)).replace(",", ".")
-    for i in range(5):
-        v = passo_y * i
-        d.add(Line(L, y(v), W - R, y(v), strokeColor=C("#E3E7E4"), strokeWidth=0.5))
-        d.add(String(L - 3, y(v) - 2.5, fmt(v), fontName=f["n"], fontSize=6, fillColor=C("#767C82"), textAnchor="end"))
-    for i, x in enumerate(S):
-        cx = L + passo * i + passo / 2
-        base = 0
-        for k, _, cor in regs:
-            v = x.get(k) or 0
-            if v:
-                d.add(Rect(cx - bw / 2, y(base), bw, y(base + v) - y(base), fillColor=C(cor), strokeColor=None))
-                base += v
-        d.add(String(cx, y(x.get("pop") or base) + 3, fmt(x.get("pop") or base), fontName=f["b"], fontSize=6.5, fillColor=C(TX), textAnchor="middle"))
-        d.add(String(cx, B - 10, x.get("ciclo") or "", fontName=f["n"], fontSize=6.3, fillColor=C("#4F555A"), textAnchor="middle"))
+    grupos = [("Por regime", [("Provisórios", x.get("provisorios"), "#9CBFA9"), ("Fechado", x.get("fechado"), "#1D5A3B"), ("Semiaberto", x.get("semiaberto"), "#4E8C66"),
+                              ("Aberto", x.get("aberto"), "#C9DDD0"), ("Outros", max(0, x["pop"] - soma), "#7C8C82")]),
+              ("Provisórios", [("Provisórios", x.get("provisorios"), "#A3201D"), ("Condenados", max(0, x["pop"] - (x.get("provisorios") or 0)), "#1D5A3B")])]
     if cap:
-        d.add(Line(L, y(cap), W - R, y(cap), strokeColor=C("#A3201D"), strokeWidth=1, strokeDashArray=[4, 3]))
-        d.add(Line(L + 285, 7.5, L + 305, 7.5, strokeColor=C("#A3201D"), strokeWidth=1, strokeDashArray=[4, 3]))
-        d.add(String(L + 309, 5, "vagas: %s" % fmt(cap), fontName=f["b"], fontSize=6.5, fillColor=C("#A3201D")))
-    for i, (_, nome, cor) in enumerate(regs):
-        d.add(Rect(L + i * 70, 4, 7, 7, fillColor=C(cor), strokeColor=None))
-        d.add(String(L + i * 70 + 10, 5, nome, fontName=f["n"], fontSize=6.5, fillColor=C("#4F555A")))
+        grupos.append(("Ocupação", [("Nas vagas", min(cap, x["pop"]), "#1D5A3B"), ("Além das vagas", max(0, x["pop"] - cap), "#A3201D"),
+                                    ("Vagas livres", max(0, cap - x["pop"]), "#C9DDD0")]))
+    W, H = larg, 52 * 2.835
+    d = Drawing(W, H)
+    col = W / len(grupos)
+    for gi, (tit, fat) in enumerate(grupos):
+        fat = [(n, v or 0, c) for n, v, c in fat if (v or 0) > 0]
+        tot = sum(v for _, v, _ in fat) or 1
+        x0 = gi * col
+        d.add(String(x0 + 4, H - 9, tit, fontName=f["b"], fontSize=7.5, fillColor=C(NAVY)))
+        pie = Pie()
+        pie.x, pie.y, pie.width, pie.height = x0 + 6, H - 82, 66, 66
+        pie.data = [v for _, v, _ in fat]
+        pie.labels = None
+        pie.slices.strokeColor = C("#FFFFFF")
+        pie.slices.strokeWidth = 0.8
+        for i, (_, _, c) in enumerate(fat):
+            pie.slices[i].fillColor = C(c)
+        d.add(pie)
+        for i, (n, v, c) in enumerate(fat):
+            yy = H - 22 - i * 11
+            d.add(Rect(x0 + 80, yy, 6, 6, fillColor=C(c), strokeColor=None))
+            d.add(String(x0 + 89, yy + 0.5, "%s: %s (%d%%)" % (n, fmt(v), round(100 * v / tot)), fontName=f["n"], fontSize=6.5, fillColor=C(TX)))
+    d.add(String(4, 4, "Inspeção de %s · %s presos%s" % (x.get("ciclo") or "", fmt(x["pop"]), (" · %s vagas" % fmt(cap)) if cap else ""),
+                 fontName=f["n"], fontSize=6.5, fillColor=C("#767C82")))
     return d
 
 
@@ -3151,9 +3167,18 @@ def relatorio_unidade_prisional(u, atualizado, assistidos, caminho, nome_base):
         if len(linhas) > 1:
             el.append(KeepTogether([Paragraph(_t("%s · inspeção de %s" % (rgeo.TEMAS[int(t)], T.get("ciclo") or "")), st["h2"]),
                                     _tabela(linhas, [W - 60 * mm, 60 * mm], st, pad=4)]))
-    graf = _geo_grafico_unidade(u, W, _fontes(), C)
+    graf = _geo_pizzas_unidade(u, W, _fontes(), C)
     if graf is not None:
-        el.append(KeepTogether([Paragraph("Presos por regime e vagas", st["h2"]), graf]))
+        el.append(KeepTogether([Paragraph("Composição e ocupação", st["h2"]), graf]))
+    S = u.get("serie") or []
+    if len(S) > 1 and S[0].get("pop"):
+        a, b = S[0], S[-1]
+        dlt = (b.get("pop") or 0) - (a.get("pop") or 0)
+        var = lambda k: (b.get(k) or 0) - (a.get(k) or 0)
+        sinal = lambda n: ("+" if n > 0 else "") + fmt(n)
+        el.append(Paragraph(_t("Crescimento de apenados: de %s em %s para %s em %s (%s; %s%d%%). Provisórios %s; fechado %s; semiaberto %s; aberto %s."
+                               % (fmt(a["pop"]), a["ciclo"], fmt(b["pop"]), b["ciclo"], sinal(dlt), "+" if dlt >= 0 else "", round(100 * dlt / a["pop"]),
+                                  sinal(var("provisorios")), sinal(var("fechado")), sinal(var("semiaberto")), sinal(var("aberto")))), st["neg"]))
     if len(u.get("serie") or []) > 1:
         linhas = [["Ciclo da inspeção", "Presos", "Provisórios", "Fechado", "Semiaberto", "Aberto"]]
         for x in u["serie"]:
