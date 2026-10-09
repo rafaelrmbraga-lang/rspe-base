@@ -1,9 +1,9 @@
-APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.7.0
+APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.8.0
 (antigo RSPE Base; SEEU, programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-7.7.0. A documentação técnica completa (cada parâmetro, a regra, a norma e
+7.8.0. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -674,6 +674,65 @@ PROGRESSÃO ANTECIPADA (ícone azul de degraus ao lado do nome)
   Progressão: com o pedido marcado, o ícone fica azul preenchido e o pedido
   entra no Registro para o SAP como progressão.
 
+DADOS PRISIONAIS (aba ao lado do Quadro do Usuário)
+  Retrato do sistema prisional de MS pela API pública do Geopresídios/CNIEP
+  (CNJ): para cada unidade, a última inspeção judicial mensal do tema
+  "Aspectos gerais" (vagas, presos por regime, perfil da população e
+  servidores). O botão "Baixar/Atualizar dados" busca tudo (cerca de 2
+  minutos, com internet); os dados ficam guardados ao lado do programa
+  (geopresidios_ms.json) e valem para qualquer base.
+  - Mapa do estado: um círculo verde-escuro por cidade com estabelecimento
+    dos tipos marcados, com o tamanho pelo número de presos. Passar o mouse
+    lista os estabelecimentos com presos, vagas e ocupação; clicar filtra a
+    cidade.
+  - Unidade: escolhida na lista "Unidade" ou com um clique na linha da
+    tabela, troca o mapa pelo gráfico dela, com as visões: em pizza, por
+    regime, provisórios (x condenados; o mês da inspeção pode ser
+    escolhido), perfil e condições; em colunas, uma por inspeção, o
+    crescimento de apenados (por regime, com a variação desde a inspeção
+    anterior) e a ocupação (presos nas vagas e além delas, a linha das
+    vagas e a taxa de cada mês; as vagas são as da inspeção mais recente).
+    O painel passa a mostrar só ela, com os botões "Detalhe da
+    unidade" e "Relatório da unidade (PDF)".
+  - Nomes das cidades no mapa: das maiores e da escolhida, cada um na
+    posição (direita, esquerda, acima, abaixo) em que não cobre outro nome
+    nem outro círculo; os demais aparecem ao passar o mouse.
+  - Tipos (marque um ou mais): unidades penais, delegacias e cadeias,
+    unidades militares, Polícia Federal e outras. O download traz sempre
+    todos os estabelecimentos de MS; o mapa, os indicadores, as condições,
+    a tabela e os relatórios seguem os tipos marcados.
+  - Indicadores: presos, vagas, ocupação e déficit, provisórios, fechado,
+    semiaberto e aberto (do estado ou da cidade escolhida).
+  - Assistidos desta base em cada unidade, pela unidade da ficha do SIAPEN,
+    e quantos estão no semiaberto ou no aberto pelo RSPE em unidade de
+    regime fechado (Súmula Vinculante 56).
+  - Tabela das unidades (clique no título da coluna para ordenar; na
+    unidade, o perfil da população e os servidores). Avisos: unidade sem
+    inspeção ou sem capacidade, números idênticos aos de outra unidade
+    (formulário possivelmente copiado) e inspeção com mais de 6 meses.
+  - Condições constatadas: pela última inspeção de cada tema (rodízio
+    mensal: habitabilidade, assistências, segurança e saúde), quantas
+    unidades têm cada problema (sem cinco refeições diárias, remição pela
+    leitura não reconhecida, médicos abaixo do adequado, "procedimento",
+    forças especiais etc.). Clicar filtra a tabela.
+  - Evolução: a população vem da inspeção mais recente (todos os temas
+    repetem o quadro de presos), o que dá a série dos últimos meses: no
+    painel (soma do estado ou da cidade) e em cada unidade (linha e
+    percentual na tabela; mês a mês no detalhe).
+  - Relatórios em PDF (dos tipos marcados e da cidade escolhida no mapa):
+    "Relatório geral" (indicadores, mapa, ocupação por unidade, condições e
+    evolução); "Condições por unidade" (para cada problema, em quais
+    estabelecimentos foi constatado, com a resposta e o mês da inspeção; e
+    cada estabelecimento com a lista dos seus problemas); e, no detalhe de
+    cada estabelecimento, "Relatório da unidade" (ocupação, situação e
+    perfil, servidores, todas as respostas por tema, pizzas da composição,
+    colunas do crescimento de apenados e da ocupação ao longo das
+    inspeções, tabela da evolução e os
+    assistidos da base custodiados nela, com o regime pelo RSPE).
+  - Se o servidor do CNJ recusar pedidos, o programa tenta de novo; o que
+    ainda faltar mantém o dado baixado antes e o aviso pede nova
+    atualização.
+
 PROBLEMAS
   Se o programa não abrir ou travar, veja o arquivo rspe_log.txt criado ao
   lado do .exe: ele registra os erros (o .exe roda sem console). Envie esse
@@ -684,6 +743,22 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v7.8.0
+  - Aba Dados prisionais: sistema prisional de MS pelo Geopresídios (CNJ),
+    com mapa interativo do estado, indicadores, condições constatadas nas
+    inspeções (habitabilidade, assistências, segurança e saúde), evolução
+    da população, relatório em PDF, tabela das unidades e os assistidos da
+    base em cada unidade; filtro por tipo (unidades penais, delegacias,
+    militares, outras); gráfico da unidade escolhida (pizzas de regime,
+    provisórios, perfil e condições; colunas no tempo do crescimento de
+    apenados e da ocupação);
+    relatórios geral, de condições por unidade e da unidade. Ver "Dados
+    prisionais".
+  - Visual mais sóbrio: fonte Arial (a mesma do SEEU e do PJe), negrito só
+    no nome, na aba ativa e no botão principal, verde Defensoria mais
+    fechado, cores de situação de documento (sem tons pastel), sem
+    bolinhas, cápsulas e sombras.
 
 v7.7.0
   - Saída temporária: ícone ao lado do nome na aba Geral (verde = elegível;
