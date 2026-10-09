@@ -40,7 +40,9 @@ import rspe_geopresidios as rgeo
 import rspe_mapa_ms as rmapa
 
 APP = "APTO"
-VERSAO = "7.8.0"
+VERSAO = "7.8.1"
+GEO_AUTO_DIAS = 30           # dados prisionais: baixados de novo sozinhos quando têm 30 dias ou mais
+_GEO_LOCK = threading.Lock()  # um download do Geopresídios por vez (automático ou pelo botão)
 
 
 def pasta_app():
@@ -270,8 +272,8 @@ curso (o externo conta). Amarelo: algo fica a conferir (ficha com mais de 90 dia
 abre o pedido da progressão (o mesmo da coluna "Pedido" da aba Progressão); com o pedido marcado, o ícone fica azul preenchido.
 <h4>Dados prisionais (Geopresídios/CNJ)</h4>
 Aba ao lado do Quadro do Usuário. Pela API pública do Geopresídios/CNIEP (CNJ), traz para cada unidade de MS a última inspeção judicial
-mensal do tema "Aspectos gerais": vagas, presos por regime, perfil e servidores. "Baixar/Atualizar dados" busca tudo (cerca de 2 minutos,
-com internet) e guarda ao lado do programa. No mapa, um círculo verde-escuro por cidade com estabelecimento dos tipos marcados (unidades
+mensal do tema "Aspectos gerais": vagas, presos por regime, perfil e servidores. Os dados são baixados sozinhos, em segundo plano, ao abrir uma base,
+quando têm 30 dias ou mais (cerca de 2 minutos, com internet); "Atualizar dados" baixa na hora. Ficam guardados ao lado do programa. No mapa, um círculo verde-escuro por cidade com estabelecimento dos tipos marcados (unidades
 penais, delegacias e cadeias, unidades militares, Polícia Federal e outras), com o tamanho pelo número de presos; o mouse lista os
 estabelecimentos e o clique filtra a cidade. Escolher a unidade (lista ou tabela) troca o mapa pelo gráfico dela: em pizza, por regime, provisórios (mês escolhível), perfil
 e condições; em colunas, uma por inspeção, o crescimento de apenados e a ocupação (com a linha das vagas).
@@ -1650,12 +1652,24 @@ class Api:
             self._geo_pontos(d["unidades"])
         return {"geo": d, "mapa": rmapa.MAPA, "ind": self._geo_ind(), "cats": rgeo.CATEGORIAS}
 
+    def geo_precisa(self):
+        """Atualização automática: True se os dados prisionais nunca foram baixados ou têm GEO_AUTO_DIAS dias ou mais."""
+        d = rgeo.carregar(self._geo_arq())
+        try:
+            return (datetime.now() - datetime.strptime(d["atualizado"], "%d/%m/%Y %H:%M")).days >= GEO_AUTO_DIAS
+        except Exception:
+            return True
+
     def geo_atualizar(self, todas=False):
+        if not _GEO_LOCK.acquire(blocking=False):
+            return {"msg": "A atualização dos dados prisionais já está em andamento."}
         try:
             d = rgeo.atualizar(self._geo_arq())
         except Exception as ex:
             logging.getLogger("rspe").exception("Geopresídios")
             return {"erro": "Não foi possível baixar os dados do Geopresídios (%s). Confira a conexão com a internet." % str(ex)[:120]}
+        finally:
+            _GEO_LOCK.release()
         self._geo_assistidos(d["unidades"])
         self._geo_pontos(d["unidades"])
         msg = "Dados prisionais atualizados (%d estabelecimentos)." % len(d["unidades"])

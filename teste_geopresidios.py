@@ -101,8 +101,27 @@ arq3 = os.path.join(tempfile.mkdtemp(), "cond.pdf")
 rrel.relatorio_condicoes_prisional(D, arq3, "teste", "", ["penal"])
 ok(open(arq3, "rb").read(4) == b"%PDF", "PDF das condições por unidade")
 ok(len(rrel._geo_sel(dict(D, unidades=D["unidades"] + [{"nome": "1ª DELEGACIA", "cat": "delegacia"}]), "", ["penal"])) == 2, "filtro por tipo")
+# relatório da unidade com série (colunas de crescimento e ocupação)
+U1 = dict(U0, capacidade=100, serie=[dict(ciclo=c, pop=v, provisorios=10, fechado=v - 10, semiaberto=0, aberto=0) for c, v in
+                                     (("Maio/2026", 150), ("Junho/2026", 90), ("Julho/2026", 210))])
+ok(rrel._geo_colunas_unidade(U1, 480, rrel._fontes(), rrel._estilos()["C"]) is not None, "colunas da unidade")
+arq4 = os.path.join(tempfile.mkdtemp(), "un2.pdf")
+rrel.relatorio_unidade_prisional(U1, "09/10/2026", [], arq4, "teste")
+ok(open(arq4, "rb").read(4) == b"%PDF", "PDF da unidade com série")
+# atualização automática: sem dados ou com 30 dias ou mais
+import json as _json
+from datetime import datetime as _dt, timedelta as _td
+arq5 = os.path.join(tempfile.mkdtemp(), "geo.json")
+a._geo_arq = lambda: arq5
+ok(a.geo_precisa() is True, "automática: sem dados baixa")
+for dias, esp in ((0, False), (29, False), (30, True), (45, True)):
+    open(arq5, "w", encoding="utf-8").write(_json.dumps({"atualizado": (_dt.now() - _td(days=dias)).strftime("%d/%m/%Y %H:%M"), "unidades": []}))
+    ok(a.geo_precisa() is esp, "automática: %d dias -> %s" % (dias, esp))
+app._GEO_LOCK.acquire()
+ok("andamento" in (a.geo_atualizar() or {}).get("msg", ""), "um download por vez")
+app._GEO_LOCK.release()
 
 if falhas:
     print("FALHOU (Geopresídios):\n  " + "\n  ".join(falhas))
     sys.exit(1)
-print("ok: Geopresídios (relatório, unidades penais, mapa, cidades, assistidos da base, números idênticos)")
+print("ok: Geopresídios (relatório, unidades penais, mapa, cidades, assistidos da base, números idênticos, colunas, atualização automática)")
