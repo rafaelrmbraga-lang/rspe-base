@@ -38,6 +38,7 @@ import rspe_relatorio as rrel
 import rspe_indulto_tl as rtl
 import rspe_geopresidios as rgeo
 import rspe_mapa_ms as rmapa
+import rspe_calc as rcalc
 
 APP = "APTO"
 VERSAO = "7.9.0"
@@ -281,6 +282,13 @@ Relatórios em PDF: geral, condições por unidade (em quais estabelecimentos fo
 base em cada unidade (pela ficha do SIAPEN) e quantos estão no semiaberto ou no aberto pelo RSPE em unidade de regime fechado (SV 56).
 Condições constatadas nos demais temas (habitabilidade, assistências, segurança e saúde): quantas unidades têm cada problema; clicar filtra
 a tabela. Evolução da população nos últimos meses (painel, tabela e detalhe). "Relatório PDF": o estado ou a cidade escolhida no mapa.
+<h4>Calculadora de penas</h4>
+Botão "Calculadora" no topo, em qualquer aba: abre uma janela móvel, que continua aberta ao trocar de aba. Soma e subtrai penas (30 dias = 1 mês;
+12 meses = 1 ano), calcula o período entre duas datas (contando o dia do começo; o resultado vai para a pena, a interrupção ou a detração),
+o término (início + pena + interrupção − remidos/detração − 1 dia, CP, art. 10) e as datas das frações (1/6 a 2/3), dos percentuais do art. 112
+da LEP e de outra fração, com os dias remidos descontados antes ou depois da fração. "Trazer de ..." preenche com a pena total, o início do
+cumprimento, as interrupções e os remidos do RSPE do assistido aberto. Ao lado, a anotação do cálculo; "Registrar cálculo" grava na base
+(Registros: abrir, copiar, excluir). "Copiar cálculo" e "PDF". Baseada na Calculadora de penas 2.1 (Guilherme Benages Alcantara, 2001).
 <h4>RSPE desatualizado e cópias de segurança</h4>
 RSPE emitido há mais de 60 dias ganha um "!" laranja ao lado do nome (passe o mouse para ver a data e os dias); o chip "RSPE antigo" da faixa de resumo
 filtra esses assistidos. Ao abrir a base, o programa faz uma cópia de segurança (pasta "copias", ao lado da base) e guarda as
@@ -657,6 +665,9 @@ class Base:
             self.con.execute("ALTER TABLE quadro_cartoes ADD COLUMN arquivado TEXT DEFAULT ''")  # data do arquivamento ('' = no quadro)
         if "aba" not in [r[1] for r in self.con.execute("PRAGMA table_info(quadro_cartoes)").fetchall()]:
             self.con.execute("ALTER TABLE quadro_cartoes ADD COLUMN aba TEXT DEFAULT ''")  # benefício do cartão (prog, liv, ind...)
+        # calculadora de penas: cálculos registrados (assistido opcional, anotação e o estado da janela)
+        self.con.execute("""CREATE TABLE IF NOT EXISTS calculos (id TEXT PRIMARY KEY, criado TEXT, atualizado TEXT, processo TEXT,
+            assistido TEXT, nota TEXT, resumo TEXT, dados TEXT)""")
         if not self.con.execute("SELECT 1 FROM quadro_colunas").fetchone():
             for i, (cid, nome) in enumerate((("fazer", "A fazer"), ("andamento", "Em andamento"), ("aguardando", "Aguardando decisão"), ("concluido", "Concluído"))):
                 self.con.execute("INSERT INTO quadro_colunas VALUES (?,?,?)", (cid, nome, i))
@@ -846,6 +857,29 @@ class Base:
     def reabrir(self, processo, chave):
         with self.lock:
             self.con.execute("DELETE FROM baixas WHERE processo=? AND chave=?", (processo, chave))
+            self.con.commit()
+
+    def calculos(self):
+        with self.lock:
+            return [dict(zip(("id", "criado", "atualizado", "processo", "assistido", "nota", "resumo", "dados"), r))
+                    for r in self.con.execute("SELECT id, criado, atualizado, processo, assistido, nota, resumo, dados FROM calculos "
+                                              "ORDER BY substr(atualizado, 7, 4) || substr(atualizado, 4, 2) || substr(atualizado, 1, 2) || substr(atualizado, 12) DESC").fetchall()]
+
+    def calculo_gravar(self, c):
+        import uuid
+        agora = datetime.now().strftime("%d/%m/%Y %H:%M")
+        with self.lock:
+            cid = c.get("id") or uuid.uuid4().hex[:12]
+            ant = self.con.execute("SELECT criado FROM calculos WHERE id=?", (cid,)).fetchone()
+            self.con.execute("INSERT OR REPLACE INTO calculos VALUES (?,?,?,?,?,?,?,?)",
+                             (cid, ant[0] if ant else agora, agora, c.get("processo") or "", c.get("assistido") or "", c.get("nota") or "",
+                              c.get("resumo") or "", json.dumps(c.get("dados") or {}, ensure_ascii=False)))
+            self.con.commit()
+        return cid
+
+    def calculo_excluir(self, cid):
+        with self.lock:
+            self.con.execute("DELETE FROM calculos WHERE id=?", (cid,))
             self.con.commit()
 
     def fixados(self):
@@ -1285,6 +1319,77 @@ class Api:
             return {"erro": "Nenhuma base aberta."}
         self.base.fixar(processo, bool(on))
         return self._atualizar(processo, "Assistido fixado no topo das abas." if on else "Assistido solto.")
+
+    # ---- calculadora de penas (janela do botão "Calculadora", em qualquer aba) ----
+    def calc_calcular(self, e):
+        try:
+            return rcalc.calcular(e)
+        except Exception as ex:
+            logging.getLogger("rspe").exception("calculadora")
+            return {"erros": ["Falha no cálculo: %s" % ex]}
+
+    def calc_texto(self, e):
+        return rcalc.texto(e or {}, rcalc.calcular(e or {}))
+
+    def calc_lista(self):
+        if not self.base:
+            return {"itens": [], "sem_base": True}
+        return {"itens": [dict(c, dados=json.loads(c["dados"] or "{}")) for c in self.base.calculos()]}
+
+    def calc_gravar(self, e):
+        if not self.base:
+            return {"erro": "Abra uma base para registrar cálculos (o cálculo em si funciona sem base)."}
+        e = dict(e or {})
+        r = rcalc.calcular(e)
+        if not r.get("termino") and not r.get("periodo") and r.get("total") == "0a0m0d":
+            return {"erro": "Nada a registrar: preencha a pena (e o início) ou o período."}
+        resumo = "Pena %s%s%s" % (r.get("total_ext"), (" · início %s · término %s" % (e.get("inicio"), r["termino"])) if r.get("termino") else "",
+                                  (" · período %s (%d dias)" % (r["periodo"]["ext"], r["periodo"]["dias"])) if r.get("periodo") else "")
+        dados = {k: e.get(k) for k in ("fita", "inicio", "interr", "rem", "rem_modo", "outra", "p1", "p2")}
+        cid = self.base.calculo_gravar({"id": e.get("id"), "processo": e.get("processo") or "", "assistido": (e.get("assist") or "").strip(),
+                                        "nota": (e.get("nota") or "").strip(), "resumo": resumo, "dados": dados})
+        out = self.calc_lista()
+        out.update(id=cid, msg="Cálculo registrado.")
+        return out
+
+    def calc_excluir(self, cid):
+        if not self.base:
+            return {"erro": "Nenhuma base aberta."}
+        self.base.calculo_excluir(cid)
+        out = self.calc_lista()
+        out["msg"] = "Cálculo excluído."
+        return out
+
+    def calc_assistido(self, processo):
+        """Dados do assistido para a calculadora: pena total, início do cumprimento, interrupções e saldo de remidos do RSPE."""
+        m = next((x for x in (self._modelos or []) if x.get("id") == processo), None)
+        r = (m or {}).get("_bruto")
+        if not r:
+            return {"erro": "Assistido não encontrado."}
+        p = rs.pena_amd(r.get("pena_total") or "")
+        it = rs.pena_amd(r.get("total_interrupcoes") or "") or (0, 0, 0)
+        ini = rs.inicio_execucao(r.get("_eventos") or [], r.get("_crimes") or [])
+        mrem = re.match(r"\s*(-?\d+)", r.get("saldo_remidos") or "")
+        return {"fita": [{"s": 1, "p": {"a": p[0], "m": p[1], "d": p[2]}}] if p else [], "inicio": rs.fmt(ini) if ini else "",
+                "interr": {"a": it[0], "m": it[1], "d": it[2]}, "rem": max(0, int(mrem.group(1))) if mrem else 0, "rem_modo": "antes",
+                "assist": "%s · %s" % (rv.nome_proprio(r.get("nome") or ""), processo), "processo": processo,
+                "msg": "Pena total, início do cumprimento, interrupções e remidos do RSPE de %s. Confira antes de usar." % rv.nome_proprio(r.get("nome") or "")}
+
+    def calc_pdf(self, e):
+        e = dict(e or {})
+        r = rcalc.calcular(e)
+        if not r.get("termino") and not r.get("periodo"):
+            return {"erro": "Nada a imprimir: preencha a pena e o início (ou o período)."}
+        c = self._geo_pdf_destino("Calculo de pena - %s.pdf" % datetime.now().strftime("%d-%m-%Y %H%M"))
+        if not c:
+            return None
+        try:
+            rrel.relatorio_calculo(e, r, c, self.base.nome if self.base else "")
+        except Exception as ex:
+            logging.getLogger("rspe").exception("PDF da calculadora")
+            return {"erro": "Falha ao gerar o PDF: %s" % ex}
+        _abrir(c)
+        return {"caminho": c, "msg": "PDF salvo."}
 
     def quadro(self):
         """Quadro do Usuário: colunas e cartões (processos acompanhados de perto, com observação, prazo e etiqueta)."""

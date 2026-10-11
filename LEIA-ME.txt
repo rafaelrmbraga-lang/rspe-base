@@ -701,6 +701,27 @@ PROGRESSÃO ANTECIPADA (ícone azul de degraus ao lado do nome)
   Progressão: com o pedido marcado, o ícone fica azul preenchido e o pedido
   entra no Registro para o SAP como progressão.
 
+CALCULADORA DE PENAS (botão "Calculadora" no topo, em qualquer aba)
+  Abre uma janela móvel, que continua aberta ao trocar de aba. Baseada na
+  Calculadora de penas 2.1 (Guilherme Benages Alcantara, 2001, distribuição
+  livre), com os percentuais do art. 112 da LEP.
+  - Pena: digite anos, meses e dias e clique em "+ somar" (ou Enter) ou
+    "− subtrair"; a soma é por componente (30 dias = 1 mês; 12 meses = 1
+    ano).
+  - Período entre datas: conta o dia do começo; o resultado pode ir para a
+    pena, para a interrupção ou para a detração (em dias).
+  - Cumprimento: início, interrupção e remidos/detração (em dias),
+    descontados antes ou depois de calcular a fração.
+  - Resultado: término (início + pena + interrupção − remidos − 1 dia, CP,
+    art. 10) e a data em que completa cada fração (1/6 a 2/3), cada
+    percentual (16% a 70%) e outra fração (2/5 ou 55%). A fração incide
+    sobre a pena em dias (ano de 365, mês de 30), arredondada para baixo.
+  - "Trazer de ...": com um assistido aberto, preenche a pena total, o
+    início do cumprimento, as interrupções e os remidos do RSPE.
+  - Ao lado, a anotação (assistido e observações). "Registrar cálculo"
+    grava na base; a guia "Registros" abre, copia ou exclui. "Copiar
+    cálculo" e "PDF".
+
 DADOS PRISIONAIS (aba ao lado do Quadro do Usuário)
   Retrato do sistema prisional de MS pela API pública do Geopresídios/CNIEP
   (CNJ): para cada unidade, a última inspeção judicial mensal do tema
@@ -791,6 +812,9 @@ v7.9.0
     favoráveis saem; fuga e falta sem sanção viram informação.
   - Fuga ou evasão sem homologação na janela do art. 6º impede o indulto e a
     comutação (antes: "a verificar").
+  - Calculadora de penas: botão "Calculadora" no topo de todas as abas,
+    com janela móvel, anotação ao lado e registros gravados na base. Ver
+    "Calculadora de penas".
 
 v7.8.2
   - Mapa da tela só com os círculos; o nome do município aparece ao passar

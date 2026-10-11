@@ -706,6 +706,40 @@ tbody tr.geo-on td{background:var(--pri-soft)!important}
 .geo-det{width:100%;border-collapse:collapse;font-size:12.5px}.geo-det thead th{position:static!important}.geo-det td{padding:3px 6px;border-bottom:1px solid var(--line)}.geo-det th{text-align:left;padding:4px 6px}
 /* teclado: o contorno só aparece com o foco pelo teclado (Tab), não no clique - o visual com mouse não muda */
 [data-kb]:focus{outline:none}[data-kb]:focus-visible{outline:2px solid var(--pri);outline-offset:1px;border-radius:4px}
+/* calculadora de penas (botão no topo, janela) */
+.calc{display:grid;grid-template-columns:minmax(420px,1.05fr) minmax(360px,1fr);gap:14px;font-size:12.5px}
+.calc .cb{border:1px solid var(--line);border-radius:4px;padding:10px 12px;margin-bottom:10px;background:#fff}
+.calc .ct,.cn .ct,.crg .ct{font-weight:700;font-size:11px;letter-spacing:.4px;text-transform:uppercase;color:#153F2A;margin-bottom:6px}
+.calc .ct .muted{text-transform:none;letter-spacing:0;font-weight:400}
+.calc .clin{display:flex;flex-wrap:wrap;align-items:center;gap:6px}.calc .clin label{color:var(--tx2)}
+.calc .clin.rd{margin-top:6px;flex-direction:column;align-items:flex-start;gap:2px}
+.cx{border:1px solid var(--line2);border-radius:3px;padding:4px 6px;font:inherit;background:#fff}
+.calc .btn.sm,.cw-tabs .btn.sm{padding:4px 9px;font-size:12px}
+.calc .fita{margin:8px 0 6px;border-top:1px dashed var(--line2);padding-top:6px;max-height:130px;overflow:auto}
+.calc .fl{display:grid;grid-template-columns:18px 1fr 18px;padding:2px 0;font-variant-numeric:tabular-nums}.calc .fl .x,.calc .tot .x,.cw-h .x{cursor:pointer;color:var(--tx2)}
+.calc .tot{display:flex;align-items:baseline;gap:10px;border-top:1px solid var(--line);padding-top:6px}.calc .tot b{font-size:15px;color:#153F2A}
+.calc .cr{border:1px solid var(--line);border-radius:4px;padding:10px 12px;background:#FAFBFA}
+.calc .term{display:flex;flex-direction:column;gap:2px;border-left:4px solid #1D5A3B;padding:6px 10px;background:#fff}.calc .term b{font-size:20px;color:#153F2A}
+.calc .fg{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:6px}
+.calc .fc{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:3px;padding:5px 7px;background:#fff;font-variant-numeric:tabular-nums}.calc .fc b{color:#1D5A3B}.calc .fc .dt{font-weight:700}
+.calc .ca{display:flex;gap:6px;justify-content:flex-end;margin-top:12px;flex-wrap:wrap}
+.cw-g .side{display:flex;flex-direction:column;gap:10px}
+.cn,.crg{border:1px solid var(--line);border-radius:4px;padding:10px 12px;background:#fff}
+.cn textarea{width:100%;min-height:120px;border:1px solid var(--line2);border-radius:3px;padding:6px;font:inherit;resize:vertical}
+.crg .ri{border-top:1px solid var(--line);padding:6px 0}.crg .rh{display:flex;justify-content:space-between;gap:8px}.crg .rn{color:var(--tx2);font-style:italic;margin-top:2px}.crg .ra{display:flex;gap:8px;margin-top:3px}
+#calcWin{position:fixed;right:24px;top:118px;width:min(1180px,calc(100vw - 48px));max-height:calc(100vh - 140px);overflow:auto;background:#F4F6F5;border:1px solid #9FB3A6;border-radius:6px;box-shadow:0 10px 30px rgba(0,0,0,.18);z-index:60}
+#calcWin .cw-h{display:flex;align-items:center;gap:10px;padding:8px 12px;background:#1D5A3B;color:#fff;cursor:move}#calcWin .cw-h .muted{color:#CFE0D5}#calcWin .cw-h .x{color:#fff;font-size:16px}
+#calcWin .sp,.cw-tabs .sp{flex:1}
+#calcWin .cw-b{padding:10px 12px}
+.cw-tabs{display:flex;gap:4px;align-items:center;margin-bottom:8px}.cw-tabs>span:not(.sp):not(.mini){padding:5px 12px;border:1px solid var(--line2);border-radius:3px;background:#fff;cursor:pointer}.cw-tabs>span.on{background:#1D5A3B;color:#fff;border-color:#1D5A3B}
+.cw-g{display:grid;grid-template-columns:1fr 270px;gap:12px}
+.cw-g .calc{grid-template-columns:1fr 1fr}
+.btn-calc svg{width:16px;height:16px}
+
+.calc .clin label{display:inline;margin:0}
+.cw-tabs>span.on:not(.sp):not(.mini){background:#1D5A3B;color:#fff;border-color:#1D5A3B}
+#calcWin .cw-h .muted{font-size:12px}.calc .err{color:var(--r-tx);font-size:12px;margin-top:6px}
+.calc .nota-c{color:var(--tx2);font-size:11.5px;margin-top:8px}
 </style>
 </head>
 <body>
@@ -749,6 +783,7 @@ tbody tr.geo-on td{background:var(--pri-soft)!important}
   <div class="spacer"></div>
   <!-- modelos de petição desativados nesta versão (MODELOS_ATIVOS) -->
   <span class="letra" title="Tamanho da letra (vale para todas as telas; fica gravado neste computador)"><span class="lb">Letra</span><button class="s" id="letraMenos" title="Diminuir" onclick="ui.letra(-1)">A</button><button class="g" id="letraMais" title="Aumentar" onclick="ui.letra(1)">A</button></span>
+  <button class="btn btn-calc" onclick="ui.cpAbrir()" title="Calculadora de penas: soma de penas, período entre datas, término e frações (abre em janela, em qualquer aba)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8M8 11h2M12 11h2M8 15h2M12 15h2M8 18h2M12 18h4"/></svg>Calculadora</button>
   <button class="btn ghost" onclick="ui.ajuda()">Legenda e método</button>
 </div>
 
@@ -795,7 +830,7 @@ async function api(m, ...a){ try{ const r = await API()[m](...a); if(r && r.regi
 
 const ui = {
   dados:{registros:[],abas:[],base:'',hoje:''}, aba:'geral', filtro:'', filtroCor:null, filtroSel:'todas', ordem:{}, sel:null, aberto:null,
-  carregar(d){ this.dados=d; if(!this._geoChecado){ this._geoChecado=true; Promise.resolve(API().geo_precisa()).then(p=>{ if(p) this.geoAtualizar(true); }).catch(()=>{}); } const w=document.getElementById('welcome');
+  carregar(d){ this.dados=d; if(document.getElementById('calcWin')) this.cpLista().then(()=>this.cpDesenha()); if(!this._geoChecado){ this._geoChecado=true; Promise.resolve(API().geo_precisa()).then(p=>{ if(p) this.geoAtualizar(true); }).catch(()=>{}); } const w=document.getElementById('welcome');
     if(this.aberto){ const ra=(d.registros||[]).find(x=>x.id===this.aberto); if(ra&&ra._leve) setTimeout(()=>this.completo(ra.id),0); }
     if(d.sem_base){ w.classList.add('on'); document.getElementById('copia').innerHTML=''; document.getElementById('baseNome').textContent='—'; document.getElementById('baseN').textContent='0';
       document.getElementById('recentes').innerHTML=(d.recentes||[]).map(r=>`<div onclick="ui.abrirBase(${jsa(r.caminho)},${jsa(r.nome)})"><span>${esc(r.nome)}</span><small>${esc(r.caminho)}</small></div>`).join('')||'<div style="cursor:default;color:var(--tx3)">Nenhuma base recente</div>';
@@ -2144,7 +2179,7 @@ const ui = {
       <p style="margin-top:10px">Dados incompletos = o programa não conseguiu ler algum campo essencial; o assistido entra na base com alerta na Auditoria. Duplicado = mesmo arquivo ou RSPE do mesmo processo com a mesma data de geração. Um RSPE mais recente do mesmo processo substitui o atual; um mais antigo entra só no histórico (botão Histórico, na aba Geral), sem substituir o atual. Os anteriores ficam guardados. Lista completa em importacao_avisos.txt.</p>
       <div class="acts"><button class="btn" id="btFalhas" style="display:none" title="PDF com o registro completo deste lote: cada arquivo, como foi lido, falhas e causa provável" onclick="ui.falhasPdf()">Registro da importação (PDF)</button><button class="btn pri" onclick="ui.fecharModal()">Fechar</button></div></div>`; document.getElementById('modal').classList.add('on'); },
   // ficha
-  async abrir(id){ this.stPop(null); const r=await this.completo(id); if(!r) return; this.sel=id;
+  async abrir(id){ this.stPop(null); const r=await this.completo(id); if(!r) return; this.sel=id; if(document.getElementById('calcWin')) this.cpDesenha();
     const kv=(l,v)=>`<div><small>${l}</small>${esc(v||'—')}</div>`;
     const pill=(t,c)=> t?`<span class="pill ${c||'none'}">${esc(t)}</span>`:'<span class="muted">—</span>';
     const lin=(rot,conteudo)=>`<div class="ln"><span class="lr">${rot}</span><span class="lv">${conteudo}</span></div>`;
@@ -2434,6 +2469,73 @@ const ui = {
       </div></div>`; },
   tlvExpl(B,fechado,tit){ const P=(B||{}).explicacao||[]; if(!P.length) return '';
     return `<details class="expl" ${fechado?'':'open'}><summary><b>${tit?tit+' · ':''}Como cheguei a este resultado</b></summary><ol>${P.map(p=>{ const m=/^(Ordem dos crimes|Quais crimes|Períodos até|Remição até)[^:]*:\s*/.exec(p); if(m){ const it=p.slice(m[0].length).replace(/\.$/,'').split('; '); return `<li><b>${esc(m[0].trim())}</b><ul class="sub">${it.map(t=>`<li>${penaExt(esc(t)).replace(/: (não conta[^\[]*)/,': <span style="color:#8E2424">$1</span>')}</li>`).join('')}</ul></li>`; } return `<li>${penaExt(esc(p)).replace(/^(Ordem dos crimes[^:]*:|Início do cumprimento:|Quais crimes o Decreto [^ ]+ alcança:|Períodos até a data de referência[^:]*:|Remição até a data de referência[^:]*:|A conta do tempo cumprido[^:]*:|Pena considerada pelo decreto:|Requisito da comutação:|Regra aplicada \(crime impeditivo\):|A redução:|Falta grave:|Resultado:|Se o resultado parecer errado, confira no SEEU:)/,'<b>$1</b>')}</li>`; }).join('')}</ol></details>`; },
+  // ---- calculadora de penas (botão no topo: janela móvel, em qualquer aba; contas em rspe_calc.py) ----
+  _cp:null,
+  cpNovo(){ this._cp={fita:[],ent:{a:'',m:'',d:''},inicio:'',interr:{a:'',m:'',d:''},rem:'',remModo:'antes',outra:'',p1:'',p2:'',assist:'',processo:'',nota:'',id:null,regs:[],tab:'calc',res:{},semBase:false}; },
+  cpEstado(){ const C=this._cp; return {fita:C.fita,inicio:C.inicio,interr:C.interr,rem:C.rem,rem_modo:C.remModo,outra:C.outra,p1:C.p1,p2:C.p2,assist:C.assist,processo:C.processo,nota:C.nota,id:C.id}; },
+  async cpAtualiza(){ try{ this._cp.res=await API().calc_calcular(this.cpEstado())||{}; }catch(e){ this._cp.res={erros:[String(e)]}; } this.cpDesenha(); },
+  cpSet(k,v){ const C=this._cp; if(k.includes('.')){ const [a,b]=k.split('.'); C[a][b]=v; } else C[k]=v; if(k.startsWith('ent.')||k==='nota'||k==='assist') return; this.cpAtualiza(); },
+  cpOp(sn){ const C=this._cp, p={a:+C.ent.a||0,m:+C.ent.m||0,d:+C.ent.d||0}; if(!(p.a||p.m||p.d)) return this.toast('Digite a pena (anos, meses e dias).'); C.fita.push({s:sn,p}); C.ent={a:'',m:'',d:''}; this.cpAtualiza(); },
+  cpTira(i){ this._cp.fita.splice(i,1); this.cpAtualiza(); },
+  cpPeriodo(dest){ const C=this._cp, P=(C.res||{}).periodo; if(!P) return;
+    if(dest==='pena'){ C.fita.push({s:1,p:{a:P.a,m:P.m,d:P.d}}); }
+    else if(dest==='interr'){ C.interr={a:(+C.interr.a||0)+P.a,m:(+C.interr.m||0)+P.m,d:(+C.interr.d||0)+P.d}; }
+    else { C.rem=(+C.rem||0)+P.dias; }
+    this.cpAtualiza(); },
+  cpHtml(){ const C=this._cp, R=C.res||{}, ext=t=>penaExt(esc(t||''));
+    const inp=(k,v,w,ph,cb)=>`<input class="cx" style="width:${w}px" value="${esc(String(v??''))}" placeholder="${ph}" ${cb||`onchange="ui.cpSet('${k}',this.value)"`}>`;
+    const ent=k=>`<input class="cx" style="width:${k==='a'?52:42}px" value="${esc(String(C.ent[k]??''))}" placeholder="0" oninput="ui._cp.ent.${k}=this.value" onkeydown="if(event.key==='Enter')ui.cpOp(1)">`;
+    const fita=C.fita.length?C.fita.map((x,i)=>`<div class="fl"><span>${x.s>0?'+':'−'}</span><span>${x.p.a}a ${x.p.m}m ${x.p.d}d</span><span class="x" title="Tirar da soma" onclick="ui.cpTira(${i})">✕</span></div>`).join(''):'<div class="muted" style="padding:4px 0">Digite a pena e clique em "+ somar" (ou Enter); "− subtrair" desconta.</div>';
+    const cel=x=>`<div class="fc"><b>${esc(x.rot)}</b><span>${esc(x.q.replace(/(\d+)a(\d+)m(\d+)d/,'$1a $2m $3d'))}</span><span class="dt">${esc(x.data)}</span></div>`;
+    const P=R.periodo;
+    return `<div class="calc win"><div class="cg">
+      <div class="cb"><div class="ct">1 · Pena</div>
+        <div class="clin"><label>anos</label>${ent('a')}<label>meses</label>${ent('m')}<label>dias</label>${ent('d')}<button class="btn sm" onclick="ui.cpOp(1)">+ somar</button><button class="btn sm" onclick="ui.cpOp(-1)">− subtrair</button></div>
+        <div class="fita">${fita}</div>
+        <div class="tot"><span>Pena total</span><b>${ext(R.total_ext||'0 dia')}</b><span class="muted">${esc(R.total||'')}</span>${C.fita.length?'<span class="x" onclick="ui._cp.fita=[];ui.cpAtualiza()">limpar</span>':''}</div></div>
+      <div class="cb"><div class="ct">2 · Período entre datas <span class="muted">(conta o dia do começo)</span></div>
+        <div class="clin">${inp('p1',C.p1,92,'dd/mm/aaaa')}<span>a</span>${inp('p2',C.p2,92,'dd/mm/aaaa')}<b>${P?esc(P.amd.replace(/(\d+)a(\d+)m(\d+)d/,'$1a $2m $3d'))+' · '+P.dias+' dias':'—'}</b></div>
+        ${P?`<div class="clin" style="margin-top:6px"><button class="btn sm" onclick="ui.cpPeriodo('pena')">→ somar à pena</button><button class="btn sm" onclick="ui.cpPeriodo('interr')">→ interrupção</button><button class="btn sm" title="Soma os dias do período aos dias a descontar (prisão provisória)" onclick="ui.cpPeriodo('det')">→ detração</button></div>`:''}</div>
+      <div class="cb"><div class="ct">3 · Cumprimento</div>
+        <div class="clin"><label>início em</label>${inp('inicio',C.inicio,92,'dd/mm/aaaa')}<label>interrupção</label>${inp('interr.a',C.interr.a,36,'a')}${inp('interr.m',C.interr.m,32,'m')}${inp('interr.d',C.interr.d,32,'d')}</div>
+        <div class="clin" style="margin-top:6px"><label>remidos/detração (dias)</label>${inp('rem',C.rem,56,'0')}</div>
+        <div class="clin rd"><label><input type="radio" name="cp_rm" ${C.remModo!=='depois'?'checked':''} onchange="ui.cpSet('remModo','antes')"> descontar os dias antes de calcular a fração</label><label><input type="radio" name="cp_rm" ${C.remModo==='depois'?'checked':''} onchange="ui.cpSet('remModo','depois')"> descontar depois de calcular a fração</label></div></div>
+      </div>
+      <div class="cr">
+        <div class="term"><span>Término da pena</span><b>${esc(R.termino||'—')}</b><span class="muted">${R.termino?esc(R.termino_det||''):'preencha a pena e o início'}</span></div>
+        <div class="ct" style="margin-top:10px">Frações (data em que completa)</div><div class="fg">${(R.fracoes||[]).map(cel).join('')||'<span class="muted">—</span>'}</div>
+        <div class="ct" style="margin-top:8px">Percentuais da LEP (art. 112)</div><div class="fg">${(R.percentuais||[]).map(cel).join('')||'<span class="muted">—</span>'}</div>
+        <div class="clin" style="margin-top:8px"><label>outra fração</label>${inp('outra',C.outra,80,'2/5 ou 55%')}${R.outra?`<b>${esc(R.outra.q.replace(/(\d+)a(\d+)m(\d+)d/,'$1a $2m $3d'))}</b><span>em</span><b>${esc(R.outra.data)}</b>`:''}</div>
+        ${(R.erros||[]).length?`<div class="err">${R.erros.map(esc).join('<br>')}</div>`:''}
+        <div class="ca"><button class="btn" onclick="ui.cpNovoTela()">Novo cálculo</button><button class="btn" onclick="ui.cpCopiar()">⧉ Copiar cálculo</button><button class="btn" onclick="ui.cpPdf()">PDF</button><button class="btn pri" onclick="ui.cpRegistrar()">${C.id?'Atualizar registro':'Registrar cálculo'}</button></div>
+        <div class="nota-c">Soma por componente (30 dias = 1 mês; 12 meses = 1 ano); fração sobre a pena em dias (ano de 365, mês de 30), arredondada para baixo; datas pelo calendário, contando o dia do começo (CP, art. 10). Baseada na Calculadora de penas 2.1 (Guilherme Benages Alcantara, 2001).</div>
+      </div></div>`; },
+  cpNotas(){ const C=this._cp; return `<div class="cn"><div class="ct">Anotação deste cálculo</div>
+      <input class="cx" style="width:100%;margin-bottom:6px" placeholder="Assistido (opcional): nome ou processo" value="${esc(C.assist)}" oninput="ui._cp.assist=this.value">
+      <textarea placeholder="Observações: de onde veio cada pena, o que conferir, para quem é o cálculo..." oninput="ui._cp.nota=this.value">${esc(C.nota)}</textarea></div>`; },
+  cpRegs(lim){ const C=this._cp, L=C.regs||[]; return `<div class="crg"><div class="ct">Registros de cálculo <span class="muted">(${L.length})</span></div>${C.semBase?'<div class="muted">Abra uma base para registrar cálculos.</div>':L.length?L.slice(0,lim||999).map(x=>`<div class="ri"><div class="rh"><b>${esc(x.assistido||'Sem assistido')}</b><span class="muted">${esc(x.atualizado)}</span></div><div>${penaExt(esc(x.resumo))}</div>${x.nota?`<div class="rn">${esc(x.nota)}</div>`:''}<div class="ra"><span class="mini" onclick="ui.cpCarregar('${esc(x.id)}')">Abrir</span><span class="mini" onclick="ui.cpCopiarReg('${esc(x.id)}')">Copiar</span><span class="mini" style="color:var(--r-tx)" onclick="ui.cpExcluir('${esc(x.id)}')">Excluir</span></div></div>`).join('')+(lim&&L.length>lim?`<div style="margin-top:4px"><span class="mini" onclick="ui._cp.tab='reg';ui.cpDesenha()">Ver todos (${L.length})</span></div>`:''):'<div class="muted">Nenhum cálculo registrado.</div>'}</div>`; },
+  cpDesenha(){ const w=document.getElementById('calcWin'); if(!w) return; const C=this._cp, alvo=this.sel||this.aberto, ra=alvo&&this.dados?(this.dados.registros||[]).find(x=>x.id===alvo):null;
+    w.querySelector('.cw-b').innerHTML=`<div class="cw-tabs"><span class="${C.tab==='calc'?'on':''}" onclick="ui._cp.tab='calc';ui.cpDesenha()">Calculadora</span><span class="${C.tab==='reg'?'on':''}" onclick="ui._cp.tab='reg';ui.cpDesenha()">Registros (${(C.regs||[]).length})</span><span class="sp"></span>${ra?`<span class="mini" title="Pena total, início do cumprimento, interrupções e remidos do RSPE" onclick="ui.cpTrazer('${esc(ra.id)}')">Trazer de ${esc(ra.nome)}</span>`:''}</div>`+
+      (C.tab==='calc'?`<div class="cw-g"><div>${this.cpHtml()}</div><div class="side">${this.cpNotas()}${this.cpRegs(3)}</div></div>`:`<div style="padding:4px 2px">${this.cpRegs()}</div>`); },
+  async cpAbrir(){ let w=document.getElementById('calcWin'); if(w){ w.remove(); return; } if(!this._cp) this.cpNovo();
+    w=document.createElement('div'); w.id='calcWin'; w.innerHTML=`<div class="cw-h"><b>Calculadora de penas</b><span class="muted">arraste para mover · continua aberta ao trocar de aba</span><span class="sp"></span><span class="x" title="Fechar (o cálculo fica guardado até fechar o programa)" onclick="ui.cpAbrir()">✕</span></div><div class="cw-b"></div>`;
+    document.body.appendChild(w);
+    const h=w.querySelector('.cw-h'); h.onmousedown=ev=>{ if(ev.target.classList.contains('x')) return; const r=w.getBoundingClientRect(), dx=ev.clientX-r.left, dy=ev.clientY-r.top;
+      const mv=e=>{ w.style.left=Math.max(0,Math.min(innerWidth-120,e.clientX-dx))+'px'; w.style.top=Math.max(0,Math.min(innerHeight-40,e.clientY-dy))+'px'; w.style.right='auto'; };
+      const up=()=>{ document.removeEventListener('mousemove',mv); document.removeEventListener('mouseup',up); }; document.addEventListener('mousemove',mv); document.addEventListener('mouseup',up); ev.preventDefault(); };
+    await this.cpLista(); await this.cpAtualiza(); },
+  async cpLista(){ const r=await API().calc_lista(); this._cp.regs=(r&&r.itens)||[]; this._cp.semBase=!!(r&&r.sem_base); },
+  cpNovoTela(){ const regs=this._cp.regs, sb=this._cp.semBase; this.cpNovo(); this._cp.regs=regs; this._cp.semBase=sb; this.cpAtualiza(); },
+  async cpTrazer(id){ const r=await API().calc_assistido(id); if(!r||r.erro) return this.toast((r&&r.erro)||'Falha.'); const C=this._cp;
+    Object.assign(C,{fita:r.fita,inicio:r.inicio,interr:r.interr,rem:r.rem,remModo:r.rem_modo,assist:r.assist,processo:r.processo,id:null,tab:'calc'}); this.toast(r.msg); this.cpAtualiza(); },
+  async cpCopiar(){ const t=await API().calc_texto(this.cpEstado()); this.copiarClip(this.clip(t)); },
+  async cpPdf(){ await api('calc_pdf', this.cpEstado()); },
+  async cpRegistrar(){ const r=await api('calc_gravar', this.cpEstado()); if(r&&r.itens){ this._cp.regs=r.itens; this._cp.id=r.id; } this.cpDesenha(); },
+  cpCarregar(id){ const x=(this._cp.regs||[]).find(z=>z.id===id); if(!x) return; const d=x.dados||{}, C=this._cp;
+    Object.assign(C,{fita:d.fita||[],inicio:d.inicio||'',interr:d.interr||{a:'',m:'',d:''},rem:d.rem||'',remModo:d.rem_modo||'antes',outra:d.outra||'',p1:d.p1||'',p2:d.p2||'',assist:x.assistido||'',processo:x.processo||'',nota:x.nota||'',id:x.id,tab:'calc'}); this.cpAtualiza(); },
+  async cpCopiarReg(id){ const x=(this._cp.regs||[]).find(z=>z.id===id); if(!x) return; const d=x.dados||{};
+    const t=await API().calc_texto(Object.assign({},d,{assist:x.assistido,nota:x.nota})); this.copiarClip(this.clip(t)); },
+  async cpExcluir(id){ if(!confirm('Excluir este cálculo registrado?')) return; const r=await api('calc_excluir', id); if(r&&r.itens) this._cp.regs=r.itens; if(this._cp.id===id) this._cp.id=null; this.cpDesenha(); },
   tlvFundCopiar(k){ const el=document.getElementById('fnd_'+k.replace(/[^\w]/g,'_')); if(el) this.copiarClip(this.clip(el.value)); },
   tlvSel(id){ if(id==='todos') return; this._tlvDec=id; this.renderTLV(); },
   tlvReg(titulo,det){ this._tlvDets.push({titulo,det}); return this._tlvDets.length-1; },

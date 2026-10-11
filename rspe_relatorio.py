@@ -3277,3 +3277,49 @@ def relatorio_unidade_prisional(u, atualizado, assistidos, caminho, nome_base):
     fr = _moldura("Relatório da unidade", nome_base, rodape="Fonte: Geopresídios/CNIEP (CNJ), geopresidios.cnj.jus.br. Dados declarados nas inspeções judiciais mensais.")
     doc.build(el, onFirstPage=fr, onLaterPages=fr, canvasmaker=_canvas_numerado())
     return caminho
+
+
+def relatorio_calculo(e, r, caminho, nome_base):
+    """PDF da calculadora de penas: penas somadas, início, interrupção, remidos, término, frações e percentuais e a anotação."""
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.units import mm
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+    import rspe_calc as rc
+    import rspe_scraper as _rs
+    st = _estilos()
+    W = A4[0] - 32 * mm
+    el = [Paragraph("Cálculo de pena", st["tit"])]
+    if e.get("assist"):
+        el.append(Paragraph(_t(e["assist"]), st["sub"]))
+    el.append(Spacer(1, 6))
+    linhas = [["Item", "Valor"]]
+    fita = e.get("fita") or []
+    for i, x in enumerate(fita):
+        linhas.append(["Pena %d (%s)" % (i + 1, "soma" if rc._int(x.get("s", 1)) >= 0 else "subtrai"), rc.extenso(rc.amd(x.get("p")))])
+    linhas.append(["Pena total", r.get("total_ext", "")])
+    if e.get("inicio"):
+        linhas.append(["Início", e["inicio"]])
+    if any(rc.amd(e.get("interr"))):
+        linhas.append(["Interrupção", rc.extenso(rc.amd(e.get("interr")))])
+    if rc._int(e.get("rem")):
+        linhas.append(["Remidos/detração", "%s, descontados %s da fração" % (_rs.pl(rc._int(e["rem"]), "dia", "dias"),
+                                                                          "depois" if e.get("rem_modo") == "depois" else "antes")])
+    if r.get("termino"):
+        linhas.append(["Término da pena", "%s (%s)" % (r["termino"], r.get("termino_det", ""))])
+    if r.get("periodo"):
+        linhas.append(["Período de %s a %s" % (e.get("p1"), e.get("p2")), "%s (%d dias)" % (r["periodo"]["ext"], r["periodo"]["dias"])])
+    el.append(_tabela([[Paragraph(_t(a), st["cel"]) for a in l] if k else l for k, l in enumerate(linhas)], [55 * mm, W - 55 * mm], st, pad=4))
+    if r.get("termino"):
+        fr = [["Fração", "Tempo", "Completa em"]] + [[x["rot"], _rs.pena_extenso(x["q"]), x["data"]] for x in r["fracoes"] + r["percentuais"]
+                                                       + ([r["outra"]] if r.get("outra") else [])]
+        el += [Spacer(1, 8), Paragraph("Frações e percentuais (LEP, art. 112)", st["h2"]), _tabela(fr, [30 * mm, W - 75 * mm, 45 * mm], st, pad=4)]
+    if e.get("nota"):
+        el += [Spacer(1, 8), Paragraph("Anotação", st["h2"]), Paragraph(_t(e["nota"]), st["cel"])]
+    el += [Spacer(1, 8), Paragraph(_t("Convenções: soma por componente (30 dias = 1 mês; 12 meses = 1 ano); fração sobre a pena em dias (ano de 365, mês de "
+                                      "30), arredondada para baixo; datas pelo calendário, contando o dia do começo (CP, art. 10). Conferir com o cálculo do SEEU."),
+                         st["sub"])]
+    doc = SimpleDocTemplate(caminho, pagesize=A4, leftMargin=16 * mm, rightMargin=16 * mm, topMargin=21 * mm, bottomMargin=20 * mm,
+                            title="Cálculo de pena", author="APTO")
+    fr_ = _moldura("Calculadora de penas", nome_base)
+    doc.build(el, onFirstPage=fr_, onLaterPages=fr_, canvasmaker=_canvas_numerado())
+    return caminho
