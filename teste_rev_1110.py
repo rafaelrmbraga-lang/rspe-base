@@ -83,7 +83,17 @@ c, conta, conf, alc = tl._cond_prosa("pena ≤ 8 anos sem VGA, exige 1/5 (cumpri
 ok(c == "pena não superior a 8 anos por crime sem violência ou grave ameaça, com 1/5 da pena cumprida" and conta == "cumpridos 11 meses e 9 dias de pena de 1 ano e 2 meses",
    "prosa 2025: %s | %s" % (c, conta))
 
+# fuga sem homologação: impede indulto e comutação (art. 6º); fora do indulto, segue "a apurar"
+import rspe_scraper as rs
+from datetime import date
+evf = [{"tipo": "PRISÃO/INÍCIO DE CUMPRIMENTO", "data": "01/01/2023", "motivo": "PRISÃO EM FLAGRANTE", "processos": P1},
+       {"tipo": "INTERRUPÇÃO", "data": "10/06/2025", "motivo": "FUGA", "processos": ""}]
+firmes, verif = rs.falta_art6([], date(2025, 12, 25), evf, date(2025, 12, 23))
+ok(firmes and "não homologada" in firmes[0] and not verif, "fuga no indulto: %s | %s" % (firmes, verif))
+ind = rs.indicios_falta([], date(2025, 12, 25), eventos=evf)
+ok(ind and not ind[0][1], "fuga fora do indulto (falta nos 12 meses): %s" % ind)
+
 if falhas:
     print("FALHOU (revisão 11/10):\n  " + "\n  ".join(falhas))
     sys.exit(1)
-print("ok: revisão 11/10 (detração da ficha por processo do RSPE, alcance do indulto, resumo objetivo, cartão do resultado, fundamentação por enquadramento)")
+print("ok: revisão 11/10 (detração da ficha por processo do RSPE, alcance do indulto, resumo objetivo, cartão do resultado, fundamentação por enquadramento, fuga sem homologação no indulto)")

@@ -365,8 +365,12 @@ INDULTO E COMUTAÇÃO
     (pela data de nascimento).
   * Art. 6º: falta com sanção reconhecida em juízo nos 12 meses antes de
     25/12, pela data do fato, até a publicação (23/12) - o "Sim" vira "Falta";
-    falta pendente, regressão sem falta homologada, perda de remidos sem
-    falta datada e fuga só como evento transformam o "Sim" em "Verificar".
+    falta pendente, regressão sem falta homologada e perda de remidos sem
+    falta datada transformam o "Sim" em "Verificar". A fuga ou evasão na
+    janela, mesmo sem homologação, conta como falta grave e impede (critério
+    da unidade; o decreto que exige a falta homologada a afasta). Se não
+    houve falta, informe pelo Preencher. Fora do indulto e da comutação
+    (falta nos 12 meses, livramento), a fuga sem sanção segue "a apurar".
   * Art. 7º, p. ú.: no concurso com crime impeditivo, os crimes não
     impeditivos são analisados depois de 2/3 da pena do impeditivo ("só
     crimes não impeditivos"), podendo dar "Sim", "Verificar" ou "Não
@@ -785,6 +789,8 @@ v7.9.0
     decreto é atendido.
   - Auditoria só com o que prejudica: 1/6 vale como 16%; divergências
     favoráveis saem; fuga e falta sem sanção viram informação.
+  - Fuga ou evasão sem homologação na janela do art. 6º impede o indulto e a
+    comutação (antes: "a verificar").
 
 v7.8.2
   - Mapa da tela só com os círculos; o nome do município aparece ao passar

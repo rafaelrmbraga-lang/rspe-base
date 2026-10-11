@@ -462,7 +462,8 @@ def linha(r, hoje=None):
             continue
         fato = rs._data_fato_falta(i)
         conf = i.get("_falta") == "sim"
-        pend = rs._pendente(i) and not conf and not i.get("_fuga_ficha")  # fuga (ficha): falta grave por padrão
+        # fuga (ficha ou incidente), mesmo sem homologação: falta grave para o indulto e a comutação (critério da unidade)
+        pend = rs._pendente(i) and not conf and not i.get("_fuga_ficha") and not RE_FUGA.search(rot)
         homol = _d(i.get("data_decisao")) if not rs._pendente(i) else None
         faltas.append({"fato": fato, "homol": homol, "pendente": pend, "texto": rot + (" (falta grave confirmada pelo operador)" if conf else ""),
                        "sub": "confirmada pelo operador" if conf and not homol else ""})
@@ -471,8 +472,8 @@ def linha(r, hoje=None):
         d0 = _d(e.get("data"))
         if d0 and RE_FUGA.search(tt) and e.get("_falta") != "nao" and not any(f["fato"] and abs((f["fato"] - d0).days) <= 1 for f in faltas):
             # fuga: em tese falta grave (LEP, art. 50, II); só impede reconhecida em juízo (art. 6º; a data é a do fato - STJ, Tema 1195)
-            faltas.append({"fato": d0, "homol": None, "pendente": True, "fuga": True, "texto": tt + " (fuga: em tese falta grave, LEP, art. 50, II - sem sanção reconhecida em juízo)",
-                           "sub": "fuga (LEP, art. 50, II)"})
+            faltas.append({"fato": d0, "homol": None, "pendente": False, "fuga": True, "texto": tt + " (fuga não homologada: tratada como falta grave, LEP, art. 50, II)",
+                           "sub": "fuga sem homologação (LEP, art. 50, II)"})
 
     # ---- decretos ----
     ult_cad = max((D for D in decretos if D.get("cadastrado")), key=lambda D: _d(D.get("referencia")) or date.min, default=None)
