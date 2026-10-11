@@ -1063,7 +1063,7 @@ def confrontar(r, f, hoje=None, manuais=None):
     # 3d) progressão, regressão e livramento cumpridos na unidade e ausentes do RSPE
     itens.extend(_regime_x_ficha(r, f))
     # 3e) identidade, prisão, processos, pena, unidade x regime, fuga e conduta
-    for fn in (_identidade_x_ficha, _prisao_x_ficha, _processos_x_ficha, _pena_x_ficha, _unidade_x_ficha, _fuga_x_ficha, _conduta_x_ficha):
+    for fn in (_identidade_x_ficha, _prisao_x_ficha, _detracao_x_ficha, _processos_x_ficha, _pena_x_ficha, _unidade_x_ficha, _fuga_x_ficha, _conduta_x_ficha):
         try:
             itens.extend(fn(r, f))
         except Exception as e:
@@ -1410,6 +1410,55 @@ def _prisao_x_ficha(r, f):
                      "CP, art. 42; LEP, art. 111.")]
 
 
+def _detracao_x_ficha(r, f):
+    """Prisão encerrada na ficha (entrada vinda da rua até a soltura por alvará) por processo que integra o RSPE, em período que o
+    RSPE trata como liberdade: os dias faltam como detração (CP, art. 42). A prisão em curso fica com _prisao_x_ficha."""
+    evs = sorted((e for e in r.get("_eventos", []) if rs.to_date(e.get("data") or "")), key=lambda e: rs.to_date(e["data"]))
+    if not evs:
+        return []
+    per = rs.periodos_custodia(evs)
+    crimes = {}
+    for c in r.get("_crimes", []):
+        k = rs.chave_processo(c.get("processo_criminal") or "")
+        if k:
+            crimes.setdefault(k, c)
+    ev = sorted(((_dp(e.get("data") or ""), e.get("texto") or "") for e in f.get("eventos", [])), key=lambda x: x[0] or date.min)
+    ev = [(x, t) for x, t in ev if x]
+    dp = _dp(f.get("data_prisao") or "")
+    out, ini, ult_saida = [], None, None
+    for x, t in ev:
+        if ini is None and RE_ENTRADA_RUA.search(t):
+            ini = x
+            # a prisão (na delegacia) costuma ser dias antes da entrada na unidade: a data de prisão da ficha, se cai entre a soltura
+            # anterior e a entrada, é o início
+            if dp and dp <= x and (x - dp).days <= 30 and (ult_saida is None or dp > ult_saida):
+                ini = dp
+        elif ini is not None and re.search(r"SA[ÍI]DA DA UNIDADE PENAL.*MOTIVO:\s*(ALVAR|SOLTURA|LIBERDADE)", t, re.I):
+            m = re.search(r"ALVAR[ÁA][^:]*:\s*(?:AUTOS\s*)?(\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4})", t, re.I)
+            c = crimes.get(rs.chave_processo(m.group(1))) if m else None
+            if c:
+                fora = [ini + timedelta(days=i) for i in range((x - ini).days + 1)]
+                fato = rs.to_date(c.get("data_infracao") or "")
+                # só conta a partir do fato do crime desse processo (antes dele, a prisão era por outro motivo - CP, art. 42)
+                fora = [d for d in fora if not any(a <= d and (b is None or d <= b) for a, b in per) and (not fato or d >= fato)]
+                if len(fora) >= 2:
+                    i0 = max(ini, fato) if fato else ini
+                    out.append(_item_rf("alerta", "Detração: prisão de %s a %s na ficha (processo %s, deste RSPE) sem cômputo no RSPE - %s" % (
+                        rs.fmt(i0), rs.fmt(x), m.group(1), rs.pl(len(fora), "dia", "dias")),
+                        ("Preso desde %s; conta a partir do fato (%s). " % (rs.fmt(ini), rs.fmt(fato)) if i0 != ini else "") +
+                        "A ficha registra a prisão de %s a %s, encerrada por alvará de soltura no processo %s (%s, fato em %s), que integra esta "
+                        "execução. O RSPE trata %s desse período como liberdade. A prisão provisória pelo próprio processo da condenação é "
+                        "detração obrigatória: os dias entram como pena cumprida e antecipam progressão, livramento, indulto e término. "
+                        "Conferir o auto de prisão e o alvará e pedir o lançamento da detração." % (
+                            rs.fmt(i0), rs.fmt(x), m.group(1), rs.crimes_curto([dict(c, extinto="")]), c.get("data_infracao") or "?",
+                            rs.pl(len(fora), "dia", "dias")),
+                        "CP, art. 42; LEP, arts. 66, III, c, e 111."))
+            ini, ult_saida = None, x
+        elif ini is not None and RE_SAIDA_LIVRE.search(t):
+            ini, ult_saida = None, x  # fuga, evasão, livramento: fim da custódia sem detração a apurar aqui
+    return out
+
+
 def _processos_x_ficha(r, f):
     """Processos na ficha que não aparecem no RSPE: condenação não somada, prisão por outro processo, guia pendente."""
     rspe = {rs.chave_processo(c.get("processo_criminal") or "") for c in r.get("_crimes", [])}
@@ -1505,11 +1554,7 @@ def _fuga_x_ficha(r, f):
         if any(abs((x - d).days) <= 30 for d in fugas_r) or any(d and abs((x - d).days) <= 3 for d in desc_r) or any(abs((x - y).days) <= 3 for y in vistos):
             continue
         vistos.append(x)
-        # a omissão favorece o assistido (sem interrupção nem falta, o período conta como cumprido e a data-base não muda)
-        out.append(_item_rf("verificar", "Fuga/evasão em %s registrada na ficha e ausente no RSPE" % rs.fmt(x),
-                            "Ficha: %s. O RSPE não registra a interrupção nem a falta. A omissão favorece o assistido (o período conta como pena "
-                            "cumprida e a data-base não muda): não há o que pedir; conferir só se o registro é desta execução. Sem PAD e homologação, "
-                            "a fuga fica como falta \"A apurar\" (Súmula 533/STJ); decida no item da fuga (Preencher)." % _br(t)[:180], "LEP, arts. 50, II, e 118; CP, art. 113."))
+        # a omissão favorece o assistido (sem interrupção nem falta, o período conta como cumprido e a data-base não muda): sem item
     ini_f = ev[0][0] if ev else None
     for d in fugas_r:
         if ini_f and d > ini_f and not any(abs((x - d).days) <= 30 for x, _ in fugas_f):

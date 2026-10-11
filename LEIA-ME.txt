@@ -1,9 +1,9 @@
-APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.8.2
+APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.9.0
 (antigo RSPE Base; SEEU, programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-7.8.2. A documentação técnica completa (cada parâmetro, a regra, a norma e
+7.9.0. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -393,6 +393,14 @@ INDULTO E COMUTAÇÃO
     geral; não tem análise inciso por inciso nem coluna própria (o modelo
     de petição do inciso XV desse decreto é só um modelo da unidade).
   * A ficha do assistido traz a análise inciso por inciso.
+  * Linha do tempo (indulto e comutação): o cartão do resultado diz para
+    quais crimes cabe (crime e processo) e quais ficam fora, com o botão
+    "Copiar fundamentação" (também nos decretos de 2000 a 2023). "Como
+    cheguei aqui" mostra o resumo objetivo - crimes alcançados, tempo
+    cumprido, a hipótese atendida, a falta grave e o resultado -, com o
+    indulto à esquerda, em verde, e a comutação à direita, em azul; o passo
+    a passo completo abre em "Ver o passo a passo completo". No comparativo,
+    quando uma hipótese é atendida, as não atendidas ficam numa linha só.
 
 PRESCRIÇÃO (arts. 109 a 119 do CP, crime a crime)
   Punitiva (retroativa e intercorrente): prazo pela pena aplicada, metade pelo
@@ -503,6 +511,15 @@ AUDITORIA
   progressão especial da mulher (1/8) e, para o reincidente em crime com
   violência ou grave ameaça, o percentual por analogia (25%) se a
   condenação anterior não teve violência (informativo: o RSPE não diz).
+  Só o que prejudica o assistido vira ponto: divergência que o favorece
+  (percentual ou fração menor que a legal, pena total menor que a soma,
+  data-base anterior ao marco, hediondo tratado como comum, fuga da ficha
+  ausente no RSPE) não aparece. O 1/6 do SEEU vale como o 16% da lei (sem
+  alerta). Fuga e falta sem sanção reconhecida ficam como informação (não
+  pendência); o botão Preencher continua para registrar a decisão.
+  Detração da ficha: prisão encerrada por alvará de soltura em processo que
+  integra o RSPE, em período que o RSPE trata como liberdade, vira alerta
+  com os dias (contados a partir do fato do crime desse processo).
   Níveis: Alerta (divergência com efeito concreto para o apenado), Verificar
   (depende de dado que o RSPE não traz), Info (registro sem efeito prático:
   oculto por padrão, "ver conferências OK / informativas") e OK.
@@ -747,6 +764,18 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v7.9.0
+  - Detração da ficha: prisão encerrada por alvará em processo do RSPE, sem
+    cômputo no RSPE, vira alerta com os dias (caso Alex: 26/01/2022 a
+    05/08/2022, 192 dias).
+  - Indulto e comutação: o resultado diz para quais crimes cabe (crime e
+    processo) e quais ficam fora; "Como cheguei aqui" objetivo, com o
+    indulto em verde e a comutação em azul; hipóteses não atendidas numa
+    linha só quando uma foi atendida; "Copiar fundamentação" no resultado e
+    também nos decretos de 2000 a 2023.
+  - Auditoria só com o que prejudica: 1/6 vale como 16%; divergências
+    favoráveis saem; fuga e falta sem sanção viram informação.
 
 v7.8.2
   - Mapa da tela só com os círculos; o nome do município aparece ao passar

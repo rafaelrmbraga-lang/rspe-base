@@ -177,9 +177,9 @@ r = reg([crime()], [inc(AR, "Aberto - Progressão de Regime", "01/02/2025", "01/
         [ev(PR, "PRISÃO EM FLAGRANTE", "01/02/2017")], data_base_seeu="04/09/2025", regime_atual="Aberto - ATIVO")
 ok(all(i["nivel"] == "info" for i in itens(r) if i["tipo"] == "alteracao-de-data-base-sem-falta-homologada"), "A9: aberto")
 
-# A10: soma das penas maior que o total (favorece o assistido): informativo
+# A10: soma das penas maior que o total (favorece o assistido): sem item
 r = reg([crime(), crime(processo_criminal="0000004-44.2016.8.12.0001", pena_imposta="1 ano(s), 0 mês(es) e 0 dia(s)")], pena_total="10a0m0d")
-ok(por_tipo(r).get("soma-das-penas-difere-da-pena-total", [{}])[0].get("nivel") == "info", "A10: soma favorável")
+ok("soma-das-penas-difere-da-pena-total" not in por_tipo(r), "A10: soma favorável não vira item")
 
 # A11: capitulação criada depois do fato com divergência de fração que não decorre dela: informativo
 c = crime(artigo="ART 157: Roubo", tipo_penal="§ 2º-A, I: se a violência ou ameaça é exercida com emprego de arma de fogo, Reclusão: 4 a 10 anos",

@@ -658,6 +658,12 @@ def _ajustar_itens_do_crime(itens, i0, c, nome, esp_ok):
                            "item próprio e não decorrem do anacronismo.")
 
 
+def _oculto(it):
+    """Item que favorece o assistido: serve à caixa da data-base, mas não aparece na Auditoria (só o que prejudica vira item)."""
+    it["oculto"] = True
+    return it
+
+
 def auditar(r, hoje=None):
     hoje = hoje or date.today()
     itens = []
@@ -799,7 +805,8 @@ def auditar(r, hoje=None):
             it["auto_baixa"] = {"obs": "Data de nascimento %s: %s%s. Usada nos cálculos (art. 115 e idade no indulto)." % (
                 r["_nasc_fonte"], rs.fmt(nasc), (" (RSPE: %s)" % r["_nasc_rspe"]) if r.get("_nasc_rspe") else ""), "data": _dt}
         itens.append(it)
-    # indícios de falta: a decisão fica com o operador (botão Preencher); sem sanção reconhecida, tudo fica a apurar (Súmula 533/STJ)
+    # indícios de falta: a decisão fica com o operador (botão Preencher); sem sanção reconhecida, tudo fica a apurar (Súmula 533/STJ).
+    # Sem decisão do operador, o indício é informação, não pendência: na prática a fuga se confirma e não gera pedido
     for fi in rs.faltas_editaveis(incidentes, eventos, hoje):
         dec = fi["decisao"]
         rot = {"sim": "falta grave", "nao": "não houve falta grave"}.get(dec, "")
@@ -819,18 +826,18 @@ def auditar(r, hoje=None):
                        fi["texto"], "LEP, arts. 50 e 118; STJ, Tema 1195.", tipo="falta-a-apurar", ref=fi["chave"])
             it["auto_baixa"] = {"obs": "Decisão do operador: %s. Vale em todas as abas (falta nos 12 meses, indulto, comutação)." % rot, "data": ""}
         elif fi.get("ficha_falta"):
-            it = _item("verificar", "%s em %s: a ficha registra a falta, sem sanção reconhecida no RSPE" % (fi["texto"][:40], fi["data"] or "data não informada"),
+            it = _item("info", "%s em %s: a ficha registra a falta, sem sanção reconhecida no RSPE" % (fi["texto"][:40], fi["data"] or "data não informada"),
                        "%s. %s. A ficha explica o indício do RSPE, mas a falta só produz efeitos depois de reconhecida em juízo (Súmula 533/STJ): "
                        "fica \"a apurar\" (falta nos 12 meses, indulto, comutação). Confirmada a sanção, informe pelo botão Preencher." % (fi["texto"], fi["ficha"]),
                        "LEP, arts. 50, 52 e 118; Súmula 533/STJ; STJ, Tema 1195.", tipo="falta-a-apurar", ref=fi["chave"])
         elif fuga:
-            it = _item("verificar", "Fuga em %s: em tese falta grave - informar se houve sanção reconhecida" % (fi["data"] or "data não informada"),
+            it = _item("info", "Fuga em %s: em tese falta grave - informar se houve sanção reconhecida" % (fi["data"] or "data não informada"),
                        "%s. A fuga é, em tese, falta grave (LEP, art. 50, II), mas só impede o indulto e a comutação e só move a data-base depois de "
                        "reconhecida em juízo (Súmula 533/STJ), ainda que depois do decreto e salvo inércia ou mora estatal (STJ, Tema 1195). Até "
                        "lá fica \"a apurar\". Informe pelo botão Preencher se houve ou não falta grave." % fi["texto"],
                        "LEP, art. 50, II; Súmula 533/STJ; STJ, Tema 1195.", tipo="falta-a-apurar", ref=fi["chave"])
         else:
-            it = _item("verificar", "Falta a apurar em %s: informar se houve falta grave" % (fi["data"] or "data não informada"),
+            it = _item("info", "Falta a apurar em %s: informar se houve falta grave" % (fi["data"] or "data não informada"),
                        "%s. O RSPE não registra sanção reconhecida.%s Informe se houve falta grave: a decisão vale em todas as abas "
                        "(falta nos 12 meses, indulto, comutação, linha do tempo)." % (fi["texto"], (" " + fi["ficha"]) if fi.get("ficha") else
                        " Ficha disciplinar não importada: importá-la ajuda a explicar o indício."), "LEP, arts. 50 e 118; STJ, Tema 1195.",
@@ -1025,9 +1032,8 @@ def auditar(r, hoje=None):
                            " A pena total impressa é menor que a soma: a divergência favorece o assistido; conferir se há pena extinta, "
                            "comutada ou suspensa que explique a diferença (não há o que impugnar a favor dele)." if _maior and not _extra else ""),
                        "LEP, arts. 66, III, a, e 111 (soma/unificação); CP, art. 75, § 2º; possível pena extinta, comutada, detração ou unificação não refletida no cálculo.", tipo="soma-das-penas-difere-da-pena-total")
-            if _maior and not _extra:
-                it["sem_fundamentacao"] = True  # a correção aumentaria a pena total: sem texto de impugnação
-            itens.append(it)
+            if not (_maior and not _extra):  # pena total menor que a soma: favorece o assistido, sem item
+                itens.append(it)
         else:
             itens.append(_item("ok", "Soma das penas confere com a pena total", "Soma das penas = total %s." % r.get("pena_total"), tipo="soma-das-penas-confere-com-a-pena-total"))
     _t, _c, _r = rs.pena_amd(r.get("pena_total")), rs.pena_amd(r.get("pena_cumprida")), rs.pena_amd(r.get("pena_remanescente"))
@@ -1209,9 +1215,9 @@ def auditar(r, hoje=None):
                                "Sem trânsito o RSPE pode estar em execução provisória; afeta a prescrição executória. O indulto não depende do trânsito "
                                "(Decretos 12.338/2024 e 12.790/2025, art. 2º; Decreto 11.302/2022, art. 9º).", "CP, art. 112, I; STF Tema 788.", tipo="transito-em-julgado-nao-informado", ref=nome))
         # hediondez
+        # hediondo pela lei com fração comum no SEEU: favorece o assistido, sem item
         if hed_lei is True and not hed_seeu:
-            itens.append(_item("info", "%s: hediondo/equiparado pela lei, mas o SEEU aplicou fração comum (favorece o apenado)" % nome,
-                               "No RSPE: progressão %s; livramento %s." % (rs.pct_rotulo(c.get("fracao_progressao")), c.get("fracao_livramento")), "Lei 8.072/90, art. 1º; LEP, art. 112; CP, art. 83, V.", tipo="hediondo-equiparado-pela-lei-mas-o-seeu-aplicou", ref=nome))
+            pass
         elif hed_seeu and rs.hediondo_na_epoca(c) is False:
             _d, _lei = rs.hediondo_desde(c)
             itens.append(_item("alerta", "%s: SEEU tratou como hediondo, mas o fato (%s) é anterior à lei que o tornou hediondo (%s, vigência %s)" % (
@@ -1300,7 +1306,12 @@ def auditar(r, hoje=None):
         if orcrim_uv and f_seeu is not None and abs(float(f_seeu) - 0.75) <= 0.01:
             pass  # 75% aplicado pelo SEEU: depende da qualificação "ultraviolenta" (item acima)
         elif f_seeu is not None and f_esp is not None:
-            if abs(Fraction(f_seeu) - Fraction(f_esp)) > Fraction(1, 2000):
+            # 1/6 (16,67%) no SEEU é o 16% da lei: mesma fração, só arredondada; percentual menor que o legal favorece o
+            # assistido e não vira item (o painel mostra só o que prejudica)
+            _eq16 = {Fraction(f_seeu), Fraction(f_esp)} == {Fraction(1, 6), Fraction(16, 100)}
+            if abs(Fraction(f_seeu) - Fraction(f_esp)) > Fraction(1, 2000) and not _eq16 and float(f_seeu) < float(f_esp):
+                pass
+            elif abs(Fraction(f_seeu) - Fraction(f_esp)) > Fraction(1, 2000) and not _eq16:
                 itens.append(_item("alerta" if float(f_seeu) > float(f_esp) else "info",
                                ("%s: percentual de progressão do SEEU (%s) maior que o legal (%s)" if float(f_seeu) > float(f_esp) else "%s: percentual de progressão do SEEU (%s) menor que o esperado (%s) - favorece o apenado") % (nome, rs.pct_rotulo(c.get("fracao_progressao")), rs.pct_rotulo(rot)),
                                ("Fato em %s; %s; %s; %s. %s" % (rs.fmt(fato) if fato else "?", ("reincidente genérico (reincidência específica marcada, mas não demonstrada no RSPE)"
@@ -1360,6 +1371,8 @@ def auditar(r, hoje=None):
                                "correção: fração legal no crime e revogação pelo incidente próprio, preservados os efeitos da revogação." % (rotl, _lc_hist),
                                "CP, arts. 83, 86 e 88; LEP, arts. 140 a 145; decretos de indulto e comutação (rol de impeditivos).",
                                tipo="livramento-1-1-pela-revogacao", ref=nome))
+        elif fl_seeu is not None and float(fl_seeu) < float(fl_esp) - 0.005:
+            pass  # fração de livramento menor que a legal: favorece o assistido, sem item
         elif fl_seeu is not None and abs(float(fl_seeu) - float(fl_esp)) > 0.005:
             itens.append(_item("alerta" if float(fl_seeu) > float(fl_esp) else "info",
                                ("%s: fração de livramento do SEEU (%s) maior que a legal (%s)" if float(fl_seeu) > float(fl_esp) else "%s: fração de livramento do SEEU (%s) menor que a esperada (%s) - favorece o apenado") % (nome, c.get("fracao_livramento"), rotl),
@@ -1642,11 +1655,12 @@ def auditar(r, hoje=None):
         _db_fav = True
         # a progressão é a data-base + fração da pena remanescente nela: data-base anterior antecipa a progressão. Não há o que
         # impugnar a favor do assistido (o item não gera fundamentação)
-        itens.append(_item("info", "Data-base de progressão (%s) anterior à última alteração de regime (%s) - favorável ao assistido" % (rs.fmt(db_seeu), rs.fmt(ult[0])),
+        # favorece o assistido: fica só para a caixa da data-base (motivo), fora da lista da Auditoria
+        itens.append(_oculto(_item("info", "Data-base de progressão (%s) anterior à última alteração de regime (%s) - favorável ao assistido" % (rs.fmt(db_seeu), rs.fmt(ult[0])),
                            "Data-base impressa: %s; última alteração de regime: %s (%s). Pela regra, a data-base seria a do marco posterior; "
                            "mantida a anterior, a progressão é calculada de data mais antiga e se antecipa. A divergência favorece o assistido: "
                            "não há pedido a fazer." % (rs.fmt(db_seeu), rs.fmt(ult[0]), ult[1].get("complemento")),
-                           "LEP, art. 112, § 6º (falta grave reinicia pela remanescente); STJ Tema 1006 (a unificação de penas não altera a data-base); STJ Tema 1165 (data-base é a do preenchimento dos requisitos, não a da decisão).", tipo="data-base-de-progressao-anterior-a-ultima-altera"))
+                           "LEP, art. 112, § 6º (falta grave reinicia pela remanescente); STJ Tema 1006 (a unificação de penas não altera a data-base); STJ Tema 1165 (data-base é a do preenchimento dos requisitos, não a da decisão).", tipo="data-base-de-progressao-anterior-a-ultima-altera")))
     # alteração de data-base determinada no RSPE depois da última progressão: só se justifica por falta grave homologada
     # (LEP, arts. 112, § 6º, e 118; Súmula 534/STJ), regressão ou nova prisão após interrupção; soma/unificação não altera
     # (STJ, Tema 1006). Sem nenhum desses fundamentos no RSPE, a alteração atrasa a progressão e pede conferência
@@ -1710,14 +1724,15 @@ def auditar(r, hoje=None):
                 _db_fav = True
                 # a data-base fixa é anterior aos marcos que vieram depois: a progressão sai antes do que sairia com a data-base no
                 # marco posterior (atraso de Δ × (1 - fração)) - favorece o assistido, sem pedido
-                itens.append(_item("info", "Data-base fixada na alteração de %s, anterior aos marcos posteriores - favorável ao assistido" % rs.fmt(d),
+                # favorece o assistido: fica só para a caixa da data-base (motivo), fora da lista da Auditoria
+                itens.append(_oculto(_item("info", "Data-base fixada na alteração de %s, anterior aos marcos posteriores - favorável ao assistido" % rs.fmt(d),
                                    "%s (decisão de %s). Lançada como fixa, a alteração trava o cálculo automático: progressão, regressão ou falta "
                                    "posteriores não movem mais a data-base. Depois dela houve %s, mas a data-base impressa (%s) continua sendo a da "
                                    "alteração. Como a data-base fixa é anterior a esses marcos, a progressão é contada de data mais antiga e se "
                                    "antecipa: a divergência favorece o assistido e não há pedido a fazer." % (
                                        rs._rotulo_incidente(i), i.get("data_decisao") or "?",
                                        "; ".join("%s em %s" % (rot_, rs.fmt(x)) for x, rot_ in _dep[:3]), rs.fmt(_db)),
-                                   "LEP, arts. 112, § 6º, e 118; STJ, Temas 709 e 1165.", tipo="alteracao-de-data-base-no-lugar-do-incidente", ref=rs.fmt(d)))
+                                   "LEP, arts. 112, § 6º, e 118; STJ, Temas 709 e 1165.", tipo="alteracao-de-data-base-no-lugar-do-incidente", ref=rs.fmt(d))))
                 continue
             # não fixa e com fundamento na data: o marco está certo, só o tipo de lançamento é atípico - informativo
             itens.append(_item("info", "Alteração de data-base lançada em %s no lugar do incidente próprio" % rs.fmt(d),

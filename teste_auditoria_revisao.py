@@ -98,13 +98,13 @@ por = crime(lei="6368/76 - Lei de Tóxicos", artigo="ART 16: Adquirir, guardar o
 t = tipos(reg([por]))
 ok("pena-de-prisao-por-porte-para-consumo-proprio" in t and "percentual-de-progressao-diverge" not in t, "porte: %s" % t)
 
-# 7. soma das penas: guia suspensa fora da soma; soma maior que o total não gera texto de impugnação
+# 7. soma das penas: guia suspensa fora da soma; soma maior que o total favorece o assistido e não vira item
 sus = crime(processo_criminal="0000003-33.2024.8.12.0001", pena_imposta="2 ano(s), 6 mês(es) e 0 dia(s)", suspenso="Sim")
 t = tipos(reg([crime(), sus]))
 ok("soma-das-penas-difere-da-pena-total" not in t and "soma-das-penas-confere-com-a-pena-total" in t, "suspensa: %s" % t)
 r = reg([crime(), crime(processo_criminal="0000004-44.2024.8.12.0001", pena_imposta="1 ano(s), 5 mês(es) e 17 dia(s)")], pena_total="10a5m22d")
 it = [i for i in itens(r) if i["tipo"] == "soma-das-penas-difere-da-pena-total"]
-ok(it and "diferença 0a11m25d" in it[0]["detalhe"] and not ra.fundamentacao(it[0], r), "soma maior que o total: %s" % (it and it[0]["detalhe"]))
+ok(not it, "soma maior que o total (favorável): %s" % (it and it[0]["detalhe"]))
 
 # 8. regime inicial depois da primeira prisão com diferença menor que 10 dias: informativo
 evs = [ev("PRISÃO/INÍCIO DE CUMPRIMENTO", "PRISÃO EM FLAGRANTE", "29/11/2016"), ev("INTERRUPÇÃO", "SOLTURA", "30/11/2016", ""),
@@ -217,7 +217,7 @@ r = reg([crime(data_infracao="01/02/2021", fracao_progressao="1/6 - Comum", pena
         [inc(AR, "Fechado - Regime Inicial", "", "01/01/2021"), inc(AR, "Aberto - Progressão de Regime", "10/03/2024", "10/03/2024")],
         [ev(PR, "PRISÃO EM FLAGRANTE", "01/01/2021")], regime_atual="Aberto - ATIVO", data_base_seeu="10/03/2024")
 pt = por_tipo(r)
-ok(all(i["nivel"] == "info" for i in pt.get("percentual-de-progressao-diverge", [])) and pt.get("percentual-de-progressao-diverge"), "A8 aberto: %s" % pt.get("percentual-de-progressao-diverge"))
+ok("percentual-de-progressao-diverge" not in pt, "A8 aberto (1/6 = 16%%): %s" % pt.get("percentual-de-progressao-diverge"))
 ok("progressao-com-data-base-igual-a-data-da-decisao" not in pt, "A8 progressão ao aberto: %s" % list(pt))
 
 # A9. perda de remidos sem incidente de falta: a própria sanção não vira "falta a apurar" (verificar)
@@ -254,7 +254,7 @@ pt = por_tipo(r)
 ok("data-base-na-data-do-fato-de-condenacao" in pt and "inconsistencia-da-data-base-sem-prisao-alteracao" not in pt, "A13: %s" % list(pt))
 
 # A14. rótulo da fração cita o dispositivo do crime (furto: LEP, art. 112, I), não a janela (feminicídio, Lei 8.072)
-it = por_tipo(reg([crime(data_infracao="01/02/2025", fracao_progressao="1/6 - Comum", pena_imposta="2 ano(s), 0 mês(es) e 0 dia(s)")])).get("percentual-de-progressao-diverge", [{}])[0]
+it = por_tipo(reg([crime(data_infracao="01/02/2025", fracao_progressao="1/5 - Comum", pena_imposta="2 ano(s), 0 mês(es) e 0 dia(s)")])).get("percentual-de-progressao-diverge", [{}])[0]
 ok("LEP, art. 112, I" in it.get("titulo", "") and "14.994" not in it.get("titulo", ""), "A14: %s" % it.get("titulo"))
 it = por_tipo(reg([crime(artigo="ART 121: Matar alguem:", tipo_penal="CAPUT: Matar alguém, Reclusão: 6 a 20 anos", vga="S",
                          data_infracao="01/02/2015", fracao_progressao="2/5 - Hediondo")])).get("percentual-de-progressao-diverge", [{}])[0]
@@ -284,6 +284,16 @@ _mods = open(ra.__file__, encoding="utf-8").read() + open(rf.__file__, encoding=
 ok(len(_neg) >= 10, "âncora: poucas asserções negativas encontradas (%d)" % len(_neg))
 for _t in sorted(_neg):
     ok('"%s"' % _t in _mods, "âncora: o tipo %s não existe mais em rspe_auditoria/rspe_ficha (a asserção negativa não testa nada)" % _t)
+
+# rev. 11/10/2026: 1/6 do SEEU é o 16% da lei (sem alerta); percentual ou fração menor que o legal favorece e não vira item
+_t = tipos(reg([crime(data_infracao="01/02/2021", fracao_progressao="1/6 - Comum")]))
+ok("percentual-de-progressao-diverge" not in _t and "percentual-de-progressao-confere" in _t, "1/6 x 16%%: %s" % _t)
+_t = tipos(reg([crime(data_infracao="01/02/2021", fracao_progressao="1/8 - Comum")]))
+ok("percentual-de-progressao-diverge" not in _t, "percentual menor (favorável): %s" % _t)
+_it = itens(reg([crime()], [inc(AR, "Fechado - Regime Inicial", "", "01/01/2020"), inc("HOMOLOGAÇÃO DE FALTA GRAVE", "01/05/2021", "20/05/2021", "01/05/2021"),
+                            inc("ALTERAÇÃO DE DATA-BASE", "", "20/05/2021", "01/06/2021"), inc(AR, "Semiaberto - Progressão de Regime", "10/06/2023", "01/06/2023")],
+                [ev(PR, "PRISÃO EM FLAGRANTE", "01/01/2020")], data_base_seeu="01/06/2021"))
+ok(all(i.get("oculto") for i in _it if "favorável" in i.get("titulo", "")), "favoráveis ocultos na Auditoria: %s" % [i["titulo"] for i in _it if "favorável" in i.get("titulo", "")])
 
 if falhas:
     print("FALHOU (revisão da auditoria):\n  " + "\n  ".join(falhas))

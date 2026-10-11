@@ -999,7 +999,7 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
                                         "tipo": "falha-confronto", "ref": ""})
     # a Auditoria cuida da matemática do RSPE; o que já aparece nas outras abas (remição/ficha, indulto e
     # comutação, prescrição, prazos vencidos, extinção) não se repete aqui
-    aud["aud_itens"] = list(extras or []) + [i for i in aud["aud_itens"] if so_matematica(i)]
+    aud["aud_itens"] = list(extras or []) + [i for i in aud["aud_itens"] if so_matematica(i) and not i.get("oculto")]
     if execucao_extinta(r):
         # pena extinta: as divergências do cálculo não têm mais efeito para o assistido - ficam como informação
         for i in aud["aud_itens"]:
