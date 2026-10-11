@@ -721,6 +721,9 @@ CALCULADORA DE PENAS (botão "Calculadora" no topo, em qualquer aba)
   - Ao lado, a anotação (assistido e observações). "Registrar cálculo"
     grava na base; a guia "Registros" abre, copia ou exclui. "Copiar
     cálculo" e "PDF".
+  - As datas aceitam só os números (11102026 vira 11/10/2026). A janela
+    maximiza (□ no título) ou se redimensiona pelo canto inferior direito;
+    ao fechar e abrir de novo, começa zerada (os registros ficam).
 
 DADOS PRISIONAIS (aba ao lado do Quadro do Usuário)
   Retrato do sistema prisional de MS pela API pública do Geopresídios/CNIEP
@@ -812,6 +815,11 @@ v7.9.0
     favoráveis saem; fuga e falta sem sanção viram informação.
   - Fuga ou evasão sem homologação na janela do art. 6º impede o indulto e a
     comutação (antes: "a verificar").
+  - Dados prisionais: andamento do download em porcentagem; a visão
+    "Condições" da unidade lista os problemas constatados por tema (sem
+    gráfico); "Relatório geral" é sempre do estado, com a escolha dos tipos
+    de estabelecimento; "Condições por unidade" abre a busca para escolher
+    as unidades (quantas quiser).
   - Calculadora de penas: botão "Calculadora" no topo de todas as abas,
     com janela móvel, anotação ao lado e registros gravados na base. Ver
     "Calculadora de penas".

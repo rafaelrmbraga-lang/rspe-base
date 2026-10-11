@@ -3130,7 +3130,7 @@ def relatorio_prisional(dados, mapa, caminho, nome_base, cidade="", cats=None):
     return caminho
 
 
-def relatorio_condicoes_prisional(dados, caminho, nome_base, cidade="", cats=None):
+def relatorio_condicoes_prisional(dados, caminho, nome_base, cidade="", cats=None, ids=None):
     """PDF das condições constatadas nas inspeções: para cada problema, as unidades em que foi constatado (com o ciclo da
     inspeção); depois, cada unidade com a lista dos seus problemas."""
     from reportlab.lib.pagesizes import A4
@@ -3141,8 +3141,15 @@ def relatorio_condicoes_prisional(dados, caminho, nome_base, cidade="", cats=Non
     st = _estilos()
     W = A4[0] - 32 * mm
     peq = ParagraphStyle("geo_peq2", parent=st["cel"], fontSize=7.6, leading=9.8)
-    U = [u for u in _geo_sel(dados, cidade, cats) if u.get("temas")]
-    titulo = "Condições constatadas nas inspeções" + (" · %s" % cidade if cidade else "")
+    if ids:  # unidades escolhidas na janela de seleção, de qualquer tipo
+        ids = {str(x) for x in ids}
+        U = [u for u in dados.get("unidades") or [] if str(u.get("id")) in ids and u.get("temas")]
+    else:
+        U = [u for u in _geo_sel(dados, cidade, cats) if u.get("temas")]
+    if ids:
+        cats = sorted({u.get("cat") or "penal" for u in U})
+    titulo = "Condições constatadas nas inspeções" + (" · %s" % cidade if cidade and not ids else "") + (
+        " · %d unidade%s escolhida%s" % (len(U), "s" if len(U) != 1 else "", "s" if len(U) != 1 else "") if ids else "")
     el = [Paragraph(_t(titulo), st["tit"]),
           Paragraph(_t("Geopresídios/CNIEP (CNJ), última inspeção judicial de cada tema · dados baixados em %s · %d estabelecimentos com inspeção (%s)"
                        % (dados.get("atualizado", "?"), len(U), _geo_tipos(cats))), st["sub"]), Spacer(1, 6)]

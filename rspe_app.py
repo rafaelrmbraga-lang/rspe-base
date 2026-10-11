@@ -278,7 +278,7 @@ quando têm 30 dias ou mais (cerca de 2 minutos, com internet); "Atualizar dados
 penais, delegacias e cadeias, unidades militares, Polícia Federal e outras), com o tamanho pelo número de presos; o mouse lista os
 estabelecimentos e o clique filtra a cidade. Escolher a unidade (lista ou tabela) troca o mapa pelo gráfico dela: em pizza, por regime, provisórios (mês escolhível), perfil
 e condições; em colunas, uma por inspeção, o crescimento de apenados e a ocupação (com a linha das vagas).
-Relatórios em PDF: geral, condições por unidade (em quais estabelecimentos foi constatado cada problema) e, no detalhe, o da unidade. Mostra também os assistidos da
+Relatórios em PDF: geral (sempre do estado, com a escolha dos tipos de estabelecimento), condições por unidade (escolha as unidades pela busca; em quais foi constatado cada problema) e, no detalhe, o da unidade. O download mostra o andamento em porcentagem; a visão "Condições" da unidade lista os problemas constatados por tema. Mostra também os assistidos da
 base em cada unidade (pela ficha do SIAPEN) e quantos estão no semiaberto ou no aberto pelo RSPE em unidade de regime fechado (SV 56).
 Condições constatadas nos demais temas (habitabilidade, assistências, segurança e saúde): quantas unidades têm cada problema; clicar filtra
 a tabela. Evolução da população nos últimos meses (painel, tabela e detalhe). "Relatório PDF": o estado ou a cidade escolhida no mapa.
@@ -1755,7 +1755,7 @@ class Api:
         if d:
             self._geo_assistidos(d["unidades"])
             self._geo_pontos(d["unidades"])
-        return {"geo": d, "mapa": rmapa.MAPA, "ind": self._geo_ind(), "cats": rgeo.CATEGORIAS}
+        return {"geo": d, "mapa": rmapa.MAPA, "ind": self._geo_ind(), "cats": rgeo.CATEGORIAS, "temas": {str(k): v for k, v in rgeo.TEMAS.items()}}
 
     def geo_precisa(self):
         """Atualização automática: True se os dados prisionais nunca foram baixados ou têm GEO_AUTO_DIAS dias ou mais."""
@@ -1769,7 +1769,13 @@ class Api:
         if not _GEO_LOCK.acquire(blocking=False):
             return {"msg": "A atualização dos dados prisionais já está em andamento."}
         try:
-            d = rgeo.atualizar(self._geo_arq())
+            ult = [-1]
+
+            def aviso(texto, pct=None):  # andamento na tela (porcentagem), sem repetir a mesma
+                if pct is not None and pct != ult[0]:
+                    ult[0] = pct
+                    self._js("window.ui && ui.geoProgresso && ui.geoProgresso(%d, %s)" % (pct, json.dumps(texto)))
+            d = rgeo.atualizar(self._geo_arq(), aviso=aviso)
         except Exception as ex:
             logging.getLogger("rspe").exception("Geopresídios")
             return {"erro": "Não foi possível baixar os dados do Geopresídios (%s). Confira a conexão com a internet." % str(ex)[:120]}
@@ -1780,7 +1786,7 @@ class Api:
         msg = "Dados prisionais atualizados (%d estabelecimentos)." % len(d["unidades"])
         if d.get("falhas"):
             msg += " %d relatórios de inspeção não foram baixados (o servidor do CNJ recusou): clique em Atualizar de novo." % d["falhas"]
-        return {"geo": d, "mapa": rmapa.MAPA, "ind": self._geo_ind(), "cats": rgeo.CATEGORIAS, "msg": msg}
+        return {"geo": d, "mapa": rmapa.MAPA, "ind": self._geo_ind(), "cats": rgeo.CATEGORIAS, "temas": {str(k): v for k, v in rgeo.TEMAS.items()}, "msg": msg}
 
     def teses(self):
         """Jurisprudências da execução penal (aba Jurisprudências): decisões do TJMS, STJ e STF favoráveis à defesa, triadas pela
@@ -3009,7 +3015,7 @@ class Api:
             self._geo_assistidos(d["unidades"])
         return d
 
-    def geo_pdf(self, cats=None, cidade="", tipo="geral"):
+    def geo_pdf(self, cats=None, cidade="", tipo="geral", ids=None):
         """Relatório em PDF dos dados prisionais, pelos tipos de estabelecimento marcados e pela cidade escolhida no mapa.
         tipo "geral": indicadores, mapa, ocupação, condições e evolução; "condicoes": em quais unidades foi constatado cada
         problema e os problemas de cada unidade."""
@@ -3017,13 +3023,15 @@ class Api:
         if not d:
             return {"erro": "Baixe os dados do Geopresídios antes de gerar o relatório."}
         cats = [c for c in (cats or ["penal"]) if c in rgeo.CATEGORIAS] or ["penal"]
+        if tipo == "condicoes" and ids is not None and not ids:
+            return {"erro": "Escolha ao menos uma unidade."}
         rot = "Condições por unidade" if tipo == "condicoes" else "Dados prisionais de MS"
         c = self._geo_pdf_destino("%s%s - %s.pdf" % (rot, (" - " + cidade) if cidade else "", datetime.now().strftime("%d-%m-%Y")))
         if not c:
             return None
         try:
             if tipo == "condicoes":
-                rrel.relatorio_condicoes_prisional(d, c, self.base.nome if self.base else "", cidade or "", cats)
+                rrel.relatorio_condicoes_prisional(d, c, self.base.nome if self.base else "", cidade or "", cats, ids=ids)
             else:
                 rrel.relatorio_prisional(d, rmapa.MAPA, c, self.base.nome if self.base else "", cidade or "", cats)
         except Exception as e:

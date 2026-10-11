@@ -192,14 +192,14 @@ def atualizar(destino, todas=False, aviso=None):
     """Baixa o cadastro e as inspeções e, para cada estabelecimento de MS (unidades penais, delegacias, cadeias e unidades
     militares), o relatório da última inspeção de cada tema. Grava o resultado em `destino` e o devolve. `todas` fica por
     compatibilidade: o download traz sempre todos e a tela filtra pelo tipo."""
-    aviso = aviso or (lambda *_: None)
-    aviso("cadastro de estabelecimentos")
+    aviso = aviso or (lambda *_: None)  # aviso(texto, porcentagem)
+    aviso("cadastro de estabelecimentos", 2)
     estabs = [e for e in _get("/geopresidios/estabelecimentos") if e.get("dsc_uf") == UF and e.get("flg_ativo") == "S"]
     try:  # cidade e coordenadas de cada unidade (o cadastro não traz)
         geo = {m["seq_estabelecimento"]: m.get("geo") or {} for m in _get("/geopresidios/mapa") if m.get("dsc_uf") == UF}
     except Exception:
         geo = {}
-    aviso("inspeções")
+    aviso("inspeções", 6)
     insp = [i for i in _get("/geopresidios/inspecoes", timeout=180)
             if (i.get("estabelecimento") or {}).get("dsc_uf") == UF and not i.get("excluida") and i.get("status_submissao")]
     ult = {}  # (unidade, tema) -> última inspeção
@@ -223,7 +223,7 @@ def atualizar(destino, todas=False, aviso=None):
         except Exception as ex:  # uma inspeção com falha não derruba as demais
             rels[i["id"]] = {"erro": str(ex)[:120]}
         feitos[0] += 1
-        aviso("relatórios: %d de %d" % (feitos[0], len(pedidos)))
+        aviso("relatórios: %d de %d" % (feitos[0], len(pedidos)), 10 + int(88 * feitos[0] / max(1, len(pedidos))))
     from concurrent.futures import ThreadPoolExecutor
     with ThreadPoolExecutor(max_workers=4) as ex:  # mais que isso, o servidor do CNJ passa a recusar (429)
         list(ex.map(baixa, pedidos))
