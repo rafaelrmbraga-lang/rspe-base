@@ -18,6 +18,7 @@ cadastro dá "A VERIFICAR", nunca aplicação por analogia com outro decreto.
 
 from datetime import date, timedelta
 from fractions import Fraction
+import logging
 import re
 
 import rspe_scraper as rs
@@ -513,8 +514,17 @@ def linha(r, hoje=None):
         for tp in ("indulto", "comutacao"):
             if (dd.get(tp) or {}).get("checklist"):
                 dd[tp]["explicacao"] = _explicacao(dd, tp, C, faixas, ini_exec, remicoes)
-                dd[tp]["resumo"] = _resumo(dd, tp)
-                dd[tp]["peticao"] = _peticao(dd, tp, _nomes(C))
+                # resumo e fundamentação: uma falha no texto não pode impedir a linha do tempo
+                try:
+                    dd[tp]["resumo"] = _resumo(dd, tp)
+                except Exception:
+                    logging.getLogger("rspe").exception("resumo do indulto")
+                    dd[tp]["resumo"] = []
+                try:
+                    dd[tp]["peticao"] = _peticao(dd, tp, _nomes(C))
+                except Exception:
+                    logging.getLogger("rspe").exception("fundamentação do indulto")
+                    dd[tp]["peticao"] = []
                 if dd[tp]["peticao"]:
                     # os botões "Copiar fundamentação" (resultado, comparativo, resumo) copiam o mesmo texto da seção 5
                     dd[tp]["fundamentacao"] = dd[tp]["peticao"][0]["texto"]
@@ -851,7 +861,7 @@ def _peticao(dd, tp, nomes):
     if nat and nat["estado"] == "ok" and not I.get("crimes_imp") and not imp_fora:
         dem.append("nenhum dos crimes integra o rol de vedações do decreto")
     if imp_fora and not I.get("crimes_imp"):
-        dem.append("%s %s de crime impeditivo (%s); o tempo cumprido é imputado primeiro a %s, e o restante é o considerado para os demais crimes" % (
+        dem.append("%s %s %s de crime impeditivo (%s); o tempo cumprido é imputado primeiro a %s, e o restante é o considerado para os demais crimes" % (
             "as penas de" if len(imp_fora) > 1 else "a pena de", lista([nm(c) for c in imp_fora]), "são" if len(imp_fora) > 1 else "é",
             "; ".join(c["motivo"].replace("crime impeditivo: ", "") for c in imp_fora), "elas" if len(imp_fora) > 1 else "ela"))
     if I.get("crimes_imp") and I.get("data") and not I.get("projecao") and I.get("imputado_liv", 0) > 0:

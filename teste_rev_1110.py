@@ -78,6 +78,10 @@ ok(t.startswith("DO INDULTO - Decreto nº 11.846/2023\n") and "Enquadra-se no ar
    and "prosseguindo a execução quanto a art. 33 Lei 11.343/06 (processo 0000180-61.2023.8.12.0014)" in t and "C1" not in t and "art. 2º, II" not in t, "prosa: %s" % t)
 ok("Enquadra-se no art. 2º, XIV" in P[1]["texto"], "segundo inciso: %s" % P[1]["texto"])
 ok(not tl._peticao(dict(dd, indulto=dict(dd["indulto"], status="nao")), "indulto", nomes), "não cabe: sem texto")
+# crime impeditivo fora do alcance, sem imputação calculada (decretos da base): o texto sai (antes: erro de formatação)
+dd2 = dict(dd, alcance={"crimes": dd["alcance"]["crimes"], "fora": [{"id": "C3", "crime": "Art. 33", "proc": "1", "motivo": "crime impeditivo: hediondo", "impeditivo": True}]})
+P2 = tl._peticao(dd2, "indulto", nomes)
+ok(P2 and "é de crime impeditivo (hediondo)" in P2[0]["texto"], "impeditivo sem imputação: %s" % (P2 and P2[0]["texto"]))
 # texto resumido dos decretos de 2024/2025 em prosa
 c, conta, conf, alc = tl._cond_prosa("pena ≤ 8 anos sem VGA, exige 1/5 (cumprido 0a11m9d de 1a2m0d).")
 ok(c == "pena não superior a 8 anos por crime sem violência ou grave ameaça, com 1/5 da pena cumprida" and conta == "cumpridos 11 meses e 9 dias de pena de 1 ano e 2 meses",
