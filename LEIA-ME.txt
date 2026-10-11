@@ -401,6 +401,12 @@ INDULTO E COMUTAÇÃO
     indulto à esquerda, em verde, e a comutação à direita, em azul; o passo
     a passo completo abre em "Ver o passo a passo completo". No comparativo,
     quando uma hipótese é atendida, as não atendidas ficam numa linha só.
+    5 · Fundamentação: o texto em prosa para a petição (fatos, enquadramento,
+    demais requisitos e pedido, com os crimes e processos), em caixa
+    editável, com o botão "Copiar fundamentação". Com mais de um inciso
+    atendido (ou a comprovar), a caixa "Enquadramento" escolhe o inciso, e o
+    texto muda. Os demais botões "Copiar fundamentação" copiam esse mesmo
+    texto (o do primeiro enquadramento).
 
 PRESCRIÇÃO (arts. 109 a 119 do CP, crime a crime)
   Punitiva (retroativa e intercorrente): prazo pela pena aplicada, metade pelo
@@ -774,6 +780,9 @@ v7.9.0
     indulto em verde e a comutação em azul; hipóteses não atendidas numa
     linha só quando uma foi atendida; "Copiar fundamentação" no resultado e
     também nos decretos de 2000 a 2023.
+  - Seção 5 · Fundamentação: prosa concisa para a petição, editável e com
+    o botão de copiar; caixa "Enquadramento" quando mais de um inciso do
+    decreto é atendido.
   - Auditoria só com o que prejudica: 1/6 vale como 16%; divergências
     favoráveis saem; fuga e falta sem sanção viram informação.
 
