@@ -1,9 +1,9 @@
-APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.8.2
+APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.9.0
 (antigo RSPE Base; SEEU, programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-7.8.2. A documentação técnica completa (cada parâmetro, a regra, a norma e
+7.9.0. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -365,8 +365,12 @@ INDULTO E COMUTAÇÃO
     (pela data de nascimento).
   * Art. 6º: falta com sanção reconhecida em juízo nos 12 meses antes de
     25/12, pela data do fato, até a publicação (23/12) - o "Sim" vira "Falta";
-    falta pendente, regressão sem falta homologada, perda de remidos sem
-    falta datada e fuga só como evento transformam o "Sim" em "Verificar".
+    falta pendente, regressão sem falta homologada e perda de remidos sem
+    falta datada transformam o "Sim" em "Verificar". A fuga ou evasão na
+    janela, mesmo sem homologação, conta como falta grave e impede (critério
+    da unidade; o decreto que exige a falta homologada a afasta). Se não
+    houve falta, informe pelo Preencher. Fora do indulto e da comutação
+    (falta nos 12 meses, livramento), a fuga sem sanção segue "a apurar".
   * Art. 7º, p. ú.: no concurso com crime impeditivo, os crimes não
     impeditivos são analisados depois de 2/3 da pena do impeditivo ("só
     crimes não impeditivos"), podendo dar "Sim", "Verificar" ou "Não
@@ -393,6 +397,20 @@ INDULTO E COMUTAÇÃO
     geral; não tem análise inciso por inciso nem coluna própria (o modelo
     de petição do inciso XV desse decreto é só um modelo da unidade).
   * A ficha do assistido traz a análise inciso por inciso.
+  * Linha do tempo (indulto e comutação): o cartão do resultado diz para
+    quais crimes cabe (crime e processo) e quais ficam fora, com o botão
+    "Copiar fundamentação" (também nos decretos de 2000 a 2023). "Como
+    cheguei aqui" mostra o resumo objetivo - crimes alcançados, tempo
+    cumprido, a hipótese atendida, a falta grave e o resultado -, com o
+    indulto à esquerda, em verde, e a comutação à direita, em azul; o passo
+    a passo completo abre em "Ver o passo a passo completo". No comparativo,
+    quando uma hipótese é atendida, as não atendidas ficam numa linha só.
+    5 · Fundamentação: o texto em prosa para a petição (fatos, enquadramento,
+    demais requisitos e pedido, com os crimes e processos), em caixa
+    editável, com o botão "Copiar fundamentação". Com mais de um inciso
+    atendido (ou a comprovar), a caixa "Enquadramento" escolhe o inciso, e o
+    texto muda. Os demais botões "Copiar fundamentação" copiam esse mesmo
+    texto (o do primeiro enquadramento).
 
 PRESCRIÇÃO (arts. 109 a 119 do CP, crime a crime)
   Punitiva (retroativa e intercorrente): prazo pela pena aplicada, metade pelo
@@ -503,6 +521,15 @@ AUDITORIA
   progressão especial da mulher (1/8) e, para o reincidente em crime com
   violência ou grave ameaça, o percentual por analogia (25%) se a
   condenação anterior não teve violência (informativo: o RSPE não diz).
+  Só o que prejudica o assistido vira ponto: divergência que o favorece
+  (percentual ou fração menor que a legal, pena total menor que a soma,
+  data-base anterior ao marco, hediondo tratado como comum, fuga da ficha
+  ausente no RSPE) não aparece. O 1/6 do SEEU vale como o 16% da lei (sem
+  alerta). Fuga e falta sem sanção reconhecida ficam como informação (não
+  pendência); o botão Preencher continua para registrar a decisão.
+  Detração da ficha: prisão encerrada por alvará de soltura em processo que
+  integra o RSPE, em período que o RSPE trata como liberdade, vira alerta
+  com os dias (contados a partir do fato do crime desse processo).
   Níveis: Alerta (divergência com efeito concreto para o apenado), Verificar
   (depende de dado que o RSPE não traz), Info (registro sem efeito prático:
   oculto por padrão, "ver conferências OK / informativas") e OK.
@@ -674,6 +701,27 @@ PROGRESSÃO ANTECIPADA (ícone azul de degraus ao lado do nome)
   Progressão: com o pedido marcado, o ícone fica azul preenchido e o pedido
   entra no Registro para o SAP como progressão.
 
+CALCULADORA DE PENAS (botão "Calculadora" no topo, em qualquer aba)
+  Abre uma janela móvel, que continua aberta ao trocar de aba. Baseada na
+  Calculadora de penas 2.1 (Guilherme Benages Alcantara, 2001, distribuição
+  livre), com os percentuais do art. 112 da LEP.
+  - Pena: digite anos, meses e dias e clique em "+ somar" (ou Enter) ou
+    "− subtrair"; a soma é por componente (30 dias = 1 mês; 12 meses = 1
+    ano).
+  - Período entre datas: conta o dia do começo; o resultado pode ir para a
+    pena, para a interrupção ou para a detração (em dias).
+  - Cumprimento: início, interrupção e remidos/detração (em dias),
+    descontados antes ou depois de calcular a fração.
+  - Resultado: término (início + pena + interrupção − remidos − 1 dia, CP,
+    art. 10) e a data em que completa cada fração (1/6 a 2/3), cada
+    percentual (16% a 70%) e outra fração (2/5 ou 55%). A fração incide
+    sobre a pena em dias (ano de 365, mês de 30), arredondada para baixo.
+  - "Trazer de ...": com um assistido aberto, preenche a pena total, o
+    início do cumprimento, as interrupções e os remidos do RSPE.
+  - Ao lado, a anotação (assistido e observações). "Registrar cálculo"
+    grava na base; a guia "Registros" abre, copia ou exclui. "Copiar
+    cálculo" e "PDF".
+
 DADOS PRISIONAIS (aba ao lado do Quadro do Usuário)
   Retrato do sistema prisional de MS pela API pública do Geopresídios/CNIEP
   (CNJ): para cada unidade, a última inspeção judicial mensal do tema
@@ -747,6 +795,26 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v7.9.0
+  - Detração da ficha: prisão encerrada por alvará em processo do RSPE, sem
+    cômputo no RSPE, vira alerta com os dias (caso Alex: 26/01/2022 a
+    05/08/2022, 192 dias).
+  - Indulto e comutação: o resultado diz para quais crimes cabe (crime e
+    processo) e quais ficam fora; "Como cheguei aqui" objetivo, com o
+    indulto em verde e a comutação em azul; hipóteses não atendidas numa
+    linha só quando uma foi atendida; "Copiar fundamentação" no resultado e
+    também nos decretos de 2000 a 2023.
+  - Seção 5 · Fundamentação: prosa concisa para a petição, editável e com
+    o botão de copiar; caixa "Enquadramento" quando mais de um inciso do
+    decreto é atendido.
+  - Auditoria só com o que prejudica: 1/6 vale como 16%; divergências
+    favoráveis saem; fuga e falta sem sanção viram informação.
+  - Fuga ou evasão sem homologação na janela do art. 6º impede o indulto e a
+    comutação (antes: "a verificar").
+  - Calculadora de penas: botão "Calculadora" no topo de todas as abas,
+    com janela móvel, anotação ao lado e registros gravados na base. Ver
+    "Calculadora de penas".
 
 v7.8.2
   - Mapa da tela só com os círculos; o nome do município aparece ao passar

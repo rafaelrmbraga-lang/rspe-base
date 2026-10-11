@@ -571,7 +571,7 @@ def _avaliar_ficha(f, r, ctx, ini, hoje):
         base_f = ref if F.get("contada_de") == "referencia" else pub
         dias_f = rs.dias_anos(float(f_meses) / 12, base_f) if f_meses else 36500
         ach = rs.indicios_falta(r.get("_incidentes") or [], base_f, dias=dias_f, eventos=r.get("_eventos") or [], ate=min(pub, base_f), hoje=pub,  # prescrição da falta aferida na data do decreto
-                                crimes=r.get("_crimes") or [], inicio=ini)
+                                crimes=r.get("_crimes") or [], inicio=ini, fuga_firme=True)
         # decreto que exige a falta apurada/homologada (ex.: "falta sem a devida apuração não impede"): a não homologada
         # (fuga só registrada como evento) não impede - fica como ressalva
         hom = F.get("exige_homologacao")

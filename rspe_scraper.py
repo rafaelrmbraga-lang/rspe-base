@@ -1997,15 +1997,17 @@ def _texto_ficha(t, n):
     return t.rstrip(" ,;:.")
 
 
-def indicios_falta(incidentes, ref, dias=365, eventos=None, ate=None, hoje=None, crimes=None, inicio=None):
+def indicios_falta(incidentes, ref, dias=365, eventos=None, ate=None, hoje=None, crimes=None, inicio=None, fuga_firme=False):
     """Faltas nos 'dias' anteriores a ref (art. 6º dos decretos; CP, art. 83, III, b), pela data do FATO.
     Devolve [(texto, firme)]: firme = falta grave, homologação ou sanção CONCEDIDA (sanção reconhecida em juízo);
     não firme = pendente, regressão sem menção a falta (ou cautelar, sem a homologação na ficha), perda de remidos sem falta
     datada (a perda é datada pela decisão, não pelo fato), fuga ou descumprimento só registrados como evento. Incidente não
     concedido não conta. ate: último dia da janela (art. 6º, p. ú.: falta posterior à publicação do decreto não impede);
     padrão = ref. crimes/inicio: crime doloso com fato na janela, depois do início do cumprimento, é falta grave (LEP, art.
-    52) se reconhecido - a apurar."""
+    52) se reconhecido - a apurar. fuga_firme (indulto e comutação, critério da unidade): a fuga/evasão sem sanção reconhecida
+    conta como falta grave (firme), com o texto "não homologada" (o decreto que exige a homologação a afasta)."""
     limite = ref - timedelta(days=dias)
+    FUGA_SH = " - fuga não homologada: tratada como falta grave (LEP, art. 50, II)"
     fim = ate or ref
     proprias = [i for i in incidentes if RE_FALTA_PROPRIA.search(_rotulo_incidente(i)) and not _negado(i)]
     datas_proprias = [d for d in (_data_fato_falta(i) for i in proprias) if d]
@@ -2023,12 +2025,16 @@ def indicios_falta(incidentes, ref, dias=365, eventos=None, ate=None, hoje=None,
                     out.append(("%s (%s - falta grave confirmada pelo operador)" % (txt, fmt(d)), True))
                 elif i.get("_fuga_ficha"):
                     if not falta_prescrita(d, True, eventos, hoje):
-                        out.append(("%s (%s - fuga: em tese falta grave (LEP, art. 50, II), sem sanção reconhecida em juízo - só impede se reconhecida (Súmula 533/STJ; STJ, Tema 1195))" % (txt, fmt(d)), False))
+                        out.append(("%s (%s%s)" % (txt, fmt(d), FUGA_SH), True) if fuga_firme else
+                                   ("%s (%s - fuga: em tese falta grave (LEP, art. 50, II), sem sanção reconhecida em juízo - só impede se reconhecida (Súmula 533/STJ; STJ, Tema 1195))" % (txt, fmt(d)), False))
                 elif i.get("_ficha_falta") and _pendente(i):
                     _ff = i["_ficha_falta"]
                     out.append(("%s (%s - pendente no RSPE, sem sanção reconhecida em juízo%s; ficha: %s)" % (
                         txt, fmt(d), ("; a ficha registra a sanção homologada pelo juízo em %s - conferir a decisão no SEEU" % _ff["homologada"])
                         if _ff.get("homologada") else "", _texto_ficha(_ff["texto"], 90)), False))
+                elif _pendente(i) and fuga_firme and RE_FUGA_EV.search(txt):
+                    if not falta_prescrita(d, True, eventos, hoje):
+                        out.append(("%s (%s%s)" % (txt, fmt(d), FUGA_SH), True))
                 elif _pendente(i):
                     if not falta_prescrita(d, bool(RE_FUGA_EV.search(txt)), eventos, hoje):
                         # a ficha a dá como homologada/punida, mas o SEEU não registra a sanção: não se afirma as duas coisas
@@ -2088,7 +2094,8 @@ def indicios_falta(incidentes, ref, dias=365, eventos=None, ate=None, hoje=None,
                 out.append(("%s (%s - falta grave confirmada pelo operador)" % (t, fmt(d)), True))
             elif RE_FUGA_EV.search(t):
                 if not falta_prescrita(d, True, eventos, hoje):
-                    out.append(("%s (%s - fuga: em tese falta grave (LEP, art. 50, II), sem sanção reconhecida em juízo - só impede se reconhecida (Súmula 533/STJ; STJ, Tema 1195))" % (t, fmt(d)), False))
+                    out.append(("%s (%s%s)" % (t, fmt(d), FUGA_SH), True) if fuga_firme else
+                               ("%s (%s - fuga: em tese falta grave (LEP, art. 50, II), sem sanção reconhecida em juízo - só impede se reconhecida (Súmula 533/STJ; STJ, Tema 1195))" % (t, fmt(d)), False))
             elif not falta_prescrita(d, False, eventos, hoje):
                 out.append(("%s (%s; falta a apurar)" % (t, fmt(d)), False))
     if crimes and inicio:
@@ -4537,7 +4544,7 @@ def falta_art6(incidentes, ref, eventos=None, publicacao=None, crimes=None, inic
     # 12 meses de calendário (como na linha do tempo), não 365 dias
     if crimes and inicio is None:
         inicio = inicio_execucao(eventos, crimes)
-    ach = indicios_falta(incidentes, ref, dias=dias_anos(1, ref), eventos=eventos, ate=publicacao, crimes=crimes, inicio=inicio)
+    ach = indicios_falta(incidentes, ref, dias=dias_anos(1, ref), eventos=eventos, ate=publicacao, crimes=crimes, inicio=inicio, fuga_firme=True)
     return [t for t, f in ach if f], [t for t, f in ach if not f]
 
 
