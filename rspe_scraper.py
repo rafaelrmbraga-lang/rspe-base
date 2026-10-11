@@ -335,6 +335,43 @@ def _previsao_seeu(calc, rotulos):
     return data, "", (" ".join(m.group(1).split()) if m else "")
 
 
+def campo_continuado(texto, rotulo, proximo, linha_ok=r"[^:]+"):
+    """Como campo(), mas com o valor completo quando a célula do PDF quebrou o texto em mais de uma linha (o que passa da 1ª linha
+    fica cortado na impressão, mas está no arquivo). Só junta as linhas seguintes quando a estrutura confirma a quebra: até 2 linhas
+    sem rótulo ("X:") que casam com linha_ok, seguidas da linha do campo seguinte (regex 'proximo'). Fora disso, o valor da 1ª linha."""
+    m = re.search(re.escape(rotulo) + r"[ \t]*:?[ \t]*(.*)", texto, re.I)
+    if not m:
+        return ""
+    v = m.group(1).strip()
+    if not v:
+        return v
+    extra = []
+    for l in texto[m.end():].split("\n")[1:4]:
+        s = l.strip()
+        if re.match(proximo, s, re.I):
+            return " ".join([v] + extra)
+        if not s or len(extra) >= 2 or not re.fullmatch(linha_ok, s):
+            break
+        extra.append(s)
+    return v
+
+
+def _nota_previsao(calc, rotulos):
+    """Texto entre parênteses que o SEEU imprime no fim de uma previsão ("02/06/2029 (Indeferido em 10/01/2026)",
+    "(Em regime aberto deferido em …)"), sem os parênteses. Só registro - nenhuma regra usa."""
+    v = next((campo(calc, r) for r in rotulos if campo(calc, r)), "")
+    m = re.search(r"\(([^()]+)\)\s*$", v)
+    return " ".join(m.group(1).split()) if m else ""
+
+
+_RE_FRACAO_CALC = re.compile(r"(?m)^([^:\n]*?\(\s*(?:\d+\s*/\s*\d+|\d+(?:[.,]\d+)?\s*%)\s*\))\s*:\s*(\d+a\d+m\d+d)\s*$")
+
+
+def _fracoes_calc(calc, titulo, fins):
+    """Lapsos por categoria do bloco de cálculo do SEEU ("Hediondo primário (40%): 1a11m29d"), na ordem impressa. Só registro."""
+    return ["%s: %s" % (" ".join(a.split()), b) for a, b in _RE_FRACAO_CALC.findall(secao(calc, titulo, fins))]
+
+
 def _sem_nao_informado(v):
     """Campo do cabeçalho com "Não informado" (Nome da Mãe, RG): fica em branco - não é dado."""
     return "" if re.fullmatch(r"n[ãa]o\s+informad[oa]\.?", (v or "").strip(), re.I) else (v or "")
@@ -667,6 +704,17 @@ def parse_crimes(trecho, sem_crime=None):
         m = RE_CNJ.search(base["processo_criminal"])
         if m:
             base["processo_criminal"] = m.group(0)
+        # só registro (prefixo "seeu_"; nenhuma regra usa ainda): observação da ação e ação vinculada importada do Projudi
+        _obs = re.search(r"(?m)^Observa[çc][ãa]o\s*:[ \t]*(.*)$", proc)
+        if _obs and _sem_nao_informado(_obs.group(1).strip()):
+            base["seeu_observacao"] = " ".join(_obs.group(1).split())
+        _pj = re.search(r"(?m)^A[çc][ãa]o Vinculada importada do Projudi[^\n:]*:[ \t]*(.*)$", proc, re.I)
+        if _pj:
+            # o número pode vir na linha de baixo (célula de 2 linhas), depois do rótulo "Observação:" da coluna ao lado
+            _pjv = _pj.group(1).strip() or next((s.strip() for s in proc[_pj.end():].split("\n")[1:4]
+                                                 if re.fullmatch(r"[\d.\-/ ]{7,30}", s.strip())), "")
+            if _pjv:
+                base["seeu_acao_vinculada_projudi"] = _pjv
 
         leis = re.split(r"(?m)^(?=Lei\s*:)", proc)
         if sem_crime is not None and not any(x.strip().startswith("Lei") for x in leis) and base["processo_criminal"]:
@@ -680,7 +728,8 @@ def parse_crimes(trecho, sem_crime=None):
                 continue
             c = dict(base)
             c["lei"] = campo(lei, "Lei")
-            c["artigo"] = campo(lei, "Artigo da Lei")
+            # descrição comprida quebrada na célula: as linhas seguintes (sem rótulo) até "Pena:" completam o artigo
+            c["artigo"] = campo_continuado(lei, "Artigo da Lei", r"Pena\s*:")
             m = re.search(r"(?m)^Pena\s*:\s*(.*?)(?=^Pena Imposta)", lei, re.S)
             c["tipo_penal"] = " ".join(m.group(1).split()) if m else campo(lei, "Pena")
             c["pena_imposta"] = campo(lei, "Pena Imposta")
@@ -699,6 +748,9 @@ def parse_crimes(trecho, sem_crime=None):
             if _de:
                 c["data_extincao"] = _de.group(1)
             c["suspenso"] = {"S": "Sim", "N": "Não"}.get(campo_sn(lei, "Suspenso"), "")
+            _ds = campo_data(lei, "Data de suspensão")
+            if _ds:
+                c["seeu_data_suspensao"] = _ds  # só registro (nenhuma regra usa ainda)
             c["artigo_rspe"] = c["artigo"]
             inferir_artigo(c)
             c["hediondo_ou_equiparado"] = "S" if e_hediondo(c) else "N"
@@ -2026,7 +2078,7 @@ def indicios_falta(incidentes, ref, dias=365, eventos=None, ate=None, hoje=None,
                 elif i.get("_fuga_ficha"):
                     if not falta_prescrita(d, True, eventos, hoje):
                         out.append(("%s (%s%s)" % (txt, fmt(d), FUGA_SH), True) if fuga_firme else
-                                   ("%s (%s - fuga: em tese falta grave (LEP, art. 50, II), sem sanção reconhecida em juízo - só impede se reconhecida (Súmula 533/STJ; STJ, Tema 1195))" % (txt, fmt(d)), False))
+                                   ("%s (%s - fuga: em tese falta grave (LEP, art. 50, II), sem sanção reconhecida em juízo - só impede se reconhecida (STJ, Tema 1195))" % (txt, fmt(d)), False))
                 elif i.get("_ficha_falta") and _pendente(i):
                     _ff = i["_ficha_falta"]
                     out.append(("%s (%s - pendente no RSPE, sem sanção reconhecida em juízo%s; ficha: %s)" % (
@@ -2095,7 +2147,7 @@ def indicios_falta(incidentes, ref, dias=365, eventos=None, ate=None, hoje=None,
             elif RE_FUGA_EV.search(t):
                 if not falta_prescrita(d, True, eventos, hoje):
                     out.append(("%s (%s%s)" % (t, fmt(d), FUGA_SH), True) if fuga_firme else
-                               ("%s (%s - fuga: em tese falta grave (LEP, art. 50, II), sem sanção reconhecida em juízo - só impede se reconhecida (Súmula 533/STJ; STJ, Tema 1195))" % (t, fmt(d)), False))
+                               ("%s (%s - fuga: em tese falta grave (LEP, art. 50, II), sem sanção reconhecida em juízo - só impede se reconhecida (STJ, Tema 1195))" % (t, fmt(d)), False))
             elif not falta_prescrita(d, False, eventos, hoje):
                 out.append(("%s (%s; falta a apurar)" % (t, fmt(d)), False))
     if crimes and inicio:
@@ -4591,7 +4643,9 @@ def extrair(caminho):
         "nome": campo(cab, "Nome:"),
         "cpf": campo(cab, "CPF"),
         "rg": _sem_nao_informado(_campo_rg(cab)),
-        "nome_mae": _sem_nao_informado(campo(cab, "Nome da Mãe")),
+        # nome comprido quebrado na célula: as linhas seguintes (só letras) até a data de nascimento completam o nome
+        "nome_mae": _sem_nao_informado(campo_continuado(cab, "Nome da Mãe", r"(?:Data\s+(?:de\s+)?|Dt\.?\s*(?:de\s+)?)?Nascimento\b",
+                                                        r"[A-Za-zÀ-ÿ'´`.\- ]+")),
         "data_nascimento": _nascimento(cab),
         "_rspe_sem_processo": not crim.strip(),
         "_rspe_sem_crime": bool(crim.strip()) and not re.search(r"Pena Imposta", crim),
@@ -4615,6 +4669,16 @@ def extrair(caminho):
         "livramento_data_base_seeu": campo_data(calc, "Data-base adotada no cálculo para livramento condicional"),
         "termino_previsao_seeu": campo_data(calc, "Data prevista para o Término da Pena"),
     }
+    # só registro (prefixo "seeu_"; nenhuma regra usa ainda): lapsos por categoria do cálculo e notas entre parênteses das previsões
+    _lv = "CÁLCULOS PARA LIVRAMENTO CONDICIONAL"
+    for k, v in (("seeu_fracoes_progressao", _fracoes_calc(calc, "CÁLCULOS PARA PROGRESSÃO DE REGIME", [_lv])),
+                 ("seeu_fracoes_livramento", _fracoes_calc(calc, _lv, [])),
+                 ("seeu_previsao_progressao_nota", _nota_previsao(calc, ("Data prevista para progressão de regime",))),
+                 ("seeu_previsao_livramento_nota", _nota_previsao(calc, ("Data prevista livramento condicional",
+                                                                        "Data prevista para livramento condicional"))),
+                 ("seeu_previsao_termino_nota", _nota_previsao(calc, ("Data prevista para o Término da Pena",)))):
+        if v:
+            r[k] = v
 
     crimes = parse_crimes(crim)
     eventos = blocos_tipo(ev)
