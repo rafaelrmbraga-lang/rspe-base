@@ -1442,7 +1442,12 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
                 txt += ("\nTese defensiva (%s): nessa imputação, o saldo deste crime seria %s, prazo %s%s - mais favorável que a imputação do SEEU." % (
                             tese76["fund"], _pena_ou_zero(tese76["saldo"]), tese76["prazo"] or "nada a prescrever",
                             (", %s em %s" % ("venceu" if tese76["resultado"] == "prescrita" else "vence", tese76["limite"])) if tese76["limite"] else ""))
-            if outras:
+            _pc = lambda y: re.sub(r"\D", "", y.get("processo_criminal") or "")
+            if outras and _pc(c) and all(_pc(x) == _pc(c) for _, _, x in outras):
+                # crimes da mesma ação penal (item 69): não são execuções distintas - o texto das correntes não se aplica
+                txt += ("\nCrimes da mesma condenação: no concurso, a prescrição incide sobre a pena de cada crime, isoladamente (CP, art. 119); "
+                        "depois da fuga, cada um corre pelo seu saldo. O foragido não está \"preso por outro motivo\" (art. 116, p. único).")
+            elif outras:
                 txt += ("\nVárias execuções: adotada a corrente simultânea - depois da fuga, cada condenação corre pelo seu saldo, nunca pela pena "
                         "unificada (STJ, AgRg no REsp 2.256.555 e HC 261.866). Há corrente sucessiva, desfavorável: só corre a execução em curso e as "
                         "demais ficam suspensas (STJ, AgRg no RHC 150.075). O foragido não está \"preso por outro motivo\" (art. 116, p. único).")

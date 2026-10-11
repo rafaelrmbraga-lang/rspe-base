@@ -849,13 +849,19 @@ def _avaliar_ficha(f, r, ctx, ini, hoje):
                     ressalva="; ".join(x for x in ("",
                                                    ("indulto a verificar (%s): %s" % (ind_ver[0].get("dispositivo") or "", ind_ver[2]))
                                                    if (ind_ver and not ind and not imp_ind and not f_ind) else "") if x))
+    restrito = not any(h.get("objetivo") and _decisiva(h) for h in (f.get("indulto") or [])) and not (f.get("comutacao") or [])
+    if imp and restrito:
+        # decreto só para grupos (doença, deficiência...): o resultado é o mesmo com ou sem o crime impeditivo - diz o motivo
+        # exato, em vez de "vedado"
+        return dict(res, s="nao", mot="decreto restrito (doença, deficiência, agentes de segurança ou outros grupos): nenhuma hipótese "
+                                      "aferível pelo RSPE; há também crime impeditivo (%s)" % "; ".join(imp))
     if imp:
         return dict(res, s="imp", mot="; ".join(imp))
     if ind_n and ind_n[2]:
         return dict(res, s="nao", mot=ind_n[2], exigido=ind_n[1], dispositivo=ind_n[0].get("dispositivo") or "")
     if com_n and com_n[2]:
         return dict(res, s="nao", mot=com_n[2], exigido=com_n[1], dispositivo=com_n[0].get("dispositivo") or "")
-    if not any(h.get("objetivo") and _decisiva(h) for h in (f.get("indulto") or [])) and not (f.get("comutacao") or []):
+    if restrito:
         return dict(res, s="nao", mot="decreto restrito (doença, deficiência, agentes de segurança ou outros grupos): nenhuma hipótese pelos dados do RSPE")
     return dict(res, s="nao", mot="nenhuma hipótese objetiva do decreto alcança o caso")
 

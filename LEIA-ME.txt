@@ -1,9 +1,9 @@
-APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.9.0
+APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.9.1
 (antigo RSPE Base; SEEU, programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-7.9.0. A documentação técnica completa (cada parâmetro, a regra, a norma e
+7.9.1. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -798,6 +798,33 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v7.9.1
+  - Abas na ordem: ... Auditoria, Dados prisionais, Jurisprudências e
+    Quadro do Usuário por último.
+  - Linha do tempo do indulto: a falha "not all arguments converted" ao
+    abrir (concurso com crime impeditivo) foi corrigida; resumo e
+    fundamentação passam a ser montados à parte, sem derrubar a linha.
+  - Decreto de 2022: "Vedado (art. 7º)" na aba, na linha do tempo e nas
+    colunas (antes "Excluído" em um lugar e "Vedado" em outro).
+  - Decreto restrito com crime impeditivo: o motivo diz as duas coisas.
+  - Auditoria: tráfico privilegiado (art. 33, § 4º) marcado como
+    reincidente no SEEU vira informação para conferir; alertas da ficha sem
+    prejuízo direto (reinício omitido, retomada divergente, grafia de nome,
+    mãe, CPF ou nascimento) passam a "verificar"; CPF com dígitos trocados
+    ou deslocados é apontado como provável erro de digitação.
+  - Prescrição: crimes da mesma ação penal têm texto próprio (CP, art.
+    119), sem as correntes de execuções distintas.
+  - Remição detalhada (PDF): nova seção com as fichas importadas sem o
+    RSPE correspondente e os dias dos atestados.
+  - Cartões de contagem seguem os filtros da aba (situação e RSPE antigo).
+  - Remover assistido abre janela com tudo o que está ligado a ele
+    (ficha, pedidos, cálculos, anotações), com a opção de apagar tudo.
+  - Base somente leitura: abre para consulta e avisa ao tentar gravar.
+  - Pasta vigiada usa a base aberta quando o nome coincide; falhas da
+    importação automática ficam registradas à parte.
+  - Modelos de petição: "&" e "<" no nome, crime ou motivo não corrompem
+    mais o documento Word.
 
 v7.9.0
   - Detração da ficha: prisão encerrada por alvará em processo do RSPE, sem

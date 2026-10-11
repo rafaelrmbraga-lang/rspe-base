@@ -41,7 +41,7 @@ import rspe_mapa_ms as rmapa
 import rspe_calc as rcalc
 
 APP = "APTO"
-VERSAO = "7.9.0"
+VERSAO = "7.9.1"
 GEO_AUTO_DIAS = 30           # dados prisionais: baixados de novo sozinhos quando têm 30 dias ou mais
 _GEO_LOCK = threading.Lock()  # um download do Geopresídios por vez (automático ou pelo botão)
 
@@ -621,8 +621,19 @@ class Base:
     def __init__(self, caminho):
         os.makedirs(os.path.dirname(caminho) or ".", exist_ok=True)
         self.caminho = caminho
-        self.con = sqlite3.connect(caminho, check_same_thread=False)
+        # arquivo sem permissão de gravação (pasta protegida, base de outro computador só para leitura): abre só para consulta,
+        # sem criar tabelas nem gravar nada (as gravações dão erro com mensagem clara na tela)
+        self.somente_leitura = os.path.exists(caminho) and not os.access(caminho, os.W_OK)
+        if self.somente_leitura:
+            self.con = sqlite3.connect("file:%s?mode=ro" % urllib.parse.quote(os.path.abspath(caminho)), uri=True, check_same_thread=False)
+        else:
+            self.con = sqlite3.connect(caminho, check_same_thread=False)
         self.lock = threading.Lock()
+        if not self.somente_leitura:
+            self._esquema()
+
+    def _esquema(self):
+        """Cria as tabelas que faltam e migra as colunas novas."""
         self.con.execute("""CREATE TABLE IF NOT EXISTS assistidos (
             processo TEXT PRIMARY KEY, nome TEXT, data_geracao TEXT,
             arquivo TEXT, importado_em TEXT, dados TEXT)""")
@@ -1067,10 +1078,37 @@ class Base:
             h = ""
         return (row[0], h, antiga)
 
-    def remover(self, processo):
+    TABELAS_DO_ASSISTIDO = (("fichas", "ficha disciplinar vinculada"), ("pedidos", "pedido(s) marcado(s)"), ("baixas", "alerta(s) baixado(s)"),
+                            ("baixas_hist", "registro(s) no histórico de alertas"), ("presc_ajustes", "ajuste(s) da prescrição"),
+                            ("dados_manuais", "dado(s) informado(s) pelo operador"), ("atestados_manuais", "atestado(s) lançado(s) à mão"),
+                            ("quadro_cartoes", "cartão(ões) no Quadro do Usuário"), ("fixados", "fixação no topo"), ("calculos", "cálculo(s) registrado(s)"))
+
+    def remover_info(self, processo):
+        """O que existe na base ligado ao assistido, além do RSPE (para a confirmação da remoção)."""
+        with self.lock:
+            out = []
+            for t, rot in self.TABELAS_DO_ASSISTIDO:
+                try:
+                    n = self.con.execute("SELECT COUNT(*) FROM %s WHERE processo=?" % t, (processo,)).fetchone()[0]
+                except sqlite3.OperationalError:
+                    n = 0
+                if n:
+                    out.append({"tabela": t, "n": n, "rot": rot})
+            h = self.con.execute("SELECT COUNT(*) FROM rspe_historico WHERE processo=?", (processo,)).fetchone()[0]
+        return {"ligados": out, "historico": h}
+
+    def remover(self, processo, tudo=False):
+        """Remove o RSPE (e o histórico de RSPEs). tudo=True apaga também ficha, pedidos, baixas, ajustes, dados informados,
+        cartões, fixação e cálculos; sem isso, eles ficam e voltam se o RSPE for importado de novo."""
         with self.lock:
             self.con.execute("DELETE FROM assistidos WHERE processo=?", (processo,))
             self.con.execute("DELETE FROM rspe_historico WHERE processo=?", (processo,))
+            if tudo:
+                for t, _ in self.TABELAS_DO_ASSISTIDO:
+                    try:
+                        self.con.execute("DELETE FROM %s WHERE processo=?" % t, (processo,))
+                    except sqlite3.OperationalError:
+                        pass
             self.con.commit()
 
     def fechar(self):
@@ -1985,11 +2023,19 @@ class Api:
         self.base.hist_add(processo, chave, (h or {}).get("titulo", ""), "", "reaberto")
         return self._atualizar(processo, "Alerta reaberto.")
 
-    def remover(self, chave):
+    def remover_info(self, chave):
+        if not self.base:
+            return {"erro": "Nenhuma base aberta."}
+        return self.base.remover_info(chave)
+
+    def remover(self, chave, tudo=False):
         if not self.base:
             return None
-        self.base.remover(chave)
-        return self.listar()
+        self.base.remover(chave, bool(tudo))
+        out = self.listar()
+        if isinstance(out, dict):
+            out["msg"] = "Assistido removido%s." % (" com todos os dados ligados a ele" if tudo else " (ficha e anotações mantidas na base)")
+        return out
 
     # ---- bases ----
     def _trocar_base(self, caminho):
@@ -2031,6 +2077,10 @@ class Api:
             n = 0
         self._etapa("Calculando prazos e benefícios de %s…" % rs.pl(n, "assistido", "assistidos") if n else "Calculando prazos e benefícios…")
         r = self.listar()
+        if getattr(self.base, "somente_leitura", False) and isinstance(r, dict):
+            r["msg"] = ("Base aberta só para consulta: o arquivo não tem permissão de gravação (pasta protegida ou arquivo somente "
+                        "leitura). Importações, baixas, pedidos e anotações não serão gravados. Para editar, copie a base para "
+                        "a pasta \"bases\" do programa.")
         self._etapa("Montando a tela…")
         return r
 
@@ -2455,10 +2505,11 @@ class Api:
                     f.write("\n".join(avisos))
             except Exception as e:
                 logging.getLogger("rspe").warning("importacao_avisos.txt não gravado: %s", e)
-        # guardado para o PDF de falhas do lote (Api.falhas_pdf)
-        self._falhas_lote = {"quando": datetime.now().strftime("%d/%m/%Y %H:%M"), "erros": list(erros), "incompletos": list(incompletos),
+        # guardado para o PDF de falhas do lote (Api.falhas_pdf). A importação manual e a da pasta vigiada ficam separadas: o
+        # botão da janela da importação manual sempre gera o registro dela, mesmo que a pasta vigiada importe algo depois
+        setattr(self, "_falhas_lote_auto" if silencioso else "_falhas_lote", {"quando": datetime.now().strftime("%d/%m/%Y %H:%M"), "erros": list(erros), "incompletos": list(incompletos),
                              "ignorados": [a for a in antigos if "ignorad" in a], "processos": list(lote), "arquivos": len(arqs),
-                             "registro": sorted(registro, key=lambda x: x["arquivo"].lower()), "base_nome": getattr(base, "nome", "")}
+                             "registro": sorted(registro, key=lambda x: x["arquivo"].lower()), "base_nome": getattr(base, "nome", "")})
         resumo = {"novos": novos, "atualizados": atualizados, "historico": historicos, "duplicados": len(duplicados), "antigos": len(antigos),
                   "erros": len(erros), "fichas": len(fichas_ok), "incompletos": len(incompletos), "avisos": avisos[:60],
                   "falhos": falhos, "erros_txt": list(erros)}
@@ -2660,6 +2711,10 @@ class Api:
         for b, itens in sorted(pend.items()):
             os.makedirs(PASTA_BASES, exist_ok=True)
             caminho = os.path.join(PASTA_BASES, b + ".sqlite")
+            # base aberta com o mesmo nome, guardada fora da pasta "bases": os PDFs vão para ela, não para uma base nova
+            if self.base and not os.path.exists(caminho) and \
+                    os.path.splitext(os.path.basename(self.base.caminho))[0].lower() == b.lower():
+                caminho = self.base.caminho
             nova = not os.path.exists(caminho)
             # a base é escolhida já com a trava do arquivo: assim ela não é trocada nem fechada entre a escolha e a importação
             with self._trava(caminho):
@@ -3076,6 +3131,21 @@ class Api:
         return {"caminho": c, "msg": "PDF salvo."}
 
     # ---- relatórios (PDF) ----
+    def _fichas_sem_rspe(self):
+        """Fichas importadas que nenhum assistido da base exibe (sem o RSPE correspondente): nome, unidade, data e dias dos atestados."""
+        usadas = {m.get("ficha_chave") for m in self._modelos or []}
+        out = []
+        for ch, dados in self.base.con.execute("SELECT chave, dados FROM fichas").fetchall():
+            if ch in usadas:
+                continue
+            try:
+                f = json.loads(dados or "{}")
+            except ValueError:
+                continue
+            out.append({"nome": f.get("nome") or "", "unidade": f.get("unidade") or "", "data": f.get("data_impressao") or "",
+                        "atestados": len(f.get("atestados") or []), "dias": f.get("dias_remidos_atestados") or 0})
+        return out
+
     def relatorios(self, ids, individual, geral, planilha, nominal, ids_individual=None, remicao=False):
         """Gera, numa pasta escolhida, a subpasta 'Relatorios <data hora>' com o relatório geral, os individuais e a planilha."""
         if not self.base:
@@ -3092,7 +3162,8 @@ class Api:
             sel = set(ids_individual) if ids_individual else None
             individuais = [m for m in modelos if m["id"] in sel] if sel is not None else modelos
             destino, n, erros = rrel.gerar(modelos, pasta, self.base.nome, individual=individual, geral=geral, nominal=nominal,
-                                           individuais=individuais, remicao=remicao)
+                                           individuais=individuais, remicao=remicao,
+                                           fichas_sem_rspe=self._fichas_sem_rspe() if remicao else None)
             if planilha:
                 rx.exportar_xlsx(modelos, os.path.join(destino, "%s - planilha.xlsx" % self.base.nome),
                                  ["geral", "prog", "liv", "ind", "presc", "ext", "fd", "aud", "completo"])

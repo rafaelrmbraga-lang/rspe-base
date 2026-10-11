@@ -872,7 +872,7 @@ def _peticao(dd, tp, nomes):
     if J and not J.get("informativa"):
         q = [f for f in dd.get("faltas") or [] if f["estado"] == "verificar"]
         dem.append("não houve falta grave reconhecida em juízo nos %d meses anteriores (de %s a %s)%s" % (
-            J["meses"], J["ini"], J["fim"], (" - a ocorrência de %s não tem sanção reconhecida, o que impede seu efeito (STJ, Súmula 533)" % lista([f["fato"] for f in q])) if q else ""))
+            J["meses"], J["ini"], J["fim"], (" - a ocorrência de %s não tem sanção reconhecida em juízo (STJ, Tema 1195)" % lista([f["fato"] for f in q])) if q else ""))
     for c in A.get("fora") or []:
         if not c.get("impeditivo"):
             dem.append("a pena de %s fica fora da soma (%s) e não impede o benefício quanto às demais" % (nm(c), c["motivo"]))

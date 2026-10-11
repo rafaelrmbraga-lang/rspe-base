@@ -428,7 +428,7 @@ def curto_indulto(txt):
     if base.startswith("prejudicada"):
         return "Prejudicada · indulto cabível"
     if base.startswith("excluído"):
-        return "Excluído (art. 7º)"
+        return "Vedado (art. 7º)"  # mesmo nome das colunas (item 90)
     if base.startswith("não atinge: pena dos crimes impeditivos"):
         return "Não atinge · pena dos crimes impeditivos não cumprida (art. 11, p. ú.)" + falta
     m = rs.re.search(r"cumprido (\S+) de ([0-9amd]+)", base)
@@ -468,7 +468,7 @@ def compacto_indulto(txt):
     """Versão curta para a célula da tabela; o texto completo vai para o tooltip e para a ficha."""
     t = txt or ""
     t = rs.re.sub(r"\s*\((?:sem execução na data|fatos posteriores|sem condenação até [\d/]+|sem pena em cumprimento em [\d/]+|não iniciou o cumprimento em [\d/]+|cumprimento interrompido em [\d/]+)\)", "", t)
-    t = t.replace("Vedado (art. 1º)", "Vedado · art. 1º").replace("Excluído (art. 7º)", "Excluído · art. 7º")
+    t = t.replace("Vedado (art. 1º)", "Vedado · art. 1º").replace("Vedado (art. 7º)", "Vedado · art. 7º")
     t = t.replace(" · art. 9º, ", " · ").replace("art. 5º (pena máx. ≤ 5 anos)", "art. 5º")
     t = rs.re.sub(r"^Não atinge \(.*\)$", "Não atinge", t)
     t = rs.re.sub(r"^não atinge.*$", "Não atinge", t)
@@ -792,9 +792,9 @@ def sim_nao(txt, cor):
         return "Fato posterior", "cinza"
     if t.startswith("Não cabe") and "falta" in t:
         return "Falta", "vermelho"  # art. 6º: falta grave nos 12 meses (inclui fuga) - o motivo fica na ficha
-    if t.startswith("Vedado"):
+    if t.startswith("Vedado") and "7º" not in t:
         return "Vedado (art. 1º)", "vermelho"
-    if t.startswith("Excluído"):
+    if t.startswith("Excluído") or t.startswith("Vedado"):
         return "Vedado (art. 7º)", "vermelho"
     if t.startswith("Indeferido"):
         return "Indeferido", "vermelho"
@@ -910,6 +910,8 @@ def chave_item(it):
 
 # tipos com vários pontos distintos por assistido e sem ref própria (confronto RSPE x ficha: fuga, prisão, regime, processos):
 # a chave leva o título, só com as datas (sem contagens de dias, que mudam), para a baixa de um não esconder os outros
+RE_FICHA_SEM_PREJUIZO = re.compile(r"^(Rein[íi]cio omitido no RSPE|RSPE sem evento de pris[ãa]o|Retomada divergente|Regress[ãa]o registrada na ficha|"
+                                   r"(Nascimento|M[ãa]e|CPF|Nome) na ficha)", re.I)
 TIPOS_REF_TITULO = ("rspe-x-ficha",)
 
 
@@ -1000,6 +1002,12 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
     # a Auditoria cuida da matemática do RSPE; o que já aparece nas outras abas (remição/ficha, indulto e
     # comutação, prescrição, prazos vencidos, extinção) não se repete aqui
     aud["aud_itens"] = list(extras or []) + [i for i in aud["aud_itens"] if so_matematica(i) and not i.get("oculto")]
+    # confronto com a ficha sem prejuízo direto ao assistido (reinício/início lançado pela ficha, retomada divergente, regressão
+    # ausente no RSPE, divergência de identidade): pesa como "verificar", não como alerta vermelho. O que prejudica (prisão sem
+    # cômputo, fuga com alvará, regime mais gravoso, benefício ausente no RSPE) continua alerta
+    for i in aud["aud_itens"]:
+        if i.get("tipo") == "rspe-x-ficha" and i["nivel"] == "alerta" and RE_FICHA_SEM_PREJUIZO.search(i.get("titulo") or ""):
+            i["nivel"] = "verificar"
     if execucao_extinta(r):
         # pena extinta: as divergências do cálculo não têm mais efeito para o assistido - ficam como informação
         for i in aud["aud_itens"]:

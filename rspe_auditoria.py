@@ -1240,6 +1240,15 @@ def auditar(r, hoje=None):
             itens.append(_item("alerta" if c.get("vga") == "S" else "info", "%s: marcação de violência/grave ameaça diverge do tipo" % nome,
                                "RSPE: VGA = %s; pelo tipo penal esperava-se %s. Reflete nas frações de progressão e no indulto (arts. 9º, I a III dos decretos)." % (c.get("vga"), esperado),
                                ("LEP, art. 112, I e II (redação da Lei 15.402/2026)" if fato and fato >= rg.data_lei_15402() else "LEP, art. 112, III e IV") + "; Decretos 12.338/2024 e 12.790/2025.", tipo="marcacao-de-violencia-grave-ameaca-diverge-do-ti", ref=nome))
+        # tráfico privilegiado (exige primariedade) com "Reincidente: S": incoerência do cadastro, só informação - corrigi-la
+        # prejudicaria o assistido (perderia o privilégio), então não vira impugnação
+        if lei == "11343" and art == "33" and re.match(r"\s*§\s*4", c.get("tipo_penal") or "") and \
+                "S" in ((c.get("reincidente_comum") or "") + (c.get("reincidente_especifico") or "")).upper():
+            itens.append(_item("info", "%s: tráfico privilegiado marcado como reincidente" % nome,
+                               "O privilégio do art. 33, § 4º, da Lei 11.343/06 exige primariedade, e o RSPE marca \"Reincidente: S\". É "
+                               "incoerência do cadastro do SEEU; a correção não favorece o assistido e não se impugna. Conferir só se a "
+                               "reincidência estiver sendo usada para agravar outra fração.", "Lei 11.343/06, art. 33, § 4º.",
+                               tipo="trafico-privilegiado-marcado-reincidente", ref=nome))
         # fração de progressão
         f_seeu = _fr_seeu(c.get("fracao_progressao"))
         hed = hed_lei if hed_lei is not None else hed_seeu

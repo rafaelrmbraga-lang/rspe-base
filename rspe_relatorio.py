@@ -1830,7 +1830,7 @@ def relatorio_geral(modelos, caminho, nome_base, nominal=True):
     return caminho
 
 
-def gerar(modelos, pasta, nome_base, individual=True, geral=True, nominal=True, individuais=None, remicao=False):
+def gerar(modelos, pasta, nome_base, individual=True, geral=True, nominal=True, individuais=None, remicao=False, fichas_sem_rspe=None):
     """Cria <pasta>/Relatorios <data hora>/ com o geral e a subpasta Individuais. O geral e a estatística usam
     'modelos'; os PDFs individuais, 'individuais' (quando informado, os assistidos escolhidos).
     Devolve (pasta, n_individuais, erros)."""
@@ -1852,7 +1852,7 @@ def gerar(modelos, pasta, nome_base, individual=True, geral=True, nominal=True, 
             erros.append("relatório geral: %s" % e)
     if remicao:
         nb = re.sub(r"[^\w\- ]", "", nome_base)
-        for nome, fn in (("remição detalhada", lambda: relatorio_remicao(modelos, os.path.join(destino, "Remicao detalhada - %s.pdf" % nb), nome_base, nominal)),
+        for nome, fn in (("remição detalhada", lambda: relatorio_remicao(modelos, os.path.join(destino, "Remicao detalhada - %s.pdf" % nb), nome_base, nominal, fichas_sem_rspe)),
                          ("planilha de conferência (Excel)", lambda: planilha_remicao_xlsx(modelos, os.path.join(destino, "Conferencia da remicao - %s.xlsx" % nb), nome_base)),
                          ("planilha de conferência (PDF)", lambda: planilha_remicao_pdf(modelos, os.path.join(destino, "Conferencia da remicao - %s.pdf" % nb), nome_base))):
             try:
@@ -1915,7 +1915,7 @@ def nome_rel(m):
     return n
 
 
-def relatorio_remicao(modelos, caminho, nome_base, nominal=True):
+def relatorio_remicao(modelos, caminho, nome_base, nominal=True, fichas_sem_rspe=None):
     """PDF da remição detalhada: de onde vem cada dia a remir (atestado emitido e não lançado, diferença, trabalho sem
     atestado, estudo, leitura), por origem, por unidade prisional em que o trabalho ou o estudo aconteceu (com os assistidos
     de cada unidade, para o ofício) e por assistido - base do pedido de providências."""
@@ -2148,6 +2148,21 @@ def relatorio_remicao(modelos, caminho, nome_base, nominal=True):
                 el.append(_tabela(dados, larg, st, zebra=False))
             else:
                 el.append(Paragraph(_t("Nada a remir além do que já está no processo."), st["mut"]))
+    if fichas_sem_rspe:
+        # fichas importadas sem o RSPE do assistido (item 105): a remição delas não entra nos totais acima - pedir o RSPE no SEEU
+        el.append(CondPageBreak(40 * mm))
+        el.append(Paragraph("Fichas sem RSPE na base", st["h2"]))
+        el.append(Paragraph(_t("Fichas disciplinares importadas sem o RSPE correspondente. A remição delas não entra nos totais deste relatório: "
+                               "importar o RSPE (ou baixá-lo no SEEU) para conciliar. Os dias abaixo são os dos atestados lançados na ficha."), st["mut"]))
+        lin = [[Paragraph("Assistido (ficha)", peqn), Paragraph("Unidade", peqn), Paragraph("Ficha de", peqn), Paragraph("Atestados", dirn), Paragraph("Dias nos atestados", dirn)]]
+        for x in sorted(fichas_sem_rspe, key=lambda x: -(x.get("dias") or 0)):
+            lin.append([Paragraph(_t(x.get("nome") or "?") if nominal else "—", peq), Paragraph(_t(x.get("unidade") or ""), peq),
+                        Paragraph(_t(x.get("data") or ""), peq), Paragraph(str(x.get("atestados") or 0), dir_), Paragraph(_dias(x.get("dias")), dir_)])
+        t = Table(lin, colWidths=[W * .34, W * .34, W * .1, W * .1, W * .12], repeatRows=1)
+        from reportlab.lib import colors
+        t.setStyle(TableStyle([("GRID", (0, 0), (-1, -1), .3, colors.HexColor("#C8CEC8")), ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#E6EEE9")),
+                               ("VALIGN", (0, 0), (-1, -1), "TOP")]))
+        el.append(t)
     doc = SimpleDocTemplate(caminho, pagesize=PG, leftMargin=16 * mm, rightMargin=16 * mm, topMargin=21 * mm, bottomMargin=20 * mm,
                             title="Remição detalhada", author="APTO")
     fr = _moldura("Remição detalhada", nome_base,
