@@ -2546,7 +2546,7 @@ const ui = {
         <div class="clin rd"><label><input type="radio" name="cp_rm" ${C.remModo!=='depois'?'checked':''} onchange="ui.cpSet('remModo','antes')"> descontar os dias antes de calcular a fração</label><label><input type="radio" name="cp_rm" ${C.remModo==='depois'?'checked':''} onchange="ui.cpSet('remModo','depois')"> descontar depois de calcular a fração</label></div></div>
       </div>
       <div class="cr">
-        <div class="term"><span>Término da pena</span><b>${esc(R.termino||'—')}</b><span class="muted">${R.termino?esc(R.termino_det||''):'preencha a pena e o início'}</span></div>
+        <div class="term"><span>Término da pena</span><b>${esc(R.termino||'—')}</b><span class="muted">${R.termino?esc(R.termino_det||''):'preencha a pena e o início'}</span>${C.termSeeu&&R.termino&&C.termSeeu!==R.termino?`<span class="muted" style="color:var(--a-tx)">SEEU: ${esc(C.termSeeu)} · a diferença vem da conversão da remição, do limite do art. 75 ou de interrupções - confira</span>`:''}</div>
         <div class="ct" style="margin-top:10px">Frações (data em que completa)</div><div class="fg">${(R.fracoes||[]).map(cel).join('')||'<span class="muted">—</span>'}</div>
         <div class="ct" style="margin-top:8px">Percentuais da LEP (art. 112)</div><div class="fg">${(R.percentuais||[]).map(cel).join('')||'<span class="muted">—</span>'}</div>
         <div class="clin" style="margin-top:8px"><label>outra fração</label>${inp('outra',C.outra,80,'2/5 ou 55%')}${R.outra?`<b>${esc(R.outra.q.replace(/(\d+)a(\d+)m(\d+)d/,'$1a $2m $3d'))}</b><span>em</span><b>${esc(R.outra.data)}</b>`:''}</div>
@@ -2574,7 +2574,7 @@ const ui = {
   async cpLista(){ const r=await API().calc_lista(); this._cp.regs=(r&&r.itens)||[]; this._cp.semBase=!!(r&&r.sem_base); },
   cpNovoTela(){ const regs=this._cp.regs, sb=this._cp.semBase; this.cpNovo(); this._cp.regs=regs; this._cp.semBase=sb; this.cpAtualiza(); },
   async cpTrazer(id){ const r=await API().calc_assistido(id); if(!r||r.erro) return this.toast((r&&r.erro)||'Falha.'); const C=this._cp;
-    Object.assign(C,{fita:r.fita,inicio:r.inicio,interr:r.interr,rem:r.rem,remModo:r.rem_modo,assist:r.assist,processo:r.processo,id:null,tab:'calc'}); this.toast(r.msg); this.cpAtualiza(); },
+    Object.assign(C,{fita:r.fita,inicio:r.inicio,interr:r.interr,rem:r.rem,remModo:r.rem_modo,assist:r.assist,processo:r.processo,termSeeu:r.termino_seeu||'',id:null,tab:'calc'}); this.toast(r.msg); this.cpAtualiza(); },
   async cpCopiar(){ const t=await API().calc_texto(this.cpEstado()); this.copiarClip(this.clip(t)); },
   async cpPdf(){ await api('calc_pdf', this.cpEstado()); },
   async cpRegistrar(){ const r=await api('calc_gravar', this.cpEstado()); if(r&&r.itens){ this._cp.regs=r.itens; this._cp.id=r.id; } this.cpDesenha(); },

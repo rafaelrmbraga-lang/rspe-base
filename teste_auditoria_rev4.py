@@ -260,11 +260,11 @@ it = por_tipo(reg(cs, [inc(AR, "Fechado - Regime Inicial", "", "01/02/2018")], e
     "regime-inicial-depois-da-primeira-prisao", [{}])[0]
 ok("ponderada" in it.get("detalhe", "") and "a fração aplicada pelo SEEU (2/5)" not in it.get("detalhe", ""), "4-A7: %s" % it.get("detalhe"))
 
-# A8: data-base corrigida pelo operador: a maior fração pelo valor
+# A8: data-base corrigida pelo operador: em concurso, a média das frações ponderada pelas penas (não a maior)
 r = {"_db_manual": "01/01/2024|", "data_base_seeu": "01/01/2025", "progressao_previsao_seeu": "01/01/2027", "fracao_progressao_aplicada": "",
-     "_crimes": [crime(fracao_progressao="40% - Hediondo"), crime(fracao_progressao="3/5 - Hediondo Reincidente")]}
-# fração 3/5 (e não 40%): previsão - (1 - 3/5) x 366 dias
-ok(rv._prog_pela_db_manual(r) == date(2027, 1, 1) - timedelta(days=round(0.4 * 366)),
+     "_crimes": [crime(fracao_progressao="40% - Hediondo"), crime(fracao_progressao="3/5 - Hediondo Reincidente", pena_imposta="5 ano(s), 0 mês(es) e 0 dia(s)")]}
+# 40% sobre 10 anos e 60% sobre 5: média 140/300 = 7/15; previsão - (1 - 7/15) x 366 dias
+ok(rv._prog_pela_db_manual(r) == date(2027, 1, 1) - timedelta(days=round(8 / 15 * 366)),
    "4-A8: %s" % rv._prog_pela_db_manual(r))
 
 # A9: recaptura sem remição: sem "0 dias remidos" e sem o Tema 709 no fundamento

@@ -1411,6 +1411,7 @@ class Api:
         return {"fita": [{"s": 1, "p": {"a": p[0], "m": p[1], "d": p[2]}}] if p else [], "inicio": rs.fmt(ini) if ini else "",
                 "interr": {"a": it[0], "m": it[1], "d": it[2]}, "rem": max(0, int(mrem.group(1))) if mrem else 0, "rem_modo": "antes",
                 "assist": "%s · %s" % (rv.nome_proprio(r.get("nome") or ""), processo), "processo": processo,
+                "termino_seeu": r.get("termino_previsao_seeu") or "",
                 "msg": "Pena total, início do cumprimento, interrupções e remidos do RSPE de %s. Confira antes de usar." % rv.nome_proprio(r.get("nome") or "")}
 
     def calc_pdf(self, e):
