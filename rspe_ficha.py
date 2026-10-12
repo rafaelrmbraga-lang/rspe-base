@@ -3282,6 +3282,16 @@ def complementar_decretos(r, f, hoje=None):
         # nova conclusão pelo conjunto das linhas
         poss = [m.group(1) for m in re.finditer(r"^✔ ([IVX]+(?: e [IVX]+)?):", det, re.M)]
         verif = [m.group(1) for m in re.finditer(r"^\? ([IVX]+):", det, re.M) if m.group(1) not in ("XVI",)]
+        # o que não é inciso do art. 9º entra na conclusão como na análise do RSPE: "✔ Art. 10, III, c" (mulheres) e os "?" do
+        # art. 10, do § 2º, II a VI (metade do lapso) e do XIV/XV com VGA em branco. Sem eles, a ficha que nega o XII/XIII (linhas
+        # que só aparecem com mais tempo cumprido) dava "não atinge" a quem seguia "a verificar" pelo art. 10 ou pelo § 2º
+        poss_art = [m.group(1).replace("Art.", "art.") for m in re.finditer(r"^✔ (Art\. \d+[^:]*):", det, re.M)]
+        for m in re.finditer(r"^\? (.+)$", det, re.M):
+            t = m.group(1)
+            x = ("XIV, XV (VGA em branco)" if t.startswith("XIV/XV") else "§ 2º, II a VI (metade do lapso)" if t.startswith("§ 2º")
+                 else "art. 10 (mulheres)" if t.startswith("Art. 10") else "")
+            if x and x not in verif:
+                verif.append(x)
         antes = r.get(k) or ""
         # NÃO CABE (art. 6º, falta grave nos 12 meses): a ficha não reabre - a falta afasta o indulto qualquer que seja o inciso
         # "A VERIFICAR: ... | antes: ..." (pena extinta depois do decreto) e tempo cumprido incerto: a dúvida não é de inciso - a
@@ -3304,23 +3314,25 @@ def complementar_decretos(r, f, hoje=None):
         # o inciso XV não depende do tempo cumprido nem da pena: a ressalva sobre eles não o alcança (como na análise do RSPE)
         ressalva_xv = "; ".join(x for x in ressalva.split("; ") if x and not x.startswith(("conferir o tempo cumprido", "conferir a pena considerada")))
         if poss and ressalva and "XV" in poss and not ressalva_xv:
-            outros = [p for p in poss if p != "XV"] + verif
+            outros = [p for p in poss if p != "XV"] + poss_art + verif
             r[k] = "POSSÍVEL%s: art. 9º, XV%s" % (rot, aviso)
             r[k + "_status"] = rs.status_texto_decreto(r[k])
             if (r.get(kc) or "").startswith("POSSÍVEL"):
                 r[kc] = "prejudicada: indulto cabível (art. 13, § 5º)"
             concl = "possível pelo art. 9º, XV%s." % ((" (a verificar: %s - %s)" % (", ".join(dict.fromkeys(outros)), ressalva)) if outros else "")
-        elif poss and ressalva:
+        elif (poss or poss_art) and ressalva:
             # a ficha confirma o requisito, mas a ressalva continua: segue "a verificar"
-            r[k] = "A VERIFICAR%s: art. 9º, %s%s" % (rot, ", ".join(dict.fromkeys(poss + verif)), aviso)
+            r[k] = "A VERIFICAR%s: art. 9º, %s%s" % (rot, ", ".join(dict.fromkeys(poss + poss_art + verif)), aviso)
             r[k + "_status"] = "verificar"
-            concl = "a verificar (%s) - %s." % (", ".join(dict.fromkeys(poss + verif)), ressalva)
-        elif poss:
-            r[k] = "POSSÍVEL%s: art. 9º, %s%s" % (rot, ", ".join(poss), aviso)
+            concl = "a verificar (%s) - %s." % (", ".join(dict.fromkeys(poss + poss_art + verif)), ressalva)
+        elif poss or poss_art:
+            # como na análise do RSPE: "art. 9º, I, XII; art. 10, III, c"
+            _inc = "; ".join(filter(None, [("art. 9º, " + ", ".join(poss)) if poss else "", ", ".join(poss_art)]))
+            r[k] = "POSSÍVEL%s: %s%s" % (rot, _inc, aviso)
             r[k + "_status"] = rs.status_texto_decreto(r[k])  # falta do art. 6º a verificar no aviso: a verificar (critério único)
             if (r.get(kc) or "").startswith("POSSÍVEL"):
                 r[kc] = "prejudicada: indulto cabível (art. 13, § 5º)"
-            concl = "possível pelo art. 9º, %s (conferido na ficha disciplinar)." % ", ".join(poss)
+            concl = "possível pelo %s (conferido na ficha disciplinar)." % _inc
         elif verif:
             r[k] = "A VERIFICAR%s: art. 9º, %s%s" % (rot, ", ".join(verif), aviso)
             r[k + "_status"] = "verificar"

@@ -384,7 +384,7 @@ def linha(r, hoje=None):
 
     per_seeu = rs.periodos_custodia(eventos)
     lc_seeu = rs.periodos_livramento(eventos, incidentes)
-    rem_seeu = [(dt, n) for dt, n, k, _ in remicoes if n > 0]
+    rem_seeu = [(dt, n) for dt, n, k, _ in remicoes]  # remições e perdas de remidos: a mesma conta da aba (rs.remicoes_liquidas)
 
     def cumprido(ref):
         """Pena cumprida em ref pelo MESMO cálculo da aba (âncora no SEEU: rspe_scraper.cumprido_na_data). Detração e
@@ -794,7 +794,8 @@ def _resumo(dd, tp):
     if ct.get("total"):
         _soma = (cu.get("cumprimento") or 0) + (cu.get("detracao") or 0) + (cu.get("remicao") or 0) - (cu.get("perda") or 0)
         _pt = [("%s %s" % (r_, _pena_ext(ct.get(k_)))) for r_, k_ in (("prisão", "cumprimento"), ("detração", "detracao"), ("remição", "remicao")) if cu.get(k_)]
-        L.append("Tempo cumprido em %s: %s%s." % (dd["referencia"], _pena_ext(ct.get("total")), (" (%s)" % " + ".join(_pt)) if (_soma == cu.get("total") and len(_pt) > 1) else
+        _pp = (" − perda de remidos %s" % _pena_ext(ct.get("perda"))) if cu.get("perda") else ""  # a soma das parcelas fecha com o total
+        L.append("Tempo cumprido em %s: %s%s." % (dd["referencia"], _pena_ext(ct.get("total")), (" (%s%s)" % (" + ".join(_pt), _pp)) if (_soma == cu.get("total") and len(_pt) > 1) else
             "" if _soma == cu.get("total") else " (pena cumprida do SEEU, com a detração e a remição)"))
     if B.get("pena_considerada_txt") and _p2d(B["pena_considerada_txt"]) != 0:
         L.append("Pena considerada: %s (%s)." % (_pena_ext(B["pena_considerada_txt"]), B.get("reinc") or "-"))
@@ -1339,6 +1340,9 @@ def _decreto(D, ref, pub, C, cumprido, data_atinge, faltas, hoje, ultimo, em_cur
     if st == "nao" and re.match(r"^não se aplica: .*estava em execução em", txt_i):
         # pena em execução na data do decreto e extinta depois: o curto genérico da aba ("sem execução na data") diria o contrário
         rot = "Não se aplica (pena em execução em %s, extinta depois: sem pena a cumprir)" % _f(ref)
+    elif st == "nao" and re.match(r"^não se aplica: sem pena remanescente", txt_i):
+        # pena considerada já integralmente cumprida na data (como a comutação "sem pena remanescente a comutar")
+        rot = "Não se aplica (pena considerada já cumprida em %s: sem pena a indultar)" % _f(ref)
     proj = None
     if ultimo and st == "nao" and txt_i.lower().startswith("não atinge") and num_i:
         # projeção pela primeira hipótese cadastrada que se aplica à pena considerada na aba
@@ -1885,7 +1889,9 @@ def _consolidado(decs, C):
             if red:
                 linhas.append("Fração %s sobre a pena %s; remanescente passa de %s para %s." % (
                     red["fracao"], {"cumprido": "cumprida", "pena": "total"}.get(red["base"], red["base"]), red["antes_txt"], red["depois_txt"]))
-            if st not in ("cabe", "concedido", "prejudicada"):
+            # indulto sem objeto: a pena considerada já estava cumprida na data - o motivo é esse (não um inciso)
+            sem_obj = tipo == "indulto" and st == "nao" and (x.get("texto_aba") or "").startswith("não se aplica: sem pena remanescente")
+            if st not in ("cabe", "concedido", "prejudicada") and not sem_obj:
                 ck = x.get("checklist") or []
                 # "não cabe": só um item não atendido ("ko") é motivo - a pendência "a verificar" não decide o resultado, e sem item
                 # "ko" o próprio rótulo (não iniciou, sem crimes ativos...) já é o motivo. "A verificar": a pendência primeiro
@@ -1934,7 +1940,7 @@ def _consolidado(decs, C):
                                   "futuro com as mesmas condições." % (x["projecao"].get("hipotese", ""), x["projecao"]["data"]))
                 else:
                     linhas.append("Atinge o requisito objetivo (%s) em %s." % (x["projecao"].get("hipotese", ""), x["projecao"]["data"]))
-            pcu = _pena_cumprida(x) if (tipo == "indulto" and st in ("cabe", "verificar")) else None
+            pcu = _pena_cumprida(x) if (tipo == "indulto" and (st in ("cabe", "verificar") or sem_obj)) else None
             if pcu:
                 linhas.append("Pena já cumprida: a pena considerada (%s) estava integralmente cumprida em %s (cumpridos %s) - pedir a extinção pelo "
                               "cumprimento, não o indulto." % (_pena_ext(_pena(pcu[0])), d["referencia"], _pena_ext(_pena(pcu[1]))))

@@ -1,9 +1,9 @@
-APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.9.2
+APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.9.3
 (antigo RSPE Base; SEEU, programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-7.9.2. A documentação técnica completa (cada parâmetro, a regra, a norma e
+7.9.3. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -829,6 +829,32 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v7.9.3
+  - Leitura da ficha do SIAPEN (relida ao abrir): saídas temporárias com
+    aspas, "RETONROU" ou "beneficiado... retornou" passam a contar (inciso XI
+    e art. 124, § 3º); trabalho em dois setores ao mesmo tempo não encerra o
+    primeiro vínculo (sem lacuna falsa e sem dia contado em dobro); período
+    do atestado com setor iniciado por número ou "data inicial em X e final
+    em Y"; setor vazio deixa de aparecer como "CONFORME DOCUMENTO"; fim de
+    isolamento não conta como isolamento; "Entrada no Regime X da Unidade
+    Penal" é lida.
+  - RSPE: o número provisório de 13 dígitos do SEEU não aparece como CPF no
+    relatório nem na petição ("não informado (registro provisório do SEEU)").
+  - Perda de dias remidos com o complemento só numérico ("11") passa a
+    descontar no cumprido do indulto e da comutação (aba, colunas e linha do
+    tempo).
+  - Data-base informada pelo operador: a remição é abatida como no SEEU; uma
+    data-base mais antiga nunca atrasa a progressão.
+  - Indulto/comutação: mais tempo cumprido ou mais remição nunca piora o
+    resultado (âncora do SEEU x eventos); 2022, art. 4º, sem condenação até a
+    publicação: "não se aplica"; pena extinta com sentença posterior ao
+    decreto não conta como em execução; inciso XV não é rebaixado por tempo
+    cumprido; pena já cumprida antes do decreto: indulto sem objeto (pedir a
+    extinção); a ficha que nega o inciso XII mantém o art. 10 e o § 2º;
+    "faltavam para 2/3 do impeditivo" não prevalece sobre o "não" pela
+    fração; eventos ordenados por data.
+  - Textos: "0 dias", "+1 dia", "Decreto 9.370" sem "None".
 
 v7.9.2
   - Aviso de legislação nova: ao abrir a base, depois da janela de

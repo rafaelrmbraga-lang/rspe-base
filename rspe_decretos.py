@@ -371,16 +371,13 @@ def _regra_concurso(f):
 
 def _ctx(r):
     eventos, incidentes = r.get("_eventos") or [], r.get("_incidentes") or []
-    rem = []
-    for i in incidentes:
-        if rs.e_remicao_concedida(i):
-            n = rs.dias_de(i.get("complemento", ""))
-            if n is not None:
-                rem.append((rs.to_date(i.get("data_referencia") or i.get("data_decisao") or ""), n))
+    rem = rs.remicoes_liquidas(incidentes)  # remições e perdas de remidos (a mesma conta das colunas 2022-2025)
     return {"periodos": rs.periodos_custodia(eventos), "lc": rs.periodos_livramento(eventos, incidentes), "rem": rem}
 
 
-_RANK_S = {"cabe": 2, "ver": 1}
+# ordem dos resultados (melhor por último): "imp" abaixo de "nao" - o "faltavam X para 2/3 do impeditivo" pela âncora (que não conta
+# o tempo das penas já extintas) não prevalece sobre os eventos que mostram os 2/3 cumpridos e levam à análise dos demais crimes
+_RANK_S = {"cabe": 3, "ver": 2, "nao": 1, "imp": 0}
 
 
 def avaliar_ficha(f, r, ctx, ini, hoje):
