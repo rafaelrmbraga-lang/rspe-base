@@ -896,6 +896,38 @@ v7.9.1
       lista em ordem alfabética em todos os lugares; calculadora (29/02,
       pena negativa, fração inválida, término do SEEU ao lado).
 
+  - Auditoria funcional (12/10/2026: todas as funções, com 121 casos
+    simulados e PDFs simulados de RSPE e ficha) - correções:
+    . Calculadora: fim de mês (29/02, 31/01) sem 1 dia a menos; o Tab não
+      perde o que se digita; entradas inválidas e remidos acima da pena
+      avisados (também no Copiar e no PDF); "Trazer de" mostra o término do
+      SEEU, o critério do SEEU e avisos (art. 75, custódia que não bate,
+      dado que não veio); abre sem base.
+    . Linha do tempo e petições do indulto: só diz "requisitos atendidos"
+      com hipótese atendida; pontos a conferir listados; citações (art. 13,
+      art. 5º de 2022, § 2º, I, art. 10); extenso sem dias a mais; pena
+      cumprida pede a extinção; soltura não é fuga; "Copiar fundamentação"
+      copia o enquadramento escolhido.
+    . Progressão antecipada e saída temporária: homicídio/latrocínio sem a
+      marcação do resultado morte "a conferir"; fração para baixo; nome da
+      unidade; conduta "Má" e "PADIC/PDIB"; análises independentes.
+    . Funções do defensor: ajuste da prescrição validado; histórico liga o
+      pedido à decisão de RSPE posterior; "Mesma pessoa" agrupa e desfaz;
+      pedidos e dados informados sem datas futuras; "mudou depois" no
+      indulto; um defensor padrão.
+    . Jurisprudências: 319 decisões desfavoráveis retiradas; temas pelo
+      conteúdo; citações quebradas corrigidas ou retiradas; busca que ignora
+      pontuação ("(enem)", "1.084").
+    . Sistema: salvar como / nova base guardam a base substituída; aviso da
+      base jurídica na tela; dados prisionais com falha parcial mantêm os
+      dados e tentam de novo; mensagens em português.
+    . Auditoria: um pedido só por crime; parágrafos das fundamentações só
+      quando cabem; art. 149-A sem alerta falso de hediondo; art. 75 no
+      último dia (CP, art. 10); progressão pela data-base informada com o
+      remanescente exato.
+    . Testes: 27 conjuntos, incluindo a bateria dos 121 casos simulados
+      (casos_simulados/).
+
 v7.9.0
   - Detração da ficha: prisão encerrada por alvará em processo do RSPE, sem
     cômputo no RSPE, vira alerta com os dias (caso Alex: 26/01/2022 a
