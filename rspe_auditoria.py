@@ -463,15 +463,18 @@ def _lancamentos_seeu(r, crimes, ativos, incidentes, eventos):
             # interrupção "por prisão em outro processo" cujo processo é desta execução: a custódia é desta pena (detração
             # obrigatória, CP, art. 42) - o caso é de alerta, com o período a computar
             _procs = [c.get("processo_criminal") for c in crimes if c.get("processo_criminal")]
+            def _procs_do_dia(e):
+                # o processo da prisão pode vir no evento de prisão do mesmo dia, não no da interrupção
+                return [q for e2 in prop if e2.get("data") == e.get("data") for q in rs.lista_processos(e2.get("processos"))]
             _int_proprio = [e for e in prop if "INTERRUP" in (e.get("tipo") or "").upper() and re.search(r"OUTRO PROCESSO", e.get("motivo") or "", re.I)
-                            and any(rs.mesmo_processo(q, x) for q in rs.lista_processos(e.get("processos")) for x in _procs)]
+                            and any(rs.mesmo_processo(q, x) for q in _procs_do_dia(e) for x in _procs)]
             if falta > 60 and not [c for c in crimes if c not in ativos] and _int_proprio:
                 out.append(_item("alerta", "Prisão por processo desta execução lançada como interrupção (%s): %s sem cômputo" % (
                                      _int_proprio[-1].get("data") or "?", rs.pl(falta, "dia", "dias")),
                                  "O SEEU interrompeu o cumprimento em %s por \"prisão em outro processo\", mas o processo indicado (%s) integra esta "
                                  "execução: a custódia é desta pena e deve ser computada (detração). Os eventos de prisão somam %s de custódia e o saldo "
                                  "de remição é de %s, e o SEEU imprime %s de pena cumprida. Pedir a retificação do evento e o recálculo." % (
-                                     _int_proprio[-1].get("data") or "?", _int_proprio[-1].get("processos") or "?",
+                                     _int_proprio[-1].get("data") or "?", ", ".join(q for q in _procs_do_dia(_int_proprio[-1]) if any(rs.mesmo_processo(q, x) for x in _procs)) or "?",
                                      rs.pl(cust, "dia", "dias"), rs.pl(rem, "dia", "dias"), r.get("pena_cumprida")),
                                  "CP, art. 42; LEP, arts. 111 e 126.", tipo="pena-cumprida-menor-que-custodia"))
             elif falta > 60 and not [c for c in crimes if c not in ativos]:
@@ -2766,7 +2769,10 @@ def _razao(tipo, it, tit):
         else:
             fim = ("a Lei 13.964/2019 não prevê percentual próprio, e aplica-se o do primário, %s, que, por ser mais benéfico que a fração "
                    "vigente na data do fato, retroage (CF, art. 5º, XL; %s)." % (prim, prec))
-        return gen + "O percentual de %s é o do reincidente específico em crime hediondo%s; para o reincidente genérico, %s" % (pc[0], lei_esp, fim)
+        _cons = re.search(r"consumado, o resultado morte integra o tipo e o percentual legal é (\d+%)", det)
+        return gen + "O percentual de %s é o do reincidente específico em crime hediondo%s; para o reincidente genérico, %s" % (pc[0], lei_esp, fim) + (
+            " Se o crime foi consumado, o resultado morte integra o tipo, e o percentual devido é %s (LEP, art. 112, VI, a; STJ, Tema 1196)." % _cons.group(1)
+            if _cons else "")
     if tipo == "fracao-de-livramento-diverge" and "reincidente genérico" in det and re.search(r"\(1/1\b", tit):
         return gen + ("Fora das vedações próprias do art. 112 da LEP, que não incidem no caso, a vedação do livramento condicional alcança "
                       "apenas o reincidente específico em crime hediondo ou equiparado (CP, art. 83, V, parte final); ao reincidente genérico "

@@ -1031,6 +1031,9 @@ def conciliar(r, f, hoje=None, manuais=None, ini_exec=None, excluir_remicoes=Non
     impressao = _dt(f.get("data_impressao") or "") or hoje
     evs = f.get("eventos") or []
     vinc, av_v = vinculos(evs, hoje, _dt(f.get("data_impressao") or ""))
+    import rspe_ficha as _rf
+    _solturas = sorted(d for d in (_dt(e.get("data") or "") for e in evs
+                                   if RE_SOLTURA.search(_sa(_rf._sem_fuga_falsa(e.get("texto") or ""))) and not RE_SOLTURA_NAO.search(_sa(e.get("texto") or ""))) if d)
     ats = atestados(evs) + atestados_manuais(manuais)
     ats.sort(key=lambda a: a["emissao"])
     rems = remicoes_rspe(r)
@@ -1414,6 +1417,10 @@ def conciliar(r, f, hoje=None, manuais=None, ini_exec=None, excluir_remicoes=Non
         if ini_exec and w0 < ini_exec:
             w0 = max(w0, min([v["ini"] for v in vinc if (v["fim"] or hoje) >= ini_exec] or [ini_exec]))
         w1 = a["emissao"]
+        # a janela não atravessa uma soltura: o atestado emitido depois dela não cobre trabalho de uma custódia anterior
+        _sol = [d for d in _solturas if d < w1]
+        if _sol and w0 <= max(_sol):
+            w0 = max(_sol) + timedelta(days=1)
         nomes = {s["chave"]: s.get("setor_txt") or "" for s in a["segs"] if s["chave"]}
         novos = []
         for v in vinc:

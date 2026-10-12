@@ -1139,9 +1139,11 @@ def estatisticas(modelos, hoje=None):
 
     def faixa(m, campo_dias, campo_sit):
         d = m.get(campo_dias)
-        if d is not None:
+        if d is not None and not (m.get(campo_sit) or "").startswith("Posterior ao término"):
             return _prazo(d) or "mais de 180 dias"
         est = (m.get("estado_exec") or "")
+        if (m.get(campo_sit) or "").startswith("Posterior ao término"):
+            return "não se aplica"  # livramento depois do término: sem efeito prático (cartão "Sem prazo" da aba)
         if est == "lc_duvida":
             return "a verificar"  # livramento com situação incerta: a tela marca "A verificar (livramento)"
         if est in SEM:

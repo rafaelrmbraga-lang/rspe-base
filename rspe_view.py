@@ -336,7 +336,9 @@ def data_livramento(r):
             if (c.get("extinto") or "").upper().startswith("S"):
                 continue
             f, d = rs.parse_fracao(c.get("fracao_livramento")), rs.pena_para_dias(c.get("pena_imposta"))
-            if not f or not d:
+            if not d:
+                continue  # sem pena privativa (art. 28, multa): não entra no lapso
+            if not f:
                 _ex = None
                 break
             _ex += int(d * f)
@@ -561,6 +563,9 @@ def custodia_sem_calculo(r):
     ativos = [c for c in r.get("_crimes", []) if not (c.get("extinto") or "").upper().startswith("S")]
     if not pt and not pc and not rem:
         # guia sem pena calculada (0a0m0d) com condenações ativas: a soma das penas impostas faz as vezes da pena total
+        # (não na medida de segurança, que não tem término pela pena)
+        if any("MEDIDA DE SEGURAN" in rs._sem_acento(c.get("pena_total_processo") or "").upper() for c in ativos):
+            return None
         pt = rem = soma_penas_ativas(r) or None
     if not pt or pc not in (None, 0) or rem != pt:
         return None
@@ -1273,6 +1278,15 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
         notas["termino"] += (" Atenção: a Auditoria aponta pena cumprida do SEEU menor que a custódia dos eventos - este término parte do "
                              "remanescente do SEEU e pode estar atrasado; conferir.")
     m["calc_notas"] = notas
+    # livramento "vedado" (1/1 em todas as penas) que a própria Auditoria contesta: não afirmar a vedação - a data do SEEU volta,
+    # com o aviso para ver a Auditoria
+    if (m.get("liv_sit") or "").startswith("Vedado") and any(it.get("tipo") in ("fracao-de-livramento-diverge", "reincidencia-especifica-nao-demonstrada-no-rspe")
+                                                             and it.get("nivel") == "alerta" for it in m.get("aud_itens") or []):
+        m["liv_sit"] = m["liv_sit_full"] = "1/1 do SEEU maior que o legal - ver Auditoria"
+        m["liv_cor"] = "amarelo"
+        if r.get("livramento_previsao_seeu"):
+            m["liv"] = r["livramento_previsao_seeu"]
+            m["liv_dias"] = _dias_para(_data(r["livramento_previsao_seeu"]))
     # percentual do SEEU maior que o legal (alerta da Auditoria): a data da aba é a do SEEU e pode estar atrasada - a linha avisa
     if any(it.get("tipo") == "percentual-de-progressao-diverge" and it.get("nivel") == "alerta" for it in m.get("aud_itens") or []) \
             and m.get("prog_cor") not in ("vencido", "azul") and m.get("prog_sit"):
