@@ -99,6 +99,15 @@ r = reg([crime(pena_imposta="1 ano(s), 0 mês(es) e 0 dia(s)")], eventos=[ev(PR,
 ok(rv.soma_penas_ativas(r) == 365 and rv.custodia_sem_calculo(r) is not None, "guia sem pena: %s" % rv.custodia_sem_calculo(r))
 ok(rv.termino_calc(r) == date(2025, 12, 31), "término da guia sem pena (CP, art. 10): %s" % rv.termino_calc(r))
 
+# 9. saída temporária: homicídio qualificado sem a marcação do resultado morte fica "a conferir" (nunca verde); fração em dias
+# arredondada para baixo (1/6 de 100 dias = 16)
+r = reg([crime(artigo="ART 121: Matar alguem:", tipo_penal="§ 2º: Se o homicídio é cometido:", data_infracao="10/03/2021",
+               hediondo_ou_equiparado="S", pena_imposta="0 ano(s), 3 mês(es) e 10 dia(s)")],
+        regime_atual="Semiaberto - ATIVO", pena_total="0a3m10d", pena_cumprida="0a0m16d", status_execucao="ATIVO")
+st = rv.saida_temporaria(r, None, {})
+ok(any(i["ok"] is None and "resultado morte" in i["txt"] for i in st["st_itens"]) and not st["st_ok"], "saída: resultado morte %s" % st["st_itens"])
+ok(any(i["ok"] is True and "1/6 da pena" in i["txt"] for i in st["st_itens"]), "saída: 1/6 arredondado %s" % st["st_itens"])
+
 if falhas:
     print("FALHOU (auditoria externa):")
     for f in falhas:

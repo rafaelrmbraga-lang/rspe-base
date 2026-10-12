@@ -124,7 +124,7 @@ table.rz{margin-top:8px;width:100%}table.rz td,table.rz th{font-size:12px;vertic
 .st-ok svg{width:12px;height:12px}
 .st-ok.quase{background:#FFF6DB;color:#8A6100;border-color:#E2C77A}
 .st-ok.feito{background:#1F6B3A;color:#fff;border-color:#1F6B3A}
-#stpop.quase b{color:#8A6100}#stpop i.q{color:#B07D00}
+#stpop.quase b{color:#8A6100}#stpop i.q{color:#B07D00}#stpop i.x{color:#B42318}
 #stpop{position:fixed;z-index:9999;max-width:460px;background:#fff;border:1px solid #C9D3CC;border-radius:8px;box-shadow:0 6px 24px rgba(0,0,0,.14);padding:10px 12px;font-size:12.5px;color:#22302A;pointer-events:none}
 #stpop b{display:block;margin-bottom:6px;font-size:13px;color:#1F6B3A}
 #stpop div{display:flex;gap:6px;margin:3px 0;line-height:1.35}#stpop i{font-style:normal;color:#1F6B3A;font-weight:700;flex:none}
@@ -1561,7 +1561,7 @@ const ui = {
       presc:()=>{ const nm=L=>sp(String(L.rotulo||L.crime||'').replace(/\s*\((ação penal [^()]*)\)/i,' da $1')), e=lin.filter(L=>L.ppe_cor==='vermelho').map(nm), u=lin.filter(L=>L.retro_cor==='vermelho').map(nm);
         const p=[e.length?'possível prescrição da pretensão executória quanto a '+E(e):'', u.length?'possível prescrição da pretensão punitiva quanto a '+E(u):''].filter(Boolean); return p.length?p.join(', bem como '):'possível prescrição'; },
       ext:()=>'possível extinção da pena'+(r.ext_sit?', '+sp(r.ext_sit).replace(/^./,x=>x.toLowerCase()):''),
-      st:()=>r.st_ok?'preenchimento dos requisitos para a saída temporária, LEP, arts. 122 e 123':'requisitos para a saída temporária, com ponto a conferir',
+      st:()=>r.st_ok?'preenchimento dos requisitos para a saída temporária, LEP, arts. 122 e 123':r.st_quase?'requisitos para a saída temporária, com ponto a conferir':'pedido de saída temporária (os requisitos não aparecem todos atendidos na análise de hoje)',
       fd:()=>{ const p=[]; if(/Remição a requerer/.test(r.fd_sit||'')) p.push('remição a requerer'); if(/Ausência de atestado|Último atestado/.test(r.fd_sit||'')) p.push('pendência de atestado de trabalho ou de certificação de estudo'); if(/Conferir remição/.test(r.fd_sit||'')) p.push('remição a conferir'); return p.join(' e ')||'remição a requerer'; }};
     const NOME={prog:'progressão de regime',liv:'livramento condicional',ind:'indulto ou comutação',presc:'extinção da punibilidade pela prescrição',ext:'extinção da pena',fd:'remição',st:'saída temporária'};
     Object.keys(r.pedidos||{}).filter(k=>k.startsWith('ind_')).forEach(k=>{ const x=this.decDe(r).find(y=>y.id===k.slice(4)); const dn=x?'Decreto '+x.numero:'decreto '+k.slice(4);
@@ -1799,7 +1799,7 @@ const ui = {
     let el=document.getElementById('stpop'); if(!el){ el=document.createElement('div'); el.id='stpop'; document.body.appendChild(el); }
     el.className=r.pa_ok||P?'pa':'quase';
     el.innerHTML=(P?`<b>Pedido de progressão marcado em ${esc(P.data)}</b>`:'')+`<b${P?' style="font-size:12px;color:#22302A"':''}>${r.pa_ok?'Elegível para pedir a progressão antecipada':'Progressão antecipada: requisitos atendidos, com ponto a conferir'}</b>`+
-      (r.pa_itens||[]).map(i=>`<div><i class="${i.ok?'':'q'}">${i.ok?'✓':i.ok===false?'✗':'?'}</i><span>${esc(i.txt)}</span></div>`).join('')+
+      (r.pa_itens||[]).map(i=>`<div><i class="${i.ok?'':i.ok===false?'x':'q'}">${i.ok?'✓':i.ok===false?'✗':'?'}</i><span>${esc(i.txt)}</span></div>`).join('')+
       `<small>${P?'Clique para editar o pedido da progressão.':'Clique para marcar o pedido de progressão (o mesmo da coluna "Pedido" da aba Progressão).'} Indicação para o pedido antes da data do SEEU: a antecipação depende do entendimento do juízo da execução.</small>`;
     const b=ev.target.getBoundingClientRect(); el.style.left=Math.max(8,Math.min(b.left, innerWidth-480))+'px';
     const h=el.offsetHeight; el.style.top=(b.bottom+6+h>innerHeight? Math.max(8,b.top-6-h) : b.bottom+6)+'px'; },
@@ -1811,7 +1811,7 @@ const ui = {
     el.className=(r.st_ok||P)?'':'quase';
     const tit=r.st_ok?'Elegível para pedir saída temporária':r.st_quase?'Saída temporária: requisitos atendidos, com ponto a conferir':'Saída temporária: requisitos não atendidos hoje';
     el.innerHTML=(P?`<b>Pedido de saída temporária feito em ${esc(P.data)}</b><div style="margin:-2px 0 6px;color:#66736B">${esc(({pedido:'pedido nos autos',oficio:'ofício à unidade',outro:'outra providência'})[P.tipo]||'pedido')}${P.obs?' · '+esc(P.obs):''}</div>`:'')+
-      `<b${P?' style="font-size:12px;color:#22302A"':''}>${tit}</b>`+(r.st_itens||[]).map(i=>`<div><i class="${i.ok?'':'q'}">${i.ok?'✓':i.ok===false?'✗':'?'}</i><span>${esc(i.txt)}</span></div>`).join('')+
+      `<b${P?' style="font-size:12px;color:#22302A"':''}>${tit}</b>`+(r.st_itens||[]).map(i=>`<div><i class="${i.ok?'':i.ok===false?'x':'q'}">${i.ok?'✓':i.ok===false?'✗':'?'}</i><span>${esc(i.txt)}</span></div>`).join('')+
       `<small>${P?'Clique para editar o pedido ou abrir o Registro para o SAP.':'Clique para registrar o pedido feito (o ícone fica verde preenchido) e abrir o Registro para o SAP.'} LEP, arts. 122 a 125: a concessão depende de decisão do juízo da execução, ouvidos o Ministério Público e a administração penitenciária.</small>`;
     const b=ev.target.getBoundingClientRect(); el.style.left=Math.max(8,Math.min(b.left, innerWidth-480))+'px';
     const h=el.offsetHeight; el.style.top=(b.bottom+6+h>innerHeight? Math.max(8,b.top-6-h) : b.bottom+6)+'px'; },

@@ -1178,7 +1178,7 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
         **rf.comparativo(r, ficha, HOJE, conferidos={k for k in baixas if k.startswith("fd:")}, manuais=manuais),
         "ficha_resumo": rf.resumo(ficha) if ficha else "",
         "conduta_ruim": bool(ficha and re.search(r"RESPONDE|REGULAR|\bM[ÁA]\b|P[ÉE]SSIMA|RUIM", (ficha.get("conduta") or "").upper())),
-        "conduta": ((ficha.get("conduta") or "não informada na ficha").title().replace("Padic", "PADIC").replace("Ipcg", "IPCG").replace("Otima", "Ótima").replace("Pessima", "Péssima") if ficha else "Sem ficha"),
+        "conduta": (_conduta_txt(ficha.get("conduta") or "não informada na ficha").replace("Ipcg", "IPCG").replace("Pessima", "Péssima") if ficha else "Sem ficha"),
         "ficha_tem": bool(ficha),
         "status_exec": (r.get("status_execucao") or "").strip().upper(),
         "ficha": ({k: ficha.get(k) for k in ("nome", "rgi", "cpf", "unidade", "data_entrada", "data_prisao", "conduta", "data_impressao", "trabalho", "atestados",
@@ -1293,11 +1293,12 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
         m["prog_sit"] += " · percentual do SEEU acima do legal - ver Auditoria"
         m["prog_sit_full"] = (m.get("prog_sit_full") or m["prog_sit"]) + ("" if "acima do legal" in (m.get("prog_sit_full") or "") else
                                                                           " · percentual do SEEU acima do legal - ver Auditoria")
-    try:
-        m.update(saida_temporaria(r, ficha, m, est, interr))
-        m.update(progressao_antecipada(r, ficha, m, est, interr))
-    except Exception:
-        m.update(st_ok=False, st_itens=[], pa_ok=False, pa_itens=[])
+    # cada análise no seu try: a falha de uma não apaga a outra, e o quadro diz que não foi possível analisar
+    for _fn, _k in ((saida_temporaria, "st"), (progressao_antecipada, "pa")):
+        try:
+            m.update(_fn(r, ficha, m, est, interr))
+        except Exception:
+            m.update({_k + "_ok": False, _k + "_quase": False, _k + "_itens": [{"ok": None, "txt": "Não foi possível analisar os requisitos (dados incompletos)"}]})
     m["_final"] = r  # o registro com o que a ficha resolveu (incisos IV, XI a XIII): base da linha do tempo, igual à aba
     return m
 
@@ -1496,6 +1497,20 @@ def _pena_dias(t):
     return int(mm.group(1)) * 365 + int(mm.group(2)) * 30 + int(mm.group(3)) if mm else None
 
 
+def _conduta_txt(c):
+    """Conduta da ficha para exibição: "Ótima", "Má", siglas em maiúscula ("Responde PADIC/PDIB")."""
+    t = (c or "não informada").strip()
+    t = t.title().replace("Otima", "Ótima").replace("Ma ", "Má ")
+    t = re.sub(r"^Ma$", "Má", t)
+    return re.sub(r"(?i)padic/(\w+)", lambda x: "PADIC/" + x.group(1).upper(), t)
+
+
+def _morte_tipo(c):
+    """Homicídio doloso (121 qualificado ou 121-A) ou latrocínio (157, § 3º): o resultado morte é do tipo quando consumado."""
+    art = rs.num_art(c.get("artigo"))
+    return (art in ("121", "121-A") and rs.vga_elementar(c)) or (art == "157" and bool(re.match(r"\s*§\s*3", c.get("tipo_penal") or "")))
+
+
 def saida_temporaria(r, ficha, m, est=None, interr=False, hoje=None):
     """Requisitos da saída temporária para visita à família e atividades de retorno ao convívio social (LEP, art. 122, I e III,
     na redação anterior à Lei 14.843/2024): st_ok só quando todos estão preenchidos; st_quase quando nenhum falha mas algum
@@ -1506,8 +1521,9 @@ def saida_temporaria(r, ficha, m, est=None, interr=False, hoje=None):
     add = lambda ok, txt: it.append({"ok": ok, "txt": txt})
     reg = (r.get("regime_atual") or "").replace(" - ATIVO", "")
     ativo = (r.get("status_execucao") or "").strip().upper() in ("", "ATIVO") and not est and not interr
-    add("SEMIABERTO" in reg.upper() and ativo,
-        "Regime semiaberto, cumprimento em curso" if "SEMIABERTO" in reg.upper() and ativo else
+    _semi = "SEMIABERTO" in reg.upper().replace("-", "").replace(" ", "")  # "Semiaberto" e "Semi-Aberto"
+    add(_semi and ativo,
+        "Regime semiaberto, cumprimento em curso" if _semi and ativo else
         "Regime: %s%s" % (reg or "não informado", "" if ativo else " (cumprimento não está em curso)"))
     crimes = [c for c in r.get("_crimes", []) if (c.get("extinto") or "").startswith("N") and (c.get("tipo_processo") or "").upper() != "OUTRAS ACOES"]
     datas = [(rs.to_date(c.get("data_infracao") or ""), c) for c in crimes]
@@ -1523,22 +1539,27 @@ def saida_temporaria(r, ficha, m, est=None, interr=False, hoje=None):
         add(None if sem_data else False,
             ("Só há condenação por fato a partir de 11/04/2024 (%s), sem condenação mais antiga em cumprimento: vedada pela Lei 14.843/2024" % rs.fmt(min(novos))
              if novos else "Nenhuma condenação em cumprimento com fato anterior a 11/04/2024") + (" (há crime sem data do fato)" if sem_data else ""))
-    ved = []
+    ved, duv = [], []
     for d, c in datas:
         nm = (c.get("artigo") or "").split(":")[0].title()
         if d and d >= LEI_13964 and c.get("hediondo_ou_equiparado") == "S" and c.get("resultado_morte") == "S":
             ved.append("%s de %s: hediondo com resultado morte (art. 122, § 2º, Lei 13.964/2019)" % (nm, rs.fmt(d)))
+        elif d and d >= LEI_13964 and c.get("hediondo_ou_equiparado") == "S" and _morte_tipo(c):
+            duv.append("%s de %s: o RSPE não marca o resultado morte nem diz se o crime foi consumado (consumado, vedada - art. 122, § 2º) - "
+                       "conferir a sentença" % (nm, rs.fmt(d)))
     # a vedação da Lei 14.843/2024 (hediondo ou com violência/grave ameaça) não alcança a condenação anterior a ela: crime
     # novo não impede (decisão do usuário); fica só a do hediondo com resultado morte, vigente desde a Lei 13.964/2019
-    add(not ved, "Sem hediondo com resultado morte (art. 122, § 2º)" if not ved else "Vedação: " + "; ".join(ved))
+    add(False if ved else (None if duv else True),
+        "Vedação: " + "; ".join(ved) if ved else ("; ".join(duv) if duv else "Sem hediondo com resultado morte (art. 122, § 2º)"))
     cump, tot = _pena_dias(r.get("pena_cumprida")), _pena_dias(r.get("pena_total"))
     reinc = (r.get("reincidente") or "").upper().startswith("S") or any(
         (c.get("reincidente_comum") == "S" or c.get("reincidente_especifico") == "S") for c in crimes)
     fr = Fraction(1, 4) if reinc else Fraction(1, 6)
     if cump is None or not tot:
-        add(None, "Pena cumprida não informada no RSPE")
+        add(None, "%s não informada no RSPE" % ("Pena cumprida" if cump is None and tot else "Pena total" if cump is not None else "Pena total e pena cumprida"))
     else:
-        add(cump >= tot * fr, "%s da pena cumprida (%s): %s de %s (art. 123, II; Súmula 40 do STJ)" % (
+        # fração em dias arredondada para baixo, como no resto do programa
+        add(cump >= int(tot * fr), "%s da pena cumprida (%s): %s de %s (art. 123, II; Súmula 40 do STJ)" % (
             "1/4" if reinc else "1/6", "reincidente" if reinc else "primário", r.get("pena_cumprida"), r.get("pena_total")))
     if not ficha:
         add(None, "Sem ficha disciplinar: conduta, trabalho e saídas anteriores não conferidos")
@@ -1546,13 +1567,14 @@ def saida_temporaria(r, ficha, m, est=None, interr=False, hoje=None):
         un = ficha.get("unidade") or ""
         tipo_un, rot_un = rf.classificar_unidade(un)
         add(True if tipo_un == "semiaberto" else (None if not tipo_un else False),
-            "Unidade de semiaberto: %s" % (rot_un or un.title()) if tipo_un == "semiaberto" else
-            ("Unidade não reconhecida: %s" % (un.title() or "não informada") if not tipo_un else
-             "Unidade de regime %s: %s (a saída temporária pressupõe o cumprimento no semiaberto)" % (tipo_un, rot_un or un.title())))
+            "Unidade de semiaberto: %s" % rf.nome_unidade(un) if tipo_un == "semiaberto" else
+            ("Unidade não reconhecida: %s" % (rf.nome_unidade(un) if un else "não informada") if not tipo_un else
+             "%s: %s (a saída temporária pressupõe o cumprimento no semiaberto)" % (
+                 "Unidade de monitoramento eletrônico" if tipo_un == "monitoramento" else "Unidade de regime %s" % tipo_un, rf.nome_unidade(un))))
         cond = rs._sem_acento(ficha.get("conduta") or "").upper().strip()
         fal = r.get("falta_12m")
         add(cond in ("OTIMA", "BOA") and fal not in ("SIM", "A APURAR"),
-            "Conduta %s%s" % ((ficha.get("conduta") or "não informada").title().replace("Otima", "Ótima"),
+            "Conduta %s%s" % (_conduta_txt(ficha.get("conduta")),
                               "" if fal not in ("SIM", "A APURAR") else " · falta nos últimos 12 meses: %s" % fal.lower()))
         trab = _trabalho_atual(ficha, m)  # o trabalho externo também conta
         add(bool(trab), "Trabalhando: " + trab if trab else "Sem trabalho em curso na ficha")
@@ -1572,7 +1594,7 @@ def saida_temporaria(r, ficha, m, est=None, interr=False, hoje=None):
         no_ano = [x for x in sts if (x[0] or x[1]).year == hoje.year]
         if len(no_ano) >= 5:
             add(None, "%d saídas temporárias em %d: conferir o limite anual (art. 124, caput: até 5 por ano; STJ, Tema 445: até 35 dias no ano)" % (len(no_ano), hoje.year))
-        imp = rs.to_date((ficha.get("data_impressao") or "").split()[0].replace(".", "/"))
+        imp = rs.to_date(((ficha.get("data_impressao") or "").split() or [""])[0].replace(".", "/"))
         if imp and (hoje - imp).days > 90:
             add(None, "Ficha impressa em %s (há %d dias, mais de 90): conferir conduta e trabalho atuais" % (rs.fmt(imp), (hoje - imp).days))
     ok = all(x["ok"] is True for x in it)
@@ -1589,13 +1611,13 @@ def progressao_antecipada(r, ficha, m, est=None, interr=False, hoje=None):
     add = lambda ok, txt: it.append({"ok": ok, "txt": txt})
     reg = (r.get("regime_atual") or "").replace(" - ATIVO", "")
     ativo = (r.get("status_execucao") or "").strip().upper() in ("", "ATIVO") and not est and not interr
-    rg = reg.upper()
+    rg = reg.upper().replace("-", "").replace(" ", "")
     add((rg.startswith("FECHADO") or rg.startswith("SEMI")) and ativo,
         "Regime %s, cumprimento em curso" % reg.lower() if (rg.startswith("FECHADO") or rg.startswith("SEMI")) and ativo else
         "Regime: %s%s" % (reg or "não informado", "" if ativo else " (cumprimento não está em curso)"))
     n = m.get("prog_dias")
     add(n is not None and 0 < n <= 60,
-        "Progressão prevista para %s: faltam %s" % (m.get("prog") or "?", rs.pl(n, "dia", "dias")) if n is not None and n > 0 else
+        "Progressão prevista para %s: %s %s" % (m.get("prog") or "?", "falta" if n == 1 else "faltam", rs.pl(n, "dia", "dias")) if n is not None and n > 0 else
         ("Progressão: lapso já atingido (%s)" % (m.get("prog") or "") if n is not None else "Progressão sem data no RSPE"))
     crimes = [c for c in r.get("_crimes", []) if (c.get("extinto") or "").startswith("N") and (c.get("tipo_processo") or "").upper() != "OUTRAS ACOES"]
     vga = [c for c in crimes if c.get("vga") == "S" or rs.vga_elementar(c)]  # violência elementar do tipo (homicídio, roubo...) também
@@ -1610,11 +1632,11 @@ def progressao_antecipada(r, ficha, m, est=None, interr=False, hoje=None):
         cond = rs._sem_acento(ficha.get("conduta") or "").upper().strip()
         fal = r.get("falta_12m")
         add(cond in ("OTIMA", "BOA") and fal not in ("SIM", "A APURAR"),
-            "Conduta %s%s" % ((ficha.get("conduta") or "não informada").title().replace("Otima", "Ótima"),
+            "Conduta %s%s" % (_conduta_txt(ficha.get("conduta")),
                               "" if fal not in ("SIM", "A APURAR") else " · falta nos últimos 12 meses: %s" % fal.lower()))
         trab = _trabalho_atual(ficha, m)
         add(bool(trab), "Trabalhando: " + trab if trab else "Sem trabalho em curso na ficha")
-        imp = rs.to_date((ficha.get("data_impressao") or "").split()[0].replace(".", "/"))
+        imp = rs.to_date(((ficha.get("data_impressao") or "").split() or [""])[0].replace(".", "/"))
         if imp and (hoje - imp).days > 90:
             add(None, "Ficha impressa em %s (há %d dias, mais de 90): conferir conduta e trabalho atuais" % (rs.fmt(imp), (hoje - imp).days))
     ok = all(x["ok"] is True for x in it)
