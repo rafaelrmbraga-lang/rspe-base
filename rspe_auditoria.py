@@ -1380,7 +1380,11 @@ def auditar(r, hoje=None):
                                    " O RSPE não informa se o crime foi consumado: tentado, vale o percentual acima; consumado, o resultado morte integra o "
                                    "tipo e o percentual legal é %s (LEP, art. 112, VI, a, ou VIII) - conferir a sentença." % rs.pct(_fm) if _fm is not None else ""),
                                "LEP, art. 112 (redação vigente na data do fato; lei posterior só retroage se mais benéfica - CF, art. 5º, XL; STJ Temas 1084, 1196 e 1354; STF Tema 1169).", tipo="percentual-de-progressao-diverge", ref=nome))
-                if vga_gen and float(f_seeu) > float(f_esp):
+                if any(x.get("tipo") == "reincidente-vga-percentual-se-nao-especifica" and x.get("nivel") == "alerta" and x.get("ref") == nome
+                       for x in itens[:-1]):
+                    # a condenação anterior não violenta já está demonstrada (alerta dos 25%): um pedido só, o mais favorável
+                    itens.pop()
+                elif vga_gen and float(f_seeu) > float(f_esp):
                     # um pedido só para o crime: o item dos 25% (reincidência não violenta) entra como hipótese neste alerta
                     itens[:] = [x for x in itens if not (x.get("tipo") == "reincidente-vga-percentual-se-nao-especifica" and x.get("ref") == nome)]
                     itens[-1]["detalhe"] += (" Se a condenação anterior não foi por crime com violência ou grave ameaça, o percentual é o do "
@@ -2534,7 +2538,7 @@ FUND_TIPOS = {
         "(CP, art. 64, I).",
         "Requer-se a exclusão da reincidência e o recálculo das frações e datas dos benefícios."),
     "reincidente-vga-percentual-se-nao-especifica": (
-        "O percentual de 30% (LEP, art. 112, IV) pressupõe reincidência em crime cometido com violência à pessoa ou grave ameaça. Ao reincidente "
+        "O percentual do reincidente em crime com violência (LEP, art. 112, IV, 30%) pressupõe reincidência em crime cometido com violência à pessoa ou grave ameaça. Ao reincidente "
         "cuja condenação anterior não teve essa natureza, a lei não prevê percentual próprio, e o STJ aplica, por analogia in bonam partem, o do "
         "primário em crime com violência, 25% (LEP, art. 112, III; STJ, AgRg no HC 675.062, 6ª T., 03/08/2021, na linha do Tema 1084).",
         "Não constando dos autos que a condenação anterior tenha sido por crime com violência ou grave ameaça, requer-se a retificação do "

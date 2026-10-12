@@ -455,6 +455,10 @@ def curto_indulto(txt):
     if base.startswith("não se aplica: sem pena em cumprimento"):
         md = rs.re.search(r"em (\d{2}/\d{2}/\d{4})", base)
         return "Não se aplica (sem pena em cumprimento em %s)" % md.group(1) if md else "Não se aplica (sem execução na data)"
+    if base.startswith("não se aplica") and "estava em execução em" in base:
+        return "Não se aplica (pena em execução na data, extinta depois)"
+    if base.startswith("não se aplica") and base.rstrip(".").endswith("sem pena a cumprir"):
+        return "Não se aplica (sem pena a cumprir)"
     if base.startswith("não se aplica"):
         return "Não se aplica (sem execução na data)"
     if base.startswith("CONCEDIDO no RSPE"):
