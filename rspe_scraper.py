@@ -1505,20 +1505,13 @@ def cumprido_na_data(campos, periodos, remicoes, ref, extras=None):
         return dias_cumpridos_ate(todos, remicoes, ref), "custódia%s + remições (dias de calendário)" % (" e livramento" if extras else "")
     if ref >= ger:
         # RSPE anterior à data de referência: soma o cumprimento registrado como em curso entre a geração e a data
-        mais = 0
-        for ini, fim in todos:
-            a, b = max(ini, ger), min(fim or ref, ref)
-            if b > a:
-                mais += (b - a).days
+        # mesma contagem de dias_cumpridos_ate (o dia de início e o de fim contam): a diferença não ganha 1 dia por período
+        mais = max(0, dias_cumpridos_ate(todos, [], ref) - dias_cumpridos_ate(todos, [], ger))
         if mais:
             return base + mais, ("pena cumprida do SEEU em %s mais %s de cumprimento em curso até %s (projeção: o RSPE é anterior a essa data; "
                                  "remições posteriores não constam)" % (fmt(ger), pl(mais, "dia", "dias"), fmt(ref)))
         return base, "pena cumprida do SEEU em %s" % fmt(ger)
-    depois = 0
-    for ini, fim in todos:
-        a, b = max(ini, ref), min(fim or ger, ger)
-        if b > a:
-            depois += (b - a).days
+    depois = max(0, dias_cumpridos_ate(todos, [], ger) - dias_cumpridos_ate(todos, [], ref))
     rem_depois = sum(n for d, n in remicoes if d and ref < d <= ger)
     anc = max(0, base - depois - rem_depois)
     # o SEEU registra mais tempo do que os eventos explicam (detração de outro processo, evento ausente): não se sabe QUANDO
@@ -3811,8 +3804,9 @@ def analise_decretos(campos, crimes, eventos, incidentes, hoje):
                 return (F(r) if reinc else F(nr)) * (red if par2 else 1)
 
             def tem(fr):
-                ok = cumprido >= pena_total * fr
-                if not ok and _p2[0] and not meia and cumprido >= pena_total * fr / 2:
+                # fração da pena em dias, arredondada para baixo (o mesmo critério das frações de progressão e da calculadora)
+                ok = cumprido >= (pena_total * fr.numerator) // fr.denominator
+                if not ok and _p2[0] and not meia and cumprido >= (pena_total * fr.numerator) // (fr.denominator * 2):
                     meio.append(fr)
                 return ok
 
@@ -4009,12 +4003,12 @@ def analise_decretos(campos, crimes, eventos, incidentes, hoje):
                 if _pun:
                     if _sx == "F":
                         nao.append("Art. 10: exige não ter sido punida por falta grave (falta de %s)" % fmt(_data_fato_falta(_pun[-1])))
-                elif idade is not None and (idade >= 60 or idade < 21) and cumprido >= pena_total * _fr10:
+                elif idade is not None and (idade >= 60 or idade < 21) and cumprido >= (pena_total * _fr10.numerator) // _fr10.denominator:
                     (possiveis if _sx == "F" else verificar).append(
                         "Art. 10, III, c: mulher presa com %s, crime sem violência ou grave ameaça, sem falta grave punida, %s da pena cumprido%s - "
                         "conferir se responde a outro processo por crime violento (inciso I)" % (pl(idade, "ano", "anos"), _fr10, _se))
                 elif _sx == "F":
-                    if cumprido >= pena_total * _fr10:
+                    if cumprido >= (pena_total * _fr10.numerator) // _fr10.denominator:
                         verificar.append("Art. 10, III, a e b: mulher presa, crime sem violência, %s cumprido - cabe se for mãe de filho de até %d anos "
                                          "(ou com deficiência) que dependa dos seus cuidados, ou avó responsável por neto nessas condições - conferir" % (
                                              _fr10, 16 if ano == "2025" else 12))
@@ -4221,7 +4215,7 @@ def analise_decretos(campos, crimes, eventos, incidentes, hoje):
                 out[kc] = com_txt
             # memória da comutação
             fr13 = frac(*f13, par2=False)
-            exig13 = -(-pena_total * fr13.numerator // fr13.denominator)  # cumprir a fração exige alcançá-la (teto), como em tem()
+            exig13 = pena_total * fr13.numerator // fr13.denominator  # fração em dias arredondada para baixo, como em tem()
             cl13 = ["Situação em %s: %s · %s" % (fmt(ref), "reincidente" if reinc else "primário", ("pena considerada %s" % dias_para_pena(pena_total)))]
             if True:
                 if com_ant and cumprido < exig13:

@@ -424,12 +424,13 @@ o = rs.analise_decretos(reg_([c30], [ev_("01/01/2017")], "30a0m0d", "9a0m0d", ge
 confere("IV: 7 anos e 6 meses ininterruptos" in o["indulto_2024_detalhe"], "(39) lapso do § 2º arredondado: %s" % [
     l for l in o["indulto_2024_detalhe"].split("\n") if "IV:" in l[:6]])
 
-# (40) comutação de 2024: o exigido da memória é a fração arredondada para cima, e o ✔/✘ acompanha a decisão
+# (40) comutação de 2024: o exigido da memória é a fração em dias arredondada para baixo (mesmo critério das frações de
+# progressão e da calculadora; 981 / 5 = 196,2 -> 196), e o ✔/✘ acompanha a decisão
 cr = crime("01/01/2023", "01/03/2024", "01/04/2024", artigo="ART 157: Roubo", tipo="CAPUT: Subtrair coisa móvel alheia, mediante grave ameaça",
            pena="2 ano(s), 8 mês(es) e 11 dia(s)")
 cr["vga"] = "S"
 o = rs.analise_decretos(reg_([cr], [ev_("13/06/2024")], "2a8m11d", "0a6m16d", ger="25/12/2024"), [cr], [ev_("13/06/2024")], [], HOJE)
-confere(o["comutacao_2024_num"]["exigido"] == 197 and "✘ Requisito" in o["comutacao_2024_detalhe"], "(40) %s / %s" % (
+confere(o["comutacao_2024_num"]["exigido"] == 196 and "✔ Requisito" in o["comutacao_2024_detalhe"], "(40) %s / %s" % (
     o["comutacao_2024_num"], o["comutacao_2024_detalhe"][:200]))
 
 # (41) 2/3 do impeditivo arredondados para cima nos dois motores
