@@ -813,7 +813,7 @@ def _vencido_full(r, sit, cor, palavra):
 
 def _dias_para(d):
     if d == "atingido":
-        return 0
+        return -1  # lapso já atingido sem data impressa: conta como vencido (cartão, filtro e relatório pela mesma regra)
     if isinstance(d, date):
         return (d - HOJE).days
     return None
@@ -930,7 +930,7 @@ def simplificar(m):
     parada_rot = m.get("parada_rot") if (m.get("interrompida") and not m.get("estado_exec")) else ""
     for k in ("prog", "liv"):
         sit, cor = m.get(k + "_sit", ""), m.get(k + "_cor", "")
-        if cor == "cinza" and not sit.startswith("Pena cumprida"):
+        if cor == "cinza" and not re.match(r"Pena cumprida|Vedado|Não consta|Não cabível|Posterior ao término", sit):
             m[k + "_sit_full"] = m.get(k + "_sit_full") or sit
             m[k + "_sit"] = parada_rot or "Não se aplica"
     for k in ("prog", "liv"):
@@ -1066,6 +1066,15 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
                       "amarelo" if est[0] == "lc_duvida" else "azul" if est[0] == "extinta" else "cinza")
         if est[0] in ("extinta", "cumprida", "lc", "lc_duvida", "nao_iniciou"):
             lsit, lcor = (psit, pcor)
+    # livramento depois do término (art. 75, frações altas): o benefício não chega a ter efeito - a linha diz isso
+    _tm = rs.to_date(r.get("termino_previsao_seeu") or "")
+    if isinstance(ld, date) and _tm and ld > _tm and lcor not in ("vencido",):
+        lsit, lcor = "Posterior ao término (%s) - sem efeito prático" % rs.fmt(_tm), "cinza"
+    # sem data e sem outro estado: a situação diz o motivo (cinza, cartão "Sem prazo"), em vez de ficar em branco e fora dos cartões
+    if not psit and not pcor and pd is None:
+        psit, pcor = (ptxt.split(" (")[0] if ptxt and not re.match(r"^\d{2}/\d{2}/\d{4}", ptxt) else "Não consta no RSPE"), "cinza"
+    if not lsit and not lcor and ld is None:
+        lsit, lcor = (ltxt.split(" (")[0] if ltxt and not re.match(r"^\d{2}/\d{2}/\d{4}", ltxt) else "Não consta no RSPE"), "cinza"
     # nota do SEEU depois da data prevista: exibida junto da data que veio do SEEU (sem mudar a cor nem o prazo)
     if not est and r.get("progressao_previsao_seeu"):
         psit = _com_nota(psit, r.get("progressao_nota"))
@@ -1264,6 +1273,12 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
         notas["termino"] += (" Atenção: a Auditoria aponta pena cumprida do SEEU menor que a custódia dos eventos - este término parte do "
                              "remanescente do SEEU e pode estar atrasado; conferir.")
     m["calc_notas"] = notas
+    # percentual do SEEU maior que o legal (alerta da Auditoria): a data da aba é a do SEEU e pode estar atrasada - a linha avisa
+    if any(it.get("tipo") == "percentual-de-progressao-diverge" and it.get("nivel") == "alerta" for it in m.get("aud_itens") or []) \
+            and m.get("prog_cor") not in ("vencido", "azul") and m.get("prog_sit"):
+        m["prog_sit"] += " · percentual do SEEU acima do legal - ver Auditoria"
+        m["prog_sit_full"] = (m.get("prog_sit_full") or m["prog_sit"]) + ("" if "acima do legal" in (m.get("prog_sit_full") or "") else
+                                                                          " · percentual do SEEU acima do legal - ver Auditoria")
     try:
         m.update(saida_temporaria(r, ficha, m, est, interr))
         m.update(progressao_antecipada(r, ficha, m, est, interr))

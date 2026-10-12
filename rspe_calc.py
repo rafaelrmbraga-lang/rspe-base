@@ -59,14 +59,19 @@ def entre(a, b):
     if not a or not b or b < a:
         return None
     fim = b + timedelta(days=1)  # o dia final também conta
+
+    def aniv(y_, m_):
+        # dia inexistente no mês de chegada (29/02, 31/04...): o período completa no dia seguinte ao último do mês
+        x = mais(a, y_, m_, 0)
+        return x + timedelta(days=1) if x.day < a.day else x
     y, m = fim.year - a.year, fim.month - a.month
     if m < 0:
         y, m = y - 1, m + 12
-    if mais(a, y, m, 0) > fim:
+    while (y > 0 or m > 0) and aniv(y, m) > fim:
         m -= 1
         if m < 0:
-            y, m = y - 1, m + 11
-    d = (fim - mais(a, y, m, 0)).days
+            y, m = y - 1, m + 12
+    d = (fim - aniv(y, m)).days
     return (y, m, d), (b - a).days + 1
 
 
@@ -96,6 +101,11 @@ def calcular(e):
     e = e or {}
     P = soma_penas(e.get("fita"))
     out = {"total": txt(P), "total_ext": extenso(P), "erros": []}
+    _bruto = sum((1 if _int(x.get("s", 1)) >= 0 else -1) * (lambda t: t[0] * 360 + t[1] * 30 + t[2])(amd(x.get("p"))) for x in e.get("fita") or [])
+    if _bruto < 0:
+        out["erros"].append("A subtração deixa a pena negativa: o total foi considerado zero.")
+    if (e.get("outra") or "").strip() and fracao(e["outra"]) is None:
+        out["erros"].append("Outra fração inválida: use 2/5 ou 55%.")
     p1, p2 = rs.to_date(e.get("p1") or ""), rs.to_date(e.get("p2") or "")
     if e.get("p1") and not p1 or e.get("p2") and not p2:
         out["erros"].append("Data do período inválida: use dd/mm/aaaa.")
@@ -126,9 +136,7 @@ def calcular(e):
     out["percentuais"] = [dict(fr(fracao(r)), rot=r) for r in PERCENTUAIS]
     if (e.get("outra") or "").strip():
         f = fracao(e["outra"])
-        if f is None:
-            out["erros"].append("Outra fração inválida: use 2/5 ou 55%.")
-        else:
+        if f is not None:
             out["outra"] = dict(fr(f), rot=e["outra"].strip())
     return out
 

@@ -977,13 +977,13 @@ const ui = {
       return ks.some(k=>r[k]===p[2]); }
     const d=spec.campo_dias?r[spec.campo_dias]:null; const cor=this.cor(r,spec);
     switch(f){
-      case 'vencidas': return spec.id==='ext' ? cor==='vermelho' : (d!==null && d<0);
-      case '30': return d!==null && d>=0 && d<=30;
-      case '60': return d!==null && d>=0 && d<=60;
-      case '90': return d!==null && d>=0 && d<=90;
+      case 'vencidas': return spec.id==='ext' ? cor==='vermelho' : ((d!==null && d<0) || cor==='vencido');  // lapso atingido sem data: vencido
+      case '30': return d!==null && d>=0 && d<=30 && cor!=='vencido';
+      case '60': return d!==null && d>=0 && d<=60 && cor!=='vencido';
+      case '90': return d!==null && d>=0 && d<=90 && cor!=='vencido';
       case 'interrompida': return !!r.interrompida && !r.estado_exec;
       case 'naoiniciou': return r.estado_exec==='nao_iniciou';
-      case 'naoaplica': return !!r.estado_exec && r.estado_exec!=='nao_iniciou';
+      case 'naoaplica': return !!r.estado_exec && r.estado_exec!=='nao_iniciou' && !(spec.id==='liv' && r.estado_exec==='aberto');  // no aberto o livramento ainda se aplica
       case 'semdata': return d===null && !r.interrompida && !r.estado_exec;
       case 'possivel': return (r.ind_status||[]).includes('possivel') && cor!=='vermelho';
       case 'verificar': return cor==='amarelo';
@@ -999,7 +999,7 @@ const ui = {
       case 'atencao': return r.aud_status==='atencao';
       case 'pedfeito': return !!(r.pedidos||{})[spec.id];
       case 'pedsem': return !(r.pedidos||{})[spec.id];
-      case 'ok': return spec.id==='fd' ? cor==='verde' : r.aud_status==='ok';
+      case 'ok': return spec.id==='fd' ? cor==='verde' : (r.aud_status==='ok' && cor!=='azul');  // as extintas têm cartão próprio
     } return true; },
   expandir(id){ if(this.aberto===id){ this.aberto=null; return this.render(); } this.completo(id).then(()=>{ this.aberto=id; this.render(); }); },
   // a lista chega na versão leve; o registro completo (prescrição, auditoria) vem quando o assistido é aberto ou expandido
@@ -1453,7 +1453,7 @@ const ui = {
     const tk=(on,ch)=>`<span class="tk ${on?'on':''}" title="${on?'Conferido - clique para desfazer':'Conferir homologação: marcar como conferido'}" onclick="event.stopPropagation();ui.fdConferir(${jsa(r.id)},${jsa(ch)},${!on})"></span>`;
     const th='style="text-align:left;font-size:11px;color:var(--tx2);padding:6px 8px;background:var(--bg2,#F1F2EF)"', td='style="padding:6px 8px;font-size:12.5px;border-top:1px solid var(--line);vertical-align:top"';
     const rows=(C.tabela||[]).map(t=>`<tr class="${t.ok?'ok':''}"><td ${td}><b>${esc(t.atestado)}</b>${t.emissao?`<br><span class="muted">emitido ${esc(t.emissao)}</span>`:''}${t.nota?`<br><span class="muted" style="font-size:11px">${esc(t.nota)}</span>`:''}</td>
-      <td ${td}>${(t.segs||[]).map(x=>`<div>${esc(x.setor)} · ${esc(x.per)}${x.inferido?' <span class="muted">(inferido)</span>':''}${x.corrigido?` <span style="color:#7A5410">(ano corrigido; ${esc(x.corrigido)})</span>`:''}${x.trab!=null&&x.trab!==''&&!x.inferido?` <span class="muted">${x.trab}/${String(x.rem).replace('.',',')}</span>`:''}</div>`).join('')}</td>
+      <td ${td}>${(t.segs||[]).map(x=>`<div>${esc(x.setor)} · ${esc(x.per)}${x.inferido?' <span class="muted">(inferido)</span>':''}${x.corrigido?` <span style="color:#7A5410">(ano corrigido; ${esc(x.corrigido)})</span>`:''}${x.trab!=null&&x.trab!==''&&!x.inferido?` <span class="muted">${x.trab}${x.rem!=null?'/'+String(x.rem).replace('.',','):''}</span>`:''}</div>`).join('')}</td>
       <td ${td}>${t.trab!=null?t.trab:'—'}</td><td ${td}>${esc(t.rem)}</td><td ${td}>${esc(t.rspe)}</td><td ${td}>${esc(t.decisao)}</td><td ${td}>${esc(t.ref)}</td><td ${td}>${pill(t.rot,t.cor)}</td><td ${td} class="c">${tk(!!t.ok,t.chave)}</td></tr>`).join('');
     const pend=(C.pend||[]).map(p=>`<li><b>${esc(p.data)}</b> · ${pill(p.status==='NAO_LANCADO'?'Atestado não lançado':p.status==='SEM_ATESTADO'?'Sem atestado':p.status==='EM_CURSO'?'Em curso':p.status==='LACUNA'?'Lacuna':'Divergência de dias',p.cor)} ${esc(p.texto)} → <b>${esc(p.acao)}</b></li>`).join('');
     const al=(C.alertas||[]).map(a=>`<li><span class="muted">${esc(a.tipo)}:</span> ${esc(a.texto)}</li>`).join('');
@@ -1626,7 +1626,7 @@ const ui = {
   // aba Indulto: o mesmo critério do relatório geral (quadro "Indulto ou comutação cabível em ao menos um decreto"): assistidos com
   // algum decreto "cabe" (2000 a 2025), com ou sem pedido - o rótulo do contador diz isso
   contaInd(rs){ return rs.filter(r=>this.decDe(r).some(x=>x.s==='cabe')).length; },
-  contaCor(a,rs){ if(a.id==='ind') return this.contaInd(rs) || ''; rs=rs.filter(r=>this.pedPendente(r,a.id)); const k = a.id==='presc' ? (this.prescModo!=='pp'?'presc_ppe_cor':'presc_retro_cor') : a.cor;
+  contaCor(a,rs){ if(a.id==='ind') return this.contaInd(rs) || ''; rs=rs.filter(r=>this.pedPendente(r,a.id)); const k = a.id==='presc' ? 'presc_ppe_cor' : a.cor;
     // mesma regra dos cartões (ui.cor): o pedido com a situação mudada depois conta onde o cartão o mostra
     const corDe=r=>a.id==='presc'?r[k]:this.cor(r,a); return rs.filter(r=>{ const c=corDe(r); return c==='vermelho'||c==='vencido'; }).length || ''; },
   ABAS_EXTRA:[{id:'geo',titulo:'Dados prisionais'},{id:'teses',titulo:'Jurisprudências'},{id:'quadro',titulo:'Quadro do Usuário'}],
@@ -2404,7 +2404,7 @@ const ui = {
       <label class="chk"><input type="checkbox" id="rel_rem">Remição detalhada: relatório (PDF) e planilha de conferência ficha x RSPE (Excel e PDF)</label>
       <label class="chk"><input type="checkbox" id="rel_pla" checked>Planilha (Excel, todas as abas)</label>
       <label class="chk"><input type="checkbox" id="rel_nom" checked>Remição detalhada com o nome dos assistidos</label>
-      <p class="muted" style="font-size:12px">Triagem: não substitui o Atestado de Pena. Datas de progressão, livramento e término são as do SEEU.</p>
+      <p class="muted" style="font-size:12px">Triagem: não substitui o Atestado de Pena. Datas de progressão, livramento e término são as do SEEU, salvo as marcadas com * (calculadas pelo programa quando o SEEU não as imprime).</p>
       <div class="acts"><button class="btn" style="margin-right:auto" onclick="ui.modalProvidencias()">Relatório de providências</button><button class="btn" onclick="ui.fecharModal()">Cancelar</button><button class="btn pri" onclick="ui.gerarRelatorios()">Gerar</button></div></div>`;
     document.getElementById('modal').classList.add('on'); this.relConta(); },
   relSelecionados(){ return [...document.querySelectorAll('#rel_pessoas .relp:checked')].map(i=>i.value); },

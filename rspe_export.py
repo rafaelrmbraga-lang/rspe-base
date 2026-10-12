@@ -214,7 +214,7 @@ def exportar_pdf(modelos, saida, nome_base, abas, progresso=None):
     _f = _rr._fontes()
     # mesmo cabeçalho e rodapé dos relatórios (selo, APTO, filete verde, "página X de Y")
     moldura = _rr._moldura("Execução penal · SEEU", nome_base, pagina=landscape(A4),
-                           rodape="Datas conforme o SEEU (RSPE); indulto, comutação e prescrição calculados pelo programa. Falta (12 meses) = indícios "
+                           rodape="Datas conforme o SEEU (RSPE), salvo as marcadas com * (calculadas pelo programa); indulto, comutação e prescrição calculados pelo programa. Falta (12 meses) = indícios "
                                   "no RSPE, conferir o PAD. Indulto: Decretos 11.302/2022, 12.338/2024 e 12.790/2025.")
 
     ML = 16 * mm
@@ -245,7 +245,7 @@ def exportar_pdf(modelos, saida, nome_base, abas, progresso=None):
 
         # cartões de resumo
         rot = rv.ROTULO[spec["legenda"]]
-        if spec["cor"]:
+        if spec["cor"] and not spec.get("sem_stats"):  # Geral: sem cartões de prazo, como na tela
             cont = contagem_cartoes(spec, modelos)
             itens = list(rot.items()) + ([("__ped", "Pedido feito")] if cont.get("__ped") else [])
             cel, larg, est = [], [], [("VALIGN", (0, 0), (-1, -1), "MIDDLE"), ("TOPPADDING", (0, 0), (-1, -1), 6),

@@ -2478,6 +2478,7 @@ UNIDADES_CANON = [
     (r"^IPCG$|INSTITUTO PENAL DE CAMPO GRANDE", "Instituto Penal de Campo Grande"),
     (r"^PTRAN$|PRES[IÍ]DIO DE TR[AÂ]NSITO", "Presídio de Trânsito de Campo Grande"),
     (r"MONITORAMENTO VIRTUAL", "Unidade Mista de Monitoramento Virtual Estadual de Campo Grande"),
+    (r"^PDIB$|PENITENCIARIA DE DOIS IRMAOS? DO BURITI", "Penitenciária de Dois Irmãos do Buriti"),  # o SIAPEN grafa "Dois Irmão"
     (r"RICARDO BRAND[AÃ]O", "Unidade Penal Ricardo Brandão"),
     (r"(E\.?P\.?M\.?|ESTABELECIMENTO PENAL MASCULINO) DE (REG\.?|REGIME) SEMIABERTO E ABERTO DE DOURADOS",
      "Estabelecimento Penal Masculino de Regime Semiaberto e Aberto de Dourados"),

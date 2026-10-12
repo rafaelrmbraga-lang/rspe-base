@@ -826,6 +826,45 @@ v7.9.1
   - Modelos de petição: "&" e "<" no nome, crime ou motivo não corrompem
     mais o documento Word.
 
+  - Auditoria externa (12/10/2026, 595 assistidos, 7 frentes com verificador
+    independente) - correções:
+    . Término: com o reinício lançado pela ficha, o término corre do reinício
+      (o SEEU congela a pena cumprida na interrupção); já alcançado, a
+      Extinção fica "a verificar". Guia sem pena total: soma das penas
+      impostas. Término calculado sem o SEEU com o -1 dia do CP, art. 10.
+    . Art. 75: alerta também com fato durante o cumprimento (limite da nova
+      unificação contado do trânsito/fato mais tardio).
+    . Livramento: vedação ao reincidente específico em tráfico também no
+      art. 35 (Lei 11.343, art. 44, p. ú.); vedado em todas as penas aparece
+      como "Vedado"; posterior ao término, "sem efeito prático"; alteração de
+      data-base não conta como pedido concedido; lapso atingido com o SEEU
+      parado na interrupção.
+    . Progressão: homicídio/latrocínio sem a marcação do resultado morte vira
+      "verificar" (consumado x tentado); a fundamentação não atribui mais 50%
+      ao inciso VII; percentual acima do legal avisado na linha; frações em
+      concurso listadas por crime (tela, resumo, petição); recálculo pela
+      data-base editada pela média ponderada; falta "homologada/punida" da
+      ficha não pinta a data-base de vermelho; violência elementar na
+      progressão antecipada; prisão por processo da execução lançada como
+      interrupção vira alerta.
+    . Prescrição: art. 28 sem pena com o prazo do art. 30 (2 anos);
+      reincidência afastada que decide o resultado fica "a verificar";
+      trânsito para a acusação posterior ao final; medida de segurança;
+      prazo pelo saldo na fuga na coluna.
+    . Indulto/comutação: motivo decisivo no cartão; redução pela base que o
+      decreto manda (cumprida em 2009-2015 e 2023); indulto ainda possível
+      com a comutação concedida; decreto passado sem "projeção"; fração em
+      dias arredondada para baixo; contagem da âncora do SEEU sem o dia a
+      mais por período.
+    . Remição e ficha: alvará de soltura encerra o trabalho; troca de função
+      não põe o trabalho novo em dúvida; falta negada no RSPE não volta como
+      "a apurar"; fundamentação com 1/3 exato; siglas de unidade agrupadas.
+    . Telas e relatórios: PDF exportado sem "0 Vencido" na Geral; cartões,
+      filtros e relatório geral pela mesma regra (vencidos, a verificar,
+      sem data com motivo); "datas do SEEU" ressalvam as marcadas com *;
+      lista em ordem alfabética em todos os lugares; calculadora (29/02,
+      pena negativa, fração inválida, término do SEEU ao lado).
+
 v7.9.0
   - Detração da ficha: prisão encerrada por alvará em processo do RSPE, sem
     cômputo no RSPE, vira alerta com os dias (caso Alex: 26/01/2022 a

@@ -50,7 +50,11 @@ r = rc.calcular({"fita": F((5, 0, 0)), "inicio": "01/01/2020", "outra": "2/5"})
 ok(r["outra"]["q"] == "2a0m0d" and r["outra"]["data"] == "31/12/2021", "2/5: %s" % r.get("outra"))
 ok(rc.calcular({"fita": F((5, 0, 0)), "inicio": "01/01/2020", "outra": "55%"})["outra"]["rot"] == "55%", "55%")
 r = rc.calcular({"fita": F((5, 0, 0)), "inicio": "31/02/2020", "outra": "x", "p1": "01/01/2020", "p2": "01/01/2019"})
-ok(len(r["erros"]) == 2 and "termino" not in r and any("anterior" in x for x in r["erros"]), "erros: %s" % r["erros"])
+# a fração inválida é apontada mesmo sem data de início válida
+ok(len(r["erros"]) == 3 and "termino" not in r and any("anterior" in x for x in r["erros"]) and any("fração" in x for x in r["erros"]), "erros: %s" % r["erros"])
+# período que começa em 29/02: 1 ano exato; subtração que deixa a pena negativa é avisada
+ok(rc.entre(rc.rs.to_date("29/02/2024"), rc.rs.to_date("28/02/2025"))[0] == (1, 0, 0), "29/02")
+ok(any("negativa" in x for x in rc.calcular({"fita": [{"s": 1, "p": {"a": 1}}, {"s": -1, "p": {"a": 2}}]})["erros"]), "pena negativa")
 ok("Término da pena: 31/12/2020" in rc.texto({"fita": F((1, 0, 0)), "inicio": "01/01/2020", "nota": "x"}, rc.calcular({"fita": F((1, 0, 0)), "inicio": "01/01/2020"})), "texto")
 
 # registros na base e PDF, pela Api

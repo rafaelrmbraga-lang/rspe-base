@@ -114,7 +114,7 @@ imputação do cumprimento entre condenações); sem cor = não prescrita ("Não
 trânsito ou a pena no RSPE - conferir na ação penal); cinza = sem dados; azul = extinta. A tela, a exportação e o relatório mostram
 cada pretensão (executória e punitiva) com a sua cor. Clique num cartão de resumo para filtrar pela cor.
 <h4>Datas e cálculos</h4>
-Progressão, livramento e término são os impressos pelo SEEU no RSPE; o programa não os recalcula. Sem data no RSPE, a tabela mostra
+Progressão, livramento e término são os impressos pelo SEEU no RSPE. Quando o SEEU não os imprime, o programa calcula o término (e o lapso atingido do livramento) e marca o valor com *. Sem data no RSPE, a tabela mostra
 "—" e o motivo ("Não consta no RSPE", "Pena interrompida", "Não iniciou") fica na ficha. O programa calcula indulto e comutação,
 prescrição, extinção pelo cumprimento, estado da execução, falta nos 12 meses, remição a requerer (ficha x RSPE, estudo estimado) e as
 conferências da Auditoria, na convenção do SEEU (ano de 365 dias, mês de 30, prazos pelo calendário).
@@ -1245,7 +1245,8 @@ class Api:
         _ids = {id(m) for m in ativos}
         self._json = {}
         self._hoje_modelos = rv.HOJE
-        self._modelos = ativos
+        # ordem alfabética (sem acento), como as abas da tela: exportação, relatórios e aba Indulto na mesma ordem
+        self._modelos = sorted(ativos, key=lambda m: (rs._sem_acento(m.get("nome") or "").upper(), m.get("id") or ""))
         self._ocultos = [m for m in modelos if id(m) not in _ids]  # outras execuções de quem tem mais de um RSPE (fora da lista)
         return {
             "base": self.base.nome,
@@ -2956,6 +2957,8 @@ class Api:
         if not modelos:
             return {"erro": "Nada para exportar."}
         sufixo = rv.ABA_POR_ID[abas[0]]["titulo"].split(" /")[0] if len(abas) == 1 and abas[0] in rv.ABA_POR_ID else "abas"
+        if len(modelos) < len(self._modelos):
+            sufixo += " (filtrado, %d)" % len(modelos)  # não sobrescreve a exportação completa do mesmo dia
         nome = "%s - %s %s.%s" % (self.base.nome, sufixo, datetime.now().strftime("%d-%m-%Y"), formato)
         c = _um(self._janela.create_file_dialog(webview.SAVE_DIALOG, save_filename=nome,
                                                file_types=("Excel (*.xlsx)",) if formato == "xlsx" else ("PDF (*.pdf)",)))

@@ -28,7 +28,7 @@ COR = {"vermelho": ("#F6E4E3", "#8E2424"), "laranja": ("#F7EADB", "#8A4A12"), "a
        "vencido": ("#F6E4E3", "#8E2424"), "verde": ("#E3EFE7", "#1F5B39"), "cinza": ("#ECEEEB", "#5F6662"),
        "azul": ("#E6ECF2", "#334E68"), "": ("#FFFFFF", TX)}
 AVISO = ("Triagem automatizada a partir do RSPE (SEEU) e da ficha disciplinar (SIAPEN). Não substitui o Atestado de Pena. "
-         "Progressão, livramento e término são as datas do SEEU; indulto, comutação, prescrição e remição a requerer são "
+         "Progressão, livramento e término são as datas do SEEU (as marcadas com * foram calculadas pelo programa); indulto, comutação, prescrição e remição a requerer são "
          "cálculos do programa e devem ser conferidos.")
 
 # ---------------------------------------------------------------- fontes (acentos e símbolos)
@@ -1142,6 +1142,8 @@ def estatisticas(modelos, hoje=None):
         if d is not None:
             return _prazo(d) or "mais de 180 dias"
         est = (m.get("estado_exec") or "")
+        if est == "lc_duvida":
+            return "a verificar"  # livramento com situação incerta: a tela marca "A verificar (livramento)"
         if est in SEM:
             return "não se aplica"
         if m.get("interrompida") or re.search(r"interrompid|suspens", (m.get(campo_sit) or "").lower()):
@@ -1693,7 +1695,7 @@ def relatorio_geral(modelos, caminho, nome_base, nominal=True):
 
     # ============================================================ 3. situação jurídico-executória
     parte(3, "Situação jurídico-executória",
-          "Progressão, livramento e término: datas do SEEU. Indulto, comutação, prescrição e extinção: cálculo do programa sobre os dados do RSPE.")
+          "Progressão, livramento e término: datas do SEEU (com *, calculadas pelo programa). Indulto, comutação, prescrição e extinção: cálculo do programa sobre os dados do RSPE.")
     pres = E["presc"]
     indic = [("vermelho", "Prescrição da pretensão executória aparente", pres.get("aparente", 0), rs.pl(E["presc_crimes"], "condenação", "condenações")),
              ("vermelho", "Prescrição da pretensão punitiva aparente", E["presc_punitiva"], ""),
