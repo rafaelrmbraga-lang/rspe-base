@@ -213,6 +213,21 @@ def _prog_pela_db_manual(r):
         fr = max((f_ for f_ in (rs.parse_fracao(c.get("fracao_progressao") or "") for c in r.get("_crimes", [])
                                 if not (c.get("extinto") or "").upper().startswith("S")) if f_), default=None) or Fraction(1, 6)
     from datetime import timedelta as _td
+    import math
+    # remanescente na data-base do SEEU inferido do próprio lapso (lapso = fração da pena em dias, para baixo): o novo lapso é a
+    # fração do remanescente acrescido do deslocamento, também para baixo
+    pt = rs.pena_para_dias(r.get("pena_total"))
+    evs = [e for e in r.get("_eventos", []) if not e.get("_ficha")]
+    if pt and evs and fr:
+        # remanescente na nova data-base = pena total - custódia até a véspera dela (o dia da prisão conta); lapso = fração, para baixo
+        per = rs.periodos_custodia(evs)
+        rem_n = pt - rs.dias_cumpridos_ate(per, [], novo - _td(days=1))
+        if rem_n > 0:
+            return novo + _td(days=int(rem_n * fr))
+    lap = (prev - db0).days
+    if lap > 0 and fr:
+        rem0 = math.ceil(lap / fr)
+        return novo + _td(days=int((rem0 + (db0 - novo).days) * fr))
     return prev - _td(days=round(float((1 - fr) * (db0 - novo).days)))
 
 
@@ -1276,7 +1291,7 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
             notas["termino"] = ("Término*: calculado pelo programa - data de geração do RSPE (%s) + pena remanescente (%s), pelo calendário; "
                                 "o SEEU não imprimiu o término." % (r.get("data_geracao_rspe") or "?", r.get("pena_remanescente") or "?"))
     if dbi.get("db_editada") and r.get("progressao_previsao_seeu") and _prog_pela_db_manual(r):
-        notas["prog"] = ("Progressão*: recalculada pelo programa com a data-base informada (%s) - estimativa, pode variar 1 dia pelo arredondamento; a data do SEEU é %s."
+        notas["prog"] = ("Progressão*: recalculada pelo programa com a data-base informada (%s): pena total menos a custódia até ela, fração para baixo; a data do SEEU é %s."
                          % (dbi["db"], r["progressao_previsao_seeu"]))
     if notas.get("termino") and any(it.get("tipo") == "pena-cumprida-menor-que-custodia" for it in m.get("aud_itens") or []):
         notas["termino"] += (" Atenção: a Auditoria aponta pena cumprida do SEEU menor que a custódia dos eventos - este término parte do "
@@ -1294,9 +1309,10 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
     # percentual do SEEU maior que o legal (alerta da Auditoria): a data da aba é a do SEEU e pode estar atrasada - a linha avisa
     if any(it.get("tipo") == "percentual-de-progressao-diverge" and it.get("nivel") == "alerta" for it in m.get("aud_itens") or []) \
             and m.get("prog_cor") not in ("vencido", "azul") and m.get("prog_sit"):
-        m["prog_sit"] += " · percentual do SEEU acima do legal - ver Auditoria"
-        m["prog_sit_full"] = (m.get("prog_sit_full") or m["prog_sit"]) + ("" if "acima do legal" in (m.get("prog_sit_full") or "") else
-                                                                          " · percentual do SEEU acima do legal - ver Auditoria")
+        _av = " · percentual do SEEU acima do legal - ver Auditoria"
+        _full = m.get("prog_sit_full") or m["prog_sit"]
+        m["prog_sit"] += _av
+        m["prog_sit_full"] = _full if "acima do legal" in _full else _full + _av
     # cada análise no seu try: a falha de uma não apaga a outra, e o quadro diz que não foi possível analisar
     for _fn, _k in ((saida_temporaria, "st"), (progressao_antecipada, "pa")):
         try:
@@ -1512,7 +1528,7 @@ def _conduta_txt(c):
 def _morte_tipo(c):
     """Homicídio doloso (121 qualificado ou 121-A) ou latrocínio (157, § 3º): o resultado morte é do tipo quando consumado."""
     art = rs.num_art(c.get("artigo"))
-    return (art in ("121", "121-A") and rs.vga_elementar(c)) or (art == "157" and bool(re.match(r"\s*§\s*3", c.get("tipo_penal") or "")))
+    return art == "121-A" or (art == "121" and rs.vga_elementar(c)) or (art == "157" and bool(re.match(r"\s*§\s*3", c.get("tipo_penal") or "")))
 
 
 def saida_temporaria(r, ficha, m, est=None, interr=False, hoje=None):

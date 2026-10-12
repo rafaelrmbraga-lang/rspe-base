@@ -1342,7 +1342,7 @@ def auditar(r, hoje=None):
             # homicídio (CP, arts. 121 doloso e 121-A) ou latrocínio sem a marcação "resultado morte": o RSPE não diz se o crime foi
             # consumado. Consumado, o resultado morte é do próprio tipo (LEP, art. 112, VI, a, e VIII) - o percentual que o SEEU
             # aplica pode ser o certo; tentado, vale o do hediondo sem morte. Sem a sentença, é ponto a conferir, não erro
-            _hom = (_cp and hed and not morte and fato and fato >= rg.data_lei_13964() and (art in ("121", "121-A") and rs.vga_elementar(c)
+            _hom = (_cp and hed and not morte and (art == "121-A" or (art == "121" and rs.vga_elementar(c))
                                                     or (art == "157" and re.match(r"\s*§\s*3", _tp))))
             _fm = None
             if _hom:
@@ -1353,6 +1353,8 @@ def auditar(r, hoje=None):
                         _f2 = rg.fracao_progressao_esperada(_dref, hed, True, vga, reinc, reinc_especifico=False, especial=especial)[0]
                         if _f2 is not None and (_fm is None or _f2 < _fm):
                             _fm = _f2
+                if _fm is not None and f_esp is not None and abs(float(_fm) - float(f_esp)) < 0.0005:
+                    _fm = None  # consumado ou tentado, o percentual é o mesmo (ex.: fato anterior a 2020 sem retroação): nada a conferir
             if abs(Fraction(f_seeu) - Fraction(f_esp)) > Fraction(1, 2000) and not _eq16 and float(f_seeu) < float(f_esp):
                 pass
             elif _fm is not None and float(f_seeu) > float(f_esp) and float(f_seeu) <= float(_fm) + 0.0005:
