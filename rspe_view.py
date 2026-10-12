@@ -197,9 +197,29 @@ def data_progressao(r):
     return _sem_data(r)
 
 
+def _remicoes_liquidas(r):
+    """Remições concedidas (+) e perdas de dias remidos (-) do RSPE: [(data, dias)], pela data de referência (ou da decisão)."""
+    out = []
+    for i in r.get("_incidentes", []):
+        t = (i.get("tipo") or "").upper()
+        if rs.e_remicao_concedida(i):
+            n = rs.dias_de(i.get("complemento", ""))
+            if n:
+                out.append((rs.to_date(i.get("data_referencia") or i.get("data_decisao") or ""), n))
+        elif re.search(r"PERD", t) and re.search(r"REMI", t) and (i.get("situacao") or "CONCEDIDO") == "CONCEDIDO":
+            # "DIAS PERDIDOS NA REMIÇÃO" traz no complemento só o número ("11")
+            cpl = i.get("complemento", "")
+            n = rs.dias_de(cpl) or rs.dias_de(cpl, r"dias?") or (rs.num_br(cpl.strip()) if re.fullmatch(r"\s*[\d.,]+\s*", cpl or "") else None)
+            if n:
+                out.append((rs.to_date(i.get("data_referencia") or i.get("data_decisao") or ""), -n))
+    return out
+
+
 def _prog_pela_db_manual(r):
     """Data-base corrigida pelo operador: a previsão do SEEU é refeita. Mudar a data-base em N dias muda a pena remanescente
-    nela em N dias (período em custódia): previsão nova = previsão do SEEU - (1 - fração) x (data-base do SEEU - nova)."""
+    nela em N dias (período em custódia): previsão nova = previsão do SEEU - (1 - fração) x (data-base do SEEU - nova).
+    A remição entra como no SEEU (pena cumprida): a anterior à data-base reduz o remanescente, a posterior abate o lapso; a
+    conta é monótona - quanto mais antiga a data-base informada, mais cedo (ou igual) a progressão."""
     novo, db0, prev = _data((r.get("_db_manual") or "").split("|")[0]), _data(r.get("data_base_seeu") or r.get("data_base") or ""), _data(r.get("progressao_previsao_seeu") or "")
     if not (novo and db0 and prev) or novo == db0:
         return None
@@ -218,16 +238,29 @@ def _prog_pela_db_manual(r):
     # fração do remanescente acrescido do deslocamento, também para baixo
     pt = rs.pena_para_dias(r.get("pena_total"))
     evs = [e for e in r.get("_eventos", []) if not e.get("_ficha")]
+    # remição é pena cumprida (LEP, art. 128), como no cálculo do SEEU: a concedida até a véspera da data-base reduz o remanescente
+    # nela; a concedida depois abate dias do lapso, um por um (sem data: abate do lapso, como posterior). A perda de remidos
+    # (LEP, art. 127) volta ao remanescente - no SEEU vem na data da falta, que é a data-base -, sempre pela fração: assim a
+    # data-base informada mais antiga que a perda não a converte em dias inteiros de lapso (não atrasa a progressão)
+    _rl = _remicoes_liquidas(r)
+    rems = [(dt, n) for dt, n in _rl if n > 0]
+    perdas = -sum(n for _, n in _rl if n < 0)
+    rem_antes = lambda d: sum(n for dt, n in rems if dt and dt < d) - perdas
+    rem_depois = lambda d: sum(n for dt, n in rems if not dt or dt >= d)
     if pt and evs and fr:
-        # remanescente na nova data-base = pena total - custódia até a véspera dela (o dia da prisão conta); lapso = fração, para baixo
+        # remanescente na nova data-base = pena total - custódia e remição até a véspera dela (o dia da prisão conta); lapso = fração,
+        # para baixo, menos os remidos depois da data-base
         per = rs.periodos_custodia(evs)
-        rem_n = pt - rs.dias_cumpridos_ate(per, [], novo - _td(days=1))
+        rem_n = pt - rs.dias_cumpridos_ate(per, [], novo - _td(days=1)) - rem_antes(novo)
         if rem_n > 0:
-            return novo + _td(days=int(rem_n * fr))
+            return novo + _td(days=max(0, int(int(rem_n * fr) - rem_depois(novo))))
     lap = (prev - db0).days
     if lap > 0 and fr:
-        rem0 = math.ceil(lap / fr)
-        return novo + _td(days=int((rem0 + (db0 - novo).days) * fr))
+        # o lapso do SEEU já vem abatido dos remidos depois da data-base dele: o bruto os devolve; os remidos entre a data-base
+        # informada e a do SEEU saem do remanescente na do SEEU e passam a abater o lapso novo
+        rem0 = math.ceil((lap + rem_depois(db0)) / fr)
+        entre = sum(n for dt, n in rems if dt and novo <= dt < db0) if novo < db0 else -sum(n for dt, n in rems if dt and db0 <= dt < novo)
+        return novo + _td(days=max(0, int(int((rem0 + (db0 - novo).days + entre) * fr) - rem_depois(novo))))
     return prev - _td(days=round(float((1 - fr) * (db0 - novo).days)))
 
 

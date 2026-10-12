@@ -174,7 +174,7 @@ def pena_extenso(txt):
     if d:
         partes.append("%d dia%s" % (d, "s" if d > 1 else ""))
     if not partes:
-        return "0 dia"
+        return "0 dias"
     neg = "-" if isinstance(txt, str) and txt.strip().startswith("-") else ""
     return neg + (partes[0] if len(partes) == 1 else ", ".join(partes[:-1]) + " e " + partes[-1])
 
@@ -1411,11 +1411,18 @@ def triagem_indulto(crimes):
 # cumprimento de pena (estimativas)
 # --------------------------------------------------------------------------- #
 
+def eventos_cronologicos(eventos):
+    """Eventos em ordem de data (ordenação estável: no mesmo dia, mantém a ordem do PDF; sem data, no começo, como antes).
+    O SEEU pode imprimir um lançamento retroativo fora da ordem; a custódia, a interrupção, o término, o indulto e a
+    prescrição não podem depender da ordem em que os eventos aparecem no relatório."""
+    return sorted(eventos or [], key=lambda e: to_date(e.get("data") or "") or date.min)
+
+
 def periodos_custodia_detalhe(eventos):
     """Como periodos_custodia, mas devolve (inicio, fim|None, motivo, processos) do evento de início."""
     per = []
     aberto = None
-    for e in eventos:
+    for e in eventos_cronologicos(eventos):
         d = to_date(e.get("data", ""))
         if not d:
             continue
@@ -1433,10 +1440,10 @@ def periodos_custodia_detalhe(eventos):
 
 
 def periodos_custodia(eventos):
-    """A partir dos eventos, devolve lista de (inicio, fim|None)."""
+    """A partir dos eventos (em ordem de data), devolve lista de (inicio, fim|None)."""
     per = []
     aberto = None
-    for e in eventos:
+    for e in eventos_cronologicos(eventos):
         d = to_date(e.get("data", ""))
         if not d:
             continue
@@ -2248,6 +2255,17 @@ def _sentenca_posterior(c, lim):
     return bool(d and lim and d > lim)
 
 
+def _sem_condenacao_na_data(c, pub):
+    """Condenação inexistente na publicação do decreto: sentença posterior a ela (como rspe_decretos._alcancados - sentença
+    posterior ao trânsito, dado incoerente, vale o trânsito). Pena extinta depois do decreto com essa sentença não estava
+    "em execução" na data: o decreto não a alcança e ela não muda a análise."""
+    if not _sentenca_posterior(c, pub):
+        return False
+    s = to_date(c.get("data_sentenca") or "")
+    ts = [d for d in (to_date(c.get("transito_mp") or ""), to_date(c.get("transito_processo") or "")) if d]
+    return not (ts and s and s > min(ts) and min(ts) <= pub)
+
+
 def _art2_ii(c, lim):
     """Sentença anterior à data-limite (ou sem data), mas trânsito (para a acusação e final) só depois: o decreto alcança se
     não havia recurso da acusação, ou se ele não visava majorar a pena (art. 2º, II) - ponto controvertido, a verificar."""
@@ -2678,7 +2696,7 @@ def _curto_nao(n):
     return "%s (%s)" % (inc.strip(), txt)
 
 
-def analise_decreto_2022(campos, crimes, eventos, incidentes):
+def _analise_decreto_2022_modo(campos, crimes, eventos, incidentes, modo=None):
     """Decreto 11.302/2022: art. 5º (pena máxima em abstrato do crime ≤ 5 anos, crime a crime - parágrafo único),
     art. 4º (maiores de 70 anos com 1/3 cumprido), art. 1º (saúde - laudo), art. 7º (exclusões), art. 9º (independe
     de trânsito em julgado). Não exige fração cumprida nem regime. STF: a ADI 7.330 suspendeu (medida cautelar de
@@ -2803,13 +2821,22 @@ def analise_decreto_2022(campos, crimes, eventos, incidentes):
         linhas.append("? art. 9º: sentença anterior à publicação e trânsito só depois (%s) - o indulto cabe sem trânsito para a defesa, salvo recurso "
                       "da acusação após o julgamento em 2º grau (art. 9º, p. ú.) - conferir." % "; ".join(
                           "%s, trânsito em %s" % (crimes_curto([c]), c.get("transito_mp") or c.get("transito_processo")) for c in art9_22))
+    # art. 4º só sobre as condenações existentes em 25/12/2022: sem nenhuma (todas com fato ou sentença posterior), não há
+    # pena a que aplicar o 1/3 - nunca uma pena fictícia de 1 dia, que o tempo de prisão provisória "cumpriria"
+    alc4 = [c for c in ativos if c not in sem_tr22]
     if pena_total and (posteriores or sem_tr22):
-        pena_total = max(1, pena_total - sum(pena_para_dias(c.get("pena_imposta")) or 0 for c in posteriores + sem_tr22))
+        pena_total = pena_total - sum(pena_para_dias(c.get("pena_imposta")) or 0 for c in posteriores + sem_tr22)
+        if pena_total <= 0 and alc4:  # pena total do RSPE incoerente com as penas impostas: a soma das alcançadas
+            pena_total = sum(pena_para_dias(c.get("pena_imposta")) or 0 for c in alc4)
+        if pena_total <= 0 or not alc4:
+            pena_total = 0
     aviso22 = ""  # cumprido pelos eventos (SEEU sem cálculo ou âncora zerada): o favorável fica a verificar
     art4_ok = False
     art4_parcial = False
     art4_tese = False
-    if idade is not None and idade >= 70 and pena_total and ativos:
+    if idade is not None and idade >= 70 and ativos and not alc4:
+        linhas.append("✗ art. 4º: %s em 25/12/2022, mas sem condenação até o decreto (sentença posterior à publicação) - o art. 4º não alcança" % pl(idade, "ano", "anos"))
+    if idade is not None and idade >= 70 and pena_total and alc4:
         periodos = periodos_custodia(eventos)
         _rem = []
         for i in incidentes:
@@ -2818,7 +2845,10 @@ def analise_decreto_2022(campos, crimes, eventos, incidentes):
                 if mr is not None:
                     _rem.append((to_date(i.get("data_referencia") or i.get("data_decisao") or ""), mr))
         try:
-            cumprido, _, aviso22 = cumprido_decreto(campos, periodos, _rem, ref, periodos_livramento(eventos, incidentes), crimes)
+            _ci22 = cumprido_decreto_info(campos, periodos, _rem, ref, periodos_livramento(eventos, incidentes), crimes, modo)
+            cumprido, aviso22 = _ci22["dias"], _ci22["aviso"]
+            if _ci22.get("alt"):
+                out["_alt_cump"] = True
         except Exception:
             cumprido = dias_cumpridos_ate(periodos, _rem, ref)
         # art. 7º, § 2º: as vedações do inciso III, "b" (lavagem) e "d" (organização criminosa), e do inciso V
@@ -2866,13 +2896,19 @@ def analise_decreto_2022(campos, crimes, eventos, incidentes):
     elif art4_tese:
         out["indulto_2022"] = "A VERIFICAR: art. 4º (%s) - 1/3 da pena unificada cumprido e pena do impeditivo cumprida (leitura literal do art. 11)" % pl(idade, "ano", "anos")
         out["indulto_2022_status"] = "verificar"
+    elif ativos and not alc4:
+        # todas as condenações com sentença posterior à publicação: o decreto não alcança nenhuma (nem o art. 4º, nem o 5º, nem
+        # as vedações do art. 7º) - como na aba Indulto ("sem condenação até o decreto")
+        out["indulto_2022"] = "não se aplica: sem condenação até %s (sentença posterior à publicação: %s)" % (fmt(pub22), "; ".join(
+            "%s, sentença de %s" % (crimes_curto([c]), c.get("data_sentenca")) for c in sem_tr22))
+        out["indulto_2022_status"] = "nao"
     elif not ativos and posteriores:
         out["indulto_2022"], out["indulto_2022_status"] = "não se aplica: fatos posteriores a 25/12/2022", "nao"
     elif not ativos:
         # pena extinta DEPOIS de 25/12/2022 (fato anterior): estava em execução na data do decreto - não "sem crimes" nela;
         # hoje não há pena a cumprir, e o indulto não tem objeto
         _ext_dep = [c for c in crimes if (c.get("extinto") or "").upper().startswith("S") and (to_date(c.get("data_extincao") or "") or date.min) > ref
-                    and (to_date(c.get("data_infracao") or "") or date.max) <= ref]
+                    and (to_date(c.get("data_infracao") or "") or date.max) <= ref and not _sem_condenacao_na_data(c, pub22)]
         out["indulto_2022"] = ("não se aplica: a pena (%s) estava em execução em 25/12/2022 e foi extinta depois (%s) - sem pena a cumprir" % (
             crimes_curto(_ext_dep).replace(" (extinto)", ""), ", ".join(dict.fromkeys(c.get("data_extincao") for c in _ext_dep)))
             if _ext_dep else "sem crimes ativos no RSPE")
@@ -2920,7 +2956,10 @@ def analise_decreto_2022(campos, crimes, eventos, incidentes):
                     if mr is not None:
                         remicoes.append((to_date(i.get("data_referencia") or i.get("data_decisao") or ""), mr))
             try:
-                cump22, _, aviso22 = cumprido_decreto(campos, periodos, remicoes, ref, periodos_livramento(eventos, incidentes), crimes)
+                _ci22 = cumprido_decreto_info(campos, periodos, remicoes, ref, periodos_livramento(eventos, incidentes), crimes, modo)
+                cump22, aviso22 = _ci22["dias"], _ci22["aviso"]
+                if _ci22.get("alt"):
+                    out["_alt_cump"] = True
             except Exception:
                 cump22 = None
             procs = "; ".join("proc. %s (%s, %s)" % (c.get("processo_criminal") or "?", crimes_curto([c]), dias_para_pena(pena_para_dias(c.get("pena_imposta")) or 0)) for c in _fora7)
@@ -2977,7 +3016,7 @@ def analise_decreto_2022(campos, crimes, eventos, incidentes):
             # os eventos não servem e a âncora do SEEU fica abaixo deles: a pena do impeditivo pode estar cumprida - a verificar
             out["indulto_2022"] = "A VERIFICAR: conferir o tempo cumprido (art. 11, p. ú.) | " + aviso22
             out["indulto_2022_status"] = "verificar"
-    if any(c.get("comando_orcrim") == "S" for c in ativos if c not in posteriores):
+    if any(c.get("comando_orcrim") == "S" for c in alc4 if c not in posteriores):
         # art. 7º, § 1º: integrantes de facções criminosas - quem exerce o comando é integrante (o § 2º não afasta o § 1º)
         out["indulto_2022"], out["indulto_2022_status"] = "VEDADO (art. 7º, § 1º): condenado por exercer comando de organização criminosa", "vedado"
         linhas.append("✗ Art. 7º, § 1º: o RSPE registra condenação por exercer comando de organização criminosa (integrante de facção)")
@@ -3083,13 +3122,21 @@ def _interrupcoes_omitidas(campos, todos, ini):
     return max(0, seeu - max(0, fora_ev))
 
 
-def cumprido_decreto_info(campos, periodos, remicoes, ref, extras=None, crimes=None):
+def cumprido_decreto_info(campos, periodos, remicoes, ref, extras=None, crimes=None, modo=None):
     """Pena cumprida na data, numa regra só para todos os decretos (2000 a 2025, aba, linha do tempo e colunas). Vale a âncora
     do SEEU (cumprido_na_data); a conta pelos eventos (custódia e livramento + remições) entra quando o SEEU não traz o cálculo,
     quando a âncora zera ou fica abaixo da metade dos eventos (penas extintas e interrupções que o SEEU atual não conta) - com
     180 dias ou mais de diferença. Eventos acima do teto (a pena da execução, extintas inclusive) não servem: fica a âncora (ou,
     sem ela, os eventos limitados ao teto) e o resultado que depende do tempo fica a verificar. Devolve
-    {dias, fonte, aviso, origem}; origem: seeu | sem_calculo | ancora | estouro."""
+    {dias, fonte, aviso, origem}; origem: seeu | sem_calculo | ancora | estouro.
+
+    modo (a decisão pelo requisito, monótona - mais pena cumprida nunca piora o resultado): "ancora" devolve a âncora do SEEU
+    (com "alt": True quando os eventos mostram mais tempo e podem mudar o resultado); "eventos" devolve o cumprido pelos eventos
+    (origem "ancora", com o aviso - o favorável fica a verificar). Quem avalia o decreto roda as duas e fica com a âncora quando
+    ela atende, senão com os eventos quando eles atendem (a verificar), senão com a âncora (_por_requisito e
+    rspe_decretos.avaliar_ficha). Eventos acima da
+    pena da execução (estouro) valem nos dois modos, sem depender da distância até a âncora. Sem modo: a regra antiga (só para
+    exibição, linha do tempo)."""
     todos = uniao_periodos(list(periodos) + list(extras or []))
     ev = dias_cumpridos_ate(todos, remicoes, ref)
     teto = _teto_eventos(campos, crimes)
@@ -3117,6 +3164,18 @@ def cumprido_decreto_info(campos, periodos, remicoes, ref, extras=None, crimes=N
                     "aviso": "%s: usado o cumprido pelos eventos do RSPE, %s até %s - conferir" % (SEM_CALCULO, dias_para_pena(ev), fmt(ref))}
         return {"dias": 0, "fonte": "o SEEU não traz o cálculo da pena e os eventos não mostram cumprimento até a data", "origem": "seeu", "aviso": ""}
     c, fonte = cumprido_na_data(campos, periodos, remicoes, ref, extras)
+    if modo:
+        if ev >= 180 and ev > c:
+            if ruim:
+                return estouro(c, fonte, "usado o cálculo do SEEU, %s" % dias_para_pena(c))
+            if modo == "eventos":
+                txt = ANCORA_ZERADA if c == 0 else ("%s (%s)" % (ANCORA_BAIXA, dias_para_pena(c)) if ev - c >= 180 else
+                                                     "pela âncora do SEEU o cumprido nesta data (%s) fica abaixo do que os eventos mostram" % dias_para_pena(c))
+                return {"dias": ev, "fonte": "pelos eventos (custódia e livramento + remições)", "origem": "ancora",
+                        "aviso": ("%s (o SEEU atual não conta o tempo das penas já extintas nem o das interrupções): pelos eventos, %s, o requisito "
+                                  "é atendido - conferir, pois os eventos podem contar a mais (livramento revogado%s)" % (txt, dias_para_pena(ev), nota_omit))}
+            return {"dias": c, "fonte": fonte, "origem": "seeu", "aviso": "", "alt": True}
+        return {"dias": c, "fonte": fonte, "origem": "seeu", "aviso": ""}
     if ev >= 180 and ev - c >= 180 and (c == 0 or c * 2 < ev):
         if ruim:
             return estouro(c, fonte, "usado o cálculo do SEEU, %s" % dias_para_pena(c))
@@ -3127,10 +3186,71 @@ def cumprido_decreto_info(campos, periodos, remicoes, ref, extras=None, crimes=N
     return {"dias": c, "fonte": fonte, "origem": "seeu", "aviso": ""}
 
 
-def cumprido_decreto(campos, periodos, remicoes, ref, extras=None, crimes=None):
+def cumprido_decreto(campos, periodos, remicoes, ref, extras=None, crimes=None, modo=None):
     """(dias, fonte, aviso) de cumprido_decreto_info."""
-    x = cumprido_decreto_info(campos, periodos, remicoes, ref, extras, crimes)
+    x = cumprido_decreto_info(campos, periodos, remicoes, ref, extras, crimes, modo)
     return x["dias"], x["fonte"], x["aviso"]
+
+
+_RANK_ST = {"possivel": 2, "verificar": 1}
+
+
+def _por_requisito(fn, args, chaves):
+    """Roda a análise pela âncora do SEEU; quando os eventos mostram mais tempo, roda de novo pelos eventos e mescla
+    (mesclar_por_requisito): o resultado pelos eventos vale (a verificar) só onde a âncora não atende e os eventos atendem."""
+    o_a = fn(*args, modo="ancora")
+    if o_a.pop("_alt_cump", False):
+        o_e = fn(*args, modo="eventos")
+        o_e.pop("_alt_cump", None)
+        o_a = mesclar_por_requisito(o_a, o_e, chaves)
+    return o_a
+
+
+def analise_decretos(campos, crimes, eventos, incidentes, hoje):
+    """Indulto e comutação dos Decretos 2024 e 2025 (_analise_decretos_modo), com a decisão pelo requisito (_por_requisito)."""
+    return _por_requisito(_analise_decretos_modo, (campos, crimes, eventos, incidentes, hoje),
+                          [p_ + a_ for a_ in DECRETOS for p_ in ("indulto_", "comutacao_")])
+
+
+def analise_decreto_2022(campos, crimes, eventos, incidentes):
+    """Decreto 11.302/2022 (_analise_decreto_2022_modo), com a decisão pelo requisito (_por_requisito)."""
+    return _por_requisito(_analise_decreto_2022_modo, (campos, crimes, eventos, incidentes), ["indulto_2022", "comutacao_2022"])
+
+
+def mesclar_por_requisito(out_a, out_e, chaves):
+    """Decisão pelo requisito (cumprido_decreto_info, modo), por decreto (o indulto e a comutação do ano andam juntos - a
+    comutação "prejudicada" depende do indulto cabível): fica a análise pela âncora quando ela dá resultado possível; senão a
+    dos eventos quando ela dá resultado melhor (possível ou a verificar - com o aviso, a verificar); senão a da âncora. Mais
+    pena cumprida no SEEU nunca piora o resultado. chaves: [indulto_AAAA, comutacao_AAAA, ...] (cada resultado com as chaves
+    que começam por ele + "_")."""
+    def nota(o, k):
+        if k.startswith("indulto_") and (o.get(k) or "").upper().startswith("POSSÍVEL"):
+            return 2  # possível com falta a verificar (art. 6º): a comutação já ficou prejudicada por ele
+        if k.startswith("comutacao_") and (o.get(k) or "").startswith("prejudicada"):
+            return 2  # prejudicada pelo indulto (inclusive o da tese): o indulto cobre a pena
+        return _RANK_ST.get(o.get(k + "_status") or status_texto_decreto(o.get(k)), 0)
+    out = dict(out_a)
+    anos = {}
+    for k in chaves:
+        anos.setdefault(k.rsplit("_", 1)[-1], []).append(k)
+    def troca(k):
+        for kk in [x for x in out if x == k or x.startswith(k + "_")]:
+            out.pop(kk, None)
+        out.update({x: v for x, v in out_e.items() if x == k or x.startswith(k + "_")})
+    for ano, ks in anos.items():
+        if any((out_a.get(k) or "").startswith("não se aplica: sem pena remanescente") for k in ks):
+            continue  # pena já cumprida pela âncora: com o tempo maior dos eventos, também não sobra o que comutar
+        ki = [k for k in ks if k.startswith("indulto_")]
+        if ki and nota(out_a, ki[0]) == 2:
+            continue  # indulto possível pela âncora (a comutação fica como está - prejudicada, se for o caso)
+        if ki and out_e.get(ki[0]) and nota(out_e, ki[0]) == 2:
+            for k in ks:
+                troca(k)  # indulto possível pelos eventos: o decreto inteiro (a comutação prejudicada vem junto)
+            continue
+        for k in ks:  # nenhum indulto possível: cada resultado, o melhor dos dois
+            if out_e.get(k) and nota(out_e, k) > nota(out_a, k):
+                troca(k)
+    return out
 
 
 def decisoes_decreto(incidentes, ano, tipo):
@@ -3504,7 +3624,7 @@ def _tempo_em_liberdade(periodos, ref):
 PATRIMONIO_CP = set(str(a) for a in range(155, 181))  # Título II do CP
 
 
-def analise_decretos(campos, crimes, eventos, incidentes, hoje):
+def _analise_decretos_modo(campos, crimes, eventos, incidentes, hoje, modo=None):
     """Decretos 12.338/2024 e 12.790/2025: art. 1º (vedações), art. 6º (falta),
     art. 9º (16 hipóteses de indulto), § 2º (redução pela metade), art. 13 (comutação).
     Parâmetros (frações, tetos, anos) vêm da base jurídica (decretos_indulto.art9_incisos).
@@ -3693,7 +3813,7 @@ def analise_decretos(campos, crimes, eventos, incidentes, hoje):
         def _interrompido_ver(motivo, det_base):
             """Cumprimento interrompido na data (fuga, soltura): os incisos exigem fração cumprida ATÉ a data, não custódia NA data.
             Com tempo cumprido antes da interrupção, fica a verificar (a fuga, se punida, entra como falta grave na janela)."""
-            cump_i, _f, _av = cumprido_decreto(campos, periodos, remicoes, ref, periodos_lc, crimes)
+            cump_i, _f, _av = cumprido_decreto(campos, periodos, remicoes, ref, periodos_lc, crimes, modo)
             if not cump_i or not pena_total:
                 return False
             # art. 7º, p. ú.: com crime impeditivo certo cujos 2/3 não estavam cumpridos, o indulto e a comutação dos demais
@@ -3781,7 +3901,9 @@ def analise_decretos(campos, crimes, eventos, incidentes, hoje):
             out[kc] = "não se aplica"
             _xv_sem_cumprimento("sem pena em cumprimento", det + nota_art2)
             continue
-        _ci = cumprido_decreto_info(campos, periodos, remicoes, ref, periodos_lc, crimes)
+        _ci = cumprido_decreto_info(campos, periodos, remicoes, ref, periodos_lc, crimes, modo)
+        if _ci.get("alt"):
+            out["_alt_cump"] = True
         cumprido, cump_fonte, aviso_cump, cump_orig = _ci["dias"], _ci["fonte"], _ci["aviso"], _ci["origem"]
         cumprido_ref = cumprido  # tempo total cumprido na execução (IV e V contam anos de prisão, não fração da pena)
         remanescente = max(0, pena_total - cumprido)
@@ -4084,12 +4206,17 @@ def analise_decretos(campos, crimes, eventos, incidentes, hoje):
                 aviso = "; ".join(t for _, t in ressalvas) + ("; " + aviso if aviso else "")
                 # o inciso XV não exige tempo cumprido nem tem teto de pena (afere-se crime a crime): a dúvida sobre o cumprido ou
                 # sobre a pena considerada não o alcança - continua possível, com a nota
-                res_p = [x for x in ressalvas if not (all(p.startswith("XV:") for p in possiveis)
-                                                      and x[0].startswith(("conferir o tempo cumprido", "conferir a pena considerada")))]
-                if possiveis and res_p:
-                    suf = " - " + "; ".join(x[0] for x in res_p)
-                    verificar = [p + suf for p in possiveis] + verificar
-                    possiveis = []
+                # (crime a crime: com o XV e outro inciso possíveis, só o outro - que depende do tempo - fica a verificar)
+                res_xv = [x for x in ressalvas if not x[0].startswith(("conferir o tempo cumprido", "conferir a pena considerada"))]
+                fica, rebaixa = [], []
+                for p in possiveis:
+                    rp = res_xv if re.match(r"XV( \(parcial\))?:", p) else ressalvas
+                    if rp:
+                        rebaixa.append(p + " - " + "; ".join(x[0] for x in rp))
+                    else:
+                        fica.append(p)
+                verificar = rebaixa + verificar
+                possiveis = fica
             verificar = sorted(verificar, key=_k)
             # indulto só pelo XIV/XV de parte dos crimes: a pena dos demais segue e a comutação não fica prejudicada
             so_parcial = bool(possiveis) and all(" - alcança as penas de " in p for p in possiveis)
@@ -4482,8 +4609,9 @@ def _sem_objeto(out, campos, crimes, ano):
 def _extinta_depois(out, crimes, ano, ref):
     """Pena extinta DEPOIS da data do decreto (fato anterior): estava em execução na data e fica fora da análise, que usa só os
     crimes ativos - o resultado sem ela não se sustenta: a verificar, com a pena a incluir."""
+    pub = DECRETOS_PUB.get(ano) or ref
     ext_dep = [c for c in crimes if c.get("extinto", "").upper().startswith("S") and (to_date(c.get("data_extincao") or "") or date.min) > ref
-               and (to_date(c.get("data_infracao") or "") or date.max) <= ref]
+               and (to_date(c.get("data_infracao") or "") or date.max) <= ref and not _sem_condenacao_na_data(c, pub)]
     if not ext_dep:
         return
     por_data = {}
@@ -4645,7 +4773,7 @@ def extrair(caminho):
         "status_execucao": status,
         "numero_antigo": campo(cab, "Número Antigo"),
         "nome": campo(cab, "Nome:"),
-        "cpf": campo(cab, "CPF"),
+        "cpf": cpf_rspe(campo(cab, "CPF")),
         "rg": _sem_nao_informado(_campo_rg(cab)),
         # nome comprido quebrado na célula: as linhas seguintes (só letras) até a data de nascimento completam o nome
         "nome_mae": _sem_nao_informado(campo_continuado(cab, "Nome da Mãe", r"(?:Data\s+(?:de\s+)?|Dt\.?\s*(?:de\s+)?)?Nascimento\b",
@@ -4700,6 +4828,18 @@ def extrair(caminho):
     return derivar(r, crimes, eventos, incidentes)
 
 
+def cpf_rspe(v):
+    """CPF do cabeçalho do RSPE. Sem CPF cadastrado, o SEEU imprime no campo um número provisório de 13 dígitos (começa por 15-17,
+    como um carimbo de tempo): não é CPF e não sai como CPF no relatório nem na petição - fica "não informado (registro provisório
+    do SEEU nº X)". Os 13 algarismos continuam no campo, para o confronto de identidade entre RSPEs (que só usa CPF de 11 dígitos
+    e, à parte, o registro de 13). Idempotente."""
+    v = (v or "").strip()
+    dig = re.sub(r"\D", "", v)
+    if len(dig) != 13 or "SEEU" in v.upper():
+        return v
+    return "não informado (registro provisório do SEEU nº %s)" % dig
+
+
 def reprocessar(r):
     """Refaz a análise de um registro já gravado na base (leitura do PDF preservada), com as regras desta versão."""
     _completar_processos_eventos(r.get("_crimes", []), r.get("_eventos", []), r.get("_incidentes", []))
@@ -4713,7 +4853,12 @@ def derivar(r, crimes, eventos, incidentes):
     inc_conc = [i for i in incidentes if i.get("situacao") == "CONCEDIDO"]
     inc_neg = [i for i in incidentes if i.get("situacao") == "NÃO CONCEDIDO"]
     inc_pend = [i for i in incidentes if i.get("situacao") == "PENDENTE"]
+    # eventos em ordem de data (estável): todo o resto (custódia, interrupção, fuga, término, decretos) lê a lista nessa ordem
+    eventos[:] = eventos_cronologicos(eventos)
     r["_reimportar"] = reimportar_motivos(r)
+    # número provisório do SEEU no lugar do CPF (registro gravado antes desta versão): rotulado, sem reimportar
+    if r.get("cpf"):
+        r["cpf"] = cpf_rspe(r["cpf"])
     for c in crimes:
         for k in ("vga", "resultado_morte", "reincidente_especifico", "comando_orcrim"):
             if (c.get(k) or "") not in ("", "S", "N"):

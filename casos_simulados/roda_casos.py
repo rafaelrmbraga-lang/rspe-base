@@ -82,8 +82,12 @@ def comparar(op, real, v):
     raise ValueError(op)
 
 
-def conferir(j, ch):
+def conferir(j, ch, api=None, processo=None):
     t = ch["t"]
+    if t == "linha_tempo":
+        # linha do tempo do indulto (Api.indulto_linha), como a tela a abre
+        real = api.indulto_linha(processo)
+        return comparar(ch["op"], real, ch["v"]), real
     if t == "campo":
         real = j.get(ch["campo"])
         return comparar(ch["op"], real, ch["v"]), real
@@ -150,7 +154,7 @@ def main():
             j = (rr.get("parcial") or [None])[0] or api._json_de(next(x for x in (api._modelos or []) + (api._ocultos or []) if x.get("id") == c["processo"]))
         for ch in c["checks"]:
             try:
-                okk, real = conferir(j, ch)
+                okk, real = conferir(j, ch, api, c["processo"])
             except Exception as e:
                 okk, real = False, "exceção: %r" % e
             nt += 1

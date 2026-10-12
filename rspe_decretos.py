@@ -202,8 +202,11 @@ SEM_CALCULO = rs.SEM_CALCULO
 def _cumprido_info(r, ctx, ref):
     """Pena cumprida na data pela regra única de todos os decretos (rs.cumprido_decreto_info: âncora do SEEU; pelos eventos
     quando o SEEU não traz o cálculo ou a âncora zera ou fica abaixo da metade deles; teto na pena da execução). Devolve o
-    dicionário {dias, fonte, aviso, origem}."""
-    return rs.cumprido_decreto_info(r, ctx["periodos"], ctx["rem"], ref, ctx["lc"], r.get("_crimes") or [])
+    dicionário {dias, fonte, aviso, origem}. Com ctx["_modo"] (avaliar_ficha), a âncora ou os eventos - decisão pelo requisito."""
+    x = rs.cumprido_decreto_info(r, ctx["periodos"], ctx["rem"], ref, ctx["lc"], r.get("_crimes") or [], ctx.get("_modo"))
+    if x.get("alt"):
+        ctx["_alt"] = True
+    return x
 
 
 def _cumprido(r, ctx, ref):
@@ -377,7 +380,24 @@ def _ctx(r):
     return {"periodos": rs.periodos_custodia(eventos), "lc": rs.periodos_livramento(eventos, incidentes), "rem": rem}
 
 
+_RANK_S = {"cabe": 2, "ver": 1}
+
+
 def avaliar_ficha(f, r, ctx, ini, hoje):
+    """Avalia o decreto com a decisão pelo requisito (rs.cumprido_decreto_info, modo): pela âncora do SEEU; se ela não dá o
+    resultado favorável e os eventos mostram mais tempo, de novo pelos eventos - que valem (a verificar, com o aviso) quando
+    dão resultado melhor. Mais pena cumprida no SEEU nunca piora o resultado."""
+    if ctx.get("_modo") or "periodos" not in ctx:
+        return _avaliar_ficha_um(f, r, ctx, ini, hoje)
+    ca = dict(ctx, _modo="ancora")
+    xa = _avaliar_ficha_um(f, r, ca, ini, hoje)
+    if xa.get("s") == "cabe" or not ca.get("_alt") or (xa.get("mot") or "").startswith("sem pena remanescente"):
+        return xa  # (pena já cumprida pela âncora: com o tempo maior dos eventos, também não sobra o que comutar)
+    xe = _avaliar_ficha_um(f, r, dict(ctx, _modo="eventos"), ini, hoje)
+    return xe if _RANK_S.get(xe.get("s"), 0) > _RANK_S.get(xa.get("s"), 0) else xa
+
+
+def _avaliar_ficha_um(f, r, ctx, ini, hoje):
     """Avalia o decreto; com o cumprimento interrompido na data (fuga, soltura), o resultado favorável vira A VERIFICAR: o decreto
     exige a fração cumprida ATÉ a data, não a custódia NA data, e a interrupção pode ter sido punida como falta grave."""
     x = _avaliar_ficha(f, r, ctx, ini, hoje)
@@ -872,6 +892,12 @@ def _avaliar_ficha(f, r, ctx, ini, hoje):
                                       "aferível pelo RSPE; há também crime impeditivo (%s)" % "; ".join(imp))
     if imp:
         return dict(res, s="imp", mot="; ".join(imp))
+    sem_rem = next((x for x in hips if x["tipo"] == "comutacao" and (x.get("mot") or "").startswith("sem pena remanescente a comutar")), None)
+    if sem_rem:
+        # a comutação caiu só porque a pena considerada já estava cumprida na data (o requisito de tempo foi atendido): esse é o
+        # motivo, e não o da hipótese de indulto que chegou mais perto
+        return dict(res, s="nao", mot=sem_rem["mot"] + ((" - indulto: %s" % ind_n[2]) if (ind_n and ind_n[2]) else ""),
+                    exigido=sem_rem.get("exigido"), dispositivo=sem_rem.get("dispositivo") or "")
     if ind_n and ind_n[2]:
         return dict(res, s="nao", mot=ind_n[2], exigido=ind_n[1], dispositivo=ind_n[0].get("dispositivo") or "")
     if com_n and com_n[2]:

@@ -2547,7 +2547,7 @@ const ui = {
       <div class="cb"><div class="ct">1 · Pena</div>
         <div class="clin"><label>anos</label>${ent('a')}<label>meses</label>${ent('m')}<label>dias</label>${ent('d')}<button class="btn sm" onclick="ui.cpOp(1)">+ somar</button><button class="btn sm" onclick="ui.cpOp(-1)">− subtrair</button></div>
         <div class="fita">${fita}</div>
-        <div class="tot"><span>Pena total</span><b>${ext(R.total_ext||'0 dia')}</b><span class="muted">${esc(R.total||'')}</span>${C.fita.length?'<span class="x" onclick="ui._cp.fita=[];ui.cpAtualiza()">limpar</span>':''}</div></div>
+        <div class="tot"><span>Pena total</span><b>${ext(R.total_ext||'0 dias')}</b><span class="muted">${esc(R.total||'')}</span>${C.fita.length?'<span class="x" onclick="ui._cp.fita=[];ui.cpAtualiza()">limpar</span>':''}</div></div>
       <div class="cb"><div class="ct">2 · Período entre datas <span class="muted">(conta o dia do começo)</span></div>
         <div class="clin">${inp('p1',C.p1,92,'dd/mm/aaaa')}<span>a</span>${inp('p2',C.p2,92,'dd/mm/aaaa')}<b>${P?esc(P.amd.replace(/(\d+)a(\d+)m(\d+)d/,'$1a $2m $3d'))+' · '+pl(P.dias,'dia','dias'):'—'}</b></div>
         ${P?`<div class="clin" style="margin-top:6px"><button class="btn sm" onclick="ui.cpPeriodo('pena')">→ somar à pena</button><button class="btn sm" onclick="ui.cpPeriodo('interr')">→ interrupção</button><button class="btn sm" title="Soma os dias do período aos dias a descontar (prisão provisória)" onclick="ui.cpPeriodo('det')">→ detração</button></div>`:''}</div>

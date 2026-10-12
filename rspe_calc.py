@@ -101,7 +101,7 @@ def txt(p):
 
 
 def extenso(p):
-    return rs.pena_extenso(txt(p)) if any(p) else "0 dia"
+    return rs.pena_extenso(txt(p)) if any(p) else "0 dias"
 
 
 def calcular(e):

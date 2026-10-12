@@ -1,4 +1,4 @@
-"""Bateria de 121 casos simulados (situações que a base real não tem: frações de todas as leis, livramento, prazos, prescrição,
+"""Bateria de 134 casos simulados (situações que a base real não tem: frações de todas as leis, livramento, prazos, prescrição,
 extinção, faltas e data-base, indulto e comutação 2024/2025, ficha e remição), cada um com a conta feita à parte, conferida pela
 Api da tela numa base nova só com os casos. As divergências marcadas "decisão jurídica" não contam como falha.
 Rodar: python teste_casos_simulados.py"""

@@ -14444,5 +14444,1562 @@
     "nota": ""
    }
   ]
+ },
+ {
+  "acoes": [],
+  "id": "S122",
+  "grupo": "Data-base informada e remição",
+  "titulo": "Data-base informada 1 dia antes da do SEEU, com remição: a progressão não pode atrasar",
+  "conta": "Furto 2a6m (912 dias), 16%. Prisão 11/01/2025, 117 remidos em 02/04/2025. SEEU: data-base 11/01/2025, progressão 08/02/2025 (lapso int(912 x 16%) = 145 dias - 117 remidos = 28). Data-base informada 10/01/2025: remanescente nela 912 (nada cumprido antes), lapso 145 - 117 remidos depois da data-base = 28 dias -> 07/02/2025* (antes: 04/06/2025*, remição ignorada).",
+  "processo": "9900122-00.2026.8.12.0001",
+  "rspe": {
+   "arquivo": "SIMULADO_122.pdf",
+   "nome": "SIMULADO CASO 122",
+   "processo_execucao": "9900122-00.2026.8.12.0001",
+   "cpf": "90000000122",
+   "nome_mae": "MAE SIMULADA 122",
+   "rg": "",
+   "data_nascimento": "01/01/1980",
+   "numero_antigo": "",
+   "tribunal": "TJMS",
+   "vara": "TJMS - 1ª VARA DE EXECUÇÃO PENAL",
+   "comarca": "CAMPO GRANDE",
+   "status_execucao": "ATIVO",
+   "regime_atual": "Fechado - ATIVO",
+   "pena_total": "2a6m0d",
+   "pena_cumprida": "2a0m4d",
+   "pena_remanescente": "0a5m26d",
+   "total_interrupcoes": "0a0m0d",
+   "saldo_remidos": "117 dias (117 dias remidos - 0 dias perdidos)",
+   "data_base_seeu": "11/01/2025",
+   "livramento_data_base_seeu": "11/01/2025",
+   "progressao_previsao_seeu": "08/02/2025",
+   "livramento_previsao_seeu": "",
+   "termino_previsao_seeu": "31/03/2027",
+   "fracao_progressao_aplicada": "",
+   "fracao_livramento_aplicada": "",
+   "progressao_obs_seeu": "",
+   "livramento_obs_seeu": "",
+   "data_geracao_rspe": "05/10/2026",
+   "versao_leitura_rspe": 4,
+   "_crimes": [
+    {
+     "processo_criminal": "8800101-00.2023.8.12.0001",
+     "processo_situacao": "",
+     "tipo_processo": "ACAO PENAL",
+     "vara_condenacao": "Campo Grande, 1ª Vara",
+     "data_denuncia": "",
+     "data_sentenca": "10/09/2023",
+     "transito_mp": "10/11/2024",
+     "transito_processo": "10/11/2024",
+     "pena_total_processo": "",
+     "regime_sentenca": "Fechado",
+     "lei": "2848/40 - Código Penal",
+     "artigo": "ART 155: Furto",
+     "tipo_penal": "CAPUT: Subtrair, para si ou para outrem, coisa alheia móvel, Reclusão: 1 a 4 anos E Multa",
+     "pena_imposta": "2 ano(s), 6 mês(es) e 0 dia(s)",
+     "data_infracao": "10/03/2023",
+     "vga": "N",
+     "resultado_morte": "N",
+     "reincidente_comum": "N",
+     "reincidente_especifico": "N",
+     "comando_orcrim": "N",
+     "fracao_progressao": "16% - Art.112, I, da LEP",
+     "fracao_livramento": "1/3 - Comum Primário",
+     "extinto": "Não",
+     "suspenso": "Não"
+    }
+   ],
+   "_eventos": [
+    {
+     "tipo": "PRISÃO/INÍCIO DE CUMPRIMENTO",
+     "motivo": "PRISÃO DEFINITIVA",
+     "complemento": "",
+     "data": "11/01/2025",
+     "data_decisao": "",
+     "data_referencia": "",
+     "processos": "8800101-00.2023.8.12.0001"
+    }
+   ],
+   "_incidentes": [
+    {
+     "tipo": "FIXAÇÃO/ALTERAÇÃO DE REGIME",
+     "motivo": "",
+     "complemento": "Fechado - Regime Inicial",
+     "data": "",
+     "data_decisao": "11/01/2025",
+     "data_referencia": "11/01/2025",
+     "processos": "",
+     "situacao": "CONCEDIDO"
+    },
+    {
+     "tipo": "REMIÇÃO",
+     "motivo": "",
+     "complemento": "117 Dia(s) Remido(s)",
+     "data": "",
+     "data_decisao": "02/04/2025",
+     "data_referencia": "02/04/2025",
+     "processos": "",
+     "situacao": "CONCEDIDO"
+    }
+   ],
+   "_hash": "sim122"
+  },
+  "ficha": null,
+  "manuais": {
+   "data_base": "10/01/2025|teste"
+  },
+  "extra_rspe": [],
+  "checks": [
+   {
+    "t": "campo",
+    "campo": "prog",
+    "op": "eq",
+    "v": "07/02/2025*",
+    "nota": "remição abatida como no SEEU; data-base mais antiga não atrasa a progressão"
+   }
+  ]
+ },
+ {
+  "acoes": [],
+  "id": "S123",
+  "grupo": "Linha do tempo do indulto - textos",
+  "titulo": "Mulher, furto 2016, Decreto 9.370/2018 sem rol de vedações: a linha do tempo não mostra \"None\"",
+  "conta": "base_juridica.json traz impeditivos.dispositivo = null no Decreto 9.370/2018; o fundamento do item \"Natureza dos crimes\" da linha do tempo era \"Decreto 9.370, None\".",
+  "processo": "9900123-00.2026.8.12.0001",
+  "rspe": {
+   "arquivo": "SIMULADO_123.pdf",
+   "nome": "SIMULADO CASO 123",
+   "processo_execucao": "9900123-00.2026.8.12.0001",
+   "cpf": "90000000123",
+   "nome_mae": "MAE SIMULADA 123",
+   "rg": "",
+   "data_nascimento": "01/01/1980",
+   "numero_antigo": "",
+   "tribunal": "TJMS",
+   "vara": "TJMS - 1ª VARA DE EXECUÇÃO PENAL",
+   "comarca": "CAMPO GRANDE",
+   "status_execucao": "ATIVO",
+   "regime_atual": "Fechado - ATIVO",
+   "pena_total": "4a0m0d",
+   "pena_cumprida": "4a0m0d",
+   "pena_remanescente": "0a0m0d",
+   "total_interrupcoes": "0a0m0d",
+   "saldo_remidos": "0 dias (0 dias remidos - 0 dias perdidos)",
+   "data_base_seeu": "10/01/2017",
+   "livramento_data_base_seeu": "",
+   "progressao_previsao_seeu": "",
+   "livramento_previsao_seeu": "",
+   "termino_previsao_seeu": "09/01/2021",
+   "fracao_progressao_aplicada": "",
+   "fracao_livramento_aplicada": "",
+   "progressao_obs_seeu": "",
+   "livramento_obs_seeu": "",
+   "data_geracao_rspe": "05/10/2026",
+   "versao_leitura_rspe": 4,
+   "_crimes": [
+    {
+     "processo_criminal": "8800104-00.2016.8.12.0001",
+     "processo_situacao": "",
+     "tipo_processo": "ACAO PENAL",
+     "vara_condenacao": "Campo Grande, 1ª Vara",
+     "data_denuncia": "",
+     "data_sentenca": "10/09/2016",
+     "transito_mp": "10/11/2016",
+     "transito_processo": "10/11/2016",
+     "pena_total_processo": "",
+     "regime_sentenca": "Fechado",
+     "lei": "2848/40 - Código Penal",
+     "artigo": "ART 155: Furto",
+     "tipo_penal": "CAPUT: Subtrair, para si ou para outrem, coisa alheia móvel, Reclusão: 1 a 4 anos E Multa",
+     "pena_imposta": "4 ano(s), 0 mês(es) e 0 dia(s)",
+     "data_infracao": "10/03/2016",
+     "vga": "N",
+     "resultado_morte": "N",
+     "reincidente_comum": "N",
+     "reincidente_especifico": "N",
+     "comando_orcrim": "N",
+     "fracao_progressao": "1/6 - Comum",
+     "fracao_livramento": "1/3 - Comum Primário",
+     "extinto": "Não",
+     "suspenso": "Não"
+    }
+   ],
+   "_eventos": [
+    {
+     "tipo": "PRISÃO/INÍCIO DE CUMPRIMENTO",
+     "motivo": "PRISÃO DEFINITIVA",
+     "complemento": "",
+     "data": "10/01/2017",
+     "data_decisao": "",
+     "data_referencia": "",
+     "processos": "8800104-00.2016.8.12.0001"
+    }
+   ],
+   "_incidentes": [
+    {
+     "tipo": "FIXAÇÃO/ALTERAÇÃO DE REGIME",
+     "motivo": "",
+     "complemento": "Fechado - Regime Inicial",
+     "data": "",
+     "data_decisao": "10/01/2017",
+     "data_referencia": "10/01/2017",
+     "processos": "",
+     "situacao": "CONCEDIDO"
+    }
+   ],
+   "_hash": "sim123"
+  },
+  "ficha": null,
+  "manuais": {
+   "sexo": "F"
+  },
+  "extra_rspe": [],
+  "checks": [
+   {
+    "t": "linha_tempo",
+    "op": "nao_contem",
+    "v": "None",
+    "nota": "Api.indulto_linha"
+   },
+   {
+    "t": "linha_tempo",
+    "op": "contem",
+    "v": "Decreto 9.370 (sem rol de vedações)",
+    "nota": "Api.indulto_linha"
+   }
+  ]
+ },
+ {
+  "acoes": [],
+  "id": "S124",
+  "grupo": "Linha do tempo do indulto - textos",
+  "titulo": "Remição de 1 dia: a linha do tempo diz \"+1 dia\", não \"+1 dias\"",
+  "conta": "Marco da remição de 1 dia com o cálculo \"+1 dias\" (formato %+g dias); singular/plural pelo número de dias.",
+  "processo": "9900124-00.2026.8.12.0001",
+  "rspe": {
+   "arquivo": "SIMULADO_124.pdf",
+   "nome": "SIMULADO CASO 124",
+   "processo_execucao": "9900124-00.2026.8.12.0001",
+   "cpf": "90000000124",
+   "nome_mae": "MAE SIMULADA 124",
+   "rg": "",
+   "data_nascimento": "01/01/1980",
+   "numero_antigo": "",
+   "tribunal": "TJMS",
+   "vara": "TJMS - 1ª VARA DE EXECUÇÃO PENAL",
+   "comarca": "CAMPO GRANDE",
+   "status_execucao": "ATIVO",
+   "regime_atual": "Fechado - ATIVO",
+   "pena_total": "2a6m0d",
+   "pena_cumprida": "1a8m29d",
+   "pena_remanescente": "0a9m1d",
+   "total_interrupcoes": "0a0m0d",
+   "saldo_remidos": "1 dias (1 dias remidos - 0 dias perdidos)",
+   "data_base_seeu": "11/01/2025",
+   "livramento_data_base_seeu": "",
+   "progressao_previsao_seeu": "",
+   "livramento_previsao_seeu": "",
+   "termino_previsao_seeu": "06/07/2027",
+   "fracao_progressao_aplicada": "",
+   "fracao_livramento_aplicada": "",
+   "progressao_obs_seeu": "",
+   "livramento_obs_seeu": "",
+   "data_geracao_rspe": "05/10/2026",
+   "versao_leitura_rspe": 4,
+   "_crimes": [
+    {
+     "processo_criminal": "8800108-00.2023.8.12.0001",
+     "processo_situacao": "",
+     "tipo_processo": "ACAO PENAL",
+     "vara_condenacao": "Campo Grande, 1ª Vara",
+     "data_denuncia": "",
+     "data_sentenca": "10/09/2023",
+     "transito_mp": "10/11/2024",
+     "transito_processo": "10/11/2024",
+     "pena_total_processo": "",
+     "regime_sentenca": "Fechado",
+     "lei": "2848/40 - Código Penal",
+     "artigo": "ART 155: Furto",
+     "tipo_penal": "CAPUT: Subtrair, para si ou para outrem, coisa alheia móvel, Reclusão: 1 a 4 anos E Multa",
+     "pena_imposta": "2 ano(s), 6 mês(es) e 0 dia(s)",
+     "data_infracao": "10/03/2023",
+     "vga": "N",
+     "resultado_morte": "N",
+     "reincidente_comum": "N",
+     "reincidente_especifico": "N",
+     "comando_orcrim": "N",
+     "fracao_progressao": "16% - Art.112, I, da LEP",
+     "fracao_livramento": "1/3 - Comum Primário",
+     "extinto": "Não",
+     "suspenso": "Não"
+    }
+   ],
+   "_eventos": [
+    {
+     "tipo": "PRISÃO/INÍCIO DE CUMPRIMENTO",
+     "motivo": "PRISÃO DEFINITIVA",
+     "complemento": "",
+     "data": "11/01/2025",
+     "data_decisao": "",
+     "data_referencia": "",
+     "processos": "8800108-00.2023.8.12.0001"
+    }
+   ],
+   "_incidentes": [
+    {
+     "tipo": "FIXAÇÃO/ALTERAÇÃO DE REGIME",
+     "motivo": "",
+     "complemento": "Fechado - Regime Inicial",
+     "data": "",
+     "data_decisao": "11/01/2025",
+     "data_referencia": "11/01/2025",
+     "processos": "",
+     "situacao": "CONCEDIDO"
+    },
+    {
+     "tipo": "REMIÇÃO",
+     "motivo": "",
+     "complemento": "1 Dia(s) Remido(s)",
+     "data": "",
+     "data_decisao": "02/04/2025",
+     "data_referencia": "02/04/2025",
+     "processos": "",
+     "situacao": "CONCEDIDO"
+    }
+   ],
+   "_hash": "sim124"
+  },
+  "ficha": null,
+  "manuais": {},
+  "extra_rspe": [],
+  "checks": [
+   {
+    "t": "linha_tempo",
+    "op": "nao_contem",
+    "v": "+1 dias",
+    "nota": "Api.indulto_linha"
+   },
+   {
+    "t": "linha_tempo",
+    "op": "contem",
+    "v": "+1 dia\"",
+    "nota": "Api.indulto_linha"
+   }
+  ]
+ },
+ {
+  "acoes": [],
+  "id": "S125",
+  "grupo": "Indulto e custódia - ordem dos eventos",
+  "titulo": "Eventos em ordem cronológica: em cumprimento, término calculado",
+  "conta": "Prisão 22/11/2025, fuga 04/06/2026, recaptura 11/06/2026, em ordem de data: em cumprimento, término calculado (controle do caso seguinte).",
+  "processo": "9900125-00.2026.8.12.0001",
+  "rspe": {
+   "arquivo": "SIMULADO_125.pdf",
+   "nome": "SIMULADO CASO 125",
+   "processo_execucao": "9900125-00.2026.8.12.0001",
+   "cpf": "90000000125",
+   "nome_mae": "MAE SIMULADA 125",
+   "rg": "",
+   "data_nascimento": "01/01/1980",
+   "numero_antigo": "",
+   "tribunal": "TJMS",
+   "vara": "TJMS - 1ª VARA DE EXECUÇÃO PENAL",
+   "comarca": "CAMPO GRANDE",
+   "status_execucao": "ATIVO",
+   "regime_atual": "Fechado - ATIVO",
+   "pena_total": "3a0m0d",
+   "pena_cumprida": "0a10m0d",
+   "pena_remanescente": "2a2m0d",
+   "total_interrupcoes": "0a0m0d",
+   "saldo_remidos": "0 dias (0 dias remidos - 0 dias perdidos)",
+   "data_base_seeu": "11/06/2026",
+   "livramento_data_base_seeu": "22/11/2025",
+   "progressao_previsao_seeu": "",
+   "livramento_previsao_seeu": "",
+   "termino_previsao_seeu": "",
+   "fracao_progressao_aplicada": "",
+   "fracao_livramento_aplicada": "",
+   "progressao_obs_seeu": "",
+   "livramento_obs_seeu": "",
+   "data_geracao_rspe": "05/10/2026",
+   "versao_leitura_rspe": 4,
+   "_crimes": [
+    {
+     "processo_criminal": "8800102-00.2024.8.12.0001",
+     "processo_situacao": "",
+     "tipo_processo": "ACAO PENAL",
+     "vara_condenacao": "Campo Grande, 1ª Vara",
+     "data_denuncia": "",
+     "data_sentenca": "10/09/2024",
+     "transito_mp": "10/11/2024",
+     "transito_processo": "10/11/2024",
+     "pena_total_processo": "",
+     "regime_sentenca": "Fechado",
+     "lei": "2848/40 - Código Penal",
+     "artigo": "ART 155: Furto",
+     "tipo_penal": "CAPUT: Subtrair, para si ou para outrem, coisa alheia móvel, Reclusão: 1 a 4 anos E Multa",
+     "pena_imposta": "3 ano(s), 0 mês(es) e 0 dia(s)",
+     "data_infracao": "10/03/2024",
+     "vga": "N",
+     "resultado_morte": "N",
+     "reincidente_comum": "N",
+     "reincidente_especifico": "N",
+     "comando_orcrim": "N",
+     "fracao_progressao": "16% - Art.112, I, da LEP",
+     "fracao_livramento": "1/3 - Comum Primário",
+     "extinto": "Não",
+     "suspenso": "Não"
+    }
+   ],
+   "_eventos": [
+    {
+     "tipo": "PRISÃO/INÍCIO DE CUMPRIMENTO",
+     "motivo": "PRISÃO DEFINITIVA",
+     "complemento": "",
+     "data": "22/11/2025",
+     "data_decisao": "",
+     "data_referencia": "",
+     "processos": "8800102-00.2024.8.12.0001"
+    },
+    {
+     "tipo": "INTERRUPÇÃO",
+     "motivo": "FUGA",
+     "complemento": "",
+     "data": "04/06/2026",
+     "data_decisao": "",
+     "data_referencia": "",
+     "processos": ""
+    },
+    {
+     "tipo": "PRISÃO/INÍCIO DE CUMPRIMENTO",
+     "motivo": "RECAPTURA/REINÍCIO DE CUMPRIMENTO",
+     "complemento": "",
+     "data": "11/06/2026",
+     "data_decisao": "",
+     "data_referencia": "",
+     "processos": ""
+    }
+   ],
+   "_incidentes": [
+    {
+     "tipo": "FIXAÇÃO/ALTERAÇÃO DE REGIME",
+     "motivo": "",
+     "complemento": "Fechado - Regime Inicial",
+     "data": "",
+     "data_decisao": "22/11/2025",
+     "data_referencia": "22/11/2025",
+     "processos": "",
+     "situacao": "CONCEDIDO"
+    }
+   ],
+   "_hash": "sim125"
+  },
+  "ficha": null,
+  "manuais": {},
+  "extra_rspe": [],
+  "checks": [
+   {
+    "t": "campo",
+    "campo": "ext_sit",
+    "op": "eq",
+    "v": "Em cumprimento"
+   },
+   {
+    "t": "campo",
+    "campo": "termino",
+    "op": "regex",
+    "v": "^\\d\\d/\\d\\d/\\d{4}\\*?$"
+   }
+  ]
+ },
+ {
+  "acoes": [],
+  "id": "S126",
+  "grupo": "Indulto e custódia - ordem dos eventos",
+  "titulo": "Os mesmos eventos impressos fora da ordem (recaptura antes da fuga): o resultado não pode mudar",
+  "conta": "Mesmos três eventos do caso anterior impressos fora da ordem (recaptura antes da fuga). Os eventos são lidos em ordem de data (ordenação estável): o resultado é o mesmo - em cumprimento, com término.",
+  "processo": "9900126-00.2026.8.12.0001",
+  "rspe": {
+   "arquivo": "SIMULADO_126.pdf",
+   "nome": "SIMULADO CASO 126",
+   "processo_execucao": "9900126-00.2026.8.12.0001",
+   "cpf": "90000000126",
+   "nome_mae": "MAE SIMULADA 126",
+   "rg": "",
+   "data_nascimento": "01/01/1980",
+   "numero_antigo": "",
+   "tribunal": "TJMS",
+   "vara": "TJMS - 1ª VARA DE EXECUÇÃO PENAL",
+   "comarca": "CAMPO GRANDE",
+   "status_execucao": "ATIVO",
+   "regime_atual": "Fechado - ATIVO",
+   "pena_total": "3a0m0d",
+   "pena_cumprida": "0a10m0d",
+   "pena_remanescente": "2a2m0d",
+   "total_interrupcoes": "0a0m0d",
+   "saldo_remidos": "0 dias (0 dias remidos - 0 dias perdidos)",
+   "data_base_seeu": "11/06/2026",
+   "livramento_data_base_seeu": "22/11/2025",
+   "progressao_previsao_seeu": "",
+   "livramento_previsao_seeu": "",
+   "termino_previsao_seeu": "",
+   "fracao_progressao_aplicada": "",
+   "fracao_livramento_aplicada": "",
+   "progressao_obs_seeu": "",
+   "livramento_obs_seeu": "",
+   "data_geracao_rspe": "05/10/2026",
+   "versao_leitura_rspe": 4,
+   "_crimes": [
+    {
+     "processo_criminal": "8800102-00.2024.8.12.0001",
+     "processo_situacao": "",
+     "tipo_processo": "ACAO PENAL",
+     "vara_condenacao": "Campo Grande, 1ª Vara",
+     "data_denuncia": "",
+     "data_sentenca": "10/09/2024",
+     "transito_mp": "10/11/2024",
+     "transito_processo": "10/11/2024",
+     "pena_total_processo": "",
+     "regime_sentenca": "Fechado",
+     "lei": "2848/40 - Código Penal",
+     "artigo": "ART 155: Furto",
+     "tipo_penal": "CAPUT: Subtrair, para si ou para outrem, coisa alheia móvel, Reclusão: 1 a 4 anos E Multa",
+     "pena_imposta": "3 ano(s), 0 mês(es) e 0 dia(s)",
+     "data_infracao": "10/03/2024",
+     "vga": "N",
+     "resultado_morte": "N",
+     "reincidente_comum": "N",
+     "reincidente_especifico": "N",
+     "comando_orcrim": "N",
+     "fracao_progressao": "16% - Art.112, I, da LEP",
+     "fracao_livramento": "1/3 - Comum Primário",
+     "extinto": "Não",
+     "suspenso": "Não"
+    }
+   ],
+   "_eventos": [
+    {
+     "tipo": "PRISÃO/INÍCIO DE CUMPRIMENTO",
+     "motivo": "PRISÃO DEFINITIVA",
+     "complemento": "",
+     "data": "22/11/2025",
+     "data_decisao": "",
+     "data_referencia": "",
+     "processos": "8800102-00.2024.8.12.0001"
+    },
+    {
+     "tipo": "PRISÃO/INÍCIO DE CUMPRIMENTO",
+     "motivo": "RECAPTURA/REINÍCIO DE CUMPRIMENTO",
+     "complemento": "",
+     "data": "11/06/2026",
+     "data_decisao": "",
+     "data_referencia": "",
+     "processos": ""
+    },
+    {
+     "tipo": "INTERRUPÇÃO",
+     "motivo": "FUGA",
+     "complemento": "",
+     "data": "04/06/2026",
+     "data_decisao": "",
+     "data_referencia": "",
+     "processos": ""
+    }
+   ],
+   "_incidentes": [
+    {
+     "tipo": "FIXAÇÃO/ALTERAÇÃO DE REGIME",
+     "motivo": "",
+     "complemento": "Fechado - Regime Inicial",
+     "data": "",
+     "data_decisao": "22/11/2025",
+     "data_referencia": "22/11/2025",
+     "processos": "",
+     "situacao": "CONCEDIDO"
+    }
+   ],
+   "_hash": "sim126"
+  },
+  "ficha": null,
+  "manuais": {},
+  "extra_rspe": [],
+  "checks": [
+   {
+    "t": "campo",
+    "campo": "ext_sit",
+    "op": "eq",
+    "v": "Em cumprimento"
+   },
+   {
+    "t": "campo",
+    "campo": "termino",
+    "op": "regex",
+    "v": "^\\d\\d/\\d\\d/\\d{4}\\*?$"
+   }
+  ]
+ },
+ {
+  "acoes": [],
+  "id": "S127",
+  "grupo": "Indulto 2024 - pena extinta depois do decreto",
+  "titulo": "Pena extinta com sentença posterior ao Decreto 12.338/2024 não estava 'em execução' em 25/12/2024",
+  "conta": "Furto em execução desde 10/09/2024 (Indulto 2024 pelo XV) e outra condenação com fato 03/2024 e sentença 10/03/2025, extinta em 10/09/2025. A condenação não existia em 23/12/2024 (publicação): não estava 'em execução' na data e não deixa o resultado 'a verificar'.",
+  "processo": "9900127-00.2026.8.12.0001",
+  "rspe": {
+   "arquivo": "SIMULADO_127.pdf",
+   "nome": "SIMULADO CASO 127",
+   "processo_execucao": "9900127-00.2026.8.12.0001",
+   "cpf": "90000000127",
+   "nome_mae": "MAE SIMULADA 127",
+   "rg": "",
+   "data_nascimento": "01/01/1980",
+   "numero_antigo": "",
+   "tribunal": "TJMS",
+   "vara": "TJMS - 1ª VARA DE EXECUÇÃO PENAL",
+   "comarca": "CAMPO GRANDE",
+   "status_execucao": "ATIVO",
+   "regime_atual": "Semiaberto - ATIVO",
+   "pena_total": "2a0m0d",
+   "pena_cumprida": "2a0m26d",
+   "pena_remanescente": "0a0m0d",
+   "total_interrupcoes": "0a0m0d",
+   "saldo_remidos": "0 dias (0 dias remidos - 0 dias perdidos)",
+   "data_base_seeu": "10/09/2024",
+   "livramento_data_base_seeu": "",
+   "progressao_previsao_seeu": "",
+   "livramento_previsao_seeu": "",
+   "termino_previsao_seeu": "09/09/2026",
+   "fracao_progressao_aplicada": "",
+   "fracao_livramento_aplicada": "",
+   "progressao_obs_seeu": "",
+   "livramento_obs_seeu": "",
+   "data_geracao_rspe": "05/10/2026",
+   "versao_leitura_rspe": 4,
+   "_crimes": [
+    {
+     "processo_criminal": "8800105-00.2023.8.12.0001",
+     "processo_situacao": "",
+     "tipo_processo": "ACAO PENAL",
+     "vara_condenacao": "Campo Grande, 1ª Vara",
+     "data_denuncia": "",
+     "data_sentenca": "10/06/2024",
+     "transito_mp": "10/08/2024",
+     "transito_processo": "10/08/2024",
+     "pena_total_processo": "",
+     "regime_sentenca": "Fechado",
+     "lei": "2848/40 - Código Penal",
+     "artigo": "ART 155: Furto",
+     "tipo_penal": "CAPUT: Subtrair, para si ou para outrem, coisa alheia móvel, Reclusão: 1 a 4 anos E Multa",
+     "pena_imposta": "2 ano(s), 0 mês(es) e 0 dia(s)",
+     "data_infracao": "10/03/2023",
+     "vga": "N",
+     "resultado_morte": "N",
+     "reincidente_comum": "N",
+     "reincidente_especifico": "N",
+     "comando_orcrim": "N",
+     "fracao_progressao": "16% - Art.112, I, da LEP",
+     "fracao_livramento": "1/3 - Comum Primário",
+     "extinto": "Não",
+     "suspenso": "Não"
+    },
+    {
+     "processo_criminal": "8800106-00.2024.8.12.0001",
+     "processo_situacao": "",
+     "tipo_processo": "ACAO PENAL",
+     "vara_condenacao": "Campo Grande, 1ª Vara",
+     "data_denuncia": "",
+     "data_sentenca": "10/03/2025",
+     "transito_mp": "10/05/2025",
+     "transito_processo": "10/05/2025",
+     "pena_total_processo": "",
+     "regime_sentenca": "Fechado",
+     "lei": "2848/40 - Código Penal",
+     "artigo": "ART 155: Furto",
+     "tipo_penal": "CAPUT: Subtrair, para si ou para outrem, coisa alheia móvel, Reclusão: 1 a 4 anos E Multa",
+     "pena_imposta": "1 ano(s), 0 mês(es) e 0 dia(s)",
+     "data_infracao": "10/03/2024",
+     "vga": "N",
+     "resultado_morte": "N",
+     "reincidente_comum": "N",
+     "reincidente_especifico": "N",
+     "comando_orcrim": "N",
+     "fracao_progressao": "16% - Art.112, I, da LEP",
+     "fracao_livramento": "1/3 - Comum Primário",
+     "extinto": "Sim",
+     "suspenso": "Não",
+     "data_extincao": "10/09/2025"
+    }
+   ],
+   "_eventos": [
+    {
+     "tipo": "PRISÃO/INÍCIO DE CUMPRIMENTO",
+     "motivo": "PRISÃO DEFINITIVA",
+     "complemento": "",
+     "data": "10/09/2024",
+     "data_decisao": "",
+     "data_referencia": "",
+     "processos": "8800105-00.2023.8.12.0001"
+    }
+   ],
+   "_incidentes": [
+    {
+     "tipo": "FIXAÇÃO/ALTERAÇÃO DE REGIME",
+     "motivo": "",
+     "complemento": "Semiaberto - Regime Inicial",
+     "data": "",
+     "data_decisao": "10/09/2024",
+     "data_referencia": "10/09/2024",
+     "processos": "",
+     "situacao": "CONCEDIDO"
+    }
+   ],
+   "_hash": "sim127"
+  },
+  "ficha": null,
+  "manuais": {},
+  "extra_rspe": [],
+  "checks": [
+   {
+    "t": "campo",
+    "campo": "i24_full",
+    "op": "nao_contem",
+    "v": "ainda estava em execução"
+   },
+   {
+    "t": "campo",
+    "campo": "c24_full",
+    "op": "nao_contem",
+    "v": "ainda estava em execução"
+   },
+   {
+    "t": "campo",
+    "campo": "i24",
+    "op": "eq",
+    "v": "Sim",
+    "nota": "XV pelo furto; a condenação posterior não muda o resultado"
+   }
+  ]
+ },
+ {
+  "acoes": [],
+  "id": "S128",
+  "grupo": "Indulto - âncora do SEEU x eventos (monotonia)",
+  "titulo": "Decreto 11.846/2023 com pena cumprida do SEEU 3a6m25d: a verificar ou cabível, nunca 'não atinge'",
+  "conta": "Furto 5a6m; flagrante 01/03/2018-01/03/2019 e prisão 01/06/2023. Decreto 11.846/2023 (comutação 1/4): pela âncora do SEEU (cumprida 3a6m25d) não atinge; pelos eventos (1a6m29d >= 1a4m16d) atinge - a verificar.",
+  "processo": "9900128-00.2026.8.12.0001",
+  "rspe": {
+   "arquivo": "SIMULADO_128.pdf",
+   "nome": "SIMULADO CASO 128",
+   "processo_execucao": "9900128-00.2026.8.12.0001",
+   "cpf": "90000000128",
+   "nome_mae": "MAE SIMULADA 128",
+   "rg": "",
+   "data_nascimento": "01/01/1980",
+   "numero_antigo": "",
+   "tribunal": "TJMS",
+   "vara": "TJMS - 1ª VARA DE EXECUÇÃO PENAL",
+   "comarca": "CAMPO GRANDE",
+   "status_execucao": "ATIVO",
+   "regime_atual": "Fechado - ATIVO",
+   "pena_total": "5a6m0d",
+   "pena_cumprida": "3a6m25d",
+   "pena_remanescente": "1a11m5d",
+   "total_interrupcoes": "0a0m0d",
+   "saldo_remidos": "0 dias (0 dias remidos - 0 dias perdidos)",
+   "data_base_seeu": "01/06/2023",
+   "livramento_data_base_seeu": "01/06/2023",
+   "progressao_previsao_seeu": "",
+   "livramento_previsao_seeu": "",
+   "termino_previsao_seeu": "",
+   "fracao_progressao_aplicada": "",
+   "fracao_livramento_aplicada": "",
+   "progressao_obs_seeu": "",
+   "livramento_obs_seeu": "",
+   "data_geracao_rspe": "05/10/2026",
+   "versao_leitura_rspe": 4,
+   "_crimes": [
+    {
+     "processo_criminal": "8800107-00.2018.8.12.0001",
+     "processo_situacao": "",
+     "tipo_processo": "ACAO PENAL",
+     "vara_condenacao": "Campo Grande, 1ª Vara",
+     "data_denuncia": "",
+     "data_sentenca": "10/09/2019",
+     "transito_mp": "10/02/2020",
+     "transito_processo": "10/02/2020",
+     "pena_total_processo": "",
+     "regime_sentenca": "Fechado",
+     "lei": "2848/40 - Código Penal",
+     "artigo": "ART 155: Furto",
+     "tipo_penal": "CAPUT: Subtrair, para si ou para outrem, coisa alheia móvel, Reclusão: 1 a 4 anos E Multa",
+     "pena_imposta": "5 ano(s), 6 mês(es) e 0 dia(s)",
+     "data_infracao": "01/03/2018",
+     "vga": "N",
+     "resultado_morte": "N",
+     "reincidente_comum": "N",
+     "reincidente_especifico": "N",
+     "comando_orcrim": "N",
+     "fracao_progressao": "16% - Art.112, I, da LEP",
+     "fracao_livramento": "1/3 - Comum Primário",
+     "extinto": "Não",
+     "suspenso": "Não"
+    }
+   ],
+   "_eventos": [
+    {
+     "tipo": "PRISÃO/INÍCIO DE CUMPRIMENTO",
+     "motivo": "PRISÃO EM FLAGRANTE",
+     "complemento": "",
+     "data": "01/03/2018",
+     "data_decisao": "",
+     "data_referencia": "",
+     "processos": "8800107-00.2018.8.12.0001"
+    },
+    {
+     "tipo": "INTERRUPÇÃO",
+     "motivo": "LIBERDADE PROVISÓRIA",
+     "complemento": "",
+     "data": "01/03/2019",
+     "data_decisao": "",
+     "data_referencia": "",
+     "processos": "8800107-00.2018.8.12.0001"
+    },
+    {
+     "tipo": "PRISÃO/INÍCIO DE CUMPRIMENTO",
+     "motivo": "PRISÃO DEFINITIVA",
+     "complemento": "",
+     "data": "01/06/2023",
+     "data_decisao": "",
+     "data_referencia": "",
+     "processos": "8800107-00.2018.8.12.0001"
+    }
+   ],
+   "_incidentes": [
+    {
+     "tipo": "FIXAÇÃO/ALTERAÇÃO DE REGIME",
+     "motivo": "",
+     "complemento": "Fechado - Regime Inicial",
+     "data": "",
+     "data_decisao": "01/06/2023",
+     "data_referencia": "01/06/2023",
+     "processos": "",
+     "situacao": "CONCEDIDO"
+    }
+   ],
+   "_hash": "sim128"
+  },
+  "ficha": null,
+  "manuais": {},
+  "extra_rspe": [],
+  "checks": [
+   {
+    "t": "campo",
+    "campo": "dec",
+    "op": "regex",
+    "v": "\"id\": \"2023\", \"ano\": 2023,(?:(?!\"id\": \").)*?\"s\": \"(ver|cabe)\"",
+    "nota": "aba Indulto, Decreto 2023: mais pena cumprida não pode piorar"
+   }
+  ]
+ },
+ {
+  "acoes": [],
+  "id": "S129",
+  "grupo": "Indulto - âncora do SEEU x eventos (monotonia)",
+  "titulo": "Decreto 11.846/2023 com pena cumprida do SEEU 3a7m15d: a verificar ou cabível, nunca 'não atinge'",
+  "conta": "O mesmo do caso anterior com 20 dias a mais de pena cumprida no SEEU (3a7m15d): a âncora continua abaixo do exigido e os eventos atendem - a verificar, nunca 'não atinge' (mais pena cumprida não piora o resultado).",
+  "processo": "9900129-00.2026.8.12.0001",
+  "rspe": {
+   "arquivo": "SIMULADO_129.pdf",
+   "nome": "SIMULADO CASO 129",
+   "processo_execucao": "9900129-00.2026.8.12.0001",
+   "cpf": "90000000129",
+   "nome_mae": "MAE SIMULADA 129",
+   "rg": "",
+   "data_nascimento": "01/01/1980",
+   "numero_antigo": "",
+   "tribunal": "TJMS",
+   "vara": "TJMS - 1ª VARA DE EXECUÇÃO PENAL",
+   "comarca": "CAMPO GRANDE",
+   "status_execucao": "ATIVO",
+   "regime_atual": "Fechado - ATIVO",
+   "pena_total": "5a6m0d",
+   "pena_cumprida": "3a7m15d",
+   "pena_remanescente": "1a10m15d",
+   "total_interrupcoes": "0a0m0d",
+   "saldo_remidos": "0 dias (0 dias remidos - 0 dias perdidos)",
+   "data_base_seeu": "01/06/2023",
+   "livramento_data_base_seeu": "01/06/2023",
+   "progressao_previsao_seeu": "",
+   "livramento_previsao_seeu": "",
+   "termino_previsao_seeu": "",
+   "fracao_progressao_aplicada": "",
+   "fracao_livramento_aplicada": "",
+   "progressao_obs_seeu": "",
+   "livramento_obs_seeu": "",
+   "data_geracao_rspe": "05/10/2026",
+   "versao_leitura_rspe": 4,
+   "_crimes": [
+    {
+     "processo_criminal": "8800107-00.2018.8.12.0001",
+     "processo_situacao": "",
+     "tipo_processo": "ACAO PENAL",
+     "vara_condenacao": "Campo Grande, 1ª Vara",
+     "data_denuncia": "",
+     "data_sentenca": "10/09/2019",
+     "transito_mp": "10/02/2020",
+     "transito_processo": "10/02/2020",
+     "pena_total_processo": "",
+     "regime_sentenca": "Fechado",
+     "lei": "2848/40 - Código Penal",
+     "artigo": "ART 155: Furto",
+     "tipo_penal": "CAPUT: Subtrair, para si ou para outrem, coisa alheia móvel, Reclusão: 1 a 4 anos E Multa",
+     "pena_imposta": "5 ano(s), 6 mês(es) e 0 dia(s)",
+     "data_infracao": "01/03/2018",
+     "vga": "N",
+     "resultado_morte": "N",
+     "reincidente_comum": "N",
+     "reincidente_especifico": "N",
+     "comando_orcrim": "N",
+     "fracao_progressao": "16% - Art.112, I, da LEP",
+     "fracao_livramento": "1/3 - Comum Primário",
+     "extinto": "Não",
+     "suspenso": "Não"
+    }
+   ],
+   "_eventos": [
+    {
+     "tipo": "PRISÃO/INÍCIO DE CUMPRIMENTO",
+     "motivo": "PRISÃO EM FLAGRANTE",
+     "complemento": "",
+     "data": "01/03/2018",
+     "data_decisao": "",
+     "data_referencia": "",
+     "processos": "8800107-00.2018.8.12.0001"
+    },
+    {
+     "tipo": "INTERRUPÇÃO",
+     "motivo": "LIBERDADE PROVISÓRIA",
+     "complemento": "",
+     "data": "01/03/2019",
+     "data_decisao": "",
+     "data_referencia": "",
+     "processos": "8800107-00.2018.8.12.0001"
+    },
+    {
+     "tipo": "PRISÃO/INÍCIO DE CUMPRIMENTO",
+     "motivo": "PRISÃO DEFINITIVA",
+     "complemento": "",
+     "data": "01/06/2023",
+     "data_decisao": "",
+     "data_referencia": "",
+     "processos": "8800107-00.2018.8.12.0001"
+    }
+   ],
+   "_incidentes": [
+    {
+     "tipo": "FIXAÇÃO/ALTERAÇÃO DE REGIME",
+     "motivo": "",
+     "complemento": "Fechado - Regime Inicial",
+     "data": "",
+     "data_decisao": "01/06/2023",
+     "data_referencia": "01/06/2023",
+     "processos": "",
+     "situacao": "CONCEDIDO"
+    }
+   ],
+   "_hash": "sim129"
+  },
+  "ficha": null,
+  "manuais": {},
+  "extra_rspe": [],
+  "checks": [
+   {
+    "t": "campo",
+    "campo": "dec",
+    "op": "regex",
+    "v": "\"id\": \"2023\", \"ano\": 2023,(?:(?!\"id\": \").)*?\"s\": \"(ver|cabe)\"",
+    "nota": "aba Indulto, Decreto 2023: mais pena cumprida não pode piorar"
+   }
+  ]
+ },
+ {
+  "acoes": [],
+  "id": "S130",
+  "grupo": "Indulto 2022 - art. 4º (idade)",
+  "titulo": "74 anos, preso em flagrante em 20/09/2022, sentença em 2024: o Decreto 11.302/2022 não alcança (art. 4º sem condenação)",
+  "conta": "74 anos em 25/12/2022, preso em flagrante em 20/09/2022, homicídio com sentença em 19/11/2024: nenhuma condenação até a publicação do Decreto 11.302/2022 - o art. 4º não se aplica (antes, pena fictícia de 1 dia dava 'Sim').",
+  "processo": "9900130-00.2026.8.12.0001",
+  "rspe": {
+   "arquivo": "SIMULADO_130.pdf",
+   "nome": "SIMULADO CASO 130",
+   "processo_execucao": "9900130-00.2026.8.12.0001",
+   "cpf": "90000000130",
+   "nome_mae": "MAE SIMULADA 130",
+   "rg": "",
+   "data_nascimento": "07/08/1948",
+   "numero_antigo": "",
+   "tribunal": "TJMS",
+   "vara": "TJMS - 1ª VARA DE EXECUÇÃO PENAL",
+   "comarca": "CAMPO GRANDE",
+   "status_execucao": "ATIVO",
+   "regime_atual": "Fechado - ATIVO",
+   "pena_total": "8a0m0d",
+   "pena_cumprida": "4a0m16d",
+   "pena_remanescente": "3a11m14d",
+   "total_interrupcoes": "0a0m0d",
+   "saldo_remidos": "0 dias (0 dias remidos - 0 dias perdidos)",
+   "data_base_seeu": "20/09/2022",
+   "livramento_data_base_seeu": "",
+   "progressao_previsao_seeu": "",
+   "livramento_previsao_seeu": "",
+   "termino_previsao_seeu": "19/09/2030",
+   "fracao_progressao_aplicada": "",
+   "fracao_livramento_aplicada": "",
+   "progressao_obs_seeu": "",
+   "livramento_obs_seeu": "",
+   "data_geracao_rspe": "05/10/2026",
+   "versao_leitura_rspe": 4,
+   "_crimes": [
+    {
+     "processo_criminal": "8800109-00.2022.8.12.0001",
+     "processo_situacao": "",
+     "tipo_processo": "ACAO PENAL",
+     "vara_condenacao": "Campo Grande, 1ª Vara",
+     "data_denuncia": "",
+     "data_sentenca": "19/11/2024",
+     "transito_mp": "21/03/2025",
+     "transito_processo": "21/03/2025",
+     "pena_total_processo": "",
+     "regime_sentenca": "Fechado",
+     "lei": "2848/40 - Código Penal",
+     "artigo": "ART 121: Matar alguem:",
+     "tipo_penal": "CAPUT: Matar alguém, Reclusão: 6 a 20 anos",
+     "pena_imposta": "8 ano(s), 0 mês(es) e 0 dia(s)",
+     "data_infracao": "20/09/2022",
+     "vga": "S",
+     "resultado_morte": "S",
+     "reincidente_comum": "N",
+     "reincidente_especifico": "N",
+     "comando_orcrim": "N",
+     "fracao_progressao": "25% - Art.112, III, da LEP",
+     "fracao_livramento": "1/3 - Comum Primário",
+     "extinto": "Não",
+     "suspenso": "Não"
+    }
+   ],
+   "_eventos": [
+    {
+     "tipo": "PRISÃO/INÍCIO DE CUMPRIMENTO",
+     "motivo": "PRISÃO EM FLAGRANTE",
+     "complemento": "",
+     "data": "20/09/2022",
+     "data_decisao": "",
+     "data_referencia": "",
+     "processos": "8800109-00.2022.8.12.0001"
+    }
+   ],
+   "_incidentes": [
+    {
+     "tipo": "FIXAÇÃO/ALTERAÇÃO DE REGIME",
+     "motivo": "",
+     "complemento": "Fechado - Regime Inicial",
+     "data": "",
+     "data_decisao": "20/09/2022",
+     "data_referencia": "20/09/2022",
+     "processos": "",
+     "situacao": "CONCEDIDO"
+    }
+   ],
+   "_hash": "sim130"
+  },
+  "ficha": null,
+  "manuais": {},
+  "extra_rspe": [],
+  "checks": [
+   {
+    "t": "campo",
+    "campo": "i22",
+    "op": "em",
+    "v": [
+     "Fato posterior",
+     "Não se aplica",
+     "Não atinge",
+     "Não alcançado",
+     "Vedado (art. 7º)"
+    ],
+    "nota": "sem condenação em 25/12/2022: nunca 'Sim'"
+   },
+   {
+    "t": "campo",
+    "campo": "i22_full",
+    "op": "contem",
+    "v": "sem condenação",
+    "nota": "coluna e aba Indulto concordam: sem condenação até o decreto"
+   }
+  ]
+ },
+ {
+  "acoes": [],
+  "id": "S131",
+  "grupo": "Textos",
+  "titulo": "Pena cumprida zerada: '0 dias', não '0 dia'",
+  "conta": "Guia sem cálculo (pena cumprida 0a0m0d): '0 dias', não '0 dia'.",
+  "processo": "9900131-00.2026.8.12.0001",
+  "rspe": {
+   "arquivo": "SIMULADO_131.pdf",
+   "nome": "SIMULADO CASO 131",
+   "processo_execucao": "9900131-00.2026.8.12.0001",
+   "cpf": "90000000131",
+   "nome_mae": "MAE SIMULADA 131",
+   "rg": "",
+   "data_nascimento": "01/01/1980",
+   "numero_antigo": "",
+   "tribunal": "TJMS",
+   "vara": "TJMS - 1ª VARA DE EXECUÇÃO PENAL",
+   "comarca": "CAMPO GRANDE",
+   "status_execucao": "ATIVO",
+   "regime_atual": "Fechado - ATIVO",
+   "pena_total": "2a6m0d",
+   "pena_cumprida": "0a0m0d",
+   "pena_remanescente": "2a6m0d",
+   "total_interrupcoes": "0a0m0d",
+   "saldo_remidos": "0 dias (0 dias remidos - 0 dias perdidos)",
+   "data_base_seeu": "",
+   "livramento_data_base_seeu": "",
+   "progressao_previsao_seeu": "",
+   "livramento_previsao_seeu": "",
+   "termino_previsao_seeu": "",
+   "fracao_progressao_aplicada": "",
+   "fracao_livramento_aplicada": "",
+   "progressao_obs_seeu": "",
+   "livramento_obs_seeu": "",
+   "data_geracao_rspe": "05/10/2026",
+   "versao_leitura_rspe": 4,
+   "_crimes": [
+    {
+     "processo_criminal": "8800112-00.2025.8.12.0001",
+     "processo_situacao": "",
+     "tipo_processo": "ACAO PENAL",
+     "vara_condenacao": "Campo Grande, 1ª Vara",
+     "data_denuncia": "",
+     "data_sentenca": "10/06/2025",
+     "transito_mp": "10/08/2025",
+     "transito_processo": "10/08/2025",
+     "pena_total_processo": "",
+     "regime_sentenca": "Fechado",
+     "lei": "2848/40 - Código Penal",
+     "artigo": "ART 155: Furto",
+     "tipo_penal": "CAPUT: Subtrair, para si ou para outrem, coisa alheia móvel, Reclusão: 1 a 4 anos E Multa",
+     "pena_imposta": "2 ano(s), 6 mês(es) e 0 dia(s)",
+     "data_infracao": "10/03/2025",
+     "vga": "N",
+     "resultado_morte": "N",
+     "reincidente_comum": "N",
+     "reincidente_especifico": "N",
+     "comando_orcrim": "N",
+     "fracao_progressao": "16% - Art.112, I, da LEP",
+     "fracao_livramento": "1/3 - Comum Primário",
+     "extinto": "Não",
+     "suspenso": "Não"
+    }
+   ],
+   "_eventos": [],
+   "_incidentes": [],
+   "_hash": "sim131"
+  },
+  "ficha": null,
+  "manuais": {},
+  "extra_rspe": [],
+  "checks": [
+   {
+    "t": "campo",
+    "campo": "pena_cumprida",
+    "op": "regex",
+    "v": "^(?!0 dia$)"
+   }
+  ]
+ },
+ {
+  "acoes": [],
+  "id": "S132",
+  "grupo": "Indulto 2024 - inciso XV (guia sem cálculo)",
+  "titulo": "Receptação, guia sem cálculo, preso desde 06/08/2024: Indulto 2024 pelo inciso XV continua 'Sim'",
+  "conta": "Receptação 3 anos, guia sem cálculo, semiaberto, preso desde 06/08/2024: Indulto 2024 pelo inciso XV (sem exigência de tempo).",
+  "processo": "9900132-00.2026.8.12.0001",
+  "rspe": {
+   "arquivo": "SIMULADO_132.pdf",
+   "nome": "SIMULADO CASO 132",
+   "processo_execucao": "9900132-00.2026.8.12.0001",
+   "cpf": "90000000132",
+   "nome_mae": "MAE SIMULADA 132",
+   "rg": "",
+   "data_nascimento": "01/01/1980",
+   "numero_antigo": "",
+   "tribunal": "TJMS",
+   "vara": "TJMS - 1ª VARA DE EXECUÇÃO PENAL",
+   "comarca": "CAMPO GRANDE",
+   "status_execucao": "ATIVO",
+   "regime_atual": "Semiaberto - ATIVO",
+   "pena_total": "3a0m0d",
+   "pena_cumprida": "0a0m0d",
+   "pena_remanescente": "3a0m0d",
+   "total_interrupcoes": "0a0m0d",
+   "saldo_remidos": "0 dias (0 dias remidos - 0 dias perdidos)",
+   "data_base_seeu": "",
+   "livramento_data_base_seeu": "",
+   "progressao_previsao_seeu": "",
+   "livramento_previsao_seeu": "",
+   "termino_previsao_seeu": "",
+   "fracao_progressao_aplicada": "",
+   "fracao_livramento_aplicada": "",
+   "progressao_obs_seeu": "",
+   "livramento_obs_seeu": "",
+   "data_geracao_rspe": "05/10/2026",
+   "versao_leitura_rspe": 4,
+   "_crimes": [
+    {
+     "processo_criminal": "8800113-00.2006.8.12.0001",
+     "processo_situacao": "",
+     "tipo_processo": "ACAO PENAL",
+     "vara_condenacao": "Campo Grande, 1ª Vara",
+     "data_denuncia": "",
+     "data_sentenca": "10/09/2007",
+     "transito_mp": "03/05/2008",
+     "transito_processo": "03/05/2008",
+     "pena_total_processo": "",
+     "regime_sentenca": "Fechado",
+     "lei": "2848/40 - Código Penal",
+     "artigo": "ART 180: Receptação",
+     "tipo_penal": "CAPUT: Adquirir, receber, transportar coisa que sabe ser produto de crime, Reclusão: 1 a 4 anos E Multa",
+     "pena_imposta": "3 ano(s), 0 mês(es) e 0 dia(s)",
+     "data_infracao": "09/04/2006",
+     "vga": "N",
+     "resultado_morte": "N",
+     "reincidente_comum": "N",
+     "reincidente_especifico": "N",
+     "comando_orcrim": "N",
+     "fracao_progressao": "1/6 - Comum",
+     "fracao_livramento": "1/3 - Comum Primário",
+     "extinto": "Não",
+     "suspenso": "Não"
+    }
+   ],
+   "_eventos": [
+    {
+     "tipo": "PRISÃO/INÍCIO DE CUMPRIMENTO",
+     "motivo": "PRISÃO DEFINITIVA",
+     "complemento": "",
+     "data": "06/08/2024",
+     "data_decisao": "",
+     "data_referencia": "",
+     "processos": "8800113-00.2006.8.12.0001"
+    }
+   ],
+   "_incidentes": [
+    {
+     "tipo": "FIXAÇÃO/ALTERAÇÃO DE REGIME",
+     "motivo": "",
+     "complemento": "Semiaberto - Regime Inicial",
+     "data": "",
+     "data_decisao": "06/08/2024",
+     "data_referencia": "06/08/2024",
+     "processos": "",
+     "situacao": "CONCEDIDO"
+    }
+   ],
+   "_hash": "sim132"
+  },
+  "ficha": null,
+  "manuais": {},
+  "extra_rspe": [],
+  "checks": [
+   {
+    "t": "campo",
+    "campo": "i24",
+    "op": "eq",
+    "v": "Sim",
+    "nota": "mais tempo cumprido não tira o XV"
+   }
+  ]
+ },
+ {
+  "acoes": [],
+  "id": "S133",
+  "grupo": "Indulto 2024 - inciso XV (guia sem cálculo)",
+  "titulo": "Receptação, guia sem cálculo, preso desde 10/02/2024: Indulto 2024 pelo inciso XV continua 'Sim'",
+  "conta": "O mesmo do caso anterior preso desde 10/02/2024 (mais tempo cumprido, que passa a atender também o inciso I pelos eventos): o XV continua possível; só os incisos que dependem do tempo ficam a verificar.",
+  "processo": "9900133-00.2026.8.12.0001",
+  "rspe": {
+   "arquivo": "SIMULADO_133.pdf",
+   "nome": "SIMULADO CASO 133",
+   "processo_execucao": "9900133-00.2026.8.12.0001",
+   "cpf": "90000000133",
+   "nome_mae": "MAE SIMULADA 133",
+   "rg": "",
+   "data_nascimento": "01/01/1980",
+   "numero_antigo": "",
+   "tribunal": "TJMS",
+   "vara": "TJMS - 1ª VARA DE EXECUÇÃO PENAL",
+   "comarca": "CAMPO GRANDE",
+   "status_execucao": "ATIVO",
+   "regime_atual": "Semiaberto - ATIVO",
+   "pena_total": "3a0m0d",
+   "pena_cumprida": "0a0m0d",
+   "pena_remanescente": "3a0m0d",
+   "total_interrupcoes": "0a0m0d",
+   "saldo_remidos": "0 dias (0 dias remidos - 0 dias perdidos)",
+   "data_base_seeu": "",
+   "livramento_data_base_seeu": "",
+   "progressao_previsao_seeu": "",
+   "livramento_previsao_seeu": "",
+   "termino_previsao_seeu": "",
+   "fracao_progressao_aplicada": "",
+   "fracao_livramento_aplicada": "",
+   "progressao_obs_seeu": "",
+   "livramento_obs_seeu": "",
+   "data_geracao_rspe": "05/10/2026",
+   "versao_leitura_rspe": 4,
+   "_crimes": [
+    {
+     "processo_criminal": "8800113-00.2006.8.12.0001",
+     "processo_situacao": "",
+     "tipo_processo": "ACAO PENAL",
+     "vara_condenacao": "Campo Grande, 1ª Vara",
+     "data_denuncia": "",
+     "data_sentenca": "10/09/2007",
+     "transito_mp": "03/05/2008",
+     "transito_processo": "03/05/2008",
+     "pena_total_processo": "",
+     "regime_sentenca": "Fechado",
+     "lei": "2848/40 - Código Penal",
+     "artigo": "ART 180: Receptação",
+     "tipo_penal": "CAPUT: Adquirir, receber, transportar coisa que sabe ser produto de crime, Reclusão: 1 a 4 anos E Multa",
+     "pena_imposta": "3 ano(s), 0 mês(es) e 0 dia(s)",
+     "data_infracao": "09/04/2006",
+     "vga": "N",
+     "resultado_morte": "N",
+     "reincidente_comum": "N",
+     "reincidente_especifico": "N",
+     "comando_orcrim": "N",
+     "fracao_progressao": "1/6 - Comum",
+     "fracao_livramento": "1/3 - Comum Primário",
+     "extinto": "Não",
+     "suspenso": "Não"
+    }
+   ],
+   "_eventos": [
+    {
+     "tipo": "PRISÃO/INÍCIO DE CUMPRIMENTO",
+     "motivo": "PRISÃO DEFINITIVA",
+     "complemento": "",
+     "data": "10/02/2024",
+     "data_decisao": "",
+     "data_referencia": "",
+     "processos": "8800113-00.2006.8.12.0001"
+    }
+   ],
+   "_incidentes": [
+    {
+     "tipo": "FIXAÇÃO/ALTERAÇÃO DE REGIME",
+     "motivo": "",
+     "complemento": "Semiaberto - Regime Inicial",
+     "data": "",
+     "data_decisao": "10/02/2024",
+     "data_referencia": "10/02/2024",
+     "processos": "",
+     "situacao": "CONCEDIDO"
+    }
+   ],
+   "_hash": "sim133"
+  },
+  "ficha": null,
+  "manuais": {},
+  "extra_rspe": [],
+  "checks": [
+   {
+    "t": "campo",
+    "campo": "i24",
+    "op": "eq",
+    "v": "Sim",
+    "nota": "mais tempo cumprido não tira o XV"
+   }
+  ]
+ },
+ {
+  "processo": "9900134-00.2026.8.12.0001",
+  "rspe": {
+   "arquivo": "SIMULADO_134.pdf",
+   "nome": "SIMULADO CASO 134",
+   "processo_execucao": "9900134-00.2026.8.12.0001",
+   "cpf": "90000000134",
+   "nome_mae": "MAE SIMULADA 134",
+   "rg": "",
+   "data_nascimento": "13/12/1975",
+   "numero_antigo": "",
+   "tribunal": "TJMS",
+   "vara": "TJMS - 1ª VARA DE EXECUÇÃO PENAL",
+   "comarca": "CAMPO GRANDE",
+   "status_execucao": "ATIVO",
+   "regime_atual": "Semiaberto - ATIVO",
+   "pena_total": "21a2m16d",
+   "pena_cumprida": "19a9m5d",
+   "pena_remanescente": "1a5m16d",
+   "total_interrupcoes": "0a0m0d",
+   "saldo_remidos": "104 dias (104 dias remidos - 0 dias perdidos)",
+   "data_base_seeu": "17/10/2021",
+   "livramento_data_base_seeu": "24/06/2007",
+   "progressao_previsao_seeu": "06/11/2022",
+   "livramento_previsao_seeu": "11/07/2018",
+   "termino_previsao_seeu": "28/03/2028",
+   "fracao_progressao_aplicada": "",
+   "fracao_livramento_aplicada": "",
+   "progressao_obs_seeu": "",
+   "livramento_obs_seeu": "",
+   "data_geracao_rspe": "12/10/2026",
+   "versao_leitura_rspe": 4,
+   "_crimes": [
+    {
+     "processo_criminal": "8801341-00.2011.8.12.0001",
+     "processo_situacao": "",
+     "tipo_processo": "ACAO PENAL",
+     "vara_condenacao": "Campo Grande, 1ª Vara",
+     "data_denuncia": "02/07/2011",
+     "data_sentenca": "11/10/2013",
+     "transito_mp": "13/11/2013",
+     "transito_processo": "17/04/2014",
+     "regime_sentenca": "Semiaberto",
+     "lei": "2848/40 - Código Penal",
+     "artigo": "ART 157: Roubo",
+     "tipo_penal": "CAPUT: Subtrair coisa móvel alheia, mediante grave ameaça ou violência a pessoa, Reclusão: 4 a 10 anos E Multa",
+     "pena_imposta": "8 ano(s), 4 mês(es) e 22 dia(s)",
+     "data_infracao": "07/04/2011",
+     "vga": "S",
+     "resultado_morte": "N",
+     "reincidente_comum": "N",
+     "reincidente_especifico": "N",
+     "comando_orcrim": "N",
+     "extinto": "Não",
+     "suspenso": "Não",
+     "fracao_progressao": "16% - Art.112, I, da LEP",
+     "fracao_livramento": "1/3 - Comum Primário"
+    },
+    {
+     "processo_criminal": "8801342-00.2004.8.12.0001",
+     "processo_situacao": "",
+     "tipo_processo": "ACAO PENAL",
+     "vara_condenacao": "Campo Grande, 1ª Vara",
+     "data_denuncia": "10/05/2005",
+     "data_sentenca": "30/04/2006",
+     "transito_mp": "23/05/2006",
+     "transito_processo": "14/06/2007",
+     "regime_sentenca": "Semiaberto",
+     "lei": "2848/40 - Código Penal",
+     "artigo": "ART 121: Matar alguem:",
+     "tipo_penal": "§ 2º: Homicídio qualificado, Reclusão: 12 a 30 anos",
+     "pena_imposta": "12 ano(s), 9 mês(es) e 29 dia(s)",
+     "data_infracao": "13/11/2004",
+     "vga": "S",
+     "resultado_morte": "S",
+     "reincidente_comum": "N",
+     "reincidente_especifico": "N",
+     "comando_orcrim": "N",
+     "extinto": "Não",
+     "suspenso": "Não",
+     "fracao_progressao": "16% - Art.112, I, da LEP",
+     "fracao_livramento": "2/3 - Hediondo"
+    }
+   ],
+   "_eventos": [
+    {
+     "tipo": "PRISÃO/INÍCIO DE CUMPRIMENTO",
+     "motivo": "PRISÃO EM FLAGRANTE",
+     "complemento": "",
+     "data": "13/11/2004",
+     "data_decisao": "",
+     "data_referencia": "",
+     "processos": "8801341-00.2011.8.12.0001"
+    },
+    {
+     "tipo": "INTERRUPÇÃO",
+     "motivo": "LIBERDADE PROVISÓRIA",
+     "complemento": "",
+     "data": "13/06/2005",
+     "data_decisao": "",
+     "data_referencia": "",
+     "processos": "8801341-00.2011.8.12.0001"
+    },
+    {
+     "tipo": "PRISÃO/INÍCIO DE CUMPRIMENTO",
+     "motivo": "PRISÃO DEFINITIVA",
+     "complemento": "",
+     "data": "24/06/2007",
+     "data_decisao": "",
+     "data_referencia": "",
+     "processos": "8801341-00.2011.8.12.0001, 8801342-00.2004.8.12.0001"
+    }
+   ],
+   "_incidentes": [
+    {
+     "tipo": "FIXAÇÃO/ALTERAÇÃO DE REGIME",
+     "motivo": "",
+     "complemento": "Semiaberto - Regime Inicial",
+     "data": "",
+     "data_decisao": "",
+     "data_referencia": "24/06/2007",
+     "processos": "",
+     "situacao": "CONCEDIDO"
+    },
+    {
+     "tipo": "FIXAÇÃO/ALTERAÇÃO DE REGIME",
+     "motivo": "",
+     "complemento": "Semiaberto - Progressão de Regime",
+     "data": "",
+     "data_decisao": "27/10/2021",
+     "data_referencia": "17/10/2021",
+     "processos": "",
+     "situacao": "CONCEDIDO"
+    },
+    {
+     "tipo": "REMIÇÃO",
+     "motivo": "",
+     "complemento": "26 Dia(s) Remido(s)",
+     "data": "",
+     "data_decisao": "24/07/2010",
+     "data_referencia": "24/07/2010",
+     "processos": "",
+     "situacao": "CONCEDIDO"
+    },
+    {
+     "tipo": "REMIÇÃO",
+     "motivo": "",
+     "complemento": "78 Dia(s) Remido(s)",
+     "data": "",
+     "data_decisao": "03/05/2014",
+     "data_referencia": "03/05/2014",
+     "processos": "",
+     "situacao": "CONCEDIDO"
+    }
+   ],
+   "_hash": "sim134"
+  },
+  "ficha": null,
+  "manuais": {},
+  "acoes": [],
+  "id": "S134",
+  "grupo": "Indulto - comutação sem pena remanescente",
+  "titulo": "Comutação do Decreto 11.846/2023 com a pena já cumprida na data: o motivo é 'sem pena remanescente a comutar'",
+  "conta": "Roubo 8a4m22d (fato 2011) e homicídio qualificado 12a9m29d (fato 2004, art. 7º p. ú. do concurso cumprido); em 25/12/2023 a pena dos crimes não impeditivos já estava cumprida (8a4m27d de 8a4m22d): a comutação não tem o que comutar. O motivo exibido é esse, e não o da hipótese de indulto que chegou mais perto ('pena total acima de 8 anos').",
+  "extra_rspe": [],
+  "checks": [
+   {
+    "t": "campo",
+    "campo": "dec",
+    "op": "regex",
+    "v": "\"id\": \"2023\", \"ano\": 2023,(?:(?!\"id\": \").)*?\"s\": \"nao\"(?:(?!\"id\": \").)*?\"mot\": \"sem pena remanescente a comutar",
+    "nota": "motivo correto da queda da comutação"
+   }
+  ]
  }
 ]

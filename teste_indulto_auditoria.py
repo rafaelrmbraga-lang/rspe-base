@@ -314,11 +314,20 @@ r = {"nome": "T", "pena_total": "0a1m0d", "pena_cumprida": "0a0m0d", "pena_reman
      "status_execucao": "ATIVO", "regime_atual": "Fechado - ATIVO", "_eventos": [preso("30/11/2025")],
      "_incidentes": [incidente("FIXAÇÃO/ALTERAÇÃO DE REGIME", "Fechado - Regime inicial", "30/11/2025")],
      "_crimes": [crime("01/01/2024", "01/06/2025", "01/07/2025", pena="0 ano(s), 1 mês(es) e 0 dia(s)")]}
+r0 = dict(r)
+r = rs.reprocessar(dict(r0))
+# furto: o inciso XV não depende do tempo cumprido nem da pena - continua possível (com o aviso); I e II ficam a verificar (E9)
+confere(r["indulto_2025"].startswith("POSSÍVEL: art. 9º, XV |") and "não traz o cálculo" in r["indulto_2025"]
+        and "? I: pena ≤ 8 anos" in r["indulto_2025_detalhe"], "(29) SEEU sem cálculo: %s" % r["indulto_2025"])
+r = rs.reprocessar(dict(r, pena_total="0a0m0d", pena_remanescente="0a0m0d"))
+confere(r["indulto_2025"].startswith("POSSÍVEL: art. 9º, XV |") and not r["indulto_2025"].startswith("sem pena"), "(29) pena total zerada: %s" % r["indulto_2025"])
+# crime não patrimonial (porte de arma): só os incisos que dependem do tempo - o favorável fica a verificar
+r = dict(r0, _crimes=[crime("01/01/2024", "01/06/2025", "01/07/2025", pena="0 ano(s), 1 mês(es) e 0 dia(s)", artigo="ART 14: Porte ilegal de arma de fogo de uso permitido",
+                            lei="10826/03 - Estatuto do Desarmamento", tipo="CAPUT: Portar arma de fogo de uso permitido, Reclusão: 2 a 4 anos E Multa")])
 r = rs.reprocessar(r)
-confere(r["indulto_2025_status"] == "verificar" and "não traz o cálculo" in r["indulto_2025"], "(29) SEEU sem cálculo: %s" % r["indulto_2025"])
-r = dict(r, pena_total="0a0m0d", pena_remanescente="0a0m0d")
-r = rs.reprocessar(r)
-confere(r["indulto_2025_status"] == "verificar" and not r["indulto_2025"].startswith("sem pena"), "(29) pena total zerada: %s" % r["indulto_2025"])
+confere(r["indulto_2025_status"] == "verificar" and "não traz o cálculo" in r["indulto_2025"], "(29) SEEU sem cálculo (porte): %s" % r["indulto_2025"])
+r = rs.reprocessar(dict(r, pena_total="0a0m0d", pena_remanescente="0a0m0d"))
+confere(r["indulto_2025_status"] == "verificar" and not r["indulto_2025"].startswith("sem pena"), "(29) pena total zerada (porte): %s" % r["indulto_2025"])
 
 # (30) concurso com impeditivo e cumprimento interrompido: o art. 7º, p. ú., veda antes da dúvida da interrupção (Alex Rodrigues
 # de Souza, Brehndo, Márcio de Souza Alves, 2024/2025)

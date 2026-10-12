@@ -472,7 +472,7 @@ def _faixas_saldo(smin, smax):
 def _dur(d0, d1):
     """Tempo entre duas datas por extenso: '6 anos, 11 meses e 4 dias'."""
     if not d0 or not d1 or d1 <= d0:
-        return "0 dia"
+        return "0 dias"
     a, m = d1.year - d0.year, d1.month - d0.month
     dd = d1.day - d0.day
     if dd < 0:
@@ -483,7 +483,7 @@ def _dur(d0, d1):
         m += 12
     p = [rs.pl(a, "ano", "anos") if a else "", rs.pl(m, "mês", "meses") if m else "", rs.pl(dd, "dia", "dias") if dd else ""]
     p = [x for x in p if x]
-    return " e ".join([", ".join(p[:-1]), p[-1]]) if len(p) > 1 else (p[0] if p else "0 dia")
+    return " e ".join([", ".join(p[:-1]), p[-1]]) if len(p) > 1 else (p[0] if p else "0 dias")
 
 
 FAIXAS_TETO = ((0, 1, "inferior a 1 ano"), (1, 2, "de até 2 anos"), (2, 4, "de até 4 anos"), (4, 8, "de até 8 anos"), (8, 12, "de até 12 anos"), (12, None, "acima de 12 anos"))
@@ -2329,9 +2329,9 @@ def _classe(L):
 
 # ---------------- fundamentação para a petição (padrão do programa: título, fatos e fundamentos, pedido) ----------------
 def _ext(dias):
-    """dias -> '2 anos, 5 meses e 27 dias' ('0 dia' para zero)."""
+    """dias -> '2 anos, 5 meses e 27 dias' ('0 dias' para zero)."""
     if not dias:
-        return "0 dia"
+        return "0 dias"
     m = rs.re.match(r"^(\d+)a(\d+)m(\d+)d$", rs.dias_para_pena(int(dias)) or "")
     if not m:
         return rs.pl(int(dias), "dia", "dias")

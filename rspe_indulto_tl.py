@@ -305,7 +305,7 @@ def linha(r, hoje=None):
                        "det": _det("%s em %s%s" % (mot, _f(a), (" - processos: " + procs) if procs else ""), ", ".join(rot_ids),
                                    "%s → %s" % (_f(a), _f(b) or "hoje"), "detração" if prov else "cumprimento",
                                    "CP, art. 42; LEP, art. 111" if prov else "LEP, arts. 66, III, a, e 111",
-                                   "%s dias até %s" % ((fim - a).days + 1, _f(b) or "hoje"),
+                                   "%s até %s" % (rs.pl((fim - a).days + 1, "dia", "dias"), _f(b) or "hoje"),
                                    "soma no tempo cumprido para indulto/comutação")})
     for (a, b) in rs.periodos_livramento(eventos, incidentes):
         dias.marcar(a, b or hoje, "livramento", "livramento condicional de %s" % _f(a), ["GERAL"])
@@ -335,8 +335,8 @@ def linha(r, hoje=None):
                 "livramento": "CP, art. 89; LEP, art. 146", "nao_comprovado": "LEP, art. 111 - atribuição não comprovada no SEEU"}[t]
         n = (b - a).days + 1
         faixas.append({"tipo": t, "ini": _f(a), "fim": _f(b), "aberta": b >= hoje and t != "nao_comprovado", "crimes": cr, "dias": n,
-                       "det": _det(f, ", ".join(cr) or "-", "%s → %s" % (_f(a), _f(b)), trat, fund, "%s → %s = %d dias (contagem do SEEU: inclui o 1º e o último dia)" % (_f(a), _f(b), n),
-                                   "não soma no cumprido" if t == "nao_comprovado" else "soma %d dias no cumprido" % n)})
+                       "det": _det(f, ", ".join(cr) or "-", "%s → %s" % (_f(a), _f(b)), trat, fund, "%s → %s = %s (contagem do SEEU: inclui o 1º e o último dia)" % (_f(a), _f(b), rs.pl(n, "dia", "dias")),
+                                   "não soma no cumprido" if t == "nao_comprovado" else "soma %s no cumprido" % rs.pl(n, "dia", "dias"))})
     for g0, g1 in gaps:
         mot = rp._motivo_interrupcao(eventos, incidentes, g0 - timedelta(days=1)) or rp._motivo_interrupcao(eventos, incidentes, g0)
         fuga = bool(mot and RE_FUGA.search(mot))
@@ -347,7 +347,7 @@ def linha(r, hoje=None):
                                    # a soltura (alvará, liberdade provisória) não é fuga: o fundamento do art. 50, II, só vale para a evasão
                                    "LEP, art. 50, II; o tempo fora não é pena cumprida" if fuga else
                                    "LEP, art. 111 (só o tempo de cumprimento conta); o tempo em liberdade não é pena cumprida",
-                                   "%d dias fora do cumprimento" % n, "não soma no cumprido")})
+                                   "%s fora do cumprimento" % rs.pl(n, "dia", "dias"), "não soma no cumprido")})
         if fuga or not mot:
             marcos.append({"data": _f(g0 - timedelta(days=1)), "tipo": "fuga", "rotulo": "Fuga / evasão" if fuga else "Interrupção", "sub": (mot or "motivo não consta").lower(),
                            "crimes": ["GERAL"], "efeito": "o tempo fora não conta; não zera o cumprido (Súmula 535/STJ)",
@@ -370,7 +370,9 @@ def linha(r, hoje=None):
                 continue
             remicoes.append((dt, n, "remicao", i))
         elif re.search(r"PERD", t) and re.search(r"REMI", t) and (i.get("situacao") or "CONCEDIDO") == "CONCEDIDO":
-            n = rs.dias_de(i.get("complemento", "")) or rs.dias_de(i.get("complemento", ""), r"dias?")
+            # "DIAS PERDIDOS NA REMIÇÃO" traz no complemento só o número ("11")
+            cpl = i.get("complemento", "") or ""
+            n = rs.dias_de(cpl) or rs.dias_de(cpl, r"dias?") or (rs.num_br(cpl.strip()) if re.fullmatch(r"\s*[\d.,]+\s*", cpl) else None)
             if n:
                 remicoes.append((dt, -n, "perda", i))
     for dt, n, k, i in remicoes:
@@ -378,7 +380,7 @@ def linha(r, hoje=None):
                        "sub": "", "crimes": ["GERAL"], "efeito": "soma no cumprido (LEP, art. 128)" if n > 0 else "reduz a remição (LEP, art. 127)",
                        "det": _det("%s - %s (decisão de %s)" % (i.get("tipo") or "", i.get("complemento") or "", i.get("data_decisao") or "?"), "GERAL", _f(dt),
                                    "remição" if n > 0 else "perda de dias remidos", "LEP, art. 128 (remição é pena cumprida)" if n > 0 else "LEP, art. 127",
-                                   "%+g dias" % n, "entra no cumprido a partir de %s" % _f(dt))})
+                                   ("+" if n > 0 else "−") + rs.pl(abs(n), "dia", "dias"), "entra no cumprido a partir de %s" % _f(dt))})
 
     per_seeu = rs.periodos_custodia(eventos)
     lc_seeu = rs.periodos_livramento(eventos, incidentes)
@@ -1421,7 +1423,7 @@ def _decreto_ficha(f, x, C, cumprido, faltas, crimes_all=None):
 
     # selo de cada crime (alcance e impeditivo, pela mesma função do motor)
     fora, alc = [], []
-    disp_imp = (f.get("impeditivos") or {}).get("dispositivo", "")
+    disp_imp = (f.get("impeditivos") or {}).get("dispositivo") or ""  # null na base jurídica (decreto sem rol de vedações)
     # crimes que o motor somou (os mesmos da aba: inclui a pena extinta depois da data e a sentença incoerente com o trânsito)
     alc_m = [crimes_all[n] for n in x["alc"]] if (crimes_all is not None and x.get("alc") is not None) else None
     for c in C:
@@ -1490,7 +1492,9 @@ def _decreto_ficha(f, x, C, cumprido, faltas, crimes_all=None):
         est, txt = "ok", "Nenhum crime alcançado está no rol de vedações."
     comum.append(chk("Natureza dos crimes (vedações)", est, txt,
                      _det("tipificação e lei do SEEU", ", ".join("%s: %s" % (c["id"], n["selo"].replace("_", " ")) for c, n in alc), "", "impeditivo / não impeditivo",
-                          "Decreto %s, %s" % (num, disp_imp), "", "crime impeditivo afasta o benefício ou adia os demais")))
+                          ("Decreto %s, %s" % (num, disp_imp)) if disp_imp else
+                          "Decreto %s (sem rol de vedações); Lei 8.072/90, art. 2º, I; CF, art. 5º, XLIII" % num,
+                          "", "crime impeditivo afasta o benefício ou adia os demais")))
     F = f.get("falta_grave") or {}
     janela, faltas_out = None, []
     if F.get("meses"):
