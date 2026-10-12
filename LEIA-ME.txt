@@ -863,6 +863,8 @@ v7.9.3
     da prisão (não "possível").
   - Quando a âncora e os eventos dão o mesmo "não", o texto mostra o menor
     "faltavam" (o mais favorável), com a outra contagem citada.
+  - Comutação sem pena remanescente: a coluna mostra "Não se aplica (sem pena
+    remanescente a comutar)" em vez de "sem execução na data".
 
 v7.9.2
   - Aviso de legislação nova: ao abrir a base, depois da janela de
