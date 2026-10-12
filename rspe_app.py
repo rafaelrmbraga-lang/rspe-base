@@ -41,7 +41,7 @@ import rspe_mapa_ms as rmapa
 import rspe_calc as rcalc
 
 APP = "APTO"
-VERSAO = "7.9.1"
+VERSAO = "7.9.2"
 GEO_AUTO_DIAS = 30           # dados prisionais: baixados de novo sozinhos quando têm 30 dias ou mais
 GEO_REPETIR_MIN = 10         # ... ou 10 minutos depois de um download em que algum relatório falhou (nova tentativa automática)
 GEO_REPETIR_MAX = 3          # tentativas automáticas seguidas com o programa aberto (depois, na próxima abertura ou pelo botão)
@@ -413,7 +413,11 @@ Entre o arquivo base_juridica.json ao lado do programa e a cópia embutida, vale
 o de ao lado do programa); o que só existe na embutida é completado a partir dela. Para atualizar (novo decreto, nova fração,
 nova tese), edite o arquivo ao lado do programa, aumente a "versao" dele e use "Base ▾ → Recarregar base jurídica": a mensagem
 diz a versão e o arquivo em uso e avisa se a cópia ao lado foi ignorada (JSON inválido ou versão mais antiga). A versão em uso
-aparece no topo da tela ("Hoje … · base jurídica …"), com o aviso, se houver.
+aparece no topo da tela ("Hoje … · base jurídica …"), com o aviso, se houver.<br>
+<b>Legislação nova:</b> ao abrir a base, o programa consulta a legislação federal (Senado Federal, dados abertos) e abre uma
+janela só se houver lei que altere a LEP, o CP, a Lei 8.072/90, a Lei 11.343/06, a Lei 10.826/03 ou a Lei 12.850/13 depois da
+data da base jurídica, ou decreto de indulto ou comutação que a base ainda não tem. É só aviso: os cálculos seguem a base
+jurídica até a revisão dela. "Ciente" esconde aqueles avisos; sem internet, nada aparece.
 <h4>Crimes</h4>
 Resumidos pelo artigo: "art. 33 Lei 11.343/06 (x2)". "n/i" = artigo não informado pelo SEEU. A ficha traz a descrição completa.
 """
@@ -1975,6 +1979,29 @@ class Api:
             self._geo_assistidos(d["unidades"])
             self._geo_pontos(d["unidades"])
         return {"geo": d, "mapa": rmapa.MAPA, "ind": self._geo_ind(), "cats": rgeo.CATEGORIAS, "temas": {str(k): v for k, v in rgeo.TEMAS.items()}}
+
+    def leg_verificar(self):
+        """Legislação nova desde a base jurídica (API do Senado; cache de um dia): leis que alteram as normas dos cálculos e
+        decretos de indulto/comutação que a base ainda não tem. Devolve só os avisos não marcados como "Ciente"; lista vazia
+        (a tela não abre janela) se não há novidade ou não há internet."""
+        import rspe_legislacao as rleg
+        import rspe_decretos as rdc
+        try:
+            conh = [f.get("numero") for f in rdc.fichas()] + list(rs.NUM_DECRETO.values())
+            r = rleg.com_cache(os.path.join(pasta_app(), "legislacao_cache.json"), rg.versao(), conh)
+        except Exception as e:
+            logging.getLogger("rspe").warning("vigilância de legislação: %s", e)
+            return {"itens": []}
+        cientes = set(self._cfg().get("leg_cientes") or [])
+        return {"itens": [x for x in r.get("itens") or [] if x["chave"] not in cientes], "consultado": r.get("consultado", ""),
+                "base_juridica": rg.versao()}
+
+    def leg_ciente(self, chaves):
+        """Marca avisos de legislação como vistos: não voltam a aparecer ao abrir."""
+        c = set(self._cfg().get("leg_cientes") or [])
+        c.update(k for k in (chaves or []) if isinstance(k, str))
+        self._cfg_gravar(leg_cientes=sorted(c))
+        return {"msg": "Avisos marcados como vistos."}
 
     def geo_precisa(self):
         """Atualização automática: True se os dados prisionais nunca foram baixados, têm GEO_AUTO_DIAS dias ou mais ou se

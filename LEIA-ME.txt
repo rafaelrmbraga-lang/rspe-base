@@ -1,9 +1,9 @@
-APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.9.1
+APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.9.2
 (antigo RSPE Base; SEEU, programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-7.9.1. A documentação técnica completa (cada parâmetro, a regra, a norma e
+7.9.2. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -829,6 +829,18 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v7.9.2
+  - Aviso de legislação nova: ao abrir a base, depois da janela de
+    carregamento, o programa consulta a legislação federal (Senado Federal,
+    dados abertos, sem cadastro) e abre uma janela só se houver (1) lei que
+    altere a LEP, o CP, a Lei 8.072/90, a Lei 11.343/06, a Lei 10.826/03
+    ou a Lei 12.850/13 depois da data da base jurídica, ou (2) decreto de
+    indulto ou comutação do ano corrente ou do anterior que a base jurídica
+    ainda não tem. Só informa: os cálculos não mudam até a base jurídica ser
+    revisada. "Ciente" deixa de mostrar aqueles avisos; "Lembrar depois"
+    mostra de novo na próxima abertura. A consulta vale por um dia
+    (legislacao_cache.json, na pasta do programa); sem internet, nada abre.
 
 v7.9.1
   - Abas na ordem: ... Auditoria, Dados prisionais, Jurisprudências e

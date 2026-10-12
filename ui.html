@@ -839,7 +839,7 @@ const ui = {
     if(d.sem_base){ w.classList.add('on'); document.getElementById('copia').innerHTML=''; document.getElementById('baseNome').textContent='—'; document.getElementById('baseN').textContent='0';
       document.getElementById('recentes').innerHTML=(d.recentes||[]).map(r=>`<div onclick="ui.abrirBase(${jsa(r.caminho)},${jsa(r.nome)})"><span>${esc(r.nome)}</span><small>${esc(r.caminho)}</small></div>`).join('')||'<div style="cursor:default;color:var(--tx3)">Nenhuma base recente</div>';
       document.getElementById('wfoot').textContent='Base jurídica '+(d.base_juridica?d.base_juridica.versao:'?')+' · '+d.hoje; this.dados.registros=[]; this.render(); return; }
-    w.classList.remove('on'); if(d.base!==this._qdBase){ this._qdBase=d.base; this._qd=null; this.qdCarregar().then(()=>this.render()); } document.getElementById('baseNome').textContent=d.base; document.getElementById('baseN').textContent=d.registros.length;
+    w.classList.remove('on'); if(!this._legFeito){ this._legFeito=true; setTimeout(()=>this.legVerificar(),800); } if(d.base!==this._qdBase){ this._qdBase=d.base; this._qd=null; this.qdCarregar().then(()=>this.render()); } document.getElementById('baseNome').textContent=d.base; document.getElementById('baseN').textContent=d.registros.length;
     document.getElementById('copia').innerHTML=d.copia?`<i></i>cópia de segurança: ${esc(d.copia.quando)}`:'';
     document.getElementById('hoje').textContent='Hoje '+d.hoje+(d.base_juridica?' · base jurídica '+d.base_juridica.versao:''); if(!this.dados.abas.concat(this.ABAS_EXTRA).find(a=>a.id===this.aba)) this.aba='geral'; this.render(); },
   // tela de carregamento: aparece assim que a base é escolhida e mostra a etapa (o Python avisa cada uma)
@@ -2325,6 +2325,15 @@ const ui = {
     const ds=document.getElementById('defsel'); const di=ds?parseInt(ds.value):null;
     const r=await API().gerar_peticao(id, m.value, pdf, di); if(r&&r.erro) this.toast(r.erro); else if(r&&r.caminho) this.toast('Petição salva: '+r.caminho+(r.pdf?' (+PDF)':'')+(r.aviso?' · '+r.aviso:'')); },
   // remover: mostra o que existe ligado ao assistido e deixa escolher entre remover só o RSPE ou tudo
+  // legislação nova (API do Senado), conferida uma vez por sessão depois da janela de carregamento; sem novidade, nada abre
+  async legVerificar(){ if(document.getElementById('loading').classList.contains('on')||document.getElementById('modal').classList.contains('on')) return setTimeout(()=>this.legVerificar(),1500);
+    let r; try{ r=await API().leg_verificar(); }catch(e){ return; } const L=(r&&r.itens)||[]; if(!L.length) return; this._leg=L;
+    const sec=(tp,tit)=>{ const X=L.filter(x=>x.tipo===tp); return X.length?`<h3 style="margin:12px 0 6px;font-size:14px">${tit}</h3>`+X.map(x=>`<div style="border-left:3px solid var(--a-dot,#B07D00);padding:4px 10px;margin:0 0 8px"><b>${esc(x.titulo)}</b><div class="muted" style="font-size:12.5px;margin-top:2px">${esc(x.texto)}</div>${x.link?`<span class="mini" style="margin-top:4px;display:inline-block" onclick="api('abrir_url',${jsa(x.link)})">Abrir a norma</span>`:''}</div>`).join(''):''; };
+    document.getElementById('modal').innerHTML=`<div class="box" style="width:640px;max-height:80vh;overflow:auto"><h2>Nova legislação publicada</h2><p class="muted" style="margin:0 0 4px">Consulta à legislação federal (Senado Federal, dados abertos) em ${esc(r.consultado||'')}. As normas abaixo são posteriores à base jurídica do programa (${esc(r.base_juridica||'')}), que não as considera: os cálculos continuam pelas regras anteriores até a revisão da base. Confira os cálculos que dependem dos dispositivos alterados.</p>
+      ${sec('decreto','Decreto de indulto ou comutação')}${sec('lei','Alteração das leis usadas nos cálculos')}
+      <div class="acts"><button class="btn" onclick="ui.fecharModal()">Lembrar depois</button><button class="btn pri" onclick="ui.legCiente()">Ciente (não mostrar de novo)</button></div></div>`;
+    document.getElementById('modal').classList.add('on'); },
+  async legCiente(){ await API().leg_ciente((this._leg||[]).map(x=>x.chave)); this.fecharModal(); this.toast('Avisos de legislação marcados como vistos.'); },
   async confirmarRemocao(id){ const I=await API().remover_info(id); if(!I||I.erro) return this.toast((I&&I.erro)||'Falha.'); const r=(this.dados.registros||[]).find(x=>x.id===id)||{};
     const lig=(I.ligados||[]).map(x=>`<li>${x.n} ${esc(x.rot)}</li>`).join('');
     document.getElementById('modal').innerHTML=`<div class="box" style="width:560px"><h2>Remover ${esc(r.nome||id)}</h2><p class="muted" style="margin:0 0 8px">${esc(id)} · ${pl(I.historico||1,'RSPE importado','RSPEs importados')} (sai em qualquer opção).</p>
