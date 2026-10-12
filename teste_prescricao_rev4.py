@@ -218,6 +218,45 @@ _inc = [{"tipo": "ALTERAÇÃO DE DATA-BASE DE PROGRESSÃO DE REGIME/LIVRAMENTO C
 per, _av = rp.periodos_cumprimento(reg([crime()], [], _inc), HOJE)
 confere(not per, "data-base/não concedido tratados como alteração de regime: %s" % per)
 
+# ---------------- auditoria independente (prescrição, 12/10/2026) ----------------
+_Z = "0 ano(s), 0 mês(es) e 0 dia(s)"
+_ART28 = dict(lei="11343/06 - Lei de Drogas", artigo="ART 28: Posse para consumo", tipo_penal="CAPUT, I: Quem adquirir...", pena_imposta=_Z,
+              pena_total_processo="0a0m0d - PENA ORIGINÁRIA")
+# 1 (ALTA): art. 28 com pena 0: prazo de 2 anos (art. 30) na punitiva pelas datas; executória a verificar, com o termo
+L = run(reg([crime(data_infracao="01/01/2019", data_denuncia="19/02/2019", data_sentenca="26/09/2022", transito_mp="17/05/2023",
+                   transito_processo="17/05/2023", **_ART28)]))
+confere(L["prazo_ppp"] == "2 anos" and L["retro_cor"] == "vermelho" and "denúncia → sentença" in L["retro_status"], "AUD-1: art. 28 punitiva: %s" % L["retro_status"])
+confere(L["ppe_status"].startswith("A VERIFICAR: art. 28") and L["ppe_cor"] == "amarelo" and L["ppe_termo"] == "17/05/2023" and not L["ppe_previsao"]
+        and not L["ppe_saldos"], "AUD-1: art. 28 executória: %s" % L["ppe_status"])
+# 2 (MÉDIA): reincidência afastada que muda o resultado -> A VERIFICAR; crimes do mesmo processo não são "outras condenações"
+_Q2 = "0000300-30.2014.8.12.0001"
+_cr = crime(reincidente_comum="S", pena_imposta="2 ano(s), 0 mês(es) e 0 dia(s)", pena_total_processo="2a0m0d - PENA ORIGINÁRIA",
+            data_infracao="01/01/2010", data_denuncia="01/02/2010", data_sentenca="01/06/2011", transito_mp="10/01/2012", transito_processo="10/01/2012")
+_out = crime(processo_criminal=_Q2, data_infracao="01/01/2009", data_denuncia="01/02/2014", data_sentenca="01/06/2014", transito_mp="10/01/2015",
+             transito_processo="10/01/2015")
+L = run(reg([_cr, _out], [ev(PRI, "PRISÃO DEFINITIVA", "01/03/2017", P)]))
+confere(L["ppe_status"].startswith("A VERIFICAR") and L["ppe_cor"] == "amarelo" and "Com o +1/3" in (L.get("ppe_reinc_aviso") or ""),
+        "AUD-2: reincidência afastada que muda o resultado: %s" % L["ppe_status"])
+_mesmo = crime(artigo="ART 330: Desobediência", data_infracao="01/01/2010")
+L = run(reg([_cr, _mesmo], [ev(PRI, "PRISÃO DEFINITIVA", "01/03/2017", P)]))
+confere("+1/3" in L["prazo_ppe"] and L["ppe_status"].startswith("A VERIFICAR"), "AUD-2: crime do mesmo processo contado como outra condenação: %s / %s" % (
+    L["prazo_ppe"], L["ppe_status"]))
+# 3 (MÉDIA): trânsito para a acusação (até 12/11/2020) posterior ao final: termo na data mais favorável, com incoerência
+L = run(reg([crime(transito_mp="17/08/2015", transito_processo="12/08/2015")]))
+confere(L["ppe_termo"] == "12/08/2015" and any("posterior ao trânsito final" in a for a in L["avisos"]), "AUD-3: termo %s" % L["ppe_termo"])
+# 4 (MÉDIA): crime único com pena 0 e pena total legível; medida de segurança não é "sem pena"
+L = run(reg([crime(pena_imposta=_Z, pena_total_processo="2a11m0d - PENA ORIGINÁRIA")]))
+confere(L["pena"] == "2 anos e 11 meses" and L["prazo_ppp"] == "8 anos" and "sem pena" not in L["ppe_status"], "AUD-4: pena do processo: %s" % L["pena"])
+L = run(reg([crime(pena_imposta=_Z, pena_total_processo="1a0m0d - MEDIDA DE SEGURANÇA")]))
+confere(L["ppe_status"].startswith("medida de segurança - prazo pela pena máxima cominada") and L["prazo_ppe"] == "8 anos", "AUD-4: MS: %s" % L["ppe_status"])
+# 5 (BAIXA): datas incoerentes só rebaixam a punitiva se o intervalo decisivo usa a data errada
+L = run(reg([crime(data_infracao="10/08/2008", data_denuncia="19/01/2012", data_sentenca="01/06/2007", transito_mp="10/01/2013",
+                   transito_processo="10/01/2013", pena_imposta="0 ano(s), 6 mês(es) e 0 dia(s)", pena_total_processo="0a6m0d - PENA ORIGINÁRIA")]))
+confere(L["retro_cor"] == "amarelo", "AUD-5: intervalo com a data incoerente (sentença antes da denúncia) deveria ficar a verificar: %s" % L["retro_status"])
+L = run(reg([crime(data_infracao="10/08/2008", data_denuncia="19/01/2012", data_sentenca="01/06/2013", transito_mp="10/01/2013",
+                   transito_processo="10/01/2013", pena_imposta="0 ano(s), 6 mês(es) e 0 dia(s)", pena_total_processo="0a6m0d - PENA ORIGINÁRIA")]))
+confere(L["retro_cor"] == "vermelho" and "fato → denúncia" in L["retro_status"], "AUD-5: fato → denúncia não usa o trânsito incoerente: %s" % L["retro_status"])
+
 if falhas:
     print("FALHOU (prescrição - revisão 4):\n  " + "\n  ".join(falhas))
     sys.exit(1)
