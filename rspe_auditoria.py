@@ -854,7 +854,8 @@ def auditar(r, hoje=None):
             it = _item("info", "Falta a apurar em %s: informar se houve falta grave" % (fi["data"] or "data não informada"),
                        "%s. O RSPE não registra sanção reconhecida.%s Informe se houve falta grave: a decisão vale em todas as abas "
                        "(falta nos 12 meses, indulto, comutação, linha do tempo)." % (fi["texto"], (" " + fi["ficha"]) if fi.get("ficha") else
-                       (" A ficha disciplinar importada não registra falta nesta data." if r.get("_tem_ficha") else
+                       (" A falta foi lida da própria ficha disciplinar (SIAPEN), sem incidente no RSPE." if re.search(r"NA FICHA", fi.get("texto") or "", re.I) else
+                        " A ficha disciplinar importada não registra falta nesta data." if r.get("_tem_ficha") else
                         " Ficha disciplinar não importada: importá-la ajuda a explicar o indício.")), "LEP, arts. 50 e 118; STJ, Tema 1195.",
                        tipo="falta-a-apurar", ref=fi["chave"])
         if _sancao and not dec:

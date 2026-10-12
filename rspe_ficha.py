@@ -1242,6 +1242,7 @@ def reconciliar_eventos(r, f):
     Altera r no lugar; devolve [(tipo, dados)] para a Auditoria."""
     r["_eventos"] = [e for e in r.get("_eventos", []) if not e.get("_ficha")]
     r.pop("_custodia_ficha", None); r.pop("_reconc_ficha", None)
+    r["_tem_ficha"] = bool(f)
     if not f:
         return []
     ev = sorted(((_dp(e["data"]), e["texto"]) for e in f.get("eventos", []) if _dp(e.get("data") or "")), key=lambda x: x[0])
@@ -1818,8 +1819,19 @@ def _interrupcao_x_ficha(r, f):
     """RSPE com o cumprimento parado (último evento é interrupção): a ficha explica? Custódia depois da interrupção =
     preso (em outro processo ou sem reinício lançado), não em liberdade nem foragido; saída em liberdade = confirma."""
     out = []
+    # execução extinta (o mesmo critério de rspe_view.execucao_extinta): a nova prisão da ficha é de outro processo ou sem efeito aqui -
+    # não se pede retificação do RSPE desta execução
+    _cr = r.get("_crimes", [])
+    extinta = bool(r.get("execucao_extinta")) or (bool(_cr) and all((c.get("extinto") or "").upper().startswith("S") for c in _cr))
     for tp, x in r.get("_reconc_ficha") or []:
-        if tp == "reinicio-pela-ficha":
+        if tp == "reinicio-pela-ficha" and extinta:
+            out.append({"nivel": "info", "titulo": "Nova prisão na ficha em %s, depois da interrupção do RSPE (execução extinta)" % rs.fmt(x["entrada"]),
+                        "detalhe": "O RSPE termina na interrupção de %s (%s), e a ficha registra entrada%s em %s. Com a execução extinta, essa "
+                                   "prisão é provavelmente de outro processo: não há reinício a pedir nesta execução." % (
+                                       rs.fmt(x["interrupcao"]), x["motivo"].lower() or "motivo não consta",
+                                       (" vinda de " + x["origem"]) if x["origem"] else "", rs.fmt(x["entrada"])),
+                        "fundamento": "LEP, art. 111.", "tipo": "rspe-x-ficha"})
+        elif tp == "reinicio-pela-ficha":
             out.append({"nivel": "alerta", "titulo": "Reinício omitido no RSPE: lançado pela ficha em %s" % rs.fmt(x["entrada"]),
                         "detalhe": "O RSPE termina na interrupção de %s (%s), sem reinício. A ficha registra entrada%s em %s e custódia desde então. "
                                    "Os cálculos do programa (situação, custódia, prescrição, incisos do indulto) passam a considerar o cumprimento a "
@@ -1921,7 +1933,9 @@ def resumo(f):
 
 def _fmtn(v):
     v = float(v)
-    return ("%d" % v) if abs(v - round(v)) < 0.01 else ("%.2f" % v).replace(".", ",")
+    # até 0,01 do inteiro, o inteiro mais próximo (39,99 -> 40, como o SEEU lança a remição do atestado de 39,99); o "%d" truncava
+    # (39,99 -> 39) e a tolerância dependia do arredondamento binário (39,99 virava 39; 66,99 ficava 66,99)
+    return ("%d" % round(v)) if abs(v - round(v)) < 0.01 + 1e-9 else ("%.2f" % v).replace(".", ",")
 
 
 # ---------------------------------------------------------------- trabalho por emprego x remição no RSPE
@@ -2368,6 +2382,12 @@ def quadro_trabalho(r, f, hoje=None, manuais=None):
         linhas.append({"emp": "Trabalho", "per": "", "dias": "—", "at": "—", "un": "—", "cor": "amarelo",
                        "sit": "Falha na conciliação da remição (%s): conferir a ficha e o RSPE" % e})
         return linhas, res
+    # trecho sem atestado que não chega a 1 dia remido em nenhuma unidade (1 ou 2 dias, ou 3 divididos por uma transferência): a remição
+    # detalhada não o lista (remicao_detalhada), e a aba também não pede atestado por ele
+    curtos = [x for x in C.get("sem_atestado") or [] if not x.get("duvida") and not _trecho_conta(x, tl)]
+    if curtos:
+        C["pendencias"] = [p_ for p_ in C["pendencias"] if not (p_["status"] == "SEM_ATESTADO" and any(
+            p_["data"] == x["ini"] and p_["texto"].startswith("%s, " % x["setor"]) for x in curtos))]
     res["conc"] = C
     # unidade de cada atestado da conferência (a do fim do período atestado; sem período, a da emissão)
     _por_id = {a["id"]: a for a in C["atestados"]}
@@ -2395,7 +2415,8 @@ def quadro_trabalho(r, f, hoje=None, manuais=None):
     res["diferenca"] = max(0, res["remidos_estudo"] - livres) if res["remidos_estudo"] else 0
     res["sem_n"] = len(sem_p)
     res["em_curso_n"] = len([p for p in C["pendencias"] if p["status"] == "EM_CURSO"])
-    res["sem_atestado_a_requerer"] = sum(x["est"] // 3 for x in C["sem_atestado"] if not x.get("duvida") and not (x["em_curso"] and (x["fim"] - x["ini"]).days <= 90))
+    res["sem_atestado_a_requerer"] = sum(x["est"] // 3 for x in C["sem_atestado"] if not x.get("duvida") and not (x["em_curso"] and (x["fim"] - x["ini"]).days <= 90)
+                                         and not any(x is y for y in curtos))
     res["baixas"] = 0
     # linhas (Excel, relatório e Auditoria): uma por atestado conciliado + as pendências de trabalho
     nov = []
@@ -2446,11 +2467,13 @@ SEM_UNIDADE = "Unidade não identificada na ficha"
 # grafias da mesma unidade na ficha (sigla, abreviação, nome antigo): um nome só no relatório por unidade
 UNIDADES_CANON = [
     (r"^CT$|CENTRO DE TRIAGEM", "Centro de Triagem Anísio Lima"),
-    (r"^CPAIG$|AGROINDUSTRIAL DA GAMELEIRA", "Centro Penal Agroindustrial da Gameleira"),
+    (r"^CPAI?G?$|AGROINDUSTRIAL DA GAMELEIRA", "Centro Penal Agroindustrial da Gameleira"),  # CPA, CPAG, CPAIG ("CPA da Gameleira")
     (r"GAMELEIRA II\b", "Penitenciária Estadual Masculina de Regime Fechado da Gameleira II"),
     (r"(PENIT\.? EST\.? MASC\.?|PENITENCI[AÁ]RIA ESTADUAL MASCULINA) DE REGIME FECHADO DA GAMELEIRA$",
      "Penitenciária Estadual Masculina de Regime Fechado da Gameleira"),
-    (r"^EPJFC$|JAIR FERREIRA DE CARVALHO", "Estabelecimento Penal Jair Ferreira de Carvalho"),
+    (r"^E?PJFC$|JAIR FERREIRA DE CARVALHO", "Estabelecimento Penal Jair Ferreira de Carvalho"),
+    (r"^PSMTL$|SEGURANCA MEDIA DE TRES LAGOAS", "Penitenciária de Segurança Média de Três Lagoas"),
+    (r"^EPMC$|ESTABELECIMENTO PENAL MASCULINO DE COXIM", "Estabelecimento Penal Masculino de Coxim"),
     (r"^EPRACA$|REGIME ABERTO E CASA (DO )?ALBERGADO", "Estabelecimento Penal de Regime Aberto e Casa do Albergado de Campo Grande"),
     (r"^IPCG$|INSTITUTO PENAL DE CAMPO GRANDE", "Instituto Penal de Campo Grande"),
     (r"^PTRAN$|PRES[IÍ]DIO DE TR[AÂ]NSITO", "Presídio de Trânsito de Campo Grande"),
@@ -2463,6 +2486,29 @@ UNIDADES_CANON = [
     (r"SEMIABERTO, ABERTO E ASS.* AMAMBAI", "Estabelecimento Penal de Regime Semiaberto, Aberto e Assistência ao Albergado de Amambai"),
     (r"COL[OÔ]NIA PENAL.*TR[EÊ]S LAGOAS", "Colônia Penal e Industrial de Três Lagoas"),
 ]
+
+
+def _trecho_conta(x, tl):
+    """O trecho de trabalho sem atestado x (rspe_remicao: ini, fim, ausencias) entra na remição detalhada? Só se, em alguma unidade,
+    tem 3 dias de trabalho ou mais (seg.-sáb., sem feriados nem ausências) - a mesma conta de remicao_detalhada."""
+    fer = set()
+    for y in range(x["ini"].year, x["fim"].year + 1):
+        fer |= feriados(y)
+    aus = {d for c0, c1, _m in x.get("ausencias") or [] for d in rrm_dias_set(c0, c1)}
+    for _un, a0, b0 in _segmentos_unidade(tl, x["ini"], x["fim"]):
+        n, d = 0, a0
+        while d <= b0:
+            if d.weekday() < 6 and d not in fer and d not in aus:
+                n += 1
+            d += timedelta(days=1)
+        if n >= 3:
+            return True
+    return False
+
+
+def rrm_dias_set(a, b):
+    import rspe_remicao as rrm
+    return rrm._dias_set(a, b)
 
 
 def nome_unidade(nome):
@@ -2606,6 +2652,7 @@ def remicao_detalhada(C, pend_est, lei, lei_rem, res, hoje, tl=None, cursos=None
         if sum(i["dias"] for i in det[k]["itens"]) > det[k]["dias"] + 1:
             det[k]["sobreposicao"] = True  # períodos simultâneos: o total é menor que a soma das linhas
     # estudo: horas por unidade (declaradas: proporcionais aos dias úteis de cada unidade); matrícula em curso há até 90 dias à parte
+    restos = []  # (horas que sobram da divisão por 12, índice da linha) de cada linha de estudo
     for e in list(pend_est) + list(est_curso or []):
         ini, fim = e.get("_ini"), e.get("_fim") or hoje
         segs = _segmentos_unidade(tl, ini, fim) if ini else [(SEM_UNIDADE, None, None)]
@@ -2615,6 +2662,8 @@ def remicao_detalhada(C, pend_est, lei, lei_rem, res, hoje, tl=None, cursos=None
             h = int(round(e["_horas"] * du / du_tot)) if (e.get("_declaradas") or not a0) and len(segs) > 1 else (e["_horas"] if len(segs) == 1 else du * HORAS_DIA_ESTUDO)
             if h < 12:
                 continue
+            if not e.get("_em_curso"):
+                restos.append((h % 12, len(det["estudo"]["itens"])))
             add("em_curso" if e.get("_em_curso") else "estudo", {"ref": "Estudo · %s" % (e.get("curso") or "").title(), "data": "", "setor": "", "unidade": un,
                            "per": "%s a %s" % (rrm._f(a0), rrm._f(b0) if (b0 != hoje or e.get("_fim")) else "hoje (matrícula ativa)") if a0 else "período não informado",
                            "base": ("%d h declaradas" % h) if e.get("_declaradas") else "≈ %d h" % h, "dias": h // 12, "estimado": not e.get("_declaradas")})
@@ -2623,6 +2672,18 @@ def remicao_detalhada(C, pend_est, lei, lei_rem, res, hoje, tl=None, cursos=None
         tot, alvo = sum(det["estudo"]["por_un"].values()), res.get("estudo_dias_pend") or 0
         det["estudo"]["por_un"] = {u: v * alvo // tot for u, v in det["estudo"]["por_un"].items()}
         det["estudo"]["sobreposicao"] = True
+    elif restos and sum(det["estudo"]["por_un"].values()) < (res.get("estudo_dias_pend") or 0):
+        # as horas somam-se antes da divisão por 12 (a conta da aba): o que sobra de cada linha completa dias - vão para as linhas com
+        # mais horas sobrando, para o total ser o mesmo da aba (456 h = 38 dias, e não 380 h -> 31 + 76 h -> 6)
+        falta = (res.get("estudo_dias_pend") or 0) - sum(det["estudo"]["por_un"].values())
+        ordem = [i for _r, i in sorted(restos, key=lambda x: -x[0])]
+        for k_, i_ in enumerate(ordem):
+            n_ = falta // len(ordem) + (1 if k_ < falta % len(ordem) else 0)
+            if n_:
+                it = det["estudo"]["itens"][i_]
+                it["dias"] += n_
+                it["base"] += " · + %s das horas que sobram na divisão por 12 das linhas somadas" % rs.pl(n_, "dia", "dias")
+                det["estudo"]["por_un"][it["unidade"]] = det["estudo"]["por_un"].get(it["unidade"], 0) + n_
     for x in cursos or []:
         # curso de qualificação peticionado no SEEU: a ficha não traz a carga horária - sem dias, para conferir a remição
         det["estudo"]["itens"].append({"ref": "Curso de qualificação peticionado" + (" (%s)" % ", ".join(x["meses"]) if x.get("meses") else ""),
@@ -2670,7 +2731,7 @@ def remicao_detalhada(C, pend_est, lei, lei_rem, res, hoje, tl=None, cursos=None
 
 def _dias_txt(v):
     """'1 dia' / '2,5 dias' / '3 dias'."""
-    return "%s %s" % (_fmtn(v), "dia" if v == 1 else "dias")
+    return "%s %s" % (_fmtn(v), "dia" if _fmtn(v) == "1" else "dias")
 
 
 def _rotulo_leitura(x):
@@ -2699,8 +2760,16 @@ def fundamentacao_remicao(res):
     par, total = [], 0.0
     if ats:
         total = round(sum(a["dias_remidos"] for a in ats), 2)
-        trab = sum(a["dias_trabalhados"] for a in ats)
         todos_trab = all(a["dias_trabalhados"] for a in ats)
+        # atestado inteiro sem remição (nem parte já remida, nem acima do possível): pede-se 1/3 dos dias trabalhados - o atestado
+        # que declara menos (fração truncada, erro de conta) não reduz o pedido; o que declara mais (arredondamento) fica com o que declara
+        parcial = [a for a in ats if a.get("ja_remidos") or a.get("acima_do_possivel")]
+        cheios = [a for a in ats if a not in parcial]
+        trab = sum(a["dias_trabalhados"] for a in cheios)
+        menos = [a for a in cheios if a["dias_remidos"] <= a["dias_trabalhados"] / 3 - 1]
+        acima = [a for a in cheios if a["dias_remidos"] > a["dias_trabalhados"] / 3 + 0.01]
+        if todos_trab:
+            total = round(sum(max(a["dias_remidos"], a["dias_trabalhados"] / 3) for a in cheios) + sum(a["dias_remidos"] for a in parcial), 2)
 
         def _item(a):
             per = (", período de %s a %s" % (a["periodo_inicio"], a["periodo_fim"])) if a.get("periodo_inicio") else ""
@@ -2715,10 +2784,29 @@ def fundamentacao_remicao(res):
             return "nº %s, de %s%s%s%s" % ((a.get("numero") or "s/n").split("/ST")[0], _br(a["data"]), per, dt_, obs)
         lst = "; ".join(_item(a) for a in ats)
         if todos_trab:
-            par.append("A ficha disciplinar (SIAPEN) registra %s de trabalho sem remição correspondente no RSPE: %s. %s, à razão de 1 dia de pena "
-                       "a cada 3 de trabalho (LEP, art. 126, § 1º, II), correspondem a %s remidos."
-                       % (rs.pl(len(ats), "atestado", "atestados"), lst,
-                          ("Os %s trabalhados" % _dias_txt(trab)) if len(ats) > 1 else "Os dias trabalhados", _dias_txt(total)))
+            txt = "A ficha disciplinar (SIAPEN) registra %s de trabalho sem remição correspondente no RSPE: %s." % (rs.pl(len(ats), "atestado", "atestados"), lst)
+            razao = "à razão de 1 dia de pena a cada 3 de trabalho (LEP, art. 126, § 1º, II)"
+            _n = lambda a: (a.get("numero") or "s/n").split("/ST")[0]
+            if cheios:
+                txt += " %s, %s, correspondem a %s remidos." % (
+                    ("Os %s trabalhados" % _dias_txt(trab)) if len(ats) > 1 else "Os dias trabalhados", razao, _dias_txt(round(trab / 3, 2)))
+            if acima:
+                txt += " %s, acima de 1/3 (arredondamento): requer-se o valor declarado." % (
+                    "; ".join("O atestado nº %s declara %s remidos para %s trabalhados" % (_n(a), _fmtn(a["dias_remidos"]), _fmtn(a["dias_trabalhados"]))
+                              for a in acima))
+            if menos:
+                txt += " %s menos que 1/3 dos dias trabalhados (%s): requer-se a proporção legal." % (
+                    "Os atestados declaram" if len(menos) > 1 else "O atestado declara",
+                    "; ".join("nº %s: %s remidos para %s trabalhados" % (_n(a), _fmtn(a["dias_remidos"]), _fmtn(a["dias_trabalhados"])) for a in menos))
+            if parcial:
+                rp = round(sum(a["dias_remidos"] for a in parcial), 2)
+                txt += " %s, %s só os ≈ %s ainda não remidos, como indicado." % (
+                    ("Dos atestados com parte do período já remida ou acima do possível" if len(parcial) > 1 else
+                     "Do atestado com parte do período já remida" if parcial[0].get("ja_remidos") else "Do atestado acima do possível no período"),
+                    "requerem-se" if cheios else razao + ", requerem-se", _dias_txt(rp))
+            if parcial and cheios or acima:
+                txt += " No total, %s remidos." % _dias_txt(total)
+            par.append(txt)
         else:
             # sem os dias trabalhados na ficha, a conta "1 a cada 3" não se demonstra: vale o que o atestado declara
             par.append("A ficha disciplinar (SIAPEN) registra %s de trabalho sem remição correspondente no RSPE: %s. %s %s remidos "
@@ -2853,8 +2941,11 @@ def comparativo(r, f, hoje=None, conferidos=None, manuais=None):
     rot = []
     if nh >= 1 or nl_sd:
         rot.append("Atestado não lançado")
-    if lei_d >= 1 or est_decl:
+    if est_decl:
         rot.append("Remição a requerer")
+    elif lei_d >= 1:
+        # leitura já peticionada: o mesmo rótulo do bloco da leitura e da providência do relatório (conferir a homologação)
+        rot.append("Leitura: conferir homologação")
     elif est_pend:
         rot.append("Estudo sem remição (estimativa)")
     if not (nh >= 1 or nl_sd) and res["diferenca"] >= 1:

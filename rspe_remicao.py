@@ -151,6 +151,12 @@ RE_SAIDA = re.compile(r"SAIDA DA UNIDADE PENAL|EVASAO|TRANSFERENCIA|\bFUGA\b|"
                       r"\bTRANSFERID[OA] (?:PARA|AO|A|NO|NA)\b|^\W*(?:NESTA DATA\W*)?(?:DEU ENTRADA|ENTRADA|(?:RE)?INGRESSOU|ADENTROU) N[OA]\s+(?!SETOR|TRABALHO)|"
                       r"\bEVADI(?:U|NDO)\b|BENEFICIADO COM (?:O )?LIVRAMENTO|SAIDA .{0,30}LIVRAMENTO CONDICIONAL|POR FORCA DE PRISAO PREVENTIVA|"
                       r"POSTO EM LIBERDADE|COLOCADO EM LIBERDADE")
+# soltura nas redações antigas ("BENEFICIADO COM ALVARÁ DE SOLTURA", "SAIU MEDIANTE ALVARÁ DE SOLTURA"); não conta o alvará só citado
+# (parecer, consulta, "aguardando", "não liberado") - o alvará de transferência de regime não é soltura
+RE_SOLTURA = re.compile(r"BENEFICIAD[OA] COM (?:O )?ALVARA DE ?SOLTURA|"
+                        r"\b(?:SAIU|SAIDA|DEU SAIDA|RECEBEU|EM CUMPRIMENTO AO|POR FORCA D[OE]|MEDIANTE|ATRAVES DO)\b.{0,80}?ALVARA DE ?SOLTURA")
+# (sentença ou decisão transcrita na ficha - "expeça-se alvará de soltura" - não é a saída)
+RE_SOLTURA_NAO = re.compile(r"PARECER|CONSULTA|AGUARDANDO|NAO (?:FOI )?LIBERAD|NAO FOI (?:COLOCAD|POST)|SENTENCA|DECISAO|DESPACHO|JULGO|EXPECA")
 _FIMNOME = r"(?:\s+-\s+(?:COMUNICACAO|CI\b|OF\b|OFICIO|DOC)|\s+CONVENIAD|\s+CUMPRINDO|\s+CONFORME|\s+DELIBERAD|\s+UTILIZANDO|\s+APENAS|\s+POR\s|\s+A PEDIDO|\s+DEVIDO|\s+COM\s|,|\.|\(|/INTERNAMENTE|$)"
 # outras redações do SIAPEN (levantadas nas fichas da PDIB, IPCG, CPAIG, PED, EPJFC): início, troca de setor e fim
 RE_INI2 = [re.compile(r"(?:RE)?INICIOU SUAS ATI[VN]IDADES LABORAIS,?\s*(?:NESTA\s+UP\s*)?(?:NO SETOR(?: DE| DA| DO)?|N[OA])\s+(.+?)" + _FIMNOME),
@@ -184,6 +190,7 @@ RE_FIM2 = [re.compile(r"DESLIGADO (?:DE |DA )?(?:SUAS? )?ATIVIDADES? LABORA(?:L|
 # fim sem setor: encerra todos os vínculos abertos
 RE_FIM_GERAL = re.compile(r"NAO RETORNOU DO TRABALHO|RETIRADO DO TRABALHO|\bSAI DO TRABALHO\b|DESLIGA[DG]O DO TRABALHO|DESLIGAMENTO DO (?:LABOR|TRABALHO)|AFASTOU-SE DO TRABALHO|SOLICITOU AFASTAMENTO DO SETOR DE TRABALHO|DESLIGADO DO TRABALHO|DESLIGADO (?:DE |DA )?(?:SUAS? )?ATIVIDADES? LABORA(?:L|IS)(?!,?\s*(?:DO|NO) SETOR)|AFASTADO DO TRABALHO")
 RE_LIBERACAO = re.compile(r"^LIBERACAO DO SETOR DE TRABALHO")
+RE_TROCA_FUNCAO = re.compile(r"MOTIVO:\s*(?:(?:TROCA|MUDANCA|ALTERACAO)(?: DE)? (?:FUNCAO|SETOR|ATIVIDADE)|REMANEJAMENTO)")
 RE_SEM_EFEITO = re.compile(r"TORNAR SEM EFEITO O LANCAMENTO DO DIA\s+(\d{2}/\d{2}/\d{2,4}),?\s*REFERENTE AO SETOR DE TRABALHO")
 # regra de reserva para o texto livre das unidades (cada época e unidade escreve de um jeito): verbo de início/fim + palavra de
 # trabalho; escola, curso, cela, saúde e prisão domiciliar ficam de fora
@@ -220,6 +227,8 @@ def _saida_unidade(u, texto):
     if re.match(r"MUDANCA DE CELA", u):
         return False
     if RE_SAIDA.search(uf):
+        return True
+    if RE_SOLTURA.search(uf) and not RE_SOLTURA_NAO.search(uf):
         return True
     # entrada estruturada vinda da delegacia: nova prisão (a custódia anterior acabou)
     return bool(rf.RE_ENTRADA_RUA.search(texto or ""))
@@ -279,7 +288,8 @@ def vinculos(eventos, hoje, impressao=None):
     do dia X, referente ao setor de trabalho") é ignorado. Baixa sem vínculo aberto: o vínculo encerrado pela saída da
     unidade não é reaberto; sem nenhum vínculo do setor, fica registrada como alerta (nunca como linha "baixa sem início").
     Vínculo que fica aberto até hoje sem nenhuma baixa recebe "duvida" quando foi aberto no mesmo dia de outro setor
-    (provável registro duplicado) ou quando, depois dele, houve início em outro setor ou liberação do trabalho: desde essa
+    (provável registro duplicado) ou quando, depois dele, houve início em outro setor ou liberação do trabalho (a liberação por troca
+    de função que acompanha a baixa de um setor no mesmo dia não conta): desde essa
     data o período não entra em dias (fica "a conferir").
     Lançamento com data posterior à impressão da ficha (erro de digitação: "23.12.2026" numa ficha impressa em 05/10/2026) é
     ignorado, com aviso. A baixa com outra grafia do setor ("Artsanato" x "Artesanato"; "Setor de CRINA" x "Manufatura de Crina")
@@ -433,7 +443,10 @@ def vinculos(eventos, hoje, impressao=None):
             mm = re.search(r"MOTIVO:\s*(.+?)\s*\.?\s*$", u)
             if d not in baixa_no_dia:
                 fechar_todos(d, "liberação do setor de trabalho" + ((": " + mm.group(1).strip(" .").lower()) if mm else ""), e.get("texto", ""))
-            marcos.append((d, "liberação do setor de trabalho", None))
+            if not (d in baixa_no_dia and RE_TROCA_FUNCAO.search(u)):
+                # a liberação por troca de função que acompanha a baixa de um setor no mesmo dia é dessa baixa: não põe em dúvida o
+                # trabalho novo, aberto antes em outro setor (início na Cozinha em 30/06, baixa da Cela Livre e liberação em 01/07)
+                marcos.append((d, "liberação do setor de trabalho", None))
             continue
         if abertos and _saida_unidade(u, e.get("texto", "")):
             for ch in list(abertos):

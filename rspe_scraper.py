@@ -1927,7 +1927,9 @@ def faltas_da_ficha(r, ficha, hoje=None):
     r["_incidentes"] = [i for i in r.get("_incidentes", []) if not i.get("_ficha")]
     if not ficha:
         return
-    proprias = [i for i in r["_incidentes"] if RE_FALTA_PROPRIA.search(_rotulo_incidente(i)) and not _negado(i)]
+    # falta própria do RSPE, inclusive a negada ou afastada em juízo ("homologação de falta grave - não concedido"): o mesmo fato já
+    # foi decidido e não volta como pendência vinda da ficha
+    proprias = [i for i in r["_incidentes"] if RE_FALTA_PROPRIA.search(_rotulo_incidente(i))]
     datas = [d for d in (_data_fato_falta(i) for i in proprias) if d]
     for x in ficha.get("faltas") or []:
         d = to_date(x.get("data_fato") or x.get("data_registro") or "")
