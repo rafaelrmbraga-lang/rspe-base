@@ -1868,8 +1868,8 @@ class Api:
 
     @staticmethod
     def _norm_busca(t):
-        import unicodedata
-        return " " + re.sub(r"\s+", " ", unicodedata.normalize("NFD", t or "").encode("ascii", "ignore").decode().lower()) + " "
+        import rspe_teses
+        return rspe_teses.norm_busca(t)  # sem acento e caixa; pontuação separa palavras ("(enem)", "1.084")
 
     def _teses_indice(self):
         if Api._auto_norm is None:
@@ -1879,10 +1879,8 @@ class Api:
     def teses_buscar(self, q):
         """Ids das decisões da triagem automática cujo texto integral tem todas as palavras da busca (começo de palavra; sem
         acento e caixa)."""
-        ws = [" " + w for w in self._norm_busca(q).split() if len(w) >= 2]
-        if not ws:
-            return []
-        return [k for k, t in self._teses_indice() if all(w in t for w in ws)][:5000]
+        import rspe_teses
+        return rspe_teses.buscar(self._teses_indice(), q)
 
     def teses_resumos(self, ids):
         """Resumo (EMENTA do fim da decisão ou o começo do texto) das decisões da triagem automática pedidas pela tela."""
