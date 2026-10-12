@@ -387,7 +387,7 @@ def avaliar_ficha(f, r, ctx, ini, hoje):
         ref_t = x.get("ref") or ""
         if x.get("s") == "cabe":
             x.update(s="ver", mot="%s; o cumprimento estava interrompido em %s (não estava preso nem em livramento): o decreto exige a fração "
-                                  "cumprida até a data, não a custódia na data - conferir se a interrupção (fuga) foi punida como falta grave"
+                                  "cumprida até a data, não a custódia na data - conferir se a interrupção foi fuga e, se foi, se ela foi punida como falta grave"
                                   % (x.get("mot") or "", ref_t))
         elif x.get("s") in ("nao", "ver"):
             x["mot"] = "cumprimento interrompido em %s (não estava preso nem em livramento); %s" % (ref_t, x.get("mot") or "")

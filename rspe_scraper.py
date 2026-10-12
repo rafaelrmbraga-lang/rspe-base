@@ -2869,7 +2869,14 @@ def analise_decreto_2022(campos, crimes, eventos, incidentes):
     elif not ativos and posteriores:
         out["indulto_2022"], out["indulto_2022_status"] = "não se aplica: fatos posteriores a 25/12/2022", "nao"
     elif not ativos:
-        out["indulto_2022"], out["indulto_2022_status"] = "sem crimes ativos no RSPE", "nao"
+        # pena extinta DEPOIS de 25/12/2022 (fato anterior): estava em execução na data do decreto - não "sem crimes" nela;
+        # hoje não há pena a cumprir, e o indulto não tem objeto
+        _ext_dep = [c for c in crimes if (c.get("extinto") or "").upper().startswith("S") and (to_date(c.get("data_extincao") or "") or date.min) > ref
+                    and (to_date(c.get("data_infracao") or "") or date.max) <= ref]
+        out["indulto_2022"] = ("não se aplica: a pena (%s) estava em execução em 25/12/2022 e foi extinta depois (%s) - sem pena a cumprir" % (
+            crimes_curto(_ext_dep).replace(" (extinto)", ""), ", ".join(dict.fromkeys(c.get("data_extincao") for c in _ext_dep)))
+            if _ext_dep else "sem crimes ativos no RSPE")
+        out["indulto_2022_status"] = "nao"
     elif alcanca and len(alcanca) >= len([c for c in ativos]):
         _priv22 = any(num_lei(c.get("lei")) == "11343" and num_art(c.get("artigo")) == "33" and "§ 4" in (c.get("tipo_penal") or "") for c in ativos)
         out["indulto_2022"] = ("POSSÍVEL: art. 5º c/c art. 7º, VI (tráfico privilegiado - STJ, AgRg no HC 818.978)" if _priv22 and all(
@@ -3470,9 +3477,9 @@ def _maior_periodo_continuo(periodos, ref):
 
 
 def _dois_tercos(p):
-    """2/3 da pena do impeditivo (art. 7º, p. ú.), arredondados para cima: cumprir os dois terços exige alcançá-los - a mesma
-    conta dos decretos de 2000 a 2023 (rspe_decretos)."""
-    return -(-int(p) * 2 // 3)
+    """2/3 da pena do impeditivo (art. 7º, p. ú.) em dias, arredondados para baixo - a regra das frações do programa e a mesma conta
+    dos decretos de 2000 a 2023 (rspe_decretos._avaliar_ficha: int(pena * 2 // 3))."""
+    return int(p) * 2 // 3
 
 
 def _anos_txt(anos):
@@ -3709,7 +3716,7 @@ def analise_decretos(campos, crimes, eventos, incidentes, hoje):
                     return True
             ult_i = max((fim for _, fim in periodos if fim and fim <= ref), default=None)
             txt = ("A VERIFICAR: %s%s; até %s, cumpriu %s de %s (%.0f%%). O decreto exige fração cumprida até a data, não custódia na data: "
-                   "conferir a fração do inciso e se a interrupção (fuga) foi punida como falta grave" % (
+                   "conferir a fração do inciso e, se a interrupção foi fuga, se ela foi punida como falta grave" % (
                        motivo, (" em " + fmt(ult_i)) if ult_i else "", fmt(ref), dias_para_pena(cump_i), dias_para_pena(pena_total), 100.0 * cump_i / pena_total))
             out[k], out[kc] = txt, "A VERIFICAR: " + txt.split(": ", 1)[1]
             out[k + "_status"] = "verificar"
@@ -4021,7 +4028,8 @@ def analise_decretos(campos, crimes, eventos, incidentes, hoje):
                 verificar.append("§ 2º, II a VI: com a metade do lapso, alcançaria %s se for %s; imprescindível ao cuidado de criança de até 12 anos (IV); "
                                  "pessoa com deficiência (V); ou participante de justiça restaurativa (VI) - dados que o RSPE não traz: conferir. "
                                  "II a IV não valem para crime com violência contra filho, criança ou adolescente (§ 3º)" % (
-                                     "o requisito temporal de algum inciso" if any(not isinstance(x, str) for x in meio) else "os incisos " + ", ".join(dict.fromkeys(meio)),
+                                     "o requisito temporal de algum inciso" if any(not isinstance(x, str) for x in meio) else
+                                     ("o inciso " if len(dict.fromkeys(meio)) == 1 else "os incisos ") + ", ".join(dict.fromkeys(meio)),
                                      _qd))
             # ordena por inciso
             ordem_inc = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII", "XIII", "XIV", "XV", "XVI"]
