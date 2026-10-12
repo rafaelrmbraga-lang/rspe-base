@@ -583,8 +583,9 @@ def _explicacao(L, LT, x, termo, duv):
                 ("; %s de suspensão somados ao prazo" % _d(S["suspensao_dias"])) if S.get("suspensao_dias") else "",
                 ("O prazo terminou em %s." % S["limite_max"]) if S.get("limite_max") else ""))
         else:
-            passos.append("A conta: sem fuga nem revogação do livramento, o prazo se regula pela pena aplicada (%s): %s%s, contado de %s; "
-                          "terminou em %s." % (L.get("pena") or "-", fmt_prazo(x["meses"]), _mods(L), rs.fmt(x["g0"]), rs.fmt(x["limite"])))
+            passos.append(("A conta: no art. 28 da Lei 11.343/2006, o prazo é o fixo do art. 30 (%s): %s%s, contado de %s; terminou em %s." if L.get("art28") else
+                           "A conta: sem fuga nem revogação do livramento, o prazo se regula pela pena aplicada (%s): %s%s, contado de %s; "
+                           "terminou em %s.") % (L.get("pena") or "-", fmt_prazo(x["meses"]), _mods(L), rs.fmt(x["g0"]), rs.fmt(x["limite"])))
     passos.append("Resultado: %s." % (L.get("ppe_status") or "-"))
     conf = []
     for d_ in duv:
@@ -2458,10 +2459,12 @@ def fundamentacao(L, parte):
                            "que um dos trechos necessariamente o completou.",
                 "juri": " Ainda que a pronúncia e a decisão que a confirma (CP, art. 117, II e III) tenham ocorrido nesse intervalo, o tempo "
                         "decorrido supera o triplo do prazo, de modo que um dos trechos necessariamente o completou."}.get(L.get("retro_marco_irrelevante") or "", "")
-        return "%s\nCom trânsito em julgado para a acusação, a prescrição regula-se pela pena aplicada (%s): %s%s: %s. " \
+        _base = ("No crime do art. 28 da Lei 11.343/2006, a prescrição tem prazo fixo, qualquer que seja a pena (%s)" % L.get("pena", "")) if L.get("art28") else \
+            ("Com trânsito em julgado para a acusação, a prescrição regula-se pela pena aplicada (%s)" % L.get("pena", ""))
+        return "%s\n%s: %s%s: %s. " \
                "Entre %s (%s%s) e %s (%s%s) decorreram %s, superando o prazo, que se esgotou em %s (prescrição %s).%s\n" \
                "Operou-se a prescrição da pretensão punitiva, requerendo-se a declaração da extinção da punibilidade (CP, art. 107, IV), com o afastamento " \
-               "dos efeitos da condenação." % (cab, L.get("pena", ""), _reg, mods(False), prazo, mk[0], a, ("; " + mk[1]) if mk[1] else "",
+               "dos efeitos da condenação." % (cab, _base, _reg, mods(False), prazo, mk[0], a, ("; " + mk[1]) if mk[1] else "",
                                                mk[2], b, ("; " + mk[3]) if mk[3] else "", dur, vence, mk[4], _irr)
     # executória
     sal = L.get("ppe_saldos") or []

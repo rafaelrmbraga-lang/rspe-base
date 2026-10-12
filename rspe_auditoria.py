@@ -191,7 +191,9 @@ def _hediondo_seeu(c):
     ou 1/1. O rótulo engana: "1/3 - Crime Hediondo até 24/07/1990" e "1/6 - Crime Hediondo até 28/03/2007" são as frações comuns
     da regra anterior à hediondez."""
     fp, fl = _fr_seeu(c.get("fracao_progressao")), _fr_seeu(c.get("fracao_livramento"))
-    return bool((fp is not None and fp >= Fraction(2, 5)) or (fl is not None and fl >= Fraction(2, 3)))
+    # no tráfico de pessoas (CP, art. 149-A) os 2/3 do livramento são os legais (CP, art. 83, V): não indicam hediondez
+    fl_hed = fl is not None and (fl >= Fraction(1, 1) if _trafico_pessoas(c) else fl >= Fraction(2, 3))
+    return bool((fp is not None and fp >= Fraction(2, 5)) or fl_hed)
 
 
 def _hed_progressao(o):
@@ -1340,7 +1342,7 @@ def auditar(r, hoje=None):
             # homicídio (CP, arts. 121 doloso e 121-A) ou latrocínio sem a marcação "resultado morte": o RSPE não diz se o crime foi
             # consumado. Consumado, o resultado morte é do próprio tipo (LEP, art. 112, VI, a, e VIII) - o percentual que o SEEU
             # aplica pode ser o certo; tentado, vale o do hediondo sem morte. Sem a sentença, é ponto a conferir, não erro
-            _hom = (_cp and hed and not morte and (art in ("121", "121-A") and rs.vga_elementar(c)
+            _hom = (_cp and hed and not morte and fato and fato >= rg.data_lei_13964() and (art in ("121", "121-A") and rs.vga_elementar(c)
                                                     or (art == "157" and re.match(r"\s*§\s*3", _tp))))
             _fm = None
             if _hom:
@@ -1378,6 +1380,11 @@ def auditar(r, hoje=None):
                                    " O RSPE não informa se o crime foi consumado: tentado, vale o percentual acima; consumado, o resultado morte integra o "
                                    "tipo e o percentual legal é %s (LEP, art. 112, VI, a, ou VIII) - conferir a sentença." % rs.pct(_fm) if _fm is not None else ""),
                                "LEP, art. 112 (redação vigente na data do fato; lei posterior só retroage se mais benéfica - CF, art. 5º, XL; STJ Temas 1084, 1196 e 1354; STF Tema 1169).", tipo="percentual-de-progressao-diverge", ref=nome))
+                if vga_gen and float(f_seeu) > float(f_esp):
+                    # um pedido só para o crime: o item dos 25% (reincidência não violenta) entra como hipótese neste alerta
+                    itens[:] = [x for x in itens if not (x.get("tipo") == "reincidente-vga-percentual-se-nao-especifica" and x.get("ref") == nome)]
+                    itens[-1]["detalhe"] += (" Se a condenação anterior não foi por crime com violência ou grave ameaça, o percentual é o do "
+                                             "primário com violência, %s, por analogia in bonam partem (STJ, AgRg no HC 675.062; Tema 1084)." % _vg)
             elif esp_ok is False or vga_gen:
                 pass  # o alerta de reincidência específica / o item dos 25% já tratam do percentual
             else:
@@ -2121,8 +2128,9 @@ def auditar(r, hoje=None):
             try:
                 _lim = _ini75.replace(year=_ini75.year + _anos)
             except ValueError:
-                _lim = _ini75.replace(year=_ini75.year + _anos, day=28)
-            _lim += timedelta(days=_fora)
+                _lim = _ini75.replace(year=_ini75.year + _anos, month=3, day=1)  # 29/02 sem correspondente: completa em 01/03
+            # o dia do começo conta (CP, art. 10): o último dia é a véspera do aniversário
+            _lim += timedelta(days=_fora - 1)
             if _term > _lim + timedelta(days=3):
                 _rem75 = rs.saldo_remidos_num(r.get("saldo_remidos"))
                 _rem75 = max((_rem75[0] or 0) - (_rem75[1] or 0), 0)
@@ -2155,8 +2163,9 @@ def auditar(r, hoje=None):
             try:
                 _lim = _base.replace(year=_base.year + _anos)
             except ValueError:
-                _lim = _base.replace(year=_base.year + _anos, day=28)
-            _lim += timedelta(days=_fora)
+                _lim = _base.replace(year=_base.year + _anos, month=3, day=1)  # 29/02 sem correspondente: completa em 01/03
+            # o dia do começo conta (CP, art. 10): o último dia é a véspera do aniversário
+            _lim += timedelta(days=_fora - 1)
             if _term > _lim + timedelta(days=3):
                 itens.append(_item("verificar", "Término (%s) além do limite de %d anos de cumprimento (CP, art. 75), mesmo contado da condenação nova" % (rs.fmt(_term), _anos),
                                    "Há fato posterior ao início do cumprimento (%s), o que leva a nova unificação contada da condenação nova (CP, art. 75, § 2º). "
@@ -2806,6 +2815,12 @@ def fundamentacao(it, r):
     if tipo == "alteracao-de-data-base-no-lugar-do-incidente" and it.get("nivel") != "alerta":
         return ""  # só a data-base fixa é erro a impugnar; no "verificar", o marco pode justificar a alteração
     correto, pedido = FUND_TIPOS[tipo]
+    _tt = it.get("titulo") or ""
+    if tipo == "seeu-tratou-como-hediondo-mas-o-tipo-nao-consta" and not re.search(r"11\.343|Lei de Drogas|art\. 33", _tt, re.I):
+        correto = correto.replace("; no tráfico privilegiado, a natureza hedionda é afastada por lei (LEP, art. 112, § 5º; Súmula Vinculante 63/STF)", "")
+    if tipo == "fracao-de-livramento-diverge" and not re.search(r"legal \(1/3", _tt):
+        # o parágrafo do 1/3 com maus antecedentes só cabe quando a fração legal é 1/3
+        correto = re.sub(r" Ao condenado não reincidente em crime doloso aplica-se a fração de 1/3.*$", "", correto)
     ger = r.get("data_geracao_rspe") or ""
     rel = "o cálculo de pena (Relatório da Situação Processual Executória%s)" % ((" emitido em %s" % ger) if ger else "")
     tit = _limpa_par(re.sub(r"\s+", " ", it.get("titulo") or "").strip().rstrip("."))
@@ -2813,7 +2828,7 @@ def fundamentacao(it, r):
     tit = _TIT_PECA.get(tipo, tit)
     m = re.match(r"^Proc\. ([\d.\-]+) · ([^:]+): (.+)$", tit)
     nao_erro = bool(re.search(r"vencida|possivel|prescricao|idade|menor-de-21|extinta|integralmente|detracao", tipo))
-    verbo = "dele consta" if nao_erro else "apresenta a seguinte inconsistência"
+    verbo = "registra" if nao_erro else "apresenta a seguinte inconsistência"
     if m:
         erro = "Na condenação do processo %s (%s), %s %s: %s." % (m.group(1), m.group(2).strip(), rel, verbo, m.group(3))
     else:

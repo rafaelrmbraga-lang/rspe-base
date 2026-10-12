@@ -1272,7 +1272,7 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
             notas["termino"] = ("Término*: calculado pelo programa - data de geração do RSPE (%s) + pena remanescente (%s), pelo calendário; "
                                 "o SEEU não imprimiu o término." % (r.get("data_geracao_rspe") or "?", r.get("pena_remanescente") or "?"))
     if dbi.get("db_editada") and r.get("progressao_previsao_seeu") and _prog_pela_db_manual(r):
-        notas["prog"] = ("Progressão*: recalculada pelo programa com a data-base informada (%s); a data do SEEU é %s."
+        notas["prog"] = ("Progressão*: recalculada pelo programa com a data-base informada (%s) - estimativa, pode variar 1 dia pelo arredondamento; a data do SEEU é %s."
                          % (dbi["db"], r["progressao_previsao_seeu"]))
     if notas.get("termino") and any(it.get("tipo") == "pena-cumprida-menor-que-custodia" for it in m.get("aud_itens") or []):
         notas["termino"] += (" Atenção: a Auditoria aponta pena cumprida do SEEU menor que a custódia dos eventos - este término parte do "

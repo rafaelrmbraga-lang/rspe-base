@@ -247,7 +247,8 @@ c = crime(artigo="ART 217-A: Estupro de vulnerável", tipo_penal="CAPUT: Ter con
 r = reg([c], [inc(AR, "Fechado - Regime Inicial", "", "30/12/2020")], [ev(PR, "PRISÃO PREVENTIVA", "30/12/2020")], pena_total="48a9m0d",
         termino_previsao_seeu="30/12/2060", data_base_seeu="30/12/2020")
 it = por_tipo(r).get("limite-de-cumprimento-art-75", [{}])[0]
-ok(it.get("nivel") == "alerta" and "30/12/2050" in it.get("titulo", "") and ra.fundamentacao(it, r), "4-A6: %s" % it)
+# último dia contando o dia do começo (CP, art. 10): 30/12/2020 + 30 anos - 1 dia
+ok(it.get("nivel") == "alerta" and "29/12/2050" in it.get("titulo", "") and ra.fundamentacao(it, r), "4-A6: %s" % it)
 r["termino_previsao_seeu"] = "30/12/2049"
 ok("limite-de-cumprimento-art-75" not in por_tipo(r), "4-A6: dentro do limite")
 
