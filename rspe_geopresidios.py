@@ -1,7 +1,8 @@
 """Dados prisionais de MS pelo Geopresídios (CNJ): a API pública do CNIEP (Cadastro Nacional de Inspeções nos Estabelecimentos
 Penais) traz, para cada unidade, a última inspeção mensal do juízo. Do tema "Aspectos Gerais" saem a capacidade, a população
-por regime e por perfil e o quadro de servidores. Os dados ficam guardados num arquivo ao lado do programa e só são baixados
-de novo pelo botão "Atualizar"."""
+por regime e por perfil e o quadro de servidores. Os dados ficam guardados num arquivo ao lado do programa e são baixados de
+novo pelo botão "Atualizar" ou sozinhos (30 dias depois; logo, se algum relatório não veio). O relatório que falha mantém o
+dado baixado antes (com a evolução da população) e conta em "falhas"."""
 import json
 import os
 import re
@@ -211,7 +212,9 @@ def atualizar(destino, todas=False, aviso=None):
     pedidos = [i for (sq, t), i in ult.items() if any(e["seq_estabelecimento"] == sq for e in sel)]
     rels, feitos = {}, [0]
     antigo = {}  # inspeção -> dados já baixados antes (usados se o relatório desta vez falhar)
+    antiga_un = {}  # unidade -> como estava no download anterior (tema sem relatório novo, série da população)
     for u0 in (carregar(destino) or {}).get("unidades", []):
+        antiga_un[u0.get("id")] = u0
         for t0, T0 in (u0.get("temas") or {}).items():
             antigo[T0.get("id")] = ("tema", u0, t0)
         if u0.get("inspecao"):
@@ -227,7 +230,8 @@ def atualizar(destino, todas=False, aviso=None):
     from concurrent.futures import ThreadPoolExecutor
     with ThreadPoolExecutor(max_workers=4) as ex:  # mais que isso, o servidor do CNJ passa a recusar (429)
         list(ex.map(baixa, pedidos))
-    unidades, falhas = [], [0]
+    unidades, falhas, mantidos = [], [0], [0]  # relatórios não baixados; destes, quantos ficaram com o dado anterior
+    CAMPOS_GERAL = list(QUESTOES.values()) + list(TEXTO.values()) + ["servidores", "servidores_seguranca", "inspecao"]
     for e in sorted(sel, key=lambda x: x["dsc_identificacao"]):
         sq = e["seq_estabelecimento"]
         u = {"id": sq, "nome": re.sub(r"\s+", " ", e["dsc_identificacao"]).strip(), "endereco": e.get("dsc_endereco") or "",
@@ -238,19 +242,30 @@ def atualizar(destino, todas=False, aviso=None):
             u.update(cidade=(g.get("dsc_cidade") or "").title(), ibge=str(g.get("codigo_ibge") or ""), lat=float(g["lat"]), lon=float(g["lon"]))
         except (KeyError, TypeError, ValueError):
             u.update(cidade=(g.get("dsc_cidade") or "").title(), ibge=str(g.get("codigo_ibge") or ""))
+        u0 = antiga_un.get(sq) or {}
+        usou_antigo = False
         for t in sorted(TEMAS):
             i = ult.get((sq, t))
             rel = rels.get(i["id"]) if i else None
             if not rel or rel.get("erro"):
                 if rel and rel.get("erro"):
+                    # relatório recusado (429, rede): fica o que foi baixado antes - da mesma inspeção ou, se ela é nova, a
+                    # anterior do mesmo tema - e a falha conta, para o aviso e a nova tentativa
+                    falhas[0] += 1
                     velho = antigo.get(i["id"])
                     if velho and velho[0] == "tema":
                         u["temas"][str(t)] = velho[1]["temas"][velho[2]]
                     elif velho:
-                        u.update({k: velho[1].get(k) for k in list(QUESTOES.values()) + list(TEXTO.values()) + ["servidores", "servidores_seguranca", "inspecao"]})
+                        u.update({k: velho[1].get(k) for k in CAMPOS_GERAL})
+                    elif t != TEMA_GERAL and (u0.get("temas") or {}).get(str(t)):
+                        u["temas"][str(t)] = u0["temas"][str(t)]
+                    elif t == TEMA_GERAL and u0.get("inspecao"):
+                        u.update({k: u0.get(k) for k in CAMPOS_GERAL})
                     else:
-                        falhas[0] += 1
                         u["erro"] = rel["erro"]
+                        continue
+                    mantidos[0] += 1
+                    usou_antigo = True
                 continue
             info = {"id": i["id"], "data": i["data_inicio"][:10], "ciclo": i.get("ciclo") or ""}
             if t == TEMA_GERAL:
@@ -261,15 +276,23 @@ def atualizar(destino, todas=False, aviso=None):
             p = _populacao(rel, t)
             if p:
                 u["serie"].append(dict(p, data=info["data"], ciclo=info["ciclo"]))
+        if usou_antigo:
+            # a série (evolução da população) do download anterior entra junto: o mês que não veio desta vez não some e a
+            # população mais recente continua sendo a do último mês conhecido (não volta a um mês anterior)
+            tem = {(x.get("ciclo"), x.get("data")) for x in u["serie"]}
+            u["serie"] += [dict(x) for x in (u0.get("serie") or []) if (x.get("ciclo"), x.get("data")) not in tem]
+            u["dado_anterior"] = True
         u["serie"].sort(key=lambda x: (ordem_ciclo(x["ciclo"]), x["data"]))
         if u["serie"]:
             # a população mais recente vem da inspeção do mês (qualquer tema); a capacidade e o perfil, do tema 1
             a = u["serie"][-1]
             u.update(provisorios=a["provisorios"], fechado=a["fechado"], semiaberto=a["semiaberto"], aberto=a["aberto"],
                      pop=a["pop"], pop_ciclo=a["ciclo"], pop_data=a["data"])
+        elif usou_antigo and u0.get("pop") is not None:
+            u.update({k: u0.get(k) for k in ("provisorios", "fechado", "semiaberto", "aberto", "pop", "pop_ciclo", "pop_data")})
         unidades.append(u)
     dados = {"atualizado": datetime.now().strftime("%d/%m/%Y %H:%M"), "fonte": SITE, "uf": UF, "todas": True, "unidades": unidades,
-             "falhas": falhas[0]}
+             "falhas": falhas[0], "mantidos": mantidos[0], "relatorios": len(pedidos)}
     tmp = destino + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(dados, f, ensure_ascii=False)

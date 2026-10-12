@@ -27,8 +27,9 @@ pasta…" varrendo subpastas, ou arrastando PDFs/pasta sobre o .exe).
 ABERTURA
 O programa abre SEM base carregada. A tela inicial pede: criar uma base nova
 (digitando o nome, ex.: "Comarca de Dourados") ou abrir uma existente; lista as
-bases recentes (até 8). Arrastar PDFs sobre o .exe cria uma base
-"Importação <data>".
+bases recentes (até 8, sem repetir o mesmo arquivo). Arrastar PDFs sobre o
+.exe cria uma base "Importação <data e hora com segundos>" (se o nome já
+existir, "(2)", "(3)"…; uma base existente nunca é substituída).
 
 ATUALIZAR O PROGRAMA
   Substitua só o executável (a partir da 7.4.0, APTO.exe; apague o antigo
@@ -45,6 +46,14 @@ Os dados ficam em arquivos .sqlite na pasta "bases", ao lado do .exe.
     Nova base…          cria uma base vazia (ex.: "Comarca de Dourados.sqlite")
     Abrir base…         troca para outra base já salva
     Salvar base como…   grava a base atual com outro nome e passa a usá-la
+  "Salvar base como…" ou "Nova base…" sobre um arquivo que já é base do APTO
+  (o Windows pergunta se substitui): antes, a base substituída é copiada para
+  bases\copias\<nome> (substituída em <data e hora>)\, junto com as cópias de
+  segurança que ela já tinha; a base nova com esse nome começa uma pasta de
+  cópias própria (as cópias de uma base nunca recebem o conteúdo de outra).
+  Se a cópia não puder ser feita, nada é substituído. Para recuperar a base
+  substituída, use "Abrir base…" no arquivo .sqlite dessa pasta e "Salvar
+  base como…" com outro nome.
 Cada base guarda os RSPE lidos, as fichas disciplinares, as baixas da
 Auditoria, as conferências da aba Ficha disciplinar e os atestados
 adicionados à mão.
@@ -80,7 +89,15 @@ DUPLICADOS
   Ficha disciplinar impressa antes da já gravada (ou sem data legível) é
   ignorada; a mesma ficha repetida no lote ou já importada (mesmo arquivo)
   conta como duplicada. O resumo aparece ao fim da importação e a lista fica em
-  importacao_avisos.txt.
+  importacao_avisos.txt (reescrito a cada importação manual, com data, base e
+  "Sem avisos" quando não há; a pasta vigiada acrescenta os avisos dela em
+  importacao_avisos_pasta_vigiada.txt). No resumo, o RSPE sem data legível
+  não conta como "mais antigo" (aparece na lista como "sem data de geração
+  legível ... ignorado"), e a ficha guardada pelo nome em importação anterior
+  que agora vincula ao RSPE não conta como ficha do lote (aparece na lista
+  como "ficha(s) guardada(s) pelo nome agora vinculada(s)"). Ficha de mesmo
+  nome de um RSPE da base mas com outra mãe (ou com homônimos) fica guardada
+  pelo nome e o aviso diz "NÃO VINCULADA" com o motivo: conferir.
 
 ABAS (colunas)
   Geral        Nome, Nº da execução, Regime, Progressão, Livramento, Término.
@@ -198,8 +215,10 @@ CORES
   ("Não prescrita (há crimes sem dados)" quando algum crime não tem trânsito
   ou pena no RSPE - conferir na ação penal); cinza = sem dados; azul =
   extinta. A tela mostra uma pretensão por vez; a exportação (Excel e PDF)
-  também sai em duas abas, "Prescrição - pretensão executória" e
-  "Prescrição - pretensão punitiva", cada uma com a sua cor e contagem; na
+  também sai em duas abas - no Excel, "Prescrição executória" e
+  "Prescrição punitiva"; no PDF, com os títulos "Prescrição - pretensão
+  executória" e "Prescrição - pretensão punitiva" -, cada uma com a sua
+  cor e contagem; na
   ficha do assistido, a executória com a sua cor e, se aparente ou a
   verificar, a punitiva logo abaixo.
   Ficha disciplinar: vermelho = remição a requerer; amarelo = conferir remição,
@@ -587,9 +606,15 @@ BASE JURÍDICA (base_juridica.json)
   STJ 1084/1196/1354 e STF 1169 (o STF Tema 1319 está registrado como
   repercussão geral pendente, sem tese); frações de livramento; rol de
   hediondos com a data de cada lei; VGA esperada por artigo; jurisprudência
-  citada. A cópia ao lado do .exe tem prioridade sobre a embutida: para
-  atualizar, edite o arquivo e use "Base ▾ → Recarregar base jurídica" (ou
-  reabra o programa). A versão em uso aparece na aba Auditoria.
+  citada. Entre a cópia ao lado do .exe e a embutida, vale a de versão
+  mais recente (campo "versao"; em empate, a de ao lado do .exe); o que só
+  existe na embutida é completado a partir dela. Para uma edição valer,
+  edite o arquivo ao lado do .exe, AUMENTE a "versao" dele (ex.:
+  "2026-10-08i" -> "2026-10-09") e use "Base ▾ → Recarregar base jurídica"
+  (ou reabra o programa). A mensagem do "Recarregar" diz a versão e o
+  arquivo em uso e avisa se a cópia ao lado foi ignorada (JSON inválido ou
+  versão mais antiga que a embutida). A versão em uso aparece no topo da
+  tela ("Hoje … · base jurídica …"), com o aviso, se houver.
 
 PRESUNÇÃO DE HIPOSSUFICIÊNCIA (Defensoria)
   No indulto, a multa é indultável e não é óbice (Decretos 12.338/2024 e
@@ -651,7 +676,8 @@ ARQUIVOS
   RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf   documentação técnica
   Criados ao lado do .exe: bases/ (com copias/, as cópias de segurança),
   rspe_config.json (bases recentes e pasta vigiada),
-  pasta_vigiada_estado.json, importacao_avisos.txt, rspe_log.txt; só com
+  pasta_vigiada_estado.json, importacao_avisos.txt,
+  importacao_avisos_pasta_vigiada.txt, rspe_log.txt; só com
   as petições ativas: modelos/ e defensores.json.
 
 SAÍDA TEMPORÁRIA (ícone ao lado do nome, aba Geral)
@@ -730,10 +756,15 @@ DADOS PRISIONAIS (aba ao lado do Quadro do Usuário)
   (CNJ): para cada unidade, a última inspeção judicial mensal do tema
   "Aspectos gerais" (vagas, presos por regime, perfil da população e
   servidores). Os dados são baixados sozinhos, em segundo plano, ao
-  abrir uma base, quando nunca foram baixados ou têm 30 dias ou mais
-  (cerca de 2 minutos, com internet); enquanto isso, a aba segue com os
-  dados anteriores. Sem internet, o programa avisa e continua com o que
-  tem. O botão "Atualizar dados" baixa na hora. Os dados ficam guardados
+  abrir o programa (já na tela inicial, mesmo sem base aberta), quando
+  nunca foram baixados ou têm 30 dias ou mais (cerca de 2 minutos, com
+  internet); enquanto isso, a aba segue com os dados anteriores. Sem
+  internet, o programa avisa e continua com o que tem. Se parte dos
+  relatórios de inspeção não vier (o servidor do CNJ recusa pedidos em
+  excesso), a unidade fica com o dado baixado antes (população e evolução,
+  sem trocar o mês mais recente por um anterior), a mensagem diz quantos
+  relatórios faltaram e o programa tenta de novo sozinho em 10 minutos
+  (até 3 vezes; depois, ao reabrir o programa ou pelo botão). O botão "Atualizar dados" baixa na hora. Os dados ficam guardados
   ao lado do programa (geopresidios_ms.json) e valem para qualquer base.
   - Mapa do estado: um círculo verde-escuro por cidade com estabelecimento
     dos tipos marcados, com o tamanho pelo número de presos. Passar o mouse

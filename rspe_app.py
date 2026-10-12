@@ -43,6 +43,8 @@ import rspe_calc as rcalc
 APP = "APTO"
 VERSAO = "7.9.1"
 GEO_AUTO_DIAS = 30           # dados prisionais: baixados de novo sozinhos quando têm 30 dias ou mais
+GEO_REPETIR_MIN = 10         # ... ou 10 minutos depois de um download em que algum relatório falhou (nova tentativa automática)
+GEO_REPETIR_MAX = 3          # tentativas automáticas seguidas com o programa aberto (depois, na próxima abertura ou pelo botão)
 _GEO_LOCK = threading.Lock()  # um download do Geopresídios por vez (automático ou pelo botão)
 
 
@@ -273,8 +275,10 @@ curso (o externo conta). Amarelo: algo fica a conferir (ficha com mais de 90 dia
 abre o pedido da progressão (o mesmo da coluna "Pedido" da aba Progressão); com o pedido marcado, o ícone fica azul preenchido.
 <h4>Dados prisionais (Geopresídios/CNJ)</h4>
 Aba ao lado do Quadro do Usuário. Pela API pública do Geopresídios/CNIEP (CNJ), traz para cada unidade de MS a última inspeção judicial
-mensal do tema "Aspectos gerais": vagas, presos por regime, perfil e servidores. Os dados são baixados sozinhos, em segundo plano, ao abrir uma base,
-quando têm 30 dias ou mais (cerca de 2 minutos, com internet); "Atualizar dados" baixa na hora. Ficam guardados ao lado do programa. No mapa, um círculo verde-escuro por cidade com estabelecimento dos tipos marcados (unidades
+mensal do tema "Aspectos gerais": vagas, presos por regime, perfil e servidores. Os dados são baixados sozinhos, em segundo plano, ao abrir o programa
+(já na tela inicial, mesmo sem base aberta), quando têm 30 dias ou mais (cerca de 2 minutos, com internet); "Atualizar dados" baixa na hora.
+Se algum relatório não vier (o servidor do CNJ recusa pedidos em excesso), a unidade fica com o dado baixado antes (população e evolução),
+a mensagem diz quantos faltaram e o programa tenta de novo sozinho em 10 minutos. Ficam guardados ao lado do programa. No mapa, um círculo verde-escuro por cidade com estabelecimento dos tipos marcados (unidades
 penais, delegacias e cadeias, unidades militares, Polícia Federal e outras), com o tamanho pelo número de presos; o mouse lista os
 estabelecimentos e o clique filtra a cidade. Escolher a unidade (lista ou tabela) troca o mapa pelo gráfico dela: em pizza, por regime, provisórios (mês escolhível), perfil
 e condições; em colunas, uma por inspeção, o crescimento de apenados e a ocupação (com a linha das vagas).
@@ -405,8 +409,11 @@ cabível" (vermelho), "Extinção a verificar" (amarelo, com o motivo: custódia
 (laranja até 30, amarelo até 60, verde até 90), "Em cumprimento" (acima de 90 dias), "Pena extinta (registrada)" (azul), "Pena
 interrompida" ou "Pena suspensa" (cinza) e "Não se aplica" (cinza: sem previsão).
 <h4>Base jurídica</h4>
-O arquivo base_juridica.json ao lado do programa tem prioridade sobre a cópia embutida. Para atualizar (novo decreto, nova fração,
-nova tese), edite o arquivo e use "Base ▾ → Recarregar base jurídica". A versão em uso aparece na aba Auditoria.
+Entre o arquivo base_juridica.json ao lado do programa e a cópia embutida, vale o de versão mais recente (campo "versao"; em empate,
+o de ao lado do programa); o que só existe na embutida é completado a partir dela. Para atualizar (novo decreto, nova fração,
+nova tese), edite o arquivo ao lado do programa, aumente a "versao" dele e use "Base ▾ → Recarregar base jurídica": a mensagem
+diz a versão e o arquivo em uso e avisa se a cópia ao lado foi ignorada (JSON inválido ou versão mais antiga). A versão em uso
+aparece no topo da tela ("Hoje … · base jurídica …"), com o aviso, se houver.
 <h4>Crimes</h4>
 Resumidos pelo artigo: "art. 33 Lei 11.343/06 (x2)". "n/i" = artigo não informado pelo SEEU. A ficha traz a descrição completa.
 """
@@ -516,6 +523,32 @@ def _mesmo_arquivo(a, b):
         return bool(a and b) and os.path.normcase(os.path.abspath(a)) == os.path.normcase(os.path.abspath(b))
     except Exception:
         return False
+
+
+def _bj_info():
+    """Base jurídica para a tela: a versão (o topo mostra só ela) leva junto o aviso de cópia ignorada (JSON inválido ou
+    versão mais antiga que a embutida), para que ele apareça."""
+    av = rg.avisos()
+    v = rg.versao()
+    curtos = ["base_juridica.json %s ignorado - %s" % ("ao lado do programa" if "ao lado" in a else "embutido",
+                                                      "JSON inválido" if "JSON inválido" in a else "versão mais antiga") for a in av]
+    return {"versao": v + (" (atenção: %s; detalhes em Base ▾ → Recarregar base jurídica)" % "; ".join(curtos) if av else ""),
+            "origem": rg.origem(), "avisos": av}
+
+
+def _msg_falha_gravar(caminho, e):
+    """Mensagem em português para a falha ao gravar (salvar como, restaurar cópia) uma base."""
+    t = str(e).lower()
+    nome = os.path.basename(caminho or "")
+    if "unable to open" in t or isinstance(e, FileNotFoundError):
+        return "a pasta de %s não existe ou não permite gravação. Escolha outra pasta." % nome
+    if "readonly" in t or "read-only" in t or isinstance(e, PermissionError):
+        return "%s está somente para leitura (arquivo ou pasta sem permissão de gravação)." % nome
+    if "in use" in t or "locked" in t or "busy" in t:
+        return "%s está em uso (por outra janela do programa, outro programa ou outro computador). Feche-o lá e tente de novo." % nome
+    if "disk" in t and "full" in t:
+        return "não há espaço em disco para gravar %s." % nome
+    return "falha ao gravar %s (%s)." % (nome, e)
 
 
 _PRESC_DATAS = {"fato": "Data do fato", "denuncia": "Recebimento da denúncia", "sentenca": "Sentença", "acordao": "Acórdão",
@@ -735,7 +768,7 @@ class Base:
             out[ch] = f
             if nn and not p:
                 out.setdefault("nome:" + nn, f)
-        if relidas:
+        if relidas and not self.somente_leitura:  # base só para consulta: relidas só na memória
             with self.lock:
                 self.con.executemany("UPDATE fichas SET dados=? WHERE chave=?", relidas)
                 self.con.commit()
@@ -1165,7 +1198,11 @@ class Api:
         try:
             with open(CONFIG, encoding="utf-8") as f:
                 c = json.load(f)
-            return [p for p in c.get("recentes", []) if os.path.exists(p)]
+            out = []
+            for p in c.get("recentes", []):  # sem repetir o mesmo arquivo escrito de outro jeito (config de versão anterior)
+                if os.path.exists(p) and not any(_mesmo_arquivo(p, q) for q in out):
+                    out.append(p)
+            return out
         except Exception:
             return []
 
@@ -1188,8 +1225,13 @@ class Api:
     def _salvar_config(self):
         rec = self._recentes()
         if self.base:
-            rec = [self.base.caminho] + [p for p in rec if p != self.base.caminho]
-        self._cfg_gravar(recentes=rec[:8])
+            rec = [os.path.abspath(self.base.caminho)] + rec
+        # uma entrada por arquivo, qualquer que seja a grafia do caminho ("bases/./B.sqlite", maiúsculas no Windows)
+        unicos = []
+        for p in rec:
+            if not any(_mesmo_arquivo(p, q) for q in unicos):
+                unicos.append(os.path.abspath(p))
+        self._cfg_gravar(recentes=unicos[:8])
 
     def _js(self, codigo):
         if self._janela:
@@ -1216,7 +1258,7 @@ class Api:
         if not self.base:
             return {"sem_base": True, "recentes": [{"caminho": p, "nome": os.path.splitext(os.path.basename(p))[0]} for p in self._recentes()],
                     "hoje": rv.HOJE.strftime("%d/%m/%Y"), "abas": rv.ABAS, "rotulos": rv.ROTULO, "ajuda": AJUDA + _ajuda_juris(),
-                    "base_juridica": {"versao": rg.versao(), "origem": rg.origem()}, "registros": []}
+                    "base_juridica": _bj_info(), "registros": []}
         brutos = self.base.todos()
         ctx = self._contexto(brutos)
         # a lista é montada à parte e só substitui a atual no fim: exportar, relatórios e registro não leem uma lista pela metade
@@ -1255,7 +1297,7 @@ class Api:
             "rotulos": rv.ROTULO,
             "rotulos_dica": rv.ROTULO_DICA,
             "ajuda": AJUDA + _ajuda_juris(),
-            "base_juridica": {"versao": rg.versao(), "origem": rg.origem()},
+            "base_juridica": _bj_info(),
             # json_seguro: um Fraction ou date esquecido no modelo derrubava a lista inteira ("Object of type Fraction is not JSON serializable")
             # versão leve (sem os textos de prescrição e auditoria): a base grande chega à tela em segundos; o registro completo
             # vem quando a ficha, a linha expandida ou o cálculo da fuga é aberto (Api.registro)
@@ -1798,12 +1840,34 @@ class Api:
         return {"geo": d, "mapa": rmapa.MAPA, "ind": self._geo_ind(), "cats": rgeo.CATEGORIAS, "temas": {str(k): v for k, v in rgeo.TEMAS.items()}}
 
     def geo_precisa(self):
-        """Atualização automática: True se os dados prisionais nunca foram baixados ou têm GEO_AUTO_DIAS dias ou mais."""
+        """Atualização automática: True se os dados prisionais nunca foram baixados, têm GEO_AUTO_DIAS dias ou mais ou se
+        no último download algum relatório falhou (e já se passaram GEO_REPETIR_MIN minutos)."""
         d = rgeo.carregar(self._geo_arq())
         try:
-            return (datetime.now() - datetime.strptime(d["atualizado"], "%d/%m/%Y %H:%M")).days >= GEO_AUTO_DIAS
+            idade = datetime.now() - datetime.strptime(d["atualizado"], "%d/%m/%Y %H:%M")
+            if d.get("falhas"):
+                return idade.total_seconds() >= GEO_REPETIR_MIN * 60
+            return idade.days >= GEO_AUTO_DIAS
         except Exception:
             return True
+
+    def _geo_agendar(self, falhas):
+        """Com relatórios que falharam, agenda nova tentativa automática daqui a GEO_REPETIR_MIN minutos (até
+        GEO_REPETIR_MAX seguidas); download completo zera a contagem."""
+        t = getattr(self, "_geo_timer", None)
+        if t:
+            t.cancel()
+            self._geo_timer = None
+        if not falhas:
+            self._geo_tentativas = 0
+            return False
+        self._geo_tentativas = getattr(self, "_geo_tentativas", 0) + 1
+        if self._geo_tentativas > GEO_REPETIR_MAX:
+            return False
+        self._geo_timer = threading.Timer(GEO_REPETIR_MIN * 60, lambda: self._js("window.ui && ui.geoAtualizar && ui.geoAtualizar(true)"))
+        self._geo_timer.daemon = True
+        self._geo_timer.start()
+        return True
 
     def geo_atualizar(self, todas=False):
         if not _GEO_LOCK.acquire(blocking=False):
@@ -1825,7 +1889,16 @@ class Api:
         self._geo_pontos(d["unidades"])
         msg = "Dados prisionais atualizados (%d estabelecimentos)." % len(d["unidades"])
         if d.get("falhas"):
-            msg += " %d relatórios de inspeção não foram baixados (o servidor do CNJ recusou): clique em Atualizar de novo." % d["falhas"]
+            n, m = d["falhas"], d.get("mantidos") or 0
+            msg += " %s de %d relatórios de inspeção não %s baixados (o servidor do CNJ recusou ou a conexão caiu)" % (
+                n, d.get("relatorios") or n, "foi" if n == 1 else "foram")
+            if m:
+                msg += "; %s com o dado baixado antes (a população e a evolução das unidades são mantidas)" % (
+                    "1 ficou" if m == 1 else "%d ficaram" % m)
+            msg += (". Nova tentativa automática em %d minutos; ou clique em \"Atualizar dados\"." % GEO_REPETIR_MIN
+                    if self._geo_agendar(n) else ". Clique em \"Atualizar dados\" mais tarde (o programa também tenta de novo ao abrir).")
+        else:
+            self._geo_agendar(0)
         return {"geo": d, "mapa": rmapa.MAPA, "ind": self._geo_ind(), "cats": rgeo.CATEGORIAS, "temas": {str(k): v for k, v in rgeo.TEMAS.items()}, "msg": msg}
 
     def teses(self):
@@ -2157,6 +2230,9 @@ class Api:
         """Volta a base para uma cópia de segurança. Antes, a base atual também é copiada (a restauração pode ser desfeita)."""
         if not self.base:
             return {"erro": "Nenhuma base aberta."}
+        if getattr(self.base, "somente_leitura", False):
+            return {"erro": "Base aberta só para consulta (sem permissão de gravação): ela não pode ser restaurada. Para restaurar, "
+                            "copie a base para a pasta \"bases\" do programa e abra a cópia."}
         with self._trava(self.base.caminho):
             alvo = next((c for c, _ in self._copias() if os.path.basename(c) == arquivo), None)
             if not alvo:
@@ -2165,12 +2241,16 @@ class Api:
                 self._fazer_copia(manter=alvo)
             except Exception:
                 logging.getLogger("rspe").exception("cópia antes de restaurar")
-            src = sqlite3.connect(alvo)
             try:
-                with self.base.lock:
-                    src.backup(self.base.con)
-            finally:
-                src.close()
+                src = sqlite3.connect(alvo)
+                try:
+                    with self.base.lock:
+                        src.backup(self.base.con)
+                finally:
+                    src.close()
+            except Exception as e:
+                logging.getLogger("rspe").exception("restaurar a cópia %s", alvo)
+                return {"erro": "Não foi possível restaurar a cópia: %s A base não foi alterada." % _msg_falha_gravar(self.base.caminho, e)}
             # a cópia pode ser de versão anterior (sem as colunas novas): a base é reaberta, o que refaz as migrações
             velha = self.base
             try:
@@ -2195,6 +2275,54 @@ class Api:
             r["msg"] = "Base restaurada para a cópia de %s. A versão anterior ficou guardada entre as cópias." % \
                        datetime.strptime(re.search(r"_(\d{8}_\d{6})\.sqlite$", arquivo).group(1), "%Y%m%d_%H%M%S").strftime("%d/%m/%Y %H:%M")
             return r
+
+    def _guardar_substituida(self, c):
+        """Antes de "Salvar base como…" ou "Nova base…" substituírem o arquivo c (base do APTO já existente), guarda uma cópia
+        íntegra dele e separa a pasta de cópias dele: copias/<nome>/ passa a "copias/<nome> (substituída em dd-mm-aaaa
+        hh-mm-ss)/", com a cópia de agora junto das anteriores. Assim nada se perde e as cópias da base que nasce com esse nome
+        não se misturam com as da base substituída. Devolve (texto para a mensagem ou None, erro ou None); com erro, o
+        arquivo não pode ser substituído. Chamar com a trava de c."""
+        if not os.path.isfile(c) or os.path.getsize(c) == 0:
+            return None, None
+        nome = os.path.splitext(os.path.basename(c))[0]
+        raiz = os.path.join(os.path.dirname(os.path.abspath(c)), "copias")
+        pasta = os.path.join(raiz, nome)
+        try:
+            src = sqlite3.connect("file:%s?mode=ro" % urllib.parse.quote(os.path.abspath(c).replace("\\", "/"), safe="/:"), uri=True)
+        except Exception as e:
+            return None, "Não foi possível ler %s para guardar uma cópia antes de substituí-la (%s). Nada foi alterado." % (
+                os.path.basename(c), e)
+        try:
+            try:
+                n = src.execute("SELECT COUNT(*) FROM assistidos").fetchone()[0]
+            except sqlite3.DatabaseError:
+                n = 0
+            if not n and not os.path.isdir(pasta):
+                return None, None  # base vazia, sem cópias: nada a guardar
+            agora = datetime.now()
+            guarda = os.path.join(raiz, "%s (substituída em %s)" % (nome, agora.strftime("%d-%m-%Y %H-%M-%S")))
+            k = 2
+            while os.path.exists(guarda):
+                guarda = os.path.join(raiz, "%s (substituída em %s) (%d)" % (nome, agora.strftime("%d-%m-%Y %H-%M-%S"), k))
+                k += 1
+            if os.path.isdir(pasta):
+                os.rename(pasta, guarda)
+            else:
+                os.makedirs(guarda)
+            if n:
+                dst = sqlite3.connect(os.path.join(guarda, "%s_%s.sqlite" % (nome, agora.strftime("%Y%m%d_%H%M%S"))))
+                try:
+                    src.backup(dst)
+                finally:
+                    dst.close()
+        except Exception as e:
+            logging.getLogger("rspe").exception("cópia da base substituída %s", c)
+            return None, ("Não foi possível guardar uma cópia de segurança de %s antes de substituí-la: %s Nada foi substituído; "
+                          "escolha outro nome." % (os.path.basename(c), _msg_falha_gravar(c, e)))
+        finally:
+            src.close()
+        return ("A base anterior %s (%s) foi guardada em %s." % (nome, rs.pl(n, "assistido", "assistidos"),
+                                                                 os.path.join("copias", os.path.basename(guarda)))), None
 
     def nova_base(self, nome=None):
         """Cria base nomeada na pasta 'bases' (nome vindo da tela inicial) ou pergunta o arquivo."""
@@ -2224,10 +2352,19 @@ class Api:
                 if motivo:
                     return {"erro": motivo.replace("Ele não foi aberto", "Ele não foi substituído")}
                 with self._trava(c):
+                    # base do APTO com assistidos (ou com cópias): guardada antes de ser apagada
+                    guardada, erro = self._guardar_substituida(c)
+                    if erro:
+                        return {"erro": erro}
                     try:
                         os.remove(c)
                     except OSError as e:
-                        return {"erro": "Não foi possível substituir %s (o arquivo está em uso?): %s" % (os.path.basename(c), e)}
+                        return {"erro": "Não foi possível substituir %s (o arquivo está em uso?): %s%s" % (
+                            os.path.basename(c), _msg_falha_gravar(c, e), (" " + guardada) if guardada else "")}
+                r = self._trocar_base(c)
+                if guardada and isinstance(r, dict) and not r.get("erro"):
+                    r["msg"] = ((r.get("msg") or "") + " " + guardada).strip()
+                return r
         return self._trocar_base(c)
 
     def escolher_base(self):
@@ -2260,7 +2397,23 @@ class Api:
 
     def recarregar_base_juridica(self):
         rg.carregar(forcar=True)
-        return self.listar()
+        r = self.listar()
+        av = rg.avisos()
+        orig = rg.origem().split(" (atenção:")[0]
+        ao_lado = os.path.join(rg._pasta_app(), "base_juridica.json")
+        if orig.startswith("("):
+            de = "base jurídica não encontrada"
+        elif _mesmo_arquivo(orig, ao_lado) and not _mesmo_arquivo(ao_lado, rg._recurso("base_juridica.json")):
+            de = "cópia ao lado do programa"
+        else:
+            de = "cópia embutida no programa"
+        msg = "Base jurídica recarregada: versão %s (%s)." % (rg.versao(), de)
+        if av:
+            msg += " Atenção: " + "; ".join(av) + "."
+        if isinstance(r, dict):
+            r["msg"] = msg
+            return r
+        return {"msg": msg}
 
     def salvar_base_como(self):
         if not self.base:
@@ -2280,8 +2433,16 @@ class Api:
         if motivo:
             return {"erro": motivo.replace("Ele não foi aberto", "Ele não foi substituído")}
         # cópia íntegra pela API de backup do SQLite, com a base travada (a pasta vigiada pode estar gravando nela)
+        guardada = None
+        if not os.path.isdir(os.path.dirname(os.path.abspath(c))):
+            return {"erro": "Não foi possível salvar a base em %s: a pasta escolhida não existe. Escolha outra pasta." % os.path.basename(c)}
         try:
             with self._travar(self.base.caminho, c):
+                # o arquivo escolhido já é uma base do APTO: a base que seria sobrescrita é guardada antes (e as cópias
+                # dela ficam à parte, sem receber o conteúdo desta)
+                guardada, erro = self._guardar_substituida(c)
+                if erro:
+                    return {"erro": erro}
                 dst = sqlite3.connect(c)
                 try:
                     with self.base.lock:
@@ -2291,11 +2452,14 @@ class Api:
                     dst.close()
         except Exception as e:
             logging.getLogger("rspe").exception("salvar base como %s", c)
-            return {"erro": "Não foi possível salvar a base em %s: %s" % (os.path.basename(c), e)}
+            return {"erro": "Não foi possível salvar a base em %s: %s%s" % (os.path.basename(c), _msg_falha_gravar(c, e),
+                                                                           (" " + guardada) if guardada else "")}
         r = self._trocar_base(c)
         if r.get("erro"):
+            if guardada:
+                r["erro"] += " " + guardada
             return r
-        r["msg"] = "Base salva: " + os.path.basename(c)
+        r["msg"] = "Base salva: " + os.path.basename(c) + ((". " + guardada) if guardada else "")
         return r
 
     def abrir_pasta_bases(self):
@@ -2363,7 +2527,9 @@ class Api:
     def _lote_(self, arqs, base, silencioso):
         novos, atualizados, duplicados, antigos, erros = 0, 0, [], [], []
         historicos = 0
+        sem_data = []  # RSPE sem data de geração legível, ignorado (não é "mais antigo": não se sabe a data)
         fichas_ok = []
+        revinculadas, n_revinc = [], [0]  # fichas de lotes anteriores (guardadas pelo nome) vinculadas agora: não são deste lote
         pend_fichas = []
         incompletos = []
         lote = []
@@ -2442,7 +2608,7 @@ class Api:
                                     duplicados.append("%s: RSPE de %s já está no histórico (%s)" % (nome_arq, r.get("data_geracao_rspe"), r.get("nome")))
                                 continue
                             if d_ex and not d_novo and not mesmo:
-                                antigos.append("%s: RSPE sem data de geração legível; a base já tem o de %s - ignorado" % (nome_arq, data_ex))
+                                sem_data.append("%s: RSPE sem data de geração legível; a base já tem o de %s - ignorado" % (nome_arq, data_ex))
                                 registro.append({"arquivo": nome_arq, "tipo": "RSPE", "nome": r.get("nome") or "", "proc": chave, "resultado": "ignorado",
                                                  "leitura": "parcial", "obs": ["data de geração do RSPE ilegível (rodapé cortado): sem ela não dá para saber se é mais novo que o da base (%s)" % data_ex]})
                                 continue
@@ -2481,9 +2647,12 @@ class Api:
                         reg(nome_arq, "Ficha", r.get("nome"), proc, "ignorada", "parcial" if parcial else "completa",
                             ["impressa em %s, mais antiga que a ficha da base" % (r.get("data_impressao") or "?")] + obs)
                         continue
-                    reg(nome_arq, "Ficha", r.get("nome"), proc, "vinculada" if proc else "sem RSPE na base", "parcial" if parcial else "completa",
-                        obs + ([] if proc else ["guardada pelo nome: vincula sozinha quando o RSPE entrar (CPF, autos ou nome sem homônimo)"]))
+                    motivo = "" if proc else self._motivo_sem_vinculo(r, info)
+                    reg(nome_arq, "Ficha", r.get("nome"), proc, "vinculada" if proc else ("sem vínculo: conferir" if motivo else "sem RSPE na base"),
+                        "parcial" if parcial else "completa",
+                        obs + ([] if proc else [motivo or "guardada pelo nome: vincula sozinha quando o RSPE entrar (CPF, autos ou nome sem homônimo)"]))
                     fichas_ok.append("%s: ficha de %s %s" % (nome_arq, r.get("nome"), ("vinculada a " + proc) if proc else
+                                                             ("NÃO VINCULADA: " + motivo) if motivo else
                                                              "SEM RSPE correspondente na base (fica guardada pelo nome; vincula sozinha quando o RSPE entrar)"))
                 except Exception as e:
                     falhos.append(a)
@@ -2492,28 +2661,42 @@ class Api:
             # fichas de lotes anteriores que esperavam o RSPE
             try:
                 nrev = self._revincular_fichas(base, info)
+                n_revinc[0] = nrev
                 if nrev:
-                    fichas_ok.append("%s guardada(s) pelo nome agora vinculada(s) ao RSPE" % rs.pl(nrev, "ficha", "fichas"))
+                    revinculadas.append("%s guardada(s) pelo nome agora vinculada(s) ao RSPE" % rs.pl(nrev, "ficha", "fichas"))
             except Exception as e:
                 erros.append("revinculação de fichas: %s" % e)
         parciais = ["%s: ficha de %s - leitura parcial: %s" % (x["arquivo"], x["nome"] or "?", "; ".join(x["obs"]))
                     for x in registro if x["tipo"] == "Ficha" and x["leitura"] == "parcial"]
-        avisos = incompletos + parciais + duplicados + antigos + erros + fichas_ok
-        if avisos:
-            # pasta do programa sem permissão de gravação (Arquivos de Programas, rede somente leitura): o arquivo é só uma
-            # cópia dos avisos, que a tela mostra de qualquer forma
-            try:
+        avisos = incompletos + parciais + duplicados + antigos + sem_data + erros + fichas_ok + revinculadas
+        # cópia dos avisos em arquivo (a tela os mostra de qualquer forma; pasta do programa sem gravação não impede nada).
+        # Importação manual: importacao_avisos.txt sempre reescrito (lote sem avisos diz isso, sem sobra do lote anterior).
+        # Pasta vigiada: em arquivo próprio, acrescentado ao fim (só os lotes com avisos), sem apagar o da importação manual
+        cab = "Importação de %s na base %s - %s (%s)" % (datetime.now().strftime("%d/%m/%Y %H:%M:%S"), getattr(base, "nome", ""),
+                                                         "pasta vigiada" if silencioso else "manual", rs.pl(len(arqs), "arquivo", "arquivos"))
+        try:
+            if not silencioso:
                 with open(os.path.join(pasta_app(), "importacao_avisos.txt"), "w", encoding="utf-8") as f:
-                    f.write("\n".join(avisos))
-            except Exception as e:
-                logging.getLogger("rspe").warning("importacao_avisos.txt não gravado: %s", e)
+                    f.write(cab + "\n" + ("\n".join(avisos) if avisos else "Sem avisos: todos os arquivos foram lidos e importados.") + "\n")
+            elif avisos:
+                arq_v = os.path.join(pasta_app(), "importacao_avisos_pasta_vigiada.txt")
+                try:
+                    with open(arq_v, encoding="utf-8") as f:
+                        velho = f.read().splitlines()[-2000:]  # o arquivo não cresce sem fim
+                except OSError:
+                    velho = []
+                with open(arq_v, "w", encoding="utf-8") as f:
+                    f.write("\n".join(velho + ([""] if velho else []) + [cab] + avisos) + "\n")
+        except Exception as e:
+            logging.getLogger("rspe").warning("arquivo de avisos da importação não gravado: %s", e)
         # guardado para o PDF de falhas do lote (Api.falhas_pdf). A importação manual e a da pasta vigiada ficam separadas: o
         # botão da janela da importação manual sempre gera o registro dela, mesmo que a pasta vigiada importe algo depois
         setattr(self, "_falhas_lote_auto" if silencioso else "_falhas_lote", {"quando": datetime.now().strftime("%d/%m/%Y %H:%M"), "erros": list(erros), "incompletos": list(incompletos),
-                             "ignorados": [a for a in antigos if "ignorad" in a], "processos": list(lote), "arquivos": len(arqs),
+                             "ignorados": [a for a in antigos if "ignorad" in a] + sem_data, "processos": list(lote), "arquivos": len(arqs),
                              "registro": sorted(registro, key=lambda x: x["arquivo"].lower()), "base_nome": getattr(base, "nome", "")})
         resumo = {"novos": novos, "atualizados": atualizados, "historico": historicos, "duplicados": len(duplicados), "antigos": len(antigos),
                   "erros": len(erros), "fichas": len(fichas_ok), "incompletos": len(incompletos), "avisos": avisos[:60],
+                  "sem_data": len(sem_data), "fichas_revinculadas": n_revinc[0],
                   "falhos": falhos, "erros_txt": list(erros)}
         return resumo
 
@@ -2574,6 +2757,25 @@ class Api:
             return por_autos[0], len(mesmos_mae) <= 1
         # pelo nome (e pela mãe): só quando resta um único assistido (com homônimos, a ficha fica guardada pelo nome)
         return (mesmos_mae[0], True) if len(mesmos_mae) == 1 else ("", False)
+
+    def _motivo_sem_vinculo(self, f, info):
+        """Ficha que ficou sem processo: se já há na base RSPE do mesmo nome que não foi ligado a ela (mãe diferente ou
+        homônimos), o motivo em português - ela não vai vincular sozinha e precisa ser conferida. "" se não há RSPE do nome."""
+        nn = _norm(f.get("nome", ""))
+        if not nn:
+            return ""
+        mae_f = _norm(f.get("nome_mae") or "")
+        mesmos = [p for p in info if info[p]["nome"] == nn or (min(len(nn), len(info[p]["nome"])) >= 15
+                                                                and (nn.startswith(info[p]["nome"]) or info[p]["nome"].startswith(nn)))]
+        if not mesmos:
+            return ""
+        com_mae = [p for p in mesmos if _mesma_mae(mae_f, info[p]["mae"])]
+        if not com_mae:
+            return ("há RSPE do mesmo nome na base (%s) com mãe diferente da ficha (%s): fica guardada pelo nome e não vincula "
+                    "sozinha - conferir se é a mesma pessoa (mãe escrita de outro jeito no SIAPEN ou no SEEU); se for, a ficha com o "
+                    "CPF preenchido vincula pelo CPF, e a Auditoria do assistido oferece \"Vincular ficha\" quando os dados não se contradizem" % (", ".join(sorted(mesmos)[:3]), f.get("nome_mae") or "sem mãe na ficha"))
+        return ("há %d RSPE de homônimos na base (%s): fica guardada pelo nome e não vincula sozinha - conferir; a ficha com o "
+                "CPF ou com os autos da execução vincula" % (len(com_mae), ", ".join(sorted(com_mae)[:3])))
 
     def _revincular_fichas(self, base=None, info=None):
         """Fichas guardadas pelo nome (importadas antes do RSPE, no mesmo lote ou antes) passam ao processo quando ele existe."""
@@ -3631,6 +3833,18 @@ def _preparar_log():
         pass
 
 
+def _nova_base_importacao(api):
+    """Base nova para os PDFs arrastados sobre o programa: "Importação dd-mm-aaaa hh-mm-ss"; se o nome já existir (outra
+    janela no mesmo segundo), " (2)", " (3)"… - nunca abre nem substitui uma base existente."""
+    nome = "Importação %s" % datetime.now().strftime("%d-%m-%Y %H-%M-%S")
+    r = None
+    for k in range(1, 100):
+        r = api.nova_base(nome if k == 1 else "%s (%d)" % (nome, k))
+        if not (isinstance(r, dict) and r.get("erro") and "Já existe" in r["erro"]):
+            break
+    return r
+
+
 def main():
     _preparar_log()
     api = Api()
@@ -3650,7 +3864,11 @@ def main():
                 lista.append(a)
         if lista:
             if not api.base:
-                api.nova_base("Importação %s" % datetime.now().strftime("%d-%m-%Y %H-%M"))
+                r = _nova_base_importacao(api)
+                if not api.base:
+                    api._js("ui.toast(%s)" % json.dumps("Não foi possível criar a base para a importação: %s" % (
+                        (r or {}).get("erro") or "erro desconhecido"), ensure_ascii=False))
+                    return
                 api._js("api('listar')")
             api._importar(lista)
 
