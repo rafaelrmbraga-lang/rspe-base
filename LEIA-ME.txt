@@ -855,6 +855,14 @@ v7.9.3
     "faltavam para 2/3 do impeditivo" não prevalece sobre o "não" pela
     fração; eventos ordenados por data.
   - Textos: "0 dias", "+1 dia", "Decreto 9.370" sem "None".
+  - Cumprido pela âncora do SEEU: a custódia que só a ficha mostra (reinício
+    depois da última interrupção, já coberto pelo Total Interrupções do SEEU)
+    não é mais descontada.
+  - Incisos VII, VIII e IX (2024/2025): quem foi preso depois do aberto ou
+    do livramento, sem regressão registrada, fica "a verificar" com o aviso
+    da prisão (não "possível").
+  - Quando a âncora e os eventos dão o mesmo "não", o texto mostra o menor
+    "faltavam" (o mais favorável), com a outra contagem citada.
 
 v7.9.2
   - Aviso de legislação nova: ao abrir a base, depois da janela de

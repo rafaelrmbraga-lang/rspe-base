@@ -1519,6 +1519,10 @@ def cumprido_na_data(campos, periodos, remicoes, ref, extras=None):
                                  "remições posteriores não constam)" % (fmt(ger), pl(mais, "dia", "dias"), fmt(ref)))
         return base, "pena cumprida do SEEU em %s" % fmt(ger)
     depois = max(0, dias_cumpridos_ate(todos, [], ger) - dias_cumpridos_ate(todos, [], ref))
+    # custódia que só a ficha mostra (reinício lançado pela ficha depois da última interrupção do RSPE): o SEEU não a conta
+    # na pena cumprida (para ele a execução segue interrompida) - descontá-la da âncora tiraria tempo que o SEEU nunca somou
+    so_ficha = _custodia_so_ficha(campos, todos, extras, ref, ger)
+    depois = max(0, depois - so_ficha)
     rem_depois = sum(n for d, n in remicoes if d and ref < d <= ger)
     anc = max(0, base - depois - rem_depois)
     # o SEEU registra mais tempo do que os eventos explicam (detração de outro processo, evento ausente): não se sabe QUANDO
@@ -1528,8 +1532,60 @@ def cumprido_na_data(campos, periodos, remicoes, ref, extras=None):
         return ev, ("custódia%s e remições até %s (dias de calendário); o SEEU registra %s a mais do que os eventos mostram, sem data - "
                     "não entram antes da data de referência" % (" e livramento" if extras else "", fmt(ref),
                                                                pl(base - dias_cumpridos_ate(todos, remicoes, ger), "dia", "dias")))
-    return anc, "pena cumprida pelo SEEU em %s, descontados %s de cumprimento (custódia%s) e %s de remição posteriores a %s" % (
-        fmt(ger), pl(depois, "dia", "dias"), " e livramento" if extras else "", pl(rem_depois, "dia", "dias"), fmt(ref))
+    return anc, "pena cumprida pelo SEEU em %s, descontados %s de cumprimento (custódia%s) e %s de remição posteriores a %s%s" % (
+        fmt(ger), pl(depois, "dia", "dias"), " e livramento" if extras else "", pl(rem_depois, "dia", "dias"), fmt(ref),
+        ("; não descontados %s de custódia que só a ficha mostra (o SEEU não os conta)" % pl(so_ficha, "dia", "dias")) if so_ficha else "")
+
+
+def _custodia_so_ficha(campos, todos, extras, ref, ger):
+    """Dias de custódia entre ref (exclusive) e a geração do RSPE que vêm só do reinício lançado pela ficha SIAPEN
+    (rspe_ficha.reconciliar_eventos): o RSPE termina numa interrupção e o SEEU segue contando a execução como interrompida
+    (Total Interrupções cobre o período), então a pena cumprida do SEEU não inclui esse tempo. 0 se não houver."""
+    evs = campos.get("_eventos") or []
+    fic = [e for e in evs if e.get("_ficha")]
+    if not fic or any("INTERRUP" in (e.get("tipo") or "").upper() or "REIN" not in (e.get("tipo") or "").upper() for e in fic):
+        return 0  # só o reinício após a interrupção (a prisão lançada sem evento nenhum no RSPE pode estar no cálculo do SEEU)
+    seeu = [e for e in evs if not e.get("_ficha")]
+    ult = max((e for e in seeu if to_date(e.get("data") or "")), key=lambda e: to_date(e["data"]), default=None)
+    if not ult or "INTERRUP" not in (ult.get("tipo") or "").upper():
+        return 0
+    d_int = to_date(ult["data"])
+    ti = pena_para_dias(campos.get("total_interrupcoes"))
+    if ti is not None and d_int < ger and ti + 5 < (ger - d_int).days:
+        return 0  # o Total Interrupções do SEEU não cobre o período desde a interrupção: o SEEU pode ter contado parte dele
+    # dias da custódia (a passada ao cálculo, todos) que estão nos períodos com o reinício da ficha e fora dos períodos só
+    # com os eventos do SEEU (e do livramento): ref < dia <= ger
+    um = timedelta(days=1)
+    def corta(ps, a, b):
+        out = []
+        for x, y in uniao_periodos(ps):
+            x2, y2 = max(x, a), min(y or b, b)
+            if x2 <= y2:
+                out.append((x2, y2))
+        return out
+    def menos(ps, qs):
+        out = []
+        for x, y in ps:
+            cur = [(x, y)]
+            for u, v in qs:
+                nxt = []
+                for a, b in cur:
+                    if v < a or u > b:
+                        nxt.append((a, b))
+                        continue
+                    if a < u:
+                        nxt.append((a, u - um))
+                    if v < b:
+                        nxt.append((v + um, b))
+                cur = nxt
+            out += cur
+        return out
+    a0 = ref + um
+    if a0 > ger:
+        return 0
+    ficha = menos(corta(periodos_custodia(evs), a0, ger), corta(periodos_custodia(seeu) + list(extras or []), a0, ger))
+    ficha = menos(corta(todos, a0, ger), menos(corta(todos, a0, ger), ficha))  # interseção com a custódia passada ao cálculo
+    return sum((y - x).days + 1 for x, y in ficha)
 
 
 def em_custodia(periodos, hoje):
@@ -3182,6 +3238,40 @@ def cumprido_decreto(campos, periodos, remicoes, ref, extras=None, crimes=None, 
     return x["dias"], x["fonte"], x["aviso"]
 
 
+RE_FALTAVAM = re.compile(r"falta(?:m|vam)\s+(\d+a\d+m\d+d|\d+\s+dias?)\s+(?:de custódia ininterrupta\s+)?para\s+([^;|()]+)")
+
+
+def _faltas(txt):
+    """[(alvo, dias)] dos "faltavam X para Y" (ou "faltam") do texto do resultado."""
+    out = []
+    for m in RE_FALTAVAM.finditer(txt or ""):
+        v = m.group(1)
+        d = int(re.match(r"\d+", v).group(0)) if "dia" in v else pena_para_dias(v)
+        if d is not None:
+            out.append((" ".join(m.group(2).split()), d))
+    return out
+
+
+def falta_menor(txt_a, txt_e):
+    """Mesmo status negativo pela âncora (txt_a) e pelos eventos (txt_e): o dos eventos é o mais favorável quando os seus
+    "faltavam" são de alvos que a âncora também tem e somam menos (alvo ausente nos eventos = já cumprido). Devolve o
+    texto da âncora a citar ("faltavam X para Y; ...") ou '' (fica a âncora)."""
+    fa, fe = _faltas(txt_a), _faltas(txt_e)
+    if not fa or re.match(r"\s*(não se aplica|sem pena)", txt_e or "", re.I):
+        return ""
+    alvos = [a for a, _d in fa]
+    if any(a not in alvos for a, _d in fe):
+        return ""
+    if sum(d for _a, d in fe) >= sum(d for _a, d in fa):
+        return ""
+    return "; ".join(m.group(0).strip() for m in RE_FALTAVAM.finditer(txt_a))
+
+
+def nota_falta_eventos(txt_a):
+    """Fonte do número mais favorável (falta_menor), anexada ao resultado pelos eventos."""
+    return "contagem pelos eventos do RSPE (a mais favorável); pela âncora do SEEU, %s" % txt_a
+
+
 # "vedado" abaixo de "nao": o "faltam X para 2/3 do impeditivo" pela âncora não prevalece sobre os eventos que mostram os 2/3
 # cumpridos (a análise dos demais crimes); mais pena cumprida nunca piora
 _RANK_ST = {"possivel": 3, "verificar": 2, "nao": 1, "vedado": 0}
@@ -3242,6 +3332,14 @@ def mesclar_por_requisito(out_a, out_e, chaves):
         for k in ks:  # nenhum indulto possível: cada resultado, o melhor dos dois
             if out_e.get(k) and nota(out_e, k) > nota(out_a, k):
                 troca(k)
+            elif out_e.get(k) and nota(out_e, k) == nota(out_a, k) and nota(out_a, k) <= 1:
+                # o mesmo resultado negativo: o texto mostra o "faltam" menor (o dos eventos, quando é ele), com a fonte
+                fa = falta_menor(out_a.get(k), out_e.get(k))
+                if fa:
+                    troca(k)
+                    out[k] = "%s | %s" % (out[k], nota_falta_eventos(fa))
+                    if out.get(k + "_detalhe"):
+                        out[k + "_detalhe"] += "\n⚠ " + nota_falta_eventos(fa)
     return out
 
 
@@ -3576,6 +3674,60 @@ def _regime_em(incidentes, ref, regime_atual, custodia=True, campos=None):
     return reg or "", dreg, lc
 
 
+RE_INICIO_ABERTO = re.compile(r"REGIME\s+ABERTO|ALBERG|DOMICILIAR", re.I)
+RE_INICIO_OUTRO_REGIME = re.compile(r"REGIME\s+(FECHADO|SEMI-?\s*ABERTO)", re.I)
+
+
+def preso_apos_aberto(eventos, incidentes, ref, periodos, dreg, lc):
+    """Estado real na data do decreto para os incisos que exigem regime aberto ou livramento (art. 9º, VII, VIII e IX dos
+    Decretos 12.338/2024 e 12.790/2025): o regime aberto (ou o livramento) vem do último incidente até ref, mas o RSPE (ou o
+    reinício lançado pela ficha) registra depois dele nova prisão - flagrante, preventiva, recaptura, prisão definitiva ou
+    início do cumprimento no fechado/semiaberto - ainda em curso na data. Aí a pessoa estava presa, não no aberto nem em
+    livramento (a nova prisão suspende o livramento - LEP, art. 145). Devolve o texto ("preso desde ...") ou ''."""
+    if not em_custodia(periodos, ref):
+        return ""
+    t0 = None
+    if lc:
+        for i in incidentes:
+            if e_concessao_livramento(i):
+                d = to_date(i.get("data_referencia") or i.get("data_decisao") or i.get("complemento") or "")
+                if d and d <= ref and (t0 is None or d > t0):
+                    t0 = d
+    inicial = False
+    if not lc and dreg:
+        t0 = dreg
+        for i in incidentes:
+            # a decisão posterior à data de referência da progressão: a prisão antes dela ainda é do regime anterior
+            if i.get("situacao") == "CONCEDIDO" and e_incidente_regime(i) and to_date(i.get("data_referencia") or i.get("data_decisao") or "") == dreg:
+                inicial = inicial or bool(re.search(r"INICIAL|CONDENA", (i.get("complemento") or "").upper()))
+                dd = to_date(i.get("data_decisao") or "")
+                if dd and t0 < dd <= ref:
+                    t0 = dd
+    inicios = [e for e in eventos_cronologicos(eventos) if to_date(e.get("data") or "") and to_date(e["data"]) <= ref
+               and "INTERRUP" not in (e.get("tipo") or "").upper()]
+    if not inicios:
+        return ""
+    e = inicios[-1]
+    d, mot = to_date(e["data"]), (e.get("motivo") or "").strip()
+    if RE_INICIO_ABERTO.search(mot):
+        return ""
+    outro = RE_INICIO_OUTRO_REGIME.search(mot)
+    if (inicial and not outro and not re.search(r"FLAGRANTE|PREVENTIV|PROVIS|TEMPOR|RECAPTURA|FICHA", mot.upper())
+            and not any(t0 < to_date(x["data"]) < d for x in inicios[:-1])):
+        return ""  # regime inicial aberto: a primeira "prisão definitiva" depois da sentença pode ser o próprio início do aberto
+    if t0 is None:
+        if not outro:
+            return ""  # regime da data tirado do regime atual (sem incidente): só o início expresso em outro regime o afasta
+    elif d <= t0:
+        return ""
+    antes = ("do livramento de %s" if lc else "do regime aberto de %s") % fmt(t0) if t0 else "do regime aberto atual do SEEU"
+    if outro:
+        return "em %s estava no regime %s (início do cumprimento em %s, depois %s)" % (
+            fmt(ref), "fechado" if outro.group(1).upper().startswith("F") else "semiaberto", fmt(d), antes)
+    return "em %s estava preso desde %s (%s%s), depois %s" % (
+        fmt(ref), fmt(d), mot.lower(), "" if "FICHA" in mot.upper() else " no RSPE", antes)
+
+
 def _maior_periodo_continuo(periodos, ref):
     """Maior período de custódia contínua até ref, em dias, contando o dia inicial e o final (como dias_cumpridos_ate). Os
     períodos devem vir unidos (uniao_periodos)."""
@@ -3899,6 +4051,8 @@ def _analise_decretos_modo(campos, crimes, eventos, incidentes, hoje, modo=None)
         semi = regime.upper().startswith("SEMI")
         # art. 3º: indulto e comutação alcançam PRD e sursis (inciso VII e IX tratam deles como o aberto)
         prd = bool(re.search(r"RESTRITIVA|\bPRD\b|SURSIS|SUSPENS[ÃA]O CONDICIONAL DA PENA", (regime or "").upper()))
+        # estado real na data para VII, VIII e IX (regime aberto ou livramento): preso depois do aberto/livramento, não se supõe
+        preso_ab = preso_apos_aberto(eventos, incidentes, ref, periodos, dreg, lc) if ((aberto or lc) and not prd) else ""
         idade = _idade_em(campos.get("data_nascimento"), ref)
         idade_min = (_base_decretos().get("art9_incisos") or {}).get("par2_idade_minima") or 60
         meia = idade is not None and idade >= idade_min  # § 2º, I (único grupo aferível pelo RSPE)
@@ -4030,22 +4184,26 @@ def _analise_decretos_modo(campos, crimes, eventos, incidentes, hoje, modo=None)
             else:
                 nao.append("VI: exige semiaberto ininterrupto por %s" % _anos_txt(anos_vi * red))
             # VII
+            # preso_ab: nova prisão depois do aberto/livramento, sem regressão registrada - o regime formal subsiste até a
+            # decisão; o inciso que atingiria o requisito fica "verificar" (não "não se aplica") com o aviso da prisão
+            obs_ab = (" - %s; regime aberto/livramento sem regressão registrada: conferir nos autos" % preso_ab) if preso_ab else ""
             if aberto or prd:
                 f7 = (A("VII", "fracao_primario", "1/6"), A("VII", "fracao_reincidente", "1/5"))
-                (possiveis if tem(frac(*f7)) else nao).append("VII: %s, cumprido %s" % ("regime aberto" if aberto else "PRD/sursis", fmt_fr(*f7)))
+                ok7 = tem(frac(*f7))
+                ((verificar if preso_ab else possiveis) if ok7 else nao).append("VII: %s, cumprido %s%s" % ("regime aberto" if aberto else "PRD/sursis", fmt_fr(*f7), obs_ab))
             else:
                 nao.append("VII: exige regime aberto, PRD ou sursis (em %s) - se houve PRD ou sursis, conferir nos autos" % (regime or "?"))
             # VIII
             lim = (A("VIII", "remanescente_max_anos_reincidente", 4) if reinc else A("VIII", "remanescente_max_anos_primario", 6)) * DIAS_ANO
             if aberto or lc:
-                (possiveis if remanescente <= lim else nao).append(
-                    "VIII: %s, remanescente em %s de %s (limite %s)" % ("livramento condicional" if lc else "regime aberto", fmt(ref), dias_para_pena(remanescente), pl(lim // DIAS_ANO, "ano", "anos")))
+                (((verificar if preso_ab else possiveis)) if remanescente <= lim else nao).append(
+                    "VIII: %s, remanescente em %s de %s (limite %s)%s" % ("livramento condicional" if lc else "regime aberto", fmt(ref), dias_para_pena(remanescente), pl(lim // DIAS_ANO, "ano", "anos"), obs_ab))
             else:
                 nao.append("VIII: exige regime aberto ou livramento (em %s)" % (regime or "?"))
             # IX
             if aberto or lc or prd:
-                verificar.append("IX: %s - verificar 2 anos em programa de egressos (patronato, escritório social)%s" % (
-                    "PRD/sursis" if prd else "aberto/LC", " e se o regime aberto é o inicial (Decreto 2025)" if (ano == "2025" and aberto and not lc and not prd) else ""))
+                verificar.append("IX: %s - verificar 2 anos em programa de egressos (patronato, escritório social)%s%s" % (
+                    "PRD/sursis" if prd else "aberto/LC", " e se o regime aberto é o inicial (Decreto 2025)" if (ano == "2025" and aberto and not lc and not prd) else "", obs_ab))
             else:
                 nao.append("IX: não se aplica - exige regime aberto, PRD, livramento ou sursis")
             # X
@@ -4251,8 +4409,9 @@ def _analise_decretos_modo(campos, crimes, eventos, incidentes, hoje, modo=None)
                 out[k] = "não se aplica: sem pena remanescente a indultar em %s (cumprido %s de %s)" % (
                     fmt(ref), dias_para_pena(cumprido), dias_para_pena(pena_total)) + (" | " + aviso if aviso else "")
                 out[k + "_status"] = "nao"
-            linhas = ["Situação em %s: regime %s%s · %s%s%s" % (
+            linhas = ["Situação em %s: regime %s%s%s · %s%s%s" % (
                 fmt(ref), regime or "?", " + livramento condicional" if (lc and not regime.lower().startswith("livramento")) else "",
+                (" (%s)" % preso_ab.split(" ", 2)[2]) if preso_ab else "",
                 "reincidente" if reinc else "primário", " · VGA" if vga_t else "", (" · %s (§ 2º, I: lapsos pela metade)" % pl(idade, "ano", "anos")) if meia else ""),
                 "Cumprido em %s: %s (%s) · remanescente %s." % (fmt(ref), dias_para_pena(cumprido), cump_fonte, dias_para_pena(remanescente))]
             todos = [("✔ ", p) for p in possiveis] + [("? ", v) for v in verificar] + [("✘ ", n) for n in nao]

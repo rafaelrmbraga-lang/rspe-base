@@ -391,7 +391,14 @@ def avaliar_ficha(f, r, ctx, ini, hoje):
     if xa.get("s") == "cabe" or not ca.get("_alt") or (xa.get("mot") or "").startswith("sem pena remanescente"):
         return xa  # (pena já cumprida pela âncora: com o tempo maior dos eventos, também não sobra o que comutar)
     xe = _avaliar_ficha_um(f, r, dict(ctx, _modo="eventos"), ini, hoje)
-    return xe if _RANK_S.get(xe.get("s"), 0) > _RANK_S.get(xa.get("s"), 0) else xa
+    if _RANK_S.get(xe.get("s"), 0) > _RANK_S.get(xa.get("s"), 0):
+        return xe
+    if xe.get("s") == xa.get("s") and xa.get("s") in ("nao", "imp"):
+        # o mesmo resultado negativo: o texto mostra o "faltavam" menor (o dos eventos, quando é ele), com a fonte
+        fa = rs.falta_menor(xa.get("mot"), xe.get("mot"))
+        if fa:
+            return dict(xe, mot="%s; %s" % (xe.get("mot") or "", rs.nota_falta_eventos(fa)))
+    return xa
 
 
 def _avaliar_ficha_um(f, r, ctx, ini, hoje):
