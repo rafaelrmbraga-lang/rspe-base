@@ -570,15 +570,47 @@ def _int_nao_neg(v):
     return int(t) if t.isdigit() else None
 
 
-def _validar_presc_ajuste(dados):
-    """Mensagem de erro (ou None) para os dados de prescrição digitados: datas que existam no calendário, saldos inteiros."""
+_PRESC_OPCOES = {"reinc": ("S", "N"), "art115": ("sim", "nao"), "modalidade": ("PPL", "PRD", "SURSIS", "MS", "MS98")}
+# ordem que as datas do processo não podem inverter: (antes, depois)
+_PRESC_ORDEM = [("fato", "denuncia"), ("fato", "sentenca"), ("denuncia", "sentenca"), ("sentenca", "acordao"), ("fato", "transito"),
+                ("sentenca", "transito"), ("acordao", "transito"), ("sentenca", "transito_mp"), ("susp366_ini", "susp366_fim")]
+
+
+def _validar_presc_ajuste(dados, orig=None):
+    """Mensagem de erro (ou None) para os dados de prescrição digitados: datas que existam no calendário e não sejam futuras,
+    sem inverter a ordem fato -> denúncia -> sentença -> acórdão -> trânsito (comparando com os dados importados `orig` da
+    linha, quando dados), pena no formato do SEEU sem sinal, opções dos campos de escolha e saldos inteiros."""
     if not dados:
         return None
     if not isinstance(dados, dict):
         return "Dados inválidos."
-    for k, v in (dados.get("valores") or {}).items():
-        if k in _PRESC_DATAS and str(v or "").strip() and not rs.to_date(str(v)):
-            return "Data inválida em \"%s\": %s não existe no calendário (use dd/mm/aaaa)." % (_PRESC_DATAS[k], v)
+    hoje = datetime.now().date()
+    valores = dados.get("valores") or {}
+    if not isinstance(valores, dict):
+        return "Dados inválidos."
+    for k, v in valores.items():
+        t = str(v or "").strip()
+        if k in _PRESC_DATAS:
+            if t and not rs.to_date(t):
+                return "Data inválida em \"%s\": %s não existe no calendário (use dd/mm/aaaa)." % (_PRESC_DATAS[k], v)
+            if t and rs.to_date(t) > hoje:
+                return "Data futura em \"%s\": %s é posterior a hoje (%s)." % (_PRESC_DATAS[k], v, hoje.strftime("%d/%m/%Y"))
+        elif k == "pena":
+            d = rs.pena_para_dias(t) if t else 0
+            if t and ("-" in t or not d):
+                return "Pena inválida: %s. Use anos, meses e dias, sem sinal (ex.: 2a6m0d)." % v
+        elif k in _PRESC_OPCOES:
+            if t and t not in _PRESC_OPCOES[k]:
+                return "Valor inválido em \"%s\": %s." % (k, v)
+        else:
+            return "Campo desconhecido no ajuste da prescrição: %s." % k
+    # ordem das datas: só acusa a inversão em que entra um dado digitado agora (a do RSPE já vai para a Auditoria)
+    junto = {k: rs.to_date(str(v or "")) for k, v in (orig or {}).items() if k in _PRESC_DATAS}
+    junto.update({k: rs.to_date(str(v or "")) for k, v in valores.items() if k in _PRESC_DATAS and str(v or "").strip()})
+    for a, b in _PRESC_ORDEM:
+        if junto.get(a) and junto.get(b) and junto[a] > junto[b] and (str(valores.get(a) or "").strip() or str(valores.get(b) or "").strip()):
+            return "Datas incoerentes: \"%s\" (%s) é posterior a \"%s\" (%s). Confira o que foi digitado." % (
+                _PRESC_DATAS[a], junto[a].strftime("%d/%m/%Y"), _PRESC_DATAS[b], junto[b].strftime("%d/%m/%Y"))
     for ev, dias in (dados.get("saldos") or {}).items():
         if _int_nao_neg(dias) is None:
             return "Saldo inválido na data %s: informe dias inteiros, sem sinal." % ev
@@ -1425,7 +1457,7 @@ class Api:
         if not r.get("termino") and not r.get("periodo") and r.get("total") == "0a0m0d":
             return {"erro": "Nada a registrar: preencha a pena (e o início) ou o período."}
         resumo = "Pena %s%s%s" % (r.get("total_ext"), (" · início %s · término %s" % (e.get("inicio"), r["termino"])) if r.get("termino") else "",
-                                  (" · período %s (%d dias)" % (r["periodo"]["ext"], r["periodo"]["dias"])) if r.get("periodo") else "")
+                                  (" · período %s (%s)" % (r["periodo"]["ext"], rs.pl(r["periodo"]["dias"], "dia", "dias"))) if r.get("periodo") else "")
         dados = {k: e.get(k) for k in ("fita", "inicio", "interr", "rem", "rem_modo", "outra", "p1", "p2")}
         cid = self.base.calculo_gravar({"id": e.get("id"), "processo": e.get("processo") or "", "assistido": (e.get("assist") or "").strip(),
                                         "nota": (e.get("nota") or "").strip(), "resumo": resumo, "dados": dados})
@@ -1442,7 +1474,10 @@ class Api:
         return out
 
     def calc_assistido(self, processo):
-        """Dados do assistido para a calculadora: pena total, início do cumprimento, interrupções e saldo de remidos do RSPE."""
+        """Dados do assistido para a calculadora: pena total, início do cumprimento, interrupções e saldo de remidos do RSPE.
+        Para a tela: termino_seeu (impresso no RSPE), termino_criterio_seeu (data do RSPE + remanescente, pelo calendário,
+        como o SEEU: quando o RSPE não imprime o término, rspe_view.termino_calc), termino_nota (por que a calculadora difere
+        do SEEU) e avisos (lista de textos: art. 75, período fora das interrupções, o que não veio do RSPE)."""
         m = next((x for x in (self._modelos or []) if x.get("id") == processo), None)
         r = (m or {}).get("_bruto")
         if not r:
@@ -1451,11 +1486,77 @@ class Api:
         it = rs.pena_amd(r.get("total_interrupcoes") or "") or (0, 0, 0)
         ini = rs.inicio_execucao(r.get("_eventos") or [], r.get("_crimes") or [])
         mrem = re.match(r"\s*(-?\d+)", r.get("saldo_remidos") or "")
+        rem = max(0, int(mrem.group(1))) if mrem else 0
+        nome = rv.nome_proprio(r.get("nome") or "")
+        avisos, faltou = [], []
+        if not p:
+            faltou.append("pena total")
+            avisos.append("Sem pena total no RSPE: a fita veio vazia; digite a pena (soma das condenações).")
+        if not ini:
+            faltou.append("início do cumprimento")
+            avisos.append("Sem início do cumprimento no RSPE (nenhuma prisão nos eventos nem trânsito em julgado): informe o início.")
+        # término pelo critério do SEEU: data do RSPE + remanescente (a pena cumprida em dias corridos)
+        crit = ""
+        try:
+            ger = rs.to_date(r.get("data_geracao_rspe") or "")
+            remn = rs.pena_para_dias(r.get("pena_remanescente"))
+            if remn is None:
+                pt_, pc_ = rs.pena_para_dias(r.get("pena_total")), rs.pena_para_dias(r.get("pena_cumprida"))
+                remn = (pt_ - pc_) if (pt_ and pc_ is not None) else None
+            if ger and remn is not None and remn > 0:
+                crit = rs.fmt(rv._soma_pena(ger, remn))
+            elif not r.get("termino_previsao_seeu"):
+                tc = rv.termino_calc(r)
+                crit = rs.fmt(tc) if tc else ""
+        except Exception:
+            logging.getLogger("rspe").exception("término pelo critério do SEEU %s", processo)
+        # art. 75: a calculadora soma a pena inteira; o término do SEEU respeita o limite
+        pt = rs.pena_para_dias(r.get("pena_total") or "")
+        if pt and pt > 30 * rs.DIAS_ANO:
+            avisos.append("Pena total de %s passa de %d anos: o limite de cumprimento do art. 75 do CP (30 anos para fatos até "
+                          "22/01/2020; 40 anos depois - Lei 13.964/2019) não é aplicado pela calculadora, que soma a pena inteira; "
+                          "o término e as frações daqui não valem para a soltura." % (rs.pena_extenso(r.get("pena_total")) or r.get("pena_total"),
+                                                                                   40 if pt > 40 * rs.DIAS_ANO else 30))
+        # pena cumprida do SEEU x o que a calculadora supõe (da 1ª prisão até o RSPE, menos as interrupções, mais os remidos)
+        try:
+            ger = rs.to_date(r.get("data_geracao_rspe") or "")
+            pc = rs.pena_para_dias(r.get("pena_cumprida") or "")
+            idias = rs.pena_para_dias(r.get("total_interrupcoes") or "") or 0
+            if ini and ger and pc is not None and ger >= ini:
+                sup = (ger - ini).days + 1 - idias + rem
+                dif = sup - pc
+                if pc == 0 and sup > 30:
+                    avisos.append("O SEEU não calculou a pena cumprida neste RSPE (0a0m0d): o início e as interrupções não puderam ser "
+                                  "conferidos com o SEEU - confira nos eventos se houve liberdade fora de \"Total Interrupções\".")
+                elif abs(dif) > 30:
+                    avisos.append(
+                        ("A pena cumprida do SEEU (%s) é %s menor que o tempo da 1ª prisão (%s) até o RSPE, menos as interrupções e "
+                         "mais os remidos: há período em liberdade fora de \"Total Interrupções\" (ou custódia que o SEEU não "
+                         "computou). O término daqui sai antes do real - confira o início ou a interrupção." if dif > 0 else
+                         "A pena cumprida do SEEU (%s) é %s maior que o tempo da 1ª prisão (%s) até o RSPE, menos as interrupções e "
+                         "mais os remidos: o SEEU computa custódia ou detração anterior aos eventos. O término daqui sai depois do "
+                         "SEEU - confira o início ou lance a detração.")
+                        % (r.get("pena_cumprida"), rs.pl(abs(dif), "dia", "dias"), rs.fmt(ini)))
+        except Exception:
+            logging.getLogger("rspe").exception("conferência da pena cumprida %s", processo)
+        veio = [x for x, ok in (("pena total", p), ("início do cumprimento", ini), ("interrupções", r.get("total_interrupcoes")),
+                                ("remidos", mrem)) if ok]
+        msg = ("%s do RSPE de %s." % ((", ".join(veio[:-1]) + " e " + veio[-1]) if len(veio) > 1 else veio[0], nome) if veio
+               else "Nada veio do RSPE de %s." % nome)
+        msg = msg[:1].upper() + msg[1:]
+        if faltou:
+            msg += " Não veio: %s." % ", ".join(faltou)
+        msg += " Confira antes de usar."
         return {"fita": [{"s": 1, "p": {"a": p[0], "m": p[1], "d": p[2]}}] if p else [], "inicio": rs.fmt(ini) if ini else "",
-                "interr": {"a": it[0], "m": it[1], "d": it[2]}, "rem": max(0, int(mrem.group(1))) if mrem else 0, "rem_modo": "antes",
-                "assist": "%s · %s" % (rv.nome_proprio(r.get("nome") or ""), processo), "processo": processo,
+                "interr": {"a": it[0], "m": it[1], "d": it[2]}, "rem": rem, "rem_modo": "antes",
+                "assist": "%s · %s" % (nome, processo), "processo": processo,
                 "termino_seeu": r.get("termino_previsao_seeu") or "",
-                "msg": "Pena total, início do cumprimento, interrupções e remidos do RSPE de %s. Confira antes de usar." % rv.nome_proprio(r.get("nome") or "")}
+                "termino_criterio_seeu": crit,
+                "termino_nota": ("A calculadora soma a pena inteira pelo calendário a partir da 1ª prisão (com as interrupções e os "
+                                 "remidos); o SEEU soma o remanescente à data do RSPE, com a pena cumprida em dias corridos. Diferença "
+                                 "de alguns dias vem dessa convenção; diferença maior, do art. 75, de liberdade fora das interrupções "
+                                 "ou de custódia que o SEEU não computou (ver os avisos)."),
+                "avisos": avisos, "msg": msg}
 
     def calc_pdf(self, e):
         e = dict(e or {})
@@ -1592,16 +1693,25 @@ class Api:
             if col is None:
                 cols[-1]["pedidos"].append({"txt": txt + " · aguardando RSPE posterior", "ret": ""})
                 continue
-            ret = ""
-            for i in col["_incs"]:
-                di = rs.to_date(i.get("data_decisao") or "") or rs.to_date(i.get("data_referencia") or "")
-                if rx_ and re.search(rx_, rs._sem_acento(i.get("tipo") or "")) and di and di >= dp:
-                    sit = rs._sem_acento(i.get("situacao") or "")
-                    ret = ("indeferida" if re.search(r"NAO CONCEDID|INDEFERID|NEGAD", sit) else
-                           "deferida" if re.search(r"CONCEDID|DEFERID|HOMOLOG", sit) else "em análise")
-                    ret = "%s (incidente de %s)" % (ret, fmt_(di))
+            # o retorno pode vir num RSPE posterior: procura da coluna do pedido em diante e anota onde ele aparece
+            ret, col_ret = "", None
+            for c2 in cols[cols.index(col):]:
+                for i in c2["_incs"]:
+                    di = rs.to_date(i.get("data_decisao") or "") or rs.to_date(i.get("data_referencia") or "")
+                    if rx_ and re.search(rx_, rs._sem_acento(i.get("tipo") or "")) and di and di >= dp:
+                        sit = rs._sem_acento(i.get("situacao") or "")
+                        ret = ("indeferida" if re.search(r"NAO CONCEDID|INDEFERID|NEGAD", sit) else
+                               "deferida" if re.search(r"CONCEDID|DEFERID|HOMOLOG", sit) else "em análise")
+                        ret = "%s (incidente de %s)" % (ret, fmt_(di))
+                        col_ret = c2
+                        break
+                if col_ret:
                     break
-            col["pedidos"].append({"txt": txt, "ret": ret or "sem retorno neste RSPE"})
+            if col_ret is None or col_ret is col:
+                col["pedidos"].append({"txt": txt, "ret": ret or "sem retorno neste RSPE"})
+            else:
+                col["pedidos"].append({"txt": txt, "ret": "sem retorno neste RSPE (retorno no RSPE de %s)" % col_ret["geracao"]})
+                col_ret["pedidos"].append({"txt": txt, "ret": ret})
         for c in cols:
             c.pop("_incs", None)
         m0 = next((x for x in self._modelos if x.get("id") == processo), {})
@@ -1643,9 +1753,18 @@ class Api:
         (datas, pena, reincidência, art. 115, saldo na data da fuga) e refaz a análise."""
         if not self.base:
             return {"erro": "Nenhuma base aberta."}
-        erro = _validar_presc_ajuste(dados)
+        m = next((x for x in (self._modelos or []) if x.get("id") == processo), None)
+        L = next((x for x in ((m or {}).get("presc_linhas") or []) if x.get("chave_ajuste") == chave), None)
+        if self._modelos and not L and dados:
+            return {"erro": "Crime não encontrado na prescrição deste assistido (a lista mudou?). Abra o assistido de novo."}
+        erro = _validar_presc_ajuste(dados, (L or {}).get("orig"))
         if erro:
             return {"erro": erro}
+        if L and dados and dados.get("saldos"):
+            evs = {S.get("evasao") for S in (L.get("ppe_saldos") or [])}
+            fora = [ev for ev in dados["saldos"] if ev not in evs]
+            if fora:
+                return {"erro": "Saldo para uma data que não é fuga, revogação ou último comparecimento desta linha: %s." % ", ".join(fora)}
         self.base.presc_ajuste_gravar(processo, chave, dados or None)
         return self._atualizar(processo)
 
@@ -1659,6 +1778,17 @@ class Api:
         for dias in (saldos or {}).values():
             if not (dias is None or str(dias).strip() == "") and _int_nao_neg(dias) is None:
                 return {"erro": "Saldo inválido (%s): informe dias inteiros, sem sinal nem vírgula." % dias}
+        # só crimes e fugas que existem nesta execução: nada de ajuste órfão gravado com mensagem de sucesso
+        m = next((x for x in (self._modelos or []) if x.get("id") == processo), None)
+        if self._modelos and m is None:
+            return {"erro": "Assistido não encontrado."}
+        if m is not None:
+            linhas = {L.get("chave_ajuste"): L for L in (m.get("presc_linhas") or [])}
+            for ch, dias in (saldos or {}).items():
+                if ch not in linhas:
+                    return {"erro": "Crime não encontrado na prescrição deste assistido: %s." % ch}
+                if not (dias is None or str(dias).strip() == "") and fuga not in {S.get("evasao") for S in (linhas[ch].get("ppe_saldos") or [])}:
+                    return {"erro": "%s não é data de fuga (ou revogação) com saldo a apurar neste crime." % fuga}
         atuais = self.base.presc_ajustes().get(processo, {})
         for ch, dias in (saldos or {}).items():
             d = dict(atuais.get(ch) or {})
@@ -1684,12 +1814,21 @@ class Api:
         data = (data or "").strip()
         if data and not rs.to_date(data):
             return {"erro": "Data inválida: use dd/mm/aaaa."}
+        if data and rs.to_date(data) > datetime.now().date():
+            return {"erro": "Data do pedido no futuro (%s): use a data em que o pedido foi feito." % data}
+        if data and not ref and (aba or "").startswith("ind_"):
+            ref = self._ref_ind(processo, aba)  # situação do decreto agora, para avisar se mudar com um RSPE novo
         self.base.pedido_gravar(processo, aba, {"data": data, "obs": (obs or "").strip(), "ref": ref or "", "tipo": tipo or "pedido"} if data else None)
         n = self.base.quadro_pedido_feito(processo, aba) if data else 0
         out = self._atualizar(processo, ("Pedido registrado." + (" Cartão do Quadro marcado como \"Pedido feito\"." if n else "")) if data else "Marcação de pedido removida.")
         if n and isinstance(out, dict):
             out["quadro"] = self.base.quadro()
         return out
+
+    def _ref_ind(self, processo, aba):
+        """Situação do decreto (aba Indulto) no pedido "ind_<decreto>": a mesma de m["pedidos"][aba]["ref_atual"]."""
+        m = next((x for x in (self._modelos or []) if x.get("id") == processo), None)
+        return _ref_decreto((m or {}).get("dec"), aba[4:])
 
     # ---- jurisprudências da triagem automática (teses_auto.bin): índice leve para a tela; texto integral sob demanda ----
     _auto = None
@@ -1960,10 +2099,27 @@ class Api:
         if not self.base:
             return {"erro": "Nenhuma base aberta."}
         valor = (valor or "").strip()
+        campo = campo or ""
+        if not (campo in ("data_nascimento", "data_base", "sexo") or campo.split("|")[0] in ("falta", "rspe", "pena_max")
+                and "|" in campo and campo.split("|", 1)[1]):
+            return {"erro": "Campo inválido: %s." % campo}
+        bruto = self.base.um(processo)
+        if bruto is None:
+            return {"erro": "Assistido não encontrado."}
+        hoje = datetime.now().date()
         if valor and campo == "data_nascimento" and not rs.to_date(valor):
             return {"erro": "Data inválida: use dd/mm/aaaa."}
+        if valor and campo == "data_nascimento" and (rs.to_date(valor) > hoje or rs.to_date(valor).year < 1900):
+            return {"erro": "Data de nascimento impossível (%s): no futuro ou antes de 1900." % valor}
         if valor and campo == "data_base" and not rs.to_date(valor.split("|")[0]):
             return {"erro": "Data-base inválida: use dd/mm/aaaa."}
+        if valor and campo == "data_base":
+            d_b, d_r = rs.to_date(valor.split("|")[0]), rs.to_date(bruto.get("data_geracao_rspe") or "")
+            if d_b > hoje:
+                return {"erro": "Data-base no futuro (%s): informe a data-base já ocorrida." % valor.split("|")[0]}
+            if d_r and d_b > d_r:
+                return {"erro": "Data-base (%s) posterior ao RSPE (%s): a data-base informada não pode ser posterior ao cálculo do SEEU." % (
+                    valor.split("|")[0], bruto.get("data_geracao_rspe"))}
         if campo == "sexo" and valor not in ("", "M", "F"):
             return {"erro": "Sexo inválido."}
         if campo.startswith("falta|") and valor not in ("", "sim", "nao"):
@@ -1975,10 +2131,12 @@ class Api:
             tipo = rs.CAMPOS_MANUAIS[c][1]
             if valor and tipo == "data" and not rs.to_date(valor):
                 return {"erro": "Data inválida: use dd/mm/aaaa."}
+            if valor and c == "data_geracao_rspe" and rs.to_date(valor) > hoje:
+                return {"erro": "Data de geração do RSPE no futuro (%s)." % valor}
             if valor and tipo == "pena" and not rs.pena_livre(valor):
                 return {"erro": "Pena inválida: use, por exemplo, 4 anos e 6 meses ou 4a6m0d."}
-            if valor and tipo == "regime" and not rs.regime_manual(valor):
-                return {"erro": "Regime inválido: fechado, semiaberto ou aberto."}
+            if valor and tipo == "regime" and re.sub(r"[\s-]", "", rs._sem_acento(valor).lower()) not in ("fechado", "semiaberto", "aberto"):
+                return {"erro": "Regime inválido: escreva só fechado, semiaberto ou aberto."}
         if valor and campo.startswith("pena_max|") and not rs.pena_livre(valor):
             return {"erro": "Pena inválida: use, por exemplo, 3 meses, 1 ano e 6 meses ou 0a3m0d."}
         self.base.dado_gravar(processo, campo, valor)
@@ -2040,11 +2198,36 @@ class Api:
         """Marca dois assistidos (homônimos) como a mesma pessoa: passam a uma linha só, como os RSPEs do mesmo CPF."""
         if not self.base:
             return {"erro": "Nenhuma base aberta."}
-        gid = min(processo, outro)
-        self.base.dado_gravar(processo, "mesma_pessoa", gid)
-        self.base.dado_gravar(outro, "mesma_pessoa", gid)
+        if not processo or not outro or processo == outro:
+            return {"erro": "Escolha dois assistidos diferentes."}
+        if self.base.um(processo) is None or self.base.um(outro) is None:
+            return {"erro": "Assistido não encontrado."}
+        # junta os grupos: quem já estava marcado com um dos dois continua junto (A=B e depois B=C deixa A, B e C juntos)
+        man = self.base.pessoa_man()
+        gids = {man.get(processo), man.get(outro)} - {None, ""}
+        membros = {processo, outro} | {p for p, g in man.items() if g in gids}
+        gid = min(membros)
+        for p in sorted(membros):
+            if man.get(p) != gid:
+                self.base.dado_gravar(p, "mesma_pessoa", gid)
         r = self.listar()
-        r["msg"] = "Marcados como a mesma pessoa; análise refeita."
+        r["msg"] = "Marcados como a mesma pessoa (%s); análise refeita. Para desfazer: \"Desfazer mesma pessoa\" no assistido." % (
+            rs.pl(len(membros), "execução", "execuções"))
+        return r
+
+    def mesma_pessoa_desfazer(self, processo):
+        """Desfaz a marcação "Mesma pessoa": todas as execuções do grupo voltam a linhas separadas."""
+        if not self.base:
+            return {"erro": "Nenhuma base aberta."}
+        man = self.base.pessoa_man()
+        gid = man.get(processo)
+        if not gid:
+            return {"erro": "Este assistido não foi marcado como a mesma pessoa de outro."}
+        membros = sorted(p for p, g in man.items() if g == gid)
+        for p in membros:
+            self.base.dado_gravar(p, "mesma_pessoa", "")
+        r = self.listar()
+        r["msg"] = "Marcação \"mesma pessoa\" desfeita: %s voltam a linhas separadas." % rs.pl(len(membros), "execução", "execuções")
         return r
 
     def baixar_alerta(self, processo, chave, titulo, obs):
@@ -2093,6 +2276,8 @@ class Api:
     def reabrir_alerta(self, processo, chave):
         if not self.base:
             return None
+        if chave not in self.base.baixas().get(processo, {}):
+            return {"erro": "Este alerta não está baixado (nada a reabrir)."}
         h = next((x for x in self.base.hist_alertas(processo) if x["chave"] == chave), None)
         self.base.reabrir(processo, chave)
         self.base.hist_add(processo, chave, (h or {}).get("titulo", ""), "", "reaberto")
@@ -2106,6 +2291,8 @@ class Api:
     def remover(self, chave, tudo=False):
         if not self.base:
             return None
+        if self.base.um(chave) is None:
+            return {"erro": "Assistido não encontrado na base (já removido?)."}
         self.base.remover(chave, bool(tudo))
         out = self.listar()
         if isinstance(out, dict):
@@ -2989,6 +3176,10 @@ class Api:
             lista = [{"nome": (d.get("nome") or "").strip(), "cargo": (d.get("cargo") or "Defensor Público").strip(),
                       "matricula": (d.get("matricula") or "").strip(), "email": (d.get("email") or "").strip(),
                       "padrao": bool(d.get("padrao"))} for d in (lista or []) if (d.get("nome") or "").strip()]
+            # um só defensor padrão: vale o último marcado
+            pad = [i for i, d in enumerate(lista) if d["padrao"]]
+            for i in pad[:-1]:
+                lista[i]["padrao"] = False
             with open(DEFENSORES, "w", encoding="utf-8") as f:
                 json.dump(lista, f, ensure_ascii=False, indent=1)
             return {"msg": "%s." % rs.pl(len(lista), "defensor salvo", "defensores salvos"), "lista": lista}
@@ -3488,6 +3679,8 @@ def _montar_modelo(r, ctx):
     for _k, _v in _dm.items():
         if _k.startswith("rspe|") and _k[5:] in rs.CAMPOS_MANUAIS and _v.get("valor") and not r.get(_k[5:]):
             r[_k[5:]] = rs.valor_manual(_k[5:], _v["valor"])
+            if _k[5:] == "regime_atual":
+                r[_k[5:]] = r[_k[5:]].capitalize()  # "Semiaberto", como o RSPE imprime (não "SEMIABERTO")
             r.setdefault("_manuais", {})[_k[5:]] = {"valor": r[_k[5:]], "data": "/".join(_v["data"][:10].split("-")[::-1])}
     try:
         imp = r.get("importado_em")
@@ -3525,6 +3718,14 @@ def _montar_modelo(r, ctx):
     except Exception:
         logging.getLogger("rspe").exception("decretos %s", ch)
         m["dec"] = {"inicio": "", "decretos": []}  # RSPEs guardados no histórico (botão "Histórico · N" da aba Geral)
+    # pedido do indulto (por decreto): a situação atual do decreto, para a tela comparar com a da marcação (ref)
+    if any(k.startswith("ind_") for k in m["pedidos"]):
+        m["pedidos"] = {k: (dict(v, ref_atual=_ref_decreto(m["dec"], k[4:])) if k.startswith("ind_") else v) for k, v in m["pedidos"].items()}
+    # homônimos marcados pelo operador como a mesma pessoa (Auditoria): a tela oferece "Desfazer mesma pessoa"
+    m["mesma_pessoa_marcada"] = bool(r.get("_pessoa_man"))
+    # regime informado pelo operador não é "como impresso no RSPE"
+    if "regime_atual" in (r.get("_manuais") or {}):
+        m["regime_rspe"] = ""
     try:
         m["faltas_itens"] = rs.faltas_editaveis(r.get("_incidentes", []), r.get("_eventos", []), rv.HOJE)
     except Exception:
@@ -3550,6 +3751,13 @@ def _leve(j):
                                 ppe_saldos=[{"evasao": S.get("evasao"), "saldo_origem": S.get("saldo_origem")} for S in (L.get("ppe_saldos") or [])])
                            for L in (j.get("presc_linhas") or [])]
     return out
+
+
+def _ref_decreto(dec, did):
+    """Situação de um decreto na aba Indulto ("cabe", "ver", "indeferido"...: o campo s de rd.avaliar), usada como referência
+    do pedido "ind_<decreto>" para avisar "situação mudou depois"."""
+    x = next((d for d in ((dec or {}).get("decretos") or []) if str(d.get("id")) == str(did)), None)
+    return str(x.get("s") or "") if x else ""
 
 
 def _pessoa_chave(r):
