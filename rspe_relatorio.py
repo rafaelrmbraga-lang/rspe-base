@@ -3333,12 +3333,14 @@ def relatorio_calculo(e, r, caminho, nome_base):
     if r.get("termino"):
         linhas.append(["Término da pena", "%s (%s)" % (r["termino"], r.get("termino_det", ""))])
     if r.get("periodo"):
-        linhas.append(["Período de %s a %s" % (e.get("p1"), e.get("p2")), "%s (%d dias)" % (r["periodo"]["ext"], r["periodo"]["dias"])])
+        linhas.append(["Período de %s a %s" % (e.get("p1"), e.get("p2")), "%s (%s)" % (r["periodo"]["ext"], _rs.pl(r["periodo"]["dias"], "dia", "dias"))])
     el.append(_tabela([[Paragraph(_t(a), st["cel"]) for a in l] if k else l for k, l in enumerate(linhas)], [55 * mm, W - 55 * mm], st, pad=4))
     if r.get("termino"):
         fr = [["Fração", "Tempo", "Completa em"]] + [[x["rot"], _rs.pena_extenso(x["q"]), x["data"]] for x in r["fracoes"] + r["percentuais"]
                                                        + ([r["outra"]] if r.get("outra") else [])]
         el += [Spacer(1, 8), Paragraph("Frações e percentuais (LEP, art. 112)", st["h2"]), _tabela(fr, [30 * mm, W - 75 * mm, 45 * mm], st, pad=4)]
+    if r.get("erros"):
+        el += [Spacer(1, 8), Paragraph("Atenção", st["h2"])] + [Paragraph(_t(x), st["cel"]) for x in r["erros"]]
     if e.get("nota"):
         el += [Spacer(1, 8), Paragraph("Anotação", st["h2"]), Paragraph(_t(e["nota"]), st["cel"])]
     el += [Spacer(1, 8), Paragraph(_t("Convenções: soma por componente (30 dias = 1 mês; 12 meses = 1 ano); fração sobre a pena em dias (ano de 365, mês de "
