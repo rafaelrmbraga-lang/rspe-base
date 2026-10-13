@@ -3959,6 +3959,12 @@ def _leitura_rspe(r, faltam):
     """Leitura do RSPE para o registro da importação: (observações, parcial). Campo vazio porque o SEEU não o tem (sem processo,
     sem crime, pena não iniciada) é observação, não leitura parcial."""
     obs, parcial = [], False
+    # parte do RSPE que falhou na leitura (seção com erro, cabeçalho fora do padrão): leitura parcial, com a parte afetada
+    if r.get("_leitura_parcial"):
+        obs += ["leitura parcial - " + x for x in r["_leitura_parcial"]]
+        parcial = True
+    # variação de impressão reconhecida (sem título, cabeçalho do navegador, marca ausente): só observação
+    obs += list(r.get("_leitura_obs") or [])
     if faltam:
         obs.append("não lido: %s - campo em branco no SEEU, página faltando ou texto quebrado na extração" % ", ".join(faltam))
         parcial = True
@@ -4021,6 +4027,8 @@ def _msg_erro_pdf(e):
     nome = e.__class__.__name__
     if nome in ("PSEOF",) or "unexpected eof" in tl or "eof marker" in tl or "startxref" in tl or "truncated" in tl:
         return "PDF corrompido ou incompleto (o download pode ter sido interrompido): gere ou baixe o PDF de novo"
+    if "password" in tl or "encrypt" in tl or nome in ("PDFPasswordIncorrect", "PDFEncryptionError"):
+        return "PDF protegido por senha: gere o PDF de novo no SEEU/SIAPEN, sem proteção"
     if "no /root object" in tl or "really a pdf" in tl or "not a pdf" in tl or nome in ("PDFSyntaxError", "PdfminerException", "PDFNoValidXRef") \
             or "invalid pdf" in tl or "no valid xref" in tl:
         return "arquivo não é PDF válido (vazio ou de outro tipo com a extensão .pdf): gere o PDF de novo no SEEU"

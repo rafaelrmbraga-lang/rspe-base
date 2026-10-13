@@ -57,8 +57,8 @@ def texto_pagina1(caminho):
 
 
 def e_ficha(texto):
-    # tolerante a espaços e quebras de linha no título e ao cabeçalho do sistema (SIAPEN ou AGEPEN)
-    t = re.sub(r"\s+", " ", (texto or "").upper())
+    # tolerante a acentos, maiúsculas/minúsculas, espaços e quebras de linha no título e ao cabeçalho do sistema (SIAPEN ou AGEPEN)
+    t = rs._norm_marca(texto)
     return bool(re.search(r"FICHA ?DISCIPLINAR", t)) and ("SIAPEN" in t or "AGEPEN" in t or "PENITENCI" in t)
 
 
@@ -381,7 +381,7 @@ def _pagina_historico(p, k):
         return p.extract_text() or "", []
     topo = 0
     if k == 0:
-        w = next((w for w in p.extract_words() if w["text"].startswith("HISTÓRICO")), None)
+        w = next((w for w in p.extract_words() if re.match(r"HIST[ÓO]RICO", w["text"], re.I)), None)
         if w is None:
             return p.extract_text() or "", []
         topo = w["bottom"]
@@ -398,7 +398,8 @@ def _pagina_historico(p, k):
     vis = p.filter(lambda o: not fora(o)).extract_text() or ""
     occ = []
     if any(oculto(c) for c in p.chars):
-        occ = [x for x in (p.filter(lambda o: o.get("object_type") != "char" or oculto(o)).extract_text() or "").splitlines() if x.strip()]
+        occ = [x for x in rs.sem_linhas_navegador(p.filter(lambda o: o.get("object_type") != "char" or oculto(o)).extract_text() or "")[0]
+               .splitlines() if x.strip()]
     return vis, occ
 
 
@@ -441,59 +442,110 @@ def _data_prisao_chars(p):
 
 
 def extrair(caminho):
-    with pdfplumber.open(caminho) as pdf:
+    """Leitura da ficha. Recusa só o que não é ficha (ValueError com o motivo); o que faltar ou falhar numa parte (cabeçalho,
+    histórico, análise) vira "_leitura_parcial", sem derrubar a leitura."""
+    try:
+        pdf = pdfplumber.open(caminho)
+    except Exception as e:
+        if re.search(r"password|encrypt", "%s %s %r" % (e.__class__.__name__, e, getattr(e, "__context__", None)), re.I):
+            raise ValueError("PDF protegido por senha: gere a ficha de novo no SIAPEN, sem proteção") from e
+        raise
+    parcial = []
+    with pdf:
         pags = [p.extract_text() or "" for p in pdf.pages]
+        if not "".join(pags).strip():
+            raise ValueError("PDF sem texto (digitalizado ou imagem): gere o PDF direto do SEEU/SIAPEN, não escaneado")
         if not e_ficha("\n".join(pags)):
             raise ValueError("não é uma Ficha Disciplinar do SIAPEN")
-        dp_chars = _data_prisao_chars(pdf.pages[0]) if pdf.pages else ""
+        dp_chars = _seguro(parcial, "cabeçalho (data da prisão pela posição)", lambda: _data_prisao_chars(pdf.pages[0]) if pdf.pages else "")
         vis, ocultas = [], []
         for k, p in enumerate(pdf.pages):
-            v, o = _pagina_historico(p, k)
-            vis.append(v)
+            try:
+                v, o = _pagina_historico(p, k)
+            except Exception as e:
+                parcial.append("página %d: falha na separação do histórico (%s) - lido o texto corrido da página" % (k + 1, rs._falha(e)))
+                v, o = pags[k], []
+            vis.append(rs.sem_linhas_navegador(v)[0])
             ocultas += o
+    return _extrair_texto(caminho, pags, vis, ocultas, dp_chars, parcial)
+
+
+def _seguro(parcial, rotulo, fn, padrao=""):
+    return rs._seguro(parcial, rotulo, fn, padrao)
+
+
+def _extrair_texto(caminho, pags, vis, ocultas=(), dp_chars="", parcial=None):
+    """Ficha a partir do texto: pags = texto de cada página; vis = texto visível de cada página (sem rodapé e histórico oculto)."""
+    parcial = list(parcial or [])
     t = _limpar("\n".join(vis))
     f = {"arquivo": caminho, "tipo": "ficha_disciplinar", "_versao_extracao": VERSAO_EXTRACAO}
-    cab = t.split("HISTÓRICO")[0]
-    f["nome"] = (re.search(r"Nome:\s*(.+?)\s+RGI:", cab) or [None, ""])[1].strip() if re.search(r"Nome:\s*(.+?)\s+RGI:", cab) else ""
-    f["rgi"] = (re.search(r"RGI:\s*(\d+)", cab) or [None, ""])[1]
-    f["cpf"] = cpf_cabecalho(cab)
-    f["cpf_em_branco"] = not f["cpf"] and bool(re.search(r"CPF:\s*(?:CIN:|RG:|N/C\b|N[AÃ]O INFORMADO|$)", cab, re.M))
-    f["data_nascimento"] = (re.search(r"Data Nascimento:\s*(\d{2}/\d{2}/\d{4})", cab) or [None, ""])[1]
+    m_hist = re.search(r"HISTÓRICO", t) or re.search(r"HISTORICO", t) or re.search(r"(?i)\bhist[óo]rico\b", t)
+    if m_hist is None:
+        parcial.append("título \"HISTÓRICO\" não encontrado: cabeçalho e histórico lidos do texto inteiro - conferir")
+    cab = t[:m_hist.start()] if m_hist else t
+    S = lambda rot, fn, padrao="": _seguro(parcial, "cabeçalho (%s)" % rot, fn, padrao)  # noqa: E731
+    f["nome"] = S("nome", lambda: (re.search(r"Nome:\s*(.+?)\s+RGI:", cab) or [None, ""])[1].strip() if re.search(r"Nome:\s*(.+?)\s+RGI:", cab) else "")
+    f["rgi"] = S("RGI", lambda: (re.search(r"RGI:\s*(\d+)", cab) or [None, ""])[1])
+    f["cpf"] = S("CPF", lambda: cpf_cabecalho(cab))
+    f["cpf_em_branco"] = S("CPF", lambda: not f["cpf"] and bool(re.search(r"CPF:\s*(?:CIN:|RG:|N/C\b|N[AÃ]O INFORMADO|$)", cab, re.M)), False)
+    f["data_nascimento"] = S("data de nascimento", lambda: (re.search(r"Data Nascimento:\s*(\d{2}/\d{2}/\d{4})", cab) or [None, ""])[1])
     # filiação "MÃE \\ PAI" (a mãe vem primeiro no SIAPEN): confronto de identidade com o nome da mãe do RSPE (homônimos)
-    f["filiacao"] = filiacao_cabecalho(cab)
-    f["nome_mae"] = re.split(r"\s*[\\/|]\s*", f["filiacao"])[0].strip() if f["filiacao"] else ""
+    f["filiacao"] = S("filiação", lambda: filiacao_cabecalho(cab))
+    f["nome_mae"] = S("filiação", lambda: re.split(r"\s*[\\/|]\s*", f["filiacao"])[0].strip() if f["filiacao"] else "")
     # o valor fica na mesma linha do rótulo: campo em branco não pega a linha seguinte ("Condenação:" vazio levava "Data Entrada: ...")
-    f["artigo"] = (re.search(r"Artigo:[ \t]*(.*)", cab) or [None, ""])[1].strip()
-    f["data_prisao"] = (re.search(r"Data Prisão:[ \t]*(\d{2}/\d{2}/\d{4})", cab) or [None, ""])[1] or dp_chars or data_prisao_cabecalho(cab)
-    f["condenacao"] = (re.search(r"Condenação:[ \t]*(.*)", cab) or [None, ""])[1].strip()
-    f["unidade"] = (re.search(r"Unidade Penal:[ \t]*(.*)", cab) or [None, ""])[1].strip()
-    f["data_entrada"] = (re.search(r"Data Entrada:\s*(\d{2}/\d{2}/\d{4})", cab) or [None, ""])[1]
+    f["artigo"] = S("artigo", lambda: (re.search(r"Artigo:[ \t]*(.*)", cab) or [None, ""])[1].strip())
+    f["data_prisao"] = S("data da prisão", lambda: (re.search(r"Data Prisão:[ \t]*(\d{2}/\d{2}/\d{4})", cab) or [None, ""])[1]
+                         or dp_chars or data_prisao_cabecalho(cab))
+    f["condenacao"] = S("condenação", lambda: (re.search(r"Condenação:[ \t]*(.*)", cab) or [None, ""])[1].strip())
+    f["unidade"] = S("unidade", lambda: (re.search(r"Unidade Penal:[ \t]*(.*)", cab) or [None, ""])[1].strip())
+    f["data_entrada"] = S("data de entrada", lambda: (re.search(r"Data Entrada:\s*(\d{2}/\d{2}/\d{4})", cab) or [None, ""])[1])
     # sexo biológico do cadastro do SIAPEN ("M"/"F"): concordância de gênero nos textos (registro do SAP, fundamentações).
     # Sem o campo, a unidade feminina basta; do nome nada se deduz
-    msx = re.search(r"Sexo(?: Biol[óo]gico)?:\s*(Masculino|Feminino)", cab, re.I)
-    f["sexo"] = msx.group(1)[0].upper() if msx else ("F" if re.search(r"FEMININ", rs._sem_acento(f["unidade"]).upper()) else "")
-    mc = re.search(r"HIST[ÓO]RICO\s*-\s*CONDUTA:\s*([^\n]+)", t) or re.search(r"CONDUTA:\s*([A-ZÇÃÕÁÉÍÓÚÂÊÔ/ ]+)", t)
-    f["conduta"] = (mc.group(1).strip() if mc else "")
-    f["data_impressao"] = (re.search(r"Impresso em (\d{2}/\d{2}/\d{4})", "\n".join(pags)) or [None, ""])[1]
+
+    def _sexo():
+        msx = re.search(r"Sexo(?: Biol[óo]gico)?:\s*(Masculino|Feminino)", cab, re.I)
+        return msx.group(1)[0].upper() if msx else ("F" if re.search(r"FEMININ", rs._sem_acento(f["unidade"]).upper()) else "")
+    f["sexo"] = S("sexo", _sexo)
+
+    def _conduta():
+        mc = re.search(r"HIST[ÓO]RICO\s*-\s*CONDUTA:\s*([^\n]+)", t) or re.search(r"CONDUTA:\s*([A-ZÇÃÕÁÉÍÓÚÂÊÔ/ ]+)", t)
+        return mc.group(1).strip() if mc else ""
+    f["conduta"] = S("conduta", _conduta)
+    f["data_impressao"] = S("data de impressão", lambda: (re.search(r"Impresso em (\d{2}/\d{2}/\d{4})", "\n".join(pags)) or [None, ""])[1])
     f["paginas"], f["paginas_sem_texto"] = len(pags), [i + 1 for i, x in enumerate(pags) if len(x.strip()) < 20]
     autos = sorted(set(re.findall(r"\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}", t)))
     f["autos"] = autos
 
     # ---- eventos do histórico ----
-    hist = t.split("HISTÓRICO", 1)[1] if "HISTÓRICO" in t else t
-    partes = RE_LINHA.split(hist)
-    # lançamento sem data no SIAPEN ("- CONSELHO DISCIPLINAR: FOI CONCLUSO ...", logo abaixo do título do histórico): fica como texto
-    # sem data (nenhuma data é atribuída), no início do histórico
-    sem_data = re.match(r"\s*(?:-\s*CONDUTA:[^\n]*\n)?\s*-\s*(\S.*)$", partes[0].split("\n", 1)[1] if "\n" in partes[0] else "", re.S)
-    eventos = ([{"data": "", "texto": " ".join(sem_data.group(1).split())}] if sem_data else []) + \
-        [{"data": partes[i], "texto": " ".join(partes[i + 1].split())} for i in range(1, len(partes) - 1, 2)]
-    eventos = _dividir(eventos)
-    eventos = [{"data": e["data"], "d": _dp(e["data"]), "texto": e["texto"]} for e in eventos]
+    def _eventos():
+        hist = t[m_hist.end():] if m_hist else t
+        partes = RE_LINHA.split(hist)
+        # lançamento sem data no SIAPEN ("- CONSELHO DISCIPLINAR: FOI CONCLUSO ...", logo abaixo do título do histórico): fica como
+        # texto sem data (nenhuma data é atribuída), no início do histórico
+        sem_data = re.match(r"\s*(?:-\s*CONDUTA:[^\n]*\n)?\s*-\s*(\S.*)$", partes[0].split("\n", 1)[1] if "\n" in partes[0] else "", re.S)
+        evs = ([{"data": "", "texto": " ".join(sem_data.group(1).split())}] if sem_data else []) + \
+            [{"data": partes[i], "texto": " ".join(partes[i + 1].split())} for i in range(1, len(partes) - 1, 2)]
+        evs = _dividir(evs)
+        return [{"data": e["data"], "d": _dp(e["data"]), "texto": e["texto"]} for e in evs]
+    eventos = _seguro(parcial, "histórico (lançamentos)", _eventos, [])
     f["eventos"] = [{"data": e["data"], "texto": e["texto"]} for e in eventos]
     # histórico antigo em 10 pt, cortado na impressão: guardado à parte, sem virar lançamento (uso a decidir)
-    f["historico_oculto"] = ocultas
+    f["historico_oculto"] = list(ocultas)
     f["versao_leitura"] = VERSAO_LEITURA
-    return derivar(f, eventos)
+    try:
+        r = derivar(f, eventos)
+    except Exception as e:
+        # a análise do histórico falhou: a ficha entra com o cabeçalho e os lançamentos, sem as conclusões tiradas deles
+        parcial.append("análise do histórico com falha (%s): ficha guardada com o cabeçalho e os lançamentos, sem trabalho, estudo e "
+                       "faltas apurados - enviar o arquivo para correção" % rs._falha(e))
+        try:
+            r = derivar(f, [])
+            r["eventos"] = f["eventos"]
+        except Exception:
+            r = f
+    if parcial:
+        r["_leitura_parcial"] = parcial
+    return r
 
 
 # versão das regras de leitura dos eventos: a ficha guardada na base com versão anterior é relida a partir dos eventos ao abrir
@@ -1245,6 +1297,9 @@ def leitura_parcial(f):
     """Leitura da ficha para o registro da importação: (observações, parcial). Campo que o próprio SIAPEN deixa em branco
     (ex.: "CPF:" vazio no cabeçalho) é observação, não leitura parcial."""
     out, parcial = [], False
+    if f.get("_leitura_parcial"):
+        out += list(f["_leitura_parcial"])
+        parcial = True
     sem = f.get("paginas_sem_texto") or []
     if sem:
         out.append("%s sem texto (%s de %d): imagem ou digitalização - o histórico dessas páginas não foi lido; gerar a ficha de novo no SIAPEN" % (

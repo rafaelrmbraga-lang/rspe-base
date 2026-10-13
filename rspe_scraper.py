@@ -381,11 +381,153 @@ def _sem_nao_informado(v):
 # leitura do PDF
 # --------------------------------------------------------------------------- #
 
-RODAPE = re.compile(r"^Processo Eletr[ôo]nico\s*-\s*SEEU.*P[áa]g\.?:.*$", re.I)
+RODAPE = re.compile(r"^Processo\s+Eletr[ôo]nico\s*-\s*SEEU.*P[áa]g(?:\.|ina)?\s*:?.*$", re.I)
 CABECALHO = (
     "PODER JUDICIÁRIO",
     "RELATÓRIO DA SITUAÇÃO PROCESSUAL EXECUTÓRIA",
 )
+
+
+def _norm_marca(t):
+    """Texto para comparar marcas do documento: sem acento, em maiúsculas e com espaços simples."""
+    import unicodedata
+    t = "".join(ch for ch in unicodedata.normalize("NFD", t or "") if unicodedata.category(ch) != "Mn").upper()
+    return re.sub(r"\s+", " ", t).strip()
+
+
+# marcas do RSPE do SEEU (comparadas por _norm_marca): (chave, regex, descrição para o registro da importação)
+MARCAS_RSPE = (
+    ("titulo", r"RELATORIO DA SITUACAO PROCESSUAL EXECUTORIA", "título \"Relatório da Situação Processual Executória\""),
+    ("execucao", r"PROCESSO DE EXECUCAO", "quadro \"PROCESSO DE EXECUÇÃO\""),
+    ("numero", r"NUMERO UNICO ?:", "rótulo \"Número Único:\""),
+    ("calculos", r"CALCULOS DA PENA", "quadro \"CÁLCULOS DA PENA\""),
+    ("rodape", r"PROCESSO ELETRONICO ?- ?SEEU", "rodapé \"Processo Eletrônico - SEEU\""),
+    ("criminais", r"PROCESSOS CRIMINAIS", "quadro \"PROCESSOS CRIMINAIS\""),
+    ("eventos", r"EVENTOS DE INICIO", "quadro \"EVENTOS DE INÍCIO\""),
+    ("pena", r"PENA TOTAL IMPOSTA", "rótulo \"Pena Total Imposta\""),
+)
+# o que, no começo do documento, mostra que é outra peça (sem o título do relatório, não é lido como RSPE)
+OUTROS_DOCUMENTOS = (
+    (r"ATESTADO DE (?:PENA|CUMPRIMENTO)", "atestado de pena"),
+    (r"FICHA ?DISCIPLINAR", "ficha disciplinar"),
+    (r"^(?:\S+ ){0,6}EXCELENTISSIM|^(?:\S+ ){0,6}EXMO\b|MERITISSIM", "petição"),
+    (r"CERTIDAO DE (?:OBJETO|ANTECEDENTES)", "certidão"),
+)
+
+
+def marcas_rspe(bruto):
+    """{chave: presente} das marcas do RSPE no texto (sem acento, maiúsc./minúsc. e espaços indiferentes)."""
+    t = _norm_marca(bruto)
+    return {k: bool(re.search(rx, t)) for k, rx, _ in MARCAS_RSPE}
+
+
+def _outro_documento(bruto):
+    ini = _norm_marca((bruto or "")[:1500])
+    return next((nome for rx, nome in OUTROS_DOCUMENTOS if re.search(rx, ini)), "")
+
+
+def classificar_rspe(bruto):
+    """(é RSPE, marcas ausentes, motivo da recusa). Reconhece o RSPE pela pontuação das marcas, não por uma linha fixa: o título
+    basta; sem ele (a tela "processoExecucaoPenal.do" salva em PDF, impressão pelo navegador), o "Número Único:" (ou o número
+    CNJ junto do quadro do processo de execução) e mais três marcas do relatório (quadros, rótulos, rodapé do SEEU)."""
+    m = marcas_rspe(bruto)
+    faltam = [d for k, _, d in MARCAS_RSPE if not m[k]]
+    if m["titulo"]:
+        return True, faltam, ""
+    outro = _outro_documento(bruto)
+    pontos = sum(1 for k in ("execucao", "calculos", "rodape", "criminais", "eventos", "pena") if m[k])
+    num = m["numero"] or (m["execucao"] and bool(RE_CNJ.search(bruto or "")))
+    # "PROCESSO DE EXECUÇÃO" + "Número Único:" + rodapé do SEEU bastam: o RSPE de execução arquivada só traz o cabeçalho
+    if not outro and num and (pontos >= 3 or (m["execucao"] and m["rodape"])):
+        return True, faltam, ""
+    if outro:
+        motivo = "não é um RSPE do SEEU: parece %s (sem o título do relatório e com \"%s\" no início)" % (outro, outro)
+    else:
+        achou = [d for k, _, d in MARCAS_RSPE if m[k]]
+        nucleo = [d for k, _, d in MARCAS_RSPE if k in ("titulo", "execucao", "numero", "calculos", "rodape") and not m[k]]
+        motivo = "não é um RSPE do SEEU: faltam as marcas do relatório (%s)%s" % (
+            ", ".join(nucleo), "; só há %s" % ", ".join(achou) if achou else "; nenhuma marca do SEEU no texto")
+    return False, faltam, motivo
+
+
+def e_rspe_seeu(bruto):
+    """RSPE do SEEU (ver classificar_rspe): pelo título ou, sem ele, pelo conjunto das outras marcas."""
+    return classificar_rspe(bruto)[0]
+
+
+# linhas que o navegador acrescenta ao "Imprimir / Salvar como PDF" no topo e no pé de cada página: data e hora (com o título
+# da aba), endereço, contador "1/6" ou "Página 1 de 6", nome da tela ("processoExecucaoPenal.do")
+_RE_NAVEGADOR = re.compile(
+    r"^\d{1,2}/\d{1,2}/\d{2,4},?\s+\d{1,2}:\d{2}(?::\d{2})?(?:\s*[AaPp]\.?\s*[Mm]\.?)?(?:\s.*)?$"
+    r"|^.{0,120}?(?:https?://|file:///?|about:blank)\S*(?:\s+\d{1,4}\s*/\s*\d{1,4})?\s*$"
+    r"|^\d{1,4}\s*/\s*\d{1,4}$"
+    r"|^(?:P[áa]gina|P[áa]g\.?)\s*\d{1,4}\s*(?:de|/)\s*\d{1,4}$"
+    r"|^[\w.-]+\.(?:do|jsf|xhtml|aspx?|php|html?)(?:\s.*)?$", re.I)
+
+
+def sem_linhas_navegador(pagina, n=3):
+    """Texto da página sem as linhas de navegador do topo e do pé (até n de cada lado; só nas bordas da página, para não tocar no
+    conteúdo). Devolve (texto, quantas linhas saíram)."""
+    linhas = (pagina or "").split("\n")
+    tirou = 0
+    for _ in range(n):
+        while linhas and not linhas[0].strip():
+            linhas.pop(0)
+        if linhas and _RE_NAVEGADOR.match(linhas[0].strip()) and not RODAPE.match(linhas[0].strip()):
+            linhas.pop(0)
+            tirou += 1
+    for _ in range(n):
+        while linhas and not linhas[-1].strip():
+            linhas.pop()
+        if linhas and _RE_NAVEGADOR.match(linhas[-1].strip()) and not RODAPE.match(linhas[-1].strip()):
+            linhas.pop()
+            tirou += 1
+    return "\n".join(linhas), tirou
+
+
+def _rx_tolerante(canonico):
+    """Regex que casa o rótulo com ou sem acento e com espaços a mais."""
+    pares = {"Á": "[ÁA]", "À": "[ÀA]", "Â": "[ÂA]", "Ã": "[ÃA]", "É": "[ÉE]", "Ê": "[ÊE]", "Í": "[ÍI]", "Ó": "[ÓO]", "Ô": "[ÔO]",
+             "Õ": "[ÕO]", "Ú": "[ÚU]", "Ç": "[ÇC]", "á": "[áa]", "à": "[àa]", "â": "[âa]", "ã": "[ãa]", "é": "[ée]", "ê": "[êe]",
+             "í": "[íi]", "ó": "[óo]", "ô": "[ôo]", "õ": "[õo]", "ú": "[úu]", "ç": "[çc]"}
+    return "".join(pares.get(ch, r"[ \t]+" if ch == " " else re.escape(ch)) for ch in canonico)
+
+
+# títulos e rótulos procurados por texto exato na leitura: a variação sem acento ou com espaços a mais (outra impressão, outro
+# leitor de PDF) volta à forma do SEEU antes da leitura. Títulos: em maiúsculas; rótulos: na grafia do SEEU ou em maiúsculas
+_TITULOS_CANON = ("PROCESSO DE EXECUÇÃO", "CÁLCULOS DA PENA", "GRÁFICO REPRESENTATIVO", "PROCESSOS CRIMINAIS", "EVENTOS DE INÍCIO",
+                  "INCIDENTES CONCEDIDOS", "INCIDENTES NÃO CONCEDIDOS", "INCIDENTES NEGADOS", "INCIDENTES PENDENTES",
+                  "INCIDENTES EM ANÁLISE", "CÁLCULOS PARA PROGRESSÃO DE REGIME", "CÁLCULOS PARA LIVRAMENTO CONDICIONAL",
+                  "TÉRMINO DE PENA", "SENTENÇA/ACÓRDÃO/RECURSO")
+# rótulos (sempre seguidos de ":" no SEEU; só com os dois-pontos são trocados, para não tocar no texto livre)
+_ROTULOS_CANON = ("Número Único", "Número Antigo", "Nome da Mãe", "Pena Cumprida Até Data Atual", "Total Interrupções",
+                  "Data prevista para progressão de regime", "Data prevista para o Término da Pena",
+                  "Data-base adotada no cálculo para progressão de regime", "Data-base adotada no cálculo para progresso regime",
+                  "Data-base adotada no cálculo para livramento condicional", "Número", "Juízo/Vara de condenação",
+                  "Data do recebimento da denúncia", "Data da Sentença", "Data do trânsito em julgado do Ministério Público",
+                  "Data do trânsito em julgado do processo", "Regime imposto na sentença/acórdão", "Data da infração",
+                  "Violência ou grave ameaça", "Reincidente específico", "Condenado por exercer comando de organização criminosa",
+                  "Fração adotada no cálculo para progressão de regime", "Fração adotada no cálculo para livramento condicional",
+                  "Data de suspensão", "Data da extinção", "Data Decisão", "Data Referência", "Observação")
+_B, _E = r"(?<![\wÀ-ÿ])", r"(?![\wÀ-ÿ])"
+# (chave sem acento para o teste rápido, regex, forma do SEEU)
+_CANON = [(_norm_marca(c), re.compile(_B + _rx_tolerante(c) + _E), c) for c in _TITULOS_CANON] + \
+    [(_norm_marca(c), re.compile(_B + _rx_tolerante(c) + r"(?=[ \t]*:)"), c) for c in _ROTULOS_CANON] + \
+    [(_norm_marca(c), re.compile(_B + _rx_tolerante(c.upper()) + r"(?=[ \t]*:)"), c) for c in _ROTULOS_CANON] + \
+    [("CODIGO PENAL", re.compile(r"^(Lei[ \t]*:[ \t]*\S+[ \t]*-[ \t]*)C[óo]digo[ \t]+Penal\b"), r"\1Código Penal")]
+_LINHA_TITULO = {_norm_marca(c): c for c in _TITULOS_CANON + ("Fim do Relatório",)}
+
+
+def _canonizar(linha):
+    """Linha com os títulos e rótulos na forma do SEEU (só muda a variação: sem acento, espaços, título em minúsculas)."""
+    n = _norm_marca(linha)
+    t = _LINHA_TITULO.get(n.rstrip(":").strip())
+    if t is not None and linha.rstrip(":").strip() != t:
+        return t + (":" if linha.rstrip().endswith(":") else "")
+    for chave, rx, c in _CANON:
+        if chave in n and rx.search(linha):
+            linha = rx.sub(c, linha)
+    return linha
 
 
 def _comarca_fora_do_padrao(linha, vara=""):
@@ -425,51 +567,118 @@ def tribunal_do_numero(numero):
     return ""
 
 
-def e_rspe_seeu(bruto):
-    """RSPE do SEEU: pelo título ("Relatório da Situação Processual Executória") ou, na impressão sem o título (a tela
-    "processoExecucaoPenal.do" salva em PDF), pelo conjunto de marcas que só ela tem: "PROCESSO DE EXECUÇÃO",
-    "Número Único:", "CÁLCULOS DA PENA" e o rodapé "Processo Eletrônico - SEEU"."""
-    up = (bruto or "").upper().replace("RELATORIO", "RELATÓRIO")
-    if "RELATÓRIO DA SITUAÇÃO PROCESSUAL EXECUTÓRIA" in up:
-        return True
-    return all(k in up for k in ("PROCESSO DE EXECUÇÃO", "NÚMERO ÚNICO:", "CÁLCULOS DA PENA", "PROCESSO ELETRÔNICO - SEEU"))
+def _abrir_paginas(caminho):
+    """Texto de cada página do PDF. PDF protegido por senha, corrompido ou sem texto: ValueError com o motivo em português."""
+    try:
+        with pdfplumber.open(caminho) as pdf:
+            paginas = [p.extract_text() or "" for p in pdf.pages]
+    except Exception as e:
+        cadeia, x = [], e
+        while x is not None and len(cadeia) < 6:
+            cadeia.append("%s %s" % (x.__class__.__name__, x))
+            x = x.__cause__ or x.__context__
+        if re.search(r"password|encrypt|senha", " ".join(cadeia), re.I):
+            raise ValueError("PDF protegido por senha: gere o PDF de novo no SEEU/SIAPEN, sem proteção") from e
+        raise
+    return paginas
 
 
-def ler_pdf(caminho):
-    """Devolve (texto_limpo, vara, comarca, tribunal, data_geracao)."""
-    paginas = []
-    with pdfplumber.open(caminho) as pdf:
-        for p in pdf.pages:
-            paginas.append(p.extract_text() or "")
-    bruto = "\n".join(paginas)
+def _cabecalho_rspe(linhas):
+    """(linha "TJxx - COMARCA DE ...", linha da vara, linha "PODER JUDICIÁRIO" achada?) do topo da 1ª página, sem posição fixa:
+    procura "PODER JUDICIÁRIO" nas primeiras linhas e toma as duas seguintes (pulando o título do relatório e linhas vazias);
+    sem ele, a linha "XX - COMARCA DE ..." e a seguinte. Sem nenhuma das duas, as linhas 2 e 3 (leitura antiga)."""
+    topo = linhas[:15]
+    nt = [_norm_marca(l) for l in topo]
+    pular = {_norm_marca(c) for c in CABECALHO}
+
+    def seguintes(i):
+        out = []
+        for l in topo[i + 1:]:
+            if not l.strip() or _norm_marca(l) in pular:
+                continue
+            out.append(l.strip())
+            if len(out) == 2:
+                break
+        return out + [""] * (2 - len(out))
+    rx_com = re.compile(r"\S+\s*-\s*COMARCA D[EAO]S?\b", re.I)
+    i_pj = next((i for i, l in enumerate(nt) if l.startswith("PODER JUDICIARIO")), None)
+    if i_pj is not None:
+        tc, vara = seguintes(i_pj)
+        if not rx_com.match(tc):
+            # tribunal e comarca na própria linha do "PODER JUDICIÁRIO" ou mais abaixo
+            resto = re.sub(r"^PODER JUDICI[ÁA]RIO\s*[-–:]?\s*", "", topo[i_pj].strip(), flags=re.I)
+            if rx_com.match(resto):
+                tc, vara = resto, seguintes(i_pj)[0]
+            else:
+                j = next((j for j, l in enumerate(topo) if j > i_pj and rx_com.match(l.strip())), None)
+                if j is not None:
+                    tc, vara = topo[j].strip(), seguintes(j)[0]
+        return tc, vara, True
+    j = next((j for j, l in enumerate(topo) if rx_com.match(l.strip())), None)
+    if j is not None and j > 1:
+        return topo[j].strip(), seguintes(j)[0], False
+    return (linhas[1].strip() if len(linhas) > 1 else ""), (linhas[2].strip() if len(linhas) > 2 else ""), False
+
+
+def ler_paginas(paginas):
+    """Leitura do texto das páginas do RSPE: dict com texto (limpo), vara, comarca, tribunal, data de geração, "parcial" (o que
+    faltou e afeta a leitura) e "obs" (variações de impressão reconhecidas, sem prejuízo). Recusa (ValueError com o motivo) só o
+    que não é RSPE: PDF sem texto (digitalizado) ou documento sem as marcas do relatório."""
+    if not "".join(paginas or []).strip():
+        raise ValueError("PDF sem texto (digitalizado ou imagem): gere o PDF direto do SEEU/SIAPEN, não escaneado")
+    parcial, obs = [], []
+    limpas_pag, nav = [], 0
+    for pg in paginas:
+        t, k = sem_linhas_navegador(pg)
+        limpas_pag.append(t)
+        nav += k
+    if nav:
+        obs.append("impressão pelo navegador: %s de cabeçalho/rodapé do navegador (data, endereço, contador de páginas) ignorada%s" % (
+            pl(nav, "linha", "linhas"), "" if nav == 1 else "s"))
+    bruto = "\n".join(limpas_pag)
+    e_rspe, faltam, motivo = classificar_rspe(bruto)
+    if not e_rspe:
+        raise ValueError(motivo)
+    if any(f.startswith("título") for f in faltam):
+        obs.append("RSPE sem o título do relatório (impressão da tela do processo): reconhecido pelas demais marcas do SEEU")
+    # quadro ou rótulo do modelo ausente: só observação (o RSPE sem cálculo, sem processo criminal ou sem eventos existe no SEEU);
+    # o campo que não pôde ser lido por causa disso entra como leitura parcial na importação (campos_faltantes)
+    base = [d for k, _, d in MARCAS_RSPE if k in ("execucao", "numero", "calculos", "rodape") and d in faltam]
+    if base:
+        obs.append("marca do RSPE ausente: %s" % ", ".join(base))
 
     linhas = [l.rstrip() for l in bruto.splitlines()]
-    # cabeçalho: linhas 1-3 da primeira página
-    tribunal_comarca = linhas[1].strip() if len(linhas) > 1 else ""
-    vara = linhas[2].strip() if len(linhas) > 2 else ""
+    tribunal_comarca, vara, com_pj = _cabecalho_rspe(linhas)
     tribunal, comarca = "", ""
     m = re.match(r"(\S+)\s*-\s*COMARCA DE\s*(.+)", tribunal_comarca, re.I)
     if m:
         tribunal, comarca = m.group(1), m.group(2).strip()
-    elif re.search(r"PODER JUDICI", linhas[0] if linhas else "", re.I):
+    elif com_pj:
         tribunal, comarca = _comarca_fora_do_padrao(tribunal_comarca, vara)
+    if not com_pj:
+        parcial.append("cabeçalho do RSPE sem \"PODER JUDICIÁRIO\": tribunal, comarca e vara lidos por posição - conferir")
 
     geracao = ""
-    m = re.search(r"Gerado em:\s*(\d{2}/\d{2}/\d{4})", bruto)
+    m = re.search(r"Gerado\s+em\s*:?\s*(\d{2}/\d{2}/\d{4})", bruto, re.I)
     if m:
         geracao = m.group(1)
-
-    if not e_rspe_seeu(bruto):
-        raise ValueError("não é um RSPE do SEEU")
+    nt_cab = {_norm_marca(c) for c in CABECALHO}
     limpas = []
     for l in linhas:
         s = l.strip()
         if not s or RODAPE.match(s):
             continue
-        if s in CABECALHO or s == tribunal_comarca or s == vara:
+        if s in CABECALHO or s == tribunal_comarca or s == vara or _norm_marca(s) in nt_cab:
             continue
-        limpas.append(s)
-    return "\n".join(limpas), vara, comarca, tribunal, geracao
+        limpas.append(_canonizar(s))
+    return {"texto": "\n".join(limpas), "vara": vara, "comarca": comarca, "tribunal": tribunal, "geracao": geracao,
+            "parcial": parcial, "obs": obs}
+
+
+def ler_pdf(caminho):
+    """Devolve (texto_limpo, vara, comarca, tribunal, data_geracao)."""
+    d = ler_paginas(_abrir_paginas(caminho))
+    return d["texto"], d["vara"], d["comarca"], d["tribunal"], d["geracao"]
 
 
 def secao(texto, inicio, fins):
@@ -4931,9 +5140,30 @@ def falta_art6(incidentes, ref, eventos=None, publicacao=None, crimes=None, inic
 # extração principal
 # --------------------------------------------------------------------------- #
 
+def _falha(e):
+    t = " ".join(str(e).split())[:120]
+    return "%s%s" % (e.__class__.__name__, (": " + t) if t else "")
+
+
+def _seguro(parcial, rotulo, fn, padrao=""):
+    """fn() protegido: a exceção vira leitura parcial com a parte afetada, sem derrubar o arquivo nem o lote."""
+    try:
+        return fn()
+    except Exception as e:
+        parcial.append("%s: falha na leitura (%s) - lido sem essa parte; conferir no SEEU" % (rotulo, _falha(e)))
+        return padrao
+
+
 def extrair(caminho):
-    texto, vara, comarca, tribunal, geracao = ler_pdf(caminho)
-    hoje = to_date(geracao) or date.today()
+    return extrair_paginas(_abrir_paginas(caminho), os.path.basename(caminho))
+
+
+def extrair_paginas(paginas, arquivo=""):
+    """Leitura do RSPE a partir do texto das páginas. Cada parte (cabeçalho, cálculos, crimes, eventos, incidentes, análise)
+    é protegida: a falha numa delas não derruba a leitura - vira "_leitura_parcial" com a parte afetada."""
+    d = ler_paginas(paginas)
+    texto, vara, comarca, tribunal, geracao = d["texto"], d["vara"], d["comarca"], d["tribunal"], d["geracao"]
+    parcial, obs = d["parcial"], d["obs"]
 
     cab = secao(texto, "PROCESSO DE EXECUÇÃO", ["CÁLCULOS DA PENA"])
     calc = secao(texto, "CÁLCULOS DA PENA", outros("CÁLCULOS DA PENA"))
@@ -4944,6 +5174,10 @@ def extrair(caminho):
         or secao(texto, "INCIDENTES NEGADOS", ["INCIDENTES PENDENTES", "INCIDENTES EM", "Fim do Relatório"])
     pend = secao(texto, "INCIDENTES PENDENTES", ["Fim do Relatório"]) \
         or secao(texto, "INCIDENTES EM ANÁLISE", ["Fim do Relatório"])
+    if not cab.strip():
+        # sem o quadro "PROCESSO DE EXECUÇÃO": o cabeçalho é o que vem antes dos cálculos (ou dos processos criminais)
+        corte = [j for j in (texto.find("CÁLCULOS DA PENA"), texto.find("PROCESSOS CRIMINAIS")) if j >= 0]
+        cab = texto[:min(corte)] if corte else texto[:3000]
 
     numero = campo(cab, "Número Único")
     status = ""
@@ -4952,66 +5186,80 @@ def extrair(caminho):
         status = m.group(1)
     m = RE_CNJ.search(numero)
     numero = m.group(0) if m else numero
+    if not numero:
+        m = RE_CNJ.search(cab)
+        if m:
+            numero = m.group(0)
+            parcial.append("número da execução lido fora do rótulo \"Número Único:\" (primeiro número CNJ do cabeçalho) - conferir")
     if not tribunal:
         tribunal = tribunal_do_numero(numero)  # cabeçalho "COMARCA DE X" sem a sigla do tribunal
-    prev_prog = _previsao_seeu(calc, ("Data prevista para progressão de regime",))
-    prev_liv = _previsao_seeu(calc, ("Data prevista livramento condicional", "Data prevista para livramento condicional"))
+    prev_prog = _seguro(parcial, "previsão de progressão (cálculos da pena)",
+                        lambda: _previsao_seeu(calc, ("Data prevista para progressão de regime",)), ("", "", ""))
+    prev_liv = _seguro(parcial, "previsão de livramento (cálculos da pena)",
+                       lambda: _previsao_seeu(calc, ("Data prevista livramento condicional", "Data prevista para livramento condicional")),
+                       ("", "", ""))
 
     r = {
         "versao_leitura_rspe": VERSAO_LEITURA_RSPE,
-        "arquivo": os.path.basename(caminho),
+        "arquivo": arquivo,
         "tribunal": tribunal,
         "comarca": comarca,
         "vara": vara,
         "data_geracao_rspe": geracao,
         "processo_execucao": numero,
         "status_execucao": status,
-        "numero_antigo": campo(cab, "Número Antigo"),
-        "nome": campo(cab, "Nome:"),
-        "cpf": cpf_rspe(campo(cab, "CPF")),
-        "rg": _sem_nao_informado(_campo_rg(cab)),
-        # nome comprido quebrado na célula: as linhas seguintes (só letras) até a data de nascimento completam o nome
-        "nome_mae": _sem_nao_informado(campo_continuado(cab, "Nome da Mãe", r"(?:Data\s+(?:de\s+)?|Dt\.?\s*(?:de\s+)?)?Nascimento\b",
-                                                        r"[A-Za-zÀ-ÿ'´`.\- ]+")),
-        "data_nascimento": _nascimento(cab),
         "_rspe_sem_processo": not crim.strip(),
-        "_rspe_sem_crime": bool(crim.strip()) and not re.search(r"Pena Imposta", crim),
-        "_acoes_sem_crime": acoes_sem_crime(crim),
-        "regime_atual": campo(calc, "Regime Atual"),
-        "pena_total": campo(calc, "Pena Total Imposta"),
-        "pena_cumprida": campo(calc, "Pena Cumprida Até Data Atual"),
-        "pena_remanescente": campo(calc, "Pena Remanescente"),
-        "total_interrupcoes": campo(calc, "Total Interrupções"),
-        "saldo_remidos": campo(calc, "Saldo dias Remidos"),
         # previsões que o SEEU imprime em alguns modelos de RSPE
         "progressao_previsao_seeu": prev_prog[0],
         "progressao_obs_seeu": prev_prog[1],
         # nota do SEEU depois da data prevista ("02/06/2029 (Indeferido em 10/01/2026)"): só exibida - o efeito jurídico é do usuário
         "progressao_nota": prev_prog[2],
-        "data_base_seeu": campo_data(calc, "Data-base adotada no cálculo para progresso regime")
-            or campo_data(calc, "Data-base adotada no cálculo para progressão de regime"),
         "livramento_previsao_seeu": prev_liv[0],
         "livramento_obs_seeu": prev_liv[1],
         "livramento_nota": prev_liv[2],
-        "livramento_data_base_seeu": campo_data(calc, "Data-base adotada no cálculo para livramento condicional"),
-        "termino_previsao_seeu": campo_data(calc, "Data prevista para o Término da Pena"),
     }
+    campos = (
+        ("cabeçalho (número antigo)", "numero_antigo", lambda: campo(cab, "Número Antigo")),
+        ("cabeçalho (nome)", "nome", lambda: campo(cab, "Nome:")),
+        ("cabeçalho (CPF)", "cpf", lambda: cpf_rspe(campo(cab, "CPF"))),
+        ("cabeçalho (RG)", "rg", lambda: _sem_nao_informado(_campo_rg(cab))),
+        # nome comprido quebrado na célula: as linhas seguintes (só letras) até a data de nascimento completam o nome
+        ("cabeçalho (nome da mãe)", "nome_mae", lambda: _sem_nao_informado(campo_continuado(
+            cab, "Nome da Mãe", r"(?:Data\s+(?:de\s+)?|Dt\.?\s*(?:de\s+)?)?Nascimento\b", r"[A-Za-zÀ-ÿ'´`.\- ]+"))),
+        ("cabeçalho (data de nascimento)", "data_nascimento", lambda: _nascimento(cab)),
+        ("processos criminais", "_rspe_sem_crime", lambda: bool(crim.strip()) and not re.search(r"Pena Imposta", crim)),
+        ("processos criminais (ações sem crime)", "_acoes_sem_crime", lambda: acoes_sem_crime(crim)),
+        ("cálculos da pena (regime atual)", "regime_atual", lambda: campo(calc, "Regime Atual")),
+        ("cálculos da pena (pena total)", "pena_total", lambda: campo(calc, "Pena Total Imposta")),
+        ("cálculos da pena (pena cumprida)", "pena_cumprida", lambda: campo(calc, "Pena Cumprida Até Data Atual")),
+        ("cálculos da pena (pena remanescente)", "pena_remanescente", lambda: campo(calc, "Pena Remanescente")),
+        ("cálculos da pena (interrupções)", "total_interrupcoes", lambda: campo(calc, "Total Interrupções")),
+        ("cálculos da pena (dias remidos)", "saldo_remidos", lambda: campo(calc, "Saldo dias Remidos")),
+        ("cálculos da pena (data-base)", "data_base_seeu", lambda: campo_data(calc, "Data-base adotada no cálculo para progresso regime")
+            or campo_data(calc, "Data-base adotada no cálculo para progressão de regime")),
+        ("cálculos da pena (data-base do livramento)", "livramento_data_base_seeu",
+            lambda: campo_data(calc, "Data-base adotada no cálculo para livramento condicional")),
+        ("cálculos da pena (término)", "termino_previsao_seeu", lambda: campo_data(calc, "Data prevista para o Término da Pena")),
+    )
+    for rot, k, fn in campos:
+        r[k] = _seguro(parcial, rot, fn, [] if k == "_acoes_sem_crime" else False if k == "_rspe_sem_crime" else "")
     # só registro (prefixo "seeu_"; nenhuma regra usa ainda): lapsos por categoria do cálculo e notas entre parênteses das previsões
     _lv = "CÁLCULOS PARA LIVRAMENTO CONDICIONAL"
-    for k, v in (("seeu_fracoes_progressao", _fracoes_calc(calc, "CÁLCULOS PARA PROGRESSÃO DE REGIME", [_lv])),
-                 ("seeu_fracoes_livramento", _fracoes_calc(calc, _lv, [])),
-                 ("seeu_previsao_progressao_nota", _nota_previsao(calc, ("Data prevista para progressão de regime",))),
-                 ("seeu_previsao_livramento_nota", _nota_previsao(calc, ("Data prevista livramento condicional",
-                                                                        "Data prevista para livramento condicional"))),
-                 ("seeu_previsao_termino_nota", _nota_previsao(calc, ("Data prevista para o Término da Pena",)))):
+    for k, fn in (("seeu_fracoes_progressao", lambda: _fracoes_calc(calc, "CÁLCULOS PARA PROGRESSÃO DE REGIME", [_lv])),
+                  ("seeu_fracoes_livramento", lambda: _fracoes_calc(calc, _lv, [])),
+                  ("seeu_previsao_progressao_nota", lambda: _nota_previsao(calc, ("Data prevista para progressão de regime",))),
+                  ("seeu_previsao_livramento_nota", lambda: _nota_previsao(calc, ("Data prevista livramento condicional",
+                                                                                 "Data prevista para livramento condicional"))),
+                  ("seeu_previsao_termino_nota", lambda: _nota_previsao(calc, ("Data prevista para o Término da Pena",)))):
+        v = _seguro(parcial, "cálculos da pena (%s)" % k.replace("seeu_", "").replace("_", " "), fn)
         if v:
             r[k] = v
 
-    crimes = parse_crimes(crim)
-    eventos = blocos_tipo(ev)
-    inc_conc = blocos_tipo(conc)
-    inc_neg = blocos_tipo(neg)
-    inc_pend = blocos_tipo(pend)
+    crimes = _seguro(parcial, "seção PROCESSOS CRIMINAIS (crimes)", lambda: parse_crimes(crim), [])
+    eventos = _seguro(parcial, "seção EVENTOS DE INÍCIO (eventos)", lambda: blocos_tipo(ev), [])
+    inc_conc = _seguro(parcial, "seção INCIDENTES CONCEDIDOS", lambda: blocos_tipo(conc), [])
+    inc_neg = _seguro(parcial, "seção INCIDENTES NÃO CONCEDIDOS", lambda: blocos_tipo(neg), [])
+    inc_pend = _seguro(parcial, "seção INCIDENTES PENDENTES", lambda: blocos_tipo(pend), [])
     for i in inc_conc:
         i["situacao"] = "CONCEDIDO"
     for i in inc_neg:
@@ -5019,8 +5267,42 @@ def extrair(caminho):
     for i in inc_pend:
         i["situacao"] = "PENDENTE"
     incidentes = inc_conc + inc_neg + inc_pend
-    _completar_processos_eventos(crimes, eventos, incidentes)
-    return derivar(r, crimes, eventos, incidentes)
+    _seguro(parcial, "processos dos eventos e incidentes", lambda: _completar_processos_eventos(crimes, eventos, incidentes))
+    return derivar_seguro(r, crimes, eventos, incidentes, parcial, obs)
+
+
+def derivar_seguro(r, crimes, eventos, incidentes, parcial=None, obs=None):
+    """derivar() sem derrubar a importação: se a análise falhar por causa de uma seção, a seção é deixada de fora (crimes, eventos
+    ou incidentes, nessa ordem de tentativa) e a leitura fica parcial, dizendo qual seção e o erro. Só se nada der certo a falha
+    sobe (o arquivo fica de fora do lote com o motivo)."""
+    parcial = list(parcial or [])
+    obs = list(obs or [])
+
+    def fim(x):
+        x.pop("_leitura_parcial", None)
+        x.pop("_leitura_obs", None)
+        if parcial:
+            x["_leitura_parcial"] = parcial
+        if obs:
+            x["_leitura_obs"] = obs
+        return x
+    import copy
+    orig = copy.deepcopy((r, crimes, eventos, incidentes))
+    try:
+        return fim(derivar(r, crimes, eventos, incidentes))
+    except Exception as e:
+        erro = _falha(e)
+    nomes = {"c": "crimes (PROCESSOS CRIMINAIS)", "e": "eventos (EVENTOS DE INÍCIO)", "i": "incidentes"}
+    for sem in ("i", "e", "c", "ie", "ci", "ce", "cei"):
+        r2, c2, e2, i2 = copy.deepcopy(orig)
+        try:
+            x = derivar(r2, [] if "c" in sem else c2, [] if "e" in sem else e2, [] if "i" in sem else i2)
+        except Exception:
+            continue
+        parcial.append("análise com falha (%s): %s deixado(s) de fora - conferir no SEEU e reimportar depois da correção" % (
+            erro, " e ".join(nomes[k] for k in sem)))
+        return fim(x)
+    raise ValueError("RSPE lido, mas a análise falhou (%s) - enviar o arquivo para correção" % erro)
 
 
 def cpf_rspe(v):

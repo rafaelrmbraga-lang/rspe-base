@@ -715,7 +715,7 @@ PROGRESSÃO ANTECIPADA (ícone azul de degraus ao lado do nome)
   estado vêm antecipando a progressão). Aparece nos mesmos lugares do ícone
   da saída temporária. Requisitos:
   - regime fechado ou semiaberto, com o cumprimento em curso;
-  - progressão prevista para daqui a 1 a 60 dias (o lapso já atingido fica
+  - progressão prevista para daqui a 1 a 90 dias (o lapso já atingido fica
     na aba Progressão como vencido);
   - nenhum crime não extinto com violência ou grave ameaça (marcação do
     RSPE);
@@ -860,6 +860,13 @@ v7.9.3
     "processoExecucaoPenal.do") passa a ser reconhecido pelo cabeçalho,
     pelos cálculos e pelo rodapé do SEEU; antes era recusado como "não é
     um RSPE do SEEU".
+  - Importação mais tolerante (RSPE e ficha): o documento é reconhecido
+    pelo conjunto das marcas (com ou sem acento, maiúsculas, espaços), não
+    por linha fixa; cabeçalho/rodapé do navegador, título ausente ou em
+    outra linha e tribunal em outra linha não atrapalham; parte que falhar
+    na leitura entra como "Leitura parcial" no registro, com a seção
+    afetada, sem derrubar o arquivo; a recusa diz o motivo (sem texto =
+    digitalizado, protegido por senha, ou outro documento).
   - Cumprido pela âncora do SEEU: a custódia que só a ficha mostra (reinício
     depois da última interrupção, já coberto pelo Total Interrupções do SEEU)
     não é mais descontada.
@@ -873,6 +880,10 @@ v7.9.3
   - Painel do assistido, "Benefícios": indulto e comutação mostram só os
     decretos cabíveis (ex.: "2017 Cabível  2024 Cabível"); sem nenhum,
     "Nenhum decreto cabível". O detalhe de cada decreto segue na aba Indulto.
+  - Painel do assistido: a conduta da ficha aparece ao lado do nome (Ótima e
+    Boa em verde; Má e "Responde PADIC" em vermelho; Sem lapso e as demais em
+    cinza). Saíram do painel os "Pontos de atenção" (estão na aba Auditoria) e
+    a lista de vínculos de trabalho (a remição e os atestados continuam).
   - Divergência no SEEU/SIAPEN: "!" amarelo ao lado do nome (todas as abas,
     painel do assistido e quadro), com a lista ao passar o mouse e a
     explicação na legenda do rodapé, quando o próprio documento não fecha:
