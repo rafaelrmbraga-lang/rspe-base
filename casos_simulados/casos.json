@@ -18133,5 +18133,407 @@
     "v": "\"id\": \"2007\",(?:(?!\"id\": \").)*?\"s\": \"imp\"(?:(?!\"id\": \").)*?\"mot\": \"[^\"]*faltavam 2a7m7d para a íntegra[^\"]*pela âncora do SEEU, faltavam 5a0m0d"
    }
   ]
+ },
+ {
+  "acoes": [],
+  "id": "S142",
+  "grupo": "Divergência no SEEU/SIAPEN",
+  "titulo": "Pena total do RSPE (3 anos) menor que a soma das ações (3a + 2a), sem comutação/indulto/suspensão: alerta e \"!\"",
+  "conta": "Ações de 3a0m0d e 2a0m0d somam 5a0m0d; o RSPE imprime pena total 3a0m0d, sem comutação, indulto, suspensão, extinção ou unificação: divergência do próprio SEEU (alerta na Auditoria e \"!\" ao lado do nome).",
+  "processo": "9900142-00.2026.8.12.0001",
+  "rspe": {
+   "arquivo": "SIMULADO_142.pdf",
+   "nome": "SIMULADO CASO 142",
+   "processo_execucao": "9900142-00.2026.8.12.0001",
+   "cpf": "90000000142",
+   "nome_mae": "MAE SIMULADA 142",
+   "rg": "",
+   "data_nascimento": "01/01/1975",
+   "numero_antigo": "",
+   "tribunal": "TJMS",
+   "vara": "TJMS - 1ª VARA DE EXECUÇÃO PENAL",
+   "comarca": "CAMPO GRANDE",
+   "status_execucao": "ATIVO",
+   "regime_atual": "Fechado - ATIVO",
+   "pena_total": "3a0m0d",
+   "pena_cumprida": "1a0m1d",
+   "pena_remanescente": "1a11m29d",
+   "total_interrupcoes": "0a0m0d",
+   "saldo_remidos": "0 dias (0 dias remidos - 0 dias perdidos)",
+   "data_base_seeu": "05/10/2025",
+   "livramento_data_base_seeu": "05/10/2025",
+   "progressao_previsao_seeu": "17/12/2026",
+   "livramento_previsao_seeu": "08/10/2027",
+   "termino_previsao_seeu": "03/10/2028",
+   "fracao_progressao_aplicada": "",
+   "fracao_livramento_aplicada": "",
+   "progressao_obs_seeu": "",
+   "livramento_obs_seeu": "",
+   "data_geracao_rspe": "05/10/2026",
+   "versao_leitura_rspe": 4,
+   "_crimes": [
+    {
+     "processo_criminal": "8800001-00.2015.8.12.0001",
+     "processo_situacao": "",
+     "tipo_processo": "ACAO PENAL",
+     "vara_condenacao": "Campo Grande, 1ª Vara",
+     "data_denuncia": "09/04/2015",
+     "data_sentenca": "26/09/2015",
+     "transito_mp": "25/11/2015",
+     "transito_processo": "25/11/2015",
+     "pena_total_processo": "3a0m0d - PENA ORIGINÁRIA",
+     "regime_sentenca": "Fechado",
+     "lei": "2848/40 - Código Penal",
+     "artigo": "ART 155: Furto",
+     "tipo_penal": "CAPUT: tipo simulado, Reclusão: 1 a 4 anos E Multa",
+     "pena_imposta": "3 ano(s), 0 mês(es) e 0 dia(s)",
+     "data_infracao": "10/03/2015",
+     "vga": "N",
+     "resultado_morte": "N",
+     "reincidente_comum": "N",
+     "reincidente_especifico": "N",
+     "comando_orcrim": "N",
+     "fracao_progressao": "1/6 - Comum",
+     "fracao_livramento": "1/3 - Comum Primário",
+     "extinto": "Não",
+     "suspenso": "Não"
+    },
+    {
+     "processo_criminal": "8800142-00.2016.8.12.0001",
+     "processo_situacao": "",
+     "tipo_processo": "ACAO PENAL",
+     "vara_condenacao": "Campo Grande, 1ª Vara",
+     "data_denuncia": "09/04/2015",
+     "data_sentenca": "26/09/2016",
+     "transito_mp": "25/11/2015",
+     "transito_processo": "25/11/2015",
+     "pena_total_processo": "2a0m0d - PENA ORIGINÁRIA",
+     "regime_sentenca": "Fechado",
+     "lei": "2848/40 - Código Penal",
+     "artigo": "ART 155: Furto",
+     "tipo_penal": "CAPUT: tipo simulado, Reclusão: 1 a 4 anos E Multa",
+     "pena_imposta": "2 ano(s), 0 mês(es) e 0 dia(s)",
+     "data_infracao": "10/03/2016",
+     "vga": "N",
+     "resultado_morte": "N",
+     "reincidente_comum": "N",
+     "reincidente_especifico": "N",
+     "comando_orcrim": "N",
+     "fracao_progressao": "1/6 - Comum",
+     "fracao_livramento": "1/3 - Comum Primário",
+     "extinto": "Não",
+     "suspenso": "Não"
+    }
+   ],
+   "_eventos": [
+    {
+     "tipo": "PRISÃO/INÍCIO DE CUMPRIMENTO",
+     "motivo": "PRISÃO DEFINITIVA",
+     "complemento": "",
+     "data": "05/10/2025",
+     "data_decisao": "",
+     "data_referencia": "",
+     "processos": "8800001-00.2015.8.12.0001, 8800142-00.2016.8.12.0001"
+    }
+   ],
+   "_incidentes": [
+    {
+     "tipo": "FIXAÇÃO/ALTERAÇÃO DE REGIME",
+     "motivo": "",
+     "complemento": "Fechado - Regime Inicial",
+     "data": "",
+     "data_decisao": "",
+     "data_referencia": "05/10/2025",
+     "processos": "",
+     "situacao": "CONCEDIDO"
+    }
+   ],
+   "_hash": "sim142"
+  },
+  "ficha": null,
+  "manuais": {},
+  "extra_rspe": [],
+  "checks": [
+   {
+    "t": "aud",
+    "tipo": "divergencia-seeu-pena-total",
+    "nivel": "alerta",
+    "presente": true,
+    "contem": [
+     "3 anos",
+     "5 anos"
+    ]
+   },
+   {
+    "t": "campo",
+    "campo": "div_seeu",
+    "op": "contem",
+    "v": "Pena total 3a0m0d menor que a soma das ações (5a0m0d)"
+   }
+  ]
+ },
+ {
+  "acoes": [],
+  "id": "S143",
+  "grupo": "Divergência no SEEU/SIAPEN",
+  "titulo": "Prisão em flagrante lançada 5 meses antes do fato da ação vinculada: alerta e \"!\"",
+  "conta": "Prisão de 05/10/2014 vinculada à ação com fato em 10/03/2015 (156 dias depois, mais de 30): prisão de outro processo ou data do fato errada no SEEU.",
+  "processo": "9900143-00.2026.8.12.0001",
+  "rspe": {
+   "arquivo": "SIMULADO_143.pdf",
+   "nome": "SIMULADO CASO 143",
+   "processo_execucao": "9900143-00.2026.8.12.0001",
+   "cpf": "90000000143",
+   "nome_mae": "MAE SIMULADA 143",
+   "rg": "",
+   "data_nascimento": "01/01/1975",
+   "numero_antigo": "",
+   "tribunal": "TJMS",
+   "vara": "TJMS - 1ª VARA DE EXECUÇÃO PENAL",
+   "comarca": "CAMPO GRANDE",
+   "status_execucao": "ATIVO",
+   "regime_atual": "Fechado - ATIVO",
+   "pena_total": "3a0m0d",
+   "pena_cumprida": "1a0m1d",
+   "pena_remanescente": "1a11m29d",
+   "total_interrupcoes": "0a0m0d",
+   "saldo_remidos": "0 dias (0 dias remidos - 0 dias perdidos)",
+   "data_base_seeu": "05/10/2025",
+   "livramento_data_base_seeu": "05/10/2025",
+   "progressao_previsao_seeu": "17/12/2026",
+   "livramento_previsao_seeu": "08/10/2027",
+   "termino_previsao_seeu": "03/10/2028",
+   "fracao_progressao_aplicada": "",
+   "fracao_livramento_aplicada": "",
+   "progressao_obs_seeu": "",
+   "livramento_obs_seeu": "",
+   "data_geracao_rspe": "05/10/2026",
+   "versao_leitura_rspe": 4,
+   "_crimes": [
+    {
+     "processo_criminal": "8800001-00.2015.8.12.0001",
+     "processo_situacao": "",
+     "tipo_processo": "ACAO PENAL",
+     "vara_condenacao": "Campo Grande, 1ª Vara",
+     "data_denuncia": "09/04/2015",
+     "data_sentenca": "26/09/2015",
+     "transito_mp": "25/11/2015",
+     "transito_processo": "25/11/2015",
+     "pena_total_processo": "3a0m0d - PENA ORIGINÁRIA",
+     "regime_sentenca": "Fechado",
+     "lei": "2848/40 - Código Penal",
+     "artigo": "ART 155: Furto",
+     "tipo_penal": "CAPUT: tipo simulado, Reclusão: 1 a 4 anos E Multa",
+     "pena_imposta": "3 ano(s), 0 mês(es) e 0 dia(s)",
+     "data_infracao": "10/03/2015",
+     "vga": "N",
+     "resultado_morte": "N",
+     "reincidente_comum": "N",
+     "reincidente_especifico": "N",
+     "comando_orcrim": "N",
+     "fracao_progressao": "1/6 - Comum",
+     "fracao_livramento": "1/3 - Comum Primário",
+     "extinto": "Não",
+     "suspenso": "Não"
+    }
+   ],
+   "_eventos": [
+    {
+     "tipo": "PRISÃO/INÍCIO DE CUMPRIMENTO",
+     "motivo": "PRISÃO EM FLAGRANTE",
+     "complemento": "",
+     "data": "05/10/2014",
+     "data_decisao": "",
+     "data_referencia": "",
+     "processos": "8800001-00.2015.8.12.0001"
+    },
+    {
+     "tipo": "PRISÃO/INÍCIO DE CUMPRIMENTO",
+     "motivo": "PRISÃO DEFINITIVA",
+     "complemento": "",
+     "data": "05/10/2025",
+     "data_decisao": "",
+     "data_referencia": "",
+     "processos": "8800001-00.2015.8.12.0001"
+    }
+   ],
+   "_incidentes": [
+    {
+     "tipo": "FIXAÇÃO/ALTERAÇÃO DE REGIME",
+     "motivo": "",
+     "complemento": "Fechado - Regime Inicial",
+     "data": "",
+     "data_decisao": "",
+     "data_referencia": "05/10/2025",
+     "processos": "",
+     "situacao": "CONCEDIDO"
+    }
+   ],
+   "_hash": "sim143"
+  },
+  "ficha": null,
+  "manuais": {},
+  "extra_rspe": [],
+  "checks": [
+   {
+    "t": "aud",
+    "tipo": "divergencia-seeu-prisao-antes-do-fato",
+    "nivel": "alerta",
+    "presente": true,
+    "contem": [
+     "05/10/2014",
+     "10/03/2015"
+    ]
+   },
+   {
+    "t": "campo",
+    "campo": "div_seeu",
+    "op": "nao_vazio",
+    "v": ""
+   }
+  ]
+ },
+ {
+  "acoes": [],
+  "id": "S144",
+  "grupo": "Divergência no SEEU/SIAPEN",
+  "titulo": "Pena total menor que a soma, com comutação concedida: sem \"!\"",
+  "conta": "Mesma situação do S142, mas com comutação concedida para a 2ª ação: a diferença tem explicação no RSPE; nenhuma divergência.",
+  "processo": "9900144-00.2026.8.12.0001",
+  "rspe": {
+   "arquivo": "SIMULADO_144.pdf",
+   "nome": "SIMULADO CASO 144",
+   "processo_execucao": "9900144-00.2026.8.12.0001",
+   "cpf": "90000000144",
+   "nome_mae": "MAE SIMULADA 144",
+   "rg": "",
+   "data_nascimento": "01/01/1975",
+   "numero_antigo": "",
+   "tribunal": "TJMS",
+   "vara": "TJMS - 1ª VARA DE EXECUÇÃO PENAL",
+   "comarca": "CAMPO GRANDE",
+   "status_execucao": "ATIVO",
+   "regime_atual": "Fechado - ATIVO",
+   "pena_total": "3a0m0d",
+   "pena_cumprida": "1a0m1d",
+   "pena_remanescente": "1a11m29d",
+   "total_interrupcoes": "0a0m0d",
+   "saldo_remidos": "0 dias (0 dias remidos - 0 dias perdidos)",
+   "data_base_seeu": "05/10/2025",
+   "livramento_data_base_seeu": "05/10/2025",
+   "progressao_previsao_seeu": "17/12/2026",
+   "livramento_previsao_seeu": "08/10/2027",
+   "termino_previsao_seeu": "03/10/2028",
+   "fracao_progressao_aplicada": "",
+   "fracao_livramento_aplicada": "",
+   "progressao_obs_seeu": "",
+   "livramento_obs_seeu": "",
+   "data_geracao_rspe": "05/10/2026",
+   "versao_leitura_rspe": 4,
+   "_crimes": [
+    {
+     "processo_criminal": "8800001-00.2015.8.12.0001",
+     "processo_situacao": "",
+     "tipo_processo": "ACAO PENAL",
+     "vara_condenacao": "Campo Grande, 1ª Vara",
+     "data_denuncia": "09/04/2015",
+     "data_sentenca": "26/09/2015",
+     "transito_mp": "25/11/2015",
+     "transito_processo": "25/11/2015",
+     "pena_total_processo": "3a0m0d - PENA ORIGINÁRIA",
+     "regime_sentenca": "Fechado",
+     "lei": "2848/40 - Código Penal",
+     "artigo": "ART 155: Furto",
+     "tipo_penal": "CAPUT: tipo simulado, Reclusão: 1 a 4 anos E Multa",
+     "pena_imposta": "3 ano(s), 0 mês(es) e 0 dia(s)",
+     "data_infracao": "10/03/2015",
+     "vga": "N",
+     "resultado_morte": "N",
+     "reincidente_comum": "N",
+     "reincidente_especifico": "N",
+     "comando_orcrim": "N",
+     "fracao_progressao": "1/6 - Comum",
+     "fracao_livramento": "1/3 - Comum Primário",
+     "extinto": "Não",
+     "suspenso": "Não"
+    },
+    {
+     "processo_criminal": "8800144-00.2016.8.12.0001",
+     "processo_situacao": "",
+     "tipo_processo": "ACAO PENAL",
+     "vara_condenacao": "Campo Grande, 1ª Vara",
+     "data_denuncia": "09/04/2015",
+     "data_sentenca": "26/09/2016",
+     "transito_mp": "25/11/2015",
+     "transito_processo": "25/11/2015",
+     "pena_total_processo": "2a0m0d - PENA ORIGINÁRIA",
+     "regime_sentenca": "Fechado",
+     "lei": "2848/40 - Código Penal",
+     "artigo": "ART 155: Furto",
+     "tipo_penal": "CAPUT: tipo simulado, Reclusão: 1 a 4 anos E Multa",
+     "pena_imposta": "2 ano(s), 0 mês(es) e 0 dia(s)",
+     "data_infracao": "10/03/2016",
+     "vga": "N",
+     "resultado_morte": "N",
+     "reincidente_comum": "N",
+     "reincidente_especifico": "N",
+     "comando_orcrim": "N",
+     "fracao_progressao": "1/6 - Comum",
+     "fracao_livramento": "1/3 - Comum Primário",
+     "extinto": "Não",
+     "suspenso": "Não"
+    }
+   ],
+   "_eventos": [
+    {
+     "tipo": "PRISÃO/INÍCIO DE CUMPRIMENTO",
+     "motivo": "PRISÃO DEFINITIVA",
+     "complemento": "",
+     "data": "05/10/2025",
+     "data_decisao": "",
+     "data_referencia": "",
+     "processos": "8800001-00.2015.8.12.0001, 8800144-00.2016.8.12.0001"
+    }
+   ],
+   "_incidentes": [
+    {
+     "tipo": "FIXAÇÃO/ALTERAÇÃO DE REGIME",
+     "motivo": "",
+     "complemento": "Fechado - Regime Inicial",
+     "data": "",
+     "data_decisao": "",
+     "data_referencia": "05/10/2025",
+     "processos": "",
+     "situacao": "CONCEDIDO"
+    },
+    {
+     "tipo": "COMUTAÇÃO",
+     "motivo": "",
+     "complemento": "DECRETO SIMULADO",
+     "data": "",
+     "data_decisao": "01/01/2026",
+     "data_referencia": "25/12/2025",
+     "processos": "8800144-00.2016.8.12.0001",
+     "situacao": "CONCEDIDO"
+    }
+   ],
+   "_hash": "sim144"
+  },
+  "ficha": null,
+  "manuais": {},
+  "extra_rspe": [],
+  "checks": [
+   {
+    "t": "aud",
+    "tipo": "divergencia-seeu-pena-total",
+    "presente": false
+   },
+   {
+    "t": "campo",
+    "campo": "div_seeu",
+    "op": "vazio",
+    "v": ""
+   }
+  ]
  }
 ]

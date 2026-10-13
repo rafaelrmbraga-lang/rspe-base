@@ -1159,6 +1159,15 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
     # a Auditoria cuida da matemática do RSPE; o que já aparece nas outras abas (remição/ficha, indulto e
     # comutação, prescrição, prazos vencidos, extinção) não se repete aqui
     aud["aud_itens"] = list(extras or []) + [i for i in aud["aud_itens"] if so_matematica(i) and not i.get("oculto")]
+    # divergências impressas no próprio RSPE/ficha (dado da fonte, não leitura): alerta na Auditoria e "!" ao lado do nome
+    try:
+        _dv = ra.divergencias_fonte(r, ficha)
+    except Exception:
+        _dv = []
+    if any(i["tipo"] == "divergencia-siapen-cpf" for i in _dv):
+        # o confronto da ficha já apontava o CPF diferente: fica um só alerta (o da divergência, com baixa própria)
+        aud["aud_itens"] = [i for i in aud["aud_itens"] if not (i.get("tipo") == "rspe-x-ficha" and (i.get("titulo") or "").startswith("CPF da ficha"))]
+    aud["aud_itens"] = _dv + aud["aud_itens"]
     # confronto com a ficha sem prejuízo direto ao assistido (reinício/início lançado pela ficha, retomada divergente, regressão
     # ausente no RSPE, divergência de identidade): pesa como "verificar", não como alerta vermelho. O que prejudica (prisão sem
     # cômputo, fuga com alvará, regime mais gravoso, benefício ausente no RSPE) continua alerta
@@ -1168,7 +1177,7 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
     if execucao_extinta(r):
         # pena extinta: as divergências do cálculo não têm mais efeito para o assistido - ficam como informação
         for i in aud["aud_itens"]:
-            if i["nivel"] in ("alerta", "verificar") and not str(i.get("tipo") or "").startswith(("falha", "pena-cumprida", "extin")):
+            if i["nivel"] in ("alerta", "verificar") and not str(i.get("tipo") or "").startswith(("falha", "pena-cumprida", "extin", "divergencia-")):
                 i["nivel"] = "info"
                 i["titulo"] = i["titulo"] + " (execução extinta: sem efeito)"
     aud["aud_itens"].sort(key=lambda i: {"alerta": 0, "verificar": 1, "info": 2, "ok": 3}.get(i["nivel"], 9))
@@ -1187,6 +1196,8 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
             it["nivel_cor"] = {"alerta": "vermelho", "verificar": "amarelo", "ok": "verde", "info": "cinza"}[it["nivel"]]
             it["nivel_txt"] = {"alerta": "Alerta", "verificar": "Verificar", "ok": "OK", "info": "Info"}[it["nivel"]]
         it["fundamentacao"] = ra.fundamentacao(it, r)  # texto para a impugnação do cálculo (Auditoria > Copiar fundamentação)
+    # "!" ao lado do nome: as divergências da fonte ainda não baixadas (baixar todas tira o "!" de todas as listas)
+    div_seeu = [i["curto"] for i in aud["aud_itens"] if str(i.get("tipo") or "").startswith("divergencia-") and not i["baixado"]]
     # recontagem sem os baixados
     n_al = sum(1 for i in aud["aud_itens"] if i["nivel"] == "alerta" and not i["baixado"])
     n_ve = sum(1 for i in aud["aud_itens"] if i["nivel"] == "verificar" and not i["baixado"])
@@ -1242,6 +1253,7 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
         "aud_status": aud["aud_status"], "aud_resumo": aud["aud_resumo"], "aud_alertas": aud["aud_alertas"], "aud_baixados": aud.get("aud_baixados", 0),
         "aud_verificar": aud["aud_verificar"], "aud_itens": aud["aud_itens"], "aud_n": len(aud["aud_itens"]),
         "aud_base": aud["aud_base"],
+        "div_seeu": div_seeu, "div_seeu_txt": "; ".join(div_seeu),
         "frac_prog": fracoes_texto(r, "fracao_progressao") or rs.pct(r.get("fracao_progressao_aplicada", "")),
         "dbase": r.get("data_base_seeu") or r.get("data_base", ""),
         "ped_prog": pedidos(r, "PROGRESS"),
@@ -1463,7 +1475,7 @@ def modelo_erro(r, erro, baixas=None):
               "regime": (r.get("regime_atual") or "").replace(" - ATIVO", ""), "aud_itens": [it], "aud_n": 1, "aud_alertas": 0 if b else 1, "aud_verificar": 0,
               "aud_status": "ok" if b else "atencao", "aud_cor": "verde" if b else "vermelho",
               "aud_resumo": "Falha ao analisar (baixada) - conferir o PDF" if b else "Falha ao analisar - conferir o PDF", "aud_base": "base jurídica %s" % rg.versao(),
-              "aud_info": 0, "presc_linhas": [], "presc_n": 0, "fd_linhas": [], "fd_blocos": [], "ind_status": [], "crimes_det": [], "incidentes": [],
+              "aud_info": 0, "div_seeu": [], "div_seeu_txt": "", "presc_linhas": [], "presc_n": 0, "fd_linhas": [], "fd_blocos": [], "ind_status": [], "crimes_det": [], "incidentes": [],
               "ficha_tem": False, "ficha": None, "falta_sim": False, "falta_apurar": False, "falta_det": "", "interrompida": False, "estado_exec": "", "ind_sim": False,
               "arquivo": r.get("arquivo", ""), "geracao": r.get("data_geracao_rspe", ""), "erro": str(erro)})
     return m

@@ -181,6 +181,161 @@ def _item(nivel, titulo, detalhe, fundamento="", tipo="", ref=""):
     return {"nivel": nivel, "titulo": titulo, "detalhe": detalhe, "fundamento": fundamento, "tipo": tipo, "ref": ref or ""}
 
 
+# ---------------- divergências impressas no próprio documento (SEEU/SIAPEN) ----------------
+# Não são falha de leitura: o RSPE ou a ficha trazem dados que não fecham entre si. Cada uma vira alerta na Auditoria
+# (tipo estável "divergencia-...", ref com os valores divergentes: a baixa vale enquanto a divergência for a mesma) e o "!"
+# amarelo ao lado do nome (rspe_view.modelo -> m["div_seeu"]).
+DIV_FONTE = "Dado do próprio documento (SEEU/SIAPEN), não erro de leitura: conferir nos autos."
+
+
+def _cpf_valido(d):
+    """CPF de 11 dígitos com os dígitos verificadores corretos (e não repetidos)."""
+    if len(d) != 11 or len(set(d)) == 1:
+        return False
+    n = [int(x) for x in d]
+    for k in (9, 10):
+        if (sum(n[i] * (k + 1 - i) for i in range(k)) * 10) % 11 % 10 != n[k]:
+            return False
+    return True
+
+
+def _amd_soma(L):
+    return rs.amd_normal(sum(x[0] for x in L), sum(x[1] for x in L), sum(x[2] for x in L))
+
+
+def _amd_txt(v):
+    """Valor de rs.amd_normal -> "10a2m5d"."""
+    return "%da%dm%dd" % (v // 10000, v // 100 % 100, v % 100)
+
+
+def _div(titulo, detalhe, conferir, tipo, ref, curto):
+    it = _item("alerta", titulo, "%s %s" % (detalhe, conferir), DIV_FONTE, tipo=tipo, ref=ref)
+    it["curto"] = curto
+    return it
+
+
+def divergencias_fonte(r, ficha=None):
+    """Inconsistências impressas no RSPE do SEEU ou na ficha do SIAPEN (dado da fonte, a conferir nos autos):
+    1) pena total menor que a soma das penas das ações, sem comutação, indulto, suspensão, extinção ou unificação que explique;
+    2) pena total de uma ação diferente da soma das penas dos seus crimes (fora pena convertida, medida de segurança, HC/apelação,
+       crime sem pena e crime extinto que fecha a conta); 3) duas ações com o mesmo número (penas e sentenças diferentes);
+    4) prisão lançada mais de 30 dias antes do fato da ação a que o SEEU a vinculou; 5) ficha sem data da prisão;
+    6) CPF da ficha diferente do CPF do RSPE (os dois com 11 dígitos válidos; o número provisório de 13 dígitos não conta)."""
+    out = []
+    crimes = r.get("_crimes") or []
+    acoes = {}
+    for c in crimes:
+        acoes.setdefault(rs.chave_processo(c.get("processo_criminal")), []).append(c)
+    _ext = lambda c: (c.get("extinto") or "").upper().startswith("S")
+    # 3) mesmo número, penas e sentenças diferentes: duas ações cadastradas com um só número
+    dup = set()
+    for k, cs in acoes.items():
+        pares = {}
+        for c in cs:
+            pares.setdefault((c.get("pena_total_processo") or "").split(" - ")[0].strip(), set()).add(c.get("data_sentenca") or "")
+        sent = {s for v in pares.values() for s in v if s}
+        if k and len(pares) > 1 and len(sent) > 1 and all(rs.pena_para_dias(p) for p in pares):
+            dup.add(k)
+            num = cs[0].get("processo_criminal") or k
+            out.append(_div("Duas ações com o mesmo número no RSPE (%s)" % num,
+                            "O RSPE lista mais de uma ação com o número %s, com penas (%s) e sentenças (%s) diferentes." % (
+                                num, " e ".join(sorted(pares)), " e ".join(sorted(sent, key=lambda s: rs.to_date(s) or date.min))),
+                            "Conferir nos autos o número de cada ação e pedir a correção do cadastro no SEEU.",
+                            "divergencia-seeu-acao-duplicada", num, "Duas ações com o mesmo número (%s)" % num))
+    # 2) pena da ação x soma dos crimes
+    for k, cs in acoes.items():
+        if k in dup:
+            continue
+        rot = ((cs[0].get("pena_total_processo") or "").split(" - ", 1) + [""])[1].strip().upper()
+        tp = rs.pena_amd(cs[0].get("pena_total_processo"))
+        si = [rs.pena_amd(c.get("pena_imposta")) for c in cs]
+        if rot not in ("", "PENA ORIGINÁRIA", "PENA ORIGINARIA") or not tp or not rs.amd_normal(*tp) or not all(si) \
+                or any(not rs.amd_normal(*x) for x in si):
+            continue  # pena convertida, medida de segurança, HC/apelação, crime sem pena: a diferença tem explicação no próprio RSPE
+        t = rs.amd_normal(*tp)
+        if t == _amd_soma(si) or t == _amd_soma([x for x, c in zip(si, cs) if not _ext(c)] or [(0, 0, 0)]):
+            continue
+        num = cs[0].get("processo_criminal") or k
+        out.append(_div("Pena da ação diferente da soma dos crimes (%s)" % num,
+                        "Na ação %s o RSPE imprime pena total de %s, mas %s %s." % (
+                            num, rs.pena_extenso(_amd_txt(t)), "a pena do único crime listado é" if len(cs) == 1 else "as penas dos %d crimes listados somam" % len(cs),
+                            rs.pena_extenso(_amd_txt(_amd_soma(si)))),
+                        "Conferir a pena na sentença ou no acórdão e, havendo erro, pedir a retificação no SEEU.",
+                        "divergencia-seeu-pena-acao", "%s|%s|%s" % (num, _amd_txt(t), _amd_txt(_amd_soma(si))),
+                        "Ação %s: pena %s x soma dos crimes %s" % (num, _amd_txt(t), _amd_txt(_amd_soma(si)))))
+    # 1) pena total x soma das ações
+    T = rs.pena_amd(r.get("pena_total"))
+    tots = [(rs.pena_amd(cs[0].get("pena_total_processo")), cs) for cs in acoes.values()]
+    incid = r.get("_incidentes") or []
+    if T and rs.amd_normal(*T) and tots and all(t for t, _ in tots):
+        t = rs.amd_normal(*T)
+        s_all = _amd_soma([x for x, _ in tots])
+        s_at = _amd_soma([x for x, cs in tots if not all(_ext(c) for c in cs)] or [(0, 0, 0)])
+        conc = [i for i in incid if (i.get("situacao") or "CONCEDIDO") == "CONCEDIDO" and not i.get("_ficha")]
+        explica = (any(re.search(r"COMUTA|INDULT", i.get("tipo") or "", re.I) for i in conc)
+                   or any(re.search(r"COMUTAD|INDULTAD|EXTINT", c.get("processo_situacao") or "", re.I) for c in crimes)
+                   or any((c.get("suspenso") or "").upper().startswith("S") for c in crimes) or any(_ext(c) for c in crimes))
+        if not explica:
+            # unificação com pena impressa no complemento: a soma fora dela + a pena unificada fecha com o total
+            for i in conc:
+                v = rs.pena_amd(i.get("complemento") or "") if re.search(r"UNIFICA", i.get("tipo") or "", re.I) else None
+                ps = {rs.chave_processo(x) for x in rs.lista_processos(i.get("processos") or "")}
+                if v and ps and _amd_soma([x for x, cs in tots if rs.chave_processo(cs[0].get("processo_criminal")) not in ps] + [v]) == t:
+                    explica = True
+        if t < s_all and t != s_at and not explica:
+            out.append(_div("Pena total do RSPE menor que a soma das penas das ações",
+                            "O RSPE imprime pena total de %s, mas as penas das %d ações somam %s, sem comutação, indulto, suspensão, extinção "
+                            "ou unificação registrada que explique a diferença." % (rs.pena_extenso(r.get("pena_total")), len(tots),
+                                                                                      rs.pena_extenso(_amd_txt(s_all))),
+                            "Conferir nos autos a pena de cada ação e pedir a retificação do cálculo de pena, se for o caso.",
+                            "divergencia-seeu-pena-total", "%s|%s" % (_amd_txt(t), _amd_txt(s_all)),
+                            "Pena total %s menor que a soma das ações (%s)" % (_amd_txt(t), _amd_txt(s_all))))
+    # 4) prisão mais de 30 dias antes do fato da ação vinculada
+    fato = {}
+    for k, cs in acoes.items():
+        ds = [rs.to_date(c.get("data_infracao") or "") for c in cs]
+        ds = [d for d in ds if d]
+        if ds:
+            fato[k] = (min(ds), cs[0].get("processo_criminal") or k)
+    for e in r.get("_eventos") or []:
+        if e.get("_ficha") or "PRIS" not in (e.get("tipo") or "").upper():
+            continue
+        de = rs.to_date(e.get("data") or "")
+        if not de:
+            continue
+        L = []
+        for x in rs.lista_processos(e.get("processos") or ""):
+            f_ = fato.get(rs.chave_processo(x))
+            if f_ and (f_[0] - de).days > 30 and f_ not in L:
+                L.append(f_)
+        if not L:
+            continue
+        mot = (e.get("motivo") or "prisão").strip().lower()
+        out.append(_div("Prisão anterior ao fato da ação vinculada (prisão em %s)" % e.get("data"),
+                        "O RSPE vincula a %s de %s %s, com fato em %s. Pode ser prisão de outro processo lançada nesta execução ou data do "
+                        "fato errada no SEEU." % (mot, e.get("data"), "à ação %s" % L[0][1] if len(L) == 1 else "às ações " + ", ".join(x[1] for x in L),
+                                                  ", ".join(rs.fmt(x[0]) for x in L)),
+                        "Conferir nos autos e pedir a correção do vínculo ou da data, que afeta detração, data-base e prescrição.",
+                        "divergencia-seeu-prisao-antes-do-fato", "%s|%s" % (e.get("data"), ",".join(x[1] for x in L)),
+                        "Prisão de %s antes do fato (%s) da ação vinculada" % (e.get("data"), ", ".join(rs.fmt(x[0]) for x in L))))
+    if ficha:
+        # 5) ficha sem data da prisão
+        if not (ficha.get("data_prisao") or "").strip():
+            out.append(_div("Ficha do SIAPEN sem data da prisão",
+                            "A ficha disciplinar%s não traz a data da prisão no cabeçalho." % (
+                                (" impressa em %s" % ficha.get("data_impressao")) if ficha.get("data_impressao") else ""),
+                            "Conferir a data da prisão no SIAPEN e nos autos; a ficha não comprova a data até a correção.",
+                            "divergencia-siapen-sem-data-prisao", "", "Ficha do SIAPEN sem data da prisão"))
+        # 6) CPF da ficha x RSPE
+        c1, c2 = re.sub(r"\D", "", r.get("cpf") or ""), re.sub(r"\D", "", ficha.get("cpf") or "")
+        if c1 != c2 and _cpf_valido(c1) and _cpf_valido(c2):
+            out.append(_div("CPF da ficha do SIAPEN diferente do CPF do RSPE",
+                            "Ficha: CPF %s; RSPE: CPF %s. Os dois números são válidos." % (ficha.get("cpf"), r.get("cpf")),
+                            "Conferir se a ficha vinculada é mesmo do assistido e qual cadastro está errado (SEEU ou SIAPEN).",
+                            "divergencia-siapen-cpf", "|".join(sorted((c1, c2))), "CPF da ficha (%s) diferente do RSPE (%s)" % (ficha.get("cpf"), r.get("cpf"))))
+    return out
+
+
 def _fr_seeu(txt):
     f = rs.parse_fracao(txt or "")
     return f

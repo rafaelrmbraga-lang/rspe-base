@@ -132,6 +132,11 @@ table.rz{margin-top:8px;width:100%}table.rz td,table.rz th{font-size:12px;vertic
 .pa-ok{display:inline-flex;align-items:center;justify-content:center;margin-left:6px;width:20px;height:18px;border-radius:5px;background:#E4EEF7;color:#1D5C8C;border:1px solid #9DBBD6;vertical-align:1px;cursor:help;flex:none}
 .pa-ok svg{width:12px;height:12px}.pa-ok.quase{background:#FFF6DB;color:#8A6100;border-color:#E2C77A}.pa-ok.feito{background:#1D5C8C;color:#fff;border-color:#1D5C8C}
 #stpop.pa b{color:#1D5C8C}#stpop.pa i{color:#1D5C8C}
+/* "!" amarelo: divergência impressa no próprio RSPE (SEEU) ou na ficha (SIAPEN), a conferir nos autos */
+.dv-seeu{display:inline-flex;align-items:center;justify-content:center;margin-left:6px;width:17px;height:17px;border-radius:50%;font-size:12px;font-weight:800;line-height:1;background:var(--a-dot);color:#fff;vertical-align:1px;cursor:pointer;flex:none}
+.dv-seeu:hover{background:var(--a-tx)}
+.leg .dv-seeu{margin-left:0;cursor:default}
+#stpop.dv b{color:var(--a-tx)}#stpop.dv i{color:var(--a-dot)}
 .rs-old{display:inline-flex;align-items:center;justify-content:center;margin-left:8px;width:18px;height:18px;border-radius:50%;font-size:12px;font-weight:800;background:#FFF1DB;color:#9A5B00;border:1px solid #DDBF85;vertical-align:1px;cursor:help;flex:none}
 .letra{display:inline-flex;align-items:center;border:1px solid var(--line2);border-radius:10px;background:#fff;height:40px;padding:0 4px 0 12px;box-shadow:var(--shadow)}
 .letra .lb{font-size:12px;color:var(--tx3);margin-right:6px;white-space:nowrap}
@@ -894,8 +899,8 @@ const ui = {
     document.getElementById('tabs').innerHTML=this.dados.abas.concat(this.ABAS_EXTRA).map(a=>`<button class="tab ${a.id===this.aba?'on':''}" title="${esc(a.titulo)}" onclick="ui.irAba(${jsa(a.id)})">${this.ICONE[a.id]?`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${this.ICONE[a.id]}</svg>`:''}${this.CURTO[a.id]||a.titulo}${a.cor&&!a.sem_stats?`<span class="cnt"${a.id==='ind'?' title="Assistidos com indulto ou comutação cabível em ao menos um decreto (2000 a 2025), com ou sem pedido - o mesmo número do relatório geral"':''}>${this.contaCor(a,rs)}</span>`:''}${a.id==='quadro'&&this.qdAlertas()?`<span class="cnt" style="background:#F6E4E3;color:#8E2424" title="Cartões com prazo vencido ou para hoje">${this.qdAlertas()}</span>`:''}</button>`).join('');
     document.getElementById('dica').textContent=this.DICA[this.aba]||'O ícone ↗ ao lado do assistido abre a ficha completa · clique no título da coluna para ordenar';
     this.renderFixados();
-    if(this.aba==='ind'){ const selE=document.getElementById('filtro'); selE.parentElement.style.display='none'; selE.dataset.aba=''; document.getElementById('legenda').innerHTML=this.decLegenda(); document.getElementById('subtabs').classList.remove('on'); document.getElementById('modoWrap').style.display='none'; return this.renderIndulto(rs); }
-    if(this.aba==='quadro'){ const selE=document.getElementById('filtro'); selE.parentElement.style.display='none'; selE.dataset.aba=''; document.getElementById('legenda').innerHTML=''; document.getElementById('subtabs').classList.remove('on'); document.getElementById('modoWrap').style.display='none'; return this.renderQuadro(); }
+    if(this.aba==='ind'){ const selE=document.getElementById('filtro'); selE.parentElement.style.display='none'; selE.dataset.aba=''; document.getElementById('legenda').innerHTML=this.decLegenda()+this.divLegenda(); document.getElementById('subtabs').classList.remove('on'); document.getElementById('modoWrap').style.display='none'; return this.renderIndulto(rs); }
+    if(this.aba==='quadro'){ const selE=document.getElementById('filtro'); selE.parentElement.style.display='none'; selE.dataset.aba=''; document.getElementById('legenda').innerHTML=this.divLegenda(); document.getElementById('subtabs').classList.remove('on'); document.getElementById('modoWrap').style.display='none'; return this.renderQuadro(); }
     if(this.aba==='geo'){ const selE=document.getElementById('filtro'); selE.parentElement.style.display='none'; selE.dataset.aba=''; document.getElementById('legenda').innerHTML=''; document.getElementById('subtabs').classList.remove('on');
       document.getElementById('modoWrap').style.display='none'; return this.renderGeo(); }
     if(this.aba==='teses'){ const selE=document.getElementById('filtro'); selE.parentElement.style.display='none'; selE.dataset.aba=''; document.getElementById('legenda').innerHTML='';
@@ -914,7 +919,7 @@ const ui = {
         +(temPed?`<div class="stat pedido ${this.filtroCor==='__ped'?'on':''}" title="Pedido feito (e a situação não mudou depois): sai da contagem da situação" onclick="ui.filtrarCor('__ped')"><i class="dot"></i><b>${nPed}</b><span>Feito</span></div>`:'')+chipVelho; }
     // legenda
     document.getElementById('legenda').innerHTML=Object.keys(rot).filter(c=>c||spec.id==='presc').map(c=>`<span class="leg" title="${esc(((this.dados.rotulos_dica||{})[spec.legenda]||{})[c]||'')}"><i style="background:${c?`var(--${({vermelho:'r',laranja:'o',amarelo:'a',vencido:'r',verde:'g',cinza:'c',azul:'b'})[c]}-dot)`:'#C8CEC8'}"></i>${rot[c]}</span>`).join('')
-      + (rs.some(r=>r.calc_notas&&Object.keys(r.calc_notas).length)?`<span class="leg">* calculado pelo programa: o SEEU não imprimiu o dado (ou ele foi recalculado com dado informado) - o cálculo está na ficha do assistido</span>`:'');
+      + this.divLegenda() + (rs.some(r=>r.calc_notas&&Object.keys(r.calc_notas).length)?`<span class="leg">* calculado pelo programa: o SEEU não imprimiu o dado (ou ele foi recalculado com dado informado) - o cálculo está na ficha do assistido</span>`:'');
     // seletor de situação
     const selEl=document.getElementById('filtro');
     const stb=document.getElementById('subtabs'); stb.classList.toggle('on',this.aba==='ind'||this.aba==='presc');
@@ -1758,7 +1763,7 @@ const ui = {
           <div class="tt"><b>${esc(this.decRot(x0))}</b><small>Decreto ${esc(x0.numero)} · data de referência ${esc(x0.ref)}</small></div>
           <span class="dc-ch c">${c('cabe')} cabem</span>${c('ver')?`<span class="dc-ch" style="background:${this.DEC_COR.ver};color:#fff">${c('ver')} a verificar</span>`:''}<span class="dc-ch n">${c('nao')+c('imp')} não cabem</span>${c('conc')+c('indef')?`<span class="dc-ch k">${c('conc')+c('indef')} já decididos</span>`:''}<span class="dc-ch f" title="execução posterior ao decreto, sem condenação até o decreto ou decreto só para mulheres">${c('fora')} não alcançados</span><span class="sp"></span>
           ${selBen}<select class="dc-sel" onchange="ui.decMostrar=this.value;ui.render()"><option value="todos" ${this.decMostrar==='todos'?'selected':''}>Todos</option><option value="cabe" ${this.decMostrar==='cabe'?'selected':''}>Só quem cabe</option><option value="cabe_ver" ${this.decMostrar==='cabe_ver'?'selected':''}>Cabe ou a verificar</option></select></div>
-        <table><thead><tr><th style="width:18%">Nome</th><th class="nw" style="width:1%">Nº da execução</th><th>Resultado</th><th>Benefício</th><th>Motivo</th><th style="width:1%"></th><th style="width:1%">Pedido</th></tr></thead><tbody>${L.map(({r,d})=>`<tr class="${r.fixado?'fix':''} noclk" style="${d.s==='fora'?'opacity:.5':''}"><td class="first" style="white-space:nowrap">${this.pinHtml(r)}${this.cpNomeTxt(r)}</td><td class="nw">${this.cpProc(r)}</td><td><span class="dres ${d.s}">${esc(this.decRotS(d))}</span></td><td>${esc(this.decBenTxt(d))}</td><td class="dmot">${esc(d.mot||'')}${d.nota?`<div style="font-size:12px">${esc(d.nota)}</div>`:''}</td><td class="nw">${d.s==='fora'?'':this.decBtn(r)}${this.fichaIcoHtml(r)}${this.qbtnHtml(r)}${this.abrirBtnHtml(r)}</td><td>${this.decPed(r,x0.id)}</td></tr>`).join('')}</tbody></table>`;
+        <table><thead><tr><th style="width:18%">Nome</th><th class="nw" style="width:1%">Nº da execução</th><th>Resultado</th><th>Benefício</th><th>Motivo</th><th style="width:1%"></th><th style="width:1%">Pedido</th></tr></thead><tbody>${L.map(({r,d})=>`<tr class="${r.fixado?'fix':''} noclk" style="${d.s==='fora'?'opacity:.5':''}"><td class="first" style="white-space:nowrap">${this.pinHtml(r)}${this.cpNomeTxt(r)}${this.divHtml(r)}</td><td class="nw">${this.cpProc(r)}</td><td><span class="dres ${d.s}">${esc(this.decRotS(d))}</span></td><td>${esc(this.decBenTxt(d))}</td><td class="dmot">${esc(d.mot||'')}${d.nota?`<div style="font-size:12px">${esc(d.nota)}</div>`:''}</td><td class="nw">${d.s==='fora'?'':this.decBtn(r)}${this.fichaIcoHtml(r)}${this.qbtnHtml(r)}${this.abrirBtnHtml(r)}</td><td>${this.decPed(r,x0.id)}</td></tr>`).join('')}</tbody></table>`;
     }
     document.getElementById('card').innerHTML=`<div class="dc">${side}<div class="dc-main">${main}</div></div>`; },
   decBenTxt(d){ if(!['cabe','ver','conc','indef'].includes(d.s)) return '—'; return (d.beneficio||'')+(d.dispositivo?' · '+d.dispositivo:'')+(d.beneficio==='Comutação'&&(d.reducao||d.fracao)?' · '+(d.reducao||d.fracao)+({cumprido:' da pena cumprida',pena:' da pena total'}[(d.reducao_calc||{}).base]||' do remanescente'):''); },
@@ -1788,7 +1793,22 @@ const ui = {
   PIN_SVG:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M14.5 2.5 21.5 9.5l-2.1 2.1-1.4-1.4-3.6 3.6.7 4.2-2.1 2.1-3.9-3.9-4.6 4.6-1.4-1.4 4.6-4.6-3.9-3.9 2.1-2.1 4.2.7 3.6-3.6-1.4-1.4z"/></svg>',
   // saída temporária: verde = elegível; amarelo = requisitos atendidos com ponto a conferir; verde preenchido = pedido feito.
   // Clicar registra o pedido (ou o edita) e leva ao Registro para o SAP
-  stHtml(r){ return this.stIco(r)+this.paHtml(r); },
+  stHtml(r){ return this.divHtml(r)+this.stIco(r)+this.paHtml(r); },
+  // "!" amarelo ao lado do nome: divergência no próprio RSPE/ficha (pena, número da ação, prisão x fato, data da prisão, CPF).
+  // Some quando todas as divergências são baixadas na Auditoria; o clique abre o assistido na aba Auditoria
+  DIV_LEG:'Divergência no SEEU/SIAPEN: dado do próprio documento, a conferir nos autos (detalhe na Auditoria)',
+  divHtml(r){ if(!(r.div_seeu||[]).length) return '';
+    return `<span class="dv-seeu" onclick="event.stopPropagation();ui.stPop(null);ui.divAbrir(${jsa(r.id)})" onmouseenter="ui.divPop(event,${jsa(r.id)})" onmouseleave="ui.stPop(null)">!</span>`; },
+  divPop(ev,id){ const r=this.dados.registros.find(x=>x.id===id); if(!r) return;
+    let el=document.getElementById('stpop'); if(!el){ el=document.createElement('div'); el.id='stpop'; document.body.appendChild(el); }
+    el.className='dv'; const L=r.div_seeu||[];
+    el.innerHTML=`<b>${L.length>1?L.length+' divergências':'Divergência'} no SEEU/SIAPEN</b>`+L.map(t=>`<div><i>!</i><span>${esc(t)}</span></div>`).join('')+
+      `<small>Dado impresso no próprio RSPE ou na ficha, não erro de leitura: conferir nos autos. Clique para ver na Auditoria (onde se dá baixa).</small>`;
+    const b=ev.target.getBoundingClientRect(); el.style.left=Math.max(8,Math.min(b.left, innerWidth-480))+'px';
+    const h=el.offsetHeight; el.style.top=(b.bottom+6+h>innerHeight? Math.max(8,b.top-6-h) : b.bottom+6)+'px'; },
+  divAbrir(id){ this.fecharDrawer();
+    this.irAba('aud'); this.completo(id).then(()=>{ this.aberto=id; this.render(); }); },
+  divLegenda(){ return (this.dados.registros||[]).some(r=>(r.div_seeu||[]).length)?`<span class="leg"><span class="dv-seeu">!</span>${this.DIV_LEG}</span>`:''; },
   stIco(r){ const P=(r.pedidos||{}).st; if(!r.st_ok&&!r.st_quase&&!P) return '';
     return `<span class="st-ok${P?' feito':r.st_ok?'':' quase'}" onclick="event.stopPropagation();ui.stPop(null);ui.stPedido(${jsa(r.id)})" onmouseenter="ui.stPop(event,${jsa(r.id)})" onmouseleave="ui.stPop(null)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4"/><path d="M9 16l-4-4 4-4"/><path d="M5 12h10"/></svg></span>`; },
   // rolar a página fecha o quadro (ele é fixo na tela)

@@ -868,6 +868,16 @@ v7.9.3
   - Painel do assistido, "Benefícios": indulto e comutação mostram só os
     decretos cabíveis (ex.: "2017 Cabível  2024 Cabível"); sem nenhum,
     "Nenhum decreto cabível". O detalhe de cada decreto segue na aba Indulto.
+  - Divergência no SEEU/SIAPEN: "!" amarelo ao lado do nome (todas as abas,
+    painel do assistido e quadro), com a lista ao passar o mouse e a
+    explicação na legenda do rodapé, quando o próprio documento não fecha:
+    pena total menor que a soma das ações sem comutação/indulto/suspensão/
+    extinção/unificação; pena da ação diferente da soma dos crimes; duas
+    ações com o mesmo número; prisão lançada mais de 30 dias antes do fato
+    da ação vinculada; ficha sem data da prisão; CPF da ficha diferente do
+    RSPE (ambos válidos). Cada uma é alerta na Auditoria, com baixa própria:
+    baixadas todas, o "!" some; a baixa vale enquanto a divergência for a
+    mesma, inclusive depois de reimportar o RSPE.
 
 v7.9.2
   - Aviso de legislação nova: ao abrir a base, depois da janela de
