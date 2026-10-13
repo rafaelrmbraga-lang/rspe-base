@@ -348,6 +348,7 @@ tr.sub td{padding:0 0 0 0;background:#FFFFFF;cursor:default}tr.sub:hover td{back
 /* com a ficha do assistido aberta, a calculadora volta para baixo do véu (não cobre o cabeçalho da gaveta) */
 body.drawer-on .btn-calc{z-index:auto}
 .welcome.on{display:grid}
+body:has(.welcome.on) .btn-calc{display:none} /* calculadora só com a base aberta */
 .loading{position:fixed;inset:0;background:var(--bg);display:none;place-items:center;z-index:40}
 .loading.on{display:grid}
 .lbox{width:420px;background:var(--card);border-radius:18px;box-shadow:var(--shadow2);padding:28px 30px;text-align:center}

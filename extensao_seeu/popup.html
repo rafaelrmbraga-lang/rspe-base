@@ -38,7 +38,7 @@
 <body>
 <header>
   <img src="icones/48.png" alt="">
-  <div><b>APTO</b><small>RSPE do SEEU para a pasta vigiada</small></div>
+  <div><b>APTO</b><small>RSPE do SEEU e ficha do SIAPEN para a pasta vigiada</small></div>
   <label class="liga" title="Liga ou desliga o download automático"><input type="checkbox" id="ativo"> <span id="ativoTxt">ligada</span></label>
 </header>
 
@@ -51,9 +51,19 @@
 </section>
 
 <section>
-  <button class="pri" id="agora">Baixar o RSPE do processo aberto</button>
+  <button class="pri" id="agora">Baixar o RSPE do processo aberto (SEEU)</button>
   <div class="estado" id="estado"></div>
   <div class="dica">O automático baixa um RSPE por processo, base e dia, só do processo aberto na tela. Este botão baixa de novo mesmo que já tenha baixado hoje.</div>
+</section>
+
+<section>
+  <details id="loteBox"><summary style="cursor:pointer;font-size:12px;color:var(--tx2)"><b style="color:var(--tx)">Lote</b> · processos (SEEU) ou nomes (SIAPEN)</summary>
+    <textarea id="loteTxt" rows="4" style="width:100%;margin-top:6px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font:12px/1.35 ui-monospace,Consolas,monospace" placeholder="SEEU: um nº de processo por linha. SIAPEN: um nome por linha (NOME ; MÃE para homônimos). Pode colar colunas de planilha."></textarea>
+    <div class="lin"><input type="file" id="loteArq" accept=".txt,.csv" style="flex:1;font-size:11px"><button id="loteIni">Iniciar</button><button id="lotePar">Parar</button></div>
+    <div class="dica">Roda na aba aberta e logada: no SEEU, um processo a cada 8 s; no SIAPEN, com a "Consulta Geral de Interno" aberta, uma ficha a cada 8 s. Vai para a base escolhida acima, pula os já baixados hoje e para se a sessão expirar. No SIAPEN, homônimos não são baixados sem o nome da mãe.</div>
+    <div class="estado" id="loteEst"></div>
+    <ul id="loteLista" style="max-height:140px"></ul>
+  </details>
 </section>
 
 <section>
