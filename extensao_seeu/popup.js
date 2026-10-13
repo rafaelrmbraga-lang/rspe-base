@@ -98,4 +98,42 @@ $("agora").onclick = async () => {
   setTimeout(carregar, 2500);
 };
 
+// ---- lote ----
+function numerosDe(txt) {
+  return [...new Set((String(txt || "").match(/\d{7}-?\d{2}\.?\d{4}\.?\d\.?\d{2}\.?\d{4}/g) || []).map((x) => x.replace(/\D/g, "")))];
+}
+async function desenharLote() {
+  const L = await enviar({ tipo: "loteEstado" });
+  const est = $("loteEst"), ul = $("loteLista");
+  ul.textContent = "";
+  if (!L) { est.className = "estado"; return; }
+  const n = (s) => L.itens.filter((x) => x.status === s).length;
+  const feitos = L.itens.length - n("fila") - n("rodando");
+  est.className = "estado " + (n("erro") ? "erro" : "ok");
+  est.textContent = (L.rodando ? "Em andamento: " : (L.parou ? "Parado: " : "Concluído: ")) + `${feitos} de ${L.itens.length} · salvos ${n("ok")} · já baixados hoje ${n("repetido")} · erros ${n("erro")} · base ${L.base}`;
+  for (const x of L.itens.filter((x) => x.status !== "fila").slice(-60).reverse()) {
+    const li = document.createElement("li");
+    const t = document.createElement("span");
+    t.className = x.status === "erro" ? "e" : x.status === "ok" ? "" : "m";
+    t.textContent = x.n + " · " + ({ ok: "salvo", repetido: "já baixado hoje", rodando: "baixando…", erro: x.msg || "erro" })[x.status];
+    li.appendChild(t);
+    ul.appendChild(li);
+  }
+  if (L.rodando) $("loteBox").open = true;
+}
+$("loteArq").onchange = async (e) => {
+  const f = e.target.files && e.target.files[0];
+  if (f) $("loteTxt").value = numerosDe(await f.text()).map((x) => x.replace(/^(\d{7})(\d{2})(\d{4})(\d)(\d{2})(\d{4})$/, "$1-$2.$3.$4.$5.$6")).join("\n");
+};
+$("loteIni").onclick = async () => {
+  const nums = numerosDe($("loteTxt").value);
+  if (!nums.length) { $("loteEst").className = "estado erro"; $("loteEst").textContent = "Nenhum nº de processo válido na lista."; return; }
+  const r = await enviar({ tipo: "loteIniciar", numeros: nums });
+  if (!r.ok) { $("loteEst").className = "estado erro"; $("loteEst").textContent = r.motivo; return; }
+  desenharLote();
+};
+$("lotePar").onclick = async () => { await enviar({ tipo: "loteParar" }); setTimeout(desenharLote, 800); };
+setInterval(desenharLote, 2000);
+
 carregar();
+desenharLote();

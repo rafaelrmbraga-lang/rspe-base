@@ -57,6 +57,16 @@
 </section>
 
 <section>
+  <details id="loteBox"><summary style="cursor:pointer;font-size:12px;color:var(--tx2)"><b style="color:var(--tx)">Lote</b> · lista de processos para baixar</summary>
+    <textarea id="loteTxt" rows="4" style="width:100%;margin-top:6px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font:12px/1.35 ui-monospace,Consolas,monospace" placeholder="Um nº de processo por linha (com ou sem pontos), ou cole a coluna de uma planilha"></textarea>
+    <div class="lin"><input type="file" id="loteArq" accept=".txt,.csv" style="flex:1;font-size:11px"><button id="loteIni">Iniciar</button><button id="lotePar">Parar</button></div>
+    <div class="dica">Roda na aba do SEEU aberta e logada, um processo a cada 8 segundos, para a base escolhida acima. Pula os já baixados hoje e para se a sessão expirar.</div>
+    <div class="estado" id="loteEst"></div>
+    <ul id="loteLista" style="max-height:140px"></ul>
+  </details>
+</section>
+
+<section>
   <label class="t" for="raiz">Pasta dentro de Downloads</label>
   <input type="text" id="raiz" maxlength="80">
   <label class="chk"><input type="checkbox" id="aviso"> Mostrar aviso discreto no SEEU quando salvar</label>

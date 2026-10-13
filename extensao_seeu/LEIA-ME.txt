@@ -48,6 +48,19 @@ COMO FUNCIONA
  - O ícone mostra quantos RSPE foram salvos hoje; "off" quando desligada; "!"
    quando pausada.
 
+LOTE (lista de processos)
+ - No painel da extensão, abra "Lote", cole os números (um por linha, com ou
+   sem pontos, ou a coluna de uma planilha) ou escolha um .txt/.csv, e clique
+   em "Iniciar". Escolha antes a base de destino.
+ - Roda na aba do SEEU aberta e logada (deixe-a aberta): um processo a cada 8
+   segundos, no máximo 300 por hora. Pula os já baixados hoje.
+ - Cada linha mostra: salvo, já baixado hoje, processo não encontrado, ou o
+   erro. Se a sessão expirar, o lote para; faça login e rode de novo (os já
+   salvos são pulados).
+ - "Parar" interrompe depois do processo em andamento.
+ - Antes de usar em volume, confirme com a Defensoria/TJ as regras de acesso
+   automatizado ao SEEU.
+
 CUIDADOS
  - Só age em https://seeu.pje.jus.br e só no processo aberto na tela. Não
    percorre listas, não abre processos sozinha e não clica em nada do SEEU.
