@@ -57,8 +57,8 @@ def texto_pagina1(caminho):
 
 
 def e_ficha(texto):
-    # tolerante a espaços e quebras de linha no título e ao cabeçalho do sistema (SIAPEN ou AGEPEN)
-    t = re.sub(r"\s+", " ", (texto or "").upper())
+    # tolerante a acentos, maiúsculas/minúsculas, espaços e quebras de linha no título e ao cabeçalho do sistema (SIAPEN ou AGEPEN)
+    t = rs._norm_marca(texto)
     return bool(re.search(r"FICHA ?DISCIPLINAR", t)) and ("SIAPEN" in t or "AGEPEN" in t or "PENITENCI" in t)
 
 
@@ -334,8 +334,27 @@ def _e_isolamento(t):
     if u.startswith("MUDANCA DE CELA"):
         md = re.search(r"DESTINO:\s*(.*?)(?:,\s*CONFORME|$)", u)
         # (a cela de seguro pedida pelo preso não é isolamento)
-        return bool(md and re.search(r"DISCIPLIN|CORRECIONAL|ISOLAMENTO", md.group(1)) and not re.search(r"MOTIVO:[^,]*SEGURO", u))
+        return bool(md and re.search(r"DISCIPLIN|CORRECIONAL|ISOLAMENTO", md.group(1)) and not re.search(r"MOTIVO:[^,]*SEGURO", u)) \
+            or _cela_por_sancao(t)
+    # o fim do isolamento não é isolamento: "Retornou ao convívio após cumprir isolamento", "TÉRMINO DO ISOLAMENTO", "SAI DA CELA
+    # DISCIPLINAR (e passa à condição de sancionado)"
+    if re.search(_RE_FIM_ISOLAMENTO, u):
+        return False
     return bool(re.search(r"ISOLADO|ISOLAMENTO|CELA DISCIPLINAR", u))
+
+
+# (no início do lançamento: "devendo retornar ao convívio" ou "quer retornar ao convívio" num registro de isolamento não é o fim dele)
+_RE_FIM_ISOLAMENTO = (r"^\W*(?:EM \d{2}/\d{2}/\d{2,4}\W*)?(?:NESTA DATA\W*)?(?:O (?:MESMO|INTERNO|PRESO|REEDUCANDO)\s+)?"
+                      r"(?:RETORNOU AO CONVIVIO|TERMINO D[OA] ISOLAMENTO|FIM D[OA] ISOLAMENTO|SAI(?:U)? DA CELA DISCIPLINAR)")
+
+
+def _cela_por_sancao(t):
+    """Mudança de cela por sanção ("Motivo: SANCIONADO", "CELA SANCIONADA POR FALTA GRAVE"; destino correcional ou não): indício
+    de isolamento, só para a lista exibida (conferir a sanção). Não cria falta nem entra em contagem (a falta vem do PADIC/CD)."""
+    u = rs._sem_acento(t or "").upper()
+    mm = re.search(r"MOTIVO:\s*([^,]*)", u)
+    return bool(u.startswith("MUDANCA DE CELA") and mm and re.search(r"\bSANCIONAD", mm.group(1))
+                and not re.search(r"FIM D[OA]|CUMPRID|TERMINO|RETORNO|SEGURO|\bSAI(?:U|R)? DA CELA", mm.group(1)))
 
 
 def cpf_cabecalho(cab):
@@ -362,7 +381,7 @@ def _pagina_historico(p, k):
         return p.extract_text() or "", []
     topo = 0
     if k == 0:
-        w = next((w for w in p.extract_words() if w["text"].startswith("HISTÓRICO")), None)
+        w = next((w for w in p.extract_words() if re.match(r"HIST[ÓO]RICO", w["text"], re.I)), None)
         if w is None:
             return p.extract_text() or "", []
         topo = w["bottom"]
@@ -379,7 +398,8 @@ def _pagina_historico(p, k):
     vis = p.filter(lambda o: not fora(o)).extract_text() or ""
     occ = []
     if any(oculto(c) for c in p.chars):
-        occ = [x for x in (p.filter(lambda o: o.get("object_type") != "char" or oculto(o)).extract_text() or "").splitlines() if x.strip()]
+        occ = [x for x in rs.sem_linhas_navegador(p.filter(lambda o: o.get("object_type") != "char" or oculto(o)).extract_text() or "")[0]
+               .splitlines() if x.strip()]
     return vis, occ
 
 
@@ -422,67 +442,122 @@ def _data_prisao_chars(p):
 
 
 def extrair(caminho):
-    with pdfplumber.open(caminho) as pdf:
+    """Leitura da ficha. Recusa só o que não é ficha (ValueError com o motivo); o que faltar ou falhar numa parte (cabeçalho,
+    histórico, análise) vira "_leitura_parcial", sem derrubar a leitura."""
+    try:
+        pdf = pdfplumber.open(caminho)
+    except Exception as e:
+        if re.search(r"password|encrypt", "%s %s %r" % (e.__class__.__name__, e, getattr(e, "__context__", None)), re.I):
+            raise ValueError("PDF protegido por senha: gere a ficha de novo no SIAPEN, sem proteção") from e
+        raise
+    parcial = []
+    with pdf:
         pags = [p.extract_text() or "" for p in pdf.pages]
+        if not "".join(pags).strip():
+            raise ValueError("PDF sem texto (digitalizado ou imagem): gere o PDF direto do SEEU/SIAPEN, não escaneado")
         if not e_ficha("\n".join(pags)):
             raise ValueError("não é uma Ficha Disciplinar do SIAPEN")
-        dp_chars = _data_prisao_chars(pdf.pages[0]) if pdf.pages else ""
+        dp_chars = _seguro(parcial, "cabeçalho (data da prisão pela posição)", lambda: _data_prisao_chars(pdf.pages[0]) if pdf.pages else "")
         vis, ocultas = [], []
         for k, p in enumerate(pdf.pages):
-            v, o = _pagina_historico(p, k)
-            vis.append(v)
+            try:
+                v, o = _pagina_historico(p, k)
+            except Exception as e:
+                parcial.append("página %d: falha na separação do histórico (%s) - lido o texto corrido da página" % (k + 1, rs._falha(e)))
+                v, o = pags[k], []
+            vis.append(rs.sem_linhas_navegador(v)[0])
             ocultas += o
+    return _extrair_texto(caminho, pags, vis, ocultas, dp_chars, parcial)
+
+
+def _seguro(parcial, rotulo, fn, padrao=""):
+    return rs._seguro(parcial, rotulo, fn, padrao)
+
+
+def _extrair_texto(caminho, pags, vis, ocultas=(), dp_chars="", parcial=None):
+    """Ficha a partir do texto: pags = texto de cada página; vis = texto visível de cada página (sem rodapé e histórico oculto)."""
+    parcial = list(parcial or [])
     t = _limpar("\n".join(vis))
     f = {"arquivo": caminho, "tipo": "ficha_disciplinar", "_versao_extracao": VERSAO_EXTRACAO}
-    cab = t.split("HISTÓRICO")[0]
-    f["nome"] = (re.search(r"Nome:\s*(.+?)\s+RGI:", cab) or [None, ""])[1].strip() if re.search(r"Nome:\s*(.+?)\s+RGI:", cab) else ""
-    f["rgi"] = (re.search(r"RGI:\s*(\d+)", cab) or [None, ""])[1]
-    f["cpf"] = cpf_cabecalho(cab)
-    f["cpf_em_branco"] = not f["cpf"] and bool(re.search(r"CPF:\s*(?:CIN:|RG:|N/C\b|N[AÃ]O INFORMADO|$)", cab, re.M))
-    f["data_nascimento"] = (re.search(r"Data Nascimento:\s*(\d{2}/\d{2}/\d{4})", cab) or [None, ""])[1]
+    m_hist = re.search(r"HISTÓRICO", t) or re.search(r"HISTORICO", t) or re.search(r"(?i)\bhist[óo]rico\b", t)
+    if m_hist is None:
+        parcial.append("título \"HISTÓRICO\" não encontrado: cabeçalho e histórico lidos do texto inteiro - conferir")
+    cab = t[:m_hist.start()] if m_hist else t
+    S = lambda rot, fn, padrao="": _seguro(parcial, "cabeçalho (%s)" % rot, fn, padrao)  # noqa: E731
+    f["nome"] = S("nome", lambda: (re.search(r"Nome:\s*(.+?)\s+RGI:", cab) or [None, ""])[1].strip() if re.search(r"Nome:\s*(.+?)\s+RGI:", cab) else "")
+    f["rgi"] = S("RGI", lambda: (re.search(r"RGI:\s*(\d+)", cab) or [None, ""])[1])
+    f["cpf"] = S("CPF", lambda: cpf_cabecalho(cab))
+    f["cpf_em_branco"] = S("CPF", lambda: not f["cpf"] and bool(re.search(r"CPF:\s*(?:CIN:|RG:|N/C\b|N[AÃ]O INFORMADO|$)", cab, re.M)), False)
+    f["data_nascimento"] = S("data de nascimento", lambda: (re.search(r"Data Nascimento:\s*(\d{2}/\d{2}/\d{4})", cab) or [None, ""])[1])
     # filiação "MÃE \\ PAI" (a mãe vem primeiro no SIAPEN): confronto de identidade com o nome da mãe do RSPE (homônimos)
-    f["filiacao"] = filiacao_cabecalho(cab)
-    f["nome_mae"] = re.split(r"\s*[\\/|]\s*", f["filiacao"])[0].strip() if f["filiacao"] else ""
+    f["filiacao"] = S("filiação", lambda: filiacao_cabecalho(cab))
+    f["nome_mae"] = S("filiação", lambda: re.split(r"\s*[\\/|]\s*", f["filiacao"])[0].strip() if f["filiacao"] else "")
     # o valor fica na mesma linha do rótulo: campo em branco não pega a linha seguinte ("Condenação:" vazio levava "Data Entrada: ...")
-    f["artigo"] = (re.search(r"Artigo:[ \t]*(.*)", cab) or [None, ""])[1].strip()
-    f["data_prisao"] = (re.search(r"Data Prisão:[ \t]*(\d{2}/\d{2}/\d{4})", cab) or [None, ""])[1] or dp_chars or data_prisao_cabecalho(cab)
-    f["condenacao"] = (re.search(r"Condenação:[ \t]*(.*)", cab) or [None, ""])[1].strip()
-    f["unidade"] = (re.search(r"Unidade Penal:[ \t]*(.*)", cab) or [None, ""])[1].strip()
-    f["data_entrada"] = (re.search(r"Data Entrada:\s*(\d{2}/\d{2}/\d{4})", cab) or [None, ""])[1]
+    f["artigo"] = S("artigo", lambda: (re.search(r"Artigo:[ \t]*(.*)", cab) or [None, ""])[1].strip())
+    f["data_prisao"] = S("data da prisão", lambda: (re.search(r"Data Prisão:[ \t]*(\d{2}/\d{2}/\d{4})", cab) or [None, ""])[1]
+                         or dp_chars or data_prisao_cabecalho(cab))
+    f["condenacao"] = S("condenação", lambda: (re.search(r"Condenação:[ \t]*(.*)", cab) or [None, ""])[1].strip())
+    f["unidade"] = S("unidade", lambda: (re.search(r"Unidade Penal:[ \t]*(.*)", cab) or [None, ""])[1].strip())
+    f["data_entrada"] = S("data de entrada", lambda: (re.search(r"Data Entrada:\s*(\d{2}/\d{2}/\d{4})", cab) or [None, ""])[1])
     # sexo biológico do cadastro do SIAPEN ("M"/"F"): concordância de gênero nos textos (registro do SAP, fundamentações).
     # Sem o campo, a unidade feminina basta; do nome nada se deduz
-    msx = re.search(r"Sexo(?: Biol[óo]gico)?:\s*(Masculino|Feminino)", cab, re.I)
-    f["sexo"] = msx.group(1)[0].upper() if msx else ("F" if re.search(r"FEMININ", rs._sem_acento(f["unidade"]).upper()) else "")
-    mc = re.search(r"HIST[ÓO]RICO\s*-\s*CONDUTA:\s*([^\n]+)", t) or re.search(r"CONDUTA:\s*([A-ZÇÃÕÁÉÍÓÚÂÊÔ/ ]+)", t)
-    f["conduta"] = (mc.group(1).strip() if mc else "")
-    f["data_impressao"] = (re.search(r"Impresso em (\d{2}/\d{2}/\d{4})", "\n".join(pags)) or [None, ""])[1]
+
+    def _sexo():
+        msx = re.search(r"Sexo(?: Biol[óo]gico)?:\s*(Masculino|Feminino)", cab, re.I)
+        return msx.group(1)[0].upper() if msx else ("F" if re.search(r"FEMININ", rs._sem_acento(f["unidade"]).upper()) else "")
+    f["sexo"] = S("sexo", _sexo)
+
+    def _conduta():
+        mc = re.search(r"HIST[ÓO]RICO\s*-\s*CONDUTA:\s*([^\n]+)", t) or re.search(r"CONDUTA:\s*([A-ZÇÃÕÁÉÍÓÚÂÊÔ/ ]+)", t)
+        return mc.group(1).strip() if mc else ""
+    f["conduta"] = S("conduta", _conduta)
+    f["data_impressao"] = S("data de impressão", lambda: (re.search(r"Impresso em (\d{2}/\d{2}/\d{4})", "\n".join(pags)) or [None, ""])[1])
     f["paginas"], f["paginas_sem_texto"] = len(pags), [i + 1 for i, x in enumerate(pags) if len(x.strip()) < 20]
     autos = sorted(set(re.findall(r"\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}", t)))
     f["autos"] = autos
 
     # ---- eventos do histórico ----
-    hist = t.split("HISTÓRICO", 1)[1] if "HISTÓRICO" in t else t
-    partes = RE_LINHA.split(hist)
-    # lançamento sem data no SIAPEN ("- CONSELHO DISCIPLINAR: FOI CONCLUSO ...", logo abaixo do título do histórico): fica como texto
-    # sem data (nenhuma data é atribuída), no início do histórico
-    sem_data = re.match(r"\s*(?:-\s*CONDUTA:[^\n]*\n)?\s*-\s*(\S.*)$", partes[0].split("\n", 1)[1] if "\n" in partes[0] else "", re.S)
-    eventos = ([{"data": "", "texto": " ".join(sem_data.group(1).split())}] if sem_data else []) + \
-        [{"data": partes[i], "texto": " ".join(partes[i + 1].split())} for i in range(1, len(partes) - 1, 2)]
-    eventos = _dividir(eventos)
-    eventos = [{"data": e["data"], "d": _dp(e["data"]), "texto": e["texto"]} for e in eventos]
+    def _eventos():
+        hist = t[m_hist.end():] if m_hist else t
+        partes = RE_LINHA.split(hist)
+        # lançamento sem data no SIAPEN ("- CONSELHO DISCIPLINAR: FOI CONCLUSO ...", logo abaixo do título do histórico): fica como
+        # texto sem data (nenhuma data é atribuída), no início do histórico
+        sem_data = re.match(r"\s*(?:-\s*CONDUTA:[^\n]*\n)?\s*-\s*(\S.*)$", partes[0].split("\n", 1)[1] if "\n" in partes[0] else "", re.S)
+        evs = ([{"data": "", "texto": " ".join(sem_data.group(1).split())}] if sem_data else []) + \
+            [{"data": partes[i], "texto": " ".join(partes[i + 1].split())} for i in range(1, len(partes) - 1, 2)]
+        evs = _dividir(evs)
+        return [{"data": e["data"], "d": _dp(e["data"]), "texto": e["texto"]} for e in evs]
+    eventos = _seguro(parcial, "histórico (lançamentos)", _eventos, [])
     f["eventos"] = [{"data": e["data"], "texto": e["texto"]} for e in eventos]
     # histórico antigo em 10 pt, cortado na impressão: guardado à parte, sem virar lançamento (uso a decidir)
-    f["historico_oculto"] = ocultas
+    f["historico_oculto"] = list(ocultas)
     f["versao_leitura"] = VERSAO_LEITURA
-    return derivar(f, eventos)
+    try:
+        r = derivar(f, eventos)
+    except Exception as e:
+        # a análise do histórico falhou: a ficha entra com o cabeçalho e os lançamentos, sem as conclusões tiradas deles
+        parcial.append("análise do histórico com falha (%s): ficha guardada com o cabeçalho e os lançamentos, sem trabalho, estudo e "
+                       "faltas apurados - enviar o arquivo para correção" % rs._falha(e))
+        try:
+            r = derivar(f, [])
+            r["eventos"] = f["eventos"]
+        except Exception:
+            r = f
+    if parcial:
+        r["_leitura_parcial"] = parcial
+    return r
 
 
 # versão das regras de leitura dos eventos: a ficha guardada na base com versão anterior é relida a partir dos eventos ao abrir
 # (9: atestados "PROTOCOLADO ... REMIÇÃO totalizou", dias por extenso, "ias", "228T 76R", substituição "pelo nº X"; faltas antigas;
 # 10: sublançamentos "dd/mm/aa... Nesta data/FOI/DEU ENTRADA", faltas em texto livre (PAD, isolamento, erros de digitação, PADIC por
 # número, instauração), "LEI Nº 7.210", trabalho externo pela empresa, estudo encerrado na saída da unidade, isolamentos, dias só por
-# extenso entre parênteses, atestado sem dias nem período)
-VERSAO_LEITURA = 10
+# extenso entre parênteses, atestado sem dias nem período; 11: leitura por ciclo sem mês, mudança de cela por sanção na lista de
+# isolamentos, vínculos de trabalho do mesmo dia numa linha, "continua exercendo/cadastrado" como continuidade do vínculo - só exibição;
+# 12: vínculos simultâneos - o setor encerrado só pelo início de outro vai até a sua baixa, sem lacuna falsa -, setor vazio ("no setor
+# de trabalho , conforme documento"), fim de isolamento fora da lista de isolamentos, período do atestado "com data inicial em d e
+# final em d", "início em d e término em d", "de (d) a (d)", setor começando por algarismo ou com apóstrofo, trecho do ATP sem "DATA")
+VERSAO_LEITURA = 12
 # versão da extração do PDF (camada de caracteres): a mesma ficha extraída por versão anterior é extraída de novo ao reimportar
 VERSAO_EXTRACAO = 2
 
@@ -602,51 +677,176 @@ def _marcar_externo(trabalho, eventos, ext):
         trabalho.sort(key=lambda t: _dp(t["inicio"]) or date.min)
 
 
+def _juntar_mesmo_dia(trabalho):
+    """Vínculos abertos no mesmo dia com nomes diferentes ("Iniciou ... FAXINA" e "Iniciou ... MARMITEIRO" na mesma data): o primeiro
+    acaba no próprio dia (o segundo início o encerra) e vira uma linha só, com os dois nomes ("FAXINA / MARMITEIRO"). Só a lista
+    exibida: o período é o do vínculo que segue, que já contém o do primeiro; não junta trabalho externo com interno nem o período
+    externo aberto só pelo lançamento (inciso XI dos decretos)."""
+    out = []
+    for t in trabalho:
+        p = out[-1] if out else None
+        if p and p["inicio"] == t["inicio"] and (p.get("fim") or "") == p["inicio"] and not p.get("so_lancamento") and not t.get("so_lancamento") \
+                and bool(p.get("externo")) == bool(t.get("externo")) and re.sub(r"\W", "", p["setor"].upper()) != re.sub(r"\W", "", t["setor"].upper()):
+            t = dict(t)
+            t["setores"] = list(dict.fromkeys((p.get("setores") or [p["setor"]]) + [t["setor"]]))
+            t["setor"] = " / ".join(t["setores"])
+            if p.get("empresa") and t.get("empresa") and p["empresa"] != t["empresa"]:
+                t["empresa"] = p["empresa"] + " / " + t["empresa"]
+            if p.get("jornada") and not t.get("jornada"):
+                t["jornada"] = p["jornada"]
+            out[-1] = t
+        else:
+            out.append(t)
+    return out
+
+
 def derivar(f, eventos):
     """Campos da ficha que vêm dos eventos do histórico (trabalho, atestados, exames, leitura, faltas, estudo)."""
 
     # ---- trabalho ----
-    trabalho, aberto, baixas_orfas, ext = [], None, [], []
-    for k_ev, e in enumerate(eventos):
-        u = e["texto"].upper()
-        m = re.search(r"TRABALHO:\s*INICIOU ATIVIDADE LABORAL,?\s*NO SETOR DE TRABALHO\s*(.+?)(?:,\s*CONFORME|$)", u)
-        if m:
-            if aberto:
-                # um trabalho novo encerra o anterior (a ficha nem sempre registra o "deixa de trabalhar")
-                aberto["fim"] = aberto.get("fim") or e["data"]
-                aberto.setdefault("motivo_fim", "início de outra atividade")
-                trabalho.append(aberto)
-            aberto = {"inicio": e["data"], "fim": "", "setor": m.group(1).strip(" ,."), "externo": False}
-            continue
-        m = re.search(r"TRABALHO:\s*DEIXA DE TRABALHAR,?\s*NO SETOR DE TRABALHO\s*(.+?)(?:,\s*CONFORME|$)", u)
-        if m:
-            setor_fim = re.sub(r"\W", "", m.group(1))
-            # só encerra o trabalho do mesmo setor (a baixa de um setor antigo não encerra o atual)
-            if not (aberto and re.sub(r"\W", "", aberto["setor"].upper())[:12] == setor_fim[:12]):
-                # baixa de um setor sem trabalho aberto: a unidade o mantinha alocado sem registrar o início
-                ult = [t for t in trabalho if re.sub(r"\W", "", t["setor"].upper())[:12] == setor_fim[:12]]
-                baixas_orfas.append({"data": e["data"], "setor": m.group(1).strip(" ,."),
-                                     "ultimo_inicio": ult[-1]["inicio"] if ult else "", "ultimo_fim": ult[-1].get("fim", "") if ult else ""})
-            if aberto and re.sub(r"\W", "", aberto["setor"].upper())[:12] == setor_fim[:12]:
-                aberto["fim"] = e["data"]
+    import rspe_remicao as rrm
+
+    def _ler_trabalho(continuidade):
+        trabalho, aberto, baixas_orfas, ext, usou = [], None, [], [], False
+        # datas em que o trabalho em curso se encerra para a leitura da remição (rspe_remicao.vinculos): saída da unidade, evasão,
+        # transferência, desligamento ou afastamento sem setor, remanejamento e "Liberação do Setor de Trabalho" sem baixa no mesmo
+        # dia - o vínculo encerrado pelo início de outro setor não é reaberto por cima delas
+        baixa_dia = {e["data"] for e in eventos if re.match(r"\s*TRABALHO:\s*DEIXA DE TRABALHAR", e["texto"], re.I)}
+        cortes = []
+        for e in eventos:
+            ua = rs._sem_acento(e["texto"]).upper()
+            if not e["d"] or re.match(r"\s*TRABALHO:", ua):
+                continue
+            cela = ua.startswith("MUDANCA DE CELA")
+            mf = None if cela else next((x for x in (p_.search(ua) for p_ in rrm.RE_FIM2) if x), None)
+            if rrm.RE_LIBERACAO.search(ua):
+                if e["data"] not in baixa_dia:
+                    cortes.append((e["d"], None))
+            elif re.search(r"SAIDA DA UNIDADE PENAL|EVASAO|TRANSFERENCIA|FUGA", ua):
+                cortes.append((e["d"], None))
+            elif mf and mf.group(1).strip():
+                cortes.append((e["d"], mf.group(1).strip()))  # desligamento de um setor nomeado: só encerra esse setor
+            elif (re.search(r"DESLIGAD[OA]", ua) and re.search(r"TRABALHO|LABORA|ATIVIDADE", ua)) \
+                    or (not cela and (rrm.RE_FIM_GERAL.search(ua) or re.search(r"\bREMANEJAD", ua))):
+                cortes.append((e["d"], None))
+
+        def _corta(v, de, ate):
+            # algum encerramento geral (ou do próprio setor) entre o fim inferido do vínculo (inclusive) e a baixa
+            for c, nome in cortes:
+                if de <= c < ate and (nome is None or rrm.palavra_comum(v["setor"], nome)
+                                      or rrm.mesmo_setor(rrm.setor_chave(v["setor"])[0], rrm.setor_chave(nome)[0])):
+                    return True
+            return False
+        for k_ev, e in enumerate(eventos):
+            u = e["texto"].upper()
+            # "continua exercendo suas atividades no setor X", "continua cadastrado no setor X" ("desconsiderar o desligamento"),
+            # "sem efeito, continua trabalhando na empresa X": o vínculo de X segue - não abre vínculo novo nem encerra; a baixa
+            # de X no mesmo dia fica sem efeito (exibição; a conta da remição é a de rspe_remicao)
+            mc = continuidade and re.search(r"\bCONTINUA\s+(?:EXERCENDO|CADASTRAD[OA]|TRABALHANDO)\b(.*)", rs._sem_acento(u))
+            if mc:
+                if aberto is None:
+                    i_ = next((i for i in range(len(trabalho) - 1, -1, -1) if trabalho[i].get("fim") == e["data"]
+                               and rrm.palavra_comum(trabalho[i]["setor"], mc.group(1))), None)
+                    if i_ is not None:
+                        v = trabalho.pop(i_)
+                        # o mesmo setor encerrado no mesmo dia pelo "Iniciou" repetido: é o mesmo vínculo, que segue desde o início
+                        j_ = next((j for j in range(len(trabalho) - 1, -1, -1) if trabalho[j].get("fim") == v["inicio"]
+                                   and trabalho[j].get("motivo_fim") == "início de outra atividade"
+                                   and re.sub(r"\W", "", trabalho[j]["setor"].upper()) == re.sub(r"\W", "", v["setor"].upper())), None)
+                        if j_ is not None:
+                            v = trabalho.pop(j_)
+                        v["fim"] = ""
+                        v.pop("motivo_fim", None)
+                        v["continuidade"] = e["data"]
+                        aberto, usou = v, True
+                continue
+            # (setor vazio - "no setor de trabalho , conforme documento" - fica vazio, não vira "CONFORME DOCUMENTO")
+            m = re.search(r"TRABALHO:\s*INICIOU ATIVIDADE LABORAL,?\s*NO SETOR DE TRABALHO\s*(.*?)(?:,\s*CONFORME|$)", u)
+            if m:
+                if aberto:
+                    # o trabalho novo encerra o anterior (a ficha nem sempre registra o "deixa de trabalhar"); se a baixa do anterior
+                    # vier depois, sem saída da unidade no meio, ele é reaberto até ela (vínculos simultâneos - abaixo)
+                    aberto["fim"] = aberto.get("fim") or e["data"]
+                    aberto.setdefault("motivo_fim", "início de outra atividade")
+                    trabalho.append(aberto)
+                aberto = {"inicio": e["data"], "fim": "", "setor": m.group(1).strip(" ,."), "externo": False}
+                continue
+            m = re.search(r"TRABALHO:\s*DEIXA DE TRABALHAR,?\s*NO SETOR DE TRABALHO\s*(.*?)(?:,\s*CONFORME|$)", u)
+            if m:
+                setor_fim = re.sub(r"\W", "", m.group(1))
                 mm = re.search(r"MOTIVO:\s*(.+)$", u)
-                aberto["motivo_fim"] = (mm.group(1).strip(" .") if mm else "")
-                trabalho.append(aberto)
-                aberto = None
-            continue
-        # desligamento em texto livre, evasão, saída ou transferência de unidade encerram o trabalho em curso
-        if aberto and (re.search(r"DESLIGAD[OA]", u) and re.search(r"TRABALHO|LABORA|ATIVIDADE", u)
-                       or re.search(r"SA[ÍI]DA DA UNIDADE PENAL|EVAS[ÃA]O|TRANSFER[ÊE]NCIA|FUGA", u)):
-            aberto["fim"] = e["data"]
-            aberto["motivo_fim"] = ("desligado" if "DESLIGAD" in u else "saída/evasão/transferência")
+                motivo = (mm.group(1).strip(" .") if mm else "")
+                d_ = _dp(e["data"])
+                # só encerra o trabalho do mesmo setor (a baixa de um setor antigo não encerra o atual)
+                if aberto and re.sub(r"\W", "", aberto["setor"].upper())[:12] == setor_fim[:12]:
+                    aberto["fim"] = e["data"]
+                    aberto["motivo_fim"] = motivo
+                    trabalho.append(aberto)
+                    aberto = None
+                    continue
+                ult = [t for t in trabalho if re.sub(r"\W", "", t["setor"].upper())[:12] == setor_fim[:12]]
+                v = ult[-1] if ult else None
+                fv = _dp(v.get("fim") or "") if v else None
+                # (a baixa por "adequação do mapa do SIAPEN" é correção de cadastro - em geral do registro duplicado do mesmo dia -, não
+                # prova que o setor seguiu: não reabre)
+                if v and v.get("motivo_fim") == "início de outra atividade" and fv and d_ and fv <= d_ \
+                        and not re.search(r"A?DEQUACAO DO MAPA", rs._sem_acento(motivo).upper()) \
+                        and not _corta(v, fv, d_):
+                    # vínculo simultâneo: o setor X foi encerrado só pelo início de outro setor e a baixa de X vem depois, sem saída,
+                    # evasão, transferência, desligamento, remanejamento ou liberação no meio - os dois setores correram juntos; X vai
+                    # até a sua baixa (sem a lacuna falsa entre o início do outro e a baixa). Só a lista exibida: a remição
+                    # (rspe_remicao.vinculos, que já lê os setores em paralelo) conta os dias como conjunto, sem dobrar o dia
+                    # (a baixa no próprio dia em que o outro começou é só a baixa dele: registra o motivo)
+                    if d_ > fv:
+                        v["fim"] = e["data"]
+                        v["simultaneo"] = True
+                    v["motivo_fim"] = motivo
+                    continue
+                if not setor_fim and aberto:
+                    # baixa sem setor: encerra o único vínculo aberto
+                    aberto["fim"] = e["data"]
+                    aberto["motivo_fim"] = motivo
+                    trabalho.append(aberto)
+                    aberto = None
+                    continue
+                # baixa de um setor sem trabalho aberto: a unidade o mantinha alocado sem registrar o início
+                baixas_orfas.append({"data": e["data"], "setor": m.group(1).strip(" ,."),
+                                     "ultimo_inicio": v["inicio"] if v else "", "ultimo_fim": v.get("fim", "") if v else ""})
+                continue
+            # desligamento em texto livre, evasão, saída ou transferência de unidade encerram o trabalho em curso
+            if (re.search(r"DESLIGAD[OA]", u) and re.search(r"TRABALHO|LABORA|ATIVIDADE", u)
+                    or re.search(r"SA[ÍI]DA DA UNIDADE PENAL|EVAS[ÃA]O|TRANSFER[ÊE]NCIA|FUGA", u)):
+                if aberto:
+                    aberto["fim"] = e["data"]
+                    aberto["motivo_fim"] = ("desligado" if "DESLIGAD" in u else "saída/evasão/transferência")
+                    trabalho.append(aberto)
+                    aberto = None
+                    continue
+            if re.search(r"ATIVIDADE LABORAL EXTERNA|ATIVIDADE LABORAL EXTERNAMENTE", u):
+                ext.append((k_ev, e))
+        if aberto:
             trabalho.append(aberto)
-            aberto = None
-            continue
-        if re.search(r"ATIVIDADE LABORAL EXTERNA|ATIVIDADE LABORAL EXTERNAMENTE", u):
-            ext.append((k_ev, e))
-    if aberto:
-        trabalho.append(aberto)
-    _marcar_externo(trabalho, eventos, ext)
+        if usou:
+            trabalho.sort(key=lambda t: _dp(t["inicio"]) or date.min)
+        _marcar_externo(trabalho, eventos, ext)
+        return trabalho, baixas_orfas, usou
+
+    def _cobertura_externa(tr):
+        # períodos de trabalho externo, unidos (o que complementar_decretos conta no inciso XI)
+        out = []
+        for a, b in sorted((_dp(t["inicio"]) or date.min, _dp(t.get("fim") or "") or date.max) for t in tr if t.get("externo")):
+            if out and a <= out[-1][1] + timedelta(days=1):
+                out[-1] = (out[-1][0], max(out[-1][1], b))
+            else:
+                out.append((a, b))
+        return out
+    trabalho, baixas_orfas, usou = _ler_trabalho(True)
+    if usou:
+        # a continuidade é só leitura do vínculo: se mudasse um período de trabalho externo (art. 9º, XI, dos decretos), vale a
+        # leitura sem ela
+        t0, b0, _u = _ler_trabalho(False)
+        if _cobertura_externa(t0) != _cobertura_externa(trabalho):
+            trabalho, baixas_orfas = t0, b0
     # jornada de cada trabalho: a ficha às vezes registra a carga horária ("de segunda a sexta", "12x36") no início
     for t in trabalho:
         ti, tf = _dp(t["inicio"]), _dp(t.get("fim") or "")
@@ -656,11 +856,10 @@ def derivar(f, eventos):
                 if j:
                     t["jornada"] = j
                     break
-    f["trabalho"] = trabalho
+    f["trabalho"] = _juntar_mesmo_dia(trabalho)
     f["baixas_sem_inicio"] = baixas_orfas
 
     # ---- atestados de trabalho (dias trabalhados / remidos): a mesma leitura da conciliação da remição ----
-    import rspe_remicao as rrm
     atest = []
     for a in rrm.atestados(eventos):
         ss = [x for x in a["segs"] if x["ini"] and x["fim"]]
@@ -728,7 +927,14 @@ def derivar(f, eventos):
             if e["d"] and str(e["d"].year)[-2:] == mof.group(1).split("/")[1][-2:] and (_dp(ant["data"]) or date.min).year != e["d"].year:
                 ant.update(data=e["data"], meses=meses, obras=obras, texto=e["texto"])  # fica o lançamento do ano do ofício
             continue
-        leituras.append({"data": e["data"], "meses": meses, "obras": obras, "texto": e["texto"], "oficio": mof.group(1) if mof else ""})
+        lt = {"data": e["data"], "meses": meses, "obras": obras, "texto": e["texto"], "oficio": mof.group(1) if mof else ""}
+        mci = re.search(r"\bCICLO\s*N?\W{0,3}(\d{1,2}\s*/\s*\d{2,4})", us)
+        if mci and not meses:
+            # atestado por ciclo, sem mês ("Atestado de Remição por Leitura nº 71/2020 - CICLO nº 03/2020"): o lançamento fica no mês
+            # do próprio atestado/protocolo (referência só para exibir; "meses" segue vazio e a conta segue 4 dias por obra)
+            lt["ciclo"] = re.sub(r"\s+", "", mci.group(1))
+            lt["ref_mes"] = e["d"].strftime("%m/%Y") if e.get("d") else ""
+        leituras.append(lt)
     f["leituras"] = leituras
     f["cursos_peticionados"] = cursos_pet
     f["dias_trabalhados_atestados"] = sum(a["dias_trabalhados"] for a in atest)
@@ -954,7 +1160,9 @@ def derivar(f, eventos):
     f["regressoes"] = [e["data"] + " - " + e["texto"] for e in eventos if re.search(r"REGRESS", e["texto"], re.I)]
     f["restabelecimentos"] = [e["data"] + " - " + e["texto"] for e in eventos if re.search(r"RESTABELEC", e["texto"], re.I)]
     f["recusa_trabalho"] = [e["data"] + " - " + e["texto"] for e in eventos if re.search(r"RECUSOU VAGA|RECUSA DE TRABALHO", e["texto"], re.I)]
-    f["isolamentos"] = [e["data"] + " - " + e["texto"] for e in eventos if _e_isolamento(e["texto"])]
+    f["isolamentos"] = [e["data"] + " - " + e["texto"] + (" [indício de isolamento: mudança de cela por sanção - conferir a sanção]"
+                                                          if _cela_por_sancao(e["texto"]) else "")
+                        for e in eventos if _e_isolamento(e["texto"])]
     f["estudo"] = [e["data"] + " - " + e["texto"] for e in eventos if re.search(r"ESTUD|LEITURA|CURSO|ESCOLA", e["texto"], re.I) and "TRABALHO" not in e["texto"].upper()]
     f["estudos"] = _estudos(eventos)
     return f
@@ -1073,7 +1281,7 @@ def confrontar(r, f, hoje=None, manuais=None):
         itens.append({"nivel": "verificar",
                       "titulo": "Remição pelo estudo a requerer: ≈ %d h (≈ %s)" % (res["estudo_horas_pend"], rs.pl(res["estudo_dias_pend"], "dia", "dias")),
                       "detalhe": "Matrículas sem remição no RSPE: " + "; ".join(
-                          "%s (%s), %s%s" % (e["curso"].title(), unidade_periodo(linha_unidades(f), e["_ini"], e["_fim"] or hoje)[0], _br(e["inicio"]),
+                          "%s (%s), %s%s" % (e["curso"].title(), unidade_periodo(linha_unidades_exibicao(f), e["_ini"], e["_fim"] or hoje)[0], _br(e["inicio"]),
                                              (" a " + _br(e["fim"])) if e.get("fim") else " em diante (matrícula ativa)")
                           for e in res["estudos_pendentes"]) +
                                  ". Horas estimadas em 4 h por dia útil (como nas certidões da EJA), sem contar duas vezes matrículas simultâneas. Requerer a certidão de frequência escolar e a remição.",
@@ -1089,6 +1297,9 @@ def leitura_parcial(f):
     """Leitura da ficha para o registro da importação: (observações, parcial). Campo que o próprio SIAPEN deixa em branco
     (ex.: "CPF:" vazio no cabeçalho) é observação, não leitura parcial."""
     out, parcial = [], False
+    if f.get("_leitura_parcial"):
+        out += list(f["_leitura_parcial"])
+        parcial = True
     sem = f.get("paginas_sem_texto") or []
     if sem:
         out.append("%s sem texto (%s de %d): imagem ou digitalização - o histórico dessas páginas não foi lido; gerar a ficha de novo no SIAPEN" % (
@@ -1143,9 +1354,9 @@ def custodia_apos(f, d):
     return True, "registros na unidade%s até %s, sem saída em liberdade" % ((" " + un) if un else "", rs.fmt(dep[-1][0]))
 
 
-# entrada em unidade: a estruturada ("Entrada na Unidade Penal: X, Procedente: Y") e a das fichas antigas ("DEU ENTRADA NO IPCG",
+# entrada em unidade: a estruturada ("Entrada na Unidade Penal: X, Procedente: Y"; "Entrada no Regime Semiaberto da Unidade Penal: X") e a das fichas antigas ("DEU ENTRADA NO IPCG",
 # "ENTRADA NO EPJFC, PROCEDENTE DO DENAR")
-RE_ENTRADA = re.compile(r"ENTRADA NA UNIDADE|DEU ENTRADA|^ENTRADA N[OA]\s+\S+.{0,40}?PROCEDENTE", re.I)
+RE_ENTRADA = re.compile(r"ENTRADA NA UNIDADE|DEU ENTRADA|^ENTRADA N[OA]\s+\S+.{0,40}?PROCEDENTE|^ENTRADA NO REGIME [\w-]+ DA UNIDADE PENAL", re.I)
 
 
 def reconciliar_eventos(r, f):
@@ -1156,6 +1367,7 @@ def reconciliar_eventos(r, f):
     Altera r no lugar; devolve [(tipo, dados)] para a Auditoria."""
     r["_eventos"] = [e for e in r.get("_eventos", []) if not e.get("_ficha")]
     r.pop("_custodia_ficha", None); r.pop("_reconc_ficha", None)
+    r["_tem_ficha"] = bool(f)
     if not f:
         return []
     ev = sorted(((_dp(e["data"]), e["texto"]) for e in f.get("eventos", []) if _dp(e.get("data") or "")), key=lambda x: x[0])
@@ -1327,8 +1539,11 @@ def _identidade_x_ficha(r, f):
     out = []
     c1, c2 = re.sub(r"\D", "", r.get("cpf") or ""), re.sub(r"\D", "", f.get("cpf") or "")
     if len(c1) == 11 and len(c2) == 11 and c1 != c2:
+        _dif = sum(1 for a, b in zip(c1, c2) if a != b)
+        _dig = (" Os números diferem só em dígitos trocados, deslocados ou em até dois dígitos: provável erro de digitação em um dos cadastros."
+                if _dif <= 2 or sorted(c1) == sorted(c2) or c1[1:] == c2[:-1] or c1[:-1] == c2[1:] else "")
         out.append(_item_rf("alerta", "CPF da ficha (%s) difere do RSPE (%s)" % (f.get("cpf"), r.get("cpf")),
-                            "A ficha vinculada pode ser de outra pessoa (homônimo) ou um dos cadastros está errado. Conferir antes de usar os dados da ficha.",
+                            "A ficha vinculada pode ser de outra pessoa (homônimo) ou um dos cadastros está errado. Conferir antes de usar os dados da ficha." + _dig,
                             "Identificação do apenado (LEP, art. 106)."))
     # CPF e nascimento iguais nos dois: é a mesma pessoa - nome ou mãe diferentes são grafia/cadastro (info, não alerta)
     d1, d2 = rs.to_date(r.get("_nasc_rspe") or ("" if r.get("_nasc_fonte") else r.get("data_nascimento")) or ""), _dp(f.get("data_nascimento") or "")
@@ -1729,8 +1944,19 @@ def _interrupcao_x_ficha(r, f):
     """RSPE com o cumprimento parado (último evento é interrupção): a ficha explica? Custódia depois da interrupção =
     preso (em outro processo ou sem reinício lançado), não em liberdade nem foragido; saída em liberdade = confirma."""
     out = []
+    # execução extinta (o mesmo critério de rspe_view.execucao_extinta): a nova prisão da ficha é de outro processo ou sem efeito aqui -
+    # não se pede retificação do RSPE desta execução
+    _cr = r.get("_crimes", [])
+    extinta = bool(r.get("execucao_extinta")) or (bool(_cr) and all((c.get("extinto") or "").upper().startswith("S") for c in _cr))
     for tp, x in r.get("_reconc_ficha") or []:
-        if tp == "reinicio-pela-ficha":
+        if tp == "reinicio-pela-ficha" and extinta:
+            out.append({"nivel": "info", "titulo": "Nova prisão na ficha em %s, depois da interrupção do RSPE (execução extinta)" % rs.fmt(x["entrada"]),
+                        "detalhe": "O RSPE termina na interrupção de %s (%s), e a ficha registra entrada%s em %s. Com a execução extinta, essa "
+                                   "prisão é provavelmente de outro processo: não há reinício a pedir nesta execução." % (
+                                       rs.fmt(x["interrupcao"]), x["motivo"].lower() or "motivo não consta",
+                                       (" vinda de " + x["origem"]) if x["origem"] else "", rs.fmt(x["entrada"])),
+                        "fundamento": "LEP, art. 111.", "tipo": "rspe-x-ficha"})
+        elif tp == "reinicio-pela-ficha":
             out.append({"nivel": "alerta", "titulo": "Reinício omitido no RSPE: lançado pela ficha em %s" % rs.fmt(x["entrada"]),
                         "detalhe": "O RSPE termina na interrupção de %s (%s), sem reinício. A ficha registra entrada%s em %s e custódia desde então. "
                                    "Os cálculos do programa (situação, custódia, prescrição, incisos do indulto) passam a considerar o cumprimento a "
@@ -1832,7 +2058,9 @@ def resumo(f):
 
 def _fmtn(v):
     v = float(v)
-    return ("%d" % v) if abs(v - round(v)) < 0.01 else ("%.2f" % v).replace(".", ",")
+    # até 0,01 do inteiro, o inteiro mais próximo (39,99 -> 40, como o SEEU lança a remição do atestado de 39,99); o "%d" truncava
+    # (39,99 -> 39) e a tolerância dependia do arredondamento binário (39,99 virava 39; 66,99 ficava 66,99)
+    return ("%d" % round(v)) if abs(v - round(v)) < 0.01 + 1e-9 else ("%.2f" % v).replace(".", ",")
 
 
 # ---------------------------------------------------------------- trabalho por emprego x remição no RSPE
@@ -2039,11 +2267,13 @@ def sigla_unidade(nome):
 
 
 def linha_unidades(f):
-    """[(data, unidade)] das entradas em unidade penal registradas na ficha: a estruturada ("Entrada na Unidade Penal: X, Procedente")
+    """[(data, unidade)] das entradas em unidade penal registradas na ficha: a estruturada ("Entrada na Unidade Penal: X, Procedente";
+    "Entrada no Regime Semiaberto da Unidade Penal: X, Procedente")
     e a das fichas antigas, pela sigla ("ENTRADA NO IPCG PROCEDENTE DA ...", "DEU ENTRADA NO EPJFC", "INGRESSOU NO PTRAN")."""
     out = []
     for e in f.get("eventos", []):
-        m = re.search(r"Entrada na Unidade Penal:\s*(.+?),\s*Procedente", e.get("texto") or "", re.I) or \
+        # ("Entrada no Regime Semiaberto da Unidade Penal: X, Procedente" é a mesma entrada estruturada)
+        m = re.search(r"Entrada n[oa] (?:Regime [\w-]+ da )?Unidade Penal:\s*(.+?),\s*Procedente", e.get("texto") or "", re.I) or \
             re.search(r"^\W*(?:(?:NESTA DATA\W*)?(?:DEU ENTRADA|ENTRADA|(?:RE)?INGRESSOU|ADENTROU))\s+N[OA]\s+(?!UNIDADE\b|REGIME\b|SISTEMA\b|PRESIDIO\b)"
                       r"([A-Z][A-Z]{1,7})\b\W{0,3}(?:,|-|PROCEDENTE|ORIUNDO|VINDO|CONF|$)", rs._sem_acento(e.get("texto") or "").upper())
         d = _dp(e.get("data") or "")
@@ -2053,6 +2283,68 @@ def linha_unidades(f):
                 out.append((d, nome))
     out.sort(key=lambda x: x[0])
     return out
+
+
+_UN_GENERICAS = {"PENITENCIARIA", "ESTABELECIMENTO", "PENAL", "PRESIDIO", "EP", "DE", "DA", "DO", "DOS", "DAS", "E", "UNIDADE"}
+
+
+def _mesma_unidade(a, b):
+    """Grafias da mesma unidade ("PENITENCIÁRIA JAIR FERREIRA DE CARVALHO" x "EPJFC"; "... ESTADUAL" x "... ESTADUAL DE CAMPO GRANDE")."""
+    na, nb = [re.sub(r"[^A-Z0-9 ]", " ", rs._sem_acento(x or "").upper()).split() for x in (a, b)]
+    if not na or not nb:
+        return False
+    ja, jb = "".join(na), "".join(nb)
+    if ja == jb or nome_unidade(a) == nome_unidade(b) or ja.startswith(jb) or jb.startswith(ja):
+        return True
+    sa, sb = sigla_unidade(a), sigla_unidade(b)
+    if sa == sb and sa.isupper() and len(sa) <= 8:
+        return True
+    ini_a, ini_b = "".join(w[0] for w in na if w not in ("DE", "DA", "DO", "DOS", "DAS", "E")), \
+        "".join(w[0] for w in nb if w not in ("DE", "DA", "DO", "DOS", "DAS", "E"))
+    if (len(na) == 1 and na[0] == ini_b) or (len(nb) == 1 and nb[0] == ini_a):
+        return True  # sigla x nome por extenso ("EPMC" x "ESTABELECIMENTO PENAL MASCULINO DE COXIM")
+    ca, cb = {w for w in na if w not in _UN_GENERICAS}, {w for w in nb if w not in _UN_GENERICAS}
+    return bool(ca) and ca == cb
+
+
+def linha_unidades_exibicao(f):
+    """linha_unidades com as unidades deduzidas das saídas ("Saída da Unidade Penal: X, Destino: ..."): a saída mostra que a pessoa
+    estava em X; sem a entrada em X registrada, X passa a valer desde a primeira mudança de cela em X depois do marco anterior
+    (entrada ou saída) ou, se o marco anterior é uma saída (ou não há marco), desde ele. Só para EXIBIR a unidade: a conta da
+    remição, a custódia e a divisão dos dias por unidade seguem com linha_unidades (só as entradas)."""
+    tl = linha_unidades(f)
+    evs = [(e, _dp(e.get("data") or "")) for e in f.get("eventos", [])]
+    evs = [(e, d) for e, d in evs if d]
+    saidas = []
+    for e, d in evs:
+        m = re.search(r"Sa[íi]da da Unidade Penal:\s*(.+?),\s*Destino", e.get("texto") or "", re.I)
+        if m and re.sub(r'["“”]', "", m.group(1)).strip():
+            saidas.append((d, re.sub(r'["“”]', "", m.group(1)).strip()))
+    novos = []
+    for k, (d, x) in enumerate(saidas):
+        ant = [(a, u) for a, u in sorted(tl + novos, key=lambda y: y[0]) if a < d]
+        if ant and _mesma_unidade(ant[-1][1], x):
+            continue
+        s_ant = [a for a, _u in saidas[:k] if a < d]
+        marco_e = ant[-1][0] if ant else None
+        marco_s = s_ant[-1] if s_ant else None
+        marco = max([m_ for m_ in (marco_e, marco_s) if m_], default=None)
+        # primeira mudança de cela registrada em X depois do marco: a pessoa já estava lá
+        cela = next((dd for e, dd in evs if (marco is None or dd >= marco) and dd < d and
+                     (lambda mc: mc and _mesma_unidade(mc.group(1), x))(re.match(r"\W*Mudan[çc]a de Cela:\s*([^,]+),", e.get("texto") or "", re.I))), None)
+        if cela:
+            ini = cela
+        elif marco is None:
+            ini = evs[0][1] if evs and evs[0][1] < d else None
+        elif marco_s and (not marco_e or marco_s > marco_e):
+            ini = marco_s  # saída anterior sem entrada registrada depois: a pessoa foi para X
+        else:
+            ini = None  # entrada em outra unidade sem a saída dela: não se sabe quando passou para X
+        if ini:
+            novos.append((ini, x))
+    if not novos:
+        return tl
+    return sorted(tl + novos, key=lambda y: y[0])
 
 
 def unidade_periodo(tl, a, b):
@@ -2078,6 +2370,7 @@ def quadro_trabalho(r, f, hoje=None, manuais=None):
     _ats, incs, ini_exec, ests = vincular(r, f, hoje)
     linhas = []
     tl = linha_unidades(f)
+    tl_ex = linha_unidades_exibicao(f)  # só para a coluna "unidade" (com as saídas); a divisão dos dias por unidade usa tl
     # relatório de leitura x remição do RSPE: 4 dias por mês/obra peticionado, concedidos depois da petição
     lei_rem, lei_parc = {}, {}
     for parcial in (False, True):
@@ -2108,7 +2401,7 @@ def quadro_trabalho(r, f, hoje=None, manuais=None):
         L = {"emp": "Estudo · %s%s" % (e["curso"].title().replace("Ead", "EAD").replace("Modulo", "Módulo"), (" (turma %s)" % e["turma"]) if e.get("turma") else ""), "per": _br(per), "per_full": _br(per_full),
              "dias": rs.pl(du, "dia útil", "dias úteis") if du else "—", "at": horas_txt,
              "at_full": ("Carga horária declarada na ficha." if e["_declaradas"] else "Estimativa: %s × %d h por dia (como nas certidões da EJA)." % (rs.pl(du, "dia útil", "dias úteis"), HORAS_DIA_ESTUDO))}
-        L["un"], L["un_full"] = unidade_periodo(tl, e["_ini"], e["_fim"] or hoje)
+        L["un"], L["un_full"] = unidade_periodo(tl_ex, e["_ini"], e["_fim"] or hoje)
         dias_e = e["_horas"] // 12
         if e["_status"] == "datas":
             L["sit"], L["cor"] = "Conferir datas", "amarelo"
@@ -2193,10 +2486,10 @@ def quadro_trabalho(r, f, hoje=None, manuais=None):
                     + (" · verificar acréscimo de 1/3 pela conclusão (LEP, art. 126, § 5º)" if "conclu" in (L.get("per_full") or "").lower() else ""),
              "cor": {"amarelo": "amarelo", "vermelho": "vermelho"}.get(L["cor"], "cinza"),
              "chave": "fd:est:%s:%s" % (_norm(L["emp"]), L["per"])} for L in est] + [
-            {"emp": x["exame"], "un": unidade_periodo(tl, _dp(x["data"]), _dp(x["data"]))[0], "per": "certificado registrado em %s" % _br(x["data"]),
+            {"emp": x["exame"], "un": unidade_periodo(tl_ex, _dp(x["data"]), _dp(x["data"]))[0], "per": "certificado registrado em %s" % _br(x["data"]),
              "sit": "Conferir homologação · se certificou a conclusão do ensino, verificar o acréscimo de 1/3 (LEP, art. 126, § 5º)", "cor": "cinza",
              "chave": "fd:exa:%s:%s" % (_norm(x["exame"]), x["data"])} for x in exs] + [
-            {"emp": "Leitura" + (" (%s)" % ", ".join(x["meses"]) if x["meses"] else ""), "un": unidade_periodo(tl, _dp(x["data"]), _dp(x["data"]))[0],
+            {"emp": _rotulo_leitura(x), "un": unidade_periodo(tl_ex, _dp(x["data"]), _dp(x["data"]))[0],
              "per": "relatórios peticionados em %s%s" % (_br(x["data"]), (" · %s · até %d dias (4 por obra)" % (
                  rs.pl(len(x["meses"]), "mês", "meses"), 4 * len(x["meses"]))) if x["meses"] else ""),
              "sit": ("Remida no RSPE: %s em %s%s" % (rs.pl(round(lei_rem[x["data"]]["dias"]), "dia", "dias"), rs.fmt(lei_rem[x["data"]]["d"] or lei_rem[x["data"]]["ref"]),
@@ -2216,13 +2509,19 @@ def quadro_trabalho(r, f, hoje=None, manuais=None):
         linhas.append({"emp": "Trabalho", "per": "", "dias": "—", "at": "—", "un": "—", "cor": "amarelo",
                        "sit": "Falha na conciliação da remição (%s): conferir a ficha e o RSPE" % e})
         return linhas, res
+    # trecho sem atestado que não chega a 1 dia remido em nenhuma unidade (1 ou 2 dias, ou 3 divididos por uma transferência): a remição
+    # detalhada não o lista (remicao_detalhada), e a aba também não pede atestado por ele
+    curtos = [x for x in C.get("sem_atestado") or [] if not x.get("duvida") and not _trecho_conta(x, tl)]
+    if curtos:
+        C["pendencias"] = [p_ for p_ in C["pendencias"] if not (p_["status"] == "SEM_ATESTADO" and any(
+            p_["data"] == x["ini"] and p_["texto"].startswith("%s, " % x["setor"]) for x in curtos))]
     res["conc"] = C
     # unidade de cada atestado da conferência (a do fim do período atestado; sem período, a da emissão)
     _por_id = {a["id"]: a for a in C["atestados"]}
     for t_ in C["tabela"]:
         a_ = _por_id.get(t_["id"])
         fs_ = [s["fim"] for s in (a_ or {}).get("segs", []) if s.get("fim")]
-        t_["unidade"] = _unidade_em(tl, max(fs_) if fs_ else (a_ or {}).get("emissao")) if a_ else SEM_UNIDADE
+        t_["unidade"] = _unidade_em(tl_ex, max(fs_) if fs_ else (a_ or {}).get("emissao")) if a_ else SEM_UNIDADE
     vivos = [a for a in C["atestados"] if a["status"] != "ANTERIOR"]
     nl = [a for a in vivos if a["status"] == "NAO_LANCADO"]
     sem_p = [p for p in C["pendencias"] if p["status"] == "SEM_ATESTADO"]
@@ -2243,7 +2542,8 @@ def quadro_trabalho(r, f, hoje=None, manuais=None):
     res["diferenca"] = max(0, res["remidos_estudo"] - livres) if res["remidos_estudo"] else 0
     res["sem_n"] = len(sem_p)
     res["em_curso_n"] = len([p for p in C["pendencias"] if p["status"] == "EM_CURSO"])
-    res["sem_atestado_a_requerer"] = sum(x["est"] // 3 for x in C["sem_atestado"] if not x.get("duvida") and not (x["em_curso"] and (x["fim"] - x["ini"]).days <= 90))
+    res["sem_atestado_a_requerer"] = sum(x["est"] // 3 for x in C["sem_atestado"] if not x.get("duvida") and not (x["em_curso"] and (x["fim"] - x["ini"]).days <= 90)
+                                         and not any(x is y for y in curtos))
     res["baixas"] = 0
     # linhas (Excel, relatório e Auditoria): uma por atestado conciliado + as pendências de trabalho
     nov = []
@@ -2263,7 +2563,7 @@ def quadro_trabalho(r, f, hoje=None, manuais=None):
         if x["data"] in lei_rem and x["data"] not in lei_parc:
             continue
         parc = x["data"] in lei_parc
-        nov.append({"emp": "Leitura" + (" (%s)" % ", ".join(x["meses"]) if x.get("meses") else ""), "per": "relatórios peticionados em %s" % _br(x["data"]),
+        nov.append({"emp": _rotulo_leitura(x), "per": "relatórios peticionados em %s" % _br(x["data"]),
                     "dias": "—", "at": rs.pl(n_, "obra", "obras") if n_ else "obras não informadas",
                     "sit": ("Remida em parte (%s de %d): conferir a decisão (obra não aprovada?)" % (_fmtn(lei_rem[x["data"]]["dias"]), 4 * n_)) if parc else
                            ("Leitura sem remição no RSPE (%s): requerer a apreciação" % rs.pl(4 * n_, "dia", "dias")) if n_ else
@@ -2294,15 +2594,18 @@ SEM_UNIDADE = "Unidade não identificada na ficha"
 # grafias da mesma unidade na ficha (sigla, abreviação, nome antigo): um nome só no relatório por unidade
 UNIDADES_CANON = [
     (r"^CT$|CENTRO DE TRIAGEM", "Centro de Triagem Anísio Lima"),
-    (r"^CPAIG$|AGROINDUSTRIAL DA GAMELEIRA", "Centro Penal Agroindustrial da Gameleira"),
+    (r"^CPAI?G?$|AGROINDUSTRIAL DA GAMELEIRA", "Centro Penal Agroindustrial da Gameleira"),  # CPA, CPAG, CPAIG ("CPA da Gameleira")
     (r"GAMELEIRA II\b", "Penitenciária Estadual Masculina de Regime Fechado da Gameleira II"),
     (r"(PENIT\.? EST\.? MASC\.?|PENITENCI[AÁ]RIA ESTADUAL MASCULINA) DE REGIME FECHADO DA GAMELEIRA$",
      "Penitenciária Estadual Masculina de Regime Fechado da Gameleira"),
-    (r"^EPJFC$|JAIR FERREIRA DE CARVALHO", "Estabelecimento Penal Jair Ferreira de Carvalho"),
+    (r"^E?PJFC$|JAIR FERREIRA DE CARVALHO", "Estabelecimento Penal Jair Ferreira de Carvalho"),
+    (r"^PSMTL$|SEGURANCA MEDIA DE TRES LAGOAS", "Penitenciária de Segurança Média de Três Lagoas"),
+    (r"^EPMC$|ESTABELECIMENTO PENAL MASCULINO DE COXIM", "Estabelecimento Penal Masculino de Coxim"),
     (r"^EPRACA$|REGIME ABERTO E CASA (DO )?ALBERGADO", "Estabelecimento Penal de Regime Aberto e Casa do Albergado de Campo Grande"),
     (r"^IPCG$|INSTITUTO PENAL DE CAMPO GRANDE", "Instituto Penal de Campo Grande"),
     (r"^PTRAN$|PRES[IÍ]DIO DE TR[AÂ]NSITO", "Presídio de Trânsito de Campo Grande"),
     (r"MONITORAMENTO VIRTUAL", "Unidade Mista de Monitoramento Virtual Estadual de Campo Grande"),
+    (r"^PDIB$|PENITENCIARIA DE DOIS IRMAOS? DO BURITI", "Penitenciária de Dois Irmãos do Buriti"),  # o SIAPEN grafa "Dois Irmão"
     (r"RICARDO BRAND[AÃ]O", "Unidade Penal Ricardo Brandão"),
     (r"(E\.?P\.?M\.?|ESTABELECIMENTO PENAL MASCULINO) DE (REG\.?|REGIME) SEMIABERTO E ABERTO DE DOURADOS",
      "Estabelecimento Penal Masculino de Regime Semiaberto e Aberto de Dourados"),
@@ -2311,6 +2614,29 @@ UNIDADES_CANON = [
     (r"SEMIABERTO, ABERTO E ASS.* AMAMBAI", "Estabelecimento Penal de Regime Semiaberto, Aberto e Assistência ao Albergado de Amambai"),
     (r"COL[OÔ]NIA PENAL.*TR[EÊ]S LAGOAS", "Colônia Penal e Industrial de Três Lagoas"),
 ]
+
+
+def _trecho_conta(x, tl):
+    """O trecho de trabalho sem atestado x (rspe_remicao: ini, fim, ausencias) entra na remição detalhada? Só se, em alguma unidade,
+    tem 3 dias de trabalho ou mais (seg.-sáb., sem feriados nem ausências) - a mesma conta de remicao_detalhada."""
+    fer = set()
+    for y in range(x["ini"].year, x["fim"].year + 1):
+        fer |= feriados(y)
+    aus = {d for c0, c1, _m in x.get("ausencias") or [] for d in rrm_dias_set(c0, c1)}
+    for _un, a0, b0 in _segmentos_unidade(tl, x["ini"], x["fim"]):
+        n, d = 0, a0
+        while d <= b0:
+            if d.weekday() < 6 and d not in fer and d not in aus:
+                n += 1
+            d += timedelta(days=1)
+        if n >= 3:
+            return True
+    return False
+
+
+def rrm_dias_set(a, b):
+    import rspe_remicao as rrm
+    return rrm._dias_set(a, b)
 
 
 def nome_unidade(nome):
@@ -2454,6 +2780,7 @@ def remicao_detalhada(C, pend_est, lei, lei_rem, res, hoje, tl=None, cursos=None
         if sum(i["dias"] for i in det[k]["itens"]) > det[k]["dias"] + 1:
             det[k]["sobreposicao"] = True  # períodos simultâneos: o total é menor que a soma das linhas
     # estudo: horas por unidade (declaradas: proporcionais aos dias úteis de cada unidade); matrícula em curso há até 90 dias à parte
+    restos = []  # (horas que sobram da divisão por 12, índice da linha) de cada linha de estudo
     for e in list(pend_est) + list(est_curso or []):
         ini, fim = e.get("_ini"), e.get("_fim") or hoje
         segs = _segmentos_unidade(tl, ini, fim) if ini else [(SEM_UNIDADE, None, None)]
@@ -2463,6 +2790,8 @@ def remicao_detalhada(C, pend_est, lei, lei_rem, res, hoje, tl=None, cursos=None
             h = int(round(e["_horas"] * du / du_tot)) if (e.get("_declaradas") or not a0) and len(segs) > 1 else (e["_horas"] if len(segs) == 1 else du * HORAS_DIA_ESTUDO)
             if h < 12:
                 continue
+            if not e.get("_em_curso"):
+                restos.append((h % 12, len(det["estudo"]["itens"])))
             add("em_curso" if e.get("_em_curso") else "estudo", {"ref": "Estudo · %s" % (e.get("curso") or "").title(), "data": "", "setor": "", "unidade": un,
                            "per": "%s a %s" % (rrm._f(a0), rrm._f(b0) if (b0 != hoje or e.get("_fim")) else "hoje (matrícula ativa)") if a0 else "período não informado",
                            "base": ("%d h declaradas" % h) if e.get("_declaradas") else "≈ %d h" % h, "dias": h // 12, "estimado": not e.get("_declaradas")})
@@ -2471,6 +2800,18 @@ def remicao_detalhada(C, pend_est, lei, lei_rem, res, hoje, tl=None, cursos=None
         tot, alvo = sum(det["estudo"]["por_un"].values()), res.get("estudo_dias_pend") or 0
         det["estudo"]["por_un"] = {u: v * alvo // tot for u, v in det["estudo"]["por_un"].items()}
         det["estudo"]["sobreposicao"] = True
+    elif restos and sum(det["estudo"]["por_un"].values()) < (res.get("estudo_dias_pend") or 0):
+        # as horas somam-se antes da divisão por 12 (a conta da aba): o que sobra de cada linha completa dias - vão para as linhas com
+        # mais horas sobrando, para o total ser o mesmo da aba (456 h = 38 dias, e não 380 h -> 31 + 76 h -> 6)
+        falta = (res.get("estudo_dias_pend") or 0) - sum(det["estudo"]["por_un"].values())
+        ordem = [i for _r, i in sorted(restos, key=lambda x: -x[0])]
+        for k_, i_ in enumerate(ordem):
+            n_ = falta // len(ordem) + (1 if k_ < falta % len(ordem) else 0)
+            if n_:
+                it = det["estudo"]["itens"][i_]
+                it["dias"] += n_
+                it["base"] += " · + %s das horas que sobram na divisão por 12 das linhas somadas" % rs.pl(n_, "dia", "dias")
+                det["estudo"]["por_un"][it["unidade"]] = det["estudo"]["por_un"].get(it["unidade"], 0) + n_
     for x in cursos or []:
         # curso de qualificação peticionado no SEEU: a ficha não traz a carga horária - sem dias, para conferir a remição
         det["estudo"]["itens"].append({"ref": "Curso de qualificação peticionado" + (" (%s)" % ", ".join(x["meses"]) if x.get("meses") else ""),
@@ -2488,7 +2829,7 @@ def remicao_detalhada(C, pend_est, lei, lei_rem, res, hoje, tl=None, cursos=None
     for x in lei:
         if x["data"] in (lei_parc or {}) and lei_parc[x["data"]] > 0:
             # remida em parte: o juízo decidiu (pode ter negado obras) - a diferença fica a conferir na decisão, fora do total
-            add("a_conferir", {"ref": "Leitura" + (" (%s)" % ", ".join(x["meses"]) if x.get("meses") else ""), "data": _br(x["data"]), "setor": "",
+            add("a_conferir", {"ref": _rotulo_leitura(x), "data": _br(x["data"]), "setor": "",
                             "unidade": _unidade_em(tl, _dp(x["data"])), "per": "relatórios peticionados em %s" % _br(x["data"]),
                             "base": "remida em parte: %s no RSPE em %s, menos que os %d da petição - conferir a decisão (obra não aprovada?)" % (
                                 _fmtn(lei_rem[x["data"]]["dias"]), rs.fmt(lei_rem[x["data"]]["d"] or lei_rem[x["data"]]["ref"]),
@@ -2498,7 +2839,7 @@ def remicao_detalhada(C, pend_est, lei, lei_rem, res, hoje, tl=None, cursos=None
         if x["data"] in lei_rem:
             continue
         n = len(x.get("meses") or []) or x.get("obras") or 0
-        add("leitura", {"ref": "Leitura" + (" (%s)" % ", ".join(x["meses"]) if x.get("meses") else ""), "data": _br(x["data"]), "setor": "",
+        add("leitura", {"ref": _rotulo_leitura(x), "data": _br(x["data"]), "setor": "",
                         "unidade": _unidade_em(tl, _dp(x["data"])),
                         "per": "relatórios peticionados em %s" % _br(x["data"]), "base": rs.pl(n, "obra", "obras") if n else "obras não informadas",
                         "dias": 4 * n, "estimado": False})
@@ -2518,7 +2859,17 @@ def remicao_detalhada(C, pend_est, lei, lei_rem, res, hoje, tl=None, cursos=None
 
 def _dias_txt(v):
     """'1 dia' / '2,5 dias' / '3 dias'."""
-    return "%s %s" % (_fmtn(v), "dia" if v == 1 else "dias")
+    return "%s %s" % (_fmtn(v), "dia" if _fmtn(v) == "1" else "dias")
+
+
+def _rotulo_leitura(x):
+    """Rótulo da leitura peticionada: os meses citados ou, no atestado por ciclo sem mês, o ciclo e o mês do próprio atestado
+    (só exibição: a conta segue 4 dias por obra)."""
+    if x.get("meses"):
+        return "Leitura (%s)" % ", ".join(x["meses"])
+    if x.get("ciclo"):
+        return "Leitura (ciclo nº %s%s)" % (x["ciclo"], (" · atestado de %s" % x["ref_mes"]) if x.get("ref_mes") else "")
+    return "Leitura"
 
 
 def _br(txt):
@@ -2537,8 +2888,16 @@ def fundamentacao_remicao(res):
     par, total = [], 0.0
     if ats:
         total = round(sum(a["dias_remidos"] for a in ats), 2)
-        trab = sum(a["dias_trabalhados"] for a in ats)
         todos_trab = all(a["dias_trabalhados"] for a in ats)
+        # atestado inteiro sem remição (nem parte já remida, nem acima do possível): pede-se 1/3 dos dias trabalhados - o atestado
+        # que declara menos (fração truncada, erro de conta) não reduz o pedido; o que declara mais (arredondamento) fica com o que declara
+        parcial = [a for a in ats if a.get("ja_remidos") or a.get("acima_do_possivel")]
+        cheios = [a for a in ats if a not in parcial]
+        trab = sum(a["dias_trabalhados"] for a in cheios)
+        menos = [a for a in cheios if a["dias_remidos"] <= a["dias_trabalhados"] / 3 - 1]
+        acima = [a for a in cheios if a["dias_remidos"] > a["dias_trabalhados"] / 3 + 0.01]
+        if todos_trab:
+            total = round(sum(max(a["dias_remidos"], a["dias_trabalhados"] / 3) for a in cheios) + sum(a["dias_remidos"] for a in parcial), 2)
 
         def _item(a):
             per = (", período de %s a %s" % (a["periodo_inicio"], a["periodo_fim"])) if a.get("periodo_inicio") else ""
@@ -2553,10 +2912,29 @@ def fundamentacao_remicao(res):
             return "nº %s, de %s%s%s%s" % ((a.get("numero") or "s/n").split("/ST")[0], _br(a["data"]), per, dt_, obs)
         lst = "; ".join(_item(a) for a in ats)
         if todos_trab:
-            par.append("A ficha disciplinar (SIAPEN) registra %s de trabalho sem remição correspondente no RSPE: %s. %s, à razão de 1 dia de pena "
-                       "a cada 3 de trabalho (LEP, art. 126, § 1º, II), correspondem a %s remidos."
-                       % (rs.pl(len(ats), "atestado", "atestados"), lst,
-                          ("Os %s trabalhados" % _dias_txt(trab)) if len(ats) > 1 else "Os dias trabalhados", _dias_txt(total)))
+            txt = "A ficha disciplinar (SIAPEN) registra %s de trabalho sem remição correspondente no RSPE: %s." % (rs.pl(len(ats), "atestado", "atestados"), lst)
+            razao = "à razão de 1 dia de pena a cada 3 de trabalho (LEP, art. 126, § 1º, II)"
+            _n = lambda a: (a.get("numero") or "s/n").split("/ST")[0]
+            if cheios:
+                txt += " %s, %s, correspondem a %s remidos." % (
+                    ("Os %s trabalhados" % _dias_txt(trab)) if len(ats) > 1 else "Os dias trabalhados", razao, _dias_txt(round(trab / 3, 2)))
+            if acima:
+                txt += " %s, acima de 1/3 (arredondamento): requer-se o valor declarado." % (
+                    "; ".join("O atestado nº %s declara %s remidos para %s trabalhados" % (_n(a), _fmtn(a["dias_remidos"]), _fmtn(a["dias_trabalhados"]))
+                              for a in acima))
+            if menos:
+                txt += " %s menos que 1/3 dos dias trabalhados (%s): requer-se a proporção legal." % (
+                    "Os atestados declaram" if len(menos) > 1 else "O atestado declara",
+                    "; ".join("nº %s: %s remidos para %s trabalhados" % (_n(a), _fmtn(a["dias_remidos"]), _fmtn(a["dias_trabalhados"])) for a in menos))
+            if parcial:
+                rp = round(sum(a["dias_remidos"] for a in parcial), 2)
+                txt += " %s, %s só os ≈ %s ainda não remidos, como indicado." % (
+                    ("Dos atestados com parte do período já remida ou acima do possível" if len(parcial) > 1 else
+                     "Do atestado com parte do período já remida" if parcial[0].get("ja_remidos") else "Do atestado acima do possível no período"),
+                    "requerem-se" if cheios else razao + ", requerem-se", _dias_txt(rp))
+            if parcial and cheios or acima:
+                txt += " No total, %s remidos." % _dias_txt(total)
+            par.append(txt)
         else:
             # sem os dias trabalhados na ficha, a conta "1 a cada 3" não se demonstra: vale o que o atestado declara
             par.append("A ficha disciplinar (SIAPEN) registra %s de trabalho sem remição correspondente no RSPE: %s. %s %s remidos "
@@ -2691,8 +3069,11 @@ def comparativo(r, f, hoje=None, conferidos=None, manuais=None):
     rot = []
     if nh >= 1 or nl_sd:
         rot.append("Atestado não lançado")
-    if lei_d >= 1 or est_decl:
+    if est_decl:
         rot.append("Remição a requerer")
+    elif lei_d >= 1:
+        # leitura já peticionada: o mesmo rótulo do bloco da leitura e da providência do relatório (conferir a homologação)
+        rot.append("Leitura: conferir homologação")
     elif est_pend:
         rot.append("Estudo sem remição (estimativa)")
     if not (nh >= 1 or nl_sd) and res["diferenca"] >= 1:
@@ -2790,22 +3171,49 @@ def custodia_na_ficha(f, ini, datas):
     return res, "; ".join(notas)
 
 
-def saidas_temporarias(eventos):
-    """Datas das saídas temporárias usufruídas pela ficha, nos formatos inequívocos: "Saída confirmada do benefício de: SAÍDA
-    TEMPORÁRIA", "Retorno confirmado do benefício ...", "Saída da Unidade Penal ... Motivo: Saída Temporária", "saiu ... em saída
-    temporária", "retornou de/da saída temporária" (o retorno prova a saída). A concessão sem registro de saída ou retorno
-    ("beneficiado com saída temporária ...") não entra (a decidir). Saída e retorno da mesma saída (até 10 dias) contam uma vez."""
+_RE_SAIDA_TEMP = re.compile(
+    r"(?:SAIDA|RETORNO) CONFIRMAD[OA] DO BENEFICIO DE:\s*SAIDA TEMPOR|SAIDA DA UNIDADE PENAL:.*MOTIVO:\s*SAIDA TEMPOR|"
+    r"\bSAIU\b.{0,40}\bEM SAIDA TEMPOR|RET(?:ORN|ONR)\w* (?:DE|DA|DO BENEFICIO DE) SAIDA TEMPOR|RETORNO DE SAIDA TEMPOR|"
+    r"\bRET(?:ORN|ONR)OU\b[^.;]{0,30}?\b(?:DE|DA|DO)\s+(?:BENEFICIO\s+DE\s+)?SAIDA TEMPOR|"
+    r"^SAIDA TEMPORARIA\W.{0,80}\bPERIODO DE\s*\d|\bBENEFICIAD[OA]\b.{0,80}\bSAIDA TEMPOR.*\b(?:RET(?:ORN|ONR)OU\b|RETORNANDO EM .{0,30}SEM ALTERAC)")
+
+
+def _lancamentos_saida_temporaria(eventos):
+    """Lançamentos de saída temporária usufruída: [(data, é retorno)]. Formatos: "Saída confirmada do benefício de: SAÍDA TEMPORÁRIA",
+    "Retorno confirmado do benefício ...", "Saída da Unidade Penal ... Motivo: Saída Temporária", "saiu ... em saída temporária",
+    "retornou (nesta data) de/da saída temporária" (também entre aspas - 'retornou da "SAÍDA TEMPORÁRIA"' - e com o erro "RETONROU"), "Saída
+    Temporária ... no período de d a d" (a saída, pela data inicial do período, e o retorno, pela final, quando já passou na data do
+    lançamento) e "beneficiado com saída temporária ..., retornou à esta unidade" / "retornando em d, sem alteração" (o retorno prova
+    a saída). A concessão sem registro
+    de saída ou retorno ("beneficiado com saída temporária ..., devendo retornar em d") não entra (a decidir)."""
     ds = []
     for e in eventos or []:
         d = _dp(e.get("data") or "")
-        u = re.sub(r"\s+", " ", rs._sem_acento(e.get("texto") or "").upper())
+        u = re.sub(r"\s+", " ", re.sub(r"[\"'´`“”‘’]", "", rs._sem_acento(e.get("texto") or "").upper())).strip()
         if not d or re.match(r"MUDANCA DE CELA", u) or re.search(r"NAO (?:PODE |PODERA )?SAIR|NAO SAIU|NAO USUFRU|NAO LIBERAR|NAO FOI LIBERAD", u):
             continue
-        if re.search(r"(?:SAIDA|RETORNO) CONFIRMAD[OA] DO BENEFICIO DE:\s*SAIDA TEMPOR|SAIDA DA UNIDADE PENAL:.*MOTIVO:\s*SAIDA TEMPOR|"
-                     r"\bSAIU\b.{0,40}\bEM SAIDA TEMPOR|RETORN\w* (?:DE|DA|DO BENEFICIO DE) SAIDA TEMPOR|RETORNO DE SAIDA TEMPOR", u):
-            ds.append((d, bool(re.search(r"RETORN", u))))
+        if not _RE_SAIDA_TEMP.search(u):
+            continue
+        mper = re.match(r"SAIDA TEMPORARIA\W.{0,80}?\bPERIODO DE\s*(\d{2}/\d{2}/\d{2,4})\s*(?:A|ATE|-)\s*(\d{2}/\d{2}/\d{2,4})", u)
+        if mper:
+            a, b = (rs.to_date(re.sub(r"/(\d{2})$", r"/20\1", x)) for x in mper.groups())
+            if a and abs((a - d).days) <= 60:
+                ds.append((a, False))
+                if b and a <= b <= d:
+                    ds.append((b, True))
+                continue
+        # "retornando em 02/01/2025, sem alteração" lançado depois: o retorno na data dita
+        mr = re.search(r"\bRET(?:ORN|ONR)(?:OU|ANDO) (?:A ESTA UNIDADE PENAL NA DATA DE |EM )(\d{2}/\d{2}/\d{4})", u)
+        dr = rs.to_date(mr.group(1)) if mr else None
+        ds.append((dr if dr and dr <= d and (d - dr).days <= 30 else d, bool(re.search(r"RET(?:ORN|ONR)", u))))
+    return ds
+
+
+def saidas_temporarias(eventos):
+    """Datas das saídas temporárias usufruídas pela ficha (formatos em _lancamentos_saida_temporaria). Saída e retorno da mesma
+    saída (até 10 dias) contam uma vez."""
     out = []  # [saída, tem retorno]
-    for d, ret in sorted(ds, key=lambda x: (x[0], x[1])):
+    for d, ret in sorted(_lancamentos_saida_temporaria(eventos), key=lambda x: (x[0], x[1])):
         if out and (d - out[-1][0]).days <= 10 and (ret and not out[-1][1] or not ret and (d - out[-1][0]).days <= 1):
             out[-1][1] = out[-1][1] or ret  # a mesma saída: o retorno dela, ou a saída lançada de novo
             continue
@@ -2816,17 +3224,8 @@ def saidas_temporarias(eventos):
 def saidas_temporarias_retorno(eventos):
     """Saídas temporárias da ficha com a data do retorno: [(saída ou None, retorno ou None)]. Mesmos formatos de
     saidas_temporarias; o retorno lançado até 10 dias depois da saída fecha a mesma saída."""
-    ds = []
-    for e in eventos or []:
-        d = _dp(e.get("data") or "")
-        u = re.sub(r"\s+", " ", rs._sem_acento(e.get("texto") or "").upper())
-        if not d or re.match(r"MUDANCA DE CELA", u) or re.search(r"NAO (?:PODE |PODERA )?SAIR|NAO SAIU|NAO USUFRU|NAO LIBERAR|NAO FOI LIBERAD", u):
-            continue
-        if re.search(r"(?:SAIDA|RETORNO) CONFIRMAD[OA] DO BENEFICIO DE:\s*SAIDA TEMPOR|SAIDA DA UNIDADE PENAL:.*MOTIVO:\s*SAIDA TEMPOR|"
-                     r"\bSAIU\b.{0,40}\bEM SAIDA TEMPOR|RETORN\w* (?:DE|DA|DO BENEFICIO DE) SAIDA TEMPOR|RETORNO DE SAIDA TEMPOR", u):
-            ds.append((d, bool(re.search(r"RETORN", u))))
     out = []  # [saída, retorno]
-    for d, ret in sorted(ds, key=lambda x: (x[0], x[1])):
+    for d, ret in sorted(_lancamentos_saida_temporaria(eventos), key=lambda x: (x[0], x[1])):
         if out and out[-1][0] and not out[-1][1] and (d - out[-1][0]).days <= 10:
             if ret:
                 out[-1][1] = d
@@ -2938,6 +3337,16 @@ def complementar_decretos(r, f, hoje=None):
         # nova conclusão pelo conjunto das linhas
         poss = [m.group(1) for m in re.finditer(r"^✔ ([IVX]+(?: e [IVX]+)?):", det, re.M)]
         verif = [m.group(1) for m in re.finditer(r"^\? ([IVX]+):", det, re.M) if m.group(1) not in ("XVI",)]
+        # o que não é inciso do art. 9º entra na conclusão como na análise do RSPE: "✔ Art. 10, III, c" (mulheres) e os "?" do
+        # art. 10, do § 2º, II a VI (metade do lapso) e do XIV/XV com VGA em branco. Sem eles, a ficha que nega o XII/XIII (linhas
+        # que só aparecem com mais tempo cumprido) dava "não atinge" a quem seguia "a verificar" pelo art. 10 ou pelo § 2º
+        poss_art = [m.group(1).replace("Art.", "art.") for m in re.finditer(r"^✔ (Art\. \d+[^:]*):", det, re.M)]
+        for m in re.finditer(r"^\? (.+)$", det, re.M):
+            t = m.group(1)
+            x = ("XIV, XV (VGA em branco)" if t.startswith("XIV/XV") else "§ 2º, II a VI (metade do lapso)" if t.startswith("§ 2º")
+                 else "art. 10 (mulheres)" if t.startswith("Art. 10") else "")
+            if x and x not in verif:
+                verif.append(x)
         antes = r.get(k) or ""
         # NÃO CABE (art. 6º, falta grave nos 12 meses): a ficha não reabre - a falta afasta o indulto qualquer que seja o inciso
         # "A VERIFICAR: ... | antes: ..." (pena extinta depois do decreto) e tempo cumprido incerto: a dúvida não é de inciso - a
@@ -2957,17 +3366,28 @@ def complementar_decretos(r, f, hoje=None):
         if mrot and antes.startswith("A VERIFICAR") and not ressalva:
             # "A VERIFICAR (tese: hediondez superveniente)" ou "(art. 2º, II)": motivo que a ficha não resolve - segue a verificar
             ressalva = mrot.group(1)
-        if poss and ressalva:
+        # o inciso XV não depende do tempo cumprido nem da pena: a ressalva sobre eles não o alcança (como na análise do RSPE)
+        ressalva_xv = "; ".join(x for x in ressalva.split("; ") if x and not x.startswith(("conferir o tempo cumprido", "conferir a pena considerada")))
+        if poss and ressalva and "XV" in poss and not ressalva_xv:
+            outros = [p for p in poss if p != "XV"] + poss_art + verif
+            r[k] = "POSSÍVEL%s: art. 9º, XV%s" % (rot, aviso)
+            r[k + "_status"] = rs.status_texto_decreto(r[k])
+            if (r.get(kc) or "").startswith("POSSÍVEL"):
+                r[kc] = "prejudicada: indulto cabível (art. 13, § 5º)"
+            concl = "possível pelo art. 9º, XV%s." % ((" (a verificar: %s - %s)" % (", ".join(dict.fromkeys(outros)), ressalva)) if outros else "")
+        elif (poss or poss_art) and ressalva:
             # a ficha confirma o requisito, mas a ressalva continua: segue "a verificar"
-            r[k] = "A VERIFICAR%s: art. 9º, %s%s" % (rot, ", ".join(dict.fromkeys(poss + verif)), aviso)
+            r[k] = "A VERIFICAR%s: art. 9º, %s%s" % (rot, ", ".join(dict.fromkeys(poss + poss_art + verif)), aviso)
             r[k + "_status"] = "verificar"
-            concl = "a verificar (%s) - %s." % (", ".join(dict.fromkeys(poss + verif)), ressalva)
-        elif poss:
-            r[k] = "POSSÍVEL%s: art. 9º, %s%s" % (rot, ", ".join(poss), aviso)
+            concl = "a verificar (%s) - %s." % (", ".join(dict.fromkeys(poss + poss_art + verif)), ressalva)
+        elif poss or poss_art:
+            # como na análise do RSPE: "art. 9º, I, XII; art. 10, III, c"
+            _inc = "; ".join(filter(None, [("art. 9º, " + ", ".join(poss)) if poss else "", ", ".join(poss_art)]))
+            r[k] = "POSSÍVEL%s: %s%s" % (rot, _inc, aviso)
             r[k + "_status"] = rs.status_texto_decreto(r[k])  # falta do art. 6º a verificar no aviso: a verificar (critério único)
             if (r.get(kc) or "").startswith("POSSÍVEL"):
                 r[kc] = "prejudicada: indulto cabível (art. 13, § 5º)"
-            concl = "possível pelo art. 9º, %s (conferido na ficha disciplinar)." % ", ".join(poss)
+            concl = "possível pelo %s (conferido na ficha disciplinar)." % _inc
         elif verif:
             r[k] = "A VERIFICAR%s: art. 9º, %s%s" % (rot, ", ".join(verif), aviso)
             r[k + "_status"] = "verificar"

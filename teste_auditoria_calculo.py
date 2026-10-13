@@ -33,7 +33,7 @@ ev = [{"tipo": "PRISÃO/INÍCIO DE CUMPRIMENTO", "motivo": "PRISÃO EM FLAGRANTE
       {"tipo": "PRISÃO/INÍCIO DE CUMPRIMENTO", "motivo": "MANDADO", "data": "01/01/2021", "processos": "0000001-11.2020.8.12.0001"}]
 t = tipos(reg([inc("FIXAÇÃO/ALTERAÇÃO DE REGIME", "Fechado - Regime Inicial", "", "01/01/2021")], ev, regime="Fechado - ATIVO", db="01/01/2021"))
 it = t["regime-inicial-depois-da-primeira-prisao"]
-assert "91 dias de prisão provisória" in it["detalhe"] and "(1 − fração) = 1 mês e 25 dias" in it["detalhe"], it["detalhe"]
+assert "92 dias de prisão provisória" in it["detalhe"] and "(1 − fração) = 1 mês e 25 dias" in it["detalhe"], it["detalhe"]
 assert "AgRg no AREsp 2.956.206" in ra.fundamentacao(it, reg([]))
 
 # 1/1 no crime comum com livramento já concedido: revogação lançada no lugar errado

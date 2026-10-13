@@ -54,19 +54,33 @@ def mais(dt, a, m, d, sinal=1):
     return date(y, mo, min(dt.day, calendar.monthrange(y, mo)[1])) + timedelta(days=sinal * d)
 
 
+def soma(dt, a, m, d):
+    """Data + a anos e m meses pelo calendário (dia inexistente no mês de chegada completa no dia seguinte ao último do mês,
+    como em entre() e na prescrição) + d dias corridos. Subtraindo 1 dia, dá o último dia de cumprimento (CP, art. 10)."""
+    x = mais(dt, a, m, 0)
+    if x.day < dt.day:
+        x += timedelta(days=1)
+    return x + timedelta(days=d)
+
+
 def entre(a, b):
     """Período de a até b, contando o dia do começo (CP, art. 10): ((anos, meses, dias), dias corridos) ou None."""
     if not a or not b or b < a:
         return None
     fim = b + timedelta(days=1)  # o dia final também conta
+
+    def aniv(y_, m_):
+        # dia inexistente no mês de chegada (29/02, 31/04...): o período completa no dia seguinte ao último do mês
+        x = mais(a, y_, m_, 0)
+        return x + timedelta(days=1) if x.day < a.day else x
     y, m = fim.year - a.year, fim.month - a.month
     if m < 0:
         y, m = y - 1, m + 12
-    if mais(a, y, m, 0) > fim:
+    while (y > 0 or m > 0) and aniv(y, m) > fim:
         m -= 1
         if m < 0:
-            y, m = y - 1, m + 11
-    d = (fim - mais(a, y, m, 0)).days
+            y, m = y - 1, m + 12
+    d = (fim - aniv(y, m)).days
     return (y, m, d), (b - a).days + 1
 
 
@@ -87,7 +101,7 @@ def txt(p):
 
 
 def extenso(p):
-    return rs.pena_extenso(txt(p)) if any(p) else "0 dia"
+    return rs.pena_extenso(txt(p)) if any(p) else "0 dias"
 
 
 def calcular(e):
@@ -96,6 +110,26 @@ def calcular(e):
     e = e or {}
     P = soma_penas(e.get("fita"))
     out = {"total": txt(P), "total_ext": extenso(P), "erros": []}
+    for x in e.get("fita") or []:
+        for k in ("a", "m", "d"):
+            v = str((x.get("p") or {}).get(k) or "").strip()
+            if v and not re.fullmatch(r"\d+", v):
+                out["erros"].append("Valor inválido na pena (%s): use números inteiros, sem vírgula ou ponto; foi considerado zero." % v)
+    for k, rot in (("rem", "remidos/detração"),):
+        v = str(e.get(k) or "").strip()
+        if v and not re.fullmatch(r"\d+", v):
+            out["erros"].append("Valor inválido em %s (%s): use dias inteiros, sem sinal; foi considerado zero." % (rot, v))
+    for k in ("a", "m", "d"):
+        v = str((e.get("interr") or {}).get(k) or "").strip()
+        if v and not re.fullmatch(r"\d+", v):
+            out["erros"].append("Valor inválido na interrupção (%s): use números inteiros; foi considerado zero." % v)
+    if P[0] >= 1000:
+        out["erros"].append("Pena de %d anos: acima do que a calculadora aceita (até 999 anos)." % P[0])
+    _bruto = sum((1 if _int(x.get("s", 1)) >= 0 else -1) * (lambda t: t[0] * 360 + t[1] * 30 + t[2])(amd(x.get("p"))) for x in e.get("fita") or [])
+    if _bruto < 0:
+        out["erros"].append("A subtração deixa a pena negativa: o total foi considerado zero.")
+    if (e.get("outra") or "").strip() and fracao(e["outra"]) is None:
+        out["erros"].append("Outra fração inválida: use 2/5 ou 55%.")
     p1, p2 = rs.to_date(e.get("p1") or ""), rs.to_date(e.get("p2") or "")
     if e.get("p1") and not p1 or e.get("p2") and not p2:
         out["erros"].append("Data do período inválida: use dd/mm/aaaa.")
@@ -112,7 +146,10 @@ def calcular(e):
     dias = rs.pena_para_dias(txt(P)) or 0
     if not ini or not dias:
         return out
-    out["termino"] = rs.fmt(mais(mais(ini, *P), *I) - timedelta(days=rem + 1))
+    _t = soma(soma(ini, *P), *I) - timedelta(days=rem + 1)
+    if _t < ini:
+        out["erros"].append("Os remidos/detração superam a pena: a pena está cumprida antes do início informado.")
+    out["termino"] = rs.fmt(_t)
     out["termino_det"] = "início %s + pena %s%s%s - 1 dia (CP, art. 10)" % (
         rs.fmt(ini), extenso(P), (" + interrupção %s" % extenso(I)) if any(I) else "", (" - %s" % rs.pl(rem, "dia remido/detraído", "dias remidos/detraídos")) if rem else "")
     antes = (e.get("rem_modo") or "antes") != "depois"
@@ -120,15 +157,13 @@ def calcular(e):
     def fr(f):
         base = max(0, dias - rem) if antes else dias
         q = rs.pena_amd(rs.dias_para_pena(int(base * f)))
-        dt = mais(mais(ini, *q), *I) - timedelta(days=1 + (0 if antes else rem))
-        return {"q": txt(q), "data": rs.fmt(dt)}
+        dt = soma(soma(ini, *q), *I) - timedelta(days=1 + (0 if antes else rem))
+        return {"q": txt(q), "data": rs.fmt(max(dt, ini))}  # fração de 0 dia (pena mínima) completa no próprio início
     out["fracoes"] = [dict(fr(fracao(r)), rot=r) for r in FRACOES]
     out["percentuais"] = [dict(fr(fracao(r)), rot=r) for r in PERCENTUAIS]
     if (e.get("outra") or "").strip():
         f = fracao(e["outra"])
-        if f is None:
-            out["erros"].append("Outra fração inválida: use 2/5 ou 55%.")
-        else:
+        if f is not None:
             out["outra"] = dict(fr(f), rot=e["outra"].strip())
     return out
 
@@ -153,7 +188,9 @@ def texto(e, r):
         if r.get("outra"):
             L.append("Fração %s: %s (%s)" % (r["outra"]["rot"], r["outra"]["data"], rs.pena_extenso(r["outra"]["q"])))
     if r.get("periodo"):
-        L.append("Período de %s a %s: %s (%d dias)" % (e.get("p1"), e.get("p2"), r["periodo"]["ext"], r["periodo"]["dias"]))
+        L.append("Período de %s a %s: %s (%s)" % (e.get("p1"), e.get("p2"), r["periodo"]["ext"], rs.pl(r["periodo"]["dias"], "dia", "dias")))
     if e.get("nota"):
         L.append("Anotação: %s" % e["nota"].strip())
+    for x in r.get("erros") or []:
+        L.append("Atenção: %s" % x)
     return "\n".join(L)

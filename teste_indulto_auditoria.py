@@ -314,11 +314,20 @@ r = {"nome": "T", "pena_total": "0a1m0d", "pena_cumprida": "0a0m0d", "pena_reman
      "status_execucao": "ATIVO", "regime_atual": "Fechado - ATIVO", "_eventos": [preso("30/11/2025")],
      "_incidentes": [incidente("FIXAÇÃO/ALTERAÇÃO DE REGIME", "Fechado - Regime inicial", "30/11/2025")],
      "_crimes": [crime("01/01/2024", "01/06/2025", "01/07/2025", pena="0 ano(s), 1 mês(es) e 0 dia(s)")]}
+r0 = dict(r)
+r = rs.reprocessar(dict(r0))
+# furto: o inciso XV não depende do tempo cumprido nem da pena - continua possível (com o aviso); I e II ficam a verificar (E9)
+confere(r["indulto_2025"].startswith("POSSÍVEL: art. 9º, XV |") and "não traz o cálculo" in r["indulto_2025"]
+        and "? I: pena ≤ 8 anos" in r["indulto_2025_detalhe"], "(29) SEEU sem cálculo: %s" % r["indulto_2025"])
+r = rs.reprocessar(dict(r, pena_total="0a0m0d", pena_remanescente="0a0m0d"))
+confere(r["indulto_2025"].startswith("POSSÍVEL: art. 9º, XV |") and not r["indulto_2025"].startswith("sem pena"), "(29) pena total zerada: %s" % r["indulto_2025"])
+# crime não patrimonial (porte de arma): só os incisos que dependem do tempo - o favorável fica a verificar
+r = dict(r0, _crimes=[crime("01/01/2024", "01/06/2025", "01/07/2025", pena="0 ano(s), 1 mês(es) e 0 dia(s)", artigo="ART 14: Porte ilegal de arma de fogo de uso permitido",
+                            lei="10826/03 - Estatuto do Desarmamento", tipo="CAPUT: Portar arma de fogo de uso permitido, Reclusão: 2 a 4 anos E Multa")])
 r = rs.reprocessar(r)
-confere(r["indulto_2025_status"] == "verificar" and "não traz o cálculo" in r["indulto_2025"], "(29) SEEU sem cálculo: %s" % r["indulto_2025"])
-r = dict(r, pena_total="0a0m0d", pena_remanescente="0a0m0d")
-r = rs.reprocessar(r)
-confere(r["indulto_2025_status"] == "verificar" and not r["indulto_2025"].startswith("sem pena"), "(29) pena total zerada: %s" % r["indulto_2025"])
+confere(r["indulto_2025_status"] == "verificar" and "não traz o cálculo" in r["indulto_2025"], "(29) SEEU sem cálculo (porte): %s" % r["indulto_2025"])
+r = rs.reprocessar(dict(r, pena_total="0a0m0d", pena_remanescente="0a0m0d"))
+confere(r["indulto_2025_status"] == "verificar" and not r["indulto_2025"].startswith("sem pena"), "(29) pena total zerada (porte): %s" % r["indulto_2025"])
 
 # (30) concurso com impeditivo e cumprimento interrompido: o art. 7º, p. ú., veda antes da dúvida da interrupção (Alex Rodrigues
 # de Souza, Brehndo, Márcio de Souza Alves, 2024/2025)
@@ -348,9 +357,10 @@ o = rs.analise_decreto_2022({"pena_total": "3a0m0d"}, [crime("01/01/2020", "01/0
                                                              proc="0000004-00.2020.8.12.0001")], [], [])
 confere(o["indulto_2022_status"] == "possivel" and "conferir" not in o["indulto_2022"], "(32) 2022: %s" % o["indulto_2022"])
 
-# (33) textos da petição: dias acima de 30 viram mês, "da pena cumprida", ficha sem reticências no meio do texto
-confere(rtl._pena_ext("4a11m33d") == "5 anos e 3 dias" and rtl._pena_ext("1a2m31d") == "1 ano, 3 meses e 1 dia", "(33) %s / %s" % (
-    rtl._pena_ext("4a11m33d"), rtl._pena_ext("1a2m31d")))
+# (33) textos da petição: dias acima de 30 viram mês (sem somar dias: 11 meses e 33 dias não são 1 ano e 3 dias - o ano tem 365
+# dias e 12 meses, 360), "da pena cumprida", ficha sem reticências no meio do texto
+confere(rtl._pena_ext("4a11m33d") == "4 anos, 11 meses e 33 dias" and rtl._pena_ext("1a2m31d") == "1 ano, 3 meses e 1 dia"
+        and rtl._pena_ext("1a11m30d") == "1 ano, 11 meses e 30 dias", "(33) %s / %s" % (rtl._pena_ext("4a11m33d"), rtl._pena_ext("1a2m31d")))
 t = rs._texto_ficha("Saída da Unidade Penal: ESTABELECIMENTO PENAL DE REGIME SEMIABERTO E ABERTO DE AQUIDAUANA, Destino: , Motivo: Evasão do "
                     "estabelecimento sem autorização judicial durante o período noturno de recolhimento", 90)
 confere("..." not in t and "Destino: ," not in t, "(33) texto da ficha: %s" % t)
@@ -424,16 +434,17 @@ o = rs.analise_decretos(reg_([c30], [ev_("01/01/2017")], "30a0m0d", "9a0m0d", ge
 confere("IV: 7 anos e 6 meses ininterruptos" in o["indulto_2024_detalhe"], "(39) lapso do § 2º arredondado: %s" % [
     l for l in o["indulto_2024_detalhe"].split("\n") if "IV:" in l[:6]])
 
-# (40) comutação de 2024: o exigido da memória é a fração arredondada para cima, e o ✔/✘ acompanha a decisão
+# (40) comutação de 2024: o exigido da memória é a fração em dias arredondada para baixo (mesmo critério das frações de
+# progressão e da calculadora; 981 / 5 = 196,2 -> 196), e o ✔/✘ acompanha a decisão
 cr = crime("01/01/2023", "01/03/2024", "01/04/2024", artigo="ART 157: Roubo", tipo="CAPUT: Subtrair coisa móvel alheia, mediante grave ameaça",
            pena="2 ano(s), 8 mês(es) e 11 dia(s)")
 cr["vga"] = "S"
 o = rs.analise_decretos(reg_([cr], [ev_("13/06/2024")], "2a8m11d", "0a6m16d", ger="25/12/2024"), [cr], [ev_("13/06/2024")], [], HOJE)
-confere(o["comutacao_2024_num"]["exigido"] == 197 and "✘ Requisito" in o["comutacao_2024_detalhe"], "(40) %s / %s" % (
+confere(o["comutacao_2024_num"]["exigido"] == 196 and "✔ Requisito" in o["comutacao_2024_detalhe"], "(40) %s / %s" % (
     o["comutacao_2024_num"], o["comutacao_2024_detalhe"][:200]))
 
-# (41) 2/3 do impeditivo arredondados para cima nos dois motores
-confere(rs._dois_tercos(1000) == 667, "(41) 2/3 de 1000 = %s" % rs._dois_tercos(1000))
+# (41) 2/3 do impeditivo arredondados para baixo nos dois motores (regra decidida: fração em dias para baixo, como em rspe_decretos)
+confere(rs._dois_tercos(1000) == 666 and rs._dois_tercos(5110) == 3406, "(41) 2/3 de 1000 = %s" % rs._dois_tercos(1000))
 
 # (42) execução encerrada: a comutação refeita depois do indulto indeferido também não tem objeto
 cx = crime("01/01/2020", "01/03/2021", "01/04/2021", pena="10 ano(s), 0 mês(es) e 0 dia(s)", extinto="Sim", data_extincao="01/06/2025")

@@ -101,6 +101,11 @@ arq3 = os.path.join(tempfile.mkdtemp(), "cond.pdf")
 rrel.relatorio_condicoes_prisional(D, arq3, "teste", "", ["penal"])
 ok(open(arq3, "rb").read(4) == b"%PDF", "PDF das condições por unidade")
 ok(len(rrel._geo_sel(dict(D, unidades=D["unidades"] + [{"nome": "1ª DELEGACIA", "cat": "delegacia"}]), "", ["penal"])) == 2, "filtro por tipo")
+# condições por unidade só das unidades escolhidas (janela de seleção)
+arq6 = os.path.join(tempfile.mkdtemp(), "cond_sel.pdf")
+rrel.relatorio_condicoes_prisional(D, arq6, "teste", "", None, ids=[D["unidades"][0]["id"]])
+ok(open(arq6, "rb").read(4) == b"%PDF", "PDF das condições das unidades escolhidas")
+
 # relatório da unidade com série (colunas de crescimento e ocupação)
 U1 = dict(U0, capacidade=100, serie=[dict(ciclo=c, pop=v, provisorios=10, fechado=v - 10, semiaberto=0, aberto=0) for c, v in
                                      (("Maio/2026", 150), ("Junho/2026", 90), ("Julho/2026", 210))])

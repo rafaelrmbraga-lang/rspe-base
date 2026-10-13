@@ -50,7 +50,8 @@ def linha(r, proc=None):
 r = reg([crime("11/04/2021", "23/04/2025", "0 ano(s), 1 mês(es) e 26 dia(s)", artigo="ART 147: Ameaça")],
         [dict(ev("29/04/2025", "ENTRADA NO SISTEMA PRISIONAL (lançada pela ficha SIAPEN)", tipo="PRISÃO"), _ficha=True)],
         pena_total="0a1m26d", pena_cumprida="0a0m0d", pena_remanescente="0a1m26d")
-confere(rv.termino_calc(r) == date(2025, 6, 24), "A1: término com a custódia deveria ser 24/06/2025: %s" % rv.termino_calc(r))
+# o dia da prisão conta (CP, art. 10): 29/04/2025 + 1m26d - 1 dia = 23/06/2025
+confere(rv.termino_calc(r) == date(2025, 6, 23), "A1: término com a custódia deveria ser 23/06/2025: %s" % rv.termino_calc(r))
 ex = rv.extincao(r, rp.analisar(r, HOJE), False)
 confere(ex["ext_cor"] == "amarelo" and ex["ext_sit"] == "Extinção a verificar" and "LEP, art. 66, II" in ex["ext_hipoteses"]
         and "outro" in ex["ext_hipoteses"], "A1: extinção pelo cumprimento a verificar: %s" % ex)

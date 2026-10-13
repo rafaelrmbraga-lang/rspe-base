@@ -41,8 +41,10 @@ import rspe_mapa_ms as rmapa
 import rspe_calc as rcalc
 
 APP = "APTO"
-VERSAO = "7.9.0"
+VERSAO = "7.9.3"
 GEO_AUTO_DIAS = 30           # dados prisionais: baixados de novo sozinhos quando têm 30 dias ou mais
+GEO_REPETIR_MIN = 10         # ... ou 10 minutos depois de um download em que algum relatório falhou (nova tentativa automática)
+GEO_REPETIR_MAX = 3          # tentativas automáticas seguidas com o programa aberto (depois, na próxima abertura ou pelo botão)
 _GEO_LOCK = threading.Lock()  # um download do Geopresídios por vez (automático ou pelo botão)
 
 
@@ -114,7 +116,7 @@ imputação do cumprimento entre condenações); sem cor = não prescrita ("Não
 trânsito ou a pena no RSPE - conferir na ação penal); cinza = sem dados; azul = extinta. A tela, a exportação e o relatório mostram
 cada pretensão (executória e punitiva) com a sua cor. Clique num cartão de resumo para filtrar pela cor.
 <h4>Datas e cálculos</h4>
-Progressão, livramento e término são os impressos pelo SEEU no RSPE; o programa não os recalcula. Sem data no RSPE, a tabela mostra
+Progressão, livramento e término são os impressos pelo SEEU no RSPE. Quando o SEEU não os imprime, o programa calcula o término (e o lapso atingido do livramento) e marca o valor com *. Sem data no RSPE, a tabela mostra
 "—" e o motivo ("Não consta no RSPE", "Pena interrompida", "Não iniciou") fica na ficha. O programa calcula indulto e comutação,
 prescrição, extinção pelo cumprimento, estado da execução, falta nos 12 meses, remição a requerer (ficha x RSPE, estudo estimado) e as
 conferências da Auditoria, na convenção do SEEU (ano de 365 dias, mês de 30, prazos pelo calendário).
@@ -273,12 +275,14 @@ curso (o externo conta). Amarelo: algo fica a conferir (ficha com mais de 90 dia
 abre o pedido da progressão (o mesmo da coluna "Pedido" da aba Progressão); com o pedido marcado, o ícone fica azul preenchido.
 <h4>Dados prisionais (Geopresídios/CNJ)</h4>
 Aba ao lado do Quadro do Usuário. Pela API pública do Geopresídios/CNIEP (CNJ), traz para cada unidade de MS a última inspeção judicial
-mensal do tema "Aspectos gerais": vagas, presos por regime, perfil e servidores. Os dados são baixados sozinhos, em segundo plano, ao abrir uma base,
-quando têm 30 dias ou mais (cerca de 2 minutos, com internet); "Atualizar dados" baixa na hora. Ficam guardados ao lado do programa. No mapa, um círculo verde-escuro por cidade com estabelecimento dos tipos marcados (unidades
+mensal do tema "Aspectos gerais": vagas, presos por regime, perfil e servidores. Os dados são baixados sozinhos, em segundo plano, ao abrir o programa
+(já na tela inicial, mesmo sem base aberta), quando têm 30 dias ou mais (cerca de 2 minutos, com internet); "Atualizar dados" baixa na hora.
+Se algum relatório não vier (o servidor do CNJ recusa pedidos em excesso), a unidade fica com o dado baixado antes (população e evolução),
+a mensagem diz quantos faltaram e o programa tenta de novo sozinho em 10 minutos. Ficam guardados ao lado do programa. No mapa, um círculo verde-escuro por cidade com estabelecimento dos tipos marcados (unidades
 penais, delegacias e cadeias, unidades militares, Polícia Federal e outras), com o tamanho pelo número de presos; o mouse lista os
 estabelecimentos e o clique filtra a cidade. Escolher a unidade (lista ou tabela) troca o mapa pelo gráfico dela: em pizza, por regime, provisórios (mês escolhível), perfil
 e condições; em colunas, uma por inspeção, o crescimento de apenados e a ocupação (com a linha das vagas).
-Relatórios em PDF: geral, condições por unidade (em quais estabelecimentos foi constatado cada problema) e, no detalhe, o da unidade. Mostra também os assistidos da
+Relatórios em PDF: geral (sempre do estado, com a escolha dos tipos de estabelecimento), condições por unidade (escolha as unidades pela busca; em quais foi constatado cada problema) e, no detalhe, o da unidade. O download mostra o andamento em porcentagem; a visão "Condições" da unidade lista os problemas constatados por tema. Mostra também os assistidos da
 base em cada unidade (pela ficha do SIAPEN) e quantos estão no semiaberto ou no aberto pelo RSPE em unidade de regime fechado (SV 56).
 Condições constatadas nos demais temas (habitabilidade, assistências, segurança e saúde): quantas unidades têm cada problema; clicar filtra
 a tabela. Evolução da população nos últimos meses (painel, tabela e detalhe). "Relatório PDF": o estado ou a cidade escolhida no mapa.
@@ -405,8 +409,15 @@ cabível" (vermelho), "Extinção a verificar" (amarelo, com o motivo: custódia
 (laranja até 30, amarelo até 60, verde até 90), "Em cumprimento" (acima de 90 dias), "Pena extinta (registrada)" (azul), "Pena
 interrompida" ou "Pena suspensa" (cinza) e "Não se aplica" (cinza: sem previsão).
 <h4>Base jurídica</h4>
-O arquivo base_juridica.json ao lado do programa tem prioridade sobre a cópia embutida. Para atualizar (novo decreto, nova fração,
-nova tese), edite o arquivo e use "Base ▾ → Recarregar base jurídica". A versão em uso aparece na aba Auditoria.
+Entre o arquivo base_juridica.json ao lado do programa e a cópia embutida, vale o de versão mais recente (campo "versao"; em empate,
+o de ao lado do programa); o que só existe na embutida é completado a partir dela. Para atualizar (novo decreto, nova fração,
+nova tese), edite o arquivo ao lado do programa, aumente a "versao" dele e use "Base ▾ → Recarregar base jurídica": a mensagem
+diz a versão e o arquivo em uso e avisa se a cópia ao lado foi ignorada (JSON inválido ou versão mais antiga). A versão em uso
+aparece no topo da tela ("Hoje … · base jurídica …"), com o aviso, se houver.<br>
+<b>Legislação nova:</b> ao abrir a base, o programa consulta a legislação federal (Senado Federal, dados abertos) e abre uma
+janela só se houver lei que altere a LEP, o CP, a Lei 8.072/90, a Lei 11.343/06, a Lei 10.826/03 ou a Lei 12.850/13 depois da
+data da base jurídica, ou decreto de indulto ou comutação que a base ainda não tem. É só aviso: os cálculos seguem a base
+jurídica até a revisão dela. "Ciente" esconde aqueles avisos; sem internet, nada aparece.
 <h4>Crimes</h4>
 Resumidos pelo artigo: "art. 33 Lei 11.343/06 (x2)". "n/i" = artigo não informado pelo SEEU. A ficha traz a descrição completa.
 """
@@ -518,6 +529,32 @@ def _mesmo_arquivo(a, b):
         return False
 
 
+def _bj_info():
+    """Base jurídica para a tela: a versão (o topo mostra só ela) leva junto o aviso de cópia ignorada (JSON inválido ou
+    versão mais antiga que a embutida), para que ele apareça."""
+    av = rg.avisos()
+    v = rg.versao()
+    curtos = ["base_juridica.json %s ignorado - %s" % ("ao lado do programa" if "ao lado" in a else "embutido",
+                                                      "JSON inválido" if "JSON inválido" in a else "versão mais antiga") for a in av]
+    return {"versao": v + (" (atenção: %s; detalhes em Base ▾ → Recarregar base jurídica)" % "; ".join(curtos) if av else ""),
+            "origem": rg.origem(), "avisos": av}
+
+
+def _msg_falha_gravar(caminho, e):
+    """Mensagem em português para a falha ao gravar (salvar como, restaurar cópia) uma base."""
+    t = str(e).lower()
+    nome = os.path.basename(caminho or "")
+    if "unable to open" in t or isinstance(e, FileNotFoundError):
+        return "a pasta de %s não existe ou não permite gravação. Escolha outra pasta." % nome
+    if "readonly" in t or "read-only" in t or isinstance(e, PermissionError):
+        return "%s está somente para leitura (arquivo ou pasta sem permissão de gravação)." % nome
+    if "in use" in t or "locked" in t or "busy" in t:
+        return "%s está em uso (por outra janela do programa, outro programa ou outro computador). Feche-o lá e tente de novo." % nome
+    if "disk" in t and "full" in t:
+        return "não há espaço em disco para gravar %s." % nome
+    return "falha ao gravar %s (%s)." % (nome, e)
+
+
 _PRESC_DATAS = {"fato": "Data do fato", "denuncia": "Recebimento da denúncia", "sentenca": "Sentença", "acordao": "Acórdão",
                 "transito_mp": "Trânsito para a acusação", "transito": "Trânsito final", "ultimo_comparecimento": "Último comparecimento",
                 "inicio_prd": "Início efetivo da restritiva", "revogacao_sursis": "Revogação do sursis",
@@ -537,15 +574,47 @@ def _int_nao_neg(v):
     return int(t) if t.isdigit() else None
 
 
-def _validar_presc_ajuste(dados):
-    """Mensagem de erro (ou None) para os dados de prescrição digitados: datas que existam no calendário, saldos inteiros."""
+_PRESC_OPCOES = {"reinc": ("S", "N"), "art115": ("sim", "nao"), "modalidade": ("PPL", "PRD", "SURSIS", "MS", "MS98")}
+# ordem que as datas do processo não podem inverter: (antes, depois)
+_PRESC_ORDEM = [("fato", "denuncia"), ("fato", "sentenca"), ("denuncia", "sentenca"), ("sentenca", "acordao"), ("fato", "transito"),
+                ("sentenca", "transito"), ("acordao", "transito"), ("sentenca", "transito_mp"), ("susp366_ini", "susp366_fim")]
+
+
+def _validar_presc_ajuste(dados, orig=None):
+    """Mensagem de erro (ou None) para os dados de prescrição digitados: datas que existam no calendário e não sejam futuras,
+    sem inverter a ordem fato -> denúncia -> sentença -> acórdão -> trânsito (comparando com os dados importados `orig` da
+    linha, quando dados), pena no formato do SEEU sem sinal, opções dos campos de escolha e saldos inteiros."""
     if not dados:
         return None
     if not isinstance(dados, dict):
         return "Dados inválidos."
-    for k, v in (dados.get("valores") or {}).items():
-        if k in _PRESC_DATAS and str(v or "").strip() and not rs.to_date(str(v)):
-            return "Data inválida em \"%s\": %s não existe no calendário (use dd/mm/aaaa)." % (_PRESC_DATAS[k], v)
+    hoje = datetime.now().date()
+    valores = dados.get("valores") or {}
+    if not isinstance(valores, dict):
+        return "Dados inválidos."
+    for k, v in valores.items():
+        t = str(v or "").strip()
+        if k in _PRESC_DATAS:
+            if t and not rs.to_date(t):
+                return "Data inválida em \"%s\": %s não existe no calendário (use dd/mm/aaaa)." % (_PRESC_DATAS[k], v)
+            if t and rs.to_date(t) > hoje:
+                return "Data futura em \"%s\": %s é posterior a hoje (%s)." % (_PRESC_DATAS[k], v, hoje.strftime("%d/%m/%Y"))
+        elif k == "pena":
+            d = rs.pena_para_dias(t) if t else 0
+            if t and ("-" in t or not d):
+                return "Pena inválida: %s. Use anos, meses e dias, sem sinal (ex.: 2a6m0d)." % v
+        elif k in _PRESC_OPCOES:
+            if t and t not in _PRESC_OPCOES[k]:
+                return "Valor inválido em \"%s\": %s." % (k, v)
+        else:
+            return "Campo desconhecido no ajuste da prescrição: %s." % k
+    # ordem das datas: só acusa a inversão em que entra um dado digitado agora (a do RSPE já vai para a Auditoria)
+    junto = {k: rs.to_date(str(v or "")) for k, v in (orig or {}).items() if k in _PRESC_DATAS}
+    junto.update({k: rs.to_date(str(v or "")) for k, v in valores.items() if k in _PRESC_DATAS and str(v or "").strip()})
+    for a, b in _PRESC_ORDEM:
+        if junto.get(a) and junto.get(b) and junto[a] > junto[b] and (str(valores.get(a) or "").strip() or str(valores.get(b) or "").strip()):
+            return "Datas incoerentes: \"%s\" (%s) é posterior a \"%s\" (%s). Confira o que foi digitado." % (
+                _PRESC_DATAS[a], junto[a].strftime("%d/%m/%Y"), _PRESC_DATAS[b], junto[b].strftime("%d/%m/%Y"))
     for ev, dias in (dados.get("saldos") or {}).items():
         if _int_nao_neg(dias) is None:
             return "Saldo inválido na data %s: informe dias inteiros, sem sinal." % ev
@@ -621,8 +690,19 @@ class Base:
     def __init__(self, caminho):
         os.makedirs(os.path.dirname(caminho) or ".", exist_ok=True)
         self.caminho = caminho
-        self.con = sqlite3.connect(caminho, check_same_thread=False)
+        # arquivo sem permissão de gravação (pasta protegida, base de outro computador só para leitura): abre só para consulta,
+        # sem criar tabelas nem gravar nada (as gravações dão erro com mensagem clara na tela)
+        self.somente_leitura = os.path.exists(caminho) and not os.access(caminho, os.W_OK)
+        if self.somente_leitura:
+            self.con = sqlite3.connect("file:%s?mode=ro" % urllib.parse.quote(os.path.abspath(caminho)), uri=True, check_same_thread=False)
+        else:
+            self.con = sqlite3.connect(caminho, check_same_thread=False)
         self.lock = threading.Lock()
+        if not self.somente_leitura:
+            self._esquema()
+
+    def _esquema(self):
+        """Cria as tabelas que faltam e migra as colunas novas."""
         self.con.execute("""CREATE TABLE IF NOT EXISTS assistidos (
             processo TEXT PRIMARY KEY, nome TEXT, data_geracao TEXT,
             arquivo TEXT, importado_em TEXT, dados TEXT)""")
@@ -724,7 +804,7 @@ class Base:
             out[ch] = f
             if nn and not p:
                 out.setdefault("nome:" + nn, f)
-        if relidas:
+        if relidas and not self.somente_leitura:  # base só para consulta: relidas só na memória
             with self.lock:
                 self.con.executemany("UPDATE fichas SET dados=? WHERE chave=?", relidas)
                 self.con.commit()
@@ -1067,10 +1147,37 @@ class Base:
             h = ""
         return (row[0], h, antiga)
 
-    def remover(self, processo):
+    TABELAS_DO_ASSISTIDO = (("fichas", "ficha disciplinar vinculada"), ("pedidos", "pedido(s) marcado(s)"), ("baixas", "alerta(s) baixado(s)"),
+                            ("baixas_hist", "registro(s) no histórico de alertas"), ("presc_ajustes", "ajuste(s) da prescrição"),
+                            ("dados_manuais", "dado(s) informado(s) pelo operador"), ("atestados_manuais", "atestado(s) lançado(s) à mão"),
+                            ("quadro_cartoes", "cartão(ões) no Quadro do Usuário"), ("fixados", "fixação no topo"), ("calculos", "cálculo(s) registrado(s)"))
+
+    def remover_info(self, processo):
+        """O que existe na base ligado ao assistido, além do RSPE (para a confirmação da remoção)."""
+        with self.lock:
+            out = []
+            for t, rot in self.TABELAS_DO_ASSISTIDO:
+                try:
+                    n = self.con.execute("SELECT COUNT(*) FROM %s WHERE processo=?" % t, (processo,)).fetchone()[0]
+                except sqlite3.OperationalError:
+                    n = 0
+                if n:
+                    out.append({"tabela": t, "n": n, "rot": rot})
+            h = self.con.execute("SELECT COUNT(*) FROM rspe_historico WHERE processo=?", (processo,)).fetchone()[0]
+        return {"ligados": out, "historico": h}
+
+    def remover(self, processo, tudo=False):
+        """Remove o RSPE (e o histórico de RSPEs). tudo=True apaga também ficha, pedidos, baixas, ajustes, dados informados,
+        cartões, fixação e cálculos; sem isso, eles ficam e voltam se o RSPE for importado de novo."""
         with self.lock:
             self.con.execute("DELETE FROM assistidos WHERE processo=?", (processo,))
             self.con.execute("DELETE FROM rspe_historico WHERE processo=?", (processo,))
+            if tudo:
+                for t, _ in self.TABELAS_DO_ASSISTIDO:
+                    try:
+                        self.con.execute("DELETE FROM %s WHERE processo=?" % t, (processo,))
+                    except sqlite3.OperationalError:
+                        pass
             self.con.commit()
 
     def fechar(self):
@@ -1127,7 +1234,11 @@ class Api:
         try:
             with open(CONFIG, encoding="utf-8") as f:
                 c = json.load(f)
-            return [p for p in c.get("recentes", []) if os.path.exists(p)]
+            out = []
+            for p in c.get("recentes", []):  # sem repetir o mesmo arquivo escrito de outro jeito (config de versão anterior)
+                if os.path.exists(p) and not any(_mesmo_arquivo(p, q) for q in out):
+                    out.append(p)
+            return out
         except Exception:
             return []
 
@@ -1150,8 +1261,13 @@ class Api:
     def _salvar_config(self):
         rec = self._recentes()
         if self.base:
-            rec = [self.base.caminho] + [p for p in rec if p != self.base.caminho]
-        self._cfg_gravar(recentes=rec[:8])
+            rec = [os.path.abspath(self.base.caminho)] + rec
+        # uma entrada por arquivo, qualquer que seja a grafia do caminho ("bases/./B.sqlite", maiúsculas no Windows)
+        unicos = []
+        for p in rec:
+            if not any(_mesmo_arquivo(p, q) for q in unicos):
+                unicos.append(os.path.abspath(p))
+        self._cfg_gravar(recentes=unicos[:8])
 
     def _js(self, codigo):
         if self._janela:
@@ -1178,7 +1294,7 @@ class Api:
         if not self.base:
             return {"sem_base": True, "recentes": [{"caminho": p, "nome": os.path.splitext(os.path.basename(p))[0]} for p in self._recentes()],
                     "hoje": rv.HOJE.strftime("%d/%m/%Y"), "abas": rv.ABAS, "rotulos": rv.ROTULO, "ajuda": AJUDA + _ajuda_juris(),
-                    "base_juridica": {"versao": rg.versao(), "origem": rg.origem()}, "registros": []}
+                    "base_juridica": _bj_info(), "registros": []}
         brutos = self.base.todos()
         ctx = self._contexto(brutos)
         # a lista é montada à parte e só substitui a atual no fim: exportar, relatórios e registro não leem uma lista pela metade
@@ -1207,7 +1323,8 @@ class Api:
         _ids = {id(m) for m in ativos}
         self._json = {}
         self._hoje_modelos = rv.HOJE
-        self._modelos = ativos
+        # ordem alfabética (sem acento), como as abas da tela: exportação, relatórios e aba Indulto na mesma ordem
+        self._modelos = sorted(ativos, key=lambda m: (rs._sem_acento(m.get("nome") or "").upper(), m.get("id") or ""))
         self._ocultos = [m for m in modelos if id(m) not in _ids]  # outras execuções de quem tem mais de um RSPE (fora da lista)
         return {
             "base": self.base.nome,
@@ -1216,7 +1333,7 @@ class Api:
             "rotulos": rv.ROTULO,
             "rotulos_dica": rv.ROTULO_DICA,
             "ajuda": AJUDA + _ajuda_juris(),
-            "base_juridica": {"versao": rg.versao(), "origem": rg.origem()},
+            "base_juridica": _bj_info(),
             # json_seguro: um Fraction ou date esquecido no modelo derrubava a lista inteira ("Object of type Fraction is not JSON serializable")
             # versão leve (sem os textos de prescrição e auditoria): a base grande chega à tela em segundos; o registro completo
             # vem quando a ficha, a linha expandida ou o cálculo da fuga é aberto (Api.registro)
@@ -1344,7 +1461,7 @@ class Api:
         if not r.get("termino") and not r.get("periodo") and r.get("total") == "0a0m0d":
             return {"erro": "Nada a registrar: preencha a pena (e o início) ou o período."}
         resumo = "Pena %s%s%s" % (r.get("total_ext"), (" · início %s · término %s" % (e.get("inicio"), r["termino"])) if r.get("termino") else "",
-                                  (" · período %s (%d dias)" % (r["periodo"]["ext"], r["periodo"]["dias"])) if r.get("periodo") else "")
+                                  (" · período %s (%s)" % (r["periodo"]["ext"], rs.pl(r["periodo"]["dias"], "dia", "dias"))) if r.get("periodo") else "")
         dados = {k: e.get(k) for k in ("fita", "inicio", "interr", "rem", "rem_modo", "outra", "p1", "p2")}
         cid = self.base.calculo_gravar({"id": e.get("id"), "processo": e.get("processo") or "", "assistido": (e.get("assist") or "").strip(),
                                         "nota": (e.get("nota") or "").strip(), "resumo": resumo, "dados": dados})
@@ -1361,7 +1478,10 @@ class Api:
         return out
 
     def calc_assistido(self, processo):
-        """Dados do assistido para a calculadora: pena total, início do cumprimento, interrupções e saldo de remidos do RSPE."""
+        """Dados do assistido para a calculadora: pena total, início do cumprimento, interrupções e saldo de remidos do RSPE.
+        Para a tela: termino_seeu (impresso no RSPE), termino_criterio_seeu (data do RSPE + remanescente, pelo calendário,
+        como o SEEU: quando o RSPE não imprime o término, rspe_view.termino_calc), termino_nota (por que a calculadora difere
+        do SEEU) e avisos (lista de textos: art. 75, período fora das interrupções, o que não veio do RSPE)."""
         m = next((x for x in (self._modelos or []) if x.get("id") == processo), None)
         r = (m or {}).get("_bruto")
         if not r:
@@ -1370,10 +1490,77 @@ class Api:
         it = rs.pena_amd(r.get("total_interrupcoes") or "") or (0, 0, 0)
         ini = rs.inicio_execucao(r.get("_eventos") or [], r.get("_crimes") or [])
         mrem = re.match(r"\s*(-?\d+)", r.get("saldo_remidos") or "")
+        rem = max(0, int(mrem.group(1))) if mrem else 0
+        nome = rv.nome_proprio(r.get("nome") or "")
+        avisos, faltou = [], []
+        if not p:
+            faltou.append("pena total")
+            avisos.append("Sem pena total no RSPE: a fita veio vazia; digite a pena (soma das condenações).")
+        if not ini:
+            faltou.append("início do cumprimento")
+            avisos.append("Sem início do cumprimento no RSPE (nenhuma prisão nos eventos nem trânsito em julgado): informe o início.")
+        # término pelo critério do SEEU: data do RSPE + remanescente (a pena cumprida em dias corridos)
+        crit = ""
+        try:
+            ger = rs.to_date(r.get("data_geracao_rspe") or "")
+            remn = rs.pena_para_dias(r.get("pena_remanescente"))
+            if remn is None:
+                pt_, pc_ = rs.pena_para_dias(r.get("pena_total")), rs.pena_para_dias(r.get("pena_cumprida"))
+                remn = (pt_ - pc_) if (pt_ and pc_ is not None) else None
+            if ger and remn is not None and remn > 0:
+                crit = rs.fmt(rv._soma_pena(ger, remn))
+            elif not r.get("termino_previsao_seeu"):
+                tc = rv.termino_calc(r)
+                crit = rs.fmt(tc) if tc else ""
+        except Exception:
+            logging.getLogger("rspe").exception("término pelo critério do SEEU %s", processo)
+        # art. 75: a calculadora soma a pena inteira; o término do SEEU respeita o limite
+        pt = rs.pena_para_dias(r.get("pena_total") or "")
+        if pt and pt > 30 * rs.DIAS_ANO:
+            avisos.append("Pena total de %s passa de %d anos: o limite de cumprimento do art. 75 do CP (30 anos para fatos até "
+                          "22/01/2020; 40 anos depois - Lei 13.964/2019) não é aplicado pela calculadora, que soma a pena inteira; "
+                          "o término e as frações daqui não valem para a soltura." % (rs.pena_extenso(r.get("pena_total")) or r.get("pena_total"),
+                                                                                   40 if pt > 40 * rs.DIAS_ANO else 30))
+        # pena cumprida do SEEU x o que a calculadora supõe (da 1ª prisão até o RSPE, menos as interrupções, mais os remidos)
+        try:
+            ger = rs.to_date(r.get("data_geracao_rspe") or "")
+            pc = rs.pena_para_dias(r.get("pena_cumprida") or "")
+            idias = rs.pena_para_dias(r.get("total_interrupcoes") or "") or 0
+            if ini and ger and pc is not None and ger >= ini:
+                sup = (ger - ini).days + 1 - idias + rem
+                dif = sup - pc
+                if pc == 0 and sup > 30:
+                    avisos.append("O SEEU não calculou a pena cumprida neste RSPE (0a0m0d): o início e as interrupções não puderam ser "
+                                  "conferidos com o SEEU - confira nos eventos se houve liberdade fora de \"Total Interrupções\".")
+                elif abs(dif) > 30:
+                    avisos.append(
+                        ("A pena cumprida do SEEU (%s) é %s menor que o tempo da 1ª prisão (%s) até o RSPE, menos as interrupções e "
+                         "mais os remidos: há período em liberdade fora de \"Total Interrupções\" (ou custódia que o SEEU não "
+                         "computou). O término daqui sai antes do real - confira o início ou a interrupção." if dif > 0 else
+                         "A pena cumprida do SEEU (%s) é %s maior que o tempo da 1ª prisão (%s) até o RSPE, menos as interrupções e "
+                         "mais os remidos: o SEEU computa custódia ou detração anterior aos eventos. O término daqui sai depois do "
+                         "SEEU - confira o início ou lance a detração.")
+                        % (r.get("pena_cumprida"), rs.pl(abs(dif), "dia", "dias"), rs.fmt(ini)))
+        except Exception:
+            logging.getLogger("rspe").exception("conferência da pena cumprida %s", processo)
+        veio = [x for x, ok in (("pena total", p), ("início do cumprimento", ini), ("interrupções", r.get("total_interrupcoes")),
+                                ("remidos", mrem)) if ok]
+        msg = ("%s do RSPE de %s." % ((", ".join(veio[:-1]) + " e " + veio[-1]) if len(veio) > 1 else veio[0], nome) if veio
+               else "Nada veio do RSPE de %s." % nome)
+        msg = msg[:1].upper() + msg[1:]
+        if faltou:
+            msg += " Não veio: %s." % ", ".join(faltou)
+        msg += " Confira antes de usar."
         return {"fita": [{"s": 1, "p": {"a": p[0], "m": p[1], "d": p[2]}}] if p else [], "inicio": rs.fmt(ini) if ini else "",
-                "interr": {"a": it[0], "m": it[1], "d": it[2]}, "rem": max(0, int(mrem.group(1))) if mrem else 0, "rem_modo": "antes",
-                "assist": "%s · %s" % (rv.nome_proprio(r.get("nome") or ""), processo), "processo": processo,
-                "msg": "Pena total, início do cumprimento, interrupções e remidos do RSPE de %s. Confira antes de usar." % rv.nome_proprio(r.get("nome") or "")}
+                "interr": {"a": it[0], "m": it[1], "d": it[2]}, "rem": rem, "rem_modo": "antes",
+                "assist": "%s · %s" % (nome, processo), "processo": processo,
+                "termino_seeu": r.get("termino_previsao_seeu") or "",
+                "termino_criterio_seeu": crit,
+                "termino_nota": ("A calculadora soma a pena inteira pelo calendário a partir da 1ª prisão (com as interrupções e os "
+                                 "remidos); o SEEU soma o remanescente à data do RSPE, com a pena cumprida em dias corridos. Diferença "
+                                 "de alguns dias vem dessa convenção; diferença maior, do art. 75, de liberdade fora das interrupções "
+                                 "ou de custódia que o SEEU não computou (ver os avisos)."),
+                "avisos": avisos, "msg": msg}
 
     def calc_pdf(self, e):
         e = dict(e or {})
@@ -1510,16 +1697,25 @@ class Api:
             if col is None:
                 cols[-1]["pedidos"].append({"txt": txt + " · aguardando RSPE posterior", "ret": ""})
                 continue
-            ret = ""
-            for i in col["_incs"]:
-                di = rs.to_date(i.get("data_decisao") or "") or rs.to_date(i.get("data_referencia") or "")
-                if rx_ and re.search(rx_, rs._sem_acento(i.get("tipo") or "")) and di and di >= dp:
-                    sit = rs._sem_acento(i.get("situacao") or "")
-                    ret = ("indeferida" if re.search(r"NAO CONCEDID|INDEFERID|NEGAD", sit) else
-                           "deferida" if re.search(r"CONCEDID|DEFERID|HOMOLOG", sit) else "em análise")
-                    ret = "%s (incidente de %s)" % (ret, fmt_(di))
+            # o retorno pode vir num RSPE posterior: procura da coluna do pedido em diante e anota onde ele aparece
+            ret, col_ret = "", None
+            for c2 in cols[cols.index(col):]:
+                for i in c2["_incs"]:
+                    di = rs.to_date(i.get("data_decisao") or "") or rs.to_date(i.get("data_referencia") or "")
+                    if rx_ and re.search(rx_, rs._sem_acento(i.get("tipo") or "")) and di and di >= dp:
+                        sit = rs._sem_acento(i.get("situacao") or "")
+                        ret = ("indeferida" if re.search(r"NAO CONCEDID|INDEFERID|NEGAD", sit) else
+                               "deferida" if re.search(r"CONCEDID|DEFERID|HOMOLOG", sit) else "em análise")
+                        ret = "%s (incidente de %s)" % (ret, fmt_(di))
+                        col_ret = c2
+                        break
+                if col_ret:
                     break
-            col["pedidos"].append({"txt": txt, "ret": ret or "sem retorno neste RSPE"})
+            if col_ret is None or col_ret is col:
+                col["pedidos"].append({"txt": txt, "ret": ret or "sem retorno neste RSPE"})
+            else:
+                col["pedidos"].append({"txt": txt, "ret": "sem retorno neste RSPE (retorno no RSPE de %s)" % col_ret["geracao"]})
+                col_ret["pedidos"].append({"txt": txt, "ret": ret})
         for c in cols:
             c.pop("_incs", None)
         m0 = next((x for x in self._modelos if x.get("id") == processo), {})
@@ -1561,9 +1757,18 @@ class Api:
         (datas, pena, reincidência, art. 115, saldo na data da fuga) e refaz a análise."""
         if not self.base:
             return {"erro": "Nenhuma base aberta."}
-        erro = _validar_presc_ajuste(dados)
+        m = next((x for x in (self._modelos or []) if x.get("id") == processo), None)
+        L = next((x for x in ((m or {}).get("presc_linhas") or []) if x.get("chave_ajuste") == chave), None)
+        if self._modelos and not L and dados:
+            return {"erro": "Crime não encontrado na prescrição deste assistido (a lista mudou?). Abra o assistido de novo."}
+        erro = _validar_presc_ajuste(dados, (L or {}).get("orig"))
         if erro:
             return {"erro": erro}
+        if L and dados and dados.get("saldos"):
+            evs = {S.get("evasao") for S in (L.get("ppe_saldos") or [])}
+            fora = [ev for ev in dados["saldos"] if ev not in evs]
+            if fora:
+                return {"erro": "Saldo para uma data que não é fuga, revogação ou último comparecimento desta linha: %s." % ", ".join(fora)}
         self.base.presc_ajuste_gravar(processo, chave, dados or None)
         return self._atualizar(processo)
 
@@ -1577,6 +1782,17 @@ class Api:
         for dias in (saldos or {}).values():
             if not (dias is None or str(dias).strip() == "") and _int_nao_neg(dias) is None:
                 return {"erro": "Saldo inválido (%s): informe dias inteiros, sem sinal nem vírgula." % dias}
+        # só crimes e fugas que existem nesta execução: nada de ajuste órfão gravado com mensagem de sucesso
+        m = next((x for x in (self._modelos or []) if x.get("id") == processo), None)
+        if self._modelos and m is None:
+            return {"erro": "Assistido não encontrado."}
+        if m is not None:
+            linhas = {L.get("chave_ajuste"): L for L in (m.get("presc_linhas") or [])}
+            for ch, dias in (saldos or {}).items():
+                if ch not in linhas:
+                    return {"erro": "Crime não encontrado na prescrição deste assistido: %s." % ch}
+                if not (dias is None or str(dias).strip() == "") and fuga not in {S.get("evasao") for S in (linhas[ch].get("ppe_saldos") or [])}:
+                    return {"erro": "%s não é data de fuga (ou revogação) com saldo a apurar neste crime." % fuga}
         atuais = self.base.presc_ajustes().get(processo, {})
         for ch, dias in (saldos or {}).items():
             d = dict(atuais.get(ch) or {})
@@ -1602,12 +1818,21 @@ class Api:
         data = (data or "").strip()
         if data and not rs.to_date(data):
             return {"erro": "Data inválida: use dd/mm/aaaa."}
+        if data and rs.to_date(data) > datetime.now().date():
+            return {"erro": "Data do pedido no futuro (%s): use a data em que o pedido foi feito." % data}
+        if data and not ref and (aba or "").startswith("ind_"):
+            ref = self._ref_ind(processo, aba)  # situação do decreto agora, para avisar se mudar com um RSPE novo
         self.base.pedido_gravar(processo, aba, {"data": data, "obs": (obs or "").strip(), "ref": ref or "", "tipo": tipo or "pedido"} if data else None)
         n = self.base.quadro_pedido_feito(processo, aba) if data else 0
         out = self._atualizar(processo, ("Pedido registrado." + (" Cartão do Quadro marcado como \"Pedido feito\"." if n else "")) if data else "Marcação de pedido removida.")
         if n and isinstance(out, dict):
             out["quadro"] = self.base.quadro()
         return out
+
+    def _ref_ind(self, processo, aba):
+        """Situação do decreto (aba Indulto) no pedido "ind_<decreto>": a mesma de m["pedidos"][aba]["ref_atual"]."""
+        m = next((x for x in (self._modelos or []) if x.get("id") == processo), None)
+        return _ref_decreto((m or {}).get("dec"), aba[4:])
 
     # ---- jurisprudências da triagem automática (teses_auto.bin): índice leve para a tela; texto integral sob demanda ----
     _auto = None
@@ -1647,8 +1872,8 @@ class Api:
 
     @staticmethod
     def _norm_busca(t):
-        import unicodedata
-        return " " + re.sub(r"\s+", " ", unicodedata.normalize("NFD", t or "").encode("ascii", "ignore").decode().lower()) + " "
+        import rspe_teses
+        return rspe_teses.norm_busca(t)  # sem acento e caixa; pontuação separa palavras ("(enem)", "1.084")
 
     def _teses_indice(self):
         if Api._auto_norm is None:
@@ -1658,10 +1883,8 @@ class Api:
     def teses_buscar(self, q):
         """Ids das decisões da triagem automática cujo texto integral tem todas as palavras da busca (começo de palavra; sem
         acento e caixa)."""
-        ws = [" " + w for w in self._norm_busca(q).split() if len(w) >= 2]
-        if not ws:
-            return []
-        return [k for k, t in self._teses_indice() if all(w in t for w in ws)][:5000]
+        import rspe_teses
+        return rspe_teses.buscar(self._teses_indice(), q)
 
     def teses_resumos(self, ids):
         """Resumo (EMENTA do fim da decisão ou o começo do texto) das decisões da triagem automática pedidas pela tela."""
@@ -1755,21 +1978,72 @@ class Api:
         if d:
             self._geo_assistidos(d["unidades"])
             self._geo_pontos(d["unidades"])
-        return {"geo": d, "mapa": rmapa.MAPA, "ind": self._geo_ind(), "cats": rgeo.CATEGORIAS}
+        return {"geo": d, "mapa": rmapa.MAPA, "ind": self._geo_ind(), "cats": rgeo.CATEGORIAS, "temas": {str(k): v for k, v in rgeo.TEMAS.items()}}
+
+    def leg_verificar(self):
+        """Legislação nova desde a base jurídica (API do Senado; cache de um dia): leis que alteram as normas dos cálculos e
+        decretos de indulto/comutação que a base ainda não tem. Devolve só os avisos não marcados como "Ciente"; lista vazia
+        (a tela não abre janela) se não há novidade ou não há internet."""
+        import rspe_legislacao as rleg
+        import rspe_decretos as rdc
+        try:
+            conh = [f.get("numero") for f in rdc.fichas()] + list(rs.NUM_DECRETO.values())
+            r = rleg.com_cache(os.path.join(pasta_app(), "legislacao_cache.json"), rg.versao(), conh)
+        except Exception as e:
+            logging.getLogger("rspe").warning("vigilância de legislação: %s", e)
+            return {"itens": []}
+        cientes = set(self._cfg().get("leg_cientes") or [])
+        return {"itens": [x for x in r.get("itens") or [] if x["chave"] not in cientes], "consultado": r.get("consultado", ""),
+                "base_juridica": rg.versao()}
+
+    def leg_ciente(self, chaves):
+        """Marca avisos de legislação como vistos: não voltam a aparecer ao abrir."""
+        c = set(self._cfg().get("leg_cientes") or [])
+        c.update(k for k in (chaves or []) if isinstance(k, str))
+        self._cfg_gravar(leg_cientes=sorted(c))
+        return {"msg": "Avisos marcados como vistos."}
 
     def geo_precisa(self):
-        """Atualização automática: True se os dados prisionais nunca foram baixados ou têm GEO_AUTO_DIAS dias ou mais."""
+        """Atualização automática: True se os dados prisionais nunca foram baixados, têm GEO_AUTO_DIAS dias ou mais ou se
+        no último download algum relatório falhou (e já se passaram GEO_REPETIR_MIN minutos)."""
         d = rgeo.carregar(self._geo_arq())
         try:
-            return (datetime.now() - datetime.strptime(d["atualizado"], "%d/%m/%Y %H:%M")).days >= GEO_AUTO_DIAS
+            idade = datetime.now() - datetime.strptime(d["atualizado"], "%d/%m/%Y %H:%M")
+            if d.get("falhas"):
+                return idade.total_seconds() >= GEO_REPETIR_MIN * 60
+            return idade.days >= GEO_AUTO_DIAS
         except Exception:
             return True
+
+    def _geo_agendar(self, falhas):
+        """Com relatórios que falharam, agenda nova tentativa automática daqui a GEO_REPETIR_MIN minutos (até
+        GEO_REPETIR_MAX seguidas); download completo zera a contagem."""
+        t = getattr(self, "_geo_timer", None)
+        if t:
+            t.cancel()
+            self._geo_timer = None
+        if not falhas:
+            self._geo_tentativas = 0
+            return False
+        self._geo_tentativas = getattr(self, "_geo_tentativas", 0) + 1
+        if self._geo_tentativas > GEO_REPETIR_MAX:
+            return False
+        self._geo_timer = threading.Timer(GEO_REPETIR_MIN * 60, lambda: self._js("window.ui && ui.geoAtualizar && ui.geoAtualizar(true)"))
+        self._geo_timer.daemon = True
+        self._geo_timer.start()
+        return True
 
     def geo_atualizar(self, todas=False):
         if not _GEO_LOCK.acquire(blocking=False):
             return {"msg": "A atualização dos dados prisionais já está em andamento."}
         try:
-            d = rgeo.atualizar(self._geo_arq())
+            ult = [-1]
+
+            def aviso(texto, pct=None):  # andamento na tela (porcentagem), sem repetir a mesma
+                if pct is not None and pct != ult[0]:
+                    ult[0] = pct
+                    self._js("window.ui && ui.geoProgresso && ui.geoProgresso(%d, %s)" % (pct, json.dumps(texto)))
+            d = rgeo.atualizar(self._geo_arq(), aviso=aviso)
         except Exception as ex:
             logging.getLogger("rspe").exception("Geopresídios")
             return {"erro": "Não foi possível baixar os dados do Geopresídios (%s). Confira a conexão com a internet." % str(ex)[:120]}
@@ -1779,8 +2053,17 @@ class Api:
         self._geo_pontos(d["unidades"])
         msg = "Dados prisionais atualizados (%d estabelecimentos)." % len(d["unidades"])
         if d.get("falhas"):
-            msg += " %d relatórios de inspeção não foram baixados (o servidor do CNJ recusou): clique em Atualizar de novo." % d["falhas"]
-        return {"geo": d, "mapa": rmapa.MAPA, "ind": self._geo_ind(), "cats": rgeo.CATEGORIAS, "msg": msg}
+            n, m = d["falhas"], d.get("mantidos") or 0
+            msg += " %s de %d relatórios de inspeção não %s baixados (o servidor do CNJ recusou ou a conexão caiu)" % (
+                n, d.get("relatorios") or n, "foi" if n == 1 else "foram")
+            if m:
+                msg += "; %s com o dado baixado antes (a população e a evolução das unidades são mantidas)" % (
+                    "1 ficou" if m == 1 else "%d ficaram" % m)
+            msg += (". Nova tentativa automática em %d minutos; ou clique em \"Atualizar dados\"." % GEO_REPETIR_MIN
+                    if self._geo_agendar(n) else ". Clique em \"Atualizar dados\" mais tarde (o programa também tenta de novo ao abrir).")
+        else:
+            self._geo_agendar(0)
+        return {"geo": d, "mapa": rmapa.MAPA, "ind": self._geo_ind(), "cats": rgeo.CATEGORIAS, "temas": {str(k): v for k, v in rgeo.TEMAS.items()}, "msg": msg}
 
     def teses(self):
         """Jurisprudências da execução penal (aba Jurisprudências): decisões do TJMS, STJ e STF favoráveis à defesa, triadas pela
@@ -1841,10 +2124,27 @@ class Api:
         if not self.base:
             return {"erro": "Nenhuma base aberta."}
         valor = (valor or "").strip()
+        campo = campo or ""
+        if not (campo in ("data_nascimento", "data_base", "sexo") or campo.split("|")[0] in ("falta", "rspe", "pena_max")
+                and "|" in campo and campo.split("|", 1)[1]):
+            return {"erro": "Campo inválido: %s." % campo}
+        bruto = self.base.um(processo)
+        if bruto is None:
+            return {"erro": "Assistido não encontrado."}
+        hoje = datetime.now().date()
         if valor and campo == "data_nascimento" and not rs.to_date(valor):
             return {"erro": "Data inválida: use dd/mm/aaaa."}
+        if valor and campo == "data_nascimento" and (rs.to_date(valor) > hoje or rs.to_date(valor).year < 1900):
+            return {"erro": "Data de nascimento impossível (%s): no futuro ou antes de 1900." % valor}
         if valor and campo == "data_base" and not rs.to_date(valor.split("|")[0]):
             return {"erro": "Data-base inválida: use dd/mm/aaaa."}
+        if valor and campo == "data_base":
+            d_b, d_r = rs.to_date(valor.split("|")[0]), rs.to_date(bruto.get("data_geracao_rspe") or "")
+            if d_b > hoje:
+                return {"erro": "Data-base no futuro (%s): informe a data-base já ocorrida." % valor.split("|")[0]}
+            if d_r and d_b > d_r:
+                return {"erro": "Data-base (%s) posterior ao RSPE (%s): a data-base informada não pode ser posterior ao cálculo do SEEU." % (
+                    valor.split("|")[0], bruto.get("data_geracao_rspe"))}
         if campo == "sexo" and valor not in ("", "M", "F"):
             return {"erro": "Sexo inválido."}
         if campo.startswith("falta|") and valor not in ("", "sim", "nao"):
@@ -1856,10 +2156,12 @@ class Api:
             tipo = rs.CAMPOS_MANUAIS[c][1]
             if valor and tipo == "data" and not rs.to_date(valor):
                 return {"erro": "Data inválida: use dd/mm/aaaa."}
+            if valor and c == "data_geracao_rspe" and rs.to_date(valor) > hoje:
+                return {"erro": "Data de geração do RSPE no futuro (%s)." % valor}
             if valor and tipo == "pena" and not rs.pena_livre(valor):
                 return {"erro": "Pena inválida: use, por exemplo, 4 anos e 6 meses ou 4a6m0d."}
-            if valor and tipo == "regime" and not rs.regime_manual(valor):
-                return {"erro": "Regime inválido: fechado, semiaberto ou aberto."}
+            if valor and tipo == "regime" and re.sub(r"[\s-]", "", rs._sem_acento(valor).lower()) not in ("fechado", "semiaberto", "aberto"):
+                return {"erro": "Regime inválido: escreva só fechado, semiaberto ou aberto."}
         if valor and campo.startswith("pena_max|") and not rs.pena_livre(valor):
             return {"erro": "Pena inválida: use, por exemplo, 3 meses, 1 ano e 6 meses ou 0a3m0d."}
         self.base.dado_gravar(processo, campo, valor)
@@ -1921,11 +2223,36 @@ class Api:
         """Marca dois assistidos (homônimos) como a mesma pessoa: passam a uma linha só, como os RSPEs do mesmo CPF."""
         if not self.base:
             return {"erro": "Nenhuma base aberta."}
-        gid = min(processo, outro)
-        self.base.dado_gravar(processo, "mesma_pessoa", gid)
-        self.base.dado_gravar(outro, "mesma_pessoa", gid)
+        if not processo or not outro or processo == outro:
+            return {"erro": "Escolha dois assistidos diferentes."}
+        if self.base.um(processo) is None or self.base.um(outro) is None:
+            return {"erro": "Assistido não encontrado."}
+        # junta os grupos: quem já estava marcado com um dos dois continua junto (A=B e depois B=C deixa A, B e C juntos)
+        man = self.base.pessoa_man()
+        gids = {man.get(processo), man.get(outro)} - {None, ""}
+        membros = {processo, outro} | {p for p, g in man.items() if g in gids}
+        gid = min(membros)
+        for p in sorted(membros):
+            if man.get(p) != gid:
+                self.base.dado_gravar(p, "mesma_pessoa", gid)
         r = self.listar()
-        r["msg"] = "Marcados como a mesma pessoa; análise refeita."
+        r["msg"] = "Marcados como a mesma pessoa (%s); análise refeita. Para desfazer: \"Desfazer mesma pessoa\" no assistido." % (
+            rs.pl(len(membros), "execução", "execuções"))
+        return r
+
+    def mesma_pessoa_desfazer(self, processo):
+        """Desfaz a marcação "Mesma pessoa": todas as execuções do grupo voltam a linhas separadas."""
+        if not self.base:
+            return {"erro": "Nenhuma base aberta."}
+        man = self.base.pessoa_man()
+        gid = man.get(processo)
+        if not gid:
+            return {"erro": "Este assistido não foi marcado como a mesma pessoa de outro."}
+        membros = sorted(p for p, g in man.items() if g == gid)
+        for p in membros:
+            self.base.dado_gravar(p, "mesma_pessoa", "")
+        r = self.listar()
+        r["msg"] = "Marcação \"mesma pessoa\" desfeita: %s voltam a linhas separadas." % rs.pl(len(membros), "execução", "execuções")
         return r
 
     def baixar_alerta(self, processo, chave, titulo, obs):
@@ -1974,16 +2301,28 @@ class Api:
     def reabrir_alerta(self, processo, chave):
         if not self.base:
             return None
+        if chave not in self.base.baixas().get(processo, {}):
+            return {"erro": "Este alerta não está baixado (nada a reabrir)."}
         h = next((x for x in self.base.hist_alertas(processo) if x["chave"] == chave), None)
         self.base.reabrir(processo, chave)
         self.base.hist_add(processo, chave, (h or {}).get("titulo", ""), "", "reaberto")
         return self._atualizar(processo, "Alerta reaberto.")
 
-    def remover(self, chave):
+    def remover_info(self, chave):
+        if not self.base:
+            return {"erro": "Nenhuma base aberta."}
+        return self.base.remover_info(chave)
+
+    def remover(self, chave, tudo=False):
         if not self.base:
             return None
-        self.base.remover(chave)
-        return self.listar()
+        if self.base.um(chave) is None:
+            return {"erro": "Assistido não encontrado na base (já removido?)."}
+        self.base.remover(chave, bool(tudo))
+        out = self.listar()
+        if isinstance(out, dict):
+            out["msg"] = "Assistido removido%s." % (" com todos os dados ligados a ele" if tudo else " (ficha e anotações mantidas na base)")
+        return out
 
     # ---- bases ----
     def _trocar_base(self, caminho):
@@ -2025,6 +2364,10 @@ class Api:
             n = 0
         self._etapa("Calculando prazos e benefícios de %s…" % rs.pl(n, "assistido", "assistidos") if n else "Calculando prazos e benefícios…")
         r = self.listar()
+        if getattr(self.base, "somente_leitura", False) and isinstance(r, dict):
+            r["msg"] = ("Base aberta só para consulta: o arquivo não tem permissão de gravação (pasta protegida ou arquivo somente "
+                        "leitura). Importações, baixas, pedidos e anotações não serão gravados. Para editar, copie a base para "
+                        "a pasta \"bases\" do programa.")
         self._etapa("Montando a tela…")
         return r
 
@@ -2099,6 +2442,9 @@ class Api:
         """Volta a base para uma cópia de segurança. Antes, a base atual também é copiada (a restauração pode ser desfeita)."""
         if not self.base:
             return {"erro": "Nenhuma base aberta."}
+        if getattr(self.base, "somente_leitura", False):
+            return {"erro": "Base aberta só para consulta (sem permissão de gravação): ela não pode ser restaurada. Para restaurar, "
+                            "copie a base para a pasta \"bases\" do programa e abra a cópia."}
         with self._trava(self.base.caminho):
             alvo = next((c for c, _ in self._copias() if os.path.basename(c) == arquivo), None)
             if not alvo:
@@ -2107,12 +2453,16 @@ class Api:
                 self._fazer_copia(manter=alvo)
             except Exception:
                 logging.getLogger("rspe").exception("cópia antes de restaurar")
-            src = sqlite3.connect(alvo)
             try:
-                with self.base.lock:
-                    src.backup(self.base.con)
-            finally:
-                src.close()
+                src = sqlite3.connect(alvo)
+                try:
+                    with self.base.lock:
+                        src.backup(self.base.con)
+                finally:
+                    src.close()
+            except Exception as e:
+                logging.getLogger("rspe").exception("restaurar a cópia %s", alvo)
+                return {"erro": "Não foi possível restaurar a cópia: %s A base não foi alterada." % _msg_falha_gravar(self.base.caminho, e)}
             # a cópia pode ser de versão anterior (sem as colunas novas): a base é reaberta, o que refaz as migrações
             velha = self.base
             try:
@@ -2137,6 +2487,54 @@ class Api:
             r["msg"] = "Base restaurada para a cópia de %s. A versão anterior ficou guardada entre as cópias." % \
                        datetime.strptime(re.search(r"_(\d{8}_\d{6})\.sqlite$", arquivo).group(1), "%Y%m%d_%H%M%S").strftime("%d/%m/%Y %H:%M")
             return r
+
+    def _guardar_substituida(self, c):
+        """Antes de "Salvar base como…" ou "Nova base…" substituírem o arquivo c (base do APTO já existente), guarda uma cópia
+        íntegra dele e separa a pasta de cópias dele: copias/<nome>/ passa a "copias/<nome> (substituída em dd-mm-aaaa
+        hh-mm-ss)/", com a cópia de agora junto das anteriores. Assim nada se perde e as cópias da base que nasce com esse nome
+        não se misturam com as da base substituída. Devolve (texto para a mensagem ou None, erro ou None); com erro, o
+        arquivo não pode ser substituído. Chamar com a trava de c."""
+        if not os.path.isfile(c) or os.path.getsize(c) == 0:
+            return None, None
+        nome = os.path.splitext(os.path.basename(c))[0]
+        raiz = os.path.join(os.path.dirname(os.path.abspath(c)), "copias")
+        pasta = os.path.join(raiz, nome)
+        try:
+            src = sqlite3.connect("file:%s?mode=ro" % urllib.parse.quote(os.path.abspath(c).replace("\\", "/"), safe="/:"), uri=True)
+        except Exception as e:
+            return None, "Não foi possível ler %s para guardar uma cópia antes de substituí-la (%s). Nada foi alterado." % (
+                os.path.basename(c), e)
+        try:
+            try:
+                n = src.execute("SELECT COUNT(*) FROM assistidos").fetchone()[0]
+            except sqlite3.DatabaseError:
+                n = 0
+            if not n and not os.path.isdir(pasta):
+                return None, None  # base vazia, sem cópias: nada a guardar
+            agora = datetime.now()
+            guarda = os.path.join(raiz, "%s (substituída em %s)" % (nome, agora.strftime("%d-%m-%Y %H-%M-%S")))
+            k = 2
+            while os.path.exists(guarda):
+                guarda = os.path.join(raiz, "%s (substituída em %s) (%d)" % (nome, agora.strftime("%d-%m-%Y %H-%M-%S"), k))
+                k += 1
+            if os.path.isdir(pasta):
+                os.rename(pasta, guarda)
+            else:
+                os.makedirs(guarda)
+            if n:
+                dst = sqlite3.connect(os.path.join(guarda, "%s_%s.sqlite" % (nome, agora.strftime("%Y%m%d_%H%M%S"))))
+                try:
+                    src.backup(dst)
+                finally:
+                    dst.close()
+        except Exception as e:
+            logging.getLogger("rspe").exception("cópia da base substituída %s", c)
+            return None, ("Não foi possível guardar uma cópia de segurança de %s antes de substituí-la: %s Nada foi substituído; "
+                          "escolha outro nome." % (os.path.basename(c), _msg_falha_gravar(c, e)))
+        finally:
+            src.close()
+        return ("A base anterior %s (%s) foi guardada em %s." % (nome, rs.pl(n, "assistido", "assistidos"),
+                                                                 os.path.join("copias", os.path.basename(guarda)))), None
 
     def nova_base(self, nome=None):
         """Cria base nomeada na pasta 'bases' (nome vindo da tela inicial) ou pergunta o arquivo."""
@@ -2166,10 +2564,19 @@ class Api:
                 if motivo:
                     return {"erro": motivo.replace("Ele não foi aberto", "Ele não foi substituído")}
                 with self._trava(c):
+                    # base do APTO com assistidos (ou com cópias): guardada antes de ser apagada
+                    guardada, erro = self._guardar_substituida(c)
+                    if erro:
+                        return {"erro": erro}
                     try:
                         os.remove(c)
                     except OSError as e:
-                        return {"erro": "Não foi possível substituir %s (o arquivo está em uso?): %s" % (os.path.basename(c), e)}
+                        return {"erro": "Não foi possível substituir %s (o arquivo está em uso?): %s%s" % (
+                            os.path.basename(c), _msg_falha_gravar(c, e), (" " + guardada) if guardada else "")}
+                r = self._trocar_base(c)
+                if guardada and isinstance(r, dict) and not r.get("erro"):
+                    r["msg"] = ((r.get("msg") or "") + " " + guardada).strip()
+                return r
         return self._trocar_base(c)
 
     def escolher_base(self):
@@ -2202,7 +2609,23 @@ class Api:
 
     def recarregar_base_juridica(self):
         rg.carregar(forcar=True)
-        return self.listar()
+        r = self.listar()
+        av = rg.avisos()
+        orig = rg.origem().split(" (atenção:")[0]
+        ao_lado = os.path.join(rg._pasta_app(), "base_juridica.json")
+        if orig.startswith("("):
+            de = "base jurídica não encontrada"
+        elif _mesmo_arquivo(orig, ao_lado) and not _mesmo_arquivo(ao_lado, rg._recurso("base_juridica.json")):
+            de = "cópia ao lado do programa"
+        else:
+            de = "cópia embutida no programa"
+        msg = "Base jurídica recarregada: versão %s (%s)." % (rg.versao(), de)
+        if av:
+            msg += " Atenção: " + "; ".join(av) + "."
+        if isinstance(r, dict):
+            r["msg"] = msg
+            return r
+        return {"msg": msg}
 
     def salvar_base_como(self):
         if not self.base:
@@ -2222,8 +2645,16 @@ class Api:
         if motivo:
             return {"erro": motivo.replace("Ele não foi aberto", "Ele não foi substituído")}
         # cópia íntegra pela API de backup do SQLite, com a base travada (a pasta vigiada pode estar gravando nela)
+        guardada = None
+        if not os.path.isdir(os.path.dirname(os.path.abspath(c))):
+            return {"erro": "Não foi possível salvar a base em %s: a pasta escolhida não existe. Escolha outra pasta." % os.path.basename(c)}
         try:
             with self._travar(self.base.caminho, c):
+                # o arquivo escolhido já é uma base do APTO: a base que seria sobrescrita é guardada antes (e as cópias
+                # dela ficam à parte, sem receber o conteúdo desta)
+                guardada, erro = self._guardar_substituida(c)
+                if erro:
+                    return {"erro": erro}
                 dst = sqlite3.connect(c)
                 try:
                     with self.base.lock:
@@ -2233,11 +2664,14 @@ class Api:
                     dst.close()
         except Exception as e:
             logging.getLogger("rspe").exception("salvar base como %s", c)
-            return {"erro": "Não foi possível salvar a base em %s: %s" % (os.path.basename(c), e)}
+            return {"erro": "Não foi possível salvar a base em %s: %s%s" % (os.path.basename(c), _msg_falha_gravar(c, e),
+                                                                           (" " + guardada) if guardada else "")}
         r = self._trocar_base(c)
         if r.get("erro"):
+            if guardada:
+                r["erro"] += " " + guardada
             return r
-        r["msg"] = "Base salva: " + os.path.basename(c)
+        r["msg"] = "Base salva: " + os.path.basename(c) + ((". " + guardada) if guardada else "")
         return r
 
     def abrir_pasta_bases(self):
@@ -2305,7 +2739,9 @@ class Api:
     def _lote_(self, arqs, base, silencioso):
         novos, atualizados, duplicados, antigos, erros = 0, 0, [], [], []
         historicos = 0
+        sem_data = []  # RSPE sem data de geração legível, ignorado (não é "mais antigo": não se sabe a data)
         fichas_ok = []
+        revinculadas, n_revinc = [], [0]  # fichas de lotes anteriores (guardadas pelo nome) vinculadas agora: não são deste lote
         pend_fichas = []
         incompletos = []
         lote = []
@@ -2384,7 +2820,7 @@ class Api:
                                     duplicados.append("%s: RSPE de %s já está no histórico (%s)" % (nome_arq, r.get("data_geracao_rspe"), r.get("nome")))
                                 continue
                             if d_ex and not d_novo and not mesmo:
-                                antigos.append("%s: RSPE sem data de geração legível; a base já tem o de %s - ignorado" % (nome_arq, data_ex))
+                                sem_data.append("%s: RSPE sem data de geração legível; a base já tem o de %s - ignorado" % (nome_arq, data_ex))
                                 registro.append({"arquivo": nome_arq, "tipo": "RSPE", "nome": r.get("nome") or "", "proc": chave, "resultado": "ignorado",
                                                  "leitura": "parcial", "obs": ["data de geração do RSPE ilegível (rodapé cortado): sem ela não dá para saber se é mais novo que o da base (%s)" % data_ex]})
                                 continue
@@ -2423,9 +2859,12 @@ class Api:
                         reg(nome_arq, "Ficha", r.get("nome"), proc, "ignorada", "parcial" if parcial else "completa",
                             ["impressa em %s, mais antiga que a ficha da base" % (r.get("data_impressao") or "?")] + obs)
                         continue
-                    reg(nome_arq, "Ficha", r.get("nome"), proc, "vinculada" if proc else "sem RSPE na base", "parcial" if parcial else "completa",
-                        obs + ([] if proc else ["guardada pelo nome: vincula sozinha quando o RSPE entrar (CPF, autos ou nome sem homônimo)"]))
+                    motivo = "" if proc else self._motivo_sem_vinculo(r, info)
+                    reg(nome_arq, "Ficha", r.get("nome"), proc, "vinculada" if proc else ("sem vínculo: conferir" if motivo else "sem RSPE na base"),
+                        "parcial" if parcial else "completa",
+                        obs + ([] if proc else [motivo or "guardada pelo nome: vincula sozinha quando o RSPE entrar (CPF, autos ou nome sem homônimo)"]))
                     fichas_ok.append("%s: ficha de %s %s" % (nome_arq, r.get("nome"), ("vinculada a " + proc) if proc else
+                                                             ("NÃO VINCULADA: " + motivo) if motivo else
                                                              "SEM RSPE correspondente na base (fica guardada pelo nome; vincula sozinha quando o RSPE entrar)"))
                 except Exception as e:
                     falhos.append(a)
@@ -2434,27 +2873,42 @@ class Api:
             # fichas de lotes anteriores que esperavam o RSPE
             try:
                 nrev = self._revincular_fichas(base, info)
+                n_revinc[0] = nrev
                 if nrev:
-                    fichas_ok.append("%s guardada(s) pelo nome agora vinculada(s) ao RSPE" % rs.pl(nrev, "ficha", "fichas"))
+                    revinculadas.append("%s guardada(s) pelo nome agora vinculada(s) ao RSPE" % rs.pl(nrev, "ficha", "fichas"))
             except Exception as e:
                 erros.append("revinculação de fichas: %s" % e)
         parciais = ["%s: ficha de %s - leitura parcial: %s" % (x["arquivo"], x["nome"] or "?", "; ".join(x["obs"]))
                     for x in registro if x["tipo"] == "Ficha" and x["leitura"] == "parcial"]
-        avisos = incompletos + parciais + duplicados + antigos + erros + fichas_ok
-        if avisos:
-            # pasta do programa sem permissão de gravação (Arquivos de Programas, rede somente leitura): o arquivo é só uma
-            # cópia dos avisos, que a tela mostra de qualquer forma
-            try:
+        avisos = incompletos + parciais + duplicados + antigos + sem_data + erros + fichas_ok + revinculadas
+        # cópia dos avisos em arquivo (a tela os mostra de qualquer forma; pasta do programa sem gravação não impede nada).
+        # Importação manual: importacao_avisos.txt sempre reescrito (lote sem avisos diz isso, sem sobra do lote anterior).
+        # Pasta vigiada: em arquivo próprio, acrescentado ao fim (só os lotes com avisos), sem apagar o da importação manual
+        cab = "Importação de %s na base %s - %s (%s)" % (datetime.now().strftime("%d/%m/%Y %H:%M:%S"), getattr(base, "nome", ""),
+                                                         "pasta vigiada" if silencioso else "manual", rs.pl(len(arqs), "arquivo", "arquivos"))
+        try:
+            if not silencioso:
                 with open(os.path.join(pasta_app(), "importacao_avisos.txt"), "w", encoding="utf-8") as f:
-                    f.write("\n".join(avisos))
-            except Exception as e:
-                logging.getLogger("rspe").warning("importacao_avisos.txt não gravado: %s", e)
-        # guardado para o PDF de falhas do lote (Api.falhas_pdf)
-        self._falhas_lote = {"quando": datetime.now().strftime("%d/%m/%Y %H:%M"), "erros": list(erros), "incompletos": list(incompletos),
-                             "ignorados": [a for a in antigos if "ignorad" in a], "processos": list(lote), "arquivos": len(arqs),
-                             "registro": sorted(registro, key=lambda x: x["arquivo"].lower()), "base_nome": getattr(base, "nome", "")}
+                    f.write(cab + "\n" + ("\n".join(avisos) if avisos else "Sem avisos: todos os arquivos foram lidos e importados.") + "\n")
+            elif avisos:
+                arq_v = os.path.join(pasta_app(), "importacao_avisos_pasta_vigiada.txt")
+                try:
+                    with open(arq_v, encoding="utf-8") as f:
+                        velho = f.read().splitlines()[-2000:]  # o arquivo não cresce sem fim
+                except OSError:
+                    velho = []
+                with open(arq_v, "w", encoding="utf-8") as f:
+                    f.write("\n".join(velho + ([""] if velho else []) + [cab] + avisos) + "\n")
+        except Exception as e:
+            logging.getLogger("rspe").warning("arquivo de avisos da importação não gravado: %s", e)
+        # guardado para o PDF de falhas do lote (Api.falhas_pdf). A importação manual e a da pasta vigiada ficam separadas: o
+        # botão da janela da importação manual sempre gera o registro dela, mesmo que a pasta vigiada importe algo depois
+        setattr(self, "_falhas_lote_auto" if silencioso else "_falhas_lote", {"quando": datetime.now().strftime("%d/%m/%Y %H:%M"), "erros": list(erros), "incompletos": list(incompletos),
+                             "ignorados": [a for a in antigos if "ignorad" in a] + sem_data, "processos": list(lote), "arquivos": len(arqs),
+                             "registro": sorted(registro, key=lambda x: x["arquivo"].lower()), "base_nome": getattr(base, "nome", "")})
         resumo = {"novos": novos, "atualizados": atualizados, "historico": historicos, "duplicados": len(duplicados), "antigos": len(antigos),
                   "erros": len(erros), "fichas": len(fichas_ok), "incompletos": len(incompletos), "avisos": avisos[:60],
+                  "sem_data": len(sem_data), "fichas_revinculadas": n_revinc[0],
                   "falhos": falhos, "erros_txt": list(erros)}
         return resumo
 
@@ -2515,6 +2969,25 @@ class Api:
             return por_autos[0], len(mesmos_mae) <= 1
         # pelo nome (e pela mãe): só quando resta um único assistido (com homônimos, a ficha fica guardada pelo nome)
         return (mesmos_mae[0], True) if len(mesmos_mae) == 1 else ("", False)
+
+    def _motivo_sem_vinculo(self, f, info):
+        """Ficha que ficou sem processo: se já há na base RSPE do mesmo nome que não foi ligado a ela (mãe diferente ou
+        homônimos), o motivo em português - ela não vai vincular sozinha e precisa ser conferida. "" se não há RSPE do nome."""
+        nn = _norm(f.get("nome", ""))
+        if not nn:
+            return ""
+        mae_f = _norm(f.get("nome_mae") or "")
+        mesmos = [p for p in info if info[p]["nome"] == nn or (min(len(nn), len(info[p]["nome"])) >= 15
+                                                                and (nn.startswith(info[p]["nome"]) or info[p]["nome"].startswith(nn)))]
+        if not mesmos:
+            return ""
+        com_mae = [p for p in mesmos if _mesma_mae(mae_f, info[p]["mae"])]
+        if not com_mae:
+            return ("há RSPE do mesmo nome na base (%s) com mãe diferente da ficha (%s): fica guardada pelo nome e não vincula "
+                    "sozinha - conferir se é a mesma pessoa (mãe escrita de outro jeito no SIAPEN ou no SEEU); se for, a ficha com o "
+                    "CPF preenchido vincula pelo CPF, e a Auditoria do assistido oferece \"Vincular ficha\" quando os dados não se contradizem" % (", ".join(sorted(mesmos)[:3]), f.get("nome_mae") or "sem mãe na ficha"))
+        return ("há %d RSPE de homônimos na base (%s): fica guardada pelo nome e não vincula sozinha - conferir; a ficha com o "
+                "CPF ou com os autos da execução vincula" % (len(com_mae), ", ".join(sorted(com_mae)[:3])))
 
     def _revincular_fichas(self, base=None, info=None):
         """Fichas guardadas pelo nome (importadas antes do RSPE, no mesmo lote ou antes) passam ao processo quando ele existe."""
@@ -2654,6 +3127,10 @@ class Api:
         for b, itens in sorted(pend.items()):
             os.makedirs(PASTA_BASES, exist_ok=True)
             caminho = os.path.join(PASTA_BASES, b + ".sqlite")
+            # base aberta com o mesmo nome, guardada fora da pasta "bases": os PDFs vão para ela, não para uma base nova
+            if self.base and not os.path.exists(caminho) and \
+                    os.path.splitext(os.path.basename(self.base.caminho))[0].lower() == b.lower():
+                caminho = self.base.caminho
             nova = not os.path.exists(caminho)
             # a base é escolhida já com a trava do arquivo: assim ela não é trocada nem fechada entre a escolha e a importação
             with self._trava(caminho):
@@ -2724,6 +3201,10 @@ class Api:
             lista = [{"nome": (d.get("nome") or "").strip(), "cargo": (d.get("cargo") or "Defensor Público").strip(),
                       "matricula": (d.get("matricula") or "").strip(), "email": (d.get("email") or "").strip(),
                       "padrao": bool(d.get("padrao"))} for d in (lista or []) if (d.get("nome") or "").strip()]
+            # um só defensor padrão: vale o último marcado
+            pad = [i for i, d in enumerate(lista) if d["padrao"]]
+            for i in pad[:-1]:
+                lista[i]["padrao"] = False
             with open(DEFENSORES, "w", encoding="utf-8") as f:
                 json.dump(lista, f, ensure_ascii=False, indent=1)
             return {"msg": "%s." % rs.pl(len(lista), "defensor salvo", "defensores salvos"), "lista": lista}
@@ -2894,6 +3375,8 @@ class Api:
         if not modelos:
             return {"erro": "Nada para exportar."}
         sufixo = rv.ABA_POR_ID[abas[0]]["titulo"].split(" /")[0] if len(abas) == 1 and abas[0] in rv.ABA_POR_ID else "abas"
+        if len(modelos) < len(self._modelos):
+            sufixo += " (filtrado, %d)" % len(modelos)  # não sobrescreve a exportação completa do mesmo dia
         nome = "%s - %s %s.%s" % (self.base.nome, sufixo, datetime.now().strftime("%d-%m-%Y"), formato)
         c = _um(self._janela.create_file_dialog(webview.SAVE_DIALOG, save_filename=nome,
                                                file_types=("Excel (*.xlsx)",) if formato == "xlsx" else ("PDF (*.pdf)",)))
@@ -3009,7 +3492,7 @@ class Api:
             self._geo_assistidos(d["unidades"])
         return d
 
-    def geo_pdf(self, cats=None, cidade="", tipo="geral"):
+    def geo_pdf(self, cats=None, cidade="", tipo="geral", ids=None):
         """Relatório em PDF dos dados prisionais, pelos tipos de estabelecimento marcados e pela cidade escolhida no mapa.
         tipo "geral": indicadores, mapa, ocupação, condições e evolução; "condicoes": em quais unidades foi constatado cada
         problema e os problemas de cada unidade."""
@@ -3017,13 +3500,15 @@ class Api:
         if not d:
             return {"erro": "Baixe os dados do Geopresídios antes de gerar o relatório."}
         cats = [c for c in (cats or ["penal"]) if c in rgeo.CATEGORIAS] or ["penal"]
+        if tipo == "condicoes" and ids is not None and not ids:
+            return {"erro": "Escolha ao menos uma unidade."}
         rot = "Condições por unidade" if tipo == "condicoes" else "Dados prisionais de MS"
         c = self._geo_pdf_destino("%s%s - %s.pdf" % (rot, (" - " + cidade) if cidade else "", datetime.now().strftime("%d-%m-%Y")))
         if not c:
             return None
         try:
             if tipo == "condicoes":
-                rrel.relatorio_condicoes_prisional(d, c, self.base.nome if self.base else "", cidade or "", cats)
+                rrel.relatorio_condicoes_prisional(d, c, self.base.nome if self.base else "", cidade or "", cats, ids=ids)
             else:
                 rrel.relatorio_prisional(d, rmapa.MAPA, c, self.base.nome if self.base else "", cidade or "", cats)
         except Exception as e:
@@ -3068,6 +3553,21 @@ class Api:
         return {"caminho": c, "msg": "PDF salvo."}
 
     # ---- relatórios (PDF) ----
+    def _fichas_sem_rspe(self):
+        """Fichas importadas que nenhum assistido da base exibe (sem o RSPE correspondente): nome, unidade, data e dias dos atestados."""
+        usadas = {m.get("ficha_chave") for m in self._modelos or []}
+        out = []
+        for ch, dados in self.base.con.execute("SELECT chave, dados FROM fichas").fetchall():
+            if ch in usadas:
+                continue
+            try:
+                f = json.loads(dados or "{}")
+            except ValueError:
+                continue
+            out.append({"nome": f.get("nome") or "", "unidade": f.get("unidade") or "", "data": f.get("data_impressao") or "",
+                        "atestados": len(f.get("atestados") or []), "dias": f.get("dias_remidos_atestados") or 0})
+        return out
+
     def relatorios(self, ids, individual, geral, planilha, nominal, ids_individual=None, remicao=False):
         """Gera, numa pasta escolhida, a subpasta 'Relatorios <data hora>' com o relatório geral, os individuais e a planilha."""
         if not self.base:
@@ -3084,7 +3584,8 @@ class Api:
             sel = set(ids_individual) if ids_individual else None
             individuais = [m for m in modelos if m["id"] in sel] if sel is not None else modelos
             destino, n, erros = rrel.gerar(modelos, pasta, self.base.nome, individual=individual, geral=geral, nominal=nominal,
-                                           individuais=individuais, remicao=remicao)
+                                           individuais=individuais, remicao=remicao,
+                                           fichas_sem_rspe=self._fichas_sem_rspe() if remicao else None)
             if planilha:
                 rx.exportar_xlsx(modelos, os.path.join(destino, "%s - planilha.xlsx" % self.base.nome),
                                  ["geral", "prog", "liv", "ind", "presc", "ext", "fd", "aud", "completo"])
@@ -3203,6 +3704,8 @@ def _montar_modelo(r, ctx):
     for _k, _v in _dm.items():
         if _k.startswith("rspe|") and _k[5:] in rs.CAMPOS_MANUAIS and _v.get("valor") and not r.get(_k[5:]):
             r[_k[5:]] = rs.valor_manual(_k[5:], _v["valor"])
+            if _k[5:] == "regime_atual":
+                r[_k[5:]] = r[_k[5:]].capitalize()  # "Semiaberto", como o RSPE imprime (não "SEMIABERTO")
             r.setdefault("_manuais", {})[_k[5:]] = {"valor": r[_k[5:]], "data": "/".join(_v["data"][:10].split("-")[::-1])}
     try:
         imp = r.get("importado_em")
@@ -3240,6 +3743,14 @@ def _montar_modelo(r, ctx):
     except Exception:
         logging.getLogger("rspe").exception("decretos %s", ch)
         m["dec"] = {"inicio": "", "decretos": []}  # RSPEs guardados no histórico (botão "Histórico · N" da aba Geral)
+    # pedido do indulto (por decreto): a situação atual do decreto, para a tela comparar com a da marcação (ref)
+    if any(k.startswith("ind_") for k in m["pedidos"]):
+        m["pedidos"] = {k: (dict(v, ref_atual=_ref_decreto(m["dec"], k[4:])) if k.startswith("ind_") else v) for k, v in m["pedidos"].items()}
+    # homônimos marcados pelo operador como a mesma pessoa (Auditoria): a tela oferece "Desfazer mesma pessoa"
+    m["mesma_pessoa_marcada"] = bool(r.get("_pessoa_man"))
+    # regime informado pelo operador não é "como impresso no RSPE"
+    if "regime_atual" in (r.get("_manuais") or {}):
+        m["regime_rspe"] = ""
     try:
         m["faltas_itens"] = rs.faltas_editaveis(r.get("_incidentes", []), r.get("_eventos", []), rv.HOJE)
     except Exception:
@@ -3265,6 +3776,13 @@ def _leve(j):
                                 ppe_saldos=[{"evasao": S.get("evasao"), "saldo_origem": S.get("saldo_origem")} for S in (L.get("ppe_saldos") or [])])
                            for L in (j.get("presc_linhas") or [])]
     return out
+
+
+def _ref_decreto(dec, did):
+    """Situação de um decreto na aba Indulto ("cabe", "ver", "indeferido"...: o campo s de rd.avaliar), usada como referência
+    do pedido "ind_<decreto>" para avisar "situação mudou depois"."""
+    x = next((d for d in ((dec or {}).get("decretos") or []) if str(d.get("id")) == str(did)), None)
+    return str(x.get("s") or "") if x else ""
 
 
 def _pessoa_chave(r):
@@ -3441,6 +3959,12 @@ def _leitura_rspe(r, faltam):
     """Leitura do RSPE para o registro da importação: (observações, parcial). Campo vazio porque o SEEU não o tem (sem processo,
     sem crime, pena não iniciada) é observação, não leitura parcial."""
     obs, parcial = [], False
+    # parte do RSPE que falhou na leitura (seção com erro, cabeçalho fora do padrão): leitura parcial, com a parte afetada
+    if r.get("_leitura_parcial"):
+        obs += ["leitura parcial - " + x for x in r["_leitura_parcial"]]
+        parcial = True
+    # variação de impressão reconhecida (sem título, cabeçalho do navegador, marca ausente): só observação
+    obs += list(r.get("_leitura_obs") or [])
     if faltam:
         obs.append("não lido: %s - campo em branco no SEEU, página faltando ou texto quebrado na extração" % ", ".join(faltam))
         parcial = True
@@ -3503,6 +4027,8 @@ def _msg_erro_pdf(e):
     nome = e.__class__.__name__
     if nome in ("PSEOF",) or "unexpected eof" in tl or "eof marker" in tl or "startxref" in tl or "truncated" in tl:
         return "PDF corrompido ou incompleto (o download pode ter sido interrompido): gere ou baixe o PDF de novo"
+    if "password" in tl or "encrypt" in tl or nome in ("PDFPasswordIncorrect", "PDFEncryptionError"):
+        return "PDF protegido por senha: gere o PDF de novo no SEEU/SIAPEN, sem proteção"
     if "no /root object" in tl or "really a pdf" in tl or "not a pdf" in tl or nome in ("PDFSyntaxError", "PdfminerException", "PDFNoValidXRef") \
             or "invalid pdf" in tl or "no valid xref" in tl:
         return "arquivo não é PDF válido (vazio ou de outro tipo com a extensão .pdf): gere o PDF de novo no SEEU"
@@ -3548,6 +4074,18 @@ def _preparar_log():
         pass
 
 
+def _nova_base_importacao(api):
+    """Base nova para os PDFs arrastados sobre o programa: "Importação dd-mm-aaaa hh-mm-ss"; se o nome já existir (outra
+    janela no mesmo segundo), " (2)", " (3)"… - nunca abre nem substitui uma base existente."""
+    nome = "Importação %s" % datetime.now().strftime("%d-%m-%Y %H-%M-%S")
+    r = None
+    for k in range(1, 100):
+        r = api.nova_base(nome if k == 1 else "%s (%d)" % (nome, k))
+        if not (isinstance(r, dict) and r.get("erro") and "Já existe" in r["erro"]):
+            break
+    return r
+
+
 def main():
     _preparar_log()
     api = Api()
@@ -3567,7 +4105,11 @@ def main():
                 lista.append(a)
         if lista:
             if not api.base:
-                api.nova_base("Importação %s" % datetime.now().strftime("%d-%m-%Y %H-%M"))
+                r = _nova_base_importacao(api)
+                if not api.base:
+                    api._js("ui.toast(%s)" % json.dumps("Não foi possível criar a base para a importação: %s" % (
+                        (r or {}).get("erro") or "erro desconhecido"), ensure_ascii=False))
+                    return
                 api._js("api('listar')")
             api._importar(lista)
 

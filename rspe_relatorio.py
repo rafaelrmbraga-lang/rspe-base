@@ -28,7 +28,7 @@ COR = {"vermelho": ("#F6E4E3", "#8E2424"), "laranja": ("#F7EADB", "#8A4A12"), "a
        "vencido": ("#F6E4E3", "#8E2424"), "verde": ("#E3EFE7", "#1F5B39"), "cinza": ("#ECEEEB", "#5F6662"),
        "azul": ("#E6ECF2", "#334E68"), "": ("#FFFFFF", TX)}
 AVISO = ("Triagem automatizada a partir do RSPE (SEEU) e da ficha disciplinar (SIAPEN). Não substitui o Atestado de Pena. "
-         "Progressão, livramento e término são as datas do SEEU; indulto, comutação, prescrição e remição a requerer são "
+         "Progressão, livramento e término são as datas do SEEU (as marcadas com * foram calculadas pelo programa); indulto, comutação, prescrição e remição a requerer são "
          "cálculos do programa e devem ser conferidos.")
 
 # ---------------------------------------------------------------- fontes (acentos e símbolos)
@@ -1139,9 +1139,13 @@ def estatisticas(modelos, hoje=None):
 
     def faixa(m, campo_dias, campo_sit):
         d = m.get(campo_dias)
-        if d is not None:
+        if d is not None and not (m.get(campo_sit) or "").startswith("Posterior ao término"):
             return _prazo(d) or "mais de 180 dias"
         est = (m.get("estado_exec") or "")
+        if (m.get(campo_sit) or "").startswith("Posterior ao término"):
+            return "não se aplica"  # livramento depois do término: sem efeito prático (cartão "Sem prazo" da aba)
+        if est == "lc_duvida":
+            return "a verificar"  # livramento com situação incerta: a tela marca "A verificar (livramento)"
         if est in SEM:
             return "não se aplica"
         if m.get("interrompida") or re.search(r"interrompid|suspens", (m.get(campo_sit) or "").lower()):
@@ -1693,7 +1697,7 @@ def relatorio_geral(modelos, caminho, nome_base, nominal=True):
 
     # ============================================================ 3. situação jurídico-executória
     parte(3, "Situação jurídico-executória",
-          "Progressão, livramento e término: datas do SEEU. Indulto, comutação, prescrição e extinção: cálculo do programa sobre os dados do RSPE.")
+          "Progressão, livramento e término: datas do SEEU (com *, calculadas pelo programa). Indulto, comutação, prescrição e extinção: cálculo do programa sobre os dados do RSPE.")
     pres = E["presc"]
     indic = [("vermelho", "Prescrição da pretensão executória aparente", pres.get("aparente", 0), rs.pl(E["presc_crimes"], "condenação", "condenações")),
              ("vermelho", "Prescrição da pretensão punitiva aparente", E["presc_punitiva"], ""),
@@ -1830,7 +1834,7 @@ def relatorio_geral(modelos, caminho, nome_base, nominal=True):
     return caminho
 
 
-def gerar(modelos, pasta, nome_base, individual=True, geral=True, nominal=True, individuais=None, remicao=False):
+def gerar(modelos, pasta, nome_base, individual=True, geral=True, nominal=True, individuais=None, remicao=False, fichas_sem_rspe=None):
     """Cria <pasta>/Relatorios <data hora>/ com o geral e a subpasta Individuais. O geral e a estatística usam
     'modelos'; os PDFs individuais, 'individuais' (quando informado, os assistidos escolhidos).
     Devolve (pasta, n_individuais, erros)."""
@@ -1852,7 +1856,7 @@ def gerar(modelos, pasta, nome_base, individual=True, geral=True, nominal=True, 
             erros.append("relatório geral: %s" % e)
     if remicao:
         nb = re.sub(r"[^\w\- ]", "", nome_base)
-        for nome, fn in (("remição detalhada", lambda: relatorio_remicao(modelos, os.path.join(destino, "Remicao detalhada - %s.pdf" % nb), nome_base, nominal)),
+        for nome, fn in (("remição detalhada", lambda: relatorio_remicao(modelos, os.path.join(destino, "Remicao detalhada - %s.pdf" % nb), nome_base, nominal, fichas_sem_rspe)),
                          ("planilha de conferência (Excel)", lambda: planilha_remicao_xlsx(modelos, os.path.join(destino, "Conferencia da remicao - %s.xlsx" % nb), nome_base)),
                          ("planilha de conferência (PDF)", lambda: planilha_remicao_pdf(modelos, os.path.join(destino, "Conferencia da remicao - %s.pdf" % nb), nome_base))):
             try:
@@ -1915,7 +1919,7 @@ def nome_rel(m):
     return n
 
 
-def relatorio_remicao(modelos, caminho, nome_base, nominal=True):
+def relatorio_remicao(modelos, caminho, nome_base, nominal=True, fichas_sem_rspe=None):
     """PDF da remição detalhada: de onde vem cada dia a remir (atestado emitido e não lançado, diferença, trabalho sem
     atestado, estudo, leitura), por origem, por unidade prisional em que o trabalho ou o estudo aconteceu (com os assistidos
     de cada unidade, para o ofício) e por assistido - base do pedido de providências."""
@@ -2148,6 +2152,21 @@ def relatorio_remicao(modelos, caminho, nome_base, nominal=True):
                 el.append(_tabela(dados, larg, st, zebra=False))
             else:
                 el.append(Paragraph(_t("Nada a remir além do que já está no processo."), st["mut"]))
+    if fichas_sem_rspe:
+        # fichas importadas sem o RSPE do assistido (item 105): a remição delas não entra nos totais acima - pedir o RSPE no SEEU
+        el.append(CondPageBreak(40 * mm))
+        el.append(Paragraph("Fichas sem RSPE na base", st["h2"]))
+        el.append(Paragraph(_t("Fichas disciplinares importadas sem o RSPE correspondente. A remição delas não entra nos totais deste relatório: "
+                               "importar o RSPE (ou baixá-lo no SEEU) para conciliar. Os dias abaixo são os dos atestados lançados na ficha."), st["mut"]))
+        lin = [[Paragraph("Assistido (ficha)", peqn), Paragraph("Unidade", peqn), Paragraph("Ficha de", peqn), Paragraph("Atestados", dirn), Paragraph("Dias nos atestados", dirn)]]
+        for x in sorted(fichas_sem_rspe, key=lambda x: -(x.get("dias") or 0)):
+            lin.append([Paragraph(_t(x.get("nome") or "?") if nominal else "—", peq), Paragraph(_t(x.get("unidade") or ""), peq),
+                        Paragraph(_t(x.get("data") or ""), peq), Paragraph(str(x.get("atestados") or 0), dir_), Paragraph(_dias(x.get("dias")), dir_)])
+        t = Table(lin, colWidths=[W * .34, W * .34, W * .1, W * .1, W * .12], repeatRows=1)
+        from reportlab.lib import colors
+        t.setStyle(TableStyle([("GRID", (0, 0), (-1, -1), .3, colors.HexColor("#C8CEC8")), ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#E6EEE9")),
+                               ("VALIGN", (0, 0), (-1, -1), "TOP")]))
+        el.append(t)
     doc = SimpleDocTemplate(caminho, pagesize=PG, leftMargin=16 * mm, rightMargin=16 * mm, topMargin=21 * mm, bottomMargin=20 * mm,
                             title="Remição detalhada", author="APTO")
     fr = _moldura("Remição detalhada", nome_base,
@@ -3130,7 +3149,7 @@ def relatorio_prisional(dados, mapa, caminho, nome_base, cidade="", cats=None):
     return caminho
 
 
-def relatorio_condicoes_prisional(dados, caminho, nome_base, cidade="", cats=None):
+def relatorio_condicoes_prisional(dados, caminho, nome_base, cidade="", cats=None, ids=None):
     """PDF das condições constatadas nas inspeções: para cada problema, as unidades em que foi constatado (com o ciclo da
     inspeção); depois, cada unidade com a lista dos seus problemas."""
     from reportlab.lib.pagesizes import A4
@@ -3141,8 +3160,15 @@ def relatorio_condicoes_prisional(dados, caminho, nome_base, cidade="", cats=Non
     st = _estilos()
     W = A4[0] - 32 * mm
     peq = ParagraphStyle("geo_peq2", parent=st["cel"], fontSize=7.6, leading=9.8)
-    U = [u for u in _geo_sel(dados, cidade, cats) if u.get("temas")]
-    titulo = "Condições constatadas nas inspeções" + (" · %s" % cidade if cidade else "")
+    if ids:  # unidades escolhidas na janela de seleção, de qualquer tipo
+        ids = {str(x) for x in ids}
+        U = [u for u in dados.get("unidades") or [] if str(u.get("id")) in ids and u.get("temas")]
+    else:
+        U = [u for u in _geo_sel(dados, cidade, cats) if u.get("temas")]
+    if ids:
+        cats = sorted({u.get("cat") or "penal" for u in U})
+    titulo = "Condições constatadas nas inspeções" + (" · %s" % cidade if cidade and not ids else "") + (
+        " · %d unidade%s escolhida%s" % (len(U), "s" if len(U) != 1 else "", "s" if len(U) != 1 else "") if ids else "")
     el = [Paragraph(_t(titulo), st["tit"]),
           Paragraph(_t("Geopresídios/CNIEP (CNJ), última inspeção judicial de cada tema · dados baixados em %s · %d estabelecimentos com inspeção (%s)"
                        % (dados.get("atualizado", "?"), len(U), _geo_tipos(cats))), st["sub"]), Spacer(1, 6)]
@@ -3307,12 +3333,14 @@ def relatorio_calculo(e, r, caminho, nome_base):
     if r.get("termino"):
         linhas.append(["Término da pena", "%s (%s)" % (r["termino"], r.get("termino_det", ""))])
     if r.get("periodo"):
-        linhas.append(["Período de %s a %s" % (e.get("p1"), e.get("p2")), "%s (%d dias)" % (r["periodo"]["ext"], r["periodo"]["dias"])])
+        linhas.append(["Período de %s a %s" % (e.get("p1"), e.get("p2")), "%s (%s)" % (r["periodo"]["ext"], _rs.pl(r["periodo"]["dias"], "dia", "dias"))])
     el.append(_tabela([[Paragraph(_t(a), st["cel"]) for a in l] if k else l for k, l in enumerate(linhas)], [55 * mm, W - 55 * mm], st, pad=4))
     if r.get("termino"):
         fr = [["Fração", "Tempo", "Completa em"]] + [[x["rot"], _rs.pena_extenso(x["q"]), x["data"]] for x in r["fracoes"] + r["percentuais"]
                                                        + ([r["outra"]] if r.get("outra") else [])]
         el += [Spacer(1, 8), Paragraph("Frações e percentuais (LEP, art. 112)", st["h2"]), _tabela(fr, [30 * mm, W - 75 * mm, 45 * mm], st, pad=4)]
+    if r.get("erros"):
+        el += [Spacer(1, 8), Paragraph("Atenção", st["h2"])] + [Paragraph(_t(x), st["cel"]) for x in r["erros"]]
     if e.get("nota"):
         el += [Spacer(1, 8), Paragraph("Anotação", st["h2"]), Paragraph(_t(e["nota"]), st["cel"])]
     el += [Spacer(1, 8), Paragraph(_t("Convenções: soma por componente (30 dias = 1 mês; 12 meses = 1 ano); fração sobre a pena em dias (ano de 365, mês de "

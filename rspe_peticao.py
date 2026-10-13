@@ -388,7 +388,7 @@ def preencher(modelo, saida, dados):
     try:
         from docxtpl import DocxTemplate
         tpl = DocxTemplate(modelo)
-        tpl.render(dados)
+        tpl.render(dados, autoescape=True)  # "<" e "&" no nome, crime ou motivo não corrompem o .docx (item 138)
         import warnings
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")

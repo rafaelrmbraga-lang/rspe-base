@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 """
 Base jurídica (base_juridica.json) e regras derivadas dela.
-A cópia ao lado do executável tem prioridade sobre a embutida, para permitir atualização.
+Entre a cópia ao lado do executável (editável) e a embutida no programa, vale a de versão mais recente (campo "versao");
+em empate, a cópia ao lado do executável. Para uma edição valer, aumente a versão dela. Os avisos (cópia ignorada por JSON
+inválido ou por ser mais antiga) ficam em avisos() e aparecem na tela.
 """
 
 import json
@@ -12,6 +14,7 @@ from fractions import Fraction
 
 _BASE = None
 _ORIGEM = ""
+_AVISOS = []  # avisos da última carga (cópia ao lado do programa ignorada: JSON inválido ou versão mais antiga)
 
 
 def _pasta_app():
@@ -38,11 +41,13 @@ def carregar(forcar=False):
     """Base jurídica em uso: entre a cópia ao lado do executável (editável) e a embutida no programa, vale a de versão mais
     recente; o que só existe na outra (tabela nova, tipo acrescentado) é completado a partir dela. Assim uma cópia antiga
     deixada na pasta do programa não esconde o que as versões novas trazem, e uma cópia editada mais nova continua valendo."""
-    global _BASE, _ORIGEM
+    global _BASE, _ORIGEM, _AVISOS
     if _BASE is not None and not forcar:
         return _BASE
     lidas, erros = [], []
     embutida = os.path.abspath(_recurso("base_juridica.json"))
+    ao_lado = os.path.abspath(os.path.join(_pasta_app(), "base_juridica.json"))
+    _AVISOS = []
     for c in (os.path.join(_pasta_app(), "base_juridica.json"), _recurso("base_juridica.json")):
         if any(os.path.abspath(c) == os.path.abspath(x[0]) for x in lidas):
             continue
@@ -53,12 +58,19 @@ def carregar(forcar=False):
                 lidas.append((c, json.load(f)))
         except Exception as e:
             erros.append("%s ignorada: JSON inválido (%s)" % (c, e))
+            _AVISOS.append("o arquivo base_juridica.json %s tem JSON inválido e foi ignorado (%s)"
+                           % ("ao lado do programa" if os.path.abspath(c) == ao_lado else "embutido", str(e)[:120]))
     if not lidas:
         _BASE, _ORIGEM = {}, "(não encontrada)" + ("; " + "; ".join(erros) if erros else "")
         return _BASE
     # a mais recente primeiro (versão 'aaaa-mm-dd' + sufixo; em empate, a cópia ao lado do executável)
     lidas.sort(key=lambda x: str(x[1].get("versao") or ""), reverse=True)
     _ORIGEM, _BASE = lidas[0]
+    for c, b in lidas[1:]:
+        if os.path.abspath(c) == ao_lado and ao_lado != embutida:
+            _AVISOS.append("o arquivo base_juridica.json ao lado do programa (versão %s) foi ignorado: a versão embutida (%s) é "
+                           "mais recente; para a sua edição valer, aumente a \"versao\" dela"
+                           % (b.get("versao") or "sem versão", _BASE.get("versao") or "?"))
     # completa só a partir da base EMBUTIDA (tabela nova de uma versão do programa); uma cópia editável mais antiga não
     # devolve o que a versão nova retirou
     for c, b in lidas[1:]:
@@ -82,6 +94,12 @@ def _sem_nulos(d):
 def origem():
     carregar()
     return _ORIGEM
+
+
+def avisos():
+    """Avisos da carga da base jurídica, para a tela (lista vazia se nada foi ignorado)."""
+    carregar()
+    return list(_AVISOS)
 
 
 def versao():

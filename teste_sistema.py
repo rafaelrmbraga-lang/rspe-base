@@ -1,8 +1,8 @@
 """Teste de fumaça do sistema (rspe_app, rspe_export, rspe_relatorio): base nova e migrações, importação e duplicados, RSPE mais
 antigo no histórico (também com a base lida por versão anterior), ficha disciplinar (duplicada, vincular, remover), lista montada
 duas vezes ao mesmo tempo, pasta vigiada com arquivo ilegível, exportação Excel e PDF (texto que começa com "=" não vira fórmula),
-relatórios, cópia de segurança e restauração de cópia antiga, salvar como sobre banco de outro programa, base somente leitura e
-nomes de modelo fora da pasta. Tudo numa pasta temporária: nada é gravado ao lado do programa.
+relatórios, cópia de segurança e restauração de cópia antiga, salvar como sobre banco de outro programa e sobre outra base do APTO
+(guardada antes), base somente leitura (abre só para consulta), recentes sem repetição e nomes de modelo fora da pasta. Tudo numa pasta temporária: nada é gravado ao lado do programa.
 
 PDFs reais: a importação real usa até 3 PDFs (RSPE e Ficha Disciplinar) da pasta indicada em APTO_TESTE_PDFS (ou "teste_pdfs",
 ao lado deste arquivo). Os PDFs têm dados pessoais e NÃO vão para o repositório; sem a pasta, essa etapa é pulada e o resto roda com
@@ -210,12 +210,60 @@ novo = os.path.join(TMP, "copia salva.sqlite")
 api._janela.fila = [novo]
 r = api.salvar_base_como()
 ok(not r.get("erro") and len(sqlite3.connect(novo).execute("SELECT * FROM assistidos").fetchall()) == n, "salvar como: %s" % r.get("erro"))
-if os.name != "nt" and hasattr(os, "geteuid") and os.geteuid() != 0:  # root ignora a permissão de arquivo
-    ro = os.path.join(TMP, "RO.sqlite")
-    shutil.copy(novo, ro)
+# salvar como sobre outra base do APTO: a base substituída é guardada antes e as cópias dela ficam à parte
+outra = os.path.join(app.PASTA_BASES, "Outra.sqlite")
+shutil.copy(novo, outra)
+con = sqlite3.connect(outra)
+con.execute("DELETE FROM assistidos WHERE processo != ?", (PROC,))
+con.execute("UPDATE assistidos SET nome='SO DA OUTRA' WHERE processo=?", (PROC,))
+con.commit()
+con.close()
+os.makedirs(os.path.join(app.PASTA_BASES, "copias", "Outra"), exist_ok=True)
+shutil.copy(outra, os.path.join(app.PASTA_BASES, "copias", "Outra", "Outra_20260101_101000.sqlite"))
+api._janela.fila = [outra]
+r = api.salvar_base_como()
+guardas = [d for d in os.listdir(os.path.join(app.PASTA_BASES, "copias")) if d.startswith("Outra (substituída em ")]
+nomes_guardados = []
+for d in guardas:
+    for a in os.listdir(os.path.join(app.PASTA_BASES, "copias", d)):
+        nomes_guardados += [x for (x,) in sqlite3.connect(os.path.join(app.PASTA_BASES, "copias", d, a)).execute("SELECT nome FROM assistidos")]
+ok(not r.get("erro") and "guardada" in (r.get("msg") or "") and len(guardas) == 1 and nomes_guardados.count("SO DA OUTRA") == 2,
+   "salvar como sobre base do APTO guarda a substituída (com as cópias dela): %s %s %s" % (r.get("erro") or r.get("msg"), guardas, nomes_guardados))
+novas = os.listdir(os.path.join(app.PASTA_BASES, "copias", "Outra"))
+ok(all("SO DA OUTRA" not in [x for (x,) in sqlite3.connect(os.path.join(app.PASTA_BASES, "copias", "Outra", a)).execute("SELECT nome FROM assistidos")]
+       for a in novas), "cópias da base nova não se misturam com as da substituída: %s" % novas)
+api._janela.fila = [os.path.join(TMP, "nao existe", "x.sqlite")]
+r = api.salvar_base_como()
+ok(r.get("erro") and "não existe" in r["erro"] and "unable" not in r["erro"], "salvar como em pasta inexistente, em português: %s" % r.get("erro"))
+# base somente leitura: abre só para consulta, com aviso (simulada com os.access quando root ou Windows, que ignoram o chmod)
+ro = os.path.join(TMP, "ro", "RO.sqlite")
+os.makedirs(os.path.dirname(ro))
+shutil.copy(novo, ro)
+_acc = os.access
+if os.name != "nt" and hasattr(os, "geteuid") and os.geteuid() != 0:
     os.chmod(ro, stat.S_IREAD)
+else:
+    os.access = lambda c, m, *a, **k: False if os.path.abspath(c) == os.path.abspath(ro) and m == os.W_OK else _acc(c, m, *a, **k)
+try:
     r = api.abrir_base(ro)
-    ok(r.get("erro") and "somente para leitura" in r["erro"], "base somente leitura: %s" % r.get("erro"))
+    ok(not r.get("erro") and "só para consulta" in (r.get("msg") or "") and getattr(api.base, "somente_leitura", False)
+       and len(r.get("registros") or []) == n, "base somente leitura abre só para consulta: %s" % (r.get("erro") or r.get("msg")))
+    os.makedirs(api._pasta_copias(), exist_ok=True)
+    shutil.copy(ro, os.path.join(api._pasta_copias(), "RO_20260101_101000.sqlite"))
+    r = api.copia_restaurar("RO_20260101_101000.sqlite")
+    ok(r.get("erro") and "só para consulta" in r["erro"], "restaurar cópia em base só para consulta: recusa em português (%s)" % r.get("erro"))
+finally:
+    os.access = _acc
+    try:
+        os.chmod(ro, stat.S_IREAD | stat.S_IWRITE)
+    except OSError:
+        pass
+r = api.abrir_base(novo)
+# bases recentes: o mesmo arquivo com outra grafia não se repete
+api.abrir_base(os.path.join(os.path.dirname(novo), ".", os.path.basename(novo)))
+api.abrir_base(novo)
+rec = api._recentes()
+ok(len(rec) == len({os.path.normcase(os.path.abspath(c)) for c in rec}), "recentes sem repetir o mesmo arquivo: %s" % rec)
 
 # ------------------------------------------------------------------ 9. pasta vigiada: arquivo com erro é tentado de novo; outra base não trava
 mae = os.path.join(TMP, "vigiada")

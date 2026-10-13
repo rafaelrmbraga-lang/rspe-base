@@ -202,8 +202,11 @@ SEM_CALCULO = rs.SEM_CALCULO
 def _cumprido_info(r, ctx, ref):
     """Pena cumprida na data pela regra única de todos os decretos (rs.cumprido_decreto_info: âncora do SEEU; pelos eventos
     quando o SEEU não traz o cálculo ou a âncora zera ou fica abaixo da metade deles; teto na pena da execução). Devolve o
-    dicionário {dias, fonte, aviso, origem}."""
-    return rs.cumprido_decreto_info(r, ctx["periodos"], ctx["rem"], ref, ctx["lc"], r.get("_crimes") or [])
+    dicionário {dias, fonte, aviso, origem}. Com ctx["_modo"] (avaliar_ficha), a âncora ou os eventos - decisão pelo requisito."""
+    x = rs.cumprido_decreto_info(r, ctx["periodos"], ctx["rem"], ref, ctx["lc"], r.get("_crimes") or [], ctx.get("_modo"))
+    if x.get("alt"):
+        ctx["_alt"] = True
+    return x
 
 
 def _cumprido(r, ctx, ref):
@@ -368,16 +371,37 @@ def _regra_concurso(f):
 
 def _ctx(r):
     eventos, incidentes = r.get("_eventos") or [], r.get("_incidentes") or []
-    rem = []
-    for i in incidentes:
-        if rs.e_remicao_concedida(i):
-            n = rs.dias_de(i.get("complemento", ""))
-            if n is not None:
-                rem.append((rs.to_date(i.get("data_referencia") or i.get("data_decisao") or ""), n))
+    rem = rs.remicoes_liquidas(incidentes)  # remições e perdas de remidos (a mesma conta das colunas 2022-2025)
     return {"periodos": rs.periodos_custodia(eventos), "lc": rs.periodos_livramento(eventos, incidentes), "rem": rem}
 
 
+# ordem dos resultados (melhor por último): "imp" abaixo de "nao" - o "faltavam X para 2/3 do impeditivo" pela âncora (que não conta
+# o tempo das penas já extintas) não prevalece sobre os eventos que mostram os 2/3 cumpridos e levam à análise dos demais crimes
+_RANK_S = {"cabe": 3, "ver": 2, "nao": 1, "imp": 0}
+
+
 def avaliar_ficha(f, r, ctx, ini, hoje):
+    """Avalia o decreto com a decisão pelo requisito (rs.cumprido_decreto_info, modo): pela âncora do SEEU; se ela não dá o
+    resultado favorável e os eventos mostram mais tempo, de novo pelos eventos - que valem (a verificar, com o aviso) quando
+    dão resultado melhor. Mais pena cumprida no SEEU nunca piora o resultado."""
+    if ctx.get("_modo") or "periodos" not in ctx:
+        return _avaliar_ficha_um(f, r, ctx, ini, hoje)
+    ca = dict(ctx, _modo="ancora")
+    xa = _avaliar_ficha_um(f, r, ca, ini, hoje)
+    if xa.get("s") == "cabe" or not ca.get("_alt") or (xa.get("mot") or "").startswith("sem pena remanescente"):
+        return xa  # (pena já cumprida pela âncora: com o tempo maior dos eventos, também não sobra o que comutar)
+    xe = _avaliar_ficha_um(f, r, dict(ctx, _modo="eventos"), ini, hoje)
+    if _RANK_S.get(xe.get("s"), 0) > _RANK_S.get(xa.get("s"), 0):
+        return xe
+    if xe.get("s") == xa.get("s") and xa.get("s") in ("nao", "imp"):
+        # o mesmo resultado negativo: o texto mostra o "faltavam" menor (o dos eventos, quando é ele), com a fonte
+        fa = rs.falta_menor(xa.get("mot"), xe.get("mot"))
+        if fa:
+            return dict(xe, mot="%s; %s" % (xe.get("mot") or "", rs.nota_falta_eventos(fa)))
+    return xa
+
+
+def _avaliar_ficha_um(f, r, ctx, ini, hoje):
     """Avalia o decreto; com o cumprimento interrompido na data (fuga, soltura), o resultado favorável vira A VERIFICAR: o decreto
     exige a fração cumprida ATÉ a data, não a custódia NA data, e a interrupção pode ter sido punida como falta grave."""
     x = _avaliar_ficha(f, r, ctx, ini, hoje)
@@ -387,7 +411,7 @@ def avaliar_ficha(f, r, ctx, ini, hoje):
         ref_t = x.get("ref") or ""
         if x.get("s") == "cabe":
             x.update(s="ver", mot="%s; o cumprimento estava interrompido em %s (não estava preso nem em livramento): o decreto exige a fração "
-                                  "cumprida até a data, não a custódia na data - conferir se a interrupção (fuga) foi punida como falta grave"
+                                  "cumprida até a data, não a custódia na data - conferir se a interrupção foi fuga e, se foi, se ela foi punida como falta grave"
                                   % (x.get("mot") or "", ref_t))
         elif x.get("s") in ("nao", "ver"):
             x["mot"] = "cumprimento interrompido em %s (não estava preso nem em livramento); %s" % (ref_t, x.get("mot") or "")
@@ -543,7 +567,7 @@ def _avaliar_ficha(f, r, ctx, ini, hoje):
         resto = [c for c in crimes if c not in imp_cr]
         if frc is not None and resto:
             pena_imp = sum(rs.pena_para_dias(c.get("pena_imposta") or c.get("pena_total_processo")) or 0 for c in imp_cr)
-            exig_imp = int(-(-pena_imp * frc.numerator // frc.denominator))
+            exig_imp = int(pena_imp * frc.numerator // frc.denominator)  # fração em dias arredondada para baixo (A2), como no resto do programa
             if cump >= exig_imp:
                 nota_conc = ("cumpridos %s da pena do crime impeditivo (%s); benefício sobre os demais crimes - conta pela pena cumprida, "
                              "não pela ordem da linha do tempo do SEEU, que é só informativa (aviso do CNJ no próprio sistema)") % (
@@ -666,7 +690,9 @@ def _avaliar_ficha(f, r, ctx, ini, hoje):
             return False, None, "hipótese só para %s" % ("não reincidentes" if reinc else "reincidentes")
         exig = None
         if fr is not None:
-            exig = int(-(-pena * fr.numerator // fr.denominator))
+            # fração da pena em dias arredondada para baixo, o critério do restante do programa (e da projeção da linha do tempo):
+            # nunca exige mais do que a fração exata
+            exig = int(pena * fr.numerator // fr.denominator)
         elif anos is not None:
             exig = rs.dias_anos(anos, ref)
         if comut and exig and com_ant and re.search(r"novo requisito temporal|independentemente de novo", rs._sem_acento(h.get("texto") or "") + " " + o, re.I):
@@ -842,22 +868,82 @@ def _avaliar_ficha(f, r, ctx, ini, hoje):
     if com and not imp_com and not f_com:
         h, exig = com
         red = h.get("reducao_reincidente") if reinc else h.get("reducao_nao_reincidente")
+        rc = _reducao_comutacao(f, red, pena, cump, bool(com_ant))
+        if rc:
+            res["reducao_calc"] = rc
+            red_txt = "comutação de %s da pena %s (%s), redução de %s; pena remanescente passa de %s para %s" % (
+                red, {"cumprido": "cumprida", "pena": "total"}.get(rc["base"], "remanescente"), rs.dias_para_pena(rc["base_dias"]),
+                _dias_txt(rc["reducao"]), rs.dias_para_pena(rc["antes"]), rs.dias_para_pena(rc["depois"]))
+            if rc.get("regra"):
+                red_txt += " (%s)" % rc["regra"]
+        elif pena and pena - cump <= 0:
+            red_txt = "comutação de %s - pela conta não sobra pena remanescente a comutar (conferir o tempo cumprido)" % (red or "?")
+        else:
+            red_txt = "comutação de %s do remanescente" % (red or "?")
         return dict(res, s="cabe", beneficio="Comutação", dispositivo=h.get("dispositivo") or "", exigido=exig,
-                    fracao=red or "", reducao=red or "",
-                    mot="cumpriu %s em %s%s; comutação de %s do remanescente" % (rs.dias_para_pena(cump), rs.fmt(ref),
-                                                                            (" (exigido %s)" % rs.dias_para_pena(exig)) if exig else "", red or "?"),
+                    fracao=red or "",
+                    # "reducao" é exibida pela aba como "<fração> do remanescente": só quando essa é a base de cálculo do decreto
+                    reducao=(red or "") if (not rc or rc["base"] == "remanescente") else "",
+                    mot="cumpriu %s em %s%s; %s" % (rs.dias_para_pena(cump), rs.fmt(ref), (" (exigido %s)" % rs.dias_para_pena(exig)) if exig else "", red_txt),
                     ressalva="; ".join(x for x in ("",
                                                    ("indulto a verificar (%s): %s" % (ind_ver[0].get("dispositivo") or "", ind_ver[2]))
                                                    if (ind_ver and not ind and not imp_ind and not f_ind) else "") if x))
+    restrito = not any(h.get("objetivo") and _decisiva(h) for h in (f.get("indulto") or [])) and not (f.get("comutacao") or [])
+    if imp and restrito:
+        # decreto só para grupos (doença, deficiência...): o resultado é o mesmo com ou sem o crime impeditivo - diz o motivo
+        # exato, em vez de "vedado"
+        return dict(res, s="nao", mot="decreto restrito (doença, deficiência, agentes de segurança ou outros grupos): nenhuma hipótese "
+                                      "aferível pelo RSPE; há também crime impeditivo (%s)" % "; ".join(imp))
     if imp:
         return dict(res, s="imp", mot="; ".join(imp))
+    sem_rem = next((x for x in hips if x["tipo"] == "comutacao" and (x.get("mot") or "").startswith("sem pena remanescente a comutar")), None)
+    if sem_rem:
+        # a comutação caiu só porque a pena considerada já estava cumprida na data (o requisito de tempo foi atendido): esse é o
+        # motivo, e não o da hipótese de indulto que chegou mais perto
+        return dict(res, s="nao", mot=sem_rem["mot"] + ((" - indulto: %s" % ind_n[2]) if (ind_n and ind_n[2]) else ""),
+                    exigido=sem_rem.get("exigido"), dispositivo=sem_rem.get("dispositivo") or "")
     if ind_n and ind_n[2]:
         return dict(res, s="nao", mot=ind_n[2], exigido=ind_n[1], dispositivo=ind_n[0].get("dispositivo") or "")
     if com_n and com_n[2]:
         return dict(res, s="nao", mot=com_n[2], exigido=com_n[1], dispositivo=com_n[0].get("dispositivo") or "")
-    if not any(h.get("objetivo") and _decisiva(h) for h in (f.get("indulto") or [])) and not (f.get("comutacao") or []):
+    if restrito:
         return dict(res, s="nao", mot="decreto restrito (doença, deficiência, agentes de segurança ou outros grupos): nenhuma hipótese pelos dados do RSPE")
     return dict(res, s="nao", mot="nenhuma hipótese objetiva do decreto alcança o caso")
+
+
+def _base_comutacao(f):
+    """Base de cálculo da redução que o texto do decreto manda: "maior" (a pena remanescente, ou o período já cumprido quando,
+    descontadas as comutações anteriores, for superior a ela - 2009 a 2015 e 2023, art. 2º/3º, § 1º); "pena" (a pena, sem dizer
+    remanescente: "terá comutada sua pena" - 2000 a 2002, em que só quem já teve comutação anterior a tem calculada sobre o
+    remanescente, parágrafo único); "remanescente" nos demais. Lida do texto de toda a ficha: o § 1º vale para o artigo inteiro,
+    inclusive as hipóteses dos §§ seguintes."""
+    hs = f.get("comutacao") or []
+    t = rs._sem_acento(" ".join("%s %s" % (h.get("texto") or "", h.get("outros_requisitos") or "") for h in hs)).lower()
+    if re.search(r"periodo (?:de pena )?(?:ja )?cumprido[^.;]{0,120}superior ao remanescente|periodo (?:ja )?cumprido se (?:este )?(?:\([^)]*\) )?(?:for )?maior"
+                 r"|ou (?:o )?periodo cumprido se maior", t):
+        return "maior"
+    if re.search(r"comutada sua pena", t) and not re.search(r"comutada a pena remanescente|comutacao da (?:pena|ppl) remanescente", t):
+        return "pena"
+    return "remanescente"
+
+
+def _reducao_comutacao(f, red, pena, cump, com_ant):
+    """Redução da comutação cabível, pela base que o decreto manda (_base_comutacao): {fracao, base ('remanescente' | 'cumprido' |
+    'pena'), base_dias, reducao, antes, depois, regra}; None sem fração ou sem pena. Os dias da redução são arredondados para baixo,
+    como na análise de 2024/2025 (rspe_scraper, art. 13)."""
+    fr = _fr(red)
+    if not fr or not pena or pena - cump <= 0:
+        return None
+    rem = pena - cump
+    regra = _base_comutacao(f)
+    base, regra_txt = "remanescente", ""
+    if regra == "maior" and cump > rem:
+        base, regra_txt = "cumprido", "o decreto manda calcular sobre o período cumprido quando superior ao remanescente"
+    elif regra == "pena" and not com_ant:
+        base, regra_txt = "pena", "o decreto comuta a pena; só a comutação anterior desloca o cálculo para o remanescente"
+    bd = {"cumprido": cump, "pena": pena}.get(base, rem)
+    n = int(bd * fr.numerator // fr.denominator)
+    return {"fracao": str(fr), "base": base, "base_dias": bd, "reducao": n, "antes": rem, "depois": max(0, rem - n), "regra": regra_txt}
 
 
 def _tese_hediondez(f, r, x):
@@ -1039,6 +1125,18 @@ def avaliar(r, hoje, completo=False):
             if y:
                 x.clear()
                 x.update(y, ressalva="; ".join(t for t in ("comutação indeferida no RSPE%s; o indulto não foi decidido" % ((" em " + dc[1]) if dc[1] else ""),
+                                                           y.get("ressalva") or "") if t))
+                continue
+        if dc and dc[0] == "conc" and not di and x.get("detalhado"):
+            # só a comutação concedida e o indulto não decidido: a concessão não esconde o indulto que a análise detalhada (coluna e
+            # linha do tempo) ainda dá como cabível ou a verificar - o indulto é o benefício mais amplo e pode ser pedido
+            # (art. 13, § 5º, dos Decretos 12.338/2024 e 12.790/2025: a comutação não alcança quem preenche o indulto)
+            y = _indulto_sem_comutacao(ano, x, r, fx.get(ano), ctx, ini, hoje)
+            if y and _sem_objeto(r, dict(y)).get("s") not in ("cabe", "ver"):
+                y = None
+            if y:
+                x.clear()
+                x.update(y, ressalva="; ".join(t for t in ("comutação concedida no RSPE%s; o indulto não foi decidido" % ((" em " + dc[1]) if dc[1] else ""),
                                                            y.get("ressalva") or "") if t))
                 continue
         if d:

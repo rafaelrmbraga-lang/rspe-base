@@ -1,9 +1,9 @@
-APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.9.0
+APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.9.3
 (antigo RSPE Base; SEEU, programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-7.9.0. A documentação técnica completa (cada parâmetro, a regra, a norma e
+7.9.3. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -27,8 +27,9 @@ pasta…" varrendo subpastas, ou arrastando PDFs/pasta sobre o .exe).
 ABERTURA
 O programa abre SEM base carregada. A tela inicial pede: criar uma base nova
 (digitando o nome, ex.: "Comarca de Dourados") ou abrir uma existente; lista as
-bases recentes (até 8). Arrastar PDFs sobre o .exe cria uma base
-"Importação <data>".
+bases recentes (até 8, sem repetir o mesmo arquivo). Arrastar PDFs sobre o
+.exe cria uma base "Importação <data e hora com segundos>" (se o nome já
+existir, "(2)", "(3)"…; uma base existente nunca é substituída).
 
 ATUALIZAR O PROGRAMA
   Substitua só o executável (a partir da 7.4.0, APTO.exe; apague o antigo
@@ -45,6 +46,14 @@ Os dados ficam em arquivos .sqlite na pasta "bases", ao lado do .exe.
     Nova base…          cria uma base vazia (ex.: "Comarca de Dourados.sqlite")
     Abrir base…         troca para outra base já salva
     Salvar base como…   grava a base atual com outro nome e passa a usá-la
+  "Salvar base como…" ou "Nova base…" sobre um arquivo que já é base do APTO
+  (o Windows pergunta se substitui): antes, a base substituída é copiada para
+  bases\copias\<nome> (substituída em <data e hora>)\, junto com as cópias de
+  segurança que ela já tinha; a base nova com esse nome começa uma pasta de
+  cópias própria (as cópias de uma base nunca recebem o conteúdo de outra).
+  Se a cópia não puder ser feita, nada é substituído. Para recuperar a base
+  substituída, use "Abrir base…" no arquivo .sqlite dessa pasta e "Salvar
+  base como…" com outro nome.
 Cada base guarda os RSPE lidos, as fichas disciplinares, as baixas da
 Auditoria, as conferências da aba Ficha disciplinar e os atestados
 adicionados à mão.
@@ -80,7 +89,15 @@ DUPLICADOS
   Ficha disciplinar impressa antes da já gravada (ou sem data legível) é
   ignorada; a mesma ficha repetida no lote ou já importada (mesmo arquivo)
   conta como duplicada. O resumo aparece ao fim da importação e a lista fica em
-  importacao_avisos.txt.
+  importacao_avisos.txt (reescrito a cada importação manual, com data, base e
+  "Sem avisos" quando não há; a pasta vigiada acrescenta os avisos dela em
+  importacao_avisos_pasta_vigiada.txt). No resumo, o RSPE sem data legível
+  não conta como "mais antigo" (aparece na lista como "sem data de geração
+  legível ... ignorado"), e a ficha guardada pelo nome em importação anterior
+  que agora vincula ao RSPE não conta como ficha do lote (aparece na lista
+  como "ficha(s) guardada(s) pelo nome agora vinculada(s)"). Ficha de mesmo
+  nome de um RSPE da base mas com outra mãe (ou com homônimos) fica guardada
+  pelo nome e o aviso diz "NÃO VINCULADA" com o motivo: conferir.
 
 ABAS (colunas)
   Geral        Nome, Nº da execução, Regime, Progressão, Livramento, Término.
@@ -198,8 +215,10 @@ CORES
   ("Não prescrita (há crimes sem dados)" quando algum crime não tem trânsito
   ou pena no RSPE - conferir na ação penal); cinza = sem dados; azul =
   extinta. A tela mostra uma pretensão por vez; a exportação (Excel e PDF)
-  também sai em duas abas, "Prescrição - pretensão executória" e
-  "Prescrição - pretensão punitiva", cada uma com a sua cor e contagem; na
+  também sai em duas abas - no Excel, "Prescrição executória" e
+  "Prescrição punitiva"; no PDF, com os títulos "Prescrição - pretensão
+  executória" e "Prescrição - pretensão punitiva" -, cada uma com a sua
+  cor e contagem; na
   ficha do assistido, a executória com a sua cor e, se aparente ou a
   verificar, a punitiva logo abaixo.
   Ficha disciplinar: vermelho = remição a requerer; amarelo = conferir remição,
@@ -587,9 +606,15 @@ BASE JURÍDICA (base_juridica.json)
   STJ 1084/1196/1354 e STF 1169 (o STF Tema 1319 está registrado como
   repercussão geral pendente, sem tese); frações de livramento; rol de
   hediondos com a data de cada lei; VGA esperada por artigo; jurisprudência
-  citada. A cópia ao lado do .exe tem prioridade sobre a embutida: para
-  atualizar, edite o arquivo e use "Base ▾ → Recarregar base jurídica" (ou
-  reabra o programa). A versão em uso aparece na aba Auditoria.
+  citada. Entre a cópia ao lado do .exe e a embutida, vale a de versão
+  mais recente (campo "versao"; em empate, a de ao lado do .exe); o que só
+  existe na embutida é completado a partir dela. Para uma edição valer,
+  edite o arquivo ao lado do .exe, AUMENTE a "versao" dele (ex.:
+  "2026-10-08i" -> "2026-10-09") e use "Base ▾ → Recarregar base jurídica"
+  (ou reabra o programa). A mensagem do "Recarregar" diz a versão e o
+  arquivo em uso e avisa se a cópia ao lado foi ignorada (JSON inválido ou
+  versão mais antiga que a embutida). A versão em uso aparece no topo da
+  tela ("Hoje … · base jurídica …"), com o aviso, se houver.
 
 PRESUNÇÃO DE HIPOSSUFICIÊNCIA (Defensoria)
   No indulto, a multa é indultável e não é óbice (Decretos 12.338/2024 e
@@ -651,7 +676,8 @@ ARQUIVOS
   RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf   documentação técnica
   Criados ao lado do .exe: bases/ (com copias/, as cópias de segurança),
   rspe_config.json (bases recentes e pasta vigiada),
-  pasta_vigiada_estado.json, importacao_avisos.txt, rspe_log.txt; só com
+  pasta_vigiada_estado.json, importacao_avisos.txt,
+  importacao_avisos_pasta_vigiada.txt, rspe_log.txt; só com
   as petições ativas: modelos/ e defensores.json.
 
 SAÍDA TEMPORÁRIA (ícone ao lado do nome, aba Geral)
@@ -689,12 +715,12 @@ PROGRESSÃO ANTECIPADA (ícone azul de degraus ao lado do nome)
   estado vêm antecipando a progressão). Aparece nos mesmos lugares do ícone
   da saída temporária. Requisitos:
   - regime fechado ou semiaberto, com o cumprimento em curso;
-  - progressão prevista para daqui a 1 a 60 dias (o lapso já atingido fica
+  - progressão prevista para daqui a 1 a 90 dias (o lapso já atingido fica
     na aba Progressão como vencido);
   - nenhum crime não extinto com violência ou grave ameaça (marcação do
     RSPE);
-  - conduta Boa ou Ótima na ficha, sem falta nos últimos 12 meses;
-  - trabalho em curso na ficha (o externo conta).
+  - conduta Boa ou Ótima na ficha, sem falta nos últimos 12 meses.
+  Trabalho em curso não é exigido.
   Amarelo: nada falha, mas algo fica a conferir (ficha impressa há mais de
   90 dias, sem ficha importada, crime sem a marcação de violência no RSPE).
   Clicar abre o pedido da progressão, o mesmo da coluna "Pedido" da aba
@@ -721,16 +747,24 @@ CALCULADORA DE PENAS (botão "Calculadora" no topo, em qualquer aba)
   - Ao lado, a anotação (assistido e observações). "Registrar cálculo"
     grava na base; a guia "Registros" abre, copia ou exclui. "Copiar
     cálculo" e "PDF".
+  - As datas aceitam só os números (11102026 vira 11/10/2026). A janela
+    maximiza (□ no título) ou se redimensiona pelo canto inferior direito;
+    ao fechar e abrir de novo, começa zerada (os registros ficam).
 
 DADOS PRISIONAIS (aba ao lado do Quadro do Usuário)
   Retrato do sistema prisional de MS pela API pública do Geopresídios/CNIEP
   (CNJ): para cada unidade, a última inspeção judicial mensal do tema
   "Aspectos gerais" (vagas, presos por regime, perfil da população e
   servidores). Os dados são baixados sozinhos, em segundo plano, ao
-  abrir uma base, quando nunca foram baixados ou têm 30 dias ou mais
-  (cerca de 2 minutos, com internet); enquanto isso, a aba segue com os
-  dados anteriores. Sem internet, o programa avisa e continua com o que
-  tem. O botão "Atualizar dados" baixa na hora. Os dados ficam guardados
+  abrir o programa (já na tela inicial, mesmo sem base aberta), quando
+  nunca foram baixados ou têm 30 dias ou mais (cerca de 2 minutos, com
+  internet); enquanto isso, a aba segue com os dados anteriores. Sem
+  internet, o programa avisa e continua com o que tem. Se parte dos
+  relatórios de inspeção não vier (o servidor do CNJ recusa pedidos em
+  excesso), a unidade fica com o dado baixado antes (população e evolução,
+  sem trocar o mês mais recente por um anterior), a mensagem diz quantos
+  relatórios faltaram e o programa tenta de novo sozinho em 10 minutos
+  (até 3 vezes; depois, ao reabrir o programa ou pelo botão). O botão "Atualizar dados" baixa na hora. Os dados ficam guardados
   ao lado do programa (geopresidios_ms.json) e valem para qualquer base.
   - Mapa do estado: um círculo verde-escuro por cidade com estabelecimento
     dos tipos marcados, com o tamanho pelo número de presos. Passar o mouse
@@ -796,6 +830,184 @@ HISTÓRICO DE VERSÕES
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
 
+v7.9.3
+  - Leitura da ficha do SIAPEN (relida ao abrir): saídas temporárias com
+    aspas, "RETONROU" ou "beneficiado... retornou" passam a contar (inciso XI
+    e art. 124, § 3º); trabalho em dois setores ao mesmo tempo não encerra o
+    primeiro vínculo (sem lacuna falsa e sem dia contado em dobro); período
+    do atestado com setor iniciado por número ou "data inicial em X e final
+    em Y"; setor vazio deixa de aparecer como "CONFORME DOCUMENTO"; fim de
+    isolamento não conta como isolamento; "Entrada no Regime X da Unidade
+    Penal" é lida.
+  - RSPE: o número provisório de 13 dígitos do SEEU não aparece como CPF no
+    relatório nem na petição ("não informado (registro provisório do SEEU)").
+  - Perda de dias remidos com o complemento só numérico ("11") passa a
+    descontar no cumprido do indulto e da comutação (aba, colunas e linha do
+    tempo).
+  - Data-base informada pelo operador: a remição é abatida como no SEEU; uma
+    data-base mais antiga nunca atrasa a progressão.
+  - Indulto/comutação: mais tempo cumprido ou mais remição nunca piora o
+    resultado (âncora do SEEU x eventos); 2022, art. 4º, sem condenação até a
+    publicação: "não se aplica"; pena extinta com sentença posterior ao
+    decreto não conta como em execução; inciso XV não é rebaixado por tempo
+    cumprido; pena já cumprida antes do decreto: indulto sem objeto (pedir a
+    extinção); a ficha que nega o inciso XII mantém o art. 10 e o § 2º;
+    "faltavam para 2/3 do impeditivo" não prevalece sobre o "não" pela
+    fração; eventos ordenados por data.
+  - Textos: "0 dias", "+1 dia", "Decreto 9.370" sem "None".
+  - Importação: o RSPE impresso sem o título "Relatório da Situação
+    Processual Executória" (tela do processo salva em PDF,
+    "processoExecucaoPenal.do") passa a ser reconhecido pelo cabeçalho,
+    pelos cálculos e pelo rodapé do SEEU; antes era recusado como "não é
+    um RSPE do SEEU".
+  - Importação mais tolerante (RSPE e ficha): o documento é reconhecido
+    pelo conjunto das marcas (com ou sem acento, maiúsculas, espaços), não
+    por linha fixa; cabeçalho/rodapé do navegador, título ausente ou em
+    outra linha e tribunal em outra linha não atrapalham; parte que falhar
+    na leitura entra como "Leitura parcial" no registro, com a seção
+    afetada, sem derrubar o arquivo; a recusa diz o motivo (sem texto =
+    digitalizado, protegido por senha, ou outro documento).
+  - Cumprido pela âncora do SEEU: a custódia que só a ficha mostra (reinício
+    depois da última interrupção, já coberto pelo Total Interrupções do SEEU)
+    não é mais descontada.
+  - Incisos VII, VIII e IX (2024/2025): quem foi preso depois do aberto ou
+    do livramento, sem regressão registrada, fica "a verificar" com o aviso
+    da prisão (não "possível").
+  - Quando a âncora e os eventos dão o mesmo "não", o texto mostra o menor
+    "faltavam" (o mais favorável), com a outra contagem citada.
+  - Comutação sem pena remanescente: a coluna mostra "Não se aplica (sem pena
+    remanescente a comutar)" em vez de "sem execução na data".
+  - Painel do assistido, "Benefícios": indulto e comutação mostram só os
+    decretos cabíveis (ex.: "2017 Cabível  2024 Cabível"); sem nenhum,
+    "Nenhum decreto cabível". O detalhe de cada decreto segue na aba Indulto.
+  - Painel do assistido: a conduta da ficha aparece em negrito ao lado do
+    nome (Ótima e Boa em verde; Má e "Responde PADIC" em vermelho; Sem lapso e
+    as demais em cinza). Saíram do painel os "Pontos de atenção" (estão na aba
+    Auditoria), a lista de vínculos de trabalho e os cartões da ficha; a ficha
+    mostra os atestados de trabalho/remição e as faltas disciplinares.
+  - Progressão antecipada: a janela passa de 60 para 90 dias antes da data
+    do SEEU, e o trabalho em curso deixa de ser exigido.
+  - Divergência no SEEU/SIAPEN: "!" amarelo ao lado do nome (todas as abas,
+    painel do assistido e quadro), com a lista ao passar o mouse e a
+    explicação na legenda do rodapé, quando o próprio documento não fecha:
+    pena total menor que a soma das ações sem comutação/indulto/suspensão/
+    extinção/unificação; pena da ação diferente da soma dos crimes; duas
+    ações com o mesmo número; prisão lançada mais de 30 dias antes do fato
+    da ação vinculada; ficha sem data da prisão; CPF da ficha diferente do
+    RSPE (ambos válidos). Cada uma é alerta na Auditoria, com baixa própria:
+    baixadas todas, o "!" some; a baixa vale enquanto a divergência for a
+    mesma, inclusive depois de reimportar o RSPE.
+
+v7.9.2
+  - Aviso de legislação nova: ao abrir a base, depois da janela de
+    carregamento, o programa consulta a legislação federal (Senado Federal,
+    dados abertos, sem cadastro) e abre uma janela só se houver (1) lei que
+    altere a LEP, o CP, a Lei 8.072/90, a Lei 11.343/06, a Lei 10.826/03
+    ou a Lei 12.850/13 depois da data da base jurídica, ou (2) decreto de
+    indulto ou comutação do ano corrente ou do anterior que a base jurídica
+    ainda não tem. Só informa: os cálculos não mudam até a base jurídica ser
+    revisada. "Ciente" deixa de mostrar aqueles avisos; "Lembrar depois"
+    mostra de novo na próxima abertura. A consulta vale por um dia
+    (legislacao_cache.json, na pasta do programa); sem internet, nada abre.
+
+v7.9.1
+  - Abas na ordem: ... Auditoria, Dados prisionais, Jurisprudências e
+    Quadro do Usuário por último.
+  - Linha do tempo do indulto: a falha "not all arguments converted" ao
+    abrir (concurso com crime impeditivo) foi corrigida; resumo e
+    fundamentação passam a ser montados à parte, sem derrubar a linha.
+  - Decreto de 2022: "Vedado (art. 7º)" na aba, na linha do tempo e nas
+    colunas (antes "Excluído" em um lugar e "Vedado" em outro).
+  - Decreto restrito com crime impeditivo: o motivo diz as duas coisas.
+  - Auditoria: tráfico privilegiado (art. 33, § 4º) marcado como
+    reincidente no SEEU vira informação para conferir; alertas da ficha sem
+    prejuízo direto (reinício omitido, retomada divergente, grafia de nome,
+    mãe, CPF ou nascimento) passam a "verificar"; CPF com dígitos trocados
+    ou deslocados é apontado como provável erro de digitação.
+  - Prescrição: crimes da mesma ação penal têm texto próprio (CP, art.
+    119), sem as correntes de execuções distintas.
+  - Remição detalhada (PDF): nova seção com as fichas importadas sem o
+    RSPE correspondente e os dias dos atestados.
+  - Cartões de contagem seguem os filtros da aba (situação e RSPE antigo).
+  - Remover assistido abre janela com tudo o que está ligado a ele
+    (ficha, pedidos, cálculos, anotações), com a opção de apagar tudo.
+  - Base somente leitura: abre para consulta e avisa ao tentar gravar.
+  - Pasta vigiada usa a base aberta quando o nome coincide; falhas da
+    importação automática ficam registradas à parte.
+  - Modelos de petição: "&" e "<" no nome, crime ou motivo não corrompem
+    mais o documento Word.
+
+  - Auditoria externa (12/10/2026, 595 assistidos, 7 frentes com verificador
+    independente) - correções:
+    . Término: com o reinício lançado pela ficha, o término corre do reinício
+      (o SEEU congela a pena cumprida na interrupção); já alcançado, a
+      Extinção fica "a verificar". Guia sem pena total: soma das penas
+      impostas. Término calculado sem o SEEU com o -1 dia do CP, art. 10.
+    . Art. 75: alerta também com fato durante o cumprimento (limite da nova
+      unificação contado do trânsito/fato mais tardio).
+    . Livramento: vedação ao reincidente específico em tráfico também no
+      art. 35 (Lei 11.343, art. 44, p. ú.); vedado em todas as penas aparece
+      como "Vedado"; posterior ao término, "sem efeito prático"; alteração de
+      data-base não conta como pedido concedido; lapso atingido com o SEEU
+      parado na interrupção.
+    . Progressão: homicídio/latrocínio sem a marcação do resultado morte vira
+      "verificar" (consumado x tentado); a fundamentação não atribui mais 50%
+      ao inciso VII; percentual acima do legal avisado na linha; frações em
+      concurso listadas por crime (tela, resumo, petição); recálculo pela
+      data-base editada pela média ponderada; falta "homologada/punida" da
+      ficha não pinta a data-base de vermelho; violência elementar na
+      progressão antecipada; prisão por processo da execução lançada como
+      interrupção vira alerta.
+    . Prescrição: art. 28 sem pena com o prazo do art. 30 (2 anos);
+      reincidência afastada que decide o resultado fica "a verificar";
+      trânsito para a acusação posterior ao final; medida de segurança;
+      prazo pelo saldo na fuga na coluna.
+    . Indulto/comutação: motivo decisivo no cartão; redução pela base que o
+      decreto manda (cumprida em 2009-2015 e 2023); indulto ainda possível
+      com a comutação concedida; decreto passado sem "projeção"; fração em
+      dias arredondada para baixo; contagem da âncora do SEEU sem o dia a
+      mais por período.
+    . Remição e ficha: alvará de soltura encerra o trabalho; troca de função
+      não põe o trabalho novo em dúvida; falta negada no RSPE não volta como
+      "a apurar"; fundamentação com 1/3 exato; siglas de unidade agrupadas.
+    . Telas e relatórios: PDF exportado sem "0 Vencido" na Geral; cartões,
+      filtros e relatório geral pela mesma regra (vencidos, a verificar,
+      sem data com motivo); "datas do SEEU" ressalvam as marcadas com *;
+      lista em ordem alfabética em todos os lugares; calculadora (29/02,
+      pena negativa, fração inválida, término do SEEU ao lado).
+
+  - Auditoria funcional (12/10/2026: todas as funções, com 121 casos
+    simulados e PDFs simulados de RSPE e ficha) - correções:
+    . Calculadora: fim de mês (29/02, 31/01) sem 1 dia a menos; o Tab não
+      perde o que se digita; entradas inválidas e remidos acima da pena
+      avisados (também no Copiar e no PDF); "Trazer de" mostra o término do
+      SEEU, o critério do SEEU e avisos (art. 75, custódia que não bate,
+      dado que não veio); abre sem base.
+    . Linha do tempo e petições do indulto: só diz "requisitos atendidos"
+      com hipótese atendida; pontos a conferir listados; citações (art. 13,
+      art. 5º de 2022, § 2º, I, art. 10); extenso sem dias a mais; pena
+      cumprida pede a extinção; soltura não é fuga; "Copiar fundamentação"
+      copia o enquadramento escolhido.
+    . Progressão antecipada e saída temporária: homicídio/latrocínio sem a
+      marcação do resultado morte "a conferir"; fração para baixo; nome da
+      unidade; conduta "Má" e "PADIC/PDIB"; análises independentes.
+    . Funções do defensor: ajuste da prescrição validado; histórico liga o
+      pedido à decisão de RSPE posterior; "Mesma pessoa" agrupa e desfaz;
+      pedidos e dados informados sem datas futuras; "mudou depois" no
+      indulto; um defensor padrão.
+    . Jurisprudências: 319 decisões desfavoráveis retiradas; temas pelo
+      conteúdo; citações quebradas corrigidas ou retiradas; busca que ignora
+      pontuação ("(enem)", "1.084").
+    . Sistema: salvar como / nova base guardam a base substituída; aviso da
+      base jurídica na tela; dados prisionais com falha parcial mantêm os
+      dados e tentam de novo; mensagens em português.
+    . Auditoria: um pedido só por crime; parágrafos das fundamentações só
+      quando cabem; art. 149-A sem alerta falso de hediondo; art. 75 no
+      último dia (CP, art. 10); progressão pela data-base informada com o
+      remanescente exato.
+    . Testes: 27 conjuntos, incluindo a bateria dos 121 casos simulados
+      (casos_simulados/).
+
 v7.9.0
   - Detração da ficha: prisão encerrada por alvará em processo do RSPE, sem
     cômputo no RSPE, vira alerta com os dias (caso Alex: 26/01/2022 a
@@ -812,6 +1024,11 @@ v7.9.0
     favoráveis saem; fuga e falta sem sanção viram informação.
   - Fuga ou evasão sem homologação na janela do art. 6º impede o indulto e a
     comutação (antes: "a verificar").
+  - Dados prisionais: andamento do download em porcentagem; a visão
+    "Condições" da unidade lista os problemas constatados por tema (sem
+    gráfico); "Relatório geral" é sempre do estado, com a escolha dos tipos
+    de estabelecimento; "Condições por unidade" abre a busca para escolher
+    as unidades (quantas quiser).
   - Calculadora de penas: botão "Calculadora" no topo de todas as abas,
     com janela móvel, anotação ao lado e registros gravados na base. Ver
     "Calculadora de penas".
