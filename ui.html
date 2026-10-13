@@ -1732,7 +1732,7 @@ const ui = {
     const u=v.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
     const cor=/^(OTIMA|BOA)\b/.test(u)?'verde':(/^(MA|PESSIMA)\b/.test(u)||/PADIC/.test(u))?'vermelho':'cinza';
     const rot={OTIMA:'Ótima',BOA:'Boa',MA:'Má','SEM LAPSO':'Sem lapso'}[u]||(/PADIC/.test(u)?v.replace(/^RESPONDE\s*/i,'Responde '):v.charAt(0)+v.slice(1).toLowerCase());
-    return ` <span class="pill ${cor}" style="font-size:13px;font-weight:700;vertical-align:middle;margin-left:8px${cor==='cinza'?';color:var(--tx3,#7A847E)':''}" title="Conduta (ficha do SIAPEN)">${esc(rot)}</span>`; },
+    return ` <span class="pill ${cor}" style="font-size:.9em;font-weight:700;vertical-align:baseline;margin-left:10px;padding:0${cor==='cinza'?';color:var(--tx3,#7A847E)':''}" title="Conduta (ficha do SIAPEN)">${esc(rot)}</span>`; },
   decDe(r){ return ((r.dec||{}).decretos||[]); },
   decLista(rs){ const m=new Map(); rs.forEach(r=>this.decDe(r).forEach(x=>{ if(!m.has(x.id)) m.set(x.id,x); }));
     return [...m.values()].sort((a,b)=>this.tlD(b.ref)-this.tlD(a.ref)); },
