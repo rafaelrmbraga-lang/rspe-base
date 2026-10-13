@@ -132,7 +132,7 @@ evs5 = [ev(PRI, "PRISÃO DEFINITIVA", "10/01/2012", P), ev(INT, "FUGA", "01/06/2
 r5 = reg([crime()], evs5)
 P5 = rp.analisar(r5, HOJE, None)
 confere(P5["presc_linhas"][0].get("ppe_saldo_zero") == "01/06/2013", "R3-A5: saldo zero não registrado")
-confere("saldo calculado zero" in rv.extincao(r5, P5, False)["ext_hipoteses"], "R3-A5: hipótese não chegou à aba Extinção")
+confere("pena já cumprida na fuga" in rv.extincao(r5, P5, False)["ext_hipoteses"], "R3-A5: hipótese não chegou à aba Extinção")
 r5b = reg([crime(), crime(processo_criminal="0000300-30.2012.8.12.0001", data_infracao="01/01/2012", transito_mp="", transito_processo="")], evs5)
 confere(not run(r5b).get("ppe_saldo_zero"), "R3-A5: saldo zero com condenação sem trânsito somada")
 

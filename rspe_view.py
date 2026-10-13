@@ -807,12 +807,13 @@ def extincao(r, presc, interr):
             a_verificar = True
         if l.get("ppe_saldo_zero"):
             # única condenação em execução: pelo tempo cumprido nos eventos do RSPE, a pena se esgotou antes da fuga
-            hip.append("%s: a verificar - pelos eventos do RSPE, a pena estava integralmente cumprida na fuga de %s (saldo calculado zero): "
-                       "extinção pelo cumprimento a conferir no cálculo do SEEU (LEP, art. 66, II)" % (l.get("rotulo") or l["crime"], l["ppe_saldo_zero"]))
+            hip.append("%s: pena já cumprida na fuga de %s, pelos eventos do RSPE. Conferir no cálculo do SEEU e pedir a extinção "
+                       "(LEP, art. 66, II)" % (l.get("rotulo") or l["crime"], l["ppe_saldo_zero"]))
             a_verificar = True
     # multa cominada: o inadimplemento não obsta a extinção, salvo prova concreta da capacidade de pagar (STJ, Tema 931 revisto)
     com_multa = any(re.search(r"\bE\s+MULTA", (c.get("tipo_penal") or "").upper()) for c in r.get("_crimes", []) if not c.get("extinto", "").upper().startswith("S"))
-    multa_txt = ("Multa cominada: o inadimplemento não obsta a extinção ante a alegada hipossuficiência, salvo decisão motivada que indique concretamente a possibilidade de pagamento (STJ, Tema 931, tese revista em 28/02/2024); a assistência pela Defensoria gera presunção relativa de hipossuficiência, e a ADI 7.032 não superou o Tema 931 (STJ, AgRg no REsp 2.267.208, 6ª Turma, 16/09/2026); há julgados da 5ª Turma exigindo prova da impossibilidade (STJ, REsp 2.055.935) - por cautela, instruir com elementos da hipossuficiência" if com_multa else "")
+    multa_txt = ("Multa: o não pagamento não impede a extinção de quem é hipossuficiente (STJ, Tema 931, revisto em 2024). "
+                 "Juntar elementos da hipossuficiência." if com_multa else "")
     # crimes já extintos no RSPE
     ext = ["%s%s%s" % (rs.crimes_curto([c]).replace(" (extinto)", ""), (" · " + c["extincao_motivo"].lower()) if c.get("extincao_motivo") else "",
                        (" em " + c["data_extincao"]) if c.get("data_extincao") else "")
