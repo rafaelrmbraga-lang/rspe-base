@@ -13022,7 +13022,7 @@
   "id": "S109",
   "grupo": "I-diversos",
   "titulo": "Pena de multa cominada",
-  "conta": "Tipo com 'E Multa': aviso do Tema 931 na Extinção e item informativo na Auditoria.",
+  "conta": "Tipo com 'E Multa': sem aviso de multa na Extinção nem na Auditoria (assistido da Defensoria: hipossuficiência presumida).",
   "processo": "9900109-00.2026.8.12.0001",
   "rspe": {
    "arquivo": "SIMULADO_109.pdf",
@@ -13114,14 +13114,14 @@
    {
     "t": "campo",
     "campo": "ext_multa",
-    "op": "contem",
-    "v": "Tema 931",
-    "nota": ""
+    "op": "vazio",
+    "nota": "Defensoria: hipossuficiência presumida, sem aviso de multa",
+    "v": null
    },
    {
     "t": "aud",
     "tipo": "pena-de-multa-cominada-extincao-cabivel-se-compr",
-    "presente": true,
+    "presente": false,
     "contem": null,
     "nivel": null,
     "nota": ""

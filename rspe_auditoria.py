@@ -2264,18 +2264,6 @@ def auditar(r, hoje=None):
                                "Decretos de indulto, art. 1º; Lei 11.340/06.", tipo="violencia-domestica-confirmar-se-a-vitima-e-mulh", ref=_nome(c)))
     # presunção de hipossuficiência (Defensoria): multa e reparação do dano nunca bloqueiam benefício no programa
     crimes_ativos = [c for c in crimes if not c.get("extinto", "").upper().startswith("S")]
-    if any(re.search(r"\b[Ee]\s+Multa", c.get("tipo_penal") or "") for c in crimes_ativos):
-        itens.append(_item("info", "Pena de multa cominada no tipo: hipossuficiência na extinção da punibilidade",
-                           "O tipo penal prevê multa; o RSPE não informa se ela foi aplicada nem se está paga. Se houver multa pendente, o "
-                           "inadimplemento não obsta a extinção ante a alegada hipossuficiência, salvo decisão motivada que indique concretamente a "
-                           "possibilidade de pagamento (STJ, Tema 931, tese revista em 28/02/2024). A 6ª Turma do STJ reconhece a presunção relativa "
-                           "de hipossuficiência do assistido pela Defensoria, cabendo ao Ministério Público demonstrar a capacidade de pagamento, e "
-                           "afirma que a ADI 7.032 não superou esse entendimento (AgRg no REsp 2.267.208, 16/09/2026); a 5ª Turma já teve a mera "
-                           "assistência pela Defensoria por insuficiente (REsp 2.055.935, 02/09/2025) - por cautela, instruir com elementos concretos "
-                           "(declaração de hipossuficiência, ausência de bens, remuneração do trabalho prisional). No indulto, a incapacidade econômica "
-                           "é presumida para o assistido da Defensoria (art. 12, § 2º, I, dos decretos).",
-                           "STF ADI 7.032; STJ Tema 931 (rev. 28/02/2024); STJ, 6ª T., AgRg no REsp 2.267.208; STJ, 5ª T., REsp 2.055.935; "
-                           "Decretos 12.338/2024 e 12.790/2025, art. 12, § 2º, I.", tipo="pena-de-multa-cominada-extincao-cabivel-se-compr"))
     if any(rs.crime_patrimonial(c) and c.get("vga") != "S" for c in crimes_ativos):
         itens.append(_item("info", "Crime patrimonial sem VGA: reparação do dano",
                            "Indulto, art. 9º, XV: reparação dispensada (art. 12, § 2º, I: presunção para o assistido da Defensoria). "
