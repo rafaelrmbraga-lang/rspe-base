@@ -626,6 +626,11 @@ def ler_paginas(paginas):
     que não é RSPE: PDF sem texto (digitalizado) ou documento sem as marcas do relatório."""
     if not "".join(paginas or []).strip():
         raise ValueError("PDF sem texto (digitalizado ou imagem): gere o PDF direto do SEEU/SIAPEN, não escaneado")
+    _todo = "".join(paginas or [])
+    if _todo.count("(cid:") >= 50 and len(re.sub(r"\(cid:\d+\)|\s", "", _todo)) < len(_todo) / 4:
+        # impressora virtual (PDFCreator, "Microsoft Print to PDF" etc.) grava o texto sem o mapa de caracteres
+        raise ValueError("PDF sem texto legível (impresso por impressora virtual, como o PDFCreator): baixe o RSPE direto do "
+                         "SEEU ou use \"Salvar como PDF\" do navegador")
     parcial, obs = [], []
     limpas_pag, nav = [], 0
     for pg in paginas:

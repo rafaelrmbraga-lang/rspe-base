@@ -77,6 +77,12 @@ PASTA VIGIADA (menu da base > "Pasta vigiada…")
   - O arquivo pasta_vigiada_estado.json (ao lado do .exe) guarda o que já
     foi lido; apagá-lo faz a pasta ser relida (os repetidos são ignorados).
 
+EXTENSÃO DO NAVEGADOR (pasta extensao_seeu)
+  "APTO - RSPE do SEEU", para Chrome e Edge: ao abrir um processo no SEEU,
+  salva o RSPE em Downloads\APTO\<base>\. Com a pasta vigiada apontada para
+  Downloads\APTO, o RSPE entra sozinho na base de mesmo nome. Instalação,
+  configuração e cuidados: extensao_seeu\LEIA-ME.txt.
+
 DUPLICADOS
   A chave é o nº da execução. Ao importar:
    - arquivo repetido no lote, ou RSPE do mesmo processo com a mesma data de
@@ -892,6 +898,10 @@ v7.9.3
     "faltavam para 2/3 do impeditivo" não prevalece sobre o "não" pela
     fração; eventos ordenados por data.
   - Textos: "0 dias", "+1 dia", "Decreto 9.370" sem "None".
+  - Extensão "APTO - RSPE do SEEU" (pasta extensao_seeu): baixa o RSPE do
+    processo aberto no SEEU para Downloads\APTO\<base>, para a pasta vigiada.
+  - PDF "impresso" por impressora virtual (PDFCreator etc.), sem texto
+    legível, é recusado com a explicação (antes: "não é um RSPE do SEEU").
   - Importação: o RSPE impresso sem o título "Relatório da Situação
     Processual Executória" (tela do processo salva em PDF,
     "processoExecucaoPenal.do") passa a ser reconhecido pelo cabeçalho,

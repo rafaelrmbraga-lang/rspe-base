@@ -363,6 +363,13 @@ if canvas is not None:
             os.remove(os.path.join(tmp, f_))
         os.rmdir(tmp)
 
+# PDF de impressora virtual (PDFCreator): texto só em "(cid:N)" - recusado com o motivo certo
+try:
+    rs.ler_paginas(["".join("(cid:%d)" % (i % 90) for i in range(400))])
+    ok(False, "PDF de impressora virtual deveria ser recusado")
+except ValueError as e:
+    ok("impressora virtual" in str(e), "motivo da recusa do PDF de impressora virtual: %s" % e)
+
 if falhas:
     print("FALHAS (%d):" % len(falhas))
     for f_ in falhas:
