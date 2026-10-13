@@ -1,0 +1,77 @@
+APTO - RSPE do SEEU (extensão do Google Chrome e do Microsoft Edge)
+====================================================================
+
+O QUE FAZ
+Ao abrir um processo no SEEU, a extensão salva o RSPE (o PDF que o próprio SEEU
+gera) em Downloads\APTO\<base>\<nº do processo>_<data>.pdf. Com a pasta vigiada
+do APTO apontada para Downloads\APTO, o RSPE entra sozinho na base de mesmo nome
+da subpasta, enquanto o APTO estiver aberto.
+
+INSTALAR (modo do desenvolvedor, sem a Chrome Web Store)
+ 1. Copie a pasta "extensao_seeu" para um lugar fixo do computador (ex.:
+    Documentos\APTO\extensao_seeu). Se a pasta for apagada ou movida, a
+    extensão deixa de funcionar.
+ 2. No Chrome, abra chrome://extensions (no Edge, edge://extensions).
+ 3. Ligue "Modo do desenvolvedor" (canto superior direito).
+ 4. Clique em "Carregar sem compactação" e escolha a pasta "extensao_seeu".
+ 5. Fixe o ícone do APTO na barra (ícone de quebra-cabeça > alfinete).
+ 6. Recarregue a página do SEEU se ela já estava aberta.
+
+CONFIGURAR
+ - Clique no ícone do APTO na barra do navegador.
+ - Base de destino: inclua as bases com o MESMO nome que elas têm no APTO
+   (ex.: "2ª VEP", "1ª VEP") e escolha a base atual. Cada base vira uma
+   subpasta. Sem base escolhida, o arquivo vai direto para Downloads\APTO e a
+   pasta vigiada do APTO o ignora (por isso o aviso no painel).
+ - Pasta dentro de Downloads: "APTO" (pode trocar).
+ - No APTO: menu da base > "Pasta vigiada…" > escolha Downloads\APTO. O botão
+   "Criar pastas das bases" cria uma subpasta para cada base.
+ - Se o Chrome perguntar onde salvar cada arquivo, desligue em Configurações >
+   Downloads > "Perguntar onde salvar cada arquivo antes de fazer download".
+
+COMO FUNCIONA
+ - Automático: ao abrir um processo, a extensão acha na página o link do RSPE
+   e baixa o PDF com a sua sessão do SEEU. Um RSPE por processo, base e dia.
+ - Botão "Baixar o RSPE do processo aberto" (no painel da extensão): baixa de
+   novo, mesmo que já tenha baixado hoje.
+ - Clique no botão do próprio SEEU que gera o RSPE: o arquivo também vai para a
+   pasta da base (com o nº do processo aberto há pouco no nome).
+ - O ícone mostra quantos RSPE foram salvos hoje; "off" quando desligada; "!"
+   quando pausada.
+
+CUIDADOS
+ - Só age em https://seeu.pje.jus.br e só no processo aberto na tela. Não
+   percorre listas, não abre processos sozinha e não clica em nada do SEEU.
+   Em página com mais de um RSPE (lista de processos), o automático não age.
+ - Usa a sessão aberta no navegador. Não pede, não lê e não guarda senha,
+   certificado ou cookie.
+ - Nada sai do computador: a extensão não envia dados para nenhum servidor
+   (a política de segurança dela bloqueia qualquer conexão de rede própria);
+   o único pedido é o download do RSPE ao próprio SEEU.
+ - Guarda só o nº do processo, a base, a data e o nome do arquivo dos últimos
+   40 downloads (painel), e as chaves de "já baixado" dos últimos 30 dias.
+   "Limpar histórico" apaga tudo isso (não apaga os PDFs).
+ - Ritmo: no mínimo 4 segundos entre dois downloads e no máximo 40 downloads
+   automáticos por hora, para não sobrecarregar o SEEU.
+ - Confere o arquivo: se o SEEU devolver outra coisa que não um PDF (sessão
+   expirada, página de erro), o arquivo é apagado e o erro aparece no painel;
+   nada errado fica na pasta vigiada.
+ - Depois de 3 falhas seguidas, pausa sozinha por 10 minutos (botão "retomar"
+   no painel). Faça login de novo no SEEU antes de retomar.
+ - Liga e desliga pelo painel. Desligada, não faz nenhum pedido ao SEEU.
+ - O aviso "RSPE salvo" no canto da página do SEEU pode ser desligado; a
+   extensão não altera mais nada na página e convive com o AZflow.
+ - Nomes de pasta são limpos (sem \ / : * ? " < > | e sem nomes reservados do
+   Windows).
+ - Uso funcional, para os processos sob atendimento da Defensoria; siga as
+   orientações do TJ e da Defensoria sobre o uso do SEEU.
+
+SE O AUTOMÁTICO NÃO BAIXAR
+ O SEEU pode mudar a página. Nesse caso, clique no botão do SEEU que gera o
+ RSPE: a extensão continua salvando o arquivo na pasta da base. Avise para a
+ extensão ser ajustada.
+
+NÃO USE IMPRESSORA VIRTUAL
+ PDF "impresso" pelo PDFCreator ou outra impressora virtual sai sem texto
+ legível e o APTO recusa. Use o PDF do SEEU (a extensão) ou "Salvar como PDF"
+ do próprio navegador.

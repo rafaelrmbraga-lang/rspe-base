@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "APTO - RSPE do SEEU",
+  "short_name": "APTO RSPE",
+  "version": "1.0.0",
+  "description": "Ao abrir um processo no SEEU, salva o RSPE (PDF) na pasta da base do APTO, dentro de Downloads, para a pasta vigiada importar.",
+  "minimum_chrome_version": "116",
+  "permissions": ["downloads", "storage"],
+  "host_permissions": ["https://seeu.pje.jus.br/*"],
+  "background": { "service_worker": "background.js" },
+  "content_scripts": [
+    {
+      "matches": ["https://seeu.pje.jus.br/seeu/*"],
+      "js": ["comum.js", "content.js"],
+      "all_frames": true,
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_title": "APTO - RSPE do SEEU",
+    "default_popup": "popup.html",
+    "default_icon": { "16": "icones/16.png", "32": "icones/32.png", "48": "icones/48.png" }
+  },
+  "icons": { "16": "icones/16.png", "32": "icones/32.png", "48": "icones/48.png", "128": "icones/128.png" },
+  "content_security_policy": { "extension_pages": "script-src 'self'; object-src 'none'; connect-src 'none'" }
+}
