@@ -880,10 +880,13 @@ v7.9.3
   - Painel do assistido, "Benefícios": indulto e comutação mostram só os
     decretos cabíveis (ex.: "2017 Cabível  2024 Cabível"); sem nenhum,
     "Nenhum decreto cabível". O detalhe de cada decreto segue na aba Indulto.
-  - Painel do assistido: a conduta da ficha aparece ao lado do nome (Ótima e
-    Boa em verde; Má e "Responde PADIC" em vermelho; Sem lapso e as demais em
-    cinza). Saíram do painel os "Pontos de atenção" (estão na aba Auditoria) e
-    a lista de vínculos de trabalho (a remição e os atestados continuam).
+  - Painel do assistido: a conduta da ficha aparece em negrito ao lado do
+    nome (Ótima e Boa em verde; Má e "Responde PADIC" em vermelho; Sem lapso e
+    as demais em cinza). Saíram do painel os "Pontos de atenção" (estão na aba
+    Auditoria), a lista de vínculos de trabalho e os cartões da ficha; a ficha
+    mostra os atestados de trabalho/remição e as faltas disciplinares.
+  - Progressão antecipada: a janela passa de 60 para 90 dias antes da data
+    do SEEU.
   - Divergência no SEEU/SIAPEN: "!" amarelo ao lado do nome (todas as abas,
     painel do assistido e quadro), com a lista ao passar o mouse e a
     explicação na legenda do rodapé, quando o próprio documento não fecha:
