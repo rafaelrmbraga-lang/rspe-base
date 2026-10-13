@@ -20,15 +20,19 @@ def ok(cond, msg):
 m = json.load(open(os.path.join(EXT, "manifest.json"), encoding="utf-8"))
 ok(m["manifest_version"] == 3, "manifesto v3")
 ok(sorted(m["permissions"]) == ["downloads", "storage"], "permissões mínimas: %s" % m["permissions"])
-ok(m["host_permissions"] == ["https://seeu.pje.jus.br/*", "https://app.siapen.ms.gov.br/*"], "só o SEEU e o SIAPEN: %s" % m["host_permissions"])
-ok([c["matches"] for c in m["content_scripts"]] == [["https://seeu.pje.jus.br/seeu/*"], ["https://app.siapen.ms.gov.br/*"]], "scripts só no SEEU e no SIAPEN")
-ok("connect-src 'none'" in m["content_security_policy"]["extension_pages"], "sem conexão de rede própria")
-for f in ["background.js", "content.js", "siapen.js", "comum.js", "popup.js", "popup.html"] + list(m["icons"].values()):
+ok(m["host_permissions"] == ["https://seeu.pje.jus.br/*", "https://app.siapen.ms.gov.br/*", "http://127.0.0.1:47321/*"],
+   "só o SEEU, o SIAPEN e o APTO deste computador: %s" % m["host_permissions"])
+ok([c["matches"] for c in m["content_scripts"]] == [["https://seeu.pje.jus.br/seeu/*"], ["https://app.siapen.ms.gov.br/*"], ["https://app.siapen.ms.gov.br/*"]],
+   "scripts só no SEEU e no SIAPEN")
+ok([c.get("world") for c in m["content_scripts"]] == [None, None, "MAIN"] and m["content_scripts"][2]["js"] == ["siapen_pagina.js"],
+   "só o siapen_pagina.js roda no mundo da página")
+ok(m["content_security_policy"]["extension_pages"].endswith("connect-src http://127.0.0.1:47321"), "conexão própria só com o APTO deste computador")
+for f in ["background.js", "content.js", "siapen.js", "siapen_pagina.js", "comum.js", "popup.js", "popup.html"] + list(m["icons"].values()):
     ok(os.path.isfile(os.path.join(EXT, f)), "arquivo %s" % f)
 
 node = shutil.which("node")
 if node:
-    for f in ("background.js", "content.js", "siapen.js", "comum.js", "popup.js"):
+    for f in ("background.js", "content.js", "siapen.js", "siapen_pagina.js", "comum.js", "popup.js"):
         r = subprocess.run([node, "--check", os.path.join(EXT, f)], capture_output=True, text=True)
         ok(r.returncode == 0, "sintaxe de %s: %s" % (f, r.stderr.strip()))
     js = r"""
@@ -68,9 +72,12 @@ t(A.chaveFicha(cfg, "joão  da silva", "2026-10-13") === "FD:JOÃO DA SILVA|2ª 
     r = subprocess.run([node, "-e", js, os.path.join(EXT, "comum.js")], capture_output=True, text=True)
     ok(r.returncode == 0 and "FALHA" not in r.stdout, "funções de comum.js: %s %s" % (r.stdout.strip(), r.stderr.strip()))
 
-# APTO: sem pasta vigiada e com Downloads\APTO criada pela extensão, passa a vigiá-la sozinho (uma vez)
+# APTO: cria Downloads\APTO\<base> para cada base, vigia Downloads\APTO sempre (além da pasta escolhida) e informa as bases
+# à extensão em 127.0.0.1 (só para extensões; página da internet recebe 403)
 import tempfile
 import types
+import urllib.request
+import urllib.error
 sys.modules.setdefault("webview", types.SimpleNamespace(SAVE_DIALOG=1, FOLDER_DIALOG=2, OPEN_DIALOG=0))
 sys.path.insert(0, AQUI)
 import rspe_app as app  # noqa: E402
@@ -83,14 +90,49 @@ try:
     api._cfg = lambda: dict(conf)
     api._cfg_gravar = lambda **k: conf.update(k)
     api._js = lambda *a: None
-    ok(api._vigia_auto() is False and not conf, "sem Downloads\\APTO, nada muda")
-    os.makedirs(os.path.join(tmp, "Downloads", "APTO", "2ª VEP"))
-    ok(api._vigia_auto() is True and conf.get("pasta_vigiada") == os.path.join(tmp, "Downloads", "APTO") and conf.get("vigiar"),
-       "Downloads\\APTO vira a pasta vigiada: %s" % conf)
-    conf.clear(); conf["pasta_vigiada"] = "X:\\outra"
-    ok(api._vigia_auto() is False and conf["pasta_vigiada"] == "X:\\outra", "pasta escolhida pela pessoa é mantida")
-    conf.clear(); conf["vigia_auto_feito"] = True
-    ok(api._vigia_auto() is False and "pasta_vigiada" not in conf, "só uma vez (se a pessoa tirou, não volta)")
+    api.base = None
+    api._vigia_ultima = ""
+    api.vigia_info = lambda: {"bases": ["2ª VEP", "5ª vep"]}
+    ext = os.path.join(tmp, "Downloads", "APTO")
+    api._pastas_extensao()
+    ok(os.path.isdir(os.path.join(ext, "2ª VEP")) and os.path.isdir(os.path.join(ext, "5ª vep")), "pastas das bases criadas em Downloads\\APTO")
+    ok(api._vigia_raizes() == [ext], "sem pasta escolhida, vigia Downloads\\APTO: %s" % api._vigia_raizes())
+    outra = os.path.join(tmp, "outra"); os.makedirs(outra)
+    conf.update(pasta_vigiada=outra, vigiar=True)
+    ok(api._vigia_raizes() == [outra, ext], "pasta escolhida e Downloads\\APTO: %s" % api._vigia_raizes())
+    conf.update(pasta_vigiada=ext)
+    ok(api._vigia_raizes() == [ext], "Downloads\\APTO escolhida: vigiada uma vez só")
+    conf.update(vigiar=False)
+    ok(api._vigia_raizes() == [], "pasta vigiada desativada: nada é lido")
+    # Downloads como pasta escolhida: Downloads\APTO é lida a partir dela mesma (base = subpasta de APTO), não como base "APTO"
+    conf.update(pasta_vigiada=os.path.join(tmp, "Downloads"), vigiar=True)
+    rz = api._vigia_raizes()
+    pdf = os.path.join(ext, "2ª VEP", "x.pdf"); open(pdf, "wb").write(b"%PDF-1.4")
+    vistos = []
+    for dp, subs, nomes in os.walk(rz[0]):
+        subs[:] = [d for d in subs if not any(app._mesma_pasta(os.path.join(dp, d), x) for x in rz if app._dentro_da_pasta(x, rz[0]))]
+        vistos += nomes
+    ok("x.pdf" not in vistos and app.base_da_pasta(ext, pdf) == "2ª VEP", "subpasta de outra pasta vigiada fica com a sua base")
+    # servidor para a extensão
+    app.PORTA_EXTENSAO = 47399
+    srv = api._extensao_servidor()
+    ok(srv is not None, "servidor da extensão aberto")
+    def pedir(caminho, origem=None):
+        rq = urllib.request.Request("http://127.0.0.1:47399" + caminho, headers={"Origin": origem} if origem else {})
+        try:
+            with urllib.request.build_opener(urllib.request.ProxyHandler({})).open(rq, timeout=5) as r:
+                return r.status, json.loads(r.read().decode("utf-8")), r.headers.get("Access-Control-Allow-Origin")
+        except urllib.error.HTTPError as e:
+            return e.code, None, None
+    st, j, acao = pedir("/apto", "chrome-extension://abcdefghijklmnop")
+    ok(st == 200 and j["bases"] == ["2ª VEP", "5ª vep"] and j["aberta"] == "" and acao == "chrome-extension://abcdefghijklmnop",
+       "extensão recebe as bases: %s %s" % (st, j))
+    ok(pedir("/apto", "https://site.qualquer")[0] == 403, "página da internet recebe 403")
+    ok(pedir("/outra", "chrome-extension://abc")[0] == 403, "só /apto")
+    api.base = types.SimpleNamespace(caminho=os.path.join(tmp, "bases", "2ª VEP.sqlite"))
+    ok(pedir("/apto")[1]["aberta"] == "2ª VEP", "base aberta informada")
+    if srv:
+        srv.shutdown(); srv.server_close()
 finally:
     if antigo is None:
         os.environ.pop("USERPROFILE", None)
@@ -103,5 +145,5 @@ if falhas:
     for f in falhas:
         print(" -", f)
     sys.exit(1)
-print("ok: extensão do SEEU (manifesto, permissões mínimas, sintaxe, nº do processo, pasta segura, caminho, endereço aceito)%s"
+print("ok: extensão do SEEU/SIAPEN (manifesto, permissões mínimas, sintaxe, nº do processo, pasta segura, caminho, endereço aceito, pastas e bases ligadas ao APTO)%s"
       % ("" if node else " - sem node: só o manifesto"))

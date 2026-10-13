@@ -7,7 +7,9 @@
 importScripts("comum.js");
 const A = self.APTO;
 
-const PADRAO = { ativo: true, raiz: "APTO", base: "", bases: [], avisoNaPagina: true };
+const AUTO = "@apto";            // base de destino = a base aberta no APTO
+const PADRAO = { ativo: true, raiz: "APTO", base: AUTO, bases: [], avisoNaPagina: true };
+const APTO_URL = "http://127.0.0.1:47321/apto"; // o APTO aberto informa as bases e a base aberta (só neste computador)
 const INTERVALO_MS = 4000;      // mínimo entre dois downloads
 const TETO_HORA = 40;           // downloads automáticos por hora (ao abrir processos)
 const TETO_LOTE_HORA = 300;     // downloads do lote por hora (o lote ainda espera 8 s entre processos)
@@ -19,6 +21,36 @@ const DIAS_HISTORICO = 30;      // chaves de "já baixado" mais antigas são apa
 async function cfg() {
   const { cfg } = await chrome.storage.local.get("cfg");
   return Object.assign({}, PADRAO, cfg || {});
+}
+// bases do APTO (o APTO cria Downloads\\APTO\\<base> para cada uma e vigia essa pasta sozinho)
+async function lerApto(forcar) {
+  const { apto } = await chrome.storage.local.get("apto");
+  if (!forcar && apto && Date.now() - apto.quando < 10000) return apto;
+  let novo;
+  try {
+    const ctl = new AbortController();
+    const t = setTimeout(() => ctl.abort(), 1500);
+    const r = await fetch(APTO_URL, { signal: ctl.signal, cache: "no-store" });
+    clearTimeout(t);
+    const j = await r.json();
+    novo = { ok: true, quando: Date.now(), bases: (j.bases || []).map(A.pastaSegura).filter(Boolean), aberta: A.pastaSegura(j.aberta || "") };
+  } catch (e) {
+    novo = Object.assign({ bases: [], aberta: "" }, apto || {}, { ok: false, quando: Date.now() });
+  }
+  await chrome.storage.local.set({ apto: novo });
+  return novo;
+}
+// configuração com a base de destino resolvida (automático: a base aberta no APTO)
+// (no lote, vale a base do início do lote, mesmo que outra base seja aberta no APTO no meio dele)
+async function cfgDestino(doLote) {
+  const c = await cfg();
+  if (doLote) {
+    const { lote } = await chrome.storage.local.get("lote");
+    if (lote && lote.rodando && lote.base) return Object.assign({}, c, { base: lote.base });
+  }
+  if (c.base !== AUTO) return c;
+  const ap = await lerApto();
+  return Object.assign({}, c, { base: ap.aberta || "" });
 }
 async function estado() {
   const r = await chrome.storage.local.get(["baixados", "log", "falhas", "pausadoAte"]);
@@ -86,7 +118,7 @@ const doSiapen = (u) => /^https:\/\/app\.siapen\.ms\.gov\.br(:\d+)?\//.test(u ||
 
 // pode baixar a ficha do SIAPEN deste nome agora?
 async function podeFicha(nome, lote) {
-  const c = await cfg();
+  const c = await cfgDestino(lote);
   const st = await estado();
   if (!c.ativo) return { ok: false, motivo: "desligada" };
   if (st.pausadoAte > Date.now()) return { ok: false, motivo: "pausada depois de falhas seguidas; faça login e clique em \"retomar\" no ícone do APTO" };
@@ -119,7 +151,7 @@ async function gravarFicha(msg, sender) {
 
 // pode baixar o RSPE deste processo agora?
 async function podeBaixar(processo, forcar, lote) {
-  const c = await cfg();
+  const c = await cfgDestino(lote);
   const st = await estado();
   if (!c.ativo) return { ok: false, motivo: "desligada" };
   if (st.pausadoAte > Date.now()) return { ok: false, motivo: "pausada depois de falhas seguidas; faça login no SEEU e clique em \"retomar\" no ícone do APTO" };
@@ -159,7 +191,7 @@ async function criarPastas() {
     "Pasta criada pela extensão \"APTO - RSPE do SEEU\".\r\n" +
     (base ? `Os RSPE salvos aqui entram na base "${base}" do APTO (pasta vigiada).\r\n`
           : "Cada subpasta é uma base do APTO. No APTO, a pasta vigiada é esta pasta (Downloads\\" + c.raiz + ").\r\n"));
-  const alvos = [""].concat(c.bases || []);
+  const alvos = [""].concat((c.bases || []).filter((b) => b !== AUTO));
   const feitos = (await chrome.storage.local.get("pastasCriadas")).pastasCriadas || {};
   for (const b of alvos) {
     const chave = c.raiz + "|" + b;
@@ -186,7 +218,7 @@ chrome.downloads.onDeterminingFilename.addListener((item, sugerir) => {
   const u = item.finalUrl || item.url || "";
   if (!doSeeu(u) || !A.urlRspeValida(u)) return false;
   (async () => {
-    const c = await cfg();
+    const c = await cfgDestino();
     if (!c.ativo) return sugerir();
     const proc = await processoDoRspe(u);
     const arquivo = A.caminhoArquivo(c, proc, A.hojeISO());
@@ -221,11 +253,11 @@ chrome.tabs.onUpdated.addListener(async (tabId, info, tab) => {
   const processo = await processoDoRspe(u);
   // sem o nº (página do processo não vista), salva assim mesmo: o APTO lê o nº de dentro do PDF
   const p = processo ? await podeBaixar(processo, false) : await (async () => {
-    const c = await cfg();
+    const c = await cfgDestino();
     return c.ativo ? { ok: true, chave: "", cfg: c } : { ok: false, motivo: "desligada" };
   })();
   if (!p.ok) {
-    if (!p.repetido && p.motivo !== "desligada") await registrar({ processo, base: (await cfg()).base, status: "erro", msg: p.motivo });
+    if (!p.repetido && p.motivo !== "desligada") await registrar({ processo, base: (await cfgDestino()).base, status: "erro", msg: p.motivo });
     return;
   }
   const arquivo = A.caminhoArquivo(p.cfg, processo, A.hojeISO());
@@ -262,6 +294,52 @@ chrome.downloads.onChanged.addListener(async (d) => {
   await falhou(p.processo, d.state.current === "interrupted" ? "download interrompido" : "o SEEU não devolveu um PDF (sessão expirada?)", p.base);
 });
 
+// começa um lote na aba indicada (a aba ativa, quando vem do painel)
+async function iniciarLote(msg, abaS) {
+  const c = await cfgDestino();
+  if (!c.ativo) return { ok: false, motivo: "A extensão está desligada." };
+  if (!c.base) return { ok: false, motivo: "Sem base de destino: abra uma base no APTO (ou escolha a base acima) antes de rodar o lote." };
+
+  // lista sem nº de processo = nomes (SIAPEN). O SIAPEN pode estar dentro do portal www.siapen.ms.gov.br (moldura),
+  // por isso a aba não é reconhecida pelo endereço: o pedido vai a todas as molduras e só a da consulta responde
+  if (abaS && !(msg.numeros || []).length) {
+    // SIAPEN: uma linha por pessoa - "NOME" ou "NOME ; MÃE" (também tabulação, como na coluna de uma planilha)
+    const itens = [];
+    const vistos = new Set();
+    for (const l of String(msg.texto || "").split(/\r?\n/)) {
+      const [nome, mae] = l.split(/\t|;/).map((x) => String(x || "").replace(/\s+/g, " ").trim().toUpperCase());
+      if (!nome || /^\d/.test(nome) || vistos.has(nome + "|" + (mae || ""))) continue;
+      vistos.add(nome + "|" + (mae || ""));
+      itens.push({ nome, mae: mae || "" });
+    }
+    if (!itens.length) return { ok: false, motivo: "Nenhum nome na lista (um por linha; \"NOME ; MÃE\" para separar homônimos)." };
+    const lote = { tab: abaS.id, sistema: "siapen", base: c.base, inicio: Date.now(), rodando: true, itens: itens.map((x) => ({ n: x.nome + (x.mae ? " (mãe: " + x.mae + ")" : ""), status: "fila", msg: "" })) };
+    await chrome.storage.local.set({ lote });
+    let r;
+    try { r = await chrome.tabs.sendMessage(abaS.id, { tipo: "loteFichas", itens }); } catch (e) { r = null; }
+    if (!r || !r.ok) {
+      lote.rodando = false;
+      await chrome.storage.local.set({ lote });
+      return { ok: false, motivo: (r && r.motivo) || "Nomes (SIAPEN): deixe aberta nesta aba a tela Consultas > Consulta Geral de Interno (se a extensão acabou de ser atualizada, recarregue a página do SIAPEN). Processos (SEEU): cole os nºs de processo." };
+    }
+    return { ok: true, total: itens.length };
+  }
+  const numeros = [...new Set((msg.numeros || []).map((x) => String(x).replace(/\D/g, "")).filter((x) => x.length === 20))];
+  if (!numeros.length) return { ok: false, motivo: "Nenhum nº de processo válido (20 dígitos) na lista." };
+  const aba = abaS;
+  if (!aba || !doSeeu(aba.url)) return { ok: false, motivo: "Deixe o SEEU aberto e logado nesta aba." };
+  const lote = { tab: aba.id, base: c.base, inicio: Date.now(), rodando: true, itens: numeros.map((n) => ({ n: A.cnj(n), status: "fila", msg: "" })) };
+  await chrome.storage.local.set({ lote });
+  let r;
+  try { r = await chrome.tabs.sendMessage(aba.id, { tipo: "lote", numeros }, { frameId: 0 }); } catch (e) { r = null; }
+  if (!r || !r.ok) {
+    lote.rodando = false;
+    await chrome.storage.local.set({ lote });
+    return { ok: false, motivo: (r && r.motivo) || "Recarregue a página do SEEU e tente de novo." };
+  }
+  return { ok: true, total: numeros.length };
+}
+
 chrome.runtime.onMessage.addListener((msg, sender, responder) => {
   (async () => {
     try {
@@ -279,7 +357,7 @@ chrome.runtime.onMessage.addListener((msg, sender, responder) => {
       }
       if (daPagina && msg.tipo === "rspePdf") return responder(await gravarPdf(msg, sender));
       if (daPagina && msg.tipo === "falha") {
-        await falhou(A.cnj(msg.processo), msg.motivo || "falha", (await cfg()).base);
+        await falhou(A.cnj(msg.processo), msg.motivo || "falha", (await cfgDestino()).base);
         return responder({ ok: false, motivo: msg.motivo });
       }
       if (daPagina && msg.tipo === "processoVisto") {
@@ -309,46 +387,8 @@ chrome.runtime.onMessage.addListener((msg, sender, responder) => {
       // o resto só das páginas da própria extensão (o painel)
       if (sender.id !== chrome.runtime.id || !String(sender.url || "").startsWith(chrome.runtime.getURL(""))) return responder({ ok: false });
       if (msg.tipo === "loteIniciar") {
-        const c = await cfg();
-        if (!c.ativo) return responder({ ok: false, motivo: "A extensão está desligada." });
-        if (!c.base) return responder({ ok: false, motivo: "Escolha a base de destino antes de rodar o lote." });
         const [abaS] = await chrome.tabs.query({ active: true, currentWindow: true });
-        if (abaS && doSiapen(abaS.url)) {
-          // SIAPEN: uma linha por pessoa - "NOME" ou "NOME ; MÃE" (também tabulação, como na coluna de uma planilha)
-          const itens = [];
-          const vistos = new Set();
-          for (const l of String(msg.texto || "").split(/\r?\n/)) {
-            const [nome, mae] = l.split(/\t|;/).map((x) => String(x || "").replace(/\s+/g, " ").trim().toUpperCase());
-            if (!nome || /^\d/.test(nome) || vistos.has(nome + "|" + (mae || ""))) continue;
-            vistos.add(nome + "|" + (mae || ""));
-            itens.push({ nome, mae: mae || "" });
-          }
-          if (!itens.length) return responder({ ok: false, motivo: "Nenhum nome na lista (um por linha; \"NOME ; MÃE\" para separar homônimos)." });
-          const lote = { tab: abaS.id, sistema: "siapen", base: c.base, inicio: Date.now(), rodando: true, itens: itens.map((x) => ({ n: x.nome + (x.mae ? " (mãe: " + x.mae + ")" : ""), status: "fila", msg: "" })) };
-          await chrome.storage.local.set({ lote });
-          let r;
-          try { r = await chrome.tabs.sendMessage(abaS.id, { tipo: "loteFichas", itens }); } catch (e) { r = null; }
-          if (!r || !r.ok) {
-            lote.rodando = false;
-            await chrome.storage.local.set({ lote });
-            return responder({ ok: false, motivo: (r && r.motivo) || "Abra no SIAPEN: Consultas > Consulta Geral de Interno (e recarregue a página se a extensão acabou de ser atualizada)." });
-          }
-          return responder({ ok: true, total: itens.length });
-        }
-        const numeros = [...new Set((msg.numeros || []).map((x) => String(x).replace(/\D/g, "")).filter((x) => x.length === 20))];
-        if (!numeros.length) return responder({ ok: false, motivo: "Nenhum nº de processo válido (20 dígitos) na lista." });
-        const [aba] = await chrome.tabs.query({ active: true, currentWindow: true });
-        if (!aba || !doSeeu(aba.url)) return responder({ ok: false, motivo: "Deixe o SEEU (processos) ou o SIAPEN (fichas) aberto e logado nesta aba." });
-        const lote = { tab: aba.id, base: c.base, inicio: Date.now(), rodando: true, itens: numeros.map((n) => ({ n: A.cnj(n), status: "fila", msg: "" })) };
-        await chrome.storage.local.set({ lote });
-        let r;
-        try { r = await chrome.tabs.sendMessage(aba.id, { tipo: "lote", numeros }, { frameId: 0 }); } catch (e) { r = null; }
-        if (!r || !r.ok) {
-          lote.rodando = false;
-          await chrome.storage.local.set({ lote });
-          return responder({ ok: false, motivo: (r && r.motivo) || "Recarregue a página do SEEU e tente de novo." });
-        }
-        return responder({ ok: true, total: numeros.length });
+        return responder(await iniciarLote(msg, abaS));
       }
       if (msg.tipo === "loteParar") {
         const { lote } = await chrome.storage.local.get("lote");
@@ -358,14 +398,15 @@ chrome.runtime.onMessage.addListener((msg, sender, responder) => {
       if (msg.tipo === "loteEstado") return responder((await chrome.storage.local.get("lote")).lote || null);
       if (msg.tipo === "estado") {
         const st = await estado();
-        return responder({ cfg: await cfg(), log: st.log, pausadoAte: st.pausadoAte, hoje: Object.keys(st.baixados).filter((k) => k.endsWith("|" + A.hojeISO())).length });
+        return responder({ cfg: await cfg(), apto: await lerApto(true), log: st.log, pausadoAte: st.pausadoAte, hoje: Object.keys(st.baixados).filter((k) => k.endsWith("|" + A.hojeISO())).length });
       }
       if (msg.tipo === "salvarCfg") {
         const c = Object.assign(await cfg(), msg.cfg || {});
         c.raiz = A.pastaSegura(c.raiz) || "APTO";
-        c.bases = [...new Set((c.bases || []).map(A.pastaSegura).filter(Boolean))].sort((a, b) => a.localeCompare(b, "pt-BR"));
-        c.base = A.pastaSegura(c.base);
-        if (c.base && !c.bases.includes(c.base)) c.bases.push(c.base);
+        c.bases = [...new Set((c.bases || []).map(A.pastaSegura).filter((b) => b && b !== AUTO))].sort((a, b) => a.localeCompare(b, "pt-BR"));
+        c.base = c.base === AUTO ? AUTO : A.pastaSegura(c.base);
+        const doApto = ((await chrome.storage.local.get("apto")).apto || {}).bases || [];
+        if (c.base && c.base !== AUTO && !c.bases.includes(c.base) && !doApto.includes(c.base)) c.bases.push(c.base);
         await chrome.storage.local.set({ cfg: c });
         await criarPastas();
         await atualizarBadge();
@@ -381,5 +422,11 @@ chrome.runtime.onMessage.addListener((msg, sender, responder) => {
   return true;
 });
 
-chrome.runtime.onInstalled.addListener(async () => { await limparAntigos(); await criarPastas(); await atualizarBadge(); });
-chrome.runtime.onStartup.addListener(async () => { await limparAntigos(); await atualizarBadge(); });
+chrome.runtime.onInstalled.addListener(async () => {
+  // 1.4: a base de destino passa a ser, por padrão, a base aberta no APTO
+  const { cfg: c0, migrado14 } = await chrome.storage.local.get(["cfg", "migrado14"]);
+  if (c0 && !migrado14) await chrome.storage.local.set({ cfg: Object.assign({}, c0, { base: AUTO }) });
+  await chrome.storage.local.set({ migrado14: true });
+  await limparAntigos(); await criarPastas(); await lerApto(true); await atualizarBadge();
+});
+chrome.runtime.onStartup.addListener(async () => { await limparAntigos(); await criarPastas(); await atualizarBadge(); });

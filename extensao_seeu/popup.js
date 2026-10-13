@@ -1,6 +1,7 @@
 "use strict";
 const $ = (id) => document.getElementById(id);
 const enviar = (msg) => chrome.runtime.sendMessage(msg);
+const AUTO = "@apto";
 let cfg = null;
 
 function hora(t) {
@@ -22,14 +23,28 @@ async function carregar() {
   $("raiz").value = cfg.raiz;
   $("aviso").checked = !!cfg.avisoNaPagina;
   $("dlRaiz").textContent = "Downloads\\" + cfg.raiz;
+  // bases: as do APTO (lidas do APTO aberto) e as incluídas aqui
+  const ap = st.apto || { ok: false, bases: [], aberta: "" };
   const sel = $("base");
   sel.textContent = "";
-  const sem = new Option("(sem subpasta: direto em Downloads\\" + cfg.raiz + ")", "");
-  sel.add(sem);
-  for (const b of cfg.bases) sel.add(new Option(b, b));
-  sel.value = cfg.base || "";
-  $("destino").textContent = "Salva em: Downloads\\" + cfg.raiz + (cfg.base ? "\\" + cfg.base : "") + "\\<nº do processo>_<data>.pdf" +
-    (cfg.base ? "" : " - sem subpasta, a pasta vigiada do APTO ignora o arquivo; escolha uma base.");
+  sel.add(new Option("Automático: base aberta no APTO" + (ap.aberta ? " (" + ap.aberta + ")" : ap.ok ? " (nenhuma)" : ""), AUTO));
+  const grupo = (rot, lista) => {
+    if (!lista.length) return;
+    const g = document.createElement("optgroup");
+    g.label = rot;
+    for (const b of lista) g.appendChild(new Option(b, b));
+    sel.appendChild(g);
+  };
+  grupo("Bases do APTO", ap.bases);
+  grupo("Incluídas aqui", cfg.bases.filter((b) => !ap.bases.includes(b)));
+  sel.value = cfg.base || AUTO;
+  if (sel.value !== (cfg.base || AUTO)) sel.value = AUTO;
+  const dest = cfg.base === AUTO || !cfg.base ? ap.aberta : cfg.base;
+  $("ligacao").textContent = ap.ok ? `Ligada ao APTO: ${ap.bases.length} base(s). O APTO cria a pasta de cada base e vigia Downloads\\${cfg.raiz} sozinho.`
+    : "APTO fechado: abra o APTO para atualizar a lista de bases. O que for salvo espera na pasta e entra quando o APTO abrir.";
+  $("ligacao").className = "dica " + (ap.ok ? "ok" : "e");
+  $("destino").textContent = dest ? "Salva em: Downloads\\" + cfg.raiz + "\\" + dest + "\\<nº do processo>_<data>.pdf"
+    : "Sem base de destino: abra uma base no APTO ou escolha uma base acima.";
   $("hoje").textContent = st.hoje ? `(${st.hoje} hoje)` : "";
   const ul = $("log");
   ul.textContent = "";
@@ -75,8 +90,8 @@ $("add").onclick = () => {
 $("nova").onkeydown = (e) => { if (e.key === "Enter") $("add").click(); };
 $("rem").onclick = () => {
   const b = $("base").value;
-  if (!b) return;
-  salvar({ bases: cfg.bases.filter((x) => x !== b), base: "" });
+  if (!b || b === AUTO) return;
+  salvar({ bases: cfg.bases.filter((x) => x !== b), base: AUTO });
 };
 $("limpar").onclick = async () => { await enviar({ tipo: "limparHistorico" }); carregar(); };
 
@@ -132,9 +147,8 @@ $("loteArq").onchange = async (e) => {
 $("loteIni").onclick = async () => {
   const texto = $("loteTxt").value;
   const nums = numerosDe(texto);
-  const [aba] = await chrome.tabs.query({ active: true, currentWindow: true });
-  const siapen = aba && /^https:\/\/app\.siapen\.ms\.gov\.br/.test(aba.url || "");
-  if (!siapen && !nums.length) { $("loteEst").className = "estado erro"; $("loteEst").textContent = "Nenhum nº de processo válido na lista."; return; }
+  // com nºs de processo: SEEU; sem nºs: nomes (SIAPEN)
+  if (!texto.trim()) { $("loteEst").className = "estado erro"; $("loteEst").textContent = "Cole a lista: nºs de processo (SEEU) ou nomes (SIAPEN)."; return; }
   const r = await enviar({ tipo: "loteIniciar", numeros: nums, texto });
   if (!r.ok) { $("loteEst").className = "estado erro"; $("loteEst").textContent = r.motivo; return; }
   desenharLote();
