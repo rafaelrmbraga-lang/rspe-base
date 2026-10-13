@@ -719,8 +719,8 @@ PROGRESSÃO ANTECIPADA (ícone azul de degraus ao lado do nome)
     na aba Progressão como vencido);
   - nenhum crime não extinto com violência ou grave ameaça (marcação do
     RSPE);
-  - conduta Boa ou Ótima na ficha, sem falta nos últimos 12 meses;
-  - trabalho em curso na ficha (o externo conta).
+  - conduta Boa ou Ótima na ficha, sem falta nos últimos 12 meses.
+  Trabalho em curso não é exigido.
   Amarelo: nada falha, mas algo fica a conferir (ficha impressa há mais de
   90 dias, sem ficha importada, crime sem a marcação de violência no RSPE).
   Clicar abre o pedido da progressão, o mesmo da coluna "Pedido" da aba
@@ -886,7 +886,7 @@ v7.9.3
     Auditoria), a lista de vínculos de trabalho e os cartões da ficha; a ficha
     mostra os atestados de trabalho/remição e as faltas disciplinares.
   - Progressão antecipada: a janela passa de 60 para 90 dias antes da data
-    do SEEU.
+    do SEEU, e o trabalho em curso deixa de ser exigido.
   - Divergência no SEEU/SIAPEN: "!" amarelo ao lado do nome (todas as abas,
     painel do assistido e quadro), com a lista ao passar o mouse e a
     explicação na legenda do rodapé, quando o próprio documento não fecha:

@@ -1669,8 +1669,8 @@ def saida_temporaria(r, ficha, m, est=None, interr=False, hoje=None):
 
 def progressao_antecipada(r, ficha, m, est=None, interr=False, hoje=None):
     """Pedido de progressão antecipada (faltando de 1 a 90 dias para a data do SEEU; a antecipação vem sendo deferida pelos
-    juízos de MS): regime fechado ou semiaberto em curso, crimes sem violência nem grave ameaça (marcação do RSPE), trabalho em
-    curso (o externo conta) e conduta Boa/Ótima sem falta nos 12 meses. pa_ok só com todos os requisitos; pa_quase quando nenhum falha e algum fica
+    juízos de MS): regime fechado ou semiaberto em curso, crimes sem violência nem grave ameaça (marcação do RSPE) e
+    conduta Boa/Ótima sem falta nos 12 meses (trabalho em curso não é exigido). pa_ok só com todos os requisitos; pa_quase quando nenhum falha e algum fica
     a conferir; pa_itens = [{ok, txt}]."""
     hoje = hoje or HOJE
     it = []
@@ -1693,18 +1693,16 @@ def progressao_antecipada(r, ficha, m, est=None, interr=False, hoje=None):
     else:
         add(None if (sem or not crimes) else True, "Nenhum crime com violência ou grave ameaça" + (" (crime sem a marcação no RSPE: conferir)" if sem or not crimes else ""))
     if not ficha:
-        add(None, "Sem ficha disciplinar: conduta e trabalho não conferidos")
+        add(None, "Sem ficha disciplinar: conduta não conferida")
     else:
         cond = rs._sem_acento(ficha.get("conduta") or "").upper().strip()
         fal = r.get("falta_12m")
         add(cond in ("OTIMA", "BOA") and fal not in ("SIM", "A APURAR"),
             "Conduta %s%s" % (_conduta_txt(ficha.get("conduta")),
                               "" if fal not in ("SIM", "A APURAR") else " · falta nos últimos 12 meses: %s" % fal.lower()))
-        trab = _trabalho_atual(ficha, m)
-        add(bool(trab), "Trabalhando: " + trab if trab else "Sem trabalho em curso na ficha")
         imp = rs.to_date(((ficha.get("data_impressao") or "").split() or [""])[0].replace(".", "/"))
         if imp and (hoje - imp).days > 90:
-            add(None, "Ficha impressa em %s (há %d dias, mais de 90): conferir conduta e trabalho atuais" % (rs.fmt(imp), (hoje - imp).days))
+            add(None, "Ficha impressa em %s (há %d dias, mais de 90): conferir a conduta atual" % (rs.fmt(imp), (hoje - imp).days))
     ok = all(x["ok"] is True for x in it)
     return {"pa_ok": ok, "pa_itens": it, "pa_quase": (not ok) and all(x["ok"] is not False for x in it)}
 
