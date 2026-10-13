@@ -67,6 +67,8 @@ PASTA VIGIADA (menu da base > "Pasta vigiada…")
       Entrada\1ª VEP\    -> base "1ª VEP"
   Também vale separar por tipo: Entrada\RSPE\2ª VEP\ e Entrada\FD\2ª VEP\.
   - Se a base ainda não existir, é criada no primeiro PDF.
+  - Sem pasta vigiada escolhida, o programa adota sozinho Downloads\APTO
+    quando ela existir (criada pela extensão do SEEU, pasta extensao_seeu).
   - "Criar pastas das bases" cria uma subpasta para cada base existente.
   - PDF solto na pasta mãe é ignorado. PDF já lido não é lido de novo,
     salvo se o arquivo for substituído. PDF com erro (aberto em outro
