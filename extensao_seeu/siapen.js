@@ -110,8 +110,9 @@
     let cand = g.linhas.filter((x) => norm(x.nome) === nome);
     if (mae && cand.length > 1) cand = cand.filter((x) => norm(x.mae) === mae);
     if (mae && cand.length === 1 && norm(cand[0].mae) && norm(cand[0].mae) !== mae) cand = [];
+    if (cand.length > 1 && item.prontuario) cand = cand.filter((x) => String(x.pront).replace(/\D/g, "") === String(item.prontuario).replace(/\D/g, ""));
     if (!cand.length) return { status: "erro", msg: "não encontrado no SIAPEN" + (mae ? " com essa mãe" : "") };
-    if (cand.length > 1) return { status: "erro", msg: `homônimos (${cand.length}): informe o nome da mãe na lista` };
+    if (cand.length > 1) return { status: "erro", msg: `homônimos (${cand.length}): informe a mãe ou o prontuário na lista` };
     const alvo = cand[0];
     if (alvo.i !== g.atual) {
       const r2 = await pagina("selecionar", { i: alvo.i });

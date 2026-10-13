@@ -1,5 +1,5 @@
-APTO - RSPE do SEEU e Ficha do SIAPEN (extensão do Chrome e do Edge)
-====================================================================
+APTO - RSPE do SEEU, Ficha do SIAPEN e processos do SAP (Chrome e Edge)
+=========================================================================
 
 O QUE FAZ
 Ao abrir um processo no SEEU, a extensão salva o RSPE (o PDF do botão "Situação
@@ -81,9 +81,44 @@ FICHA DO SIAPEN
  - O filtro de status da consulta (Ativo, etc.) é o que estiver escolhido na
    tela.
 
+PROCESSOS DO SAP (Defensoria)
+ - Para cada nome da lista, acha no SAP o nº do processo (CNJ) escrito no
+   atendimento mais recente do NUSPEN e, com um clique, baixa os RSPE no
+   SEEU.
+ - Como usar: abra o SAP logado (capital.defensoria.ms.def.br/sap) e deixe
+   essa aba ativa; no painel, "Lote", cole a lista de nomes (ou escolha o
+   .txt/.csv) e clique em "Iniciar". Um nome a cada 8 segundos.
+ - Lista: um nome por linha. Pode ter outras colunas, em qualquer ordem:
+   nome da mãe (o 2º texto da linha), CPF, ID do SAP; cabeçalho, data de
+   nascimento e numeração (1., 2.) são ignorados; repetidos contam uma vez.
+ - Em cada nome, a extensão faz o que a pessoa faria, numa moldura oculta da
+   aba do SAP: Módulos > Assistidos, busca o nome, lupa "Visualizar
+   Assistido", aba Designações, "Histórico" da designação do NUSPEN e abre os
+   atendimentos do mais recente para o mais antigo até achar o nº. Se o
+   mais recente não tiver nº, desce para o anterior (a linha avisa). Se o
+   texto tiver dois nºs, copia os dois.
+ - Só lê. Nunca clica em "Designar Assistido", "Atendimentos do
+   Assistido", relatórios, declarações ou em nada que grave.
+ - Homônimos: com a mãe, o CPF ou o ID na lista, pega o certo; sem isso, se o
+   SAP marcar um deles com "(USAR ESSE)", pega esse; senão a linha fica
+   "homônimos" com as mães encontradas, para completar a lista.
+ - Avisos por linha: não encontrado no SAP; sem atendimento do NUSPEN; sem
+   nº de processo nos atendimentos do NUSPEN; sessão do SAP expirada (o lote
+   para).
+ - Ao final: "Baixar os RSPE no SEEU" roda o lote do SEEU, na aba do SEEU
+   aberta e logada, com todos os nºs achados (a base de destino é a do
+   painel). Os nºs que o SEEU não achar aparecem no fim, com o nome.
+   "Salvar planilha" grava Downloads\APTO\SAP_processos_<data>.csv (abre no
+   Excel) com nome, nome no SAP, mãe, ID, processo(s), data do atendimento,
+   situação e, depois do SEEU, o resultado de cada nº no SEEU. A pasta
+   vigiada ignora o CSV.
+ - Durante o lote, não use o SAP nessa mesma janela do navegador (a moldura
+   oculta usa a mesma sessão).
+
 CUIDADOS
- - Só age no SEEU (https://seeu.pje.jus.br) e no SIAPEN
-   (https://app.siapen.ms.gov.br). Sem lote, só no processo ou na ficha
+ - Só age no SEEU (https://seeu.pje.jus.br), no SIAPEN
+   (https://app.siapen.ms.gov.br) e no SAP da Defensoria
+   (*.defensoria.ms.def.br/sap, só leitura e só no lote). Sem lote, só no processo ou na ficha
    aberta na tela e sem clicar em nada; em página com mais de um RSPE
    (lista de processos), o automático não age. O lote só roda quando você
    clica em "Iniciar".

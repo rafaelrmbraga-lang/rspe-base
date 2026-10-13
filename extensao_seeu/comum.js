@@ -88,7 +88,47 @@
     return `${cnj(processo)}|${pastaSegura(cfg && cfg.base)}|${data || hojeISO()}`;
   }
 
-  const api = { RE_CNJ, RE_RSPE, ACAO_RSPE, cnj, pastaSegura, hojeISO, caminhoArquivo, urlRspeValida, urlRspeDoId, rspeNoHtml, ehPdf, chaveDia, caminhoFicha, chaveFicha };
+  // todos os nºs CNJ de um texto (sem repetir, na ordem em que aparecem)
+  function cnjsNoTexto(texto) {
+    const r = [];
+    for (const m of String(texto || "").matchAll(/\b\d{7}-?\d{2}\.?\d{4}\.?\d\.?\d{2}\.?\d{4}\b/g)) {
+      const c = cnj(m[0]);
+      if (c && !r.includes(c)) r.push(c);
+    }
+    return r;
+  }
+
+  // lista de pessoas colada ou lida de arquivo, em qualquer formato: uma por linha; colunas separadas por tabulação, ";",
+  // "|" ou ","; nome, nome da mãe (2º texto), CPF e um nº (ID do SAP ou prontuário do SIAPEN) em qualquer ordem; data
+  // (nascimento) e cabeçalho são ignorados. Devolve [{nome, mae, cpf, num}] sem repetir.
+  const RE_CPF = /^\d{3}\.?\d{3}\.?\d{3}-?\d{2}$/;
+  const RE_CAB = /^(nome|assistido|interno|sentenciado|apenado|reeducando)s?( d[oa] (assistido|interno|sentenciado|apenado|reeducando))?$/i;
+  function pessoasDaLista(texto) {
+    const r = [];
+    const vistos = new Set();
+    for (const linha of String(texto || "").split(/\r?\n/)) {
+      const cols = linha.split(/\t|;|\||,/).map((x) => x.replace(/\s+/g, " ").trim()).filter(Boolean);
+      const p = { nome: "", mae: "", cpf: "", num: "" };
+      for (const c of cols) {
+        if (RE_CPF.test(c)) p.cpf = p.cpf || c.replace(/\D/g, "");
+        else if (/^\d{1,10}$/.test(c)) p.num = p.num || c;
+        else if (/^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(c)) continue;
+        else if (/[A-Za-zÀ-ÿ]/.test(c)) {
+          const t = c.replace(/^\d+\s*[-.)]\s*/, "").toUpperCase();
+          if (!p.nome) p.nome = t;
+          else if (!p.mae) p.mae = t.replace(/^M[ÃA]E\s*:\s*/, "");
+        }
+      }
+      if (!p.nome || RE_CAB.test(p.nome) || /^(m[ãa]e|nome da m[ãa]e|cpf|id)$/i.test(p.mae)) continue;
+      const chave = [p.nome, p.mae, p.cpf, p.num].join("|");
+      if (vistos.has(chave)) continue;
+      vistos.add(chave);
+      r.push(p);
+    }
+    return r;
+  }
+
+  const api = { RE_CNJ, cnjsNoTexto, pessoasDaLista, RE_RSPE, ACAO_RSPE, cnj, pastaSegura, hojeISO, caminhoArquivo, urlRspeValida, urlRspeDoId, rspeNoHtml, ehPdf, chaveDia, caminhoFicha, chaveFicha };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else raiz.APTO = api;
 })(typeof self !== "undefined" ? self : this);

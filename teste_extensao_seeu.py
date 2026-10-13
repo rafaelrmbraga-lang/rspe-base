@@ -20,19 +20,23 @@ def ok(cond, msg):
 m = json.load(open(os.path.join(EXT, "manifest.json"), encoding="utf-8"))
 ok(m["manifest_version"] == 3, "manifesto v3")
 ok(sorted(m["permissions"]) == ["downloads", "storage"], "permissões mínimas: %s" % m["permissions"])
-ok(m["host_permissions"] == ["https://seeu.pje.jus.br/*", "https://app.siapen.ms.gov.br/*", "http://127.0.0.1:47321/*"],
-   "só o SEEU, o SIAPEN e o APTO deste computador: %s" % m["host_permissions"])
-ok([c["matches"] for c in m["content_scripts"]] == [["https://seeu.pje.jus.br/seeu/*"], ["https://app.siapen.ms.gov.br/*"], ["https://app.siapen.ms.gov.br/*"]],
-   "scripts só no SEEU e no SIAPEN")
-ok([c.get("world") for c in m["content_scripts"]] == [None, None, "MAIN"] and m["content_scripts"][2]["js"] == ["siapen_pagina.js"],
+ok(m["host_permissions"] == ["https://seeu.pje.jus.br/*", "https://app.siapen.ms.gov.br/*", "https://*.defensoria.ms.def.br/*", "http://127.0.0.1:47321/*"],
+   "só o SEEU, o SIAPEN, o SAP da Defensoria e o APTO deste computador: %s" % m["host_permissions"])
+ok([c["matches"] for c in m["content_scripts"]] == [["https://seeu.pje.jus.br/seeu/*"], ["https://app.siapen.ms.gov.br/*"], ["https://app.siapen.ms.gov.br/*"],
+                                                   ["https://*.defensoria.ms.def.br/sap/*"]], "scripts só no SEEU, no SIAPEN e no SAP")
+ok([c.get("world") for c in m["content_scripts"]] == [None, None, "MAIN", None] and m["content_scripts"][2]["js"] == ["siapen_pagina.js"],
    "só o siapen_pagina.js roda no mundo da página")
+# SAP: só leitura - a lupa "Visualizar" (designar=0) é o único botão de linha clicado; nunca "Designar Assistido"
+sap = open(os.path.join(EXT, "sap.js"), encoding="utf-8").read()
+ok("bt-pesquisar" in sap and "'designar'\\s*:\\s*'0'" in sap and "bt-designar" not in sap and "bt-atendimentos" not in sap,
+   "SAP: só a lupa Visualizar (designar=0)")
 ok(m["content_security_policy"]["extension_pages"].endswith("connect-src http://127.0.0.1:47321"), "conexão própria só com o APTO deste computador")
-for f in ["background.js", "content.js", "siapen.js", "siapen_pagina.js", "comum.js", "popup.js", "popup.html"] + list(m["icons"].values()):
+for f in ["background.js", "content.js", "siapen.js", "siapen_pagina.js", "sap.js", "comum.js", "popup.js", "popup.html"] + list(m["icons"].values()):
     ok(os.path.isfile(os.path.join(EXT, f)), "arquivo %s" % f)
 
 node = shutil.which("node")
 if node:
-    for f in ("background.js", "content.js", "siapen.js", "siapen_pagina.js", "comum.js", "popup.js"):
+    for f in ("background.js", "content.js", "siapen.js", "siapen_pagina.js", "sap.js", "comum.js", "popup.js"):
         r = subprocess.run([node, "--check", os.path.join(EXT, f)], capture_output=True, text=True)
         ok(r.returncode == 0, "sintaxe de %s: %s" % (f, r.stderr.strip()))
     js = r"""
@@ -68,6 +72,13 @@ t(A.chaveDia(cfg, "00445862220178120001", "2026-10-13") === "0044586-22.2017.8.1
 t(/^\d{4}-\d{2}-\d{2}$/.test(A.hojeISO()), "data de hoje");
 t(A.caminhoFicha(cfg, "joão da silva", "2026-10-13") === "APTO/2ª VEP/FD_JOÃO_DA_SILVA_2026-10-13.pdf", "caminho da ficha: " + A.caminhoFicha(cfg, "joão da silva", "2026-10-13"));
 t(A.chaveFicha(cfg, "joão  da silva", "2026-10-13") === "FD:JOÃO DA SILVA|2ª VEP|2026-10-13", "chave da ficha");
+// nºs de processo no texto do atendimento do SAP (com e sem pontuação; CPF não é nº de processo)
+t(JSON.stringify(A.cnjsNoTexto("GR Nº 0000123-45.2014.8.12.0054 - e 00001234520148120054; PEP 7654321-00.2020.8.12.0001, cpf 123.456.789-09"))
+  === JSON.stringify(["0000123-45.2014.8.12.0054", "7654321-00.2020.8.12.0001"]), "nºs CNJ do texto");
+// listas em qualquer formato: cabeçalho, nome; mãe; CPF; ID; data; numeração; vírgula; repetidos
+const L = A.pessoasDaLista("NOME;MÃE\nFulano de Tal ; Maria de Tal\n1. Beltrano Silva\t123.456.789-09\t4321\nNOME DO ASSISTIDO\nCiclano Souza, 01/02/1990, mãe: Ana Souza\n\nFulano de Tal ; Maria de Tal");
+t(JSON.stringify(L) === JSON.stringify([{ nome: "FULANO DE TAL", mae: "MARIA DE TAL", cpf: "", num: "" }, { nome: "BELTRANO SILVA", mae: "", cpf: "12345678909", num: "4321" },
+  { nome: "CICLANO SOUZA", mae: "ANA SOUZA", cpf: "", num: "" }]), "lista de pessoas: " + JSON.stringify(L));
 """
     r = subprocess.run([node, "-e", js, os.path.join(EXT, "comum.js")], capture_output=True, text=True)
     ok(r.returncode == 0 and "FALHA" not in r.stdout, "funções de comum.js: %s %s" % (r.stdout.strip(), r.stderr.strip()))
@@ -145,5 +156,5 @@ if falhas:
     for f in falhas:
         print(" -", f)
     sys.exit(1)
-print("ok: extensão do SEEU/SIAPEN (manifesto, permissões mínimas, sintaxe, nº do processo, pasta segura, caminho, endereço aceito, pastas e bases ligadas ao APTO)%s"
+print("ok: extensão SEEU/SIAPEN/SAP (manifesto, permissões mínimas, sintaxe, nº do processo, pasta segura, caminho, endereço aceito, pastas e bases ligadas ao APTO, lista de pessoas, nºs do SAP)%s"
       % ("" if node else " - sem node: só o manifesto"))

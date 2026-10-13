@@ -115,6 +115,7 @@ async function baixarArquivo(url, arquivo, extra) {
 
 const doSeeu = (u) => /^https:\/\/seeu\.pje\.jus\.br\//.test(u || "");
 const doSiapen = (u) => /^https:\/\/app\.siapen\.ms\.gov\.br(:\d+)?\//.test(u || "");
+const doSap = (u) => /^https:\/\/[\w-]+\.defensoria\.ms\.def\.br\/sap\//.test(u || "");
 
 // pode baixar a ficha do SIAPEN deste nome agora?
 async function podeFicha(nome, lote) {
@@ -298,20 +299,28 @@ chrome.downloads.onChanged.addListener(async (d) => {
 async function iniciarLote(msg, abaS) {
   const c = await cfgDestino();
   if (!c.ativo) return { ok: false, motivo: "A extensão está desligada." };
+  // SAP da Defensoria: nomes -> nº do processo do último atendimento do NUSPEN (não baixa arquivo; não precisa de base)
+  if (abaS && doSap(abaS.url)) {
+    const pessoas = A.pessoasDaLista(msg.texto);
+    if (!pessoas.length) return { ok: false, motivo: "Nenhum nome na lista (um por linha; pode ter mãe, CPF ou ID do SAP em outras colunas)." };
+    const lote = { tab: abaS.id, sistema: "sap", inicio: Date.now(), rodando: true, itens: pessoas.map((x) => ({ n: x.nome, p: x, status: "fila", msg: "" })) };
+    await chrome.storage.local.set({ lote });
+    let r;
+    try { r = await chrome.tabs.sendMessage(abaS.id, { tipo: "loteSap", itens: pessoas }, { frameId: 0 }); } catch (e) { r = null; }
+    if (!r || !r.ok) {
+      lote.rodando = false;
+      await chrome.storage.local.set({ lote });
+      return { ok: false, motivo: (r && r.motivo) || "Recarregue a página do SAP (se a extensão acabou de ser atualizada) e tente de novo." };
+    }
+    return { ok: true, total: pessoas.length };
+  }
   if (!c.base) return { ok: false, motivo: "Sem base de destino: abra uma base no APTO (ou escolha a base acima) antes de rodar o lote." };
 
   // lista sem nº de processo = nomes (SIAPEN). O SIAPEN pode estar dentro do portal www.siapen.ms.gov.br (moldura),
   // por isso a aba não é reconhecida pelo endereço: o pedido vai a todas as molduras e só a da consulta responde
   if (abaS && !(msg.numeros || []).length) {
-    // SIAPEN: uma linha por pessoa - "NOME" ou "NOME ; MÃE" (também tabulação, como na coluna de uma planilha)
-    const itens = [];
-    const vistos = new Set();
-    for (const l of String(msg.texto || "").split(/\r?\n/)) {
-      const [nome, mae] = l.split(/\t|;/).map((x) => String(x || "").replace(/\s+/g, " ").trim().toUpperCase());
-      if (!nome || /^\d/.test(nome) || vistos.has(nome + "|" + (mae || ""))) continue;
-      vistos.add(nome + "|" + (mae || ""));
-      itens.push({ nome, mae: mae || "" });
-    }
+    // SIAPEN: uma linha por pessoa - nome e, se houver, mãe e prontuário (em qualquer coluna)
+    const itens = A.pessoasDaLista(msg.texto).map((x) => ({ nome: x.nome, mae: x.mae, prontuario: x.num }));
     if (!itens.length) return { ok: false, motivo: "Nenhum nome na lista (um por linha; \"NOME ; MÃE\" para separar homônimos)." };
     const lote = { tab: abaS.id, sistema: "siapen", base: c.base, inicio: Date.now(), rodando: true, itens: itens.map((x) => ({ n: x.nome + (x.mae ? " (mãe: " + x.mae + ")" : ""), status: "fila", msg: "" })) };
     await chrome.storage.local.set({ lote });
@@ -340,10 +349,57 @@ async function iniciarLote(msg, abaS) {
   return { ok: true, total: numeros.length };
 }
 
+// nºs achados no último lote do SAP -> lote do SEEU (na aba do SEEU aberta); guarda nome de cada nº para o aviso final
+async function sapParaSeeu() {
+  const { ultimoSap } = await chrome.storage.local.get("ultimoSap");
+  if (!ultimoSap) return { ok: false, motivo: "Rode antes o lote no SAP." };
+  const nomes = {};
+  for (const x of ultimoSap.itens) for (const n of (x.extra && x.extra.processos) || []) nomes[n] = nomes[n] ? nomes[n] + " / " + x.n : x.n;
+  const numeros = Object.keys(nomes);
+  if (!numeros.length) return { ok: false, motivo: "O lote do SAP não achou nenhum nº de processo." };
+  const [seeu] = await chrome.tabs.query({ url: "https://seeu.pje.jus.br/*" });
+  if (!seeu) return { ok: false, motivo: "Abra o SEEU (logado) em outra aba e clique de novo." };
+  await chrome.storage.local.set({ sapNomes: nomes });
+  return iniciarLote({ numeros, texto: numeros.join("\n") }, seeu);
+}
+
+// planilha (CSV para o Excel) com o resultado do último lote do SAP, em Downloads\\<raiz> (a pasta vigiada ignora CSV)
+async function sapPlanilha() {
+  const { ultimoSap, lote, sapNomes } = await chrome.storage.local.get(["ultimoSap", "lote", "sapNomes"]);
+  if (!ultimoSap) return { ok: false, motivo: "Rode antes o lote no SAP." };
+  const c = await cfg();
+  // depois do lote do SEEU com os nºs do SAP: o que o SEEU achou ou não
+  const noSeeu = {};
+  if (lote && lote.sistema !== "sap" && sapNomes && Object.keys(sapNomes).length) {
+    for (const x of lote.itens) {
+      noSeeu[x.n] = x.status === "ok" || x.status === "repetido" ? "RSPE baixado"
+        : x.status === "fila" || x.status === "rodando" ? "não verificado" : /não encontrado/.test(x.msg || "") ? "NÃO ENCONTRADO" : x.msg;
+    }
+  }
+  const temSeeu = Object.keys(noSeeu).length > 0;
+  const cel = (v) => '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"';
+  const cab = ["Nome (lista)", "Nome no SAP", "Mãe", "ID SAP", "Processo(s)", "Data do atendimento", "Situação"].concat(temSeeu ? ["No SEEU"] : []);
+  const linhas = [cab.map(cel).join(";")];
+  for (const x of ultimoSap.itens) {
+    const e = x.extra || {};
+    const procs = e.processos || [];
+    linhas.push([x.n, e.nomeSap, e.mae, e.sapId, procs.join(" / "), e.data,
+      x.status === "ok" ? "ok" : x.status === "fila" ? "não processado" : x.msg]
+      .concat(temSeeu ? [procs.map((n) => n + ": " + (noSeeu[n] || "não verificado")).join(" / ")] : []).map(cel).join(";"));
+  }
+  const agora = new Date();
+  const hm = String(agora.getHours()).padStart(2, "0") + String(agora.getMinutes()).padStart(2, "0");
+  const arquivo = (A.pastaSegura(c.raiz) || "APTO") + "/SAP_processos_" + A.hojeISO() + "_" + hm + ".csv";
+  const csv = "\ufeff" + linhas.join("\r\n");
+  proximosNomes.push(arquivo);
+  await chrome.downloads.download({ url: "data:text/csv;charset=utf-8," + encodeURIComponent(csv), filename: arquivo, conflictAction: "uniquify", saveAs: false });
+  return { ok: true, arquivo };
+}
+
 chrome.runtime.onMessage.addListener((msg, sender, responder) => {
   (async () => {
     try {
-      const daPagina = sender.tab && (doSeeu(sender.url) || doSiapen(sender.url));
+      const daPagina = sender.tab && (doSeeu(sender.url) || doSiapen(sender.url) || doSap(sender.url));
       const doSiapenMsg = sender.tab && doSiapen(sender.url);
       if (doSiapenMsg && msg.tipo === "podeFicha") {
         const r = await podeFicha(String(msg.nome || "").toUpperCase(), msg.lote);
@@ -375,19 +431,24 @@ chrome.runtime.onMessage.addListener((msg, sender, responder) => {
         if (lote && lote.itens[msg.i]) {
           lote.itens[msg.i].status = msg.status;
           lote.itens[msg.i].msg = msg.msg || "";
+          if (msg.extra) lote.itens[msg.i].extra = msg.extra;
           await chrome.storage.local.set({ lote });
         }
         return responder({ ok: true });
       }
       if (daPagina && msg.tipo === "loteFim") {
         const { lote } = await chrome.storage.local.get("lote");
-        if (lote) { lote.rodando = false; lote.fim = Date.now(); lote.parou = !!msg.parou; await chrome.storage.local.set({ lote }); }
+        if (lote) {
+          lote.rodando = false; lote.fim = Date.now(); lote.parou = !!msg.parou;
+          await chrome.storage.local.set(lote.sistema === "sap" ? { lote, ultimoSap: lote } : { lote });
+        }
         return responder({ ok: true });
       }
       // o resto só das páginas da própria extensão (o painel)
       if (sender.id !== chrome.runtime.id || !String(sender.url || "").startsWith(chrome.runtime.getURL(""))) return responder({ ok: false });
       if (msg.tipo === "loteIniciar") {
         const [abaS] = await chrome.tabs.query({ active: true, currentWindow: true });
+        await chrome.storage.local.remove("sapNomes"); // lote colado à mão: os nºs não vêm do SAP
         return responder(await iniciarLote(msg, abaS));
       }
       if (msg.tipo === "loteParar") {
@@ -395,7 +456,12 @@ chrome.runtime.onMessage.addListener((msg, sender, responder) => {
         if (lote && lote.tab != null) await chrome.tabs.sendMessage(lote.tab, { tipo: "lotePare" }, lote.sistema === "siapen" ? {} : { frameId: 0 }).catch(() => {});
         return responder({ ok: true });
       }
-      if (msg.tipo === "loteEstado") return responder((await chrome.storage.local.get("lote")).lote || null);
+      if (msg.tipo === "loteEstado") {
+        const r = await chrome.storage.local.get(["lote", "sapNomes", "ultimoSap"]);
+        return responder(r.lote ? Object.assign({}, r.lote, { sapNomes: r.sapNomes || {}, temSap: !!r.ultimoSap }) : null);
+      }
+      if (msg.tipo === "sapParaSeeu") return responder(await sapParaSeeu());
+      if (msg.tipo === "sapPlanilha") return responder(await sapPlanilha());
       if (msg.tipo === "estado") {
         const st = await estado();
         return responder({ cfg: await cfg(), apto: await lerApto(true), log: st.log, pausadoAte: st.pausadoAte, hoje: Object.keys(st.baixados).filter((k) => k.endsWith("|" + A.hojeISO())).length });

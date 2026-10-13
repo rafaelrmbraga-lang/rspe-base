@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "APTO - RSPE do SEEU e Ficha do SIAPEN",
+  "name": "APTO - RSPE do SEEU, Ficha do SIAPEN e processos do SAP",
   "short_name": "APTO RSPE",
-  "version": "1.4.0",
-  "description": "Salva o RSPE do SEEU e a Ficha Disciplinar do SIAPEN na pasta da base do APTO, dentro de Downloads, para a pasta vigiada importar.",
+  "version": "1.5.0",
+  "description": "Salva o RSPE do SEEU e a Ficha Disciplinar do SIAPEN na pasta da base do APTO, e acha no SAP da Defensoria o nº do processo do último atendimento do NUSPEN.",
   "minimum_chrome_version": "116",
   "permissions": [
     "downloads",
@@ -12,6 +12,7 @@
   "host_permissions": [
     "https://seeu.pje.jus.br/*",
     "https://app.siapen.ms.gov.br/*",
+    "https://*.defensoria.ms.def.br/*",
     "http://127.0.0.1:47321/*"
   ],
   "background": {
@@ -50,10 +51,20 @@
       "all_frames": true,
       "run_at": "document_idle",
       "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://*.defensoria.ms.def.br/sap/*"
+      ],
+      "js": [
+        "comum.js",
+        "sap.js"
+      ],
+      "run_at": "document_idle"
     }
   ],
   "action": {
-    "default_title": "APTO - RSPE do SEEU e Ficha do SIAPEN",
+    "default_title": "APTO - SEEU, SIAPEN e SAP",
     "default_popup": "popup.html",
     "default_icon": {
       "16": "icones/16.png",

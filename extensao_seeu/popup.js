@@ -124,16 +124,27 @@ async function desenharLote() {
   if (!L) { est.className = "estado"; return; }
   const n = (s) => L.itens.filter((x) => x.status === s).length;
   const feitos = L.itens.length - n("fila") - n("rodando");
+  const sap = L.sistema === "sap";
+  const nomes = L.sapNomes || {};
+  const fase = L.rodando ? "Em andamento: " : (L.parou ? "Parado: " : "Concluído: ");
   est.className = "estado " + (n("erro") ? "erro" : "ok");
-  est.textContent = (L.rodando ? "Em andamento: " : (L.parou ? "Parado: " : "Concluído: ")) + `${feitos} de ${L.itens.length} · salvos ${n("ok")} · já baixados hoje ${n("repetido")} · erros ${n("erro")} · base ${L.base}`;
-  for (const x of L.itens.filter((x) => x.status !== "fila").slice(-60).reverse()) {
+  est.textContent = sap
+    ? fase + `SAP · ${feitos} de ${L.itens.length} · com nº ${n("ok")} · sem nº ou com aviso ${n("erro")}`
+    : fase + `${feitos} de ${L.itens.length} · salvos ${n("ok")} · já baixados hoje ${n("repetido")} · erros ${n("erro")} · base ${L.base}`;
+  // ao final do lote do SEEU vindo do SAP: os nºs que o SEEU não achou, com o nome
+  const naoAchados = !sap && !L.rodando ? L.itens.filter((x) => x.status === "erro" && /não encontrado/.test(x.msg || "") && nomes[x.n]) : [];
+  if (naoAchados.length) est.textContent += ` · não achados no SEEU: ${naoAchados.map((x) => x.n + " (" + nomes[x.n] + ")").join("; ")}`;
+  for (const x of L.itens.filter((x) => x.status !== "fila").slice(-80).reverse()) {
     const li = document.createElement("li");
     const t = document.createElement("span");
     t.className = x.status === "erro" ? "e" : x.status === "ok" ? "" : "m";
-    t.textContent = x.n + " · " + ({ ok: "salvo", repetido: "já baixado hoje", rodando: "baixando…", erro: x.msg || "erro" })[x.status];
+    const quem = x.n + (nomes[x.n] ? " (" + nomes[x.n] + ")" : "");
+    t.textContent = quem + " · " + (sap && x.status === "ok" ? x.msg
+      : ({ ok: "salvo", repetido: "já baixado hoje", rodando: sap ? "procurando…" : "baixando…", erro: x.msg || "erro" })[x.status]);
     li.appendChild(t);
     ul.appendChild(li);
   }
+  $("sapAcoes").style.display = L.temSap && !L.rodando ? "flex" : "none";
   if (L.rodando) $("loteBox").open = true;
 }
 $("loteArq").onchange = async (e) => {
@@ -152,6 +163,17 @@ $("loteIni").onclick = async () => {
   const r = await enviar({ tipo: "loteIniciar", numeros: nums, texto });
   if (!r.ok) { $("loteEst").className = "estado erro"; $("loteEst").textContent = r.motivo; return; }
   desenharLote();
+};
+$("sapSeeu").onclick = async () => {
+  const r = await enviar({ tipo: "sapParaSeeu" });
+  $("loteEst").className = "estado " + (r.ok ? "ok" : "erro");
+  $("loteEst").textContent = r.ok ? `Lote do SEEU iniciado na aba do SEEU: ${r.total} nº(s).` : r.motivo;
+  if (r.ok) setTimeout(desenharLote, 800);
+};
+$("sapCsv").onclick = async () => {
+  const r = await enviar({ tipo: "sapPlanilha" });
+  $("loteEst").className = "estado " + (r.ok ? "ok" : "erro");
+  $("loteEst").textContent = r.ok ? "Planilha salva em Downloads\\" + r.arquivo.replace(/\//g, "\\") : r.motivo;
 };
 $("lotePar").onclick = async () => { await enviar({ tipo: "loteParar" }); setTimeout(desenharLote, 800); };
 setInterval(desenharLote, 2000);

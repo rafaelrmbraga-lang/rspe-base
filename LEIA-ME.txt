@@ -81,9 +81,11 @@ PASTA VIGIADA (menu da base > "Pasta vigiada…")
     foi lido; apagá-lo faz a pasta ser relida (os repetidos são ignorados).
 
 EXTENSÃO DO NAVEGADOR (pasta extensao_seeu)
-  "APTO - RSPE do SEEU e Ficha do SIAPEN", para Chrome e Edge: salva o RSPE
-  do SEEU e a Ficha Disciplinar do SIAPEN em Downloads\APTO\<base>\ (por
-  padrão, a base aberta no APTO), e o RSPE/ficha entra sozinho na base.
+  "APTO - RSPE do SEEU, Ficha do SIAPEN e processos do SAP", para Chrome e
+  Edge: salva o RSPE do SEEU e a Ficha Disciplinar do SIAPEN em
+  Downloads\APTO\<base>\ (por padrão, a base aberta no APTO), e o
+  RSPE/ficha entra sozinho na base. No SAP da Defensoria, acha por lote de
+  nomes o nº do processo do último atendimento do NUSPEN (só leitura).
   Ligação automática: o APTO aberto informa à extensão as suas bases (só
   neste computador, endereço 127.0.0.1, porta 47321, só leitura da lista
   de bases), cria Downloads\APTO\<base> para cada uma e vigia essa pasta.
@@ -884,6 +886,11 @@ v7.9.4
     Downloads\APTO\<base> para cada base, vigia Downloads\APTO sempre
     (além da pasta escolhida) e informa as bases à extensão; a base de
     destino padrão da extensão é a base aberta no APTO.
+  - Extensão 1.5.0, lote do SAP da Defensoria: para uma lista de nomes,
+    acha o nº do processo no atendimento mais recente do NUSPEN (desce para
+    o anterior se não houver nº; copia os dois se houver dois), só lendo;
+    depois baixa os RSPE no SEEU e avisa os nºs que o SEEU não achou;
+    planilha CSV com o resultado.
   - Lote de fichas do SIAPEN: funciona com o SIAPEN aberto pelo portal
     www.siapen.ms.gov.br (a lista de nomes era tomada por lista de
     processos); o lote usa os comandos da própria tela do SIAPEN para
