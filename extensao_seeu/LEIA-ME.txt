@@ -2,10 +2,17 @@ APTO - RSPE do SEEU (extensão do Google Chrome e do Microsoft Edge)
 ====================================================================
 
 O QUE FAZ
-Ao abrir um processo no SEEU, a extensão salva o RSPE (o PDF que o próprio SEEU
-gera) em Downloads\APTO\<base>\<nº do processo>_<data>.pdf. Com a pasta vigiada
-do APTO apontada para Downloads\APTO, o RSPE entra sozinho na base de mesmo nome
-da subpasta, enquanto o APTO estiver aberto.
+Ao abrir um processo no SEEU, a extensão salva o RSPE (o PDF do botão "Situação
+Carcerária", gerado pelo próprio SEEU) em
+Downloads\APTO\<base>\<nº do processo>_<data>.pdf. O RSPE entra sozinho na base
+de mesmo nome da subpasta, enquanto o APTO estiver aberto.
+
+PASTAS CRIADAS SOZINHAS
+ - Ao instalar, a extensão cria Downloads\APTO (com um LEIA-ME dentro). Ao
+   incluir uma base no painel, cria Downloads\APTO\<base>.
+ - O APTO, ao abrir, se ainda não tiver pasta vigiada e encontrar
+   Downloads\APTO, passa a vigiá-la sozinho (aviso na tela). Não é preciso
+   vincular nada à mão. Se você escolher outra pasta no APTO, vale a escolha.
 
 INSTALAR (modo do desenvolvedor, sem a Chrome Web Store)
  1. Copie a pasta "extensao_seeu" para um lugar fixo do computador (ex.:
@@ -24,18 +31,20 @@ CONFIGURAR
    subpasta. Sem base escolhida, o arquivo vai direto para Downloads\APTO e a
    pasta vigiada do APTO o ignora (por isso o aviso no painel).
  - Pasta dentro de Downloads: "APTO" (pode trocar).
- - No APTO: menu da base > "Pasta vigiada…" > escolha Downloads\APTO. O botão
-   "Criar pastas das bases" cria uma subpasta para cada base.
+ - No APTO a pasta vigiada é configurada sozinha (veja acima). Se já havia
+   outra pasta vigiada escolhida, troque no menu da base > "Pasta vigiada…".
  - Se o Chrome perguntar onde salvar cada arquivo, desligue em Configurações >
    Downloads > "Perguntar onde salvar cada arquivo antes de fazer download".
 
 COMO FUNCIONA
- - Automático: ao abrir um processo, a extensão acha na página o link do RSPE
-   e baixa o PDF com a sua sessão do SEEU. Um RSPE por processo, base e dia.
+ - Automático: ao abrir um processo, a extensão acha na página o endereço do
+   relatório "Situação Carcerária" e busca o PDF com a sua sessão do SEEU.
+   Um RSPE por processo, base e dia.
  - Botão "Baixar o RSPE do processo aberto" (no painel da extensão): baixa de
    novo, mesmo que já tenha baixado hoje.
- - Clique no botão do próprio SEEU que gera o RSPE: o arquivo também vai para a
-   pasta da base (com o nº do processo aberto há pouco no nome).
+ - Ao clicar em "Situação Carcerária" no SEEU, o RSPE que abre na janela
+   "Visualizar Pdf" também é salvo na pasta da base (se o automático ainda
+   não o salvou hoje).
  - O ícone mostra quantos RSPE foram salvos hoje; "off" quando desligada; "!"
    quando pausada.
 
@@ -67,9 +76,11 @@ CUIDADOS
    orientações do TJ e da Defensoria sobre o uso do SEEU.
 
 SE O AUTOMÁTICO NÃO BAIXAR
- O SEEU pode mudar a página. Nesse caso, clique no botão do SEEU que gera o
- RSPE: a extensão continua salvando o arquivo na pasta da base. Avise para a
- extensão ser ajustada.
+ O SEEU pode mudar a página. Nesse caso, clique em "Situação Carcerária": a
+ extensão continua salvando o RSPE na pasta da base. Avise para a extensão
+ ser ajustada (um HAR da aba Rede, gravado antes de abrir o processo, ajuda).
+ Depois de instalar ou atualizar a extensão, recarregue as páginas do SEEU
+ já abertas.
 
 NÃO USE IMPRESSORA VIRTUAL
  PDF "impresso" pelo PDFCreator ou outra impressora virtual sai sem texto

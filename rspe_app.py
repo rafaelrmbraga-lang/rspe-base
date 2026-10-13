@@ -3087,9 +3087,33 @@ class Api:
 
     VIGIA_TENTATIVAS = 3  # tentativas de um PDF com erro antes de a pasta vigiada desistir dele (até ser substituído)
 
+    @staticmethod
+    def _pasta_extensao():
+        """Downloads\\APTO: a pasta mãe que a extensão "APTO - RSPE do SEEU" cria (uma subpasta por base)."""
+        casa = os.environ.get("USERPROFILE") or os.path.expanduser("~")
+        return os.path.join(casa, "Downloads", "APTO")
+
+    def _vigia_auto(self):
+        """Sem pasta vigiada escolhida e com a pasta da extensão criada: passa a vigiar Downloads\\APTO (uma vez; depois
+        vale a escolha feita no menu da base)."""
+        c = self._cfg()
+        if c.get("pasta_vigiada") or c.get("vigia_auto_feito"):
+            return False
+        d = self._pasta_extensao()
+        if not os.path.isdir(d):
+            return False
+        self._cfg_gravar(pasta_vigiada=d, vigiar=True, vigia_auto_feito=True)
+        logging.getLogger("rspe").info("pasta vigiada configurada sozinha: %s", d)
+        try:
+            self._js("ui.toast(%s)" % json.dumps("Pasta vigiada: %s (criada pela extensão do SEEU)" % d, ensure_ascii=False))
+        except Exception:
+            pass
+        return True
+
     def _vigia_loop(self):
         while True:
             try:
+                self._vigia_auto()
                 c = self._cfg()
                 if c.get("vigiar") and c.get("pasta_vigiada") and os.path.isdir(c["pasta_vigiada"]):
                     self._vigia_varrer()

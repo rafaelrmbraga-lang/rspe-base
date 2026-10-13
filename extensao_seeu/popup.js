@@ -92,7 +92,7 @@ $("agora").onclick = async () => {
     r = null;
   }
   if (!r || !r.achou) return estado("O link do RSPE não foi encontrado nesta página (se a extensão acabou de ser instalada, recarregue a página). " +
-    "Clique no botão do SEEU que gera o RSPE: a extensão salva o arquivo na pasta da base.", true);
+    "Clique em \"Situação Carcerária\" no SEEU: a extensão salva o RSPE na pasta da base.", true);
   if (r.ok) estado("Baixando: Downloads\\" + r.arquivo.replace(/\//g, "\\"));
   else estado(r.motivo || "Não foi possível baixar.", true);
   setTimeout(carregar, 2500);
