@@ -885,9 +885,14 @@ v7.9.3
     as demais em cinza). Saíram do painel os "Pontos de atenção" (estão na aba
     Auditoria), a lista de vínculos de trabalho e os cartões da ficha; a ficha
     mostra os atestados de trabalho/remição e as faltas disciplinares.
+  - Prescrição executória: a prisão lançada só para outras ações da mesma
+    execução, enquanto a ação do crime ainda não estava em cumprimento,
+    suspende o prazo desse crime (CP, art. 116, p. único); o primeiro evento
+    ou somatório que inclui a ação interrompe (art. 117, V). Vale também para
+    o art. 28 da Lei 11.343/06, antes contado só pelos 2 anos corridos.
   - Progressão antecipada: a janela passa de 60 para 90 dias antes da data
     do SEEU, e o trabalho em curso deixa de ser exigido.
-  - Divergência no SEEU/SIAPEN: "!" amarelo ao lado do nome (todas as abas,
+  - Divergência no SEEU/SIAPEN: triângulo âmbar ao lado do nome (todas as abas,
     painel do assistido e quadro), com a lista ao passar o mouse e a
     explicação na legenda do rodapé, quando o próprio documento não fecha:
     pena total menor que a soma das ações sem comutação/indulto/suspensão/
@@ -895,7 +900,7 @@ v7.9.3
     ações com o mesmo número; prisão lançada mais de 30 dias antes do fato
     da ação vinculada; ficha sem data da prisão; CPF da ficha diferente do
     RSPE (ambos válidos). Cada uma é alerta na Auditoria, com baixa própria:
-    baixadas todas, o "!" some; a baixa vale enquanto a divergência for a
+    baixadas todas, o triângulo some; a baixa vale enquanto a divergência for a
     mesma, inclusive depois de reimportar o RSPE.
 
 v7.9.2

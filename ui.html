@@ -132,9 +132,9 @@ table.rz{margin-top:8px;width:100%}table.rz td,table.rz th{font-size:12px;vertic
 .pa-ok{display:inline-flex;align-items:center;justify-content:center;margin-left:6px;width:20px;height:18px;border-radius:5px;background:#E4EEF7;color:#1D5C8C;border:1px solid #9DBBD6;vertical-align:1px;cursor:help;flex:none}
 .pa-ok svg{width:12px;height:12px}.pa-ok.quase{background:#FFF6DB;color:#8A6100;border-color:#E2C77A}.pa-ok.feito{background:#1D5C8C;color:#fff;border-color:#1D5C8C}
 #stpop.pa b{color:#1D5C8C}#stpop.pa i{color:#1D5C8C}
-/* "!" amarelo: divergência impressa no próprio RSPE (SEEU) ou na ficha (SIAPEN), a conferir nos autos */
-.dv-seeu{display:inline-flex;align-items:center;justify-content:center;margin-left:6px;width:17px;height:17px;border-radius:50%;font-size:12px;font-weight:800;line-height:1;background:var(--a-dot);color:#fff;vertical-align:1px;cursor:pointer;flex:none}
-.dv-seeu:hover{background:var(--a-tx)}
+/* triângulo âmbar: divergência impressa no próprio RSPE (SEEU) ou na ficha (SIAPEN), a conferir nos autos */
+.dv-seeu{display:inline-flex;align-items:center;justify-content:center;margin-left:7px;width:17px;height:17px;color:var(--a-dot);vertical-align:-2px;cursor:pointer;flex:none}.dv-seeu svg{width:16px;height:16px;display:block}
+.dv-seeu:hover{color:var(--a-tx)}
 .leg .dv-seeu{margin-left:0;cursor:default}
 #stpop.dv b{color:var(--a-tx)}#stpop.dv i{color:var(--a-dot)}
 .rs-old{display:inline-flex;align-items:center;justify-content:center;margin-left:8px;width:18px;height:18px;border-radius:50%;font-size:12px;font-weight:800;background:#FFF1DB;color:#9A5B00;border:1px solid #DDBF85;vertical-align:1px;cursor:help;flex:none}
@@ -1800,12 +1800,13 @@ const ui = {
   // saída temporária: verde = elegível; amarelo = requisitos atendidos com ponto a conferir; verde preenchido = pedido feito.
   // Clicar registra o pedido (ou o edita) e leva ao Registro para o SAP
   stHtml(r){ return this.divHtml(r)+this.stIco(r)+this.paHtml(r); },
-  // "!" amarelo ao lado do nome: divergência no próprio RSPE/ficha (pena, número da ação, prisão x fato, data da prisão, CPF).
+  // triângulo âmbar ao lado do nome: divergência no próprio RSPE/ficha (pena, número da ação, prisão x fato, data da prisão, CPF).
   // Some quando todas as divergências são baixadas na Auditoria; o clique abre o assistido na aba Auditoria
   DIV_LEG:'Divergência no SEEU/SIAPEN',
+  DIV_SVG:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.9 1.8 18.5A2 2 0 0 0 3.5 21.5h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13.5"/><circle cx="12" cy="17.2" r=".6" fill="currentColor"/></svg>',
   DIV_DICA:'Dado do próprio documento do SEEU ou do SIAPEN, a conferir nos autos (detalhe na Auditoria)',
   divHtml(r){ if(!(r.div_seeu||[]).length) return '';
-    return `<span class="dv-seeu" onclick="event.stopPropagation();ui.stPop(null);ui.divAbrir(${jsa(r.id)})" onmouseenter="ui.divPop(event,${jsa(r.id)})" onmouseleave="ui.stPop(null)">!</span>`; },
+    return `<span class="dv-seeu" onclick="event.stopPropagation();ui.stPop(null);ui.divAbrir(${jsa(r.id)})" onmouseenter="ui.divPop(event,${jsa(r.id)})" onmouseleave="ui.stPop(null)">${this.DIV_SVG}</span>`; },
   divPop(ev,id){ const r=this.dados.registros.find(x=>x.id===id); if(!r) return;
     let el=document.getElementById('stpop'); if(!el){ el=document.createElement('div'); el.id='stpop'; document.body.appendChild(el); }
     el.className='dv'; const L=r.div_seeu||[];
@@ -1815,7 +1816,7 @@ const ui = {
     const h=el.offsetHeight; el.style.top=(b.bottom+6+h>innerHeight? Math.max(8,b.top-6-h) : b.bottom+6)+'px'; },
   divAbrir(id){ this.fecharDrawer();
     this.irAba('aud'); this.completo(id).then(()=>{ this.aberto=id; this.render(); }); },
-  divLegenda(){ return (this.dados.registros||[]).some(r=>(r.div_seeu||[]).length)?`<span class="leg" title="${esc(this.DIV_DICA)}"><span class="dv-seeu">!</span>${this.DIV_LEG}</span>`:''; },
+  divLegenda(){ return (this.dados.registros||[]).some(r=>(r.div_seeu||[]).length)?`<span class="leg" title="${esc(this.DIV_DICA)}"><span class="dv-seeu">${this.DIV_SVG}</span>${this.DIV_LEG}</span>`:''; },
   stIco(r){ const P=(r.pedidos||{}).st; if(!r.st_ok&&!r.st_quase&&!P) return '';
     return `<span class="st-ok${P?' feito':r.st_ok?'':' quase'}" onclick="event.stopPropagation();ui.stPop(null);ui.stPedido(${jsa(r.id)})" onmouseenter="ui.stPop(event,${jsa(r.id)})" onmouseleave="ui.stPop(null)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4"/><path d="M9 16l-4-4 4-4"/><path d="M5 12h10"/></svg></span>`; },
   // rolar a página fecha o quadro (ele é fixo na tela)
