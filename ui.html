@@ -1727,6 +1727,12 @@ const ui = {
   decRotS(d){ if(d.s!=='fora') return this.DEC_ROT[d.s]||d.s; const m=(d.mot||'').toLowerCase();
     return m.startsWith('execução posterior')?'Execução posterior':m.startsWith('sem condenação')?'Sem condenação até o decreto':m.startsWith('decreto só para mulheres')?'Decreto só para mulheres':'Não alcançado'; },
   decCurto(x){ return (x.tipo==='dia_das_maes'?'M':'')+String(x.ano).slice(2); },
+  // conduta da ficha ao lado do nome: Ótima/Boa verde; Má e PADIC vermelho; Sem lapso e demais cinza
+  condutaPill(r){ const v=((r.ficha_tem&&r.conduta)||'').trim(); if(!v||v==='—') return '';
+    const u=v.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    const cor=/^(OTIMA|BOA)\b/.test(u)?'verde':(/^(MA|PESSIMA)\b/.test(u)||/PADIC/.test(u))?'vermelho':'cinza';
+    const rot={OTIMA:'Ótima',BOA:'Boa',MA:'Má','SEM LAPSO':'Sem lapso'}[u]||(/PADIC/.test(u)?v.replace(/^RESPONDE\s*/i,'Responde '):v.charAt(0)+v.slice(1).toLowerCase());
+    return ` <span class="pill ${cor}" style="font-size:12px;vertical-align:middle;margin-left:6px" title="Conduta (ficha do SIAPEN)">${esc(rot)}</span>`; },
   decDe(r){ return ((r.dec||{}).decretos||[]); },
   decLista(rs){ const m=new Map(); rs.forEach(r=>this.decDe(r).forEach(x=>{ if(!m.has(x.id)) m.set(x.id,x); }));
     return [...m.values()].sort((a,b)=>this.tlD(b.ref)-this.tlD(a.ref)); },
@@ -2243,9 +2249,6 @@ const ui = {
     const pill=(t,c)=> t?`<span class="pill ${c||'none'}">${esc(t)}</span>`:'<span class="muted">—</span>';
     const lin=(rot,conteudo)=>`<div class="ln"><span class="lr">${rot}</span><span class="lv">${conteudo}</span></div>`;
     const dataSit=(d,sit,cor)=> `${esc(d||'—')}${sit&&sit!==d?' '+pill(sit,cor):''}`;
-    // pontos de atenção: só alertas e "verificar" não baixados, títulos
-    const pts=(r.aud_itens||[]).filter(i=>!i.baixado&&(i.nivel==='alerta'||i.nivel==='verificar'));
-    const ptsHtml=pts.length?`<ul class="pts">${pts.slice(0,6).map(i=>`<li class="${i.nivel}">${esc(i.titulo)}</li>`).join('')}${pts.length>6?`<li class="muted">+ ${pts.length-6} na aba Auditoria</li>`:''}</ul>`:'<div class="muted">Nenhum ponto pendente.</div>';
     const crimes=(r.crimes_det||[]).filter(c=>!/^S/i.test(c.extinto||'')).map(c=>`<b>${esc(c.nome_crime||'Crime')}</b> <span class="muted">(${esc(c.dispositivo||'')})</span> · ${esc(c.pena||'')}`).join('<br>');
     // Benefícios: só os decretos em que o indulto ou a comutação é cabível ("2005 Cabível; 2019 Cabível")
     const cabiveis=ben=>{ const L=this.decDe(r).filter(d=>d.s==='cabe'&&d.beneficio===ben);
@@ -2284,7 +2287,7 @@ const ui = {
           `Comutação ${x[0]}\n`+ui.txtLinhas(exp)); }).join('');
     const calc=dets+cms; // a prescrição fica só na aba Prescrição, não na ficha do assistido
     document.getElementById('drawer').innerHTML=`
-      <div class="dh"><div><h2><span class="copy" onclick="ui.copiar(ui._clips[${this.clip(r.nome||'')}])" title="Clique para copiar o nome">${esc(r.nome)}<svg class="cpi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></span>${this.stHtml(r)}</h2><div class="sub"><span class="copy" onclick="ui.copiar(${jsa(r.proc)})" title="Clique para copiar">${esc(r.proc)}<svg class="cpi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></span> · ${esc(r.regime||'regime não informado')}</div>
+      <div class="dh"><div><h2><span class="copy" onclick="ui.copiar(ui._clips[${this.clip(r.nome||'')}])" title="Clique para copiar o nome">${esc(r.nome)}<svg class="cpi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></span>${this.stHtml(r)}${this.condutaPill(r)}</h2><div class="sub"><span class="copy" onclick="ui.copiar(${jsa(r.proc)})" title="Clique para copiar">${esc(r.proc)}<svg class="cpi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></span> · ${esc(r.regime||'regime não informado')}</div>
         <div class="sub">RSPE de ${esc(r.geracao)} · <span class="mini" onclick="ui.copiarClip(${ui.clip(ui.txtFicha(r))})">Copiar resumo</span> <span class="mini pre" onclick="ui.abrirSAP(${jsa(r.id)})">Registro para o SAP</span> <span class="mini" onclick="ui.qdNovo(${jsa(r.id)})">Enviar ao Quadro do Usuário</span> <span class="mini" onclick="ui.fixar(${jsa(r.id)},${r.fixado?0:1})">${r.fixado?'Soltar':'Fixar no topo'}</span></div></div>
         <button class="close" onclick="ui.fecharDrawer()">✕</button></div>
       <div class="db">
@@ -2303,7 +2306,6 @@ const ui = {
           ${r.falta_sim?lin('Falta (12 meses)', `<span class="falta">${esc(r.falta.replace(/^Sim · /,''))}</span>`):''}
           ${r.falta_apurar?lin('Falta a apurar (12 meses)', `<span class="apurar">${esc(r.falta_det)}</span> <span class="muted">sem sanção reconhecida no RSPE</span>`):''}
         </div>
-        <div class="sec"><h3>Pontos de atenção</h3>${ptsHtml}</div>
         ${(()=>{ const P=r.pedidos||{}; const ks=this.pedKeys(r); if(!ks.length) return '';
           return `<div class="sec"><h3>Pedidos feitos</h3><div class="peds">${ks.map(k=>{ const x=P[k], mud=x.ref&&x.ref!==this.pedRef(r,k);
             return `<div class="pedl"><span class="pck ok ${mud?'mud':''}" style="width:16px;height:16px;font-size:11px">✓</span><span class="pn">${this.pedNome(k,r).replace(/^./,c=>c.toUpperCase())}</span><b>${esc(x.data)}</b><span class="muted" style="white-space:nowrap">${({pedido:'pedido nos autos',oficio:'ofício à unidade',outro:'outra providência'})[x.tipo]||''}</span><span class="po">${esc(x.obs||'')}${mud?` <span style="color:var(--a-tx);font-weight:600">· ⚠ situação mudou depois do pedido</span>`:''}</span><span class="mini" onclick="ui.pedidoAbrir(${jsa(r.id)},'${k}')">Editar</span></div>`; }).join('')}</div></div>`; })()}
@@ -2322,15 +2324,13 @@ const ui = {
     if(!f) return `<div class="sec"><h3>Ficha disciplinar (SIAPEN)</h3>${faltaSec}<div class="kv one"><div class="muted">Nenhuma ficha importada para este assistido. Importe o PDF da Ficha Disciplinar pelo botão "Importar PDFs": o programa vincula pelos autos citados nela (ou pelo nome, se não houver homônimo na base).</div></div></div>`;
     const kv=(l,v)=>`<div><small>${l}</small>${esc(v||'—')}</div>`;
     const pillFd=r.fd_sit?`<span class="pill ${r.fd_cor||'none'}">${esc(r.fd_sit)}</span>`:'<span class="muted">—</span>';
-    const rem=`<div class="kv">${kv('Conduta',f.conduta)}${kv('Trabalho atual',r.fd_trab)}${kv('Remidos: atestados na ficha / homologados no RSPE',r.fd_remidos)}${kv('Trabalho a atestar',r.fd_atestar)}${kv('Estudo a requerer',r.fd_estudo)}<div><small>Situação da remição</small>${pillFd}</div></div>`;
-    const trab=(f.trabalho||[]).map(t=>`<li><span>${esc(t.inicio)}${t.fim?' → '+esc(t.fim):' → em curso'}</span><span>${esc(t.empresa||t.setor)}${t.externo?' <span class="tag ok">externo</span>':''}${t.motivo_fim?' <span class="muted">· '+esc(t.motivo_fim)+'</span>':''}</span></li>`).join('')||'<li>—</li>';
+    const rem=`<div class="kv">${kv('Trabalho atual',r.fd_trab)}${kv('Remidos: atestados na ficha / homologados no RSPE',r.fd_remidos)}${kv('Trabalho a atestar',r.fd_atestar)}${kv('Estudo a requerer',r.fd_estudo)}<div><small>Situação da remição</small>${pillFd}</div></div>`;
     const at=(f.atestados||[]).map(a=>`<li><span>${esc(a.data)}</span><span>nº ${esc(a.numero||'s/n')} · <b>${a.dias_trabalhados} trabalhados · ${a.dias_remidos} remidos</b>${a.periodo_inicio?' · '+esc(a.periodo_inicio)+' a '+esc(a.periodo_fim):''}${a.empresa?' · '+esc(a.empresa):''}</span></li>`).join('')||'<li>—</li>';
     const fal=(f.faltas||[]).map(x=>`<li><span>${esc(x.data_fato)}</span><span><span class="tag ${x.situacao==='arquivada'?'ok':x.situacao==='registrada'?'pend':'no'}">${esc(x.situacao)}</span>${esc(x.artigo||'art. n/i')}${x.grave?' · <b>grave</b>':''}${x.padic?' · PADIC '+esc(x.padic):''}${x.data_resultado?' · decisão '+esc(x.data_resultado):''}</span></li>`).join('')||'<li>nenhuma</li>';
     const outros=[...(f.regressoes||[]),...(f.restabelecimentos||[]),...(f.recusa_trabalho||[]),...(f.isolamentos||[])].map(x=>`<li><span>${esc(x.slice(0,10))}</span><span>${esc(x.slice(13))}</span></li>`).join('');
     return `<div class="sec"><h3>Ficha disciplinar (SIAPEN) <span class="muted" style="font-weight:400">· impressa em ${esc(f.data_impressao||'?')} · importada em ${esc(f.importado_em||'?')}</span></h3>
       ${rem}${faltaSec}
       <div class="kv" style="margin-bottom:6px">${kv('Unidade',f.unidade)}${kv('Entrada na unidade',f.data_entrada)}${kv('RGI',f.rgi)}${kv('Dias trabalhados (atestados)',String(f.dias_trabalhados_atestados||0))}${kv('Dias remidos (atestados)',String(f.dias_remidos_atestados||0))}</div>
-      <h4 style="margin:10px 0 4px;font-size:12px;color:var(--tx2)">Trabalho</h4><ul class="tl">${trab}</ul>
       <h4 style="margin:10px 0 4px;font-size:12px;color:var(--tx2)">Atestados de trabalho / remição</h4><ul class="tl">${at}</ul>
       <h4 style="margin:10px 0 4px;font-size:12px;color:var(--tx2)">Faltas disciplinares</h4><ul class="tl">${fal}</ul>
       ${outros?`<h4 style="margin:10px 0 4px;font-size:12px;color:var(--tx2)">Regressão, restabelecimento, isolamento, recusa de trabalho</h4><ul class="tl">${outros}</ul>`:''}
