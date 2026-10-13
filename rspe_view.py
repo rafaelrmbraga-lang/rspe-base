@@ -1668,7 +1668,7 @@ def saida_temporaria(r, ficha, m, est=None, interr=False, hoje=None):
 
 
 def progressao_antecipada(r, ficha, m, est=None, interr=False, hoje=None):
-    """Pedido de progressão antecipada (faltando de 1 a 60 dias para a data do SEEU; a antecipação vem sendo deferida pelos
+    """Pedido de progressão antecipada (faltando de 1 a 90 dias para a data do SEEU; a antecipação vem sendo deferida pelos
     juízos de MS): regime fechado ou semiaberto em curso, crimes sem violência nem grave ameaça (marcação do RSPE), trabalho em
     curso (o externo conta) e conduta Boa/Ótima sem falta nos 12 meses. pa_ok só com todos os requisitos; pa_quase quando nenhum falha e algum fica
     a conferir; pa_itens = [{ok, txt}]."""
@@ -1682,7 +1682,7 @@ def progressao_antecipada(r, ficha, m, est=None, interr=False, hoje=None):
         "Regime %s, cumprimento em curso" % reg.lower() if (rg.startswith("FECHADO") or rg.startswith("SEMI")) and ativo else
         "Regime: %s%s" % (reg or "não informado", "" if ativo else " (cumprimento não está em curso)"))
     n = m.get("prog_dias")
-    add(n is not None and 0 < n <= 60,
+    add(n is not None and 0 < n <= 90,
         "Progressão prevista para %s: %s %s" % (m.get("prog") or "?", "falta" if n == 1 else "faltam", rs.pl(n, "dia", "dias")) if n is not None and n > 0 else
         ("Progressão: lapso já atingido (%s)" % (m.get("prog") or "") if n is not None else "Progressão sem data no RSPE"))
     crimes = [c for c in r.get("_crimes", []) if (c.get("extinto") or "").startswith("N") and (c.get("tipo_processo") or "").upper() != "OUTRAS ACOES"]

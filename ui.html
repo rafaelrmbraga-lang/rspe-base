@@ -1732,7 +1732,7 @@ const ui = {
     const u=v.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
     const cor=/^(OTIMA|BOA)\b/.test(u)?'verde':(/^(MA|PESSIMA)\b/.test(u)||/PADIC/.test(u))?'vermelho':'cinza';
     const rot={OTIMA:'Ótima',BOA:'Boa',MA:'Má','SEM LAPSO':'Sem lapso'}[u]||(/PADIC/.test(u)?v.replace(/^RESPONDE\s*/i,'Responde '):v.charAt(0)+v.slice(1).toLowerCase());
-    return ` <span class="pill ${cor}" style="font-size:12px;vertical-align:middle;margin-left:6px" title="Conduta (ficha do SIAPEN)">${esc(rot)}</span>`; },
+    return ` <span class="pill ${cor}" style="font-size:13px;font-weight:700;vertical-align:middle;margin-left:8px${cor==='cinza'?';color:var(--tx3,#7A847E)':''}" title="Conduta (ficha do SIAPEN)">${esc(rot)}</span>`; },
   decDe(r){ return ((r.dec||{}).decretos||[]); },
   decLista(rs){ const m=new Map(); rs.forEach(r=>this.decDe(r).forEach(x=>{ if(!m.has(x.id)) m.set(x.id,x); }));
     return [...m.values()].sort((a,b)=>this.tlD(b.ref)-this.tlD(a.ref)); },
@@ -1819,7 +1819,7 @@ const ui = {
     return `<span class="st-ok${P?' feito':r.st_ok?'':' quase'}" onclick="event.stopPropagation();ui.stPop(null);ui.stPedido(${jsa(r.id)})" onmouseenter="ui.stPop(event,${jsa(r.id)})" onmouseleave="ui.stPop(null)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4"/><path d="M9 16l-4-4 4-4"/><path d="M5 12h10"/></svg></span>`; },
   // rolar a página fecha o quadro (ele é fixo na tela)
   _stScroll: (window.addEventListener('scroll', ()=>{ const e=document.getElementById('stpop'); if(e) e.remove(); }, true), 1),
-  // progressão antecipada: faltam até 60 dias, crimes sem violência/grave ameaça, trabalho e conduta Boa/Ótima.
+  // progressão antecipada: faltam até 90 dias, crimes sem violência/grave ameaça, trabalho e conduta Boa/Ótima.
   // Clicar abre o pedido da progressão (o mesmo da coluna "Pedido" da aba Progressão); com o pedido marcado, fica preenchido
   paHtml(r){ if(!r.pa_ok&&!r.pa_quase) return ''; const P=(r.pedidos||{}).prog;
     return `<span class="pa-ok${P?' feito':r.pa_ok?'':' quase'}" onclick="event.stopPropagation();ui.stPop(null);ui.pedidoAbrir(${jsa(r.id)},'prog')" onmouseenter="ui.paPop(event,${jsa(r.id)})" onmouseleave="ui.stPop(null)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h5v-5h5v-5h5V5h3"/></svg></span>`; },
@@ -2317,20 +2317,12 @@ const ui = {
     document.getElementById('drawer').classList.add('on'); document.getElementById('veil').classList.add('on'); },
   fecharDrawer(){ document.getElementById('drawer').classList.remove('on'); document.getElementById('veil').classList.remove('on'); },
   fichaHtml(r){ const f=r.ficha;
-    // falta dos 12 meses (RSPE): o detalhe da coluna Falta aparece aqui, com ou sem ficha
-    const faltaRspe=r.falta_sim?`<span class="falta">Sim</span> · ${esc(r.falta.replace(/^Sim · /,''))}`
-      :(r.falta_apurar?`<span class="apurar">A apurar</span> · ${esc(r.falta_det)} <span class="muted">(sem sanção reconhecida no RSPE)</span>`:'<span class="muted">Não consta no RSPE (conferir o PAD)</span>');
-    const faltaSec=`<div class="kv one" style="margin:8px 0"><div><small>Falta nos 12 meses (RSPE)</small>${faltaRspe}</div></div>`;
-    if(!f) return `<div class="sec"><h3>Ficha disciplinar (SIAPEN)</h3>${faltaSec}<div class="kv one"><div class="muted">Nenhuma ficha importada para este assistido. Importe o PDF da Ficha Disciplinar pelo botão "Importar PDFs": o programa vincula pelos autos citados nela (ou pelo nome, se não houver homônimo na base).</div></div></div>`;
+    if(!f) return `<div class="sec"><h3>Ficha disciplinar (SIAPEN)</h3><div class="kv one"><div class="muted">Nenhuma ficha importada para este assistido. Importe o PDF da Ficha Disciplinar pelo botão "Importar PDFs": o programa vincula pelos autos citados nela (ou pelo nome, se não houver homônimo na base).</div></div></div>`;
     const kv=(l,v)=>`<div><small>${l}</small>${esc(v||'—')}</div>`;
-    const pillFd=r.fd_sit?`<span class="pill ${r.fd_cor||'none'}">${esc(r.fd_sit)}</span>`:'<span class="muted">—</span>';
-    const rem=`<div class="kv">${kv('Trabalho atual',r.fd_trab)}${kv('Remidos: atestados na ficha / homologados no RSPE',r.fd_remidos)}${kv('Trabalho a atestar',r.fd_atestar)}${kv('Estudo a requerer',r.fd_estudo)}<div><small>Situação da remição</small>${pillFd}</div></div>`;
     const at=(f.atestados||[]).map(a=>`<li><span>${esc(a.data)}</span><span>nº ${esc(a.numero||'s/n')} · <b>${a.dias_trabalhados} trabalhados · ${a.dias_remidos} remidos</b>${a.periodo_inicio?' · '+esc(a.periodo_inicio)+' a '+esc(a.periodo_fim):''}${a.empresa?' · '+esc(a.empresa):''}</span></li>`).join('')||'<li>—</li>';
     const fal=(f.faltas||[]).map(x=>`<li><span>${esc(x.data_fato)}</span><span><span class="tag ${x.situacao==='arquivada'?'ok':x.situacao==='registrada'?'pend':'no'}">${esc(x.situacao)}</span>${esc(x.artigo||'art. n/i')}${x.grave?' · <b>grave</b>':''}${x.padic?' · PADIC '+esc(x.padic):''}${x.data_resultado?' · decisão '+esc(x.data_resultado):''}</span></li>`).join('')||'<li>nenhuma</li>';
     const outros=[...(f.regressoes||[]),...(f.restabelecimentos||[]),...(f.recusa_trabalho||[]),...(f.isolamentos||[])].map(x=>`<li><span>${esc(x.slice(0,10))}</span><span>${esc(x.slice(13))}</span></li>`).join('');
     return `<div class="sec"><h3>Ficha disciplinar (SIAPEN) <span class="muted" style="font-weight:400">· impressa em ${esc(f.data_impressao||'?')} · importada em ${esc(f.importado_em||'?')}</span></h3>
-      ${rem}${faltaSec}
-      <div class="kv" style="margin-bottom:6px">${kv('Unidade',f.unidade)}${kv('Entrada na unidade',f.data_entrada)}${kv('RGI',f.rgi)}${kv('Dias trabalhados (atestados)',String(f.dias_trabalhados_atestados||0))}${kv('Dias remidos (atestados)',String(f.dias_remidos_atestados||0))}</div>
       <h4 style="margin:10px 0 4px;font-size:12px;color:var(--tx2)">Atestados de trabalho / remição</h4><ul class="tl">${at}</ul>
       <h4 style="margin:10px 0 4px;font-size:12px;color:var(--tx2)">Faltas disciplinares</h4><ul class="tl">${fal}</ul>
       ${outros?`<h4 style="margin:10px 0 4px;font-size:12px;color:var(--tx2)">Regressão, restabelecimento, isolamento, recusa de trabalho</h4><ul class="tl">${outros}</ul>`:''}
