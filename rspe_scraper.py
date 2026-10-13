@@ -425,6 +425,16 @@ def tribunal_do_numero(numero):
     return ""
 
 
+def e_rspe_seeu(bruto):
+    """RSPE do SEEU: pelo título ("Relatório da Situação Processual Executória") ou, na impressão sem o título (a tela
+    "processoExecucaoPenal.do" salva em PDF), pelo conjunto de marcas que só ela tem: "PROCESSO DE EXECUÇÃO",
+    "Número Único:", "CÁLCULOS DA PENA" e o rodapé "Processo Eletrônico - SEEU"."""
+    up = (bruto or "").upper().replace("RELATORIO", "RELATÓRIO")
+    if "RELATÓRIO DA SITUAÇÃO PROCESSUAL EXECUTÓRIA" in up:
+        return True
+    return all(k in up for k in ("PROCESSO DE EXECUÇÃO", "NÚMERO ÚNICO:", "CÁLCULOS DA PENA", "PROCESSO ELETRÔNICO - SEEU"))
+
+
 def ler_pdf(caminho):
     """Devolve (texto_limpo, vara, comarca, tribunal, data_geracao)."""
     paginas = []
@@ -449,7 +459,7 @@ def ler_pdf(caminho):
     if m:
         geracao = m.group(1)
 
-    if "RELATÓRIO DA SITUAÇÃO PROCESSUAL EXECUTÓRIA" not in bruto.upper().replace("RELATORIO", "RELATÓRIO"):
+    if not e_rspe_seeu(bruto):
         raise ValueError("não é um RSPE do SEEU")
     limpas = []
     for l in linhas:

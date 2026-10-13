@@ -855,6 +855,11 @@ v7.9.3
     "faltavam para 2/3 do impeditivo" não prevalece sobre o "não" pela
     fração; eventos ordenados por data.
   - Textos: "0 dias", "+1 dia", "Decreto 9.370" sem "None".
+  - Importação: o RSPE impresso sem o título "Relatório da Situação
+    Processual Executória" (tela do processo salva em PDF,
+    "processoExecucaoPenal.do") passa a ser reconhecido pelo cabeçalho,
+    pelos cálculos e pelo rodapé do SEEU; antes era recusado como "não é
+    um RSPE do SEEU".
   - Cumprido pela âncora do SEEU: a custódia que só a ficha mostra (reinício
     depois da última interrupção, já coberto pelo Total Interrupções do SEEU)
     não é mais descontada.

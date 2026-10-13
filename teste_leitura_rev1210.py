@@ -202,6 +202,17 @@ try:
 except ImportError:
     pass
 
+# RSPE impresso sem o título "Relatório da Situação Processual Executória" (tela processoExecucaoPenal.do salva em PDF)
+import rspe_scraper as _rs
+_sem_titulo = ("PODER JUDICIÁRIO\nTJMS - COMARCA DE CAMPO GRANDE\n2ª VARA DE EXECUÇÃO PENAL DE CAMPO GRANDE\nPROCESSO DE EXECUÇÃO\n"
+               "Número Único: 0000000-00.2020.8.12.0001 (ATIVO)\nCÁLCULOS DA PENA:\nRegime Atual: Fechado - ATIVO\n"
+               "Processo Eletrônico - SEEU Gerado em: 13/10/2026 14:17:31 Pág.: 1 de 6")
+ok(_rs.e_rspe_seeu(_sem_titulo), "RSPE sem o título do relatório deve ser aceito")
+ok(_rs.e_rspe_seeu("RELATÓRIO DA SITUAÇÃO PROCESSUAL EXECUTÓRIA\n..."), "RSPE com o título continua aceito")
+ok(not _rs.e_rspe_seeu("PODER JUDICIÁRIO\nPROCESSO DE EXECUÇÃO\nNúmero Único: 0000000-00.2020.8.12.0001\nAtestado de pena"),
+   "documento sem cálculos nem rodapé do SEEU não é RSPE")
+ok(not _rs.e_rspe_seeu("FICHA DISCIPLINAR\nSIAPEN"), "ficha do SIAPEN não é RSPE")
+
 if falhas:
     print("FALHAS (%d):" % len(falhas))
     for f_ in falhas:
