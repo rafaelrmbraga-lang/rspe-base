@@ -82,6 +82,40 @@ async function baixarArquivo(url, arquivo, extra) {
 }
 
 const doSeeu = (u) => /^https:\/\/seeu\.pje\.jus\.br\//.test(u || "");
+const doSiapen = (u) => /^https:\/\/app\.siapen\.ms\.gov\.br(:\d+)?\//.test(u || "");
+
+// pode baixar a ficha do SIAPEN deste nome agora?
+async function podeFicha(nome, lote) {
+  const c = await cfg();
+  const st = await estado();
+  if (!c.ativo) return { ok: false, motivo: "desligada" };
+  if (st.pausadoAte > Date.now()) return { ok: false, motivo: "pausada depois de falhas seguidas; faça login e clique em \"retomar\" no ícone do APTO" };
+  const chave = A.chaveFicha(c, nome, A.hojeISO());
+  if (nome && lote && st.baixados[chave]) return { ok: false, motivo: "já baixada hoje", repetido: true };
+  const naHora = st.log.filter((x) => x.quando > Date.now() - 3600e3 && x.lote).length;
+  if (lote && naHora >= TETO_LOTE_HORA) return { ok: false, motivo: `limite de ${TETO_LOTE_HORA} downloads do lote por hora - pausada` };
+  return { ok: true, chave, cfg: c };
+}
+
+// PDF da ficha (buscado pela página do SIAPEN): grava na pasta da base
+async function gravarFicha(msg, sender) {
+  const nome = String(msg.nome || "").toUpperCase().replace(/\s+/g, " ").trim();
+  const p = await podeFicha(nome, msg.lote);
+  if (!p.ok) return p;
+  if (!msg.b64 || msg.b64.length < 2000 || !msg.b64.startsWith("JVBER")) {
+    await falhou(nome, "o arquivo da ficha não é PDF", p.cfg.base);
+    return { ok: false, motivo: "o arquivo da ficha não é PDF" };
+  }
+  const arquivo = A.caminhoFicha(p.cfg, nome || (msg.cod ? "cod_" + msg.cod : ""), A.hojeISO());
+  try {
+    await baixarArquivo("data:application/pdf;base64," + msg.b64, arquivo,
+      { processo: nome ? "Ficha " + nome : "Ficha", chave: nome ? p.chave : "", base: p.cfg.base, lote: !!msg.lote, manual: !msg.lote, tab: sender.tab && sender.tab.id, frame: sender.frameId });
+  } catch (e) {
+    await falhou(nome, "o Chrome recusou gravar a ficha: " + (e && e.message || e), p.cfg.base);
+    return { ok: false, motivo: "o Chrome recusou gravar a ficha" };
+  }
+  return { ok: true, arquivo };
+}
 
 // pode baixar o RSPE deste processo agora?
 async function podeBaixar(processo, forcar, lote) {
@@ -231,7 +265,13 @@ chrome.downloads.onChanged.addListener(async (d) => {
 chrome.runtime.onMessage.addListener((msg, sender, responder) => {
   (async () => {
     try {
-      const daPagina = sender.tab && doSeeu(sender.url);
+      const daPagina = sender.tab && (doSeeu(sender.url) || doSiapen(sender.url));
+      const doSiapenMsg = sender.tab && doSiapen(sender.url);
+      if (doSiapenMsg && msg.tipo === "podeFicha") {
+        const r = await podeFicha(String(msg.nome || "").toUpperCase(), msg.lote);
+        return responder({ ok: r.ok, motivo: r.motivo, repetido: r.repetido });
+      }
+      if (doSiapenMsg && msg.tipo === "fichaPdf") return responder(await gravarFicha(msg, sender));
       if (msg.tipo === "cfg") return responder(await cfg());
       if (daPagina && msg.tipo === "podeBaixar") {
         const r = await podeBaixar(A.cnj(msg.processo), msg.forcar, msg.lote);
@@ -272,10 +312,33 @@ chrome.runtime.onMessage.addListener((msg, sender, responder) => {
         const c = await cfg();
         if (!c.ativo) return responder({ ok: false, motivo: "A extensão está desligada." });
         if (!c.base) return responder({ ok: false, motivo: "Escolha a base de destino antes de rodar o lote." });
+        const [abaS] = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (abaS && doSiapen(abaS.url)) {
+          // SIAPEN: uma linha por pessoa - "NOME" ou "NOME ; MÃE" (também tabulação, como na coluna de uma planilha)
+          const itens = [];
+          const vistos = new Set();
+          for (const l of String(msg.texto || "").split(/\r?\n/)) {
+            const [nome, mae] = l.split(/\t|;/).map((x) => String(x || "").replace(/\s+/g, " ").trim().toUpperCase());
+            if (!nome || /^\d/.test(nome) || vistos.has(nome + "|" + (mae || ""))) continue;
+            vistos.add(nome + "|" + (mae || ""));
+            itens.push({ nome, mae: mae || "" });
+          }
+          if (!itens.length) return responder({ ok: false, motivo: "Nenhum nome na lista (um por linha; \"NOME ; MÃE\" para separar homônimos)." });
+          const lote = { tab: abaS.id, sistema: "siapen", base: c.base, inicio: Date.now(), rodando: true, itens: itens.map((x) => ({ n: x.nome + (x.mae ? " (mãe: " + x.mae + ")" : ""), status: "fila", msg: "" })) };
+          await chrome.storage.local.set({ lote });
+          let r;
+          try { r = await chrome.tabs.sendMessage(abaS.id, { tipo: "loteFichas", itens }); } catch (e) { r = null; }
+          if (!r || !r.ok) {
+            lote.rodando = false;
+            await chrome.storage.local.set({ lote });
+            return responder({ ok: false, motivo: (r && r.motivo) || "Abra no SIAPEN: Consultas > Consulta Geral de Interno (e recarregue a página se a extensão acabou de ser atualizada)." });
+          }
+          return responder({ ok: true, total: itens.length });
+        }
         const numeros = [...new Set((msg.numeros || []).map((x) => String(x).replace(/\D/g, "")).filter((x) => x.length === 20))];
         if (!numeros.length) return responder({ ok: false, motivo: "Nenhum nº de processo válido (20 dígitos) na lista." });
         const [aba] = await chrome.tabs.query({ active: true, currentWindow: true });
-        if (!aba || !doSeeu(aba.url)) return responder({ ok: false, motivo: "Deixe o SEEU aberto e logado nesta aba." });
+        if (!aba || !doSeeu(aba.url)) return responder({ ok: false, motivo: "Deixe o SEEU (processos) ou o SIAPEN (fichas) aberto e logado nesta aba." });
         const lote = { tab: aba.id, base: c.base, inicio: Date.now(), rodando: true, itens: numeros.map((n) => ({ n: A.cnj(n), status: "fila", msg: "" })) };
         await chrome.storage.local.set({ lote });
         let r;
@@ -289,7 +352,7 @@ chrome.runtime.onMessage.addListener((msg, sender, responder) => {
       }
       if (msg.tipo === "loteParar") {
         const { lote } = await chrome.storage.local.get("lote");
-        if (lote && lote.tab != null) await chrome.tabs.sendMessage(lote.tab, { tipo: "lotePare" }, { frameId: 0 }).catch(() => {});
+        if (lote && lote.tab != null) await chrome.tabs.sendMessage(lote.tab, { tipo: "lotePare" }, lote.sistema === "siapen" ? {} : { frameId: 0 }).catch(() => {});
         return responder({ ok: true });
       }
       if (msg.tipo === "loteEstado") return responder((await chrome.storage.local.get("lote")).lote || null);

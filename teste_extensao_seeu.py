@@ -20,15 +20,15 @@ def ok(cond, msg):
 m = json.load(open(os.path.join(EXT, "manifest.json"), encoding="utf-8"))
 ok(m["manifest_version"] == 3, "manifesto v3")
 ok(sorted(m["permissions"]) == ["downloads", "storage"], "permissões mínimas: %s" % m["permissions"])
-ok(m["host_permissions"] == ["https://seeu.pje.jus.br/*"], "só o SEEU: %s" % m["host_permissions"])
-ok(all(c["matches"] == ["https://seeu.pje.jus.br/seeu/*"] for c in m["content_scripts"]), "content script só no SEEU")
+ok(m["host_permissions"] == ["https://seeu.pje.jus.br/*", "https://app.siapen.ms.gov.br/*"], "só o SEEU e o SIAPEN: %s" % m["host_permissions"])
+ok([c["matches"] for c in m["content_scripts"]] == [["https://seeu.pje.jus.br/seeu/*"], ["https://app.siapen.ms.gov.br/*"]], "scripts só no SEEU e no SIAPEN")
 ok("connect-src 'none'" in m["content_security_policy"]["extension_pages"], "sem conexão de rede própria")
-for f in ["background.js", "content.js", "comum.js", "popup.js", "popup.html"] + list(m["icons"].values()):
+for f in ["background.js", "content.js", "siapen.js", "comum.js", "popup.js", "popup.html"] + list(m["icons"].values()):
     ok(os.path.isfile(os.path.join(EXT, f)), "arquivo %s" % f)
 
 node = shutil.which("node")
 if node:
-    for f in ("background.js", "content.js", "comum.js", "popup.js"):
+    for f in ("background.js", "content.js", "siapen.js", "comum.js", "popup.js"):
         r = subprocess.run([node, "--check", os.path.join(EXT, f)], capture_output=True, text=True)
         ok(r.returncode == 0, "sintaxe de %s: %s" % (f, r.stderr.strip()))
     js = r"""
@@ -62,6 +62,8 @@ t(A.rspeNoHtml(h3) === null, "outra ação não é RSPE");
 t(A.ehPdf(new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2d])) && !A.ehPdf(new Uint8Array([0x3c, 0x68, 0x74, 0x6d, 0x6c])), "PDF x página");
 t(A.chaveDia(cfg, "00445862220178120001", "2026-10-13") === "0044586-22.2017.8.12.0001|2ª VEP|2026-10-13", "chave do dia");
 t(/^\d{4}-\d{2}-\d{2}$/.test(A.hojeISO()), "data de hoje");
+t(A.caminhoFicha(cfg, "joão da silva", "2026-10-13") === "APTO/2ª VEP/FD_JOÃO_DA_SILVA_2026-10-13.pdf", "caminho da ficha: " + A.caminhoFicha(cfg, "joão da silva", "2026-10-13"));
+t(A.chaveFicha(cfg, "joão  da silva", "2026-10-13") === "FD:JOÃO DA SILVA|2ª VEP|2026-10-13", "chave da ficha");
 """
     r = subprocess.run([node, "-e", js, os.path.join(EXT, "comum.js")], capture_output=True, text=True)
     ok(r.returncode == 0 and "FALHA" not in r.stdout, "funções de comum.js: %s %s" % (r.stdout.strip(), r.stderr.strip()))

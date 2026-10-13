@@ -61,6 +61,21 @@ LOTE (lista de processos)
  - Antes de usar em volume, confirme com a Defensoria/TJ as regras de acesso
    automatizado ao SEEU.
 
+FICHA DO SIAPEN
+ - Toda ficha aberta no SIAPEN (Consultas > nome > "Ficha") é salva em
+   Downloads\APTO\<base>\FD_<NOME>_<data>.pdf e entra na base pela pasta
+   vigiada.
+ - Lote de fichas: com a "Consulta Geral de Interno" aberta, cole no "Lote"
+   um nome por linha (ou "NOME ; MÃE", ou duas colunas de planilha: nome e
+   mãe) e clique em "Iniciar". Para cada nome, a extensão digita na busca,
+   escolhe a linha com o nome exato, clica em "Ficha", salva o PDF e fecha a
+   janela da ficha; um nome a cada 8 segundos.
+ - Homônimos: se houver mais de uma pessoa com o mesmo nome, a ficha NÃO é
+   baixada sem o nome da mãe (marca "homônimos"); com a mãe informada, só a
+   pessoa com essa mãe. Nome que não aparece: "não encontrado".
+ - O filtro de status da consulta (Ativo, etc.) é o que estiver escolhido na
+   tela.
+
 CUIDADOS
  - Só age em https://seeu.pje.jus.br e só no processo aberto na tela. Não
    percorre listas, não abre processos sozinha e não clica em nada do SEEU.

@@ -72,12 +72,23 @@
     return bytes && bytes.length > 4 && bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46;
   }
 
+  // ficha do SIAPEN: <raiz>/<base>/FD_<NOME>_<data>.pdf
+  function caminhoFicha(cfg, nome, data) {
+    const raizP = pastaSegura(cfg && cfg.raiz) || "APTO";
+    const base = pastaSegura(cfg && cfg.base);
+    const n = "FD_" + (pastaSegura(String(nome || "").toUpperCase()).replace(/ /g, "_") || "sem_nome") + "_" + (data || hojeISO()) + ".pdf";
+    return base ? `${raizP}/${base}/${n}` : `${raizP}/${n}`;
+  }
+  function chaveFicha(cfg, nome, data) {
+    return `FD:${String(nome || "").toUpperCase().replace(/\s+/g, " ").trim()}|${pastaSegura(cfg && cfg.base)}|${data || hojeISO()}`;
+  }
+
   // chave de "já baixado hoje" (um RSPE por processo, base e dia)
   function chaveDia(cfg, processo, data) {
     return `${cnj(processo)}|${pastaSegura(cfg && cfg.base)}|${data || hojeISO()}`;
   }
 
-  const api = { RE_CNJ, RE_RSPE, ACAO_RSPE, cnj, pastaSegura, hojeISO, caminhoArquivo, urlRspeValida, urlRspeDoId, rspeNoHtml, ehPdf, chaveDia };
+  const api = { RE_CNJ, RE_RSPE, ACAO_RSPE, cnj, pastaSegura, hojeISO, caminhoArquivo, urlRspeValida, urlRspeDoId, rspeNoHtml, ehPdf, chaveDia, caminhoFicha, chaveFicha };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else raiz.APTO = api;
 })(typeof self !== "undefined" ? self : this);

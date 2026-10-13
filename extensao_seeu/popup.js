@@ -123,12 +123,19 @@ async function desenharLote() {
 }
 $("loteArq").onchange = async (e) => {
   const f = e.target.files && e.target.files[0];
-  if (f) $("loteTxt").value = numerosDe(await f.text()).map((x) => x.replace(/^(\d{7})(\d{2})(\d{4})(\d)(\d{2})(\d{4})$/, "$1-$2.$3.$4.$5.$6")).join("\n");
+  if (!f) return;
+  const txt = await f.text();
+  const nums = numerosDe(txt);
+  // com nºs de processo: lista de processos (SEEU); sem nºs: lista de nomes (SIAPEN), como veio
+  $("loteTxt").value = nums.length ? nums.map((x) => x.replace(/^(\d{7})(\d{2})(\d{4})(\d)(\d{2})(\d{4})$/, "$1-$2.$3.$4.$5.$6")).join("\n") : txt.replace(/,/g, ";");
 };
 $("loteIni").onclick = async () => {
-  const nums = numerosDe($("loteTxt").value);
-  if (!nums.length) { $("loteEst").className = "estado erro"; $("loteEst").textContent = "Nenhum nº de processo válido na lista."; return; }
-  const r = await enviar({ tipo: "loteIniciar", numeros: nums });
+  const texto = $("loteTxt").value;
+  const nums = numerosDe(texto);
+  const [aba] = await chrome.tabs.query({ active: true, currentWindow: true });
+  const siapen = aba && /^https:\/\/app\.siapen\.ms\.gov\.br/.test(aba.url || "");
+  if (!siapen && !nums.length) { $("loteEst").className = "estado erro"; $("loteEst").textContent = "Nenhum nº de processo válido na lista."; return; }
+  const r = await enviar({ tipo: "loteIniciar", numeros: nums, texto });
   if (!r.ok) { $("loteEst").className = "estado erro"; $("loteEst").textContent = r.motivo; return; }
   desenharLote();
 };
