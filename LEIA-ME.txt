@@ -865,6 +865,9 @@ v7.9.3
     "faltavam" (o mais favorável), com a outra contagem citada.
   - Comutação sem pena remanescente: a coluna mostra "Não se aplica (sem pena
     remanescente a comutar)" em vez de "sem execução na data".
+  - Painel do assistido, "Benefícios": indulto e comutação mostram só os
+    decretos cabíveis (ex.: "2017 Cabível  2024 Cabível"); sem nenhum,
+    "Nenhum decreto cabível". O detalhe de cada decreto segue na aba Indulto.
 
 v7.9.2
   - Aviso de legislação nova: ao abrir a base, depois da janela de

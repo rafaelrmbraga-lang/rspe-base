@@ -2227,7 +2227,11 @@ const ui = {
     const pts=(r.aud_itens||[]).filter(i=>!i.baixado&&(i.nivel==='alerta'||i.nivel==='verificar'));
     const ptsHtml=pts.length?`<ul class="pts">${pts.slice(0,6).map(i=>`<li class="${i.nivel}">${esc(i.titulo)}</li>`).join('')}${pts.length>6?`<li class="muted">+ ${pts.length-6} na aba Auditoria</li>`:''}</ul>`:'<div class="muted">Nenhum ponto pendente.</div>';
     const crimes=(r.crimes_det||[]).filter(c=>!/^S/i.test(c.extinto||'')).map(c=>`<b>${esc(c.nome_crime||'Crime')}</b> <span class="muted">(${esc(c.dispositivo||'')})</span> · ${esc(c.pena||'')}`).join('<br>');
-    const ind=[['2022',r.i22_txt,r.i22_cor],['2024',r.i24_txt,r.i24_cor],['2025',r.i25_txt,r.i25_cor]].map(x=>`<div><span class="muted">${x[0]}</span> ${pill(x[1],x[2])}</div>`).join('');
+    // Benefícios: só os decretos em que o indulto ou a comutação é cabível ("2005 Cabível; 2019 Cabível")
+    const cabiveis=ben=>{ const L=this.decDe(r).filter(d=>d.s==='cabe'&&d.beneficio===ben);
+      return L.length?'<div style="display:flex;flex-wrap:wrap;gap:4px 12px">'+L.map(d=>`<div><span class="muted">${esc(String(d.ano||d.id))}${/_maes$/.test(d.id||'')?' (Dia das Mães)':''}</span> ${pill('Cabível','verde')}</div>`).join('')+'</div>'
+        :'<div class="muted">Nenhum decreto cabível</div>'; };
+    const ind=cabiveis('Indulto');
     const dmot=(v,mot)=> v&&v!=='—'?v:(mot||'—');
     // só mostra cálculo quando dá (indulto possível / a verificar; prescrição aparente), e só as linhas que sustentam
     const util=(txt)=>(txt||'').split('\n').filter(l=>/^(✔|✓|\?|⚠|Situação em|Cumprido em|Art\. 7º|Crime impeditivo|Pela corrente)/.test(l.trim()) && !/XVI:|art\. 1º: saúde/.test(l)).join('\n');
@@ -2272,8 +2276,8 @@ const ui = {
         <div class="sec"><h3>Benefícios</h3>
           ${lin('Progressão', r.prog&&r.prog!=='—'?dataSit(r.prog, r.prog_sit, r.prog_cor):esc(r.prog_motivo||'—'))}
           ${lin('Livramento', r.liv&&r.liv!=='—'?dataSit(r.liv, r.liv_sit, r.liv_cor):esc(r.liv_motivo||'—'))}
-          ${lin('Indulto', '<div style="display:flex;flex-direction:column;gap:4px">'+ind+'</div>'+(r.imp==='Sim'?`<div class="muted" style="font-size:11.5px;margin-top:3px">Crime impeditivo · ${esc((r.imp_txt||'').replace(/^Sim · /,''))}</div>`:''))}
-          ${lin('Comutação', `<div style="display:flex;flex-direction:column;gap:4px"><div><span class="muted">2024</span> ${pill(r.c24_txt, r.c24_cor)}</div><div><span class="muted">2025</span> ${pill(r.c25_txt, r.c25_cor)}</div></div>`)}
+          ${lin('Indulto', ind+(r.imp==='Sim'?`<div class="muted" style="font-size:11.5px;margin-top:3px">Crime impeditivo · ${esc((r.imp_txt||'').replace(/^Sim · /,''))}</div>`:''))}
+          ${lin('Comutação', cabiveis('Comutação'))}
           ${lin('Prescrição', pill(r.presc_ppe_full||r.presc_ppe, r.presc_ppe_cor)+(['vermelho','amarelo'].includes(r.presc_retro_cor)?`<div style="margin-top:4px"><span class="muted">punitiva</span> ${pill(r.presc_retro_full||r.presc_retro, r.presc_retro_cor)}</div>`:''))}
           ${lin('Extinção', r.ext_sit?pill(r.ext_sit,r.ext_cor)+(r.ext_hipoteses&&r.ext_hipoteses!=='—'?`<div class="muted" style="font-size:12px;margin-top:3px">${penaExt(esc(r.ext_hipoteses))}</div>`:'')+(r.ext_multa?`<div class="muted" style="font-size:12px;margin-top:3px">${esc(r.ext_multa)}</div>`:''):'<span class="muted">—</span>')}
           ${r.falta_sim?lin('Falta (12 meses)', `<span class="falta">${esc(r.falta.replace(/^Sim · /,''))}</span>`):''}
