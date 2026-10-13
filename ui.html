@@ -132,13 +132,13 @@ table.rz{margin-top:8px;width:100%}table.rz td,table.rz th{font-size:12px;vertic
 .pa-ok{display:inline-flex;align-items:center;justify-content:center;margin-left:6px;width:20px;height:18px;border-radius:5px;background:#E4EEF7;color:#1D5C8C;border:1px solid #9DBBD6;vertical-align:1px;cursor:help;flex:none}
 .pa-ok svg{width:12px;height:12px}.pa-ok.quase{background:#FFF6DB;color:#8A6100;border-color:#E2C77A}.pa-ok.feito{background:#1D5C8C;color:#fff;border-color:#1D5C8C}
 #stpop.pa b{color:#1D5C8C}#stpop.pa i{color:#1D5C8C}
-/* triângulo âmbar: divergência impressa no próprio RSPE (SEEU) ou na ficha (SIAPEN), a conferir nos autos */
-.dv-seeu{display:inline-flex;align-items:center;justify-content:center;margin-left:7px;width:17px;height:17px;color:var(--a-dot);vertical-align:-2px;cursor:pointer;flex:none}.dv-seeu svg{width:16px;height:16px;display:block}
-.dv-seeu:hover{color:var(--a-tx)}
+/* triângulo vermelho: divergência impressa no próprio RSPE (SEEU) ou na ficha (SIAPEN), a conferir nos autos */
+.dv-seeu{display:inline-flex;align-items:center;justify-content:center;margin-left:7px;width:17px;height:17px;color:var(--r-dot);vertical-align:-2px;cursor:pointer;flex:none}.dv-seeu svg{width:16px;height:16px;display:block}
+.dv-seeu:hover{color:var(--r-tx)}
 .leg .dv-seeu{margin-left:0;cursor:default}
 #stpop.dv b{color:var(--a-tx)}#stpop.dv i{color:var(--a-dot)}
 .rs-old{display:inline-flex;align-items:center;justify-content:center;margin-left:8px;width:18px;height:18px;border-radius:50%;font-size:12px;font-weight:800;background:#FFF1DB;color:#9A5B00;border:1px solid #DDBF85;vertical-align:1px;cursor:help;flex:none}
-.letra{display:inline-flex;align-items:center;border:1px solid var(--line2);border-radius:10px;background:#fff;height:40px;padding:0 4px 0 12px;box-shadow:var(--shadow)}
+.letra{display:inline-flex;align-items:center;border:1px solid var(--line2);border-radius:10px;background:#fff;height:40px;padding:0 4px;box-shadow:var(--shadow)}
 .letra .lb{font-size:12px;color:var(--tx3);margin-right:6px;white-space:nowrap}
 .letra button{display:inline-flex;align-items:center;justify-content:center;min-width:34px;height:32px;border-radius:8px;font-weight:700;color:var(--tx)}
 .letra button:hover{background:#F1F2EF}.letra button:disabled{color:#C0C6D0;background:none;cursor:default}.letra .s{font-size:12px}.letra .g{font-size:18px}
@@ -345,6 +345,8 @@ tr.sub td{padding:0 0 0 0;background:#FFFFFF;cursor:default}tr.sub:hover td{back
 /* tela inicial (sem base) */
 .welcome{position:fixed;inset:0;background:var(--bg);display:none;place-items:center;z-index:25}
 .btn-calc{position:relative;z-index:30}
+/* com a ficha do assistido aberta, a calculadora volta para baixo do véu (não cobre o cabeçalho da gaveta) */
+body.drawer-on .btn-calc{z-index:auto}
 .welcome.on{display:grid}
 .loading{position:fixed;inset:0;background:var(--bg);display:none;place-items:center;z-index:40}
 .loading.on{display:grid}
@@ -372,6 +374,10 @@ tr.sub td{padding:0 0 0 0;background:#FFFFFF;cursor:default}tr.sub:hover td{back
 .menu{position:absolute;top:44px;left:0;background:var(--card);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow2);padding:6px;display:none;z-index:15;min-width:200px}
 .menu.on{display:block}.menu button{display:block;width:100%;text-align:left;padding:8px 10px;border-radius:8px;font-size:13px}.menu button:hover{background:#F4F6F3}
 .rel{position:relative}
+/* botão Exportar: um menu com Excel, PDF da aba, relatórios e providências */
+.expm .car{font-size:10px;margin-left:-2px;color:var(--tx3)}
+#mExp{min-width:300px;top:42px}#mExp button{display:flex;align-items:flex-start;gap:10px;padding:8px 10px}
+#mExp svg{width:16px;height:16px;flex:none;margin-top:2px;color:var(--tx2)}#mExp b{display:block;font-weight:600;color:var(--tx)}#mExp small{display:block;color:var(--tx3);font-size:11.5px;margin-top:1px}
 .ln{display:flex;gap:12px;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--ln,#ECEEEB)}
 .ln:last-child{border-bottom:0}.ln .lr{flex:0 0 118px;color:var(--tx3,#6B726D);font-size:12.5px;padding-top:2px}.ln .lv{flex:1;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .pts{margin:0;padding-left:0;list-style:none}.pts li{padding:5px 0 5px 12px;border-left:3px solid #C8CEC8;margin-bottom:4px}.pts li.alerta{border-color:var(--r-dot,#A33A36)}.pts li.verificar{border-color:var(--a-dot,#C49A3A)}
@@ -682,6 +688,39 @@ thead th{font-weight:700;background:#F0F1F2;color:#333;border-bottom:1px solid #
 /* animações de entrada dispensáveis */
 .box{animation:none}
 
+/* aba Dados da Base: os gráficos e quadros dos relatórios em PDF da base */
+.bd-nav{display:flex;flex-wrap:wrap;gap:6px;padding:8px 24px 0}.bd-nav span{padding:4px 10px;border:1px solid var(--line2);border-radius:3px;cursor:pointer;font-size:12.5px;background:#fff;color:var(--tx2)}.bd-nav span:hover{border-color:var(--pri);color:var(--pri)}
+.bd-wrap{padding:6px 22px 30px;max-width:1280px}
+.bd-s{padding:14px 0 6px;border-bottom:1px solid var(--line)}.bd-s:last-child{border-bottom:0}
+.bd-s h2{font-size:17px;margin:4px 0 4px;color:var(--pri2)}.bd-s h2 span{color:var(--pri);margin-right:10px}
+.bd-s h3{font-size:14px;margin:18px 0 2px;color:var(--tx)}
+.bd-sub{color:var(--tx2);font-size:12.5px;margin:0 0 10px;max-width:980px}.bd-nota{color:var(--tx2);font-size:12px;margin:6px 0 0;max-width:980px}
+.bd-num{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin:6px 0 12px}
+.bd-num>div{padding:8px 12px 10px;border-left:1px solid var(--line);border-top:3px solid transparent}.bd-num>div:first-child{border-left:0}
+.bd-num b{display:block;font-size:24px;line-height:1.15;color:var(--tx)}.bd-num span{display:block;font-size:12.5px;color:var(--tx2);margin-top:2px}.bd-num small{display:block;font-size:11.5px;color:var(--tx3);margin-top:3px}
+.bd-num .c-r{border-top-color:var(--r-dot)}.bd-num .c-a{border-top-color:var(--a-dot)}.bd-num .c-o{border-top-color:var(--o-dot)}.bd-num .c-g{border-top-color:var(--g-dot)}
+.bd-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 24px;margin:6px 0}.bd-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px 20px;margin:6px 0 10px}.bd-1{margin:6px 0 10px}
+.bd-g h4{margin:6px 0 6px;font-size:13px;color:var(--tx)}
+.bd-rw{display:flex;gap:14px;align-items:flex-start}.bd-rosca{flex:none}.bd-3 .bd-rw{flex-direction:column;align-items:center}
+.bd-leg{border-collapse:collapse;font-size:12.5px;width:100%;flex:1;min-width:0}.bd-leg th{font-size:11px;color:var(--tx3);font-weight:600;text-align:right;padding:2px 4px;border-bottom:1px solid var(--line2)}
+.bd-leg td{padding:3px 4px;border-bottom:1px solid var(--line);vertical-align:top}.bd-leg td:nth-child(n+2){text-align:right;white-space:nowrap;width:1%}.bd-leg td:nth-child(2){font-weight:700}
+.bd-leg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+.bd-t{border-collapse:collapse;font-size:12.5px;margin:8px 0 6px;width:100%}.bd-t th{text-align:left;font-size:11.5px;color:var(--tx2);font-weight:600;padding:6px 8px;border-bottom:2px solid var(--pri);background:#F7F8F6}
+.bd-t td{padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}.bd-t td:not(:first-child):not(.tx){white-space:nowrap}.bd-t.num td:not(:first-child),.bd-t.num th:not(:first-child){text-align:right}
+.bd-t td.tx{color:var(--tx2);font-size:12px;min-width:200px}.bd-t tr.tot td{background:#F7F8F6}
+.bd-t tr[class^="f-"] td:first-child{box-shadow:inset 3px 0 0 var(--c-dot)}.bd-t tr.f-r td:first-child{box-shadow:inset 3px 0 0 var(--r-dot)}.bd-t tr.f-a td:first-child{box-shadow:inset 3px 0 0 var(--a-dot)}.bd-t tr.f-g td:first-child{box-shadow:inset 3px 0 0 var(--g-dot)}
+.bd-hb{display:grid;grid-template-columns:minmax(180px,34%) 1fr 64px;gap:10px;align-items:center;font-size:12.5px;margin:3px 0}.bd-hb span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--tx2)}
+.bd-hb i{display:block;height:12px;background:#EEF1EE;border-radius:2px}.bd-hb em{display:block;height:100%;background:#3E8E62;border-radius:2px}.bd-hb b{text-align:right}
+.bd-cart{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 28px;margin:6px 0 10px}.bd-cat{font-size:13px;margin-bottom:4px}
+.bd-bar{display:flex;height:14px;border-radius:2px;overflow:hidden;background:#EEF1EE}.bd-bar i{display:block;height:100%;border-right:1px solid #fff}
+.bd-cl{display:flex;flex-wrap:wrap;gap:3px 14px;font-size:12px;color:var(--tx2);margin-top:5px}.bd-cl i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px}.bd-cl b{color:var(--tx)}
+@media (max-width:1200px){.bd-3{grid-template-columns:1fr 1fr}.bd-cart{grid-template-columns:1fr}}
+.bd-wrap thead th{position:static;cursor:default;text-transform:none;letter-spacing:0;user-select:auto}
+.bd-wrap .bd-leg thead th{background:none;border-bottom:1px solid var(--line2);padding:2px 4px;font-size:11px;color:var(--tx3)}
+.bd-wrap .bd-leg tbody td{padding:3px 4px;font-size:12.5px;font-weight:400;line-height:1.3;vertical-align:top;border-bottom:1px solid var(--line)}.bd-wrap .bd-leg tbody td:nth-child(2){font-weight:700}
+.bd-wrap .bd-t thead th{padding:6px 8px;font-size:11.5px;background:#F7F8F6;border-bottom:2px solid var(--pri)}
+.bd-wrap .bd-t tbody td{padding:6px 8px;font-size:12.5px;font-weight:400;vertical-align:top}.bd-wrap .bd-t tbody td:first-child{padding-left:10px}
+.bd-1 .bd-rw{max-width:1000px}
 /* aba Dados prisionais: mapa do estado à esquerda, indicadores à direita, tabela das unidades abaixo */
 .geo-head{display:flex;align-items:center;gap:16px;padding:12px 24px 0}.geo-head>div:first-child{display:flex;flex-direction:column;gap:2px}
 .geo-head b{font-size:15px;color:var(--pri2)}.geo-head .muted{font-size:12px}
@@ -743,12 +782,14 @@ tbody tr.geo-on td{background:var(--pri-soft)!important}
 .cw-tabs{display:flex;gap:4px;align-items:center;margin-bottom:8px}.cw-tabs>span:not(.sp):not(.mini){padding:5px 12px;border:1px solid var(--line2);border-radius:3px;background:#fff;cursor:pointer}.cw-tabs>span.on{background:#1D5A3B;color:#fff;border-color:#1D5A3B}
 .cw-g{display:grid;grid-template-columns:1fr 270px;gap:12px}
 .cw-g .calc{grid-template-columns:1fr 1fr}
-.btn-calc svg{width:16px;height:16px}
+.bar .btn.btn-calc{padding:7px 10px}.btn-calc svg{width:22px;height:22px}
 
 .calc .clin label{display:inline;margin:0}
 .cw-tabs>span.on:not(.sp):not(.mini){background:#1D5A3B;color:#fff;border-color:#1D5A3B}
 #calcWin .cw-h .muted{font-size:12px}.calc .err{color:var(--r-tx);font-size:12px;margin-top:6px}
 .calc .nota-c{color:var(--tx2);font-size:11.5px;margin-top:8px}
+/* doze abas: em telas de até 1500 px, menos folga entre elas, para caberem numa linha */
+@media (max-width:1500px){.tabs{gap:0;padding-left:16px;padding-right:16px}.tab{padding-left:6px;padding-right:6px;gap:4px;font-size:12.5px}.tab svg{width:16px;height:16px}}
 </style>
 </head>
 <body>
@@ -783,16 +824,20 @@ tbody tr.geo-on td{background:var(--pri-soft)!important}
   <button class="btn pri" onclick="api('importar_pdfs')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Importar PDFs</button>
   <button class="btn" onclick="api('importar_pasta')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Importar pasta</button>
   <div class="sep"></div>
-  <button class="btn" onclick="ui.modalExportar('xlsx')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4zM4 10h16M10 4v16"/></svg>Exportar Excel</button>
-  <button class="btn" onclick="ui.modalRelatorios()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h8l4 4v14H6z"/><path d="M9 13h6M9 17h6M9 9h2"/></svg>Relatórios</button>
-  <button class="btn" onclick="ui.modalExportar('pdf')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/></svg>Exportar PDF</button>
+  <div class="rel expm"><button class="btn" id="btnExp" aria-haspopup="menu" title="Excel, PDF da aba, relatórios em PDF e providências" onclick="ui.menu('mExp')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>Exportar<span class="car">▾</span></button>
+    <div class="menu" id="mExp" role="menu">
+      <button role="menuitem" onclick="ui.modalExportar('xlsx')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4zM4 10h16M10 4v16"/></svg><span><b>Excel</b><small>as abas da base, numa planilha</small></span></button>
+      <button role="menuitem" onclick="ui.modalExportar('pdf')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/></svg><span><b>PDF da aba</b><small>a tabela da aba aberta, em paisagem</small></span></button>
+      <button role="menuitem" onclick="ui.modalRelatorios()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h8l4 4v14H6z"/><path d="M9 13h6M9 17h6M9 9h2"/></svg><span><b>Relatórios em PDF</b><small>individuais, geral da base, remição detalhada</small></span></button>
+      <button role="menuitem" onclick="ui.modalProvidencias()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg><span><b>Relatório de providências</b><small>pedidos e ofícios marcados, por mês</small></span></button>
+    </div></div>
   <div class="sep"></div>
   <div class="sel" id="modoWrap" style="display:none"><select id="modo" onchange="ui.prescModo=this.value;ui.filtroCor=null;ui.aberto=null;ui.render()"><option value="pe">Pretensão executória</option><option value="pp">Pretensão punitiva</option></select></div>
   <div class="sel"><select id="filtro" onchange="ui.filtroSel=this.value;ui.render()"></select></div>
   <div class="spacer"></div>
   <!-- modelos de petição desativados nesta versão (MODELOS_ATIVOS) -->
-  <span class="letra" title="Tamanho da letra (vale para todas as telas; fica gravado neste computador)"><span class="lb">Letra</span><button class="s" id="letraMenos" title="Diminuir" onclick="ui.letra(-1)">A</button><button class="g" id="letraMais" title="Aumentar" onclick="ui.letra(1)">A</button></span>
-  <button class="btn btn-calc" onclick="ui.cpAbrir()" title="Calculadora de penas: soma de penas, período entre datas, término e frações (abre em janela, em qualquer aba)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8M8 11h2M12 11h2M8 15h2M12 15h2M8 18h2M12 18h4"/></svg>Calculadora</button>
+  <span class="letra" title="Tamanho da letra (vale para todas as telas; fica gravado neste computador)"><button class="s" id="letraMenos" title="Diminuir" onclick="ui.letra(-1)">A</button><button class="g" id="letraMais" title="Aumentar" onclick="ui.letra(1)">A</button></span>
+  <button class="btn btn-calc" onclick="ui.cpAbrir()" title="Calculadora de penas" aria-label="Calculadora de penas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4.5" y="2.5" width="15" height="19" rx="2.2"/><rect x="7.5" y="5.5" width="9" height="4" rx=".8"/><rect x="7.3" y="12" width="2.6" height="2" rx=".4" fill="currentColor" stroke="none"/><rect x="10.7" y="12" width="2.6" height="2" rx=".4" fill="currentColor" stroke="none"/><rect x="14.1" y="12" width="2.6" height="2" rx=".4" fill="currentColor" stroke="none"/><rect x="7.3" y="15.3" width="2.6" height="2" rx=".4" fill="currentColor" stroke="none"/><rect x="10.7" y="15.3" width="2.6" height="2" rx=".4" fill="currentColor" stroke="none"/><rect x="14.1" y="15.3" width="2.6" height="2" rx=".4" fill="currentColor" stroke="none"/><rect x="7.3" y="18.4" width="2.6" height="2" rx=".4" fill="currentColor" stroke="none"/><rect x="10.7" y="18.4" width="2.6" height="2" rx=".4" fill="currentColor" stroke="none"/><rect x="14.1" y="18.4" width="2.6" height="2" rx=".4" fill="currentColor" stroke="none"/></svg></button>
   <button class="btn ghost" onclick="ui.ajuda()">Legenda e método</button>
 </div>
 
@@ -839,7 +884,8 @@ async function api(m, ...a){ try{ const r = await API()[m](...a); if(r && r.regi
 
 const ui = {
   dados:{registros:[],abas:[],base:'',hoje:''}, aba:'geral', filtro:'', filtroCor:null, filtroSel:'todas', ordem:{}, sel:null, aberto:null,
-  carregar(d){ this.dados=d; if(document.getElementById('calcWin')) this.cpLista().then(()=>this.cpDesenha()); if(!this._geoChecado){ this._geoChecado=true; Promise.resolve(API().geo_precisa()).then(p=>{ if(p) this.geoAtualizar(true); }).catch(()=>{}); } const w=document.getElementById('welcome');
+  carregar(d){ this.dados=d; this._bdChave=null;  // a aba Dados da Base reconta na próxima vez que for desenhada
+    if(document.getElementById('calcWin')) this.cpLista().then(()=>this.cpDesenha()); if(!this._geoChecado){ this._geoChecado=true; Promise.resolve(API().geo_precisa()).then(p=>{ if(p) this.geoAtualizar(true); }).catch(()=>{}); } const w=document.getElementById('welcome');
     if(this.aberto){ const ra=(d.registros||[]).find(x=>x.id===this.aberto); if(ra&&ra._leve) setTimeout(()=>this.completo(ra.id),0); }
     if(d.sem_base){ w.classList.add('on'); document.getElementById('copia').innerHTML=''; document.getElementById('baseNome').textContent='—'; document.getElementById('baseN').textContent='0';
       document.getElementById('recentes').innerHTML=(d.recentes||[]).map(r=>`<div onclick="ui.abrirBase(${jsa(r.caminho)},${jsa(r.nome)})"><span>${esc(r.nome)}</span><small>${esc(r.caminho)}</small></div>`).join('')||'<div style="cursor:default;color:var(--tx3)">Nenhuma base recente</div>';
@@ -903,13 +949,15 @@ const ui = {
     if(this.aba==='quadro'){ const selE=document.getElementById('filtro'); selE.parentElement.style.display='none'; selE.dataset.aba=''; document.getElementById('legenda').innerHTML=this.divLegenda(); document.getElementById('subtabs').classList.remove('on'); document.getElementById('modoWrap').style.display='none'; return this.renderQuadro(); }
     if(this.aba==='geo'){ const selE=document.getElementById('filtro'); selE.parentElement.style.display='none'; selE.dataset.aba=''; document.getElementById('legenda').innerHTML=''; document.getElementById('subtabs').classList.remove('on');
       document.getElementById('modoWrap').style.display='none'; return this.renderGeo(); }
+    if(this.aba==='base'){ const selE=document.getElementById('filtro'); selE.parentElement.style.display='none'; selE.dataset.aba=''; document.getElementById('legenda').innerHTML=''; document.getElementById('subtabs').classList.remove('on');
+      document.getElementById('modoWrap').style.display='none'; return this.renderBase(); }
     if(this.aba==='teses'){ const selE=document.getElementById('filtro'); selE.parentElement.style.display='none'; selE.dataset.aba=''; document.getElementById('legenda').innerHTML='';
       document.getElementById('modoWrap').style.display='none'; return this.renderTeses(); }
     // resumo
     const st=document.getElementById('stats'); const rot=this.dados.rotulos[spec.legenda];
     const nVelho=rs.filter(r=>this.idadeRSPE(r)>this.RSPE_VELHO).length; if(!nVelho) this.filtroVelho=false;
     const chipVelho=nVelho?`<div class="stat velho ${this.filtroVelho?'on':''}" title="RSPE desatualizado: emitido há mais de ${this.RSPE_VELHO} dias. Vale baixar um novo no SEEU · clique para filtrar" onclick="ui.filtroVelho=!ui.filtroVelho;ui.render()"><i class="dot"></i><b>${nVelho}</b><span>RSPE antigo</span></div>`:'';
-    if(!spec.cor || spec.sem_stats){ const nExt=rs.filter(r=>r.geral_cor==='azul').length; st.innerHTML=`<div class="info">${pl(rs.length,'assistido','assistidos')}${nExt?` · <span class="pill azul">${nExt} com pena extinta registrada</span>`:''}. As abas seguintes mostram cada marco com prazo, cor e falta nos últimos 12 meses.</div>`+chipVelho; }
+    if(!spec.cor || spec.sem_stats){ const rsf=rs.filter(r=>this.passaFiltro(r,spec)), nExt=rsf.filter(r=>r.geral_cor==='azul').length; st.innerHTML=`<div class="info">${rsf.length!==rs.length?rsf.length+' de ':''}${pl(rs.length,'assistido','assistidos')}${nExt?` · <span class="pill azul">${nExt} com pena extinta registrada</span>`:''}. As abas seguintes mostram cada marco com prazo, cor e falta nos últimos 12 meses.</div>`+chipVelho; }
     else{ const cont={}; const temPed=this.abaPedido(spec); let nPed=0;
       // pedido feito (e a situação não mudou depois): sai da contagem da situação e entra em "Pedido feito"
       // os cartões seguem o filtro de situação da caixa e o de RSPE antigo (a contagem é a do que a tabela pode mostrar)
@@ -975,7 +1023,7 @@ const ui = {
     linhas=linhas.filter(r=>this.passaFiltro(r,spec)); if(this.filtroVelho) linhas=linhas.filter(r=>this.idadeRSPE(r)>this.RSPE_VELHO);
     return linhas; },
   // há filtro de situação ativo na aba aberta? (as abas Indulto, Quadro e Jurisprudências não têm)
-  filtroAtivo(){ if(['ind','quadro','teses','geo'].includes(this.aba)) return false; const spec=this.spec(); if(!spec) return false;
+  filtroAtivo(){ if(['ind','quadro','teses','geo','base'].includes(this.aba)) return false; const spec=this.spec(); if(!spec) return false;
     return this.filtroCor!==null || (!!this.filtroSel&&this.filtroSel!=='todas') || !!this.filtroVelho; },
   passaFiltro(r,spec){ const f=this.filtroSel||'todas'; if(f==='todas') return true;
     if(f.startsWith('b:')){ const p=f.split(':'); const ks=p[1]==='*'?['i22','i24','c24','i25','c25']:[p[1]];
@@ -1005,6 +1053,10 @@ const ui = {
       case 'atencao': return r.aud_status==='atencao';
       case 'pedfeito': return !!(r.pedidos||{})[spec.id];
       case 'pedsem': return !(r.pedidos||{})[spec.id];
+      case 'st_ok': return !!r.st_ok;
+      case 'st_quase': return !!r.st_quase;
+      case 'pa_ok': return !!r.pa_ok;
+      case 'pa_quase': return !!r.pa_quase;
       case 'ok': return spec.id==='fd' ? cor==='verde' : (r.aud_status==='ok' && cor!=='azul');  // as extintas têm cartão próprio
     } return true; },
   expandir(id){ if(this.aberto===id){ this.aberto=null; return this.render(); } this.completo(id).then(()=>{ this.aberto=id; this.render(); }); },
@@ -1636,7 +1688,7 @@ const ui = {
   contaCor(a,rs){ if(a.id==='ind') return this.contaInd(rs) || ''; rs=rs.filter(r=>this.pedPendente(r,a.id)); const k = a.id==='presc' ? 'presc_ppe_cor' : a.cor;
     // mesma regra dos cartões (ui.cor): o pedido com a situação mudada depois conta onde o cartão o mostra
     const corDe=r=>a.id==='presc'?r[k]:this.cor(r,a); return rs.filter(r=>{ const c=corDe(r); return c==='vermelho'||c==='vencido'; }).length || ''; },
-  ABAS_EXTRA:[{id:'geo',titulo:'Dados prisionais'},{id:'teses',titulo:'Jurisprudências'},{id:'quadro',titulo:'Quadro do Usuário'}],
+  ABAS_EXTRA:[{id:'geo',titulo:'Dados prisionais'},{id:'base',titulo:'Dados da Base'},{id:'teses',titulo:'Jurisprudências'},{id:'quadro',titulo:'Quadro do Usuário'}],
   // abas: ícone (traço fino; verde na aba aberta) e nome curto
   ICONE:{
     geral:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
@@ -1649,8 +1701,9 @@ const ui = {
     aud:'<path d="M12 22s8-3.6 8-10V5l-8-3-8 3v7c0 6.4 8 10 8 10z"/><path d="m9 12 2 2 4-4"/>',
     teses:'<path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1z"/><path d="M7 21h10M12 3v18M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/>',
     quadro:'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 7v7M12 7v4M16 7v10"/>',
-    geo:'<path d="M3 21h18M5 21V8l7-4 7 4v13"/><path d="M9 21v-6h6v6M9 11h.01M12 11h.01M15 11h.01"/>'},
-  CURTO:{ind:'Indulto',fd:'Ficha',teses:'Jurisprudências',quadro:'Quadro do Usuário',geo:'Dados prisionais'},
+    geo:'<path d="M3 21h18M5 21V8l7-4 7 4v13"/><path d="M9 21v-6h6v6M9 11h.01M12 11h.01M15 11h.01"/>',
+    base:'<path d="M21.2 15.9A10 10 0 1 1 8 2.8"/><path d="M22 12A10 10 0 0 0 12 2v10z"/>'},
+  CURTO:{ind:'Indulto',fd:'Ficha',teses:'Jurisprudências',quadro:'Quadro do Usuário',geo:'Dados prisionais',base:'Dados da Base'},
   // rodapé: dica da aba aberta
   DICA:{geral:'O ícone ↗ ao lado do assistido abre a ficha completa · "Histórico" compara os RSPE importados',
     prog:'Clique no título da coluna para ordenar · a caixa em "Pedido" marca o pedido feito',
@@ -1660,6 +1713,7 @@ const ui = {
     ext:'"Linha do tempo" mostra períodos, fugas e término',
     fd:'Clique no assistido para ver trabalho, estudo e remição a atestar',
     aud:'Cada alerta traz a fundamentação para copiar · "Dar baixa" (com o motivo) tira o alerta da linha · os baixados ficam no "Histórico de alertas"',
+    base:'Os mesmos números dos relatórios em PDF da base · a busca restringe os assistidos contados · passe o mouse no gráfico para ver o número',
     teses:'Pesquise por palavras e filtre por tema · "Copiar ementa" leva a referência',
     quadro:'Arraste os cartões entre as colunas · clique no cartão para editar · botão direito: mover ou arquivar · o ícone de quadro em cada linha envia o assistido para cá'},
   // RSPE desatualizado: emitido há mais de 60 dias (etiqueta no nome e filtro na faixa de resumo)
@@ -1800,7 +1854,7 @@ const ui = {
   // saída temporária: verde = elegível; amarelo = requisitos atendidos com ponto a conferir; verde preenchido = pedido feito.
   // Clicar registra o pedido (ou o edita) e leva ao Registro para o SAP
   stHtml(r){ return this.divHtml(r)+this.stIco(r)+this.paHtml(r); },
-  // triângulo âmbar ao lado do nome: divergência no próprio RSPE/ficha (pena, número da ação, prisão x fato, data da prisão, CPF).
+  // triângulo vermelho ao lado do nome: divergência no próprio RSPE/ficha (pena, número da ação, prisão x fato, data da prisão, CPF).
   // Some quando todas as divergências são baixadas na Auditoria; o clique abre o assistido na aba Auditoria
   DIV_LEG:'Divergência no SEEU/SIAPEN',
   DIV_SVG:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.9 1.8 18.5A2 2 0 0 0 3.5 21.5h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13.5"/><circle cx="12" cy="17.2" r=".6" fill="currentColor"/></svg>',
@@ -2185,6 +2239,88 @@ const ui = {
     const fr=t=>{ t=t.trim().toLowerCase().replace(ACR,m=>m.toUpperCase()); return t.charAt(0).toUpperCase()+t.slice(1); };
     const kw=head.split(/\s[–-]\s|\.\s+(?=[A-ZÁ-Ú]{3,})/).map(x=>x.replace(/\.$/,'').trim()).filter(x=>x&&x.length<70&&!GEN.test(x)).slice(0,6).map(fr);
     return {kw, corpo:corpo.replace(/^I\.\s*CASO EM EXAME\s*/,'').trim()}; },
+  // ---------- Dados da Base: os números e gráficos dos relatórios em PDF da base, na tela ----------
+  // tudo vem contado do Python (rspe_relatorio.blocos_geral, remicao_por_origem/por_unidade e os cartões da exportação):
+  // aqui só se desenha, para os números serem os mesmos do PDF
+  BD_TOK:{vermelho:'r',vencido:'r',laranja:'o',amarelo:'a',verde:'g',cinza:'c',azul:'b'},
+  bdCor(c){ const t=this.BD_TOK[c]; return t?`var(--${t}-dot)`:(c==='__ped'?'var(--b-dot)':'#C8CEC8'); },
+  async bdCarregar(){ const vis=this.visiveis(); const ids=this.filtro?vis.map(r=>r.id):null; const chave=(ids?ids.join('|'):'*')+'#'+(this.dados.registros||[]).length;
+    if(this._bdPed===chave) return; this._bdPed=chave;
+    try{ const d=await API().dados_base(ids); if(this._bdPed!==chave) return; this._bd=d&&!d.erro?d:{erro:(d&&d.erro)||'Dados indisponíveis.'}; this._bdChave=chave; }
+    catch(e){ this._bd={erro:'Dados indisponíveis: '+e}; }
+    this._bdPed=null; if(this.aba==='base') this.renderBase(true); },
+  bdIr(id){ const el=document.getElementById(id); if(el) el.scrollIntoView({behavior:'smooth',block:'start'}); },
+  // números em destaque: o primeiro é o valor; o segundo, o que ele conta; o terceiro, o detalhe
+  bdNum(lista,cores){ cores=cores||{}; return `<div class="bd-num">${lista.map((x,k)=>`<div class="${cores[k]?'c-'+(this.BD_TOK[cores[k]]||''):''}"><b>${esc(x[0])}</b><span>${esc(x[1])}</span>${x[2]?`<small>${esc(x[2])}</small>`:''}</div>`).join('')}</div>`; },
+  // rosca: total no centro, percentual escrito na fatia de 8% ou mais, legenda com Nº e % (como no PDF)
+  bdRosca(g){ if(!g) return ''; const F=g.fatias||[], tot=g.total||0;
+    if(!tot) return `<div class="bd-g"><h4>${esc(g.titulo)}</h4><p class="muted">Sem dados.</p></div>`;
+    const S=150, c=S/2, R=70, ri=R*0.56, rm=(R+ri)/2, w=R-ri, C=2*Math.PI*rm; let a=0, arcos='', txt='', fios='';
+    F.forEach(([rot,v,cor,p])=>{ const f=v/tot, L=C*f;
+      arcos+=`<circle cx="${c}" cy="${c}" r="${rm}" fill="none" stroke="${cor}" stroke-width="${w}" stroke-dasharray="${L} ${C-L}" stroke-dashoffset="${-C*a}" transform="rotate(-90 ${c} ${c})"><title>${esc(rot)}: ${v} (${p}%)</title></circle>`;
+      if(F.length>1){ const t=2*Math.PI*a; fios+=`<line x1="${c+ri*Math.sin(t)}" y1="${c-ri*Math.cos(t)}" x2="${c+R*Math.sin(t)}" y2="${c-R*Math.cos(t)}" stroke="#fff" stroke-width="1.5"/>`; }
+      if(f>=0.08){ const m=2*Math.PI*(a+f/2); txt+=`<text x="${c+rm*Math.sin(m)}" y="${c-rm*Math.cos(m)+4}" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">${p}%</text>`; }
+      a+=f; });
+    const svg=`<svg class="bd-rosca" viewBox="0 0 ${S} ${S}" width="${S}" height="${S}" role="img" aria-label="${esc(g.titulo)}">${arcos}${fios}${txt}<text x="${c}" y="${c+3}" text-anchor="middle" font-size="20" font-weight="700" fill="var(--tx)">${tot}</text>${g.total_rot?`<text x="${c}" y="${c+19}" text-anchor="middle" font-size="10.5" fill="var(--tx2)">${esc(g.total_rot)}</text>`:''}</svg>`;
+    const leg=`<table class="bd-leg"><thead><tr><th></th><th>Nº</th><th>%</th></tr></thead><tbody>${F.map(([rot,v,cor,p])=>`<tr><td><i style="background:${cor}"></i>${esc(rot)}</td><td>${v}</td><td>${p}%</td></tr>`).join('')}</tbody></table>`;
+    return `<div class="bd-g"><h4>${esc(g.titulo)}</h4><div class="bd-rw">${svg}${leg}</div>${g.nota?`<p class="bd-nota">${esc(g.nota)}</p>`:''}</div>`; },
+  // colunas verticais (empilhadas quando há mais de uma série), valor sobre a coluna, rótulo embaixo
+  bdColunas(g,alt){ if(!g) return ''; const cats=g.categorias||[], ser=g.series||[]; const tots=cats.map((_,i)=>ser.reduce((s,x)=>s+(x[1][i]||0),0));
+    if(!cats.length||!tots.some(Boolean)) return `<div class="bd-g"><h4>${esc(g.titulo)}</h4><p class="muted">Sem dados.</p></div>`;
+    const W=Math.max(720,cats.length*(cats.length>10?64:110)), H=alt||200, quebra=t=>{ const ls=[]; let at=''; String(t).replace(/\//g,'/ ').split(' ').forEach(p=>{ if((at+' '+p).trim().length>15&&at){ ls.push(at); at=p; } else at=(at+' '+p).trim(); }); return ls.concat(at); };
+    const rots=cats.map(quebra), rh=14*Math.max(...rots.map(r=>r.length))+6, y0=H-rh, top=20, area=y0-top, mx=Math.max(...tots)||1, p=W/cats.length, bw=Math.min(p*0.56,46);
+    let s=''; for(let k=1;k<=4;k++){ const y=y0-area*k/4; s+=`<line x1="0" x2="${W}" y1="${y}" y2="${y}" stroke="var(--line)" stroke-width="1"/>`; }
+    s+=`<line x1="0" x2="${W}" y1="${y0}" y2="${y0}" stroke="var(--line2)"/>`;
+    cats.forEach((cat,i)=>{ const x=p*i+(p-bw)/2; let yb=y0;
+      ser.forEach(([nome,vals,cor])=>{ const v=vals[i]||0, h=area*v/mx; if(v) s+=`<rect x="${x}" y="${yb-h}" width="${bw}" height="${h}" fill="${cor}" stroke="#fff" stroke-width="1"><title>${esc(cat)} · ${esc(nome)}: ${v}${esc(g.sufixo||'')}</title></rect>`; yb-=h; });
+      s+=`<text x="${x+bw/2}" y="${yb-5}" text-anchor="middle" font-size="12" font-weight="700" fill="var(--tx)">${tots[i]}${esc(g.sufixo||'')}</text>`;
+      rots[i].forEach((l,j)=>{ s+=`<text x="${p*i+p/2}" y="${y0+15+14*j}" text-anchor="middle" font-size="11.5" fill="var(--tx2)">${esc(l)}</text>`; }); });
+    const leg=ser.length>1?`<div class="provleg">${ser.map(([n,_,c])=>`<span><i style="background:${c}"></i>${esc(n)}</span>`).join('')}</div>`:'';
+    return `<div class="bd-g"><h4>${esc(g.titulo)}</h4>${leg}<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" style="display:block;max-width:100%;height:auto">${s}</svg>${g.nota?`<p class="bd-nota">${esc(g.nota)}</p>`:''}</div>`; },
+  // quadro: primeira coluna em texto, as demais em número; cores = filete da linha (1 = primeira linha de dados)
+  bdTab(cab,linhas,cores,cls){ cores=cores||{}; return `<table class="bd-t ${cls||''}"><thead><tr>${cab.map(c=>`<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>${linhas.map((l,i)=>`<tr class="${cores[i+1]?'f-'+(this.BD_TOK[cores[i+1]]||''):''}">${l.map((v,j)=>`<td>${j?esc(v):`<b>${esc(v)}</b>`}</td>`).join('')}</tr>`).join('')}</tbody></table>`; },
+  bdSec(id,num,titulo,sub,corpo){ return `<section class="bd-s" id="${id}"><h2>${num?`<span>${num}</span>`:''}${esc(titulo)}</h2>${sub?`<p class="bd-sub">${esc(sub)}</p>`:''}${corpo}</section>`; },
+  renderBase(pronto){ const st=document.getElementById('stats'), card=document.getElementById('card'), D=this._bd;
+    const vis=this.visiveis(), chave=(this.filtro?vis.map(r=>r.id).join('|'):'*')+'#'+(this.dados.registros||[]).length;
+    if(!pronto && this._bdChave!==chave) this.bdCarregar();
+    const secs=[['bd1','Perfil'],['bd2','Trabalho e disciplina'],['bd3','Situação executória'],['bd4','Auditoria'],['bd5','Remição'],['bd6','Cartões das abas'],['bd7','Providências']];
+    st.innerHTML=`<div class="geo-head"><div><b>Dados da Base</b><span class="muted">${D&&D.geral?`${D.n<D.total?D.n+' de '+D.total+' assistidos (pela busca)':pl(D.n,'assistido','assistidos')} · ${D.geral.nf} com ficha disciplinar (SIAPEN) · RSPEs gerados entre ${esc(D.geral.periodo[0])} e ${esc(D.geral.periodo[1])} · os mesmos números do relatório geral e da remição detalhada em PDF`:'Os números e gráficos dos relatórios em PDF da base, sem gerar o arquivo.'}</span></div>
+      <div class="geo-acts"><button class="btn" onclick="ui.modalRelatorios()" title="Gera os relatórios em PDF (geral, remição detalhada, individuais)">Relatórios em PDF…</button></div></div>
+      <div class="bd-nav">${secs.map(([id,t])=>`<span onclick="ui.bdIr('${id}')">${t}</span>`).join('')}</div>`;
+    if(!D || this._bdChave!==chave && !D.geral){ card.innerHTML=`<div class="empty"><div><b>Contando a base…</b></div></div>`; return; }
+    if(D.erro){ card.innerHTML=`<div class="empty"><div><b>Dados da Base</b>${esc(D.erro)}</div></div>`; return; }
+    if(!D.n){ card.innerHTML=`<div class="empty"><div><b>Nenhum assistido</b>Importe RSPEs ou ajuste a busca.</div></div>`; return; }
+    const G=D.geral, R=D.rem;
+    const par=(a,b)=>`<div class="bd-2">${this.bdRosca(a)}${this.bdRosca(b)}</div>`, trio=gs=>`<div class="bd-3">${gs.map(g=>this.bdRosca(g)).join('')}</div>`;
+    let h='';
+    h+=this.bdSec('bd1','1','Perfil da população','', this.bdNum(G.p1_num)+par(G.r1_1,G.r1_2)+par(G.r1_3,G.r1_4)+(G.r1_5?`<div class="bd-1">${this.bdRosca(G.r1_5)}</div>`:'')+`<div class="bd-1">${this.bdRosca(G.r1_6)}</div>`);
+    h+=this.bdSec('bd2','2','Trabalho, conduta e disciplina',G.p2_sub, this.bdNum(G.p2_num,G.p2_cores)+par(G.r2_1,G.r2_2)+par(G.r2_3,G.r2_4)
+      +`<h3>${esc(G.s2_5[0])}</h3><p class="bd-sub">${esc(G.s2_5[1])}</p>`+this.bdNum(G.p2_5_num,G.p2_5_cores));
+    const t33=G.t3_3, l33=t33.linhas.map(l=>[l[0]+' · Decreto '+l[1]].concat(l.slice(2))).concat(t33.demais?[t33.demais]:[]);
+    h+=this.bdSec('bd3','3','Situação jurídico-executória',G.p3_sub, `<div class="bd-1">${this.bdColunas(G.c3_1,210)}</div>`+this.bdTab(G.t3_1.cab,G.t3_1.linhas,G.t3_1.cores,'num')
+      +`<h3>${esc(G.s3_2[0])}</h3><p class="bd-sub">${esc(G.s3_2[1])}</p>`+trio(G.r3_2)+this.bdTab(G.t3_2.cab,G.t3_2.linhas,{},'num')+`<p class="bd-nota">${esc(G.n3_2)}</p>`
+      +`<h3>${esc(G.s3_3[0])}</h3><p class="bd-sub">${esc(G.s3_3[1])}</p>`+(G.c3_3?`<div class="bd-1">${this.bdColunas(G.c3_3,200)}</div>`:'')+this.bdTab(t33.cab,l33,t33.cores,'num')+G.n3_3.map(t=>`<p class="bd-nota">${esc(t)}</p>`).join('')
+      +`<h3>${esc(G.s3_4[0])}</h3>`+trio(G.r3_4)+this.bdTab(G.t3_4.cab,G.t3_4.linhas,G.t3_4.cores,'num'));
+    h+=this.bdSec('bd4','4','Inconsistências do cálculo (Auditoria)',G.p4_sub, this.bdNum(G.p4_num,G.p4_cores)+(G.t4.linhas.length?this.bdTab(G.t4.cab,G.t4.linhas,{},'num'):''));
+    // remição detalhada: quadros 1 e 2 (sem nomes)
+    const uns=R.unidades||[], mxU=Math.max(1,...uns.map(u=>u.total_n||0));
+    const barU=uns.length?`<div class="bd-g"><h4>Dias a remir por unidade prisional</h4>${uns.slice(0,10).map(u=>`<div class="bd-hb"><span title="${esc(u.un)}">${esc(u.un)}</span><i><em style="width:${(100*(u.total_n||0)/mxU).toFixed(1)}%"></em></i><b>${esc(u.total)}</b></div>`).join('')}${uns.length>10?`<p class="bd-nota">As ${uns.length} unidades estão no quadro abaixo.</p>`:''}</div>`:'';
+    h+=this.bdSec('bd5','5','Remição detalhada',`Origem de cada dia a remir, pela ficha disciplinar (SIAPEN) x RSPE · ${pl(R.com_ficha,'assistido','assistidos')} com ficha de ${D.n} na seleção. O quadro por assistido sai no PDF "Remição detalhada".`,
+      this.bdNum([[R.ass,'assistidos com remição a requerer (com a estimativa)',R.ass_exatos+' em vermelho na aba Ficha'],[R.total,'dias a remir (sem o trabalho em curso)','']])
+      +`<h3>Por origem</h3>`+`<table class="bd-t"><thead><tr><th>Origem</th><th>Assistidos</th><th>Itens</th><th>Dias a remir</th><th>Como foi calculado</th><th>Providência</th></tr></thead><tbody>${R.origens.map(o=>`<tr><td><b>${esc(o.rot)}</b></td><td>${o.ass}</td><td>${o.itens}</td><td><b>${esc(o.dias)}</b>${o.fora?' <span class="muted">(fora do total)</span>':''}</td><td class="tx">${esc(o.como)}</td><td class="tx">${esc(o.prov)}</td></tr>`).join('')}<tr class="tot"><td><b>Total</b></td><td><b>${R.ass}</b></td><td></td><td><b>${esc(R.total)}</b></td><td></td><td></td></tr></tbody></table>`
+      +(uns.length?`<h3>Por unidade prisional (onde o trabalho, o estudo ou a leitura aconteceu)</h3><div class="bd-1">${barU}</div><table class="bd-t num"><thead><tr><th>Unidade</th><th>Assistidos</th>${R.cols.map(c=>`<th>${esc(c)}</th>`).join('')}<th>Total</th></tr></thead><tbody>${uns.map(u=>`<tr><td><b>${esc(u.un)}</b></td><td>${u.ass}</td>${u.dias.map(v=>`<td>${esc(v)}</td>`).join('')}<td><b>${esc(u.total)}</b></td></tr>`).join('')}<tr class="tot"><td><b>Total</b></td><td></td>${R.un_total.map(v=>`<td><b>${esc(v)}</b></td>`).join('')}</tr></tbody></table>`:''));
+    // cartões de cada aba, contados como na exportação em PDF
+    h+=this.bdSec('bd6','6','Cartões de resumo das abas','Contados como no PDF de cada aba: quem tem o pedido marcado (e a situação não mudou) sai da cor e entra em "Pedido feito"; os sem cor (sem prazo próximo) ficam em "Demais".',
+      `<div class="bd-cart">${D.cartoes.map(c=>{ const soma=c.itens.reduce((s,x)=>s+x.n,0), resto=Math.max(0,D.n-soma), tot=Math.max(1,D.n);
+        return `<div class="bd-ca"><div class="bd-cat"><b>${esc(c.titulo)}</b></div><div class="bd-bar">${c.itens.filter(x=>x.n).map(x=>`<i style="width:${(100*x.n/tot).toFixed(2)}%;background:${this.bdCor(x.cor)}" title="${esc(x.rot)}: ${x.n}"></i>`).join('')}</div>
+          <div class="bd-cl">${c.itens.map(x=>`<span><i style="background:${this.bdCor(x.cor)}"></i><b>${x.n}</b> ${esc(x.rot)}</span>`).join('')}${resto?`<span><i style="background:#E3E6E2"></i><b>${resto}</b> Demais</span>`:''}</div></div>`; }).join('')}</div>`);
+    // providências: as mesmas linhas e gráficos do "Relatório de providências" (base inteira)
+    const todas=this.provLinhas(), mes=(this.dados.hoje||'').slice(3), L=todas.filter(x=>x.data.slice(3)===mes), tipos=this.PROV_TIPOS;
+    h+=this.bdSec('bd7','7','Providências','Pedidos e ofícios marcados na coluna Pedido de todas as abas, pela data da providência (base inteira). Mês corrente e os últimos 12 meses; o período pode ser escolhido no "Relatório de providências".',
+      todas.length?`<div class="provr"><div><b>${todas.length}</b><span>providências no total</span></div><div><b>${L.length}</b><span>neste mês</span></div>${tipos.map(([t,_,r])=>`<div><b>${todas.filter(x=>x.tipo===t).length}</b><span>${r}</span></div>`).join('')}</div>
+        <div class="provg"><div><h4>Benefícios com mais providências (todo o período)</h4>${this.provGrafRanking(todas)}</div><div><h4>Providências por mês</h4>${this.provGrafMeses(todas,mes)}</div></div>
+        <p><span class="mini" onclick="ui.modalProvidencias()">Abrir o relatório de providências</span></p>`:'<p class="muted">Nenhuma providência marcada.</p>');
+    const y=card.scrollTop; card.innerHTML=`<div class="bd-wrap">${h}</div>`; if(pronto) card.scrollTop=y; },
   renderTeses(){ if(!this._teses){ this.tesCarregar(); }
     document.getElementById('subtabs').classList.remove('on');
     document.getElementById('stats').innerHTML=`<div class="tesbar"><div class="search has"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="tq" placeholder="Pesquisar tese, ementa, relator ou número (ex.: remição ENEM, falta grave bis in idem)" value="${esc(this.tesQ)}" oninput="ui.tesBusca(this.value)"></div>
@@ -2312,23 +2448,11 @@ const ui = {
           return `<div class="sec"><h3>Pedidos feitos</h3><div class="peds">${ks.map(k=>{ const x=P[k], mud=x.ref&&x.ref!==this.pedRef(r,k);
             return `<div class="pedl"><span class="pck ok ${mud?'mud':''}" style="width:16px;height:16px;font-size:11px">✓</span><span class="pn">${this.pedNome(k,r).replace(/^./,c=>c.toUpperCase())}</span><b>${esc(x.data)}</b><span class="muted" style="white-space:nowrap">${({pedido:'pedido nos autos',oficio:'ofício à unidade',outro:'outra providência'})[x.tipo]||''}</span><span class="po">${esc(x.obs||'')}${mud?` <span style="color:var(--a-tx);font-weight:600">· ⚠ situação mudou depois do pedido</span>`:''}</span><span class="mini" onclick="ui.pedidoAbrir(${jsa(r.id)},'${k}')">Editar</span></div>`; }).join('')}</div></div>`; })()}
         <div class="sec"><h3>Crimes em execução</h3><div class="kv one"><div>${crimes||'—'}</div></div></div>
-        ${this.fichaHtml(r)}
         ${calc?`<div class="sec"><h3>Cálculos do programa</h3>${calc}</div>`:''}
-        <div class="sec"><span class="mini" onclick="ui.relatorioUm(${jsa(r.id)})">Relatório em PDF</span> <span class="mini" style="color:var(--r-tx)" onclick="ui.confirmarRemocao(${jsa(r.id)})">Remover este assistido da base</span></div>
+        <div class="sec"><span class="mini" onclick="ui.relatorioUm(${jsa(r.id)})">Relatório em PDF</span> ${r.ficha?` <span class="mini" title="Desvincula a ficha disciplinar (SIAPEN) importada para este assistido" onclick="ui.removerFicha(${jsa(r.id)})">Remover ficha</span>`:''} <span class="mini" style="color:var(--r-tx)" onclick="ui.confirmarRemocao(${jsa(r.id)})">Remover este assistido da base</span></div>
       </div>`;
-    document.getElementById('drawer').classList.add('on'); document.getElementById('veil').classList.add('on'); },
-  fecharDrawer(){ document.getElementById('drawer').classList.remove('on'); document.getElementById('veil').classList.remove('on'); },
-  fichaHtml(r){ const f=r.ficha;
-    if(!f) return `<div class="sec"><h3>Ficha disciplinar (SIAPEN)</h3><div class="kv one"><div class="muted">Nenhuma ficha importada para este assistido. Importe o PDF da Ficha Disciplinar pelo botão "Importar PDFs": o programa vincula pelos autos citados nela (ou pelo nome, se não houver homônimo na base).</div></div></div>`;
-    const kv=(l,v)=>`<div><small>${l}</small>${esc(v||'—')}</div>`;
-    const at=(f.atestados||[]).map(a=>`<li><span>${esc(a.data)}</span><span>nº ${esc(a.numero||'s/n')} · <b>${a.dias_trabalhados} trabalhados · ${a.dias_remidos} remidos</b>${a.periodo_inicio?' · '+esc(a.periodo_inicio)+' a '+esc(a.periodo_fim):''}${a.empresa?' · '+esc(a.empresa):''}</span></li>`).join('')||'<li>—</li>';
-    const fal=(f.faltas||[]).map(x=>`<li><span>${esc(x.data_fato)}</span><span><span class="tag ${x.situacao==='arquivada'?'ok':x.situacao==='registrada'?'pend':'no'}">${esc(x.situacao)}</span>${esc(x.artigo||'art. n/i')}${x.grave?' · <b>grave</b>':''}${x.padic?' · PADIC '+esc(x.padic):''}${x.data_resultado?' · decisão '+esc(x.data_resultado):''}</span></li>`).join('')||'<li>nenhuma</li>';
-    const outros=[...(f.regressoes||[]),...(f.restabelecimentos||[]),...(f.recusa_trabalho||[]),...(f.isolamentos||[])].map(x=>`<li><span>${esc(x.slice(0,10))}</span><span>${esc(x.slice(13))}</span></li>`).join('');
-    return `<div class="sec"><h3>Ficha disciplinar (SIAPEN) <span class="muted" style="font-weight:400">· impressa em ${esc(f.data_impressao||'?')} · importada em ${esc(f.importado_em||'?')}</span></h3>
-      <h4 style="margin:10px 0 4px;font-size:12px;color:var(--tx2)">Atestados de trabalho / remição</h4><ul class="tl">${at}</ul>
-      <h4 style="margin:10px 0 4px;font-size:12px;color:var(--tx2)">Faltas disciplinares</h4><ul class="tl">${fal}</ul>
-      ${outros?`<h4 style="margin:10px 0 4px;font-size:12px;color:var(--tx2)">Regressão, restabelecimento, isolamento, recusa de trabalho</h4><ul class="tl">${outros}</ul>`:''}
-      <div style="margin-top:8px"><span class="mini" onclick="ui.removerFicha(${jsa(r.id)})">Remover ficha</span></div></div>`; },
+    document.getElementById('drawer').classList.add('on'); document.getElementById('veil').classList.add('on'); document.body.classList.add('drawer-on'); },
+  fecharDrawer(){ document.getElementById('drawer').classList.remove('on'); document.getElementById('veil').classList.remove('on'); document.body.classList.remove('drawer-on'); },
   async removerFicha(id){ if(confirm('Remover a ficha disciplinar vinculada a '+id+'?')){ await api('remover_ficha',id); this.abrir(id); } },
   async peticao(id){ const r=this.dados.registros.find(x=>x.id===id); if(!r) return; const lm=await API().listar_modelos(); const ms=(lm&&lm.modelos)||[]; const defs=(lm&&lm.defensores)||[]; if(!ms.length){ this.toast('Nenhum modelo .docx na pasta "modelos" ao lado do programa.'); return; }
     if(!defs.length){ this.toast('Cadastre ao menos um defensor (botão "Defensores") antes de gerar a petição.'); this.defensores(); return; }
@@ -2826,7 +2950,7 @@ function esc(s){ return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&l
 function cmp(a,b){ const da=dt(a), db=dt(b); if(da&&db) return da-db; if(da) return -1; if(db) return 1; return String(a??'').localeCompare(String(b??''),'pt',{numeric:true}); }
 function dt(v){ const m=/^(\d{2})\/(\d{2})\/(\d{4})/.exec(String(v??'')); return m? new Date(+m[3],+m[2]-1,+m[1]).getTime():null; }
 window.addEventListener('resize',()=>{ clearTimeout(ui._rz); ui._rz=setTimeout(()=>{ if(document.getElementById('tlv').classList.contains('on')) (ui._tlvModo==='ext'?ui.renderExtTL():ui.renderTLV()); },200); });
-document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ ui.fecharDrawer(); ui.fecharModal(); ui.fecharTLV(); } });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ ui.fecharDrawer(); ui.fecharModal(); ui.fecharTLV(); document.querySelectorAll('.menu.on').forEach(m=>m.classList.remove('on')); } });
 document.addEventListener('click',e=>ui.tlClick(e));
 ui.letraAplicar();
 // atalho para a busca de assistido (Ctrl+K ou /): em bases grandes, achar o nome sem rolar a lista
