@@ -177,6 +177,38 @@ api._janela.fila = [TMP]
 r2 = api.relatorios(ids, True, True, False, True, ids[:1], False)
 ok(r2 and r and r2.get("caminho") != r.get("caminho"), "relatórios no mesmo minuto vão para outra pasta")
 
+# ------------------------------------------------------------------ 6b. aba Dados da Base: os mesmos números do relatório geral em PDF
+import json  # noqa: E402
+import rspe_relatorio as rrel  # noqa: E402
+import rspe_export as rx  # noqa: E402
+import rspe_view as rv  # noqa: E402
+d = api.dados_base(ids)
+ok(d and not d.get("erro") and d["n"] == len(ids) and json.dumps(d, ensure_ascii=False), "Dados da Base: %s" % (d or {}).get("erro"))
+G = rrel.blocos_geral(api._modelos)
+for k in ("p1_num", "p2_num", "p2_5_num", "p4_num", "t3_1", "t3_2", "t3_3", "t3_4", "t4", "c3_1"):
+    ok(json.loads(json.dumps(d["geral"][k])) == json.loads(json.dumps(G[k])), "Dados da Base = relatório geral (%s)" % k)
+for k in ("r1_1", "r1_2", "r1_3", "r1_4", "r1_6", "r2_1", "r2_2", "r2_3", "r2_4"):
+    g = G[k]
+    fat = rrel._rosca_fatias(g["pares"], g["max_fatias"], g["cores"], g["ordenar"])
+    ok([list(x[:3]) for x in d["geral"][k]["fatias"]] == [list(x) for x in fat] and d["geral"][k]["total"] == sum(v for _r, v, _c in fat),
+       "Dados da Base: fatias da rosca %s iguais às do PDF" % k)
+spec = rx.specs_export("prog")[0]
+cont = rx.contagem_cartoes(spec, api._modelos)
+cp = next(c for c in d["cartoes"] if c["aba"] == "prog")
+ok(all(it["n"] == cont.get(it["cor"], 0) for it in cp["itens"]), "Dados da Base: cartões da Progressão iguais aos do PDF da aba")
+ok(api.dados_base(ids[:1])["n"] == 1, "Dados da Base segue a busca (só os ids visíveis)")
+ok(all(any(f[0] == "st_ok" for f in a["filtros"]) and any(f[0] == "pa_ok" for f in a["filtros"]) for a in rv.ABAS if a["id"] != "ind")
+   and not any(f[0] in ("st_ok", "pa_ok") for f in rv.ABA_POR_ID["ind"]["filtros"]), "filtro: saída temporária e progressão antecipada (menos no Indulto)")
+UI = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "ui.html"), encoding="utf-8").read()
+ok("{id:'base',titulo:'Dados da Base'}" in UI and "API().dados_base(" in UI, "aba Dados da Base na barra de abas")
+ok(all(x in UI for x in ("id=\"mExp\"", "ui.modalExportar('xlsx')", "ui.modalExportar('pdf')", "ui.modalRelatorios()", "ui.modalProvidencias()"))
+   and ">Exportar Excel</button>" not in UI and ">Exportar PDF</button>" not in UI, "um botão Exportar com o menu das saídas")
+ok("fichaHtml(" not in UI and "Ficha disciplinar (SIAPEN)</h3>" not in UI and "ui.removerFicha(" in UI, "painel do assistido sem a seção da ficha, com Remover ficha")
+ok('aria-label="Calculadora de penas"' in UI and '<span class="lb">Letra</span>' not in UI and "body.drawer-on .btn-calc" in UI,
+   "barra: A/A sem 'Letra', calculadora só com o ícone e sob a gaveta aberta")
+ok(".dv-seeu{display:inline-flex;align-items:center;justify-content:center;margin-left:7px;width:17px;height:17px;color:var(--r-dot)" in UI,
+   "triângulo de divergência em vermelho")
+
 # ------------------------------------------------------------------ 7. cópia de segurança e restauração (inclusive de versão anterior)
 api._fazer_copia()
 cps = api.copias_listar().get("copias") or []
@@ -296,5 +328,5 @@ shutil.rmtree(TMP, ignore_errors=True)
 if falhas:
     print("FALHOU (sistema):\n  " + "\n  ".join(falhas))
     sys.exit(1)
-print("ok: sistema (base, importação, histórico, ficha, lista, exportação, relatórios, cópias, salvar como, pasta vigiada) em %.0f s"
+print("ok: sistema (base, importação, histórico, ficha, lista, exportação, relatórios, Dados da Base, barra e filtros, cópias, salvar como, pasta vigiada) em %.0f s"
       % (time.time() - T0))

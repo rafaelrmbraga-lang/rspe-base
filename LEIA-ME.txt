@@ -7,7 +7,7 @@ As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na vers�
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
-Janela com dez abas (interface em HTML dentro de uma janela nativa; no
+Janela com doze abas (interface em HTML dentro de uma janela nativa; no
 Windows 10/11 usa o WebView2 que já vem no sistema), alimentada pelos RSPE
 (PDF) dos assistidos e, se houver, pela Ficha Disciplinar do SIAPEN. Aceita
 centenas de PDFs de uma vez ("Importar PDFs…" com seleção múltipla, "Importar
@@ -99,6 +99,16 @@ DUPLICADOS
   nome de um RSPE da base mas com outra mãe (ou com homônimos) fica guardada
   pelo nome e o aviso diz "NÃO VINCULADA" com o motivo: conferir.
 
+BARRA SUPERIOR
+  Importar PDFs, Importar pasta, Exportar (um botão com o menu: Excel das
+  abas da base; PDF da aba; Relatórios em PDF - individuais, geral da base
+  e remição detalhada; Relatório de providências), o seletor de filtro da
+  aba, o tamanho da letra (A pequeno / A grande), a calculadora de penas
+  (ícone de calculadora; "Calculadora de penas" ao passar o mouse) e
+  "Legenda e método". Abas, na ordem: Geral, Progressão, Livramento,
+  Indulto, Prescrição, Extinção, Ficha, Auditoria, Dados prisionais, Dados
+  da Base, Jurisprudências e Quadro do Usuário.
+
 ABAS (colunas)
   Geral        Nome, Nº da execução, Regime, Progressão, Livramento, Término.
                Linha azul = execução extinta. Ícone ao lado do nome (em todas
@@ -172,8 +182,8 @@ SITUAÇÃO NAS ABAS DE PRAZO
   suspensa" ou "Não se aplica" (cinza, sem previsão).
 
 FILTROS
-  Seletor "Situação" ao lado dos botões (as abas Geral, Indulto,
-  Jurisprudências e Quadro não têm):
+  Seletor "Situação" ao lado dos botões (as abas Indulto, Dados prisionais,
+  Dados da Base, Jurisprudências e Quadro não têm):
    - Progressão e Livramento: vencidas (data já passada); vence em até 30,
      60 ou 90 dias (os três incluem "Vence hoje"); não iniciou o
      cumprimento; pena interrompida / suspensa; não se aplica (cumprida /
@@ -188,6 +198,15 @@ FILTROS
    - Ficha disciplinar: remição a requerer, conferir remição / sem atestado /
      estudo, em ordem, sem ficha.
    - Auditoria: com alertas, pontos a verificar, guia em ordem.
+   - Em todas as abas com o seletor, menos Indulto (e as abas Dados
+     prisionais, Dados da Base, Jurisprudências e Quadro, que não têm
+     seletor), e também na Geral: "Faz jus à saída temporária" e "Faz jus
+     à progressão antecipada" (todos os requisitos atendidos: os mesmos
+     ícones verde e azul ao lado do nome) e, à parte, "Saída temporária:
+     requisitos a conferir" e "Progressão antecipada: requisitos a
+     conferir" (nenhum requisito falha, mas algum depende de conferência:
+     o ícone amarelo). Os cartões de resumo e a exportação com o filtro
+     seguem a escolha; na Geral, a faixa mostra "N de M assistidos".
   Os cartões de resumo também filtram (pela cor). O número da execução é
   copiado com um clique (na tabela ou na ficha).
 
@@ -238,19 +257,21 @@ CLIQUES E FICHA DO ASSISTIDO
   clique na linha abre a ficha do assistido (painel lateral). Nas abas
   Prescrição, Ficha disciplinar e Auditoria, o clique expande a linha; a
   ficha abre pelo link "Abrir ficha completa". A ficha do assistido mostra:
-  pena, uma linha por benefício, falta (12 meses), pontos de atenção (alertas
-  e pontos a verificar não baixados), crimes em execução e, recolhidos, os
-  a ficha disciplinar (conduta, remidos atestados na ficha x homologados
-  no RSPE, trabalho a atestar, estudo a requerer, situação da remição, o
-  detalhe da falta dos 12 meses - "Sim" ou "A apurar" -, trabalho,
-  atestados e faltas disciplinares, com "Remover ficha") e, recolhidos, os
-  cálculos do programa (indulto e comutação possíveis ou a verificar,
-  prescrição aparente ou iminente). Clique no título da
+  pena, data-base, uma linha por benefício, falta (12 meses), pedidos
+  feitos, crimes em execução e, recolhidos, os cálculos do programa
+  (indulto e comutação possíveis ou a verificar). A ficha disciplinar
+  (atestados, faltas, regressões, isolamentos) fica na aba Ficha; no pé do
+  painel, ao lado de "Relatório em PDF" e "Remover este assistido da
+  base", aparece "Remover ficha" quando há ficha vinculada. Com o painel
+  aberto, o botão da calculadora fica sob o véu, sem cobrir o cabeçalho
+  do painel. Clique no título da
   coluna para ordenar (a coluna Situação ordena pelos dias, do mais
   vencido ao mais distante). A busca filtra todas as abas.
 
 EXPORTAR
-  Ao clicar em Exportar Excel / Exportar PDF, uma janela pergunta QUAIS abas
+  O botão "Exportar" abre o menu com as saídas: Excel, PDF da aba,
+  Relatórios em PDF e Relatório de providências.
+  Em Excel ou PDF da aba, uma janela pergunta QUAIS abas
   exportar (no PDF vem marcada só a aba que está aberta; no Excel, todas mais a
   aba "Completo" com todos os campos). A busca restringe o que sai; com um
   filtro de situação, cartão de cor ou "RSPE antigo" ativo na aba aberta, a
@@ -264,7 +285,7 @@ EXPORTAR
   resumo por cor, tabela colorida, legenda e numeração de página.
 
 RELATÓRIOS EM PDF
-  O botão "Relatórios" gera, numa pasta "Relatorios <data hora>" (gerado de
+  "Exportar" > "Relatórios em PDF" gera, numa pasta "Relatorios <data hora>" (gerado de
   novo no mesmo minuto, "... (2)"): um PDF por assistido escolhido (lista
   com busca sem acento e "Todos"/"Nenhum"), o relatório geral da base
   (perfil, benefícios, remição e alertas, com a prescrição punitiva e a
@@ -285,6 +306,22 @@ RELATÓRIOS EM PDF
   imputação e resultado), sem figura de linha do tempo. Na tabela de
   benefícios, a observação repete o complemento da tela ("sem pedido no
   RSPE - requerer") e o término mostra "Extinção cabível" como na aba.
+
+DADOS DA BASE (aba)
+  Os números e gráficos dos relatórios em PDF da base, na tela, sem gerar
+  o arquivo, em seções curtas: 1. Perfil da população (idade, regime, pena,
+  juízo, unidade, incidência penal); 2. Trabalho, conduta e disciplina
+  (conduta, trabalho, PADIC, faltas no RSPE, pendências de remição);
+  3. Situação jurídico-executória (indicadores, prazos de progressão,
+  livramento e término, indulto e comutação por decreto, prescrição e
+  extinção); 4. Auditoria (alertas mais frequentes); 5. Remição detalhada
+  (por origem e por unidade prisional, sem nomes); 6. Cartões de resumo de
+  cada aba, contados como no PDF da aba; 7. Providências (as do relatório
+  de providências). As contas são as mesmas funções do relatório geral e da
+  remição detalhada (rspe_relatorio.blocos_geral, remicao_por_origem e
+  remicao_por_unidade): os números da tela e do PDF são os mesmos. A busca
+  restringe os assistidos contados, como nos relatórios; as providências
+  são sempre da base inteira, como no relatório de providências.
 
 CRIMES
   Mostrados só pelo artigo: "art. 33 Lei 11.343/06 (x2)", "art. 180 CP".
@@ -655,7 +692,7 @@ ARQUIVOS
   rspe_auditoria.py  auditoria do RSPE
   rspe_ficha.py      ficha disciplinar (leitura e remição)
   rspe_regras.py     leitura da base jurídica
-  rspe_relatorio.py  relatórios em PDF (individual e geral)
+  rspe_relatorio.py  relatórios em PDF (individual e geral) e contas da aba Dados da Base
   rspe_export.py     exportação Excel e PDF
   rspe_peticao.py    petições por modelo .docx (desativadas)
   base_juridica.json base jurídica (editável)
@@ -727,7 +764,7 @@ PROGRESSÃO ANTECIPADA (ícone azul de degraus ao lado do nome)
   Progressão: com o pedido marcado, o ícone fica azul preenchido e o pedido
   entra no Registro para o SAP como progressão.
 
-CALCULADORA DE PENAS (botão "Calculadora" no topo, em qualquer aba)
+CALCULADORA DE PENAS (ícone de calculadora no topo, em qualquer aba)
   Abre uma janela móvel, que continua aberta ao trocar de aba. Baseada na
   Calculadora de penas 2.1 (Guilherme Benages Alcantara, 2001, distribuição
   livre), com os percentuais do art. 112 da LEP.
@@ -883,20 +920,45 @@ v7.9.3
   - Painel do assistido: a conduta da ficha aparece em negrito ao lado do
     nome (Ótima e Boa em verde; Má e "Responde PADIC" em vermelho; Sem lapso e
     as demais em cinza). Saíram do painel os "Pontos de atenção" (estão na aba
-    Auditoria), a lista de vínculos de trabalho e os cartões da ficha; a ficha
-    mostra os atestados de trabalho/remição e as faltas disciplinares.
+    Auditoria), a lista de vínculos de trabalho, os cartões da ficha e a
+    seção "Ficha disciplinar (SIAPEN)" inteira (atestados, faltas,
+    regressão, restabelecimento, isolamento, recusa): o detalhe fica na
+    aba Ficha. "Remover ficha" passa para o pé do painel, ao lado de
+    "Relatório em PDF", só quando há ficha.
+  - Prescrição executória: a prisão lançada só para outras ações da mesma
+    execução, enquanto a ação do crime ainda não estava em cumprimento,
+    suspende o prazo desse crime (CP, art. 116, p. único); o primeiro evento
+    ou somatório que inclui a ação interrompe (art. 117, V). Vale também para
+    o art. 28 da Lei 11.343/06, antes contado só pelos 2 anos corridos.
   - Progressão antecipada: a janela passa de 60 para 90 dias antes da data
     do SEEU, e o trabalho em curso deixa de ser exigido.
-  - Divergência no SEEU/SIAPEN: "!" amarelo ao lado do nome (todas as abas,
-    painel do assistido e quadro), com a lista ao passar o mouse e a
+  - Divergência no SEEU/SIAPEN: triângulo vermelho ao lado do nome (todas
+    as abas, painel do assistido e quadro), com a lista ao passar o mouse e a
     explicação na legenda do rodapé, quando o próprio documento não fecha:
     pena total menor que a soma das ações sem comutação/indulto/suspensão/
     extinção/unificação; pena da ação diferente da soma dos crimes; duas
     ações com o mesmo número; prisão lançada mais de 30 dias antes do fato
     da ação vinculada; ficha sem data da prisão; CPF da ficha diferente do
     RSPE (ambos válidos). Cada uma é alerta na Auditoria, com baixa própria:
-    baixadas todas, o "!" some; a baixa vale enquanto a divergência for a
+    baixadas todas, o triângulo some; a baixa vale enquanto a divergência for a
     mesma, inclusive depois de reimportar o RSPE.
+  - Aba "Dados da Base", depois de "Dados prisionais": os gráficos e quadros
+    do relatório geral, da remição detalhada (por origem e por unidade),
+    os cartões de resumo de cada aba e as providências, na tela. As contas
+    saem das mesmas funções do PDF (o relatório geral passou a ser
+    desenhado a partir de rspe_relatorio.blocos_geral, sem mudar o
+    arquivo); a busca restringe os assistidos contados.
+  - Um botão "Exportar" no lugar de "Exportar Excel", "Relatórios" e
+    "Exportar PDF", com o menu: Excel, PDF da aba, Relatórios em PDF e
+    Relatório de providências (as janelas de cada um não mudaram).
+  - Filtro de todas as abas, menos Indulto (e as que não têm seletor):
+    "Faz jus à saída temporária", "Faz jus à progressão antecipada" e, à
+    parte, as duas com "requisitos a conferir". A Geral ganhou o seletor.
+  - Barra: o tamanho da letra fica só com "A" e "A" maior; a calculadora,
+    só com o ícone (visor e teclas), "Calculadora de penas" no título.
+    Com o painel do assistido aberto, o botão não cobre mais o cabeçalho.
+  - Triângulo de divergência no SEEU/SIAPEN em vermelho (era âmbar), na
+    lista, no painel e na legenda do rodapé.
 
 v7.9.2
   - Aviso de legislação nova: ao abrir a base, depois da janela de

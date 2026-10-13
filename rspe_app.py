@@ -226,12 +226,14 @@ liberdade sem evasão); conclusão.
 Na linha de cada crime da aba Prescrição, "cálculo" abre a memória em texto e "editar dados" o formulário de ajuste; a
 pretensão executória não tem linha do tempo (nem na tela nem no relatório individual).
 <h4>Filtro de situação</h4>
-O seletor ao lado dos botões filtra a aba (a Geral, o Indulto, as Jurisprudências e o Quadro não têm). Progressão e Livramento: vencidas (data já passada), vence em até 30,
+O seletor ao lado dos botões filtra a aba (o Indulto, os Dados prisionais, os Dados da Base, as Jurisprudências e o Quadro não têm). Progressão e Livramento: vencidas (data já passada), vence em até 30,
 60 ou 90 dias (os três incluem "Vence hoje"), não iniciou, pena interrompida / suspensa, não se aplica (cumprida / livramento / aberto), sem data. Indulto/Comutação:
 o seletor fica oculto; a barra lateral escolhe o decreto, os chips filtram o resultado e o seletor do topo escolhe indulto, comutação ou os dois.
 Prescrição: aparente, iminente / a verificar, não prescrita / não configurada, sem dados, extinta. Extinção: extinção cabível,
 término em até 30, 60 ou 90 dias, pena interrompida, sem previsão. Ficha disciplinar: remição a requerer, conferir remição / sem atestado
-/ estudo, em ordem, sem ficha. Auditoria: com alertas, pontos a verificar, guia em ordem. O número da execução é copiado com um clique.
+/ estudo, em ordem, sem ficha. Auditoria: com alertas, pontos a verificar, guia em ordem. Em todas as abas com o seletor (inclusive a Geral, menos o
+Indulto): "Faz jus à saída temporária" e "Faz jus à progressão antecipada" (todos os requisitos atendidos) e, à parte, as mesmas com
+"requisitos a conferir". O número da execução é copiado com um clique.
 Na coluna Situação, a situação que pede ação vem com o complemento "sem pedido no RSPE - requerer" (prazo vencido e nenhum pedido
 do benefício lançado no RSPE). Clicar no título da coluna Situação ordena pelos dias (do mais vencido ao mais distante).
 Ao exportar com um filtro de situação (ou cartão de cor) ativo, a janela oferece "Aplicar o filtro de situação" (marcado): saem só os
@@ -287,7 +289,7 @@ base em cada unidade (pela ficha do SIAPEN) e quantos estão no semiaberto ou no
 Condições constatadas nos demais temas (habitabilidade, assistências, segurança e saúde): quantas unidades têm cada problema; clicar filtra
 a tabela. Evolução da população nos últimos meses (painel, tabela e detalhe). "Relatório PDF": o estado ou a cidade escolhida no mapa.
 <h4>Calculadora de penas</h4>
-Botão "Calculadora" no topo, em qualquer aba: abre uma janela móvel, que continua aberta ao trocar de aba. Soma e subtrai penas (30 dias = 1 mês;
+Ícone de calculadora no topo ("Calculadora de penas"), em qualquer aba: abre uma janela móvel, que continua aberta ao trocar de aba. Soma e subtrai penas (30 dias = 1 mês;
 12 meses = 1 ano), calcula o período entre duas datas (contando o dia do começo; o resultado vai para a pena, a interrupção ou a detração),
 o término (início + pena + interrupção − remidos/detração − 1 dia, CP, art. 10) e as datas das frações (1/6 a 2/3), dos percentuais do art. 112
 da LEP e de outra fração, com os dias remidos descontados antes ou depois da fração. "Trazer de ..." preenche com a pena total, o início do
@@ -297,7 +299,7 @@ cumprimento, as interrupções e os remidos do RSPE do assistido aberto. Ao lado
 RSPE emitido há mais de 60 dias ganha um "!" laranja ao lado do nome (passe o mouse para ver a data e os dias); o chip "RSPE antigo" da faixa de resumo
 filtra esses assistidos. Ao abrir a base, o programa faz uma cópia de segurança (pasta "copias", ao lado da base) e guarda as
 10 últimas; o menu da base &gt; "Cópias de segurança…" mostra as cópias e restaura uma delas (a versão de agora também é copiada antes).
-O botão "Letra" (A pequeno / A grande) muda o tamanho de tudo na tela e fica gravado neste computador.
+Os botões "A" (pequeno / grande) na barra mudam o tamanho de tudo na tela e fica gravado neste computador.
 <h4>Pasta vigiada</h4>
 Menu da base &gt; "Pasta vigiada…": escolha uma pasta mãe com uma subpasta por base (ex.: "2ª VEP", "1ª VEP", ou RSPE\\2ª VEP e
 FD\\2ª VEP). Os PDFs salvos numa subpasta entram sozinhos na base de mesmo nome, com o programa aberto; a base é criada se não
@@ -355,8 +357,12 @@ mas ela não impede o indulto nem a comutação das penas anteriores (art. 7º; 
 crimes anteriores e a ficha traz a nota; "Fato posterior" só aparece quando não resta crime anterior.
 Para levar ao Word: "Copiar resumo" (ficha do assistido), "Copiar pretensão punitiva" e "Copiar pretensão executória" (prescrição), "Copiar cálculo" (indulto e comutação), "Copiar" e
 "Copiar pendências" (Auditoria). O texto vai em linhas simples, pronto para colar.
+<h4>Exportar e Dados da Base</h4>
+O botão "Exportar" abre o menu: Excel (abas da base), PDF da aba, Relatórios em PDF e Relatório de providências. A aba "Dados da Base"
+mostra na tela os números e gráficos do relatório geral, da remição detalhada (por origem e por unidade), os cartões de cada aba e as
+providências, contados pelas mesmas funções do PDF; a busca restringe os assistidos contados.
 <h4>Relatórios em PDF</h4>
-O botão <b>Relatórios</b> gera, numa pasta com a data e a hora: um PDF por assistido (bloco da pena, tabela de benefícios com
+"Exportar" &gt; <b>Relatórios em PDF</b> gera, numa pasta com a data e a hora: um PDF por assistido (bloco da pena, tabela de benefícios com
 etiquetas e observação, condenações, linha do tempo em eventos e incidentes, remição, um bloco por alerta em frases curtas com o
 fundamento em lista e, para os crimes com evasão, prescrição aparente ou a verificar, o cálculo da prescrição executória por crime,
 em texto e tabela - detração, saldo de cada fuga, hipóteses de imputação e resultado; sem figura de linha do tempo), o relatório geral da base (perfil,
@@ -1437,7 +1443,7 @@ class Api:
         self.base.fixar(processo, bool(on))
         return self._atualizar(processo, "Assistido fixado no topo das abas." if on else "Assistido solto.")
 
-    # ---- calculadora de penas (janela do botão "Calculadora", em qualquer aba) ----
+    # ---- calculadora de penas (janela do botão da calculadora, em qualquer aba) ----
     def calc_calcular(self, e):
         try:
             return rcalc.calcular(e)
@@ -3596,6 +3602,46 @@ class Api:
         if erros:
             msg += " · %s: %s" % (rs.pl(len(erros), "falha", "falhas"), "; ".join(erros[:3]))
         return {"caminho": destino, "msg": msg}
+
+    def dados_base(self, ids=None):
+        """Aba Dados da Base: os números e gráficos dos relatórios em PDF da base (relatório geral, remição detalhada e cartões de
+        cada aba), contados pelas mesmas funções do PDF, para os assistidos que a busca mostra."""
+        if not self.base:
+            return {"erro": "Nenhuma base aberta."}
+        sel = None if ids is None else set(ids)
+        modelos = self._modelos if sel is None else [m for m in self._modelos if m["id"] in sel]
+        G = rrel.blocos_geral(modelos)
+        for k, g in list(G.items()):
+            for x in (g if isinstance(g, list) else [g]):
+                if isinstance(x, dict) and "pares" in x:  # rosca: as fatias exatamente como o PDF as desenha
+                    fat = rrel._rosca_fatias(x["pares"], x["max_fatias"], x["cores"], x["ordenar"])
+                    tot = sum(v for _r, v, _c in fat)
+                    # o percentual vem daqui (round do Python, como no PDF), não do arredondamento do JavaScript
+                    x["fatias"] = [(r_, v, c_, round(100.0 * v / tot)) for r_, v, c_ in fat]
+                    x["total"] = tot
+                    x.pop("pares")
+        # remição detalhada (quadros 1 e 2, sem nomes)
+        O = rrel.remicao_por_origem(modelos)
+        origens = [{"rot": r_, "ass": O["n"][k], "itens": O["itens"][k], "dias": rrel._num(O["r"][k]), "fora": k in rf.FORA_DO_TOTAL,
+                    "como": rrel.COMO_REMICAO.get(k, ""), "prov": p_} for k, r_, p_ in rf.ORIGENS_REMICAO]
+        origens.append({"rot": "Lacuna entre atestados", "ass": O["n"]["lacunas"], "itens": O["itens"]["lacunas"], "dias": "—", "fora": False,
+                        "como": "período sem vínculo comprovado: não há como estimar dias", "prov": "verificar com a unidade se houve trabalho"})
+        por_un, ks = rrel.remicao_por_unidade(modelos, O)
+        rot_k = dict((k, r_) for k, r_, _p in rf.ORIGENS_REMICAO)
+        uns = [{"un": u, "ass": len(x["ass"]), "dias": [rrel._num(x["r_" + k]) for k in ks], "total": rrel._num(x["r_total"]), "total_n": x["r_total"]}
+               for u, x in sorted(por_un.items(), key=lambda kv: (kv[0] == rf.SEM_UNIDADE, -kv[1]["total"]))]
+        rem = {"ass": O["ass"], "ass_exatos": O["ass_exatos"], "com_ficha": O["com_ficha"], "total": rrel._num(O["r_total"]), "origens": origens,
+               "cols": [rot_k[k] for k in ks], "unidades": uns,
+               "un_total": [rrel._num(sum(x["r_" + k] for x in por_un.values())) for k in ks] + [rrel._num(sum(x["r_total"] for x in por_un.values()))]}
+        # cartões de resumo de cada aba, contados como na exportação em PDF (quem tem o pedido marcado sai da cor e entra em "Pedido feito")
+        cart = []
+        for aid in ("prog", "liv", "ind", "presc", "ext", "fd", "aud"):
+            for spec in rx.specs_export(aid):
+                cont = rx.contagem_cartoes(spec, modelos)
+                itens = [(c, nome) for c, nome in rv.ROTULO[spec["legenda"]].items() if not (aid == "ind" and c == "")]
+                itens += [("__ped", "Pedido feito")] if cont.get("__ped") else []
+                cart.append({"aba": aid, "titulo": spec["titulo"], "itens": [{"cor": c, "rot": nome, "n": cont.get(c, 0)} for c, nome in itens]})
+        return {"n": len(modelos), "total": len(self._modelos), "geral": G, "rem": rem, "cartoes": cart}
 
     def relatorio_um(self, id_):
         """Relatório individual de um assistido (botão na ficha)."""

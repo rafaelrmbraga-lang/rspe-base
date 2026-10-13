@@ -1,4 +1,4 @@
-"""Calculadora de penas (botão "Calculadora" no topo de todas as abas). Reproduz a Calculadora de penas 2.1 (Guilherme
+"""Calculadora de penas (botão da calculadora no topo de todas as abas). Reproduz a Calculadora de penas 2.1 (Guilherme
 Benages Alcantara, 2001, distribuição livre): soma e subtração de penas, período entre datas, término e frações, com os dias
 remidos descontados antes ou depois da fração; acrescenta os percentuais do art. 112 da LEP.
 

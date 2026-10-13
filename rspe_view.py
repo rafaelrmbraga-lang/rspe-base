@@ -1526,6 +1526,9 @@ ABAS = [
      "sub_pilulas": {"nivel_txt": "nivel_cor"}, "sub_calc": False, "sub_baixa": True},
 ]
 ABA_POR_ID = {a["id"]: a for a in ABAS}
+# st_ok / pa_ok: todos os requisitos atendidos; st_quase / pa_quase: nenhum falha, mas algum fica a conferir
+FILTROS_BENEFICIO = [("st_ok", "Faz jus à saída temporária"), ("st_quase", "Saída temporária: requisitos a conferir"),
+                     ("pa_ok", "Faz jus à progressão antecipada"), ("pa_quase", "Progressão antecipada: requisitos a conferir")]
 ABAS_PEDIDO = ("prog", "liv", "ind", "presc", "ext", "fd")
 for _a in ABAS:
     # a aba Geral não tem prazo próprio (não há campo de dias): sem filtro de situação
@@ -1534,6 +1537,9 @@ for _a in ABAS:
         # controle de pedidos: coluna "Pedido" (feito em dd/mm/aaaa ou botão para marcar) e filtro
         _a["cols"] = list(_a["cols"]) + [("pedido", "Pedido", 9)]
         _a["filtros"] += [("pedfeito", "Pedido já feito"), ("pedsem", "Sem pedido")]
+    if _a["id"] != "ind":
+        # benefícios ao lado do nome (ícones da saída temporária e da progressão antecipada): elegíveis e, à parte, os com ponto a conferir
+        _a["filtros"] = (_a["filtros"] or [("todas", "Todas")]) + FILTROS_BENEFICIO
     _a["campo_dias"] = {"prog": "prog_dias", "liv": "liv_dias", "presc": "presc_dias", "ext": "ext_dias"}.get(_a["id"], "")
 
 
