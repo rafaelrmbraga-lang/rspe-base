@@ -1,9 +1,9 @@
-APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.9.6
+APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.10.0
 (antigo RSPE Base; SEEU, programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-7.9.6. A documentação técnica completa (cada parâmetro, a regra, a norma e
+7.10.0. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -115,15 +115,31 @@ ATENDIMENTOS (aba Geral > botão "Atendimentos")
   - Período: escolha "de" e "a" (ou clique no período de um relatório, ou
     "Todo o período"); cores, contagens e PDF passam a valer para o período.
   - "Registrar" (em cada linha): registra no APTO um atendimento feito, com
-    a data e uma observação; o APTO guarda quando foi registrado. O alerta
+    a data e o que foi feito; o APTO guarda quando foi registrado. O alerta
     sai. Quando for importado depois um relatório do SAP cujo período
     cobre aquela data, vale o que consta no relatório (o registro do APTO
     sai, conste ou não o atendimento no relatório). "desfazer" apaga o
-    registro.
+    registro. Depois de registrar, abre o resumo para o assistido.
   - Saídas da unidade: com uma listagem nova, a janela mostra quantos
     saíram e quantos entraram desde a anterior; "Saídas (Excel)" e "Saídas
     (PDF)" geram a lista para controle (nome, localização, entrada,
     procedência e último atendimento).
+
+RESUMO PARA O ASSISTIDO (botão "Resumo" na janela Atendimentos e "Resumo
+para o assistido" na ficha)
+  Uma folha A4 para imprimir e entregar ao preso, em linguagem simples
+  (Pacto Nacional do Judiciário pela Linguagem Simples, CNJ): como está a
+  pena (com a barra do que já cumpriu), os próximos direitos, o que a
+  Defensoria fez (atendimentos do SAP e do APTO, pedidos e ofícios marcados)
+  e os avisos (falta grave). Fluxo: registrar o atendimento (com o que foi
+  feito) > resumo para o assistido > relatório do SAP depois.
+  - Só entra o que o APTO já calculou. Data duvidosa ("ver Auditoria",
+    "verificar") sai como "a Defensoria está conferindo a data". Pedido já
+    feito sai dos direitos e aparece em "o que a Defensoria fez".
+  - Antes do PDF, cada frase pode ser corrigida, desmarcada ou acrescentada.
+  - Embaixo, depois da linha pontilhada, o canhoto de quem fez o
+    atendimento: data do atendimento, retorno em 30/60/90/__ dias, data e
+    "Entregue ao setor psicossocial da unidade". Não traz contato.
 
 EXTENSÃO DO NAVEGADOR (pasta extensao_seeu)
   "APTO - RSPE do SEEU, Ficha do SIAPEN e processos do SAP", para Chrome e
@@ -925,6 +941,14 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v7.10.0
+  - Resumo para o assistido: folha A4 em linguagem simples (CNJ) com a
+    pena, os próximos direitos, o que a Defensoria fez e o canhoto do
+    atendimento (retorno em X dias, entrega ao setor psicossocial). O texto
+    é conferido e editado na tela antes do PDF.
+  - Registrar atendimento: campo "o que foi feito" (sai no resumo) e, ao
+    registrar, abre o resumo.
 
 v7.9.6
   - Dados da Base > Atendimentos aparece também na base que ainda não tem

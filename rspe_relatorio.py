@@ -3581,3 +3581,115 @@ def relatorio_saidas(d, caminho, nome_base):
                             title="Saídas da unidade - %s" % un, author="APTO")
     fr = _moldura("Saídas da unidade · " + un, nome_base, rodape="Comparação entre listagens de internos ativos do SIAPEN, pelo nome (igual, sem acento, preposições e apóstrofo, ou cortado).")
     doc.build(el, onFirstPage=fr, onLaterPages=fr, canvasmaker=_canvas_numerado())
+
+
+def relatorio_resumo_assistido(d, caminho):
+    """Resumo para o assistido (linguagem simples, CNJ), uma folha A4 para imprimir: em cima, a pena, os próximos direitos e o que
+    a Defensoria fez; embaixo, depois da linha pontilhada, o canhoto de quem fez o atendimento (retorno em X dias, data e entrega ao
+    setor psicossocial da unidade). d = o que a janela do APTO mandou (o texto já conferido e editado)."""
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.units import mm
+    from reportlab.lib import colors
+    from reportlab.lib.styles import ParagraphStyle
+    from reportlab.pdfgen import canvas as rl_canvas
+    from reportlab.platypus import Paragraph, Spacer, Frame, KeepInFrame, Table, TableStyle
+    import rspe_resumo as rres
+    f = _fontes()
+    C = colors.HexColor
+    PW, PH = A4
+    ML = 18 * mm
+    W = PW - 2 * ML
+    s_cab = ParagraphStyle("rc", fontName=f["sb"], fontSize=9, leading=12, textColor=C(TX2))
+    s_tit = ParagraphStyle("rt", fontName=f["serifb"], fontSize=24, leading=28, textColor=C(NAVY))
+    s_nome = ParagraphStyle("rn", fontName=f["b"], fontSize=15, leading=19, textColor=C(TX), spaceBefore=4)
+    s_sub = ParagraphStyle("rs", fontName=f["n"], fontSize=10.5, leading=14, textColor=C(TX2))
+    s_h = ParagraphStyle("rh", fontName=f["serifb"], fontSize=15, leading=19, textColor=C(NAVY), spaceBefore=10, spaceAfter=3)
+    s_p = ParagraphStyle("rp", fontName=f["n"], fontSize=12.5, leading=16.5, textColor=C(TX), leftIndent=13, bulletIndent=0, spaceAfter=4)
+    s_rod = ParagraphStyle("rr", fontName=f["n"], fontSize=9.5, leading=12.5, textColor=C(TX2), spaceBefore=10)
+    hoje = rres._data(d.get("hoje")) or datetime.now().date()
+
+    el = [Paragraph("DEFENSORIA PÚBLICA DO ESTADO DE MATO GROSSO DO SUL", s_cab),
+          Paragraph("Resumo da sua pena", s_tit),
+          Paragraph(_t("Para: %s" % (d.get("nome") or "")), s_nome),
+          Paragraph(_t(" · ".join(x for x in ("Processo de execução nº %s" % d["proc"] if d.get("proc") else "",
+                                                "entregue em %s" % rres.extenso(hoje)) if x)), s_sub)]
+    B = d.get("barra")
+    if B and B.get("pct") is not None:
+        pct = max(0, min(100, int(B["pct"])))
+        bw = W * pct / 100.0
+        t = Table([["", ""]], colWidths=[max(bw, 0.1), max(W - bw, 0.1)], rowHeights=[12], hAlign="LEFT")
+        t.setStyle(TableStyle([("BACKGROUND", (0, 0), (0, 0), C(PRI)), ("BACKGROUND", (1, 0), (1, 0), C("#E3E8E4")),
+                               ("LEFTPADDING", (0, 0), (-1, -1), 0), ("RIGHTPADDING", (0, 0), (-1, -1), 0)]))
+        el += [Spacer(1, 12), Paragraph("Você já cumpriu %d%% da pena." % pct,
+                                        ParagraphStyle("rb", parent=s_p, leftIndent=0, spaceAfter=3)), t]
+    for sec in d.get("secoes") or []:
+        itens = [x for x in sec.get("itens") or [] if str(x).strip()]
+        if not itens:
+            continue
+        el.append(Paragraph(_t(sec.get("titulo") or ""), s_h))
+        el += [Paragraph(_t(x), s_p, bulletText="•") for x in itens]
+    if d.get("rodape"):
+        el.append(Paragraph(_t(d["rodape"]), s_rod))
+
+    c = rl_canvas.Canvas(caminho, pagesize=A4)
+    c.setTitle("Resumo da pena - %s" % (d.get("nome") or ""))
+    corte = 60 * mm  # altura do canhoto, a partir da borda de baixo
+    topo = PH - 16 * mm
+    fr = Frame(ML, corte + 6 * mm, W, topo - corte - 6 * mm, leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0)
+    fr.addFromList([KeepInFrame(W, topo - corte - 6 * mm, el, mode="shrink")], c)
+
+    # linha pontilhada de corte
+    c.setStrokeColor(C("#8E958F"))
+    c.setLineWidth(0.8)
+    c.setDash(3, 3)
+    c.line(ML - 8 * mm, corte, PW - ML + 8 * mm, corte)
+    c.setDash()
+    c.setFillColor(C(TX2))
+    c.setFont(f["n"], 8)
+    c.drawRightString(PW - ML, corte + 2.5 * mm, "recorte aqui")
+
+    # canhoto de quem fez o atendimento
+    y = corte - 8 * mm
+    c.setFillColor(C(NAVY))
+    c.setFont(f["b"], 11)
+    c.drawString(ML, y, "Para quem fez o atendimento")
+    c.setFillColor(C(TX))
+    c.setFont(f["n"], 11)
+    y -= 8 * mm
+    c.drawString(ML, y, "Interno: %s" % (d.get("nome") or ""))
+    da = rres._data(d.get("data_atend"))
+    c.drawString(ML + W * 0.62, y, "Atendimento: %s" % (da.strftime("%d/%m/%Y") if da else "____/____/________"))
+
+    def caixa(x, yy, marcada=False):
+        c.setStrokeColor(C(TX))
+        c.setLineWidth(0.8)
+        c.rect(x, yy - 0.6 * mm, 3.6 * mm, 3.6 * mm)
+        if marcada:
+            c.setFont(f["b"], 10)
+            c.drawString(x + 0.7 * mm, yy, "X")
+            c.setFont(f["n"], 11)
+        return x + 5.5 * mm
+
+    y -= 8.5 * mm
+    c.drawString(ML, y, "Retorno em:")
+    x = ML + 24 * mm
+    ret = str(d.get("retorno") or "").strip()
+    for n in ("30", "60", "90"):
+        x = caixa(x, y, ret == n)
+        c.drawString(x, y, "%s dias" % n)
+        x += 20 * mm
+    x = caixa(x, y, bool(ret) and ret not in ("30", "60", "90"))
+    c.drawString(x, y, "%s dias" % (ret if ret and ret not in ("30", "60", "90") else "______"))
+
+    y -= 8.5 * mm
+    c.drawString(ML, y, "Data: ____/____/________")
+    x = caixa(ML + 52 * mm, y)
+    c.drawString(x, y, "Entregue ao setor psicossocial da unidade")
+
+    y -= 12 * mm
+    c.drawString(ML, y, "Responsável: ")
+    c.setStrokeColor(C(TX))
+    c.line(ML + 25 * mm, y - 1, ML + W * 0.75, y - 1)
+    c.showPage()
+    c.save()
+    return caminho

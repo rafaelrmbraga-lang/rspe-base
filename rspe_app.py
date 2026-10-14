@@ -40,9 +40,10 @@ import rspe_geopresidios as rgeo
 import rspe_mapa_ms as rmapa
 import rspe_calc as rcalc
 import rspe_atendimentos as ratd
+import rspe_resumo as rres
 
 APP = "APTO"
-VERSAO = "7.9.6"
+VERSAO = "7.10.0"
 GEO_AUTO_DIAS = 30           # dados prisionais: baixados de novo sozinhos quando têm 30 dias ou mais
 GEO_REPETIR_MIN = 10         # ... ou 10 minutos depois de um download em que algum relatório falhou (nova tentativa automática)
 GEO_REPETIR_MAX = 3          # tentativas automáticas seguidas com o programa aberto (depois, na próxima abertura ou pelo botão)
@@ -4078,6 +4079,38 @@ class Api:
             return {"erro": "Falha ao gerar o relatório: %s" % e}
         _abrir(c)
         return {"caminho": c}
+
+    def resumo_assistido(self, id_="", nome=""):
+        """Resumo para o assistido em linguagem simples (texto proposto; a janela deixa editar antes do PDF)."""
+        if not self.base:
+            return {"erro": "Abra uma base."}
+        m = next((x for x in (getattr(self, "_modelos", None) or []) if id_ and x["id"] == id_), None)
+        nome = (m or {}).get("nome") or nome
+        if not nome:
+            return {"erro": "Assistido não encontrado."}
+        ped = self.base.pedidos().get((m or {}).get("proc") or (m or {}).get("id") or "", {}) if m else {}
+        at = rres.atendimentos_da_pessoa(nome, self.base.atend_registros(), self.base.atend_manuais())
+        d = rres.montar(m, ped, at, datetime.now().date(), nome)
+        hoje = datetime.now().strftime("%Y-%m-%d")
+        d["data_atend"] = next((datetime.strptime(x["data"], "%Y-%m-%d").strftime("%d/%m/%Y") for x in at if x["fonte"] == "apto" and x["data"] == hoje), "")
+        return d
+
+    def resumo_assistido_pdf(self, d):
+        """PDF do resumo (o texto que veio da janela, já conferido), para imprimir."""
+        if not d or not d.get("nome"):
+            return {"erro": "Resumo vazio."}
+        nome_arq = "Resumo - %s.pdf" % _nome_seguro(d["nome"])
+        c = _um(self._janela.create_file_dialog(webview.SAVE_DIALOG, save_filename=nome_arq, file_types=("PDF (*.pdf)",)))
+        if not c:
+            return None
+        if not c.lower().endswith(".pdf"):
+            c += ".pdf"
+        try:
+            rrel.relatorio_resumo_assistido(d, c)
+        except Exception as e:
+            return {"erro": "Falha ao gerar o resumo: %s" % e}
+        _abrir(c)
+        return {"caminho": c, "msg": "Resumo salvo em " + c}
 
 
 DEFENSORES = os.path.join(pasta_app(), "defensores.json")
