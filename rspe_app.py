@@ -39,9 +39,10 @@ import rspe_indulto_tl as rtl
 import rspe_geopresidios as rgeo
 import rspe_mapa_ms as rmapa
 import rspe_calc as rcalc
+import rspe_atendimentos as ratd
 
 APP = "APTO"
-VERSAO = "7.9.4"
+VERSAO = "7.9.5"
 GEO_AUTO_DIAS = 30           # dados prisionais: baixados de novo sozinhos quando têm 30 dias ou mais
 GEO_REPETIR_MIN = 10         # ... ou 10 minutos depois de um download em que algum relatório falhou (nova tentativa automática)
 GEO_REPETIR_MAX = 3          # tentativas automáticas seguidas com o programa aberto (depois, na próxima abertura ou pelo botão)
@@ -61,6 +62,7 @@ def recurso(nome):
 PASTA_BASES = os.path.join(pasta_app(), "bases")
 CONFIG = os.path.join(pasta_app(), "rspe_config.json")
 VIGIA_ESTADO = os.path.join(pasta_app(), "pasta_vigiada_estado.json")
+ATEND_SAP = os.path.join(pasta_app(), "atendimentos_sap.json")  # última planilha do lote do SAP (vale para todas as bases)
 VIGIA_INTERVALO = 15  # segundos entre as varreduras da pasta vigiada
 PORTA_EXTENSAO = 47321  # a extensão do navegador pergunta ao APTO (só neste computador) quais são as bases
 PASTAS_TIPO = {"RSPE", "RSPES", "FD", "FDS", "FICHA", "FICHAS", "FICHA DISCIPLINAR", "FICHAS DISCIPLINARES"}
@@ -3179,8 +3181,77 @@ class Api:
         threading.Thread(target=srv.serve_forever, daemon=True).start()
         return srv
 
+    # ---- atendimentos do NUSPEN (planilha do lote do SAP, gravada pela extensão em Downloads\\APTO) ----
+    def _atend_ler(self):
+        try:
+            with open(ATEND_SAP, encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return {}
+
+    def _atend_gravar(self, caminho, conteudo, auto=False):
+        cads = ratd.ler_planilha(conteudo)
+        dados = {"arquivo": os.path.basename(caminho), "importado_em": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                 "mtime": os.path.getmtime(caminho) if os.path.exists(caminho) else 0, "auto": auto, "cadastros": ratd.para_json(cads)}
+        tmp = ATEND_SAP + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(dados, f, ensure_ascii=False)
+        os.replace(tmp, ATEND_SAP)
+        return len(cads)
+
+    def atendimentos(self):
+        """Lista de atendimentos da base aberta, em ordem de prioridade, com a cor de cada assistido."""
+        d = self._atend_ler()
+        regs = [{"id": m.get("id"), "nome": m.get("nome") or "", "proc": m.get("proc") or ""} for m in (getattr(self, "_modelos", None) or [])]
+        lista = ratd.classificar(regs, ratd.de_json(d.get("cadastros")), datetime.now().date()) if d else []
+        cont = {}
+        for x in lista:
+            cont[x["cor"]] = cont.get(x["cor"], 0) + 1
+        return {"tem": bool(d), "arquivo": d.get("arquivo", ""), "importado_em": d.get("importado_em", ""), "n_planilha": len(d.get("cadastros") or []),
+                "prazo": ratd.PRAZO_DIAS, "lista": lista, "cont": cont}
+
+    def atendimentos_importar(self):
+        c = _um(self._janela.create_file_dialog(webview.OPEN_DIALOG, directory=self._pasta_extensao() if os.path.isdir(self._pasta_extensao()) else "",
+                                                file_types=("Planilha do SAP (*.csv)",)))
+        if not c:
+            return None
+        try:
+            with open(c, "rb") as f:
+                n = self._atend_gravar(c, f.read())
+        except Exception as e:
+            r = self.atendimentos()
+            r["erro"] = "Planilha não importada: %s" % e
+            return r
+        r = self.atendimentos()
+        r["msg"] = "Planilha importada: %s" % rs.pl(n, "cadastro do SAP", "cadastros do SAP")
+        return r
+
+    def _atend_auto(self):
+        """A planilha que a extensão grava em Downloads\\APTO (SAP_processos_*.csv) entra sozinha: a mais recente, uma vez."""
+        d = self._pasta_extensao()
+        if not os.path.isdir(d):
+            return False
+        csvs = [os.path.join(d, n) for n in os.listdir(d) if re.match(r"SAP_processos_.*\.csv$", n, re.I)]
+        if not csvs:
+            return False
+        ult = max(csvs, key=os.path.getmtime)
+        if os.path.getmtime(ult) <= (self._atend_ler().get("mtime") or 0):
+            return False
+        try:
+            with open(ult, "rb") as f:
+                n = self._atend_gravar(ult, f.read(), auto=True)
+        except Exception as e:
+            logging.getLogger("rspe").warning("planilha de atendimentos %s: %s", ult, e)
+            return False
+        self._js("ui.toast(%s)" % json.dumps("Atendimentos: planilha do SAP importada (%s) · aba Geral > Atendimentos" % rs.pl(n, "cadastro", "cadastros"), ensure_ascii=False))
+        return True
+
     def _vigia_loop(self):
         while True:
+            try:
+                self._atend_auto()
+            except Exception as e:
+                logging.warning("atendimentos: %s", e)
             try:
                 self._pastas_extensao()
                 rz = self._vigia_raizes()

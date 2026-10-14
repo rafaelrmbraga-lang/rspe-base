@@ -146,6 +146,8 @@ table.rz{margin-top:8px;width:100%}table.rz td,table.rz th{font-size:12px;vertic
 .copia i{width:8px;height:8px;border-radius:50%;background:var(--g-dot);display:inline-block}
 .hbtn{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border:1px solid var(--line);border-radius:8px;font-size:11.5px;font-weight:600;color:var(--tx2);background:#fff;cursor:pointer;margin-right:6px}
 .hbtn:hover{border-color:var(--pri);color:var(--pri)}.hbtn svg{width:14px;height:14px}
+table.atd{width:100%;border-collapse:collapse;font-size:13px}table.atd th{text-align:left;color:var(--tx3);font-size:11px;text-transform:uppercase;padding:7px 10px;border-bottom:1px solid var(--line);position:sticky;top:0;background:#fff;cursor:default}
+table.atd td{padding:6px 10px;border-bottom:1px solid #ECEEEB;cursor:default;font-weight:400}table.atd tr:hover td{background:#F7F9F7}
 table.hist{width:100%;border-collapse:collapse;margin-top:10px;font-size:13px;table-layout:fixed}table.hist td{overflow-wrap:anywhere}
 table.hist th{text-align:left;color:var(--tx3);font-size:11px;text-transform:uppercase;padding:6px 8px;border-bottom:1px solid var(--line);position:static;background:none;cursor:default;vertical-align:bottom}
 table.hist td{padding:7px 8px;border-bottom:1px solid #ECEEEB;vertical-align:top;cursor:default;font-weight:400}table.hist td:first-child{color:var(--tx2);font-weight:600;white-space:nowrap}
@@ -958,7 +960,8 @@ const ui = {
     const st=document.getElementById('stats'); const rot=this.dados.rotulos[spec.legenda];
     const nVelho=rs.filter(r=>this.idadeRSPE(r)>this.RSPE_VELHO).length; if(!nVelho) this.filtroVelho=false;
     const chipVelho=nVelho?`<div class="stat velho ${this.filtroVelho?'on':''}" title="RSPE desatualizado: emitido há mais de ${this.RSPE_VELHO} dias. Vale baixar um novo no SEEU · clique para filtrar" onclick="ui.filtroVelho=!ui.filtroVelho;ui.render()"><i class="dot"></i><b>${nVelho}</b><span>RSPE antigo</span></div>`:'';
-    if(!spec.cor || spec.sem_stats){ const rsf=rs.filter(r=>this.passaFiltro(r,spec)), nExt=rsf.filter(r=>r.geral_cor==='azul').length; st.innerHTML=`<div class="info">${rsf.length!==rs.length?rsf.length+' de ':''}${pl(rs.length,'assistido','assistidos')}${nExt?` · <span class="pill azul">${nExt} com pena extinta registrada</span>`:''}. As abas seguintes mostram cada marco com prazo, cor e falta nos últimos 12 meses.</div>`+chipVelho; }
+    if(!spec.cor || spec.sem_stats){ const rsf=rs.filter(r=>this.passaFiltro(r,spec)), nExt=rsf.filter(r=>r.geral_cor==='azul').length; st.innerHTML=`<div class="info">${rsf.length!==rs.length?rsf.length+' de ':''}${pl(rs.length,'assistido','assistidos')}${nExt?` · <span class="pill azul">${nExt} com pena extinta registrada</span>`:''}. As abas seguintes mostram cada marco com prazo, cor e falta nos últimos 12 meses.</div>`+chipVelho
+      +(spec.id==='geral'?`<button class="btn" style="margin-left:auto" title="Último atendimento do NUSPEN de cada assistido (planilha do lote do SAP), em ordem de prioridade" onclick="ui.atendimentos()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>Atendimentos</button>`:''); }
     else{ const cont={}; const temPed=this.abaPedido(spec); let nPed=0;
       // pedido feito (e a situação não mudou depois): sai da contagem da situação e entra em "Pedido feito"
       // os cartões seguem o filtro de situação da caixa e o de RSPE antigo (a contagem é a do que a tabela pode mostrar)
@@ -1728,6 +1731,20 @@ const ui = {
     const a=document.getElementById('letraMenos'), b=document.getElementById('letraMais'); if(a) a.disabled=z<=this.LETRAS[0]; if(b) b.disabled=z>=this.LETRAS[this.LETRAS.length-1]; return z; },
   letra(d){ const z=this.letraAplicar(); const i=Math.max(0,Math.min(this.LETRAS.length-1,this.LETRAS.indexOf(z)+d)); try{ localStorage.setItem('rspe_letra',String(this.LETRAS[i])); }catch(e){} this.letraAplicar(); },
   // histórico comparativo dos RSPE importados (aba Geral)
+  // atendimentos do NUSPEN: planilha do lote do SAP (extensão) ligada aos assistidos da base, em ordem de prioridade
+  async atendimentos(r){ r=r||await API().atendimentos(); if(!r) return; if(r.msg) this.toast(r.msg); if(r.erro) this.toast(r.erro);
+    const P=r.prazo||90, C=r.cont||{};
+    const chip=(cor,txt,dica)=>`<div class="stat ${cor}" title="${esc(dica)}" style="cursor:default"><i class="dot"></i><b>${C[cor]||0}</b><span>${txt}</span></div>`;
+    const DOT={vermelho:'r',amarelo:'a',verde:'g',cinza:'c'};
+    const corpo=!r.tem?`<div class="empty" style="padding:22px 4px"><div><b>Nenhuma planilha de atendimentos ainda</b>Rode o lote do SAP na extensão do navegador e clique em "Salvar planilha": a planilha, gravada em Downloads\\APTO, entra aqui sozinha com o APTO aberto. Ou importe o arquivo abaixo.</div></div>`
+      :!r.lista.length?`<p class="muted">Nenhum assistido nesta base.</p>`
+      :`<div style="max-height:56vh;overflow:auto;border:1px solid var(--line);border-radius:8px"><table class="atd"><thead><tr><th style="width:1%">#</th><th>Nome</th><th class="nw">Nº da execução</th><th class="nw">Último atendimento</th><th class="nw">Situação</th></tr></thead><tbody>${r.lista.map((x,i)=>`<tr title="${esc(x.obs||'')}${x.fonte?(x.obs?' · ':'')+'ligado pelo '+x.fonte:''}"><td class="muted nw">${i+1}</td><td>${esc(x.nome)}</td><td class="nw">${esc(x.proc||'')}</td><td class="nw">${x.ultimo?esc(x.ultimo)+' <span class="muted">('+pl(x.dias,'dia','dias')+')</span>':'<span class="muted">-</span>'}</td><td class="nw"><span class="pill ${x.cor}"><i style="display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--${DOT[x.cor]||'c'}-dot);align-self:center"></i>${esc(x.txt)}</span></td></tr>`).join('')}</tbody></table></div>`;
+    document.getElementById('modal').innerHTML=`<div class="box" style="width:900px;max-width:95vw"><h2>Atendimentos (NUSPEN)</h2>
+      <p class="muted" style="margin:0 0 8px">${r.tem?`Planilha do SAP: ${esc(r.arquivo)} · importada em ${esc(r.importado_em)} · ${pl(r.n_planilha,'cadastro','cadastros')}. `:''}Ordem de prioridade: nunca atendidos, depois do atendimento mais antigo ao mais recente.</p>
+      ${r.tem?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin:0 0 10px">${chip('vermelho','Nunca atendidos','Não achado no SAP ou sem atendimento do NUSPEN')}${chip('amarelo','Mais de '+P+' dias','Último atendimento do NUSPEN há mais de '+P+' dias')}${chip('verde','Até '+P+' dias','Último atendimento do NUSPEN nos últimos '+P+' dias')}${chip('cinza','Sem informação','Fora da planilha, homônimos sem como separar ou não verificado no SAP')}</div>`:''}
+      ${corpo}
+      <div class="acts"><button class="btn" onclick="API().atendimentos_importar().then(x=>x&&ui.atendimentos(x))">Importar planilha do SAP…</button><button class="btn pri" onclick="ui.fecharModal()">Fechar</button></div></div>`;
+    document.getElementById('modal').classList.add('on'); },
   async historico(id){ const h=await API().historico(id); if(!h||h.erro){ this.toast((h&&h.erro)||'Histórico indisponível.'); return; }
     const C=h.colunas||[]; const L=[['regime','Regime'],['pena_total','Pena total'],['pena_cumprida','Pena cumprida'],['remidos','Dias remidos (perdidos)'],['db','Data-base de progressão'],['prog','Previsão de progressão'],['liv','Previsão de livramento'],['termino','Término'],['falta','Faltas graves (12 meses)']];
     const th=C.map((c,i)=>`<th title="${esc(c.arquivo||'')}${c.importado_em?' · importado em '+esc(c.importado_em):''}">RSPE de ${esc(c.geracao||'?')}${i===C.length-1?'<span class="atual">atual</span>':''}</th>`).join('');

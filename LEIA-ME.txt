@@ -1,9 +1,9 @@
-APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.9.4
+APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.9.5
 (antigo RSPE Base; SEEU, programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-7.9.4. A documentação técnica completa (cada parâmetro, a regra, a norma e
+7.9.5. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -79,6 +79,22 @@ PASTA VIGIADA (menu da base > "Pasta vigiada…")
   - Vale a mesma regra de duplicados da importação manual.
   - O arquivo pasta_vigiada_estado.json (ao lado do .exe) guarda o que já
     foi lido; apagá-lo faz a pasta ser relida (os repetidos são ignorados).
+
+ATENDIMENTOS (aba Geral > botão "Atendimentos")
+  Último atendimento do NUSPEN de cada assistido da base, a partir da
+  planilha do lote do SAP (extensão do navegador > "Salvar planilha").
+  - A planilha gravada em Downloads\APTO (SAP_processos_<data>.csv) entra
+    sozinha com o APTO aberto (a mais recente); ou "Importar planilha do
+    SAP…" na janela. Vale para todas as bases (guardada em
+    atendimentos_sap.json, ao lado do .exe).
+  - Cada assistido é ligado pelo nº da execução; sem ele, pelo nome (só se a
+    planilha tiver um único cadastro com esse nome).
+  - Cores: vermelho = nunca atendido (não achado no SAP ou sem atendimento
+    do NUSPEN); amarelo = último atendimento há mais de 90 dias; verde =
+    até 90 dias; cinza = sem informação (fora da planilha, homônimos sem
+    como separar ou não verificado no SAP).
+  - Ordem de prioridade: nunca atendidos; depois do atendimento mais antigo
+    ao mais recente; sem informação no fim.
 
 EXTENSÃO DO NAVEGADOR (pasta extensao_seeu)
   "APTO - RSPE do SEEU, Ficha do SIAPEN e processos do SAP", para Chrome e
@@ -880,6 +896,12 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v7.9.5
+  - Aba Geral, botão "Atendimentos": último atendimento do NUSPEN de cada
+    assistido (planilha do lote do SAP, importada sozinha de
+    Downloads\APTO), em ordem de prioridade, com cores: nunca atendido em
+    vermelho, mais de 90 dias em amarelo, até 90 dias em verde.
 
 v7.9.4
   - Extensão 1.4.0 ligada ao APTO sem configurar nada: o APTO cria
