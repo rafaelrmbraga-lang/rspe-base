@@ -115,7 +115,7 @@ ATENDIMENTOS (aba Geral > botão "Atendimentos")
   - Período: escolha "de" e "a" (ou clique no período de um relatório, ou
     "Todo o período"); cores, contagens e PDF passam a valer para o período.
   - "Registrar" (em cada linha): registra no APTO um atendimento feito, com
-    a data e o que foi feito; o APTO guarda quando foi registrado. O alerta
+    a data e uma observação; o APTO guarda quando foi registrado. O alerta
     sai. Quando for importado depois um relatório do SAP cujo período
     cobre aquela data, vale o que consta no relatório (o registro do APTO
     sai, conste ou não o atendimento no relatório). "desfazer" apaga o
@@ -135,14 +135,14 @@ para o assistido" na ficha)
   - Só entra o que o APTO já calculou. Data duvidosa ("ver Auditoria",
     "verificar") sai como "a Defensoria está conferindo a data". Pedido já
     marcado no APTO sai dos próximos direitos.
-  - Resumo do atendimento: marque as providências feitas (explicação da
-    pena, pedidos ao juiz (um a um, indulto e comutação separados), ofício
-    de atestados, orientação sobre falta,
-    processo em análise, pedido aguardando decisão) e, se quiser, escreva
-    outra. Cada uma sai como frase simples. As providências marcadas no
-    APTO com a data do atendimento já vêm marcadas; o que foi escrito no
-    "Registrar" entra no campo livre. Marcar um pedido tira da lista o
-    direito correspondente.
+  - O que a Defensoria vai fazer: marque as providências que serão
+    adotadas (pedir progressão, livramento, indulto, comutação, remição,
+    extinção, prescrição ou saída temporária; acompanhar a data da
+    progressão; ofício de atestados; pedir o cálculo atualizado; defesa na
+    falta disciplinar; analisar o processo; acompanhar pedido já feito) e,
+    se quiser, escreva outra. Cada uma sai como frase simples ("Vamos
+    pedir ao juiz..."). Marcar um pedido tira da lista de próximos direitos
+    a frase correspondente.
   - Falta grave: valem as datas fixadas no RSPE. RSPE gerado depois da
     homologação já traz a data-base e a progressão refeitas (STJ, Súmula
     534): sai a data, com "(data já refeita depois da falta grave)". RSPE
@@ -960,12 +960,11 @@ HISTÓRICO DE VERSÕES
 
 v7.10.0
   - Resumo para o assistido: folha A4 em linguagem simples (CNJ) com a
-    pena, os próximos direitos, o resumo do atendimento (pelas providências
-    marcadas) e o canhoto do assistido para pedir o próximo atendimento ao
+    pena, os próximos direitos, o que a Defensoria vai fazer (pelas
+    providências marcadas) e o canhoto do assistido para pedir o próximo atendimento ao
     setor psicossocial, com a data do retorno. O texto é conferido e
     editado na tela antes do PDF.
-  - Registrar atendimento: campo "o que foi feito" (sai no resumo) e, ao
-    registrar, abre o resumo.
+  - Registrar atendimento: ao registrar, abre o resumo.
 
 v7.9.6
   - Dados da Base > Atendimentos aparece também na base que ainda não tem

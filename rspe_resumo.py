@@ -1,4 +1,4 @@
-"""Resumo para o assistido: a situação da pena, os próximos direitos e o resumo do atendimento, em linguagem simples
+"""Resumo para o assistido: a situação da pena, os próximos direitos e o que a Defensoria vai fazer, em linguagem simples
 (Pacto Nacional do Judiciário pela Linguagem Simples, CNJ): frases curtas, ordem direta, voz ativa, "você", sem termos
 técnicos sem explicação e o mais importante primeiro.
 
@@ -7,27 +7,27 @@ conferindo", nunca como data. O texto é uma proposta: a janela do APTO deixa ed
 import re
 from datetime import date
 
-import rspe_atendimentos as ratd
 
 MESES = "janeiro fevereiro março abril maio junho julho agosto setembro outubro novembro dezembro".split()
 
 PROXIMO_REGIME = {"fechado": "semiaberto", "semiaberto": "aberto"}
 
-# providências do atendimento: (id, rótulo na janela, frase no resumo)
+# providências que a Defensoria vai adotar: (id, rótulo na janela, frase no resumo)
 PROVIDENCIAS = [
-    ("explicou", "Explicação da pena e das datas", "Explicamos como está a sua pena e as datas dos seus direitos."),
-    ("ped_prog", "Pedido de progressão de regime", "Pedimos ao juiz a mudança de regime."),
-    ("ped_liv", "Pedido de livramento condicional", "Pedimos ao juiz o livramento condicional."),
-    ("ped_ind", "Pedido de indulto", "Pedimos ao juiz o indulto (perdão da pena)."),
-    ("ped_com", "Pedido de comutação", "Pedimos ao juiz a comutação (redução da pena)."),
-    ("ped_rem", "Pedido de remição", "Pedimos ao juiz o desconto dos dias de trabalho e estudo na pena (remição)."),
-    ("ped_ext", "Pedido de extinção da pena", "Pedimos ao juiz o fim da pena (extinção)."),
-    ("ped_presc", "Pedido de prescrição", "Pedimos ao juiz o reconhecimento da prescrição (o fim do prazo para cumprir a pena)."),
-    ("ped_st", "Pedido de saída temporária", "Pedimos ao juiz a saída temporária."),
-    ("ofi_atest", "Ofício: atestados de trabalho e estudo", "Pedimos à unidade prisional os atestados de trabalho e estudo."),
-    ("falta", "Orientação sobre falta disciplinar", "Orientamos você sobre a falta disciplinar."),
-    ("analise", "Processo em análise", "Vamos analisar o seu processo e, se for o caso, fazer o pedido ao juiz."),
-    ("aguarda", "Pedido aguardando decisão", "Já existe pedido no seu processo. Agora é preciso esperar a decisão do juiz."),
+    ("ped_prog", "Pedir a progressão de regime", "Vamos pedir ao juiz a mudança de regime."),
+    ("acomp_prog", "Acompanhar a data da progressão", "Vamos acompanhar a data da mudança de regime e fazer o pedido ao juiz quando ela chegar."),
+    ("ped_liv", "Pedir o livramento condicional", "Vamos pedir ao juiz o livramento condicional."),
+    ("ped_ind", "Pedir o indulto", "Vamos pedir ao juiz o indulto (perdão da pena)."),
+    ("ped_com", "Pedir a comutação", "Vamos pedir ao juiz a comutação (redução da pena)."),
+    ("ped_rem", "Pedir a remição", "Vamos pedir ao juiz o desconto dos dias de trabalho e estudo na pena (remição)."),
+    ("ped_ext", "Pedir a extinção da pena", "Vamos pedir ao juiz o fim da pena (extinção)."),
+    ("ped_presc", "Pedir a prescrição", "Vamos pedir ao juiz o reconhecimento da prescrição (o fim do prazo para cumprir a pena)."),
+    ("ped_st", "Pedir a saída temporária", "Vamos pedir ao juiz a saída temporária."),
+    ("ofi_atest", "Ofício: atestados de trabalho e estudo", "Vamos pedir à unidade prisional os atestados de trabalho e estudo."),
+    ("rspe", "Pedir o cálculo atualizado da pena", "Vamos pedir o cálculo atualizado da sua pena (relatório do SEEU)."),
+    ("falta", "Defesa na falta disciplinar", "Vamos acompanhar o procedimento da falta disciplinar e fazer a sua defesa."),
+    ("analise", "Analisar o processo", "Vamos analisar o seu processo e, se for o caso, fazer o pedido ao juiz."),
+    ("aguarda", "Acompanhar pedido já feito", "Vamos acompanhar o pedido que já está no processo até a decisão do juiz."),
 ]
 
 
@@ -88,9 +88,9 @@ def _quando(d, aprox):
     return extenso(d) + (" (data aproximada)" if aprox else "")
 
 
-def montar(m, pedidos, atendimentos, hoje=None, nome="", data_atend=None):
+def montar(m, pedidos, hoje=None, nome="", data_atend=None):
     """m: modelo do assistido (None se ainda não há RSPE na base); pedidos: {aba: {data, tipo, obs}} do processo;
-    atendimentos: [{data ISO, tipo, texto, fonte}] da pessoa; data_atend: o atendimento do resumo (hoje, se vazio).
+    data_atend: o atendimento do resumo (hoje, se vazio).
     -> dados do resumo (editáveis na janela do APTO)."""
     hoje = hoje or date.today()
     nome = (m or {}).get("nome") or nome
@@ -184,21 +184,11 @@ def montar(m, pedidos, atendimentos, hoje=None, nome="", data_atend=None):
         if not sec_dir:
             sec_dir.append("Neste momento, não há data próxima de novo direito no seu processo.")
 
-    # 3) resumo do atendimento: quem atendeu marca na janela as providências feitas (as do APTO com a data do atendimento já vêm
-    # marcadas) e escreve o que mais houve; as frases saem no PDF
+    # 3) o que a Defensoria vai fazer: quem atendeu marca na janela as providências que serão adotadas e escreve outras; as frases
+    # saem no PDF (nada vem marcado: é a decisão de quem atendeu)
     da = data_atend or hoje
-    marcadas = {"explicou"}
-    for k, p in (pedidos or {}).items():
-        if _data(p.get("data")) != da:
-            continue
-        tp = p.get("tipo") or "pedido"
-        if k == "fd" and tp == "oficio":
-            marcadas.add("ofi_atest")
-        elif tp == "pedido":
-            marcadas.add({"prog": "ped_prog", "liv": "ped_liv", "fd": "ped_rem", "ext": "ped_ext", "presc": "ped_presc", "st": "ped_st"}.get(k)
-                         or ("ped_ind" if k == "ind" or k.startswith("ind_") else ""))
-    provs = [{"id": i_, "rot": r_, "frase": f_, "marcado": i_ in marcadas} for i_, r_, f_ in PROVIDENCIAS]
-    outro = next((a.get("texto") or "" for a in atendimentos or [] if a.get("fonte") == "apto" and _data(a.get("data")) == da), "")
+    provs = [{"id": i_, "rot": r_, "frase": f_, "marcado": False} for i_, r_, f_ in PROVIDENCIAS]
+    outro = ""
 
     # 4) atenção
     if m:
@@ -214,7 +204,7 @@ def montar(m, pedidos, atendimentos, hoje=None, nome="", data_atend=None):
     secoes = [{"id": "pena", "titulo": "Como está a sua pena", "itens": sec_pena}]
     if m:
         secoes.append({"id": "direitos", "titulo": "Seus próximos direitos", "itens": sec_dir})
-    secoes += [{"id": "atend", "titulo": "Resumo do atendimento", "itens": []},
+    secoes += [{"id": "prov", "titulo": "O que a Defensoria vai fazer", "itens": []},
                {"id": "atencao", "titulo": "Fique atento", "itens": sec_aten}]
     ger = (m or {}).get("geracao") or ""
     rodape = ("As datas deste resumo vêm do SEEU (relatório de %s). Elas podem mudar com decisões do juiz, faltas ou dias de trabalho e estudo." % ger
@@ -222,19 +212,3 @@ def montar(m, pedidos, atendimentos, hoje=None, nome="", data_atend=None):
     return {"nome": nome, "proc": (m or {}).get("proc") or "", "hoje": hoje.strftime("%d/%m/%Y"), "barra": barra,
             "secoes": secoes, "rodape": rodape, "data_atend": da.strftime("%d/%m/%Y"), "providencias": provs, "outro": outro}
 
-
-def atendimentos_da_pessoa(nome, registros, manuais):
-    """atendimentos do SAP e registrados no APTO da pessoa (pelo nome, sem ligar nome só parecido), do mais recente ao mais antigo."""
-    nomes = {r["nome"] for r in registros if r.get("nome")} | {x["nome"] for x in manuais if x.get("nome")}
-    k, _c = ratd._Indice(nomes).achar(nome, parecido=False)
-    if not k:
-        return []
-    alvo = ratd.norm(k)
-    out = [{"data": r["data"], "tipo": r.get("tipo") or "", "texto": "", "fonte": "sap"} for r in registros if ratd.norm(r.get("nome")) == alvo]
-    out += [{"data": x["data"], "tipo": "", "texto": x.get("obs") or "", "fonte": "apto", "registrado_em": x.get("registrado_em")}
-            for x in manuais if ratd.norm(x.get("nome")) == alvo]
-    # o mesmo dia no SAP e no APTO: fica o do APTO (traz o que foi feito)
-    dias_apto = {x["data"] for x in out if x["fonte"] == "apto"}
-    out = [x for x in out if x["fonte"] == "apto" or x["data"] not in dias_apto]
-    out.sort(key=lambda x: (x["data"], x.get("registrado_em") or ""), reverse=True)
-    return out

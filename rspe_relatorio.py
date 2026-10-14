@@ -3584,8 +3584,8 @@ def relatorio_saidas(d, caminho, nome_base):
 
 
 def relatorio_resumo_assistido(d, caminho):
-    """Resumo para o assistido (linguagem simples, CNJ), uma folha A4 para imprimir: em cima, a pena, os próximos direitos e o resumo
-    do atendimento; embaixo, depois da linha pontilhada, o canhoto do assistido (retorno em X dias e a data): perto dela, ele entrega
+    """Resumo para o assistido (linguagem simples, CNJ), uma folha A4 para imprimir: em cima, a pena, os próximos direitos e o que a
+    Defensoria vai fazer; embaixo, depois da linha pontilhada, o canhoto do assistido (retorno em X dias e a data): perto dela, ele entrega
     o papel ao setor psicossocial da unidade para pedir atendimento. d = o que a janela do APTO mandou (o texto já conferido)."""
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.units import mm
@@ -3626,10 +3626,7 @@ def relatorio_resumo_assistido(d, caminho):
         itens = [x for x in sec.get("itens") or [] if str(x).strip()]
         if not itens:
             continue
-        tit = sec.get("titulo") or ""
-        if sec.get("id") == "atend" and rres._data(d.get("data_atend")):
-            tit = "Resumo do atendimento de %s" % rres.extenso(rres._data(d.get("data_atend")))
-        el.append(Paragraph(_t(tit), s_h))
+        el.append(Paragraph(_t(sec.get("titulo") or ""), s_h))
         el += [Paragraph(_t(x), s_p, bulletText="•") for x in itens]
     if d.get("rodape"):
         el.append(Paragraph(_t(d["rodape"]), s_rod))

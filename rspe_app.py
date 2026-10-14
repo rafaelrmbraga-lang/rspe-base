@@ -4089,8 +4089,7 @@ class Api:
         if not nome:
             return {"erro": "Assistido não encontrado."}
         ped = self.base.pedidos().get((m or {}).get("proc") or (m or {}).get("id") or "", {}) if m else {}
-        at = rres.atendimentos_da_pessoa(nome, self.base.atend_registros(), self.base.atend_manuais())
-        return rres.montar(m, ped, at, datetime.now().date(), nome)
+        return rres.montar(m, ped, datetime.now().date(), nome)
 
     def resumo_assistido_pdf(self, d):
         """PDF do resumo (o texto que veio da janela, já conferido), para imprimir."""

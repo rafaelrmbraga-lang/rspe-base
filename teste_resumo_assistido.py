@@ -1,6 +1,6 @@
-"""Resumo para o assistido (linguagem simples, CNJ): frases a partir do modelo, das providências e dos atendimentos; data
-duvidosa sai como "conferindo"; pedido feito tira o direito da lista; as providências do dia do atendimento já vêm marcadas no
-resumo do atendimento; atendimento do SAP e do APTO no mesmo dia fica uma vez só (o do APTO, com o que foi feito); PDF de uma página com o canhoto do assistido (pedido do próximo atendimento). Nomes fictícios."""
+"""Resumo para o assistido (linguagem simples, CNJ): frases a partir do modelo e das providências; data
+duvidosa sai como "conferindo"; pedido feito tira o direito da lista; as providências que a Defensoria vai adotar saem no futuro
+("Vamos pedir...");  PDF de uma página com o canhoto do assistido (pedido do próximo atendimento). Nomes fictícios."""
 import os
 import shutil
 import sys
@@ -33,7 +33,7 @@ def itens(d, sid):
 
 
 try:
-    d = rres.montar(M, {}, [], HOJE)
+    d = rres.montar(M, {}, HOJE)
     pena, dirs, aten = itens(d, "pena"), itens(d, "direitos"), itens(d, "atencao")
     ok(pena[0] == "Você está no regime fechado." and "Faltam 4 anos" in pena[2] and "30 dias" in pena[3], "pena: %s" % pena)
     ok(any("10 de outubro de 2030" in x for x in pena), "término por extenso")
@@ -44,53 +44,50 @@ try:
     ok(aten[0].startswith("Consta falta grave confirmada pelo juiz em 1º de junho de 2026"), "falta grave: %s" % aten)
     # falta grave: vale a data do RSPE. RSPE gerado depois da homologação traz a data refeita (sai com a data); RSPE anterior a ela
     # ainda não (sem data). O livramento segue com a data do RSPE (Súmulas 534 e 441 do STJ)
-    dfg = rres.montar(dict(M, geracao="10/10/2026", dbase="20/05/2026", prog="17/12/2026"), {}, [], HOJE)
+    dfg = rres.montar(dict(M, geracao="10/10/2026", dbase="20/05/2026", prog="17/12/2026"), {}, HOJE)
     ok(itens(dfg, "direitos")[0] == "Ir para o regime semiaberto: a partir de 17 de dezembro de 2026 (data já refeita depois da falta grave). "
        "Para isso, é preciso ter bom comportamento.", "RSPE depois da falta: data do RSPE: %s" % itens(dfg, "direitos")[0])
-    dant = rres.montar(dict(M, geracao="15/05/2026"), {}, [], HOJE)
+    dant = rres.montar(dict(M, geracao="15/05/2026"), {}, HOJE)
     ok(itens(dant, "direitos")[0].startswith("Ir para o regime semiaberto: por causa da falta grave, a data vai ser refeita no SEEU")
        and "12 de fevereiro" not in itens(dant, "direitos")[0] and itens(dant, "direitos")[1].startswith("Livramento condicional"),
        "RSPE anterior à falta: sem data: %s" % itens(dant, "direitos"))
-    dl = rres.montar(dict(M, liv="01/03/2027", liv_sit="Em cumprimento"), {}, [], HOJE)
+    dl = rres.montar(dict(M, liv="01/03/2027", liv_sit="Em cumprimento"), {}, HOJE)
     ok(itens(dl, "direitos")[1].endswith("A lei também exige 12 meses sem falta grave. A Defensoria vai conferir essa data."),
        "livramento a menos de 12 meses da falta grave: %s" % itens(dl, "direitos")[1])
     # data duvidosa: não sai como data
-    d2 = rres.montar(dict(M, prog_sit="Em cumprimento · percentual do SEEU acima do legal - ver Auditoria"), {}, [], HOJE)
+    d2 = rres.montar(dict(M, prog_sit="Em cumprimento · percentual do SEEU acima do legal - ver Auditoria"), {}, HOJE)
     ok(itens(d2, "direitos")[0] == "Ir para o regime semiaberto: a Defensoria está conferindo a data.", "data a conferir: %s" % itens(d2, "direitos")[0])
     ok("12 de fevereiro" not in " ".join(itens(d2, "direitos")), "data a conferir não aparece")
-    # pedido feito: sai dos direitos e entra no que a Defensoria fez; atendimento do mesmo dia (SAP e APTO) uma vez só
-    regs = [{"nome": "FULANO DE TESTE", "data": "2026-10-14", "tipo": "VIDEO CONFERENCIA"}, {"nome": "FULANO DE TESTE", "data": "2026-08-12", "tipo": "PRESENCIAL"},
-            {"nome": "OUTRA PESSOA", "data": "2026-09-01", "tipo": "PRESENCIAL"}]
-    man = [{"nome": "Fulano de Teste", "data": "2026-10-14", "obs": "explicamos o cálculo da pena", "registrado_em": "2026-10-14 10:00:00"}]
-    at = rres.atendimentos_da_pessoa("FULANO DE TESTE", regs, man)
-    ok(len(at) == 2 and at[0]["fonte"] == "apto" and at[1]["data"] == "2026-08-12", "atendimentos da pessoa: %s" % at)
+    # pedido já feito: sai dos direitos; as providências a adotar não vêm marcadas
     d3 = rres.montar(M, {"liv": {"data": "14/10/2026", "tipo": "pedido"}, "fd": {"data": "14/10/2026", "tipo": "oficio"},
-                         "prog": {"data": "01/09/2026", "tipo": "pedido"}}, at, HOJE)
+                         "prog": {"data": "01/09/2026", "tipo": "pedido"}}, HOJE)
     ok(not any(x.startswith("Livramento") for x in itens(d3, "direitos")), "pedido feito sai dos direitos")
-    marc = {p["id"] for p in d3["providencias"] if p["marcado"]}
-    ok(marc == {"explicou", "ped_liv", "ofi_atest"}, "providências do dia do atendimento já marcadas: %s" % marc)
-    ok(d3["outro"] == "explicamos o cálculo da pena" and d3["data_atend"] == "14/10/2026", "o que foi feito registrado no APTO: %s" % d3["outro"])
-    ok(any(s_["id"] == "atend" for s_ in d3["secoes"]) and not any(s_["id"] == "fez" for s_ in d3["secoes"]), "seção do resumo do atendimento")
+    ok(not any(p["marcado"] for p in d3["providencias"]) and d3["outro"] == "" and d3["data_atend"] == "14/10/2026",
+       "providências a adotar: nada vem marcado")
+    ok(all(p["frase"].startswith("Vamos ") for p in d3["providencias"]), "providências no futuro")
+    ok(any(s_["id"] == "prov" and s_["titulo"] == "O que a Defensoria vai fazer" for s_ in d3["secoes"])
+       and not any(s_["id"] in ("fez", "atend") for s_ in d3["secoes"]), "seção do que a Defensoria vai fazer")
     # sem RSPE na base
-    d4 = rres.montar(None, {}, [], HOJE, "BELTRANO SEM RSPE")
+    d4 = rres.montar(None, {}, HOJE, "BELTRANO SEM RSPE")
     ok(d4["nome"] == "BELTRANO SEM RSPE" and "ainda não tem o relatório" in itens(d4, "pena")[0] and not itens(d4, "direitos"), "sem RSPE")
     # extinção cabível: sem "faltam"
-    d5 = rres.montar(dict(M, ext_sit="Extinção cabível", pena_rem="2 dias"), {}, [], HOJE)
+    d5 = rres.montar(dict(M, ext_sit="Extinção cabível", pena_rem="2 dias"), {}, HOJE)
     ok(not any("Faltam" in x for x in itens(d5, "pena")) and any("pode já ter terminado" in x for x in itens(d5, "pena")), "extinção cabível")
-    ok(rres.montar(dict(M, pena_rem="1 ano"), {}, [], HOJE)["secoes"][0]["itens"][2].endswith("Falta 1 ano."), "singular: falta 1 ano")
+    ok(rres.montar(dict(M, pena_rem="1 ano"), {}, HOJE)["secoes"][0]["itens"][2].endswith("Falta 1 ano."), "singular: falta 1 ano")
     # PDF de uma página, com o canhoto
     tmp = tempfile.mkdtemp()
     try:
         pdf = os.path.join(tmp, "Resumo.pdf")
-        sec = [dict(s_, itens=[p["frase"] for p in d3["providencias"] if p["marcado"]]) if s_["id"] == "atend" else s_ for s_ in d3["secoes"]]
+        fr = {p["id"]: p["frase"] for p in d3["providencias"]}
+        sec = [dict(s_, itens=[fr["ped_ind"], fr["falta"]]) if s_["id"] == "prov" else s_ for s_ in d3["secoes"]]
         rrel.relatorio_resumo_assistido(dict(d3, secoes=sec, retorno="60"), pdf)
         import pdfplumber
         with pdfplumber.open(pdf) as p:
             n = len(p.pages)
             txt = p.pages[0].extract_text() or ""
         ok(n == 1, "uma página: %d" % n)
-        ok("Resumo da sua pena" in txt and "FULANO DE TESTE" in txt and "Resumo do atendimento de 14 de outubro de 2026" in txt
-           and "Pedimos ao juiz o livramento condicional." in txt and "setor psicossocial da unidade" in txt and "Retorno em" in txt
+        ok("Resumo da sua pena" in txt and "FULANO DE TESTE" in txt and "O que a Defensoria vai fazer" in txt
+           and "Vamos pedir ao juiz o indulto (perdão da pena)." in txt and "setor psicossocial da unidade" in txt and "Retorno em" in txt
            and "recorte aqui" in txt and "Data do retorno: 13/12/2026" in txt, "conteúdo do PDF")
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
@@ -104,4 +101,4 @@ if falhas:
     for f in falhas:
         print(" -", f)
     sys.exit(1)
-print("ok: resumo para o assistido (linguagem simples, datas a conferir, pedidos e atendimentos, PDF com canhoto)")
+print("ok: resumo para o assistido (linguagem simples, datas do RSPE, falta grave, providências a adotar, PDF com canhoto)")
