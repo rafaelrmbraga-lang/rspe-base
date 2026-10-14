@@ -891,6 +891,10 @@ v7.9.4
     o anterior se não houver nº; copia os dois se houver dois), só lendo;
     depois baixa os RSPE no SEEU e avisa os nºs que o SEEU não achou;
     planilha CSV com o resultado.
+  - Extensão 1.6.0, lote do SAP: homônimos são todos verificados (nº e data
+    de cada um, em linhas separadas); a planilha traz a data do último
+    atendimento do NUSPEN e sai em ordem de prioridade (sem atendimento
+    registrado, depois do mais antigo ao mais recente).
   - Extensão 1.5.1, lote do SEEU: processo que o SEEU não abre conta como
     "não encontrado" e o lote segue (antes, as palavras "login"/"logon"
     das páginas logadas faziam o lote parar como "sessão expirada").

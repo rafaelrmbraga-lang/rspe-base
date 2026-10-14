@@ -118,7 +118,7 @@
     };
   }
 
-  // escolhe o assistido certo; homônimos só com a mãe, o CPF ou o ID da lista (ou a anotação "USAR ESSE" do SAP)
+  // escolhe o(s) assistido(s): a mãe, o CPF ou o ID da lista filtram; homônimos que sobrarem são todos verificados
   function escolher(p, linhas) {
     const nome = semNota(p.nome);
     let cand = linhas.filter((x) => semNota(x.nome) === nome);
@@ -130,15 +130,9 @@
     }
     if (cand.length > 1 && p.cpf) cand = cand.filter((x) => x.cpf === dig(p.cpf));
     if (cand.length > 1 && p.num) cand = cand.filter((x) => dig(x.id) === dig(p.num));
-    if (cand.length > 1) {
-      const usar = cand.filter((x) => /USAR ESSE/.test(norm(x.nome)));
-      if (usar.length === 1) cand = usar;
-    }
     if (!cand.length) return { erro: "não encontrado no SAP com esse CPF/ID" };
-    if (cand.length > 1) {
-      return { erro: `homônimos (${cand.length}) no SAP: informe a mãe, o CPF ou o ID na lista (mães: ${cand.map((x) => x.mae || "?").join("; ")})` };
-    }
-    return { alvo: cand[0] };
+    // homônimos que a lista não separa: todos são verificados (cada um sai numa linha da planilha, com a mãe e o ID)
+    return { alvos: cand.slice(0, 10), mais: Math.max(0, cand.length - 10) };
   }
 
   async function designacoesNuspen() {
@@ -188,39 +182,68 @@
       if (!det) continue;
       const texto = det.textContent.replace(/\s+/g, " ");
       const nums = A.cnjsNoTexto(texto);
-      if (nums.length) return { processos: nums, data: dataDe(data), desceu: jaDesceu || k > 0 };
+      if (nums.length) return { processos: nums, data: dataDe(data), desceu: jaDesceu || k > 0, ultimo: linhas[0] ? linhas[0].data : "" };
     }
-    return { nenhum: true, total: linhas.length };
+    return { nenhum: true, total: linhas.length, ultimo: linhas[0] ? linhas[0].data : "" };
   }
 
-  async function umAssistido(p) {
-    const b = await buscar(p);
-    if (b.erro) return { status: "erro", msg: b.erro, parar: b.parar };
-    const e = escolher(p, b.linhas);
-    if (e.erro) return { status: "erro", msg: e.erro };
-    const alvo = e.alvo;
+  // um assistido do SAP (já achado na busca): nº do processo e data do último atendimento do NUSPEN
+  async function umCadastro(alvo) {
+    const base = { sapId: alvo.id, nomeSap: alvo.nome, mae: alvo.mae, processos: [], data: "", ultimo: "" };
     // a lupa "Visualizar Assistido" (designar=0); nunca o botão "Designar Assistido"
     const lupa = [...alvo.tr.querySelectorAll("button")].find((x) => x.classList.contains("bt-pesquisar") &&
       /'designar'\s*:\s*'0'/.test(x.getAttribute("onclick") || ""));
-    if (!lupa) return { status: "erro", msg: "a lupa Visualizar Assistido não foi reconhecida (o SAP mudou?)", parar: true };
+    if (!lupa) return Object.assign(base, { status: "erro", msg: "a lupa Visualizar Assistido não foi reconhecida (o SAP mudou?)", parar: true });
     const carga = proximaCarga();
     lupa.click();
-    if (!(await carga)) return { status: "erro", msg: "o SAP não abriu o assistido" };
-    if (naLogin()) return { status: "erro", msg: "sessão do SAP expirada: faça login e rode de novo", parar: true };
-    if (!$(ID.abas)) return { status: "erro", msg: "o SAP não abriu o cadastro do assistido" };
+    if (!(await carga)) return Object.assign(base, { status: "erro", msg: "o SAP não abriu o assistido" });
+    if (naLogin()) return Object.assign(base, { status: "erro", msg: "sessão do SAP expirada: faça login e rode de novo", parar: true });
+    if (!$(ID.abas)) return Object.assign(base, { status: "erro", msg: "o SAP não abriu o cadastro do assistido" });
     const d = await designacoesNuspen();
-    if (d.erro) return { status: "erro", msg: d.erro, parar: d.parar, sapId: alvo.id };
+    if (d.erro) return Object.assign(base, { status: "erro", msg: d.erro, parar: d.parar, semAtendimento: /sem (atendimento|designa)/.test(d.erro) });
+    // último atendimento do NUSPEN: o mais recente entre as designações e os históricos abertos
+    let ultimo = d.nus[0].data;
+    const maisRecente = (x) => { if (x && quando(x) > quando(ultimo)) ultimo = x; };
     for (let i = 0; i < d.nus.length; i++) {
       const r = await procurarNoHistorico(d.nus[i], i > 0);
-      if (r.erro) return { status: "erro", msg: r.erro, sapId: alvo.id };
+      if (r.erro) return Object.assign(base, { status: "erro", msg: r.erro, ultimo: dataDe(ultimo) });
+      maisRecente(r.ultimo);
       if (r.processos) {
-        return {
-          status: "ok", processos: r.processos, data: r.data, sapId: alvo.id, nomeSap: alvo.nome, mae: alvo.mae,
-          msg: r.processos.join(", ") + " · atendimento de " + r.data + (r.desceu ? " (o mais recente não tinha nº)" : ""),
-        };
+        return Object.assign(base, { status: "ok", processos: r.processos, data: r.data, ultimo: dataDe(ultimo),
+          msg: r.processos.join(", ") + " · nº do atendimento de " + r.data + (r.desceu ? " (o mais recente não tinha nº)" : "") });
       }
     }
-    return { status: "erro", msg: "sem nº de processo nos atendimentos do NUSPEN", sapId: alvo.id };
+    return Object.assign(base, { status: "erro", msg: "sem nº de processo nos atendimentos do NUSPEN", ultimo: dataDe(ultimo) });
+  }
+
+  async function umAssistido(p) {
+    let b = await buscar(p);
+    if (b.erro) return { status: "erro", msg: b.erro, parar: b.parar };
+    const e = escolher(p, b.linhas);
+    if (e.erro) return { status: "erro", msg: e.erro, cadastros: [] };
+    const cadastros = [];
+    for (let k = 0; k < e.alvos.length; k++) {
+      // a partir do 2º homônimo, busca de novo e abre a linha do mesmo ID (a moldura saiu da lista ao abrir o anterior)
+      let alvo = e.alvos[k];
+      if (k > 0) {
+        await dormir(2000);
+        b = await buscar(p);
+        if (b.erro) { cadastros.push({ sapId: alvo.id, nomeSap: alvo.nome, mae: alvo.mae, processos: [], status: "erro", msg: b.erro }); if (b.parar) break; continue; }
+        alvo = b.linhas.find((x) => dig(x.id) === dig(e.alvos[k].id));
+        if (!alvo) { cadastros.push({ sapId: e.alvos[k].id, nomeSap: e.alvos[k].nome, mae: e.alvos[k].mae, processos: [], status: "erro", msg: "o SAP não listou de novo este homônimo" }); continue; }
+      }
+      const r = await umCadastro(alvo);
+      cadastros.push(r);
+      if (r.parar) return { status: "erro", msg: r.msg, parar: true, cadastros };
+    }
+    const processos = [...new Set(cadastros.flatMap((x) => x.processos || []))];
+    const homon = cadastros.length > 1;
+    const resumo = (x) => (homon ? (x.mae ? "mãe " + x.mae : "ID " + x.sapId) + ": " : "") + (x.status === "ok" ? x.msg : x.msg) +
+      (x.ultimo ? " · último atendimento NUSPEN " + x.ultimo : "");
+    return {
+      status: processos.length ? "ok" : "erro", processos, cadastros,
+      msg: (homon ? `${cadastros.length} homônimos verificados${e.mais ? " (e mais " + e.mais + " não verificados)" : ""} - ` : "") + cadastros.map(resumo).join(" | "),
+    };
   }
 
   let lote = null;
@@ -234,7 +257,8 @@
         let r;
         try { r = await umAssistido(itens[i]); } catch (e) { r = { status: "erro", msg: String((e && e.message) || e) }; }
         await chrome.runtime.sendMessage({ tipo: "loteItem", i, status: r.status, msg: r.msg,
-          extra: { processos: r.processos || [], data: r.data || "", sapId: r.sapId || "", nomeSap: r.nomeSap || "", mae: r.mae || "" } }).catch(() => {});
+          extra: { processos: r.processos || [], cadastros: (r.cadastros || []).map((x) => ({ sapId: x.sapId || "", nomeSap: x.nomeSap || "",
+            mae: x.mae || "", processos: x.processos || [], data: x.data || "", ultimo: x.ultimo || "", situacao: x.status === "ok" ? "ok" : x.msg || "" })) } }).catch(() => {});
         if (r.parar) { lote.parar = true; break; }
         if (i < itens.length - 1) await dormir(INTERVALO_MS);
       }

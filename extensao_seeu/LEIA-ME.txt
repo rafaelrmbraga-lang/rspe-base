@@ -99,9 +99,11 @@ PROCESSOS DO SAP (Defensoria)
    texto tiver dois nºs, copia os dois.
  - Só lê. Nunca clica em "Designar Assistido", "Atendimentos do
    Assistido", relatórios, declarações ou em nada que grave.
- - Homônimos: com a mãe, o CPF ou o ID na lista, pega o certo; sem isso, se o
-   SAP marcar um deles com "(USAR ESSE)", pega esse; senão a linha fica
-   "homônimos" com as mães encontradas, para completar a lista.
+ - Homônimos: com a mãe, o CPF ou o ID na lista, pega só o certo; sem isso,
+   verifica todos os homônimos (até 10) e entrega o nº e a data de cada um,
+   em linhas separadas da planilha, com a mãe e o ID do SAP.
+ - Data do último atendimento do NUSPEN: vai na planilha, mesmo quando o
+   atendimento não tem nº de processo.
  - Avisos por linha: não encontrado no SAP; sem atendimento do NUSPEN; sem
    nº de processo nos atendimentos do NUSPEN; sessão do SAP expirada (o lote
    para).
@@ -109,7 +111,11 @@ PROCESSOS DO SAP (Defensoria)
    aberta e logada, com todos os nºs achados (a base de destino é a do
    painel). Os nºs que o SEEU não achar aparecem no fim, com o nome.
    "Salvar planilha" grava Downloads\APTO\SAP_processos_<data>.csv (abre no
-   Excel) com nome, nome no SAP, mãe, ID, processo(s), data do atendimento,
+   Excel), já em ordem de prioridade de atendimento: primeiro quem não tem
+   atendimento registrado (não achado no SAP ou sem atendimento do NUSPEN),
+   depois do último atendimento mais antigo ao mais recente; por último o
+   que não pôde ser verificado. Colunas: prioridade, nome, nome no SAP, mãe,
+   ID, último atendimento NUSPEN, processo(s), atendimento com o nº,
    situação e, depois do SEEU, o resultado de cada nº no SEEU. A pasta
    vigiada ignora o CSV.
  - Durante o lote, não use o SAP nessa mesma janela do navegador (a moldura
