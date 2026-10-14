@@ -1,9 +1,9 @@
-APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.9.4
+APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.9.5
 (antigo RSPE Base; SEEU, programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-7.9.4. A documentação técnica completa (cada parâmetro, a regra, a norma e
+7.9.5. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -79,6 +79,32 @@ PASTA VIGIADA (menu da base > "Pasta vigiada…")
   - Vale a mesma regra de duplicados da importação manual.
   - O arquivo pasta_vigiada_estado.json (ao lado do .exe) guarda o que já
     foi lido; apagá-lo faz a pasta ser relida (os repetidos são ignorados).
+
+ATENDIMENTOS (aba Geral > botão "Atendimentos")
+  Situação de atendimento de quem está hoje na unidade, a partir de dois
+  PDFs, importados pelo botão da janela ou junto com os RSPE ("Importar
+  PDFs" / pasta vigiada, pelo nome do arquivo):
+   - "Listagem Internos Ativos" do SIAPEN: quem está na unidade (nome,
+     localização, entrada). É ela que decide quem aparece: quem está no
+     relatório do SAP e não está na listagem já saiu da unidade.
+   - "Relatório de Atendimento" do SAP: os atendimentos do período (o
+     último de cada um vale). O relatório grande é lido em paralelo (cerca
+     de meio minuto para 500 páginas).
+  - Cores: vermelho = sem atendimento no período do relatório; amarelo =
+    último atendimento há mais de 90 dias; verde = até 90 dias. Ordem de
+    prioridade: vermelhos; depois do atendimento mais antigo ao mais
+    recente. Clique na cor para filtrar.
+  - Nomes: iguais sem acento, maiúsculas, preposições e apóstrofo; nome
+    cortado pela listagem do SIAPEN também é ligado (aviso "nome cortado").
+    Nome só parecido (grafia diferente) não é ligado: o interno fica
+    vermelho, com "nome parecido no SAP: ... - confira".
+  - Coluna "Documentos na base": RSPE e ficha disciplinar já importados.
+  - Internos sem RSPE: aparecem no fim da aba Geral com "Falta juntar o
+    RSPE e a ficha disciplinar"; nas demais abas, um aviso conta quantos
+    faltam. Não é erro: as colunas e abas se preenchem quando o RSPE e a
+    ficha forem importados.
+  - A listagem e o relatório ficam guardados na base; importar de novo
+    substitui o anterior.
 
 EXTENSÃO DO NAVEGADOR (pasta extensao_seeu)
   "APTO - RSPE do SEEU, Ficha do SIAPEN e processos do SAP", para Chrome e
@@ -881,6 +907,16 @@ HISTÓRICO DE VERSÕES
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
 
+v7.9.5
+  - Aba Geral, botão "Atendimentos": internos da unidade (listagem do
+    SIAPEN) com o último atendimento (relatório de atendimento do SAP), em
+    ordem de prioridade, com cores (sem atendimento no período em vermelho,
+    mais de 90 dias em amarelo, até 90 dias em verde) e os documentos já
+    na base.
+  - Internos da listagem ainda sem RSPE aparecem na aba Geral com "Falta
+    juntar o RSPE e a ficha disciplinar" e são contados nas demais abas.
+  - Os dois PDFs também entram pelo "Importar PDFs" e pela pasta vigiada.
+
 v7.9.4
   - Extensão 1.4.0 ligada ao APTO sem configurar nada: o APTO cria
     Downloads\APTO\<base> para cada base, vigia Downloads\APTO sempre
@@ -891,6 +927,13 @@ v7.9.4
     o anterior se não houver nº; copia os dois se houver dois), só lendo;
     depois baixa os RSPE no SEEU e avisa os nºs que o SEEU não achou;
     planilha CSV com o resultado.
+  - Extensão 1.6.0, lote do SAP: homônimos são todos verificados (nº e data
+    de cada um, em linhas separadas); a planilha traz a data do último
+    atendimento do NUSPEN e sai em ordem de prioridade (sem atendimento
+    registrado, depois do mais antigo ao mais recente).
+  - Extensão 1.5.1, lote do SEEU: processo que o SEEU não abre conta como
+    "não encontrado" e o lote segue (antes, as palavras "login"/"logon"
+    das páginas logadas faziam o lote parar como "sessão expirada").
   - Lote de fichas do SIAPEN: funciona com o SIAPEN aberto pelo portal
     www.siapen.ms.gov.br (a lista de nomes era tomada por lista de
     processos); o lote usa os comandos da própria tela do SIAPEN para

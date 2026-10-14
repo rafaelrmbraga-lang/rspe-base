@@ -354,7 +354,12 @@ async function sapParaSeeu() {
   const { ultimoSap } = await chrome.storage.local.get("ultimoSap");
   if (!ultimoSap) return { ok: false, motivo: "Rode antes o lote no SAP." };
   const nomes = {};
-  for (const x of ultimoSap.itens) for (const n of (x.extra && x.extra.processos) || []) nomes[n] = nomes[n] ? nomes[n] + " / " + x.n : x.n;
+  for (const x of ultimoSap.itens) {
+    for (const n of (x.extra && x.extra.processos) || []) {
+      if (!nomes[n]) nomes[n] = x.n;
+      else if (!nomes[n].split(" / ").includes(x.n)) nomes[n] += " / " + x.n;
+    }
+  }
   const numeros = Object.keys(nomes);
   if (!numeros.length) return { ok: false, motivo: "O lote do SAP não achou nenhum nº de processo." };
   const [seeu] = await chrome.tabs.query({ url: "https://seeu.pje.jus.br/*" });
@@ -378,15 +383,32 @@ async function sapPlanilha() {
   }
   const temSeeu = Object.keys(noSeeu).length > 0;
   const cel = (v) => '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"';
-  const cab = ["Nome (lista)", "Nome no SAP", "Mãe", "ID SAP", "Processo(s)", "Data do atendimento", "Situação"].concat(temSeeu ? ["No SEEU"] : []);
-  const linhas = [cab.map(cel).join(";")];
+  // uma linha por cadastro do SAP (homônimos em linhas separadas); nome não achado no SAP também entra
+  const dataNum = (d) => { const m = /(\d{2})\/(\d{2})\/(\d{4})/.exec(d || ""); return m ? Number(m[3] + m[2] + m[1]) : 0; };
+  const reg = [];
   for (const x of ultimoSap.itens) {
-    const e = x.extra || {};
-    const procs = e.processos || [];
-    linhas.push([x.n, e.nomeSap, e.mae, e.sapId, procs.join(" / "), e.data,
-      x.status === "ok" ? "ok" : x.status === "fila" ? "não processado" : x.msg]
-      .concat(temSeeu ? [procs.map((n) => n + ": " + (noSeeu[n] || "não verificado")).join(" / ")] : []).map(cel).join(";"));
+    const cads = (x.extra && x.extra.cadastros) || [];
+    if (!cads.length) reg.push({ lista: x.n, nomeSap: "", mae: "", sapId: "", ultimo: "", processos: [], data: "", situacao: x.status === "fila" ? "não processado" : x.msg || "" });
+    for (const c0 of cads) {
+      // o mesmo cadastro do SAP vindo de duas linhas da lista (ex.: só o nome e nome com a mãe) sai uma vez
+      if (c0.sapId && reg.some((r) => r.sapId === c0.sapId)) continue;
+      reg.push(Object.assign({ lista: x.n }, c0));
+    }
   }
+  // prioridade de atendimento: 1º sem atendimento registrado; depois do último atendimento mais antigo ao mais recente;
+  // por último o que não pôde ser verificado (erro de tela, sessão, não processado)
+  const semAtend = (r) => !r.ultimo && /^(não encontrado no SAP|sem atendimento do NUSPEN no SAP|sem designações no SAP)$/.test(r.situacao || "");
+  const grupo = (r) => (semAtend(r) ? 0 : r.ultimo ? 1 : 2);
+  reg.sort((p1, p2) => grupo(p1) - grupo(p2) || dataNum(p1.ultimo) - dataNum(p2.ultimo) || p1.lista.localeCompare(p2.lista, "pt-BR"));
+  const cab = ["Prioridade", "Nome (lista)", "Nome no SAP", "Mãe", "ID SAP", "Último atendimento NUSPEN", "Processo(s)", "Atendimento com o nº", "Situação"]
+    .concat(temSeeu ? ["No SEEU"] : []);
+  const linhas = [cab.map(cel).join(";")];
+  reg.forEach((r, i) => {
+    const procs = r.processos || [];
+    linhas.push([i + 1, r.lista, r.nomeSap, r.mae, r.sapId, r.ultimo || (semAtend(r) ? "sem atendimento registrado" : ""), procs.join(" / "), r.data,
+      r.situacao === "ok" ? "ok" : r.situacao]
+      .concat(temSeeu ? [procs.map((n) => n + ": " + (noSeeu[n] || "não verificado")).join(" / ")] : []).map(cel).join(";"));
+  });
   const agora = new Date();
   const hm = String(agora.getHours()).padStart(2, "0") + String(agora.getMinutes()).padStart(2, "0");
   const arquivo = (A.pastaSegura(c.raiz) || "APTO") + "/SAP_processos_" + A.hojeISO() + "_" + hm + ".csv";

@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "APTO - RSPE do SEEU, Ficha do SIAPEN e processos do SAP",
   "short_name": "APTO RSPE",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "description": "Salva o RSPE do SEEU e a Ficha Disciplinar do SIAPEN na pasta da base do APTO, e acha no SAP da Defensoria o nº do processo do último atendimento do NUSPEN.",
   "minimum_chrome_version": "116",
   "permissions": [

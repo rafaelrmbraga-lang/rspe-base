@@ -39,9 +39,10 @@ import rspe_indulto_tl as rtl
 import rspe_geopresidios as rgeo
 import rspe_mapa_ms as rmapa
 import rspe_calc as rcalc
+import rspe_atendimentos as ratd
 
 APP = "APTO"
-VERSAO = "7.9.4"
+VERSAO = "7.9.5"
 GEO_AUTO_DIAS = 30           # dados prisionais: baixados de novo sozinhos quando têm 30 dias ou mais
 GEO_REPETIR_MIN = 10         # ... ou 10 minutos depois de um download em que algum relatório falhou (nova tentativa automática)
 GEO_REPETIR_MAX = 3          # tentativas automáticas seguidas com o programa aberto (depois, na próxima abertura ou pelo botão)
@@ -762,6 +763,8 @@ class Base:
             self.con.execute("ALTER TABLE quadro_cartoes ADD COLUMN arquivado TEXT DEFAULT ''")  # data do arquivamento ('' = no quadro)
         if "aba" not in [r[1] for r in self.con.execute("PRAGMA table_info(quadro_cartoes)").fetchall()]:
             self.con.execute("ALTER TABLE quadro_cartoes ADD COLUMN aba TEXT DEFAULT ''")  # benefício do cartão (prog, liv, ind...)
+        # atendimentos por unidade: a listagem de internos (SIAPEN) e o relatório de atendimento (SAP) importados
+        self.con.execute("CREATE TABLE IF NOT EXISTS atend_dados (chave TEXT PRIMARY KEY, arquivo TEXT, importado_em TEXT, dados TEXT)")
         # calculadora de penas: cálculos registrados (assistido opcional, anotação e o estado da janela)
         self.con.execute("""CREATE TABLE IF NOT EXISTS calculos (id TEXT PRIMARY KEY, criado TEXT, atualizado TEXT, processo TEXT,
             assistido TEXT, nota TEXT, resumo TEXT, dados TEXT)""")
@@ -769,6 +772,25 @@ class Base:
             for i, (cid, nome) in enumerate((("fazer", "A fazer"), ("andamento", "Em andamento"), ("aguardando", "Aguardando decisão"), ("concluido", "Concluído"))):
                 self.con.execute("INSERT INTO quadro_colunas VALUES (?,?,?)", (cid, nome, i))
         self.con.commit()
+
+    def atend_gravar(self, chave, arquivo, dados):
+        with self.lock:
+            self.con.execute("INSERT OR REPLACE INTO atend_dados VALUES (?,?,?,?)",
+                             (chave, arquivo, datetime.now().strftime("%d/%m/%Y %H:%M"), json.dumps(dados, ensure_ascii=False)))
+            self.con.commit()
+
+    def atend_ler(self):
+        """{"listagem": {...}, "relatorio": {...}} (cada um com arquivo e importado_em)."""
+        out = {}
+        try:
+            for ch, arq, quando, d in self.con.execute("SELECT chave, arquivo, importado_em, dados FROM atend_dados").fetchall():
+                out[ch] = dict(json.loads(d), arquivo=arq, importado_em=quando)
+        except sqlite3.OperationalError:
+            pass  # base só para leitura, de versão anterior (sem a tabela)
+        return out
+
+    def fichas_sem_rspe(self):
+        return [r[0] for r in self.con.execute("SELECT nome_norm FROM fichas WHERE IFNULL(processo,'')=''").fetchall()]
 
     def gravar_ficha(self, f, processo, mesma_pessoa=False):
         """Grava a ficha; não substitui ficha impressa depois (devolve False nesse caso). A comparação vale também
@@ -1355,6 +1377,7 @@ class Api:
             # versão leve (sem os textos de prescrição e auditoria): a base grande chega à tela em segundos; o registro completo
             # vem quando a ficha, a linha expandida ou o cálculo da fuga é aberto (Api.registro)
             "registros": [_leve(self._json_de(m)) for m in self._modelos],
+            "pendentes": self._pendentes_unidade(),
             "copia": self._copia_info(),
         }
 
@@ -2739,7 +2762,15 @@ class Api:
         try:
             if base is None:
                 raise RuntimeError("nenhuma base aberta")
-            resumo = self._lote_(arqs, base, silencioso)
+            # listagem de internos (SIAPEN) e relatório de atendimento (SAP) vão para Atendimentos (aba Geral), não para o lote de RSPE
+            atend = [a for a in arqs if ratd.tipo_pelo_nome(os.path.basename(a))]
+            av_atend = self._atend_importar_arquivos(atend, base) if atend else []
+            arqs = [a for a in arqs if a not in atend]
+            resumo = self._lote_(arqs, base, silencioso) if arqs else {"novos": 0, "atualizados": 0, "historico": 0, "duplicados": 0,
+                                                                       "antigos": 0, "erros": 0, "fichas": 0, "incompletos": 0, "avisos": []}
+            if av_atend:
+                resumo["avisos"] = ["Atendimentos (aba Geral > Atendimentos): " + a for a in av_atend] + list(resumo.get("avisos") or [])
+                resumo["atendimentos"] = len(av_atend)
         except Exception as e:
             logging.getLogger("rspe").exception("importação interrompida")
             msg = "Importação interrompida: %s" % ("a base foi fechada durante a importação" if isinstance(e, sqlite3.ProgrammingError) else e)
@@ -3178,6 +3209,79 @@ class Api:
         srv.daemon_threads = True
         threading.Thread(target=srv.serve_forever, daemon=True).start()
         return srv
+
+    # ---- atendimentos por unidade: listagem de internos (SIAPEN) + relatório de atendimento (SAP) ----
+    def _atend_importar_arquivos(self, caminhos, base=None):
+        """Lê e guarda na base as listagens de internos e os relatórios de atendimento; devolve os avisos."""
+        base = base or self.base
+        avisos = []
+        for c in caminhos:
+            nome = os.path.basename(c)
+            tipo = ratd.tipo_do_arquivo(c)
+            try:
+                if tipo == "listagem":
+                    L = ratd.ler_listagem_arquivo(c)
+                    if not L["internos"]:
+                        raise ValueError("nenhum interno lido")
+                    base.atend_gravar("listagem", nome, L)
+                    avisos.append("Listagem de internos (%s): %s, emitida em %s" % (L["unidade"] or "unidade", rs.pl(len(L["internos"]), "interno", "internos"), L["emitida"] or "?"))
+                elif tipo == "relatorio":
+                    R = ratd.ler_relatorio(c, processos=max(1, min(8, (os.cpu_count() or 2) - 1)))
+                    if not R["n"]:
+                        raise ValueError("nenhum atendimento lido")
+                    base.atend_gravar("relatorio", nome, R)
+                    avisos.append("Relatório de atendimento do SAP (%s a %s): %s de %s" % (
+                        *(R["periodo"] or ["?", "?"]), rs.pl(R["n"], "atendimento", "atendimentos"), rs.pl(len(R["pessoas"]), "assistido", "assistidos")))
+                else:
+                    avisos.append("%s: não é a listagem de internos ativos (SIAPEN) nem o relatório de atendimento (SAP)" % nome)
+            except Exception as e:
+                logging.getLogger("rspe").exception("atendimentos: %s", c)
+                avisos.append("%s: não foi possível ler (%s)" % (nome, e))
+        return avisos
+
+    def atendimentos(self):
+        """Internos da unidade (última listagem importada), com o último atendimento e os documentos na base, em ordem de prioridade."""
+        if not self.base:
+            return {"erro": "Abra uma base."}
+        d = self.base.atend_ler()
+        L, R = d.get("listagem"), d.get("relatorio")
+        regs = [{"id": m.get("id"), "nome": m.get("nome") or "", "proc": m.get("proc") or "", "ficha_tem": m.get("ficha_tem")}
+                for m in (getattr(self, "_modelos", None) or [])]
+        lista = ratd.cruzar(L, R, regs, self.base.fichas_sem_rspe(), datetime.now().date()) if L else []
+        cont, docs = {}, {"sem_rspe": 0, "sem_ficha": 0}
+        for x in lista:
+            cont[x["cor"]] = cont.get(x["cor"], 0) + 1
+            docs["sem_rspe"] += 0 if x["rspe"] else 1
+            docs["sem_ficha"] += 0 if x["ficha"] else 1
+        meta = lambda o, *ks: {k: (o or {}).get(k) for k in ks}
+        return {"listagem": meta(L, "unidade", "emitida", "arquivo", "importado_em") if L else None,
+                "relatorio": dict(meta(R, "periodo", "gerado", "arquivo", "importado_em", "n"), pessoas=len((R or {}).get("pessoas") or {})) if R else None,
+                "prazo": ratd.PRAZO_DIAS, "lista": lista, "cont": cont, "docs": docs}
+
+    def atendimentos_importar(self):
+        if not self.base:
+            return {"erro": "Abra uma base."}
+        arqs = self._janela.create_file_dialog(webview.OPEN_DIALOG, allow_multiple=True,
+                                               file_types=("Listagem de internos (SIAPEN) ou relatório de atendimento (SAP) (*.pdf)",))
+        if not arqs:
+            return None
+        avisos = self._atend_importar_arquivos(list(arqs))
+        r = self.atendimentos()
+        r["avisos"] = avisos
+        self._js("api('listar')")
+        return r
+
+    def _pendentes_unidade(self):
+        """internos da listagem da unidade ainda sem RSPE na base (aba Geral e aviso das demais abas)."""
+        try:
+            L = self.base.atend_ler().get("listagem") if self.base else None
+        except Exception:
+            L = None
+        if not L:
+            return None
+        regs = [{"nome": m.get("nome") or ""} for m in (getattr(self, "_modelos", None) or [])]
+        return {"unidade": L.get("unidade", ""), "emitida": L.get("emitida", ""), "total": len(L.get("internos") or []),
+                "lista": ratd.pendentes(L, regs)}
 
     def _vigia_loop(self):
         while True:
