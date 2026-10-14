@@ -1758,7 +1758,8 @@ const ui = {
     const x=(r.lista||[]).find(y=>y.nome===nome); this.resumoAssistido(x&&x.id||'',nome,true); },
   async atdDesfazer(id){ this.atendimentos(await API().atendimentos_desfazer(id,...this.atdPer())); },
   async atendimentos(r){ r=r||await API().atendimentos(...this.atdPer()); if(!r) return; if(r.erro) return this.toast(r.erro);
-    this._atd=r; if(r.avisos&&r.avisos.length) this.toast(r.avisos.join(' · ')); if(r.msg) this.toast(r.msg);
+    this._atd=r; this._bdAtd=undefined;  // Dados da Base reconta os atendimentos (importação, registro ou desfazer)
+    if(r.avisos&&r.avisos.length) this.toast(r.avisos.join(' · ')); if(r.msg) this.toast(r.msg);
     const L=r.listagem, R=r.relatorio, P=r.prazo||90, C=r.cont||{}, D=r.docs||{}, A=r.anterior, RL=r.relatorios||[];
     const per=(r.periodo_sel||[]).filter(Boolean).join(' a ');
     const chip=(cor,txt,dica)=>`<div class="stat ${cor} ${this.atdFiltro===cor?'on':''}" title="${esc(dica)} · clique para filtrar" onclick="ui.atdFiltro=ui.atdFiltro===${jsa(cor)}?'':${jsa(cor)};ui.atendimentos(ui._atd)"><i class="dot"></i><b>${C[cor]||0}</b><span>${txt}</span></div>`;
@@ -2676,6 +2677,7 @@ const ui = {
       const sec=d.secoes[s]; sec._off=sec._off||{}; sec.itens[k]=el.querySelector('textarea').value; sec._off[k]=!el.querySelector('input').checked; });
     (d.providencias||[]).forEach(p=>{ const el=document.getElementById('resP_'+p.id); if(el) p.marcado=el.checked; });
     const ou=document.getElementById('resOutro'); if(ou) d.outro=ou.value;
+    const un=document.getElementById('resUn'); if(un) d.unidade=un.value;
     const rt=document.getElementById('resRet'), ro=document.getElementById('resRetO'), da=document.getElementById('resData');
     if(rt) d.retorno=rt.value==='outro'?(ro.value||'').replace(/\D/g,''):rt.value; if(da) d.data_atend=da.value; },
   resumoProv(id,on){ this.resumoLer(); const d=this._res, pre={ped_prog:'Ir para o regime',ped_liv:'Livramento condicional',ped_ind:'Indulto',ped_com:'Comutação'}[id]; if(!pre) return;
@@ -2699,7 +2701,8 @@ const ui = {
         <span>Atendimento <input id="resData" value="${esc(d.data_atend||'')}" placeholder="dd/mm/aaaa"></span>
         <span>Retorno em <select id="resRet" onchange="document.getElementById('resRetO').style.display=this.value==='outro'?'':'none'"><option value="" ${!ret?'selected':''}>em branco (marcar à mão)</option>${['30','60','90'].map(n=>`<option value="${n}" ${ret===n?'selected':''}>${n} dias</option>`).join('')}<option value="outro" ${ret&&!['30','60','90'].includes(ret)?'selected':''}>outro</option></select>
         <input id="resRetO" value="${esc(ret&&!['30','60','90'].includes(ret)?ret:'')}" placeholder="dias" style="width:60px;${ret&&!['30','60','90'].includes(ret)?'':'display:none'}"></span>
-        <span class="muted">Perto do prazo de retorno, o assistido entrega o canhoto ao setor psicossocial da unidade.</span></div>
+        <span>Unidade <input id="resUn" value="${esc(d.unidade||'')}" placeholder="unidade prisional no atendimento" style="width:300px"></span>
+        <span class="muted">Leva também o nº do processo. Perto do prazo de retorno, o assistido entrega o canhoto ao setor psicossocial da unidade.</span></div>
       <div class="acts">${this._resAtd?`<button class="btn" onclick="ui.atendimentos(ui._atd)">Voltar aos atendimentos</button>`:''}<button class="btn pri" onclick="ui.resumoPdf()">Gerar PDF para imprimir</button><button class="btn" onclick="ui.fecharModal()">Fechar</button></div></div>`;
     document.getElementById('modal').classList.add('on'); },
   async relatorioUm(id){ const r=await API().relatorio_um(id); if(r && r.caminho){ this.toast('Relatório: '+r.caminho); } else if(r && r.erro){ this.toast(r.erro); } },

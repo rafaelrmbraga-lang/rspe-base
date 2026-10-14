@@ -151,9 +151,13 @@ para o assistido" na ficha)
     se ela cair a menos de 12 meses da falta, o texto lembra que a lei exige
     12 meses sem falta grave (CP, art. 83, III, "b").
   - Antes do PDF, cada frase pode ser corrigida, desmarcada ou acrescentada.
+  - Logo da Defensoria no canto do cabeçalho: arquivo logo_defensoria.png
+    na pasta do APTO.exe (sem o arquivo, o resumo sai sem logo).
   - Embaixo, depois da linha pontilhada, o canhoto do assistido: pedido de
-    atendimento com a Defensoria, com o último atendimento e o retorno em
-    30/60/90/__ dias. Perto do prazo de retorno, o assistido entrega o
+    atendimento com a Defensoria, com o último atendimento, o nº do processo
+    de execução, a unidade no momento do atendimento (da listagem de
+    internos mais recente ou da ficha disciplinar; pode ser corrigida na
+    tela) e o retorno em 30/60/90/__ dias. Perto do prazo de retorno, o assistido entrega o
     canhoto ao setor psicossocial da unidade para pedir
     atendimento. Não traz contato.
 
@@ -965,6 +969,8 @@ v7.10.0
     setor psicossocial. O texto é conferido e
     editado na tela antes do PDF.
   - Registrar atendimento: ao registrar, abre o resumo.
+  - Dados da Base > Atendimentos se atualiza logo depois de importar a
+    listagem ou o relatório, registrar ou desfazer um atendimento.
 
 v7.9.6
   - Dados da Base > Atendimentos aparece também na base que ainda não tem

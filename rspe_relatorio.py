@@ -143,6 +143,17 @@ def _estilos():
     }
 
 
+def _arquivo_programa(nome):
+    """Arquivo que vai junto do programa (embutido no .exe ou na pasta dele); None se não houver."""
+    import sys
+    for pasta in (getattr(sys, "_MEIPASS", ""), os.path.dirname(os.path.abspath(__file__)),
+                  os.path.dirname(os.path.abspath(sys.executable if getattr(sys, "frozen", False) else __file__))):
+        p = os.path.join(pasta, nome) if pasta else ""
+        if p and os.path.exists(p):
+            return p
+    return None
+
+
 def _selo(canvas, x, y, lado):
     """Selo do APTO no cabeçalho dos PDFs (apto_selo.png, junto do programa ou do .exe)."""
     import sys
@@ -3608,11 +3619,22 @@ def relatorio_resumo_assistido(d, caminho):
     s_rod = ParagraphStyle("rr", fontName=f["n"], fontSize=9.5, leading=12.5, textColor=C(TX2), spaceBefore=10)
     hoje = rres._data(d.get("hoje")) or datetime.now().date()
 
-    el = [Paragraph("DEFENSORIA PÚBLICA DO ESTADO DE MATO GROSSO DO SUL", s_cab),
-          Paragraph("Resumo da sua pena", s_tit),
-          Paragraph(_t("Para: %s" % (d.get("nome") or "")), s_nome),
-          Paragraph(_t(" · ".join(x for x in ("Processo de execução nº %s" % d["proc"] if d.get("proc") else "",
-                                                "entregue em %s" % rres.extenso(hoje)) if x)), s_sub)]
+    cab = [Paragraph("DEFENSORIA PÚBLICA DO ESTADO DE MATO GROSSO DO SUL", s_cab),
+           Paragraph("Resumo da sua pena", s_tit),
+           Paragraph(_t("Para: %s" % (d.get("nome") or "")), s_nome),
+           Paragraph(_t(" · ".join(x for x in ("Processo de execução nº %s" % d["proc"] if d.get("proc") else "",
+                                                 "entregue em %s" % rres.extenso(hoje)) if x)), s_sub)]
+    logo = _arquivo_programa("logo_defensoria.png")  # logo da Defensoria no canto do cabeçalho, se estiver junto do programa
+    if logo:
+        from reportlab.platypus import Image as RLImage
+        lado = 30 * mm
+        t = Table([[cab, RLImage(logo, width=lado, height=lado)]], colWidths=[W - lado - 4 * mm, lado + 4 * mm])
+        t.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "MIDDLE"), ("ALIGN", (1, 0), (1, 0), "RIGHT"),
+                               ("LEFTPADDING", (0, 0), (-1, -1), 0), ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                               ("TOPPADDING", (0, 0), (-1, -1), 0), ("BOTTOMPADDING", (0, 0), (-1, -1), 0)]))
+        el = [t]
+    else:
+        el = list(cab)
     B = d.get("barra")
     if B and B.get("pct") is not None:
         pct = max(0, min(100, int(B["pct"])))
@@ -3663,6 +3685,10 @@ def relatorio_resumo_assistido(d, caminho):
     y -= 8 * mm
     c.drawString(ML, y, "Interno: %s" % (d.get("nome") or ""))
     c.drawString(ML + W * 0.62, y, "Último atendimento: %s" % (da.strftime("%d/%m/%Y") if da else "____/____/________"))
+    y -= 7 * mm
+    c.drawString(ML, y, "Processo de execução nº %s" % (d.get("proc") or "______________________________"))
+    y -= 7 * mm
+    c.drawString(ML, y, "Unidade: %s" % (d.get("unidade") or "______________________________________________"))
 
     def caixa(x, yy, marcada=False):
         c.setStrokeColor(C(TX))
@@ -3674,7 +3700,7 @@ def relatorio_resumo_assistido(d, caminho):
             c.setFont(f["n"], 11)
         return x + 5.5 * mm
 
-    y -= 8.5 * mm
+    y -= 8 * mm
     c.drawString(ML, y, "Retorno em:")
     x = ML + 24 * mm
     for n in ("30", "60", "90"):
@@ -3691,13 +3717,6 @@ def relatorio_resumo_assistido(d, caminho):
     c.setFont(f["b"], 12)
     c.drawString(ML + 4 * mm, y, "Perto do prazo de retorno, entregue este papel ao setor psicossocial da unidade")
     c.drawString(ML + 4 * mm, y - 5.2 * mm, "para pedir atendimento com a Defensoria Pública.")
-    c.setFillColor(C(TX))
-    c.setFont(f["n"], 11)
-
-    y -= 15 * mm
-    c.drawString(ML, y, "Atendido por: ")
-    c.setStrokeColor(C(TX))
-    c.line(ML + 25 * mm, y - 1, ML + W * 0.75, y - 1)
     c.showPage()
     c.save()
     return caminho

@@ -80,7 +80,7 @@ try:
         pdf = os.path.join(tmp, "Resumo.pdf")
         fr = {p["id"]: p["frase"] for p in d3["providencias"]}
         sec = [dict(s_, itens=[fr["ped_ind"], fr["falta"]]) if s_["id"] == "prov" else s_ for s_ in d3["secoes"]]
-        rrel.relatorio_resumo_assistido(dict(d3, secoes=sec, retorno="60"), pdf)
+        rrel.relatorio_resumo_assistido(dict(d3, secoes=sec, retorno="60", unidade="UNIDADE PENAL DE TESTE"), pdf)
         import pdfplumber
         with pdfplumber.open(pdf) as p:
             n = len(p.pages)
@@ -88,7 +88,9 @@ try:
         ok(n == 1, "uma página: %d" % n)
         ok("Resumo da sua pena" in txt and "FULANO DE TESTE" in txt and "O que a Defensoria vai fazer" in txt
            and "Vamos pedir ao juiz o indulto (perdão da pena)." in txt and "setor psicossocial da unidade" in txt and "Retorno em" in txt
-           and "recorte aqui" in txt and "Data do retorno" not in txt, "conteúdo do PDF")
+           and "recorte aqui" in txt and "Data do retorno" not in txt
+           and "Unidade: UNIDADE PENAL DE TESTE" in txt and "Processo de execução nº 0000001-00.2026.8.12.0001" in txt.split("recorte aqui")[-1]
+           and "Atendido por" not in txt, "conteúdo do PDF")
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 except Exception as e:
