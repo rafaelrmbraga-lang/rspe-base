@@ -136,12 +136,16 @@ para o assistido" na ficha)
     "verificar") sai como "a Defensoria está conferindo a data". Pedido já
     marcado no APTO sai dos próximos direitos.
   - Resumo do atendimento: marque as providências feitas (explicação da
-    pena, pedidos ao juiz, ofício de atestados, orientação sobre falta,
+    pena, pedidos ao juiz (um a um, indulto e comutação separados), ofício
+    de atestados, orientação sobre falta,
     processo em análise, pedido aguardando decisão) e, se quiser, escreva
     outra. Cada uma sai como frase simples. As providências marcadas no
     APTO com a data do atendimento já vêm marcadas; o que foi escrito no
     "Registrar" entra no campo livre. Marcar um pedido tira da lista o
     direito correspondente.
+  - Falta grave homologada depois da data-base do RSPE: a progressão sai
+    como "a contagem do tempo recomeçou" (STJ, Súmula 534), sem data; o
+    livramento continua com a data (Súmula 441).
   - Antes do PDF, cada frase pode ser corrigida, desmarcada ou acrescentada.
   - Embaixo, depois da linha pontilhada, o canhoto do assistido: pedido de
     atendimento com a Defensoria, com o último atendimento, o retorno em

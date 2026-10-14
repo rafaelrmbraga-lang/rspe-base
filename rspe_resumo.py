@@ -18,7 +18,8 @@ PROVIDENCIAS = [
     ("explicou", "Explicação da pena e das datas", "Explicamos como está a sua pena e as datas dos seus direitos."),
     ("ped_prog", "Pedido de progressão de regime", "Pedimos ao juiz a mudança de regime."),
     ("ped_liv", "Pedido de livramento condicional", "Pedimos ao juiz o livramento condicional."),
-    ("ped_ind", "Pedido de indulto ou comutação", "Pedimos ao juiz o indulto ou a comutação da pena."),
+    ("ped_ind", "Pedido de indulto", "Pedimos ao juiz o indulto (perdão da pena)."),
+    ("ped_com", "Pedido de comutação", "Pedimos ao juiz a comutação (redução da pena)."),
     ("ped_rem", "Pedido de remição", "Pedimos ao juiz o desconto dos dias de trabalho e estudo na pena (remição)."),
     ("ped_ext", "Pedido de extinção da pena", "Pedimos ao juiz o fim da pena (extinção)."),
     ("ped_presc", "Pedido de prescrição", "Pedimos ao juiz o reconhecimento da prescrição (o fim do prazo para cumprir a pena)."),
@@ -137,9 +138,15 @@ def montar(m, pedidos, atendimentos, hoje=None, nome="", data_atend=None):
         ped = pedidos or {}
         r0 = str(m.get("regime") or "").split(" (")[0].strip().lower()
         prox = PROXIMO_REGIME.get(r0)
+        # falta grave homologada depois da data-base do RSPE: a contagem para a progressão recomeça (STJ, Súmula 534); o RSPE ainda
+        # não traz a data nova, então não sai data (o livramento não é interrompido: Súmula 441)
+        fa = str(m.get("falta") or "")
+        dfa, dbase = _data(fa) if fa.startswith("Sim") else None, _data(m.get("dbase"))
         if prox and not ped.get("prog"):
             sit, d, ap = _beneficio_data(m, "prog", "prog_sit")
-            if sit == "futuro":
+            if dfa and dbase and dfa > dbase and sit in ("futuro", "vencido", "conferir"):
+                sec_dir.append("Ir para o regime %s: por causa da falta grave, a contagem do tempo recomeçou. A Defensoria vai acompanhar a nova data." % prox)
+            elif sit == "futuro":
                 sec_dir.append("Ir para o regime %s: a partir de %s. Para isso, é preciso ter bom comportamento." % (prox, _quando(d, ap)))
             elif sit == "vencido":
                 sec_dir.append("Ir para o regime %s: você já cumpriu o tempo necessário em %s. A Defensoria vai analisar e, se for o caso, fazer o pedido ao juiz." % (prox, _quando(d, ap)))

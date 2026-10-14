@@ -42,6 +42,12 @@ try:
     ok("já cumpriu o tempo necessário em 1º de janeiro de 2025" in dirs[1] and "se for o caso" in dirs[1], "livramento vencido: %s" % dirs[1])
     ok(dirs[2].startswith("Indulto de 2025") and len(dirs) == 3, "indulto: só o decreto mais recente: %s" % dirs)
     ok(aten[0].startswith("Consta falta grave confirmada pelo juiz em 1º de junho de 2026"), "falta grave: %s" % aten)
+    # falta grave depois da data-base: a progressão recomeça (sem data); o livramento continua (Súmulas 534 e 441 do STJ)
+    dfg = rres.montar(dict(M, dbase="01/01/2024"), {}, [], HOJE)
+    ok(itens(dfg, "direitos")[0] == "Ir para o regime semiaberto: por causa da falta grave, a contagem do tempo recomeçou. A Defensoria vai acompanhar a nova data."
+       and itens(dfg, "direitos")[1].startswith("Livramento condicional"), "falta grave recente: %s" % itens(dfg, "direitos"))
+    ok(itens(rres.montar(dict(M, dbase="02/06/2026"), {}, [], HOJE), "direitos")[0].startswith("Ir para o regime semiaberto: a partir de"),
+       "data-base já atualizada depois da falta: segue a data do RSPE")
     # data duvidosa: não sai como data
     d2 = rres.montar(dict(M, prog_sit="Em cumprimento · percentual do SEEU acima do legal - ver Auditoria"), {}, [], HOJE)
     ok(itens(d2, "direitos")[0] == "Ir para o regime semiaberto: a Defensoria está conferindo a data.", "data a conferir: %s" % itens(d2, "direitos")[0])
