@@ -1,9 +1,9 @@
-APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.9.5
+APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.9.6
 (antigo RSPE Base; SEEU, programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-7.9.5. A documentação técnica completa (cada parâmetro, a regra, a norma e
+7.9.6. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -925,6 +925,15 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v7.9.6
+  - Dados da Base > Atendimentos aparece também na base que ainda não tem
+    RSPE (só a listagem do SIAPEN e o relatório do SAP).
+  - Gráfico "por ala": o número de cada cor dentro da coluna, o total de
+    cada cor na legenda e um quadro com os números de cada ala (na tela e no
+    PDF).
+  - Janela Atendimentos: botão "Todos" para tirar o filtro de cor.
+  - Aba Geral: o aviso dos internos ainda sem RSPE ficou mais discreto.
 
 v7.9.5
   - Aba Geral, botão "Atendimentos": internos da unidade (listagem do
