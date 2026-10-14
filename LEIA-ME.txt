@@ -891,6 +891,9 @@ v7.9.4
     o anterior se não houver nº; copia os dois se houver dois), só lendo;
     depois baixa os RSPE no SEEU e avisa os nºs que o SEEU não achou;
     planilha CSV com o resultado.
+  - Extensão 1.5.1, lote do SEEU: processo que o SEEU não abre conta como
+    "não encontrado" e o lote segue (antes, as palavras "login"/"logon"
+    das páginas logadas faziam o lote parar como "sessão expirada").
   - Lote de fichas do SIAPEN: funciona com o SIAPEN aberto pelo portal
     www.siapen.ms.gov.br (a lista de nomes era tomada por lista de
     processos); o lote usa os comandos da própria tela do SIAPEN para

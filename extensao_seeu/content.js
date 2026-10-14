@@ -90,15 +90,22 @@
     const pre = await chrome.runtime.sendMessage({ tipo: "podeBaixar", processo, lote: true }).catch((e) => ({ ok: false, motivo: String(e) }));
     if (pre && pre.repetido) return { status: "repetido", msg: "já baixado hoje" };
     if (!pre || !pre.ok) return { status: "erro", msg: (pre && pre.motivo) || "extensão indisponível", parar: true };
-    let html = "";
+    let html = "", urlFinal = "";
     try {
       const r = await fetch("/seeu/visualizacaoProcesso.do?actionType=visualizar&numeroUnico=" + dig, { credentials: "include", cache: "no-store" });
       html = await r.text();
+      urlFinal = r.url || "";
     } catch (e) {
       return { status: "erro", msg: "o SEEU não respondeu" };
     }
     const m = /processoNumeroFormatado["']?[^>]*?value=["'](\d{20})["']/.exec(html);
-    if (!m) return { status: "erro", msg: /logon|login|senha/i.test(html) ? "sessão expirada: faça login no SEEU" : "processo não encontrado no SEEU", parar: /logon|login|senha/i.test(html) };
+    if (!m) {
+      // sessão expirada só com a tela de senha ou o endereço de login (as páginas logadas do SEEU também citam "logon")
+      const login = /type\s*=\s*["']?password/i.test(html) || /\/(login|logon)[^/]*$/i.test(new URL(urlFinal || location.href, location.href).pathname);
+      if (login) return { status: "erro", msg: "sessão expirada: faça login no SEEU", parar: true };
+      const titulo = ((/<title[^>]*>([\s\S]*?)<\/title>/i.exec(html) || [])[1] || "").replace(/\s+/g, " ").trim().slice(0, 80);
+      return { status: "erro", msg: "processo não encontrado no SEEU" + (titulo ? " (o SEEU abriu: " + titulo + ")" : "") };
+    }
     if (m[1] !== dig) return { status: "erro", msg: "o SEEU abriu outro processo (" + A.cnj(m[1]) + ")" };
     const rs = A.rspeNoHtml(html);
     if (!rs) return { status: "erro", msg: "sem o relatório Situação Carcerária (não é execução penal?)" };
