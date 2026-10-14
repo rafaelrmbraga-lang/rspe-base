@@ -163,6 +163,11 @@ try:
         txt = "\n".join(pg.extract_text() or "" for pg in d.pages)
     ok("Situação de atendimento" in txt and "Lista em ordem de prioridade" in txt and "FULANO DE TAL" in txt and "UNIDADE PENAL DE TESTE" in txt,
        "conteúdo do PDF")
+    ok("Por ala" not in txt or "Ala / pavilhão" in txt, "quadro por ala com o número de cada cor")
+    UI = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "ui.html"), encoding="utf-8").read()
+    ok("<span>Todos</span>" in UI and "ui.atdFiltro='';ui.atendimentos(ui._atd)" in UI, "janela: botão Todos tira o filtro de cor")
+    ok("if(!D.n){ card.innerHTML=`<div class=\"bd-wrap\">" in UI and "${this.bdAtendimentos()}</div>`; return; }" in UI,
+       "Dados da Base sem RSPE ainda mostra os atendimentos")
     r2 = api.atendimentos_pdf("verde", "")
     with pdfplumber.open(pdf) as d:
         txt = "\n".join(pg.extract_text() or "" for pg in d.pages)

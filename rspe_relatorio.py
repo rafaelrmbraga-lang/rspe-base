@@ -1487,9 +1487,10 @@ def _rosca(titulo, pares, largura, st, total_rot="", max_fatias=6, cores=None, n
     return corpo
 
 
-def _colunas(titulo, categorias, series, largura, st, altura=120, sufixo="", nota=""):
+def _colunas(titulo, categorias, series, largura, st, altura=120, sufixo="", nota="", partes=False):
     """Colunas verticais: categorias no eixo x; series = [(nome, [valores], cor)], empilhadas quando mais de uma.
-    Valor escrito sobre cada coluna (o total, se empilhada); grade recessiva; legenda acima quando há mais de uma série."""
+    Valor escrito sobre cada coluna (o total, se empilhada); com partes=True, também o valor de cada parte dentro dela,
+    quando cabe; grade recessiva; legenda acima quando há mais de uma série."""
     from reportlab.graphics.shapes import Drawing, Rect, String, Line
     from reportlab.lib import colors
     from reportlab.pdfbase.pdfmetrics import stringWidth
@@ -1532,6 +1533,12 @@ def _colunas(titulo, categorias, series, largura, st, altura=120, sufixo="", not
             hh = alt * v / float(mx)
             if v:
                 d.add(Rect(x, yb, bw, hh, fillColor=colors.HexColor(cor), strokeColor=colors.white, strokeWidth=1, rx=1.5, ry=1.5))
+                tp = str(v)
+                if partes and len(series) > 1 and hh >= 10 and stringWidth(tp, f["b"], 6.8) <= bw - 2:
+                    c_ = colors.HexColor(cor)
+                    claro = 0.299 * c_.red + 0.587 * c_.green + 0.114 * c_.blue > 0.6
+                    d.add(String(x + bw / 2.0 - stringWidth(tp, f["b"], 6.8) / 2.0, yb + hh / 2.0 - 2.4, tp, fontName=f["b"], fontSize=6.8,
+                                 fillColor=colors.HexColor(TX) if claro else colors.white))
             yb += hh
         tv = "%s%s" % (tots[i], sufixo)
         d.add(String(x + bw / 2.0 - stringWidth(tv, f["b"], 7.2) / 2.0, yb + 3, tv, fontName=f["b"], fontSize=7.2, fillColor=colors.HexColor(TX)))
@@ -3434,7 +3441,7 @@ def relatorio_atendimentos(d, caminho, nome_base, filtro=""):
     atendimento, mês do último atendimento, documentos na base) e a lista em ordem de prioridade (com o filtro da janela)."""
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.units import mm
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, CondPageBreak
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, CondPageBreak, KeepTogether
     st = _estilos()
     C = st["C"]
     W = A4[0] - 32 * mm
@@ -3483,10 +3490,15 @@ def relatorio_atendimentos(d, caminho, nome_base, filtro=""):
     # por ala (letra inicial da localização: "A - UNICO - 015" -> A)
     alas = sorted({(x.get("local") or "?").split(" ")[0] or "?" for x in todos})
     if 1 < len(alas) <= 16:
-        el += [CondPageBreak(80 * mm), Paragraph("2. Por ala / pavilhão (localização no SIAPEN)", st["h2"])]
+        h2_ala = Paragraph("2. Por ala / pavilhão (localização no SIAPEN)", st["h2"])
         series = [(rot_sit[c], [sum(1 for x in todos if x["cor"] == c and ((x.get("local") or "?").split(" ")[0] or "?") == a) for a in alas], COR_ATD[c])
                   for c in ("vermelho", "amarelo", "verde") if cont.get(c)]
-        el += _colunas("Internos por ala, pela situação de atendimento", alas, series, W, st, altura=130)
+        tab = [["Ala / pavilhão"] + [nome for nome, _v, _c in series] + ["Total"]]
+        tab += [[a] + [str(vals[i]) for _n, vals, _c in series] + [str(sum(vals[i] for _n, vals, _c in series))] for i, a in enumerate(alas)]
+        tab.append(["Total"] + [str(sum(vals)) for _n, vals, _c in series] + [str(sum(sum(v) for _n, v, _c in series))])
+        series = [("%s (%d)" % (nome, sum(vals)), vals, cor) for nome, vals, cor in series]
+        el.append(KeepTogether([h2_ala] + _colunas("Internos por ala, pela situação de atendimento", alas, series, W, st, altura=130, partes=True)
+                               + [Spacer(1, 3 * mm), _tabela(tab, [W * 0.25] + [W * 0.6 / (len(tab[0]) - 2)] * (len(tab[0]) - 2) + [W * 0.15], st, pad=5, vpad=3)]))
         n_sec = 3
     else:
         n_sec = 2

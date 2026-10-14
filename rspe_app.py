@@ -42,7 +42,7 @@ import rspe_calc as rcalc
 import rspe_atendimentos as ratd
 
 APP = "APTO"
-VERSAO = "7.9.5"
+VERSAO = "7.9.6"
 GEO_AUTO_DIAS = 30           # dados prisionais: baixados de novo sozinhos quando têm 30 dias ou mais
 GEO_REPETIR_MIN = 10         # ... ou 10 minutos depois de um download em que algum relatório falhou (nova tentativa automática)
 GEO_REPETIR_MAX = 3          # tentativas automáticas seguidas com o programa aberto (depois, na próxima abertura ou pelo botão)
