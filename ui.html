@@ -147,6 +147,9 @@ table.rz{margin-top:8px;width:100%}table.rz td,table.rz th{font-size:12px;vertic
 .hbtn{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border:1px solid var(--line);border-radius:8px;font-size:11.5px;font-weight:600;color:var(--tx2);background:#fff;cursor:pointer;margin-right:6px}
 .hbtn:hover{border-color:var(--pri);color:var(--pri)}.hbtn svg{width:14px;height:14px}
 tr.pend-sep{scroll-margin-top:44px}tr.pend-sep td{background:var(--card);padding:18px 14px 10px;border-top:1px solid var(--line2)}tr.pend-sep .ps-t{font-size:13px;font-weight:400;color:var(--tx)}tr.pend-sep .ps-t b{font-weight:700;color:var(--pri)}tr.pend-sep .ps-s{font-size:12px;font-weight:400;color:var(--tx2);margin-top:2px}tr.pend td{color:var(--tx2)}tr.pend td:first-child{font-weight:600}
+.res-sec h3{font-size:14px;margin:12px 0 6px;color:var(--pri)}.res-it{display:flex;gap:8px;align-items:flex-start;margin:0 0 6px}.res-it input{margin-top:7px}.res-it textarea{flex:1;font:inherit;font-size:13px;line-height:1.4;padding:5px 8px;border:1px solid var(--line2);border-radius:7px;resize:vertical}
+.res-provs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px 14px;font-size:13px}.res-provs label{display:flex;gap:6px;align-items:center;cursor:pointer}
+.res-can{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin:10px 0 0;padding:9px 12px;border:1px dashed var(--line2);border-radius:8px;font-size:12.5px}.res-can input,.res-can select{padding:4px 7px;border:1px solid var(--line2);border-radius:7px;font:inherit}
 .falta-doc{display:inline-block;padding:2px 9px;border-radius:999px;background:#F1F2EF;border:1px dashed #B9BFB8;color:var(--tx2);font-size:12px}
 .pend-info{cursor:pointer;color:var(--tx2);font-size:12.5px;padding:5px 10px;border:1px dashed #B9BFB8;border-radius:8px;background:#F8F9F7}.pend-info:hover{border-color:var(--pri);color:var(--pri)}
 table.atd{width:100%;border-collapse:collapse;font-size:13px}table.atd th{text-align:left;color:var(--tx3);font-size:11px;text-transform:uppercase;padding:7px 10px;border-bottom:1px solid var(--line);position:sticky;top:0;background:#fff;cursor:default}
@@ -1751,7 +1754,8 @@ const ui = {
   atdPer(){ return [this.atdDe||'', this.atdAte||'']; },
   async atdPeriodo(de,ate){ this.atdDe=de||''; this.atdAte=ate||''; this.atendimentos(await API().atendimentos(this.atdDe,this.atdAte)); },
   async atdRegistrar(nome){ const d=(document.getElementById('atdRegD')||{}).value||'', o=(document.getElementById('atdRegO')||{}).value||'';
-    const r=await API().atendimentos_registrar(nome,d,o,...this.atdPer()); if(r&&r.erro) return this.toast(r.erro); this.atdReg=null; this.atendimentos(r); },
+    const r=await API().atendimentos_registrar(nome,d,o,...this.atdPer()); if(r&&r.erro) return this.toast(r.erro); this.atdReg=null; this._atd=r; if(r.msg) this.toast(r.msg);
+    const x=(r.lista||[]).find(y=>y.nome===nome); this.resumoAssistido(x&&x.id||'',nome,true); },
   async atdDesfazer(id){ this.atendimentos(await API().atendimentos_desfazer(id,...this.atdPer())); },
   async atendimentos(r){ r=r||await API().atendimentos(...this.atdPer()); if(!r) return; if(r.erro) return this.toast(r.erro);
     this._atd=r; if(r.avisos&&r.avisos.length) this.toast(r.avisos.join(' · ')); if(r.msg) this.toast(r.msg);
@@ -1768,11 +1772,11 @@ const ui = {
       <td class="nw">${x.ultimo?esc(x.ultimo)+' <span class="muted">('+pl(x.dias,'dia','dias')+(x.tipo?' · '+esc(x.tipo.toLowerCase()):'')+')</span>':'<span class="muted">-</span>'}</td>
       <td class="nw"><span class="pill ${x.cor}"><i style="display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--${DOT[x.cor]||'c'}-dot);align-self:center"></i>${esc(x.txt)}</span></td>
       <td class="nw">${doc(x.rspe,'RSPE')} · ${doc(x.ficha,'ficha')}</td>
-      <td class="nw">${this.atdReg===x.n?'':`<span class="mini" title="Registrar no APTO um atendimento feito (tira o alerta até um relatório do SAP posterior cobrir a data)" onclick="ui.atdReg=${x.n};ui.atendimentos(ui._atd)">Registrar</span>`}</td></tr>`
+      <td class="nw">${this.atdReg===x.n?'':`<span class="mini" title="Registrar no APTO um atendimento feito (tira o alerta até um relatório do SAP posterior cobrir a data)" onclick="ui.atdReg=${x.n};ui.atendimentos(ui._atd)">Registrar</span> <span class="mini" title="Resumo da pena em linguagem simples, para entregar ao assistido" onclick="ui.resumoAssistido(${jsa(x.id||'')},${jsa(x.nome)},true)">Resumo</span>`}</td></tr>`
       +(this.atdReg===x.n?`<tr><td></td><td colspan="6" style="background:#F6F8F6"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:4px 0"><b style="font-size:12.5px">Registrar atendimento de ${esc(x.nome)}</b>
         <input id="atdRegD" value="${esc(hoje)}" placeholder="dd/mm/aaaa" style="width:110px;padding:5px 8px;border:1px solid var(--line2);border-radius:7px">
         <input id="atdRegO" placeholder="Observação (opcional)" maxlength="300" style="flex:1;min-width:200px;padding:5px 8px;border:1px solid var(--line2);border-radius:7px">
-        <button class="btn pri" onclick="ui.atdRegistrar(${jsa(x.nome)})">Registrar</button><button class="btn" onclick="ui.atdReg=null;ui.atendimentos(ui._atd)">Cancelar</button></div>
+        <button class="btn pri" title="Registra o atendimento e abre o resumo para o assistido" onclick="ui.atdRegistrar(${jsa(x.nome)})">Registrar e fazer o resumo</button><button class="btn" onclick="ui.atdReg=null;ui.atendimentos(ui._atd)">Cancelar</button></div>
         <div class="muted" style="font-size:11.5px">O registro vale até a juntada de um relatório do SAP que cubra esta data: aí prevalece o que constar no relatório.</div></td></tr>`:'');
     const perBar=L&&(RL.length||r.manuais)?`<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:0 0 8px;font-size:12.5px">
         <b>Período</b><input id="atdDe" value="${esc(this.atdDe||'')}" placeholder="${esc((r.periodo_sel||[])[0]||'dd/mm/aaaa')}" style="width:104px;padding:4px 7px;border:1px solid var(--line2);border-radius:7px"> a
@@ -2540,7 +2544,7 @@ const ui = {
             return `<div class="pedl"><span class="pck ok ${mud?'mud':''}" style="width:16px;height:16px;font-size:11px">✓</span><span class="pn">${this.pedNome(k,r).replace(/^./,c=>c.toUpperCase())}</span><b>${esc(x.data)}</b><span class="muted" style="white-space:nowrap">${({pedido:'pedido nos autos',oficio:'ofício à unidade',outro:'outra providência'})[x.tipo]||''}</span><span class="po">${esc(x.obs||'')}${mud?` <span style="color:var(--a-tx);font-weight:600">· ⚠ situação mudou depois do pedido</span>`:''}</span><span class="mini" onclick="ui.pedidoAbrir(${jsa(r.id)},'${k}')">Editar</span></div>`; }).join('')}</div></div>`; })()}
         <div class="sec"><h3>Crimes em execução</h3><div class="kv one"><div>${crimes||'—'}</div></div></div>
         ${calc?`<div class="sec"><h3>Cálculos do programa</h3>${calc}</div>`:''}
-        <div class="sec"><span class="mini" onclick="ui.relatorioUm(${jsa(r.id)})">Relatório em PDF</span> ${r.ficha?` <span class="mini" title="Desvincula a ficha disciplinar (SIAPEN) importada para este assistido" onclick="ui.removerFicha(${jsa(r.id)})">Remover ficha</span>`:''} <span class="mini" style="color:var(--r-tx)" onclick="ui.confirmarRemocao(${jsa(r.id)})">Remover este assistido da base</span></div>
+        <div class="sec"><span class="mini" onclick="ui.relatorioUm(${jsa(r.id)})">Relatório em PDF</span> <span class="mini" title="Resumo da pena em linguagem simples, para entregar ao assistido" onclick="ui.resumoAssistido(${jsa(r.id)},${jsa(r.nome)})">Resumo para o assistido</span> ${r.ficha?` <span class="mini" title="Desvincula a ficha disciplinar (SIAPEN) importada para este assistido" onclick="ui.removerFicha(${jsa(r.id)})">Remover ficha</span>`:''} <span class="mini" style="color:var(--r-tx)" onclick="ui.confirmarRemocao(${jsa(r.id)})">Remover este assistido da base</span></div>
       </div>`;
     document.getElementById('drawer').classList.add('on'); document.getElementById('veil').classList.add('on'); document.body.classList.add('drawer-on'); },
   fecharDrawer(){ document.getElementById('drawer').classList.remove('on'); document.getElementById('veil').classList.remove('on'); document.body.classList.remove('drawer-on'); },
@@ -2665,6 +2669,39 @@ const ui = {
     const sel=this.relSelecionados(); if(op[0] && !sel.length) return this.toast('Escolha ao menos um assistido para o relatório individual.');
     this.fecharModal(); this.toast('Gerando relatórios…'); const r=await API().relatorios(this.visiveis().map(x=>x.id), op[0], op[1], op[2], op[3], sel, op[4]);
     if(r && r.msg){ this.toast(r.msg); } else if(r && r.erro){ this.toast(r.erro); } },
+  // resumo para o assistido (linguagem simples, CNJ): o APTO propõe as frases; aqui se confere, edita ou tira cada uma antes do PDF
+  async resumoAssistido(id,nome,daAtd){ const d=await API().resumo_assistido(id||'',nome||''); if(!d) return; if(d.erro) return this.toast(d.erro);
+    this._res=d; this._resAtd=!!daAtd; this.resumoTela(); },
+  resumoLer(){ const d=this._res; if(!d) return; document.querySelectorAll('#resSecs [data-s]').forEach(el=>{ const s=+el.dataset.s, k=+el.dataset.k;
+      const sec=d.secoes[s]; sec._off=sec._off||{}; sec.itens[k]=el.querySelector('textarea').value; sec._off[k]=!el.querySelector('input').checked; });
+    (d.providencias||[]).forEach(p=>{ const el=document.getElementById('resP_'+p.id); if(el) p.marcado=el.checked; });
+    const ou=document.getElementById('resOutro'); if(ou) d.outro=ou.value;
+    const rt=document.getElementById('resRet'), ro=document.getElementById('resRetO'), da=document.getElementById('resData');
+    if(rt) d.retorno=rt.value==='outro'?(ro.value||'').replace(/\D/g,''):rt.value; if(da) d.data_atend=da.value; },
+  resumoProv(id,on){ this.resumoLer(); const d=this._res, pre={ped_prog:'Ir para o regime',ped_liv:'Livramento condicional',ped_ind:'Indulto',ped_com:'Comutação'}[id]; if(!pre) return;
+    const S=d.secoes.find(s=>s.id==='direitos'); if(!S) return; S._off=S._off||{}; S.itens.forEach((x,k)=>{ if([].concat(pre).some(p=>String(x).startsWith(p))) S._off[k]=on; }); this.resumoTela(); },
+  resumoMais(s){ this.resumoLer(); this._res.secoes[s].itens.push(''); this.resumoTela(); },
+  async resumoPdf(){ this.resumoLer(); const d=this._res;
+    const fr=t=>{ t=String(t||'').trim(); if(!t) return ''; t=t[0].toUpperCase()+t.slice(1); return /[.!?]$/.test(t)?t:t+'.'; };
+    const atd=(d.providencias||[]).filter(p=>p.marcado).map(p=>p.frase).concat(String(d.outro||'').split(/\n+/).map(fr)).filter(Boolean);
+    const out={...d, secoes:d.secoes.map(s=>({id:s.id, titulo:s.titulo, itens:s.id==='prov'?atd:s.itens.filter((x,k)=>!(s._off||{})[k]&&String(x).trim())}))};
+    const r=await API().resumo_assistido_pdf(out); if(r) this.toast(r.erro||r.msg); },
+  resumoTela(){ const d=this._res, ret=d.retorno||'';
+    const secs=d.secoes.map((s,i)=>s.id==='prov'?`<div class="res-sec"><h3>O que a Defensoria vai fazer <span class="muted" style="font-weight:400;font-size:12px">(marque as providências que serão adotadas; cada uma vira uma frase simples)</span></h3>
+        <div class="res-provs">${(d.providencias||[]).map(p=>`<label title="${esc(p.frase)}"><input type="checkbox" id="resP_${p.id}" ${p.marcado?'checked':''} onchange="ui.resumoProv(${jsa(p.id)},this.checked)"> ${esc(p.rot)}</label>`).join('')}</div>
+        <textarea id="resOutro" rows="2" placeholder="Outra providência que será adotada (escreva como vai sair no papel; uma frase por linha)" style="width:100%;margin-top:6px;font:inherit;font-size:13px;padding:5px 8px;border:1px solid var(--line2);border-radius:7px">${esc(d.outro||'')}</textarea></div>`
+      :`<div class="res-sec"><h3>${esc(s.titulo)}</h3>${s.itens.map((x,k)=>`<label class="res-it" data-s="${i}" data-k="${k}"><input type="checkbox" ${(s._off||{})[k]?'':'checked'} title="Desmarque para não imprimir"><textarea rows="${Math.max(1,Math.ceil(String(x).length/95))}">${esc(x)}</textarea></label>`).join('')}<span class="mini" onclick="ui.resumoMais(${i})">+ frase</span></div>`).join('');
+    document.getElementById('modal').innerHTML=`<div class="box" style="width:860px;max-width:96vw"><h2>Resumo para o assistido · ${esc(d.nome)}</h2>
+      <p class="muted" style="margin:0 0 8px">Texto em linguagem simples (Pacto do CNJ), montado com os dados da base${d.proc?' (RSPE do processo '+esc(d.proc)+')':''}. Confira, corrija ou desmarque cada frase e marque as providências que a Defensoria vai adotar. Dado que o APTO ainda confere sai como "a Defensoria está conferindo".</p>
+      ${d.barra?`<p style="margin:0 0 6px">Barra da pena: <b>${d.barra.pct}%</b> cumprida</p>`:''}
+      <div id="resSecs" style="max-height:48vh;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:4px 12px 10px">${secs}</div>
+      <div class="res-can"><b>Canhoto do assistido (pedido do próximo atendimento)</b>
+        <span>Atendimento <input id="resData" value="${esc(d.data_atend||'')}" placeholder="dd/mm/aaaa"></span>
+        <span>Retorno em <select id="resRet" onchange="document.getElementById('resRetO').style.display=this.value==='outro'?'':'none'"><option value="" ${!ret?'selected':''}>em branco (marcar à mão)</option>${['30','60','90'].map(n=>`<option value="${n}" ${ret===n?'selected':''}>${n} dias</option>`).join('')}<option value="outro" ${ret&&!['30','60','90'].includes(ret)?'selected':''}>outro</option></select>
+        <input id="resRetO" value="${esc(ret&&!['30','60','90'].includes(ret)?ret:'')}" placeholder="dias" style="width:60px;${ret&&!['30','60','90'].includes(ret)?'':'display:none'}"></span>
+        <span class="muted">Perto do prazo de retorno, o assistido entrega o canhoto ao setor psicossocial da unidade.</span></div>
+      <div class="acts">${this._resAtd?`<button class="btn" onclick="ui.atendimentos(ui._atd)">Voltar aos atendimentos</button>`:''}<button class="btn pri" onclick="ui.resumoPdf()">Gerar PDF para imprimir</button><button class="btn" onclick="ui.fecharModal()">Fechar</button></div></div>`;
+    document.getElementById('modal').classList.add('on'); },
   async relatorioUm(id){ const r=await API().relatorio_um(id); if(r && r.caminho){ this.toast('Relatório: '+r.caminho); } else if(r && r.erro){ this.toast(r.erro); } },
   // ---- pena em dias <-> 'XaYmZd' (convenção do SEEU: ano 365, mês 30) ----
   sqAmd(t){ t=String(t??'').trim(); if(!t) return null; if(/^\d+$/.test(t)) return +t;
