@@ -890,7 +890,7 @@ async function api(m, ...a){ try{ const r = await API()[m](...a); if(r && r.regi
 
 const ui = {
   dados:{registros:[],abas:[],base:'',hoje:''}, aba:'geral', filtro:'', filtroCor:null, filtroSel:'todas', ordem:{}, sel:null, aberto:null,
-  carregar(d){ this.dados=d; this._bdChave=null;  // a aba Dados da Base reconta na próxima vez que for desenhada
+  carregar(d){ this.dados=d; this._bdChave=null; this._bdAtd=undefined;  // a aba Dados da Base reconta na próxima vez que for desenhada
     if(document.getElementById('calcWin')) this.cpLista().then(()=>this.cpDesenha()); if(!this._geoChecado){ this._geoChecado=true; Promise.resolve(API().geo_precisa()).then(p=>{ if(p) this.geoAtualizar(true); }).catch(()=>{}); } const w=document.getElementById('welcome');
     if(this.aberto){ const ra=(d.registros||[]).find(x=>x.id===this.aberto); if(ra&&ra._leve) setTimeout(()=>this.completo(ra.id),0); }
     if(d.sem_base){ w.classList.add('on'); document.getElementById('copia').innerHTML=''; document.getElementById('baseNome').textContent='—'; document.getElementById('baseN').textContent='0';
@@ -1768,7 +1768,7 @@ const ui = {
       <p class="muted" style="margin:0 0 8px">${L?`Internos: listagem do SIAPEN de ${esc(L.emitida||'?')} (${esc(L.arquivo||'')}). `:''}${R?`Atendimentos: relatório do SAP de ${esc(per)} (${pl(R.n||0,'atendimento','atendimentos')}). `:L?'<b>Falta o relatório de atendimento do SAP.</b> ':''}Ordem de prioridade: sem atendimento no período, depois do atendimento mais antigo ao mais recente. Quem está no relatório e não está na listagem já não está na unidade e não aparece.</p>
       ${L&&R?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin:0 0 10px">${chip('vermelho','Sem atendimento no período','Não aparece no relatório do SAP ('+per+')')}${chip('amarelo','Mais de '+P+' dias','Último atendimento há mais de '+P+' dias')}${chip('verde','Até '+P+' dias','Último atendimento nos últimos '+P+' dias')}${D.sem_rspe?`<div class="pend-info" style="cursor:default" title="Estes internos já aparecem na aba Geral; as demais abas se preenchem quando o RSPE e a ficha forem juntados">${pl(D.sem_rspe,'interno','internos')} sem RSPE na base · ${pl(D.sem_ficha,'interno','internos')} sem ficha</div>`:''}</div>`:''}
       ${corpo}
-      <div class="acts"><button class="btn" onclick="ui.toast('Lendo os PDFs… o relatório do SAP pode levar até um minuto.');API().atendimentos_importar().then(x=>x&&ui.atendimentos(x))">Importar listagem e/ou relatório (PDF)…</button><button class="btn pri" onclick="ui.fecharModal()">Fechar</button></div></div>`;
+      <div class="acts">${L?`<button class="btn" title="Números, gráficos e a lista em ordem de prioridade (com o filtro e a busca desta janela)" onclick="API().atendimentos_pdf(ui.atdFiltro||'',ui.atdQ||'').then(x=>x&&ui.toast(x.erro||x.msg))">Exportar em PDF</button>`:''}<button class="btn" onclick="ui.toast('Lendo os PDFs… o relatório do SAP pode levar até um minuto.');API().atendimentos_importar().then(x=>x&&ui.atendimentos(x))">Importar listagem e/ou relatório (PDF)…</button><button class="btn pri" onclick="ui.fecharModal()">Fechar</button></div></div>`;
     document.getElementById('modal').classList.add('on'); },
   async historico(id){ const h=await API().historico(id); if(!h||h.erro){ this.toast((h&&h.erro)||'Histórico indisponível.'); return; }
     const C=h.colunas||[]; const L=[['regime','Regime'],['pena_total','Pena total'],['pena_cumprida','Pena cumprida'],['remidos','Dias remidos (perdidos)'],['db','Data-base de progressão'],['prog','Previsão de progressão'],['liv','Previsão de livramento'],['termino','Término'],['falta','Faltas graves (12 meses)']];
@@ -2326,7 +2326,7 @@ const ui = {
   renderBase(pronto){ const st=document.getElementById('stats'), card=document.getElementById('card'), D=this._bd;
     const vis=this.visiveis(), chave=(this.filtro?vis.map(r=>r.id).join('|'):'*')+'#'+(this.dados.registros||[]).length;
     if(!pronto && this._bdChave!==chave) this.bdCarregar();
-    const secs=[['bd1','Perfil'],['bd2','Trabalho e disciplina'],['bd3','Situação executória'],['bd4','Auditoria'],['bd5','Remição'],['bd6','Cartões das abas'],['bd7','Providências']];
+    const secs=[['bd1','Perfil'],['bd2','Trabalho e disciplina'],['bd3','Situação executória'],['bd4','Auditoria'],['bd5','Remição'],['bd6','Cartões das abas'],['bd7','Providências'],['bd8','Atendimentos']];
     st.innerHTML=`<div class="geo-head"><div><b>Dados da Base</b><span class="muted">${D&&D.geral?`${D.n<D.total?D.n+' de '+D.total+' assistidos (pela busca)':pl(D.n,'assistido','assistidos')} · ${D.geral.nf} com ficha disciplinar (SIAPEN) · RSPEs gerados entre ${esc(D.geral.periodo[0])} e ${esc(D.geral.periodo[1])} · os mesmos números do relatório geral e da remição detalhada em PDF`:'Os números e gráficos dos relatórios em PDF da base, sem gerar o arquivo.'}</span></div>
       <div class="geo-acts"><button class="btn" onclick="ui.modalRelatorios()" title="Gera os relatórios em PDF (geral, remição detalhada, individuais)">Relatórios em PDF…</button></div></div>
       <div class="bd-nav">${secs.map(([id,t])=>`<span onclick="ui.bdIr('${id}')">${t}</span>`).join('')}</div>`;
@@ -2363,7 +2363,31 @@ const ui = {
       todas.length?`<div class="provr"><div><b>${todas.length}</b><span>providências no total</span></div><div><b>${L.length}</b><span>neste mês</span></div>${tipos.map(([t,_,r])=>`<div><b>${todas.filter(x=>x.tipo===t).length}</b><span>${r}</span></div>`).join('')}</div>
         <div class="provg"><div><h4>Benefícios com mais providências (todo o período)</h4>${this.provGrafRanking(todas)}</div><div><h4>Providências por mês</h4>${this.provGrafMeses(todas,mes)}</div></div>
         <p><span class="mini" onclick="ui.modalProvidencias()">Abrir o relatório de providências</span></p>`:'<p class="muted">Nenhuma providência marcada.</p>');
+    h+=this.bdAtendimentos();
     const y=card.scrollTop; card.innerHTML=`<div class="bd-wrap">${h}</div>`; if(pronto) card.scrollTop=y; },
+  // atendimentos por unidade (listagem do SIAPEN + relatório do SAP): os mesmos números e gráficos do PDF da janela Atendimentos
+  bdAtendimentos(){ const A=this._bdAtd;
+    if(A===undefined){ this._bdAtd=null; API().atendimentos().then(r=>{ this._bdAtd=r||{}; if(this.aba==='base') this.renderBase(true); }); }
+    const sub='Quem está na unidade (listagem de internos ativos do SIAPEN) e o último atendimento (relatório de atendimento do SAP). A lista nominal está em Geral > Atendimentos.';
+    if(!A) return this.bdSec('bd8','8','Atendimentos',sub,'<p class="muted">Carregando…</p>');
+    if(!A.listagem) return this.bdSec('bd8','8','Atendimentos',sub,'<p class="muted">Nenhuma listagem de internos importada nesta base. Importe a listagem do SIAPEN e o relatório do SAP em Geral &gt; Atendimentos (ou pelo "Importar PDFs").</p>');
+    const T=A.lista||[], P=A.prazo||90, C={}; T.forEach(x=>C[x.cor]=(C[x.cor]||0)+1);
+    const COR={vermelho:'#A33A36',amarelo:'#C9A55C',verde:'#3E8E62',cinza:'#AEB5B0'}, ROT={vermelho:'Sem atendimento no período',amarelo:'Mais de '+P+' dias',verde:'Até '+P+' dias',cinza:'Sem relatório do SAP'};
+    const rosca=(titulo,pares,total_rot)=>{ const tot=pares.reduce((s,x)=>s+x[1],0); return {titulo, total:tot, total_rot, fatias:pares.filter(x=>x[1]).map(([r,v,c])=>[r,v,c,tot?Math.round(100*v/tot):0])}; };
+    const R=A.relatorio||{}, per=(R.periodo||[]).join(' a ');
+    const semR=T.filter(x=>!x.rspe).length;
+    const FX=[['até 30',0,30],['31 a 60',31,60],['61 a 90',61,90],['91 a 180',91,180],['181 a 270',181,270],['mais de 270',271,1e9]];
+    const fx=FX.map(([_,a,b])=>T.filter(x=>x.dias!=null&&x.dias>=a&&x.dias<=b).length), z=n=>Array(n).fill(0);
+    const alas=[...new Set(T.map(x=>(x.local||'?').split(' ')[0]||'?'))].sort(), ala=x=>(x.local||'?').split(' ')[0]||'?';
+    const tipos={}; T.filter(x=>x.ultimo).forEach(x=>{ const t=(x.tipo||'?').toLowerCase().replace(/^./,c=>c.toUpperCase()); tipos[t]=(tipos[t]||0)+1; });
+    const CAT=['#0B3B22','#3E8E62','#C9A55C','#7FB894','#8A5D0E','#4A6A8A'];
+    const meses={}; T.filter(x=>x.ultimo).forEach(x=>{ const k=x.ultimo.slice(6)+'-'+x.ultimo.slice(3,5); meses[k]=(meses[k]||0)+1; }); const mk=Object.keys(meses).sort().slice(-10);
+    const corpo=this.bdNum([[T.length,'internos na unidade',A.listagem.emitida?'listagem de '+A.listagem.emitida:''],[C.vermelho||0,'sem atendimento no período',per],[C.amarelo||0,'último há mais de '+P+' dias',''],[C.verde||0,'último até '+P+' dias',''],[semR,'sem RSPE na base','falta juntar o RSPE e a ficha']],{1:'vermelho',2:'amarelo',3:'verde'})
+      +`<div class="bd-2">${this.bdRosca(rosca('Situação dos internos',['vermelho','amarelo','verde','cinza'].map(c=>[ROT[c],C[c]||0,COR[c]]),'internos'))}${this.bdColunas({titulo:'Dias desde o último atendimento',categorias:FX.map(x=>x[0]).concat(['sem atend.']),series:[['Até '+P+' dias',fx.slice(0,3).concat(z(4)),COR.verde],['Mais de '+P+' dias',z(3).concat(fx.slice(3),[0]),COR.amarelo],['Sem atendimento',z(6).concat([C.vermelho||0]),COR.vermelho]]},200)}</div>`
+      +(alas.length>1&&alas.length<=16?`<div class="bd-1">${this.bdColunas({titulo:'Internos por ala / pavilhão (localização no SIAPEN), pela situação',categorias:alas,series:['vermelho','amarelo','verde'].filter(c=>C[c]).map(c=>[ROT[c],alas.map(a=>T.filter(x=>x.cor===c&&ala(x)===a).length),COR[c]])},210)}</div>`:'')
+      +`<div class="bd-2">${this.bdRosca(rosca('Tipo do último atendimento',Object.entries(tipos).sort((a,b)=>b[1]-a[1]).map(([t,v],i)=>[t,v,CAT[i%CAT.length]]),'atendidos'))}${this.bdColunas({titulo:'Mês do último atendimento (internos)',categorias:mk.map(k=>['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'][+k.slice(5)-1]+' '+k.slice(2,4)),series:[['Internos',mk.map(k=>meses[k]),'#00602C']]},200)}</div>`
+      +`<p><span class="mini" onclick="ui.atendimentos()">Abrir a lista em ordem de prioridade</span> <span class="mini" onclick="API().atendimentos_pdf('','').then(x=>x&&ui.toast(x.erro||x.msg))">Exportar PDF</span></p>`;
+    return this.bdSec('bd8','8','Atendimentos'+(A.listagem.unidade?' · '+A.listagem.unidade:''),sub+(per?' Relatório do SAP: '+per+'.':''),corpo); },
   renderTeses(){ if(!this._teses){ this.tesCarregar(); }
     document.getElementById('subtabs').classList.remove('on');
     document.getElementById('stats').innerHTML=`<div class="tesbar"><div class="search has"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="tq" placeholder="Pesquisar tese, ementa, relator ou número (ex.: remição ENEM, falta grave bis in idem)" value="${esc(this.tesQ)}" oninput="ui.tesBusca(this.value)"></div>

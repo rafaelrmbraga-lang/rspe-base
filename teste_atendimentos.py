@@ -152,6 +152,21 @@ try:
     ok(r["cont"].get("vermelho") == 3 and r["docs"]["sem_rspe"] == 6 and r["docs"]["sem_ficha"] == 7, "contagem: %s %s" % (r["cont"], r["docs"]))
     pu = api._pendentes_unidade()
     ok(pu["unidade"] == "UNIDADE PENAL DE TESTE" and pu["total"] == 8 and len(pu["lista"]) == 6, "pendentes para a aba Geral: %d" % len(pu["lista"]))
+    # PDF da janela (números, gráficos e lista), com e sem filtro
+    pdf = os.path.join(tmp, "Atendimentos.pdf")
+    api._janela = types.SimpleNamespace(create_file_dialog=lambda *x, **k: pdf)
+    app._abrir = lambda c: None
+    r1 = api.atendimentos_pdf("", "")
+    ok(r1 and r1.get("caminho") == pdf and os.path.getsize(pdf) > 5000, "PDF dos atendimentos: %s" % r1)
+    import pdfplumber
+    with pdfplumber.open(pdf) as d:
+        txt = "\n".join(pg.extract_text() or "" for pg in d.pages)
+    ok("Situação de atendimento" in txt and "Lista em ordem de prioridade" in txt and "FULANO DE TAL" in txt and "UNIDADE PENAL DE TESTE" in txt,
+       "conteúdo do PDF")
+    r2 = api.atendimentos_pdf("verde", "")
+    with pdfplumber.open(pdf) as d:
+        txt = "\n".join(pg.extract_text() or "" for pg in d.pages)
+    ok(r2 and "Filtro da janela: até 90 dias" in txt and "FULANO DE TAL" not in txt.split("Lista em ordem de prioridade")[-1], "PDF com o filtro da janela")
     base.con.close()
 finally:
     shutil.rmtree(tmp, ignore_errors=True)

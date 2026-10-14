@@ -103,6 +103,11 @@ ATENDIMENTOS (aba Geral > botão "Atendimentos")
     RSPE e a ficha disciplinar"; nas demais abas, um aviso conta quantos
     faltam. Não é erro: as colunas e abas se preenchem quando o RSPE e a
     ficha forem importados.
+  - "Exportar em PDF" (na janela e no card da aba Dados da Base): números,
+    gráficos (situação, dias desde o último atendimento, por ala, tipo e
+    mês do último atendimento, RSPE e ficha na base) e a lista em ordem de
+    prioridade, com o filtro de cor e a busca da janela.
+  - Aba Dados da Base, card "Atendimentos": os mesmos números e gráficos.
   - A listagem e o relatório ficam guardados na base; importar de novo
     substitui o anterior.
 
@@ -916,6 +921,8 @@ v7.9.5
   - Internos da listagem ainda sem RSPE aparecem na aba Geral com "Falta
     juntar o RSPE e a ficha disciplinar" e são contados nas demais abas.
   - Os dois PDFs também entram pelo "Importar PDFs" e pela pasta vigiada.
+  - Atendimentos em PDF (com gráficos) e no card "Atendimentos" da aba Dados
+    da Base.
 
 v7.9.4
   - Extensão 1.4.0 ligada ao APTO sem configurar nada: o APTO cria

@@ -307,7 +307,7 @@ def _canvas_numerado():
     return _CanvasNumerado
 
 
-def _tabela(dados, larguras, st, cab=True, cores_linha=None, zebra=True, pad=6):
+def _tabela(dados, larguras, st, cab=True, cores_linha=None, zebra=True, pad=6, vpad=5):
     """dados: lista de linhas (strings ou Paragraph). cores_linha: {indice: cor} para faixa lateral."""
     from reportlab.platypus import Table, TableStyle, Paragraph
     C = st["C"]
@@ -317,7 +317,7 @@ def _tabela(dados, larguras, st, cab=True, cores_linha=None, zebra=True, pad=6):
     t = Table(linhas, colWidths=larguras, repeatRows=1 if cab else 0)
     est = [("VALIGN", (0, 0), (-1, -1), "TOP"),
            ("LEFTPADDING", (0, 0), (-1, -1), pad), ("RIGHTPADDING", (0, 0), (-1, -1), pad),
-           ("TOPPADDING", (0, 0), (-1, -1), 5), ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+           ("TOPPADDING", (0, 0), (-1, -1), vpad), ("BOTTOMPADDING", (0, 0), (-1, -1), vpad),
            ("LINEBELOW", (0, 0), (-1, -1), 0.4, C(LINE))]
     if cab:
         est += [("LINEBELOW", (0, 0), (-1, 0), 1.1, C(PRI))]
@@ -3420,3 +3420,112 @@ def relatorio_calculo(e, r, caminho, nome_base):
     fr_ = _moldura("Calculadora de penas", nome_base)
     doc.build(el, onFirstPage=fr_, onLaterPages=fr_, canvasmaker=_canvas_numerado())
     return caminho
+
+
+# --------------------------------------------------------------------------- #
+# Atendimentos por unidade (aba Geral > Atendimentos)
+# --------------------------------------------------------------------------- #
+COR_ATD = {"vermelho": "#A33A36", "amarelo": "#C9A55C", "verde": "#3E8E62", "cinza": "#AEB5B0"}
+FAIXAS_ATD = (("até 30", 0, 30), ("31 a 60", 31, 60), ("61 a 90", 61, 90), ("91 a 180", 91, 180), ("181 a 270", 181, 270), ("mais de 270", 271, 10 ** 6))
+
+
+def relatorio_atendimentos(d, caminho, nome_base, filtro=""):
+    """PDF da janela Atendimentos: números, gráficos (situação, tempo desde o último atendimento, por ala, tipo do último
+    atendimento, mês do último atendimento, documentos na base) e a lista em ordem de prioridade (com o filtro da janela)."""
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.units import mm
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, CondPageBreak
+    st = _estilos()
+    C = st["C"]
+    W = A4[0] - 32 * mm
+    L, R = d.get("listagem") or {}, d.get("relatorio") or {}
+    todos, lista = d.get("lista_toda") or d.get("lista") or [], d.get("lista") or []
+    P = d.get("prazo") or 90
+    per = " a ".join(R.get("periodo") or []) or "?"
+    unidade = L.get("unidade") or "Unidade"
+    rot_sit = {"vermelho": "Sem atendimento no período", "amarelo": "Mais de %d dias" % P, "verde": "Até %d dias" % P, "cinza": "Sem relatório do SAP"}
+    el = [Paragraph(_t("Atendimentos · " + unidade), st["tit"]),
+          Paragraph(_t("Internos: listagem do SIAPEN de %s · atendimentos: relatório do SAP de %s (%s) · gerado em %s" % (
+              L.get("emitida") or "?", per, rs.pl(R.get("n") or 0, "atendimento", "atendimentos"), datetime.now().strftime("%d/%m/%Y %H:%M"))), st["sub"]),
+          Spacer(1, 8)]
+    cont = Counter(x["cor"] for x in todos)
+    sem_rspe = sum(1 for x in todos if not x.get("rspe"))
+    nums = [(len(todos), "internos na unidade"), (cont.get("vermelho", 0), rot_sit["vermelho"].lower()),
+            (cont.get("amarelo", 0), "último há mais de %d dias" % P), (cont.get("verde", 0), "último até %d dias" % P), (sem_rspe, "sem RSPE na base")]
+    cel = [[Paragraph(_t(str(v)), st["num"]), Paragraph(_t(r), st["rot"])] for v, r in nums]
+    t = Table([cel], colWidths=[W / len(cel)] * len(cel))
+    t.setStyle(TableStyle([("LINEABOVE", (0, 0), (-1, 0), 0.6, C(LINE)), ("LINEBELOW", (0, 0), (-1, 0), 0.6, C(LINE)),
+                           ("LINEAFTER", (0, 0), (-2, 0), 0.6, C(LINE)), ("TOPPADDING", (0, 0), (-1, -1), 6),
+                           ("BOTTOMPADDING", (0, 0), (-1, -1), 7), ("LEFTPADDING", (0, 0), (-1, -1), 8), ("VALIGN", (0, 0), (-1, -1), "TOP")]))
+    el += [t, Spacer(1, 4), Paragraph(_t("“Sem atendimento no período” = o interno não aparece no relatório do SAP do período acima "
+                                         "(não quer dizer que nunca foi atendido). Nome só parecido entre SIAPEN e SAP não é ligado (conferir na lista)."), st["mut"])]
+    RW = W / 2.0 - 10
+
+    def lado(c1, c2):
+        tb = Table([[c1, c2]], colWidths=[W / 2.0, W / 2.0])
+        tb.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP"), ("LEFTPADDING", (0, 0), (-1, -1), 0), ("RIGHTPADDING", (0, 0), (-1, -1), 10),
+                                ("TOPPADDING", (0, 0), (-1, -1), 0), ("BOTTOMPADDING", (0, 0), (-1, -1), 12)]))
+        el.append(tb)
+    el += [CondPageBreak(90 * mm), Paragraph("1. Situação de atendimento", st["h2"])]
+    sit = [(rot_sit[c], cont.get(c, 0)) for c in ("vermelho", "amarelo", "verde", "cinza") if cont.get(c)]
+    g1 = _rosca("Situação dos internos", sit, RW, st, total_rot="internos", cores={rot_sit[c]: COR_ATD[c] for c in COR_ATD}, ordenar=False, abaixo=True)
+    dias = [x["dias"] for x in todos if x.get("dias") is not None]
+    fx = [sum(1 for v in dias if a <= v <= b) for _r, a, b in FAIXAS_ATD]
+    # uma série por cor (zeros nas outras faixas): as colunas saem na cor da situação
+    sv = cont.get("vermelho", 0)
+    g2 = _colunas("Dias desde o último atendimento", [r for r, _a, _b in FAIXAS_ATD] + ["sem atend."],
+                  [("Até %d dias" % P, fx[:3] + [0, 0, 0, 0], COR_ATD["verde"]), ("Mais de %d dias" % P, [0, 0, 0] + fx[3:] + [0], COR_ATD["amarelo"]),
+                   ("Sem atendimento", [0] * 6 + [sv], COR_ATD["vermelho"])], RW, st, altura=118)
+    lado(g1, g2)
+    # por ala (letra inicial da localização: "A - UNICO - 015" -> A)
+    alas = sorted({(x.get("local") or "?").split(" ")[0] or "?" for x in todos})
+    if 1 < len(alas) <= 16:
+        el += [CondPageBreak(80 * mm), Paragraph("2. Por ala / pavilhão (localização no SIAPEN)", st["h2"])]
+        series = [(rot_sit[c], [sum(1 for x in todos if x["cor"] == c and ((x.get("local") or "?").split(" ")[0] or "?") == a) for a in alas], COR_ATD[c])
+                  for c in ("vermelho", "amarelo", "verde") if cont.get(c)]
+        el += _colunas("Internos por ala, pela situação de atendimento", alas, series, W, st, altura=130)
+        n_sec = 3
+    else:
+        n_sec = 2
+    el += [CondPageBreak(80 * mm), Paragraph("%d. Último atendimento" % n_sec, st["h2"])]
+    tipos = Counter((x.get("tipo") or "").capitalize() for x in todos if x.get("ultimo"))
+    g3 = _rosca("Tipo do último atendimento", tipos.most_common(), RW, st, total_rot="atendidos", abaixo=True)
+    meses = Counter()
+    for x in todos:
+        if x.get("ultimo"):
+            dd, mm_, aa = x["ultimo"].split("/")
+            meses[(aa, mm_)] += 1
+    chaves = sorted(meses)[-10:]
+    g4 = _colunas("Mês do último atendimento (internos)", ["%s %s" % ("jan fev mar abr mai jun jul ago set out nov dez".split()[int(m_) - 1], a_[2:]) for a_, m_ in chaves], [("Internos", [meses[k] for k in chaves], PRI)],
+                  RW, st, altura=118, nota="Quantos internos tiveram o último atendimento em cada mês (os 10 meses mais recentes).")
+    lado(g3, g4)
+    el += [CondPageBreak(70 * mm), Paragraph("%d. Documentos na base (APTO)" % (n_sec + 1), st["h2"])]
+    n_ficha = sum(1 for x in todos if x.get("ficha"))
+    g5 = _rosca("RSPE na base", [("Com RSPE", len(todos) - sem_rspe), ("Falta juntar o RSPE", sem_rspe)], RW, st, total_rot="internos",
+                cores={"Com RSPE": "#3E8E62", "Falta juntar o RSPE": "#AEB5B0"}, ordenar=False, abaixo=True)
+    g6 = _rosca("Ficha disciplinar na base", [("Com ficha", n_ficha), ("Falta juntar a ficha", len(todos) - n_ficha)], RW, st, total_rot="internos",
+                cores={"Com ficha": "#3E8E62", "Falta juntar a ficha": "#AEB5B0"}, ordenar=False, abaixo=True)
+    lado(g5, g6)
+    # lista
+    el += [CondPageBreak(60 * mm), Paragraph("%d. Lista em ordem de prioridade" % (n_sec + 2), st["h2"]),
+           Paragraph(_t("Sem atendimento no período; depois do último atendimento mais antigo ao mais recente.%s %s." % (
+               (" Filtro da janela: %s." % filtro) if filtro else "", rs.pl(len(lista), "interno", "internos"))), st["mut"]), Spacer(1, 4)]
+    curto = {"vermelho": "Sem atendimento", "amarelo": "Mais de %d dias" % P, "verde": "Até %d dias" % P, "cinza": "Sem relatório"}
+    tipo_c = {"ANALISE PROCESSUAL": "Análise proc.", "VIDEO CONFERENCIA": "Vídeo", "PRESENCIAL": "Presencial", "TELEFONE": "Telefone", "E-MAIL": "E-mail"}
+    dados = [["#", "Nome", "Localização", "Último", "Dias", "Tipo", "Situação", "RSPE", "Ficha"]]
+    for i, x in enumerate(lista, 1):
+        nota = ""
+        if x.get("conf") == "nome cortado":
+            nota = "<br/><font color='%s' size='6.8'>no SAP: %s</font>" % (TX3, _t(x.get("nome_sap", "")))
+        elif x.get("conf") == "parecido":
+            nota = "<br/><font color='%s' size='6.8'>%s</font>" % (TX3, _t(x.get("obs", "")))
+        dados.append([str(i), Paragraph(_t(x["nome"]) + nota, st["cel"]), Paragraph(_t(x.get("local") or "—"), st["cel"]), x.get("ultimo") or "—",
+                      "" if x.get("dias") is None else str(x["dias"]),
+                      tipo_c.get(rs._sem_acento(x.get("tipo") or "").upper(), (x.get("tipo") or "—").capitalize()),
+                      _pilula(curto.get(x.get("cor"), x.get("txt", "")), x.get("cor"), st), "sim" if x.get("rspe") else "falta", "sim" if x.get("ficha") else "falta"])
+    el.append(_tabela(dados, [8 * mm, 55 * mm, 24 * mm, 16 * mm, 9 * mm, 20 * mm, W - 150 * mm, 9 * mm, 9 * mm], st, pad=3, vpad=2.5))
+    doc = SimpleDocTemplate(caminho, pagesize=A4, leftMargin=16 * mm, rightMargin=16 * mm, topMargin=21 * mm, bottomMargin=20 * mm,
+                            title="Atendimentos - %s" % unidade, author="APTO")
+    fr = _moldura("Atendimentos · " + unidade, nome_base,
+                  rodape="Internos: Listagem Internos Ativos (SIAPEN). Atendimentos: Relatório de Atendimento (SAP). Ligação pelo nome; conferir os avisos da lista.")
+    doc.build(el, onFirstPage=fr, onLaterPages=fr, canvasmaker=_canvas_numerado())

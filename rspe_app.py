@@ -3271,6 +3271,32 @@ class Api:
         self._js("api('listar')")
         return r
 
+    def atendimentos_pdf(self, cor="", busca=""):
+        """PDF da janela Atendimentos (números, gráficos e a lista em ordem de prioridade, com o filtro e a busca da janela)."""
+        d = self.atendimentos()
+        if d.get("erro") or not d.get("listagem"):
+            return {"erro": d.get("erro") or "Importe antes a listagem de internos da unidade."}
+        todos = d["lista"]
+        q = ratd.norm(busca)
+        d["lista_toda"] = todos
+        d["lista"] = [x for x in todos if (not cor or x["cor"] == cor) and (not q or q in ratd.norm(x["nome"]))]
+        rot = {"vermelho": "sem atendimento no período", "amarelo": "mais de %d dias" % ratd.PRAZO_DIAS, "verde": "até %d dias" % ratd.PRAZO_DIAS}
+        filtro = ", ".join(x for x in (rot.get(cor, ""), ("busca \u201c%s\u201d" % busca) if busca else "") if x)
+        unidade = (d["listagem"].get("unidade") or "unidade").title()
+        nome = "Atendimentos - %s - %s.pdf" % (unidade, datetime.now().strftime("%Y-%m-%d"))
+        c = _um(self._janela.create_file_dialog(webview.SAVE_DIALOG, save_filename=nome, file_types=("PDF (*.pdf)",)))
+        if not c:
+            return None
+        if not c.lower().endswith(".pdf"):
+            c += ".pdf"
+        try:
+            rrel.relatorio_atendimentos(d, c, self.base.nome, filtro)
+        except Exception as e:
+            logging.getLogger("rspe").exception("PDF de atendimentos")
+            return {"erro": "Falha ao gerar o PDF: %s" % e}
+        _abrir(c)
+        return {"caminho": c, "msg": "PDF salvo."}
+
     def _pendentes_unidade(self):
         """internos da listagem da unidade ainda sem RSPE na base (aba Geral e aviso das demais abas)."""
         try:
