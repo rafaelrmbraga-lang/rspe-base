@@ -129,17 +129,25 @@ RESUMO PARA O ASSISTIDO (botão "Resumo" na janela Atendimentos e "Resumo
 para o assistido" na ficha)
   Uma folha A4 para imprimir e entregar ao preso, em linguagem simples
   (Pacto Nacional do Judiciário pela Linguagem Simples, CNJ): como está a
-  pena (com a barra do que já cumpriu), os próximos direitos, o que a
-  Defensoria fez (atendimentos do SAP e do APTO, pedidos e ofícios marcados)
-  e os avisos (falta grave). Fluxo: registrar o atendimento (com o que foi
-  feito) > resumo para o assistido > relatório do SAP depois.
+  pena (com a barra do que já cumpriu), os próximos direitos, o resumo do
+  atendimento e os avisos (falta grave). Fluxo: registrar o atendimento >
+  resumo para o assistido > relatório do SAP depois.
   - Só entra o que o APTO já calculou. Data duvidosa ("ver Auditoria",
     "verificar") sai como "a Defensoria está conferindo a data". Pedido já
-    feito sai dos direitos e aparece em "o que a Defensoria fez".
+    marcado no APTO sai dos próximos direitos.
+  - Resumo do atendimento: marque as providências feitas (explicação da
+    pena, pedidos ao juiz, ofício de atestados, orientação sobre falta,
+    processo em análise, pedido aguardando decisão) e, se quiser, escreva
+    outra. Cada uma sai como frase simples. As providências marcadas no
+    APTO com a data do atendimento já vêm marcadas; o que foi escrito no
+    "Registrar" entra no campo livre. Marcar um pedido tira da lista o
+    direito correspondente.
   - Antes do PDF, cada frase pode ser corrigida, desmarcada ou acrescentada.
-  - Embaixo, depois da linha pontilhada, o canhoto de quem fez o
-    atendimento: data do atendimento, retorno em 30/60/90/__ dias, data e
-    "Entregue ao setor psicossocial da unidade". Não traz contato.
+  - Embaixo, depois da linha pontilhada, o canhoto do assistido: pedido de
+    atendimento com a Defensoria, com o último atendimento, o retorno em
+    30/60/90/__ dias e a data do retorno. Perto dessa data, o assistido
+    entrega o canhoto ao setor psicossocial da unidade para pedir
+    atendimento. Não traz contato.
 
 EXTENSÃO DO NAVEGADOR (pasta extensao_seeu)
   "APTO - RSPE do SEEU, Ficha do SIAPEN e processos do SAP", para Chrome e
@@ -944,9 +952,10 @@ HISTÓRICO DE VERSÕES
 
 v7.10.0
   - Resumo para o assistido: folha A4 em linguagem simples (CNJ) com a
-    pena, os próximos direitos, o que a Defensoria fez e o canhoto do
-    atendimento (retorno em X dias, entrega ao setor psicossocial). O texto
-    é conferido e editado na tela antes do PDF.
+    pena, os próximos direitos, o resumo do atendimento (pelas providências
+    marcadas) e o canhoto do assistido para pedir o próximo atendimento ao
+    setor psicossocial, com a data do retorno. O texto é conferido e
+    editado na tela antes do PDF.
   - Registrar atendimento: campo "o que foi feito" (sai no resumo) e, ao
     registrar, abre o resumo.
 

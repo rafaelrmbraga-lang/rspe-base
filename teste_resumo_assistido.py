@@ -1,6 +1,6 @@
 """Resumo para o assistido (linguagem simples, CNJ): frases a partir do modelo, das providências e dos atendimentos; data
-duvidosa sai como "conferindo"; pedido feito tira o direito da lista e entra em "o que a Defensoria fez"; atendimento do SAP e
-do APTO no mesmo dia fica uma vez só (o do APTO, com o que foi feito); PDF de uma página com o canhoto. Nomes fictícios."""
+duvidosa sai como "conferindo"; pedido feito tira o direito da lista; as providências do dia do atendimento já vêm marcadas no
+resumo do atendimento; atendimento do SAP e do APTO no mesmo dia fica uma vez só (o do APTO, com o que foi feito); PDF de uma página com o canhoto do assistido (pedido do próximo atendimento). Nomes fictícios."""
 import os
 import shutil
 import sys
@@ -52,12 +52,13 @@ try:
     man = [{"nome": "Fulano de Teste", "data": "2026-10-14", "obs": "explicamos o cálculo da pena", "registrado_em": "2026-10-14 10:00:00"}]
     at = rres.atendimentos_da_pessoa("FULANO DE TESTE", regs, man)
     ok(len(at) == 2 and at[0]["fonte"] == "apto" and at[1]["data"] == "2026-08-12", "atendimentos da pessoa: %s" % at)
-    d3 = rres.montar(M, {"liv": {"data": "13/10/2026", "tipo": "pedido"}, "fd": {"data": "20/09/2026", "tipo": "oficio"}}, at, HOJE)
-    fez = itens(d3, "fez")
+    d3 = rres.montar(M, {"liv": {"data": "14/10/2026", "tipo": "pedido"}, "fd": {"data": "14/10/2026", "tipo": "oficio"},
+                         "prog": {"data": "01/09/2026", "tipo": "pedido"}}, at, HOJE)
     ok(not any(x.startswith("Livramento") for x in itens(d3, "direitos")), "pedido feito sai dos direitos")
-    ok(fez[0] == "Em 14 de outubro de 2026, você teve atendimento com a Defensoria. O que foi feito: explicamos o cálculo da pena.", "atendimento: %s" % fez[0])
-    ok(fez[1].startswith("Em 13 de outubro de 2026, a Defensoria pediu ao juiz o livramento condicional"), "pedido: %s" % fez[1])
-    ok("ofício" in fez[2] and "atestados de trabalho e estudo" in fez[2] and "atendimento presencial" in fez[3], "ofício e atendimento do SAP: %s" % fez)
+    marc = {p["id"] for p in d3["providencias"] if p["marcado"]}
+    ok(marc == {"explicou", "ped_liv", "ofi_atest"}, "providências do dia do atendimento já marcadas: %s" % marc)
+    ok(d3["outro"] == "explicamos o cálculo da pena" and d3["data_atend"] == "14/10/2026", "o que foi feito registrado no APTO: %s" % d3["outro"])
+    ok(any(s_["id"] == "atend" for s_ in d3["secoes"]) and not any(s_["id"] == "fez" for s_ in d3["secoes"]), "seção do resumo do atendimento")
     # sem RSPE na base
     d4 = rres.montar(None, {}, [], HOJE, "BELTRANO SEM RSPE")
     ok(d4["nome"] == "BELTRANO SEM RSPE" and "ainda não tem o relatório" in itens(d4, "pena")[0] and not itens(d4, "direitos"), "sem RSPE")
@@ -69,14 +70,16 @@ try:
     tmp = tempfile.mkdtemp()
     try:
         pdf = os.path.join(tmp, "Resumo.pdf")
-        rrel.relatorio_resumo_assistido(dict(d3, retorno="60", data_atend="14/10/2026"), pdf)
+        sec = [dict(s_, itens=[p["frase"] for p in d3["providencias"] if p["marcado"]]) if s_["id"] == "atend" else s_ for s_ in d3["secoes"]]
+        rrel.relatorio_resumo_assistido(dict(d3, secoes=sec, retorno="60"), pdf)
         import pdfplumber
         with pdfplumber.open(pdf) as p:
             n = len(p.pages)
             txt = p.pages[0].extract_text() or ""
         ok(n == 1, "uma página: %d" % n)
-        ok("Resumo da sua pena" in txt and "FULANO DE TESTE" in txt and "Entregue ao setor psicossocial da unidade" in txt and "Retorno em" in txt
-           and "recorte aqui" in txt and "14/10/2026" in txt, "conteúdo do PDF")
+        ok("Resumo da sua pena" in txt and "FULANO DE TESTE" in txt and "Resumo do atendimento de 14 de outubro de 2026" in txt
+           and "Pedimos ao juiz o livramento condicional." in txt and "setor psicossocial da unidade" in txt and "Retorno em" in txt
+           and "recorte aqui" in txt and "Data do retorno: 13/12/2026" in txt, "conteúdo do PDF")
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 except Exception as e:

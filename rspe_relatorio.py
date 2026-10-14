@@ -3584,9 +3584,9 @@ def relatorio_saidas(d, caminho, nome_base):
 
 
 def relatorio_resumo_assistido(d, caminho):
-    """Resumo para o assistido (linguagem simples, CNJ), uma folha A4 para imprimir: em cima, a pena, os próximos direitos e o que
-    a Defensoria fez; embaixo, depois da linha pontilhada, o canhoto de quem fez o atendimento (retorno em X dias, data e entrega ao
-    setor psicossocial da unidade). d = o que a janela do APTO mandou (o texto já conferido e editado)."""
+    """Resumo para o assistido (linguagem simples, CNJ), uma folha A4 para imprimir: em cima, a pena, os próximos direitos e o resumo
+    do atendimento; embaixo, depois da linha pontilhada, o canhoto do assistido (retorno em X dias e a data): perto dela, ele entrega
+    o papel ao setor psicossocial da unidade para pedir atendimento. d = o que a janela do APTO mandou (o texto já conferido)."""
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.units import mm
     from reportlab.lib import colors
@@ -3626,14 +3626,17 @@ def relatorio_resumo_assistido(d, caminho):
         itens = [x for x in sec.get("itens") or [] if str(x).strip()]
         if not itens:
             continue
-        el.append(Paragraph(_t(sec.get("titulo") or ""), s_h))
+        tit = sec.get("titulo") or ""
+        if sec.get("id") == "atend" and rres._data(d.get("data_atend")):
+            tit = "Resumo do atendimento de %s" % rres.extenso(rres._data(d.get("data_atend")))
+        el.append(Paragraph(_t(tit), s_h))
         el += [Paragraph(_t(x), s_p, bulletText="•") for x in itens]
     if d.get("rodape"):
         el.append(Paragraph(_t(d["rodape"]), s_rod))
 
     c = rl_canvas.Canvas(caminho, pagesize=A4)
     c.setTitle("Resumo da pena - %s" % (d.get("nome") or ""))
-    corte = 60 * mm  # altura do canhoto, a partir da borda de baixo
+    corte = 70 * mm  # altura do canhoto, a partir da borda de baixo
     topo = PH - 16 * mm
     fr = Frame(ML, corte + 6 * mm, W, topo - corte - 6 * mm, leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0)
     fr.addFromList([KeepInFrame(W, topo - corte - 6 * mm, el, mode="shrink")], c)
@@ -3647,18 +3650,24 @@ def relatorio_resumo_assistido(d, caminho):
     c.setFillColor(C(TX2))
     c.setFont(f["n"], 8)
     c.drawRightString(PW - ML, corte + 2.5 * mm, "recorte aqui")
+    c.setFont(f["b"], 9.5)
+    c.setFillColor(C(NAVY))
+    c.drawString(ML, corte + 2.5 * mm, "Guarde a parte de baixo: ela serve para pedir o próximo atendimento.")
 
-    # canhoto de quem fez o atendimento
+    # canhoto do assistido: perto da data de retorno, ele entrega esta parte ao setor psicossocial para pedir atendimento
+    from datetime import timedelta
+    da = rres._data(d.get("data_atend"))
+    ret = str(d.get("retorno") or "").strip()
+    prev = da + timedelta(days=int(ret)) if da and ret.isdigit() else None
     y = corte - 8 * mm
     c.setFillColor(C(NAVY))
-    c.setFont(f["b"], 11)
-    c.drawString(ML, y, "Para quem fez o atendimento")
+    c.setFont(f["serifb"], 13)
+    c.drawString(ML, y, "Pedido de atendimento com a Defensoria Pública")
     c.setFillColor(C(TX))
     c.setFont(f["n"], 11)
     y -= 8 * mm
     c.drawString(ML, y, "Interno: %s" % (d.get("nome") or ""))
-    da = rres._data(d.get("data_atend"))
-    c.drawString(ML + W * 0.62, y, "Atendimento: %s" % (da.strftime("%d/%m/%Y") if da else "____/____/________"))
+    c.drawString(ML + W * 0.62, y, "Último atendimento: %s" % (da.strftime("%d/%m/%Y") if da else "____/____/________"))
 
     def caixa(x, yy, marcada=False):
         c.setStrokeColor(C(TX))
@@ -3673,21 +3682,29 @@ def relatorio_resumo_assistido(d, caminho):
     y -= 8.5 * mm
     c.drawString(ML, y, "Retorno em:")
     x = ML + 24 * mm
-    ret = str(d.get("retorno") or "").strip()
     for n in ("30", "60", "90"):
         x = caixa(x, y, ret == n)
         c.drawString(x, y, "%s dias" % n)
-        x += 20 * mm
+        x += 17 * mm
     x = caixa(x, y, bool(ret) and ret not in ("30", "60", "90"))
     c.drawString(x, y, "%s dias" % (ret if ret and ret not in ("30", "60", "90") else "______"))
+    y -= 8 * mm
+    c.setFont(f["b"], 11)
+    c.drawString(ML, y, "Data do retorno: %s" % (prev.strftime("%d/%m/%Y") if prev else "____/____/________"))
+    c.setFont(f["n"], 11)
 
-    y -= 8.5 * mm
-    c.drawString(ML, y, "Data: ____/____/________")
-    x = caixa(ML + 52 * mm, y)
-    c.drawString(x, y, "Entregue ao setor psicossocial da unidade")
+    y -= 11 * mm
+    c.setFillColor(C("#EEF3EF"))
+    c.roundRect(ML, y - 8 * mm, W, 14 * mm, 2 * mm, stroke=0, fill=1)
+    c.setFillColor(C(NAVY))
+    c.setFont(f["b"], 12)
+    c.drawString(ML + 4 * mm, y, "Perto da data do retorno, entregue este papel ao setor psicossocial da unidade")
+    c.drawString(ML + 4 * mm, y - 5.2 * mm, "para pedir atendimento com a Defensoria Pública.")
+    c.setFillColor(C(TX))
+    c.setFont(f["n"], 11)
 
-    y -= 12 * mm
-    c.drawString(ML, y, "Responsável: ")
+    y -= 15 * mm
+    c.drawString(ML, y, "Atendido por: ")
     c.setStrokeColor(C(TX))
     c.line(ML + 25 * mm, y - 1, ML + W * 0.75, y - 1)
     c.showPage()

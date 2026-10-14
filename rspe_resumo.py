@@ -1,11 +1,11 @@
-"""Resumo para o assistido: a situação da pena, os próximos direitos e o que a Defensoria fez, em linguagem simples
+"""Resumo para o assistido: a situação da pena, os próximos direitos e o resumo do atendimento, em linguagem simples
 (Pacto Nacional do Judiciário pela Linguagem Simples, CNJ): frases curtas, ordem direta, voz ativa, "você", sem termos
 técnicos sem explicação e o mais importante primeiro.
 
 Só entra o que o APTO já calculou. Data duvidosa (aviso "ver Auditoria", "verificar") sai como "a Defensoria está
 conferindo", nunca como data. O texto é uma proposta: a janela do APTO deixa editar e tirar cada frase antes do PDF."""
 import re
-from datetime import date, datetime
+from datetime import date
 
 import rspe_atendimentos as ratd
 
@@ -13,26 +13,21 @@ MESES = "janeiro fevereiro março abril maio junho julho agosto setembro outubro
 
 PROXIMO_REGIME = {"fechado": "semiaberto", "semiaberto": "aberto"}
 
-# assunto de cada aba de providência, no texto para o assistido
-ASSUNTO = {
-    "prog": "a mudança de regime",
-    "liv": "o livramento condicional",
-    "ind": "o indulto ou a comutação",
-    "presc": "o reconhecimento da prescrição (o fim do prazo para cumprir a pena)",
-    "ext": "o fim da pena (extinção)",
-    "fd": "o desconto dos dias de trabalho e estudo na pena (remição)",
-    "st": "a saída temporária",
-}
-
-TIPO_ATEND = {
-    "PRESENCIAL": "atendimento presencial",
-    "VIDEO CONFERENCIA": "atendimento por vídeo",
-    "VIDEOCONFERENCIA": "atendimento por vídeo",
-    "TELEFONE": "atendimento por telefone",
-    "E-MAIL": "atendimento por e-mail",
-    "EMAIL": "atendimento por e-mail",
-    "ANALISE PROCESSUAL": "análise do seu processo",
-}
+# providências do atendimento: (id, rótulo na janela, frase no resumo)
+PROVIDENCIAS = [
+    ("explicou", "Explicação da pena e das datas", "Explicamos como está a sua pena e as datas dos seus direitos."),
+    ("ped_prog", "Pedido de progressão de regime", "Pedimos ao juiz a mudança de regime."),
+    ("ped_liv", "Pedido de livramento condicional", "Pedimos ao juiz o livramento condicional."),
+    ("ped_ind", "Pedido de indulto ou comutação", "Pedimos ao juiz o indulto ou a comutação da pena."),
+    ("ped_rem", "Pedido de remição", "Pedimos ao juiz o desconto dos dias de trabalho e estudo na pena (remição)."),
+    ("ped_ext", "Pedido de extinção da pena", "Pedimos ao juiz o fim da pena (extinção)."),
+    ("ped_presc", "Pedido de prescrição", "Pedimos ao juiz o reconhecimento da prescrição (o fim do prazo para cumprir a pena)."),
+    ("ped_st", "Pedido de saída temporária", "Pedimos ao juiz a saída temporária."),
+    ("ofi_atest", "Ofício: atestados de trabalho e estudo", "Pedimos à unidade prisional os atestados de trabalho e estudo."),
+    ("falta", "Orientação sobre falta disciplinar", "Orientamos você sobre a falta disciplinar."),
+    ("analise", "Processo em análise", "Vamos analisar o seu processo e, se for o caso, fazer o pedido ao juiz."),
+    ("aguarda", "Pedido aguardando decisão", "Já existe pedido no seu processo. Agora é preciso esperar a decisão do juiz."),
+]
 
 
 def _data(txt):
@@ -92,12 +87,13 @@ def _quando(d, aprox):
     return extenso(d) + (" (data aproximada)" if aprox else "")
 
 
-def montar(m, pedidos, atendimentos, hoje=None, nome=""):
+def montar(m, pedidos, atendimentos, hoje=None, nome="", data_atend=None):
     """m: modelo do assistido (None se ainda não há RSPE na base); pedidos: {aba: {data, tipo, obs}} do processo;
-    atendimentos: [{data ISO, tipo, texto, fonte}] da pessoa. -> dados do resumo (editáveis na janela do APTO)."""
+    atendimentos: [{data ISO, tipo, texto, fonte}] da pessoa; data_atend: o atendimento do resumo (hoje, se vazio).
+    -> dados do resumo (editáveis na janela do APTO)."""
     hoje = hoje or date.today()
     nome = (m or {}).get("nome") or nome
-    sec_pena, sec_dir, sec_fez, sec_aten = [], [], [], []
+    sec_pena, sec_dir, sec_aten = [], [], []
     barra = None
 
     # 1) como está a pena
@@ -174,38 +170,21 @@ def montar(m, pedidos, atendimentos, hoje=None, nome=""):
         if not sec_dir:
             sec_dir.append("Neste momento, não há data próxima de novo direito no seu processo.")
 
-    # 3) o que a Defensoria fez
-    fez = []
-    for a in atendimentos or []:
-        d = _data(a.get("data"))
-        if not d:
-            continue
-        t = TIPO_ATEND.get(ratd.norm(a.get("tipo") or "")) if a.get("fonte") == "sap" else None
-        txt = (a.get("texto") or "").strip().rstrip(".")
-        if t == "análise do seu processo":
-            frase = "a Defensoria analisou o seu processo."
-        elif t:
-            frase = "você teve %s com a Defensoria." % t
-        else:
-            frase = "você teve atendimento com a Defensoria."
-        if txt:
-            frase += " O que foi feito: %s." % txt
-        fez.append((d, "Em %s, %s" % (extenso(d), frase)))
+    # 3) resumo do atendimento: quem atendeu marca na janela as providências feitas (as do APTO com a data do atendimento já vêm
+    # marcadas) e escreve o que mais houve; as frases saem no PDF
+    da = data_atend or hoje
+    marcadas = {"explicou"}
     for k, p in (pedidos or {}).items():
-        d = _data(p.get("data"))
-        if not d:
+        if _data(p.get("data")) != da:
             continue
-        assunto = ASSUNTO.get(k) or (ASSUNTO["ind"].replace("o indulto ou a comutação", "o indulto ou a comutação de " + k[4:]) if k.startswith("ind_") else k)
         tp = p.get("tipo") or "pedido"
-        if tp == "oficio":
-            obj = "os atestados de trabalho e estudo" if k == "fd" else "informações sobre " + assunto
-            fez.append((d, "Em %s, a Defensoria enviou um ofício (documento oficial) à unidade prisional pedindo %s." % (extenso(d), obj)))
-        elif tp == "outro":
-            fez.append((d, "Em %s, a Defensoria tomou providências sobre %s." % (extenso(d), assunto)))
-        else:
-            fez.append((d, "Em %s, a Defensoria pediu ao juiz %s. Agora é preciso esperar a decisão." % (extenso(d), assunto)))
-    fez.sort(key=lambda x: x[0], reverse=True)
-    sec_fez = [t for _d, t in fez[:5]] or ["Ainda não há atendimento ou pedido registrado."]
+        if k == "fd" and tp == "oficio":
+            marcadas.add("ofi_atest")
+        elif tp == "pedido":
+            marcadas.add({"prog": "ped_prog", "liv": "ped_liv", "fd": "ped_rem", "ext": "ped_ext", "presc": "ped_presc", "st": "ped_st"}.get(k)
+                         or ("ped_ind" if k == "ind" or k.startswith("ind_") else ""))
+    provs = [{"id": i_, "rot": r_, "frase": f_, "marcado": i_ in marcadas} for i_, r_, f_ in PROVIDENCIAS]
+    outro = next((a.get("texto") or "" for a in atendimentos or [] if a.get("fonte") == "apto" and _data(a.get("data")) == da), "")
 
     # 4) atenção
     if m:
@@ -221,13 +200,13 @@ def montar(m, pedidos, atendimentos, hoje=None, nome=""):
     secoes = [{"id": "pena", "titulo": "Como está a sua pena", "itens": sec_pena}]
     if m:
         secoes.append({"id": "direitos", "titulo": "Seus próximos direitos", "itens": sec_dir})
-    secoes += [{"id": "fez", "titulo": "O que a Defensoria fez por você", "itens": sec_fez},
+    secoes += [{"id": "atend", "titulo": "Resumo do atendimento", "itens": []},
                {"id": "atencao", "titulo": "Fique atento", "itens": sec_aten}]
     ger = (m or {}).get("geracao") or ""
     rodape = ("As datas deste resumo vêm do SEEU (relatório de %s). Elas podem mudar com decisões do juiz, faltas ou dias de trabalho e estudo." % ger
               if m else "")
     return {"nome": nome, "proc": (m or {}).get("proc") or "", "hoje": hoje.strftime("%d/%m/%Y"), "barra": barra,
-            "secoes": secoes, "rodape": rodape}
+            "secoes": secoes, "rodape": rodape, "data_atend": da.strftime("%d/%m/%Y"), "providencias": provs, "outro": outro}
 
 
 def atendimentos_da_pessoa(nome, registros, manuais):
