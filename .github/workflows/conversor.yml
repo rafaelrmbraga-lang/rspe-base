@@ -1,0 +1,67 @@
+name: Gerar ConversorAudio.exe
+
+# Roda quando algo em conversor_audio/ muda (em qualquer branch) e também manualmente
+# (aba Actions > "Gerar ConversorAudio.exe" > Run workflow).
+on:
+  push:
+    paths:
+      - "conversor_audio/**"
+      - ".github/workflows/conversor.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependências
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r conversor_audio/requirements.txt
+
+      - name: Teste rápido (gera um vídeo de 1 min e converte)
+        working-directory: conversor_audio
+        run: python teste_conversor.py
+
+      - name: Compilar com PyInstaller
+        working-directory: conversor_audio
+        run: python -m PyInstaller --onefile --windowed --clean --name ConversorAudio --collect-all imageio_ffmpeg conversor.py
+
+      - name: Versão
+        id: versao
+        shell: pwsh
+        run: |
+          $v = (Select-String -Path conversor_audio/conversor.py -Pattern 'VERSAO = "([^"]+)"').Matches[0].Groups[1].Value
+          "v=$v" >> $env:GITHUB_OUTPUT
+
+      - name: Montar pacote
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force pacote_conversor | Out-Null
+          Copy-Item conversor_audio\dist\ConversorAudio.exe, conversor_audio\LEIA-ME.txt pacote_conversor\
+          Compress-Archive -Path pacote_conversor\* -DestinationPath "ConversorAudio_v${{ steps.versao.outputs.v }}.zip"
+
+      - name: Guardar o .exe (aba Actions)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ConversorAudio_v${{ steps.versao.outputs.v }}
+          path: pacote_conversor/*
+          retention-days: 30
+
+      - name: Publicar em Releases (só na main)
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: conversor-v${{ steps.versao.outputs.v }}
+          name: Conversor de Áudio v${{ steps.versao.outputs.v }}
+          body: "Baixe o .zip, extraia e dê dois cliques em ConversorAudio.exe (Windows 10/11). Não precisa instalar nada."
+          files: ConversorAudio_v${{ steps.versao.outputs.v }}.zip
+          make_latest: false

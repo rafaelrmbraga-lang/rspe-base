@@ -19,3 +19,9 @@ Compilação local (opcional): `build_exe.bat` num PC com Python.
 ## Dados
 
 Nenhum RSPE, ficha ou base de assistidos é versionado (ver `.gitignore`).
+
+## Conversor de Áudio (à parte)
+
+`conversor_audio/` — programa simples que transforma vídeo (MP4 etc.) em MP3/M4A/OGG/WAV/FLAC,
+com modo "NotebookLM" (MP3 de voz compacto, divide em partes se passar de 200 MB).
+O `.exe` é gerado por `.github/workflows/conversor.yml`. Instruções em `conversor_audio/LEIA-ME.txt`.

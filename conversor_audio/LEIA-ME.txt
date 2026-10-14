@@ -1,0 +1,25 @@
+CONVERSOR DE ÁUDIO
+==================
+
+Transforma vídeos (MP4, MKV, MOV, AVI, WEBM...) em áudio: MP3, M4A, OGG, WAV ou FLAC.
+Feito para subir reuniões longas no NotebookLM.
+
+COMO USAR
+1. Dê dois cliques em ConversorAudio.exe.
+2. Clique em "Escolher…" e selecione o vídeo (pode escolher vários).
+3. Deixe o formato "NotebookLM — MP3 de voz, compacto (recomendado)".
+4. Clique em "Converter". O MP3 fica na mesma pasta do vídeo.
+5. Clique em "Abrir pasta" e arraste o MP3 para o NotebookLM.
+
+TAMANHO
+- O modo NotebookLM gera cerca de 29 MB por hora de reunião.
+  Um vídeo de 2 GB com 3 horas vira um MP3 de ~85 MB.
+- O NotebookLM aceita até 200 MB por arquivo. Se a reunião for muito longa
+  (mais de ~6 horas), o programa divide em "parte 01", "parte 02"...
+  Suba todas as partes no mesmo notebook.
+
+OBSERVAÇÕES
+- Nada é apagado: o vídeo original fica intacto e nunca se sobrescreve um arquivo.
+- O botão "Converter" vira "Cancelar" durante a conversão.
+- O Windows pode mostrar "O Windows protegeu o computador" na primeira vez:
+  clique em "Mais informações" > "Executar assim mesmo".
