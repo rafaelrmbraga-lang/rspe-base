@@ -138,16 +138,19 @@ def montar(m, pedidos, atendimentos, hoje=None, nome="", data_atend=None):
         ped = pedidos or {}
         r0 = str(m.get("regime") or "").split(" (")[0].strip().lower()
         prox = PROXIMO_REGIME.get(r0)
-        # falta grave homologada depois da data-base do RSPE: a contagem para a progressão recomeça (STJ, Súmula 534); o RSPE ainda
-        # não traz a data nova, então não sai data (o livramento não é interrompido: Súmula 441)
+        # falta grave: a contagem para a progressão recomeça (STJ, Súmula 534) e o SEEU refaz a data-base e a data. Vale a data do RSPE:
+        # RSPE gerado depois da homologação já traz a data refeita; RSPE anterior a ela ainda não (sem data: falta o RSPE atualizado).
+        # O livramento não é interrompido pela falta grave (Súmula 441): segue a data do RSPE.
         fa = str(m.get("falta") or "")
-        dfa, dbase = _data(fa) if fa.startswith("Sim") else None, _data(m.get("dbase"))
+        dfa, ger = _data(fa) if fa.startswith("Sim") else None, _data(m.get("geracao"))
         if prox and not ped.get("prog"):
             sit, d, ap = _beneficio_data(m, "prog", "prog_sit")
-            if dfa and dbase and dfa > dbase and sit in ("futuro", "vencido", "conferir"):
-                sec_dir.append("Ir para o regime %s: por causa da falta grave, a contagem do tempo recomeçou. A Defensoria vai acompanhar a nova data." % prox)
+            if dfa and ger and ger < dfa and sit:
+                sec_dir.append("Ir para o regime %s: por causa da falta grave, a data vai ser refeita no SEEU. A Defensoria vai pedir o relatório "
+                               "atualizado e informar a nova data." % prox)
             elif sit == "futuro":
-                sec_dir.append("Ir para o regime %s: a partir de %s. Para isso, é preciso ter bom comportamento." % (prox, _quando(d, ap)))
+                sec_dir.append("Ir para o regime %s: a partir de %s%s. Para isso, é preciso ter bom comportamento."
+                               % (prox, _quando(d, ap), " (data já refeita depois da falta grave)" if dfa else ""))
             elif sit == "vencido":
                 sec_dir.append("Ir para o regime %s: você já cumpriu o tempo necessário em %s. A Defensoria vai analisar e, se for o caso, fazer o pedido ao juiz." % (prox, _quando(d, ap)))
             elif sit == "conferir":
@@ -155,7 +158,11 @@ def montar(m, pedidos, atendimentos, hoje=None, nome="", data_atend=None):
         if "livramento" not in r0 and not ped.get("liv"):
             sit, d, ap = _beneficio_data(m, "liv", "liv_sit")
             lc = "Livramento condicional (terminar a pena em liberdade, cumprindo regras)"
-            if sit == "futuro":
+            if sit == "futuro" and dfa and (d - dfa).days < 365:
+                # o livramento exige também 12 meses sem falta grave (CP, art. 83, III, "b"); a data da falta em si não está no RSPE
+                sec_dir.append("%s: o tempo necessário se completa em %s. A lei também exige 12 meses sem falta grave. A Defensoria vai "
+                               "conferir essa data." % (lc, _quando(d, ap)))
+            elif sit == "futuro":
                 sec_dir.append("%s: a partir de %s." % (lc, _quando(d, ap)))
             elif sit == "vencido":
                 sec_dir.append("%s: você já cumpriu o tempo necessário em %s. A Defensoria vai analisar e, se for o caso, fazer o pedido ao juiz." % (lc, _quando(d, ap)))

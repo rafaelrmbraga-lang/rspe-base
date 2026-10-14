@@ -38,16 +38,22 @@ try:
     ok(pena[0] == "Você está no regime fechado." and "Faltam 4 anos" in pena[2] and "30 dias" in pena[3], "pena: %s" % pena)
     ok(any("10 de outubro de 2030" in x for x in pena), "término por extenso")
     ok(d["barra"]["pct"] == 33, "barra: %s" % d["barra"])
-    ok(dirs[0].startswith("Ir para o regime semiaberto: a partir de 12 de fevereiro de 2027"), "progressão futura: %s" % dirs[0])
+    ok(dirs[0].startswith("Ir para o regime semiaberto: a partir de 12 de fevereiro de 2027 (data já refeita depois da falta grave)"), "progressão futura: %s" % dirs[0])
     ok("já cumpriu o tempo necessário em 1º de janeiro de 2025" in dirs[1] and "se for o caso" in dirs[1], "livramento vencido: %s" % dirs[1])
     ok(dirs[2].startswith("Indulto de 2025") and len(dirs) == 3, "indulto: só o decreto mais recente: %s" % dirs)
     ok(aten[0].startswith("Consta falta grave confirmada pelo juiz em 1º de junho de 2026"), "falta grave: %s" % aten)
-    # falta grave depois da data-base: a progressão recomeça (sem data); o livramento continua (Súmulas 534 e 441 do STJ)
-    dfg = rres.montar(dict(M, dbase="01/01/2024"), {}, [], HOJE)
-    ok(itens(dfg, "direitos")[0] == "Ir para o regime semiaberto: por causa da falta grave, a contagem do tempo recomeçou. A Defensoria vai acompanhar a nova data."
-       and itens(dfg, "direitos")[1].startswith("Livramento condicional"), "falta grave recente: %s" % itens(dfg, "direitos"))
-    ok(itens(rres.montar(dict(M, dbase="02/06/2026"), {}, [], HOJE), "direitos")[0].startswith("Ir para o regime semiaberto: a partir de"),
-       "data-base já atualizada depois da falta: segue a data do RSPE")
+    # falta grave: vale a data do RSPE. RSPE gerado depois da homologação traz a data refeita (sai com a data); RSPE anterior a ela
+    # ainda não (sem data). O livramento segue com a data do RSPE (Súmulas 534 e 441 do STJ)
+    dfg = rres.montar(dict(M, geracao="10/10/2026", dbase="20/05/2026", prog="17/12/2026"), {}, [], HOJE)
+    ok(itens(dfg, "direitos")[0] == "Ir para o regime semiaberto: a partir de 17 de dezembro de 2026 (data já refeita depois da falta grave). "
+       "Para isso, é preciso ter bom comportamento.", "RSPE depois da falta: data do RSPE: %s" % itens(dfg, "direitos")[0])
+    dant = rres.montar(dict(M, geracao="15/05/2026"), {}, [], HOJE)
+    ok(itens(dant, "direitos")[0].startswith("Ir para o regime semiaberto: por causa da falta grave, a data vai ser refeita no SEEU")
+       and "12 de fevereiro" not in itens(dant, "direitos")[0] and itens(dant, "direitos")[1].startswith("Livramento condicional"),
+       "RSPE anterior à falta: sem data: %s" % itens(dant, "direitos"))
+    dl = rres.montar(dict(M, liv="01/03/2027", liv_sit="Em cumprimento"), {}, [], HOJE)
+    ok(itens(dl, "direitos")[1].endswith("A lei também exige 12 meses sem falta grave. A Defensoria vai conferir essa data."),
+       "livramento a menos de 12 meses da falta grave: %s" % itens(dl, "direitos")[1])
     # data duvidosa: não sai como data
     d2 = rres.montar(dict(M, prog_sit="Em cumprimento · percentual do SEEU acima do legal - ver Auditoria"), {}, [], HOJE)
     ok(itens(d2, "direitos")[0] == "Ir para o regime semiaberto: a Defensoria está conferindo a data.", "data a conferir: %s" % itens(d2, "direitos")[0])

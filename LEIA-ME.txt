@@ -143,9 +143,13 @@ para o assistido" na ficha)
     APTO com a data do atendimento já vêm marcadas; o que foi escrito no
     "Registrar" entra no campo livre. Marcar um pedido tira da lista o
     direito correspondente.
-  - Falta grave homologada depois da data-base do RSPE: a progressão sai
-    como "a contagem do tempo recomeçou" (STJ, Súmula 534), sem data; o
-    livramento continua com a data (Súmula 441).
+  - Falta grave: valem as datas fixadas no RSPE. RSPE gerado depois da
+    homologação já traz a data-base e a progressão refeitas (STJ, Súmula
+    534): sai a data, com "(data já refeita depois da falta grave)". RSPE
+    anterior à homologação ainda não: sai sem data, avisando que a data vai
+    ser refeita no SEEU. O livramento segue a data do RSPE (Súmula 441);
+    se ela cair a menos de 12 meses da falta, o texto lembra que a lei exige
+    12 meses sem falta grave (CP, art. 83, III, "b").
   - Antes do PDF, cada frase pode ser corrigida, desmarcada ou acrescentada.
   - Embaixo, depois da linha pontilhada, o canhoto do assistido: pedido de
     atendimento com a Defensoria, com o último atendimento, o retorno em
