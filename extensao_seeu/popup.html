@@ -23,6 +23,8 @@
   button.pri{background:var(--pri);border-color:var(--pri);color:#fff;width:100%;padding:8px}
   button.pri:hover{background:var(--pri2);color:#fff}
   .dica{font-size:11px;color:var(--tx3);margin-top:6px}
+  .dica.ok{color:var(--g)}
+  .dica.e{color:var(--r)}
   .estado{margin-top:8px;padding:6px 8px;border-radius:6px;font-size:12px;display:none}
   .estado.ok{display:block;background:var(--gbg);color:var(--g)}
   .estado.erro{display:block;background:var(--rbg);color:var(--r)}
@@ -43,11 +45,12 @@
 </header>
 
 <section>
-  <label class="t" for="base">Base de destino (subpasta)</label>
+  <label class="t" for="base">Base de destino</label>
   <select id="base"></select>
-  <div class="lin"><input type="text" id="nova" placeholder="Nome da base, igual ao do APTO" maxlength="80"><button id="add">Incluir</button></div>
+  <div class="lin"><input type="text" id="nova" placeholder="Base nova" title="O APTO cria a base ao receber o primeiro PDF" maxlength="80"><button id="add">Incluir</button></div>
   <div class="lin"><button id="rem" style="flex:1">Retirar a base escolhida da lista</button></div>
   <div class="dica" id="destino"></div>
+  <div class="dica" id="ligacao"></div>
 </section>
 
 <section>
@@ -57,10 +60,11 @@
 </section>
 
 <section>
-  <details id="loteBox"><summary style="cursor:pointer;font-size:12px;color:var(--tx2)"><b style="color:var(--tx)">Lote</b> · processos (SEEU) ou nomes (SIAPEN)</summary>
-    <textarea id="loteTxt" rows="4" style="width:100%;margin-top:6px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font:12px/1.35 ui-monospace,Consolas,monospace" placeholder="SEEU: um nº de processo por linha. SIAPEN: um nome por linha (NOME ; MÃE para homônimos). Pode colar colunas de planilha."></textarea>
+  <details id="loteBox"><summary style="cursor:pointer;font-size:12px;color:var(--tx2)"><b style="color:var(--tx)">Lote</b> · SEEU, SIAPEN ou SAP</summary>
+    <textarea id="loteTxt" rows="4" style="width:100%;margin-top:6px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font:12px/1.35 ui-monospace,Consolas,monospace" placeholder="SEEU: nºs de processo. SIAPEN ou SAP: nomes, um por linha (mãe, CPF, ID ou prontuário em outras colunas ajudam nos homônimos). Pode colar colunas de planilha."></textarea>
     <div class="lin"><input type="file" id="loteArq" accept=".txt,.csv" style="flex:1;font-size:11px"><button id="loteIni">Iniciar</button><button id="lotePar">Parar</button></div>
-    <div class="dica">Roda na aba aberta e logada: no SEEU, um processo a cada 8 s; no SIAPEN, com a "Consulta Geral de Interno" aberta, uma ficha a cada 8 s. Vai para a base escolhida acima, pula os já baixados hoje e para se a sessão expirar. No SIAPEN, homônimos não são baixados sem o nome da mãe.</div>
+    <div class="dica">Roda na aba aberta e logada, um item a cada 8 s, e para se a sessão expirar. SEEU: baixa o RSPE. SIAPEN (com a "Consulta Geral de Interno" aberta): baixa a ficha. SAP: acha o nº do processo no atendimento mais recente do NUSPEN (desce para o anterior se não houver nº) e não altera nada. Homônimos sem mãe, CPF, ID ou prontuário não são processados.</div>
+    <div class="lin" id="sapAcoes" style="display:none"><button id="sapSeeu" style="flex:1">Baixar os RSPE no SEEU</button><button id="sapCsv">Salvar planilha</button></div>
     <div class="estado" id="loteEst"></div>
     <ul id="loteLista" style="max-height:140px"></ul>
   </details>
@@ -70,7 +74,7 @@
   <label class="t" for="raiz">Pasta dentro de Downloads</label>
   <input type="text" id="raiz" maxlength="80">
   <label class="chk"><input type="checkbox" id="aviso"> Mostrar aviso discreto no SEEU quando salvar</label>
-  <div class="dica">No APTO: menu da base &gt; "Pasta vigiada…" &gt; escolha <b id="dlRaiz">Downloads\APTO</b>. Cada subpasta entra na base de mesmo nome.</div>
+  <div class="dica">O APTO vigia <b id="dlRaiz">Downloads\APTO</b> sozinho: cada subpasta entra na base de mesmo nome. Nada a configurar no APTO.</div>
 </section>
 
 <section>

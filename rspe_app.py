@@ -41,7 +41,7 @@ import rspe_mapa_ms as rmapa
 import rspe_calc as rcalc
 
 APP = "APTO"
-VERSAO = "7.9.3"
+VERSAO = "7.9.4"
 GEO_AUTO_DIAS = 30           # dados prisionais: baixados de novo sozinhos quando têm 30 dias ou mais
 GEO_REPETIR_MIN = 10         # ... ou 10 minutos depois de um download em que algum relatório falhou (nova tentativa automática)
 GEO_REPETIR_MAX = 3          # tentativas automáticas seguidas com o programa aberto (depois, na próxima abertura ou pelo botão)
@@ -62,11 +62,22 @@ PASTA_BASES = os.path.join(pasta_app(), "bases")
 CONFIG = os.path.join(pasta_app(), "rspe_config.json")
 VIGIA_ESTADO = os.path.join(pasta_app(), "pasta_vigiada_estado.json")
 VIGIA_INTERVALO = 15  # segundos entre as varreduras da pasta vigiada
+PORTA_EXTENSAO = 47321  # a extensão do navegador pergunta ao APTO (só neste computador) quais são as bases
 PASTAS_TIPO = {"RSPE", "RSPES", "FD", "FDS", "FICHA", "FICHAS", "FICHA DISCIPLINAR", "FICHAS DISCIPLINARES"}
 
 
 def _nome_seguro(nome):
     return "".join(ch for ch in (nome or "") if ch not in '\\/:*?"<>|').strip()
+
+
+def _mesma_pasta(a, b):
+    return os.path.normcase(os.path.abspath(a)).rstrip("\\/") == os.path.normcase(os.path.abspath(b)).rstrip("\\/")
+
+
+def _dentro_da_pasta(a, b):
+    """a fica dentro de b (b é pasta mãe, em qualquer nível)."""
+    a, b = os.path.normcase(os.path.abspath(a)), os.path.normcase(os.path.abspath(b)).rstrip("\\/")
+    return a.startswith(b + os.sep)
 
 
 def base_da_pasta(raiz, arquivo):
@@ -3030,7 +3041,8 @@ class Api:
                         subs.append(n)
         bases = sorted(os.path.splitext(n)[0] for n in os.listdir(PASTA_BASES) if n.lower().endswith(".sqlite")) if os.path.isdir(PASTA_BASES) else []
         return {"pasta": pasta, "ativa": bool(c.get("vigiar") and pasta and os.path.isdir(pasta)), "pastas": subs, "bases": bases,
-                "ultima": self._vigia_ultima, "intervalo": VIGIA_INTERVALO}
+                "ultima": self._vigia_ultima, "intervalo": VIGIA_INTERVALO,
+                "extensao": self._pasta_extensao(), "ext_ativa": c.get("vigiar") is not False}
 
     def vigia_escolher(self):
         d = _um(self._janela.create_file_dialog(webview.FOLDER_DIALOG))
@@ -3070,7 +3082,11 @@ class Api:
         return r
 
     def vigia_agora(self):
-        threading.Thread(target=self._vigia_varrer, kwargs={"imediato": True}, daemon=True).start()
+        def todas():
+            rz = self._vigia_raizes()
+            for r in rz:
+                self._vigia_varrer(imediato=True, raiz=r, excluir=rz)
+        threading.Thread(target=todas, daemon=True).start()
         return {"msg": "Verificando a pasta vigiada…"}
 
     def vigia_abrir(self):
@@ -3093,37 +3109,91 @@ class Api:
         casa = os.environ.get("USERPROFILE") or os.path.expanduser("~")
         return os.path.join(casa, "Downloads", "APTO")
 
-    def _vigia_auto(self):
-        """Sem pasta vigiada escolhida e com a pasta da extensão criada: passa a vigiar Downloads\\APTO (uma vez; depois
-        vale a escolha feita no menu da base)."""
-        c = self._cfg()
-        if c.get("pasta_vigiada") or c.get("vigia_auto_feito"):
-            return False
+    def _pastas_extensao(self):
+        """Downloads\\APTO e uma subpasta para cada base: a extensão salva nelas e a pasta vigiada as lê, sem configurar nada."""
         d = self._pasta_extensao()
-        if not os.path.isdir(d):
-            return False
-        self._cfg_gravar(pasta_vigiada=d, vigiar=True, vigia_auto_feito=True)
-        logging.getLogger("rspe").info("pasta vigiada configurada sozinha: %s", d)
+        nomes = list(self.vigia_info()["bases"])
+        if self.base:
+            nomes.append(os.path.splitext(os.path.basename(self.base.caminho))[0])
+        for n in [""] + nomes:
+            alvo = os.path.join(d, n) if n else d
+            if not os.path.isdir(alvo):
+                try:
+                    os.makedirs(alvo, exist_ok=True)
+                except OSError as e:
+                    logging.getLogger("rspe").warning("pasta da extensão %s: %s", alvo, e)
+
+    def _vigia_raizes(self):
+        """Pastas vigiadas: a escolhida no menu da base (se ativa) e, sempre, Downloads\\APTO (a da extensão)."""
+        c = self._cfg()
+        raizes = []
+        if c.get("vigiar") and c.get("pasta_vigiada") and os.path.isdir(c["pasta_vigiada"]):
+            raizes.append(c["pasta_vigiada"])
+        ext = self._pasta_extensao()
+        if c.get("vigiar") is not False and os.path.isdir(ext) and not any(_mesma_pasta(ext, r) for r in raizes):
+            raizes.append(ext)
+        return raizes
+
+    def _extensao_dados(self):
+        aberta = os.path.splitext(os.path.basename(self.base.caminho))[0] if self.base else ""
+        return {"app": APP, "versao": VERSAO, "bases": self.vigia_info()["bases"], "aberta": aberta, "pasta": self._pasta_extensao()}
+
+    def _extensao_servidor(self):
+        """Responde à extensão do navegador, só em 127.0.0.1 e só para extensões (página da internet recebe 403): a lista
+        de bases e a base aberta. Nada de assistido sai daqui; é só leitura."""
+        import http.server
+        api = self
+
+        class Pedido(http.server.BaseHTTPRequestHandler):
+            def log_message(self, *a):
+                pass
+
+            def do_GET(self):
+                origem = self.headers.get("Origin") or ""
+                host = (self.headers.get("Host") or "").rsplit(":", 1)[0]
+                if self.path.split("?")[0] != "/apto" or host not in ("127.0.0.1", "localhost") or \
+                        (origem and not origem.startswith(("chrome-extension://", "extension://"))):
+                    self.send_error(403)
+                    return
+                try:
+                    corpo = json.dumps(api._extensao_dados(), ensure_ascii=False).encode("utf-8")
+                except Exception as e:
+                    logging.getLogger("rspe").warning("extensão: %s", e)
+                    self.send_error(500)
+                    return
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.send_header("Content-Length", str(len(corpo)))
+                self.send_header("Cache-Control", "no-store")
+                if origem:
+                    self.send_header("Access-Control-Allow-Origin", origem)
+                self.end_headers()
+                self.wfile.write(corpo)
+
         try:
-            self._js("ui.toast(%s)" % json.dumps("Pasta vigiada: %s (criada pela extensão do SEEU)" % d, ensure_ascii=False))
-        except Exception:
-            pass
-        return True
+            srv = http.server.ThreadingHTTPServer(("127.0.0.1", PORTA_EXTENSAO), Pedido)
+        except OSError as e:  # outro APTO aberto já responde
+            logging.getLogger("rspe").info("extensão: porta %d ocupada (%s)", PORTA_EXTENSAO, e)
+            return None
+        srv.daemon_threads = True
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        return srv
 
     def _vigia_loop(self):
         while True:
             try:
-                self._vigia_auto()
-                c = self._cfg()
-                if c.get("vigiar") and c.get("pasta_vigiada") and os.path.isdir(c["pasta_vigiada"]):
-                    self._vigia_varrer()
+                self._pastas_extensao()
+                rz = self._vigia_raizes()
+                for r in rz:
+                    self._vigia_varrer(raiz=r, excluir=rz)
             except Exception as e:
                 logging.warning("pasta vigiada: %s", e)
             time.sleep(VIGIA_INTERVALO)
 
-    def _vigia_varrer(self, imediato=False):
-        c = self._cfg()
-        raiz = c.get("pasta_vigiada") or ""
+    def _vigia_varrer(self, imediato=False, raiz=None, excluir=()):
+        """excluir: outras pastas vigiadas que ficam dentro desta (cada uma é lida a partir dela mesma, para o nome da base
+        sair da subpasta certa)."""
+        raiz = raiz or self._cfg().get("pasta_vigiada") or ""
         if not raiz or not os.path.isdir(raiz):
             return
         try:
@@ -3133,7 +3203,9 @@ class Api:
             estado = {}
         pend, soltos = {}, 0
         agora = time.time()
-        for dirpath, _, nomes in os.walk(raiz):
+        outras = [x for x in excluir if not _mesma_pasta(x, raiz) and _dentro_da_pasta(x, raiz)]
+        for dirpath, subs, nomes in os.walk(raiz):
+            subs[:] = [d for d in subs if not any(_mesma_pasta(os.path.join(dirpath, d), x) for x in outras)]
             for n in nomes:
                 if not n.lower().endswith(".pdf"):
                     continue
@@ -4164,6 +4236,7 @@ def main():
     api._janela = janela
 
     def ao_abrir():
+        api._extensao_servidor()
         api._vigia_iniciar()
         arqs = [a for a in sys.argv[1:] if a.lower().endswith(".pdf") or os.path.isdir(a)]
         lista = []

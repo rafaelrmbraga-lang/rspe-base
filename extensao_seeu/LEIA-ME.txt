@@ -1,5 +1,5 @@
-APTO - RSPE do SEEU (extensão do Google Chrome e do Microsoft Edge)
-====================================================================
+APTO - RSPE do SEEU, Ficha do SIAPEN e processos do SAP (Chrome e Edge)
+=========================================================================
 
 O QUE FAZ
 Ao abrir um processo no SEEU, a extensão salva o RSPE (o PDF do botão "Situação
@@ -7,12 +7,17 @@ Carcerária", gerado pelo próprio SEEU) em
 Downloads\APTO\<base>\<nº do processo>_<data>.pdf. O RSPE entra sozinho na base
 de mesmo nome da subpasta, enquanto o APTO estiver aberto.
 
-PASTAS CRIADAS SOZINHAS
- - Ao instalar, a extensão cria Downloads\APTO (com um LEIA-ME dentro). Ao
-   incluir uma base no painel, cria Downloads\APTO\<base>.
- - O APTO, ao abrir, se ainda não tiver pasta vigiada e encontrar
-   Downloads\APTO, passa a vigiá-la sozinho (aviso na tela). Não é preciso
-   vincular nada à mão. Se você escolher outra pasta no APTO, vale a escolha.
+LIGAÇÃO COM O APTO (automática, nada a configurar)
+ - Com o APTO aberto, ele cria Downloads\APTO\<base> para cada base sua e
+   vigia Downloads\APTO sempre (além de outra pasta vigiada que você tenha
+   escolhido).
+ - A extensão pergunta ao APTO (neste computador: 127.0.0.1, porta 47321)
+   quais são as bases e qual está aberta. O painel lista as bases do APTO
+   e mostra "Ligada ao APTO". Com o APTO fechado, vale a última lista; o
+   que for salvo espera na pasta e entra quando o APTO abrir.
+ - Base de destino padrão: "Automático: base aberta no APTO". Abriu a base
+   "2ª VEP" no APTO, o RSPE/ficha vai para Downloads\APTO\2ª VEP. Pode
+   escolher uma base fixa na lista. O lote usa a base do início do lote.
 
 INSTALAR (modo do desenvolvedor, sem a Chrome Web Store)
  1. Copie a pasta "extensao_seeu" para um lugar fixo do computador (ex.:
@@ -22,17 +27,14 @@ INSTALAR (modo do desenvolvedor, sem a Chrome Web Store)
  3. Ligue "Modo do desenvolvedor" (canto superior direito).
  4. Clique em "Carregar sem compactação" e escolha a pasta "extensao_seeu".
  5. Fixe o ícone do APTO na barra (ícone de quebra-cabeça > alfinete).
- 6. Recarregue a página do SEEU se ela já estava aberta.
+ 6. Recarregue as páginas do SEEU e do SIAPEN que já estavam abertas.
 
 CONFIGURAR
  - Clique no ícone do APTO na barra do navegador.
- - Base de destino: inclua as bases com o MESMO nome que elas têm no APTO
-   (ex.: "2ª VEP", "1ª VEP") e escolha a base atual. Cada base vira uma
-   subpasta. Sem base escolhida, o arquivo vai direto para Downloads\APTO e a
-   pasta vigiada do APTO o ignora (por isso o aviso no painel).
- - Pasta dentro de Downloads: "APTO" (pode trocar).
- - No APTO a pasta vigiada é configurada sozinha (veja acima). Se já havia
-   outra pasta vigiada escolhida, troque no menu da base > "Pasta vigiada…".
+ - Base de destino: deixe "Automático: base aberta no APTO" ou escolha uma
+   base da lista. "Incluir" cria uma base nova (o APTO a cria ao receber o
+   primeiro PDF).
+ - Pasta dentro de Downloads: "APTO" (não troque: é a que o APTO vigia).
  - Se o Chrome perguntar onde salvar cada arquivo, desligue em Configurações >
    Downloads > "Perguntar onde salvar cada arquivo antes de fazer download".
 
@@ -64,27 +66,68 @@ LOTE (lista de processos)
 FICHA DO SIAPEN
  - Toda ficha aberta no SIAPEN (Consultas > nome > "Ficha") é salva em
    Downloads\APTO\<base>\FD_<NOME>_<data>.pdf e entra na base pela pasta
-   vigiada.
+   vigiada. Vale com o SIAPEN aberto direto ou pelo portal
+   www.siapen.ms.gov.br.
  - Lote de fichas: com a "Consulta Geral de Interno" aberta, cole no "Lote"
    um nome por linha (ou "NOME ; MÃE", ou duas colunas de planilha: nome e
-   mãe) e clique em "Iniciar". Para cada nome, a extensão digita na busca,
-   escolhe a linha com o nome exato, clica em "Ficha", salva o PDF e fecha a
-   janela da ficha; um nome a cada 8 segundos.
+   mãe) e clique em "Iniciar". Lista com nºs de processo vai para o SEEU;
+   lista de nomes, para o SIAPEN. Para cada nome, a extensão localiza o
+   nome na consulta (o mesmo comando da digitação no campo "Localizar"),
+   escolhe a linha com o nome exato, clica em "Ficha", salva o PDF e fecha
+   a janela da ficha; um nome a cada 8 segundos.
  - Homônimos: se houver mais de uma pessoa com o mesmo nome, a ficha NÃO é
    baixada sem o nome da mãe (marca "homônimos"); com a mãe informada, só a
    pessoa com essa mãe. Nome que não aparece: "não encontrado".
  - O filtro de status da consulta (Ativo, etc.) é o que estiver escolhido na
    tela.
 
+PROCESSOS DO SAP (Defensoria)
+ - Para cada nome da lista, acha no SAP o nº do processo (CNJ) escrito no
+   atendimento mais recente do NUSPEN e, com um clique, baixa os RSPE no
+   SEEU.
+ - Como usar: abra o SAP logado (capital.defensoria.ms.def.br/sap) e deixe
+   essa aba ativa; no painel, "Lote", cole a lista de nomes (ou escolha o
+   .txt/.csv) e clique em "Iniciar". Um nome a cada 8 segundos.
+ - Lista: um nome por linha. Pode ter outras colunas, em qualquer ordem:
+   nome da mãe (o 2º texto da linha), CPF, ID do SAP; cabeçalho, data de
+   nascimento e numeração (1., 2.) são ignorados; repetidos contam uma vez.
+ - Em cada nome, a extensão faz o que a pessoa faria, numa moldura oculta da
+   aba do SAP: Módulos > Assistidos, busca o nome, lupa "Visualizar
+   Assistido", aba Designações, "Histórico" da designação do NUSPEN e abre os
+   atendimentos do mais recente para o mais antigo até achar o nº. Se o
+   mais recente não tiver nº, desce para o anterior (a linha avisa). Se o
+   texto tiver dois nºs, copia os dois.
+ - Só lê. Nunca clica em "Designar Assistido", "Atendimentos do
+   Assistido", relatórios, declarações ou em nada que grave.
+ - Homônimos: com a mãe, o CPF ou o ID na lista, pega o certo; sem isso, se o
+   SAP marcar um deles com "(USAR ESSE)", pega esse; senão a linha fica
+   "homônimos" com as mães encontradas, para completar a lista.
+ - Avisos por linha: não encontrado no SAP; sem atendimento do NUSPEN; sem
+   nº de processo nos atendimentos do NUSPEN; sessão do SAP expirada (o lote
+   para).
+ - Ao final: "Baixar os RSPE no SEEU" roda o lote do SEEU, na aba do SEEU
+   aberta e logada, com todos os nºs achados (a base de destino é a do
+   painel). Os nºs que o SEEU não achar aparecem no fim, com o nome.
+   "Salvar planilha" grava Downloads\APTO\SAP_processos_<data>.csv (abre no
+   Excel) com nome, nome no SAP, mãe, ID, processo(s), data do atendimento,
+   situação e, depois do SEEU, o resultado de cada nº no SEEU. A pasta
+   vigiada ignora o CSV.
+ - Durante o lote, não use o SAP nessa mesma janela do navegador (a moldura
+   oculta usa a mesma sessão).
+
 CUIDADOS
- - Só age em https://seeu.pje.jus.br e só no processo aberto na tela. Não
-   percorre listas, não abre processos sozinha e não clica em nada do SEEU.
-   Em página com mais de um RSPE (lista de processos), o automático não age.
+ - Só age no SEEU (https://seeu.pje.jus.br), no SIAPEN
+   (https://app.siapen.ms.gov.br) e no SAP da Defensoria
+   (*.defensoria.ms.def.br/sap, só leitura e só no lote). Sem lote, só no processo ou na ficha
+   aberta na tela e sem clicar em nada; em página com mais de um RSPE
+   (lista de processos), o automático não age. O lote só roda quando você
+   clica em "Iniciar".
  - Usa a sessão aberta no navegador. Não pede, não lê e não guarda senha,
    certificado ou cookie.
  - Nada sai do computador: a extensão não envia dados para nenhum servidor
-   (a política de segurança dela bloqueia qualquer conexão de rede própria);
-   o único pedido é o download do RSPE ao próprio SEEU.
+   (a política de segurança dela só permite a conexão com o APTO deste
+   computador, 127.0.0.1); os pedidos são os do próprio SEEU/SIAPEN, com a
+   sua sessão.
  - Guarda só o nº do processo, a base, a data e o nome do arquivo dos últimos
    40 downloads (painel), e as chaves de "já baixado" dos últimos 30 dias.
    "Limpar histórico" apaga tudo isso (não apaga os PDFs).
