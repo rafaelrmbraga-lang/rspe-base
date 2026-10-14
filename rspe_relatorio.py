@@ -3441,12 +3441,15 @@ def relatorio_atendimentos(d, caminho, nome_base, filtro=""):
     L, R = d.get("listagem") or {}, d.get("relatorio") or {}
     todos, lista = d.get("lista_toda") or d.get("lista") or [], d.get("lista") or []
     P = d.get("prazo") or 90
-    per = " a ".join(R.get("periodo") or []) or "?"
+    per = " a ".join(d.get("periodo_sel") or R.get("periodo") or []) or "?"
+    rels = d.get("relatorios") or []
     unidade = L.get("unidade") or "Unidade"
     rot_sit = {"vermelho": "Sem atendimento no período", "amarelo": "Mais de %d dias" % P, "verde": "Até %d dias" % P, "cinza": "Sem relatório do SAP"}
     el = [Paragraph(_t("Atendimentos · " + unidade), st["tit"]),
-          Paragraph(_t("Internos: listagem do SIAPEN de %s · atendimentos: relatório do SAP de %s (%s) · gerado em %s" % (
-              L.get("emitida") or "?", per, rs.pl(R.get("n") or 0, "atendimento", "atendimentos"), datetime.now().strftime("%d/%m/%Y %H:%M"))), st["sub"]),
+          Paragraph(_t("Internos: listagem do SIAPEN de %s · período %s%s · gerado em %s" % (
+              L.get("emitida") or "?", per, " (filtrado)" if d.get("filtrado") else "", datetime.now().strftime("%d/%m/%Y %H:%M"))), st["sub"]),
+          Paragraph(_t("Relatórios do SAP somados: %s%s." % ("; ".join("%s a %s (%s)" % (r["inicio"], r["fim"], rs.pl(r["n"] or 0, "atendimento", "atendimentos")) for r in rels) or "nenhum",
+                                                             (" · %s no APTO (até um relatório do SAP posterior cobrir a data)" % rs.pl(d.get("manuais") or 0, "atendimento registrado", "atendimentos registrados")) if d.get("manuais") else "")), st["mut"]),
           Spacer(1, 8)]
     cont = Counter(x["cor"] for x in todos)
     sem_rspe = sum(1 for x in todos if not x.get("rspe"))
@@ -3511,7 +3514,8 @@ def relatorio_atendimentos(d, caminho, nome_base, filtro=""):
            Paragraph(_t("Sem atendimento no período; depois do último atendimento mais antigo ao mais recente.%s %s." % (
                (" Filtro da janela: %s." % filtro) if filtro else "", rs.pl(len(lista), "interno", "internos"))), st["mut"]), Spacer(1, 4)]
     curto = {"vermelho": "Sem atendimento", "amarelo": "Mais de %d dias" % P, "verde": "Até %d dias" % P, "cinza": "Sem relatório"}
-    tipo_c = {"ANALISE PROCESSUAL": "Análise proc.", "VIDEO CONFERENCIA": "Vídeo", "PRESENCIAL": "Presencial", "TELEFONE": "Telefone", "E-MAIL": "E-mail"}
+    tipo_c = {"ANALISE PROCESSUAL": "Análise proc.", "VIDEO CONFERENCIA": "Vídeo", "PRESENCIAL": "Presencial", "TELEFONE": "Telefone", "E-MAIL": "E-mail",
+              "REGISTRADO NO APTO": "Registro APTO"}
     dados = [["#", "Nome", "Localização", "Último", "Dias", "Tipo", "Situação", "RSPE", "Ficha"]]
     for i, x in enumerate(lista, 1):
         nota = ""
@@ -3519,6 +3523,9 @@ def relatorio_atendimentos(d, caminho, nome_base, filtro=""):
             nota = "<br/><font color='%s' size='6.8'>no SAP: %s</font>" % (TX3, _t(x.get("nome_sap", "")))
         elif x.get("conf") == "parecido":
             nota = "<br/><font color='%s' size='6.8'>%s</font>" % (TX3, _t(x.get("obs", "")))
+        if x.get("manual"):
+            nota += "<br/><font color='%s' size='6.8'>registrado no APTO em %s%s</font>" % (TX3, _t(x["manual"].get("registrado_em", "")),
+                                                                                         (": " + _t(x["manual"]["obs"])) if x["manual"].get("obs") else "")
         dados.append([str(i), Paragraph(_t(x["nome"]) + nota, st["cel"]), Paragraph(_t(x.get("local") or "—"), st["cel"]), x.get("ultimo") or "—",
                       "" if x.get("dias") is None else str(x["dias"]),
                       tipo_c.get(rs._sem_acento(x.get("tipo") or "").upper(), (x.get("tipo") or "—").capitalize()),
@@ -3528,4 +3535,37 @@ def relatorio_atendimentos(d, caminho, nome_base, filtro=""):
                             title="Atendimentos - %s" % unidade, author="APTO")
     fr = _moldura("Atendimentos · " + unidade, nome_base,
                   rodape="Internos: Listagem Internos Ativos (SIAPEN). Atendimentos: Relatório de Atendimento (SAP). Ligação pelo nome; conferir os avisos da lista.")
+    doc.build(el, onFirstPage=fr, onLaterPages=fr, canvasmaker=_canvas_numerado())
+
+
+def relatorio_saidas(d, caminho, nome_base):
+    """PDF das saídas da unidade: quem estava na listagem anterior e não está na mais recente, e quem entrou."""
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.units import mm
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+    st = _estilos()
+    W = A4[0] - 32 * mm
+    un = d.get("unidade") or "Unidade"
+    el = [Paragraph(_t("Saídas da unidade · " + un), st["tit"]),
+          Paragraph(_t("Listagem de internos ativos (SIAPEN) de %s comparada com a de %s · gerado em %s" % (d["de"], d["ate"], datetime.now().strftime("%d/%m/%Y %H:%M"))), st["sub"]),
+          Spacer(1, 8),
+          _tabela([["Saíram da unidade", "Entraram na unidade"], [str(len(d["sairam"])), str(len(d["entraram"]))]], [W / 2] * 2, st, zebra=False)]
+
+    def lista(titulo, linhas, nota):
+        el.append(Paragraph(_t(titulo), st["h2"]))
+        el.append(Paragraph(_t(nota), st["mut"]))
+        el.append(Spacer(1, 4))
+        if not linhas:
+            el.append(Paragraph("Nenhum.", st["mut"]))
+            return
+        dados = [["#", "Nome", "Localização", "Entrada", "Procedência", "Último atend."]]
+        for i, x in enumerate(linhas, 1):
+            dados.append([str(i), Paragraph(_t(x["nome"]), st["cel"]), Paragraph(_t(x.get("local") or "—"), st["cel"]), x.get("entrada") or "—",
+                          Paragraph(_t(x.get("procedencia") or "—"), st["cel"]), x.get("ultimo") or "—"])
+        el.append(_tabela(dados, [9 * mm, 62 * mm, 28 * mm, 19 * mm, W - 139 * mm, 21 * mm], st, pad=3, vpad=2.5))
+    lista("1. Saíram da unidade", d["sairam"], "Estavam na listagem de %s e não constam na de %s (localização e entrada da listagem anterior)." % (d["de"], d["ate"]))
+    lista("2. Entraram na unidade", d["entraram"], "Constam na listagem de %s e não estavam na de %s." % (d["ate"], d["de"]))
+    doc = SimpleDocTemplate(caminho, pagesize=A4, leftMargin=16 * mm, rightMargin=16 * mm, topMargin=21 * mm, bottomMargin=20 * mm,
+                            title="Saídas da unidade - %s" % un, author="APTO")
+    fr = _moldura("Saídas da unidade · " + un, nome_base, rodape="Comparação entre listagens de internos ativos do SIAPEN, pelo nome (igual, sem acento, preposições e apóstrofo, ou cortado).")
     doc.build(el, onFirstPage=fr, onLaterPages=fr, canvasmaker=_canvas_numerado())

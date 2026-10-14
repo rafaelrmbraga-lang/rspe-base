@@ -763,8 +763,17 @@ class Base:
             self.con.execute("ALTER TABLE quadro_cartoes ADD COLUMN arquivado TEXT DEFAULT ''")  # data do arquivamento ('' = no quadro)
         if "aba" not in [r[1] for r in self.con.execute("PRAGMA table_info(quadro_cartoes)").fetchall()]:
             self.con.execute("ALTER TABLE quadro_cartoes ADD COLUMN aba TEXT DEFAULT ''")  # benefício do cartão (prog, liv, ind...)
-        # atendimentos por unidade: a listagem de internos (SIAPEN) e o relatório de atendimento (SAP) importados
-        self.con.execute("CREATE TABLE IF NOT EXISTS atend_dados (chave TEXT PRIMARY KEY, arquivo TEXT, importado_em TEXT, dados TEXT)")
+        # atendimentos por unidade: listagens de internos (SIAPEN; a mais recente vale, as anteriores ficam para ver quem saiu),
+        # relatórios de atendimento (SAP; somam-se, sem repetir o mesmo atendimento) e atendimentos registrados no APTO
+        self.con.execute("""CREATE TABLE IF NOT EXISTS atend_listagens (id INTEGER PRIMARY KEY AUTOINCREMENT, unidade TEXT, emitida TEXT,
+            arquivo TEXT, importado_em TEXT, dados TEXT)""")
+        self.con.execute("""CREATE TABLE IF NOT EXISTS atend_relatorios (id INTEGER PRIMARY KEY AUTOINCREMENT, inicio TEXT, fim TEXT, gerado TEXT,
+            arquivo TEXT, importado_em TEXT, n INTEGER)""")
+        self.con.execute("""CREATE TABLE IF NOT EXISTS atend_registros (nome_norm TEXT, nome TEXT, data TEXT, hora TEXT, tipo TEXT, defensor TEXT,
+            estab TEXT, rel INTEGER, PRIMARY KEY (nome_norm, data, hora, tipo))""")
+        self.con.execute("""CREATE TABLE IF NOT EXISTS atend_manuais (id INTEGER PRIMARY KEY AUTOINCREMENT, nome_norm TEXT, nome TEXT, data TEXT,
+            obs TEXT, registrado_em TEXT)""")
+        self._atend_migrar()
         # calculadora de penas: cálculos registrados (assistido opcional, anotação e o estado da janela)
         self.con.execute("""CREATE TABLE IF NOT EXISTS calculos (id TEXT PRIMARY KEY, criado TEXT, atualizado TEXT, processo TEXT,
             assistido TEXT, nota TEXT, resumo TEXT, dados TEXT)""")
@@ -773,21 +782,102 @@ class Base:
                 self.con.execute("INSERT INTO quadro_colunas VALUES (?,?,?)", (cid, nome, i))
         self.con.commit()
 
-    def atend_gravar(self, chave, arquivo, dados):
+    def _atend_migrar(self):
+        """7.9.5 (primeira versão): listagem e relatório numa tabela só, substituídos a cada importação -> histórico."""
+        if not self.con.execute("SELECT 1 FROM sqlite_master WHERE name='atend_dados'").fetchone():
+            return
+        for ch, arq, quando, d in self.con.execute("SELECT chave, arquivo, importado_em, dados FROM atend_dados").fetchall():
+            try:
+                D = json.loads(d)
+                q = datetime.strptime(quando, "%d/%m/%Y %H:%M").strftime("%Y-%m-%d %H:%M:%S")
+            except Exception:
+                continue
+            if ch == "listagem":
+                self.con.execute("INSERT INTO atend_listagens (unidade, emitida, arquivo, importado_em, dados) VALUES (?,?,?,?,?)",
+                                 (D.get("unidade", ""), D.get("emitida", ""), arq, q, d))
+            elif ch == "relatorio":
+                regs = D.get("registros") or [{"nome": p_["nome"], "data": p_["ultimo"], "hora": p_.get("hora", ""), "tipo": p_.get("tipo", ""),
+                                               "defensor": p_.get("defensor", ""), "estab": p_.get("estab", "")} for p_ in (D.get("pessoas") or {}).values()]
+                self._atend_relatorio_add(D, arq, regs, q)
+        self.con.execute("DROP TABLE atend_dados")
+        self.con.commit()
+
+    @staticmethod
+    def _iso_br(d):
+        try:
+            return datetime.strptime(d, "%d/%m/%Y").strftime("%Y-%m-%d")
+        except Exception:
+            return ""
+
+    def _atend_relatorio_add(self, R, arquivo, registros, quando):
+        per = R.get("periodo") or ["", ""]
+        cur = self.con.execute("INSERT INTO atend_relatorios (inicio, fim, gerado, arquivo, importado_em, n) VALUES (?,?,?,?,?,?)",
+                               (self._iso_br(per[0]), self._iso_br(per[1]), R.get("gerado", ""), arquivo, quando, len(registros)))
+        rel, novos = cur.lastrowid, 0
+        for r in registros:
+            c = self.con.execute("INSERT OR IGNORE INTO atend_registros VALUES (?,?,?,?,?,?,?,?)",
+                                 (ratd.norm(r["nome"]), r["nome"], r["data"], r.get("hora") or "", r.get("tipo") or "", r.get("defensor") or "",
+                                  r.get("estab") or "", rel))
+            novos += c.rowcount
+        return rel, novos
+
+    def atend_relatorio_add(self, R, arquivo):
+        """soma o relatório aos anteriores; o mesmo atendimento (nome, data, hora, tipo) não se repete. -> (novos, repetidos)"""
         with self.lock:
-            self.con.execute("INSERT OR REPLACE INTO atend_dados VALUES (?,?,?,?)",
-                             (chave, arquivo, datetime.now().strftime("%d/%m/%Y %H:%M"), json.dumps(dados, ensure_ascii=False)))
+            _rel, novos = self._atend_relatorio_add(R, arquivo, R.get("registros") or [], datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+            self.con.commit()
+        return novos, len(R.get("registros") or []) - novos
+
+    def atend_listagem_add(self, L, arquivo):
+        with self.lock:
+            self.con.execute("INSERT INTO atend_listagens (unidade, emitida, arquivo, importado_em, dados) VALUES (?,?,?,?,?)",
+                             (L.get("unidade", ""), L.get("emitida", ""), arquivo, datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                              json.dumps(L, ensure_ascii=False)))
             self.con.commit()
 
-    def atend_ler(self):
-        """{"listagem": {...}, "relatorio": {...}} (cada um com arquivo e importado_em)."""
-        out = {}
+    def atend_listagens(self, carregar=2):
+        """listagens da mais recente (pela data de emissão) para a mais antiga; só as `carregar` primeiras com os internos."""
         try:
-            for ch, arq, quando, d in self.con.execute("SELECT chave, arquivo, importado_em, dados FROM atend_dados").fetchall():
-                out[ch] = dict(json.loads(d), arquivo=arq, importado_em=quando)
+            rows = self.con.execute("SELECT id, unidade, emitida, arquivo, importado_em FROM atend_listagens").fetchall()
         except sqlite3.OperationalError:
-            pass  # base só para leitura, de versão anterior (sem a tabela)
+            return []
+        out = [{"id": i, "unidade": u, "emitida": e, "arquivo": a, "importado_em": q} for i, u, e, a, q in rows]
+        out.sort(key=lambda x: (self._iso_br(x["emitida"]), x["id"]), reverse=True)
+        for x in out[:carregar]:
+            x.update(json.loads(self.con.execute("SELECT dados FROM atend_listagens WHERE id=?", (x["id"],)).fetchone()[0]))
         return out
+
+    def atend_relatorios(self):
+        try:
+            rows = self.con.execute("SELECT id, inicio, fim, gerado, arquivo, importado_em, n FROM atend_relatorios ORDER BY inicio, id").fetchall()
+        except sqlite3.OperationalError:
+            return []
+        return [dict(zip(("id", "inicio", "fim", "gerado", "arquivo", "importado_em", "n"), r)) for r in rows]
+
+    def atend_registros(self):
+        try:
+            rows = self.con.execute("SELECT nome, data, hora, tipo, defensor, estab FROM atend_registros").fetchall()
+        except sqlite3.OperationalError:
+            return []
+        return [dict(zip(("nome", "data", "hora", "tipo", "defensor", "estab"), r)) for r in rows]
+
+    def atend_manual_add(self, nome, data, obs):
+        with self.lock:
+            self.con.execute("INSERT INTO atend_manuais (nome_norm, nome, data, obs, registrado_em) VALUES (?,?,?,?,?)",
+                             (ratd.norm(nome), nome, data, obs or "", datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+            self.con.commit()
+
+    def atend_manual_del(self, id_):
+        with self.lock:
+            self.con.execute("DELETE FROM atend_manuais WHERE id=?", (id_,))
+            self.con.commit()
+
+    def atend_manuais(self):
+        try:
+            rows = self.con.execute("SELECT id, nome, data, obs, registrado_em FROM atend_manuais ORDER BY id").fetchall()
+        except sqlite3.OperationalError:
+            return []
+        return [dict(zip(("id", "nome", "data", "obs", "registrado_em"), r)) for r in rows]
 
     def fichas_sem_rspe(self):
         return [r[0] for r in self.con.execute("SELECT nome_norm FROM fichas WHERE IFNULL(processo,'')=''").fetchall()]
@@ -3223,15 +3313,27 @@ class Api:
                     L = ratd.ler_listagem_arquivo(c)
                     if not L["internos"]:
                         raise ValueError("nenhum interno lido")
-                    base.atend_gravar("listagem", nome, L)
-                    avisos.append("Listagem de internos (%s): %s, emitida em %s" % (L["unidade"] or "unidade", rs.pl(len(L["internos"]), "interno", "internos"), L["emitida"] or "?"))
+                    base.atend_listagem_add(L, nome)
+                    av = "Listagem de internos (%s): %s, emitida em %s" % (L["unidade"] or "unidade", rs.pl(len(L["internos"]), "interno", "internos"), L["emitida"] or "?")
+                    Ls = base.atend_listagens()
+                    if len(Ls) > 1 and Ls[0]["emitida"] == L["emitida"] and Ls[0]["arquivo"] == nome:
+                        sairam, entraram = ratd.comparar_listagens(Ls[1], Ls[0])
+                        av += " · desde a listagem de %s: %s, %s (lista em Atendimentos > Saídas da unidade)" % (
+                            Ls[1]["emitida"], rs.pl(len(sairam), "saiu da unidade", "saíram da unidade"), rs.pl(len(entraram), "entrou", "entraram"))
+                    elif Ls and Ls[0]["arquivo"] != nome:
+                        av += " · é mais antiga que a listagem de %s, que continua valendo" % Ls[0]["emitida"]
+                    avisos.append(av)
                 elif tipo == "relatorio":
                     R = ratd.ler_relatorio(c, processos=max(1, min(8, (os.cpu_count() or 2) - 1)))
                     if not R["n"]:
                         raise ValueError("nenhum atendimento lido")
-                    base.atend_gravar("relatorio", nome, R)
-                    avisos.append("Relatório de atendimento do SAP (%s a %s): %s de %s" % (
-                        *(R["periodo"] or ["?", "?"]), rs.pl(R["n"], "atendimento", "atendimentos"), rs.pl(len(R["pessoas"]), "assistido", "assistidos")))
+                    antes = self._atend_manuais_ativos(base)
+                    novos, rep = base.atend_relatorio_add(R, nome)
+                    superados = len(antes) - len(self._atend_manuais_ativos(base))
+                    avisos.append("Relatório de atendimento do SAP (%s a %s): %s%s%s" % (
+                        *(R["periodo"] or ["?", "?"]), rs.pl(novos, "atendimento novo", "atendimentos novos"),
+                        (" · %s já estavam em relatório anterior" % rep) if rep else "",
+                        (" · %s no APTO substituído(s) pelo relatório" % rs.pl(superados, "atendimento registrado", "atendimentos registrados")) if superados else ""))
                 else:
                     avisos.append("%s: não é a listagem de internos ativos (SIAPEN) nem o relatório de atendimento (SAP)" % nome)
             except Exception as e:
@@ -3239,26 +3341,53 @@ class Api:
                 avisos.append("%s: não foi possível ler (%s)" % (nome, e))
         return avisos
 
-    def atendimentos(self):
-        """Internos da unidade (última listagem importada), com o último atendimento e os documentos na base, em ordem de prioridade."""
+    @staticmethod
+    def _atend_manuais_ativos(base):
+        """atendimentos registrados no APTO que valem: o relatório do SAP importado depois do registro, cujo período cobre a data
+        registrada, prevalece (o registro manual sai, conste ou não o atendimento no relatório)."""
+        rels = base.atend_relatorios()
+        out = []
+        for m in base.atend_manuais():
+            sup = next((r for r in rels if r["importado_em"] > m["registrado_em"] and r["inicio"] and r["inicio"] <= m["data"] <= (r["fim"] or "9999")), None)
+            if not sup:
+                out.append(m)
+        return out
+
+    def atendimentos(self, de="", ate=""):
+        """Internos da unidade (listagem mais recente), com o último atendimento no período escolhido (relatórios do SAP somados e
+        atendimentos registrados no APTO) e os documentos na base, em ordem de prioridade."""
         if not self.base:
             return {"erro": "Abra uma base."}
-        d = self.base.atend_ler()
-        L, R = d.get("listagem"), d.get("relatorio")
-        regs = [{"id": m.get("id"), "nome": m.get("nome") or "", "proc": m.get("proc") or "", "ficha_tem": m.get("ficha_tem")}
-                for m in (getattr(self, "_modelos", None) or [])]
-        lista = ratd.cruzar(L, R, regs, self.base.fichas_sem_rspe(), datetime.now().date()) if L else []
+        Ls = self.base.atend_listagens()
+        L = Ls[0] if Ls else None
+        rels = self.base.atend_relatorios()
+        manuais = self._atend_manuais_ativos(self.base)
+        regs = self.base.atend_registros() + [
+            {"nome": m["nome"], "data": m["data"], "hora": "", "tipo": "REGISTRADO NO APTO", "defensor": "", "estab": "",
+             "manual": {"id": m["id"], "obs": m["obs"], "registrado_em": datetime.strptime(m["registrado_em"], "%Y-%m-%d %H:%M:%S").strftime("%d/%m/%Y %H:%M")}}
+            for m in manuais]
+        de_i, ate_i = Base._iso_br(de) if de else "", Base._iso_br(ate) if ate else ""
+        pessoas = ratd.resumir(regs, de_i or None, ate_i or None)
+        cad = [{"id": m.get("id"), "nome": m.get("nome") or "", "proc": m.get("proc") or "", "ficha_tem": m.get("ficha_tem")}
+               for m in (getattr(self, "_modelos", None) or [])]
+        lista = ratd.cruzar(L, {"pessoas": pessoas, "tem": bool(rels or manuais)}, cad, self.base.fichas_sem_rspe(), datetime.now().date()) if L else []
         cont, docs = {}, {"sem_rspe": 0, "sem_ficha": 0}
         for x in lista:
             cont[x["cor"]] = cont.get(x["cor"], 0) + 1
             docs["sem_rspe"] += 0 if x["rspe"] else 1
             docs["sem_ficha"] += 0 if x["ficha"] else 1
-        meta = lambda o, *ks: {k: (o or {}).get(k) for k in ks}
-        return {"listagem": meta(L, "unidade", "emitida", "arquivo", "importado_em") if L else None,
-                "relatorio": dict(meta(R, "periodo", "gerado", "arquivo", "importado_em", "n"), pessoas=len((R or {}).get("pessoas") or {})) if R else None,
-                "prazo": ratd.PRAZO_DIAS, "lista": lista, "cont": cont, "docs": docs}
+        br = lambda d: datetime.strptime(d, "%Y-%m-%d").strftime("%d/%m/%Y") if d else ""
+        ini = min((r["inicio"] for r in rels if r["inicio"]), default="")
+        fim = max((r["fim"] for r in rels if r["fim"]), default="")
+        sairam, entraram = ratd.comparar_listagens(Ls[1], Ls[0]) if len(Ls) > 1 else ([], [])
+        return {"listagem": {k: L.get(k) for k in ("unidade", "emitida", "arquivo")} if L else None,
+                "anterior": {"emitida": Ls[1]["emitida"], "sairam": len(sairam), "entraram": len(entraram)} if len(Ls) > 1 else None,
+                "relatorios": [dict(r, inicio=br(r["inicio"]), fim=br(r["fim"])) for r in rels],
+                "relatorio": {"periodo": [br(ini), br(fim)], "n": sum(r["n"] or 0 for r in rels)} if rels else None,
+                "periodo_sel": [de or br(ini), ate or br(fim)], "filtrado": bool(de or ate),
+                "manuais": len(manuais), "prazo": ratd.PRAZO_DIAS, "lista": lista, "cont": cont, "docs": docs}
 
-    def atendimentos_importar(self):
+    def atendimentos_importar(self, de="", ate=""):
         if not self.base:
             return {"erro": "Abra uma base."}
         arqs = self._janela.create_file_dialog(webview.OPEN_DIALOG, allow_multiple=True,
@@ -3266,22 +3395,49 @@ class Api:
         if not arqs:
             return None
         avisos = self._atend_importar_arquivos(list(arqs))
-        r = self.atendimentos()
+        r = self.atendimentos(de, ate)
         r["avisos"] = avisos
         self._js("api('listar')")
         return r
 
-    def atendimentos_pdf(self, cor="", busca=""):
-        """PDF da janela Atendimentos (números, gráficos e a lista em ordem de prioridade, com o filtro e a busca da janela)."""
-        d = self.atendimentos()
+    def atendimentos_registrar(self, nome, data, obs="", de="", ate=""):
+        """Registra no APTO um atendimento (tira o alerta até um relatório do SAP posterior cobrir a data)."""
+        if not self.base:
+            return {"erro": "Abra uma base."}
+        d = Base._iso_br((data or "").strip())
+        if not d:
+            return {"erro": "Data inválida (use dd/mm/aaaa)."}
+        if d > datetime.now().strftime("%Y-%m-%d"):
+            return {"erro": "A data do atendimento não pode ser futura."}
+        self.base.atend_manual_add(nome, d, (obs or "").strip()[:300])
+        r = self.atendimentos(de, ate)
+        r["msg"] = "Atendimento de %s registrado em %s." % (data, datetime.now().strftime("%d/%m/%Y %H:%M"))
+        return r
+
+    def atendimentos_desfazer(self, id_, de="", ate=""):
+        if not self.base:
+            return {"erro": "Abra uma base."}
+        self.base.atend_manual_del(int(id_))
+        r = self.atendimentos(de, ate)
+        r["msg"] = "Registro desfeito."
+        return r
+
+    def _atend_filtrar(self, cor, busca, de, ate):
+        d = self.atendimentos(de, ate)
         if d.get("erro") or not d.get("listagem"):
-            return {"erro": d.get("erro") or "Importe antes a listagem de internos da unidade."}
-        todos = d["lista"]
+            return None, {"erro": d.get("erro") or "Importe antes a listagem de internos da unidade."}
         q = ratd.norm(busca)
-        d["lista_toda"] = todos
-        d["lista"] = [x for x in todos if (not cor or x["cor"] == cor) and (not q or q in ratd.norm(x["nome"]))]
+        d["lista_toda"] = d["lista"]
+        d["lista"] = [x for x in d["lista"] if (not cor or x["cor"] == cor) and (not q or q in ratd.norm(x["nome"]))]
         rot = {"vermelho": "sem atendimento no período", "amarelo": "mais de %d dias" % ratd.PRAZO_DIAS, "verde": "até %d dias" % ratd.PRAZO_DIAS}
-        filtro = ", ".join(x for x in (rot.get(cor, ""), ("busca \u201c%s\u201d" % busca) if busca else "") if x)
+        d["filtro"] = ", ".join(x for x in (rot.get(cor, ""), ("busca \u201c%s\u201d" % busca) if busca else "") if x)
+        return d, None
+
+    def atendimentos_pdf(self, cor="", busca="", de="", ate=""):
+        """PDF da janela Atendimentos (números, gráficos e a lista em ordem de prioridade, com o filtro, a busca e o período da janela)."""
+        d, erro = self._atend_filtrar(cor, busca, de, ate)
+        if erro:
+            return erro
         unidade = (d["listagem"].get("unidade") or "unidade").title()
         nome = "Atendimentos - %s - %s.pdf" % (unidade, datetime.now().strftime("%Y-%m-%d"))
         c = _um(self._janela.create_file_dialog(webview.SAVE_DIALOG, save_filename=nome, file_types=("PDF (*.pdf)",)))
@@ -3290,21 +3446,58 @@ class Api:
         if not c.lower().endswith(".pdf"):
             c += ".pdf"
         try:
-            rrel.relatorio_atendimentos(d, c, self.base.nome, filtro)
+            rrel.relatorio_atendimentos(d, c, self.base.nome, d["filtro"])
         except Exception as e:
             logging.getLogger("rspe").exception("PDF de atendimentos")
             return {"erro": "Falha ao gerar o PDF: %s" % e}
         _abrir(c)
         return {"caminho": c, "msg": "PDF salvo."}
 
-    def _pendentes_unidade(self):
-        """internos da listagem da unidade ainda sem RSPE na base (aba Geral e aviso das demais abas)."""
-        try:
-            L = self.base.atend_ler().get("listagem") if self.base else None
-        except Exception:
-            L = None
-        if not L:
+    def atendimentos_saidas(self, fmt="xlsx"):
+        """Quem estava na listagem anterior e não está na mais recente (saiu da unidade), e quem entrou: PDF ou Excel para controle."""
+        if not self.base:
+            return {"erro": "Abra uma base."}
+        Ls = self.base.atend_listagens()
+        if len(Ls) < 2:
+            return {"erro": "É preciso ter duas listagens da unidade importadas para comparar."}
+        sairam, entraram = ratd.comparar_listagens(Ls[1], Ls[0])
+        unidade = (Ls[0].get("unidade") or "unidade").title()
+        ext = "pdf" if fmt == "pdf" else "xlsx"
+        nome = "Saídas da unidade - %s - %s a %s.%s" % (unidade, Ls[1]["emitida"].replace("/", "-"), Ls[0]["emitida"].replace("/", "-"), ext)
+        c = _um(self._janela.create_file_dialog(webview.SAVE_DIALOG, save_filename=nome, file_types=(("PDF (*.pdf)",) if ext == "pdf" else ("Excel (*.xlsx)",))))
+        if not c:
             return None
+        if not c.lower().endswith("." + ext):
+            c += "." + ext
+        # último atendimento de quem saiu (para o controle): todos os relatórios e registros
+        pessoas = ratd.resumir(self.base.atend_registros())
+        ind = ratd._Indice(pessoas.keys())
+
+        def ult(nome_):
+            k, como = ind.achar(nome_, parecido=False)
+            return datetime.strptime(pessoas[k]["ultimo"], "%Y-%m-%d").strftime("%d/%m/%Y") if k else ""
+        dados = {"unidade": Ls[0].get("unidade") or "", "de": Ls[1]["emitida"], "ate": Ls[0]["emitida"],
+                 "sairam": [dict(x, ultimo=ult(x["nome"])) for x in sairam], "entraram": [dict(x, ultimo=ult(x["nome"])) for x in entraram]}
+        try:
+            if ext == "pdf":
+                rrel.relatorio_saidas(dados, c, self.base.nome)
+            else:
+                rx.exportar_saidas(dados, c)
+        except Exception as e:
+            logging.getLogger("rspe").exception("saídas da unidade")
+            return {"erro": "Falha ao gerar o arquivo: %s" % e}
+        _abrir(c)
+        return {"caminho": c, "msg": "%s salvo: %s, %s." % (ext.upper(), rs.pl(len(sairam), "saiu", "saíram"), rs.pl(len(entraram), "entrou", "entraram"))}
+
+    def _pendentes_unidade(self):
+        """internos da listagem mais recente da unidade ainda sem RSPE na base (aba Geral e aviso das demais abas)."""
+        try:
+            Ls = self.base.atend_listagens(carregar=1) if self.base else []
+        except Exception:
+            Ls = []
+        if not Ls:
+            return None
+        L = Ls[0]
         regs = [{"nome": m.get("nome") or ""} for m in (getattr(self, "_modelos", None) or [])]
         return {"unidade": L.get("unidade", ""), "emitida": L.get("emitida", ""), "total": len(L.get("internos") or []),
                 "lista": ratd.pendentes(L, regs)}

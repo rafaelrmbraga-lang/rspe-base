@@ -44,14 +44,14 @@ def listagem_pdf(caminho, linhas):
     c.save()
 
 
-def relatorio_pdf(caminho, regs):
+def relatorio_pdf(caminho, regs, periodo="01/01/2026 à 14/10/2026"):
     from reportlab.pdfgen import canvas
     c = canvas.Canvas(caminho, pagesize=(842, 595))
     H = 595
     c.setFont("Helvetica", 9)
     c.drawString(708, H - 30, "Gerado em : 14/10/2026 10:57")
     c.drawString(94, H - 48, "RELATÓRIO DE ATENDIMENTO")
-    c.drawString(94, H - 66, "PERÍODO: 01/01/2026 à 14/10/2026")
+    c.drawString(94, H - 66, "PERÍODO: " + periodo)
     y = H - 105
     for nome, cima, baixo, status, data in regs:
         c.setFont("Helvetica", 8)
@@ -167,7 +167,65 @@ try:
     with pdfplumber.open(pdf) as d:
         txt = "\n".join(pg.extract_text() or "" for pg in d.pages)
     ok(r2 and "Filtro da janela: até 90 dias" in txt and "FULANO DE TAL" not in txt.split("Lista em ordem de prioridade")[-1], "PDF com o filtro da janela")
+    # 2º relatório (período que se sobrepõe ao 1º): soma sem repetir; período filtrado; registro no APTO e a superveniência do relatório
+    import time
+    from datetime import datetime as _dt
+    hoje_br = _dt.now().strftime("%d/%m/%Y")
+    R2 = os.path.join(tmp, "RELATORIO_ATENDIMENTO_TESTE2.pdf")
+    relatorio_pdf(R2, [("BELTRANO SILVA", "", "", "TELEFONE", "02/03/26"),                         # repetido (já no 1º)
+                       ("SEM DOCUMENTO NENHUM", "", "", "PRESENCIAL", _dt.now().strftime("%d/%m/%y"))], "01/03/2026 à " + hoje_br)
+    api.atendimentos_registrar("FULANO DE TAL", "01/02/2026", "visita na unidade")   # antes do período do 2º: continua valendo
+    api.atendimentos_registrar("CICLANO COSTA E SOUZA", "05/03/2026", "")             # dentro do período do 2º, que não o cita: sai
+    r = api.atendimentos_registrar("ALEXANDRO TESTE SANTOS", "01/05/2026", "")
+    por = {x["nome"]: x for x in r["lista"]}
+    ok(por["ALEXANDRO TESTE SANTOS"]["manual"] and por["ALEXANDRO TESTE SANTOS"]["ultimo"] == "01/05/2026", "registro no APTO tira o vermelho")
+    ok(api.atendimentos_registrar("FULANO DE TAL", "01/01/2999").get("erro"), "data futura recusada")
+    time.sleep(1.1)
+    av = api._atend_importar_arquivos([R2])
+    ok("1 atendimento novo" in av[0] and "1 já estava" in av[0] or "1 já estavam" in av[0], "2º relatório: só o novo entra: %s" % av)
+    ok("2 atendimentos registrados no APTO substituído" in av[0], "registros no APTO cobertos pelo relatório posterior saem: %s" % av)
+    r = api.atendimentos()
+    por = {x["nome"]: x for x in r["lista"]}
+    ok(len(r["relatorios"]) == 2 and r["relatorio"]["n"] == 10 and r["manuais"] == 1, "relatórios somados: %s" % {k: r[k] for k in ("manuais",)})
+    ok(por["SEM DOCUMENTO NENHUM"]["cor"] == "verde", "atendimento do relatório novo")
+    ok(por["FULANO DE TAL"]["manual"] and por["FULANO DE TAL"]["ultimo"] == "01/02/2026", "registro fora do período do relatório novo continua")
+    ok(por["ALEXANDRO TESTE SANTOS"]["cor"] == "vermelho" and not por["ALEXANDRO TESTE SANTOS"]["manual"], "relatório posterior prevalece sobre o registro no APTO")
+    rp = api.atendimentos("01/09/2026", "")
+    porp = {x["nome"]: x for x in rp["lista"]}
+    ok(rp["filtrado"] and porp["BELTRANO SILVA"]["cor"] == "vermelho" and porp["CICLANO COSTA E SOUZA"]["cor"] == "verde", "filtro de período")
+    mid = por["FULANO DE TAL"]["manual"]["id"]
+    ok(not {x["nome"]: x for x in api.atendimentos_desfazer(mid)["lista"]}["FULANO DE TAL"]["manual"], "desfazer o registro")
+    # listagem nova: quem saiu e quem entrou (Excel e PDF)
+    L2 = os.path.join(tmp, "ListagemdeInternosAtivos_TESTE2.pdf")
+    listagem_pdf(L2, [("BELTRANO SILVA", "", "B - UNICO - 002 03/03/2025 IPCG"), ("CICLANO COSTA E SOUZA", "", "C - UNICO - 003 04/04/2026 PTRAN"),
+                      ("JOAO PEDRO DA SILVA", "MOREIRA", "D - UNICO - 104 05/05/2026 EPJFC"), ("NOVATO RECENTE", "", "A - UNICO - 009 10/10/2026 EPJFC")])
+    av = api._atend_importar_arquivos([L2])
+    Ls = base.atend_listagens()
+    ok(len(Ls) == 2, "duas listagens guardadas")
+    r = api.atendimentos()
+    ok(r["anterior"] and r["anterior"]["sairam"] == 5 and r["anterior"]["entraram"] == 1 and len(r["lista"]) == 4, "saíram e entraram: %s" % r["anterior"])
+    for fmt in ("xlsx", "pdf"):
+        arq = os.path.join(tmp, "saidas." + fmt)
+        api._janela = types.SimpleNamespace(create_file_dialog=lambda *x, **k: arq)
+        rs_ = api.atendimentos_saidas(fmt)
+        ok(rs_ and rs_.get("caminho") == arq and os.path.getsize(arq) > 2000, "saídas em %s: %s" % (fmt, rs_))
+    from openpyxl import load_workbook
+    wb = load_workbook(os.path.join(tmp, "saidas.xlsx"))
+    nomes = [c.value for c in wb["Saíram da unidade"]["B"][5:]]
+    ok("FULANO DE TAL" in nomes and "BELTRANO SILVA" not in nomes and wb["Entraram"]["B"][5].value == "NOVATO RECENTE", "planilha das saídas: %s" % nomes)
     base.con.close()
+    # base da primeira versão (listagem e relatório substituídos): migra para o histórico
+    import sqlite3, json as _json
+    velha = os.path.join(tmp, "Velha.sqlite")
+    con = sqlite3.connect(velha)
+    con.execute("CREATE TABLE atend_dados (chave TEXT PRIMARY KEY, arquivo TEXT, importado_em TEXT, dados TEXT)")
+    con.execute("INSERT INTO atend_dados VALUES ('listagem','l.pdf','14/10/2026 10:00',?)", (_json.dumps(L, ensure_ascii=False),))
+    con.execute("INSERT INTO atend_dados VALUES ('relatorio','r.pdf','14/10/2026 10:01',?)", (_json.dumps({"periodo": R["periodo"], "n": 8, "pessoas": R["pessoas"]}, ensure_ascii=False),))
+    con.commit(); con.close()
+    bv = app.Base(velha)
+    ok(len(bv.atend_listagens()) == 1 and len(bv.atend_relatorios()) == 1 and len(bv.atend_registros()) == 7
+       and not bv.con.execute("SELECT 1 FROM sqlite_master WHERE name='atend_dados'").fetchone(), "migração da versão anterior")
+    bv.con.close()
 finally:
     shutil.rmtree(tmp, ignore_errors=True)
 

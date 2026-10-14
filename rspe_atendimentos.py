@@ -159,16 +159,37 @@ def ler_relatorio(caminho, processos=1):
     else:
         for b in blocos:
             regs += _relatorio_paginas(b)
+    registros = [{"nome": nome, "data": d, "hora": hora, "tipo": tipo, "defensor": defensor, "estab": estab} for nome, d, hora, tipo, defensor, estab in regs]
+    return {"periodo": [per.group(1), per.group(2)] if per else [], "gerado": ger.group(1) if ger else "", "n": len(regs),
+            "registros": registros, "pessoas": resumir(registros)}
+
+
+def resumir(registros, de=None, ate=None):
+    """atendimentos (de um ou mais relatórios e os registrados no APTO) -> {nome: último atendimento} no período [de, ate]
+    (datas ISO; vazio = sem limite)."""
     pessoas = {}
-    for nome, d, hora, tipo, defensor, estab in regs:
-        k = norm(nome)
-        r = pessoas.get(k)
-        if not r:
-            r = pessoas[k] = {"nome": nome, "n": 0, "ultimo": "", "hora": "", "tipo": "", "defensor": "", "estab": ""}
-        r["n"] += 1
-        if not r["ultimo"] or (d, hora) >= (r["ultimo"], r["hora"]):
-            r.update(ultimo=d, hora=hora, tipo=tipo, defensor=defensor, estab=estab)
-    return {"periodo": [per.group(1), per.group(2)] if per else [], "gerado": ger.group(1) if ger else "", "n": len(regs), "pessoas": pessoas}
+    for r in registros:
+        d = r["data"]
+        if (de and d < de) or (ate and d > ate):
+            continue
+        k = norm(r["nome"])
+        p = pessoas.get(k)
+        if not p:
+            p = pessoas[k] = {"nome": r["nome"], "n": 0, "ultimo": "", "hora": "", "tipo": "", "defensor": "", "estab": "", "manual": None}
+        p["n"] += 1
+        if not p["ultimo"] or (d, r.get("hora") or "") >= (p["ultimo"], p["hora"]):
+            p.update(ultimo=d, hora=r.get("hora") or "", tipo=r.get("tipo") or "", defensor=r.get("defensor") or "", estab=r.get("estab") or "",
+                     manual=r.get("manual"))
+    return pessoas
+
+
+def comparar_listagens(antiga, nova):
+    """quem estava na listagem anterior e não está na nova (saiu da unidade) e quem entrou."""
+    ind_nova = _Indice([it["nome"] for it in (nova or {}).get("internos") or []])
+    ind_antiga = _Indice([it["nome"] for it in (antiga or {}).get("internos") or []])
+    sairam = [it for it in (antiga or {}).get("internos") or [] if not ind_nova.achar(it["nome"], parecido=False)[0]]
+    entraram = [it for it in (nova or {}).get("internos") or [] if not ind_antiga.achar(it["nome"], parecido=False)[0]]
+    return sairam, entraram
 
 
 def ler_listagem_arquivo(caminho):
@@ -235,7 +256,7 @@ def cruzar(listagem, relatorio, registros, fichas_nomes, hoje=None):
     for it in (listagem or {}).get("internos") or []:
         x = {"n": it["n"], "nome": it["nome"], "local": it.get("local", ""), "entrada": it.get("entrada", ""),
              "homonimo": repetidos[norm(it["nome"])] > 1, "ultimo": "", "dias": None, "tipo": "", "defensor": "", "n_atend": 0,
-             "conf": "", "nome_sap": "", "obs": "", "proc": "", "id": "", "rspe": False, "ficha": False}
+             "conf": "", "nome_sap": "", "obs": "", "proc": "", "id": "", "rspe": False, "ficha": False, "manual": None}
         k, como = ind_rel.achar(it["nome"])
         if k:
             r = pessoas[k]
@@ -245,8 +266,8 @@ def cruzar(listagem, relatorio, registros, fichas_nomes, hoje=None):
                 x.update(conf="parecido", nome_sap=r["nome"], obs="nome parecido no SAP: %s, atendido em %s - confira" % (r["nome"], d.strftime("%d/%m/%Y")))
             else:
                 x.update(ultimo=d.strftime("%d/%m/%Y"), dias=(hoje - d).days, tipo=r.get("tipo", ""), defensor=r.get("defensor", ""),
-                         n_atend=r.get("n", 0), conf=como, nome_sap=r["nome"] if como else "")
-        if not relatorio:
+                         n_atend=r.get("n", 0), conf=como, nome_sap=r["nome"] if como else "", manual=r.get("manual"))
+        if (not relatorio or relatorio.get("tem") is False) and not x["ultimo"]:
             x.update(cor="cinza", txt="Sem relatório do SAP")
         elif x["dias"] is None:
             x.update(cor="vermelho", txt="Sem atendimento no período")

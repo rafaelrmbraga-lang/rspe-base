@@ -108,8 +108,22 @@ ATENDIMENTOS (aba Geral > botão "Atendimentos")
     mês do último atendimento, RSPE e ficha na base) e a lista em ordem de
     prioridade, com o filtro de cor e a busca da janela.
   - Aba Dados da Base, card "Atendimentos": os mesmos números e gráficos.
-  - A listagem e o relatório ficam guardados na base; importar de novo
-    substitui o anterior.
+  - Atualizações: cada relatório do SAP importado SOMA-SE aos anteriores
+    (ex.: 01/01 a 14/10 e depois 15/10 a 31/12); o mesmo atendimento não é
+    contado duas vezes. Cada listagem nova passa a valer (a mais recente
+    pela data de emissão); as anteriores ficam guardadas.
+  - Período: escolha "de" e "a" (ou clique no período de um relatório, ou
+    "Todo o período"); cores, contagens e PDF passam a valer para o período.
+  - "Registrar" (em cada linha): registra no APTO um atendimento feito, com
+    a data e uma observação; o APTO guarda quando foi registrado. O alerta
+    sai. Quando for importado depois um relatório do SAP cujo período
+    cobre aquela data, vale o que consta no relatório (o registro do APTO
+    sai, conste ou não o atendimento no relatório). "desfazer" apaga o
+    registro.
+  - Saídas da unidade: com uma listagem nova, a janela mostra quantos
+    saíram e quantos entraram desde a anterior; "Saídas (Excel)" e "Saídas
+    (PDF)" geram a lista para controle (nome, localização, entrada,
+    procedência e último atendimento).
 
 EXTENSÃO DO NAVEGADOR (pasta extensao_seeu)
   "APTO - RSPE do SEEU, Ficha do SIAPEN e processos do SAP", para Chrome e
@@ -923,6 +937,9 @@ v7.9.5
   - Os dois PDFs também entram pelo "Importar PDFs" e pela pasta vigiada.
   - Atendimentos em PDF (com gráficos) e no card "Atendimentos" da aba Dados
     da Base.
+  - Relatórios do SAP somados (sem repetir atendimentos), filtro por período,
+    registro de atendimento no APTO (substituído pelo relatório posterior
+    que cobrir a data) e saídas da unidade entre listagens (Excel e PDF).
 
 v7.9.4
   - Extensão 1.4.0 ligada ao APTO sem configurar nada: o APTO cria

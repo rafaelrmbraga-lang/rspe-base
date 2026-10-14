@@ -362,3 +362,36 @@ def exportar_providencias(linhas, saida, titulo):
         rs_.column_dimensions[col].width = w
     wb.save(saida)
 
+
+
+def exportar_saidas(d, saida):
+    """Saídas da unidade em Excel: quem estava na listagem anterior e não está na mais recente, e quem entrou."""
+    from openpyxl import Workbook
+    from openpyxl.styles import Alignment, Font, PatternFill
+    wb = Workbook()
+
+    def aba(ws, titulo, linhas, nota):
+        ws.append([titulo])
+        ws["A1"].font = Font(bold=True, size=13)
+        ws.append(["%s · listagem de internos ativos (SIAPEN) de %s comparada com a de %s · gerado em %s" % (
+            d.get("unidade", ""), d["de"], d["ate"], datetime.now().strftime("%d/%m/%Y %H:%M"))])
+        ws.append([nota])
+        ws.append([])
+        ws.append(["#", "Nome", "Localização (na listagem)", "Entrada", "Procedência", "Último atendimento (SAP/APTO)"])
+        for cell in ws[ws.max_row]:
+            cell.font = Font(bold=True, color="FFFFFF")
+            cell.fill = PatternFill("solid", fgColor=NAVY.lstrip("#"))
+            cell.alignment = Alignment(vertical="center")
+        for i, x in enumerate(linhas, 1):
+            ws.append([i, x.get("nome", ""), x.get("local", ""), x.get("entrada", ""), x.get("procedencia", ""), x.get("ultimo", "")])
+            _sem_formula(ws)
+        for col, w in zip("ABCDEF", (6, 44, 22, 12, 22, 22)):
+            ws.column_dimensions[col].width = w
+        ws.freeze_panes = "A6"
+    ws = wb.active
+    ws.title = "Saíram da unidade"
+    aba(ws, "Saíram da unidade (%d)" % len(d["sairam"]), d["sairam"],
+        "Estavam na listagem de %s e não constam na de %s. Localização e entrada: as da listagem anterior." % (d["de"], d["ate"]))
+    aba(wb.create_sheet("Entraram"), "Entraram na unidade (%d)" % len(d["entraram"]), d["entraram"],
+        "Constam na listagem de %s e não estavam na de %s." % (d["ate"], d["de"]))
+    wb.save(saida)
