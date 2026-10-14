@@ -3585,7 +3585,7 @@ def relatorio_saidas(d, caminho, nome_base):
 
 def relatorio_resumo_assistido(d, caminho):
     """Resumo para o assistido (linguagem simples, CNJ), uma folha A4 para imprimir: em cima, a pena, os próximos direitos e o que a
-    Defensoria vai fazer; embaixo, depois da linha pontilhada, o canhoto do assistido (retorno em X dias e a data): perto dela, ele entrega
+    Defensoria vai fazer; embaixo, depois da linha pontilhada, o canhoto do assistido (retorno em X dias): perto do prazo, ele entrega
     o papel ao setor psicossocial da unidade para pedir atendimento. d = o que a janela do APTO mandou (o texto já conferido)."""
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.units import mm
@@ -3651,11 +3651,9 @@ def relatorio_resumo_assistido(d, caminho):
     c.setFillColor(C(NAVY))
     c.drawString(ML, corte + 2.5 * mm, "Guarde a parte de baixo: ela serve para pedir o próximo atendimento.")
 
-    # canhoto do assistido: perto da data de retorno, ele entrega esta parte ao setor psicossocial para pedir atendimento
-    from datetime import timedelta
+    # canhoto do assistido: perto do prazo de retorno, ele entrega esta parte ao setor psicossocial para pedir atendimento
     da = rres._data(d.get("data_atend"))
     ret = str(d.get("retorno") or "").strip()
-    prev = da + timedelta(days=int(ret)) if da and ret.isdigit() else None
     y = corte - 8 * mm
     c.setFillColor(C(NAVY))
     c.setFont(f["serifb"], 13)
@@ -3685,17 +3683,13 @@ def relatorio_resumo_assistido(d, caminho):
         x += 17 * mm
     x = caixa(x, y, bool(ret) and ret not in ("30", "60", "90"))
     c.drawString(x, y, "%s dias" % (ret if ret and ret not in ("30", "60", "90") else "______"))
-    y -= 8 * mm
-    c.setFont(f["b"], 11)
-    c.drawString(ML, y, "Data do retorno: %s" % (prev.strftime("%d/%m/%Y") if prev else "____/____/________"))
-    c.setFont(f["n"], 11)
 
     y -= 11 * mm
     c.setFillColor(C("#EEF3EF"))
     c.roundRect(ML, y - 8 * mm, W, 14 * mm, 2 * mm, stroke=0, fill=1)
     c.setFillColor(C(NAVY))
     c.setFont(f["b"], 12)
-    c.drawString(ML + 4 * mm, y, "Perto da data do retorno, entregue este papel ao setor psicossocial da unidade")
+    c.drawString(ML + 4 * mm, y, "Perto do prazo de retorno, entregue este papel ao setor psicossocial da unidade")
     c.drawString(ML + 4 * mm, y - 5.2 * mm, "para pedir atendimento com a Defensoria Pública.")
     c.setFillColor(C(TX))
     c.setFont(f["n"], 11)

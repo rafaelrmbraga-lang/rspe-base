@@ -88,7 +88,7 @@ try:
         ok(n == 1, "uma página: %d" % n)
         ok("Resumo da sua pena" in txt and "FULANO DE TESTE" in txt and "O que a Defensoria vai fazer" in txt
            and "Vamos pedir ao juiz o indulto (perdão da pena)." in txt and "setor psicossocial da unidade" in txt and "Retorno em" in txt
-           and "recorte aqui" in txt and "Data do retorno: 13/12/2026" in txt, "conteúdo do PDF")
+           and "recorte aqui" in txt and "Data do retorno" not in txt, "conteúdo do PDF")
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 except Exception as e:

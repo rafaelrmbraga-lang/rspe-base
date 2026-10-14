@@ -152,9 +152,9 @@ para o assistido" na ficha)
     12 meses sem falta grave (CP, art. 83, III, "b").
   - Antes do PDF, cada frase pode ser corrigida, desmarcada ou acrescentada.
   - Embaixo, depois da linha pontilhada, o canhoto do assistido: pedido de
-    atendimento com a Defensoria, com o último atendimento, o retorno em
-    30/60/90/__ dias e a data do retorno. Perto dessa data, o assistido
-    entrega o canhoto ao setor psicossocial da unidade para pedir
+    atendimento com a Defensoria, com o último atendimento e o retorno em
+    30/60/90/__ dias. Perto do prazo de retorno, o assistido entrega o
+    canhoto ao setor psicossocial da unidade para pedir
     atendimento. Não traz contato.
 
 EXTENSÃO DO NAVEGADOR (pasta extensao_seeu)
@@ -962,7 +962,7 @@ v7.10.0
   - Resumo para o assistido: folha A4 em linguagem simples (CNJ) com a
     pena, os próximos direitos, o que a Defensoria vai fazer (pelas
     providências marcadas) e o canhoto do assistido para pedir o próximo atendimento ao
-    setor psicossocial, com a data do retorno. O texto é conferido e
+    setor psicossocial. O texto é conferido e
     editado na tela antes do PDF.
   - Registrar atendimento: ao registrar, abre o resumo.
 
