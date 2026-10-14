@@ -146,6 +146,9 @@ table.rz{margin-top:8px;width:100%}table.rz td,table.rz th{font-size:12px;vertic
 .copia i{width:8px;height:8px;border-radius:50%;background:var(--g-dot);display:inline-block}
 .hbtn{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border:1px solid var(--line);border-radius:8px;font-size:11.5px;font-weight:600;color:var(--tx2);background:#fff;cursor:pointer;margin-right:6px}
 .hbtn:hover{border-color:var(--pri);color:var(--pri)}.hbtn svg{width:14px;height:14px}
+tr.pend-sep td{background:#F6F8F6;padding:9px 14px;font-weight:400;font-size:12.5px;border-top:2px solid var(--line)}tr.pend td{color:var(--tx2)}tr.pend td:first-child{font-weight:600}
+.falta-doc{display:inline-block;padding:2px 9px;border-radius:999px;background:#F1F2EF;border:1px dashed #B9BFB8;color:var(--tx2);font-size:12px}
+.pend-info{cursor:pointer;color:var(--tx2);font-size:12.5px;padding:5px 10px;border:1px dashed #B9BFB8;border-radius:8px;background:#F8F9F7}.pend-info:hover{border-color:var(--pri);color:var(--pri)}
 table.atd{width:100%;border-collapse:collapse;font-size:13px}table.atd th{text-align:left;color:var(--tx3);font-size:11px;text-transform:uppercase;padding:7px 10px;border-bottom:1px solid var(--line);position:sticky;top:0;background:#fff;cursor:default}
 table.atd td{padding:6px 10px;border-bottom:1px solid #ECEEEB;cursor:default;font-weight:400}table.atd tr:hover td{background:#F7F9F7}
 table.hist{width:100%;border-collapse:collapse;margin-top:10px;font-size:13px;table-layout:fixed}table.hist td{overflow-wrap:anywhere}
@@ -933,6 +936,11 @@ const ui = {
     const v=[r.nome,r.proc,r.id,r.crimes].concat(cr.map(c=>[c.nome_crime,c.dispositivo,c.desc,c.proc].join(' ')), pl.map(l=>[l.crime,l.proc_crim].join(' '))).join(' | ');
     const pr=[r.proc,r.id].concat(cr.map(c=>c.proc), pl.map(l=>l.proc_crim)).map(x=>String(x||'').replace(/\D/g,'')).filter(Boolean);
     t={txt:semAcento(v), dig:'|'+pr.join('|')+'|'}; this._bTxt.set(r,t); return t; },
+  // internos da unidade (listagem do SIAPEN) ainda sem RSPE na base: aparecem só na aba Geral, como "falta juntar"
+  pendVis(){ const P=(this.dados.pendentes||{}).lista||[]; const q=semAcento(this.filtro); return q?P.filter(x=>semAcento(x.nome).includes(q)):P; },
+  pendLinhas(ncol){ const P=this.pendVis(), U=this.dados.pendentes||{}; if(!P.length) return '';
+    return `<tr class="pend-sep"><td colspan="${ncol}"><b>${pl(P.length,'interno','internos')} de ${esc(U.unidade||'unidade')} ainda sem RSPE nesta base</b><span class="muted"> · listagem de internos ativos de ${esc(U.emitida||'?')}. Não é erro: as demais colunas e abas se preenchem quando o RSPE e a ficha disciplinar forem juntados.</span></td></tr>`
+      +P.map(x=>`<tr class="pend"><td><span class="nmc"><span class="copy" title="Clique para copiar o nome" onclick="event.stopPropagation();ui.copiar(ui._clips[${this.clip(String(x.nome))}])">${esc(x.nome)}</span></span></td><td colspan="${ncol-1}"><span class="falta-doc">Falta juntar o RSPE e a ficha disciplinar</span>${x.local?`<span class="muted" style="margin-left:10px">${esc(x.local)}</span>`:''}</td></tr>`).join(''); },
   visiveis(){ const q=semAcento(this.filtro); let rs=this.dados.registros; if(q){ const qd=/\d/.test(q)&&/^[\d.\-\/\s]+$/.test(q)?q.replace(/\D/g,''):'';
       rs=rs.filter(r=>{ const b=this.buscaTxt(r); return b.txt.includes(q) || (qd && b.dig.includes(qd)); }); } return rs; },
   cor(r,spec){ const x=this.sitPed(r,spec); if(x) return x.cor; return spec.cor ? (r[spec.cor]||'') : ''; },
@@ -961,14 +969,17 @@ const ui = {
     const nVelho=rs.filter(r=>this.idadeRSPE(r)>this.RSPE_VELHO).length; if(!nVelho) this.filtroVelho=false;
     const chipVelho=nVelho?`<div class="stat velho ${this.filtroVelho?'on':''}" title="RSPE desatualizado: emitido há mais de ${this.RSPE_VELHO} dias. Vale baixar um novo no SEEU · clique para filtrar" onclick="ui.filtroVelho=!ui.filtroVelho;ui.render()"><i class="dot"></i><b>${nVelho}</b><span>RSPE antigo</span></div>`:'';
     if(!spec.cor || spec.sem_stats){ const rsf=rs.filter(r=>this.passaFiltro(r,spec)), nExt=rsf.filter(r=>r.geral_cor==='azul').length; st.innerHTML=`<div class="info">${rsf.length!==rs.length?rsf.length+' de ':''}${pl(rs.length,'assistido','assistidos')}${nExt?` · <span class="pill azul">${nExt} com pena extinta registrada</span>`:''}. As abas seguintes mostram cada marco com prazo, cor e falta nos últimos 12 meses.</div>`+chipVelho
-      +(spec.id==='geral'?`<button class="btn" style="margin-left:auto" title="Último atendimento do NUSPEN de cada assistido (planilha do lote do SAP), em ordem de prioridade" onclick="ui.atendimentos()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>Atendimentos</button>`:''); }
+      +(spec.id==='geral'&&this.dados.pendentes&&this.dados.pendentes.lista.length?`<div class="pend-info" title="Estão no fim da lista desta aba. Não é erro: as demais colunas e abas se preenchem quando o RSPE e a ficha disciplinar forem juntados." onclick="document.querySelector('tr.pend-sep')&&document.querySelector('tr.pend-sep').scrollIntoView({behavior:'smooth'})">+ ${pl(this.dados.pendentes.lista.length,'interno','internos')} da unidade sem RSPE (falta juntar o RSPE e a ficha)</div>`:'')
+      +(spec.id==='geral'?`<button class="btn" style="margin-left:auto" title="Internos da unidade (listagem do SIAPEN) com o último atendimento (relatório do SAP), em ordem de prioridade" onclick="ui.atendimentos()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>Atendimentos</button>`:''); }
     else{ const cont={}; const temPed=this.abaPedido(spec); let nPed=0;
       // pedido feito (e a situação não mudou depois): sai da contagem da situação e entra em "Pedido feito"
       // os cartões seguem o filtro de situação da caixa e o de RSPE antigo (a contagem é a do que a tabela pode mostrar)
       rs.filter(r=>this.passaFiltro(r,spec)&&(!this.filtroVelho||this.idadeRSPE(r)>this.RSPE_VELHO)).forEach(r=>{ if(temPed && !this.pedPendente(r,spec.id)){ nPed++; return; } const c=this.cor(r,spec); cont[c]=(cont[c]||0)+1;});
       const dica=(this.dados.rotulos_dica||{})[spec.legenda]||{};
+      const PU=this.dados.pendentes, nP=PU&&PU.lista?PU.lista.length:0;
       st.innerHTML=Object.keys(rot).map(c=>`<div class="stat ${c||'neutro'} ${this.filtroCor===c?'on':''}" title="${esc(dica[c]||'')}" onclick="ui.filtrarCor(${jsa(c)})"><i class="dot"></i><b>${cont[c]||0}</b><span>${rot[c]}</span></div>`).join('')
-        +(temPed?`<div class="stat pedido ${this.filtroCor==='__ped'?'on':''}" title="Pedido feito (e a situação não mudou depois): sai da contagem da situação" onclick="ui.filtrarCor('__ped')"><i class="dot"></i><b>${nPed}</b><span>Feito</span></div>`:'')+chipVelho; }
+        +(temPed?`<div class="stat pedido ${this.filtroCor==='__ped'?'on':''}" title="Pedido feito (e a situação não mudou depois): sai da contagem da situação" onclick="ui.filtrarCor('__ped')"><i class="dot"></i><b>${nPed}</b><span>Feito</span></div>`:'')+chipVelho
+        +(nP?`<div class="pend-info" title="Internos da listagem da unidade ainda sem RSPE nesta base. Não é erro do sistema: esta aba se preenche quando o RSPE e a ficha disciplinar forem juntados. Clique para ver a lista." onclick="ui.atendimentos()">+ ${pl(nP,'interno','internos')} da unidade sem RSPE: falta juntar o RSPE e a ficha</div>`:''); }
     // legenda
     document.getElementById('legenda').innerHTML=Object.keys(rot).filter(c=>c||spec.id==='presc').map(c=>`<span class="leg" title="${esc(((this.dados.rotulos_dica||{})[spec.legenda]||{})[c]||'')}"><i style="background:${c?`var(--${({vermelho:'r',laranja:'o',amarelo:'a',vencido:'r',verde:'g',cinza:'c',azul:'b'})[c]}-dot)`:'#C8CEC8'}"></i>${rot[c]}</span>`).join('')
       + this.divLegenda() + (rs.some(r=>r.calc_notas&&Object.keys(r.calc_notas).length)?`<span class="leg" title="O SEEU não imprimiu o dado (ou ele foi recalculado com dado informado); o cálculo está na ficha do assistido"><b style="color:var(--tx)">*</b> calculado pelo programa</span>`:'');
@@ -990,8 +1001,10 @@ const ui = {
       : [...linhas].sort((a,b)=>String(a.nome||'').localeCompare(String(b.nome||''),'pt',{sensitivity:'base'})||String(a.id||'').localeCompare(String(b.id||'')));
     linhas=[...linhas].sort((a,b)=>(b.fixado?1:0)-(a.fixado?1:0));
     const card=document.getElementById('card');
+    const ncolG=spec.cols.length+1;
+    if(!this.dados.registros.length && this.aba==='geral' && this.pendVis().length){ card.innerHTML=`<table><thead><tr>${spec.cols.map(c=>`<th>${c[1]}</th>`).join('')}<th></th></tr></thead><tbody>${this.pendLinhas(ncolG)}</tbody></table>`; return; }
     if(!this.dados.registros.length){ card.innerHTML=`<div class="empty"><div><b>Nenhum RSPE nesta base</b>Clique em <em>Importar PDFs</em> ou <em>Importar pasta</em>. Pode selecionar centenas de arquivos de uma vez.</div></div>`; return; }
-    if(!linhas.length){ card.innerHTML=`<div class="empty"><div><b>Nada encontrado</b>Ajuste a busca ou o filtro de situação.</div></div>`; return; }
+    if(!linhas.length && !(this.aba==='geral' && !this.filtroAtivo() && this.pendVis().length)){ card.innerHTML=`<div class="empty"><div><b>Nada encontrado</b>Ajuste a busca ou o filtro de situação.</div></div>`; return; }
     const NW=new Set(['proc','regime','frac_prog','frac_liv','dbase','termino','presc_prox','presc_n','ext_termino','pena_total','pena_cumprida']);
     const tot=spec.cols.reduce((s,c)=>s+c[2],0);
     const th=spec.cols.map(c=>`<th class="${NW.has(c[0])?'nw':''}" style="${NW.has(c[0])?'width:1%':'width:'+(100*c[2]/tot).toFixed(2)+'%'}" onclick="ui.ordenar(${jsa(c[0])})">${c[1]}${o&&o.k===c[0]?`<span class="arr">${o.inv?'▼':'▲'}</span>`:''}</th>`).join('')+'<th class="nw" style="width:1%"></th>';
@@ -1018,7 +1031,8 @@ const ui = {
       let html=`<tr class="${cor} ${exp?'exp':''} ${r.fixado?'fix':''} ${spec.expansivel?'':'noclk'}" ${spec.expansivel?`onclick="ui.expandir(${jsa(r.id)})"`:''}>${tds}${acao}</tr>`;
       if(exp) html+=`<tr class="sub"><td colspan="${spec.cols.length+1}"><div class="subwrap">${this.subTabela(r,spec)}</div></td></tr>`;
       return html; }).join('');
-    card.innerHTML=`<table><thead class="${spec.expansivel?"exp":""}"><tr>${th}</tr></thead><tbody>${tr}</tbody></table>`;
+    const pend=this.aba==='geral' && !this.filtroAtivo() ? this.pendLinhas(ncolG) : '';
+    card.innerHTML=`<table><thead class="${spec.expansivel?"exp":""}"><tr>${th}</tr></thead><tbody>${tr}${pend}</tbody></table>`;
   },
   // filtros da aba (cartão de cor, seletor de situação e "RSPE antigo"), além da busca: a tabela e a exportação usam o mesmo
   filtrarSituacao(rs,spec){ let linhas=rs; if(spec.cor && this.filtroCor!==null){ const tp=this.abaPedido(spec);
@@ -1731,19 +1745,30 @@ const ui = {
     const a=document.getElementById('letraMenos'), b=document.getElementById('letraMais'); if(a) a.disabled=z<=this.LETRAS[0]; if(b) b.disabled=z>=this.LETRAS[this.LETRAS.length-1]; return z; },
   letra(d){ const z=this.letraAplicar(); const i=Math.max(0,Math.min(this.LETRAS.length-1,this.LETRAS.indexOf(z)+d)); try{ localStorage.setItem('rspe_letra',String(this.LETRAS[i])); }catch(e){} this.letraAplicar(); },
   // histórico comparativo dos RSPE importados (aba Geral)
-  // atendimentos do NUSPEN: planilha do lote do SAP (extensão) ligada aos assistidos da base, em ordem de prioridade
-  async atendimentos(r){ r=r||await API().atendimentos(); if(!r) return; if(r.msg) this.toast(r.msg); if(r.erro) this.toast(r.erro);
-    const P=r.prazo||90, C=r.cont||{};
-    const chip=(cor,txt,dica)=>`<div class="stat ${cor}" title="${esc(dica)}" style="cursor:default"><i class="dot"></i><b>${C[cor]||0}</b><span>${txt}</span></div>`;
+  // atendimentos por unidade: listagem de internos ativos (SIAPEN) + relatório de atendimento (SAP), em ordem de prioridade
+  atdFiltro:'', atdQ:'',
+  async atendimentos(r){ r=r||await API().atendimentos(); if(!r) return; if(r.erro) return this.toast(r.erro);
+    this._atd=r; if(r.avisos&&r.avisos.length) this.toast(r.avisos.join(' · '));
+    const L=r.listagem, R=r.relatorio, P=r.prazo||90, C=r.cont||{}, D=r.docs||{};
+    const per=R&&R.periodo&&R.periodo.length?R.periodo[0]+' a '+R.periodo[1]:'';
+    const chip=(cor,txt,dica)=>`<div class="stat ${cor} ${this.atdFiltro===cor?'on':''}" title="${esc(dica)} · clique para filtrar" onclick="ui.atdFiltro=ui.atdFiltro===${jsa(cor)}?'':${jsa(cor)};ui.atendimentos(ui._atd)"><i class="dot"></i><b>${C[cor]||0}</b><span>${txt}</span></div>`;
     const DOT={vermelho:'r',amarelo:'a',verde:'g',cinza:'c'};
-    const corpo=!r.tem?`<div class="empty" style="padding:22px 4px"><div><b>Nenhuma planilha de atendimentos ainda</b>Rode o lote do SAP na extensão do navegador e clique em "Salvar planilha": a planilha, gravada em Downloads\\APTO, entra aqui sozinha com o APTO aberto. Ou importe o arquivo abaixo.</div></div>`
-      :!r.lista.length?`<p class="muted">Nenhum assistido nesta base.</p>`
-      :`<div style="max-height:56vh;overflow:auto;border:1px solid var(--line);border-radius:8px"><table class="atd"><thead><tr><th style="width:1%">#</th><th>Nome</th><th class="nw">Nº da execução</th><th class="nw">Último atendimento</th><th class="nw">Situação</th></tr></thead><tbody>${r.lista.map((x,i)=>`<tr title="${esc(x.obs||'')}${x.fonte?(x.obs?' · ':'')+'ligado pelo '+x.fonte:''}"><td class="muted nw">${i+1}</td><td>${esc(x.nome)}</td><td class="nw">${esc(x.proc||'')}</td><td class="nw">${x.ultimo?esc(x.ultimo)+' <span class="muted">('+pl(x.dias,'dia','dias')+')</span>':'<span class="muted">-</span>'}</td><td class="nw"><span class="pill ${x.cor}"><i style="display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--${DOT[x.cor]||'c'}-dot);align-self:center"></i>${esc(x.txt)}</span></td></tr>`).join('')}</tbody></table></div>`;
-    document.getElementById('modal').innerHTML=`<div class="box" style="width:900px;max-width:95vw"><h2>Atendimentos (NUSPEN)</h2>
-      <p class="muted" style="margin:0 0 8px">${r.tem?`Planilha do SAP: ${esc(r.arquivo)} · importada em ${esc(r.importado_em)} · ${pl(r.n_planilha,'cadastro','cadastros')}. `:''}Ordem de prioridade: nunca atendidos, depois do atendimento mais antigo ao mais recente.</p>
-      ${r.tem?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin:0 0 10px">${chip('vermelho','Nunca atendidos','Não achado no SAP ou sem atendimento do NUSPEN')}${chip('amarelo','Mais de '+P+' dias','Último atendimento do NUSPEN há mais de '+P+' dias')}${chip('verde','Até '+P+' dias','Último atendimento do NUSPEN nos últimos '+P+' dias')}${chip('cinza','Sem informação','Fora da planilha, homônimos sem como separar ou não verificado no SAP')}</div>`:''}
+    const q=semAcento(this.atdQ||''); const lista=(r.lista||[]).filter(x=>(!this.atdFiltro||x.cor===this.atdFiltro)&&(!q||semAcento(x.nome).includes(q)));
+    const doc=(ok,txt)=>ok?`<span class="muted">${txt} ✓</span>`:`<span class="falta-doc" style="font-size:11px;padding:1px 7px">falta ${txt}</span>`;
+    const linha=(x,i)=>`<tr title="${esc([x.defensor?'Defensor(a): '+x.defensor:'',x.n_atend?pl(x.n_atend,'atendimento','atendimentos')+' no período':'',x.conf==='nome cortado'?'Nome no SAP: '+x.nome_sap:'',x.obs].filter(Boolean).join(' · '))}">
+      <td class="muted nw">${i+1}</td><td>${esc(x.nome)}${x.homonimo?' <span class="falta-doc" style="font-size:11px;padding:1px 7px">homônimo na unidade</span>':''}${x.conf==='parecido'?`<div class="muted" style="font-size:11.5px">≈ ${esc(x.obs)}</div>`:''}</td>
+      <td class="nw muted">${esc(x.local||'')}</td>
+      <td class="nw">${x.ultimo?esc(x.ultimo)+' <span class="muted">('+pl(x.dias,'dia','dias')+(x.tipo?' · '+esc(x.tipo.toLowerCase()):'')+')</span>':'<span class="muted">-</span>'}</td>
+      <td class="nw"><span class="pill ${x.cor}"><i style="display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--${DOT[x.cor]||'c'}-dot);align-self:center"></i>${esc(x.txt)}</span></td>
+      <td class="nw">${doc(x.rspe,'RSPE')} · ${doc(x.ficha,'ficha')}</td></tr>`;
+    const corpo=!L?`<div class="empty" style="padding:22px 4px"><div><b>Importe a listagem de internos ativos da unidade (SIAPEN)</b>É ela que diz quem está hoje na unidade. Com o relatório de atendimento do SAP, cada interno recebe a data do último atendimento. Os dois PDFs podem ir juntos, aqui ou pelo "Importar PDFs".</div></div>`
+      :`<div style="display:flex;gap:8px;align-items:center;margin:0 0 8px"><input type="text" placeholder="Buscar nome" value="${esc(this.atdQ||'')}" oninput="ui.atdQ=this.value;clearTimeout(ui._atdT);ui._atdT=setTimeout(()=>{ui.atendimentos(ui._atd);const e=document.getElementById('atdQ');if(e){e.focus();e.setSelectionRange(e.value.length,e.value.length)}},250)" id="atdQ" style="flex:1;padding:6px 9px;border:1px solid var(--line2);border-radius:8px"><span class="muted" style="font-size:12px">${pl(lista.length,'interno','internos')}</span></div>
+       <div style="max-height:52vh;overflow:auto;border:1px solid var(--line);border-radius:8px"><table class="atd"><thead><tr><th style="width:1%">#</th><th>Nome</th><th class="nw">Localização</th><th class="nw">Último atendimento</th><th class="nw">Situação</th><th class="nw">Documentos na base</th></tr></thead><tbody>${lista.map(linha).join('')||'<tr><td colspan="6" class="muted">Nenhum interno neste filtro.</td></tr>'}</tbody></table></div>`;
+    document.getElementById('modal').innerHTML=`<div class="box" style="width:1080px;max-width:96vw"><h2>Atendimentos${L&&L.unidade?' · '+esc(L.unidade):''}</h2>
+      <p class="muted" style="margin:0 0 8px">${L?`Internos: listagem do SIAPEN de ${esc(L.emitida||'?')} (${esc(L.arquivo||'')}). `:''}${R?`Atendimentos: relatório do SAP de ${esc(per)} (${pl(R.n||0,'atendimento','atendimentos')}). `:L?'<b>Falta o relatório de atendimento do SAP.</b> ':''}Ordem de prioridade: sem atendimento no período, depois do atendimento mais antigo ao mais recente. Quem está no relatório e não está na listagem já não está na unidade e não aparece.</p>
+      ${L&&R?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin:0 0 10px">${chip('vermelho','Sem atendimento no período','Não aparece no relatório do SAP ('+per+')')}${chip('amarelo','Mais de '+P+' dias','Último atendimento há mais de '+P+' dias')}${chip('verde','Até '+P+' dias','Último atendimento nos últimos '+P+' dias')}${D.sem_rspe?`<div class="pend-info" style="cursor:default" title="Estes internos já aparecem na aba Geral; as demais abas se preenchem quando o RSPE e a ficha forem juntados">${pl(D.sem_rspe,'interno','internos')} sem RSPE na base · ${pl(D.sem_ficha,'interno','internos')} sem ficha</div>`:''}</div>`:''}
       ${corpo}
-      <div class="acts"><button class="btn" onclick="API().atendimentos_importar().then(x=>x&&ui.atendimentos(x))">Importar planilha do SAP…</button><button class="btn pri" onclick="ui.fecharModal()">Fechar</button></div></div>`;
+      <div class="acts"><button class="btn" onclick="ui.toast('Lendo os PDFs… o relatório do SAP pode levar até um minuto.');API().atendimentos_importar().then(x=>x&&ui.atendimentos(x))">Importar listagem e/ou relatório (PDF)…</button><button class="btn pri" onclick="ui.fecharModal()">Fechar</button></div></div>`;
     document.getElementById('modal').classList.add('on'); },
   async historico(id){ const h=await API().historico(id); if(!h||h.erro){ this.toast((h&&h.erro)||'Histórico indisponível.'); return; }
     const C=h.colunas||[]; const L=[['regime','Regime'],['pena_total','Pena total'],['pena_cumprida','Pena cumprida'],['remidos','Dias remidos (perdidos)'],['db','Data-base de progressão'],['prog','Previsão de progressão'],['liv','Previsão de livramento'],['termino','Término'],['falta','Faltas graves (12 meses)']];
@@ -2386,7 +2411,7 @@ const ui = {
   trabalho(t,f){ const p=document.getElementById('prog'); if(!t){ p.classList.remove('on'); return; } p.classList.add('on'); document.getElementById('progTxt').textContent=t; if(f!=null) document.getElementById('progFill').style.width=Math.round(100*f)+'%'; },
   importado(r){ document.getElementById('prog').classList.remove('on'); const pL=api('listar');
     const partes=[]; if(r.novos) partes.push(pl(r.novos,'novo','novos')); if(r.atualizados) partes.push(pl(r.atualizados,'atualizado','atualizados')+' por RSPE mais recente');
-    if(r.duplicados) partes.push(pl(r.duplicados,'duplicado ignorado','duplicados ignorados')); if(r.historico) partes.push(pl(r.historico,'mais antigo guardado no histórico','mais antigos guardados no histórico')); if(r.antigos-(r.historico||0)>0) partes.push(pl(r.antigos-(r.historico||0),'mais antigo ignorado','mais antigos ignorados')); if(r.erros) partes.push(pl(r.erros,'falha','falhas')); if(r.fichas) partes.push(pl(r.fichas,'ficha disciplinar','fichas disciplinares')); if(r.fichas_revinculadas) partes.push(pl(r.fichas_revinculadas,'ficha já importada revinculada','fichas já importadas revinculadas')); if(r.sem_data) partes.push(pl(r.sem_data,'RSPE sem data ignorado','RSPE sem data ignorados')); if(r.incompletos) partes.push(`${r.incompletos} com dados incompletos (ver Auditoria)`);
+    if(r.duplicados) partes.push(pl(r.duplicados,'duplicado ignorado','duplicados ignorados')); if(r.historico) partes.push(pl(r.historico,'mais antigo guardado no histórico','mais antigos guardados no histórico')); if(r.antigos-(r.historico||0)>0) partes.push(pl(r.antigos-(r.historico||0),'mais antigo ignorado','mais antigos ignorados')); if(r.erros) partes.push(pl(r.erros,'falha','falhas')); if(r.fichas) partes.push(pl(r.fichas,'ficha disciplinar','fichas disciplinares')); if(r.fichas_revinculadas) partes.push(pl(r.fichas_revinculadas,'ficha já importada revinculada','fichas já importadas revinculadas')); if(r.sem_data) partes.push(pl(r.sem_data,'RSPE sem data ignorado','RSPE sem data ignorados')); if(r.incompletos) partes.push(`${r.incompletos} com dados incompletos (ver Auditoria)`); if(r.atendimentos) partes.push(pl(r.atendimentos,'arquivo de atendimentos (aba Geral > Atendimentos)','arquivos de atendimentos (aba Geral > Atendimentos)'));
     if(!partes.length) partes.push('nada importado');
     // todo lote tem o registro da importação em PDF (arquivo a arquivo, com leitura parcial e causa provável)
     const mostrar=()=>{ this.modalAvisos(partes.join(' · '), (r.avisos&&r.avisos.length)?r.avisos:['Sem avisos: todos os arquivos foram lidos e importados.'], r.interrompida);

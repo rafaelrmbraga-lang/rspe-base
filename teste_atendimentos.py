@@ -1,11 +1,11 @@
-"""Atendimentos do NUSPEN: planilha do lote do SAP (extensão) lida e ligada aos assistidos da base, com a cor e a ordem de
-prioridade (nunca atendidos; mais de 90 dias; até 90 dias; sem informação). Dados fictícios."""
-import json
+"""Atendimentos por unidade: leitura da "Listagem Internos Ativos" (SIAPEN) e do "Relatório de Atendimento" (SAP) - com o nome
+comprido impresso em duas linhas sobrepostas, localização e entrada sem coluna fixa e o relatório lido em blocos -, cruzamento
+dos nomes (igual, sem preposição/apóstrofo, cortado; parecido só como aviso), cores de 90 dias, ordem de prioridade, internos
+sem RSPE e importação pelo "Importar PDFs". PDFs sintéticos com nomes fictícios."""
 import os
 import shutil
 import sys
 import tempfile
-import time
 import types
 from datetime import date
 
@@ -21,87 +21,139 @@ def ok(cond, msg):
         falhas.append(msg)
 
 
-CSV = ("﻿" + '"Prioridade";"Nome (lista)";"Nome no SAP";"Mãe";"ID SAP";"Último atendimento NUSPEN";"Processo(s)";"Atendimento com o nº";"Situação";"No SEEU"\r\n'
-       '"1";"FULANO NUNCA";"";"";"";"sem atendimento registrado";"";"";"não encontrado no SAP";""\r\n'
-       '"2";"CICLANO SEM NUSPEN";"CICLANO SEM NUSPEN";"MAE X";"5";"sem atendimento registrado";"";"";"sem atendimento do NUSPEN no SAP";""\r\n'
-       '"3";"BELTRANO ANTIGO";"BELTRANO ANTIGO";"MAE Y";"7";"10/01/2026";"0000001-11.2020.8.12.0001";"10/01/2026";"ok";""\r\n'
-       '"4";"BELTRANO ANTIGO";"BELTRANO ANTIGO";"MAE Y2";"8";"01/09/2026";"0000001-11.2020.8.12.0001";"01/09/2026";"ok";""\r\n'
-       '"5";"JOANA RECENTE";"JOANA RECENTE";"MAE Z";"9";"20/09/2026";"0000002-22.2021.8.12.0001 / 0000003-33.2022.8.12.0001";"20/09/2026";"ok";""\r\n'
-       '"6";"MARIA DUPLA";"MARIA DUPLA";"MAE A";"10";"05/05/2026";"";"";"sem nº de processo nos atendimentos do NUSPEN";""\r\n'
-       '"7";"MARIA DUPLA";"MARIA DUPLA (USAR ESSE)";"MAE B";"11";"06/06/2026";"";"";"sem nº de processo nos atendimentos do NUSPEN";""\r\n'
-       '"8";"PEDRO VELHO";"PEDRO VELHO";"MAE P";"12";"01/02/2025";"";"01/02/2025";"sem nº de processo nos atendimentos do NUSPEN";""\r\n'
-       '"9";"ERRO TELA";"";"";"";"";"";"";"a tela do SAP mudou";""\r\n')
-cads = ratd.ler_planilha(CSV.encode("utf-8"))
-ok(len(cads) == 9, "9 cadastros: %d" % len(cads))
-ok(cads[0]["nunca"] and cads[1]["nunca"] and not cads[8]["nunca"], "nunca atendido só com 'não encontrado'/'sem NUSPEN'")
-ok(cads[4]["processos"] == ["0000002-22.2021.8.12.0001", "0000003-33.2022.8.12.0001"], "dois nºs na mesma linha")
-# planilha da extensão 1.5 (sem "Último atendimento"): vale a data do atendimento
-antiga = ratd.ler_planilha('"Nome (lista)";"Nome no SAP";"Mãe";"ID SAP";"Processo(s)";"Data do atendimento";"Situação"\n"X Y";"X Y";"M";"1";"0000009-99.2019.8.12.0001";"15/09/2026";"ok"\n')
-ok(antiga[0]["ultimo"] == date(2026, 9, 15), "planilha antiga lida")
-try:
-    ratd.ler_planilha('"a";"b"\n"1";"2"\n')
-    ok(False, "planilha errada recusada")
-except ValueError:
-    pass
+def listagem_pdf(caminho, linhas):
+    from reportlab.pdfgen import canvas
+    c = canvas.Canvas(caminho, pagesize=(612, 792))
+    H = 792
+    for i, t in enumerate(["GOVERNO DO ESTADO DE MATO GROSSO DO SUL", "AGÊNCIA ESTADUAL DE ADMINISTRAÇÃO DO SISTEMA PENITENCIÁRIO - AGEPEN",
+                           "UNIDADE PENAL DE TESTE", "LISTAGEM INTERNOS ATIVOS"]):
+        c.setFont("Helvetica", 9)
+        c.drawString(150, H - 60 - 12 * i, t)
+    for x, t in ((89, "NOME"), (301, "LOCALIZAÇÃO"), (431, "ENTRADA"), (489, "PROCEDÊNCIA")):
+        c.drawString(x, H - 160, t)
+    y = H - 185
+    for n, (nome, extra, resto) in enumerate(linhas, 1):
+        c.setFont("Helvetica", 9)
+        c.drawString(70 if n < 10 else 65, y, str(n))
+        c.drawString(89, y, nome)
+        c.drawString(300, y, resto)
+        if extra:  # 2ª linha do nome impressa por cima da 1ª, um pouco deslocada (como no SIAPEN)
+            c.drawString(89, y - 0.12, extra)
+        y -= 11.5
+    c.drawString(60, 40, "Projeto SIAP, Impresso em 14/10/2026 - 11:05:38, Pag. 1/1")
+    c.save()
 
-HOJE = date(2026, 10, 14)
-regs = [{"id": "a", "nome": "Fulano Nunca", "proc": "1111111-11.2011.8.12.0001"},           # pelo nome: nunca atendido
-        {"id": "b", "nome": "Beltrano Antigo", "proc": "0000001-11.2020.8.12.0001"},       # pelo nº: o atendimento mais recente (01/09)
-        {"id": "c", "nome": "Joana Recente", "proc": "0000003-33.2022.8.12.0001"},         # 2º nº da linha
-        {"id": "d", "nome": "Maria Dupla", "proc": "2222222-22.2012.8.12.0001"},           # homônimos na planilha, sem nº: cinza
-        {"id": "e", "nome": "Pedro Velho", "proc": "3333333-33.2013.8.12.0001"},           # pelo nome, mais de 90 dias
-        {"id": "f", "nome": "Ciclano Sem Nuspen", "proc": "4444444-44.2014.8.12.0001"},    # nunca atendido
-        {"id": "g", "nome": "Fora Da Planilha", "proc": "5555555-55.2015.8.12.0001"},      # cinza
-        {"id": "h", "nome": "Erro Tela", "proc": ""}]                                       # não verificado: cinza
-L = ratd.classificar(regs, cads, HOJE)
-por = {x["id"]: x for x in L}
-ok(por["a"]["cor"] == "vermelho" and por["a"]["fonte"] == "nome", "nunca atendido (pelo nome): %s" % por["a"])
-ok(por["f"]["cor"] == "vermelho", "sem NUSPEN: vermelho")
-ok(por["b"]["cor"] == "verde" and por["b"]["ultimo"] == "01/09/2026" and por["b"]["dias"] == 43, "nº com dois cadastros: o mais recente: %s" % por["b"])
-ok(por["c"]["cor"] == "verde" and por["c"]["dias"] == 24, "2º nº da linha")
-ok(por["e"]["cor"] == "amarelo" and por["e"]["dias"] > 90, "mais de 90 dias: amarelo")
-ok(por["d"]["cor"] == "cinza" and "Homônimos" in por["d"]["txt"], "homônimos sem nº: cinza")
-ok(por["g"]["cor"] == "cinza" and por["g"]["txt"] == "Não está na planilha", "fora da planilha: cinza")
-ok(por["h"]["cor"] == "cinza" and "Não verificado" in por["h"]["txt"], "não verificado: cinza")
-ok([x["id"] for x in L] == ["f", "a", "e", "b", "c", "h", "g", "d"],
-   "ordem de prioridade: %s" % [x["id"] for x in L])
-# limite dos 90 dias: 90 = verde, 91 = amarelo
-c90 = [{"lista": "A B", "nome_sap": "A B", "mae": "", "sap_id": "1", "ultimo": date(2026, 7, 16), "processos": [], "situacao": "", "nunca": False}]
-ok(ratd.classificar([{"id": 1, "nome": "A B", "proc": ""}], c90, HOJE)[0]["cor"] == "verde", "90 dias: verde")
-c90[0]["ultimo"] = date(2026, 7, 15)
-ok(ratd.classificar([{"id": 1, "nome": "A B", "proc": ""}], c90, HOJE)[0]["cor"] == "amarelo", "91 dias: amarelo")
-ok(ratd.de_json(json.loads(json.dumps(ratd.para_json(cads))))[2]["ultimo"] == date(2026, 1, 10), "guarda e lê de novo")
 
-# APTO: a planilha que a extensão grava em Downloads\APTO entra sozinha (a mais recente, uma vez) e aparece em Atendimentos
-sys.modules.setdefault("webview", types.SimpleNamespace(SAVE_DIALOG=1, FOLDER_DIALOG=2, OPEN_DIALOG=0))
-import rspe_app as app  # noqa: E402
-tmp = tempfile.mkdtemp()
-antigo_up, antigo_atd = os.environ.get("USERPROFILE"), app.ATEND_SAP
-os.environ["USERPROFILE"] = tmp
-app.ATEND_SAP = os.path.join(tmp, "atendimentos_sap.json")
-try:
-    api = app.Api.__new__(app.Api)
-    avisos = []
-    api._js = lambda c: avisos.append(c)
-    api._modelos = [{"id": r["id"], "nome": r["nome"], "proc": r["proc"]} for r in regs]
-    ok(api._atend_auto() is False and api.atendimentos()["tem"] is False, "sem planilha: nada")
-    d = os.path.join(tmp, "Downloads", "APTO")
-    os.makedirs(d)
-    open(os.path.join(d, "SAP_processos_2026-10-13_1000.csv"), "w", encoding="utf-8").write('"Nome (lista)";"Último atendimento NUSPEN";"Situação"\n"X";"01/01/2026";"ok"\n')
-    time.sleep(0.05)
-    open(os.path.join(d, "SAP_processos_2026-10-14_1000.csv"), "w", encoding="utf-8").write(CSV)
-    ok(api._atend_auto() is True and api._atend_auto() is False, "importa a mais recente uma vez")
-    r = api.atendimentos()
-    ok(r["tem"] and r["arquivo"] == "SAP_processos_2026-10-14_1000.csv" and r["n_planilha"] == 9 and len(r["lista"]) == 8, "atendimentos da base: %s" % {k: r[k] for k in ("arquivo", "n_planilha")})
-    ok(r["cont"].get("vermelho") == 2 and r["cont"].get("amarelo") == 1 and r["cont"].get("verde") == 2, "contagem por cor: %s" % r["cont"])
-    ok(avisos and "Atendimentos" in avisos[-1], "aviso na tela")
-finally:
-    for k, v in (("USERPROFILE", antigo_up),):
-        if v is None:
-            os.environ.pop(k, None)
+def relatorio_pdf(caminho, regs):
+    from reportlab.pdfgen import canvas
+    c = canvas.Canvas(caminho, pagesize=(842, 595))
+    H = 595
+    c.setFont("Helvetica", 9)
+    c.drawString(708, H - 30, "Gerado em : 14/10/2026 10:57")
+    c.drawString(94, H - 48, "RELATÓRIO DE ATENDIMENTO")
+    c.drawString(94, H - 66, "PERÍODO: 01/01/2026 à 14/10/2026")
+    y = H - 105
+    for nome, cima, baixo, status, data in regs:
+        c.setFont("Helvetica", 8)
+        c.drawString(779, y + 4, "DATA")
+        for x, t in ((82, "UNIDADE"), (198, "ESTABELECIMENTO PENAL"), (376, "DEFENSOR(A)"), (548, "ASSISTIDO"), (664, "STATUS ATEND. PRESO")):
+            c.drawString(x, y, t)
+        c.drawString(762, y - 4, "ATENDIMENTO")
+        y -= 28
+        c.drawString(180, y + 5, "CENTRO PENAL")
+        c.drawString(25, y, "NÚCLEO DE TESTE")
+        c.drawString(320, y, "Defensora Teste")
+        if cima:
+            c.drawString(490, y + 5, cima)
+            c.drawString(490, y - 5, baixo)
         else:
-            os.environ[k] = v
-    app.ATEND_SAP = antigo_atd
+            c.drawString(490, y, nome)
+        c.drawString(659, y, status)
+        c.drawString(759, y, data)
+        c.drawString(800, y, "10:00")
+        c.drawString(180, y - 5, "UNIDADE DE TESTE")
+        y -= 30
+    c.drawString(60, 40, "TOTAL DE ATENDIMENTOS: %d" % len(regs))
+    c.drawString(380, 30, "Página 1 de 1")
+    c.save()
+
+
+tmp = tempfile.mkdtemp()
+try:
+    LP, RP = os.path.join(tmp, "ListagemdeInternosAtivos_TESTE.pdf"), os.path.join(tmp, "RELATORIO_ATENDIMENTO_TESTE.pdf")
+    listagem_pdf(LP, [("FULANO DE TAL", "", "A - UNICO - 001 01/02/2026 EPJFC"),
+                      ("BELTRANO SILVA", "", "B - UNICO - 002 03/03/2025 IPCG"),
+                      ("CICLANO COSTA E SOUZA", "", "C - UNICO - 003 04/04/2026 PTRAN"),
+                      ("JOAO PEDRO DA SILVA", "MOREIRA", "D - UNICO - 104 05/05/2026 EPJFC"),     # nome em duas linhas
+                      ("MARCOS PAULO GONCALVES DE", "", "D - UNICO - 105 06/06/2026 EPJFC"),     # cortado pelo SIAPEN
+                      ("ALEXANDRO TESTE SANTOS", "", "A - UNICO - 006 07/07/2026 EPJFC"),        # só parecido no SAP
+                      ("PEDRO SANT ANA", "", "A - UNICO - 007 08/08/2026 EPJFC"),
+                      ("SEM DOCUMENTO NENHUM", "", "A - UNICO - 008 09/09/2026 EPJFC")])
+    relatorio_pdf(RP, [("BELTRANO SILVA", "", "", "PRESENCIAL", "10/01/26"),
+                       ("BELTRANO SILVA", "", "", "TELEFONE", "02/03/26"),              # o último vale
+                       ("CICLANO COSTA SOUZA", "", "", "E-MAIL", "01/10/26"),
+                       ("", "JOAO PEDRO DA SILVA", "MOREIRA", "VÍDEO CONFERÊNCIA", "20/09/26"),
+                       ("MARCOS PAULO GONÇALVES DE LIMA", "", "", "ANÁLISE PROCESSUAL", "16/07/26"),
+                       ("LEANDRO TESTE SANTOS", "", "", "ANÁLISE PROCESSUAL", "11/10/26"),
+                       ("PEDRO SANT'ANA", "", "", "PRESENCIAL", "16/07/26"),
+                       ("JA SAIU DA UNIDADE", "", "", "PRESENCIAL", "12/10/26")])
+    ok(ratd.tipo_do_arquivo(LP) == "listagem" and ratd.tipo_do_arquivo(RP) == "relatorio", "tipos dos PDFs")
+    ok(ratd.tipo_pelo_nome("ListagemdeInternosAtivosR6_LOGIN_X.pdf") == "listagem" and ratd.tipo_pelo_nome("RELATORIO_ATENDIMENTO_SEM_FATO_1.pdf") == "relatorio"
+       and not ratd.tipo_pelo_nome("0001234-11.2020.8.12.0001.pdf"), "tipos pelo nome do arquivo")
+    L = ratd.ler_listagem_arquivo(LP)
+    ok(L["unidade"] == "UNIDADE PENAL DE TESTE" and L["emitida"] == "14/10/2026" and len(L["internos"]) == 8, "listagem: %s" % {k: L[k] for k in ("unidade", "emitida")})
+    ok(L["internos"][3]["nome"] == "JOAO PEDRO DA SILVA MOREIRA", "nome em duas linhas sobrepostas: %s" % L["internos"][3]["nome"])
+    ok(L["internos"][0]["local"] == "A - UNICO - 001" and L["internos"][0]["entrada"] == "01/02/2026" and L["internos"][0]["procedencia"] == "EPJFC",
+       "localização, entrada e procedência: %s" % L["internos"][0])
+    for proc in (1, 2):
+        R = ratd.ler_relatorio(RP, processos=proc)
+        ok(R["periodo"] == ["01/01/2026", "14/10/2026"] and R["n"] == 8 and len(R["pessoas"]) == 7, "relatório (%d processo(s)): %s" % (proc, R["n"]))
+    b = R["pessoas"][ratd.norm("BELTRANO SILVA")]
+    ok(b["n"] == 2 and b["ultimo"] == "2026-03-02" and b["tipo"] == "TELEFONE" and b["defensor"] == "Defensora Teste", "último atendimento: %s" % b)
+    ok(ratd.norm("JOAO PEDRO DA SILVA MOREIRA") in R["pessoas"], "nome do relatório em duas linhas")
+
+    HOJE = date(2026, 10, 14)
+    regs = [{"id": "p1", "nome": "Beltrano Silva", "proc": "0000001-11.2020.8.12.0001", "ficha_tem": True},
+            {"id": "p2", "nome": "Joao Pedro da Silva Moreira", "proc": "0000002-22.2020.8.12.0001", "ficha_tem": False},
+            {"id": "p3", "nome": "Alexandra Teste Santos", "proc": "0000003-33.2020.8.12.0001", "ficha_tem": False}]
+    X = ratd.cruzar(L, R, regs, [ratd.norm("CICLANO COSTA E SOUZA")], HOJE)
+    por = {x["nome"]: x for x in X}
+    ok(len(X) == 8 and "JA SAIU DA UNIDADE" not in por, "só quem está na listagem")
+    ok(por["FULANO DE TAL"]["cor"] == "vermelho" and por["SEM DOCUMENTO NENHUM"]["cor"] == "vermelho", "sem atendimento no período: vermelho")
+    ok(por["BELTRANO SILVA"]["cor"] == "amarelo" and por["BELTRANO SILVA"]["ultimo"] == "02/03/2026", "mais de 90 dias: amarelo")
+    ok(por["CICLANO COSTA E SOUZA"]["cor"] == "verde" and por["CICLANO COSTA E SOUZA"]["ficha"] and not por["CICLANO COSTA E SOUZA"]["rspe"],
+       "sem preposição: o mesmo nome; ficha sem RSPE achada")
+    ok(por["JOAO PEDRO DA SILVA MOREIRA"]["cor"] == "verde" and por["JOAO PEDRO DA SILVA MOREIRA"]["rspe"]
+       and por["JOAO PEDRO DA SILVA MOREIRA"]["proc"] == "0000002-22.2020.8.12.0001", "nome em duas linhas: atendimento e RSPE")
+    m = por["MARCOS PAULO GONCALVES DE"]
+    ok(m["cor"] == "verde" and m["conf"] == "nome cortado" and m["dias"] == 90 and m["nome_sap"].startswith("MARCOS"), "nome cortado pelo SIAPEN (90 dias = verde): %s" % m)
+    a = por["ALEXANDRO TESTE SANTOS"]
+    ok(a["cor"] == "vermelho" and a["conf"] == "parecido" and "LEANDRO" in a["obs"], "só parecido: continua vermelho, com o aviso: %s" % a)
+    ok(not a["rspe"], "RSPE não é ligado por nome só parecido")
+    ok(por["PEDRO SANT ANA"]["cor"] == "verde" and por["PEDRO SANT ANA"]["dias"] == 90, "apóstrofo; 90 dias = verde")
+    ok([x["cor"] for x in X][:2] == ["vermelho"] * 2 and [x["cor"] for x in X].index("amarelo") < [x["cor"] for x in X].index("verde"), "ordem de prioridade")
+    verdes = [x["dias"] for x in X if x["cor"] == "verde"]
+    ok(verdes == sorted(verdes, reverse=True), "dentro da cor, do mais antigo ao mais recente")
+    ok(ratd.cruzar(L, None, regs, [], HOJE)[0]["cor"] == "cinza", "sem relatório: cinza")
+    P = ratd.pendentes(L, regs)
+    ok(len(P) == 6 and "BELTRANO SILVA" not in [p["nome"] for p in P], "internos sem RSPE: %d" % len(P))
+
+    # APTO: "Importar PDFs" separa os dois PDFs para Atendimentos; a lista vem com os internos sem RSPE
+    sys.modules.setdefault("webview", types.SimpleNamespace(SAVE_DIALOG=1, FOLDER_DIALOG=2, OPEN_DIALOG=0))
+    import rspe_app as app  # noqa: E402
+    base = app.Base(os.path.join(tmp, "Teste.sqlite"))
+    api = app.Api.__new__(app.Api)
+    api.base = base
+    api._modelos = regs
+    av = api._atend_importar_arquivos([LP, RP, os.path.join(tmp, "outro.pdf")])
+    ok(len(av) == 3 and "Listagem" in av[0] and "Relatório" in av[1] and "não é a listagem" in av[2], "avisos da importação: %s" % av)
+    r = api.atendimentos()
+    ok(r["listagem"]["unidade"] == "UNIDADE PENAL DE TESTE" and r["relatorio"]["n"] == 8 and len(r["lista"]) == 8, "atendimentos da base")
+    ok(r["cont"].get("vermelho") == 3 and r["docs"]["sem_rspe"] == 6 and r["docs"]["sem_ficha"] == 7, "contagem: %s %s" % (r["cont"], r["docs"]))
+    pu = api._pendentes_unidade()
+    ok(pu["unidade"] == "UNIDADE PENAL DE TESTE" and pu["total"] == 8 and len(pu["lista"]) == 6, "pendentes para a aba Geral: %d" % len(pu["lista"]))
+    base.con.close()
+finally:
     shutil.rmtree(tmp, ignore_errors=True)
 
 if falhas:
@@ -109,4 +161,4 @@ if falhas:
     for f in falhas:
         print(" -", f)
     sys.exit(1)
-print("ok: atendimentos do NUSPEN (planilha do SAP, ligação pelo nº e pelo nome, cores 90 dias, ordem de prioridade, importação sozinha)")
+print("ok: atendimentos por unidade (listagem do SIAPEN e relatório do SAP, nomes sobrepostos e cortados, cores de 90 dias, prioridade, internos sem RSPE)")

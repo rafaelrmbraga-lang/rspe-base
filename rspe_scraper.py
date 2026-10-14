@@ -412,6 +412,8 @@ OUTROS_DOCUMENTOS = (
     (r"FICHA ?DISCIPLINAR", "ficha disciplinar"),
     (r"^(?:\S+ ){0,6}EXCELENTISSIM|^(?:\S+ ){0,6}EXMO\b|MERITISSIM", "petição"),
     (r"CERTIDAO DE (?:OBJETO|ANTECEDENTES)", "certidão"),
+    (r"LISTAGEM INTERNOS ATIVOS", "a listagem de internos do SIAPEN (importe pela aba Geral > Atendimentos)"),
+    (r"RELATORIO DE ATENDIMENTO", "o relatório de atendimento do SAP (importe pela aba Geral > Atendimentos)"),
 )
 
 

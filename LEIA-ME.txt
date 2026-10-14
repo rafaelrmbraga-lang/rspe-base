@@ -81,20 +81,30 @@ PASTA VIGIADA (menu da base > "Pasta vigiada…")
     foi lido; apagá-lo faz a pasta ser relida (os repetidos são ignorados).
 
 ATENDIMENTOS (aba Geral > botão "Atendimentos")
-  Último atendimento do NUSPEN de cada assistido da base, a partir da
-  planilha do lote do SAP (extensão do navegador > "Salvar planilha").
-  - A planilha gravada em Downloads\APTO (SAP_processos_<data>.csv) entra
-    sozinha com o APTO aberto (a mais recente); ou "Importar planilha do
-    SAP…" na janela. Vale para todas as bases (guardada em
-    atendimentos_sap.json, ao lado do .exe).
-  - Cada assistido é ligado pelo nº da execução; sem ele, pelo nome (só se a
-    planilha tiver um único cadastro com esse nome).
-  - Cores: vermelho = nunca atendido (não achado no SAP ou sem atendimento
-    do NUSPEN); amarelo = último atendimento há mais de 90 dias; verde =
-    até 90 dias; cinza = sem informação (fora da planilha, homônimos sem
-    como separar ou não verificado no SAP).
-  - Ordem de prioridade: nunca atendidos; depois do atendimento mais antigo
-    ao mais recente; sem informação no fim.
+  Situação de atendimento de quem está hoje na unidade, a partir de dois
+  PDFs, importados pelo botão da janela ou junto com os RSPE ("Importar
+  PDFs" / pasta vigiada, pelo nome do arquivo):
+   - "Listagem Internos Ativos" do SIAPEN: quem está na unidade (nome,
+     localização, entrada). É ela que decide quem aparece: quem está no
+     relatório do SAP e não está na listagem já saiu da unidade.
+   - "Relatório de Atendimento" do SAP: os atendimentos do período (o
+     último de cada um vale). O relatório grande é lido em paralelo (cerca
+     de meio minuto para 500 páginas).
+  - Cores: vermelho = sem atendimento no período do relatório; amarelo =
+    último atendimento há mais de 90 dias; verde = até 90 dias. Ordem de
+    prioridade: vermelhos; depois do atendimento mais antigo ao mais
+    recente. Clique na cor para filtrar.
+  - Nomes: iguais sem acento, maiúsculas, preposições e apóstrofo; nome
+    cortado pela listagem do SIAPEN também é ligado (aviso "nome cortado").
+    Nome só parecido (grafia diferente) não é ligado: o interno fica
+    vermelho, com "nome parecido no SAP: ... - confira".
+  - Coluna "Documentos na base": RSPE e ficha disciplinar já importados.
+  - Internos sem RSPE: aparecem no fim da aba Geral com "Falta juntar o
+    RSPE e a ficha disciplinar"; nas demais abas, um aviso conta quantos
+    faltam. Não é erro: as colunas e abas se preenchem quando o RSPE e a
+    ficha forem importados.
+  - A listagem e o relatório ficam guardados na base; importar de novo
+    substitui o anterior.
 
 EXTENSÃO DO NAVEGADOR (pasta extensao_seeu)
   "APTO - RSPE do SEEU, Ficha do SIAPEN e processos do SAP", para Chrome e
@@ -898,10 +908,14 @@ HISTÓRICO DE VERSÕES
   comportamento atual é o descrito nas seções acima.
 
 v7.9.5
-  - Aba Geral, botão "Atendimentos": último atendimento do NUSPEN de cada
-    assistido (planilha do lote do SAP, importada sozinha de
-    Downloads\APTO), em ordem de prioridade, com cores: nunca atendido em
-    vermelho, mais de 90 dias em amarelo, até 90 dias em verde.
+  - Aba Geral, botão "Atendimentos": internos da unidade (listagem do
+    SIAPEN) com o último atendimento (relatório de atendimento do SAP), em
+    ordem de prioridade, com cores (sem atendimento no período em vermelho,
+    mais de 90 dias em amarelo, até 90 dias em verde) e os documentos já
+    na base.
+  - Internos da listagem ainda sem RSPE aparecem na aba Geral com "Falta
+    juntar o RSPE e a ficha disciplinar" e são contados nas demais abas.
+  - Os dois PDFs também entram pelo "Importar PDFs" e pela pasta vigiada.
 
 v7.9.4
   - Extensão 1.4.0 ligada ao APTO sem configurar nada: o APTO cria
