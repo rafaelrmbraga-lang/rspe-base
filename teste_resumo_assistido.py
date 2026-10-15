@@ -41,7 +41,7 @@ try:
     ok(Q == {"Regime atual": "Fechado", "Pena total": "6 anos", "Dias tirados pelo trabalho e estudo": "30 dias"} and not pena, "quadro: %s %s" % (Q, pena))
     ok(d["barra"] == {"pct": 33, "cumprida": "2 anos", "falta": "4 anos", "fim": "10/10/2030"}, "pizza da pena: %s" % d["barra"])
     ok("condenacoes" not in d, "sem o que cumpre hoje (o atestado vai junto)")
-    ok(dirs[0] == "Progressão para o semiaberto: Fração do SEEU: 16%. Data-base: 01/01/2024. Entra no direito em 12/02/2027. Precisa ter bom ou ótimo comportamento.",
+    ok(dirs[0] == "Progressão para o semiaberto: Fração do SEEU: 16%. Data-base: 01/01/2024. Entra no direito em 12/02/2027. Precisa ter bom comportamento.",
        "progressão futura: %s" % dirs[0])
     ok(dirs[1] == "Livramento condicional: Fração do SEEU: 1/3. Data-base: 01/01/2024. Já tem o tempo desde 01/01/2025. A Defensoria vai analisar.", "livramento vencido: %s" % dirs[1])
     ok(dirs[2].startswith("Indulto 2025: Você pode ter direito.") and len(dirs) == 3, "indulto: só o decreto mais recente: %s" % dirs)
@@ -51,7 +51,7 @@ try:
     # falta grave: vale a data do RSPE. RSPE gerado depois da homologação traz a data refeita; RSPE anterior a ela ainda não (sem data).
     # O livramento segue com a data do RSPE (Súmulas 534 e 441 do STJ)
     dfg = rres.montar(dict(M, geracao="10/10/2026", dbase="20/05/2026", prog="17/12/2026"), {}, HOJE)
-    ok(itens(dfg, "direitos")[0] == "Progressão para o semiaberto: Fração do SEEU: 16%. Data-base: 20/05/2026. Entra no direito em 17/12/2026. Precisa ter bom ou ótimo comportamento.",
+    ok(itens(dfg, "direitos")[0] == "Progressão para o semiaberto: Fração do SEEU: 16%. Data-base: 20/05/2026. Entra no direito em 17/12/2026. Precisa ter bom comportamento.",
        "RSPE depois da falta: data do RSPE: %s" % itens(dfg, "direitos")[0])
     ok(dfg["pizzas"]["Progressão para o semiaberto"] == 70, "pizza da progressão (20/05 a 17/12, hoje 14/10): %s" % dfg["pizzas"])
     dant = rres.montar(dict(M, geracao="15/05/2026"), {}, HOJE)

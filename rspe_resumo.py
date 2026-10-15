@@ -186,7 +186,7 @@ def montar(m, pedidos, hoje=None, nome="", data_atend=None):
 
         if prox and not ped.get("prog"):
             direito("Progressão para o %s" % prox, m.get("frac_prog"), "prog", "prog_sit", "ped_prog", m.get("dbase"),
-                    "Precisa ter bom ou ótimo comportamento.", "refazer" if dfa and ger and ger < dfa else "")
+                    "Precisa ter bom comportamento.", "refazer" if dfa and ger and ger < dfa else "")
         if "livramento" not in r0 and not ped.get("liv"):
             dl = _data(m.get("liv"))
             direito("Livramento condicional", m.get("frac_liv"), "liv", "liv_sit", "ped_liv",
