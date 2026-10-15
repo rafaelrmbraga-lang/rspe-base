@@ -2678,6 +2678,7 @@ const ui = {
     (d.providencias||[]).forEach(p=>{ const el=document.getElementById('resP_'+p.id); if(el) p.marcado=el.checked; });
     const ou=document.getElementById('resOutro'); if(ou) d.outro=ou.value;
     const un=document.getElementById('resUn'); if(un) d.unidade=un.value;
+    const cn=document.getElementById('resCan'); if(cn) d.canhoto=cn.checked;
     const rt=document.getElementById('resRet'), ro=document.getElementById('resRetO'), da=document.getElementById('resData');
     if(rt) d.retorno=rt.value==='outro'?(ro.value||'').replace(/\D/g,''):rt.value; if(da) d.data_atend=da.value; },
   resumoProv(id,on){ this.resumoLer(); const d=this._res, pre={ped_prog:'Ir para o regime',ped_liv:'Livramento condicional',ped_ind:'Indulto',ped_com:'Comutação'}[id]; if(!pre) return;
@@ -2697,12 +2698,12 @@ const ui = {
       <p class="muted" style="margin:0 0 8px">Texto em linguagem simples (Pacto do CNJ), montado com os dados da base${d.proc?' (RSPE do processo '+esc(d.proc)+')':''}. Confira, corrija ou desmarque cada frase e marque as providências que a Defensoria vai adotar. Dado que o APTO ainda confere sai como "a Defensoria está conferindo".</p>
       ${d.barra?`<p style="margin:0 0 6px">Barra da pena: <b>${d.barra.pct}%</b> cumprida</p>`:''}
       <div id="resSecs" style="max-height:48vh;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:4px 12px 10px">${secs}</div>
-      <div class="res-can"><b>Canhoto do assistido (pedido do próximo atendimento)</b>
+      <div class="res-can"><label style="display:flex;gap:5px;align-items:center;cursor:pointer"><input type="checkbox" id="resCan" ${d.canhoto===false?'':'checked'}><b>Canhoto do assistido (pedido do próximo atendimento)</b></label>
         <span>Atendimento <input id="resData" value="${esc(d.data_atend||'')}" placeholder="dd/mm/aaaa"></span>
         <span>Retorno em <select id="resRet" onchange="document.getElementById('resRetO').style.display=this.value==='outro'?'':'none'"><option value="" ${!ret?'selected':''}>em branco (marcar à mão)</option>${['30','60','90'].map(n=>`<option value="${n}" ${ret===n?'selected':''}>${n} dias</option>`).join('')}<option value="outro" ${ret&&!['30','60','90'].includes(ret)?'selected':''}>outro</option></select>
         <input id="resRetO" value="${esc(ret&&!['30','60','90'].includes(ret)?ret:'')}" placeholder="dias" style="width:60px;${ret&&!['30','60','90'].includes(ret)?'':'display:none'}"></span>
         <span>Unidade <input id="resUn" value="${esc(d.unidade||'')}" placeholder="unidade prisional no atendimento" style="width:300px"></span>
-        <span class="muted">Leva também o nº do processo. Perto do prazo de retorno, o assistido entrega o canhoto ao setor psicossocial da unidade.</span></div>
+        <span class="muted">Leva também o nº do processo. Perto do prazo de retorno, o assistido entrega o canhoto ao setor psicossocial da unidade. Se o texto não couber em uma folha com o canhoto, ele sai sem o canhoto.</span></div>
       <div class="acts">${this._resAtd?`<button class="btn" onclick="ui.atendimentos(ui._atd)">Voltar aos atendimentos</button>`:''}<button class="btn pri" onclick="ui.resumoPdf()">Gerar PDF para imprimir</button><button class="btn" onclick="ui.fecharModal()">Fechar</button></div></div>`;
     document.getElementById('modal').classList.add('on'); },
   async relatorioUm(id){ const r=await API().relatorio_um(id); if(r && r.caminho){ this.toast('Relatório: '+r.caminho); } else if(r && r.erro){ this.toast(r.erro); } },

@@ -4114,7 +4114,8 @@ class Api:
         except Exception as e:
             return {"erro": "Falha ao gerar o resumo: %s" % e}
         _abrir(c)
-        return {"caminho": c, "msg": "Resumo salvo em " + c}
+        sem = d.get("canhoto", True) and not d.get("_canhoto_saiu")
+        return {"caminho": c, "msg": "Resumo salvo em " + c + (" (sem o canhoto: o texto não caberia em uma folha com ele)" if sem else "")}
 
 
 DEFENSORES = os.path.join(pasta_app(), "defensores.json")

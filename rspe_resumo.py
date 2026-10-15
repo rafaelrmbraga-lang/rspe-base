@@ -97,7 +97,8 @@ def montar(m, pedidos, hoje=None, nome="", data_atend=None):
     sec_pena, sec_dir, sec_aten = [], [], []
     barra = None
 
-    # 1) como está a pena
+    # 1) como está a pena: o quadro com os números (como no atestado de pena do SEEU, sem as frações) e as notas que pedem explicação
+    quadro, condenacoes = [], []
     if not m:
         sec_pena.append("A Defensoria ainda não tem o relatório atualizado da sua pena. Por isso, este resumo não traz as datas dos seus direitos.")
     else:
@@ -105,33 +106,34 @@ def montar(m, pedidos, hoje=None, nome="", data_atend=None):
         r0 = reg.split(" (")[0].strip().lower()
         if "livramento" in r0:
             sec_pena.append("Você está em livramento condicional: cumpre o resto da pena em liberdade, seguindo as regras do juiz.")
-        elif r0 in ("fechado", "semiaberto", "aberto"):
-            if "não iniciado" in reg.lower():
-                sec_pena.append("Seu regime é o %s. O cumprimento ainda não começou." % r0)
-            else:
-                sec_pena.append("Você está no regime %s." % r0)
+        elif r0 in ("fechado", "semiaberto", "aberto") and "não iniciado" in reg.lower():
+            sec_pena.append("O cumprimento da pena no regime %s ainda não começou." % r0)
         tot, cum, rem = m.get("pena_total"), m.get("pena_cumprida"), m.get("pena_rem")
-        if _dias(tot):
-            sec_pena.append("Sua pena total é de %s." % tot)
         ext = str(m.get("ext_sit") or "")
+        mr = re.match(r"\s*(\d+)\s*dias?", str(m.get("remidos") or ""))
+        rem_d = int(mr.group(1)) if mr else 0
+        dt = _data(m.get("termino"))
+        fim = "—"
+        if ext.startswith("Extinção cabível"):
+            fim = "pode já ter terminado"
+        elif dt and not ext.startswith(("Pena interrompida", "Pena suspensa", "Pena extinta")):
+            fim = dt.strftime("%d/%m/%Y") + (" (aproximada)" if str(m.get("termino")).strip().endswith("*") else "")
+        quadro = [["Regime atual", reg.split(" (")[0] or "—"], ["Pena total", tot if _dias(tot) else "—"],
+                  ["Dias tirados pelo trabalho e estudo", "%d dias" % rem_d if rem_d else "nenhum"],
+                  ["Já cumpriu", cum if _dias(cum) else "—"],
+                  ["Falta cumprir", rem if _dias(rem) and not ext.startswith("Extinção cabível") else "—"],
+                  ["Fim previsto da pena", fim]]
         if _dias(cum) and _dias(rem) is not None:
-            if _dias(rem) and not ext.startswith("Extinção cabível"):
-                sec_pena.append("Você já cumpriu %s. %s %s." % (cum, "Falta" if re.match(r"^1 \w+$", str(rem).strip()) else "Faltam", rem))
-            else:
-                sec_pena.append("Você já cumpriu %s." % cum)
             t_ = (_dias(cum) or 0) + (_dias(rem) or 0)
             if t_:
                 barra = {"pct": round(100.0 * (_dias(cum) or 0) / t_), "cumprida": cum, "falta": rem}
-        mr = re.match(r"\s*(\d+)\s*dias?", str(m.get("remidos") or ""))
-        if mr and int(mr.group(1)) > 0:
-            sec_pena.append("O trabalho e o estudo já tiraram %s dias da sua pena. Isso se chama remição." % mr.group(1))
-        if ext.startswith("Extinção cabível"):
-            if not (pedidos or {}).get("ext"):
-                sec_pena.append("Pelas contas, a sua pena pode já ter terminado. A Defensoria vai analisar e, se for o caso, pedir ao juiz o fim da pena.")
-        else:
-            dt = _data(m.get("termino"))
-            if dt and dt > hoje and not ext.startswith(("Pena interrompida", "Pena suspensa", "Pena extinta")):
-                sec_pena.append("Pela conta de hoje, a sua pena termina em %s." % _quando(dt, str(m.get("termino")).strip().endswith("*")))
+        if ext.startswith("Extinção cabível") and not (pedidos or {}).get("ext"):
+            sec_pena.append("Pelas contas, a sua pena pode já ter terminado. A Defensoria vai analisar e, se for o caso, pedir ao juiz o fim da pena.")
+        for c in m.get("crimes_det") or []:
+            if str(c.get("extinto") or "").upper().startswith("S"):
+                continue
+            condenacoes.append({"crime": c.get("nome_crime") or c.get("dispositivo") or "Crime", "pena": c.get("pena") or "",
+                                "proc": c.get("proc") or ""})
 
     # 2) próximos direitos
     if m:
@@ -143,9 +145,20 @@ def montar(m, pedidos, hoje=None, nome="", data_atend=None):
         # O livramento não é interrompido pela falta grave (Súmula 441): segue a data do RSPE.
         fa = str(m.get("falta") or "")
         dfa, ger = _data(fa) if fa.startswith("Sim") else None, _data(m.get("geracao"))
+        def pedido_rspe(chave):
+            """situação do último pedido registrado no RSPE: ("pendente"|"negado"|"", data)"""
+            v = str(m.get(chave) or "").lower()
+            return ("pendente" if v.startswith("pendente") else "negado" if v.startswith("negado") else ""), _data(v)
         if prox and not ped.get("prog"):
             sit, d, ap = _beneficio_data(m, "prog", "prog_sit")
-            if dfa and ger and ger < dfa and sit:
+            pr, dp = pedido_rspe("ped_prog")
+            if pr == "pendente" and sit:
+                sec_dir.append("Ir para o regime %s: já há pedido no processo%s, aguardando a decisão do juiz."
+                               % (prox, " desde " + extenso(dp) if dp else ""))
+            elif pr == "negado" and sit == "vencido":
+                sec_dir.append("Ir para o regime %s: você cumpriu o tempo necessário em %s, mas o juiz negou o pedido%s. A Defensoria vai "
+                               "analisar o caso." % (prox, _quando(d, ap), " em " + extenso(dp) if dp else ""))
+            elif dfa and ger and ger < dfa and sit:
                 sec_dir.append("Ir para o regime %s: por causa da falta grave, a data vai ser refeita no SEEU. A Defensoria vai pedir o relatório "
                                "atualizado e informar a nova data." % prox)
             elif sit == "futuro":
@@ -158,7 +171,13 @@ def montar(m, pedidos, hoje=None, nome="", data_atend=None):
         if "livramento" not in r0 and not ped.get("liv"):
             sit, d, ap = _beneficio_data(m, "liv", "liv_sit")
             lc = "Livramento condicional (terminar a pena em liberdade, cumprindo regras)"
-            if sit == "futuro" and dfa and (d - dfa).days < 365:
+            pr, dp = pedido_rspe("ped_liv")
+            if pr == "pendente" and sit:
+                sec_dir.append("%s: já há pedido no processo%s, aguardando a decisão do juiz." % (lc, " desde " + extenso(dp) if dp else ""))
+            elif pr == "negado" and sit == "vencido":
+                sec_dir.append("%s: você cumpriu o tempo necessário em %s, mas o juiz negou o pedido%s. A Defensoria vai analisar o caso."
+                               % (lc, _quando(d, ap), " em " + extenso(dp) if dp else ""))
+            elif sit == "futuro" and dfa and (d - dfa).days < 365:
                 # o livramento exige também 12 meses sem falta grave (CP, art. 83, III, "b"); a data da falta em si não está no RSPE
                 sec_dir.append("%s: o tempo necessário se completa em %s. A lei também exige 12 meses sem falta grave. A Defensoria vai "
                                "conferir essa data." % (lc, _quando(d, ap)))
@@ -201,7 +220,7 @@ def montar(m, pedidos, hoje=None, nome="", data_atend=None):
             sec_aten.append("Há uma falta disciplinar em apuração. Se for confirmada, pode atrasar os seus direitos.")
     sec_aten.append("Trabalhar e estudar diminui a pena. Manter o bom comportamento ajuda a conseguir os seus direitos.")
 
-    secoes = [{"id": "pena", "titulo": "Como está a sua pena", "itens": sec_pena}]
+    secoes = [{"id": "pena", "titulo": "Sua pena hoje", "itens": sec_pena}]
     if m:
         secoes.append({"id": "direitos", "titulo": "Seus próximos direitos", "itens": sec_dir})
     secoes += [{"id": "prov", "titulo": "O que a Defensoria vai fazer", "itens": []},
@@ -210,5 +229,6 @@ def montar(m, pedidos, hoje=None, nome="", data_atend=None):
     rodape = ("As datas deste resumo vêm do SEEU (relatório de %s). Elas podem mudar com decisões do juiz, faltas ou dias de trabalho e estudo." % ger
               if m else "")
     return {"nome": nome, "proc": (m or {}).get("proc") or "", "hoje": hoje.strftime("%d/%m/%Y"), "barra": barra,
+            "quadro": quadro, "condenacoes": condenacoes[:8], "vara": (m or {}).get("vara") or "",
             "secoes": secoes, "rodape": rodape, "data_atend": da.strftime("%d/%m/%Y"), "providencias": provs, "outro": outro}
 

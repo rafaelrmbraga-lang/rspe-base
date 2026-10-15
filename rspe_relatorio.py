@@ -3595,128 +3595,195 @@ def relatorio_saidas(d, caminho, nome_base):
 
 
 def relatorio_resumo_assistido(d, caminho):
-    """Resumo para o assistido (linguagem simples, CNJ), uma folha A4 para imprimir: em cima, a pena, os próximos direitos e o que a
-    Defensoria vai fazer; embaixo, depois da linha pontilhada, o canhoto do assistido (retorno em X dias): perto do prazo, ele entrega
-    o papel ao setor psicossocial da unidade para pedir atendimento. d = o que a janela do APTO mandou (o texto já conferido)."""
+    """Resumo para o assistido (linguagem simples, CNJ), uma folha A4 para imprimir, na ordem do atestado de pena do SEEU mas sem as
+    frações e os termos técnicos: logo da Defensoria; a pena hoje (quadro e barra); o que o assistido cumpre (crime, pena, processo); os
+    próximos direitos; o que a Defensoria vai fazer; os avisos. Embaixo, depois da linha pontilhada, o canhoto do assistido para pedir o
+    próximo atendimento, só se couber na folha (senão sai sem ele). d = o que a janela do APTO mandou (o texto já conferido)."""
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.units import mm
     from reportlab.lib import colors
     from reportlab.lib.styles import ParagraphStyle
     from reportlab.pdfgen import canvas as rl_canvas
     from reportlab.platypus import Paragraph, Spacer, Frame, KeepInFrame, Table, TableStyle
+    from reportlab.platypus import Image as RLImage
     import rspe_resumo as rres
     f = _fontes()
     C = colors.HexColor
     PW, PH = A4
-    ML = 18 * mm
+    ML = 16 * mm
     W = PW - 2 * ML
     s_cab = ParagraphStyle("rc", fontName=f["sb"], fontSize=9, leading=12, textColor=C(TX2))
     s_tit = ParagraphStyle("rt", fontName=f["serifb"], fontSize=24, leading=28, textColor=C(NAVY))
-    s_nome = ParagraphStyle("rn", fontName=f["b"], fontSize=15, leading=19, textColor=C(TX), spaceBefore=4)
-    s_sub = ParagraphStyle("rs", fontName=f["n"], fontSize=10.5, leading=14, textColor=C(TX2))
-    s_h = ParagraphStyle("rh", fontName=f["serifb"], fontSize=15, leading=19, textColor=C(NAVY), spaceBefore=10, spaceAfter=3)
-    s_p = ParagraphStyle("rp", fontName=f["n"], fontSize=12.5, leading=16.5, textColor=C(TX), leftIndent=13, bulletIndent=0, spaceAfter=4)
-    s_rod = ParagraphStyle("rr", fontName=f["n"], fontSize=9.5, leading=12.5, textColor=C(TX2), spaceBefore=10)
+    s_nome = ParagraphStyle("rn", fontName=f["b"], fontSize=15, leading=19, textColor=C(TX), spaceBefore=3)
+    s_sub = ParagraphStyle("rs", fontName=f["n"], fontSize=10, leading=13.5, textColor=C(TX2))
+    s_h = ParagraphStyle("rh", fontName=f["serifb"], fontSize=14, leading=18, textColor=C(NAVY), spaceBefore=7, spaceAfter=3)
+    s_p = ParagraphStyle("rp", fontName=f["n"], fontSize=11.5, leading=15, textColor=C(TX), leftIndent=12, bulletIndent=0, spaceAfter=3)
+    s_rot = ParagraphStyle("rq", fontName=f["n"], fontSize=8.8, leading=11, textColor=C(TX2))
+    s_val = ParagraphStyle("rv", fontName=f["b"], fontSize=12.5, leading=15.5, textColor=C(TX))
+    s_cel = ParagraphStyle("rcel", fontName=f["n"], fontSize=10.5, leading=13.5, textColor=C(TX))
+    s_celb = ParagraphStyle("rcelb", parent=s_cel, fontName=f["b"])
+    s_tcab = ParagraphStyle("rtc", fontName=f["b"], fontSize=8.8, leading=11, textColor=C(TX2))
+    s_rod = ParagraphStyle("rr", fontName=f["n"], fontSize=9, leading=12, textColor=C(TX2), spaceBefore=8)
     hoje = rres._data(d.get("hoje")) or datetime.now().date()
 
-    cab = [Paragraph("DEFENSORIA PÚBLICA DO ESTADO DE MATO GROSSO DO SUL", s_cab),
-           Paragraph("Resumo da sua pena", s_tit),
-           Paragraph(_t("Para: %s" % (d.get("nome") or "")), s_nome),
-           Paragraph(_t(" · ".join(x for x in ("Processo de execução nº %s" % d["proc"] if d.get("proc") else "",
-                                                 "entregue em %s" % rres.extenso(hoje)) if x)), s_sub)]
-    logo = _arquivo_programa("logo_defensoria.png")  # logo da Defensoria no canto do cabeçalho, se estiver junto do programa
+    # cabeçalho: texto à esquerda, logo da Defensoria à direita (sem o arquivo do logo, o nome vai em texto)
+    logo = _arquivo_programa("logo_defensoria.png")
+    cab = ([] if logo else [Paragraph("DEFENSORIA PÚBLICA DO ESTADO DE MATO GROSSO DO SUL", s_cab)]) + [
+        Paragraph("Resumo da sua pena", s_tit),
+        Paragraph(_t("Para: %s" % (d.get("nome") or "")), s_nome),
+        Paragraph(_t(" · ".join(x for x in ("Processo de execução nº %s" % d["proc"] if d.get("proc") else "",
+                                              "entregue em %s" % rres.extenso(hoje)) if x)), s_sub)]
     if logo:
-        from reportlab.platypus import Image as RLImage
-        lado = 30 * mm
-        t = Table([[cab, RLImage(logo, width=lado, height=lado)]], colWidths=[W - lado - 4 * mm, lado + 4 * mm])
+        from reportlab.lib.utils import ImageReader
+        iw, ih = ImageReader(logo).getSize()
+        lado = 32 * mm
+        t = Table([[cab, RLImage(logo, width=lado, height=lado * ih / float(iw))]], colWidths=[W - lado - 4 * mm, lado + 4 * mm])
         t.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "MIDDLE"), ("ALIGN", (1, 0), (1, 0), "RIGHT"),
                                ("LEFTPADDING", (0, 0), (-1, -1), 0), ("RIGHTPADDING", (0, 0), (-1, -1), 0),
                                ("TOPPADDING", (0, 0), (-1, -1), 0), ("BOTTOMPADDING", (0, 0), (-1, -1), 0)]))
         el = [t]
     else:
         el = list(cab)
+
+    def tabela(linhas, larg, cab_=None):
+        dados = ([[Paragraph(_t(x), s_tcab) for x in cab_]] if cab_ else []) + \
+                [[Paragraph(_t(x), s_celb if j == 0 else s_cel) for j, x in enumerate(l)] for l in linhas]
+        t = Table(dados, colWidths=larg, hAlign="LEFT")
+        est = [("VALIGN", (0, 0), (-1, -1), "TOP"), ("LINEBELOW", (0, 0), (-1, -1), 0.5, C(LINE)),
+               ("LEFTPADDING", (0, 0), (-1, -1), 5), ("RIGHTPADDING", (0, 0), (-1, -1), 5),
+               ("TOPPADDING", (0, 0), (-1, -1), 4), ("BOTTOMPADDING", (0, 0), (-1, -1), 4)]
+        if cab_:
+            est.append(("LINEBELOW", (0, 0), (-1, 0), 1, C(PRI)))
+        t.setStyle(TableStyle(est))
+        return t
+
+    secs = {s_.get("id"): s_ for s_ in d.get("secoes") or []}
+
+    def itens(sec):
+        return [x for x in (sec or {}).get("itens") or [] if str(x).strip()]
+
+    # 1) sua pena hoje: quadro com os números, barra e as notas
+    Q = d.get("quadro") or []
+    pena = secs.get("pena") or {"titulo": "Sua pena hoje"}
+    if Q or itens(pena):
+        el.append(Paragraph(_t(pena.get("titulo") or "Sua pena hoje"), s_h))
+    if Q:
+        cw = W / 3.0
+        cel = [[Paragraph(_t(r), s_rot), Paragraph(_t(v), s_val)] for r, v in Q]
+        linhas = [cel[k:k + 3] + [""] * (3 - len(cel[k:k + 3])) for k in range(0, len(cel), 3)]
+        t = Table(linhas, colWidths=[cw] * 3)
+        t.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP"), ("BACKGROUND", (0, 0), (-1, -1), C("#EEF3EF")),
+                               ("LINEAFTER", (0, 0), (-2, -1), 3, colors.white), ("LINEBELOW", (0, 0), (-1, -2), 3, colors.white),
+                               ("LEFTPADDING", (0, 0), (-1, -1), 7), ("TOPPADDING", (0, 0), (-1, -1), 5), ("BOTTOMPADDING", (0, 0), (-1, -1), 6)]))
+        el.append(t)
     B = d.get("barra")
     if B and B.get("pct") is not None:
         pct = max(0, min(100, int(B["pct"])))
         bw = W * pct / 100.0
-        t = Table([["", ""]], colWidths=[max(bw, 0.1), max(W - bw, 0.1)], rowHeights=[12], hAlign="LEFT")
+        t = Table([["", ""]], colWidths=[max(bw, 0.1), max(W - bw, 0.1)], rowHeights=[9], hAlign="LEFT")
         t.setStyle(TableStyle([("BACKGROUND", (0, 0), (0, 0), C(PRI)), ("BACKGROUND", (1, 0), (1, 0), C("#E3E8E4")),
                                ("LEFTPADDING", (0, 0), (-1, -1), 0), ("RIGHTPADDING", (0, 0), (-1, -1), 0)]))
-        el += [Spacer(1, 12), Paragraph("Você já cumpriu %d%% da pena." % pct,
-                                        ParagraphStyle("rb", parent=s_p, leftIndent=0, spaceAfter=3)), t]
-    for sec in d.get("secoes") or []:
-        itens = [x for x in sec.get("itens") or [] if str(x).strip()]
-        if not itens:
-            continue
-        el.append(Paragraph(_t(sec.get("titulo") or ""), s_h))
-        el += [Paragraph(_t(x), s_p, bulletText="•") for x in itens]
+        el += [Spacer(1, 6), Paragraph("Você já cumpriu %d%% da pena." % pct, ParagraphStyle("rb", parent=s_p, leftIndent=0, spaceAfter=2)), t,
+               Spacer(1, 3)]
+    el += [Paragraph(_t(x), s_p, bulletText="•") for x in itens(pena)]
+
+    # 2) o que você cumpre hoje: crime, pena e processo (sem artigos e frações)
+    CD = d.get("condenacoes") or []
+    if CD:
+        el.append(Paragraph("O que você cumpre hoje", s_h))
+        el.append(tabela([[c_.get("crime") or "", c_.get("pena") or "", c_.get("proc") or ""] for c_ in CD],
+                         [W * 0.48, W * 0.2, W * 0.32], ["Crime", "Pena", "Processo"]))
+
+    # 3) próximos direitos: "Direito: o que dizer" vira tabela de duas colunas
+    dirs = secs.get("direitos")
+    if itens(dirs):
+        el.append(Paragraph(_t(dirs.get("titulo") or "Seus próximos direitos"), s_h))
+        linhas = []
+        for x in itens(dirs):
+            a_, sep, b_ = str(x).partition(": ")
+            linhas.append([a_, b_[0].upper() + b_[1:] if sep and b_ else ""] if sep else [x, ""])
+        if all(l[1] for l in linhas):
+            el.append(tabela(linhas, [W * 0.32, W * 0.68]))
+        else:
+            el += [Paragraph(_t(x), s_p, bulletText="•") for x in itens(dirs)]
+
+    # 4) o que a Defensoria vai fazer e 5) avisos
+    for sid in ("prov", "atencao"):
+        sec = secs.get(sid)
+        if itens(sec):
+            el.append(Paragraph(_t(sec.get("titulo") or ""), s_h))
+            el += [Paragraph(_t(x), s_p, bulletText="•") for x in itens(sec)]
     if d.get("rodape"):
         el.append(Paragraph(_t(d["rodape"]), s_rod))
 
     c = rl_canvas.Canvas(caminho, pagesize=A4)
     c.setTitle("Resumo da pena - %s" % (d.get("nome") or ""))
-    corte = 70 * mm  # altura do canhoto, a partir da borda de baixo
-    topo = PH - 16 * mm
-    fr = Frame(ML, corte + 6 * mm, W, topo - corte - 6 * mm, leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0)
-    fr.addFromList([KeepInFrame(W, topo - corte - 6 * mm, el, mode="shrink")], c)
+    topo = PH - 14 * mm
+    base = 12 * mm
+    corte = 58 * mm  # altura do canhoto, a partir da borda de baixo
+    alt = sum(fl.wrap(W, 10000)[1] + fl.getSpaceBefore() + fl.getSpaceAfter() for fl in el)
+    com_canhoto = d.get("canhoto", True) and alt <= topo - corte - 6 * mm
+    d["_canhoto_saiu"] = bool(com_canhoto)
+    fundo = corte + 6 * mm if com_canhoto else base
+    Frame(ML, fundo, W, topo - fundo, leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0).addFromList(
+        [KeepInFrame(W, topo - fundo, el, mode="shrink")], c)
 
-    # linha pontilhada de corte
-    c.setStrokeColor(C("#8E958F"))
-    c.setLineWidth(0.8)
-    c.setDash(3, 3)
-    c.line(ML - 8 * mm, corte, PW - ML + 8 * mm, corte)
-    c.setDash()
-    c.setFillColor(C(TX2))
-    c.setFont(f["n"], 8)
-    c.drawRightString(PW - ML, corte + 2.5 * mm, "recorte aqui")
-    c.setFont(f["b"], 9.5)
-    c.setFillColor(C(NAVY))
-    c.drawString(ML, corte + 2.5 * mm, "Guarde a parte de baixo: ela serve para pedir o próximo atendimento.")
-
-    # canhoto do assistido: perto do prazo de retorno, ele entrega esta parte ao setor psicossocial para pedir atendimento
-    da = rres._data(d.get("data_atend"))
-    ret = str(d.get("retorno") or "").strip()
-    y = corte - 8 * mm
-    c.setFillColor(C(NAVY))
-    c.setFont(f["serifb"], 13)
-    c.drawString(ML, y, "Pedido de atendimento com a Defensoria Pública")
-    c.setFillColor(C(TX))
-    c.setFont(f["n"], 11)
-    y -= 8 * mm
-    c.drawString(ML, y, "Interno: %s" % (d.get("nome") or ""))
-    c.drawString(ML + W * 0.62, y, "Último atendimento: %s" % (da.strftime("%d/%m/%Y") if da else "____/____/________"))
-    y -= 7 * mm
-    c.drawString(ML, y, "Processo de execução nº %s" % (d.get("proc") or "______________________________"))
-    y -= 7 * mm
-    c.drawString(ML, y, "Unidade: %s" % (d.get("unidade") or "______________________________________________"))
-
-    def caixa(x, yy, marcada=False):
-        c.setStrokeColor(C(TX))
+    if com_canhoto:
+        # linha pontilhada de corte
+        c.setStrokeColor(C("#8E958F"))
         c.setLineWidth(0.8)
-        c.rect(x, yy - 0.6 * mm, 3.6 * mm, 3.6 * mm)
-        if marcada:
-            c.setFont(f["b"], 10)
-            c.drawString(x + 0.7 * mm, yy, "X")
-            c.setFont(f["n"], 11)
-        return x + 5.5 * mm
+        c.setDash(3, 3)
+        c.line(ML - 8 * mm, corte, PW - ML + 8 * mm, corte)
+        c.setDash()
+        c.setFillColor(C(TX2))
+        c.setFont(f["n"], 8)
+        c.drawRightString(PW - ML, corte + 2.5 * mm, "recorte aqui")
+        c.setFont(f["b"], 9.5)
+        c.setFillColor(C(NAVY))
+        c.drawString(ML, corte + 2.5 * mm, "Guarde a parte de baixo: ela serve para pedir o próximo atendimento.")
+        # canhoto do assistido: perto do prazo de retorno, ele entrega esta parte ao setor psicossocial para pedir atendimento
+        da = rres._data(d.get("data_atend"))
+        ret = str(d.get("retorno") or "").strip()
+        y = corte - 7.5 * mm
+        c.setFillColor(C(NAVY))
+        c.setFont(f["serifb"], 13)
+        c.drawString(ML, y, "Pedido de atendimento com a Defensoria Pública")
+        c.setFillColor(C(TX))
+        c.setFont(f["n"], 11)
+        y -= 7 * mm
+        c.drawString(ML, y, "Interno: %s" % (d.get("nome") or ""))
+        c.drawString(ML + W * 0.62, y, "Último atendimento: %s" % (da.strftime("%d/%m/%Y") if da else "____/____/________"))
+        y -= 6 * mm
+        c.drawString(ML, y, "Processo de execução nº %s" % (d.get("proc") or "______________________________"))
+        y -= 6 * mm
+        c.drawString(ML, y, "Unidade: %s" % (d.get("unidade") or "______________________________________________"))
 
-    y -= 8 * mm
-    c.drawString(ML, y, "Retorno em:")
-    x = ML + 24 * mm
-    for n in ("30", "60", "90"):
-        x = caixa(x, y, ret == n)
-        c.drawString(x, y, "%s dias" % n)
-        x += 17 * mm
-    x = caixa(x, y, bool(ret) and ret not in ("30", "60", "90"))
-    c.drawString(x, y, "%s dias" % (ret if ret and ret not in ("30", "60", "90") else "______"))
+        def caixa(x, yy, marcada=False):
+            c.setStrokeColor(C(TX))
+            c.setLineWidth(0.8)
+            c.rect(x, yy - 0.6 * mm, 3.6 * mm, 3.6 * mm)
+            if marcada:
+                c.setFont(f["b"], 10)
+                c.drawString(x + 0.7 * mm, yy, "X")
+                c.setFont(f["n"], 11)
+            return x + 5.5 * mm
 
-    y -= 11 * mm
-    c.setFillColor(C("#EEF3EF"))
-    c.roundRect(ML, y - 8 * mm, W, 14 * mm, 2 * mm, stroke=0, fill=1)
-    c.setFillColor(C(NAVY))
-    c.setFont(f["b"], 12)
-    c.drawString(ML + 4 * mm, y, "Perto do prazo de retorno, entregue este papel ao setor psicossocial da unidade")
-    c.drawString(ML + 4 * mm, y - 5.2 * mm, "para pedir atendimento com a Defensoria Pública.")
+        y -= 7 * mm
+        c.drawString(ML, y, "Retorno em:")
+        x = ML + 24 * mm
+        for n in ("30", "60", "90"):
+            x = caixa(x, y, ret == n)
+            c.drawString(x, y, "%s dias" % n)
+            x += 17 * mm
+        x = caixa(x, y, bool(ret) and ret not in ("30", "60", "90"))
+        c.drawString(x, y, "%s dias" % (ret if ret and ret not in ("30", "60", "90") else "______"))
+        y -= 9.5 * mm
+        c.setFillColor(C("#EEF3EF"))
+        c.roundRect(ML, y - 7.5 * mm, W, 12.5 * mm, 2 * mm, stroke=0, fill=1)
+        c.setFillColor(C(NAVY))
+        c.setFont(f["b"], 11.5)
+        c.drawString(ML + 4 * mm, y, "Perto do prazo de retorno, entregue este papel ao setor psicossocial da unidade")
+        c.drawString(ML + 4 * mm, y - 4.8 * mm, "para pedir atendimento com a Defensoria Pública.")
     c.showPage()
     c.save()
     return caminho
