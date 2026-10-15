@@ -2701,7 +2701,7 @@ const ui = {
       <div class="res-can"><label style="display:flex;gap:5px;align-items:center;cursor:pointer"><input type="checkbox" id="resCan" ${d.canhoto===false?'':'checked'}><b>Canhoto do assistido (pedido do próximo atendimento)</b></label>
         <span>Atendimento <input id="resData" value="${esc(d.data_atend||'')}" placeholder="dd/mm/aaaa"></span>
         <span>Unidade <input id="resUn" value="${esc(d.unidade||'')}" placeholder="unidade prisional no atendimento" style="width:300px"></span>
-        <span class="muted">Leva o nº do processo e o campo "Motivo" (orientação, transferência, cálculo de pena, saúde, saldo de salário, PADIC ou outro), que o assistido marca quando precisar de novo atendimento e entrega ao setor psicossocial da unidade. Se o texto não couber em uma folha com o canhoto, ele sai sem o canhoto.</span></div>
+        <span class="muted">Leva o nº do processo e o campo "Motivo" (orientação, transferência, cálculo de pena, saúde, trabalho/educação, PADIC ou outro), que o assistido marca quando precisar de novo atendimento e entrega ao setor psicossocial da unidade. Se o texto não couber em uma folha com o canhoto, ele sai sem o canhoto.</span></div>
       <div class="acts">${this._resAtd?`<button class="btn" onclick="ui.atendimentos(ui._atd)">Voltar aos atendimentos</button>`:''}<button class="btn pri" onclick="ui.resumoPdf()">Gerar PDF para imprimir</button><button class="btn" onclick="ui.fecharModal()">Fechar</button></div></div>`;
     document.getElementById('modal').classList.add('on'); },
   async relatorioUm(id){ const r=await API().relatorio_um(id); if(r && r.caminho){ this.toast('Relatório: '+r.caminho); } else if(r && r.erro){ this.toast(r.erro); } },

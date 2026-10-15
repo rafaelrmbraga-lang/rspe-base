@@ -3774,7 +3774,7 @@ def relatorio_resumo_assistido(d, caminho):
         c.drawString(ML, y, "Motivo:")
         c.setFont(f["n"], 11)
         x0 = ML + 17 * mm
-        for linha in (("Orientação", "Transferência", "Cálculo de pena", "Saúde"), ("Saldo de salário", "PADIC")):
+        for linha in (("Orientação", "Transferência", "Cálculo de pena", "Saúde"), ("Trabalho/educação", "PADIC")):
             x = x0
             for op in linha:
                 x = caixa(x, y)
