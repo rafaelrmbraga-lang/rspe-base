@@ -3697,28 +3697,46 @@ def relatorio_resumo_assistido(d, caminho):
         el.append(t)
     el += [Paragraph(_t(x), s_p, bulletText="•") for x in itens(pena)]
 
-    # 2) próximos direitos: pizza do tempo já cumprido para o direito, o nome e as frases, uma por linha
+    # 2) próximos benefícios: pizza do tempo já cumprido, o nome e o dia do benefício em destaque (muitos assistidos leem pouco ou não
+    # leem: o número grande é o que se reconhece); as demais frases ao lado; a fração e a data-base, menores, em "Outras informações"
     dirs = secs.get("direitos")
     PZ = d.get("pizzas") or {}
     if itens(dirs):
-        el.append(Paragraph(_t(dirs.get("titulo") or "Seus próximos direitos"), s_h))
+        el.append(Paragraph(_t(dirs.get("titulo") or "Seus próximos benefícios"), s_h))
         lado = 20 * mm
+        s_tdir = ParagraphStyle("rtd", parent=s_celb, fontSize=12, leading=15)
+        s_dlab = ParagraphStyle("rdl", parent=s_cel, fontSize=9.5, leading=12, textColor=C(TX2), spaceBefore=3)
+        s_data = ParagraphStyle("rdd", parent=s_celb, fontSize=17, leading=20, textColor=C(NAVY))
+        s_out = ParagraphStyle("rout", parent=s_cel, fontSize=9, leading=11.5, textColor=C(TX2), spaceBefore=3)
         linhas = []
         for x in itens(dirs):
             a_, sep, b_ = str(x).partition(": ")
             if not sep:
                 a_, b_ = "", x
             frases = [fr.strip() for fr in re.split(r"(?<=\.)\s+", b_) if fr.strip()]
-            txt = "<br/>".join(_t(fr) for fr in frases)
+            col_nome = [Paragraph(_t(a_), s_tdir)] if a_ else []
+            princ, outras = [], []
+            for fr in frases:
+                md = re.match(r"(Dia do benefício|Completa o tempo em|Já tem o tempo desde):?\s*(.+?)\.?$", fr)
+                if md and not any(isinstance(c_, Paragraph) and c_.style is s_data for c_ in col_nome):
+                    col_nome += [Paragraph(_t(md.group(1).rstrip(":") if md.group(1) == "Dia do benefício" else md.group(1)), s_dlab),
+                                 Paragraph(_t(md.group(2)), s_data)]
+                elif fr.startswith(("Fração do SEEU", "Data-base")):
+                    outras.append(fr)
+                else:
+                    princ.append(fr)
+            col_txt = [Paragraph("<br/>".join(_t(fr) for fr in princ), s_cel)] if princ else []
+            if outras:
+                col_txt.append(Paragraph("<b>Outras informações:</b> " + " ".join(_t(fr) for fr in outras), s_out))
             pz = PZ.get(a_)
-            linhas.append([pizza(pz, lado) if pz is not None else "", Paragraph(_t(a_), s_celb), Paragraph(txt, s_cel)])
-        t = Table(linhas, colWidths=[lado + 4 * mm, W * 0.3, W - lado - 4 * mm - W * 0.3], hAlign="LEFT")
+            linhas.append([pizza(pz, lado) if pz is not None else "", col_nome, col_txt])
+        t = Table(linhas, colWidths=[lado + 4 * mm, W * 0.34, W - lado - 4 * mm - W * 0.34], hAlign="LEFT")
         t.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "MIDDLE"), ("LINEBELOW", (0, 0), (-1, -1), 0.5, C(LINE)),
                                ("LEFTPADDING", (0, 0), (-1, -1), 4), ("RIGHTPADDING", (0, 0), (-1, -1), 4),
-                               ("TOPPADDING", (0, 0), (-1, -1), 4), ("BOTTOMPADDING", (0, 0), (-1, -1), 4)]))
+                               ("TOPPADDING", (0, 0), (-1, -1), 4), ("BOTTOMPADDING", (0, 0), (-1, -1), 5)]))
         el.append(t)
         if PZ:
-            el.append(Paragraph("O círculo mostra quanto do tempo para o direito você já cumpriu.", s_rod))
+            el.append(Paragraph("O círculo mostra quanto do tempo para o benefício você já cumpriu.", s_rod))
 
     # 3) o que a Defensoria vai fazer e 4) avisos
     for sid in ("prov", "atencao"):

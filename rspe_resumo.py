@@ -160,7 +160,8 @@ def montar(m, pedidos, hoje=None, nome="", data_atend=None):
             if not sit:
                 return
             pr, dp = pedido_rspe(ped_chave)
-            # primeiro a entrada no direito; depois a fração e a data-base do SEEU; por fim o que mais precisa
+            # primeiro o dia do benefício (a palavra que o assistido entende; "data-base" ele confunde com o dia do benefício, por isso
+            # a fração e a data-base vão no PDF em "Outras informações", menores); depois o que mais precisa
             fr = ("Fração do SEEU: %s." % fracao) if fracao else ""
             db = _data(base)
             if db and aviso_falta != "refazer":  # a data-base do RSPE anterior à falta grave já não vale
@@ -174,21 +175,21 @@ def montar(m, pedidos, hoje=None, nome="", data_atend=None):
             elif aviso_falta == "refazer":
                 txt = "A data vai ser refeita por causa da falta grave."
             elif sit == "futuro":
-                txt = ("Completa o tempo em %s." if doze else "Entra no direito em %s.") % _quando(d, ap)
+                txt = ("Completa o tempo em %s." if doze else "Dia do benefício: %s.") % _quando(d, ap)
                 extra = comportamento + doze
             elif sit == "vencido":
                 txt = "Já tem o tempo desde %s." % _quando(d, ap)
                 extra = (comportamento + doze) if doze else "A Defensoria vai analisar."
             else:
                 txt = "A Defensoria está conferindo a data."
-            sec_dir.append("%s: %s" % (titulo, " ".join(x.strip() for x in (txt, fr, extra) if x.strip())))
+            sec_dir.append("%s: %s" % (titulo, " ".join(x.strip() for x in (txt, extra, fr) if x.strip())))
             if d and sit in ("futuro", "vencido") and aviso_falta != "refazer":
                 p_ = 100 if sit == "vencido" else _pct(_data(base), d, hoje)
                 if p_ is not None:
                     pizzas[titulo] = p_
 
         if prox and not ped.get("prog"):
-            direito("Progressão para o %s" % prox, m.get("frac_prog"), "prog", "prog_sit", "ped_prog", m.get("dbase"),
+            direito(prox.capitalize(), m.get("frac_prog"), "prog", "prog_sit", "ped_prog", m.get("dbase"),
                     "Precisa ter bom comportamento.", "refazer" if dfa and ger and ger < dfa else "")
         if "livramento" not in r0 and not ped.get("liv"):
             dl = _data(m.get("liv"))
@@ -228,7 +229,7 @@ def montar(m, pedidos, hoje=None, nome="", data_atend=None):
 
     secoes = [{"id": "pena", "titulo": "Sua pena hoje", "itens": sec_pena}]
     if m:
-        secoes.append({"id": "direitos", "titulo": "Seus próximos direitos", "itens": sec_dir})
+        secoes.append({"id": "direitos", "titulo": "Seus próximos benefícios", "itens": sec_dir})
     secoes += [{"id": "prov", "titulo": "O que a Defensoria vai fazer", "itens": []},
                {"id": "atencao", "titulo": "Fique atento", "itens": sec_aten}]
     ger = (m or {}).get("geracao") or ""

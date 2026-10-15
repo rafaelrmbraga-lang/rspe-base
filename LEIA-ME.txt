@@ -132,9 +132,12 @@ para o assistido" na ficha)
   junto com o atestado de pena do SEEU: frases curtas, datas em dd/mm/aaaa
   e sem parênteses. "Sua pena hoje" (regime, pena total, dias tirados pelo
   trabalho e estudo e um gráfico de pizza com o que já cumpriu, o que falta
-  e o fim previsto); "Seus próximos direitos" (progressão e livramento com
-  a fração do SEEU, a data-base, a data em que entra no direito, o
-  comportamento exigido e uma pizza do tempo já cumprido para o direito;
+  e o fim previsto); "Seus próximos benefícios" (semiaberto ou aberto e
+  livramento: o dia do benefício em destaque, em número grande, porque
+  muitos assistidos leem pouco ou não leem; o comportamento exigido; uma
+  pizza do tempo já cumprido; e, menores, em "Outras informações", a
+  fração e a data-base do SEEU, que o assistido confunde com o dia do
+  benefício;
   pedido pendente ou negado no RSPE; indulto e comutação); o que a
   Defensoria vai fazer e os avisos (falta grave). Fluxo: registrar o atendimento >
   resumo para o assistido > relatório do SAP depois.
@@ -157,8 +160,8 @@ para o assistido" na ficha)
     na data do livramento ou hoje, sai "Completa o tempo em..." ou "Já tem
     o tempo desde...", com "Também precisa de 12 meses sem falta grave"
     (CP, art. 83, III, "b").
-  - Cada direito começa pela entrada no direito; depois vêm a fração e a
-    data-base do SEEU e o comportamento exigido.
+  - Cada benefício começa pelo dia do benefício; depois vêm o
+    comportamento exigido e, por último, a fração e a data-base do SEEU.
   - Antes do PDF, cada frase pode ser corrigida, desmarcada ou acrescentada.
   - Logo da Defensoria no canto do cabeçalho (vai dentro do APTO.exe; só o
     resumo para o assistido usa o logo).
@@ -979,6 +982,10 @@ v7.10.0
     curtas, datas dd/mm/aaaa, pizza da pena e de cada direito (fração do
     SEEU e data-base), logo da Defensoria e canhoto com o motivo do pedido
     de atendimento, só quando cabe na folha.
+  - Resumo: "Seus próximos benefícios", com o dia do benefício em número
+    grande e a fração e a data-base em "Outras informações"; livramento
+    com falta grave a menos de 12 meses avisa os 12 meses também quando o
+    tempo já foi cumprido.
   - Resumo para o assistido: folha A4 em linguagem simples (CNJ) com a
     pena, os próximos direitos, o que a Defensoria vai fazer (pelas
     providências marcadas) e o canhoto do assistido para pedir o próximo atendimento ao
