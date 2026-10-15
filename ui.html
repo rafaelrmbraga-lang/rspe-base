@@ -2680,21 +2680,34 @@ const ui = {
     const un=document.getElementById('resUn'); if(un) d.unidade=un.value;
     const cn=document.getElementById('resCan'); if(cn) d.canhoto=cn.checked;
     const da=document.getElementById('resData');
-    if(da) d.data_atend=da.value; },
+    if(da) d.data_atend=da.value;
+    // verso: versão escolhida e os períodos marcados
+    const vs=document.querySelector('input[name=resVs]:checked'); if(vs) d.verso_modo=vs.value;
+    document.querySelectorAll('#resVerso [data-v]').forEach(el=>{ const x=((d.verso||{}).itens||[]).find(y=>y.id===el.dataset.v); if(x) x._off=!el.checked; }); },
   resumoProv(id,on){ this.resumoLer(); const d=this._res, pre={ped_prog:'Progressão',acomp_prog:'',ped_liv:'Livramento condicional',ped_ind:'Indulto',ped_com:'Comutação'}[id]; if(!pre) return;
     const S=d.secoes.find(s=>s.id==='direitos'); if(!S) return; S._off=S._off||{}; S.itens.forEach((x,k)=>{ if([].concat(pre).some(p=>String(x).startsWith(p))) S._off[k]=on; }); this.resumoTela(); },
   resumoMais(s){ this.resumoLer(); this._res.secoes[s].itens.push(''); this.resumoTela(); },
   async resumoPdf(){ this.resumoLer(); const d=this._res;
     const fr=t=>{ t=String(t||'').trim(); if(!t) return ''; t=t[0].toUpperCase()+t.slice(1); return /[.!?]$/.test(t)?t:t+'.'; };
     const atd=(d.providencias||[]).filter(p=>p.marcado).map(p=>p.frase).concat(String(d.outro||'').split(/\n+/).map(fr)).filter(Boolean);
-    const out={...d, secoes:d.secoes.map(s=>({id:s.id, titulo:s.titulo, itens:s.id==='prov'?atd:s.itens.filter((x,k)=>!(s._off||{})[k]&&String(x).trim())}))};
+    const out={...d, secoes:d.secoes.map(s=>({id:s.id, titulo:s.titulo, itens:s.id==='prov'?atd:s.itens.filter((x,k)=>!(s._off||{})[k]&&String(x).trim())})),
+      verso:{...(d.verso||{}), itens:((d.verso||{}).itens||[]).filter(x=>!x._off)}};
     const r=await API().resumo_assistido_pdf(out); if(r) this.toast(r.erro||r.msg); },
+  // verso (2ª folha): trabalho em cima, estudo embaixo; com os dias descontados da pena ou só o histórico; cada período pode sair ou não
+  resumoVerso(){ const d=this._res, V=(d.verso||{}).itens||[];
+    if(!V.length) return `<div class="res-can"><span class="muted">Verso (2ª folha): não há trabalho nem estudo na ficha disciplinar deste assistido.</span></div>`;
+    const cor={ok:'#1F6B3A',pend:'#8A6100',curso:'#4A6A8A',conf:'#55595A'}, m=d.verso_modo||'';
+    const op=(v,t)=>`<label style="display:flex;gap:5px;align-items:center;cursor:pointer"><input type="radio" name="resVs" value="${v}" ${m===v?'checked':''}>${t}</label>`;
+    return `<div class="res-can" id="resVerso"><b>Verso (2ª folha): trabalho e estudo</b>${op('','Não imprimir')}${op('remicao','Com os dias descontados da pena')}${op('historico','Só o histórico de trabalho e estudo')}
+      <span class="muted">Marque os períodos que vão no verso (trabalho em cima, estudo embaixo) e imprima frente e verso.</span>
+      <div style="display:grid;grid-template-columns:auto minmax(160px,1fr) auto minmax(200px,1.4fr);gap:3px 10px;align-items:center;margin-top:6px;font-size:13px;width:100%">
+      ${V.map(x=>`<input type="checkbox" data-v="${esc(x.id)}" ${x._off?'':'checked'}><span><b>${x.grupo==='trabalho'?'Trabalho':'Estudo'} · ${esc(x.onde)}</b></span><span class="nw">${esc(x.per)}</span><span style="color:${cor[x.tipo]||'#55595A'}">${esc(x.sit)}${x.det?' · '+esc(x.det):''}</span>`).join('')}</div></div>`; },
   resumoTela(){ const d=this._res;
     const secs=d.secoes.map((s,i)=>s.id==='prov'?`<div class="res-sec"><h3>O que a Defensoria vai fazer <span class="muted" style="font-weight:400;font-size:12px">(marque as providências que serão adotadas; cada uma vira uma frase simples)</span></h3>
         <div class="res-provs">${(d.providencias||[]).map(p=>`<label title="${esc(p.frase)}"><input type="checkbox" id="resP_${p.id}" ${p.marcado?'checked':''} onchange="ui.resumoProv(${jsa(p.id)},this.checked)"> ${esc(p.rot)}</label>`).join('')}</div>
         <textarea id="resOutro" rows="2" placeholder="Outra providência que será adotada (escreva como vai sair no papel; uma frase por linha)" style="width:100%;margin-top:6px;font:inherit;font-size:13px;padding:5px 8px;border:1px solid var(--line2);border-radius:7px">${esc(d.outro||'')}</textarea></div>`
       :`<div class="res-sec"><h3>${esc(s.titulo)}</h3>${s.itens.map((x,k)=>`<label class="res-it" data-s="${i}" data-k="${k}"><input type="checkbox" ${(s._off||{})[k]?'':'checked'} title="Desmarque para não imprimir"><textarea rows="${Math.max(1,Math.ceil(String(x).length/95))}">${esc(x)}</textarea></label>`).join('')}<span class="mini" onclick="ui.resumoMais(${i})">+ frase</span></div>`).join('');
-    document.getElementById('modal').innerHTML=`<div class="box" style="width:860px;max-width:96vw"><h2>Resumo para o assistido · ${esc(d.nome)}</h2>
+    document.getElementById('modal').innerHTML=`<div class="box" style="width:min(1100px,96vw);max-width:96vw"><h2>Resumo para o assistido · ${esc(d.nome)}</h2>
       <p class="muted" style="margin:0 0 8px">Texto em linguagem simples (Pacto do CNJ), montado com os dados da base${d.proc?' (RSPE do processo '+esc(d.proc)+')':''}. Confira, corrija ou desmarque cada frase e marque as providências que a Defensoria vai adotar. Dado que o APTO ainda confere sai como "a Defensoria está conferindo".</p>
       ${d.barra?`<p style="margin:0 0 6px">Pena cumprida: <b>${d.barra.pct}%</b></p>`:''}
       <div id="resSecs" style="max-height:48vh;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:4px 12px 10px">${secs}</div>
@@ -2702,6 +2715,7 @@ const ui = {
         <span>Atendimento <input id="resData" value="${esc(d.data_atend||'')}" placeholder="dd/mm/aaaa"></span>
         <span>Unidade <input id="resUn" value="${esc(d.unidade||'')}" placeholder="unidade prisional no atendimento" style="width:300px"></span>
         <span class="muted">Leva o nº do processo e o campo "Motivo" (orientação, transferência, cálculo de pena, saúde, trabalho/educação, PADIC ou outro), que o assistido marca quando precisar de novo atendimento e entrega ao setor psicossocial da unidade. Se o texto não couber em uma folha com o canhoto, ele sai sem o canhoto.</span></div>
+      ${this.resumoVerso()}
       <div class="acts">${this._resAtd?`<button class="btn" onclick="ui.atendimentos(ui._atd)">Voltar aos atendimentos</button>`:''}<button class="btn pri" onclick="ui.resumoPdf()">Gerar PDF para imprimir</button><button class="btn" onclick="ui.fecharModal()">Fechar</button></div></div>`;
     document.getElementById('modal').classList.add('on'); },
   async relatorioUm(id){ const r=await API().relatorio_um(id); if(r && r.caminho){ this.toast('Relatório: '+r.caminho); } else if(r && r.erro){ this.toast(r.erro); } },

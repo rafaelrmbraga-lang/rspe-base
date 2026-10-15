@@ -112,6 +112,38 @@ try:
            and "recorte aqui" in txt and "Data do retorno" not in txt
            and "Unidade: UNIDADE PENAL DE TESTE" in txt and "Processo nº 0000001-00.2026.8.12.0001" in txt.split("recorte aqui")[-1]
            and "Atendido por" not in txt, "conteúdo do PDF")
+        # verso (2ª folha): trabalho em cima, estudo embaixo; com os dias descontados ou só o histórico (ficha fictícia)
+        import types as _ty
+        sys.modules.setdefault("webview", _ty.ModuleType("webview"))
+        import rspe_ficha as rf
+        fic = {"data_impressao": "07/10/2026", "eventos": [
+            {"data": "24.01.2025", "texto": "TRABALHO: Iniciou atividade laboral, no setor de trabalho Oficina Teste, conforme documento CI 1."},
+            {"data": "07.07.2026", "texto": "FOI EMITIDO ATESTADO DE TRABALHO Nº 185/TESTE, PERÍODO DE 24/01/2025 A 07/07/2026, 453 DIAS TRABALHADOS E 151 DIAS REMIDOS"}],
+            "exames": [{"exame": "ENEM 2024", "data": "11/04/2025"}], "leituras": [{"data": "17/06/2026", "meses": ["02/2026", "03/2026", "04/2026"]}]}
+        rr = {"_eventos": [{"data": "01/01/2024", "tipo": "PRISÃO/INÍCIO DE CUMPRIMENTO", "motivo": "PRISÃO"}], "_incidentes": []}
+        mv = dict(M, ficha_tem=True, ficha={"data_impressao": "07/10/2026"}, **rf.comparativo(rr, fic, date(2026, 10, 8)))
+        dv = rres.montar(mv, {}, HOJE)
+        V = dv["verso"]["itens"]
+        g = [(x["grupo"], x["tipo"], x["onde"]) for x in V]
+        ok(dv["verso_modo"] == "remicao" and g[0] == ("trabalho", "pend", "Oficina Teste") and ("trabalho", "curso", "Oficina Teste") in g
+           and ("estudo", "conf", "Prova do ENEM 2024") in g and ("estudo", "pend", "Leitura de livro") in g
+           and [x["grupo"] for x in V] == sorted([x["grupo"] for x in V], key=lambda s: s != "trabalho"), "verso: itens %s" % g)
+        ok(V[0]["sit"] == "Ainda não descontado" and "falta o juiz decidir" in V[0]["det"] and V[0]["dias_pend"] == 151, "verso: atestado não lançado %s" % V[0])
+        ok("Informações da ficha da unidade de 07/10/2026" in dv["verso_fontes"], "verso: fontes %s" % dv["verso_fontes"])
+        for modo, tem, nao in (("remicao", ["Seu trabalho, seu estudo e os dias descontados da pena", "Ainda não descontado", "Trabalho", "Estudo",
+                                            "Ainda pode ser descontado"], ["Seu histórico"]),
+                               ("historico", ["Seu histórico de trabalho e estudo", "Dias trabalhados", "453 dias", "3 livros"], ["descontado"])):
+            pv = os.path.join(tmp, "v_%s.pdf" % modo)
+            dd = dict(dv, verso_modo=modo)
+            rrel.relatorio_resumo_assistido(dd, pv)
+            with pdfplumber.open(pv) as p:
+                n2, t2 = len(p.pages), " ".join((p.pages[-1].extract_text() or "").split())
+            ok(n2 == 2 and dd["_verso_saiu"] and all(x in t2 for x in tem) and not any(x in t2 for x in nao),
+               "verso %s: %d páginas: %s" % (modo, n2, t2[:400]))
+        pv = os.path.join(tmp, "v_sem.pdf")
+        rrel.relatorio_resumo_assistido(dict(dv, verso_modo=""), pv)
+        with pdfplumber.open(pv) as p:
+            ok(len(p.pages) == 1, "sem verso: uma página")
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 except Exception as e:

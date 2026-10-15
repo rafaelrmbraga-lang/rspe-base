@@ -165,6 +165,14 @@ para o assistido" na ficha)
   - Cada benefício começa pelo dia do benefício; depois vêm o
     comportamento exigido e, por último, a fração e a data-base do SEEU.
   - Antes do PDF, cada frase pode ser corrigida, desmarcada ou acrescentada.
+  - Verso (2ª folha), com a ficha disciplinar importada: trabalho em cima e
+    estudo embaixo (escola, ENCCEJA/ENEM, leitura), a partir da conferência
+    da remição da aba Ficha. A janela escolhe "Não imprimir", "Com os dias
+    descontados da pena" (ícone e situação de cada período: já descontado,
+    ainda não descontado, trabalhando agora, a Defensoria vai conferir, e os
+    totais) ou "Só o histórico de trabalho e estudo" (onde, unidade, período
+    e dias ou horas), e cada período pode sair ou não. Imprimir frente e
+    verso.
   - Logo da Defensoria no canto do cabeçalho (vai dentro do APTO.exe; só o
     resumo para o assistido usa o logo).
   - O canhoto sai só se tudo couber em uma folha (a janela tem a opção de
@@ -990,6 +998,8 @@ v7.10.0
     curtas, datas dd/mm/aaaa, pizza da pena e de cada direito (fração do
     SEEU e data-base), logo da Defensoria e canhoto com o motivo do pedido
     de atendimento, só quando cabe na folha.
+  - Resumo para o assistido: verso opcional com o trabalho e o estudo, em
+    duas versões (com os dias descontados da pena ou só o histórico).
   - Aba Ficha, "Copiar fundamentação" da remição: novo texto "Da remição de
     pena e da divergência entre a ficha disciplinar (SIAPEN) e o RSPE":
     atestados sem remição (nº, data, período, dias), trabalho sem atestado,

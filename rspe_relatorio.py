@@ -3824,5 +3824,141 @@ def relatorio_resumo_assistido(d, caminho):
         c.drawString(ML + 4 * mm, y, "Quando precisar de novo atendimento, marque o motivo e entregue este papel ao setor")
         c.drawString(ML + 4 * mm, y - 4.8 * mm, "psicossocial da unidade.")
     c.showPage()
+    # verso (2ª folha): trabalho e estudo, com os dias descontados ("remicao") ou só o histórico; os itens já vêm escolhidos na janela
+    its = [x for x in (d.get("verso") or {}).get("itens") or [] if x.get("grupo") in ("trabalho", "estudo")]
+    modo = d.get("verso_modo") or ""
+    d["_verso_saiu"] = False
+    if modo in ("remicao", "historico") and its:
+        el2 = _verso_resumo(d, its, modo, f, W, ML, PH)
+        for _ in range(6):  # o verso costuma caber em uma folha; o que sobra passa para a seguinte
+            if not el2:
+                break
+            Frame(ML, 12 * mm, W, PH - 26 * mm, leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0).addFromList(el2, c)
+            c.showPage()
+        d["_verso_saiu"] = True
     c.save()
     return caminho
+
+
+def _verso_resumo(d, its, modo, f, W, ML, PH):
+    """Flowables do verso do resumo: trabalho em cima, estudo embaixo. "remicao": ícone e situação de cada período (já descontado,
+    ainda não descontado, trabalhando agora, a Defensoria vai conferir) e os totais; "historico": só onde, unidade, período e
+    dias ou horas, sem falar em remição. Linguagem simples, para quem lê pouco: ícone com cor e forma, frases curtas."""
+    from reportlab.lib.units import mm
+    from reportlab.lib import colors
+    from reportlab.lib.styles import ParagraphStyle
+    from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
+    from reportlab.platypus import Image as RLImage
+    from reportlab.graphics.shapes import Drawing, Circle, PolyLine, String, Line
+    C_ = colors.HexColor
+    COR = {"ok": "#1F6B3A", "pend": "#B8860B", "curso": "#4A6A8A", "conf": "#7A7F7B"}
+    TXC = {"ok": "#1F6B3A", "pend": "#8A6100", "curso": "#4A6A8A", "conf": "#55595A"}
+
+    def icone(tipo, lado=8.5 * mm):
+        dw = Drawing(lado, lado)
+        r = lado / 2 - 0.5
+        dw.add(Circle(lado / 2, lado / 2, r, fillColor=C_(COR[tipo]), strokeColor=None))
+        if tipo == "ok":
+            dw.add(PolyLine([lado * .27, lado * .52, lado * .43, lado * .35, lado * .74, lado * .68], strokeColor=colors.white, strokeWidth=2.4))
+        elif tipo == "pend":
+            dw.add(Line(lado / 2, lado * .66, lado / 2, lado * .40, strokeColor=colors.white, strokeWidth=2.6))
+            dw.add(Circle(lado / 2, lado * .27, 1.4, fillColor=colors.white, strokeColor=None))
+        elif tipo == "curso":
+            dw.add(Circle(lado / 2, lado / 2, r * .62, fillColor=None, strokeColor=colors.white, strokeWidth=1.6))
+            dw.add(Line(lado / 2, lado / 2, lado / 2, lado * .70, strokeColor=colors.white, strokeWidth=1.6))
+            dw.add(Line(lado / 2, lado / 2, lado * .66, lado / 2, strokeColor=colors.white, strokeWidth=1.6))
+        else:
+            dw.add(String(lado / 2, lado * .3, "?", fontName=f["b"], fontSize=lado * .55, fillColor=colors.white, textAnchor="middle"))
+        return dw
+
+    def st(nome, **k):
+        return ParagraphStyle(nome, **k)
+    s_tit = st("vt", fontName=f["serifb"], fontSize=19, leading=23, textColor=C_(NAVY))
+    s_nome = st("vn", fontName=f["b"], fontSize=12.5, leading=16, textColor=C_(TX))
+    s_sub = st("vs", fontName=f["n"], fontSize=9.5, leading=12, textColor=C_(TX2))
+    s_p = st("vp", fontName=f["n"], fontSize=11.5, leading=15.5, textColor=C_(TX), spaceAfter=3)
+    s_h = st("vh", fontName=f["serifb"], fontSize=14, leading=18, textColor=C_(NAVY), spaceBefore=8, spaceAfter=3)
+    s_cel = st("vc", fontName=f["n"], fontSize=10.5, leading=13.5, textColor=C_(TX))
+    s_celb = st("vcb", fontName=f["b"], fontSize=10.5, leading=13.5, textColor=C_(TX))
+    s_min = st("vm", fontName=f["n"], fontSize=8.8, leading=11, textColor=C_(TX2))
+    s_cab = st("vca", fontName=f["b"], fontSize=8.8, leading=11, textColor=C_(TX2))
+    s_rod = st("vr", fontName=f["n"], fontSize=9, leading=12, textColor=C_(TX2), spaceBefore=6)
+    rem = modo == "remicao"
+    tit = "Seu trabalho, seu estudo e os dias descontados da pena" if rem else "Seu histórico de trabalho e estudo"
+    cab = [Paragraph(_t(tit), s_tit), Paragraph(_t("Para: %s" % (d.get("nome") or "")), s_nome),
+           Paragraph(_t(" · ".join(x for x in ("Processo de execução nº %s" % d["proc"] if d.get("proc") else "", "verso do resumo da pena") if x)), s_sub)]
+    logo = _arquivo_programa("logo_defensoria.png")
+    if logo:
+        from reportlab.lib.utils import ImageReader
+        iw, ih = ImageReader(logo).getSize()
+        lado = 26 * mm
+        tc = Table([[cab, RLImage(logo, width=lado, height=lado * ih / float(iw))]], colWidths=[W - lado - 4 * mm, lado + 4 * mm])
+        tc.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "MIDDLE"), ("ALIGN", (1, 0), (1, 0), "RIGHT"),
+                                ("LEFTPADDING", (0, 0), (-1, -1), 0), ("RIGHTPADDING", (0, 0), (-1, -1), 0)]))
+        el = [tc]
+    else:
+        el = list(cab)
+    el.append(Spacer(1, 3 * mm))
+    if rem:
+        el.append(Paragraph("A cada <b>3 dias de trabalho</b>, ou <b>12 horas de estudo</b>, <b>1 dia é descontado da sua pena</b>. Provas como o "
+                            "ENCCEJA e o ENEM e a leitura de livros também descontam dias. Para isso, a unidade manda o papel ao juiz e o juiz "
+                            "precisa aceitar.", s_p))
+        usados = [t for t in ("ok", "pend", "curso", "conf") if any(x.get("tipo") == t for x in its)]
+        rot = {"ok": "Já descontado", "pend": "Ainda não descontado", "curso": "Trabalhando agora", "conf": "A Defensoria vai conferir"}
+        row = []
+        for tp in usados:
+            row += [icone(tp, 5.5 * mm), Paragraph(rot[tp], s_cel)]
+        lg = Table([row], colWidths=[7.5 * mm, W / max(len(usados), 1) - 7.5 * mm] * len(usados))
+        lg.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "MIDDLE"), ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                                ("BACKGROUND", (0, 0), (-1, -1), C_("#F3F6F4")), ("TOPPADDING", (0, 0), (-1, -1), 4), ("BOTTOMPADDING", (0, 0), (-1, -1), 4)]))
+        el.append(lg)
+    else:
+        el.append(Paragraph("Estes são os trabalhos e estudos registrados na sua ficha da unidade.", s_p))
+
+    def estilo(tb):
+        tb.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "MIDDLE"), ("LINEBELOW", (0, 0), (-1, -1), 0.5, C_(LINE)),
+                                ("LINEBELOW", (0, 0), (-1, 0), 1, C_(PRI)), ("TOPPADDING", (0, 0), (-1, -1), 4), ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+                                ("LEFTPADDING", (0, 0), (-1, -1), 3)]))
+        return tb
+
+    for grupo, titulo, rot_onde, rot_qtd in (("trabalho", "Trabalho", "Onde trabalhou", "Dias trabalhados"),
+                                              ("estudo", "Estudo", "O que estudou", "Horas ou livros")):
+        lst = [x for x in its if x.get("grupo") == grupo]
+        if not lst:
+            continue
+        el.append(Paragraph(titulo, s_h))
+        if rem:
+            rows = [[Paragraph("", s_cab), Paragraph(rot_onde, s_cab), Paragraph("Período", s_cab), Paragraph("Situação", s_cab)]]
+            for x in lst:
+                tp = x.get("tipo") if x.get("tipo") in COR else "conf"
+                rows.append([icone(tp), [Paragraph(_t(x.get("onde") or ""), s_celb), Paragraph(_t(x.get("un") or ""), s_min)],
+                             Paragraph(_t(x.get("per") or ""), s_cel),
+                             [Paragraph("<b>%s</b>" % _t(x.get("sit") or ""), st("vx%s" % tp, fontName=f["n"], fontSize=10.5, leading=13.5, textColor=C_(TXC[tp]))),
+                              Paragraph(_t(x.get("det") or ""), s_min)]])
+            el.append(estilo(Table(rows, colWidths=[11 * mm, W * 0.31, W * 0.28, W - 11 * mm - W * 0.59], repeatRows=1)))
+        else:
+            rows = [[Paragraph(rot_onde, s_cab), Paragraph("Unidade", s_cab), Paragraph("Período", s_cab), Paragraph(rot_qtd, s_cab)]]
+            for x in lst:
+                rows.append([Paragraph(_t(x.get("onde") or ""), s_celb), Paragraph(_t(x.get("un") or ""), s_cel), Paragraph(_t(x.get("per") or ""), s_cel),
+                             Paragraph(_t(x.get("qtd") or "—"), s_cel)])
+            el.append(estilo(Table(rows, colWidths=[W * 0.24, W * 0.34, W * 0.26, W * 0.16], repeatRows=1)))
+    if rem:
+        ok = int(round(sum(float(x.get("dias_ok") or 0) for x in its)))
+        pend = int(round(sum(float(x.get("dias_pend") or 0) for x in its)))
+        cel = []
+        if ok:
+            cel.append([Paragraph("Já descontado da pena nesta folha", s_min),
+                        Paragraph(_dias(ok) + " dias", st("vtok", fontName=f["serifb"], fontSize=19, leading=23, textColor=C_(COR["ok"])))])
+        if pend:
+            cel.append([Paragraph("Ainda pode ser descontado", s_min),
+                        Paragraph("cerca de " + _dias(pend) + " dias", st("vtpe", fontName=f["serifb"], fontSize=19, leading=23, textColor=C_(TXC["pend"])))])
+        if cel:
+            tot = Table([cel], colWidths=[W / len(cel)] * len(cel))
+            tot.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, -1), C_("#F3F6F4")), ("LINEAFTER", (0, 0), (-2, -1), 3, colors.white),
+                                     ("TOPPADDING", (0, 0), (-1, -1), 6), ("BOTTOMPADDING", (0, 0), (-1, -1), 6), ("LEFTPADDING", (0, 0), (-1, -1), 10)]))
+            el += [Spacer(1, 4 * mm), tot]
+        el.append(Paragraph("O número exato depende do papel da unidade e da decisão do juiz. O total de dias descontados da primeira folha vem "
+                            "do SEEU e pode incluir dias de outra unidade.", s_rod))
+    if d.get("verso_fontes"):
+        el.append(Paragraph(_t(d["verso_fontes"]), s_rod))
+    return el

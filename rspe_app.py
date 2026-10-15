@@ -4115,7 +4115,8 @@ class Api:
             return {"erro": "Falha ao gerar o resumo: %s" % e}
         _abrir(c)
         sem = d.get("canhoto", True) and not d.get("_canhoto_saiu")
-        return {"caminho": c, "msg": "Resumo salvo em " + c + (" (sem o canhoto: o texto não caberia em uma folha com ele)" if sem else "")}
+        return {"caminho": c, "msg": "Resumo salvo em " + c + (" (sem o canhoto: o texto não caberia em uma folha com ele)" if sem else "")
+                + (" · com o verso: imprima frente e verso" if d.get("_verso_saiu") else "")}
 
 
 DEFENSORES = os.path.join(pasta_app(), "defensores.json")
