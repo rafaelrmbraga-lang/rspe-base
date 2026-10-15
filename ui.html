@@ -153,7 +153,7 @@ tr.pend-sep{scroll-margin-top:44px}tr.pend-sep td{background:var(--card);padding
 .falta-doc{display:inline-block;padding:2px 9px;border-radius:999px;background:#F1F2EF;border:1px dashed #B9BFB8;color:var(--tx2);font-size:12px}
 .pend-info{cursor:pointer;color:var(--tx2);font-size:12.5px;padding:5px 10px;border:1px dashed #B9BFB8;border-radius:8px;background:#F8F9F7}.pend-info:hover{border-color:var(--pri);color:var(--pri)}
 table.atd{width:100%;border-collapse:collapse;font-size:13px}table.atd th{text-align:left;color:var(--tx3);font-size:11px;text-transform:uppercase;padding:7px 10px;border-bottom:1px solid var(--line);position:sticky;top:0;background:#fff;cursor:default}
-table.atd td{padding:6px 10px;border-bottom:1px solid #ECEEEB;cursor:default;font-weight:400}table.atd tr:hover td{background:#F7F9F7}
+table.atd td{padding:6px 10px;border-bottom:1px solid #ECEEEB;cursor:default;font-weight:400;overflow-wrap:normal;word-break:normal}table.atd td.atd-nome{min-width:200px}table.atd tr:hover td{background:#F7F9F7}
 table.hist{width:100%;border-collapse:collapse;margin-top:10px;font-size:13px;table-layout:fixed}table.hist td{overflow-wrap:anywhere}
 table.hist th{text-align:left;color:var(--tx3);font-size:11px;text-transform:uppercase;padding:6px 8px;border-bottom:1px solid var(--line);position:static;background:none;cursor:default;vertical-align:bottom}
 table.hist td{padding:7px 8px;border-bottom:1px solid #ECEEEB;vertical-align:top;cursor:default;font-weight:400}table.hist td:first-child{color:var(--tx2);font-weight:600;white-space:nowrap}
@@ -170,7 +170,7 @@ table{width:100%;border-collapse:separate;border-spacing:0;table-layout:auto}
 thead th{position:sticky;top:0;z-index:2;background:#F8F9F7;color:var(--tx2);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.3px;text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);cursor:pointer;user-select:none;white-space:normal;line-height:1.25;vertical-align:bottom}
 thead th:first-child{padding-left:14px}thead.exp th:first-child{padding-left:32px}thead th:hover{color:var(--tx)}
 thead th .arr{opacity:.5;margin-left:4px;font-size:10px}
-tbody td{padding:9px 12px;border-bottom:1px solid #F0F2F5;white-space:normal;overflow-wrap:anywhere;vertical-align:middle;line-height:1.35;font-size:13px}
+tbody td{padding:9px 12px;border-bottom:1px solid #F0F2F5;white-space:normal;overflow-wrap:break-word;vertical-align:middle;line-height:1.35;font-size:13px}
 tbody td:first-child{padding-left:14px;font-weight:600}td.nw,th.nw{white-space:nowrap;font-variant-numeric:tabular-nums}td.nw{max-width:320px;overflow:hidden;text-overflow:ellipsis}td.nw .pill{white-space:nowrap}td.pl .pill{overflow-wrap:normal;word-break:keep-all}
 tbody tr{cursor:pointer;transition:background .1s}tbody tr:hover td{background:#F4F6F3}
 /* linhas brancas: a cor fica só nas palavras (pílulas) e na barrinha lateral */
@@ -1768,7 +1768,7 @@ const ui = {
     const doc=(ok,txt)=>ok?`<span class="muted">${txt} ✓</span>`:`<span class="falta-doc" style="font-size:11px;padding:1px 7px">falta ${txt}</span>`;
     const hoje=this.dados.hoje||'';
     const linha=(x,i)=>`<tr title="${esc([x.defensor?'Defensor(a): '+x.defensor:'',x.n_atend?pl(x.n_atend,'atendimento','atendimentos')+' no período':'',x.conf==='nome cortado'?'Nome no SAP: '+x.nome_sap:'',x.obs].filter(Boolean).join(' · '))}">
-      <td class="muted nw">${i+1}</td><td>${esc(x.nome)}${x.homonimo?' <span class="falta-doc" style="font-size:11px;padding:1px 7px">homônimo na unidade</span>':''}${x.conf==='parecido'?`<div class="muted" style="font-size:11.5px">≈ ${esc(x.obs)}</div>`:''}${x.manual?`<div class="muted" style="font-size:11.5px">Registrado no APTO em ${esc(x.manual.registrado_em)}${x.manual.obs?': '+esc(x.manual.obs):''} · <span class="mini" onclick="ui.atdDesfazer(${x.manual.id})">desfazer</span></div>`:''}</td>
+      <td class="muted nw">${i+1}</td><td class="atd-nome">${esc(x.nome)}${x.homonimo?' <span class="falta-doc" style="font-size:11px;padding:1px 7px">homônimo na unidade</span>':''}${x.conf==='parecido'?`<div class="muted" style="font-size:11.5px">≈ ${esc(x.obs)}</div>`:''}${x.manual?`<div class="muted" style="font-size:11.5px">Registrado no APTO em ${esc(x.manual.registrado_em)}${x.manual.obs?': '+esc(x.manual.obs):''} · <span class="mini" onclick="ui.atdDesfazer(${x.manual.id})">desfazer</span></div>`:''}</td>
       <td class="nw muted">${esc(x.local||'')}</td>
       <td class="nw">${x.ultimo?esc(x.ultimo)+' <span class="muted">('+pl(x.dias,'dia','dias')+(x.tipo?' · '+esc(x.tipo.toLowerCase()):'')+')</span>':'<span class="muted">-</span>'}</td>
       <td class="nw"><span class="pill ${x.cor}"><i style="display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--${DOT[x.cor]||'c'}-dot);align-self:center"></i>${esc(x.txt)}</span></td>
@@ -1791,7 +1791,7 @@ const ui = {
     const corpo=!L?`<div class="empty" style="padding:22px 4px"><div><b>Importe a listagem de internos ativos da unidade (SIAPEN)</b>É ela que diz quem está hoje na unidade. Com o relatório de atendimento do SAP, cada interno recebe a data do último atendimento. Os dois PDFs podem ir juntos, aqui ou pelo "Importar PDFs".</div></div>`
       :`${saidas}${perBar}<div style="display:flex;gap:8px;align-items:center;margin:0 0 8px"><input type="text" placeholder="Buscar nome" value="${esc(this.atdQ||'')}" oninput="ui.atdQ=this.value;clearTimeout(ui._atdT);ui._atdT=setTimeout(()=>{ui.atendimentos(ui._atd);const e=document.getElementById('atdQ');if(e){e.focus();e.setSelectionRange(e.value.length,e.value.length)}},250)" id="atdQ" style="flex:1;padding:6px 9px;border:1px solid var(--line2);border-radius:8px"><span class="muted" style="font-size:12px">${pl(lista.length,'interno','internos')}</span></div>
        <div style="max-height:46vh;overflow:auto;border:1px solid var(--line);border-radius:8px"><table class="atd"><thead><tr><th style="width:1%">#</th><th>Nome</th><th class="nw">Localização</th><th class="nw">Último atendimento</th><th class="nw">Situação</th><th class="nw">Documentos na base</th><th></th></tr></thead><tbody>${lista.map(linha).join('')||'<tr><td colspan="7" class="muted">Nenhum interno neste filtro.</td></tr>'}</tbody></table></div>`;
-    document.getElementById('modal').innerHTML=`<div class="box" style="width:1120px;max-width:96vw"><h2>Atendimentos${L&&L.unidade?' · '+esc(L.unidade):''}</h2>
+    document.getElementById('modal').innerHTML=`<div class="box" style="width:min(1440px,96vw);max-width:96vw"><h2>Atendimentos${L&&L.unidade?' · '+esc(L.unidade):''}</h2>
       <p class="muted" style="margin:0 0 8px">${L?`Internos: listagem do SIAPEN de ${esc(L.emitida||'?')}. `:''}${R?`Atendimentos: ${pl(RL.length,'relatório','relatórios')} do SAP somados (${esc((R.periodo||[]).join(' a '))}); período em análise: <b>${esc(per)}</b>${r.filtrado?' (filtrado)':''}. `:L?'<b>Falta o relatório de atendimento do SAP.</b> ':''}Ordem de prioridade: sem atendimento no período, depois do atendimento mais antigo ao mais recente. Quem está no relatório e não está na listagem já não está na unidade e não aparece.</p>
       ${L&&(R||r.manuais)?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin:0 0 10px"><div class="stat neutro ${!this.atdFiltro?'on':''}" title="Mostrar todos os internos da listagem" onclick="ui.atdFiltro='';ui.atendimentos(ui._atd)"><b>${(r.lista||[]).length}</b><span>Todos</span></div>${chip('vermelho','Sem atendimento no período','Sem atendimento em '+per)}${chip('amarelo','Mais de '+P+' dias','Último atendimento há mais de '+P+' dias')}${chip('verde','Até '+P+' dias','Último atendimento nos últimos '+P+' dias')}${D.sem_rspe?`<div class="pend-info" style="cursor:default" title="Estes internos já aparecem na aba Geral; as demais abas se preenchem quando o RSPE e a ficha forem juntados">${pl(D.sem_rspe,'interno','internos')} sem RSPE na base · ${pl(D.sem_ficha,'interno','internos')} sem ficha</div>`:''}</div>`:''}
       ${corpo}
@@ -2680,21 +2680,34 @@ const ui = {
     const un=document.getElementById('resUn'); if(un) d.unidade=un.value;
     const cn=document.getElementById('resCan'); if(cn) d.canhoto=cn.checked;
     const da=document.getElementById('resData');
-    if(da) d.data_atend=da.value; },
+    if(da) d.data_atend=da.value;
+    // verso: versão escolhida e os períodos marcados
+    const vs=document.querySelector('input[name=resVs]:checked'); if(vs) d.verso_modo=vs.value;
+    document.querySelectorAll('#resVerso [data-v]').forEach(el=>{ const x=((d.verso||{}).itens||[]).find(y=>y.id===el.dataset.v); if(x) x._off=!el.checked; }); },
   resumoProv(id,on){ this.resumoLer(); const d=this._res, pre={ped_prog:'Progressão',acomp_prog:'',ped_liv:'Livramento condicional',ped_ind:'Indulto',ped_com:'Comutação'}[id]; if(!pre) return;
     const S=d.secoes.find(s=>s.id==='direitos'); if(!S) return; S._off=S._off||{}; S.itens.forEach((x,k)=>{ if([].concat(pre).some(p=>String(x).startsWith(p))) S._off[k]=on; }); this.resumoTela(); },
   resumoMais(s){ this.resumoLer(); this._res.secoes[s].itens.push(''); this.resumoTela(); },
   async resumoPdf(){ this.resumoLer(); const d=this._res;
     const fr=t=>{ t=String(t||'').trim(); if(!t) return ''; t=t[0].toUpperCase()+t.slice(1); return /[.!?]$/.test(t)?t:t+'.'; };
     const atd=(d.providencias||[]).filter(p=>p.marcado).map(p=>p.frase).concat(String(d.outro||'').split(/\n+/).map(fr)).filter(Boolean);
-    const out={...d, secoes:d.secoes.map(s=>({id:s.id, titulo:s.titulo, itens:s.id==='prov'?atd:s.itens.filter((x,k)=>!(s._off||{})[k]&&String(x).trim())}))};
+    const out={...d, secoes:d.secoes.map(s=>({id:s.id, titulo:s.titulo, itens:s.id==='prov'?atd:s.itens.filter((x,k)=>!(s._off||{})[k]&&String(x).trim())})),
+      verso:{...(d.verso||{}), itens:((d.verso||{}).itens||[]).filter(x=>!x._off)}};
     const r=await API().resumo_assistido_pdf(out); if(r) this.toast(r.erro||r.msg); },
+  // verso (2ª folha): trabalho em cima, estudo embaixo; com os dias descontados da pena ou só o histórico; cada período pode sair ou não
+  resumoVerso(){ const d=this._res, V=(d.verso||{}).itens||[];
+    if(!V.length) return `<div class="res-can"><span class="muted">Verso (2ª folha): não há trabalho nem estudo na ficha disciplinar deste assistido.</span></div>`;
+    const cor={ok:'#1F6B3A',pend:'#8A6100',curso:'#4A6A8A',conf:'#55595A'}, m=d.verso_modo||'';
+    const op=(v,t)=>`<label style="display:flex;gap:5px;align-items:center;cursor:pointer"><input type="radio" name="resVs" value="${v}" ${m===v?'checked':''}>${t}</label>`;
+    return `<div class="res-can" id="resVerso"><b>Verso (2ª folha): trabalho e estudo</b>${op('','Não imprimir')}${op('remicao','Com os dias descontados da pena')}${op('historico','Só o histórico de trabalho e estudo')}
+      <span class="muted">Marque os períodos que vão no verso (trabalho em cima, estudo embaixo) e imprima frente e verso.</span>
+      <div style="display:grid;grid-template-columns:auto minmax(160px,1fr) auto minmax(200px,1.4fr);gap:3px 10px;align-items:center;margin-top:6px;font-size:13px;width:100%">
+      ${V.map(x=>`<input type="checkbox" data-v="${esc(x.id)}" ${x._off?'':'checked'}><span><b>${x.grupo==='trabalho'?'Trabalho':'Estudo'} · ${esc(x.onde)}</b></span><span class="nw">${esc(x.per)}</span><span style="color:${cor[x.tipo]||'#55595A'}">${esc(x.sit)}${x.det?' · '+esc(x.det):''}</span>`).join('')}</div></div>`; },
   resumoTela(){ const d=this._res;
     const secs=d.secoes.map((s,i)=>s.id==='prov'?`<div class="res-sec"><h3>O que a Defensoria vai fazer <span class="muted" style="font-weight:400;font-size:12px">(marque as providências que serão adotadas; cada uma vira uma frase simples)</span></h3>
         <div class="res-provs">${(d.providencias||[]).map(p=>`<label title="${esc(p.frase)}"><input type="checkbox" id="resP_${p.id}" ${p.marcado?'checked':''} onchange="ui.resumoProv(${jsa(p.id)},this.checked)"> ${esc(p.rot)}</label>`).join('')}</div>
         <textarea id="resOutro" rows="2" placeholder="Outra providência que será adotada (escreva como vai sair no papel; uma frase por linha)" style="width:100%;margin-top:6px;font:inherit;font-size:13px;padding:5px 8px;border:1px solid var(--line2);border-radius:7px">${esc(d.outro||'')}</textarea></div>`
       :`<div class="res-sec"><h3>${esc(s.titulo)}</h3>${s.itens.map((x,k)=>`<label class="res-it" data-s="${i}" data-k="${k}"><input type="checkbox" ${(s._off||{})[k]?'':'checked'} title="Desmarque para não imprimir"><textarea rows="${Math.max(1,Math.ceil(String(x).length/95))}">${esc(x)}</textarea></label>`).join('')}<span class="mini" onclick="ui.resumoMais(${i})">+ frase</span></div>`).join('');
-    document.getElementById('modal').innerHTML=`<div class="box" style="width:860px;max-width:96vw"><h2>Resumo para o assistido · ${esc(d.nome)}</h2>
+    document.getElementById('modal').innerHTML=`<div class="box" style="width:min(1100px,96vw);max-width:96vw"><h2>Resumo para o assistido · ${esc(d.nome)}</h2>
       <p class="muted" style="margin:0 0 8px">Texto em linguagem simples (Pacto do CNJ), montado com os dados da base${d.proc?' (RSPE do processo '+esc(d.proc)+')':''}. Confira, corrija ou desmarque cada frase e marque as providências que a Defensoria vai adotar. Dado que o APTO ainda confere sai como "a Defensoria está conferindo".</p>
       ${d.barra?`<p style="margin:0 0 6px">Pena cumprida: <b>${d.barra.pct}%</b></p>`:''}
       <div id="resSecs" style="max-height:48vh;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:4px 12px 10px">${secs}</div>
@@ -2702,6 +2715,7 @@ const ui = {
         <span>Atendimento <input id="resData" value="${esc(d.data_atend||'')}" placeholder="dd/mm/aaaa"></span>
         <span>Unidade <input id="resUn" value="${esc(d.unidade||'')}" placeholder="unidade prisional no atendimento" style="width:300px"></span>
         <span class="muted">Leva o nº do processo e o campo "Motivo" (orientação, transferência, cálculo de pena, saúde, trabalho/educação, PADIC ou outro), que o assistido marca quando precisar de novo atendimento e entrega ao setor psicossocial da unidade. Se o texto não couber em uma folha com o canhoto, ele sai sem o canhoto.</span></div>
+      ${this.resumoVerso()}
       <div class="acts">${this._resAtd?`<button class="btn" onclick="ui.atendimentos(ui._atd)">Voltar aos atendimentos</button>`:''}<button class="btn pri" onclick="ui.resumoPdf()">Gerar PDF para imprimir</button><button class="btn" onclick="ui.fecharModal()">Fechar</button></div></div>`;
     document.getElementById('modal').classList.add('on'); },
   async relatorioUm(id){ const r=await API().relatorio_um(id); if(r && r.caminho){ this.toast('Relatório: '+r.caminho); } else if(r && r.erro){ this.toast(r.erro); } },

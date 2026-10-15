@@ -234,6 +234,127 @@ def montar(m, pedidos, hoje=None, nome="", data_atend=None):
                {"id": "atencao", "titulo": "Fique atento", "itens": sec_aten}]
     ger = (m or {}).get("geracao") or ""
     rodape = ("Datas do SEEU de %s. Elas podem mudar com decisões do juiz, faltas, trabalho e estudo." % ger if m else "")
+    V = verso(m)
     return {"nome": nome, "proc": (m or {}).get("proc") or "", "hoje": hoje.strftime("%d/%m/%Y"), "barra": barra,
             "quadro": quadro, "pizzas": pizzas, "vara": (m or {}).get("vara") or "",
-            "secoes": secoes, "rodape": rodape, "data_atend": da.strftime("%d/%m/%Y"), "providencias": provs, "outro": ""}
+            "secoes": secoes, "rodape": rodape, "data_atend": da.strftime("%d/%m/%Y"), "providencias": provs, "outro": "",
+            "verso": V, "verso_modo": "remicao" if V["itens"] else "",
+            "verso_fontes": ("Informações da ficha da unidade%s e do SEEU de %s." % (
+                (" de " + V["ficha"]) if V["ficha"] else "", ger)) if V["itens"] else ""}
+
+
+# --------------------------------------------------------------------------- #
+# verso do resumo (2ª folha): trabalho em cima, estudo embaixo; com os dias descontados da pena ou só o histórico
+_SEM_UN = ("Unidade não identificada na ficha", "—", "-")
+
+
+def _dt_ini(per):
+    d = _data(per)
+    return d or date.max
+
+
+def _per_simples(per):
+    """'08/07/2026 a hoje (em curso)' -> 'desde 08/07/2026'"""
+    per = str(per or "").strip()
+    mm = re.match(r"(\d{2}/\d{2}/\d{4}) a hoje", per)
+    return ("desde " + mm.group(1)) if mm else per
+
+
+def _num_dias(txt):
+    mm = re.search(r"(\d+(?:[.,]\d+)?)\s*dias?", str(txt or ""))
+    return float(mm.group(1).replace(",", ".")) if mm else 0.0
+
+
+def verso(m):
+    """Itens do verso, a partir da conferência da remição da ficha (aba Ficha): trabalho (atestados conciliados ou não, trabalho
+    sem atestado, em curso) e estudo (escola, ENCCEJA/ENEM, leitura). Cada item: grupo, tipo (ok = já descontado, pend = ainda não
+    descontado, curso = trabalhando agora, conf = a Defensoria vai conferir), onde, unidade, período, quantidade, situação,
+    detalhe, dias já descontados e dias que ainda podem ser descontados (estimativa)."""
+    out = {"itens": [], "ficha": ""}
+    if not m or not m.get("ficha_tem"):
+        return out
+    out["ficha"] = str((m.get("ficha") or {}).get("data_impressao") or "").split(" ")[0].replace(".", "/")
+    C, RD = m.get("fd_conc") or {}, m.get("fd_rem_det") or {}
+    trab, est = [], []
+
+    def item(lst, grupo, tipo, onde, un, per, qtd, sit, det, ok=0.0, pend=0.0):
+        lst.append({"grupo": grupo, "tipo": tipo, "onde": onde or "", "un": "" if (un or "—") in _SEM_UN else un, "per": _per_simples(per),
+                    "qtd": qtd or "", "sit": sit, "det": det, "dias_ok": ok, "dias_pend": pend})
+
+    for t in C.get("tabela") or []:
+        segs = t.get("segs") or []
+        onde = "; ".join(dict.fromkeys(s.get("setor") or "" for s in segs if s.get("setor"))) or "Trabalho"
+        pers = [s.get("per") or "" for s in segs if s.get("per")]
+        per = pers[0] if len(pers) == 1 else ("%s a %s" % (pers[0].split(" a ")[0], pers[-1].split(" a ")[-1]) if pers else "")
+        qtd = ("%d dias" % t["trab"]) if isinstance(t.get("trab"), int) and t["trab"] else ""
+        if t.get("status") == "CONCILIADO" or t.get("cor") == "cinza":
+            dias = _num_dias(t.get("rspe"))
+            item(trab, "trabalho", "ok", onde, t.get("unidade"), per, qtd, ("Já descontado: %s" % t["rspe"]) if dias else "Já descontado",
+                 ("o juiz decidiu em %s" % t["decisao"]) if (t.get("decisao") or "—") != "—" else "período já descontado", ok=dias)
+        elif t.get("status") == "NAO_LANCADO":
+            dias = _num_dias((t.get("rem") or "") + " dias")
+            item(trab, "trabalho", "pend", onde, t.get("unidade"), per, qtd, "Ainda não descontado",
+                 "o atestado foi feito; falta o juiz decidir%s" % ((" · %s dias" % t["rem"]) if dias else ""), pend=dias)
+        elif t.get("status") == "DIVERGENCIA":
+            item(trab, "trabalho", "conf", onde, t.get("unidade"), per, qtd, "A Defensoria vai conferir",
+                 "os dias descontados não batem com o atestado")
+    for chave, tipo in (("sem_atestado", "pend"), ("em_curso", "curso"), ("a_conferir", "conf")):
+        for it in (RD.get(chave) or {}).get("itens") or []:
+            q = re.search(r"≈ (\d+) dias trabalhados", it.get("base") or "")
+            qtd = ("cerca de %s dias" % q.group(1)) if q else ""
+            if tipo == "pend" and " a hoje" in (it.get("per") or ""):  # trabalho em curso, atestado ainda não emitido
+                item(trab, "trabalho", "curso", it.get("setor"), it.get("unidade"), it.get("per"), qtd, "Trabalhando agora",
+                     "o atestado sai ao fim do período")
+            elif tipo == "pend":
+                item(trab, "trabalho", "pend", it.get("setor"), it.get("unidade"), it.get("per"), qtd, "Ainda não descontado",
+                     "falta o atestado da unidade · cerca de %d dias" % it.get("dias", 0), pend=it.get("dias") or 0)
+            elif tipo == "curso":
+                item(trab, "trabalho", "curso", it.get("setor"), it.get("unidade"), it.get("per"), qtd, "Trabalhando agora",
+                     "o atestado sai ao fim do período")
+            else:
+                item(trab, "trabalho", "conf", it.get("setor"), it.get("unidade"), it.get("per"), qtd, "A Defensoria vai conferir",
+                     "com a unidade, se houve trabalho no período")
+    for b in m.get("fd_blocos") or []:
+        if b.get("tipo") != "estudo":
+            continue
+        for it in b.get("itens") or []:
+            emp, per, sit = it.get("emp") or "", it.get("per") or "", it.get("sit") or ""
+            if emp.startswith("Leitura"):
+                mm = re.search(r"peticionados em (\d{2}/\d{2}/\d{4})", per)
+                n = re.search(r"· (\d+) m[eê]s", per)
+                n = int(n.group(1)) if n else 0
+                qtd = rs_pl(n, "livro", "livros") if n else ""
+                pr = ("relatório entregue em " + mm.group(1)) if mm else per
+                rem = re.match(r"Remida no RSPE: (\d+) dias? em (\d{2}/\d{2}/\d{4})", sit)
+                if rem:
+                    item(est, "estudo", "ok", "Leitura de livro", it.get("un"), pr, qtd, "Já descontado: %s dias" % rem.group(1),
+                         "o juiz decidiu em %s" % rem.group(2), ok=float(rem.group(1)))
+                else:
+                    item(est, "estudo", "pend", "Leitura de livro", it.get("un"), pr, qtd, "Ainda não descontado",
+                         "falta o juiz decidir%s" % ((" · até %d dias" % (4 * n)) if n else ""), pend=4 * n)
+            elif re.search(r"ENCCEJA|ENEM", emp, re.I):
+                mm = re.search(r"(\d{2}/\d{2}/\d{4})", per)
+                item(est, "estudo", "conf", "Prova do " + emp, it.get("un"), ("certificado em " + mm.group(1)) if mm else per, "",
+                     "A Defensoria vai conferir", "se o desconto já foi feito")
+            else:
+                pr, _, resto = per.partition(" · ")
+                h = re.search(r"≈ (\d+) ?h", resto)
+                qtd = ("cerca de %s horas" % h.group(1)) if h else ""
+                if sit.startswith("Requerer"):
+                    dias = int(h.group(1)) // 12 if h else 0
+                    item(est, "estudo", "pend", emp or "Escola", it.get("un"), pr, qtd, "Ainda não descontado",
+                         "falta a certidão de horas da escola%s" % ((" · cerca de %d dias" % dias) if dias else ""), pend=dias)
+                elif sit.startswith("Conferir"):
+                    item(est, "estudo", "conf", emp or "Escola", it.get("un"), pr, qtd, "A Defensoria vai conferir", "se o desconto já foi feito")
+                else:
+                    item(est, "estudo", "ok", emp or "Escola", it.get("un"), pr, qtd, "Já descontado", "")
+    trab.sort(key=lambda x: _dt_ini(x["per"]))
+    est.sort(key=lambda x: _dt_ini(x["per"]))
+    out["itens"] = trab + est
+    for i, x in enumerate(out["itens"]):
+        x["id"] = "v%d" % i
+    return out
+
+
+def rs_pl(n, s, p):
+    return "%d %s" % (n, s if n == 1 else p)
