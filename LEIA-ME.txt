@@ -164,9 +164,10 @@ para o assistido" na ficha)
     atendimento com a Defensoria, com o último atendimento, o nº do processo
     de execução, a unidade no momento do atendimento (da listagem de
     internos mais recente ou da ficha disciplinar; pode ser corrigida na
-    tela) e o retorno em 30/60/90/__ dias. Perto do prazo de retorno, o assistido entrega o
-    canhoto ao setor psicossocial da unidade para pedir
-    atendimento. Não traz contato.
+    tela) e o "Motivo", que o assistido marca à mão: orientação,
+    transferência, cálculo de pena, saúde, saldo de salário, PADIC ou outro
+    (com linha para escrever). Quando precisar de novo atendimento, ele
+    entrega o canhoto ao setor psicossocial da unidade. Não traz contato.
 
 EXTENSÃO DO NAVEGADOR (pasta extensao_seeu)
   "APTO - RSPE do SEEU, Ficha do SIAPEN e processos do SAP", para Chrome e

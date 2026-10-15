@@ -3606,6 +3606,7 @@ def relatorio_resumo_assistido(d, caminho):
     from reportlab.pdfgen import canvas as rl_canvas
     from reportlab.platypus import Paragraph, Spacer, Frame, KeepInFrame, Table, TableStyle
     from reportlab.platypus import Image as RLImage
+    from reportlab.pdfbase import pdfmetrics
     import rspe_resumo as rres
     f = _fontes()
     C = colors.HexColor
@@ -3741,9 +3742,8 @@ def relatorio_resumo_assistido(d, caminho):
         c.setFont(f["b"], 9.5)
         c.setFillColor(C(NAVY))
         c.drawString(ML, corte + 2.5 * mm, "Guarde a parte de baixo: ela serve para pedir o próximo atendimento.")
-        # canhoto do assistido: perto do prazo de retorno, ele entrega esta parte ao setor psicossocial para pedir atendimento
+        # canhoto do assistido: quando precisar de novo atendimento, marca o motivo e entrega esta parte ao setor psicossocial
         da = rres._data(d.get("data_atend"))
-        ret = str(d.get("retorno") or "").strip()
         y = corte - 7.5 * mm
         c.setFillColor(C(NAVY))
         c.setFont(f["serifb"], 13)
@@ -3754,36 +3754,45 @@ def relatorio_resumo_assistido(d, caminho):
         c.drawString(ML, y, "Interno: %s" % (d.get("nome") or ""))
         c.drawString(ML + W * 0.62, y, "Último atendimento: %s" % (da.strftime("%d/%m/%Y") if da else "____/____/________"))
         y -= 6 * mm
-        c.drawString(ML, y, "Processo de execução nº %s" % (d.get("proc") or "______________________________"))
-        y -= 6 * mm
-        c.drawString(ML, y, "Unidade: %s" % (d.get("unidade") or "______________________________________________"))
+        pu = "Processo nº %s" % (d.get("proc") or "______________________") + "   ·   Unidade: %s" % (d.get("unidade") or "__________________________")
+        tam = 11
+        while tam > 8 and pdfmetrics.stringWidth(pu, f["n"], tam) > W:
+            tam -= 0.5
+        c.setFont(f["n"], tam)
+        c.drawString(ML, y, pu)
+        c.setFont(f["n"], 11)
 
-        def caixa(x, yy, marcada=False):
+        def caixa(x, yy):
             c.setStrokeColor(C(TX))
             c.setLineWidth(0.8)
             c.rect(x, yy - 0.6 * mm, 3.6 * mm, 3.6 * mm)
-            if marcada:
-                c.setFont(f["b"], 10)
-                c.drawString(x + 0.7 * mm, yy, "X")
-                c.setFont(f["n"], 11)
             return x + 5.5 * mm
 
-        y -= 7 * mm
-        c.drawString(ML, y, "Retorno em:")
-        x = ML + 24 * mm
-        for n in ("30", "60", "90"):
-            x = caixa(x, y, ret == n)
-            c.drawString(x, y, "%s dias" % n)
-            x += 17 * mm
-        x = caixa(x, y, bool(ret) and ret not in ("30", "60", "90"))
-        c.drawString(x, y, "%s dias" % (ret if ret and ret not in ("30", "60", "90") else "______"))
-        y -= 9.5 * mm
+        # motivo do novo pedido de atendimento: o assistido marca à mão
+        y -= 7.5 * mm
+        c.setFont(f["b"], 11)
+        c.drawString(ML, y, "Motivo:")
+        c.setFont(f["n"], 11)
+        x0 = ML + 17 * mm
+        for linha in (("Orientação", "Transferência", "Cálculo de pena", "Saúde"), ("Saldo de salário", "PADIC")):
+            x = x0
+            for op in linha:
+                x = caixa(x, y)
+                c.drawString(x, y, op)
+                x += pdfmetrics.stringWidth(op, f["n"], 11) + 7 * mm
+            if len(linha) == 2:
+                x = caixa(x, y)
+                c.drawString(x, y, "Outro:")
+                c.setStrokeColor(C(TX))
+                c.line(x + pdfmetrics.stringWidth("Outro:", f["n"], 11) + 2 * mm, y - 1, ML + W, y - 1)
+            y -= 6.5 * mm
+        y -= 3.5 * mm
         c.setFillColor(C("#EEF3EF"))
         c.roundRect(ML, y - 7.5 * mm, W, 12.5 * mm, 2 * mm, stroke=0, fill=1)
         c.setFillColor(C(NAVY))
         c.setFont(f["b"], 11.5)
-        c.drawString(ML + 4 * mm, y, "Perto do prazo de retorno, entregue este papel ao setor psicossocial da unidade")
-        c.drawString(ML + 4 * mm, y - 4.8 * mm, "para pedir atendimento com a Defensoria Pública.")
+        c.drawString(ML + 4 * mm, y, "Quando precisar de novo atendimento, marque o motivo e entregue este papel ao setor")
+        c.drawString(ML + 4 * mm, y - 4.8 * mm, "psicossocial da unidade.")
     c.showPage()
     c.save()
     return caminho

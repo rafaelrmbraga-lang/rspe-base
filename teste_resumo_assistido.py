@@ -97,9 +97,10 @@ try:
         ok(n == 1, "uma página: %d" % n)
         ok("Resumo da sua pena" in txt and "FULANO DE TESTE" in txt and "O que a Defensoria vai fazer" in txt
            and "O que você cumpre hoje" in txt and "Furto qualificado" in txt and "Sua pena hoje" in txt
-           and "Vamos pedir ao juiz o indulto (perdão da pena)." in txt and "setor psicossocial da unidade" in txt and "Retorno em" in txt
+           and "Vamos pedir ao juiz o indulto (perdão da pena)." in txt and "psicossocial da unidade" in txt and "Motivo:" in txt and "Saldo de salário" in txt and "PADIC" in txt
+           and "Retorno em" not in txt
            and "recorte aqui" in txt and "Data do retorno" not in txt
-           and "Unidade: UNIDADE PENAL DE TESTE" in txt and "Processo de execução nº 0000001-00.2026.8.12.0001" in txt.split("recorte aqui")[-1]
+           and "Unidade: UNIDADE PENAL DE TESTE" in txt and "Processo nº 0000001-00.2026.8.12.0001" in txt.split("recorte aqui")[-1]
            and "Atendido por" not in txt, "conteúdo do PDF")
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
