@@ -14,9 +14,11 @@ centenas de PDFs de uma vez ("Importar PDFs…" com seleção múltipla, "Import
 pasta…" varrendo subpastas, ou arrastando PDFs/pasta sobre o .exe).
   - Datas de progressão, livramento e término: as impressas pelo SEEU no
     RSPE. O programa não as recalcula.
-  - Cálculos do programa: indulto e comutação (Decretos 11.302/2022,
-    12.338/2024 e 12.790/2025, inciso por inciso; os demais decretos, de
-    2000 a 2025, no mapa da aba Indulto), prescrição (punitiva e executória, crime a
+  - Cálculos do programa: indulto e comutação, inciso por inciso, nos
+    decretos de 2000 a 2025 (2022, 2024 e 2025 em análise detalhada, com
+    coluna própria; os demais pela ficha de cada decreto, no mapa da aba
+    Indulto e na linha do tempo; os incisos que dependem de dado que o
+    RSPE não traz saem nomeados, para conferir), prescrição (punitiva e executória, crime a
     crime), extinção pelo cumprimento, estado da execução (não iniciou,
     interrompida, em livramento, no aberto, cumprida, extinta), falta nos 12
     meses, remição a requerer (ficha disciplinar x RSPE, estudo estimado) e
@@ -560,8 +562,14 @@ INDULTO E COMUTAÇÃO
     verificar"), art. 15 (PSC, aviso).
   * O Decreto 11.846/2023 entra só no mapa da aba Indulto (todos os
     decretos, com as hipóteses que se resolvem pela conta) e no relatório
-    geral; não tem análise inciso por inciso nem coluna própria (o modelo
-    de petição do inciso XV desse decreto é só um modelo da unidade).
+    geral; não tem a análise detalhada nem coluna própria (o modelo de
+    petição do inciso XV desse decreto é só um modelo da unidade).
+  * Decretos de 2000 a 2023: cada inciso da ficha é calculado quando se
+    resolve pelos dados do RSPE (pena, fração ou anos cumpridos, regime,
+    idade pela data de nascimento, regime inicial). Os que dependem de dado
+    que o RSPE não traz (filhos, doença, deficiência, estudo, reparação do
+    dano...) saem nomeados na nota do decreto, na linha do tempo, para
+    conferir no prontuário.
   * A ficha do assistido traz a análise inciso por inciso.
   * Linha do tempo (indulto e comutação): o cartão do resultado diz para
     quais crimes cabe (crime e processo) e quais ficam fora, com o botão
@@ -982,6 +990,9 @@ v7.10.0
     curtas, datas dd/mm/aaaa, pizza da pena e de cada direito (fração do
     SEEU e data-base), logo da Defensoria e canhoto com o motivo do pedido
     de atendimento, só quando cabe na folha.
+  - Indulto, decretos de 2000 a 2023: a nota da linha do tempo nomeia os
+    incisos não calculados (dependem de dado que o RSPE não traz), no lugar
+    de só contá-los.
   - Resumo: "Seus próximos benefícios", com o dia do benefício em número
     grande e a fração e a data-base em "Outras informações"; livramento
     com falta grave a menos de 12 meses avisa os 12 meses também quando o

@@ -1415,10 +1415,15 @@ def _decreto_ficha(f, x, C, cumprido, faltas, crimes_all=None):
     num, did = f.get("numero") or "s/n", f["id"]
     rot_dec = ("Dia das Mães %s" % f.get("ano")) if f.get("tipo") == "dia_das_maes" else ""
     fonte = "Decreto %s/%s (ficha da base jurídica)" % (num, f.get("ano"))
-    ign = [h for h in (f.get("indulto") or []) if not h.get("objetivo")]
+    # incisos de indulto que o motor não calculou (dependem de dado que o RSPE não traz): saem nomeados, para conferir no prontuário.
+    # Sem a lista de hipóteses calculadas (decreto que não alcança, crime impeditivo, benefício já decidido), não há o que apontar
+    calc = {h.get("dispositivo") for h in x["hips"] if h["tipo"] == "indulto"} if x.get("hips") is not None else None
+    ign = list(dict.fromkeys(h.get("dispositivo") or "s/ dispositivo" for h in (f.get("indulto") or [])
+                             if calc is not None and (h.get("dispositivo") or "") not in calc))
     nota = "; ".join(t for t in (rot_dec, x.get("nota") or "",
-                                 ("%d hipótese(s) dependem de dado que o RSPE não traz (idade, filhos, doença, estudo...) e não entram na conta"
-                                  % len(ign)) if ign else "") if t)
+                                 ("não calculado%s pelo programa, por depender%s de dado que o RSPE não traz (filhos, doença, deficiência, "
+                                  "estudo, reparação do dano...): %s - conferir no prontuário" % ("s" if len(ign) > 1 else "", "em" if len(ign) > 1 else "",
+                                                                                                 " · ".join(ign))) if ign else "") if t)
     out = {"id": did, "numero": num, "referencia": _f(ref), "publicacao": _f(pub) if pub != ref else "", "cadastrado": True,
            "fonte": fonte, "nota": nota, "generico": True}
 
