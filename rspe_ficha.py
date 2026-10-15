@@ -2500,6 +2500,11 @@ def quadro_trabalho(r, f, hoje=None, manuais=None):
              "cor": "verde" if x["data"] in lei_rem and x["data"] not in lei_parc else "amarelo",
              "chave": "fd:lei:%s" % x["data"]} for x in lei]})
     res["blocos"] = blocos
+    # para a fundamentação: certificações (ENCCEJA/ENEM), leituras sem remição (ou remidas em parte) e as unidades por onde passou
+    res["exames_f"] = [{"exame": x["exame"], "data": x["data"]} for x in exs]
+    res["leituras_f"] = [{"data": x["data"], "obras": len(x.get("meses") or []) or x.get("obras") or 0} for x in lei
+                         if x["data"] not in lei_rem or x["data"] in lei_parc]
+    res["unidades_f"] = list(dict.fromkeys(nome_unidade(u) for _d, u in tl_ex if u))
     # ---- conciliação atestado x remição (rspe_remicao): substitui a parte de trabalho do quadro ----
     try:
         import rspe_remicao as rrm
@@ -2516,6 +2521,8 @@ def quadro_trabalho(r, f, hoje=None, manuais=None):
         C["pendencias"] = [p_ for p_ in C["pendencias"] if not (p_["status"] == "SEM_ATESTADO" and any(
             p_["data"] == x["ini"] and p_["texto"].startswith("%s, " % x["setor"]) for x in curtos))]
     res["conc"] = C
+    res["sem_atestado_f"] = [re.sub(r", (\d{2}/\d{2}/\d{4}) a hoje \(em curso\)$", r", desde \1, em curso", p_["texto"].split(":")[0])
+                             for p_ in C["pendencias"] if p_["status"] == "SEM_ATESTADO"]
     # unidade de cada atestado da conferência (a do fim do período atestado; sem período, a da emissão)
     _por_id = {a["id"]: a for a in C["atestados"]}
     for t_ in C["tabela"]:
@@ -2878,13 +2885,23 @@ def _br(txt):
     return re.sub(r"\b(\d{2})/(\d{2})/(\d{2})\b(?!/|\d)", lambda m: "%s/%s/%s" % (m.group(1), m.group(2), (2000 if int(m.group(3)) < 70 else 1900) + int(m.group(3))), txt)
 
 
-def fundamentacao_remicao(res):
-    """Fundamentação do pedido de remição (atestados sem remição no RSPE e estudo a requerer), no padrão do programa:
-    título, fatos e fundamentos em um parágrafo, pedido."""
+def _lista_e(itens):
+    itens = [x for x in itens if x]
+    return itens[0] if len(itens) == 1 else ", ".join(itens[:-1]) + " e " + itens[-1] if itens else ""
+
+
+def fundamentacao_remicao(res, r=None):
+    """Fundamentação do pedido de remição: divergência entre a ficha disciplinar (SIAPEN) e o RSPE no trabalho (atestados sem
+    remição, trabalho sem atestado) e no estudo (frequência, ENCCEJA/ENEM, leitura); o ônus de reunir os atestados é da
+    administração (LEP, art. 129); pedidos de declaração, de certificação pela unidade e de atualização do cálculo; reflexo na
+    progressão. O que depende de conferência fica entre colchetes."""
     ats = res.get("atestados_pendentes") or []
-    est_h, est_d = res.get("estudo_horas_pend") or 0, res.get("estudo_dias_pend") or 0
-    if not ats and est_h < 12:
+    est_h = res.get("estudo_horas_pend") or 0
+    exames, leituras = res.get("exames_f") or [], res.get("leituras_f") or []
+    sem_at = res.get("sem_atestado_f") or []
+    if not ats and est_h < 12 and not exames and not leituras and not sem_at:
         return ""
+    r = r or {}
     par, total = [], 0.0
     if ats:
         total = round(sum(a["dias_remidos"] for a in ats), 2)
@@ -2898,26 +2915,23 @@ def fundamentacao_remicao(res):
         acima = [a for a in cheios if a["dias_remidos"] > a["dias_trabalhados"] / 3 + 0.01]
         if todos_trab:
             total = round(sum(max(a["dias_remidos"], a["dias_trabalhados"] / 3) for a in cheios) + sum(a["dias_remidos"] for a in parcial), 2)
+        _n = lambda a: (a.get("numero") or "s/n").split("/ST")[0]
 
         def _item(a):
-            per = (", período de %s a %s" % (a["periodo_inicio"], a["periodo_fim"])) if a.get("periodo_inicio") else ""
-            dt_ = (" (%s trabalhados)" % _dias_txt(a["dias_trabalhados"])) if a["dias_trabalhados"] else ""
+            per = (", referente ao período de %s a %s" % (a["periodo_inicio"], a["periodo_fim"])) if a.get("periodo_inicio") else ""
+            dt_ = ("%s trabalhados e " % _dias_txt(a["dias_trabalhados"])) if a["dias_trabalhados"] else ""
             obs = ""
             if a.get("ja_remidos"):
-                obs = " - %s remidos no atestado, dos quais só ≈ %s fora do período já remido (%s)" % (
-                    _fmtn(a.get("dias_atestado") or 0), _dias_txt(a["dias_remidos"]), a["ja_remidos"])
+                obs = " - dos quais só ≈ %s fora do período já remido (%s)" % (_dias_txt(a["dias_remidos"]), a["ja_remidos"])
             elif a.get("acima_do_possivel"):
-                obs = " - %s remidos no atestado, acima do possível no período: requerem-se ≈ %s, a conferir no atestado" % (
-                    _fmtn(a.get("dias_atestado") or 0), _dias_txt(a["dias_remidos"]))
-            return "nº %s, de %s%s%s%s" % ((a.get("numero") or "s/n").split("/ST")[0], _br(a["data"]), per, dt_, obs)
-        lst = "; ".join(_item(a) for a in ats)
+                obs = " - acima do possível no período: requerem-se ≈ %s, a conferir no atestado" % _dias_txt(a["dias_remidos"])
+            return "nº %s, de %s%s, com %s%s remidos%s" % (_n(a), _br(a["data"]), per, dt_, _dias_txt(a.get("dias_atestado") or a["dias_remidos"]), obs)
+        txt = ("A ficha disciplinar do SIAPEN registra %s de trabalho %s (LEP, art. 126, § 1º, II). O RSPE, contudo, não registra remição "
+               "correspondente." % ("o atestado" if len(ats) == 1 else "os atestados", "; ".join(_item(a) for a in ats)))
+        razao = "à razão de 1 dia de pena a cada 3 de trabalho (LEP, art. 126, § 1º, II)"
         if todos_trab:
-            txt = "A ficha disciplinar (SIAPEN) registra %s de trabalho sem remição correspondente no RSPE: %s." % (rs.pl(len(ats), "atestado", "atestados"), lst)
-            razao = "à razão de 1 dia de pena a cada 3 de trabalho (LEP, art. 126, § 1º, II)"
-            _n = lambda a: (a.get("numero") or "s/n").split("/ST")[0]
-            if cheios:
-                txt += " %s, %s, correspondem a %s remidos." % (
-                    ("Os %s trabalhados" % _dias_txt(trab)) if len(ats) > 1 else "Os dias trabalhados", razao, _dias_txt(round(trab / 3, 2)))
+            if len(ats) > 1 and cheios:
+                txt += " Os %s trabalhados, %s, correspondem a %s remidos." % (_dias_txt(trab), razao, _dias_txt(round(trab / 3, 2)))
             if acima:
                 txt += " %s, acima de 1/3 (arredondamento): requer-se o valor declarado." % (
                     "; ".join("O atestado nº %s declara %s remidos para %s trabalhados" % (_n(a), _fmtn(a["dias_remidos"]), _fmtn(a["dias_trabalhados"]))
@@ -2926,36 +2940,75 @@ def fundamentacao_remicao(res):
                 txt += " %s menos que 1/3 dos dias trabalhados (%s): requer-se a proporção legal." % (
                     "Os atestados declaram" if len(menos) > 1 else "O atestado declara",
                     "; ".join("nº %s: %s remidos para %s trabalhados" % (_n(a), _fmtn(a["dias_remidos"]), _fmtn(a["dias_trabalhados"])) for a in menos))
-            if parcial:
-                rp = round(sum(a["dias_remidos"] for a in parcial), 2)
-                txt += " %s, %s só os ≈ %s ainda não remidos, como indicado." % (
-                    ("Dos atestados com parte do período já remida ou acima do possível" if len(parcial) > 1 else
-                     "Do atestado com parte do período já remida" if parcial[0].get("ja_remidos") else "Do atestado acima do possível no período"),
-                    "requerem-se" if cheios else razao + ", requerem-se", _dias_txt(rp))
-            if parcial and cheios or acima:
+            if parcial and cheios or acima or menos:
                 txt += " No total, %s remidos." % _dias_txt(total)
-            par.append(txt)
         else:
             # sem os dias trabalhados na ficha, a conta "1 a cada 3" não se demonstra: vale o que o atestado declara
-            par.append("A ficha disciplinar (SIAPEN) registra %s de trabalho sem remição correspondente no RSPE: %s. %s %s remidos "
-                       "(LEP, art. 126, § 1º, II)."
-                       % (rs.pl(len(ats), "atestado", "atestados"), lst, "Os atestados declaram" if len(ats) > 1 else "O atestado declara", _dias_txt(total)))
+            txt += " %s %s remidos." % ("Os atestados declaram" if len(ats) > 1 else "O atestado declara", _dias_txt(total))
+        par.append(txt)
+    if sem_at:
+        par.append(("A ficha registra, ainda, trabalho sem atestado emitido: %s." if ats else
+                    "A ficha disciplinar do SIAPEN registra trabalho sem atestado emitido nem remição correspondente no RSPE: %s.") % "; ".join(sem_at))
+    # estudo: frequência escolar, certificação (ENCCEJA/ENEM) e leitura
+    est = []
     if est_h >= 12:
         cursos = "; ".join("%s (%s%s)" % (e["curso"].title(), _br(e["inicio"]), (" a " + _br(e["fim"])) if e.get("fim") else " em diante")
                            for e in res.get("estudos_pendentes") or [])
-        par.append("Consta ainda matrícula em estudo sem remição no RSPE%s, a ser comprovada por certidão de frequência da unidade, para a "
-                   "remição à razão de 1 dia de pena a cada 12 horas de frequência escolar, divididas em no mínimo 3 dias (LEP, art. 126, § 1º, I)."
+        est.append("matrícula em estudo sem remição no RSPE%s, a ser comprovada por certidão de frequência, para a remição à razão de "
+                   "1 dia de pena a cada 12 horas de frequência escolar, divididas em no mínimo 3 dias (LEP, art. 126, § 1º, I)"
                    % ((": " + cursos) if cursos else ""))
+    if exames:
+        est.append("aprovação %s, que %s remição pelo estudo tomando por base 50%% da carga horária definida legalmente para cada nível de "
+                   "ensino - 1.600 horas para os anos finais do ensino fundamental e 1.200 horas para o ensino médio -, acrescida de 1/3 "
+                   "por conclusão de nível de educação (Res. CNJ 391/2021, art. 3º, parágrafo único; LEP, art. 126, §§ 1º, I, e 5º)" % (_lista_e(
+                       ["no %s (certificado registrado em %s)" % (x["exame"], _br(x["data"])) for x in exames]), "geram" if len(exames) > 1 else "gera"))
+    if leituras:
+        est.append("relatórios de leitura peticionados em %s sem remição correspondente no RSPE, à razão de 4 dias por obra lida, até 12 "
+                   "obras em 12 meses (Res. CNJ 391/2021, art. 5º, V)" % _lista_e(
+                       ["%s%s" % (_br(x["data"]), (" (%s)" % rs.pl(x["obras"], "obra", "obras")) if x["obras"] else "") for x in leituras]))
+    if est:
+        par.append(("Quanto ao estudo, a ficha registra " if (ats or sem_at) else "A ficha disciplinar do SIAPEN registra ") +
+                   "; ".join(est) + (". Caso a remição correspondente ainda não tenha sido declarada, deve sê-lo." if exames else "."))
+    uns = res.get("unidades_f") or []
+    par.append("A divergência indica que nem todos os atestados de trabalho e estudo produzidos pela administração penitenciária chegaram aos "
+               "autos ou foram apreciados.%s Exigir que a defesa requisite, unidade por unidade, cada atestado faltante transfere ao apenado "
+               "um ônus que é da administração." % ((" O apenado cumpriu pena em mais de uma unidade prisional (%s), o que fragmenta os registros."
+                                                    % _lista_e(uns)) if len(uns) > 1 else ""))
+    par.append("Compete à autoridade administrativa encaminhar mensalmente ao juízo da execução cópia do registro dos condenados que trabalham "
+               "ou estudam, com os dias de trabalho e as horas de frequência escolar de cada um (LEP, art. 129). No âmbito estadual, a própria "
+               "AGEPEN adota a mesma sistemática para a remição pela leitura, ao prever o envio mensal ao juízo por ofício (Portaria AGEPEN "
+               "15/2021, art. 11). Cabe ao juízo da execução decidir sobre a remição (LEP, art. 66, III, \"c\"), e o tempo remido é computado "
+               "como pena cumprida para todos os efeitos (LEP, art. 128).")
+    par.append("A ficha do SIAPEN é de abrangência estadual e reúne o histórico do apenado em todas as unidades por onde passou. Por isso, a "
+               "direção da unidade atual tem condições de certificar a totalidade dos períodos de trabalho e estudo, sem necessidade de "
+               "diligências isoladas em cada estabelecimento.")
+    ped, k = [], iter("abcdefgh")
     if ats:
-        ped = ("Requer-se a declaração da remição de %s%s, computados como pena cumprida para todos os fins (LEP, art. 128), ouvidos "
-               "o Ministério Público e a defesa (LEP, art. 126, § 8º)%s." % (
-                   _dias_txt(total), " e dos dias correspondentes ao estudo" if est_h >= 12 else "",
-                   ", com a requisição da certidão de frequência escolar à unidade prisional" if est_h >= 12 else ""))
-    else:
-        ped = ("Requer-se a requisição da certidão de frequência escolar à unidade prisional e, com ela, a declaração da remição dos dias "
-               "correspondentes ao estudo, computados como pena cumprida para todos os fins (LEP, arts. 126, § 1º, I, e 128), ouvidos o "
-               "Ministério Público e a defesa (LEP, art. 126, § 8º).")
-    return "DA REMIÇÃO DE PENA\n" + " ".join(par) + "\n" + ped
+        ped.append("%s) a declaração da remição de %s, referente %s nº %s, computados como pena cumprida (LEP, arts. 126, § 8º, e 128);" % (
+            next(k), _dias_txt(total), "ao atestado" if len(ats) == 1 else "aos atestados",
+            _lista_e([(a.get("numero") or "s/n").split("/ST")[0] for a in ats])))
+    if est:
+        ped.append("%s) a declaração da remição pelo estudo indicada acima, com a requisição à unidade da certidão de frequência ou dos "
+                   "certificados e relatórios correspondentes, se ainda não juntados (LEP, art. 126, § 1º, I, e § 5º; Res. CNJ 391/2021);" % next(k))
+    atual = uns[-1] if uns else "[unidade atual]"
+    ped.append("%s) a expedição de ofício à direção da unidade %s para que, no prazo de [10] dias, certifique com base na ficha do SIAPEN todos "
+               "os períodos de trabalho e estudo do apenado, inclusive os cumpridos em outras unidades. A certidão deve indicar, para cada "
+               "período, a unidade, os dias trabalhados ou as horas de estudo, e o número do atestado correspondente. Os atestados ainda "
+               "não encaminhados ao juízo devem ser juntados. Caso a unidade não detenha os atestados dos períodos cumpridos em outro "
+               "estabelecimento, requer-se a expedição de ofício à AGEPEN para providenciá-los;" % (next(k), atual))
+    ped.append("%s) a certificação, pela Secretaria, de quais desses atestados já constam dos autos sem apreciação;" % next(k))
+    ped.append("%s) após a juntada, a declaração das remições faltantes e a remessa dos autos à contadoria para atualização do cálculo de "
+               "pena." % next(k))
+    out = "DA REMIÇÃO DE PENA E DA DIVERGÊNCIA ENTRE A FICHA DISCIPLINAR (SIAPEN) E O RSPE\n" + "\n\n".join(par) + \
+          "\n\nDiante do exposto, requer-se:\n\n" + "\n\n".join(ped)
+    prog = rs.to_date(r.get("progressao_previsao_seeu") or "")
+    if ats and (not prog or prog > date.today()):
+        # a remição conta como pena cumprida: a data da progressão recua os dias remidos (sugestão entre colchetes, a conferir no
+        # cálculo); com a data já transcorrida, o reflexo não se aplica e a seção sai
+        nova = ("[data recalculada: por volta de %s - conferir no cálculo]" % rs.fmt(prog - timedelta(days=int(total)))) if prog else "[data recalculada]"
+        out += ("\n\nDO REFLEXO NA PROGRESSÃO DE REGIME\nCom a declaração da remição de %s, a data prevista para a progressão de regime "
+                "passará de %s para %s, conforme cálculo [anexo]." % (_dias_txt(total), rs.fmt(prog) if prog else "[data atual]", nova))
+    return out
 
 
 def comparativo(r, f, hoje=None, conferidos=None, manuais=None):
@@ -3099,7 +3152,7 @@ def comparativo(r, f, hoje=None, conferidos=None, manuais=None):
     out["fd_resumo_exec"] = "atestados: %s · estudo: ≈ %s · RSPE: %s%s%s" % (
         _dias_txt(res["remidos_execucao"]), _dias_txt(res["remidos_estudo"]), _dias_txt(res["homologados"]), (" · adicionados por você: %s" % _dias_txt(rem_man)) if rem_man else "",
         (" · anteriores a esta execução: %s" % _dias_txt(res["remidos_anteriores"])) if res["remidos_anteriores"] else "")
-    out["fd_fund"] = fundamentacao_remicao(res)
+    out["fd_fund"] = fundamentacao_remicao(res, r)
     out.update(fd_cor=cor, fd_sit=sit, fd_conduta=f.get("conduta") or "", fd_linhas=linhas,
                fd_blocos=blocos, fd_conf_n=n_ok, fd_conf_tot=marcaveis, fd_sem_n=res.get("sem_n", 0),
                fd_sem_pend=res.get("sem_atestado_a_requerer", 0), fd_rem_det=res.get("rem_det"))

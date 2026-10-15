@@ -990,6 +990,19 @@ v7.10.0
     curtas, datas dd/mm/aaaa, pizza da pena e de cada direito (fração do
     SEEU e data-base), logo da Defensoria e canhoto com o motivo do pedido
     de atendimento, só quando cabe na folha.
+  - Aba Ficha, "Copiar fundamentação" da remição: novo texto "Da remição de
+    pena e da divergência entre a ficha disciplinar (SIAPEN) e o RSPE":
+    atestados sem remição (nº, data, período, dias), trabalho sem atestado,
+    estudo (frequência, aprovação no ENCCEJA/ENEM - Res. CNJ 391/2021, art.
+    3º, parágrafo único - e leitura - art. 5º, V), o ônus da administração
+    (LEP, arts. 129, 66, III, "c", e 128; Portaria AGEPEN 15/2021, art. 11),
+    as unidades por onde passou e os pedidos: declaração da remição, ofício
+    à unidade atual para certificar todos os períodos (ou à AGEPEN),
+    certificação pela Secretaria e contadoria; reflexo na progressão com a
+    data do RSPE e a recalculada entre colchetes, para conferir. O texto sai
+    também quando só há estudo (ENCCEJA/ENEM ou leitura).
+  - Tabelas: o texto quebra só entre palavras (nome não se parte letra a
+    letra); a janela de atendimentos acompanha a largura da tela.
   - Indulto, decretos de 2000 a 2023: a nota da linha do tempo nomeia os
     incisos não calculados (dependem de dado que o RSPE não traz), no lugar
     de só contá-los.
