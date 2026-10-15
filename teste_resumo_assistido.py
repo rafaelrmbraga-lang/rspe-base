@@ -63,6 +63,8 @@ try:
     ok(itens(dant, "direitos")[0] == "Semiaberto: A data vai ser refeita por causa da falta grave. Fração do SEEU: 16%."
        and "Semiaberto" not in dant["pizzas"] and itens(dant, "direitos")[1].startswith("Livramento condicional"),
        "RSPE anterior à falta: sem data: %s" % itens(dant, "direitos"))
+    dz = rres.montar(dict(M, remidos=""), {}, HOJE)
+    ok(dict(dz["quadro"])["Dias tirados pelo trabalho e estudo"] == "zero", "sem remição: zero: %s" % dz["quadro"])
     dl = rres.montar(dict(M, liv="01/03/2027", liv_sit="Em cumprimento"), {}, HOJE)
     ok(itens(dl, "direitos")[1] == "Livramento condicional: Completa o tempo em 01/03/2027. Precisa ter bom comportamento. "
        "Também precisa de 12 meses sem falta grave. Fração do SEEU: 1/3. Data-base: 01/01/2024.", "livramento a menos de 12 meses da falta grave: %s" % itens(dl, "direitos")[1])

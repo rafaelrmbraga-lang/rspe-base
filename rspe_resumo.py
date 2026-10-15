@@ -129,7 +129,7 @@ def montar(m, pedidos, hoje=None, nome="", data_atend=None):
         elif dt and not ext.startswith(("Pena interrompida", "Pena suspensa", "Pena extinta")):
             fim = _quando(dt, str(m.get("termino")).strip().endswith("*"))
         quadro = [["Regime atual", reg.split(" (")[0] or "—"], ["Pena total", tot if _dias(tot) else "—"],
-                  ["Dias tirados pelo trabalho e estudo", "%d dias" % rem_d if rem_d else "nenhum"]]
+                  ["Dias tirados pelo trabalho e estudo", "%d dias" % rem_d if rem_d else "zero"]]
         if _dias(cum) and _dias(rem) is not None:
             t_ = (_dias(cum) or 0) + (_dias(rem) or 0)
             if t_:
