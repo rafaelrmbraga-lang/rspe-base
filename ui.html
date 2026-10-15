@@ -2681,7 +2681,7 @@ const ui = {
     const cn=document.getElementById('resCan'); if(cn) d.canhoto=cn.checked;
     const da=document.getElementById('resData');
     if(da) d.data_atend=da.value; },
-  resumoProv(id,on){ this.resumoLer(); const d=this._res, pre={ped_prog:'Ir para o regime',ped_liv:'Livramento condicional',ped_ind:'Indulto',ped_com:'Comutação'}[id]; if(!pre) return;
+  resumoProv(id,on){ this.resumoLer(); const d=this._res, pre={ped_prog:'Progressão',acomp_prog:'',ped_liv:'Livramento condicional',ped_ind:'Indulto',ped_com:'Comutação'}[id]; if(!pre) return;
     const S=d.secoes.find(s=>s.id==='direitos'); if(!S) return; S._off=S._off||{}; S.itens.forEach((x,k)=>{ if([].concat(pre).some(p=>String(x).startsWith(p))) S._off[k]=on; }); this.resumoTela(); },
   resumoMais(s){ this.resumoLer(); this._res.secoes[s].itens.push(''); this.resumoTela(); },
   async resumoPdf(){ this.resumoLer(); const d=this._res;

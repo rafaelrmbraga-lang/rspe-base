@@ -3633,7 +3633,7 @@ def relatorio_resumo_assistido(d, caminho):
         Paragraph("Resumo da sua pena", s_tit),
         Paragraph(_t("Para: %s" % (d.get("nome") or "")), s_nome),
         Paragraph(_t(" · ".join(x for x in ("Processo de execução nº %s" % d["proc"] if d.get("proc") else "",
-                                              "entregue em %s" % rres.extenso(hoje)) if x)), s_sub)]
+                                              "entregue em %s" % hoje.strftime("%d/%m/%Y")) if x)), s_sub)]
     if logo:
         from reportlab.lib.utils import ImageReader
         iw, ih = ImageReader(logo).getSize()
@@ -3646,69 +3646,81 @@ def relatorio_resumo_assistido(d, caminho):
     else:
         el = list(cab)
 
-    def tabela(linhas, larg, cab_=None):
-        dados = ([[Paragraph(_t(x), s_tcab) for x in cab_]] if cab_ else []) + \
-                [[Paragraph(_t(x), s_celb if j == 0 else s_cel) for j, x in enumerate(l)] for l in linhas]
-        t = Table(dados, colWidths=larg, hAlign="LEFT")
-        est = [("VALIGN", (0, 0), (-1, -1), "TOP"), ("LINEBELOW", (0, 0), (-1, -1), 0.5, C(LINE)),
-               ("LEFTPADDING", (0, 0), (-1, -1), 5), ("RIGHTPADDING", (0, 0), (-1, -1), 5),
-               ("TOPPADDING", (0, 0), (-1, -1), 4), ("BOTTOMPADDING", (0, 0), (-1, -1), 4)]
-        if cab_:
-            est.append(("LINEBELOW", (0, 0), (-1, 0), 1, C(PRI)))
-        t.setStyle(TableStyle(est))
-        return t
-
     secs = {s_.get("id"): s_ for s_ in d.get("secoes") or []}
 
     def itens(sec):
         return [x for x in (sec or {}).get("itens") or [] if str(x).strip()]
 
-    # 1) sua pena hoje: quadro com os números, barra e as notas
+    from reportlab.graphics.shapes import Drawing, Wedge, Circle, String
+
+    def pizza(pct, lado, rotulo=True):
+        """rosca com a parte cumprida (verde) e a que falta (cinza claro), com o percentual no meio."""
+        dw = Drawing(lado, lado)
+        cx = cy = lado / 2.0
+        r = lado / 2.0 - 1
+        dw.add(Circle(cx, cy, r, fillColor=C("#DDE3DE"), strokeColor=None))
+        if pct >= 100:
+            dw.add(Circle(cx, cy, r, fillColor=C(PRI), strokeColor=None))
+        elif pct > 0:
+            dw.add(Wedge(cx, cy, r, 90 - 360 * pct / 100.0, 90, fillColor=C(PRI), strokeColor=None))
+        dw.add(Circle(cx, cy, r * 0.58, fillColor=colors.white, strokeColor=None))
+        if rotulo:
+            dw.add(String(cx, cy - lado * 0.07, "%d%%" % pct, fontName=f["b"], fontSize=lado * 0.2, fillColor=C(TX), textAnchor="middle"))
+        return dw
+
+    # 1) sua pena hoje: quadro (regime, pena total, remição) e a pizza do que já cumpriu e do que falta
     Q = d.get("quadro") or []
     pena = secs.get("pena") or {"titulo": "Sua pena hoje"}
-    if Q or itens(pena):
+    B = d.get("barra")
+    if Q or itens(pena) or B:
         el.append(Paragraph(_t(pena.get("titulo") or "Sua pena hoje"), s_h))
     if Q:
-        cw = W / 3.0
-        cel = [[Paragraph(_t(r), s_rot), Paragraph(_t(v), s_val)] for r, v in Q]
-        linhas = [cel[k:k + 3] + [""] * (3 - len(cel[k:k + 3])) for k in range(0, len(cel), 3)]
-        t = Table(linhas, colWidths=[cw] * 3)
+        cw = W / float(len(Q))
+        t = Table([[[Paragraph(_t(r), s_rot), Paragraph(_t(v), s_val)] for r, v in Q]], colWidths=[cw] * len(Q))
         t.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP"), ("BACKGROUND", (0, 0), (-1, -1), C("#EEF3EF")),
-                               ("LINEAFTER", (0, 0), (-2, -1), 3, colors.white), ("LINEBELOW", (0, 0), (-1, -2), 3, colors.white),
+                               ("LINEAFTER", (0, 0), (-2, -1), 3, colors.white),
                                ("LEFTPADDING", (0, 0), (-1, -1), 7), ("TOPPADDING", (0, 0), (-1, -1), 5), ("BOTTOMPADDING", (0, 0), (-1, -1), 6)]))
         el.append(t)
-    B = d.get("barra")
     if B and B.get("pct") is not None:
         pct = max(0, min(100, int(B["pct"])))
-        bw = W * pct / 100.0
-        t = Table([["", ""]], colWidths=[max(bw, 0.1), max(W - bw, 0.1)], rowHeights=[9], hAlign="LEFT")
-        t.setStyle(TableStyle([("BACKGROUND", (0, 0), (0, 0), C(PRI)), ("BACKGROUND", (1, 0), (1, 0), C("#E3E8E4")),
-                               ("LEFTPADDING", (0, 0), (-1, -1), 0), ("RIGHTPADDING", (0, 0), (-1, -1), 0)]))
-        el += [Spacer(1, 6), Paragraph("Você já cumpriu %d%% da pena." % pct, ParagraphStyle("rb", parent=s_p, leftIndent=0, spaceAfter=2)), t,
-               Spacer(1, 3)]
+        s_leg = ParagraphStyle("rleg", parent=s_cel, fontSize=12, leading=17)
+        quad = lambda cor: '<font color="%s">■</font> ' % cor
+        leg = [Paragraph(quad(PRI) + "<b>Já cumpriu:</b> " + _t(B.get("cumprida") or ""), s_leg)]
+        if B.get("falta"):
+            leg.append(Paragraph(quad("#B8C2BA") + "<b>Falta cumprir:</b> " + _t(B["falta"]), s_leg))
+        if B.get("fim"):
+            leg.append(Paragraph("<b>Fim previsto da pena:</b> " + _t(B["fim"]), s_leg))
+        lado = 30 * mm
+        t = Table([[pizza(pct, lado), leg]], colWidths=[lado + 6 * mm, W - lado - 6 * mm])
+        t.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "MIDDLE"), ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                               ("TOPPADDING", (0, 0), (-1, -1), 6), ("BOTTOMPADDING", (0, 0), (-1, -1), 2)]))
+        el.append(t)
     el += [Paragraph(_t(x), s_p, bulletText="•") for x in itens(pena)]
 
-    # 2) o que você cumpre hoje: crime, pena e processo (sem artigos e frações)
-    CD = d.get("condenacoes") or []
-    if CD:
-        el.append(Paragraph("O que você cumpre hoje", s_h))
-        el.append(tabela([[c_.get("crime") or "", c_.get("pena") or "", c_.get("proc") or ""] for c_ in CD],
-                         [W * 0.48, W * 0.2, W * 0.32], ["Crime", "Pena", "Processo"]))
-
-    # 3) próximos direitos: "Direito: o que dizer" vira tabela de duas colunas
+    # 2) próximos direitos: pizza do tempo já cumprido para o direito, o nome e as frases, uma por linha
     dirs = secs.get("direitos")
+    PZ = d.get("pizzas") or {}
     if itens(dirs):
         el.append(Paragraph(_t(dirs.get("titulo") or "Seus próximos direitos"), s_h))
+        lado = 20 * mm
         linhas = []
         for x in itens(dirs):
             a_, sep, b_ = str(x).partition(": ")
-            linhas.append([a_, b_[0].upper() + b_[1:] if sep and b_ else ""] if sep else [x, ""])
-        if all(l[1] for l in linhas):
-            el.append(tabela(linhas, [W * 0.32, W * 0.68]))
-        else:
-            el += [Paragraph(_t(x), s_p, bulletText="•") for x in itens(dirs)]
+            if not sep:
+                a_, b_ = "", x
+            frases = [fr.strip() for fr in re.split(r"(?<=\.)\s+", b_) if fr.strip()]
+            txt = "<br/>".join(_t(fr) for fr in frases)
+            pz = PZ.get(a_)
+            linhas.append([pizza(pz, lado) if pz is not None else "", Paragraph(_t(a_), s_celb), Paragraph(txt, s_cel)])
+        t = Table(linhas, colWidths=[lado + 4 * mm, W * 0.3, W - lado - 4 * mm - W * 0.3], hAlign="LEFT")
+        t.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "MIDDLE"), ("LINEBELOW", (0, 0), (-1, -1), 0.5, C(LINE)),
+                               ("LEFTPADDING", (0, 0), (-1, -1), 4), ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+                               ("TOPPADDING", (0, 0), (-1, -1), 4), ("BOTTOMPADDING", (0, 0), (-1, -1), 4)]))
+        el.append(t)
+        if PZ:
+            el.append(Paragraph("O círculo mostra quanto do tempo para o direito você já cumpriu.", s_rod))
 
-    # 4) o que a Defensoria vai fazer e 5) avisos
+    # 3) o que a Defensoria vai fazer e 4) avisos
     for sid in ("prov", "atencao"):
         sec = secs.get(sid)
         if itens(sec):

@@ -128,14 +128,15 @@ ATENDIMENTOS (aba Geral > botão "Atendimentos")
 RESUMO PARA O ASSISTIDO (botão "Resumo" na janela Atendimentos e "Resumo
 para o assistido" na ficha)
   Uma folha A4 para imprimir e entregar ao preso, em linguagem simples
-  (Pacto Nacional do Judiciário pela Linguagem Simples, CNJ), na ordem do
-  atestado de pena do SEEU mas sem as frações e os termos técnicos: "Sua
-  pena hoje" (quadro com regime, pena total, dias tirados pelo trabalho e
-  estudo, já cumpriu, falta cumprir e fim previsto, e a barra do que já
-  cumpriu), "O que você cumpre hoje" (crime, pena e processo das
-  condenações não extintas), os próximos direitos (em tabela; com o pedido
-  pendente ou negado que o RSPE registra), o que a Defensoria vai fazer e
-  os avisos (falta grave). Fluxo: registrar o atendimento >
+  (Pacto Nacional do Judiciário pela Linguagem Simples, CNJ), para entregar
+  junto com o atestado de pena do SEEU: frases curtas, datas em dd/mm/aaaa
+  e sem parênteses. "Sua pena hoje" (regime, pena total, dias tirados pelo
+  trabalho e estudo e um gráfico de pizza com o que já cumpriu, o que falta
+  e o fim previsto); "Seus próximos direitos" (progressão e livramento com
+  a fração do SEEU, a data-base, a data em que entra no direito, o
+  comportamento exigido e uma pizza do tempo já cumprido para o direito;
+  pedido pendente ou negado no RSPE; indulto e comutação); o que a
+  Defensoria vai fazer e os avisos (falta grave). Fluxo: registrar o atendimento >
   resumo para o assistido > relatório do SAP depois.
   - Só entra o que o APTO já calculou. Data duvidosa ("ver Auditoria",
     "verificar") sai como "a Defensoria está conferindo a data". Pedido já
@@ -971,10 +972,10 @@ HISTÓRICO DE VERSÕES
   comportamento atual é o descrito nas seções acima.
 
 v7.10.0
-  - Resumo para o assistido no modelo do atestado de pena do SEEU, em
-    linguagem simples: quadro da pena, "O que você cumpre hoje", direitos
-    em tabela (com pedido pendente ou negado no RSPE), logo da Defensoria
-    e canhoto só quando cabe na folha.
+  - Resumo para o assistido para entregar com o atestado de pena: frases
+    curtas, datas dd/mm/aaaa, pizza da pena e de cada direito (fração do
+    SEEU e data-base), logo da Defensoria e canhoto com o motivo do pedido
+    de atendimento, só quando cabe na folha.
   - Resumo para o assistido: folha A4 em linguagem simples (CNJ) com a
     pena, os próximos direitos, o que a Defensoria vai fazer (pelas
     providências marcadas) e o canhoto do assistido para pedir o próximo atendimento ao
