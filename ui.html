@@ -2696,7 +2696,7 @@ const ui = {
       :`<div class="res-sec"><h3>${esc(s.titulo)}</h3>${s.itens.map((x,k)=>`<label class="res-it" data-s="${i}" data-k="${k}"><input type="checkbox" ${(s._off||{})[k]?'':'checked'} title="Desmarque para não imprimir"><textarea rows="${Math.max(1,Math.ceil(String(x).length/95))}">${esc(x)}</textarea></label>`).join('')}<span class="mini" onclick="ui.resumoMais(${i})">+ frase</span></div>`).join('');
     document.getElementById('modal').innerHTML=`<div class="box" style="width:860px;max-width:96vw"><h2>Resumo para o assistido · ${esc(d.nome)}</h2>
       <p class="muted" style="margin:0 0 8px">Texto em linguagem simples (Pacto do CNJ), montado com os dados da base${d.proc?' (RSPE do processo '+esc(d.proc)+')':''}. Confira, corrija ou desmarque cada frase e marque as providências que a Defensoria vai adotar. Dado que o APTO ainda confere sai como "a Defensoria está conferindo".</p>
-      ${d.barra?`<p style="margin:0 0 6px">Barra da pena: <b>${d.barra.pct}%</b> cumprida</p>`:''}
+      ${d.barra?`<p style="margin:0 0 6px">Pena cumprida: <b>${d.barra.pct}%</b></p>`:''}
       <div id="resSecs" style="max-height:48vh;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:4px 12px 10px">${secs}</div>
       <div class="res-can"><label style="display:flex;gap:5px;align-items:center;cursor:pointer"><input type="checkbox" id="resCan" ${d.canhoto===false?'':'checked'}><b>Canhoto do assistido (pedido do próximo atendimento)</b></label>
         <span>Atendimento <input id="resData" value="${esc(d.data_atend||'')}" placeholder="dd/mm/aaaa"></span>
