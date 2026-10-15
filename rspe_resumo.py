@@ -160,10 +160,13 @@ def montar(m, pedidos, hoje=None, nome="", data_atend=None):
             if not sit:
                 return
             pr, dp = pedido_rspe(ped_chave)
-            fr = ("Fração do SEEU: %s. " % fracao) if fracao else ""
+            # primeiro a entrada no direito; depois a fração e a data-base do SEEU; por fim o que mais precisa
+            fr = ("Fração do SEEU: %s." % fracao) if fracao else ""
             db = _data(base)
             if db and aviso_falta != "refazer":  # a data-base do RSPE anterior à falta grave já não vale
-                fr += "Data-base: %s. " % br(db)
+                fr += " Data-base: %s." % br(db)
+            extra = ""
+            doze = " Também precisa de 12 meses sem falta grave." if aviso_falta == "12meses" else ""
             if pr == "pendente":
                 txt = "Já tem pedido no processo%s. Aguarde a decisão do juiz." % (", desde " + br(dp) if dp else "")
             elif pr == "negado" and sit == "vencido":
@@ -171,14 +174,14 @@ def montar(m, pedidos, hoje=None, nome="", data_atend=None):
             elif aviso_falta == "refazer":
                 txt = "A data vai ser refeita por causa da falta grave."
             elif sit == "futuro":
-                txt = "Entra no direito em %s. %s" % (_quando(d, ap), comportamento)
-                if aviso_falta == "12meses":
-                    txt += " Precisa de 12 meses sem falta grave."
+                txt = ("Completa o tempo em %s." if doze else "Entra no direito em %s.") % _quando(d, ap)
+                extra = comportamento + doze
             elif sit == "vencido":
-                txt = "Já tem o tempo desde %s. A Defensoria vai analisar." % _quando(d, ap)
+                txt = "Já tem o tempo desde %s." % _quando(d, ap)
+                extra = (comportamento + doze) if doze else "A Defensoria vai analisar."
             else:
                 txt = "A Defensoria está conferindo a data."
-            sec_dir.append("%s: %s%s" % (titulo, fr, txt))
+            sec_dir.append("%s: %s" % (titulo, " ".join(x.strip() for x in (txt, fr, extra) if x.strip())))
             if d and sit in ("futuro", "vencido") and aviso_falta != "refazer":
                 p_ = 100 if sit == "vencido" else _pct(_data(base), d, hoje)
                 if p_ is not None:
@@ -191,7 +194,7 @@ def montar(m, pedidos, hoje=None, nome="", data_atend=None):
             dl = _data(m.get("liv"))
             direito("Livramento condicional", m.get("frac_liv"), "liv", "liv_sit", "ped_liv",
                     bruto.get("livramento_data_base_seeu") or m.get("dbase"), "Precisa ter bom comportamento.",
-                    "12meses" if dfa and dl and (dl - dfa).days < 365 else "")
+                    "12meses" if dfa and dl and (max(dl, hoje) - dfa).days < 365 else "")
         ind_ped = any(k == "ind" or k.startswith("ind_") for k in ped)
         if not ind_ped:
             for ano, ki, kc in (("2025", "i25", "c25"), ("2024", "i24", "c24"), ("2022", "i22", None)):

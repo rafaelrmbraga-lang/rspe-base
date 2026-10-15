@@ -41,9 +41,14 @@ try:
     ok(Q == {"Regime atual": "Fechado", "Pena total": "6 anos", "Dias tirados pelo trabalho e estudo": "30 dias"} and not pena, "quadro: %s %s" % (Q, pena))
     ok(d["barra"] == {"pct": 33, "cumprida": "2 anos", "falta": "4 anos", "fim": "10/10/2030"}, "pizza da pena: %s" % d["barra"])
     ok("condenacoes" not in d, "sem o que cumpre hoje (o atestado vai junto)")
-    ok(dirs[0] == "Progressão para o semiaberto: Fração do SEEU: 16%. Data-base: 01/01/2024. Entra no direito em 12/02/2027. Precisa ter bom comportamento.",
+    ok(dirs[0] == "Progressão para o semiaberto: Entra no direito em 12/02/2027. Fração do SEEU: 16%. Data-base: 01/01/2024. Precisa ter bom comportamento.",
        "progressão futura: %s" % dirs[0])
-    ok(dirs[1] == "Livramento condicional: Fração do SEEU: 1/3. Data-base: 01/01/2024. Já tem o tempo desde 01/01/2025. A Defensoria vai analisar.", "livramento vencido: %s" % dirs[1])
+    # livramento vencido, mas a falta grave de 01/06/2026 tem menos de 12 meses (CP, art. 83, III, "b")
+    ok(dirs[1] == "Livramento condicional: Já tem o tempo desde 01/01/2025. Fração do SEEU: 1/3. Data-base: 01/01/2024. Precisa ter bom "
+       "comportamento. Também precisa de 12 meses sem falta grave.", "livramento vencido com falta recente: %s" % dirs[1])
+    dv = rres.montar(dict(M, falta="Sim · HOMOLOGAÇÃO DE FALTA GRAVE 01/06/2025"), {}, HOJE)
+    ok(itens(dv, "direitos")[1] == "Livramento condicional: Já tem o tempo desde 01/01/2025. Fração do SEEU: 1/3. Data-base: 01/01/2024. "
+       "A Defensoria vai analisar.", "livramento vencido, falta com mais de 12 meses: %s" % itens(dv, "direitos")[1])
     ok(dirs[2].startswith("Indulto 2025: Você pode ter direito.") and len(dirs) == 3, "indulto: só o decreto mais recente: %s" % dirs)
     ok(d["pizzas"].get("Livramento condicional") == 100, "pizza do livramento vencido: %s" % d["pizzas"])
     ok(not any("(" in x for x in dirs + aten), "sem parênteses")
@@ -51,18 +56,19 @@ try:
     # falta grave: vale a data do RSPE. RSPE gerado depois da homologação traz a data refeita; RSPE anterior a ela ainda não (sem data).
     # O livramento segue com a data do RSPE (Súmulas 534 e 441 do STJ)
     dfg = rres.montar(dict(M, geracao="10/10/2026", dbase="20/05/2026", prog="17/12/2026"), {}, HOJE)
-    ok(itens(dfg, "direitos")[0] == "Progressão para o semiaberto: Fração do SEEU: 16%. Data-base: 20/05/2026. Entra no direito em 17/12/2026. Precisa ter bom comportamento.",
+    ok(itens(dfg, "direitos")[0] == "Progressão para o semiaberto: Entra no direito em 17/12/2026. Fração do SEEU: 16%. Data-base: 20/05/2026. Precisa ter bom comportamento.",
        "RSPE depois da falta: data do RSPE: %s" % itens(dfg, "direitos")[0])
     ok(dfg["pizzas"]["Progressão para o semiaberto"] == 70, "pizza da progressão (20/05 a 17/12, hoje 14/10): %s" % dfg["pizzas"])
     dant = rres.montar(dict(M, geracao="15/05/2026"), {}, HOJE)
-    ok(itens(dant, "direitos")[0] == "Progressão para o semiaberto: Fração do SEEU: 16%. A data vai ser refeita por causa da falta grave."
+    ok(itens(dant, "direitos")[0] == "Progressão para o semiaberto: A data vai ser refeita por causa da falta grave. Fração do SEEU: 16%."
        and "Progressão para o semiaberto" not in dant["pizzas"] and itens(dant, "direitos")[1].startswith("Livramento condicional"),
        "RSPE anterior à falta: sem data: %s" % itens(dant, "direitos"))
     dl = rres.montar(dict(M, liv="01/03/2027", liv_sit="Em cumprimento"), {}, HOJE)
-    ok(itens(dl, "direitos")[1].endswith("Precisa de 12 meses sem falta grave."), "livramento a menos de 12 meses da falta grave: %s" % itens(dl, "direitos")[1])
+    ok(itens(dl, "direitos")[1] == "Livramento condicional: Completa o tempo em 01/03/2027. Fração do SEEU: 1/3. Data-base: 01/01/2024. "
+       "Precisa ter bom comportamento. Também precisa de 12 meses sem falta grave.", "livramento a menos de 12 meses da falta grave: %s" % itens(dl, "direitos")[1])
     # data duvidosa: não sai como data
     d2 = rres.montar(dict(M, prog_sit="Em cumprimento · percentual do SEEU acima do legal - ver Auditoria"), {}, HOJE)
-    ok(itens(d2, "direitos")[0] == "Progressão para o semiaberto: Fração do SEEU: 16%. Data-base: 01/01/2024. A Defensoria está conferindo a data.", "data a conferir: %s" % itens(d2, "direitos")[0])
+    ok(itens(d2, "direitos")[0] == "Progressão para o semiaberto: A Defensoria está conferindo a data. Fração do SEEU: 16%. Data-base: 01/01/2024.", "data a conferir: %s" % itens(d2, "direitos")[0])
     ok("12/02/2027" not in " ".join(itens(d2, "direitos")), "data a conferir não aparece")
     # pedido já feito: sai dos direitos; as providências a adotar não vêm marcadas
     d3 = rres.montar(M, {"liv": {"data": "14/10/2026", "tipo": "pedido"}, "fd": {"data": "14/10/2026", "tipo": "oficio"},
@@ -81,7 +87,7 @@ try:
     ok(d5["barra"]["falta"] == "" and any("pode já ter terminado" in x for x in itens(d5, "pena")), "extinção cabível")
     # pedido registrado no RSPE: pendente (aguarda decisão) e negado
     dp = rres.montar(dict(M, ped_prog="pendente (15/09/2026)"), {}, HOJE)
-    ok(itens(dp, "direitos")[0] == "Progressão para o semiaberto: Fração do SEEU: 16%. Data-base: 01/01/2024. Já tem pedido no processo, desde 15/09/2026. Aguarde a decisão do juiz.",
+    ok(itens(dp, "direitos")[0] == "Progressão para o semiaberto: Já tem pedido no processo, desde 15/09/2026. Aguarde a decisão do juiz. Fração do SEEU: 16%. Data-base: 01/01/2024.",
        "pedido pendente no RSPE: %s" % itens(dp, "direitos")[0])
     dn = rres.montar(dict(M, ped_liv="negado (20/08/2026)"), {}, HOJE)
     ok("O juiz negou o pedido em 20/08/2026." in itens(dn, "direitos")[1], "pedido negado no RSPE: %s" % itens(dn, "direitos"))

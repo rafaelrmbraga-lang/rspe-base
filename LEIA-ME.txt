@@ -151,11 +151,14 @@ para o assistido" na ficha)
     a frase correspondente.
   - Falta grave: valem as datas fixadas no RSPE. RSPE gerado depois da
     homologação já traz a data-base e a progressão refeitas (STJ, Súmula
-    534): sai a data, com "(data já refeita depois da falta grave)". RSPE
-    anterior à homologação ainda não: sai sem data, avisando que a data vai
-    ser refeita no SEEU. O livramento segue a data do RSPE (Súmula 441);
-    se ela cair a menos de 12 meses da falta, o texto lembra que a lei exige
-    12 meses sem falta grave (CP, art. 83, III, "b").
+    534): sai a data refeita. RSPE anterior à homologação ainda não: sai
+    sem data, avisando que a data vai ser refeita. O livramento segue a
+    data do RSPE (Súmula 441); se ainda não houver 12 meses desde a falta,
+    na data do livramento ou hoje, sai "Completa o tempo em..." ou "Já tem
+    o tempo desde...", com "Também precisa de 12 meses sem falta grave"
+    (CP, art. 83, III, "b").
+  - Cada direito começa pela entrada no direito; depois vêm a fração e a
+    data-base do SEEU e o comportamento exigido.
   - Antes do PDF, cada frase pode ser corrigida, desmarcada ou acrescentada.
   - Logo da Defensoria no canto do cabeçalho (vai dentro do APTO.exe; só o
     resumo para o assistido usa o logo).
