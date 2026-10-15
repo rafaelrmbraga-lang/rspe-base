@@ -4089,7 +4089,15 @@ class Api:
         if not nome:
             return {"erro": "Assistido não encontrado."}
         ped = self.base.pedidos().get((m or {}).get("proc") or (m or {}).get("id") or "", {}) if m else {}
-        return rres.montar(m, ped, datetime.now().date(), nome)
+        d = rres.montar(m, ped, datetime.now().date(), nome)
+        # unidade no momento do atendimento: a listagem de internos mais recente, se a pessoa está nela; senão, a da ficha disciplinar
+        d["unidade"] = ""
+        L = (self.base.atend_listagens(carregar=1) or [None])[0]
+        if L and ratd._Indice([x.get("nome") or "" for x in L.get("internos") or []]).achar(nome, parecido=False)[0]:
+            d["unidade"] = L.get("unidade") or ""
+        if not d["unidade"] and m:
+            d["unidade"] = ((m.get("ficha") or {}).get("unidade") or "").strip()
+        return d
 
     def resumo_assistido_pdf(self, d):
         """PDF do resumo (o texto que veio da janela, já conferido), para imprimir."""
@@ -4106,7 +4114,8 @@ class Api:
         except Exception as e:
             return {"erro": "Falha ao gerar o resumo: %s" % e}
         _abrir(c)
-        return {"caminho": c, "msg": "Resumo salvo em " + c}
+        sem = d.get("canhoto", True) and not d.get("_canhoto_saiu")
+        return {"caminho": c, "msg": "Resumo salvo em " + c + (" (sem o canhoto: o texto não caberia em uma folha com ele)" if sem else "")}
 
 
 DEFENSORES = os.path.join(pasta_app(), "defensores.json")

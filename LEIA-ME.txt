@@ -14,9 +14,11 @@ centenas de PDFs de uma vez ("Importar PDFs…" com seleção múltipla, "Import
 pasta…" varrendo subpastas, ou arrastando PDFs/pasta sobre o .exe).
   - Datas de progressão, livramento e término: as impressas pelo SEEU no
     RSPE. O programa não as recalcula.
-  - Cálculos do programa: indulto e comutação (Decretos 11.302/2022,
-    12.338/2024 e 12.790/2025, inciso por inciso; os demais decretos, de
-    2000 a 2025, no mapa da aba Indulto), prescrição (punitiva e executória, crime a
+  - Cálculos do programa: indulto e comutação, inciso por inciso, nos
+    decretos de 2000 a 2025 (2022, 2024 e 2025 em análise detalhada, com
+    coluna própria; os demais pela ficha de cada decreto, no mapa da aba
+    Indulto e na linha do tempo; os incisos que dependem de dado que o
+    RSPE não traz saem nomeados, para conferir), prescrição (punitiva e executória, crime a
     crime), extinção pelo cumprimento, estado da execução (não iniciou,
     interrompida, em livramento, no aberto, cumprida, extinta), falta nos 12
     meses, remição a requerer (ficha disciplinar x RSPE, estudo estimado) e
@@ -128,9 +130,18 @@ ATENDIMENTOS (aba Geral > botão "Atendimentos")
 RESUMO PARA O ASSISTIDO (botão "Resumo" na janela Atendimentos e "Resumo
 para o assistido" na ficha)
   Uma folha A4 para imprimir e entregar ao preso, em linguagem simples
-  (Pacto Nacional do Judiciário pela Linguagem Simples, CNJ): como está a
-  pena (com a barra do que já cumpriu), os próximos direitos, o resumo do
-  atendimento e os avisos (falta grave). Fluxo: registrar o atendimento >
+  (Pacto Nacional do Judiciário pela Linguagem Simples, CNJ), para entregar
+  junto com o atestado de pena do SEEU: frases curtas, datas em dd/mm/aaaa
+  e sem parênteses. "Sua pena hoje" (regime, pena total, dias tirados pelo
+  trabalho e estudo e um gráfico de pizza com o que já cumpriu, o que falta
+  e o fim previsto); "Seus próximos benefícios" (semiaberto ou aberto e
+  livramento: o dia do benefício em destaque, em número grande, porque
+  muitos assistidos leem pouco ou não leem; o comportamento exigido; uma
+  pizza do tempo já cumprido; e, menores, em "Outras informações", a
+  fração e a data-base do SEEU, que o assistido confunde com o dia do
+  benefício;
+  pedido pendente ou negado no RSPE; indulto e comutação); o que a
+  Defensoria vai fazer e os avisos (falta grave). Fluxo: registrar o atendimento >
   resumo para o assistido > relatório do SAP depois.
   - Só entra o que o APTO já calculou. Data duvidosa ("ver Auditoria",
     "verificar") sai como "a Defensoria está conferindo a data". Pedido já
@@ -145,17 +156,27 @@ para o assistido" na ficha)
     a frase correspondente.
   - Falta grave: valem as datas fixadas no RSPE. RSPE gerado depois da
     homologação já traz a data-base e a progressão refeitas (STJ, Súmula
-    534): sai a data, com "(data já refeita depois da falta grave)". RSPE
-    anterior à homologação ainda não: sai sem data, avisando que a data vai
-    ser refeita no SEEU. O livramento segue a data do RSPE (Súmula 441);
-    se ela cair a menos de 12 meses da falta, o texto lembra que a lei exige
-    12 meses sem falta grave (CP, art. 83, III, "b").
+    534): sai a data refeita. RSPE anterior à homologação ainda não: sai
+    sem data, avisando que a data vai ser refeita. O livramento segue a
+    data do RSPE (Súmula 441); se ainda não houver 12 meses desde a falta,
+    na data do livramento ou hoje, sai "Completa o tempo em..." ou "Já tem
+    o tempo desde...", com "Também precisa de 12 meses sem falta grave"
+    (CP, art. 83, III, "b").
+  - Cada benefício começa pelo dia do benefício; depois vêm o
+    comportamento exigido e, por último, a fração e a data-base do SEEU.
   - Antes do PDF, cada frase pode ser corrigida, desmarcada ou acrescentada.
+  - Logo da Defensoria no canto do cabeçalho (vai dentro do APTO.exe; só o
+    resumo para o assistido usa o logo).
+  - O canhoto sai só se tudo couber em uma folha (a janela tem a opção de
+    tirá-lo); quando não cabe, o aviso ao salvar informa.
   - Embaixo, depois da linha pontilhada, o canhoto do assistido: pedido de
-    atendimento com a Defensoria, com o último atendimento e o retorno em
-    30/60/90/__ dias. Perto do prazo de retorno, o assistido entrega o
-    canhoto ao setor psicossocial da unidade para pedir
-    atendimento. Não traz contato.
+    atendimento com a Defensoria, com o último atendimento, o nº do processo
+    de execução, a unidade no momento do atendimento (da listagem de
+    internos mais recente ou da ficha disciplinar; pode ser corrigida na
+    tela) e o "Motivo", que o assistido marca à mão: orientação,
+    transferência, cálculo de pena, saúde, trabalho/educação, PADIC ou outro
+    (com linha para escrever). Quando precisar de novo atendimento, ele
+    entrega o canhoto ao setor psicossocial da unidade. Não traz contato.
 
 EXTENSÃO DO NAVEGADOR (pasta extensao_seeu)
   "APTO - RSPE do SEEU, Ficha do SIAPEN e processos do SAP", para Chrome e
@@ -541,8 +562,14 @@ INDULTO E COMUTAÇÃO
     verificar"), art. 15 (PSC, aviso).
   * O Decreto 11.846/2023 entra só no mapa da aba Indulto (todos os
     decretos, com as hipóteses que se resolvem pela conta) e no relatório
-    geral; não tem análise inciso por inciso nem coluna própria (o modelo
-    de petição do inciso XV desse decreto é só um modelo da unidade).
+    geral; não tem a análise detalhada nem coluna própria (o modelo de
+    petição do inciso XV desse decreto é só um modelo da unidade).
+  * Decretos de 2000 a 2023: cada inciso da ficha é calculado quando se
+    resolve pelos dados do RSPE (pena, fração ou anos cumpridos, regime,
+    idade pela data de nascimento, regime inicial). Os que dependem de dado
+    que o RSPE não traz (filhos, doença, deficiência, estudo, reparação do
+    dano...) saem nomeados na nota do decreto, na linha do tempo, para
+    conferir no prontuário.
   * A ficha do assistido traz a análise inciso por inciso.
   * Linha do tempo (indulto e comutação): o cartão do resultado diz para
     quais crimes cabe (crime e processo) e quais ficam fora, com o botão
@@ -959,12 +986,25 @@ HISTÓRICO DE VERSÕES
   comportamento atual é o descrito nas seções acima.
 
 v7.10.0
+  - Resumo para o assistido para entregar com o atestado de pena: frases
+    curtas, datas dd/mm/aaaa, pizza da pena e de cada direito (fração do
+    SEEU e data-base), logo da Defensoria e canhoto com o motivo do pedido
+    de atendimento, só quando cabe na folha.
+  - Indulto, decretos de 2000 a 2023: a nota da linha do tempo nomeia os
+    incisos não calculados (dependem de dado que o RSPE não traz), no lugar
+    de só contá-los.
+  - Resumo: "Seus próximos benefícios", com o dia do benefício em número
+    grande e a fração e a data-base em "Outras informações"; livramento
+    com falta grave a menos de 12 meses avisa os 12 meses também quando o
+    tempo já foi cumprido.
   - Resumo para o assistido: folha A4 em linguagem simples (CNJ) com a
     pena, os próximos direitos, o que a Defensoria vai fazer (pelas
     providências marcadas) e o canhoto do assistido para pedir o próximo atendimento ao
     setor psicossocial. O texto é conferido e
     editado na tela antes do PDF.
   - Registrar atendimento: ao registrar, abre o resumo.
+  - Dados da Base > Atendimentos se atualiza logo depois de importar a
+    listagem ou o relatório, registrar ou desfazer um atendimento.
 
 v7.9.6
   - Dados da Base > Atendimentos aparece também na base que ainda não tem

@@ -1758,7 +1758,8 @@ const ui = {
     const x=(r.lista||[]).find(y=>y.nome===nome); this.resumoAssistido(x&&x.id||'',nome,true); },
   async atdDesfazer(id){ this.atendimentos(await API().atendimentos_desfazer(id,...this.atdPer())); },
   async atendimentos(r){ r=r||await API().atendimentos(...this.atdPer()); if(!r) return; if(r.erro) return this.toast(r.erro);
-    this._atd=r; if(r.avisos&&r.avisos.length) this.toast(r.avisos.join(' · ')); if(r.msg) this.toast(r.msg);
+    this._atd=r; this._bdAtd=undefined;  // Dados da Base reconta os atendimentos (importação, registro ou desfazer)
+    if(r.avisos&&r.avisos.length) this.toast(r.avisos.join(' · ')); if(r.msg) this.toast(r.msg);
     const L=r.listagem, R=r.relatorio, P=r.prazo||90, C=r.cont||{}, D=r.docs||{}, A=r.anterior, RL=r.relatorios||[];
     const per=(r.periodo_sel||[]).filter(Boolean).join(' a ');
     const chip=(cor,txt,dica)=>`<div class="stat ${cor} ${this.atdFiltro===cor?'on':''}" title="${esc(dica)} · clique para filtrar" onclick="ui.atdFiltro=ui.atdFiltro===${jsa(cor)}?'':${jsa(cor)};ui.atendimentos(ui._atd)"><i class="dot"></i><b>${C[cor]||0}</b><span>${txt}</span></div>`;
@@ -2676,9 +2677,11 @@ const ui = {
       const sec=d.secoes[s]; sec._off=sec._off||{}; sec.itens[k]=el.querySelector('textarea').value; sec._off[k]=!el.querySelector('input').checked; });
     (d.providencias||[]).forEach(p=>{ const el=document.getElementById('resP_'+p.id); if(el) p.marcado=el.checked; });
     const ou=document.getElementById('resOutro'); if(ou) d.outro=ou.value;
-    const rt=document.getElementById('resRet'), ro=document.getElementById('resRetO'), da=document.getElementById('resData');
-    if(rt) d.retorno=rt.value==='outro'?(ro.value||'').replace(/\D/g,''):rt.value; if(da) d.data_atend=da.value; },
-  resumoProv(id,on){ this.resumoLer(); const d=this._res, pre={ped_prog:'Ir para o regime',ped_liv:'Livramento condicional',ped_ind:'Indulto',ped_com:'Comutação'}[id]; if(!pre) return;
+    const un=document.getElementById('resUn'); if(un) d.unidade=un.value;
+    const cn=document.getElementById('resCan'); if(cn) d.canhoto=cn.checked;
+    const da=document.getElementById('resData');
+    if(da) d.data_atend=da.value; },
+  resumoProv(id,on){ this.resumoLer(); const d=this._res, pre={ped_prog:'Progressão',acomp_prog:'',ped_liv:'Livramento condicional',ped_ind:'Indulto',ped_com:'Comutação'}[id]; if(!pre) return;
     const S=d.secoes.find(s=>s.id==='direitos'); if(!S) return; S._off=S._off||{}; S.itens.forEach((x,k)=>{ if([].concat(pre).some(p=>String(x).startsWith(p))) S._off[k]=on; }); this.resumoTela(); },
   resumoMais(s){ this.resumoLer(); this._res.secoes[s].itens.push(''); this.resumoTela(); },
   async resumoPdf(){ this.resumoLer(); const d=this._res;
@@ -2686,20 +2689,19 @@ const ui = {
     const atd=(d.providencias||[]).filter(p=>p.marcado).map(p=>p.frase).concat(String(d.outro||'').split(/\n+/).map(fr)).filter(Boolean);
     const out={...d, secoes:d.secoes.map(s=>({id:s.id, titulo:s.titulo, itens:s.id==='prov'?atd:s.itens.filter((x,k)=>!(s._off||{})[k]&&String(x).trim())}))};
     const r=await API().resumo_assistido_pdf(out); if(r) this.toast(r.erro||r.msg); },
-  resumoTela(){ const d=this._res, ret=d.retorno||'';
+  resumoTela(){ const d=this._res;
     const secs=d.secoes.map((s,i)=>s.id==='prov'?`<div class="res-sec"><h3>O que a Defensoria vai fazer <span class="muted" style="font-weight:400;font-size:12px">(marque as providências que serão adotadas; cada uma vira uma frase simples)</span></h3>
         <div class="res-provs">${(d.providencias||[]).map(p=>`<label title="${esc(p.frase)}"><input type="checkbox" id="resP_${p.id}" ${p.marcado?'checked':''} onchange="ui.resumoProv(${jsa(p.id)},this.checked)"> ${esc(p.rot)}</label>`).join('')}</div>
         <textarea id="resOutro" rows="2" placeholder="Outra providência que será adotada (escreva como vai sair no papel; uma frase por linha)" style="width:100%;margin-top:6px;font:inherit;font-size:13px;padding:5px 8px;border:1px solid var(--line2);border-radius:7px">${esc(d.outro||'')}</textarea></div>`
       :`<div class="res-sec"><h3>${esc(s.titulo)}</h3>${s.itens.map((x,k)=>`<label class="res-it" data-s="${i}" data-k="${k}"><input type="checkbox" ${(s._off||{})[k]?'':'checked'} title="Desmarque para não imprimir"><textarea rows="${Math.max(1,Math.ceil(String(x).length/95))}">${esc(x)}</textarea></label>`).join('')}<span class="mini" onclick="ui.resumoMais(${i})">+ frase</span></div>`).join('');
     document.getElementById('modal').innerHTML=`<div class="box" style="width:860px;max-width:96vw"><h2>Resumo para o assistido · ${esc(d.nome)}</h2>
       <p class="muted" style="margin:0 0 8px">Texto em linguagem simples (Pacto do CNJ), montado com os dados da base${d.proc?' (RSPE do processo '+esc(d.proc)+')':''}. Confira, corrija ou desmarque cada frase e marque as providências que a Defensoria vai adotar. Dado que o APTO ainda confere sai como "a Defensoria está conferindo".</p>
-      ${d.barra?`<p style="margin:0 0 6px">Barra da pena: <b>${d.barra.pct}%</b> cumprida</p>`:''}
+      ${d.barra?`<p style="margin:0 0 6px">Pena cumprida: <b>${d.barra.pct}%</b></p>`:''}
       <div id="resSecs" style="max-height:48vh;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:4px 12px 10px">${secs}</div>
-      <div class="res-can"><b>Canhoto do assistido (pedido do próximo atendimento)</b>
+      <div class="res-can"><label style="display:flex;gap:5px;align-items:center;cursor:pointer"><input type="checkbox" id="resCan" ${d.canhoto===false?'':'checked'}><b>Canhoto do assistido (pedido do próximo atendimento)</b></label>
         <span>Atendimento <input id="resData" value="${esc(d.data_atend||'')}" placeholder="dd/mm/aaaa"></span>
-        <span>Retorno em <select id="resRet" onchange="document.getElementById('resRetO').style.display=this.value==='outro'?'':'none'"><option value="" ${!ret?'selected':''}>em branco (marcar à mão)</option>${['30','60','90'].map(n=>`<option value="${n}" ${ret===n?'selected':''}>${n} dias</option>`).join('')}<option value="outro" ${ret&&!['30','60','90'].includes(ret)?'selected':''}>outro</option></select>
-        <input id="resRetO" value="${esc(ret&&!['30','60','90'].includes(ret)?ret:'')}" placeholder="dias" style="width:60px;${ret&&!['30','60','90'].includes(ret)?'':'display:none'}"></span>
-        <span class="muted">Perto do prazo de retorno, o assistido entrega o canhoto ao setor psicossocial da unidade.</span></div>
+        <span>Unidade <input id="resUn" value="${esc(d.unidade||'')}" placeholder="unidade prisional no atendimento" style="width:300px"></span>
+        <span class="muted">Leva o nº do processo e o campo "Motivo" (orientação, transferência, cálculo de pena, saúde, trabalho/educação, PADIC ou outro), que o assistido marca quando precisar de novo atendimento e entrega ao setor psicossocial da unidade. Se o texto não couber em uma folha com o canhoto, ele sai sem o canhoto.</span></div>
       <div class="acts">${this._resAtd?`<button class="btn" onclick="ui.atendimentos(ui._atd)">Voltar aos atendimentos</button>`:''}<button class="btn pri" onclick="ui.resumoPdf()">Gerar PDF para imprimir</button><button class="btn" onclick="ui.fecharModal()">Fechar</button></div></div>`;
     document.getElementById('modal').classList.add('on'); },
   async relatorioUm(id){ const r=await API().relatorio_um(id); if(r && r.caminho){ this.toast('Relatório: '+r.caminho); } else if(r && r.erro){ this.toast(r.erro); } },

@@ -14,20 +14,20 @@ PROXIMO_REGIME = {"fechado": "semiaberto", "semiaberto": "aberto"}
 
 # providências que a Defensoria vai adotar: (id, rótulo na janela, frase no resumo)
 PROVIDENCIAS = [
-    ("ped_prog", "Pedir a progressão de regime", "Vamos pedir ao juiz a mudança de regime."),
-    ("acomp_prog", "Acompanhar a data da progressão", "Vamos acompanhar a data da mudança de regime e fazer o pedido ao juiz quando ela chegar."),
-    ("ped_liv", "Pedir o livramento condicional", "Vamos pedir ao juiz o livramento condicional."),
-    ("ped_ind", "Pedir o indulto", "Vamos pedir ao juiz o indulto (perdão da pena)."),
-    ("ped_com", "Pedir a comutação", "Vamos pedir ao juiz a comutação (redução da pena)."),
-    ("ped_rem", "Pedir a remição", "Vamos pedir ao juiz o desconto dos dias de trabalho e estudo na pena (remição)."),
-    ("ped_ext", "Pedir a extinção da pena", "Vamos pedir ao juiz o fim da pena (extinção)."),
-    ("ped_presc", "Pedir a prescrição", "Vamos pedir ao juiz o reconhecimento da prescrição (o fim do prazo para cumprir a pena)."),
-    ("ped_st", "Pedir a saída temporária", "Vamos pedir ao juiz a saída temporária."),
-    ("ofi_atest", "Ofício: atestados de trabalho e estudo", "Vamos pedir à unidade prisional os atestados de trabalho e estudo."),
-    ("rspe", "Pedir o cálculo atualizado da pena", "Vamos pedir o cálculo atualizado da sua pena (relatório do SEEU)."),
-    ("falta", "Defesa na falta disciplinar", "Vamos acompanhar o procedimento da falta disciplinar e fazer a sua defesa."),
-    ("analise", "Analisar o processo", "Vamos analisar o seu processo e, se for o caso, fazer o pedido ao juiz."),
-    ("aguarda", "Acompanhar pedido já feito", "Vamos acompanhar o pedido que já está no processo até a decisão do juiz."),
+    ("ped_prog", "Pedir a progressão de regime", "Vamos pedir a progressão ao juiz."),
+    ("acomp_prog", "Acompanhar a data da progressão", "Vamos acompanhar a data da progressão."),
+    ("ped_liv", "Pedir o livramento condicional", "Vamos pedir o livramento condicional ao juiz."),
+    ("ped_ind", "Pedir o indulto", "Vamos pedir o indulto ao juiz. Indulto é o perdão da pena."),
+    ("ped_com", "Pedir a comutação", "Vamos pedir a comutação ao juiz. Comutação diminui a pena."),
+    ("ped_rem", "Pedir a remição", "Vamos pedir ao juiz o desconto dos dias de trabalho e estudo."),
+    ("ped_ext", "Pedir a extinção da pena", "Vamos pedir ao juiz o fim da pena."),
+    ("ped_presc", "Pedir a prescrição", "Vamos pedir a prescrição ao juiz. É quando acaba o prazo para cumprir a pena."),
+    ("ped_st", "Pedir a saída temporária", "Vamos pedir a saída temporária ao juiz."),
+    ("ofi_atest", "Ofício: atestados de trabalho e estudo", "Vamos pedir à unidade os atestados de trabalho e estudo."),
+    ("rspe", "Pedir o cálculo atualizado da pena", "Vamos pedir o cálculo atualizado da sua pena."),
+    ("falta", "Defesa na falta disciplinar", "Vamos fazer a sua defesa na falta disciplinar."),
+    ("analise", "Analisar o processo", "Vamos analisar o seu processo."),
+    ("aguarda", "Acompanhar pedido já feito", "Vamos acompanhar o seu pedido até o juiz decidir."),
 ]
 
 
@@ -84,131 +84,156 @@ def _beneficio_data(m, chave, sit_chave):
     return None, None, False
 
 
+def br(d):
+    return d.strftime("%d/%m/%Y")
+
+
 def _quando(d, aprox):
-    return extenso(d) + (" (data aproximada)" if aprox else "")
+    return ("por volta de " if aprox else "") + br(d)
+
+
+def _pct(base, alvo, hoje):
+    """quanto do tempo entre a data-base e a data do direito já passou (0 a 100); None sem as duas datas."""
+    if not base or not alvo or alvo <= base:
+        return None
+    return max(0, min(100, round(100.0 * (hoje - base).days / (alvo - base).days)))
 
 
 def montar(m, pedidos, hoje=None, nome="", data_atend=None):
     """m: modelo do assistido (None se ainda não há RSPE na base); pedidos: {aba: {data, tipo, obs}} do processo;
-    data_atend: o atendimento do resumo (hoje, se vazio).
+    data_atend: o atendimento do resumo (hoje, se vazio). Frases curtas, datas em dd/mm/aaaa, sem parênteses.
     -> dados do resumo (editáveis na janela do APTO)."""
     hoje = hoje or date.today()
     nome = (m or {}).get("nome") or nome
     sec_pena, sec_dir, sec_aten = [], [], []
-    barra = None
+    barra, quadro, pizzas = None, [], {}
 
-    # 1) como está a pena
+    # 1) a pena hoje: quadro (regime, pena total, remição) e a pizza do que já cumpriu e do que falta, com o fim previsto
     if not m:
-        sec_pena.append("A Defensoria ainda não tem o relatório atualizado da sua pena. Por isso, este resumo não traz as datas dos seus direitos.")
+        sec_pena.append("Ainda não temos o cálculo atualizado da sua pena.")
     else:
         reg = str(m.get("regime") or "").strip()
         r0 = reg.split(" (")[0].strip().lower()
         if "livramento" in r0:
-            sec_pena.append("Você está em livramento condicional: cumpre o resto da pena em liberdade, seguindo as regras do juiz.")
-        elif r0 in ("fechado", "semiaberto", "aberto"):
-            if "não iniciado" in reg.lower():
-                sec_pena.append("Seu regime é o %s. O cumprimento ainda não começou." % r0)
-            else:
-                sec_pena.append("Você está no regime %s." % r0)
+            sec_pena.append("Você está em livramento condicional.")
+        elif r0 in ("fechado", "semiaberto", "aberto") and "não iniciado" in reg.lower():
+            sec_pena.append("O cumprimento da pena ainda não começou.")
         tot, cum, rem = m.get("pena_total"), m.get("pena_cumprida"), m.get("pena_rem")
-        if _dias(tot):
-            sec_pena.append("Sua pena total é de %s." % tot)
         ext = str(m.get("ext_sit") or "")
+        mr = re.match(r"\s*(\d+)\s*dias?", str(m.get("remidos") or ""))
+        rem_d = int(mr.group(1)) if mr else 0
+        dt = _data(m.get("termino"))
+        fim = ""
+        if ext.startswith("Extinção cabível"):
+            fim = "pode já ter terminado"
+        elif dt and not ext.startswith(("Pena interrompida", "Pena suspensa", "Pena extinta")):
+            fim = _quando(dt, str(m.get("termino")).strip().endswith("*"))
+        quadro = [["Regime atual", reg.split(" (")[0] or "—"], ["Pena total", tot if _dias(tot) else "—"],
+                  ["Dias tirados pelo trabalho e estudo", "%d dias" % rem_d if rem_d else "zero"]]
         if _dias(cum) and _dias(rem) is not None:
-            if _dias(rem) and not ext.startswith("Extinção cabível"):
-                sec_pena.append("Você já cumpriu %s. %s %s." % (cum, "Falta" if re.match(r"^1 \w+$", str(rem).strip()) else "Faltam", rem))
-            else:
-                sec_pena.append("Você já cumpriu %s." % cum)
             t_ = (_dias(cum) or 0) + (_dias(rem) or 0)
             if t_:
-                barra = {"pct": round(100.0 * (_dias(cum) or 0) / t_), "cumprida": cum, "falta": rem}
-        mr = re.match(r"\s*(\d+)\s*dias?", str(m.get("remidos") or ""))
-        if mr and int(mr.group(1)) > 0:
-            sec_pena.append("O trabalho e o estudo já tiraram %s dias da sua pena. Isso se chama remição." % mr.group(1))
-        if ext.startswith("Extinção cabível"):
-            if not (pedidos or {}).get("ext"):
-                sec_pena.append("Pelas contas, a sua pena pode já ter terminado. A Defensoria vai analisar e, se for o caso, pedir ao juiz o fim da pena.")
-        else:
-            dt = _data(m.get("termino"))
-            if dt and dt > hoje and not ext.startswith(("Pena interrompida", "Pena suspensa", "Pena extinta")):
-                sec_pena.append("Pela conta de hoje, a sua pena termina em %s." % _quando(dt, str(m.get("termino")).strip().endswith("*")))
+                falta = rem if _dias(rem) and not ext.startswith("Extinção cabível") else ""
+                barra = {"pct": round(100.0 * (_dias(cum) or 0) / t_), "cumprida": cum, "falta": falta, "fim": fim}
+        if ext.startswith("Extinção cabível") and not (pedidos or {}).get("ext"):
+            sec_pena.append("Sua pena pode já ter terminado. A Defensoria vai analisar.")
 
-    # 2) próximos direitos
+    # 2) próximos direitos: "Título: frase. frase." (a janela edita; o PDF põe cada frase numa linha, com a pizza do tempo já cumprido)
     if m:
         ped = pedidos or {}
         r0 = str(m.get("regime") or "").split(" (")[0].strip().lower()
         prox = PROXIMO_REGIME.get(r0)
-        # falta grave: a contagem para a progressão recomeça (STJ, Súmula 534) e o SEEU refaz a data-base e a data. Vale a data do RSPE:
-        # RSPE gerado depois da homologação já traz a data refeita; RSPE anterior a ela ainda não (sem data: falta o RSPE atualizado).
-        # O livramento não é interrompido pela falta grave (Súmula 441): segue a data do RSPE.
+        bruto = m.get("_bruto") or {}
+        # falta grave: a contagem da progressão recomeça (STJ, Súmula 534) e o SEEU refaz a data-base e a data. Vale a data do RSPE:
+        # RSPE gerado depois da homologação já traz a data refeita; RSPE anterior a ela ainda não (sem data). O livramento não é
+        # interrompido pela falta grave (Súmula 441), mas exige 12 meses sem falta grave (CP, art. 83, III, "b").
         fa = str(m.get("falta") or "")
         dfa, ger = _data(fa) if fa.startswith("Sim") else None, _data(m.get("geracao"))
+
+        def pedido_rspe(chave):
+            """situação do último pedido registrado no RSPE: ("pendente"|"negado"|"", data)"""
+            v = str(m.get(chave) or "").lower()
+            return ("pendente" if v.startswith("pendente") else "negado" if v.startswith("negado") else ""), _data(v)
+
+        def direito(titulo, fracao, chave, sit_chave, ped_chave, base, comportamento, aviso_falta):
+            sit, d, ap = _beneficio_data(m, chave, sit_chave)
+            if not sit:
+                return
+            pr, dp = pedido_rspe(ped_chave)
+            # primeiro o dia do benefício (a palavra que o assistido entende; "data-base" ele confunde com o dia do benefício, por isso
+            # a fração e a data-base vão no PDF em "Outras informações", menores); depois o que mais precisa
+            fr = ("Fração do SEEU: %s." % fracao) if fracao else ""
+            db = _data(base)
+            if db and aviso_falta != "refazer":  # a data-base do RSPE anterior à falta grave já não vale
+                fr += " Data-base: %s." % br(db)
+            extra = ""
+            doze = " Também precisa de 12 meses sem falta grave." if aviso_falta == "12meses" else ""
+            if pr == "pendente":
+                txt = "Já tem pedido no processo%s. Aguarde a decisão do juiz." % (", desde " + br(dp) if dp else "")
+            elif pr == "negado" and sit == "vencido":
+                txt = "O juiz negou o pedido%s. A Defensoria vai analisar." % (" em " + br(dp) if dp else "")
+            elif aviso_falta == "refazer":
+                txt = "A data vai ser refeita por causa da falta grave."
+            elif sit == "futuro":
+                txt = ("Completa o tempo em %s." if doze else "Dia do benefício: %s.") % _quando(d, ap)
+                extra = comportamento + doze
+            elif sit == "vencido":
+                txt = "Já tem o tempo desde %s." % _quando(d, ap)
+                extra = (comportamento + doze) if doze else "A Defensoria vai analisar."
+            else:
+                txt = "A Defensoria está conferindo a data."
+            sec_dir.append("%s: %s" % (titulo, " ".join(x.strip() for x in (txt, extra, fr) if x.strip())))
+            if d and sit in ("futuro", "vencido") and aviso_falta != "refazer":
+                p_ = 100 if sit == "vencido" else _pct(_data(base), d, hoje)
+                if p_ is not None:
+                    pizzas[titulo] = p_
+
         if prox and not ped.get("prog"):
-            sit, d, ap = _beneficio_data(m, "prog", "prog_sit")
-            if dfa and ger and ger < dfa and sit:
-                sec_dir.append("Ir para o regime %s: por causa da falta grave, a data vai ser refeita no SEEU. A Defensoria vai pedir o relatório "
-                               "atualizado e informar a nova data." % prox)
-            elif sit == "futuro":
-                sec_dir.append("Ir para o regime %s: a partir de %s%s. Para isso, é preciso ter bom comportamento."
-                               % (prox, _quando(d, ap), " (data já refeita depois da falta grave)" if dfa else ""))
-            elif sit == "vencido":
-                sec_dir.append("Ir para o regime %s: você já cumpriu o tempo necessário em %s. A Defensoria vai analisar e, se for o caso, fazer o pedido ao juiz." % (prox, _quando(d, ap)))
-            elif sit == "conferir":
-                sec_dir.append("Ir para o regime %s: a Defensoria está conferindo a data." % prox)
+            direito(prox.capitalize(), m.get("frac_prog"), "prog", "prog_sit", "ped_prog", m.get("dbase"),
+                    "Precisa ter bom comportamento.", "refazer" if dfa and ger and ger < dfa else "")
         if "livramento" not in r0 and not ped.get("liv"):
-            sit, d, ap = _beneficio_data(m, "liv", "liv_sit")
-            lc = "Livramento condicional (terminar a pena em liberdade, cumprindo regras)"
-            if sit == "futuro" and dfa and (d - dfa).days < 365:
-                # o livramento exige também 12 meses sem falta grave (CP, art. 83, III, "b"); a data da falta em si não está no RSPE
-                sec_dir.append("%s: o tempo necessário se completa em %s. A lei também exige 12 meses sem falta grave. A Defensoria vai "
-                               "conferir essa data." % (lc, _quando(d, ap)))
-            elif sit == "futuro":
-                sec_dir.append("%s: a partir de %s." % (lc, _quando(d, ap)))
-            elif sit == "vencido":
-                sec_dir.append("%s: você já cumpriu o tempo necessário em %s. A Defensoria vai analisar e, se for o caso, fazer o pedido ao juiz." % (lc, _quando(d, ap)))
-            elif sit == "conferir":
-                sec_dir.append("%s: a Defensoria está conferindo a data." % lc)
+            dl = _data(m.get("liv"))
+            direito("Livramento condicional", m.get("frac_liv"), "liv", "liv_sit", "ped_liv",
+                    bruto.get("livramento_data_base_seeu") or m.get("dbase"), "Precisa ter bom comportamento.",
+                    "12meses" if dfa and dl and (max(dl, hoje) - dfa).days < 365 else "")
         ind_ped = any(k == "ind" or k.startswith("ind_") for k in ped)
         if not ind_ped:
             for ano, ki, kc in (("2025", "i25", "c25"), ("2024", "i24", "c24"), ("2022", "i22", None)):
                 vi, vc = str(m.get(ki) or ""), str(m.get(kc) or "") if kc else ""
                 if vi == "Sim":
-                    sec_dir.append("Indulto de %s (perdão da pena dado pelo Presidente da República): você pode ter direito. A Defensoria vai analisar." % ano)
+                    sec_dir.append("Indulto %s: Você pode ter direito. Indulto é o perdão da pena. A Defensoria vai analisar." % ano)
                 elif vc == "Sim":
-                    sec_dir.append("Comutação de %s (redução da pena dada pelo Presidente da República): você pode ter direito. A Defensoria vai analisar." % ano)
+                    sec_dir.append("Comutação %s: Você pode ter direito. Comutação diminui a pena. A Defensoria vai analisar." % ano)
                 elif vi == "Verificar" or vc == "Verificar":
-                    sec_dir.append("Indulto ou comutação de %s: a Defensoria vai verificar se você tem direito." % ano)
+                    sec_dir.append("Indulto ou comutação %s: A Defensoria vai verificar se você tem direito." % ano)
                 else:
                     continue
                 break  # só o decreto mais recente que alcança
         if not sec_dir:
-            sec_dir.append("Neste momento, não há data próxima de novo direito no seu processo.")
+            sec_dir.append("Neste momento, não há data próxima de novo direito.")
 
     # 3) o que a Defensoria vai fazer: quem atendeu marca na janela as providências que serão adotadas e escreve outras; as frases
     # saem no PDF (nada vem marcado: é a decisão de quem atendeu)
     da = data_atend or hoje
     provs = [{"id": i_, "rot": r_, "frase": f_, "marcado": False} for i_, r_, f_ in PROVIDENCIAS]
-    outro = ""
 
     # 4) atenção
     if m:
         fa = str(m.get("falta") or "")
         if fa.startswith("Sim"):
             dfa = _data(fa)
-            sec_aten.append("Consta falta grave confirmada pelo juiz%s. A falta grave pode atrasar a mudança de regime e outros direitos."
-                            % (" em " + extenso(dfa) if dfa else ""))
+            sec_aten.append("Você tem falta grave%s. Ela pode atrasar seus direitos." % (", confirmada em " + br(dfa) if dfa else ""))
         elif fa.startswith("A apurar"):
-            sec_aten.append("Há uma falta disciplinar em apuração. Se for confirmada, pode atrasar os seus direitos.")
-    sec_aten.append("Trabalhar e estudar diminui a pena. Manter o bom comportamento ajuda a conseguir os seus direitos.")
+            sec_aten.append("Há uma falta em apuração. Se for confirmada, pode atrasar seus direitos.")
+    sec_aten += ["Trabalhar e estudar diminui a pena.", "Bom comportamento ajuda nos seus direitos."]
 
-    secoes = [{"id": "pena", "titulo": "Como está a sua pena", "itens": sec_pena}]
+    secoes = [{"id": "pena", "titulo": "Sua pena hoje", "itens": sec_pena}]
     if m:
-        secoes.append({"id": "direitos", "titulo": "Seus próximos direitos", "itens": sec_dir})
+        secoes.append({"id": "direitos", "titulo": "Seus próximos benefícios", "itens": sec_dir})
     secoes += [{"id": "prov", "titulo": "O que a Defensoria vai fazer", "itens": []},
                {"id": "atencao", "titulo": "Fique atento", "itens": sec_aten}]
     ger = (m or {}).get("geracao") or ""
-    rodape = ("As datas deste resumo vêm do SEEU (relatório de %s). Elas podem mudar com decisões do juiz, faltas ou dias de trabalho e estudo." % ger
-              if m else "")
+    rodape = ("Datas do SEEU de %s. Elas podem mudar com decisões do juiz, faltas, trabalho e estudo." % ger if m else "")
     return {"nome": nome, "proc": (m or {}).get("proc") or "", "hoje": hoje.strftime("%d/%m/%Y"), "barra": barra,
-            "secoes": secoes, "rodape": rodape, "data_atend": da.strftime("%d/%m/%Y"), "providencias": provs, "outro": outro}
-
+            "quadro": quadro, "pizzas": pizzas, "vara": (m or {}).get("vara") or "",
+            "secoes": secoes, "rodape": rodape, "data_atend": da.strftime("%d/%m/%Y"), "providencias": provs, "outro": ""}
