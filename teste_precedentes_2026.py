@@ -94,6 +94,20 @@ try:
     x = {"id": "2017", "ref": "25/12/2017", "s": "nao", "mot": "faltavam 1a0m0d para 1/5 em 25/12/2017"}
     rd._remicao_pendente(x, rr)
     ok(x["s"] == "nao", "remição: déficit maior que a remição")
+    # ícone de prioridade: a remição pendente (30 + 40 dias, até hoje) leva a progressão prevista para daqui a 50 dias a hoje; o
+    # livramento a 200 dias não; decreto convertido entra nos motivos
+    import rspe_view as rv
+    from datetime import timedelta
+    hj = date(2026, 10, 16)
+    m = {"prog": (hj + timedelta(days=50)).strftime("%d/%m/%Y"), "liv": (hj + timedelta(days=200)).strftime("%d/%m/%Y"), "termino": "",
+         "dec": {"decretos": [{"id": "2017", "ano": 2017, "numero": "9.246", "s": "ver", "mot": "A VERIFICAR (remição pendente): faltavam 10 dias"}]}}
+    p_ = rv.prioridade_remicao(m, rr, hj)
+    ok(any(t.startswith("Progressão de regime") for t in p_), "prioridade: progressão ausente %r" % p_)
+    ok(not any(t.startswith("Livramento") for t in p_), "prioridade: livramento a 200 dias entrou")
+    ok(any("Decreto 9.246" in t for t in p_) and p_[-1].startswith("Remição pendente: 70 dias"), "prioridade: decreto ou resumo %r" % p_)
+    ok(rv.prioridade_remicao(dict(m, prog="", dec={}), rr, hj) == [], "prioridade: sem benefício deveria ficar vazio")
+    ok(rv.prioridade_remicao(m, {}, hj)[:1] == ["Indulto/comutação, Decreto 9.246 (2017): o tempo que faltava é coberto pela remição pendente."],
+       "prioridade: sem remição só o decreto")
 except Exception as e:
     import traceback
     traceback.print_exc()

@@ -1743,6 +1743,31 @@ def nome_proprio(nome):
     return " ".join(out)
 
 
+def prioridade_remicao(m, r, hoje=None):
+    """Remição pendente da ficha (dias exatos, r["_rem_pend"]) que, declarada, já daria um benefício: a progressão, o livramento ou o
+    término previstos para o futuro recuam os dias remidos e cairiam até hoje, ou um decreto passa a "a verificar" por ela. Lista de
+    motivos para o ícone de prioridade ao lado do nome ([] se nada muda hoje). A remição é pena cumprida (LEP, art. 128)."""
+    hoje = hoje or HOJE
+    tot, rots = rs.remicao_pendente_ate(r, hoje)
+    out = []
+    if tot >= 1:
+        n = int(tot)
+        for k, rot, g in (("prog", "Progressão de regime", "a"), ("liv", "Livramento condicional", "o"), ("termino", "Término da pena (extinção)", "o")):
+            d = rs.to_date(m.get(k) or "")
+            if d and d > hoje and d - timedelta(days=n) <= hoje:
+                out.append("%s: previst" % rot + g + " para %s; com a remição pendente de %s, o tempo já estaria cumprido (por volta de %s)." % (
+                    rs.fmt(d), rs.pl(n, "dia", "dias"), rs.fmt(d - timedelta(days=n))))
+    for x in (m.get("dec") or {}).get("decretos") or []:
+        if "remição pendente" in (x.get("mot") or "") and x.get("s") == "ver":
+            out.append("Indulto/comutação, Decreto %s (%s): o tempo que faltava é coberto pela remição pendente." % (
+                x.get("numero") or x.get("id"), x.get("ano") or x.get("id")))
+    if out:
+        out.append("Remição pendente: %s%s. Pedir a declaração da remição (LEP, arts. 126 e 128)." % (
+            rs.pl(int(tot), "dia", "dias") if tot >= 1 else "ver a aba Ficha",
+            (" (%s)" % ("; ".join(rots[:4]) + ("; ..." if len(rots) > 4 else ""))) if rots else ""))
+    return out
+
+
 def json_seguro(o):
     """Cópia do modelo que a tela consegue receber: Fraction vira número, date vira dd/mm/aaaa, tupla/conjunto vira lista.
     (A ponte com a tela serializa em JSON; um Fraction perdido derrubava a lista inteira.)"""
