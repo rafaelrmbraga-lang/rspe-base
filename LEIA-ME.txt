@@ -1,9 +1,9 @@
-APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.10.0
+APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.11.0
 (antigo RSPE Base; SEEU, programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-7.10.0. A documentação técnica completa (cada parâmetro, a regra, a norma e
+7.11.0. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -993,6 +993,60 @@ HISTÓRICO DE VERSÕES
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
 
+v7.11.0
+  - Filtros por ícone em todas as abas (menos Indulto): além da saída
+    temporária e da progressão antecipada, "Prioridade: remição pendente
+    que já dá benefício", "Divergência no SEEU/SIAPEN" e "RSPE
+    desatualizado (mais de 60 dias)".
+  - Remição (aba Ficha): atestado com período declarado e intervalos
+    ("de 07/06/13 a 16/12/15, com intervalos") mostra os trechos de
+    trabalho que a ficha registra dentro do período - afastamentos e
+    lançamentos tornados sem efeito ficam de fora -, com os dias possíveis
+    para os dias declarados. Atestado sem período cujos trechos não
+    comportam os dias declarados é marcado como provável atestado
+    cumulativo: sai do total a requerer e da prioridade, com a indicação
+    das remições do RSPE sem origem que podem ser a sua apreciação.
+  - Processos antigos (físicos, digitalizados no SEEU): o atestado
+    cumulativo é comparado com as remições do RSPE sem atestado na ficha
+    decididas até a sua emissão (e as posteriores sem origem); se a soma
+    alcança os remidos declarados, fica "provavelmente já remido". A
+    remição sem origem decidida dentro do período de um atestado ainda não
+    lançado é apontada (pode já incluir parte dele). Com remições
+    anteriores a 2019 e atestado antigo sem remição, a ficha avisa que se
+    trata de provável processo digitalizado.
+  - Aba Ficha: botão "Exportar tabela" gera a tabela da remição em Word
+    (.docx, A4 retrato), para colar na petição: atestados x RSPE, total
+    a requerer, observações numeradas abaixo da tabela e trabalho sem
+    atestado.
+  - Aba Ficha, novo item A) Resumo quantitativo: dias de remição pelos
+    atestados expedidos, dias homologados no RSPE (e perdidos, LEP, art.
+    127) e a estimativa pelos períodos de trabalho da ficha (segunda a
+    sábado, sem descontar faltas), até o último atestado ou a última
+    remição, com um parágrafo que aponta inconsistência, remição acima da
+    estimativa ou números compatíveis; o trabalho posterior aparece à
+    parte, como ainda sem atestado. Quando a ficha registra estudo, exame
+    (ENCCEJA/ENEM) ou leitura, o resumo avisa que essa remição entra no
+    total homologado e pode encobrir atestado de trabalho não homologado
+    ou outra divergência (linha "Histórico de estudo ou leitura": Sim,
+    conferir se encobre divergência com a remição pelo trabalho; Não,
+    verificar se há certificados homologados fora da ficha do SIAPEN).
+    Os demais itens passam a B, C e D, com menos negrito nas pendências
+    e nos alertas (data discreta e providência em verde); o parágrafo
+    sai justificado.
+  - Pendências da remição coerentes com o aviso de atestado cumulativo:
+    o atestado provavelmente cumulativo sai como "Possível cumulativo"
+    (amarelo), com a providência de conferir nos autos quais períodos já
+    foram remidos (e requerer só a diferença), e não mais "requerer a
+    apreciação" (o mesmo na tabela B e na Auditoria); atestado com
+    remição sem origem decidida dentro do seu período pede para conferir
+    se ela já inclui parte dele, também no resumo do topo ("antes,
+    conferir as remições sem origem do mesmo período").
+  - Aba Ficha, linha aberta: botões no topo; a situação sai em lista
+    curta, um ponto por linha, em letra normal com marcador vermelho
+    (dias exatos a requerer) ou amarelo (conferir); a observação longa de
+    cada atestado vai numa linha inteira abaixo dele, e não mais na
+    coluna estreita.
+
 v7.10.0
   - Resumo para o assistido para entregar com o atestado de pena: frases
     curtas, datas dd/mm/aaaa, pizza da pena e de cada direito (fração do
@@ -1043,56 +1097,6 @@ v7.10.0
     assistido na aba Ficha.
   - Alerta de divergência no SEEU/SIAPEN em caixinha (fundo branco, borda
     vermelha), no padrão dos ícones ao lado do nome.
-  - Filtros por ícone em todas as abas (menos Indulto): além da saída
-    temporária e da progressão antecipada, "Prioridade: remição pendente
-    que já dá benefício", "Divergência no SEEU/SIAPEN" e "RSPE
-    desatualizado (mais de 60 dias)".
-  - Remição (aba Ficha): atestado com período declarado e intervalos
-    ("de 07/06/13 a 16/12/15, com intervalos") mostra os trechos de
-    trabalho que a ficha registra dentro do período - afastamentos e
-    lançamentos tornados sem efeito ficam de fora -, com os dias possíveis
-    para os dias declarados. Atestado sem período cujos trechos não
-    comportam os dias declarados é marcado como provável atestado
-    cumulativo: sai do total a requerer e da prioridade, com a indicação
-    das remições do RSPE sem origem que podem ser a sua apreciação.
-  - Processos antigos (físicos, digitalizados no SEEU): o atestado
-    cumulativo é comparado com as remições do RSPE sem atestado na ficha
-    decididas até a sua emissão (e as posteriores sem origem); se a soma
-    alcança os remidos declarados, fica "provavelmente já remido". A
-    remição sem origem decidida dentro do período de um atestado ainda não
-    lançado é apontada (pode já incluir parte dele). Com remições
-    anteriores a 2019 e atestado antigo sem remição, a ficha avisa que se
-    trata de provável processo digitalizado.
-  - Aba Ficha: botão "Exportar tabela" gera a tabela da remição em Word
-    (.docx, A4 retrato), para colar na petição: atestados x RSPE, total
-    a requerer, observações numeradas abaixo da tabela e trabalho sem
-    atestado.
-  - Aba Ficha, novo item A) Resumo quantitativo: dias de remição pelos
-    atestados expedidos, dias homologados no RSPE (e perdidos, LEP, art.
-    127) e a estimativa pelos períodos de trabalho da ficha (segunda a
-    sábado, sem descontar faltas), até o último atestado ou a última
-    remição, com um parágrafo que aponta inconsistência, remição acima da
-    estimativa ou números compatíveis; o trabalho posterior aparece à
-    parte, como ainda sem atestado. Quando a ficha registra estudo, exame
-    (ENCCEJA/ENEM) ou leitura, o resumo avisa que essa remição entra no
-    total homologado e pode encobrir atestado de trabalho não homologado
-    ou outra divergência (linha "Histórico de estudo ou leitura": Sim,
-    conferir se encobre divergência com a remição pelo trabalho; Não,
-    verificar se há certificados homologados fora da ficha do SIAPEN).
-    Os demais itens passam a B, C e D;
-    pendências e alertas com menos negrito (data discreta e providência
-    em verde).
-  - Pendências da remição coerentes com o aviso de atestado cumulativo:
-    o atestado provavelmente cumulativo sai como "Possível cumulativo"
-    (amarelo), com a providência de conferir nos autos quais períodos já
-    foram remidos (e requerer só a diferença), e não mais "requerer a
-    apreciação" (o mesmo na tabela B); atestado com remição sem origem decidida dentro do seu
-    período pede para conferir se ela já inclui parte dele. O mesmo na
-    Auditoria.
-  - Aba Ficha, linha aberta: botões no topo; a situação sai em lista curta, um ponto por
-    linha, em letra normal com marcador vermelho (dias exatos a requerer)
-    ou amarelo (conferir); a observação longa de cada atestado vai numa
-    linha inteira abaixo dele, e não mais na coluna estreita.
   - Aba Indulto, um decreto por vez: nome social longo não alarga mais a
     coluna do nome nem espreme o motivo; o benefício vai abaixo do
     resultado, e a tabela cabe na tela sem rolagem lateral.

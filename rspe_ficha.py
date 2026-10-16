@@ -3106,7 +3106,10 @@ def comparativo(r, f, hoje=None, conferidos=None, manuais=None):
         sem_pet = any(a["status"] == "NAO_LANCADO" and not a.get("peticionado") for a in ((res.get("conc") or {}).get("atestados") or []))
         partes.append("Atestado não lançado no RSPE: %s - %s" % (
             " + ".join(x for x in (("%s dia%s de remição" % (_fmtn(nh), "s" if nh >= 2 else "")) if nh >= 1 else "", rs.pl(nl_sd, "atestado sem os dias na ficha", "atestados sem os dias na ficha") if nl_sd else "") if x),
-            "conferir nos autos e, se juntado, requerer a apreciação" if sem_pet else "já peticionado: requerer a apreciação"))
+            "conferir nos autos e, se juntado, requerer a apreciação" if sem_pet else "já peticionado: requerer a apreciação") + (
+            "; antes, conferir as remições sem origem do mesmo período" if any(
+                a.get("status") == "NAO_LANCADO" and a.get("sobrep_rems") and a.get("cumulativo") is None
+                for a in ((res.get("conc") or {}).get("atestados") or [])) else ""))
     # processo antigo (físico, digitalizado no SEEU): remições anteriores a 2019 sem atestado na ficha e atestado antigo ainda sem
     # remição - os atestados da época costumam ser cumulativos e as decisões antigas não trazem o atestado
     C_ = res.get("conc") or {}
