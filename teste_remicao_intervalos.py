@@ -36,7 +36,9 @@ f = {"data_impressao": "16/10/2026", "eventos": [
                     "07/06/13 A 16/12/15 (COM INTERVALOS). AUTOS Nº 0000001-11.2010.8.12.0001 - SETOR DE TRABALHO."),
 ]}
 r = {"processo_execucao": "0000001-11.2010.8.12.0001", "_eventos": [{"data": "01/01/2010", "tipo": "PRISÃO/INÍCIO DE CUMPRIMENTO", "motivo": "PRISÃO"}],
-     "_incidentes": [{"tipo": "REMIÇÃO", "complemento": "65 dias", "data_decisao": "14/11/2011", "data_referencia": "14/11/2011", "situacao": "CONCEDIDO"}]}
+     "_incidentes": [{"tipo": "REMIÇÃO", "complemento": "65 dias", "data_decisao": "14/11/2011", "data_referencia": "14/11/2011", "situacao": "CONCEDIDO"},
+                     {"tipo": "REMIÇÃO", "complemento": "122 dias", "data_decisao": "20/04/2010", "data_referencia": "20/04/2010", "situacao": "CONCEDIDO"},
+                     {"tipo": "REMIÇÃO", "complemento": "16 dias", "data_decisao": "26/11/2014", "data_referencia": "26/11/2014", "situacao": "CONCEDIDO"}]}
 try:
     res = rr.conciliar(r, f, date(2026, 10, 16))
     t14 = next(t for t in res["tabela"] if "014" in t["atestado"])
@@ -49,8 +51,10 @@ try:
     ok("com intervalos" in t14["nota"] and "111 trabalhados declarados" in t14["nota"], "014: nota %r" % t14["nota"])
     ok(all(s.get("vinc") for s in t14["segs"]), "014: trechos sem a marca de vínculo")
     t300 = next(t for t in res["tabela"] if "300" in t["atestado"])
-    ok("cumulativo" in t300["nota"] and "65 dias em 14/11/2011" in t300["nota"], "300: aviso de cumulativo %r" % t300["nota"])
+    ok("cumulativo" in t300["nota"] and "posteriores sem origem (65 em 14/11/2011), 187 dias" in t300["nota"], "300: aviso de cumulativo %r" % t300["nota"])
     ok(t300.get("cumulativo") is True and not t14.get("cumulativo"), "marca de cumulativo na tabela")
+    ok(t300.get("ja_remido") and "Provavelmente já remido" in t300["rot"] and "122 em 20/04/2010" in t300["nota"], "300: já remido %r / %r" % (t300["rot"], t300["nota"]))
+    ok(t14.get("sobreposicao") and "16 dias em 26/11/2014" in t14["nota"], "014: remição sem origem dentro do período %r" % t14["nota"])
     # planilha simples
     import openpyxl
     out = os.path.join(tempfile.mkdtemp(), "rem.xlsx")
@@ -59,7 +63,8 @@ try:
     linhas = [[c for c in row] for row in ws.iter_rows(values_only=True)]
     tot = next(L for L in linhas if L[0] and str(L[0]).startswith("Total a requerer"))
     ok(tot[4] == "37", "planilha: total a requerer %r" % (tot,))
-    ok(any(L[7] == "Conferir nos autos antes de requerer" for L in linhas), "planilha: cumulativo deveria ficar a conferir")
+    ok(any(str(L[7]).startswith("Provavelmente já remido") for L in linhas), "planilha: cumulativo já remido")
+    ok(any(str(L[7]).startswith("Não lançado no RSPE: requerer, conferindo") for L in linhas), "planilha: sobreposição")
     ok(any(L[0] and "cumulativo" in str(L[0]) for L in linhas), "planilha: aviso do cumulativo")
 except Exception as e:
     import traceback

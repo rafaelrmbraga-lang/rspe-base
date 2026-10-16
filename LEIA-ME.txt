@@ -1055,6 +1055,14 @@ v7.10.0
     comportam os dias declarados é marcado como provável atestado
     cumulativo: sai do total a requerer e da prioridade, com a indicação
     das remições do RSPE sem origem que podem ser a sua apreciação.
+  - Processos antigos (físicos, digitalizados no SEEU): o atestado
+    cumulativo é comparado com as remições do RSPE sem atestado na ficha
+    decididas até a sua emissão (e as posteriores sem origem); se a soma
+    alcança os remidos declarados, fica "provavelmente já remido". A
+    remição sem origem decidida dentro do período de um atestado ainda não
+    lançado é apontada (pode já incluir parte dele). Com remições
+    anteriores a 2019 e atestado antigo sem remição, a ficha avisa que se
+    trata de provável processo digitalizado.
   - Aba Ficha: botão "Exportar tabela" gera a planilha simples da remição
     para a petição (atestados x RSPE, total a requerer e trabalho sem
     atestado).

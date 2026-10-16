@@ -1897,6 +1897,14 @@ def conciliar(r, f, hoje=None, manuais=None, ini_exec=None, excluir_remicoes=Non
             a["cumulativo"] = poss
             a["cumul_orf"] = [x_ for x_ in rems if x_.get("usada") and x_["usada"] not in ids_at and "+" not in x_["usada"]
                               and x_["usada"] != "outra origem" and a["emissao"] < x_["decisao"] <= a["emissao"] + timedelta(days=730)]
+            # remições do RSPE sem atestado na ficha decididas até a emissão (processo antigo, digitalizado: o atestado cumulativo
+            # costuma ser a soma delas) e as posteriores sem origem: se juntas alcançam os remidos declarados, provavelmente já remido
+            ant_f = max([b_["emissao"] for b_ in ats if b_["origem"] == "ficha" and b_["emissao"] < a["emissao"]] or [date.min])
+            a["cumul_antes"] = [x_ for x_ in rems if x_.get("usada") in ids_at and str(x_["usada"]).startswith("rem:")
+                                and ant_f < x_["decisao"] <= a["emissao"]]
+            soma_ = sum(x_["dias"] for x_ in a["cumul_antes"] + a["cumul_orf"])
+            if a["rem"] and soma_ >= 0.9 * a["rem"]:
+                a["cumul_coberto"] = soma_
 
     def _segs_tabela(a):
         """Trechos da tabela. Atestado com período declarado longo ("de 07/06/13 a 16/12/15, com intervalos"): mostra os vínculos de
@@ -1942,6 +1950,26 @@ def conciliar(r, f, hoje=None, manuais=None, ini_exec=None, excluir_remicoes=Non
                                       " - a ficha registra menos trabalho que o atestado: conferir com a unidade" if t_ and t_ > poss + 3 else ""))
                     continue
             segs_.append(base)
+        for s in a["segs"]:
+            if s["inferido"] or not s.get("ini") or not s.get("fim") or a["status"] != "NAO_LANCADO":
+                continue
+            dentro_ = [x_ for x_ in rems if x_.get("usada") and x_["usada"] not in ids_at and "+" not in x_["usada"] and x_["usada"] != "outra origem"
+                       and s["ini"] <= x_["decisao"] <= s["fim"]]
+            if dentro_:
+                notas_.append("%s no RSPE, sem origem identificada, %s dentro do período deste atestado e pode%s já incluir parte dele - conferir nos autos "
+                              "antes de requerer" % (" e ".join("a remição de %s em %s" % (rs.pl(int(x_["dias"]), "dia", "dias"), _f(x_["decisao"])) for x_ in dentro_),
+                                                     "foram decididas" if len(dentro_) > 1 else "foi decidida", "m" if len(dentro_) > 1 else ""))
+                a["sobreposicao"] = [x_["dias"] for x_ in dentro_]
+        if a.get("cumulativo") is not None and a.get("cumul_antes"):
+            ant = a["cumul_antes"]
+            sa_ = sum(x_["dias"] for x_ in ant)
+            orf_ = a.get("cumul_orf") or []
+            notas_.append("antes da emissão, o RSPE tem %s sem atestado na ficha: %s = %s, para %s remidos declarados%s%s" % (
+                "remições" if len(ant) > 1 else "remição", " + ".join("%d em %s" % (x_["dias"], _f(x_["decisao"])) for x_ in ant), rs.pl(int(sa_), "dia", "dias"),
+                _fmtn(a["rem"]),
+                ("; somadas as posteriores sem origem (%s), %s" % (" + ".join("%d em %s" % (x_["dias"], _f(x_["decisao"])) for x_ in orf_),
+                                                                  rs.pl(int(a.get("cumul_coberto") or sa_ + sum(x_["dias"] for x_ in orf_)), "dia", "dias"))) if orf_ else "",
+                ": provavelmente já remido - conferir nos autos" if a.get("cumul_coberto") else ""))
         if a.get("cumulativo") is not None:
             poss, orf = a["cumulativo"], a.get("cumul_orf") or []
             # remições do RSPE posteriores à emissão (até 2 anos) que ficaram sem origem: podem ser a apreciação deste atestado
@@ -1950,7 +1978,7 @@ def conciliar(r, f, hoje=None, manuais=None, ini_exec=None, excluir_remicoes=Non
                               rs.pl(poss, "dia possível", "dias possíveis"), a["trab"],
                               "; %s no RSPE, posterior%s à emissão e sem origem identificada, pode%s ser a apreciação deste atestado" % (
                                   " e ".join("a remição de %s em %s" % (rs.pl(int(x_["dias"]), "dia", "dias"), _f(x_["decisao"])) for x_ in orf),
-                                  "es" if len(orf) > 1 else "", "m" if len(orf) > 1 else "") if orf else ""))
+                                  "es" if len(orf) > 1 else "", "m" if len(orf) > 1 else "") if orf and not a.get("cumul_coberto") else ""))
         return segs_, notas_
 
     tabela = []
@@ -1971,8 +1999,11 @@ def conciliar(r, f, hoje=None, manuais=None, ini_exec=None, excluir_remicoes=Non
                        "segs": segs_t,
                        "trab": a["trab"], "rem": _fmtn(a["rem"]) if a["rem"] is not None else "—",
                        "rspe": rs.pl(int(x["dias"]), "dia", "dias") if x else "—", "decisao": _f(x["decisao"]) if x else "—", "ref": _f(x["ref"]) if x else "—",
-                       "cumulativo": a.get("cumulativo") is not None, "status": a["status"], "rot": "Sem dias a requerer: período já remido" if a.get("zerado") else rot[a["status"]][0],
-                       "cor": "cinza" if a.get("zerado") else rot[a["status"]][1], "nota": nota,
+                       "cumulativo": a.get("cumulativo") is not None, "ja_remido": bool(a.get("cumul_coberto")),
+                       "sobreposicao": bool(a.get("sobreposicao")), "status": a["status"],
+                       "rot": "Sem dias a requerer: período já remido" if a.get("zerado") else
+                              "Provavelmente já remido (atestado cumulativo)" if a.get("cumul_coberto") else rot[a["status"]][0],
+                       "cor": "cinza" if (a.get("zerado") or a.get("cumul_coberto")) else rot[a["status"]][1], "nota": nota,
                        "peticionado": a.get("peticionado", ""), "texto": a.get("texto", ""), "autos": a.get("autos", ""),
                        "autos_outros": bool(a.get("autos")) and not any(re.sub(r"\D", "", a["autos"]) == re.sub(r"\D", "", x or "")
                                                                          for x in _procs_r(r)),

@@ -3101,6 +3101,14 @@ def comparativo(r, f, hoje=None, conferidos=None, manuais=None):
         partes.append("Atestado emitido não lançado no RSPE (%s) - %s" % (
             " + ".join(x for x in (("%s remidos" % _fmtn(nh)) if nh >= 1 else "", rs.pl(nl_sd, "atestado sem os dias na ficha", "atestados sem os dias na ficha") if nl_sd else "") if x),
             "conferir nos autos (se juntado, requerer a apreciação)" if sem_pet else "peticionado: requerer a apreciação"))
+    # processo antigo (físico, digitalizado no SEEU): remições anteriores a 2019 sem atestado na ficha e atestado antigo ainda sem
+    # remição - os atestados da época costumam ser cumulativos e as decisões antigas não trazem o atestado
+    C_ = res.get("conc") or {}
+    rem_ant = [x for x in C_.get("remicoes") or [] if x.get("decisao") and x["decisao"].year < 2019]
+    at_ant = [a for a in C_.get("atestados") or [] if a.get("status") == "NAO_LANCADO" and a.get("origem") == "ficha" and a["emissao"].year < 2019]
+    if rem_ant and at_ant:
+        partes.append("processo com remições anteriores a 2019 (provável processo físico digitalizado): atestados antigos podem ser cumulativos "
+                      "e já remidos - conferir os autos digitalizados antes de requerer")
     nl_cum = res.get("nl_cumulativos") or []
     if nl_cum:
         partes.append("atestado cumulativo a conferir nos autos antes de requerer (%s)" % "; ".join(

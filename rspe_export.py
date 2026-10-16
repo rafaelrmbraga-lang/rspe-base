@@ -408,9 +408,13 @@ def exportar_remicao_tabela(m, saida):
     for t in tab:
         cumul = bool(t.get("cumulativo"))
         sit = "Sem dias a requerer: período já remido" if t.get("rot", "").startswith("Sem dias") else SIT.get(t.get("status"), t.get("rot", ""))
-        if t.get("status") == "NAO_LANCADO" and cumul:
+        if t.get("status") == "NAO_LANCADO" and t.get("ja_remido"):
+            sit, conferir = "Provavelmente já remido (atestado cumulativo): conferir nos autos", conferir + 1
+        elif t.get("status") == "NAO_LANCADO" and cumul:
             sit, conferir = "Conferir nos autos antes de requerer", conferir + 1
         elif t.get("status") == "NAO_LANCADO":
+            if t.get("sobreposicao"):
+                sit = "Não lançado no RSPE: requerer, conferindo antes a remição sem origem do mesmo período"
             try:
                 a_requerer += float(str(t.get("rem")).replace(",", "."))
             except ValueError:
