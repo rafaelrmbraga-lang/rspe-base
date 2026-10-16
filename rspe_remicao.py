@@ -1811,10 +1811,10 @@ def conciliar(r, f, hoje=None, manuais=None, ini_exec=None, excluir_remicoes=Non
             # nada a requerer: o período todo já foi remido por outro atestado ou remição (parte fora do período < 1 dia) ou o máximo
             # possível no período é zero - a linha sai do vermelho (fica para conferir)
             a["zerado"] = a["rem"] is not None and (("rem_pend" in a and a["rem_pend"] < 1) or a.get("teto") == 0)
-            pend.append({"data": a["emissao"], "status": "NAO_LANCADO", "texto": "Atestado %s de %s (%s remidos%s) sem remição no RSPE%s" % (
+            pend.append({"_at": a["id"], "data": a["emissao"], "status": "NAO_LANCADO", "texto": "Atestado %s de %s (%s remidos%s) sem remição no RSPE%s" % (
                 a["numero"] or "s/n", _f(a["emissao"]), _fmtn(a["rem"]),
                 ("; ≈ %s fora do período já remido (%s)" % (_fmtn(a["rem_pend"]), ", ".join(a["cobertos_por"]))) if "rem_pend" in a else "",
-                (" - peticionado no SEEU em %s" % a["peticionado"]) if a.get("peticionado") else " - sem registro de peticionamento na ficha"),
+                (" - peticionado no SEEU em %s" % a["peticionado"]) if a.get("peticionado") else ", sem peticionamento registrado na ficha"),
                 "acao": "conferir na decisão anterior os dias já remidos (nada a requerer)" if a["zerado"] else
                 "requerer a apreciação (vista às partes e decisão)" if a.get("peticionado") else
                 "conferir nos autos: se juntado, requerer a apreciação; se não, pedir o peticionamento à unidade",
@@ -1960,6 +1960,7 @@ def conciliar(r, f, hoje=None, manuais=None, ini_exec=None, excluir_remicoes=Non
                               "antes de requerer" % (" e ".join("a remição de %s em %s" % (rs.pl(int(x_["dias"]), "dia", "dias"), _f(x_["decisao"])) for x_ in dentro_),
                                                      "foram decididas" if len(dentro_) > 1 else "foi decidida", "m" if len(dentro_) > 1 else ""))
                 a["sobreposicao"] = [x_["dias"] for x_ in dentro_]
+                a["sobrep_rems"] = a.get("sobrep_rems", []) + dentro_
         if a.get("cumulativo") is not None and a.get("cumul_antes"):
             ant = a["cumul_antes"]
             sa_ = sum(x_["dias"] for x_ in ant)
@@ -2008,6 +2009,27 @@ def conciliar(r, f, hoje=None, manuais=None, ini_exec=None, excluir_remicoes=Non
                        "autos_outros": bool(a.get("autos")) and not any(re.sub(r"\D", "", a["autos"]) == re.sub(r"\D", "", x or "")
                                                                          for x in _procs_r(r)),
                        "chave": "fd:at:%s:%s" % (a["numero"] or "s/n", _f(a["emissao"]).replace("/", "."))})
+    # atestado cumulativo ou com remição sem origem dentro do período: a providência é conferir nos autos antes de requerer, não
+    # requerer a apreciação direto (o período pode já estar remido)
+    por_id = {x_["id"]: x_ for x_ in ats}
+    for p_ in pend:
+        a = por_id.get(p_.get("_at"))
+        if not a or p_["status"] != "NAO_LANCADO":
+            continue
+        if a.get("cumulativo") is not None:
+            p_["status"], p_["cor"] = "CUMULATIVO", "amarelo"
+            p_["texto"] = "Atestado %s de %s (%s remidos)%s" % (
+                a["numero"] or "s/n", _f(a["emissao"]), _fmtn(a["rem"]),
+                ": provavelmente cumulativo e já remido no RSPE (remições sem atestado na ficha somam %s dias)" % _fmtn(a["cumul_coberto"])
+                if a.get("cumul_coberto") else ": possivelmente cumulativo (declara %s dias trabalhados; a ficha comporta cerca de %s no período)" % (
+                    _fmtn(a["trab"]), a["cumulativo"]))
+            p_["acao"] = ("conferir nos autos se os períodos deste atestado já foram remidos; requerer só a diferença, se houver"
+                          if a.get("cumul_coberto") else "conferir nos autos quais períodos já foram remidos antes de requerer")
+        elif a.get("sobrep_rems"):
+            sr_ = a["sobrep_rems"]
+            p_["acao"] = "conferir nos autos se %s, sem origem identificada, já %s parte deste período; requerer o restante" % (
+                " e ".join("a remição de %s de %s" % (rs.pl(int(x_["dias"]), "dia", "dias"), _f(x_["decisao"])) for x_ in sr_),
+                "incluem" if len(sr_) > 1 else "inclui")
     alertas.sort(key=lambda x: x["data"] or date.min)
     return {"tabela": tabela, "pendencias": pend, "alertas": alertas, "vinculos": vinc, "atestados": ats, "remicoes": rems,
             "sem_atestado": sem, "residuo": residuo, "resumo": _resumo_quant(r, ats, rems, vinc, ini_exec, impressao, f)}

@@ -1180,6 +1180,11 @@ def _itens_conciliacao(C):
                         "detalhe": "A ficha registra o atestado, e o RSPE não tem remição correspondente (nem pelo número, nem pelos dias). "
                                    "Providência: %s." % p_["acao"],
                         "fundamento": "LEP, art. 126, § 1º, II, e § 8º.", "tipo": "remicao-nao-lancada"})
+        elif p_["status"] == "CUMULATIVO":
+            out.append({"nivel": "verificar", "titulo": "Atestado possivelmente cumulativo: " + p_["texto"].replace("Atestado ", "nº ", 1),
+                        "detalhe": "O atestado declara mais trabalho do que a ficha comporta no período, como os atestados que somam períodos "
+                                   "já remidos. Providência: %s." % p_["acao"],
+                        "fundamento": "LEP, art. 126, § 1º, II, e § 8º.", "tipo": "remicao-cumulativa"})
         elif p_["status"] == "SEM_ATESTADO":
             out.append({"nivel": "verificar", "titulo": "Trabalho sem atestado nem remição: " + p_["texto"],
                         "detalhe": "Estimativa em dias de segunda a sábado (LEP, art. 33), só onde não há atestado nem remição. Pedir o atestado à unidade "
