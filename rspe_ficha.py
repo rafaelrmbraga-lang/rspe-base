@@ -3068,7 +3068,8 @@ def comparativo(r, f, hoje=None, conferidos=None, manuais=None):
         out["fd_conc"] = {"tabela": C["tabela"],
                           "pend": [{"data": _br(p_["data"].strftime("%d/%m/%Y")) if p_["data"] else "", "status": p_["status"], "texto": p_["texto"],
                                     "acao": p_["acao"], "cor": p_["cor"]} for p_ in C["pendencias"]],
-                          "alertas": [{"tipo": a_["tipo"], "texto": a_["texto"]} for a_ in C["alertas"]]}
+                          "alertas": [{"tipo": a_["tipo"], "texto": a_["texto"]} for a_ in C["alertas"]],
+                          "resumo": C.get("resumo")}
     res["remidos_manuais"] = rem_man
     # trabalho anterior a esta execução: fica só no resumo do cabeçalho
     linhas = [L for L in linhas if L["sit"] != "Anterior a esta execução"]

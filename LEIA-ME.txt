@@ -1066,6 +1066,15 @@ v7.10.0
   - Aba Ficha: botão "Exportar tabela" gera a planilha simples da remição
     para a petição (atestados x RSPE, total a requerer e trabalho sem
     atestado).
+  - Aba Ficha, novo item A) Resumo quantitativo: dias de remição pelos
+    atestados expedidos, dias homologados no RSPE (e perdidos, LEP, art.
+    127) e a estimativa pelos períodos de trabalho da ficha (segunda a
+    sábado, sem descontar faltas), até o último atestado ou a última
+    remição, com um parágrafo que aponta inconsistência, remição acima da
+    estimativa ou números compatíveis; o trabalho posterior aparece à
+    parte, como ainda sem atestado. Os demais itens passam a B, C e D;
+    pendências e alertas com menos negrito (data discreta e providência
+    em verde).
   - Aba Indulto, um decreto por vez: nome social longo não alarga mais a
     coluna do nome nem espreme o motivo; o benefício vai abaixo do
     resultado, e a tabela cabe na tela sem rolagem lateral.

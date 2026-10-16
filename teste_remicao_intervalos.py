@@ -55,6 +55,11 @@ try:
     ok(t300.get("cumulativo") is True and not t14.get("cumulativo"), "marca de cumulativo na tabela")
     ok(t300.get("ja_remido") and "Provavelmente já remido" in t300["rot"] and "122 em 20/04/2010" in t300["nota"], "300: já remido %r / %r" % (t300["rot"], t300["nota"]))
     ok(t14.get("sobreposicao") and "16 dias em 26/11/2014" in t14["nota"], "014: remição sem origem dentro do período %r" % t14["nota"])
+    R = res["resumo"]
+    ok(R["at_n"] == 2 and R["at_rem"] == 237 and R["at_trab"] == 711 and R["cumulativos"] == 1, "resumo: atestados %r" % R)
+    ok(R["homologados"] == 203 and not R["perdidos"], "resumo: homologados %r" % R)
+    ok(R["trab_ficha"] > 0 and abs(R["dir_ficha"] - R["trab_ficha"] / 3.0) < 0.01, "resumo: estimativa %r" % R)
+    ok("faria jus a 237 dias de remição" in R["texto"] and "No RSPE constam 203 dias" in R["texto"], "resumo: texto %r" % R["texto"])
     # planilha simples
     import openpyxl
     out = os.path.join(tempfile.mkdtemp(), "rem.xlsx")
