@@ -500,9 +500,16 @@ def perdas_por_falta(incidentes):
                 remicoes.append({"d": dt(i), "data": i.get("data_decisao") or i.get("data_referencia") or "", "n": n})
     out = []
     resid = {id(x): x["n"] for x in remicoes}  # saldo de cada remição depois das perdas anteriores
+
+    def _perdas_da(k):
+        prox_ = faltas[k + 1] if k + 1 < len(faltas) else None
+        return [q for d, q in perdas if d and d >= faltas[k] and (prox_ is None or d < prox_)]
+    # a contagem só recomeça na falta anterior que teve perda de dias remidos decretada: o art. 127 liga o recomeço à revogação dos
+    # dias (falta homologada sem perda não reinicia a contagem)
+    com_perda = [faltas[k] for k in range(len(faltas)) if _perdas_da(k)]
     for k, f in enumerate(faltas):
         prox = faltas[k + 1] if k + 1 < len(faltas) else None
-        prev = faltas[k - 1] if k else None
+        prev = max([g for g in com_perda if g < f] or [None], key=lambda g: g or date.min)
         pf = sorted([q for d, q in perdas if d and d >= f and (prox is None or d < prox)], reverse=True)
         if not pf:
             continue
@@ -550,7 +557,7 @@ def _perda_remidos(incidentes, perdidos, eventos=None):
         dup = [(q, rem) for q, rem in x["parcelas"] if prev and rem and rem["d"] and rem["d"] <= prev]
         if dup:
             itens.append(_item("alerta", "Perda de dias remidos em duplicidade (falta de %s)" % rs.fmt(f),
-                               "A perda de %s pela falta de %s incidiu sobre remição anterior à falta de %s: %s. A contagem recomeçou em %s; "
+                               "A perda de %s pela falta de %s incidiu sobre remição anterior à falta de %s, que teve perda de dias decretada: %s. A contagem recomeçou em %s; "
                                "a nova perda só pode alcançar a remição adquirida entre as duas faltas (%s; limite de 1/3: %d). Cabe impugnar o cálculo." % (
                                    rs.pl(x["perda"], "dia", "dias"), rs.fmt(f), rs.fmt(prev),
                                    "; ".join("%s sobre a remição de %s de %s" % (rs.pl(q, "dia", "dias"), rs.pl(rem["n"], "dia", "dias"), rem["data"]) for q, rem in dup),

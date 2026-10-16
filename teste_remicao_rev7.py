@@ -122,7 +122,8 @@ ok(a["status"] == "NAO_LANCADO" and 300 <= (a.get("teto") or 0) <= 335 and any(a
    "8: atestado acima do possível sem teto/alerta: %s" % a.get("teto"))
 _L, res = rf.quadro_trabalho(r8, f, HOJE)
 it = res["rem_det"]["emitido"]["itens"]
-ok(it and it[0]["dias"] == a["teto"] and "acima do máximo" in it[0]["base"], "8: dias exatos sem o teto: %s" % [(i["dias"], i["base"]) for i in it])
+# (quesito 136, 16/10/2026: todo atestado sem período fica fora do total e da prioridade, listado "a conferir" - antes contava o teto)
+ok(it and it[0]["dias"] == 0 and it[0].get("sem_periodo") and "sem período" in it[0]["base"], "8: atestado sem período no total: %s" % [(i["dias"], i["base"]) for i in it])
 
 # ---- 9: livramento travado pela falta grave nos últimos 12 meses: a remição não o antecipa ----
 m = {"nome": "Teste", "liv_dias": 60, "prog_dias": 500, "ext_dias": None, "liv": "28/01/2027",

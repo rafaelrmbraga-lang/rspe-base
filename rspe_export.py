@@ -413,6 +413,10 @@ def _linhas_remicao(m):
             sit, conferir = "Provavelmente já remido (atestado cumulativo): conferir nos autos", conferir + 1
         elif t.get("status") == "NAO_LANCADO" and cumul:
             sit, conferir = "Conferir nos autos antes de requerer", conferir + 1
+        elif t.get("status") == "NAO_LANCADO" and (t.get("sem_periodo") or t.get("rot", "").startswith("Peticionado em outros autos")):
+            # sem período ou peticionado em outros autos: fora do total a requerer (rspe_remicao.conciliar)
+            sit, conferir = ("Sem período no atestado: conferir antes de requerer" if t.get("sem_periodo") else
+                             "Peticionado em outros autos: não pedir em duplicidade"), conferir + 1
         elif t.get("status") == "NAO_LANCADO":
             if t.get("sobreposicao"):
                 sit = "Não lançado no RSPE: requerer, conferindo antes a remição sem origem do mesmo período"

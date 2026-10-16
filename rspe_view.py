@@ -1857,9 +1857,12 @@ def prioridade_remicao(m, r, hoje=None):
             out.append("Indulto/comutação, Decreto %s (%s): o tempo que faltava é coberto pela remição pendente." % (
                 x.get("numero") or x.get("id"), x.get("ano") or x.get("id")))
     if out:
-        out.append("Remição pendente: %s%s. Pedir a declaração da remição (LEP, arts. 126 e 128)." % (
+        # falta grave pendente ou posterior ao período: ressalva da perda de até 1/3 (LEP, art. 127), sem afirmar a perda
+        ress = (m.get("fd_rem_det") or {}).get("ressalva_127") if isinstance(m.get("fd_rem_det"), dict) else ""
+        out.append("Remição pendente: %s%s%s. Pedir a declaração da remição (LEP, arts. 126 e 128)." % (
             rs.pl(int(tot), "dia", "dias") if tot >= 1 else "ver a aba Ficha",
-            (" (%s)" % ("; ".join(rots[:4]) + ("; ..." if len(rots) > 4 else ""))) if rots else ""))
+            (" (%s)" % ("; ".join(rots[:4]) + ("; ..." if len(rots) > 4 else ""))) if rots else "",
+            (" - " + ress) if ress else ""))
     return out
 
 
