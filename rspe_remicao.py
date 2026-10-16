@@ -94,8 +94,18 @@ def setor_chave(nome):
         if re.search(pad, u):
             return ch, disp
     ch = re.sub(r"\W", "", u)[:12] or "?"
-    disp = " ".join(w.capitalize() if len(w) > 2 else w.lower() for w in u.split()) or "Setor não identificado"
+    disp = com_siglas(" ".join(w.capitalize() if len(w) > 2 else w.lower() for w in u.split())) or "Setor não identificado"
     return ch, disp
+
+
+# siglas que ficam em caixa alta nos nomes de setor e de unidade (unidades penais de MS e órgãos que aparecem na ficha)
+SIGLAS = {"IPCG", "UP", "UPs", "PED", "PDIB", "EPJFC", "CPAC", "CPAIG", "EPFIIZ", "EPFSA", "EPRACAG", "PHAC", "PTRAN", "UMMVE", "EPFI",
+          "CTAP", "AGEPEN", "SIAPEN", "SENAC", "SENAI", "SESC", "SEBRAE", "EJA", "EAD", "ENCCEJA", "ENEM", "PCE", "UPRB", "EPRB", "CPPCG"}
+
+
+def com_siglas(txt):
+    """Devolve em caixa alta as siglas conhecidas de um nome já em caixa de título ("Ipcg Faxina da Up" -> "IPCG Faxina da UP")."""
+    return re.sub(r"\b[\wÀ-ú]+\b", lambda m: m.group(0).upper() if m.group(0).upper() in SIGLAS else m.group(0), txt or "")
 
 
 def setor_parecido(a, b):
@@ -1987,22 +1997,34 @@ def conciliar(r, f, hoje=None, manuais=None, ini_exec=None, excluir_remicoes=Non
         if a["status"] == "ANTERIOR":
             continue
         x = a.get("remicao")
-        tit = ("Atestado nº %s" % a["numero"]) if a["numero"] else ("Atestado não registrado na ficha" if a["origem"] == "rspe" else "Atestado s/n")
+        # linha "rspe": remição do RSPE cujo atestado a ficha não registra (o atestado não está na ficha; os dias são os da decisão)
+        tit = ("Atestado nº %s" % a["numero"]) if a["numero"] else ("Remição sem atestado na ficha" if a["origem"] == "rspe" else "Atestado s/n")
         if a["origem"] == "operador":
             tit += " (informado por você)"
         nota = ""
         if a["lote"]:
-            nota = ("períodos inferidos dos vínculos da ficha até a data de referência da remição; a ficha não registra o atestado" if a["origem"] == "rspe"
+            nota = ("a ficha não registra o atestado desta remição; períodos inferidos dos vínculos da ficha até a data de referência" if a["origem"] == "rspe"
                     else "períodos inferidos da ficha; o texto do atestado não os detalha")
+        # uma remição do RSPE repartida entre linhas (atestado da ficha + trabalho sem atestado): cada linha mostra a sua parte
+        rspe_txt = rs.pl(int(x["dias"]), "dia", "dias") if x else "—"
+        if x and "+" in str(x.get("usada") or "") and a["rem"] is not None and a["rem"] < x["dias"]:
+            outros = [b for b in ats if b is not a and b.get("remicao") is x]
+            rspe_txt = "%s de %s" % (_fmtn(a["rem"]), rs.pl(int(x["dias"]), "dia", "dias"))
+            partes_ = ["%s %s" % ("o atestado %s" % b["numero"] if b["numero"] else "trabalho sem atestado na ficha",
+                                  "(%s)" % rs.pl(int(round(b["rem"] or 0)), "dia", "dias"))
+                       for b in sorted([a] + outros, key=lambda b: (not b["numero"], b["emissao"]))]
+            nota = "; ".join(y for y in [nota, "a remição de %s de %s soma %s" % (
+                rs.pl(int(x["dias"]), "dia", "dias"), _f(x["decisao"]), " e ".join(partes_))] if y)
         segs_t, notas_t = _segs_tabela(a)
-        nota = "; ".join(x for x in [nota] + notas_t if x)
+        nota = "; ".join(x_ for x_ in [nota] + notas_t if x_)
         tabela.append({"id": a["id"], "atestado": tit, "emissao": _f(a["emissao"]) if a["origem"] != "rspe" else "",
                        "segs": segs_t,
-                       "trab": a["trab"], "rem": _fmtn(a["rem"]) if a["rem"] is not None else "—",
-                       "rspe": rs.pl(int(x["dias"]), "dia", "dias") if x else "—", "decisao": _f(x["decisao"]) if x else "—", "ref": _f(x["ref"]) if x else "—",
+                       "trab": a["trab"], "rem": _fmtn(a["rem"]) if a["rem"] is not None and a["origem"] != "rspe" else "—",
+                       "rspe": rspe_txt, "decisao": _f(x["decisao"]) if x else "—", "ref": _f(x["ref"]) if x else "—",
                        "cumulativo": a.get("cumulativo") is not None, "ja_remido": bool(a.get("cumul_coberto")),
                        "sobreposicao": bool(a.get("sobreposicao")), "status": a["status"],
                        "rot": "Sem dias a requerer: período já remido" if a.get("zerado") else
+                              "Remido no RSPE" if a["origem"] == "rspe" and a["status"] == "CONCILIADO" else
                               "Provavelmente já remido (atestado cumulativo)" if a.get("cumul_coberto") else
                               "Possível cumulativo: conferir nos autos" if a["status"] == "NAO_LANCADO" and a.get("cumulativo") is not None else rot[a["status"]][0],
                        "cor": "cinza" if (a.get("zerado") or a.get("cumul_coberto")) else
@@ -2035,6 +2057,66 @@ def conciliar(r, f, hoje=None, manuais=None, ini_exec=None, excluir_remicoes=Non
     alertas.sort(key=lambda x: x["data"] or date.min)
     return {"tabela": tabela, "pendencias": pend, "alertas": alertas, "vinculos": vinc, "atestados": ats, "remicoes": rems,
             "sem_atestado": sem, "residuo": residuo, "resumo": _resumo_quant(r, ats, rems, vinc, ini_exec, impressao, f)}
+
+
+# alertas de qualidade agrupados para a tela: título em linguagem simples, o que significa, os casos em linhas curtas e a providência
+GRUPOS_ALERTA = [
+    ("origem", ("origem",), "Remições do RSPE sem origem identificada",
+     "A ficha não mostra trabalho nem atestado que expliquem estas remições: podem ser de estudo, leitura, exame (ENCCEJA/ENEM) ou de "
+     "atestado de outra unidade.", "conferir na decisão de que se trata cada uma"),
+    ("dias", ("capacidade", "plausibilidade", "erro de ano", "proporção", "resíduo", "anterior à execução"), "Dias que não fecham",
+     "Os dias declarados não cabem no período que a ficha registra, ou a conta de 1 dia a cada 3 não bate.",
+     "conferir os dias no atestado e na decisão"),
+    ("lanc", ("baixa sem início", "baixa", "baixa tardia", "setor sem vínculo", "vínculos sobrepostos"), "Lançamentos de trabalho incompletos na ficha",
+     "A ficha registra a saída do trabalho sem o início, ou o mesmo período em dois setores.", "conferir o período com a unidade"),
+    ("per", ("sobreposição", "lacuna"), "Períodos sobrepostos ou sem cobertura",
+     "Atestados que repetem período ou deixam intervalo sem atestado.", "conferir os períodos nos atestados"),
+    ("datas", ("data", "ref"), "Datas inconsistentes", "Datas fora de ordem ou posteriores à impressão da ficha.", "conferir as datas nos documentos"),
+]
+
+
+def _item_alerta(a):
+    """Texto curto de um alerta dentro do seu grupo (o grupo já explica o problema e a providência)."""
+    t, tp = a["texto"], a["tipo"]
+    m = re.match(r"Baixa de (.+?) em (\d{2}/\d{2}/\d{4}) sem início", t)
+    if tp == "baixa sem início" and m:
+        return ["%s: saída em %s, sem início registrado" % (com_siglas(m.group(1)), m.group(2))]
+    if tp == "origem":
+        casos = re.findall(r"(\d+ dias? em \d{2}/\d{2}/\d{4})", t)
+        if casos:
+            leit = "múltiplos de 4" in t
+            return ["%s%s" % (c, " (múltiplo de 4: pode ser leitura)" if leit else "") for c in casos]
+    m = re.match(r"Atestado (\S+): (\d+) dias trabalhados não cabem nos períodos inferidos da ficha \((\d+) dias corridos de (\S+) a (\S+)\)", t)
+    if tp == "capacidade" and m:
+        return ["Atestado %s: %s dias trabalhados declarados para %s dias corridos (%s a %s)" % m.groups()]
+    m = re.match(r"Remição de (.+?) em (\S+) \(sem atestado na ficha\) não cabe no período sem atestado \(≈ (.+?) de trabalho.*?atribuída também aos atestados (.+?) \(", t)
+    if tp == "capacidade" and m:
+        g_ = m.groups()
+        return ["Remição de %s em %s: maior que o trabalho sem atestado do período (≈ %s); parte atribuída %s %s" % (
+            g_[0], g_[1], g_[2], "aos atestados" if "," in g_[3] else "ao atestado", g_[3])]
+    m = re.search(r"data de referência (\d{2}/\d{2}/\d{4}) anterior ao fim do período \((\d{2}/\d{2}/\d{4})\)", t)
+    if tp == "ref" and m and _dt(m.group(1)) and _dt(m.group(2)) and (_dt(m.group(2)) - _dt(m.group(1))).days <= 7:
+        return []  # referência poucos dias antes do fim do período: sem efeito prático, só poluiria a lista
+    return [re.sub(r"\s*-\s*conferir[^.]*\.?$|:\s*conferir[^.]*\.?$", "", t).rstrip(".")]
+
+
+def agrupar_alertas(alertas, ocultar=()):
+    """[{titulo, explica, acao, itens}] na ordem de GRUPOS_ALERTA; "ocultar": números de atestado já tratados nas pendências (cumulativo),
+    cujo alerta de capacidade só repetiria a pendência."""
+    out, usados = [], set()
+    for _k, tipos, tit, exp, acao in GRUPOS_ALERTA + [("outros", None, "Outros pontos", "", "")]:
+        its = []
+        for i, a in enumerate(alertas):
+            if i in usados or (tipos is not None and a["tipo"] not in tipos):
+                continue
+            usados.add(i)
+            mn = re.match(r"Atestado (\S+?)(?: de \S+)?:", a["texto"])
+            if a["tipo"] in ("capacidade", "plausibilidade") and mn and mn.group(1) in ocultar:
+                continue
+            its += _item_alerta(a)
+        if its:
+            out.append({"titulo": tit, "explica": exp, "acao": acao, "itens": list(dict.fromkeys(its))})
+    return out
 
 
 def _resumo_quant(r, ats, rems, vinc, ini_exec, impressao, f=None):

@@ -2268,7 +2268,8 @@ def sigla_unidade(nome):
     for rx, sg in SIGLAS_UNIDADE:
         if re.search(rx, u):
             return sg
-    return (nome or "").strip().title()
+    import rspe_remicao as _rr
+    return _rr.com_siglas((nome or "").strip().title())
 
 
 def linha_unidades(f):
@@ -2663,7 +2664,9 @@ def nome_unidade(nome):
         if re.search(rx, u):
             return nm
     lig = ("DE", "DO", "DA", "DOS", "DAS", "E")
-    return " ".join(w.lower() if w in lig and k else w.capitalize() for k, w in enumerate((nome or "").strip().upper().split()))
+    import rspe_remicao as _rr
+    return " ".join(w.lower() if w in lig and k else w if w in _rr.SIGLAS else w.capitalize()
+                    for k, w in enumerate((nome or "").strip().upper().split()))
 
 
 def _segmentos_unidade(tl, a, b):
@@ -3074,6 +3077,8 @@ def comparativo(r, f, hoje=None, conferidos=None, manuais=None):
                           "pend": [{"data": _br(p_["data"].strftime("%d/%m/%Y")) if p_["data"] else "", "status": p_["status"], "texto": p_["texto"],
                                     "acao": p_["acao"], "cor": p_["cor"]} for p_ in C["pendencias"]],
                           "alertas": [{"tipo": a_["tipo"], "texto": a_["texto"]} for a_ in C["alertas"]],
+                          "alertas_g": __import__("rspe_remicao").agrupar_alertas(C["alertas"], {a_["numero"] for a_ in C["atestados"]
+                                                                            if a_.get("cumulativo") is not None and a_.get("numero")}),
                           "resumo": C.get("resumo")}
     res["remidos_manuais"] = rem_man
     # trabalho anterior a esta execução: fica só no resumo do cabeçalho

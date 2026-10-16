@@ -1041,6 +1041,18 @@ v7.11.0
     remição sem origem decidida dentro do seu período pede para conferir
     se ela já inclui parte dele, também no resumo do topo ("antes,
     conferir as remições sem origem do mesmo período").
+  - Tabela de remição: a remição do RSPE sem atestado na ficha aparece
+    como "Remição sem atestado na ficha" (sem dias na coluna Remidos,
+    que é a do atestado); a remição repartida entre um atestado e o
+    trabalho sem atestado mostra a parte de cada linha ("1 de 77 dias",
+    "76 de 77 dias"), com a nota da soma.
+  - Aba Ficha, item D) "Pontos a conferir na ficha e no RSPE": os
+    alertas de qualidade saem agrupados (remições sem origem, dias que
+    não fecham, lançamentos incompletos, períodos, datas), cada grupo com
+    o que significa, os casos em linhas curtas e a providência. Saem o
+    que só repetia a pendência do atestado cumulativo e a referência
+    poucos dias antes do fim do período.
+  - Siglas de unidade e de setor em caixa alta (IPCG, UP, PED, EPJFC...).
   - Aba Ficha, linha aberta: botões no topo; a situação sai em lista
     curta, um ponto por linha, em letra normal com marcador vermelho
     (dias exatos a requerer) ou amarelo (conferir); a observação longa de

@@ -61,6 +61,14 @@ try:
        "pendência do cumulativo %r" % pd.get("Atestado 300"))
     ok("16 dias de 26/11/2014" in pd["Atestado 014/2015"]["acao"] and "requerer o restante" in pd["Atestado 014/2015"]["acao"],
        "pendência com remição sem origem no período %r" % pd.get("Atestado 014/2015"))
+    G = rr.agrupar_alertas(res["alertas"] + [{"tipo": "baixa sem início", "texto": "Baixa de Ipcg Faxina da Up em 17/12/2015 sem início registrado na "
+                                               "ficha nem vínculo anterior do setor: conferir o período com a unidade.", "data": None},
+                                              {"tipo": "capacidade", "texto": "Atestado 300: 600 dias trabalhados não cabem nos períodos inferidos da "
+                                               "ficha (40 dias corridos de 10/03/2010 a 20/04/2010) - conferir o período no atestado.", "data": None}], {"300"})
+    gl = {g["titulo"]: g for g in G}
+    ok("IPCG Faxina da UP: saída em 17/12/2015, sem início registrado" in gl["Lançamentos de trabalho incompletos na ficha"]["itens"]
+       and gl["Lançamentos de trabalho incompletos na ficha"]["acao"], "alertas agrupados: baixa sem início %r" % G)
+    ok(not any("Atestado 300" in i for g in G for i in g["itens"]), "alerta de capacidade repetido para o cumulativo %r" % G)
     R = res["resumo"]
     ok(R["at_n"] == 2 and R["at_rem"] == 237 and R["at_trab"] == 711 and R["cumulativos"] == 1, "resumo: atestados %r" % R)
     ok(R["homologados"] == 203 and not R["perdidos"], "resumo: homologados %r" % R)

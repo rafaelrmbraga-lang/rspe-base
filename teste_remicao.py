@@ -53,7 +53,7 @@ def caso(manuais):
 
 
 C, st, tipos = caso([])
-assert st["Atestado não registrado na ficha"] == ("CONCILIADO", "102 dias"), st
+assert st["Remição sem atestado na ficha"] == ("CONCILIADO", "102 dias"), st
 C, st, tipos = caso(M033)
 assert st["033/2025"] == ("CONCILIADO", "102 dias"), st
 assert any(a["tipo"] == "baixa tardia" and "Ags" in a["texto"] and "10/08/2024" in a["texto"] and "17/12/2023" in a["texto"] for a in C["alertas"]), C["alertas"]
