@@ -1536,7 +1536,7 @@ def auditar(r, hoje=None):
                                    if art == "147" and _cp else "") + (
                                    " O RSPE não informa se o crime foi consumado: tentado, vale o percentual acima; consumado, o resultado morte integra o "
                                    "tipo e o percentual legal é %s (LEP, art. 112, VI, a, ou VIII) - conferir a sentença." % rs.pct(_fm) if _fm is not None else ""),
-                               "LEP, art. 112 (redação vigente na data do fato; lei posterior só retroage se mais benéfica - CF, art. 5º, XL; STJ Temas 1084, 1196 e 1354; STF Tema 1169).", tipo="percentual-de-progressao-diverge", ref=nome))
+                               "LEP, art. 112 (redação vigente na data do fato; lei posterior só retroage se mais benéfica - CF, art. 5º, XL; STJ Temas 1084, 1196 e 1354 - na pena unificada, cada condenação mantém a sua fração, REsp 2.037.377/SC, 3ª Seção, 18/06/2026; STF Tema 1169).", tipo="percentual-de-progressao-diverge", ref=nome))
                 if any(x.get("tipo") == "reincidente-vga-percentual-se-nao-especifica" and x.get("nivel") == "alerta" and x.get("ref") == nome
                        for x in itens[:-1]):
                     # a condenação anterior não violenta já está demonstrada (alerta dos 25%): um pedido só, o mais favorável
@@ -1926,6 +1926,31 @@ def auditar(r, hoje=None):
     # da condenação nova). A prisão em flagrante ou preventiva de quem estava no semiaberto/aberto é prisão nova e conta
     _pris_fund = [x for x in _pris_todas if x and not (x in _pris_guia and x not in _pris)]
     _db_sem = []
+    # indulto/comutação concedidos: a extinção de uma ou algumas condenações (ou a comutação) não cria novo marco - a pena indultada
+    # conta como cumprida e a data-base segue a anterior (STJ, Tema 1006, por analogia; STJ, HC 1.076.656, 04/03/2026)
+    _ind_marcos = []
+    for _j in incidentes:
+        _tj = (_j.get("tipo") or "").upper()
+        if re.search(r"INDULTO|COMUTA", _tj) and "CONCEDID" in (_j.get("situacao") or "CONCEDIDO").upper():
+            _rot_j = "%s%s" % ("indulto" if "INDULTO" in _tj else "comutação",
+                               (" (%s)" % (_j.get("complemento") or "").strip()[:60]) if (_j.get("complemento") or "").strip() else "")
+            for _dj in (_j.get("data_decisao"), _j.get("data_referencia")):
+                _dd = rs.to_date(_dj or "")
+                if _dd:
+                    _ind_marcos.append((_dd, _rot_j))
+
+    def _pelo_indulto(dt):
+        return next(((x, rot_) for x, rot_ in _ind_marcos if abs((x - dt).days) <= 30), None) if dt else None
+
+    def _item_indulto(dt, achado, alteracao):
+        return _item("alerta", "Data-base %s em %s, junto com o %s: indulto ou comutação não criam nova data-base" % (
+                         "alterada" if alteracao else "(atual)", rs.fmt(dt), achado[1].split(" (")[0]),
+                     "A data-base %s coincide com o %s de %s, e não há falta grave homologada, regressão nem nova prisão nessa data. "
+                     "A extinção de uma ou algumas condenações por indulto, assim como a comutação, não cria novo marco: a pena indultada "
+                     "conta como cumprida, e a data-base segue a anterior. Retificada, a progressão se antecipa." % (
+                         "alterada em %s" % rs.fmt(dt) if alteracao else "atual (%s)" % rs.fmt(dt), achado[1], rs.fmt(achado[0])),
+                     "LEP, arts. 112 e 118; STJ, Tema 1006, por analogia; STJ, HC 1.076.656, monocrática, 04/03/2026 (indulto parcial "
+                     "não altera a data-base).", tipo="data-base-movida-pelo-indulto", ref=rs.fmt(dt))
     _progd = [rs.to_date(i.get("data_referencia") or i.get("data_decisao") or "") for i in regs if "PROGRESS" in (i.get("complemento") or "").upper()]
     _db_vistas = set()
     for i in incidentes:
@@ -1990,6 +2015,11 @@ def auditar(r, hoje=None):
                                "progressão, e a data-base atual (%s) já é posterior: a alteração não produz mais efeito." % (
                                    rs._rotulo_incidente(i), i.get("data_decisao") or "?", rs.fmt(_leg[0]), rs.fmt(db_seeu)),
                                "LEP, arts. 112, § 6º, e 118; STJ, Tema 1006.", tipo="alteracao-de-data-base-sem-falta-homologada", ref=rs.fmt(d)))
+            _db_sem.append(d)
+            continue
+        _ach = _pelo_indulto(d)
+        if _ach and not unif:
+            itens.append(_item_indulto(d, _ach, True))
             _db_sem.append(d)
             continue
         itens.append(_item("alerta" if unif else "verificar",
@@ -2147,6 +2177,8 @@ def auditar(r, hoje=None):
                                "Conferir nos autos se o fato ocorreu durante o cumprimento da pena e se foi reconhecido como falta grave." % (
                                    "; ".join(sorted(set(_nome(c) for c in _cf)))),
                                "LEP, arts. 52, 112, § 6º, e 118; Súmulas 526 e 534/STJ; STJ, Tema 1006.", tipo="data-base-na-data-do-fato-de-condenacao"))
+        elif _pelo_indulto(db_seeu):
+            itens.append(_item_indulto(db_seeu, _pelo_indulto(db_seeu), False))
         else:
             ant = sorted([m for m in marcos if m[0] <= db_seeu], key=lambda m: m[0])
             itens.append(_item("verificar", "Inconsistência da data-base (%s): sem prisão, alteração de regime ou falta grave homologada nessa data" % rs.fmt(db_seeu),
@@ -2406,7 +2438,7 @@ def auditar(r, hoje=None):
                            "STJ: afere na data do decreto e veda. "
                            "STF, a favor: 2ª Turma (RHC 267.297 AgR e HC 273.296 AgR) e monocráticas (RE 1.572.734, HC 258.516, RHC 269.076, HC 271.716, RE 1.607.670). "
                            "Em sentido contrário no STF: 1ª Turma, RHC 273.867 AgR (24/08/2026; antes, monocrática de 13/07/2026), aferição na data do decreto. "
-                           "TJMS: a 2ª Câmara Criminal dá provimento parcial para reanálise (1602006-93.2026, 1602467-65.2026, 1603697-45.2026); a 1ª e a 3ª seguem o STJ. "
+                           "TJMS: a 2ª Câmara Criminal dá provimento parcial para reanálise (1602006-93.2026, 1602467-65.2026, 1603697-45.2026) e afere na data do fato no Decreto 12.790 (1602182-72.2026, 26/06/2026); a 1ª e a 3ª seguem o STJ. "
                            "Frações de progressão: pela data do fato.",
                            "Decretos de indulto, art. 1º, I; CF, art. 5º, XL; CP, art. 2º.", tipo="hediondez-posterior-ao-fato-indulto-comutacao-po"))
     # violência doméstica: art. 129 §§ 9º-11 sem sinal de que a vítima é mulher

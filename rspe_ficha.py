@@ -3287,6 +3287,62 @@ def saidas_temporarias_retorno(eventos):
     return [tuple(x) for x in out]
 
 
+def _pend_ate(comp, ref):
+    """Remição pendente com dias exatos (atestados emitidos, peticionados ou com remição a menor; leitura peticionada) de período
+    encerrado até a data: [(rótulo, dias)]. Fica de fora a estimativa (trabalho sem atestado, estudo pelas horas)."""
+    RD = (comp or {}).get("fd_rem_det") or {}
+    out = []
+    for chave in ("nao_lancado", "emitido", "divergencia", "leitura"):
+        for it in (RD.get(chave) or {}).get("itens") or []:
+            if it.get("estimado") or not it.get("dias"):
+                continue
+            datas = re.findall(r"\d{2}/\d{2}/\d{4}", it.get("per") or "")
+            fim = _dp(datas[-1]) if datas else None
+            if fim and fim <= ref:
+                out.append(("%s%s" % (it.get("ref") or it.get("setor") or "remição", (" (%s)" % it["per"]) if it.get("per") else ""), float(it["dias"])))
+    return out
+
+
+def remicao_pendente_decretos(r, comp):
+    """Decretos 2022, 2024 e 2025: o indulto ou a comutação que "não atinge" o lapso por poucos dias passa a "A VERIFICAR" quando
+    a remição pendente da ficha (dias exatos, período até a data do decreto) cobre a diferença - a remição é pena cumprida para
+    todos os efeitos, inclusive o requisito temporal do indulto (LEP, art. 128; STJ, HC 1.089.923, 11/06/2026). Altera r."""
+    refs = {"2022": date(2022, 12, 25), "2024": rs.DECRETOS.get("2024"), "2025": rs.DECRETOS.get("2025")}
+    _dias = lambda t: rs.pena_para_dias(t) or 0
+    for ano, ref in refs.items():
+        if not ref:
+            continue
+        pend = _pend_ate(comp, ref)
+        tot = sum(d for _r, d in pend)
+        if tot < 1:
+            continue
+        for k in ("indulto_%s" % ano, "comutacao_%s" % ano):
+            v, det = r.get(k) or "", r.get(k + "_detalhe") or ""
+            if not v.startswith("não atinge") or v.startswith("não atinge: pena dos crimes impeditivos") or "posterior à publicação" in v:
+                continue
+            faltas = []
+            if k.startswith("comutacao"):
+                for mm in re.finditer(r"✘ Requisito: \S+ da pena cumprida até [\d/]+ = (\d+a\d+m\d+d); cumprido (\d+a\d+m\d+d)", det):
+                    faltas.append(_dias(mm.group(1)) - _dias(mm.group(2)))
+            else:
+                for ln in det.split("\n"):
+                    mm = re.match(r"✘ ([IVXL]+): .*?exige (\d+)/(\d+) \(cumprido (\d+a\d+m\d+d) de (\d+a\d+m\d+d)\)", ln)
+                    if mm and "não se aplica" not in ln:
+                        req = _dias(mm.group(5)) * int(mm.group(2)) // int(mm.group(3))
+                        faltas.append(req - _dias(mm.group(4)))
+            faltas = [x for x in faltas if x > 0]
+            if not faltas or tot < min(faltas):
+                continue
+            falta = min(faltas)
+            nota = ("com a remição pendente de %s (%s), de período anterior a %s e ainda não computada, o requisito temporal seria "
+                    "atingido (faltavam %s) - pedir a declaração da remição e o benefício (LEP, art. 128; STJ, HC 1.089.923, 11/06/2026)" % (
+                        _dias_txt(round(tot)), "; ".join(rot for rot, _d in pend[:4]), rs.fmt(ref), _dias_txt(falta)))
+            r[k] = "A VERIFICAR (remição pendente): " + nota
+            r[k + "_detalhe"] = det + "\n? Remição pendente: " + nota
+            if k.startswith("indulto"):
+                r[k + "_status"] = "verificar"
+
+
 def complementar_decretos(r, f, hoje=None):
     """Decretos 12.338/2024 e 12.790/2025, art. 9º, XI, XII e XIII: o RSPE não traz saídas temporárias, trabalho externo,
     estudo nem curso concluído; a ficha traz. Resolve pela ficha os incisos que o cálculo deixou "a verificar"

@@ -1111,6 +1111,14 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
             rf.complementar_decretos(r, ficha, HOJE)  # XI, XII e XIII do art. 9º pela ficha (saídas, trabalho externo, estudo, curso)
         except Exception:
             pass
+    # a conferência da ficha (aba Ficha) sai antes dos decretos: a remição pendente com dias exatos pode bastar para o lapso do
+    # indulto ou da comutação (LEP, art. 128) - o resultado "não atinge" passa a "a verificar"
+    _comp = rf.comparativo(r, ficha, HOJE, conferidos={k for k in (baixas or ()) if k.startswith("fd:")}, manuais=manuais)
+    if ficha:
+        try:
+            rf.remicao_pendente_decretos(r, _comp)
+        except Exception:
+            pass
     sem_inicio = nao_iniciou(r)
     interr = parada(r) and not sem_inicio
     ptxt, pd = data_progressao(r)
@@ -1239,7 +1247,7 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
         "presc_linhas": presc["presc_linhas"], "presc_n": len(presc["presc_linhas"]),
         "ind_status": [r.get("indulto_2022_status", ""), r.get("indulto_2024_status", ""), r.get("indulto_2025_status", "")],
         **ext,
-        **rf.comparativo(r, ficha, HOJE, conferidos={k for k in baixas if k.startswith("fd:")}, manuais=manuais),
+        **_comp,
         "ficha_resumo": rf.resumo(ficha) if ficha else "",
         "conduta_ruim": bool(ficha and re.search(r"RESPONDE|REGULAR|\bM[ÁA]\b|P[ÉE]SSIMA|RUIM", (ficha.get("conduta") or "").upper())),
         "conduta": (_conduta_txt(ficha.get("conduta") or "não informada na ficha").replace("Ipcg", "IPCG").replace("Pessima", "Péssima") if ficha else "Sem ficha"),

@@ -4788,8 +4788,9 @@ def _analise_decretos_modo(campos, crimes, eventos, incidentes, hoje, modo=None)
             concluir(*res[:3], pena_total, cumprido, remanescente, *res[3:], cump_fonte)
             if imp_sup:
                 nomes_sup = crimes_curto(imp_sup)
-                nota = ("Hediondez posterior ao fato (%s): o STJ afere a hediondez na data do decreto e veda o benefício; "
-                        "pela irretroatividade concedem o STF (2ª Turma, RHC 267.297 AgR e HC 273.296 AgR; monocráticas) e a 2ª Câmara Criminal do TJMS; "
+                nota = ("Hediondez posterior ao fato (%s): o STJ afere a hediondez na data do decreto e veda o benefício (AgRg no HC 1.087.914/SP, 6ª Turma, 11/06/2026); "
+                        "pela irretroatividade concedem o STF (2ª Turma, RHC 267.297 AgR e HC 273.296 AgR; monocráticas) e a 2ª Câmara Criminal do TJMS "
+                        "(1602182-72.2026, 26/06/2026, Decreto 12.790); "
                         "em sentido contrário, a 1ª Turma do STF afere na data do decreto (RHC 273.867 AgR, 24/08/2026)." % nomes_sup)
                 out[k] = rotulo_tese(out[k])
                 if out[k].startswith("A VERIFICAR"):
