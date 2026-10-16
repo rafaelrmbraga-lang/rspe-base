@@ -208,8 +208,8 @@ def _amd_txt(v):
     return "%da%dm%dd" % (v // 10000, v // 100 % 100, v % 100)
 
 
-def _div(titulo, detalhe, conferir, tipo, ref, curto):
-    it = _item("alerta", titulo, "%s %s" % (detalhe, conferir), DIV_FONTE, tipo=tipo, ref=ref)
+def _div(titulo, detalhe, conferir, tipo, ref, curto, nivel="alerta"):
+    it = _item(nivel, titulo, "%s %s" % (detalhe, conferir), DIV_FONTE, tipo=tipo, ref=ref)
     it["curto"] = curto
     return it
 
@@ -312,12 +312,14 @@ def divergencias_fonte(r, ficha=None):
             continue
         mot = (e.get("motivo") or "prisão").strip().lower()
         out.append(_div("Prisão anterior ao fato da ação vinculada (prisão em %s)" % e.get("data"),
-                        "O RSPE vincula a %s de %s %s, com fato em %s. Pode ser prisão de outro processo lançada nesta execução ou data do "
-                        "fato errada no SEEU." % (mot, e.get("data"), "à ação %s" % L[0][1] if len(L) == 1 else "às ações " + ", ".join(x[1] for x in L),
+                        "O RSPE vincula a %s de %s %s, com fato em %s. Pode ser data do fato errada no SEEU ou prisão de outro processo "
+                        "computada nesta execução (detração)." % (mot, e.get("data"), "à ação %s" % L[0][1] if len(L) == 1 else "às ações " + ", ".join(x[1] for x in L),
                                                   ", ".join(rs.fmt(x[0]) for x in L)),
-                        "Conferir nos autos e pedir a correção do vínculo ou da data, que afeta detração, data-base e prescrição.",
+                        "Conferir nos autos antes de pedir qualquer correção: a detração entre processos é possível conforme as datas (CP, art. 42; "
+                        "prisão cautelar em outro processo, com fato anterior a ela), e a retirada do período reduziria a pena cumprida.",
                         "divergencia-seeu-prisao-antes-do-fato", "%s|%s" % (e.get("data"), ",".join(x[1] for x in L)),
-                        "Prisão de %s antes do fato (%s) da ação vinculada" % (e.get("data"), ", ".join(rs.fmt(x[0]) for x in L))))
+                        "Prisão de %s antes do fato (%s) da ação vinculada" % (e.get("data"), ", ".join(rs.fmt(x[0]) for x in L)),
+                        nivel="verificar"))  # item 53 de 16/10: nunca "alerta" contra a detração
     if ficha:
         # 5) ficha sem data da prisão
         if not (ficha.get("data_prisao") or "").strip():
@@ -838,6 +840,43 @@ def _oculto(it):
     return it
 
 
+def _detracao_outro_processo(r, crimes, ativos, eventos):
+    """Custódia do RSPE por processo que não integra esta execução (nem outra execução da pessoa), já encerrada, com fato de crime
+    ativo anterior ao início dela: detração possível nesta execução - "verificar" com o período e a tese (item 155 de 16/10)."""
+    _f = [(rs.to_date(c.get("data_infracao") or ""), c) for c in ativos]
+    _f = [(d, c) for d, c in _f if d]
+    if not _f:
+        return []
+    _meus = [c.get("processo_criminal") or "" for c in crimes] + [r.get("processo_execucao") or ""]
+    _meus += [o.get("processo_criminal") or "" for o in r.get("_outras_condenacoes") or []]
+    _meus += [o.get("_execucao") or "" for o in r.get("_outras_condenacoes") or []]
+    _meus = [x for x in _meus if x]
+    out = []
+    for a, b, mot, procs in rs.periodos_custodia_detalhe([e for e in eventos if not e.get("_ficha")]):
+        ps = rs.lista_processos(procs or "")
+        if not a or not b or not ps or any(rp._mesmo_processo(q, x) for q in ps for x in _meus):
+            continue
+        ant = [c for d, c in _f if d < a]
+        dias = (b - a).days + 1
+        if not ant or dias < 2:
+            continue
+        _fim = next((rs._texto_evento(e) for e in eventos if rs.to_date(e.get("data") or "") == b and "INTERRUP" in (e.get("tipo") or "").upper()), "")
+        _rem = rs.pena_para_dias(r.get("pena_remanescente"))
+        out.append(_item("verificar", "Detração por prisão em outro processo (%s): %s a %s - %s" % (", ".join(ps), rs.fmt(a), rs.fmt(b), rs.pl(dias, "dia", "dias")),
+                         "O RSPE registra a custódia de %s a %s por processo que não integra esta execução (%s)%s. O fato de %s é anterior a essa "
+                         "prisão: a detração da prisão cautelar em outro processo é admitida quando o crime da condenação é anterior a ela (vedada "
+                         "só a \"conta-corrente\" de pena futura), sobretudo se o outro processo terminou em absolvição, extinção ou sem "
+                         "condenação. Conferir o desfecho do outro processo e se esses dias já estão computados nesta pena; se não, pedir a "
+                         "detração%s." % (
+                             rs.fmt(a), rs.fmt(b), ", ".join(ps), (", encerrada por %s" % _fim.lower()) if _fim else "",
+                             "; ".join(sorted(set("%s (%s)" % (_nome(c), c.get("data_infracao")) for c in ant))),
+                             ", que alcança a pena remanescente (%s) e pode levar à extinção (LEP, art. 66, II)" % r.get("pena_remanescente")
+                             if _rem is not None and dias >= _rem else ""),
+                         "CP, art. 42; LEP, arts. 66, III, c, e 111; STJ, detração em processo diverso (prisão posterior ao crime).",
+                         tipo="detracao-prisao-em-outro-processo", ref=rs.fmt(a)))
+    return out
+
+
 def auditar(r, hoje=None):
     hoje = hoje or date.today()
     itens = []
@@ -1164,7 +1203,9 @@ def auditar(r, hoje=None):
     _tot = rs.pena_amd(r.get("pena_total"))
     _som = [c for c in ativos if not (c.get("suspenso") or "").upper().startswith("S")]
     _at = [rs.pena_amd(c.get("pena_imposta")) for c in ativos]
+    _susp_tot = []  # guias suspensas que o total impresso inclui (item 50 de 16/10: "verificar", não "confere")
     if _tot and all(_at) and rs.amd_normal(*(sum(x[k] for x in _at) for k in range(3))) == rs.amd_normal(*_tot):
+        _susp_tot = [c for c in ativos if c not in _som and (rs.pena_para_dias(c.get("pena_imposta")) or 0) > 0]
         _som = ativos  # o total impresso inclui a suspensa: confere com a soma de todas
     soma = sum(rs.pena_para_dias(c.get("pena_imposta")) or 0 for c in _som)
     _amds = [rs.pena_amd(c.get("pena_imposta")) for c in _som]
@@ -1210,6 +1251,18 @@ def auditar(r, hoje=None):
                        "LEP, arts. 66, III, a, e 111 (soma/unificação); CP, art. 75, § 2º; possível pena extinta, comutada, detração ou unificação não refletida no cálculo.", tipo="soma-das-penas-difere-da-pena-total")
             if not (_maior and not _extra):  # pena total menor que a soma: favorece o assistido, sem item
                 itens.append(it)
+        elif _susp_tot:
+            # a pena com execução suspensa não compõe a pena total que serve de base para progressão e término: conferir a
+            # situação da suspensão (se revogada sem registro, a soma está certa)
+            _ps_ = sum(rs.pena_para_dias(c.get("pena_imposta")) or 0 for c in _susp_tot)
+            itens.append(_item("verificar", "Pena total inclui guia suspensa (%s)" % ", ".join(sorted(set(_nome(c) for c in _susp_tot))),
+                               "A pena total impressa (%s) é a soma de todas as condenações, inclusive a marcada como suspensa (%s, pena de %s). "
+                               "A pena com execução suspensa não compõe o total que serve de base para progressão, livramento e término; sem ela, "
+                               "o total seria %s. Conferir nos autos a situação da suspensão: se não foi revogada, pedir a exclusão da pena "
+                               "suspensa do total e o recálculo das datas." % (
+                                   r.get("pena_total"), ", ".join(sorted(set(_nome(c) for c in _susp_tot))), rs.dias_para_pena(_ps_),
+                                   rs.dias_para_pena(max(0, (pena_total or 0) - _ps_))),
+                               "CP, art. 77; STJ, Tema 1106; LEP, art. 111.", tipo="guia-suspensa-somada-na-pena-total"))
         else:
             itens.append(_item("ok", "Soma das penas confere com a pena total", "Soma das penas = total %s." % r.get("pena_total"), tipo="soma-das-penas-confere-com-a-pena-total"))
     _t, _c, _r = rs.pena_amd(r.get("pena_total")), rs.pena_amd(r.get("pena_cumprida")), rs.pena_amd(r.get("pena_remanescente"))
@@ -1824,6 +1877,10 @@ def auditar(r, hoje=None):
         _reinicios += [rs.to_date(e.get("data") or "") for e in eventos if re.search(r"RECAPTURA", ((e.get("tipo") or "") + " " + (e.get("motivo") or "")).upper())]
         _recomecou = bool(_db_atual) and any(x and _lprog0 < x <= _db_atual + timedelta(days=1) for x in _reinicios)
         _ri_sem_efeito = _db_atual and _db_atual > _d_ri + timedelta(days=1) and (_sem_prog or _recomecou)
+        # item 48 de 16/10: com progressão posterior ao regime inicial, a progressão já concedida esgotou o efeito prático do
+        # lançamento - superado, só "info"
+        _prog_pos = sorted(x for x in (rs.to_date(j.get("data_referencia") or j.get("data_decisao") or "") for j in regs
+                                       if "PROGRESS" in (j.get("complemento") or "").upper()) if x and x > _d_ri)
         _ri_aberto = bool(re.match(r"\s*ABERTO", rs._sem_acento((_ri[0][1].get("complemento") or "").upper())))
         if _prim and min(_prim) < _d_ri - timedelta(days=1) and _ri_aberto:
             itens.append(_item("info", "Regime inicial aberto lançado em %s, depois da primeira prisão (%s) - sem progressão a calcular" % (rs.fmt(_d_ri), rs.fmt(min(_prim))),
@@ -1841,6 +1898,13 @@ def auditar(r, hoje=None):
                                    "depois %s houve falta grave, regressão ou recaptura, que reiniciou a contagem" % (
                                        "do regime inicial" if _sem_prog else "da última progressão (%s)" % rs.fmt(_lprog0)),
                                    rs.fmt(_db_atual)),
+                               "CP, art. 42; LEP, art. 112.", tipo="regime-inicial-depois-da-primeira-prisao", ref=rs.fmt(_d_ri)))
+        elif _prim and min(_prim) < _d_ri - timedelta(days=1) and _prog_pos:
+            itens.append(_item("info", "Regime inicial lançado em %s, depois da primeira prisão (%s) - superado pela progressão de %s" % (
+                                   rs.fmt(_d_ri), rs.fmt(min(_prim)), rs.fmt(_prog_pos[0])),
+                               "A primeira prisão por processo desta execução é de %s e o regime inicial foi lançado em %s. A ordem entre detração e "
+                               "fração só pesava na primeira progressão contada do regime inicial; a progressão já concedida (%s) esgotou o efeito "
+                               "prático do lançamento." % (rs.fmt(min(_prim)), rs.fmt(_d_ri), rs.fmt(_prog_pos[0])),
                                "CP, art. 42; LEP, art. 112.", tipo="regime-inicial-depois-da-primeira-prisao", ref=rs.fmt(_d_ri)))
         elif _prim and min(_prim) < _d_ri - timedelta(days=1):
             itens.append(_item("info" if _dif is not None and _dif < 10 else "alerta",
@@ -2062,6 +2126,10 @@ def auditar(r, hoje=None):
                 else:
                     marcos.append((d, "prisão/início do cumprimento (%s)" % (e.get("motivo") or e.get("tipo") or "").strip().lower()))
                 _preso = True
+        _d_soma = [rs.to_date(j.get("data_decisao") or j.get("data_referencia") or "") for j in incidentes
+                   if re.search(r"SOMAT|UNIFICA", (j.get("tipo") or "").upper()) and j.get("situacao", "CONCEDIDO") == "CONCEDIDO"]
+        _adeq_soma = lambda i: any(x and rs.to_date(i.get("data_decisao") or "") and abs((x - rs.to_date(i.get("data_decisao"))).days) <= 1 for x in _d_soma)
+        _adeq = []
         for i in incidentes:
             if i.get("situacao") != "CONCEDIDO":
                 continue
@@ -2076,6 +2144,11 @@ def auditar(r, hoje=None):
                         marcos.append((d, "alteração de data-base determinada no RSPE"))
                 elif "REGIME" in t and re.search(r"SOMAT|UNIFICA", (i.get("complemento") or "").upper()):
                     continue  # regime fixado pela soma das penas: não altera a data-base (Tema 1006) - tratado como soma, abaixo
+                elif "REGIME" in t and "ADEQUA" in rs._sem_acento((i.get("complemento") or "").upper()) and _adeq_soma(i):
+                    # "adequação de pena" decidida no mesmo dia do somatório: é o regime da soma, não marco da data-base (item 145
+                    # de 16/10) - a data-base fica para a conferência abaixo (data do fato, falta reconhecida)
+                    _adeq.append(i)
+                    continue
                 elif "REGIME" in t:
                     marcos.append((d, "alteração de regime (%s)" % (i.get("complemento") or "").strip()))
                 elif "FALTA GRAVE" in t:
@@ -2111,15 +2184,22 @@ def auditar(r, hoje=None):
             e.get("_falta") == "sim" and rs.to_date(e.get("data") or "") == _fu[0] for e in r.get("_eventos", [])))
         _recapt = bool(bate) and "recaptura" in (bate[0][1] if bate else "").lower()
         if _fuga and _fu and _recapt and _fu[0] < db_seeu and not _homolog:
-            itens.append(_item("alerta", "Data-base movida para a recaptura (%s) sem falta homologada no RSPE" % rs.fmt(db_seeu),
+            # itens 52 e 147 de 16/10: "verificar" (não "alerta") - a falta pode estar em apuração (PAD em curso) ou homologada sem
+            # registro no RSPE; o "alerta" anteciparia uma falta ainda não julgada
+            _pad_pend = [i for i in incidentes if rs.RE_FALTA_PROPRIA.search(rs._rotulo_incidente(i)) and rs._pendente(i) and not rs._negado(i)
+                         and (rs._data_fato_falta(i) or date.min) >= _fu[0] - timedelta(days=5)]
+            itens.append(_item("verificar", "Data-base movida para a recaptura (%s) sem falta homologada no RSPE%s" % (
+                                   rs.fmt(db_seeu), " - PAD pendente" if _pad_pend else ""),
                                "Houve %s em %s e recaptura em %s. Na fuga, a nova data-base é a da recaptura, porque a falta é permanente, "
                                "mas a interrupção depende de apuração em procedimento disciplinar com defesa técnica e de homologação judicial, "
-                               "e o RSPE não registra esse incidente. Sem homologação, a data-base volta a ser %s e a progressão se antecipa%s. "
+                               "e o RSPE não registra esse incidente%s. Sem homologação, a data-base volta a ser %s e a progressão se antecipa%s. "
                                "Se o juízo reconsiderou ou afastou a falta, "
                                "o lançamento correto é trocar a interrupção \"fuga\" por \"descumprimento das condições\": o SEEU desconta o "
                                "período fora, mas deixa de usar a recaptura como data-base." % (
                                    "fuga" if "FUGA" in _fu[1].upper() else "interrupção (%s)" % (_fu[1].lower() or "sem motivo"),
-                                   rs.fmt(_fu[0]), rs.fmt(db_seeu), ("%s - %s" % (rs.fmt(ant2[0]), ant2[1]) if (ant2 := next((m for k, m in sorted(enumerate(marcos), key=lambda x: x[1][0], reverse=True) if m[0] < _fu[0] and k not in _so_dec), None)) else "a anterior"),
+                                   rs.fmt(_fu[0]), rs.fmt(db_seeu),
+                                   (" homologado: há falta em apuração (%s), ainda sem decisão - aguardar o desfecho do PAD antes de impugnar" %
+                                    rs._rotulo_incidente(_pad_pend[0])) if _pad_pend else "", ("%s - %s" % (rs.fmt(ant2[0]), ant2[1]) if (ant2 := next((m for k, m in sorted(enumerate(marcos), key=lambda x: x[1][0], reverse=True) if m[0] < _fu[0] and k not in _so_dec), None)) else "a anterior"),
                                    ("; a perda de até 1/3 dos %s remidos também depende dessa apuração" % rs.pl(rs.saldo_remidos_num(r.get("saldo_remidos"))[0], "dia", "dias"))
                                    if (rs.saldo_remidos_num(r.get("saldo_remidos"))[0] or 0) > 0 else ""),
                                "LEP, arts. 50, II, 57, 59, 118 e 127; Súmulas 533, 534 e 535/STJ; STF, Tema 941.", tipo="data-base-movida-para-a-recaptura-sem-falta-homo"))
@@ -2171,12 +2251,36 @@ def auditar(r, hoje=None):
             # data do fato de condenação desta execução: o SEEU trata o crime doloso como falta grave na data do fato (Súmulas 526 e
             # 534/STJ) - o motivo é esse; se vale depende de o fato ter ocorrido durante o cumprimento e da falta reconhecida
             _cf = [c for c in crimes if rs.to_date(c.get("data_infracao") or "") == db_seeu]
-            itens.append(_item("verificar", "Data-base (%s) na data do fato de condenação desta execução (%s)" % (rs.fmt(db_seeu), "; ".join(sorted(set(_nome(c) for c in _cf)))),
-                               "A data-base coincide com a data do fato de %s, e não há prisão, alteração de regime ou falta grave homologada nessa "
-                               "data. Motivo provável: o SEEU trata o crime doloso como falta grave na data do fato (Súmulas 526 e 534/STJ). "
-                               "Conferir nos autos se o fato ocorreu durante o cumprimento da pena e se foi reconhecido como falta grave." % (
-                                   "; ".join(sorted(set(_nome(c) for c in _cf)))),
-                               "LEP, arts. 52, 112, § 6º, e 118; Súmulas 526 e 534/STJ; STJ, Tema 1006.", tipo="data-base-na-data-do-fato-de-condenacao"))
+            # item 45 de 16/10: fato durante o cumprimento (dentro de período de custódia iniciado antes, por fato anterior) - o crime
+            # doloso é falta grave e a data-base na data do fato é válida (Súmulas 526 e 534/STJ); fato em liberdade, "verificar".
+            # Item 145: fixada por "adequação de pena" decidida com o somatório, sem falta homologada - "verificar" como os demais
+            _per_f = rs.periodos_custodia(sorted((e for e in eventos if rs.to_date(e.get("data") or "")), key=lambda e: rs.to_date(e["data"])))
+            _durante_f = any(a < db_seeu and (b is None or db_seeu < b) for a, b in _per_f) and any(
+                (rs.to_date(c.get("data_infracao") or "") or date.max) < min((a for a, b in _per_f if a < db_seeu and (b is None or db_seeu < b)), default=date.min)
+                for c in crimes)
+            _nm_f = "; ".join(sorted(set(_nome(c) for c in _cf)))
+            _adeq = [i for i in _adeq if abs(((rs.to_date(i.get("data_referencia") or "") or date.min) - db_seeu).days) <= 1]
+            if _adeq:
+                itens.append(_item("verificar", "Data-base (%s) fixada por adequação de pena na data do fato de condenação desta execução (%s)" % (rs.fmt(db_seeu), _nm_f),
+                                   "A data-base coincide com a data do fato de %s e foi fixada pelo incidente %s, decidido no mesmo dia do somatório "
+                                   "das penas, sem falta grave homologada no RSPE. A soma de penas não altera a data-base (STJ, Tema 1006); só a "
+                                   "falta grave reconhecida em juízo a desloca para a data do fato. Conferir nos autos se houve falta reconhecida: "
+                                   "sem ela, a data-base volta à da progressão anterior e a progressão se antecipa." % (
+                                       _nm_f, rs._rotulo_incidente(_adeq[0])),
+                                   "LEP, arts. 111, 112, § 6º, e 118; Súmulas 526 e 534/STJ; STJ, Tema 1006.", tipo="data-base-na-data-do-fato-de-condenacao"))
+            elif _durante_f:
+                itens.append(_item("info", "Data-base (%s) na data do fato de condenação desta execução, cometido durante o cumprimento (%s)" % (rs.fmt(db_seeu), _nm_f),
+                                   "A data-base coincide com a data do fato de %s, ocorrido durante o cumprimento da pena (a pessoa estava em custódia "
+                                   "nesta execução). O crime doloso no cumprimento é falta grave, e a data-base passa a ser a do fato (Súmulas 526 e "
+                                   "534/STJ)." % _nm_f,
+                                   "LEP, arts. 52, 112, § 6º, e 118; Súmulas 526 e 534/STJ.", tipo="data-base-na-data-do-fato-de-condenacao"))
+            else:
+                itens.append(_item("verificar", "Data-base (%s) na data do fato de condenação desta execução (%s)" % (rs.fmt(db_seeu), _nm_f),
+                                   "A data-base coincide com a data do fato de %s, e não há prisão, alteração de regime ou falta grave homologada nessa "
+                                   "data. Pelos períodos de custódia do RSPE, o fato não ocorreu durante o cumprimento desta execução (em liberdade): o "
+                                   "crime cometido fora do cumprimento não é falta grave e não move a data-base (Súmula 526/STJ; STJ, Tema 1006). "
+                                   "Conferir nos autos." % _nm_f,
+                                   "LEP, arts. 52, 112, § 6º, e 118; Súmulas 526 e 534/STJ; STJ, Tema 1006.", tipo="data-base-na-data-do-fato-de-condenacao"))
         elif _pelo_indulto(db_seeu):
             itens.append(_item_indulto(db_seeu, _pelo_indulto(db_seeu), False))
         else:
@@ -2197,11 +2301,38 @@ def auditar(r, hoje=None):
                 and re.search(r"PRIS|IN[ÍI]CIO", (e.get("tipo") or "").upper()) and rs.to_date(e.get("data") or "")), default=None)
     _dbl_ini = bool(_dbl and _pri and abs((_pri - _dbl).days) <= 1)
     _dbl_falta = bool(_dbl and any(abs((d - _dbl).days) <= 1 for d in _faltas_d))
+    # item 47 de 16/10: também regressão, recaptura e falta homologada (fato ou decisão) - marcos que a Súmula 441/STJ manda
+    # ignorar no livramento (a data-base do livramento que vale é a que o SEEU mostra; a primeira prisão continua a exceção)
+    _m441 = []
+    for i in incidentes:
+        if i.get("situacao", "CONCEDIDO") != "CONCEDIDO" or rs._negado(i) or rs._pendente(i):
+            continue
+        _ti = (i.get("tipo") or "").upper() + " " + (i.get("complemento") or "").upper()
+        if rs.RE_FALTA_PROPRIA.search(rs._rotulo_incidente(i)) and not i.get("_ficha"):
+            _m441 += [("falta grave homologada", x) for x in (rs._data_fato_falta(i), rs.to_date(i.get("data_decisao") or "")) if x]
+        elif "REGIME" in _ti and "REGRESS" in _ti:
+            _m441 += [("regressão", x) for x in (rs.to_date(i.get("data_referencia") or ""), rs.to_date(i.get("data_decisao") or "")) if x]
+    # recaptura de verdade: a que segue interrupção por fuga, evasão ou descumprimento (a "recaptura/reinício" depois de liberdade
+    # provisória é a nova prisão, com a anterior contada como detração)
+    _ev441 = sorted((e for e in eventos if rs.to_date(e.get("data") or "")), key=lambda e: rs.to_date(e["data"]))
+    for k, e in enumerate(_ev441):
+        _ant441 = next((x for x in reversed(_ev441[:k]) if "INTERRUP" in (x.get("tipo") or "").upper()), None)
+        if "RECAPTURA" in rs._sem_acento(((e.get("tipo") or "") + " " + (e.get("motivo") or "")).upper()) and _ant441 \
+                and re.search(r"FUGA|EVAS|DESCUMPR", rs._sem_acento(_ant441.get("motivo") or "").upper()):
+            _m441.append(("recaptura", rs.to_date(e["data"])))
+    _dbl_m441 = next((rot_ for rot_, x in _m441 if _dbl and abs((x - _dbl).days) <= 1), None)
     if _dbl and _faltas_d and not _dbl_ini and _dbl_falta:
         itens.append(_item("alerta", "Data-base do livramento (%s) coincide com a de falta grave" % rs.fmt(_dbl),
                            "A falta grave interrompe o prazo da progressão, não o do livramento condicional, nem os do indulto e da comutação. "
                            "A data-base do livramento deve continuar a do início do cumprimento, descontado apenas o período de evasão.",
                            "Súmulas 441 e 535/STJ; STJ, Tema 709; LEP, art. 112, § 6º.", tipo="data-base-do-livramento-alterada-por-falta-grave"))
+    elif _dbl and _dbl_m441 and not _dbl_ini:
+        itens.append(_item("alerta", "Data-base do livramento (%s) coincide com %s" % (rs.fmt(_dbl), _dbl_m441),
+                           "A data-base do livramento impressa pelo SEEU coincide com %s. A falta grave, a regressão e a recaptura interrompem "
+                           "o prazo da progressão, não o do livramento condicional: a data-base do livramento deve continuar a do início do "
+                           "cumprimento (%s), descontado apenas o período fora da custódia." % (
+                               _dbl_m441 if _dbl_m441 != "recaptura" else "a recaptura", rs.fmt(_pri) if _pri else "primeira prisão desta execução"),
+                           "Súmula 441/STJ; CP, art. 83; LEP, art. 112, § 6º.", tipo="data-base-do-livramento-alterada-por-falta-grave"))
     elif _dbl and _faltas_d and not _dbl_ini and db_seeu and abs((db_seeu - _dbl).days) <= 1:
         # sem falta na data: a data-base do livramento acompanhou a da progressão (nova prisão, regime inicial, progressão)
         itens.append(_item("alerta", "Data-base do livramento (%s) igual à data-base da progressão, sem falta grave nessa data" % rs.fmt(_dbl),
@@ -2324,25 +2455,39 @@ def auditar(r, hoje=None):
                 _lim = _ini75.replace(year=_ini75.year + _anos, month=3, day=1)  # 29/02 sem correspondente: completa em 01/03
             # o dia do começo conta (CP, art. 10): o último dia é a véspera do aniversário
             _lim += timedelta(days=_fora - 1)
-            if _term > _lim + timedelta(days=3):
+            # itens 58 e 156 de 16/10: com fatos dos dois lados de 23/01/2020, "verificar" (40 anos ao conjunto, com a tese dos 30
+            # anos para as penas dos fatos anteriores - CF, art. 5º, XL), também quando só essas penas passam de 30 anos
+            _misto = _novo and any(f < rg.data_lei_13964() for f in _fatos_at)
+            _p_ant = sum(rs.pena_para_dias(c.get("pena_imposta")) or 0 for c in ativos
+                         if (rs.to_date(c.get("data_infracao") or "") or date.max) < rg.data_lei_13964())
+            if _misto and (_term > _lim + timedelta(days=3) or _p_ant > 30 * 365.25):
+                itens.append(_item("verificar", "Limite de cumprimento (CP, art. 75) com fatos antes e depois de %s: sustentar 30 anos para as penas dos fatos anteriores" % rs.fmt(rg.data_lei_13964()),
+                                   "Início do cumprimento por estas condenações: %s; fatos de %s a %s; término impresso pelo SEEU: %s. As penas dos fatos "
+                                   "anteriores a %s somam %s; pelo limite de 40 anos da Lei 13.964/2019 aplicado ao conjunto, o término máximo seria %s%s. "
+                                   "A lei mais grave não retroage (CF, art. 5º, XL): para as penas dos fatos anteriores vale o limite de 30 anos, e só "
+                                   "as dos fatos posteriores se somam até 40 anos. Conferir a unificação e sustentar os 30 anos para os fatos anteriores." % (
+                                       rs.fmt(_ini75), rs.fmt(min(_fatos_at)), rs.fmt(max(_fatos_at)), rs.fmt(_term), rs.fmt(rg.data_lei_13964()),
+                                       rs.dias_para_pena(_p_ant), rs.fmt(_lim), (" - o SEEU imprime término posterior") if _term > _lim + timedelta(days=3) else ""),
+                                   "CP, art. 75, caput e § 2º; CF, art. 5º, XL; Lei 13.964/2019; Súmula 715/STF.", tipo="limite-de-cumprimento-art-75"))
+            elif _term > _lim + timedelta(days=3):
                 _rem75 = rs.saldo_remidos_num(r.get("saldo_remidos"))
                 _rem75 = max((_rem75[0] or 0) - (_rem75[1] or 0), 0)
                 itens.append(_item("alerta", "Término (%s) além do limite de %d anos de cumprimento (CP, art. 75): máximo em %s" % (rs.fmt(_term), _anos, rs.fmt(_lim)),
                                    "Início do cumprimento por estas condenações: %s; %s; término impresso pelo SEEU: %s (%s depois do início). %s O "
                                    "tempo de cumprimento não pode passar de %d anos%s: término máximo em %s%s%s. As frações de progressão e livramento "
-                                   "continuam a incidir sobre a pena total unificada (Súmula 715/STF); o limite alcança o término. O programa não "
-                                   "recalcula a coluna Término." % (
+                                   "continuam a incidir sobre a pena total unificada (Súmula 715/STF); o limite alcança o término. A coluna Término "
+                                   "mostra o término máximo, calculado pelo programa (*)." % (
                                        rs.fmt(_ini75), "fatos de %s a %s" % (rs.fmt(min(_fatos_at)), rs.fmt(max(_fatos_at))) if min(_fatos_at) != max(_fatos_at) else "fato em %s" % rs.fmt(_fatos_at[0]),
                                        rs.fmt(_term), ("%.1f anos" % ((_term - _ini75).days / 365.25)).replace(".", ","),
                                        ("Todos os fatos são anteriores a %s, quando a Lei 13.964/2019 elevou o limite para 40 anos; a lei mais gravosa "
                                         "não retroage (CF, art. 5º, XL), e vale o limite de 30 anos." % rs.fmt(rg.data_lei_13964())) if not _novo else
-                                       ("Há fato posterior a %s: vale o limite de 40 anos da Lei 13.964/2019%s." % (
-                                           rs.fmt(rg.data_lei_13964()), " (com fatos dos dois lados dessa data, sustentar os 30 anos para as penas dos fatos anteriores - conferir)"
-                                           if any(f < rg.data_lei_13964() for f in _fatos_at) else "")),
+                                       ("Todos os fatos são posteriores a %s: vale o limite de 40 anos da Lei 13.964/2019." % rs.fmt(rg.data_lei_13964())),
                                        _anos, " (CP, art. 75, caput)",
                                        rs.fmt(_lim), (", somados %s fora da custódia" % rs.pl(_fora, "dia", "dias")) if _fora else "",
                                        (", antes ainda com o desconto de %s remidos" % rs.pl(_rem75, "dia", "dias")) if _rem75 else ""),
                                    "CP, art. 75, caput e § 2º; CF, art. 5º, XL; Lei 13.964/2019; Súmula 715/STF.", tipo="limite-de-cumprimento-art-75"))
+                itens[-1]["termino_limite"] = rs.fmt(_lim)  # item 58: término recalculado na coluna (marca "calculado pelo programa")
+                itens[-1]["termino_limite_anos"] = _anos
         elif _ini75 and _per75 and _per75[-1][1] is None:
             # fato durante o cumprimento: nova unificação (art. 75, § 2º) contada da condenação nova. Pelo RSPE não se fixa o
             # termo exato, mas o limite mais folgado (trânsito mais tardio das condenações por fato posterior ao início, ou o
@@ -2465,7 +2610,7 @@ def auditar(r, hoje=None):
     # guia suspensa ainda somada na pena total: sem a data da suspensão, o SEEU mantém a pena dela no total (pena maior, benefícios
     # e término adiados). Caso típico: restritiva de direitos superveniente, suspensa durante a privativa (STJ, Tema 1106)
     _susp = [c for c in ativos if (c.get("suspenso") or "").upper().startswith("S")]
-    if _susp and pena_total:
+    if _susp and pena_total and not _susp_tot:  # com a soma que inclui a suspensa, o item "verificar" acima já trata
         _ps = sum(rs.pena_para_dias(c.get("pena_imposta")) or 0 for c in _susp)
         _sem = sum(rs.pena_para_dias(c.get("pena_imposta")) or 0 for c in ativos if c not in _susp)
         if _ps and abs(pena_total - (_sem + _ps)) <= 3 and abs(pena_total - _sem) > 3:
@@ -2503,6 +2648,12 @@ def auditar(r, hoje=None):
                            "pelo restante da pena só na fuga e na revogação do livramento (art. 113); nas demais interrupções, pela pena aplicada "
                            "(STF, HC 236.292; STJ, RHC 67.403).", "CP, arts. 112, II, e 113.", tipo="cumprimento-interrompido-ultimo-evento-e-interru"))
 
+    # item 155 de 16/10: prisão cautelar por outro processo (que não integra esta execução), encerrada, com fato desta execução anterior
+    # a ela - a detração entre processos é admitida (CP, art. 42; STJ), sobretudo se o outro processo terminou sem condenação
+    try:
+        itens += _detracao_outro_processo(r, crimes, ativos, eventos)
+    except Exception:
+        pass
     # já no regime aberto ou em livramento: as divergências que só pesam na progressão não têm efeito (no livramento a confirmar,
     # só pesariam se ele tiver sido revogado - ficam para verificar)
     if _est in ("aberto", "lc", "lc_duvida"):

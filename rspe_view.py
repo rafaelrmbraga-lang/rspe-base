@@ -295,6 +295,8 @@ def data_base_info(r, itens, ficha=None):
             c, m = DB_TIPOS[t]
             if it.get("nivel") in ("info", "ok"):
                 c = ""  # rebaixado (aberto, livramento): sem efeito na progressão
+                if t == "data-base-na-data-do-fato-de-condenacao" and "durante o cumprimento" in (it.get("titulo") or ""):
+                    m = "data do fato de crime cometido durante o cumprimento - falta grave (Súmulas 526 e 534/STJ)"
             if not cor or c == "vermelho":
                 cor, mot = c, m
         elif t == "alteracao-de-data-base-sem-falta-homologada" and it.get("ref") == rs.fmt(d0):
@@ -810,6 +812,16 @@ def extincao(r, presc, interr):
             hip.append("%s: pena já cumprida na fuga de %s, pelos eventos do RSPE. Conferir no cálculo do SEEU e pedir a extinção "
                        "(LEP, art. 66, II)" % (l.get("rotulo") or l["crime"], l["ppe_saldo_zero"]))
             a_verificar = True
+    # item 155 de 16/10: prisão cautelar em outro processo, com fato desta execução anterior a ela, que alcança a pena remanescente
+    try:
+        _atv = [c for c in r.get("_crimes", []) if not (c.get("extinto") or "").upper().startswith("S")]
+        for _it in ra._detracao_outro_processo(r, r.get("_crimes", []), _atv, r.get("_eventos", [])):
+            if "extinção" in _it["detalhe"]:
+                hip.append("A verificar: %s - se imputada a esta execução (fato anterior à prisão; CP, art. 42), alcança a pena remanescente: "
+                           "extinção pelo cumprimento (LEP, art. 66, II)" % _it["titulo"])
+                a_verificar = True
+    except Exception:
+        pass
     multa_txt = ""  # multa: hipossuficiência presumida (Defensoria) - sem aviso na extinção
     # crimes já extintos no RSPE
     ext = ["%s%s%s" % (rs.crimes_curto([c]).replace(" (extinto)", ""), (" · " + c["extincao_motivo"].lower()) if c.get("extincao_motivo") else "",
@@ -1347,6 +1359,15 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
     if dbi.get("db_editada") and r.get("progressao_previsao_seeu") and _prog_pela_db_manual(r):
         notas["prog"] = ("Progressão*: recalculada pelo programa com a data-base informada (%s): pena total menos a custódia até ela, fração para baixo; a data do SEEU é %s."
                          % (dbi["db"], r["progressao_previsao_seeu"]))
+    # item 58 de 16/10: término além do limite do art. 75 (alerta da Auditoria) - a coluna mostra o término máximo, calculado pelo programa
+    _l75 = next((it for it in m.get("aud_itens") or [] if it.get("tipo") == "limite-de-cumprimento-art-75" and it.get("nivel") == "alerta"
+                 and it.get("termino_limite") and not it.get("baixado")), None)
+    if _l75:
+        m["termino"] = _l75["termino_limite"] + "*"
+        m["termino_motivo"] = "%s* - calculado pelo programa: limite de %d anos de cumprimento (CP, art. 75); SEEU: %s" % (
+            _l75["termino_limite"], _l75.get("termino_limite_anos") or 30, r.get("termino_previsao_seeu") or "?")
+        notas["termino"] = ("Término*: calculado pelo programa - limite de %d anos de cumprimento (CP, art. 75), contado do início do cumprimento "
+                            "por estas condenações; o SEEU imprime %s. Ver a Auditoria." % (_l75.get("termino_limite_anos") or 30, r.get("termino_previsao_seeu") or "?"))
     if notas.get("termino") and any(it.get("tipo") == "pena-cumprida-menor-que-custodia" for it in m.get("aud_itens") or []):
         notas["termino"] += (" Atenção: a Auditoria aponta pena cumprida do SEEU menor que a custódia dos eventos - este término parte do "
                              "remanescente do SEEU e pode estar atrasado; conferir.")
@@ -1591,6 +1612,23 @@ def _morte_tipo(c):
     return art == "121-A" or (art == "121" and rs.vga_elementar(c)) or (art == "157" and bool(re.match(r"\s*§\s*3", c.get("tipo_penal") or "")))
 
 
+def _conduta_requisito(add, ficha, fal):
+    """Conduta e falta nos 12 meses (saída temporária e progressão antecipada). Itens 148 e 150 de 16/10: a falta "a apurar" (indício
+    sem sanção reconhecida) e a conduta "sem lapso" (sem tempo para classificar) ficam a conferir (amarelo), não como requisito não
+    atendido - a falta só produz efeito depois de reconhecida em juízo (Súmula 533/STJ). Falta reconhecida ou conduta ruim: não atende."""
+    cond = rs._sem_acento(ficha.get("conduta") or "").upper().strip()
+    sem_lapso = "SEM LAPSO" in cond
+    if fal == "SIM" or not (cond in ("OTIMA", "BOA") or sem_lapso):
+        ok = False
+    else:
+        ok = None if (fal == "A APURAR" or sem_lapso) else True
+    add(ok, "Conduta %s%s%s" % (
+        _conduta_txt(ficha.get("conduta")),
+        " (sem tempo para classificar, não conduta ruim): pedir o atestado de conduta" if sem_lapso else "",
+        "" if fal not in ("SIM", "A APURAR") else (" · falta nos últimos 12 meses: sim" if fal == "SIM" else
+                                                  " · falta a apurar nos últimos 12 meses, sem sanção reconhecida: conferir o PAD antes de pedir (Súmula 533/STJ)")))
+
+
 def saida_temporaria(r, ficha, m, est=None, interr=False, hoje=None):
     """Requisitos da saída temporária para visita à família e atividades de retorno ao convívio social (LEP, art. 122, I e III,
     na redação anterior à Lei 14.843/2024): st_ok só quando todos estão preenchidos; st_quase quando nenhum falha mas algum
@@ -1646,16 +1684,19 @@ def saida_temporaria(r, ficha, m, est=None, interr=False, hoje=None):
     else:
         un = ficha.get("unidade") or ""
         tipo_un, rot_un = rf.classificar_unidade(un)
-        add(True if tipo_un == "semiaberto" else (None if not tipo_un else False),
+        # item 149 de 16/10: semiaberto no RSPE com a ficha em unidade do fechado (falta de vaga) ou do monitoramento - a conferir
+        # (amarelo), não requisito não atendido: a falta de vaga não pode prejudicar o condenado (Súmula Vinculante 56)
+        _sv56 = _semi and tipo_un in ("fechado", "monitoramento")
+        add(True if tipo_un == "semiaberto" else (None if (not tipo_un or _sv56) else False),
             "Unidade de semiaberto: %s" % rf.nome_unidade(un) if tipo_un == "semiaberto" else
             ("Unidade não reconhecida: %s" % (rf.nome_unidade(un) if un else "não informada") if not tipo_un else
+             ("Unidade de regime fechado (%s) com o semiaberto fixado no RSPE: a falta de vaga não pode prejudicar o condenado (Súmula "
+              "Vinculante 56) - conferir a unidade" % rf.nome_unidade(un) if tipo_un == "fechado" else
+              "Unidade de monitoramento eletrônico (%s) com o semiaberto fixado no RSPE: conferir a unidade e as condições do monitoramento "
+              "(Súmula Vinculante 56)" % rf.nome_unidade(un)) if _sv56 else
              "%s: %s (a saída temporária pressupõe o cumprimento no semiaberto)" % (
                  "Unidade de monitoramento eletrônico" if tipo_un == "monitoramento" else "Unidade de regime %s" % tipo_un, rf.nome_unidade(un))))
-        cond = rs._sem_acento(ficha.get("conduta") or "").upper().strip()
-        fal = r.get("falta_12m")
-        add(cond in ("OTIMA", "BOA") and fal not in ("SIM", "A APURAR"),
-            "Conduta %s%s" % (_conduta_txt(ficha.get("conduta")),
-                              "" if fal not in ("SIM", "A APURAR") else " · falta nos últimos 12 meses: %s" % fal.lower()))
+        _conduta_requisito(add, ficha, r.get("falta_12m"))
         trab = _trabalho_atual(ficha, m)  # o trabalho externo também conta
         add(bool(trab), "Trabalhando: " + trab if trab else "Sem trabalho em curso na ficha")
         sts = rf.saidas_temporarias_retorno(ficha.get("eventos", []))
@@ -1709,11 +1750,7 @@ def progressao_antecipada(r, ficha, m, est=None, interr=False, hoje=None):
     if not ficha:
         add(None, "Sem ficha disciplinar: conduta não conferida")
     else:
-        cond = rs._sem_acento(ficha.get("conduta") or "").upper().strip()
-        fal = r.get("falta_12m")
-        add(cond in ("OTIMA", "BOA") and fal not in ("SIM", "A APURAR"),
-            "Conduta %s%s" % (_conduta_txt(ficha.get("conduta")),
-                              "" if fal not in ("SIM", "A APURAR") else " · falta nos últimos 12 meses: %s" % fal.lower()))
+        _conduta_requisito(add, ficha, r.get("falta_12m"))
         imp = rs.to_date(((ficha.get("data_impressao") or "").split() or [""])[0].replace(".", "/"))
         if imp and (hoje - imp).days > 90:
             add(None, "Ficha impressa em %s (há %d dias, mais de 90): conferir a conduta atual" % (rs.fmt(imp), (hoje - imp).days))
