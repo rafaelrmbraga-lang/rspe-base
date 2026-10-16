@@ -1,9 +1,9 @@
-APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.12.0
+APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.12.1
 (antigo RSPE Base; SEEU, programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-7.12.0. A documentação técnica completa (cada parâmetro, a regra, a norma e
+7.12.1. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -992,6 +992,16 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v7.12.1
+  - Indulto, Decreto 11.846/2023 (art. 1º, XIV): a mesma regra do inciso
+    XVII de 2024/2025. Só os crimes das leis citadas no inciso (Leis
+    11.340/2006, 13.718/2018, 14.192/2021, 14.132/2021 e 13.641/2018:
+    CP, arts. 147-A, 215-A e 218-C; Código Eleitoral, art. 326-B; Lei
+    11.340, art. 24-A) são vedados pela violência contra a mulher. O
+    crime comum do CP em contexto doméstico fica "a verificar" (norma
+    restritiva não se amplia por analogia), com a ressalva da leitura que
+    veda todo crime nesse contexto.
 
 v7.12.0
   Aplicação dos quesitos respondidos em 16/10/2026 (108 itens). Regra

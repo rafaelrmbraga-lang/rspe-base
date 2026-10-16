@@ -40,6 +40,22 @@ for k in ("indulto_2024", "comutacao_2024", "indulto_2025", "comutacao_2025"):
 fu = dict(hs, artigo="ART 155: Furto", tipo="CAPUT: Subtrair", fracao_progressao="16%", fracao_livramento="1/3", vga="N", resultado_morte="N")
 ok(rs.analise_decretos(dict(r, _crimes=[fu]), [fu], ev, [], date(2026, 10, 16)) == rs.analise_decretos(dict(r, _crimes=[fu]), [fu], ev, [], date(2026, 10, 16)),
    "conta instável")
-print("\n".join(falhas) if falhas else "ok: quesitos 16/10 - junção (item 35 na análise detalhada)")
+# item 82 estendido ao Decreto de 2023 (art. 1º, XIV): ameaça em vara de violência doméstica (crime do CP fora das leis citadas)
+# deixa de ser vedada e fica a verificar; o crime da Lei 11.340 continua vedado
+import rspe_decretos as rd
+f23 = next((f for f in rd.fichas() if str(f.get("id")) == "2023"), None)
+am = dict(hs, artigo="ART 147: Ameaça", tipo_penal="CAPUT: Ameaçar alguém", vara_condenacao="Vara de Violência Doméstica e Familiar contra a Mulher",
+          fracao_progressao="16%", fracao_livramento="1/3", vga="S", resultado_morte="N", pena_imposta="0 ano(s), 3 mês(es) e 0 dia(s)")
+mp = dict(am, lei="11340/06 - Lei Maria da Penha", artigo="ART 24-A: Descumprimento de medida protetiva")
+if f23 is not None:
+    ver = []
+    ok(not rd._impeditivos(f23, [am], date(2023, 12, 25), ver=ver) and any("art. 1º, XIV" in v for v in ver),
+       "82/2023: ameaça em contexto doméstico vedada sem estar nas leis do XIV: %s" % ver)
+    ok(bool(rd._impeditivos(f23, [mp], date(2023, 12, 25), ver=[])), "82/2023: crime da Lei 11.340 deixou de ser vedado")
+    f17 = dict(f23, id="2017")
+    ok(bool(rd._impeditivos(f17, [am], date(2023, 12, 25), ver=[])), "82: regra de 2023 vazou para outro decreto")
+else:
+    falhas.append("ficha do Decreto de 2023 não encontrada")
+print("\n".join(falhas) if falhas else "ok: quesitos 16/10 - junção (item 35 na análise detalhada; item 82 no Decreto de 2023)")
 print({k: (o.get(k) or "")[:90] for k in ("indulto_2024", "comutacao_2024")}) if "-v" in sys.argv else None
 sys.exit(1 if falhas else 0)

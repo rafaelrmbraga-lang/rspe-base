@@ -233,6 +233,16 @@ def _lc_duvida(r, ctx, ref):
             "revogado, o tempo do livramento não conta como pena cumprida (CP, art. 88)" % (rs.fmt(a), "; ".join(duv[:3]), rs.fmt(ref)))
 
 
+def _rol_xiv_2023(c):
+    """Crime do rol do art. 1º, XIV, do Decreto 11.846/2023: os das Leis 11.340/2006, 13.718/2018 (CP, arts. 215-A e 218-C),
+    14.192/2021 (Código Eleitoral, art. 326-B), 14.132/2021 (CP, art. 147-A) e 13.641/2018 (Lei 11.340, art. 24-A)."""
+    lei, art = rs.num_lei(c.get("lei")), rs.num_art(c.get("artigo"))
+    if lei in ("11340", "13718", "14192", "14132", "13641") or (lei == "4737" and art == "326-B"):
+        return True
+    cp = lei in ("2848", "") or ("PENAL" in (c.get("lei") or "").upper() and "MILITAR" not in (c.get("lei") or "").upper())
+    return bool(cp and art in ("147-A", "215-A", "218-C"))
+
+
 _HED_CACHE = {}  # hediondez na data do fato, por crime (a mesma em todos os decretos); limpo a cada avaliar()
 
 
@@ -288,6 +298,13 @@ def _impeditivos(f, crimes, ref, pena_total=None, ver=None, contexto=None, incer
             if re.search(r"viol[eê]ncia contra a mulher", o.get("descricao") or "", re.I):
                 # vedação pelo contexto (Lei 11.340 e crimes do CP contra a mulher), não pelo número da lei do crime
                 v = _vd(c)
+                if v and v[0] == "sim" and str(f.get("id")) == "2023" and not _rol_xiv_2023(c):
+                    # 2023, art. 1º, XIV: o rol cita as Leis 11.340, 13.718, 14.192, 14.132 e 13.641 - o crime comum do CP em
+                    # contexto doméstico fora delas fica a verificar (a mesma regra do XVII de 2024/2025: norma restritiva)
+                    if ver is not None:
+                        ver.append("%s: crime fora das leis citadas no art. 1º, XIV, em contexto de violência contra a mulher (%s) - norma "
+                                   "restritiva não se amplia por analogia; há leitura que veda todo crime nesse contexto - conferir" % (rot, v[1]))
+                    continue
                 if v and v[0] == "sim":
                     out.append("%s: %s (%s)" % (rot, o["descricao"], v[1]))
                     break

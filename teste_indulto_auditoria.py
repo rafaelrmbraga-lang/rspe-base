@@ -84,8 +84,10 @@ x = dec(r, "2023")
 confere(x["s"] == "ver" and "violência contra a mulher" in x.get("mot", ""), "(7) 2023, art. 129 § 9º: devia ficar a verificar, %s" % x)
 c147 = crime("01/01/2019", "01/06/2019", "01/07/2019", artigo="ART 147: Ameaça", tipo="CAPUT: Ameaçar alguém, Detenção: 1 a 6 meses ou Multa",
              pena="0 ano(s), 3 mês(es) e 0 dia(s)", vara="2ª Vara da Violência Doméstica e Familiar c/Mulher - Campo Grande")
-x = dec(dict(r, _crimes=[c147]), "2023")
-confere(x["s"] == "imp", "(7) 2023, art. 147 em vara de violência doméstica: devia ser impeditivo, %s" % x)
+x = dec(dict(r, _crimes=[r["_crimes"][0], c147]), "2023")
+# quesito 82 estendido a 2023 (16/10/2026): o art. 1º, XIV, cita leis; a ameaça do CP em contexto doméstico fica a verificar, não vedada
+confere(x["s"] == "ver" and "art. 1º, XIV" in x.get("mot", ""),
+        "(7) 2023, art. 147 em vara de violência doméstica: devia ficar a verificar, %s" % x)
 
 # (9) crime extinto depois da data do decreto estava em execução nela (Rubens Rafael Lopes Echeverria, 0001113-59.2008.8.12.0014;
 # Igor Roberto Arruda, 6000009-67.2021.8.12.0015)
