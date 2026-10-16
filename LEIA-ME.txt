@@ -1053,6 +1053,9 @@ v7.11.0
     que só repetia a pendência do atestado cumulativo e a referência
     poucos dias antes do fim do período.
   - Siglas de unidade e de setor em caixa alta (IPCG, UP, PED, EPJFC...).
+  - Aba Ficha, linha aberta: ao rolar, o cabeçalho das tabelas internas
+    (atestados x RSPE e demais) fica preso logo abaixo do cabeçalho
+    principal, sem confundir com as colunas da lista.
   - Aba Ficha, linha aberta: botões no topo; a situação sai em lista
     curta, um ponto por linha, em letra normal com marcador vermelho
     (dias exatos a requerer) ou amarelo (conferir); a observação longa de
