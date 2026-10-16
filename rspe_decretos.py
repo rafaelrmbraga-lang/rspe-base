@@ -1505,6 +1505,36 @@ def _tese_comutacoes_anteriores(out, fx, dec):
         x["ressalva"] = "; ".join(v for v in (x.get("ressalva") or "", t) if v)
 
 
+def _incertezas_rspe(f, r, ctx, ini, hoje, x):
+    """Resultado que depende de dado incerto do RSPE fica "ver": crime alcançado com pena não informada ("Pena Imposta: 0" - o zero
+    favorece o "cabe"), com "Suspenso: Sim" sem a causa ou com medida de segurança (o prazo mínimo não é pena); e o requisito de
+    idade que muda com a data de nascimento da ficha do SIAPEN (r["_nasc_alt"], diferente da do RSPE)."""
+    if x.get("s") not in ("cabe", "nao") or rs.execucao_encerrada(r) or re.search(r"sem pena a cumprir|não se aplica", x.get("mot") or ""):
+        return
+    ref = rs.to_date(f.get("data_referencia") or "") or hoje
+    alc = [c for c in r.get("_crimes") or [] if not (c.get("extinto") or "").upper().startswith("S")
+           and (rs.to_date(c.get("data_infracao") or "") or date.min) <= ref]
+    zero = [c for c in alc if c.get("pena_nao_informada")]
+    duv = [c for c in alc if c.get("medida_seguranca") or rs.suspenso_rspe(c)]
+    mot = ""
+    if zero and x.get("s") == "cabe":
+        mot = "pena não informada no RSPE (%s: \"Pena Imposta: 0\")" % rs.crimes_curto(zero)
+    elif duv and (x.get("s") == "cabe" or rs.pena_decide_txt(x.get("mot") or "")):
+        mot = "%s no RSPE (%s): a pena sai das contas só com o sursis, a substituição ou a medida confirmados" % (
+            "medida de segurança" if any(c.get("medida_seguranca") for c in duv) else "\"Suspenso: Sim\" sem a causa", rs.crimes_curto(duv))
+    elif r.get("_nasc_alt") and rs.to_date(r.get("_nasc_alt")) != rs.to_date(r.get("data_nascimento") or ""):
+        try:
+            y = avaliar_ficha(f, dict(r, data_nascimento=r["_nasc_alt"]), ctx, ini, hoje)
+        except Exception:
+            y = {}
+        if y.get("s") and y.get("s") != x.get("s"):
+            mot = "data de nascimento divergente (RSPE %s, ficha %s): com a da ficha o resultado muda - conferir o documento" % (
+                r.get("data_nascimento") or "?", r["_nasc_alt"])
+    if mot:
+        x["s"] = "ver"
+        x["mot"] = "a verificar: %s%s" % (mot, ("; antes: " + x["mot"]) if x.get("mot") else "")
+
+
 def avaliar(r, hoje, completo=False):
     """Lista de resultados (do decreto mais antigo ao mais novo) para a aba Indulto. completo=True mantém as hipóteses
     calculadas e as faltas da janela (linha do tempo); sem ele, a lista fica leve."""
@@ -1521,6 +1551,7 @@ def avaliar(r, hoje, completo=False):
         try:
             x = avaliar_ficha(f, r, ctx, ini, hoje)
             x = _sem_objeto(r, _tese_hediondez(f, r, x))
+            _incertezas_rspe(f, r, ctx, ini, hoje, x)
         except Exception as e:  # uma ficha com dado ruim não derruba o assistido
             x = {"id": f["id"], "ano": f.get("ano"), "numero": f.get("numero") or "", "ref": f.get("data_referencia"), "s": "ver",
                  "mot": "falha ao avaliar o decreto: %s" % e}

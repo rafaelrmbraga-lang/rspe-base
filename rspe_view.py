@@ -111,11 +111,11 @@ def _data(txt):
 
 def parada(r):
     """Cumprimento parado: interrompido (sem reinício) ou suspenso (preso em outro processo)."""
-    return bool(re.search(r"INTERROMPIDA|SUSPENSA", r.get("situacao_cumprimento") or ""))
+    return bool(re.search(r"INTERROMPIDA|SUSPENSA", r.get("situacao_eventos") or r.get("situacao_cumprimento") or ""))
 
 
 def rotulo_parada(r, curto=False):
-    if "SUSPENSA" in (r.get("situacao_cumprimento") or ""):
+    if "SUSPENSA" in (r.get("situacao_eventos") or r.get("situacao_cumprimento") or ""):
         return "Suspensa" if curto else "Pena suspensa (preso em outro processo)"
     return "Interrompida" if curto else "Pena interrompida"
 
@@ -1381,7 +1381,7 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
         "crimes_det": [
             {"nome_crime": rs.nome_crime(c), "dispositivo": rs.dispositivo(c), "lei": rs.lei_curta(c.get("lei")), "artigo": ("art. " + rs.num_art(c.get("artigo")) + ((" " + rs.paragrafo_texto(c)) if rs.paragrafo_texto(c) else "")) if rs.num_art(c.get("artigo")) else "", "extinto": c.get("extinto", ""),
              "pena": rs.pena_extenso(c.get("pena_imposta")), "fato": c.get("data_infracao"),
-             "vga": c.get("vga"), "morte": c.get("resultado_morte"), "reinc": "%s/%s" % (c.get("reincidente_comum"), c.get("reincidente_especifico")),
+             "vga": c.get("vga"), "vga_res": rs.vga_resumo(c), "vga_txt": rs.vga_resumo_txt(c), "morte": c.get("resultado_morte"), "reinc": "%s/%s" % (c.get("reincidente_comum"), c.get("reincidente_especifico")),
              "hediondo": c.get("hediondo_ou_equiparado"), "proc": c.get("processo_criminal"), "desc": c.get("tipo_penal"),
              "frac_prog": rs.pct_rotulo(c.get("fracao_progressao")), "frac_liv": c.get("fracao_livramento")}
             for c in r.get("_crimes", [])],
@@ -1811,10 +1811,14 @@ def progressao_antecipada(r, ficha, m, est=None, interr=False, hoje=None):
         "Progressão prevista para %s: %s %s" % (m.get("prog") or "?", "falta" if n == 1 else "faltam", rs.pl(n, "dia", "dias")) if n is not None and n > 0 else
         ("Progressão: lapso já atingido (%s)" % (m.get("prog") or "") if n is not None else "Progressão sem data no RSPE"))
     crimes = [c for c in r.get("_crimes", []) if (c.get("extinto") or "").startswith("N") and (c.get("tipo_processo") or "").upper() != "OUTRAS ACOES"]
-    vga = [c for c in crimes if c.get("vga") == "S" or rs.vga_elementar(c)]  # violência elementar do tipo (homicídio, roubo...) também
-    sem = [c for c in crimes if c.get("vga") not in ("S", "N")]
+    vga = [c for c in crimes if rs.vga_resumo(c) == "S"]  # marcação do RSPE ou violência elementar do tipo (homicídio, roubo...)
+    pres = [c for c in crimes if rs.vga_resumo(c) == "presumida"]  # estupro de vulnerável: violência presumida, à parte
+    sem = [c for c in crimes if c.get("vga") not in ("S", "N") and c not in pres]
     if vga:
         add(False, "Crime com violência ou grave ameaça: " + "; ".join("%s (%s)" % ((c.get("artigo") or "").split(":")[0].title(), c.get("data_infracao") or "?") for c in vga))
+    elif pres:
+        add(None, "Violência presumida (art. 217-A): " + "; ".join("%s (%s)" % ((c.get("artigo") or "").split(":")[0].title(), c.get("data_infracao") or "?") for c in pres)
+            + " - não é violência elementar do tipo; conferir")
     else:
         add(None if (sem or not crimes) else True, "Nenhum crime com violência ou grave ameaça" + (" (crime sem a marcação no RSPE: conferir)" if sem or not crimes else ""))
     if not ficha:

@@ -1673,6 +1673,16 @@ def _item_rf(nivel, titulo, detalhe, fundamento):
     return {"nivel": nivel, "titulo": titulo, "detalhe": detalhe, "fundamento": fundamento, "tipo": "rspe-x-ficha"}
 
 
+def nascimento_muda_marco(r, d1, d2):
+    """A diferença entre as duas datas de nascimento muda algum marco de idade: 18/21 anos no fato, 70 na sentença (CP, arts. 27 e
+    115), 60/70 nos decretos e hoje."""
+    _id = lambda n, ref: ref.year - n.year - ((ref.month, ref.day) < (n.month, n.day))
+    _refs = [(rs.to_date(c.get("data_infracao") or ""), (18, 21)) for c in r.get("_crimes", [])]
+    _refs += [(rs.to_date(c.get("data_sentenca") or ""), (70,)) for c in r.get("_crimes", [])]
+    _refs += [(x, (60, 70)) for x in list(rs.DECRETOS.values()) + [date(2022, 12, 25), date.today()]]
+    return any(ref and any((_id(d1, ref) >= k) != (_id(d2, ref) >= k) for k in ks) for ref, ks in _refs)
+
+
 def _identidade_x_ficha(r, f):
     """Mesma pessoa? CPF, nome e nascimento da ficha x RSPE (a ficha vinculada pode ser de homônimo ou o cadastro estar errado)."""
     out = []
@@ -1707,12 +1717,7 @@ def _identidade_x_ficha(r, f):
         out.append(_item_rf(nv, "Nome na ficha (%s) difere do RSPE" % (f.get("nome") or "").title(),
                             "RSPE: %s. Conferir se a ficha é desta pessoa.%s" % ((r.get("nome") or "").title(), _ck), "Identificação do apenado (LEP, art. 106)."))
     if d1 and d2 and d1 != d2:
-        # só pesa se a diferença muda algum marco: 18/21 anos no fato, 70 na sentença (CP, arts. 27 e 115), 60/70 nos decretos e hoje
-        _id = lambda n, ref: ref.year - n.year - ((ref.month, ref.day) < (n.month, n.day))
-        _refs = [(rs.to_date(c.get("data_infracao") or ""), (18, 21)) for c in r.get("_crimes", [])]
-        _refs += [(rs.to_date(c.get("data_sentenca") or ""), (70,)) for c in r.get("_crimes", [])]
-        _refs += [(x, (60, 70)) for x in list(rs.DECRETOS.values()) + [date(2022, 12, 25), date.today()]]
-        muda = any(ref and any((_id(d1, ref) >= k) != (_id(d2, ref) >= k) for k in ks) for ref, ks in _refs)
+        muda = nascimento_muda_marco(r, d1, d2)
         it = _item_rf("alerta" if muda else "info", "Nascimento na ficha (%s) difere do RSPE (%s)" % (rs.fmt(d2), rs.fmt(d1)),
                       "A data decide a redução do prazo prescricional (CP, art. 115: menor de 21 no fato, maior de 70 na sentença) e as hipóteses de "
                       "indulto por idade. %s" % ("A diferença muda um desses marcos: conferir no documento de identidade e informar a correta pelo botão Preencher."
@@ -1856,7 +1861,7 @@ def _unidade_x_ficha(r, f):
                          "desatualizado no SEEU: conferir a decisão e pedir a atualização." % (desde, un.title(), rot), "LEP, art. 112.")]
     if (reg.startswith("SEMI") or reg.startswith("ABERTO")) and tipo_un in ("fechado", "provisorio", "federal"):
         evs = sorted((e for e in r.get("_eventos", []) if rs.to_date(e.get("data") or "")), key=lambda e: rs.to_date(e["data"]))
-        if "SUSPENSA" in (r.get("situacao_cumprimento") or "").upper() or (
+        if "SUSPENSA" in (r.get("situacao_eventos") or r.get("situacao_cumprimento") or "").upper() or (
                 evs and "INTERRUP" in (evs[-1].get("tipo") or "").upper() and rs.RE_OUTRO_PROC.search(evs[-1].get("motivo") or "")):
             return []  # execução suspensa (preso em outro processo): a unidade é a da outra prisão
         # nova prisão lançada pelo programa a partir da ficha (recaptura/reinício): justifica o fechado ou a regressão cautelar

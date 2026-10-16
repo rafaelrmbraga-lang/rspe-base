@@ -854,7 +854,7 @@ def relatorio_individual(m, caminho, nome_base):
         fl = (c.get("frac_liv") or "—").split(" - ")[0]
         cd.append([Paragraph("<b>%s</b> <font color='%s'>%s</font>%s" % (_t(c.get("nome_crime")), TX2, _t(c.get("dispositivo")), " <font color='%s'>· extinto</font>" % TX3 if ext else ""), st["cel"]),
                    c.get("pena") or "—", c.get("fato") or "—", "sim" if c.get("hediondo") == "S" else "não",
-                   "sim" if c.get("vga") == "S" else "não", reinc, fp, "vedado" if fl.strip() in ("1", "1/1") else fl])
+                   {"S": "sim", "presumida": "presumida"}.get(c.get("vga_res") or c.get("vga"), "não"), reinc, fp, "vedado" if fl.strip() in ("1", "1/1") else fl])
     el.append(_tabela(cd, [W * 0.3, W * 0.12, W * 0.1, W * 0.08, W * 0.06, W * 0.1, W * 0.12, W * 0.12], st))
 
     # 5) linha do tempo, separada
@@ -1095,7 +1095,7 @@ def estatisticas(modelos, hoje=None):
             dsp = c.get("dispositivo") or ""
             arts[("%s (%s)" % (c["nome_crime"], dsp)) if c.get("nome_crime") else (dsp[:1].upper() + dsp[1:] or "Crime não identificado")] += 1
         hed += any(c.get("hediondo") == "S" for c in cs)
-        vga += any(c.get("vga") == "S" for c in cs)
+        vga += any((c.get("vga_res") or c.get("vga")) == "S" for c in cs)  # marcação ou elementar do tipo; a presumida (217-A) fica fora
         reinc += any("S" in (c.get("reinc") or "") for c in cs)
     E["artigos"], E["hed"], E["vga"], E["reinc"] = arts, hed, vga, reinc
     # idade (data de nascimento do RSPE ou da ficha)

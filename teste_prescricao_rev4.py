@@ -251,7 +251,8 @@ confere(L["ppe_termo"] == "12/08/2015" and any("posterior ao trânsito final" in
 L = run(reg([crime(pena_imposta=_Z, pena_total_processo="2a11m0d - PENA ORIGINÁRIA")]))
 confere(L["pena"] == "2 anos e 11 meses" and L["prazo_ppp"] == "8 anos" and "sem pena" not in L["ppe_status"], "AUD-4: pena do processo: %s" % L["pena"])
 L = run(reg([crime(pena_imposta=_Z, pena_total_processo="1a0m0d - MEDIDA DE SEGURANÇA")]))
-confere(L["ppe_status"].startswith("medida de segurança - prazo pela pena máxima cominada") and L["prazo_ppe"] == "8 anos", "AUD-4: MS: %s" % L["ppe_status"])
+# quesito 30 (16/10/2026): a medida de segurança fica sempre a verificar; o prazo pela pena máxima cominada só como referência
+confere(L["ppe_status"].startswith("A VERIFICAR: medida de segurança - prazo de referência pela pena máxima cominada") and L["prazo_ppe"] == "8 anos", "AUD-4: MS: %s" % L["ppe_status"])
 # 5 (BAIXA): datas incoerentes só rebaixam a punitiva se o intervalo decisivo usa a data errada
 L = run(reg([crime(data_infracao="10/08/2008", data_denuncia="19/01/2012", data_sentenca="01/06/2007", transito_mp="10/01/2013",
                    transito_processo="10/01/2013", pena_imposta="0 ano(s), 6 mês(es) e 0 dia(s)", pena_total_processo="0a6m0d - PENA ORIGINÁRIA")]))

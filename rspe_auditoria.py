@@ -359,6 +359,16 @@ def divergencias_fonte(r, ficha=None):
                             "Ficha: CPF %s; RSPE: CPF %s. Os dois números são válidos." % (ficha.get("cpf"), r.get("cpf")),
                             "Conferir se a ficha vinculada é mesmo do assistido e qual cadastro está errado (SEEU ou SIAPEN).",
                             "divergencia-siapen-cpf", "|".join(sorted((c1, c2))), "CPF da ficha (%s) diferente do RSPE (%s)" % (ficha.get("cpf"), r.get("cpf"))))
+        # 7) nascimento da ficha x RSPE (a data do RSPE, não a informada pelo operador): nenhuma fonte prevalece sozinha
+        n1 = rs.to_date(r.get("_nasc_rspe") or ("" if r.get("_nasc_fonte") else r.get("data_nascimento")) or "")
+        n2 = rs.to_date((ficha.get("data_nascimento") or "").strip())
+        if n1 and n2 and n1 != n2:
+            out.append(_div("Data de nascimento do SEEU diferente da ficha do SIAPEN",
+                            "RSPE: %s; ficha: %s.%s" % (rs.fmt(n1), rs.fmt(n2), " A data muda requisito de idade (art. 115 do CP, 60 e 70 anos nos "
+                                                         "decretos): esses resultados ficam a verificar." if r.get("_nasc_alt") else ""),
+                            "Conferir no documento de identidade e informar a correta na Auditoria (botão Preencher do aviso de nascimento).",
+                            "divergencia-siapen-nascimento", "|".join(sorted((rs.fmt(n1), rs.fmt(n2)))),
+                            "Nascimento no SEEU (%s) diferente do SIAPEN (%s)" % (rs.fmt(n1), rs.fmt(n2))))
     return out
 
 
@@ -645,7 +655,7 @@ def _lancamentos_seeu(r, crimes, ativos, incidentes, eventos):
         ger = D(r.get("data_geracao_rspe"))
         prop = [e for e in eventos if not e.get("_ficha")]
         cump = rs.pena_para_dias(r.get("pena_cumprida"))
-        if ger and prop and cump and rs.pena_para_dias(r.get("pena_total")) and "SUSPENSA" not in (r.get("situacao_cumprimento") or "").upper():
+        if ger and prop and cump and rs.pena_para_dias(r.get("pena_total")) and "SUSPENSA" not in (r.get("situacao_eventos") or r.get("situacao_cumprimento") or "").upper():
             cust = sum(((fim or ger) - ini).days for ini, fim in rs.periodos_custodia(prop) if ini <= ger)
             _rb, _rp = rs.saldo_remidos_num(r.get("saldo_remidos"))
             rem = max((_rb or 0) - (_rp or 0), 0)  # saldo (remidos menos os perdidos), não o bruto
@@ -928,6 +938,46 @@ def auditar(r, hoje=None):
                            "Este RSPE foi lido antes de uma correção de leitura do PDF (%s). Reimporte o PDF (Importar PDFs ou Importar pasta) para "
                            "refazer a leitura; enquanto isso, confira esses pontos no RSPE." % "; ".join(r["_reimportar"]),
                            "", tipo="reimportar-rspe"))
+    # lista "Processos Selecionados" do evento cortada na margem pelo próprio SEEU: não liga a prisão a processo
+    _cort = [e for e in eventos if e.get("processos_incompletos")]
+    if _cort:
+        itens.append(_item("verificar", "Lista de processos incompleta no RSPE: %s" % rs.pl(len(_cort), "evento", "eventos"),
+                           "Em %s, a lista \u201cProcessos Selecionados\u201d sai cortada na margem pelo próprio SEEU (o PDF não traz o restante). "
+                           "O programa não usa essa lista para ligar a prisão a um processo: a custódia fica sem processo indicado, e a detração, "
+                           "o fato posterior e a custódia por ação ficam a conferir nos autos." % "; ".join(
+                               "%s de %s (lista impressa: %s…)" % ((e.get("motivo") or e.get("tipo") or "evento").lower(), e.get("data") or "?",
+                                                                  (e.get("processos_rspe") or "").rstrip(" ,")) for e in _cort[:6]),
+                           "CP, art. 42; LEP, art. 111.", tipo="lista-processos-incompleta-rspe"))
+    # quadro "Cálculos da pena" ausente no PDF: pedir o RSPE de novo; se o novo vier igual, o SEEU não imprime (só nota)
+    if rs.sem_quadro_calculo(r) and r.get("_crimes"):
+        _enc = rs.execucao_encerrada(r)
+        if r.get("_sem_calculo_confirmado"):
+            itens.append(_item("info", "O SEEU não imprime o cálculo da pena desta guia",
+                               "O RSPE juntado de novo (%s) também veio sem o quadro \u201cCálculos da pena\u201d: não é falha de leitura nem do PDF." % (
+                                   r["_sem_calculo_confirmado"]), "", tipo="rspe-sem-quadro-calculo"))
+        else:
+            itens.append(_item("info" if _enc else "verificar", "RSPE sem o quadro \u201cCálculos da pena\u201d: juntar o RSPE de novo",
+                               "O PDF não traz o quadro de cálculos (pena total, cumprida, remanescente, regime atual, data-base e término)%s. Baixe "
+                               "o RSPE de novo no SEEU e importe: se o novo vier igual, o aviso sai (o SEEU não imprime o cálculo desta guia) e, "
+                               "havendo pena a cumprir, pede-se o cálculo nos autos." % ((" - %s" % _enc) if _enc else ""),
+                               "LEP, arts. 66, III, a, e 111.", tipo="rspe-sem-quadro-calculo"))
+    # execução arquivada no SEEU com condenação não extinta: o arquivamento pode ser erro do cartório
+    _st_arq = "ARQUIV" in rs._sem_acento(str(r.get("status_execucao") or "")).upper()
+    _at_arq = [c for c in crimes if not (c.get("extinto") or "").upper().startswith("S")]
+    if _st_arq and _at_arq and not r.get("execucao_extinta") and (rs.pena_para_dias(r.get("pena_remanescente")) or 0) > 0:
+        itens.append(_item("verificar", "Execução arquivada no SEEU com pena por cumprir",
+                           "O SEEU marca a execução como arquivada, mas há %s não extinta%s e pena remanescente de %s. Conferir se o "
+                           "arquivamento decorre de extinção, de unificação em outra execução ou de erro do cartório." % (
+                               rs.pl(len(_at_arq), "condenação", "condenações"), "" if len(_at_arq) == 1 else "s", rs.pena_extenso(r.get("pena_remanescente"))),
+                           "LEP, arts. 66, II e III, a, e 111.", tipo="execucao-arquivada-com-pena"))
+    # processo "(Indultada)" com comutação lançada depois: mantém a marca do SEEU (extinto por indulto), com a nota
+    for c in crimes:
+        if c.get("comutacao_posterior"):
+            itens.append(_item("info", "%s: processo \u201c(Indultada)\u201d - comutação lançada depois: conferir" % _nome(c),
+                               "O processo %s está marcado \u201c(Indultada)\u201d no RSPE e o programa o trata como extinto por indulto, como o "
+                               "SEEU; mas há comutação lançada depois para ele (%s). Se o indulto foi revisto, a pena volta às contas." % (
+                                   c.get("processo_criminal") or "-", c["comutacao_posterior"]),
+                               "CP, art. 107, II; LEP, art. 192.", tipo="indultada-com-comutacao-posterior", ref=_nome(c)))
     for d_ in r.get("_extincao_duvidosa") or []:
         itens.append(_item("verificar", "Extinção sem processo listado com a execução ativa: %s" % d_,
                            "O RSPE registra EXTINÇÃO concedida sem processo selecionado, mas a execução segue ATIVA e com pena remanescente. "
@@ -962,6 +1012,11 @@ def auditar(r, hoje=None):
         _desc = "; ".join("%s (%s%s)" % (o["processo"], (o["status"] or "?").lower(),
                                          (", " + o["crimes"]) if o["crimes"] else (", sem condenação cadastrada" if not o["tem_crime"] else ""))
                           for o in _oe)
+        # histórico das outras execuções (arquivadas ou de outras ações): reincidência, faltas e prisões só a conferir
+        _hist = "; ".join("%s: %s" % (o["processo"], o["historico"]) for o in _oe if o.get("historico"))
+        if _hist:
+            _desc += (". Histórico das outras execuções, a conferir (não entra nas contas desta, nem para reincidência, falta ou detração "
+                      "sem confirmação): %s" % _hist)
         if _at:
             itens.append(_item("verificar", "Mais de uma execução ativa no SEEU para a mesma pessoa",
                                "Outras execuções com condenação ativa: %s. A lista mostra só esta (a mais completa). As penas da mesma pessoa "
@@ -1223,6 +1278,36 @@ def auditar(r, hoje=None):
 
     # condenação ativa sem pena imposta: distorce soma, frações e prescrição
     for c in ativos:
+        if c.get("medida_seguranca"):
+            itens.append(_item("verificar", "%s: medida de segurança na execução - a verificar" % _nome(c),
+                               "O RSPE traz \u201c%s\u201d no processo %s. O número é o prazo mínimo da medida de segurança, não pena: o programa não o "
+                               "soma como pena na unificação, no indulto nem na prescrição, e esses resultados ficam a verificar. Conferir a sentença "
+                               "(absolvição imprópria ou substituição do art. 98 do CP) e o laudo de cessação de periculosidade." % (
+                                   (c.get("pena_total_processo") or "medida de segurança").strip(), c.get("processo_criminal") or "-"),
+                               "CP, arts. 96 a 98; LEP, arts. 171 a 179.", tipo="medida-de-seguranca-na-execucao", ref=_nome(c)))
+            continue
+        if c.get("pena_da_acao"):
+            itens.append(_item("info", "%s: pena do crime zerada no RSPE - usada a pena da ação" % _nome(c),
+                               "O RSPE traz \u201cPena Imposta: 0\u201d no processo %s, que tem um só crime: as contas usam a pena total da ação (%s). "
+                               "Conferir a sentença e pedir a correção do lançamento no SEEU." % (
+                                   c.get("processo_criminal") or "-", rs.pena_extenso(c.get("pena_imposta"))),
+                               "LEP, art. 66, III, a.", tipo="condenacao-sem-pena-imposta-no-rspe", ref=_nome(c)))
+            continue
+        if c.get("pena_nao_informada"):
+            itens.append(_item("verificar", "%s: pena não informada no RSPE - a verificar" % _nome(c),
+                               "O RSPE traz \u201cPena Imposta: 0\u201d no processo %s%s: não há como saber a pena deste crime. Ele fica fora da soma, e o "
+                               "indulto e a comutação que dependem dela ficam a verificar (pena não informada). Conferir a sentença e pedir a correção "
+                               "do lançamento no SEEU." % (c.get("processo_criminal") or "-",
+                                                           ", com mais de um crime na ação" if rs.pena_para_dias(c.get("pena_total_processo")) else ", e a ação também sem pena"),
+                               "LEP, art. 66, III, a.", tipo="condenacao-sem-pena-imposta-no-rspe", ref=_nome(c)))
+            continue
+        if rs.suspenso_rspe(c):
+            itens.append(_item("verificar", "%s: \u201cSuspenso: Sim\u201d no RSPE - a verificar" % _nome(c),
+                               "O RSPE marca o crime do processo %s como suspenso, sem a data nem a causa (sursis, pena substituída ou outra). A pena "
+                               "só sai das contas de progressão e indulto com o sursis ou a substituição confirmados: somá-la sem conferir atrasa a "
+                               "progressão; tirá-la sem confirmação a adianta indevidamente. O indulto e a comutação ficam a verificar. Conferir a "
+                               "sentença." % (c.get("processo_criminal") or "-"),
+                               "CP, arts. 44 e 77; LEP, arts. 111 e 156.", tipo="crime-suspenso-a-verificar", ref=_nome(c)))
         if not (rs.pena_para_dias(c.get("pena_imposta")) or 0):
             itens.append(_item("info", "%s: condenação sem pena imposta no RSPE" % _nome(c),
                                "O RSPE traz \u201cPena Imposta: 0 ano(s), 0 mês(es) e 0 dia(s)\u201d no processo %s. Esse crime não entra na soma das penas; "
@@ -1365,9 +1450,19 @@ def auditar(r, hoje=None):
         # reincidência pela lei, a mesma na progressão e no livramento (CP, arts. 63 e 64, I): a marcação do RSPE ou condenação
         # anterior transitada antes do fato, fora a depurada
         reinc_ef, marc, _ant, _dep = _reincidencia_legal(c, crimes_pessoa)
+        _ant_outra = not marc and _ant and all(o.get("_execucao") for o in _ant)
+        if _ant_outra:
+            reinc_ef = False  # condenação só de outra execução (RSPE arquivado ou de outra ação): a conferir, sem efeito automático
         reinc = reinc_ef
         _ant_lei = _ant  # anteriores que geram a reincidência (o nome _ant é reaproveitado adiante)
-        if not marc and _ant:
+        if _ant_outra:
+            itens.append(_item("verificar", "%s: condenação anterior em outra execução da mesma pessoa - reincidência a conferir" % nome,
+                               "Outra execução da mesma pessoa (%s) traz condenação transitada antes do fato (%s): %s. O RSPE desta execução não marca "
+                               "a reincidência, e o programa não a aplica sozinho: conferir a certidão de antecedentes e o período depurador." % (
+                                   ", ".join(sorted({o.get("_execucao") for o in _ant})), rs.fmt(fato),
+                                   "; ".join("%s, trânsito em %s" % (_nome(o), rs.fmt(_transito(o))) for o in _ant)),
+                               "CP, arts. 63 e 64, I.", tipo="reincidente-pela-lei-sem-marcacao", ref=nome))
+        elif not marc and _ant:
             # a fração de primário que o SEEU aplica favorece o assistido: não se impugna (só informação; o juízo pode recalcular)
             itens.append(_item("info", "%s: reincidente pela lei, mas o RSPE não marca a reincidência" % nome,
                                "Condenação anterior transitada antes do fato (%s): %s. Pela lei (CP, art. 63), é reincidente; a Auditoria confere as "
@@ -1583,8 +1678,10 @@ def auditar(r, hoje=None):
             # condenações anteriores do RSPE (transitadas antes deste fato, de outro processo): decidem a natureza da reincidência
             _ant = [x for x in crimes_pessoa if x is not c and fato and not rs.mesmo_processo(x.get("processo_criminal"), c.get("processo_criminal"))
                     and (rs.to_date(x.get("transito_processo") or x.get("transito_mp") or "") or date.max) < fato]
-            if _ant and any(rs.vga_indulto(x) for x in _ant):
+            if _ant and any(rs.vga_indulto(x) for x in _ant if not x.get("_execucao")):
                 vga_gen = False  # reincidente em crime violento: o percentual do SEEU está certo
+            elif _ant and any(rs.vga_indulto(x) for x in _ant):
+                pass  # o crime violento anterior está só em outra execução (RSPE arquivado): a conferir (item abaixo), sem efeito automático
             elif _ant:
                 itens.append(_item("alerta", "%s: reincidente em crime com violência ou grave ameaça, mas a condenação anterior não teve violência - %s" % (nome, _vg),
                                    "O SEEU aplica %s. As condenações anteriores do RSPE, transitadas antes do fato (%s), não têm violência ou grave ameaça: a "
@@ -2506,7 +2603,7 @@ def auditar(r, hoje=None):
     if nasc:
         idade = hoje.year - nasc.year - ((hoje.month, hoje.day) < (nasc.month, nasc.day))
         if idade >= 70:
-            _ab = "ABERTO" in (r.get("regime_atual") or "").upper().replace("SEMIABERTO", "") and not re.search(r"INTERROMPIDA|SUSPENSA", r.get("situacao_cumprimento") or "")
+            _ab = "ABERTO" in (r.get("regime_atual") or "").upper().replace("SEMIABERTO", "") and not re.search(r"INTERROMPIDA|SUSPENSA", r.get("situacao_eventos") or r.get("situacao_cumprimento") or "")
             itens.append(_item("alerta" if _ab else "info",
                                ("Idade %s no regime aberto: cabe prisão domiciliar (LEP, art. 117, I)" if _ab else
                                 "Idade %s: prisão domiciliar quando no regime aberto (LEP, art. 117, I)") % rs.pl(idade, "ano", "anos"),
