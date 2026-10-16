@@ -1081,6 +1081,9 @@ const ui = {
       case 'st_quase': return !!r.st_quase;
       case 'pa_ok': return !!r.pa_ok;
       case 'pa_quase': return !!r.pa_quase;
+      case 'rem_prio': return !!(r.rem_prio||[]).length;
+      case 'div_seeu': return !!(r.div_seeu||[]).length;
+      case 'rspe_velho': return this.idadeRSPE(r)>this.RSPE_VELHO;
       case 'ok': return spec.id==='fd' ? cor==='verde' : (r.aud_status==='ok' && cor!=='azul');  // as extintas têm cartão próprio
     } return true; },
   expandir(id){ if(this.aberto===id){ this.aberto=null; return this.render(); } this.completo(id).then(()=>{ this.aberto=id; this.render(); }); },

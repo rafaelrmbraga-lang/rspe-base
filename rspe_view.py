@@ -1536,7 +1536,10 @@ ABAS = [
 ABA_POR_ID = {a["id"]: a for a in ABAS}
 # st_ok / pa_ok: todos os requisitos atendidos; st_quase / pa_quase: nenhum falha, mas algum fica a conferir
 FILTROS_BENEFICIO = [("st_ok", "Faz jus à saída temporária"), ("st_quase", "Saída temporária: requisitos a conferir"),
-                     ("pa_ok", "Faz jus à progressão antecipada"), ("pa_quase", "Progressão antecipada: requisitos a conferir")]
+                     ("pa_ok", "Faz jus à progressão antecipada"), ("pa_quase", "Progressão antecipada: requisitos a conferir"),
+                     # os demais ícones ao lado do nome: prioridade da remição pendente, divergência no SEEU/SIAPEN e RSPE desatualizado
+                     ("rem_prio", "Prioridade: remição pendente que já dá benefício"), ("div_seeu", "Divergência no SEEU/SIAPEN"),
+                     ("rspe_velho", "RSPE desatualizado (mais de 60 dias)")]
 ABAS_PEDIDO = ("prog", "liv", "ind", "presc", "ext", "fd")
 for _a in ABAS:
     # a aba Geral não tem prazo próprio (não há campo de dias): sem filtro de situação
