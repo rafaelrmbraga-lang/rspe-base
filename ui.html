@@ -1944,10 +1944,10 @@ const ui = {
     const h=el.offsetHeight; el.style.top=(b.bottom+6+h>innerHeight? Math.max(8,b.top-6-h) : b.bottom+6)+'px'; },
   divAbrir(id){ this.fecharDrawer();
     this.irAba('aud'); this.completo(id).then(()=>{ this.aberto=id; this.render(); }); },
-  // raio âmbar ao lado do nome: remição pendente (dias exatos da ficha) que, declarada, já dá um benefício - progressão, livramento,
+  // ampulheta âmbar ao lado do nome: remição pendente (dias exatos da ficha) que, declarada, já dá um benefício - progressão, livramento,
   // término ou indulto/comutação. Prioridade: o motivo aparece ao passar o mouse; o clique abre o assistido na aba Ficha
   PRIO_LEG:'Prioridade: remição pendente que já dá benefício',
-  PRIO_SVG:'<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13.2 2 4.5 13.4h6.1L9.4 22l8.9-11.6h-6.2z"/></svg>',
+  PRIO_SVG:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 2h12M6 22h12M7 2v4a5 5 0 0 0 10 0V2M7 22v-4a5 5 0 0 1 10 0v4"/></svg>',
   prioHtml(r){ if(!(r.rem_prio||[]).length) return '';
     return `<span class="pr-rem" onclick="event.stopPropagation();ui.stPop(null);ui.prioAbrir(${jsa(r.id)})" onmouseenter="ui.prioPop(event,${jsa(r.id)})" onmouseleave="ui.stPop(null)">${this.PRIO_SVG}</span>`; },
   prioPop(ev,id){ const r=this.dados.registros.find(x=>x.id===id); if(!r) return;
