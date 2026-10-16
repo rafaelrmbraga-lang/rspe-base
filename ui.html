@@ -304,6 +304,8 @@ tr.sub td{padding:0 0 0 0;background:#FFFFFF;cursor:default}tr.sub:hover td{back
 .subtab pre{white-space:pre-wrap;overflow-wrap:anywhere;font:11.5px/1.5 Consolas,monospace;margin:6px 0 0;color:var(--tx2);background:#F8F9F7;border-radius:8px;padding:8px 10px}
 .mini{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:8px;font-size:11px;font-weight:600;color:var(--tx2);border:1px solid var(--line);background:#fff;cursor:pointer}.mini:hover{border-color:var(--pri);color:var(--pri)}
 .mini.on{border-color:var(--pri);color:var(--pri);background:#EEF5F0}
+.fdal{font-weight:400;font-size:12.5px;line-height:1.55;margin:0 0 10px;padding:8px 12px;border-left:3px solid var(--line2);background:#FAFAF8;max-width:980px}
+.fdal-t{font-weight:600;margin-bottom:1px}.fdal ul{margin:4px 0 4px;padding-left:18px}
 .fdpts{margin:5px 0 0;padding:0;list-style:none;font-weight:400;font-size:12.5px;line-height:1.55;color:var(--tx)}
 .fdpts li{position:relative;padding-left:14px}.fdpts li::before{content:"";position:absolute;left:2px;top:.6em;width:6px;height:6px;border-radius:50%;background:var(--a-tx)}
 .fdpts li.vermelho::before{background:var(--r-tx)}
@@ -405,9 +407,10 @@ body:has(.welcome.on) .btn-calc{display:none} /* calculadora só com a base aber
 .ac-h{display:flex;align-items:center;gap:10px}.ac-h b{font-size:13.5px;color:var(--tx);font-weight:600;flex:1}.ac-a{margin-left:auto}
 .ac-d{margin:8px 0 0;max-width:1100px}.ac-d p{margin:0 0 5px;font-size:12.8px;line-height:1.6;color:var(--tx);font-weight:400}
 .ac-f{margin-top:6px;font-size:11.5px;color:var(--tx3);font-weight:400}.ac-top .muted{font-weight:400}
-.fdt{width:100%;border-collapse:collapse;table-layout:fixed;background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden}
-.fdt th{background:#F7F8F6;color:var(--tx2);font-size:11px;text-transform:uppercase;letter-spacing:.3px;padding:8px 12px;text-align:left;border-bottom:1px solid var(--line);position:static}
-.fdt td{padding:8px 12px!important;font-size:12.5px;line-height:1.45;border-bottom:1px solid #F0F1F3;white-space:normal;font-weight:400!important;height:auto}
+.fdt{width:100%;border-collapse:collapse;table-layout:fixed;background:#fff;border:1px solid var(--line);border-radius:10px;overflow:visible}
+.fdt th{background:#F7F8F6;color:var(--tx2);font-size:11px;text-transform:uppercase;letter-spacing:.3px;padding:8px 12px;text-align:left;border-bottom:1px solid var(--line);position:sticky;top:var(--thh,62px);z-index:1;box-shadow:0 1px 0 var(--line),0 8px 0 #fff,0 10px 6px -4px rgba(16,24,40,.12)}
+.fdt th{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.fdt th:nth-child(5){white-space:normal}
+.fdt td{overflow-wrap:normal;word-break:normal;padding:8px 12px!important;font-size:12.5px;line-height:1.45;border-bottom:1px solid #F0F1F3;white-space:normal;font-weight:400!important;height:auto}
 .fdt tr.fdb td{font-weight:600!important}.fdt tr.fdb td .n{font-weight:400!important}
 .fdt tr.fdb td{background:#F7F8F6;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:9px 12px;font-weight:600}
 .fdt tr.fdb td .n{color:var(--tx2);font-weight:400}
@@ -904,7 +907,9 @@ const ui = {
     if(this.aberto){ const ra=(d.registros||[]).find(x=>x.id===this.aberto); if(ra&&ra._leve) setTimeout(()=>this.completo(ra.id),0); }
     if(d.sem_base){ w.classList.add('on'); document.getElementById('copia').innerHTML=''; document.getElementById('baseNome').textContent='—'; document.getElementById('baseN').textContent='0';
       document.getElementById('recentes').innerHTML=(d.recentes||[]).map(r=>`<div onclick="ui.abrirBase(${jsa(r.caminho)},${jsa(r.nome)})"><span>${esc(r.nome)}</span><small>${esc(r.caminho)}</small></div>`).join('')||'<div style="cursor:default;color:var(--tx3)">Nenhuma base recente</div>';
-      document.getElementById('wfoot').textContent='Base jurídica '+(d.base_juridica?d.base_juridica.versao:'?')+' · '+d.hoje; this.dados.registros=[]; this.render(); return; }
+      document.getElementById('wfoot').textContent='Base jurídica '+(d.base_juridica?d.base_juridica.versao:'?')+' · '+d.hoje+(d.aviso_pasta?' · '+d.aviso_pasta:''); this.dados.registros=[]; this.render(); return; }
+    // pasta do programa sem permissão de gravação: avisa uma vez onde ficam bases, configuração e registro de erros
+    if(d.aviso_pasta&&!this._avisoPasta){ this._avisoPasta=true; setTimeout(()=>this.toast(d.aviso_pasta),600); }
     w.classList.remove('on'); if(!this._legFeito){ this._legFeito=true; setTimeout(()=>this.legVerificar(),800); } if(d.base!==this._qdBase){ this._qdBase=d.base; this._qd=null; this.qdCarregar().then(()=>this.render()); } document.getElementById('baseNome').textContent=d.base; document.getElementById('baseN').textContent=d.registros.length;
     document.getElementById('copia').innerHTML=d.copia?`<i></i>cópia de segurança: ${esc(d.copia.quando)}`:'';
     document.getElementById('hoje').textContent='Hoje '+d.hoje+(d.base_juridica?' · base jurídica '+d.base_juridica.versao:''); if(!this.dados.abas.concat(this.ABAS_EXTRA).find(a=>a.id===this.aba)) this.aba='geral'; this.render(); },
@@ -953,9 +958,12 @@ const ui = {
   visiveis(){ const q=semAcento(this.filtro); let rs=this.dados.registros; if(q){ const qd=/\d/.test(q)&&/^[\d.\-\/\s]+$/.test(q)?q.replace(/\D/g,''):'';
       rs=rs.filter(r=>{ const b=this.buscaTxt(r); return b.txt.includes(q) || (qd && b.dig.includes(qd)); }); } return rs; },
   cor(r,spec){ const x=this.sitPed(r,spec); if(x) return x.cor; return spec.cor ? (r[spec.cor]||'') : ''; },
-  // situação depois da providência: pedido marcado (Progressão, Livramento, Ficha) ou todos os itens da ficha conferidos
-  sitPed(r,spec){ if(!spec||!['prog','liv','fd'].includes(spec.id)) return null; const P=(r.pedidos||{})[spec.id];
-    if(P){ const mud=P.ref&&P.ref!==this.pedRef(r,spec.id); return {txt:'Pedido feito em '+P.data+(mud?' · situação mudou depois':''), cor:mud?'amarelo':'azul', dica:this.pedDica(P,mud)}; }
+  // situação depois da providência: pedido marcado (Progressão, Livramento, Prescrição, Extinção, Ficha) ou todos os itens da ficha
+  // conferidos. Pedido cuja situação mudou depois: amarelo "situação mudou depois" em todas as abas, salvo prazo vencido (vermelho), que
+  // continua vermelho; a mesma cor vale para a linha, os cartões e o contador da aba (contaCor usa ui.cor)
+  sitPed(r,spec){ if(!spec||!['prog','liv','fd','presc','ext'].includes(spec.id)) return null; const P=(r.pedidos||{})[spec.id];
+    if(P){ const mud=P.ref&&P.ref!==this.pedRef(r,spec.id), base=spec.cor?(r[spec.cor]||''):'', venc=base==='vencido'||base==='vermelho';
+      return {txt:'Pedido feito em '+P.data+(mud?' · situação mudou depois':''), cor:mud?(venc?base:'amarelo'):'azul', dica:this.pedDica(P,mud)}; }
     if(spec.id==='fd'&&r.fd_conf_tot&&(r.fd_conf_n||0)>=r.fd_conf_tot&&['vermelho','amarelo'].includes(r.fd_cor)) return {txt:'Conferido', cor:'verde', dica:'Todos os itens da ficha foram conferidos ('+r.fd_conf_n+' de '+r.fd_conf_tot+'). Situação antes da conferência: '+(r.fd_sit||'')};
     return null; },
   render(){
@@ -1468,7 +1476,7 @@ const ui = {
       return `<div class="ac ${k}"><div class="ac-h"><span class="pill ${s.nivel_cor}">${esc(s.nivel_txt)}</span><b>${penaExt(esc(s.titulo))}</b><span class="ac-a">${bx}</span></div>
         ${s.detalhe?`<div class="ac-d">${paras(s.detalhe)}</div>`:''}
         ${s.fundamento?`<div class="ac-f">${penaExt(esc(s.fundamento))}</div>`:''}
-        ${s.fundamentacao&&!s.baixado?`<div class="ac-fund"><div class="ac-fh"><b>Fundamentação</b> <span class="muted">texto para a impugnação do cálculo</span>
+        ${s.fundamentacao&&!s.baixado?`<div class="ac-fund"><div class="ac-fh"><b>Fundamentação</b> <span class="muted">${s.nivel==='verificar'?'texto para a impugnação · usar depois de conferir nos autos o ponto acima (o pedido vem condicionado a essa conferência)':'texto para a impugnação do cálculo'}</span>
           <span class="mini pre" onclick="event.stopPropagation();ui.copiarClip(${ui.clip(penaExt(s.fundamentacao))})">Copiar fundamentação</span>
           <span class="mini" onclick="event.stopPropagation();const b=this.closest('.ac-fund').querySelector('.ac-ft');b.classList.toggle('on');this.textContent=b.classList.contains('on')?'Ocultar texto':'Ver texto'">Ver texto</span></div>
           <div class="ac-ft">${esc(penaExt(s.fundamentacao))}</div></div>`:''}
@@ -1543,8 +1551,8 @@ const ui = {
     const rows=(C.tabela||[]).map(t=>`<tr class="${t.ok?'ok':''}"><td ${td}><b>${esc(t.atestado)}</b>${t.emissao?`<br><span class="muted">emitido ${esc(t.emissao)}</span>`:''}</td>
       <td ${td}>${(t.segs||[]).map(x=>`<div>${esc(x.setor)} · ${esc(x.per)}${x.inferido?' <span class="muted">(inferido)</span>':''}${x.vinc?' <span class="muted">(vínculo na ficha)</span>':''}${x.corrigido?` <span style="color:#7A5410">(ano corrigido; ${esc(x.corrigido)})</span>`:''}${x.trab!=null&&x.trab!==''&&!x.inferido?` <span class="muted">${x.trab}${x.rem!=null?'/'+String(x.rem).replace('.',','):''}</span>`:''}</div>`).join('')}</td>
       <td ${td}>${t.trab!=null?t.trab:'—'}</td><td ${td}>${esc(t.rem)}</td><td ${td}>${esc(t.rspe)}</td><td ${td}>${esc(t.decisao)}</td><td ${td}>${esc(t.ref)}</td><td ${td}>${pill(t.rot,t.cor)}</td><td ${td} class="c">${tk(!!t.ok,t.chave)}</td></tr>${t.nota?`<tr class="${t.ok?'ok':''}"><td colspan="9" style="border-top:0;padding:0 12px 8px!important;font-size:11.5px;line-height:1.5;font-weight:400;color:var(--tx2)">Obs.: ${esc(t.nota)}</td></tr>`:''}`).join('');
-    const pend=(C.pend||[]).map(p=>`<li><span class="muted">${esc(p.data)}</span> ${pill(p.status==='NAO_LANCADO'?'Atestado não lançado':p.status==='SEM_ATESTADO'?'Sem atestado':p.status==='EM_CURSO'?'Em curso':p.status==='LACUNA'?'Lacuna':p.status==='CUMULATIVO'?'Possível cumulativo':'Divergência de dias',p.cor)} ${esc(p.texto)}${p.acao?` <span style="color:#1F6B3A">— providência: ${esc(p.acao.charAt(0).toLowerCase()+p.acao.slice(1))}</span>`:''}</li>`).join('');
-    const al=(C.alertas||[]).map(a=>`<li><span class="muted">${esc(a.tipo)}:</span> ${esc(a.texto)}</li>`).join('');
+    const pend=(C.pend||[]).map(p=>`<li><span class="muted">${esc(p.data)}</span> ${pill(p.status==='NAO_LANCADO'?'Atestado não lançado':p.status==='SEM_ATESTADO'?'Sem atestado':p.status==='EM_CURSO'?'Em curso':p.status==='LACUNA'?'Lacuna':p.status==='CUMULATIVO'?'Possível cumulativo':p.status==='A_CONFERIR'?'A conferir':p.status==='SEM_PERIODO'?'Sem período':p.status==='OUTROS_AUTOS'?'Outros autos':p.status==='FICTA'?'Remição ficta':'Divergência de dias',p.cor)} ${esc(p.texto)}${p.acao?` <span style="color:#1F6B3A">— providência: ${esc(p.acao.charAt(0).toLowerCase()+p.acao.slice(1))}</span>`:''}</li>`).join('');
+    const al=(C.alertas_g||[]).map(g=>`<div class="fdal"><div class="fdal-t">${esc(g.titulo)}</div>${g.explica?`<div class="muted">${esc(g.explica)}</div>`:''}<ul>${g.itens.map(i=>`<li>${esc(i)}</li>`).join('')}</ul>${g.acao?`<div style="color:#1F6B3A">Providência: ${esc(g.acao)}.</div>`:''}</div>`).join('');
     const R=C.resumo, nf=v=>v==null?'—':String(v).replace('.',','), hd=t=>`<div style="font-weight:700;font-size:12.5px;margin:12px 0 4px">${t}</div>`;
     const rs=R?`<div style="font-weight:700;font-size:12.5px;margin:4px 0 6px">A) Resumo quantitativo</div>
       <table class="fdt" style="border-collapse:collapse;min-width:520px"><tr><th ${th}>Fonte</th><th ${th}>Dias de trabalho</th><th ${th}>Dias de remição</th></tr>
@@ -1556,9 +1564,9 @@ const ui = {
       <p style="font-size:12.5px;line-height:1.6;font-weight:400;margin:8px 0 0;max-width:980px;text-align:justify;hyphens:auto" lang="pt-BR">${esc(R.texto)}</p>`:'';
     const L=R?['B','C','D']:['A','B','C'];
     return `${rs}${R?hd(L[0]+') Atestados × remições do RSPE'):`<div style="font-weight:700;font-size:12.5px;margin:4px 0 6px">${L[0]}) Atestados × remições do RSPE</div>`}
-      <table class="fdt" style="width:100%;border-collapse:collapse;table-layout:fixed"><colgroup><col style="width:13%"><col style="width:31%"><col style="width:5%"><col style="width:7%"><col style="width:9%"><col style="width:8%"><col style="width:8%"><col style="width:15%"><col style="width:4%"></colgroup><tr><th ${th}>Atestado</th><th ${th}>Setores e períodos</th><th ${th}>Trab.</th><th ${th}>Remidos</th><th ${th}>Remição no RSPE</th><th ${th}>Decisão</th><th ${th}>Data ref.</th><th ${th}>Status</th><th ${th} class="c" title="Conferir homologação (checklist manual)">✓</th></tr>${rows||`<tr><td ${td} colspan="9" class="muted">Nenhum atestado de trabalho.</td></tr>`}</table>
+      <table class="fdt" style="width:100%;border-collapse:collapse;table-layout:fixed"><colgroup><col style="width:13%"><col style="width:26%"><col style="width:6%"><col style="width:7%"><col style="width:9%"><col style="width:9%"><col style="width:9%"><col style="width:16%"><col style="width:5%"></colgroup><tr><th ${th}>Atestado</th><th ${th}>Setores e períodos</th><th ${th}>Trab.</th><th ${th}>Remidos</th><th ${th}>Remição no RSPE</th><th ${th}>Decisão</th><th ${th}>Data ref.</th><th ${th}>Status</th><th ${th} class="c" title="Conferir homologação (checklist manual)">✓</th></tr>${rows||`<tr><td ${td} colspan="9" class="muted">Nenhum atestado de trabalho.</td></tr>`}</table>
       ${hd(L[1]+') Pendências')}${pend?`<ul style="margin:0;padding-left:18px;font-size:12.5px;line-height:1.7;font-weight:400">${pend}</ul>`:'<div class="muted" style="font-size:12.5px;font-weight:400">Nenhuma pendência de trabalho.</div>'}
-      ${al?`${hd(L[2]+') Alertas de qualidade dos dados')}<ul style="margin:0;padding-left:18px;font-size:12px;line-height:1.6;font-weight:400">${al}</ul>`:''}
+      ${al?`${hd(L[2]+') Pontos a conferir na ficha e no RSPE')}${al}`:''}
       <div class="muted" style="font-size:11.5px;margin:8px 0 14px;font-weight:400">Status automáticos pela conciliação (número do atestado, dias iguais após truncar a fração, ordem cronológica). A coluna ✓ é o checklist manual "Conferir homologação".</div>`; },
   fdTabela(r){ const conc=this.fdConc(r); const B=r.fd_blocos||[]; if(!B.length) return conc||'<p class="muted">Nenhum trabalho ou estudo nesta execução.</p>';
     if(conc&&!B.length) return conc;
@@ -1667,7 +1675,7 @@ const ui = {
     Object.keys(r.pedidos||{}).filter(k=>k.startsWith('ind_')).forEach(k=>{ const x=this.decDe(r).find(y=>y.id===k.slice(4)); const dn=x?'Decreto '+x.numero:'decreto '+k.slice(4);
       achado[k]=()=>'possível direito a indulto ou comutação pelo '+dn; NOME[k]='indulto ou comutação pelo '+dn; });
     const P=r.pedidos||{}; const ks=Object.keys(P).filter(k=>achado[k]&&(!sel||sel.includes(k))).sort((a,b)=>this.tlD(P[a].data)-this.tlD(P[b].data));
-    if(!ks.length) return sel ? 'Selecione ao menos uma providência.' : `Atendimento a ${r.nome} referente aos autos ${r.proc} na data de hoje${this.dados.hoje?' ('+this.dados.hoje+')':''}. A GR foi analisada e não se verificou cabível pedido sobre progressão, livramento, indulto, prescrição ou extinção no momento da análise.`;
+    if(!ks.length) return sel ? 'Selecione ao menos uma providência.' : `Atendimento a ${r.nome} referente aos autos ${r.proc} na data de hoje${this.dados.hoje?' ('+this.dados.hoje+')':''}. Nenhum pedido registrado nesta data.`;
     const c=ks.map(k=>achado[k]());
     const f=ks.map(k=>{ const x=P[k], o=x.obs?', com a anotação: '+sp(x.obs):'';
       if(x.tipo==='oficio') return 'em '+x.data+', foi expedido ofício à unidade prisional'+(k==='fd'?' solicitando atestado de trabalho ou certificação de estudo':' referente a '+NOME[k])+o;
@@ -1722,13 +1730,17 @@ const ui = {
   _copiaFallback(t){ const ta=document.createElement('textarea'); ta.value=t; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(e){} ta.remove(); },
   // contador da aba: o que ainda pede providência - sai quem já teve o pedido marcado (volta se a situação da aba mudou depois)
   abaPedido(spec){ return !!(spec && (spec.cols||[]).some(c=>c[0]==='pedido')); },
-  pedPendente(r,aba){ if(aba==='ind'&&Object.keys(r.pedidos||{}).some(k=>k.startsWith('ind_'))) return false; const P=(r.pedidos||{})[aba]; return !P || (P.ref && P.ref!==this.pedRef(r,aba)); },
+  // indulto: o pedido é por decreto (ind_<id>) - o de um decreto não tira da contagem outro decreto que cabe sem pedido, e o pedido
+  // cuja situação do decreto mudou depois volta a contar
+  pedPendente(r,aba){ const PP=r.pedidos||{}; if(aba==='ind'&&Object.keys(PP).some(k=>k.startsWith('ind_'))) return this.decDe(r).some(x=>x.s==='cabe'&&!PP['ind_'+x.id]) || Object.keys(PP).some(k=>k.startsWith('ind_')&&this.pedMudou(PP[k]));
+    const P=PP[aba]; return !P || (P.ref && P.ref!==this.pedRef(r,aba)); },
+  pedMudou(P){ return !!(P&&P.ref&&P.ref_atual!=null&&P.ref!==P.ref_atual); },
   // aba Indulto: o mesmo critério do relatório geral (quadro "Indulto ou comutação cabível em ao menos um decreto"): assistidos com
   // algum decreto "cabe" (2000 a 2025), com ou sem pedido - o rótulo do contador diz isso
   contaInd(rs){ return rs.filter(r=>this.decDe(r).some(x=>x.s==='cabe')).length; },
   contaCor(a,rs){ if(a.id==='ind') return this.contaInd(rs) || ''; rs=rs.filter(r=>this.pedPendente(r,a.id)); const k = a.id==='presc' ? 'presc_ppe_cor' : a.cor;
     // mesma regra dos cartões (ui.cor): o pedido com a situação mudada depois conta onde o cartão o mostra
-    const corDe=r=>a.id==='presc'?r[k]:this.cor(r,a); return rs.filter(r=>{ const c=corDe(r); return c==='vermelho'||c==='vencido'; }).length || ''; },
+    const corDe=r=>{ const x=this.sitPed(r,a); return a.id==='presc'?(x&&x.cor==='amarelo'?'amarelo':r[k]):this.cor(r,a); }; return rs.filter(r=>{ const c=corDe(r); return c==='vermelho'||c==='vencido'; }).length || ''; },
   ABAS_EXTRA:[{id:'geo',titulo:'Dados prisionais'},{id:'base',titulo:'Dados da Base'},{id:'teses',titulo:'Jurisprudências'},{id:'quadro',titulo:'Quadro do Usuário'}],
   // abas: ícone (traço fino; verde na aba aberta) e nome curto
   ICONE:{
@@ -1882,14 +1894,14 @@ const ui = {
   decBenOk(x){ return this.decBen==='todos' || !x.beneficio || (this.decBen==='indulto'?x.beneficio==='Indulto':x.beneficio==='Comutação'); },
   decMapa(r){ const L=this.decDe(r).filter(x=>x.s!=='fora'&&x.s!=='futuro'&&this.decBenOk(x)); if(!L.length) return '<span class="muted" style="font-size:12px">nenhum decreto desde o início do cumprimento</span>';
     const P=r.pedidos||{};
-    return `<span class="mx">${L.map(x=>{ const pd=P['ind_'+x.id]; return `<i class="${x.s}${pd?' ped':''}" title="${esc(this.decRot(x))} (${esc(x.numero)}): ${esc(this.decRotS(x))}${x.mot?' - '+esc(x.mot_c||x.mot):''}${pd?' · PEDIDO FEITO em '+esc(pd.data):''}" style="background:${pd?this.DEC_COR.ped:(this.DEC_COR[x.s]||'#E2E5E0')}">${this.decCurto(x)}</i>`; }).join('')}</span>`; },
+    return `<span class="mx">${L.map(x=>{ const pd=P['ind_'+x.id]; const mud=pd&&this.pedMudou(pd); return `<i class="${x.s}${pd&&!mud?' ped':''}" title="${esc(this.decRot(x))} (${esc(x.numero)}): ${esc(this.decRotS(x))}${x.mot?' - '+esc(x.mot_c||x.mot):''}${pd?' · PEDIDO FEITO em '+esc(pd.data)+(mud?' · a situação do decreto mudou depois do pedido':''):''}" style="background:${pd&&!mud?this.DEC_COR.ped:(this.DEC_COR[x.s]||'#E2E5E0')}">${this.decCurto(x)}</i>`; }).join('')}</span>`; },
   async decAbrir(id){ if(this.decAberto===id){ this.decAberto=null; return this.render(); } await this.completo(id); this.decAberto=id; this.render(); },
   decBtn(r){ return `<span class="mini dbtn" title="Linha do tempo: crimes, impeditivos, pena cumprida em cada decreto, faltas na janela e resultado" onclick="event.stopPropagation();ui.indTL(${jsa(r.id)})">Verificar indulto/comutação</span>`; },
   // pedido de indulto/comutação é por decreto (ind_<id>): no decreto aberto, o daquele decreto; no Geral, qualquer um (o clique pergunta o decreto)
   decPed(r,decId){ const P=r.pedidos||{}; const k=decId?'ind_'+decId:null;
     const ks=k?(P[k]?[k]:[]):Object.keys(P).filter(x=>x==='ind'||x.startsWith('ind_'));
-    const dica=ks.map(x=>this.pedNome(x,r)+': '+this.pedDica(P[x],false)).join(' | ');
-    return ks.length?`<span class="pck ok" title="${esc(dica)}" onclick="event.stopPropagation();ui.pedidoAbrir(${jsa(r.id)},'${k||ks[0]}')">✓</span>`:`<span class="pck" title="Marcar pedido feito" onclick="event.stopPropagation();ui.pedidoAbrir(${jsa(r.id)},'${k||'ind'}')"></span>`; },
+    const dica=ks.map(x=>this.pedNome(x,r)+': '+this.pedDica(P[x],this.pedMudou(P[x]))).join(' | '), mud=ks.some(x=>this.pedMudou(P[x]));
+    return ks.length?`<span class="pck ok${mud?' mud':''}" title="${esc(dica)}" onclick="event.stopPropagation();ui.pedidoAbrir(${jsa(r.id)},'${k||ks[0]}')">✓</span>`:`<span class="pck" title="Marcar pedido feito" onclick="event.stopPropagation();ui.pedidoAbrir(${jsa(r.id)},'${k||'ind'}')"></span>`; },
   renderIndulto(rs){ rs=[...rs].sort((a,b)=>(b.fixado?1:0)-(a.fixado?1:0)); const D=this.decLista(this.dados.registros||[]);
     if(this.decSel && !D.find(x=>x.id===this.decSel)) this.decSel=null;
     // legenda das cores desta aba (os contadores antigos não filtravam nada)
@@ -2773,7 +2785,7 @@ const ui = {
         <div class="muted">${esc(S.saldo_rotulo||'')}</div>
         <div class="amd"><input data-s="a" value="${a}" placeholder="0"> ano(s) <input data-s="m" value="${m}" placeholder="0"> mês(es) <input data-s="d" value="${d}" placeholder="0"> dia(s)</div></div>`; }).join('');
     return `<div class="pf" id="${id}" onclick="event.stopPropagation()"><h5>${esc(L.rotulo||L.crime)} · preencher ou corrigir os dados <span class="muted">(em branco = dado importado do RSPE; o valor importado aparece como exemplo)</span></h5>
-      <div class="pf-g">${sel('modalidade','Modalidade da pena',[['','Privativa de liberdade (padrão)'],['PRD','Restritiva de direitos'+(o.convertida?' (o RSPE indica CONVERTIDA)':'')],['SURSIS','Sursis (suspensão condicional da pena)'],['MS','Medida de segurança (inimputável)'],['MS98','Medida de segurança substitutiva (semi-imputável, art. 98)']])}${inp('inicio_prd','Início efetivo da restritiva (1º dia de serviço)')}${inp('ultimo_comparecimento','Último comparecimento (restritiva, ou regime aberto com fuga sem data)')}${inp('revogacao_sursis','Revogação do sursis')}${inp('novo_crime','Novo crime após o trânsito (data do fato)')}
+      <div class="pf-g">${sel('modalidade','Modalidade da pena',[['','Privativa de liberdade (padrão)'],['PRD','Restritiva de direitos'+(o.convertida?' (o RSPE indica CONVERTIDA)':'')],['SURSIS','Sursis (suspensão condicional da pena)'],['MS','Medida de segurança (inimputável)'],['MS98','Medida de segurança substitutiva (semi-imputável, art. 98)']])}${inp('inicio_prd','Início efetivo da restritiva (1º dia de serviço)')}${inp('ultimo_comparecimento','Último comparecimento (restritiva, ou regime aberto com fuga sem data)')}${inp('audiencia_sursis','Audiência admonitória do sursis (início do período de prova)')}${inp('revogacao_sursis','Revogação do sursis')}${inp('novo_crime','Novo crime após o trânsito (data do fato)')}
         ${inp('fato','Data do fato')}${inp('denuncia','Recebimento da denúncia')}${inp('sentenca','Sentença')}${inp('acordao','Acórdão (se houver)')}${inp('transito_mp','Trânsito para a acusação')}${inp('transito','Trânsito final')}${inp('pena','Pena aplicada','ex.: 2a6m0d')}${inp('susp366_ini','Suspensão do art. 366 do CPP - início')}${inp('susp366_fim','Suspensão do art. 366 - fim (retomada; em branco = ainda suspenso)')}
         ${sel('reinc','Reincidente',[['','Conforme o RSPE'+(o.reinc?' ('+(o.reinc==='S'?'sim':'não')+')':' (não informado)')],['S','Sim'],['N','Não']])}
         ${sel('art115','Art. 115 (metade do prazo)',[['','Conforme o RSPE'+(o.nascimento?' (nasc. '+o.nascimento+')':' (sem data de nascimento)')],['sim','Aplicar: menor de 21 no fato ou maior de 70 na sentença'],['nao','Não aplicar']])}</div>
@@ -2786,8 +2798,9 @@ const ui = {
     let dados=null;
     if(!restaurar){ const valores={}; f.querySelectorAll('[data-k]').forEach(e=>{ const k=e.dataset.k, x=e.value.trim(); if(x && x!==(e.dataset.o||'')) valores[k]=x; });
       if(valores.modalidade==='PRD'&&!valores.ultimo_comparecimento&&!valores.inicio_prd&&!(L.ultimo_comparecimento)) this.toast('Restritiva sem início efetivo nem último comparecimento: o prazo corre pela pena aplicada desde o trânsito (a audiência admonitória não interrompe).');
+      if(valores.modalidade==='SURSIS'&&!valores.audiencia_sursis&&!(L.audiencia_sursis)) this.toast('Sursis sem a audiência admonitória: o período de prova só começa nela (LEP, art. 160) - o resultado fica a verificar.');
       if(valores.susp366_fim&&!valores.susp366_ini) return this.toast('Informe o início da suspensão do art. 366.');
-      for(const k of ['fato','denuncia','sentenca','acordao','transito_mp','transito','ultimo_comparecimento','inicio_prd','revogacao_sursis','novo_crime','susp366_ini','susp366_fim']) if(valores[k] && !dataOk(valores[k])) return this.toast('Data inválida em "'+(PF_ROT[k]||k)+'": '+valores[k]+' não existe no calendário (use dd/mm/aaaa).');
+      for(const k of ['fato','denuncia','sentenca','acordao','transito_mp','transito','ultimo_comparecimento','inicio_prd','revogacao_sursis','novo_crime','susp366_ini','susp366_fim','audiencia_sursis']) if(valores[k] && !dataOk(valores[k])) return this.toast('Data inválida em "'+(PF_ROT[k]||k)+'": '+valores[k]+' não existe no calendário (use dd/mm/aaaa).');
       if(valores.pena && this.sqAmd(valores.pena)==null) return this.toast('Pena inválida: use o formato 2a6m0d.');
       let salRuim=false; const saldos={}; f.querySelectorAll('.sd').forEach(b=>{ const g=q=>b.querySelector(`[data-s="${q}"]`).value.trim(); if(g('a')===''&&g('m')===''&&g('d')==='') return; if(![g('a'),g('m'),g('d')].every(x=>/^\d*$/.test(x))) salRuim=true; saldos[b.dataset.ev]=(+g('a')||0)*365+(+g('m')||0)*30+(+g('d')||0); });
       if(salRuim) return this.toast('Saldo inválido: use só números inteiros (anos, meses e dias), sem sinal nem vírgula.');
@@ -3122,7 +3135,7 @@ function pl(n,a,b){ return n+' '+(n===1?a:b); }
 // texto dentro de string JS num atributo on*="...": aspa simples vira \x27 (o HTML decodifica &#39; antes de o JS rodar)
 // data dd/mm/aaaa que existe no calendário (31/31/2020 e 29/02/2023 não), no intervalo que o programa aceita (1900 a 2100)
 function dataOk(s){ const m=/^(\d{2})\/(\d{2})\/(\d{4})$/.exec(String(s||'').trim()); if(!m) return false; const d=+m[1], me=+m[2], a=+m[3]; if(a<1900||a>2100||me<1||me>12||d<1) return false; return d<=new Date(a,me,0).getDate(); }
-const PF_ROT={fato:'Data do fato',denuncia:'Recebimento da denúncia',sentenca:'Sentença',acordao:'Acórdão',transito_mp:'Trânsito para a acusação',transito:'Trânsito final',ultimo_comparecimento:'Último comparecimento',inicio_prd:'Início efetivo da restritiva',revogacao_sursis:'Revogação do sursis',novo_crime:'Novo crime após o trânsito',susp366_ini:'Suspensão do art. 366 - início',susp366_fim:'Suspensão do art. 366 - fim'};
+const PF_ROT={fato:'Data do fato',denuncia:'Recebimento da denúncia',sentenca:'Sentença',acordao:'Acórdão',transito_mp:'Trânsito para a acusação',transito:'Trânsito final',ultimo_comparecimento:'Último comparecimento',inicio_prd:'Início efetivo da restritiva',revogacao_sursis:'Revogação do sursis',novo_crime:'Novo crime após o trânsito',susp366_ini:'Suspensão do art. 366 - início',susp366_fim:'Suspensão do art. 366 - fim',audiencia_sursis:'Audiência admonitória do sursis'};
 function semAcento(s){ return String(s??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(); }
 function jsa(s){ return esc("'"+String(s??'').replace(/\\/g,'\\\\').replace(/'/g,'\\x27').replace(/\r/g,'\\r').replace(/\n/g,'\\n').replace(/[\u2028\u2029]/g,c=>'\\u'+c.charCodeAt(0).toString(16))+"'"); }
 function esc(s){ return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
@@ -3145,6 +3158,15 @@ kbFocaveis();
 document.addEventListener('keydown',e=>{ const el=e.target; if(!el||!el.hasAttribute||!el.hasAttribute('data-kb')) return;
   if(e.key==='Enter'||e.key===' '||e.key==='Spacebar'){ e.preventDefault(); el.click(); } });
 window.addEventListener('pywebviewready', ()=>api('listar'));
+// cabeçalho das tabelas internas da linha aberta (aba Ficha) fica preso logo abaixo do cabeçalho principal ao rolar
+// (a posição é a borda inferior real do cabeçalho principal dentro da lista, medida a cada rolagem, clique, mudança de letra ou janela)
+(()=>{ let pend=false;
+  const upd=()=>{ pend=false; document.querySelectorAll('.card').forEach(c=>{ const th=c.querySelector(':scope > table > thead th, table > thead th'); if(!th) return;
+      const off=th.getBoundingClientRect().bottom-c.getBoundingClientRect().top-c.clientTop;
+      if(off>0) c.style.setProperty('--thh', Math.floor(off)-1+'px'); }); };
+  const agenda=()=>{ if(!pend){ pend=true; requestAnimationFrame(upd); } };
+  document.addEventListener('scroll', agenda, true); window.addEventListener('resize', agenda);
+  document.addEventListener('click', ()=>setTimeout(agenda, 0)); new MutationObserver(agenda).observe(document.body, {childList:true, subtree:true}); })();
 if(window.__mockApi) api('listar');
 </script>
 </body>

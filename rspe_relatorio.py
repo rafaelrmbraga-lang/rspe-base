@@ -854,7 +854,7 @@ def relatorio_individual(m, caminho, nome_base):
         fl = (c.get("frac_liv") or "—").split(" - ")[0]
         cd.append([Paragraph("<b>%s</b> <font color='%s'>%s</font>%s" % (_t(c.get("nome_crime")), TX2, _t(c.get("dispositivo")), " <font color='%s'>· extinto</font>" % TX3 if ext else ""), st["cel"]),
                    c.get("pena") or "—", c.get("fato") or "—", "sim" if c.get("hediondo") == "S" else "não",
-                   "sim" if c.get("vga") == "S" else "não", reinc, fp, "vedado" if fl.strip() in ("1", "1/1") else fl])
+                   {"S": "sim", "presumida": "presumida"}.get(c.get("vga_res") or c.get("vga"), "não"), reinc, fp, "vedado" if fl.strip() in ("1", "1/1") else fl])
     el.append(_tabela(cd, [W * 0.3, W * 0.12, W * 0.1, W * 0.08, W * 0.06, W * 0.1, W * 0.12, W * 0.12], st))
 
     # 5) linha do tempo, separada
@@ -880,9 +880,9 @@ def relatorio_individual(m, caminho, nome_base):
                                                                   (" (+ ≈ %s do trabalho em curso)" % rs.pl(D["em_curso"]["dias"], "dia", "dias")) if D["em_curso"]["dias"] else "")), st["neg"]))
             lin = [["Origem", "Dias", "De onde vem", "Providência"]]
             for k, r_, p_ in rf.ORIGENS_REMICAO + [("lacunas", "Lacuna entre atestados", "verificar com a unidade se houve trabalho")]:
-                its = D[k]["itens"]
+                its = (D.get(k) or {}).get("itens")
                 if its:
-                    est = k in ("sem_atestado", "em_curso", "a_conferir") or (k == "estudo" and any(i["estimado"] for i in its))
+                    est = k in ("sem_atestado", "ficta", "em_curso", "a_conferir") or (k == "estudo" and any(i["estimado"] for i in its))
                     lin.append([r_, ("≈ " if est else "") + _num(D[k]["dias"]) if D[k]["dias"] else "—",
                                 "; ".join("%s, %s, %s%s" % (i["ref"], i.get("unidade") or "—", i["per"], (" (%s%s)" % ("≈ " if i["estimado"] else "", _num(i["dias"]))) if i["dias"] else "") for i in its), p_])
             el.append(_tabela(lin, [W * 0.22, W * 0.08, W * 0.46, W * 0.24], st))
@@ -1095,7 +1095,7 @@ def estatisticas(modelos, hoje=None):
             dsp = c.get("dispositivo") or ""
             arts[("%s (%s)" % (c["nome_crime"], dsp)) if c.get("nome_crime") else (dsp[:1].upper() + dsp[1:] or "Crime não identificado")] += 1
         hed += any(c.get("hediondo") == "S" for c in cs)
-        vga += any(c.get("vga") == "S" for c in cs)
+        vga += any((c.get("vga_res") or c.get("vga")) == "S" for c in cs)  # marcação ou elementar do tipo; a presumida (217-A) fica fora
         reinc += any("S" in (c.get("reinc") or "") for c in cs)
     E["artigos"], E["hed"], E["vga"], E["reinc"] = arts, hed, vga, reinc
     # idade (data de nascimento do RSPE ou da ficha)
@@ -1960,7 +1960,7 @@ def remicao_por_origem(modelos):
             continue
         O["com_ficha"] += 1
         for k in ks:
-            if D[k]["itens"]:
+            if (D.get(k) or {}).get("itens"):  # (modelo gravado antes de uma origem nova: sem a chave)
                 O["n"][k] += 1
                 O["itens"][k] += len(D[k]["itens"])
                 O["dias"][k] += D[k]["dias"]
@@ -1983,7 +1983,10 @@ COMO_REMICAO = {"nao_lancado": "dias remidos do próprio atestado; a ficha regis
                     "lançado na ficha não é visto pelo programa: este número tende a ser maior que o real (lance o atestado em \"Adicionar atestado\" na aba Ficha)",
     "estudo": "12 horas de frequência = 1 dia (LEP, art. 126, § 1º, I); horas declaradas ou estimadas",
     "leitura": "4 dias por obra (Res. CNJ 391/2021, art. 5º)", "em_curso": "estimativa, como no trabalho sem atestado",
-    "a_conferir": "sem dias no total: vínculo aberto sem baixa na ficha (registro duplicado ou baixa esquecida); a estimativa só vale se a unidade confirmar o trabalho"}
+    "ficta": "estimativa: dias seg.-sáb. entre a suspensão do trabalho pela pandemia e o retorno (no máximo até o fim da emergência sanitária, "
+             "22/04/2022), ÷ 3 (STJ, Tema 1.120)",
+    "a_conferir": "sem dias no total: vínculo sem baixa na ficha, lacuna entre atestados, divergência entre o RSPE e a ficha, afastamento (LEP, art. "
+                  "126, § 4º) ou trabalho que pode já estar remido; a estimativa só vale se a unidade ou os autos confirmarem o trabalho"}
 
 
 def remicao_por_unidade(modelos, O=None):
@@ -2399,7 +2402,7 @@ def prioridade_remicao(m):
         return None
     g = lambda k: float((D.get(k) or {}).get("dias") or 0)
     exatos = g("nao_lancado") + g("emitido") + g("divergencia")
-    estim = g("sem_atestado")
+    estim = g("sem_atestado") + g("ficta")
     edu = g("estudo") + g("leitura")
     total = float(D.get("total") or 0)
     if total < 1:
@@ -2417,12 +2420,15 @@ def prioridade_remicao(m):
                     continue
                 alvos.append((rot, m[k]))
     efeito, nivel = [], None
+    # falta grave pendente ou posterior ao período (rspe_ficha.remicao_detalhada): a remição pode perder até 1/3 (LEP, art. 127) - ressalva,
+    # sem afirmar a perda
+    salvo = ", salvo perda de até 1/3 (art. 127)" if D.get("ressalva_127") else ""
     for rot, d in alvos:
         fem = rot == "progressão"  # "a progressão" x "o livramento", "o término"
         if exatos >= d:
-            efeito.append("%s em %d dias: os atestados prontos (%s dias) já %s alcançam" % (rot, d, _dias(exatos), "a" if fem else "o"))
+            efeito.append("%s em %d dias: os atestados prontos (%s dias) já %s alcançam%s" % (rot, d, _dias(exatos), "a" if fem else "o", salvo))
         elif total >= d:
-            efeito.append("%s em %d dias: %s com a estimativa (%s dias), se confirmado o trabalho" % (rot, d, "alcançada" if fem else "alcançado", _dias(total)))
+            efeito.append("%s em %d dias: %s com a estimativa (%s dias), se confirmado o trabalho%s" % (rot, d, "alcançada" if fem else "alcançado", _dias(total), salvo))
         else:
             continue
         nivel = min(nivel or 9, 1 if rot == "término" else 2)
@@ -2430,7 +2436,7 @@ def prioridade_remicao(m):
         nivel = 3 if exatos >= 30 else 4 if estim >= 30 else 5
         prox = min(alvos, key=lambda x: x[1]) if alvos else None
         if prox:
-            efeito.append("antecipa a %s (em %d dias) em até %s dias" % (prox[0], prox[1], _dias(total)))
+            efeito.append("antecipa a %s (em %d dias) em até %s dias%s" % (prox[0], prox[1], _dias(total), salvo))
     if travado:
         efeito.append("livramento (em %d dias) travado pela falta grave nos últimos 12 meses: a remição não o antecipa" % m["liv_dias"])
     certo = any("atestados prontos" in e for e in efeito) or (nivel == 3)

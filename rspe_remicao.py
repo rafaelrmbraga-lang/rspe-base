@@ -94,8 +94,18 @@ def setor_chave(nome):
         if re.search(pad, u):
             return ch, disp
     ch = re.sub(r"\W", "", u)[:12] or "?"
-    disp = " ".join(w.capitalize() if len(w) > 2 else w.lower() for w in u.split()) or "Setor não identificado"
+    disp = com_siglas(" ".join(w.capitalize() if len(w) > 2 else w.lower() for w in u.split())) or "Setor não identificado"
     return ch, disp
+
+
+# siglas que ficam em caixa alta nos nomes de setor e de unidade (unidades penais de MS e órgãos que aparecem na ficha)
+SIGLAS = {"IPCG", "UP", "UPs", "PED", "PDIB", "EPJFC", "CPAC", "CPAIG", "EPFIIZ", "EPFSA", "EPRACAG", "PHAC", "PTRAN", "UMMVE", "EPFI",
+          "CTAP", "AGEPEN", "SIAPEN", "SENAC", "SENAI", "SESC", "SEBRAE", "EJA", "EAD", "ENCCEJA", "ENEM", "PCE", "UPRB", "EPRB", "CPPCG"}
+
+
+def com_siglas(txt):
+    """Devolve em caixa alta as siglas conhecidas de um nome já em caixa de título ("Ipcg Faxina da Up" -> "IPCG Faxina da UP")."""
+    return re.sub(r"\b[\wÀ-ú]+\b", lambda m: m.group(0).upper() if m.group(0).upper() in SIGLAS else m.group(0), txt or "")
 
 
 def setor_parecido(a, b):
@@ -475,13 +485,16 @@ def vinculos(eventos, hoje, impressao=None):
             v["duvida"], v["duvida_desde"] = "baixa por adequação do mapa do SIAPEN (correção de cadastro)", v["ini"]
     # vínculo sem baixa própria, encerrado só pela saída da unidade (às vezes anos depois), durante o qual outro setor começou e
     # terminou com baixa própria (trabalhos que vieram e foram com este "aberto"): a mesma dúvida do vínculo esquecido aberto, desde
-    # o início desse outro setor. Setores simultâneos encerrados juntos pela saída não entram na dúvida
-    for v in [v for v in fechados if v.get("por_saida") and (v["fim"] - v["ini"]).days > 90]:
+    # o início desse outro setor. Setores simultâneos encerrados juntos pela saída não entram na dúvida. A baixa do próprio setor com
+    # motivo "Saída do Presídio" segue a mesma regra: costuma ser registro tardio, lançado quando a pessoa deixa a unidade
+    for v in [v for v in fechados if (v.get("por_saida") or re.search(r"SAIDA DO PRESIDIO", _sa(v.get("motivo_fim")))) and (v["fim"] - v["ini"]).days > 90]:
         dentro = sorted(w["ini"] for w in fechados if w is not v and not mesmo_setor(w["chave"], v["chave"]) and not w.get("por_saida")
-                        and v["ini"] < w["ini"] and w["fim"] < v["fim"])
+                        and not re.search(r"SAIDA DO PRESIDIO", _sa(w.get("motivo_fim"))) and v["ini"] < w["ini"] and w["fim"] < v["fim"])
         if dentro:
-            v["duvida"], v["duvida_desde"] = "sem baixa na ficha (encerrado só pela saída da unidade em %s); depois houve início e baixa em " \
-                                             "outro setor em %s" % (_f(v["fim"]), _f(dentro[0])), dentro[0]
+            v["duvida"], v["duvida_desde"] = ("sem baixa na ficha (encerrado só pela saída da unidade em %s); depois houve início e baixa em "
+                                              "outro setor em %s" % (_f(v["fim"]), _f(dentro[0])) if v.get("por_saida") else
+                                              "baixa com motivo \"saída do presídio\" em %s (registro tardio provável); antes dela, houve início e baixa "
+                                              "em outro setor em %s" % (_f(v["fim"]), _f(dentro[0]))), dentro[0]
     for v in [v for v in fechados if not v.get("duvida") and (v.get("por_saida") or re.search(r"SAIDA DO PRESIDIO|TRANSFERENCIA DE PRESIDIO|"
                                                                                            r"SAIDA DA UNIDADE", _sa(v.get("motivo_fim"))))]:
         par = [w for w in fechados if w is not v and abs((w["ini"] - v["ini"]).days) <= 1 and not w.get("por_saida") and w.get("fim_ficha")
@@ -931,18 +944,21 @@ RE_INT_FORA = re.compile(r"FUGA|EVAS|LIBERDADE|LIVRAMENTO|ALVARA|SOLTURA|RELAXAM
                          r"REGIME ABERTO|RESTRITIVA|BENEFICIO|INDULTO|^CUMPRIMENTO DA PENA")
 
 
-def fora_da_unidade(r, hoje, f=None):
+def fora_da_unidade(r, hoje, f=None, presos=None):
     """Períodos do RSPE em que o trabalho não gera remição a estimar: interrupção da custódia por fuga, soltura ou livramento
     (até a nova prisão), período de prova do livramento e regime aberto (LEP, art. 126, caput e § 6º: no aberto só o estudo).
     A ficha prevalece quando mostra a pessoa presa: a entrada em unidade de custódia (fechado, semiaberto, provisória) encerra
     o período na véspera; no aberto e no livramento, o dia em unidade de custódia segundo a ficha também fica fora do corte.
-    [(início, fim, motivo)]."""
+    [(início, fim, motivo)]. presos (lista, opcional): recebe os trechos da interrupção do RSPE em que a ficha mostra a pessoa
+    em unidade de custódia [(entrada, fim da interrupção, motivo)] - a custódia não muda; o trabalho nesses trechos fica a verificar."""
     import rspe_ficha as rf
     tl = rf.linha_unidades(f) if f else []
     custodia = [(d, (rf.classificar_unidade(u)[0] or "")) for d, u in tl]
 
-    def ate_entrada(a, b):
+    def ate_entrada(a, b, mot=""):
         ent = [d for d, c in custodia if a < d <= b and c in ("fechado", "semiaberto", "provisorio", "federal")]
+        if ent and presos is not None:
+            presos.append((min(ent), b, mot))
         return (a, min(ent) - timedelta(days=1)) if ent else (a, b)
 
     def fora_de_custodia(a, b):
@@ -966,10 +982,10 @@ def fora_da_unidade(r, hoje, f=None):
                 ab = (d, (e.get("motivo") or "").strip().lower())
         elif ab:
             if d > ab[0]:
-                out.append(ate_entrada(ab[0], d - timedelta(days=1)) + (ab[1],))
+                out.append(ate_entrada(ab[0], d - timedelta(days=1), ab[1]) + (ab[1],))
             ab = None
     if ab:
-        out.append(ate_entrada(ab[0], hoje) + (ab[1],))
+        out.append(ate_entrada(ab[0], hoje, ab[1]) + (ab[1],))
     per = []
     try:
         per = [(a, (b - timedelta(days=1)) if b else hoje, "livramento condicional")
@@ -1016,6 +1032,27 @@ def ausencias_ficha(eventos):
         if m and not u.startswith("MUDANCA DE CELA") and 0 < int(m.group(1)) <= 30:
             out.append((d, d + timedelta(days=int(m.group(1)) - 1), "isolamento"))
     return sorted(set(out))
+
+
+# remição por aprovação em exame (ENCCEJA/ENEM; Res. CNJ 391/2021, art. 3º): 50% da carga horária do nível - 1.600 h no fundamental
+# e 1.200 h no médio, 12 h por dia: 133 e 100 dias; aprovação parcial por área (4 áreas): 1/4 por área; conclusão: + 1/3 (LEP, art. 126,
+# § 5º). Só a remição com dias compatíveis (tolerância de 5% ou 2 dias) é atribuída ao exame
+DIAS_EXAME = sorted({round(b * k / 4.0, 2) for b in (1600 / 12.0, 1200 / 12.0) for k in (1, 2, 3, 4)} |
+                    {round(1600 / 12.0 * 4 / 3.0, 2), round(1200 / 12.0 * 4 / 3.0, 2)})
+
+
+def dias_compativeis_exame(d):
+    return any(abs((d or 0) - v) <= max(2.0, 0.05 * v) for v in DIAS_EXAME)
+
+
+# início e fim da suspensão das atividades pela pandemia: a remição ficta (STJ, Tema 1.120) vai até o retorno ao trabalho, no máximo até
+# o fim da emergência sanitária (Portaria GM/MS 913, de 22/04/2022)
+RE_PANDEMIA = re.compile(r"COVID|PANDEMIA|CORONA ?VIRUS|SARS.?COV")
+FIM_EMERGENCIA_COVID = date(2022, 4, 22)
+# afastamento do trabalho por acidente ou por saúde (escolta, internação, atendimento hospitalar): LEP, art. 126, § 4º
+RE_ACIDENTE = re.compile(r"ACIDENT")
+RE_SAUDE_FIM = re.compile(r"ESCOLT\w* (?:AO|AT[EÉ] O|PARA O|PARA A) (?:HOSPITAL|SANTA CASA|UPA\b|PRONTO)|INTERNAD|INTERNACAO|HOSPITALIZ|"
+                          r"ATENDIMENTO (?:MEDICO|HOSPITALAR)|TRATAMENTO (?:MEDICO|DE SAUDE)|PROBLEMAS? DE SAUDE|MOTIVO DE SAUDE|LICENCA MEDICA")
 
 
 def remicoes_rspe(r):
@@ -1097,16 +1134,23 @@ def conciliar(r, f, hoje=None, manuais=None, ini_exec=None, excluir_remicoes=Non
         if fs:
             fim_ant = max(fs + ([fim_ant] if fim_ant else []))
         for s in a["segs"]:
-            if s.get("trab") and s.get("rem") is not None and s["rem"] > s["trab"] / 3.0 + 1:
+            if s.get("trab") and s.get("rem") is not None and s["rem"] > s["trab"] * 2 / 3.0 + 1:
                 s["rem_ficha"], s["rem"] = s["rem"], round(s["trab"] / 3.0, 2)
         if a["trab"] and a["rem"] is not None and abs(a["trab"] / 3.0 - a["rem"]) > 1:
             maior = a["rem"] > a["trab"] / 3.0 + 1
+            # acima de 1/3: o atestado pode ter contado as horas além da jornada (LEP, art. 33) como dias adicionais, o que parte da
+            # jurisprudência admite - o valor do atestado fica, com alerta. Só o erro evidente de digitação (remidos acima de 2/3 dos
+            # trabalhados, mais de 16 h por dia: "171 trabalhados e 171 remidos") é corrigido para 1/3
+            evidente = a["rem"] > a["trab"] * 2 / 3.0 + 1
             alerta("proporção", "Atestado %s: %s trabalhados dariam %s remidos (1 a cada 3), consta %s%s." % (
                 a["numero"] or "s/n", a["trab"], _fmtn(a["trab"] / 3.0), _fmtn(a["rem"]),
-                " - a conta usa 1/3 dos dias trabalhados (LEP, art. 126, § 1º, II): conferir o atestado" if maior else ""), a["emissao"])
-            if maior:
-                # remidos acima de 1/3 dos dias trabalhados: erro de digitação da ficha ("171 trabalhados e 171 remidos")
+                " - erro evidente de digitação: a conta usa 1/3 dos dias trabalhados (LEP, art. 126, § 1º, II); conferir o atestado" if evidente else
+                " - o atestado pode ter contado horas além da jornada (LEP, art. 33) como dias adicionais, o que parte da jurisprudência "
+                "admite: a conta mantém o valor do atestado; conferir no atestado as horas declaradas" if maior else ""), a["emissao"])
+            if evidente:
                 a["rem_ficha"], a["rem"] = a["rem"], round(a["trab"] / 3.0, 2)
+            elif maior:
+                a["acima_terco"] = True
 
     # ---- Etapa 3: casamento atestado x remição ----
     def livre(x):
@@ -1287,11 +1331,13 @@ def conciliar(r, f, hoje=None, manuais=None, ini_exec=None, excluir_remicoes=Non
         if x:
             x["usada"], a["remicao"], a["status"] = a["id"], x, "CONCILIADO"
 
-    # ENCCEJA/ENEM: remição concedida até 150 dias depois do certificado registrado na ficha é dele
+    # ENCCEJA/ENEM: remição concedida até 150 dias depois do certificado registrado na ficha, com dias compatíveis com a carga horária
+    # do exame (DIAS_EXAME), é dele
     exames = []
     for ex in f.get("exames") or []:
         de = _dt(ex.get("data"))
-        x = next((x for x in rems if livre(x) and de and de <= (x["decisao"] or date.min) <= de + timedelta(days=150)), None) if de else None
+        x = next((x for x in rems if livre(x) and de and de <= (x["decisao"] or date.min) <= de + timedelta(days=150)
+                  and dias_compativeis_exame(x["dias"])), None) if de else None
         if x:
             x["usada"] = "exame"
             exames.append("%s em %s: provável %s (certificado registrado em %s)" % (rs.pl(int(x["dias"]), "dia", "dias"), _f(x["decisao"]), ex.get("exame"), _f(de)))
@@ -1329,17 +1375,23 @@ def conciliar(r, f, hoje=None, manuais=None, ini_exec=None, excluir_remicoes=Non
                 break
     # remição sem atestado na ficha: atestado não registrado (cobertura inferida até a data de referência), desde que haja
     # trabalho no período e nenhuma outra origem possível (estudo/leitura já excluídos)
-    # remição de 4 a 24 dias, múltipla de 4, sem número de atestado no RSPE: padrão da leitura (4 dias por obra) - não é atribuída
-    # ao trabalho (o trabalho do período fica na estimativa, a conferir na decisão)
+    # remição de 4 a 24 dias, múltipla de 4, sem número de atestado no RSPE: padrão da leitura (4 dias por obra). Com projeto de leitura
+    # registrado na ficha, é leitura - não é atribuída ao trabalho (o trabalho do período fica na estimativa). Sem esse registro, a origem
+    # fica a conferir (trabalho ou leitura) e o trabalho que ela cobriria fica "a conferir", sem pedido de atestado (pode já estar remido)
+    tem_leitura = bool(f.get("leituras")) or any(re.search(r"PROJETO\W+(?:DE\W+)?LEITURA|REMICAO P(?:OR|ELA) LEITURA|RELATORIOS? DE LEITURA|RESENHA",
+                                                           _sa(e.get("texto"))) for e in evs)
     for x in rems:
         if not livre(x) or not x["ref"]:
             continue
-        leit = not x["numero"] and 4 <= x["dias"] <= 24 and abs(x["dias"] / 4.0 - round(x["dias"] / 4.0)) < 1e-9
+        m4 = not x["numero"] and 4 <= x["dias"] <= 24 and abs(x["dias"] / 4.0 - round(x["dias"] / 4.0)) < 1e-9
+        leit = m4 and tem_leitura
         a = {"id": "rem:%s" % _f(x["decisao"]), "numero": "", "emissao": x["ref"], "segs": [{"setor_txt": "", "chave": None, "setor": "", "ini": None, "fim": None,
              "trab": None, "rem": None, "inferido": True}], "trab": None, "rem": x["dias"], "lote": True, "origem": "rspe", "texto": "",
              "remicao": x, "status": "SEM_ORIGEM" if leit else "CONCILIADO", "_ant": False}
         if leit:
             a["sem_origem"], a["leitura"] = True, True
+        elif m4:
+            a["m4"] = True
         x["usada"] = a["id"]
         ats.append(a)
     ats.sort(key=lambda a: (max([s["fim"] for s in a["segs"] if s["fim"]] or [a["emissao"]]), a["emissao"]))
@@ -1381,6 +1433,7 @@ def conciliar(r, f, hoje=None, manuais=None, ini_exec=None, excluir_remicoes=Non
     # volta à estimativa. Uma remição pequena (leitura, saldo) não "cobre" anos de trabalho.
     E = sorted((s["ini"], s["fim"]) for _, s in expl)
     inferidos = []  # (início, fim, origem) do que cada atestado inferido de fato cobriu
+    conferir = []  # (início, fim, motivo): trabalho que fica "a conferir" na estimativa (sem dias no total e sem pedido de atestado)
     try:
         import rspe_ficha as rf
         tl_un = rf.linha_unidades(f)
@@ -1432,6 +1485,11 @@ def conciliar(r, f, hoje=None, manuais=None, ini_exec=None, excluir_remicoes=Non
         _sol = [d for d in _solturas if d < w1]
         if _sol and w0 <= max(_sol):
             w0 = max(_sol) + timedelta(days=1)
+        w0_todo = w0
+        if a["origem"] == "rspe" and w0 < w1 - timedelta(days=365):
+            # remição sem atestado na ficha: atribuída só ao trabalho dos 12 meses anteriores à referência; o trabalho mais antigo que ela
+            # cobriria fica "a conferir" (pode já estar remido), sem pedido de atestado - adiante
+            w0 = w1 - timedelta(days=365)
         nomes = {s["chave"]: s.get("setor_txt") or "" for s in a["segs"] if s["chave"]}
         novos = []
         for v in vinc:
@@ -1467,6 +1525,15 @@ def conciliar(r, f, hoje=None, manuais=None, ini_exec=None, excluir_remicoes=Non
         if sem_v and a["origem"] != "rspe":
             alerta("setor sem vínculo", "Atestado %s de %s cita %s sem início de trabalho registrado na ficha: o período desse setor não aparece "
                    "na ficha - conferir o atestado." % (a["numero"] or "s/n", _f(a["emissao"]), ", ".join(sem_v)), a["emissao"])
+        if a.get("m4"):
+            # múltipla de 4 sem projeto de leitura na ficha: origem a conferir; o trabalho que ela cobriria (os dias mais próximos da
+            # referência) fica "a conferir", sem dias no total e sem pedido de atestado
+            x = a["remicao"]
+            for s in (_corta(novos, int(round(a["rem"] * 3)))[0] if novos else []):
+                conferir.append((s["ini"], s["fim"], "a remição de %s em %s (sem atestado na ficha, múltipla de 4, sem projeto de leitura registrado: "
+                                 "trabalho ou leitura) pode já cobrir este período" % (rs.pl(int(x["dias"]), "dia", "dias"), _f(x["decisao"]))))
+            a["status"], a["sem_origem"] = "SEM_ORIGEM", True
+            continue
         if a["origem"] == "rspe":
             # teste de capacidade: a remição não pode ser maior que 1/3 dos dias de trabalho do período inferido (seg.-sáb.). Se for,
             # ela abrange atestados da ficha ainda sem par, emitidos até a decisão (153 dias = atestado 087 de 92,66 + trabalho
@@ -1518,6 +1585,21 @@ def conciliar(r, f, hoje=None, manuais=None, ini_exec=None, excluir_remicoes=Non
                     alerta("capacidade", "Remição de %s em %s (sem atestado na ficha) maior que 1/3 dos dias de trabalho do período a que o programa "
                            "a atribuiu (≈ %s de %s a %s): a remição deve abranger outro período ou atestado - conferir na decisão." % (
                                rs.pl(int(x["dias"]), "dia", "dias"), _f(x["decisao"]), rs.pl(len(tem), "dia", "dias"), _f(w0), _f(w1)), x["decisao"])
+            lim_ = int(int(round(a["rem"] * 3)) * 1.3) + 10 - len(tem)
+            if not absorvidos and w0_todo < w0 and lim_ > 0:
+                # o trabalho anterior à janela de 12 meses que a cobertura alcançaria (os dias mais recentes, até remidos x 3 com a folga de
+                # 30% + 10) não é atribuído à remição nem volta à estimativa: fica "a conferir" - pode já estar remido por ela
+                velhos = []
+                for v in vinc:
+                    a0, b0 = max(v["ini"], w0_todo), min(v["fim"] or hoje, w0 - timedelta(days=1))
+                    if a0 <= b0:
+                        velhos += [{"ini": y0, "fim": y1} for y0, y1 in _menos(a0, b0, ja)]
+                ds_ = sorted(set().union(*(_dias_set(s["ini"], s["fim"]) for s in velhos)), reverse=True)[:lim_] if velhos else []
+                for s in ([dict(s, ini=max(s["ini"], ds_[-1])) for s in velhos if s["fim"] >= ds_[-1]] if ds_ else []):
+                    conferir.append((s["ini"], s["fim"], "trabalho de mais de 12 meses antes da referência (%s) da remição de %s em %s, sem atestado "
+                                     "na ficha: pode já estar remido por ela" % (_f(x["ref"]), rs.pl(int(x["dias"]), "dia", "dias"), _f(x["decisao"]))))
+                if ds_ and int(round(a["rem"] * 3)) - len(tem) > max(9, 0.3 * a["rem"]):
+                    a["origem_12m"] = True  # a remição é maior que o trabalho dos 12 meses: origem a conferir (alerta adiante)
         # a cobertura não passa do trabalho remido (remidos x 3 ou trabalhados, com folga de 30% + 10 dias): o vínculo anterior volta
         # à estimativa
         need_c = a["trab"] or int(round((a["rem"] or 0) * 3))
@@ -1567,7 +1649,16 @@ def conciliar(r, f, hoje=None, manuais=None, ini_exec=None, excluir_remicoes=Non
                        a["numero"] or "s/n", _f(a["emissao"]), _fmtn(a["rem"]), _f(p0), _f(w1), rs.pl(maxd, "dia", "dias"),
                        (" e %s remidos dos atestados %s, emitidos no mesmo intervalo" % (_fmtn(round(usado, 2)), ", ".join(b["numero"] or "s/n" for b in irmaos))) if irmaos else "",
                        a["teto"]), a["emissao"])
-    so = [a for a in ats if a.get("status") == "SEM_ORIGEM" and not a.get("leitura")]
+    for a in [a for a in ats if a.get("origem_12m") and a.get("remicao")]:
+        alerta("capacidade", "Remição de %s em %s (sem atestado na ficha) maior que o trabalho dos 12 meses anteriores à referência (%s): o "
+               "trabalho mais antigo que ela cobriria fica a conferir (pode já estar remido) - conferir a origem na decisão." % (
+                   rs.pl(int(a["remicao"]["dias"]), "dia", "dias"), _f(a["remicao"]["decisao"]), _f(a["remicao"]["ref"])), a["remicao"]["decisao"])
+    so = [a for a in ats if a.get("status") == "SEM_ORIGEM" and a.get("m4")]
+    if so:
+        alerta("origem", "Remições sem atestado na ficha com dias múltiplos de 4 (4 a 24), sem projeto de leitura registrado na ficha: %s - origem "
+                         "a conferir (trabalho ou leitura); o trabalho do período que ela cobriria fica a conferir, sem pedido de atestado." % "; ".join(
+                             "%s em %s" % (rs.pl(int(a["rem"]), "dia", "dias"), _f(a["remicao"]["decisao"])) for a in so), None)
+    so = [a for a in ats if a.get("status") == "SEM_ORIGEM" and not a.get("leitura") and not a.get("m4")]
     if so:
         alerta("origem", "Remições sem atestado na ficha e sem trabalho no período (origem não identificada: estudo, leitura, ENCCEJA/ENEM ou atestado de "
                          "outra unidade): %s - conferir na decisão." % "; ".join("%s em %s" % (rs.pl(int(a["rem"]), "dia", "dias"), _f(a["remicao"]["decisao"])) for a in so), None)
@@ -1619,6 +1710,10 @@ def conciliar(r, f, hoje=None, manuais=None, ini_exec=None, excluir_remicoes=Non
                 alerta("lacuna", "Lacuna de %s a %s no atestado %s%s." % (_f(g0), _f(g1), a["numero"] or "não registrado na ficha", entre), g0)
                 pend.append({"data": g0, "status": "LACUNA", "texto": "%s a %s: sem vínculo comprovado (atestado %s)" % (_f(g0), _f(g1), a["numero"] or "s/n"),
                              "acao": "verificar se houve trabalho", "cor": "amarelo"})
+                # o intervalo entre trechos com período explícito costuma ser de dias não trabalhados: o trabalho estimado nele fica "a
+                # conferir" (lacuna), sem dias no total e sem pedido de atestado
+                conferir.append((g0, g1, "lacuna entre trechos do atestado %s, que tem período explícito: o intervalo costuma ser de dias não "
+                                         "trabalhados" % (a["numero"] or "s/n")))
     exp_docs = [(a, min(s["ini"] for s in a["segs"] if s["ini"]), max(s["fim"] for s in a["segs"] if s["fim"]))
                 for a in ats if not a["lote"] and any(s["ini"] for s in a["segs"]) and any(s["fim"] for s in a["segs"])]
     for (a, _, f1), (b, i2, _) in zip(exp_docs, exp_docs[1:]):
@@ -1627,6 +1722,8 @@ def conciliar(r, f, hoje=None, manuais=None, ini_exec=None, excluir_remicoes=Non
             alerta("lacuna", "Lacuna de %s a %s entre os atestados %s e %s." % (_f(g0), _f(g1), a["numero"] or "s/n", b["numero"] or "s/n"), g0)
             pend.append({"data": g0, "status": "LACUNA", "texto": "%s a %s: entre os atestados %s e %s" % (_f(g0), _f(g1), a["numero"] or "s/n", b["numero"] or "s/n"),
                          "acao": "verificar se houve trabalho", "cor": "amarelo"})
+            conferir.append((g0, g1, "lacuna entre os atestados %s e %s, com período explícito: o intervalo costuma ser de dias não trabalhados" % (
+                a["numero"] or "s/n", b["numero"] or "s/n")))
 
     # ---- Etapa 6: trabalho sem atestado nem remição (estimativa) ----
     cob = sorted([(s["ini"], s["fim"]) for a in ats for s in a["segs"] if s["ini"] and s["fim"] and not s.get("sem_vinculo")])
@@ -1676,8 +1773,11 @@ def conciliar(r, f, hoje=None, manuais=None, ini_exec=None, excluir_remicoes=Non
                 " [fim em %s: véspera do período coberto pela %s]" % (_f(x1), o)
         f_ = interr if interr and interr[0] == x1 + timedelta(days=1) else next((c for c in fora if c[0] == x1 + timedelta(days=1)), None)
         if f_:
-            return " [fim em %s: véspera de %s registrada no RSPE em %s; o trabalho não continua depois sem novo início na ficha]" % (
-                _f(x1), f_[2], _f(f_[0]))
+            return " [fim em %s: véspera de %s registrada no RSPE em %s; o trabalho não continua depois sem novo início na ficha%s]" % (
+                _f(x1), f_[2], _f(f_[0]),
+                # a evasão reconhecida como falta grave pode custar até 1/3 dos dias remidos até ela: ressalva, sem afirmar a perda
+                "; salvo perda de até 1/3 dos dias remidos, se a evasão for reconhecida como falta grave (LEP, art. 127)"
+                if re.search(r"FUGA|EVAS|ABANDONO", _sa(f_[2])) else "")
         if v.get("duvida_desde") == x1 + timedelta(days=1):
             return " [fim em %s: véspera do trecho a conferir (%s)]" % (_f(x1), v.get("duvida") or "")
         if v["fim"] and v["fim"] == x1:
@@ -1695,8 +1795,34 @@ def conciliar(r, f, hoje=None, manuais=None, ini_exec=None, excluir_remicoes=Non
         sem_motivo = bool(re.search(r"motivo:\s*N/?C\b", v.get("txt_fim") or "", re.I))
         return troca or sem_motivo
     sem = []
-    fora = fora_da_unidade(r, hoje, f)
+    presos = []
+    fora = fora_da_unidade(r, hoje, f, presos)
+    for c0, c1, mot in presos:
+        # interrupção da custódia no RSPE (fuga, soltura...) e a ficha registra a entrada em unidade de custódia antes do fim dela: o
+        # trabalho nesse trecho sai da estimativa e fica a verificar (a custódia não é alterada)
+        conferir.append((c0, c1, "o RSPE registra a custódia interrompida (%s) até %s, mas a ficha registra entrada em unidade de custódia em %s: "
+                                  "trabalho a verificar (a custódia não é alterada)" % (mot, _f(c1), _f(c0))))
     aus = ausencias_ficha(evs)
+
+    def _partir(trechos, ints):
+        # trechos (início, fim, a conferir, motivo) divididos pelos intervalos "a conferir" (o primeiro motivo que alcança o dia vale)
+        out_ = []
+        for x0, x1, duv, t0 in trechos:
+            partes = [(x0, x1, duv, t0)]
+            for c0, c1, t_ in ([] if duv else ints):
+                nv = []
+                for y0, y1, d_, tt in partes:
+                    if d_ or c1 < y0 or c0 > y1:
+                        nv.append((y0, y1, d_, tt))
+                        continue
+                    if y0 < c0:
+                        nv.append((y0, c0 - timedelta(days=1), False, None))
+                    nv.append((max(y0, c0), min(y1, c1), True, t_))
+                    if c1 < y1:
+                        nv.append((c1 + timedelta(days=1), y1, False, None))
+                partes = nv
+            out_ += partes
+        return out_
 
     def _aus(x0, x1):
         # isolamento e saída temporária dentro do trecho: dias fora da estimativa
@@ -1709,15 +1835,25 @@ def conciliar(r, f, hoje=None, manuais=None, ini_exec=None, excluir_remicoes=Non
         # fuga, soltura, livramento ou aberto registrados no RSPE no meio do vínculo: o trabalho termina aí - a mesma vaga não é
         # retomada depois da recaptura ou da nova prisão sem novo início na ficha
         interr = next(((c0, c1, mot) for c0, c1, mot in fora if a0 < c0 <= b0), None)
+        fora_v, conf_v = fora, []
+        if interr and re.search(r"LIBERDADE|SOLTURA|ALVARA|HABEAS|RELAXAMENTO|FIANCA", _sa(interr[2])) and b0 > interr[0] + timedelta(days=7):
+            # liberdade provisória (ou soltura) no RSPE, e a ficha mostra o vínculo de trabalho ativo depois dela, sem saída da unidade: a
+            # ficha costuma refletir a presença física, mas a divergência é conferida - o período da interrupção fica a verificar, sem
+            # dias no total e sem alterar a custódia; depois dela, o vínculo segue como a ficha o registra
+            conf_v = [(interr[0], min(interr[1], b0), "o RSPE registra %s em %s, mas a ficha mostra o trabalho em %s depois disso, sem saída "
+                                                      "da unidade: a verificar (a custódia não é alterada)" % (interr[2], _f(interr[0]), v["setor"]))]
+            fora_v = [c for c in fora if c != interr]
+            v["lp_divergente"] = interr
+            interr = None
         if interr:
             b0 = interr[0] - timedelta(days=1)
             v["fim_interrupcao"] = interr
         livres = [(a0, b0)]
         # fuga, soltura, livramento e regime aberto registrados no RSPE: sem trabalho a estimar
-        for c0, c1, mot in fora:
+        for c0, c1, mot in fora_v:
             if c0 <= b0 and c1 >= a0:
                 v.setdefault("fora_rspe", []).append("%s (%s a %s)" % (mot, _f(max(c0, a0)), _f(min(c1, b0))))
-        for c0, c1 in cob + [(c0, c1) for c0, c1, _m in fora]:
+        for c0, c1 in cob + [(c0, c1) for c0, c1, _m in fora_v]:
             nv = []
             for x0, x1 in livres:
                 if c1 < x0 or c0 > x1:
@@ -1742,13 +1878,15 @@ def conciliar(r, f, hoje=None, manuais=None, ini_exec=None, excluir_remicoes=Non
             livres3 = nv
         else:
             livres3 = [(x0, x1, False) for x0, x1 in livres]
-        for x0, x1, duv in livres3:
+        # lacuna entre atestados, trabalho que pode já estar remido, divergência RSPE x ficha: "a conferir" (sem dias no total)
+        livres3 = _partir([(x0, x1, d_, None) for x0, x1, d_ in livres3], conf_v + conferir)
+        for x0, x1, duv, txt_c in livres3:
             if (x1 - x0).days < 1:
                 continue
             ex_ = _aus(x0, x1)
             n = max(0, _dias_seg_sab(x0, x1) - len({d for c0, c1, _m in ex_ for d in _dias_set(c0, c1)}))
             em_curso = v["fim"] is None and x1 == hoje
-            duvida_ = v.get("duvida")
+            duvida_ = txt_c or v.get("duvida")
             if not duv and not em_curso and _troca_logo_apos_atestado(v, x0, x1):
                 duv = True
                 duvida_ = ("dias entre o fim do %s e a baixa do setor na ficha (%s), que coincide com troca de setor ou vem sem motivo - "
@@ -1774,6 +1912,51 @@ def conciliar(r, f, hoje=None, manuais=None, ini_exec=None, excluir_remicoes=Non
                 v["setor"], _f(x0), "hoje (em curso)" if em_curso else _f(x1), rs.pl(n, "dia", "dias"), n // 3, _origem_ini(v, x0),
                 "" if em_curso else _origem_fim(v, x1, interr)),
                 "acao": "Pedir atestado", "cor": "amarelo"})
+
+    # ---- afastamento do trabalho: suspensão pela pandemia (remição ficta, STJ, Tema 1.120) e acidente ou saúde (LEP, art. 126, § 4º) ----
+    for v in vinc:
+        if not v["fim"] or (ini_exec and v["fim"] < ini_exec):
+            continue
+        tf = _sa("%s %s" % (v.get("txt_fim") or "", v.get("motivo_fim") or ""))
+        pand, acid = bool(RE_PANDEMIA.search(tf)), bool(RE_ACIDENTE.search(tf))
+        if not (pand or acid or RE_SAUDE_FIM.search(tf)):
+            continue
+        if any(w is not v and w["ini"] <= v["fim"] < (w["fim"] or hoje) for w in vinc):
+            continue  # seguiu trabalhando em outro setor: não houve afastamento do trabalho
+        i0 = v["fim"] + timedelta(days=1)
+        volta = min([w["ini"] for w in vinc if w["ini"] > v["fim"]] or [None], key=lambda d: d or date.max)
+        f0 = (volta - timedelta(days=1)) if volta and (volta - i0).days <= 365 else None
+        if pand:
+            f0 = min(f0 or FIM_EMERGENCIA_COVID, FIM_EMERGENCIA_COVID, hoje)
+        cf = [c0 for c0, _c1, _m in fora if i0 <= c0 <= (f0 or i0)]
+        if f0 and cf:
+            f0 = min(cf) - timedelta(days=1)  # fuga, soltura ou livramento no meio: o afastamento termina aí
+        if f0 and f0 < i0:
+            continue
+        n = _dias_seg_sab(i0, f0) if f0 else 0
+        trecho = v.get("txt_fim") or ""
+        ate = (" (retorno ao trabalho em %s)" % _f(volta)) if volta and f0 == volta - timedelta(days=1) else ""
+        if pand:
+            # suspensão das atividades pela pandemia com o vínculo ativo até ela: remição ficta do período (STJ, Tema 1.120), estimada
+            sem.append({"setor": v["setor"], "ini": i0, "fim": f0, "em_curso": False, "est": n, "ficta": True,
+                        "origem": "dia seguinte à suspensão do trabalho pela pandemia na ficha (%s)" % _f(v["fim"]),
+                        "origem_fim": "retorno ao trabalho em %s" % _f(volta) if ate else "fim da emergência sanitária (22/04/2022) ou da custódia",
+                        "trecho": trecho, "ausencias": []})
+            pend.append({"data": i0, "status": "FICTA", "texto": "%s, %s a %s: atividades suspensas pela pandemia%s - remição ficta a requerer "
+                         "(estimativa seg.-sáb.: ≈ %s, ≈ %d remidos)" % (v["setor"], _f(i0), _f(f0), ate, rs.pl(n, "dia", "dias"), n // 3),
+                         "acao": "Requerer a remição ficta do período de suspensão (STJ, Tema 1.120)", "cor": "amarelo"})
+            continue
+        mot = ("afastamento por acidente em %s: quem fica impossibilitado de prosseguir no trabalho por acidente continua a beneficiar-se da "
+               "remição (LEP, art. 126, § 4º)" % _f(v["fim"])) if acid else \
+              ("afastamento por motivo de saúde (escolta ou internação hospitalar) em %s: a lei prevê a continuidade da remição só no "
+               "acidente (LEP, art. 126, § 4º) - conferir o motivo" % _f(v["fim"]))
+        if f0:
+            sem.append({"setor": v["setor"], "ini": i0, "fim": f0, "em_curso": False, "est": n, "duvida": mot, "trecho": trecho})
+        pend.append({"data": i0, "status": "A_CONFERIR", "texto": "%s, %s%s: %s - sem dias no total%s" % (
+            v["setor"], ("%s a %s" % (_f(i0), _f(f0))) if f0 else "desde %s" % _f(i0), ate, mot,
+            (" (≈ %s se reconhecida a continuidade)" % rs.pl(n // 3, "dia remido", "dias remidos")) if f0 else ""),
+            "acao": "Conferir o afastamento e requerer a continuidade da remição (LEP, art. 126, § 4º)" if acid else
+                    "Conferir o motivo do afastamento (LEP, art. 126, § 4º: continuidade da remição só no acidente)", "cor": "cinza"})
 
     # ---- atestado sem remição sobreposto a período já remido (cumulativo): só a parte não coberta fica pendente ----
     remidos_per = [(s["ini"], s["fim"], b) for b in ats if b.get("remicao") for s in b["segs"] if not s["inferido"] and s["ini"] and s["fim"]]
@@ -1801,6 +1984,23 @@ def conciliar(r, f, hoje=None, manuais=None, ini_exec=None, excluir_remicoes=Non
         a["cobertos_por"] = list(dict.fromkeys("atestado " + (b["numero"] or "s/n") for _c0, _c1, b in cob_))
         alerta("sobreposição", "Atestado %s (%s remidos) cobre período já remido (%s): fica pendente só a parte não coberta "
                "(≈ %s, proporcional aos dias)." % (a["numero"] or "s/n", _fmtn(a["rem"]), ", ".join(a["cobertos_por"]), _fmtn(a["rem_pend"])), a["emissao"])
+
+    # atestado com remidos abaixo de 1/3 dos trabalhados, conciliado com remição do mesmo valor: o juízo concedeu o que o atestado
+    # declarou, a menor - a diferença até 1/3 (LEP, art. 126, § 1º, II) fica a pedir
+    for a in ats:
+        x = a.get("remicao")
+        if (a["status"] != "CONCILIADO" or a["origem"] == "rspe" or not x or not a["trab"] or a["rem"] is None or a.get("rem_estudo")
+                or a.get("remicao_conjunta") or x.get("linhas") or a.get("_ant") or "+" in str(x.get("usada") or "")):
+            continue
+        terco = int(math.floor(a["trab"] / 3.0 + 1e-9))
+        # só quando os dias trabalhados são plausíveis: cabem no período (seg.-sáb.) e os remidos são ao menos metade de 1/3 - senão é
+        # mais provável erro de digitação nos trabalhados ("1174 trabalhados e 58 remidos"), que fica só no alerta de proporção
+        ss_ = [s for s in a["segs"] if not s["inferido"] and s.get("ini") and s.get("fim") and s["fim"] >= s["ini"]]
+        poss_ = len(set().union(*(_dias_set(s["ini"], s["fim"]) for s in ss_))) if ss_ else 0
+        if (ss_ and a["trab"] > poss_ + 3) or a["rem"] < a["trab"] / 6.0:
+            continue
+        if a["rem"] < a["trab"] / 3.0 - 1 and int(math.floor(x["dias"] + 1e-9)) < terco:
+            a["status"], a["abaixo_terco"] = "DIVERGENCIA", terco  # (o alerta "proporção" da validação já aponta a diferença)
 
     # ---- pendências dos atestados ----
     for a in ats:
@@ -1835,10 +2035,21 @@ def conciliar(r, f, hoje=None, manuais=None, ini_exec=None, excluir_remicoes=Non
                                a["numero"] or "s/n", _fmtn(a["rem"]), rs.pl(int(a["remicao"]["dias"]), "dia", "dias"), _fmtn(round(dif_, 2)), _f(ini_exec),
                                rs.pl(len(antes_d), "dia", "dias")), a["emissao"])
                     continue
-        if a["status"] == "DIVERGENCIA":
+        if a["status"] == "DIVERGENCIA" and a.get("abaixo_terco"):
+            pend.append({"data": a["emissao"], "status": "DIVERGENCIA", "texto": "Atestado %s: %s trabalhados dariam %s remidos (1 a cada 3); o atestado "
+                         "declara %s e o RSPE concedeu %s (%s)" % (a["numero"] or "s/n", a["trab"], a["abaixo_terco"], _fmtn(a["rem"]),
+                                                                   rs.pl(int(a["remicao"]["dias"]), "dia", "dias"), _f(a["remicao"]["decisao"])),
+                         "acao": "requerer a diferença (≈ %s): pedir à unidade a retificação do atestado (LEP, art. 126, § 1º, II) e a remição "
+                                 "complementar" % rs.pl(a["abaixo_terco"] - int(a["remicao"]["dias"]), "dia", "dias"), "cor": "amarelo"})
+        elif a["status"] == "DIVERGENCIA":
+            dif_ = int(math.floor(a["rem"] + 1e-9)) - int(a["remicao"]["dias"])
             pend.append({"data": a["emissao"], "status": "DIVERGENCIA", "texto": "Atestado %s: %s remidos x remição de %s no RSPE (%s)" % (
                 a["numero"] or "s/n", _fmtn(a["rem"]), rs.pl(int(a["remicao"]["dias"]), "dia", "dias"), _f(a["remicao"]["decisao"])),
-                "acao": "conferir a decisão e requerer a diferença" if a["remicao"]["dias"] < math.floor(a["rem"]) else "conferir a decisão", "cor": "amarelo"})
+                # diferença acima de 3 dias: a decisão pode ter glosado de propósito - erro material se corrige por pedido de retificação;
+                # contra decisão fundamentada, agravo em execução em 5 dias (o programa não sabe da intimação: manda conferir)
+                "acao": "conferir a decisão: erro material, pedido de retificação; decisão fundamentada, agravo em execução em 5 dias "
+                        "(LEP, art. 197; Súmula 700/STF)" if dif_ > 3 else
+                        "conferir a decisão e requerer a diferença" if a["remicao"]["dias"] < math.floor(a["rem"]) else "conferir a decisão", "cor": "amarelo"})
     pend.sort(key=lambda p: p["data"] or date.min)
 
     # ---- Etapa 5: resíduo de fração ----
@@ -1982,34 +2193,56 @@ def conciliar(r, f, hoje=None, manuais=None, ini_exec=None, excluir_remicoes=Non
                                   "es" if len(orf) > 1 else "", "m" if len(orf) > 1 else "") if orf and not a.get("cumul_coberto") else ""))
         return segs_, notas_
 
+    for a in ats:
+        a["autos_outros"] = bool(a.get("autos")) and not any(re.sub(r"\D", "", a["autos"]) == re.sub(r"\D", "", x_ or "") for x_ in _procs_r(r))
+        pend_ = a["status"] == "NAO_LANCADO" and a["rem"] is not None and a.get("cumulativo") is None and not a.get("zerado")
+        # atestado peticionado em outros autos: sai do total desta execução e fica listado à parte (não pedir em duplicidade)
+        a["outros_autos"] = pend_ and a["autos_outros"]
+        # atestado sem período (os dias não podem ser situados no tempo): fora do total a requerer e da prioridade, listado "a conferir"
+        a["sem_periodo"] = pend_ and not a["outros_autos"] and a["lote"] and a["origem"] != "rspe"
     tabela = []
     for a in ats:
         if a["status"] == "ANTERIOR":
             continue
         x = a.get("remicao")
-        tit = ("Atestado nº %s" % a["numero"]) if a["numero"] else ("Atestado não registrado na ficha" if a["origem"] == "rspe" else "Atestado s/n")
+        # linha "rspe": remição do RSPE cujo atestado a ficha não registra (o atestado não está na ficha; os dias são os da decisão)
+        tit = ("Atestado nº %s" % a["numero"]) if a["numero"] else ("Remição sem atestado na ficha" if a["origem"] == "rspe" else "Atestado s/n")
         if a["origem"] == "operador":
             tit += " (informado por você)"
         nota = ""
         if a["lote"]:
-            nota = ("períodos inferidos dos vínculos da ficha até a data de referência da remição; a ficha não registra o atestado" if a["origem"] == "rspe"
+            nota = ("a ficha não registra o atestado desta remição; períodos inferidos dos vínculos da ficha até a data de referência" if a["origem"] == "rspe"
                     else "períodos inferidos da ficha; o texto do atestado não os detalha")
+        # uma remição do RSPE repartida entre linhas (atestado da ficha + trabalho sem atestado): cada linha mostra a sua parte
+        rspe_txt = rs.pl(int(x["dias"]), "dia", "dias") if x else "—"
+        if x and "+" in str(x.get("usada") or "") and a["rem"] is not None and a["rem"] < x["dias"]:
+            outros = [b for b in ats if b is not a and b.get("remicao") is x]
+            rspe_txt = "%s de %s" % (_fmtn(a["rem"]), rs.pl(int(x["dias"]), "dia", "dias"))
+            partes_ = ["%s %s" % ("o atestado %s" % b["numero"] if b["numero"] else "trabalho sem atestado na ficha",
+                                  "(%s)" % rs.pl(int(round(b["rem"] or 0)), "dia", "dias"))
+                       for b in sorted([a] + outros, key=lambda b: (not b["numero"], b["emissao"]))]
+            nota = "; ".join(y for y in [nota, "a remição de %s de %s soma %s" % (
+                rs.pl(int(x["dias"]), "dia", "dias"), _f(x["decisao"]), " e ".join(partes_))] if y)
         segs_t, notas_t = _segs_tabela(a)
-        nota = "; ".join(x for x in [nota] + notas_t if x)
+        nota = "; ".join(x_ for x_ in [nota] + notas_t if x_)
         tabela.append({"id": a["id"], "atestado": tit, "emissao": _f(a["emissao"]) if a["origem"] != "rspe" else "",
                        "segs": segs_t,
-                       "trab": a["trab"], "rem": _fmtn(a["rem"]) if a["rem"] is not None else "—",
-                       "rspe": rs.pl(int(x["dias"]), "dia", "dias") if x else "—", "decisao": _f(x["decisao"]) if x else "—", "ref": _f(x["ref"]) if x else "—",
+                       "trab": a["trab"], "rem": _fmtn(a["rem"]) if a["rem"] is not None and a["origem"] != "rspe" else "—",
+                       "rspe": rspe_txt, "decisao": _f(x["decisao"]) if x else "—", "ref": _f(x["ref"]) if x else "—",
                        "cumulativo": a.get("cumulativo") is not None, "ja_remido": bool(a.get("cumul_coberto")),
                        "sobreposicao": bool(a.get("sobreposicao")), "status": a["status"],
                        "rot": "Sem dias a requerer: período já remido" if a.get("zerado") else
+                              "Remido no RSPE" if a["origem"] == "rspe" and a["status"] == "CONCILIADO" else
                               "Provavelmente já remido (atestado cumulativo)" if a.get("cumul_coberto") else
-                              "Possível cumulativo: conferir nos autos" if a["status"] == "NAO_LANCADO" and a.get("cumulativo") is not None else rot[a["status"]][0],
-                       "cor": "cinza" if (a.get("zerado") or a.get("cumul_coberto")) else
-                              "amarelo" if a["status"] == "NAO_LANCADO" and a.get("cumulativo") is not None else rot[a["status"]][1], "nota": nota,
+                              "Possível cumulativo: conferir nos autos" if a["status"] == "NAO_LANCADO" and a.get("cumulativo") is not None else
+                              "Peticionado em outros autos: fora do total" if a.get("outros_autos") else
+                              "Sem período: conferir (fora do total)" if a.get("sem_periodo") else
+                              "Diferença até 1/3 a pedir" if a.get("abaixo_terco") else rot[a["status"]][0],
+                       "cor": "cinza" if (a.get("zerado") or a.get("cumul_coberto") or a.get("outros_autos")) else
+                              "amarelo" if a["status"] == "NAO_LANCADO" and (a.get("cumulativo") is not None or a.get("sem_periodo")) else rot[a["status"]][1],
+                       "nota": nota, "sem_periodo": bool(a.get("sem_periodo")),
                        "peticionado": a.get("peticionado", ""), "texto": a.get("texto", ""), "autos": a.get("autos", ""),
-                       "autos_outros": bool(a.get("autos")) and not any(re.sub(r"\D", "", a["autos"]) == re.sub(r"\D", "", x or "")
-                                                                         for x in _procs_r(r)),
+                       "autos_outros": a["autos_outros"],
                        "chave": "fd:at:%s:%s" % (a["numero"] or "s/n", _f(a["emissao"]).replace("/", "."))})
     # atestado cumulativo ou com remição sem origem dentro do período: a providência é conferir nos autos antes de requerer, não
     # requerer a apreciação direto (o período pode já estar remido)
@@ -2027,6 +2260,20 @@ def conciliar(r, f, hoje=None, manuais=None, ini_exec=None, excluir_remicoes=Non
                     _fmtn(a["trab"]), a["cumulativo"]))
             p_["acao"] = ("conferir nos autos se os períodos deste atestado já foram remidos; requerer só a diferença, se houver"
                           if a.get("cumul_coberto") else "conferir nos autos quais períodos já foram remidos antes de requerer")
+        elif a.get("outros_autos"):
+            p_["status"], p_["cor"] = "OUTROS_AUTOS", "cinza"
+            p_["texto"] = "Atestado %s de %s (%s remidos) peticionado em outros autos (%s): fora do total desta execução" % (
+                a["numero"] or "s/n", _f(a["emissao"]), _fmtn(a["rem"]), a["autos"])
+            p_["acao"] = ("conferir em qual execução o pedido corre e não pedir de novo nesta; se o peticionamento em outros autos foi "
+                          "equívoco, requerer nesta execução")
+        elif a.get("sem_periodo"):
+            p_["status"], p_["cor"] = "SEM_PERIODO", "amarelo"
+            p_["texto"] = "Atestado %s de %s (%s remidos) sem período no texto da ficha%s: os dias não podem ser situados no tempo e ficam fora do " \
+                          "total até a conferência" % (a["numero"] or "s/n", _f(a["emissao"]), _fmtn(a["rem"]),
+                                                       (", peticionado no SEEU em %s" % a["peticionado"]) if a.get("peticionado") else "")
+            p_["acao"] = ("conferir no atestado o período trabalhado e se já foi remido; se não, requerer a apreciação (há dias a requerer)"
+                          if a.get("peticionado") else "conferir nos autos o atestado e o período trabalhado; se juntado e não remido, requerer a "
+                          "apreciação (há dias a requerer)")
         elif a.get("sobrep_rems"):
             sr_ = a["sobrep_rems"]
             p_["acao"] = "conferir nos autos se %s, sem origem identificada, já %s parte deste período; requerer o restante" % (
@@ -2034,7 +2281,95 @@ def conciliar(r, f, hoje=None, manuais=None, ini_exec=None, excluir_remicoes=Non
                 "incluem" if len(sr_) > 1 else "inclui")
     alertas.sort(key=lambda x: x["data"] or date.min)
     return {"tabela": tabela, "pendencias": pend, "alertas": alertas, "vinculos": vinc, "atestados": ats, "remicoes": rems,
-            "sem_atestado": sem, "residuo": residuo, "resumo": _resumo_quant(r, ats, rems, vinc, ini_exec, impressao, f)}
+            "sem_atestado": sem, "residuo": residuo, "resumo": _resumo_quant(r, ats, rems, vinc, ini_exec, impressao, f),
+            "faltas_127": faltas_graves(r, f)}
+
+
+def faltas_graves(r, f=None):
+    """Faltas graves que podem custar até 1/3 dos dias remidos até elas (LEP, art. 127): homologadas ou pendentes no RSPE, evasões
+    registradas no RSPE e faltas graves da ficha não arquivadas. [(data do fato, rótulo)], sem repetir a mesma falta (30 dias)."""
+    out = []
+    for i in r.get("_incidentes") or []:
+        if i.get("_ficha") or "FALTA GRAVE" not in _sa(i.get("tipo")) or i.get("situacao") not in ("CONCEDIDO", "PENDENTE"):
+            continue
+        m = re.search(r"\d{2}/\d{2}/\d{4}", i.get("complemento") or "")
+        d = (_dt(m.group(0)) if m else None) or _dt(i.get("data_referencia") or "") or _dt(i.get("data_decisao") or "")
+        if d:
+            out.append((d, "falta grave %s (%s)" % ("pendente de homologação" if i.get("situacao") == "PENDENTE" else "homologada", _f(d))))
+    for e in r.get("_eventos") or []:
+        if "INTERRUP" in _sa(e.get("tipo")) and re.search(r"FUGA|EVAS|ABANDONO", _sa(e.get("motivo"))):
+            d = rs.to_date(e.get("data") or "")
+            if d:
+                out.append((d, "evasão (%s)" % _f(d)))
+    for x in (f or {}).get("faltas") or []:
+        d = _dt(x.get("data_fato") or "")
+        if x.get("grave") and d and x.get("situacao") != "arquivada":
+            out.append((d, "falta grave registrada na ficha (%s)" % _f(d)))
+    uniq = []
+    for d, rot_ in sorted(out):
+        if not any(abs((d - d2).days) <= 30 for d2, _r in uniq):
+            uniq.append((d, rot_))
+    return uniq
+
+
+# alertas de qualidade agrupados para a tela: título em linguagem simples, o que significa, os casos em linhas curtas e a providência
+GRUPOS_ALERTA = [
+    ("origem", ("origem",), "Remições do RSPE sem origem identificada",
+     "A ficha não mostra trabalho nem atestado que expliquem estas remições: podem ser de estudo, leitura, exame (ENCCEJA/ENEM) ou de "
+     "atestado de outra unidade.", "conferir na decisão de que se trata cada uma"),
+    ("dias", ("capacidade", "plausibilidade", "erro de ano", "proporção", "resíduo", "anterior à execução"), "Dias que não fecham",
+     "Os dias declarados não cabem no período que a ficha registra, ou a conta de 1 dia a cada 3 não bate.",
+     "conferir os dias no atestado e na decisão"),
+    ("lanc", ("baixa sem início", "baixa", "baixa tardia", "setor sem vínculo", "vínculos sobrepostos"), "Lançamentos de trabalho incompletos na ficha",
+     "A ficha registra a saída do trabalho sem o início, ou o mesmo período em dois setores.", "conferir o período com a unidade"),
+    ("per", ("sobreposição", "lacuna"), "Períodos sobrepostos ou sem cobertura",
+     "Atestados que repetem período ou deixam intervalo sem atestado.", "conferir os períodos nos atestados"),
+    ("datas", ("data", "ref"), "Datas inconsistentes", "Datas fora de ordem ou posteriores à impressão da ficha.", "conferir as datas nos documentos"),
+]
+
+
+def _item_alerta(a):
+    """Texto curto de um alerta dentro do seu grupo (o grupo já explica o problema e a providência)."""
+    t, tp = a["texto"], a["tipo"]
+    m = re.match(r"Baixa de (.+?) em (\d{2}/\d{2}/\d{4}) sem início", t)
+    if tp == "baixa sem início" and m:
+        return ["%s: saída em %s, sem início registrado" % (com_siglas(m.group(1)), m.group(2))]
+    if tp == "origem":
+        casos = re.findall(r"(\d+ dias? em \d{2}/\d{2}/\d{4})", t)
+        if casos:
+            leit = "múltiplos de 4" in t
+            return ["%s%s" % (c, " (múltiplo de 4: pode ser leitura)" if leit else "") for c in casos]
+    m = re.match(r"Atestado (\S+): (\d+) dias trabalhados não cabem nos períodos inferidos da ficha \((\d+) dias corridos de (\S+) a (\S+)\)", t)
+    if tp == "capacidade" and m:
+        return ["Atestado %s: %s dias trabalhados declarados para %s dias corridos (%s a %s)" % m.groups()]
+    m = re.match(r"Remição de (.+?) em (\S+) \(sem atestado na ficha\) não cabe no período sem atestado \(≈ (.+?) de trabalho.*?atribuída também aos atestados (.+?) \(", t)
+    if tp == "capacidade" and m:
+        g_ = m.groups()
+        return ["Remição de %s em %s: maior que o trabalho sem atestado do período (≈ %s); parte atribuída %s %s" % (
+            g_[0], g_[1], g_[2], "aos atestados" if "," in g_[3] else "ao atestado", g_[3])]
+    m = re.search(r"data de referência (\d{2}/\d{2}/\d{4}) anterior ao fim do período \((\d{2}/\d{2}/\d{4})\)", t)
+    if tp == "ref" and m and _dt(m.group(1)) and _dt(m.group(2)) and (_dt(m.group(2)) - _dt(m.group(1))).days <= 7:
+        return []  # referência poucos dias antes do fim do período: sem efeito prático, só poluiria a lista
+    return [re.sub(r"\s*-\s*conferir[^.]*\.?$|:\s*conferir[^.]*\.?$", "", t).rstrip(".")]
+
+
+def agrupar_alertas(alertas, ocultar=()):
+    """[{titulo, explica, acao, itens}] na ordem de GRUPOS_ALERTA; "ocultar": números de atestado já tratados nas pendências (cumulativo),
+    cujo alerta de capacidade só repetiria a pendência."""
+    out, usados = [], set()
+    for _k, tipos, tit, exp, acao in GRUPOS_ALERTA + [("outros", None, "Outros pontos", "", "")]:
+        its = []
+        for i, a in enumerate(alertas):
+            if i in usados or (tipos is not None and a["tipo"] not in tipos):
+                continue
+            usados.add(i)
+            mn = re.match(r"Atestado (\S+?)(?: de \S+)?:", a["texto"])
+            if a["tipo"] in ("capacidade", "plausibilidade") and mn and mn.group(1) in ocultar:
+                continue
+            its += _item_alerta(a)
+        if its:
+            out.append({"titulo": tit, "explica": exp, "acao": acao, "itens": list(dict.fromkeys(its))})
+    return out
 
 
 def _resumo_quant(r, ats, rems, vinc, ini_exec, impressao, f=None):

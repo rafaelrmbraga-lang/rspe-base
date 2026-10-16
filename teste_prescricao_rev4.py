@@ -87,11 +87,14 @@ L = run(reg([c3], evs3b), ficha(("10.02.2016", "Deu entrada no EPMC, procedente 
 confere(not any(p["tipo"] == "outro_motivo" for p in L["ppe_linha_tempo"]) and any("autos da própria execução" in p["fonte"] for p in L["ppe_linha_tempo"]),
         "R3-A1: entrada nos autos da execução tratada como outro processo")
 confere(L["ppe_status"].startswith("A VERIFICAR: prescrição executória aparente, mas há indício de retomada"), "R3-A1: retomada pela ficha: %s" % L["ppe_status"])
-# monitoramento sem processo: cumprimento; monitoramento por OUTRO processo: segue como suspensão (dúvida B1, do usuário)
+# monitoramento sem processo: cumprimento; monitoramento por OUTRO processo: não suspende (quesitos 16/10, item 16: o art. 116, p. ú.,
+# fala em "preso por outro motivo" - leitura restritiva; antes seguia como suspensão, dúvida B1)
 L = run(reg([c3], evs3b), ficha(("10.02.2016", "Entrada na Unidade Penal: UNIDADE MISTA DE MONITORAMENTO VIRTUAL, Procedente: DP")))
 confere(not any(p["tipo"] == "outro_motivo" for p in L["ppe_linha_tempo"]), "R3-A1: monitoramento sem outro processo tratado como prisão por outro processo")
 L = run(reg([c3], evs3b), ficha(("10.02.2016", "Entrada na Unidade Penal: UNIDADE MISTA DE MONITORAMENTO VIRTUAL, Conforme Ofício: 0005555-55.2016.8.12.0001")))
-confere(L["ppe_status"].startswith("Não corre (preso por outro processo desde 10/02/2016"), "R3-A1/B1: monitoramento por outro processo: %s" % L["ppe_status"])
+confere(not L["ppe_status"].startswith("Não corre (preso por outro processo") and not any(p["tipo"] == "outro_motivo" for p in L["ppe_linha_tempo"])
+        and any(p["tipo"] == "liberdade" and "não suspende" in p["efeito"] for p in L["ppe_linha_tempo"]),
+        "R3-A1/B1: monitoramento por outro processo: %s" % L["ppe_status"])
 # o texto mostra a data real da entrada, não o início do recorte
 L = run(reg([crime()], []), ficha(("01.05.2011", "Deu entrada no EPMC, procedente da DP, Autos nº 0007777-77.2011.8.12.0001"),
                                   ("01.03.2012", "Deu saida do EPMC, por Alvará de Soltura, Autos nº 0007777-77.2011.8.12.0001")))
@@ -248,7 +251,8 @@ confere(L["ppe_termo"] == "12/08/2015" and any("posterior ao trânsito final" in
 L = run(reg([crime(pena_imposta=_Z, pena_total_processo="2a11m0d - PENA ORIGINÁRIA")]))
 confere(L["pena"] == "2 anos e 11 meses" and L["prazo_ppp"] == "8 anos" and "sem pena" not in L["ppe_status"], "AUD-4: pena do processo: %s" % L["pena"])
 L = run(reg([crime(pena_imposta=_Z, pena_total_processo="1a0m0d - MEDIDA DE SEGURANÇA")]))
-confere(L["ppe_status"].startswith("medida de segurança - prazo pela pena máxima cominada") and L["prazo_ppe"] == "8 anos", "AUD-4: MS: %s" % L["ppe_status"])
+# quesito 30 (16/10/2026): a medida de segurança fica sempre a verificar; o prazo pela pena máxima cominada só como referência
+confere(L["ppe_status"].startswith("A VERIFICAR: medida de segurança - prazo de referência pela pena máxima cominada") and L["prazo_ppe"] == "8 anos", "AUD-4: MS: %s" % L["ppe_status"])
 # 5 (BAIXA): datas incoerentes só rebaixam a punitiva se o intervalo decisivo usa a data errada
 L = run(reg([crime(data_infracao="10/08/2008", data_denuncia="19/01/2012", data_sentenca="01/06/2007", transito_mp="10/01/2013",
                    transito_processo="10/01/2013", pena_imposta="0 ano(s), 6 mês(es) e 0 dia(s)", pena_total_processo="0a6m0d - PENA ORIGINÁRIA")]))

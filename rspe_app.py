@@ -43,7 +43,7 @@ import rspe_atendimentos as ratd
 import rspe_resumo as rres
 
 APP = "APTO"
-VERSAO = "7.11.0"
+VERSAO = "7.12.1"
 GEO_AUTO_DIAS = 30           # dados prisionais: baixados de novo sozinhos quando têm 30 dias ou mais
 GEO_REPETIR_MIN = 10         # ... ou 10 minutos depois de um download em que algum relatório falhou (nova tentativa automática)
 GEO_REPETIR_MAX = 3          # tentativas automáticas seguidas com o programa aberto (depois, na próxima abertura ou pelo botão)
@@ -60,9 +60,60 @@ def recurso(nome):
     return os.path.join(getattr(sys, "_MEIPASS", pasta_app()), nome)
 
 
-PASTA_BASES = os.path.join(pasta_app(), "bases")
-CONFIG = os.path.join(pasta_app(), "rspe_config.json")
-VIGIA_ESTADO = os.path.join(pasta_app(), "pasta_vigiada_estado.json")
+def _gravavel(pasta):
+    """A pasta aceita gravação (cria a pasta, se faltar, e um arquivo de teste)."""
+    try:
+        os.makedirs(pasta, exist_ok=True)
+        t = os.path.join(pasta, ".apto_teste_gravacao_%d" % os.getpid())
+        with open(t, "w") as f:
+            f.write("")
+        os.remove(t)
+        return True
+    except OSError:
+        return False
+
+
+def pasta_usuario():
+    """Pasta de reserva na pasta do usuário: Documentos\\APTO (ou <usuário>\\APTO, sem a pasta Documentos)."""
+    casa = os.environ.get("USERPROFILE") or os.path.expanduser("~")
+    doc = os.path.join(casa, "Documents")
+    return os.path.join(doc if os.path.isdir(doc) else casa, APP)
+
+
+def pasta_dados():
+    """Bases, configuração e registro de erros: ao lado do programa; se a pasta do programa não permite gravação (ex.:
+    "Arquivos de Programas"), na pasta do usuário, e a tela informa o caminho."""
+    if _gravavel(pasta_app()):
+        return pasta_app()
+    reserva = pasta_usuario()
+    return reserva if _gravavel(reserva) else pasta_app()
+
+
+PASTA_DADOS = pasta_dados()
+DADOS_RESERVA = os.path.normcase(os.path.abspath(PASTA_DADOS)) != os.path.normcase(os.path.abspath(pasta_app()))
+PASTA_BASES = os.path.join(PASTA_DADOS, "bases")
+CONFIG = os.path.join(PASTA_DADOS, "rspe_config.json")
+VIGIA_ESTADO = os.path.join(PASTA_DADOS, "pasta_vigiada_estado.json")
+if DADOS_RESERVA:
+    # a configuração que já existia ao lado do programa (bases recentes, pasta vigiada) passa para a pasta de reserva
+    for _n in ("rspe_config.json", "pasta_vigiada_estado.json"):
+        try:
+            if not os.path.exists(os.path.join(PASTA_DADOS, _n)) and os.path.isfile(os.path.join(pasta_app(), _n)):
+                shutil.copy2(os.path.join(pasta_app(), _n), os.path.join(PASTA_DADOS, _n))
+        except OSError:
+            pass
+
+
+def pasta_gravacao():
+    """Onde gravar configuração, avisos e registro de erros agora (a pasta do programa, ou a de reserva)."""
+    return PASTA_DADOS if DADOS_RESERVA else pasta_app()
+
+
+def aviso_pasta_dados():
+    """Texto para a tela quando a pasta de reserva está em uso ("" quando tudo fica ao lado do programa)."""
+    if not DADOS_RESERVA:
+        return ""
+    return ("A pasta do programa não permite gravação: bases, configuração e registro de erros ficam em %s." % PASTA_DADOS)
 VIGIA_INTERVALO = 15  # segundos entre as varreduras da pasta vigiada
 PORTA_EXTENSAO = 47321  # a extensão do navegador pergunta ao APTO (só neste computador) quais são as bases
 PASTAS_TIPO = {"RSPE", "RSPES", "FD", "FDS", "FICHA", "FICHAS", "FICHA DISCIPLINAR", "FICHAS DISCIPLINARES"}
@@ -578,7 +629,7 @@ _PRESC_DATAS = {"fato": "Data do fato", "denuncia": "Recebimento da denúncia", 
                 "transito_mp": "Trânsito para a acusação", "transito": "Trânsito final", "ultimo_comparecimento": "Último comparecimento",
                 "inicio_prd": "Início efetivo da restritiva", "revogacao_sursis": "Revogação do sursis",
                 "novo_crime": "Novo crime após o trânsito", "susp366_ini": "Suspensão do art. 366 - início",
-                "susp366_fim": "Suspensão do art. 366 - fim"}
+                "susp366_fim": "Suspensão do art. 366 - fim", "audiencia_sursis": "Audiência admonitória do sursis"}
 
 
 def _int_nao_neg(v):
@@ -596,7 +647,8 @@ def _int_nao_neg(v):
 _PRESC_OPCOES = {"reinc": ("S", "N"), "art115": ("sim", "nao"), "modalidade": ("PPL", "PRD", "SURSIS", "MS", "MS98")}
 # ordem que as datas do processo não podem inverter: (antes, depois)
 _PRESC_ORDEM = [("fato", "denuncia"), ("fato", "sentenca"), ("denuncia", "sentenca"), ("sentenca", "acordao"), ("fato", "transito"),
-                ("sentenca", "transito"), ("acordao", "transito"), ("sentenca", "transito_mp"), ("susp366_ini", "susp366_fim")]
+                ("sentenca", "transito"), ("acordao", "transito"), ("sentenca", "transito_mp"), ("susp366_ini", "susp366_fim"),
+                ("audiencia_sursis", "revogacao_sursis")]
 
 
 def _validar_presc_ajuste(dados, orig=None):
@@ -1197,13 +1249,38 @@ class Base:
             self.con.commit()
         return cur.rowcount > 0
 
+    def guardar_anterior(self, processo):
+        """O RSPE da base vai para o histórico antes de ser substituído por outro gerado no mesmo dia, com conteúdo diferente: a
+        chave do histórico (processo, data de geração) leva a marca "(substituído em …)", para não ser sobrescrita."""
+        with self.lock:
+            row = self.con.execute("SELECT data_geracao, arquivo, importado_em, dados FROM assistidos WHERE processo=?", (processo,)).fetchone()
+            if not row:
+                return False
+            self.con.execute("INSERT OR REPLACE INTO rspe_historico VALUES (?,?,?,?,?)",
+                             (processo, "%s (substituído em %s)" % (row[0] or "", datetime.now().strftime("%d/%m/%Y %H:%M:%S")),
+                              row[1], row[2], row[3]))
+            self.con.commit()
+        return True
+
+    def marcar_dado(self, processo, chave, valor):
+        """Grava uma marca no registro do RSPE da base (ex.: cálculo ausente confirmado por novo RSPE)."""
+        with self.lock:
+            row = self.con.execute("SELECT dados FROM assistidos WHERE processo=?", (processo,)).fetchone()
+            if not row:
+                return False
+            d = json.loads(row[0])
+            d[chave] = valor
+            self.con.execute("UPDATE assistidos SET dados=? WHERE processo=?", (json.dumps(d, ensure_ascii=False), processo))
+            self.con.commit()
+        return True
+
     def historico(self, processo):
-        """RSPEs guardados do processo, do mais antigo para o mais novo."""
+        """RSPEs guardados do processo, do mais antigo para o mais novo (o substituído no mesmo dia, antes do que o substituiu)."""
         with self.lock:
             rows = self.con.execute("SELECT data_geracao, arquivo, importado_em, dados FROM rspe_historico WHERE processo=?",
                                     (processo,)).fetchall()
         out = [{"geracao": g or "", "arquivo": a or "", "importado_em": i or "", "dados": json.loads(d)} for g, a, i, d in rows]
-        return sorted(out, key=lambda x: rs.to_date(x["geracao"]) or date.min)
+        return sorted(out, key=lambda x: (rs.to_date(x["geracao"][:10]) or date.min, "substitu" not in x["geracao"], x["geracao"]))
 
     def historico_n(self):
         with self.lock:
@@ -1424,7 +1501,8 @@ class Api:
         if not self.base:
             return {"sem_base": True, "recentes": [{"caminho": p, "nome": os.path.splitext(os.path.basename(p))[0]} for p in self._recentes()],
                     "hoje": rv.HOJE.strftime("%d/%m/%Y"), "abas": rv.ABAS, "rotulos": rv.ROTULO, "ajuda": AJUDA + _ajuda_juris(),
-                    "base_juridica": _bj_info(), "registros": []}
+                    "base_juridica": _bj_info(), "registros": [], "aviso_pasta": aviso_pasta_dados()}
+        self._copia_diaria()
         brutos = self.base.todos()
         ctx = self._contexto(brutos)
         # a lista é montada à parte e só substitui a atual no fim: exportar, relatórios e registro não leem uma lista pela metade
@@ -1470,6 +1548,7 @@ class Api:
             "registros": [_leve(self._json_de(m)) for m in self._modelos],
             "pendentes": self._pendentes_unidade(),
             "copia": self._copia_info(),
+            "aviso_pasta": aviso_pasta_dados(),
         }
 
     def registro(self, processo):
@@ -1518,6 +1597,7 @@ class Api:
             if msg:
                 r["msg"] = msg
             return r
+        self._copia_diaria()
         r = self.base.um(processo)
         self._json.pop(processo, None)
         rv.HOJE = datetime.now().date()
@@ -1821,7 +1901,7 @@ class Api:
             if not dp:
                 continue
             nome, rx_ = self.HIST_ABAS.get(aba) or ((rx.nome_pedido(aba), r"INDULTO|COMUTA") if aba.startswith("ind_") else (aba, None))
-            col = next((c for c in cols if (rs.to_date(c["geracao"]) or date.min) >= dp), None)
+            col = next((c for c in cols if (rs.to_date(c["geracao"][:10]) or date.min) >= dp), None)
             # "Progressão: pedido em ..." / "Remição (ofício): ofício em ...": sem concordância de gênero com o nome do benefício
             _tp = {"oficio": "ofício", "outro": "providência"}.get(p.get("tipo") or "", "pedido")
             txt = "%s: %s em %s" % (nome, _tp, p["data"])
@@ -2449,6 +2529,7 @@ class Api:
             return None
         if self.base.um(chave) is None:
             return {"erro": "Assistido não encontrado na base (já removido?)."}
+        self._copia_antes("remover %s" % chave)
         self.base.remover(chave, bool(tudo))
         out = self.listar()
         if isinstance(out, dict):
@@ -2502,15 +2583,18 @@ class Api:
         self._etapa("Montando a tela…")
         return r
 
-    # ---- cópias de segurança: uma a cada abertura da base, guardadas as 10 últimas ----
+    # ---- cópias de segurança: a cada abertura da base, uma por dia com o programa aberto, antes de "Restaurar", de "Remover"
+    # e das importações em lote; guardadas as 10 últimas e, além delas, a última de cada um dos 7 dias anteriores ----
     COPIAS_MAX = 10
+    COPIAS_DIAS = 7
 
-    def _pasta_copias(self):
-        return os.path.join(os.path.dirname(os.path.abspath(self.base.caminho)), "copias", self.base.nome)
+    def _pasta_copias(self, base=None):
+        base = base or self.base
+        return os.path.join(os.path.dirname(os.path.abspath(base.caminho)), "copias", base.nome)
 
-    def _copias(self):
-        """Cópias da base aberta, da mais nova para a mais antiga: [(caminho, datetime)]."""
-        pasta = self._pasta_copias()
+    def _copias(self, base=None):
+        """Cópias da base (a aberta, se não indicada), da mais nova para a mais antiga: [(caminho, datetime)]."""
+        pasta = self._pasta_copias(base)
         out = []
         if os.path.isdir(pasta):
             for a in os.listdir(pasta):
@@ -2519,29 +2603,58 @@ class Api:
                     out.append((os.path.join(pasta, a), datetime.strptime(m.group(1), "%Y%m%d_%H%M%S")))
         return sorted(out, key=lambda x: x[1], reverse=True)
 
-    def _fazer_copia(self, manter=None):
+    def _fazer_copia(self, manter=None, base=None):
         """Copia a base (API de backup do SQLite: cópia íntegra mesmo com a base aberta). Base vazia não é copiada."""
-        if not self.base or not self.base.nomes():
+        base = base or self.base
+        if not base or not base.nomes():
             return
-        pasta = self._pasta_copias()
+        pasta = self._pasta_copias(base)
         os.makedirs(pasta, exist_ok=True)
         agora = datetime.now()
-        destino = os.path.join(pasta, "%s_%s.sqlite" % (self.base.nome, agora.strftime("%Y%m%d_%H%M%S")))
+        destino = os.path.join(pasta, "%s_%s.sqlite" % (base.nome, agora.strftime("%Y%m%d_%H%M%S")))
         if os.path.exists(destino):
             return
         dst = sqlite3.connect(destino)
         try:
-            with self.base.lock:
-                self.base.con.backup(dst)
+            with base.lock:
+                base.con.backup(dst)
         finally:
             dst.close()
-        for c, _ in self._copias()[self.COPIAS_MAX:]:
-            if c == manter:
+        todas = self._copias(base)
+        # além das 10 últimas, fica a última cópia de cada um dos 7 dias anteriores: as cópias antes de remover e de importar
+        # não apagam, num dia de muito movimento, as dos dias anteriores
+        dias, guardar = set(), set()
+        for c, d in todas[self.COPIAS_MAX:]:
+            if d.date() not in dias and (agora.date() - d.date()).days <= self.COPIAS_DIAS:
+                dias.add(d.date())
+                guardar.add(c)
+        dias_recentes = {d.date() for _, d in todas[:self.COPIAS_MAX]}
+        for c, d in todas[self.COPIAS_MAX:]:
+            if c == manter or (c in guardar and d.date() not in dias_recentes):
                 continue
             try:
                 os.remove(c)
             except OSError:
                 pass
+
+    def _copia_diaria(self, base=None):
+        """Cópia do dia: com o programa aberto por dias seguidos, a primeira atualização de cada dia faz uma cópia nova."""
+        base = base or self.base
+        try:
+            if base and not getattr(base, "somente_leitura", False):
+                c = self._copias(base)
+                if not c or c[0][1].date() < datetime.now().date():
+                    self._fazer_copia(base=base)
+        except Exception:
+            logging.getLogger("rspe").exception("cópia diária de %s", getattr(base, "caminho", "?"))
+
+    def _copia_antes(self, motivo, base=None):
+        """Cópia antes de uma operação que apaga ou substitui muitos dados (remover assistido, importação em lote)."""
+        try:
+            if not getattr(base or self.base, "somente_leitura", False):
+                self._fazer_copia(base=base)
+        except Exception:
+            logging.getLogger("rspe").exception("cópia antes de %s", motivo)
 
     def _copia_info(self):
         try:
@@ -2669,7 +2782,10 @@ class Api:
 
     def nova_base(self, nome=None):
         """Cria base nomeada na pasta 'bases' (nome vindo da tela inicial) ou pergunta o arquivo."""
-        os.makedirs(PASTA_BASES, exist_ok=True)
+        try:
+            os.makedirs(PASTA_BASES, exist_ok=True)
+        except OSError as e:
+            return {"erro": "Não foi possível criar a pasta das bases (%s): %s" % (PASTA_BASES, _msg_falha_gravar(PASTA_BASES, e))}
         nome = (nome or "").strip()
         if nome:
             seguro = "".join(ch for ch in nome if ch not in '\\/:*?"<>|').strip().rstrip(".").strip() or "Nova base"
@@ -2678,6 +2794,13 @@ class Api:
             c = os.path.join(PASTA_BASES, seguro + ".sqlite")
             if os.path.exists(c):
                 return {"erro": "Já existe uma base chamada '%s'. Escolha outro nome ou abra a existente." % seguro}
+            if not _gravavel(PASTA_BASES):
+                return {"erro": "A pasta %s não permite gravação: a base '%s' não pode ser criada nela. Use \"Nova base…\" "
+                                "e escolha uma pasta com permissão de gravação (por exemplo, Documentos)." % (PASTA_BASES, seguro)}
+            r = self._trocar_base(c)
+            if DADOS_RESERVA and isinstance(r, dict) and not r.get("erro"):
+                r["msg"] = ((r.get("msg") or "") + " Base criada em %s. %s" % (c, aviso_pasta_dados())).strip()
+            return r
         else:
             c = _um(self._janela.create_file_dialog(webview.SAVE_DIALOG, directory=PASTA_BASES, save_filename="Nova base.sqlite",
                                                    file_types=("Base APTO (*.sqlite)",)))
@@ -2712,13 +2835,15 @@ class Api:
 
     def escolher_base(self):
         """Só o diálogo de arquivo: a tela mostra o carregamento depois que o arquivo é escolhido."""
-        os.makedirs(PASTA_BASES, exist_ok=True)
+        with contextlib.suppress(OSError):
+            os.makedirs(PASTA_BASES, exist_ok=True)  # sem gravação: o diálogo abre na pasta que existir
         return _um(self._janela.create_file_dialog(webview.OPEN_DIALOG, directory=PASTA_BASES, file_types=("Base APTO (*.sqlite)",)))
 
     def abrir_base(self, caminho=None):
         if caminho and os.path.exists(caminho):
             return self._trocar_base(caminho)
-        os.makedirs(PASTA_BASES, exist_ok=True)
+        with contextlib.suppress(OSError):
+            os.makedirs(PASTA_BASES, exist_ok=True)
         c = _um(self._janela.create_file_dialog(webview.OPEN_DIALOG, directory=PASTA_BASES, file_types=("Base APTO (*.sqlite)",)))
         return self._trocar_base(c) if c else None
 
@@ -2806,7 +2931,10 @@ class Api:
         return r
 
     def abrir_pasta_bases(self):
-        os.makedirs(PASTA_BASES, exist_ok=True)
+        try:
+            os.makedirs(PASTA_BASES, exist_ok=True)
+        except OSError as e:
+            return {"erro": "Não foi possível criar a pasta das bases (%s): %s" % (PASTA_BASES, _msg_falha_gravar(PASTA_BASES, e))}
         _abrir(PASTA_BASES)
         return None
 
@@ -2857,6 +2985,8 @@ class Api:
             atend = [a for a in arqs if ratd.tipo_pelo_nome(os.path.basename(a))]
             av_atend = self._atend_importar_arquivos(atend, base) if atend else []
             arqs = [a for a in arqs if a not in atend]
+            if len(arqs) >= 2:
+                self._copia_antes("importar %d arquivos" % len(arqs), base)  # importação em lote: cópia antes de gravar
             resumo = self._lote_(arqs, base, silencioso) if arqs else {"novos": 0, "atualizados": 0, "historico": 0, "duplicados": 0,
                                                                        "antigos": 0, "erros": 0, "fichas": 0, "incompletos": 0, "avisos": []}
             if av_atend:
@@ -2939,14 +3069,32 @@ class Api:
                             continue
                         vistos.add(r["_hash"])
                         ex_ = base.existente(chave)
+                        _subst = ""
                         if ex_:
                             data_ex, hash_ex, leitura_antiga = ex_
                             mesmo = hash_ex == r["_hash"] or (data_ex and data_ex == r.get("data_geracao_rspe"))
+                            _ant = base.um(chave) if hash_ex != r["_hash"] else None
+                            if _ant is not None and rs.sem_quadro_calculo(r) and rs.sem_quadro_calculo(_ant):
+                                # RSPE juntado de novo, também sem o quadro "Cálculos da pena": o SEEU não imprime o cálculo (o alerta sai)
+                                r["_sem_calculo_confirmado"] = _ant.get("_sem_calculo_confirmado") or datetime.now().strftime("%d/%m/%Y")
+                                if not _ant.get("_sem_calculo_confirmado"):
+                                    base.marcar_dado(chave, "_sem_calculo_confirmado", r["_sem_calculo_confirmado"])
+                            # mesma data de geração, outro arquivo: conteúdo diferente (decisão lançada depois da primeira geração do dia)
+                            # substitui o da base, que vai para o histórico; leitura parcial não substitui uma completa
+                            if (mesmo and not leitura_antiga and _ant is not None and data_ex == r.get("data_geracao_rspe")
+                                    and _conteudo_rspe(_ant) != _conteudo_rspe(r)
+                                    and not (r.get("_leitura_parcial") and not _ant.get("_leitura_parcial"))):
+                                base.guardar_anterior(chave)
+                                mesmo = False
+                                _subst = ("RSPE gerado de novo em %s com conteúdo diferente: substitui o da base (o anterior fica no histórico)"
+                                          % (r.get("data_geracao_rspe") or "?"))
                             if mesmo and not leitura_antiga:
                                 base.arquivar(r)
                                 duplicados.append("%s: RSPE de %s já está na base (%s)" % (nome_arq, r.get("data_geracao_rspe"), r.get("nome")))
                                 registro.append({"arquivo": nome_arq, "tipo": "RSPE", "nome": r.get("nome") or "", "proc": chave, "resultado": "já na base",
-                                                 "leitura": "—", "obs": ["RSPE de %s, igual ao que a base já tem" % (r.get("data_geracao_rspe") or "?")]})
+                                                 "leitura": "—", "obs": ["RSPE de %s, igual ao que a base já tem%s" % (
+                                                     r.get("data_geracao_rspe") or "?",
+                                                     "" if hash_ex == r["_hash"] else " (mesmo conteúdo, outro arquivo)")]})
                                 continue
                             d_ex, d_novo = rs.to_date(data_ex or ""), rs.to_date(r.get("data_geracao_rspe") or "")
                             if d_ex and d_novo and d_novo < d_ex and not mesmo:
@@ -2974,6 +3122,8 @@ class Api:
                         if faltam:
                             incompletos.append("%s: %s - não foi possível ler %s" % (nome_arq, r.get("nome") or "?", ", ".join(faltam)))
                         obs, parcial = _leitura_rspe(r, faltam)
+                        if _subst:
+                            obs.insert(0, _subst)
                         registro.append({"arquivo": nome_arq, "tipo": "RSPE", "nome": r.get("nome") or "", "proc": chave,
                                          "resultado": "atualizado" if ex_ else "novo", "leitura": "parcial" if parcial else "completa", "obs": obs})
                 except Exception as e:
@@ -3027,10 +3177,10 @@ class Api:
                                                          "pasta vigiada" if silencioso else "manual", rs.pl(len(arqs), "arquivo", "arquivos"))
         try:
             if not silencioso:
-                with open(os.path.join(pasta_app(), "importacao_avisos.txt"), "w", encoding="utf-8") as f:
+                with open(os.path.join(pasta_gravacao(), "importacao_avisos.txt"), "w", encoding="utf-8") as f:
                     f.write(cab + "\n" + ("\n".join(avisos) if avisos else "Sem avisos: todos os arquivos foram lidos e importados.") + "\n")
             elif avisos:
-                arq_v = os.path.join(pasta_app(), "importacao_avisos_pasta_vigiada.txt")
+                arq_v = os.path.join(pasta_gravacao(), "importacao_avisos_pasta_vigiada.txt")
                 try:
                     with open(arq_v, encoding="utf-8") as f:
                         velho = f.read().splitlines()[-2000:]  # o arquivo não cresce sem fim
@@ -3785,6 +3935,7 @@ class Api:
         fch = (m or {}).get("ficha_chave") or ""
         if not fch:
             return {"erro": "Este assistido não tem ficha disciplinar vinculada."}
+        self._copia_antes("remover a ficha de %s" % chave)
         if not self.base.remover_ficha(fch):
             return {"erro": "A ficha não foi encontrada na base (já removida?)."}
         r = self.listar()
@@ -4191,6 +4342,13 @@ def _montar_modelo(r, ctx):
         r["data_nascimento"] = _f0["data_nascimento"]
         r["_nasc_fonte"] = "lida da ficha disciplinar do SIAPEN"
         r["_nasc_data"] = ""
+    # nascimento do RSPE diferente do da ficha (operador ainda não informou a correta): nenhuma fonte prevalece sozinha - o
+    # requisito de idade que muda com a data da ficha fica a verificar (decretos e art. 115 do CP)
+    r.pop("_nasc_alt", None)
+    if _f0 and not _dm.get("data_nascimento"):
+        _na, _nb = rs.to_date(r.get("data_nascimento") or ""), rs.to_date((_f0.get("data_nascimento") or "").strip())
+        if _na and _nb and _na != _nb and rf.nascimento_muda_marco(r, _na, _nb):
+            r["_nasc_alt"] = rs.fmt(_nb)
     # RSPE x ficha: retomada do cumprimento omitida no RSPE é lançada pela ficha; divergência vira alerta
     try:
         rf.reconciliar_eventos(r, _f0)
@@ -4435,9 +4593,29 @@ def _outras_exec(regs):
             out[r.get("processo_execucao") or r.get("arquivo")] = [
                 {"processo": o.get("processo_execucao") or o.get("arquivo"), "status": o.get("status_execucao") or "",
                  "encerrada": _exec_encerrada(o), "crimes": o.get("crimes_curto") or "", "geracao": o.get("data_geracao_rspe") or "",
-                 "tem_crime": any(not (c.get("extinto") or "").upper().startswith("S") for c in o.get("_crimes") or [])}
+                 "tem_crime": any(not (c.get("extinto") or "").upper().startswith("S") for c in o.get("_crimes") or []),
+                 "historico": _historico_exec(o)}
                 for o in g if o is not r]
     return out
+
+
+def _historico_exec(o):
+    """Prisões e faltas de outra execução da mesma pessoa (RSPE arquivado ou de outra ação), para a Auditoria da principal mostrar
+    como histórico a conferir - não entram nas contas desta execução, nunca automaticamente contra o assistido."""
+    try:
+        evs = [e for e in o.get("_eventos") or [] if not e.get("_ficha")]
+        pris = ["%s a %s" % (rs.fmt(a), rs.fmt(b) if b else "sem soltura no RSPE") for a, b in rs.periodos_custodia(evs)]
+        fal = ["%s (%s)" % ((i.get("complemento") or i.get("tipo") or "").strip().lower()[:60], i.get("data_referencia") or i.get("data_decisao") or "?")
+               for i in o.get("_incidentes") or [] if not i.get("_ficha") and i.get("situacao") == "CONCEDIDO"
+               and rs.RE_FALTA_PROPRIA.search((i.get("tipo") or "") + " " + (i.get("complemento") or ""))]
+    except Exception:
+        return ""
+    partes = []
+    if pris:
+        partes.append("prisões %s" % "; ".join(pris[:4]) + ("; ..." if len(pris) > 4 else ""))
+    if fal:
+        partes.append("faltas %s" % "; ".join(fal[:4]) + ("; ..." if len(fal) > 4 else ""))
+    return " · ".join(partes)
 
 
 def _so_ativos(modelos, brutos=None):
@@ -4483,6 +4661,33 @@ def _montar_proc(args):
     return _montar_modelo(r, sub)
 
 
+_CONTEUDO_CRIME = ("processo_criminal", "processo_situacao", "tipo_processo", "data_sentenca", "transito_mp", "transito_processo",
+                   "pena_total_processo", "regime_sentenca", "lei", "artigo_rspe", "pena_imposta_rspe", "pena_imposta", "data_infracao", "vga",
+                   "resultado_morte", "reincidente_comum", "reincidente_especifico", "fracao_progressao", "fracao_livramento", "extinto_rspe",
+                   "suspenso")
+_CONTEUDO_BLOCO = ("tipo", "motivo", "complemento", "data", "data_decisao", "data_referencia", "situacao", "processos", "processos_rspe")
+
+
+def _conteudo_rspe(r):
+    """O que o RSPE traz (cabeçalho, cálculo, crimes, eventos e incidentes), sem o que o programa deriva: compara dois RSPEs
+    gerados no mesmo dia (o arquivo baixado de novo muda o hash sem mudar o conteúdo)."""
+    def _c(c):
+        x = {k: c.get(k) or "" for k in _CONTEUDO_CRIME}
+        x["pena_imposta"] = c.get("pena_imposta_rspe", c.get("pena_imposta")) or ""
+        x.pop("pena_imposta_rspe")
+        x["extinto_rspe"] = c.get("extinto_rspe", c.get("extinto")) or ""
+        return x
+    cab = {k: r.get(k) or "" for k in ("nome", "cpf", "status_execucao", "regime_atual", "pena_total", "pena_cumprida", "pena_remanescente",
+                                       "total_interrupcoes", "saldo_remidos", "data_base_seeu", "livramento_data_base_seeu",
+                                       "termino_previsao_seeu", "progressao_previsao_seeu", "livramento_previsao_seeu")}
+    ev = sorted(json.dumps({k: e.get(k) or "" for k in _CONTEUDO_BLOCO}, sort_keys=True, ensure_ascii=False)
+                for e in r.get("_eventos") or [] if not e.get("_ficha"))
+    inc = sorted(json.dumps({k: i.get(k) or "" for k in _CONTEUDO_BLOCO}, sort_keys=True, ensure_ascii=False)
+                 for i in r.get("_incidentes") or [] if not i.get("_ficha"))
+    cr = sorted(json.dumps(_c(c), sort_keys=True, ensure_ascii=False) for c in r.get("_crimes") or [])
+    return json.dumps([cab, ev, inc, cr], sort_keys=True, ensure_ascii=False)
+
+
 def _leitura_rspe(r, faltam):
     """Leitura do RSPE para o registro da importação: (observações, parcial). Campo vazio porque o SEEU não o tem (sem processo,
     sem crime, pena não iniciada) é observação, não leitura parcial."""
@@ -4503,6 +4708,14 @@ def _leitura_rspe(r, faltam):
     elif not r.get("_crimes"):
         obs.append("nenhuma condenação lida: quadro de processos criminais ausente ou fora do layout")
         parcial = True
+    if rs.sem_quadro_calculo(r) and r.get("_crimes"):
+        obs.append("sem o quadro \"Cálculos da pena\" no PDF%s" % (
+            ": o RSPE juntado de novo veio igual - o SEEU não imprime o cálculo desta guia" if r.get("_sem_calculo_confirmado")
+            else ": baixar o RSPE de novo no SEEU e importar"))
+    _cort = [e for e in r.get("_eventos") or [] if e.get("processos_incompletos")]
+    if _cort:
+        obs.append("lista de processos incompleta no RSPE (cortada na margem pelo SEEU) em %s: não usada para ligar a prisão a processo"
+                   % rs.pl(len(_cort), "evento", "eventos"))
     if rs.sem_inicio_seeu(r):
         obs.append("sem eventos nem incidentes: pena não iniciada no SEEU")
     elif not [e for e in r.get("_eventos") or [] if not e.get("_ficha")]:
@@ -4586,10 +4799,11 @@ def _abrir(caminho):
 
 
 def _preparar_log():
-    """No .exe (modo janela) não há console: erros vão para rspe_log.txt ao lado do programa."""
+    """No .exe (modo janela) não há console: erros vão para rspe_log.txt ao lado do programa (sem permissão de gravação
+    ali, na pasta de reserva do usuário)."""
     try:
         import logging
-        caminho = os.path.join(pasta_app(), "rspe_log.txt")
+        caminho = os.path.join(pasta_gravacao(), "rspe_log.txt")
         if sys.stdout is None or sys.stderr is None:
             f = open(caminho, "a", encoding="utf-8", buffering=1)
             sys.stdout = sys.stdout or f

@@ -148,7 +148,8 @@ ok(not [x for x in C["pendencias"] if x["status"] == "DIVERGENCIA"], "A9: diverg
 # ---- código A1/A2/A10: fundamentação com o valor da remição detalhada, sem "(0 dias trabalhados)", LEP art. 128 ----
 f = F([("16.08.2018", "Nesta data foi peticionado o Atestado de Trabalho n 110/2018, na função Faxina (10/07/2017 a 16/08/2018), sendo 346 dias trabalhados e 115 remidos."),
        ("17.01.2026", "Peticionado o Atestado de Trabalho n 006/2026, no Sistema SEEU, função Faxina (01/09/2017 a 10/08/2018) 290 dias trabalhados e 96 remidos."),
-       ("20.02.2026", "FOI EMITIDO ATESTADO DE TRABALHO Nº 024/2026 COM 29 DIAS REMIDOS")])
+       # (quesito 136, 16/10/2026: atestado sem período fica fora do total e da fundamentação - o deste caso passa a trazer o período)
+       ("20.02.2026", "FOI EMITIDO ATESTADO DE TRABALHO Nº 024/2026, PERÍODO DE 01/09/2025 A 31/12/2025, COM 29 DIAS REMIDOS")])
 o = rf.comparativo(R(rem(115, "16/08/2018")), f, HOJE)
 fund = o.get("fd_fund") or ""
 ok("006/2026" not in fund, "código A1: atestado zerado no pedido: %s" % fund[:300])

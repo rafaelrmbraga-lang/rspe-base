@@ -43,7 +43,9 @@ def caso(manuais):
         assert st[n] == ("CONCILIADO", "%d dias" % d), (n, st[n])
     assert st["183/PDIB"][0] == "NAO_LANCADO", st["183/PDIB"]
     t183 = next(t for t in C["tabela"] if "183" in t["atestado"])
-    assert all(x["inferido"] for x in t183["segs"]) and {x["per"] for x in t183["segs"]} == {"19/02/2025 a 24/03/2026", "30/06/2026 a 07/07/2026"}, t183["segs"]
+    # (quesito 112, 16/10/2026: sem o atestado 033, a remição de 102 dias só alcança os 12 meses anteriores à referência; a Poligonal de
+    # 18/12/2023 a 18/02/2024 fica livre e entra na folga do atestado 183)
+    assert all(x["inferido"] for x in t183["segs"]) and {x["per"] for x in t183["segs"]} - {"18/12/2023 a 18/02/2024"} == {"19/02/2025 a 24/03/2026", "30/06/2026 a 07/07/2026"}, t183["segs"]
     assert not any(p["acao"] == "Pedir atestado" for p in C["pendencias"]), "Pedir atestado indevido"
     assert not any(a["tipo"] == "baixa sem início" for a in C["alertas"]), "baixa sem início"
     assert not any(a["tipo"] == "ref" for a in C["alertas"]), "data de referência não pode gerar divergência neste caso"
@@ -53,7 +55,7 @@ def caso(manuais):
 
 
 C, st, tipos = caso([])
-assert st["Atestado não registrado na ficha"] == ("CONCILIADO", "102 dias"), st
+assert st["Remição sem atestado na ficha"] == ("CONCILIADO", "102 dias"), st
 C, st, tipos = caso(M033)
 assert st["033/2025"] == ("CONCILIADO", "102 dias"), st
 assert any(a["tipo"] == "baixa tardia" and "Ags" in a["texto"] and "10/08/2024" in a["texto"] and "17/12/2023" in a["texto"] for a in C["alertas"]), C["alertas"]

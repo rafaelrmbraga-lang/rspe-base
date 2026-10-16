@@ -149,8 +149,9 @@ assert not ra._cpf_valido("11111111111") and ra._cpf_valido(c_fic)
 r = reg(pena_total="6a0m0d", _eventos=[ev("01/01/2019", P2)])
 m = rv.modelo(copy.deepcopy(r), {}, None, [])
 its = [i for i in m["aud_itens"] if i["tipo"].startswith("divergencia-")]
-assert sorted(i["tipo"] for i in its) == sorted([T1, T4]) and all(i["nivel"] == "alerta" and not i["baixado"] for i in its), its
-assert len(m["div_seeu"]) == 2 and m["div_seeu_txt"] and m["aud_alertas"] >= 2, m["div_seeu"]
+# a prisão anterior ao fato fica "verificar" (item 53 de 16/10: a detração entre processos é possível conforme as datas)
+assert sorted(i["tipo"] for i in its) == sorted([T1, T4]) and all(i["nivel"] == ("verificar" if i["tipo"] == T4 else "alerta") and not i["baixado"] for i in its), its
+assert len(m["div_seeu"]) == 2 and m["div_seeu_txt"] and m["aud_alertas"] >= 1, m["div_seeu"]
 # baixa de uma: o "!" fica só com a outra; das duas: some
 b1 = {its[0]["chave"]: {"obs": "conferido nos autos", "data": "12/10/2026"}}
 m1 = rv.modelo(copy.deepcopy(r), b1, None, [])
@@ -171,7 +172,7 @@ except KeyError:
     pass  # ficha mínima sem algum campo do confronto: o teste da Api abaixo cobre a ficha real
 # execução extinta: o alerta continua alerta (o "!" é dado do documento)
 m5 = rv.modelo(copy.deepcopy(dict(r, execucao_extinta="extinção simulada")), {}, None, [])
-assert m5["div_seeu"] and all(i["nivel"] == "alerta" for i in m5["aud_itens"] if i["tipo"].startswith("divergencia-")), m5["div_seeu"]
+assert m5["div_seeu"] and all(i["nivel"] == ("verificar" if i["tipo"] == T4 else "alerta") for i in m5["aud_itens"] if i["tipo"].startswith("divergencia-")), m5["div_seeu"]
 
 # ---------------- baixa pela Api: grava na base, some da lista, sobrevive à reimportação, volta ao desfazer ----------------
 import rspe_app as app

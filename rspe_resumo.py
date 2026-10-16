@@ -196,9 +196,11 @@ def montar(m, pedidos, hoje=None, nome="", data_atend=None):
             direito("Livramento condicional", m.get("frac_liv"), "liv", "liv_sit", "ped_liv",
                     bruto.get("livramento_data_base_seeu") or m.get("dbase"), "Precisa ter bom comportamento.",
                     "12meses" if dfa and dl and (max(dl, hoje) - dfa).days < 365 else "")
-        ind_ped = any(k == "ind" or k.startswith("ind_") for k in ped)
+        ind_ped = bool(ped.get("ind"))  # pedido antigo, sem decreto; o de um decreto (ind_<ano>) só tira aquele decreto
         if not ind_ped:
             for ano, ki, kc in (("2025", "i25", "c25"), ("2024", "i24", "c24"), ("2022", "i22", None)):
+                if ped.get("ind_" + ano):
+                    continue
                 vi, vc = str(m.get(ki) or ""), str(m.get(kc) or "") if kc else ""
                 if vi == "Sim":
                     sec_dir.append("Indulto %s: Você pode ter direito. Indulto é o perdão da pena. A Defensoria vai analisar." % ano)

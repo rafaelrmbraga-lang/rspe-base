@@ -57,8 +57,9 @@ base = {"pena_total": "10a0m0d", "_eventos": [preso("01/01/2015")],
 x = dec(dict(base, _incidentes=[]), "2023")
 confere(x["s"] == "cabe" and x.get("beneficio") == "Indulto", "(3) sem decisão, o indulto de 2023 devia caber: %s" % x)
 x = dec(dict(base, _incidentes=[incidente("INDULTO", "DECRETO Nº 11.846, DE 22 DE DEZEMBRO DE 2023", "06/02/2025", "NÃO CONCEDIDO")]), "2023")
-confere(x["s"] == "cabe" and x.get("beneficio") == "Comutação" and "indeferido" in (x.get("ressalva") or ""),
-        "(3) indulto 2023 indeferido escondeu a comutação: %s" % x)
+# (quesito 93, 16/10/2026: a comutação não decidida depois do indulto indeferido fica A VERIFICAR - conferir o fundamento)
+confere(x["s"] == "ver" and x.get("beneficio") == "Comutação" and "indeferido" in (x.get("ressalva") or "")
+        and "fundamento do indeferimento" in (x.get("mot") or ""), "(3) indulto 2023 indeferido escondeu a comutação: %s" % x)
 x = dec(dict(base, _incidentes=[incidente("INDULTO", "DECRETO Nº 11.846, DE 22 DE DEZEMBRO DE 2023", "06/02/2025", "NÃO CONCEDIDO"),
                                 incidente("COMUTAÇÃO", "DECRETO Nº 11.846, DE 22 DE DEZEMBRO DE 2023", "06/02/2025", "NÃO CONCEDIDO")]), "2023")
 confere(x["s"] == "indef", "(3) comutação também indeferida: devia ficar indeferido, %s" % x)
@@ -67,7 +68,7 @@ r = dict(base, _incidentes=[incidente("INDULTO", "DECRETO Nº 12.338, DE 23 DE D
          indulto_2024="INDEFERIDO no RSPE em 15/10/2025", indulto_2024_status="nao",
          comutacao_2024="POSSÍVEL: art. 13 (1/5 do cumprido)", comutacao_2024_status="possivel")
 x = dec(r, "2024")
-confere(x["s"] == "cabe" and x.get("beneficio") == "Comutação", "(3) 2024: indulto indeferido escondeu a comutação: %s" % x)
+confere(x["s"] == "ver" and x.get("beneficio") == "Comutação", "(3) 2024: indulto indeferido escondeu a comutação: %s" % x)
 
 # (6) art. 129, § 9º: a vítima pode ser de qualquer sexo - violência contra a mulher só provável
 c9 = crime("01/01/2019", "01/06/2019", "01/07/2019", artigo="ART 129: Lesão corporal", tipo="§ 9º: Violência Doméstica, Detenção: 3 meses a 3 anos Sem Multa",
@@ -83,8 +84,10 @@ x = dec(r, "2023")
 confere(x["s"] == "ver" and "violência contra a mulher" in x.get("mot", ""), "(7) 2023, art. 129 § 9º: devia ficar a verificar, %s" % x)
 c147 = crime("01/01/2019", "01/06/2019", "01/07/2019", artigo="ART 147: Ameaça", tipo="CAPUT: Ameaçar alguém, Detenção: 1 a 6 meses ou Multa",
              pena="0 ano(s), 3 mês(es) e 0 dia(s)", vara="2ª Vara da Violência Doméstica e Familiar c/Mulher - Campo Grande")
-x = dec(dict(r, _crimes=[c147]), "2023")
-confere(x["s"] == "imp", "(7) 2023, art. 147 em vara de violência doméstica: devia ser impeditivo, %s" % x)
+x = dec(dict(r, _crimes=[r["_crimes"][0], c147]), "2023")
+# quesito 82 estendido a 2023 (16/10/2026): o art. 1º, XIV, cita leis; a ameaça do CP em contexto doméstico fica a verificar, não vedada
+confere(x["s"] == "ver" and "art. 1º, XIV" in x.get("mot", ""),
+        "(7) 2023, art. 147 em vara de violência doméstica: devia ficar a verificar, %s" % x)
 
 # (9) crime extinto depois da data do decreto estava em execução nela (Rubens Rafael Lopes Echeverria, 0001113-59.2008.8.12.0014;
 # Igor Roberto Arruda, 6000009-67.2021.8.12.0015)
@@ -233,9 +236,11 @@ r = {"pena_total": "10a0m0d", "_eventos": [preso("01/01/2015")], "_crimes": [cri
      "comutacao_2024_se_indeferido": "POSSÍVEL: art. 13 (1/5 do cumprido)",
      "_incidentes": [incidente("INDULTO", "DECRETO Nº 12.338, DE 23 DE DEZEMBRO DE 2024", "12/07/2025", "NÃO CONCEDIDO")]}
 rs.aplicar_decisoes_decretos(r, r["_incidentes"])
-confere(r["comutacao_2024_status"] == "possivel", "(23) status da comutação não acompanhou o texto: %s" % r["comutacao_2024_status"])
+# (quesito 93: depois do indulto indeferido, a comutação não decidida fica A VERIFICAR - conferir o fundamento do indeferimento)
+confere(r["comutacao_2024_status"] == "verificar" and "fundamento do indeferimento" in r["comutacao_2024"],
+        "(23) status da comutação não acompanhou o texto: %s" % r["comutacao_2024_status"])
 x = dec(r, "2024")
-confere(x["s"] == "cabe" and x.get("beneficio") == "Comutação", "(23) aba escondeu a comutação: %s" % x)
+confere(x["s"] == "ver" and x.get("beneficio") == "Comutação", "(23) aba escondeu a comutação: %s" % x)
 r2 = dict(r, comutacao_2024="POSSÍVEL: art. 13 (1/5 do cumprido) | falta a verificar (art. 6º: só impede se ...): X", comutacao_2024_status="possivel")
 confere(dec(r2, "2024")["s"] == "ver", "(23) comutação com falta a verificar devia ficar a verificar: %s" % dec(r2, "2024"))
 
@@ -297,7 +302,9 @@ def _r13():
     return {"_eventos": [preso("01/01/2020")], "indulto_2025": "A VERIFICAR: art. 9º, XIII", "indulto_2025_status": "verificar",
             "indulto_2025_detalhe": "Situação em 25/12/2025: regime Fechado · primário\n? XIII: pena ≤ 12 anos, 1/5 cumprido - verificar conclusão de curso certificado nos 3 anos anteriores"}
 for txt13, ex13, novo, esperado in (("Peticionado Certificado do Enem 2024 no Sistema SEEU nos autos nº 1", "ENEM 2024", False, "?"),
-                                    ("Peticionado Certificado do ENCCEJA 2024 no Sistema SEEU nos autos nº 1", "ENCCEJA 2024", True, "✔"),
+                                    # (quesito 88, 16/10/2026: a petição não é conclusão certificada expressa - a verificar)
+                                    ("Peticionado Certificado do ENCCEJA 2024 no Sistema SEEU nos autos nº 1", "ENCCEJA 2024", True, "?"),
+                                    ("Certificado de conclusão do ensino fundamental - ENCCEJA 2024", "ENCCEJA 2024", True, "✔"),
                                     ("Peticionado a declaração parcial de proficiência para ens. fund. - ENCCEJA/2024", "ENCCEJA", False, "?")):
     for com_marca in (True, False):  # ficha lida nesta versão (com a marca) e ficha gravada antes (sem ela)
         ex = {"exame": ex13, "data": "11.04.2025"}
@@ -354,7 +361,7 @@ confere("Art. 7º, p. ú.: 2/3" in (r.get("indulto_2024_detalhe") or "") and "VG
 # (32) 2022: crime com pena máxima acima de 5 anos não vai para a conferência do trânsito (Aldo Pereira de Souza)
 o = rs.analise_decreto_2022({"pena_total": "3a0m0d"}, [crime("01/01/2020", "01/06/2020", "01/07/2020"),
                                                        crime("01/01/2020", None, None, tipo="§ 4º: Furto qualificado, Reclusão: 2 a 8 anos E Multa",
-                                                             proc="0000004-00.2020.8.12.0001")], [], [])
+                                                             pena="2 ano(s), 0 mês(es) e 0 dia(s)", proc="0000004-00.2020.8.12.0001")], [], [])
 confere(o["indulto_2022_status"] == "possivel" and "conferir" not in o["indulto_2022"], "(32) 2022: %s" % o["indulto_2022"])
 
 # (33) textos da petição: dias acima de 30 viram mês (sem somar dias: 11 meses e 33 dias não são 1 ano e 3 dias - o ano tem 365
@@ -463,7 +470,14 @@ confere(not (x["s"] in ("cabe", "ver") and x.get("beneficio") == "Comutação"),
 cf = crime("01/01/2017", "01/06/2017", "01/07/2017", pena="4 ano(s), 0 mês(es) e 0 dia(s)")
 r = reg_([cf], [preso("01/01/2018"), ev_("01/06/2023", "INTERRUPÇÃO", "FUGA"), ev_("10/06/2023", "REINÍCIO", "RECAPTURA")], "4a0m0d", "")
 x = dec(r, "2023")
-confere(x["s"] == "ver" and "falta" in (x.get("mot") or ""), "(44) falta na janela ficou como ressalva de um 'cabe': %s %s" % (x["s"], x.get("mot")))
+# (quesito 140, 16/10/2026: no Decreto de 2023, de art. 6º com a redação do de 2024/2025, a fuga sem homologação na janela impede;
+# nos que exigem a falta apurada ou homologada - ex.: 2019 -, fica a verificar)
+confere(x["s"] == "nao" and "fuga" in (x.get("mot") or ""), "(44) 2023: fuga na janela devia impedir: %s %s" % (x["s"], x.get("mot")))
+cf15 = crime("01/01/2012", "01/06/2012", "01/07/2012", pena="4 ano(s), 0 mês(es) e 0 dia(s)")
+r = reg_([cf15], [preso("01/01/2013"), ev_("01/06/2015", "INTERRUPÇÃO", "FUGA"), ev_("10/06/2015", "REINÍCIO", "RECAPTURA")], "4a0m0d", "")
+x = dec(r, "2015")
+confere(x["s"] == "ver" and "falta" in (x.get("mot") or "") and "tratada como falta grave" not in (x.get("mot") or ""),
+        "(44) falta na janela ficou como ressalva de um 'cabe': %s %s" % (x["s"], x.get("mot")))
 
 # (45) só o inciso XV (crime a crime, sem tempo cumprido): a dúvida do cumprido não o torna "a verificar"
 c13 = crime("01/01/2024", "01/03/2025", "01/04/2025", tipo="§ 4º, I: qualificado", pena="13 ano(s), 0 mês(es) e 0 dia(s)")

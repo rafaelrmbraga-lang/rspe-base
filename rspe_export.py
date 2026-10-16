@@ -30,9 +30,20 @@ def exportar_xlsx(modelos, saida, abas):
     fino = Side(style="thin", color=LINE.lstrip("#"))
     wb = Workbook()
     wb.remove(wb.active)
+    folhas = []
     for spec in [sp for aid in abas if aid != "completo" for sp in specs_export(aid)]:
-        ws = wb.create_sheet((spec.get("folha") or spec["titulo"]).replace("/", "-")[:31])
+        if spec["id"] == "aud":
+            # Auditoria: a primeira folha igual à tela (alertas e pontos a verificar pendentes); OK, Info e baixados vão para
+            # a folha "Conferência completa", para não perder a memória da conferência
+            folhas += [(spec, spec["titulo"], aud_na_tela), (spec, "Conferência completa", lambda d: not aud_na_tela(d))]
+        else:
+            folhas.append((spec, spec.get("folha") or spec["titulo"], None))
+    for spec, nome_folha, filtro in folhas:
+        ws = wb.create_sheet(nome_folha.replace("/", "-")[:31])
         cols, modelos_aba = _linhas_export(spec, modelos)
+        if filtro:
+            # cada linha com a cor do próprio ponto (Alerta, Verificar, OK, Info, Baixado), não a do assistido
+            modelos_aba = [dict(d, **{spec["cor"]: d.get("nivel_cor") or ""}) for d in modelos_aba if filtro(d)]
         ws.append([c[1] for c in cols])
         for cell in ws[1]:
             cell.font = Font(bold=True, color="FFFFFF")
@@ -43,7 +54,7 @@ def exportar_xlsx(modelos, saida, abas):
         for m in modelos_aba:
             ws.append([m.get(k + "_full", m.get(k, "")) for k, _, _ in cols])
             _sem_formula(ws)
-            cor = m.get(spec["cor"], "") if spec["cor"] else ""
+            cor = (m.get(spec["cor"], "") if spec["cor"] else "") if spec.get("sub") else cor_linha(spec, m)
             for cell in ws[ws.max_row]:
                 cell.alignment = Alignment(wrap_text=True, vertical="top")
                 cell.border = Border(bottom=fino)
@@ -72,6 +83,11 @@ def exportar_xlsx(modelos, saida, abas):
             _sem_formula(ws)
         ws.freeze_panes = "B2"
     wb.save(saida)
+
+
+def aud_na_tela(it):
+    """Ponto da Auditoria que a tela mostra de saída: alerta ou a verificar, não baixado."""
+    return it.get("nivel") in ("alerta", "verificar") and not it.get("baixado")
 
 
 def specs_export(aid):
@@ -106,9 +122,30 @@ def pedido_pendente(m, aba):
     """Como na tela (ui.pedPendente): sem pedido marcado, ou a situação mudou depois dele."""
     P = m.get("pedidos") or {}
     if aba == "ind" and any(k.startswith("ind_") for k in P):
-        return False
+        # pedido por decreto: o de um decreto não tira da contagem outro decreto que cabe sem pedido; o pedido cuja situação
+        # do decreto mudou depois (ref_atual) volta a contar
+        return (any(x.get("s") == "cabe" and not P.get("ind_" + str(x.get("id"))) for x in ((m.get("dec") or {}).get("decretos") or []))
+                or any(k.startswith("ind_") and (P[k] or {}).get("ref") and (P[k] or {}).get("ref_atual") is not None
+                       and P[k]["ref"] != P[k]["ref_atual"] for k in P))
     p = P.get(aba)
     return (not p) or bool(p.get("ref") and p.get("ref") != _ped_ref(m, aba))
+
+
+def cor_linha(spec, m):
+    """Cor do assistido na aba, como na tela (ui.cor / ui.sitPed): pedido marcado fica azul ("Pedido feito"); se a situação
+    mudou depois do pedido, amarelo ("situação mudou depois") em todas as abas, salvo prazo vencido (vermelho), que continua
+    vermelho. Linha, cartões e contador seguem a mesma regra."""
+    base = m.get(spec["cor"], "") if spec.get("cor") else ""
+    if spec.get("id") not in ("prog", "liv", "fd", "presc", "ext"):
+        return base
+    P = (m.get("pedidos") or {}).get(spec["id"])
+    if P:
+        if P.get("ref") and P.get("ref") != _ped_ref(m, spec["id"]):
+            return base if base in ("vencido", "vermelho") else "amarelo"
+        return "azul"
+    if spec["id"] == "fd" and m.get("fd_conf_tot") and (m.get("fd_conf_n") or 0) >= m["fd_conf_tot"] and m.get("fd_cor") in ("vermelho", "amarelo"):
+        return "verde"  # todos os itens da ficha conferidos ("Conferido")
+    return base
 
 
 def contagem_cartoes(spec, modelos):
@@ -120,7 +157,7 @@ def contagem_cartoes(spec, modelos):
         if tem_ped and not pedido_pendente(m, spec["id"]):
             cont["__ped"] = cont.get("__ped", 0) + 1
             continue
-        c = m.get(spec["cor"], "")
+        c = cor_linha(spec, m)
         cont[c] = cont.get(c, 0) + 1
     return cont
 
@@ -275,7 +312,7 @@ def exportar_pdf(modelos, saida, nome_base, abas, progresso=None):
         ]
         for i, m in enumerate(modelos_aba, 1):
             linha = []
-            cor = m.get(spec["cor"], "") if spec["cor"] else ""
+            cor = (m.get(spec["cor"], "") if spec["cor"] else "") if spec.get("sub") else cor_linha(spec, m)
             for j, (k, _, _) in enumerate(cols):
                 v = _cortar_celula(str(m.get(k + "_full", m.get(k, "")) or ""), larguras[j] - 10)
                 v = v.replace("&", "&amp;").replace("<", "&lt;")
@@ -380,6 +417,10 @@ def _linhas_remicao(m):
             sit, conferir = "Provavelmente já remido (atestado cumulativo): conferir nos autos", conferir + 1
         elif t.get("status") == "NAO_LANCADO" and cumul:
             sit, conferir = "Conferir nos autos antes de requerer", conferir + 1
+        elif t.get("status") == "NAO_LANCADO" and (t.get("sem_periodo") or t.get("rot", "").startswith("Peticionado em outros autos")):
+            # sem período ou peticionado em outros autos: fora do total a requerer (rspe_remicao.conciliar)
+            sit, conferir = ("Sem período no atestado: conferir antes de requerer" if t.get("sem_periodo") else
+                             "Peticionado em outros autos: não pedir em duplicidade"), conferir + 1
         elif t.get("status") == "NAO_LANCADO":
             if t.get("sobreposicao"):
                 sit = "Não lançado no RSPE: requerer, conferindo antes a remição sem origem do mesmo período"

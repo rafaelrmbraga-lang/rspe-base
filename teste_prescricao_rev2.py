@@ -168,7 +168,8 @@ P = "0000006-45.2017.8.12.0052"
 l = linha(reg([crime("13/12/2016", "10/07/2018", "2 ano(s), 0 mês(es) e 0 dia(s)", proc=P)],
               [ev("30/10/2017", "PRISÃO DEFINITIVA", proc=P), ev("26/03/2019", "FUGA", tipo="INTERRUPÇÃO"), ev("18/08/2025", "RECAPTURA", proc=P)],
               [inc("FIXAÇÃO/ALTERAÇÃO DE REGIME", "Aberto - Progressão de Regime", "14/04/2020")]))
-confere(l["ppe_status"].startswith("A VERIFICAR") and "interrompeu" not in l["ppe_quadro"]["prazo"] and "a verificar" in l["ppe_quadro"]["prazo"],
+# quesito 70 (16/10/2026): a progressão no intervalo conclui "não prescrita - conferir", sem afirmar que a recaptura interrompeu
+confere(l["ppe_status"].startswith("Não prescrita - conferir") and "interrompeu" not in l["ppe_quadro"]["prazo"] and "conferir" in l["ppe_quadro"]["prazo"],
         "A9: quadro contraditório: %s" % l["ppe_quadro"]["prazo"])
 
 # A10: liberdade até hoje, mas preso por outro processo: "Não corre", sem falsa "retomada do cumprimento" (Alex Sandro Cardoso Gabriel)

@@ -1,9 +1,9 @@
-APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.11.0
+APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.12.1
 (antigo RSPE Base; SEEU, programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-7.11.0. A documentação técnica completa (cada parâmetro, a regra, a norma e
+7.12.1. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -993,6 +993,86 @@ HISTÓRICO DE VERSÕES
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
 
+v7.12.1
+  - Indulto, Decreto 11.846/2023 (art. 1º, XIV): a mesma regra do inciso
+    XVII de 2024/2025. Só os crimes das leis citadas no inciso (Leis
+    11.340/2006, 13.718/2018, 14.192/2021, 14.132/2021 e 13.641/2018:
+    CP, arts. 147-A, 215-A e 218-C; Código Eleitoral, art. 326-B; Lei
+    11.340, art. 24-A) são vedados pela violência contra a mulher. O
+    crime comum do CP em contexto doméstico fica "a verificar" (norma
+    restritiva não se amplia por analogia), com a ressalva da leitura que
+    veda todo crime nesse contexto.
+
+v7.12.0
+  Aplicação dos quesitos respondidos em 16/10/2026 (108 itens). Regra
+  geral: o que depende de dado que o RSPE ou a ficha não trazem fica "a
+  verificar"/"a conferir", nunca descartado nem afirmado contra o assistido.
+  - Ficha: histórico anterior ao SIAPEN exibido à parte, fora das contas;
+    saídas por "determinação judicial" lidas como transferência (nova
+    entrada em até 3 dias), monitoramento (UMMVE), apresentação
+    (delegacia) ou "a conferir", nunca como liberdade automática;
+    recaptura e apresentação espontânea encerram a fuga; domiciliar e
+    monitoramento contam como cumprimento e custódia; autorização de
+    trabalho externo sem prestação registrada fica "a conferir"; falta
+    só com a data da ciência e fatos antigos narrados em outro
+    lançamento ficam "a verificar"; faltas de execuções anteriores só
+    como informação.
+  - RSPE: vínculo ficha x RSPE só pelo conteúdo dos arquivos (nome, CPF,
+    mãe, nascimento, autos), nunca pelo nome do arquivo; "Extinta",
+    "Arquivada" e "Sem início de cumprimento no SEEU"; RSPE sem
+    "Cálculos da pena" pede nova juntada e, se o novo vier igual, o
+    aviso vira nota; divergência de nascimento SEEU x SIAPEN em alerta,
+    com requisitos de idade "a verificar" quando a data muda o marco;
+    pena zero, "Suspenso: Sim" e medida de segurança "a verificar";
+    lista de processos cortada pelo SEEU marcada como incompleta; RSPE
+    regerado no mesmo dia com conteúdo diferente substitui o anterior;
+    execuções arquivadas da mesma pessoa só como histórico.
+  - Progressão e livramento: fração mais favorável como tese, sem
+    afirmar ilegalidade; reincidência que favorece o assistido só como
+    informação; homicídio qualificado consumado, homicídio simples com
+    selo de hediondo, feminicídio tentado, Lei 15.402/2026 (20% x 30%),
+    reincidente genérico pela lei nova e livramento com crime culposo
+    passam a "verificar" com a tese; na progressão refeita, 16% na
+    janela da lei e data nunca pior que a do SEEU deslocada pela
+    diferença das datas-base.
+  - Data-base e faltas: fato cometido em liberdade, recaptura sem falta
+    homologada, PAD pendente, adequação de pena e detração por prisão em
+    outro processo passam a "verificar"; PADIC prescrito sem efeito;
+    limite do art. 75 do CP (30 anos para fatos anteriores a 23/01/2020);
+    progressão antecipada e saída temporária com falta "a apurar",
+    semiaberto em unidade do fechado (SV 56) e conduta "sem lapso" em
+    amarelo.
+  - Prescrição e extinção: suspensão (art. 116, p. ú.) pela prisão por
+    outro processo; Súmula 617/STJ na aba Extinção; os três critérios de
+    imputação concordes dispensam o "a verificar"; intervalo denúncia ->
+    sentença acima do dobro do prazo, Lei 15.160/2025 sem o sexo da
+    vítima e teto da Súmula 415 com as duas contas (com e sem o art.
+    115) "a verificar"; campo da audiência admonitória do sursis;
+    término calculado abatendo as remições; folga de até 30 dias pede
+    conferir a data de publicação.
+  - Indulto e comutação: teto pela cláusula de soma de cada decreto;
+    custódia por outro processo não conta como cumprimento da pena
+    antiga; comutações de decretos anteriores não pedidas como tese;
+    violência contra a mulher (2024/2025) só nos crimes das leis do
+    inciso XVII; "cabe quanto aos crimes com trânsito"; ENCCEJA só com
+    conclusão certificada; saídas temporárias só as usufruídas; remição
+    entra no lapso ininterrupto e conta pelo período trabalhado; fuga
+    sem homologação no Decreto de 2023 impede; pena já cumprida leva ao
+    pedido de extinção; contagem de pedidos por decreto.
+  - Remição: atestado peticionado em outros autos fora do total;
+    atestados sem período fora do total e "a conferir"; remição abaixo
+    de 1/3 do atestado como diferença a pedir; trabalho durante
+    interrupção e recesso escolar fora da estimativa; remição ficta da
+    pandemia (Tema 1.120/STJ) a requerer; ressalva do art. 127 na
+    prioridade; jornada acima de 8 horas só alerta.
+  - Sistema: "Copiar fundamentação" em mais 16 tipos de alerta; pedido
+    cuja situação mudou depois em amarelo em todas as abas; cópia de
+    segurança diária e antes de remover e de importar em lote; pasta do
+    usuário como reserva quando a do programa não aceita gravação;
+    "Registro para o SAP" sem pedido diz "nenhum pedido registrado nesta
+    data"; Excel da Auditoria com a aba da tela e a "Conferência
+    completa".
+
 v7.11.0
   - Filtros por ícone em todas as abas (menos Indulto): além da saída
     temporária e da progressão antecipada, "Prioridade: remição pendente
@@ -1041,6 +1121,23 @@ v7.11.0
     remição sem origem decidida dentro do seu período pede para conferir
     se ela já inclui parte dele, também no resumo do topo ("antes,
     conferir as remições sem origem do mesmo período").
+  - Tabela de remição: a remição do RSPE sem atestado na ficha aparece
+    como "Remição sem atestado na ficha" (sem dias na coluna Remidos,
+    que é a do atestado); a remição repartida entre um atestado e o
+    trabalho sem atestado mostra a parte de cada linha ("1 de 77 dias",
+    "76 de 77 dias"), com a nota da soma.
+  - Aba Ficha, item D) "Pontos a conferir na ficha e no RSPE": os
+    alertas de qualidade saem agrupados (remições sem origem, dias que
+    não fecham, lançamentos incompletos, períodos, datas), cada grupo com
+    o que significa, os casos em linhas curtas e a providência. Saem o
+    que só repetia a pendência do atestado cumulativo e a referência
+    poucos dias antes do fim do período.
+  - Siglas de unidade e de setor em caixa alta (IPCG, UP, PED, EPJFC...).
+  - Aba Ficha, linha aberta: ao rolar, o cabeçalho das tabelas internas
+    (atestados x RSPE e demais) fica preso rente ao cabeçalho principal,
+    em qualquer largura de janela ou tamanho de letra, com uma faixa
+    branca abaixo para as linhas não colarem nele; datas e títulos das
+    colunas não se partem no meio.
   - Aba Ficha, linha aberta: botões no topo; a situação sai em lista
     curta, um ponto por linha, em letra normal com marcador vermelho
     (dias exatos a requerer) ou amarelo (conferir); a observação longa de

@@ -97,7 +97,9 @@ confere("ainda não estava em cumprimento" not in l["ppe_detalhe"] and "Evasão 
 
 # 4. sem somatório no RSPE e com resultado mais favorável se a ação já estivesse na execução: A VERIFICAR (não se tira a hipótese)
 E = "9000005-55.2015.8.12.0001"
-crimes4 = [crime(A, "13/06/2014", "10 ano(s), 0 mês(es) e 0 dia(s)"), crime(E, "01/01/2015", "3 ano(s), 0 mês(es) e 0 dia(s)")]
+# (quesito 65, 16/10/2026: com E transitada depois de A, os três critérios de imputação põem A primeiro e concluem "não prescrita"; o
+# trânsito de E antes do de A faz a ordem do trânsito e a da pena maior divergirem, e a hipótese continua a verificar)
+crimes4 = [crime(A, "13/06/2014", "10 ano(s), 0 mês(es) e 0 dia(s)"), crime(E, "01/05/2014", "3 ano(s), 0 mês(es) e 0 dia(s)")]
 evs4 = [ev("01/06/2014", "PRISÃO DEFINITIVA", proc=A), ev("01/01/2016", "FUGA", tipo="INTERRUPÇÃO"),
         ev("01/01/2022", "RECAPTURA/REINÍCIO DE CUMPRIMENTO", proc="%s, %s" % (A, E))]
 l = linha(reg(crimes4, evs4), E)
