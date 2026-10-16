@@ -948,7 +948,7 @@ def derivar(f, eventos):
         if mx and re.search(r"CERTIFICAD|APROVA|PETICION|DECLARA", u):
             # conclusão certificada (art. 9º, XIII, dos Decretos 2024/2025): só o certificado do ENCCEJA; o ENEM não certifica a
             # conclusão desde 2017, e a declaração parcial ou a aprovação por área não é conclusão
-            cert = mx.group(1) == "ENCCEJA" and "CERTIFICAD" in u and not re.search(r"PARCIAL|NA AREA|NA ÁREA|POR AREA|POR ÁREA", u)
+            cert = mx.group(1) == "ENCCEJA" and conclusao_certificada(u)
             exames.append({"exame": mx.group(1) + ((" " + mx.group(2)) if mx.group(2) else ""), "data": e["data"], "certificado": cert})
     f["exames"] = exames
     # relatórios de leitura peticionados (remição pela leitura - Res. CNJ 391/2021, art. 5º: 4 dias por obra, até 12 obras por
@@ -3701,6 +3701,32 @@ def _lancamentos_saida_temporaria(eventos):
     return ds
 
 
+def conclusao_certificada(texto):
+    """Conclusão do ensino certificada expressamente (art. 9º, XIII, dos Decretos 2024/2025; LEP, art. 126, § 5º - acréscimo de 1/3):
+    o registro diz o certificado e a conclusão. A mera petição ("peticionado certificado do ENCCEJA"), a declaração parcial ou a
+    aprovação por área não bastam - ficam a verificar."""
+    u = rs._sem_acento(texto or "").upper()
+    return bool("CERTIFICAD" in u and re.search(r"CONCLUS|CONCLUI", u)
+                and not re.search(r"PARCIAL|NA AREA|POR AREA|PETICION|PROTOCOL", u))
+
+
+def saidas_temporarias_duvidosas(eventos):
+    """Lançamentos de saída temporária que não provam a saída usufruída (concessão "beneficiado com saída temporária ..., devendo
+    retornar em", "mudança de cela ... motivo: saída temporária", "não pode sair"): [(data, texto)] - não contam, mas, se
+    completarem as saídas exigidas, o inciso fica a verificar. A mesma saída já contada (até 10 dias) não entra."""
+    contadas = [d for d, _r in _lancamentos_saida_temporaria(eventos)]
+    out = []
+    for e in eventos or []:
+        d = _dp(e.get("data") or "")
+        u = re.sub(r"\s+", " ", rs._sem_acento(e.get("texto") or "").upper())
+        if not d or not re.search(r"SAIDA TEMPOR", u) or any(abs((d - x).days) <= 10 for x in contadas):
+            continue
+        if any(abs((d - x).days) <= 10 for x, _t in out):
+            continue  # a mesma concessão lançada de novo
+        out.append((d, (e.get("texto") or "").strip()[:90]))
+    return out
+
+
 def saidas_temporarias(eventos):
     """Datas das saídas temporárias usufruídas pela ficha (formatos em _lancamentos_saida_temporaria). Saída e retorno da mesma
     saída (até 10 dias) contam uma vez."""
@@ -3790,6 +3816,7 @@ def complementar_decretos(r, f, hoje=None):
     hoje = hoje or date.today()
     ev = f.get("eventos", [])
     saidas = saidas_temporarias(ev)
+    duv_st = saidas_temporarias_duvidosas(ev)
     externos = [(_dp(t["inicio"]), _dp(t.get("fim") or "")) for t in f.get("trabalho", []) if t.get("externo")]
 
     def _fim_est(e):
@@ -3819,6 +3846,13 @@ def complementar_decretos(r, f, hoje=None):
             res["XI"] = (True, "ficha: %d saídas temporárias até %s (última em %s)" % (ns, rs.fmt(ref), rs.fmt(max(d for d in saidas if d <= ref))))
         elif dext >= 360:
             res["XI"] = (True, "ficha: %s de trabalho externo nos 3 anos anteriores" % rs.pl(dext, "dia", "dias"))
+        elif ns + len([d for d, _t in duv_st if d <= ref]) >= 5:
+            # só contam as saídas usufruídas (registro de saída ou retorno); a concessão sem esse registro, que completaria as 5,
+            # fica a verificar - não se descarta nem se conta
+            _dv = [(d, t) for d, t in duv_st if d <= ref]
+            res["XI"] = (None, "ficha: %s usufruídas até %s e %s sem registro de saída ou retorno (%s) - conferir se foram usufruídas" % (
+                rs.pl(ns, "saída temporária", "saídas temporárias"), rs.fmt(ref), rs.pl(len(_dv), "lançamento", "lançamentos"),
+                "; ".join("%s: %s" % (rs.fmt(d), t) for d, t in _dv[:3]) + ("; ..." if len(_dv) > 3 else "")))
         elif aut:
             res["XI"] = (None, "ficha: %s até %s e %s de trabalho externo registrado nos 3 anos anteriores; autorização ou termo de compromisso "
                                "de trabalho externo em %s, sem registro da prestação - conferir se trabalhou 12 meses" % (
@@ -3836,11 +3870,11 @@ def complementar_decretos(r, f, hoje=None):
         j13 = ref - timedelta(days=3 * 365)
         exs13 = [x for x in f.get("exames", []) if j13 <= (_dp(x["data"]) or date.min) <= ref and (not ini_exec or (_dp(x["data"]) or date.min) >= ini_exec)]
         def _cert(x):
-            if "certificado" in x:
-                return x["certificado"]
-            # ficha gravada antes desta versão (sem a marca): pelo texto do registro do mesmo dia
+            # pelo texto do registro do mesmo dia (a regra atual vale também para a ficha gravada antes: a marca gravada era mais larga)
             us = [e["texto"].upper() for e in ev if e.get("data") == x["data"] and x["exame"].split()[0] in (e.get("texto") or "").upper()]
-            return x["exame"].startswith("ENCCEJA") and any("CERTIFICAD" in u and not re.search(r"PARCIAL|NA AREA|NA ÁREA|POR AREA|POR ÁREA", u) for u in us)
+            if not us:
+                return bool(x.get("certificado"))
+            return x["exame"].startswith("ENCCEJA") and any(conclusao_certificada(u) for u in us)
         conc = [x for x in exs13 if _cert(x)]
         exs_ver = [x for x in exs13 if x not in conc]  # ENEM ou ENCCEJA sem certificado de conclusão: a verificar
         conc += [{"exame": e["curso"].title(), "data": e.get("fim")} for a, b, e in estudos

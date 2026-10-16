@@ -111,6 +111,16 @@ def natureza(c, D, ref):
                     "se_sim": "hediondez na data do decreto (STJ): IMPEDITIVO", "se_nao": "na data do fato (irretroatividade - STF, 2ª T.): NÃO IMPEDITIVO"}
         if imp:
             return {"selo": "IMPEDITIVO", "motivo": imp[1], "dispositivo": "Decreto %s, art. 1º, %s" % (num, imp[0])}
+        vf = rs.vd_fora_xvii(c)
+        if vf:
+            return {"selo": "A_VERIFICAR", "motivo": vf.split(": ", 1)[-1], "dispositivo": "Decreto %s, art. 1º, XVII" % num,
+                    "se_sim": "leitura ampla (todo crime em contexto de violência contra a mulher): IMPEDITIVO",
+                    "se_nao": "leitura restrita (só o rol do inciso): NÃO IMPEDITIVO"}
+        a14 = rs.assoc_6368_xviii(c)
+        if a14:
+            return {"selo": "A_VERIFICAR", "motivo": a14.split(": ", 1)[-1], "dispositivo": "Decreto %s, art. 1º, XVIII" % num,
+                    "se_sim": "continuidade normativo-típica com o art. 35 da Lei 11.343/06: IMPEDITIVO",
+                    "se_nao": "o inciso cita só a lei nova: NÃO IMPEDITIVO"}
     elif regra == "art7_2022":
         exc = rs.exclusao_art7_2022(c)
         if exc and "fato anterior - tese" in exc:
@@ -1306,13 +1316,12 @@ def _decreto(D, ref, pub, C, cumprido, data_atinge, faltas, hoje, ultimo, em_cur
     semtr = [dict(x, transito=_f(x["_tr_acus"]) or "") for x, _ in alc if not x["_tr_acus"] or x["_tr_acus"] > lim_pub]
     for x, _ in alc:
         x.pop("_tr_acus", None)
-    checklist.append(chk("Condenação na data (trânsito/recurso da acusação)", ("ko" if ano == "2022" and any(_d(x["transito"]) for x in semtr) else "q") if semtr else "ok",
+    checklist.append(chk("Condenação na data (trânsito/recurso da acusação)", "q" if semtr else "ok",
                          ("%s%s - %s (%s) - conferir." % (
                              ("Trânsito não informado no RSPE: %s" % ", ".join(x["id"] for x in semtr if not _d(x["transito"]))) if any(not _d(x["transito"]) for x in semtr) else "",
                              (("%sTrânsito posterior a %s: %s" % ("; " if any(not _d(x["transito"]) for x in semtr) else "", _f(lim_pub),
                                                                   ", ".join(x["id"] for x in semtr if _d(x["transito"])))) if any(_d(x["transito"]) for x in semtr) else ""),
-                             ("pela regra aplicada na aba, a condenação sem trânsito para a acusação na publicação não é alcançada (STJ, AgRg nos EDcl no "
-                              "HC 991.402); o art. 9º dispensa só o trânsito para a defesa" if ano == "2022" else
+                             (rs.TESE_ART9_2022 if ano == "2022" else
                               "o decreto alcança a condenação se houve trânsito para a acusação ou se o recurso da acusação não visa majorar a pena nem "
                               "alterar as condições exigidas para o benefício"),
                              (D.get("regra_transito") or {}).get("dispositivo", "decreto")))
@@ -1427,7 +1436,7 @@ def _decreto_ficha(f, x, C, cumprido, faltas, crimes_all=None):
     calc = {h.get("dispositivo") for h in x["hips"] if h["tipo"] == "indulto"} if x.get("hips") is not None else None
     ign = list(dict.fromkeys(h.get("dispositivo") or "s/ dispositivo" for h in (f.get("indulto") or [])
                              if calc is not None and (h.get("dispositivo") or "") not in calc))
-    nota = "; ".join(t for t in (rot_dec, x.get("nota") or "",
+    nota = "; ".join(t for t in (rot_dec, x.get("nota") or "", x.get("tese_com_ant") or "",
                                  ("não calculado%s pelo programa, por depender%s de dado que o RSPE não traz (filhos, doença, deficiência, "
                                   "estudo, reparação do dano...): %s - conferir no prontuário" % ("s" if len(ign) > 1 else "", "em" if len(ign) > 1 else "",
                                                                                                  " · ".join(ign))) if ign else "") if t)
@@ -1519,11 +1528,19 @@ def _decreto_ficha(f, x, C, cumprido, faltas, crimes_all=None):
         j1 = min(pub, base_f)  # o motor fecha a janela na publicação: falta posterior a ela não impede
         janela = {"ini": _f(j0), "fim": _f(j1), "meses": int(F["meses"]), "dispositivo": F.get("dispositivo", ""), "informativa": False}
         _ant = "anteriores à data de referência" if F.get("contada_de") == "referencia" else "anteriores à publicação"
+        # decreto que exige a falta apurada ou homologada (salvo 2023, mesma redação de 2024/2025): a fuga sem homologação fica a
+        # verificar, como no motor - o texto não pode dizer "tratada como falta grave"
+        fuga_ver = bool(F.get("exige_homologacao")) and not rd.fuga_impede(f)
         for fl in faltas:
             if fl["fato"]:
                 dentro = j0 <= fl["fato"] <= j1
-                faltas_out.append({"fato": _f(fl["fato"]), "homol": _f(fl["homol"]), "texto": fl["texto"],
-                                   "estado": ("verificar" if fl["pendente"] else "impede") if dentro else "fora"})
+                fsh = fuga_ver and not fl["homol"] and not fl["pendente"] and (fl.get("fuga") or RE_FUGA.search(fl["texto"])) \
+                    and "confirmada pelo operador" not in fl["texto"]
+                faltas_out.append({"fato": _f(fl["fato"]), "homol": _f(fl["homol"]),
+                                   "texto": (re.sub(r"tratada como falta grave(?:, LEP, art\. 50, II| \(LEP, art\. 50, II\))","em tese falta grave (LEP, art. 50, II); "
+                                                    "este decreto exige a falta apurada ou homologada - só impede se reconhecida", fl["texto"])
+                                             if fsh else fl["texto"]),
+                                   "estado": ("verificar" if (fl["pendente"] or fsh) else "impede") if dentro else "fora"})
         # o que o motor conta como falta e a lista da linha não tem (crime doloso durante a execução - LEP, art. 52; regressão sem
         # falta datada): entra na lista da janela, com o estado do motor
         for est_m, lst in (("impede", x.get("falta_firme") or []), ("verificar", x.get("falta_ind") or [])):
@@ -1563,8 +1580,9 @@ def _decreto_ficha(f, x, C, cumprido, faltas, crimes_all=None):
     if not hi:
         ind_ck.insert(0, chk("Requisito objetivo / hipótese", "ko", "Nenhuma hipótese de indulto do decreto se resolve pelos dados do RSPE.", _det("", "", "", "", fonte, "", "")))
     if s == "conc":
-        # comutação concedida não prejudica o indulto (só o indulto cabível prejudica a comutação - art. 13, § 5º dos decretos recentes)
-        st_i, rot_i = ("concedido", x["mot"]) if ben == "Indulto" else ("nao", "Não concedido (comutação concedida no RSPE)")
+        # comutação concedida não prejudica o indulto (só o indulto cabível prejudica a comutação - art. 13, § 5º dos decretos recentes):
+        # a aba já refez a análise do indulto (rspe_decretos.avaliar) - chegando aqui, ele não é cabível nem a verificar pela conta
+        st_i, rot_i = ("concedido", x["mot"]) if ben == "Indulto" else ("nao", "Não cabe pela análise do indulto (comutação concedida no RSPE)")
         st_c, rot_c = ("concedido", x["mot"]) if ben == "Comutação" else ("prejudicada", "Prejudicada (indulto concedido)")
     elif s == "indef":
         st_i, rot_i = ("nao", x["mot"]) if ben == "Indulto" else ("nao", "Não analisado no RSPE (comutação indeferida)")
@@ -1591,6 +1609,17 @@ def _decreto_ficha(f, x, C, cumprido, faltas, crimes_all=None):
     else:
         st_i, rot_i = "nao", "Não cabe"
         st_c, rot_c = "nao", "Não cabe" if hc else "Sem comutação calculável"
+    _rsv = x.get("ressalva") or ""
+    if s == "ver" and (x.get("mot") or "").startswith(rd.PENA_CUMPRIDA):
+        # a pena considerada já estava cumprida: o pedido é a extinção pelo cumprimento (LEP, art. 66, II), como a petição
+        st_i, rot_i = "verificar", "Pena cumprida - pedir a extinção%s" % (" parcial" if "pedir a extinção parcial" in x["mot"] else "")
+    if s in ("cabe", "ver") and _rsv.startswith("comutação concedida no RSPE"):
+        # comutação concedida e indulto não decidido: o indulto cabível (ou a verificar) é pedido possível; a comutação já foi concedida
+        st_c, rot_c = "concedido", "Concedida no RSPE" + (_rsv.split(";")[0][len("comutação concedida no RSPE"):])
+    elif s in ("cabe", "ver") and _rsv.startswith("indulto indeferido no RSPE"):
+        st_i, rot_i = "nao", "Indeferido no RSPE" + (_rsv.split(";")[0][len("indulto indeferido no RSPE"):])
+    elif s in ("cabe", "ver") and _rsv.startswith("comutação indeferida no RSPE"):
+        st_c, rot_c = "nao", "Indeferida no RSPE" + (_rsv.split(";")[0][len("comutação indeferida no RSPE"):])
     if not f.get("comutacao"):
         # o decreto não prevê comutação (ex.: Decreto 8.940/2016): nada a mostrar nem a verificar
         st_c, rot_c = "nao", "Decreto sem comutação"
