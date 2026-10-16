@@ -1577,6 +1577,8 @@ def e_hediondo(c, ref=None):
     ref=data: lei vigente nessa data (vedação dos decretos de indulto/comutação: STJ afere na data do decreto)."""
     if qualificado_privilegiado(c):
         return False  # homicídio qualificado-privilegiado: não hediondo, ainda que o SEEU o rotule (STJ)
+    if c.get("_sem_selo"):
+        return False  # conta alternativa do homicídio simples com o selo de hediondo (_homicidio_selo)
     if num_art(c.get("artigo")) == "129" and num_lei(c.get("lei")) in ("2848", "") and hediondo_condicional(c) is False:
         return False  # lesão que não é a gravíssima nem a seguida de morte (§ 12 é causa de aumento): não hediondo
     if ref is None:
@@ -3711,7 +3713,38 @@ def analise_decretos(campos, crimes, eventos, incidentes, hoje):
     """Indulto e comutação dos Decretos 2024 e 2025 (_analise_decretos_modo), com a decisão pelo requisito (_por_requisito)."""
     chaves = [p_ + a_ for a_ in DECRETOS for p_ in ("indulto_", "comutacao_")]
     out = _por_requisito(_analise_decretos_modo, (campos, crimes, eventos, incidentes, hoje), chaves)
-    return _art2_parcial(out, (campos, crimes, eventos, incidentes, hoje), chaves)
+    out = _art2_parcial(out, (campos, crimes, eventos, incidentes, hoje), chaves)
+    return _homicidio_selo(out, (campos, crimes, eventos, incidentes, hoje), chaves)
+
+
+def _homicidio_selo(out, args, chaves):
+    """Homicídio simples com o selo de hediondo do SEEU (homicidio_simples_selo): hediondo só em atividade típica de grupo de
+    extermínio, o que o RSPE não informa. A conta é refeita sem o selo; se sem ele o resultado melhora (benefício possível ou a
+    verificar onde com o selo não cabe), o resultado fica A VERIFICAR com as duas hipóteses. Nunca rebaixa um "possível"."""
+    campos, crimes, eventos, incidentes, hoje = args
+    sel = [c for c in crimes if homicidio_simples_selo(c) and not c.get("_sem_selo") and not (c.get("extinto") or "").upper().startswith("S")]
+    if not sel:
+        return out
+    c2 = [dict(c, _sem_selo=True) if c in sel else c for c in crimes]
+    try:
+        o2 = analise_decretos(campos, c2, eventos, incidentes, hoje)
+    except Exception:
+        return out
+    rot = "homicídio simples com o selo de hediondo do SEEU (%s): hediondo só se praticado em atividade típica de grupo de " \
+          "extermínio (Lei 8.072/90, art. 1º, I), o que o RSPE não informa - conferir a sentença" % crimes_curto(sel)
+    for k in chaves:
+        if k not in out:
+            continue
+        s1 = out.get(k + "_status") or status_texto_decreto(out.get(k))
+        s2 = o2.get(k + "_status") or status_texto_decreto(o2.get(k))
+        if s1 in ("nao", "vedado") and s2 in ("possivel", "verificar"):
+            sem = (o2.get(k) or "").split(" | ")[0]
+            out[k] = "A VERIFICAR (%s): com o selo, %s; sem o selo, %s" % (rot, (out.get(k) or "").split(" | ")[0], sem)
+            out[k + "_status"] = "verificar"
+            if out.get(k + "_detalhe") or o2.get(k + "_detalhe"):
+                out[k + "_detalhe"] = ("Hipótese sem o selo de hediondo no homicídio simples:\n%s\n\nHipótese com o selo:\n%s" % (
+                    o2.get(k + "_detalhe") or sem, out.get(k + "_detalhe") or ""))
+    return out
 
 
 ROT_ART2 = "crimes com trânsito; conferir os demais - art. 2º, II"
