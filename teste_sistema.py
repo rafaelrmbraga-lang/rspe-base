@@ -206,8 +206,9 @@ ok(all(x in UI for x in ("id=\"mExp\"", "ui.modalExportar('xlsx')", "ui.modalExp
 ok("fichaHtml(" not in UI and "Ficha disciplinar (SIAPEN)</h3>" not in UI and "ui.removerFicha(" in UI, "painel do assistido sem a seção da ficha, com Remover ficha")
 ok('aria-label="Calculadora de penas"' in UI and '<span class="lb">Letra</span>' not in UI and "body.drawer-on .btn-calc" in UI,
    "barra: A/A sem 'Letra', calculadora só com o ícone e sob a gaveta aberta")
-ok(".dv-seeu{display:inline-flex;align-items:center;justify-content:center;margin-left:7px;width:17px;height:17px;color:var(--r-dot)" in UI,
-   "triângulo de divergência em vermelho")
+ok("background:#fff;color:#C0261F;border:1px solid #C0261F" in UI.split(".dv-seeu{", 1)[-1].split("}", 1)[0],
+   "triângulo de divergência em caixinha branca com borda vermelha")
+ok("background:#FBE8EF;color:#8E1F4A" in UI.split(".pr-rem{", 1)[-1].split("}", 1)[0], "prioridade da remição em caixinha vinho")
 
 # ------------------------------------------------------------------ 7. cópia de segurança e restauração (inclusive de versão anterior)
 api._fazer_copia()
