@@ -224,13 +224,13 @@ def _prog_pela_db_manual(r):
     if not (novo and db0 and prev) or novo == db0:
         return None
     # em concurso, cada fração incide sobre a pena do seu crime: a fração equivalente é a média ponderada pelas penas (não a maior)
-    _pp = [(rs.parse_fracao(c.get("fracao_progressao") or ""), rs.pena_para_dias(c.get("pena_imposta")) or 0) for c in r.get("_crimes", [])
+    _pp = [(_fr_prog_refeita(c), rs.pena_para_dias(c.get("pena_imposta")) or 0) for c in r.get("_crimes", [])
            if not (c.get("extinto") or "").upper().startswith("S")]
     _pp = [(f_, d_) for f_, d_ in _pp if f_ and d_]
     fr = (sum(f_ * d_ for f_, d_ in _pp) / sum(d_ for _, d_ in _pp)) if _pp else Fraction(0)
     if not 0 < fr < 1:
         # a maior fração pelo VALOR (o max() do texto punha "40% ..." acima de "3/5 ...")
-        fr = max((f_ for f_ in (rs.parse_fracao(c.get("fracao_progressao") or "") for c in r.get("_crimes", [])
+        fr = max((f_ for f_ in (_fr_prog_refeita(c) for c in r.get("_crimes", [])
                                 if not (c.get("extinto") or "").upper().startswith("S")) if f_), default=None) or Fraction(1, 6)
     from datetime import timedelta as _td
     import math
@@ -253,15 +253,37 @@ def _prog_pela_db_manual(r):
         per = rs.periodos_custodia(evs)
         rem_n = pt - rs.dias_cumpridos_ate(per, [], novo - _td(days=1)) - rem_antes(novo)
         if rem_n > 0:
-            return novo + _td(days=max(0, int(int(rem_n * fr) - rem_depois(novo))))
+            return min(novo + _td(days=max(0, int(int(rem_n * fr) - rem_depois(novo)))), _ancora(novo, db0, prev, fr, rems))
     lap = (prev - db0).days
     if lap > 0 and fr:
         # o lapso do SEEU já vem abatido dos remidos depois da data-base dele: o bruto os devolve; os remidos entre a data-base
         # informada e a do SEEU saem do remanescente na do SEEU e passam a abater o lapso novo
         rem0 = math.ceil((lap + rem_depois(db0)) / fr)
         entre = sum(n for dt, n in rems if dt and novo <= dt < db0) if novo < db0 else -sum(n for dt, n in rems if dt and db0 <= dt < novo)
-        return novo + _td(days=max(0, int(int((rem0 + (db0 - novo).days + entre) * fr) - rem_depois(novo))))
-    return prev - _td(days=round(float((1 - fr) * (db0 - novo).days)))
+        return min(novo + _td(days=max(0, int(int((rem0 + (db0 - novo).days + entre) * fr) - rem_depois(novo)))),
+                   _ancora(novo, db0, prev, fr, rems))
+    return _ancora(novo, db0, prev, fr, rems)
+
+
+def _fr_prog_refeita(c):
+    """Fração de progressão do crime para a progressão refeita: a do SEEU, salvo o 1/6 em fato da janela em que a lei prevê 16%
+    (Lei 13.964/2019 até 07/05/2026): 16%, como na Auditoria (mais favorável). Fora dessa janela, a fração literal."""
+    f = rs.parse_fracao(c.get("fracao_progressao") or "")
+    if f == Fraction(1, 6):
+        j = rg.regime_progressao(rs.to_date(c.get("data_infracao") or ""))
+        if j and rg.fr(j.get("comum")) == Fraction(16, 100):
+            return Fraction(16, 100)
+    return f
+
+
+def _ancora(novo, db0, prev, fr, rems):
+    """Previsão do SEEU deslocada pela diferença das datas-base: a mudança informada é só a data-base. Mudá-la em N dias muda o
+    remanescente nela em N dias (custódia), e o lapso em fração x N: previsão nova = previsão do SEEU - (1 - fração) x (N + remidos
+    entre as duas datas-base, que passam a abater o lapso). A conta refeita nunca fica depois desta por convenção de calendário."""
+    import math
+    from datetime import timedelta as _td
+    entre = sum(n for dt, n in rems if dt and novo <= dt < db0) if novo < db0 else -sum(n for dt, n in rems if dt and db0 <= dt < novo)
+    return prev - _td(days=int(math.floor(float((1 - fr) * ((db0 - novo).days + entre)))))  # para baixo, como a fração do lapso
 
 
 DB_TIPOS = {  # itens da Auditoria sobre a data-base -> (cor, motivo)
@@ -1345,8 +1367,13 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
             notas["termino"] = ("Término*: calculado pelo programa - data de geração do RSPE (%s) + pena remanescente (%s), pelo calendário; "
                                 "o SEEU não imprimiu o término." % (r.get("data_geracao_rspe") or "?", r.get("pena_remanescente") or "?"))
     if dbi.get("db_editada") and r.get("progressao_previsao_seeu") and _prog_pela_db_manual(r):
-        notas["prog"] = ("Progressão*: recalculada pelo programa com a data-base informada (%s): pena total menos a custódia até ela, fração para baixo; a data do SEEU é %s."
-                         % (dbi["db"], r["progressao_previsao_seeu"]))
+        _16 = any(_fr_prog_refeita(c) != rs.parse_fracao(c.get("fracao_progressao") or "") for c in r.get("_crimes", [])
+                  if not (c.get("extinto") or "").upper().startswith("S"))
+        notas["prog"] = ("Progressão*: recalculada pelo programa com a data-base informada (%s): pena total menos a custódia até ela, fração para baixo, "
+                         "nunca depois da previsão do SEEU deslocada pela diferença das datas-base; a data do SEEU é %s.%s"
+                         % (dbi["db"], r["progressao_previsao_seeu"],
+                            " Usado 16% no lugar do 1/6 do SEEU (LEP, art. 112, I, na redação da Lei 13.964/2019): a diferença para a conta do "
+                            "SEEU deve constar da petição." if _16 else ""))
     if notas.get("termino") and any(it.get("tipo") == "pena-cumprida-menor-que-custodia" for it in m.get("aud_itens") or []):
         notas["termino"] += (" Atenção: a Auditoria aponta pena cumprida do SEEU menor que a custódia dos eventos - este término parte do "
                              "remanescente do SEEU e pode estar atrasado; conferir.")

@@ -260,6 +260,12 @@ def _impeditivos(f, crimes, ref, pena_total=None, ver=None, contexto=None, incer
             incerto.append("%s: tráfico sem indicação do caput/§ 1º nem do § 4º no RSPE - se privilegiado (§ 4º), não é impeditivo; "
                            "conferir na sentença" % rot)
             continue
+        hom_selo = incerto is not None and rs.homicidio_simples_selo(c) and not f.get("_hom_selo_imp")
+        if hom_selo:
+            # a mesma regra da progressão e do livramento: o selo pode ser o do grupo de extermínio (Lei 8.072, art. 1º, I) - não é
+            # impeditivo por hediondez, a verificar (as demais vedações do decreto continuam a valer)
+            incerto.append("%s: homicídio simples com o selo de hediondo do SEEU - impeditivo só se em atividade típica de grupo de "
+                           "extermínio (Lei 8.072/90, art. 1º, I); conferir na sentença" % rot)
         priv_vedado = priv and I.get("trafico_privilegiado_ressalvado") is False
         # hediondos, tortura, tráfico e terrorismo: vedados pela própria lei (CF, art. 5º, XLIII; Lei 8.072, art. 2º, I), ainda
         # que o decreto não os liste (ex.: Dia das Mães 2017 e 2018)
@@ -269,7 +275,7 @@ def _impeditivos(f, crimes, ref, pena_total=None, ver=None, contexto=None, incer
             # hediondo praticado após" a Lei 8.072/1990 e as que ampliaram o rol). Tráfico: equiparado desde 25/07/1990
             if id(c) not in _HED_CACHE:
                 _HED_CACHE[id(c)] = (c, rs.e_hediondo(c, None))
-            if priv_vedado or (not priv and (_HED_CACHE[id(c)][1] or (trafico and (fato or ref) >= date(1990, 7, 25)))):
+            if priv_vedado or (not priv and ((_HED_CACHE[id(c)][1] and not hom_selo) or (trafico and (fato or ref) >= date(1990, 7, 25)))):
                 out.append("%s: %s%s" % (rot, "tráfico privilegiado vedado pelo decreto" if priv_vedado else "hediondo ou equiparado na data do fato",
                                          (" (%s)" % rs.fmt(fato)) if fato and not priv_vedado else ""))
                 continue
@@ -405,6 +411,12 @@ def _avaliar_ficha_um(f, r, ctx, ini, hoje):
     """Avalia o decreto; com o cumprimento interrompido na data (fuga, soltura), o resultado favorável vira A VERIFICAR: o decreto
     exige a fração cumprida ATÉ a data, não a custódia NA data, e a interrupção pode ter sido punida como falta grave."""
     x = _avaliar_ficha(f, r, ctx, ini, hoje)
+    if any(rs.homicidio_simples_selo(c) for c in r.get("_crimes") or []):
+        # homicídio simples com o selo de hediondo: se o resultado cabe mesmo com o selo (impeditivo), o selo não importa; senão,
+        # vale a análise sem ele, a verificar (o selo pode ser o do grupo de extermínio - Lei 8.072, art. 1º, I)
+        x0 = _avaliar_ficha(dict(f, _hom_selo_imp=True), r, ctx, ini, hoje)
+        if x0.get("s") == "cabe" or x.get("s") == x0.get("s"):
+            x = x0
     vd_ver = x.pop("_vd_ver", None) or []
     tr_ver = x.pop("_tr_ver", None) or []
     if x.pop("_interr", False):
@@ -445,6 +457,9 @@ def _avaliar_ficha_um(f, r, ctx, ini, hoje):
         tr = transito_pendente(f, r)
         if tr:
             x.update(s="ver", mot="%s; %s" % (x.get("mot") or "", tr) if x.get("mot") else tr)
+    _rl = x.pop("_reinc_lei", "")
+    if _rl and x.get("s") == "cabe":
+        x["ressalva"] = "; ".join(y for y in (x.get("ressalva") or "", _rl) if y)
     if x.get("s") == "cabe" and vd_ver:
         # violência contra a mulher que o RSPE não confirma (vítima, vara): se houve, o crime é impeditivo
         x.update(s="ver", mot="%s; A VERIFICAR - conferir se houve violência contra a mulher (vedação do %s): %s" % (
@@ -499,6 +514,28 @@ def transito_pendente(f, r):
     return "A VERIFICAR - " + "; ".join(partes) + ". " + STJ_TRANSITO
 
 
+def _reinc_pelas_datas(crimes, todos):
+    """(condenação anterior, crime) quando um crime da soma foi cometido depois do trânsito de outra condenação e antes de 5 anos da
+    extinção dela (CP, arts. 63 e 64, I); senão None. Contravenção e porte para consumo não geram reincidência."""
+    for c in crimes:
+        fato = rs.to_date(c.get("data_infracao") or "")
+        if not fato:
+            continue
+        for o in todos:
+            if o is c or rs.num_lei(o.get("lei")) == "3688" or "CONTRAVEN" in (o.get("lei") or "").upper():
+                continue
+            if (rs.num_lei(o.get("lei")), rs.num_art(o.get("artigo"))) in (("11343", "28"), ("6368", "16")):
+                continue
+            t = rs.to_date(o.get("transito_processo") or o.get("transito_mp") or "")
+            if not (t and t < fato):
+                continue
+            ext = rs.to_date(o.get("data_extincao") or "") if (o.get("extinto") or "").upper().startswith("S") else None
+            if ext and (fato - ext).days > 5 * 365:
+                continue
+            return (rs.crimes_curto([o]).strip() or "condenação anterior", rs.crimes_curto([c]).strip() or "outro crime")
+    return None
+
+
 def _avaliar_ficha(f, r, ctx, ini, hoje):
     ref = rs.to_date(f["data_referencia"])
     pub = rs.to_date(f.get("data_publicacao") or "") or ref
@@ -548,6 +585,13 @@ def _avaliar_ficha(f, r, ctx, ini, hoje):
     elif _ci["origem"] == "estouro":
         base["_estouro"] = _ci["aviso"]
     reinc = any(c.get("reincidente_comum") == "S" or c.get("reincidente_especifico") == "S" for c in crimes)
+    if not reinc:
+        # vale a marcação do RSPE (fração de primário, a que o SEEU aplicou); as datas indicam reincidência (condenação anterior
+        # transitada antes do fato, sem os 5 anos do art. 64, I, do CP): nota de que o juízo pode recalcular
+        _rl = _reinc_pelas_datas(crimes, (r.get("_crimes") or []) + (r.get("_outras_condenacoes") or []))
+        if _rl:
+            base["_reinc_lei"] = ("o RSPE não marca reincidência, mas %s transitou antes do fato de %s: o juízo pode recalcular como "
+                                  "reincidente (CP, arts. 63 e 64, I)" % _rl)
     vga = any(rs.vga_indulto(c) for c in crimes)
     detalhe = {"pena": pena, "cumprido": cump, "fonte": _orig, "reincidente": reinc, "vga": vga, "crimes": [rs.crimes_curto([c]) for c in crimes]}
     vd_ver, tr_ver = [], []
