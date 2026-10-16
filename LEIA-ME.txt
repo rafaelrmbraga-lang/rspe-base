@@ -1086,10 +1086,10 @@ v7.10.0
     o atestado provavelmente cumulativo sai como "Possível cumulativo"
     (amarelo), com a providência de conferir nos autos quais períodos já
     foram remidos (e requerer só a diferença), e não mais "requerer a
-    apreciação"; atestado com remição sem origem decidida dentro do seu
+    apreciação" (o mesmo na tabela B); atestado com remição sem origem decidida dentro do seu
     período pede para conferir se ela já inclui parte dele. O mesmo na
     Auditoria.
-  - Aba Ficha, linha aberta: a situação sai em lista curta, um ponto por
+  - Aba Ficha, linha aberta: botões no topo; a situação sai em lista curta, um ponto por
     linha, em letra normal com marcador vermelho (dias exatos a requerer)
     ou amarelo (conferir); a observação longa de cada atestado vai numa
     linha inteira abaixo dele, e não mais na coluna estreita.

@@ -2003,8 +2003,10 @@ def conciliar(r, f, hoje=None, manuais=None, ini_exec=None, excluir_remicoes=Non
                        "cumulativo": a.get("cumulativo") is not None, "ja_remido": bool(a.get("cumul_coberto")),
                        "sobreposicao": bool(a.get("sobreposicao")), "status": a["status"],
                        "rot": "Sem dias a requerer: período já remido" if a.get("zerado") else
-                              "Provavelmente já remido (atestado cumulativo)" if a.get("cumul_coberto") else rot[a["status"]][0],
-                       "cor": "cinza" if (a.get("zerado") or a.get("cumul_coberto")) else rot[a["status"]][1], "nota": nota,
+                              "Provavelmente já remido (atestado cumulativo)" if a.get("cumul_coberto") else
+                              "Possível cumulativo: conferir nos autos" if a["status"] == "NAO_LANCADO" and a.get("cumulativo") is not None else rot[a["status"]][0],
+                       "cor": "cinza" if (a.get("zerado") or a.get("cumul_coberto")) else
+                              "amarelo" if a["status"] == "NAO_LANCADO" and a.get("cumulativo") is not None else rot[a["status"]][1], "nota": nota,
                        "peticionado": a.get("peticionado", ""), "texto": a.get("texto", ""), "autos": a.get("autos", ""),
                        "autos_outros": bool(a.get("autos")) and not any(re.sub(r"\D", "", a["autos"]) == re.sub(r"\D", "", x or "")
                                                                          for x in _procs_r(r)),
