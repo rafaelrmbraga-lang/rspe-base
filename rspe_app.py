@@ -578,7 +578,7 @@ _PRESC_DATAS = {"fato": "Data do fato", "denuncia": "Recebimento da denúncia", 
                 "transito_mp": "Trânsito para a acusação", "transito": "Trânsito final", "ultimo_comparecimento": "Último comparecimento",
                 "inicio_prd": "Início efetivo da restritiva", "revogacao_sursis": "Revogação do sursis",
                 "novo_crime": "Novo crime após o trânsito", "susp366_ini": "Suspensão do art. 366 - início",
-                "susp366_fim": "Suspensão do art. 366 - fim"}
+                "susp366_fim": "Suspensão do art. 366 - fim", "audiencia_sursis": "Audiência admonitória do sursis"}
 
 
 def _int_nao_neg(v):
@@ -596,7 +596,8 @@ def _int_nao_neg(v):
 _PRESC_OPCOES = {"reinc": ("S", "N"), "art115": ("sim", "nao"), "modalidade": ("PPL", "PRD", "SURSIS", "MS", "MS98")}
 # ordem que as datas do processo não podem inverter: (antes, depois)
 _PRESC_ORDEM = [("fato", "denuncia"), ("fato", "sentenca"), ("denuncia", "sentenca"), ("sentenca", "acordao"), ("fato", "transito"),
-                ("sentenca", "transito"), ("acordao", "transito"), ("sentenca", "transito_mp"), ("susp366_ini", "susp366_fim")]
+                ("sentenca", "transito"), ("acordao", "transito"), ("sentenca", "transito_mp"), ("susp366_ini", "susp366_fim"),
+                ("audiencia_sursis", "revogacao_sursis")]
 
 
 def _validar_presc_ajuste(dados, orig=None):

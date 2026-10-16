@@ -67,7 +67,8 @@ base3 = ([crime("13/12/2016", "10/07/2018", "2 ano(s), 0 mês(es) e 0 dia(s)", p
          [ev("30/10/2017", "PRISÃO DEFINITIVA", proc=P), ev("26/03/2019", "FUGA", tipo="INTERRUPÇÃO"), ev("18/08/2025", "RECAPTURA", proc=P)])
 confere(linha(reg(*base3))["ppe_cor"] == "vermelho", "A3: sem o incidente, a fuga de 2019 a 2025 dá prescrição aparente")
 l = linha(reg(*base3, incidentes=[inc("FIXAÇÃO/ALTERAÇÃO DE REGIME", "Aberto - Progressão de Regime", "14/04/2020")]))
-confere(l["ppe_status"].startswith("A VERIFICAR") and l["ppe_cor"] == "amarelo", "A3: progressão durante a fuga -> A VERIFICAR: %s" % l["ppe_status"])
+# quesito 70 (16/10/2026): progressão ou livramento nesta execução dentro do intervalo bastam para "não prescrita - conferir"
+confere(l["ppe_status"].startswith("Não prescrita - conferir") and l["ppe_cor"] == "", "A3: progressão durante a fuga -> não prescrita - conferir: %s" % l["ppe_status"])
 
 # A4: fuga lançada quando os eventos mostravam a pessoa solta não é ignorada (Hoeder Leguir Fernandes, 0000910-90.2009)
 P = "0000910-90.2009.8.12.0005"
