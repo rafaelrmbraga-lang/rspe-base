@@ -1036,7 +1036,8 @@ v7.10.0
     quando a remição pendente da ficha (dias exatos, período até o
     decreto) cobre o que falta (LEP, art. 128; STJ, HC 1.089.923). A
     custódia ininterrupta e a pena do crime impeditivo ficam de fora.
-  - Ícone de prioridade (avanço rápido, ▸▸, em caixinha vinho) ao lado do nome, em todas as abas:
+  - Ícone de prioridade (avanço rápido, ▸▸, em caixinha vinho); alerta de
+    divergência em caixinha branca com borda vermelha ao lado do nome, em todas as abas:
     remição pendente da ficha (dias exatos) que, declarada, já dá a
     progressão, o livramento, o término ou o indulto/comutação. O motivo
     aparece ao passar o mouse; o clique abre o assistido na aba Ficha.
