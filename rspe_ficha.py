@@ -525,12 +525,12 @@ def _extrair_texto(caminho, pags, vis, ocultas=(), dp_chars="", parcial=None):
         sem_data = re.match(r"\s*(?:-\s*CONDUTA:[^\n]*\n)?\s*-\s*(\S.*)$", partes[0].split("\n", 1)[1] if "\n" in partes[0] else "", re.S)
         evs = ([{"data": "", "texto": " ".join(sem_data.group(1).split())}] if sem_data else []) + \
             [{"data": partes[i], "texto": " ".join(partes[i + 1].split())} for i in range(1, len(partes) - 1, 2)]
-        evs = _dividir(evs)
-        return [{"data": e["data"], "d": _dp(e["data"]), "texto": e["texto"]} for e in evs]
+        evs = _datar_sem_data(_dividir(evs))
+        return [dict(e, d=_dp(e["data"])) for e in evs]
     eventos = _seguro(parcial, "histórico (lançamentos)", _eventos, [])
-    f["eventos"] = [{"data": e["data"], "texto": e["texto"]} for e in eventos]
+    f["eventos"] = [{k: v for k, v in e.items() if k != "d"} for e in eventos]
     # histórico antigo em 10 pt, cortado na impressão: guardado à parte, sem virar lançamento (uso a decidir)
-    f["historico_oculto"] = list(ocultas)
+    f["historico_oculto"] = list(ocultas)  # exibido como "histórico anterior" (historico_anterior), fora das contas
     f["versao_leitura"] = VERSAO_LEITURA
     try:
         r = derivar(f, eventos)
@@ -556,8 +556,11 @@ def _extrair_texto(caminho, pags, vis, ocultas=(), dp_chars="", parcial=None):
 # isolamentos, vínculos de trabalho do mesmo dia numa linha, "continua exercendo/cadastrado" como continuidade do vínculo - só exibição;
 # 12: vínculos simultâneos - o setor encerrado só pelo início de outro vai até a sua baixa, sem lacuna falsa -, setor vazio ("no setor
 # de trabalho , conforme documento"), fim de isolamento fora da lista de isolamentos, período do atestado "com data inicial em d e
-# final em d", "início em d e término em d", "de (d) a (d)", setor começando por algarismo ou com apóstrofo, trecho do ATP sem "DATA")
-VERSAO_LEITURA = 12
+# final em d", "início em d e término em d", "de (d) a (d)", setor começando por algarismo ou com apóstrofo, trecho do ATP sem "DATA";
+# 13: sublançamento só com verbo após a data e fora de período (os demais, trecho sem data "a conferir"), lançamento sem data no
+# SIAPEN datado pela única data citada no texto, autorização/termo de compromisso de trabalho externo "a conferir", falta só pela
+# ciência marcada (data do fato desconhecida))
+VERSAO_LEITURA = 13
 # versão da extração do PDF (camada de caracteres): a mesma ficha extraída por versão anterior é extraída de novo ao reimportar
 VERSAO_EXTRACAO = 2
 
@@ -567,10 +570,23 @@ def _limpar_evento(txt):
     return re.sub(r"\s*\b[A-Z0-9]{2,12}\s*\(\d{5,}\)\s*em:\s*\d{2}/\d{2}/\d{4}(?:\s+\d{2}:\d{2}(?::\d{2})?)?", "", txt or "").strip()
 
 
+# verbo logo depois da data do sublançamento ("Em 11/03/04 Nesta data iniciou", "Foi alojado", "Tomou ciência", "isolado", "evadiu")
+_RE_VERBO_SUB = re.compile(r"^\W{0,4}(?:NESTA DATA|DEU|FOI|FORAM|TEVE|FEZ|INICI\w*|\w{2,}(?:OU|IU|EU|ADO|ADA|IDO|IDA|ADOS|IDOS|ARAM|IRAM)(?:-SE)?)\b")
+
+
+def _sub_em_periodo(antes, depois):
+    """A data está dentro de um período ("de 16/05/2019 a 16/07/2019", "no período de d a d"): não é fato próprio."""
+    a = rs._sem_acento(antes[-40:]).upper()
+    return bool(re.search(r"\b(?:A|ATE|E|DE|DESDE|ENTRE|PERIODO)\s*$", a)) or \
+        bool(re.match(r"\s*(?:A|ATE|-)\s*(?:EM\s+)?\d{1,2}[/.]\d{1,2}[/.]\d{2,4}", rs._sem_acento(depois[:30]).upper()))
+
+
 def _dividir(eventos):
     """Lançamentos grudados no texto de outro: data em linha própria seguida de "-" sem texto na mesma linha ("12.12.2017 -\ntexto")
     e sublançamentos das fichas antigas ("... Em 11/03/04 Nesta data iniciou trabalho ..."), cada um com a sua data. Lançamento
-    vazio sai; o sublançamento entra na ordem cronológica."""
+    vazio sai; o sublançamento entra na ordem cronológica. O sublançamento "Em dd/mm/aa" só é fato próprio com data completa e
+    válida seguida de verbo e fora de um período ("de ... a ..."); dentro de um período, não se divide; sem verbo (ou com data
+    inválida), vira trecho sem data "a conferir" (a_conferir), logo depois do lançamento, sem entrar nas contas."""
     out, subs = [], []
     for e in eventos:
         partes, d, ini = [], e["data"], 0
@@ -581,7 +597,8 @@ def _dividir(eventos):
             d, ini = m.group(1), m.end()
         partes.append((d, e["texto"][ini:]))
         for k, (d, t) in enumerate(partes):
-            pos = [m for m in re.finditer(r"(?:^|(?<=[\s.;,]))Em (\d{2})/(\d{2})/(\d{2})(?![\d/])", t)]
+            pos = [m for m in re.finditer(r"(?:^|(?<=[\s.;,]))Em (\d{2})/(\d{2})/(\d{2})(?![\d/])", t)
+                   if not _sub_em_periodo(t[:m.start()], t[m.end():])]
             # "... Corumbá/MS. 04/09/08... Nesta data foi Preso", "... ARTESANATO. 10/03/09 FOI POSTO EM LIBERDADE", "18/03/17 DEU ENTRADA":
             # sublançamento só depois do fim de uma frase e com o verbo logo após a data (não "datada de d, foi", "no dia d foi")
             d0 = _dp(d)
@@ -589,7 +606,7 @@ def _dividir(eventos):
                 aa = int(m.group(3))
                 aa = aa + (2000 if aa < 70 else 1900) if aa < 100 else aa
                 ds_ = _dp("%s.%s.%d" % (m.group(1), m.group(2), aa))
-                if ds_ and (not d0 or ds_ >= d0):
+                if ds_ and (not d0 or ds_ >= d0) and not _sub_em_periodo("", t[m.end():]):
                     pos.append(m)
             pos.sort(key=lambda m: m.start())
             pedacos = [(d, t[:pos[0].start()] if pos else t)]
@@ -597,15 +614,56 @@ def _dividir(eventos):
                 aa = int(m.group(3))
                 aa = aa + (2000 if aa < 70 else 1900) if aa < 100 else aa
                 ds = "%s.%s.%d" % (m.group(1), m.group(2), aa)
-                pedacos.append((ds if _dp(ds) else d, t[m.start():pos[j + 1].start() if j + 1 < len(pos) else len(t)]))
+                # data completa e válida seguida de verbo: fato próprio; senão, trecho sem data a conferir
+                ok = bool(_dp(ds)) and bool(_RE_VERBO_SUB.search(rs._sem_acento(t[m.end():m.end() + 40]).upper()))
+                pedacos.append((ds if ok else "", t[m.start():pos[j + 1].start() if j + 1 < len(pos) else len(t)]))
             for j, (dd, tt) in enumerate(pedacos):
                 tt = tt.strip()
                 if tt:
                     ev = dict(e, data=dd, texto=tt) if (k or j) else dict(e, texto=tt)
+                    if j and not dd:
+                        ev["a_conferir"] = True
+                        ev.pop("data_do_texto", None)
+                        out.append(ev)  # sem data: fica junto do lançamento de onde saiu
+                        continue
+                    if j:
+                        ev.pop("a_conferir", None)
                     (subs if j else out).append(ev)
     for ev in subs:  # sublançamento: antes do primeiro lançamento posterior a ele
         dv = _dp(ev["data"]) or date.min
         i = next((i for i, x in enumerate(out) if (_dp(x["data"]) or date.min) > dv), len(out))
+        out.insert(i, ev)
+    return out
+
+
+def _data_citada(txt):
+    """Única data citada no texto ("fato ocorrido em 05/10/2023", "alvará de soltura em 16/02/2016"), no formato da ficha; "" se
+    não houver nenhuma ou houver duas ou mais diferentes (nunca a data do lançamento seguinte)."""
+    ds = set()
+    for m in re.finditer(r"(?<![\d/.])(\d{1,2})[/.](\d{1,2})[/.](\d{4}|\d{2})(?![\d/.])", txt or ""):
+        aa = int(m.group(3))
+        aa = aa + (2000 if aa < 70 else 1900) if aa < 100 else aa
+        d = _dp("%02d.%02d.%d" % (int(m.group(1)), int(m.group(2)), aa))
+        if not d:
+            return ""  # data ilegível ou inválida no texto: não se escolhe outra
+        ds.add(d)
+    return next(iter(ds)).strftime("%d.%m.%Y") if len(ds) == 1 else ""
+
+
+def _datar_sem_data(evs):
+    """Lançamento sem data no SIAPEN (não o trecho "a conferir" de _dividir): recebe a data citada no texto quando ela é única e
+    inequívoca (data_do_texto) e entra na ordem cronológica; com nenhuma ou duas ou mais datas, segue só exibido, sem data."""
+    out, novos = [], []
+    for e in evs:
+        if not (e.get("data") or "").strip() and not e.get("a_conferir") and not e.get("data_do_texto"):
+            dc = _data_citada(e.get("texto"))
+            if dc:
+                novos.append(dict(e, data=dc, data_do_texto=True))
+                continue
+        out.append(e)
+    for ev in novos:
+        dv = _dp(ev["data"])
+        i = next((i for i, x in enumerate(out) if (_dp(x.get("data") or "") or date.min) > dv), len(out))
         out.insert(i, ev)
     return out
 
@@ -617,8 +675,13 @@ def atualizar(f):
         return f
     for e in f["eventos"]:
         e["texto"] = _limpar_evento(e.get("texto"))
-    f["eventos"] = _dividir(f["eventos"])
-    eventos = [{"data": e["data"], "d": _dp(e["data"]), "texto": e["texto"]} for e in f["eventos"]]
+    # filiação gravada por leitura antiga com o "Nº Pront Saúde" colado ("...ALBUQUERQUENº Pront Saúde: PDIB - 52.281"): o valor
+    # completo do arquivo, sem o campo vizinho, e o nome completo da mãe para a conferência de identidade ficha x RSPE
+    if re.search(r"N[ºo°]\s*Pront", f.get("filiacao") or ""):
+        f["filiacao"] = filiacao_cabecalho("Filiação: " + f["filiacao"])
+        f["nome_mae"] = re.split(r"\s*[\\/|]\s*", f["filiacao"])[0].strip() if f["filiacao"] else ""
+    f["eventos"] = _datar_sem_data(_dividir(f["eventos"]))
+    eventos = [dict(e, d=_dp(e["data"])) for e in f["eventos"]]
     f["versao_leitura"] = VERSAO_LEITURA
     return derivar(f, eventos)
 
@@ -675,6 +738,10 @@ def _marcar_externo(trabalho, eventos, ext):
     if novos:
         trabalho.extend(novos)
         trabalho.sort(key=lambda t: _dp(t["inicio"]) or date.min)
+
+
+_RE_EXTERNO_AUTORIZADO = re.compile(r"(?:FOI |FICA |ESTA |SENDO )?AUTORIZAD[OA]\W+(?:A\s+|O\s+|PARA\s+(?:O\s+)?|A REALIZAR\s+(?:O\s+)?)?TRABALHO EXTERNO|"
+                                    r"AUTORIZACAO\W+(?:DE\s+|PARA\s+|DO\s+)?(?:O\s+)?TRABALHO EXTERNO|TERMO DE COMPROMISSO\b.{0,400}?TRABALHO EXTERNO")
 
 
 def _juntar_mesmo_dia(trabalho):
@@ -858,6 +925,10 @@ def derivar(f, eventos):
                     break
     f["trabalho"] = _juntar_mesmo_dia(trabalho)
     f["baixas_sem_inicio"] = baixas_orfas
+    # "foi autorizado o trabalho externo" e termo de compromisso de trabalho externo: início "a conferir" (inciso XI dos decretos),
+    # sem contar como prestação efetiva. Ala/cela de semiaberto e prefixo de setor não bastam
+    f["externo_a_conferir"] = [{"inicio": e["data"], "texto": e["texto"][:200]} for e in eventos if e["d"] and _RE_EXTERNO_AUTORIZADO.search(rs._sem_acento(e["texto"]).upper())
+                               and not re.search(r"NAO (?:FOI |ESTA |FICA )?AUTORIZ|INDEFERI|NEGAD|REVOGAD|SUSPENS|CANCELAD|^\W*MUDANCA DE CELA", rs._sem_acento(e["texto"]).upper())]
 
     # ---- atestados de trabalho (dias trabalhados / remidos): a mesma leitura da conciliação da remição ----
     atest = []
@@ -1005,6 +1076,9 @@ def derivar(f, eventos):
                     alvo = {"data_registro": e["data"], "data_fato": dfr, "artigo": ("art. %s da LEP" % art.group(1)) if art else "",
                             "grave": bool(art) or "FALTA GRAVE" in us or nat == "GRAVE" or (isol and nat not in ("MEDIA", "LEVE")),
                             "texto": e["texto"], "padic": "", "resultado": ""}
+                    if not (mf and _d(mf.group(1))):
+                        # só a ciência do resultado: a data do fato é desconhecida (a da ciência é posterior)
+                        alvo["data_fato_ciencia"], alvo["data_fato_obs"] = True, "data da ciência do resultado: a data do fato não consta da ficha"
                     faltas.append(alvo)
                 elif e["texto"] not in alvo["texto"]:
                     alvo["texto"] += " | " + e["texto"]
@@ -1032,6 +1106,9 @@ def derivar(f, eventos):
                            "texto": e["texto"], "padic": "", "resultado": "",
                            # "RESPONDE PROCESSO - PADIC/...", "RESPONDE CD SIMPLIFICADA/..." ou "RESPONDE /PDIB": o registro já abre o processo
                            "situacao": "PADIC instaurado" if re.search(r"RESPONDE\s*(?:PROCESSO|CD SIMPLIFICADA|/)", u) else "registrada"})
+            if not cometida and re.search(r"COMETIDA EM\s*\d{0,2}/+\d{0,2}/+\d{2,4}", u):
+                # data do fato ilegível ("1//12/2009"): usada a do lançamento, com aviso
+                faltas[-1]["data_fato_ciencia"], faltas[-1]["data_fato_obs"] = True, "data do fato ilegível na ficha: usada a do lançamento"
     # isolamento preventivo lançado com a data do fato nula ("FALTA DISCIPLINAR COMETIDA EM 30/12/1899 - RESPONDE PADIC") e sem o
     # registro da falta: a falta é do dia do lançamento, com PADIC
     for e in eventos:
@@ -1081,6 +1158,8 @@ def derivar(f, eventos):
             dt = (m.group(1) or m.group(2)) if m else (mf.group(1) if mf and len(mf.group(1)) == 10 else e["data"])
             alvo = {"data_registro": e["data"], "data_fato": dt, "artigo": _artigo_falta(u), "grave": "FALTA GRAVE" in u or _nat(u) == "GRAVE",
                     "texto": e["texto"], "padic": "", "resultado": "", "situacao": "registrada"}
+            if not m and not (mf and len(mf.group(1)) == 10):
+                alvo["data_fato_ciencia"], alvo["data_fato_obs"] = True, "data da ciência do resultado: a data do fato não consta da ficha"
             faltas.append(alvo)
         if npad:
             alvo["padic_num"] = npad
@@ -1277,7 +1356,8 @@ def confrontar(r, f, hoje=None, manuais=None):
     # 3d) progressão, regressão e livramento cumpridos na unidade e ausentes do RSPE
     itens.extend(_regime_x_ficha(r, f))
     # 3e) identidade, prisão, processos, pena, unidade x regime, fuga e conduta
-    for fn in (_identidade_x_ficha, _prisao_x_ficha, _detracao_x_ficha, _processos_x_ficha, _pena_x_ficha, _unidade_x_ficha, _fuga_x_ficha, _conduta_x_ficha):
+    for fn in (_identidade_x_ficha, _prisao_x_ficha, _detracao_x_ficha, _processos_x_ficha, _pena_x_ficha, _unidade_x_ficha, _fuga_x_ficha, _conduta_x_ficha,
+               _historico_anterior_x_ficha, _faltas_outra_execucao_x_ficha):
         try:
             itens.extend(fn(r, f))
         except Exception as e:
@@ -1327,9 +1407,18 @@ def leitura_parcial(f):
         ds = [d for d in (_dp(e.get("data") or "") for e in evs) if d]
         imp = _dp(f.get("data_impressao") or "")
         sem_data = sum(1 for e in evs if not (e.get("data") or "").strip())
-        if sem_data:
+        conf = sum(1 for e in evs if e.get("a_conferir"))
+        dtx = [e for e in evs if e.get("data_do_texto")]
+        if sem_data - conf:
             # o próprio SIAPEN imprime o lançamento sem data ("- CONSELHO DISCIPLINAR: ..."): guardado como texto, sem data atribuída
-            out.append("%s sem data no SIAPEN (guardado como texto, sem data atribuída)" % rs.pl(sem_data, "lançamento", "lançamentos"))
+            out.append("%s sem data no SIAPEN (guardado como texto, sem data atribuída: o texto não cita uma data única)" % rs.pl(sem_data - conf, "lançamento", "lançamentos"))
+        if dtx:
+            out.append("%s sem data no SIAPEN datado pela única data citada no texto (%s) - conferir" % (
+                rs.pl(len(dtx), "lançamento", "lançamentos"), ", ".join(_br(e["data"]) for e in dtx[:5])))
+        if conf:
+            # data dentro do texto de outro lançamento sem verbo logo depois (ou inválida): não vira fato próprio nem entra nas contas
+            out.append("%s com data dentro de outro lançamento sem verbo logo após a data (não lido como fato próprio, sem data nas contas) - a conferir" %
+                       rs.pl(conf, "trecho", "trechos"))
         if len(ds) + sem_data < len(evs):
             out.append("%d de %d registros do histórico sem data legível" % (len(evs) - len(ds) - sem_data, len(evs)))
             parcial = True
@@ -1349,6 +1438,13 @@ def custodia_apos(f, d):
         return None, ""
     livres = [(x, t) for x, t in dep if RE_SAIDA_LIVRE.search(t)]
     entradas = [(x, t) for x, t in dep if RE_ENTRADA.search(t)]
+    # saída por determinação judicial ou para a domiciliar depois da última entrada e da última soltura: monitoramento e domiciliar
+    # são cumprimento; destino incerto sem nova entrada, a conferir (nunca liberdade automática)
+    jud = [(x, t, saida_judicial(t, ev, x)) for x, t in dep if RE_SAIDA_JUDICIAL.search(t)]
+    jud = [(x, t, sj) for x, t, sj in jud if sj and sj[0] != "transferencia"]
+    if jud and jud[-1][0] >= max([y for y, _ in livres[-1:] + entradas[-1:]] or [date.min]):
+        x, _t, (tipo, dest) = jud[-1]
+        return (None if tipo == "a_conferir" else True), _rotulo_saida_judicial(x, tipo, dest)
     if livres and (not entradas or livres[-1][0] > entradas[-1][0]):
         mm = re.search(r"MOTIVO:\s*([^,]+)", livres[-1][1], re.I)
         return False, "saída em %s (%s)" % (rs.fmt(livres[-1][0]), mm.group(1).strip().lower() if mm else _br(livres[-1][1])[:60])
@@ -1387,7 +1483,7 @@ def reconciliar_eventos(r, f):
             continue
         d, g1 = rs.to_date(e["data"]), rs.to_date(evs[i + 1]["data"])
         # só a entrada depois da última soltura antes do reinício: com saída em liberdade no meio, a custódia não é contínua
-        _sol = max((x for x, t in ev if d < x < g1 and RE_SAIDA_LIVRE.search(t)), default=None)
+        _sol = max((x for x, t in ev if d < x < g1 and _saida_fim_custodia(t)), default=None)
         rua = [(x, t) for x, t in ev if d < x < g1 - timedelta(days=2) and RE_ENTRADA_RUA.search(t) and not (_sol and x <= _sol)]
         if rua:
             mm = re.search(r"PROCEDENTE:\s*([^,]+)", rua[0][1], re.I)
@@ -1403,10 +1499,10 @@ def reconciliar_eventos(r, f):
             # só é retomada se a pessoa esteve fora: entrada vinda da delegacia/audiência de custódia, ou saída em liberdade
             # entre a interrupção e a entrada. Transferência entre unidades = custódia contínua (provável prisão em outro
             # processo): não se lança nada - a Auditoria alerta a contradição
-            fora = RE_ENTRADA_RUA.search(t) or any(d - timedelta(days=3) <= y < x and RE_SAIDA_LIVRE.search(u) for y, u in ev)
+            fora = RE_ENTRADA_RUA.search(t) or _entrada_fim_fuga(t, ev, x, d) or any(d - timedelta(days=3) <= y < x and _saida_fim_custodia(u) for y, u in ev)
             if ok and fora:
                 mm = re.search(r"PROCEDENTE:\s*([^,]+)", t, re.I)
-                rua = bool(RE_ENTRADA_RUA.search(t))
+                rua = bool(RE_ENTRADA_RUA.search(t) or _entrada_fim_fuga(t, ev, x, d))
                 # a "Data Prisão" da ficha, poucos dias antes da entrada na unidade (delegacia, audiência de custódia), é o início
                 # da custódia: o reinício vai nela, para o confronto da prisão com a ficha não alertar contra o próprio lançamento
                 _xp = _dp(f.get("data_prisao") or "")
@@ -1450,8 +1546,8 @@ def _sem_fuga_falsa(t):
     _LIB = r"ALVARA|SOLTURA|LIBERDADE|\bFUGA\b|FUGIR|EVADI\w*|EVASAO|FORAGID\w*|NAO RETORNOU"
     # mudança de cela, entrada, recaptura e reapresentação só citam a fuga ou o alvará ("Motivo: AGUARDANDO CONSULTA DE ALVARÁ",
     # "ENTRADA NO EPJFC ... MOTIVO: EVASÃO DO EPRACA", "FOI PRESO POR EVASÃO", "RETORNOU DE EVASÃO"): não são saída
-    if re.match(r"MUDANCA DE CELA", u) or re.search(r"ENTRADA NA UNIDADE|DEU ENTRADA|^\W*ENTRADA N[OA]\s|\b(?:RE)?INGRESSOU|RECAPTURAD|REAPRESENTA|"
-                                                  r"RETORN\w* D[AE] (?:EVASAO|FUGA)|\bPRES[OA] (?:POR|EM RAZAO D[AE]|PELA?) (?:EVASAO|FUGA)", u):
+    if re.match(r"MUDANCA DE CELA", u) or re.search(r"ENTRADA NA UNIDADE|DEU ENTRADA|^\W*ENTRADA N[OA]\s|\b(?:RE)?INGRESSOU|RECAPTURA|REAPRESENTA|APRESENTA\w*(?:-SE)? ESPONTANE|"
+                                                  r"APRESENTOU-?SE ESPONTANE|RETORN\w* D[AE] (?:EVASAO|FUGA)|\bPRES[OA] (?:POR|EM RAZAO D[AE]|PELA?) (?:EVASAO|FUGA)", u):
         u = re.sub(_LIB, " ", u)
     # alvará citado sem soltura ("tomou ciência do Alvará ... Não foi colocado em liberdade devido pendência"; parecer da Central de
     # Alvarás) e fuga só narrada (termo de assentada, reconhecimento da falta, ciência de regressão, aviso "será considerado evasão",
@@ -1637,7 +1733,7 @@ def _prisao_x_ficha(r, f):
     if not depois:
         return []  # parado no RSPE depois dessa data: tratado na retomada
     s = min(depois)
-    if any(x < y < s and (RE_SAIDA_LIVRE.search(t) or re.search(r"SALVO[- ]CONDUTO|TRANSFER[ÊE]NCIA PARA (O )?ESTADO", t, re.I))
+    if any(x < y < s and (_saida_fim_custodia(t) or re.search(r"SALVO[- ]CONDUTO|TRANSFER[ÊE]NCIA PARA (O )?ESTADO", t, re.I))
            for y, t in ((_dp(e.get("data") or ""), e.get("texto") or "") for e in f.get("eventos", [])) if y):
         # a ficha registra soltura (ou saída para outro estado, com salvo-conduto) no intervalo: não é custódia contínua até o
         # início no RSPE
@@ -1696,7 +1792,7 @@ def _detracao_x_ficha(r, f):
                             rs.pl(len(fora), "dia", "dias")),
                         "CP, art. 42; LEP, arts. 66, III, c, e 111."))
             ini, ult_saida = None, x
-        elif ini is not None and RE_SAIDA_LIVRE.search(t):
+        elif ini is not None and _saida_fim_custodia(t):
             ini, ult_saida = None, x  # fuga, evasão, livramento: fim da custódia sem detração a apurar aqui
     return out
 
@@ -1775,7 +1871,7 @@ def _unidade_x_ficha(r, f):
 
 
 # registro de volta (recaptura, reapresentação, prisão "(evasão)") que cita a evasão sem ser a fuga
-RE_RETORNO_FUGA = re.compile(r"RETORN\w*\s+(D[AE]\s+)?(EVAS|FUGA)|RECAPTURAD|REAPRESENTA|\bPRES[OA]\b|MANDADO\s+(JUDICIAL\s+)?DE\s+PRIS", re.I)
+RE_RETORNO_FUGA = re.compile(r"RETORN\w*\s+(D[AE]\s+)?(EVAS|FUGA)|RECAPTURA|REAPRESENTA|APRESENTA\w*(?:-SE)? ESPONTANE|APRESENTOU-?SE ESPONTANE|\bPRES[OA]\b|MANDADO\s+(JUDICIAL\s+)?DE\s+PRIS", re.I)
 # saída da unidade que não é soltura nem fuga, mas tira a pessoa da custódia registrada (novo delito, decisão judicial)
 RE_SAIDA_OUTRA = re.compile(r"SA[ÍI]DA DA UNIDADE PENAL.*MOTIVO:\s*(NOVO DELITO|DECIS[ÃA]O JUDICIAL)", re.I)
 
@@ -1813,7 +1909,7 @@ def _fuga_x_ficha(r, f):
             # a ficha cobre a data e não registra saída/fuga: custódia contínua?
             antes = [x for x, _ in ev if d - timedelta(days=90) <= x < d]
             depois = [x for x, _ in ev if d < x <= d + timedelta(days=90)]
-            livres = [x for x, t in ev if abs((x - d).days) <= 30 and (RE_SAIDA_LIVRE.search(t) or RE_SAIDA_OUTRA.search(t))]
+            livres = [x for x, t in ev if abs((x - d).days) <= 30 and (_saida_fim_custodia(t) or RE_SAIDA_OUTRA.search(t))]
             # soltura por alvará na mesma data da fuga lançada no RSPE: a saída foi legítima, não fuga
             alvara = [(x, t) for x, t in ev if abs((x - d).days) <= 1 and re.search(r"ALVAR[ÁA] DE SOLTURA|MOTIVO:\s*(ALVAR|SOLTURA)", t, re.I)
                       and not re.search(r"APRESENT", t, re.I)]  # quem se apresenta trazendo o alvará está voltando, não saindo
@@ -2031,6 +2127,12 @@ def _interrupcao_x_ficha(r, f):
     mot = (evs[-1].get("motivo") or "").strip()
     outro = bool(rs.RE_OUTRO_PROC.search(mot))
     ok, txt = custodia_apos(f, d)
+    if ok is None and txt:
+        # saída por determinação judicial de destino incerto, sem nova entrada: nem liberdade nem custódia afirmadas
+        return out + [{"nivel": "verificar", "titulo": "Cumprimento interrompido em %s: saída por determinação judicial na ficha, a conferir" % rs.fmt(d),
+                       "detalhe": "Motivo no RSPE: %s. Ficha: %s. A saída por determinação judicial não é liberdade automática: conferir nos autos "
+                                  "se foi soltura, transferência para outra comarca ou cumprimento em outro regime." % (mot.lower() or "não consta", txt),
+                       "fundamento": "LEP, art. 111; CP, arts. 113 e 116, p. único.", "tipo": "rspe-x-ficha"}]
     if ok is None:
         return out if outro else out + [{"nivel": "verificar", "titulo": "Cumprimento interrompido em %s: a ficha não tem registro posterior" % rs.fmt(d),
                                   "detalhe": "Motivo no RSPE: %s. Sem movimentação na ficha depois dessa data, não há como dizer se a pessoa está presa, "
@@ -2053,6 +2155,78 @@ def _interrupcao_x_ficha(r, f):
                  "fundamento": "LEP, arts. 111 e 112; CP, art. 116, p. único.", "tipo": "rspe-x-ficha"}]
     return out + [{"nivel": "info", "titulo": "Interrupção de %s confirmada pela ficha: %s" % (rs.fmt(d), txt),
              "detalhe": "Motivo no RSPE: %s. A ficha registra a saída do sistema prisional depois da interrupção." % (mot.lower() or "não consta"), "fundamento": "CP, art. 113.", "tipo": "rspe-x-ficha"}]
+
+
+# fato do histórico anterior que pode mudar a custódia ininterrupta ou a prescrição: evasão/fuga, soltura, prisão, PAD/falta,
+# progressão/regressão, transferência de regime
+_RE_HIST_RELEVANTE = re.compile(r"EVADI|EVASAO|\bFUGA|FORAGID|NAO RETORNOU|ALVARA|SOLTURA|LIBERDADE|LIVRAMENTO|\bPRES[OA]\b|FLAGRANTE|"
+                                r"RECAPTUR|PADIC?\b|PROCESSO DISCIPLINAR|FALTA|CELA DISCIPLINAR|ISOLAD|PROGRESS|REGRESS|SEMI-?ABERTO|ABERTO")
+
+
+def historico_anterior(f):
+    """Histórico anterior ao SIAPEN (bloco em 10 pt cortado na impressão, guardado em historico_oculto): só exibição, fora das
+    contas. Cada "Em dd/mm/aa" com a sua data. Devolve [{data (date ou None), texto, relevante}]."""
+    linhas = [" ".join((x or "").split()) for x in (f or {}).get("historico_oculto") or []]
+    txt = " ".join(x for x in linhas if x)
+    if not txt:
+        return []
+    out = []
+    partes = re.split(r"(?:^|(?<=[\s.;,>]))(?=Em \d{1,2}/\d{1,2}/\d{2,4}\b)", txt)
+    for p_ in partes:
+        p_ = p_.strip(" -;>")
+        if not p_:
+            continue
+        m = re.match(r"Em (\d{1,2})/(\d{1,2})/(\d{2,4})\b", p_)
+        d = None
+        if m:
+            aa = int(m.group(3))
+            aa = aa + (2000 if aa < 70 else 1900) if aa < 100 else aa
+            d = _dp("%02d.%02d.%d" % (int(m.group(1)), int(m.group(2)), aa))
+        out.append({"data": d, "texto": p_, "relevante": bool(_RE_HIST_RELEVANTE.search(rs._sem_acento(p_).upper()))})
+    return out
+
+
+def _historico_anterior_x_ficha(r, f):
+    """Histórico anterior ao SIAPEN: exibido como informação, sem lançar as evasões, PADs e progressões nas contas. "A conferir"
+    (verificar) só quando um fato desses cai no período desta execução (pode mudar a custódia ininterrupta do indulto ou a prescrição)."""
+    H = historico_anterior(f)
+    if not H:
+        return []
+    ds = [h["data"] for h in H if h["data"]]
+    ini = min([d for d in (rs.to_date(e.get("data") or "") for e in r.get("_eventos", [])) if d] or [None], key=lambda x: x or date.max)
+    conferir = [h for h in H if h["relevante"] and h["data"] and ini and h["data"] >= ini]
+    per = ("de %s a %s" % (rs.fmt(min(ds)), rs.fmt(max(ds)))) if ds else "sem datas legíveis"
+    lista = "; ".join("%s: %s" % (rs.fmt(h["data"]) if h["data"] else "sem data", _br(h["texto"])[:140]) for h in (conferir or H)[:12])
+    if conferir:
+        return [_item_rf("verificar", "Histórico anterior ao SIAPEN com %s no período desta execução - a conferir" % rs.pl(len(conferir), "fato", "fatos"),
+                         "A ficha traz um histórico anterior ao SIAPEN (%s), cortado na impressão, que não entra nas contas. Estes fatos caem "
+                         "depois do início desta execução (%s) e podem mudar a custódia ininterrupta do indulto ou a prescrição: %s. "
+                         "Conferir nos autos antes de usá-los." % (per, rs.fmt(ini), lista),
+                         "Ficha disciplinar (SIAPEN); LEP, art. 111; CP, arts. 113 e 117.")]
+    return [_item_rf("info", "Histórico anterior ao SIAPEN (%s): só exibido, fora das contas" % per,
+                     "A ficha traz um bloco anterior ao SIAPEN, cortado na impressão (%s). Ele não é lançado como evasão, falta ou "
+                     "progressão nas contas desta execução: %s." % (rs.pl(len(H), "registro", "registros"), lista),
+                     "Ficha disciplinar (SIAPEN).")]
+
+
+def _faltas_outra_execucao_x_ficha(r, f):
+    """Faltas da ficha anteriores ao início desta execução (a ficha cobre toda a vida prisional): só informação - não entram como
+    falta a apurar nem nas janelas dos decretos (decisão: contar só as faltas desta execução, dentro do prazo de reabilitação)."""
+    ini = min([d for d in (rs.to_date(e.get("data") or "") for e in r.get("_eventos", []) if not e.get("_ficha")) if d] or [None],
+              key=lambda x: x or date.max)
+    if not ini:
+        return []
+    ant = [x for x in f.get("faltas", []) if x.get("grave") and x.get("situacao") != "arquivada"
+           and (_dp(x.get("data_fato") or "") or _dp(x.get("data_registro") or "") or date.max) < ini]
+    if not ant:
+        return []
+    return [_item_rf("info", "Ficha: %s anterior%s ao início desta execução (%s) - só informação" % (
+        rs.pl(len(ant), "falta grave", "faltas graves"), "es" if len(ant) > 1 else "", rs.fmt(ini)),
+        "A ficha cobre toda a vida prisional. Estas faltas são de execução anterior e não entram como falta a apurar, nem nas janelas "
+        "dos decretos: %s. Em reinício ou unificação, conferir nos autos se alguma é desta pena." % "; ".join(
+            "%s%s (%s)" % (_br(x.get("data_fato") or x.get("data_registro") or ""), (" - " + x["artigo"]) if x.get("artigo") else "", x.get("situacao") or "registrada")
+            for x in ant[:10]),
+        "LEP, art. 112, § 7º (reabilitação da conduta); decretos de indulto, art. 6º.")]
 
 
 def _falta_anterior_x_perda(r, f):
@@ -3261,8 +3435,53 @@ def _dias_no_intervalo(periodos, a, b):
     return len(dias)
 
 
-RE_SAIDA_LIVRE = _ReFicha(re.compile(r"SA[ÍI]DA DA UNIDADE PENAL.*MOTIVO:\s*(ALVAR|SOLTURA|LIBERDADE|FUGA|EVAS|DETERMINA[ÇC][ÃA]O JUDICIAL|LIVRAMENTO|"
-                                     r"T[ÉE]RMINO|EXTIN|CUMPRIMENTO DE PENA|(?:REGIME |PRIS[ÃA]O )?DOMICILIAR)|ALVAR[ÁA] DE SOLTURA|\bFUGA\b|EVADIU|EVAS[ÃA]O|FORAGID|N[ÃA]O RETORNOU", re.I))
+# saída em liberdade ou fuga. A saída por "determinação judicial" e a da prisão domiciliar não são liberdade automática
+# (RE_SAIDA_JUDICIAL e saida_judicial): o monitoramento e a domiciliar no curso da execução são cumprimento, e o destino incerto
+# fica "a conferir"
+RE_SAIDA_LIVRE = _ReFicha(re.compile(r"SA[ÍI]DA DA UNIDADE PENAL.*MOTIVO:\s*(ALVAR|SOLTURA|LIBERDADE|FUGA|EVAS|LIVRAMENTO|"
+                                     r"T[ÉE]RMINO|EXTIN|CUMPRIMENTO DE PENA)|ALVAR[ÁA] DE SOLTURA|\bFUGA\b|EVADIU|EVAS[ÃA]O|FORAGID|N[ÃA]O RETORNOU", re.I))
+RE_SAIDA_JUDICIAL = re.compile(r"SA[ÍI]DA DA UNIDADE PENAL.*MOTIVO:\s*(DETERMINA[ÇC][ÃA]O JUDICIAL|(?:REGIME |PRIS[ÃA]O )?DOMICILIAR)", re.I)
+
+
+def _saida_fim_custodia(t):
+    """Saída que encerra a custódia registrada na unidade para as conferências de detração, prisão e fuga (liberdade, fuga ou
+    saída judicial de qualquer destino): o critério de antes da classificação das saídas judiciais."""
+    return bool(RE_SAIDA_LIVRE.search(t) or RE_SAIDA_JUDICIAL.search(_sem_fuga_falsa(t)))
+
+
+def saida_judicial(t, ev=None, x=None):
+    """Saída da unidade por "determinação judicial" ou para a prisão domiciliar: None se não é; senão (tipo, destino). Nenhuma é
+    liberdade automática. tipo: 'transferencia' (destino em unidade prisional, ou nova entrada em até 3 dias - ev: [(data, texto)]
+    da ficha, x: data da saída), 'monitoramento' (UMMVE: cumprimento em monitoramento eletrônico), 'domiciliar' (cumprimento em
+    prisão domiciliar), 'apresentacao' (delegacia) ou 'a_conferir' (destino vazio, comarca, vara, "local incerto", sem nova entrada)."""
+    u = rs._sem_acento(t or "").upper()
+    m = re.search(r"SAIDA DA UNIDADE PENAL.*?MOTIVO:\s*(DETERMINACAO JUDICIAL|(?:REGIME |PRISAO )?DOMICILIAR)", u)
+    if not m or RE_SAIDA_LIVRE.search(t):
+        return None
+    md = re.search(r"DESTINO:\s*([^,]*)", u)
+    dest = md.group(1).strip() if md else ""
+    if "DOMICILIAR" in m.group(1):
+        return "domiciliar", dest
+    reg = classificar_unidade(dest)[0] if dest else None
+    if reg in ("fechado", "semiaberto", "provisorio", "federal") or (dest and re.search(
+            r"\b(?:PDIB|IPCG|EPJFC|PTRAN|CPAIG|PED|EPMR|EPA|PEMRFG\w*|PHAC|UPRB|EPRACA|EP\w*RSA\w*|PSM\w*)\b|UNIDADE PENAL|PENITENC|PRESIDIO|ESTAB\w*\.? PENAL", dest)):
+        return "transferencia", dest
+    if reg == "monitoramento" or re.search(r"UMMVE|MONITORA", dest):
+        return "monitoramento", dest
+    if dest and re.search(_DELEGACIA, dest, re.I):
+        return "apresentacao", dest
+    if ev and x and any(x <= y <= x + timedelta(days=3) and RE_ENTRADA.search(tt) for y, tt in ev):
+        return "transferencia", dest
+    return "a_conferir", dest
+
+
+def _rotulo_saida_judicial(x, tipo, dest):
+    dd = (" (destino: %s)" % dest.lower()) if dest else " (destino em branco)"
+    return {"monitoramento": "saída em %s para o monitoramento eletrônico - cumprimento da pena" % rs.fmt(x),
+            "domiciliar": "saída em %s para a prisão domiciliar - cumprimento da pena" % rs.fmt(x),
+            "apresentacao": "saída em %s para apresentação na delegacia%s" % (rs.fmt(x), dd),
+            "transferencia": "saída em %s por determinação judicial%s, com nova entrada - transferência" % (rs.fmt(x), dd),
+            }.get(tipo) or "saída em %s por determinação judicial%s, sem nova entrada em até 3 dias - a conferir se houve soltura" % (rs.fmt(x), dd)
 # delegacia de origem: "DP", "1 DP AQUIDAUANA", "1º DP DE JARDIM", ".DP MIRANDA", "1ª DELEGACIA DE POLICIA", "1DP-DOURADOS", "DERF",
 # "DEAM", "DPF DOURADOS", "POLINTER", "GARRAS", "DENAR", "CUSTÓDIA/DREX/SR/DPF/MS", "1ª CIA INDEPENDENTE POLICIA MILITAR"
 _DELEGACIA = (r"(?:\d{1,2}\s*[ºª°]?\s*)?\.?\s*(?:DP\b|DELEGACIA|DEPAC|CEPOL|CPAC|DERF\b|DEAM\b|DPF\b|POLINTER|GARRAS|DENAR\b|"
@@ -3270,12 +3489,36 @@ _DELEGACIA = (r"(?:\d{1,2}\s*[ºª°]?\s*)?\.?\s*(?:DP\b|DELEGACIA|DEPAC|CEPOL|C
 RE_ENTRADA_RUA = re.compile(r"(ENTRADA NA UNIDADE PENAL|DEU ENTRADA|\bENTRADA N[OA]\s|\b(?:RE)?INGRESSOU|ADENTROU).*?(PROCEDENTE\s*(?::|D[AOE]S?\b)\s*(?:[^,]{0,40}?[\s-])?" + _DELEGACIA +
                             r"|PROVINDO DA DELEGACIA|AUDI[ÊE]NCIA DE CUST[ÓO]DIA)|ENTRADA NA UNIDADE PENAL:\s*CENTRAL PROVIS[ÓO]RIA DE AUDI[ÊE]NCIA DE CUST[ÓO]DIA", re.I)
 
+# entrada que encerra uma fuga: recaptura e apresentação espontânea ("Procedente: RECAPTURA - INTERIOR", "Procedente: APRESENTACAO
+# ESPONTANEA - CAPITAL"). A entrada "Procedente: <cidade> - INTERIOR" ou de outro presídio, sem soltura ou fuga antes, é transferência
+RE_ENTRADA_FIM_FUGA = re.compile(r"(ENTRADA NA UNIDADE PENAL|DEU ENTRADA|\bENTRADA N[OA]\s|\b(?:RE)?INGRESSOU).*?PROCEDENTE\s*(?::|D[AOE]S?\b)\s*"
+                                 r"(RECAPTURA|APRESENTA[ÇC][ÃA]O ESPONT|APRESENTACAO ESPONT)", re.I)
+# prisão em flagrante só narrada, sem entrada formal na unidade ("Nesta data ... foi preso em Flagrante referente aos Autos ..."):
+# fato novo a conferir, nunca interrupção automática
+RE_FLAGRANTE_NARRADO = re.compile(r"\bFOI PRES[OA] EM FLAGRANTE|\bPRES[OA] EM FLAGRANTE\b", re.I)
+
+
+def _entrada_fim_fuga(t, ev, x, desde):
+    """Entrada por recaptura (encerra a fuga) ou por apresentação espontânea depois de uma fuga registrada na ficha desde 'desde'."""
+    m = RE_ENTRADA_FIM_FUGA.search(t or "")
+    if not m:
+        return False
+    if m.group(2).upper().startswith("RECAPTURA"):
+        return True
+    return any(desde - timedelta(days=30) <= y < x and RE_FUGA_FICHA.search(u) for y, u in ev)
+
+
+def _flagrante_narrado(t):
+    return bool(RE_FLAGRANTE_NARRADO.search(t or "")) and not RE_ENTRADA.search(t or "") and not RE_ENTRADA_RUA.search(t or "")
+
 
 def custodia_na_ficha(f, ini, datas):
     """Inciso IV (custódia ininterrupta): confronta cada nova prisão que o RSPE registra dentro do período contínuo com a
     movimentação da ficha disciplinar. (True, nota): a ficha mostra a pessoa custodiada antes e depois, sem soltura, fuga
-    ou evasão - a prisão ocorreu durante a custódia e não interrompe; (False, nota): a ficha registra saída em liberdade
-    (alvará, fuga, evasão) ou entrada vinda da delegacia/audiência de custódia; (None, nota): a ficha não cobre a data."""
+    ou evasão - a prisão ocorreu durante a custódia e não interrompe (o monitoramento eletrônico e a prisão domiciliar no curso da
+    execução são custódia); (False, nota): a ficha registra saída em liberdade (alvará, fuga, evasão) ou entrada vinda da
+    delegacia/audiência de custódia; (None, nota): a ficha não cobre a data, ou registra saída por determinação judicial de destino
+    incerto sem nova entrada, ou prisão em flagrante só narrada (a conferir)."""
     ev = sorted(((_dp(e["data"]), e["texto"]) for e in f.get("eventos", []) if _dp(e.get("data") or "")), key=lambda x: x[0])
     if not ev or not datas:
         return None, ""
@@ -3295,6 +3538,18 @@ def custodia_na_ficha(f, ini, datas):
                 partes.append("entrada em %s vinda de %s" % (rs.fmt(x), mm.group(1).strip() if mm else "fora do sistema prisional"))
             notas.append("ficha: %s - houve interrupção antes da prisão de %s" % ("; ".join(partes), rs.fmt(d)))
             res = False
+            continue
+        # saída por determinação judicial com destino incerto (vazio, comarca, vara, "local incerto") e sem nova entrada em até 3
+        # dias, e prisão em flagrante só narrada (sem entrada formal): não são liberdade nem nova prisão automáticas - a conferir.
+        # Monitoramento eletrônico e prisão domiciliar no curso da execução são cumprimento e mantêm a custódia
+        duv = [_rotulo_saida_judicial(x, *sj) for x, t, sj in ((x, t, saida_judicial(t, ev, x)) for x, t in ev if ini < x <= d and RE_SAIDA_JUDICIAL.search(t))
+               if sj and sj[0] == "a_conferir"]
+        duv += ["prisão em flagrante só narrada em %s, sem entrada formal na unidade - a conferir se houve nova prisão vinda de fora" % rs.fmt(x)
+                for x, t in ev if max(d - timedelta(days=10), ini + timedelta(days=5)) < x <= d + timedelta(days=20) and _flagrante_narrado(t)]
+        if duv:
+            notas.append("ficha: %s - conferir nos autos se houve interrupção antes da prisão de %s" % ("; ".join(duv), rs.fmt(d)))
+            if res is True:
+                res = None
             continue
         antes = [x for x, _ in ev if d - timedelta(days=365) <= x < d]
         depois = [x for x, _ in ev if d < x <= d + timedelta(days=365)]
@@ -3458,10 +3713,17 @@ def complementar_decretos(r, f, hoje=None):
         # XI: 5 saídas temporárias usufruídas até a data, ou 12 meses de trabalho externo nos 3 anos anteriores
         ns = len([d for d in saidas if d <= ref])
         dext = _dias_no_intervalo(externos, ref - timedelta(days=3 * 365), ref)
+        # autorização/termo de compromisso de trabalho externo nos 3 anos anteriores, sem a prestação registrada: a conferir
+        aut = [x for x in f.get("externo_a_conferir") or [] if ref - timedelta(days=3 * 365) <= (_dp(x.get("inicio") or "") or date.min) <= ref]
         if ns >= 5:
             res["XI"] = (True, "ficha: %d saídas temporárias até %s (última em %s)" % (ns, rs.fmt(ref), rs.fmt(max(d for d in saidas if d <= ref))))
         elif dext >= 360:
             res["XI"] = (True, "ficha: %s de trabalho externo nos 3 anos anteriores" % rs.pl(dext, "dia", "dias"))
+        elif aut:
+            res["XI"] = (None, "ficha: %s até %s e %s de trabalho externo registrado nos 3 anos anteriores; autorização ou termo de compromisso "
+                               "de trabalho externo em %s, sem registro da prestação - conferir se trabalhou 12 meses" % (
+                                   rs.pl(ns, "saída temporária", "saídas temporárias"), rs.fmt(ref), rs.pl(dext, "dia", "dias"),
+                                   ", ".join(_br(x["inicio"]) for x in aut[:3])))
         else:
             res["XI"] = (False, "ficha: %s até %s e %s de trabalho externo nos 3 anos anteriores" % (rs.pl(ns, "saída temporária", "saídas temporárias"), rs.fmt(ref), rs.pl(dext, "dia", "dias")))
         # XII: estudo (fundamental, médio, superior, profissionalizante) por 12 meses nos 3 anos anteriores
