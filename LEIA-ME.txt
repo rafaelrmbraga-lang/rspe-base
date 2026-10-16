@@ -1072,7 +1072,10 @@ v7.10.0
     sábado, sem descontar faltas), até o último atestado ou a última
     remição, com um parágrafo que aponta inconsistência, remição acima da
     estimativa ou números compatíveis; o trabalho posterior aparece à
-    parte, como ainda sem atestado. Os demais itens passam a B, C e D;
+    parte, como ainda sem atestado. Quando a ficha registra estudo, exame
+    (ENCCEJA/ENEM) ou leitura, o resumo avisa que essa remição entra no
+    total homologado e pode encobrir atestado de trabalho não homologado
+    ou outra divergência. Os demais itens passam a B, C e D;
     pendências e alertas com menos negrito (data discreta e providência
     em verde).
   - Aba Indulto, um decreto por vez: nome social longo não alarga mais a

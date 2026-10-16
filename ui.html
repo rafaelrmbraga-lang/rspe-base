@@ -1548,6 +1548,7 @@ const ui = {
       <tr><td ${td}>Atestados expedidos (ficha)${R.at_n?` <span class="muted">· ${R.at_n}</span>`:''}</td><td ${td}>${nf(R.at_trab)}</td><td ${td}>${nf(R.at_rem)}</td></tr>
       <tr><td ${td}>Homologados no RSPE${R.perdidos?` <span class="muted">· ${nf(R.perdidos)} perdidos</span>`:''}</td><td ${td}>—</td><td ${td}>${nf(R.homologados)}</td></tr>
       ${R.trab_ficha?`<tr><td ${td}>Trabalho registrado na ficha até ${esc(R.corte)} <span class="muted">· estimativa</span></td><td ${td}>${nf(R.trab_ficha)}</td><td ${td}>${nf(R.dir_ficha)}</td></tr>`:''}
+      ${R.estudo?`<tr><td ${td}>Histórico de estudo ou leitura na ficha</td><td ${td} colspan="2"><span class="pill amarelo">pode encobrir divergência</span></td></tr>`:''}
       ${R.trab_pos?`<tr><td ${td}>Trabalho ${R.corte?'posterior, ':''}ainda sem atestado <span class="muted">· estimativa</span></td><td ${td}>${nf(R.trab_pos)}</td><td ${td}>${nf(R.dir_pos)}</td></tr>`:''}</table>
       <p style="font-size:12.5px;line-height:1.6;font-weight:400;margin:8px 0 0;max-width:980px">${esc(R.texto)}</p>`:'';
     const L=R?['B','C','D']:['A','B','C'];
