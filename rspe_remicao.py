@@ -1873,6 +1873,86 @@ def conciliar(r, f, hoje=None, manuais=None, ini_exec=None, excluir_remicoes=Non
     # ---- tabela conciliada ----
     rot = {"CONCILIADO": ("Conciliado", "verde"), "NAO_LANCADO": ("Atestado emitido não lançado", "vermelho"),
            "DIVERGENCIA": ("Divergência de dias", "amarelo"), "ANTERIOR": ("Anterior a esta execução", "cinza")}
+    def _uniao(ps):
+        out_ = []
+        for i_, f_ in sorted(ps):
+            if out_ and i_ <= out_[-1][1] + timedelta(days=1):
+                out_[-1][1] = max(out_[-1][1], f_)
+            else:
+                out_.append([i_, f_])
+        return out_
+
+    def _possiveis(ps):
+        return sum(_rf.dias_trabalho(i_, f_) for i_, f_ in _uniao(ps))
+
+    # atestado sem período cujos trechos inferidos não comportam os dias declarados: provável atestado cumulativo (vários períodos,
+    # inclusive já remidos, como o emitido a pedido da Promotoria). Sai do "a requerer" e da prioridade: conferir nos autos antes de pedir
+    ids_at = {x_["id"] for x_ in ats}
+    for a in ats:
+        if not (a["lote"] and a["trab"]):
+            continue
+        ps = [(s["ini"], s["fim"]) for s in a["segs"] if s["inferido"] and s.get("ini") and s.get("fim")]
+        poss = _possiveis(ps) if ps else 0
+        if ps and a["trab"] > poss + 30:
+            a["cumulativo"] = poss
+            a["cumul_orf"] = [x_ for x_ in rems if x_.get("usada") and x_["usada"] not in ids_at and "+" not in x_["usada"]
+                              and x_["usada"] != "outra origem" and a["emissao"] < x_["decisao"] <= a["emissao"] + timedelta(days=730)]
+
+    def _segs_tabela(a):
+        """Trechos da tabela. Atestado com período declarado longo ("de 07/06/13 a 16/12/15, com intervalos"): mostra os vínculos de
+        trabalho da ficha dentro dele (afastamentos, lançamentos tornados sem efeito e intervalos ficam de fora), com a conta dos
+        dias possíveis; atestado sem período cujos trechos inferidos não comportam os dias declarados: aviso de atestado cumulativo."""
+        segs_, notas_ = [], []
+        for s in a["segs"]:
+            base = {"setor": s["setor"] or "não identificado", "per": "%s a %s" % (_f(s["ini"]), _f(s["fim"])) if s["ini"] else "período não informado",
+                    "trab": s.get("trab"), "rem": s.get("rem"), "inferido": s["inferido"],
+                    "corrigido": ("ficha: %s" % _f(s["ini_ficha"])) if s.get("corrigido") else ""}
+            if not s["inferido"] and s["ini"] and s["fim"] and (s["fim"] - s["ini"]).days > 45:
+                dentro = sorted(((v, max(v["ini"], s["ini"]), min(v["fim"] or hoje, s["fim"])) for v in vinc
+                                 if v.get("ini") and v["ini"] <= s["fim"] and (v["fim"] or hoje) >= s["ini"]), key=lambda x: x[1])
+                dentro = [x for x in dentro if x[1] <= x[2]]
+                if len(dentro) > 1:
+                    # pedaço de borda (até 2 dias) de vínculo que está quase todo fora do período: troca de setor no dia, não trabalho
+                    dentro = [x for x in dentro if not ((x[2] - x[1]).days < 2 and ((x[1] == s["ini"] and x[0]["ini"] < s["ini"])
+                                                                                  or (x[2] == s["fim"] and (x[0]["fim"] or hoje) > s["fim"])))] or dentro
+                # trechos contíguos do mesmo setor viram um só; o dia isolado (troca de setor no dia) que outro trecho já cobre sai
+                junt = []
+                for v, i_, f_ in sorted(dentro, key=lambda x: (x[1], x[2])):
+                    if junt and _sa(junt[-1][0]["setor"] or "") == _sa(v["setor"] or "") and i_ <= junt[-1][2] + timedelta(days=1):
+                        junt[-1] = (junt[-1][0], junt[-1][1], max(junt[-1][2], f_))
+                    else:
+                        junt.append((v, i_, f_))
+                dentro = [x for x in junt if not (x[1] == x[2] and any(y is not x and y[1] <= x[1] <= y[2] and y[1] < y[2] for y in junt))] or junt
+                # o mesmo setor lançado com dois nomes no mesmo período ("IPCG ARTESANATO" e "ARTESANATO"): fica o nome mais completo
+                _nm = lambda v: re.sub(r"\s+", " ", _sa(v["setor"] or "")).strip()
+                dentro = [x for x in dentro if not any(y is not x and (y[1], y[2]) == (x[1], x[2]) and _nm(x[0]) != _nm(y[0]) and _nm(x[0]) in _nm(y[0])
+                                                       for y in dentro)]
+                corridos = (s["fim"] - s["ini"]).days + 1
+                cobre = sum((f_ - i_).days + 1 for i_, f_ in _uniao([(i_, f_) for _v, i_, f_ in dentro]))
+                if dentro and (cobre < 0.9 * corridos or (len(dentro) > 1 and "INTERVAL" in _sa(a.get("texto")))):
+                    for v, i_, f_ in dentro:
+                        segs_.append({"setor": v["setor"] or "não identificado", "per": "%s a %s" % (_f(i_), _f(f_)), "trab": None, "rem": None,
+                                      "inferido": False, "vinc": True, "corrigido": ""})
+                    poss = _possiveis([(i_, f_) for _v, i_, f_ in dentro])
+                    t_ = s.get("trab") if s.get("trab") is not None else (a["trab"] if len(a["segs"]) == 1 else None)
+                    notas_.append("o atestado declara o período de %s a %s%s; abaixo, os trechos de trabalho que a ficha registra dentro dele "
+                                  "(%s possíveis, de segunda a sábado%s)%s" % (
+                                      _f(s["ini"]), _f(s["fim"]), " (com intervalos)" if "INTERVAL" in _sa(a.get("texto")) else "",
+                                      rs.pl(poss, "dia", "dias"), ", para %s trabalhados declarados" % t_ if t_ else "",
+                                      " - a ficha registra menos trabalho que o atestado: conferir com a unidade" if t_ and t_ > poss + 3 else ""))
+                    continue
+            segs_.append(base)
+        if a.get("cumulativo") is not None:
+            poss, orf = a["cumulativo"], a.get("cumul_orf") or []
+            # remições do RSPE posteriores à emissão (até 2 anos) que ficaram sem origem: podem ser a apreciação deste atestado
+            notas_.append("os trechos inferidos comportam só %s, e o atestado declara %s trabalhados: provável atestado cumulativo, que "
+                          "pode somar períodos já remidos%s - conferir nos autos antes de pedir" % (
+                              rs.pl(poss, "dia possível", "dias possíveis"), a["trab"],
+                              "; %s no RSPE, posterior%s à emissão e sem origem identificada, pode%s ser a apreciação deste atestado" % (
+                                  " e ".join("a remição de %s em %s" % (rs.pl(int(x_["dias"]), "dia", "dias"), _f(x_["decisao"])) for x_ in orf),
+                                  "es" if len(orf) > 1 else "", "m" if len(orf) > 1 else "") if orf else ""))
+        return segs_, notas_
+
     tabela = []
     for a in ats:
         if a["status"] == "ANTERIOR":
@@ -1885,13 +1965,13 @@ def conciliar(r, f, hoje=None, manuais=None, ini_exec=None, excluir_remicoes=Non
         if a["lote"]:
             nota = ("períodos inferidos dos vínculos da ficha até a data de referência da remição; a ficha não registra o atestado" if a["origem"] == "rspe"
                     else "períodos inferidos da ficha; o texto do atestado não os detalha")
+        segs_t, notas_t = _segs_tabela(a)
+        nota = "; ".join(x for x in [nota] + notas_t if x)
         tabela.append({"id": a["id"], "atestado": tit, "emissao": _f(a["emissao"]) if a["origem"] != "rspe" else "",
-                       "segs": [{"setor": s["setor"] or "não identificado", "per": "%s a %s" % (_f(s["ini"]), _f(s["fim"])) if s["ini"] else "período não informado",
-                                 "trab": s.get("trab"), "rem": s.get("rem"), "inferido": s["inferido"],
-                                 "corrigido": ("ficha: %s" % _f(s["ini_ficha"])) if s.get("corrigido") else ""} for s in a["segs"]],
+                       "segs": segs_t,
                        "trab": a["trab"], "rem": _fmtn(a["rem"]) if a["rem"] is not None else "—",
                        "rspe": rs.pl(int(x["dias"]), "dia", "dias") if x else "—", "decisao": _f(x["decisao"]) if x else "—", "ref": _f(x["ref"]) if x else "—",
-                       "status": a["status"], "rot": "Sem dias a requerer: período já remido" if a.get("zerado") else rot[a["status"]][0],
+                       "cumulativo": a.get("cumulativo") is not None, "status": a["status"], "rot": "Sem dias a requerer: período já remido" if a.get("zerado") else rot[a["status"]][0],
                        "cor": "cinza" if a.get("zerado") else rot[a["status"]][1], "nota": nota,
                        "peticionado": a.get("peticionado", ""), "texto": a.get("texto", ""), "autos": a.get("autos", ""),
                        "autos_outros": bool(a.get("autos")) and not any(re.sub(r"\D", "", a["autos"]) == re.sub(r"\D", "", x or "")

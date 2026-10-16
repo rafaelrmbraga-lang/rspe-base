@@ -1047,6 +1047,17 @@ v7.10.0
     temporária e da progressão antecipada, "Prioridade: remição pendente
     que já dá benefício", "Divergência no SEEU/SIAPEN" e "RSPE
     desatualizado (mais de 60 dias)".
+  - Remição (aba Ficha): atestado com período declarado e intervalos
+    ("de 07/06/13 a 16/12/15, com intervalos") mostra os trechos de
+    trabalho que a ficha registra dentro do período - afastamentos e
+    lançamentos tornados sem efeito ficam de fora -, com os dias possíveis
+    para os dias declarados. Atestado sem período cujos trechos não
+    comportam os dias declarados é marcado como provável atestado
+    cumulativo: sai do total a requerer e da prioridade, com a indicação
+    das remições do RSPE sem origem que podem ser a sua apreciação.
+  - Aba Ficha: botão "Exportar tabela" gera a planilha simples da remição
+    para a petição (atestados x RSPE, total a requerer e trabalho sem
+    atestado).
   - Aba Indulto, um decreto por vez: nome social longo não alarga mais a
     coluna do nome nem espreme o motivo; o benefício vai abaixo do
     resultado, e a tabela cabe na tela sem rolagem lateral.

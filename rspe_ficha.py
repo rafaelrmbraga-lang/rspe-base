@@ -2540,9 +2540,12 @@ def quadro_trabalho(r, f, hoje=None, manuais=None):
                 "dias_atestado": a["rem"] or 0, "ja_remidos": ", ".join(a.get("cobertos_por") or []) if "rem_pend" in a else "",
                 "acima_do_possivel": a.get("teto") is not None and (a.get("rem_pend", a["rem"]) or 0) > a["teto"],
                 "periodo_inicio": rrm._f(min(x["ini"] for x in ss)) if ss else "", "periodo_fim": rrm._f(max(x["fim"] for x in ss)) if ss else ""}
-    res["atestados_pendentes"] = [_compat(a) for a in nl if a["rem"] and not a.get("zerado")]
-    # o mesmo valor da remição detalhada: a parte fora do período já remido e, no atestado sem período, só o possível (teto)
-    res["pendentes"] = sum(min(a.get("rem_pend", a["rem"]) or 0, a["teto"] if a.get("teto") is not None else float("inf")) for a in nl)
+    res["atestados_pendentes"] = [_compat(a) for a in nl if a["rem"] and not a.get("zerado") and a.get("cumulativo") is None]
+    # o mesmo valor da remição detalhada: a parte fora do período já remido e, no atestado sem período, só o possível (teto); o
+    # atestado cumulativo (rspe_remicao.conciliar) fica de fora: conferir nos autos o que já foi remido antes de pedir
+    res["pendentes"] = sum(min(a.get("rem_pend", a["rem"]) or 0, a["teto"] if a.get("teto") is not None else float("inf"))
+                           for a in nl if a.get("cumulativo") is None)
+    res["nl_cumulativos"] = [a for a in nl if a.get("cumulativo") is not None and a["rem"]]
     res["nl_sem_dias"] = sum(1 for a in nl if a["rem"] is None)
     res["remidos_execucao"] = sum(a["rem"] or 0 for a in vivos if a["origem"] != "rspe")
     livres = sum(x["dias"] for x in C["remicoes"] if x["usada"] is None)
@@ -2710,7 +2713,14 @@ def remicao_detalhada(C, pend_est, lei, lei_rem, res, hoje, tl=None, cursos=None
         base = "%s trabalhados" % a["trab"] if a["trab"] else ""
         if pela != un:
             base = (base + "; " if base else "") + "período em " + pela
-        if a["status"] == "NAO_LANCADO" and a["rem"]:
+        if a["status"] == "NAO_LANCADO" and a["rem"] and a.get("cumulativo") is not None:
+            # atestado cumulativo: sem dias exatos a requerer (fora dos totais e da prioridade); conferir nos autos o que já foi remido
+            add("nao_lancado" if a.get("peticionado") else "emitido",
+                {"ref": ref, "data": rrm._f(a["emissao"]), "setor": setor, "per": per, "unidade": un,
+                 "base": (base + "; " if base else "") + "%s remidos declarados; provável atestado cumulativo (os trechos da ficha comportam ≈ %s): "
+                         "conferir nos autos o que já foi remido antes de requerer" % (_fmtn(a["rem"]), rs.pl(a["cumulativo"], "dia", "dias")),
+                 "dias": 0, "estimado": False, "sem_dias": True, "cumulativo": True, "texto": a.get("texto", "")})
+        elif a["status"] == "NAO_LANCADO" and a["rem"]:
             if "rem_pend" in a:  # cumulativo: a parte já remida por outros atestados não se pede de novo
                 base = (base + "; " if base else "") + "%s remidos no atestado, ≈ %s fora do período já remido (%s)" % (
                     _fmtn(a["rem"]), _fmtn(a["rem_pend"]), ", ".join(a["cobertos_por"]))
@@ -3091,7 +3101,13 @@ def comparativo(r, f, hoje=None, conferidos=None, manuais=None):
         partes.append("Atestado emitido não lançado no RSPE (%s) - %s" % (
             " + ".join(x for x in (("%s remidos" % _fmtn(nh)) if nh >= 1 else "", rs.pl(nl_sd, "atestado sem os dias na ficha", "atestados sem os dias na ficha") if nl_sd else "") if x),
             "conferir nos autos (se juntado, requerer a apreciação)" if sem_pet else "peticionado: requerer a apreciação"))
-    elif res["diferenca"] >= 1:
+    nl_cum = res.get("nl_cumulativos") or []
+    if nl_cum:
+        partes.append("atestado cumulativo a conferir nos autos antes de requerer (%s)" % "; ".join(
+            "nº %s: %s remidos declarados" % (a["numero"] or "s/n", _fmtn(a["rem"])) for a in nl_cum))
+    if nl_cum and not (nh >= 1 or nl_sd):
+        pass
+    elif res["diferenca"] >= 1 and not (nh >= 1 or nl_sd):
         partes.append("Conferir remição: ficha %s%s × RSPE %s" % ("≈ " if res["remidos_estudo"] else "", _dias_txt(ficha_total), _dias_txt(res["homologados"])))
     if lei_d >= 1:
         partes.append("leitura peticionada sem remição no RSPE (%s)" % rs.pl(int(lei_d), "dia", "dias"))

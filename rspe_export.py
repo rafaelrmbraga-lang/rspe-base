@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Exportação das abas para Excel e PDF, com o mesmo visual do programa."""
 
+import re
 from datetime import datetime
 
 import rspe_scraper as rs
@@ -362,6 +363,89 @@ def exportar_providencias(linhas, saida, titulo):
         rs_.column_dimensions[col].width = w
     wb.save(saida)
 
+
+
+def exportar_remicao_tabela(m, saida):
+    """Planilha simples da remição de um assistido, para juntar à petição: (1) atestados da ficha x remições do RSPE, com o total a
+    requerer, e (2) trabalho registrado na ficha sem atestado nem remição (pedir o atestado à unidade)."""
+    from openpyxl import Workbook
+    from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+    tab = ((m.get("fd_conc") or {}).get("tabela")) or []
+    sem = (((m.get("fd_rem_det") or {}).get("sem_atestado")) or {}).get("itens") or []
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Remição"
+    fino = Side(style="thin", color="C9D3CC")
+    cab_fill = PatternFill("solid", fgColor="1F5B39")
+    quebra = Alignment(wrap_text=True, vertical="top")
+
+    def cabecalho(cols):
+        ws.append(cols)
+        for c in ws[ws.max_row]:
+            c.font = Font(bold=True, color="FFFFFF")
+            c.fill = cab_fill
+            c.alignment = Alignment(wrap_text=True, vertical="center")
+
+    def linha(vals, negrito=False):
+        ws.append(vals)
+        _sem_formula(ws)
+        for c in ws[ws.max_row]:
+            c.alignment = quebra
+            c.border = Border(bottom=fino)
+            if negrito:
+                c.font = Font(bold=True)
+
+    ws.append(["Remição: ficha disciplinar (SIAPEN) x RSPE"])
+    ws["A1"].font = Font(bold=True, size=13)
+    ws.append(["%s · autos %s · gerado em %s" % (m.get("nome", ""), m.get("proc") or m.get("id", ""), datetime.now().strftime("%d/%m/%Y"))])
+    ws.append([])
+    ws.append(["1. Atestados de trabalho e remições"])
+    ws[ws.max_row][0].font = Font(bold=True, size=11.5)
+    cabecalho(["Atestado", "Emitido em", "Setor e período de trabalho", "Dias trabalhados", "Dias remidos (atestado)",
+               "Remição no RSPE", "Decisão", "Situação", "Observação"])
+    SIT = {"CONCILIADO": "Já remido no RSPE", "NAO_LANCADO": "Não lançado no RSPE: requerer", "DIVERGENCIA": "Remição menor que o atestado"}
+    a_requerer, conferir = 0.0, 0
+    for t in tab:
+        cumul = bool(t.get("cumulativo"))
+        sit = "Sem dias a requerer: período já remido" if t.get("rot", "").startswith("Sem dias") else SIT.get(t.get("status"), t.get("rot", ""))
+        if t.get("status") == "NAO_LANCADO" and cumul:
+            sit, conferir = "Conferir nos autos antes de requerer", conferir + 1
+        elif t.get("status") == "NAO_LANCADO":
+            try:
+                a_requerer += float(str(t.get("rem")).replace(",", "."))
+            except ValueError:
+                pass
+        per = "\n".join("%s: %s" % (s.get("setor"), s.get("per")) for s in t.get("segs") or [])
+        obs = t.get("nota") or ""
+        if obs.startswith("períodos inferidos"):
+            obs = "Períodos deduzidos dos vínculos da ficha (o atestado não os informa)" + obs.split(";", 1)[1] if ";" in obs else \
+                  "Períodos deduzidos dos vínculos da ficha (o atestado não os informa)."
+        linha([t.get("atestado", ""), t.get("emissao") or "—", per, t.get("trab") if t.get("trab") is not None else "—",
+               t.get("rem") or "—", t.get("rspe") or "—", t.get("decisao") or "—", sit, obs.strip()[:1].upper() + obs.strip()[1:]])
+    ws.append([])
+    linha(["Total a requerer (atestados emitidos e não lançados no RSPE)", "", "", "", ("%.2f" % a_requerer).rstrip("0").rstrip(".").replace(".", ","),
+           "", "", "dias", ""], negrito=True)
+    if conferir:
+        linha(["%d atestado(s) com indício de atestado cumulativo: fora do total, conferir nos autos antes de requerer." % conferir] + [""] * 8)
+    if sem:
+        ws.append([])
+        ws.append(["2. Trabalho registrado na ficha sem atestado nem remição (pedir o atestado à unidade)"])
+        ws[ws.max_row][0].font = Font(bold=True, size=11.5)
+        cabecalho(["Setor", "Unidade", "Período", "Dias estimados (seg. a sáb.)", "Remidos estimados", "", "", "", "Observação"])
+        for x in sem:
+            mt = re.search(r"≈\s*(\d+)\s*dias", x.get("base") or "")
+            linha([x.get("setor", ""), x.get("unidade", ""), x.get("per", ""), int(mt.group(1)) if mt else "—", x.get("dias", "—"), "", "", "",
+                   "Estimativa; o atestado da unidade prevalece."])
+    ws.append([])
+    ws.append(["Remição: 1 dia de pena a cada 3 dias de trabalho (LEP, art. 126, § 1º, II); o tempo remido conta como pena cumprida (LEP, art. 128)."])
+    for col, w in zip("ABCDEFGHI", (24, 12, 46, 12, 13, 13, 12, 26, 52)):
+        ws.column_dimensions[col].width = w
+    ws.freeze_panes = "A6"
+    ws.page_setup.orientation = "landscape"
+    ws.page_setup.fitToWidth = 1
+    ws.sheet_properties.pageSetUpPr.fitToPage = True
+    ws.page_setup.fitToHeight = 0
+    wb.save(saida)
 
 
 def exportar_saidas(d, saida):
