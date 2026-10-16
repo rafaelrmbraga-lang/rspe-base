@@ -108,6 +108,20 @@ try:
     ok(rv.prioridade_remicao(dict(m, prog="", dec={}), rr, hj) == [], "prioridade: sem benefício deveria ficar vazio")
     ok(rv.prioridade_remicao(m, {}, hj)[:1] == ["Indulto/comutação, Decreto 9.246 (2017): o tempo que faltava é coberto pela remição pendente."],
        "prioridade: sem remição só o decreto")
+    # motivo curto da aba Indulto: objetivo, por que cabe ou não
+    mc = rd.motivo_curto
+    ok(mc({"s": "nao", "mot": "faltavam 38 dias para 1/5 em 25/12/2017"}) == "Tempo insuficiente: faltavam 38 dias para 1/5", "curto: faltavam")
+    ok(mc({"s": "cabe", "mot": "cumpriu 2a11m10d em 25/12/2017 (exigido 1a5m21d); comutação de 1/4 da pena remanescente (1a5m25d), redução de 135 dias; "
+                              "pena remanescente passa de 1a5m25d para 1a1m10d"}) == "Tempo cumprido: 2a11m10d (exigido 1a5m21d)", "curto: cabe")
+    ok(mc({"s": "imp", "mot": "VEDADO (art. 1º) · art. 7º, p. ú.: faltam 4a11m34d para 2/3 do impeditivo"}) == "Crime vedado pelo decreto (art. 1º)", "curto: vedado")
+    ok(mc({"s": "imp", "mot": "art. 33 Lei 11.343/06: hediondo ou equiparado na data do fato (18/10/2013); faltavam 2a8m12d para 2/3 da pena do "
+                              "impeditivo (concurso)"}) == "Crime impeditivo: art. 33 Lei 11.343/06 (hediondo); faltavam 2a8m12d para 2/3 da pena impeditiva",
+       "curto: impeditivo")
+    ok(mc({"s": "ver", "mot": "cumpriu 6a3m0d em 25/12/2017 (exigido 5a0m26d); A VERIFICAR - trânsito em julgado não consta no RSPE (art. 157 CP; "
+                              "art. 155 CP): conferir"}) == "Tempo cumprido: 6a3m0d (exigido 5a0m26d); a verificar: trânsito em julgado não consta no RSPE",
+       "curto: a verificar")
+    ok(mc({"s": "nao", "mot": "falta grave nos 12 meses anteriores: HOMOLOGAÇÃO DE FALTA GRAVE 31/08/2017"})
+       == "Falta grave nos 12 meses anteriores ao decreto (31/08/2017)", "curto: falta grave")
 except Exception as e:
     import traceback
     traceback.print_exc()

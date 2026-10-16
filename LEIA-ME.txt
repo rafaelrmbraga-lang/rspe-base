@@ -1043,6 +1043,10 @@ v7.10.0
   - Aba Indulto, um decreto por vez: nome social longo não alarga mais a
     coluna do nome nem espreme o motivo; o benefício vai abaixo do
     resultado, e a tabela cabe na tela sem rolagem lateral.
+  - Aba Indulto: o motivo é curto e objetivo (por que cabe ou não cabe:
+    tempo cumprido e exigido, o que falta verificar, o crime impeditivo,
+    o tempo que faltava). O texto completo do cálculo aparece ao passar o
+    mouse e na linha do tempo.
   - Dados da Base > Atendimentos se atualiza logo depois de importar a
     listagem ou o relatório, registrar ou desfazer um atendimento.
 
