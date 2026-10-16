@@ -264,7 +264,7 @@
   "vedado_reincidente_especifico_hediondo": true,
   "trafico_art44_lei11343": "2/3, vedado ao reincidente especifico (Lei 11.343/06, art. 44, p. ú.: arts. 33, caput e § 1º, e 34 a 37; art. 33, §§ 2º, 3º e 4º fora)",
   "trafico_pessoas": "2/3 (CP, art. 83, V, na redação da Lei 13.344/2016, que também criou o art. 149-A)",
-  "vedado_lc_lep112": "Vedado o livramento (LEP, art. 112): hediondo com morte primário (VI, a) e reincidente em hediondo com morte (VIII) desde 23/01/2020; feminicídio primário (VI-A) de 10/10/2024 a 24/03/2026; a partir de 25/03/2026 (Lei 15.358/2026): VI, a; VI, b (comando de organização criminosa ultraviolenta); VI, d (feminicídio primário) e VIII. A retroação do 50% sem a vedação é entendimento do STJ (Tema 1196); no STF é o Tema 1319, com repercussão geral reconhecida e mérito pendente.",
+  "vedado_lc_lep112": "Vedado o livramento (LEP, art. 112): hediondo com morte primário (VI, a) e reincidente em hediondo com morte (VIII) desde 23/01/2020; feminicídio primário (VI-A) de 10/10/2024 a 24/03/2026; a partir de 25/03/2026 (Lei 15.358/2026): VI, a; VI, b (comando de organização criminosa ultraviolenta); VI, d (feminicídio primário) e VIII. A retroação do 50% sem a vedação é entendimento do STJ (Tema 1196, tese firmada; recurso extraordinário sobrestado até o julgamento do Tema 1319/STF); no STF é o Tema 1319, com repercussão geral reconhecida e mérito pendente.",
   "art83_iii_b": "sem falta grave nos ultimos 12 meses",
   "pena_minima_anos": 2,
   "fonte": "CP, art. 83 (texto vigente conferido em 18/09/2026): I mais de 1/3 se não reincidente em crime doloso e bons antecedentes; II mais da metade se reincidente em crime doloso; III a) bom comportamento, b) sem falta grave nos últimos 12 meses; V mais de 2/3 para hediondo, tortura, tráfico, tráfico de pessoas e terrorismo, se não reincidente específico",
@@ -990,7 +990,7 @@
   },
   {
    "tema": "Progressao - reincidente generico hediondo com morte",
-   "fonte": "STJ, REsp 2.012.101, 2.012.112 e 2.016.358 (Tema 1196), 3ª Seção, j. 22/05/2024",
+   "fonte": "STJ, REsp 2.012.101, 2.012.112 e 2.016.358 (Tema 1196), 3ª Seção, j. 22/05/2024 (acórdão de mérito publicado em 27/05/2024; embargos em 08/04/2025); recurso extraordinário sobrestado até o julgamento do Tema 1319/STF - a tese continua firmada",
    "tese": "É válida a aplicação retroativa do percentual de 50% (cinquenta por cento), para fins de progressão de regime, a condenado por crime hediondo, com resultado morte, que seja reincidente genérico, nos moldes da alteração legal promovida pela Lei n. 13.964/2019 no art. 112, inc. VI, alínea a, da Lei n. 7.210/84 (Lei de Execução Penal), bem como a posterior concessão do livramento condicional, podendo ser formulado posteriormente com base no art. 83, inc. V, do Código Penal, o que não configura combinação de leis na aplicação retroativa de norma penal material mais benéfica."
   },
   {
@@ -1006,7 +1006,7 @@
   {
    "tema": "Progressao - hediondo com morte e livramento (pendente no STF)",
    "fonte": "STF, RE 1.464.013 (Tema 1319), repercussão geral reconhecida em 06/09/2024 (DJe 12/09/2024); mérito pendente",
-   "tese": "Questão submetida (sem tese de mérito): possibilidade de aplicação retroativa do art. 112, VI, a, da LEP (redação da Lei 13.964/2019) para garantir a progressão de regime de condenado por crime hediondo, mas sem a incidência da vedação ao livramento condicional e à saída temporária. No STJ, a retroação do 50% com posterior livramento (CP, art. 83, V) é admitida (Tema 1196).",
+   "tese": "Questão submetida (sem tese de mérito): possibilidade de aplicação retroativa do art. 112, VI, a, da LEP (redação da Lei 13.964/2019) para garantir a progressão de regime de condenado por crime hediondo, mas sem a incidência da vedação ao livramento condicional e à saída temporária. No STJ, a retroação do 50% com posterior livramento (CP, art. 83, V) é admitida (Tema 1196, tese firmada; o recurso extraordinário está sobrestado até o julgamento deste tema).",
    "nivel": "repercussao_geral_pendente"
   },
   {

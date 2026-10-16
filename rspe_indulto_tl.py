@@ -99,6 +99,11 @@ def natureza(c, D, ref):
         return {"selo": "A_VERIFICAR", "motivo": "tráfico (art. 33 da Lei 11.343/06) sem indicação, no SEEU, de caput/§ 1º ou do § 4º (tráfico privilegiado)",
                 "dispositivo": "Decreto %s, %s (só caput e § 1º; § 4º fora - STJ, Tema 1336; STF, Tema 1400)" % (num, "art. 1º, XVIII" if regra == "art1_2024_2025" else "art. 7º, I e VI"),
                 "se_sim": "caput ou § 1º: IMPEDITIVO", "se_nao": "§ 4º (privilegiado): NÃO IMPEDITIVO"}
+    if regra == "art1_2024_2025" and rs.homicidio_simples_selo(c):
+        # a mesma regra da progressão e do livramento: o selo do SEEU pode ser o do grupo de extermínio
+        return {"selo": "A_VERIFICAR", "motivo": "homicídio simples com o selo de hediondo do SEEU: hediondo só se em atividade típica de grupo de extermínio",
+                "dispositivo": "Lei 8.072/90, art. 1º, I; Decreto %s (vedação ao hediondo)" % num,
+                "se_sim": "grupo de extermínio: IMPEDITIVO", "se_nao": "homicídio simples: NÃO IMPEDITIVO"}
     if regra == "art1_2024_2025":
         imp = rs.impeditivo_decreto(c, ref)
         if imp and "fato anterior" in imp[1]:

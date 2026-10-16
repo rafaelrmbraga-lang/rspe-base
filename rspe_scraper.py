@@ -2729,6 +2729,17 @@ def trafico_incerto(c):
     return True
 
 
+def homicidio_simples_selo(c):
+    """Homicídio simples (CP, art. 121, fora do § 2º) com o selo de hediondo do SEEU: hediondo só se praticado em atividade típica de
+    grupo de extermínio (Lei 8.072/90, art. 1º, I), o que o RSPE não informa. A mesma regra na progressão, no livramento e no
+    indulto (tabela dos decretos e linha do tempo): o selo não se descarta nem se afirma - a verificar."""
+    if num_art(c.get("artigo")) != "121" or num_lei(c.get("lei")) not in ("2848", ""):
+        return False
+    if "HEDIONDO" not in ((c.get("fracao_progressao") or "") + (c.get("fracao_livramento") or "")).upper():
+        return False
+    return hediondo_condicional(c) is False and not qualificado_privilegiado(c)
+
+
 def impeditivo_decreto(c, ref=date(2024, 12, 25)):
     """Devolve (inciso, motivo) se o crime está no art. 1º dos Decretos 12.338/24 e 12.790/25, senão None.
     Hediondez aferida na data do decreto (ref), conforme o STJ."""
