@@ -79,7 +79,7 @@ def periodos_cumprimento(r, hoje, extras_out=None):
     per += extras
     # RSPE diz "em cumprimento" (último evento não é interrupção) mas não há período aberto: abre a partir da última alteração de regime.
     # "Pena suspensa (preso em outro processo)" não é cumprimento desta pena: nada se infere (o prazo fica suspenso - art. 116, p. ú.)
-    _sit = (r.get("situacao_cumprimento") or "").upper()
+    _sit = (r.get("situacao_eventos") or r.get("situacao_cumprimento") or "").upper()
     em_cumpr = "INTERROMPIDA" not in _sit and "SUSPENSA" not in _sit
     if em_cumpr and not any(f is None for _, f in per):
         # alteração de regime concedida; "ALTERAÇÃO DE DATA-BASE" (complemento "Progressão de Regime") não é mudança de regime, e
@@ -2948,7 +2948,13 @@ def analisar(r, hoje=None, ficha=None):
                     L["fato"], ("; a primeira transitou em %s" % rs.fmt(_trs[0])) if _trs else ""))
             L["avisos"].append("reincidência marcada no RSPE sem condenação anterior transitada: prazo calculado sem o +1/3 (CP, arts. 63 e 110) - conferir a certidão de antecedentes")
         pena = rs.pena_para_dias(c.get("pena_imposta") or c.get("pena_total_processo"))
-        _ms_rspe = "MEDIDA DE SEGURANCA" in rs._sem_acento(c.get("pena_total_processo") or "").upper()  # absolvição imprópria (RSPE)
+        _ms_rspe = "MEDIDA DE SEGURANCA" in rs._sem_acento(c.get("pena_total_processo") or "").upper() or bool(c.get("medida_seguranca"))  # absolvição imprópria (RSPE)
+        if c.get("pena_da_acao"):
+            # "Pena Imposta: 0" no único crime da ação: a leitura já usa a pena total da ação (rs.penas_dos_crimes)
+            L["pena"] = rs.pena_extenso(c.get("pena_imposta"))
+            L["pena_do_processo"] = True
+            L["avisos"].append("a pena individual do crime consta como 0 no RSPE; usada a pena total do processo (%s), único crime da ação "
+                               "penal - conferir na guia" % L["pena"])
         if not pena and not _ms_rspe and c.get("pena_total_processo"):
             # pena individual "0" no único crime da ação penal: a pena total do processo é a dele
             _pt = rs.pena_para_dias(c.get("pena_total_processo"))
@@ -2995,6 +3001,17 @@ def analisar(r, hoje=None, ficha=None):
             meia = _v115 == "sim"
             L["avisos"].append("art. 115 %s por informação do operador" % ("aplicado" if meia else "afastado"))
         meia_desc = (nasc is None or idade_incoer) and _v115 not in ("sim", "nao")  # idade incoerente vale como idade desconhecida
+        # nascimento do RSPE diferente do da ficha (sem a data informada pelo operador): se a da ficha muda o art. 115, o resultado
+        # que dependa dele fica a verificar (a mesma variante da idade desconhecida)
+        _alt = rs.to_date(r.get("_nasc_alt") or "")
+        if _alt and nasc and _v115 not in ("sim", "nao") and not meia_desc:
+            _fa, _sa = _idade(_alt, fato), _idade(_alt, sent)
+            _meia_alt = (_fa is not None and 18 <= _fa < menor21) or (_sa is not None and _sa >= maior70)
+            _meia_rspe = (i_fato is not None and 18 <= i_fato < menor21) or (i_sent is not None and i_sent >= maior70)
+            if _meia_alt != _meia_rspe:
+                meia_desc = True
+                L["avisos"].append("art. 115: a data de nascimento da ficha (%s) diverge da do RSPE (%s) e muda a metade do prazo - a verificar "
+                                   "no documento de identidade" % (rs.fmt(_alt), rs.fmt(nasc)))
         L["art115"] = meia
 
         art28_sem_pena = False
@@ -3005,12 +3022,12 @@ def analisar(r, hoje=None, ficha=None):
             if _pm:
                 _mm = Fraction(prazo_base_anos(_pm, fato) * 12) * (Fraction(1, 2) if meia else 1)
                 _pz = fmt_prazo(_mm) + (" (½ art. 115)" if meia else "")
-                _t = "medida de segurança - prazo pela pena máxima cominada (STJ, Súm. 527)"
+                _t = "A VERIFICAR: medida de segurança - prazo de referência pela pena máxima cominada (STJ, Súm. 527)"
                 _dt = ("Medida de segurança (RSPE: \"%s\"): sem pena aplicada, a prescrição regula-se pela pena máxima cominada ao crime (%s): "
                        "prazo de %s (CP, art. 109%s; STJ, Súmula 527 e AgRg no REsp 1.667.508). Os marcos da medida não constam do RSPE - "
                        "verificar na ação penal e na execução." % ((c.get("pena_total_processo") or "").strip(), rs.dias_para_pena(_pm), _pz,
                                                                     ", com a metade do art. 115" if meia else ""))
-                L.update(retro_status=_t, retro_cor="cinza", ppe_status=_t, ppe_cor="cinza", prazo_ppp=_pz, prazo_ppe=_pz, ppe_termo="",
+                L.update(retro_status=_t, retro_cor="amarelo", ppe_status=_t, ppe_cor="amarelo", prazo_ppp=_pz, prazo_ppe=_pz, ppe_termo="",
                          ppe_previsao="", retro_detalhe=_dt, ppe_detalhe=_dt)
             else:
                 _t = "A VERIFICAR: medida de segurança - pena máxima cominada não identificada"
