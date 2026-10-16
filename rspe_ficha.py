@@ -1075,7 +1075,7 @@ def derivar(f, eventos):
             # imputado o cometimento de falta disciplinar GRAVE, referente ao fato ocorrido em d"): vira a falta já julgada
             if instaura or not re.search(r"CIENCIA D[OA] (?:RESULTADO|DECISAO)|CONCLUSO|DECISAO DO (?:PRESIDENTE DO )?CONSELHO|APLICACAO DE SANCAO", u) or \
                     not re.search(r"SANCIONAD|COMETEU FALTA|IMPUTADO (?:N?O )?COMETIMENTO|PROPOSTA DE REGRESSAO|SANCAO DISCIPLINAR|ADVERTENCIA|REPREENSAO", u) or \
-                    re.search(r"ABSOLVID|EXTINT|ARQUIVAD|SANCIONADO PREVENTIVAMENTE|AGUARDA", u):
+                    re.search(r"ABSOLVID|EXTINT|ARQUIVAD|PRESCRI|SANCIONADO PREVENTIVAMENTE|AGUARDA", u):
                 continue
             mf = re.search(_RE_FATO_RES, u)
             dt = (m.group(1) or m.group(2)) if m else (mf.group(1) if mf and len(mf.group(1)) == 10 else e["data"])
@@ -1095,7 +1095,8 @@ def derivar(f, eventos):
             continue
         if re.search(r"ABSOLVID", u):
             tipo = "absolvido"
-        elif re.search(r"EXTINT", u):
+        elif re.search(r"EXTINT|PRESCRI", u):
+            # item 57 de 16/10: PADIC extinto ou arquivado por prescrição ("reconhecida a prescrição") não produz efeito disciplinar
             tipo = "extinto"
         elif re.search(r"ARQUIVAD", u):
             tipo = "arquivado"
@@ -1411,11 +1412,18 @@ def reconciliar_eventos(r, f):
                 _xp = _dp(f.get("data_prisao") or "")
                 if _xp and d < _xp < x and (x - _xp).days <= 30:
                     x = _xp
-                r["_eventos"].append({"tipo": "REINÍCIO", "motivo": "%s (lançado pela ficha SIAPEN)" % ("RECAPTURA" if rua else "ENTRADA NO SISTEMA PRISIONAL"),
-                                      "complemento": "", "data": rs.fmt(x), "data_decisao": "", "data_referencia": "", "processos": "", "_ficha": True})
-                r["_eventos"].sort(key=lambda e2: rs.to_date(e2.get("data") or "") or date.min)
-                avisos.append(("reinicio-pela-ficha", {"interrupcao": d, "entrada": x, "origem": mm.group(1).strip() if mm else "", "rua": rua,
-                                                       "motivo": (evs[-1].get("motivo") or "").strip()}))
+                # item 51 de 16/10: depois de liberdade provisória, relaxamento ou regime aberto, a nova prisão pode ser por outro
+                # processo (suspensão, não reinício) - reinício e suspensão levam a data-base e prescrição opostas: nada se lança
+                # até se saber em que processo foi a prisão ("verificar")
+                if re.search(r"LIBERDADE PROVIS|RELAXAMENTO|ABERTO", rs._sem_acento(evs[-1].get("motivo") or "").upper()):
+                    avisos.append(("reinicio-a-conferir", {"interrupcao": d, "entrada": x, "origem": mm.group(1).strip() if mm else "", "rua": rua,
+                                                           "motivo": (evs[-1].get("motivo") or "").strip()}))
+                else:
+                    r["_eventos"].append({"tipo": "REINÍCIO", "motivo": "%s (lançado pela ficha SIAPEN)" % ("RECAPTURA" if rua else "ENTRADA NO SISTEMA PRISIONAL"),
+                                          "complemento": "", "data": rs.fmt(x), "data_decisao": "", "data_referencia": "", "processos": "", "_ficha": True})
+                    r["_eventos"].sort(key=lambda e2: rs.to_date(e2.get("data") or "") or date.min)
+                    avisos.append(("reinicio-pela-ficha", {"interrupcao": d, "entrada": x, "origem": mm.group(1).strip() if mm else "", "rua": rua,
+                                                           "motivo": (evs[-1].get("motivo") or "").strip()}))
     # omissão: nenhum evento de prisão no RSPE, e a ficha registra a entrada no sistema prisional
     if not evs:
         ent = [(x, t) for x, t in ev if RE_ENTRADA.search(t)]
@@ -1499,6 +1507,20 @@ UNIDADES_MS = [
     (r"SEGURAN[ÇC]A M[ÁA]XIMA", "fechado", "Penitenciária de Segurança Máxima"),
     (r"PENITENCI[ÁA]RIA|PRES[ÍI]DIO|CADEIA|ESTABELECIMENTO PENAL|CENTRO DE DETEN", "fechado", "Estabelecimento de regime fechado"),
 ]
+
+
+def unidade_incerta(nome):
+    """Unidade classificada como de regime fechado só pelo nome genérico (estabelecimento penal, presídio, cadeia, sigla de
+    estabelecimento penal) ou com ala/anexo: pode abrigar o semiaberto. A penitenciária é de regime fechado (LEP, art. 87)."""
+    reg, rot = classificar_unidade(nome)
+    u = rs._sem_acento(nome or "").upper()
+    if re.search(r"\bALA\b|ANEXO", u):
+        return True
+    if rot == "Estabelecimento de regime fechado":
+        return "PENITENCI" not in u
+    if rot == "Estabelecimento de regime fechado (sigla)":
+        return not re.match(r"\s*P", u)
+    return False
 
 
 def classificar_unidade(nome):
@@ -1727,13 +1749,23 @@ def _unidade_x_ficha(r, f):
             return []  # execução suspensa (preso em outro processo): a unidade é a da outra prisão
         # nova prisão lançada pelo programa a partir da ficha (recaptura/reinício): justifica o fechado ou a regressão cautelar
         nova = [e for e in evs if e.get("_ficha")]
-        return [_item_rf("verificar" if nova else "alerta", "RSPE em regime %s, mas a ficha indica unidade de regime %s (%s)" % (
+        # nova prisão na ficha ainda sem reinício lançado (item 51 de 16/10: conferir em que processo) - também pode justificar o fechado
+        _conf = [x for tp, x in r.get("_reconc_ficha") or [] if tp == "reinicio-a-conferir"]
+        if _conf and not nova:
+            nova = [{"motivo": "nova prisão (a conferir)", "data": rs.fmt(_conf[-1]["entrada"]), "_conf": True}]
+        # item 59 de 16/10: "alerta" só com a unidade claramente de regime fechado; com ala/anexo ou classificação incerta, "verificar"
+        incerta = unidade_incerta(un) and tipo_un == "fechado"
+        return [_item_rf("verificar" if nova or incerta else "alerta", "RSPE em regime %s, mas a ficha indica unidade de regime %s (%s)" % (
                              reg.split(" - ")[0].lower(), "fechado" if tipo_un != "provisorio" else "provisório", un.title()),
                          "Unidade atual%s: %s - %s. Se não houve regressão (nem cautelar) ou nova prisão, a pessoa cumpre em regime mais gravoso que o "
                          "fixado: a falta de vaga não autoriza isso - pedir a transferência ou, na falta de vaga, o regime menos gravoso/monitoramento "
-                         "(STF, Súmula Vinculante 56; RE 641.320). Se houve regressão, conferir o lançamento no RSPE.%s" % (
-                             desde, un.title(), rot, (" O programa lançou %s pela ficha em %s: a nova prisão pode justificar o fechado ou a regressão "
-                                                      "cautelar - conferir." % ((nova[-1].get("motivo") or "o reinício").split(" (")[0].lower(), nova[-1]["data"])) if nova else ""),
+                         "(STF, Súmula Vinculante 56; RE 641.320). Se houve regressão, conferir o lançamento no RSPE.%s%s" % (
+                             desde, un.title(), rot, ((" A ficha registra nova prisão em %s, ainda sem reinício lançado (processo a conferir): ela pode "
+                                                       "justificar o fechado ou a regressão cautelar - conferir." % nova[-1]["data"]) if nova[-1].get("_conf") else
+                                                      (" O programa lançou %s pela ficha em %s: a nova prisão pode justificar o fechado ou a regressão "
+                                                       "cautelar - conferir." % ((nova[-1].get("motivo") or "o reinício").split(" (")[0].lower(), nova[-1]["data"]))) if nova else "",
+                             " A classificação da unidade como de regime fechado é incerta (pode ter ala de semiaberto): conferir onde a pessoa "
+                             "cumpre a pena." if incerta else ""),
                          "STF, Súmula Vinculante 56; LEP, arts. 112 e 118.")]
     if reg.startswith("SEMI") and tipo_un in ("aberto", "monitoramento") or reg.startswith("ABERTO") and tipo_un == "semiaberto":
         return [_item_rf("verificar", "RSPE em regime %s; a ficha indica unidade de %s (%s)" % (reg.split(" - ")[0].lower(), tipo_un, un.title()),
@@ -1954,7 +1986,7 @@ def _interrupcao_x_ficha(r, f):
     _cr = r.get("_crimes", [])
     extinta = bool(r.get("execucao_extinta")) or (bool(_cr) and all((c.get("extinto") or "").upper().startswith("S") for c in _cr))
     for tp, x in r.get("_reconc_ficha") or []:
-        if tp == "reinicio-pela-ficha" and extinta:
+        if tp in ("reinicio-pela-ficha", "reinicio-a-conferir") and extinta:
             out.append({"nivel": "info", "titulo": "Nova prisão na ficha em %s, depois da interrupção do RSPE (execução extinta)" % rs.fmt(x["entrada"]),
                         "detalhe": "O RSPE termina na interrupção de %s (%s), e a ficha registra entrada%s em %s. Com a execução extinta, essa "
                                    "prisão é provavelmente de outro processo: não há reinício a pedir nesta execução." % (
@@ -1969,6 +2001,16 @@ def _interrupcao_x_ficha(r, f):
                                        rs.fmt(x["interrupcao"]), x["motivo"].lower() or "motivo não consta",
                                        (" vinda de " + x["origem"]) if x["origem"] else "", rs.fmt(x["entrada"]), rs.fmt(x["entrada"])),
                         "fundamento": "LEP, arts. 111 e 112; CP, arts. 113 e 117, V.", "tipo": "rspe-x-ficha"})
+        elif tp == "reinicio-a-conferir":
+            out.append({"nivel": "verificar", "titulo": "Nova prisão na ficha em %s, depois da interrupção do RSPE (%s): conferir em que processo" % (
+                            rs.fmt(x["entrada"]), x["motivo"].lower() or "motivo não consta"),
+                        "detalhe": "O RSPE termina na interrupção de %s (%s), e a ficha registra entrada%s em %s e custódia desde então. A prisão "
+                                   "pode ser desta execução (reinício do cumprimento, a pedir a retificação do RSPE) ou de outro processo (suspensão "
+                                   "desta execução, sem curso da prescrição - CP, art. 116, p. único). Reinício e suspensão levam a data-base e a "
+                                   "prescrição a resultados opostos: o programa não lança o reinício até a conferência do processo da prisão." % (
+                                       rs.fmt(x["interrupcao"]), x["motivo"].lower() or "motivo não consta",
+                                       (" vinda de " + x["origem"]) if x["origem"] else "", rs.fmt(x["entrada"])),
+                        "fundamento": "LEP, arts. 111 e 112; CP, arts. 116, p. único, e 117, V.", "tipo": "rspe-x-ficha"})
         elif tp == "inicio-pela-ficha":
             out.append({"nivel": "alerta", "titulo": "RSPE sem evento de prisão: início lançado pela ficha em %s" % rs.fmt(x["entrada"]),
                         "detalhe": "O RSPE não lista eventos de início do cumprimento; a ficha registra a prisão/entrada no sistema prisional em %s. "
@@ -2001,6 +2043,8 @@ def _interrupcao_x_ficha(r, f):
         return out + [{"nivel": "verificar", "titulo": "Suspensão por prisão em outro processo, mas a ficha registra saída em liberdade",
                  "detalhe": "RSPE: %s em %s. Ficha: %s. Se foi solto no outro processo, esta execução deveria ter sido retomada (reinício): conferir." % (mot.lower(), rs.fmt(d), txt),
                  "fundamento": "LEP, art. 111; CP, art. 116, p. único.", "tipo": "rspe-x-ficha"}]
+    if ok and any(tp == "reinicio-a-conferir" for tp, _x in r.get("_reconc_ficha") or []):
+        return out  # nova prisão depois de liberdade provisória/aberto: o item "verificar" acima já trata
     if ok:
         return out + [{"nivel": "alerta", "titulo": "RSPE indica pena interrompida em %s, mas a ficha registra custódia" % rs.fmt(d),
                  "detalhe": "Motivo no RSPE: %s. Ficha: %s, sem entrada vinda de fora depois da interrupção (custódia contínua). A pessoa está presa: provável prisão em outro processo (suspensão, sem curso da prescrição - "

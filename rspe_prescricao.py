@@ -2981,6 +2981,16 @@ def analisar(r, hoje=None, ficha=None):
             if i_sent is not None and i_sent >= maior70:
                 meia = True
                 L["avisos"].append("art. 115: maior de %s na sentença (%s) - prazos pela metade" % (rs.pl(maior70, "ano", "anos"), rs.pl(i_sent, "ano", "anos")))
+            elif not meia and RE_INDICIO_ACORDAO.search(c.get("pena_total_processo") or ""):
+                # item 147 de 16/10: pena fixada em grau de recurso - o acórdão que condena ou altera a pena também é marco para a
+                # idade do art. 115 (o meramente confirmatório não); sem a data do acórdão, o trânsito é o limite
+                _ac = rs.to_date(L.get("acordao") or "") or tpr or tmp
+                i_ac = _idade(nasc, _ac)
+                if i_ac is not None and i_ac >= maior70:
+                    L["avisos"].append("art. 115 a verificar: maior de %s %s (%s) e a pena foi fixada em grau de recurso - se o acórdão condenou "
+                                       "ou alterou a pena, os prazos caem pela metade; o acórdão meramente confirmatório não é marco para a idade" % (
+                                           rs.pl(maior70, "ano", "anos"), "na data do acórdão" if rs.to_date(L.get("acordao") or "") else "até o trânsito em julgado",
+                                           rs.pl(i_ac, "ano", "anos")))
             if meia and sexual:
                 LEI_15160 = rg.data_lei_15160()
                 if fato and LEI_15160 and fato < LEI_15160:

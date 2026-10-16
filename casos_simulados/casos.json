@@ -18276,7 +18276,7 @@
   "acoes": [],
   "id": "S143",
   "grupo": "Divergência no SEEU/SIAPEN",
-  "titulo": "Prisão em flagrante lançada 5 meses antes do fato da ação vinculada: alerta e \"!\"",
+  "titulo": "Prisão em flagrante lançada 5 meses antes do fato da ação vinculada: verificar e \"!\" (item 53 de 16/10: detração entre processos possível)",
   "conta": "Prisão de 05/10/2014 vinculada à ação com fato em 10/03/2015 (156 dias depois, mais de 30): prisão de outro processo ou data do fato errada no SEEU.",
   "processo": "9900143-00.2026.8.12.0001",
   "rspe": {
@@ -18378,7 +18378,7 @@
    {
     "t": "aud",
     "tipo": "divergencia-seeu-prisao-antes-do-fato",
-    "nivel": "alerta",
+    "nivel": "verificar",
     "presente": true,
     "contem": [
      "05/10/2014",

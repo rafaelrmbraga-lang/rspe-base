@@ -49,7 +49,8 @@ ok(x["st_ok"] and not x["st_quase"], "elegível: %s" % x)
 # regime fechado / unidade do fechado
 ok(not st(rspe(regime_atual="Fechado - ATIVO"), ficha())["st_ok"], "regime fechado")
 x = st(rspe(), ficha(unidade="PENITENCIARIA ESTADUAL DE DOURADOS"))
-ok(not x["st_ok"] and not x["st_quase"], "unidade do fechado não é elegível nem amarela: %s" % x)
+# item 149 de 16/10: semiaberto no RSPE com a ficha em unidade do fechado (falta de vaga) fica amarelo, com o aviso da SV 56
+ok(not x["st_ok"] and x["st_quase"] and "Vinculante 56" in " ".join(i["txt"] for i in x["st_itens"]), "unidade do fechado fica amarela: %s" % x)
 ok(not rv.saida_temporaria(rspe(), ficha(), M, None, True, HOJE)["st_ok"], "pena interrompida")
 # só crimes posteriores à Lei 14.843/2024
 ok(not st(rspe(_crimes=[crime("10/05/2024")]), ficha())["st_ok"], "só fato posterior a 11/04/2024")
