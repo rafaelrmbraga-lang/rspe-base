@@ -60,9 +60,60 @@ def recurso(nome):
     return os.path.join(getattr(sys, "_MEIPASS", pasta_app()), nome)
 
 
-PASTA_BASES = os.path.join(pasta_app(), "bases")
-CONFIG = os.path.join(pasta_app(), "rspe_config.json")
-VIGIA_ESTADO = os.path.join(pasta_app(), "pasta_vigiada_estado.json")
+def _gravavel(pasta):
+    """A pasta aceita gravação (cria a pasta, se faltar, e um arquivo de teste)."""
+    try:
+        os.makedirs(pasta, exist_ok=True)
+        t = os.path.join(pasta, ".apto_teste_gravacao_%d" % os.getpid())
+        with open(t, "w") as f:
+            f.write("")
+        os.remove(t)
+        return True
+    except OSError:
+        return False
+
+
+def pasta_usuario():
+    """Pasta de reserva na pasta do usuário: Documentos\\APTO (ou <usuário>\\APTO, sem a pasta Documentos)."""
+    casa = os.environ.get("USERPROFILE") or os.path.expanduser("~")
+    doc = os.path.join(casa, "Documents")
+    return os.path.join(doc if os.path.isdir(doc) else casa, APP)
+
+
+def pasta_dados():
+    """Bases, configuração e registro de erros: ao lado do programa; se a pasta do programa não permite gravação (ex.:
+    "Arquivos de Programas"), na pasta do usuário, e a tela informa o caminho."""
+    if _gravavel(pasta_app()):
+        return pasta_app()
+    reserva = pasta_usuario()
+    return reserva if _gravavel(reserva) else pasta_app()
+
+
+PASTA_DADOS = pasta_dados()
+DADOS_RESERVA = os.path.normcase(os.path.abspath(PASTA_DADOS)) != os.path.normcase(os.path.abspath(pasta_app()))
+PASTA_BASES = os.path.join(PASTA_DADOS, "bases")
+CONFIG = os.path.join(PASTA_DADOS, "rspe_config.json")
+VIGIA_ESTADO = os.path.join(PASTA_DADOS, "pasta_vigiada_estado.json")
+if DADOS_RESERVA:
+    # a configuração que já existia ao lado do programa (bases recentes, pasta vigiada) passa para a pasta de reserva
+    for _n in ("rspe_config.json", "pasta_vigiada_estado.json"):
+        try:
+            if not os.path.exists(os.path.join(PASTA_DADOS, _n)) and os.path.isfile(os.path.join(pasta_app(), _n)):
+                shutil.copy2(os.path.join(pasta_app(), _n), os.path.join(PASTA_DADOS, _n))
+        except OSError:
+            pass
+
+
+def pasta_gravacao():
+    """Onde gravar configuração, avisos e registro de erros agora (a pasta do programa, ou a de reserva)."""
+    return PASTA_DADOS if DADOS_RESERVA else pasta_app()
+
+
+def aviso_pasta_dados():
+    """Texto para a tela quando a pasta de reserva está em uso ("" quando tudo fica ao lado do programa)."""
+    if not DADOS_RESERVA:
+        return ""
+    return ("A pasta do programa não permite gravação: bases, configuração e registro de erros ficam em %s." % PASTA_DADOS)
 VIGIA_INTERVALO = 15  # segundos entre as varreduras da pasta vigiada
 PORTA_EXTENSAO = 47321  # a extensão do navegador pergunta ao APTO (só neste computador) quais são as bases
 PASTAS_TIPO = {"RSPE", "RSPES", "FD", "FDS", "FICHA", "FICHAS", "FICHA DISCIPLINAR", "FICHAS DISCIPLINARES"}
@@ -1425,7 +1476,8 @@ class Api:
         if not self.base:
             return {"sem_base": True, "recentes": [{"caminho": p, "nome": os.path.splitext(os.path.basename(p))[0]} for p in self._recentes()],
                     "hoje": rv.HOJE.strftime("%d/%m/%Y"), "abas": rv.ABAS, "rotulos": rv.ROTULO, "ajuda": AJUDA + _ajuda_juris(),
-                    "base_juridica": _bj_info(), "registros": []}
+                    "base_juridica": _bj_info(), "registros": [], "aviso_pasta": aviso_pasta_dados()}
+        self._copia_diaria()
         brutos = self.base.todos()
         ctx = self._contexto(brutos)
         # a lista é montada à parte e só substitui a atual no fim: exportar, relatórios e registro não leem uma lista pela metade
@@ -1471,6 +1523,7 @@ class Api:
             "registros": [_leve(self._json_de(m)) for m in self._modelos],
             "pendentes": self._pendentes_unidade(),
             "copia": self._copia_info(),
+            "aviso_pasta": aviso_pasta_dados(),
         }
 
     def registro(self, processo):
@@ -1519,6 +1572,7 @@ class Api:
             if msg:
                 r["msg"] = msg
             return r
+        self._copia_diaria()
         r = self.base.um(processo)
         self._json.pop(processo, None)
         rv.HOJE = datetime.now().date()
@@ -2450,6 +2504,7 @@ class Api:
             return None
         if self.base.um(chave) is None:
             return {"erro": "Assistido não encontrado na base (já removido?)."}
+        self._copia_antes("remover %s" % chave)
         self.base.remover(chave, bool(tudo))
         out = self.listar()
         if isinstance(out, dict):
@@ -2503,15 +2558,18 @@ class Api:
         self._etapa("Montando a tela…")
         return r
 
-    # ---- cópias de segurança: uma a cada abertura da base, guardadas as 10 últimas ----
+    # ---- cópias de segurança: a cada abertura da base, uma por dia com o programa aberto, antes de "Restaurar", de "Remover"
+    # e das importações em lote; guardadas as 10 últimas e, além delas, a última de cada um dos 7 dias anteriores ----
     COPIAS_MAX = 10
+    COPIAS_DIAS = 7
 
-    def _pasta_copias(self):
-        return os.path.join(os.path.dirname(os.path.abspath(self.base.caminho)), "copias", self.base.nome)
+    def _pasta_copias(self, base=None):
+        base = base or self.base
+        return os.path.join(os.path.dirname(os.path.abspath(base.caminho)), "copias", base.nome)
 
-    def _copias(self):
-        """Cópias da base aberta, da mais nova para a mais antiga: [(caminho, datetime)]."""
-        pasta = self._pasta_copias()
+    def _copias(self, base=None):
+        """Cópias da base (a aberta, se não indicada), da mais nova para a mais antiga: [(caminho, datetime)]."""
+        pasta = self._pasta_copias(base)
         out = []
         if os.path.isdir(pasta):
             for a in os.listdir(pasta):
@@ -2520,29 +2578,58 @@ class Api:
                     out.append((os.path.join(pasta, a), datetime.strptime(m.group(1), "%Y%m%d_%H%M%S")))
         return sorted(out, key=lambda x: x[1], reverse=True)
 
-    def _fazer_copia(self, manter=None):
+    def _fazer_copia(self, manter=None, base=None):
         """Copia a base (API de backup do SQLite: cópia íntegra mesmo com a base aberta). Base vazia não é copiada."""
-        if not self.base or not self.base.nomes():
+        base = base or self.base
+        if not base or not base.nomes():
             return
-        pasta = self._pasta_copias()
+        pasta = self._pasta_copias(base)
         os.makedirs(pasta, exist_ok=True)
         agora = datetime.now()
-        destino = os.path.join(pasta, "%s_%s.sqlite" % (self.base.nome, agora.strftime("%Y%m%d_%H%M%S")))
+        destino = os.path.join(pasta, "%s_%s.sqlite" % (base.nome, agora.strftime("%Y%m%d_%H%M%S")))
         if os.path.exists(destino):
             return
         dst = sqlite3.connect(destino)
         try:
-            with self.base.lock:
-                self.base.con.backup(dst)
+            with base.lock:
+                base.con.backup(dst)
         finally:
             dst.close()
-        for c, _ in self._copias()[self.COPIAS_MAX:]:
-            if c == manter:
+        todas = self._copias(base)
+        # além das 10 últimas, fica a última cópia de cada um dos 7 dias anteriores: as cópias antes de remover e de importar
+        # não apagam, num dia de muito movimento, as dos dias anteriores
+        dias, guardar = set(), set()
+        for c, d in todas[self.COPIAS_MAX:]:
+            if d.date() not in dias and (agora.date() - d.date()).days <= self.COPIAS_DIAS:
+                dias.add(d.date())
+                guardar.add(c)
+        dias_recentes = {d.date() for _, d in todas[:self.COPIAS_MAX]}
+        for c, d in todas[self.COPIAS_MAX:]:
+            if c == manter or (c in guardar and d.date() not in dias_recentes):
                 continue
             try:
                 os.remove(c)
             except OSError:
                 pass
+
+    def _copia_diaria(self, base=None):
+        """Cópia do dia: com o programa aberto por dias seguidos, a primeira atualização de cada dia faz uma cópia nova."""
+        base = base or self.base
+        try:
+            if base and not getattr(base, "somente_leitura", False):
+                c = self._copias(base)
+                if not c or c[0][1].date() < datetime.now().date():
+                    self._fazer_copia(base=base)
+        except Exception:
+            logging.getLogger("rspe").exception("cópia diária de %s", getattr(base, "caminho", "?"))
+
+    def _copia_antes(self, motivo, base=None):
+        """Cópia antes de uma operação que apaga ou substitui muitos dados (remover assistido, importação em lote)."""
+        try:
+            if not getattr(base or self.base, "somente_leitura", False):
+                self._fazer_copia(base=base)
+        except Exception:
+            logging.getLogger("rspe").exception("cópia antes de %s", motivo)
 
     def _copia_info(self):
         try:
@@ -2670,7 +2757,10 @@ class Api:
 
     def nova_base(self, nome=None):
         """Cria base nomeada na pasta 'bases' (nome vindo da tela inicial) ou pergunta o arquivo."""
-        os.makedirs(PASTA_BASES, exist_ok=True)
+        try:
+            os.makedirs(PASTA_BASES, exist_ok=True)
+        except OSError as e:
+            return {"erro": "Não foi possível criar a pasta das bases (%s): %s" % (PASTA_BASES, _msg_falha_gravar(PASTA_BASES, e))}
         nome = (nome or "").strip()
         if nome:
             seguro = "".join(ch for ch in nome if ch not in '\\/:*?"<>|').strip().rstrip(".").strip() or "Nova base"
@@ -2679,6 +2769,13 @@ class Api:
             c = os.path.join(PASTA_BASES, seguro + ".sqlite")
             if os.path.exists(c):
                 return {"erro": "Já existe uma base chamada '%s'. Escolha outro nome ou abra a existente." % seguro}
+            if not _gravavel(PASTA_BASES):
+                return {"erro": "A pasta %s não permite gravação: a base '%s' não pode ser criada nela. Use \"Nova base…\" "
+                                "e escolha uma pasta com permissão de gravação (por exemplo, Documentos)." % (PASTA_BASES, seguro)}
+            r = self._trocar_base(c)
+            if DADOS_RESERVA and isinstance(r, dict) and not r.get("erro"):
+                r["msg"] = ((r.get("msg") or "") + " Base criada em %s. %s" % (c, aviso_pasta_dados())).strip()
+            return r
         else:
             c = _um(self._janela.create_file_dialog(webview.SAVE_DIALOG, directory=PASTA_BASES, save_filename="Nova base.sqlite",
                                                    file_types=("Base APTO (*.sqlite)",)))
@@ -2713,13 +2810,15 @@ class Api:
 
     def escolher_base(self):
         """Só o diálogo de arquivo: a tela mostra o carregamento depois que o arquivo é escolhido."""
-        os.makedirs(PASTA_BASES, exist_ok=True)
+        with contextlib.suppress(OSError):
+            os.makedirs(PASTA_BASES, exist_ok=True)  # sem gravação: o diálogo abre na pasta que existir
         return _um(self._janela.create_file_dialog(webview.OPEN_DIALOG, directory=PASTA_BASES, file_types=("Base APTO (*.sqlite)",)))
 
     def abrir_base(self, caminho=None):
         if caminho and os.path.exists(caminho):
             return self._trocar_base(caminho)
-        os.makedirs(PASTA_BASES, exist_ok=True)
+        with contextlib.suppress(OSError):
+            os.makedirs(PASTA_BASES, exist_ok=True)
         c = _um(self._janela.create_file_dialog(webview.OPEN_DIALOG, directory=PASTA_BASES, file_types=("Base APTO (*.sqlite)",)))
         return self._trocar_base(c) if c else None
 
@@ -2807,7 +2906,10 @@ class Api:
         return r
 
     def abrir_pasta_bases(self):
-        os.makedirs(PASTA_BASES, exist_ok=True)
+        try:
+            os.makedirs(PASTA_BASES, exist_ok=True)
+        except OSError as e:
+            return {"erro": "Não foi possível criar a pasta das bases (%s): %s" % (PASTA_BASES, _msg_falha_gravar(PASTA_BASES, e))}
         _abrir(PASTA_BASES)
         return None
 
@@ -2858,6 +2960,8 @@ class Api:
             atend = [a for a in arqs if ratd.tipo_pelo_nome(os.path.basename(a))]
             av_atend = self._atend_importar_arquivos(atend, base) if atend else []
             arqs = [a for a in arqs if a not in atend]
+            if len(arqs) >= 2:
+                self._copia_antes("importar %d arquivos" % len(arqs), base)  # importação em lote: cópia antes de gravar
             resumo = self._lote_(arqs, base, silencioso) if arqs else {"novos": 0, "atualizados": 0, "historico": 0, "duplicados": 0,
                                                                        "antigos": 0, "erros": 0, "fichas": 0, "incompletos": 0, "avisos": []}
             if av_atend:
@@ -3028,10 +3132,10 @@ class Api:
                                                          "pasta vigiada" if silencioso else "manual", rs.pl(len(arqs), "arquivo", "arquivos"))
         try:
             if not silencioso:
-                with open(os.path.join(pasta_app(), "importacao_avisos.txt"), "w", encoding="utf-8") as f:
+                with open(os.path.join(pasta_gravacao(), "importacao_avisos.txt"), "w", encoding="utf-8") as f:
                     f.write(cab + "\n" + ("\n".join(avisos) if avisos else "Sem avisos: todos os arquivos foram lidos e importados.") + "\n")
             elif avisos:
-                arq_v = os.path.join(pasta_app(), "importacao_avisos_pasta_vigiada.txt")
+                arq_v = os.path.join(pasta_gravacao(), "importacao_avisos_pasta_vigiada.txt")
                 try:
                     with open(arq_v, encoding="utf-8") as f:
                         velho = f.read().splitlines()[-2000:]  # o arquivo não cresce sem fim
@@ -3786,6 +3890,7 @@ class Api:
         fch = (m or {}).get("ficha_chave") or ""
         if not fch:
             return {"erro": "Este assistido não tem ficha disciplinar vinculada."}
+        self._copia_antes("remover a ficha de %s" % chave)
         if not self.base.remover_ficha(fch):
             return {"erro": "A ficha não foi encontrada na base (já removida?)."}
         r = self.listar()
@@ -4587,10 +4692,11 @@ def _abrir(caminho):
 
 
 def _preparar_log():
-    """No .exe (modo janela) não há console: erros vão para rspe_log.txt ao lado do programa."""
+    """No .exe (modo janela) não há console: erros vão para rspe_log.txt ao lado do programa (sem permissão de gravação
+    ali, na pasta de reserva do usuário)."""
     try:
         import logging
-        caminho = os.path.join(pasta_app(), "rspe_log.txt")
+        caminho = os.path.join(pasta_gravacao(), "rspe_log.txt")
         if sys.stdout is None or sys.stderr is None:
             f = open(caminho, "a", encoding="utf-8", buffering=1)
             sys.stdout = sys.stdout or f

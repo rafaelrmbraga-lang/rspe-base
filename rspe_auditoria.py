@@ -3121,6 +3121,171 @@ FUND_TIPOS = {
         "(LEP, art. 66, III).",
         "Requer-se a atualização do cálculo e a emissão de novo atestado de pena."),
 }
+# ---- fundamentação dos tipos mais frequentes que ainda não tinham texto (base 08.10: divergências com a ficha do SIAPEN,
+# hediondez posterior ao fato, data-base na data do fato, livramento sem desfecho, limite do art. 75, porte para consumo...).
+# Só os pontos em que a correção favorece o assistido; nos de nível "verificar", o pedido vem condicionado ao que se deve
+# conferir nos autos. Tipos que reúnem situações diferentes (rspe-x-ficha; perda de remidos lida da ficha) recebem uma
+# chave própria pelo título (_FUND_TITULO).
+FUND_TIPOS.update({
+    "pena-de-prisao-por-porte-para-consumo-proprio": (
+        "O art. 28 da Lei 11.343/2006 não comina pena privativa de liberdade ao porte de droga para consumo pessoal: prevê apenas "
+        "advertência sobre os efeitos das drogas, prestação de serviços à comunidade e medida educativa, e o descumprimento das medidas "
+        "autoriza somente a admoestação verbal e a multa (art. 28, § 6º), sem conversão em prisão. Por ser mais benéfico, o dispositivo "
+        "retroage aos fatos tipificados no art. 16 da Lei 6.368/1976 (CF, art. 5º, XL; CP, art. 2º, parágrafo único). Quanto à cannabis "
+        "sativa, a conduta não tem natureza penal (STF, Tema 506). A condenação não pode, portanto, integrar a pena privativa de "
+        "liberdade em execução.",
+        "Requer-se a exclusão da condenação do cálculo da pena privativa de liberdade, com o recálculo das datas de progressão, "
+        "livramento condicional e término e, cumprida ou prescrita a medida aplicada, a declaração da extinção da punibilidade quanto a ela."),
+    "hediondez-posterior-ao-fato": (
+        "A qualificação do crime como hediondo decorre de lei posterior ao fato e não pode retroagir em prejuízo do condenado (CF, art. 5º, "
+        "XL; CP, art. 2º): as frações de progressão e de livramento condicional são as do crime comum vigentes à época do fato. Pela mesma "
+        "razão, sustenta-se que a vedação dos decretos de indulto e comutação aos crimes hediondos não alcança fato anterior à lei que lhe "
+        "atribuiu essa natureza, entendimento acolhido pela 2ª Turma do STF (RHC 267.297 AgR), embora o Superior Tribunal de Justiça "
+        "afira a hediondez na data do decreto.",
+        "Requer-se que o crime seja tratado como comum para todos os fins da execução, mantidas as frações de crime comum na progressão e no "
+        "livramento condicional, e que o indulto e a comutação sejam analisados sem a vedação própria dos crimes hediondos."),
+    "data-base-na-data-do-fato-de-condenacao": (
+        "A data-base para a progressão só se altera pela falta grave judicialmente reconhecida, pela regressão ou pelo reinício do "
+        "cumprimento (LEP, arts. 112, § 6º, e 118; Súmula 534/STJ). O crime doloso praticado durante o cumprimento da pena constitui falta "
+        "grave (LEP, art. 52), mas seus efeitos dependem de reconhecimento judicial, precedido de apuração com defesa técnica (Súmula "
+        "533/STJ; STF, Tema 941). Praticado o fato antes do início do cumprimento, a condenação dele decorrente apenas se soma às demais "
+        "(LEP, art. 111) e não altera a data-base (STJ, Tema 1006).",
+        "Não havendo falta grave reconhecida judicialmente na data do fato, ou sendo o fato anterior ao início do cumprimento, requer-se a "
+        "retificação da data-base para a do último marco legal válido, com o recálculo das datas de progressão."),
+    "livramento-condicional-com-situacao-incerta-no-r": (
+        "Expirado o período de prova sem suspensão ou revogação do livramento condicional, a pena considera-se extinta (CP, art. 90; LEP, "
+        "art. 146). A suspensão ou a revogação só produz efeitos se decretada antes do término do período de prova (Súmula 617/STJ), e a "
+        "revogação depende de decisão judicial, ouvido o liberado (LEP, art. 143).",
+        "Requer-se a certificação da situação do livramento condicional e, inexistente suspensão ou revogação decretada antes do término do "
+        "período de prova, a declaração da extinção da pena (CP, art. 90; LEP, art. 146)."),
+    "em-apos-o-livramento-condicional-deferido-em-ver": (
+        "Expirado o período de prova sem suspensão ou revogação do livramento condicional, a pena considera-se extinta (CP, art. 90; LEP, "
+        "art. 146), e a suspensão ou a revogação só produz efeitos se decretada antes do término do período de prova (Súmula 617/STJ). A "
+        "regressão, por sua vez, depende de falta grave reconhecida judicialmente, ouvido previamente o condenado (LEP, art. 118, § 2º; "
+        "Súmula 533/STJ; STF, Tema 941); a regressão cautelar é provisória e não fixa, por si, nova data-base.",
+        "Requer-se a certificação do desfecho do livramento condicional e, inexistente suspensão ou revogação decretada antes do término do "
+        "período de prova, a declaração da extinção da pena (CP, art. 90; LEP, art. 146); subsidiariamente, ausente falta grave reconhecida "
+        "judicialmente, o afastamento dos efeitos da regressão sobre a data-base."),
+    "limite-de-cumprimento-art-75-unificacao": (
+        "O tempo de cumprimento das penas privativas de liberdade não pode ser superior a 30 anos para fatos anteriores à Lei 13.964/2019, "
+        "que elevou o limite para 40 anos e, por ser mais gravosa, não retroage (CP, art. 75; CF, art. 5º, XL). Sobrevindo condenação por "
+        "fato posterior ao início do cumprimento, faz-se nova unificação, desprezado o período de pena já cumprido (CP, art. 75, § 2º); "
+        "ainda assim, contado o limite do termo mais desfavorável ao assistido, o término informado o ultrapassa.",
+        "Requer-se a unificação das penas para atender ao limite do art. 75 do Código Penal, observada a nova unificação do § 2º, com a "
+        "retificação da data do término do cumprimento."),
+    "pena-nao-iniciada-seeu": (
+        "A guia deve ter o cumprimento iniciado e o cálculo de pena elaborado para que se apurem os benefícios da execução (LEP, arts. 105, "
+        "106 e 111). O tempo de prisão é pena cumprida e, quando anterior ao início da execução, computa-se como detração (CP, art. 42).",
+        "Estando o assistido preso por esta condenação, requer-se o lançamento do início do cumprimento na data da prisão e a elaboração do "
+        "cálculo de pena, com o cômputo de todo o tempo de custódia."),
+    "percentual-homicidio-consumacao-a-conferir": (
+        "O percentual próprio do crime hediondo ou equiparado com resultado morte (LEP, art. 112, VI, a, e VIII) pressupõe que o resultado "
+        "tenha ocorrido. No crime tentado não há resultado morte (CP, art. 14, II), e aplica-se o percentual do crime hediondo sem esse "
+        "resultado (LEP, art. 112, V ou VII).",
+        "Constando da sentença que o crime foi tentado, requer-se a retificação do percentual de progressão e o recálculo das datas dos "
+        "benefícios."),
+    # chaves pelo título (_FUND_TITULO)
+    "ficha:fuga-era-soltura": (
+        "A saída do estabelecimento por alvará de soltura cumpre ordem judicial e não configura fuga (LEP, art. 50, II). A fuga lançada sem "
+        "correspondência com os fatos produz efeitos que só a falta grave reconhecida em decisão judicial, após apuração com defesa "
+        "técnica, poderia produzir (LEP, art. 118; Súmula 533/STJ; STF, Tema 941): interrompe a contagem para a progressão (LEP, art. "
+        "112, § 6º; Súmula 534/STJ) e afasta o indulto e a comutação nos decretos que vedam o benefício a quem cometeu falta grave.",
+        "Requer-se a retificação do evento, para que conste a soltura por alvará, e não fuga, com o afastamento de todos os efeitos da "
+        "fuga (data-base, falta grave e perda de dias remidos) e o recálculo das datas dos benefícios."),
+    "ficha:fuga-sem-registro": (
+        "A fuga só produz efeitos na execução quando efetivamente ocorrida e reconhecida como falta grave em decisão judicial, precedida de "
+        "apuração com defesa técnica (LEP, arts. 50, II, e 118; Súmula 533/STJ; STF, Tema 941). O registro do sistema prisional mostra "
+        "movimentação contínua no período, sem saída, fuga ou evasão.",
+        "Não comprovada a fuga nos autos, requer-se a exclusão do evento e de todos os seus efeitos (interrupção do cumprimento, data-base e "
+        "falta grave), com o recálculo das datas dos benefícios."),
+    "ficha:detracao": (
+        "O tempo de prisão provisória computa-se na pena privativa de liberdade (CP, art. 42), e cabe ao juízo da execução decidir sobre a "
+        "detração (LEP, art. 66, III, c). A detração alcança também a prisão cautelar decretada em outro processo, desde que o crime da "
+        "condenação em execução seja anterior a ela, conforme a jurisprudência do Superior Tribunal de Justiça. O registro do sistema "
+        "prisional comprova a custódia no período que o cálculo trata como liberdade.",
+        "Requer-se o cômputo do período de custódia como detração, com o recálculo da pena cumprida e das datas de progressão, livramento "
+        "condicional, indulto, comutação e término."),
+    "ficha:custodia-sem-lancamento": (
+        "O tempo de custódia é pena cumprida e deve integrar o cálculo desde a data da prisão (CP, art. 42; LEP, art. 111). O registro do "
+        "sistema prisional comprova a custódia em data não refletida no cálculo de pena; sem o lançamento, esse tempo não é contado como "
+        "cumprimento, e o SEEU não projeta a progressão nem o livramento condicional.",
+        "Confirmada a prisão por esta execução, requer-se o lançamento do início ou do reinício do cumprimento na data registrada pelo "
+        "sistema prisional, com o cômputo do período de custódia e o recálculo das datas dos benefícios."),
+    "ficha:regime-mais-gravoso": (
+        "O condenado cumpre a pena no regime fixado na sentença ou alcançado por progressão, e a regressão depende de decisão judicial, "
+        "ouvido previamente o condenado (LEP, art. 118, § 2º). A falta de estabelecimento penal adequado não autoriza a manutenção em "
+        "regime prisional mais gravoso, devendo-se observar os parâmetros do RE 641.320/RS: saída antecipada, liberdade eletronicamente "
+        "monitorada ou, na falta de vaga, prisão domiciliar (Súmula Vinculante 56/STF).",
+        "Inexistindo decisão de regressão, requer-se a imediata transferência do assistido para estabelecimento compatível com o regime "
+        "{regime} e, na falta de vaga, a aplicação dos parâmetros do RE 641.320/RS, com a monitoração eletrônica ou o recolhimento "
+        "domiciliar."),
+    "ficha:progressao-ausente": (
+        "A progressão deferida e cumprida deve constar do cálculo de pena: é ela que define o regime atual e o marco a partir do qual se "
+        "conta o requisito objetivo da progressão seguinte (LEP, art. 112). O registro do sistema prisional comprova a transferência por "
+        "progressão de regime, ausente do cálculo.",
+        "Requer-se o lançamento da progressão no cálculo de pena, com o regime atual e a data-base correspondentes, e a projeção da "
+        "progressão seguinte e do livramento condicional."),
+    "ficha:livramento-ausente": (
+        "O livramento condicional concedido deve constar do cálculo de pena, com o início do período de prova. Expirado esse período sem "
+        "suspensão ou revogação, a pena considera-se extinta (CP, art. 90; LEP, art. 146; Súmula 617/STJ), e o tempo de livramento "
+        "computa-se como pena cumprida, salvo revogação por motivo diverso de infração penal anterior à sua vigência (LEP, arts. 141 e 142).",
+        "Requer-se o lançamento do livramento condicional no cálculo de pena, com a data do início do período de prova, e, esgotado esse "
+        "período sem suspensão ou revogação, a declaração da extinção da pena (CP, art. 90; LEP, art. 146)."),
+    "ficha:perda-remidos-anterior": (
+        "A falta grave autoriza a revogação de até 1/3 do tempo remido, e a contagem recomeça a partir da data da infração disciplinar "
+        "(LEP, art. 127). Por isso, a perda aplicada por falta posterior só alcança a remição adquirida depois da falta anterior, sendo "
+        "vedado o desconto repetido sobre a mesma remição (STJ, HC 398.850/SP).",
+        "Confirmada a homologação da falta anterior, requer-se a restituição dos dias remidos alcançados pela perda posterior e o recálculo "
+        "das datas dos benefícios."),
+})
+# (tipo do item, ou None para item sem tipo; título; chave em FUND_TIPOS): tipos que reúnem situações diferentes. Os títulos
+# não listados (CPF, nascimento ou mãe divergentes, regressão ausente do RSPE, unidade de monitoramento) ficam sem texto
+# pronto: a correção não favorece o assistido ou depende só de conferência
+_FUND_TITULO = [
+    ("rspe-x-ficha", r"^Fuga no RSPE em .*alvará de soltura", "ficha:fuga-era-soltura"),
+    ("rspe-x-ficha", r"^Fuga no RSPE em .* sem registro na ficha", "ficha:fuga-sem-registro"),
+    ("rspe-x-ficha", r"^Detração: prisão de |^Prisão em .* na ficha; (RSPE só registra início|cômputo só a partir)", "ficha:detracao"),
+    ("rspe-x-ficha", r"^Reinício omitido no RSPE|^RSPE sem evento de prisão|^Retomada divergente|^RSPE indica pena interrompida .*ficha registra custódia",
+     "ficha:custodia-sem-lancamento"),
+    ("rspe-x-ficha", r"^RSPE em regime (semiaberto|aberto), mas a ficha indica unidade de regime fechado", "ficha:regime-mais-gravoso"),
+    ("rspe-x-ficha", r"^Progressão para o (semiaberto|aberto) registrada na ficha .* ausente no RSPE", "ficha:progressao-ausente"),
+    ("rspe-x-ficha", r"^Livramento condicional registrado na ficha .* ausente no RSPE", "ficha:livramento-ausente"),
+    (None, r"^Perda de remidos pode alcançar remição anterior à falta", "ficha:perda-remidos-anterior"),
+]
+# títulos das divergências com a ficha na linguagem da peça (sem "lançado pela ficha", que é do programa)
+_TIT_FICHA = [
+    (r"^Reinício omitido no RSPE: lançado pela ficha em (\S+)",
+     r"o RSPE não registra o reinício do cumprimento, e a ficha registra a custódia desde \1"),
+    (r"^RSPE sem evento de prisão: início lançado pela ficha em (\S+)",
+     r"o RSPE não registra prisão nem início do cumprimento, e a ficha registra a prisão em \1"),
+    (r"^Retomada divergente: RSPE reinício em (\S+), ficha entrada em (\S+)",
+     r"o RSPE registra o reinício do cumprimento em \1, mas a ficha registra a entrada no sistema prisional em \2"),
+    (r"^Prisão em (\S+) na ficha; RSPE só registra início em (\S+) \((.*)\)$",
+     r"a ficha registra a prisão em \1, mas o RSPE só registra o início do cumprimento em \2 (\3)"),
+    (r"^Prisão em (\S+) na ficha; cômputo só a partir de (\S+), reinício lançado pela ficha \((.*)\)$",
+     r"a ficha registra a prisão em \1, sem reinício do cumprimento lançado no RSPE"),
+    (r"^Detração: prisão de (\S+) a (\S+) na ficha \(processo ([^,]+), [^)]*\) sem cômputo no RSPE - (.*)$",
+     r"a ficha registra a prisão de \1 a \2 pelo processo \3, desta execução, sem cômputo no RSPE: \4"),
+    (r"^Perda de remidos pode alcançar remição anterior à falta de (\S+) \((.*)\)$",
+     r"a perda de dias remidos pode ter alcançado remição anterior à falta de \1 registrada na ficha (\2)"),
+]
+# tipos em que o primeiro parágrafo diz o que o cálculo registra (não "apresenta a seguinte inconsistência")
+_FUND_REGISTRA = {"hediondez-posterior-ao-fato", "data-base-na-data-do-fato-de-condenacao", "livramento-condicional-com-situacao-incerta-no-r",
+                  "em-apos-o-livramento-condicional-deferido-em-ver", "pena-nao-iniciada-seeu", "percentual-homicidio-consumacao-a-conferir"}
+
+
+def _tipo_fund(it):
+    """Chave do texto pronto do item: o tipo ou, nos tipos que reúnem situações diferentes, a chave pelo título."""
+    tipo = it.get("tipo") or ""
+    if tipo in FUND_TIPOS:
+        return tipo
+    tit = it.get("titulo") or ""
+    for t, rx, k in _FUND_TITULO:
+        if (t or "") == tipo and re.search(rx, tit):
+            return k
+    return tipo
+
+
 # frases de orientação ao operador que não cabem na peça
 _RE_ORIENTACAO = re.compile(r"^(conferir|confira|importe|informe|verificar|verifique|o programa|clique|use |ver a aba|pedir|cabe impugnar|"
                             r"cabe pedir|marque|preencha|decida|se for o caso, informe|sem ele|sem esse)", re.I)
@@ -3133,6 +3298,28 @@ def _frases(t):
 
 # prejuízo concreto de cada tipo de erro (terceiro parágrafo da impugnação): o que o erro causa ao assistido
 _IMPACTO = [
+    # tipos com texto pronto desde a 7.12 (antes dos padrões gerais abaixo, que também os alcançariam)
+    (r"^ficha:fuga",
+     "Com isso, o assistido sofre os efeitos de uma falta grave que não cometeu: perde, para a progressão, o tempo já cumprido e pode "
+     "ter afastados o indulto, a comutação e parte dos dias remidos."),
+    (r"^ficha:detracao|^ficha:custodia|^pena-nao-iniciada",
+     "Com isso, tempo em que o assistido esteve efetivamente preso deixa de contar como pena cumprida, e os benefícios e o término são "
+     "postergados pelo mesmo período."),
+    (r"^ficha:regime-mais-gravoso", "Com isso, o assistido cumpre a pena em regime mais gravoso que o devido."),
+    (r"^ficha:progressao-ausente",
+     "Com isso, o cálculo não reflete o regime em que o assistido se encontra, e a progressão seguinte e o livramento condicional deixam "
+     "de ser projetados corretamente."),
+    (r"^ficha:livramento-ausente|^livramento-condicional-com-situacao|^em-apos-o-livramento",
+     "Com isso, o assistido pode permanecer submetido à execução de pena já extinta pelo decurso do período de prova."),
+    (r"^hediondez-posterior-ao-fato$",
+     "Tratado como hediondo, o crime teria o indulto e a comutação afastados e as frações dos benefícios elevadas por lei que não existia "
+     "na data do fato."),
+    (r"porte-para-consumo",
+     "Com isso, o assistido cumpre pena privativa de liberdade por conduta que a lei não pune com prisão, e a pena indevida eleva as "
+     "frações e posterga todos os benefícios e o término."),
+    (r"^percentual-homicidio",
+     "Com isso, exige-se para a progressão mais pena cumprida do que a lei determina para o crime tentado: a data do benefício é "
+     "postergada e o assistido permanece em regime mais gravoso que o devido."),
     (r"reincidencia-especifica",
      "Com isso, o livramento condicional é vedado ou postergado e, conforme a lei da data do fato, o percentual de progressão pode ser "
      "elevado, sem que a reincidência específica esteja demonstrada."),
@@ -3286,7 +3473,7 @@ def _citacoes(fund, ja):
 def fundamentacao(it, r):
     """Impugnação do cálculo em 4 parágrafos curtos: (1) o que o cálculo mostra, com os dados concretos do RSPE; (2) por que está
     errado, com o fundamento; (3) o prejuízo ao assistido; (4) o pedido."""
-    tipo = it.get("tipo") or ""
+    tipo = _tipo_fund(it)  # o tipo ou, nos tipos que reúnem situações diferentes (divergências com a ficha), a chave pelo título
     if it.get("nivel") not in ("alerta", "verificar") or tipo not in FUND_TIPOS or it.get("sem_fundamentacao"):
         return ""
     if tipo == "idade-prisao-domiciliar-no-regime-aberto-lep-art" and "ABERTO" not in (r.get("regime_atual") or "").upper():
@@ -3295,6 +3482,9 @@ def fundamentacao(it, r):
         return ""  # só a data-base fixa é erro a impugnar; no "verificar", o marco pode justificar a alteração
     correto, pedido = FUND_TIPOS[tipo]
     _tt = it.get("titulo") or ""
+    if "{regime}" in pedido:
+        _rg = re.search(r"\bregime (semiaberto|aberto)\b", _tt)
+        pedido = pedido.replace("{regime}", _rg.group(1) if _rg else "fixado")
     if tipo == "seeu-tratou-como-hediondo-mas-o-tipo-nao-consta" and not re.search(r"11\.343|Lei de Drogas|art\. 33", _tt, re.I):
         correto = correto.replace("; no tráfico privilegiado, a natureza hedionda é afastada por lei (LEP, art. 112, § 5º; Súmula Vinculante 63/STF)", "")
     if tipo == "fracao-de-livramento-diverge" and not re.search(r"legal \(1/3", _tt):
@@ -3306,15 +3496,23 @@ def fundamentacao(it, r):
     tit = re.sub(r"\s*\([^()]*\?\)", "", tit)  # dúvida interna do alerta, ex.: "(data-base fixa?)"
     tit = _TIT_PECA.get(tipo, tit)
     m = re.match(r"^Proc\. ([\d.\-]+) · ([^:]+): (.+)$", tit)
-    nao_erro = bool(re.search(r"vencida|possivel|prescricao|idade|menor-de-21|extinta|integralmente|detracao", tipo))
+    nao_erro = bool(re.search(r"vencida|possivel|prescricao|idade|menor-de-21|extinta|integralmente|detracao", tipo)) or tipo in _FUND_REGISTRA
     verbo = "registra" if nao_erro else "apresenta a seguinte inconsistência"
-    if m:
+    if tipo.startswith("ficha:"):
+        # divergência com a ficha carcerária (SIAPEN): o título já diz o que cada documento registra
+        for _rx, _rp in _TIT_FICHA:
+            tit = re.sub(_rx, _rp, tit)
+        erro = "Confrontado com a ficha carcerária do assistido no SIAPEN, %s apresenta a seguinte divergência: %s." % (rel, tit[0].lower() + tit[1:] if tit[:2] != tit[:2].upper() else tit)
+    elif m:
         erro = "Na condenação do processo %s (%s), %s %s: %s." % (m.group(1), m.group(2).strip(), rel, verbo, m.group(3))
     else:
         erro = "%s %s: %s." % (rel[0].upper() + rel[1:], verbo, tit[0].lower() + tit[1:] if tit[:2] != tit[:2].upper() else tit)
     fatos = [f for f in _fatos(it) if f.rstrip(".") not in tit and not f.startswith("Cautela")]
     if tipo == "hediondez-posterior-ao-fato-indulto-comutacao-po":
         fatos = ["O crime não era hediondo na data do fato e passou a sê-lo por lei posterior."]
+    if tipo.startswith("ficha:") or tipo in _FUND_REGISTRA:
+        # sem as frases do programa ("Os cálculos do programa...") e os itens soltos das orientações ("(c) se a falta...")
+        fatos = [re.sub(r"\.{2,}$", ".", f) for f in fatos if not re.match(r"\([a-z]\) |Os cálculos do programa|O programa ", f) and "pelo programa" not in f]
     if fatos:
         erro += " " + " ".join(fatos)
     erro = _abrev(erro)
