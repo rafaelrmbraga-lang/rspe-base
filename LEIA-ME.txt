@@ -1063,9 +1063,10 @@ v7.10.0
     lançado é apontada (pode já incluir parte dele). Com remições
     anteriores a 2019 e atestado antigo sem remição, a ficha avisa que se
     trata de provável processo digitalizado.
-  - Aba Ficha: botão "Exportar tabela" gera a planilha simples da remição
-    para a petição (atestados x RSPE, total a requerer e trabalho sem
-    atestado).
+  - Aba Ficha: botão "Exportar tabela" gera a tabela da remição em Word
+    (.docx, A4 retrato), para colar na petição: atestados x RSPE, total
+    a requerer, observações numeradas abaixo da tabela e trabalho sem
+    atestado.
   - Aba Ficha, novo item A) Resumo quantitativo: dias de remição pelos
     atestados expedidos, dias homologados no RSPE (e perdidos, LEP, art.
     127) e a estimativa pelos períodos de trabalho da ficha (segunda a
@@ -1075,9 +1076,16 @@ v7.10.0
     parte, como ainda sem atestado. Quando a ficha registra estudo, exame
     (ENCCEJA/ENEM) ou leitura, o resumo avisa que essa remição entra no
     total homologado e pode encobrir atestado de trabalho não homologado
-    ou outra divergência. Os demais itens passam a B, C e D;
+    ou outra divergência (linha "Histórico de estudo ou leitura": Sim,
+    conferir se encobre divergência com a remição pelo trabalho; Não,
+    verificar se há certificados homologados fora da ficha do SIAPEN).
+    Os demais itens passam a B, C e D;
     pendências e alertas com menos negrito (data discreta e providência
     em verde).
+  - Aba Ficha, linha aberta: a situação sai em lista curta, um ponto por
+    linha, em letra normal com marcador vermelho (dias exatos a requerer)
+    ou amarelo (conferir); a observação longa de cada atestado vai numa
+    linha inteira abaixo dele, e não mais na coluna estreita.
   - Aba Indulto, um decreto por vez: nome social longo não alarga mais a
     coluna do nome nem espreme o motivo; o benefício vai abaixo do
     resultado, e a tabela cabe na tela sem rolagem lateral.

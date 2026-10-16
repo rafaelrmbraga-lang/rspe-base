@@ -3834,23 +3834,23 @@ class Api:
         return {"caminho": c}
 
 
-    def remicao_tabela_xlsx(self, processo):
-        """Planilha simples da remição do assistido (aba Ficha), para levar à petição."""
+    def remicao_tabela_docx(self, processo):
+        """Tabela da remição do assistido (aba Ficha) em Word, para colar na petição."""
         m = next((x for x in (self._modelos or []) if x.get("id") == processo), None)
         if not m or not (m.get("fd_conc") or {}).get("tabela"):
             return {"erro": "Sem tabela de remição para este assistido."}
-        nome = "Remição - %s.xlsx" % re.sub(r"[^\w\s-]", "", rv.nome_proprio(m.get("nome", "")))[:60].strip()
-        c = _um(self._janela.create_file_dialog(webview.SAVE_DIALOG, save_filename=nome, file_types=("Excel (*.xlsx)",)))
+        nome = "Remição - %s.docx" % re.sub(r"[^\w\s-]", "", rv.nome_proprio(m.get("nome", "")))[:60].strip()
+        c = _um(self._janela.create_file_dialog(webview.SAVE_DIALOG, save_filename=nome, file_types=("Word (*.docx)",)))
         if not c:
             return None
-        if not c.lower().endswith(".xlsx"):
-            c += ".xlsx"
+        if not c.lower().endswith(".docx"):
+            c += ".docx"
         try:
             rx.exportar_remicao_tabela(m, c)
         except Exception as e:
             return {"erro": "Falha ao salvar: %s" % e}
         _abrir(c)
-        return {"caminho": c, "msg": "Planilha salva."}
+        return {"caminho": c, "msg": "Tabela salva em Word."}
 
     def providencias_xlsx(self, titulo, linhas):
         """Salva em Excel o relatório de providências montado na tela (mês escolhido)."""

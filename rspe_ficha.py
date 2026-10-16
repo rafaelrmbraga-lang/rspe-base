@@ -3099,21 +3099,20 @@ def comparativo(r, f, hoje=None, conferidos=None, manuais=None):
     if nh >= 1 or nl_sd:
         # "verificar peticionamento" só quando a ficha não registra o peticionamento de algum atestado pendente
         sem_pet = any(a["status"] == "NAO_LANCADO" and not a.get("peticionado") for a in ((res.get("conc") or {}).get("atestados") or []))
-        partes.append("Atestado emitido não lançado no RSPE (%s) - %s" % (
-            " + ".join(x for x in (("%s remidos" % _fmtn(nh)) if nh >= 1 else "", rs.pl(nl_sd, "atestado sem os dias na ficha", "atestados sem os dias na ficha") if nl_sd else "") if x),
-            "conferir nos autos (se juntado, requerer a apreciação)" if sem_pet else "peticionado: requerer a apreciação"))
+        partes.append("Atestado não lançado no RSPE: %s - %s" % (
+            " + ".join(x for x in (("%s dia%s de remição" % (_fmtn(nh), "s" if nh >= 2 else "")) if nh >= 1 else "", rs.pl(nl_sd, "atestado sem os dias na ficha", "atestados sem os dias na ficha") if nl_sd else "") if x),
+            "conferir nos autos e, se juntado, requerer a apreciação" if sem_pet else "já peticionado: requerer a apreciação"))
     # processo antigo (físico, digitalizado no SEEU): remições anteriores a 2019 sem atestado na ficha e atestado antigo ainda sem
     # remição - os atestados da época costumam ser cumulativos e as decisões antigas não trazem o atestado
     C_ = res.get("conc") or {}
     rem_ant = [x for x in C_.get("remicoes") or [] if x.get("decisao") and x["decisao"].year < 2019]
     at_ant = [a for a in C_.get("atestados") or [] if a.get("status") == "NAO_LANCADO" and a.get("origem") == "ficha" and a["emissao"].year < 2019]
     if rem_ant and at_ant:
-        partes.append("processo com remições anteriores a 2019 (provável processo físico digitalizado): atestados antigos podem ser cumulativos "
-                      "e já remidos - conferir os autos digitalizados antes de requerer")
+        partes.append("Processo antigo (digitalizado): atestados anteriores a 2019 podem ser cumulativos e já remidos - conferir os autos antes de requerer")
     nl_cum = res.get("nl_cumulativos") or []
     if nl_cum:
-        partes.append("atestado cumulativo a conferir nos autos antes de requerer (%s)" % "; ".join(
-            "nº %s: %s remidos declarados" % (a["numero"] or "s/n", _fmtn(a["rem"])) for a in nl_cum))
+        partes.append("%s a conferir: %s" % ("Atestados cumulativos" if len(nl_cum) > 1 else "Atestado cumulativo", " e ".join(
+            "nº %s (%s remidos)" % (a["numero"] or "s/n", _fmtn(a["rem"])) for a in nl_cum)))
     if nl_cum and not (nh >= 1 or nl_sd):
         pass
     elif res["diferenca"] >= 1 and not (nh >= 1 or nl_sd):
@@ -3124,7 +3123,7 @@ def comparativo(r, f, hoje=None, conferidos=None, manuais=None):
     if lei_parc_n:
         partes.append("leitura remida em parte no RSPE: conferir a decisão")
     if res.get("sem_n"):
-        partes.append("trabalho sem atestado (%d período%s)" % (res["sem_n"], "s" if res["sem_n"] > 1 else ""))
+        partes.append("Trabalho sem atestado: %d período%s" % (res["sem_n"], "s" if res["sem_n"] > 1 else ""))
     n_lac = sum(1 for p_ in (C or {}).get("pendencias", []) if p_["status"] in ("LACUNA", "DIVERGENCIA"))
     if n_lac:
         partes.append("%s na conciliação (lacuna ou divergência de dias)" % rs.pl(n_lac, "ponto a conferir", "pontos a conferir"))
@@ -3164,8 +3163,11 @@ def comparativo(r, f, hoje=None, conferidos=None, manuais=None):
         rot.append("Último atestado há 6 meses")
     if partes:
         cor = "vermelho" if (nh >= 1 or nl_sd or lei_d >= 1 or est_decl) else "amarelo"
+        partes = [p_[0].upper() + p_[1:] for p_ in partes]
         det = "; ".join(partes)
-        det = det[0].upper() + det[1:]
+        # cada ponto em uma linha, com a cor própria: vermelho = dias exatos a requerer; amarelo = conferir ou estimar
+        out["fd_sit_itens"] = [{"t": p_, "c": "vermelho" if re.match(r"(Atestado não lançado|Leitura peticionada)", p_) or (
+            est_decl and p_.startswith("Estudo a requerer")) else "amarelo"} for p_ in partes]
         sit = " · ".join(rot) or det
     else:
         cor, sit, det = "verde", "Em ordem", ""

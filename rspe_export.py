@@ -365,46 +365,14 @@ def exportar_providencias(linhas, saida, titulo):
 
 
 
-def exportar_remicao_tabela(m, saida):
-    """Planilha simples da remição de um assistido, para juntar à petição: (1) atestados da ficha x remições do RSPE, com o total a
-    requerer, e (2) trabalho registrado na ficha sem atestado nem remição (pedir o atestado à unidade)."""
-    from openpyxl import Workbook
-    from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+def _linhas_remicao(m):
+    """Linhas da tabela de remição da aba Ficha prontas para a petição: (atestado, emissão, setores e períodos, dias trabalhados,
+    dias remidos, remição no RSPE, decisão, situação, observação), o total a requerer, quantos atestados cumulativos ficam de fora
+    e o trabalho sem atestado."""
     tab = ((m.get("fd_conc") or {}).get("tabela")) or []
     sem = (((m.get("fd_rem_det") or {}).get("sem_atestado")) or {}).get("itens") or []
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "Remição"
-    fino = Side(style="thin", color="C9D3CC")
-    cab_fill = PatternFill("solid", fgColor="1F5B39")
-    quebra = Alignment(wrap_text=True, vertical="top")
-
-    def cabecalho(cols):
-        ws.append(cols)
-        for c in ws[ws.max_row]:
-            c.font = Font(bold=True, color="FFFFFF")
-            c.fill = cab_fill
-            c.alignment = Alignment(wrap_text=True, vertical="center")
-
-    def linha(vals, negrito=False):
-        ws.append(vals)
-        _sem_formula(ws)
-        for c in ws[ws.max_row]:
-            c.alignment = quebra
-            c.border = Border(bottom=fino)
-            if negrito:
-                c.font = Font(bold=True)
-
-    ws.append(["Remição: ficha disciplinar (SIAPEN) x RSPE"])
-    ws["A1"].font = Font(bold=True, size=13)
-    ws.append(["%s · autos %s · gerado em %s" % (m.get("nome", ""), m.get("proc") or m.get("id", ""), datetime.now().strftime("%d/%m/%Y"))])
-    ws.append([])
-    ws.append(["1. Atestados de trabalho e remições"])
-    ws[ws.max_row][0].font = Font(bold=True, size=11.5)
-    cabecalho(["Atestado", "Emitido em", "Setor e período de trabalho", "Dias trabalhados", "Dias remidos (atestado)",
-               "Remição no RSPE", "Decisão", "Situação", "Observação"])
     SIT = {"CONCILIADO": "Já remido no RSPE", "NAO_LANCADO": "Não lançado no RSPE: requerer", "DIVERGENCIA": "Remição menor que o atestado"}
-    a_requerer, conferir = 0.0, 0
+    linhas, a_requerer, conferir = [], 0.0, 0
     for t in tab:
         cumul = bool(t.get("cumulativo"))
         sit = "Sem dias a requerer: período já remido" if t.get("rot", "").startswith("Sem dias") else SIT.get(t.get("status"), t.get("rot", ""))
@@ -419,37 +387,121 @@ def exportar_remicao_tabela(m, saida):
                 a_requerer += float(str(t.get("rem")).replace(",", "."))
             except ValueError:
                 pass
-        per = "\n".join("%s: %s" % (s.get("setor"), s.get("per")) for s in t.get("segs") or [])
-        obs = t.get("nota") or ""
+        obs = (t.get("nota") or "").strip()
         if obs.startswith("períodos inferidos"):
-            obs = "Períodos deduzidos dos vínculos da ficha (o atestado não os informa)" + obs.split(";", 1)[1] if ";" in obs else \
+            obs = "Períodos deduzidos dos vínculos da ficha (o atestado não os informa);" + obs.split(";", 1)[1] if ";" in obs else \
                   "Períodos deduzidos dos vínculos da ficha (o atestado não os informa)."
-        linha([t.get("atestado", ""), t.get("emissao") or "—", per, t.get("trab") if t.get("trab") is not None else "—",
-               t.get("rem") or "—", t.get("rspe") or "—", t.get("decisao") or "—", sit, obs.strip()[:1].upper() + obs.strip()[1:]])
-    ws.append([])
-    linha(["Total a requerer (atestados emitidos e não lançados no RSPE)", "", "", "", ("%.2f" % a_requerer).rstrip("0").rstrip(".").replace(".", ","),
-           "", "", "dias", ""], negrito=True)
+        linhas.append([t.get("atestado", ""), t.get("emissao") or "—", ["%s: %s" % (s.get("setor"), s.get("per")) for s in t.get("segs") or []],
+                       t.get("trab") if t.get("trab") is not None else "—", t.get("rem") or "—", t.get("rspe") or "—", t.get("decisao") or "—",
+                       sit, obs[:1].upper() + obs[1:]])
+    sem_l = []
+    for x in sem:
+        mt = re.search(r"≈\s*(\d+)\s*dias", x.get("base") or "")
+        sem_l.append([x.get("setor", ""), x.get("unidade", ""), x.get("per", ""), mt.group(1) if mt else "—", str(x.get("dias", "—"))])
+    return linhas, ("%.2f" % a_requerer).rstrip("0").rstrip(".").replace(".", ","), conferir, sem_l
+
+
+def _docx(saida, corpo, paisagem=False):
+    """Grava um .docx mínimo (WordprocessingML) só com a biblioteca padrão: o build não leva o python-docx."""
+    import zipfile
+    w, h = (16838, 11906) if paisagem else (11906, 16838)
+    doc = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+           '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>%s'
+           '<w:sectPr><w:pgSz w:w="%d" w:h="%d"%s/><w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134" w:header="709" '
+           'w:footer="709" w:gutter="0"/></w:sectPr></w:body></w:document>') % (corpo, w, h, ' w:orient="landscape"' if paisagem else "")
+    estilos = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+               '<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:docDefaults><w:rPrDefault><w:rPr>'
+               '<w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial" w:eastAsia="Arial"/><w:sz w:val="20"/><w:szCs w:val="20"/><w:lang w:val="pt-BR"/>'
+               '</w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr></w:pPrDefault>'
+               '</w:docDefaults></w:styles>')
+    with zipfile.ZipFile(saida, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("[Content_Types].xml", '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+                   '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+                   '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+                   '<Default Extension="xml" ContentType="application/xml"/>'
+                   '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>'
+                   '<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>'
+                   '</Types>')
+        z.writestr("_rels/.rels", '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+                   '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+                   '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>'
+                   '</Relationships>')
+        z.writestr("word/_rels/document.xml.rels", '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+                   '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+                   '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>'
+                   '</Relationships>')
+        z.writestr("word/styles.xml", estilos)
+        z.writestr("word/document.xml", doc)
+
+
+def _wx(s):
+    return str(s).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+def _wp(texto, negrito=False, tam=None, antes=0, depois=0, alinh=None, cor=None):
+    """Parágrafo do Word; texto pode ser lista (uma linha por item, com quebra de linha)."""
+    rpr = ("<w:b/>" if negrito else "") + ('<w:color w:val="%s"/>' % cor if cor else "") + ('<w:sz w:val="%d"/><w:szCs w:val="%d"/>' % (tam, tam) if tam else "")
+    partes = texto if isinstance(texto, list) else [texto]
+    runs = '<w:r><w:rPr>%s</w:rPr><w:br/></w:r>' % rpr
+    corpo = runs.join('<w:r><w:rPr>%s</w:rPr><w:t xml:space="preserve">%s</w:t></w:r>' % (rpr, _wx(x)) for x in partes)
+    ppr = '<w:pPr><w:spacing w:before="%d" w:after="%d"/>%s</w:pPr>' % (antes, depois, '<w:jc w:val="%s"/>' % alinh if alinh else "")
+    return "<w:p>%s%s</w:p>" % (ppr, corpo)
+
+
+def _wtab(cab, linhas, larg, negrito_ult=False):
+    """Tabela com bordas finas, cabeçalho cinza repetido em cada página e linhas que não se partem entre páginas."""
+    borda = "".join('<w:%s w:val="single" w:sz="4" w:space="0" w:color="808080"/>' % b for b in ("top", "left", "bottom", "right", "insideH", "insideV"))
+    grid = "".join('<w:gridCol w:w="%d"/>' % x for x in larg)
+
+    def cel(v, wd, cabec=False, neg=False):
+        sh = '<w:shd w:val="clear" w:color="auto" w:fill="E7E9E6"/>' if cabec else ""
+        return ('<w:tc><w:tcPr><w:tcW w:w="%d" w:type="dxa"/>%s</w:tcPr>%s</w:tc>' % (
+            wd, sh, _wp(v if isinstance(v, list) else str(v), negrito=cabec or neg, tam=18)))
+
+    def lin(vals, cabec=False, neg=False):
+        trpr = '<w:trPr><w:cantSplit/>%s</w:trPr>' % ("<w:tblHeader/>" if cabec else "")
+        return "<w:tr>%s%s</w:tr>" % (trpr, "".join(cel(v, larg[k], cabec, neg) for k, v in enumerate(vals)))
+    rows = lin(cab, cabec=True) + "".join(lin(v, neg=negrito_ult and k == len(linhas) - 1) for k, v in enumerate(linhas))
+    return ('<w:tbl><w:tblPr><w:tblW w:w="%d" w:type="dxa"/><w:tblBorders>%s</w:tblBorders><w:tblLayout w:type="fixed"/>'
+            '<w:tblCellMar><w:top w:w="40" w:type="dxa"/><w:left w:w="80" w:type="dxa"/><w:bottom w:w="40" w:type="dxa"/>'
+            '<w:right w:w="80" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid>%s</w:tblGrid>%s</w:tbl>') % (sum(larg), borda, grid, rows)
+
+
+def exportar_remicao_tabela(m, saida):
+    """Tabela da remição de um assistido em Word, para colar na petição: (1) atestados da ficha x remições do RSPE, com o total a
+    requerer, e (2) trabalho registrado na ficha sem atestado nem remição (pedir o atestado à unidade). Observações longas vão em
+    notas numeradas abaixo da tabela, para não alargar as colunas."""
+    linhas, total, conferir, sem = _linhas_remicao(m)
+    c = [_wp("Remição: ficha disciplinar (SIAPEN) x RSPE", negrito=True, tam=24, depois=60),
+         _wp("%s · autos %s · gerado em %s" % (m.get("nome", ""), m.get("proc") or m.get("id", ""), datetime.now().strftime("%d/%m/%Y")),
+             tam=18, cor="555555", depois=200),
+         _wp("1. Atestados de trabalho e remições", negrito=True, depois=80)]
+    notas, rows = [], []
+    for L in linhas:
+        at = L[0]
+        if L[8]:
+            if L[8] not in notas:
+                notas.append(L[8])
+            at = "%s (%d)" % (at, notas.index(L[8]) + 1)
+        rspe = L[5] if L[5] == "—" else "%s (decisão de %s)" % (L[5], L[6]) if L[6] != "—" else L[5]
+        rows.append([[at, "emitido em %s" % L[1]] if L[1] != "—" else at, L[2] or "—", L[3], L[4], rspe, L[7]])
+    rows.append(["Total a requerer", "atestados emitidos e não lançados no RSPE", "", total, "", ""])
+    c.append(_wtab(["Atestado", "Setor e período de trabalho", "Dias trab.", "Dias rem.", "Remição no RSPE", "Situação"],
+                   rows, [1800, 2900, 900, 900, 1350, 1750], negrito_ult=True))
     if conferir:
-        linha(["%d atestado(s) com indício de atestado cumulativo: fora do total, conferir nos autos antes de requerer." % conferir] + [""] * 8)
+        c.append(_wp("%d atestado(s) com indício de atestado cumulativo: fora do total, conferir nos autos antes de requerer." % conferir,
+                     tam=18, antes=80))
+    if notas:
+        c.append(_wp("Observações", negrito=True, tam=18, antes=160, depois=40))
+        c += [_wp("(%d) %s%s" % (k, x, "" if x.endswith(".") else "."), tam=18, depois=40) for k, x in enumerate(notas, 1)]
     if sem:
-        ws.append([])
-        ws.append(["2. Trabalho registrado na ficha sem atestado nem remição (pedir o atestado à unidade)"])
-        ws[ws.max_row][0].font = Font(bold=True, size=11.5)
-        cabecalho(["Setor", "Unidade", "Período", "Dias estimados (seg. a sáb.)", "Remidos estimados", "", "", "", "Observação"])
-        for x in sem:
-            mt = re.search(r"≈\s*(\d+)\s*dias", x.get("base") or "")
-            linha([x.get("setor", ""), x.get("unidade", ""), x.get("per", ""), int(mt.group(1)) if mt else "—", x.get("dias", "—"), "", "", "",
-                   "Estimativa; o atestado da unidade prevalece."])
-    ws.append([])
-    ws.append(["Remição: 1 dia de pena a cada 3 dias de trabalho (LEP, art. 126, § 1º, II); o tempo remido conta como pena cumprida (LEP, art. 128)."])
-    for col, w in zip("ABCDEFGHI", (24, 12, 46, 12, 13, 13, 12, 26, 52)):
-        ws.column_dimensions[col].width = w
-    ws.freeze_panes = "A6"
-    ws.page_setup.orientation = "landscape"
-    ws.page_setup.fitToWidth = 1
-    ws.sheet_properties.pageSetUpPr.fitToPage = True
-    ws.page_setup.fitToHeight = 0
-    wb.save(saida)
+        c.append(_wp("2. Trabalho registrado na ficha sem atestado nem remição (pedir o atestado à unidade)", negrito=True, antes=240, depois=80))
+        c.append(_wtab(["Setor", "Unidade", "Período", "Dias estimados (seg. a sáb.)", "Remição estimada"],
+                       sem, [2400, 2200, 2200, 1500, 1300]))
+        c.append(_wp("Estimativa; o atestado da unidade prevalece.", tam=18, antes=60))
+    c.append(_wp("Remição: 1 dia de pena a cada 3 dias de trabalho (LEP, art. 126, § 1º, II); o tempo remido conta como pena cumprida "
+                 "(LEP, art. 128).", tam=18, antes=200))
+    _docx(saida, "".join(c))
 
 
 def exportar_saidas(d, saida):

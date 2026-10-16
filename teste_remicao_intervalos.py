@@ -3,6 +3,7 @@
 de atestado cumulativo; a planilha simples para a petição soma só o que se pode requerer. Dados fictícios.
 Rodar: python teste_remicao_intervalos.py"""
 import os
+import re
 import sys
 import tempfile
 import types
@@ -66,17 +67,20 @@ try:
     R2 = rr.conciliar(r, f2, date(2026, 10, 16))["resumo"]
     ok("histórico de estudo (1 período, 2012) e leitura (1 registro)" in R2["estudo"] and "pode encobrir atestado de trabalho não homologado" in R2["estudo"]
        and R2["estudo"] in R2["texto"], "resumo: aviso de estudo %r" % R2["estudo"])
-    # planilha simples
-    import openpyxl
-    out = os.path.join(tempfile.mkdtemp(), "rem.xlsx")
+    # tabela em Word (para colar na petição)
+    import zipfile
+    out = os.path.join(tempfile.mkdtemp(), "rem.docx")
     rx.exportar_remicao_tabela({"nome": "Assistido Exemplo", "proc": r["processo_execucao"], "fd_conc": {"tabela": res["tabela"]}, "fd_rem_det": {}}, out)
-    ws = openpyxl.load_workbook(out).active
-    linhas = [[c for c in row] for row in ws.iter_rows(values_only=True)]
-    tot = next(L for L in linhas if L[0] and str(L[0]).startswith("Total a requerer"))
-    ok(tot[4] == "37", "planilha: total a requerer %r" % (tot,))
-    ok(any(str(L[7]).startswith("Provavelmente já remido") for L in linhas), "planilha: cumulativo já remido")
-    ok(any(str(L[7]).startswith("Não lançado no RSPE: requerer, conferindo") for L in linhas), "planilha: sobreposição")
-    ok(any(L[0] and "cumulativo" in str(L[0]) for L in linhas), "planilha: aviso do cumulativo")
+    z = zipfile.ZipFile(out)
+    ok(z.testzip() is None and "word/document.xml" in z.namelist(), "word: pacote")
+    import xml.dom.minidom as _md
+    xml = z.read("word/document.xml").decode("utf-8")
+    _md.parseString(xml)
+    txt = re.sub(r"<[^>]+>", "|", xml)
+    ok("|37|" in txt.split("Total a requerer", 1)[1], "word: total a requerer")
+    ok("Provavelmente já remido" in txt, "word: cumulativo já remido")
+    ok("Não lançado no RSPE: requerer, conferindo" in txt, "word: sobreposição")
+    ok("cumulativo: fora do total" in txt and "Observações" in txt, "word: aviso do cumulativo e notas")
 except Exception as e:
     import traceback
     traceback.print_exc()
