@@ -1026,6 +1026,28 @@ v7.10.0
     setor psicossocial. O texto é conferido e
     editado na tela antes do PDF.
   - Registrar atendimento: ao registrar, abre o resumo.
+  - Teses de execução penal 2026: na pena unificada cada condenação
+    mantém a sua fração (REsp 2.037.377/SC, Tema 1354); hediondez do
+    tráfico com os precedentes do Decreto 12.790 (TJMS 1602182-72.2026;
+    STJ, AgRg no HC 1.087.914/SP); alerta próprio para a data-base movida
+    na data do indulto ou da comutação (STJ, HC 1.076.656); indulto ou
+    comutação que "não atinge" por tempo, em qualquer decreto da base
+    (2000 a 2025, aba Indulto e linha do tempo), passa a "a verificar"
+    quando a remição pendente da ficha (dias exatos, período até o
+    decreto) cobre o que falta (LEP, art. 128; STJ, HC 1.089.923). A
+    custódia ininterrupta e a pena do crime impeditivo ficam de fora.
+  - Ícone de prioridade (avanço rápido, ▸▸, em caixinha vinho); alerta de
+    divergência em caixinha branca com borda vermelha ao lado do nome, em todas as abas:
+    remição pendente da ficha (dias exatos) que, declarada, já dá a
+    progressão, o livramento, o término ou o indulto/comutação. O motivo
+    aparece ao passar o mouse; o clique abre o assistido na aba Ficha.
+  - Aba Indulto, um decreto por vez: nome social longo não alarga mais a
+    coluna do nome nem espreme o motivo; o benefício vai abaixo do
+    resultado, e a tabela cabe na tela sem rolagem lateral.
+  - Aba Indulto: o motivo é curto e objetivo (por que cabe ou não cabe:
+    tempo cumprido e exigido, o que falta verificar, o crime impeditivo,
+    o tempo que faltava). O texto completo do cálculo aparece ao passar o
+    mouse e na linha do tempo.
   - Dados da Base > Atendimentos se atualiza logo depois de importar a
     listagem ou o relatório, registrar ou desfazer um atendimento.
 

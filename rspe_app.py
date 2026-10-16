@@ -4247,6 +4247,12 @@ def _montar_modelo(r, ctx):
     except Exception:
         logging.getLogger("rspe").exception("decretos %s", ch)
         m["dec"] = {"inicio": "", "decretos": []}  # RSPEs guardados no histórico (botão "Histórico · N" da aba Geral)
+    try:
+        # remição pendente que, declarada, já dá um benefício: ícone de prioridade ao lado do nome
+        m["rem_prio"] = rv.prioridade_remicao(m, m.get("_final") or r)
+    except Exception:
+        logging.getLogger("rspe").exception("prioridade da remição %s", ch)
+        m["rem_prio"] = []
     # pedido do indulto (por decreto): a situação atual do decreto, para a tela comparar com a da marcação (ref)
     if any(k.startswith("ind_") for k in m["pedidos"]):
         m["pedidos"] = {k: (dict(v, ref_atual=_ref_decreto(m["dec"], k[4:])) if k.startswith("ind_") else v) for k, v in m["pedidos"].items()}

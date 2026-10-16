@@ -1057,6 +1057,104 @@ def _sem_objeto(r, x):
     return x
 
 
+def _frase(t, n=110):
+    """Primeira oração (até '; ', ': ', ' | ' ou '. ' fora de parênteses), sem o parêntese final longo, com no máximo n caracteres."""
+    t = (t or "").strip()
+    prof = 0
+    for i, ch in enumerate(t):
+        if ch == "(":
+            prof += 1
+        elif ch == ")":
+            prof = max(0, prof - 1)
+        elif prof == 0 and i >= 12 and (t[i:i + 2] in ("; ", ": ", ". ") or t[i:i + 3] == " | "):
+            if ch == "." and re.search(r"(?:\bart|\binc|\bp|\bn|nº|\bal|\bLei)$", t[:i], re.I):
+                continue
+            t = t[:i]
+            break
+    if len(t) > n:
+        t = re.sub(r"\s*\([^()]{25,}\)$", "", t)
+    if len(t) > n:
+        t = t[:n - 1].rsplit(" ", 1)[0].rstrip(",;:(") + "…"
+        t += ")" * max(0, t.count("(") - t.count(")"))
+    return t[:1].upper() + t[1:]
+
+
+def motivo_curto(x):
+    """Motivo do resultado em uma linha, objetivo: por que cabe ou não cabe (o texto completo fica em x["mot"], na dica e na linha
+    do tempo)."""
+    s, t = x.get("s"), (x.get("mot") or "").strip()
+    if s in ("conc", "indef"):
+        return t.replace(" (incidente do RSPE)", "")
+    m_c = re.search(r"cumpriu (\d+a\d+m\d+d) em [\d/]+(?: \(exigido (\d+a\d+m\d+d)\))?", t)
+    red = re.search(r"redução de (\d+a\d+m\d+d)", t)
+    tempo = ("Tempo cumprido: %s%s" % (m_c.group(1), " (exigido %s)" % m_c.group(2) if m_c.group(2) else "")) if m_c else ""
+    if s == "cabe":
+        if tempo:
+            return tempo + ("; redução de %s" % red.group(1) if red else "")
+        m = re.match(r"POSSÍVEL( \(crimes não impeditivos[^)]*\))?(?:: ([^|]+))?", t)
+        if m:
+            disp = (m.group(2) or "").strip()
+            return "Requisitos atendidos%s%s" % (" nos crimes não impeditivos" if m.group(1) else "",
+                                                 " (%s)" % disp if disp and len(disp) <= 60 and not disp.startswith("art. 5º para") else
+                                                 " (art. 5º)" if disp.startswith("art. 5º") else "")
+        return _frase(t)
+    if s == "ver":
+        if t.startswith("A VERIFICAR (remição pendente)"):
+            m = re.search(r"a remição de (\d+ dias?)", t)
+            return "Remição pendente%s cobre o tempo que faltava: pedir a declaração" % (" de " + m.group(1) if m else "")
+        m = (re.search(r"A VERIFICAR - (.+)", t) or re.search(r"A VERIFICAR[^:|]*:\s*art\. 9º[^|]*\|\s*(.+)", t)
+             or re.search(r"A VERIFICAR(?: \([^)]*\))?:\s*(.+)", t) or re.search(r"(falta a verificar)", t)
+             or re.search(r"o (cumprimento estava interrompido em [\d/]+)", t) or re.search(r"^(cumprimento interrompido em [\d/]+)", t))
+        motivo = m.group(1) if m else t
+        motivo = re.sub(r"^falta na janela a verificar", "falta na janela do decreto", motivo)
+        if motivo.startswith("pela âncora do SEEU"):
+            motivo = "o cumprido pelo SEEU fica abaixo do que os eventos mostram"
+        motivo = _frase(re.sub(r"\s*\((?:[^()]|\([^()]*\))*;(?:[^()]|\([^()]*\))*\)", "", motivo), 90)
+        return ("%s; a verificar: %s" % (tempo, motivo[:1].lower() + motivo[1:])) if tempo and m else "A verificar: " + motivo[:1].lower() + motivo[1:]
+    if s == "imp":
+        if t.startswith("VEDADO"):
+            m = re.match(r"VEDADO \(([^)]+)\)", t)
+            return "Crime vedado pelo decreto%s" % (" (%s)" % m.group(1) if m else "")
+        crimes, nats = [], []
+        for seg in re.split(r"; ", t):
+            m = re.match(r"(art\. [^:]+?)(?: \(extinto\))?: (.+)", seg)
+            if m:
+                crimes.append(m.group(1))
+                nats.append("hediondo" if m.group(2).startswith("hediondo") else re.split(r" na data| \(| - |,", m.group(2))[0])
+        fa = re.search(r"faltavam (\S+) para (2/3|a íntegra) da pena do impeditivo", t)
+        if crimes:
+            crimes, nats = list(dict.fromkeys(crimes)), list(dict.fromkeys(nats))
+            lst = ", ".join(crimes[:3]) + (" e mais %d" % (len(crimes) - 3) if len(crimes) > 3 else "")
+            return "%s: %s%s%s" % ("Crimes impeditivos" if len(crimes) > 1 else "Crime impeditivo", lst, " (%s)" % nats[0] if len(nats) == 1 else "",
+                                                 "; faltavam %s para %s da pena impeditiva" % (fa.group(1), fa.group(2)) if fa else "")
+        return _frase(t)
+    # não cabe
+    t2 = re.sub(r"^cumprimento interrompido em [\d/]+ \([^)]*\); ", "", t)
+    m = re.search(r"faltavam (\S+(?: dias?)?)( de custódia ininterrupta)? para ([^;|(]+?) em [\d/]+", t2)
+    if m:
+        return "Tempo insuficiente: faltavam %s%s para %s" % (m.group(1), m.group(2) or "", m.group(3).strip())
+    m = re.match(r"(?:NÃO CABE \(art\. \d+º\): )?falta grave (?:com sanção reconhecida )?nos 12 meses(?: anteriores)?", t2)
+    if m:
+        d = re.search(r"\d{2}/\d{2}/\d{4}", t2)
+        return "Falta grave nos 12 meses anteriores ao decreto%s" % (" (%s)" % d.group(0) if d else "")
+    if t2.startswith("decreto restrito"):
+        return "Decreto restrito (doença, deficiência e outros grupos): nenhuma hipótese aferível pelo RSPE"
+    t2 = re.sub(r"^(?:não se aplica|não atinge):\s*", "", t2)
+    return _frase(t2)
+
+
+def _remicao_pendente(x, r):
+    """Remição pendente da ficha (dias exatos, período até o decreto) que cobre o que faltava: o "não atinge" passa a A VERIFICAR.
+    Os decretos 2022, 2024 e 2025 já vêm do registro com a mesma regra (rspe_ficha.remicao_pendente_decretos). Altera x."""
+    ref = rs.to_date(x.get("ref") or "")
+    if x.get("s") != "nao" or x.get("detalhado") or not ref or not r.get("_rem_pend"):
+        return
+    fl = rs.faltas_remiveis(x.get("mot"))
+    tot, rots = rs.remicao_pendente_ate(r, ref)
+    if fl and tot >= min(fl):
+        x.update(s="ver", mot="A VERIFICAR (remição pendente): %s; %s" % (x.get("mot") or "", rs.nota_remicao_pendente(tot, rots, ref)))
+
+
 def avaliar(r, hoje, completo=False):
     """Lista de resultados (do decreto mais antigo ao mais novo) para a aba Indulto. completo=True mantém as hipóteses
     calculadas e as faltas da janela (linha do tempo); sem ele, a lista fica leve."""
@@ -1151,7 +1249,11 @@ def avaliar(r, hoje, completo=False):
                 x["ressalva"] = "%s no RSPE%s" % (
                     ("comutação concedida" if outro[0] == "conc" else "comutação indeferida") if ben == "Indulto" else
                     ("indulto concedido" if outro[0] == "conc" else "indulto indeferido"), (" em " + outro[1]) if outro[1] else "")
+    for x in out:
+        _remicao_pendente(x, r)
     out.sort(key=lambda x: (rs.to_date(x.get("ref") or "") or date.min))
+    for x in out:
+        x["mot_c"] = motivo_curto(x) if x.get("mot") else ""
     if not completo:
         for x in out:
             for k in ("hips", "falta_ind", "falta_firme", "alc"):
