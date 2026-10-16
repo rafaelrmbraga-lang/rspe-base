@@ -3478,6 +3478,37 @@ def _faltas(txt):
     return out
 
 
+NOTA_REM_PEND = "LEP, art. 128; STJ, HC 1.089.923, 11/06/2026"
+
+
+def remicao_pendente_ate(r, ref):
+    """Remição pendente da ficha (r["_rem_pend"], gravada no modelo: dias exatos ainda fora do SEEU) de período encerrado até
+    ref: (total de dias, [rótulos])."""
+    its = [x for x in (r.get("_rem_pend") or []) if (to_date(x[0]) or date.max) <= ref]
+    return sum(x[2] for x in its), [x[1] for x in its]
+
+
+def faltas_remiveis(txt):
+    """Dias que faltavam para a fração (cada "faltavam X para Y" do resultado), sem os de custódia ininterrupta e os da pena do
+    impeditivo: a remição soma no tempo cumprido, não na custódia contínua."""
+    out = []
+    for m in RE_FALTAVAM.finditer(txt or ""):
+        if "custódia ininterrupta" in m.group(0) or "impeditivo" in m.group(2):
+            continue
+        v = m.group(1)
+        d = int(re.match(r"\d+", v).group(0)) if "dia" in v else pena_para_dias(v)
+        if d:
+            out.append(d)
+    return out
+
+
+def nota_remicao_pendente(tot, rots, ref, falta=None):
+    """Texto da regra: falta=None quando o resultado já diz quanto faltava."""
+    return ("a remição de %s ainda não computada (%s), de período anterior a %s, cobre %s - pedir a declaração da remição e o "
+            "benefício (%s)" % (pl(round(tot), "dia", "dias"), "; ".join(rots[:4]) + ("; ..." if len(rots) > 4 else ""), fmt(ref),
+                                "os %s que faltavam" % pl(falta, "dia", "dias") if falta else "a diferença", NOTA_REM_PEND))
+
+
 def falta_menor(txt_a, txt_e):
     """Mesmo status negativo pela âncora (txt_a) e pelos eventos (txt_e): o dos eventos é o mais favorável quando os seus
     "faltavam" são de alvos que a âncora também tem e somam menos (alvo ausente nos eventos = já cumprido). Devolve o

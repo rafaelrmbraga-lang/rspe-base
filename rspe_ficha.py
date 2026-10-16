@@ -3287,9 +3287,9 @@ def saidas_temporarias_retorno(eventos):
     return [tuple(x) for x in out]
 
 
-def _pend_ate(comp, ref):
-    """Remição pendente com dias exatos (atestados emitidos, peticionados ou com remição a menor; leitura peticionada) de período
-    encerrado até a data: [(rótulo, dias)]. Fica de fora a estimativa (trabalho sem atestado, estudo pelas horas)."""
+def remicao_pendente(comp):
+    """Remição pendente com dias exatos (atestados emitidos, peticionados ou com remição a menor; leitura peticionada):
+    [[fim do período dd/mm/aaaa, rótulo, dias]]. Fica de fora a estimativa (trabalho sem atestado, estudo pelas horas)."""
     RD = (comp or {}).get("fd_rem_det") or {}
     out = []
     for chave in ("nao_lancado", "emitido", "divergencia", "leitura"):
@@ -3297,23 +3297,26 @@ def _pend_ate(comp, ref):
             if it.get("estimado") or not it.get("dias"):
                 continue
             datas = re.findall(r"\d{2}/\d{2}/\d{4}", it.get("per") or "")
-            fim = _dp(datas[-1]) if datas else None
-            if fim and fim <= ref:
-                out.append(("%s%s" % (it.get("ref") or it.get("setor") or "remição", (" (%s)" % it["per"]) if it.get("per") else ""), float(it["dias"])))
+            if datas and _dp(datas[-1]):
+                out.append([datas[-1], "%s%s" % (it.get("ref") or it.get("setor") or "remição", (", %s" % it["per"]) if it.get("per") else ""),
+                            float(it["dias"])])
     return out
 
 
 def remicao_pendente_decretos(r, comp):
-    """Decretos 2022, 2024 e 2025: o indulto ou a comutação que "não atinge" o lapso por poucos dias passa a "A VERIFICAR" quando
-    a remição pendente da ficha (dias exatos, período até a data do decreto) cobre a diferença - a remição é pena cumprida para
-    todos os efeitos, inclusive o requisito temporal do indulto (LEP, art. 128; STJ, HC 1.089.923, 11/06/2026). Altera r."""
+    """Grava em r["_rem_pend"] a remição pendente (a aba Indulto e a linha do tempo a usam em todos os decretos, rspe_decretos.avaliar)
+    e aplica a regra nos decretos 2022, 2024 e 2025: o indulto ou a comutação que "não atinge" o lapso passa a "A VERIFICAR" quando
+    a remição pendente de período até a data do decreto cobre a diferença - a remição é pena cumprida para todos os efeitos,
+    inclusive o requisito temporal do indulto (LEP, art. 128; STJ, HC 1.089.923, 11/06/2026). Altera r."""
+    r["_rem_pend"] = remicao_pendente(comp)
+    if not r["_rem_pend"]:
+        return
     refs = {"2022": date(2022, 12, 25), "2024": rs.DECRETOS.get("2024"), "2025": rs.DECRETOS.get("2025")}
     _dias = lambda t: rs.pena_para_dias(t) or 0
     for ano, ref in refs.items():
         if not ref:
             continue
-        pend = _pend_ate(comp, ref)
-        tot = sum(d for _r, d in pend)
+        tot, rots = rs.remicao_pendente_ate(r, ref)
         if tot < 1:
             continue
         for k in ("indulto_%s" % ano, "comutacao_%s" % ano):
@@ -3333,14 +3336,10 @@ def remicao_pendente_decretos(r, comp):
             faltas = [x for x in faltas if x > 0]
             if not faltas or tot < min(faltas):
                 continue
-            falta = min(faltas)
-            nota = ("com a remição pendente de %s (%s), de período anterior a %s e ainda não computada, o requisito temporal seria "
-                    "atingido (faltavam %s) - pedir a declaração da remição e o benefício (LEP, art. 128; STJ, HC 1.089.923, 11/06/2026)" % (
-                        _dias_txt(round(tot)), "; ".join(rot for rot, _d in pend[:4]), rs.fmt(ref), _dias_txt(falta)))
+            nota = rs.nota_remicao_pendente(tot, rots, ref, min(faltas))
             r[k] = "A VERIFICAR (remição pendente): " + nota
             r[k + "_detalhe"] = det + "\n? Remição pendente: " + nota
-            if k.startswith("indulto"):
-                r[k + "_status"] = "verificar"
+            r[k + "_status"] = "verificar"
 
 
 def complementar_decretos(r, f, hoje=None):

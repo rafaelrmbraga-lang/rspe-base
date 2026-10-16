@@ -74,6 +74,26 @@ try:
     r = {"indulto_2024": "não atinge: pena dos crimes impeditivos", "indulto_2024_detalhe": "✘ II: exige 1/3 (cumprido 1a0m0d de 6a0m0d)"}
     rf.remicao_pendente_decretos(r, {"fd_rem_det": {"emitido": {"itens": [{"setor": "O", "per": "01/01/2024 a 30/06/2024", "dias": 900}]}}})
     ok(r["indulto_2024"] == "não atinge: pena dos crimes impeditivos", "remição: mexeu no impeditivo")
+    # demais decretos da base (2000 a 2023): o "faltavam" do resultado coberto pela remição pendente até a data vira a verificar
+    import rspe_decretos as rd
+    rr = {}
+    rf.remicao_pendente_decretos(rr, comp)
+    ok(len(rr["_rem_pend"]) == 2, "remição: lista gravada no registro %r" % rr.get("_rem_pend"))
+    x = {"id": "2025a", "ref": "25/12/2025", "s": "nao", "mot": "faltavam 25 dias para 1/5 em 25/12/2025"}
+    rd._remicao_pendente(x, rr)
+    ok(x["s"] == "ver" and "HC 1.089.923" in x["mot"] and "Horta" not in x["mot"], "remição até 2025: %r" % x)
+    x = {"id": "2017", "ref": "25/12/2017", "s": "nao", "mot": "faltavam 25 dias de custódia ininterrupta para 10 anos em 25/12/2017"}
+    rd._remicao_pendente(x, rr)
+    ok(x["s"] == "nao", "remição: custódia ininterrupta não se completa com remição")
+    x = {"id": "2023", "ref": "25/12/2023", "s": "nao", "mot": "faltavam 25 dias para 1/5 em 25/12/2023"}
+    rd._remicao_pendente(x, rr)
+    ok(x["s"] == "nao", "remição: período posterior ao decreto contado")
+    x = {"id": "2026a", "ref": "25/12/2026", "s": "nao", "mot": "faltavam 60 dias para 1/5 em 25/12/2026"}
+    rd._remicao_pendente(x, rr)
+    ok(x["s"] == "ver", "remição: 30 + 40 dias cobrem 60")
+    x = {"id": "2017", "ref": "25/12/2017", "s": "nao", "mot": "faltavam 1a0m0d para 1/5 em 25/12/2017"}
+    rd._remicao_pendente(x, rr)
+    ok(x["s"] == "nao", "remição: déficit maior que a remição")
 except Exception as e:
     import traceback
     traceback.print_exc()

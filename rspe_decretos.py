@@ -1057,6 +1057,18 @@ def _sem_objeto(r, x):
     return x
 
 
+def _remicao_pendente(x, r):
+    """Remição pendente da ficha (dias exatos, período até o decreto) que cobre o que faltava: o "não atinge" passa a A VERIFICAR.
+    Os decretos 2022, 2024 e 2025 já vêm do registro com a mesma regra (rspe_ficha.remicao_pendente_decretos). Altera x."""
+    ref = rs.to_date(x.get("ref") or "")
+    if x.get("s") != "nao" or x.get("detalhado") or not ref or not r.get("_rem_pend"):
+        return
+    fl = rs.faltas_remiveis(x.get("mot"))
+    tot, rots = rs.remicao_pendente_ate(r, ref)
+    if fl and tot >= min(fl):
+        x.update(s="ver", mot="A VERIFICAR (remição pendente): %s; %s" % (x.get("mot") or "", rs.nota_remicao_pendente(tot, rots, ref)))
+
+
 def avaliar(r, hoje, completo=False):
     """Lista de resultados (do decreto mais antigo ao mais novo) para a aba Indulto. completo=True mantém as hipóteses
     calculadas e as faltas da janela (linha do tempo); sem ele, a lista fica leve."""
@@ -1151,6 +1163,8 @@ def avaliar(r, hoje, completo=False):
                 x["ressalva"] = "%s no RSPE%s" % (
                     ("comutação concedida" if outro[0] == "conc" else "comutação indeferida") if ben == "Indulto" else
                     ("indulto concedido" if outro[0] == "conc" else "indulto indeferido"), (" em " + outro[1]) if outro[1] else "")
+    for x in out:
+        _remicao_pendente(x, r)
     out.sort(key=lambda x: (rs.to_date(x.get("ref") or "") or date.min))
     if not completo:
         for x in out:
