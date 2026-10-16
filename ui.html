@@ -901,7 +901,9 @@ const ui = {
     if(this.aberto){ const ra=(d.registros||[]).find(x=>x.id===this.aberto); if(ra&&ra._leve) setTimeout(()=>this.completo(ra.id),0); }
     if(d.sem_base){ w.classList.add('on'); document.getElementById('copia').innerHTML=''; document.getElementById('baseNome').textContent='—'; document.getElementById('baseN').textContent='0';
       document.getElementById('recentes').innerHTML=(d.recentes||[]).map(r=>`<div onclick="ui.abrirBase(${jsa(r.caminho)},${jsa(r.nome)})"><span>${esc(r.nome)}</span><small>${esc(r.caminho)}</small></div>`).join('')||'<div style="cursor:default;color:var(--tx3)">Nenhuma base recente</div>';
-      document.getElementById('wfoot').textContent='Base jurídica '+(d.base_juridica?d.base_juridica.versao:'?')+' · '+d.hoje; this.dados.registros=[]; this.render(); return; }
+      document.getElementById('wfoot').textContent='Base jurídica '+(d.base_juridica?d.base_juridica.versao:'?')+' · '+d.hoje+(d.aviso_pasta?' · '+d.aviso_pasta:''); this.dados.registros=[]; this.render(); return; }
+    // pasta do programa sem permissão de gravação: avisa uma vez onde ficam bases, configuração e registro de erros
+    if(d.aviso_pasta&&!this._avisoPasta){ this._avisoPasta=true; setTimeout(()=>this.toast(d.aviso_pasta),600); }
     w.classList.remove('on'); if(!this._legFeito){ this._legFeito=true; setTimeout(()=>this.legVerificar(),800); } if(d.base!==this._qdBase){ this._qdBase=d.base; this._qd=null; this.qdCarregar().then(()=>this.render()); } document.getElementById('baseNome').textContent=d.base; document.getElementById('baseN').textContent=d.registros.length;
     document.getElementById('copia').innerHTML=d.copia?`<i></i>cópia de segurança: ${esc(d.copia.quando)}`:'';
     document.getElementById('hoje').textContent='Hoje '+d.hoje+(d.base_juridica?' · base jurídica '+d.base_juridica.versao:''); if(!this.dados.abas.concat(this.ABAS_EXTRA).find(a=>a.id===this.aba)) this.aba='geral'; this.render(); },
@@ -950,9 +952,12 @@ const ui = {
   visiveis(){ const q=semAcento(this.filtro); let rs=this.dados.registros; if(q){ const qd=/\d/.test(q)&&/^[\d.\-\/\s]+$/.test(q)?q.replace(/\D/g,''):'';
       rs=rs.filter(r=>{ const b=this.buscaTxt(r); return b.txt.includes(q) || (qd && b.dig.includes(qd)); }); } return rs; },
   cor(r,spec){ const x=this.sitPed(r,spec); if(x) return x.cor; return spec.cor ? (r[spec.cor]||'') : ''; },
-  // situação depois da providência: pedido marcado (Progressão, Livramento, Ficha) ou todos os itens da ficha conferidos
-  sitPed(r,spec){ if(!spec||!['prog','liv','fd'].includes(spec.id)) return null; const P=(r.pedidos||{})[spec.id];
-    if(P){ const mud=P.ref&&P.ref!==this.pedRef(r,spec.id); return {txt:'Pedido feito em '+P.data+(mud?' · situação mudou depois':''), cor:mud?'amarelo':'azul', dica:this.pedDica(P,mud)}; }
+  // situação depois da providência: pedido marcado (Progressão, Livramento, Prescrição, Extinção, Ficha) ou todos os itens da ficha
+  // conferidos. Pedido cuja situação mudou depois: amarelo "situação mudou depois" em todas as abas, salvo prazo vencido (vermelho), que
+  // continua vermelho; a mesma cor vale para a linha, os cartões e o contador da aba (contaCor usa ui.cor)
+  sitPed(r,spec){ if(!spec||!['prog','liv','fd','presc','ext'].includes(spec.id)) return null; const P=(r.pedidos||{})[spec.id];
+    if(P){ const mud=P.ref&&P.ref!==this.pedRef(r,spec.id), base=spec.cor?(r[spec.cor]||''):'', venc=base==='vencido'||base==='vermelho';
+      return {txt:'Pedido feito em '+P.data+(mud?' · situação mudou depois':''), cor:mud?(venc?base:'amarelo'):'azul', dica:this.pedDica(P,mud)}; }
     if(spec.id==='fd'&&r.fd_conf_tot&&(r.fd_conf_n||0)>=r.fd_conf_tot&&['vermelho','amarelo'].includes(r.fd_cor)) return {txt:'Conferido', cor:'verde', dica:'Todos os itens da ficha foram conferidos ('+r.fd_conf_n+' de '+r.fd_conf_tot+'). Situação antes da conferência: '+(r.fd_sit||'')};
     return null; },
   render(){
@@ -1462,7 +1467,7 @@ const ui = {
       return `<div class="ac ${k}"><div class="ac-h"><span class="pill ${s.nivel_cor}">${esc(s.nivel_txt)}</span><b>${penaExt(esc(s.titulo))}</b><span class="ac-a">${bx}</span></div>
         ${s.detalhe?`<div class="ac-d">${paras(s.detalhe)}</div>`:''}
         ${s.fundamento?`<div class="ac-f">${penaExt(esc(s.fundamento))}</div>`:''}
-        ${s.fundamentacao&&!s.baixado?`<div class="ac-fund"><div class="ac-fh"><b>Fundamentação</b> <span class="muted">texto para a impugnação do cálculo</span>
+        ${s.fundamentacao&&!s.baixado?`<div class="ac-fund"><div class="ac-fh"><b>Fundamentação</b> <span class="muted">${s.nivel==='verificar'?'texto para a impugnação · usar depois de conferir nos autos o ponto acima (o pedido vem condicionado a essa conferência)':'texto para a impugnação do cálculo'}</span>
           <span class="mini pre" onclick="event.stopPropagation();ui.copiarClip(${ui.clip(penaExt(s.fundamentacao))})">Copiar fundamentação</span>
           <span class="mini" onclick="event.stopPropagation();const b=this.closest('.ac-fund').querySelector('.ac-ft');b.classList.toggle('on');this.textContent=b.classList.contains('on')?'Ocultar texto':'Ver texto'">Ver texto</span></div>
           <div class="ac-ft">${esc(penaExt(s.fundamentacao))}</div></div>`:''}
@@ -1650,7 +1655,7 @@ const ui = {
     Object.keys(r.pedidos||{}).filter(k=>k.startsWith('ind_')).forEach(k=>{ const x=this.decDe(r).find(y=>y.id===k.slice(4)); const dn=x?'Decreto '+x.numero:'decreto '+k.slice(4);
       achado[k]=()=>'possível direito a indulto ou comutação pelo '+dn; NOME[k]='indulto ou comutação pelo '+dn; });
     const P=r.pedidos||{}; const ks=Object.keys(P).filter(k=>achado[k]&&(!sel||sel.includes(k))).sort((a,b)=>this.tlD(P[a].data)-this.tlD(P[b].data));
-    if(!ks.length) return sel ? 'Selecione ao menos uma providência.' : `Atendimento a ${r.nome} referente aos autos ${r.proc} na data de hoje${this.dados.hoje?' ('+this.dados.hoje+')':''}. A GR foi analisada e não se verificou cabível pedido sobre progressão, livramento, indulto, prescrição ou extinção no momento da análise.`;
+    if(!ks.length) return sel ? 'Selecione ao menos uma providência.' : `Atendimento a ${r.nome} referente aos autos ${r.proc} na data de hoje${this.dados.hoje?' ('+this.dados.hoje+')':''}. Nenhum pedido registrado nesta data.`;
     const c=ks.map(k=>achado[k]());
     const f=ks.map(k=>{ const x=P[k], o=x.obs?', com a anotação: '+sp(x.obs):'';
       if(x.tipo==='oficio') return 'em '+x.data+', foi expedido ofício à unidade prisional'+(k==='fd'?' solicitando atestado de trabalho ou certificação de estudo':' referente a '+NOME[k])+o;
@@ -1711,7 +1716,7 @@ const ui = {
   contaInd(rs){ return rs.filter(r=>this.decDe(r).some(x=>x.s==='cabe')).length; },
   contaCor(a,rs){ if(a.id==='ind') return this.contaInd(rs) || ''; rs=rs.filter(r=>this.pedPendente(r,a.id)); const k = a.id==='presc' ? 'presc_ppe_cor' : a.cor;
     // mesma regra dos cartões (ui.cor): o pedido com a situação mudada depois conta onde o cartão o mostra
-    const corDe=r=>a.id==='presc'?r[k]:this.cor(r,a); return rs.filter(r=>{ const c=corDe(r); return c==='vermelho'||c==='vencido'; }).length || ''; },
+    const corDe=r=>{ const x=this.sitPed(r,a); return a.id==='presc'?(x&&x.cor==='amarelo'?'amarelo':r[k]):this.cor(r,a); }; return rs.filter(r=>{ const c=corDe(r); return c==='vermelho'||c==='vencido'; }).length || ''; },
   ABAS_EXTRA:[{id:'geo',titulo:'Dados prisionais'},{id:'base',titulo:'Dados da Base'},{id:'teses',titulo:'Jurisprudências'},{id:'quadro',titulo:'Quadro do Usuário'}],
   // abas: ícone (traço fino; verde na aba aberta) e nome curto
   ICONE:{

@@ -535,7 +535,10 @@ def gerar_modelo_exemplo(pasta_app, origem_padrao=None):
     doc.add_paragraph("Sentenciado: {{nome}}")
     doc.add_paragraph("")
     doc.add_paragraph("A DEFENSORIA PÚBLICA DO ESTADO DE MATO GROSSO DO SUL, por seu Defensor Público que esta subscreve, no exercício das atribuições institucionais, em favor de {{nome}}, vem, respeitosamente, à presença de Vossa Excelência, requerer a PROGRESSÃO DE REGIME, com fundamento no art. 112 da Lei 7.210/1984, pelos fatos e fundamentos a seguir.")
-    doc.add_paragraph("Consta que {{assistido}} cumpre pena total de {{pena_total}} em regime {{regime}}, com data-base em {{data_base}}, e atingiu o percentual de {{fracao_progressao}} exigido pelo art. 112 da LEP em {{data_progressao}}, preenchendo o requisito objetivo. Crimes: {{crimes}}. Quanto ao requisito subjetivo, requer-se a juntada do atestado de conduta carcerária (LEP, art. 112, § 1º).")
+    doc.add_paragraph("Consta que {{assistido}} cumpre pena total de {{pena_total}} em regime {{regime}}, com data-base em {{data_base}}, e atingiu o percentual de {{fracao_progressao}} exigido pelo art. 112 da LEP em {{data_progressao}}, preenchendo o requisito objetivo. Crimes: {{crimes}}. Quanto ao requisito subjetivo, a boa conduta carcerária comprova-se pelo atestado do diretor do estabelecimento, cuja juntada se requer (LEP, art. 112, § 1º).")
+    # LEP, art. 112, § 1º, na redação da Lei 14.843/2024: boa conduta e exame criminológico; a menção ao exame vem com a tese
+    # de irretroatividade (fatos anteriores a 11/04/2024)
+    doc.add_paragraph("A exigência de exame criminológico, incluída no art. 112, § 1º, da LEP pela Lei 14.843/2024, torna mais gravoso o acesso à progressão e tem natureza penal material: não retroage para alcançar crimes praticados antes de 11/04/2024 (CF, art. 5º, XL; CP, art. 2º). Para esses fatos, o requisito subjetivo é a boa conduta carcerária comprovada pelo atestado, e o exame só pode ser determinado excepcionalmente, pelas peculiaridades do caso e em decisão motivada (Súmula Vinculante 26/STF; Súmula 439/STJ).")
     doc.add_paragraph("Diante do exposto, requer a concessão da progressão ao regime imediatamente menos rigoroso (LEP, art. 112), com a consequente transferência para estabelecimento compatível.")
     doc.add_paragraph("")
     doc.add_paragraph("Campo Grande/MS, {{hoje_extenso}}.")
