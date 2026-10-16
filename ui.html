@@ -1705,7 +1705,11 @@ const ui = {
   _copiaFallback(t){ const ta=document.createElement('textarea'); ta.value=t; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(e){} ta.remove(); },
   // contador da aba: o que ainda pede providência - sai quem já teve o pedido marcado (volta se a situação da aba mudou depois)
   abaPedido(spec){ return !!(spec && (spec.cols||[]).some(c=>c[0]==='pedido')); },
-  pedPendente(r,aba){ if(aba==='ind'&&Object.keys(r.pedidos||{}).some(k=>k.startsWith('ind_'))) return false; const P=(r.pedidos||{})[aba]; return !P || (P.ref && P.ref!==this.pedRef(r,aba)); },
+  // indulto: o pedido é por decreto (ind_<id>) - o de um decreto não tira da contagem outro decreto que cabe sem pedido, e o pedido
+  // cuja situação do decreto mudou depois volta a contar
+  pedPendente(r,aba){ const PP=r.pedidos||{}; if(aba==='ind'&&Object.keys(PP).some(k=>k.startsWith('ind_'))) return this.decDe(r).some(x=>x.s==='cabe'&&!PP['ind_'+x.id]) || Object.keys(PP).some(k=>k.startsWith('ind_')&&this.pedMudou(PP[k]));
+    const P=PP[aba]; return !P || (P.ref && P.ref!==this.pedRef(r,aba)); },
+  pedMudou(P){ return !!(P&&P.ref&&P.ref_atual!=null&&P.ref!==P.ref_atual); },
   // aba Indulto: o mesmo critério do relatório geral (quadro "Indulto ou comutação cabível em ao menos um decreto"): assistidos com
   // algum decreto "cabe" (2000 a 2025), com ou sem pedido - o rótulo do contador diz isso
   contaInd(rs){ return rs.filter(r=>this.decDe(r).some(x=>x.s==='cabe')).length; },
@@ -1865,14 +1869,14 @@ const ui = {
   decBenOk(x){ return this.decBen==='todos' || !x.beneficio || (this.decBen==='indulto'?x.beneficio==='Indulto':x.beneficio==='Comutação'); },
   decMapa(r){ const L=this.decDe(r).filter(x=>x.s!=='fora'&&x.s!=='futuro'&&this.decBenOk(x)); if(!L.length) return '<span class="muted" style="font-size:12px">nenhum decreto desde o início do cumprimento</span>';
     const P=r.pedidos||{};
-    return `<span class="mx">${L.map(x=>{ const pd=P['ind_'+x.id]; return `<i class="${x.s}${pd?' ped':''}" title="${esc(this.decRot(x))} (${esc(x.numero)}): ${esc(this.decRotS(x))}${x.mot?' - '+esc(x.mot_c||x.mot):''}${pd?' · PEDIDO FEITO em '+esc(pd.data):''}" style="background:${pd?this.DEC_COR.ped:(this.DEC_COR[x.s]||'#E2E5E0')}">${this.decCurto(x)}</i>`; }).join('')}</span>`; },
+    return `<span class="mx">${L.map(x=>{ const pd=P['ind_'+x.id]; const mud=pd&&this.pedMudou(pd); return `<i class="${x.s}${pd&&!mud?' ped':''}" title="${esc(this.decRot(x))} (${esc(x.numero)}): ${esc(this.decRotS(x))}${x.mot?' - '+esc(x.mot_c||x.mot):''}${pd?' · PEDIDO FEITO em '+esc(pd.data)+(mud?' · a situação do decreto mudou depois do pedido':''):''}" style="background:${pd&&!mud?this.DEC_COR.ped:(this.DEC_COR[x.s]||'#E2E5E0')}">${this.decCurto(x)}</i>`; }).join('')}</span>`; },
   async decAbrir(id){ if(this.decAberto===id){ this.decAberto=null; return this.render(); } await this.completo(id); this.decAberto=id; this.render(); },
   decBtn(r){ return `<span class="mini dbtn" title="Linha do tempo: crimes, impeditivos, pena cumprida em cada decreto, faltas na janela e resultado" onclick="event.stopPropagation();ui.indTL(${jsa(r.id)})">Verificar indulto/comutação</span>`; },
   // pedido de indulto/comutação é por decreto (ind_<id>): no decreto aberto, o daquele decreto; no Geral, qualquer um (o clique pergunta o decreto)
   decPed(r,decId){ const P=r.pedidos||{}; const k=decId?'ind_'+decId:null;
     const ks=k?(P[k]?[k]:[]):Object.keys(P).filter(x=>x==='ind'||x.startsWith('ind_'));
-    const dica=ks.map(x=>this.pedNome(x,r)+': '+this.pedDica(P[x],false)).join(' | ');
-    return ks.length?`<span class="pck ok" title="${esc(dica)}" onclick="event.stopPropagation();ui.pedidoAbrir(${jsa(r.id)},'${k||ks[0]}')">✓</span>`:`<span class="pck" title="Marcar pedido feito" onclick="event.stopPropagation();ui.pedidoAbrir(${jsa(r.id)},'${k||'ind'}')"></span>`; },
+    const dica=ks.map(x=>this.pedNome(x,r)+': '+this.pedDica(P[x],this.pedMudou(P[x]))).join(' | '), mud=ks.some(x=>this.pedMudou(P[x]));
+    return ks.length?`<span class="pck ok${mud?' mud':''}" title="${esc(dica)}" onclick="event.stopPropagation();ui.pedidoAbrir(${jsa(r.id)},'${k||ks[0]}')">✓</span>`:`<span class="pck" title="Marcar pedido feito" onclick="event.stopPropagation();ui.pedidoAbrir(${jsa(r.id)},'${k||'ind'}')"></span>`; },
   renderIndulto(rs){ rs=[...rs].sort((a,b)=>(b.fixado?1:0)-(a.fixado?1:0)); const D=this.decLista(this.dados.registros||[]);
     if(this.decSel && !D.find(x=>x.id===this.decSel)) this.decSel=null;
     // legenda das cores desta aba (os contadores antigos não filtravam nada)

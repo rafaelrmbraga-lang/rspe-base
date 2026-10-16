@@ -105,7 +105,11 @@ def pedido_pendente(m, aba):
     """Como na tela (ui.pedPendente): sem pedido marcado, ou a situação mudou depois dele."""
     P = m.get("pedidos") or {}
     if aba == "ind" and any(k.startswith("ind_") for k in P):
-        return False
+        # pedido por decreto: o de um decreto não tira da contagem outro decreto que cabe sem pedido; o pedido cuja situação
+        # do decreto mudou depois (ref_atual) volta a contar
+        return (any(x.get("s") == "cabe" and not P.get("ind_" + str(x.get("id"))) for x in ((m.get("dec") or {}).get("decretos") or []))
+                or any(k.startswith("ind_") and (P[k] or {}).get("ref") and (P[k] or {}).get("ref_atual") is not None
+                       and P[k]["ref"] != P[k]["ref_atual"] for k in P))
     p = P.get(aba)
     return (not p) or bool(p.get("ref") and p.get("ref") != _ped_ref(m, aba))
 

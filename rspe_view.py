@@ -479,6 +479,7 @@ def curto_indulto(txt):
         rot = _pv
         extra = " · só crimes não impeditivos (art. 7º, p. ú.)" if "art. 7º" in q else ""
         extra += " · tese: hed. superveniente" if "hediondez" in q else ""
+        extra += " · quanto aos crimes com trânsito; conferir os demais (art. 2º, II)" if "crimes com trânsito" in q else ""
         return "%s · %s%s%s" % (rot, m.group(2).replace("art. 9º, ", ""), extra, falta)
     if base.startswith("POSSÍVEL"):
         return base.replace("POSSÍVEL: ", _pv + " · ").split("; § 5º")[0].replace("art. 5º (todos os crimes com pena máxima ≤ 5 anos)", "art. 5º (pena máx. ≤ 5 anos)") + falta
@@ -507,6 +508,8 @@ def curto_indulto(txt):
         return "Não se aplica (pena em execução na data, extinta depois)"
     if base.startswith("não se aplica: sem pena remanescente"):
         md = rs.re.search(r"a (comutar|indultar)", base)
+        if md and md.group(1) == "indultar":
+            return "Não se aplica (pena cumprida - pedir a extinção)"
         return "Não se aplica (sem pena remanescente a %s)" % (md.group(1) if md else "cumprir")
     if base.startswith("não se aplica") and base.rstrip(".").endswith("sem pena a cumprir"):
         return "Não se aplica (sem pena a cumprir)"
@@ -1119,6 +1122,15 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
             rf.remicao_pendente_decretos(r, _comp)
         except Exception:
             pass
+    try:
+        # remição homologada depois da data do decreto por atividade anterior a ela (fim do período do atestado conciliado; sem
+        # o período, a verificar) - LEP, art. 128
+        import rspe_decretos as _rd
+        _rd.remicao_posterior_decretos(r, _comp if ficha else None)
+        _rd.outro_processo_decretos(r)  # custódia por outro processo ou pelo crime novo contada no cumprido: a verificar
+        _rd.pena_cumprida_decretos(r)  # indulto com a pena considerada já cumprida: "pena cumprida - pedir a extinção"
+    except Exception:
+        pass
     sem_inicio = nao_iniciou(r)
     interr = parada(r) and not sem_inicio
     ptxt, pd = data_progressao(r)
