@@ -46,7 +46,8 @@ f = F([("31.08.2018", INI % "FAXINA"), ("11.01.2021", FIM % "FAXINA")])
 C = rrm.conciliar(R(rem(3, "16/10/2023", "23/12/2022")), f, HOJE)
 ok(est(C) > 600, "A1: remição de 3 dias escondeu o trabalho: %s dias estimados" % est(C))
 nr = [a for a in C["atestados"] if a["origem"] == "rspe"]
-ok(nr and sum(len(rrm._dias_set(s["ini"], s["fim"])) for s in nr[0]["segs"]) <= int(9 * 1.3) + 10, "A1: cobertura da remição de 3 dias além de 3 x 3")
+# (quesito 112, 16/10/2026: a remição sem atestado só alcança os 12 meses anteriores à referência - aqui, sem trabalho neles, fica sem origem)
+ok(not nr or sum(len(rrm._dias_set(s["ini"], s["fim"])) for s in nr[0]["segs"]) <= int(9 * 1.3) + 10, "A1: cobertura da remição de 3 dias além de 3 x 3")
 # remição do tamanho do trabalho continua cobrindo o período inteiro
 C = rrm.conciliar(R(rem(215, "16/10/2023", "23/12/2022")), f, HOJE)
 ok(est(C) < 30, "A1: remição que cabe no trabalho deixou estimativa: %s" % est(C))
@@ -57,7 +58,8 @@ C = rrm.conciliar(R(), f2, HOJE)
 ok(est(C) > 500, "A1: atestado em lote de 90 dias cobriu 3 anos: %s" % est(C))
 # remição com o padrão da leitura (múltipla de 4, sem número de atestado) não cobre trabalho (Camila: 4, 8 e 12 dias)
 C = rrm.conciliar(R(rem(12, "25/09/2024"), rem(8, "01/04/2025")), F([("04.01.2022", INI % "CANTINA"), ("22.03.2025", FIM % "CANTINA")]), HOJE)
-ok(not [a for a in C["atestados"] if a["origem"] == "rspe"] and any("padrão da leitura" in al["texto"] for al in C["alertas"]),
+# (quesito 114, 16/10/2026: sem projeto de leitura na ficha, a origem fica a conferir e o trabalho que ela cobriria fica "a conferir")
+ok(not [a for a in C["atestados"] if a["origem"] == "rspe"] and any("múltiplos de 4" in al["texto"] for al in C["alertas"]),
    "A1: remição de leitura atribuída ao trabalho")
 
 # ---- A2: a planilha usa o mesmo valor do relatório (parte fora do período já remido; teto) ----
