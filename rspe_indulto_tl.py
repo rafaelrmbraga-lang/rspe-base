@@ -470,6 +470,8 @@ def linha(r, hoje=None):
         conf = i.get("_falta") == "sim"
         # fuga (ficha ou incidente), mesmo sem homologação: falta grave para o indulto e a comutação (critério da unidade)
         pend = rs._pendente(i) and not conf and not i.get("_fuga_ficha") and not RE_FUGA.search(rot)
+        # falta da ficha datada pela ciência do resultado (fato anterior, sem data): segue a verificar mesmo confirmada
+        pend = pend or bool(i.get("_data_ciencia") and rs._pendente(i))
         homol = _d(i.get("data_decisao")) if not rs._pendente(i) else None
         faltas.append({"fato": fato, "homol": homol, "pendente": pend, "texto": rot + (" (falta grave confirmada pelo operador)" if conf else ""),
                        "sub": "confirmada pelo operador" if conf and not homol else ""})

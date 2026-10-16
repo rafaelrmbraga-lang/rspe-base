@@ -292,6 +292,9 @@ RE_FICHA_TRANSF = re.compile(r"TRANSFER|PERMUTA", re.I)
 # unidade de monitoramento eletrônico ou de regime semiaberto/aberto: é cumprimento de pena, não prisão provisória
 RE_FICHA_ABERTA = re.compile(r"MONITORA|UMMVE|SEMI-?ABERTO|REGIME ABERTO|ABERTO E |EPMRSAAC|EPRSAA|EPRACA|CPAIG|CPAG\b|GAMELEIRA|PATRONATO|"
                              r"AUDI[ÊE]NCIA (ADMONIT|DE ADVERT)", re.I)
+# monitoramento eletrônico, prisão domiciliar e regime aberto: a pessoa não está presa - por outro processo, não suspende a executória
+# (CP, art. 116, p. único: "preso por outro motivo"; leitura restritiva)
+RE_FICHA_NAO_PRESO = re.compile(r"MONITORA|UMMVE|REGIME ABERTO|PATRONATO|ALBERGAD|DOMICILIAR", re.I)
 # a saída mostra que a custódia era cumprimento de pena (progressão, regressão, livramento)
 RE_FICHA_SAIDA_CUMPR = re.compile(r"MOTIVO:\s*(PROGRESS|REGRESS|LIVRAMENTO)|PROGRESS[ÃA]O DE REGIME|LIVRAMENTO CONDICIONAL", re.I)
 
@@ -322,7 +325,7 @@ def _periodos_ficha(f):
             if cur is None:
                 cur = {"ini": d, "fim": None, "proc_ent": RE_FICHA_PROC.findall(t), "proc_sai": [],
                        "cumprimento": bool(re.search(r"CUMPRIMENTO D[EA] (SUA )?PENA", t, re.I)),
-                       "aberta": bool(RE_FICHA_ABERTA.search(t)), "saida_cumpr": False}
+                       "aberta": bool(RE_FICHA_ABERTA.search(t)), "nao_preso": bool(RE_FICHA_NAO_PRESO.search(t)), "saida_cumpr": False}
         elif cur is not None and (RE_FICHA_SAIDA_LIVRE.search(t) or (re.match(r"^\s*SA[ÍI]DA DA UNIDADE PENAL", t, re.I)
                                                                    and not re.search(r"MOTIVO:\s*TRANSFER", t, re.I))
                                   or (RE_FICHA_SAIDA_OUTRA.search(t) and not RE_FICHA_TRANSF.search(t))):
@@ -390,7 +393,10 @@ def _ficha_classifica(ctx, r, crimes, termo, cob, proc_x="", MA=None):
         outra_acao = bool(marco)
         if outra_acao:
             porque = ""
-        out.append({"tipo": "ret" if porque else "susp", "P": P, "inicio": pa, "fim": None if aberto_hoje else pb,
+        # monitoramento, domiciliar ou aberto por outro processo (ou por ação que ainda não estava em cumprimento): não é "preso por
+        # outro motivo" - não suspende a executória (CP, art. 116, p. único; leitura restritiva, como no livramento por outra pena)
+        nao_preso = not porque and bool(P.get("nao_preso"))
+        out.append({"tipo": "ret" if porque else "nao_susp" if nao_preso else "susp", "P": P, "inicio": pa, "fim": None if aberto_hoje else pb,
                     "fim_calc": None if aberto_hoje else pb, "processo": ", ".join(P["proc_sai"] or P["proc_ent"]) or "não indicado",
                     "conhecido": any(_rspe(q) for q in qs), "porque": porque, "outra_acao": outra_acao, "marco": marco})
     return out
@@ -967,6 +973,15 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
                "por outro processo - conferir na guia", "nao_comprovada")
             corpo.append((pa, "Ficha SIAPEN: %s%s (%s), que o RSPE não registra - indica cumprimento desta pena (interrompe - art. 117, V), "
                               "e não prisão por outro processo; conferir na guia." % (_ent, (", saída em %s" % rs.fmt(pb_txt)) if pb_txt else "", F["porque"])))
+            continue
+        if F["tipo"] == "nao_susp":
+            lt(pa, pb_txt, "liberdade", "ficha SIAPEN: %s, monitoramento eletrônico, domiciliar ou regime aberto (processo %s)" % (_ent, F["processo"]),
+               "monitoramento, domiciliar ou aberto por outro processo: não é \"preso por outro motivo\" e não suspende a prescrição desta pena "
+               "(CP, art. 116, p. único - leitura restritiva); ressalva: o juízo pode entender que o monitorado está preso - conferir")
+            corpo.append((pa, "Ficha SIAPEN: %s até %s em monitoramento eletrônico, domiciliar ou regime aberto pelo processo %s: não é prisão por "
+                              "outro motivo, e a prescrição desta pena corre (CP, art. 116, p. único, leitura restritiva). Ressalva: se o juízo "
+                              "entender que o monitorado está preso, o prazo fica suspenso nesse período - conferir." % (
+                                  _ent, rs.fmt(pb_txt) if pb_txt else "hoje", F["processo"])))
             continue
         susp.append((pa, F["fim_calc"]))
         ficha_susp.append({"inicio": pa, "entrada": fa, "fim": pb_txt, "processo": F["processo"], "conhecido": F["conhecido"]})

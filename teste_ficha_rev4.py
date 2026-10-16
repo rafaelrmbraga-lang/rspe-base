@@ -62,13 +62,15 @@ try:
     evs = f["eventos"]
     ok(any(e["data"] == "25.10.2010" and e["texto"].startswith("SAÍDA DO EPJFC MEDIANTE LIVRAMENTO") for e in evs), "A1: lançamento perdido no histórico oculto: %s" % evs)
     ok(not any("Mutirão" in e["texto"] or "21/09/10" in e["texto"] for e in evs) and f.get("historico_oculto"), "A1: histórico oculto virou lançamento: %s" % evs)
-    ok(evs and evs[0]["data"] == "" and evs[0]["texto"].startswith("CONSELHO DISCIPLINAR: FOI CONCLUSO"), "A2: lançamento sem data perdido: %s" % evs[:1])
+    # quesitos 16/10, item 3: o lançamento sem data recebe a única data citada no texto ("FATO OCORRIDO EM 05/10/2023")
+    ok(any(e["data"] == "05.10.2023" and e.get("data_do_texto") and e["texto"].startswith("CONSELHO DISCIPLINAR: FOI CONCLUSO") for e in evs),
+       "A2: lançamento sem data perdido: %s" % evs)
     ok(not any("FERNANDES" in e["texto"] for e in evs), "A3: 2ª linha do nome do rodapé colada: %s" % evs[-1:])
     ok(any("RUA: ANTONIO GONÇALVES" in e["texto"] for e in evs), "A4: linha 'RUA:' do lançamento apagada: %s" % evs[-1:])
     ok(f["condenacao"] == "" and f["data_prisao"] == "10/04/2026", "A16c: condenação em branco pegou a linha seguinte: %r" % f["condenacao"])
     ok(any("05/10/2023" in x["data_fato"].replace(".", "/") for x in f["faltas"]), "A2: falta do lançamento sem data: %s" % f["faltas"])
     nota, _parc = rf.leitura_parcial(f)
-    ok(any("sem data no SIAPEN" in n for n in nota), "A2: aviso do lançamento sem data: %s" % nota)
+    ok(any("sem data no SIAPEN datado pela única data citada" in n for n in nota), "A2: aviso do lançamento sem data: %s" % nota)
 except ImportError:
     pass
 ok(rf.data_prisao_cabecalho("Data Prisão: AVÓ-D0O6L/1O2R/2E0S1)5 Procedência: X") == "06/12/2015", "A16d: data da prisão intercalada")
@@ -100,8 +102,13 @@ nao = ["Saída da Unidade Penal: ESTABELECIMENTO PENAL REGIME SEMIABERTO E ABERT
        "REAPRESENTAÇÃO: RETORNOU DE EVASÃO NESTA DATA"]
 for t in nao:
     ok(not rf.RE_SAIDA_LIVRE.search(t), "A7: lido como saída em liberdade: %s" % t[:70])
-ok(rf.RE_SAIDA_LIVRE.search("Saída da Unidade Penal: EPA, Destino: , Motivo: Regime Domiciliar, Conforme Ofício: 1."), "A7c: domiciliar")
-ok(rf.RE_SAIDA_LIVRE.search("Saída da Unidade Penal: EPA, Destino: RESIDÊNCIA, Motivo: Determinação Judicial, Conforme Ofício: 1."), "A7: determinação judicial sem presídio")
+# quesitos 16/10, itens 4 e 16: domiciliar é cumprimento e a determinação judicial de destino incerto fica a conferir - nenhuma é
+# liberdade automática (antes as duas eram lidas como saída em liberdade)
+ok(not rf.RE_SAIDA_LIVRE.search("Saída da Unidade Penal: EPA, Destino: , Motivo: Regime Domiciliar, Conforme Ofício: 1.")
+   and rf.saida_judicial("Saída da Unidade Penal: EPA, Destino: , Motivo: Regime Domiciliar, Conforme Ofício: 1.")[0] == "domiciliar", "A7c: domiciliar")
+ok(not rf.RE_SAIDA_LIVRE.search("Saída da Unidade Penal: EPA, Destino: RESIDÊNCIA, Motivo: Determinação Judicial, Conforme Ofício: 1.")
+   and rf.saida_judicial("Saída da Unidade Penal: EPA, Destino: RESIDÊNCIA, Motivo: Determinação Judicial, Conforme Ofício: 1.")[0] == "a_conferir",
+   "A7: determinação judicial sem presídio")
 for t in ("RECEBIMENTO DO TERMO DE ASSENTADA: Reconheço a prática de falta grave - evasão - ocorrida no dia 24.12.2019",
           "REGRESSÃO DE REGIME: Tomou ciência da DECISÃO que regrediu o regime pois evadiu",
           "FOI FLAGRADO PLANEJANDO PARA FUGIR, MAS NÃO TEVE CORAGEM PARA EXECUTAR A FUGA",

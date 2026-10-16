@@ -2213,15 +2213,23 @@ def faltas_da_ficha(r, ficha, hoje=None):
     # foi decidido e não volta como pendência vinda da ficha
     proprias = [i for i in r["_incidentes"] if RE_FALTA_PROPRIA.search(_rotulo_incidente(i))]
     datas = [d for d in (_data_fato_falta(i) for i in proprias) if d]
+    # início desta execução (primeiro evento do RSPE): a ficha cobre a vida prisional toda - a falta anterior é de outra execução e
+    # fica só como informação (Auditoria, ficha x RSPE)
+    _ini_f = min([x for x in (to_date(e.get("data") or "") for e in r.get("_eventos", []) if not e.get("_ficha")) if x] or [None],
+                 key=lambda x: x or date.max)
     for x in ficha.get("faltas") or []:
         d = to_date(x.get("data_fato") or x.get("data_registro") or "")
         if (not d or not x.get("grave") or x.get("situacao") == "arquivada" or d < corte_faltas(hoje)
-                or any(abs((d - y).days) <= 30 for y in datas)):
+                or (_ini_f and d < _ini_f) or any(abs((d - y).days) <= 30 for y in datas)):
             continue
         sit = x.get("situacao") or "registrada"
+        # falta registrada só pela ciência do resultado: a data é a da ciência, posterior ao fato (que a ficha não traz) - aviso no
+        # complemento; nas janelas de 12 meses fica a verificar (indicios_falta)
+        cien = (" (%s)" % (x.get("data_fato_obs") or "data da ciência do resultado: a data do fato não consta da ficha")) if x.get("data_fato_ciencia") else ""
         r["_incidentes"].append({"tipo": "FALTA GRAVE NA FICHA DISCIPLINAR (SIAPEN)",
-                                 "complemento": "Data da infração: %s%s - %s" % (fmt(d), (" - " + x["artigo"]) if x.get("artigo") else "", sit),
-                                 "situacao": "PENDENTE", "data_referencia": fmt(d), "data_decisao": "", "_ficha": True})
+                                 "complemento": "Data da infração: %s%s%s - %s" % (fmt(d), cien, (" - " + x["artigo"]) if x.get("artigo") else "", sit),
+                                 "situacao": "PENDENTE", "data_referencia": fmt(d), "data_decisao": "", "_ficha": True,
+                                 **({"_data_ciencia": True} if cien else {})})
         datas.append(d)
     # fuga/evasão registrada na ficha e ausente no RSPE: falta grave por padrão (LEP, art. 50, II), decidível pelo operador
     fugas_r = [to_date(e.get("data") or "") for e in r.get("_eventos", []) if RE_FUGA_EV.search(_texto_evento(e))]
@@ -2357,7 +2365,11 @@ def indicios_falta(incidentes, ref, dias=365, eventos=None, ate=None, hoje=None,
         if i in proprias:
             d = _data_fato_falta(i)
             if d and limite <= d <= fim:
-                if i.get("_falta") == "sim":
+                if i.get("_data_ciencia"):
+                    # falta da ficha datada pela ciência do resultado: o fato é anterior e pode estar fora da janela - a verificar
+                    out.append(("%s - data do fato desconhecida (a usada é posterior ao fato): conferir no PAD se a falta foi cometida "
+                                "na janela" % txt, False))
+                elif i.get("_falta") == "sim":
                     out.append(("%s (%s - falta grave confirmada pelo operador)" % (txt, fmt(d)), True))
                 elif i.get("_fuga_ficha"):
                     if not falta_prescrita(d, True, eventos, hoje):
