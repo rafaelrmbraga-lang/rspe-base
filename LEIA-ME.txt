@@ -1054,8 +1054,10 @@ v7.11.0
     poucos dias antes do fim do período.
   - Siglas de unidade e de setor em caixa alta (IPCG, UP, PED, EPJFC...).
   - Aba Ficha, linha aberta: ao rolar, o cabeçalho das tabelas internas
-    (atestados x RSPE e demais) fica preso logo abaixo do cabeçalho
-    principal, sem confundir com as colunas da lista.
+    (atestados x RSPE e demais) fica preso rente ao cabeçalho principal,
+    em qualquer largura de janela ou tamanho de letra, com uma faixa
+    branca abaixo para as linhas não colarem nele; datas e títulos das
+    colunas não se partem no meio.
   - Aba Ficha, linha aberta: botões no topo; a situação sai em lista
     curta, um ponto por linha, em letra normal com marcador vermelho
     (dias exatos a requerer) ou amarelo (conferir); a observação longa de
