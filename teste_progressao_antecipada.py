@@ -58,6 +58,15 @@ ok(not pa(rspe(), ficha(conduta="RESPONDE PADIC/PDIB"))["pa_ok"], "PADIC")
 ok(pa(rspe(), ficha(conduta="BOA"))["pa_ok"], "conduta boa")
 ok(not pa(rspe(falta_12m="SIM"), ficha())["pa_ok"], "falta")
 ok(pa(rspe(), ficha(), trab="sem trabalho em curso")["pa_ok"], "sem trabalho: não impede")
+# organização criminosa (critério do juízo): Lei 12.850 ou marcação de comando no RSPE impede
+orc = dict(crime(), lei="12850/13", artigo="ART 2: Organização criminosa")
+ok(not pa(rspe(_crimes=[crime(), orc]), ficha())["pa_ok"], "organização criminosa")
+ok(not pa(rspe(_crimes=[dict(crime(), comando_orcrim="S")]), ficha())["pa_ok"], "comando de organização criminosa")
+# estupro de vulnerável (fato depois da Lei 12.015/2009): amarelo, sem afirmar "violência presumida"
+e217 = dict(crime(vga="N"), lei="2848/40 - Código Penal", artigo="ART 217-A: Estupro de vulnerável", data_infracao="31/12/2013")
+x = pa(rspe(_crimes=[e217]), ficha())
+t = [i["txt"] for i in x["pa_itens"] if "217-A" in i["txt"]]
+ok(not x["pa_ok"] and x["pa_quase"] and t and "Lei 12.015/2009" in t[0] and "presumida (art. 217-A)" not in t[0], "217-A: %s" % x)
 ok(pa(rspe(), ficha(trabalho=[{"inicio": "01.06.2026", "fim": "", "setor": "EMPRESA X", "externo": True}]), trab="sem trabalho em curso")["pa_ok"],
    "trabalho externo")
 # amarelo

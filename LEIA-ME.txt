@@ -1,9 +1,9 @@
-APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.12.1
+APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.12.2
 (antigo RSPE Base; SEEU, programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-7.12.1. A documentação técnica completa (cada parâmetro, a regra, a norma e
+7.12.2. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -874,14 +874,23 @@ SAÍDA TEMPORÁRIA (ícone ao lado do nome, aba Geral)
   execução.
 
 PROGRESSÃO ANTECIPADA (ícone azul de degraus ao lado do nome)
-  Destaca quem pode pedir a progressão antes da data do SEEU (os juízos do
-  estado vêm antecipando a progressão). Aparece nos mesmos lugares do ícone
-  da saída temporária. Requisitos:
+  Destaca quem pode pedir a progressão antes da data do SEEU. Não é
+  requisito de lei: é o critério da 1ª Vara de Execução Penal de Campo
+  Grande (antecipação em até 90 dias para quem tem condenação só por crimes
+  sem violência ou grave ameaça à pessoa, conduta boa ou ótima e não
+  integra organização criminosa, com base na ADPF 347, na SV 56 e no art.
+  185 da LEP), mantido pelo TJMS nas cautelares do Ministério Público (ex.:
+  2ª Câm. Crim., 1421350-44.2026.8.12.0000, j. 14/10/2026). Aparece nos
+  mesmos lugares do ícone da saída temporária. Requisitos:
   - regime fechado ou semiaberto, com o cumprimento em curso;
   - progressão prevista para daqui a 1 a 90 dias (o lapso já atingido fica
     na aba Progressão como vencido);
   - nenhum crime não extinto com violência ou grave ameaça (marcação do
-    RSPE);
+    RSPE ou elementar do tipo); o estupro de vulnerável (art. 217-A) fica
+    a conferir: desde a Lei 12.015/2009 o tipo não tem violência nem grave
+    ameaça como elementar (a violência presumida do art. 224 foi revogada);
+  - nenhuma condenação por organização criminosa (Lei 12.850/2013 ou
+    marcação de comando no RSPE);
   - conduta Boa ou Ótima na ficha, sem falta nos últimos 12 meses.
   Trabalho em curso não é exigido.
   Amarelo: nada falha, mas algo fica a conferir (ficha impressa há mais de
@@ -992,6 +1001,20 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v7.12.2
+  - Progressão antecipada: o critério é o do juízo (não de lei) e passa a
+    conferir também a organização criminosa; o estupro de vulnerável sai
+    com o texto correto (o tipo não tem violência elementar; a violência
+    presumida do art. 224 foi revogada em 2009), em amarelo.
+  - Remição pela leitura: uma decisão pode apreciar vários relatórios de
+    uma vez (12 dias = relatórios de 1 e 2 obras), sem acusar "leitura
+    peticionada sem remição". A remição múltipla de 4 só conta como
+    leitura até as obras registradas na ficha; a que sobra, posterior a um
+    atestado sem remição, deixa esse atestado "Não lançado? Conferir"
+    (amarelo, fora do total e da prioridade), em vez de "não lançado".
+  - Divergência no SEEU/SIAPEN: o título do quadro sai em vermelho, como o
+    ícone.
 
 v7.12.1
   - Indulto, Decreto 11.846/2023 (art. 1º, XIV): a mesma regra do inciso

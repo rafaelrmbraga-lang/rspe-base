@@ -1380,11 +1380,18 @@ def conciliar(r, f, hoje=None, manuais=None, ini_exec=None, excluir_remicoes=Non
     # fica a conferir (trabalho ou leitura) e o trabalho que ela cobriria fica "a conferir", sem pedido de atestado (pode já estar remido)
     tem_leitura = bool(f.get("leituras")) or any(re.search(r"PROJETO\W+(?:DE\W+)?LEITURA|REMICAO P(?:OR|ELA) LEITURA|RELATORIOS? DE LEITURA|RESENHA",
                                                            _sa(e.get("texto"))) for e in evs)
-    for x in rems:
+    # com os relatórios de leitura registrados na ficha, só cabe como leitura até 4 dias por obra registrada (na ordem das decisões):
+    # a remição múltipla de 4 que excede as obras da ficha fica com a origem a conferir (pode ser trabalho ou estudo)
+    obras_f = sum(len(x_.get("meses") or []) or x_.get("obras") or 0 for x_ in f.get("leituras") or [])
+    # (as remições que a ficha já casou com relatórios de leitura - excluir_remicoes - consomem as obras primeiro)
+    cap_leit, usado_leit = (4 * obras_f if obras_f else None), sum(d_ for _x, d_ in (excluir_remicoes or ()) if d_)
+    for x in sorted(rems, key=lambda x_: x_.get("decisao") or x_["ref"] or date.min):
         if not livre(x) or not x["ref"]:
             continue
         m4 = not x["numero"] and 4 <= x["dias"] <= 24 and abs(x["dias"] / 4.0 - round(x["dias"] / 4.0)) < 1e-9
-        leit = m4 and tem_leitura
+        leit = m4 and tem_leitura and (cap_leit is None or usado_leit + x["dias"] <= cap_leit + 0.5)
+        if leit:
+            usado_leit += x["dias"]
         a = {"id": "rem:%s" % _f(x["decisao"]), "numero": "", "emissao": x["ref"], "segs": [{"setor_txt": "", "chave": None, "setor": "", "ini": None, "fim": None,
              "trab": None, "rem": None, "inferido": True}], "trab": None, "rem": x["dias"], "lote": True, "origem": "rspe", "texto": "",
              "remicao": x, "status": "SEM_ORIGEM" if leit else "CONCILIADO", "_ant": False}
@@ -1392,6 +1399,7 @@ def conciliar(r, f, hoje=None, manuais=None, ini_exec=None, excluir_remicoes=Non
             a["sem_origem"], a["leitura"] = True, True
         elif m4:
             a["m4"] = True
+            a["leit_excede"] = bool(tem_leitura and cap_leit is not None)
         x["usada"] = a["id"]
         ats.append(a)
     ats.sort(key=lambda a: (max([s["fim"] for s in a["segs"] if s["fim"]] or [a["emissao"]]), a["emissao"]))
@@ -1653,7 +1661,13 @@ def conciliar(r, f, hoje=None, manuais=None, ini_exec=None, excluir_remicoes=Non
         alerta("capacidade", "Remição de %s em %s (sem atestado na ficha) maior que o trabalho dos 12 meses anteriores à referência (%s): o "
                "trabalho mais antigo que ela cobriria fica a conferir (pode já estar remido) - conferir a origem na decisão." % (
                    rs.pl(int(a["remicao"]["dias"]), "dia", "dias"), _f(a["remicao"]["decisao"]), _f(a["remicao"]["ref"])), a["remicao"]["decisao"])
-    so = [a for a in ats if a.get("status") == "SEM_ORIGEM" and a.get("m4")]
+    so = [a for a in ats if a.get("status") == "SEM_ORIGEM" and a.get("m4") and a.get("leit_excede")]
+    if so:
+        alerta("origem", "Remições sem atestado na ficha com dias múltiplos de 4 (4 a 24), além das obras de leitura registradas na ficha (%s): %s - "
+                         "origem a conferir (trabalho, estudo ou leitura não registrada na ficha); o trabalho do período que ela cobriria fica a "
+                         "conferir, sem pedido de atestado." % (rs.pl(obras_f, "obra", "obras"), "; ".join(
+                             "%s em %s" % (rs.pl(int(a["rem"]), "dia", "dias"), _f(a["remicao"]["decisao"])) for a in so)), None)
+    so = [a for a in ats if a.get("status") == "SEM_ORIGEM" and a.get("m4") and not a.get("leit_excede")]
     if so:
         alerta("origem", "Remições sem atestado na ficha com dias múltiplos de 4 (4 a 24), sem projeto de leitura registrado na ficha: %s - origem "
                          "a conferir (trabalho ou leitura); o trabalho do período que ela cobriria fica a conferir, sem pedido de atestado." % "; ".join(
@@ -1667,6 +1681,7 @@ def conciliar(r, f, hoje=None, manuais=None, ini_exec=None, excluir_remicoes=Non
         alerta("origem", "Remições sem atestado na ficha com dias múltiplos de 4 (padrão da leitura: 4 dias por obra): %s - não foram atribuídas ao "
                          "trabalho, que fica na estimativa; conferir a origem na decisão." % "; ".join(
                              "%s em %s" % (rs.pl(int(a["rem"]), "dia", "dias"), _f(a["remicao"]["decisao"])) for a in so), None)
+    m4_rems = [a["remicao"] for a in ats if a.get("m4") and a.get("remicao") and a.get("status") != "ABSORVIDA"]
     ats = [a for a in ats if a.get("status") not in ("SEM_ORIGEM", "ABSORVIDA")]
 
     # ---- coerência da data de referência (sem desfazer o casamento) ----
@@ -2117,6 +2132,15 @@ def conciliar(r, f, hoje=None, manuais=None, ini_exec=None, excluir_remicoes=Non
             if a["rem"] and soma_ >= 0.9 * a["rem"]:
                 a["cumul_coberto"] = soma_
 
+    # atestado não lançado com remição do RSPE posterior à emissão (até 2 anos), múltipla de 4 e sem origem (excede as obras de leitura
+    # da ficha): pode ser a apreciação deste atestado, no todo ou em parte - o "não lançado" fica a conferir (amarelo), sem afirmar
+    for a in ats:
+        if a["status"] != "NAO_LANCADO" or a["origem"] != "ficha" or not a["rem"] or a.get("cumulativo") is not None:
+            continue
+        pos_ = [x_ for x_ in m4_rems if a["emissao"] < x_["decisao"] <= a["emissao"] + timedelta(days=730)]
+        if pos_:
+            a["orf_post"] = pos_
+
     def _segs_tabela(a):
         """Trechos da tabela. Atestado com período declarado longo ("de 07/06/13 a 16/12/15, com intervalos"): mostra os vínculos de
         trabalho da ficha dentro dele (afastamentos, lançamentos tornados sem efeito e intervalos ficam de fora), com a conta dos
@@ -2182,6 +2206,12 @@ def conciliar(r, f, hoje=None, manuais=None, ini_exec=None, excluir_remicoes=Non
                 ("; somadas as posteriores sem origem (%s), %s" % (" + ".join("%d em %s" % (x_["dias"], _f(x_["decisao"])) for x_ in orf_),
                                                                   rs.pl(int(a.get("cumul_coberto") or sa_ + sum(x_["dias"] for x_ in orf_)), "dia", "dias"))) if orf_ else "",
                 ": provavelmente já remido - conferir nos autos" if a.get("cumul_coberto") else ""))
+        if a.get("orf_post"):
+            op_ = a["orf_post"]
+            notas_.append("%s no RSPE, posterior%s à emissão, sem atestado na ficha e além das obras de leitura registradas (%s): pode%s ser a "
+                          "apreciação deste atestado, no todo ou em parte - conferir nos autos antes de requerer" % (
+                              " e ".join("a remição de %s em %s" % (rs.pl(int(x_["dias"]), "dia", "dias"), _f(x_["decisao"])) for x_ in op_),
+                              "es" if len(op_) > 1 else "", rs.pl(int(sum(x_["dias"] for x_ in op_)), "dia", "dias"), "m" if len(op_) > 1 else ""))
         if a.get("cumulativo") is not None:
             poss, orf = a["cumulativo"], a.get("cumul_orf") or []
             # remições do RSPE posteriores à emissão (até 2 anos) que ficaram sem origem: podem ser a apreciação deste atestado
@@ -2237,9 +2267,10 @@ def conciliar(r, f, hoje=None, manuais=None, ini_exec=None, excluir_remicoes=Non
                               "Possível cumulativo: conferir nos autos" if a["status"] == "NAO_LANCADO" and a.get("cumulativo") is not None else
                               "Peticionado em outros autos: fora do total" if a.get("outros_autos") else
                               "Sem período: conferir (fora do total)" if a.get("sem_periodo") else
+                              "Não lançado? Remição sem origem posterior: conferir" if a["status"] == "NAO_LANCADO" and a.get("orf_post") else
                               "Diferença até 1/3 a pedir" if a.get("abaixo_terco") else rot[a["status"]][0],
                        "cor": "cinza" if (a.get("zerado") or a.get("cumul_coberto") or a.get("outros_autos")) else
-                              "amarelo" if a["status"] == "NAO_LANCADO" and (a.get("cumulativo") is not None or a.get("sem_periodo")) else rot[a["status"]][1],
+                              "amarelo" if a["status"] == "NAO_LANCADO" and (a.get("cumulativo") is not None or a.get("sem_periodo") or a.get("orf_post")) else rot[a["status"]][1],
                        "nota": nota, "sem_periodo": bool(a.get("sem_periodo")),
                        "peticionado": a.get("peticionado", ""), "texto": a.get("texto", ""), "autos": a.get("autos", ""),
                        "autos_outros": a["autos_outros"],
@@ -2274,6 +2305,15 @@ def conciliar(r, f, hoje=None, manuais=None, ini_exec=None, excluir_remicoes=Non
             p_["acao"] = ("conferir no atestado o período trabalhado e se já foi remido; se não, requerer a apreciação (há dias a requerer)"
                           if a.get("peticionado") else "conferir nos autos o atestado e o período trabalhado; se juntado e não remido, requerer a "
                           "apreciação (há dias a requerer)")
+        elif a.get("orf_post"):
+            op_ = a["orf_post"]
+            p_["status"], p_["cor"] = "ORF_POST", "amarelo"
+            p_["texto"] = "Atestado %s de %s (%s remidos) sem remição identificada no RSPE; %s, posterior%s, sem atestado na ficha e além das " \
+                          "obras de leitura registradas, pode%s ser a sua apreciação" % (
+                              a["numero"] or "s/n", _f(a["emissao"]), _fmtn(a["rem"]),
+                              " e ".join("a remição de %s de %s" % (rs.pl(int(x_["dias"]), "dia", "dias"), _f(x_["decisao"])) for x_ in op_),
+                              "es" if len(op_) > 1 else "", "m" if len(op_) > 1 else "")
+            p_["acao"] = "conferir nas decisões a origem dessas remições; se não forem deste atestado, requerer a apreciação; se forem em parte, requerer a diferença"
         elif a.get("sobrep_rems"):
             sr_ = a["sobrep_rems"]
             p_["acao"] = "conferir nos autos se %s, sem origem identificada, já %s parte deste período; requerer o restante" % (
