@@ -1793,9 +1793,12 @@ def saida_temporaria(r, ficha, m, est=None, interr=False, hoje=None):
 
 
 def progressao_antecipada(r, ficha, m, est=None, interr=False, hoje=None):
-    """Pedido de progressão antecipada (faltando de 1 a 90 dias para a data do SEEU; a antecipação vem sendo deferida pelos
-    juízos de MS): regime fechado ou semiaberto em curso, crimes sem violência nem grave ameaça (marcação do RSPE) e
-    conduta Boa/Ótima sem falta nos 12 meses (trabalho em curso não é exigido). pa_ok só com todos os requisitos; pa_quase quando nenhum falha e algum fica
+    """Pedido de progressão antecipada (faltando de 1 a 90 dias para a data do SEEU): critério do juízo, não de lei - a 1ª VEP de
+    Campo Grande antecipa em até 90 dias a progressão de quem tem condenação só por crimes sem violência ou grave ameaça à pessoa,
+    conduta boa ou ótima e não integra organização criminosa (ADPF 347, SV 56, LEP, art. 185; mantido pelo TJMS nas cautelares do
+    MP, ex.: 2ª Câm. Crim., 1421350-44.2026.8.12.0000, j. 14/10/2026). Aqui: regime fechado ou semiaberto em curso, crimes sem
+    violência nem grave ameaça (marcação do RSPE ou elementar do tipo), sem organização criminosa e conduta Boa/Ótima sem falta
+    nos 12 meses (trabalho em curso não é exigido). pa_ok só com todos os requisitos; pa_quase quando nenhum falha e algum fica
     a conferir; pa_itens = [{ok, txt}]."""
     hoje = hoje or HOJE
     it = []
@@ -1817,10 +1820,18 @@ def progressao_antecipada(r, ficha, m, est=None, interr=False, hoje=None):
     if vga:
         add(False, "Crime com violência ou grave ameaça: " + "; ".join("%s (%s)" % ((c.get("artigo") or "").split(":")[0].title(), c.get("data_infracao") or "?") for c in vga))
     elif pres:
-        add(None, "Violência presumida (art. 217-A): " + "; ".join("%s (%s)" % ((c.get("artigo") or "").split(":")[0].title(), c.get("data_infracao") or "?") for c in pres)
-            + " - não é violência elementar do tipo; conferir")
+        # estupro de vulnerável: desde a Lei 12.015/2009 (vigência em 10/08/2009) o tipo não tem violência nem grave ameaça como elementar
+        # (a violência presumida era a do art. 224, revogado); o critério do juízo é o crime sem violência ou grave ameaça à pessoa
+        add(None, "Estupro de vulnerável (art. 217-A): " + "; ".join("fato em %s" % (c.get("data_infracao") or "?") for c in pres)
+            + " - o tipo não tem violência nem grave ameaça como elementar (a violência presumida do art. 224 do CP foi revogada pela "
+              "Lei 12.015/2009); conferir na sentença se houve violência real ou grave ameaça")
     else:
         add(None if (sem or not crimes) else True, "Nenhum crime com violência ou grave ameaça" + (" (crime sem a marcação no RSPE: conferir)" if sem or not crimes else ""))
+    # critério do juízo (1ª VEP de Campo Grande): não integrar organização criminosa - pela condenação do RSPE (Lei 12.850/2013 ou
+    # marcação de comando de organização criminosa)
+    orc = [c for c in crimes if c.get("comando_orcrim") == "S" or rs.num_lei(c.get("lei")) == "12850"]
+    add(not orc, ("Organização criminosa: " + "; ".join("%s (%s)" % ((c.get("artigo") or "").split(":")[0].title() or "Lei 12.850/2013", c.get("data_infracao") or "?") for c in orc))
+        if orc else "Sem condenação por organização criminosa no RSPE")
     if not ficha:
         add(None, "Sem ficha disciplinar: conduta não conferida")
     else:

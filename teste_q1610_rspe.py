@@ -189,7 +189,7 @@ ok(r["vga"] == "S", "28: resumo do assistido com a violência elementar")
 r = reg([c217], [ev("10/09/2019")])
 ok(r["vga"] == "N" and r["vga_presumida"] == "S", "28: presumida à parte no resumo")
 pa = rv.progressao_antecipada(r, None, {"prog_dias": 30, "prog": "15/11/2026"})
-ok(any(x["ok"] is None and "Violência presumida (art. 217-A)" in x["txt"] for x in pa["pa_itens"]), "28: progressão antecipada mostra a presumida: %s" % pa)
+ok(any(x["ok"] is None and "Estupro de vulnerável (art. 217-A)" in x["txt"] for x in pa["pa_itens"]), "28: progressão antecipada mostra a presumida: %s" % pa)
 
 # ---------------- 29: "Suspenso: Sim" ----------------
 r = reg([crime(P1), crime(P2, suspenso="Sim")], [ev("10/09/2019")])

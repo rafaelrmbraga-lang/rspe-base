@@ -1265,6 +1265,11 @@ def _itens_conciliacao(C):
                         "detalhe": "O atestado declara mais trabalho do que a ficha comporta no período, como os atestados que somam períodos "
                                    "já remidos. Providência: %s." % p_["acao"],
                         "fundamento": "LEP, art. 126, § 1º, II, e § 8º.", "tipo": "remicao-cumulativa"})
+        elif p_["status"] == "ORF_POST":
+            out.append({"nivel": "verificar", "titulo": "Verificar remição: " + p_["texto"].replace("Atestado ", "atestado nº ", 1),
+                        "detalhe": "O RSPE não tem remição com os dias do atestado, mas tem remição posterior, sem atestado na ficha e além das obras "
+                                   "de leitura registradas, que pode ser a sua apreciação. Providência: %s." % p_["acao"],
+                        "fundamento": "LEP, art. 126, § 1º, II, e § 8º.", "tipo": "remicao-nao-lancada-a-conferir"})
         elif p_["status"] == "SEM_PERIODO":
             out.append({"nivel": "verificar", "titulo": "Atestado sem período: " + p_["texto"].replace("Atestado ", "nº ", 1),
                         "detalhe": "O texto do atestado na ficha não informa o período trabalhado: os dias ficam fora do total e da prioridade até a "
@@ -2669,6 +2674,29 @@ def quadro_trabalho(r, f, hoje=None, manuais=None):
                 lei_rem[x["data"]] = min(c, key=lambda i: i["d"] or i["ref"])
                 if parcial:
                     lei_parc[x["data"]] = 4 * n - int(round(lei_rem[x["data"]]["dias"]))
+    # uma decisão pode apreciar vários relatórios de uma vez (12 dias = relatórios de 1 e 2 obras): pela ordem das remições, cada uma
+    # casa com o relatório pendente de mesmo total ou com a soma dos mais antigos pendentes (até 3, no ano anterior). Vale se casar mais
+    # obras que a conta relatório a relatório
+    _lt = [(x["data"], _dp(x["data"]), len(x.get("meses") or []) or x.get("obras") or 0) for x in f.get("leituras") or []]
+    _lt = sorted([t for t in _lt if t[1] and t[2]], key=lambda t: t[1])
+    g_rem, pend_ = {}, []
+    for i in sorted([i for i in incs if (i["d"] or i["ref"]) and (i["dias"] or 0) >= 4], key=lambda i: i["d"] or i["ref"]):
+        di = i["d"] or i["ref"]
+        pend_ += [t for t in _lt if t[1] <= di and t[0] not in g_rem and t not in pend_]
+        cand = [t for t in pend_ if di - timedelta(days=365) <= t[1] <= di]
+        grupo = next(([t] for t in cand if abs(i["dias"] - 4 * t[2]) < 0.5), None)
+        for k_ in (2, 3):
+            if grupo is None and len(cand) >= k_:
+                for s_ in range(len(cand) - k_ + 1):
+                    if abs(i["dias"] - 4 * sum(t[2] for t in cand[s_:s_ + k_])) < 0.5:
+                        grupo = cand[s_:s_ + k_]
+                        break
+        for t in grupo or []:
+            g_rem[t[0]] = i
+            pend_.remove(t)
+    _ob = {t[0]: t[2] for t in _lt}
+    if sum(_ob[k] for k in g_rem) > sum(_ob.get(k, 0) for k in lei_rem if k not in lei_parc):
+        lei_rem, lei_parc = g_rem, {}
     # estudo (LEP, art. 126, § 1º, I: 1 dia a cada 12 h de frequência, divididas em no mínimo 3 dias)
     pend_est, conf_est, est_duv, est_curso = [], [], [], []
     ult_rem = max((max(i["d"] or date.min, i["ref"] or date.min) for i in incs), default=None)
@@ -2824,7 +2852,7 @@ def quadro_trabalho(r, f, hoje=None, manuais=None):
                 "acima_do_possivel": a.get("teto") is not None and (a.get("rem_pend", a["rem"]) or 0) > a["teto"],
                 "periodo_inicio": rrm._f(min(x["ini"] for x in ss)) if ss else "", "periodo_fim": rrm._f(max(x["fim"] for x in ss)) if ss else ""}
     # peticionado em outros autos e sem período (rspe_remicao.conciliar): listados à parte, fora do total e da prioridade
-    _fora = lambda a: a.get("cumulativo") is not None or a.get("outros_autos") or a.get("sem_periodo")
+    _fora = lambda a: a.get("cumulativo") is not None or a.get("outros_autos") or a.get("sem_periodo") or a.get("orf_post")
     res["atestados_pendentes"] = [_compat(a) for a in nl if a["rem"] and not a.get("zerado") and not _fora(a)]
     # o mesmo valor da remição detalhada: a parte fora do período já remido e, no atestado sem período, só o possível (teto); o
     # atestado cumulativo (rspe_remicao.conciliar) fica de fora: conferir nos autos o que já foi remido antes de pedir
@@ -2833,6 +2861,7 @@ def quadro_trabalho(r, f, hoje=None, manuais=None):
     res["nl_cumulativos"] = [a for a in nl if a.get("cumulativo") is not None and a["rem"]]
     res["nl_outros_autos"] = [a for a in nl if a.get("outros_autos")]
     res["nl_sem_periodo"] = [a for a in nl if a.get("sem_periodo")]
+    res["nl_orf_post"] = [a for a in nl if a.get("orf_post") and a.get("cumulativo") is None and not a.get("outros_autos") and not a.get("sem_periodo")]
     res["nl_sem_dias"] = sum(1 for a in nl if a["rem"] is None)
     res["remidos_execucao"] = sum(a["rem"] or 0 for a in vivos if a["origem"] != "rspe")
     livres = sum(x["dias"] for x in C["remicoes"] if x["usada"] is None)
@@ -3444,12 +3473,15 @@ def comparativo(r, f, hoje=None, conferidos=None, manuais=None):
     if nl_cum:
         partes.append("%s a conferir: %s" % ("Atestados cumulativos" if len(nl_cum) > 1 else "Atestado cumulativo", " e ".join(
             "nº %s (%s remidos)" % (a["numero"] or "s/n", _fmtn(a["rem"])) for a in nl_cum)))
+    for a_ in res.get("nl_orf_post") or []:
+        partes.append("Verificar remição: o atestado nº %s (%s dias) não aparece no RSPE, e há remição posterior sem origem informada que "
+                      "pode ser dele" % (a_["numero"] or "s/n", _fmtn(a_["rem"])))
     for chave_, rot_ in (("nl_sem_periodo", "sem período (fora do total)"), ("nl_outros_autos", "peticionado em outros autos (fora do total)")):
         L_ = res.get(chave_) or []
         if L_:
             partes.append("%s %s a conferir: %s" % ("Atestados" if len(L_) > 1 else "Atestado", rot_, " e ".join(
                 "nº %s (%s remidos)" % (a["numero"] or "s/n", _fmtn(a["rem"])) for a in L_)))
-    if (nl_cum or res.get("nl_sem_periodo") or res.get("nl_outros_autos")) and not (nh >= 1 or nl_sd):
+    if (nl_cum or res.get("nl_sem_periodo") or res.get("nl_outros_autos") or res.get("nl_orf_post")) and not (nh >= 1 or nl_sd):
         pass
     elif res["diferenca"] >= 1 and not (nh >= 1 or nl_sd):
         partes.append("Conferir remição: ficha %s%s × RSPE %s" % ("≈ " if res["remidos_estudo"] else "", _dias_txt(ficha_total), _dias_txt(res["homologados"])))
@@ -3489,6 +3521,8 @@ def comparativo(r, f, hoje=None, conferidos=None, manuais=None):
         rot.append("Leitura: conferir homologação")
     elif est_pend:
         rot.append("Estudo sem remição (estimativa)")
+    if not (nh >= 1 or nl_sd) and res.get("nl_orf_post"):
+        rot.append("Verificar remição")
     if not (nh >= 1 or nl_sd) and res["diferenca"] >= 1:
         rot.append("Conferir remição")
     if (n_lac or lei_parc_n) and "Conferir remição" not in rot:
