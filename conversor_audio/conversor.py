@@ -1,4 +1,4 @@
-"""Conversor de Áudio — extrai o áudio de vídeos (MP4, MKV, MOV...) para MP3 e outros formatos.
+"""Conversor de Áudio — extrai o áudio de vídeos (MP4, MKV, MOV...) para MP3 e outros formatos, ou converte para WebM.
 
 O usuário escolhe o formato e o nível de compressão, de "sem perda nenhuma"
 (áudio original sem recomprimir, FLAC, WAV) até "voz compacta". Preparado para
@@ -16,12 +16,19 @@ import sys
 import threading
 import time
 
-VERSAO = "1.1.0"
+VERSAO = "1.2.0"
 
 # Limite de upload por arquivo no NotebookLM é 200 MB; folga para não bater no teto.
 LIMITE_MB = 190
 
 ORIGINAL = "Original do vídeo — sem recomprimir"
+
+
+def _vp9(altura_max, taxa):
+    """Vídeo VP9 em modo rápido (realtime) + áudio Opus. Não aumenta vídeos menores que altura_max."""
+    return ["-vf", f"scale=-2:'min({altura_max},ih)'", "-c:v", "libvpx-vp9", "-b:v", taxa,
+            "-maxrate", taxa, "-bufsize", taxa, "-deadline", "realtime", "-cpu-used", "8", "-row-mt", "1",
+            "-g", "300", "-c:a", "libopus", "-b:a", "96k"]
 
 # formato -> (extensão, {qualidade: (argumentos de áudio do ffmpeg, kbps)})
 # kbps None = calculado a partir do áudio de origem.
@@ -44,6 +51,16 @@ FORMATOS = {
         "Boa — qualidade 5 (~160 kbps)": (["-c:a", "libvorbis", "-q:a", "5"], 160),
         "Alta — qualidade 8 (~256 kbps)": (["-c:a", "libvorbis", "-q:a", "8"], 256),
         "Compacta — qualidade 3 (~112 kbps)": (["-c:a", "libvorbis", "-q:a", "3"], 112),
+    }),
+    "WebM — só áudio (Opus)": ("webm", {
+        "Boa — 96 kbps": (["-c:a", "libopus", "-b:a", "96k"], 96),
+        "Alta — 160 kbps": (["-c:a", "libopus", "-b:a", "160k"], 160),
+        "Voz compacta — 32 kbps mono (arquivo bem menor)": (["-ac", "1", "-c:a", "libopus", "-b:a", "32k"], 32),
+    }),
+    "WebM — com vídeo (VP9)": ("webm", {
+        "Boa — até 720p (~1 Mbps)": (_vp9(720, "1M"), 1000 + 96),
+        "Compacta — até 480p (~500 kbps)": (_vp9(480, "500k"), 500 + 96),
+        "Alta — até 1080p (~2,5 Mbps, mais lento)": (_vp9(1080, "2500k"), 2500 + 96),
     }),
     "FLAC (compressão sem perda)": ("flac", {
         "Normal — nível 5": (["-c:a", "flac", "-compression_level", "5"], None),
@@ -74,7 +91,8 @@ def analisar(arquivo, ffmpeg=None):
     """Lê duração e dados da 1ª faixa de áudio pela saída de `ffmpeg -i` (só o cabeçalho; rápido mesmo em 3 GB)."""
     r = subprocess.run([ffmpeg or caminho_ffmpeg(), "-hide_banner", "-i", arquivo], capture_output=True,
                        text=True, errors="replace", creationflags=_SEM_JANELA)
-    info = {"duracao": None, "codec": None, "kbps": None, "hz": 44100, "canais": 2}
+    info = {"duracao": None, "codec": None, "kbps": None, "hz": 44100, "canais": 2,
+            "video": any("Stream #" in l and "Video:" in l and "attached pic" not in l for l in r.stderr.splitlines())}
     m = re.search(r"Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)", r.stderr)
     if m:
         h, mi, s = m.groups()
@@ -145,7 +163,9 @@ def converter(arquivo, formato, qualidade, pasta_saida=None, dividir=True, ao_pr
     info = info or analisar(arquivo, ffmpeg)
     if not info["codec"]:
         raise RuntimeError("Este arquivo não tem faixa de áudio.")
-    args_audio = FORMATOS[formato][1][qualidade][0]
+    args_saida = FORMATOS[formato][1][qualidade][0]
+    if "-c:v" in args_saida and not info.get("video"):
+        raise RuntimeError("Este arquivo não tem vídeo. Use \"WebM — só áudio\".")
     ext = extensao(formato, info)
     pasta = pasta_saida or os.path.dirname(os.path.abspath(arquivo))
     nome = os.path.splitext(os.path.basename(arquivo))[0]
@@ -153,7 +173,11 @@ def converter(arquivo, formato, qualidade, pasta_saida=None, dividir=True, ao_pr
     partes = planejar_partes(tamanho_estimado_mb(formato, qualidade, info), dividir)
 
     cmd = [ffmpeg, "-hide_banner", "-nostdin", "-y", "-progress", "pipe:1", "-nostats", "-loglevel", "error",
-           "-i", arquivo, "-map", "0:a:0", "-vn", "-sn", "-dn"] + args_audio
+           "-i", arquivo]
+    if "-c:v" in args_saida:  # saída com vídeo
+        cmd += ["-map", "0:v:0", "-map", "0:a:0", "-sn", "-dn"] + args_saida
+    else:
+        cmd += ["-map", "0:a:0", "-vn", "-sn", "-dn"] + args_saida
     if partes > 1:
         prefixo = f"{nome} - parte "
         n = 1
@@ -301,7 +325,7 @@ def app():
             try:
                 infos[f] = analisar(f)
             except Exception:
-                infos[f] = {"duracao": None, "codec": None, "kbps": None, "hz": 44100, "canais": 2}
+                infos[f] = {"duracao": None, "codec": None, "kbps": None, "hz": 44100, "canais": 2, "video": False}
         raiz.after(0, atualizar_lista)
 
     def escolher():

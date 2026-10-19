@@ -1,7 +1,8 @@
 CONVERSOR DE ÁUDIO
 ==================
 
-Transforma vídeos (MP4, MKV, MOV, AVI, WEBM...) em áudio: MP3, M4A, OGG, FLAC ou WAV.
+Transforma vídeos (MP4, MKV, MOV, AVI, WEBM...) em áudio: MP3, M4A, OGG, WebM, FLAC ou WAV.
+Também converte vídeo para WebM (com imagem).
 Feito para reuniões longas (arquivos de vários GB) e para subir no NotebookLM.
 
 COMO USAR
@@ -17,6 +18,11 @@ QUAL ESCOLHER
 - Sem perda e compactado: FLAC (o nível 8 só deixa o arquivo menor; a qualidade é igual).
 - Mais compatível: MP3 "Boa — 128 kbps" (~58 MB por hora; ótimo para fala).
 - Arquivo menor: MP3 "Voz compacta — 64 kbps mono" (~29 MB por hora).
+- WebM só áudio (Opus): ótima qualidade em tamanho pequeno; "Voz compacta 32 kbps" dá ~15 MB por hora.
+- WebM com vídeo (VP9): mantém a imagem. É bem mais lento que só áudio
+  (numa máquina comum, cerca de 3 a 5 vezes mais rápido que a duração do vídeo:
+  uma reunião de 3 h leva perto de 1 hora). O tempo restante aparece na tela.
+  Para vídeo, desmarque "Dividir em partes" se não for subir no NotebookLM.
 
 TAMANHO E NOTEBOOKLM
 - O NotebookLM aceita até 200 MB por arquivo. Se o resultado passar disso, o programa

@@ -17,6 +17,13 @@ with tempfile.TemporaryDirectory() as pasta:
             saida = c.converter(video, formato, q)
             assert len(saida) == 1 and os.path.getsize(saida[0]) > 10_000, (formato, q, saida)
     assert c.extensao(c.ORIGINAL, info) == "m4a"
+    assert info["video"]
+    so_audio = c.converter(video, "MP3", next(iter(c.FORMATOS["MP3"][1])))[0]
+    try:
+        c.converter(so_audio, "WebM — com vídeo (VP9)", next(iter(c.FORMATOS["WebM — com vídeo (VP9)"][1])))
+        raise AssertionError("aceitou WebM com vídeo a partir de arquivo sem vídeo")
+    except RuntimeError as e:
+        assert "não tem vídeo" in str(e)
     assert c.planejar_partes(c.tamanho_estimado_mb("MP3", next(iter(c.FORMATOS["MP3"][1])),
                                                    {**info, "duracao": 3 * 3600}), True) == 1  # 3 h a 128 kbps cabe
     c.LIMITE_MB = 0.4  # força a divisão: 60 s a 128 kbps ≈ 0,94 MB -> 3 partes
