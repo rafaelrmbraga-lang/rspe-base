@@ -1266,7 +1266,7 @@ def _itens_conciliacao(C):
                                    "já remidos. Providência: %s." % p_["acao"],
                         "fundamento": "LEP, art. 126, § 1º, II, e § 8º.", "tipo": "remicao-cumulativa"})
         elif p_["status"] == "ORF_POST":
-            out.append({"nivel": "verificar", "titulo": "Atestado não lançado ou apreciado sem identificação: " + p_["texto"].replace("Atestado ", "nº ", 1),
+            out.append({"nivel": "verificar", "titulo": "Verificar remição: " + p_["texto"].replace("Atestado ", "atestado nº ", 1),
                         "detalhe": "O RSPE não tem remição com os dias do atestado, mas tem remição posterior, sem atestado na ficha e além das obras "
                                    "de leitura registradas, que pode ser a sua apreciação. Providência: %s." % p_["acao"],
                         "fundamento": "LEP, art. 126, § 1º, II, e § 8º.", "tipo": "remicao-nao-lancada-a-conferir"})
@@ -3473,8 +3473,10 @@ def comparativo(r, f, hoje=None, conferidos=None, manuais=None):
     if nl_cum:
         partes.append("%s a conferir: %s" % ("Atestados cumulativos" if len(nl_cum) > 1 else "Atestado cumulativo", " e ".join(
             "nº %s (%s remidos)" % (a["numero"] or "s/n", _fmtn(a["rem"])) for a in nl_cum)))
-    for chave_, rot_ in (("nl_sem_periodo", "sem período (fora do total)"), ("nl_outros_autos", "peticionado em outros autos (fora do total)"),
-                         ("nl_orf_post", "sem remição identificada, com remição posterior sem origem que pode ser a sua (fora do total)")):
+    for a_ in res.get("nl_orf_post") or []:
+        partes.append("Verificar remição: o atestado nº %s (%s dias) não aparece no RSPE, e há remição posterior sem origem informada que "
+                      "pode ser dele" % (a_["numero"] or "s/n", _fmtn(a_["rem"])))
+    for chave_, rot_ in (("nl_sem_periodo", "sem período (fora do total)"), ("nl_outros_autos", "peticionado em outros autos (fora do total)")):
         L_ = res.get(chave_) or []
         if L_:
             partes.append("%s %s a conferir: %s" % ("Atestados" if len(L_) > 1 else "Atestado", rot_, " e ".join(
@@ -3520,7 +3522,7 @@ def comparativo(r, f, hoje=None, conferidos=None, manuais=None):
     elif est_pend:
         rot.append("Estudo sem remição (estimativa)")
     if not (nh >= 1 or nl_sd) and res.get("nl_orf_post"):
-        rot.append("Atestado: conferir remição sem origem")
+        rot.append("Verificar remição")
     if not (nh >= 1 or nl_sd) and res["diferenca"] >= 1:
         rot.append("Conferir remição")
     if (n_lac or lei_parc_n) and "Conferir remição" not in rot:

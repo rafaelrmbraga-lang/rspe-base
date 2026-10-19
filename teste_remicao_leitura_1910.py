@@ -36,10 +36,12 @@ try:
     ok(res.get("leituras_f") == [], "leitura: todos os relatórios casados (12 dias = 1 + 2 obras): %r" % res.get("leituras_f"))
     C = res["conc"]
     t = next(t for t in C["tabela"] if "024" in t["atestado"])
-    ok(t["cor"] == "amarelo" and "conferir" in t["rot"] and "8 dias em 07/01/2025" in t["nota"], "atestado a conferir: %r / %r" % (t["rot"], t["nota"]))
+    ok(t["cor"] == "amarelo" and t["rot"] == "Verificar remição" and "8 dias em 07/01/2025" in t["nota"], "atestado a conferir: %r / %r" % (t["rot"], t["nota"]))
     p = next(p_ for p_ in C["pendencias"] if p_["texto"].startswith("Atestado 024"))
     ok(p["status"] == "ORF_POST" and p["cor"] == "amarelo", "pendência: %r" % p)
     ok(not res.get("atestados_pendentes") and (res.get("pendentes") or 0) == 0, "fora do total: %r" % res.get("pendentes"))
+    R = C["resumo"]["texto"]
+    ok("possui 32 dias remidos" in R and "fazendo jus a 29 dias" in R and "insuficientes: faltam cerca de 13 dias" in R, "resumo simples: %s" % R)
     al = " ".join(a["texto"] for a in C["alertas"])
     ok("além das obras de leitura registradas na ficha (4 obras)" in al, "alerta das remições além das obras: %s" % al)
 except Exception as e:

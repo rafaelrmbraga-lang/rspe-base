@@ -73,12 +73,13 @@ try:
     ok(R["at_n"] == 2 and R["at_rem"] == 237 and R["at_trab"] == 711 and R["cumulativos"] == 1, "resumo: atestados %r" % R)
     ok(R["homologados"] == 203 and not R["perdidos"], "resumo: homologados %r" % R)
     ok(R["trab_ficha"] > 0 and abs(R["dir_ficha"] - R["trab_ficha"] / 3.0) < 0.01, "resumo: estimativa %r" % R)
-    ok("faria jus a 237 dias de remição" in R["texto"] and "No RSPE constam 203 dias" in R["texto"], "resumo: texto %r" % R["texto"])
+    ok("fazendo jus a 237 dias de remição" in R["texto"] and "o sentenciado possui 203 dias remidos" in R["texto"]
+       and "insuficientes: faltam cerca de 34 dias" in R["texto"], "resumo: texto %r" % R["texto"])
     ok(not R["estudo"], "resumo: sem estudo na ficha %r" % R["estudo"])
     f2 = dict(f, estudos=[{"curso": "ENSINO FUNDAMENTAL", "inicio": "01.03.2012", "fim": "10.12.2012"}],
               leituras=[{"data": "10.05.2013", "meses": [], "obras": 1, "texto": "RELATÓRIO DE LEITURA"}])
     R2 = rr.conciliar(r, f2, date(2026, 10, 16))["resumo"]
-    ok("histórico de estudo (1 período, 2012) e leitura (1 registro)" in R2["estudo"] and "pode encobrir atestado de trabalho não homologado" in R2["estudo"]
+    ok("A ficha indica leitura (relatórios em 10/05/2013) e estudo (de 01/03/2012 a 10/12/2012)" in R2["estudo"]
        and R2["estudo"] in R2["texto"], "resumo: aviso de estudo %r" % R2["estudo"])
     # tabela em Word (para colar na petição)
     import zipfile

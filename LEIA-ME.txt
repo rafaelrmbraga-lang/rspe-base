@@ -1015,6 +1015,13 @@ v7.12.2
     (amarelo, fora do total e da prioridade), em vez de "não lançado".
   - Divergência no SEEU/SIAPEN: o título do quadro sai em vermelho, como o
     ícone.
+  - Aba Ficha, A) Resumo quantitativo, em linguagem simples: "Conforme
+    consta no RSPE, o sentenciado possui X dias remidos. Ao analisar sua
+    ficha disciplinar, possui N atestados de trabalho, fazendo jus a Y dias
+    de remição. Sem atestado, trabalhou entre ... e ... no setor ... A
+    ficha indica leitura/estudo ... Recomenda-se a verificação, pois ... as
+    remições homologadas são insuficientes (ou superam os atestados)". O
+    atestado com remição posterior sem origem fica "Verificar remição".
 
 v7.12.1
   - Indulto, Decreto 11.846/2023 (art. 1º, XIV): a mesma regra do inciso

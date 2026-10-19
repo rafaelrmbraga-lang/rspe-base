@@ -2208,10 +2208,10 @@ def conciliar(r, f, hoje=None, manuais=None, ini_exec=None, excluir_remicoes=Non
                 ": provavelmente já remido - conferir nos autos" if a.get("cumul_coberto") else ""))
         if a.get("orf_post"):
             op_ = a["orf_post"]
-            notas_.append("%s no RSPE, posterior%s à emissão, sem atestado na ficha e além das obras de leitura registradas (%s): pode%s ser a "
-                          "apreciação deste atestado, no todo ou em parte - conferir nos autos antes de requerer" % (
-                              " e ".join("a remição de %s em %s" % (rs.pl(int(x_["dias"]), "dia", "dias"), _f(x_["decisao"])) for x_ in op_),
-                              "es" if len(op_) > 1 else "", rs.pl(int(sum(x_["dias"] for x_ in op_)), "dia", "dias"), "m" if len(op_) > 1 else ""))
+            notas_.append("este atestado não aparece no RSPE; depois dele, o RSPE tem %s sem origem informada, que pode%s ser dele - verificar "
+                          "nas decisões antes de requerer" % (
+                              " e ".join("%s em %s" % (rs.pl(int(x_["dias"]), "dia", "dias"), _f(x_["decisao"])) for x_ in op_),
+                              "m" if len(op_) > 1 else ""))
         if a.get("cumulativo") is not None:
             poss, orf = a["cumulativo"], a.get("cumul_orf") or []
             # remições do RSPE posteriores à emissão (até 2 anos) que ficaram sem origem: podem ser a apreciação deste atestado
@@ -2267,7 +2267,7 @@ def conciliar(r, f, hoje=None, manuais=None, ini_exec=None, excluir_remicoes=Non
                               "Possível cumulativo: conferir nos autos" if a["status"] == "NAO_LANCADO" and a.get("cumulativo") is not None else
                               "Peticionado em outros autos: fora do total" if a.get("outros_autos") else
                               "Sem período: conferir (fora do total)" if a.get("sem_periodo") else
-                              "Não lançado? Remição sem origem posterior: conferir" if a["status"] == "NAO_LANCADO" and a.get("orf_post") else
+                              "Verificar remição" if a["status"] == "NAO_LANCADO" and a.get("orf_post") else
                               "Diferença até 1/3 a pedir" if a.get("abaixo_terco") else rot[a["status"]][0],
                        "cor": "cinza" if (a.get("zerado") or a.get("cumul_coberto") or a.get("outros_autos")) else
                               "amarelo" if a["status"] == "NAO_LANCADO" and (a.get("cumulativo") is not None or a.get("sem_periodo") or a.get("orf_post")) else rot[a["status"]][1],
@@ -2308,12 +2308,11 @@ def conciliar(r, f, hoje=None, manuais=None, ini_exec=None, excluir_remicoes=Non
         elif a.get("orf_post"):
             op_ = a["orf_post"]
             p_["status"], p_["cor"] = "ORF_POST", "amarelo"
-            p_["texto"] = "Atestado %s de %s (%s remidos) sem remição identificada no RSPE; %s, posterior%s, sem atestado na ficha e além das " \
-                          "obras de leitura registradas, pode%s ser a sua apreciação" % (
+            p_["texto"] = "Atestado %s de %s (%s dias de remição) não aparece no RSPE; depois dele, o RSPE tem %s sem origem informada, que pode%s ser dele" % (
                               a["numero"] or "s/n", _f(a["emissao"]), _fmtn(a["rem"]),
-                              " e ".join("a remição de %s de %s" % (rs.pl(int(x_["dias"]), "dia", "dias"), _f(x_["decisao"])) for x_ in op_),
-                              "es" if len(op_) > 1 else "", "m" if len(op_) > 1 else "")
-            p_["acao"] = "conferir nas decisões a origem dessas remições; se não forem deste atestado, requerer a apreciação; se forem em parte, requerer a diferença"
+                              " e ".join("%s em %s" % (rs.pl(int(x_["dias"]), "dia", "dias"), _f(x_["decisao"])) for x_ in op_),
+                              "m" if len(op_) > 1 else "")
+            p_["acao"] = "verificar nas decisões se essas remições são deste atestado; se não forem, requerer a apreciação; se forem só em parte, requerer a diferença"
         elif a.get("sobrep_rems"):
             sr_ = a["sobrep_rems"]
             p_["acao"] = "conferir nos autos se %s, sem origem identificada, já %s parte deste período; requerer o restante" % (
@@ -2321,7 +2320,7 @@ def conciliar(r, f, hoje=None, manuais=None, ini_exec=None, excluir_remicoes=Non
                 "incluem" if len(sr_) > 1 else "inclui")
     alertas.sort(key=lambda x: x["data"] or date.min)
     return {"tabela": tabela, "pendencias": pend, "alertas": alertas, "vinculos": vinc, "atestados": ats, "remicoes": rems,
-            "sem_atestado": sem, "residuo": residuo, "resumo": _resumo_quant(r, ats, rems, vinc, ini_exec, impressao, f),
+            "sem_atestado": sem, "residuo": residuo, "resumo": _resumo_quant(r, ats, rems, vinc, ini_exec, impressao, f, sem),
             "faltas_127": faltas_graves(r, f)}
 
 
@@ -2412,7 +2411,7 @@ def agrupar_alertas(alertas, ocultar=()):
     return out
 
 
-def _resumo_quant(r, ats, rems, vinc, ini_exec, impressao, f=None):
+def _resumo_quant(r, ats, rems, vinc, ini_exec, impressao, f=None, sem=None):
     """Quadro quantitativo da aba Ficha (seção A): remição pelos atestados expedidos x homologada no RSPE x estimada pelos períodos de
     trabalho da ficha, com o parágrafo explicativo. A estimativa é de segunda a sábado (LEP, art. 33), sem descontar faltas ao
     serviço; vínculo a conferir conta só até o início da dúvida."""
@@ -2449,58 +2448,62 @@ def _resumo_quant(r, ats, rems, vinc, ini_exec, impressao, f=None):
     trab_p = sum(_rf.dias_trabalho(max(i_, corte + timedelta(days=1)) if corte else i_, f_) for i_, f_ in uni if not corte or f_ > corte)
     dir_f = trab_f / 3.0
     n_ = lambda x: _fmtn(round(x, 2))
+    ni_ = lambda x: rs.pl(int(round(x)), "dia", "dias")  # números do parágrafo simples: dias inteiros
     fd_ = lambda d: d.strftime("%d/%m/%Y")
-    est = "estimativa de segunda a sábado, sem descontar faltas ao serviço"
-    txt = []
-    if da:
-        dt_ok = all(a["trab"] for a in da)
-        txt.append("Pelos atestados expedidos e registrados na ficha (%d), o sentenciado faria jus a %s dias de remição%s%s." % (
-            len(da), n_(at_rem), " (%s dias trabalhados declarados)" % n_(at_trab) if dt_ok else "", "; %s cumulativo%s, que pode%s repetir períodos já remidos" % (
-                cumul, "s" if cumul > 1 else "", "m" if cumul > 1 else "") if cumul else ""))
-    else:
-        txt.append("A ficha não registra atestado de trabalho expedido.")
-    txt.append("No RSPE constam %s dias de remição homologados%s." % (n_(hom), ", com %s dias perdidos por falta grave (LEP, art. 127)" % n_(perd) if perd else "")
-               if hom else "No RSPE não há remição homologada.")
-    if trab_f:
-        txt.append("Pelos períodos de trabalho registrados na ficha até %s (%s), o sentenciado trabalhou cerca de %s dias (%s), o que daria cerca de %s dias "
-                   "de remição." % (fd_(corte), "último atestado" if corte == ult_at else "referência da última remição", trab_f, est, n_(dir_f)))
-        dif = dir_f - hom
-        if dif > max(10, 0.1 * dir_f):
-            txt.append("Nota-se, portanto, inconsistência entre o período trabalhado e o remido: cerca de %s dias de remição sem homologação no RSPE." % n_(dif))
-        elif -dif > max(10, 0.1 * dir_f):
-            txt.append("A remição homologada supera a estimada pela ficha%s." % (
-                "" if (f or {}).get("estudos") or (f or {}).get("exames") or (f or {}).get("leituras") else
-                ": parte dela pode vir de estudo, leitura ou trabalho não registrado na ficha"))
-        else:
-            txt.append("Os números são compatíveis.")
-    # histórico de estudo/leitura: a remição por estudo ou leitura entra no total homologado e pode encobrir atestado de trabalho
-    # não homologado (ou outra divergência), por isso o aviso vem sempre que houver
     f = f or {}
+    # parágrafo em linguagem simples: o que o RSPE diz, o que a ficha diz (atestados, trabalho sem atestado, estudo e leitura) e a
+    # conclusão em relação aos atestados (as remições homologadas são insuficientes, superam ou correspondem)
+    txt = []
+    txt.append("Conforme consta no RSPE, o sentenciado possui %s remidos%s." % (ni_(hom), " e perdeu %s por falta grave" % ni_(perd) if perd else "")
+               if hom else "Conforme consta no RSPE, o sentenciado não possui dias remidos.")
+    if da:
+        txt.append("Ao analisar sua ficha disciplinar, possui %s, fazendo jus a %s de remição%s%s." % (
+            rs.pl(len(da), "atestado de trabalho", "atestados de trabalho"), ni_(at_rem),
+            " (%s trabalhados)" % ni_(at_trab) if all(a["trab"] for a in da) else "",
+            "; %s pode%s repetir períodos já remidos" % ("um deles" if cumul == 1 else "%d deles" % cumul, "" if cumul == 1 else "m") if cumul else ""))
+    else:
+        txt.append("Ao analisar sua ficha disciplinar, não há atestado de trabalho.")
+    sem_ = [x for x in (sem or []) if not x.get("duvida") and not x.get("ficta") and x.get("est")]
+    _setor = lambda s: ("no setor %s" % s) if s and not re.match(r"(?i)setor n[ãa]o identificado", s) else "em setor não identificado"
+    if sem_ and sum(x["est"] for x in sem_) >= 3:
+        pts = ["entre %s e %s %s" % (fd_(x["ini"]), "hoje" if x.get("em_curso") else fd_(x["fim"]), _setor(x["setor"])) for x in sem_[:3]]
+        txt.append("Sem atestado, trabalhou %s%s (cerca de %s de remição)." % (
+            "; ".join(pts), "; e em mais %s" % rs.pl(len(sem_) - 3, "período", "períodos") if len(sem_) > 3 else "",
+            ni_(sum(x["est"] for x in sem_) // 3)))
+    elif not sem_ and trab_p >= 3:
+        txt.append("Depois %s, trabalhou cerca de %s ainda sem atestado (cerca de %s de remição)." % (
+            "de %s" % fd_(corte) if corte else "do último atestado", ni_(trab_p), ni_(trab_p // 3)))
+    # estudo e leitura: entram no total homologado e podem encobrir atestado de trabalho não homologado
     est_p = [e for e in (f.get("estudos") or []) if e.get("inicio")]
     exs = [x for x in (f.get("exames") or [])]
     lts = f.get("leituras") or []
     out_o = sum(x["dias"] for x in rems if x.get("usada") == "outra origem")
     av_est = ""
     if est_p or exs or lts:
-        anos = sorted({(_dt(e["inicio"]) or date.min).year for e in est_p if _dt(e["inicio"])})
         pt = []
+        if lts:
+            pt.append("leitura (relatórios em %s%s)" % (", ".join(str(x.get("data") or "").replace(".", "/") for x in lts[:4]), " e outros" if len(lts) > 4 else ""))
         if est_p:
-            pt.append("estudo (%d período%s%s)" % (len(est_p), "s" if len(est_p) > 1 else "",
-                                                   ", %s" % (str(anos[0]) if anos[0] == anos[-1] else "de %s a %s" % (anos[0], anos[-1])) if anos else ""))
+            pt.append("estudo (%s)" % "; ".join("desde %s" % str(e["inicio"]).replace(".", "/") if not e.get("fim") else
+                                                 "de %s a %s" % (str(e["inicio"]).replace(".", "/"), str(e["fim"]).replace(".", "/")) for e in est_p[:3]))
         if exs:
             pt.append("exame (%s)" % ", ".join(sorted({x["exame"].split()[0] for x in exs})))
-        if lts:
-            pt.append("leitura (%d registro%s)" % (len(lts), "s" if len(lts) > 1 else ""))
-        av_est = ("A ficha registra histórico de %s: parte da remição homologada no RSPE pode ser de %s%s, o que pode encobrir "
-                  "atestado de trabalho não homologado ou outra divergência; conferir a origem de cada remição nas decisões." % (
-                      " e ".join([", ".join(pt[:-1]), pt[-1]] if len(pt) > 1 else pt),
-                      "estudo ou leitura" if (est_p or exs) and lts else "leitura" if lts else "estudo",
-                      " (%s dias já identificados como estudo ou leitura)" % n_(out_o) if out_o else ""))
+        av_est = "A ficha indica %s%s." % (" e ".join([", ".join(pt[:-1]), pt[-1]] if len(pt) > 1 else pt),
+                                           "; %s do RSPE já foram identificados como leitura ou estudo" % ni_(out_o) if out_o else "")
         txt.append(av_est)
-    if trab_p:
-        txt.append("%s, há cerca de %s dias de trabalho ainda sem atestado (%s%s), cerca de %s dias de remição: pedir o atestado." % (
-            "Depois de %s" % fd_(corte) if corte else "Pelos períodos de trabalho registrados na ficha", trab_p, "mesma estimativa" if trab_f else est,
-            "; vínculo em aberto contado até a impressão da ficha, %s" % fd_(aberto) if aberto else "", n_(trab_p / 3.0)))
+    hom_t = hom - out_o
+    if da:
+        dif = at_rem - hom_t
+        if round(dif) >= 1:
+            txt.append("Recomenda-se a verificação, pois, em relação aos atestados da ficha, as remições homologadas são insuficientes: "
+                       "faltam cerca de %s." % ni_(dif))
+        elif round(-dif) >= 1:
+            txt.append("Recomenda-se a verificação, pois as remições homologadas superam os atestados da ficha em cerca de %s: "
+                       "podem vir de estudo, leitura ou de atestado que a ficha não registra." % ni_(-dif))
+        else:
+            txt.append("As remições homologadas correspondem aos atestados da ficha.")
+    elif hom_t >= 1:
+        txt.append("Recomenda-se a verificação da origem das remições homologadas, pois a ficha não registra atestado de trabalho.")
     return {"at_n": len(da), "at_rem": round(at_rem, 2), "at_trab": at_trab if da and all(a["trab"] for a in da) else None, "cumulativos": cumul,
             "homologados": round(hom, 2), "perdidos": round(perd, 2), "corte": fd_(corte) if corte else "", "trab_ficha": trab_f,
             "dir_ficha": round(dir_f, 2), "estudo": av_est, "trab_pos": trab_p, "dir_pos": round(trab_p / 3.0, 2), "texto": " ".join(txt)}
