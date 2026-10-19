@@ -3040,6 +3040,15 @@ def remicao_detalhada(C, pend_est, lei, lei_rem, res, hoje, tl=None, cursos=None
                  "base": (base + "; " if base else "") + "%s remidos declarados; provável atestado cumulativo (os trechos da ficha comportam ≈ %s): "
                          "conferir nos autos o que já foi remido antes de requerer" % (_fmtn(a["rem"]), rs.pl(a["cumulativo"], "dia", "dias")),
                  "dias": 0, "estimado": False, "sem_dias": True, "cumulativo": True, "texto": a.get("texto", "")})
+        elif a["status"] == "NAO_LANCADO" and a["rem"] and a.get("orf_post"):
+            # remição posterior sem origem que pode ser a apreciação deste atestado ("Verificar remição"): listado, sem dias no total
+            # nem na prioridade, até a conferência nas decisões
+            add("nao_lancado" if a.get("peticionado") else "emitido",
+                {"ref": ref, "data": rrm._f(a["emissao"]), "setor": setor, "per": per, "unidade": un,
+                 "base": (base + "; " if base else "") + "%s remidos declarados; o RSPE tem remição posterior sem origem informada que pode ser "
+                         "deste atestado (%s): verificar nas decisões antes de requerer" % (_fmtn(a["rem"]), " e ".join(
+                             "%s em %s" % (rs.pl(int(x_["dias"]), "dia", "dias"), rrm._f(x_["decisao"])) for x_ in a["orf_post"])),
+                 "dias": 0, "estimado": False, "sem_dias": True, "orf_post": True, "texto": a.get("texto", "")})
         elif a["status"] == "NAO_LANCADO" and a["rem"] and (a.get("outros_autos") or a.get("sem_periodo")):
             # peticionado em outros autos (não pedir em duplicidade) ou sem período (os dias não podem ser situados no tempo): listado,
             # sem dias no total nem na prioridade (rspe_remicao.conciliar)

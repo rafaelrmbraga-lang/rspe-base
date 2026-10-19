@@ -94,7 +94,7 @@ try:
     ok("|37|" in txt.split("Total a requerer", 1)[1], "word: total a requerer")
     ok("Provavelmente já remido" in txt, "word: cumulativo já remido")
     ok("Não lançado no RSPE: requerer, conferindo" in txt, "word: sobreposição")
-    ok("cumulativo: fora do total" in txt and "Observações" in txt, "word: aviso do cumulativo e notas")
+    ok("remição sem origem que pode ser dele): fora do total" in txt and "Observações" in txt, "word: aviso do cumulativo e notas")
 except Exception as e:
     import traceback
     traceback.print_exc()
