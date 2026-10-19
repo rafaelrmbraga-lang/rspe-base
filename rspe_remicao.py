@@ -2353,17 +2353,17 @@ def faltas_graves(r, f=None):
 
 # alertas de qualidade agrupados para a tela: título em linguagem simples, o que significa, os casos em linhas curtas e a providência
 GRUPOS_ALERTA = [
-    ("origem", ("origem",), "Remições do RSPE sem origem identificada",
-     "A ficha não mostra trabalho nem atestado que expliquem estas remições: podem ser de estudo, leitura, exame (ENCCEJA/ENEM) ou de "
-     "atestado de outra unidade.", "conferir na decisão de que se trata cada uma"),
-    ("dias", ("capacidade", "plausibilidade", "erro de ano", "proporção", "resíduo", "anterior à execução"), "Dias que não fecham",
-     "Os dias declarados não cabem no período que a ficha registra, ou a conta de 1 dia a cada 3 não bate.",
-     "conferir os dias no atestado e na decisão"),
-    ("lanc", ("baixa sem início", "baixa", "baixa tardia", "setor sem vínculo", "vínculos sobrepostos"), "Lançamentos de trabalho incompletos na ficha",
-     "A ficha registra a saída do trabalho sem o início, ou o mesmo período em dois setores.", "conferir o período com a unidade"),
-    ("per", ("sobreposição", "lacuna"), "Períodos sobrepostos ou sem cobertura",
-     "Atestados que repetem período ou deixam intervalo sem atestado.", "conferir os períodos nos atestados"),
-    ("datas", ("data", "ref"), "Datas inconsistentes", "Datas fora de ordem ou posteriores à impressão da ficha.", "conferir as datas nos documentos"),
+    ("origem", ("origem",), "Remições sem origem informada",
+     "O RSPE tem estas remições, mas a ficha não mostra trabalho nem atestado que as expliquem. Podem ser de estudo, leitura, "
+     "ENCCEJA/ENEM ou de atestado de outra unidade.", "verificar na decisão a origem de cada uma"),
+    ("dias", ("capacidade", "plausibilidade", "erro de ano", "proporção", "resíduo", "anterior à execução"), "Dias que não batem",
+     "Os dias do atestado não cabem no período que a ficha registra, ou a conta de 1 dia de remição a cada 3 trabalhados não fecha.",
+     "verificar os dias no atestado e na decisão"),
+    ("lanc", ("baixa sem início", "baixa", "baixa tardia", "setor sem vínculo", "vínculos sobrepostos"), "Trabalho registrado de forma incompleta na ficha",
+     "A ficha registra a saída do trabalho sem a entrada, ou o mesmo período em dois setores.", "verificar o período com a unidade prisional"),
+    ("per", ("sobreposição", "lacuna"), "Períodos repetidos ou sem atestado",
+     "Há atestados que repetem o mesmo período ou deixam um intervalo sem atestado.", "verificar os períodos nos atestados"),
+    ("datas", ("data", "ref"), "Datas que não batem", "Há datas fora de ordem ou posteriores à impressão da ficha.", "verificar as datas nos documentos"),
 ]
 
 
@@ -2376,8 +2376,9 @@ def _item_alerta(a):
     if tp == "origem":
         casos = re.findall(r"(\d+ dias? em \d{2}/\d{2}/\d{4})", t)
         if casos:
-            leit = "múltiplos de 4" in t
-            return ["%s%s" % (c, " (múltiplo de 4: pode ser leitura)" if leit else "") for c in casos]
+            nota_ = (" (além das leituras registradas na ficha)" if "além das obras de leitura" in t else
+                     " (pode ser leitura: 4 dias por livro)" if "múltiplos de 4" in t else "")
+            return ["%s%s" % (c, nota_) for c in casos]
     m = re.match(r"Atestado (\S+): (\d+) dias trabalhados não cabem nos períodos inferidos da ficha \((\d+) dias corridos de (\S+) a (\S+)\)", t)
     if tp == "capacidade" and m:
         return ["Atestado %s: %s dias trabalhados declarados para %s dias corridos (%s a %s)" % m.groups()]

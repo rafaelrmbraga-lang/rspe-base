@@ -66,8 +66,8 @@ try:
                                               {"tipo": "capacidade", "texto": "Atestado 300: 600 dias trabalhados não cabem nos períodos inferidos da "
                                                "ficha (40 dias corridos de 10/03/2010 a 20/04/2010) - conferir o período no atestado.", "data": None}], {"300"})
     gl = {g["titulo"]: g for g in G}
-    ok("IPCG Faxina da UP: saída em 17/12/2015, sem início registrado" in gl["Lançamentos de trabalho incompletos na ficha"]["itens"]
-       and gl["Lançamentos de trabalho incompletos na ficha"]["acao"], "alertas agrupados: baixa sem início %r" % G)
+    ok("IPCG Faxina da UP: saída em 17/12/2015, sem início registrado" in gl["Trabalho registrado de forma incompleta na ficha"]["itens"]
+       and gl["Trabalho registrado de forma incompleta na ficha"]["acao"], "alertas agrupados: baixa sem início %r" % G)
     ok(not any("Atestado 300" in i for g in G for i in g["itens"]), "alerta de capacidade repetido para o cumulativo %r" % G)
     R = res["resumo"]
     ok(R["at_n"] == 2 and R["at_rem"] == 237 and R["at_trab"] == 711 and R["cumulativos"] == 1, "resumo: atestados %r" % R)
