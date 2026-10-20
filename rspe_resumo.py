@@ -282,8 +282,8 @@ def verso(m):
     fmt = lambda d: d.strftime("%d/%m/%Y") if hasattr(d, "strftime") else str(d or "")
     docs = {d["chave"]: d for d in N.get("docs") or []}
     for L in (N.get("trab") or {}).get("linhas") or []:
-        qtd = "%d dias" % L["dias"]
         d = docs.get(L.get("at_chave")) if L["st"] in ("auto", "manual") else None
+        qtd = "%d dias" % (d["trab"] if d and d.get("trab") else L["dias"])
         if L["st"] == "sem" and L.get("em_curso"):
             item(trab, "trabalho", "curso", L["local"], L.get("un"), L["periodo"], qtd, "Trabalhando agora", "o atestado sai ao fim do período")
         elif L["st"] == "sem" and L.get("pedir_dias"):
@@ -294,7 +294,7 @@ def verso(m):
                  "atestado nº %s, decisão conferida pela Defensoria" % d["num"])
         elif d and d.get("cor") in ("vermelho", "amarelo") and (d.get("sit") or "").startswith(("Posterior", "Sem remição", "Sem peticionamento e posterior")):
             item(trab, "trabalho", "pend", L["local"], L.get("un"), L["periodo"], qtd, "Ainda não descontado",
-                 "o atestado nº %s foi feito depois da última decisão do juiz" % d["num"])
+                 "o atestado nº %s foi feito; falta o juiz decidir" % d["num"], pend=d.get("dias") or 0)
         else:
             item(trab, "trabalho", "conf", L["local"], L.get("un"), L["periodo"], qtd, "A Defensoria vai conferir",
                  ("se o atestado nº %s já foi descontado" % L["at"]) if L.get("at") else "com a unidade, se há atestado do período")
@@ -302,7 +302,7 @@ def verso(m):
         if d.get("fora") or d["tipo"] in ("Atestado de trabalho", "Trabalho (informado por você)"):
             continue
         if d["tipo"] == "Leitura":
-            onde, qtd = "Leitura de livro", d.get("num") or ""
+            onde, qtd = "Leitura de livro", rs_pl(int((d.get("dias") or 0) // 4), "livro", "livros") if d.get("dias") else ""
         elif d["tipo"] == "Exame":
             onde, qtd = "Prova do " + (d.get("num") or "exame"), ""
         else:
@@ -310,8 +310,8 @@ def verso(m):
         per = "entregue em %s" % fmt(d.get("emissao"))
         if d.get("hom"):
             item(est, "estudo", "ok", onde, d.get("un"), per, qtd, "Já descontado", "decisão conferida pela Defensoria", ok=d.get("dias") or 0)
-        elif (d.get("sit") or "").startswith(("Posterior", "Sem remição")):
-            item(est, "estudo", "pend", onde, d.get("un"), per, qtd, "Ainda não descontado", "entregue depois da última decisão do juiz%s" % (
+        elif (d.get("sit") or "").startswith(("Posterior", "Sem remição")) and d["tipo"] != "Exame":
+            item(est, "estudo", "pend", onde, d.get("un"), per, qtd, "Ainda não descontado", "falta o juiz decidir%s" % (
                 (" · até %s dias" % int(d["dias"])) if d.get("dias") else ""), pend=d.get("dias") or 0)
         else:
             item(est, "estudo", "conf", onde, d.get("un"), per, qtd, "A Defensoria vai conferir", "se o desconto já foi feito")

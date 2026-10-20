@@ -134,14 +134,8 @@ ok(len(x) == 1 and x[0]["nivel"] == "alerta", "unificação que não reduz: aler
 # nascimento lido da ficha: nada a verificar
 x = itens(reg([crime()], _nasc_fonte="lida da ficha disciplinar do SIAPEN"), "nascimento-nao-consta")
 ok(len(x) == 1 and x[0]["nivel"] == "info", "nascimento lido da ficha: info: %s" % x)
-# remição tardia: o decreto que ela não alcança não gera alerta
-rr = {"indulto_2022": "não atinge: pena dos crimes impeditivos não cumprida até 25/12/2022 (art. 11, p. ú.)", "indulto_2022_status": "nao",
-      "indulto_2022_imp": {"exigido": 8760, "cumprido_total": 1904}}
-ok(rf._marco_sem_efeito(rr, (date(2022, 12, 25), "do decreto de 25/12/2022"), 54), "remição sem efeito no decreto")
-ok(not rf._marco_sem_efeito(dict(rr, indulto_2022_imp={"exigido": 1930, "cumprido_total": 1904}), (date(2022, 12, 25), "do decreto de 25/12/2022"), 54),
-   "remição que alcança o impeditivo: com efeito")
-ok(not rf._marco_sem_efeito(dict(rr, indulto_2022="POSSÍVEL: art. 5º", indulto_2022_status="possivel"), (date(2022, 12, 25), "do decreto de 25/12/2022"), 54),
-   "decreto possível: com efeito")
+# (7.14: o alerta de remição com referência tardia - e o teste do decreto que ela não alcança - saiu: dependia de ligar a remição
+# do RSPE a um atestado da ficha, o que o programa não faz mais)
 
 # ---- data-base a 1 dia do marco: não é "confere" ----
 r5 = reg([crime(data_infracao="19/03/2024")], [inc(AR, "Fechado - Regime Inicial", "", "18/03/2024")], [ev(PR, "PRISÃO PREVENTIVA", "18/03/2024")],

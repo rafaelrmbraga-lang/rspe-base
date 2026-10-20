@@ -199,10 +199,10 @@ ok(x["s"] == "ver" and "art. 9º" in (x.get("mot") or ""), "98: %s %s" % (x["s"]
 c99 = crime("01/01/2014", "01/06/2014", "01/07/2014", pena="6 ano(s), 0 mês(es) e 0 dia(s)", proc="0000013-00.2014.8.12.0001")
 r = reg([c99], [ev("01/01/2016")], "6a0m0d", incid=[inc("REMIÇÃO", "200 Dias", "01/03/2018")])
 its = rd.remicoes_ref_decisao(r)
-ok(its and its[0][2] is None, "99: %s" % its)
-r["_rem_fim_at"] = {"01/03/2018": "30/11/2017"}
+ok(its == [(date(2018, 3, 1), 200)], "99: %s" % its)
+# (7.14: o RSPE não diz de qual atestado veio a remição - ela conta pela decisão, e o decreto que ela cobriria fica a verificar)
 ctx = rd._ctx(r)
-ok((date(2017, 11, 30), 200) in [(d, n) for d, n in ctx["rem"]], "99: remição não contada pelo fim do atestado: %s" % ctx["rem"])
+ok((date(2018, 3, 1), 200) in [(d, n) for d, n in ctx["rem"]], "99: remição contada fora da decisão: %s" % ctx["rem"])
 
 # ---- 127: pedido de indulto por decreto ----
 m = {"pedidos": {"ind_2024": {"data": "01/02/2025", "ref": "cabe", "ref_atual": "cabe"}}, "dec": {"decretos": [{"id": "2024", "s": "cabe"}, {"id": "2025", "s": "cabe"}]}}

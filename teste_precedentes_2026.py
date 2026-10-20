@@ -50,9 +50,10 @@ try:
     ok("1.087.914/SP" in src_s, "hediondez: AgRg no HC 1.087.914/SP não citado")
 
     # (3) comutação 2025 que não atinge por 20 dias, com 30 dias de remição pendente (atestado emitido) até 25/12/2025: a verificar
-    comp = {"fd_rem_det": {"emitido": {"itens": [{"setor": "Oficina Teste", "per": "01/01/2025 a 31/03/2025", "dias": 30}]},
-                           "nao_lancado": {"itens": [{"setor": "Horta", "per": "01/01/2026 a 31/03/2026", "dias": 40}]},
-                           "sem_atestado": {"itens": [{"setor": "Cozinha", "per": "01/04/2025 a hoje", "dias": 90, "estimado": True}]}}}
+    # (7.14: a remição possivelmente pendente vem dos documentos com fato certo - fd_novo["fatos"]; o estimado não entra)
+    comp = {"fd_novo": {"fatos": [{"data": date(2025, 3, 31), "dias": 30, "rotulo": "Atestado de trabalho nº 1/2025 · Oficina Teste (30 dias)"},
+                                  {"data": date(2026, 3, 31), "dias": 40, "rotulo": "Atestado de trabalho nº 2/2026 · Horta (40 dias)"}],
+                        "pedir_dias": 90}}
     r = {"comutacao_2025": "não atinge (1/5 até 25/12/2025)",
          "comutacao_2025_detalhe": "✘ Requisito: 1/5 da pena cumprida até 25/12/2025 = 1a0m24d; cumprido 1a0m4d.",
          "indulto_2025": "não atinge (1/3 até 25/12/2025)", "indulto_2025_status": "nao",
@@ -67,12 +68,12 @@ try:
     # indulto com déficit coberto
     r = {"indulto_2024": "não atinge (1/3 até 25/12/2024)", "indulto_2024_status": "nao",
          "indulto_2024_detalhe": "✘ II: pena ≤ 12 anos sem VGA, exige 1/3 (cumprido 1a11m10d de 6a0m0d)"}
-    rf.remicao_pendente_decretos(r, {"fd_rem_det": {"emitido": {"itens": [{"setor": "Oficina", "per": "01/01/2024 a 30/06/2024", "dias": 30}]}}})
+    rf.remicao_pendente_decretos(r, {"fd_novo": {"fatos": [{"data": date(2024, 6, 30), "dias": 30, "rotulo": "Atestado de trabalho nº 3/2024 (30 dias)"}]}})
     ok(r["indulto_2024_status"] == "verificar" and "? Remição pendente" in r["indulto_2024_detalhe"], "remição: indulto 2024 não virou a verificar")
 
     # sem remição pendente nada muda; crimes impeditivos também não
     r = {"indulto_2024": "não atinge: pena dos crimes impeditivos", "indulto_2024_detalhe": "✘ II: exige 1/3 (cumprido 1a0m0d de 6a0m0d)"}
-    rf.remicao_pendente_decretos(r, {"fd_rem_det": {"emitido": {"itens": [{"setor": "O", "per": "01/01/2024 a 30/06/2024", "dias": 900}]}}})
+    rf.remicao_pendente_decretos(r, {"fd_novo": {"fatos": [{"data": date(2024, 6, 30), "dias": 900, "rotulo": "Atestado de trabalho nº 4/2024 (900 dias)"}]}})
     ok(r["indulto_2024"] == "não atinge: pena dos crimes impeditivos", "remição: mexeu no impeditivo")
     # demais decretos da base (2000 a 2023): o "faltavam" do resultado coberto pela remição pendente até a data vira a verificar
     import rspe_decretos as rd
@@ -104,9 +105,9 @@ try:
     p_ = rv.prioridade_remicao(m, rr, hj)
     ok(any(t.startswith("Progressão de regime") for t in p_), "prioridade: progressão ausente %r" % p_)
     ok(not any(t.startswith("Livramento") for t in p_), "prioridade: livramento a 200 dias entrou")
-    ok(any("Decreto 9.246" in t for t in p_) and p_[-1].startswith("Remição pendente: 70 dias"), "prioridade: decreto ou resumo %r" % p_)
+    ok(any("Decreto 9.246" in t for t in p_) and p_[-1].startswith("Remição possivelmente pendente (documentos posteriores à última remição do RSPE): 70 dias"), "prioridade: decreto ou resumo %r" % p_)
     ok(rv.prioridade_remicao(dict(m, prog="", dec={}), rr, hj) == [], "prioridade: sem benefício deveria ficar vazio")
-    ok(rv.prioridade_remicao(m, {}, hj)[:1] == ["Indulto/comutação, Decreto 9.246 (2017): o tempo que faltava é coberto pela remição pendente."],
+    ok(rv.prioridade_remicao(m, {}, hj)[:1] == ["Indulto/comutação, Decreto 9.246 (2017): o tempo que faltava seria coberto pela remição possivelmente pendente (a conferir nos autos)."],
        "prioridade: sem remição só o decreto")
     # motivo curto da aba Indulto: objetivo, por que cabe ou não
     mc = rd.motivo_curto

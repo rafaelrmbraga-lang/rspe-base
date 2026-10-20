@@ -1248,7 +1248,7 @@ def trabalho_x_atestados(f, hoje=None, manuais=None, vinculos=None, inicio=None)
         s = t.get("setor") or ""
         if any(u["a"] <= a and b <= u["b"] and re.sub(r"\W", "", _sa(u["s"])) == re.sub(r"\W", "", _sa(s)) for u in uni):
             continue  # o mesmo vínculo repetido (ou contido em outro do mesmo setor)
-        uni.append({"a": a, "b": b, "s": s, "aberto": not t.get("fim"), "ext": bool(t.get("externo"))})
+        uni.append({"a": a, "b": b, "s": s, "aberto": not t.get("fim"), "ext": bool(t.get("externo")), "jornada": t.get("jornada") or ""})
     linhas = []
     for u in uni:
         cob = []
@@ -1276,6 +1276,13 @@ def trabalho_x_atestados(f, hoje=None, manuais=None, vinculos=None, inicio=None)
                 jun[-1][1], jun[-1][3] = p[1], jun[-1][3] or p[3]
             else:
                 jun.append(p)
+        # trecho de até 2 dias coberto pelo mesmo atestado da parte vizinha (dia da troca de setor): fica com ela
+        for x in [x for x in jun if x[2] and (x[1] - x[0]).days + 1 <= LACUNA_IGNORADA]:
+            k = jun.index(x)
+            viz = [y for y in (jun[k + 1] if k + 1 < len(jun) else None, jun[k - 1] if k else None) if y and y[2] == x[2]]
+            if viz and len(jun) > 1:
+                viz[0][0], viz[0][1] = min(viz[0][0], x[0]), max(viz[0][1], x[1])
+                jun.remove(x)
         k = 0
         while k < len(jun):
             a, b, ch, nome = jun[k]
@@ -1305,7 +1312,7 @@ def trabalho_x_atestados(f, hoje=None, manuais=None, vinculos=None, inicio=None)
                            "ini": a, "fim": b, "periodo": "%s a %s%s" % (_f(a), _f(b), " (em curso na impressão da ficha)" if em_curso else ""),
                            "dias": (b - a).days + 1, "at": alvo["num"] if alvo else "", "at_chave": alvo["chave"] if alvo else "",
                            "st": st, "como": "período e nome da empresa" if nome else "período (único trabalho no período)",
-                           "sem_confirmado": confirmado_sem, "em_curso": em_curso, "externo": u["ext"]})
+                           "sem_confirmado": confirmado_sem, "em_curso": em_curso, "externo": u["ext"], "jornada": u["jornada"]})
     sem_dias = set()
     for L in linhas:
         if L["st"] == "sem":
@@ -1462,7 +1469,7 @@ def comparacao(r, f, hoje=None, manuais=None, homologados=None, trab=None):
         if L["st"] != "sem" or (ult_at and L["fim"] <= ult_at):
             continue
         ini_ = max(L["ini"], ult_at + timedelta(days=1)) if ult_at else L["ini"]
-        dias_ = {d for d in _rf.dias_jornada_set(ini_, min(L["fim"], imp), "") if livre(d)}
+        dias_ = {d for d in _rf.dias_jornada_set(ini_, min(L["fim"], imp), L.get("jornada") or "", L["ini"]) if livre(d)}
         antes = {d for d in dias_ if corte and d <= corte}
         for conj, lst, tot, k_ in ((antes, itens_t, talvez, "talvez_dias"), (dias_ - antes, itens_p, pedir, "pedir_dias")):
             novos = conj - tot
@@ -1539,9 +1546,44 @@ def comparacao(r, f, hoje=None, manuais=None, homologados=None, trab=None):
             if d["trab"] > poss + 2:
                 ponto("Aviso", "cinza", "Atestado nº %s: %s trabalhados declarados para %s corridos no período (%s) - o atestado pode somar outro "
                       "período ou ter erro de digitação; conferir." % (d["num"], d["trab"], poss, d["periodo"]), "capacidade", docs_=[d])
+    # 1/3 do atestado (LEP, art. 126, § 1º, II): conta do próprio documento - remidos acima de 1/3 (horas além da jornada?) e abaixo
+    # de 1/3 com os dias trabalhados plausíveis (cabem no período): a conferir, sem valor a requerer
+    for d in at_:
+        ps = d["periodo"].split(" a ")
+        if not (d["trab"] and d["dias"]):
+            continue
+        poss = _rf.dias_trabalho(_dt(ps[0]), _dt(ps[1]), "todos") if len(ps) == 2 and _dt(ps[0]) and _dt(ps[1]) else None
+        if d["dias"] > d["trab"] / 3.0 + 1:
+            ponto("Aviso", "cinza", "Atestado nº %s: %s remidos para %s trabalhados, acima de 1/3 (%s) - o atestado pode ter contado horas além da "
+                  "jornada (LEP, art. 33) ou ter erro de digitação; conferir." % (d["num"], _nf(d["dias"]), d["trab"], _nf(d["trab"] / 3.0)), "terco_acima", docs_=[d])
+        elif poss and d["trab"] <= poss + 2 and d["trab"] / 6.0 <= d["dias"] < d["trab"] / 3.0 - 1:
+            ponto("A conferir", "amarelo", "Atestado nº %s: %s remidos para %s trabalhados, abaixo de 1/3 (%s) - conferir a conta do atestado e a "
+                  "decisão (LEP, art. 126, § 1º, II)." % (d["num"], _nf(d["dias"]), d["trab"], _nf(d["trab"] / 3.0)), "terco_abaixo", docs_=[d])
+    # afastamento do trabalho registrado na ficha: pandemia (remição ficta, STJ, Tema 1.120), acidente (continuidade, LEP, art. 126, § 4º)
+    # ou saúde (a continuidade é só no acidente)
+    trs = [(t, _dt(t.get("inicio") or ""), _dt(t.get("fim") or "")) for t in f.get("trabalho") or []]
+    for t, a0, fim in trs:
+        mf = _sa(t.get("motivo_fim"))
+        if not fim or (inicio and fim < inicio):
+            continue
+        nome_ = setor_chave(t.get("setor") or "")[1] if t.get("setor") else "Trabalho"
+        if re.search(r"COVID|PANDEMIA|CORONA ?VIRUS|SARS.?COV", mf):
+            volta = min([x for _t, x, _f in trs if x and x > fim] or [None], key=lambda x: x or date.max)
+            b_ = min(x for x in ((volta - timedelta(days=1)) if volta else None, date(2022, 4, 22), imp) if x)
+            if b_ > fim:
+                ponto("Remição ficta", "amarelo", "%s: trabalho suspenso pela pandemia de %s a %s (≈ %s de remição, estimativa de segunda a sábado até "
+                      "o retorno ou o fim da emergência sanitária, 22/04/2022) - conferir com a unidade e requerer a remição ficta (STJ, Tema 1.120)." % (
+                          nome_, _f(fim + timedelta(days=1)), _f(b_), _nf(_rf.dias_trabalho(fim + timedelta(days=1), b_) / 3.0)), "ficta")
+        elif re.search(r"ACIDENT", mf):
+            ponto("A conferir", "amarelo", "%s: afastamento por acidente de trabalho em %s - o preso impossibilitado de prosseguir no trabalho por "
+                  "acidente continua a beneficiar-se da remição (LEP, art. 126, § 4º): conferir o período do afastamento e requerer a continuidade." % (
+                      nome_, _f(fim)), "acidente")
+        elif re.search(r"HOSPITAL|INTERNAD|INTERNACAO|SAUDE|MEDIC", mf):
+            ponto("Aviso", "cinza", "%s: afastamento por saúde em %s - a continuidade da remição (LEP, art. 126, § 4º) é só no acidente: "
+                  "conferir se foi acidente de trabalho." % (nome_, _f(fim)), "saude")
     if pedir:
         ponto("Pedir atestado", "amarelo", "Trabalho registrado na ficha depois do último atestado%s, sem atestado: %s (≈ %s de remição, estimativa "
-              "de segunda a sábado até a impressão da ficha, %s). Pedir o atestado à unidade. Não entra na comparação." % (
+              "de segunda a sábado - ou pela jornada registrada na ficha - até a impressão da ficha, %s). Pedir o atestado à unidade. Não entra na comparação." % (
                   (" e da última remição do RSPE (ref. %s)" % _f(corte)) if corte else "", "; ".join(itens_p), _nf(len(pedir) / 3.0), _f(imp)),
               "pedir_atestado", curto="trabalho depois do último atestado, sem atestado (≈ %s dias de remição): pedir atestado" % _nf(len(pedir) / 3.0))
     if talvez:
@@ -1550,7 +1592,8 @@ def comparacao(r, f, hoje=None, manuais=None, homologados=None, trab=None):
               "conferir nos autos antes de pedir." % (_f(corte), "; ".join(itens_t), _nf(len(talvez) / 3.0)), "talvez_remido",
               curto="trabalho sem atestado antes da última remição: pode já estar remido - conferir")
     for x in est_estim:
-        ponto("Estudo sem certidão", "cinza", "%s (estimativa, sem certidão de horas na ficha) - conferir nos autos se a certidão foi juntada; se "
+        # estudo que vai além da última decisão de remição pode estar sem remição: ponto a conferir; o anterior, só informação
+        ponto("Estudo sem certidão", "amarelo" if not ult_dec or x["fim"] > ult_dec else "cinza", "%s (estimativa, sem certidão de horas na ficha) - conferir nos autos se a certidão foi juntada; se "
               "não, pedir a certidão de horas. Não entra na comparação." % x["txt"], "estudo_estimado")
     # perdas de dias remidos (LEP, art. 127): os testes da Auditoria (1/3 da remição até a falta, perda sem falta datada, perda sobre
     # remição posterior à falta, duplicidade) - regra de lei, não depende de saber a origem da remição

@@ -121,6 +121,9 @@ try:
             {"data": "07.07.2026", "texto": "FOI EMITIDO ATESTADO DE TRABALHO Nº 185/TESTE, PERÍODO DE 24/01/2025 A 07/07/2026, 453 DIAS TRABALHADOS E 151 DIAS REMIDOS"}],
             "exames": [{"exame": "ENEM 2024", "data": "11/04/2025"}], "leituras": [{"data": "17/06/2026", "meses": ["02/2026", "03/2026", "04/2026"]}]}
         rr = {"_eventos": [{"data": "01/01/2024", "tipo": "PRISÃO/INÍCIO DE CUMPRIMENTO", "motivo": "PRISÃO"}], "_incidentes": []}
+        _ex, _lei = fic["exames"], fic["leituras"]  # (7.14: a ficha de teste passa pela leitura, como na base)
+        fic = rf.atualizar(fic)
+        fic.update(exames=_ex, leituras=_lei)
         mv = dict(M, ficha_tem=True, ficha={"data_impressao": "07/10/2026"}, **rf.comparativo(rr, fic, date(2026, 10, 8)))
         dv = rres.montar(mv, {}, HOJE)
         V = dv["verso"]["itens"]

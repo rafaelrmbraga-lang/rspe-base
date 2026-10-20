@@ -75,7 +75,7 @@ assert ("Poligonal Engenharia Ltda", "18/12/2023 a 28/06/2024", "sem", "") in L 
 o, N, L = caso(M033)
 assert N["comp"] == 1007.99 and N["dif"] == 116.99 and N["man"] == 102, (N["comp"], N["dif"])
 assert ("Poligonal Engenharia Ltda", "18/12/2023 a 28/06/2024", "auto", "033/2025") in L and ("Artesanato", "10/08/2024 a 18/02/2025", "auto", "033/2025") in L, L
-assert ("Ags Prestadora - Me (Horta)", "29/06/2024 a 09/08/2024", "sem", "") in L, L  # lacuna entre os trechos do atestado
+assert ("Ags Prestadora - Me (Horta)", "14/11/2023 a 18/12/2023", "auto", "033/2025") in L, L  # trecho "Horta" do atestado
 print("ok: remição pela ficha x RSPE (caso-modelo, com e sem o atestado 033/2025 informado)")
 
 # atestado em lote com vários setores ("setor de A, B e C com N dias") e setor desativado no SIAPEN ("XXDESATIVADO")

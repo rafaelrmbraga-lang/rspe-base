@@ -1,7 +1,7 @@
-"""Remição pela leitura x atestado (19/10/2026): uma decisão pode apreciar vários relatórios de leitura de uma vez (12 dias = relatórios
-de 1 e 2 obras) - não sobra "leitura peticionada sem remição"; a remição múltipla de 4 só conta como leitura até as obras registradas
-na ficha, e a que sobra, posterior a um atestado sem remição, deixa o "não lançado" a conferir (amarelo, fora do total). Dados
-fictícios. Rodar: python teste_remicao_leitura_1910.py"""
+"""Remição pela leitura x atestado (19/10/2026; modelo da 7.14): o programa não decide qual remição é da leitura e qual é do atestado -
+compara os totais (leitura 4 dias por obra, 1 obra por mês quando a ficha só traz os meses; atestado com os dias dele) com o
+concedido no RSPE e aponta a diferença para conferir nos autos, sem valor a requerer. (Até a 7.13: casamento leitura x remição e
+"faltam ≈ 13" do atestado, pela conciliação, que saiu.) Dados fictícios. Rodar: python teste_remicao_leitura_1910.py"""
 import sys
 import types
 from datetime import date
@@ -32,27 +32,21 @@ rem = lambda d, n: {"tipo": "REMIÇÃO", "complemento": "%d dias" % n, "data_dec
 r = {"processo_execucao": AUTOS, "_eventos": [{"data": "01/03/2023", "tipo": "PRISÃO/INÍCIO DE CUMPRIMENTO", "motivo": "PRISÃO"}],
      "_incidentes": [rem("11/10/2023", 4), rem("18/08/2024", 12), rem("07/01/2025", 8), rem("10/09/2025", 8)], "_crimes": []}
 try:
-    linhas, res = rf.quadro_trabalho(r, f, date(2026, 10, 19))
-    ok(res.get("leituras_f") == [], "leitura: todos os relatórios casados (12 dias = 1 + 2 obras): %r" % res.get("leituras_f"))
-    C = res["conc"]
-    t = next(t for t in C["tabela"] if "024" in t["atestado"])
-    # (7.13.0) as remições posteriores sem origem (8 + 8 = 16) não alcançam os 29 dias do atestado: no máximo pagaram parte dele - o
-    # restante (≈ 13) segue a requerer, vermelho, com a ressalva de conferir se as de 8 dias são dele
-    ok(t["cor"] == "vermelho" and t["rot"] == "Atestado emitido não lançado", "atestado a requerer: %r / %r" % (t["rot"], t["nota"]))
-    p = next(p_ for p_ in C["pendencias"] if p_["texto"].startswith("Atestado 024"))
-    ok(p["status"] == "NAO_LANCADO" and p["cor"] == "vermelho" and "faltam ≈ 13" in p["texto"] and "8 dias em 07/01/2025" in p["acao"], "pendência: %r" % p)
-    ok(abs((res.get("pendentes") or 0) - 13) < 0.01, "no total, só o que as remições sem origem não alcançam: %r" % res.get("pendentes"))
-    det = res.get("rem_det") or {}
-    ok(abs(det.get("total", 0) - 13) < 0.01, "total por origem só com o restante: %r" % {k: det.get(k) for k in ("nao_lancado", "emitido", "total")})
-    R = C["resumo"]["texto"]
-    ok("possui 32 dias remidos" in R and "fazendo jus a 29 dias" in R and "faltam cerca de 13 dias" in R and "8 dias em 07/01/2025" in R,
-       "resumo simples: %s" % R)
-    al = " ".join(a["texto"] for a in C["alertas"])
-    ok("além das obras de leitura registradas na ficha (4 obras)" in al or ("origem não identificada" in al and "8 dias em 07/01/2025" in al),
-       "alerta das remições além das obras: %s" % al)
+    lei = f["leituras"]
+    rf.atualizar(f)
+    f["leituras"] = lei
+    o = rf.comparativo(r, f, date(2026, 10, 19))
+    N = o["fd_novo"]
+    ok(N["leitura"] == 16 and N["obras"] == 4 and N["at_desta"] == 29 and N["R"]["concedido"] == 32, "totais: %s %s %s" % (N["leitura"], N["at_desta"], N["R"]))
+    ok(N["dif"] == 13 and N["concl"].startswith("Verificar remição: a ficha comprova 45 dias e o RSPE concedeu 32, diferença de 13 dias")
+       and "não o quanto requerer" in N["concl"], "conclusão: %s" % N["concl"])
+    # o atestado é anterior à última decisão: não é fato vermelho; sem registro de peticionamento, é ponto a conferir
+    ok(o["fd_cor"] == "amarelo" and any(p["tipo"] == "sem_pet" and "024/2024" in p["texto"] for p in N["pontos"]) and not N["fatos"],
+       "situação: %s %s" % (o["fd_cor"], [p["tipo"] for p in N["pontos"]]))
+    ok(not (o.get("fd_fund") or ""), "fundamentação sem fato certo: %s" % (o.get("fd_fund") or "")[:200])
 except Exception as e:
     import traceback
     traceback.print_exc()
     falhas.append("exceção: %r" % e)
-print("\n".join(falhas) if falhas else "ok: remição pela leitura somada e atestado com remição sem origem posterior (19/10/2026)")
+print("\n".join(falhas) if falhas else "ok: remição pela leitura e atestado comparados pelos totais (7.14)")
 sys.exit(1 if falhas else 0)
