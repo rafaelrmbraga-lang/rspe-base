@@ -893,7 +893,14 @@ def _detracao_outro_processo(r, crimes, ativos, eventos):
     _meus += [o.get("_execucao") or "" for o in r.get("_outras_condenacoes") or []]
     _meus = [x for x in _meus if x]
     out = []
-    for a, b, mot, procs in rs.periodos_custodia_detalhe([e for e in eventos if not e.get("_ficha")]):
+    # pena que falta: a remanescente do SEEU; na guia sem cálculo (pena total zero ou em branco), a soma das penas impostas
+    _rem = rs.pena_para_dias(r.get("pena_remanescente"))
+    if not rs.pena_para_dias(r.get("pena_total")):
+        _rem = sum(rs.pena_para_dias(c.get("pena_imposta")) or 0 for c in ativos) or None
+    _per = [(a, b, mot, procs, False) for a, b, mot, procs in rs.periodos_custodia_detalhe([e for e in eventos if not e.get("_ficha")])]
+    # prisões encerradas que só a ficha SIAPEN mostra, vinculadas a autos que o RSPE não lista (rspe_ficha.custodias_outro_processo)
+    _per += [(rs.to_date(a), rs.to_date(b), "", ", ".join(ps), True) for a, b, ps in r.get("_custodias_ficha_outro") or []]
+    for a, b, mot, procs, pela_ficha in _per:
         ps = rs.lista_processos(procs or "")
         if not a or not b or not ps or any(rp._mesmo_processo(q, x) for q in ps for x in _meus):
             continue
@@ -901,18 +908,20 @@ def _detracao_outro_processo(r, crimes, ativos, eventos):
         dias = (b - a).days + 1
         if not ant or dias < 2:
             continue
-        _fim = next((rs._texto_evento(e) for e in eventos if rs.to_date(e.get("data") or "") == b and "INTERRUP" in (e.get("tipo") or "").upper()), "")
-        _rem = rs.pena_para_dias(r.get("pena_remanescente"))
+        if pela_ficha and not (_rem and dias >= _rem):
+            continue  # prisão que só a ficha mostra: só quando, sozinha, alcança a pena que falta (hipótese de extinção)
+        _fim = "" if pela_ficha else next((rs._texto_evento(e) for e in eventos if rs.to_date(e.get("data") or "") == b and "INTERRUP" in (e.get("tipo") or "").upper()), "")
         out.append(_item("verificar", "Detração por prisão em outro processo (%s): %s a %s - %s" % (", ".join(ps), rs.fmt(a), rs.fmt(b), rs.pl(dias, "dia", "dias")),
-                         "O RSPE registra a custódia de %s a %s por processo que não integra esta execução (%s)%s. O fato de %s é anterior a essa "
+                         ("A ficha SIAPEN registra" if pela_ficha else "O RSPE registra") +
+                         " a custódia de %s a %s por processo que não integra esta execução (%s)%s. O fato de %s é anterior a essa "
                          "prisão: a detração da prisão cautelar em outro processo é admitida quando o crime da condenação é anterior a ela (vedada "
                          "só a \"conta-corrente\" de pena futura), sobretudo se o outro processo terminou em absolvição, extinção ou sem "
                          "condenação. Conferir o desfecho do outro processo e se esses dias já estão computados nesta pena; se não, pedir a "
                          "detração%s." % (
                              rs.fmt(a), rs.fmt(b), ", ".join(ps), (", encerrada por %s" % _fim.lower()) if _fim else "",
                              "; ".join(sorted(set("%s (%s)" % (_nome(c), c.get("data_infracao")) for c in ant))),
-                             ", que alcança a pena remanescente (%s) e pode levar à extinção (LEP, art. 66, II)" % r.get("pena_remanescente")
-                             if _rem is not None and dias >= _rem else ""),
+                             ", que alcança a pena remanescente (%s) e pode levar à extinção (LEP, art. 66, II)" % rs.dias_para_pena(_rem)
+                             if _rem and dias >= _rem else ""),
                          "CP, art. 42; LEP, arts. 66, III, c, e 111; STJ, detração em processo diverso (prisão posterior ao crime).",
                          tipo="detracao-prisao-em-outro-processo", ref=rs.fmt(a)))
     return out
@@ -2577,6 +2586,13 @@ def auditar(r, hoje=None):
             if rs.e_concessao_livramento(i)]
     _dls = [d for d in _dls if d]
     _lc_reg = bool(ult and _dls and "REGRESS" in (ult[1].get("complemento") or "").upper() and ult[0] > max(_dls))
+    if _lc_reg and any(rs.e_incidente_regime(i) and i.get("situacao") == "CONCEDIDO" and i is not ult[1]
+                       and "LIVRAMENTO" not in rs._sem_acento(i.get("complemento") or "").upper()
+                       and max(_dls) < (rs.to_date(i.get("data_referencia") or i.get("data_decisao") or "") or date.min) < ult[0]
+                       for i in incidentes):
+        # entre o livramento e a regressão houve outra alteração de regime (soma de penas, adequação, progressão): o livramento já
+        # tinha deixado de existir, e a regressão é do regime em curso - não do livramento
+        _lc_reg = False
     if _lc_reg:
         _dlc = max(_dls)
         _int = [(rs.to_date(e.get("data") or ""), (e.get("motivo") or "").strip().lower()) for e in eventos

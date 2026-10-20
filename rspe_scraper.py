@@ -87,6 +87,46 @@ def mesmo_processo(a, b):
     return bool(ka) and ka == kb
 
 
+# número CNJ com separadores faltando ou fora do lugar ("00107745720158120001", "0052142-562009.8.12.0001", "AUTOS0801005-11.2019...")
+RE_CNJ_SOLTO = re.compile(r"(?<!\d)0?(\d{7})-?(\d{2})[.\-]?(\d{4})\.?(\d)\.?(\d{2})\.?(\d{4})(?!\d)")
+
+
+def processos_no_texto(txt):
+    """Números de processo (padrão CNJ) citados num texto, também os grafados sem pontos ou hífen, no formato canônico."""
+    out = []
+    for m in RE_CNJ_SOLTO.finditer(txt or ""):
+        n = "%s-%s.%s.%s.%s.%s" % m.groups()
+        if n not in out:
+            out.append(n)
+    return out
+
+
+def _digitos_cnj(num):
+    d = re.sub(r"\D", "", num or "")
+    return d.zfill(20) if 13 <= len(d) <= 20 else ""
+
+
+def processo_parecido(a, b):
+    """Mesmo processo com erro de digitação: números CNJ diferentes, mas com a mesma origem (justiça, tribunal e foro) e no máximo
+    um dígito trocado, um par de dígitos invertido ou um zero a mais/a menos no número sequencial ("0004790-48.2020" x
+    "0004790-48.2022"; "9000036-28.2024" x "0900036-28.2024"). Iguais também valem."""
+    da, db = _digitos_cnj(a), _digitos_cnj(b)
+    if not da or not db:
+        return False
+    if da == db:
+        return True
+    if da[13:] != db[13:]:
+        return False  # origem (J.TR.OOOO) diferente: outro processo
+    x, y = da[:13], db[:13]
+    dif = [i for i in range(13) if x[i] != y[i]]
+    if len(dif) == 1:
+        return True
+    if len(dif) == 2 and dif[1] == dif[0] + 1 and x[dif[0]] == y[dif[1]] and x[dif[1]] == y[dif[0]]:
+        return True  # dois dígitos vizinhos invertidos
+    sx, sy = x[:7].lstrip("0"), y[:7].lstrip("0")
+    return x[7:] == y[7:] and bool(sx) and (sx.rstrip("0") == sy.rstrip("0")) and abs(len(sx) - len(sy)) == 1
+
+
 def completar_processos(txt, crimes):
     """Completa número truncado pela quebra de linha do PDF ("0020835-") com o único processo criminal que o inicia."""
     nums = list(dict.fromkeys(c.get("processo_criminal") or "" for c in crimes if c.get("processo_criminal")))
@@ -1664,11 +1704,56 @@ def triagem_indulto(crimes):
 # cumprimento de pena (estimativas)
 # --------------------------------------------------------------------------- #
 
+# prisão que é volta física à custódia (pode seguir uma soltura ou fuga do mesmo dia); prisão definitiva ou início de regime
+# com a pessoa já presa só registra o título
+RE_PRISAO_FISICA = re.compile(r"RECAPTURA|REIN[IÍ]CIO|FLAGRANTE|PREVENTIVA|PROVIS", re.I)
+
+
 def eventos_cronologicos(eventos):
     """Eventos em ordem de data (ordenação estável: no mesmo dia, mantém a ordem do PDF; sem data, no começo, como antes).
     O SEEU pode imprimir um lançamento retroativo fora da ordem; a custódia, a interrupção, o término, o indulto e a
-    prescrição não podem depender da ordem em que os eventos aparecem no relatório."""
-    return sorted(eventos or [], key=lambda e: to_date(e.get("data") or "") or date.min)
+    prescrição não podem depender da ordem em que os eventos aparecem no relatório.
+    Eventos do MESMO dia: o SEEU imprime às vezes a soltura antes da prisão (flagrante e liberdade provisória/fiança no
+    mesmo dia) ou a recaptura antes da interrupção (descumprimento e prisão no mesmo dia). Na ordem do PDF, a interrupção
+    sem período aberto seria descartada e a prisão ficaria aberta até a soltura seguinte (custódia inexistente), ou a
+    recaptura seria ignorada e a interrupção criaria dias "sem cômputo" falsos. No mesmo dia, a ordem segue o estado da
+    custódia: preso na véspera, primeiro a interrupção e depois a prisão (cumprimento contínuo); solto na véspera,
+    primeiro a prisão e depois a soltura (um dia de custódia)."""
+    ordenados = sorted(eventos or [], key=lambda e: to_date(e.get("data") or "") or date.min)
+    out, aberto, i = [], False, 0
+
+    def _papel(e):
+        t = (e.get("tipo") or "").upper()
+        if "INTERRUP" in t:
+            return "neutro" if interrupcao_continua_cumprimento(e) else "fecha"
+        return "abre"
+
+    while i < len(ordenados):
+        d = to_date(ordenados[i].get("data") or "")
+        j = i + 1
+        if d:
+            while j < len(ordenados) and to_date(ordenados[j].get("data") or "") == d:
+                j += 1
+        grupo = ordenados[i:j]
+        if len(grupo) > 1 and d:
+            resto = [e for e in grupo if _papel(e) != "neutro"]
+            novo = [e for e in grupo if _papel(e) == "neutro"]
+            while resto:
+                quer = "fecha" if aberto else "abre"
+                k = next((n for n, e in enumerate(resto) if _papel(e) == quer), 0)
+                if aberto and _papel(resto[0]) == "abre" and not RE_PRISAO_FISICA.search(resto[0].get("motivo") or ""):
+                    k = 0  # preso, prisão definitiva/início de regime antes da interrupção: só registra o título (ordem do PDF)
+                e = resto.pop(k)
+                novo.append(e)
+                aberto = _papel(e) == "abre"
+            grupo = novo
+        else:
+            for e in grupo:
+                if _papel(e) != "neutro" and d:
+                    aberto = _papel(e) == "abre"
+        out += grupo
+        i = j
+    return out
 
 
 # interrupção por incompatibilidade de regime (domiciliar ou monitoramento à espera de vaga - STF, SV 56): o cumprimento segue,
@@ -2192,6 +2277,12 @@ def prescricao_disciplinar(d_fato, fuga=False, eventos=None):
     if fuga:
         rec = [to_date(e.get("data") or "") for e in eventos or [] if "INTERRUP" not in (e.get("tipo") or "").upper()]
         rec = [x for x in rec if x and x > d_fato]
+        # recaptura no mesmo dia da fuga (impressa antes ou depois dela): na ordem cronológica dos eventos, a prisão que vem
+        # depois da interrupção do dia encerra a fuga
+        _ord = eventos_cronologicos([e for e in eventos or [] if to_date(e.get("data") or "")])
+        _ix = [k for k, e in enumerate(_ord) if "INTERRUP" in (e.get("tipo") or "").upper() and to_date(e["data"]) == d_fato]
+        if _ix and any("INTERRUP" not in (e.get("tipo") or "").upper() and to_date(e["data"]) == d_fato for e in _ord[_ix[-1] + 1:]):
+            rec.append(d_fato)
         if not rec:
             return None, None
         termo = min(rec)
@@ -3983,12 +4074,19 @@ def aplicar_extincoes(r, crimes, incidentes):
                                            "comutacao": next(j.get("data_decisao") or j.get("data_referencia") for j in com_dep
                                                              if any(mesmo_processo(c.get("processo_criminal"), x) for x in lista_processos(j.get("processos") or "")))}
                     continue
+                if procs and k in procs and c.get("extinto", "").upper().startswith("S") and c.get("extincao_motivo") == "indulto" \
+                        and not c.get("data_extincao"):
+                    # processo já marcado "(Indultada)" no RSPE: o incidente que o seleciona dá a data e o decreto
+                    c["data_extincao"] = d
+                    c["extincao_fonte"] += "; incidente INDULTO concedido%s%s" % ((" (Decreto %s)" % dec.group(1)) if dec else "", " em " + d if d else "")
+                    continue
                 if procs and k in procs and not c.get("extinto", "").upper().startswith("S"):
                     c["extinto"] = "Sim"
                     c["data_extincao"] = c.get("data_extincao") or d
                     c["extincao_motivo"] = "indulto%s" % ((" (Decreto %s)" % dec.group(1)) if dec else "")
                     c["extincao_fonte"] = "incidente INDULTO concedido%s%s" % ((" (Decreto %s)" % dec.group(1)) if dec else "", " em " + d if d else "")
                     c["indultado_rspe"] = True
+    _ext_por_inc = set()
     for i in ext_inc:
         procs = [chave_processo(p) for p in lista_processos(i.get("processos") or "")]
         d = i.get("data_referencia") or i.get("data_decisao") or ""
@@ -3999,7 +4097,13 @@ def aplicar_extincoes(r, crimes, incidentes):
                     c["extinto"] = "Sim"
                     if d and not c.get("data_extincao"):
                         c["data_extincao"] = d
-                    c["extincao_motivo"] = motivo
+                    if id(c) in _ext_por_inc and c.get("extincao_motivo") and motivo.upper() not in c["extincao_motivo"].upper():
+                        # duas extinções registradas para o mesmo processo (ex.: PRESCRIÇÃO e ANISTIA, GRAÇA OU INDULTO): as duas causas
+                        # aparecem - a prescrição executória não gera reincidência, o indulto sim
+                        c["extincao_motivo"] = "%s; %s" % (c["extincao_motivo"], motivo)
+                    else:
+                        c["extincao_motivo"] = motivo
+                    _ext_por_inc.add(id(c))
                     c["extincao_fonte"] = (c["extincao_fonte"] + "; " if c["extincao_fonte"] else "") + "incidente EXTINÇÃO (%s%s)" % (motivo, " em " + d if d else "")
         elif ("ATIV" in (r.get("status_execucao") or "").upper() and (pena_para_dias(r.get("pena_remanescente")) or 0) > 0
               and ((r.get("versao_leitura_rspe") or 1) < 2 or ativos_depois(crimes, d))):  # < 2: lista perdida na leitura da versão 1
@@ -4136,6 +4240,15 @@ def livramento_em_curso(campos, incidentes, ref=None):
             d = to_date(i.get("data_referencia") or i.get("data_decisao") or "")
             if i.get("situacao") == "CONCEDIDO" and "REGRESS" in t and d and d > dl and (ref is None or d <= ref):
                 return False, dl
+    # as penas que estavam em livramento (condenações com fato e sentença até o deferimento) já estão todas extintas e há outras
+    # condenações ativas: o livramento acabou com a extinção delas - a nota "(Em livramento ...)" do SEEU é resíduo
+    if dl != date.min and ref is None:
+        crs = campos.get("_crimes") or []
+        epoca = [c for c in crs if (to_date(c.get("data_infracao") or "") or date.max) <= dl
+                 and (to_date(c.get("data_sentenca") or "") or date.min) <= dl]
+        if epoca and all((c.get("extinto") or "").upper().startswith("S") for c in epoca) and \
+                any(not (c.get("extinto") or "").upper().startswith("S") for c in crs):
+            return False, dl
     if "LIVRAMENTO" in (campos.get("regime_atual") or "").upper():
         return True, dl
     # livramento superado: regime fixado/alterado por decisão posterior (nova condenação, somatório,

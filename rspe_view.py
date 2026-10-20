@@ -632,9 +632,20 @@ def _soma_pena(d, dias):
 
 
 def soma_penas_ativas(r):
-    """Soma das penas impostas das condenações ativas, em dias (guia sem pena total calculada pelo SEEU)."""
-    return sum(rs.pena_para_dias(c.get("pena_imposta")) or 0 for c in r.get("_crimes", [])
-               if not (c.get("extinto") or "").upper().startswith("S"))
+    """Soma das penas impostas das condenações ativas, em dias (guia sem pena total calculada pelo SEEU). Soma por componente, como o
+    SEEU e a calculadora (anos com anos, meses com meses, dias com dias; 30 dias = 1 mês, 12 meses = 1 ano), e devolve em dias na
+    convenção de pena_para_dias, para que _soma_pena reponha os mesmos anos, meses e dias (somar em dias faria 12 meses = 360 dias
+    perderem 5 dias por ano: 8a10m20d + 5a4m + 1a2m + 5a daria 20a4m15d, e não 20a4m20d)."""
+    a = m = d = 0
+    for c in r.get("_crimes", []):
+        if (c.get("extinto") or "").upper().startswith("S"):
+            continue
+        amd = rs.pena_amd(c.get("pena_imposta"))
+        if amd:
+            a, m, d = a + amd[0], m + amd[1], d + amd[2]
+    m, d = m + d // 30, d % 30
+    a, m = a + m // 12, m % 12
+    return a * rs.DIAS_ANO + m * 30 + d
 
 
 def custodia_sem_calculo(r):
@@ -654,15 +665,27 @@ def custodia_sem_calculo(r):
     fatos = [d for d in (rs.to_date(c.get("data_infracao") or "") for c in ativos) if d]
     f0 = min(fatos) if fatos else None
     procs = [c.get("processo_criminal") for c in ativos if c.get("processo_criminal")]
-    antes, desde, duvida = 0, None, False
+    antes, desde, duvida, duvida_txt = 0, None, False, ""
     fechados = []
+    # a que processo a ficha SIAPEN vincula a custódia em curso sem processo no RSPE (rspe_ficha.custodia_ficha_processo)
+    cfp = r.get("_custodia_ficha_proc") or {}
     for a, b, _mot, p in rs.periodos_custodia_detalhe(r.get("_eventos", [])):
         if f0 and (b or HOJE) <= f0:
             continue  # prisão encerrada antes do fato: não é detração (CP, art. 42)
         lst = rs.lista_processos(p)
         if lst and not any(rp._mesmo_processo(q, x) for q in lst for x in procs):
             continue  # registrada só para outro processo
-        duvida = duvida or not lst
+        if not lst and b is None and cfp.get("desde") == rs.fmt(a):
+            if cfp.get("tipo") == "civil":
+                continue  # prisão civil (alimentos): não é pena nem detração
+            if cfp.get("tipo") == "outro":
+                duvida = True
+                duvida_txt = ("%s: só serve a esta pena como detração (CP, art. 42), se o fato desta execução for anterior à prisão e o "
+                              "tempo não for usado naquele processo - conferir" % cfp.get("texto"))
+            elif cfp.get("tipo") != "desta":
+                duvida = True
+        else:
+            duvida = duvida or not lst
         a = max(a, f0) if f0 else a
         if b is None:
             desde = a
@@ -670,7 +693,9 @@ def custodia_sem_calculo(r):
             fechados.append((a, b))
     # conta o dia da prisão e o da soltura, como o SEEU (rs.dias_cumpridos_ate); períodos contíguos contam o dia comum uma vez
     antes = sum((b - a).days + 1 for a, b in rs.uniao_periodos(fechados))
-    return {"antes": antes, "desde": desde, "duvida": duvida} if (antes or desde) else None
+    if duvida and not duvida_txt:
+        duvida_txt = "a custódia não indica processo (nem no RSPE, nem na ficha SIAPEN) e pode ser de outro - conferir"
+    return {"antes": antes, "desde": desde, "duvida": duvida, "duvida_txt": duvida_txt} if (antes or desde) else None
 
 
 def fracoes_texto(r, campo):
@@ -707,17 +732,21 @@ def termino_calc(r):
     if rem is None:
         pt, pc = rs.pena_para_dias(r.get("pena_total")), rs.pena_para_dias(r.get("pena_cumprida"))
         rem = (pt - pc) if (pt and pc is not None) else None
-    if not ger or rem is None or rem < 0:
-        return None
     cs = custodia_sem_calculo(r)
     if cs and not rs.pena_para_dias(r.get("pena_total")):
-        rem = soma_penas_ativas(r)  # guia sem pena calculada: a soma das penas impostas
+        # guia sem pena calculada (0a0m0d ou quadro do cálculo em branco): a soma das penas impostas
+        rem = soma_penas_ativas(r)
+    if not ger or rem is None or rem < 0:
+        return None
     if rem == 0 and not cs:
         return None  # pena já cumprida: a data em que se esgotou não consta (a data do RSPE seria falsa); fica na Extinção
 
     # sem o cálculo do SEEU, as remições concedidas no RSPE (menos as perdas) também são pena cumprida (LEP, art. 128) - conferir
     rmd = remidos_sem_calculo(r) if cs else 0
     if cs and cs["desde"]:
+        partes = termino_por_fato(r, cs, rem, rmd)
+        if partes:
+            return partes["termino"]
         # o dia do começo conta (CP, art. 10): o último dia é início + pena - 1
         return _soma_pena(cs["desde"], rem) - timedelta(days=cs["antes"] + 1 + rmd)
     rf = reinicio_ficha(r)
@@ -726,6 +755,31 @@ def termino_calc(r):
         # remanescente impresso é o que faltava ali - o término corre do reinício, não da data do RSPE
         return _soma_pena(rf, rem)
     return _soma_pena(ger, rem) - timedelta(days=(cs["antes"] + rmd) if cs else 0)
+
+
+def termino_por_fato(r, cs, rem, rmd):
+    """Guia sem cálculo (custodia_sem_calculo) com condenação por fato POSTERIOR ao início da custódia em curso: a prisão anterior ao
+    fato não se detrai dessa pena (CP, art. 42 - vedada a "conta-corrente"). As penas dos fatos anteriores correm da custódia; cada
+    pena de fato posterior começa no dia seguinte ao fim das anteriores ou na data do fato, o que vier depois. Devolve
+    {"antigas": término das penas por fatos anteriores, "novas": [(processo, fato, pena)], "termino"} ou None (nenhum fato posterior)."""
+    ativos = [c for c in r.get("_crimes", []) if not (c.get("extinto") or "").upper().startswith("S")]
+    novos = [c for c in ativos if (rs.to_date(c.get("data_infracao") or "") or date.min) > cs["desde"]]
+    if not novos or len(novos) == len(ativos):
+        return None
+    pen = lambda c: rs.pena_para_dias(c.get("pena_imposta")) or 0  # noqa: E731
+    soma_nov = sum(pen(c) for c in novos)
+    antigas = _soma_pena(cs["desde"], max(0, rem - soma_nov)) - timedelta(days=cs["antes"] + 1 + rmd)
+    cur = antigas
+    por_fato = {}
+    for c in novos:
+        por_fato.setdefault(rs.to_date(c["data_infracao"]), []).append(c)
+    lst = []
+    for f in sorted(por_fato):
+        ini = max(cur + timedelta(days=1), f)
+        dias = sum(pen(c) for c in por_fato[f])
+        cur = _soma_pena(ini, dias) - timedelta(days=1)
+        lst.append((rs.crimes_curto([dict(c, extinto="") for c in por_fato[f]]), f, dias))
+    return {"antigas": antigas, "novas": lst, "termino": cur}
 
 
 def remidos_sem_calculo(r):
@@ -758,6 +812,45 @@ def termino(r):
     return rotulo_parada(r, True) if parada(r) else "Não consta no RSPE"
 
 
+def todos_extintos_(r):
+    """Todos os crimes do RSPE extintos."""
+    crs = r.get("_crimes", [])
+    return bool(crs) and all((c.get("extinto") or "").upper().startswith("S") for c in crs)
+
+
+def pena_na_data(r, ref):
+    """Pena em execução numa data passada (fim do período de prova do livramento): a pena total do SEEU, se todas as condenações
+    já existiam (fato e sentença até ref); senão, só as penas impostas das condenações com fato e sentença até ref - as somadas
+    depois (crime posterior, condenação posterior) não integram o período de prova deferido antes delas. Devolve (dias, nota)."""
+    pt = rs.pena_para_dias(r.get("pena_total")) or 0
+    crs = r.get("_crimes", [])
+    if not ref or not crs:
+        return pt, ""
+    dentro, fora = [], []
+    for c in crs:
+        fato, sent = rs.to_date(c.get("data_infracao") or ""), rs.to_date(c.get("data_sentenca") or "")
+        (fora if ((fato and fato > ref) or (sent and sent > ref)) else dentro).append(c)
+    if not fora or not dentro:
+        return pt, ""
+    soma = sum(rs.pena_para_dias(c.get("pena_imposta")) or 0 for c in dentro)
+    if not soma:
+        return pt, ""
+    return soma, "pena da época: %s, sem as condenações somadas depois do deferimento (%s)" % (
+        rs.dias_para_pena(soma), rs.crimes_curto([dict(c, extinto="") for c in fora]))
+
+
+def livramento_substituido(r, dlc, ate):
+    """Alteração de regime concedida depois do deferimento do livramento e até 'ate' (fim do período de prova): o livramento foi
+    substituído (soma de penas com novo regime, regressão, adequação) - a hipótese da Súmula 617/STJ não se aplica. Devolve o texto
+    da primeira alteração ou ""."""
+    for i in sorted(r.get("_incidentes", []), key=lambda i: rs.to_date(i.get("data_referencia") or i.get("data_decisao") or "") or date.min):
+        d = rs.to_date(i.get("data_referencia") or i.get("data_decisao") or "")
+        if d and dlc < d <= ate and rs.e_incidente_regime(i) and i.get("situacao") == "CONCEDIDO" and \
+                "LIVRAMENTO" not in rs._sem_acento(i.get("complemento") or "").upper():
+            return "%s em %s" % ((i.get("complemento") or "alteração de regime").strip(), rs.fmt(d))
+    return ""
+
+
 def extincao(r, presc, interr):
     """Hipóteses de extinção da pena/punibilidade aferíveis pelo RSPE."""
     hip, cor, d_ref = [], "", None
@@ -773,6 +866,12 @@ def extincao(r, presc, interr):
     # ficha ou sem processo indicado pode ser de outro processo
     cust = custodia_sem_calculo(r) if term_calc else None
     cust_ver = bool(cust and term <= HOJE)
+    _pf, _parcial_ver = None, False
+    if cust and cust.get("desde"):
+        _rem0 = rs.pena_para_dias(r.get("pena_remanescente"))
+        if not rs.pena_para_dias(r.get("pena_total")):
+            _rem0 = soma_penas_ativas(r)
+        _pf = termino_por_fato(r, cust, _rem0 or 0, remidos_sem_calculo(r)) if _rem0 else None
     rf_ver = bool(term_calc and not cust and reinicio_ficha(r) and term <= HOJE)
     # 1) pena cumprida
     if pt and cump is not None and cump >= pt:
@@ -783,7 +882,7 @@ def extincao(r, presc, interr):
                    "extinção pelo cumprimento a verificar (LEP, art. 66, II)%s" % (
                        (" desde %s" % rs.fmt(cust["desde"])) if cust["desde"] else "",
                        rs.dias_para_pena(pt) if pt else "%s, soma das penas impostas - o SEEU não calculou a pena total" % rs.dias_para_pena(soma_penas_ativas(r)), rs.fmt(term),
-                       ("; a custódia não indica processo (ficha SIAPEN) e pode ser de outro - conferir" if cust["duvida"] else "") +
+                       (("; " + cust["duvida_txt"]) if cust["duvida"] else "") +
                        ("; abatidos %d dias remidos concedidos no RSPE (LEP, art. 128) - conferir" % remidos_sem_calculo(r) if remidos_sem_calculo(r) else "")))
     elif rf_ver:
         hip.append("A verificar: pelo reinício lançado pela ficha SIAPEN em %s, mais a pena remanescente congelada na interrupção, o término "
@@ -792,6 +891,15 @@ def extincao(r, presc, interr):
     elif term and term <= HOJE:
         hip.append("Término da pena %s %s já alcançado" % ("calculado (data do RSPE + pena remanescente, pelo calendário) para" if term_calc else "previsto para", rs.fmt(term)))
         cor, d_ref = "vermelho", term
+    if _pf and _pf["antigas"] <= HOJE < term:
+        hip.append("A verificar: extinção parcial - pela custódia desde %s, as penas por fatos anteriores a ela se esgotaram em %s. %s "
+                   "só corre%s depois do fato, porque a prisão anterior a ele não se detrai (CP, art. 42), e termina%s em %s. Pedir a extinção "
+                   "das penas cumpridas (LEP, art. 66, II) e o cálculo da pena nova - conferir se a custódia foi toda desta execução" % (
+                       rs.fmt(cust["desde"]), rs.fmt(_pf["antigas"]),
+                       ("A pena de " if len(_pf["novas"]) == 1 else "As penas de ") +
+                       "; ".join("%s (fato em %s, pena %s)" % (n, rs.fmt(f), rs.dias_para_pena(d)) for n, f, d in _pf["novas"]),
+                       "" if len(_pf["novas"]) == 1 else "m", "" if len(_pf["novas"]) == 1 else "m", rs.fmt(term)))
+        _parcial_ver = True
     # 2) livramento condicional: período de prova expirado sem revogação
     lc_ver = False  # livramento com situação incerta e período de prova já terminado: extinção a verificar (Súmula 617/STJ)
     inc = r.get("_incidentes", [])
@@ -805,15 +913,17 @@ def extincao(r, presc, interr):
         # fim do período de prova = deferimento + pena remanescente no deferimento; revogação/suspensão decidida só depois
         # desse fim não impede a extinção (CP, art. 90; Súmula 617/STJ)
         fim_prova = None
-        if revog and dlc != date.min and pt:
+        # a pena do período de prova é a da época do deferimento, sem as condenações somadas depois
+        pt_lc, _nota_lc = pena_na_data(r, dlc) if dlc != date.min else (pt, "")
+        if revog and dlc != date.min and pt_lc:
             try:
                 import rspe_decretos as _rd
                 cx = _rd._ctx(r)
                 c_dlc = rs.cumprido_na_data(r, cx["periodos"], cx["rem"], dlc)[0]
-                fim_prova = _soma_pena(dlc, max(0, pt - c_dlc))  # pelo calendário, como o término do SEEU
+                fim_prova = _soma_pena(dlc, max(0, pt_lc - c_dlc))  # pelo calendário, como o término do SEEU
             except Exception:
                 fim_prova = None
-        if revog and fim_prova and fim_prova <= HOJE and all(d > fim_prova for d in revs if d > dlc):
+        if revog and fim_prova and fim_prova <= HOJE and all(d > fim_prova for d in revs if d > dlc) and not livramento_substituido(r, dlc, fim_prova):
             hip.append("Livramento condicional desde %s: o período de prova terminou em %s (deferimento + pena remanescente), e a revogação/suspensão "
                        "só foi decidida em %s, depois desse fim - extinção da pena (CP, art. 90; LEP, art. 146; Súmula 617/STJ)" % (
                            rs.fmt(dlc), rs.fmt(fim_prova), rs.fmt(min(d for d in revs if d > dlc))))
@@ -827,19 +937,21 @@ def extincao(r, presc, interr):
         if dlc != date.min and not revog and duv:
             # fim do período de prova = deferimento + pena remanescente no deferimento (o término atual conta a interrupção)
             fim_lc = None
-            if pt:
+            if pt_lc:
                 try:
                     import rspe_decretos as _rd
                     cx = _rd._ctx(r)
-                    fim_lc = _soma_pena(dlc, max(0, pt - rs.cumprido_na_data(r, cx["periodos"], cx["rem"], dlc)[0]))
+                    fim_lc = _soma_pena(dlc, max(0, pt_lc - rs.cumprido_na_data(r, cx["periodos"], cx["rem"], dlc)[0]))
                 except Exception:
                     fim_lc = None
             fim_lc = fim_lc or term
-            if fim_lc and fim_lc <= HOJE:
-                hip.append("A verificar: livramento condicional desde %s, sem revogação registrada (%s); o período de prova terminou em %s - se "
+            # o livramento substituído por nova alteração de regime antes do fim do período de prova (soma de penas, regressão,
+            # adequação) deixou de existir: não há extinção pela Súmula 617
+            if fim_lc and fim_lc <= HOJE and not livramento_substituido(r, dlc, fim_lc):
+                hip.append("A verificar: livramento condicional desde %s, sem revogação registrada (%s); o período de prova terminou em %s%s - se "
                            "não houve revogação nem suspensão até essa data, extinção da pena (CP, art. 90; LEP, art. 146; Súmula 617/STJ), "
                            "observado o art. 89 do CP (processo por crime cometido na vigência do livramento)" % (
-                               rs.fmt(dlc), "; ".join(duv), rs.fmt(fim_lc)))
+                               rs.fmt(dlc), "; ".join(duv), rs.fmt(fim_lc), (" (%s)" % _nota_lc) if _nota_lc else ""))
                 lc_ver = True
         elif dlc != date.min and not revog and term:
             if term <= HOJE:
@@ -847,7 +959,7 @@ def extincao(r, presc, interr):
                 cor = "vermelho"
     # 3) detração que alcança toda a pena do processo (custódia provisória anterior ao trânsito): hipótese a verificar,
     #    porque a mesma prisão pode servir a várias condenações (LEP, art. 111). Prescrição e indulto ficam nas próprias abas.
-    a_verificar = False
+    a_verificar = _parcial_ver
     for l in presc.get("presc_linhas", []):
         if l.get("ppe_detracao_cobre") and l.get("ppe_detracao_exclusiva"):
             hip.append("%s: custódia anterior ao trânsito de %s iguala ou supera a pena do processo (%s), e nenhuma outra condenação do RSPE tem "
@@ -867,12 +979,35 @@ def extincao(r, presc, interr):
     try:
         _atv = [c for c in r.get("_crimes", []) if not (c.get("extinto") or "").upper().startswith("S")]
         for _it in ra._detracao_outro_processo(r, r.get("_crimes", []), _atv, r.get("_eventos", [])):
-            if "extinção" in _it["detalhe"]:
+            if "alcança a pena remanescente" in _it["detalhe"]:
                 hip.append("A verificar: %s - se imputada a esta execução (fato anterior à prisão; CP, art. 42), alcança a pena remanescente: "
                            "extinção pelo cumprimento (LEP, art. 66, II)" % _it["titulo"])
                 a_verificar = True
     except Exception:
         pass
+    # prisão em outro processo EM CURSO (execução suspensa no SEEU), com os fatos desta execução anteriores a ela: se o tempo for
+    # imputado a esta execução (CP, art. 42; LEP, art. 111), a pena remanescente pode já estar alcançada
+    _own = [e for e in r.get("_eventos", []) if not e.get("_ficha") and rs.to_date(e.get("data") or "")]
+    _ult = _own[-1] if _own else None
+    _rem_d = rs.pena_para_dias(r.get("pena_remanescente"))
+    if _ult and "INTERRUP" in (_ult.get("tipo") or "").upper() and rs.RE_OUTRO_PROC.search(_ult.get("motivo") or "") \
+            and _rem_d and r.get("_custodia_ficha") is not False and not (r.get("execucao_extinta") or todos_extintos_(r)):
+        _a = rs.to_date(_ult["data"])
+        _fatos = [rs.to_date(c.get("data_infracao") or "") for c in r.get("_crimes", []) if not (c.get("extinto") or "").upper().startswith("S")]
+        _fatos = [d for d in _fatos if d]
+        _alc = _a + timedelta(days=_rem_d - 1)
+        if _fatos and max(_fatos) < _a and _alc <= HOJE:
+            hip.append("A verificar: preso por outro processo desde %s (esta execução está suspensa); os fatos desta execução são anteriores a "
+                       "essa prisão - se o tempo for imputado aqui (CP, art. 42; LEP, art. 111), a pena remanescente (%s) foi alcançada em %s: "
+                       "extinção pelo cumprimento a verificar (LEP, art. 66, II)" % (rs.fmt(_a), rs.dias_para_pena(_rem_d), rs.fmt(_alc)))
+            a_verificar = True
+    # execução arquivada (ou baixada) no SEEU com condenação ainda ativa: a extinção dessa pena não está registrada
+    _atv_arq = [c for c in r.get("_crimes", []) if not (c.get("extinto") or "").upper().startswith("S")]
+    if re.search(r"ARQUIVAD|BAIXAD", rs._sem_acento(r.get("status_execucao") or "").upper()) and _atv_arq \
+            and not r.get("execucao_extinta") and not hip:
+        hip.append("A verificar: execução arquivada no SEEU, mas %s sem extinção registrada no RSPE - conferir se a pena foi declarada "
+                   "extinta (cumprimento, prescrição, indulto) ou pedir a declaração (LEP, art. 66, II)" % rs.crimes_curto(_atv_arq))
+        a_verificar = True
     multa_txt = ""  # multa: hipossuficiência presumida (Defensoria) - sem aviso na extinção
     # crimes já extintos no RSPE
     ext = ["%s%s%s" % (rs.crimes_curto([c]).replace(" (extinto)", ""), (" · " + c["extincao_motivo"].lower()) if c.get("extincao_motivo") else "",
@@ -901,7 +1036,8 @@ def extincao(r, presc, interr):
     return {
         "ext_hipoteses": "; ".join(hip) if hip else ("Não iniciou o cumprimento - sem previsão" if nao_iniciou(r) else ("" if not interr else rotulo_parada(r) + " - sem previsão")),
         "ext_cor": cor,
-        "ext_termino": (rs.fmt(term) + ("*" if term_calc else "")) if term else ("Não iniciou" if nao_iniciou(r) else (rotulo_parada(r, True) if interr else (termino(r) if termino(r).startswith("Pena cumprida") else ""))),
+        # execução extinta: sem término nem "interrompida" (o último evento é anterior à extinção)
+        "ext_termino": (rs.fmt(term) + ("*" if term_calc else "")) if term else ("" if ja_extinta else ("Não iniciou" if nao_iniciou(r) else (rotulo_parada(r, True) if interr else (termino(r) if termino(r).startswith("Pena cumprida") else "")))),
         "ext_dias": (term - HOJE).days if term else None,
         "ext_sit": ("Pena extinta (registrada)" if ja_extinta else ("Extinção a verificar" if ((cust_ver or rf_ver or lc_ver) and cor != "vermelho") else ("Extinção cabível" if cor == "vermelho" else situacao(term)[0].replace("Vence", "Término").replace("Em ", "Término em ")) if (term or cor == "vermelho") else "")),
         "ext_extintos": "; ".join(ext),
@@ -1067,7 +1203,9 @@ def simplificar(m):
             m["ext_sit"] = "Em cumprimento"
         elif m.get("ext_cor") == "cinza":
             # na Extinção a pena suspensa/interrompida aparece mesmo com o estado da execução (aberto, livramento)
-            m["ext_sit"] = (m.get("parada_rot") if m.get("interrompida") else "") or "Não se aplica"
+            m["ext_sit"] = (m.get("parada_rot") if m.get("interrompida") else "") or (
+                # em custódia, sem término no RSPE (guia sem cálculo): a pena está em cumprimento, não "não se aplica"
+                "Em cumprimento" if (m.get("cumprimento") or "").startswith("EM CUMPRIMENTO") and not m.get("estado_exec") else "Não se aplica")
     if m.get("ext_sit") == "Extinção a verificar" and m.get("ext_hipoteses") not in (None, "", TRACO):
         m["ext_sit_full"] = "Extinção a verificar · " + m["ext_hipoteses"]
     # indulto e comutação
@@ -1410,7 +1548,13 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
                                     (" mais %s de custódia anterior" % rs.dias_para_pena(_cs["antes"])) if _cs["antes"] else "") +
                                 ((" Abatidos %d dias remidos concedidos no RSPE (LEP, art. 128) - conferir." % remidos_sem_calculo(r))
                                  if remidos_sem_calculo(r) else "") +
-                                (" A custódia não indica processo (ficha SIAPEN): conferir se é desta execução." if _cs["duvida"] else ""))
+                                ((" " + _cs["duvida_txt"][0].upper() + _cs["duvida_txt"][1:] + ".") if _cs["duvida"] else ""))
+            _rm0 = rs.pena_para_dias(r.get("pena_remanescente")) if rs.pena_para_dias(r.get("pena_total")) else soma_penas_ativas(r)
+            _pf = termino_por_fato(r, _cs, _rm0 or 0, remidos_sem_calculo(r)) if (_cs.get("desde") and _rm0) else None
+            if _pf:
+                notas["termino"] += (" Condenação por fato posterior ao início da custódia (%s): a prisão anterior ao fato não se detrai dela "
+                                     "(CP, art. 42) - as penas antigas terminam em %s e a nova corre depois." % (
+                                         "; ".join("%s, fato em %s" % (n, rs.fmt(f)) for n, f, _d in _pf["novas"]), rs.fmt(_pf["antigas"])))
         elif reinicio_ficha(r):
             notas["termino"] = ("Término*: calculado pelo programa - reinício lançado pela ficha SIAPEN (%s) + pena remanescente congelada na "
                                 "interrupção (%s), pelo calendário; conferir se a custódia da ficha é desta execução." % (
@@ -1687,16 +1831,47 @@ def _conduta_requisito(add, ficha, fal):
     sem sanção reconhecida) e a conduta "sem lapso" (sem tempo para classificar) ficam a conferir (amarelo), não como requisito não
     atendido - a falta só produz efeito depois de reconhecida em juízo (Súmula 533/STJ). Falta reconhecida ou conduta ruim: não atende."""
     cond = rs._sem_acento(ficha.get("conduta") or "").upper().strip()
-    sem_lapso = "SEM LAPSO" in cond
+    # "SEM LAPSO" e anotações que não classificam a conduta ("SOLICITAR RELATÓRIO CIRCUNSTANCIADO NA UMMVE", campo em branco): a
+    # conferir, não conduta ruim
+    sem_lapso = "SEM LAPSO" in cond or (cond not in ("OTIMA", "BOA") and not re.search(r"\b(?:REGULAR|MA|PESSIMA|RUIM|NEGATIVA)\b", cond))
     if fal == "SIM" or not (cond in ("OTIMA", "BOA") or sem_lapso):
         ok = False
     else:
         ok = None if (fal == "A APURAR" or sem_lapso) else True
     add(ok, "Conduta %s%s%s" % (
         _conduta_txt(ficha.get("conduta")),
-        " (sem tempo para classificar, não conduta ruim): pedir o atestado de conduta" if sem_lapso else "",
+        (" (sem tempo para classificar, não conduta ruim): pedir o atestado de conduta" if "SEM LAPSO" in cond else
+         " (a ficha não classifica a conduta): pedir o atestado de conduta") if sem_lapso else "",
         "" if fal not in ("SIM", "A APURAR") else (" · falta nos últimos 12 meses: sim" if fal == "SIM" else
                                                   " · falta a apurar nos últimos 12 meses, sem sanção reconhecida: conferir o PAD antes de pedir (Súmula 533/STJ)")))
+
+
+def _cumprido_estimado(r, hoje, interr=False):
+    """Pena cumprida até hoje pela custódia, para não afirmar requisito "não atendido" com a pena cumprida do SEEU zerada (guia sem
+    cálculo) ou parada na data do RSPE: (dias, texto) ou (None, ""). Guia sem cálculo: custódia anterior + custódia em curso + remições
+    (custodia_sem_calculo). Com cálculo: a pena cumprida do SEEU mais a custódia em curso desde a geração do RSPE."""
+    cs = custodia_sem_calculo(r)
+    if cs:
+        d = cs["antes"] + (((hoje - cs["desde"]).days + 1) if cs["desde"] and cs["desde"] <= hoje else 0) + remidos_sem_calculo(r)
+        return d, "a custódia%s soma %s" % ((" desde %s" % rs.fmt(cs["desde"])) if cs["desde"] else "", rs.dias_para_pena(d))
+    cump, ger = rs.pena_para_dias(r.get("pena_cumprida")), rs.to_date(r.get("data_geracao_rspe") or "")
+    if cump is None or not ger or interr or parada(r):
+        return None, ""
+    per = rs.periodos_custodia(r.get("_eventos", []))
+    out = (None, "")
+    if rs.em_custodia(per, ger) and rs.em_custodia(per, hoje):
+        d = cump + max(0, (hoje - ger).days)
+        out = (d, "com a custódia em curso desde o RSPE (%s), a pena cumprida chega a %s" % (rs.fmt(ger), rs.dias_para_pena(d)))
+    # pelos eventos do RSPE (custódia depois do primeiro fato, mais as remições): o SEEU pode registrar menos do que os eventos mostram
+    f0 = min((d for d in (rs.to_date(c.get("data_infracao") or "") for c in r.get("_crimes", [])) if d), default=None)
+    if f0:
+        per_f = [(max(a, f0), b) for a, b in per if (b or hoje) >= f0]
+        rem = [(rs.to_date(i.get("data_referencia") or i.get("data_decisao") or ""), n) for i, n in
+               ((i, rs.dias_de(i.get("complemento") or "", r"Dia")) for i in r.get("_incidentes", []) if rs.e_remicao_concedida(i)) if n]
+        ev = rs.dias_cumpridos_ate(per_f, [(d, n) for d, n in rem if d], hoje)
+        if ev > (out[0] or cump):
+            out = (ev, "pelos eventos do RSPE, a custódia desde o primeiro fato e as remições somam %s" % rs.dias_para_pena(ev))
+    return out
 
 
 def saida_temporaria(r, ficha, m, est=None, interr=False, hoje=None):
@@ -1743,12 +1918,25 @@ def saida_temporaria(r, ficha, m, est=None, interr=False, hoje=None):
     reinc = (r.get("reincidente") or "").upper().startswith("S") or any(
         (c.get("reincidente_comum") == "S" or c.get("reincidente_especifico") == "S") for c in crimes)
     fr = Fraction(1, 4) if reinc else Fraction(1, 6)
+    # custódia que o SEEU não conta na pena cumprida (guia sem cálculo, RSPE antigo com a pessoa presa): se só ela alcança a fração,
+    # o requisito fica a conferir - nunca "não atendido" pela pena cumprida zerada ou desatualizada do SEEU
+    est_c, est_txt = _cumprido_estimado(r, hoje, interr)
+    if not tot and est_c is not None:
+        tot = soma_penas_ativas(r) or None
     if cump is None or not tot:
-        add(None, "%s não informada no RSPE" % ("Pena cumprida" if cump is None and tot else "Pena total" if cump is not None else "Pena total e pena cumprida"))
+        if tot and est_c is not None and est_c >= int(tot * fr):
+            add(None, "%s da pena cumprida (%s): o SEEU não informa a pena cumprida; %s - conferir (art. 123, II)" % (
+                "1/4" if reinc else "1/6", "reincidente" if reinc else "primário", est_txt))
+        else:
+            add(None, "%s não informada no RSPE" % ("Pena cumprida" if cump is None and tot else "Pena total" if cump is not None else "Pena total e pena cumprida"))
+    elif cump < int(tot * fr) and est_c is not None and est_c >= int(tot * fr):
+        add(None, "%s da pena cumprida (%s): pelo SEEU %s de %s, mas %s, o que alcança a fração (%s) - conferir (art. 123, II)" % (
+            "1/4" if reinc else "1/6", "reincidente" if reinc else "primário", r.get("pena_cumprida") or "0", rs.dias_para_pena(tot),
+            est_txt, rs.dias_para_pena(int(tot * fr))))
     else:
         # fração em dias arredondada para baixo, como no resto do programa
         add(cump >= int(tot * fr), "%s da pena cumprida (%s): %s de %s (art. 123, II; Súmula 40 do STJ)" % (
-            "1/4" if reinc else "1/6", "reincidente" if reinc else "primário", r.get("pena_cumprida"), r.get("pena_total")))
+            "1/4" if reinc else "1/6", "reincidente" if reinc else "primário", r.get("pena_cumprida"), r.get("pena_total") or rs.dias_para_pena(tot)))
     if not ficha:
         add(None, "Sem ficha disciplinar: conduta, trabalho e saídas anteriores não conferidos")
     else:
