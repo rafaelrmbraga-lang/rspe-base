@@ -702,8 +702,32 @@ def _perda_remidos(incidentes, perdidos, eventos=None):
                       "O saldo registra dias perdidos, mas não há incidente de homologação de falta grave com data: conferir a decisão e o PAD." + extra,
                       "LEP, arts. 118 e 127; Súmula 533/STJ; STF, Tema 941.", tipo="perda-de-remidos-sem-falta-grave-datada-no-rspe")]
     itens = []
+    # perda decidida antes da primeira falta grave datada: não se liga a nenhuma falta homologada no RSPE
+    orfas = [(d, q) for d, q in perdas if d and d < faltas[0]]
+    for d, q in orfas:
+        itens.append(_item("verificar", "Perda de %s remidos sem falta grave datada no RSPE (decisão de %s)" % (rs.num_txt(q), rs.fmt(d)),
+                           "O RSPE registra a perda, mas nenhuma falta grave homologada anterior a ela: conferir a decisão e o PAD (a falta precisa "
+                           "ter sido apurada e homologada, e o limite de 1/3 incide só sobre a remição adquirida até a falta).",
+                           "LEP, arts. 118 e 127; Súmula 533/STJ; STF, Tema 941.", tipo="perda-de-remidos-sem-falta-grave-datada-no-rspe", ref=rs.fmt(d)))
     for x in res:
         f, prev = x["falta"], x["prev"]
+        # parcela da perda ligada a remição decidida depois da falta: a falta só alcança a remição adquirida até ela
+        pos_ = [(q, rem) for q, rem in x["parcelas"] if rem and rem["d"] and rem["d"] > f]
+        if pos_:
+            itens.append(_item("verificar", "Perda de remidos sobre remição posterior à falta de %s" % rs.fmt(f),
+                               "%s: a falta só alcança a remição adquirida até ela (LEP, art. 127) - conferir na decisão sobre qual remição a "
+                               "perda incidiu." % "; ".join("%s parece ser 1/3 da remição de %s de %s, posterior à falta" % (
+                                   rs.pl(q, "dia", "dias"), rs.pl(rem["n"], "dia", "dias"), rem["data"]) for q, rem in pos_),
+                               FUND_127, tipo="perda-sobre-remicao-posterior-a-falta", ref=rs.fmt(f)))
+        # sem falta anterior com perda, mas com perda sem falta datada antes: a remição até a falta já sofreu aquela perda - somadas, as
+        # duas não podem passar de 1/3 dessa remição (possível excesso ou duplicidade, a conferir)
+        ant_ = sum(q for d, q in orfas if d < f) if prev is None else 0
+        if ant_ and x["janela"] and ant_ + x["perda"] > x["janela"] // 3:
+            itens.append(_item("verificar", "Perdas de remidos somadas acima de 1/3 (falta de %s)" % rs.fmt(f),
+                               "Remição até a falta: %s; perda anterior sem falta datada: %s; perda por esta falta: %s - somadas, %s, acima de 1/3 (%s). "
+                               "Possível excesso ou desconto em duplicidade: conferir as decisões." % (
+                                   rs.pl(x["janela"], "dia", "dias"), rs.num_txt(ant_), rs.num_txt(x["perda"]), rs.num_txt(ant_ + x["perda"]),
+                                   rs.pl(x["janela"] // 3, "dia", "dias")), FUND_127, tipo="perdas-somadas-acima-de-1-3", ref=rs.fmt(f)))
         ress = (" Data do fato não consta no complemento da homologação: usada a data de referência (%s); conferir a data da infração, "
                 "que é a que reinicia a contagem (art. 127)." % rs.fmt(f)) if x.get("sem_fato") else ""
         # falta sem o incidente de homologação, inferida da fuga/evasão com regressão e perda de remidos (rs.mapa_faltas): a conta
@@ -732,7 +756,7 @@ def _perda_remidos(incidentes, perdidos, eventos=None):
                                    " Parcelas: %s - o arredondamento para cima de cada parcela ultrapassa o teto legal." % ", ".join(
                                        "%s (sobre %s)" % (rs.num_txt(q), rs.num_txt(rem["n"]) if rem else "?") for q, rem in x["parcelas"]) if (len(x["parcelas"]) > 1 and not dup) else "") + ress,
                                FUND_127, tipo="perda-de-dias-remidos-acima-de-1-3-falta-de", ref=rs.fmt(f)))
-        elif not dup:
+        elif not dup and not (ant_ and x["janela"] and ant_ + x["perda"] > x["janela"] // 3):
             itens.append(_item("info", "Perda de %s remidos pela falta grave de %s" % (rs.pl(x["perda"], "dia", "dias"), rs.fmt(f)),
                                "Dentro do limite de 1/3 (remição %s: %s)." % (("entre a falta de %s e esta" % rs.fmt(prev)) if prev else "até a falta", rs.pl(base, "dia", "dias")) + ress, "LEP, art. 127.", tipo="perda-de-remidos-pela-falta-grave-de", ref=rs.fmt(f)))
     return itens
