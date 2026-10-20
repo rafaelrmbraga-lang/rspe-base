@@ -4122,6 +4122,15 @@ def livramento_em_curso(campos, incidentes, ref=None):
     revog = [to_date(j.get("data_referencia") or j.get("data_decisao") or "") or date.max for j in incidentes if e_revogacao_livramento(j)]
     if any(d > dl and (ref is None or d <= ref) for d in revog):
         return False, dl
+    # revogação sem incidente próprio, mas aplicada pelo SEEU: sem a nota "(Em livramento condicional deferido ...)", ele calcula um
+    # novo livramento com a fração 1/1 "com revogação L.C." que nenhum crime ativo tem (não é o hediondo reincidente) - o livramento
+    # deferido antes foi revogado e a pena segue no regime impresso
+    _lc_imp = [l for l in campos.get("seeu_fracoes_livramento") or [] if "REVOGA" in _sem_acento(l).upper() and re.search(r"\(\s*1\s*/\s*1\s*\)", l)]
+    if (ref is None and _lc_imp and "LIVRAMENTO" not in (campos.get("livramento_obs_seeu") or "").upper()
+            and to_date(campos.get("livramento_previsao_seeu") or "")
+            and not any((parse_fracao(c.get("fracao_livramento") or "") or 0) >= 1 for c in campos.get("_crimes") or []
+                        if not (c.get("extinto") or "").upper().startswith("S"))):
+        return False, dl
     # suspensão do livramento registrada em incidente concedido depois do deferimento: não está em livramento
     susp = [to_date(j.get("data_referencia") or j.get("data_decisao") or "") or date.max for j in incidentes if e_suspensao_livramento(j)]
     if dl != date.min and any(d > dl and (ref is None or d <= ref) for d in susp):

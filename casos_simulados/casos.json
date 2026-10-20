@@ -18138,8 +18138,8 @@
   "acoes": [],
   "id": "S142",
   "grupo": "Divergência no SEEU/SIAPEN",
-  "titulo": "Pena total do RSPE (3 anos) menor que a soma das ações (3a + 2a), sem comutação/indulto/suspensão: alerta e \"!\"",
-  "conta": "Ações de 3a0m0d e 2a0m0d somam 5a0m0d; o RSPE imprime pena total 3a0m0d, sem comutação, indulto, suspensão, extinção ou unificação: divergência do próprio SEEU (alerta na Auditoria e \"!\" ao lado do nome).",
+  "titulo": "Pena total do RSPE (3 anos) menor que a soma das ações (3a + 2a), sem comutação/indulto/suspensão: informação, sem \"!\" (favorável ao assistido)",
+  "conta": "Ações de 3a0m0d e 2a0m0d somam 5a0m0d; o RSPE imprime pena total 3a0m0d, sem comutação, indulto, suspensão, extinção ou unificação: divergência do próprio SEEU, mas a favor do assistido (conferência de 20/10/2026: o SEEU calcula tudo sobre a pena menor; a correção só aumentaria a pena) - informação na Auditoria, sem \"!\" ao lado do nome.",
   "processo": "9900142-00.2026.8.12.0001",
   "rspe": {
    "arquivo": "SIMULADO_142.pdf",
@@ -18257,7 +18257,7 @@
    {
     "t": "aud",
     "tipo": "divergencia-seeu-pena-total",
-    "nivel": "alerta",
+    "nivel": "info",
     "presente": true,
     "contem": [
      "3 anos",
@@ -18267,7 +18267,7 @@
    {
     "t": "campo",
     "campo": "div_seeu",
-    "op": "contem",
+    "op": "nao_contem",
     "v": "Pena total 3a0m0d menor que a soma das ações (5a0m0d)"
    }
   ]

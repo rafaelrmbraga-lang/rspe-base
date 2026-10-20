@@ -221,7 +221,7 @@ def _prog_pela_db_manual(r):
     nela em N dias (período em custódia): previsão nova = previsão do SEEU - (1 - fração) x (data-base do SEEU - nova).
     A remição entra como no SEEU (pena cumprida): a anterior à data-base reduz o remanescente, a posterior abate o lapso; a
     conta é monótona - quanto mais antiga a data-base informada, mais cedo (ou igual) a progressão."""
-    novo, db0, prev = _data((r.get("_db_manual") or "").split("|")[0]), _data(r.get("data_base_seeu") or r.get("data_base") or ""), _data(r.get("progressao_previsao_seeu") or "")
+    novo, db0, prev = _data((r.get("_db_manual") or "").split("|")[0]), _data(r.get("data_base_seeu") or data_base_calculada(r)[0] or ""), _data(r.get("progressao_previsao_seeu") or "")
     if not (novo and db0 and prev) or novo == db0:
         return None
     # em concurso, cada fração incide sobre a pena do seu crime: a fração equivalente é a média ponderada pelas penas (não a maior)
@@ -298,12 +298,44 @@ DB_TIPOS = {  # itens da Auditoria sobre a data-base -> (cor, motivo)
 }
 
 
+def data_base_calculada(r):
+    """Data-base quando o SEEU não a imprime: (data dd/mm/aaaa, origem). A leitura (rspe_scraper.situacao_execucao) toma a última
+    fixação/alteração de regime. Ela cede ao início do período de custódia atual, posterior, em dois casos verificáveis no RSPE
+    (e nos eventos lançados pela ficha): (1) nada foi cumprido antes (regime fixado na sentença, pena cumprida zero) - a contagem
+    começa na prisão; (2) prisão nova depois de liberdade, com crime cometido nesse intervalo ou no dia da prisão - o crime no
+    curso da execução reinicia a contagem (LEP, art. 112, § 6º; Súmula 534/STJ). Sem nenhum dos dois (recaptura depois de fuga sem
+    falta homologada, por exemplo), fica a última alteração de regime."""
+    d0 = _data(r.get("data_base") or "")
+    fonte = "última alteração de regime"
+    if not d0:
+        return "", fonte
+    try:
+        per = rs.periodos_custodia([e for e in r.get("_eventos", []) if rs.to_date(e.get("data") or "")])
+    except Exception:
+        per = []
+    if not per or per[-1][0] <= d0 + timedelta(days=1):
+        return rs.fmt(d0), fonte
+    ini = per[-1][0]
+    ant = [b for a, b in per[:-1] if b]  # fim da custódia anterior (liberdade antes da prisão atual)
+    desde = max([d0] + [b for b in ant if b < ini])
+    nada = not any((b is None or b >= d0) and a < ini for a, b in per[:-1]) and not (rs.pena_para_dias(r.get("pena_cumprida")) or 0)
+    crime_novo = [c for c in r.get("_crimes", []) if desde <= (rs.to_date(c.get("data_infracao") or "") or date.min) <= ini + timedelta(days=1)]
+    if not (nada or crime_novo):
+        return rs.fmt(d0), fonte
+    ev = next((e for e in r.get("_eventos", []) if rs.to_date(e.get("data") or "") == ini and "INTERRUP" not in (e.get("tipo") or "").upper()), {})
+    mot = re.sub(r"\s*\(lan[çc]ad[ao] pela ficha[^)]*\)", "", (ev.get("motivo") or ev.get("tipo") or "prisão")).strip().lower()
+    return rs.fmt(ini), "%s em %s (%s%s)%s" % (
+        "início do cumprimento" if nada else "nova prisão", rs.fmt(ini), mot, ", lançada pela ficha do SIAPEN" if ev.get("_ficha") else "",
+        (" - crime de %s no período" % rs.fmt(rs.to_date(crime_novo[0].get("data_infracao")))) if crime_novo and not nada else "")
+
+
 def data_base_info(r, itens, ficha=None):
     """Data-base da progressão com o motivo: normal (confere), vermelho (motivo incorreto verificável no RSPE), amarelo
     (suspeita, sem explicação no RSPE nem na ficha). Editável: o valor do operador prevalece e refaz a previsão."""
-    orig = r.get("data_base_seeu") or r.get("data_base") or ""
+    _dbc = data_base_calculada(r) if not r.get("data_base_seeu") else ("", "")
+    orig = r.get("data_base_seeu") or _dbc[0] or ""
     d0 = _data(orig)
-    fonte = "SEEU" if r.get("data_base_seeu") else "última alteração de regime"
+    fonte = "SEEU" if r.get("data_base_seeu") else _dbc[1]
     if r.get("_db_manual"):
         v, mot = (r["_db_manual"] + "|").split("|", 1)
         mot = mot.rstrip("|").strip()
@@ -337,6 +369,8 @@ def data_base_info(r, itens, ficha=None):
             cor, mot = "vermelho", "falta grave homologada depois da prescrição disciplinar - não move a data-base"
         elif t == "data-base-confere-com-o-rspe" and not cor:
             mot = it.get("titulo", "").split(": ", 1)[-1]
+            if " a 1 dia do marco" in it.get("titulo", ""):
+                mot = "a 1 dia do marco do RSPE (%s) - conferir a data" % mot
     # falta não homologada na data: não move a data-base
     for i in r.get("_incidentes", []):
         if rs.RE_FALTA_PROPRIA.search(rs._rotulo_incidente(i)) and rs._pendente(i) and i.get("_falta") != "sim":
@@ -369,7 +403,8 @@ def data_base_info(r, itens, ficha=None):
                 mot += "; ficha em %s: %s" % (rs.fmt(x), rf._br(t)[:70])
         else:
             mot += "; nada na ficha nessa data"
-    return {"db": rs.fmt(d0), "db_motivo": (mot or "motivo não identificado") + ("" if fonte == "SEEU" else " (calculada: %s)" % fonte),
+    return {"db": rs.fmt(d0), "db_motivo": ("calculada pelo programa: %s" % fonte if (fonte != "SEEU" and not mot) else
+                                            (mot or "motivo não identificado") + ("" if fonte == "SEEU" else " (calculada: %s)" % fonte)),
             "db_cor": cor, "db_editada": False, "db_orig": orig}
 
 
@@ -682,17 +717,33 @@ def fracoes_texto(r, campo):
     for c in r.get("_crimes", []):
         if (c.get("extinto") or "").upper().startswith("S"):
             continue
+        if rs.pena_para_dias(c.get("pena_imposta")) == 0:
+            continue  # sem pena privativa (porte para uso, só multa): a fração não incide sobre nada
         f = rs.parse_fracao(c.get(campo))
         if f and f not in fs:
             fs.append(f)
     if not fs:
         return ""
+    # o quadro de cálculo do SEEU lista as frações que ele de fato aplicou ("Comum Reincidente (1/2): 10a9m6d"); com a data-base
+    # movida, pode aplicar só parte delas - vale o que ele imprime
+    _imp = []
+    for l in r.get("seeu_fracoes_" + ("progressao" if campo == "fracao_progressao" else "livramento")) or []:
+        m = re.search(r"\(([^()]*)\)\s*:", l)
+        f = rs.parse_fracao(m.group(1)) if m else None
+        if f and f not in _imp:
+            _imp.append(f)
+    if _imp and set(_imp) < set(fs):
+        fs = _imp
     fmt = (lambda f: rs.pct(f)) if campo == "fracao_progressao" else (lambda f: "vedado" if f >= 1 else "%d/%d" % (f.numerator, f.denominator))
     fs.sort()
+    # ação penal sem crime cadastrado (com pena, não medida de segurança): a fração dela depende da sentença - a lista fica incompleta
+    _sc = [a for a in r.get("_acoes_sem_crime") or [] if rs.pena_para_dias((a.get("pena_total_processo") or "").split(" - ")[0])
+           and "MEDIDA" not in (a.get("pena_total_processo") or "").upper()]
+    _mais = (" + %s sem crime cadastrado no RSPE (fração a conferir na sentença)" % rs.pl(len(_sc), "ação", "ações")) if _sc else ""
     if len(fs) == 1:
-        return fmt(fs[0])
+        return fmt(fs[0]) + _mais
     t = [fmt(f) for f in fs]
-    return "%s e %s (cada %s sobre a pena do seu crime)" % (", ".join(t[:-1]), t[-1], "percentual" if campo == "fracao_progressao" else "fração")
+    return "%s e %s (cada %s sobre a pena do seu crime)%s" % (", ".join(t[:-1]), t[-1], "percentual" if campo == "fracao_progressao" else "fração", _mais)
 
 
 def termino_calc(r):
@@ -1286,7 +1337,9 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
             it["nivel_txt"] = {"alerta": "Alerta", "verificar": "Verificar", "ok": "OK", "info": "Info"}[it["nivel"]]
         it["fundamentacao"] = ra.fundamentacao(it, r)  # texto para a impugnação do cálculo (Auditoria > Copiar fundamentação)
     # "!" ao lado do nome: as divergências da fonte ainda não baixadas (baixar todas tira o "!" de todas as listas)
-    div_seeu = [i["curto"] for i in aud["aud_itens"] if str(i.get("tipo") or "").startswith("divergencia-") and not i["baixado"]]
+    # (a divergência só informativa - a favor do assistido ou sem efeito - não põe o "!")
+    div_seeu = [i["curto"] for i in aud["aud_itens"] if str(i.get("tipo") or "").startswith("divergencia-") and not i["baixado"]
+                and i.get("nivel") != "info"]
     # recontagem sem os baixados
     n_al = sum(1 for i in aud["aud_itens"] if i["nivel"] == "alerta" and not i["baixado"])
     n_ve = sum(1 for i in aud["aud_itens"] if i["nivel"] == "verificar" and not i["baixado"])
@@ -1344,7 +1397,7 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
         "aud_base": aud["aud_base"],
         "div_seeu": div_seeu, "div_seeu_txt": "; ".join(div_seeu),
         "frac_prog": fracoes_texto(r, "fracao_progressao") or rs.pct(r.get("fracao_progressao_aplicada", "")),
-        "dbase": r.get("data_base_seeu") or r.get("data_base", ""),
+        "dbase": r.get("data_base_seeu") or data_base_calculada(r)[0],
         "ped_prog": pedidos(r, "PROGRESS"),
         "liv": ltxt, "liv_sit": lsit, "liv_cor": lcor,
         "frac_liv": fracoes_texto(r, "fracao_livramento") or r.get("fracao_livramento_aplicada", ""),
@@ -1722,6 +1775,20 @@ def _conduta_requisito(add, ficha, fal):
                                                   " · falta a apurar nos últimos 12 meses, sem sanção reconhecida: conferir o PAD antes de pedir (Súmula 533/STJ)")))
 
 
+def _fora_de_curso(r, est, interr):
+    """Por que o cumprimento não conta como "em curso" para saída temporária e progressão antecipada (texto curto), ou "" se está.
+    O livramento a confirmar com a pessoa presa não é cumprimento parado: o que falta é só confirmar o livramento antigo."""
+    if not (r.get("status_execucao") or "").strip().upper() in ("", "ATIVO"):
+        return "execução %s" % (r.get("status_execucao") or "").strip().lower()
+    if est:
+        return {"extinta": "pena extinta", "cumprida": "pena cumprida", "lc": "em livramento condicional",
+                "lc_duvida": "livramento antigo a confirmar - ver Auditoria", "nao_iniciou": "cumprimento não iniciado",
+                "aberto": ""}.get(est[0], "cumprimento não está em curso")
+    if interr:
+        return "cumprimento interrompido"
+    return ""
+
+
 def saida_temporaria(r, ficha, m, est=None, interr=False, hoje=None):
     """Requisitos da saída temporária para visita à família e atividades de retorno ao convívio social (LEP, art. 122, I e III,
     na redação anterior à Lei 14.843/2024): st_ok só quando todos estão preenchidos; st_quase quando nenhum falha mas algum
@@ -1732,10 +1799,12 @@ def saida_temporaria(r, ficha, m, est=None, interr=False, hoje=None):
     add = lambda ok, txt: it.append({"ok": ok, "txt": txt})
     reg = (r.get("regime_atual") or "").replace(" - ATIVO", "")
     ativo = (r.get("status_execucao") or "").strip().upper() in ("", "ATIVO") and not est and not interr
+    _fc = _fora_de_curso(r, est, interr)
     _semi = "SEMIABERTO" in reg.upper().replace("-", "").replace(" ", "")  # "Semiaberto" e "Semi-Aberto"
-    add(_semi and ativo,
+    _lcd = bool(est and est[0] == "lc_duvida" and not interr)  # preso, com livramento antigo a confirmar: a conferir, não "parado"
+    add(None if (_semi and _lcd) else (_semi and ativo),
         "Regime semiaberto, cumprimento em curso" if _semi and ativo else
-        "Regime: %s%s" % (reg or "não informado", "" if ativo else " (cumprimento não está em curso)"))
+        "Regime: %s%s" % (reg or "não informado", (" (%s)" % _fc) if _fc else ""))
     crimes = [c for c in r.get("_crimes", []) if (c.get("extinto") or "").startswith("N") and (c.get("tipo_processo") or "").upper() != "OUTRAS ACOES"]
     datas = [(rs.to_date(c.get("data_infracao") or ""), c) for c in crimes]
     antes = [d for d, c in datas if d and d < LEI_14843]
@@ -1833,14 +1902,24 @@ def progressao_antecipada(r, ficha, m, est=None, interr=False, hoje=None):
     add = lambda ok, txt: it.append({"ok": ok, "txt": txt})
     reg = (r.get("regime_atual") or "").replace(" - ATIVO", "")
     ativo = (r.get("status_execucao") or "").strip().upper() in ("", "ATIVO") and not est and not interr
+    _fc = _fora_de_curso(r, est, interr)
+    _lcd = bool(est and est[0] == "lc_duvida" and not interr)  # preso, com livramento antigo a confirmar: a conferir, não "parado"
     rg = reg.upper().replace("-", "").replace(" ", "")
-    add((rg.startswith("FECHADO") or rg.startswith("SEMI")) and ativo,
-        "Regime %s, cumprimento em curso" % reg.lower() if (rg.startswith("FECHADO") or rg.startswith("SEMI")) and ativo else
-        "Regime: %s%s" % (reg or "não informado", "" if ativo else " (cumprimento não está em curso)"))
+    _fs = rg.startswith("FECHADO") or rg.startswith("SEMI")
+    add(None if (_fs and _lcd) else (_fs and ativo),
+        "Regime %s, cumprimento em curso" % reg.lower() if _fs and ativo else
+        "Regime: %s%s" % (reg or "não informado", (" (%s)" % _fc) if _fc else ""))
     n = m.get("prog_dias")
+    _prog = m.get("prog") or ""
+    _nota = ""
+    if n is None and _data(r.get("progressao_previsao_seeu") or ""):
+        # a aba Progressão não mostra a data (livramento a confirmar, por exemplo), mas o RSPE a imprime: usa a do SEEU, com a ressalva
+        _dp_ = _data(r["progressao_previsao_seeu"])
+        n, _prog = (_dp_ - hoje).days, rs.fmt(_dp_)
+        _nota = " (data do RSPE%s)" % ("; livramento antigo a confirmar" if _lcd else "")
     add(n is not None and 0 < n <= 90,
-        "Progressão prevista para %s: %s %s" % (m.get("prog") or "?", "falta" if n == 1 else "faltam", rs.pl(n, "dia", "dias")) if n is not None and n > 0 else
-        ("Progressão: lapso já atingido (%s)" % (m.get("prog") or "") if n is not None else "Progressão sem data no RSPE"))
+        "Progressão prevista para %s%s: %s %s" % (_prog or "?", _nota, "falta" if n == 1 else "faltam", rs.pl(n, "dia", "dias")) if n is not None and n > 0 else
+        ("Progressão: lapso já atingido (%s)%s" % (_prog, _nota) if n is not None else "Progressão sem data no RSPE"))
     crimes = [c for c in r.get("_crimes", []) if (c.get("extinto") or "").startswith("N") and (c.get("tipo_processo") or "").upper() != "OUTRAS ACOES"]
     vga = [c for c in crimes if rs.vga_resumo(c) == "S"]  # marcação do RSPE ou violência elementar do tipo (homicídio, roubo...)
     pres = [c for c in crimes if rs.vga_resumo(c) == "presumida"]  # estupro de vulnerável: violência presumida, à parte
