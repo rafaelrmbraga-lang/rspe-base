@@ -1701,13 +1701,13 @@
     "unidade": "PDIB (Dois Irmãos do Buriti)"
    },
    {
-    "padrao": "\\bPAIVA\\b",
+    "padrao": "\\bPAIVA\\b|\\bPAICA\\b|\\bPIVA\\b|\\bLINGERIE\\b|\\bLANGU?ERIE\\b|^FABRICA$",
     "chave": "PAIVA",
     "nome": "Paiva Lingerie",
     "unidade": "PDIB (Dois Irmãos do Buriti)"
    },
    {
-    "padrao": "\\bPRENDE ?BEM\\b|\\bPRENDEBEM|\\bPRENDEDORES\\b",
+    "padrao": "\\bPRENDE ?BEM\\b|\\bPRENDEBEM|\\bPRENDEDOR(?:ES)?\\b",
     "chave": "PRENDEBEM",
     "nome": "Prendebem (prendedores)",
     "unidade": "PDIB (Dois Irmãos do Buriti)"
