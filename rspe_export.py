@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """Exportação das abas para Excel e PDF, com o mesmo visual do programa."""
 
-import re
 from datetime import datetime
 
 import rspe_scraper as rs
@@ -143,8 +142,6 @@ def cor_linha(spec, m):
         if P.get("ref") and P.get("ref") != _ped_ref(m, spec["id"]):
             return base if base in ("vencido", "vermelho") else "amarelo"
         return "azul"
-    if spec["id"] == "fd" and m.get("fd_conf_tot") and (m.get("fd_conf_n") or 0) >= m["fd_conf_tot"] and m.get("fd_cor") in ("vermelho", "amarelo"):
-        return "verde"  # todos os itens da ficha conferidos ("Conferido")
     return base
 
 
@@ -402,51 +399,6 @@ def exportar_providencias(linhas, saida, titulo):
 
 
 
-def _linhas_remicao(m):
-    """Linhas da tabela de remição da aba Ficha prontas para a petição: (atestado, emissão, setores e períodos, dias trabalhados,
-    dias remidos, remição no RSPE, decisão, situação, observação), o total a requerer, quantos atestados cumulativos ficam de fora
-    e o trabalho sem atestado."""
-    tab = ((m.get("fd_conc") or {}).get("tabela")) or []
-    sem = (((m.get("fd_rem_det") or {}).get("sem_atestado")) or {}).get("itens") or []
-    SIT = {"CONCILIADO": "Já remido no RSPE", "NAO_LANCADO": "Não lançado no RSPE: requerer", "DIVERGENCIA": "Remição menor que o atestado"}
-    linhas, a_requerer, conferir = [], 0.0, 0
-    for t in tab:
-        cumul = bool(t.get("cumulativo"))
-        sit = "Sem dias a requerer: período já remido" if t.get("rot", "").startswith("Sem dias") else SIT.get(t.get("status"), t.get("rot", ""))
-        if t.get("status") == "NAO_LANCADO" and t.get("ja_remido"):
-            sit, conferir = "Provavelmente já remido (atestado cumulativo): conferir nos autos", conferir + 1
-        elif t.get("status") == "NAO_LANCADO" and cumul:
-            sit, conferir = "Conferir nos autos antes de requerer", conferir + 1
-        elif t.get("status") == "NAO_LANCADO" and (t.get("sem_periodo") or t.get("rot", "").startswith("Peticionado em outros autos")):
-            # sem período ou peticionado em outros autos: fora do total a requerer (rspe_remicao.conciliar)
-            sit, conferir = ("Sem período no atestado: conferir antes de requerer" if t.get("sem_periodo") else
-                             "Peticionado em outros autos: não pedir em duplicidade"), conferir + 1
-        elif t.get("status") == "NAO_LANCADO" and t.get("rot") == "Verificar remição":
-            # remição posterior sem origem que pode ser deste atestado: fora do total até a conferência nas decisões
-            sit, conferir = "Verificar remição: o RSPE tem remição posterior sem origem que pode ser deste atestado", conferir + 1
-        elif t.get("status") == "NAO_LANCADO" and t.get("rot", "").startswith("Sem dias"):
-            pass  # período já remido: nada a requerer, fora do total
-        elif t.get("status") == "NAO_LANCADO":
-            if t.get("sobreposicao"):
-                sit = "Não lançado no RSPE: requerer, conferindo antes a remição sem origem do mesmo período"
-            try:
-                a_requerer += float(str(t.get("rem")).replace(",", "."))
-            except ValueError:
-                pass
-        obs = (t.get("nota") or "").strip()
-        if obs.startswith("períodos inferidos"):
-            obs = "Períodos deduzidos dos vínculos da ficha (o atestado não os informa);" + obs.split(";", 1)[1] if ";" in obs else \
-                  "Períodos deduzidos dos vínculos da ficha (o atestado não os informa)."
-        linhas.append([t.get("atestado", ""), t.get("emissao") or "—", ["%s: %s" % (s.get("setor"), s.get("per")) for s in t.get("segs") or []],
-                       t.get("trab") if t.get("trab") is not None else "—", t.get("rem") or "—", t.get("rspe") or "—", t.get("decisao") or "—",
-                       sit, obs[:1].upper() + obs[1:]])
-    sem_l = []
-    for x in sem:
-        mt = re.search(r"≈\s*(\d+)\s*dias", x.get("base") or "")
-        sem_l.append([x.get("setor", ""), x.get("unidade", ""), x.get("per", ""), mt.group(1) if mt else "—", str(x.get("dias", "—"))])
-    return linhas, ("%.2f" % a_requerer).rstrip("0").rstrip(".").replace(".", ","), conferir, sem_l
-
-
 def _docx(saida, corpo, paisagem=False):
     """Grava um .docx mínimo (WordprocessingML) só com a biblioteca padrão: o build não leva o python-docx."""
     import zipfile
@@ -514,39 +466,49 @@ def _wtab(cab, linhas, larg, negrito_ult=False):
 
 
 def exportar_remicao_tabela(m, saida):
-    """Tabela da remição de um assistido em Word, para colar na petição: (1) atestados da ficha x remições do RSPE, com o total a
-    requerer, e (2) trabalho registrado na ficha sem atestado nem remição (pedir o atestado à unidade). Observações longas vão em
-    notas numeradas abaixo da tabela, para não alargar as colunas."""
-    linhas, total, conferir, sem = _linhas_remicao(m)
+    """Tabela da remição de um assistido em Word, para colar na petição (modelo da aba Ficha): (1) comparação dos totais RSPE x ficha,
+    (2) documentos de remição da ficha com o peticionamento e a situação, (3) trabalho registrado na ficha x atestados e (4) pontos a
+    conferir. O programa compara os totais e não liga remição a atestado: nenhum valor a requerer sai da diferença."""
+    N = m.get("fd_novo") or {}
+    R = N.get("R") or {}
+    nf = lambda v: "—" if v in (None, "") else ("%d" % round(v)) if abs(float(v) - round(float(v))) < 1e-9 else ("%.2f" % float(v)).replace(".", ",")
+    fd = lambda d: d.strftime("%d/%m/%Y") if hasattr(d, "strftime") else (d or "—")
     c = [_wp("Remição: ficha disciplinar (SIAPEN) x RSPE", negrito=True, tam=24, depois=60),
          _wp("%s · autos %s · gerado em %s" % (m.get("nome", ""), m.get("proc") or m.get("id", ""), datetime.now().strftime("%d/%m/%Y")),
              tam=18, cor="555555", depois=200),
-         _wp("1. Atestados de trabalho e remições", negrito=True, depois=80)]
-    notas, rows = [], []
-    for L in linhas:
-        at = L[0]
-        if L[8]:
-            if L[8] not in notas:
-                notas.append(L[8])
-            at = "%s (%d)" % (at, notas.index(L[8]) + 1)
-        rspe = L[5] if L[5] == "—" else "%s (decisão de %s)" % (L[5], L[6]) if L[6] != "—" else L[5]
-        rows.append([[at, "emitido em %s" % L[1]] if L[1] != "—" else at, L[2] or "—", L[3], L[4], rspe, L[7]])
-    rows.append(["Total a requerer", "atestados emitidos e não lançados no RSPE", "", total, "", ""])
-    c.append(_wtab(["Atestado", "Setor e período de trabalho", "Dias trab.", "Dias rem.", "Remição no RSPE", "Situação"],
-                   rows, [1800, 2900, 900, 900, 1350, 1750], negrito_ult=True))
-    if conferir:
-        c.append(_wp("%d atestado(s) a conferir (cumulativo, sem período, outros autos ou remição sem origem que pode ser dele): fora do total, conferir nos autos antes de requerer." % conferir,
-                     tam=18, antes=80))
-    if notas:
-        c.append(_wp("Observações", negrito=True, tam=18, antes=160, depois=40))
-        c += [_wp("(%d) %s%s" % (k, x, "" if x.endswith(".") else "."), tam=18, depois=40) for k, x in enumerate(notas, 1)]
-    if sem:
-        c.append(_wp("2. Trabalho registrado na ficha sem atestado nem remição (pedir o atestado à unidade)", negrito=True, antes=240, depois=80))
-        c.append(_wtab(["Setor", "Unidade", "Período", "Dias estimados (seg. a sáb.)", "Remição estimada"],
-                       sem, [2400, 2200, 2200, 1500, 1300]))
-        c.append(_wp("Estimativa; o atestado da unidade prevalece.", tam=18, antes=60))
-    c.append(_wp("Remição: 1 dia de pena a cada 3 dias de trabalho (LEP, art. 126, § 1º, II); o tempo remido conta como pena cumprida "
-                 "(LEP, art. 128).", tam=18, antes=200))
+         _wp("1. Comparação dos totais", negrito=True, depois=80)]
+    rows = [["Remição concedida no RSPE (%d decisões)" % len(R.get("remicoes") or []), nf(R.get("concedido"))]]
+    if R.get("perdido"):
+        rows.append(["Dias perdidos por falta (LEP, art. 127) - saldo no RSPE: %s" % nf(R.get("saldo")), "- " + nf(R.get("perdido"))])
+    rows += [["Atestados de trabalho desta execução (%d)" % (N.get("n_desta") or 0), nf(N.get("at_desta"))],
+             ["Estudo e leitura comprovados na ficha", nf((N.get("est_comp") or 0) + (N.get("leitura") or 0))]]
+    if N.get("n_man"):
+        rows.append(["Informados pela equipe (juntados nos autos)", nf(N.get("man"))])
+    rows += [["Total comprovado pela ficha", nf(N.get("comp"))], ["Diferença (ficha - RSPE)", ("+" if (N.get("dif") or 0) > 0 else "") + nf(N.get("dif"))]]
+    c.append(_wtab(["", "Dias de remição"], rows, [7200, 2400], negrito_ult=True))
+    c.append(_wp(N.get("concl") or "", tam=18, antes=80))
+    docs = N.get("docs") or []
+    if docs:
+        c.append(_wp("2. Atestados e documentos de remição da ficha", negrito=True, antes=240, depois=80))
+        c.append(_wtab(["Documento", "Emissão", "Período", "Trab.", "Remição", "Peticionamento", "Situação"],
+                       [["%s%s" % (d["tipo"], (" nº " + d["num"]) if d["tipo"].startswith("Atestado") else (" · " + d["num"]) if d.get("num") else ""),
+                         fd(d.get("emissao")), d.get("periodo") or "—", str(d.get("trab") or "—"), nf(d.get("dias")), d.get("pet") or "—", d.get("sit") or ""]
+                        for d in docs], [2000, 1050, 1700, 650, 800, 2050, 1850]))
+    T = N.get("trab") or {}
+    if T.get("linhas"):
+        ST = {"auto": "Vinculado automaticamente", "possivel": "Possível - confirmar", "provavel": "Sugerido - confirmar", "sem": "Sem atestado",
+              "manual": "Vinculado na conferência"}
+        c.append(_wp("3. Trabalho registrado na ficha x atestados", negrito=True, antes=240, depois=80))
+        c.append(_wtab(["Empresa / setor", "Período", "Dias corridos", "Atestado", "Vínculo"],
+                       [[L["local"], L["periodo"], str(L["dias"]), ("nº " + L["at"]) if L.get("at") else "—", ST.get(L["st"], L["st"])] for L in T["linhas"]],
+                       [2600, 2900, 1100, 1300, 2200]))
+    pts = [p_ for p_ in N.get("pontos") or []]
+    if pts:
+        c.append(_wp("4. Pontos a conferir", negrito=True, antes=240, depois=80))
+        c += [_wp("%s: %s" % (p_["rot"], p_["texto"]), tam=18, depois=40) for p_ in pts]
+    c.append(_wp("O RSPE não diz de onde vem cada remição: o programa compara os totais e não liga remição a atestado - a diferença indica "
+                 "onde conferir, não o quanto requerer. Remição: 1 dia de pena a cada 3 dias de trabalho ou 12 horas de estudo (LEP, art. 126, "
+                 "§ 1º); o tempo remido conta como pena cumprida (LEP, art. 128).", tam=18, antes=200))
     _docx(saida, "".join(c))
 
 

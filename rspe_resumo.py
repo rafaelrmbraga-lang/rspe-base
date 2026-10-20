@@ -262,94 +262,59 @@ def _per_simples(per):
     return ("desde " + mm.group(1)) if mm else per
 
 
-def _num_dias(txt):
-    mm = re.search(r"(\d+(?:[.,]\d+)?)\s*dias?", str(txt or ""))
-    return float(mm.group(1).replace(",", ".")) if mm else 0.0
-
-
 def verso(m):
-    """Itens do verso, a partir da conferência da remição da ficha (aba Ficha): trabalho (atestados conciliados ou não, trabalho
-    sem atestado, em curso) e estudo (escola, ENCCEJA/ENEM, leitura). Cada item: grupo, tipo (ok = já descontado, pend = ainda não
-    descontado, curso = trabalhando agora, conf = a Defensoria vai conferir), onde, unidade, período, quantidade, situação,
-    detalhe, dias já descontados e dias que ainda podem ser descontados (estimativa)."""
+    """Itens do verso, pelo modelo da aba Ficha (fd_novo: trabalho da ficha x atestados e documentos de remição). Cada item: grupo,
+    tipo (ok = já descontado - só o documento marcado "✓ Homologado" na conferência; pend = ainda não descontado - documento posterior
+    à última decisão de remição, ou trabalho depois do último atestado, sem atestado; curso = trabalhando agora; conf = a Defensoria vai
+    conferir), onde, unidade, período, quantidade, situação, detalhe, dias já descontados e dias que ainda podem ser descontados. O RSPE
+    não diz de qual atestado veio cada remição: o resto fica "a Defensoria vai conferir"."""
     out = {"itens": [], "ficha": ""}
     if not m or not m.get("ficha_tem"):
         return out
     out["ficha"] = str((m.get("ficha") or {}).get("data_impressao") or "").split(" ")[0].replace(".", "/")
-    C, RD = m.get("fd_conc") or {}, m.get("fd_rem_det") or {}
+    N = m.get("fd_novo") or {}
     trab, est = [], []
 
     def item(lst, grupo, tipo, onde, un, per, qtd, sit, det, ok=0.0, pend=0.0):
         lst.append({"grupo": grupo, "tipo": tipo, "onde": onde or "", "un": "" if (un or "—") in _SEM_UN else un, "per": _per_simples(per),
                     "qtd": qtd or "", "sit": sit, "det": det, "dias_ok": ok, "dias_pend": pend})
 
-    for t in C.get("tabela") or []:
-        segs = t.get("segs") or []
-        onde = "; ".join(dict.fromkeys(s.get("setor") or "" for s in segs if s.get("setor"))) or "Trabalho"
-        pers = [s.get("per") or "" for s in segs if s.get("per")]
-        per = pers[0] if len(pers) == 1 else ("%s a %s" % (pers[0].split(" a ")[0], pers[-1].split(" a ")[-1]) if pers else "")
-        qtd = ("%d dias" % t["trab"]) if isinstance(t.get("trab"), int) and t["trab"] else ""
-        if t.get("status") == "CONCILIADO" or t.get("cor") == "cinza":
-            dias = _num_dias(t.get("rspe"))
-            item(trab, "trabalho", "ok", onde, t.get("unidade"), per, qtd, ("Já descontado: %s" % t["rspe"]) if dias else "Já descontado",
-                 ("o juiz decidiu em %s" % t["decisao"]) if (t.get("decisao") or "—") != "—" else "período já descontado", ok=dias)
-        elif t.get("status") == "NAO_LANCADO":
-            dias = _num_dias((t.get("rem") or "") + " dias")
-            item(trab, "trabalho", "pend", onde, t.get("unidade"), per, qtd, "Ainda não descontado",
-                 "o atestado foi feito; falta o juiz decidir%s" % ((" · %s dias" % t["rem"]) if dias else ""), pend=dias)
-        elif t.get("status") == "DIVERGENCIA":
-            item(trab, "trabalho", "conf", onde, t.get("unidade"), per, qtd, "A Defensoria vai conferir",
-                 "os dias descontados não batem com o atestado")
-    for chave, tipo in (("sem_atestado", "pend"), ("em_curso", "curso"), ("a_conferir", "conf")):
-        for it in (RD.get(chave) or {}).get("itens") or []:
-            q = re.search(r"≈ (\d+) dias trabalhados", it.get("base") or "")
-            qtd = ("cerca de %s dias" % q.group(1)) if q else ""
-            if tipo == "pend" and re.search(r" a hoje|\(em curso", it.get("per") or ""):  # trabalho em curso, atestado ainda não emitido
-                item(trab, "trabalho", "curso", it.get("setor"), it.get("unidade"), it.get("per"), qtd, "Trabalhando agora",
-                     "o atestado sai ao fim do período")
-            elif tipo == "pend":
-                item(trab, "trabalho", "pend", it.get("setor"), it.get("unidade"), it.get("per"), qtd, "Ainda não descontado",
-                     "falta o atestado da unidade · cerca de %d dias" % it.get("dias", 0), pend=it.get("dias") or 0)
-            elif tipo == "curso":
-                item(trab, "trabalho", "curso", it.get("setor"), it.get("unidade"), it.get("per"), qtd, "Trabalhando agora",
-                     "o atestado sai ao fim do período")
-            else:
-                item(trab, "trabalho", "conf", it.get("setor"), it.get("unidade"), it.get("per"), qtd, "A Defensoria vai conferir",
-                     "com a unidade, se houve trabalho no período")
-    for b in m.get("fd_blocos") or []:
-        if b.get("tipo") != "estudo":
+    fmt = lambda d: d.strftime("%d/%m/%Y") if hasattr(d, "strftime") else str(d or "")
+    docs = {d["chave"]: d for d in N.get("docs") or []}
+    for L in (N.get("trab") or {}).get("linhas") or []:
+        qtd = "%d dias" % L["dias"]
+        d = docs.get(L.get("at_chave")) if L["st"] in ("auto", "manual") else None
+        if L["st"] == "sem" and L.get("em_curso"):
+            item(trab, "trabalho", "curso", L["local"], L.get("un"), L["periodo"], qtd, "Trabalhando agora", "o atestado sai ao fim do período")
+        elif L["st"] == "sem" and L.get("pedir_dias"):
+            item(trab, "trabalho", "pend", L["local"], L.get("un"), L["periodo"], qtd, "Ainda não descontado",
+                 "falta o atestado da unidade · cerca de %d dias" % int(L["pedir_dias"]), pend=L["pedir_dias"])
+        elif d and d.get("hom"):
+            item(trab, "trabalho", "ok", L["local"], L.get("un"), L["periodo"], qtd, "Já descontado",
+                 "atestado nº %s, decisão conferida pela Defensoria" % d["num"])
+        elif d and d.get("cor") in ("vermelho", "amarelo") and (d.get("sit") or "").startswith(("Posterior", "Sem remição", "Sem peticionamento e posterior")):
+            item(trab, "trabalho", "pend", L["local"], L.get("un"), L["periodo"], qtd, "Ainda não descontado",
+                 "o atestado nº %s foi feito depois da última decisão do juiz" % d["num"])
+        else:
+            item(trab, "trabalho", "conf", L["local"], L.get("un"), L["periodo"], qtd, "A Defensoria vai conferir",
+                 ("se o atestado nº %s já foi descontado" % L["at"]) if L.get("at") else "com a unidade, se há atestado do período")
+    for d in N.get("docs") or []:
+        if d.get("fora") or d["tipo"] in ("Atestado de trabalho", "Trabalho (informado por você)"):
             continue
-        for it in b.get("itens") or []:
-            emp, per, sit = it.get("emp") or "", it.get("per") or "", it.get("sit") or ""
-            if emp.startswith("Leitura"):
-                mm = re.search(r"peticionados em (\d{2}/\d{2}/\d{4})", per)
-                n = re.search(r"· (\d+) m[eê]s", per)
-                n = int(n.group(1)) if n else 0
-                qtd = rs_pl(n, "livro", "livros") if n else ""
-                pr = ("relatório entregue em " + mm.group(1)) if mm else per
-                rem = re.match(r"Remida no RSPE: (\d+) dias? em (\d{2}/\d{2}/\d{4})", sit)
-                if rem:
-                    item(est, "estudo", "ok", "Leitura de livro", it.get("un"), pr, qtd, "Já descontado: %s dias" % rem.group(1),
-                         "o juiz decidiu em %s" % rem.group(2), ok=float(rem.group(1)))
-                else:
-                    item(est, "estudo", "pend", "Leitura de livro", it.get("un"), pr, qtd, "Ainda não descontado",
-                         "falta o juiz decidir%s" % ((" · até %d dias" % (4 * n)) if n else ""), pend=4 * n)
-            elif re.search(r"ENCCEJA|ENEM", emp, re.I):
-                mm = re.search(r"(\d{2}/\d{2}/\d{4})", per)
-                item(est, "estudo", "conf", "Prova do " + emp, it.get("un"), ("certificado em " + mm.group(1)) if mm else per, "",
-                     "A Defensoria vai conferir", "se o desconto já foi feito")
-            else:
-                pr, _, resto = per.partition(" · ")
-                h = re.search(r"≈ (\d+) ?h", resto)
-                qtd = ("cerca de %s horas" % h.group(1)) if h else ""
-                if sit.startswith("Requerer"):
-                    dias = int(h.group(1)) // 12 if h else 0
-                    item(est, "estudo", "pend", emp or "Escola", it.get("un"), pr, qtd, "Ainda não descontado",
-                         "falta a certidão de horas da escola%s" % ((" · cerca de %d dias" % dias) if dias else ""), pend=dias)
-                elif sit.startswith("Conferir"):
-                    item(est, "estudo", "conf", emp or "Escola", it.get("un"), pr, qtd, "A Defensoria vai conferir", "se o desconto já foi feito")
-                else:
-                    item(est, "estudo", "ok", emp or "Escola", it.get("un"), pr, qtd, "Já descontado", "")
+        if d["tipo"] == "Leitura":
+            onde, qtd = "Leitura de livro", d.get("num") or ""
+        elif d["tipo"] == "Exame":
+            onde, qtd = "Prova do " + (d.get("num") or "exame"), ""
+        else:
+            onde, qtd = d["tipo"], d.get("num") or ""
+        per = "entregue em %s" % fmt(d.get("emissao"))
+        if d.get("hom"):
+            item(est, "estudo", "ok", onde, d.get("un"), per, qtd, "Já descontado", "decisão conferida pela Defensoria", ok=d.get("dias") or 0)
+        elif (d.get("sit") or "").startswith(("Posterior", "Sem remição")):
+            item(est, "estudo", "pend", onde, d.get("un"), per, qtd, "Ainda não descontado", "entregue depois da última decisão do juiz%s" % (
+                (" · até %s dias" % int(d["dias"])) if d.get("dias") else ""), pend=d.get("dias") or 0)
+        else:
+            item(est, "estudo", "conf", onde, d.get("un"), per, qtd, "A Defensoria vai conferir", "se o desconto já foi feito")
     trab.sort(key=lambda x: _dt_ini(x["per"]))
     est.sort(key=lambda x: _dt_ini(x["per"]))
     out["itens"] = trab + est

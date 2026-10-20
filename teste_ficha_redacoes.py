@@ -60,9 +60,9 @@ t = ("Nesta data foi emitido ATESTADO DE TRABALHO PRISIONAL Nº 040/2020/ST/EPRS
      "24/12/2019, e correspondente ao período de 14/04/2020 a 30/06/2020. Totalizando 90 (noventa) dias trabalhados e 30 (trinta) dias REMIDOS.")
 r = at1("08.07.2020", t)
 ok(r is not None and r[:2] == (90, 30.0) and len(r[2]) == 2 and r[2][1]["ini"] == date(2020, 4, 14), "atestado com dois períodos vira dois trechos")
-C = rrm.conciliar({"_incidentes": []}, {"eventos": [{"data": "08.07.2020", "texto": t}]}, date(2026, 10, 7))
-ok(not any(a["tipo"] == "erro de ano" for a in C["alertas"]) and C["atestados"][0]["segs"][0]["ini"] == date(2019, 11, 1),
-   "vários períodos: sem falso 'erro de ano' e sem corrigir o início")
+# (7.14: a "correção de ano" era validação da conciliação atestado x remição, que saiu; fica a leitura dos dois períodos)
+A_ = rrm.atestados([{"data": "08.07.2020", "texto": t}])
+ok(A_ and A_[0]["segs"][0]["ini"] == date(2019, 11, 1) and A_[0]["segs"][1]["fim"] == date(2020, 6, 30), "vários períodos: o início lido como está")
 r = at1("15.03.2026", "Peticionado o Atestado de trabalho n 039/2026, no Sistema SEEU, Autos 6000051-17.2024.8.12.0014, função Auxiliar Administrativo "
                       "(24/02/2025 a 23/12/2025) e função Paiva Lingerie (24/12/2025 a 04/03/2026) totalizando 309 dias trabalhados e 103 dias remidos.")
 ok(r is not None and r[:2] == (309, 103.0) and len(r[2]) == 2, "duas funções e um total: dois trechos, total do atestado")

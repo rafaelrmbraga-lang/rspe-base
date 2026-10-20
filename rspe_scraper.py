@@ -4013,8 +4013,8 @@ NOTA_REM_PEND = "LEP, art. 128; STJ, HC 1.089.923, 11/06/2026"
 
 
 def remicao_pendente_ate(r, ref):
-    """Remição pendente da ficha (r["_rem_pend"], gravada no modelo: dias exatos ainda fora do SEEU) de período encerrado até
-    ref: (total de dias, [rótulos])."""
+    """Remição possivelmente pendente da ficha (r["_rem_pend"], gravada no modelo: documentos desta execução posteriores à última
+    remição do RSPE, a conferir nos autos) de período encerrado até ref: (total de dias, [rótulos])."""
     its = [x for x in (r.get("_rem_pend") or []) if (to_date(x[0]) or date.max) <= ref]
     return sum(x[2] for x in its), [x[1] for x in its]
 
@@ -4035,8 +4035,8 @@ def faltas_remiveis(txt):
 
 def nota_remicao_pendente(tot, rots, ref, falta=None):
     """Texto da regra: falta=None quando o resultado já diz quanto faltava."""
-    return ("a remição de %s ainda não computada (%s), de período anterior a %s, cobre %s - pedir a declaração da remição e o "
-            "benefício (%s)" % (pl(round(tot), "dia", "dias"), "; ".join(rots[:4]) + ("; ..." if len(rots) > 4 else ""), fmt(ref),
+    return ("a remição pendente de %s (documentos posteriores à última remição do RSPE, a conferir nos autos: %s), de período anterior a "
+            "%s, cobriria %s - conferir nos autos e, se não apreciada, pedir a declaração da remição e o benefício (%s)" % (pl(round(tot), "dia", "dias"), "; ".join(rots[:4]) + ("; ..." if len(rots) > 4 else ""), fmt(ref),
                                 "os %s que faltavam" % pl(falta, "dia", "dias") if falta else "a diferença", NOTA_REM_PEND))
 
 

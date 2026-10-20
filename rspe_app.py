@@ -375,15 +375,17 @@ Importe o PDF da Ficha Disciplinar pelo mesmo botão "Importar PDFs": o programa
 citados na ficha. Sem esse vínculo, a ficha fica guardada pelo nome e vale para o assistido de mesmo nome só se houver um único na base
 (com homônimos, não é ligada a ninguém). Extrai conduta, períodos de trabalho (setor/empresa), atestados de trabalho com dias
 trabalhados e remidos, estudo, faltas disciplinares (registro, PADIC, arquivamento/homologação), regressão/restabelecimento, isolamento e
-recusa de trabalho. A análise da ficha é de remição: a aba <b>Ficha disciplinar</b> agrupa por atestado (dias trabalhados e remidos,
-como constam nele, e os empregos que ele cobre); depois vêm os períodos sem atestado na ficha (procurar nos autos ou pedir à unidade),
-a baixa de trabalho sem início registrado, o estudo e o que você adicionou ("+ Adicionar atestado": ENCCEJA/ENEM, trabalho fora da
-ficha). O círculo à direita marca o atestado ou o período como conferido (fica gravado na base). A remição do trabalho vem dos dias
-trabalhados do atestado; a coluna "Dias" mostra os dias corridos do período, só como referência. O estudo sem carga declarada é
-estimado em 4 h por dia útil (1 dia remido a cada 12 h); início ou fim ilegível = "Conferir datas". O RSPE não diz de onde vem cada
-remição (trabalho, estudo, ENCCEJA/ENEM, leitura), então o programa não liga remição a atestado: aponta "Requerer remição" só quando não
-há nenhuma remição lançada no RSPE depois do atestado (ou depois do período de estudo); os demais ficam "conferir a homologação", com as
-somas e a lista das remições do RSPE no cabeçalho. Trabalho anterior à 1ª prisão do RSPE fica só no resumo. As faltas graves da ficha
+recusa de trabalho. A análise da ficha é de remição. O RSPE não diz de onde vem cada remição (trabalho, estudo, ENCCEJA/ENEM, leitura),
+então o programa não liga remição a atestado: a aba <b>Ficha disciplinar</b> mostra (A) a comparação dos totais - remição concedida
+no RSPE x atestados desta execução, certidões e cursos com carga horária (÷ 12) e leitura (4 dias por obra) da ficha, com tolerância
+de 3 dias; a diferença a favor da ficha é "Verificar remição" (conferir nos autos), nunca um valor a requerer -; (B) os pontos a
+conferir (documento emitido ou peticionado depois da última decisão de remição, sem registro de peticionamento ou enviado à
+Defensoria sem protocolo, exame, curso sem carga horária, trabalho sem atestado e estudo sem certidão - estimativas, fora da conta -,
+perdas do art. 127); (C) cada período de trabalho da ficha ligado ao atestado que o cobre (automático quando o período bate e o
+nome confere ou não havia outro trabalho; "possível" ou "sugerido" para confirmar; "sem atestado"), com o botão "Vincular atestado";
+(D) os documentos de remição da ficha, com o peticionamento e a coluna "✓ Homologado"; (E) as remições do RSPE. Vermelho só para fato
+documental certo (atestado desta execução sem registro de peticionamento e posterior à última decisão de remição). Os vínculos e o
+✓ ficam gravados na base e continuam valendo quando nova ficha for importada. Trabalho anterior à 1ª prisão do RSPE fica de fora. As faltas graves da ficha
 que o RSPE não traz (não arquivadas) e a fuga registrada só na ficha entram como falta "A apurar" ("FALTA GRAVE NA FICHA DISCIPLINAR
 (SIAPEN)"): aparecem na coluna Falta e pesam no indulto e na comutação (a verificar, art. 6º), até você decidir no ✎ da coluna Falta
 se é falta grave; a ficha também explica a regressão ou a perda de remidos do RSPE. Na Auditoria, a ficha entra no ponto "Perda de
@@ -423,7 +425,7 @@ Para levar ao Word: "Copiar resumo" (ficha do assistido), "Copiar pretensão pun
 "Copiar pendências" (Auditoria). O texto vai em linhas simples, pronto para colar.
 <h4>Exportar e Dados da Base</h4>
 O botão "Exportar" abre o menu: Excel (abas da base), PDF da aba, Relatórios em PDF e Relatório de providências. A aba "Dados da Base"
-mostra na tela os números e gráficos do relatório geral, da remição detalhada (por origem e por unidade), os cartões de cada aba e as
+mostra na tela os números e gráficos do relatório geral, da remição (conferência RSPE x ficha e pedir atestado por unidade), os cartões de cada aba e as
 providências, contados pelas mesmas funções do PDF; a busca restringe os assistidos contados.
 <h4>Relatórios em PDF</h4>
 "Exportar" &gt; <b>Relatórios em PDF</b> gera, numa pasta com a data e a hora: um PDF por assistido (bloco da pena, tabela de benefícios com
@@ -432,7 +434,7 @@ fundamento em lista e, para os crimes com evasão, prescrição aparente ou a ve
 em texto e tabela - detração, saldo de cada fuga, hipóteses de imputação e resultado; sem figura de linha do tempo), o relatório geral da base (perfil,
 benefícios, remição e alertas, com a prescrição punitiva e a executória em linhas separadas) e a planilha. No próprio botão dá para escolher
 de quem sai o relatório individual, na lista com busca (sem acento; o número também só com dígitos) e "Todos"/"Nenhum". "Remição
-detalhada com o nome dos assistidos" decide se o PDF da remição detalhada traz os nomes. Vale para os assistidos visíveis pela busca
+com o nome dos assistidos" decide se o PDF da remição (conferência RSPE x ficha) traz os nomes. Vale para os assistidos visíveis pela busca
 (o filtro de situação e os cartões não restringem). Na ficha do assistido, "Relatório em PDF" gera só o dele. A exportação Excel/PDF
 segue a busca e, se marcado na janela de exportação, o filtro de situação.
 <h4>Presunção de hipossuficiência (Defensoria)</h4>
@@ -830,6 +832,12 @@ class Base:
         # calculadora de penas: cálculos registrados (assistido opcional, anotação e o estado da janela)
         self.con.execute("""CREATE TABLE IF NOT EXISTS calculos (id TEXT PRIMARY KEY, criado TEXT, atualizado TEXT, processo TEXT,
             assistido TEXT, nota TEXT, resumo TEXT, dados TEXT)""")
+        # 7.14: a marca da aba Ficha passou a ser "✓ Homologado" do documento (atestado, leitura, exame, certidão, curso, informado pela
+        # equipe), com a mesma chave de antes; as de linhas que deixaram de existir (estudo estimado, matrícula cancelada, carga
+        # horária declarada) são descartadas
+        self.con.execute("""DELETE FROM baixas WHERE titulo = 'conferido (ficha disciplinar)' AND chave LIKE 'fd:%'
+            AND chave NOT LIKE 'fd:at:%' AND chave NOT LIKE 'fd:lei:%' AND chave NOT LIKE 'fd:exa:%' AND chave NOT LIKE 'fd:edu:cert:%'
+            AND chave NOT LIKE 'fd:edu:curso:%' AND chave NOT LIKE 'fd:man:%'""")
         if not self.con.execute("SELECT 1 FROM quadro_colunas").fetchone():
             for i, (cid, nome) in enumerate((("fazer", "A fazer"), ("andamento", "Em andamento"), ("aguardando", "Aguardando decisão"), ("concluido", "Concluído"))):
                 self.con.execute("INSERT INTO quadro_colunas VALUES (?,?,?)", (cid, nome, i))
@@ -1106,10 +1114,12 @@ class Base:
 
     def manual_gravar(self, processo, dados):
         import uuid
+        id_ = uuid.uuid4().hex[:10]
         with self.lock:
             self.con.execute("INSERT INTO atestados_manuais VALUES (?,?,?,?)",
-                             (processo, uuid.uuid4().hex[:10], json.dumps(dados, ensure_ascii=False), datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+                             (processo, id_, json.dumps(dados, ensure_ascii=False), datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
             self.con.commit()
+        return id_
 
     def manual_remover(self, processo, id_):
         with self.lock:
@@ -2481,8 +2491,9 @@ class Api:
             return []
         return self.base.hist_alertas(processo)
 
-    # ---- ficha disciplinar: conferência e atestados fora da ficha ----
+    # ---- ficha disciplinar: ✓ Homologado, vínculo do trabalho ao atestado e atestados fora da ficha ----
     def fd_conferir(self, processo, chave, marcar):
+        """✓ Homologado do documento da ficha (chave estável: atestado = número + emissão; leitura, exame, certidão e curso = data)."""
         if not self.base:
             return None
         if marcar:
@@ -2491,16 +2502,35 @@ class Api:
             self.base.reabrir(processo, chave)
         return self._atualizar(processo)
 
+    def fd_vincular(self, processo, periodo, atestado):
+        """Vínculo do período de trabalho da ficha (chave "fd:vt:<setor>:<início>") ao atestado (chave "fd:at:...") ou "sem" (sem atestado:
+        pedir à unidade); atestado vazio desfaz o vínculo (volta o automático). Fica na base e vale depois de nova ficha importada;
+        vínculo cujo atestado deixar de existir é ignorado."""
+        if not self.base:
+            return None
+        if not str(periodo or "").startswith("fd:vt:") or (atestado and atestado != "sem" and not str(atestado).startswith("fd:at:")):
+            return {"erro": "Vínculo inválido."}
+        if atestado:
+            self.base.baixar(processo, periodo, "vínculo (ficha disciplinar)", atestado)
+        else:
+            self.base.reabrir(processo, periodo)
+        return self._atualizar(processo, "Vínculo gravado." if atestado else "Vínculo desfeito.")
+
     def fd_adicionar(self, processo, dados):
+        """Atestado ou remição fora da ficha ("+ Adicionar atestado"). Com dados["vinc"] (chave do período de trabalho), é o "Atestado
+        juntado nos autos, não lançado na ficha" da janela Vincular atestado: grava o atestado e o vínculo."""
         if not self.base:
             return None
         dados = {k: str(v or "").strip() for k, v in (dados or {}).items()}
+        vinc = dados.pop("vinc", "")
         if not (dados.get("remidos") or dados.get("trabalhados") or dados.get("horas")):
             return {"erro": "Informe ao menos os dias remidos, os dias trabalhados ou as horas."}
         erro = _validar_atestado_manual(dados)
         if erro:
             return {"erro": erro}
-        self.base.manual_gravar(processo, dados)
+        id_ = self.base.manual_gravar(processo, dados)
+        if vinc.startswith("fd:vt:"):
+            self.base.baixar(processo, vinc, "vínculo (ficha disciplinar)", "fd:at:man:%s" % id_)
         return self._atualizar(processo, "Adicionado.")
 
     def fd_remover(self, processo, id_):
@@ -3988,8 +4018,8 @@ class Api:
     def remicao_tabela_docx(self, processo):
         """Tabela da remição do assistido (aba Ficha) em Word, para colar na petição."""
         m = next((x for x in (self._modelos or []) if x.get("id") == processo), None)
-        if not m or not (m.get("fd_conc") or {}).get("tabela"):
-            return {"erro": "Sem tabela de remição para este assistido."}
+        if not m or not (m.get("fd_novo") or {}).get("docs") and not ((m.get("fd_novo") or {}).get("trab") or {}).get("linhas"):
+            return {"erro": "Sem documentos de remição nem trabalho na ficha deste assistido."}
         nome = "Remição - %s.docx" % re.sub(r"[^\w\s-]", "", rv.nome_proprio(m.get("nome", "")))[:60].strip()
         c = _um(self._janela.create_file_dialog(webview.SAVE_DIALOG, save_filename=nome, file_types=("Word (*.docx)",)))
         if not c:
@@ -4193,7 +4223,7 @@ class Api:
         return {"caminho": destino, "msg": msg}
 
     def dados_base(self, ids=None):
-        """Aba Dados da Base: os números e gráficos dos relatórios em PDF da base (relatório geral, remição detalhada e cartões de
+        """Aba Dados da Base: os números e gráficos dos relatórios em PDF da base (relatório geral, remição e cartões de
         cada aba), contados pelas mesmas funções do PDF, para os assistidos que a busca mostra."""
         if not self.base:
             return {"erro": "Nenhuma base aberta."}
@@ -4209,19 +4239,13 @@ class Api:
                     x["fatias"] = [(r_, v, c_, round(100.0 * v / tot)) for r_, v, c_ in fat]
                     x["total"] = tot
                     x.pop("pares")
-        # remição detalhada (quadros 1 e 2, sem nomes)
-        O = rrel.remicao_por_origem(modelos)
-        origens = [{"rot": r_, "ass": O["n"][k], "itens": O["itens"][k], "dias": rrel._num(O["r"][k]), "fora": k in rf.FORA_DO_TOTAL,
-                    "como": rrel.COMO_REMICAO.get(k, ""), "prov": p_} for k, r_, p_ in rf.ORIGENS_REMICAO]
-        origens.append({"rot": "Lacuna entre atestados", "ass": O["n"]["lacunas"], "itens": O["itens"]["lacunas"], "dias": "—", "fora": False,
-                        "como": "período sem vínculo comprovado: não há como estimar dias", "prov": "verificar com a unidade se houve trabalho"})
-        por_un, ks = rrel.remicao_por_unidade(modelos, O)
-        rot_k = dict((k, r_) for k, r_, _p in rf.ORIGENS_REMICAO)
-        uns = [{"un": u, "ass": len(x["ass"]), "dias": [rrel._num(x["r_" + k]) for k in ks], "total": rrel._num(x["r_total"]), "total_n": x["r_total"]}
-               for u, x in sorted(por_un.items(), key=lambda kv: (kv[0] == rf.SEM_UNIDADE, -kv[1]["total"]))]
-        rem = {"ass": O["ass"], "ass_exatos": O["ass_exatos"], "com_ficha": O["com_ficha"], "total": rrel._num(O["r_total"]), "origens": origens,
-               "cols": [rot_k[k] for k in ks], "unidades": uns,
-               "un_total": [rrel._num(sum(x["r_" + k] for x in por_un.values())) for k in ks] + [rrel._num(sum(x["r_total"] for x in por_un.values()))]}
+        # remição: conferência RSPE x ficha (os mesmos números do PDF, sem nomes)
+        O = rrel.remicao_resumo(modelos)
+        rem = {"com_ficha": O["com_ficha"], "verificar": O["verificar"], "dif_dias": rrel._dias(O["dif_dias"]), "vermelho": O["vermelho"],
+               "fatos": O["fatos"], "fatos_dias": rrel._dias(O["fatos_dias"]), "pedir": O["pedir"], "pedir_dias": rrel._dias(O["pedir_dias"]),
+               "em_ordem": O["em_ordem"], "pontos": O["pontos"],
+               "unidades": [{"un": u, "ass": len(x["ass"]), "dias": rrel._dias(x["dias"]), "dias_n": x["dias"]}
+                            for u, x in sorted(O["por_un"].items(), key=lambda kv: -kv[1]["dias"])]}
         # cartões de resumo de cada aba, contados como na exportação em PDF (quem tem o pedido marcado sai da cor e entra em "Pedido feito")
         cart = []
         for aid in ("prog", "liv", "ind", "presc", "ext", "fd", "aud"):

@@ -407,6 +407,20 @@ body:has(.welcome.on) .btn-calc{display:none} /* calculadora só com a base aber
 .ac-h{display:flex;align-items:center;gap:10px}.ac-h b{font-size:13.5px;color:var(--tx);font-weight:600;flex:1}.ac-a{margin-left:auto}
 .ac-d{margin:8px 0 0;max-width:1100px}.ac-d p{margin:0 0 5px;font-size:12.8px;line-height:1.6;color:var(--tx);font-weight:400}
 .ac-f{margin-top:6px;font-size:11.5px;color:var(--tx3);font-weight:400}.ac-top .muted{font-weight:400}
+.fdn-h{font-weight:700;font-size:12.5px;margin:16px 0 6px}.fdn>.fdn-h:first-child{margin-top:4px}
+.fdn-sub{font-size:11.5px;margin:-2px 0 6px;font-weight:400}.fdn-vazio{font-size:12.5px;font-weight:400}
+.fdt.fdn-cmp{max-width:760px}.fdt.fdn-cmp th{position:static;box-shadow:none}.fdt.fdn-cmp td:last-child,.fdt.fdn-cmp th:last-child{text-align:right;font-variant-numeric:tabular-nums}
+.fdt.fdn-cmp tr.fdn-dif td{border-top:2px solid var(--line)}.fdn-amarelo{color:var(--a-tx)}.fdn-verde{color:var(--g-tx)}
+.fdn-concl{font-weight:400;font-size:12.5px;line-height:1.6;margin:8px 0 0;max-width:980px;text-align:justify;hyphens:auto}
+.fdn-pts{margin:0;padding-left:18px;font-size:12.5px;line-height:1.7;font-weight:400}.fdn-pts li{margin-bottom:2px}.fdn-pts .pill{font-size:12.5px;margin-right:2px}
+.fdt.fdn-t td{vertical-align:top}.fdn-un,.fdn-mot{font-size:11px}.fdn-mot{display:block;margin-top:1px}
+.fdn-vb{font:inherit;font-size:11.5px;padding:3px 9px;border:1px solid var(--pri);color:var(--pri);background:var(--card,#fff);border-radius:6px;cursor:pointer;white-space:nowrap}.fdn-vb:hover{background:var(--g-bg)}
+.fdn-nota{font-size:11.5px;margin:10px 0 14px;font-weight:400;line-height:1.55}
+.vpop{position:absolute;z-index:60;background:var(--card,#fff);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow2);padding:12px 14px;width:440px;max-width:94vw;font-size:12.5px;font-weight:400}
+.vpop .vtit{font-weight:700;font-size:13px}.vpop .vsub{font-size:11.5px;margin:1px 0 8px}.vpop .vlst{max-height:300px;overflow:auto}
+.vpop .vop{display:flex;gap:8px;align-items:flex-start;padding:6px 6px;border-radius:6px;cursor:pointer;line-height:1.4}.vpop .vop:hover{background:#F3F5F2}
+.vpop .vop input{margin-top:3px}.vpop .vop.sug{background:var(--a-bg)}.vpop .vop .muted{font-size:11.5px}.vpop .vsug{color:var(--a-tx)}
+.vpop .vacts{display:flex;justify-content:flex-end;gap:8px;margin-top:10px}
 .fdt{width:100%;border-collapse:collapse;table-layout:fixed;background:#fff;border:1px solid var(--line);border-radius:10px;overflow:visible}
 .fdt th{background:#F7F8F6;color:var(--tx2);font-size:11px;text-transform:uppercase;letter-spacing:.3px;padding:8px 12px;text-align:left;border-bottom:1px solid var(--line);position:sticky;top:var(--thh,62px);z-index:1;box-shadow:0 1px 0 var(--line),0 8px 0 #fff,0 10px 6px -4px rgba(16,24,40,.12)}
 .fdt th{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.fdt th:nth-child(5){white-space:normal}
@@ -846,7 +860,7 @@ tbody tr.geo-on td{background:var(--pri-soft)!important}
     <div class="menu" id="mExp" role="menu">
       <button role="menuitem" onclick="ui.modalExportar('xlsx')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4zM4 10h16M10 4v16"/></svg><span><b>Excel</b><small>as abas da base, numa planilha</small></span></button>
       <button role="menuitem" onclick="ui.modalExportar('pdf')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/></svg><span><b>PDF da aba</b><small>a tabela da aba aberta, em paisagem</small></span></button>
-      <button role="menuitem" onclick="ui.modalRelatorios()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h8l4 4v14H6z"/><path d="M9 13h6M9 17h6M9 9h2"/></svg><span><b>Relatórios em PDF</b><small>individuais, geral da base, remição detalhada</small></span></button>
+      <button role="menuitem" onclick="ui.modalRelatorios()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h8l4 4v14H6z"/><path d="M9 13h6M9 17h6M9 9h2"/></svg><span><b>Relatórios em PDF</b><small>individuais, geral da base, remição</small></span></button>
       <button role="menuitem" onclick="ui.modalProvidencias()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg><span><b>Relatório de providências</b><small>pedidos e ofícios marcados, por mês</small></span></button>
     </div></div>
   <div class="sep"></div>
@@ -964,7 +978,6 @@ const ui = {
   sitPed(r,spec){ if(!spec||!['prog','liv','fd','presc','ext'].includes(spec.id)) return null; const P=(r.pedidos||{})[spec.id];
     if(P){ const mud=P.ref&&P.ref!==this.pedRef(r,spec.id), base=spec.cor?(r[spec.cor]||''):'', venc=base==='vencido'||base==='vermelho';
       return {txt:'Pedido feito em '+P.data+(mud?' · situação mudou depois':''), cor:mud?(venc?base:'amarelo'):'azul', dica:this.pedDica(P,mud)}; }
-    if(spec.id==='fd'&&r.fd_conf_tot&&(r.fd_conf_n||0)>=r.fd_conf_tot&&['vermelho','amarelo'].includes(r.fd_cor)) return {txt:'Conferido', cor:'verde', dica:'Todos os itens da ficha foram conferidos ('+r.fd_conf_n+' de '+r.fd_conf_tot+'). Situação antes da conferência: '+(r.fd_sit||'')};
     return null; },
   render(){
     this.stPop(null);  // o quadro da saída temporária não fica aberto sobre a tela redesenhada
@@ -1542,53 +1555,80 @@ const ui = {
       return `<tr>${tds}<td><span class="why" onclick="event.stopPropagation();const n=this.closest('tr').nextElementSibling;n.style.display=n.style.display==='none'?'':'none'">cálculo</span></td></tr><tr style="display:none"><td colspan="${cols.length+1}">${ui.memoria(s, spec.id==='presc'?(ui.prescModo==='pp'?'pp':'pe'):null)}</td></tr>`; }).join('');
     const cab = spec.id==='aud' ? `<b>${esc(r.nome)}</b> <span class="muted">· ${esc(r.aud_resumo)} · conferido com a ${esc(r.aud_base)} · alertas apontam o que demanda atenção, não afirmam erro</span>${(ocultos||this.mostrarTudo)?` · <span class="mini" onclick="event.stopPropagation();ui.mostrarTudo=!ui.mostrarTudo;ui.render()">${this.mostrarTudo?'ocultar informativos e OK':'mostrar '+pl(ocultos,'informativo','informativos')+'/OK'}</span>`:''}${r.ficha_resumo?`<div class="muted" style="margin-top:3px">Ficha disciplinar: ${esc(r.ficha_resumo)}</div>`:''}` : spec.id==='fd' ? (r.ficha_tem?`<span class="muted" style="font-weight:400">Ficha disciplinar (SIAPEN) impressa em ${esc((r.ficha||{}).data_impressao||'?')}</span>${(r.fd_sit_itens||[]).length?`<ul class="fdpts">${r.fd_sit_itens.map(x=>`<li class="${esc(x.c)}">${esc(x.t)}</li>`).join('')}</ul>`:` · <span class="fdsit verde">Em ordem</span>`}`:'<span class="muted">Sem ficha disciplinar importada: importe o PDF da ficha (SIAPEN) pelo botão Importar PDFs.</span>')+`${r.ficha_tem&&r.fd_remicoes?`<div class="muted" style="font-size:12px;margin-top:5px;font-weight:400">${esc(r.fd_remicoes)}</div>`:''}` : `<b>${esc(r.nome)}</b> <span class="muted">· ${pl((r.presc_linhas||[]).length,'crime','crimes')}, ${rows.length} ${ui.prescModo==='pp'?'com prescrição da pretensão punitiva aparente':'com prescrição executória aparente ou iminente'} ou datas a verificar na ação penal · cada crime prescreve isoladamente (art. 119)${r.presc_obs?' · '+esc(r.presc_obs):''}</span>`;
     const vazio = (spec.id==='presc' && !rows.length) ? `<tr><td colspan="${cols.length+1}" class="muted">Nenhum crime com prescrição ${ui.prescModo==='pp'?'da pretensão punitiva aparente':'executória aparente ou iminente'} nem datas faltando.</td></tr>` : '';
-    if(spec.id==='fd' && r.ficha_tem) return `<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:8px"><span>${cab}</span><span style="white-space:nowrap">${r.fd_conf_tot?`<span class="muted" style="font-size:12.5px;margin-right:10px">Conferidos <b style="color:var(--g-tx)">${r.fd_conf_n||0}</b> de ${r.fd_conf_tot}</span>`:''}${r.fd_fund?`<span class="mini pre" onclick="event.stopPropagation();ui.copiarClip(${ui.clip(r.fd_fund)})">Copiar fundamentação</span> `:''}<span class="mini" title="Tabela em Word, para colar na petição" onclick="event.stopPropagation();ui.fdExportar(${jsa(r.id)})">Exportar tabela</span> <span class="mini" onclick="event.stopPropagation();ui.fdAdicionar(${jsa(r.id)})">+ Adicionar atestado</span> <span class="mini" onclick="event.stopPropagation();ui.abrir(${jsa(r.id)})">Abrir ficha completa</span></span></div>${this.fdTabela(r)}`;
+    if(spec.id==='fd' && r.ficha_tem) return `<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:8px"><span>${cab}</span><span style="white-space:nowrap">${r.fd_conf_tot?`<span class="muted" style="font-size:12.5px;margin-right:10px" title="Documentos desta execução marcados como homologados em juízo (✓ Homologado)">Homologados <b style="color:var(--g-tx)">${r.fd_conf_n||0}</b> de ${r.fd_conf_tot}</span>`:''}${r.fd_fund?`<span class="mini pre" onclick="event.stopPropagation();ui.copiarClip(${ui.clip(r.fd_fund)})">Copiar fundamentação</span> `:''}<span class="mini" title="Tabela em Word, para colar na petição" onclick="event.stopPropagation();ui.fdExportar(${jsa(r.id)})">Exportar tabela</span> <span class="mini" onclick="event.stopPropagation();ui.fdAdicionar(${jsa(r.id)})">+ Adicionar atestado</span> <span class="mini" onclick="event.stopPropagation();ui.abrir(${jsa(r.id)})">Abrir ficha completa</span></span></div>${this.fdTabela(r)}`;
     return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><span>${cab}</span><span class="mini" onclick="event.stopPropagation();ui.abrir(${jsa(r.id)})">Abrir ficha completa</span></div><table class="subtab">${cg}${head}${body}${vazio}</table>`; },
-  // conciliação atestado x remição: (A) tabela, (B) pendências acionáveis, (C) alertas de qualidade dos dados
-  fdConc(r){ const C=r.fd_conc; if(!C) return ''; const pill=(t,c)=>t?`<span class="pill ${c||'cinza'}">${esc(t)}</span>`:'';
-    const tk=(on,ch)=>`<span class="tk ${on?'on':''}" title="${on?'Conferido - clique para desfazer':'Conferir homologação: marcar como conferido'}" onclick="event.stopPropagation();ui.fdConferir(${jsa(r.id)},${jsa(ch)},${!on})"></span>`;
-    const th='style="text-align:left;font-size:11px;color:var(--tx2);padding:6px 8px;background:var(--bg2,#F1F2EF)"', td='style="padding:6px 8px;font-size:12.5px;border-top:1px solid var(--line);vertical-align:top"';
-    const rows=(C.tabela||[]).map(t=>`<tr class="${t.ok?'ok':''}"><td ${td}><b>${esc(t.atestado)}</b>${t.emissao?`<br><span class="muted">emitido ${esc(t.emissao)}</span>`:''}</td>
-      <td ${td}>${(t.segs||[]).map(x=>`<div>${esc(x.setor)} · ${esc(x.per)}${x.inferido?' <span class="muted">(inferido)</span>':''}${x.vinc?' <span class="muted">(vínculo na ficha)</span>':''}${x.corrigido?` <span style="color:#7A5410">(ano corrigido; ${esc(x.corrigido)})</span>`:''}${x.trab!=null&&x.trab!==''&&!x.inferido?` <span class="muted">${x.trab}${x.rem!=null?'/'+String(x.rem).replace('.',','):''}</span>`:''}</div>`).join('')}</td>
-      <td ${td}>${t.trab!=null?t.trab:'—'}</td><td ${td}>${esc(t.rem)}</td><td ${td}>${esc(t.rspe)}</td><td ${td}>${esc(t.decisao)}</td><td ${td}>${esc(t.ref)}</td><td ${td}>${pill(t.rot,t.cor)}</td><td ${td} class="c">${tk(!!t.ok,t.chave)}</td></tr>${t.nota?`<tr class="${t.ok?'ok':''}"><td colspan="9" style="border-top:0;padding:0 12px 8px!important;font-size:11.5px;line-height:1.5;font-weight:400;color:var(--tx2)">Obs.: ${esc(t.nota)}</td></tr>`:''}`).join('');
-    const pend=(C.pend||[]).map(p=>`<li><span class="muted">${esc(p.data)}</span> ${pill(p.status==='NAO_LANCADO'?'Atestado não lançado':p.status==='SEM_ATESTADO'?'Sem atestado':p.status==='EM_CURSO'?'Em curso':p.status==='LACUNA'?'Lacuna':p.status==='CUMULATIVO'?'Possível cumulativo':p.status==='A_CONFERIR'?'A conferir':p.status==='SEM_PERIODO'?'Sem período':p.status==='ORF_POST'?'Verificar remição':p.status==='OUTROS_AUTOS'?'Outros autos':p.status==='FICTA'?'Remição ficta':'Divergência de dias',p.cor)} ${esc(p.texto)}${p.acao?` <span style="color:#1F6B3A">— providência: ${esc(p.acao.charAt(0).toLowerCase()+p.acao.slice(1))}</span>`:''}</li>`).join('');
-    const al=(C.alertas_g||[]).map(g=>`<div class="fdal"><div class="fdal-t">${esc(g.titulo)}</div>${g.explica?`<div class="muted">${esc(g.explica)}</div>`:''}<ul>${g.itens.map(i=>`<li>${esc(i)}</li>`).join('')}</ul>${g.acao?`<div style="color:#1F6B3A">Providência: ${esc(g.acao)}.</div>`:''}</div>`).join('');
-    const R=C.resumo, nf=v=>v==null?'—':String(v).replace('.',','), hd=t=>`<div style="font-weight:700;font-size:12.5px;margin:12px 0 4px">${t}</div>`;
-    const rs=R?`<div style="font-weight:700;font-size:12.5px;margin:4px 0 6px">A) Resumo quantitativo</div>
-      <table class="fdt" style="border-collapse:collapse;min-width:520px"><tr><th ${th}>Fonte</th><th ${th}>Dias de trabalho</th><th ${th}>Dias de remição</th></tr>
-      <tr><td ${td}>Atestados expedidos (ficha)${R.at_n?` <span class="muted">· ${R.at_n}</span>`:''}</td><td ${td}>${nf(R.at_trab)}</td><td ${td}>${nf(R.at_rem)}</td></tr>
-      <tr><td ${td}>Homologados no RSPE${R.perdidos?` <span class="muted">· ${nf(R.perdidos)} perdidos</span>`:''}</td><td ${td}>—</td><td ${td}>${nf(R.homologados)}</td></tr>
-      ${R.trab_ficha?`<tr><td ${td}>Trabalho registrado na ficha até ${esc(R.corte)} <span class="muted">· estimativa</span></td><td ${td}>${nf(R.trab_ficha)}</td><td ${td}>${nf(R.dir_ficha)}</td></tr>`:''}
-      <tr><td ${td}>Histórico de estudo ou leitura na ficha</td><td ${td} colspan="2">${R.estudo?'Sim, conferir se está encobrindo divergência com a remição pelo trabalho.':'Não, verificar se há certificados homologados que não constam na ficha do SIAPEN.'}</td></tr>
-      ${R.trab_pos?`<tr><td ${td}>Trabalho ${R.corte?'posterior, ':''}ainda sem atestado <span class="muted">· estimativa</span></td><td ${td}>${nf(R.trab_pos)}</td><td ${td}>${nf(R.dir_pos)}</td></tr>`:''}</table>
-      <p style="font-size:12.5px;line-height:1.6;font-weight:400;margin:8px 0 0;max-width:980px;text-align:justify;hyphens:auto" lang="pt-BR">${esc(R.texto)}</p>`:'';
-    const L=R?['B','C','D']:['A','B','C'];
-    return `${rs}${R?hd(L[0]+') Atestados × remições do RSPE'):`<div style="font-weight:700;font-size:12.5px;margin:4px 0 6px">${L[0]}) Atestados × remições do RSPE</div>`}
-      <table class="fdt" style="width:100%;border-collapse:collapse;table-layout:fixed"><colgroup><col style="width:13%"><col style="width:26%"><col style="width:6%"><col style="width:7%"><col style="width:9%"><col style="width:9%"><col style="width:9%"><col style="width:16%"><col style="width:5%"></colgroup><tr><th ${th}>Atestado</th><th ${th}>Setores e períodos</th><th ${th}>Trab.</th><th ${th}>Remidos</th><th ${th}>Remição no RSPE</th><th ${th}>Decisão</th><th ${th}>Data ref.</th><th ${th}>Status</th><th ${th} class="c" title="Conferir homologação (checklist manual)">✓</th></tr>${rows||`<tr><td ${td} colspan="9" class="muted">Nenhum atestado de trabalho.</td></tr>`}</table>
-      ${hd(L[1]+') Pendências')}${pend?`<ul style="margin:0;padding-left:18px;font-size:12.5px;line-height:1.7;font-weight:400">${pend}</ul>`:'<div class="muted" style="font-size:12.5px;font-weight:400">Nenhuma pendência de trabalho.</div>'}
-      ${al?`${hd(L[2]+') Pontos a conferir na ficha e no RSPE')}${al}`:''}
-      <div class="muted" style="font-size:11.5px;margin:8px 0 14px;font-weight:400">Status automáticos pela conciliação (número do atestado, dias iguais após truncar a fração, ordem cronológica). A coluna ✓ é o checklist manual "Conferir homologação".</div>`; },
-  fdTabela(r){ const conc=this.fdConc(r); const B=r.fd_blocos||[]; if(!B.length) return conc||'<p class="muted">Nenhum trabalho ou estudo nesta execução.</p>';
-    if(conc&&!B.length) return conc;
-    const tk=(on,ch)=>ch?`<span class="tk ${on?'on':''}" title="${on?'Conferido - clique para desfazer':'Marcar como conferido'}" onclick="event.stopPropagation();ui.fdConferir(${jsa(r.id)},${jsa(ch)},${!on})"></span>`:'';
+  // remição (7.14): o programa compara os totais e não liga remição a atestado - (A) comparação RSPE x ficha, (B) pontos a conferir,
+  // (C) trabalho da ficha x atestados (com "Vincular atestado"), (D) documentos da ficha (✓ Homologado) e (E) remições do RSPE
+  fdConc(r){ const N=r.fd_novo; if(!N) return '';
+    const nf=v=>(v==null||v==='')?'—':(Math.round(v*100)/100).toLocaleString('pt-BR',{maximumFractionDigits:2}), sg=v=>(v>0?'+':'')+nf(v);
     const pill=(t,c)=>t?`<span class="pill ${c||'cinza'}">${esc(t)}</span>`:'';
-    const rows=B.map(b=>{ const bok=!!b.ok;
-      const hd=`<tr class="fdb ${bok?'ok':''}"><td colspan="3">${esc(b.titulo)} <span class="n">· ${esc(b.info||'')}</span></td><td>${b.tipo==='atestado'?pill(b.sit,b.cor):''}</td><td class="c">${b.tipo==='atestado'?tk(bok,b.chave):''}</td></tr>`;
-      const its=(b.itens||[]).map(i=>{ const ok=bok||!!i.ok; const dir=b.tipo==='atestado'?'':(b.tipo==='manual'?`<span class="muted">${esc(i.sit)}</span>`:pill(i.sit,i.cor));
-        const ac=b.tipo==='manual'?`<span class="mini" title="Remover" onclick="event.stopPropagation();ui.fdRemover(${jsa(r.id)},${jsa(i.id)})">✕</span>`:tk(!!i.ok,i.chave);
-        return `<tr class="fdi ${ok?'ok':''}"><td>${esc(i.emp)}</td><td>${esc(i.un||'—')}</td><td>${esc(i.per||'')}</td><td>${dir}</td><td class="c">${ac}</td></tr>`; }).join('');
-      return hd+its; }).join('');
-    return conc+`<table class="fdt"><colgroup><col style="width:33%"><col style="width:10%"><col style="width:25%"><col style="width:26%"><col style="width:6%"></colgroup>
-      <tr><th>Emprego / estudo</th><th>Unidade</th><th>Período</th><th>O que conferir</th><th class="c">✓</th></tr>${rows}</table>
-      <div class="muted" style="font-size:11.5px;margin-top:8px;font-weight:400">"Conferir homologação": ver na decisão se o atestado entrou numa remição do RSPE (o RSPE não diz a origem de cada remição). Clique no círculo para marcar como conferido.</div>`; },
+    const hd=t=>`<div class="fdn-h">${t}</div>`, R=N.R||{}, dif=N.dif||0, T=N.trab||{linhas:[],ats:[]};
+    const cor=dif>3?'amarelo':'verde';
+    const lin=[[`Remição concedida no RSPE <span class="muted">· ${pl((R.remicoes||[]).length,'decisão','decisões')}</span>`,nf(R.concedido)]];
+    if(R.perdido) lin.push([`Dias perdidos por falta (LEP, art. 127) <span class="muted">· saldo no RSPE: ${nf(R.saldo)}; a comparação usa o concedido</span>`,'− '+nf(R.perdido)]);
+    const fic=[[`Atestados de trabalho desta execução <span class="muted">· ${N.n_desta||0}</span>`,nf(N.at_desta)],
+      [`Estudo e leitura comprovados na ficha${N.leitura?` <span class="muted">· leitura: ${pl(N.obras||0,'obra','obras')}</span>`:''}`,nf((N.est_comp||0)+(N.leitura||0))]];
+    if(N.n_man) fic.push([`Informados por você (juntados nos autos) <span class="muted">· ${N.n_man}</span>`,nf(N.man)]);
+    const tr=(a,b,c)=>`<tr${c?` class="${c}"`:''}><td>${a}</td><td>${b}</td></tr>`;
+    const A=`<table class="fdt fdn-cmp"><colgroup><col><col style="width:150px"></colgroup>
+      <tr><th>RSPE (SEEU)</th><th>Dias de remição</th></tr>${lin.map(([a,b])=>tr(a,b)).join('')}
+      <tr><th>Ficha disciplinar (SIAPEN)</th><th></th></tr>${fic.map(([a,b])=>tr(a,b)).join('')}
+      ${tr('<b>Total comprovado pela ficha</b>','<b>'+nf(N.comp)+'</b>')}
+      ${tr('<b>Diferença (ficha − RSPE)</b>',`<b class="fdn-${cor}">${sg(dif)}</b>`,'fdn-dif')}
+      ${N.estim?tr(`<span class="muted">Com o estimado (estudo sem certidão e trabalho sem atestado: ≈ ${nf(N.estim)})</span>`,`<span class="muted">${sg(N.dif_estim)}</span>`):''}
+      ${N.fora_n?tr(`<span class="muted">Documentos à parte (outros autos, anteriores à execução ou de período interrompido): ${N.fora_n} - não entram na conta</span>`,''):''}</table>
+      <p class="fdn-concl">${esc(N.concl)}</p>`;
+    const P=N.pontos||[];
+    const B=P.length?`<ul class="fdn-pts">${P.map(p=>`<li>${pill(p.rot,p.cor)} ${esc(p.texto)}</li>`).join('')}</ul>`:'<div class="muted fdn-vazio">Nenhum ponto a conferir.</div>';
+    const ST={auto:['Vinculado automaticamente','verde'],possivel:['Possível · confirmar','amarelo'],provavel:['Sugerido · confirmar','amarelo'],sem:['Sem atestado','amarelo'],manual:['Vinculado por você','azul']};
+    const mot=l=>l.st==='auto'?'pelo '+l.como:l.st==='possivel'?'o período bate, mas havia outro trabalho no mesmo período':l.st==='provavel'?'mesmo nome; o atestado não traz o período':l.st==='manual'?'vínculo informado na conferência':l.sem_confirmado?'confirmado na conferência: pedir à unidade':'nenhum atestado da ficha cobre este período';
+    const btn=(l,i)=>`<button class="fdn-vb" onclick="event.stopPropagation();ui.vincAbrir(this,${jsa(r.id)},${i})">${l.st==='auto'||l.st==='manual'?'Alterar':l.st==='sem'?'Vincular atestado':'Confirmar / vincular'}</button>`;
+    const L=T.linhas||[];
+    const C=`<div class="muted fdn-sub">${T.n_vinc||0} de ${T.n_tot||0} ${(T.n_tot||0)===1?'período vinculado':'períodos vinculados'} a atestado${T.dias_sem?` · ${pl(T.dias_sem,'dia corrido','dias corridos')} de trabalho sem atestado`:''}</div>
+      <table class="fdt fdn-t"><colgroup><col style="width:21%"><col style="width:24%"><col style="width:6%"><col style="width:11%"><col><col style="width:150px"></colgroup>
+      <tr><th>Empresa / setor</th><th>Período</th><th>Dias</th><th>Atestado</th><th>Vínculo</th><th></th></tr>
+      ${L.map((l,i)=>{ const [t,c]=ST[l.st]||['—','cinza']; return `<tr><td>${esc(l.local)}${l.externo?' <span class="muted">(externo)</span>':''}${l.un?`<div class="muted fdn-un">${esc(l.un)}</div>`:''}</td><td>${esc(l.periodo)}</td><td>${l.dias}</td><td>${l.at?'nº '+esc(l.at):'—'}</td><td>${pill(t,c)} <span class="muted fdn-mot">${esc(mot(l))}</span></td><td class="c">${btn(l,i)}</td></tr>`; }).join('')||'<tr><td colspan="6" class="muted">Nenhum trabalho registrado na ficha nesta execução.</td></tr>'}</table>`;
+    const tk=d=>`<span class="tk ${d.hom?'on':''}" title="${d.hom?'Homologado em juízo (marcado) - clique para desfazer':'Homologado em juízo: marcar'}" onclick="event.stopPropagation();ui.fdConferir(${jsa(r.id)},${jsa(d.chave)},${!d.hom})"></span>`;
+    const nome=d=>esc(d.tipo)+(d.num?(/^Atestado/.test(d.tipo)?' nº ':' · ')+esc(d.num):'');
+    const docs=N.docs||[];
+    const D=`<table class="fdt fdn-t"><colgroup><col style="width:19%"><col style="width:9%"><col style="width:15%"><col style="width:6%"><col style="width:7%"><col style="width:19%"><col><col style="width:92px"></colgroup>
+      <tr><th>Documento</th><th>Emissão</th><th>Período</th><th>Trab.</th><th>Remição</th><th>Peticionamento</th><th>Situação</th><th class="c" title="Homologado em juízo (marque na conferência)">✓ Homologado</th></tr>
+      ${docs.map(d=>`<tr class="${d.hom?'ok':''}"><td>${nome(d)}</td><td>${esc(d.emissao||'—')}</td><td>${esc(d.periodo||'—')}</td><td>${d.trab!=null&&d.trab!==''?d.trab:'—'}</td><td>${nf(d.dias)}</td><td>${esc(d.pet||'—')}</td><td>${pill(d.sit,d.cor)}</td><td class="c">${d.fora?'':tk(d)}</td></tr>`).join('')||'<tr><td colspan="8" class="muted">Nenhum documento de remição na ficha.</td></tr>'}</table>`;
+    const E=`<table class="fdt fdn-t"><colgroup><col style="width:16%"><col style="width:18%"><col style="width:10%"><col></colgroup><tr><th>Decisão</th><th>Data de referência</th><th>Dias</th><th>Origem</th></tr>
+      ${(R.remicoes||[]).map(x=>`<tr><td>${esc(x.decisao||'—')}</td><td>${esc(x.ref||'—')}</td><td>${nf(x.dias)}</td><td class="muted">conferir na decisão a que se refere (trabalho, estudo, leitura ou exame)</td></tr>`).join('')||'<tr><td colspan="4" class="muted">Nenhuma remição no RSPE.</td></tr>'}</table>`;
+    return `<div class="fdn">${hd('A) Comparação: RSPE × ficha disciplinar')}${A}${hd('B) Pontos a conferir')}${B}${hd('C) Trabalho registrado na ficha × atestados')}${C}
+      ${hd('D) Atestados e documentos de remição da ficha')}${D}${hd('E) Remições no RSPE')}${E}
+      <div class="muted fdn-nota">O programa compara os totais e não liga cada remição do RSPE a um atestado: a diferença indica onde conferir, não o quanto requerer. Dois controles da conferência: <b>Vincular atestado</b> liga um período de trabalho ao atestado quando o programa não ligou (ou corrige a ligação); <b>✓ Homologado</b> marca o documento cuja remição já foi homologada em juízo. As marcações ficam salvas e continuam valendo quando uma nova ficha for importada.</div></div>`; },
+  fdTabela(r){ return this.fdConc(r)||'<p class="muted">Nenhum trabalho ou estudo nesta execução.</p>'; },
+  // janela "Vincular atestado" de um período de trabalho (seção C)
+  vincFechar(){ document.querySelectorAll('.vpop').forEach(e=>e.remove()); },
+  vincAbrir(b,id,i){ this.vincFechar(); const r=(this.dados.registros||[]).find(x=>x.id===id); const T=((r||{}).fd_novo||{}).trab||{}; const l=(T.linhas||[])[i]; if(!l) return;
+    const ats=T.ats||[], sug=l.at_chave||'';
+    const p=document.createElement('div'); p.className='vpop'; p.onclick=e=>e.stopPropagation();
+    const op=(v,tit,sub,on,dest)=>`<label class="vop${dest?' sug':''}"><input type="radio" name="vop" value="${esc(v)}" ${on?'checked':''}><span>${tit}${sub?`<br><span class="muted">${sub}</span>`:''}</span></label>`;
+    p.innerHTML=`<div class="vtit">Vincular atestado</div><div class="muted vsub">${esc(l.local)} · ${esc(l.periodo)}</div><div class="vlst">`+
+      ats.map(a=>{ const s_=a.chave===sug&&['provavel','possivel'].includes(l.st), cur=a.chave===sug;
+        return op(a.chave,`Atestado nº ${esc(a.num)}${a.manual?' (informado por você)':''} · emitido em ${esc(a.emissao||'—')}`,esc(a.per)+(a.emp?' · '+esc(a.emp):'')+(s_?' · <b class="vsug">sugerido</b>':cur&&l.st!=='sem'?' · <b>vínculo atual</b>':''),cur,s_); }).join('')+
+      op('novo','Atestado juntado nos autos, não lançado na ficha','informar nº, período e dias remidos',false)+
+      op('sem','Sem atestado (pedir à unidade)','',!sug&&l.st==='sem')+
+      ((l.st==='manual'||l.sem_confirmado)?op('','Desfazer o vínculo informado','volta ao vínculo automático',false):'')+
+      `</div><div class="vacts"><button class="btn" onclick="ui.vincFechar()">Cancelar</button><button class="btn pri" onclick="ui.vincSalvar(${jsa(id)},${i})">Vincular</button></div>`;
+    document.body.appendChild(p);
+    const q=b.getBoundingClientRect(), w=p.offsetWidth; p.style.left=Math.max(8,Math.min(q.right+scrollX-w,scrollX+document.documentElement.clientWidth-w-8))+'px'; p.style.top=(q.bottom+scrollY+6)+'px';
+    setTimeout(()=>document.addEventListener('click',()=>this.vincFechar(),{once:true}),0); },
+  async vincSalvar(id,i){ const r=(this.dados.registros||[]).find(x=>x.id===id); const l=((((r||{}).fd_novo||{}).trab||{}).linhas||[])[i]; const e=document.querySelector('.vpop input[name=vop]:checked');
+    if(!l||!e){ this.toast('Escolha uma opção.'); return; } this.vincFechar();
+    if(e.value==='novo'){ this.fdAdicionar(id,{tipo:'Trabalho',descricao:l.local,inicio:l.ini,fim:l.fim,vinc:l.chave}); return; }
+    const res=await API().fd_vincular(id,l.chave,e.value); if(res&&res.erro){ this.toast(res.erro); return; } if(res&&res.registros){ this.aberto=id; this.carregar(res); } if(res&&res.msg) this.toast(res.msg); },
   async fdConferir(id,chave,marcar){ const r=await API().fd_conferir(id,chave,marcar); if(r&&r.registros){ this.aberto=id; this.carregar(r); } },
   async fdRemover(id,mid){ if(!confirm('Remover este lançamento?')) return; const r=await API().fd_remover(id,mid); if(r&&r.registros){ this.aberto=id; this.carregar(r); } if(r&&r.msg) this.toast(r.msg); },
   fdExportar(id){ api('remicao_tabela_docx', id); },  // a mensagem (salva ou erro) vem pelo api()
-  fdAdicionar(id){ const inp=(k,ph,w)=>`<input id="fdm_${k}" placeholder="${ph}" style="width:${w||'100%'};padding:7px 9px;border:1px solid var(--line);border-radius:8px;font:inherit;box-sizing:border-box">`;
-    document.getElementById('modal').innerHTML=`<div class="box" style="width:520px"><h2>Adicionar atestado ou remição</h2>
-      <p class="muted" style="margin:0 0 10px">Para o que não está na ficha: ENCCEJA/ENEM, trabalho não registrado, leitura, curso. Fica só nesta base e entra na soma "ficha × RSPE".</p>
+  fdAdicionar(id,pre){ pre=pre||{}; const inp=(k,ph,w)=>`<input id="fdm_${k}" placeholder="${ph}" value="${esc(pre[k]||'')}" style="width:${w||'100%'};padding:7px 9px;border:1px solid var(--line);border-radius:8px;font:inherit;box-sizing:border-box">`;
+    document.getElementById('modal').innerHTML=`<div class="box" style="width:520px"><h2>${pre.vinc?'Atestado juntado nos autos, não lançado na ficha':'Adicionar atestado ou remição'}</h2>
+      <p class="muted" style="margin:0 0 10px">${pre.vinc?`Informe o nº, o período e os dias remidos do atestado que está nos autos: ele fica vinculado ao trabalho (${esc(pre.descricao||'')}, ${esc(pre.inicio||'')} a ${esc(pre.fim||'')}) e entra na soma "ficha × RSPE".`:'Para o que não está na ficha: ENCCEJA/ENEM, trabalho não registrado, leitura, curso. Fica só nesta base e entra na soma "ficha × RSPE".'}</p>
+      <input type="hidden" id="fdm_vinc" value="${esc(pre.vinc||'')}">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        <select id="fdm_tipo" style="padding:7px 9px;border:1px solid var(--line);border-radius:8px;font:inherit"><option>Trabalho</option><option>Estudo</option><option>ENCCEJA/ENEM</option><option>Leitura</option><option>Outro</option></select>
+        <select id="fdm_tipo" style="padding:7px 9px;border:1px solid var(--line);border-radius:8px;font:inherit">${['Trabalho','Estudo','ENCCEJA/ENEM','Leitura','Outro'].map(o=>`<option ${pre.tipo===o?'selected':''}>${o}</option>`).join('')}</select>
         ${inp('numero','Nº do atestado/certidão')}
         <div style="grid-column:1/3">${inp('descricao','Descrição (empresa, curso, exame)')}</div>
         ${inp('inicio','Início (dd/mm/aaaa)')}${inp('fim','Fim (dd/mm/aaaa)')}
@@ -1599,7 +1639,7 @@ const ui = {
       </div>
       <div class="acts"><button class="btn" onclick="ui.fecharModal()">Cancelar</button><button class="btn pri" onclick="ui.fdSalvar(${jsa(id)})">Adicionar</button></div></div>`;
     document.getElementById('modal').classList.add('on'); },
-  async fdSalvar(id){ const d={}; ['tipo','numero','descricao','inicio','fim','trabalhados','horas','remidos','unidade','emissao','trechos'].forEach(k=>{ const e=document.getElementById('fdm_'+k); d[k]=e?e.value:''; });
+  async fdSalvar(id){ const d={}; ['tipo','numero','descricao','inicio','fim','trabalhados','horas','remidos','unidade','emissao','trechos','vinc'].forEach(k=>{ const e=document.getElementById('fdm_'+k); d[k]=e?e.value:''; });
     const r=await API().fd_adicionar(id,d); if(r&&r.erro){ this.toast(r.erro); return; } this.fecharModal(); if(r&&r.registros){ this.aberto=id; this.carregar(r); } if(r&&r.msg) this.toast(r.msg); },
   // ---------- decisão sobre indícios de falta: vale em todas as abas (falta 12 meses, indulto, comutação, linha do tempo, Auditoria) ----------
   faltasModal(id, foco){ const r=(this.dados.registros||[]).find(x=>x.id===id); if(!r) return; const its=(r.faltas_itens||[]).slice().sort((a,b)=>this.tlD(b.data||'01/01/1900')-this.tlD(a.data||'01/01/1900'));
@@ -1670,7 +1710,7 @@ const ui = {
         const p=[e.length?'possível prescrição da pretensão executória quanto a '+E(e):'', u.length?'possível prescrição da pretensão punitiva quanto a '+E(u):''].filter(Boolean); return p.length?p.join(', bem como '):'possível prescrição'; },
       ext:()=>'possível extinção da pena'+(r.ext_sit?', '+sp(r.ext_sit).replace(/^./,x=>x.toLowerCase()):''),
       st:()=>r.st_ok?'preenchimento dos requisitos para a saída temporária, LEP, arts. 122 e 123':r.st_quase?'requisitos para a saída temporária, com ponto a conferir':'pedido de saída temporária (os requisitos não aparecem todos atendidos na análise de hoje)',
-      fd:()=>{ const p=[]; if(/Remição a requerer/.test(r.fd_sit||'')) p.push('remição a requerer'); if(/Ausência de atestado|Último atestado/.test(r.fd_sit||'')) p.push('pendência de atestado de trabalho ou de certificação de estudo'); if(/Conferir remição/.test(r.fd_sit||'')) p.push('remição a conferir'); return p.join(' e ')||'remição a requerer'; }};
+      fd:()=>{ const p=[]; if(/Atestado sem peticionamento/.test(r.fd_sit||'')) p.push('juntada de atestado de trabalho sem peticionamento'); if(/Pedir atestado/.test(r.fd_sit||'')) p.push('pendência de atestado de trabalho ou de certificação de estudo'); if(/Verificar remição|Conferir pontos/.test(r.fd_sit||'')) p.push('remição a conferir'); return p.join(' e ')||'remição a conferir'; }};
     const NOME={prog:'progressão de regime',liv:'livramento condicional',ind:'indulto ou comutação',presc:'extinção da punibilidade pela prescrição',ext:'extinção da pena',fd:'remição',st:'saída temporária'};
     Object.keys(r.pedidos||{}).filter(k=>k.startsWith('ind_')).forEach(k=>{ const x=this.decDe(r).find(y=>y.id===k.slice(4)); const dn=x?'Decreto '+x.numero:'decreto '+k.slice(4);
       achado[k]=()=>'possível direito a indulto ou comutação pelo '+dn; NOME[k]='indulto ou comutação pelo '+dn; });
@@ -2402,8 +2442,8 @@ const ui = {
     const vis=this.visiveis(), chave=(this.filtro?vis.map(r=>r.id).join('|'):'*')+'#'+(this.dados.registros||[]).length;
     if(!pronto && this._bdChave!==chave) this.bdCarregar();
     const secs=[['bd1','Perfil'],['bd2','Trabalho e disciplina'],['bd3','Situação executória'],['bd4','Auditoria'],['bd5','Remição'],['bd6','Cartões das abas'],['bd7','Providências'],['bd8','Atendimentos']];
-    st.innerHTML=`<div class="geo-head"><div><b>Dados da Base</b><span class="muted">${D&&D.geral&&D.n?`${D.n<D.total?D.n+' de '+D.total+' assistidos (pela busca)':pl(D.n,'assistido','assistidos')} · ${D.geral.nf} com ficha disciplinar (SIAPEN) · RSPEs gerados entre ${esc(D.geral.periodo[0])} e ${esc(D.geral.periodo[1])} · os mesmos números do relatório geral e da remição detalhada em PDF`:'Os números e gráficos dos relatórios em PDF da base, sem gerar o arquivo.'}</span></div>
-      <div class="geo-acts"><button class="btn" onclick="ui.modalRelatorios()" title="Gera os relatórios em PDF (geral, remição detalhada, individuais)">Relatórios em PDF…</button></div></div>
+    st.innerHTML=`<div class="geo-head"><div><b>Dados da Base</b><span class="muted">${D&&D.geral&&D.n?`${D.n<D.total?D.n+' de '+D.total+' assistidos (pela busca)':pl(D.n,'assistido','assistidos')} · ${D.geral.nf} com ficha disciplinar (SIAPEN) · RSPEs gerados entre ${esc(D.geral.periodo[0])} e ${esc(D.geral.periodo[1])} · os mesmos números do relatório geral e da remição (conferência RSPE × ficha) em PDF`:'Os números e gráficos dos relatórios em PDF da base, sem gerar o arquivo.'}</span></div>
+      <div class="geo-acts"><button class="btn" onclick="ui.modalRelatorios()" title="Gera os relatórios em PDF (geral, remição, individuais)">Relatórios em PDF…</button></div></div>
       <div class="bd-nav">${secs.map(([id,t])=>`<span onclick="ui.bdIr('${id}')">${t}</span>`).join('')}</div>`;
     if(!D || this._bdChave!==chave && !D.geral){ card.innerHTML=`<div class="empty"><div><b>Contando a base…</b></div></div>`; return; }
     if(D.erro){ card.innerHTML=`<div class="empty"><div><b>Dados da Base</b>${esc(D.erro)}</div></div>`; return; }
@@ -2420,13 +2460,13 @@ const ui = {
       +`<h3>${esc(G.s3_3[0])}</h3><p class="bd-sub">${esc(G.s3_3[1])}</p>`+(G.c3_3?`<div class="bd-1">${this.bdColunas(G.c3_3,200)}</div>`:'')+this.bdTab(t33.cab,l33,t33.cores,'num')+G.n3_3.map(t=>`<p class="bd-nota">${esc(t)}</p>`).join('')
       +`<h3>${esc(G.s3_4[0])}</h3>`+trio(G.r3_4)+this.bdTab(G.t3_4.cab,G.t3_4.linhas,G.t3_4.cores,'num'));
     h+=this.bdSec('bd4','4','Inconsistências do cálculo (Auditoria)',G.p4_sub, this.bdNum(G.p4_num,G.p4_cores)+(G.t4.linhas.length?this.bdTab(G.t4.cab,G.t4.linhas,{},'num'):''));
-    // remição detalhada: quadros 1 e 2 (sem nomes)
-    const uns=R.unidades||[], mxU=Math.max(1,...uns.map(u=>u.total_n||0));
-    const barU=uns.length?`<div class="bd-g"><h4>Dias a remir por unidade prisional</h4>${uns.slice(0,10).map(u=>`<div class="bd-hb"><span title="${esc(u.un)}">${esc(u.un)}</span><i><em style="width:${(100*(u.total_n||0)/mxU).toFixed(1)}%"></em></i><b>${esc(u.total)}</b></div>`).join('')}${uns.length>10?`<p class="bd-nota">As ${uns.length} unidades estão no quadro abaixo.</p>`:''}</div>`:'';
-    h+=this.bdSec('bd5','5','Remição detalhada',`Origem de cada dia a remir, pela ficha disciplinar (SIAPEN) x RSPE · ${pl(R.com_ficha,'assistido','assistidos')} com ficha de ${D.n} na seleção. O quadro por assistido sai no PDF "Remição detalhada".`,
-      this.bdNum([[R.ass,'assistidos com remição a requerer (com a estimativa)',R.ass_exatos+' em vermelho na aba Ficha'],[R.total,'dias a remir (sem o trabalho em curso)','']])
-      +`<h3>Por origem</h3>`+`<table class="bd-t"><thead><tr><th>Origem</th><th>Assistidos</th><th>Itens</th><th>Dias a remir</th><th>Como foi calculado</th><th>Providência</th></tr></thead><tbody>${R.origens.map(o=>`<tr><td><b>${esc(o.rot)}</b></td><td>${o.ass}</td><td>${o.itens}</td><td><b>${esc(o.dias)}</b>${o.fora?' <span class="muted">(fora do total)</span>':''}</td><td class="tx">${esc(o.como)}</td><td class="tx">${esc(o.prov)}</td></tr>`).join('')}<tr class="tot"><td><b>Total</b></td><td><b>${R.ass}</b></td><td></td><td><b>${esc(R.total)}</b></td><td></td><td></td></tr></tbody></table>`
-      +(uns.length?`<h3>Por unidade prisional (onde o trabalho, o estudo ou a leitura aconteceu)</h3><div class="bd-1">${barU}</div><table class="bd-t num"><thead><tr><th>Unidade</th><th>Assistidos</th>${R.cols.map(c=>`<th>${esc(c)}</th>`).join('')}<th>Total</th></tr></thead><tbody>${uns.map(u=>`<tr><td><b>${esc(u.un)}</b></td><td>${u.ass}</td>${u.dias.map(v=>`<td>${esc(v)}</td>`).join('')}<td><b>${esc(u.total)}</b></td></tr>`).join('')}<tr class="tot"><td><b>Total</b></td><td></td>${R.un_total.map(v=>`<td><b>${esc(v)}</b></td>`).join('')}</tr></tbody></table>`:''));
+    // remição: conferência RSPE x ficha (sem nomes) - o programa compara os totais e não liga remição a atestado
+    const uns=R.unidades||[], mxU=Math.max(1,...uns.map(u=>u.dias_n||0));
+    const barU=uns.length?`<div class="bd-g"><h4>Trabalho depois do último atestado, sem atestado: remição estimada por unidade (≈ dias)</h4>${uns.slice(0,10).map(u=>`<div class="bd-hb"><span title="${esc(u.un)}">${esc(u.un)}</span><i><em style="width:${(100*(u.dias_n||0)/mxU).toFixed(1)}%"></em></i><b>≈ ${esc(u.dias)}</b></div>`).join('')}${uns.length>10?`<p class="bd-nota">As ${uns.length} unidades estão no quadro abaixo.</p>`:''}</div>`:'';
+    h+=this.bdSec('bd5','5','Remição: conferência RSPE × ficha',`Pela aba Ficha · ${pl(R.com_ficha,'assistido','assistidos')} com ficha de ${D.n} na seleção. O RSPE não diz de onde vem cada remição: o programa compara os totais e não liga remição a atestado. O detalhe por assistido sai no PDF "Remição: conferência RSPE × ficha".`,
+      this.bdNum([[R.verificar,'com diferença a favor da ficha (verificar remição)',R.dif_dias+' dias somados, a conferir nos autos'],[R.vermelho,'com atestado sem peticionamento, posterior à última remição','fato documental: conferir nos autos'],
+        [R.fatos,'com documentos posteriores à última remição',R.fatos_dias+' dias, a conferir nos autos'],[R.pedir,'com trabalho depois do último atestado, sem atestado','≈ '+R.pedir_dias+' dias de remição (estimativa): pedir atestado'],[R.em_ordem,'em ordem','']],{0:'amarelo',1:'vermelho',2:'amarelo',3:'amarelo',4:'verde'})
+      +(uns.length?`<h3>Pedir atestado: por unidade em que o trabalho aconteceu</h3><div class="bd-1">${barU}</div><table class="bd-t num"><thead><tr><th>Unidade</th><th>Assistidos</th><th>Remição estimada (≈ dias)</th></tr></thead><tbody>${uns.map(u=>`<tr><td><b>${esc(u.un)}</b></td><td>${u.ass}</td><td>≈ ${esc(u.dias)}</td></tr>`).join('')}</tbody></table>`:''));
     // cartões de cada aba, contados como na exportação em PDF
     h+=this.bdSec('bd6','6','Cartões de resumo das abas','Contados como no PDF de cada aba: quem tem o pedido marcado (e a situação não mudou) sai da cor e entra em "Pedido feito"; os sem cor (sem prazo próximo) ficam em "Demais".',
       `<div class="bd-cart">${D.cartoes.map(c=>{ const soma=c.itens.reduce((s,x)=>s+x.n,0), resto=Math.max(0,D.n-soma), tot=Math.max(1,D.n);
@@ -2697,9 +2737,9 @@ const ui = {
         <div class="muted" id="rel_conta" style="font-size:12px;margin:5px 0 0 2px"></div>
       </div>
       <label class="chk"><input type="checkbox" id="rel_ger" checked>Relatório geral da base</label>
-      <label class="chk"><input type="checkbox" id="rel_rem">Remição detalhada: relatório (PDF) e planilha de conferência ficha x RSPE (Excel e PDF)</label>
+      <label class="chk"><input type="checkbox" id="rel_rem">Remição (conferência RSPE × ficha): relatório (PDF) e planilha de conferência (Excel e PDF)</label>
       <label class="chk"><input type="checkbox" id="rel_pla" checked>Planilha (Excel, todas as abas)</label>
-      <label class="chk"><input type="checkbox" id="rel_nom" checked>Remição detalhada com o nome dos assistidos</label>
+      <label class="chk"><input type="checkbox" id="rel_nom" checked>Remição com o nome dos assistidos</label>
       <p class="muted" style="font-size:12px">Triagem: não substitui o Atestado de Pena. Datas de progressão, livramento e término são as do SEEU, salvo as marcadas com * (calculadas pelo programa quando o SEEU não as imprime).</p>
       <div class="acts"><button class="btn" style="margin-right:auto" onclick="ui.modalProvidencias()">Relatório de providências</button><button class="btn" onclick="ui.fecharModal()">Cancelar</button><button class="btn pri" onclick="ui.gerarRelatorios()">Gerar</button></div></div>`;
     document.getElementById('modal').classList.add('on'); this.relConta(); },

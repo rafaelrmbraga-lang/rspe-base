@@ -1,7 +1,12 @@
-"""Teste de regressão da conciliação atestado x remição (rspe_remicao), caso-modelo com os textos da ficha do SIAPEN e
-as remições do RSPE (dados de identificação removidos). Rodar: python teste_remicao.py"""
+"""Teste de regressão da remição pela ficha x RSPE (modelo da 7.14: comparação por totais e trabalho da ficha x atestados; até a 7.13,
+conciliação atestado x remição), caso-modelo com os textos da ficha do SIAPEN e as remições do RSPE (dados de identificação
+removidos). Rodar: python teste_remicao.py"""
+import sys
+import types
 from datetime import date
 
+sys.modules.setdefault("webview", types.ModuleType("webview"))
+import rspe_ficha as rf
 import rspe_remicao as rr
 
 EV = [
@@ -26,41 +31,52 @@ EV = [
 REM = [(170, "26/09/2017", "26/09/2017"), (106, "12/02/2019", "12/02/2019"), (129, "06/04/2020", "06/04/2020"),
        (179, "30/03/2022", "30/03/2022"), (205, "17/11/2023", "13/11/2023"), (102, "29/04/2025", "18/02/2025")]
 F = {"data_impressao": "03/10/2026", "eventos": [{"data": d, "texto": t} for d, t in EV]}
-R = {"_incidentes": [{"tipo": "REMIÇÃO", "complemento": "%d Dia(s) Remido(s)" % n, "data_decisao": dd, "data_referencia": rf, "situacao": "CONCEDIDO"}
+R = {"_eventos": [{"data": "10/07/2014", "tipo": "PRISÃO/INÍCIO DE CUMPRIMENTO", "motivo": "PRISÃO"}], "_incidentes": [{"tipo": "REMIÇÃO", "complemento": "%d Dia(s) Remido(s)" % n, "data_decisao": dd, "data_referencia": rf, "situacao": "CONCEDIDO"}
                      for n, dd, rf in REM]}
 M033 = [{"id": 1, "dados": {"tipo": "Trabalho", "numero": "033/2025", "remidos": "102",
                             "trechos": "Horta; 14/11/2023; 17/12/2023\nPoligonal Engenharia; 18/12/2023; 28/06/2024\nArtesanato; 10/08/2024; 18/02/2025"}}]
 
 
-def _status(C):
-    return {(t["atestado"].split("nº ")[-1].split(" ")[0] if "nº" in t["atestado"] else t["atestado"]): (t["status"], t["rspe"]) for t in C["tabela"]}
+def linhas(N):
+    return [(L["local"], L["periodo"].split(" (")[0], L["st"], L["at"]) for L in N["trab"]["linhas"]]
+
+
+f = rf.atualizar(dict(F, eventos=[dict(e) for e in F["eventos"]]))
+# leitura (funções de leitura de rspe_remicao): segmentos do atestado com dois setores; atestado sem período
+ats = {a["numero"]: a for a in rr.atestados(f["eventos"])}
+assert [(x["setor"], x["ini"], x["fim"]) for x in ats["041/2020"]["segs"]] == [
+    ("Artesanato", date(2018, 11, 24), date(2019, 3, 7)), ("Ags Prestadora - Me (Horta)", date(2019, 3, 8), date(2020, 3, 5))], ats["041/2020"]["segs"]
+assert not any(x["ini"] for x in ats["183/PDIB"]["segs"]) and ats["183/PDIB"]["rem"] == 116, ats["183/PDIB"]
 
 
 def caso(manuais):
-    C = rr.conciliar(R, F, date(2026, 10, 3), manuais, date(2014, 7, 10))
-    st = _status(C)
-    for n, d in (("058/2017", 170), ("143/2018", 106), ("041/2020", 129), ("219/2021", 179), ("193/2023", 205)):
-        assert st[n] == ("CONCILIADO", "%d dias" % d), (n, st[n])
-    assert st["183/PDIB"][0] == "NAO_LANCADO", st["183/PDIB"]
-    t183 = next(t for t in C["tabela"] if "183" in t["atestado"])
-    # (quesito 112, 16/10/2026: sem o atestado 033, a remição de 102 dias só alcança os 12 meses anteriores à referência; a Poligonal de
-    # 18/12/2023 a 18/02/2024 fica livre e entra na folga do atestado 183)
-    assert all(x["inferido"] for x in t183["segs"]) and {x["per"] for x in t183["segs"]} - {"18/12/2023 a 18/02/2024"} == {"19/02/2025 a 24/03/2026", "30/06/2026 a 07/07/2026"}, t183["segs"]
-    assert not any(p["acao"] == "Pedir atestado" for p in C["pendencias"]), "Pedir atestado indevido"
-    assert not any(a["tipo"] == "baixa sem início" for a in C["alertas"]), "baixa sem início"
-    assert not any(a["tipo"] == "ref" for a in C["alertas"]), "data de referência não pode gerar divergência neste caso"
-    tipos = [a["tipo"] for a in C["alertas"]]
-    assert "erro de ano" in tipos and "resíduo" in tipos and C["residuo"] == 1, tipos
-    return C, st, tipos
+    o = rf.comparativo(R, f, date(2026, 10, 3), manuais=manuais)
+    N = o["fd_novo"]
+    # o RSPE concedeu 891 dias em 6 decisões; a ficha comprova os atestados desta execução (sem ligar remição a atestado)
+    assert N["R"]["concedido"] == 891 and len(N["R"]["remicoes"]) == 6, N["R"]
+    # 183/PDIB: emitido depois da última decisão (29/04/2025) e sem peticionamento ("não restando nada a peticionar" não é peticionamento)
+    d183 = next(d for d in N["docs"] if d["num"] == "183/PDIB")
+    assert d183["cor"] == "vermelho" and not d183["pet_ok"] and o["fd_cor"] == "vermelho", (d183, o["fd_sit"])
+    # trabalho já remido (anterior ao último atestado): nunca "pedir atestado"
+    assert not any(p["tipo"] == "pedir_atestado" for p in N["pontos"]), N["pontos"]
+    # atestados com período e nome do setor: vinculados automaticamente
+    L = linhas(N)
+    for per, at in (("07/03/2019 a 05/03/2020", "041/2020"), ("06/03/2020 a 23/11/2021", "219/2021"), ("24/11/2021 a 13/11/2023", "193/2023")):
+        assert ("Ags Prestadora - Me (Horta)", per, "auto", at) in L, (per, L)
+    # o 183/PDIB (sem período no texto, mesmo nome) é sugerido para o último trabalho, posterior ao último período atestado
+    assert ("Paiva Lingerie", "30/06/2026 a 07/07/2026", "provavel", "183/PDIB") in L, L
+    return o, N, L
 
 
-C, st, tipos = caso([])
-assert st["Remição sem atestado na ficha"] == ("CONCILIADO", "102 dias"), st
-C, st, tipos = caso(M033)
-assert st["033/2025"] == ("CONCILIADO", "102 dias"), st
-assert any(a["tipo"] == "baixa tardia" and "Ags" in a["texto"] and "10/08/2024" in a["texto"] and "17/12/2023" in a["texto"] for a in C["alertas"]), C["alertas"]
-assert any(p["status"] == "LACUNA" and p["texto"].startswith("29/06/2024 a 09/08/2024") for p in C["pendencias"]), C["pendencias"]
-print("ok: conciliação atestado x remição (caso-modelo, com e sem o atestado 033/2025 informado)")
+o, N, L = caso([])
+assert N["comp"] == 905.99 and N["dif"] == 14.99 and "Verificar remição" in o["fd_sit"], (N["comp"], N["dif"], o["fd_sit"])
+assert ("Poligonal Engenharia Ltda", "18/12/2023 a 28/06/2024", "sem", "") in L and ("Artesanato", "10/08/2024 a 19/02/2025", "sem", "") in L, L
+# com o atestado 033/2025 informado pela equipe (juntado nos autos): entra na soma e cobre os trechos que cita
+o, N, L = caso(M033)
+assert N["comp"] == 1007.99 and N["dif"] == 116.99 and N["man"] == 102, (N["comp"], N["dif"])
+assert ("Poligonal Engenharia Ltda", "18/12/2023 a 28/06/2024", "auto", "033/2025") in L and ("Artesanato", "10/08/2024 a 18/02/2025", "auto", "033/2025") in L, L
+assert ("Ags Prestadora - Me (Horta)", "29/06/2024 a 09/08/2024", "sem", "") in L, L  # lacuna entre os trechos do atestado
+print("ok: remição pela ficha x RSPE (caso-modelo, com e sem o atestado 033/2025 informado)")
 
 # atestado em lote com vários setores ("setor de A, B e C com N dias") e setor desativado no SIAPEN ("XXDESATIVADO")
 EV2 = [
@@ -73,19 +89,9 @@ EV2 = [
     ("10.06.2026", "TRABALHO: Iniciou atividade laboral, no setor de trabalho FAXINA, conforme documento N/C."),
     ("14.07.2026", "TRABALHO, nesta data foi emitido atestado de trabalho nº227/PDIB/AGEPEN/MS setor de PRENDE BEM, POLIGONAL ENGENHARIA LTDA e FAXINA com 50 dias de remição."),
 ]
-F2 = {"data_impressao": "20/07/2026", "eventos": [{"data": d, "texto": t} for d, t in EV2]}
-R2 = {"_incidentes": [{"tipo": "REMIÇÃO", "complemento": "50 Dia(s) Remido(s)", "data_decisao": "16/07/2026", "data_referencia": "14/07/2026", "situacao": "CONCEDIDO"}]}
-C2 = rr.conciliar(R2, F2, date(2026, 7, 20))
-v2 = [(v["setor"], v["ini"], v["fim"]) for v in C2["vinculos"]]
+evs2 = [{"data": d, "texto": t} for d, t in EV2]
+v2 = [(v["setor"], v["ini"], v["fim"]) for v in rr.vinculos(evs2, date(2026, 7, 20), date(2026, 7, 20))[0]]
 assert ("Prendebem (prendedores)", date(2026, 1, 18), date(2026, 5, 4)) in v2 and not any("DESATIV" in s.upper() for s, _, _ in v2), v2
-a227 = [a for a in C2["atestados"] if a["numero"].startswith("227")][0]
+a227 = [a for a in rr.atestados(evs2) if a["numero"].startswith("227")][0]
 assert [s["setor"] for s in a227["segs"]] == ["Prendebem (prendedores)", "Poligonal Engenharia Ltda", "Faxina"], a227["segs"]
-assert not [p for p in C2["pendencias"] if p["status"] in ("SEM_ATESTADO", "A_CONFERIR") and p["data"] < date(2026, 7, 14)], C2["pendencias"]
 print("ok: atestado com vários setores e setor desativado no SIAPEN")
-
-# âncora das asserções negativas (A25): os nomes testados com "not any(...)" existem no módulo; se um tipo, ação ou status for
-# renomeado, a asserção negativa passaria sem testar nada - aqui ela falha
-_src = open(rr.__file__, encoding="utf-8").read()
-_nomes = ['"baixa sem início"', '"ref"', '"Pedir atestado"', '"SEM_ATESTADO"', '"A_CONFERIR"']
-assert all(n in _src for n in _nomes), [n for n in _nomes if n not in _src]
-print("ok: nomes das asserções negativas existem em rspe_remicao")

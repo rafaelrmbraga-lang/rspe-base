@@ -417,9 +417,7 @@ def _concurso_exclui(f):
 
 def remicoes_ref_decisao(r):
     """Remições concedidas no RSPE com a data de referência igual à da decisão (ou sem ela): a data não diz quando foi o trabalho
-    ou o estudo. [(data da decisão, dias, fim do período do atestado conciliado na ficha ou None)] - o fim vem de
-    r["_rem_fim_at"] (rspe_view, pela conciliação da ficha: {decisão dd/mm/aaaa: fim dd/mm/aaaa})."""
-    fins = r.get("_rem_fim_at") or {}
+    ou o estudo, e o RSPE não diz de qual atestado veio cada uma. [(data da decisão, dias)]."""
     out = []
     for i in r.get("_incidentes") or []:
         if not rs.e_remicao_concedida(i):
@@ -428,30 +426,15 @@ def remicoes_ref_decisao(r):
         n = rs.dias_de(i.get("complemento") or "")
         if not dd or not n or n <= 0 or (dr and dr != dd):
             continue
-        out.append((dd, n, rs.to_date(fins.get(rs.fmt(dd)) or "")))
-    return out
-
-
-def fins_atestado(comp):
-    """{decisão dd/mm/aaaa: fim do período} das remições conciliadas com atestado da ficha (comp: rspe_ficha.comparativo)."""
-    out = {}
-    for a in ((comp or {}).get("conc") or {}).get("atestados") or []:
-        x = a.get("remicao") or {}
-        fs = [s["fim"] for s in a.get("segs") or [] if s.get("fim") and not s.get("inferido")]
-        if x.get("decisao") and fs:
-            k = rs.fmt(x["decisao"])
-            out[k] = rs.fmt(max([max(fs)] + ([rs.to_date(out[k])] if out.get(k) else [])))
+        out.append((dd, n))
     return out
 
 
 def _ctx(r):
     eventos, incidentes = r.get("_eventos") or [], r.get("_incidentes") or []
-    rem = rs.remicoes_liquidas(incidentes)  # remições e perdas de remidos (a mesma conta das colunas 2022-2025)
-    # remição decidida com a referência igual à decisão: conta pela atividade - o fim do período do atestado conciliado na ficha -,
-    # ainda que homologada depois da data do decreto (LEP, art. 128); sem o período, fica pela decisão (a verificar: _rem_posterior)
-    mp = {(d, n): fim for d, n, fim in remicoes_ref_decisao(r) if fim and fim < d}
-    if mp:
-        rem = [(mp.get((d, n), d), n) for d, n in rem]
+    # remições e perdas de remidos (a mesma conta das colunas 2022-2025); a remição decidida com a referência igual à decisão fica pela
+    # decisão - o RSPE não diz de qual atestado ela veio - e, se cobrir o que faltava, o decreto fica a verificar (_rem_posterior)
+    rem = rs.remicoes_liquidas(incidentes)
     return {"periodos": rs.periodos_custodia(eventos), "lc": rs.periodos_livramento(eventos, incidentes), "rem": rem}
 
 
@@ -462,7 +445,7 @@ def _rem_posterior(x, r):
     if x.get("s") != "nao" or not ref:
         return
     ger = rs.to_date(r.get("data_geracao_rspe") or "") or date.max
-    its = [(d, n) for d, n, fim in remicoes_ref_decisao(r) if not fim and ref < d <= ger]
+    its = [(d, n) for d, n in remicoes_ref_decisao(r) if ref < d <= ger]
     if not its:
         return
     fl = rs.faltas_remiveis(x.get("mot"))
@@ -590,14 +573,13 @@ def _pena_cumprida_aba(out, r):
                  mot="%s; %s" % (_txt_pena_cumprida(p, c, ref, parcial), x.get("mot") or ""), ressalva=x.get("ressalva") or "")
 
 
-def remicao_posterior_decretos(r, comp):
-    """Grava r["_rem_fim_at"] (fim do período do atestado de cada remição conciliada, para _ctx) e, nos decretos 2022, 2024 e 2025
-    (análise detalhada, feita antes da ficha), passa a A VERIFICAR o "não atinge" que a remição decidida depois da data, por
-    atividade anterior a ela (ou sem o período identificado), cobriria. Altera r."""
-    r["_rem_fim_at"] = fins_atestado(comp)
+def remicao_posterior_decretos(r):
+    """Nos decretos 2022, 2024 e 2025 (análise detalhada, feita antes da ficha), passa a A VERIFICAR o "não atinge" que a remição
+    decidida depois da data, com a referência igual à decisão, cobriria: o trabalho ou o estudo pode ser anterior à data (LEP, art. 128)
+    e o RSPE não diz de qual atestado veio a remição. Altera r."""
     for ano, ref in _REF_DET.items():
         ger = rs.to_date(r.get("data_geracao_rspe") or "") or date.max
-        its = [(d, n) for d, n, fim in remicoes_ref_decisao(r) if ref < d <= ger and (not fim or fim <= ref)]
+        its = [(d, n) for d, n in remicoes_ref_decisao(r) if ref < d <= ger]
         if not its:
             continue
         tot = sum(n for _d, n in its)
@@ -617,7 +599,7 @@ def remicao_posterior_decretos(r, comp):
             fl = [y for y in fl if y > 0]
             if not fl or tot < min(fl):
                 continue
-            nota = ("%s de remição decidida depois de %s (%s), por atividade anterior a essa data ou sem o período identificado, cobre os %s "
+            nota = ("%s de remição decidida depois de %s (%s), sem o período do trabalho ou do estudo identificado, cobre os %s "
                     "que faltavam - a remição é pena cumprida (LEP, art. 128): conferir o período e pedir o benefício" % (
                         rs.pl(round(tot), "dia", "dias"), rs.fmt(ref), "; ".join("%s em %s" % (rs.pl(round(n), "dia", "dias"), rs.fmt(d)) for d, n in its[:4]),
                         rs.pl(min(fl), "dia", "dias")))

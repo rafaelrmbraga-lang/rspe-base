@@ -40,7 +40,7 @@ ROTULO = {
     "indulto": {"verde": "Possível", "amarelo": "A verificar", "vermelho": "Crime impeditivo / vedado", "cinza": "Não atinge", "azul": "Extinta"},
     "presc": {"vermelho": "Prescrição aparente", "amarelo": "Iminente / a verificar", "": "Não prescrita", "cinza": "Sem dados", "azul": "Extinta"},
     "presc_pp": {"vermelho": "Prescrição aparente", "amarelo": "A verificar", "": "Não configurada", "cinza": "Sem dados"},
-    "fd": {"vermelho": "Remição a requerer / atestado não lançado", "amarelo": "Conferir remição / ausência de atestado / último atestado há 6 meses", "verde": "Em ordem", "cinza": "Sem ficha"},
+    "fd": {"vermelho": "Atestado sem peticionamento, posterior à última remição", "amarelo": "Verificar remição / pontos a conferir / pedir atestado", "verde": "Em ordem", "cinza": "Sem ficha"},
     "aud": {"vermelho": "Com alertas", "amarelo": "Pontos a verificar", "verde": "Guia em ordem", "azul": "Extinta"},
     "ext": {"vermelho": "Extinção cabível", "laranja": "Término em até 30 dias", "amarelo": "Até 60 dias / a verificar", "verde": "Término em até 90 dias", "cinza": "Sem previsão / interrompida", "azul": "Extinta (registrada)"},
 }
@@ -53,8 +53,8 @@ def _dias(m, k):
 FILTROS = {
     "fd": [
         ("todas", "Todas"),
-        ("impeditivo", "Remição a requerer"),
-        ("verificar", "Conferir remição / sem atestado / estudo"),
+        ("impeditivo", "Atestado sem peticionamento"),
+        ("verificar", "Verificar remição / pontos a conferir"),
         ("ok", "Em ordem"),
         ("nao", "Sem ficha"),
     ],
@@ -1147,7 +1147,7 @@ def so_matematica(it):
     """Itens que ficam na Auditoria: conferência dos números e datas do RSPE."""
     if it.get("origem") == "ficha":
         # perda de dias remidos é conta do RSPE; cumprimento parado no RSPE x custódia na ficha é contradição do RSPE
-        return it["titulo"].startswith("Perda de remidos") or it.get("tipo") in ("rspe-x-ficha", "remicao-referencia-tardia")
+        return it["titulo"].startswith("Perda de remidos") or it.get("tipo") == "rspe-x-ficha"
     return it.get("tipo") not in AUD_OUTRAS_ABAS
 
 
@@ -1344,6 +1344,15 @@ def baixa_de(it, baixas):
     return None, ""
 
 
+def marcas_ficha(baixas):
+    """Marcas da conferência da aba Ficha gravadas na base (tabela de baixas, por processo): (✓ Homologado - chaves "fd:at:", "fd:lei:",
+    "fd:exa:", "fd:edu:", "fd:man:" -, {período de trabalho "fd:vt:..." -> chave do atestado ou "sem"}). As chaves são estáveis (atestado:
+    número + emissão; período: setor + início): valem depois de nova ficha importada."""
+    baixas = baixas or {}
+    vinc = {k: (v or {}).get("obs") or "" for k, v in baixas.items() if k.startswith("fd:vt:")}
+    return {k for k in baixas if k.startswith("fd:") and k not in vinc}, vinc
+
+
 def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
     """Registro extraído -> dict plano com tudo que as abas mostram. baixas: {chave: {obs, data}} da auditoria.
     ficha: Ficha Disciplinar do SIAPEN já lida (rspe_ficha.extrair), se houver. extras: itens da Auditoria criados
@@ -1372,17 +1381,18 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
             pass
     # a conferência da ficha (aba Ficha) sai antes dos decretos: a remição pendente com dias exatos pode bastar para o lapso do
     # indulto ou da comutação (LEP, art. 128) - o resultado "não atinge" passa a "a verificar"
-    _comp = rf.comparativo(r, ficha, HOJE, conferidos={k for k in (baixas or ()) if k.startswith("fd:")}, manuais=manuais)
+    _conf, _vinc = marcas_ficha(baixas)
+    _comp = rf.comparativo(r, ficha, HOJE, conferidos=_conf, manuais=manuais, vinculos=_vinc)
     if ficha:
         try:
             rf.remicao_pendente_decretos(r, _comp)
         except Exception:
             pass
     try:
-        # remição homologada depois da data do decreto por atividade anterior a ela (fim do período do atestado conciliado; sem
-        # o período, a verificar) - LEP, art. 128
+        # remição homologada depois da data do decreto, com a referência igual à decisão: o período não se conhece - a verificar
+        # (LEP, art. 128)
         import rspe_decretos as _rd
-        _rd.remicao_posterior_decretos(r, _comp if ficha else None)
+        _rd.remicao_posterior_decretos(r)
         _rd.outro_processo_decretos(r)  # custódia por outro processo ou pelo crime novo contada no cumprido: a verificar
         _rd.pena_cumprida_decretos(r)  # indulto com a pena considerada já cumprida: "pena cumprida - pedir a extinção"
     except Exception:
@@ -1748,12 +1758,9 @@ def prioridade(m):
     for k, ano in (("c25", 2025), ("c24", 2024)):
         if m.get(k) == "Sim":
             mot[2].append("comutação %d cabível" % ano)
-    D = m.get("fd_rem_det") or {}
-    rem = int(D.get("total") or 0) if isinstance(D, dict) else 0
-    if m.get("fd_cor") == "vermelho" and rem >= 1:
-        mot[3].append("remição a requerer (≈ %s)" % rs.pl(rem, "dia", "dias"))
-    elif m.get("fd_cor") == "vermelho":
-        mot[3].append("remição a requerer")
+    if m.get("fd_cor") == "vermelho":
+        # fato documental certo (atestado sem peticionamento, posterior à última remição): conferir nos autos, sem valor a requerer
+        mot[3].append("atestado sem peticionamento posterior à última remição: conferir nos autos")
     ed = m.get("ext_dias")
     if m.get("ext_cor") in ("laranja",) or (ed is not None and 0 <= ed <= 30 and m.get("ext_cor") != "vermelho"):
         mot[3].append("término em %s" % rs.pl(ed, "dia", "dias") if ed is not None else "término próximo")
@@ -1817,7 +1824,7 @@ def modelo_erro(r, erro, baixas=None):
               "regime": (r.get("regime_atual") or "").replace(" - ATIVO", ""), "aud_itens": [it], "aud_n": 1, "aud_alertas": 0 if b else 1, "aud_verificar": 0,
               "aud_status": "ok" if b else "atencao", "aud_cor": "verde" if b else "vermelho",
               "aud_resumo": "Falha ao analisar (baixada) - conferir o PDF" if b else "Falha ao analisar - conferir o PDF", "aud_base": "base jurídica %s" % rg.versao(),
-              "aud_info": 0, "div_seeu": [], "div_seeu_txt": "", "presc_linhas": [], "presc_n": 0, "fd_linhas": [], "fd_blocos": [], "ind_status": [], "crimes_det": [], "incidentes": [],
+              "aud_info": 0, "div_seeu": [], "div_seeu_txt": "", "presc_linhas": [], "presc_n": 0, "fd_linhas": [], "ind_status": [], "crimes_det": [], "incidentes": [],
               "ficha_tem": False, "ficha": None, "falta_sim": False, "falta_apurar": False, "falta_det": "", "interrompida": False, "estado_exec": "", "ind_sim": False,
               "arquivo": r.get("arquivo", ""), "geracao": r.get("data_geracao_rspe", ""), "erro": str(erro)})
     return m
@@ -2209,9 +2216,10 @@ def nome_proprio(nome):
 
 
 def prioridade_remicao(m, r, hoje=None):
-    """Remição pendente da ficha (dias exatos, r["_rem_pend"]) que, declarada, já daria um benefício: a progressão, o livramento ou o
-    término previstos para o futuro recuam os dias remidos e cairiam até hoje, ou um decreto passa a "a verificar" por ela. Lista de
-    motivos para o ícone de prioridade ao lado do nome ([] se nada muda hoje). A remição é pena cumprida (LEP, art. 128)."""
+    """Remição possivelmente pendente (r["_rem_pend"]: documentos desta execução, com dias, posteriores à última remição do RSPE - a
+    conferir nos autos) que, declarada, já daria um benefício: a progressão, o livramento ou o término previstos para o futuro recuam
+    os dias remidos e cairiam até hoje, ou um decreto passa a "a verificar" por ela. Lista de motivos para o ícone de prioridade ao
+    lado do nome ([] se nada muda hoje). A remição é pena cumprida (LEP, art. 128)."""
     hoje = hoje or HOJE
     tot, rots = rs.remicao_pendente_ate(r, hoje)
     out = []
@@ -2220,16 +2228,17 @@ def prioridade_remicao(m, r, hoje=None):
         for k, rot, g in (("prog", "Progressão de regime", "a"), ("liv", "Livramento condicional", "o"), ("termino", "Término da pena (extinção)", "o")):
             d = rs.to_date(m.get(k) or "")
             if d and d > hoje and d - timedelta(days=n) <= hoje:
-                out.append("%s: previst" % rot + g + " para %s; com a remição pendente de %s, o tempo já estaria cumprido (por volta de %s)." % (
+                out.append("%s: previst" % rot + g + " para %s; com a remição possivelmente pendente de %s (a conferir nos autos), o tempo já estaria cumprido (por volta de %s)." % (
                     rs.fmt(d), rs.pl(n, "dia", "dias"), rs.fmt(d - timedelta(days=n))))
     for x in (m.get("dec") or {}).get("decretos") or []:
         if "remição pendente" in (x.get("mot") or "") and x.get("s") == "ver":
-            out.append("Indulto/comutação, Decreto %s (%s): o tempo que faltava é coberto pela remição pendente." % (
+            out.append("Indulto/comutação, Decreto %s (%s): o tempo que faltava seria coberto pela remição possivelmente pendente (a conferir nos autos)." % (
                 x.get("numero") or x.get("id"), x.get("ano") or x.get("id")))
     if out:
         # falta grave pendente ou posterior ao período: ressalva da perda de até 1/3 (LEP, art. 127), sem afirmar a perda
-        ress = (m.get("fd_rem_det") or {}).get("ressalva_127") if isinstance(m.get("fd_rem_det"), dict) else ""
-        out.append("Remição pendente: %s%s%s. Pedir a declaração da remição (LEP, arts. 126 e 128)." % (
+        ress = (m.get("fd_novo") or {}).get("ressalva_127") or ""
+        out.append("Remição possivelmente pendente (documentos posteriores à última remição do RSPE): %s%s%s. Conferir nos autos e, se não "
+                   "apreciados, pedir a declaração da remição (LEP, arts. 126 e 128)." % (
             rs.pl(int(tot), "dia", "dias") if tot >= 1 else "ver a aba Ficha",
             (" (%s)" % ("; ".join(rots[:4]) + ("; ..." if len(rots) > 4 else ""))) if rots else "",
             (" - " + ress) if ress else ""))
