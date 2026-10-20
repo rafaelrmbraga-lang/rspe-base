@@ -2182,19 +2182,29 @@ def corte_faltas(hoje=None):
     return min(hoje - timedelta(days=3 * 365), min(DECRETOS.values()) - timedelta(days=365))
 
 
-def prescricao_disciplinar(d_fato, fuga=False, eventos=None):
+def recaptura_apos(d, eventos):
+    """Recaptura: primeiro evento de prisão/reinício depois de d (o fim da fuga ou da evasão, que é falta permanente)."""
+    if not d:
+        return None
+    rec = [to_date(e.get("data") or "") for e in eventos or [] if "INTERRUP" not in (e.get("tipo") or "").upper()]
+    rec = [x for x in rec if x and x > d]
+    return min(rec) if rec else None
+
+
+def prescricao_disciplinar(d_fato, fuga=False, eventos=None, recaptura=None):
     """(termo inicial, último dia) da prescrição da falta disciplinar: sem prazo na LEP, aplica-se o menor prazo do art. 109 do
     CP - 3 anos, ou 2 para fatos até 05/05/2010 (STJ, AgRg no HC 779.723; HC 140.870), contado o dia do começo (CP, art. 10). A
-    fuga é falta permanente: o prazo corre da recaptura (STJ, HC 527.625); foragido, não corre -> (None, None)."""
+    fuga (e a evasão do monitoramento/descumprimento que interrompe o cumprimento) é falta permanente: o prazo corre da recaptura
+    (STJ, HC 527.625) - a dos eventos do RSPE ou, na fuga lida da ficha, a que a ficha registra (recaptura); foragido, não corre
+    -> (None, None)."""
     if not d_fato:
         return None, None
     termo = d_fato
     if fuga:
-        rec = [to_date(e.get("data") or "") for e in eventos or [] if "INTERRUP" not in (e.get("tipo") or "").upper()]
-        rec = [x for x in rec if x and x > d_fato]
+        rec = recaptura or recaptura_apos(d_fato, eventos)
         if not rec:
             return None, None
-        termo = min(rec)
+        termo = rec
     anos = 2 if d_fato < date(2010, 5, 6) else 3
     try:
         fim = termo.replace(year=termo.year + anos)
@@ -2203,11 +2213,99 @@ def prescricao_disciplinar(d_fato, fuga=False, eventos=None):
     return termo, fim - timedelta(days=1)
 
 
-def falta_prescrita(d_fato, fuga, eventos, hoje=None):
+def falta_prescrita(d_fato, fuga, eventos, hoje=None, recaptura=None):
     """Falta ainda não reconhecida em juízo cuja prescrição disciplinar se consumou: não gera regressão, perda de remidos,
     nova data-base nem impede benefício."""
-    _, lim = prescricao_disciplinar(d_fato, fuga, eventos)
+    _, lim = prescricao_disciplinar(d_fato, fuga, eventos, recaptura)
     return bool(lim and lim < (hoje or date.today()))
+
+
+RE_EVASAO_EV = re.compile(r"FUGA|EVAS|ABANDON|FORAGID|N[ÃA]O RETORN|DESCUMPRIMENTO", re.I)
+
+
+def episodios_evasao(incidentes, eventos):
+    """Ocorrências de fuga/evasão/descumprimento que interrompem o cumprimento, cada uma com a recaptura: a fuga é falta
+    PERMANENTE - dura da evasão até a recaptura (STJ, HC 527.625) -, e o SEEU lança a homologação dela com a referência na
+    recaptura (às vezes na prisão em flagrante que a encerra). Fontes: eventos do RSPE (interrupção por fuga ou descumprimento)
+    e fuga lida da ficha disciplinar (incidente _fuga_ficha, com a recaptura que a ficha registra, se houver).
+    [{ini, fim (recaptura ou None), texto, obj, fuga}]; evento que não é interrupção é pontual (fim = data)."""
+    eps = []
+    evs = list(eventos or [])
+    for k, e in enumerate(evs):
+        t = _texto_evento(e)
+        d = to_date(e.get("data") or "")
+        if not d or not RE_EVASAO_EV.search(t):
+            continue
+        interr = "INTERRUP" in (e.get("tipo") or "").upper()
+        # recaptura: a prisão/reinício seguinte - inclusive a do mesmo dia lançada depois da interrupção (flagrante no dia)
+        rec = [x for x in (to_date(y.get("data") or "") for y in evs[k + 1:] if "INTERRUP" not in (y.get("tipo") or "").upper()) if x and x >= d]
+        eps.append({"ini": d, "fim": (min(rec) if rec else recaptura_apos(d, evs)) if interr else d, "texto": t, "obj": e,
+                    "fuga": bool(RE_FUGA_EV.search(t)), "permanente": interr})
+    for i in incidentes or []:
+        if i.get("_fuga_ficha") and not _negado(i):
+            d = to_date(i.get("data_referencia") or "")
+            if d:
+                eps.append({"ini": d, "fim": to_date(i.get("_recaptura") or "") or recaptura_apos(d, eventos), "texto": _rotulo_incidente(i),
+                            "obj": i, "fuga": True, "permanente": True})
+    return sorted(eps, key=lambda x: x["ini"])
+
+
+def _homologadas(incidentes, com_incidente=False):
+    """Datas do fato das faltas reconhecidas no RSPE (homologação/sanção concedida, não pendente; não as lidas da ficha)."""
+    hs = [(d, i) for d, i in ((_data_fato_falta(i), i) for i in incidentes
+                              if RE_FALTA_PROPRIA.search(_rotulo_incidente(i)) and not _negado(i) and not _pendente(i) and not i.get("_ficha")) if d]
+    return hs if com_incidente else [d for d, _i in hs]
+
+
+def mapa_faltas(incidentes, eventos):
+    """Liga numa só ocorrência a fuga/evasão, a regressão cautelar decretada durante ela (ou logo depois da recaptura), a
+    regressão definitiva e a perda de dias remidos que a seguem e a homologação lançada na recaptura. Sem isso, a mesma fuga
+    vira duas ou três faltas "a apurar" (uma delas fantasma, na data da cautelar), que pesam no indulto e na comutação.
+    Devolve (episódios, absorvidos): cada episódio ganha "homologada" (data da falta homologada que o cobre: entre a evasão e
+    30 dias depois da recaptura), "vinculados" [(texto, data)] e "reconhecida" [(texto, data)] - regressão definitiva ou perda de
+    remidos sem a homologação no RSPE: sanção que só existe com a falta grave reconhecida em juízo (LEP, arts. 118, I, e 127).
+    absorvidos: {id(incidente): episódio ou None} - regressão/perda que não é falta separada (None: regressão cautelar seguida,
+    em até 180 dias, da homologação da falta)."""
+    homs_i = _homologadas(incidentes, True)
+    homs = [d for d, _i in homs_i]
+    eps = episodios_evasao(incidentes, eventos)
+    for ep in eps:
+        ate = (ep["fim"] + timedelta(days=30)) if ep["fim"] else date.max
+        h = next(((x, i) for x, i in sorted(homs_i, key=lambda y: y[0]) if ep["ini"] - timedelta(days=3) <= x <= ate), None)
+        ep["homologada"], ep["hom_inc"] = (h[0], h[1]) if h else (None, None)
+        ep["vinculados"], ep["reconhecida"] = [], []
+    somas = [to_date(j.get("data_referencia") or j.get("data_decisao") or "") for j in incidentes
+             if re.search(r"SOMAT|UNIFICA", _rotulo_incidente(j), re.I) and not _negado(j)]
+    absorvidos = {}
+    for i in incidentes:
+        txt = _rotulo_incidente(i)
+        if RE_FALTA_PROPRIA.search(txt) or _negado(i) or not re.search(r"PERD|REGRESS", txt, re.I):
+            continue
+        d = to_date(i.get("data_referencia") or i.get("data_decisao") or "")
+        if not d:
+            continue
+        caut = bool(re.search(r"CAUTELAR", txt, re.I))
+        folga = timedelta(days=60 if caut else 180)
+        cand = [ep for ep in eps if ep["permanente"] and ep["ini"] - timedelta(days=3) <= d <= ((ep["fim"] + folga) if ep["fim"] else date.max)]
+        if cand:
+            ep = cand[-1]
+            ep["vinculados"].append((txt, d))
+            # sanção definitiva sem a homologação: perda de remidos, ou regressão decidida depois da recaptura (com a pessoa presa,
+            # ouvida em justificação - LEP, art. 118, § 2º); a regressão decretada durante a fuga não basta para afirmar a falta
+            if (not caut and not ep["homologada"] and not any(x and abs((x - d).days) <= 5 for x in somas)
+                    and (re.search(r"PERD", txt, re.I) or (ep["fim"] and d >= ep["fim"]))):
+                ep["reconhecida"].append((txt, d))
+            absorvidos[id(i)] = ep
+        elif caut and any(d <= x <= d + timedelta(days=180) for x in homs):
+            absorvidos[id(i)] = None
+    return eps, absorvidos
+
+
+def _periodo_ep(ep):
+    """Texto do período da fuga/evasão: "10/07/2024 a 19/11/2025 (recaptura)" ou "10/07/2024, sem recaptura registrada"."""
+    if not ep.get("permanente") or ep["fim"] == ep["ini"]:
+        return fmt(ep["ini"])
+    return ("%s a %s (recaptura)" % (fmt(ep["ini"]), fmt(ep["fim"]))) if ep["fim"] else "%s, sem recaptura registrada" % fmt(ep["ini"])
 
 
 def faltas_editaveis(incidentes, eventos, hoje=None):
@@ -2216,11 +2314,12 @@ def faltas_editaveis(incidentes, eventos, hoje=None):
     out = []
     for x in _faltas_editaveis(incidentes, eventos):
         d = to_date(x["data"]) if x["data"] else None
-        fuga = bool(RE_FUGA_EV.search(x["texto"] or ""))
-        termo, lim = prescricao_disciplinar(d, fuga, eventos)
+        fuga = bool(x.get("permanente")) or bool(RE_FUGA_EV.search(x["texto"] or ""))
+        rec = to_date(x.get("recaptura") or "")
+        termo, lim = prescricao_disciplinar(d, fuga, eventos, rec)
         x["presc_termo"], x["presc_limite"] = (fmt(termo) if termo else ""), (fmt(lim) if lim else "")
         x["presc_fuga"] = fuga
-        if not d or d >= corte_faltas(hoje) or (fuga and not falta_prescrita(d, True, eventos, hoje)):
+        if not d or d >= corte_faltas(hoje) or (rec and rec >= corte_faltas(hoje)) or (fuga and not falta_prescrita(d, True, eventos, hoje, rec)):
             out.append(x)
     return out
 
@@ -2229,14 +2328,30 @@ def _faltas_editaveis(incidentes, eventos):
     """Todos os indícios de falta da execução que admitem decisão do operador: fuga (em tese falta grave - LEP, art. 50, II -, a
     apurar até a sanção reconhecida em juízo - Súmula 533/STJ),
     descumprimento, incidente pendente, perda de remidos ou regressão sem falta homologada. Cada um com a chave, a data, o
-    texto, o estado padrão e a decisão gravada (_falta: 'sim' / 'nao')."""
+    texto, o estado padrão e a decisão gravada (_falta: 'sim' / 'nao'). A fuga já homologada (homologação lançada entre a evasão e
+    a recaptura) e a regressão/perda da mesma ocorrência não viram item separado (mapa_faltas): a regressão cautelar decretada
+    durante a fuga não é uma segunda falta."""
     out = []
     proprias = [i for i in incidentes if RE_FALTA_PROPRIA.search(_rotulo_incidente(i)) and not _negado(i)]
     datas_proprias = [d for d in (_data_fato_falta(i) for i in proprias) if d]
+    eps, absorvidos = mapa_faltas(incidentes, eventos)
+    ep_obj = {id(ep["obj"]): ep for ep in eps}
+
+    def _extra(ep):
+        if not ep:
+            return {}
+        return {"recaptura": fmt(ep["fim"]) if ep["fim"] and ep["permanente"] else "", "permanente": ep["permanente"],
+                "periodo": _periodo_ep(ep), "vinculados": ["%s em %s" % (t, fmt(x)) for t, x in ep["vinculados"]],
+                "reconhecida": ["%s em %s" % (t, fmt(x)) for t, x in ep["reconhecida"]]}
     for i in incidentes:
         txt = _rotulo_incidente(i)
         if not RE_FALTA.search(txt) or _negado(i):
             continue
+        if id(i) in absorvidos:
+            continue  # regressão/perda da mesma ocorrência de uma fuga ou de uma falta homologada
+        ep = ep_obj.get(id(i))
+        if ep and ep["homologada"]:
+            continue  # fuga da ficha cuja falta o RSPE já homologou
         if i in proprias:
             if not _pendente(i):
                 continue  # homologada/concedida: já é falta grave reconhecida
@@ -2245,20 +2360,29 @@ def _faltas_editaveis(incidentes, eventos):
             d = to_date(i.get("data_referencia") or i.get("data_decisao") or "")
             if re.search(r"PERD|REGRESS", txt, re.I) and any(d and d - timedelta(days=365) <= x <= d for x in datas_proprias):
                 continue
-        out.append({"chave": chave_falta(txt, d), "data": fmt(d) if d else "", "texto": txt,
-                    "padrao": "apurar",
-                    "decisao": i.get("_falta") or "", "origem": "incidente", "ficha": i.get("_ficha_obs") or "",
-                    "ficha_falta": bool(i.get("_ficha_falta"))})
-    for e in eventos or []:
-        t = _texto_evento(e)
-        if not re.search(r"FUGA|EVAS|ABANDON|FORAGID|N[ÃA]O RETORN|DESCUMPRIMENTO", t, re.I):
+        out.append(dict({"chave": chave_falta(txt, d), "data": fmt(d) if d else "", "texto": txt,
+                         "padrao": "apurar",
+                         "decisao": i.get("_falta") or "", "origem": "incidente", "ficha": i.get("_ficha_obs") or "",
+                         "ficha_falta": bool(i.get("_ficha_falta"))}, **_extra(ep)))
+    for ep in eps:
+        e = ep["obj"]
+        if e.get("_fuga_ficha") or ep["homologada"]:
+            continue  # a da ficha já entrou como incidente; a homologada já é falta reconhecida
+        t, d = ep["texto"], ep["ini"]
+        if any(abs((x - d).days) <= 1 for x in datas_proprias):
             continue
-        d = to_date(e.get("data") or "")
-        if not d or any(abs((x - d).days) <= 1 for x in datas_proprias):
-            continue
-        out.append({"chave": chave_falta(t, d), "data": fmt(d), "texto": t, "padrao": "apurar",
-                    "decisao": e.get("_falta") or "", "origem": "evento"})
+        out.append(dict({"chave": chave_falta(t, d), "data": fmt(d), "texto": t, "padrao": "apurar",
+                         "decisao": e.get("_falta") or "", "origem": "evento"}, **_extra(ep)))
     return out
+
+
+def _recaptura_ficha(ficha, d):
+    """Recaptura registrada na ficha depois da fuga de d: a primeira entrada em unidade prisional, recaptura ou retorno da
+    evasão (fim da falta permanente; o SEEU nem sempre lança a recaptura)."""
+    xs = [to_date((y.get("data") or "").replace(".", "/")) for y in (ficha or {}).get("eventos") or []
+          if re.search(r"^\s*ENTRADA NA UNIDADE|RECAPTUR|RETORNOU D[AE] EVAS", y.get("texto") or "", re.I)]
+    xs = [x for x in xs if x and d and x > d]
+    return min(xs) if xs else None
 
 
 def faltas_da_ficha(r, ficha, hoje=None):
@@ -2295,20 +2419,28 @@ def faltas_da_ficha(r, ficha, hoje=None):
     fugas_r = [to_date(e.get("data") or "") for e in r.get("_eventos", []) if RE_FUGA_EV.search(_texto_evento(e))]
     fugas_r += [to_date(i.get("data_referencia") or i.get("data_decisao") or "") for i in r["_incidentes"] if RE_FUGA_EV.search(_rotulo_incidente(i))]
     # a ficha cobre a vida prisional toda: fuga anterior ao primeiro evento desta execução é de outra execução
-    _ini = min([x for x in (to_date(e.get("data") or "") for e in r.get("_eventos", [])) if x] or [None], key=lambda x: x or date.max)
+    # (os eventos lançados pela própria ficha não contam; sem evento do RSPE, o limite é o fato mais antigo das condenações)
+    _ini = min([x for x in (to_date(e.get("data") or "") for e in r.get("_eventos", []) if not e.get("_ficha")) if x]
+               or [x for x in (to_date(c.get("data_infracao") or "") for c in r.get("_crimes", [])) if x] or [None], key=lambda x: x or date.max)
+    _eps_r = episodios_evasao([], r.get("_eventos", []))
     for e in ficha.get("eventos") or []:
         t = e.get("texto") or ""
         d = to_date((e.get("data") or "").replace(".", "/"))
-        if (not d or (d < corte_faltas(hoje) and falta_prescrita(d, True, r.get("_eventos"), hoje))
+        if (not d or (d < corte_faltas(hoje) and falta_prescrita(d, True, r.get("_eventos"), hoje, _recaptura_ficha(ficha, d)))
                 or not re.search(r"\bFUGA\b|EVADIU|EVAS[ÃA]O|FORAGID|N[ÃA]O RETORNOU|EMPREENDEU FUGA", t, re.I)
                 or re.search(r"ABANDONO D[OE] (SERVI|TRABALHO|CURSO)", t, re.I)
                 # retorno/recaptura citando a evasão não é nova fuga
                 or re.search(r"RETORNOU D[AE] EVAS|RECAPTUR|\bPRES[OA]\b.{0,80}EVAS", t, re.I)
                 or (_ini and d < _ini)
-                or any(x and abs((x - d).days) <= 30 for x in fugas_r + datas)):
+                or any(x and abs((x - d).days) <= 30 for x in fugas_r + datas)
+                # dentro de uma interrupção do RSPE (fuga ou descumprimento, até a recaptura): é a mesma ocorrência
+                or any(ep["permanente"] and ep["ini"] - timedelta(days=3) <= d <= ((ep["fim"] + timedelta(days=3)) if ep["fim"] else date.max)
+                       for ep in _eps_r)):
             continue
+        _rec = _recaptura_ficha(ficha, d)
         r["_incidentes"].append({"tipo": "FALTA GRAVE - FUGA/EVASÃO NA FICHA DISCIPLINAR (SIAPEN)", "complemento": "Data da infração: %s" % fmt(d),
-                                 "situacao": "PENDENTE", "data_referencia": fmt(d), "data_decisao": "", "_ficha": True, "_fuga_ficha": True})
+                                 "situacao": "PENDENTE", "data_referencia": fmt(d), "data_decisao": "", "_ficha": True, "_fuga_ficha": True,
+                                 **({"_recaptura": fmt(_rec)} if _rec else {})})
         datas.append(d)
 
 
@@ -2401,7 +2533,8 @@ def _texto_ficha(t, n):
     return t.rstrip(" ,;:.")
 
 
-def indicios_falta(incidentes, ref, dias=365, eventos=None, ate=None, hoje=None, crimes=None, inicio=None, fuga_firme=False):
+def indicios_falta(incidentes, ref, dias=365, eventos=None, ate=None, hoje=None, crimes=None, inicio=None, fuga_firme=False,
+                   crime_condenado_firme=False):
     """Faltas nos 'dias' anteriores a ref (art. 6º dos decretos; CP, art. 83, III, b), pela data do FATO.
     Devolve [(texto, firme)]: firme = falta grave, homologação ou sanção CONCEDIDA (sanção reconhecida em juízo);
     não firme = pendente, regressão sem menção a falta (ou cautelar, sem a homologação na ficha), perda de remidos sem falta
@@ -2409,13 +2542,48 @@ def indicios_falta(incidentes, ref, dias=365, eventos=None, ate=None, hoje=None,
     concedido não conta. ate: último dia da janela (art. 6º, p. ú.: falta posterior à publicação do decreto não impede);
     padrão = ref. crimes/inicio: crime doloso com fato na janela, depois do início do cumprimento, é falta grave (LEP, art.
     52) se reconhecido - a apurar. fuga_firme (indulto e comutação, critério da unidade): a fuga/evasão sem sanção reconhecida
-    conta como falta grave (firme), com o texto "não homologada" (o decreto que exige a homologação a afasta)."""
+    conta como falta grave (firme), com o texto "não homologada" (o decreto que exige a homologação a afasta).
+    A fuga e a evasão são faltas PERMANENTES: contam enquanto duram, até a recaptura (mapa_faltas); a regressão cautelar
+    decretada durante a fuga e a homologação lançada na recaptura são a mesma ocorrência, não faltas separadas.
+    crime_condenado_firme (falta nos 12 meses e livramento): o crime doloso cometido durante a execução, com condenação
+    transitada em julgado, é falta grave reconhecida (LEP, art. 52; Súmula 526/STJ) - nos decretos, segue a verificar."""
+    return [(t, f) for t, f, _d in indicios_falta_datas(incidentes, ref, dias, eventos, ate, hoje, crimes, inicio, fuga_firme, crime_condenado_firme)]
+
+
+def indicios_falta_datas(incidentes, ref, dias=365, eventos=None, ate=None, hoje=None, crimes=None, inicio=None, fuga_firme=False,
+                         crime_condenado_firme=False):
+    """indicios_falta com a data de onde correm os 12 meses de cada indício: [(texto, firme, data)] - a data do fato ou, na
+    fuga/evasão, a da recaptura (fim da falta permanente)."""
     limite = ref - timedelta(days=dias)
     FUGA_SH = " - fuga não homologada: tratada como falta grave (LEP, art. 50, II)"
     fim = ate or ref
     proprias = [i for i in incidentes if RE_FALTA_PROPRIA.search(_rotulo_incidente(i)) and not _negado(i)]
     datas_proprias = [d for d in (_data_fato_falta(i) for i in proprias) if d]
+    eps, absorvidos = mapa_faltas(incidentes, eventos)
+    ep_obj = {id(ep["obj"]): ep for ep in eps}
+    # homologação lançada na recaptura: a falta é a fuga inteira (da evasão à recaptura), não só o dia da referência
+    ep_hom = {id(ep["hom_inc"]): ep for ep in eps if ep["hom_inc"] is not None and ep["permanente"]}
     out = []
+
+    def add(t, f, d):
+        out.append((t, f, d))
+
+    def na_janela(ep):
+        """Ocorrência permanente: conta se qualquer parte dela (da evasão à recaptura) cai na janela."""
+        return ep["ini"] <= fim and (ep["fim"] or date.max) >= limite
+
+    def periodo(ep, d):
+        """Data exibida: a da evasão; a recaptura só quando a fuga começou antes da janela (é ela que a traz para dentro)."""
+        if ep and ep["permanente"] and ep["ini"] < limite and ep["fim"]:
+            return "%s; recaptura em %s - falta permanente: os 12 meses contam da recaptura" % (fmt(ep["ini"]), fmt(ep["fim"]))
+        return fmt(d)
+
+    def conta(ep, d):
+        return (ep["fim"] or ref) if ep and ep["permanente"] else d
+
+    def vinc(ep):
+        v = [(t, x) for t, x in (ep or {}).get("vinculados") or [] if re.search(r"CAUTELAR", t, re.I)]
+        return ("; regressão cautelar da mesma ocorrência em %s" % ", ".join(fmt(x) for _t, x in v)) if v else ""
     for i in incidentes:
         txt = _rotulo_incidente(i)
         if not RE_FALTA.search(txt) or _negado(i):
@@ -2424,43 +2592,58 @@ def indicios_falta(incidentes, ref, dias=365, eventos=None, ate=None, hoje=None,
             continue  # o operador informou que não houve falta grave
         if i in proprias:
             d = _data_fato_falta(i)
-            if d and limite <= d <= fim:
+            ep = ep_obj.get(id(i))
+            if ep and ep["homologada"]:
+                continue  # fuga da ficha já homologada no RSPE (homologação na recaptura)
+            eph = ep_hom.get(id(i))
+            if eph and d and eph["ini"] < limite <= d:
+                eph = None  # a referência já está na janela: conta pela data dela
+            if eph and d and eph["ini"] <= fim < d:
+                # fuga iniciada na janela e homologada com referência na recaptura, depois do fim da janela: a falta é a fuga
+                add("%s (%s de %s a %s, homologada: a falta começou na janela)" % (
+                    txt if fmt(d) in txt else "%s %s" % (txt, fmt(d)), "fuga" if eph["fuga"] else "evasão/descumprimento",
+                    fmt(eph["ini"]), fmt(eph["fim"] or d)), True, d)
+                continue
+            if d and (na_janela(ep) if ep else limite <= d <= fim):
                 if i.get("_data_ciencia"):
                     # falta da ficha datada pela ciência do resultado: o fato é anterior e pode estar fora da janela - a verificar
-                    out.append(("%s - data do fato desconhecida (a usada é posterior ao fato): conferir no PAD se a falta foi cometida "
-                                "na janela" % txt, False))
+                    add("%s - data do fato desconhecida (a usada é posterior ao fato): conferir no PAD se a falta foi cometida "
+                        "na janela" % txt, False, d)
                 elif i.get("_falta") == "sim":
-                    out.append(("%s (%s - falta grave confirmada pelo operador)" % (txt, fmt(d)), True))
+                    add("%s (%s - falta grave confirmada pelo operador)" % (txt, periodo(ep, d)), True, conta(ep, d))
                 elif i.get("_fuga_ficha"):
-                    if not falta_prescrita(d, True, eventos, hoje):
-                        out.append(("%s (%s%s)" % (txt, fmt(d), FUGA_SH), True) if fuga_firme else
-                                   ("%s (%s - fuga: em tese falta grave (LEP, art. 50, II), sem sanção reconhecida em juízo - só impede se reconhecida (STJ, Tema 1195))" % (txt, fmt(d)), False))
+                    if not falta_prescrita(d, True, eventos, hoje, ep["fim"] if ep else None):
+                        add(*(("%s (%s%s)" % (txt, periodo(ep, d), FUGA_SH), True) if fuga_firme else
+                              ("%s (%s - fuga: em tese falta grave (LEP, art. 50, II), sem sanção reconhecida em juízo - só impede se reconhecida (STJ, Tema 1195))"
+                               % (txt, periodo(ep, d)), False)), conta(ep, d))
                 elif i.get("_ficha_falta") and _pendente(i):
                     _ff = i["_ficha_falta"]
-                    out.append(("%s (%s - pendente no RSPE, sem sanção reconhecida em juízo%s; ficha: %s)" % (
+                    add("%s (%s - pendente no RSPE, sem sanção reconhecida em juízo%s; ficha: %s)" % (
                         txt, fmt(d), ("; a ficha registra a sanção homologada pelo juízo em %s - conferir a decisão no SEEU" % _ff["homologada"])
-                        if _ff.get("homologada") else "", _texto_ficha(_ff["texto"], 90)), False))
+                        if _ff.get("homologada") else "", _texto_ficha(_ff["texto"], 90)), False, d)
                 elif _pendente(i) and fuga_firme and RE_FUGA_EV.search(txt):
                     if not falta_prescrita(d, True, eventos, hoje):
-                        out.append(("%s (%s%s)" % (txt, fmt(d), FUGA_SH), True))
+                        add("%s (%s%s)" % (txt, fmt(d), FUGA_SH), True, d)
                 elif _pendente(i):
                     if not falta_prescrita(d, bool(RE_FUGA_EV.search(txt)), eventos, hoje):
                         # a ficha a dá como homologada/punida, mas o SEEU não registra a sanção: não se afirma as duas coisas
-                        out.append(("%s (%s - %s: só impede se a sanção for reconhecida em juízo)" % (
+                        add("%s (%s - %s: só impede se a sanção for reconhecida em juízo)" % (
                             re.sub(r"\s*-\s*homologada/punida\s*$", "", txt), fmt(d),
-                            "a ficha a registra como punida, mas o SEEU não traz a homologação" if re.search(r"homologada/punida\s*$", txt) else "pendente"), False))
+                            "a ficha a registra como punida, mas o SEEU não traz a homologação" if re.search(r"homologada/punida\s*$", txt) else "pendente"), False, d)
                 elif not RE_DATA.search(i.get("complemento") or "") and (not i.get("data_referencia") or i.get("data_referencia") == i.get("data_decisao")):
                     # sem a data do fato: a referência é a da própria decisão - não se presume que a falta foi cometida na janela
-                    out.append(("%s (data do fato não consta; decisão em %s - conferir se a falta foi cometida na janela)" % (txt, fmt(d)), False))
+                    add("%s (data do fato não consta; decisão em %s - conferir se a falta foi cometida na janela)" % (txt, fmt(d)), False, d)
                 else:
-                    out.append((txt if fmt(d) in txt else "%s (%s)" % (txt, fmt(d)), True))  # sem repetir a data que o rótulo já traz
+                    add(txt if fmt(d) in txt else "%s (%s)" % (txt, fmt(d)), True, d)  # sem repetir a data que o rótulo já traz
             continue
+        if id(i) in absorvidos:
+            continue  # regressão/perda da mesma ocorrência de uma fuga ou de uma falta homologada (mapa_faltas)
         d = to_date(i.get("data_referencia") or i.get("data_decisao") or "")
         if not d:
             continue
         if i.get("_falta") == "sim":
             if limite <= d <= fim:
-                out.append(("%s (%s - falta grave confirmada pelo operador)" % (txt, fmt(d)), True))
+                add("%s (%s - falta grave confirmada pelo operador)" % (txt, fmt(d)), True, d)
             continue
         if i.get("_ficha_falta"):
             # a ficha registra a falta que motivou a regressão/perda: falta grave pela data do fato na ficha. Regressão CAUTELAR
@@ -2468,9 +2651,9 @@ def indicios_falta(incidentes, ref, dias=365, eventos=None, ate=None, hoje=None,
             x = to_date(i["_ficha_falta"]["data"])
             if x and limite <= x <= fim:
                 caut = bool(re.search(r"CAUTELAR", txt, re.I)) and not i["_ficha_falta"].get("homologada")
-                out.append(("%s (%s) - ficha: %s em %s%s" % (txt, fmt(d), _texto_ficha(i["_ficha_falta"]["texto"], 90), fmt(x),
-                                                            " - regressão cautelar, sem sanção reconhecida em juízo: só impede se a falta for homologada"
-                                                            if caut else ""), not caut))
+                add("%s (%s) - ficha: %s em %s%s" % (txt, fmt(d), _texto_ficha(i["_ficha_falta"]["texto"], 90), fmt(x),
+                                                    " - regressão cautelar, sem sanção reconhecida em juízo: só impede se a falta for homologada"
+                                                    if caut else ""), not caut, x)
             continue
         if re.search(r"PERD|REGRESS", txt, re.I):
             # perda de remidos e regressão decorrem da falta: só se descartam se houver falta homologada nos 12 meses
@@ -2484,28 +2667,38 @@ def indicios_falta(incidentes, ref, dias=365, eventos=None, ate=None, hoje=None,
                 continue  # regressão pela soma de nova condenação (LEP, arts. 111, p. ú., e 118, II): não é falta
             if limite <= d <= fim:
                 if re.search(r"PERD", txt, re.I):
-                    out.append(("%s (decisão de %s; data do fato não consta)" % (txt, fmt(d)), False))
+                    add("%s (decisão de %s; data do fato não consta)" % (txt, fmt(d)), False, d)
+                elif re.search(r"CAUTELAR", txt, re.I):
+                    # a cautelar pressupõe uma falta (LEP, art. 118, I e § 2º), não a soma de penas
+                    add("%s (%s; sem falta homologada no RSPE: a falta que a motivou está a apurar)" % (txt, fmt(d)), False, d)
                 else:
-                    out.append(("%s (%s; sem falta homologada no RSPE - pode ser soma de penas)" % (txt, fmt(d)), False))
+                    add("%s (%s; sem falta homologada no RSPE - pode ser soma de penas)" % (txt, fmt(d)), False, d)
             continue
         if limite <= d <= fim and not falta_prescrita(d, bool(RE_FUGA_EV.search(txt)), eventos, hoje):
-            out.append(("%s (%s%s)" % (txt, fmt(d), " - pendente" if _pendente(i) else ""), False))
-    # fuga registrada só como evento: falta grave (LEP, art. 50, II), salvo decisão contrária do operador; descumprimento: a
-    # apurar (LEP, art. 50, V). A homologação pode vir depois - STJ, Tema 1195
-    for e in eventos or []:
-        t = _texto_evento(e)
-        if not re.search(r"FUGA|EVAS|ABANDON|FORAGID|N[ÃA]O RETORN|DESCUMPRIMENTO", t, re.I) or e.get("_falta") == "nao":
+            add("%s (%s%s)" % (txt, fmt(d), " - pendente" if _pendente(i) else ""), False, d)
+    # fuga/evasão registrada só como evento: falta grave (LEP, art. 50, II), salvo decisão contrária do operador; descumprimento: a
+    # apurar (LEP, art. 50, V). A homologação pode vir depois - STJ, Tema 1195. Fuga já homologada (homologação entre a evasão e a
+    # recaptura) não é outra falta; regressão definitiva ou perda de remidos da mesma ocorrência = falta reconhecida em juízo
+    for ep in eps:
+        e = ep["obj"]
+        if e.get("_fuga_ficha") or e.get("_falta") == "nao" or ep["homologada"]:
             continue
-        d = to_date(e.get("data") or "")
-        if d and limite <= d <= fim and not any(abs((x - d).days) <= 1 for x in datas_proprias):
-            if e.get("_falta") == "sim":
-                out.append(("%s (%s - falta grave confirmada pelo operador)" % (t, fmt(d)), True))
-            elif RE_FUGA_EV.search(t):
-                if not falta_prescrita(d, True, eventos, hoje):
-                    out.append(("%s (%s%s)" % (t, fmt(d), FUGA_SH), True) if fuga_firme else
-                               ("%s (%s - fuga: em tese falta grave (LEP, art. 50, II), sem sanção reconhecida em juízo - só impede se reconhecida (STJ, Tema 1195))" % (t, fmt(d)), False))
-            elif not falta_prescrita(d, False, eventos, hoje):
-                out.append(("%s (%s; falta a apurar)" % (t, fmt(d)), False))
+        t, d = ep["texto"], ep["ini"]
+        if not na_janela(ep) or any(abs((x - d).days) <= 1 for x in datas_proprias):
+            continue
+        perm = ep["permanente"]
+        if e.get("_falta") == "sim":
+            add("%s (%s - falta grave confirmada pelo operador)" % (t, periodo(ep, d)), True, conta(ep, d))
+        elif ep["reconhecida"]:
+            add("%s (%s - falta grave reconhecida em juízo: %s; o RSPE não traz a homologação com a data do fato)" % (
+                t, _periodo_ep(ep), "; ".join("%s em %s" % (tx, fmt(x)) for tx, x in ep["reconhecida"])), True, conta(ep, d))
+        elif ep["fuga"]:
+            if not falta_prescrita(d, True, eventos, hoje, ep["fim"] if perm else None):
+                add(*(("%s (%s%s%s)" % (t, periodo(ep, d), FUGA_SH, vinc(ep)), True) if fuga_firme else
+                      ("%s (%s - fuga: em tese falta grave (LEP, art. 50, II), sem sanção reconhecida em juízo - só impede se reconhecida (STJ, Tema 1195)%s)"
+                       % (t, periodo(ep, d), vinc(ep)), False)), conta(ep, d))
+        elif not falta_prescrita(d, perm, eventos, hoje, ep["fim"] if perm else None):
+            add("%s (%s; falta a apurar%s)" % (t, periodo(ep, d), vinc(ep)), False, conta(ep, d))
     if crimes and inicio:
         # só o fato cometido com a execução já em curso (custódia iniciada ANTES do dia do fato, livramento ou regime fixado antes
         # dele): o fato que originou a própria custódia (prisão em flagrante no mesmo dia) ou cometido em liberdade provisória,
@@ -2519,18 +2712,34 @@ def indicios_falta(incidentes, ref, dias=365, eventos=None, ate=None, hoje=None,
         def _em_execucao(d):
             return (any(a < d and (b is None or b >= d) for a, b in _per) or any(a < d and (b is None or b >= d) for a, b in _lc)
                     or any(x and x < d for x in _reg))
+        _homs = _homologadas(incidentes)
         for c in crimes:
             d = to_date(c.get("data_infracao") or "")
+            if d and any(abs((x - d).days) <= 3 for x in _homs):
+                continue  # o crime é a própria falta já homologada (mesma ocorrência)
             if d and inicio <= d and limite <= d <= fim and _em_execucao(d) and not re.search(r"CULPOS", (c.get("tipo_penal") or "") + " " + (c.get("artigo") or ""), re.I):
-                out.append(("%s com fato em %s, durante a execução (crime doloso: falta grave se reconhecida - LEP, art. 52)" % (crimes_curto([c]), fmt(d)), False))
-    return list(dict.fromkeys(out))
+                tr = to_date(c.get("transito_processo") or "")
+                if crime_condenado_firme and tr and tr <= (hoje or ref):
+                    add("%s com fato em %s, durante a execução: condenação transitada em julgado em %s (crime doloso é falta grave - "
+                        "LEP, art. 52; Súmula 526/STJ)" % (crimes_curto([c]), fmt(d), fmt(tr)), True, d)
+                else:
+                    add("%s com fato em %s, durante a execução (crime doloso: falta grave se reconhecido - LEP, art. 52)" % (crimes_curto([c]), fmt(d)), False, d)
+    vistos, res = set(), []
+    for t, f, d in out:
+        if t not in vistos:
+            vistos.add(t)
+            res.append((t, f, d))
+    return res
 
 
-def faltas(campos, eventos, incidentes, hoje):
+def faltas(campos, eventos, incidentes, hoje, crimes=None):
     """O RSPE não lista faltas formalmente; procura indícios (falta grave, regressão, perda de remidos, fuga,
     sanção) nos últimos 12 meses antes da geração do relatório, com a mesma regra do art. 6º dos decretos
-    (incidente não concedido não conta). falta_12m: SIM (sanção reconhecida), A APURAR (só indício) ou não consta."""
-    ind = indicios_falta(incidentes, hoje, eventos=eventos)
+    (incidente não concedido não conta). falta_12m: SIM (sanção reconhecida), A APURAR (só indício) ou não consta.
+    A fuga conta até a recaptura (falta permanente); o crime doloso cometido durante a execução, com condenação transitada,
+    é falta grave reconhecida (LEP, art. 52; Súmula 526/STJ)."""
+    ind = indicios_falta(incidentes, hoje, eventos=eventos, crimes=crimes, inicio=inicio_execucao(eventos, crimes) if crimes else None,
+                         crime_condenado_firme=True, hoje=hoje)
     firmes = [t for t, f in ind if f]
     achados = [t for t, f in ind if not f]  # a apurar: sem sanção reconhecida em juízo
     m = re.search(NUM_DIAS + r"\s*dias perdidos", campos.get("saldo_remidos", ""), re.I)
@@ -2546,6 +2755,39 @@ def faltas(campos, eventos, incidentes, hoje):
         "falta_12m": "SIM" if firmes else ("A APURAR" if achados else "não consta"),
         "falta_12m_detalhe": "; ".join(firmes + achados),
     }
+
+
+def _um_ano_depois(d):
+    try:
+        return d.replace(year=d.year + 1)
+    except ValueError:
+        return d.replace(year=d.year + 1, day=28)
+
+
+def falta_livramento(r, d_seeu, hoje):
+    """Requisito do art. 83, III, b, do CP (nenhuma falta grave nos últimos 12 meses) confrontado com a data do livramento do
+    SEEU. Os 12 meses contam do fato ou, na fuga/evasão, da recaptura (falta permanente).
+    ("firme", data, texto): falta reconhecida (homologada, sanção aplicada ou crime doloso com condenação transitada - LEP, art. 52;
+    Súmula 526/STJ) cujos 12 meses acabam depois da data do SEEU: o livramento só cabe a partir dessa data.
+    ("apurar", data_da_falta, texto): a data futura do SEEU é exatamente 12 meses de uma falta ainda sem sanção reconhecida - sem
+    a homologação, ela não se opõe ao livramento (Súmula 533/STJ): a data fica a verificar. None: nada a acrescentar."""
+    if not isinstance(d_seeu, date) or not hoje:
+        return None
+    ini = min(d_seeu, hoje) - timedelta(days=366)
+    crimes, eventos = r.get("_crimes") or [], r.get("_eventos") or []
+    ind = indicios_falta_datas(r.get("_incidentes") or [], hoje, dias=(hoje - ini).days, eventos=eventos, crimes=crimes,
+                               inicio=inicio_execucao(eventos, crimes) if crimes else None, crime_condenado_firme=True, hoje=hoje)
+    firmes = [(_um_ano_depois(d), t) for t, f, d in ind if f and d]
+    if firmes:
+        lib, t = max(firmes, key=lambda x: x[0])
+        if lib > d_seeu + timedelta(days=3):
+            return ("firme", lib, t)
+    if d_seeu > hoje:
+        for t, f, d in ind:
+            if (not f and d and abs((_um_ano_depois(d) - d_seeu).days) <= 3
+                    and not any(abs((x - d_seeu).days) <= 3 for x, _t in firmes)):
+                return ("apurar", d, t)
+    return None
 
 
 # --------------------------------------------------------------------------- #
@@ -5867,7 +6109,7 @@ def derivar(r, crimes, eventos, incidentes):
     r["incidentes_pendentes"] = " | ".join("%s %s" % (i["tipo"], i["complemento"]) for i in inc_pend)
 
     r.update(situacao_execucao(r, eventos, incidentes, crimes, hoje))
-    r.update(faltas(r, eventos, incidentes, hoje))
+    r.update(faltas(r, eventos, incidentes, hoje, crimes))
     limpar_decretos(r)
     r.update(analise_decretos(r, crimes, eventos, incidentes, hoje))
     r.update(analise_decreto_2022(r, crimes, eventos, incidentes))
