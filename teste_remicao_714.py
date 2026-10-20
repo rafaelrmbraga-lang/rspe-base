@@ -154,7 +154,10 @@ try:
     tp = {p["tipo"]: p for p in N["pontos"]}
     ok("exame" in tp and "ENCCEJA 2024" in tp["exame"]["texto"] and "áreas" in tp["exame"]["texto"], "ponto: exame %s" % list(tp))
     ok("sem_valor" in tp and "Curso de qualificação" in tp["sem_valor"]["texto"] and "carga horária" in tp["sem_valor"]["texto"], "ponto: curso sem horas")
-    ok("defensoria" in tp and "051/2024" in tp["defensoria"]["texto"] and "sem registro de protocolo" in tp["defensoria"]["texto"], "ponto: enviado à Defensoria")
+    # o 051/2024 (enviado à Defensoria, 20 dias) tem remição de 20 dias decidida 127 dias depois: "provavelmente remido" (cinza), não alarme
+    ok("defensoria" not in tp and "provavel_remido" in tp and "051/2024" in tp["provavel_remido"]["texto"] and tp["provavel_remido"]["cor"] == "cinza"
+       and next(x for x in N["docs"] if x["num"] == "051/2024")["sit"] == "Provavelmente remido em 15/01/2025 (mesmo valor): conferir",
+       "provavelmente remido (enviado à Defensoria, mesmo valor): %s" % list(tp))
     ok("sem_pet_posterior" in tp and "052/2025" in tp["sem_pet_posterior"]["texto"] and "15/01/2025" in tp["sem_pet_posterior"]["texto"]
        and o["fd_cor"] == "vermelho" and o["fd_sit"].startswith("Atestado sem peticionamento"),
        "fato certo (sem peticionamento e posterior à última decisão): %s / %s" % (list(tp), o["fd_sit"]))
@@ -184,7 +187,9 @@ try:
           [A("061/2024", "05.07.2024", "01/02/2024", "30/06/2024", 50, 150, "Marcenaria")], [("05.07.2024", "PETICIONADO ATESTADO DE TRABALHO Nº 061/2024")])
     o = rf.comparativo(R((50, "01/08/2024", "30/06/2024")), f, HOJE)
     tp = [p["tipo"] for p in o["fd_novo"]["pontos"]]
-    ok("em_curso" in tp and "pedir_atestado" not in tp and o["fd_cor"] == "verde", "em curso há até 90 dias: %s %s" % (tp, o["fd_cor"]))
+    ok("em_curso" in tp and "pedir_atestado" not in tp and o["fd_cor"] == "cinza" and o["fd_sit"] == "Acompanhar atestado"
+       and any(x["t"].startswith("Acompanhar: trabalho em Copa em curso desde 01/09/2026") and x["c"] == "cinza" for x in o["fd_novo"]["onde"]),
+       "em curso há até 90 dias: %s %s %s %s" % (tp, o["fd_cor"], o["fd_sit"], o["fd_novo"]["onde"]))
 except Exception as e:
     import traceback
     traceback.print_exc()

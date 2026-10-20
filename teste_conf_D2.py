@@ -114,10 +114,11 @@ def cor_amarela():
     r = {"_eventos": [{"data": "01/01/2010", "tipo": "PRISÃO/INÍCIO DE CUMPRIMENTO", "motivo": "PRISÃO"}], "_incidentes": [rem("20/09/2023", 34), rem("10/02/2025", 10)]}
     rf.atualizar(f)
     out = rf.comparativo(r, f, HOJE)
-    # o trabalho atual (desde 15/08/2026) está em curso há até 90 dias: acompanhar, não "pedir atestado"; o ponto amarelo é o atestado
-    # sem registro de peticionamento
+    # o trabalho atual (desde 15/08/2026) está em curso há até 90 dias: acompanhar, não "pedir atestado"; o atestado sem registro de
+    # peticionamento tem remição do mesmo valor 72 dias depois: "provavelmente remido" (cinza); o RSPE é maior que a ficha: tudo cinza
     tp = [p_["tipo"] for p_ in out["fd_novo"]["pontos"]]
-    ok(out["fd_cor"] == "amarelo" and "em_curso" in tp and "pedir_atestado" not in tp and "sem_pet" in tp and out["fd_novo"]["dif"] == -10,
+    ok(out["fd_cor"] == "cinza" and "em_curso" in tp and "pedir_atestado" not in tp and "provavel_remido" in tp and "sem_pet" not in tp
+       and out["fd_novo"]["dif"] == -10,
        "cor: %r / %r" % (out["fd_cor"], tp))
 
 

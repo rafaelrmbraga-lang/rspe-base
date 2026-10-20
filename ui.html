@@ -420,7 +420,11 @@ body:has(.welcome.on) .btn-calc{display:none} /* calculadora só com a base aber
 .fdpts li.cinza::before{background:#AEB5B0}.fdpts li.verde::before{background:var(--g-dot)}
 .fdn-onde{margin:12px 0 8px;max-width:980px;border:1px solid var(--line);border-left:3px solid var(--a-dot);border-radius:8px;background:var(--card,#fff);padding:8px 12px}
 .fdn-onde-t{font-weight:700;font-size:12.5px;margin-bottom:3px}.fdn-onde ul{margin:0;padding-left:16px;font-size:12.5px;line-height:1.6;font-weight:400}
-.fdn-onde li.vermelho::marker{color:var(--r-dot)}.fdn-onde li.amarelo::marker{color:var(--a-dot)}.fdn-onde li.verde::marker{color:var(--g-dot)}
+.fdn-onde li.vermelho::marker{color:var(--r-dot)}.fdn-onde li.amarelo::marker{color:var(--a-dot)}.fdn-onde li.verde::marker{color:var(--g-dot)}.fdn-onde li.cinza{color:var(--tx2)}.fdn-onde li.cinza::marker{color:#AEB5B0}
+.fdn-onde.vermelho{border-left-color:var(--r-dot)}.fdn-onde.cinza{border-left-color:#AEB5B0}.fdn-onde.verde{border-left-color:var(--g-dot)}
+.fdn-top{display:grid;grid-template-columns:minmax(0,980px) minmax(260px,440px);gap:0 16px;align-items:start}.fdn-top .fdn-onde{margin:0 0 8px}
+@media (max-width:1180px){.fdn-top{grid-template-columns:minmax(0,980px)}.fdn-top .fdn-onde{margin:12px 0 8px}}
+.fdn-aviso{max-width:980px;margin:2px 0 10px;padding:7px 12px;border:1px solid var(--line);border-left:3px solid #8A918C;border-radius:8px;background:#F7F8F6;font-size:12.5px;font-weight:600;color:var(--tx)}
 .fdn-det{font:inherit;font-size:12px;font-weight:600;padding:5px 12px;border:1px solid var(--pri);color:var(--pri);background:var(--card,#fff);border-radius:8px;cursor:pointer;margin:2px 0 6px}.fdn-det:hover{background:var(--g-bg)}
 .fdn-h{font-weight:700;font-size:12.5px;margin:16px 0 6px}.fdn>.fdn-h:first-child{margin-top:4px}
 .fdn-sub{font-size:11.5px;margin:-2px 0 6px;font-weight:400}.fdn-vazio{font-size:12.5px;font-weight:400}
@@ -1599,7 +1603,7 @@ const ui = {
     const C=`<div class="muted fdn-sub">${T.n_vinc||0} de ${T.n_tot||0} ${(T.n_tot||0)===1?'período vinculado':'períodos vinculados'} a atestado${T.dias_sem?` · ${pl(T.dias_sem,'dia corrido','dias corridos')} de trabalho sem atestado`:''}</div>
       <table class="fdt fdn-t"><colgroup><col style="width:21%"><col style="width:24%"><col style="width:6%"><col style="width:11%"><col><col style="width:150px"></colgroup>
       <tr><th>Empresa / setor</th><th>Período</th><th>Dias</th><th>Atestado</th><th>Vínculo</th><th></th></tr>
-      ${L.map((l,i)=>{ const [t,c]=ST[l.st]||['—','cinza']; return `<tr><td>${esc(l.local)}${l.externo?' <span class="muted">(externo)</span>':''}${l.un?`<div class="muted fdn-un">${esc(l.un)}</div>`:''}</td><td>${esc(l.periodo)}</td><td>${l.dias}</td><td>${l.at?'nº '+esc(l.at):'—'}</td><td>${pill(t,c)} <span class="muted fdn-mot">${esc(mot(l))}</span></td><td class="c">${btn(l,i)}</td></tr>`; }).join('')||'<tr><td colspan="6" class="muted">Nenhum trabalho registrado na ficha nesta execução.</td></tr>'}</table>`;
+      ${L.map((l,i)=>{ const [t,c0]=ST[l.st]||['—','cinza'], c=(N.rspe_maior&&c0==='amarelo'&&!l.pedir_dias)?'cinza':c0; return `<tr><td>${esc(l.local)}${l.externo?' <span class="muted">(externo)</span>':''}${l.un?`<div class="muted fdn-un">${esc(l.un)}</div>`:''}</td><td>${esc(l.periodo)}</td><td>${l.dias}</td><td>${l.at?'nº '+esc(l.at):'—'}</td><td>${pill(t,c)} <span class="muted fdn-mot">${esc(mot(l))}</span></td><td class="c">${btn(l,i)}</td></tr>`; }).join('')||'<tr><td colspan="6" class="muted">Nenhum trabalho registrado na ficha nesta execução.</td></tr>'}</table>`;
     const tk=d=>`<span class="tk ${d.hom?'on':''}" title="${d.hom?'Homologado em juízo (marcado) - clique para desfazer':'Homologado em juízo: marcar'}" onclick="event.stopPropagation();ui.fdConferir(${jsa(r.id)},${jsa(d.chave)},${!d.hom})"></span>`;
     const nome=d=>esc(d.tipo)+(d.num?(/^Atestado/.test(d.tipo)?' nº ':' · ')+esc(d.num):'');
     const docs=N.docs||[];
@@ -1610,12 +1614,15 @@ const ui = {
       ${(R.remicoes||[]).map(x=>`<tr><td>${esc(x.decisao||'—')}</td><td>${esc(x.ref||'—')}</td><td>${nf(x.dias)}</td><td class="muted">conferir na decisão a que se refere (trabalho, estudo, leitura ou exame)</td></tr>`).join('')||'<tr><td colspan="4" class="muted">Nenhuma remição no RSPE.</td></tr>'}</table>`;
     // visão inicial: a comparação, "onde pode estar a diferença" (até 4 linhas) e o botão da visualização detalhada (estado por assistido, só na tela)
     const O=N.onde||[], det=!!(this._fdDet||{})[r.id];
-    const Q=`<div class="fdn-onde"><div class="fdn-onde-t">Onde pode estar a diferença</div><ul>${O.map(x=>`<li class="${esc(x.c)}">${esc(x.t)}</li>`).join('')}</ul></div>
+    // borda do quadro pela cor mais forte das linhas (RSPE maior que a ficha: cinza, salvo pedir atestado e o vermelho)
+    const oc=O.some(x=>x.c==='vermelho')?'vermelho':O.some(x=>x.c==='amarelo')?'amarelo':O.every(x=>x.c==='verde')?'verde':'cinza';
+    const Q=`<div class="fdn-top"><div>${A}</div><div class="fdn-onde ${oc}"><div class="fdn-onde-t">Onde pode estar a diferença</div><ul>${O.map(x=>`<li class="${esc(x.c)}">${esc(x.t)}</li>`).join('')}</ul></div></div>
       <button class="fdn-det" onclick="event.stopPropagation();ui.fdDetalhe(${jsa(r.id)})">${det?'Ocultar detalhes':'Visualização detalhada'}</button>`;
-    if(!det) return `<div class="fdn">${hd('A) Comparação: RSPE × ficha disciplinar')}${A}${Q}</div>`;
-    return `<div class="fdn">${hd('A) Comparação: RSPE × ficha disciplinar')}${A}${Q}${hd('B) Pontos a conferir')}${B}${hd('C) Trabalho registrado na ficha × atestados')}${C}
+    const AV=N.outra_exec?`<div class="fdn-aviso">⚠ ${esc(N.outra_exec)}</div>`:'';
+    if(!det) return `<div class="fdn">${AV}${hd('A) Comparação: RSPE × ficha disciplinar')}${Q}</div>`;
+    return `<div class="fdn">${AV}${hd('A) Comparação: RSPE × ficha disciplinar')}${Q}${hd('B) Pontos a conferir')}${B}${hd('C) Trabalho registrado na ficha × atestados')}${C}
       ${hd('D) Atestados e documentos de remição da ficha')}${D}${hd('E) Remições no RSPE')}${E}
-      <div class="muted fdn-nota">O programa compara os totais e não liga cada remição do RSPE a um atestado: a diferença indica onde conferir, não o quanto requerer. Dois controles da conferência: <b>Vincular atestado</b> liga um período de trabalho ao atestado quando o programa não ligou (ou corrige a ligação); <b>✓ Homologado</b> marca o documento cuja remição já foi homologada em juízo. As marcações ficam salvas e continuam valendo quando uma nova ficha for importada.</div></div>`; },
+      <div class="muted fdn-nota">O programa compara os totais e não liga cada remição do RSPE a um atestado: a diferença indica onde conferir, não o quanto requerer. Dois controles da conferência: <b>Vincular atestado</b> liga um período de trabalho ao atestado quando o programa não ligou (ou corrige a ligação); <b>✓ Homologado</b> marca o documento cuja remição já foi homologada em juízo. As marcações ficam salvas e continuam valendo quando uma nova ficha for importada. “Provavelmente remido” é só indicação por valor e data (remição do RSPE com o mesmo valor, decidida até 180 dias depois da emissão): não liga, não muda os totais e não marca ✓.</div></div>`; },
   fdDetalhe(id){ this._fdDet=this._fdDet||{}; this._fdDet[id]=!this._fdDet[id]; this.vincFechar(); this.render(); },
   fdTabela(r){ return this.fdConc(r)||'<p class="muted">Nenhum trabalho ou estudo nesta execução.</p>'; },
   // janela "Vincular atestado" de um período de trabalho (seção C)

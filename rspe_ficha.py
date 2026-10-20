@@ -3282,7 +3282,7 @@ def comparativo(r, f, hoje=None, conferidos=None, manuais=None, vinculos=None):
     out["fd_trab"] = ("%s desde %s" % (_nome_emprego(em[-1]), em[-1]["inicio"])) if em else "sem trabalho em curso"
     out["fd_estuda"] = any(e.get("inicio") and not e.get("fim") for e in f.get("estudos") or [])  # matrícula ativa na ficha
     ult_at = N["ult_at"]
-    sem_pos = [L for L in T["linhas"] if L["st"] == "sem" and (not ult_at or L["fim"] > ult_at)]
+    sem_pos = [L for L in T["linhas"] if L["st"] == "sem" and (L.get("pedir_dias") or not ult_at or L["fim"] > ult_at)]
     out["fd_atestar"] = "Sim" if sem_pos else "Não"
     ult = R["ult_dec"]
     est_post = [d for d in N["post"] if d["tipo"] in ("Certidão de frequência escolar", "Curso de qualificação", "Leitura", "Exame")]
@@ -3291,6 +3291,8 @@ def comparativo(r, f, hoje=None, conferidos=None, manuais=None, vinculos=None):
     out["fd_remidos"] = "%s / %s" % (nf(N["comp"]), nf(R["concedido"]))
     # situação: vermelho só para fato documental certo; diferença a favor da ficha e pontos a conferir, amarelo; nada, verde
     itens, rot = [], []
+    if N.get("outra_exec"):
+        itens.append({"t": N["outra_exec"], "c": "cinza"})
     if N["vermelho"]:
         rot.append("Atestado sem peticionamento")
     for p_ in N["pontos"]:
@@ -3306,14 +3308,25 @@ def comparativo(r, f, hoje=None, conferidos=None, manuais=None, vinculos=None):
     conf_ = [p_ for p_ in N["pontos"] if p_["cor"] == "amarelo"]
     for p_ in conf_:
         itens.append({"t": "Ponto a conferir: " + p_["curto"], "c": "amarelo"})
-    if any(p_["tipo"] == "pedir_atestado" for p_ in conf_):
+    if N["pedir_dias"]:
         rot.append("Pedir atestado")
+        itens.append({"t": "Pedir atestado (≈ %s de remição)" % rs.pl(int(round(N["pedir_dias"])) or 1, "dia", "dias"), "c": "amarelo"})
     if conf_ and not rot:
         rot.append("Conferir pontos")
     cor = "vermelho" if N["vermelho"] else "amarelo" if (N["dif"] > rrm.TOL_COMPARACAO or conf_) else "verde"
+    # RSPE maior que a ficha: o que seria amarelo fica cinza (informativo) - salvo o pedido de atestado e o vermelho
+    if cor == "verde" and any(p_.get("cor0") for p_ in N["pontos"]):
+        rot.append("Conferir (informativo)")
+        cor = "cinza"
+    # trabalho em curso há até 90 dias, sem atestado: acompanhar (cinza)
+    for a_ in N.get("acomp") or []:
+        itens.append({"t": "Acompanhar: trabalho em %s em curso desde %s, sem atestado" % (a_["local"], rs.fmt(a_["ini"])), "c": "cinza"})
+    if N.get("acomp") and not rot:
+        rot.append("Acompanhar atestado")
+        cor = "cinza" if cor == "verde" else cor
     sit = " · ".join(rot) or "Em ordem"
     # cabeçalho da linha expandida: só a conclusão (fato vermelho e diferença); os pontos ficam em "Onde pode estar a diferença" e na seção B
-    out["fd_sit_itens"] = [i for i in itens if not i["t"].startswith("Ponto a conferir")] if cor != "verde" else []
+    out["fd_sit_itens"] = [i for i in itens if not i["t"].startswith("Ponto a conferir")] if cor != "verde" or N.get("outra_exec") else []
     out["fd_sit_det"] = "; ".join(i["t"] for i in itens if i["c"] not in ("verde", "cinza"))
     faltas = f.get("faltas", [])
     out["fd_faltas"] = ("%d (%s)" % (len(faltas), ", ".join(x["situacao"] for x in faltas))) if faltas else "nenhuma"
@@ -3332,8 +3345,9 @@ def comparativo(r, f, hoje=None, conferidos=None, manuais=None, vinculos=None):
     # linhas (exportação da aba, relatório individual): uma por período de trabalho (seção C) e uma por documento com fato ou ponto
     ST = {"auto": ("Vinculado automaticamente", "verde"), "possivel": ("Possível · confirmar", "amarelo"), "provavel": ("Sugerido · confirmar", "amarelo"),
           "sem": ("Sem atestado", "amarelo"), "manual": ("Vinculado por você", "azul")}
+    cor_l = lambda L: "cinza" if (N.get("rspe_maior") and ST[L["st"]][1] == "amarelo" and not L.get("pedir_dias")) else ST[L["st"]][1]
     linhas = [{"emp": L["local"] + (" (externo)" if L.get("externo") else ""), "un": L["un"], "per": L["periodo"], "dias": L["dias"], "at": ("nº " + L["at"]) if L["at"] else "—",
-               "sit": ST[L["st"]][0], "cor": ST[L["st"]][1]} for L in T["linhas"]]
+               "sit": ST[L["st"]][0], "cor": cor_l(L)} for L in T["linhas"]]
     linhas += [{"emp": _rotulo_doc(d), "un": _unidade_em(tl_ex, d["emissao"]), "per": d["periodo"] or "—", "dias": "—",
                 "at": ("%s remidos" % _fmtn(d["dias"])) if d.get("dias") else "—", "sit": d["sit"], "cor": d["cor"]}
                for d in N["docs"] if d["cor"] in ("vermelho", "amarelo")]

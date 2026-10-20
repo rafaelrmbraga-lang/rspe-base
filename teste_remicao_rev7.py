@@ -63,15 +63,16 @@ f = F([("15.02.2018", "Nesta data foi emitido Atestado de Trabalho 06/2018, na f
 a = rrm.atestados(f["eventos"])
 ok(len(a) == 1 and a[0]["rem"] == 209 and a[0].get("rem_estudo") == 6, "6: atestado de estudo na mesma linha: %s" % [(x["rem"], x.get("rem_estudo")) for x in a])
 
-# ---- 8: atestado sem período no texto, com mais dias que o possível: entra na comparação como está; emitido mais de 450 dias depois do
-# início do trabalho, não é sugerido para ele; o trabalho só vira "pedir atestado" depois da emissão do último atestado ----
+# ---- 8: atestado sem período no texto, com mais dias que o possível: entra na comparação como está; sugerido para o trabalho do mesmo
+# nome desde o fim do atestado anterior (período implícito), com o aviso de dias implausíveis; depois da emissão, "pedir atestado" ----
 f = F([("22.04.2023", "Peticionado atestado DE Trabalho n 066/2023, no sistema SEEU, função Prendebem (07/03/2022 a 21/04/2023) totalizando 294 dias trabalhados e 98 remidos."),
        ("22.04.2023", "TRABALHO: Iniciou atividade laboral, no setor de trabalho PRENDE BEM, conforme documento 1."),
        ("24.06.2026", "TRABALHO, nesta data foi emitido atestado de trabalho nº 115 setor de PRENDE BEM com 448 dias de remição.")])
 o = N_(R(rem(98, "17/05/2023")), f)
 L = o["fd_novo"]["trab"]["linhas"]
 p8 = next((p for p in o["fd_novo"]["pontos"] if p["tipo"] == "pedir_atestado"), {})
-ok(o["fd_novo"]["comp"] == 546 and o["fd_cor"] == "vermelho" and [x["st"] for x in L] == ["sem"] and "25/06/2026 a 06/10/2026" in p8.get("texto", ""),
+ok(o["fd_novo"]["comp"] == 546 and o["fd_cor"] == "vermelho" and [x["st"] for x in L] == ["provavel", "sem"] and "25/06/2026 a 06/10/2026" in p8.get("texto", "")
+   and any(p["tipo"] == "implausivel" for p in o["fd_novo"]["pontos"]),
    "8: atestado sem período: %s %s %s %s" % (o["fd_novo"]["comp"], o["fd_sit"], [(x["periodo"], x["st"], x["at"]) for x in L], p8.get("texto")))
 
 if falhas:
