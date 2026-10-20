@@ -483,7 +483,7 @@ def linha(r, hoje=None):
             continue
         fato = rs._data_fato_falta(i)
         conf = i.get("_falta") == "sim"
-        # fuga (ficha ou incidente), mesmo sem homologação: falta grave para o indulto e a comutação (critério da unidade)
+        # fuga (ficha ou incidente) sem homologação: fica fora das pendências comuns; o efeito no decreto é "a verificar" (fuga_impede)
         pend = rs._pendente(i) and not conf and not i.get("_fuga_ficha") and not RE_FUGA.search(rot)
         # falta da ficha datada pela ciência do resultado (fato anterior, sem data): segue a verificar mesmo confirmada
         pend = pend or bool(i.get("_data_ciencia") and rs._pendente(i))

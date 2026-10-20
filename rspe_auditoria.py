@@ -1316,8 +1316,8 @@ def auditar(r, hoje=None):
                        "LEP, arts. 50, 52 e 118; Súmula 533/STJ; STJ, Tema 1195.", tipo="falta-a-apurar", ref=fi["chave"])
         elif fuga:
             it = _item("info", "Fuga em %s: em tese falta grave - informar se houve sanção reconhecida" % (fi["data"] or "data não informada"),
-                       "%s. A fuga é falta grave (LEP, art. 50, II). No indulto e na comutação, ela conta como falta grave mesmo sem a "
-                       "homologação no RSPE; a data-base só se move depois de reconhecida em juízo (Súmula 533/STJ; STJ, Tema 1195). Se não houve "
+                       "%s. A fuga é falta grave (LEP, art. 50, II), mas só produz efeitos depois de reconhecida em juízo: no indulto e na "
+                       "comutação fica \"a verificar\" até a homologação, e a data-base só se move depois dela (Súmula 533/STJ; STJ, Tema 1195). Se não houve "
                        "falta grave, informe pelo botão Preencher.%s%s" % (fi["texto"], _per, _vin),
                        "LEP, art. 50, II; Súmula 533/STJ; STJ, Tema 1195.", tipo="falta-a-apurar", ref=fi["chave"])
         else:
