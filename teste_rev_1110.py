@@ -87,13 +87,14 @@ c, conta, conf, alc = tl._cond_prosa("pena ≤ 8 anos sem VGA, exige 1/5 (cumpri
 ok(c == "pena não superior a 8 anos por crime sem violência ou grave ameaça, com 1/5 da pena cumprida" and conta == "cumpridos 11 meses e 9 dias de pena de 1 ano e 2 meses",
    "prosa 2025: %s | %s" % (c, conta))
 
-# fuga sem homologação: impede indulto e comutação (art. 6º); fora do indulto, segue "a apurar"
+# fuga sem homologação: no indulto e na comutação (art. 6º), a verificar até a sanção ser reconhecida em juízo (7.13.0, decisão do
+# usuário de 20/10/2026 - antes impedia); fora do indulto, segue "a apurar"
 import rspe_scraper as rs
 from datetime import date
 evf = [{"tipo": "PRISÃO/INÍCIO DE CUMPRIMENTO", "data": "01/01/2023", "motivo": "PRISÃO EM FLAGRANTE", "processos": P1},
        {"tipo": "INTERRUPÇÃO", "data": "10/06/2025", "motivo": "FUGA", "processos": ""}]
 firmes, verif = rs.falta_art6([], date(2025, 12, 25), evf, date(2025, 12, 23))
-ok(firmes and "não homologada" in firmes[0] and not verif, "fuga no indulto: %s | %s" % (firmes, verif))
+ok(not firmes and verif and "só impede se reconhecida" in verif[0], "fuga no indulto: %s | %s" % (firmes, verif))
 ind = rs.indicios_falta([], date(2025, 12, 25), eventos=evf)
 ok(ind and not ind[0][1], "fuga fora do indulto (falta nos 12 meses): %s" % ind)
 

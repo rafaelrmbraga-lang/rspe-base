@@ -110,7 +110,8 @@ ok(not o["indulto_2024"].startswith("VEDAD") and o["indulto_2024_status"] in ("v
 
 # ---- 83: art. 2º, II - cabe quanto aos crimes com trânsito; o sem trânsito para a acusação fica a conferir ----
 c83a = crime("01/01/2018", "01/06/2018", "01/07/2018", pena="2 ano(s), 0 mês(es) e 0 dia(s)", proc="0000008-00.2018.8.12.0001")
-c83b = crime("01/01/2023", "01/06/2024", "01/02/2025", pena="1 ano(s), 0 mês(es) e 0 dia(s)", proc="0000009-00.2023.8.12.0001")
+# (fato anterior ao trânsito de c83a: sem reincidência pelas datas, que deixaria o "possível" a verificar - 7.13.0)
+c83b = crime("01/03/2018", "01/06/2024", "01/02/2025", pena="1 ano(s), 0 mês(es) e 0 dia(s)", proc="0000009-00.2023.8.12.0001")
 r = reg([c83a, c83b], [ev("01/01/2019")], "3a0m0d", "3a0m0d")
 o = rs.analise_decretos(r, r["_crimes"], r["_eventos"], [], HOJE)
 ok(o["indulto_2024"].startswith("POSSÍVEL (crimes com trânsito") and o["indulto_2024_status"] == "possivel", "83: %s" % o["indulto_2024"])
@@ -211,9 +212,10 @@ ok(not rx.pedido_pendente(m, "ind"), "127: com os dois pedidos, segue pendente")
 m["pedidos"]["ind_2025"]["ref_atual"] = "ver"
 ok(rx.pedido_pendente(m, "ind"), "127: situação mudou depois do pedido e não voltou à contagem")
 
-# ---- 140: Decreto de 2023 - fuga sem homologação na janela impede; nos que exigem falta apurada/homologada, a verificar ----
+# ---- 140: fuga sem homologação na janela - nos decretos que exigem falta apurada/homologada (inclusive 2023, como 2024 e 2025:
+# decisão do usuário de 20/10/2026), a verificar; nos que não exigem (2016), impede ----
 F = {f["id"]: f for f in rd.fichas()}
-ok(rd.fuga_impede(F["2023"]) and not rd.fuga_impede(F["2015"]) and rd.fuga_impede(F["2016"]), "140: regra da fuga por decreto")
+ok(not rd.fuga_impede(F["2023"]) and not rd.fuga_impede(F["2015"]) and rd.fuga_impede(F["2016"]), "140: regra da fuga por decreto")
 c140 = crime("01/01/2012", "01/06/2012", "01/07/2012", pena="4 ano(s), 0 mês(es) e 0 dia(s)")
 r = reg([c140], [ev("01/01/2013"), ev("01/06/2015", "INTERRUPÇÃO", "FUGA"), ev("10/06/2015", "REINÍCIO", "RECAPTURA")], "4a0m0d")
 L = tl.linha(r, HOJE)
@@ -227,7 +229,9 @@ out = [{"id": "2015", "ref": "25/12/2015", "s": "cabe", "beneficio": "Indulto", 
         "detalhe": {"pena": 3000, "cumprido": 2500, "pena_conc": 365, "cumprido_conc": 500}}]
 rd._pena_cumprida_aba(out, {})
 ok(out[0]["s"] == "ver" and out[0]["beneficio"].startswith("Extinção") and "pedir a extinção pelo" in out[0]["mot"], "158: %s" % out[0])
-ok(out[1]["beneficio"].startswith("Extinção parcial") and "pedir a extinção parcial" in out[1]["mot"], "158 (concurso): %s" % out[1])
+# (7.13.0: no concurso, o tempo além da fração do impeditivo só afere o requisito - não extingue a pena dos demais: segue o indulto,
+# com a extinção parcial como tese na ressalva)
+ok(out[1]["s"] == "cabe" and out[1]["beneficio"] == "Indulto" and "extinção parcial pelo cumprimento é tese" in out[1]["ressalva"], "158 (concurso): %s" % out[1])
 r = {"indulto_2024": "POSSÍVEL: art. 9º, I", "indulto_2024_status": "possivel", "indulto_2024_num": {"pena": 365, "cumprido": 365}}
 rd.pena_cumprida_decretos(r)
 ok(r["indulto_2024"].startswith(rd.PENA_CUMPRIDA) and r["indulto_2024_status"] == "verificar", "158 (2024): %s" % r["indulto_2024"])

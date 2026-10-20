@@ -217,7 +217,7 @@ r = reg([crime(data_infracao="01/02/2021", fracao_progressao="1/6 - Comum", pena
         [inc(AR, "Fechado - Regime Inicial", "", "01/01/2021"), inc(AR, "Aberto - Progressão de Regime", "10/03/2024", "10/03/2024")],
         [ev(PR, "PRISÃO EM FLAGRANTE", "01/01/2021")], regime_atual="Aberto - ATIVO", data_base_seeu="10/03/2024")
 pt = por_tipo(r)
-ok("percentual-de-progressao-diverge" not in pt, "A8 aberto (1/6 = 16%%): %s" % pt.get("percentual-de-progressao-diverge"))
+ok(all(i["nivel"] == "info" for i in pt.get("percentual-de-progressao-diverge", [])), "A8 aberto (1/6 x 16%%: só informação): %s" % pt.get("percentual-de-progressao-diverge"))
 ok("progressao-com-data-base-igual-a-data-da-decisao" not in pt, "A8 progressão ao aberto: %s" % list(pt))
 
 # A9. perda de remidos sem incidente de falta: a própria sanção não vira "falta a apurar" (verificar)
@@ -285,9 +285,10 @@ ok(len(_neg) >= 10, "âncora: poucas asserções negativas encontradas (%d)" % l
 for _t in sorted(_neg):
     ok('"%s"' % _t in _mods, "âncora: o tipo %s não existe mais em rspe_auditoria/rspe_ficha (a asserção negativa não testa nada)" % _t)
 
-# rev. 11/10/2026: 1/6 do SEEU é o 16% da lei (sem alerta); percentual ou fração menor que o legal favorece e não vira item
-_t = tipos(reg([crime(data_infracao="01/02/2021", fracao_progressao="1/6 - Comum")]))
-ok("percentual-de-progressao-diverge" not in _t and "percentual-de-progressao-confere" in _t, "1/6 x 16%%: %s" % _t)
+# rev. 20/10/2026 (decisão do usuário): 1/6 do SEEU onde a lei dá 16% é alerta com os dias; percentual ou fração menor que o
+# legal favorece e não vira item
+_t = tipos(reg([crime(data_infracao="01/02/2021", data_sentenca="10/06/2021", fracao_progressao="1/6 - Comum", pena_imposta="2 ano(s), 0 mês(es) e 0 dia(s)")]))
+ok("percentual-de-progressao-diverge" in _t and "percentual-de-progressao-confere" not in _t, "1/6 x 16%%: %s" % _t)
 _t = tipos(reg([crime(data_infracao="01/02/2021", fracao_progressao="1/8 - Comum")]))
 ok("percentual-de-progressao-diverge" not in _t, "percentual menor (favorável): %s" % _t)
 _it = itens(reg([crime()], [inc(AR, "Fechado - Regime Inicial", "", "01/01/2020"), inc("HOMOLOGAÇÃO DE FALTA GRAVE", "01/05/2021", "20/05/2021", "01/05/2021"),

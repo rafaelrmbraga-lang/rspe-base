@@ -105,7 +105,10 @@ base3 = dict(fato="10/05/2019", tr="23/04/2024", pena="0 ano(s), 5 mês(es) e 15
 l = linha(reg([crime(**base3, ptp="APELAÇÃO CRIMINAL")]))
 confere(l["retro_status"].startswith("A VERIFICAR") and "acórdão" in l["retro_status"] and l["retro_cor"] == "amarelo", "A3: com apelação: %s" % l["retro_status"])
 confere(not l["pp_fund"], "A3: sem fundamentação afirmativa no A VERIFICAR")
-confere(linha(reg([crime(**base3)]))["retro_cor"] == "vermelho", "A3: sem indício de acórdão continua aparente")
+# conferência 7.13 (prescricao-25/30): intervalo sentença -> trânsito maior que o prazo pressupõe recurso; sem a data do acórdão,
+# também a verificar, mesmo sem "APELAÇÃO" na pena total (antes: continuava aparente)
+_l3 = linha(reg([crime(**base3)]))
+confere(_l3["retro_cor"] == "amarelo" and "acórdão" in _l3["retro_status"], "A3: sem indício de acórdão também a verificar: %s" % _l3["retro_status"])
 
 # A4: crime conexo ao do júri (mesmo processo com art. 121): a pronúncia o alcança - A VERIFICAR (Rozildo Donizeti da Silva)
 P = "0000930-78.2014.8.12.0014"

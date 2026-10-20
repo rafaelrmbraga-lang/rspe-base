@@ -149,7 +149,11 @@ ok(rf.nascimento_muda_marco(r, date(1990, 3, 1), date(1988, 3, 1)), "24: a difer
 ok(not rf.nascimento_muda_marco(r, date(1990, 3, 1), date(1990, 2, 1)), "24: diferença que não muda marco")
 r = reg([crime()], [ev("10/09/2019")])
 dv = [i for i in ra.divergencias_fonte(r, {"data_nascimento": "01.01.1985", "cpf": "", "data_prisao": "10.09.2019"}) if i["tipo"] == "divergencia-siapen-nascimento"]
-ok(dv and dv[0]["nivel"] == "alerta", "24: alerta de divergência SEEU x SIAPEN")
+# conferência de 20/10/2026: sem efeito nos marcos, a divergência é informação; com efeito (_nasc_alt), fica a verificar
+ok(dv and dv[0]["nivel"] == "info", "24: divergência SEEU x SIAPEN sem efeito: informação")
+dv = [i for i in ra.divergencias_fonte(dict(r, _nasc_alt="01/01/1985"), {"data_nascimento": "01.01.1985", "cpf": "", "data_prisao": "10.09.2019"})
+      if i["tipo"] == "divergencia-siapen-nascimento"]
+ok(dv and dv[0]["nivel"] == "verificar", "24: divergência SEEU x SIAPEN que muda marco: verificar")
 _orig = (rs.analise_decretos, rs.analise_decreto_2022)
 try:
     rs.analise_decretos = lambda c, *a: {"indulto_2024": "não atinge (1/3 até 25/12/2024)" if c["data_nascimento"] == "01/01/1990"
@@ -194,10 +198,15 @@ ok(any(x["ok"] is None and "Estupro de vulnerável (art. 217-A)" in x["txt"] for
 # ---------------- 29: "Suspenso: Sim" ----------------
 r = reg([crime(P1), crime(P2, suspenso="Sim")], [ev("10/09/2019")])
 ok("crime-suspenso-a-verificar" in tipos(r, "verificar"), "29: crime suspenso a verificar")
+# (7.13.0: nos Decretos 2024 e 2025 o art. 3º, I e III, alcança a pena substituída e a suspensa - a causa não muda o resultado;
+# nos demais, o resultado pela pena segue a verificar)
 out = {"comutacao_2024": "não atinge (1/4 até 25/12/2024)", "indulto_2024": "não atinge: sentença posterior à publicação"}
 rs._penas_a_verificar(out, r["_crimes"], "2024", date(2024, 12, 25))
-ok(out["comutacao_2024"].startswith("A VERIFICAR: \"Suspenso: Sim\""), "29: resultado pela pena fica a verificar: %s" % out)
+ok(out["comutacao_2024"] == "não atinge (1/4 até 25/12/2024)", "29: 2024 - suspensão alcançada pelo art. 3º: %s" % out)
 ok(out["indulto_2024"].startswith("não atinge: sentença"), "29: resultado por outra causa não muda")
+out = {"indulto_2022": "não atinge (cumprido 0a1m0d de 1a0m0d)"}
+rs._penas_a_verificar(out, r["_crimes"], "2022", date(2022, 12, 25))
+ok(out["indulto_2022"].startswith("A VERIFICAR: \"Suspenso: Sim\""), "29: resultado pela pena fica a verificar: %s" % out)
 
 # ---------------- 30: medida de segurança ----------------
 cms = [crime(P1, pena="", total="1a0m0d - MEDIDA DE SEGURANÇA", regime_sentenca="Indefinido")]
@@ -255,7 +264,7 @@ finally:
     shutil.rmtree(d, ignore_errors=True)
 
 # ---------------- 137: outras execuções como histórico; reincidência só a conferir ----------------
-o = reg([crime(P3, fato="10/01/2015", transito_processo="10/08/2016")], [ev("01/02/2016", procs=P3), ev("01/02/2017", "INTERRUPÇÃO", "CUMPRIMENTO DA PENA", "")],
+o = reg([crime(P3, fato="10/01/2015", data_sentenca="10/03/2016", transito_processo="10/08/2016")], [ev("01/02/2016", procs=P3), ev("01/02/2017", "INTERRUPÇÃO", "CUMPRIMENTO DA PENA", "")],
         [{"tipo": "FALTA GRAVE", "situacao": "CONCEDIDO", "complemento": "Homologação de falta grave", "data_decisao": "10/10/2016",
           "data_referencia": "05/10/2016", "processos": ""}], processo_execucao="7700009-00.2016.8.12.0001", status_execucao="ARQUIVADO")
 hist = app._historico_exec(o)

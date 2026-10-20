@@ -42,8 +42,11 @@ try:
     p = next(p_ for p_ in C["pendencias"] if p_["texto"].startswith("Atestado 024"))
     ok(p["status"] == "NAO_LANCADO" and p["cor"] == "vermelho" and "faltam ≈ 13" in p["texto"] and "8 dias em 07/01/2025" in p["acao"], "pendência: %r" % p)
     ok(abs((res.get("pendentes") or 0) - 13) < 0.01, "no total, só o que as remições sem origem não alcançam: %r" % res.get("pendentes"))
+    det = res.get("rem_det") or {}
+    ok(abs(det.get("total", 0) - 13) < 0.01, "total por origem só com o restante: %r" % {k: det.get(k) for k in ("nao_lancado", "emitido", "total")})
     R = C["resumo"]["texto"]
-    ok("possui 32 dias remidos" in R and "fazendo jus a 29 dias" in R and "insuficientes: faltam cerca de 13 dias" in R, "resumo simples: %s" % R)
+    ok("possui 32 dias remidos" in R and "fazendo jus a 29 dias" in R and "faltam cerca de 13 dias" in R and "8 dias em 07/01/2025" in R,
+       "resumo simples: %s" % R)
     al = " ".join(a["texto"] for a in C["alertas"])
     ok("além das obras de leitura registradas na ficha (4 obras)" in al or ("origem não identificada" in al and "8 dias em 07/01/2025" in al),
        "alerta das remições além das obras: %s" % al)
