@@ -1306,6 +1306,33 @@ def _itens_conciliacao(C):
     return out
 
 
+def _marco_sem_efeito(r, m, dias):
+    """Motivo pelo qual a remição com referência tardia não muda o marco m = (data, rótulo) - texto vazio quando muda (ou na dúvida).
+    Decreto: indulto e comutação do ano que a remição não alcança (vedados, falta grave do art. 6º, ou crime impeditivo cuja pena
+    cumprida fica aquém do exigido mesmo com os dias remidos). Progressão: sempre com efeito (data-base da seguinte)."""
+    d, rot = m
+    if d.month == 12 and d.day == 25 and "decreto" in rot:
+        ano = d.year
+        motivos = []
+        for k in ("indulto_%d" % ano, "comutacao_%d" % ano):
+            v = str(r.get(k) or "")
+            if not v:
+                continue
+            st = (r.get(k + "_status") or "").lower()
+            imp = r.get(k + "_imp")
+            if re.match(r"\s*(VEDAD|EXCLU|N[ÃA]O SE APLICA|N[ÃA]O CABE \(art\. 6)", v, re.I):
+                motivos.append("%s de %d: %s" % ("indulto" if k.startswith("indulto") else "comutação", ano, v.split(" · ")[0].split(":")[0].strip().lower()))
+            elif st == "nao" and isinstance(imp, dict) and imp.get("exigido") and imp.get("cumprido_total") is not None \
+                    and int(imp["exigido"]) - int(imp["cumprido_total"]) > dias:
+                motivos.append("%s de %d: faltam %s para a pena do crime impeditivo, mais que os %s remidos" % (
+                    "indulto" if k.startswith("indulto") else "comutação", ano,
+                    rs.pl(int(imp["exigido"]) - int(imp["cumprido_total"]), "dia", "dias"), rs.pl(dias, "dia", "dias")))
+            else:
+                return ""
+        return "; ".join(motivos) if motivos else ""
+    return ""
+
+
 def _referencia_remicao(r, C):
     """Remição lançada com referência muito depois do fim do trabalho (em geral, na data da decisão), com um marco no meio:
     o 25/12 de um decreto de indulto/comutação ou uma progressão. Só aí a referência tardia tira os dias da conta; nos
@@ -1336,20 +1363,28 @@ def _referencia_remicao(r, C):
         if not ms:
             continue
         dias = int(x.get("dias") or 0)
+        # decreto que a remição não alcança: o resultado do decreto não muda com esses dias (falta do art. 6º ou, no impeditivo
+        # não cumprido, faltam mais dias do que os remidos). Progressão: superada se a data-base atual já é posterior a ela e a
+        # previsão seguinte não é contada dela. Sem marco com efeito, o item é só informação
+        ms_ef = [m for m in ms if not _marco_sem_efeito(r, m, dias)]
         na_dec = x.get("decisao") and abs((x["ref"] - x["decisao"]).days) <= 3
         cautela = ""
         if db and fim_p < db <= x["ref"]:
             cautela = (" Cautela: a data-base atual (%s) fica entre o fim do trabalho e a referência lançada. Retificada a referência, os dias "
                        "passam para antes da data-base e deixam de contar para a próxima progressão: pedir a retificação junto com o "
                        "recálculo do benefício que ela antecipa (o decreto ou a progressão acima), e só se o ganho compensar." % rs.fmt(db))
-        out.append({"nivel": "alerta",
-                    "titulo": "Remição de %s (atestado %s) lançada em %s%s; o trabalho terminou em %s, antes %s" % (
+        out.append({"nivel": "alerta" if ms_ef else "info",
+                    "titulo": "Remição de %s (atestado %s) lançada em %s%s; o trabalho terminou em %s, antes %s%s" % (
                         rs.pl(dias, "dia", "dias"), a.get("numero") or "s/n", rs.fmt(x["ref"]), " (data da decisão)" if na_dec else "",
-                        rs.fmt(fim_p), " e ".join(m[1] for m in ms)),
-                    "detalhe": "Período trabalhado de %s a %s, conforme a ficha; o SEEU lançou os dias remidos com referência em %s. Assim, eles "
-                               "ficam fora da pena cumprida na data %s. Pedir a retificação da data de referência para o fim do período "
-                               "trabalhado e a reanálise do benefício afetado.%s" % (
-                                   rs.fmt(ini_p), rs.fmt(fim_p), rs.fmt(x["ref"]), " e na ".join(m[1] for m in ms), cautela),
+                        rs.fmt(fim_p), " e ".join(m[1] for m in ms), "" if ms_ef else " - sem efeito"),
+                    "detalhe": ("Período trabalhado de %s a %s, conforme a ficha; o SEEU lançou os dias remidos com referência em %s. Assim, eles "
+                                "ficam fora da pena cumprida na data %s. Pedir a retificação da data de referência para o fim do período "
+                                "trabalhado e a reanálise do benefício afetado.%s" % (
+                                    rs.fmt(ini_p), rs.fmt(fim_p), rs.fmt(x["ref"]), " e na ".join(m[1] for m in ms_ef), cautela)) if ms_ef else (
+                               "Período trabalhado de %s a %s, conforme a ficha; o SEEU lançou os dias remidos com referência em %s, depois %s. "
+                               "Nada muda com a retificação: %s. Não há pedido a fazer." % (
+                                   rs.fmt(ini_p), rs.fmt(fim_p), rs.fmt(x["ref"]), " e ".join(m[1] for m in ms),
+                                   "; ".join(_marco_sem_efeito(r, m, dias) for m in ms))),
                     "fundamento": "LEP, arts. 126, § 8º, e 128 (a remição é pena cumprida e a decisão é declaratória); STF, ARE 1.497.973 AgR/PR.",
                     "tipo": "remicao-referencia-tardia", "ref": rs.fmt(x["ref"])})
     return out
@@ -1834,12 +1869,24 @@ def _processos_x_ficha(r, f):
         for p in rs.lista_processos(e.get("processos") or ""):
             rspe.add(rs.chave_processo(p))
     fora = [p for p in f.get("autos") or [] if re.match(r"\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}$", p) and rs.chave_processo(p) not in rspe]
+    # mesmo número sequencial, ano e origem de um processo do RSPE, só com o dígito verificador diferente: erro de digitação na ficha,
+    # não processo novo
+    _sem_dv = lambda p: (lambda d: d[:7] + d[9:] if len(d) == 20 else d)(re.sub(r"\D", "", p or ""))
+    _rspe_sdv = {}
+    for c in r.get("_crimes", []) + [{"processo_criminal": r.get("processo_execucao") or ""}]:
+        p_ = c.get("processo_criminal") or ""
+        if re.match(r"\d{7}-\d{2}\.\d{4}", p_):
+            _rspe_sdv.setdefault(_sem_dv(p_), p_)
+    _dig = [(p, _rspe_sdv[_sem_dv(p)]) for p in fora if _sem_dv(p) in _rspe_sdv]
+    fora = [p for p in fora if p not in {x for x, _ in _dig}]
     if not fora:
         return []
     return [_item_rf("info", "Processos na ficha que o RSPE não lista: %d" % len(fora),
                      "%s. Podem ser ações penais com condenação ainda não somada a esta execução (guia pendente - LEP, art. 111), prisões por outro "
                      "processo (suspensão) ou inquéritos/preventivas já encerrados. Conferir no SEEU e nos sistemas do TJ se há pena a unificar ou prisão "
-                     "que deva ser computada." % "; ".join(fora), "LEP, art. 111; CP, art. 42.")]
+                     "que deva ser computada.%s" % ("; ".join(fora), "".join(
+                         " %s na ficha é provável erro de digitação de %s (só o dígito verificador difere)." % (x, y) for x, y in _dig)),
+                     "LEP, art. 111; CP, art. 42.")]
 
 
 def _pena_x_ficha(r, f):

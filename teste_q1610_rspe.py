@@ -149,7 +149,11 @@ ok(rf.nascimento_muda_marco(r, date(1990, 3, 1), date(1988, 3, 1)), "24: a difer
 ok(not rf.nascimento_muda_marco(r, date(1990, 3, 1), date(1990, 2, 1)), "24: diferença que não muda marco")
 r = reg([crime()], [ev("10/09/2019")])
 dv = [i for i in ra.divergencias_fonte(r, {"data_nascimento": "01.01.1985", "cpf": "", "data_prisao": "10.09.2019"}) if i["tipo"] == "divergencia-siapen-nascimento"]
-ok(dv and dv[0]["nivel"] == "alerta", "24: alerta de divergência SEEU x SIAPEN")
+# conferência de 20/10/2026: sem efeito nos marcos, a divergência é informação; com efeito (_nasc_alt), fica a verificar
+ok(dv and dv[0]["nivel"] == "info", "24: divergência SEEU x SIAPEN sem efeito: informação")
+dv = [i for i in ra.divergencias_fonte(dict(r, _nasc_alt="01/01/1985"), {"data_nascimento": "01.01.1985", "cpf": "", "data_prisao": "10.09.2019"})
+      if i["tipo"] == "divergencia-siapen-nascimento"]
+ok(dv and dv[0]["nivel"] == "verificar", "24: divergência SEEU x SIAPEN que muda marco: verificar")
 _orig = (rs.analise_decretos, rs.analise_decreto_2022)
 try:
     rs.analise_decretos = lambda c, *a: {"indulto_2024": "não atinge (1/3 até 25/12/2024)" if c["data_nascimento"] == "01/01/1990"

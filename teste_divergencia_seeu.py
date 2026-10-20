@@ -79,7 +79,8 @@ assert tipos(reg()) == [], tipos(reg())
 # ---------------- 1) pena total menor que a soma das ações ----------------
 T1 = "divergencia-seeu-pena-total"
 x = com(reg(pena_total="6a0m0d"), T1)
-assert len(x) == 1 and x[0]["nivel"] == "alerta" and "6 anos" in x[0]["detalhe"] and "8 anos" in x[0]["detalhe"], x
+# conferência de 20/10/2026: total menor que a soma favorece o assistido - informação, sem pedido
+assert len(x) == 1 and x[0]["nivel"] == "info" and "6 anos" in x[0]["detalhe"] and "8 anos" in x[0]["detalhe"], x
 assert "conferir nos autos" in x[0]["fundamento"].lower() and x[0]["curto"], x
 # o que explica a diferença não marca: comutação, indulto, crime suspenso, crime extinto, ação comutada, unificação
 assert not com(reg(pena_total="6a0m0d", _incidentes=[inc("COMUTAÇÃO", "DECRETO", P1)]), T1)
@@ -146,11 +147,15 @@ assert not com(reg(), T6, dict(f_ok, cpf=c_fic[:-1] + str((int(c_fic[-1]) + 1) %
 assert not ra._cpf_valido("11111111111") and ra._cpf_valido(c_fic)
 
 # ---------------- Auditoria, "!" e baixa (rspe_view.modelo) ----------------
-r = reg(pena_total="6a0m0d", _eventos=[ev("01/01/2019", P2)])
+# conferência de 20/10/2026: a pena total menor que a soma é informação (favorável), sem "!" - o "!" fica com as outras
+m = rv.modelo(copy.deepcopy(reg(pena_total="6a0m0d")), {}, None, [])
+assert [i["nivel"] for i in m["aud_itens"] if i["tipo"] == T1] == ["info"] and m["div_seeu"] == [], m["div_seeu"]
+r = reg(pena_total="9a0m0d", _eventos=[ev("01/01/2019", P2)])
+r["_crimes"][1]["pena_total_processo"] = "4a0m0d - PENA ORIGINÁRIA"
 m = rv.modelo(copy.deepcopy(r), {}, None, [])
 its = [i for i in m["aud_itens"] if i["tipo"].startswith("divergencia-")]
 # a prisão anterior ao fato fica "verificar" (item 53 de 16/10: a detração entre processos é possível conforme as datas)
-assert sorted(i["tipo"] for i in its) == sorted([T1, T4]) and all(i["nivel"] == ("verificar" if i["tipo"] == T4 else "alerta") and not i["baixado"] for i in its), its
+assert sorted(i["tipo"] for i in its) == sorted([T2, T4]) and all(i["nivel"] == ("verificar" if i["tipo"] == T4 else "alerta") and not i["baixado"] for i in its), its
 assert len(m["div_seeu"]) == 2 and m["div_seeu_txt"] and m["aud_alertas"] >= 1, m["div_seeu"]
 # baixa de uma: o "!" fica só com a outra; das duas: some
 b1 = {its[0]["chave"]: {"obs": "conferido nos autos", "data": "12/10/2026"}}
@@ -159,9 +164,10 @@ assert len(m1["div_seeu"]) == 1 and its[0]["curto"] not in m1["div_seeu"], m1["d
 b2 = dict(b1, **{its[1]["chave"]: {"obs": "conferido", "data": "12/10/2026"}})
 m2 = rv.modelo(copy.deepcopy(r), b2, None, [])
 assert m2["div_seeu"] == [] and m2["div_seeu_txt"] == "" and all(i["baixado"] for i in m2["aud_itens"] if i["tipo"].startswith("divergencia-"))
-# divergência diferente (outra pena total): a baixa anterior não vale, o "!" volta
-m3 = rv.modelo(copy.deepcopy(dict(r, pena_total="5a0m0d")), b2, None, [])
-assert any(t.startswith("Pena total 5a0m0d") for t in m3["div_seeu"]), m3["div_seeu"]
+# divergência diferente (outra pena da ação): a baixa anterior não vale, o "!" volta
+r3 = copy.deepcopy(r); r3["_crimes"][1]["pena_total_processo"] = "4a6m0d - PENA ORIGINÁRIA"
+m3 = rv.modelo(r3, b2, None, [])
+assert any(t.startswith("Ação %s: pena 4a6m0d" % P2) for t in m3["div_seeu"]), m3["div_seeu"]
 # CPF: um alerta só (o do confronto da ficha sai quando a divergência marca)
 f_cpf = dict(f_ok, cpf=c_fic, eventos=[], trabalho=[], atestados=[], faltas=[])
 try:
