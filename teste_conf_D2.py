@@ -106,7 +106,7 @@ def unidade_corte_curto():
 
 
 def cor_amarela():
-    # o RSPE concedeu mais do que a ficha comprova (sem diferença a favor da ficha), mas há trabalho depois do último atestado: amarelo
+    # o RSPE concedeu mais do que a ficha comprova (sem diferença a favor da ficha), mas há ponto a conferir: amarelo
     f = {"data_impressao": "05/10/2026", "conduta": "BOA", "eventos": [
         E("01.03.2023", INI("COZINHA")), E("30.06.2023", FIM("COZINHA")),
         E("10.07.2023", "EMITIDO ATESTADO DE TRABALHO Nº 050/2023, NO SETOR DE COZINHA DE 01/03/2023 A 30/06/2023, COM 102 DIAS TRABALHADOS E 34 DIAS REMIDOS."),
@@ -114,7 +114,11 @@ def cor_amarela():
     r = {"_eventos": [{"data": "01/01/2010", "tipo": "PRISÃO/INÍCIO DE CUMPRIMENTO", "motivo": "PRISÃO"}], "_incidentes": [rem("20/09/2023", 34), rem("10/02/2025", 10)]}
     rf.atualizar(f)
     out = rf.comparativo(r, f, HOJE)
-    ok(out["fd_cor"] == "amarelo" and "Pedir atestado" in out["fd_sit"] and out["fd_novo"]["dif"] == -10, "cor: %r / %r" % (out["fd_cor"], out.get("fd_sit_itens")))
+    # o trabalho atual (desde 15/08/2026) está em curso há até 90 dias: acompanhar, não "pedir atestado"; o ponto amarelo é o atestado
+    # sem registro de peticionamento
+    tp = [p_["tipo"] for p_ in out["fd_novo"]["pontos"]]
+    ok(out["fd_cor"] == "amarelo" and "em_curso" in tp and "pedir_atestado" not in tp and "sem_pet" in tp and out["fd_novo"]["dif"] == -10,
+       "cor: %r / %r" % (out["fd_cor"], tp))
 
 
 def baixa_com_outro_nome():

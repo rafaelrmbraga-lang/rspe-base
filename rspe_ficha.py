@@ -3312,7 +3312,8 @@ def comparativo(r, f, hoje=None, conferidos=None, manuais=None, vinculos=None):
         rot.append("Conferir pontos")
     cor = "vermelho" if N["vermelho"] else "amarelo" if (N["dif"] > rrm.TOL_COMPARACAO or conf_) else "verde"
     sit = " · ".join(rot) or "Em ordem"
-    out["fd_sit_itens"] = itens if cor != "verde" else []
+    # cabeçalho da linha expandida: só a conclusão (fato vermelho e diferença); os pontos ficam em "Onde pode estar a diferença" e na seção B
+    out["fd_sit_itens"] = [i for i in itens if not i["t"].startswith("Ponto a conferir")] if cor != "verde" else []
     out["fd_sit_det"] = "; ".join(i["t"] for i in itens if i["c"] != "verde")
     faltas = f.get("faltas", [])
     out["fd_faltas"] = ("%d (%s)" % (len(faltas), ", ".join(x["situacao"] for x in faltas))) if faltas else "nenhuma"
