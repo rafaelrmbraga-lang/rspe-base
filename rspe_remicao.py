@@ -27,18 +27,28 @@ SEPD = r"\s*(?:A|À|ATÉ|ATE|-)\s*"
 # nomes de setor que a ficha e os atestados usam para o mesmo vínculo: base jurídica, remicao.setores_sinonimos (editável sem
 # mexer no programa); a lista abaixo só vale se a base não trouxer nenhuma
 ALIAS_PADRAO = [(r"\bHORTA\b|\bAGS\b", "AGS", "Ags Prestadora - Me (Horta)"),
-                (r"\bPAIVA\b", "PAIVA", "Paiva Lingerie"),
-                (r"\bPRENDE ?BEM\b|\bPRENDEBEM|\bPRENDEDORES\b", "PRENDEBEM", "Prendebem (prendedores)")]
+                (r"\bPAIVA\b|\bPAICA\b|\bPIVA\b|\bLINGERIE\b|\bLANGU?ERIE\b|^FABRICA$", "PAIVA", "Paiva Lingerie"),
+                (r"\bPRENDE ?BEM\b|\bPRENDEBEM|\bPRENDEDOR(?:ES)?\b", "PRENDEBEM", "Prendebem (prendedores)")]
 
 
 def sinonimos():
+    """Sinônimos da base jurídica; os padrões do programa (ALIAS_PADRAO) valem junto, pela mesma chave - uma cópia antiga da base ao
+    lado do programa não esconde as grafias acrescentadas depois ("Paica", "Langerie", "Prendedor de roupas")."""
     try:
         import rspe_regras as rg
         lst = (rg.carregar().get("remicao") or {}).get("setores_sinonimos") or []
         out = [(x["padrao"], x["chave"], x.get("nome") or x["chave"]) for x in lst if x.get("padrao") and x.get("chave")]
-        return out or ALIAS_PADRAO
     except Exception:
+        out = []
+    if not out:
         return ALIAS_PADRAO
+    for pad, ch, disp in ALIAS_PADRAO:
+        i = next((i for i, x in enumerate(out) if x[1] == ch), None)
+        if i is None:
+            out.append((pad, ch, disp))
+        elif out[i][0] != pad:
+            out[i] = ("(?:%s)|(?:%s)" % (out[i][0], pad), ch, out[i][2])
+    return out
 
 
 def _sa(t):
@@ -86,6 +96,9 @@ def _fmtn(v):
 def setor_chave(nome):
     """(chave, nome de exibição) do setor: tira prefixos ("PP - ", "EMPRESA", "SETOR DE", "FUNÇÃO") e junta as variações."""
     u = _sa(nome).strip(" ,.;:-")
+    # "atividade externa na empreiteira X", "trabalho interno - X" (texto livre): o nome é X
+    u = re.sub(r"^(?:A |O )?(?:ATIVIDADE|TRABALHO)(?: LABORAL)?\s+(?:EXTERNA|INTERNA|EXTERNO|INTERNO)\s*(?:-\s*|/\s*|N[AO]\s+|JUNTO A[O]?\s+)"
+               r"(?:EMPREITEIRA\s+|EMP\.?\s+|EMPRESA\s+)?(?=\w{3})", "", u)
     u = re.sub(r"^(?:NA\s+|NO\s+)?(?:FUNCAO|SETOR(?: DE TRABALHO)?(?: DE)?|EMPRESA)\s+", "", u)
     u = re.sub(r"^(?:PP|CC|A1|R1)\s*-\s*", "", u).strip(" ,.;:-")
     u = re.sub(r"^EMPRESA\s+", "", u)
@@ -124,11 +137,31 @@ _GENERICAS = {"EMPRESA", "SETOR", "TRABALHO", "SERVICOS", "SERVICO", "GERAIS", "
               "PAVILHAO", "INTERNO", "EXTERNO"}
 
 
+def _palavras_proprias(t):
+    """Palavras próprias de um nome de setor, no singular ("BOLAS" -> "BOLA", "PRENDEDORES" -> "PRENDEDOR"): 5 letras ou mais, ou
+    4 quando é o nome inteiro ("Edyp" x "R1 - Fundição Edyp"); sem as genéricas e sem a sigla da unidade ("EPJFC", "PDIB")."""
+    ws = re.findall(r"[A-Z]+", _sa(t))
+    out = set()
+    for w in ws:
+        if w in _GENERICAS or w in _SIGLAS_UN or len(w) < 4 or (len(w) == 4 and len(ws) > 1 and w not in ("BOLA", "COPA", "OBRA")):
+            continue
+        out.add(re.sub(r"(?<=[A-Z]{4})(?:ES|S)$", "", w) if len(w) > 5 else re.sub(r"(?<=[A-Z]{4})S$", "", w))
+    return out
+
+
+# siglas de unidade que vêm coladas ao nome do setor ("FÁBRICA PRENDEBEM/EPJFC", "CELA LIVRE PV 1 / EPJFC"): não identificam o setor
+_SIGLAS_UN = {"IPCG", "PDIB", "EPJFC", "CPAIG", "CPAG", "PTRAN", "PHAC", "PED", "EPRB", "UPRB", "EPMR", "EPA", "EPMC", "PSMTL", "EPRSAA", "AGEPEN",
+              # e o que é comum a empresas diferentes ("CONVÊNIO PREFEITURA DE ANASTÁCIO" x "PREFEITURA DE AQUIDAUANA")
+              "EIRELI", "COMERCIO", "INDUSTRIA", "PREFEITURA", "MUNICIPAL", "CONVENIO", "CONSTRUCAO", "CONSTRUCOES", "MATERIAIS"}
+
+
 def palavra_comum(a, b):
-    """Nomes de setor com uma palavra própria em comum ("SETOR JURIDICO" x "Auxiliar Juridico"; "PINTOR" x "Manutenção Predial - Pintor")."""
-    pa = {w for w in re.findall(r"[A-Z]{5,}", _sa(a)) if w not in _GENERICAS}
-    pb = {w for w in re.findall(r"[A-Z]{5,}", _sa(b)) if w not in _GENERICAS}
-    return bool(pa & pb)
+    """Nomes de setor com uma palavra própria em comum ("SETOR JURIDICO" x "Auxiliar Juridico"; "PINTOR" x "Manutenção Predial - Pintor";
+    "Confecção de Bolas Freegol" x "Costura de Bola"; "Edyp" x "R1 - Fundição Edyp")."""
+    if _palavras_proprias(a) & _palavras_proprias(b):
+        return True
+    wa, wb = re.findall(r"[A-Z]+", _sa(a)), re.findall(r"[A-Z]+", _sa(b))
+    return any(len(x) == 1 and len(x[0]) == 4 and x[0] not in _SIGLAS_UN and x[0] not in _GENERICAS and x[0] in y for x, y in ((wa, wb), (wb, wa)))
 
 
 def _nomes_lista(setor):
@@ -167,7 +200,7 @@ RE_SOLTURA = re.compile(r"BENEFICIAD[OA] COM (?:O )?ALVARA DE ?SOLTURA|"
                         r"\b(?:SAIU|SAIDA|DEU SAIDA|RECEBEU|EM CUMPRIMENTO AO|POR FORCA D[OE]|MEDIANTE|ATRAVES DO)\b.{0,80}?ALVARA DE ?SOLTURA")
 # (sentença ou decisão transcrita na ficha - "expeça-se alvará de soltura" - não é a saída)
 RE_SOLTURA_NAO = re.compile(r"PARECER|CONSULTA|AGUARDANDO|NAO (?:FOI )?LIBERAD|NAO FOI (?:COLOCAD|POST)|SENTENCA|DECISAO|DESPACHO|JULGO|EXPECA")
-_FIMNOME = r"(?:\s+-\s+(?:COMUNICACAO|CI\b|OF\b|OFICIO|DOC)|\s+CONVENIAD|\s+CUMPRINDO|\s+CONFORME|\s+DELIBERAD|\s+UTILIZANDO|\s+APENAS|\s+POR\s|\s+A PEDIDO|\s+DEVIDO|\s+COM\s|,|\.|\(|/INTERNAMENTE|$)"
+_FIMNOME = r"(?:\s+-\s+(?:COMUNICACAO|CI\b|OF\b|OFICIO|DOC)|\s+CONVENIAD|\s+CUMPRINDO|\s+CONFORME|\s+DELIBERAD|\s+UTILIZANDO|\s+APENAS|\s+POR\s|\s+A PEDIDO|\s+DEVIDO|\s+COM\s|\s+NESTA\s+(?:UP|UNIDADE|PENITENCIARIA|DATA)\b|\s*/?\s*\bCI\s*N?[º°O.:\s]{0,3}\d|,|\.|\((?![A-Z][A-Z ]{2,30}\))|/INTERNAMENTE|$)"
 # outras redações do SIAPEN (levantadas nas fichas da PDIB, IPCG, CPAIG, PED, EPJFC): início, troca de setor e fim
 RE_INI2 = [re.compile(r"(?:RE)?INICIOU SUAS ATI[VN]IDADES LABORAIS,?\s*(?:NESTA\s+UP\s*)?(?:NO SETOR(?: DE| DA| DO)?|N[OA])\s+(.+?)" + _FIMNOME),
            re.compile(r"\bINI?CIA ATIVIDADE LABORAL(?: EXTERNA| INTERNA| EXTERNAMENTE| INTERNAMENTE)?,?\s+(?:NA EMPRESA|NO SETOR(?: DE| DA| DO)?|NA|NO|COMO)\s+(.+?)" + _FIMNOME),
@@ -185,7 +218,10 @@ RE_INI2 = [re.compile(r"(?:RE)?INICIOU SUAS ATI[VN]IDADES LABORAIS,?\s*(?:NESTA\
            # EMPRESA PRENDE BEM", "passa a contar os dias trabalhados para fins de remição, na Empresa Prendebem"
            re.compile(r"\bCOMECA NO TRABALHO(?: INTERNO| EXTERNO)?\s*(?:DE|-|NA|NO)?\s*(.+?)(?:/|" + _FIMNOME[3:]),
            re.compile(r"INGRESSADO NAS ATIVIDADES LABORAIS D[AO]\s+(?:EMPRESA\s+|SETOR(?: DE| DA| DO)?\s+)?(.+?)" + _FIMNOME),
-           re.compile(r"PASSA A CONTAR OS DIAS TRABALHADOS\b.*?\bN[AO]\s+(?:EMPRESA\s+|SETOR(?: DE| DA| DO)?\s+)?(.+?)" + _FIMNOME)]
+           re.compile(r"PASSA A CONTAR OS DIAS TRABALHADOS\b.*?\bN[AO]\s+(?:EMPRESA\s+|SETOR(?: DE| DA| DO)?\s+)?(.+?)" + _FIMNOME),
+           # "foi autorizado a exercer atividades laborais no setor de X" / "autorizado a trabalhar no setor X" (7.14; o trabalho EXTERNO
+           # autorizado pelo juízo não é início: rspe_ficha._RE_EXTERNO_AUTORIZADO)
+           re.compile(r"AUTORIZAD[OA] A (?:EXERCER (?:SUAS )?ATIVIDADES? LABORA(?:L|IS)|TRABALHAR|LABORAR)\s+N[AO]\s+(?:SETOR(?: DE| DA| DO)?\s+|EMPRESA\s+)?(?!TRABALHO EXTERNO)(.+?)" + _FIMNOME)]
 # "Sem efeito. Reeducando continua trabalhando na empresa X": desfaz o desligamento anterior do mesmo setor
 RE_CONTINUA = re.compile(r"SEM EFEITO\.?\s*(?:O\s+)?(?:REEDUCANDO|INTERNO|CUSTODIADO) CONTINUA TRABALHANDO N[AO]\s+(?:EMPRESA\s+|SETOR(?: DE)?\s+)?(.+?)" + _FIMNOME)
 RE_REMANEJ = [re.compile(r"REMANEJADO E INICIA ATIVIDADE LABORAL(?: EXTERNA| INTERNA)?\s+NA EMPRESA\s+(.+?)" + _FIMNOME),
@@ -205,13 +241,18 @@ RE_SEM_EFEITO = re.compile(r"TORNAR SEM EFEITO O LANCAMENTO DO DIA\s+(\d{2}/\d{2
 # regra de reserva para o texto livre das unidades (cada época e unidade escreve de um jeito): verbo de início/fim + palavra de
 # trabalho; escola, curso, cela, saúde e prisão domiciliar ficam de fora
 _NAO_TRAB = re.compile(r"(?<!NAO )RETORNOU DO TRABALHO|EMBRIAGUEZ|EDUCA|PEDAGOG|SAUDE|ESCOLA|CURSO|MATRICULA|(?:DA|PARA|PARA A|NA) CELA (?!LIVRE)|CELA [IVX]+\b|CELA \d|PRISAO DOMICILIAR|PERNOITE|ADVERTENCIA|NAO RETORNOU|TESTE DE TRABALHO")
-_PALAVRA_TRAB = r"(?:ATIVIDADES?\s+(?:LABORA(?:L|IS|TIVA)|INTRAMUROS)|TRABALHO|LABOR|SETOR|QUADRO|SERVICOS?|FUNCAO|EMPRESA|EMPREITEIRA|PRODUCAO|CONVENIO)"
-RE_INI_RESERVA = re.compile(r"\b(?:INICI\w*|REINICI\w*|RETORN\w*|PASSA A (?:FAZER PARTE|EXERCER|TRABALHAR|DESEMPENHAR|DESENVOLVER|PRESTAR|LABORAR)|PASSA AO|PASSOU A \w+|"
-                            r"CADASTRAD\w*|INTEGRAD\w*|REMANEJAD\w*)\b.{0,60}?" + _PALAVRA_TRAB)
-RE_FIM_RESERVA = re.compile(r"\b(?:DESLIGA[DG]\w*|AFAST\w*|DEIXA (?:DE (?:TRABALHAR|LABORAR|FAZER PARTE|EXERCER|PRESTAR)|ATIVIDADE)|EXCLUID\w*)\b")
+_PALAVRA_TRAB = r"(?:ATIVIDADES?\s+(?:LABORA(?:L|IS|TIVA)|INTRAMUROS)|TRABALHO|TRABALHAR|LABOR|SETOR|QUADRO|SERVICOS?|FUNCAO|EMPRESA|EMPREITEIRA|PRODUCAO|CONVENIO)"
+# (também "começou a trabalhar como X", "volta a trabalhar no setor X", "foi inserido no setor X" - 7.14)
+RE_INI_RESERVA = re.compile(r"\b(?:INICI\w*|REINICI\w*|RETORN(?:A|OU|AR|ANDO)\b|PASSA A (?:FAZER PARTE|EXERCER|TRABALHAR|DESEMPENHAR|DESENVOLVER|PRESTAR|LABORAR)|PASSA AO|PASSOU A \w+|"
+                            r"CADASTRAD\w*|INTEGRAD\w*|REMANEJAD\w*|INCIA|(?:COMEC|VOLT)\w* A (?=TRABALHAR|LABORAR|EXERCER|PRESTAR|DESEMPENHAR)|INSERID\w*)\b.{0,60}?" + _PALAVRA_TRAB)
+# (também "deixou de trabalhar", "deixa de remir pena no setor X", "saiu do setor/beneficiamento X" - 7.14)
+RE_FIM_RESERVA = re.compile(r"\b(?:DESLIGA[DG]\w*|AFAST\w*|DEIX(?:A|OU) (?:DE (?:TRABALHAR|LABORAR|FAZER PARTE|EXERCER|PRESTAR|REMIR)|ATIVIDADE)|EXCLUID\w*|"
+                            r"SAIU D[OA] (?:SETOR|TRABALHO|EMPRESA|BENEFICIAMENTO|OFICINA|FUNCAO)\b)\b")
 _SETOR_EM = [r"\bPARA (?:O |A )?(?:SETOR(?: DE| DA| DO)?\s+|EMPRESA\s+|OFICINA DE\s+|FUNCAO DE\s+)?(.+?)", r"\bPASSA AO TRABALHO (?:INTERNO|EXTERNO)?\s*[-/]?\s*(.+?)",
              r"\b(?:N[OA]|AO|DO|DA) SETOR(?: DE| DA| DO)?\s+(.+?)", r"\bNA EMPRESA\s+(.+?)", r"\bNA EMPREITEIRA\s+(.+?)",
-             r"\bFUNCAO DE\s+(.+?)", r"\bNA PRODUCAO DE\s+(.+?)", r"\bNO CONVENIO\s+(.+?)", r"\bNA OFICINA DE\s+(.+?)"]
+             r"\bFUNCAO DE\s+(.+?)", r"\bNA PRODUCAO DE\s+(.+?)", r"\bNO CONVENIO\s+(.+?)", r"\bNA OFICINA DE\s+(.+?)",
+             # sem preposição antes de "setor" ("atividade laboral interna setor das marmitas"), "trabalhar na X", "como X" (7.14)
+             r"\bSETOR (?!(?:DE |DA |DO )?TRABALHO\b)(?:DE |DA |DO |DAS |DOS )?(.+?)", r"\bTRABALHAR N[AO]\s+(?:SETOR (?:DE |DA |DO )?)?(.+?)", r"\bCOMO\s+(.+?)"]
 
 
 def _setor_livre(u, remanejo=False):
@@ -220,8 +261,10 @@ def _setor_livre(u, remanejo=False):
     u = re.split(r"\b(?:CONFORME|DELIBERA\w*|DETERMINA\w*|AUTORIZA\w*|ANOTACAO)\b", u)[0]
     for rx in (_SETOR_EM if remanejo else _SETOR_EM[1:]):
         m = re.search(rx + r"(?:\s+CONVENIAD|\s+CUMPRINDO|\s+CONFORME|\s+DELIBERAD|\s+POR\s|\s+A PEDIDO|\s+DEVIDO|\s+EM VIRTUDE|\s+APOS|"
-                           r"\s+COM\s|\s+E PASSA|,|\.|\(|$)", u)
+                           r"\s+COM\s|\s+E PASSA|\s+NESTA\b|\s+DESTA\b|\s+DA UNIDADE\b|\s*/?\s*\bCI\s*N?[º°O.:\s]{0,3}\d|,|\.|\(|;|$)", u)
         if m and m.group(1).strip() and len(m.group(1).strip()) <= 60:
+            if re.match(r"(?:DISCIPLINA|SEGURANCA|PSICO|INTELIGENCIA|PRONTUARIO|SAUDE|EDUCA)", m.group(1).strip()):
+                return ""  # setor administrativo citado ("à disposição do setor de disciplina"): não é trabalho
             return m.group(1).strip()
     return ""
 
@@ -588,6 +631,8 @@ def _norm_at(u):
                lambda m: "%02d/%02d/%s" % (int(m.group(1)), _MESES.index(m.group(2)) + 1, m.group(3)), u)  # "21 de março de 2014"
     u = re.sub(r"REMISS", "REMIC", u)  # "tempo de remissão"
     u = re.sub(r"\bATETADO\b", "ATESTADO", u)
+    u = re.sub(r"\bFAB\.\s*(?=[A-Z])", "FABRICA ", u)  # "na Fab. Prendebem": o ponto da abreviatura não encerra o nome do setor
+    u = re.sub(r"\bEMP\.\s*(?=[A-Z])", "EMPRESA ", u)
     u = re.sub(r"(\d)\s*DT\s*[/-]?\s*(\d[\d.,]*)\s*DR\b", r"\1 DIAS TRABALHADOS E \2 DIAS REMIDOS", u)  # "234DT / 78DR"
     u = re.sub(r"(\d{2}[./]\d{2}[./]\d{4})(\d{1,4}\s*DIAS)", r"\1 \2", u)  # "25.11.2020434 dias"
     u = re.sub(r"(TRABALHAD[OA]S)(\d)", r"\1 \2", u)
@@ -616,6 +661,7 @@ def _totais(u):
 
 def _limpa_setor(t):
     t = re.sub(r"^.*?\b(?:FUNCAO|SETOR DE|SETOR|NA EMPRESA|EMPRESA)\s+", "", t.strip(" ,.;:-"))
+    t = re.sub(r"^(?:SENDO|NA|NO|E)\s+(?=\w{3})", "", t)  # "sendo Serviços Gerais (d a d) ...": "sendo" é palavra do texto
     t = re.sub(r"\s+(?:NO|DO|NUM) PERIODO\b.*$|\s+DESDE\b.*$", "", t)
     return t.strip(" ,.;:-")
 
@@ -640,10 +686,10 @@ def _atp(u, d, e):
         ms_ += [m for m in re.finditer(rx, u) if not any(m.start() < x.end() and x.start() < m.end() for x in ms_)]
     ms_.sort(key=lambda m: m.start())
     for m in ms_:
-        nome = (m.group(1) or "").strip(" ;:-")
+        nome = re.sub(r"^E\s+", "", (m.group(1) or "").strip(" ;:-"))  # "...; E CELA LIVRE DATA INICIAL d": o setor é "CELA LIVRE"
         nome = "" if not nome or nome.startswith(("EMITIDO", "ATP")) else nome
         if not nome:
-            nome = (segs[-1]["setor_txt"] if segs else (re.search(r"ATP\s*N\S*\s*[\d/]+\s*[;:-]?\s*([A-Z][A-Z /]{3,40}?)\s*[;:-]", u) or [None, ""])[1])
+            nome = (segs[-1]["setor_txt"] if segs else (re.search(r"ATP\s*N\S*\s*[\d/]+\s*[;:-]?\s*(?!DATA\b|TEMPO\b|PERIODO\b)([A-Z][A-Z /]{3,40}?)\s*[;:-]", u) or [None, ""])[1])
         segs.append({"setor_txt": (nome or "").strip(), "ini": _dt(m.group(2)), "fim": _dt(m.group(3)), "trab": None, "rem": None, "inferido": False})
     if not segs:
         # "Data Inicial d até Data Final d no SETOR DE X[, Data Inicial ...]": o setor vem depois do período
