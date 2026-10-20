@@ -41,7 +41,8 @@ try:
     ok(p["status"] == "ORF_POST" and p["cor"] == "amarelo", "pendência: %r" % p)
     ok(not res.get("atestados_pendentes") and (res.get("pendentes") or 0) == 0, "fora do total: %r" % res.get("pendentes"))
     R = C["resumo"]["texto"]
-    ok("possui 32 dias remidos" in R and "fazendo jus a 29 dias" in R and "insuficientes: faltam cerca de 13 dias" in R, "resumo simples: %s" % R)
+    ok("possui 32 dias remidos" in R and "fazendo jus a 29 dias" in R and "nº 024/2024 (29 dias) fica a conferir" in R and "faltam" not in R,
+       "resumo simples: %s" % R)
     al = " ".join(a["texto"] for a in C["alertas"])
     ok("além das obras de leitura registradas na ficha (4 obras)" in al, "alerta das remições além das obras: %s" % al)
 except Exception as e:
