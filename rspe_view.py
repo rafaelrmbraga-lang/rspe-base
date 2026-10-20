@@ -14,6 +14,7 @@ import rspe_prescricao as rp
 import rspe_auditoria as ra
 import rspe_ficha as rf
 import rspe_regras as rg
+import rspe_reincidencia as rr
 
 HOJE = date.today()
 # janelas de alerta (dias até o marco): acima da última, a situação fica em branco
@@ -1220,6 +1221,14 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
             and ltxt == r.get("livramento_previsao_seeu"):
         lsit = _com_nota(lsit, r.get("livramento_nota"))
     presc = rp.analisar(r, HOJE, ficha)
+    if ficha:
+        # reincidência pelas datas (rspe_reincidencia): penas de outros processos extintas na ficha e a capitulação da ficha
+        # (tentativa) - só a Auditoria usa
+        try:
+            r["_extincoes_ficha"] = [dict(e, data=rs.fmt(e["data"])) for e in rr.extincoes_ficha(ficha)]
+        except Exception:
+            r["_extincoes_ficha"] = []
+        r["_ficha_artigo"] = ficha.get("artigo") or ""
     aud = ra.auditar(r, HOJE)
     try:
         dbi = data_base_info(r, aud["aud_itens"], ficha)
@@ -1448,8 +1457,22 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
         if r.get("livramento_previsao_seeu"):
             m["liv"] = r["livramento_previsao_seeu"]
             m["liv_dias"] = _dias_para(_data(r["livramento_previsao_seeu"]))
+    # reincidente pela lei sem a marcação do SEEU, com efeito nas frações: a data da aba (do SEEU, com a fração do primário) favorece
+    # o assistido, mas o juízo pode recalcular como reincidente - a linha avisa
+    _rl = [it for it in m.get("aud_itens") or [] if it.get("tipo") == "reincidente-pela-lei-sem-marcacao" and it.get("efeito")]
+    if _rl:
+        if any("livramento" in it["efeito"] for it in _rl) and m.get("liv_sit") and m.get("liv_cor") not in ("azul", "cinza"):
+            _av = " · reincidente pela lei (o SEEU usa a fração do primário): o juízo pode recalcular - ver Auditoria"
+            m["liv_sit_full"] = (m.get("liv_sit_full") or m["liv_sit"]) + _av
+        if any("progressão" in it["efeito"] for it in _rl) and m.get("prog_sit") and m.get("prog_cor") not in ("azul", "cinza"):
+            _av = " · reincidente pela lei (o SEEU usa o percentual do primário): o juízo pode recalcular - ver Auditoria"
+            m["prog_sit_full"] = (m.get("prog_sit_full") or m["prog_sit"]) + _av
     # percentual do SEEU maior que o legal (alerta da Auditoria): a data da aba é a do SEEU e pode estar atrasada - a linha avisa
-    if any(it.get("tipo") == "percentual-de-progressao-diverge" and it.get("nivel") == "alerta" for it in m.get("aud_itens") or []) \
+    # (também o percentual que decorre da reincidência específica não demonstrada: o alerta é o da reincidência)
+    _ai = m.get("aud_itens") or []
+    if (any(it.get("tipo") == "percentual-de-progressao-diverge" and it.get("nivel") == "alerta" for it in _ai)
+        or any(it.get("tipo") == "reincidencia-especifica-nao-demonstrada-no-rspe" and it.get("nivel") == "alerta" and it.get("prog_acima")
+               for it in _ai)) \
             and m.get("prog_cor") not in ("vencido", "azul") and m.get("prog_sit"):
         _av = " · percentual do SEEU acima do legal - ver Auditoria"
         _full = m.get("prog_sit_full") or m["prog_sit"]
@@ -1727,9 +1750,11 @@ def saida_temporaria(r, ficha, m, est=None, interr=False, hoje=None):
         add(None if sem_data else False,
             ("Só há condenação por fato a partir de 11/04/2024 (%s), sem condenação mais antiga em cumprimento: vedada pela Lei 14.843/2024" % rs.fmt(min(novos))
              if novos else "Nenhuma condenação em cumprimento com fato anterior a 11/04/2024") + (" (há crime sem data do fato)" if sem_data else ""))
-    ved, duv = [], []
+    ved, duv, ant_m = [], [], []
     for d, c in datas:
         nm = (c.get("artigo") or "").split(":")[0].title()
+        if d and d < LEI_13964 and c.get("hediondo_ou_equiparado") == "S" and c.get("resultado_morte") == "S":
+            ant_m.append("%s de %s" % (nm, rs.fmt(d)))
         if d and d >= LEI_13964 and c.get("hediondo_ou_equiparado") == "S" and c.get("resultado_morte") == "S":
             ved.append("%s de %s: hediondo com resultado morte (art. 122, § 2º, Lei 13.964/2019)" % (nm, rs.fmt(d)))
         elif d and d >= LEI_13964 and c.get("hediondo_ou_equiparado") == "S" and _morte_tipo(c):
@@ -1738,7 +1763,10 @@ def saida_temporaria(r, ficha, m, est=None, interr=False, hoje=None):
     # a vedação da Lei 14.843/2024 (hediondo ou com violência/grave ameaça) não alcança a condenação anterior a ela: crime
     # novo não impede (decisão do usuário); fica só a do hediondo com resultado morte, vigente desde a Lei 13.964/2019
     add(False if ved else (None if duv else True),
-        "Vedação: " + "; ".join(ved) if ved else ("; ".join(duv) if duv else "Sem hediondo com resultado morte (art. 122, § 2º)"))
+        "Vedação: " + "; ".join(ved) if ved else ("; ".join(duv) if duv else
+                                                 ("Hediondo com resultado morte (%s), mas fato anterior à Lei 13.964/2019: a vedação do art. 122, "
+                                                  "§ 2º, não se aplica (CF, art. 5º, XL)" % "; ".join(ant_m)) if ant_m else
+                                                 "Sem hediondo com resultado morte (art. 122, § 2º)"))
     cump, tot = _pena_dias(r.get("pena_cumprida")), _pena_dias(r.get("pena_total"))
     reinc = (r.get("reincidente") or "").upper().startswith("S") or any(
         (c.get("reincidente_comum") == "S" or c.get("reincidente_especifico") == "S") for c in crimes)
@@ -1826,7 +1854,9 @@ def progressao_antecipada(r, ficha, m, est=None, interr=False, hoje=None):
             + " - o tipo não tem violência nem grave ameaça como elementar (a violência presumida do art. 224 do CP foi revogada pela "
               "Lei 12.015/2009); conferir na sentença se houve violência real ou grave ameaça")
     else:
-        add(None if (sem or not crimes) else True, "Nenhum crime com violência ou grave ameaça" + (" (crime sem a marcação no RSPE: conferir)" if sem or not crimes else ""))
+        add(None if (sem or not crimes) else True,
+            "Sem condenação em cumprimento no RSPE (as condenações estão extintas): requisito a conferir" if not crimes else
+            "Nenhum crime com violência ou grave ameaça" + (" (crime sem a marcação no RSPE: conferir)" if sem else ""))
     # critério do juízo (1ª VEP de Campo Grande): não integrar organização criminosa - pela condenação do RSPE (Lei 12.850/2013 ou
     # marcação de comando de organização criminosa)
     orc = [c for c in crimes if c.get("comando_orcrim") == "S" or rs.num_lei(c.get("lei")) == "12850"]
