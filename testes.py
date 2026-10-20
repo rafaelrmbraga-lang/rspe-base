@@ -8,6 +8,7 @@ TESTES += ["teste_conf_C1.py"]  # conferência manual (7.13.0), frente C1: reinc
 TESTES += ["teste_conf_C2.py"]
 TESTES += ["teste_conf_F.py"]
 TESTES += ["teste_conf_E.py"]
+TESTES += ["teste_conf_B.py"]
 falhas = [t for t in TESTES if subprocess.call([sys.executable, t]) != 0]
 if falhas:
     print("FALHOU: " + ", ".join(falhas))

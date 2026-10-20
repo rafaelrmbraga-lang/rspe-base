@@ -608,10 +608,19 @@ FUND_127 = ("LEP, art. 127 (até 1/3; a contagem recomeça da data da infração
             "TJDFT, Acórdão 1230029.")
 
 
-def perdas_por_falta(incidentes):
+def perdas_por_falta(incidentes, eventos=None):
     """Para cada falta grave homologada no RSPE com perda de dias remidos: a perda, as parcelas e a remição
     sobre a qual cada parcela incidiu (parcela = 1/3 da remição, arredondado), a falta anterior e a janela de
-    remição entre a falta anterior e a atual (LEP, art. 127: a contagem recomeça da data da infração)."""
+    remição entre a falta anterior e a atual (LEP, art. 127: a contagem recomeça da data da infração).
+    eventos: a fuga/evasão cuja perda de remidos o RSPE lança sem o incidente de homologação (rs.mapa_faltas: sanção da mesma
+    ocorrência) também é falta - a perda dela não se soma à da falta homologada anterior."""
+    _reconh = []
+    if eventos:
+        try:
+            _eps, _abs = rs.mapa_faltas([i for i in incidentes if not i.get("_ficha")], eventos)
+            _reconh = [ep["ini"] for ep in _eps if any(re.search(r"PERD", t, re.I) for t, _x in ep["reconhecida"])]
+        except Exception:
+            _reconh = []
     incidentes = [i for i in incidentes if not i.get("_ficha")]  # falta da ficha disciplinar: não é homologação no RSPE
     def dt(i):
         return rs.to_date(i.get("data_referencia") or i.get("data_decisao") or "")
@@ -630,7 +639,8 @@ def perdas_por_falta(incidentes):
         if d:
             sem_fato.add(d)
         return d
-    faltas = sorted(set(d for d in (dt_falta(i) for i in incidentes if "FALTA GRAVE" in (i.get("tipo") or "").upper() and i.get("situacao") == "CONCEDIDO") if d))
+    _homol = [d for d in (dt_falta(i) for i in incidentes if "FALTA GRAVE" in (i.get("tipo") or "").upper() and i.get("situacao") == "CONCEDIDO") if d]
+    faltas = sorted(set(_homol + _reconh))
     perdas = [(dt(i), qtd(i)) for i in incidentes if "PERDIDOS" in (i.get("tipo") or "").upper()]
     remicoes = []
     for i in incidentes:
@@ -669,6 +679,7 @@ def perdas_por_falta(incidentes):
                 resid[id(rem)] = max(0, resid[id(rem)] - q)
         janela = sum(x["n"] for x in remicoes if x["d"] and x["d"] <= f and (prev is None or x["d"] > prev))
         out.append({"falta": f, "prev": prev, "perda": sum(pf), "parcelas": parcelas, "janela": janela, "sem_fato": f in sem_fato,
+                    "inferida": [g for g in (f, prev) if g and g in _reconh and g not in _homol],
                     "remido_ate": sum(x["n"] for x in remicoes if x["d"] and x["d"] <= f)})
     return out, faltas, perdas
 
@@ -676,7 +687,7 @@ def perdas_por_falta(incidentes):
 def _perda_remidos(incidentes, perdidos, eventos=None):
     """LEP, art. 127: a falta grave permite revogar ATÉ 1/3 do tempo remido, e a contagem recomeça da data da
     infração - nova falta só alcança a remição adquirida depois da falta anterior (vedado o desconto em duplicidade)."""
-    res, faltas, perdas = perdas_por_falta(incidentes)
+    res, faltas, perdas = perdas_por_falta(incidentes, eventos)
     if not faltas or not perdas:
         _fg = [e for e in (eventos or []) if re.search(r"FUGA|EVAS|ABANDONO", ((e.get("tipo") or "") + " " + (e.get("motivo") or "")).upper())]
         _dp_ = [rs.to_date(i.get("data_decisao") or i.get("data_referencia") or "") for i in incidentes if "PERDIDOS" in (i.get("tipo") or "").upper()]
@@ -695,9 +706,17 @@ def _perda_remidos(incidentes, perdidos, eventos=None):
         f, prev = x["falta"], x["prev"]
         ress = (" Data do fato não consta no complemento da homologação: usada a data de referência (%s); conferir a data da infração, "
                 "que é a que reinicia a contagem (art. 127)." % rs.fmt(f)) if x.get("sem_fato") else ""
+        # falta sem o incidente de homologação, inferida da fuga/evasão com regressão e perda de remidos (rs.mapa_faltas): a conta
+        # depende da data do fato e da decisão - fica a verificar, não alerta
+        _inf = x.get("inferida") or []
+        if _inf:
+            ress += (" A falta de %s não tem o incidente de homologação no RSPE: foi tomada da fuga/evasão seguida de regressão e perda "
+                     "de remidos (mesma ocorrência). Conferir nos autos a decisão da perda e os períodos das remições, que fixam a base de 1/3."
+                     % " e de ".join(rs.fmt(g) for g in _inf))
+        _niv = "verificar" if _inf else "alerta"
         dup = [(q, rem) for q, rem in x["parcelas"] if prev and rem and rem["d"] and rem["d"] <= prev]
         if dup:
-            itens.append(_item("alerta", "Perda de dias remidos em duplicidade (falta de %s)" % rs.fmt(f),
+            itens.append(_item(_niv, "Perda de dias remidos em duplicidade (falta de %s)" % rs.fmt(f),
                                "A perda de %s pela falta de %s incidiu sobre remição anterior à falta de %s, que teve perda de dias decretada: %s. A contagem recomeçou em %s; "
                                "a nova perda só pode alcançar a remição adquirida entre as duas faltas (%s; limite de 1/3: %d). Cabe impugnar o cálculo." % (
                                    rs.pl(x["perda"], "dia", "dias"), rs.fmt(f), rs.fmt(prev),
@@ -706,7 +725,7 @@ def _perda_remidos(incidentes, perdidos, eventos=None):
         base = x["janela"]
         limite = base // 3
         if base and x["perda"] > limite:
-            itens.append(_item("alerta", "Perda de dias remidos acima de 1/3 (falta de %s)" % rs.fmt(f),
+            itens.append(_item(_niv, "Perda de dias remidos acima de 1/3 (falta de %s)" % rs.fmt(f),
                                "Remição %s: %s; limite de 1/3: %s; perdidos: %s (excesso de %s).%s" % (
                                    ("adquirida entre a falta de %s e esta" % rs.fmt(prev)) if prev else "até a falta",
                                    rs.pl(base, "dia", "dias"), rs.pl(limite, "dia", "dias"), rs.num_txt(x["perda"]), rs.pl(x["perda"] - limite, "dia", "dias"),
@@ -1269,7 +1288,18 @@ def auditar(r, hoje=None):
         # 127) - a mesma leitura da data-base na recaptura (_homolog): não é indício "a apurar"
         _sancao = fi.get("origem") == "incidente" and (re.search(r"PERDID|PERDA", fi.get("texto") or "", re.I) or (
             re.search(r"REGRESS", fi.get("texto") or "", re.I) and not re.search(r"CAUTELAR", fi.get("texto") or "", re.I)))
-        if _sancao and not dec:
+        # mesma ocorrência (rs.mapa_faltas): o período da fuga/evasão até a recaptura e a regressão cautelar decretada nela
+        _per = (" Período: %s - a fuga/evasão é falta permanente, que só cessa com a recaptura (os 12 meses do art. 83, III, b, do CP "
+                "e do art. 6º dos decretos contam dela)." % fi["periodo"]) if fi.get("permanente") and fi.get("recaptura") else ""
+        _vin = (" Da mesma ocorrência (não é outra falta): %s." % "; ".join(fi["vinculados"])) if fi.get("vinculados") else ""
+        if fi.get("reconhecida") and not dec:
+            it = _item("info", "%s em %s: falta grave reconhecida em juízo (sanção sem a homologação no RSPE)" % (
+                "Fuga" if fuga else "Evasão/descumprimento", fi["data"] or "data não informada"),
+                       "%s.%s A sanção aplicada a essa ocorrência (%s) só existe com a falta grave reconhecida em juízo (LEP, arts. 118, I, e "
+                       "127; Súmula 533/STJ): ela conta como falta grave nas outras abas, com a data do fato. O RSPE não traz o incidente de "
+                       "homologação: conferir a decisão para a data exata do fato." % (fi["texto"], _per, "; ".join(fi["reconhecida"])),
+                       "LEP, arts. 50, 118, I, e 127; Súmula 533/STJ.", tipo="falta-a-apurar", ref=fi["chave"])
+        elif _sancao and not dec:
             it = _item("info", "%s em %s: sanção que pressupõe falta grave reconhecida" % (fi["texto"][:60], fi["data"] or "data não informada"),
                        "%s. A perda de dias remidos e a regressão definitiva só se aplicam depois de reconhecida a falta grave em juízo (LEP, "
                        "arts. 118, I, e 127; Súmula 533/STJ): o registro não é indício a apurar, embora o RSPE não traga o incidente da falta "
@@ -1288,22 +1318,22 @@ def auditar(r, hoje=None):
             it = _item("info", "Fuga em %s: em tese falta grave - informar se houve sanção reconhecida" % (fi["data"] or "data não informada"),
                        "%s. A fuga é falta grave (LEP, art. 50, II). No indulto e na comutação, ela conta como falta grave mesmo sem a "
                        "homologação no RSPE; a data-base só se move depois de reconhecida em juízo (Súmula 533/STJ; STJ, Tema 1195). Se não houve "
-                       "falta grave, informe pelo botão Preencher." % fi["texto"],
+                       "falta grave, informe pelo botão Preencher.%s%s" % (fi["texto"], _per, _vin),
                        "LEP, art. 50, II; Súmula 533/STJ; STJ, Tema 1195.", tipo="falta-a-apurar", ref=fi["chave"])
         else:
             it = _item("info", "Falta a apurar em %s: informar se houve falta grave" % (fi["data"] or "data não informada"),
                        "%s. O RSPE não registra sanção reconhecida.%s Informe se houve falta grave: a decisão vale em todas as abas "
-                       "(falta nos 12 meses, indulto, comutação, linha do tempo)." % (fi["texto"], (" " + fi["ficha"]) if fi.get("ficha") else
+                       "(falta nos 12 meses, indulto, comutação, linha do tempo).%s%s" % (fi["texto"], (" " + fi["ficha"]) if fi.get("ficha") else
                        (" A falta foi lida da própria ficha disciplinar (SIAPEN), sem incidente no RSPE." if re.search(r"NA FICHA", fi.get("texto") or "", re.I) else
                         " A ficha disciplinar importada não registra falta nesta data." if r.get("_tem_ficha") else
-                        " Ficha disciplinar não importada: importá-la ajuda a explicar o indício.")), "LEP, arts. 50 e 118; STJ, Tema 1195.",
+                        " Ficha disciplinar não importada: importá-la ajuda a explicar o indício."), _per, _vin), "LEP, arts. 50 e 118; STJ, Tema 1195.",
                        tipo="falta-a-apurar", ref=fi["chave"])
-        if _sancao and not dec:
+        if (_sancao or fi.get("reconhecida")) and not dec:
             pass  # sanção que pressupõe a falta reconhecida: o prazo contado da regressão/perda não é o do fato
         elif fi.get("presc_limite"):
             it["detalhe"] += (" Prescrição da falta disciplinar: 3 anos%s (menor prazo do art. 109 do CP - STJ, AgRg no HC 779.723), até %s; "
                               "depois disso não gera regressão, perda de remidos nem nova data-base." % (
-                                  " da recaptura em %s - a fuga é falta permanente (STJ, HC 527.625)" % fi["presc_termo"] if fi.get("presc_fuga") else " do fato",
+                                  " da recaptura em %s - a fuga/evasão é falta permanente (STJ, HC 527.625)" % fi["presc_termo"] if fi.get("presc_fuga") else " do fato",
                                   fi["presc_limite"]))
         elif fi.get("presc_fuga") and fi["data"]:
             it["detalhe"] += " Sem recaptura registrada: a fuga é falta permanente, e a prescrição disciplinar só corre da recaptura (STJ, HC 527.625)."

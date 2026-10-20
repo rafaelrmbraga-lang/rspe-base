@@ -1256,6 +1256,26 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
     est = estado_execucao(r)
     psit, pcor = _vencido_pedido(r, situacao(pd, interr, rotulo_parada(r)), pd, "PROGRESS")
     lsit, lcor = _vencido_pedido(r, situacao(ld, interr, rotulo_parada(r)), ld, "LIVRAMENTO")
+    # requisito dos 12 meses sem falta grave (CP, art. 83, III, b) frente à data do SEEU: falta reconhecida que o SEEU não
+    # considerou empurra a data; data futura do SEEU que é só 12 meses de falta ainda não reconhecida fica a verificar
+    _lf = None
+    if isinstance(ld, date) and not interr and ltxt == r.get("livramento_previsao_seeu"):
+        try:
+            _lf = rs.falta_livramento(r, ld, HOJE)
+        except Exception:
+            _lf = None
+    if _lf and _lf[0] == "firme":
+        _seeu = ltxt
+        ld = _lf[1]
+        ltxt = rs.fmt(ld)
+        _s, _c = _vencido_pedido(r, situacao(ld, interr, rotulo_parada(r)), ld, "LIVRAMENTO")
+        lsit = "%sFalta grave (%s): livramento só a partir de %s, 12 meses depois (CP, art. 83, III, b); data do SEEU: %s" % (
+            (_s + " · ") if _s else "", _lf[2], ltxt, _seeu)
+        lcor = _c  # acima de 90 dias, sem cor (não é "cinza", que a tela lê como "não se aplica")
+    elif _lf and _lf[0] == "apurar":
+        lsit = ("A verificar · a data do SEEU é 12 meses da falta de %s, ainda sem sanção reconhecida em juízo (%s): sem a homologação, "
+                "a falta não impede o livramento (CP, art. 83, III, b; Súmula 533/STJ) - conferir o PAD e o lapso" % (rs.fmt(_lf[1]), _lf[2]))
+        lcor = "amarelo"
     if est:
         psit, pcor = ({"extinta": "Pena extinta", "cumprida": "Pena cumprida", "lc": "Em livramento", "aberto": "Já no aberto", "lc_duvida": "A verificar (livramento)",
                        "nao_iniciou": "Não iniciou o cumprimento"}[est[0]],
@@ -1764,19 +1784,39 @@ def _morte_tipo(c):
     return art == "121-A" or (art == "121" and rs.vga_elementar(c)) or (art == "157" and bool(re.match(r"\s*§\s*3", c.get("tipo_penal") or "")))
 
 
+def falta_12m_hoje(r, hoje=None):
+    """Falta nos 12 meses contada até a data de hoje (a mesma com que a saída temporária e a progressão antecipada contam os
+    prazos), e não até a emissão do RSPE: a falta de 13 meses atrás não é "dos últimos 12 meses" porque o RSPE é de semanas antes.
+    A coluna Falta segue a emissão do RSPE (o retrato do documento)."""
+    hoje = hoje or HOJE
+    try:
+        ger = rs.to_date(r.get("data_geracao_rspe") or "")
+        if ger and hoje > ger:
+            args = (r, r.get("_eventos") or [], r.get("_incidentes") or [])
+            # só quando a análise gravada é a destes dados (registro informado à mão fica como está)
+            if rs.faltas(*args, ger, r.get("_crimes") or [])["falta_12m"] == r.get("falta_12m"):
+                return rs.faltas(*args, hoje, r.get("_crimes") or [])["falta_12m"]
+    except Exception:
+        pass
+    return r.get("falta_12m")
+
+
 def _conduta_requisito(add, ficha, fal):
     """Conduta e falta nos 12 meses (saída temporária e progressão antecipada). Itens 148 e 150 de 16/10: a falta "a apurar" (indício
     sem sanção reconhecida) e a conduta "sem lapso" (sem tempo para classificar) ficam a conferir (amarelo), não como requisito não
     atendido - a falta só produz efeito depois de reconhecida em juízo (Súmula 533/STJ). Falta reconhecida ou conduta ruim: não atende."""
     cond = rs._sem_acento(ficha.get("conduta") or "").upper().strip()
     sem_lapso = "SEM LAPSO" in cond
-    if fal == "SIM" or not (cond in ("OTIMA", "BOA") or sem_lapso):
+    # "Responde PADIC/IPCG": procedimento disciplinar em curso, sem sanção reconhecida - a conferir, como a falta a apurar
+    padic = cond.startswith("RESPONDE")
+    if fal == "SIM" or not (cond in ("OTIMA", "BOA") or sem_lapso or padic):
         ok = False
     else:
-        ok = None if (fal == "A APURAR" or sem_lapso) else True
+        ok = None if (fal == "A APURAR" or sem_lapso or padic) else True
     add(ok, "Conduta %s%s%s" % (
-        _conduta_txt(ficha.get("conduta")),
-        " (sem tempo para classificar, não conduta ruim): pedir o atestado de conduta" if sem_lapso else "",
+        _conduta_txt(ficha.get("conduta")).replace("Ipcg", "IPCG").replace("Padic", "PADIC"),
+        " (sem tempo para classificar, não conduta ruim): pedir o atestado de conduta" if sem_lapso else
+        " (procedimento disciplinar em curso, sem sanção reconhecida): conferir o resultado do PADIC antes de pedir (Súmula 533/STJ)" if padic else "",
         "" if fal not in ("SIM", "A APURAR") else (" · falta nos últimos 12 meses: sim" if fal == "SIM" else
                                                   " · falta a apurar nos últimos 12 meses, sem sanção reconhecida: conferir o PAD antes de pedir (Súmula 533/STJ)")))
 
@@ -1869,7 +1909,7 @@ def saida_temporaria(r, ficha, m, est=None, interr=False, hoje=None):
               "(Súmula Vinculante 56)" % rf.nome_unidade(un)) if _sv56 else
              "%s: %s (a saída temporária pressupõe o cumprimento no semiaberto)" % (
                  "Unidade de monitoramento eletrônico" if tipo_un == "monitoramento" else "Unidade de regime %s" % tipo_un, rf.nome_unidade(un))))
-        _conduta_requisito(add, ficha, r.get("falta_12m"))
+        _conduta_requisito(add, ficha, falta_12m_hoje(r, hoje))
         trab = _trabalho_atual(ficha, m)  # o trabalho externo também conta
         add(bool(trab), "Trabalhando: " + trab if trab else "Sem trabalho em curso na ficha")
         sts = rf.saidas_temporarias_retorno(ficha.get("eventos", []))
@@ -1950,7 +1990,7 @@ def progressao_antecipada(r, ficha, m, est=None, interr=False, hoje=None):
     if not ficha:
         add(None, "Sem ficha disciplinar: conduta não conferida")
     else:
-        _conduta_requisito(add, ficha, r.get("falta_12m"))
+        _conduta_requisito(add, ficha, falta_12m_hoje(r, hoje))
         imp = rs.to_date(((ficha.get("data_impressao") or "").split() or [""])[0].replace(".", "/"))
         if imp and (hoje - imp).days > 90:
             add(None, "Ficha impressa em %s (há %d dias, mais de 90): conferir a conduta atual" % (rs.fmt(imp), (hoje - imp).days))

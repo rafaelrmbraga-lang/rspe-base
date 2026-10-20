@@ -513,7 +513,8 @@ def _extrair_texto(caminho, pags, vis, ocultas=(), dp_chars="", parcial=None):
     f["conduta"] = S("conduta", _conduta)
     f["data_impressao"] = S("data de impressão", lambda: (re.search(r"Impresso em (\d{2}/\d{2}/\d{4})", "\n".join(pags)) or [None, ""])[1])
     f["paginas"], f["paginas_sem_texto"] = len(pags), [i + 1 for i, x in enumerate(pags) if len(x.strip()) < 20]
-    autos = sorted(set(re.findall(r"\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}", t)))
+    # número CNJ também escrito com ponto no lugar do hífen ("0003115.29.2013.8.12.0013"): normalizado para o hífen
+    autos = sorted(set(re.sub(r"^(\d{7})\.", r"\1-", a) for a in re.findall(r"(?<![\d.])\d{7}[-.]\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}(?![\d])", t)))
     f["autos"] = autos
 
     # ---- eventos do histórico ----
@@ -1912,6 +1913,20 @@ def _unidade_x_ficha(r, f):
         return [_item_rf("alerta", "RSPE em regime fechado, mas a ficha indica unidade de %s (%s)" % (tipo_un, un.title()),
                          "Unidade atual%s: %s - %s. Provável progressão não lançada no RSPE (a data-base e as frações seguintes mudam) ou regime "
                          "desatualizado no SEEU: conferir a decisão e pedir a atualização." % (desde, un.title(), rot), "LEP, art. 112.")]
+    if tipo_un in ("fechado", "provisorio", "federal"):
+        try:
+            _lc, _dl = rs.livramento_em_curso(r, r.get("_incidentes", []))
+        except Exception:
+            _lc, _dl = False, None
+        if _lc:
+            # em livramento condicional, a pessoa presa em unidade fechada não indica falta de vaga (SV 56): indica nova prisão,
+            # suspensão cautelar (LEP, art. 145) ou revogação do livramento (CP, arts. 86 e 87) não lançada no SEEU
+            return [_item_rf("verificar", "Em livramento condicional no RSPE, mas a ficha registra a pessoa em unidade de regime %s (%s)" % (
+                                 "fechado" if tipo_un != "provisorio" else "provisório", un.title()),
+                             "Unidade atual%s: %s - %s. Provável nova prisão, suspensão do livramento ou revogação ainda não lançada no SEEU "
+                             "(não é caso de falta de vaga). Conferir o motivo da prisão e a decisão sobre o livramento: a suspensão e a "
+                             "revogação mudam o período de prova, a data-base e os demais benefícios." % (desde, un.title(), rot),
+                             "LEP, arts. 140 e 145; CP, arts. 86, 87 e 88.")]
     if (reg.startswith("SEMI") or reg.startswith("ABERTO")) and tipo_un in ("fechado", "provisorio", "federal"):
         evs = sorted((e for e in r.get("_eventos", []) if rs.to_date(e.get("data") or "")), key=lambda e: rs.to_date(e["data"]))
         if "SUSPENSA" in (r.get("situacao_eventos") or r.get("situacao_cumprimento") or "").upper() or (
@@ -1993,6 +2008,14 @@ def _fuga_x_ficha(r, f):
                                     "progressão, conta como falta grave (indulto, comutação, remição) e interrompe a prescrição (CP, art. 117, V). Pedir a "
                                     "retificação do evento (soltura, não fuga)." % _br(alvara[0][1])[:180],
                                     "LEP, arts. 50, II, 111 e 118; CP, arts. 113 e 117, V."))
+            # saída para unidade de semiaberto/aberto pouco antes e entrada vinda de delegacia depois: a ficha confirma a evasão do
+            # regime mais brando e a recaptura (a unidade de destino nem sempre registra a fuga)
+            _brando = [x for x, t in ev if d - timedelta(days=30) <= x <= d + timedelta(days=3) and re.search(r"SA[ÍI]DA DA UNIDADE", t, re.I)
+                       and re.search(r"DESTINO:\s*[^,]*(SEMI-?ABERTO|ABERTO|MONITORA)", t, re.I)]
+            _dp_ = [x for x, t in ev if d <= x <= d + timedelta(days=120) and re.search(r"ENTRADA NA UNIDADE", t, re.I)
+                    and re.search(r"PROCEDENTE:\s*[^,]*(\bD\.?P\b|DELEGACIA|DP\s|\d+\s*ª?\s*DP)", t, re.I)]
+            if _brando and _dp_:
+                continue
             elif antes and depois and not livres:
                 out.append(_item_rf("verificar", "Fuga no RSPE em %s sem registro na ficha" % rs.fmt(d),
                                     "A ficha tem movimentação antes e depois dessa data sem saída, fuga ou evasão. Conferir se o evento do RSPE está correto: fuga "
@@ -2078,6 +2101,18 @@ def _regime_x_ficha(r, f):
                         return True
         return False
 
+    def superada(x):
+        """Marco posterior no RSPE que refez a data-base depois de x (falta homologada, regressão, nova progressão ou somatório):
+        texto do primeiro, ou ""."""
+        for i in sorted(incs, key=lambda i: rs.to_date(i.get("data_referencia") or i.get("data_decisao") or "") or date.min):
+            d = rs.to_date(i.get("data_referencia") or i.get("data_decisao") or "")
+            if not d or d <= x + timedelta(days=30) or rs._negado(i) or rs._pendente(i):
+                continue
+            t = rs._rotulo_incidente(i)
+            if re.search(r"FALTA GRAVE", i.get("tipo") or "", re.I) or (rs.e_incidente_regime(i) and re.search(r"REGRESS|PROGRESS|SOMAT", t, re.I)):
+                return "%s em %s" % (t, rs.fmt(d))
+        return ""
+
     def regime_rspe_em(x):
         # regime em que o RSPE põe a pessoa na data x: o do último incidente de regime (inicial, progressão, regressão,
         # somatório) até essa data
@@ -2128,9 +2163,15 @@ def _regime_x_ficha(r, f):
         if m and ("prog", m.group(1)) not in vistos and not no_rspe(r"PROGRESS", x) and not no_rspe(reg_m.replace("SEMIABERTO", "SEMI-?ABERTO"), x) and not ev_rspe \
                 and not _ja:
             vistos.add(("prog", m.group(1)))
-            out.append(("Progressão para o %s registrada na ficha em %s e ausente no RSPE" % (m.group(1).lower().replace(" ", ""), rs.fmt(x)),
-                        "A ficha registra o cumprimento da progressão (%s). Sem o incidente no RSPE, a data-base e as frações seguintes ficam erradas: "
-                        "conferir a decisão e pedir o lançamento no SEEU." % _br(e["texto"])[:160]))
+            # depois dela, falta homologada ou outra alteração de regime no RSPE refez a data-base: a progressão ausente não pesa
+            # mais no cálculo atual (como a progressão lançada na data errada "já superada") - informação, não alerta
+            _sup = superada(x)
+            out.append(("Progressão para o %s registrada na ficha em %s e ausente no RSPE%s" % (m.group(1).lower().replace(" ", ""), rs.fmt(x),
+                                                                                              " - já superada" if _sup else ""),
+                        "A ficha registra o cumprimento da progressão (%s). %s" % (_br(e["texto"])[:160],
+                            ("Depois dela, o RSPE registra %s, que refez a data-base: a ausência não muda o cálculo atual." % _sup) if _sup else
+                            "Sem o incidente no RSPE, a data-base e as frações seguintes ficam erradas: conferir a decisão e pedir o lançamento no SEEU."),
+                        "info" if _sup else "alerta"))
         # saída para o monitoramento eletrônico não é regressão (a unidade registra "Motivo: Regressão de Regime" também na ida
         # ao monitoramento depois de progressão ou reconsideração)
         _dest = re.search(r"DESTINO:\s*([^,]+)", u)
@@ -2142,9 +2183,28 @@ def _regime_x_ficha(r, f):
         if re.search(r"MOTIVO:\s*LIVRAMENTO CONDICIONAL|BENEFICIADO COM (O )?LIVRAMENTO", u) and "lc" not in vistos and not no_rspe(r"LIVRAMENTO", x) \
                 and not _lc_ev(x):
             vistos.add("lc")
-            out.append(("Livramento condicional registrado na ficha em %s e ausente no RSPE" % rs.fmt(x),
-                        "Ficha: %s. Sem o incidente no RSPE, o período de prova não é contado: pedir o lançamento no SEEU." % _br(e["texto"])[:160]))
-    return [{"nivel": "alerta", "titulo": t, "detalhe": d, "fundamento": "LEP, arts. 112, 118 e 131.", "tipo": "rspe-x-ficha"} for t, d in out]
+            # crime doloso com fato durante o período de prova (antes da prisão seguinte do RSPE): revogação obrigatória (CP, art. 86, I) e
+            # o tempo em liberdade não se desconta, nem se concede novo livramento para essa pena (CP, art. 88)
+            _prox = min([d for d in (rs.to_date(ev.get("data") or "") for ev in r.get("_eventos", []) if "INTERRUP" not in (ev.get("tipo") or "").upper())
+                         if d and d > x] or [date.max])
+            _cr = [c for c in r.get("_crimes", []) if (rs.to_date(c.get("data_infracao") or "") or date.min) > x
+                   and rs.to_date(c.get("data_infracao") or "") <= _prox and not re.search(r"CULPOS", (c.get("tipo_penal") or ""), re.I)]
+            _fg = [ev for ev in r.get("_eventos", []) if rs.RE_FUGA_EV.search(ev.get("motivo") or "") and rs.to_date(ev.get("data") or "")
+                   and abs((rs.to_date(ev["data"]) - x).days) <= 5]
+            if _cr:
+                out.append(("Livramento condicional registrado na ficha em %s e ausente no RSPE" % rs.fmt(x),
+                            "Ficha: %s. Durante o período de prova houve crime doloso (%s, fato em %s): a revogação é obrigatória (CP, art. 86, I) "
+                            "e o tempo em liberdade não se desconta, nem se concede novo livramento para essa pena (CP, art. 88) - o período de "
+                            "prova não conta. %sO SEEU não registra o livramento: conferir a decisão de revogação." % (
+                                _br(e["texto"])[:160], rs.crimes_curto(_cr[:1]), _cr[0].get("data_infracao"),
+                                ("O lançamento correto (livramento e revogação, no lugar da fuga lançada em %s) serve para afastar a falta de fuga. "
+                                 % _fg[0]["data"]) if _fg else ""),
+                            "alerta" if _fg else "verificar"))
+            else:
+                out.append(("Livramento condicional registrado na ficha em %s e ausente no RSPE" % rs.fmt(x),
+                            "Ficha: %s. Sem o incidente no RSPE, o período de prova não é contado: pedir o lançamento no SEEU." % _br(e["texto"])[:160]))
+    return [{"nivel": (o[2] if len(o) > 2 else "alerta"), "titulo": o[0], "detalhe": o[1], "fundamento": "LEP, arts. 112, 118 e 131.", "tipo": "rspe-x-ficha"}
+            for o in out]
 
 
 def _interrupcao_x_ficha(r, f):
