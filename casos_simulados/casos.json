@@ -4,7 +4,7 @@
   "id": "S001",
   "grupo": "A-frações",
   "titulo": "Furto, fato 2015, primário, SEEU 1/6",
-  "conta": "Fato 10/03/2015 (redação de 2003): comum 1/6; livramento 1/3.",
+  "conta": "Fato 10/03/2015 (redação de 2003): comum 1/6; a Lei 13.964/2019 (16%, primário sem violência) é mais benéfica e retroage: 1/6 do SEEU é alerta com os dias (decisão de 20/10/2026); livramento 1/3.",
   "processo": "9900001-00.2026.8.12.0001",
   "rspe": {
    "arquivo": "SIMULADO_001.pdf",
@@ -96,7 +96,7 @@
    {
     "t": "aud",
     "tipo": "percentual-de-progressao-confere",
-    "presente": true,
+    "presente": false,
     "contem": null,
     "nivel": null,
     "nota": ""
@@ -104,9 +104,9 @@
    {
     "t": "aud",
     "tipo": "percentual-de-progressao-diverge",
-    "presente": false,
+    "presente": true,
     "contem": null,
-    "nivel": null,
+    "nivel": "alerta",
     "nota": ""
    },
    {
@@ -13255,7 +13255,7 @@
   "id": "S111",
   "grupo": "J-complementares",
   "titulo": "Fato 2021, primário, SEEU 1/6 (16% da lei)",
-  "conta": "1/6 = 16,67% x 16%: regra decidida - sem alerta.",
+  "conta": "1/6 = 16,67% x 16%: alerta com os dias de diferença (decisão de 20/10/2026).",
   "processo": "9900111-00.2026.8.12.0001",
   "rspe": {
    "arquivo": "SIMULADO_111.pdf",
@@ -13336,9 +13336,9 @@
    {
     "t": "aud",
     "tipo": "percentual-de-progressao-diverge",
-    "presente": false,
+    "presente": true,
     "contem": null,
-    "nivel": null,
+    "nivel": "alerta",
     "nota": ""
    }
   ]

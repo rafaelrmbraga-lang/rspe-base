@@ -255,7 +255,7 @@ finally:
     shutil.rmtree(d, ignore_errors=True)
 
 # ---------------- 137: outras execuções como histórico; reincidência só a conferir ----------------
-o = reg([crime(P3, fato="10/01/2015", transito_processo="10/08/2016")], [ev("01/02/2016", procs=P3), ev("01/02/2017", "INTERRUPÇÃO", "CUMPRIMENTO DA PENA", "")],
+o = reg([crime(P3, fato="10/01/2015", data_sentenca="10/03/2016", transito_processo="10/08/2016")], [ev("01/02/2016", procs=P3), ev("01/02/2017", "INTERRUPÇÃO", "CUMPRIMENTO DA PENA", "")],
         [{"tipo": "FALTA GRAVE", "situacao": "CONCEDIDO", "complemento": "Homologação de falta grave", "data_decisao": "10/10/2016",
           "data_referencia": "05/10/2016", "processos": ""}], processo_execucao="7700009-00.2016.8.12.0001", status_execucao="ARQUIVADO")
 hist = app._historico_exec(o)
