@@ -194,10 +194,15 @@ ok(any(x["ok"] is None and "Estupro de vulnerável (art. 217-A)" in x["txt"] for
 # ---------------- 29: "Suspenso: Sim" ----------------
 r = reg([crime(P1), crime(P2, suspenso="Sim")], [ev("10/09/2019")])
 ok("crime-suspenso-a-verificar" in tipos(r, "verificar"), "29: crime suspenso a verificar")
+# (7.13.0: nos Decretos 2024 e 2025 o art. 3º, I e III, alcança a pena substituída e a suspensa - a causa não muda o resultado;
+# nos demais, o resultado pela pena segue a verificar)
 out = {"comutacao_2024": "não atinge (1/4 até 25/12/2024)", "indulto_2024": "não atinge: sentença posterior à publicação"}
 rs._penas_a_verificar(out, r["_crimes"], "2024", date(2024, 12, 25))
-ok(out["comutacao_2024"].startswith("A VERIFICAR: \"Suspenso: Sim\""), "29: resultado pela pena fica a verificar: %s" % out)
+ok(out["comutacao_2024"] == "não atinge (1/4 até 25/12/2024)", "29: 2024 - suspensão alcançada pelo art. 3º: %s" % out)
 ok(out["indulto_2024"].startswith("não atinge: sentença"), "29: resultado por outra causa não muda")
+out = {"indulto_2022": "não atinge (cumprido 0a1m0d de 1a0m0d)"}
+rs._penas_a_verificar(out, r["_crimes"], "2022", date(2022, 12, 25))
+ok(out["indulto_2022"].startswith("A VERIFICAR: \"Suspenso: Sim\""), "29: resultado pela pena fica a verificar: %s" % out)
 
 # ---------------- 30: medida de segurança ----------------
 cms = [crime(P1, pena="", total="1a0m0d - MEDIDA DE SEGURANÇA", regime_sentenca="Indefinido")]

@@ -17547,37 +17547,40 @@
   "acoes": [],
   "extra_rspe": [],
   "titulo": "Reinício lançado pela ficha depois da interrupção: a âncora não desconta custódia que o SEEU não conta; preso no aberto sem regressão: VII/VIII/IX ficam \"a verificar\"",
-  "conta": "Tráfico 5a + Lei 10.826 + LCP (2016) e tráfico 6a (fato 09/03/2023); preso 16/12/2016, aberto 04/05/2021, interrupção 09/03/2023 no RSPE (Total Interrupções 3a6m28d = desde a interrupção) e recaptura em 16/03/2023 só na ficha. O SEEU dá 6a9m16d cumpridos em 06/10/2026 e não conta nada depois de 09/03/2023: a âncora em 25/12/2024 e em 25/12/2025 é 6a9m16d (antes, descontava a custódia da ficha e dava 5a0m1d e 6a0m1d). Em 25/12/2024 estava preso desde 16/03/2023, depois do aberto: VII, VIII e IX (regime aberto/livramento) não se aplicam.",
+  "conta": "Tráfico 5a + Lei 10.826 + LCP (2016) e tráfico 6a (fato 09/03/2023); preso 16/12/2016, aberto 04/05/2021, interrupção 09/03/2023 no RSPE (Total Interrupções 3a6m28d = desde a interrupção) e recaptura em 16/03/2023 só na ficha. O SEEU dá 6a9m16d cumpridos em 06/10/2026 e não conta nada depois de 09/03/2023: a âncora em 25/12/2024 e em 25/12/2025 é 6a9m16d (antes, descontava a custódia da ficha e dava 5a0m1d e 6a0m1d). Em 25/12/2024 estava preso desde 16/03/2023, depois do aberto: VII, VIII e IX (regime aberto/livramento) não se aplicam. 7.13.0: o tráfico de 09/03/2023 é impeditivo e os 2/3 dele (4a) só contam o tempo posterior ao fato (de 09/03/2023: 1a9m17d em 25/12/2024 e 2a9m17d em 25/12/2025): o indulto e a comutação dos demais crimes ficam vedados (art. 7º, p. ú.).",
   "checks": [
    {
     "t": "campo",
-    "campo": "dec",
-    "op": "regex",
-    "v": "\"id\": \"2024\",(?:(?!\"id\": \").)*?\"mot\": \"[^\"]*os eventos mostram \\(6a9m16d\\)"
+    "campo": "det24",
+    "op": "contem",
+    "v": [
+     "só conta o tempo posterior ao fato",
+     "1a9m17d de 09/03/2023 a 25/12/2024"
+    ]
    },
    {
     "t": "campo",
-    "campo": "dec",
-    "op": "regex",
-    "v": "\"id\": \"2025\",(?:(?!\"id\": \").)*?\"mot\": \"[^\"]*os eventos mostram \\(6a9m16d\\)"
+    "campo": "det25",
+    "op": "contem",
+    "v": [
+     "2a9m17d de 09/03/2023 a 25/12/2025"
+    ]
    },
    {
     "t": "campo",
     "campo": "i24_full",
     "op": "contem",
     "v": [
-     "A verificar",
-     "VII"
+     "Vedado"
     ],
-    "nota": "preso desde 16/03/2023 (ficha), depois do aberto"
+    "nota": "2/3 do tráfico de 2023 só com o tempo posterior ao fato"
    },
    {
     "t": "campo",
     "campo": "i25_full",
     "op": "contem",
     "v": [
-     "A verificar",
-     "VII"
+     "Vedado"
     ]
    }
   ]

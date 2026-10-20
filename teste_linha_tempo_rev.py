@@ -110,10 +110,10 @@ ok([e for e, _ in lin] == ["ko", "q", "q"] and lin[1][1].startswith("§ 2º") an
 ok(tl._hip_partes({"texto": lin[1][1]}, {"id": "2024"})[0] == "art. 9º, § 2º, II a VI", "A2 enquadramento do § 2º")
 
 # M1: extenso pelo total de dias (1a11m30d = 725 dias, não 2 anos)
-ok(tl._pena_ext("1a11m30d") == "1 ano, 11 meses e 30 dias" and tl._pena_ext("0a5m31d") == "6 meses e 1 dia", "M1: %s" % tl._pena_ext("1a11m30d"))
+ok(tl._pena_ext("1a11m30d") == "1 ano, 11 meses e 25 dias" and tl._pena_ext("0a5m31d") == "6 meses e 1 dia", "M1: %s" % tl._pena_ext("1a11m30d"))
 t = linha(caso([crime("01/06/2022", "01/10/2022", "01/11/2022")], [preso("01/01/2023")], pena_total="2a0m0d"))
 P = textos(card(t, "2024")["indulto"])
-ok(P and all("havia cumprido 1 ano, 11 meses e 30 dias" in x and "2 anos," not in x.split("Enquadra")[0] for x in P), "M1 petição: %s" % P[:1])
+ok(P and all("havia cumprido 1 ano, 11 meses e 25 dias" in x and "2 anos," not in x.split("Enquadra")[0] for x in P), "M1 petição: %s" % P[:1])
 
 # M2 e B8/B2: falta homologada e fuga
 c = tl._curto("INTERRUPÇÃO FUGA (fuga não homologada: tratada como falta grave, LEP, art. 50, II) e mais um texto longo qualquer aqui", 80)
@@ -179,7 +179,9 @@ r = caso([C4], [preso("01/01/2023"), ev("INTERRUPÇÃO", "FUGA", "22/05/2025"), 
 r["_incidentes"][0]["_ficha_falta"] = {"data": "22/05/2025", "texto": "Saída da Unidade Penal: X, Destino: EVASÃO, Motivo: Evasão", "homologada": ""}
 t = linha(r)
 fl = card(t, "2025")["faltas"]
-ok(any(f["fato"] == "22/05/2025" and f["estado"] == "impede" for f in fl) and not any(f["estado"] == "verificar" for f in fl), "B9 fuga: %s" % fl)
+# (7.13.0: a fuga sem homologação fica a verificar - decisão do usuário de 20/10/2026; a falta homologada segue impeditiva)
+ok(any(f["fato"] == "22/05/2025" and f["estado"] == "verificar" and "só impede" in f["texto"] for f in fl)
+   and any(f["fato"] == "28/09/2025" and f["estado"] == "impede" for f in fl), "B9 fuga: %s" % fl)
 ok(any("antes do fato" in d["texto"] for d in t["duvidas"]), "B9 homologação antes do fato: %s" % t["duvidas"])
 
 # "0 dias": o resumo não soma parcelas zeradas

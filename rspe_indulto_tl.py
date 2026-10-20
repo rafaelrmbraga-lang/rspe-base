@@ -1268,8 +1268,16 @@ def _decreto(D, ref, pub, C, cumprido, data_atinge, faltas, hoje, ultimo, em_cur
             dentro = j0 <= f["fato"] <= j1
             est = "fora"
             if dentro:
-                est = "informativa" if FG.get("exige") is False else ("verificar" if f["pendente"] else "impede")
-            faltas_out.append({"fato": _f(f["fato"]), "homol": _f(f["homol"]), "texto": f["texto"], "estado": est})
+                # fuga sem homologação: o art. 6º exige a sanção reconhecida em juízo - a verificar, como na aba (rs.falta_art6)
+                fsh = bool(not f["homol"] and not f["pendente"] and (f.get("fuga") or RE_FUGA.search(f["texto"]))
+                           and "confirmada pelo operador" not in f["texto"])
+                est = "informativa" if FG.get("exige") is False else ("verificar" if (f["pendente"] or fsh) else "impede")
+            else:
+                fsh = False
+            faltas_out.append({"fato": _f(f["fato"]), "homol": _f(f["homol"]),
+                               "texto": (re.sub(r"tratada como falta grave(?:, LEP, art\. 50, II| \(LEP, art\. 50, II\))",
+                                                "em tese falta grave (LEP, art. 50, II); só impede se a sanção for reconhecida em juízo", f["texto"])
+                                         if fsh else f["texto"]), "estado": est})
     out["janela_falta"] = janela
     out["faltas"] = faltas_out
     if not FG:
@@ -1332,21 +1340,26 @@ def _decreto(D, ref, pub, C, cumprido, data_atinge, faltas, hoje, ultimo, em_cur
     imputacao = None
     ti = r.get(k + "_imp")
     if ti:
-        dt_lib, proj = data_atinge(ti["exigido"])
+        # tempo anterior ao fato do impeditivo não se imputa a ele (rs.cumprido_imputavel_impeditivos): a data em que os 2/3 se
+        # completam anda esse tanto
+        _nao_imp = max(0, ti["cumprido_total"] - ti.get("cumprido_imputavel", ti["cumprido_total"]))
+        dt_lib, proj = data_atinge(ti["exigido"] + _nao_imp)
         # a pena do impeditivo da aba inclui os de hediondez superveniente (corrente do STJ) quando há tese: os crimes listados
         # têm de ser os mesmos que somam o número
         ids_imp = ([x["id"] for x, _ in imp] + [x["id"] for x, _ in ver]) if ti.get("tese") else ([x["id"] for x, _ in imp] or [x["id"] for x, _ in ver])
         ids_liv = [x["id"] for x, _ in liv if x["id"] not in ids_imp]
         imputacao = {"fracao": ti["fracao"], "dispositivo": (D.get("concurso_impeditivo") or {}).get("dispositivo", ""), "pena_imp": ti["pena_imp"],
                      "pena_imp_txt": _pena(ti["pena_imp"]), "exigido": ti["exigido"], "exigido_txt": _pena(ti["exigido"]), "data": _f(dt_lib), "projecao": proj,
-                     "crimes_imp": ids_imp, "crimes_liv": ids_liv, "imputado_imp": min(ti["cumprido_total"], ti["exigido"]),
+                     "crimes_imp": ids_imp, "crimes_liv": ids_liv, "imputado_imp": min(ti.get("cumprido_imputavel", ti["cumprido_total"]), ti["exigido"]),
                      "tese": ({"crimes": [x["id"] for x, _ in imp], "pena_imp_txt": _pena(ti["tese"]["pena_imp"]), "exigido_txt": _pena(ti["tese"]["exigido"]),
                                "resultado": ti["tese"].get("resultado", "")} if ti.get("tese") else None),
                      "imputado_liv": max(0, ti["cumprido_total"] - ti["exigido"]),
                      "sobra_txt": _pena(max(0, ti["cumprido_total"] - ti["exigido"])), "cumprido_total_txt": _pena(ti["cumprido_total"]),
                      "det": _det("pena dos crimes impeditivos: %s" % _pena(ti["pena_imp"]), ", ".join(ids_imp), "%s → %s" % (_f(ref), _f(dt_lib) or "sem data"),
                                  "imputação do cumprido primeiro ao impeditivo", (D.get("concurso_impeditivo") or {}).get("dispositivo", ""),
-                                 "%s × %s = %s; cumprido em %s: %s" % (_pena(ti["pena_imp"]), ti["fracao"], _pena(ti["exigido"]), _f(ref), _pena(ti["cumprido_total"])),
+                                 "%s × %s = %s; cumprido em %s: %s%s" % (_pena(ti["pena_imp"]), ti["fracao"], _pena(ti["exigido"]), _f(ref), _pena(ti["cumprido_total"]),
+                                                                         (" (imputável ao impeditivo, só o tempo posterior ao fato dele: %s)" % _pena(ti["cumprido_imputavel"]))
+                                                                         if _nao_imp else ""),
                                  (("libera a análise de %s" % ", ".join(ids_liv)) if ids_liv else "cumprida a parte do impeditivo") + ((" em %s%s" % (_f(dt_lib), " (projeção)" if proj else "")) if dt_lib else ""))}
     out["imputacao"] = imputacao
 
@@ -1663,11 +1676,13 @@ def _pena_ext(t):
         return t or ""
     # a convenção do SEEU (ano de 365 e mês de 30 dias) deixa sobrar até 34 dias depois dos 11 meses; a normalização é pelo total
     # de dias (sem somar nada): os dias acima de 30 viram mês só até os 11 meses, e 12 meses de 30 dias (360) não são um ano -
-    # 1a11m30d (725 dias) fica "1 ano, 11 meses e 30 dias", não "2 anos" (730)
+    # 1a11m30d (725 dias) fica "1 ano, 11 meses e 25 dias", não "2 anos" (730) nem "11 meses e 30 dias"
     tot = sum(int(x) * k for x, k in zip(m.groups(), (rs.DIAS_ANO, 30, 1)))
     a, resto = divmod(tot, rs.DIAS_ANO)
     me = min(resto // 30, 11)
     d = resto - me * 30
+    if d >= 30:
+        d = resto - 335  # como rs.dias_para_pena: o 12º mês do ano de 365 dias começa no dia 335 ("11 meses e 33 dias" não existe)
     p = [("%d ano%s" % (a, "s" if a != 1 else "")) if a else "", ("%d %s" % (me, "meses" if me != 1 else "mês")) if me else "",
          ("%d dia%s" % (d, "s" if d != 1 else "")) if d else ""]
     p = [x for x in p if x]
