@@ -1097,6 +1097,12 @@ def simplificar(m):
         m["presc_ppe"] = "Não prescrita (há crimes sem dados)"
         m["presc_ppe_full"] = "%s · %s sem os dados do cálculo (%s): conferir na ação penal" % (
             m["presc_ppe_full"] or "Não prescrita", rs.pl(len(_sem), "crime", "crimes"), "; ".join(sorted({L.get("crime") or "?" for L in _sem})))
+    # o mesmo na punitiva: "não configurada" não vale para o crime sem as datas (conferência 7.13, prescricao-37)
+    _sem_r = [L for L in m.get("presc_linhas") or [] if L.get("retro_cor") == "cinza"]
+    if m["presc_retro"] == "Não configurada" and _sem_r:
+        m["presc_retro"] = "Não configurada (há crimes sem dados)"
+        m["presc_retro_full"] = "%s · %s sem as datas do cálculo (%s): conferir na ação penal" % (
+            m["presc_retro_full"] or "não configurada", rs.pl(len(_sem_r), "crime", "crimes"), "; ".join(sorted({L.get("crime") or "?" for L in _sem_r})))
     _pc = {"Aparente": "vermelho", "Conferir a guia": "amarelo", "Conferir a ficha": "amarelo", "Iminente": "amarelo", "A verificar": "amarelo", "Extinta": "azul", "Sem dados": "cinza"}
     m["presc_retro_cor"], m["presc_ppe_cor"] = _pc.get(m["presc_retro"], ""), _pc.get(m["presc_ppe"], "")
     # dados conferidos/corrigidos pelo operador sem prescrição: verde

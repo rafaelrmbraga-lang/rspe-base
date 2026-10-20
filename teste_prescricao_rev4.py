@@ -258,7 +258,8 @@ L = run(reg([crime(data_infracao="10/08/2008", data_denuncia="19/01/2012", data_
                    transito_processo="10/01/2013", pena_imposta="0 ano(s), 6 mês(es) e 0 dia(s)", pena_total_processo="0a6m0d - PENA ORIGINÁRIA")]))
 confere(L["retro_cor"] == "amarelo", "AUD-5: intervalo com a data incoerente (sentença antes da denúncia) deveria ficar a verificar: %s" % L["retro_status"])
 L = run(reg([crime(data_infracao="10/08/2008", data_denuncia="19/01/2012", data_sentenca="01/06/2013", transito_mp="10/01/2013",
-                   transito_processo="10/01/2013", pena_imposta="0 ano(s), 6 mês(es) e 0 dia(s)", pena_total_processo="0a6m0d - PENA ORIGINÁRIA")]))
+                   transito_processo="10/01/2013", pena_imposta="0 ano(s), 6 mês(es) e 0 dia(s)", pena_total_processo="0a6m0d - PENA ORIGINÁRIA",
+                   tipo_penal="CAPUT: Subtrair..., Detenção: 1 a 6 meses E Multa")]))  # tipo compatível com a pena (7.13: pena abaixo do mínimo fica a verificar)
 confere(L["retro_cor"] == "vermelho" and "fato → denúncia" in L["retro_status"], "AUD-5: fato → denúncia não usa o trânsito incoerente: %s" % L["retro_status"])
 
 if falhas:

@@ -63,7 +63,9 @@ confere("não esgotado" in st and "suspenso de 13/09/2018 a 01/04/2025" in st an
         and "correram 5 dias" in st and "06/04/2025" in st and "hoje em cumprimento" in st, "1: status sem a suspensão e os dias: %s" % st)
 confere("preso pelos processos %s e %s (prisão preventiva de 05/08/2017), quando esta ação penal ainda não estava em cumprimento" % (A, B)
         in l["ppe_detalhe"], "1: memória sem o período de prisão pelas outras ações: %s" % l["ppe_detalhe"])
-confere(l["ppe_cor"] == "amarelo" and l["ppe_faltam"], "1: art. 28 sem pena continua a verificar (pena e cumprimento fora do RSPE)")
+# conferência 7.13 (prescricao-04/21/37): somados todos os dias em que o prazo correu, os 2 anos não se completam em nenhuma hipótese
+# (custódia é suspensão ou cumprimento): não prescrita - a pena do art. 28 e seu cumprimento são questão de extinção
+confere(l["ppe_cor"] == "" and st.startswith("Não prescrita") and not l["ppe_faltam"], "1: art. 28 sem pena, prazo não esgotado em nenhuma hipótese: %s" % st)
 
 # 1b. com o somatório que inclui C (29/08/2022): a suspensão vai até ele, que interrompe (LEP, art. 111; CP, art. 117, V)
 l = linha(reg(crimes1, evs1, [soma("29/08/2022", "%s, %s, %s" % (A, C, B))]), C)
