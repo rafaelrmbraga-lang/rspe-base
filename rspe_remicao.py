@@ -1591,6 +1591,12 @@ def comparacao(r, f, hoje=None, manuais=None, homologados=None, trab=None):
               "(≈ %s de remição). O RSPE já concedeu mais do que a ficha comprova: pode ter sido remido com atestado que a ficha não registra - "
               "conferir nos autos antes de pedir." % (_f(corte), "; ".join(itens_t), _nf(len(talvez) / 3.0)), "talvez_remido",
               curto="trabalho sem atestado antes da última remição: pode já estar remido - conferir")
+    for x in f.get("estudo_cancelado_sem_matricula") or []:
+        d_ = _dt(x.get("data") or "")
+        if d_ and (not inicio or d_ >= inicio):
+            ponto("Estudo a conferir", "amarelo", "A ficha registra o cancelamento de matrícula em %s, mas não a matrícula nem o período: pedir a "
+                  "certidão de frequência escolar e conferir nos autos se houve remição (LEP, art. 126, § 1º, I)." % _f(d_), "estudo_sem_matricula",
+                  curto="matrícula cancelada em %s sem a matrícula registrada: pedir a certidão de frequência" % _f(d_))
     for x in est_estim:
         # estudo que vai além da última decisão de remição pode estar sem remição: ponto a conferir; o anterior, só informação
         ponto("Estudo sem certidão", "amarelo" if not ult_dec or x["fim"] > ult_dec else "cinza", "%s (estimativa, sem certidão de horas na ficha) - conferir nos autos se a certidão foi juntada; se "

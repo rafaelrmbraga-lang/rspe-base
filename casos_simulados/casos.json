@@ -10666,7 +10666,7 @@
   "id": "S093",
   "grupo": "H-ficha",
   "titulo": "Atestado de trabalho não lançado no RSPE (90 dias -> 30 remidos)",
-  "conta": "Atestado 02/01/2026 a 31/03/2026: 90 dias trabalhados, 30 remidos (3:1); RSPE sem remição: 'Atestado não lançado', 30 / 0.",
+  "conta": "Atestado 02/01/2026 a 31/03/2026: 90 dias trabalhados, 30 remidos (3:1); RSPE sem remição: atestado sem peticionamento e posterior à última remição (fato certo, vermelho) e 'Verificar remição', 30 / 0. (7.14: o programa compara os totais e não liga remição a atestado.)",
   "processo": "9900093-00.2026.8.12.0001",
   "rspe": {
    "arquivo": "SIMULADO_093.pdf",
@@ -10806,7 +10806,7 @@
     "t": "campo",
     "campo": "fd_sit",
     "op": "contem",
-    "v": "Atestado não lançado",
+    "v": "Atestado sem peticionamento",
     "nota": ""
    },
    {
@@ -10823,7 +10823,7 @@
   "id": "S094",
   "grupo": "H-ficha",
   "titulo": "Atestado de trabalho já homologado no RSPE",
-  "conta": "Mesmo atestado; RSPE com REMIÇÃO de 30 dias concedida em 01/06/2026: 'Em ordem', 30 / 30.",
+  "conta": "Mesmo atestado; RSPE com REMIÇÃO de 30 dias concedida em 01/06/2026: sem diferença (30 / 30); a ficha não registra o peticionamento do atestado - ponto a conferir, nunca vermelho. (7.14: o programa compara os totais e não liga remição a atestado.)",
   "processo": "9900094-00.2026.8.12.0001",
   "rspe": {
    "arquivo": "SIMULADO_094.pdf",
@@ -10972,8 +10972,8 @@
    {
     "t": "campo",
     "campo": "fd_sit",
-    "op": "eq",
-    "v": "Em ordem",
+    "op": "regex",
+    "v": "^(Em ordem|Conferir pontos)$",
     "nota": ""
    }
   ]
@@ -11424,7 +11424,7 @@
   "id": "S098",
   "grupo": "H-ficha",
   "titulo": "Leitura peticionada na ficha sem remição no RSPE",
-  "conta": "Ficha: projeto remição pela leitura, 1 livro (Dom Casmurro), meses 06/2026: 4 dias a requerer (Res. CNJ 391).",
+  "conta": "Ficha: projeto remição pela leitura, 1 livro (Dom Casmurro), meses 06/2026: 4 dias na ficha x 0 no RSPE - 'Verificar remição' e leitura posterior à última remição, a conferir (Res. CNJ 391). (7.14: o programa compara os totais e não liga remição a atestado.)",
   "processo": "9900098-00.2026.8.12.0001",
   "rspe": {
    "arquivo": "SIMULADO_098.pdf",
@@ -11549,7 +11549,7 @@
     "t": "campo",
     "campo": "fd_sit",
     "op": "regex",
-    "v": "Leitura|leitura|Conferir|Em ordem",
+    "v": "Leitura|leitura|Conferir|Verificar remição|Em ordem",
     "nota": ""
    },
    {
@@ -14205,7 +14205,7 @@
   "id": "S120",
   "grupo": "J-complementares",
   "titulo": "Trabalho em curso desde 05/01/2026 sem atestado",
-  "conta": "Trabalha na cozinha desde 05/01/2026 (9 meses), nenhum atestado: 'trabalho a atestar' = Sim e situação 'Ausência de atestado'.",
+  "conta": "Trabalha na cozinha desde 05/01/2026 (9 meses), nenhum atestado: 'trabalho a atestar' = Sim e situação 'Pedir atestado'. (7.14: o programa compara os totais e não liga remição a atestado.)",
   "processo": "9900120-00.2026.8.12.0001",
   "rspe": {
    "arquivo": "SIMULADO_120.pdf",
@@ -14317,7 +14317,7 @@
     "t": "campo",
     "campo": "fd_sit",
     "op": "contem",
-    "v": "Ausência de atestado",
+    "v": "Pedir atestado",
     "nota": ""
    }
   ]
