@@ -6,6 +6,7 @@ TESTES = ["teste_remicao.py", "teste_indulto_transito.py", "teste_auditoria_calc
 TESTES += ["teste_conf_D2.py"]  # conferência manual (7.13.0), frente D2: remição - contas e apresentação
 TESTES += ["teste_conf_C1.py"]  # conferência manual (7.13.0), frente C1: reincidência e frações
 TESTES += ["teste_conf_C2.py"]
+TESTES += ["teste_conf_F.py"]
 falhas = [t for t in TESTES if subprocess.call([sys.executable, t]) != 0]
 if falhas:
     print("FALHOU: " + ", ".join(falhas))
