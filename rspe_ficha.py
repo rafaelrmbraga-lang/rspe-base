@@ -567,7 +567,13 @@ def _extrair_texto(caminho, pags, vis, ocultas=(), dp_chars="", parcial=None):
 # SIAPEN datado pela única data citada no texto, autorização/termo de compromisso de trabalho externo "a conferir", falta só pela
 # ciência marcada (data do fato desconhecida))
 # 14: certidões de frequência escolar peticionadas, todos os meses dos cursos de qualificação e os autos citados nos documentos de estudo
-VERSAO_LEITURA = 14
+# 15: trabalho escrito em texto livre também na lista de trabalho (início, fim, remanejamento, "deixa de trabalhar como X e passa a Y",
+# "volta a trabalhar", "começou a trabalhar como X"), saída da unidade nas fichas antigas ("SAÍDA DA CPAIG", "transferido para",
+# entrada em outra unidade, soltura) e não a saída por duplicidade de registros nem a saída temporária, "tornar sem efeito o
+# lançamento do dia d", "desconsiderar a função X", "Liberação do Setor de Trabalho" sem baixa no dia, o vínculo simultâneo só quando
+# o outro setor acabou antes da baixa tardia (não a baixa "saída do presídio"), nomes de setor sem "nesta UP", "CI nº ...", "sendo",
+# "E" e "ATIVIDADE EXTERNA NA"; sinônimos e palavras próprias no singular)
+VERSAO_LEITURA = 15
 # versão da extração do PDF (camada de caracteres): a mesma ficha extraída por versão anterior é extraída de novo ao reimportar
 VERSAO_EXTRACAO = 2
 
@@ -693,6 +699,98 @@ def atualizar(f):
     return derivar(f, eventos)
 
 
+def _saida_trabalho(texto):
+    """Lançamento que tira a pessoa da unidade e encerra o trabalho em curso: saída da unidade, transferência, evasão, soltura,
+    livramento e, nas fichas antigas, a entrada em outra unidade ou a "SAÍDA DA CPAIG, motivo: ..." (rspe_remicao._saida_unidade).
+    Não encerram: a mudança de cela, o atestado, o parecer (alvará consultado), a escolta, nem a saída da unidade por "duplicidade de
+    registros" (correção de cadastro) ou por saída temporária (a pessoa volta)."""
+    import rspe_remicao as rrm
+    u = rrm._sa(texto)
+    if re.match(r"\W*MUDANCA DE CELA", u) or re.search(r"\bATESTADO\b|\bATP\b|PARECER|AGUARDA", u) \
+            or re.search(r"MOTIVO:\s*(?:DUPLICIDADE|SAIDA TEMPORARIA)", u) \
+            or (re.search(r"ESCOLT", u) and not re.search(r"SAIDA DA UNIDADE PENAL|EVADI|EVASAO|\bFUGA\b", u)):
+        return False
+    return bool(rrm._saida_unidade(u, texto) or re.match(r"\W*SAIDA D[OA]S?\s+(?!CELA|SOLARIO|SETOR|TRABALHO|TEMPORARIA)\S", u))
+
+
+def _desconsiderar(texto):
+    """Correção do setor em texto livre ("Desconsiderar a função Faxina, interno trabalha na Prendebem"; "Atividade laboral correta
+    X, desconsiderar Y"; "desconsiderar a função trabalho X, reconsiderar a função de trabalho Y"): (X anulado, Y que segue ou "")
+    ou None. A baixa "desconsiderar o desligamento" é continuidade (outra regra)."""
+    import rspe_remicao as rrm
+    u = rrm._sa(texto)
+    if re.match(r"\W*TRABALHO:", u):
+        return None
+    m = re.search(r"\bDESCONSIDERAR\s+(?:O\s+|A\s+)?(?:FUNCAO\s+(?:DE\s+)?(?:TRABALHO\s+)?|CADASTRO\s+(?:DE TRABALHO\s+)?(?:N[AO]\s+)?|SETOR\s+(?:DE\s+)?)?"
+                  r"(?:EMPRESA\s+)?(?!O\b|A\b|DESLIGAMENTO|MOVIMENTACAO|ULTIMO|LANCAMENTO|BAIXA)([A-Z][A-Z/ ]{2,40}?)\s*(?=,|\.|;|$)", u)
+    if not m:
+        return None
+    y = re.search(r"(?:CORRETA|RECONSIDERAR A FUNCAO DE TRABALHO|RECONSIDERAR A FUNCAO DE|INTERNO TRABALH[OA]|TRABALHA N[AO])\s*:?\s+"
+                  r"(?:N[AO]\s+)?(?:EMPRESA\s+)?([A-Z][A-Z/ ]{2,40}?)\s*(?=,|\.|;|$|\bDESCONSIDERAR\b)", u)
+    return m.group(1).strip(), (y.group(1).strip() if y else "")
+
+
+def _nome_livre(nome):
+    """Nome do setor lido em texto livre, sem o que não é nome ("ATIVIDADE EXTERNA NA EMPREITEIRA X" -> "EMPREITEIRA X")."""
+    n = re.sub(r"^(?:A |O )?(?:ATIVIDADE|TRABALHO)(?: LABORAL)?\s+(?:EXTERNA|INTERNA|EXTERNO|INTERNO)\s*(?:-\s*|/\s*|N[AO]\s+|JUNTO A[O]?\s+)(?=\w{3})",
+               "", nome or "")
+    return n.strip(" ,.;:-") or (nome or "")
+
+
+def _setor_igual(a, b):
+    """Mesmo setor com outra grafia ("IPCG ARTESANATO" x "SETOR DE ARTESANATO"; "Serviços Gerais" x "Serviço Gerais")."""
+    import rspe_remicao as rrm
+    return bool(a and b) and (rrm.palavra_comum(a, b) or rrm.setor_parecido(rrm.setor_chave(a)[0], rrm.setor_chave(b)[0]))
+
+
+def _trecho_original(texto, trecho):
+    """O trecho (lido no texto sem acento, maiúsculo) como está escrito no lançamento, em maiúsculas e com os acentos."""
+    import rspe_remicao as rrm
+    sa, up = rrm._sa(texto), (texto or "").upper()
+    i = sa.find(trecho)
+    return up[i:i + len(trecho)].strip(" ,.") if i >= 0 and len(sa) == len(up) else trecho.strip(" ,.")
+
+
+def _trabalho_livre(texto):
+    """Início ou fim de trabalho escrito em texto livre (fichas antigas e redações próprias das unidades: "passa a trabalhar na
+    empresa X", "remanejado para o setor X", "deixa de trabalhar como X e passa a desempenhar a função de Y", "desligado do
+    trabalho"), pelas mesmas regras de rspe_remicao.vinculos. Devolve a lista de marcas, na ordem do texto: ("fim", setor ou "")
+    e ("ini", setor, remanejamento); [] quando o lançamento não é de trabalho. O lançamento estruturado do SIAPEN ("TRABALHO:
+    Iniciou/Deixa de trabalhar"), a mudança de cela, a continuidade ("continua cadastrado/trabalhando"), a atividade externa
+    (_marcar_externo), o atestado, a escola/curso e a saída da unidade ficam com as suas próprias regras."""
+    import rspe_remicao as rrm
+    u = rrm._sa(texto)
+    if re.match(r"\W*MUDANCA DE CELA", u):
+        # "Mudança de cela ... motivo: deixou de trabalhar no setor X": fim de X
+        mc = re.search(r"MOTIVO:[^,]*?DEIXA(?:R|U)? DE TRABALHAR\s+(?:N[AO]|DO|DA|EM)\s+(?:SETOR\s+(?:DE\s+|DA\s+|DO\s+)?)?([^,]+?)\s*(?:,|$)", u)
+        return [("fim", mc.group(1))] if mc else []
+    if re.match(r"\W*TRABALHO:\s*(?:INICIOU|DEIXA)", u) or re.search(r"\bCONTINUA\b|ATIVIDADE LABORAL EXTERNA", u) or rrm.RE_LIBERACAO.search(u):
+        return []
+    m = None if (re.search(r"\bCELA\b(?! LIVRE)|SOLARIO", u) and "SETOR" not in u) else next((x for x in (p.search(u) for p in rrm.RE_REMANEJ) if x), None)
+    if m and m.group(1).strip():
+        return [("fim", ""), ("ini", m.group(1).strip(), True)]
+    m = next((x for x in (p.search(u) for p in rrm.RE_INI + rrm.RE_INI2) if x), None)
+    if m and m.group(1).strip():
+        return [("ini", m.group(1).strip(), False)]
+    m = next((x for x in (p.search(u) for p in rrm.RE_FIM + rrm.RE_FIM2) if x), None)
+    if m and m.group(1).strip():
+        return [("fim", m.group(1).strip())]
+    if rrm.RE_FIM_GERAL.search(u):
+        return [("fim", "")]
+    if rrm._NAO_TRAB.search(u) or re.search(r"\bATESTADO\b|\bATP\b", u):
+        return []
+    out = []
+    fim_, ini_ = rrm.RE_FIM_RESERVA.search(u), rrm.RE_INI_RESERVA.search(u)
+    if fim_ and (not ini_ or fim_.start() < ini_.start()):
+        out.append(("fim", rrm._setor_livre(u[:ini_.start()] if ini_ else u)))
+    if ini_:
+        rem = "REMANEJAD" in ini_.group(0)
+        nome = rrm._setor_livre(u[ini_.start():], rem)
+        if nome:
+            out += ([("fim", "")] if rem else []) + [("ini", nome, rem)]
+    return out
+
+
 def _marcar_externo(trabalho, eventos, ext):
     """Trabalho externo (inciso XI dos decretos): o lançamento "INICIA ATIVIDADE LABORAL EXTERNA NA EMPRESA X" marca o vínculo da
     mesma empresa (pelo nome, venha o "TRABALHO: Iniciou ..." antes ou depois no mesmo dia); sem vínculo da empresa iniciado até 3
@@ -802,13 +900,15 @@ def derivar(f, eventos):
             if rrm.RE_LIBERACAO.search(ua):
                 if e["data"] not in baixa_dia:
                     cortes.append((e["d"], None))
-            elif re.search(r"SAIDA DA UNIDADE PENAL|EVASAO|TRANSFERENCIA|FUGA", ua):
+            elif _saida_trabalho(e["texto"]):
                 cortes.append((e["d"], None))
             elif mf and mf.group(1).strip():
                 cortes.append((e["d"], mf.group(1).strip()))  # desligamento de um setor nomeado: só encerra esse setor
             elif (re.search(r"DESLIGAD[OA]", ua) and re.search(r"TRABALHO|LABORA|ATIVIDADE", ua)) \
                     or (not cela and (rrm.RE_FIM_GERAL.search(ua) or re.search(r"\bREMANEJAD", ua))):
                 cortes.append((e["d"], None))
+            else:
+                cortes += [(e["d"], mk[1] or None) for mk in _trabalho_livre(e["texto"]) if mk[0] == "fim"]
 
         def _corta(v, de, ate):
             # algum encerramento geral (ou do próprio setor) entre o fim inferido do vínculo (inclusive) e a baixa
@@ -817,8 +917,43 @@ def derivar(f, eventos):
                                       or rrm.mesmo_setor(rrm.setor_chave(v["setor"])[0], rrm.setor_chave(nome)[0])):
                     return True
             return False
+        # "tornar sem efeito o lançamento do dia d, referente ao setor de trabalho": os lançamentos de trabalho daquele dia não contam
+        anulados = {m.group(1) for m in (rrm.RE_SEM_EFEITO.search(rs._sem_acento(e["texto"]).upper()) for e in eventos) if m}
+        anulados = {_dp(x.replace("/", ".")) or rrm._dt(x) for x in anulados} - {None}
         for k_ev, e in enumerate(eventos):
             u = e["texto"].upper()
+            if e["d"] in anulados and re.search(r"TRABALH|LABORA|SETOR", rs._sem_acento(u)) and not rrm.RE_SEM_EFEITO.search(rs._sem_acento(u)):
+                continue
+            # "desconsiderar a função X[, (trabalha / correta / reconsiderar a função) Y]": o vínculo de X aberto naquele dia não
+            # existiu; o de Y segue (reaberto se a baixa dele foi no mesmo dia)
+            mdx = _desconsiderar(e["texto"])
+            # (com uma baixa posterior do próprio X por motivo de trabalho - "improdutividade", "mudança de atividade" - o SIAPEN
+            # manteve o vínculo de X: a anotação não se sobrepõe a ele e nada muda)
+            if mdx and any(e2["d"] and e["d"] and e2["d"] > e["d"] and _setor_igual(m2.group(1), mdx[0])
+                           and not re.search(r"A?DEQUA|DESCONSIDER|DUPLICIDADE", rs._sem_acento(m2.group(2)).upper())
+                           for e2 in eventos[k_ev + 1:]
+                           for m2 in [re.search(r"TRABALHO:\s*DEIXA DE TRABALHAR,?\s*NO SETOR DE TRABALHO\s*(.*?)(?:,\s*CONFORME.*?)?(?:MOTIVO:(.*))?$",
+                                                e2["texto"].upper())] if m2):
+                mdx = None
+            if mdx:
+                x_, y_ = mdx
+                if aberto and aberto["inicio"] == e["data"] and _setor_igual(aberto["setor"], x_):
+                    aberto = None
+                trabalho[:] = [t for t in trabalho if not (t["inicio"] == e["data"] and _setor_igual(t["setor"], x_))]
+                if y_ and not (aberto and _setor_igual(aberto["setor"], y_)):
+                    v = next((t for t in reversed(trabalho) if t.get("fim") == e["data"] and _setor_igual(t["setor"], y_)), None)
+                    if aberto:
+                        aberto["fim"] = aberto.get("fim") or e["data"]
+                        aberto.setdefault("motivo_fim", "início de outra atividade")
+                        trabalho.append(aberto)
+                    if v:
+                        trabalho.remove(v)
+                        v["fim"] = ""
+                        v.pop("motivo_fim", None)
+                        aberto = v
+                    else:
+                        aberto = {"inicio": e["data"], "fim": "", "setor": _trecho_original(e["texto"], y_), "externo": False, "texto_livre": True}
+                continue
             # "continua exercendo suas atividades no setor X", "continua cadastrado no setor X" ("desconsiderar o desligamento"),
             # "sem efeito, continua trabalhando na empresa X": o vínculo de X segue - não abre vínculo novo nem encerra; a baixa
             # de X no mesmo dia fica sem efeito (exibição; a conta da remição é a de rspe_remicao)
@@ -843,6 +978,8 @@ def derivar(f, eventos):
             # (setor vazio - "no setor de trabalho , conforme documento" - fica vazio, não vira "CONFORME DOCUMENTO")
             m = re.search(r"TRABALHO:\s*INICIOU ATIVIDADE LABORAL,?\s*NO SETOR DE TRABALHO\s*(.*?)(?:,\s*CONFORME|$)", u)
             if m:
+                if aberto and aberto.get("texto_livre") and aberto["inicio"] == e["data"] and _setor_igual(aberto["setor"], m.group(1)):
+                    aberto = None  # o mesmo início lançado antes em texto livre: fica o registro do SIAPEN
                 if aberto:
                     # o trabalho novo encerra o anterior (a ficha nem sempre registra o "deixa de trabalhar"); se a baixa do anterior
                     # vier depois, sem saída da unidade no meio, ele é reaberto até ela (vínculos simultâneos - abaixo)
@@ -857,6 +994,11 @@ def derivar(f, eventos):
                 mm = re.search(r"MOTIVO:\s*(.+)$", u)
                 motivo = (mm.group(1).strip(" .") if mm else "")
                 d_ = _dp(e["data"])
+                # baixa "desconsiderar o cadastro/lançamento" do setor aberto no próprio dia: o vínculo não existiu
+                if re.search(r"DESCONSIDER", rs._sem_acento(motivo).upper()) and aberto and aberto["inicio"] == e["data"] \
+                        and re.sub(r"\W", "", aberto["setor"].upper())[:12] == setor_fim[:12]:
+                    aberto = None
+                    continue
                 # só encerra o trabalho do mesmo setor (a baixa de um setor antigo não encerra o atual)
                 if aberto and re.sub(r"\W", "", aberto["setor"].upper())[:12] == setor_fim[:12]:
                     aberto["fim"] = e["data"]
@@ -867,10 +1009,21 @@ def derivar(f, eventos):
                 ult = [t for t in trabalho if re.sub(r"\W", "", t["setor"].upper())[:12] == setor_fim[:12]]
                 v = ult[-1] if ult else None
                 fv = _dp(v.get("fim") or "") if v else None
+                if v and v.get("fim_livre") and v.get("fim") == e["data"]:
+                    v["motivo_fim"] = motivo or v.get("motivo_fim", "")  # já encerrado no dia pelo lançamento em texto livre
+                    continue
                 # (a baixa por "adequação do mapa do SIAPEN" é correção de cadastro - em geral do registro duplicado do mesmo dia -, não
                 # prova que o setor seguiu: não reabre)
+                # (7.14) só quando o outro setor já tinha acabado antes dessa baixa: com o outro ainda em curso, ou com a baixa lançada
+                # na saída da unidade ("motivo: saída do presídio"), é registro tardio - nos atestados do corpus, o setor X acaba quando o
+                # outro começa
+                if v and v.get("motivo_fim") == "início de outra atividade" and fv and fv == d_:
+                    v["motivo_fim"] = motivo  # a baixa no próprio dia em que o outro começou é só a baixa dele: registra o motivo
+                    continue
+                outros_ = [t for t in trabalho + ([aberto] if aberto else []) if t is not v and _dp(t["inicio"]) and fv and _dp(t["inicio"]) >= fv]
                 if v and v.get("motivo_fim") == "início de outra atividade" and fv and d_ and fv <= d_ \
-                        and not re.search(r"A?DEQUACAO DO MAPA", rs._sem_acento(motivo).upper()) \
+                        and not re.search(r"A?DEQUACAO DO MAPA|SAIDA D[OA] (?:PRESIDIO|UNIDADE)|SAIU DA UNIDADE|TRANSFERENCIA", rs._sem_acento(motivo).upper()) \
+                        and all(_dp(t.get("fim") or "") and _dp(t["fim"]) < d_ for t in outros_) \
                         and not _corta(v, fv, d_):
                     # vínculo simultâneo: o setor X foi encerrado só pelo início de outro setor e a baixa de X vem depois, sem saída,
                     # evasão, transferência, desligamento, remanejamento ou liberação no meio - os dois setores correram juntos; X vai
@@ -893,12 +1046,48 @@ def derivar(f, eventos):
                 baixas_orfas.append({"data": e["data"], "setor": m.group(1).strip(" ,."),
                                      "ultimo_inicio": v["inicio"] if v else "", "ultimo_fim": v.get("fim", "") if v else ""})
                 continue
+            # trabalho em texto livre (fichas antigas e redações das unidades - _trabalho_livre): o início abre o vínculo e encerra o
+            # anterior, como o "Iniciou" do SIAPEN; o mesmo setor de novo, com o vínculo dele aberto, é o mesmo vínculo; o fim com setor
+            # só encerra esse setor, sem setor encerra o vínculo aberto. A saída da unidade segue a regra própria (abaixo)
+            saida_ev = _saida_trabalho(e["texto"])
+            marcas = [] if saida_ev else _trabalho_livre(e["texto"])
+            for mk in marcas:
+                if mk[0] == "fim":
+                    if aberto and (not mk[1] or _setor_igual(aberto["setor"], mk[1])):
+                        aberto["fim"] = e["data"]
+                        aberto["motivo_fim"] = "remanejado para outro setor" if len(marcas) > 1 and marcas[-1][0] == "ini" and marcas[-1][2] else "desligado"
+                        aberto["fim_livre"] = True
+                        trabalho.append(aberto)
+                        aberto = None
+                    continue
+                nome = _nome_livre(_trecho_original(e["texto"], mk[1]))
+                if aberto and _setor_igual(aberto["setor"], nome):
+                    continue  # o mesmo setor, com o vínculo dele aberto: é o mesmo vínculo
+                if aberto:
+                    aberto["fim"] = aberto.get("fim") or e["data"]
+                    aberto.setdefault("motivo_fim", "início de outra atividade")
+                    trabalho.append(aberto)
+                aberto = {"inicio": e["data"], "fim": "", "setor": nome, "externo": False, "texto_livre": True}
+            if marcas:
+                continue
+            # "Liberação do Setor de Trabalho" sem a baixa de um setor no mesmo dia: o trabalho em curso acaba (com a baixa, é só o
+            # registro dela - o "motivo: desligado" da liberação não encerra o setor iniciado no mesmo dia)
+            if rrm.RE_LIBERACAO.search(rs._sem_acento(u).strip()):
+                if aberto and e["data"] not in baixa_dia:
+                    aberto["fim"] = e["data"]
+                    aberto["motivo_fim"] = "liberação do setor de trabalho"
+                    trabalho.append(aberto)
+                    aberto = None
+                continue
             # desligamento em texto livre, evasão, saída ou transferência de unidade encerram o trabalho em curso
+            # (entrada na unidade e início do trabalho no mesmo dia, em qualquer ordem: a entrada não encerra o trabalho que começa nela)
+            if saida_ev and aberto and aberto["inicio"] == e["data"] and not re.match(r"\W*SA[ÍI]DA DA UNIDADE PENAL", u):
+                saida_ev = False
             if (re.search(r"DESLIGAD[OA]", u) and re.search(r"TRABALHO|LABORA|ATIVIDADE", u)
-                    or re.search(r"SA[ÍI]DA DA UNIDADE PENAL|EVAS[ÃA]O|TRANSFER[ÊE]NCIA|FUGA", u)):
+                    or saida_ev):
                 if aberto:
                     aberto["fim"] = e["data"]
-                    aberto["motivo_fim"] = ("desligado" if "DESLIGAD" in u else "saída/evasão/transferência")
+                    aberto["motivo_fim"] = ("saída/evasão/transferência" if saida_ev else "desligado")
                     trabalho.append(aberto)
                     aberto = None
                     continue
@@ -906,6 +1095,8 @@ def derivar(f, eventos):
                 ext.append((k_ev, e))
         if aberto:
             trabalho.append(aberto)
+        for t in trabalho:
+            t.pop("fim_livre", None)
         if usou:
             trabalho.sort(key=lambda t: _dp(t["inicio"]) or date.min)
         _marcar_externo(trabalho, eventos, ext)

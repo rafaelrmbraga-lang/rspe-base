@@ -11,6 +11,7 @@ TESTES += ["teste_conf_E.py"]
 TESTES += ["teste_conf_B.py"]
 TESTES += ["teste_conf_A.py"]  # conferência manual (7.13.0), frente A: RSPE, eventos e custódia
 TESTES += ["teste_conf_D1.py"]  # conferência manual (7.13.0), frente D1: remição ligada à origem
+TESTES += ["teste_leitura_714.py"]
 falhas = [t for t in TESTES if subprocess.call([sys.executable, t]) != 0]
 if falhas:
     print("FALHOU: " + ", ".join(falhas))
