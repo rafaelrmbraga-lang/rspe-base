@@ -366,8 +366,9 @@ confere(o["indulto_2022_status"] == "possivel" and "conferir" not in o["indulto_
 
 # (33) textos da petição: dias acima de 30 viram mês (sem somar dias: 11 meses e 33 dias não são 1 ano e 3 dias - o ano tem 365
 # dias e 12 meses, 360), "da pena cumprida", ficha sem reticências no meio do texto
-confere(rtl._pena_ext("4a11m33d") == "4 anos, 11 meses e 33 dias" and rtl._pena_ext("1a2m31d") == "1 ano, 3 meses e 1 dia"
-        and rtl._pena_ext("1a11m30d") == "1 ano, 11 meses e 30 dias", "(33) %s / %s" % (rtl._pena_ext("4a11m33d"), rtl._pena_ext("1a2m31d")))
+# (7.13.0: "11 meses e 33 dias" não é data possível - o 12º mês do ano de 365 dias começa no dia 335: 11 meses e 28 dias)
+confere(rtl._pena_ext("4a11m33d") == "4 anos, 11 meses e 28 dias" and rtl._pena_ext("1a2m31d") == "1 ano, 3 meses e 1 dia"
+        and rtl._pena_ext("1a11m30d") == "1 ano, 11 meses e 25 dias", "(33) %s / %s" % (rtl._pena_ext("4a11m33d"), rtl._pena_ext("1a2m31d")))
 t = rs._texto_ficha("Saída da Unidade Penal: ESTABELECIMENTO PENAL DE REGIME SEMIABERTO E ABERTO DE AQUIDAUANA, Destino: , Motivo: Evasão do "
                     "estabelecimento sem autorização judicial durante o período noturno de recolhimento", 90)
 confere("..." not in t and "Destino: ," not in t, "(33) texto da ficha: %s" % t)
@@ -470,9 +471,10 @@ confere(not (x["s"] in ("cabe", "ver") and x.get("beneficio") == "Comutação"),
 cf = crime("01/01/2017", "01/06/2017", "01/07/2017", pena="4 ano(s), 0 mês(es) e 0 dia(s)")
 r = reg_([cf], [preso("01/01/2018"), ev_("01/06/2023", "INTERRUPÇÃO", "FUGA"), ev_("10/06/2023", "REINÍCIO", "RECAPTURA")], "4a0m0d", "")
 x = dec(r, "2023")
-# (quesito 140, 16/10/2026: no Decreto de 2023, de art. 6º com a redação do de 2024/2025, a fuga sem homologação na janela impede;
-# nos que exigem a falta apurada ou homologada - ex.: 2019 -, fica a verificar)
-confere(x["s"] == "nao" and "fuga" in (x.get("mot") or ""), "(44) 2023: fuga na janela devia impedir: %s %s" % (x["s"], x.get("mot")))
+# (7.13.0, decisão do usuário de 20/10/2026: a fuga sem homologação na janela do art. 6º não impede - Decretos 2023, 2024 e 2025
+# inclusive; fica a verificar até a sanção ser reconhecida em juízo)
+confere(x["s"] == "ver" and "fuga" in (x.get("mot") or "") and "tratada como falta grave" not in (x.get("mot") or ""),
+        "(44) 2023: fuga na janela sem homologação devia ficar a verificar: %s %s" % (x["s"], x.get("mot")))
 cf15 = crime("01/01/2012", "01/06/2012", "01/07/2012", pena="4 ano(s), 0 mês(es) e 0 dia(s)")
 r = reg_([cf15], [preso("01/01/2013"), ev_("01/06/2015", "INTERRUPÇÃO", "FUGA"), ev_("10/06/2015", "REINÍCIO", "RECAPTURA")], "4a0m0d", "")
 x = dec(r, "2015")

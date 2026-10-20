@@ -258,7 +258,7 @@ def _dt_ini(per):
 def _per_simples(per):
     """'08/07/2026 a hoje (em curso)' -> 'desde 08/07/2026'"""
     per = str(per or "").strip()
-    mm = re.match(r"(\d{2}/\d{2}/\d{4}) a hoje", per)
+    mm = re.match(r"(\d{2}/\d{2}/\d{4}) a (?:hoje|\d{2}/\d{2}/\d{4} \(em curso)", per)
     return ("desde " + mm.group(1)) if mm else per
 
 
@@ -304,7 +304,7 @@ def verso(m):
         for it in (RD.get(chave) or {}).get("itens") or []:
             q = re.search(r"≈ (\d+) dias trabalhados", it.get("base") or "")
             qtd = ("cerca de %s dias" % q.group(1)) if q else ""
-            if tipo == "pend" and " a hoje" in (it.get("per") or ""):  # trabalho em curso, atestado ainda não emitido
+            if tipo == "pend" and re.search(r" a hoje|\(em curso", it.get("per") or ""):  # trabalho em curso, atestado ainda não emitido
                 item(trab, "trabalho", "curso", it.get("setor"), it.get("unidade"), it.get("per"), qtd, "Trabalhando agora",
                      "o atestado sai ao fim do período")
             elif tipo == "pend":

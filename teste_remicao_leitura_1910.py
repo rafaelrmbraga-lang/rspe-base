@@ -40,8 +40,12 @@ try:
     p = next(p_ for p_ in C["pendencias"] if p_["texto"].startswith("Atestado 024"))
     ok(p["status"] == "ORF_POST" and p["cor"] == "amarelo", "pendência: %r" % p)
     ok(not res.get("atestados_pendentes") and (res.get("pendentes") or 0) == 0, "fora do total: %r" % res.get("pendentes"))
+    det = res.get("rem_det") or {}
+    ok(det.get("total", 0) == 0 and not any(i.get("dias") for k in ("nao_lancado", "emitido") for i in (det.get(k) or {}).get("itens", [])),
+       "Verificar remição fora do total por origem e da prioridade: %r" % {k: det.get(k) for k in ("nao_lancado", "emitido", "total")})
     R = C["resumo"]["texto"]
-    ok("possui 32 dias remidos" in R and "fazendo jus a 29 dias" in R and "insuficientes: faltam cerca de 13 dias" in R, "resumo simples: %s" % R)
+    ok("possui 32 dias remidos" in R and "fazendo jus a 29 dias" in R and "nº 024/2024 (29 dias) fica a conferir" in R and "faltam" not in R,
+       "resumo simples: %s" % R)
     al = " ".join(a["texto"] for a in C["alertas"])
     ok("além das obras de leitura registradas na ficha (4 obras)" in al, "alerta das remições além das obras: %s" % al)
 except Exception as e:

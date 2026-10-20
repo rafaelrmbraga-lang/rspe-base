@@ -421,6 +421,11 @@ def _linhas_remicao(m):
             # sem período ou peticionado em outros autos: fora do total a requerer (rspe_remicao.conciliar)
             sit, conferir = ("Sem período no atestado: conferir antes de requerer" if t.get("sem_periodo") else
                              "Peticionado em outros autos: não pedir em duplicidade"), conferir + 1
+        elif t.get("status") == "NAO_LANCADO" and t.get("rot") == "Verificar remição":
+            # remição posterior sem origem que pode ser deste atestado: fora do total até a conferência nas decisões
+            sit, conferir = "Verificar remição: o RSPE tem remição posterior sem origem que pode ser deste atestado", conferir + 1
+        elif t.get("status") == "NAO_LANCADO" and t.get("rot", "").startswith("Sem dias"):
+            pass  # período já remido: nada a requerer, fora do total
         elif t.get("status") == "NAO_LANCADO":
             if t.get("sobreposicao"):
                 sit = "Não lançado no RSPE: requerer, conferindo antes a remição sem origem do mesmo período"
@@ -530,7 +535,7 @@ def exportar_remicao_tabela(m, saida):
     c.append(_wtab(["Atestado", "Setor e período de trabalho", "Dias trab.", "Dias rem.", "Remição no RSPE", "Situação"],
                    rows, [1800, 2900, 900, 900, 1350, 1750], negrito_ult=True))
     if conferir:
-        c.append(_wp("%d atestado(s) com indício de atestado cumulativo: fora do total, conferir nos autos antes de requerer." % conferir,
+        c.append(_wp("%d atestado(s) a conferir (cumulativo, sem período, outros autos ou remição sem origem que pode ser dele): fora do total, conferir nos autos antes de requerer." % conferir,
                      tam=18, antes=80))
     if notas:
         c.append(_wp("Observações", negrito=True, tam=18, antes=160, depois=40))

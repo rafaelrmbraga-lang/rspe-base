@@ -7,6 +7,7 @@ bases/
 rspe_config.json
 defensores.json
 importacao_avisos.txt
+importacao_avisos_pasta_vigiada.txt
 rspe_log.txt
 # build
 build/
