@@ -105,7 +105,7 @@ ok(len(lei.get("18.08.2026", [])) == 6, "E8: meses lidos: %s" % lei.get("18.08.2
 r = {"_eventos": [{"data": "01/01/2020", "tipo": "PRISÃO/INÍCIO DE CUMPRIMENTO", "motivo": "PRISÃO"}],
      "_incidentes": [rem(24, "28/08/2026"), rem(8, "11/03/2026")]}
 N = rf.comparativo(r, fl, HOJE)["fd_novo"]
-ok(N["leitura"] == 36 and N["comp"] == 36 and N["dif"] == 4 and N["concl"].startswith("Verificar remição"), "E8: leitura 9 obras x 32 no RSPE: %s %s" % (N["comp"], N["dif"]))
+ok(N["leitura"] == 36 and N["comp"] == 36 and N["dif"] == 4 and N["concl"].startswith("A ficha comprova 4 dias a mais"), "E8: leitura 9 obras x 32 no RSPE: %s %s" % (N["comp"], N["dif"]))
 
 # ---- E11: estudo sem feriados; matrícula sem certidão é estimativa, fora da comparação ----
 ok(len(rf.dias_jornada_set(date(2026, 9, 7), date(2026, 9, 11), "seg-sex")) == 4, "E11: 7 de setembro contado como dia letivo")

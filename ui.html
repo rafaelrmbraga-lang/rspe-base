@@ -407,14 +407,23 @@ body:has(.welcome.on) .btn-calc{display:none} /* calculadora só com a base aber
 .ac-h{display:flex;align-items:center;gap:10px}.ac-h b{font-size:13.5px;color:var(--tx);font-weight:600;flex:1}.ac-a{margin-left:auto}
 .ac-d{margin:8px 0 0;max-width:1100px}.ac-d p{margin:0 0 5px;font-size:12.8px;line-height:1.6;color:var(--tx);font-weight:400}
 .ac-f{margin-top:6px;font-size:11.5px;color:var(--tx3);font-weight:400}.ac-top .muted{font-weight:400}
+.fdn-cmp2{display:grid;grid-template-columns:1fr 1fr;gap:0 14px;max-width:980px}
+.fdn-lado{width:100%;border-collapse:collapse;background:var(--card,#fff);border:1px solid var(--line);border-radius:8px;font-size:12.5px;font-weight:400}
+.fdn-lado th{background:#F7F8F6;color:var(--tx2);font-size:11px;text-transform:uppercase;letter-spacing:.3px;text-align:left;padding:7px 10px;border-bottom:1px solid var(--line)}
+.fdn-lado td{padding:7px 10px;border-bottom:1px solid #F0F1F3;vertical-align:top}.fdn-lado td:last-child,.fdn-lado th:last-child{text-align:right;width:90px;font-variant-numeric:tabular-nums}
+.fdn-lado td{padding:7px 10px!important;font-weight:400!important;height:auto}.fdn-lado tr.vz td{border-bottom:1px solid #F0F1F3}.fdn-lado tr.tot td{font-weight:700!important;border-top:1px solid var(--line);border-bottom:0}
+.fdn-dif2,.fdn-est2{grid-column:1/3;display:flex;justify-content:space-between;gap:12px;padding:8px 10px;font-size:12.5px}
+.fdn-dif2{margin-top:8px;border:1px solid var(--line);border-radius:8px;font-weight:700;background:var(--card,#fff)}.fdn-dif2 b{font-variant-numeric:tabular-nums}
+.fdn-dif2.amarelo{border-left:3px solid var(--a-dot)}.fdn-dif2.amarelo b{color:var(--a-tx)}.fdn-dif2.verde b{color:var(--g-tx)}.fdn-dif2.cinza b{color:var(--tx2)}
+.fdn-est2{color:var(--tx2);padding-top:4px;padding-bottom:0;font-weight:400}.fdn-cmp2{font-weight:400}
+.fdn-concl.cinza{color:var(--tx2);font-size:12px}.fdn-concl.amarelo{color:var(--a-tx);font-weight:600}
+.fdpts li.cinza::before{background:#AEB5B0}.fdpts li.verde::before{background:var(--g-dot)}
 .fdn-onde{margin:12px 0 8px;max-width:980px;border:1px solid var(--line);border-left:3px solid var(--a-dot);border-radius:8px;background:var(--card,#fff);padding:8px 12px}
 .fdn-onde-t{font-weight:700;font-size:12.5px;margin-bottom:3px}.fdn-onde ul{margin:0;padding-left:16px;font-size:12.5px;line-height:1.6;font-weight:400}
 .fdn-onde li.vermelho::marker{color:var(--r-dot)}.fdn-onde li.amarelo::marker{color:var(--a-dot)}.fdn-onde li.verde::marker{color:var(--g-dot)}
 .fdn-det{font:inherit;font-size:12px;font-weight:600;padding:5px 12px;border:1px solid var(--pri);color:var(--pri);background:var(--card,#fff);border-radius:8px;cursor:pointer;margin:2px 0 6px}.fdn-det:hover{background:var(--g-bg)}
 .fdn-h{font-weight:700;font-size:12.5px;margin:16px 0 6px}.fdn>.fdn-h:first-child{margin-top:4px}
 .fdn-sub{font-size:11.5px;margin:-2px 0 6px;font-weight:400}.fdn-vazio{font-size:12.5px;font-weight:400}
-.fdt.fdn-cmp{max-width:760px}.fdt.fdn-cmp th{position:static;box-shadow:none}.fdt.fdn-cmp td:last-child,.fdt.fdn-cmp th:last-child{text-align:right;font-variant-numeric:tabular-nums}
-.fdt.fdn-cmp tr.fdn-dif td{border-top:2px solid var(--line)}.fdn-amarelo{color:var(--a-tx)}.fdn-verde{color:var(--g-tx)}
 .fdn-concl{font-weight:400;font-size:12.5px;line-height:1.6;margin:8px 0 0;max-width:980px;text-align:justify;hyphens:auto}
 .fdn-pts{margin:0;padding-left:18px;font-size:12.5px;line-height:1.7;font-weight:400}.fdn-pts li{margin-bottom:2px}.fdn-pts .pill{font-size:12.5px;margin-right:2px}
 .fdt.fdn-t td{vertical-align:top}.fdn-un,.fdn-mot{font-size:11px}.fdn-mot{display:block;margin-top:1px}
@@ -1567,21 +1576,20 @@ const ui = {
     const nf=v=>(v==null||v==='')?'—':(Math.round(v*100)/100).toLocaleString('pt-BR',{maximumFractionDigits:2}), sg=v=>(v>0?'+':'')+nf(v);
     const pill=(t,c)=>t?`<span class="pill ${c||'cinza'}">${esc(t)}</span>`:'';
     const hd=t=>`<div class="fdn-h">${t}</div>`, R=N.R||{}, dif=N.dif||0, T=N.trab||{linhas:[],ats:[]};
-    const cor=dif>3?'amarelo':'verde';
-    const lin=[[`Remição concedida no RSPE <span class="muted">· ${pl((R.remicoes||[]).length,'decisão','decisões')}</span>`,nf(R.concedido)]];
-    if(R.perdido) lin.push([`Dias perdidos por falta (LEP, art. 127) <span class="muted">· saldo no RSPE: ${nf(R.saldo)}; a comparação usa o concedido</span>`,'− '+nf(R.perdido)]);
+    const cor=dif>3?'amarelo':dif<-3?'cinza':'verde';
+    const lin=[[`Remição concedida <span class="muted">· ${pl((R.remicoes||[]).length,'decisão','decisões')}</span>`,nf(R.concedido)]];
+    if(R.perdido) lin.push([`Dias perdidos por falta (LEP, art. 127) <span class="muted">· saldo: ${nf(R.saldo)}; a comparação usa o concedido</span>`,'− '+nf(R.perdido)]);
     const fic=[[`Atestados de trabalho desta execução <span class="muted">· ${N.n_desta||0}</span>`,nf(N.at_desta)],
-      [`Estudo e leitura comprovados na ficha${N.leitura?` <span class="muted">· leitura: ${pl(N.obras||0,'obra','obras')}</span>`:''}`,nf((N.est_comp||0)+(N.leitura||0))]];
+      [`Estudo e leitura${N.leitura?` <span class="muted">· leitura: ${pl(N.obras||0,'obra','obras')}</span>`:''}`,nf((N.est_comp||0)+(N.leitura||0))]];
     if(N.n_man) fic.push([`Informados por você (juntados nos autos) <span class="muted">· ${N.n_man}</span>`,nf(N.man)]);
-    const tr=(a,b,c)=>`<tr${c?` class="${c}"`:''}><td>${a}</td><td>${b}</td></tr>`;
-    const A=`<table class="fdt fdn-cmp"><colgroup><col><col style="width:150px"></colgroup>
-      <tr><th>RSPE (SEEU)</th><th>Dias de remição</th></tr>${lin.map(([a,b])=>tr(a,b)).join('')}
-      <tr><th>Ficha disciplinar (SIAPEN)</th><th></th></tr>${fic.map(([a,b])=>tr(a,b)).join('')}
-      ${tr('<b>Total comprovado pela ficha</b>','<b>'+nf(N.comp)+'</b>')}
-      ${tr('<b>Diferença (ficha − RSPE)</b>',`<b class="fdn-${cor}">${sg(dif)}</b>`,'fdn-dif')}
-      ${N.estim?tr(`<span class="muted">Com o estimado (estudo sem certidão e trabalho sem atestado: ≈ ${nf(N.estim)})</span>`,`<span class="muted">${sg(N.dif_estim)}</span>`):''}
-      ${N.fora_n?tr(`<span class="muted">Documentos à parte (outros autos, anteriores à execução ou de período interrompido): ${N.fora_n} - não entram na conta</span>`,''):''}</table>
-      <p class="fdn-concl">${esc(N.concl)}</p>`;
+    // tabela A lado a lado: RSPE à esquerda, ficha à direita (cada um com as suas linhas e o seu total); a diferença ocupa a largura
+    const col=(tit,ls,tot,rot)=>{ const vz=Math.max(lin.length,fic.length)-ls.length;
+      return `<table class="fdn-lado"><tr><th>${tit}</th><th>Dias</th></tr>${ls.map(([a,b])=>`<tr><td>${a}</td><td>${b}</td></tr>`).join('')}${'<tr class="vz"><td>&nbsp;</td><td></td></tr>'.repeat(vz)}<tr class="tot"><td>${rot}</td><td>${nf(tot)}</td></tr></table>`; };
+    const A=`<div class="fdn-cmp2">${col('RSPE (SEEU)',lin,R.concedido,'Total concedido')}${col('Ficha disciplinar (SIAPEN)',fic,N.comp,'Total comprovado')}
+      <div class="fdn-dif2 ${cor}"><span>Diferença (ficha − RSPE)</span><b>${sg(dif)}</b></div>
+      ${N.estim?`<div class="fdn-est2"><span>Com o estimado (estudo sem certidão e trabalho sem atestado: ≈ ${nf(N.estim)})</span><span>${sg(N.dif_estim)}</span></div>`:''}
+      ${N.fora_n?`<div class="fdn-est2"><span>Documentos à parte (outros autos, anteriores à execução ou de período interrompido): ${N.fora_n} - não entram na conta</span><span></span></div>`:''}</div>
+      <p class="fdn-concl ${esc(N.concl_cor||'')}">${esc(N.concl)}</p>`;
     const P=N.pontos||[];
     const B=P.length?`<ul class="fdn-pts">${P.map(p=>`<li>${pill(p.rot,p.cor)} ${esc(p.texto)}</li>`).join('')}</ul>`:'<div class="muted fdn-vazio">Nenhum ponto a conferir.</div>';
     const ST={auto:['Vinculado automaticamente','verde'],possivel:['Possível · confirmar','amarelo'],provavel:['Sugerido · confirmar','amarelo'],sem:['Sem atestado','amarelo'],manual:['Vinculado por você','azul']};

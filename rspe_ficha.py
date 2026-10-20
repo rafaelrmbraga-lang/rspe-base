@@ -3298,11 +3298,11 @@ def comparativo(r, f, hoje=None, conferidos=None, manuais=None, vinculos=None):
             itens.append({"t": p_["curto"][0].upper() + p_["curto"][1:], "c": "vermelho"})
     if N["dif"] > rrm.TOL_COMPARACAO:
         rot.append("Verificar remição")
-        itens.append({"t": "Verificar remição: a ficha comprova %s dias e o RSPE concedeu %s (diferença de %s dias) - conferir nos autos" % (
-            nf(N["comp"]), nf(R["concedido"]), nf(N["dif"])), "c": "amarelo"})
+        itens.append({"t": "Verificar remição: ficha %s × RSPE %s" % (nf(N["comp"]), nf(R["concedido"])), "c": "amarelo"})
+    elif N["dif"] < -rrm.TOL_COMPARACAO:
+        itens.append({"t": "RSPE maior que a ficha (%s × %s)" % (nf(R["concedido"]), nf(N["comp"])), "c": "cinza"})
     elif N["pontos"] or N["comp"] or R["concedido"]:
-        itens.append({"t": "Sem diferença a favor da ficha (o RSPE concedeu %s; a ficha comprova %s)" % (nf(R["concedido"]), nf(N["comp"])),
-                      "c": "verde"})
+        itens.append({"t": "Sem diferença (RSPE %s; ficha %s)" % (nf(R["concedido"]), nf(N["comp"])), "c": "verde"})
     conf_ = [p_ for p_ in N["pontos"] if p_["cor"] == "amarelo"]
     for p_ in conf_:
         itens.append({"t": "Ponto a conferir: " + p_["curto"], "c": "amarelo"})
@@ -3314,7 +3314,7 @@ def comparativo(r, f, hoje=None, conferidos=None, manuais=None, vinculos=None):
     sit = " · ".join(rot) or "Em ordem"
     # cabeçalho da linha expandida: só a conclusão (fato vermelho e diferença); os pontos ficam em "Onde pode estar a diferença" e na seção B
     out["fd_sit_itens"] = [i for i in itens if not i["t"].startswith("Ponto a conferir")] if cor != "verde" else []
-    out["fd_sit_det"] = "; ".join(i["t"] for i in itens if i["c"] != "verde")
+    out["fd_sit_det"] = "; ".join(i["t"] for i in itens if i["c"] not in ("verde", "cinza"))
     faltas = f.get("faltas", [])
     out["fd_faltas"] = ("%d (%s)" % (len(faltas), ", ".join(x["situacao"] for x in faltas))) if faltas else "nenhuma"
     out["fd_remicoes"] = ("Remições no RSPE: " + " · ".join("%s em %s" % (_dias_txt(x["dias"]), rs.fmt(x["decisao"])) for x in R["remicoes"]) +

@@ -38,8 +38,7 @@ try:
     o = rf.comparativo(r, f, date(2026, 10, 19))
     N = o["fd_novo"]
     ok(N["leitura"] == 16 and N["obras"] == 4 and N["at_desta"] == 29 and N["R"]["concedido"] == 32, "totais: %s %s %s" % (N["leitura"], N["at_desta"], N["R"]))
-    ok(N["dif"] == 13 and N["concl"].startswith("Verificar remição: a ficha comprova 45 dias e o RSPE concedeu 32, diferença de 13 dias")
-       and "não o quanto requerer" in N["concl"], "conclusão: %s" % N["concl"])
+    ok(N["dif"] == 13 and N["concl"] == "A ficha comprova 13 dias a mais do que o RSPE concedeu. Conferir nos autos se cada atestado foi apreciado.", "conclusão: %s" % N["concl"])
     # o atestado é anterior à última decisão: não é fato vermelho; sem registro de peticionamento, é ponto a conferir
     ok(o["fd_cor"] == "amarelo" and any(p["tipo"] == "sem_pet" and "024/2024" in p["texto"] for p in N["pontos"]) and not N["fatos"],
        "situação: %s %s" % (o["fd_cor"], [p["tipo"] for p in N["pontos"]]))

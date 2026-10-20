@@ -131,11 +131,13 @@ try:
        "tolerância de 3 dias: %s %s %s" % (N["dif"], o["fd_cor"], N["concl"]))
     o = rf.comparativo(R((48, "10/08/2024", "30/06/2024")), f, HOJE)
     N = o["fd_novo"]
-    ok(N["dif"] == 4.5 and N["concl"].startswith("Verificar remição") and o["fd_cor"] == "amarelo" and "Verificar remição" in o["fd_sit"]
-       and any(i["t"].startswith("Verificar remição: a ficha comprova 52,50 dias e o RSPE concedeu 48 (diferença de 4,50 dias) - conferir nos autos")
+    ok(N["dif"] == 4.5 and N["concl"] == "A ficha comprova 4,50 dias a mais do que o RSPE concedeu. Conferir nos autos se cada atestado foi apreciado." and o["fd_cor"] == "amarelo" and "Verificar remição" in o["fd_sit"]
+       and any(i["t"] == "Verificar remição: ficha 52,50 × RSPE 48"
                for i in o["fd_sit_itens"]) and "requerer 4" not in str(o), "diferença acima da tolerância: %s" % o["fd_sit_itens"])
     o = rf.comparativo(R((200, "10/08/2024", "30/06/2024")), f, HOJE)
-    ok("Comparação pouco informativa" in o["fd_novo"]["concl"] and o["fd_cor"] == "verde", "RSPE muito maior: %s" % o["fd_novo"]["concl"])
+    # RSPE maior que a ficha: uma frase informativa, em cinza, que não deixa a linha amarela nem vermelha
+    ok(o["fd_novo"]["concl"] == "O RSPE concedeu 147,50 dias a mais do que a ficha comprova (documentos fora da ficha). Nada a requerer por esta conta."
+       and o["fd_novo"]["concl_cor"] == "cinza" and o["fd_cor"] == "verde", "RSPE muito maior: %s" % o["fd_novo"]["concl"])
 
     # ---- pontos a conferir: exame, curso sem horas, enviado à Defensoria, posterior à última decisão; vermelho só no fato certo ----
     f = F([T("MARCENARIA", "01.02.2024", "30.06.2024")],

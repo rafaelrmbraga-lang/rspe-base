@@ -1529,7 +1529,8 @@ def comparacao(r, f, hoje=None, manuais=None, homologados=None, trab=None):
         ponto("Posterior à última remição", "amarelo", "%s: emitido%s ou peticionado%s depois %s - provável pendência: conferir nos autos se "
               "já foi apreciado." % (_lista(["%s (%s%s)" % (nome_doc(d), _f(d["data_ref"]), (", %s dias" % _nf(d["dias"])) if d["dias"] else "") for d in p2]),
                                      "s" if len(p2) > 1 else "", "s" if len(p2) > 1 else "", dec_txt), "posterior",
-              curto="%s posterior%s %s" % (_lista([nome_doc(d) for d in p2]), "es" if len(p2) > 1 else "", dec_txt), docs_=p2)
+              curto="%s posterior%s %s" % (_lista(["%s%s" % (nome_doc(d), (" (%s dias)" % _nf(d["dias"])) if d["dias"] else "") for d in p2]),
+                                          "es" if len(p2) > 1 else "", dec_txt), docs_=p2)
     dfn = [d for d in vivos if d["defensoria"] and d not in verm]
     if dfn:
         ponto("A conferir", "amarelo", "%s: enviado à Defensoria, sem registro de protocolo na ficha - conferir se a Defensoria o juntou aos autos." % (
@@ -1623,24 +1624,16 @@ def comparacao(r, f, hoje=None, manuais=None, homologados=None, trab=None):
         for it in its_:
             if it.get("nivel") != "info":
                 ponto("Perda (art. 127)", "amarelo", "%s: %s" % (it["titulo"], it.get("detalhe") or ""), "perda", curto=it["titulo"])
-    # ---- conclusão em linguagem simples ----
+    # ---- conclusão em linguagem simples: a favor da ficha, direta (amarelo); RSPE maior, uma frase informativa (cinza) ----
     if dif > TOL_COMPARACAO:
-        concl = ("Verificar remição: a ficha comprova %s dias e o RSPE concedeu %s, diferença de %s dias a favor da ficha. A diferença "
-                 "indica onde conferir, não o quanto requerer: conferir nos autos quais documentos ainda não foram apreciados." % (
-                     _nf(comp), _nf(R["concedido"]), _nf(dif)))
+        concl, concl_cor = ("A ficha comprova %s dias a mais do que o RSPE concedeu. Conferir nos autos se cada atestado foi apreciado." % _nf(dif),
+                            "amarelo")
     elif dif >= -TOL_COMPARACAO:
-        concl = "Sem diferença: o RSPE concedeu %s dias e a ficha comprova %s (diferença dentro da tolerância de 3 dias, pelas frações)." % (
-            _nf(R["concedido"]), _nf(comp))
+        concl, concl_cor = "Sem diferença: dentro da tolerância de 3 dias (frações).", "verde"
     else:
-        concl = ("Sem diferença a favor da ficha: o RSPE concedeu %s dias, mais do que a ficha comprova (%s). Os %s dias a mais vêm de documentos "
-                 "que a ficha não registra ou não valora (outra unidade, penas somadas, cursos sem carga horária, exames, decisões antigas) - "
-                 "informação, nada a requerer por esta conta." % (_nf(R["concedido"]), _nf(comp), _nf(-dif)))
+        concl, concl_cor = ("O RSPE concedeu %s dias a mais do que a ficha comprova (documentos fora da ficha). Nada a requerer por esta conta." % _nf(-dif),
+                            "cinza")
     pouco = R["concedido"] > 1.3 * comp + TOL_COMPARACAO
-    if pouco:
-        concl += " Comparação pouco informativa: há remições de origem fora da ficha."
-    n_p = len([p for p in pontos if p["cor"] != "cinza"])
-    if n_p:
-        concl += " Há %s (abaixo)." % rs.pl(n_p, "ponto a conferir", "pontos a conferir")
     # ---- situação factual de cada documento (D) ----
     for d in docs:
         if d["fora"]:
@@ -1658,7 +1651,7 @@ def comparacao(r, f, hoje=None, manuais=None, homologados=None, trab=None):
     onde = onde_diferenca(dif, docs, post, verm, pontos, trab, ult_dec)
     return {"onde": onde, "R": R, "docs": docs, "at_desta": soma(at_), "n_desta": len(at_), "man": soma(man_), "n_man": len(man_), "est_comp": soma(est_),
             "leitura": soma(lei_), "obras": int(round(soma(lei_) / 4)), "fora": [d for d in docs if d["fora"]], "comp": comp, "dif": dif,
-            "estim": estim, "dif_estim": round(dif + estim, 2), "pouco": pouco, "concl": concl, "pontos": pontos,
+            "estim": estim, "dif_estim": round(dif + estim, 2), "pouco": pouco, "concl": concl, "concl_cor": concl_cor, "pontos": pontos,
             "pedir_dias": len(pedir) / 3.0, "talvez_dias": len(talvez) / 3.0, "est_estim": est_estim, "impressao": imp, "inicio": inicio,
             "ult_at": ult_at, "post": post, "vermelho": verm, "faltas_127": faltas_graves(r, f)}
 
