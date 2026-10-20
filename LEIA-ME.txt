@@ -1,9 +1,9 @@
-APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.13.0
+APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.14.0
 (antigo RSPE Base; SEEU, programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-7.13.0. A documentação técnica completa (cada parâmetro, a regra, a norma e
+7.14.0. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -1002,6 +1002,38 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v7.14.0
+  Remição (aba Ficha) sem ligar remição a atestado. O RSPE não diz de onde
+  vem cada remição, então o programa compara os totais: remição concedida no
+  RSPE, de um lado, e atestados, estudo e leitura da ficha, do outro, lado a
+  lado. Ao abrir o assistido aparece só essa comparação e o quadro "Onde pode
+  estar a diferença", com o que conferir e onde; o botão "Visualização
+  detalhada" abre o resto: pontos a conferir, cada período de trabalho da
+  ficha ligado ao atestado que o cobre (automático, possível, sugerido ou sem
+  atestado), o botão "Vincular atestado" para confirmar ou corrigir, a lista
+  de documentos com a coluna "✓ Homologado" e as remições do RSPE. Vínculos e
+  ✓ ficam gravados e valem depois de importar ficha nova.
+  - Diferença a favor da ficha: texto direto, em amarelo ("Verificar
+    remição"), indicando onde conferir, nunca um número a requerer.
+  - RSPE maior que a ficha: tudo em cinza ("Conferir (informativo)"),
+    menos o "Pedir atestado" de trabalho depois da última remição sem
+    documento na ficha e o vermelho de atestado desta execução, com dias,
+    sem peticionamento e posterior à última decisão.
+  - Atestado com remição do mesmo valor no RSPE, decidida até 180 dias
+    depois: "provavelmente remido em ... (mesmo valor): conferir", em cinza.
+  - Avisos novos em cinza: leitura remida a menor, atestado com dias
+    impossíveis no período e RSPE de outra execução associado à ficha.
+  - Trabalho em curso há até 90 dias: "Acompanhar atestado".
+  Relatórios, planilha de conferência, exportação, verso do resumo e decretos
+  deixaram de afirmar "dias a requerer" por inferência; no indulto, a remição
+  conta pela data da decisão.
+  Leitura da ficha: trabalho escrito em texto livre entra na lista de
+  trabalho; a saída da unidade nas fichas antigas ("Saída da CPAIG",
+  "transferido para", soltura) encerra o trabalho; respeita "tornar sem
+  efeito o lançamento", "desconsiderar a função" e a liberação do setor; nomes
+  de setor limpos e grafias da mesma empresa reconhecidas. Conferido em 640
+  fichas da PDIB e em 51 análises manuais de remição.
 
 v7.13.0
   Correções da conferência manual de 420 casos reais (60 por aba, base de
