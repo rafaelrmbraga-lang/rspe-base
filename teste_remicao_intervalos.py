@@ -74,7 +74,7 @@ try:
     ok(R["homologados"] == 203 and not R["perdidos"], "resumo: homologados %r" % R)
     ok(R["trab_ficha"] > 0 and abs(R["dir_ficha"] - R["trab_ficha"] / 3.0) < 0.01, "resumo: estimativa %r" % R)
     ok("fazendo jus a 237 dias de remição" in R["texto"] and "o sentenciado possui 203 dias remidos" in R["texto"]
-       and "insuficientes: faltam cerca de 34 dias" in R["texto"], "resumo: texto %r" % R["texto"])
+       and "insuficientes: faltam cerca de 21 dias" in R["texto"], "resumo: texto %r" % R["texto"])
     ok(not R["estudo"], "resumo: sem estudo na ficha %r" % R["estudo"])
     f2 = dict(f, estudos=[{"curso": "ENSINO FUNDAMENTAL", "inicio": "01.03.2012", "fim": "10.12.2012"}],
               leituras=[{"data": "10.05.2013", "meses": [], "obras": 1, "texto": "RELATÓRIO DE LEITURA"}])
