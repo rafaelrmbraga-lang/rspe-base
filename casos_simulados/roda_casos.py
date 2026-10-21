@@ -111,7 +111,7 @@ def conferir(j, ch, api=None, processo=None):
 
 CAMPOS_RESUMO = ("regime", "prog", "prog_sit", "prog_dias", "liv", "liv_sit", "termino", "ext_sit", "ext_termino", "ext_cor", "presc_ppe", "presc_retro",
                  "presc_cor", "i22", "i24", "i25", "c24", "c25", "imp", "falta", "falta_full", "fd_sit", "fd_remidos", "fd_atestar", "fd_estudo",
-                 "aud_resumo", "fd_sit_det", "fd_rem_det", "ext_hipoteses", "estado_exec", "parada_rot", "cumprimento", "frac_prog", "frac_liv", "dbase", "db")
+                 "aud_resumo", "fd_sit_det", "ext_hipoteses", "estado_exec", "parada_rot", "cumprimento", "frac_prog", "frac_liv", "dbase", "db")
 
 
 def main():

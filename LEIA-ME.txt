@@ -1,9 +1,9 @@
-APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.12.2
+APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.14.4
 (antigo RSPE Base; SEEU, programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-7.12.2. A documentação técnica completa (cada parâmetro, a regra, a norma e
+7.14.4. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -706,9 +706,10 @@ AUDITORIA
   Só o que prejudica o assistido vira ponto: divergência que o favorece
   (percentual ou fração menor que a legal, pena total menor que a soma,
   data-base anterior ao marco, hediondo tratado como comum, fuga da ficha
-  ausente no RSPE) não aparece. O 1/6 do SEEU vale como o 16% da lei (sem
-  alerta). Fuga e falta sem sanção reconhecida ficam como informação (não
-  pendência); o botão Preencher continua para registrar a decisão.
+  ausente no RSPE) não aparece. O 1/6 do SEEU onde a lei dá 16% é alerta,
+  com os dias a mais. Fuga e falta sem sanção reconhecida ficam como
+  informação (não pendência; no indulto e na comutação, "a verificar"); o
+  botão Preencher continua para registrar a decisão.
   Detração da ficha: prisão encerrada por alvará de soltura em processo que
   integra o RSPE, em período que o RSPE trata como liberdade, vira alerta
   com os dias (contados a partir do fato do crime desse processo).
@@ -1001,6 +1002,319 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v7.14.4
+  Resíduos da validação da 7.14.3.
+  - A remição sem documento no RSPE passa a cobrir primeiro o trabalho mais
+    próximo dela, antes de um atestado sem período emitido depois ficar com
+    o intervalo só por declarar mais dias do que ele comporta; o atestado
+    fica com o restante. O atestado de estudo ou curso com carga horária é
+    ligado à remição que fecha com as horas ÷ 12 quando os dias declarados
+    não fecham com nenhuma remição próxima. Na Auditoria, a "Diferença" da
+    detração descontada antes da fração passa a ser o lapso impresso menos a
+    forma favorável, e as três linhas fecham entre si; o aviso do regime
+    inicial sem efeito cita o último regime inicial válido. Ajustes de
+    texto: "execução suspensa ou sobrestada" e "arquivada" na saída
+    temporária e na progressão antecipada; no indulto, a âncora do SEEU
+    aparece só como referência, valendo o prazo pelos eventos; e a extinção
+    repetida na ficha aparece uma só vez no aviso de reincidência.
+
+v7.14.3
+  Rodada curta: pontos restantes da validação da 7.14.2.
+  - Remição: o atestado sem período e sem setor que declara mais dias do que
+    todo o trabalho sem atestado entre o atestado anterior e a sua emissão
+    passa a ficar com esse trabalho ("Sugerido · confirmar"), e o pedido não
+    sai em dobro. No vínculo sem baixa (a ficha registra só o início e a
+    saída da unidade, mais de um ano depois), o trecho após o último dia
+    documentado fica "a conferir" e não "pedir atestado". Entre dois
+    atestados que se repetem, fica o que tem remição do mesmo valor no RSPE.
+    A certidão de semestre sem carga horária ganha estimativa pela
+    matrícula; com mais de uma certidão candidata, a remição só se liga
+    quando o valor fecha, senão "conferir". O atestado de estudo com os dias
+    declarados entra na comparação como documento, com "conferir datas"
+    quando as datas estão invertidas.
+  - Saída temporária: a prisão provisória que só a ficha registra não é mais
+    somada duas vezes. Na progressão refeita, o 16% só substitui o 1/6 do
+    SEEU em crime sem violência ou grave ameaça, de primário e não hediondo.
+    Quando o SEEU fixa a data-base no início da guia nova com a pessoa já
+    presa, a Auditoria passa a estimar a progressão pela data-base correta,
+    com as remições abatidas, e a aba aponta essa estimativa. A soma das
+    penas sai em anos, meses e dias, como no SEEU. "Regime aberto, sem
+    progressão a calcular" deixa de aparecer quando a execução foi relançada
+    depois em regime mais grave. A nota do SEEU sobre falta nos 12 meses usa
+    a mesma data da coluna Falta e informa quando a janela venceu. No
+    indulto, o prazo que faltava vem pela conta dos eventos também quando há
+    falta grave, e o indulto concedido sem baixa no cálculo é avisado na
+    própria aba (pode ter sido só da multa). Na prescrição, a reincidência
+    reconhecida pela ficha entra no prazo, e o quadro diz quando a pena
+    começou a ser cumprida. Na Auditoria, a forma favorável da detração sai
+    pela conta direta e a detração inclui os dias da soltura que não se
+    efetivou.
+
+v7.14.2
+  Terceira rodada: correção dos 77 erros da reconferência manual da 7.14.1.
+  - Remição: o "pode já estar remido" passa a usar só o saldo de remição do
+    RSPE que nenhum documento da ficha explica (mesmo valor, ou soma de 2 ou
+    3 atestados, decididos até 3 anos depois da emissão; "provavelmente
+    remido" continua só até 180 dias, e depois disso aparece "mesmo valor
+    decidido em ...: conferir"). O saldo cobre o trabalho sem atestado do
+    mais próximo da remição para o mais antigo; o que sobra é "Pedir
+    atestado", e a fundamentação lista só esses trechos. O atestado contido
+    em outro não se soma; a remição sem documento dentro do período de um
+    atestado pendente reduz o pedido ("pedir ≈ X − Y"); exame e certidão são
+    ligados pela referência e pela tabela do CNJ; isolamento e saída
+    temporária são descontados; setores iniciados no mesmo dia não são
+    tratados como duplicados; o ano digitado errado no trecho do atestado é
+    corrigido; o trabalho na execução interrompida fica à parte; o atestado
+    "de outros autos" com remição nesta execução é conciliado; o RSPE maior
+    sem documentos na ficha não aparece mais "Em ordem".
+  - Progressão, livramento e Auditoria: a escolta hospitalar não é mais lida
+    como fuga. O crime que dá início ao cumprimento não conta como falta
+    grave. A condenação em regime mais grave ainda não somada deixa o regime
+    "a verificar: unificação pendente" e estima a progressão pelo regime
+    mais grave. A data-base calculada pelo programa segue a data da falta na
+    regressão e não aparece antes do início do cumprimento. A data-base do
+    SEEU contrária à lei (guia nova com a pessoa presa; livramento movido na
+    soma das penas) vira "verificar" na Auditoria com a data certa, e a aba
+    mantém a do SEEU. Na saída temporária, o trabalho passa a ser só
+    informação e a fração considera a pena somada, a soltura e a detração da
+    ficha. As notas do SEEU sobre falta fora dos 12 meses e sobre
+    indeferimento anterior ao lapso ficam explicadas.
+  - Indulto e comutação: quando há mais de um impedimento, o motivo mostrado
+    é primeiro o objetivo (crime, pena acima do teto, prazo) e depois a fuga
+    ainda não homologada. Com o indulto indeferido no RSPE, a comutação
+    volta a ser calculada sobre a soma de todas as penas, e a explicação diz
+    o mesmo que o detalhamento. Uma pena extinta depois do decreto que só
+    aumentaria o requisito não deixa mais a comutação "a verificar": o
+    resultado é "não atinge". Se o tempo pelos eventos passa em mais de 180
+    dias a custódia desde os fatos das penas, a comutação é o resultado
+    firme e o indulto fica a verificar. Quem estava preso na data depois do
+    aberto ou do livramento aparece como preso, com o regime do SEEU como
+    ressalva. A reincidência também é reconhecida quando a ficha mostra
+    outra pena em cumprimento antes do fato, mesmo extinta depois.
+  - Prescrição e extinção: quando o SEEU corta a lista de processos de um
+    evento, a ação que aparece em outro incidente da execução passa a contar
+    como listada no cálculo da detração. O término calculado pelo programa
+    (guia sem cálculo) desconta a prisão provisória do próprio processo que
+    só a ficha registra. A detração por prisão em outro processo não é mais
+    sugerida quando, naquele período, a pessoa cumpria outra execução. A
+    dúvida sobre a idade (art. 115) volta a aparecer quando o resultado
+    depende dela. A prisão depois de uma fuga passa a contar como
+    cumprimento quando há regressão ou perda de dias remidos nesta execução.
+    O indulto lançado sem baixa no cálculo do SEEU fica "a verificar" (pode
+    ter sido só da multa), e as penas continuam nas contas. A data em que a
+    pena remanescente seria alcançada passa a ser contada pelo calendário.
+
+v7.14.1
+  Segunda rodada de correções da conferência manual (pontos que a reconferência
+  apontou) e das análises manuais de remição.
+  - Auditoria, segunda conferência: a data de nascimento lida da ficha não
+    pede mais para ser informada; artigo já revogado na data do fato (como o
+    antigo art. 217) aparece como aviso de cadastro; a volta depois de uma
+    fuga lançada como "início do cumprimento" é tratada como recaptura (sem
+    falta reconhecida, a data-base fica a verificar); a conta da detração
+    antes da fração segue a forma do SEEU (em meses); o aviso do regime
+    inicial só é "sem efeito" quando a data-base atual tem marco firme; a
+    soltura que só a ficha mostra deixa o recálculo em "verificar" (pode
+    expor erro favorável); prisão definitiva não é tratada como provisória;
+    havendo livramento e nova prisão, a fração do livramento traz a ressalva
+    do art. 88; remição pretérita sem efeito atual vira informação; o limite
+    de 1/3 da perda de remidos é por falta; crime cometido em liberdade
+    provisória, antes de qualquer trânsito, não é falta da execução; pena
+    extinta de outra execução só pelo art. 28 não serve de base para
+    reincidência; execução extinta mostra "Pena extinta" no término; a nova
+    prisão da ficha é a entrada depois do alvará.
+  - Indulto e comutação: a soma das penas passa a ser feita por anos, meses
+    e dias, como no SEEU; o livramento condicional encerrado que o SEEU
+    lançou como interrupção deixa de contar como pena cumprida; no crime
+    praticado durante a execução, a remição datada depois do fato só conta
+    até 1 dia por 3 dias desde o fato, e a perda de dias remidos depois do
+    fato é descontada; no concurso com crime impeditivo, o tempo só vale
+    para os demais crimes a partir do fato deles; impeditivo de reclusão com
+    demais de detenção não gera mais "não há pena a comutar"; condenação sem
+    trânsito com recurso impresso fica "a verificar" (art. 2º, II); faltas
+    da ficha com datas próximas aparecem todas; o texto da comutação
+    acompanha o indulto indeferido ou a verificar; reincidência pelas datas
+    também decide a comutação já a verificar.
+  - Prescrição: quando o SEEU corta na margem a lista de processos de uma
+    prisão (linha terminada em vírgula), o programa volta a ligar a prisão
+    aos processos impressos, em vez de "sem processo indicado"; continua o
+    aviso na Auditoria para conferir a lista completa, e a ação fora da
+    lista recebe a nota "lista cortada no RSPE". A tese de pena já cumprida
+    na fuga (ordem do trânsito e art. 76) aparece também na aba Extinção
+    como "a verificar", e deixa de ser proposta quando condenação sem
+    trânsito anterior à fuga pode ter recebido o tempo antes. "Suspenso:
+    Sim" em crime que não admite suspensão condicional do processo pede
+    conferência do ANPP ou do sursis. Intercorrente sem acórdão: "recurso ou
+    demora na intimação". Reincidência sem condenação anterior transitada é
+    afastada também quando as outras condenações não transitaram.
+  - Remição: a ficha passa a encerrar o estudo quando a desistência da
+    escola aparece só na mudança de cela e lê o certificado da "Jornada da
+    Leitura no Cárcere" como leitura a conferir; o valor possível de
+    ENEM/ENCCEJA vai de 20 dias (uma área do ENEM) a 133,33 dias
+    (fundamental completo), mais 1/3 com a conclusão certificada; o pedido
+    de atestado do trabalho em curso diz até quando vai a conta (impressão
+    da ficha) e há quantos dias está em curso; aviso de atestado que cita
+    outra unidade penal quando a ficha mostra o assistido em outra unidade
+    sem trabalho no período; matrícula cancelada no dia da saída indica a
+    unidade de origem para pedir a certidão.
+
+v7.14.0
+  Remição (aba Ficha) sem ligar remição a atestado. O RSPE não diz de onde
+  vem cada remição, então o programa compara os totais: remição concedida no
+  RSPE, de um lado, e atestados, estudo e leitura da ficha, do outro, lado a
+  lado. Ao abrir o assistido aparece só essa comparação e o quadro "Onde pode
+  estar a diferença", com o que conferir e onde; o botão "Visualização
+  detalhada" abre o resto: pontos a conferir, cada período de trabalho da
+  ficha ligado ao atestado que o cobre (automático, possível, sugerido ou sem
+  atestado), o botão "Vincular atestado" para confirmar ou corrigir, a lista
+  de documentos com a coluna "✓ Homologado" e as remições do RSPE. Vínculos e
+  ✓ ficam gravados e valem depois de importar ficha nova.
+  - Diferença a favor da ficha: texto direto, em amarelo ("Verificar
+    remição"), indicando onde conferir, nunca um número a requerer.
+  - RSPE maior que a ficha: tudo em cinza ("Conferir (informativo)"),
+    menos o "Pedir atestado" de trabalho depois da última remição sem
+    documento na ficha e o vermelho de atestado desta execução, com dias,
+    sem peticionamento e posterior à última decisão.
+  - Atestado com remição do mesmo valor no RSPE, decidida até 180 dias
+    depois: "provavelmente remido em ... (mesmo valor): conferir", em cinza.
+  - Avisos novos em cinza: leitura remida a menor, atestado com dias
+    impossíveis no período e RSPE de outra execução associado à ficha.
+  - Trabalho em curso há até 90 dias: "Acompanhar atestado".
+  Relatórios, planilha de conferência, exportação, verso do resumo e decretos
+  deixaram de afirmar "dias a requerer" por inferência; no indulto, a remição
+  conta pela data da decisão.
+  Leitura da ficha: trabalho escrito em texto livre entra na lista de
+  trabalho; a saída da unidade nas fichas antigas ("Saída da CPAIG",
+  "transferido para", soltura) encerra o trabalho; respeita "tornar sem
+  efeito o lançamento", "desconsiderar a função" e a liberação do setor; nomes
+  de setor limpos e grafias da mesma empresa reconhecidas. Conferido em 640
+  fichas da PDIB e em 51 análises manuais de remição.
+
+v7.13.0
+  Correções da conferência manual de 420 casos reais (60 por aba, base de
+  08/10/2026), conferidos contra os PDFs originais. Decisões do usuário
+  aplicadas: o 1/6 do SEEU onde a lei dá 16% passa a alerta; a fuga sem
+  homologação deixa o indulto e a comutação "a verificar" (não impede); a
+  vedação do livramento no tráfico exige condenação anterior por crime da
+  Lei de Drogas.
+  - Leitura do RSPE e da ficha: quando o SEEU imprime no mesmo dia a soltura
+    antes da prisão (ou a recaptura antes da interrupção), o programa não
+    cria mais prisão inexistente nem "dias sem cômputo" falsos. Quando a
+    ficha mostra que a prisão é de outro processo, é prisão civil (pensão)
+    ou serviu a outra execução já extinta, o programa diz isso e não a conta
+    como início desta pena. Também aponta a liberdade provisória que não
+    virou soltura na ficha. Números de processo com erro de digitação na
+    ficha são reconhecidos. Na aba Extinção, o fim do período de prova do
+    livramento usa a pena da época, e passam a aparecer, como "a verificar":
+    a prisão em outro processo que já cobre o que falta da pena, a execução
+    arquivada com pena ativa e a extinção parcial quando há condenação por
+    fato posterior à prisão. O término da guia sem cálculo soma as penas
+    como o SEEU (ano, mês e dia).
+  - Faltas disciplinares: a fuga passa a ser uma ocorrência só, da evasão
+    até a recaptura. A regressão cautelar decretada durante a fuga e a
+    homologação que o SEEU lança na recaptura não aparecem mais como outra
+    falta "a apurar", nem pesam duas vezes no indulto e na comutação. Os 12
+    meses sem falta do livramento e o prazo de prescrição da falta contam da
+    recaptura, e a recaptura registrada só na ficha também vale. Perda de
+    dias remidos ou regressão decidida depois da recaptura mostram que a
+    falta foi reconhecida, mesmo sem o incidente de homologação. O crime
+    doloso cometido durante a execução, com condenação transitada, conta
+    como falta grave na coluna Falta e na data do livramento. Quando a data
+    do livramento do SEEU é só os 12 meses de uma falta ainda não
+    reconhecida, ela aparece "A verificar". "Responde PADIC" fica a
+    conferir. A saída temporária e a progressão antecipada contam a falta
+    dos 12 meses até hoje. A ficha passa a confirmar a fuga e a recaptura
+    lidas no RSPE, e reconhece o processo escrito com ponto.
+  - Reincidência e frações: o programa passou a testar a reincidência pelas
+    datas do próprio RSPE e da ficha, e não só pela marcação do SEEU. Quando
+    a ficha mostra pena de outro processo extinta há menos de 5 anos do
+    fato, a reincidência tem base. Quando a pessoa tinha 18 anos (ou menos)
+    no fato, ou no tráfico privilegiado, não há reincidência, e o programa
+    aponta as frações do primário. Sem base nem desmentido, as frações de
+    reincidente deixam de aparecer como "confere" e passam a "verificar",
+    com a fração do primário e os dias de diferença. O 1/6 aplicado pelo
+    SEEU onde a lei dá 16% passou a ser alerta, com os dias a mais. No
+    tráfico, o livramento só é vedado quando a condenação anterior é por
+    crime da Lei de Drogas. No homicídio, a pena passou a indicar a
+    consumação (resultado morte) para apontar o percentual certo. As abas de
+    Progressão e Livramento avisam quando o SEEU usa a fração do primário
+    para quem é reincidente pela lei.
+  - Detração antes da fração: a Auditoria agora mostra a diferença no grupo
+    de crimes em que o SEEU descontou a prisão provisória, lendo os lapsos
+    que ele imprime por fração, e não pela média das frações. Se o SEEU já
+    aplicou a fração sobre a pena inteira, não há alerta. A mesma conta vale
+    quando a data-base foi para uma nova prisão depois de soltura.
+    Progressão negada depois do regime inicial tardio fica "a verificar".
+    Passam a informação, sem o "!", os pontos que favorecem o assistido ou
+    não têm efeito: pena total menor que a soma, unificação que reduziu a
+    pena, data de nascimento diferente que não muda nenhum marco, remição
+    lançada tarde quando o decreto não seria alcançado e nascimento já lido
+    da ficha. Data-base a um dia da prisão não aparece mais como "confere".
+    Quando o SEEU não imprime a data-base, o programa usa o início do
+    cumprimento ou a nova prisão por crime novo. O livramento revogado no
+    próprio cálculo do SEEU deixa de ficar "a verificar". Saída temporária e
+    progressão antecipada explicam o motivo certo e usam a data do RSPE. A
+    lista de frações mostra só as que o SEEU aplicou. Número de processo com
+    dígito trocado na ficha é apontado como digitação.
+  - Remição: o programa agora liga cada remição do RSPE à sua origem.
+    Certidões de frequência escolar e cursos de qualificação peticionados
+    (com todos os meses), cursos com carga horária e exames (ENCCEJA/ENEM)
+    explicam a remição decidida logo depois, que aparece como "Remido no
+    RSPE" no bloco Estudo e deixa de ser "sem origem" ou trabalho. O
+    programa também reconhece a decisão que soma atestado e leitura e o
+    excedente de uma remição que paga outro atestado. Para não pedir em
+    duplicidade: a remição maior que o trabalho registrado fica "sem
+    origem", com o trabalho a conferir; atestado contido em outro cumulativo
+    não se soma; atestado do período em que a execução estava suspensa pela
+    liberdade é de outra custódia; leitura que pode já estar remida fica
+    "verificar". Atestado com remição posterior menor que ele continua no
+    total pela diferença. Lacunas, referência tardia, "último atestado há 6
+    meses" e perdas de remidos ficaram mais precisos.
+  - Remição na aba Ficha: o trabalho e o estudo em curso passam a ser
+    estimados só até a data de impressão da ficha, porque a ficha não prova
+    o que veio depois. Quando a ficha informa a jornada (de segunda a sexta,
+    12x36), a estimativa usa essa jornada. Os dias em que a pessoa aparece
+    em dois setores ao mesmo tempo contam uma vez só, e a tabela, a remição
+    detalhada e o resumo mostram o mesmo número. O resumo da seção A agora
+    diz o que falta de cada atestado sem remição, o que fica a conferir e as
+    remições do RSPE sem origem, em vez de comparar somas. A linha fica
+    amarela, e não verde, quando há pontos a conferir. O aviso de "6 meses
+    sem atestado" conta a partir do início do trabalho atual. Deixaram de
+    aparecer as "baixas sem início" e os "vínculos sobrepostos" causados por
+    um mesmo início lançado duas vezes. O envio do atestado pelo ESAJ conta
+    como peticionamento. A lacuna desconta os períodos fora da custódia e os
+    já cobertos por outro atestado. A ressalva da perda de até 1/3 (art.
+    127) cita primeiro as faltas homologadas.
+  - Indulto e comutação: o tempo cumprido antes de um crime não conta mais
+    para a pena desse crime. A fração do crime que impede o benefício (2/3
+    em 2024 e 2025) passa a usar só o tempo posterior ao fato dele, e o
+    "faltam X" ficou correto. Fuga sem homologação na janela de 12 meses não
+    impede mais o indulto nem a comutação (2023, 2024 e 2025): fica "a
+    verificar" até o juiz reconhecer a falta. Quando o SEEU não marca
+    reincidência, mas as datas do RSPE a mostram, o programa não afirma
+    "cabe" como primário: refaz a conta como reincidente ou deixa "a
+    verificar". Quem cumpriu pena e depois fugiu aparece como "cumprimento
+    interrompido", não "não iniciou". As datas não aparecem mais como "11
+    meses e 33 dias". A comutação mostra quando a comutação anterior não foi
+    descontada. A comutação não fica "prejudicada" quando o indulto ainda
+    está a verificar. O inciso XV (furto sem violência) e o art. 3º (pena
+    substituída ou suspensa) passam a ser considerados onde antes eram
+    ignorados.
+  - Prescrição: o programa deixa de dar prescrição "aparente" com base em
+    dado duvidoso: pede conferência quando a intercorrente pode ter sido
+    interrompida por acórdão sem data no RSPE, quando as datas são
+    impossíveis (pessoa menor de 18 anos na denúncia, prisão em flagrante
+    anterior ao fato) e quando a pena do RSPE parece ser só o acréscimo do
+    concurso de crimes; avisa para conferir a suspensão condicional do
+    processo e o "Suspenso: Sim" do SEEU. Quando o próprio RSPE já resolve,
+    afirma em vez de pedir conferência (art. 28 que não prescreveu em
+    nenhuma hipótese; crime sem data de trânsito com resultado igual em
+    qualquer data possível; reincidência resolvida pela fração de primário;
+    pena remanescente do SEEU na fuga). Também desconta a remição perdida,
+    só atribui a custódia a outra condenação depois que ela entra no
+    cumprimento e até a pena dela, e corrige um dia a mais na contagem da
+    suspensão.
 
 v7.12.2
   - Progressão antecipada: o critério é o do juízo (não de lei) e passa a

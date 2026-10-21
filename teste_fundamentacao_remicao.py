@@ -18,8 +18,10 @@ def ok(cond, msg):
 
 
 def F(eventos, exames=(), leituras=()):
-    return {"data_impressao": "07/10/2026", "eventos": [{"data": d, "texto": t} for d, t in eventos],
-            "exames": list(exames), "leituras": list(leituras)}
+    # (7.14: a remição usa os campos lidos da ficha - trabalho, atestados - como na base: a ficha de teste passa pela leitura)
+    f = rf.atualizar({"data_impressao": "07/10/2026", "eventos": [{"data": d, "texto": t} for d, t in eventos]})
+    f.update(exames=list(exames), leituras=list(leituras))
+    return f
 
 
 def R(*incs, prog=None):
