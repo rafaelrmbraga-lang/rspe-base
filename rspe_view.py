@@ -1022,6 +1022,13 @@ def extincao(r, presc, interr):
             hip.append("%s: a verificar - custódia anterior ao trânsito de %s iguala ou supera a pena do processo (%s); se computada nesta "
                        "condenação, extinção pelo cumprimento (CP, art. 42; LEP, arts. 66, II, e 111)" % (l.get("rotulo") or l["crime"], rs.dias_para_pena(l.get("ppe_detracao_dias") or 0), l.get("ppe_pena_processo") or l["pena"]))
             a_verificar = True
+        if l.get("ppe_saldo_zero_crit") and not l.get("ppe_saldo_zero"):
+            # várias condenações na fuga: por algum critério de imputação do tempo cumprido, a pena deste crime já estava cumprida
+            _z = l["ppe_saldo_zero_crit"]
+            hip.append("%s: a verificar - pel%s %s, o tempo cumprido até a fuga de %s já esgotava a pena deste crime (saldo zero). "
+                       "Conferir o saldo no cálculo do SEEU e, se confirmado, pedir a extinção pelo cumprimento (LEP, art. 66, II)" % (
+                           l.get("rotulo") or l["crime"], "os critérios" if " e " in _z["criterios"] else "o critério", _z["criterios"], _z["fuga"]))
+            a_verificar = True
         if l.get("ppe_saldo_zero"):
             # única condenação em execução: pelo tempo cumprido nos eventos do RSPE, a pena se esgotou antes da fuga
             hip.append("%s: pena já cumprida na fuga de %s, pelos eventos do RSPE. Conferir no cálculo do SEEU e pedir a extinção "

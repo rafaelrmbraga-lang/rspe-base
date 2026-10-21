@@ -14,6 +14,7 @@ TESTES += ["teste_conf_D1.py"]  # conferência manual (7.13.0), frente D1: remi�
 TESTES += ["teste_remicao_714.py"]  # remição 7.14: comparação por totais e trabalho x atestados com vinculação
 TESTES += ["teste_remicao_714b.py"]  # remição 7.14, segunda rodada: provavelmente remido, cinza com RSPE maior, atestado sem período, aviso de outra execução
 TESTES += ["teste_leitura_714.py"]
+TESTES += ["teste_conf2_prescricao.py"]  # conferência 7.14, frente prescrição: lista cortada, saldo zero na Extinção, ANPP/sursis, recurso/intimação, reincidência sem base
 falhas = [t for t in TESTES if subprocess.call([sys.executable, t]) != 0]
 if falhas:
     print("FALHOU: " + ", ".join(falhas))

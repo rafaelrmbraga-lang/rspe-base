@@ -85,10 +85,12 @@ inc = rs.blocos_tipo("Tipo: SOMATÓRIO\n%s, %s,\nProcessos Selecionados: %s\n" %
 ok(not inc.get("processos_incompletos") and P3 in inc["processos"], "18: lista do incidente em duas linhas não é cortada: %s" % inc)
 evs = [dict(partida)]
 rs._completar_processos_eventos([crime(P3)], evs, [])
-ok(evs[0]["processos"] == "" and evs[0]["processos_rspe"].startswith(P1), "18: lista incompleta não liga a prisão a processo: %s" % evs[0])
-r = reg([crime(P1)], [ev("22/09/2026", procs="", processos_incompletos=True, processos_rspe="%s, %s," % (P1, P2))])
+# conferência 7.13 (prescricao 11, 20 e 47): os processos impressos ligam a prisão; só o que estivesse na parte cortada fica de fora
+ok(P1 in evs[0]["processos"] and P2 in evs[0]["processos"] and evs[0]["processos_rspe"].startswith(P1),
+   "18: lista incompleta liga a prisão aos processos impressos: %s" % evs[0])
+r = reg([crime(P1)], [ev("22/09/2026", procs="%s, %s" % (P1, P2), processos_incompletos=True, processos_rspe="%s, %s," % (P1, P2))])
 ok("lista-processos-incompleta-rspe" in tipos(r, "verificar"), "18: Auditoria avisa a lista incompleta")
-ok(rs.periodos_custodia_detalhe(r["_eventos"])[0][3] == "", "18: custódia sem processo indicado")
+ok(P1 in rs.periodos_custodia_detalhe(r["_eventos"])[0][3], "18: custódia ligada aos processos impressos")
 ok(rs.reimportar_motivos({"versao_leitura_rspe": 4, "_eventos": [ev("01/01/2020", procs="%s, %s, %s" % (P1, P2, P3))]}),
    "18: registro da versão 4 com lista de 3 processos pede reimportação")
 ok(not rs.reimportar_motivos({"versao_leitura_rspe": 4, "_eventos": [ev("01/01/2020")]}), "18: lista curta não pede reimportação")

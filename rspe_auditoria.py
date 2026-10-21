@@ -1148,8 +1148,8 @@ def auditar(r, hoje=None):
     if _cort:
         itens.append(_item("verificar", "Lista de processos incompleta no RSPE: %s" % rs.pl(len(_cort), "evento", "eventos"),
                            "Em %s, a lista \u201cProcessos Selecionados\u201d sai cortada na margem pelo próprio SEEU (o PDF não traz o restante). "
-                           "O programa não usa essa lista para ligar a prisão a um processo: a custódia fica sem processo indicado, e a detração, "
-                           "o fato posterior e a custódia por ação ficam a conferir nos autos." % "; ".join(
+                           "O programa liga a prisão aos processos impressos; um processo que estivesse só na parte cortada fica como não listado. "
+                           "Confira nos autos a lista completa: ela pode mudar a detração, o fato posterior e a custódia por ação." % "; ".join(
                                "%s de %s (lista impressa: %s…)" % ((e.get("motivo") or e.get("tipo") or "evento").lower(), e.get("data") or "?",
                                                                   (e.get("processos_rspe") or "").rstrip(" ,")) for e in _cort[:6]),
                            "CP, art. 42; LEP, art. 111.", tipo="lista-processos-incompleta-rspe"))

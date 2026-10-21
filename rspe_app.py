@@ -4738,7 +4738,7 @@ def _leitura_rspe(r, faltam):
             else ": baixar o RSPE de novo no SEEU e importar"))
     _cort = [e for e in r.get("_eventos") or [] if e.get("processos_incompletos")]
     if _cort:
-        obs.append("lista de processos incompleta no RSPE (cortada na margem pelo SEEU) em %s: não usada para ligar a prisão a processo"
+        obs.append("lista de processos incompleta no RSPE (cortada na margem pelo SEEU) em %s: a prisão liga só aos processos impressos"
                    % rs.pl(len(_cort), "evento", "eventos"))
     if rs.sem_inicio_seeu(r):
         obs.append("sem eventos nem incidentes: pena não iniciada no SEEU")

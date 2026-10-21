@@ -832,8 +832,14 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
         fim = b or hoje
         mot = (motivo or "prisão").lower()
         fonte = "%s de %s%s" % (mot, rs.fmt(a), (" (processo %s)" % procs) if procs else " (sem processo indicado)")
+        cortada = bool(lst) and not liga and any(e.get("processos_incompletos") and rs.to_date(e.get("data") or "") == a for e in eventos)
+        if cortada:
+            # lista cortada na margem pelo SEEU: esta ação não está entre os processos impressos, mas pode estar na parte cortada
+            fonte = fonte[:-1] + "; lista cortada no RSPE - conferir se esta ação está na parte que falta)"
         if a < termo:
             f = min(fim, termo)
+            # lista cortada: vale a lista impressa também para a detração - a custódia lançada nas ações impressas era cumprimento
+            # delas, e lê-la como "sem processo indicado" a convertia em detração das demais (conferência 7.13, prescricao 29)
             if liga and fato and f <= fato:
                 # prisão encerrada antes do fato: não é detração deste crime (CP, art. 42 - vedada a "conta corrente" de pena)
                 lt(a, f, "outro_motivo", fonte, "prisão anterior ao fato deste crime: não é detração dele (CP, art. 42)")
@@ -1438,7 +1444,7 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
                     res = "prescrita" if lim_h < ref else "não prescrita"
                 else:
                     m, lim_h, res = None, None, "nada a prescrever"
-                return {"posicao": pos, "de": len(ordem), "saldo": s, "prazo_meses": (int(m) if m is not None else None),
+                return {"posicao": pos, "de": len(ordem), "saldo": s, "antes": antes, "prazo_meses": (int(m) if m is not None else None),
                         "prazo": fmt_prazo(m) if m is not None else "", "limite": rs.fmt(lim_h) if lim_h else "", "resultado": res,
                         "_lim": lim_h}
 
@@ -1470,6 +1476,7 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
             hipcron = _hip(sorted(em_exec, key=lambda t: (t[0], -t[1], _desemp(t))))
             # leitura da 6ª Turma (AgRg no HC 1.075.773): a pena maior primeiro, pelo tamanho
             hipgrav = _hip(sorted(em_exec, key=lambda t: (-t[1], t[0], _desemp(t))))
+            _antes_h = [h_.pop("antes") for h_ in (hipcron, hip76, hipgrav)]  # tempo imputado antes deste crime em cada critério
             tese76 = None
             _crit_zero = []
             crit_concordam = None  # os três critérios de imputação deram o mesmo resultado (True = prescrita)
@@ -1532,9 +1539,14 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
                 _pres_lim = [(_limite(Fraction(prazo_base_anos(s_, fato) * 12) * fator)[0] < ref) for s_ in _faixas_saldo(saldo_min, saldo_max) if s_ > 0]
                 # critério que zera o saldo (pena já cumprida antes da fuga) não "dá o mesmo resultado": é tese de extinção pelo
                 # cumprimento - não se conclui pelos critérios (conferência 7.13, prescricao-47)
-                _crit_zero = [n_ for n_, s_ in zip(("ordem do trânsito", "art. 76", "pena mais grave primeiro"), _sc) if s_ <= 0]
+                # condenação sem trânsito por fato anterior à fuga (execução provisória, somada pelo SEEU) pode ter recebido o tempo
+                # antes - pelo art. 76, a mais grave primeiro: o saldo zero só vale se resistir a ela imputada antes (conferência 7.13,
+                # prescricao-13: tráfico sem trânsito, com a custódia lançada só para ele, fora da conta)
+                _px_st = sum(rs.pena_para_dias(x.get("pena_imposta") or x.get("pena_total_processo")) or 0 for x in _sem_tr_g)
+                _crit_zero = [n_ for n_, s_, h_ in zip(("ordem do trânsito", "art. 76", "pena mais grave primeiro"), _sc, _antes_h)
+                              if s_ <= 0 and pena - max(0, cumprido_total - h_ - _px_st) <= 0]
                 if _pres and len(set(_pres)) == 1 and len(set(_pres_lim)) > 1 and (ctx.get("saldos_inf") or {}).get(rs.fmt(g0)) is None \
-                        and not _crit_zero:
+                        and not any(s_ <= 0 for s_ in _sc):
                     saldo_min, saldo_max = min(_sc), max(_sc)
                     crit_concordam = _pres[0]
             _det_txt = (" (descontados %s de detração - CP, art. 42)" % _d(detr)) if detr else ""
@@ -1562,6 +1574,11 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
                 saldo_rotulo = ("Saldo não determinado: com %d condenações em execução na fuga, ele depende de como o SEEU imputou o tempo cumprido "
                                 "(%s) entre elas. Informe o saldo de cada uma (aba Prescrição > Calcular); até lá, só se afirma o que vale em "
                                 "qualquer imputação (saldo entre %s e %s)." % (len(em_exec), _d(cumprido_total), _pena_ou_zero(saldo_min), _pena_ou_zero(saldo_max)))
+                if "ordem do trânsito" in _crit_zero and "art. 76" in _crit_zero:
+                    # a mesma tese vai para a aba Extinção (conferência 7.13, prescricao-47) quando os dois critérios do STJ (5ª T.) e do
+                    # TJMS - ordem do trânsito e art. 76 - zeram o saldo; só pela pena mais grave (6ª T.) ou só por um deles fica na aba
+                    # Prescrição
+                    L["ppe_saldo_zero_crit"] = {"fuga": rs.fmt(g0), "criterios": _e_lista(_crit_zero)}
                 if _crit_zero and len(_crit_zero) < 3:
                     saldo_rotulo += (" Pel%s %s, o saldo seria zero: a pena deste crime estaria cumprida antes da fuga - tese de extinção pelo "
                                      "cumprimento (LEP, art. 66, II); conferir no SEEU." % (
@@ -3270,7 +3287,9 @@ def analisar(r, hoje=None, ficha=None):
         # com outras condenações no RSPE, todas transitadas depois do fato, a reincidência marcada não tem base: calcula sem o +1/3
         # (com alerta). Com uma condenação só, o RSPE não mostra o passado (condenação anterior já extinta): segue a reincidência
         # marcada e confere a hipótese sem ela
-        reinc_afastada = bool(reinc_sem_base and _trs)
+        # vale também quando as outras condenações ainda não transitaram (nenhuma pode ser a anterior): o tratamento era diferente
+        # do da condenação posterior já transitada (conferência 7.13, prescricao-57 x 59)
+        reinc_afastada = bool(reinc_sem_base and _outras)
         # o RSPE marca primário (ou não informa), mas outra condenação dele transitou antes do fato: a reincidência (+1/3 no prazo da
         # executória - CP, arts. 63 e 110) pode ter sido reconhecida na sentença - a hipótese com ela é conferida (conferência 7.13)
         _tr_ant = [d_ for d_ in _trs if _fx and d_ < _fx]
@@ -3579,9 +3598,12 @@ def analisar(r, hoje=None, ficha=None):
                                "sentença, interrompe o prazo (CP, art. 117, IV; STF, HC 176.473); sua data não consta do RSPE (informe-a em \"editar dados\")." % (
                                    (c.get("pena_total_processo") or "").strip()))
                 else:
-                    det.append("⚠ A verificar: entre a sentença e o trânsito passou mais que o prazo, o que só se explica por recurso - o acórdão, "
-                               "inclusive o que confirma a sentença, interrompe o prazo (CP, art. 117, IV; STF, HC 176.473), e sua data não consta do "
-                               "RSPE (informe-a em \"editar dados\").")
+                    # o intervalo longo também se explica pela demora na intimação da sentença (sem recurso, a punitiva corre até o
+                    # trânsito): não se presume recurso (conferência 7.13, prescricao-43)
+                    det.append("⚠ A verificar: entre a sentença e o trânsito passou mais que o prazo. Isso pode decorrer de recurso ou de demora na "
+                               "intimação da sentença. Se houve recurso, o acórdão, inclusive o que confirma a sentença, interrompe o prazo (CP, art. "
+                               "117, IV; STF, HC 176.473), e sua data não consta do RSPE (informe-a em \"editar dados\"); sem recurso, a prescrição "
+                               "corre até o trânsito e está configurada.")
         elif faltando and _limites_ok(fato, den, sent, tpr or tmp, rs.to_date(r.get("data_geracao_rspe") or "") or hoje, ppp_meses, det):
             # a data ausente fica entre duas conhecidas: se nem o intervalo maior que a contém completa o prazo, nenhum dos
             # menores completa - não configurada, sem presumir a data
@@ -3671,7 +3693,20 @@ def analisar(r, hoje=None, ficha=None):
         if (L["retro_cor"] == "vermelho" or _retro_q) and pior and (_susp_seeu or (_admite89 and pior == "denúncia → sentença")):
             _a, _b = _iv[pior]
             _lim4 = ultimo_dia(_a, ppp_meses + 48) + timedelta(days=_ov(_a, _b, s_fim))
-            if _susp_seeu or _b <= _lim4:
+            # "Suspenso: Sim" em crime que não admite a suspensão do processo (pena mínima acima de 1 ano, violência doméstica): a
+            # marca vem do sursis da pena (CP, art. 77) ou de acordo de não persecução penal - só o ANPP suspende a punitiva
+            # (conferência 7.13, prescricao-12: furto qualificado, pena mínima de 2 anos)
+            _pmin89 = _pmin if _pmin is not None else rs.pena_minima_abstrata(c, extenso=True)
+            _nao89 = _susp_seeu and not _viol_dom and _pmin89 is not None and _pmin89 > rs.DIAS_ANO or _susp_seeu and _viol_dom
+            if _nao89:
+                if L["retro_cor"] == "vermelho" and "conferir" not in L["retro_status"]:
+                    L["retro_status"] += " - conferir acordo de não persecução penal"
+                det.append("⚠ O SEEU marca \"Suspenso: Sim\" neste crime, mas ele não admite a suspensão condicional do processo (%s): a marca "
+                           "indica, em regra, o sursis da pena (CP, art. 77), que não altera a prescrição da pretensão punitiva. Só o acordo de não "
+                           "persecução penal suspende o prazo enquanto não cumprido ou rescindido (CP, art. 116, IV) - conferir na ação penal se "
+                           "houve." % ("violência doméstica - Lei 11.340/2006, art. 41" if _viol_dom else
+                                       "pena mínima de %s; Lei 9.099/1995, art. 89" % rs.dias_para_pena(_pmin89)))
+            elif _susp_seeu or _b <= _lim4:
                 if L["retro_cor"] == "vermelho" and "conferir suspensão condicional" not in L["retro_status"]:
                     L["retro_status"] += " - conferir suspensão condicional do processo"
                 det.append("⚠ Conferir %s: a suspensão condicional do processo (Lei 9.099/1995, art. 89, § 6º) não deixa correr a prescrição "
