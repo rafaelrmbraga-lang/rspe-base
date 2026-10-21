@@ -1717,7 +1717,9 @@ def comparacao(r, f, hoje=None, manuais=None, homologados=None, trab=None):
     for d in sorted([d for d in desta if d["dias"] and d["emissao"] and not d.get("provavel") and d["tipo"] != "Leitura"], key=lambda d: d["emissao"]):
         i = _livres(d, 1095, lambda x, d=d: abs(x["dias"] - d["dias"]) <= 1)
         if i is not None:
-            orig[i], d["provavel"] = d, _f(rem_[i]["decisao"])
+            # decisão do usuário: "provavelmente remido" só até 180 dias; depois disso o mesmo valor só explica a remição (não a
+            # deixa "sem documento") e aparece como "mesmo valor decidido em ...: conferir"
+            orig[i], d["provavel"], d["provavel_tarde"] = d, _f(rem_[i]["decisao"]), True
     # exame e certidão/curso sem o valor na ficha: a remição (não de leitura) decidida até 180 dias depois, com referência posterior ao
     # início da prova ou do período - de 10 dias ou mais no exame; na certidão e no curso, também a pequena (1 dia de um semestre curto).
     # O exame primeiro (o certificado de conclusão do ENCCEJA antes), depois a certidão e o curso; no exame, o valor da tabela do CNJ (Res. 391/2021, art. 3º: áreas de 20 dias no
@@ -1767,6 +1769,8 @@ def comparacao(r, f, hoje=None, manuais=None, homologados=None, trab=None):
             usados_ |= {id(d) for d in achou}
             for d in achou:
                 d["provavel"] = _f(x["decisao"])
+                if d["emissao"] and (x["decisao"] - d["emissao"]).days > 180:
+                    d["provavel_tarde"] = True
                 d["soma_com"] = [o["num"] or o["tipo"] for o in achou if o is not d]
                 d["soma_rem"] = x["dias"]
     # (7.14.2) atestado ainda sem decisão (emitido ou peticionado depois da última remição) cujo período contém a referência de uma remição
@@ -1967,7 +1971,8 @@ def comparacao(r, f, hoje=None, manuais=None, homologados=None, trab=None):
         ponto("Provavelmente remido", "cinza", "Sem registro de peticionamento na ficha, mas o RSPE tem remição do mesmo valor (ou da soma "
               "de documentos) decidida depois da emissão: %s - provavelmente remido; conferir nos autos (indicação por valor e data, sem vínculo)." % _lista(
                   ["%s (%s, %s dias → remição de %s%s)" % (nome_doc(d), _f(d["emissao"]), _nf(d["dias"]), d["provavel"],
-                                                          (", somado ao nº %s" % _lista(d["soma_com"])) if d.get("soma_com") else "") for d in prov]),
+                                                          ((", somado ao nº %s" % _lista(d["soma_com"])) if d.get("soma_com") else "") +
+                                                          ("; decidida mais de 180 dias depois" if d.get("provavel_tarde") else "")) for d in prov]),
               "provavel_remido", docs_=prov)
     if sem_pet:
         ponto("A conferir", "amarelo", "Sem registro de peticionamento na ficha: %s - conferir nos autos se foi juntado e apreciado." % (
@@ -2158,9 +2163,11 @@ def comparacao(r, f, hoje=None, manuais=None, homologados=None, trab=None):
         elif d in post:
             d["sit"], d["cor"] = ("Posterior à última remição (%s)" % _f(ult_dec)) if ult_dec else "Sem remição no RSPE", "amarelo"
         elif d.get("provavel"):
-            d["sit"], d["cor"] = ("Provavelmente remido em %s (soma com %s = %s dias): conferir" % (
+            d["sit"], d["cor"] = (("Soma de mesmo valor decidida em %s (soma com %s = %s dias; mais de 180 dias depois da emissão): conferir"
+                                   if d.get("provavel_tarde") else "Provavelmente remido em %s (soma com %s = %s dias): conferir") % (
                 d["provavel"], _lista(["o nº %s" % n_ for n_ in d["soma_com"]]), _nf(d["soma_rem"])) if d.get("soma_com") else
-                "Provavelmente remido em %s (mesmo valor): conferir" % d["provavel"]), "cinza"
+                ("Mesmo valor decidido em %s (mais de 180 dias depois da emissão): conferir" if d.get("provavel_tarde") else
+                 "Provavelmente remido em %s (mesmo valor): conferir") % d["provavel"]), "cinza"
         elif d.get("provavel_ex"):
             d["sit"], d["cor"] = "Possivelmente remido em %s: conferir %s" % (d["provavel_ex"], "as áreas" if d["tipo"] == "Exame" else "as horas"), "cinza"
         elif d.get("menor"):

@@ -1,9 +1,9 @@
-APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.14.1
+APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.14.2
 (antigo RSPE Base; SEEU, programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-7.14.1. A documentação técnica completa (cada parâmetro, a regra, a norma e
+7.14.2. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -1002,6 +1002,60 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v7.14.2
+  Terceira rodada: correção dos 77 erros da reconferência manual da 7.14.1.
+  - Remição: o "pode já estar remido" passa a usar só o saldo de remição do
+    RSPE que nenhum documento da ficha explica (mesmo valor, ou soma de 2 ou
+    3 atestados, decididos até 3 anos depois da emissão; "provavelmente
+    remido" continua só até 180 dias, e depois disso aparece "mesmo valor
+    decidido em ...: conferir"). O saldo cobre o trabalho sem atestado do
+    mais próximo da remição para o mais antigo; o que sobra é "Pedir
+    atestado", e a fundamentação lista só esses trechos. O atestado contido
+    em outro não se soma; a remição sem documento dentro do período de um
+    atestado pendente reduz o pedido ("pedir ≈ X − Y"); exame e certidão são
+    ligados pela referência e pela tabela do CNJ; isolamento e saída
+    temporária são descontados; setores iniciados no mesmo dia não são
+    tratados como duplicados; o ano digitado errado no trecho do atestado é
+    corrigido; o trabalho na execução interrompida fica à parte; o atestado
+    "de outros autos" com remição nesta execução é conciliado; o RSPE maior
+    sem documentos na ficha não aparece mais "Em ordem".
+  - Progressão, livramento e Auditoria: a escolta hospitalar não é mais lida
+    como fuga. O crime que dá início ao cumprimento não conta como falta
+    grave. A condenação em regime mais grave ainda não somada deixa o regime
+    "a verificar: unificação pendente" e estima a progressão pelo regime
+    mais grave. A data-base calculada pelo programa segue a data da falta na
+    regressão e não aparece antes do início do cumprimento. A data-base do
+    SEEU contrária à lei (guia nova com a pessoa presa; livramento movido na
+    soma das penas) vira "verificar" na Auditoria com a data certa, e a aba
+    mantém a do SEEU. Na saída temporária, o trabalho passa a ser só
+    informação e a fração considera a pena somada, a soltura e a detração da
+    ficha. As notas do SEEU sobre falta fora dos 12 meses e sobre
+    indeferimento anterior ao lapso ficam explicadas.
+  - Indulto e comutação: quando há mais de um impedimento, o motivo mostrado
+    é primeiro o objetivo (crime, pena acima do teto, prazo) e depois a fuga
+    ainda não homologada. Com o indulto indeferido no RSPE, a comutação
+    volta a ser calculada sobre a soma de todas as penas, e a explicação diz
+    o mesmo que o detalhamento. Uma pena extinta depois do decreto que só
+    aumentaria o requisito não deixa mais a comutação "a verificar": o
+    resultado é "não atinge". Se o tempo pelos eventos passa em mais de 180
+    dias a custódia desde os fatos das penas, a comutação é o resultado
+    firme e o indulto fica a verificar. Quem estava preso na data depois do
+    aberto ou do livramento aparece como preso, com o regime do SEEU como
+    ressalva. A reincidência também é reconhecida quando a ficha mostra
+    outra pena em cumprimento antes do fato, mesmo extinta depois.
+  - Prescrição e extinção: quando o SEEU corta a lista de processos de um
+    evento, a ação que aparece em outro incidente da execução passa a contar
+    como listada no cálculo da detração. O término calculado pelo programa
+    (guia sem cálculo) desconta a prisão provisória do próprio processo que
+    só a ficha registra. A detração por prisão em outro processo não é mais
+    sugerida quando, naquele período, a pessoa cumpria outra execução. A
+    dúvida sobre a idade (art. 115) volta a aparecer quando o resultado
+    depende dela. A prisão depois de uma fuga passa a contar como
+    cumprimento quando há regressão ou perda de dias remidos nesta execução.
+    O indulto lançado sem baixa no cálculo do SEEU fica "a verificar" (pode
+    ter sido só da multa), e as penas continuam nas contas. A data em que a
+    pena remanescente seria alcançada passa a ser contada pelo calendário.
 
 v7.14.1
   Segunda rodada de correções da conferência manual (pontos que a reconferência

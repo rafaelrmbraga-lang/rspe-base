@@ -100,7 +100,7 @@ try:
     # ---- R1) atestado sem registro de peticionamento apreciado mais de 180 dias depois (mesmo valor): explica a remição ----
     f = F([T("COSTURA", "06.07.2022", "07.10.2022"), T("FAXINA", "10.04.2023", "05.05.2023")], [A("052/2022", "23.11.2022", "06/07/2022", "07/10/2022", 26, 78, "Costura")])
     o, N = comp(R((26, "01/03/2024", None)), f)
-    ok(doc(N, "052/2022")["sit"].startswith("Provavelmente remido em 01/03/2024") and linha(N, "Faxina").get("pedir_dias")
+    ok(doc(N, "052/2022")["sit"].startswith("Mesmo valor decidido em 01/03/2024") and linha(N, "Faxina").get("pedir_dias")
        and not linha(N, "Faxina").get("talvez_dias"), "R1: atestado apreciado mais tarde: %s %s" % (doc(N, "052/2022")["sit"], linha(N, "Faxina")))
 
     # ---- R3) atestado contido em outro (o mesmo período em trechos do segundo): não se soma ----
@@ -141,7 +141,7 @@ try:
     f = F([], [A("255/2023", "23.10.2023", "02/05/2023", "23/10/2023", 50, 150)],
           exames=[{"exame": "ENCCEJA 2024", "data": "02.05.2025", "certificado": False, "texto": "PETICIONADO CERTIFICADO DO ENCCEJA 2024"}])
     o, N = comp(R((100, "23/05/2025", "31/12/2024"), (50, "23/05/2025", "19/04/2025")), f)
-    ok(doc(N, "255/2023")["sit"].startswith("Provavelmente remido em 23/05/2025 (mesmo valor)") and "(100 dias)" in doc(N, "ENCCEJA 2024")["sit"],
+    ok(doc(N, "255/2023")["sit"].startswith("Mesmo valor decidido em 23/05/2025") and "(100 dias)" in doc(N, "ENCCEJA 2024")["sit"],
        "R5b: %s / %s" % (doc(N, "255/2023")["sit"], doc(N, "ENCCEJA 2024")["sit"]))
 
     # ---- R6) isolamento e saída temporária registrados na ficha não contam como dia trabalhado ----
