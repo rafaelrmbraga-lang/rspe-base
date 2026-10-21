@@ -95,6 +95,11 @@ $("rem").onclick = () => {
 };
 $("limpar").onclick = async () => { await enviar({ tipo: "limparHistorico" }); carregar(); };
 
+$("triagem").onclick = async () => {
+  await chrome.tabs.create({ url: chrome.runtime.getURL("triagem.html") });
+  window.close();
+};
+
 $("agora").onclick = async () => {
   const [aba] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!aba || !/^https:\/\/seeu\.pje\.jus\.br\//.test(aba.url || "")) return estado("Abra um processo no SEEU nesta aba.", true);

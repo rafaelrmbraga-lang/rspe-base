@@ -1,11 +1,13 @@
-APTO - RSPE do SEEU, Ficha do SIAPEN e processos do SAP (Chrome e Edge)
-=========================================================================
+APTO - RSPE do SEEU, Triagem da Mesa, Ficha do SIAPEN e processos do SAP (Chrome e Edge)
+==========================================================================================
 
 O QUE FAZ
 Ao abrir um processo no SEEU, a extensão salva o RSPE (o PDF do botão "Situação
 Carcerária", gerado pelo próprio SEEU) em
 Downloads\APTO\<base>\<nº do processo>_<data>.pdf. O RSPE entra sozinho na base
 de mesmo nome da subpasta, enquanto o APTO estiver aberto.
+A Triagem da Mesa do Defensor lê a Mesa, o motivo de cada intimação e a última
+decisão, só lendo (veja "TRIAGEM DA MESA DO DEFENSOR").
 
 LIGAÇÃO COM O APTO (automática, nada a configurar)
  - Com o APTO aberto, ele cria Downloads\APTO\<base> para cada base sua e
@@ -62,6 +64,64 @@ LOTE (lista de processos)
  - "Parar" interrompe depois do processo em andamento.
  - Antes de usar em volume, confirme com a Defensoria/TJ as regras de acesso
    automatizado ao SEEU.
+
+TRIAGEM DA MESA DO DEFENSOR (1.7)
+ - No painel da extensão, "Triagem da Mesa do Defensor" abre uma aba própria.
+   Deixe o SEEU aberto e logado em outra aba.
+ - "1 · Ler a Mesa": lê as abas marcadas (Manifestação, Ciência,
+   Razões/Contrarrazões) e a situação escolhida (Recebidas e não lidas,
+   Lidas e aguardando análise, Aguardando assinatura), todas as páginas.
+   De cada linha: processo, assistido, defensor, data de envio, último dia
+   e prazo.
+ - Filtros: defensor (inclusive "Sem defensor vinculado"), final do nº (o
+   último algarismo antes do traço: 0011147-54... = 7; clique nos
+   algarismos 0 a 9 ou escreva a faixa: "0-2" = finais 0, 1 e 2; "0-2, 5,
+   7-9"), tipo do motivo, busca por texto e "só com alerta vermelho".
+   "Guardar" dá nome a uma faixa (ex.: "Meus processos") para usar com um
+   clique. Os filtros ficam guardados.
+ - "2 · Ler processos e decisões": só os processos do filtro, do último
+   dia mais próximo ao mais distante. Para cada um, sem abrir aba:
+     . o motivo da intimação: o quadro "Pendências" do processo (ex.: "Juntar
+       MANIFESTAÇÃO referente ao movimento - JUNTADA DE CERTIDÃO") e o texto
+       do documento desse movimento (a certidão, o despacho...);
+     . a última decisão: o último ato do juiz com documento (o SEEU marca o
+       papel JUIZ na movimentação; remessas e expedições automáticas não
+       contam). Se for despacho de mero expediente, mostra também a última
+       decisão de mérito antes dele. Vale sempre, também quando o motivo é
+       uma certidão;
+     . o que aconteceu desde a última decisão (juntadas, mandados, atos
+       ordinatórios, manifestação do MP), sem remessas e confirmações;
+     . alertas: risco (internação, regressão, prisão, suspensão, revogação,
+       conversão da PRD, falta grave, perda de dias), justificativa,
+       audiência com data, indeferimento (conferir agravo), deferimento,
+       pedido de manifestação, cálculo/atestado, prazo escrito no texto,
+       urgência; e os temas (progressão, livramento, indulto, remição...).
+ - Clique na linha para ver o texto inteiro do motivo, da última decisão,
+   da decisão de mérito e a lista "desde a última decisão", com links para
+   abrir o PDF e o processo no SEEU (o mesmo que clicar neles).
+ - "Planilha (xlsx)" salva a tabela filtrada (uma linha por processo, com
+   os resumos e os alertas); "Imprimir" imprime a tabela com os detalhes
+   abertos. A planilha é a base para, depois, o APTO receber a triagem.
+ - Ritmo: no mínimo 0,9 s entre dois pedidos ao SEEU (cerca de 3 a 7
+   pedidos por processo). Processo já lido hoje não é relido (marque
+   "reler tudo" para ler de novo); o texto de cada documento já lido fica
+   guardado e não é baixado de novo. 3 falhas seguidas ou sessão expirada
+   param a leitura; "Parar" interrompe depois do pedido em andamento.
+ - SÓ LEITURA. A triagem pede ao SEEU apenas: a lista da Mesa, a página do
+   processo (o link do nº), a lista de arquivos do movimento e o PDF. A
+   própria extensão recusa qualquer outro endereço, em especial "Analisar"
+   (preAnalise.do, que atribui a remessa e pode iniciar o prazo), "Leitura
+   de Prazo" e "Dispensar Juntada". Nada é marcado, assinado ou juntado.
+ - Antes de usar em volume, confira uma vez: leia um processo pela triagem
+   e veja no SEEU que a coluna "Leitura de Prazo" da Mesa não mudou e que
+   não surgiu "CONFIRMADA A INTIMAÇÃO ELETRÔNICA" na movimentação.
+ - Durante a leitura, evite navegar no SEEU (a sessão é a mesma: o SEEU
+   guarda o "processo aberto" da sessão).
+ - O texto dos PDFs é lido dentro do navegador pelo pdf.js (Mozilla, Apache
+   2.0, pasta pdfjs). PDF escaneado (imagem) aparece como "sem texto: abrir
+   no SEEU". Nada sai do computador. Guarda (no navegador) a última
+   triagem, os filtros e os textos dos últimos 220 documentos lidos.
+ - É triagem: ordena e destaca. Não substitui ler a decisão no SEEU.
 
 FICHA DO SIAPEN
  - Toda ficha aberta no SIAPEN (Consultas > nome > "Ficha") é salva em

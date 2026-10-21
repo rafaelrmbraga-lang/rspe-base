@@ -148,7 +148,56 @@
     return Object.assign({ achou: true, processo }, r || {});
   }
 
+  // ---- Triagem da Mesa do Defensor: a página da triagem (da própria extensão) pede um endereço do SEEU; este script, na
+  // moldura principal do SEEU aberto, busca com a sessão da pessoa e devolve o texto (ou o PDF). Só os endereços de
+  // leitura de A.pedidoTriagemPermitido passam (nunca "Analisar", leitura de prazo ou qualquer gravação). Não clica em
+  // nada, não navega e não altera a página.
+  function charsetDe(resp, bytes) {
+    const ct = resp.headers.get("content-type") || "";
+    let m = /charset=([\w-]+)/i.exec(ct);
+    if (!m) m = /<meta[^>]+charset=["']?([\w-]+)/i.exec(new TextDecoder("latin1").decode(bytes.subarray(0, 4096)));
+    const c = (m ? m[1] : "windows-1252").toLowerCase();
+    return /^(iso-8859-1|latin1|us-ascii|ascii)$/.test(c) ? "windows-1252" : c;
+  }
+  async function buscarTriagem(msg) {
+    const metodo = String(msg.metodo || "GET").toUpperCase();
+    const recusa = A.pedidoTriagemPermitido(msg.url, metodo, msg.corpo);
+    if (recusa) return { ok: false, motivo: "pedido recusado pela extensão: " + recusa };
+    const op = { credentials: "include", cache: "no-store", method: metodo, redirect: "follow" };
+    if (metodo === "POST") {
+      op.body = String(msg.corpo || "");
+      op.headers = { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8", "X-Requested-With": "XMLHttpRequest" };
+    }
+    let resp;
+    try {
+      resp = await fetch(new URL(msg.url, location.href).href, op);
+    } catch (e) {
+      return { ok: false, motivo: "o SEEU não respondeu (" + (e && e.message || e) + ")" };
+    }
+    const bytes = new Uint8Array(await resp.arrayBuffer());
+    const fim = resp.url || "";
+    let caminho = "";
+    try { caminho = new URL(fim).pathname; } catch (e) {}
+    const base = { status: resp.status, url: fim, login: /\/(login|logon)[^/]*$/i.test(caminho) };
+    if (msg.binario && A.ehPdf(bytes)) return Object.assign(base, { ok: resp.ok, pdf: true, b64: base64(bytes) });
+    const txt = new TextDecoder(charsetDe(resp, bytes)).decode(bytes);
+    if (/type\s*=\s*["']?password/i.test(txt)) base.login = true;
+    return Object.assign(base, { ok: resp.ok, pdf: false, texto: txt });
+  }
+
   chrome.runtime.onMessage.addListener((msg, _s, responder) => {
+    if (msg.tipo === "triagemBuscar") {
+      // só a moldura principal do SEEU e só a página da triagem da própria extensão
+      if (window !== window.top) return false;
+      if (!_s || _s.id !== chrome.runtime.id || !String(_s.url || "").startsWith(chrome.runtime.getURL("triagem.html"))) return false;
+      buscarTriagem(msg).then(responder, (e) => responder({ ok: false, motivo: String(e && e.message || e) }));
+      return true;
+    }
+    if (msg.tipo === "triagemPing") {
+      if (window !== window.top) return false;
+      responder({ ok: true, url: location.href, logado: !document.querySelector("input[type=password]") });
+      return false;
+    }
     if (msg.tipo === "procurar") {
       // só responde a moldura que tem o RSPE (as demais ficam em silêncio)
       if (!emProcesso() || !rspeDaPagina()) return false;

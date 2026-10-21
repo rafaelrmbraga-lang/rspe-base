@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "APTO - RSPE do SEEU, Ficha do SIAPEN e processos do SAP",
+  "name": "APTO - RSPE do SEEU, Triagem da Mesa, Ficha do SIAPEN e processos do SAP",
   "short_name": "APTO RSPE",
-  "version": "1.6.0",
-  "description": "Salva o RSPE do SEEU e a Ficha Disciplinar do SIAPEN na pasta da base do APTO, e acha no SAP da Defensoria o nº do processo do último atendimento do NUSPEN.",
+  "version": "1.7.0",
+  "description": "RSPE do SEEU e ficha do SIAPEN para a pasta do APTO, triagem da Mesa do Defensor (só leitura) e nº do processo no SAP.",
   "minimum_chrome_version": "116",
   "permissions": [
     "downloads",
@@ -64,7 +64,7 @@
     }
   ],
   "action": {
-    "default_title": "APTO - SEEU, SIAPEN e SAP",
+    "default_title": "APTO - SEEU, Triagem, SIAPEN e SAP",
     "default_popup": "popup.html",
     "default_icon": {
       "16": "icones/16.png",

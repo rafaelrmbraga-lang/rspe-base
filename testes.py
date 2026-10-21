@@ -26,6 +26,7 @@ TESTES += ["teste_conf3_remicao.py"]
 TESTES += ["teste_conf4_remicao.py"]  # conferência 7.14.3, frente remição
 TESTES += ["teste_conf4_demais.py"]
 TESTES += ["teste_conf5.py"]  # validação da 7.14.3: resíduos (7.14.4)
+TESTES += ["teste_triagem_seeu.py"]  # extensão: triagem da Mesa do Defensor
 # saída em UTF-8 em qualquer console (no Windows o padrão cp1252 não imprime símbolos como "✓" e derruba o teste)
 _env = dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUTF8="1")
 falhas = [t for t in TESTES if subprocess.call([sys.executable, t], env=_env) != 0]

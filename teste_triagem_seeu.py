@@ -1,0 +1,46 @@
+"""Extensão APTO, Triagem da Mesa do Defensor: roda extensao_seeu_testes/teste_triagem.js no node (leitura da Mesa, do
+processo, da lista de arquivos e do texto das decisões; motivo e última decisão; alertas; filtros de final; endereços que a
+triagem pode pedir ao SEEU; planilha) e confere a sintaxe dos scripts da triagem. Sem node, só confere que os arquivos
+existem."""
+import os
+import shutil
+import subprocess
+import sys
+import tempfile
+
+AQUI = os.path.dirname(os.path.abspath(__file__))
+EXT = os.path.join(AQUI, "extensao_seeu")
+falhas = []
+for f in ("triagem.html", "triagem.js", "triagem_core.js", "pdfjs/pdf.min.mjs", "pdfjs/pdf.worker.min.mjs", "pdfjs/LICENSE.txt"):
+    if not os.path.isfile(os.path.join(EXT, f)):
+        falhas.append("arquivo %s" % f)
+html = open(os.path.join(EXT, "triagem.html"), encoding="utf-8").read()
+if '<script src="triagem_core.js"></script>' not in html or '<script type="module" src="triagem.js"></script>' not in html:
+    falhas.append("triagem.html carrega triagem_core.js e triagem.js")
+js = open(os.path.join(EXT, "triagem.js"), encoding="utf-8").read()
+# a página só fala com o SEEU pelo content.js (que aplica a lista de endereços permitidos); nunca busca direto
+if "fetch(" in js or "XMLHttpRequest" in js:
+    falhas.append("triagem.js não faz pedido direto (só pelo content.js)")
+if "preAnalise" in js:
+    falhas.append("triagem.js não cita o Analisar")
+node = shutil.which("node")
+if node:
+    r = subprocess.run([node, "--check", os.path.join(EXT, "triagem_core.js")], capture_output=True, text=True)
+    if r.returncode:
+        falhas.append("sintaxe de triagem_core.js: " + r.stderr.strip())
+    with tempfile.TemporaryDirectory() as tmp:
+        mjs = os.path.join(tmp, "triagem.mjs")
+        shutil.copy(os.path.join(EXT, "triagem.js"), mjs)
+        r = subprocess.run([node, "--check", mjs], capture_output=True, text=True)
+        if r.returncode:
+            falhas.append("sintaxe de triagem.js: " + r.stderr.strip())
+    r = subprocess.run([node, os.path.join(AQUI, "extensao_seeu_testes", "teste_triagem.js")], capture_output=True, text=True, encoding="utf-8")
+    sys.stdout.write(r.stdout)
+    if r.returncode:
+        falhas.append("teste_triagem.js: " + (r.stderr.strip() or "falhou"))
+if falhas:
+    print("FALHAS (%d):" % len(falhas))
+    for f in falhas:
+        print(" -", f)
+    sys.exit(1)
+print("ok: triagem da Mesa%s" % ("" if node else " - sem node: só os arquivos"))

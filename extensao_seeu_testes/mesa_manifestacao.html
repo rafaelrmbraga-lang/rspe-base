@@ -1,0 +1,170 @@
+<!DOCTYPE html><html><head><meta http-equiv="Content-Type" content="text/html; charset=windows-1252"><title>SEEU - Sistema Eletrônico de Execução Unificado</title></head><body>
+<form name="mesaDefensor1GrauForm" id="mesaDefensor1GrauForm" method="post" action="https://seeu.pje.jus.br/seeu/usuario/mesaDefensor1Grau.do?actionType=listar"><div><input type="hidden" name="org.apache.struts.taglib.html.TOKEN" value="0123456789abcdef0123456789abcdef"></div>
+	<input type="hidden" name="selectedIcon" value="tabManifestacao">
+	<input type="hidden" name="pageSize" value="20">
+	<input type="hidden" name="pageNumber" value="1">
+	<input type="hidden" name="sortColumn" value="dataEnvio">
+	<input type="hidden" name="sortOrder" value="ASC">
+Situação: <input type="radio" name="situacao" value="1" checked="checked" onclick="enviaForm()"> Recebidas e não Lidas
+<input type="radio" name="situacao" value="2" onclick="enviaForm()"> Lidas e Aguardando Análise
+<input type="hidden" name="finalidadeRemessa" value="5">
+	<div id="navigator"><div class="navRight"><b>1</b>,&nbsp;<a title="Ir para a página 2" href="javascript:document.forms['mesaDefensor1GrauForm']['pageNumber'].value='2';document.forms['mesaDefensor1GrauForm'].submit();">2</a></div><div class="navLeft">23 registro(s) encontrado(s), exibindo de 1 até 20</div><div style="clear:both"></div></div>
+<table class="resultTable"><thead><tr><th>Seq</th><th>Processo</th><th>Classe Processual<br>(Assunto Principal)</th><th>Partes</th><th>Defensor</th><th>Data de Envio<br>Último Dia</th><th>Prazo para resposta</th><th>Pré-Análise</th><th>Leitura de Prazo<br>Todos
+<label data-label=""><input type="checkbox" name="checker" value="checker" title="Seleciona todos os itens desta paginação"></label></th></tr></thead>
+<tbody>
+<tr class="even">
+										<td nowrap="nowrap" align="center" style="padding:0 5px 0 5px;" valign="middle">
+										</td>
+										<td nowrap="nowrap" align="center">11001</td>
+										<td nowrap="nowrap">
+										<div style="display: inline; position: relative; cursor: pointer;"><span style="opacity: 0;"><span>
+<seeu-tooltip placement="right"><template shadowrootmode="open"><slot name="trigger"></slot></template><span style="font-size:11px">Abrir em nova guia</span></seeu-tooltip>
+</span></span><a href="https://seeu.pje.jus.br/seeu/visualizacaoProcesso.do?_tj=aa11bb22cc33dd44" class="link">
+											<em class="normal">7000117-54.2016.8.12.0001</em>
+										</a></div><a href="https://marketplace.pdpj.jus.br/?numeroProcesso=7000117-54.2016.8.12.0001"><img src="./pdpjl.png" style="height: 16px;"></a>
+										</td>				
+										<td style="text-align:center">
+											<a href="#" title="Execução da Pena">Execução da Pena</a>
+											<br>
+											(Pena Privativa de Liberdade)
+										</td>		
+										<td style="text-align:left">
+											<table class="form">
+											<tbody><tr>
+												<td align="top" style="vertical-align:top; text-align:right; width:89px;"><font size="-2" style="font-weight:bold;">Autoridade:</font></td>
+												<td><ul style="list-style-type:circle"><li>ESTADO DE MATO GROSSO DO SUL</li></ul></td>
+											</tr>
+											<tr><td colspan="2" style="height:1px; color:#C5C5C2; border-bottom:1px dotted #C5C5C2;"></td></tr>
+											<tr>
+												<td align="top" style="vertical-align:top; text-align:right; width:89px;"><font size="-2" style="font-weight:bold;">Executado:</font></td>
+												<td><ul style="list-style-type:circle">
+													<li>Fulano de Tal Exemplo</li>
+													<li class="azflow-lopris" data-numero="7000117-54.2016.8.12.0001"><b>Local de prisão:</b> Não vinculado.</li>
+												</ul></td>
+											</tr>
+											</tbody></table>
+										</td>
+										<td>
+											Defensora Alfa Exemplo
+										</td>
+										<td style="text-align:center" nowrap="nowrap">
+											13/10/2026															
+											<br>
+											<font color="#FF0000">
+												23/10/2026
+											</font>
+										</td>
+										<td align="center">
+											10 dias corridos
+										</td>
+										<td style="text-align:center" nowrap="nowrap">
+										<!--  remessa não é do defensor, lança um aviso ao clicar no botão analisar que a remessa será encamihada a ele e o prazo iniciado -->
+										<button type="button" class="btn" onclick="if(confirm('A remessa atual está atribuída a outro defensor. Ao analisar ela será atribuída a você e o prazo poderá ser iniciado. Confirma a operação?')){document.location.href='/seeu/processo/preAnalise.do?_tj=aa11bb22cc33dd4499';}">Analisar</button>
+										</td>
+										<td align="center"><label data-label=""><input type="checkbox" name="vistas" value="11001"></label></td>
+									</tr>
+<tr class="odd">
+										<td nowrap="nowrap" align="center" style="padding:0 5px 0 5px;" valign="middle">
+										</td>
+										<td nowrap="nowrap" align="center">11002</td>
+										<td nowrap="nowrap">
+										<div style="display: inline; position: relative; cursor: pointer;"><span style="opacity: 0;"><span>
+<seeu-tooltip placement="right"><template shadowrootmode="open"><slot name="trigger"></slot></template><span style="font-size:11px">Abrir em nova guia</span></seeu-tooltip>
+</span></span><a href="https://seeu.pje.jus.br/seeu/visualizacaoProcesso.do?_tj=aa11bb22cc33dd55" class="link">
+											<em class="normal">7000220-13.2026.8.12.0001</em>
+										</a></div><a href="https://marketplace.pdpj.jus.br/?numeroProcesso=7000220-13.2026.8.12.0001"><img src="./pdpjl.png" style="height: 16px;"></a>
+										</td>				
+										<td style="text-align:center">
+											<a href="#" title="Execução de Medidas Alternativas no Juízo Comum">Execução de Medidas Alternativas no Juízo Comum</a>
+											<br>
+											(Pena Restritiva de Direitos)
+										</td>		
+										<td style="text-align:left">
+											<table class="form">
+											<tbody><tr>
+												<td align="top" style="vertical-align:top; text-align:right; width:89px;"><font size="-2" style="font-weight:bold;">Autoridade:</font></td>
+												<td><ul style="list-style-type:circle"><li>ESTADO DE MATO GROSSO DO SUL</li></ul></td>
+											</tr>
+											<tr><td colspan="2" style="height:1px; color:#C5C5C2; border-bottom:1px dotted #C5C5C2;"></td></tr>
+											<tr>
+												<td align="top" style="vertical-align:top; text-align:right; width:89px;"><font size="-2" style="font-weight:bold;">Executado:</font></td>
+												<td><ul style="list-style-type:circle">
+													<li>Beltrano Ficticio</li>
+													<li class="azflow-lopris" data-numero="7000220-13.2026.8.12.0001"><b>Local de prisão:</b> Não vinculado.</li>
+												</ul></td>
+											</tr>
+											</tbody></table>
+										</td>
+										<td>
+											Defensor Beta Exemplo
+										</td>
+										<td style="text-align:center" nowrap="nowrap">
+											14/10/2026															
+											<br>
+											<font color="#FF0000">
+												24/10/2026
+											</font>
+										</td>
+										<td align="center">
+											10 dias corridos
+										</td>
+										<td style="text-align:center" nowrap="nowrap">
+										<!--  remessa não é do defensor, lança um aviso ao clicar no botão analisar que a remessa será encamihada a ele e o prazo iniciado -->
+										<button type="button" class="btn" onclick="document.location.href='/seeu/processo/preAnalise.do?_tj=aa11bb22cc33dd5599';">Analisar</button>
+										</td>
+										<td align="center"><label data-label=""><input type="checkbox" name="vistas" value="11002"></label></td>
+									</tr>
+<tr class="even">
+										<td nowrap="nowrap" align="center" style="padding:0 5px 0 5px;" valign="middle">
+										</td>
+										<td nowrap="nowrap" align="center">11003</td>
+										<td nowrap="nowrap">
+										<div style="display: inline; position: relative; cursor: pointer;"><span style="opacity: 0;"><span>
+<seeu-tooltip placement="right"><template shadowrootmode="open"><slot name="trigger"></slot></template><span style="font-size:11px">Abrir em nova guia</span></seeu-tooltip>
+</span></span><a href="https://seeu.pje.jus.br/seeu/visualizacaoProcesso.do?_tj=aa11bb22cc33dd66" class="link">
+											<em class="normal">7000333-10.2014.8.12.0008</em>
+										</a></div><a href="https://marketplace.pdpj.jus.br/?numeroProcesso=7000333-10.2014.8.12.0008"><img src="./pdpjl.png" style="height: 16px;"></a>
+										</td>				
+										<td style="text-align:center">
+											<a href="#" title="Execução da Pena">Execução da Pena</a>
+											<br>
+											(Medidas de Segurança)
+										</td>		
+										<td style="text-align:left">
+											<table class="form">
+											<tbody><tr>
+												<td align="top" style="vertical-align:top; text-align:right; width:89px;"><font size="-2" style="font-weight:bold;">Autoridade:</font></td>
+												<td><ul style="list-style-type:circle"><li>ESTADO DE MATO GROSSO DO SUL</li></ul></td>
+											</tr>
+											<tr><td colspan="2" style="height:1px; color:#C5C5C2; border-bottom:1px dotted #C5C5C2;"></td></tr>
+											<tr>
+												<td align="top" style="vertical-align:top; text-align:right; width:89px;"><font size="-2" style="font-weight:bold;">Executado:</font></td>
+												<td><ul style="list-style-type:circle">
+													<li>Ciclano &amp; Filho</li>
+													<li class="azflow-lopris" data-numero="7000333-10.2014.8.12.0008"><b>Local de prisão:</b> Não vinculado.</li>
+												</ul></td>
+											</tr>
+											</tbody></table>
+										</td>
+										<td>
+											
+										</td>
+										<td style="text-align:center" nowrap="nowrap">
+											15/10/2026															
+											<br>
+											<font color="#FF0000">
+												25/10/2026
+											</font>
+										</td>
+										<td align="center">
+											10 dias corridos
+										</td>
+										<td style="text-align:center" nowrap="nowrap">
+										<!--  remessa não é do defensor, lança um aviso ao clicar no botão analisar que a remessa será encamihada a ele e o prazo iniciado -->
+										<button type="button" class="btn" onclick="if(confirm('A remessa atual está atribuída a outro defensor. Ao analisar ela será atribuída a você e o prazo poderá ser iniciado. Confirma a operação?')){document.location.href='/seeu/processo/preAnalise.do?_tj=aa11bb22cc33dd6699';}">Analisar</button>
+										</td>
+										<td align="center"><label data-label=""><input type="checkbox" name="vistas" value="11003"></label></td>
+									</tr>
+</tbody></table>
+<input type="button" value="Leitura de Prazo" title="Realizar a Leitura de Prazo para os Itens Selecionados ">
+</form></body></html>
