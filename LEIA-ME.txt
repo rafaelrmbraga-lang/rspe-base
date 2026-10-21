@@ -1,9 +1,9 @@
-APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.14.3
+APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.14.4
 (antigo RSPE Base; SEEU, programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-7.14.3. A documentação técnica completa (cada parâmetro, a regra, a norma e
+7.14.4. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -1002,6 +1002,22 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v7.14.4
+  Resíduos da validação da 7.14.3.
+  - A remição sem documento no RSPE passa a cobrir primeiro o trabalho mais
+    próximo dela, antes de um atestado sem período emitido depois ficar com
+    o intervalo só por declarar mais dias do que ele comporta; o atestado
+    fica com o restante. O atestado de estudo ou curso com carga horária é
+    ligado à remição que fecha com as horas ÷ 12 quando os dias declarados
+    não fecham com nenhuma remição próxima. Na Auditoria, a "Diferença" da
+    detração descontada antes da fração passa a ser o lapso impresso menos a
+    forma favorável, e as três linhas fecham entre si; o aviso do regime
+    inicial sem efeito cita o último regime inicial válido. Ajustes de
+    texto: "execução suspensa ou sobrestada" e "arquivada" na saída
+    temporária e na progressão antecipada; no indulto, a âncora do SEEU
+    aparece só como referência, valendo o prazo pelos eventos; e a extinção
+    repetida na ficha aparece uma só vez no aviso de reincidência.
 
 v7.14.3
   Rodada curta: pontos restantes da validação da 7.14.2.
