@@ -68,8 +68,8 @@ ok(not st(rspe(reincidente="S", pena_cumprida="1a5m0d", pena_total="8a0m0d"), fi
 ok(not st(rspe(), ficha(conduta="SEM LAPSO"))["st_ok"], "conduta sem lapso")
 ok(st(rspe(), ficha(conduta="BOA"))["st_ok"], "conduta boa")
 ok(not st(rspe(falta_12m="SIM"), ficha())["st_ok"], "falta nos 12 meses")
-# trabalho: sem trabalho não; externo aberto conta
-ok(not st(rspe(), ficha(), {"fd_trab": "sem trabalho em curso"})["st_ok"], "sem trabalho")
+# trabalho: não é requisito do art. 123 da LEP (7.14.2) - sem trabalho é só informação; externo aberto conta
+ok(st(rspe(), ficha(), {"fd_trab": "sem trabalho em curso"})["st_ok"], "sem trabalho")
 x = st(rspe(), ficha(trabalho=[{"inicio": "01.06.2026", "fim": "", "setor": "EMPRESA X", "externo": True}]), {"fd_trab": "sem trabalho em curso"})
 ok(x["st_ok"], "trabalho externo conta: %s" % x)
 # 45 dias do retorno

@@ -2077,7 +2077,7 @@ const ui = {
     el.className=(r.st_ok||P)?'':'quase';
     const tit=r.st_ok?'Elegível para pedir saída temporária':r.st_quase?'Saída temporária: requisitos atendidos, com ponto a conferir':'Saída temporária: requisitos não atendidos hoje';
     el.innerHTML=(P?`<b>Pedido de saída temporária feito em ${esc(P.data)}</b><div style="margin:-2px 0 6px;color:#66736B">${esc(({pedido:'pedido nos autos',oficio:'ofício à unidade',outro:'outra providência'})[P.tipo]||'pedido')}${P.obs?' · '+esc(P.obs):''}</div>`:'')+
-      `<b${P?' style="font-size:12px;color:#22302A"':''}>${tit}</b>`+(r.st_itens||[]).map(i=>`<div><i class="${i.ok?'':i.ok===false?'x':'q'}">${i.ok?'✓':i.ok===false?'✗':'?'}</i><span>${esc(i.txt)}</span></div>`).join('')+
+      `<b${P?' style="font-size:12px;color:#22302A"':''}>${tit}</b>`+(r.st_itens||[]).map(i=>`<div><i class="${i.ok==='info'?'q':i.ok?'':i.ok===false?'x':'q'}">${i.ok==='info'?'•':i.ok?'✓':i.ok===false?'✗':'?'}</i><span>${esc(i.txt)}</span></div>`).join('')+
       `<small>${P?'Clique para editar o pedido ou abrir o Registro para o SAP.':'Clique para registrar o pedido feito (o ícone fica verde preenchido) e abrir o Registro para o SAP.'} LEP, arts. 122 a 125: a concessão depende de decisão do juízo da execução, ouvidos o Ministério Público e a administração penitenciária.</small>`;
     const b=ev.target.getBoundingClientRect(); el.style.left=Math.max(8,Math.min(b.left, innerWidth-480))+'px';
     const h=el.offsetHeight; el.style.top=(b.bottom+6+h>innerHeight? Math.max(8,b.top-6-h) : b.bottom+6)+'px'; },

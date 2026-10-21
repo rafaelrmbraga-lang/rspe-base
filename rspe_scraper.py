@@ -2230,6 +2230,31 @@ def e_incidente_regime(i):
     return "REGIME" in (i.get("tipo") or "").upper() and not e_alteracao_data_base(i)
 
 
+def _gravidade_regime(t):
+    u = _sem_acento(t or "").upper().replace("-", "").replace(" ", "")
+    return 3 if "FECHADO" in u else 2 if "SEMIABERTO" in u else 1 if "ABERTO" in u else 0
+
+
+def unificacao_pendente(r):
+    """Condenação ativa com regime da sentença mais grave que o regime atual do RSPE, sem somatório/unificação nem fixação ou
+    alteração de regime depois da sentença dela: o crime (o mais grave), ou None. A soma das penas impõe o regime pelo total
+    (LEP, arts. 111 e 118, II) - o regime atual fica a verificar."""
+    atual = _gravidade_regime(r.get("regime_atual"))
+    if not atual:
+        return None
+    marcos = [to_date(i.get("data_referencia") or i.get("data_decisao") or "") for i in r.get("_incidentes", [])
+              if (i.get("situacao") or "CONCEDIDO") == "CONCEDIDO" and (e_incidente_regime(i) or re.search(r"SOMAT|UNIFICA", _sem_acento(i.get("tipo") or "").upper()))]
+    marcos = [x for x in marcos if x]
+    out = None
+    for c in r.get("_crimes", []):
+        if (c.get("extinto") or "").upper().startswith("S"):
+            continue
+        g, ds = _gravidade_regime(c.get("regime_sentenca")), to_date(c.get("data_sentenca") or "")
+        if g > atual and ds and not any(x >= ds for x in marcos) and (out is None or g > _gravidade_regime(out.get("regime_sentenca"))):
+            out = c
+    return out
+
+
 def _rotulo_incidente(i):
     tipo, comp = i.get("tipo", ""), i.get("complemento", "")
     if e_alteracao_data_base(i):
@@ -2495,6 +2520,25 @@ def _recaptura_ficha(ficha, d):
     return min(xs) if xs else None
 
 
+def _escolta_com_retorno(ficha, t, d):
+    """Saída por escolta, hospital, consulta ou internação, sem palavra de fuga ("evadiu", "fuga", "evasão", "foragido"), seguida de
+    lançamento da própria unidade em até 30 dias (hospitalizado, isolamento, mudança de cela, retorno) e sem entrada nova/recaptura:
+    a pessoa não saiu da custódia - o "não retornou" é do hospital, não fuga."""
+    u = _sem_acento(t or "").upper()
+    if not re.search(r"ESCOLT|HOSPITAL|INTERNA[CD]|PLANTAO|CONSULTA|\bUPA\b|SANTA CASA", u) or re.search(r"EVADI|\bFUGA\b|EVASAO|FORAGID", u):
+        return False
+    for y in (ficha or {}).get("eventos") or []:
+        x = to_date((y.get("data") or "").replace(".", "/"))
+        uy = _sem_acento(y.get("texto") or "").upper()
+        if not x or not d or not (d <= x <= d + timedelta(days=30)) or uy == u:
+            continue
+        if re.search(r"RECAPTUR|EVADI|\bFUGA\b|EVASAO|FORAGID|^\W*ENTRADA NA UNIDADE", uy):
+            return False
+        if re.search(r"^\W*MUDANCA DE CELA|HOSPITALIZAD|INTERNAD|ISOLAMENTO|RETORN|ESCOLTA", uy):
+            return True
+    return False
+
+
 def faltas_da_ficha(r, ficha, hoje=None):
     """Faltas graves registradas na ficha disciplinar do SIAPEN que o RSPE não traz (sem falta própria em até 30 dias da
     mesma data): entram como incidente PENDENTE (falta a apurar), datado pelo fato - a sanção do conselho disciplinar não é
@@ -2545,6 +2589,9 @@ def faltas_da_ficha(r, ficha, hoje=None):
                 or re.search(r"ABANDONO D[OE] (SERVI|TRABALHO|CURSO)", t, re.I)
                 # retorno/recaptura citando a evasão não é nova fuga
                 or re.search(r"RETORNOU D[AE] EVAS|RECAPTUR|\bPRES[OA]\b.{0,80}EVAS", t, re.I)
+                # escolta a hospital/consulta/internação ("até o término do plantão NÃO RETORNOU") com a pessoa de volta à unidade logo
+                # depois (internação, isolamento, mudança de cela), sem interrupção no RSPE: não é fuga
+                or _escolta_com_retorno(ficha, t, d)
                 or (_ini and d < _ini)
                 or any(x and abs((x - d).days) <= 30 for x in fugas_r + datas)
                 # dentro de uma interrupção do RSPE (fuga ou descumprimento, até a recaptura): é a mesma ocorrência
@@ -2819,9 +2866,13 @@ def indicios_falta_datas(incidentes, ref, dias=365, eventos=None, ate=None, hoje
         # antes de qualquer cumprimento, não é falta da execução
         _per = periodos_custodia(eventos or [])
         _lc = periodos_livramento(eventos or [], incidentes)
-        _reg = [to_date(i.get("data_referencia") or i.get("data_decisao") or "") for i in incidentes
+        _reg = [(to_date(i.get("data_referencia") or i.get("data_decisao") or ""), "INICIAL" in _sem_acento(i.get("complemento") or "").upper())
+                for i in incidentes
                 if "REGIME" in (i.get("tipo") or "").upper() and not re.search(r"DATA[- ]BASE", (i.get("tipo") or "").upper())
                 and (i.get("situacao") or "CONCEDIDO") == "CONCEDIDO"]
+        # evento lançado no próprio SEEU (os da ficha não contam): sem nenhum antes do fato, o regime inicial fixado na sentença não
+        # pôs a pena em cumprimento (início efetivo) - a prisão pelo próprio crime novo não é início anterior a ele
+        _own = sorted(x for x in (to_date(e.get("data") or "") for e in (eventos or []) if not e.get("_ficha")) if x)
 
         # soltura provisória (liberdade provisória, alvará, relaxamento) sem retomada depois: o regime fixado antes dela não pôs a
         # pena em cumprimento (aberto nunca iniciado) - o fato cometido nessa liberdade não é falta da execução
@@ -2834,7 +2885,7 @@ def indicios_falta_datas(incidentes, ref, dias=365, eventos=None, ate=None, hoje
             # só a soltura antes de qualquer trânsito (custódia provisória): solto depois do trânsito, a pena já era executada
             _tj = min([t for t in (to_date(c.get("transito_processo") or c.get("transito_mp") or "") for c in crimes) if t] or [date.max])
             _s = [x for x in _solt if x < d and x < _tj]
-            return any(x and x < d and not (_s and x <= _s[-1]) for x in _reg)
+            return any(x and x < d and not (_s and x <= _s[-1]) and not (ini_ and not (_own and _own[0] < d)) for x, ini_ in _reg)
         _homs = _homologadas(incidentes)
         for c in crimes:
             d = to_date(c.get("data_infracao") or "")

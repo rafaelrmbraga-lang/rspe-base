@@ -177,16 +177,45 @@ def estado_execucao(r):
         return ("lc", "Em livramento condicional" + (" desde %s" % rs.fmt(dl) if dl else ""))
     if nao_iniciou(r):
         return ("nao_iniciou", "Não iniciou o cumprimento")
-    if regime.startswith("ABERTO"):
+    if regime.startswith("ABERTO") and not (rs.unificacao_pendente(r) and not r.get("progressao_previsao_seeu")):
         m = rs.RE_DATA.search(r.get("progressao_obs_seeu") or "")
         return ("aberto", "Já em regime aberto" + (" (%s)" % m.group(1) if m else ""))
     return None
+
+
+def progressao_unificacao(r):
+    """Progressão estimada com a unificação pendente (condenação em regime mais grave que o atual, sem somatório): pelo regime mais
+    grave, da custódia em curso, com a fração de cada crime sobre a sua pena (dias, para baixo), menos as remições concedidas
+    depois do início - (texto, data) ou (texto, None) sem custódia em curso. Só estimativa: o juízo unifica e fixa a data-base."""
+    c = rs.unificacao_pendente(r)
+    rot = "unificação pendente (LEP, arts. 111 e 118, II): condenação em regime %s (sentença de %s) não somada ao regime atual" % (
+        (c.get("regime_sentenca") or "").lower(), c.get("data_sentenca") or "?")
+    per = rs.periodos_custodia([e for e in r.get("_eventos", []) if rs.to_date(e.get("data") or "")])
+    ini = per[-1][0] if per and per[-1][1] is None else None
+    if not ini:
+        return ("A verificar: %s; sem custódia em curso, sem data" % rot, None)
+    if (rs.pena_para_dias(r.get("pena_cumprida")) or 0) > 0:
+        # já houve cumprimento: o remanescente na data-base depende da unificação pelo juízo - sem estimativa
+        return ("A verificar: %s; com pena já cumprida, a data depende da unificação pelo juízo" % rot, None)
+    lap = 0
+    for x in r.get("_crimes", []):
+        if (x.get("extinto") or "").upper().startswith("S"):
+            continue
+        f, p = _fr_prog_refeita(x), rs.pena_para_dias(x.get("pena_imposta"))
+        if not f or not p:
+            return ("A verificar: %s; fração ou pena de crime não informada, sem data" % rot, None)
+        lap += int(f * p)
+    lap -= sum(n for dt, n in _remicoes_liquidas(r) if dt and dt >= ini)
+    d = ini + timedelta(days=max(0, lap - 1))
+    return ("%s* (estimada pelo programa - a verificar: %s; contada da custódia em %s pelo regime mais grave)" % (rs.fmt(d), rot, rs.fmt(ini)), d)
 
 
 def data_progressao(r):
     est = estado_execucao(r)
     if est:
         return (est[1], None)
+    if not r.get("progressao_previsao_seeu") and rs.unificacao_pendente(r):
+        return progressao_unificacao(r)
     if r.get("progressao_obs_seeu"):
         m = rs.RE_DATA.search(r["progressao_obs_seeu"])
         return ("Já em regime aberto" + (" (%s)" % m.group(1) if m else ""), None)
@@ -294,6 +323,7 @@ DB_TIPOS = {  # itens da Auditoria sobre a data-base -> (cor, motivo)
     "data-base-movida-para-a-recaptura-sem-falta-homo": ("amarelo", "recaptura depois de fuga, sem falta homologada no RSPE"),
     "data-base-na-guia-nova-de-quem-ja-estava-preso": ("vermelho", "início da guia nova com a pessoa já presa - a condenação nova não altera a data-base (STJ, Tema 1006)"),
     "data-base-na-data-do-fato-de-condenacao": ("amarelo", "data do fato de condenação desta execução - provável crime durante o cumprimento tratado como falta grave (Súmulas 526 e 534/STJ); conferir"),
+    "data-base-no-inicio-da-guia-nova-com-a-pessoa-presa": ("amarelo", "início da guia nova com a pessoa presa sem interrupção - a data certa é a do início da custódia (STJ, Tema 1006); ver Auditoria"),
     "inconsistencia-da-data-base-sem-prisao-alteracao": ("amarelo", "sem prisão, alteração de regime ou falta grave homologada nessa data"),
 }
 
@@ -309,10 +339,29 @@ def data_base_calculada(r):
     fonte = "última alteração de regime"
     if not d0:
         return "", fonte
+    if nao_iniciou(r):
+        # sem início do cumprimento não há data-base (a fixação do regime com a pessoa solta não é marco de contagem)
+        return "", "cumprimento não iniciado"
     try:
         per = rs.periodos_custodia([e for e in r.get("_eventos", []) if rs.to_date(e.get("data") or "")])
     except Exception:
         per = []
+    # regressão lançada na data da decisão, com a homologação da falta grave decidida junto: a data-base é a da falta, não a da
+    # decisão (Súmula 534/STJ); se a pessoa estava fora da custódia na data da falta, a contagem só corre da volta à custódia
+    _reg = [i for i in r.get("_incidentes", []) if "REGRESS" in rs._sem_acento("%s %s" % (i.get("tipo", ""), i.get("complemento", ""))).upper()
+            and "CAUTELAR" not in rs._sem_acento(i.get("complemento") or "").upper() and (i.get("situacao") or "").startswith("CONCEDIDO")
+            and _data(i.get("data_referencia") or "") == d0]
+    if _reg:
+        fatos = [rs._data_fato_falta(i) for i in r.get("_incidentes", []) if rs.RE_FALTA_PROPRIA.search(rs._rotulo_incidente(i))
+                 and (i.get("situacao") or "").startswith("CONCEDIDO") and _data(i.get("data_decisao") or "")
+                 and abs((_data(i.get("data_decisao")) - d0).days) <= 3]
+        fatos = [x for x in fatos if x and x < d0 - timedelta(days=1)]
+        if fatos:
+            fx = max(fatos)
+            volta = next((a for a, b in per if a > fx and a <= d0 and not rs.em_custodia(per, fx)), None) if per else None
+            novo = volta or fx
+            return rs.fmt(novo), "data da falta grave (%s), não a da decisão de regressão (%s) - Súmula 534/STJ%s" % (
+                rs.fmt(fx), rs.fmt(d0), (" - contada da volta à custódia em %s" % rs.fmt(volta)) if volta else "")
     if not per or per[-1][0] <= d0 + timedelta(days=1):
         return rs.fmt(d0), fonte
     ini = per[-1][0]
@@ -342,7 +391,8 @@ def data_base_info(r, itens, ficha=None):
         return {"db": v, "db_motivo": "informada pelo operador" + ((" - " + mot) if mot else "") + ((" (SEEU: %s)" % orig) if orig and orig != v else ""),
                 "db_cor": "", "db_editada": True, "db_orig": orig}
     if not d0:
-        return {"db": "", "db_motivo": "não consta no RSPE", "db_cor": "", "db_editada": False, "db_orig": ""}
+        return {"db": "", "db_motivo": "sem data-base: o cumprimento não começou" if _dbc[1] == "cumprimento não iniciado" else "não consta no RSPE",
+                "db_cor": "", "db_editada": False, "db_orig": ""}
     cor, mot = "", ""
     for it in itens:
         t = it.get("tipo") or ""
@@ -398,7 +448,10 @@ def data_base_info(r, itens, ficha=None):
         if perto:
             x, t = perto[0]
             if re.search(r"ENTRADA|RECAPTUR", t, re.I) and rf.RE_ENTRADA_RUA.search(t):
-                cor, mot = "", "prisão/recaptura registrada na ficha em %s (%s)" % (rs.fmt(x), rf._br(t)[:70])
+                # a entrada na unidade costuma vir dias depois da prisão: a diferença é dita, para o motivo não apontar outra data
+                cor, mot = "", "prisão/recaptura registrada na ficha em %s%s (%s)" % (
+                    rs.fmt(x), "" if x == d0 else " (%s %s da data-base: a entrada na unidade costuma vir depois da prisão)" % (
+                        rs.pl(abs((x - d0).days), "dia", "dias"), "depois" if x > d0 else "antes"), rf._br(t)[:70])
             else:
                 mot += "; ficha em %s: %s" % (rs.fmt(x), rf._br(t)[:70])
         else:
@@ -494,11 +547,22 @@ def _vencido_pedido(r, sc, d, palavra):
     return sc
 
 
-def _com_nota(sit, nota):
+def _com_nota(sit, nota, d=None, hoje=None):
     """Situação da progressão/livramento com a nota que o SEEU imprime depois da data prevista ("Indeferido em …",
-    "Existe falta grave nos últimos 12 meses em …", "Em trâmite desde …"): só exibida - o efeito jurídico fica com o usuário."""
+    "Existe falta grave nos últimos 12 meses em …", "Em trâmite desde …"): só exibida - o efeito jurídico fica com o usuário.
+    d: data do lapso. O indeferimento anterior ao lapso não é pedido depois dele ("indeferido antes do lapso: requerer"), e a falta
+    da nota que já saiu dos 12 meses fica marcada como nota histórica."""
     if not nota:
         return sit
+    hoje = hoje or HOJE
+    mi = re.match(r"\s*indeferid[oa] em (\d{2}/\d{2}/\d{4})", nota, re.I)
+    xi = rs.to_date(mi.group(1)) if mi else None
+    if xi and isinstance(d, date) and xi < d and "sem pedido no RSPE - requerer" in (sit or ""):
+        return sit.replace("sem pedido no RSPE - requerer", "indeferido antes do lapso (RSPE: %s): requerer" % nota.strip())
+    mf = re.search(r"falta grave nos [úu]ltimos 12 meses em (\d{2}/\d{2}/\d{4})", nota, re.I)
+    xf = rs.to_date(mf.group(1)) if mf else None
+    if xf and (hoje - xf).days > 365:
+        nota = "%s (nota do SEEU; a falta já está fora dos 12 meses)" % nota.strip()
     return ("%s · RSPE: %s" % (sit, nota)) if sit else "RSPE: %s" % nota
 
 
@@ -682,6 +746,17 @@ def soma_penas_ativas(r):
     m, d = m + d // 30, d % 30
     a, m = a + m // 12, m % 12
     return a * rs.DIAS_ANO + m * 30 + d
+
+
+def penas_sem_crime(r):
+    """Pena das ações penais sem crime cadastrado no RSPE (com pena, não medida de segurança), em dias: entra na soma da guia sem
+    cálculo, como a Auditoria já faz."""
+    tot = 0
+    for a in r.get("_acoes_sem_crime") or []:
+        p = a.get("pena_total_processo") or ""
+        if "MEDIDA" not in p.upper():
+            tot += rs.pena_para_dias(p.split(" - ")[0]) or 0
+    return tot
 
 
 def custodia_sem_calculo(r):
@@ -1487,14 +1562,16 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
     # sem data e sem outro estado: a situação diz o motivo (cinza, cartão "Sem prazo"), em vez de ficar em branco e fora dos cartões
     if not psit and not pcor and pd is None:
         psit, pcor = (ptxt.split(" (")[0] if ptxt and not re.match(r"^\d{2}/\d{2}/\d{4}", ptxt) else "Não consta no RSPE"), "cinza"
+    if pd is None and (ptxt or "").startswith("A verificar: unificação pendente"):
+        psit, pcor = "A verificar: unificação pendente", "amarelo"
     if not lsit and not lcor and ld is None:
         lsit, lcor = (ltxt.split(" (")[0] if ltxt and not re.match(r"^\d{2}/\d{2}/\d{4}", ltxt) else "Não consta no RSPE"), "cinza"
     # nota do SEEU depois da data prevista: exibida junto da data que veio do SEEU (sem mudar a cor nem o prazo)
     if not est and r.get("progressao_previsao_seeu"):
-        psit = _com_nota(psit, r.get("progressao_nota"))
+        psit = _com_nota(psit, r.get("progressao_nota"), pd)
     if not (est and est[0] in ("extinta", "cumprida", "lc", "lc_duvida", "nao_iniciou")) and r.get("livramento_previsao_seeu") \
             and ltxt == r.get("livramento_previsao_seeu"):
-        lsit = _com_nota(lsit, r.get("livramento_nota"))
+        lsit = _com_nota(lsit, r.get("livramento_nota"), ld)
     presc = rp.analisar(r, HOJE, ficha)
     if ficha:
         # reincidência pelas datas (rspe_reincidencia): penas de outros processos extintas na ficha e a capitulação da ficha
@@ -1504,6 +1581,11 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
         except Exception:
             r["_extincoes_ficha"] = []
         r["_ficha_artigo"] = ficha.get("artigo") or ""
+    try:
+        # soltura do RSPE que a ficha desmente (alvará com pendência, sem saída): a Auditoria não a usa como fundamento
+        r["_solturas_sem_saida"] = [rs.fmt(a) for a, _b in rf._soltura_x_ficha(r, ficha, so_periodos=True)] if ficha else []
+    except Exception:
+        r["_solturas_sem_saida"] = []
     aud = ra.auditar(r, HOJE)
     try:
         dbi = data_base_info(r, aud["aud_itens"], ficha)
@@ -1592,7 +1674,9 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
         "geral_cor": "azul" if execucao_extinta(r) else "",
         "regime": ("Livramento condicional" if (est and est[0] == "lc") else
                    ("Livramento? (RSPE: %s)" % (r.get("regime_atual") or "").replace(" - ATIVO", "") if (est and est[0] == "lc_duvida") else
-                    ((r.get("regime_atual") or "").replace(" - ATIVO", "") + (" (não iniciado)" if (est and est[0] == "nao_iniciou" and r.get("regime_atual")) else "")))),
+                    ((r.get("regime_atual") or "").replace(" - ATIVO", "") + (" (não iniciado)" if (est and est[0] == "nao_iniciou" and r.get("regime_atual")) else "")
+                     + (" (a verificar: unificação pendente)" if (not est or est[0] not in ("extinta", "cumprida", "nao_iniciou")) and not r.get("progressao_previsao_seeu")
+                        and rs.unificacao_pendente(r) else "")))),
         "regime_rspe": (r.get("regime_atual") or "").replace(" - ATIVO", ""),
         "vara": r.get("vara", ""),
         "crimes": rs.crimes_curto(r.get("_crimes", [])) or r.get("crimes_curto") or "",
@@ -2116,28 +2200,61 @@ def saida_temporaria(r, ficha, m, est=None, interr=False, hoje=None):
                                                   "§ 2º, não se aplica (CF, art. 5º, XL)" % "; ".join(ant_m)) if ant_m else
                                                  "Sem hediondo com resultado morte (art. 122, § 2º)"))
     cump, tot = _pena_dias(r.get("pena_cumprida")), _pena_dias(r.get("pena_total"))
+    _pt_rspe = bool(tot)  # pena total calculada pelo SEEU
     reinc = (r.get("reincidente") or "").upper().startswith("S") or any(
         (c.get("reincidente_comum") == "S" or c.get("reincidente_especifico") == "S") for c in crimes)
     fr = Fraction(1, 4) if reinc else Fraction(1, 6)
+    _fr_txt, _cond_txt = ("1/4" if reinc else "1/6"), ("reincidente" if reinc else "primário")
     # custódia que o SEEU não conta na pena cumprida (guia sem cálculo, RSPE antigo com a pessoa presa): se só ela alcança a fração,
     # o requisito fica a conferir - nunca "não atendido" pela pena cumprida zerada ou desatualizada do SEEU
     est_c, est_txt = _cumprido_estimado(r, hoje, interr)
     if not tot and est_c is not None:
-        tot = soma_penas_ativas(r) or None
+        # guia sem cálculo: a soma das penas impostas, com a pena da ação penal sem crime cadastrado (não a medida de segurança)
+        tot = (soma_penas_ativas(r) + penas_sem_crime(r)) or None
+    tot_txt = (r.get("pena_total") or rs.dias_para_pena(tot)) if _pt_rspe else ("%s (soma das penas impostas)" % rs.dias_para_pena(tot) if tot else "")
+    # ficha: soltura dentro da custódia contínua dos eventos (o RSPE conta a liberdade como custódia) sai da estimativa; a prisão
+    # provisória por processo deste RSPE sem cômputo (detração) entra - os dois ficam "a conferir"
+    det_f, det_txt = 0, ""
+    if ficha:
+        try:
+            if est_c is not None:
+                sol = [(a, b) for a, b in rf.solturas_nao_lancadas(r, ficha, judicial=True) if a <= hoje]
+                fora = sum(max(0, ((b or hoje) - a).days - 1) for a, b in sol)
+                if fora:
+                    est_c -= fora
+                    est_txt += "; descontada a soltura registrada na ficha (%s), ficam %s" % ("; ".join(
+                        "%s a %s" % (rs.fmt(a), rs.fmt(b) if b else "hoje") for a, b in sol), rs.dias_para_pena(est_c))
+            dets = rf._detracao_x_ficha(r, ficha, so_periodos=True)
+            det_f = sum(n for _a, _b, n in dets)
+            if det_f:
+                det_txt = "a prisão provisória registrada na ficha (%s, %s) não está no cômputo do RSPE (detração, CP, art. 42)" % (
+                    "; ".join("%s a %s" % (rs.fmt(a), rs.fmt(b)) for a, b, _n in dets), rs.pl(det_f, "dia", "dias"))
+                if est_c is not None:
+                    est_c += det_f
+                    est_txt += "; somada %s, ficam %s" % (det_txt.replace(" não está no cômputo do RSPE", ", fora do cômputo do RSPE"), rs.dias_para_pena(est_c))
+        except Exception:
+            pass
     if cump is None or not tot:
         if tot and est_c is not None and est_c >= int(tot * fr):
             add(None, "%s da pena cumprida (%s): o SEEU não informa a pena cumprida; %s - conferir (art. 123, II)" % (
-                "1/4" if reinc else "1/6", "reincidente" if reinc else "primário", est_txt))
+                _fr_txt, _cond_txt, est_txt))
         else:
             add(None, "%s não informada no RSPE" % ("Pena cumprida" if cump is None and tot else "Pena total" if cump is not None else "Pena total e pena cumprida"))
     elif cump < int(tot * fr) and est_c is not None and est_c >= int(tot * fr):
         add(None, "%s da pena cumprida (%s): pelo SEEU %s de %s, mas %s, o que alcança a fração (%s) - conferir (art. 123, II)" % (
-            "1/4" if reinc else "1/6", "reincidente" if reinc else "primário", r.get("pena_cumprida") or "0", rs.dias_para_pena(tot),
-            est_txt, rs.dias_para_pena(int(tot * fr))))
+            _fr_txt, _cond_txt, r.get("pena_cumprida") or "0", tot_txt, est_txt, rs.dias_para_pena(int(tot * fr))))
+    elif cump < int(tot * fr) and det_f and cump + det_f >= int(tot * fr):
+        add(None, "%s da pena cumprida (%s): pelo SEEU %s de %s, mas %s; com ela, alcança a fração (%s) - conferir (art. 123, II)" % (
+            _fr_txt, _cond_txt, r.get("pena_cumprida") or "0", tot_txt, det_txt, rs.dias_para_pena(int(tot * fr))))
+    elif not _pt_rspe and est_c is not None:
+        # guia sem cálculo: a pena cumprida do SEEU (0a0m0d) não diz nada - vale a custódia reconstruída, sobre a soma das penas
+        add(False, "%s da pena cumprida (%s): o SEEU não calculou a pena; %s, de %s - não alcança a fração (%s) (art. 123, II)" % (
+            _fr_txt, _cond_txt, est_txt, tot_txt, rs.dias_para_pena(int(tot * fr))))
     else:
         # fração em dias arredondada para baixo, como no resto do programa
-        add(cump >= int(tot * fr), "%s da pena cumprida (%s): %s de %s (art. 123, II; Súmula 40 do STJ)" % (
-            "1/4" if reinc else "1/6", "reincidente" if reinc else "primário", r.get("pena_cumprida"), r.get("pena_total") or rs.dias_para_pena(tot)))
+        add(cump >= int(tot * fr), "%s da pena cumprida (%s): %s de %s (art. 123, II; Súmula 40 do STJ)%s" % (
+            _fr_txt, _cond_txt, r.get("pena_cumprida"), tot_txt,
+            (" · %s" % det_txt) if det_f and cump < int(tot * fr) else ""))
     if not ficha:
         add(None, "Sem ficha disciplinar: conduta, trabalho e saídas anteriores não conferidos")
     else:
@@ -2157,7 +2274,8 @@ def saida_temporaria(r, ficha, m, est=None, interr=False, hoje=None):
                  "Unidade de monitoramento eletrônico" if tipo_un == "monitoramento" else "Unidade de regime %s" % tipo_un, rf.nome_unidade(un))))
         _conduta_requisito(add, ficha, falta_12m_hoje(r, hoje))
         trab = _trabalho_atual(ficha, m)  # o trabalho externo também conta
-        add(bool(trab), "Trabalhando: " + trab if trab else "Sem trabalho em curso na ficha")
+        # o trabalho não é requisito da saída temporária (LEP, art. 123): só informação, sem ✓ nem ✗
+        add("info", ("Trabalhando: " + trab if trab else "Sem trabalho em curso na ficha") + " (informação: o trabalho não é requisito do art. 123 da LEP)")
         sts = rf.saidas_temporarias_retorno(ficha.get("eventos", []))
         if not sts:
             add(True, "Nenhuma saída temporária anterior na ficha")
@@ -2177,7 +2295,7 @@ def saida_temporaria(r, ficha, m, est=None, interr=False, hoje=None):
         imp = rs.to_date(((ficha.get("data_impressao") or "").split() or [""])[0].replace(".", "/"))
         if imp and (hoje - imp).days > 90:
             add(None, "Ficha impressa em %s (há %d dias, mais de 90): conferir conduta e trabalho atuais" % (rs.fmt(imp), (hoje - imp).days))
-    ok = all(x["ok"] is True for x in it)
+    ok = all(x["ok"] is True or x["ok"] == "info" for x in it)
     return {"st_ok": ok, "st_itens": it, "st_quase": (not ok) and all(x["ok"] is not False for x in it)}
 
 
