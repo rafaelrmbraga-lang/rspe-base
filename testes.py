@@ -15,6 +15,7 @@ TESTES += ["teste_remicao_714.py"]  # remição 7.14: comparação por totais e 
 TESTES += ["teste_remicao_714b.py"]  # remição 7.14, segunda rodada: provavelmente remido, cinza com RSPE maior, atestado sem período, aviso de outra execução
 TESTES += ["teste_leitura_714.py"]
 TESTES += ["teste_conf2_remicao.py"]  # conferência 7.14.1, frente remição
+TESTES += ["teste_conf2_auditoria.py"]  # conferência 7.14.1, frente auditoria
 falhas = [t for t in TESTES if subprocess.call([sys.executable, t]) != 0]
 if falhas:
     print("FALHOU: " + ", ".join(falhas))

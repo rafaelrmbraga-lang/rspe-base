@@ -75,8 +75,10 @@ try:
             {"tipo": "DIAS PERDIDOS NA REMIÇÃO", "complemento": "26 Dia(s)", "data_decisao": "10/01/2020", "situacao": "CONCEDIDO"}]
     its = ra._perda_remidos(incs, 109)
     tits = " | ".join(i["titulo"] for i in its)
-    ok("sem falta grave datada no RSPE (decisão de 24/08/2015)" in tits and "somadas acima de 1/3" in tits, "14: perdas %s" % tits)
-    ok(not any(i["nivel"] == "info" and "Dentro do limite" in (i.get("detalhe") or "") for i in its), "14: 'dentro do limite' contraditório")
+    # 7.14.1 (conferência 2, auditoria 11): o limite de 1/3 é por falta - a perda anterior é de outra falta e só reduz o saldo
+    # (250 - 83 = 167; 26 <= 167/3): dentro do limite, sem somar as duas perdas contra um único 1/3
+    ok("sem falta grave datada no RSPE (decisão de 24/08/2015)" in tits and "somadas acima de 1/3" not in tits, "14: perdas %s" % tits)
+    ok(any(i["nivel"] == "info" and "saldo é 167" in (i.get("detalhe") or "") for i in its), "14: limite por falta, sobre o saldo")
 
     # ---- 15: trabalho atual iniciado há menos de 6 meses: o atestado antigo não está "vencido" ----
     f = FD([("01.03.2019", INI % "FAXINA"), ("31.08.2019", FIM % ("FAXINA", "A PEDIDO")),

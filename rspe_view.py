@@ -861,6 +861,8 @@ def termino(r):
         return "Não iniciou"
     if not parada(r) and not execucao_extinta(r) and rs.pena_para_dias(r.get("pena_remanescente")) == 0 and rs.pena_para_dias(r.get("pena_total")):
         return "Pena cumprida (até %s)" % (r.get("data_geracao_rspe") or "?")
+    if execucao_extinta(r):
+        return "Pena extinta"  # execução extinta: a interrupção antiga não é mais situação da pena
     return rotulo_parada(r, True) if parada(r) else "Não consta no RSPE"
 
 
@@ -937,9 +939,15 @@ def extincao(r, presc, interr):
                        (("; " + cust["duvida_txt"]) if cust["duvida"] else "") +
                        ("; abatidos %d dias remidos concedidos no RSPE (LEP, art. 128) - conferir" % remidos_sem_calculo(r) if remidos_sem_calculo(r) else "")))
     elif rf_ver:
+        # a ficha liga a custódia a esta execução: a dúvida não é o processo, mas o que houve depois da saída que ela registra
+        _cfp = r.get("_custodia_ficha_proc") or {}
+        _cfp = _cfp if (_cfp.get("tipo") == "desta" and _cfp.get("desde") == rs.fmt(reinicio_ficha(r))) else {}
         hip.append("A verificar: pelo reinício lançado pela ficha SIAPEN em %s, mais a pena remanescente congelada na interrupção, o término "
-                   "seria %s, já alcançado - extinção pelo cumprimento a verificar (LEP, art. 66, II); a custódia da ficha pode ser de outro "
-                   "processo - conferir" % (rs.fmt(reinicio_ficha(r)), rs.fmt(term)))
+                   "seria %s, já alcançado - extinção pelo cumprimento a verificar (LEP, art. 66, II); %s" % (
+                       rs.fmt(reinicio_ficha(r)), rs.fmt(term),
+                       ("%s%s - conferir se o cumprimento seguiu sem nova interrupção (fuga, descumprimento, regressão) até o término" % (
+                           _cfp["texto"], (", e registra saída em %s (%s)" % _cfp["saida"]) if _cfp.get("saida") else ""))
+                       if _cfp else "a custódia da ficha pode ser de outro processo - conferir"))
     elif term and term <= HOJE:
         hip.append("Término da pena %s %s já alcançado" % ("calculado (data do RSPE + pena remanescente, pelo calendário) para" if term_calc else "previsto para", rs.fmt(term)))
         cor, d_ref = "vermelho", term
@@ -1353,6 +1361,34 @@ def marcas_ficha(baixas):
     return {k for k in baixas if k.startswith("fd:") and k not in vinc}, vinc
 
 
+
+def _ajustar_regime_inicial_ficha(itens, r, ficha):
+    """Alerta da detração antes da fração (regime inicial depois da primeira prisão): se a ficha mostra soltura por alvará entre a
+    primeira prisão e o regime inicial que o RSPE não lançou, a prisão provisória do RSPE está superestimada (o SEEU já conta o
+    tempo em liberdade como pena cumprida, a favor do assistido) e o pedido de recálculo pode expor esse erro - fica "verificar"."""
+    try:
+        sol = rf.solturas_nao_lancadas(r, ficha)
+    except Exception:
+        return
+    for it in itens:
+        if it.get("tipo") != "regime-inicial-depois-da-primeira-prisao" or it.get("nivel") != "alerta":
+            continue
+        ds = [rs.to_date(x) for x in re.findall(r"\d{2}/\d{2}/\d{4}", it.get("titulo") or "")]
+        if len(ds) < 2 or not all(ds[:2]):
+            continue
+        d_ri, prim = ds[0], ds[1]
+        s_ = [(x, y) for x, y in sol if prim < x < d_ri]
+        if not s_:
+            continue
+        x, y = s_[0]
+        it["nivel"] = "verificar"
+        it["titulo"] += " - a ficha registra soltura em %s" % rs.fmt(x)
+        it["detalhe"] += (" Atenção: a ficha registra saída por alvará de soltura em %s%s, sem interrupção no RSPE. A prisão provisória real "
+                          "antes do regime inicial seria de %s a %s (%s), e não a do RSPE: o SEEU já conta o tempo em liberdade como pena "
+                          "cumprida, erro favorável ao assistido, e o pedido de recálculo pode expô-lo. Conferir o alvará nos autos antes "
+                          "de pedir." % (rs.fmt(x), (" e nova entrada em %s" % rs.fmt(y)) if y else "", rs.fmt(prim), rs.fmt(x),
+                                         rs.pl((x - prim).days + 1, "dia", "dias")))
+
 def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
     """Registro extraído -> dict plano com tudo que as abas mostram. baixas: {chave: {obs, data}} da auditoria.
     ficha: Ficha Disciplinar do SIAPEN já lida (rspe_ficha.extrair), se houver. extras: itens da Auditoria criados
@@ -1467,6 +1503,7 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
     if ficha:
         try:
             aud["aud_itens"] = rf.confrontar(r, ficha, HOJE, manuais) + aud["aud_itens"]
+            _ajustar_regime_inicial_ficha(aud["aud_itens"], r, ficha)
         except Exception as e:
             aud["aud_itens"].insert(0, {"nivel": "verificar", "titulo": "Ficha disciplinar: falha ao confrontar (%s)" % e, "detalhe": "", "fundamento": "",
                                         "tipo": "falha-confronto", "ref": ""})

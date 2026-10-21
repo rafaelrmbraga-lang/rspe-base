@@ -458,7 +458,7 @@ def _detracao_blocos(r, ativos, det=None):
     lapso impresso e detração descontada nele ((pena x fração - lapso) / fração; zero quando a diferença é só arredondamento do
     SEEU, até 5 dias). Com um só bloco descontado e a estimativa perto da custódia anterior à data-base (det), vale a custódia.
     None quando o RSPE não traz os lapsos ou eles não casam com as frações dos crimes. Devolve [[fração, pena, lapso, detração]]."""
-    impresso = {}
+    impresso, amd_imp = {}, {}
     for l in r.get("seeu_fracoes_progressao") or []:
         m = re.search(r"\(([^()]*)\)\s*:\s*(\d+a\d+m\d+d)\s*$", l)
         f = rs.parse_fracao(m.group(1)) if m else None
@@ -466,9 +466,10 @@ def _detracao_blocos(r, ativos, det=None):
         if not f or d is None:
             return None
         impresso[f] = impresso.get(f, 0) + d
+        amd_imp[f] = [x + int(y) for x, y in zip(amd_imp.get(f, [0, 0, 0]), re.findall(r"\d+", m.group(2)))]
     if not impresso:
         return None
-    grupos = {}
+    grupos, amd = {}, {}
     for c in ativos:
         p = rs.pena_para_dias(c.get("pena_imposta"))
         if not p:
@@ -477,19 +478,31 @@ def _detracao_blocos(r, ativos, det=None):
         if not f:
             return None
         grupos[f] = grupos.get(f, 0) + p
+        a_, m_, d_ = _amd(rs.dias_para_pena(p))
+        amd[f] = [x + y for x, y in zip(amd.get(f, [0, 0, 0]), (a_, m_, d_))]
     if set(grupos) != set(impresso):
         return None
     out = []
     for f in sorted(grupos):
         P, L = grupos[f], impresso[f]
-        falta = float(P * f) - L
+        # a fração como o SEEU a aplica: sobre os meses (ano = 12 meses) e, à parte, sobre os dias; o resto do mês em dias de 30
+        # (3a8m × 16% = 44 m × 0,16 = 7,04 m = 7m1d) - a conta em dias corridos desvia alguns dias e infla a detração estimada
+        _mm = Fraction(amd[f][0] * 12 + amd[f][1]) * f
+        _esp = (int(_mm) // 12) * rs.DIAS_ANO + (int(_mm) % 12) * 30 + float((_mm - int(_mm)) * 30) + float(amd[f][2] * f)
+        falta = _esp - L
         if falta < -5:
             return None  # lapso maior que a fração sobre a pena inteira: não é a conta esperada
-        out.append([f, P, L, int(round(falta / float(f))) if falta > 5 else 0])
+        out.append([f, P, L, int(round(falta / float(f))) if falta > 5 else 0, amd_imp[f]])
     desc = [b for b in out if b[3] >= 10]
     if len(desc) == 1 and det and abs(desc[0][3] - det) <= max(15, det // 10):
         desc[0][3] = det
     return out
+
+
+def _amd(txt):
+    """'9a2m1d' -> (9, 2, 1)."""
+    m = re.search(r"(\d+)a(\d+)m(\d+)d", txt or "")
+    return tuple(int(x) for x in m.groups()) if m else (0, 0, 0)
 
 
 def _texto_blocos(blocos):
@@ -497,11 +510,13 @@ def _texto_blocos(blocos):
     blocos) contra a fração sobre a pena inteira com a detração descontada depois - diferença detração x (1 - fração do bloco)."""
     ext = lambda n: rs.pena_extenso(rs.dias_para_pena(max(0, int(round(n)))))
     desc = [b for b in blocos if b[3] >= 10]
-    L_tot = sum(b[2] for b in blocos)
-    dif = sum(d * (1 - float(f)) for f, _P, _L, d in desc)
+    # o lapso total é a soma dos lapsos impressos em anos, meses e dias, como o SEEU soma (não em dias corridos)
+    _t = [sum(b[4][k] for b in blocos) for k in range(3)] if all(len(b) > 4 for b in blocos) else None
+    L_tot = rs.pena_para_dias("%da%dm%dd" % (_t[0] + _t[1] // 12, _t[1] % 12, _t[2])) if _t else sum(b[2] for b in blocos)
+    dif = sum(d * (1 - float(f)) for f, _P, _L, d, *_x in desc)
     fav = L_tot - dif
     partes = "; ".join("no bloco de %s (pena de %s), %s de detração: lapso impresso de %s = (pena do bloco − detração) × %s" % (
-        rs.pct(f), ext(P), rs.pl(d, "dia", "dias"), ext(L), rs.pct(f)) for f, P, L, d in desc)
+        rs.pct(f), ext(P), rs.pl(d, "dia", "dias"), ext(L), rs.pct(f)) for f, P, L, d, *_x in desc)
     return (" Pelos lapsos que o SEEU imprime por fração, a detração foi descontada antes da fração %s. Lapso total impresso: %s; com a "
             "fração sobre a pena inteira e a detração descontada depois (pena × fração − detração): %s. Diferença: detração × (1 − fração "
             "do bloco) = %s a mais pela forma mais gravosa." % (
@@ -648,7 +663,8 @@ def perdas_por_falta(incidentes, eventos=None):
         if "REMI" in t and "PERDIDOS" not in t and i.get("situacao") == "CONCEDIDO":
             n = rs.dias_de(i.get("complemento", ""))
             if n is not None:
-                remicoes.append({"d": dt(i), "data": i.get("data_decisao") or i.get("data_referencia") or "", "n": n})
+                remicoes.append({"d": dt(i), "data": i.get("data_decisao") or i.get("data_referencia") or "", "n": n,
+                                 "dec": rs.to_date(i.get("data_decisao") or "") or dt(i)})
     out = []
     resid = {id(x): x["n"] for x in remicoes}  # saldo de cada remição depois das perdas anteriores
 
@@ -661,14 +677,17 @@ def perdas_por_falta(incidentes, eventos=None):
     for k, f in enumerate(faltas):
         prox = faltas[k + 1] if k + 1 < len(faltas) else None
         prev = max([g for g in com_perda if g < f] or [None], key=lambda g: g or date.min)
-        pf = sorted([q for d, q in perdas if d and d >= f and (prox is None or d < prox)], reverse=True)
+        pfd = sorted([(q, d) for d, q in perdas if d and d >= f and (prox is None or d < prox)], key=lambda t: t[0], reverse=True)
+        pf = [q for q, _d in pfd]
         if not pf:
             continue
         usadas, parcelas = set(), []
         def bate(q, n):
             return n > 0 and q in (n // 3, -(-n // 3), round(n / 3))
-        for q in pf:
-            cand = [x for x in remicoes if id(x) not in usadas and (bate(q, x["n"]) or bate(q, resid[id(x)]))]
+        for q, dq in pfd:
+            # a perda só pode ter incidido sobre remição já decidida na data dela (remição lançada depois não existia)
+            cand = [x for x in remicoes if id(x) not in usadas and (bate(q, x["n"]) or bate(q, resid[id(x)]))
+                    and not (x.get("dec") and dq and x["dec"] > dq)]
             cand.sort(key=lambda x: (x["d"] is None or x["d"] > f, -(x["d"] or date.min).toordinal()))
             rem = cand[0] if cand else None
             if rem:
@@ -719,15 +738,18 @@ def _perda_remidos(incidentes, perdidos, eventos=None):
                                "perda incidiu." % "; ".join("%s parece ser 1/3 da remição de %s de %s, posterior à falta" % (
                                    rs.pl(q, "dia", "dias"), rs.pl(rem["n"], "dia", "dias"), rem["data"]) for q, rem in pos_),
                                FUND_127, tipo="perda-sobre-remicao-posterior-a-falta", ref=rs.fmt(f)))
-        # sem falta anterior com perda, mas com perda sem falta datada antes: a remição até a falta já sofreu aquela perda - somadas, as
-        # duas não podem passar de 1/3 dessa remição (possível excesso ou duplicidade, a conferir)
+        # sem falta anterior com perda, mas com perda sem falta datada antes: aquela perda é de outra falta, com limite próprio. O limite
+        # de 1/3 é por falta (LEP, art. 127): a desta incide sobre o saldo da remição até ela, já descontada a perda anterior - não se
+        # somam as duas perdas contra um único 1/3
         ant_ = sum(q for d, q in orfas if d < f) if prev is None else 0
-        if ant_ and x["janela"] and ant_ + x["perda"] > x["janela"] // 3:
-            itens.append(_item("verificar", "Perdas de remidos somadas acima de 1/3 (falta de %s)" % rs.fmt(f),
-                               "Remição até a falta: %s; perda anterior sem falta datada: %s; perda por esta falta: %s - somadas, %s, acima de 1/3 (%s). "
-                               "Possível excesso ou desconto em duplicidade: conferir as decisões." % (
-                                   rs.pl(x["janela"], "dia", "dias"), rs.num_txt(ant_), rs.num_txt(x["perda"]), rs.num_txt(ant_ + x["perda"]),
-                                   rs.pl(x["janela"] // 3, "dia", "dias")), FUND_127, tipo="perdas-somadas-acima-de-1-3", ref=rs.fmt(f)))
+        _saldo_ = max(0, x["janela"] - ant_) if ant_ else x["janela"]
+        _exc_ant = bool(ant_ and x["janela"] and x["perda"] > -(-_saldo_ // 3))
+        if _exc_ant:
+            itens.append(_item("verificar", "Perda de remidos acima de 1/3 do saldo (falta de %s)" % rs.fmt(f),
+                               "Remição até a falta: %s; perda anterior, de outra falta (sem data no RSPE): %s; saldo: %s; perda por esta falta: "
+                               "%s, acima de 1/3 do saldo (%s). O limite é por falta, sobre a remição ainda não atingida: conferir as decisões." % (
+                                   rs.pl(x["janela"], "dia", "dias"), rs.num_txt(ant_), rs.pl(_saldo_, "dia", "dias"), rs.num_txt(x["perda"]),
+                                   rs.pl(_saldo_ // 3, "dia", "dias")), FUND_127, tipo="perdas-somadas-acima-de-1-3", ref=rs.fmt(f)))
         ress = (" Data do fato não consta no complemento da homologação: usada a data de referência (%s); conferir a data da infração, "
                 "que é a que reinicia a contagem (art. 127)." % rs.fmt(f)) if x.get("sem_fato") else ""
         # falta sem o incidente de homologação, inferida da fuga/evasão com regressão e perda de remidos (rs.mapa_faltas): a conta
@@ -756,9 +778,13 @@ def _perda_remidos(incidentes, perdidos, eventos=None):
                                    " Parcelas: %s - o arredondamento para cima de cada parcela ultrapassa o teto legal." % ", ".join(
                                        "%s (sobre %s)" % (rs.num_txt(q), rs.num_txt(rem["n"]) if rem else "?") for q, rem in x["parcelas"]) if (len(x["parcelas"]) > 1 and not dup) else "") + ress,
                                FUND_127, tipo="perda-de-dias-remidos-acima-de-1-3-falta-de", ref=rs.fmt(f)))
-        elif not dup and not (ant_ and x["janela"] and ant_ + x["perda"] > x["janela"] // 3):
+        elif not dup and not _exc_ant:
             itens.append(_item("info", "Perda de %s remidos pela falta grave de %s" % (rs.pl(x["perda"], "dia", "dias"), rs.fmt(f)),
-                               "Dentro do limite de 1/3 (remição %s: %s)." % (("entre a falta de %s e esta" % rs.fmt(prev)) if prev else "até a falta", rs.pl(base, "dia", "dias")) + ress, "LEP, art. 127.", tipo="perda-de-remidos-pela-falta-grave-de", ref=rs.fmt(f)))
+                               "Dentro do limite de 1/3 (remição %s: %s%s)." % (
+                                   ("entre a falta de %s e esta" % rs.fmt(prev)) if prev else "até a falta", rs.pl(base, "dia", "dias"),
+                                   ("; descontada a perda anterior, de outra falta (%s), o saldo é %s e o limite, %s" % (
+                                       rs.num_txt(ant_), rs.pl(_saldo_, "dia", "dias"), rs.num_txt(round(_saldo_ / 3, 2)) + " dias")) if ant_ else "")
+                               + ress, "LEP, art. 127.", tipo="perda-de-remidos-pela-falta-grave-de", ref=rs.fmt(f)))
     return itens
 
 
@@ -782,7 +808,25 @@ def _lancamentos_seeu(r, crimes, ativos, incidentes, eventos):
         up = max(prog, key=lambda i: D(i["data_referencia"]))
         rem = [i for i in conc if (i.get("tipo") or "").upper().startswith("REMI") and D(i.get("data_referencia"))
                and D(i.get("data_decisao")) and D(i["data_referencia"]) < D(up["data_referencia"]) and D(i["data_decisao"]) > D(up["data_decisao"])]
-        if rem:
+        # contagem reiniciada depois da progressão (falta reconhecida, regressão definitiva, interrupção/recaptura) até a data-base
+        # atual: antecipar aquela progressão não muda benefício pendente - informação, sem pedido
+        _db = D(r.get("data_base_seeu"))
+        _upr = D(up["data_referencia"])
+        _rein = [rs._data_fato_falta(i) for i in conc if rs.RE_FALTA_PROPRIA.search(rs._rotulo_incidente(i)) and not rs._negado(i)]
+        _rein += [D(i.get("data_referencia") or i.get("data_decisao")) for i in conc if rs.e_incidente_regime(i)
+                  and "REGRESS" in (i.get("complemento") or "").upper() and "CAUTELAR" not in (i.get("complemento") or "").upper()]
+        _rein += [D(e.get("data")) for e in eventos if re.search(r"INTERRUP|RECAPTURA", ((e.get("tipo") or "") + " " + (e.get("motivo") or "")).upper())]
+        _sup = bool(_db) and _db > _upr + timedelta(days=1) and any(x and _upr < x <= _db + timedelta(days=1) for x in _rein)
+        if rem and _sup:
+            out.append(_item("info", "Remição de período anterior à progressão de %s lançada depois dela - sem efeito atual" % up["data_referencia"],
+                             "Depois da progressão de %s foram lançadas remições com referência anterior: %s. Antecipar aquela progressão "
+                             "já não muda benefício pendente: a contagem recomeçou depois dela (data-base atual %s), e os dias já integram a "
+                             "pena cumprida e o término." % (
+                                 up["data_referencia"],
+                                 "; ".join("%s dias ref. %s, lançados em %s" % (_dias_compl(i) or "?", i["data_referencia"], i["data_decisao"]) for i in rem),
+                                 rs.fmt(_db)),
+                             "LEP, arts. 126, § 8º, e 128.", tipo="remicao-preterita-apos-progressao"))
+        elif rem:
             out.append(_item("verificar", "Remição de período anterior à progressão lançada depois dela: pedir o recálculo",
                              "A progressão de %s (%s) foi decidida em %s e a data dela fica fixa no SEEU. Depois disso foram lançadas remições "
                              "com referência anterior: %s (%s no total). O SEEU não recalcula sozinho e o servidor não recalcula de ofício: "
@@ -1055,6 +1099,12 @@ def _ajustar_itens_do_crime(itens, i0, c, nome, esp_ok):
             for i in fr_al:
                 i["nivel"] = "info"
                 i["titulo"] += " - mesmo erro da reincidência específica não demonstrada (item próprio)"
+                # reincidência específica provável (item próprio a verificar): a fração do SEEU pode estar certa - a informação não
+                # afirma o erro sem a mesma ressalva
+                if rei.get("nivel") == "verificar" and re.search(r"sem trânsito", rei.get("detalhe") or "") \
+                        and "pode estar cert" not in i.get("detalhe", ""):
+                    i["detalhe"] += (" Ressalva: há condenação anterior sem trânsito informado que pode ter transitado antes do fato (ver o "
+                                     "item da reincidência específica): nesse caso a fração do SEEU está certa.")
             fr_al = []
     cap = next((i for i in meus if i.get("tipo") == "capitulacao-criada-depois-do-fato" and i.get("nivel") == "alerta"), None)
     # só o anacronismo que muda o cálculo fica como alerta: o SEEU aplicou fração de hediondo que a lei da época não previa (item
@@ -1307,6 +1357,12 @@ def auditar(r, hoje=None):
         it["preencher"] = {"campo": "data_nascimento", "rotulo": "Data de nascimento (dd/mm/aaaa)", "tipo": "data"}
         if nasc:
             # preenchido (pelo operador ou pela ficha): o alerta sai da contagem e fica como baixado, com a origem do dado
+            # o texto deixa de mandar informar: a data já é usada nas contas
+            if r.get("_nasc_rspe"):
+                it["titulo"] = "Data de nascimento %s (RSPE: %s)" % (r["_nasc_fonte"], r["_nasc_rspe"])
+            it["detalhe"] = (("" if r.get("_nasc_rspe") else "O RSPE não traz a data de nascimento. ") +
+                             "O programa usa a data %s (%s) na metade do prazo de prescrição (art. 115 do CP) e nas hipóteses de idade "
+                             "do indulto e da comutação. Se estiver errada, corrija pelo botão Preencher." % (r["_nasc_fonte"], rs.fmt(nasc)))
             _dt = r.get("_nasc_data") or ""
             it["auto_baixa"] = {"obs": "Data de nascimento %s: %s%s. Usada nos cálculos (art. 115 e idade no indulto)." % (
                 r["_nasc_fonte"], rs.fmt(nasc), (" (RSPE: %s)" % r["_nasc_rspe"]) if r.get("_nasc_rspe") else ""), "data": _dt}
@@ -1856,6 +1912,17 @@ def auditar(r, hoje=None):
                                    rs.fmt(fato), _lh or "lei", rs.fmt(_dh),
                                    ""),
                                "CF, art. 5º, XL; CP, art. 2º; Lei 8.072/90; STF, 2ª T., RHC 267.297 AgR.", tipo="hediondez-posterior-ao-fato", ref=nome))
+        # tipo revogado antes do fato: o SEEU cadastrou artigo que já não existia na data do fato (ex.: "ART 217 (Revogado pela Lei nº
+        # 11.106, de 2005)" para fato de 2016, em geral no lugar do 217-A). Sem efeito aferível na fração (conferida pelo tipo provável):
+        # informação para corrigir a capitulação no SEEU
+        _rv = re.search(r"REVOGAD\w*\s+PEL\w\s+(LEI\s+(?:N[º°O.]*\s*)?[\d.]+\d)\s*,?\s*DE\s+(\d{4})", (c.get("artigo") or "").upper())
+        if fato and _rv and fato.year > int(_rv.group(2)):
+            _prov = (" A fração foi conferida como estupro de vulnerável (art. 217-A), hediondo, que é a capitulação provável."
+                     if art == "217" and _hediondo_seeu(c) else "")
+            itens.append(_item("info", "%s: artigo revogado antes do fato (%s, de %s)" % (nome, _rv.group(1).title().replace("Nº", "nº"), _rv.group(2)),
+                               "O SEEU cadastrou um artigo revogado em %s; o fato é de %s, quando esse tipo já não existia. O cadastro está "
+                               "errado: conferir a capitulação da sentença e pedir a correção no SEEU.%s" % (_rv.group(2), rs.fmt(fato), _prov),
+                               "CF, art. 5º, XXXIX; CP, art. 1º.", tipo="artigo-revogado-antes-do-fato", ref=nome))
         if not fato:
             itens.append(_item("info", "%s: data do fato ausente" % nome, "Sem a data do fato não se aplica a lei do tempo (frações de progressão, art. 115 CP).", "CF, art. 5º, XL; STJ Tema 1354.", tipo="data-do-fato-ausente", ref=nome))
         if not c.get("transito_processo") and not c.get("transito_mp"):
@@ -2141,6 +2208,8 @@ def auditar(r, hoje=None):
                                    "CP, arts. 63 e 64, I; LEP, art. 112.", tipo="percentual-reincidencia-a-conferir", ref=nome))
             else:
                 nota = " ".join(obs) or "Conforme a lei da data do fato."
+                if any(x.get("tipo") == "artigo-revogado-antes-do-fato" and x.get("ref") == nome for x in itens):
+                    nota += " Atenção: o artigo cadastrado foi revogado antes do fato - o percentual confere com a capitulação provável."
                 itens.append(_item("ok", "%s: percentual de progressão confere (%s)" % (nome, rs.pct_rotulo(c.get("fracao_progressao"))), rs.pct_texto(nota), "LEP, art. 112.", tipo="percentual-de-progressao-confere", ref=nome))
         # fração de livramento
         if pena_total and pena_total < rg.carregar().get("livramento", {}).get("pena_minima_anos", 2) * rs.DIAS_ANO and c.get("fracao_livramento"):
@@ -2245,7 +2314,8 @@ def auditar(r, hoje=None):
                                    " A fração 1/1 só cabe a hediondo de reincidente específico; lançada em crime comum (muitas vezes para "
                                    "\"revogar\" o livramento na implantação do processo, em vez do incidente próprio), o SEEU trata o crime como "
                                    "hediondo e trava indulto e comutação: pedir a correção da fração." if (c.get("fracao_livramento") or "").startswith("1/1") and not hed else ""),
-                               "CP, art. 83; Lei 11.343/06, art. 44, p. ú.", tipo="fracao-de-livramento-diverge", ref=nome))
+                               "CP, art. 83" + ("; Lei 11.343/06, art. 44, p. ú." if trafico else "; Lei 8.072/90" if hed else "") + ".",
+                               tipo="fracao-de-livramento-diverge", ref=nome))
             _itl = itens[-1]
             if _itl["nivel"] == "alerta" and reinc_ind:
                 _flr = rg.fracao_livramento_esperada(hed, True, trafico, _trafico_pessoas(c))[0]
@@ -2384,6 +2454,25 @@ def auditar(r, hoje=None):
                            "antecedentes confirma a data do trânsito e se a reincidência é específica." % (
                                _juntar_por_processo(sorted(set(_n for _f, _n, _r in reinc_ficha))), reinc_ficha[0][2]["motivo"]),
                            "CP, arts. 63 e 64, I; ficha disciplinar (SIAPEN).", tipo="reincidencia-com-base-na-ficha"))
+    # livramento já concedido nesta execução e nova prisão depois dele (ou revogação registrada): o 1/1 do SEEU ("Hediondo reincidente
+    # ou com revogação L.C.") pode ser a revogação. Revogado por crime cometido no período de prova, não se concede novo livramento
+    # nesta pena (CP, art. 88): a afirmação "livramento possível" fica condicionada à causa da revogação (verificar)
+    _dlc = sorted(d for d in (rs.to_date(j.get("data_referencia") or j.get("data_decisao") or "") for j in incidentes
+                              if rs.e_concessao_livramento(j)) if d)
+    _rev_lc = any(rs.e_revogacao_livramento(j) for j in incidentes)
+    _prs_pos = sorted(d for d in (rs.to_date(e.get("data") or "") for e in eventos if not e.get("_ficha")
+                                  and "PRIS" in (e.get("tipo") or "").upper()) if d and _dlc and d > _dlc[0] + timedelta(days=1))
+    if _dlc and (_rev_lc or _prs_pos):
+        _nota88 = (" Atenção: houve livramento nesta execução (%s)%s; o 1/1 do SEEU (\"com revogação L.C.\") pode ser a revogação. Se o "
+                   "livramento foi revogado por crime cometido durante o período de prova, não se concede novo livramento nesta pena (CP, art. "
+                   "88): verificar nos autos a causa da revogação antes de pedir o livramento." % (
+                       rs.fmt(_dlc[0]), (" e revogação registrada" if _rev_lc else " e nova prisão em %s" % rs.fmt(_prs_pos[0]))))
+        for it in itens:
+            if it.get("tipo") in ("reincidencia-especifica-nao-demonstrada-no-rspe", "fracao-de-livramento-diverge", "reincidencia-crime-a-crime-livramento") \
+                    and re.search(r"livramento", (it.get("titulo") or "") + (it.get("detalhe") or ""), re.I) and "art. 88" not in it.get("detalhe", ""):
+                it["detalhe"] += _nota88
+                if it.get("tipo") == "fracao-de-livramento-diverge" and it.get("nivel") == "alerta":
+                    it["nivel"] = "verificar"
     # ---------------- 3. data-base e faltas ----------------
     regs = [i for i in incidentes if rs.e_incidente_regime(i) and i.get("situacao") == "CONCEDIDO"
             and rs.re.search(r"PROGRESS|REGRESS", i.get("complemento") or "", rs.re.I)]
@@ -2462,9 +2551,16 @@ def auditar(r, hoje=None):
         # a "conta-corrente"): prisão de processo já extinto ou anterior a todos os fatos não entra
         _procs_exec = [c.get("processo_criminal") or "" for c in ativos]
         _f_min = min((d for d in (rs.to_date(c.get("data_infracao") or "") for c in ativos) if d), default=None)
+        # só prisão provisória é detração: a prisão definitiva (cumprimento de pena) e o período com progressão concedida dentro dele
+        # já são execução da pena, não custódia anterior ao regime inicial (regime inicial relançado depois da revogação do
+        # livramento, por exemplo)
+        _dprog = [rs.to_date(j.get("data_referencia") or j.get("data_decisao") or "") for j in regs
+                  if "PROGRESS" in (j.get("complemento") or "").upper()]
         _per = [(a, b) for a, b, _m, procs in rs.periodos_custodia_detalhe(eventos)
                 if a and (not rs.lista_processos(procs) or any(rp._mesmo_processo(q, x) for q in rs.lista_processos(procs) for x in _procs_exec if x))
-                and not (_f_min and b and b <= _f_min)]
+                and not (_f_min and b and b <= _f_min)
+                and not re.search(r"DEFINITIV", _m or "", re.I)
+                and not any(x and a <= x <= (b or _d_ri) and x < _d_ri for x in _dprog)]
         _prim = [a for a, _b in _per]
         # as duas contas: detração antes da fração ((P - d) x f) e fração sobre a pena total (P x f - d); diferença d x (1 - f).
         # Com frações diferentes entre os crimes, a fração é a média ponderada pelas penas dos crimes ativos (o SEEU aplica cada
@@ -2507,7 +2603,22 @@ def auditar(r, hoje=None):
                        if "REGRESS" in (j.get("complemento") or "").upper() and "CAUTELAR" not in (j.get("complemento") or "").upper()]
         _reinicios += [rs.to_date(e.get("data") or "") for e in eventos if re.search(r"RECAPTURA", ((e.get("tipo") or "") + " " + (e.get("motivo") or "")).upper())]
         _recomecou = bool(_db_atual) and any(x and _lprog0 < x <= _db_atual + timedelta(days=1) for x in _reinicios)
-        _ri_sem_efeito = _db_atual and _db_atual > _d_ri + timedelta(days=1) and (_sem_prog or _recomecou)
+        # sem progressão, a data-base atual só encerra o efeito se tiver marco firme no RSPE (prisão, recaptura de fuga com falta
+        # reconhecida, falta reconhecida, regressão): data-base sem marco (ex.: falta ainda não homologada) ou recaptura de fuga sem
+        # falta reconhecida pode cair e voltar ao regime inicial - o item fica condicionado ("verificar")
+        _db_firme = bool(_db_atual) and (any(x and abs((x - _db_atual).days) <= 1 for x in _reinicios) or any(
+            abs(((rs.to_date(e.get("data") or "") or date.min) - _db_atual).days) <= 1
+            and re.search(r"PRIS|RECAPTURA|REIN[ÍI]CIO", ((e.get("tipo") or "") + " " + (e.get("motivo") or "")).upper()) for e in eventos))
+        _fg = sorted(d for d in (rs.to_date(e.get("data") or "") for e in eventos if "INTERRUP" in (e.get("tipo") or "").upper()
+                                 and re.search(r"FUGA|EVAS", (e.get("motivo") or "").upper())) if d and _db_atual and d < _db_atual)
+        _rec_ev = [rs.to_date(e.get("data") or "") for e in eventos if re.search(r"RECAPTURA", ((e.get("tipo") or "") + " " + (e.get("motivo") or "")).upper())]
+        _db_fuga = bool(_db_firme and _fg) and not any(
+            x and _fg[-1] - timedelta(days=5) <= x <= _db_atual + timedelta(days=1) for x in _reinicios
+            if not any(y and abs((x - y).days) <= 1 for y in _rec_ev))
+        if _db_fuga:
+            _db_firme = False
+        _ri_cond = bool(_db_atual) and _db_atual > _d_ri + timedelta(days=1) and _sem_prog and not _recomecou and not _db_firme
+        _ri_sem_efeito = _db_atual and _db_atual > _d_ri + timedelta(days=1) and ((_sem_prog and not _ri_cond) or _recomecou)
         # lapsos por fração que o SEEU imprime no quadro de cálculo ("Hediondo primário (40%): 2a0m1d"): mostram em que bloco
         # (fração) a detração foi descontada antes da fração - a diferença é detração x (1 - fração DESSE bloco), não a média.
         # Valem enquanto a data-base atual não veio de progressão nem de falta, regressão ou recaptura (lapso sobre a pena inteira
@@ -2589,7 +2700,7 @@ def auditar(r, hoje=None):
                                    rs.fmt(min(_prim)), rs.fmt(_d_ri), "; ".join(r.get("seeu_fracoes_progressao") or []), rs.fmt(_db_atual) if _db_atual else "?"),
                                "CP, art. 42; LEP, art. 112.", tipo="regime-inicial-depois-da-primeira-prisao", ref=rs.fmt(_d_ri)))
         elif _prim and min(_prim) < _d_ri - timedelta(days=1):
-            itens.append(_item("info" if _dif is not None and _dif < 10 else "alerta",
+            itens.append(_item("info" if _dif is not None and _dif < 10 else "verificar" if _ri_cond else "alerta",
                                "Regime inicial lançado em %s, depois da primeira prisão (%s)" % (rs.fmt(_d_ri), rs.fmt(min(_prim))),
                                "A primeira prisão por processo desta execução é de %s e o regime inicial foi lançado em %s. Lançado depois da "
                                "primeira prisão (na data de prisão posterior ou de decisão), o regime inicial faz o SEEU descontar a detração antes "
@@ -2602,7 +2713,12 @@ def auditar(r, hoje=None):
                                "indulto e comutação (AgRg no REsp 2.248.958, 09/09/2026).%s" % (
                                    rs.fmt(min(_prim)), rs.fmt(_d_ri),
                                    (" Houve soltura em %s, antes do regime inicial: a data-base não volta à primeira prisão, que conta como "
-                                    "detração (pena cumprida)." % rs.fmt(_solt[-1])) if _solt else "", _contas),
+                                    "detração (pena cumprida)." % rs.fmt(_solt[-1])) if _solt else "", _contas + (
+                                   " Hoje a data-base impressa (%s) é posterior ao regime inicial, mas %s: se for mantida, o lançamento fica "
+                                   "sem efeito; se cair, a contagem volta ao regime inicial (%s) e a diferença acima pesa na progressão." % (
+                                       rs.fmt(_db_atual), "é a recaptura de uma fuga sem falta reconhecida no RSPE" if _db_fuga else
+                                       "não tem prisão, recaptura ou falta reconhecida no RSPE nessa data", rs.fmt(_d_ri))
+                                   if _ri_cond else "")),
                                "CP, art. 42 (a detração é pena cumprida); LEP, art. 112; STJ, AgRg no AREsp 2.956.206; STJ, AgRg no HC 719.763; "
                                "STJ, 5ª T., AgRg no REsp 2.248.958 (divergência).",
                                tipo="regime-inicial-depois-da-primeira-prisao",
@@ -2884,7 +3000,10 @@ def auditar(r, hoje=None):
             and (rs.to_date(i.get("data_referencia") or i.get("data_decisao") or "") or date.min) >= _fu[0] - timedelta(days=5)
             for i in incidentes if i.get("situacao", "CONCEDIDO") == "CONCEDIDO") or any(
             e.get("_falta") == "sim" and rs.to_date(e.get("data") or "") == _fu[0] for e in r.get("_eventos", [])))
-        _recapt = bool(bate) and "recaptura" in (bate[0][1] if bate else "").lower()
+        # recaptura: o marco que bate é a recaptura, ou a prisão/início de cumprimento que se segue à interrupção por fuga (o SEEU
+        # lança a volta como "início do cumprimento", sem a palavra recaptura)
+        _recapt = bool(bate) and ("recaptura" in bate[0][1].lower() or (
+            bate[0][1].lower().startswith("prisão") and bool(_fu) and re.search(r"FUGA|EVAS", _fu[1].upper()) is not None))
         if _fuga and _fu and _recapt and _fu[0] < db_seeu and not _homolog:
             # itens 52 e 147 de 16/10: "verificar" (não "alerta") - a falta pode estar em apuração (PAD em curso) ou homologada sem
             # registro no RSPE; o "alerta" anteciparia uma falta ainda não julgada

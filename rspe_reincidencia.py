@@ -145,7 +145,10 @@ def reincidencia_pelas_datas(c, crimes, nasc=None, extincoes=None, processos_exc
                 R["anteriores"].append(o)
         elif not t and s_o and s_o < fato and (not f_o or f_o < fato):
             R["sem_transito"].append(o)
-    procs_rspe = [x.get("processo_criminal") or "" for x in crimes] + [p for p in processos_excluir if p]
+    # a extinção da ficha pode citar o número da execução (não o da ação penal): o de outra execução já lida também decide pelas
+    # datas e pelos crimes dela (ex.: execução só do art. 28 da Lei 11.343/06, que não gera reincidência)
+    procs_rspe = ([x.get("processo_criminal") or "" for x in crimes] + [x.get("_execucao") or "" for x in crimes]
+                  + [p for p in processos_excluir if p])
     for e in extincoes or []:
         if any(p and rs.mesmo_processo(p, e["processo"]) for p in procs_rspe):
             continue  # processo deste RSPE (ou de outra execução já lida): as datas do RSPE decidem

@@ -1677,7 +1677,9 @@ def reconciliar_eventos(r, f):
                 # a "Data Prisão" da ficha, poucos dias antes da entrada na unidade (delegacia, audiência de custódia), é o início
                 # da custódia: o reinício vai nela, para o confronto da prisão com a ficha não alertar contra o próprio lançamento
                 _xp = _dp(f.get("data_prisao") or "")
-                if _xp and d < _xp < x and (x - _xp).days <= 30:
+                # ... salvo se entre ela e a entrada há saída em liberdade (alvará): aí a "Data Prisão" é da custódia anterior, e a nova
+                # prisão é a entrada
+                if _xp and d < _xp < x and (x - _xp).days <= 30 and not any(_xp <= y < x and _saida_fim_custodia(u) for y, u in ev):
                     x = _xp
                 # item 51 de 16/10: depois de liberdade provisória, relaxamento ou regime aberto, a nova prisão pode ser por outro
                 # processo (suspensão, não reinício) - reinício e suspensão levam a data-base e prescrição opostas: nada se lança
@@ -1892,15 +1894,27 @@ def custodia_ficha_processo(r, f, desde):
     rspe += [p for e in r.get("_eventos", []) + r.get("_incidentes", []) if not e.get("_ficha") for p in rs.lista_processos(e.get("processos") or "")]
     rspe = [x for x in rspe if rs.chave_processo(x)]
     ev = sorted(((_dp(e.get("data") or ""), e.get("texto") or "") for e in f.get("eventos", [])), key=lambda x: x[0] or date.min)
-    autos = []
+    autos, saida = [], None
     for x, t in ev:
         if not x or x < desde - timedelta(days=10):
             continue
-        if _saida_fim_custodia(t) and x > desde:
-            break  # soltura depois do início: o que vem depois é outra custódia
+        _fim = _saida_fim_custodia(t) and x > desde
+        # os autos citados na própria saída (ofício, alvará, progressão) também são da custódia que ela encerra
         for n in rs.processos_no_texto(t):
             if n not in autos:
                 autos.append(n)
+        if _fim:
+            saida = (x, _br(t)[:160])
+            break  # soltura depois do início: o que vem depois é outra custódia
+    if saida is None:
+        # saída da unidade para fora do sistema (progressão na comarca de origem, por exemplo) seguida de nova entrada vinda da rua:
+        # a custódia não foi contínua
+        for k, (x, t) in enumerate(ev):
+            if x and x > desde and re.search(r"SA[ÍI]DA DA UNIDADE PENAL", t, re.I):
+                _prox = next(((x2, t2) for x2, t2 in ev[k + 1:] if x2 and RE_ENTRADA.search(t2)), None)
+                if _prox and RE_ENTRADA_RUA.search(_prox[1]) and (_prox[0] - x).days > 2:
+                    saida = (x, _br(t)[:160])
+                    break
     desta = [n for n in autos if any(rs.processo_parecido(n, q) for q in rspe)]
     outros = [n for n in autos if n not in desta]
     # cabeçalho: vale para a prisão atual (Data Prisão até 30 dias antes do início ou depois dele)
@@ -1912,7 +1926,8 @@ def custodia_ficha_processo(r, f, desde):
         return {"tipo": "civil", "autos": outros, "artigo": art,
                 "texto": "a ficha registra prisão civil (Artigo: %s), que não é cumprimento de pena nem detração" % art.lower()}
     if desta:
-        return {"tipo": "desta", "autos": desta, "artigo": art, "texto": "a ficha vincula a custódia aos autos %s, desta execução" % ", ".join(desta)}
+        return {"tipo": "desta", "autos": desta, "artigo": art, "texto": "a ficha vincula a custódia aos autos %s, desta execução" % ", ".join(desta),
+                "saida": (rs.fmt(saida[0]), saida[1]) if saida else None}
     arts_r = {rs.num_art(c.get("artigo") or "") for c in r.get("_crimes", []) if not (c.get("extinto") or "").upper().startswith("S")}
     arts_f = _arts_cabecalho(art)
     art_outro = bool(cond.upper().startswith("PROCESSAD") and arts_f and arts_r and not (arts_f & arts_r))
@@ -2164,6 +2179,28 @@ def _detracao_x_ficha(r, f):
             ini, ult_saida = None, x
         elif ini is not None and _saida_fim_custodia(t):
             ini, ult_saida = None, x  # fuga, evasão, livramento: fim da custódia sem detração a apurar aqui
+    return out
+
+
+def solturas_nao_lancadas(r, f):
+    """Saídas por alvará/soltura da ficha dentro de um período que o RSPE trata como prisão contínua (sem interrupção): o RSPE conta o
+    tempo em liberdade como custódia - erro favorável ao assistido. Devolve [(soltura, nova entrada | None)]."""
+    if not f:
+        return []
+    evs = sorted((e for e in r.get("_eventos", []) if rs.to_date(e.get("data") or "") and not e.get("_ficha")), key=lambda e: rs.to_date(e["data"]))
+    per = rs.periodos_custodia(evs)
+    ev = sorted(((_dp(e.get("data") or ""), e.get("texto") or "") for e in f.get("eventos", [])), key=lambda x: x[0] or date.min)
+    ev = [(x, t) for x, t in ev if x]
+    out = []
+    for k, (x, t) in enumerate(ev):
+        if not re.search(r"SA[ÍI]DA DA UNIDADE PENAL.*MOTIVO:\s*(ALVAR|SOLTURA|LIBERDADE)", t, re.I) or re.search(r"TRANSFER", t, re.I):
+            continue
+        if not any(a < x and (b is None or x < b - timedelta(days=1)) for a, b in per):
+            continue
+        y = next((x2 for x2, t2 in ev[k + 1:] if RE_ENTRADA_RUA.search(t2)), None)
+        if y and (y - x).days <= 2:
+            continue  # saída e volta no mesmo episódio (sem liberdade efetiva)
+        out.append((x, y))
     return out
 
 
