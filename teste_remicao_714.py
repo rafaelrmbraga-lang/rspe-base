@@ -202,4 +202,4 @@ if falhas:
     for x in falhas:
         print(" -", x)
     sys.exit(1)
-print("ok: remição 7.14 (comparação por totais, pontos a conferir, trabalho x atestados com vinculação, ✓ Homologado e vínculo gravados)")
+print("ok: remição 7.14 (comparação por totais, pontos a conferir, trabalho x atestados com vinculação, Homologado e vínculo gravados)")
