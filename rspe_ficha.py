@@ -876,6 +876,47 @@ def _juntar_mesmo_dia(trabalho):
     return out
 
 
+def _separar_mesmo_dia(trabalho, eventos):
+    """(7.14.2) Vínculos abertos no mesmo dia em setores DIFERENTES não são duplicados: quando a linha juntada ("POLIGONAL / SERRALHERIA")
+    termina pela baixa só do último setor (com motivo próprio, não a saída da unidade) e os outros setores não têm baixa na ficha, eles
+    seguem - até o início do trabalho seguinte, a saída da unidade ou, sem nenhum dos dois, em curso. Só é duplicado o mesmo setor."""
+    import rspe_remicao as rrm
+    out = list(trabalho)
+    for t in list(trabalho):
+        if len(t.get("setores") or []) < 2 or not t.get("fim") or not t.get("motivo_fim") \
+                or t.get("texto_livre") or re.search(r"SAIDA|TRANSFER|EVAS|DESLIG|LIBERA|DUPLICIDADE|DESCONSIDER|A?DEQUACAO|"
+                                                     r"OUTRA ATIVIDADE", rs._sem_acento(t["motivo_fim"]).upper()):
+            continue
+        ti, tf = _dp(t["inicio"]), _dp(t["fim"])
+        pal_ = lambda x: set(re.findall(r"[A-Z0-9]{3,}", rs._sem_acento(x or "").upper()))
+        mesmo_ = lambda a_, b_: (_setor_igual(a_, b_) or rrm._nome_confere(a_, b_) or rrm._nome_confere(b_, a_)
+                                 or bool(pal_(a_)) and bool(pal_(b_)) and (pal_(a_) <= pal_(b_) or pal_(b_) <= pal_(a_)))
+        ult = t["setores"][-1]
+        if any(mesmo_(s, ult) for s in t["setores"][:-1]):
+            continue  # nomes do mesmo setor (lançamento estruturado e outro nome): duplicado
+        resto = [s for s in t["setores"][:-1] if not any(
+            e["d"] and ti and e["d"] >= ti and re.match(r"\s*TRABALHO:\s*DEIXA DE TRABALHAR", e["texto"], re.I) and mesmo_(s, re.sub(
+                r"(?i).*NO SETOR DE TRABALHO\s*", "", e["texto"]).split(",")[0]) for e in eventos)]
+        if not resto or not ti or not tf:
+            continue
+        prox = [_dp(x["inicio"]) for x in trabalho if x is not t and _dp(x["inicio"]) and _dp(x["inicio"]) > ti]
+        sai = [e["d"] for e in eventos if e["d"] and e["d"] > ti and _saida_trabalho(e["texto"])]
+        fim_r = min(prox + sai) if (prox or sai) else None
+        if fim_r and fim_r <= tf:
+            continue  # os outros setores não vão além da baixa do último: nada a separar
+        k = out.index(t)
+        a = dict(t, setor=ult, setores=[ult])
+        b = dict(t, setor=" / ".join(resto), setores=resto, fim=fim_r.strftime("%d.%m.%Y") if fim_r else "",
+                 motivo_fim=("início de outra atividade" if fim_r in prox else "saída/evasão/transferência") if fim_r else "")
+        if not fim_r:
+            b.pop("motivo_fim", None)
+        for x in (a, b):
+            if len(x["setores"]) < 2:
+                x.pop("setores")
+        out[k:k + 1] = [b, a]
+    return out
+
+
 def _autos_citados(us):
     """Número CNJ citado no texto ("nos Autos Nº 6001397-76.2023.8.12.0001" ou "Nº60013977620238120001"), só os dígitos; '' sem número."""
     m = re.search(r"\d{7}-?\d{2}\.?\d{4}\.?\d\.?\d{2}\.?\d{4}", us or "")
@@ -1134,7 +1175,7 @@ def derivar(f, eventos):
                 if j:
                     t["jornada"] = j
                     break
-    f["trabalho"] = _juntar_mesmo_dia(trabalho)
+    f["trabalho"] = _separar_mesmo_dia(_juntar_mesmo_dia(trabalho), eventos)
     f["baixas_sem_inicio"] = baixas_orfas
     # "foi autorizado o trabalho externo" e termo de compromisso de trabalho externo: início "a conferir" (inciso XI dos decretos),
     # sem contar como prestação efetiva. Ala/cela de semiaberto e prefixo de setor não bastam
@@ -1143,9 +1184,22 @@ def derivar(f, eventos):
 
     # ---- atestados de trabalho (dias trabalhados / remidos): a mesma leitura da conciliação da remição ----
     atest = []
+    trab_p = [(_dp(t["inicio"]), _dp(t.get("fim") or "") or date.max) for t in f["trabalho"] if _dp(t["inicio"])]
     for a in rrm.atestados(eventos):
         ss = [x for x in a["segs"] if x["ini"] and x["fim"]]
-        atest.append({"data": a["emissao"].strftime("%d.%m.%Y"), "numero": a["numero"], "dias_trabalhados": a["trab"] or 0, "dias_remidos": a["rem"] or 0,
+        corr, ss0, ss = [], ss, []
+        for x in ss0:
+            # (7.14.2) trecho com o ano digitado errado (início 01/07/2023, fim 05/10/2022): o ano trocado que faz o trecho caber num
+            # trabalho registrado na ficha - lido com o ano corrigido e marcado "ano corrigido · conferir"
+            if x["ini"] > x["fim"]:
+                for ini_, fim_ in ((x["ini"].replace(year=x["fim"].year) if not (x["ini"].month == 2 and x["ini"].day == 29) else None, x["fim"]),
+                                   (x["ini"], x["fim"].replace(year=x["ini"].year) if not (x["fim"].month == 2 and x["fim"].day == 29) else None)):
+                    if ini_ and fim_ and ini_ <= fim_ and any(ti <= ini_ + timedelta(days=3) and fim_ <= tf + timedelta(days=3) for ti, tf in trab_p):
+                        corr.append("%s: %s a %s lido como %s a %s" % (x["setor"] or "trecho", rrm._f(x["ini"]), rrm._f(x["fim"]), rrm._f(ini_), rrm._f(fim_)))
+                        x = dict(x, ini=ini_, fim=fim_)
+                        break
+            ss.append(x)
+        atest.append({"ano_corrigido": "; ".join(corr), "data": a["emissao"].strftime("%d.%m.%Y"), "numero": a["numero"], "dias_trabalhados": a["trab"] or 0, "dias_remidos": a["rem"] or 0,
                       "periodo_inicio": rrm._f(min(x["ini"] for x in ss)) if ss else "", "periodo_fim": rrm._f(max(x["fim"] for x in ss)) if ss else "",
                       "empresa": ", ".join(dict.fromkeys(x["setor"] for x in a["segs"] if x["setor"])), "autos": a.get("autos", ""),
                       "trechos": [{"setor": x["setor"], "inicio": rrm._f(x["ini"]), "fim": rrm._f(x["fim"])} for x in ss] if len(ss) > 1 else []})
@@ -3300,8 +3354,10 @@ def _res_fundamentacao(N, T, f, hoje):
         if not (d["tipo"] == "Atestado de trabalho" or d["tipo"] == "Trabalho (informado por você)") or not d.get("dias"):
             continue
         ps = (d.get("periodo") or "").split(" a ")
+        # (7.14.2) remição sem documento com referência dentro do período do atestado: pede-se só a diferença, a conferir na decisão
+        ja_ = ("remição de %s, com referência dentro do período do atestado - conferir a decisão antes de requerer" % d["ja_rem_txt"]) if d.get("ja_rem") else ""
         ats.append({"numero": d["num"], "data": rs.fmt(d["emissao"]) if d["emissao"] else "", "dias_trabalhados": d.get("trab") or 0,
-                    "dias_remidos": d["dias"], "dias_atestado": d["dias"], "ja_remidos": "", "acima_do_possivel": False,
+                    "dias_remidos": d.get("dias_pedir") or d["dias"], "dias_atestado": d["dias"], "ja_remidos": ja_, "acima_do_possivel": False,
                     "periodo_inicio": ps[0] if len(ps) == 2 else "", "periodo_fim": ps[1] if len(ps) == 2 else ""})
     # estudo registrado depois da última decisão de remição (a parte posterior a ela), sem certidão: estimativa de 4 h por dia letivo
     ate = N["impressao"]
@@ -3321,11 +3377,15 @@ def _res_fundamentacao(N, T, f, hoje):
                 for d in post if d["tipo"] == "Leitura" and d["emissao"]]
     edu = [{"rotulo": d["tipo"] + ((" (%s)" % d["num"]) if d["num"] else ""), "tipo": "certidao" if d["tipo"].startswith("Certidão") else "curso",
             "data": d["emissao"]} for d in post if d["tipo"] in ("Certidão de frequência escolar", "Curso de qualificação") and d["emissao"]]
+    # (7.14.2) trabalho sem atestado: a mesma lista da tela - só os trechos "Pedir atestado" (sem atestado e fora do saldo de remição do
+    # RSPE sem documento); o que "pode já estar remido" e o trabalho em curso a acompanhar ficam fora do pedido
     sem_at = []
     for L in T.get("linhas") or []:
-        if L["st"] == "sem" and (not N["ult_at"] or L["fim"] > N["ult_at"]):
-            a = max(L["ini"], N["ult_at"] + timedelta(days=1)) if N["ult_at"] else L["ini"]
-            sem_at.append("%s, desde %s, em curso" % (L["local"], rs.fmt(a)) if L.get("em_curso") else "%s, %s a %s" % (L["local"], rs.fmt(a), rs.fmt(L["fim"])))
+        if L["st"] != "sem" or not L.get("pedir_dias"):
+            continue
+        for a, b in L.get("pedir_trechos") or [(L["pedir_ini"], L["pedir_fim"])]:
+            sem_at.append("%s, desde %s, em curso" % (L["local"], rs.fmt(a)) if L.get("em_curso") and (L["fim"] - b).days <= 7
+                          else "%s, %s a %s" % (L["local"], rs.fmt(a), rs.fmt(b)))
     return {"atestados_pendentes": ats, "estudo_horas_pend": horas, "estudos_pendentes": est_pend, "exames_f": exames, "leituras_f": leituras,
             "educacao_f": edu, "sem_atestado_f": sem_at, "unidades_f": list(dict.fromkeys(nome_unidade(u) for _d, u in linha_unidades_exibicao(f) if u))}
 
@@ -3392,6 +3452,10 @@ def comparativo(r, f, hoje=None, conferidos=None, manuais=None, vinculos=None):
     # RSPE maior que a ficha: o que seria amarelo fica cinza (informativo) - salvo o pedido de atestado e o vermelho
     if cor == "verde" and any(p_.get("cor0") for p_ in N["pontos"]):
         rot.append("Conferir (informativo)")
+        cor = "cinza"
+    elif cor == "verde" and N["dif"] < -rrm.TOL_COMPARACAO and not rot:
+        # (7.14.2) RSPE maior que a ficha sem ponto a conferir (ficha sem documentos, p. ex.): informativo, nunca "Em ordem"
+        rot.append("RSPE maior que a ficha (%s × %s)" % (nf(R["concedido"]), nf(N["comp"])))
         cor = "cinza"
     # trabalho em curso há até 90 dias, sem atestado: acompanhar (cinza)
     for a_ in N.get("acomp") or []:

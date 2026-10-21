@@ -57,8 +57,11 @@ def caso(manuais):
     # 183/PDIB: emitido depois da última decisão (29/04/2025) e sem peticionamento ("não restando nada a peticionar" não é peticionamento)
     d183 = next(d for d in N["docs"] if d["num"] == "183/PDIB")
     assert d183["cor"] == "vermelho" and not d183["pet_ok"] and o["fd_cor"] == "vermelho", (d183, o["fd_sit"])
-    # trabalho já remido (anterior ao último atestado): nunca "pedir atestado"
-    assert not any(p["tipo"] == "pedir_atestado" for p in N["pontos"]), N["pontos"]
+    # trabalho já remido (anterior ao último atestado): nunca "pedir atestado". (7.14.2) O saldo sem documento (102 dias ≈ 306 dias de
+    # segunda a sábado) cobre do trabalho mais próximo para o mais antigo; sem o 033/2025, a Horta de 2023 (29 dias) passa do saldo e é
+    # o único pedido; o Artesanato de 2017-2018 fica com o excesso do 143/2018 (318 trabalhados para 80 dias corridos)
+    ped_ = [p for p in N["pontos"] if p["tipo"] == "pedir_atestado"]
+    assert not ped_ or (not manuais and "Horta), 14/11/2023 a 18/12/2023" in ped_[0]["texto"] and "Artesanato" not in ped_[0]["texto"]), N["pontos"]
     # atestados com período e nome do setor: vinculados automaticamente
     L = linhas(N)
     for per, at in (("07/03/2019 a 05/03/2020", "041/2020"), ("06/03/2020 a 23/11/2021", "219/2021"), ("24/11/2021 a 13/11/2023", "193/2023")):

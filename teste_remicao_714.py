@@ -136,8 +136,10 @@ try:
                for i in o["fd_sit_itens"]) and "requerer 4" not in str(o), "diferença acima da tolerância: %s" % o["fd_sit_itens"])
     o = rf.comparativo(R((200, "10/08/2024", "30/06/2024")), f, HOJE)
     # RSPE maior que a ficha: uma frase informativa, em cinza, que não deixa a linha amarela nem vermelha
-    ok(o["fd_novo"]["concl"] == "O RSPE concedeu 147,50 dias a mais do que a ficha comprova (documentos fora da ficha). Nada a requerer por esta conta."
-       and o["fd_novo"]["concl_cor"] == "cinza" and o["fd_cor"] == "verde", "RSPE muito maior: %s" % o["fd_novo"]["concl"])
+    # (7.14.2) a frase cita também os documentos da ficha sem valor (ENEM/ENCCEJA, cursos ou certidões sem carga horária)
+    ok(o["fd_novo"]["concl"] == "O RSPE concedeu 147,50 dias a mais do que a ficha comprova (documentos fora da ficha ou sem valor na ficha - "
+       "ENEM/ENCCEJA, cursos ou certidões sem carga horária). Nada a requerer por esta conta."
+       and o["fd_novo"]["concl_cor"] == "cinza" and o["fd_cor"] in ("verde", "cinza"), "RSPE muito maior: %s %s" % (o["fd_novo"]["concl"], o["fd_cor"]))
 
     # ---- pontos a conferir: exame, curso sem horas, enviado à Defensoria, posterior à última decisão; vermelho só no fato certo ----
     f = F([T("MARCENARIA", "01.02.2024", "30.06.2024")],

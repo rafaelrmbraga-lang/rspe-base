@@ -50,7 +50,8 @@ f = F([("16.08.2018", "Nesta data foi peticionado o Atestado de Trabalho n 110/2
 r = dict(R(rem(115, "16/08/2018"), rem(87, "19/07/2019")), processo_execucao="0000001-00.2020.8.12.0001", nome="TESTE")
 m = dict(N_(r, f), ficha_tem=True, nome="TESTE", proc="0000001-00.2020.8.12.0001", ficha=f)
 L = [x for x in rrel.linhas_conferencia([m]) if x["Documento / setor"] == "Atestado de trabalho nº 005/2026"]
-ok(L and L[0]["Remição na ficha"] == 244 and L[0]["Situação"].startswith("Posterior à última remição") and not any("Dias a remir" in x for x in L),
+# (7.14.2) a remição de 87 dias sem documento tem referência dentro do período do 005/2026: pede-se só a diferença
+ok(L and L[0]["Remição na ficha"] == 244 and L[0]["Situação"].startswith("Pedir ≈ 157 (244 − 87)") and not any("Dias a remir" in x for x in L),
    "A2: planilha: %s" % L)
 
 # ---- A4: "o atestado nº 022 deverá ser substituído pelo nº 042" (em "Observação"): fica o 042 ----
@@ -119,7 +120,10 @@ ok(o["fd_cor"] == "amarelo", "status com estudo estimado: %s %s" % (o["fd_cor"],
 f = F([("16.08.2018", "Nesta data foi peticionado o Atestado de Trabalho n 110/2018, na função Faxina (10/07/2017 a 16/08/2018), sendo 346 dias trabalhados e 115 remidos."),
        ("17.01.2026", "Peticionado o Atestado de Trabalho n 006/2026, no Sistema SEEU, função Faxina (01/09/2017 a 10/08/2018) 290 dias trabalhados e 96 remidos.")])
 o = N_(R(rem(115, "16/08/2018")), f)
-ok(o["fd_cor"] == "amarelo" and o["fd_novo"]["dif"] == 96 and "Verificar remição" in o["fd_sit"], "período já remido: %s %s" % (o["fd_cor"], o["fd_sit"]))
+# (7.14.2) o atestado que repete o período de outro já remido não se soma (contido no outro)
+d06 = next(d for d in o["fd_novo"]["docs"] if d["num"] == "006/2026")
+ok(o["fd_novo"]["dif"] == 0 and d06["sit"].startswith("Contido no atestado nº 110/2018") and o["fd_cor"] != "vermelho",
+   "período já remido: %s %s %s" % (o["fd_cor"], o["fd_sit"], d06["sit"]))
 
 if falhas:
     print("FALHOU (remição rev8):\n  " + "\n  ".join(falhas))
