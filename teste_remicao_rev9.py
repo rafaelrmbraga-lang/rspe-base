@@ -106,7 +106,8 @@ rf.atualizar(f)
 o = rf.comparativo(R(rem(115, "16/08/2018")), f, HOJE)
 fund = o.get("fd_fund") or ""
 # (7.14: o 006/2026, peticionado depois da última decisão, entra no pedido como fato - o programa não infere que o período já foi remido)
-ok("006/2026" in fund and "024/2026" in fund, "código A1: documentos posteriores à última remição no pedido: %s" % fund[:300])
+# (7.14.2: o 006/2026 repete o período do 110/2018, já remido - contido, não se soma nem entra no pedido)
+ok("006/2026" not in fund and "024/2026" in fund, "código A1: documentos posteriores à última remição no pedido: %s" % fund[:300])
 ok("(0 dias trabalhados)" not in fund and "declara" in fund, "código A2: '(0 dias trabalhados)': %s" % fund[:300])
 ok("arts. 126, 128 e 129" not in fund and "art. 128" in fund, "código A10: citação do art. 129")
 

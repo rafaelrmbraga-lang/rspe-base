@@ -48,8 +48,10 @@ try:
     ok("070/2024" in tipos(N)["provavel_remido"]["texto"] and "070/2024" not in tipos(N)["sem_pet"]["texto"]
        and not any("070/2024" in x["t"] for x in N["onde"]) and any("071/2024" in x["t"] for x in N["onde"]),
        "B: o provável sai do alarme e de Onde: %s" % N["onde"])
-    o, N = comp(R((20, "01/03/2025", None)), f)  # decidida mais de 180 dias depois: sem indicação
-    ok(doc(N, "070/2024")["sit"] == doc(N, "071/2024")["sit"] == "Sem registro de peticionamento", "B: fora de 180 dias não indica")
+    # (7.14.2) decidida mais de 180 dias depois (até 3 anos): o mesmo valor ainda explica a remição - atestado apreciado mais tarde
+    o, N = comp(R((20, "01/03/2025", None)), f)
+    ok(doc(N, "070/2024")["sit"] == "Provavelmente remido em 01/03/2025 (mesmo valor): conferir" and doc(N, "071/2024")["sit"] == "Sem registro de peticionamento",
+       "B: até 3 anos indica: %s / %s" % (doc(N, "070/2024")["sit"], doc(N, "071/2024")["sit"]))
 
     # ---- A2) RSPE maior que a ficha: o amarelo vira cinza, salvo o pedido de atestado (depois da última remição) e o vermelho ----
     f = F([T("MARCENARIA", "01.02.2024", "30.06.2024"), T("COPA", "01.02.2025", "")],

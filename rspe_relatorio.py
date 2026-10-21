@@ -1631,7 +1631,7 @@ def blocos_geral(modelos, E=None):
                       "%s dias somados, a conferir nos autos · %s sem nenhuma remição no RSPE (toda a base)" % (_dias(O["dif_dias"]), E["rem_zero"])),
                      (O["vermelho"], "com atestado sem peticionamento, posterior à última remição", "fato documental: conferir nos autos"),
                      (O["fatos"], "com documentos posteriores à última remição", "%s dias, a conferir nos autos" % _dias(O["fatos_dias"])),
-                     (O["pedir"], "com trabalho depois do último atestado, sem atestado", "≈ %s dias de remição (estimativa): pedir atestado" % _dias(O["pedir_dias"])),
+                     (O["pedir"], "com trabalho sem atestado nem remição que o explique", "≈ %s dias de remição (estimativa): pedir atestado" % _dias(O["pedir_dias"])),
                      (O["em_ordem"], "em ordem", "de %s com ficha" % O["com_ficha"])]
     G["p2_5_cores"] = {0: "amarelo", 1: "vermelho", 2: "amarelo", 3: "amarelo", 4: "verde"}
     # 3. situação jurídico-executória
@@ -1993,7 +1993,7 @@ def relatorio_remicao(modelos, caminho, nome_base, nominal=True, fichas_sem_rspe
     nums = [(O["verificar"], "com diferença a favor da ficha (verificar remição; %s dias somados, a conferir nos autos)" % _dias(O["dif_dias"])),
             (O["vermelho"], "com atestado sem peticionamento, posterior à última remição (fato documental)"),
             (O["fatos"], "com documentos posteriores à última remição (%s dias, a conferir nos autos)" % _dias(O["fatos_dias"])),
-            (O["pedir"], "com trabalho depois do último atestado, sem atestado (≈ %s dias de remição: pedir atestado)" % _dias(O["pedir_dias"])),
+            (O["pedir"], "com trabalho sem atestado nem remição que o explique (≈ %s dias de remição: pedir atestado)" % _dias(O["pedir_dias"])),
             (O["em_ordem"], "em ordem")]
     cel = [[Paragraph(_t(str(n)), st["num"]) for n, _ in nums], [Paragraph(_t(r), st["rot"]) for _, r in nums]]
     tb = Table(cel, colWidths=[W / len(nums)] * len(nums))
