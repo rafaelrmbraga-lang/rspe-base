@@ -1,9 +1,9 @@
-APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.14.2
+APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.14.3
 (antigo RSPE Base; SEEU, programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-7.14.2. A documentação técnica completa (cada parâmetro, a regra, a norma e
+7.14.3. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -1002,6 +1002,38 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v7.14.3
+  Rodada curta: pontos restantes da validação da 7.14.2.
+  - Remição: o atestado sem período e sem setor que declara mais dias do que
+    todo o trabalho sem atestado entre o atestado anterior e a sua emissão
+    passa a ficar com esse trabalho ("Sugerido · confirmar"), e o pedido não
+    sai em dobro. No vínculo sem baixa (a ficha registra só o início e a
+    saída da unidade, mais de um ano depois), o trecho após o último dia
+    documentado fica "a conferir" e não "pedir atestado". Entre dois
+    atestados que se repetem, fica o que tem remição do mesmo valor no RSPE.
+    A certidão de semestre sem carga horária ganha estimativa pela
+    matrícula; com mais de uma certidão candidata, a remição só se liga
+    quando o valor fecha, senão "conferir". O atestado de estudo com os dias
+    declarados entra na comparação como documento, com "conferir datas"
+    quando as datas estão invertidas.
+  - Saída temporária: a prisão provisória que só a ficha registra não é mais
+    somada duas vezes. Na progressão refeita, o 16% só substitui o 1/6 do
+    SEEU em crime sem violência ou grave ameaça, de primário e não hediondo.
+    Quando o SEEU fixa a data-base no início da guia nova com a pessoa já
+    presa, a Auditoria passa a estimar a progressão pela data-base correta,
+    com as remições abatidas, e a aba aponta essa estimativa. A soma das
+    penas sai em anos, meses e dias, como no SEEU. "Regime aberto, sem
+    progressão a calcular" deixa de aparecer quando a execução foi relançada
+    depois em regime mais grave. A nota do SEEU sobre falta nos 12 meses usa
+    a mesma data da coluna Falta e informa quando a janela venceu. No
+    indulto, o prazo que faltava vem pela conta dos eventos também quando há
+    falta grave, e o indulto concedido sem baixa no cálculo é avisado na
+    própria aba (pode ter sido só da multa). Na prescrição, a reincidência
+    reconhecida pela ficha entra no prazo, e o quadro diz quando a pena
+    começou a ser cumprida. Na Auditoria, a forma favorável da detração sai
+    pela conta direta e a detração inclui os dias da soltura que não se
+    efetivou.
 
 v7.14.2
   Terceira rodada: correção dos 77 erros da reconferência manual da 7.14.1.
