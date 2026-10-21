@@ -1,9 +1,9 @@
-APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.14.0
+APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.14.1
 (antigo RSPE Base; SEEU, programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-7.14.0. A documentação técnica completa (cada parâmetro, a regra, a norma e
+7.14.1. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -1002,6 +1002,60 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v7.14.1
+  Segunda rodada de correções da conferência manual (pontos que a reconferência
+  apontou) e das análises manuais de remição.
+  - Auditoria, segunda conferência: a data de nascimento lida da ficha não
+    pede mais para ser informada; artigo já revogado na data do fato (como o
+    antigo art. 217) aparece como aviso de cadastro; a volta depois de uma
+    fuga lançada como "início do cumprimento" é tratada como recaptura (sem
+    falta reconhecida, a data-base fica a verificar); a conta da detração
+    antes da fração segue a forma do SEEU (em meses); o aviso do regime
+    inicial só é "sem efeito" quando a data-base atual tem marco firme; a
+    soltura que só a ficha mostra deixa o recálculo em "verificar" (pode
+    expor erro favorável); prisão definitiva não é tratada como provisória;
+    havendo livramento e nova prisão, a fração do livramento traz a ressalva
+    do art. 88; remição pretérita sem efeito atual vira informação; o limite
+    de 1/3 da perda de remidos é por falta; crime cometido em liberdade
+    provisória, antes de qualquer trânsito, não é falta da execução; pena
+    extinta de outra execução só pelo art. 28 não serve de base para
+    reincidência; execução extinta mostra "Pena extinta" no término; a nova
+    prisão da ficha é a entrada depois do alvará.
+  - Indulto e comutação: a soma das penas passa a ser feita por anos, meses
+    e dias, como no SEEU; o livramento condicional encerrado que o SEEU
+    lançou como interrupção deixa de contar como pena cumprida; no crime
+    praticado durante a execução, a remição datada depois do fato só conta
+    até 1 dia por 3 dias desde o fato, e a perda de dias remidos depois do
+    fato é descontada; no concurso com crime impeditivo, o tempo só vale
+    para os demais crimes a partir do fato deles; impeditivo de reclusão com
+    demais de detenção não gera mais "não há pena a comutar"; condenação sem
+    trânsito com recurso impresso fica "a verificar" (art. 2º, II); faltas
+    da ficha com datas próximas aparecem todas; o texto da comutação
+    acompanha o indulto indeferido ou a verificar; reincidência pelas datas
+    também decide a comutação já a verificar.
+  - Prescrição: quando o SEEU corta na margem a lista de processos de uma
+    prisão (linha terminada em vírgula), o programa volta a ligar a prisão
+    aos processos impressos, em vez de "sem processo indicado"; continua o
+    aviso na Auditoria para conferir a lista completa, e a ação fora da
+    lista recebe a nota "lista cortada no RSPE". A tese de pena já cumprida
+    na fuga (ordem do trânsito e art. 76) aparece também na aba Extinção
+    como "a verificar", e deixa de ser proposta quando condenação sem
+    trânsito anterior à fuga pode ter recebido o tempo antes. "Suspenso:
+    Sim" em crime que não admite suspensão condicional do processo pede
+    conferência do ANPP ou do sursis. Intercorrente sem acórdão: "recurso ou
+    demora na intimação". Reincidência sem condenação anterior transitada é
+    afastada também quando as outras condenações não transitaram.
+  - Remição: a ficha passa a encerrar o estudo quando a desistência da
+    escola aparece só na mudança de cela e lê o certificado da "Jornada da
+    Leitura no Cárcere" como leitura a conferir; o valor possível de
+    ENEM/ENCCEJA vai de 20 dias (uma área do ENEM) a 133,33 dias
+    (fundamental completo), mais 1/3 com a conclusão certificada; o pedido
+    de atestado do trabalho em curso diz até quando vai a conta (impressão
+    da ficha) e há quantos dias está em curso; aviso de atestado que cita
+    outra unidade penal quando a ficha mostra o assistido em outra unidade
+    sem trabalho no período; matrícula cancelada no dia da saída indica a
+    unidade de origem para pedir a certidão.
 
 v7.14.0
   Remição (aba Ficha) sem ligar remição a atestado. O RSPE não diz de onde
