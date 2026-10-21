@@ -145,6 +145,11 @@ def _estudos(eventos, cancel_sem=None):
             continue
         if "TRABALHO" in u and not re.search(r"\bCURSO\b|MATRICUL", us):
             continue
+        if re.search(r"DESISTENCIA D[AO]S? (?:ESCOLA|ESTUDOS?)|DESISTIU D[AO]S? (?:ESCOLA|ESTUDOS?)", us):
+            # (7.14.1) desistência registrada só na mudança de cela ("Motivo: DESISTÊNCIA DA ESCOLA"): fim do estudo em curso
+            for p in [p for p in abertos if not p.get("livre")]:
+                fechar(p, e["data"], "desistência da escola")
+            continue
         if re.search(r"TERMO DE AFASTAMENTO DOS ESTUDOS|MATRICULA ESCOLAR ENCERRADA", us):
             for p in list(abertos):
                 fechar(p, e["data"], "afastamento dos estudos" if "AFASTAMENTO" in us else "matrícula encerrada")
@@ -1175,7 +1180,9 @@ def derivar(f, eventos):
             certidoes.append({"data": e["data"], "texto": e["texto"], "semestre": int(ms.group(1)) if ms and ms.group(1) in "12" else None,
                               "ano": int(ms.group(2)) if ms else None, "autos": _autos_citados(us)})
             continue
-        if not re.search(r"RELATORIOS? DE LEITURA|RESENHA|REMICAO P(?:OR|ELA) LEITURA", us):
+        # (7.14.1) e o certificado da "Jornada da Leitura no Cárcere" (projeto de leitura): documento de leitura sem o número de
+        # obras no texto - fica a conferir, fora da conta
+        if not re.search(r"RELATORIOS? DE LEITURA|RESENHA|REMICAO P(?:OR|ELA) LEITURA|JORNADA DA LEITURA", us):
             continue
         if re.search(r"PARTICIPOU DO PROJETO", us) and not re.search(r"LIVRO|RELATORIO|MES", us):
             continue

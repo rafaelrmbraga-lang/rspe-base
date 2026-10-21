@@ -1145,6 +1145,11 @@ def faltas_graves(r, f=None):
 TOL_COMPARACAO = 3.0  # diferença ficha x RSPE até 3 dias: arredondamento das frações
 LACUNA_IGNORADA = 2  # trecho sem atestado de até 2 dias (fim de semana, troca de setor) não vira "sem atestado"
 # peticionado/protocolado/juntado (não "nada a peticionar"); envio pelo ESAJ, o sistema anterior ao SEEU
+# valor da remição por aprovação em exame (Res. CNJ 391/2021, art. 3º, p. único: base de 1.600 h no ensino fundamental e 1.200 h no
+# médio, ÷ 12 = 133,33 e 100 dias, divididos pelas áreas do exame - 4 no ENCCEJA, 5 no ENEM com a redação: de 20 dias, uma área do
+# ENEM, a 133,33 dias, o ENCCEJA fundamental inteiro), mais 1/3 com a conclusão certificada (LEP, art. 126, § 5º)
+TXT_VALOR_EXAME = ("o valor depende das áreas aprovadas e do nível (Res. CNJ 391/2021, art. 3º: de 20 dias, uma área do ENEM, a 133,33 dias, "
+                   "o ensino fundamental completo; mais 1/3 com a conclusão certificada - LEP, art. 126, § 5º)")
 RE_PETICIONADO = re.compile(r"PETICIONAD|PETICIONOU|PROTOCOLAD|PROTOCOLOU|JUNTAD|JUNTOU|\b(?:VIA|NO|PELO) E-?SAJ\b")
 
 
@@ -1436,6 +1441,33 @@ def _pet_atestado(f, a):
     return "emitido em %s (a ficha não registra o peticionamento)" % _f(em), False, None, False
 
 
+# siglas de unidade penal que os atestados citam ("ATESTADO ... Nº 24/2024/ST/EPRSAA-A/AGEPEN"; o órgão AGEPEN não é unidade)
+SIGLAS_UNIDADES_PENAIS = {"IPCG", "PDIB", "EPJFC", "PJFC", "CPAIG", "CPAG", "PTRAN", "PHAC", "PED", "EPRB", "UPRB", "EPMR", "EPA", "EPMC", "PSMTL",
+                          "EPRSAA", "EPRACA", "EPRACAG", "CPAC", "EPFIIZ", "EPFSA", "EPMRSAAC", "EPB", "PEMRFG", "UMMVE"}
+
+
+def _texto_atestado(f, a):
+    """Texto do lançamento do atestado na ficha: o do dia da emissão que fala de atestado e cita o número."""
+    em = _dt(a.get("data") or "")
+    n0 = re.sub(r"\D", "", (a.get("numero") or "").split("/")[0]).lstrip("0")
+    for e in f.get("eventos") or []:
+        u = _sa(e.get("texto"))
+        if em and _dt(e.get("data") or "") == em and re.search(r"ATEST", u) and (not n0 or re.search(r"(?<!\d)0*%s(?!\d)" % n0, u)):
+            return e.get("texto") or ""
+    return ""
+
+
+def _sigla_da_unidade(sigla, unidade):
+    """A sigla é a da unidade? Pelas grafias da ficha (rspe_ficha._mesma_unidade) ou pelas iniciais do nome ("EPMR" = "Estabelecimento
+    Penal Maximo Romero de Jardim"; "EPRSAA" = "... de Regime Semiaberto e Aberto de Aquidauana")."""
+    import rspe_ficha as _rf
+    if _rf._mesma_unidade(sigla, unidade):
+        return True
+    ws = [w for w in re.sub(r"[^A-Z0-9 ]", " ", _sa(unidade)).split() if w not in ("DE", "DA", "DO", "DOS", "DAS", "E")]
+    ini = "".join(w[0] for w in ws)
+    return len(sigla) >= 3 and (ini.startswith(sigla) or sigla.startswith(ini) and len(ini) >= 3)
+
+
 def _pet_texto(texto, d):
     """Peticionamento de certidão, curso, leitura ou exame pelo próprio lançamento da ficha."""
     if RE_PETICIONADO.search(re.sub(r"\s+", " ", _sa(texto))) or re.search(r"ENVIAD\w*,?\s+(?:VIA|AO|PARA|NO)\b", _sa(texto)):
@@ -1518,9 +1550,11 @@ def comparacao(r, f, hoje=None, manuais=None, homologados=None, trab=None):
         # obras: as do relatório; sem elas, um por mês citado (PDIB) ou um por ciclo; sem nada disso, a ficha não dá o valor
         ob = x.get("obras") or len(x.get("meses") or []) or (1 if x.get("ciclo") else 0)
         pet, ok, pdt = _pet_texto(x.get("texto"), d)
-        doc("Leitura", ("%s%s" % (rs.pl(ob, "obra", "obras") if ob else "obras não informadas", (" · ciclo " + x["ciclo"]) if x.get("ciclo") else "")),
+        doc("Leitura", ("%s%s%s" % ("Jornada da Leitura no Cárcere · " if "JORNADA DA LEITURA" in _sa(x.get("texto")) else "",
+                                    rs.pl(ob, "obra", "obras") if ob else "obras não informadas", (" · ciclo " + x["ciclo"]) if x.get("ciclo") else "")),
             d, ", ".join(x.get("meses") or []) or (x.get("ref_mes") or ""), None, (4.0 * ob) if ob else None, pet, ok, pdt, fora_de("", d),
-            "fd:lei:%s" % x.get("data"), sem_valor="" if ob else "relatório de leitura sem o número de obras")
+            "fd:lei:%s" % x.get("data"), sem_valor="" if ob else "%s sem o número de obras" % (
+                "certificado" if "JORNADA DA LEITURA" in _sa(x.get("texto")) else "relatório de leitura"))
     for x in f.get("exames") or []:
         d = _dt(x.get("data") or "")
         # o peticionamento está no lançamento do exame ("Peticionado Certificado do ENEM 2025 no Sistema SEEU"): o texto do dia
@@ -1531,7 +1565,7 @@ def comparacao(r, f, hoje=None, manuais=None, homologados=None, trab=None):
             pet = "registrado em %s" % _f(d)
         dx = doc("Exame", x.get("exame") or "", d, "", None, None, pet, ok, pdt, fora_de(x.get("autos"), d),
             "fd:exa:%s:%s" % (_rf._norm(x.get("exame") or ""), x.get("data")),
-            sem_valor="o valor depende das áreas aprovadas e do nível (Res. CNJ 391/2021, art. 3º: de 25 a 133,33 dias)")
+            sem_valor=TXT_VALOR_EXAME)
         dx["cert"] = bool(x.get("certificado"))
     docs.sort(key=lambda d: d["emissao"] or date.min)
     desta = [d for d in docs if not d["fora"]]
@@ -1611,6 +1645,8 @@ def comparacao(r, f, hoje=None, manuais=None, homologados=None, trab=None):
             acomp_l.append({"local": L["local"], "ini": min(dias_), "dias": round(len(dias_) / 3.0, 2)})
             L["acomp_dias"] = round(len(dias_) / 3.0, 2)
             continue
+        if L.get("em_curso") and dias_:
+            L["curso_dias"] = (hoje - min(dias_)).days  # há quantos dias corridos o trabalho sem atestado está em curso (texto)
         for conj, lst, tot, k_ in ((antes, itens_t, talvez, "talvez"), (dias_ - antes, itens_p, pedir, "pedir")):
             novos = conj - tot
             tot |= conj
@@ -1735,6 +1771,31 @@ def comparacao(r, f, hoje=None, manuais=None, homologados=None, trab=None):
                                           "o período" if len(ps) == 2 else "o período implícito", _f(a0), _f(b0),
                                           rs.pl(poss, "dia corrido", "dias corridos")), "implausivel", docs_=[d],
                   curto="atestado nº %s: %s dias de remição para %s - dias implausíveis, conferir" % (d["num"], _nf(d["dias"]), rs.pl(poss, "dia corrido", "dias corridos")))
+    # (7.14.1) atestado de outra unidade: o texto cita a sigla de uma unidade penal diferente daquela em que a ficha mostra o assistido
+    # durante todo o período do atestado, e a ficha não registra trabalho nesse período - aviso para conferir se o atestado é dele
+    # e se o período está certo (não muda a conta)
+    tl_un = _rf.linha_unidades_exibicao(f)
+    trab_f = [(_dt(t.get("inicio") or ""), _dt(t.get("fim") or "") or imp) for t in f.get("trabalho") or []]
+    at_chave = {chave_atestado(a.get("numero"), _dt(a.get("data") or "")): a for a in f.get("atestados") or []}
+    for d in at_:
+        a = at_chave.get(d["chave"])
+        if not a:
+            continue
+        ps = d["periodo"].split(" a ")
+        a0, b0 = (_dt(ps[0]), _dt(ps[1])) if len(ps) == 2 else (None, None)
+        if not a0 or not b0 or any(x and y and x <= b0 and a0 <= y for x, y in trab_f):
+            continue
+        un_ini = [u for e_, u in tl_un if e_ <= a0]
+        if not un_ini or any(a0 < e_ <= b0 for e_, _u in tl_un):
+            continue  # unidade desconhecida no início do período, ou mudança de unidade dentro dele
+        un_p = un_ini[-1]
+        sig = sorted({s for s in re.findall(r"\b[A-Z]{2,8}\b", _sa(_texto_atestado(f, a))) if s in SIGLAS_UNIDADES_PENAIS})
+        if sig and not any(_sigla_da_unidade(s, un_p) for s in sig):
+            ponto("Aviso", "cinza", "Atestado nº %s (%s) cita %s, mas a ficha mostra o assistido em %s em todo o período, sem trabalho registrado - "
+                  "conferir se o atestado é deste assistido e se o período está certo." % (d["num"], d["periodo"], _lista(sig), _rf.nome_unidade(un_p)),
+                  "outra_unidade", docs_=[d],
+                  curto="atestado nº %s cita %s, mas a ficha mostra o assistido em %s no período, sem trabalho - conferir" % (
+                      d["num"], _lista(sig), _rf.nome_unidade(un_p)))
     # 1/3 do atestado (LEP, art. 126, § 1º, II): conta do próprio documento - remidos acima de 1/3 (horas além da jornada?) e abaixo
     # de 1/3 com os dias trabalhados plausíveis (cabem no período): a conferir, sem valor a requerer
     for d in at_:
@@ -1786,9 +1847,21 @@ def comparacao(r, f, hoje=None, manuais=None, homologados=None, trab=None):
     for x in f.get("estudo_cancelado_sem_matricula") or []:
         d_ = _dt(x.get("data") or "")
         if d_ and (not inicio or d_ >= inicio):
-            ponto("Estudo a conferir", "amarelo", "A ficha registra o cancelamento de matrícula em %s, mas não a matrícula nem o período: pedir a "
-                  "certidão de frequência escolar e conferir nos autos se houve remição (LEP, art. 126, § 1º, I)." % _f(d_), "estudo_sem_matricula",
-                  curto="matrícula cancelada em %s sem a matrícula registrada: pedir a certidão de frequência" % _f(d_))
+            # cancelamento lançado no dia da saída da unidade ("Saida do Presidio"): a matrícula era da unidade de onde ele saiu, e é
+            # a ela que se pede a certidão (a ficha já mostra a unidade de destino nesse dia)
+            un_ = ""
+            if re.search(r"SAIDA D[OA] (?:PRESIDIO|UNIDADE)|TRANSFER", _sa(x.get("texto"))) or any(
+                    _dt(e.get("data") or "") == d_ and re.search(r"SAIDA DA UNIDADE PENAL", _sa(e.get("texto"))) for e in f.get("eventos") or []):
+                tl_ = [(a_, u_) for a_, u_ in _rf.linha_unidades_exibicao(f) if a_ < d_]
+                un_ = _rf.nome_unidade(tl_[-1][1]) if tl_ else ""
+                if un_ == _rf.SEM_UNIDADE:
+                    un_ = ""
+            art_ = "da" if re.match(r"(?:PENITENCI|COLONIA|UNIDADE|CASA|CADEIA)", _sa(un_)) else "do"
+            ponto("Estudo a conferir", "amarelo", "A ficha registra o cancelamento de matrícula em %s%s, mas não a matrícula nem o período: pedir a "
+                  "certidão de frequência escolar%s e conferir nos autos se houve remição (LEP, art. 126, § 1º, I)." % (
+                      _f(d_), (", na saída %s %s" % (art_, un_)) if un_ else "", (" %s %s" % ("à" if art_ == "da" else "ao", un_)) if un_ else ""), "estudo_sem_matricula",
+                  curto="matrícula cancelada em %s%s sem a matrícula registrada: pedir a certidão de frequência" % (
+                      _f(d_), (" (%s)" % un_) if un_ else ""))
     for x in est_estim:
         # estudo que vai além da última decisão de remição pode estar sem remição: ponto a conferir; o anterior, só informação
         ponto("Estudo sem certidão", "amarelo" if not ult_dec or x["fim"] > ult_dec else "cinza", "%s (estimativa, sem certidão de horas na ficha) - conferir nos autos se a certidão foi juntada; se "
@@ -1921,7 +1994,10 @@ def onde_diferenca(dif, docs, post, verm, pontos, trab, ult_dec, rspe_maior=Fals
                          "apreciado e com quantos dias" % dias_(dif), "c": "amarelo"})
     L_ = (trab or {}).get("linhas") or []
     for L in sorted([L for L in L_ if L.get("pedir_dias")], key=lambda L: L["pedir_fim"], reverse=True):
-        ate = "hoje (em curso)" if L.get("em_curso") and (L["fim"] - L["pedir_fim"]).days <= 7 else _f(L["pedir_fim"])
+        # vínculo em curso (já passou dos 90 dias): a estimativa vai até a impressão da ficha - o texto diz isso e há quanto tempo
+        # o trabalho está em curso (o motivo de pedir o atestado e não só acompanhar)
+        ate = ("%s (impressão da ficha; em curso há %d dias)" % (_f(L["pedir_fim"]), L["curso_dias"])) if L.get("em_curso") and L.get("curso_dias") \
+            and (L["fim"] - L["pedir_fim"]).days <= 7 else _f(L["pedir_fim"])
         out.append({"t": "Pedir atestado: trabalho em %s de %s a %s, sem atestado (≈ %s de remição)" % (
             L["local"], _f(L["pedir_ini"]), ate, dias_(L["pedir_dias"])), "c": "amarelo"})
     tz = sorted([L for L in L_ if L.get("talvez_dias")], key=lambda L: L["talvez_fim"], reverse=True)
@@ -1942,7 +2018,7 @@ def onde_diferenca(dif, docs, post, verm, pontos, trab, ult_dec, rspe_maior=Fals
             "o atestado" if len(ats) == 1 else "os atestados", _lista(ats)), "c": am})
     ja = {"sem_pet_posterior", "posterior", "pedir_atestado", "talvez_remido"} | ({"sem_pet", "defensoria"} if dif > TOL_COMPARACAO else set())
     for p_ in pontos:
-        if ((p_.get("cor0") or p_["cor"]) == "amarelo" and p_["tipo"] not in ja) or p_["tipo"] in ("leitura_menor", "implausivel"):
+        if ((p_.get("cor0") or p_["cor"]) == "amarelo" and p_["tipo"] not in ja) or p_["tipo"] in ("leitura_menor", "implausivel", "outra_unidade"):
             t_ = p_["curto"]
             out.append({"t": t_[0].upper() + t_[1:], "c": p_["cor"]})
     if len(out) > 4:
