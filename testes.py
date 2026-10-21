@@ -16,6 +16,7 @@ TESTES += ["teste_remicao_714b.py"]  # remição 7.14, segunda rodada: provavelm
 TESTES += ["teste_leitura_714.py"]
 TESTES += ["teste_conf2_remicao.py"]  # conferência 7.14.1, frente remição
 TESTES += ["teste_conf2_prescricao.py"]
+TESTES += ["teste_conf2_indulto.py"]
 falhas = [t for t in TESTES if subprocess.call([sys.executable, t]) != 0]
 if falhas:
     print("FALHOU: " + ", ".join(falhas))

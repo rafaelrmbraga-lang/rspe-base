@@ -57,9 +57,10 @@ per = [(d("01/01/2015"), None)]
 c_t = crime("01/07/2024", "01/10/2024", "01/11/2024", pena="6 ano(s), 0 mês(es) e 0 dia(s)", proc="0000002-00.2024.8.12.0001", **TRAF)
 cimp, nota = rs.cumprido_imputavel_impeditivos([c_t], 4000, per, [], d("25/12/2025"))
 ok(cimp == (d("25/12/2025") - d("01/07/2024")).days + 1 and "só conta o tempo posterior ao fato" in nota, "1: imputável %s | %s" % (cimp, nota))
-# remição concedida depois do fato conta; a perda de remidos não sai do tempo posterior ao fato
-cimp2, _n = rs.cumprido_imputavel_impeditivos([c_t], 4000, per, [(d("01/03/2025"), 30), (d("02/03/2025"), -50)], d("25/12/2025"))
-ok(cimp2 == cimp + 30, "1: remição posterior ao fato: %s x %s" % (cimp2, cimp))
+# remição concedida depois do fato conta; a perda de remidos posterior ao fato sai dele até o remido contado (7.14.1, conferência:
+# antes a perda não saía)
+cimp2, _n = rs.cumprido_imputavel_impeditivos([c_t], 4000, per, [(d("01/03/2025"), 30), (d("02/03/2025"), -20)], d("25/12/2025"))
+ok(cimp2 == cimp + 10, "1: remição posterior ao fato: %s x %s" % (cimp2, cimp))
 # impeditivo de fato anterior ao início da custódia: nada muda
 c_ant = dict(c_t, data_infracao="01/07/2014")
 ok(rs.cumprido_imputavel_impeditivos([c_ant], 4000, per, [], d("25/12/2025")) == (4000, ""), "1: fato anterior à custódia mudou o cumprido")
