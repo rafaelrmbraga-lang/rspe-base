@@ -1,0 +1,2 @@
+pdf.js 4.10.38 (Mozilla, licença Apache 2.0 - LICENSE.txt), versão "legacy" do pacote pdfjs-dist.
+Usado só para extrair o texto dos PDFs das decisões, dentro do navegador (nada sai do computador).

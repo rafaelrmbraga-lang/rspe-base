@@ -128,7 +128,51 @@
     return r;
   }
 
-  const api = { RE_CNJ, cnjsNoTexto, pessoasDaLista, RE_RSPE, ACAO_RSPE, cnj, pastaSegura, hojeISO, caminhoArquivo, urlRspeValida, urlRspeDoId, rspeNoHtml, ehPdf, chaveDia, caminhoFicha, chaveFicha };
+  // Triagem da Mesa do Defensor: os ÚNICOS pedidos que a página da triagem pode fazer ao SEEU (só leitura). Devolve ""
+  // se o pedido é permitido, ou o motivo da recusa. "Analisar" (preAnalise.do), "Leitura de Prazo", "Dispensar
+  // Juntada" e qualquer outro endereço ficam fora: a triagem nunca inicia prazo nem movimenta o processo.
+  const CAMPOS_MESA = ["org.apache.struts.taglib.html.TOKEN", "selectedIcon", "pageSize", "pageNumber", "sortColumn", "sortOrder", "finalidadeRemessa", "situacao"];
+  function pedidoTriagemPermitido(url, metodo, corpo) {
+    let u;
+    try { u = new URL(url, "https://seeu.pje.jus.br/seeu/"); } catch (e) { return "endereço inválido"; }
+    metodo = String(metodo || "GET").toUpperCase();
+    corpo = corpo == null ? "" : String(corpo);
+    if (u.protocol !== "https:" || u.hostname !== "seeu.pje.jus.br" || u.port) return "fora do SEEU";
+    const q = u.searchParams;
+    const so = (...nomes) => [...q.keys()].every((k) => nomes.includes(k));
+    const p = u.pathname;
+    if (/preAnalise|leitura|dispensar|assinar|movimentar|peticion|salvar|excluir|remover|alterar|atualizar/i.test(p + "?" + u.search)) return "ação bloqueada na triagem";
+    // Mesa do Defensor: só a lista (abas Manifestação, Ciência e Razões; situação; página)
+    if (p === "/seeu/usuario/mesaDefensor1Grau.do") {
+      if (q.get("actionType") !== "listar") return "na Mesa, só a lista";
+      if (!so("actionType", "finalidadeRemessa", "situacao", "pageNumber", "pageSize")) return "parâmetro não permitido na Mesa";
+      if (metodo === "GET") return corpo ? "GET com corpo" : "";
+      if (metodo !== "POST") return "método não permitido";
+      const campos = new URLSearchParams(corpo);
+      for (const k of campos.keys()) if (!CAMPOS_MESA.includes(k)) return "campo não permitido na Mesa: " + k;
+      return "";
+    }
+    // página do processo: o link do nº na Mesa (_tj) ou a mesma página na aba Movimentações
+    if (p === "/seeu/visualizacaoProcesso.do") {
+      if (metodo !== "GET" || corpo) return "processo: só GET";
+      if (q.has("_tj") && so("_tj") && /^[0-9a-f]+$/.test(q.get("_tj"))) return "";
+      if (q.get("actionType") === "visualizar" && so("actionType", "selectedIcon") && (!q.has("selectedIcon") || q.get("selectedIcon") === "tabMovimentacoesProcesso")) return "";
+      return "parâmetro não permitido no processo";
+    }
+    // lista de arquivos de um movimento (o "+" da movimentação)
+    if (p === "/seeu/processo/movimentacaoArquivoDocumento.do") {
+      if (metodo !== "POST" || corpo !== "tipoLayout=1") return "arquivos do movimento: só a lista";
+      return q.has("_tj") && so("_tj") && /^[0-9a-f]+$/.test(q.get("_tj")) ? "" : "parâmetro não permitido";
+    }
+    // o arquivo (PDF) do movimento
+    if (p === "/seeu/arquivo.do") {
+      if (metodo !== "GET" || corpo) return "arquivo: só GET";
+      return q.has("_tj") && so("_tj") && /^[0-9a-f]+$/.test(q.get("_tj")) ? "" : "parâmetro não permitido";
+    }
+    return "endereço não permitido na triagem";
+  }
+
+  const api = { RE_CNJ, cnjsNoTexto, pessoasDaLista, RE_RSPE, ACAO_RSPE, cnj, pastaSegura, hojeISO, caminhoArquivo, urlRspeValida, urlRspeDoId, rspeNoHtml, ehPdf, chaveDia, caminhoFicha, chaveFicha, pedidoTriagemPermitido };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else raiz.APTO = api;
 })(typeof self !== "undefined" ? self : this);

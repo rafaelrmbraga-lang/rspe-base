@@ -31,12 +31,12 @@ sap = open(os.path.join(EXT, "sap.js"), encoding="utf-8").read()
 ok("bt-pesquisar" in sap and "'designar'\\s*:\\s*'0'" in sap and "bt-designar" not in sap and "bt-atendimentos" not in sap,
    "SAP: só a lupa Visualizar (designar=0)")
 ok(m["content_security_policy"]["extension_pages"].endswith("connect-src http://127.0.0.1:47321"), "conexão própria só com o APTO deste computador")
-for f in ["background.js", "content.js", "siapen.js", "siapen_pagina.js", "sap.js", "comum.js", "popup.js", "popup.html"] + list(m["icons"].values()):
+for f in ["background.js", "content.js", "siapen.js", "siapen_pagina.js", "sap.js", "comum.js", "popup.js", "popup.html", "triagem.html", "triagem.js", "triagem_core.js"] + list(m["icons"].values()):
     ok(os.path.isfile(os.path.join(EXT, f)), "arquivo %s" % f)
 
 node = shutil.which("node")
 if node:
-    for f in ("background.js", "content.js", "siapen.js", "siapen_pagina.js", "sap.js", "comum.js", "popup.js"):
+    for f in ("background.js", "content.js", "siapen.js", "siapen_pagina.js", "sap.js", "comum.js", "popup.js", "triagem_core.js"):
         r = subprocess.run([node, "--check", os.path.join(EXT, f)], capture_output=True, text=True)
         ok(r.returncode == 0, "sintaxe de %s: %s" % (f, r.stderr.strip()))
     js = r"""
