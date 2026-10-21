@@ -625,6 +625,15 @@ def remicao_posterior_decretos(r):
 _RANK_S = {"cabe": 3, "ver": 2, "nao": 1, "imp": 0}
 
 
+def _mot_eventos(mot_e, fa):
+    """Motivo pelos eventos com a fonte do "faltavam" (rs.nota_falta_eventos) logo depois do prazo - antes da falta grave dos 12
+    meses, quando houver: o prazo pela âncora mistura bases quando a pena considerada inclui penas extintas depois da data, cujo
+    tempo de cumprimento o SEEU atual já não conta."""
+    nota = rs.nota_falta_eventos(fa)
+    i = (mot_e or "").find("; também falta grave")
+    return "%s; %s%s" % (mot_e[:i], nota, mot_e[i:]) if i >= 0 else "%s; %s" % (mot_e or "", nota)
+
+
 def avaliar_ficha(f, r, ctx, ini, hoje):
     """Avalia o decreto com a decisão pelo requisito (rs.cumprido_decreto_info, modo): pela âncora do SEEU; se ela não dá o
     resultado favorável e os eventos mostram mais tempo, de novo pelos eventos - que valem (a verificar, com o aviso) quando
@@ -656,27 +665,29 @@ def avaliar_ficha(f, r, ctx, ini, hoje):
             return dict(xe, s="ver", ressalva="; ".join(y for y in (xe.get("ressalva") or "", "pela âncora do SEEU cabe a comutação: %s" % (
                 xa.get("mot") or "")) if y))
         return xa
-    if (xa.get("s") in ("nao", "imp") and not ca.get("_alt") and ca.get("_alt_txt") and (xa.get("mot") or "").startswith("faltavam")
-            and "; também falta grave" not in (xa.get("mot") or "")):
+    if xa.get("s") in ("nao", "imp") and not ca.get("_alt") and ca.get("_alt_txt") and (xa.get("mot") or "").startswith("faltavam"):
         # eventos pouco acima da âncora (menos de 180 dias): o resultado é o da âncora, mas o "faltavam" mostrado é o menor, com
         # a fonte (a custódia dos eventos é tempo efetivamente cumprido)
         xe = _avaliar_ficha_um(f, r, dict(ctx, _modo="eventos_txt"), ini, hoje)
-        if xe.get("s") == xa.get("s"):
+        if xe.get("s") == xa.get("s") and ("; também falta grave" not in (xa.get("mot") or "") or rs._faltas(xe.get("mot"))):
             fa = rs.falta_menor(xa.get("mot"), xe.get("mot"))
             if fa:
-                return dict(xe, mot="%s; %s" % (xe.get("mot") or "", rs.nota_falta_eventos(fa)))
+                return dict(xe, mot=_mot_eventos(xe.get("mot"), fa))
         return xa
     if xa.get("s") == "cabe" or not ca.get("_alt") or (xa.get("mot") or "").startswith("sem pena remanescente"):
         return xa  # (pena já cumprida pela âncora: com o tempo maior dos eventos, também não sobra o que comutar)
     xe = _avaliar_ficha_um(f, r, dict(ctx, _modo="eventos"), ini, hoje)
     if _RANK_S.get(xe.get("s"), 0) > _RANK_S.get(xa.get("s"), 0):
         return xe
-    if xe.get("s") == xa.get("s") and xa.get("s") in ("nao", "imp") and "; também falta grave" not in (xa.get("mot") or ""):
-        # o mesmo resultado negativo: o texto mostra o "faltavam" menor (o dos eventos, quando é ele), com a fonte (não quando o
-        # motivo é o prazo ao lado da falta grave: aí o prazo é só o motivo objetivo, pela âncora)
+    if xe.get("s") == xa.get("s") and xa.get("s") in ("nao", "imp") and (
+            "; também falta grave" not in (xa.get("mot") or "") or rs._faltas(xe.get("mot"))):
+        # o mesmo resultado negativo: o texto mostra o "faltavam" menor (o dos eventos, quando é ele), com a fonte - também ao lado
+        # da falta grave quando os eventos ainda mostram prazo a cumprir (o prazo vem antes dela no motivo; o da âncora misturaria a
+        # pena com as penas extintas depois e o cumprido sem o tempo delas). Com o tempo cumprido pelos eventos, a falta é o motivo
+        # e fica o prazo pela âncora
         fa = rs.falta_menor(xa.get("mot"), xe.get("mot"))
         if fa:
-            return dict(xe, mot="%s; %s" % (xe.get("mot") or "", rs.nota_falta_eventos(fa)))
+            return dict(xe, mot=_mot_eventos(xe.get("mot"), fa))
     return xa
 
 

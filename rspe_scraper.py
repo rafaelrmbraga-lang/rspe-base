@@ -4419,8 +4419,9 @@ def decisoes_decreto(incidentes, ano, tipo):
     return out
 
 
-def aplicar_decisoes_decretos(r, incidentes):
+def aplicar_decisoes_decretos(r, incidentes, crimes=None):
     """Se o RSPE já registra decisão sobre o decreto (concedido/indeferido/pendente), ela prevalece sobre a triagem."""
+    crimes = crimes if crimes is not None else (r.get("_crimes") or [])
     for ano in ("2022", "2024", "2025"):
         for chave, tipo in (("indulto_%s" % ano, "INDULTO"), ("comutacao_%s" % ano, "COMUTA")):
             if chave not in r:
@@ -4474,7 +4475,25 @@ def aplicar_decisoes_decretos(r, incidentes):
                              "impeditivo, a comutação cai pelo mesmo motivo; se foi requisito só do indulto (fração, teto de pena), o pedido "
                              "segue | %s" % (dt, r[kc]))
                     r[kc + "_status"] = "verificar"
-                r[chave + "_detalhe"] = ("Decisão registrada no RSPE (%s em %s). Triagem do programa: %s\n" % (sit.lower(), dt, calc.split(" | ")[0])) + (r.get(chave + "_detalhe") or "")
+                # indulto concedido sem baixa no cálculo (rspe_scraper.aplicar_extincoes: sem "(Indultada)", "Extinto: Não" e a pena total
+                # com essas penas): pode ter sido só da multa - a aba diz o mesmo que a Auditoria, e a triagem negativa da pena privativa
+                # ao lado de "concedido" é explicada (não contradiz a decisão)
+                _multa = [c for c in crimes if (c.get("indulto_duvida") or {}).get("multa") and chave.startswith("indulto")
+                          and re.sub(r"\D", "", (c["indulto_duvida"].get("decreto") or "")) == DECRETO_NUM[ano]]
+                _tri = calc.split(" | ")[0]
+                _neg_tri = sit == "CONCEDIDO" and bool(_multa) and bool(re.match(r"\s*(não atinge|não cabe|vedad|excluíd|não se aplica)", _tri, re.I))
+                _aviso = ""
+                if _multa and sit == "CONCEDIDO":
+                    r[chave] = "%s | sem baixa no cálculo: pode ter sido só da multa" % r[chave]
+                    _aviso = ("? Indulto sem baixa no cálculo: os processos %s não têm a marca \u201c(Indultada)\u201d, a linha do crime diz "
+                              "\u201cExtinto: Não\u201d e a pena total do SEEU ainda os inclui - o indulto pode ter sido só da multa. O programa "
+                              "mantém essas penas nas contas; conferir na decisão se ele alcançou a pena privativa (ver Auditoria).\n" % (
+                                  ", ".join(sorted({c.get("processo_criminal") or "?" for c in _multa}))))
+                r[chave + "_detalhe"] = ("Decisão registrada no RSPE (%s em %s). %s\n" % (
+                    sit.lower(), dt,
+                    ("Triagem do programa, só sobre a pena privativa: %s - a decisão prevalece; o resultado da triagem é compatível com "
+                     "indulto só da multa." % _tri) if _neg_tri else
+                    "Triagem do programa: %s" % _tri)) + _aviso + (r.get(chave + "_detalhe") or "")
 
 
 def ativos_depois(crimes, d):
@@ -6123,7 +6142,11 @@ def _analise_decretos_modo(campos, crimes, eventos, incidentes, hoje, modo=None,
             n2 = nota + " Sem a falta, %s seria: %s." % (nome, t.split(" | ")[0])
             for dk in (kk + "_detalhe", kk + "_explica"):
                 if dk in out or dk.endswith("_detalhe"):
-                    out[dk] = (out.get(dk) or "").replace("Prejudicada: o indulto é cabível e prevalece (art. 13, § 5º).", "") + "\n" + n2
+                    # o que só vale na hipótese "sem a falta" sai do texto solto: a prejudicada pelo indulto cabível e o "recalcular sem
+                    # as penas indultadas" do XV (com o indulto também "não cabe", nenhuma pena foi indultada - a hipótese vai em n2)
+                    out[dk] = (out.get(dk) or "").replace("Prejudicada: o indulto é cabível e prevalece (art. 13, § 5º).", "").replace(
+                        "\nO indulto do inciso XV alcança só parte dos crimes; a comutação incide sobre a pena dos demais - recalcular sem as penas indultadas.",
+                        "") + "\n" + n2
     # reincidência pelas datas do RSPE: a marcação do SEEU em branco ou "N" com condenação anterior transitada antes do fato
     # (CP, arts. 63 e 64, I) - o "possível" calculado como primário não se afirma: A VERIFICAR, com o motivo
     for ano, ref_r in DECRETOS.items():
@@ -6747,7 +6770,7 @@ def derivar(r, crimes, eventos, incidentes):
     r.update(analise_decretos(r, crimes, eventos, incidentes, hoje))
     r.update(analise_decreto_2022(r, crimes, eventos, incidentes))
     nascimento_divergente_decretos(r, crimes, eventos, incidentes, hoje)
-    aplicar_decisoes_decretos(r, incidentes)
+    aplicar_decisoes_decretos(r, incidentes, crimes)
     r["eventos"] = " | ".join("%s/%s %s" % (e["tipo"], e["motivo"], e["data"]) for e in eventos)
 
     r["_crimes"] = crimes

@@ -22,6 +22,7 @@ TESTES += ["teste_conf3_prescricao.py"]  # conferência 7.14.2, frente prescriç
 TESTES += ["teste_conf3_indulto.py"]
 TESTES += ["teste_conf3_progressao.py"]
 TESTES += ["teste_conf3_remicao.py"]
+TESTES += ["teste_conf4_demais.py"]  # conferência 7.14.3, frente das demais abas (progressão, livramento, auditoria, indulto, prescrição)
 falhas = [t for t in TESTES if subprocess.call([sys.executable, t]) != 0]
 if falhas:
     print("FALHOU: " + ", ".join(falhas))

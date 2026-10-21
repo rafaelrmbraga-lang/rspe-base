@@ -2260,7 +2260,19 @@ def _quadro(L, hoje):
         ini = L.get("ppe_inicio") or L["ppe_termo"]
         cump = L.get("ppe_cumprido_dias") or 0
         if ini == L["ppe_termo"] or not cump:
-            Q["periodo"] = "sem início do cumprimento desde o trânsito (%s)" % L["ppe_termo"]
+            # a liberdade do trânsito terminou com o cumprimento desta pena (prisão, somatório): o quadro diz até quando e o estado
+            # de hoje, como o detalhe - "sem início desde o trânsito" só quando o cumprimento de fato não começou
+            lt_ = L.get("ppe_linha_tempo") or []
+            _lib = next((p for p in lt_ if p["tipo"] == "liberdade" and p["inicio"] == L["ppe_termo"] and p.get("fim")), None)
+            _cp = next((p for p in lt_ if p["tipo"] in ("cumprimento", "livramento", "prd") and _lib and p["inicio"] == _lib["fim"]), None)
+            if _lib and _cp:
+                _ult = lt_[-1]
+                Q["periodo"] = "sem início do cumprimento desta pena de %s (trânsito) a %s; %s" % (
+                    L["ppe_termo"], _lib["fim"],
+                    ("hoje em cumprimento desde %s" % _cp["inicio"]) if (_ult is _cp and not _cp.get("fim"))
+                    else "cumprimento desde %s" % _cp["inicio"])
+            else:
+                Q["periodo"] = "sem início do cumprimento desde o trânsito (%s)" % L["ppe_termo"]
         else:
             Q["periodo"] = "cumprimento interrompido em %s (%s), sem fuga" % (ini, L.get("ppe_motivo") or "motivo não consta")
         if L.get("ppe_novo_crime"):
@@ -3218,6 +3230,20 @@ def analisar(r, hoje=None, ficha=None):
         c2["_chave_ajuste"], c2["_ajuste"], c2["_orig"] = ch, aj, c0
         crimes.append(c2)
     nasc = rs.to_date(r.get("data_nascimento") or "")
+    # penas de outros processos extintas na ficha do SIAPEN (rspe_reincidencia.extincoes_ficha): a mesma fonte com que a Auditoria
+    # reconhece a reincidência que o RSPE não mostra ("reincidência marcada com base na ficha")
+    _extf_p = []
+    try:
+        import rspe_reincidencia as _rr
+        if ficha:
+            _extf_p = _rr.extincoes_ficha(ficha)
+        else:
+            _extf_p = [dict(e, data=rs.to_date(e["data"]) if isinstance(e.get("data"), str) else e.get("data")) for e in r.get("_extincoes_ficha") or []]
+        _extf_p = [e for e in _extf_p if e.get("data")]
+    except Exception:
+        _extf_p = []
+    _crimes_pessoa_p = list(r.get("_crimes", [])) + [o for o in (r.get("_outras_condenacoes") or [])
+                                                     if not any(rs.mesmo_processo(o.get("processo_criminal"), c.get("processo_criminal")) for c in r.get("_crimes", []))]
     pena_total = rs.pena_para_dias(r.get("pena_total")) or 0
     eventos = r.get("_eventos", [])
     incidentes = r.get("_incidentes", [])
@@ -3312,6 +3338,17 @@ def analisar(r, hoje=None, ficha=None):
         reinc_sem_base = bool(L["reinc"] and _fx and (_aj.get("valores") or {}).get("reinc") not in ("S", "N") and not any(
             rs.to_date(o.get("transito_processo") or o.get("transito_mp") or "")
             and rs.to_date(o.get("transito_processo") or o.get("transito_mp")) < _fx for o in _outras))
+        if reinc_sem_base and _extf_p:
+            # a ficha mostra pena de outro processo extinta há menos de 5 anos do fato (só existe pena extinta se houve condenação
+            # transitada): a reincidência marcada tem base, como na Auditoria - o prazo leva o +1/3
+            try:
+                _Rf = _rr.reincidencia_pelas_datas(c.get("_orig") or c, _crimes_pessoa_p, nasc, _extf_p)
+                if _Rf.get("estado") == "reincidente" and _Rf.get("fonte") == "ficha":
+                    reinc_sem_base = False
+                    L["avisos"].append("reincidência marcada no RSPE com base na ficha do SIAPEN (%s): prazo com o +1/3 (CP, arts. 63 e 110) - "
+                                       "a certidão de antecedentes confirma a data do trânsito" % _Rf.get("motivo"))
+            except Exception:
+                pass
         L["reinc_sem_base"] = reinc_sem_base
         _trs = sorted(d_ for d_ in (rs.to_date(o.get("transito_processo") or o.get("transito_mp") or "") for o in _outras) if d_)
         # com outras condenações no RSPE, todas transitadas depois do fato, a reincidência marcada não tem base: calcula sem o +1/3

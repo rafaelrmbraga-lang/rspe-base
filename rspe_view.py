@@ -299,7 +299,10 @@ def _fr_prog_refeita(c):
     """Fração de progressão do crime para a progressão refeita: a do SEEU, salvo o 1/6 em fato da janela em que a lei prevê 16%
     (Lei 13.964/2019 até 07/05/2026): 16%, como na Auditoria (mais favorável). Fora dessa janela, a fração literal."""
     f = rs.parse_fracao(c.get("fracao_progressao") or "")
-    if f == Fraction(1, 6):
+    # o 16% é do primário, em crime sem violência ou grave ameaça e não hediondo (LEP, art. 112, I): com violência (marcada ou
+    # elementar do tipo, como a lesão corporal dolosa), reincidência ou hediondez, a lei dá 25% ou mais, e o 1/6 do SEEU é o favorável
+    if f == Fraction(1, 6) and not (rs.vga_indulto(c) or c.get("hediondo_ou_equiparado") == "S"
+                                    or c.get("reincidente_comum") == "S" or c.get("reincidente_especifico") == "S"):
         j = rg.regime_progressao(rs.to_date(c.get("data_infracao") or ""))
         if j and rg.fr(j.get("comum")) == Fraction(16, 100):
             return Fraction(16, 100)
@@ -547,7 +550,7 @@ def _vencido_pedido(r, sc, d, palavra):
     return sc
 
 
-def _com_nota(sit, nota, d=None, hoje=None):
+def _com_nota(sit, nota, d=None, hoje=None, ger=None):
     """Situação da progressão/livramento com a nota que o SEEU imprime depois da data prevista ("Indeferido em …",
     "Existe falta grave nos últimos 12 meses em …", "Em trâmite desde …"): só exibida - o efeito jurídico fica com o usuário.
     d: data do lapso. O indeferimento anterior ao lapso não é pedido depois dele ("indeferido antes do lapso: requerer"), e a falta
@@ -561,8 +564,18 @@ def _com_nota(sit, nota, d=None, hoje=None):
         return sit.replace("sem pedido no RSPE - requerer", "indeferido antes do lapso (RSPE: %s): requerer" % nota.strip())
     mf = re.search(r"falta grave nos [úu]ltimos 12 meses em (\d{2}/\d{2}/\d{4})", nota, re.I)
     xf = rs.to_date(mf.group(1)) if mf else None
-    if xf and (hoje - xf).days > 365:
+    # ger: emissão do RSPE, a mesma referência da coluna Falta (o retrato do documento). Falta já fora da janela na emissão:
+    # nota histórica; dentro dela na emissão e vencida depois: a coluna diz "Sim" e a nota diz quando a janela venceu (sem
+    # "fora dos 12 meses" ao lado de "Sim")
+    _ref = ger or hoje
+    if xf and (_ref - xf).days > 365:
         nota = "%s (nota do SEEU; a falta já está fora dos 12 meses)" % nota.strip()
+    elif xf and (hoje - xf).days > 365:
+        try:
+            _fim = xf.replace(year=xf.year + 1)
+        except ValueError:
+            _fim = xf + timedelta(days=365)
+        nota = "%s (nota do SEEU; na emissão do RSPE a falta estava nos 12 meses - a janela venceu em %s)" % (nota.strip(), rs.fmt(_fim))
     return ("%s · RSPE: %s" % (sit, nota)) if sit else "RSPE: %s" % nota
 
 
@@ -640,7 +653,7 @@ def curto_indulto(txt):
     if base.startswith("não se aplica"):
         return "Não se aplica (sem execução na data)"
     if base.startswith("CONCEDIDO no RSPE"):
-        return "Concedido · " + base.split(" em ")[-1]
+        return "Concedido · " + base.split(" em ")[-1] + (" · sem baixa: pode ter sido só da multa" if "só da multa" in txt else "")
     if base.startswith("INDEFERIDO no RSPE"):
         return "Indeferido · " + base.split(" em ")[-1]
     if base.startswith("prejudicada"):
@@ -822,7 +835,8 @@ def custodia_sem_calculo(r):
             rs.pl(antes - antes0, "dia", "dias"), "; ".join("de %s a %s no processo %s" % (rs.fmt(a), rs.fmt(b), p) for a, b, p in fic))
     if duvida and not duvida_txt:
         duvida_txt = "a custódia não indica processo (nem no RSPE, nem na ficha SIAPEN) e pode ser de outro - conferir"
-    return {"antes": antes, "desde": desde, "duvida": duvida, "duvida_txt": duvida_txt, "ficha_txt": ficha_txt} if (antes or desde) else None
+    return {"antes": antes, "desde": desde, "duvida": duvida, "duvida_txt": duvida_txt, "ficha_txt": ficha_txt,
+            "ficha_dias": antes - antes0} if (antes or desde) else None
 
 
 def fracoes_texto(r, campo):
@@ -1593,10 +1607,10 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
         lsit, lcor = (ltxt.split(" (")[0] if ltxt and not re.match(r"^\d{2}/\d{2}/\d{4}", ltxt) else "Não consta no RSPE"), "cinza"
     # nota do SEEU depois da data prevista: exibida junto da data que veio do SEEU (sem mudar a cor nem o prazo)
     if not est and r.get("progressao_previsao_seeu"):
-        psit = _com_nota(psit, r.get("progressao_nota"), pd)
+        psit = _com_nota(psit, r.get("progressao_nota"), pd, ger=rs.to_date(r.get("data_geracao_rspe") or ""))
     if not (est and est[0] in ("extinta", "cumprida", "lc", "lc_duvida", "nao_iniciou")) and r.get("livramento_previsao_seeu") \
             and ltxt == r.get("livramento_previsao_seeu"):
-        lsit = _com_nota(lsit, r.get("livramento_nota"), ld)
+        lsit = _com_nota(lsit, r.get("livramento_nota"), ld, ger=rs.to_date(r.get("data_geracao_rspe") or ""))
     presc = rp.analisar(r, HOJE, ficha)
     if ficha:
         # reincidência pelas datas (rspe_reincidencia): penas de outros processos extintas na ficha e a capitulação da ficha
@@ -1608,9 +1622,13 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
         r["_ficha_artigo"] = ficha.get("artigo") or ""
     try:
         # soltura do RSPE que a ficha desmente (alvará com pendência, sem saída): a Auditoria não a usa como fundamento
-        r["_solturas_sem_saida"] = [rs.fmt(a) for a, _b in rf._soltura_x_ficha(r, ficha, so_periodos=True)] if ficha else []
+        _ssf = rf._soltura_x_ficha(r, ficha, so_periodos=True) if ficha else []
+        r["_solturas_sem_saida"] = [rs.fmt(a) for a, _b in _ssf]
+        # até quando a pessoa seguiu presa (reinício seguinte do RSPE ou primeira saída em liberdade na ficha): a detração conta esses dias
+        r["_solturas_sem_saida_ate"] = {rs.fmt(a): rs.fmt(b) for a, b in _ssf if b}
     except Exception:
         r["_solturas_sem_saida"] = []
+        r["_solturas_sem_saida_ate"] = {}
     aud = ra.auditar(r, HOJE)
     try:
         dbi = data_base_info(r, aud["aud_itens"], ficha)
@@ -1791,6 +1809,11 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
     if dbi.get("db"):
         m["dbase"] = dbi["db"]  # a data-base corrigida pelo operador vale na tabela, no relatório e na petição
     m = simplificar(m)
+    # data-base do SEEU contra a lei (decisão do usuário, 7.14.2): a aba mantém a data do SEEU e o motivo aponta a estimativa da Auditoria
+    _dbg = next((it for it in m.get("aud_itens") or [] if it.get("prog_estimada") and not it.get("baixado")
+                 and it.get("nivel") in ("alerta", "verificar")), None)
+    if _dbg and not dbi.get("db_editada") and m.get("prog") and m.get("prog") == r.get("progressao_previsao_seeu"):
+        m["prog_motivo"] = "%s (data do SEEU; com a data-base legal, estimada em %s - ver Auditoria)" % (m["prog"], _dbg["prog_estimada"])
     if dbi.get("db_editada") and r.get("progressao_previsao_seeu") and _prog_pela_db_manual(r):
         m["prog_motivo"] = "recalculada pela data-base informada (%s); SEEU: %s" % (dbi["db"], r["progressao_previsao_seeu"])
     # * nas colunas: valor calculado pelo programa, não impresso pelo SEEU - a explicação vai ao rodapé e à ficha
@@ -2256,8 +2279,15 @@ def saida_temporaria(r, ficha, m, est=None, interr=False, hoje=None):
                 det_txt = "a prisão provisória registrada na ficha (%s, %s) não está no cômputo do RSPE (detração, CP, art. 42)" % (
                     "; ".join("%s a %s" % (rs.fmt(a), rs.fmt(b)) for a, b, _n in dets), rs.pl(det_f, "dia", "dias"))
                 if est_c is not None:
-                    est_c += det_f
-                    est_txt += "; somada %s, ficam %s" % (det_txt.replace(" não está no cômputo do RSPE", ", fora do cômputo do RSPE"), rs.dias_para_pena(est_c))
+                    # guia sem cálculo: a custódia reconstruída (custodia_sem_calculo) já inclui a prisão provisória que só a ficha
+                    # registra - soma-se só o que ela ainda não contou (sem contar duas vezes)
+                    _cs = custodia_sem_calculo(r)
+                    _ja = min(det_f, (_cs or {}).get("ficha_dias") or 0)
+                    if det_f - _ja > 0:
+                        est_c += det_f - _ja
+                        est_txt += "; somada %s, ficam %s" % (det_txt.replace(" não está no cômputo do RSPE", ", fora do cômputo do RSPE"), rs.dias_para_pena(est_c))
+                    else:
+                        est_txt += ", já incluída %s" % det_txt.replace(" não está no cômputo do RSPE (detração, CP, art. 42)", ", fora do cômputo do RSPE (detração, CP, art. 42)")
         except Exception:
             pass
     if cump is None or not tot:
