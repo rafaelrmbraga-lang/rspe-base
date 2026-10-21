@@ -82,13 +82,32 @@ def extincoes_ficha(f):
         procs = re.findall(r"\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}", t)
         if not procs:
             continue
-        m = re.search(r"PENA EXTINTA EM (\d{1,2}/\d{1,2}/\d{4})", u)
+        m = re.search(r"PENA EXTINTA(?: [A-Z ]{0,40}?,)? EM (\d{1,2}/\d{1,2}/\d{4})", u)
         d = rs.to_date(m.group(1)) if m else None
         if not d:
             dd = str(e.get("data") or "").replace(".", "/")
             d = rs.to_date(dd)
         if d:
             out.append({"processo": procs[0], "data": d, "texto": t[:200]})
+    # pena em cumprimento antes da extinção: o primeiro registro da ficha que cita o mesmo processo como execução de pena
+    # (progressão ou regressão de regime, "para cumprimento de pena", regime fechado/semiaberto/aberto) - a condenação já
+    # transitara nessa data, mesmo que a extinção seja posterior ao fato de outro crime
+    for x in out:
+        raiz = x["processo"][:15]
+        ds = []
+        for e in (f or {}).get("eventos") or []:
+            t = " ".join(str(e.get("texto") or "").split())
+            if raiz not in t:
+                continue
+            u = rs._sem_acento(t).upper()
+            if re.search(r"EXTINCAO DE PENA|PENA EXTINTA|EXTINTA A PENA|PROVISORI|PREVENTIV|FLAGRANTE", u):
+                continue
+            if re.search(r"CUMPRIMENTO DE PENA|CUMPRIR (?:A )?PENA|PROGRESSAO DE REGIME|REGRESSAO DE REGIME|REGIME (?:FECHADO|SEMIABERTO|ABERTO)", u):
+                d = rs.to_date(str(e.get("data") or "").replace(".", "/"))
+                if d and d < x["data"]:
+                    ds.append(d)
+        if ds:
+            x["cumprimento_desde"] = min(ds)
     return out
 
 
@@ -154,6 +173,10 @@ def reincidencia_pelas_datas(c, crimes, nasc=None, extincoes=None, processos_exc
             continue  # processo deste RSPE (ou de outra execução já lida): as datas do RSPE decidem
         if e["data"] < fato and not depurada(e["data"], fato):
             R["ficha"].append(e)
+        elif e["data"] >= fato and ((rs.to_date(e["cumprimento_desde"]) if isinstance(e.get("cumprimento_desde"), str)
+                                     else e.get("cumprimento_desde")) or date.max) < fato:
+            # extinta depois do fato, mas a ficha a registra em cumprimento antes dele: a condenação já tinha transitado
+            R["ficha"].append(e)
     menor = bool(nasc and fato < _mais_anos(nasc, 18) + timedelta(days=MARGEM_MAIORIDADE))
     if R["anteriores"]:
         R["estado"], R["fonte"] = "reincidente", "rspe"
@@ -172,8 +195,15 @@ def reincidencia_pelas_datas(c, crimes, nasc=None, extincoes=None, processos_exc
                        "condenação deste RSPE transitou antes do fato")
     elif R["ficha"]:
         R["estado"], R["fonte"] = "reincidente", "ficha"
-        R["motivo"] = "a ficha do SIAPEN registra pena de outro processo extinta antes do fato (%s), há menos de 5 anos: %s" % (
-            rs.fmt(fato), "; ".join("proc. %s, extinta em %s" % (e["processo"], rs.fmt(e["data"])) for e in R["ficha"][:3]))
+        _cd = lambda e: rs.to_date(e["cumprimento_desde"]) if isinstance(e.get("cumprimento_desde"), str) else e.get("cumprimento_desde")
+        if all(e["data"] < fato for e in R["ficha"]):
+            R["motivo"] = "a ficha do SIAPEN registra pena de outro processo extinta antes do fato (%s), há menos de 5 anos: %s" % (
+                rs.fmt(fato), "; ".join("proc. %s, extinta em %s" % (e["processo"], rs.fmt(e["data"])) for e in R["ficha"][:3]))
+        else:
+            R["motivo"] = "a ficha do SIAPEN registra pena de outro processo em cumprimento antes do fato (%s): %s" % (
+                rs.fmt(fato), "; ".join(("proc. %s, extinta em %s" % (e["processo"], rs.fmt(e["data"]))) if e["data"] < fato else
+                                        ("proc. %s, em cumprimento desde %s e extinta em %s, depois do fato" % (e["processo"], rs.fmt(_cd(e)), rs.fmt(e["data"])))
+                                        for e in R["ficha"][:3]))
     elif R["outra_execucao"]:
         R["estado"], R["fonte"] = "reincidente", "outra_execucao"
         R["motivo"] = "condenação de outra execução da mesma pessoa transitada antes do fato (%s): %s" % (rs.fmt(fato), "; ".join(

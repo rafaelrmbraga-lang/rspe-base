@@ -206,6 +206,8 @@ def _cumprido_info(r, ctx, ref):
     x = rs.cumprido_decreto_info(r, ctx["periodos"], ctx["rem"], ref, ctx["lc"], r.get("_crimes") or [], ctx.get("_modo"))
     if x.get("alt"):
         ctx["_alt"] = True
+    if x.get("alt_txt"):
+        ctx["_alt_txt"] = True
     return x
 
 
@@ -635,16 +637,43 @@ def avaliar_ficha(f, r, ctx, ini, hoje):
         # a âncora dá a comutação, mas os eventos mostram mais tempo: o indulto (mais benéfico) pode caber por eles - testa
         xe = _avaliar_ficha_um(f, r, dict(ctx, _modo="eventos"), ini, hoje)
         if xe.get("s") in ("cabe", "ver") and xe.get("beneficio") == "Indulto":
+            # o tempo a mais dos eventos tem de ter origem: a custódia (e o livramento, com as remições) desde o primeiro fato das
+            # penas consideradas. Se a conta pelos eventos a supera em mais de 180 dias, o excedente é tempo anterior aos fatos
+            # (penas já extintas) ou remição que o RSPE não mostra - a comutação (pela âncora) é o resultado firme, e o indulto
+            # fica como hipótese a verificar
+            ref_e = rs.to_date(f.get("data_referencia") or "")
+            _fs = [rs.to_date(c.get("data_infracao") or "") for n, c in enumerate(r.get("_crimes") or []) if n in (xe.get("alc") or [])]
+            _fs = [d for d in _fs if d]
+            c_ev = (xe.get("detalhe") or {}).get("cumprido")
+            if ref_e and _fs and c_ev is not None and "pena_conc" not in (xe.get("detalhe") or {}):
+                rec = rs.cumprido_apos_fato(ctx["periodos"], ctx["rem"], min(_fs), ref_e, ctx["lc"])
+                if c_ev - rec > 180:
+                    return dict(xa, ressalva="; ".join(y for y in (xa.get("ressalva") or "", (
+                        "indulto a verificar (%s): pelos eventos cumpriu %s, mas a custódia desde o primeiro fato das penas consideradas "
+                        "(%s) soma %s; os %s a mais não têm origem visível no RSPE para estas penas - o indulto depende de remição "
+                        "anterior não mostrada" % (xe.get("dispositivo") or "", rs.dias_para_pena(c_ev), rs.fmt(min(_fs)),
+                                                    rs.dias_para_pena(rec), rs.pl(c_ev - rec, "dia", "dias")))) if y))
             return dict(xe, s="ver", ressalva="; ".join(y for y in (xe.get("ressalva") or "", "pela âncora do SEEU cabe a comutação: %s" % (
                 xa.get("mot") or "")) if y))
+        return xa
+    if (xa.get("s") in ("nao", "imp") and not ca.get("_alt") and ca.get("_alt_txt") and (xa.get("mot") or "").startswith("faltavam")
+            and "; também falta grave" not in (xa.get("mot") or "")):
+        # eventos pouco acima da âncora (menos de 180 dias): o resultado é o da âncora, mas o "faltavam" mostrado é o menor, com
+        # a fonte (a custódia dos eventos é tempo efetivamente cumprido)
+        xe = _avaliar_ficha_um(f, r, dict(ctx, _modo="eventos_txt"), ini, hoje)
+        if xe.get("s") == xa.get("s"):
+            fa = rs.falta_menor(xa.get("mot"), xe.get("mot"))
+            if fa:
+                return dict(xe, mot="%s; %s" % (xe.get("mot") or "", rs.nota_falta_eventos(fa)))
         return xa
     if xa.get("s") == "cabe" or not ca.get("_alt") or (xa.get("mot") or "").startswith("sem pena remanescente"):
         return xa  # (pena já cumprida pela âncora: com o tempo maior dos eventos, também não sobra o que comutar)
     xe = _avaliar_ficha_um(f, r, dict(ctx, _modo="eventos"), ini, hoje)
     if _RANK_S.get(xe.get("s"), 0) > _RANK_S.get(xa.get("s"), 0):
         return xe
-    if xe.get("s") == xa.get("s") and xa.get("s") in ("nao", "imp"):
-        # o mesmo resultado negativo: o texto mostra o "faltavam" menor (o dos eventos, quando é ele), com a fonte
+    if xe.get("s") == xa.get("s") and xa.get("s") in ("nao", "imp") and "; também falta grave" not in (xa.get("mot") or ""):
+        # o mesmo resultado negativo: o texto mostra o "faltavam" menor (o dos eventos, quando é ele), com a fonte (não quando o
+        # motivo é o prazo ao lado da falta grave: aí o prazo é só o motivo objetivo, pela âncora)
         fa = rs.falta_menor(xa.get("mot"), xe.get("mot"))
         if fa:
             return dict(xe, mot="%s; %s" % (xe.get("mot") or "", rs.nota_falta_eventos(fa)))
@@ -1235,6 +1264,18 @@ def _avaliar_ficha(f, r, ctx, ini, hoje):
     res["ind_ver"] = bool(ind_ver and not ind and not imp_ind and not f_ind)  # hipótese de indulto a verificar (linha do tempo)
     mot_falta = "falta grave %s: %s" % (("nos %s meses anteriores" % f_meses) if f_meses else "punida até a data", falta_firme[0]) if falta_firme else ""
     if f_ind and (f_com or not (com and not imp_com)):
+        if all("não homologada" in t for t in falta_firme) and not ind and not ind_ver and not com:
+            # vários impedimentos: o objetivo (crime, pena, prazo) vem primeiro; a fuga não homologada, que depende de decisão
+            # (o decreto exige a sanção reconhecida em juízo), vem depois - o resultado não muda
+            if imp:
+                return dict(res, s="imp", mot="%s; também %s" % ("; ".join(imp), mot_falta))
+            # o mais próximo de ser atendido: entre as hipóteses que falharam pelo prazo, a de menor exigência (indulto ou
+            # comutação); sem prazo, o teto de pena ou o crime da hipótese de indulto que chegou mais perto
+            _cand = [x for x in (ind_n, com_n) if x and x[2] and not re.search(r"hip[óo]tese só para", x[2])]
+            _pz = [x for x in _cand if x[1] is not None and x[2].startswith("faltavam")]
+            obj = min(_pz, key=lambda x: x[1]) if _pz else (_cand[0] if _cand else None)
+            if obj:
+                return dict(res, s="nao", mot="%s; também %s" % (obj[2], mot_falta), exigido=obj[1], dispositivo=obj[0].get("dispositivo") or "")
         return dict(res, s="nao", mot=mot_falta)
     if ind and not imp_ind and not f_ind:
         h, exig = ind
