@@ -23,6 +23,10 @@ if "fetch(" in js or "XMLHttpRequest" in js:
     falhas.append("triagem.js não faz pedido direto (só pelo content.js)")
 if "preAnalise" in js:
     falhas.append("triagem.js não cita o Analisar")
+# o pacote do build (zip do Releases e artefato do Actions) leva a pasta da extensão
+wf = open(os.path.join(AQUI, ".github", "workflows", "build.yml"), encoding="utf-8").read()
+if "Copy-Item -Recurse extensao_seeu pacote\\extensao_seeu" not in wf:
+    falhas.append("build.yml: a pasta extensao_seeu entra no pacote")
 node = shutil.which("node")
 if node:
     r = subprocess.run([node, "--check", os.path.join(EXT, "triagem_core.js")], capture_output=True, text=True)
