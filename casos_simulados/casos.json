@@ -18127,13 +18127,13 @@
     "t": "campo",
     "campo": "dec",
     "op": "regex",
-    "v": "\"id\": \"2006\",(?:(?!\"id\": \").)*?\"s\": \"imp\"(?:(?!\"id\": \").)*?\"mot\": \"[^\"]*faltavam 3a7m28d para a íntegra[^\"]*pela âncora do SEEU, faltavam 5a0m0d"
+    "v": "\"id\": \"2006\",(?:(?!\"id\": \").)*?\"s\": \"imp\"(?:(?!\"id\": \").)*?\"mot\": \"[^\"]*faltavam 3a7m28d para a íntegra[^\"]*a âncora do SEEU, só como referência, daria: faltavam 5a0m0d"
    },
    {
     "t": "campo",
     "campo": "dec",
     "op": "regex",
-    "v": "\"id\": \"2007\",(?:(?!\"id\": \").)*?\"s\": \"imp\"(?:(?!\"id\": \").)*?\"mot\": \"[^\"]*faltavam 2a7m7d para a íntegra[^\"]*pela âncora do SEEU, faltavam 5a0m0d"
+    "v": "\"id\": \"2007\",(?:(?!\"id\": \").)*?\"s\": \"imp\"(?:(?!\"id\": \").)*?\"mot\": \"[^\"]*faltavam 2a7m7d para a íntegra[^\"]*a âncora do SEEU, só como referência, daria: faltavam 5a0m0d"
    }
   ]
  },

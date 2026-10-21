@@ -547,7 +547,7 @@ def _texto_blocos(blocos):
     # a forma favorável é o total impresso menos a diferença, em anos, meses e dias (sem passar por dias corridos, que desviam
     # alguns dias da subtração que se lê no texto)
     _dif_amd = _amd(rs.dias_para_pena(max(0, int(round(dif)))))
-    _fav_txt = None
+    _fav_txt = _dif_txt = None
     # forma favorável pela conta direta, como se lê no texto: pena do bloco × fração em anos, meses e dias (mês de 30 dias, como o
     # SEEU aplica a fração) menos a detração (em meses de 30 dias); os blocos sem detração entram com o lapso impresso. Partir do
     # lapso impresso menos detração × (1 − fração) desvia alguns dias (arredondamentos do SEEU)
@@ -562,6 +562,10 @@ def _texto_blocos(blocos):
         _fu = int(round(_fu))
         if _fu > 0:
             _fav_txt = rs.pena_extenso("%da%dm%dd" % (_fu // 360, (_fu % 360) // 30, _fu % 30))
+            # (7.14.4) a diferença é o lapso impresso menos a forma favorável, na mesma unidade (meses de 30 dias): as três linhas
+            # fecham entre si (detração × (1 − fração) em dias corridos desviava 7 a 10 dias da subtração que se lê no texto)
+            _du = _u(*_amd(_norm(*_t))) - _fu
+            _dif_txt = rs.pena_extenso("%da%dm%dd" % (_du // 360, (_du % 360) // 30, _du % 30)) if _du > 0 else None
     if _fav_txt is None and _t and fav > 0:
         _ta = _amd(_norm(*_t))
         tot_m, dif_m = _ta[0] * 12 + _ta[1], _dif_amd[0] * 12 + _dif_amd[1]
@@ -574,9 +578,10 @@ def _texto_blocos(blocos):
     partes = "; ".join("no bloco de %s (pena de %s), %s de detração: lapso impresso de %s = (pena do bloco − detração) × %s" % (
         rs.pct(b[0]), ext(b[1]), rs.pl(b[3], "dia", "dias"), _tot_txt if len(blocos) == 1 else ext_b(b), rs.pct(b[0])) for b in desc)
     return (" Pelos lapsos que o SEEU imprime por fração, a detração foi descontada antes da fração %s. Lapso total impresso: %s; com a "
-            "fração sobre a pena inteira e a detração descontada depois (pena × fração − detração): %s. Diferença: detração × (1 − fração "
-            "do bloco) = %s a mais pela forma mais gravosa." % (
-                partes, _tot_txt, (_fav_txt or ext(fav)) if (fav > 0 or _fav_txt) else "nada (o lapso já estaria cumprido na data-base)", ext(dif)))
+            "fração sobre a pena inteira e a detração descontada depois (pena × fração − detração): %s. Diferença: %s a mais pela forma "
+            "mais gravosa (lapso impresso − forma favorável; ≈ detração × (1 − fração do bloco))." % (
+                partes, _tot_txt, (_fav_txt or ext(fav)) if (fav > 0 or _fav_txt) else "nada (o lapso já estaria cumprido na data-base)",
+                _dif_txt or ext(dif)))
 
 
 def _hediondo_seeu(c):
@@ -2785,16 +2790,20 @@ def auditar(r, hoje=None):
                                "anterior conta como pena cumprida (detração)." % (rs.fmt(min(_prim)), rs.fmt(_d_ri)),
                                "CP, art. 42; LEP, art. 112.", tipo="regime-inicial-depois-da-primeira-prisao", ref=rs.fmt(_d_ri)))
         elif _prim and min(_prim) < _d_ri - timedelta(days=1) and _ri_sem_efeito:
-            itens.append(_item("info", "Regime inicial lançado em %s, depois da primeira prisão (%s) - sem efeito atual" % (rs.fmt(_d_ri), rs.fmt(min(_prim))),
+            # (7.14.4) o item cita o último regime inicial válido (o que rege o cumprimento atual); a análise segue a mesma
+            _d_rv = _ri_val[-1][0] if _ri_val[-1][0] > _d_ri else _d_ri
+            _ri_txt = rs.fmt(_d_ri) if _d_rv == _d_ri else "%s (último regime inicial válido, %s; o primeiro foi lançado em %s)" % (
+                rs.fmt(_d_rv), _ri_ult.get("complemento") or "", rs.fmt(_d_ri))
+            itens.append(_item("info", "Regime inicial lançado em %s, depois da primeira prisão (%s) - sem efeito atual" % (rs.fmt(_d_rv), rs.fmt(min(_prim))),
                                "A primeira prisão por processo desta execução é de %s e o regime inicial foi lançado em %s. A ordem entre detração e "
                                "fração só pesa na primeira progressão contada do regime inicial; %s, e a data-base atual (%s) já é posterior: o "
                                "lançamento não produz mais efeito no cálculo." % (
-                                   rs.fmt(min(_prim)), rs.fmt(_d_ri),
+                                   rs.fmt(min(_prim)), _ri_txt,
                                    "não houve progressão" if _sem_prog and not _recomecou else
                                    "depois %s houve falta grave, regressão ou recaptura, que reiniciou a contagem" % (
                                        "do regime inicial" if _sem_prog else "da última progressão (%s)" % rs.fmt(_lprog0)),
                                    rs.fmt(_db_atual)),
-                               "CP, art. 42; LEP, art. 112.", tipo="regime-inicial-depois-da-primeira-prisao", ref=rs.fmt(_d_ri)))
+                               "CP, art. 42; LEP, art. 112.", tipo="regime-inicial-depois-da-primeira-prisao", ref=rs.fmt(_d_rv)))
         elif _prim and min(_prim) < _d_ri - timedelta(days=1) and _prog_pos:
             # item 48 de 16/10: com progressão posterior ao regime inicial, o efeito prático em regra se esgotou (info). Exceção: houve
             # progressão NEGADA entre o regime inicial e a concedida - a negativa pode ter sido pelo lapso objetivo contado pela forma

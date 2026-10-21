@@ -3414,6 +3414,14 @@ def comparativo(r, f, hoje=None, conferidos=None, manuais=None, vinculos=None):
         return out
     T = rrm.trabalho_x_atestados(f, hoje, manuais, vinculos, inicio_execucao(r))
     N = rrm.comparacao(r, f, hoje, manuais, conferidos, T)
+    if T["inferidos"] and N.get("_sem_doc"):
+        # (7.14.4) o saldo de remição sem documento fica com o trabalho mais próximo da remição antes de o atestado sem período emitido
+        # depois absorvê-lo pela capacidade: refaz-se a ligação com essas remições reservadas, e a comparação, se ela mudou
+        T2 = rrm.trabalho_x_atestados(f, hoje, manuais, vinculos, inicio_execucao(r), reservas=N["_sem_doc"])
+        sig = lambda T_: [(L["chave"], L["ini"], L["fim"], L["st"], L["at"]) for L in T_["linhas"]]
+        if sig(T2) != sig(T):
+            T, N = T2, rrm.comparacao(r, f, hoje, manuais, conferidos, T2)
+    N.pop("_sem_doc", None)
     R = N["R"]
     tl_ex = linha_unidades_exibicao(f)
     for L in T["linhas"]:

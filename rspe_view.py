@@ -2191,7 +2191,9 @@ def _fora_de_curso(r, est, interr):
     """Por que o cumprimento não conta como "em curso" para saída temporária e progressão antecipada (texto curto), ou "" se está.
     O livramento a confirmar com a pessoa presa não é cumprimento parado: o que falta é só confirmar o livramento antigo."""
     if not (r.get("status_execucao") or "").strip().upper() in ("", "ATIVO"):
-        return "execução %s" % (r.get("status_execucao") or "").strip().lower()
+        # "Suspenso ou Sobrestado" do SEEU, no feminino da execução (7.14.4)
+        return "execução %s" % re.sub(r"\b(suspens|sobrestad|arquivad|extint|baixad|encerrad)o\b", r"\1a",
+                                      (r.get("status_execucao") or "").strip().lower())
     if est:
         return {"extinta": "pena extinta", "cumprida": "pena cumprida", "lc": "em livramento condicional",
                 "lc_duvida": "livramento antigo a confirmar - ver Auditoria", "nao_iniciou": "cumprimento não iniciado",

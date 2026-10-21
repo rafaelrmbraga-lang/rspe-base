@@ -77,8 +77,10 @@ r = reg([c30, c40], [inc(AR, "Fechado - Regime Inicial", "", "05/01/2024")], evs
 bl = ra._detracao_blocos(r, r["_crimes"], 398)
 ok(bl and [b[3] for b in bl if b[3]] == [398] and [str(b[0]) for b in bl if b[3]] == ["3/10"], "bloco da detração: %s" % bl)
 x = itens(r, RI)
-ok(len(x) == 1 and x[0]["nivel"] == "alerta" and "bloco de 30%" in x[0]["detalhe"] and "9 meses e 9 dias" in x[0]["detalhe"]
-   and "média" not in x[0]["detalhe"], "detração no bloco de 30%%: 398 x 0,7 = 279 dias: %s" % x)
+# (7.14.4) a "Diferença" é o lapso impresso menos a forma favorável, nas mesmas unidades do SEEU (meses de 30 dias: 2 anos x 30% =
+# 7m6d, não 219 dias): 4a3m10d - 3a5m28d = 9m12d (detração x 0,7 = 279 dias, 3 a menos, não fechava com as duas linhas impressas)
+ok(len(x) == 1 and x[0]["nivel"] == "alerta" and "bloco de 30%" in x[0]["detalhe"] and "Diferença: 9 meses e 12 dias" in x[0]["detalhe"]
+   and "média" not in x[0]["detalhe"], "detração no bloco de 30%%: 4a3m10d - 3a5m28d = 9m12d: %s" % x)
 # lapsos com a fração sobre a pena inteira de cada bloco: a detração não foi descontada antes da fração - sem alerta
 r2 = dict(r, seeu_fracoes_progressao=["Hediondo primário (40%): 4a0m0d", "Reincidente com violência ou grave ameaça (30%): 0a7m9d"])
 x = itens(r2, RI)
@@ -93,7 +95,7 @@ evs3 = [ev(PR, "PRISÃO EM FLAGRANTE", "31/05/2017"), ev("INTERRUPÇÃO", "LIBER
 r3 = reg([c13], [inc(AR, "Fechado - Regime Inicial", "", "31/05/2017")], evs3, pena_total="13a0m0d", data_base_seeu="26/11/2018",
          progressao_previsao_seeu="10/02/2023", seeu_fracoes_progressao=["Hediondo primário (2/5): 5a1m23d"])
 x = [i for i in itens(r3, RI) if "Data-base em 26/11/2018" in i["titulo"]]
-ok(len(x) == 1 and x[0]["nivel"] == "info" and "29 dias" in x[0]["detalhe"] and "1165" in x[0]["detalhe"], "data-base movida, lapso já atingido: %s" % x)
+ok(len(x) == 1 and x[0]["nivel"] == "info" and "Diferença: 1 mês a mais" in x[0]["detalhe"] and "1165" in x[0]["detalhe"], "data-base movida, lapso já atingido: %s" % x)
 ok(not [i for i in itens(dict(r3, progressao_previsao_seeu="10/02/2030"), RI) if i["nivel"] == "info" and "Data-base em" in i["titulo"]],
    "lapso futuro: alerta, não info")
 # falta, fuga ou crime durante o cumprimento antes da data-base: o lapso sobre a remanescente é o legal - sem o item

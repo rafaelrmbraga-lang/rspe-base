@@ -4208,7 +4208,8 @@ def falta_menor(txt_a, txt_e):
 
 def nota_falta_eventos(txt_a):
     """Fonte do número mais favorável (falta_menor), anexada ao resultado pelos eventos."""
-    return "contagem pelos eventos do RSPE (a mais favorável); pela âncora do SEEU, %s" % txt_a
+    # (7.14.4) o prazo que vale é o dos eventos; a âncora entra só como referência, sem parecer uma segunda contagem
+    return "vale a contagem pelos eventos do RSPE (a mais favorável); a âncora do SEEU, só como referência, daria: %s" % txt_a
 
 
 # "vedado" abaixo de "nao": o "faltam X para 2/3 do impeditivo" pela âncora não prevalece sobre os eventos que mostram os 2/3

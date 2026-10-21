@@ -24,6 +24,7 @@ TESTES += ["teste_conf3_progressao.py"]
 TESTES += ["teste_conf3_remicao.py"]
 TESTES += ["teste_conf4_remicao.py"]  # conferência 7.14.3, frente remição
 TESTES += ["teste_conf4_demais.py"]
+TESTES += ["teste_conf5.py"]  # validação da 7.14.3: resíduos (7.14.4)
 falhas = [t for t in TESTES if subprocess.call([sys.executable, t]) != 0]
 if falhas:
     print("FALHOU: " + ", ".join(falhas))

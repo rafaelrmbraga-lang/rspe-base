@@ -171,6 +171,8 @@ def reincidencia_pelas_datas(c, crimes, nasc=None, extincoes=None, processos_exc
     for e in extincoes or []:
         if any(p and rs.mesmo_processo(p, e["processo"]) for p in procs_rspe):
             continue  # processo deste RSPE (ou de outra execução já lida): as datas do RSPE decidem
+        if any(rs.mesmo_processo(x["processo"], e["processo"]) and x["data"] == e["data"] for x in R["ficha"]):
+            continue  # (7.14.4) a mesma extinção lançada duas vezes na ficha: uma só no aviso
         if e["data"] < fato and not depurada(e["data"], fato):
             R["ficha"].append(e)
         elif e["data"] >= fato and ((rs.to_date(e["cumprimento_desde"]) if isinstance(e.get("cumprimento_desde"), str)
@@ -198,12 +200,12 @@ def reincidencia_pelas_datas(c, crimes, nasc=None, extincoes=None, processos_exc
         _cd = lambda e: rs.to_date(e["cumprimento_desde"]) if isinstance(e.get("cumprimento_desde"), str) else e.get("cumprimento_desde")
         if all(e["data"] < fato for e in R["ficha"]):
             R["motivo"] = "a ficha do SIAPEN registra pena de outro processo extinta antes do fato (%s), há menos de 5 anos: %s" % (
-                rs.fmt(fato), "; ".join("proc. %s, extinta em %s" % (e["processo"], rs.fmt(e["data"])) for e in R["ficha"][:3]))
+                rs.fmt(fato), "; ".join(dict.fromkeys("proc. %s, extinta em %s" % (e["processo"], rs.fmt(e["data"])) for e in R["ficha"][:3])))
         else:
             R["motivo"] = "a ficha do SIAPEN registra pena de outro processo em cumprimento antes do fato (%s): %s" % (
-                rs.fmt(fato), "; ".join(("proc. %s, extinta em %s" % (e["processo"], rs.fmt(e["data"]))) if e["data"] < fato else
+                rs.fmt(fato), "; ".join(dict.fromkeys(("proc. %s, extinta em %s" % (e["processo"], rs.fmt(e["data"]))) if e["data"] < fato else
                                         ("proc. %s, em cumprimento desde %s e extinta em %s, depois do fato" % (e["processo"], rs.fmt(_cd(e)), rs.fmt(e["data"])))
-                                        for e in R["ficha"][:3]))
+                                        for e in R["ficha"][:3])))
     elif R["outra_execucao"]:
         R["estado"], R["fonte"] = "reincidente", "outra_execucao"
         R["motivo"] = "condenação de outra execução da mesma pessoa transitada antes do fato (%s): %s" % (rs.fmt(fato), "; ".join(
