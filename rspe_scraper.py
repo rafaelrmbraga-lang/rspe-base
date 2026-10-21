@@ -2823,9 +2823,18 @@ def indicios_falta_datas(incidentes, ref, dias=365, eventos=None, ate=None, hoje
                 if "REGIME" in (i.get("tipo") or "").upper() and not re.search(r"DATA[- ]BASE", (i.get("tipo") or "").upper())
                 and (i.get("situacao") or "CONCEDIDO") == "CONCEDIDO"]
 
+        # soltura provisória (liberdade provisória, alvará, relaxamento) sem retomada depois: o regime fixado antes dela não pôs a
+        # pena em cumprimento (aberto nunca iniciado) - o fato cometido nessa liberdade não é falta da execução
+        _solt = sorted(to_date(e.get("data") or "") for e in (eventos or []) if "INTERRUP" in (e.get("tipo") or "").upper()
+                       and re.search(r"LIBERDADE PROVIS|ALVAR|SOLTURA|RELAXAMENTO", (e.get("motivo") or "").upper()) and to_date(e.get("data") or ""))
+
         def _em_execucao(d):
-            return (any(a < d and (b is None or b >= d) for a, b in _per) or any(a < d and (b is None or b >= d) for a, b in _lc)
-                    or any(x and x < d for x in _reg))
+            if any(a < d and (b is None or b >= d) for a, b in _per) or any(a < d and (b is None or b >= d) for a, b in _lc):
+                return True
+            # só a soltura antes de qualquer trânsito (custódia provisória): solto depois do trânsito, a pena já era executada
+            _tj = min([t for t in (to_date(c.get("transito_processo") or c.get("transito_mp") or "") for c in crimes) if t] or [date.max])
+            _s = [x for x in _solt if x < d and x < _tj]
+            return any(x and x < d and not (_s and x <= _s[-1]) for x in _reg)
         _homs = _homologadas(incidentes)
         for c in crimes:
             d = to_date(c.get("data_infracao") or "")
