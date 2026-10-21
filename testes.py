@@ -1,4 +1,5 @@
 """Roda os testes de regressão do APTO; sai com erro se algum falhar (o build não gera o .exe). Rodar: python testes.py"""
+import os
 import subprocess
 import sys
 
@@ -25,7 +26,9 @@ TESTES += ["teste_conf3_remicao.py"]
 TESTES += ["teste_conf4_remicao.py"]  # conferência 7.14.3, frente remição
 TESTES += ["teste_conf4_demais.py"]
 TESTES += ["teste_conf5.py"]  # validação da 7.14.3: resíduos (7.14.4)
-falhas = [t for t in TESTES if subprocess.call([sys.executable, t]) != 0]
+# saída em UTF-8 em qualquer console (no Windows o padrão cp1252 não imprime símbolos como "✓" e derruba o teste)
+_env = dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUTF8="1")
+falhas = [t for t in TESTES if subprocess.call([sys.executable, t], env=_env) != 0]
 if falhas:
     print("FALHOU: " + ", ".join(falhas))
     sys.exit(1)
