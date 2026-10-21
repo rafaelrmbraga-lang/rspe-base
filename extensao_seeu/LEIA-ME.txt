@@ -107,6 +107,13 @@ TRIAGEM DA MESA DO DEFENSOR (1.7)
    "reler tudo" para ler de novo); o texto de cada documento já lido fica
    guardado e não é baixado de novo. 3 falhas seguidas ou sessão expirada
    param a leitura; "Parar" interrompe depois do pedido em andamento.
+ - Página do processo (1.7.1): a triagem tenta, nesta ordem, pelo nº do
+   processo (o mesmo endereço do lote de RSPE), pelo link do nº na Mesa e,
+   se o navegador não completar esses pedidos ("Failed to fetch"), numa
+   moldura invisível dentro do SEEU aberto (o mesmo que clicar no nº; a
+   moldura não baixa RSPE e é removida em seguida). A forma que funcionar
+   vale para os processos seguintes. Um PDF que não puder ser lido aparece
+   como "documento não lido" e a linha continua com o resto.
  - SÓ LEITURA. A triagem pede ao SEEU apenas: a lista da Mesa, a página do
    processo (o link do nº), a lista de arquivos do movimento e o PDF. A
    própria extensão recusa qualquer outro endereço, em especial "Analisar"

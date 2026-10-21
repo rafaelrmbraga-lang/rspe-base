@@ -120,6 +120,8 @@ ok(P("/seeu/usuario/mesaDefensor1Grau.do?actionType=listar", "POST", "pageNumber
 ok(P("/seeu/usuario/mesaDefensor1Grau.do?actionType=realizarLeitura", "GET") !== "", "Mesa: outra ação recusada");
 ok(P("https://seeu.pje.jus.br/seeu/visualizacaoProcesso.do?_tj=aa11bb22", "GET") === "", "processo pelo link do nº");
 ok(P("/seeu/visualizacaoProcesso.do?actionType=visualizar&selectedIcon=tabMovimentacoesProcesso", "GET") === "", "aba Movimentações");
+ok(P("/seeu/visualizacaoProcesso.do?actionType=visualizar&numeroUnico=70001175420168120001", "GET") === "", "processo pelo nº (como o lote)");
+ok(P("/seeu/visualizacaoProcesso.do?actionType=visualizar&numeroUnico=123", "GET") !== "" && P("/seeu/visualizacaoProcesso.do?actionType=visualizar&numeroUnico=70001175420168120001&x=1", "GET") !== "", "nº inválido ou parâmetro a mais recusado");
 ok(P("/seeu/visualizacaoProcesso.do?actionType=visualizar&selectedIcon=tabPeticao", "GET") !== "", "outra aba recusada");
 ok(P("/seeu/processo/movimentacaoArquivoDocumento.do?_tj=f0f0", "POST", "tipoLayout=1") === "", "lista de arquivos");
 ok(P("/seeu/processo/movimentacaoArquivoDocumento.do?_tj=f0f0", "POST", "tipoLayout=1&x=2") !== "", "lista de arquivos: outro corpo recusado");

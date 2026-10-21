@@ -192,10 +192,52 @@ function resumoMov(m) {
   return m ? { seq: m.seq, data: m.data, hora: m.hora, nome: m.nome, complemento: m.complemento, autor: m.autor, cargo: m.cargo } : null;
 }
 
+// página do processo: 1) pelo nº (como o lote de RSPE); 2) pelo link do nº na Mesa; 3) numa moldura invisível dentro do
+// SEEU (o mesmo que clicar no nº). Vale a primeira que trouxer este processo.
+let modoProcesso = 0;   // a partir de qual tentativa começar (aprende com a primeira que funcionar)
+async function paginaDoProcesso(l) {
+  const dig = l.processo.replace(/\D/g, "");
+  const tentativas = [
+    ["pelo nº", () => buscar("/seeu/visualizacaoProcesso.do?actionType=visualizar&numeroUnico=" + dig)],
+    ["pelo link da Mesa", () => buscar(l.url)],
+    ["pela moldura", () => moldura(l.url)],
+  ];
+  const motivos = [];
+  for (let i = modoProcesso; i < tentativas.length; i++) {
+    const [nome, fazer] = tentativas[i];
+    try {
+      const r = await fazer();
+      const proc = T.lerProcesso(r.texto);
+      if (proc.processo === l.processo || (!proc.processo && proc.pendencias.length)) { modoProcesso = i; return proc; }
+      motivos.push(nome + ": " + (proc.processo ? "abriu outro processo (" + proc.processo + ")" : "página sem o processo"));
+    } catch (e) {
+      if (e instanceof Parada) throw e;
+      motivos.push(nome + ": " + (e.message || e));
+    }
+  }
+  throw new Error("não abriu a página do processo – " + motivos.join("; "));
+}
+async function moldura(url) {
+  if (rodando && rodando.parar) throw new Parada("parado");
+  const espera = ultimoPedido + INTERVALO_MS - Date.now();
+  if (espera > 0) await new Promise((r) => setTimeout(r, espera));
+  ultimoPedido = Date.now();
+  if (!abaSeeu && !(await acharSeeu())) throw new Parada("Abra o SEEU logado em outra aba e tente de novo.");
+  let r;
+  try {
+    r = await chrome.tabs.sendMessage(abaSeeu.id, { tipo: "triagemMoldura", url }, { frameId: 0 });
+  } catch (e) {
+    abaSeeu = null;
+    throw new Parada("A aba do SEEU foi fechada ou recarregada. Deixe o SEEU aberto e tente de novo.");
+  }
+  if (!r) throw new Error("o SEEU não respondeu (recarregue a página do SEEU)");
+  if (r.login) throw new Parada("Sessão do SEEU expirada: faça login de novo e clique em continuar.");
+  if (!r.ok) throw new Error(r.motivo || "falha na moldura");
+  return r;
+}
+
 async function analisarLinha(l) {
-  const r = await buscar(l.url);
-  let proc = T.lerProcesso(r.texto);
-  if (proc.processo && proc.processo !== l.processo) throw new Error("o SEEU abriu outro processo (" + proc.processo + ")");
+  let proc = await paginaDoProcesso(l);
   if (!proc.movimentos.length && proc.temAbaMovimentos) {
     const r2 = await buscar("/seeu/visualizacaoProcesso.do?actionType=visualizar&selectedIcon=tabMovimentacoesProcesso");
     const p2 = T.lerProcesso(r2.texto);
@@ -212,9 +254,16 @@ async function analisarLinha(l) {
     desde: e.desde.map(resumoMov),
     mesma: !!(e.motivo && e.decisao && e.motivo.seq === e.decisao.seq),
   };
-  if (e.motivo) a.motivo.doc = await lerDocumentoDoMovimento(l.processo, e.motivo);
-  if (e.decisao) a.decisao.doc = a.mesma ? a.motivo.doc : await lerDocumentoDoMovimento(l.processo, e.decisao);
-  if (e.merito) a.merito.doc = await lerDocumentoDoMovimento(l.processo, e.merito);
+  // cada documento falha sozinho: a linha continua com o motivo, a decisão e a movimentação
+  const doc = async (m) => {
+    try { return await lerDocumentoDoMovimento(l.processo, m); } catch (er) {
+      if (er instanceof Parada) throw er;
+      return { erro: er.message || String(er), alertas: [], temas: [] };
+    }
+  };
+  if (e.motivo) a.motivo.doc = await doc(e.motivo);
+  if (e.decisao) a.decisao.doc = a.mesma ? a.motivo.doc : await doc(e.decisao);
+  if (e.merito) a.merito.doc = await doc(e.merito);
   const alertas = [], temas = [];
   for (const d of [a.motivo && a.motivo.doc, a.decisao && a.decisao.doc, a.merito && a.merito.doc]) {
     if (!d) continue;
@@ -419,7 +468,7 @@ function celulaMotivo(a, l) {
   return el("div", {},
     el("div", { class: "mot" }, p ? (p.movimento || p.texto) : "sem pendência no quadro"),
     el("div", { class: "sub" }, [p && p.juntar ? "Juntar " + p.juntar.toLowerCase() : "", a.motivo ? `seq. ${a.motivo.seq} · ${a.motivo.data}` : ""].filter(Boolean).join(" · ")),
-    d && !a.mesma ? el("div", { class: "txt" }, d.semArquivo ? "(sem arquivo)" : d.semTexto ? "documento sem texto (escaneado): abrir no SEEU" : T.resumir(d.resumo, 260)) : null);
+    d && !a.mesma ? el("div", { class: "txt" }, d.erro ? "documento não lido: " + d.erro : d.semArquivo ? "(sem arquivo)" : d.semTexto ? "documento sem texto (escaneado): abrir no SEEU" : T.resumir(d.resumo, 260)) : null);
 }
 function celulaDecisao(a) {
   if (!a || a.status !== "ok") return "";
@@ -429,7 +478,7 @@ function celulaDecisao(a) {
   return el("div", {},
     el("div", { class: "mot" }, a.decisao.nome + (a.mesma ? " (é o motivo)" : "")),
     el("div", { class: "sub" }, `seq. ${a.decisao.seq} · ${a.decisao.data}`),
-    d ? el("div", { class: "txt" }, d.semArquivo ? "(sem arquivo)" : d.semTexto ? "documento sem texto (escaneado): abrir no SEEU" : T.resumir(d.resumo, 300)) : null,
+    d ? el("div", { class: "txt" }, d.erro ? "documento não lido: " + d.erro : d.semArquivo ? "(sem arquivo)" : d.semTexto ? "documento sem texto (escaneado): abrir no SEEU" : T.resumir(d.resumo, 300)) : null,
     m ? el("div", { class: "sub", style: "margin-top:4px" }, `Mérito anterior: ${m.nome} · seq. ${m.seq} · ${m.data}`) : null);
 }
 function celulaAlertas(a) {
@@ -447,6 +496,7 @@ function blocoDoc(titulo, mov, d) {
   return el("div", { class: "bloco" },
     el("h3", {}, titulo),
     el("div", { class: "meta" }, `seq. ${mov.seq} · ${mov.data} ${mov.hora || ""} · ${mov.nome}` + (mov.autor ? ` · ${mov.autor}` : "") + (mov.complemento ? ` · ${mov.complemento}` : "")),
+    d && d.erro ? el("div", { class: "sub" }, "Documento não lido: " + d.erro) :
     d && d.semArquivo ? el("div", { class: "sub" }, "Movimento sem arquivo.") :
       d && d.semTexto ? el("div", { class: "sub" }, "Documento sem texto (provavelmente escaneado). Abra no SEEU.") :
         el("pre", {}, corpo || "(texto não lido)"),
@@ -543,7 +593,7 @@ function exportarXlsx() {
   for (const l of linhas) {
     const a = estado.analises[chaveLinha(l)] || {};
     const md = a.motivo && a.motivo.doc, dd = a.decisao && a.decisao.doc, mm = a.merito && a.merito.doc;
-    const txtDoc = (d) => !d ? "" : d.semArquivo ? "(sem arquivo)" : d.semTexto ? "(sem texto: abrir no SEEU)" : d.resumo;
+    const txtDoc = (d) => !d ? "" : d.erro ? "(não lido: " + d.erro + ")" : d.semArquivo ? "(sem arquivo)" : d.semTexto ? "(sem texto: abrir no SEEU)" : d.resumo;
     dados.push([l.final, l.processo, l.executado, l.defensor, T.ABAS[l.aba], l.dataEnvio, l.ultimoDia, l.prazo,
       a.status === "erro" ? "erro: " + a.erro : a.pendencia ? a.pendencia.texto : a.status === "ok" ? "sem pendência" : "não lido",
       a.motivo ? `seq. ${a.motivo.seq} · ${a.motivo.data} · ${a.motivo.nome}` : "",
