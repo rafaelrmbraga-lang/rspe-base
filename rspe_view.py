@@ -1525,7 +1525,7 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
         # reincidência pelas datas (rspe_reincidencia): penas de outros processos extintas na ficha e a capitulação da ficha
         # (tentativa) - só a Auditoria usa
         try:
-            r["_extincoes_ficha"] = [dict(e, data=rs.fmt(e["data"])) for e in rr.extincoes_ficha(ficha)]
+            r["_extincoes_ficha"] = [dict(e, data=rs.fmt(e["data"]), **({"cumprimento_desde": rs.fmt(e["cumprimento_desde"])} if e.get("cumprimento_desde") else {})) for e in rr.extincoes_ficha(ficha)]
         except Exception:
             r["_extincoes_ficha"] = []
         r["_ficha_artigo"] = ficha.get("artigo") or ""
