@@ -1304,7 +1304,9 @@ def trabalho_x_atestados(f, hoje=None, manuais=None, vinculos=None, inicio=None)
             continue  # "passa a exercer atividade no Setor Educacional": estudo, não trabalho
         if any(u["a"] <= a and b <= u["b"] and re.sub(r"\W", "", _sa(u["s"])) == re.sub(r"\W", "", _sa(s)) for u in uni):
             continue  # o mesmo vínculo repetido (ou contido em outro do mesmo setor)
-        uni.append({"a": a, "b": b, "s": s, "aberto": not t.get("fim"), "ext": bool(t.get("externo")), "jornada": t.get("jornada") or ""})
+        # (7.14.3) vínculo sem baixa: o fim é só a saída da unidade (ou evasão/transferência), não o desligamento do setor
+        uni.append({"a": a, "b": b, "s": s, "aberto": not t.get("fim"), "ext": bool(t.get("externo")), "jornada": t.get("jornada") or "",
+                    "sem_baixa": bool(t.get("fim")) and (t.get("motivo_fim") or "").startswith("saída/evasão/transferência")})
     blocos = []
     for u in uni:
         cob = []
@@ -1388,6 +1390,12 @@ def trabalho_x_atestados(f, hoje=None, manuais=None, vinculos=None, inicio=None)
             # o nome confere, mas os dias passam do possível: sugerido mesmo assim, com todo o trabalho contínuo até a emissão quando ele
             # inclui o setor nomeado (o aviso de dias implausíveis aponta)
             esc = blk if any(c in nomeados for c in blk) else nomeados
+        if (esc is None and not at["empresa"] and need and s0 != date.min
+                and len(uteis(cands, s0, em)) <= need * 1.1 + 3):
+            # (7.14.3) atestado sem período e sem setor que declara mais dias do que todo o trabalho sem atestado do intervalo (do fim do
+            # atestado anterior à emissão): todo esse trabalho cabe nele (teste de capacidade) - sugerido, não "pedir atestado" (o
+            # pedido sairia em dobro com o atestado que já está na ficha)
+            esc = cands
         if esc is None:
             continue
         # (7.14.2) os dias declarados passam do trabalho escolhido: o trabalho sem atestado anterior no mesmo intervalo (do mais próximo
@@ -1442,7 +1450,8 @@ def trabalho_x_atestados(f, hoje=None, manuais=None, vinculos=None, inicio=None)
                            "ini": a, "fim": b, "periodo": "%s a %s%s" % (_f(a), _f(b), " (em curso na impressão da ficha)" if em_curso else ""),
                            "dias": (b - a).days + 1, "at": alvo["num"] if alvo else "", "at_chave": alvo["chave"] if alvo else "",
                            "st": st, "como": "período e nome da empresa" if nome else "período (único trabalho no período)",
-                           "sem_confirmado": confirmado_sem, "em_curso": em_curso, "externo": u["ext"], "jornada": u["jornada"]})
+                           "sem_confirmado": confirmado_sem, "em_curso": em_curso, "externo": u["ext"], "jornada": u["jornada"],
+                           "vinc": (u["a"], u["b"], u["s"]), "sem_baixa": u["sem_baixa"]})
     sem_dias = set()
     for L in linhas:
         if L["st"] == "sem":
@@ -1593,6 +1602,23 @@ def comparacao(r, f, hoje=None, manuais=None, homologados=None, trab=None):
         sem_ = "" if h else "certidão sem a carga horária no texto da ficha"
         doc("Certidão de frequência escolar", ("%dº semestre de %s" % (c["semestre"], c["ano"])) if c.get("semestre") and c.get("ano") else "",
             d, "", None, (h / 12.0) if h else None, pet, ok, pdt, fora_de(c.get("autos"), d), "fd:edu:cert:%s" % c.get("data"), sem_valor=sem_)
+    for e in f.get("estudos") or []:
+        # (7.14.3) atestado de estudo com os dias de remição declarados: documento da comparação (as datas invertidas na ficha, com
+        # "conferir datas"); sem os dias declarados, continua como estimativa pelas horas (estudo sem certidão)
+        if not (e.get("dias_remidos") and e.get("data") and (e.get("curso") or "").startswith("Atestado de estudo")):
+            continue
+        d = _dt(e["data"])
+        a, b = _dt(e.get("inicio") or ""), _dt(e.get("fim") or "")
+        inv = bool(a and b and b < a)
+        if inv:
+            a, b = b, a
+        pet, ok, pdt = _pet_texto(e.get("texto"), d)
+        doc("Atestado de estudo", e["curso"].replace("Atestado de estudo", "").replace("nº", "").strip(), d,
+            ("%s a %s" % (_f(a), _f(b))) if a and b else "", None, float(e["dias_remidos"]), pet, ok, pdt, fora_de("", b or d, a, b),
+            "fd:edu:at:%s:%s" % (e["curso"], e["data"]))
+        docs[-1]["nota_ano"] = "datas invertidas na ficha (%s a %s) · conferir datas" % (_f(b), _f(a)) if inv else ""
+        docs[-1]["horas"] = e.get("horas")
+        e["_doc"] = True
     for c in f.get("cursos_peticionados") or []:
         d = _dt(c.get("data") or "")
         h = c.get("horas") or c.get("carga") or 0
@@ -1623,6 +1649,33 @@ def comparacao(r, f, hoje=None, manuais=None, homologados=None, trab=None):
             sem_valor=TXT_VALOR_EXAME)
         dx["cert"] = bool(x.get("certificado"))
     docs.sort(key=lambda d: d["emissao"] or date.min)
+    # (7.14.3) certidão de semestre sem a carga horária: estimativa pela matrícula da ficha (dias letivos do semestre com matrícula,
+    # segunda a sexta fora do recesso, × 4 h ÷ 12). No semestre interrompido (matrícula encerrada no meio dele), a estimativa aparece
+    # no documento; em qualquer semestre, ela decide a qual certidão uma remição pertence quando há mais de uma candidata
+    for d in docs:
+        m_ = re.match(r"(\d)º semestre de (\d{4})", d.get("num") or "")
+        if d["tipo"] != "Certidão de frequência escolar" or d["dias"] or not m_:
+            continue
+        y_ = int(m_.group(2))
+        s0, s1 = (date(y_, 1, 1), date(y_, 6, 30)) if m_.group(1) == "1" else (date(y_, 7, 1), date(y_, 12, 31))
+        dl, fins = set(), []
+        for e in f.get("estudos") or []:
+            a, b = _dt(e.get("inicio") or ""), _dt(e.get("fim") or "") or imp
+            if not a or not b or b < a or e.get("horas"):
+                continue
+            x_, z_ = max(a, s0, inicio or a), min(b, s1)
+            if x_ > z_:
+                continue
+            dl |= {x for x in _rf.dias_jornada_set(x_, z_, "seg-sex") if not _rf.em_recesso(x)}
+            if e.get("fim"):
+                fins.append(b)
+        if len(dl) < 3:
+            continue
+        corte = max(fins) if fins and max(fins) < s1 - timedelta(days=10) and max(fins) >= max(dl) else None
+        d["estim"] = {"dias": round(len(dl) * _rf.HORAS_DIA_ESTUDO / 12.0, 2), "letivos": len(dl), "corte": corte}
+        if corte:
+            d["sem_valor"] += "; semestre interrompido: estimativa ≈ %s dias (%s até o fim da matrícula em %s × %d h ÷ 12)" % (
+                _nf(d["estim"]["dias"]), rs.pl(len(dl), "dia letivo", "dias letivos"), _f(corte), _rf.HORAS_DIA_ESTUDO)
     desta = [d for d in docs if not d["fora"]]
     # (7.14.2) atestado contido em outros: o período (pelos trechos; havendo trabalho na ficha, só os dias com trabalho registrado) já
     # está 90% ou mais nos demais atestados desta execução e os dias declarados passam do que a parte nova comporta - "contido no nº X:
@@ -1637,20 +1690,21 @@ def comparacao(r, f, hoje=None, manuais=None, homologados=None, trab=None):
             trab_d |= dset_([(a, b)])
     ats_c = [d for d in docs if d["tipo"] == "Atestado de trabalho" and not d["fora"] and d.get("_segs") and d["dias"]]
     ds_ = {id(d): dset_(d["_segs"]) for d in ats_c}
-    # o mesmo período em dois atestados (reemissão: um contém 90% ou mais do outro, nos dois sentidos): fica o de mais dias
-    for d in sorted(ats_c, key=lambda d: (d["dias"], d["emissao"] or date.min)):
+    # o atestado com remição do mesmo valor no RSPE (decidida depois da emissão) é o que foi apreciado: fica; sai o que o repete
+    tem_rem = lambda d: any(x["decisao"] and d["emissao"] and 0 <= (x["decisao"] - d["emissao"]).days <= 1095 and abs(x["dias"] - d["dias"]) <= 1
+                            for x in R["remicoes"])
+    # o mesmo período em dois atestados (reemissão: um contém 90% ou mais do outro, nos dois sentidos): fica o que tem remição do mesmo
+    # valor no RSPE (7.14.3) e, entre os dois com ou sem ela, o de mais dias
+    for d in sorted(ats_c, key=lambda d: (tem_rem(d), d["dias"], d["emissao"] or date.min)):
         for o in ats_c:
             if o is d or o.get("contido") or d.get("contido"):
                 continue
             x_ = ds_[id(d)] & ds_[id(o)]
-            if len(x_) >= 0.9 * len(ds_[id(d)]) and len(x_) >= 0.9 * len(ds_[id(o)]) and d["dias"] <= o["dias"]:
+            if len(x_) >= 0.9 * len(ds_[id(d)]) and len(x_) >= 0.9 * len(ds_[id(o)]) and (tem_rem(d), d["dias"]) <= (tem_rem(o), o["dias"]):
                 d["contido"], d["dias_soma"] = "repete o período do atestado nº %s (reemissão?): não se soma" % o["num"], 0.0
     def _cob0(d):
         base = (ds_[id(d)] & trab_d) or ds_[id(d)]
         return len(base & set().union(*[ds_[id(o)] for o in ats_c if o is not d])) / float(len(base) or 1)
-    # o atestado com remição do mesmo valor no RSPE (decidida depois da emissão) é o que foi apreciado: fica; sai o que o repete
-    tem_rem = lambda d: any(x["decisao"] and d["emissao"] and 0 <= (x["decisao"] - d["emissao"]).days <= 1095 and abs(x["dias"] - d["dias"]) <= 1
-                            for x in R["remicoes"])
     for d in sorted(ats_c, key=lambda d: (tem_rem(d), -_cob0(d), -len(ds_[id(d)]))):
         outros = [o for o in ats_c if o is not d and not o.get("contido")]
         base = (ds_[id(d)] & trab_d) or ds_[id(d)]
@@ -1670,7 +1724,7 @@ def comparacao(r, f, hoje=None, manuais=None, homologados=None, trab=None):
     soma = lambda L: round(sum((d["dias_soma"] if "dias_soma" in d else d["dias"]) or 0 for d in L), 2)
     at_ = [d for d in desta if d["tipo"] == "Atestado de trabalho"]
     man_ = [d for d in desta if d["tipo"].endswith("(informado por você)")]
-    est_ = [d for d in desta if d["tipo"] in ("Certidão de frequência escolar", "Curso de qualificação")]
+    est_ = [d for d in desta if d["tipo"] in ("Certidão de frequência escolar", "Curso de qualificação", "Atestado de estudo")]
     lei_ = [d for d in desta if d["tipo"] == "Leitura"]
     comp = round(soma(at_) + soma(man_) + soma(est_) + soma(lei_), 2)
     dif = round(comp - R["concedido"], 2)
@@ -1724,6 +1778,8 @@ def comparacao(r, f, hoje=None, manuais=None, homologados=None, trab=None):
     # início da prova ou do período - de 10 dias ou mais no exame; na certidão e no curso, também a pequena (1 dia de um semestre curto).
     # O exame primeiro (o certificado de conclusão do ENCCEJA antes), depois a certidão e o curso; no exame, o valor da tabela do CNJ (Res. 391/2021, art. 3º: áreas de 20 dias no
     # ENEM, 25 ou 33,33 no ENCCEJA, níveis inteiros de 100 e 133,33 e o acréscimo de 1/3 da conclusão) antes de qualquer outro
+    nome_doc0 = lambda d: (("a certidão do %s" % d["num"]) if d["tipo"] == "Certidão de frequência escolar" and d.get("num") else
+                           ("o curso (%s)" % d["num"]) if d["tipo"] == "Curso de qualificação" and d.get("num") else d["tipo"].lower())
     tab_ = sorted({round(v * k_ * f_, 2) for v in (20.0, 25.0, 100 / 3.0) for k_ in range(1, 6) for f_ in (1, 4 / 3.0)})
     na_tab = lambda v: any(abs(v - t) <= 1 for t in tab_)
     sem_v = [d for d in desta if not d["dias"] and d["emissao"] and d["tipo"] in ("Exame", "Certidão de frequência escolar", "Curso de qualificação")]
@@ -1731,6 +1787,35 @@ def comparacao(r, f, hoje=None, manuais=None, homologados=None, trab=None):
         minimo = 10 if d["tipo"] == "Exame" else 1
         i = _livres(d, 180, lambda x, m=minimo: m <= x["dias"] <= 400 and not (x["dias"] <= 16 and x["dias"] % 4 == 0),
                     chave=(lambda x: (not na_tab(x["dias"]), x["decisao"])) if d["tipo"] == "Exame" else None)
+        if i is not None and d["tipo"] != "Exame":
+            # (7.14.3) outra certidão ou curso sem valor, peticionado antes da decisão, também pode ser desta remição: liga-se só quando o
+            # valor fecha com a estimativa (de 75% a 110%, ± 1 dia) da certidão sozinha ou somada às outras; senão, "conferir"
+            x = rem_[i]
+            outros_ = [o for o in sem_v if o is not d and o["tipo"] != "Exame" and not o.get("provavel_ex") and not o.get("rem_conf")
+                       and o["emissao"] and 0 <= (x["decisao"] - o["emissao"]).days <= 180 and ref_ok(x, o)]
+            if outros_:
+                se_ = lambda g: sum(o["estim"]["dias"] for o in g)
+                fecha = lambda g: 0.75 * se_(g) - 1 <= x["dias"] <= 1.1 * se_(g) + 1
+                grupo = None
+                if all(o.get("estim") for o in [d] + outros_):
+                    ok_ = [g for g in [[d]] + [[d] + list(c) for k in (1, 2) for c in itertools.combinations(outros_, k)] if fecha(g)]
+                    grupo = min(ok_, key=lambda g: abs(se_(g) - x["dias"])) if ok_ else None
+                orig[i] = d
+                if grupo is None:
+                    d["rem_conf"] = "a remição de %s dias de %s pode ser deste documento ou %s%s: conferir" % (
+                        _nf(x["dias"]), _f(x["decisao"]), _lista(["%s (%s)" % (re.sub(r"^a ", "da ", re.sub(r"^o ", "do ", nome_doc0(o))), _f(o["emissao"])) for o in outros_]),
+                        (" (estimativas ≈ %s)" % _lista([_nf(o["estim"]["dias"]) for o in [d] + outros_ if o.get("estim")])) if d.get("estim") else "")
+                    continue
+                for o in grupo:
+                    o["provavel_ex"] = "%s (%s dias%s)" % (
+                        _f(x["decisao"]), _nf(x["dias"]),
+                        ("; estimativa ≈ %s" % _nf(se_(grupo))) if len(grupo) == 1 else
+                        ", somad%s %s: estimativas ≈ %s = %s" % ("o" if o["tipo"] == "Curso de qualificação" else "a",
+                                                                 _lista([re.sub(r"^a ", "à ", re.sub(r"^o ", "ao ", nome_doc0(z))) for z in grupo if z is not o]),
+                                                                 " + ".join(_nf(z["estim"]["dias"]) for z in grupo), _nf(se_(grupo))))
+                    if o["estim"].get("corte"):
+                        o["provavel_ex"] += "; semestre interrompido em %s" % _f(o["estim"]["corte"])
+                continue
         if i is not None:
             orig[i], d["provavel_ex"] = d, "%s (%s dias)" % (_f(rem_[i]["decisao"]), _nf(rem_[i]["dias"]))
     menor = []
@@ -1746,6 +1831,7 @@ def comparacao(r, f, hoje=None, manuais=None, homologados=None, trab=None):
     fora_ = fora_da_unidade(r, imp, f)
     livre = lambda d: not any(x <= d <= y for x, y, _m in fora_) and (not inicio or d >= inicio)
     pedir, talvez, itens_p, itens_t, acomp, acomp_l = set(), set(), [], [], [], []
+    conferir, itens_c = set(), []
     # (7.14.2) saldo de remição sem documento. Cada remição do RSPE é ligada aos documentos da ficha que a explicam: o mesmo valor (até 1
     # dia de diferença) decidido até 3 anos depois da emissão, com ou sem registro de peticionamento, ou a soma de 2 ou 3 documentos
     # (não de leitura) emitidos antes da decisão. Só a remição que sobra (sem documento) pode cobrir trabalho sem atestado - do trabalho mais próximo da
@@ -1869,7 +1955,16 @@ def comparacao(r, f, hoje=None, manuais=None, homologados=None, trab=None):
             continue
         if L.get("em_curso") and dias_:
             L["curso_dias"] = (hoje - min(dias_)).days  # há quantos dias corridos o trabalho sem atestado está em curso (texto)
-        for conj, outro, lst, tot, k_ in ((antes, dias_ - antes, itens_t, talvez, "talvez"), (dias_ - antes, antes, itens_p, pedir, "pedir")):
+        # (7.14.3) vínculo sem baixa de mais de um ano (a ficha registra o início e só a saída da unidade, anos depois): o trecho
+        # depois do último dia documentado do vínculo (remição que o cobre ou atestado) não é trabalho certo - "a conferir", não
+        # "pedir atestado"
+        conf_ = set()
+        if L.get("sem_baixa") and (L["vinc"][1] - L["vinc"][0]).days > 365:
+            doc_ = ([max(antes)] if antes else []) + [o["fim"] for o in linhas_ if o is not L and o.get("vinc") == L["vinc"] and o["st"] != "sem"]
+            if doc_:
+                conf_ = {d for d in dias_ - antes if d > max(doc_)}
+        for conj, outro, lst, tot, k_ in ((antes, dias_ - antes, itens_t, talvez, "talvez"), (dias_ - antes - conf_, antes | conf_, itens_p, pedir, "pedir"),
+                                          (conf_, dias_ - conf_, itens_c, conferir, "conf")):
             novos = conj - tot
             tot |= conj
             L[k_ + "_dias"] = round(len(novos) / 3.0, 2)  # remição estimada desta linha, sem repetir dias de vínculos simultâneos
@@ -1895,6 +1990,8 @@ def comparacao(r, f, hoje=None, manuais=None, homologados=None, trab=None):
         cert_fim = max(x for x in (cert_fim, fim_c) if x) if fim_c else cert_fim
     est_estim, est_dias = [], set()
     for e in f.get("estudos") or []:
+        if e.get("_doc"):
+            continue  # (7.14.3) atestado de estudo com dias declarados: já é documento da comparação
         a, b = _dt(e.get("inicio") or ""), _dt(e.get("fim") or "") or imp
         # (7.14.2) atestado de estudo com as datas invertidas (início depois do fim): continua na tela, com "conferir datas"
         inv = bool(a and b and b < a and e.get("horas") and e.get("fim"))
@@ -1919,7 +2016,7 @@ def comparacao(r, f, hoje=None, manuais=None, homologados=None, trab=None):
                 (e.get("curso") or "Estudo").title(), _f(a), _f(b), rs.pl(len(dl), "dia letivo", "dias letivos"), _rf.HORAS_DIA_ESTUDO, h,
                 rs.pl(int(h // 12), "dia", "dias")), "dias": h / 12.0, "fim": b})
     acomp_dias = round(sum(L.get("acomp_dias") or 0 for L in (trab or {}).get("linhas") or []), 2)
-    estim = round(len(pedir) / 3.0 + len(talvez) / 3.0 + acomp_dias + sum(x["dias"] for x in est_estim), 2)
+    estim = round(len(pedir) / 3.0 + len(talvez) / 3.0 + len(conferir) / 3.0 + acomp_dias + sum(x["dias"] for x in est_estim), 2)
     # ---- pontos a conferir (B) ----
     pontos = []
 
@@ -2087,6 +2184,13 @@ def comparacao(r, f, hoje=None, manuais=None, homologados=None, trab=None):
                   " e fora do saldo de remição do RSPE que nenhum documento explica" if (sem_doc or exc_) else " nem remição do RSPE que o explique",
                   "; ".join(itens_p), _nf(len(pedir) / 3.0), _f(imp)),
               "pedir_atestado", curto="trabalho sem atestado (≈ %s dias de remição): pedir atestado" % _nf(len(pedir) / 3.0))
+    if conferir:
+        ponto("Vínculo sem baixa", "amarelo", "Trabalho sem atestado depois do último dia documentado do vínculo (remição ou atestado), sem baixa "
+              "na ficha - a ficha registra o início do trabalho e só a saída da unidade: %s (≈ %s de remição). Não há prova de que o trabalho "
+              "continuou até a saída: conferir com a unidade antes de pedir o atestado. Não entra na comparação." % (
+                  "; ".join(itens_c), _nf(len(conferir) / 3.0)), "sem_baixa",
+              curto="trabalho sem baixa na ficha depois da última remição do vínculo (≈ %s dias de remição): conferir com a unidade se "
+                    "continuou até a saída" % _nf(len(conferir) / 3.0))
     if aparte:
         ponto("À parte", "cinza", "Trabalho sem atestado em período em que esta execução estava interrompida: %s - fora da custódia desta "
               "execução, não entra na estimativa (a remição desse trabalho é da execução em que a pessoa estava presa)." % "; ".join(aparte),
@@ -2168,6 +2272,8 @@ def comparacao(r, f, hoje=None, manuais=None, homologados=None, trab=None):
                 d["provavel"], _lista(["o nº %s" % n_ for n_ in d["soma_com"]]), _nf(d["soma_rem"])) if d.get("soma_com") else
                 ("Mesmo valor decidido em %s (mais de 180 dias depois da emissão): conferir" if d.get("provavel_tarde") else
                  "Provavelmente remido em %s (mesmo valor): conferir") % d["provavel"]), "cinza"
+        elif d.get("rem_conf"):
+            d["sit"], d["cor"] = d["rem_conf"][0].upper() + d["rem_conf"][1:], "cinza"
         elif d.get("provavel_ex"):
             d["sit"], d["cor"] = "Possivelmente remido em %s: conferir %s" % (d["provavel_ex"], "as áreas" if d["tipo"] == "Exame" else "as horas"), "cinza"
         elif d.get("menor"):
@@ -2196,7 +2302,7 @@ def comparacao(r, f, hoje=None, manuais=None, homologados=None, trab=None):
     return {"onde": onde, "rspe_maior": rspe_maior, "outra_exec": outra, "acomp": acomp_l, "corte": corte, "R": R, "docs": docs, "at_desta": soma(at_), "n_desta": len(at_), "man": soma(man_), "n_man": len(man_), "est_comp": soma(est_),
             "leitura": soma(lei_), "obras": int(round(soma(lei_) / 4)), "fora": [d for d in docs if d["fora"]], "comp": comp, "dif": dif,
             "estim": estim, "dif_estim": round(dif + estim, 2), "pouco": pouco, "concl": concl, "concl_cor": concl_cor, "pontos": pontos,
-            "pedir_dias": len(pedir) / 3.0, "talvez_dias": len(talvez) / 3.0, "est_estim": est_estim, "impressao": imp, "inicio": inicio,
+            "pedir_dias": len(pedir) / 3.0, "talvez_dias": len(talvez) / 3.0, "conf_dias": len(conferir) / 3.0, "est_estim": est_estim, "impressao": imp, "inicio": inicio,
             "ult_at": ult_at, "post": post, "vermelho": verm, "faltas_127": faltas_graves(r, f)}
 
 

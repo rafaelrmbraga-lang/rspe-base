@@ -129,6 +129,10 @@ def _estudos(eventos, cancel_sem=None):
                 num = (nat.group(1) or nat.group(2)) if nat else ""
                 p = {"curso": "Atestado de estudo" + (" nº " + num if num else ""), "turma": "", "turno": "", "inicio": ini, "fim": fim or ini,
                      "motivo_fim": "atestado de estudo" if fim else "carga horária declarada", "horas": int(mh.group(1) or mh.group(2)), "livre": True}
+                # (7.14.3) os dias de remição declarados no atestado ("com 06 dias a serem remidos"): o atestado é documento da comparação
+                md_ = re.search(r"(?<![\d,.])(\d{1,3}(?:[,.]\d{1,2})?)\s*DIAS?\s*(?:A SEREM\s*)?REMID", ua)
+                if md_ and float(md_.group(1).replace(",", ".")):
+                    p.update(dias_remidos=float(md_.group(1).replace(",", ".")), data=e["data"], texto=e["texto"])
                 if not any(x.get("livre") and ((num and x["curso"] == p["curso"]) or (x["inicio"], x["fim"], x["horas"]) == (p["inicio"], p["fim"], p["horas"])) for x in out):
                     out.append(p)
             continue
@@ -3296,7 +3300,8 @@ def fundamentacao_remicao(res, r=None):
     if edu_:
         est.append("%s sem remição correspondente no RSPE, à razão de 1 dia de pena a cada 12 horas de estudo (LEP, art. 126, § 1º, I), "
                    "conforme a carga horária certificada" % _lista_e(["%s, peticionad%s em %s" % (
-                       o["rotulo"].replace("Certidão de frequência escolar", "certidão de frequência escolar").replace("Curso de qualificação", "curso de qualificação"),
+                       o["rotulo"].replace("Certidão de frequência escolar", "certidão de frequência escolar").replace("Curso de qualificação", "curso de qualificação")
+                       .replace("Atestado de estudo", "atestado de estudo"),
                        "a" if o["tipo"] == "certidao" else "o", rs.fmt(o["data"])) for o in edu_]))
     if est:
         par.append(("Quanto ao estudo, a ficha registra " if (ats or sem_at) else "A ficha disciplinar do SIAPEN registra ") +
@@ -3375,8 +3380,9 @@ def _res_fundamentacao(N, T, f, hoje):
     exames = [{"exame": d["num"], "data": rs.fmt(d["emissao"])} for d in post if d["tipo"] == "Exame" and d["emissao"]]
     leituras = [{"data": rs.fmt(d["emissao"]), "obras": int(round((d.get("dias") or 0) / 4)), "parcial": False}
                 for d in post if d["tipo"] == "Leitura" and d["emissao"]]
-    edu = [{"rotulo": d["tipo"] + ((" (%s)" % d["num"]) if d["num"] else ""), "tipo": "certidao" if d["tipo"].startswith("Certidão") else "curso",
-            "data": d["emissao"]} for d in post if d["tipo"] in ("Certidão de frequência escolar", "Curso de qualificação") and d["emissao"]]
+    edu = [{"rotulo": d["tipo"] + ((" (%s)" % d["num"]) if d["num"] else ""), "tipo": "certidao" if d["tipo"].startswith("Certidão") else
+            "atestado" if d["tipo"] == "Atestado de estudo" else "curso",
+            "data": d["emissao"]} for d in post if d["tipo"] in ("Certidão de frequência escolar", "Curso de qualificação", "Atestado de estudo") and d["emissao"]]
     # (7.14.2) trabalho sem atestado: a mesma lista da tela - só os trechos "Pedir atestado" (sem atestado e fora do saldo de remição do
     # RSPE sem documento); o que "pode já estar remido" e o trabalho em curso a acompanhar ficam fora do pedido
     sem_at = []
@@ -3420,7 +3426,7 @@ def comparativo(r, f, hoje=None, conferidos=None, manuais=None, vinculos=None):
     sem_pos = [L for L in T["linhas"] if L["st"] == "sem" and (L.get("pedir_dias") or not ult_at or L["fim"] > ult_at)]
     out["fd_atestar"] = "Sim" if sem_pos else "Não"
     ult = R["ult_dec"]
-    est_post = [d for d in N["post"] if d["tipo"] in ("Certidão de frequência escolar", "Curso de qualificação", "Leitura", "Exame")]
+    est_post = [d for d in N["post"] if d["tipo"] in ("Certidão de frequência escolar", "Curso de qualificação", "Atestado de estudo", "Leitura", "Exame")]
     est_ap = [x for x in N["est_estim"] if not ult or x["fim"] > ult]
     out["fd_estudo"] = "Sim" if (est_post or est_ap) else "Não"
     out["fd_remidos"] = "%s / %s" % (nf(N["comp"]), nf(R["concedido"]))
@@ -3486,7 +3492,8 @@ def comparativo(r, f, hoje=None, conferidos=None, manuais=None, vinculos=None):
           "sem": ("Sem atestado", "amarelo"), "manual": ("Vinculado por você", "azul")}
     cor_l = lambda L: "cinza" if (N.get("rspe_maior") and ST[L["st"]][1] == "amarelo" and not L.get("pedir_dias")) else ST[L["st"]][1]
     linhas = [{"emp": L["local"] + (" (externo)" if L.get("externo") else ""), "un": L["un"], "per": L["periodo"], "dias": L["dias"], "at": ("nº " + L["at"]) if L["at"] else "—",
-               "sit": ST[L["st"]][0], "cor": cor_l(L)} for L in T["linhas"]]
+               "sit": ST[L["st"]][0] + (" · vínculo sem baixa: conferir" if L.get("conf_dias") and not L.get("pedir_dias") else ""), "cor": cor_l(L)}
+              for L in T["linhas"]]
     linhas += [{"emp": _rotulo_doc(d), "un": _unidade_em(tl_ex, d["emissao"]), "per": d["periodo"] or "—", "dias": "—",
                 "at": ("%s remidos" % _fmtn(d["dias"])) if d.get("dias") else "—", "sit": d["sit"], "cor": d["cor"]}
                for d in N["docs"] if d["cor"] in ("vermelho", "amarelo")]

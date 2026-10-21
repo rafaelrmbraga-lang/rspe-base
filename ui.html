@@ -1597,7 +1597,7 @@ const ui = {
     const P=N.pontos||[];
     const B=P.length?`<ul class="fdn-pts">${P.map(p=>`<li>${pill(p.rot,p.cor)} ${esc(p.texto)}</li>`).join('')}</ul>`:'<div class="muted fdn-vazio">Nenhum ponto a conferir.</div>';
     const ST={auto:['Vinculado automaticamente','verde'],possivel:['Possível · confirmar','amarelo'],provavel:['Sugerido · confirmar','amarelo'],sem:['Sem atestado','amarelo'],manual:['Vinculado por você','azul']};
-    const mot=l=>l.st==='auto'?'pelo '+l.como:l.st==='possivel'?'o período bate, mas havia outro trabalho no mesmo período':l.st==='provavel'?'mesmo nome; o atestado não traz o período':l.st==='manual'?'vínculo informado na conferência':l.sem_confirmado?'confirmado na conferência: pedir à unidade':'nenhum atestado da ficha cobre este período';
+    const mot=l=>l.st==='auto'?'pelo '+l.como:l.st==='possivel'?'o período bate, mas havia outro trabalho no mesmo período':l.st==='provavel'?'mesmo nome; o atestado não traz o período':l.st==='manual'?'vínculo informado na conferência':l.sem_confirmado?'confirmado na conferência: pedir à unidade':(l.conf_dias&&!l.pedir_dias)?'vínculo sem baixa na ficha (só a saída da unidade): conferir com a unidade':'nenhum atestado da ficha cobre este período';
     const btn=(l,i)=>`<button class="fdn-vb" onclick="event.stopPropagation();ui.vincAbrir(this,${jsa(r.id)},${i})">${l.st==='auto'||l.st==='manual'?'Alterar':l.st==='sem'?'Vincular atestado':'Confirmar / vincular'}</button>`;
     const L=T.linhas||[];
     const C=`<div class="muted fdn-sub">${T.n_vinc||0} de ${T.n_tot||0} ${(T.n_tot||0)===1?'período vinculado':'períodos vinculados'} a atestado${T.dias_sem?` · ${pl(T.dias_sem,'dia corrido','dias corridos')} de trabalho sem atestado`:''}</div>
