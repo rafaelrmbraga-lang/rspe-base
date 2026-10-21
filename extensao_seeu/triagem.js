@@ -72,6 +72,9 @@ async function buscar(url, op) {
   ultimoPedido = Date.now();
   if (!abaSeeu && !(await acharSeeu())) throw new Parada("Abra o SEEU logado em outra aba e tente de novo.");
   let r;
+  // o PDF do movimento vem do servidor de arquivos do SEEU (Amazon S3), por redirecionamento: depois do primeiro,
+  // vai direto pela página da extensão (o pedido feito de dentro do SEEU é barrado pelo navegador)
+  if (pdfDireto && /\/seeu\/arquivo\.do\?/.test(url)) return conferirDireto(await buscarDireto(url, op));
   try {
     r = await chrome.tabs.sendMessage(abaSeeu.id, { tipo: "triagemBuscar", url, metodo: op.metodo || "GET", corpo: op.corpo || "", binario: !!op.binario }, { frameId: 0 });
   } catch (e) {
@@ -79,9 +82,79 @@ async function buscar(url, op) {
     throw new Parada("A aba do SEEU foi fechada ou recarregada. Deixe o SEEU aberto e tente de novo.");
   }
   if (!r) throw new Parada("O SEEU não respondeu (recarregue a página do SEEU).");
+  // o navegador barrou o pedido feito de dentro do SEEU (ex.: o PDF vem de outro servidor, por redirecionamento):
+  // a própria página da extensão faz o pedido, que pode seguir o redirecionamento
+  if (!r.ok && r.rede) {
+    r = conferirDireto(await buscarDireto(url, op));
+    if (r.pdf && /\/seeu\/arquivo\.do\?/.test(url)) pdfDireto = true;
+    return r;
+  }
   if (r.login) throw new Parada("Sessão do SEEU expirada: faça login de novo e clique em continuar.");
   if (!r.ok) throw new Error(r.motivo || ("o SEEU respondeu com erro " + r.status));
   return r;
+}
+let pdfDireto = false;
+function conferirDireto(r) {
+  // no pedido pela extensão, a tela de login quer dizer que o navegador não mandou a sessão do SEEU junto
+  if (r.login) throw new Error("o SEEU não reconheceu a sessão no pedido feito pela extensão (confira se o navegador bloqueia cookies de terceiros para extensões)");
+  if (!r.ok) throw new Error(r.motivo || ("o SEEU respondeu com erro " + r.status));
+  return r;
+}
+
+// pedido feito pela página da extensão (com a sessão do navegador). Mesma lista de endereços permitidos; o
+// redirecionamento só pode ir ao SEEU e ao servidor de arquivos do SEEU (permissão e política de segurança da extensão)
+let destinoDescoberto = null;
+async function buscarDireto(url, op) {
+  const abs = new URL(url, "https://seeu.pje.jus.br/seeu/").href;
+  const metodo = (op.metodo || "GET").toUpperCase(), corpo = op.corpo || "";
+  const recusa = self.APTO.pedidoTriagemPermitido(abs, metodo, corpo);
+  if (recusa) return { ok: false, motivo: "pedido recusado pela extensão: " + recusa };
+  const o = { credentials: "include", cache: "no-store", method: metodo, redirect: "follow" };
+  if (metodo === "POST") { o.body = corpo; o.headers = { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8", "X-Requested-With": "XMLHttpRequest" }; }
+  let resp;
+  try {
+    resp = await fetch(abs, o);
+  } catch (e) {
+    let onde = "";
+    if (/\/seeu\/arquivo\.do$/.test(new URL(abs).pathname)) onde = await descobrirDestino(abs);
+    return { ok: false, motivo: "o navegador não completou o pedido, nem pelo SEEU nem pela extensão (" + (e && e.message || e) + ")" +
+      (onde ? `. O SEEU entrega o arquivo a partir de ${onde}: avise para liberar esse endereço na extensão` : "") };
+  }
+  const bytes = new Uint8Array(await resp.arrayBuffer());
+  const fim = resp.url || abs;
+  let host = "";
+  try { host = new URL(fim).hostname; } catch (e) {}
+  const login = host !== "seeu.pje.jus.br" && !/\.pdf/i.test(fim) && !self.APTO.ehPdf(bytes) ? /login|sso|auth/i.test(fim) : false;
+  if (op.binario && self.APTO.ehPdf(bytes)) return { ok: resp.ok, pdf: true, bytes, url: fim, status: resp.status };
+  const ct = resp.headers.get("content-type") || "";
+  let cs = (/charset=([\w-]+)/i.exec(ct) || /<meta[^>]+charset=["']?([\w-]+)/i.exec(new TextDecoder("latin1").decode(bytes.subarray(0, 4096))) || [, "windows-1252"])[1].toLowerCase();
+  if (/^(iso-8859-1|latin1|us-ascii|ascii)$/.test(cs)) cs = "windows-1252";
+  let texto;
+  try { texto = new TextDecoder(cs).decode(bytes); } catch (e) { texto = new TextDecoder("windows-1252").decode(bytes); }
+  return { ok: resp.ok, pdf: false, texto, url: fim, status: resp.status, login: login || /type\s*=\s*["']?password/i.test(texto) };
+}
+
+// onde o SEEU entrega o arquivo: o download do próprio navegador segue o redirecionamento e informa o endereço final.
+// Feito uma vez; o download é cancelado e apagado na hora (fica fora da pasta vigiada do APTO).
+async function descobrirDestino(abs) {
+  if (destinoDescoberto !== null) return destinoDescoberto;
+  destinoDescoberto = "";
+  let id;
+  try {
+    id = await chrome.downloads.download({ url: abs, filename: "apto_triagem_diagnostico.pdf", conflictAction: "uniquify", saveAs: false });
+    for (let i = 0; i < 40; i++) {
+      const [it] = await chrome.downloads.search({ id });
+      if (it && it.finalUrl && it.finalUrl !== abs) { destinoDescoberto = new URL(it.finalUrl).origin; break; }
+      if (!it || it.state !== "in_progress") break;
+      await new Promise((r) => setTimeout(r, 250));
+    }
+  } catch (e) {}
+  if (id != null) {
+    try { await chrome.downloads.cancel(id); } catch (e) {}
+    try { const [it] = await chrome.downloads.search({ id }); if (it && it.state === "complete") await chrome.downloads.removeFile(id); } catch (e) {}
+    try { await chrome.downloads.erase({ id }); } catch (e) {}
+  }
+  return destinoDescoberto;
 }
 
 // ---------------------------------------------------------------- PDF
@@ -91,8 +164,8 @@ function b64ParaBytes(b64) {
   for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
   return u;
 }
-async function textoDoPdf(b64) {
-  const doc = await pdfjsLib.getDocument({ data: b64ParaBytes(b64), isEvalSupported: false, disableFontFace: true, useSystemFonts: false, verbosity: 0 }).promise;
+async function textoDoPdf(dados) {
+  const doc = await pdfjsLib.getDocument({ data: typeof dados === "string" ? b64ParaBytes(dados) : dados, isEvalSupported: false, disableFontFace: true, useSystemFonts: false, verbosity: 0 }).promise;
   const partes = [];
   try {
     for (let i = 1; i <= Math.min(doc.numPages, 30); i++) {
@@ -177,7 +250,7 @@ async function lerDocumentoDoMovimento(processo, mov) {
     if (!arq) return { semArquivo: true };
     const r = await buscar(arq.url, { binario: true });
     if (r.pdf) {
-      try { texto = await textoDoPdf(r.b64); } catch (e) { texto = ""; }
+      try { texto = await textoDoPdf(r.bytes || r.b64); } catch (e) { texto = ""; }
     } else {
       // documento em HTML (texto do próprio SEEU); uma página inteira do SEEU (erro, aviso) não é o documento
       texto = /SEEU - Sistema Eletr|<frameset/i.test(r.texto || "") ? "" : T.texto(r.texto || "");

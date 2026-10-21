@@ -114,6 +114,14 @@ TRIAGEM DA MESA DO DEFENSOR (1.7)
    moldura não baixa RSPE e é removida em seguida). A forma que funcionar
    vale para os processos seguintes. Um PDF que não puder ser lido aparece
    como "documento não lido" e a linha continua com o resto.
+ - PDF das movimentações (1.7.2): o SEEU entrega o arquivo a partir do seu
+   servidor de arquivos (Amazon S3, seeu-transfer.s3.sa-east-1.amazonaws.com),
+   por redirecionamento, com link temporário. O navegador barra esse
+   redirecionamento quando o pedido sai de dentro da página do SEEU; por isso
+   a página da triagem (da extensão) faz o pedido do PDF. A extensão tem
+   permissão só para o SEEU e esse servidor de arquivos, e só para os
+   endereços de leitura da lista acima. Se o SEEU mudar o servidor, o erro
+   mostra o endereço novo ("O SEEU entrega o arquivo a partir de ...").
  - SÓ LEITURA. A triagem pede ao SEEU apenas: a lista da Mesa, a página do
    processo (o link do nº), a lista de arquivos do movimento e o PDF. A
    própria extensão recusa qualquer outro endereço, em especial "Analisar"
@@ -199,8 +207,8 @@ CUIDADOS
    certificado ou cookie.
  - Nada sai do computador: a extensão não envia dados para nenhum servidor
    (a política de segurança dela só permite a conexão com o APTO deste
-   computador, 127.0.0.1); os pedidos são os do próprio SEEU/SIAPEN, com a
-   sua sessão.
+   computador, 127.0.0.1, e, na triagem, com o SEEU e o servidor de arquivos
+   do SEEU); os pedidos são os do próprio SEEU/SIAPEN, com a sua sessão.
  - Guarda só o nº do processo, a base, a data e o nome do arquivo dos últimos
    40 downloads (painel), e as chaves de "já baixado" dos últimos 30 dias.
    "Limpar histórico" apaga tudo isso (não apaga os PDFs).

@@ -18,9 +18,12 @@ html = open(os.path.join(EXT, "triagem.html"), encoding="utf-8").read()
 if '<script src="triagem_core.js"></script>' not in html or '<script type="module" src="triagem.js"></script>' not in html:
     falhas.append("triagem.html carrega triagem_core.js e triagem.js")
 js = open(os.path.join(EXT, "triagem.js"), encoding="utf-8").read()
-# a página só fala com o SEEU pelo content.js (que aplica a lista de endereços permitidos); nunca busca direto
-if "fetch(" in js or "XMLHttpRequest" in js:
-    falhas.append("triagem.js não faz pedido direto (só pelo content.js)")
+# a página fala com o SEEU pelo content.js; o único pedido direto (PDF que vem do servidor de arquivos do SEEU) passa
+# antes pela mesma lista de endereços permitidos
+if js.count("fetch(") != 1 or "new XMLHttpRequest" in js or "self.APTO.pedidoTriagemPermitido(abs, metodo, corpo)" not in js:
+    falhas.append("triagem.js: um só pedido direto, conferido por pedidoTriagemPermitido")
+if js.index("pedidoTriagemPermitido(abs") > js.index("fetch("):
+    falhas.append("triagem.js: confere o endereço antes do pedido direto")
 if "preAnalise" in js:
     falhas.append("triagem.js não cita o Analisar")
 # o pacote do build (zip do Releases e artefato do Actions) leva a pasta da extensão
