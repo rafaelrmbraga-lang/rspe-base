@@ -779,6 +779,9 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
         if not pena_x or "CONVERTIDA" in (cx.get("pena_total_processo") or "").upper():
             continue
         MAx = _marcos_acao(eventos, incidentes, px_c, tx_)
+        # a ação aparece selecionada em algum incidente (não negado) ou evento desta execução
+        _sel_x = bool(MAx["todas"]) or any(not rs._negado(i_) and any(_mesmo_processo(px_c, q) for q in rs.lista_processos(i_.get("processos") or ""))
+                                           for i_ in incidentes)
         restante = pena_x
         for a_, b_, _m, p_ in sorted(periodos_det, key=lambda t: t[0] or date.min):
             if not a_:
@@ -788,7 +791,10 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
             if fim_ < ini_:
                 continue
             lst_ = rs.lista_processos(p_)
-            if lst_ and not any(_mesmo_processo(px_c, q) for q in lst_):
+            if lst_ and not any(_mesmo_processo(px_c, q) for q in lst_) and not (_sel_x and any(
+                    e.get("processos_incompletos") and rs.to_date(e.get("data") or "") == a_ for e in eventos)):
+                # lista cortada na margem pelo SEEU e ação selecionada em outros incidentes/eventos desta execução (livramento,
+                # comutação, somatório): ela pode estar na parte cortada - vale como listada (conferência 7.14.1, extincao-30).
                 # custódia lançada só em outras ações: a outra condenação só entra no somatório que a inclui, no evento que a lista ou
                 # no livramento/progressão concedido nesta execução durante a custódia (a mesma retomada das três travas)
                 if not (any(d <= ini_ for d, _r in MAx["unif"]) or any(a_ <= d <= ini_ for d in MAx["todas"])):
@@ -807,18 +813,22 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
     # pelo crime novo) continua sendo suspensão; o que interrompe é a prova de que a pessoa voltou a cumprir pena NESTA execução
     # - livramento concedido ou progressão de regime - e a interrupção cai na data desse ato, não na do flagrante. Regressão,
     # remição e soma/unificação podem ser decididas com a pessoa presa por outro processo, então não provam a retomada.
+    # Regressão definitiva e perda de dias remidos (pela falta da fuga ou do crime novo) também provam: a pessoa voltou a esta
+    # execução, e a prisão dali em diante é cumprimento (conferência 7.14.1, prescricao-31). A regressão cautelar não prova.
     # Liberdade provisória, preventiva, mandado ou guia sem início de cumprimento não contam
     retomadas = []
     for i_ in incidentes:
         if rs._negado(i_) or rs._pendente(i_):
             continue
         t_ = rs._sem_acento(((i_.get("tipo") or "") + " | " + (i_.get("complemento") or "")).upper())
-        if re.search(r"REVOGA|SUSPENS|PERD|CAUTELAR", t_) or RE_DATA_BASE.search(i_.get("tipo") or ""):
+        _perda = bool(re.search(r"DIAS PERDIDOS|PERDA D[EO]S? DIAS", t_))
+        if (re.search(r"REVOGA|SUSPENS|CAUTELAR", t_) or (re.search(r"PERD", t_) and not _perda)) or RE_DATA_BASE.search(i_.get("tipo") or ""):
             continue
-        m_ = re.search(r"LIVRAMENTO|PROGRESS", t_)
+        m_ = re.search(r"LIVRAMENTO|PROGRESS|REGRESS", t_) if not _perda else None
         d_ = rs.to_date(i_.get("data_referencia") or i_.get("data_decisao") or "")
-        if m_ and d_:
-            nome_ = {"LIVRAMENTO": "livramento condicional", "PROGRESS": "progressão de regime"}[m_.group(0)]
+        if (m_ or _perda) and d_:
+            nome_ = "perda de dias remidos" if _perda else {"LIVRAMENTO": "livramento condicional", "PROGRESS": "progressão de regime",
+                                                            "REGRESS": "regressão de regime"}[m_.group(0)]
             retomadas.append((d_, "%s em %s nesta execução" % (nome_, rs.fmt(d_))))
     retomadas.sort()
     # interrupções do cumprimento em ordem: a trava 1 olha a última antes da prisão (precisa ser a fuga, sem cumprimento depois)
@@ -942,6 +952,22 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
                     conv_ret = next(((d_, t_) for d_, t_ in retomadas if a < d_ < fim), None)
                     if conv_ret and conv is not None and conv <= conv_ret[0]:
                         conv_ret = None
+                    if conv_ret and conv_ret[1].startswith(("regressão", "perda de dias")):
+                        # regressão ou perda de dias remidos pela falta: a prisão voltou a esta execução - é cumprimento desde o seu
+                        # início (a recaptura), não só desde o ato (conferência 7.14.1, prescricao-31)
+                        cumpr.append((a2, b))
+                        todos.append((a2, b))
+                        L["ppe_retomadas"].append({"flagrante": rs.fmt(a2), "motivo": mot, "processo": procs, "data": rs.fmt(a2), "ato": conv_ret[1],
+                                                   "fim": rs.fmt(b) if b else ""})
+                        lt(a2, b, "cumprimento", "%s; retorno a esta execução: %s" % (fonte, conv_ret[1]),
+                           "depois da fuga, a prisão foi lançada só no processo %s, mas a %s mostra que ela voltou a esta execução: é cumprimento "
+                           "desde o início - interrompe (art. 117, V) - conferir na guia" % (procs, conv_ret[1]))
+                        corpo.append((a2, "Prisão de %s a %s (%s, lançada só no processo %s): a %s mostra o retorno a esta execução - é cumprimento "
+                                          "desde a prisão, que interrompe a prescrição (art. 117, V); conferir na guia." % (
+                                              rs.fmt(a2), fim_txt, mot, procs, conv_ret[1])))
+                        L["avisos"].append("%s de %s lançada só no processo %s, mas há %s: tratada como cumprimento desde a prisão (interrompe "
+                                           "a prescrição) - conferir na guia" % (mot, rs.fmt(a2), procs, conv_ret[1]))
+                        continue
                     if conv_ret:
                         conv, conv_tr = conv_ret[0], None
                 if not conv:
@@ -1941,6 +1967,10 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
             ref_, dec_ = rs.to_date(i_.get("data_referencia") or ""), rs.to_date(i_.get("data_decisao") or "")
             ds_ = [ref_ or dec_] if "REMICAO" in t_ else [ref_, dec_]  # a remição se data pelo período trabalhado
             d_ = next((x for x in ds_ if x and _g0 < x <= _lim), None)
+            if d_ and any(s0_ <= d_ <= (s1_ or hoje) for s0_, s1_ in susp_exec):
+                # ato da execução durante a prisão pelas outras ações, antes de esta entrar em cumprimento (_ate_listar): é das
+                # outras penas e não prova que esta se cumpria (a mesma regra da fuga em fugas_soltas) - conferência 7.14.1, prescricao-8
+                d_ = None
             if d_:
                 ver_extra.append("%s em %s, %s %s: indica retomada do cumprimento nesta execução, que interrompe (art. 117, V)" % (
                     (i_.get("tipo") or "").lower() + ((" - " + i_["complemento"].lower()) if i_.get("complemento") else ""), rs.fmt(d_),
@@ -3340,6 +3370,12 @@ def analisar(r, hoje=None, ficha=None):
         fato, den, sent = (rs.to_date(x or "") for x in (L["fato"], L["denuncia"], L["sentenca"]))
         tmp, tpr = rs.to_date(L["transito_mp"] or ""), rs.to_date(L["transito"] or "")
         extinto = c.get("extinto", "").upper().startswith("S")
+        if (c.get("indulto_duvida") or {}).get("multa"):
+            _idv = c["indulto_duvida"]
+            L["avisos"].append("a verificar: indulto de %s%s registrado para este processo, sem baixa no cálculo do SEEU (sem a marca "
+                               "\"(Indultada)\" e com a pena na pena total) - pode ter sido só da multa; conferir na decisão de indulto se "
+                               "alcançou a pena privativa (se alcançou, a pena está extinta e esta prescrição perde o objeto)" % (
+                                   _idv.get("data") or "?", (" (Decreto %s)" % _idv["decreto"]) if _idv.get("decreto") else ""))
 
         # art. 115
         meia = idade_incoer = vitima_desc = False

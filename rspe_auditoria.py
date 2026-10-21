@@ -1124,6 +1124,22 @@ def _oculto(it):
     return it
 
 
+def _outra_execucao_em_curso(r, a, b):
+    """Outra execução da mesma pessoa em curso durante TODA a prisão de a a b: condenação dela (r["_outras_condenacoes"], com
+    "_execucao") transitada até a e extinta só depois de b (ou não extinta). Devolve o número da execução ou ""."""
+    for o in r.get("_outras_condenacoes") or []:
+        ex = o.get("_execucao") or ""
+        tr = rs.to_date(o.get("transito_processo") or o.get("transito_mp") or "")
+        if not ex or not tr or tr > a:
+            continue
+        ext = (o.get("extinto") or "").upper().startswith("S")
+        dx = rs.to_date(o.get("data_extincao") or "")
+        _ativa = any(rp._mesmo_processo(x.get("processo") or "", ex) and not x.get("encerrada") for x in r.get("_outras_execucoes") or [])
+        if (ext and dx and dx >= b) or (not ext and _ativa):
+            return ex
+    return ""
+
+
 def _detracao_outro_processo(r, crimes, ativos, eventos):
     """Custódia do RSPE por processo que não integra esta execução (nem outra execução da pessoa), já encerrada, com fato de crime
     ativo anterior ao início dela: detração possível nesta execução - "verificar" com o período e a tese (item 155 de 16/10)."""
@@ -1150,6 +1166,10 @@ def _detracao_outro_processo(r, crimes, ativos, eventos):
         ant = [c for d, c in _f if d < a]
         dias = (b - a).days + 1
         if not ant or dias < 2:
+            continue
+        if _outra_execucao_em_curso(r, a, b):
+            # nesse período corria outra execução da pessoa (condenação transitada antes da prisão, extinta só depois dela): a
+            # prisão contou como cumprimento daquela pena, e o tempo já usado numa pena não se detrai de novo (CP, art. 42)
             continue
         if pela_ficha and not (_rem and dias >= _rem):
             continue  # prisão que só a ficha mostra: só quando, sozinha, alcança a pena que falta (hipótese de extinção)
@@ -1524,7 +1544,22 @@ def auditar(r, hoje=None):
                                _soma_txt, r.get("pena_total") or "?",
                                (" A comutação de %s alcançou os mesmos processos, o que só se explica se o indulto não foi aplicado." % (_com[0].get("data_decisao") or _com[0].get("data_referencia") or "?")) if _com else ""),
                            "CP, art. 107, II; LEP, arts. 66, II, e 192.", tipo="indulto-concedido-sem-baixa-no-calculo"))
-    _duv = [c for c in r.get("_crimes", []) if c.get("indulto_duvida")]
+    _dm = [c for c in r.get("_crimes", []) if (c.get("indulto_duvida") or {}).get("multa")]
+    if _dm:
+        x = _dm[0]["indulto_duvida"]
+        _pind = sum(rs.pena_para_dias(c.get("pena_imposta")) or 0 for c in _dm)
+        _soma = sum(rs.pena_para_dias(c.get("pena_imposta")) or 0 for c in r.get("_crimes", []) if not (c.get("extinto") or "").upper().startswith("S"))
+        itens.append(_item("verificar", "Indulto de %s sem baixa no cálculo: pode ter sido só da multa - %s" % (x["data"] or "?", "; ".join(_nome(c) for c in _dm)),
+                           "O RSPE registra indulto concedido em %s%s para %s, mas esses processos não têm a marca \u201c(Indultada)\u201d, a linha do "
+                           "crime diz \u201cExtinto: Não\u201d e a pena total impressa (%s) só fecha com essas penas (soma das condenações ativas: %s; "
+                           "sem elas: %s). O indulto pode ter alcançado só a multa. O programa mantém essas penas nas contas (prescrição, "
+                           "frações, término); conferir na decisão de indulto se ele alcançou a pena privativa - se alcançou, pedir a baixa das "
+                           "penas indultadas e a retificação do cálculo." % (
+                               x["data"] or "?", (" (Decreto %s)" % x["decreto"]) if x.get("decreto") else "",
+                               ", ".join("proc. %s" % c.get("processo_criminal") for c in _dm), r.get("pena_total") or "?",
+                               rs.dias_para_pena(_soma), rs.dias_para_pena(max(0, _soma - _pind))),
+                           "CP, art. 107, II; LEP, arts. 66, II, e 192.", tipo="indulto-sem-baixa-pode-ser-so-da-multa"))
+    _duv = [c for c in r.get("_crimes", []) if c.get("indulto_duvida") and not c["indulto_duvida"].get("multa")]
     if _duv:
         x = _duv[0]["indulto_duvida"]
         itens.append(_item("verificar", "Indulto de %s seguido de comutação dos mesmos processos: %s" % (x["data"] or "?", "; ".join(_nome(c) for c in _duv)),

@@ -1629,6 +1629,7 @@ def reconciliar_eventos(r, f):
     Altera r no lugar; devolve [(tipo, dados)] para a Auditoria."""
     r["_eventos"] = [e for e in r.get("_eventos", []) if not e.get("_ficha")]
     r.pop("_custodia_ficha", None); r.pop("_reconc_ficha", None); r.pop("_custodias_ficha_outro", None); r.pop("_custodia_ficha_proc", None)
+    r.pop("_detracao_ficha", None)
     r["_tem_ficha"] = bool(f)
     if not f:
         return []
@@ -1731,6 +1732,12 @@ def reconciliar_eventos(r, f):
             r["_custodia_ficha_proc"] = dict(_cl, desde=rs.fmt(_ab[-1][0]))
     r["_reconc_ficha"] = avisos
     r["_custodias_ficha_outro"] = [(rs.fmt(a), rs.fmt(b), ps) for a, b, ps in custodias_outro_processo(r, f)]
+    # prisão provisória encerrada, pelo próprio processo, que o RSPE trata como liberdade: detração obrigatória (CP, art. 42) - entra
+    # no término que o programa calcula para a guia sem cálculo (rspe_view.custodia_sem_calculo)
+    try:
+        r["_detracao_ficha"] = [(rs.fmt(d["ini"]), rs.fmt(d["fim"]), d["processo"]) for d in detracoes_ficha(r, f)]
+    except Exception:
+        r["_detracao_ficha"] = []
     return avisos
 
 
@@ -2127,11 +2134,12 @@ def _soltura_x_ficha(r, f, so_periodos=False):
     return out
 
 
-def _detracao_x_ficha(r, f):
-    """Prisão encerrada na ficha (entrada vinda da rua até a soltura por alvará) por processo que integra o RSPE, em período que o
-    RSPE trata como liberdade: os dias faltam como detração (CP, art. 42). A prisão em curso fica com _prisao_x_ficha."""
+def detracoes_ficha(r, f):
+    """Prisões encerradas na ficha (entrada vinda da rua até a soltura por alvará) por processo que integra o RSPE, em período que o
+    RSPE trata como liberdade: [{"ini" (a partir do fato), "fim", "preso_desde", "fato", "dias" (fora dos períodos do RSPE),
+    "processo", "crime"}]. Base do item de detração da Auditoria e do término calculado da guia sem cálculo (rspe_view)."""
     evs = sorted((e for e in r.get("_eventos", []) if rs.to_date(e.get("data") or "")), key=lambda e: rs.to_date(e["data"]))
-    if not evs:
+    if not evs or not f:
         return []
     per = rs.periodos_custodia(evs)
     crimes = {}
@@ -2164,21 +2172,31 @@ def _detracao_x_ficha(r, f):
                 # só conta a partir do fato do crime desse processo (antes dele, a prisão era por outro motivo - CP, art. 42)
                 fora = [d for d in fora if not any(a <= d and (b is None or d <= b) for a, b in per) and (not fato or d >= fato)]
                 if len(fora) >= 2:
-                    i0 = max(ini, fato) if fato else ini
-                    _pn = c.get("processo_criminal") or m.group(1)  # o número do RSPE (o da ficha pode ter erro de digitação)
-                    out.append(_item_rf("alerta", "Detração: prisão de %s a %s na ficha (processo %s, deste RSPE) sem cômputo no RSPE - %s" % (
-                        rs.fmt(i0), rs.fmt(x), _pn, rs.pl(len(fora), "dia", "dias")),
-                        ("Preso desde %s; conta a partir do fato (%s). " % (rs.fmt(ini), rs.fmt(fato)) if i0 != ini else "") +
-                        "A ficha registra a prisão de %s a %s, encerrada por alvará de soltura no processo %s (%s, fato em %s), que integra esta "
-                        "execução. O RSPE trata %s desse período como liberdade. A prisão provisória pelo próprio processo da condenação é "
-                        "detração obrigatória: os dias entram como pena cumprida e antecipam progressão, livramento, indulto e término. "
-                        "Conferir o auto de prisão e o alvará e pedir o lançamento da detração." % (
-                            rs.fmt(i0), rs.fmt(x), _pn, rs.crimes_curto([dict(c, extinto="")]), c.get("data_infracao") or "?",
-                            rs.pl(len(fora), "dia", "dias")),
-                        "CP, art. 42; LEP, arts. 66, III, c, e 111."))
+                    out.append({"ini": max(ini, fato) if fato else ini, "fim": x, "preso_desde": ini, "fato": fato, "dias": len(fora),
+                                # o número do RSPE (o da ficha pode ter erro de digitação)
+                                "processo": c.get("processo_criminal") or m.group(1), "crime": c})
             ini, ult_saida = None, x
         elif ini is not None and _saida_fim_custodia(t):
             ini, ult_saida = None, x  # fuga, evasão, livramento: fim da custódia sem detração a apurar aqui
+    return out
+
+
+def _detracao_x_ficha(r, f):
+    """Prisão encerrada na ficha por processo que integra o RSPE, em período que o RSPE trata como liberdade (detracoes_ficha): os
+    dias faltam como detração (CP, art. 42). A prisão em curso fica com _prisao_x_ficha."""
+    out = []
+    for d in detracoes_ficha(r, f):
+        i0, x, ini, fato, _pn, c, n = d["ini"], d["fim"], d["preso_desde"], d["fato"], d["processo"], d["crime"], d["dias"]
+        out.append(_item_rf("alerta", "Detração: prisão de %s a %s na ficha (processo %s, deste RSPE) sem cômputo no RSPE - %s" % (
+            rs.fmt(i0), rs.fmt(x), _pn, rs.pl(n, "dia", "dias")),
+            ("Preso desde %s; conta a partir do fato (%s). " % (rs.fmt(ini), rs.fmt(fato)) if i0 != ini else "") +
+            "A ficha registra a prisão de %s a %s, encerrada por alvará de soltura no processo %s (%s, fato em %s), que integra esta "
+            "execução. O RSPE trata %s desse período como liberdade. A prisão provisória pelo próprio processo da condenação é "
+            "detração obrigatória: os dias entram como pena cumprida e antecipam progressão, livramento, indulto e término. "
+            "Conferir o auto de prisão e o alvará e pedir o lançamento da detração." % (
+                rs.fmt(i0), rs.fmt(x), _pn, rs.crimes_curto([dict(c, extinto="")]), c.get("data_infracao") or "?",
+                rs.pl(n, "dia", "dias")),
+            "CP, art. 42; LEP, arts. 66, III, c, e 111."))
     return out
 
 

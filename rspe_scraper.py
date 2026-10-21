@@ -4459,8 +4459,20 @@ def aplicar_extincoes(r, crimes, incidentes):
             # revogado ou reformado sem registro no RSPE) - não se trata como extinta; a Auditoria pede conferência
             com_dep = [j for j in incidentes if "COMUTA" in (j.get("tipo") or "").upper() and j.get("situacao", "CONCEDIDO") == "CONCEDIDO"
                        and (to_date(j.get("data_decisao") or j.get("data_referencia") or "") or date.min) > (d_ind or date.max)]
+            # sem a marca "(Indultada)" e com "Extinto: Não", a pena total impressa que só fecha com as penas desses processos mostra
+            # que o SEEU não as baixou: o indulto pode ter sido só da multa - a verificar, sem tirar as penas das contas (conferência
+            # 7.14.1, prescricao-37). Mesma conta do item "Indulto concedido sem baixa no cálculo" da Auditoria
+            _nao_marc = [c for c in crimes if procs and chave_processo(c.get("processo_criminal")) in procs
+                         and not c.get("extinto", "").upper().startswith("S")]
+            _vivos = [c for c in crimes if not c.get("extinto", "").upper().startswith("S")]
+            _pt = pena_para_dias(r.get("pena_total"))
+            _so_multa = bool(_nao_marc and _pt and _pt > sum(pena_para_dias(c.get("pena_imposta")) or 0 for c in _vivos)
+                             - sum(pena_para_dias(c.get("pena_imposta")) or 0 for c in _nao_marc))
             for c in crimes:
                 k = chave_processo(c.get("processo_criminal"))
+                if _so_multa and any(c is x for x in _nao_marc):
+                    c["indulto_duvida"] = {"data": d, "decreto": dec.group(1) if dec else "", "multa": True}
+                    continue
                 # (o processo marcado "(Indultada)"/"(Extinta)" no próprio RSPE não fica em dúvida: o RSPE já registra a extinção)
                 if procs and k in procs and not c.get("extincao_fonte", "").startswith("processo marcado") and any(mesmo_processo(c.get("processo_criminal"), x) for j in com_dep for x in lista_processos(j.get("processos") or "")):
                     c["indulto_duvida"] = {"data": d, "decreto": dec.group(1) if dec else "",

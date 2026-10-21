@@ -727,11 +727,27 @@ def custodia_sem_calculo(r):
             desde = a
         else:
             fechados.append((a, b))
+    # prisão provisória encerrada, pelo próprio processo desta execução, registrada só na ficha SIAPEN (rspe_ficha.detracoes_ficha):
+    # detração obrigatória (CP, art. 42), a mesma que a Auditoria aponta - entra na custódia anterior (o que o RSPE já conta não se repete)
+    fic = []
+    for a, b, p in r.get("_detracao_ficha") or []:
+        a, b = rs.to_date(a), rs.to_date(b)
+        if not (a and b) or (f0 and b < f0) or (desde and b >= desde):
+            continue
+        if p and procs and not any(rp._mesmo_processo(p, x) for x in procs):
+            continue  # processo de condenação já extinta
+        a = max(a, f0) if f0 else a
+        fic.append((a, b, p))
     # conta o dia da prisão e o da soltura, como o SEEU (rs.dias_cumpridos_ate); períodos contíguos contam o dia comum uma vez
-    antes = sum((b - a).days + 1 for a, b in rs.uniao_periodos(fechados))
+    antes0 = sum((b - a).days + 1 for a, b in rs.uniao_periodos(fechados))
+    antes = sum((b - a).days + 1 for a, b in rs.uniao_periodos(fechados + [(a, b) for a, b, _p in fic]))
+    ficha_txt = ""
+    if antes > antes0:
+        ficha_txt = "incluídos %s de prisão provisória que só a ficha SIAPEN registra, %s - detração, CP, art. 42; conferir" % (
+            rs.pl(antes - antes0, "dia", "dias"), "; ".join("de %s a %s no processo %s" % (rs.fmt(a), rs.fmt(b), p) for a, b, p in fic))
     if duvida and not duvida_txt:
         duvida_txt = "a custódia não indica processo (nem no RSPE, nem na ficha SIAPEN) e pode ser de outro - conferir"
-    return {"antes": antes, "desde": desde, "duvida": duvida, "duvida_txt": duvida_txt} if (antes or desde) else None
+    return {"antes": antes, "desde": desde, "duvida": duvida, "duvida_txt": duvida_txt, "ficha_txt": ficha_txt} if (antes or desde) else None
 
 
 def fracoes_texto(r, campo):
@@ -1062,12 +1078,21 @@ def extincao(r, presc, interr):
         _a = rs.to_date(_ult["data"])
         _fatos = [rs.to_date(c.get("data_infracao") or "") for c in r.get("_crimes", []) if not (c.get("extinto") or "").upper().startswith("S")]
         _fatos = [d for d in _fatos if d]
-        _alc = _a + timedelta(days=_rem_d - 1)
+        _alc = _soma_pena(_a, _rem_d) - timedelta(days=1)  # pelo calendário, como o término do SEEU (o dia do começo conta)
         if _fatos and max(_fatos) < _a and _alc <= HOJE:
             hip.append("A verificar: preso por outro processo desde %s (esta execução está suspensa); os fatos desta execução são anteriores a "
                        "essa prisão - se o tempo for imputado aqui (CP, art. 42; LEP, art. 111), a pena remanescente (%s) foi alcançada em %s: "
                        "extinção pelo cumprimento a verificar (LEP, art. 66, II)" % (rs.fmt(_a), rs.dias_para_pena(_rem_d), rs.fmt(_alc)))
             a_verificar = True
+    # indulto registrado sem baixa no cálculo (sem "(Indultada)", "Extinto: Não" e a pena total que só fecha com essas penas): pode ter
+    # sido só da multa - a extinção da pena privativa fica a verificar (rspe_scraper.aplicar_extincoes)
+    _idm = [c for c in r.get("_crimes", []) if (c.get("indulto_duvida") or {}).get("multa")]
+    if _idm:
+        _x = _idm[0]["indulto_duvida"]
+        hip.append("A verificar: indulto de %s%s registrado para %s, sem baixa no cálculo do SEEU - pode ter sido só da multa; se alcançou a "
+                   "pena privativa, essas penas estão extintas (CP, art. 107, II): conferir a decisão e pedir a baixa" % (
+                       _x.get("data") or "?", (" (Decreto %s)" % _x["decreto"]) if _x.get("decreto") else "", rs.crimes_curto(_idm)))
+        a_verificar = True
     # execução arquivada (ou baixada) no SEEU com condenação ainda ativa: a extinção dessa pena não está registrada
     _atv_arq = [c for c in r.get("_crimes", []) if not (c.get("extinto") or "").upper().startswith("S")]
     if re.search(r"ARQUIVAD|BAIXAD", rs._sem_acento(r.get("status_execucao") or "").upper()) and _atv_arq \
@@ -1694,7 +1719,8 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
                                     (" desde %s" % rs.fmt(_cs["desde"])) if _cs["desde"] else "",
                                     r.get("pena_total") if rs.pena_para_dias(r.get("pena_total")) else
                                     "%s, soma das penas impostas" % rs.dias_para_pena(soma_penas_ativas(r)),
-                                    (" mais %s de custódia anterior" % rs.dias_para_pena(_cs["antes"])) if _cs["antes"] else "") +
+                                    (" mais %s de custódia anterior%s" % (rs.dias_para_pena(_cs["antes"]), (", %s" % _cs["ficha_txt"]) if _cs.get("ficha_txt") else ""))
+                                    if _cs["antes"] else "") +
                                 ((" Abatidos %d dias remidos concedidos no RSPE (LEP, art. 128) - conferir." % remidos_sem_calculo(r))
                                  if remidos_sem_calculo(r) else "") +
                                 ((" " + _cs["duvida_txt"][0].upper() + _cs["duvida_txt"][1:] + ".") if _cs["duvida"] else ""))
