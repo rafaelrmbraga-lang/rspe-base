@@ -1004,7 +1004,10 @@ def derivar(f, eventos):
                     aberto = None
                     continue
                 # só encerra o trabalho do mesmo setor (a baixa de um setor antigo não encerra o atual)
-                if aberto and re.sub(r"\W", "", aberto["setor"].upper())[:12] == setor_fim[:12]:
+                # (o vínculo aberto em texto livre com outra grafia do setor - "Montagem de Prendedores Prendebem" x "PRENDEBEM/PDIB" -
+                # é o mesmo setor: a baixa estruturada o encerra)
+                if aberto and (re.sub(r"\W", "", aberto["setor"].upper())[:12] == setor_fim[:12]
+                               or (aberto.get("texto_livre") and setor_fim and _setor_igual(aberto["setor"], m.group(1)))):
                     aberto["fim"] = e["data"]
                     aberto["motivo_fim"] = motivo
                     trabalho.append(aberto)
@@ -2134,12 +2137,13 @@ def _soltura_x_ficha(r, f, so_periodos=False):
     return out
 
 
-def detracoes_ficha(r, f):
+def detracoes_ficha(r, f, so_periodos=False):
     """Prisões encerradas na ficha (entrada vinda da rua até a soltura por alvará) por processo que integra o RSPE, em período que o
     RSPE trata como liberdade: [{"ini" (a partir do fato), "fim", "preso_desde", "fato", "dias" (fora dos períodos do RSPE),
-    "processo", "crime"}]. Base do item de detração da Auditoria e do término calculado da guia sem cálculo (rspe_view)."""
+    "processo", "crime"}]. Base do item de detração da Auditoria e do término calculado da guia sem cálculo (rspe_view).
+    so_periodos: modo das estimativas (aceita RSPE sem eventos e número de alvará truncado)."""
     evs = sorted((e for e in r.get("_eventos", []) if rs.to_date(e.get("data") or "")), key=lambda e: rs.to_date(e["data"]))
-    if not evs or not f:
+    if not f or (not evs and not so_periodos):
         return []
     per = rs.periodos_custodia(evs)
     crimes = {}
@@ -2161,6 +2165,10 @@ def detracoes_ficha(r, f):
         elif ini is not None and re.search(r"SA[ÍI]DA DA UNIDADE PENAL.*MOTIVO:\s*(ALVAR|SOLTURA|LIBERDADE)", t, re.I):
             _ma = re.search(r"ALVAR[ÁA][^:]*:\s*(.*)", t, re.I)
             _na = rs.processos_no_texto(_ma.group(1))[:1] if _ma else []  # também grafado sem pontos ("AUTOS0801005...", "Nº.09000036-...")
+            if not _na and _ma and so_periodos:
+                # número truncado no alvará ("0900066-29.2025.8.12.001"): o número, o dígito e o ano bastam para achar o processo
+                _mt = re.search(r"(\d{7})-?(\d{2})\.?(\d{4})", _ma.group(1))
+                _na = [k.zfill(20) for k in crimes if _mt and k.zfill(20)[:13] == "".join(_mt.groups())][:1]
             m = re.match(r"(.*)", _na[0]) if _na else None
             c = crimes.get(rs.chave_processo(m.group(1))) if m else None
             if m and not c:
@@ -2181,9 +2189,11 @@ def detracoes_ficha(r, f):
     return out
 
 
-def _detracao_x_ficha(r, f):
+def _detracao_x_ficha(r, f, so_periodos=False):
     """Prisão encerrada na ficha por processo que integra o RSPE, em período que o RSPE trata como liberdade (detracoes_ficha): os
     dias faltam como detração (CP, art. 42). A prisão em curso fica com _prisao_x_ficha."""
+    if so_periodos:
+        return [(d["ini"], d["fim"], d["dias"]) for d in detracoes_ficha(r, f, True)]
     out = []
     for d in detracoes_ficha(r, f):
         i0, x, ini, fato, _pn, c, n = d["ini"], d["fim"], d["preso_desde"], d["fato"], d["processo"], d["crime"], d["dias"]
@@ -2200,9 +2210,11 @@ def _detracao_x_ficha(r, f):
     return out
 
 
-def solturas_nao_lancadas(r, f):
+def solturas_nao_lancadas(r, f, judicial=False):
     """Saídas por alvará/soltura da ficha dentro de um período que o RSPE trata como prisão contínua (sem interrupção): o RSPE conta o
-    tempo em liberdade como custódia - erro favorável ao assistido. Devolve [(soltura, nova entrada | None)]."""
+    tempo em liberdade como custódia - erro favorável ao assistido. Devolve [(soltura, nova entrada | None)]. judicial: também a saída
+    por determinação judicial sem destino prisional nem nova entrada em até 3 dias (saida_judicial "a_conferir"), para estimativas
+    que ficam a conferir."""
     if not f:
         return []
     evs = sorted((e for e in r.get("_eventos", []) if rs.to_date(e.get("data") or "") and not e.get("_ficha")), key=lambda e: rs.to_date(e["data"]))
@@ -2211,7 +2223,8 @@ def solturas_nao_lancadas(r, f):
     ev = [(x, t) for x, t in ev if x]
     out = []
     for k, (x, t) in enumerate(ev):
-        if not re.search(r"SA[ÍI]DA DA UNIDADE PENAL.*MOTIVO:\s*(ALVAR|SOLTURA|LIBERDADE)", t, re.I) or re.search(r"TRANSFER", t, re.I):
+        if not (re.search(r"SA[ÍI]DA DA UNIDADE PENAL.*MOTIVO:\s*(ALVAR|SOLTURA|LIBERDADE)", t, re.I) and not re.search(r"TRANSFER", t, re.I)) \
+                and not (judicial and (saida_judicial(t, ev, x) or ("",))[0] == "a_conferir"):
             continue
         if not any(a < x and (b is None or x < b - timedelta(days=1)) for a, b in per):
             continue

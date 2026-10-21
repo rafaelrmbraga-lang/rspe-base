@@ -179,7 +179,7 @@ def _a_verificar(presc, S):
 def _regime_limpo(rg):
     """Regime atual em minúsculas para o texto corrido; "Livramento? (RSPE: ...)" (incerto) e vazio viram ""."""
     rg = (rg or "").strip()
-    if not rg or rg.endswith("?") or "?" in rg:
+    if not rg or rg.endswith("?") or "?" in rg or "a verificar" in rg:
         return ""
     return rg.lower()
 
