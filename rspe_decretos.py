@@ -415,9 +415,12 @@ def _concurso_exclui(f):
     return bool(re.search(r"excluindo-se dos beneficios as infrac", t))
 
 
-def remicoes_ref_decisao(r):
+def remicoes_ref_decisao(r, ref=None):
     """Remições concedidas no RSPE com a data de referência igual à da decisão (ou sem ela): a data não diz quando foi o trabalho
-    ou o estudo, e o RSPE não diz de qual atestado veio cada uma. [(data da decisão, dias)]."""
+    ou o estudo, e o RSPE não diz de qual atestado veio cada uma. [(data da decisão, dias)]. Com ref: a ficha que mostra a primeira
+    atividade remível (trabalho, estudo, atestado) depois de ref resolve - a remição decidida depois desse início é dessas
+    atividades, posteriores à data, e sai da lista."""
+    ini_at = rs.to_date(r.get("_ficha_ativ_ini") or "")
     out = []
     for i in r.get("_incidentes") or []:
         if not rs.e_remicao_concedida(i):
@@ -425,6 +428,8 @@ def remicoes_ref_decisao(r):
         dd, dr = rs.to_date(i.get("data_decisao") or ""), rs.to_date(i.get("data_referencia") or "")
         n = rs.dias_de(i.get("complemento") or "")
         if not dd or not n or n <= 0 or (dr and dr != dd):
+            continue
+        if ref and ini_at and ini_at > ref and dd >= ini_at:
             continue
         out.append((dd, n))
     return out
@@ -445,7 +450,7 @@ def _rem_posterior(x, r):
     if x.get("s") != "nao" or not ref:
         return
     ger = rs.to_date(r.get("data_geracao_rspe") or "") or date.max
-    its = [(d, n) for d, n in remicoes_ref_decisao(r) if ref < d <= ger]
+    its = [(d, n) for d, n in remicoes_ref_decisao(r, ref) if ref < d <= ger]
     if not its:
         return
     fl = rs.faltas_remiveis(x.get("mot"))
@@ -534,6 +539,11 @@ def pena_cumprida_decretos(r):
             continue
         if num["cumprido"] < num["pena"]:
             continue
+        _det = r.get(k + "_detalhe") or ""
+        if "Fora da soma" in _det and "considerada a soma - conferir" in _det:
+            # pena considerada incerta (a pena total do SEEU, sem as penas fora da conta, não fecha com a soma) e custódia que pode ser
+            # da condenação fora da conta: não se afirma a pena cumprida - fica o resultado da análise
+            continue
         if "crimes não impeditivos" in v.split(" | ")[0] or (r.get(k + "_imp") and ano != "2022"):
             # concurso com impeditivo: o tempo além dos 2/3 do impeditivo só afere o requisito do art. 7º, p. ú. - não diz que a pena
             # dos demais crimes está extinta (pela ordem legal, CP, arts. 69 e 76, a reclusão se executa antes da detenção, e a pena
@@ -579,7 +589,7 @@ def remicao_posterior_decretos(r):
     e o RSPE não diz de qual atestado veio a remição. Altera r."""
     for ano, ref in _REF_DET.items():
         ger = rs.to_date(r.get("data_geracao_rspe") or "") or date.max
-        its = [(d, n) for d, n in remicoes_ref_decisao(r) if ref < d <= ger]
+        its = [(d, n) for d, n in remicoes_ref_decisao(r, ref) if ref < d <= ger]
         if not its:
             continue
         tot = sum(n for _d, n in its)
@@ -722,7 +732,13 @@ def _avaliar_ficha_um(f, r, ctx, ini, hoje):
         else:
             x.update(s="ver", mot="%s; A VERIFICAR - %s; como reincidente, o benefício não é atingido nesta data" % (x.get("mot") or "", _rl))
     elif _rl and x.get("s") == "ver":
-        x["ressalva"] = "; ".join(y for y in (x.get("ressalva") or "", _rl + " - a conta como reincidente exige fração maior") if y)
+        # já a verificar por outro motivo (falta, trânsito): a conta como reincidente também é feita - se por ela o requisito não
+        # é atingido, isso vai no motivo, como no "cabe" (a dúvida da reincidência decide sozinha o resultado)
+        xr = _avaliar_ficha(dict(f, _forca_reinc=True), r, ctx, ini, hoje)
+        if xr.get("s") in ("nao", "imp"):
+            x["mot"] = "%s; A VERIFICAR - %s; como reincidente, o benefício não é atingido nesta data" % (x.get("mot") or "", _rl)
+        else:
+            x["ressalva"] = "; ".join(y for y in (x.get("ressalva") or "", _rl + " - a conta como reincidente exige fração maior") if y)
     if x.get("s") == "cabe" and vd_ver:
         # violência contra a mulher que o RSPE não confirma (vítima, vara): se houve, o crime é impeditivo
         x.update(s="ver", mot="%s; A VERIFICAR - conferir se houve violência contra a mulher (vedação do %s): %s" % (
@@ -1247,6 +1263,15 @@ def _avaliar_ficha(f, r, ctx, ini, hoje):
                 red_txt += (" - valores máximos: a comutação anterior concedida (%s) não está descontada da pena, e o RSPE não traz quanto "
                             "ela reduziu; o remanescente e a redução reais são menores - conferir no SEEU" % ", ".join(dict.fromkeys(_com_ant_l)))
                 rc["com_ant_nao_descontada"] = True
+            _ext_dep = [c for c in crimes if (c.get("extinto") or "").upper().startswith("S")]
+            if _ext_dep:
+                # pena extinta depois da data (indulto de decreto anterior declarado depois, extinção pelo cumprimento): está na soma,
+                # mas a comutação só incide sobre a pena ainda em execução - se a extinção alcança a data (o indulto é declaratório:
+                # extingue a pena na data do seu decreto), ela sai da base com o tempo cumprido por ela
+                red_txt += (" - valores máximos: a soma inclui pena hoje extinta (%s); se a extinção (indulto de decreto anterior, "
+                            "cumprimento) já alcançava %s, essa pena e o tempo cumprido por ela saem da base e a redução real é menor - "
+                            "conferir no SEEU" % (rs.crimes_curto(_ext_dep), rs.fmt(ref)))
+                rc["extintas_na_base"] = True
         elif pena and pena - cump <= 0:
             red_txt = "comutação de %s - pela conta não sobra pena remanescente a comutar (conferir o tempo cumprido)" % (red or "?")
         else:
@@ -1475,6 +1500,10 @@ def motivo_curto(x):
         if t.startswith("A VERIFICAR (remição pendente)"):
             m = re.search(r"a remição de (\d+ dias?)", t)
             return "Remição pendente%s cobre o tempo que faltava: pedir a declaração" % (" de " + m.group(1) if m else "")
+        if "como reincidente, o benefício não é atingido" in t:
+            # a reincidência pelas datas decide sozinha: vem antes de qualquer outra dúvida (falta, trânsito)
+            return "%s: reincidente pelas datas do RSPE - como reincidente, o requisito não é atingido" % (
+                (tempo + "; a verificar") if tempo else "A verificar")
         m = (re.search(r"A VERIFICAR - (.+)", t) or re.search(r"A VERIFICAR[^:|]*:\s*art\. 9º[^|]*\|\s*(.+)", t)
              or re.search(r"A VERIFICAR(?: \([^)]*\))?:\s*(.+)", t) or re.search(r"(falta a verificar)", t)
              or re.search(r"o (cumprimento estava interrompido em [\d/]+)", t) or re.search(r"^(cumprimento interrompido em [\d/]+)", t))

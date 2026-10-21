@@ -1379,6 +1379,13 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
             rf.complementar_decretos(r, ficha, HOJE)  # XI, XII e XIII do art. 9º pela ficha (saídas, trabalho externo, estudo, curso)
         except Exception:
             pass
+        # início da primeira atividade remível da ficha (trabalho, estudo, atestado): a remição decidida depois dele não é de
+        # período anterior a ele (rspe_decretos._rem_posterior)
+        _ini_at = [rs.to_date((x.get(k) or "").replace(".", "/")) for lst, k in ((ficha.get("trabalho"), "inicio"), (ficha.get("estudos"), "inicio"),
+                                                                              (ficha.get("atestados"), "periodo_inicio")) for x in (lst or [])]
+        _ini_at = [d for d in _ini_at if d]
+        if _ini_at:
+            r["_ficha_ativ_ini"] = rs.fmt(min(_ini_at))
     # a conferência da ficha (aba Ficha) sai antes dos decretos: a remição pendente com dias exatos pode bastar para o lapso do
     # indulto ou da comutação (LEP, art. 128) - o resultado "não atinge" passa a "a verificar"
     _conf, _vinc = marcas_ficha(baixas)
