@@ -3287,12 +3287,15 @@ def pena_maxima_abstrata(c):
     return anos_para_dias(v)
 
 
-def pena_minima_abstrata(c):
-    """Pena mínima cominada (dias) lida do tipo penal impresso no RSPE ('Reclusão: 2 a 6 anos' -> 2 anos); None se não houver."""
+def pena_minima_abstrata(c, extenso=False):
+    """Pena mínima cominada (dias) lida do tipo penal impresso no RSPE ('Reclusão: 2 a 6 anos' -> 2 anos); None se não houver.
+    extenso=True: lê também o texto da lei por extenso ('reclusão de dois a oito anos')."""
     t = c.get("tipo_penal") or ""
     m = re.search(r"(Reclus[ãa]o|Deten[çc][ãa]o|Pris[ãa]o simples)\s*:\s*(.+?)(?:\s+(?:E|OU|e|ou)\s+Multa|\s+Sem\s+Multa|$)", t, re.I)
     if not m:
-        return None
+        # texto da lei por extenso ("§ 4º: A pena é de reclusão de dois a oito anos, e multa, se..."): a pena mínima do parágrafo
+        # (conferência 7.13, prescricao-12: o furto qualificado ficava sem mínimo e recebia o aviso da suspensão do processo)
+        return _pena_min_extenso(t) if extenso else None
     partes = re.split(r"\s+a\s+", m.group(2), maxsplit=1)
     if len(partes) < 2:
         return None
@@ -3308,6 +3311,25 @@ def aviso_pena_minima(c, pena_aplicada, pena_min):
             "errado muda a pena máxima e o enquadramento no decreto - minorante (tentativa, participação de menor importância, "
             "semi-imputabilidade) também explica a pena abaixo do mínimo - a verificar" % (
                 dias_para_pena(pena_aplicada), dias_para_pena(pena_min), crimes_curto([c]).strip()))
+
+
+_EXTENSO = {"um": 1, "uma": 1, "dois": 2, "duas": 2, "três": 3, "tres": 3, "quatro": 4, "cinco": 5, "seis": 6, "sete": 7, "oito": 8,
+            "nove": 9, "dez": 10, "onze": 11, "doze": 12, "treze": 13, "quatorze": 14, "catorze": 14, "quinze": 15, "dezesseis": 16,
+            "dezoito": 18, "vinte": 20, "trinta": 30}
+
+
+def _pena_min_extenso(t):
+    """Pena mínima (dias) do texto da lei por extenso: 'reclusão, de dois a oito anos' -> 2 anos; 'detenção de quinze dias a seis
+    meses' -> 15 dias. Só o primeiro trecho de pena do texto (a do parágrafo); None se ilegível."""
+    num = r"(\d+|%s)" % "|".join(sorted(_EXTENSO, key=len, reverse=True))
+    uni = r"(anos?|m[eê]s(?:es)?|dias?)"
+    m = re.search(r"(?:reclus[ãa]o|deten[çc][ãa]o|pris[ãa]o simples)\s*,?\s*de\s+%s\s*%s?\s+a\s+%s\s+%s" % (num, uni, num, uni), t, re.I)
+    if not m:
+        return None
+    n = m.group(1).lower()
+    n = int(n) if n.isdigit() else _EXTENSO[n]
+    u = (m.group(2) or m.group(4)).lower()
+    return n * DIAS_ANO if u.startswith("ano") else n * 30 if u.startswith("m") else n
 
 
 def _pena_max_do_texto(faixa):
@@ -6487,10 +6509,14 @@ def derivar(r, crimes, eventos, incidentes):
 def _completar_processos_eventos(crimes, eventos, incidentes):
     for x in eventos:
         if x.get("processos_incompletos"):
-            # lista incompleta no RSPE (cortada na margem pelo SEEU): não liga a prisão a processo (detração, fato posterior,
-            # custódia por ação) - a custódia fica "sem processo indicado"; a lista impressa fica em processos_rspe, só para exibir
+            # lista incompleta no RSPE (cortada na margem pelo SEEU): os processos impressos estão na lista com certeza e ligam a
+            # prisão a eles (como na leitura até a 7.12); só um processo que estivesse na parte cortada fica de fora - a Auditoria
+            # pede a conferência. Esvaziar a lista ("sem processo indicado") ligava a prisão a todas as ações (conferência 7.13,
+            # prescricao 11, 20 e 47). A lista impressa fica também em processos_rspe, para o aviso
             x["processos_rspe"] = x.get("processos_rspe") or x.get("processos") or ""
-            x["processos"] = ""
+            if not (x.get("processos") or "").strip(" ,"):
+                # registro lido pela 7.13/7.14 (lista esvaziada): volta a lista impressa, sem reimportar
+                x["processos"] = x["processos_rspe"].strip(" ,")
     for x in list(eventos) + list(incidentes):
         if x.get("processos"):
             x["processos"] = completar_processos(x["processos"], crimes)
