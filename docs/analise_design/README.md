@@ -13,7 +13,8 @@ Este é um diagnóstico e uma proposta. **Nenhum arquivo do sistema foi alterado
 | [06_perguntas.md](06_perguntas.md) | decisões que dependem de você e da equipe |
 | [anexos/](anexos/) | relatórios detalhados de PDF/Excel e de extensão/conversor/identidade/petições |
 | [capturas/](capturas/) | 117 capturas: `app_*`, `pdf_*`, `excel_*`, `extensao_*`, `conversor_*`, `identidade_*`, `peticao_*`, `depois_*` |
-| [ferramentas/](ferramentas/) | scripts para reproduzir tudo |
+| [ferramentas/](ferramentas/) | scripts para reproduzir tudo (`monta_pdf.py` gera o PDF único) |
+| [APTO_analise_de_design.pdf](APTO_analise_de_design.pdf) | tudo isto num PDF só, para circular |
 
 ## Como a tela foi executada
 
