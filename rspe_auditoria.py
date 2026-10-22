@@ -579,19 +579,40 @@ def _texto_blocos(blocos):
         # meses (fracionários) em dias: anos inteiros de 365, o resto em meses de 30
         return (int(mm) // 12) * rs.DIAS_ANO + float((mm - (int(mm) // 12) * 12) * 30)
     if _t and all(len(b) > 5 for b in blocos):
-        _fu = 0.0
+        # (7.14.6) a conta toda em anos, meses e dias, como o SEEU: pena do bloco × fração (mês fracionário em dias de 30), menos a
+        # detração (dias corridos: anos de 365, o resto em meses de 30), subtraída componente a componente (o dia pede 30 ao mês, o
+        # mês pede 12 ao ano). Passar o resultado por dias e voltar a anos de 365 desviava até 5 dias (6a - 26d saía 5a11m9d)
+        def _nrm(a_, m_, d_):
+            m_, d_ = m_ + d_ // 30, d_ % 30
+            return (a_ + m_ // 12, m_ % 12, d_)
+
+        def _menos(x, y):
+            a_, m_, d_ = x[0] - y[0], x[1] - y[1], x[2] - y[2]
+            if d_ < 0:
+                d_, m_ = d_ + 30, m_ - 1
+            if m_ < 0:
+                m_, a_ = m_ + 12, a_ - 1
+            return (a_, m_, d_)
+
+        def _vezes(p, f):
+            mm = Fraction(p[0] * 12 + p[1]) * f
+            dd = Fraction(p[2]) * f + (mm - int(mm)) * 30
+            return _nrm(0, int(mm), int(round(dd)))
+        _soma = (0, 0, 0)
         for b in blocos:
             if b[3] >= 10:
-                _fu += _meses_dias(Fraction(b[5][0] * 12 + b[5][1]) * b[0]) + float(b[5][2] * b[0]) - b[3]
+                _x = _menos(_vezes(b[5], b[0]), _du_amd(int(b[3])))
             else:
-                _fu += _u(*b[4])
-        _fu = int(round(_fu))
-        if _fu > 0:
-            _fav_txt = rs.pena_extenso("%da%dm%dd" % _du_amd(_fu))
-            # (7.14.4) a diferença é o lapso impresso menos a forma favorável, na mesma unidade: as três linhas fecham entre si
-            # (o total impresso somado bloco a bloco: normalizar 12 meses em 1 ano de 365 dias desviaria 5 dias)
-            _du = sum(_u(*b[4]) for b in blocos) - _fu
-            _dif_txt = rs.pena_extenso("%da%dm%dd" % _du_amd(_du)) if _du > 0 else None
+                _x = tuple(b[4])
+            _soma = _nrm(_soma[0] + _x[0], _soma[1] + _x[1], _soma[2] + _x[2])
+        if _soma[0] >= 0 and _soma != (0, 0, 0):
+            _fav_txt = rs.pena_extenso("%da%dm%dd" % _soma)
+            # a diferença é o lapso impresso menos a forma favorável, na mesma unidade: as três linhas fecham entre si
+            _imp = (0, 0, 0)
+            for b in blocos:
+                _imp = _nrm(_imp[0] + b[4][0], _imp[1] + b[4][1], _imp[2] + b[4][2])
+            _dx = _menos(_imp, _soma)
+            _dif_txt = rs.pena_extenso("%da%dm%dd" % _dx) if _dx[0] >= 0 and _dx != (0, 0, 0) else None
     if _fav_txt is None and _t and fav > 0:
         _ta = _amd(_norm(*_t))
         tot_m, dif_m = _ta[0] * 12 + _ta[1], _dif_amd[0] * 12 + _dif_amd[1]
