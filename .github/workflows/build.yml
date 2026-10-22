@@ -52,6 +52,9 @@ jobs:
           New-Item -ItemType Directory -Force pacote | Out-Null
           Copy-Item dist\APTO.exe pacote\
           Copy-Item LEIA-ME.txt, RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf pacote\
+          # extensão do navegador (RSPE do SEEU, Triagem da Mesa, SIAPEN e SAP): pasta pronta para "Carregar sem compactação"
+          Copy-Item -Recurse extensao_seeu pacote\extensao_seeu
+          if (-not (Test-Path pacote\extensao_seeu\manifest.json)) { throw "extensao_seeu não entrou no pacote" }
           Compress-Archive -Path pacote\* -DestinationPath "APTO_v${{ steps.versao.outputs.v }}.zip"
 
       - name: Guardar o .exe (aba Actions)
@@ -66,6 +69,6 @@ jobs:
         with:
           tag_name: v${{ steps.versao.outputs.v }}
           name: APTO v${{ steps.versao.outputs.v }}
-          body: "Gerado automaticamente a partir do commit ${{ github.sha }}. Baixe o .zip, extraia e rode APTO.exe (Windows 10/11)."
+          body: "Gerado automaticamente a partir do commit ${{ github.sha }}. Baixe o .zip, extraia e rode APTO.exe (Windows 10/11). A pasta extensao_seeu é a extensão do navegador (Chrome/Edge): chrome://extensions > Modo do desenvolvedor > Carregar sem compactação (veja extensao_seeu\\LEIA-ME.txt)."
           files: APTO_v${{ steps.versao.outputs.v }}.zip
           make_latest: true

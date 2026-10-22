@@ -112,6 +112,34 @@ ok(/^CERTIFICO que o sentenciado não compareceu/.test(cert.resumo), "certidão:
 ok(T.lerDocumento("   ").semTexto, "PDF escaneado (sem texto)");
 ok(T.analisarTexto("Ante o exposto, DEFIRO a progressão.").alertas.some((x) => x.nivel === "info"), "deferimento");
 
+// ---- providência sugerida (no lugar dos alertas)
+const mov = (nome, data, cargo) => ({ seq: 1, nome, data, cargo: cargo || "" });
+const PV = (a, aba) => T.providencia(a, aba);
+let pv = PV({ pendencia: { juntar: "MANIFESTAÇÃO", movimento: "PROFERIDO DESPACHO DE MERO EXPEDIENTE" }, mesma: true,
+  motivo: mov("PROFERIDO DESPACHO DE MERO EXPEDIENTE", "02/10/2026"), decisao: Object.assign(mov("PROFERIDO DESPACHO DE MERO EXPEDIENTE", "02/10/2026"), { doc: d }) }, "Manifestação");
+ok(pv.texto === "Requerer a intimação pessoal do sentenciado para justificar – sob pena de internação, suspensão (prazo no texto: 5 dias)" && pv.tipo === "Intimação pessoal" && pv.urgente, "justificativa -> intimação pessoal: " + JSON.stringify(pv));
+const certGr = T.lerDocumento("CERTIDÃO\nCERTIFICO, para os devidos fins, que em consulta ao SAJ, autos nº 0900000-00.2026.8.12.0001, constatei sentença condenatória [2 anos em regime aberto], mas sem GR expedida até o momento.\nCampo Grande, 20 de outubro de 2026.");
+pv = PV({ pendencia: { juntar: "MANIFESTAÇÃO", movimento: "JUNTADA DE CERTIDÃO" }, motivo: Object.assign(mov("JUNTADA DE CERTIDÃO", "20/10/2026"), { doc: certGr }),
+  decisao: Object.assign(mov("PROFERIDO DESPACHO DE MERO EXPEDIENTE", "14/10/2026"), { doc: T.lerDocumento("Vistos,\nCiente da informação. Ao MP e à defesa.\nCampo Grande, 14 de outubro de 2026.\nJuiz de Direito") }) }, "Manifestação");
+ok(pv.tipo === "Certidão" && /nova condenação\/guia/.test(pv.texto) && !pv.urgente, "certidão de nova condenação sem GR: " + JSON.stringify(pv));
+pv = PV({ pendencia: { juntar: "MANIFESTAÇÃO", movimento: "JUNTADA DE CERTIDÃO" }, motivo: Object.assign(mov("JUNTADA DE CERTIDÃO", "13/10/2026"), { doc: cert }) }, "Manifestação");
+ok(pv.texto.startsWith("Requerer a intimação pessoal do sentenciado sobre o descumprimento") && pv.tipo === "Intimação pessoal" && pv.urgente, "certidão de não comparecimento: " + JSON.stringify(pv));
+pv = PV({ pendencia: { juntar: "MANIFESTAÇÃO", movimento: "DECISÃO INTERLOCUTÓRIA DE MÉRITO" }, mesma: true, motivo: mov("DECISÃO INTERLOCUTÓRIA DE MÉRITO", "03/10/2026"),
+  decisao: Object.assign(mov("DECISÃO INTERLOCUTÓRIA DE MÉRITO", "03/10/2026"), { doc: neg }) }, "Manifestação");
+ok(pv.texto === "Avaliar agravo em execução contra a decisão de 03/10/2026" && pv.tipo === "Agravo" && pv.urgente, "indeferimento: " + JSON.stringify(pv));
+pv = PV({ pendencia: { juntar: "CIÊNCIA", movimento: "DECISÃO INTERLOCUTÓRIA DE MÉRITO" }, mesma: true, motivo: mov("DECISÃO INTERLOCUTÓRIA DE MÉRITO", "03/10/2026"),
+  decisao: Object.assign(mov("DECISÃO INTERLOCUTÓRIA DE MÉRITO", "03/10/2026"), { doc: T.lerDocumento("Vistos,\nAnte o exposto, DEFIRO a progressão ao regime aberto.\nCampo Grande, 3 de outubro de 2026.") }) }, "Ciência");
+ok(pv.texto === "Dar ciência" && !pv.urgente, "ciência de decisão favorável: " + JSON.stringify(pv));
+pv = PV({ pendencia: { juntar: "CIÊNCIA", movimento: "DECISÃO INTERLOCUTÓRIA DE MÉRITO" }, mesma: true, motivo: mov("DECISÃO INTERLOCUTÓRIA DE MÉRITO", "03/10/2026"),
+  decisao: Object.assign(mov("DECISÃO INTERLOCUTÓRIA DE MÉRITO", "03/10/2026"), { doc: neg }) }, "Ciência");
+ok(pv.tipo === "Agravo" && /depois dar ciência/.test(pv.texto), "ciência de indeferimento: " + JSON.stringify(pv));
+pv = PV({ pendencia: { juntar: "MANIFESTAÇÃO", movimento: "JUNTADA DE MANIFESTAÇÃO" }, motivo: Object.assign(mov("JUNTADA DE MANIFESTAÇÃO", "16/10/2026", "Membro(a) do Ministério Público"),
+  { doc: T.lerDocumento("O Ministério Público opina pelo indeferimento do pedido de livramento condicional, por ausência de requisito subjetivo.") }) }, "Manifestação");
+ok(pv.tipo === "Parecer do MP" && pv.texto.startsWith("Manifestar sobre o parecer do MP"), "parecer do MP: " + JSON.stringify(pv));
+pv = PV({ pendencia: { juntar: "MANIFESTAÇÃO", movimento: "JUNTADA DE CERTIDÃO" }, motivo: Object.assign(mov("JUNTADA DE CERTIDÃO", "13/10/2026"), { doc: { erro: "falhou", alertas: [] } }) }, "Manifestação");
+ok(pv.texto === "Manifestar sobre a certidão" && pv.tipo === "Certidão", "certidão não lida: " + JSON.stringify(pv));
+ok(T.urgencia({ ultimoDia: "30/10/2026" }, { providencia: { urgente: true } }, "21/10/2026") < T.urgencia({ ultimoDia: "22/10/2026" }, { providencia: { urgente: false }, alertas: [{ nivel: "alto" }] }, "21/10/2026"), "prioridade pela providência urgente");
+
 // ---- endereços que a triagem pode pedir ao SEEU (só leitura)
 const P = A.pedidoTriagemPermitido;
 ok(P("/seeu/usuario/mesaDefensor1Grau.do?actionType=listar&finalidadeRemessa=2&situacao=1&pageNumber=2", "GET") === "", "Mesa: lista");
@@ -120,6 +148,8 @@ ok(P("/seeu/usuario/mesaDefensor1Grau.do?actionType=listar", "POST", "pageNumber
 ok(P("/seeu/usuario/mesaDefensor1Grau.do?actionType=realizarLeitura", "GET") !== "", "Mesa: outra ação recusada");
 ok(P("https://seeu.pje.jus.br/seeu/visualizacaoProcesso.do?_tj=aa11bb22", "GET") === "", "processo pelo link do nº");
 ok(P("/seeu/visualizacaoProcesso.do?actionType=visualizar&selectedIcon=tabMovimentacoesProcesso", "GET") === "", "aba Movimentações");
+ok(P("/seeu/visualizacaoProcesso.do?actionType=visualizar&numeroUnico=70001175420168120001", "GET") === "", "processo pelo nº (como o lote)");
+ok(P("/seeu/visualizacaoProcesso.do?actionType=visualizar&numeroUnico=123", "GET") !== "" && P("/seeu/visualizacaoProcesso.do?actionType=visualizar&numeroUnico=70001175420168120001&x=1", "GET") !== "", "nº inválido ou parâmetro a mais recusado");
 ok(P("/seeu/visualizacaoProcesso.do?actionType=visualizar&selectedIcon=tabPeticao", "GET") !== "", "outra aba recusada");
 ok(P("/seeu/processo/movimentacaoArquivoDocumento.do?_tj=f0f0", "POST", "tipoLayout=1") === "", "lista de arquivos");
 ok(P("/seeu/processo/movimentacaoArquivoDocumento.do?_tj=f0f0", "POST", "tipoLayout=1&x=2") !== "", "lista de arquivos: outro corpo recusado");
