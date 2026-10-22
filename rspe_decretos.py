@@ -442,7 +442,7 @@ def _ctx(r):
     # remições e perdas de remidos (a mesma conta das colunas 2022-2025); a remição decidida com a referência igual à decisão fica pela
     # decisão - o RSPE não diz de qual atestado ela veio - e, se cobrir o que faltava, o decreto fica a verificar (_rem_posterior)
     rem = rs.remicoes_liquidas(incidentes)
-    return {"periodos": rs.periodos_custodia(eventos), "lc": rs.periodos_livramento(eventos, incidentes), "rem": rem}
+    return {"periodos": rs.periodos_custodia(rs.eventos_sem_custodia_outro_processo(eventos, r)), "lc": rs.periodos_livramento(eventos, incidentes), "rem": rem}
 
 
 def _rem_posterior(x, r):
@@ -468,17 +468,52 @@ def nota_rem_posterior(its, ref):
                           "; ".join("%s em %s" % (rs.pl(round(n), "dia", "dias"), rs.fmt(d)) for d, n in its[:4]), rs.fmt(ref)))
 
 
-def custodia_outro_processo(r, ref, crimes):
-    """Prisão provisória (flagrante, preventiva, temporária) que abre período de custódia contado até a data do decreto, registrada
-    para processo que não é de nenhum crime alcançado (outro processo, ou o crime novo, de fato posterior à data): a custódia por
-    outro processo, não somada, não é cumprimento desta pena - texto do "a verificar", ou ''."""
-    achou = []
-    for a, b, mot, procs in rs.periodos_custodia_detalhe(r.get("_eventos") or []):
+def _seeu_soma_custodias(r, evs):
+    """O SEEU conta como cumprimento todos os períodos de custódia dos eventos: o "Total Interrupções" impresso é só a soma dos
+    intervalos entre eles (até a geração do RSPE, se o último período foi fechado), com folga de 5 dias."""
+    ti = rs.pena_para_dias(r.get("total_interrupcoes"))
+    if ti is None:
+        return False
+    per = sorted(rs.periodos_custodia(evs), key=lambda x: x[0])
+    if not per:
+        return False
+    gaps = sum(max(0, (per[i + 1][0] - per[i][1]).days) for i in range(len(per) - 1) if per[i][1])
+    ger = rs.to_date(r.get("data_geracao_rspe") or "")
+    if per[-1][1] and ger and ger > per[-1][1]:
+        gaps += (ger - per[-1][1]).days
+    # o SEEU imprime anos/meses/dias e a conversão (ano 365, mês 30) perde até ~5 dias por ano: folga proporcional
+    return abs(gaps - ti) <= 5 + gaps * 0.015
+
+
+def _custodias_provisorias_outro(r, ref, crimes):
+    """Períodos de custódia (inicio, fim, motivo, processos), até ref, abertos por prisão provisória registrada para processo que não é
+    de nenhum crime alcançado. Fora: a prisão com reinício desta execução no mesmo dia (recaptura, reinício: o tempo é cumprimento
+    desta pena), a lançada no dia de uma interrupção por prisão em outro processo (o SEEU já a tira da conta) e todas quando o SEEU
+    soma todos os períodos (o Total Interrupções só cobre os intervalos entre eles)."""
+    evs = rs.eventos_sem_custodia_outro_processo(r.get("_eventos") or [], r)
+    res = []
+    for a, b, mot, procs in rs.periodos_custodia_detalhe(evs):
         if not a or a > ref or not procs or not re.search(r"FLAGRANTE|PREVENTIV|TEMPOR|PROVIS", (mot or "").upper()):
             continue
         ps = rs.lista_processos(procs)
         if not ps or any(rs.mesmo_processo(c.get("processo_criminal"), p) for c in crimes for p in ps):
             continue
+        if any(rs.to_date(e.get("data") or "") == a and "INTERRUP" not in (e.get("tipo") or "").upper()
+               and re.search(r"RECAPTURA|REIN[ÍI]CIO", (e.get("motivo") or "").upper()) for e in evs):
+            continue
+        res.append((a, b, mot, procs))
+    if res and _seeu_soma_custodias(r, evs):
+        return []
+    return res
+
+
+def custodia_outro_processo(r, ref, crimes):
+    """Prisão provisória (flagrante, preventiva, temporária) que abre período de custódia contado até a data do decreto, registrada
+    para processo que não é de nenhum crime alcançado (outro processo, ou o crime novo, de fato posterior à data): a custódia por
+    outro processo, não somada, não é cumprimento desta pena - texto do "a verificar", ou ''."""
+    achou = []
+    for a, b, mot, procs in _custodias_provisorias_outro(r, ref, crimes):
+        ps = rs.lista_processos(procs)
         novo = [c for c in r.get("_crimes") or [] if (rs.to_date(c.get("data_infracao") or "") or date.min) > ref
                 and any(rs.mesmo_processo(c.get("processo_criminal"), p) for p in ps)]
         achou.append("prisão de %s (%s) registrada para %s (%s)%s" % (
@@ -494,12 +529,7 @@ def dias_custodia_outro_processo(r, ref, crimes):
     """Dias, até ref, dos períodos de custódia abertos por prisão provisória registrada para outro processo (os de
     custodia_outro_processo): descontados do cumprido, mostram se a dúvida muda o resultado."""
     tot = 0
-    for a, b, mot, procs in rs.periodos_custodia_detalhe(r.get("_eventos") or []):
-        if not a or a > ref or not procs or not re.search(r"FLAGRANTE|PREVENTIV|TEMPOR|PROVIS", (mot or "").upper()):
-            continue
-        ps = rs.lista_processos(procs)
-        if not ps or any(rs.mesmo_processo(c.get("processo_criminal"), p) for c in crimes for p in ps):
-            continue
+    for a, b, mot, procs in _custodias_provisorias_outro(r, ref, crimes):
         tot += ((min(b, ref) if b else ref) - a).days + 1
     return tot
 
@@ -530,6 +560,20 @@ def _txt_pena_cumprida(pena, cump, ref, parcial):
                                   "impeditivo" if parcial else "; conferir o tempo cumprido")))
 
 
+def execucao_unificada(r, pena_cons):
+    """A pena considerada pelo decreto integra execução unificada (LEP, art. 111) com outras penas ainda em cumprimento: a soma das
+    penas dos crimes não extintos da execução (ou, sem ela, a pena total do SEEU) passa da pena considerada. Nesse caso não há
+    extinção pelo cumprimento de uma pena isolada - o tempo cumprido é da pena unificada, e o indulto das penas alcançadas reduz
+    a pena unificada (decisão do usuário, 22/10/2026)."""
+    if not pena_cons:
+        return False
+    ativos = [c for c in r.get("_crimes") or [] if not (c.get("extinto") or "").upper().startswith("S")]
+    tot = rs.soma_penas(ativos, True) if ativos else 0
+    if not tot:
+        tot = rs.pena_para_dias(r.get("pena_total")) or 0
+    return tot > pena_cons + 30
+
+
 def pena_cumprida_decretos(r):
     """Decretos 2022, 2024 e 2025 (análise detalhada): o indulto "possível" ou "a verificar" cuja pena considerada já estava cumprida
     na data (no concurso, a dos crimes não impeditivos com o tempo além dos 2/3 do impeditivo) passa a "pena cumprida - pedir a
@@ -540,6 +584,10 @@ def pena_cumprida_decretos(r):
         if not v.startswith(("POSSÍVEL", "A VERIFICAR")) or v.startswith(PENA_CUMPRIDA) or not num.get("pena") or num.get("cumprido") is None:
             continue
         if num["cumprido"] < num["pena"]:
+            continue
+        if execucao_unificada(r, num["pena"]):
+            # execução unificada com outras penas em cumprimento: não há extinção de pena isolada - fica o resultado do indulto
+            r[k + "_unificada"] = True
             continue
         _det = r.get(k + "_detalhe") or ""
         if "Fora da soma" in _det and "considerada a soma - conferir" in _det:
@@ -573,6 +621,11 @@ def _pena_cumprida_aba(out, r):
         de = x.get("detalhe") or {}
         p, c = de.get("pena_conc", de.get("pena")), de.get("cumprido_conc", de.get("cumprido"))
         if not ref or not p or c is None or c < p:
+            continue
+        if execucao_unificada(r, de.get("pena") or p):
+            # execução unificada com outras penas em cumprimento (LEP, art. 111): não há extinção pelo cumprimento de pena isolada -
+            # o decreto se conclui pelos requisitos do indulto (o indulto das penas alcançadas reduz a pena unificada)
+            x["unificada"] = True
             continue
         parcial = "pena_conc" in de
         if parcial:
