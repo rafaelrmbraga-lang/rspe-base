@@ -1578,6 +1578,11 @@ def auditar(r, hoje=None):
         itens.append(it)
     # indícios de falta: a decisão fica com o operador (botão Preencher); sem sanção reconhecida, tudo fica a apurar (Súmula 533/STJ).
     # Sem decisão do operador, o indício é informação, não pendência: na prática a fuga se confirma e não gera pedido
+    # (7.14.7) faltas homologadas no RSPE (fato, decisão): a regressão definitiva ou a perda de remidos decidida com uma delas é a sanção
+    # dessa mesma falta - não é outra falta a informar (o "Preencher" registraria falta duplicada com a data da decisão)
+    _homs = [(rs._data_fato_falta(i), rs.to_date(i.get("data_decisao") or "")) for i in incidentes
+             if not i.get("_ficha") and rs.RE_FALTA_PROPRIA.search(rs._rotulo_incidente(i)) and not rs._negado(i) and not rs._pendente(i)
+             and i.get("situacao", "CONCEDIDO") == "CONCEDIDO" and rs.to_date(i.get("data_decisao") or "")]
     for fi in rs.faltas_editaveis(incidentes, eventos, hoje):
         dec = fi["decisao"]
         rot = {"sim": "falta grave", "nao": "não houve falta grave"}.get(dec, "")
@@ -1587,6 +1592,9 @@ def auditar(r, hoje=None):
         _sancao = fi.get("origem") == "incidente" and (re.search(r"PERDID|PERDA", fi.get("texto") or "", re.I) or (
             re.search(r"REGRESS", fi.get("texto") or "", re.I) and not re.search(r"CAUTELAR", fi.get("texto") or "", re.I)))
         # mesma ocorrência (rs.mapa_faltas): o período da fuga/evasão até a recaptura e a regressão cautelar decretada nela
+        if _sancao and not dec and rs.to_date(fi.get("data") or "") and any(
+                abs((rs.to_date(fi["data"]) - dd_).days) <= 5 for _f_, dd_ in _homs):
+            continue
         _per = (" Período: %s - a fuga/evasão é falta permanente, que só cessa com a recaptura (os 12 meses do art. 83, III, b, do CP "
                 "e do art. 6º dos decretos contam dela)." % fi["periodo"]) if fi.get("permanente") and fi.get("recaptura") else ""
         _vin = (" Da mesma ocorrência (não é outra falta): %s." % "; ".join(fi["vinculados"])) if fi.get("vinculados") else ""
@@ -1938,6 +1946,23 @@ def auditar(r, hoje=None):
         art = rs.num_art(c.get("artigo"))
         lei = rs.num_lei(c.get("lei"))
         fato = rs.to_date(c.get("data_infracao") or "")
+        # (7.14.7) pena imposta muito acima do máximo cominado ao dispositivo cadastrado (art. 129, caput - 3 meses a 1 ano - com 2a9m): o
+        # dispositivo deve ser outro (qualificadora, § da violência doméstica) ou o cadastro soma várias condutas - conferir na sentença.
+        # Só nas penas máximas de até 2 anos (nas maiores, a continuidade e o concurso no mesmo cadastro são comuns), acima de 2,5 vezes
+        _mc = re.search(r"(?:RECLUS|DETEN|PRIS)\w*\W*\s*(?:\d+\s*(?:ANOS?|MES(?:ES)?|DIAS?)\s*)+A\s+((?:\d+\s*(?:ANOS?|MES(?:ES)?|DIAS?)\s*(?:E\s+)?)+)",
+                        rs._sem_acento((c.get("tipo_penal") or "").upper()))
+        if _mc:
+            _mx = sum(int(n) * {"A": 365, "M": 30, "D": 1}[u[0]] for n, u in re.findall(r"(\d+)\s*(ANOS?|MES(?:ES)?|DIAS?)", _mc.group(1)))
+            _pi = rs.pena_para_dias(c.get("pena_imposta")) or 0
+            if 0 < _mx <= 730 and _pi > 2.5 * _mx:
+                itens.append(_item("verificar", "%s: pena imposta (%s) acima do máximo do dispositivo cadastrado (%s)" % (
+                                       nome, rs.dias_para_pena(_pi), _mc.group(1).strip().lower()),
+                                   "O RSPE cadastra %s (%s), mas a pena imposta é %s - mais de 2,5 vezes o máximo cominado. O dispositivo deve ser "
+                                   "outro (forma qualificada, causa de aumento ou o parágrafo da violência doméstica ou contra a mulher) ou o cadastro "
+                                   "soma várias condutas: conferir na sentença. O dispositivo repercute nas vedações (indulto, Lei 11.340/2006), na "
+                                   "violência ou grave ameaça e nas frações." % (
+                                       c.get("artigo") or nome, re.sub(r"\s+", " ", c.get("tipo_penal") or "").strip()[:160], rs.dias_para_pena(_pi)),
+                                   "CP, arts. 59 e 68; LEP, art. 112.", tipo="pena-acima-do-maximo-do-dispositivo", ref=nome))
         if _porte_uso(c):
             # porte para consumo próprio: o art. 28 da Lei 11.343/06 não tem pena privativa de liberdade e retroage ao art. 16 da
             # Lei 6.368/76 - não há fração de progressão ou livramento a conferir. Só é erro a impugnar quando há pena privativa
@@ -2520,6 +2545,15 @@ def auditar(r, hoje=None):
                                    "O crime desta condenação é culposo." if _culposo(c) else
                                    "A condenação anterior que gera a reincidência é por crime culposo: %s." % "; ".join(_nome(o) for o in _ant_lei)),
                                "CP, art. 83, I e II.", tipo="livramento-reincidencia-em-crime-culposo", ref=nome))
+        elif (fl_seeu is not None and not hed and not trafico and abs(float(fl_seeu) - 0.5) <= 0.005
+              and (rs.num_lei(c.get("lei")) == "3688" or "CONTRAVEN" in (c.get("lei") or "").upper())):
+            # (7.14.7) contravenção penal (prisão simples): a fração de 1/2 é a do reincidente em CRIME doloso (CP, art. 83, II) - a
+            # reincidência na contravenção (LCP, art. 7º), confirmada ou não, não a alcança; vale 1/3 (CP, art. 83, I)
+            itens.append(_item("verificar", "%s: livramento 1/2 em contravenção penal - fração 1/3" % nome,
+                               "O SEEU aplica 1/2, a fração do reincidente em crime doloso (CP, art. 83, II). A condenação é por contravenção "
+                               "(prisão simples), que não é crime: ainda que reincidente (LCP, art. 7º), a fração do livramento é 1/3 (CP, art. 83, I)%s." % (
+                                   "; a reincidência, além disso, não está demonstrada no RSPE (%s)" % _R["motivo"] if reinc_duv and _R.get("motivo") else ""),
+                               "CP, art. 83, I e II; LCP (Decreto-Lei 3.688/41), arts. 1º e 7º.", tipo="livramento-contravencao-fracao", ref=nome))
         elif (reinc_duv and fl_seeu is not None and abs(float(fl_seeu) - float(fl_esp)) <= 0.005 and float(fl_esp) < 1
               and float(rg.fracao_livramento_esperada(hed, False, trafico, _trafico_pessoas(c))[0]) < float(fl_seeu) - 0.005):
             # fração de reincidente com a reincidência não demonstrada no RSPE: certa só se ela for confirmada
@@ -3289,7 +3323,10 @@ def auditar(r, hoje=None):
         # lança a volta como "início do cumprimento", sem a palavra recaptura)
         _recapt = bool(bate) and ("recaptura" in bate[0][1].lower() or (
             bate[0][1].lower().startswith("prisão") and bool(_fu) and re.search(r"FUGA|EVAS", _fu[1].upper()) is not None))
-        if _fuga and _fu and _recapt and _fu[0] < db_seeu and not _homolog:
+        # (7.14.7) a interrupção por "descumprimento das condições" (evasão do semiaberto, não retorno) seguida de recaptura usada como
+        # data-base é o mesmo caso da fuga: sem falta homologada (só a regressão cautelar), "verificar" (Súmulas 533 e 534/STJ)
+        _fuga_like = bool(_fuga) or bool(_fu and re.search(r"FUGA|EVA[SD]|DESCUMPR|ABANDON|N[AÃ]O RETORN", rs._sem_acento(_fu[1].upper())))
+        if _fuga_like and _fu and _recapt and _fu[0] < db_seeu and not _homolog:
             # itens 52 e 147 de 16/10: "verificar" (não "alerta") - a falta pode estar em apuração (PAD em curso) ou homologada sem
             # registro no RSPE; o "alerta" anteciparia uma falta ainda não julgada
             _pad_pend = [i for i in incidentes if rs.RE_FALTA_PROPRIA.search(rs._rotulo_incidente(i)) and rs._pendente(i) and not rs._negado(i)
@@ -3299,15 +3336,18 @@ def auditar(r, hoje=None):
                                "Houve %s em %s e recaptura em %s. Na fuga, a nova data-base é a da recaptura, porque a falta é permanente, "
                                "mas a interrupção depende de apuração em procedimento disciplinar com defesa técnica e de homologação judicial, "
                                "e o RSPE não registra esse incidente%s. Sem homologação, a data-base volta a ser %s e a progressão se antecipa%s. "
-                               "Se o juízo reconsiderou ou afastou a falta, "
-                               "o lançamento correto é trocar a interrupção \"fuga\" por \"descumprimento das condições\": o SEEU desconta o "
-                               "período fora, mas deixa de usar a recaptura como data-base." % (
+                               "%s" % (
                                    "fuga" if "FUGA" in _fu[1].upper() else "interrupção (%s)" % (_fu[1].lower() or "sem motivo"),
                                    rs.fmt(_fu[0]), rs.fmt(db_seeu),
                                    (" homologado: há falta em apuração (%s), ainda sem decisão - aguardar o desfecho do PAD antes de impugnar" %
                                     rs._rotulo_incidente(_pad_pend[0])) if _pad_pend else "", ("%s - %s" % (rs.fmt(ant2[0]), ant2[1]) if (ant2 := next((m for k, m in sorted(enumerate(marcos), key=lambda x: x[1][0], reverse=True) if m[0] < _fu[0] and k not in _so_dec), None)) else "a anterior"),
                                    ("; a perda de até 1/3 dos %s remidos também depende dessa apuração" % rs.pl(rs.saldo_remidos_num(r.get("saldo_remidos"))[0], "dia", "dias"))
-                                   if (rs.saldo_remidos_num(r.get("saldo_remidos"))[0] or 0) > 0 else ""),
+                                   if (rs.saldo_remidos_num(r.get("saldo_remidos"))[0] or 0) > 0 else "",
+                               ("Se o juízo reconsiderou ou afastou a falta, o lançamento correto é trocar a interrupção \"fuga\" por "
+                                "\"descumprimento das condições\": o SEEU desconta o período fora, mas deixa de usar a recaptura como data-base."
+                                if "FUGA" in _fu[1].upper() else
+                                "A interrupção lançada já é \"%s\", mas o SEEU usou a recaptura como data-base: sem falta reconhecida, o período "
+                                "fora só se desconta, e a data-base fica a anterior." % (_fu[1].lower() or "sem motivo"))),
                                "LEP, arts. 50, II, 57, 59, 118 e 127; Súmulas 533, 534 e 535/STJ; STF, Tema 941.", tipo="data-base-movida-para-a-recaptura-sem-falta-homo"))
         elif bate and "REGRESS" in bate[0][1].upper() and any(
                 abs(((rs.to_date(i.get("data_referencia") or i.get("data_decisao") or "") or date.min) - db_seeu).days) <= 5
@@ -3561,7 +3601,18 @@ def auditar(r, hoje=None):
                                (" (o RSPE adota %s)" % r.get("data_base_seeu")) if r.get("data_base_seeu") else ""),
                            "CP, arts. 86 a 90; LEP, arts. 118, 145 e 146; Súmula 617/STJ; STJ, Tema 1006.", tipo="em-apos-o-livramento-condicional-deferido-em-ver", ref="Regressão cautelar" if _cautelar else "Regressão"))
     if ult and "REGRESS" in (ult[1].get("complemento") or "").upper() and not _lc_reg:
+        # (7.14.7) regressão decidida com a homologação da falta (mesma decisão): diz qual falta; na fuga, a data-base é a recaptura
+        _hr = next(((f_, d_) for f_, d_ in _homs if f_ and abs((d_ - ult[0]).days) <= 5), None)
+        _fg = _hr and any("INTERRUP" in (e.get("tipo") or "").upper() and rs.RE_FUGA_EV.search(e.get("motivo") or "")
+                          and abs(((rs.to_date(e.get("data") or "") or date.min) - _hr[0]).days) <= 3 for e in eventos)
+        _rec = _fg and next((d for d in sorted(rs.to_date(e.get("data") or "") for e in eventos if "PRIS" in (e.get("tipo") or "").upper())
+                             if d and d > _hr[0]), None)
         itens.append(_item("info", "Regressão registrada em %s" % rs.fmt(ult[0]),
+                           ("Decorre da falta grave de %s, homologada em %s (mesma decisão): %s; o requisito recomeça sobre a pena remanescente; a "
+                            "falta também impede LC (12 meses) e indulto (art. 6º dos decretos)." % (
+                                rs.fmt(_hr[0]), rs.fmt(_hr[1]),
+                                ("a falta é fuga/evasão, permanente: a data-base da progressão é a recaptura%s" % ((" (%s)" % rs.fmt(_rec)) if _rec else ""))
+                                if _fg else "a data-base da progressão é a data da falta")) if _hr else
                            "Se decorreu de falta grave, a data-base da progressão é a data da falta e o requisito recomeça sobre a pena remanescente; a falta também impede LC (12 meses) e indulto (art. 6º dos decretos).",
                            "LEP, arts. 112, § 6º, 118 e 127; CP, art. 83, III, b.", tipo="regressao-registrada-em"))
     idade = None
@@ -4093,6 +4144,11 @@ FUND_TIPOS = {
         "A fração de metade da pena é a do condenado reincidente em crime doloso (CP, art. 83, II). Crime culposo, seja o desta condenação, "
         "seja o da condenação anterior, não gera a reincidência em crime doloso que a lei exige, e a fração aplicável é a de 1/3 (CP, art. 83, I).",
         "Requer-se a retificação da fração do livramento condicional para 1/3 e o recálculo da data do benefício."),
+    "livramento-contravencao-fracao": (
+        "A fração de metade da pena é a do condenado reincidente em crime doloso (CP, art. 83, II). A condenação é por contravenção penal, "
+        "punida com prisão simples, que não é crime (Decreto-Lei 3.688/41, art. 1º): ainda que reincidente na contravenção (art. 7º), o "
+        "condenado não é reincidente em crime doloso, e a fração aplicável é a de 1/3 (CP, art. 83, I).",
+        "Requer-se a retificação da fração do livramento condicional para 1/3 e o recálculo da data do benefício."),
     "comando-de-organizacao-criminosa-fato-em-75-so-s": (
         "O percentual de 75% e a vedação ao livramento (LEP, art. 112, VI, b, na redação da Lei 15.358/2026) exigem que a condenação reconheça "
         "o comando de organização criminosa ultraviolenta estruturada para a prática de crime hediondo ou equiparado. Sem esse reconhecimento "
@@ -4417,7 +4473,7 @@ _IMPACTO = [
      "permanece em regime mais gravoso que o devido."),
     (r"reincidencia-crime-a-crime-progressao",
      "Com isso, exige-se para a progressão o percentual do reincidente sobre pena de crime cometido quando o assistido ainda era primário."),
-    (r"reincidencia-crime-a-crime-livramento|livramento-reincidencia-em-crime-culposo",
+    (r"reincidencia-crime-a-crime-livramento|livramento-reincidencia-em-crime-culposo|livramento-contravencao-fracao",
      "Com isso, o livramento condicional é postergado pela fração de 1/2 em lugar de 1/3."),
     (r"fracao-de-livramento|livramento-vedado",
      "Com isso, o livramento condicional é postergado ou impedido{pct}, e o assistido permanece preso além do tempo exigido em lei."),

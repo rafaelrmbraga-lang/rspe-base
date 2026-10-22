@@ -1450,6 +1450,13 @@ def trabalho_x_atestados(f, hoje=None, manuais=None, vinculos=None, inicio=None,
             # sequência de atestados do mesmo trabalho), com menos dias do que o intervalo comporta: cobre esse trabalho (o trecho final,
             # quando os dias são bem menores) - sugerido, e não "sem atestado" com "pode ter sido remido com atestado que a ficha não registra"
             esc = blk
+        if (esc is None and not at["empresa"] and need and s0 == date.min and blk and all(c in blk for c in cands)
+                and any(p[0] <= em <= p[1] + timedelta(days=LACUNA_IGNORADA) for _u, p in blk)
+                and 0.75 * len(uteis(blk, s0, em)) <= need <= ((em - min(p[0] for _u, p in blk)).days + 1) * 1.02 + 3):
+            # (7.14.7) o primeiro atestado da ficha, sem período e sem setor, emitido durante o único trabalho contínuo, com os dias
+            # trabalhados declarados (contados em dias corridos, 1.554 para 1.556) que cobrem esse trabalho do início até a emissão:
+            # sugerido para esse trabalho, e não "sem atestado" (o trecho reservado ao saldo sem documento fica fora)
+            esc = _sem_reserva(blk, em)
         if not esc:
             continue
         # (7.14.2) os dias declarados passam do trabalho escolhido: o trabalho sem atestado anterior no mesmo intervalo (do mais próximo
@@ -1885,6 +1892,14 @@ def comparacao(r, f, hoje=None, manuais=None, homologados=None, trab=None):
             # decisão do usuário: "provavelmente remido" só até 180 dias; depois disso o mesmo valor só explica a remição (não a
             # deixa "sem documento") e aparece como "mesmo valor decidido em ...: conferir"
             orig[i], d["provavel"], d["provavel_tarde"], d["provavel_dias"] = d, _f(rem_[i]["decisao"]), True, rem_[i]["dias"]
+    # (7.14.7) atestado com dias declarados e remição de valor próximo (do valor do atestado a 10% acima) decidida na mesma semana da
+    # emissão: a ligação provável é esse atestado (131 dias no atestado, 138 decididos no mesmo dia), antes do exame ou da certidão sem
+    # valor - o exame não fica "possivelmente remido" por uma remição que o atestado do mesmo dia explica
+    for d in sorted([d for d in desta if d["dias"] and d["emissao"] and not d.get("provavel") and d["tipo"] not in ("Leitura", "Exame")],
+                    key=lambda d: d["emissao"]):
+        i = _livres(d, 7, lambda x, d=d: d["dias"] - 1 <= x["dias"] <= d["dias"] * 1.1 + 1, chave=lambda x, d=d: abs(x["dias"] - d["dias"]))
+        if i is not None:
+            orig[i], d["provavel"], d["provavel_dias"] = d, _f(rem_[i]["decisao"]), rem_[i]["dias"]
     # exame e certidão/curso sem o valor na ficha: a remição (não de leitura) decidida até 180 dias depois, com referência posterior ao
     # início da prova ou do período - de 10 dias ou mais no exame; na certidão e no curso, também a pequena (1 dia de um semestre curto).
     # O exame primeiro (o certificado de conclusão do ENCCEJA antes), depois a certidão e o curso; no exame, o valor da tabela do CNJ (Res. 391/2021, art. 3º: áreas de 20 dias no
@@ -1896,7 +1911,11 @@ def comparacao(r, f, hoje=None, manuais=None, homologados=None, trab=None):
     sem_v = [d for d in desta if not d["dias"] and d["emissao"] and d["tipo"] in ("Exame", "Certidão de frequência escolar", "Curso de qualificação")]
     for d in sorted(sem_v, key=lambda d: (d["tipo"] != "Exame", not d.get("cert"), d["emissao"])):
         minimo = 10 if d["tipo"] == "Exame" else 1
-        i = _livres(d, 180, lambda x, m=minimo: m <= x["dias"] <= 400 and not (x["dias"] <= 16 and x["dias"] % 4 == 0),
+        # (7.14.7) teto do exame (Res. CNJ 391/2021, art. 3º): ENEM, até o ensino médio inteiro (1.200 h ÷ 12 = 100 dias; o ENEM não
+        # certifica a conclusão desde 2017, sem o +1/3); ENCCEJA, até o fundamental inteiro com a conclusão (1.600 h ÷ 12 × 4/3 ≈ 177,78)
+        teto = 400 if d["tipo"] != "Exame" else 100 if re.search(r"ENEM", d.get("num") or "", re.I) else 1600 / 12.0 * 4 / 3.0 \
+            if re.search(r"ENCCEJA", d.get("num") or "", re.I) else 400
+        i = _livres(d, 180, lambda x, m=minimo, t=teto: m <= x["dias"] <= t + 1 and not (x["dias"] <= 16 and x["dias"] % 4 == 0),
                     chave=(lambda x: (not na_tab(x["dias"]), x["decisao"])) if d["tipo"] == "Exame" else None)
         if i is not None and d["tipo"] != "Exame":
             # (7.14.3) outra certidão ou curso sem valor, peticionado antes da decisão, também pode ser desta remição: liga-se só quando o
@@ -1916,6 +1935,14 @@ def comparacao(r, f, hoje=None, manuais=None, homologados=None, trab=None):
                     d["rem_conf"] = "a remição de %s dias de %s pode ser deste documento ou %s%s: conferir" % (
                         _nf(x["dias"]), _f(x["decisao"]), _lista(["%s (%s)" % (re.sub(r"^a ", "da ", re.sub(r"^o ", "do ", nome_doc0(o))), _f(o["emissao"])) for o in outros_]),
                         (" (estimativas ≈ %s)" % _lista([_nf(o["estim"]["dias"]) for o in [d] + outros_ if o.get("estim")])) if d.get("estim") else "")
+                    if all(o.get("estim") for o in [d] + outros_) and x["dias"] < 0.75 * se_([d] + outros_) - 1:
+                        # (7.14.7) as certidões peticionadas antes da decisão somam bem mais do que a remição (duas certidões semestrais,
+                        # ≈ 28 + ≈ 35, e uma só remição de 33): provável pendência de uma delas - amarelo, não "nada a requerer"
+                        d["pend_prov"] = "%s peticionad%s antes da decisão de %s (estimativas ≈ %s = %s dias) e uma só remição de %s dias: " \
+                            "provavelmente uma delas ainda não foi apreciada - conferir nos autos e, se for o caso, requerer a remição pendente" % (
+                                _lista([nome_doc0(o) for o in [d] + outros_]), "as" if all(o["tipo"].startswith("Certid") for o in [d] + outros_) else "os",
+                                _f(x["decisao"]), " + ".join(_nf(o["estim"]["dias"]) for o in [d] + outros_), _nf(se_([d] + outros_)), _nf(x["dias"]))
+                        d["pend_docs"] = [o["chave"] for o in [d] + outros_]
                     continue
                 for o in grupo:
                     o["provavel_ex"] = "%s (%s dias%s)" % (
@@ -2206,6 +2233,9 @@ def comparacao(r, f, hoje=None, manuais=None, homologados=None, trab=None):
                                                                               _nf(x["dias"]), _f(x["decisao"])), "leitura_menor", docs_=[d],
               curto="leitura de %s: %s pela ficha, o RSPE deu %s em %s - remida a menor? conferir" % (
                   _f(d["emissao"]), _nf(d["dias"]), _nf(x["dias"]), _f(x["decisao"])))
+    for d in [d for d in vivos if d.get("pend_prov")]:
+        ponto("A conferir", "amarelo", "Provável pendência: %s." % d["pend_prov"], "pend_cert",
+              docs_=[o for o in vivos if o["chave"] in d["pend_docs"]] or [d])
     sv = [d for d in vivos if d["sem_valor"] and d["tipo"] != "Exame" and not d.get("provavel_ex")]
     if sv:
         ponto("A conferir", "amarelo", "Sem valor na ficha (fora da comparação): %s - conferir nos autos." % _lista(
@@ -2368,6 +2398,11 @@ def comparacao(r, f, hoje=None, manuais=None, homologados=None, trab=None):
                             "cursos ou certidões sem carga horária%s). %s" % (
                                 _nf(-dif), ("; na ficha, sem valor: %s" % _lista([nome_doc(d) + (" (%s)" % _f(d["emissao"]) if d["emissao"] else "") for d in sv_]))
                                 if sv_ else "", _sem_pedido_totais(post, ult_dec, nome_doc)), "cinza")
+        if any(d.get("pend_prov") for d in desta):
+            # (7.14.7) certidões peticionadas que somam bem mais do que a remição decidida: provável pendência (amarelo)
+            concl = concl.replace("Nada a requerer por esta conta.", "A diferença de totais, sozinha, não gera pedido; mas há provável "
+                                  "pendência de certidão peticionada e não apreciada: ver os pontos.")
+            concl_cor = "amarelo"
     pouco = R["concedido"] > 1.3 * comp + TOL_COMPARACAO
     # ---- situação factual de cada documento (D) ----
     for d in docs:
@@ -2417,7 +2452,7 @@ def comparacao(r, f, hoje=None, manuais=None, homologados=None, trab=None):
     # da última remição de trabalho e o documento vermelho (com dias, sem peticionamento, depois da última decisão)
     if rspe_maior:
         for p_ in pontos:
-            if p_["cor"] == "amarelo" and p_["tipo"] != "pedir_atestado":
+            if p_["cor"] == "amarelo" and p_["tipo"] not in ("pedir_atestado", "pend_cert"):
                 p_["cor"], p_["cor0"] = "cinza", "amarelo"
         for d in docs:
             if d["cor"] == "amarelo":
@@ -2468,15 +2503,17 @@ def fatos_pendentes(N):
 def outra_execucao(r, f):
     """RSPE de outra execução associado à ficha pelo nome? Aviso no topo da aba Ficha: o RSPE é de outro tribunal estadual (a ficha do
     SIAPEN é de unidade prisional de MS) ou a ficha cita processos, nenhum está no RSPE e todos são de outro tribunal. "" sem sinal."""
+    fic = {re.sub(r"\D", "", x or "") for x in f.get("autos") or []} - {""}
+    procs = {re.sub(r"\D", "", p or "") for p in _procs_r(r)} - {""}
+    ex = re.sub(r"\D", "", r.get("processo_execucao") or "")
+    if fic & (procs | {ex} - {""}):
+        return ""  # (7.14.7) a ficha cita o número do próprio RSPE (peticionamentos nos autos desta execução): é o RSPE desta execução
     t = _sa(" ".join(str(r.get(k) or "") for k in ("tribunal", "vara")))
     m = re.search(r"\bTJ([A-Z]{2})\b", t)
     if m and m.group(1) != "MS":
         return ("RSPE de outra execução? O RSPE é do TJ%s (%s) e a ficha é de unidade prisional de MS: conferir se é o RSPE desta execução "
                 "antes de usar a comparação." % (m.group(1), re.sub(r"\s+", " ", r.get("vara") or "").strip()))
-    fic = {re.sub(r"\D", "", x or "") for x in f.get("autos") or []} - {""}
-    procs = {re.sub(r"\D", "", p or "") for p in _procs_r(r)} - {""}
     jtr = lambda x: x[13:16] if len(x) == 20 else ""  # segmento J.TR do número CNJ (8.12 = TJMS)
-    ex = re.sub(r"\D", "", r.get("processo_execucao") or "")
     if fic and procs and not fic & procs and jtr(ex) and all(jtr(x) and jtr(x) != jtr(ex) for x in fic):
         return ("RSPE de outra execução? A ficha não cita nenhum dos processos do RSPE (execução %s): conferir se é o RSPE desta execução "
                 "antes de usar a comparação." % (r.get("processo_execucao") or "?"))

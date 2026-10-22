@@ -160,6 +160,11 @@ def _estudos(eventos, cancel_sem=None):
             for p in [p for p in abertos if not p.get("livre")]:
                 fechar(p, e["data"], "desistência da escola")
             continue
+        if re.search(r"DESLIGAD[OA] D[AO]S? (?:ESCOLA|ESTUDOS?|SETOR (?:ESCOLAR|EDUCACIONAL|DE EDUCACAO)|EDUCACAO)\b", us):
+            # (7.14.7) "foi desligado da Escola ... a próprio pedido": fim do estudo em curso (sem nova matrícula, não há estudo depois)
+            for p in [p for p in abertos if not p.get("livre")]:
+                fechar(p, e["data"], "desligado da escola")
+            continue
         if re.search(r"TERMO DE AFASTAMENTO DOS ESTUDOS|MATRICULA ESCOLAR ENCERRADA", us):
             for p in list(abertos):
                 fechar(p, e["data"], "afastamento dos estudos" if "AFASTAMENTO" in us else "matrícula encerrada")
@@ -544,6 +549,9 @@ def _extrair_texto(caminho, pags, vis, ocultas=(), dp_chars="", parcial=None):
     # hífen ("0003115.29.2013.8.12.0013": separador [-.] em rs.RE_CNJ_SOLTO), no formato canônico
     autos = sorted(set(rs.processos_no_texto(t)))
     f["autos"] = autos
+    # (7.14.7) número CNJ truncado na ficha ("AUTOS 0000219-84.2025.8.12.001", origem com menos de 4 dígitos): fica à parte, como número
+    # incompleto - a Auditoria o conta entre os processos da ficha que o RSPE não lista quando nenhum processo do RSPE começa por ele
+    f["autos_incompletos"] = sorted(set(re.findall(r"(?<![\d.])\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{1,3}(?!\d|\.\d)", t)))
 
     # ---- eventos do histórico ----
     def _eventos():
@@ -1434,18 +1442,27 @@ def derivar(f, eventos):
         us = rs._sem_acento(e["texto"]).upper()
         # (só o lançamento que diz a falta - "respondendo por falta disciplinar", "por estar sancionado"; a mudança de cela "motivo:
         # sancionado", sozinha, é em geral o cumprimento da sanção de falta já registrada, às vezes semanas depois do fato)
-        if not e["d"] or not re.search(r"RESPONDENDO (?:A |POR )?(?:PROCESSO |FALTA )?DISCIPLINAR|POR ESTAR SANCI\w*", us) \
+        # (7.14.7) também o encaminhamento à Disciplinar ("foi encaminhado para a Disciplinar conforme CI ..., foto em celular apreendido")
+        _enc = re.search(r"ENCAMINHAD[OA] (?:PARA|A|AO)\s+(?:A |O )?(?:SETOR (?:DE )?)?DISCIPLINA", us)
+        if not e["d"] or not (re.search(r"RESPONDENDO (?:A |POR )?(?:PROCESSO |FALTA )?DISCIPLINAR|POR ESTAR SANCI\w*", us) or _enc) \
                 or re.search(r"TERMINO|FIM D[OA] SANC|ARQUIV|ABSOLV|CONSELHO DISCIPLINAR|PADIC", us):
             continue
         _dx = lambda x, k: _dp((x.get(k) or "").replace("/", "."))
         if any(_dx(x, k) and -10 <= (e["d"] - _dx(x, k)).days <= 90 for x in faltas for k in ("data_registro", "data_fato", "data_resultado")):
             continue  # sanção de falta já registrada (o resultado do PADIC vem semanas depois do fato)
+        if _enc and any(_dx(x, k) and 0 <= (_dx(x, k) - e["d"]).days <= 60 for x in faltas for k in ("data_registro", "data_fato")):
+            continue  # (7.14.7) o encaminhamento à Disciplinar antecede o lançamento da falta registrado depois: é a mesma ocorrência
         isol = any(x["d"] and abs((x["d"] - e["d"]).days) <= 1 and re.search(r"^\W*MUDANCA DE CELA.*MOTIVO:\s*SANCI", rs._sem_acento(x["texto"]).upper())
                    for x in eventos)
         txt_ = " | ".join(x["texto"] for x in eventos if x["d"] == e["d"] and re.search(r"SANCI|FALTA DISCIPLINAR", rs._sem_acento(x["texto"]).upper()))
-        faltas.append({"data_registro": e["data"], "data_fato": e["data"], "artigo": "", "grave": isol, "texto": txt_ or e["texto"], "padic": "",
+        # celular (aparelho telefônico) é falta grave (LEP, art. 50, VII)
+        _cel = bool(re.search(r"\bCELULAR|APARELHO (?:TELEFONICO|DE TELEFONIA|DE COMUNICACAO)", us))
+        faltas.append({"data_registro": e["data"], "data_fato": e["data"], "artigo": "art. 50, VII, da LEP" if _cel else "", "grave": isol or _cel,
+                       "texto": (txt_ if not _enc else "") or e["texto"], "padic": "",
                        "resultado": "", "situacao": "registrada", "sancao_sem_registro": True,
-                       "data_fato_obs": "sanção disciplinar registrada sem o lançamento da falta: natureza e homologação não constam da ficha%s"
+                       "data_fato_obs": ("encaminhamento à Disciplinar sem o lançamento da falta: indício de falta%s a apurar; natureza e homologação "
+                                         "não constam da ficha" % (" grave (aparelho celular - LEP, art. 50, VII)" if _cel else "")) if _enc else
+                                        "sanção disciplinar registrada sem o lançamento da falta: natureza e homologação não constam da ficha%s"
                                         % ("; o isolamento em cela indica falta grave (LEP, art. 57, p. ú.)" if isol else "")})
     # andamento e resultado do PADIC / CD simplificada: casados com a falta pela data do fato ("referente ao fato ocorrido em",
     # "cometida em"), pelo número do PADIC ou, na instauração sem data, pela falta registrada mais próxima; vale o último resultado
@@ -2436,6 +2453,11 @@ def _processos_x_ficha(r, f):
                      or (_sem_jtr(p) == _sem_jtr(q) and not _dv_ok(p) and _dv_ok(q))), None)
             for p in fora}
     fora_real = [p for p in fora if not tipo[p]]
+    # (7.14.7) número truncado na ficha: conta como processo à parte (com número incompleto) se nenhum processo do RSPE ou da ficha começa por ele
+    _todos = [x for x in _rspe_n] + [re.sub(r"\D", "", p) for p in fora]
+    fora_real += ["%s (número incompleto na ficha)" % p for p in f.get("autos_incompletos") or []
+                  if not any((lambda x20, pd: x20[:16] == pd[:16] and (x20[16:].startswith(pd[16:]) or x20[16:].endswith(pd[16:])))(
+                      re.sub(r"\D", "", x).zfill(20), re.sub(r"\D", "", p)) for x in _todos)]
     _dig = [p for p in fora if tipo[p]]
     _dig_txt = " ".join("%s na ficha é provável erro de digitação de %s (difere só por um dígito, dígitos invertidos, o dígito verificador ou o segmento do tribunal)."
                         % (p, _cnj_fmt(tipo[p])) for p in _dig)

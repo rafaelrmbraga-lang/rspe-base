@@ -323,7 +323,7 @@ DB_TIPOS = {  # itens da Auditoria sobre a data-base -> (cor, motivo)
     "data-base-coincide-com-a-soma-unificacao-das-pen": ("vermelho", "soma/unificação de penas - não altera a data-base (STJ, Tema 1006)"),
     # a Auditoria diz "favorável ao assistido, sem pedido": a caixa não fica amarela
     "data-base-de-progressao-anterior-a-ultima-altera": ("", "anterior à última alteração de regime - favorável ao assistido, sem pedido"),
-    "data-base-movida-para-a-recaptura-sem-falta-homo": ("amarelo", "recaptura depois de fuga, sem falta homologada no RSPE"),
+    "data-base-movida-para-a-recaptura-sem-falta-homo": ("amarelo", "recaptura depois de fuga ou evasão, sem falta homologada no RSPE"),
     "data-base-na-guia-nova-de-quem-ja-estava-preso": ("vermelho", "início da guia nova com a pessoa já presa - a condenação nova não altera a data-base (STJ, Tema 1006)"),
     "data-base-na-data-do-fato-de-condenacao": ("amarelo", "data do fato de condenação desta execução - provável crime durante o cumprimento tratado como falta grave (Súmulas 526 e 534/STJ); conferir"),
     "data-base-no-inicio-da-guia-nova-com-a-pessoa-presa": ("amarelo", "início da guia nova com a pessoa presa sem interrupção - a data certa é a do início da custódia (STJ, Tema 1006); ver Auditoria"),
@@ -2371,6 +2371,10 @@ def saida_temporaria(r, ficha, m, est=None, interr=False, hoje=None):
         nm = (c.get("artigo") or "").split(":")[0].title()
         if d and d < LEI_13964 and c.get("hediondo_ou_equiparado") == "S" and c.get("resultado_morte") == "S":
             ant_m.append("%s de %s" % (nm, rs.fmt(d)))
+        elif d and d < LEI_13964 and c.get("hediondo_ou_equiparado") == "S" and _morte_tipo(c):
+            # (7.14.7) homicídio qualificado (a morte integra o tipo) sem a marcação de morte no RSPE: consumado, é hediondo com resultado
+            # morte - o requisito se atende pela data do fato, e não por "sem hediondo com resultado morte"
+            ant_m.append("%s de %s, se consumado" % (nm, rs.fmt(d)))
         if d and d >= LEI_13964 and c.get("hediondo_ou_equiparado") == "S" and c.get("resultado_morte") == "S":
             ved.append("%s de %s: hediondo com resultado morte (art. 122, § 2º, Lei 13.964/2019)" % (nm, rs.fmt(d)))
         elif d and d >= LEI_13964 and c.get("hediondo_ou_equiparado") == "S" and _morte_tipo(c):
