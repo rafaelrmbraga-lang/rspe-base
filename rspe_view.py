@@ -1923,7 +1923,8 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
     _dbg = next((it for it in m.get("aud_itens") or [] if it.get("prog_estimada") and not it.get("baixado")
                  and it.get("nivel") in ("alerta", "verificar")), None)
     if _dbg and not dbi.get("db_editada") and m.get("prog") and m.get("prog") == r.get("progressao_previsao_seeu"):
-        m["prog_motivo"] = "%s (data do SEEU; com a data-base legal, estimada em %s - ver Auditoria)" % (m["prog"], _dbg["prog_estimada"])
+        m["prog_motivo"] = "%s (data do SEEU; %s, estimada em %s - ver Auditoria)" % (
+            m["prog"], _dbg.get("prog_rotulo") or "com a data-base legal", _dbg["prog_estimada"])
     if dbi.get("db_editada") and r.get("progressao_previsao_seeu") and _prog_pela_db_manual(r):
         m["prog_motivo"] = "recalculada pela data-base informada (%s); SEEU: %s" % (dbi["db"], r["progressao_previsao_seeu"])
     # * nas colunas: valor calculado pelo programa, não impresso pelo SEEU - a explicação vai ao rodapé e à ficha
@@ -2241,7 +2242,9 @@ def _conduta_txt(c):
 def _morte_tipo(c):
     """Homicídio doloso (121 qualificado ou 121-A) ou latrocínio (157, § 3º): o resultado morte é do tipo quando consumado."""
     art = rs.num_art(c.get("artigo"))
-    return art == "121-A" or (art == "121" and rs.vga_elementar(c)) or (art == "157" and bool(re.match(r"\s*§\s*3", c.get("tipo_penal") or "")))
+    # (7.14.6) o roubo com lesão corporal grave (art. 157, § 3º, I) não tem resultado morte: só o latrocínio (§ 3º, II, ou o § 3º antigo)
+    return art == "121-A" or (art == "121" and rs.vga_elementar(c)) or (art == "157" and bool(re.match(r"\s*§\s*3", c.get("tipo_penal") or ""))
+                                                                     and rs.paragrafo_inciso(c) != ("3", "I"))
 
 
 def falta_12m_hoje(r, hoje=None):
@@ -2366,8 +2369,9 @@ def saida_temporaria(r, ficha, m, est=None, interr=False, hoje=None):
         if d and d >= LEI_13964 and c.get("hediondo_ou_equiparado") == "S" and c.get("resultado_morte") == "S":
             ved.append("%s de %s: hediondo com resultado morte (art. 122, § 2º, Lei 13.964/2019)" % (nm, rs.fmt(d)))
         elif d and d >= LEI_13964 and c.get("hediondo_ou_equiparado") == "S" and _morte_tipo(c):
-            duv.append("%s de %s: o RSPE não marca o resultado morte nem diz se o crime foi consumado (consumado, vedada - art. 122, § 2º) - "
-                       "conferir a sentença" % (nm, rs.fmt(d)))
+            duv.append("%s de %s: %s se o crime foi consumado (consumado, a morte integra o tipo e a saída é vedada - art. 122, § 2º) - "
+                       "conferir a sentença" % (nm, rs.fmt(d), "o RSPE marca \"resultado morte: não\", mas não diz"
+                                                if c.get("resultado_morte") == "N" else "o RSPE não marca o resultado morte nem diz"))
     # a vedação da Lei 14.843/2024 (hediondo ou com violência/grave ameaça) não alcança a condenação anterior a ela: crime
     # novo não impede (decisão do usuário); fica só a do hediondo com resultado morte, vigente desde a Lei 13.964/2019
     add(False if ved else (None if duv else True),

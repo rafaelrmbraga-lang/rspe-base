@@ -2638,12 +2638,14 @@ def faltas_da_ficha(r, ficha, hoje=None):
         # falta registrada só pela ciência do resultado: a data é a da ciência, posterior ao fato (que a ficha não traz) - aviso no
         # complemento; nas janelas de 12 meses fica a verificar (indicios_falta)
         cien = (" (%s)" % (x.get("data_fato_obs") or "data da ciência do resultado: a data do fato não consta da ficha")) if x.get("data_fato_ciencia") else ""
+        if x.get("sancao_sem_registro"):
+            cien = " (%s)" % x.get("data_fato_obs")  # (7.14.6) sanção sem o lançamento da falta: a data é a do lançamento da sanção
         r["_incidentes"].append({"tipo": "FALTA GRAVE NA FICHA DISCIPLINAR (SIAPEN)",
                                  "complemento": "Data da infração: %s%s%s - %s%s" % (fmt(d), cien, (" - " + x["artigo"]) if x.get("artigo") else "", sit,
                                                                                    " (isolamento preventivo com PADIC, natureza da falta não informada)"
                                                                                    if x.get("grave_indicio") and not x.get("grave") else ""),
                                  "situacao": "PENDENTE", "data_referencia": fmt(d), "data_decisao": "", "_ficha": True,
-                                 **({"_data_ciencia": True} if cien else {})})
+                                 **({"_data_ciencia": True} if x.get("data_fato_ciencia") else {})})
         datas.append(d)
         datas_ficha.append(d)
     # fuga/evasão registrada na ficha e ausente no RSPE: falta grave por padrão (LEP, art. 50, II), decidível pelo operador
