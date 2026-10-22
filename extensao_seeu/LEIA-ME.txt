@@ -85,7 +85,7 @@ TRIAGEM DA MESA DO DEFENSOR (1.7)
  - Filtros: defensor (inclusive "Sem defensor vinculado"), final do nº (o
    último algarismo antes do traço: 0011147-54... = 7; clique nos
    algarismos 0 a 9 ou escreva a faixa: "0-2" = finais 0, 1 e 2; "0-2, 5,
-   7-9"), tipo do motivo, busca por texto e "só com alerta vermelho".
+   7-9"), tipo do motivo, providência e busca por texto.
    "Guardar" dá nome a uma faixa (ex.: "Meus processos") para usar com um
    clique. Os filtros ficam guardados.
  - "2 · Ler processos e decisões": só os processos do filtro, do último
@@ -95,21 +95,28 @@ TRIAGEM DA MESA DO DEFENSOR (1.7)
        do documento desse movimento (a certidão, o despacho...);
      . a última decisão: o último ato do juiz com documento (o SEEU marca o
        papel JUIZ na movimentação; remessas e expedições automáticas não
-       contam). Se for despacho de mero expediente, mostra também a última
-       decisão de mérito antes dele. Vale sempre, também quando o motivo é
-       uma certidão;
-     . o que aconteceu desde a última decisão (juntadas, mandados, atos
-       ordinatórios, manifestação do MP), sem remessas e confirmações;
-     . alertas: risco (internação, regressão, prisão, suspensão, revogação,
-       conversão da PRD, falta grave, perda de dias), justificativa,
-       audiência com data, indeferimento (conferir agravo), deferimento,
-       pedido de manifestação, cálculo/atestado, prazo escrito no texto,
-       urgência; e os temas (progressão, livramento, indulto, remição...).
- - Clique na linha para ver o texto inteiro do motivo, da última decisão,
-   da decisão de mérito e a lista "desde a última decisão", com links para
-   abrir o PDF e o processo no SEEU (o mesmo que clicar neles).
+       contam). É sempre a mais recente (não busca decisões anteriores) e
+       vale também quando o motivo é uma certidão;
+     . a providência sugerida (1.7.4, no lugar dos alertas): uma frase a
+       partir da aba e do texto lido. Ex.: "Apresentar justificativa – sob
+       pena de revogação (prazo no texto: 15 dias)", "Avaliar agravo em
+       execução contra a decisão de 14/10/2026", "Justificar o
+       descumprimento noticiado na certidão", "Manifestar sobre a nova
+       condenação/guia noticiada na certidão", "Conferir o cálculo",
+       "Manifestar sobre o parecer do MP", "Dar ciência". Em vermelho, as
+       urgentes (justificativa, audiência, agravo, risco ao assistido).
+       Filtro "Providência": todas, só urgentes ou por tipo.
+ - Prazo: em "Recebidas e não lidas", a data é o prazo de LEITURA ("Leitura
+   até"); vencido, a intimação passa para "Lidas e aguardando análise" e só
+   então corre o prazo de resposta (ex.: 10 dias corridos). Em "Lidas e
+   aguardando análise", a data é o último dia da RESPOSTA ("Resposta até").
+ - Nome do sentenciado: passe o mouse e clique em "copiar" (ou clique no
+   nome) para copiar.
+ - Clique na linha para ver o texto inteiro do motivo e da última decisão,
+   com links para abrir o PDF e o processo no SEEU (o mesmo que clicar
+   neles).
  - "Planilha (xlsx)" salva a tabela filtrada (uma linha por processo, com
-   os resumos e os alertas); "Imprimir" imprime a tabela com os detalhes
+   os resumos e a providência sugerida); "Imprimir" imprime a tabela com os detalhes
    abertos. A planilha é a base para, depois, o APTO receber a triagem.
  - Ritmo: no mínimo 0,9 s entre dois pedidos ao SEEU (cerca de 3 a 7
    pedidos por processo). Processo já lido hoje não é relido (marque

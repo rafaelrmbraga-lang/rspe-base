@@ -206,7 +206,7 @@ async function lerMesa() {
           if (m.de === 1) { avisos.push(`${T.ABAS[aba]}: só a 1ª página pôde ser lida`); break; }
         }
         if (pagina === 1) { total = m.total; campos = filtrarCampos(m.campos); }
-        for (const l of m.linhas) if (!linhas.some((x) => x.aba === aba && x.processo === l.processo)) linhas.push(Object.assign(l, { aba }));
+        for (const l of m.linhas) if (!linhas.some((x) => x.aba === aba && x.processo === l.processo)) linhas.push(Object.assign(l, { aba, situacao: Number(situacao) }));
         if (!m.linhas.length || !m.ate || m.ate >= m.total) break;
         pagina++;
       }
@@ -262,7 +262,7 @@ async function lerDocumentoDoMovimento(processo, mov) {
 }
 
 function resumoMov(m) {
-  return m ? { seq: m.seq, data: m.data, hora: m.hora, nome: m.nome, complemento: m.complemento, autor: m.autor, cargo: m.cargo } : null;
+  return m ? { seq: m.seq, data: m.data, hora: m.hora, nome: m.nome, complemento: m.complemento, autor: m.autor, cargo: m.cargo, papel: m.papel } : null;
 }
 
 // página do processo: 1) pelo nº (como o lote de RSPE); 2) pelo link do nº na Mesa; 3) numa moldura invisível dentro do
@@ -323,8 +323,7 @@ async function analisarLinha(l) {
     status: "ok", quando: Date.now(), ultimoSeq,
     pendencia: e.pendencia, pendencias: proc.pendencias,
     tipoMotivo: T.tipoDoMotivo(e.pendencia ? e.pendencia.movimento : ""),
-    motivo: resumoMov(e.motivo), decisao: resumoMov(e.decisao), merito: resumoMov(e.merito),
-    desde: e.desde.map(resumoMov),
+    motivo: resumoMov(e.motivo), decisao: resumoMov(e.decisao),
     mesma: !!(e.motivo && e.decisao && e.motivo.seq === e.decisao.seq),
   };
   // cada documento falha sozinho: a linha continua com o motivo, a decisão e a movimentação
@@ -336,15 +335,15 @@ async function analisarLinha(l) {
   };
   if (e.motivo) a.motivo.doc = await doc(e.motivo);
   if (e.decisao) a.decisao.doc = a.mesma ? a.motivo.doc : await doc(e.decisao);
-  if (e.merito) a.merito.doc = await doc(e.merito);
   const alertas = [], temas = [];
-  for (const d of [a.motivo && a.motivo.doc, a.decisao && a.decisao.doc, a.merito && a.merito.doc]) {
+  for (const d of [a.motivo && a.motivo.doc, a.decisao && a.decisao.doc]) {
     if (!d) continue;
     for (const x of d.alertas || []) if (!alertas.some((y) => y.txt === x.txt)) alertas.push(x);
     for (const x of d.temas || []) if (!temas.includes(x)) temas.push(x);
   }
   a.alertas = alertas.sort((x, y) => ({ alto: 0, medio: 1, info: 2 })[x.nivel] - ({ alto: 0, medio: 1, info: 2 })[y.nivel]);
   a.temas = temas;
+  a.providencia = T.providencia(a, T.ABAS[l.aba]);
   return a;
 }
 
@@ -386,7 +385,7 @@ async function lerProcessos() {
   terminar();
   desenhar();
   if (motivoParada) mensagem(motivoParada, true);
-  else mensagem(`Leitura concluída: ${feitos} processo(s)` + (erros ? `, ${erros} com erro (veja a coluna Alertas)` : "") + ".", erros > 0);
+  else mensagem(`Leitura concluída: ${feitos} processo(s)` + (erros ? `, ${erros} com erro (veja a coluna Motivo)` : "") + ".", erros > 0);
 }
 
 // ---------------------------------------------------------------- filtros e tabela
@@ -396,7 +395,7 @@ function filtradas() {
   const fx = T.faixasFinal($("faixa").value);
   const busca = T.normal($("busca").value);
   const tipo = $("tipo").value;
-  const soAlerta = $("soAlerta").checked;
+  const prov = $("prov").value;
   const defs = prefs.defensores;
   return estado.linhas.filter((l) => {
     if (!abas.has(String(l.aba))) return false;
@@ -404,7 +403,8 @@ function filtradas() {
     if (fx && !fx.has(l.final)) return false;
     const a = estado.analises[chaveLinha(l)];
     if (tipo && (!a || a.tipoMotivo !== tipo)) return false;
-    if (soAlerta && !(a && (a.alertas || []).some((x) => x.nivel === "alto"))) return false;
+    if (prov === "urgente" && !(a && a.providencia && a.providencia.urgente)) return false;
+    if (prov && prov !== "urgente" && !(a && a.providencia && a.providencia.tipo === prov)) return false;
     if (busca) {
       const alvo = T.normal([l.processo, l.executado, l.defensor, a && a.pendencia && a.pendencia.texto,
         a && a.motivo && a.motivo.doc && a.motivo.doc.corpo, a && a.decisao && a.decisao.doc && a.decisao.doc.corpo].join(" "));
@@ -547,20 +547,18 @@ function celulaDecisao(a) {
   if (!a || a.status !== "ok") return "";
   if (!a.decisao) return el("span", { class: "sub" }, "nenhum ato do juiz com documento na movimentação");
   const d = a.decisao.doc;
-  const m = a.merito;
   return el("div", {},
     el("div", { class: "mot" }, a.decisao.nome + (a.mesma ? " (é o motivo)" : "")),
     el("div", { class: "sub" }, `seq. ${a.decisao.seq} · ${a.decisao.data}`),
-    d ? el("div", { class: "txt" }, d.erro ? "documento não lido: " + d.erro : d.semArquivo ? "(sem arquivo)" : d.semTexto ? "documento sem texto (escaneado): abrir no SEEU" : T.resumir(d.resumo, 300)) : null,
-    m ? el("div", { class: "sub", style: "margin-top:4px" }, `Mérito anterior: ${m.nome} · seq. ${m.seq} · ${m.data}`) : null);
+    d ? el("div", { class: "txt" }, d.erro ? "documento não lido: " + d.erro : d.semArquivo ? "(sem arquivo)" : d.semTexto ? "documento sem texto (escaneado): abrir no SEEU" : T.resumir(d.resumo, 300)) : null);
 }
-function celulaAlertas(a) {
-  if (!a || a.status !== "ok") return "";
-  const f = document.createDocumentFragment();
-  for (const x of a.alertas || []) f.append(tag(x.nivel, x.txt));
-  for (const t of a.temas || []) f.append(tag("tema", t));
-  if (!(a.alertas || []).length && !(a.temas || []).length) f.append(el("span", { class: "sub" }, "—"));
-  return f;
+function providenciaDe(a, l) {
+  return a && a.status === "ok" ? (a.providencia || T.providencia(a, T.ABAS[l.aba])) : null;
+}
+function celulaProvidencia(a, l) {
+  const p = providenciaDe(a, l);
+  if (!p) return "";
+  return el("div", {}, el("div", { class: "prov" + (p.urgente ? " urg" : "") }, p.texto), el("div", { class: "sub" }, p.tipo));
 }
 
 function blocoDoc(titulo, mov, d) {
@@ -581,10 +579,6 @@ function linhaDetalhe(l, a) {
     if (a.pendencias && a.pendencias.length > 1) blocos.push(el("div", { class: "bloco" }, el("h3", {}, "Pendências"), el("ol", {}, a.pendencias.map((p) => el("li", {}, p.texto)))));
     blocos.push(blocoDoc(a.mesma ? "Motivo e última decisão" : "Motivo da intimação", a.motivo, a.motivo && a.motivo.doc));
     if (!a.mesma) blocos.push(blocoDoc("Última decisão", a.decisao, a.decisao && a.decisao.doc));
-    if (a.merito) blocos.push(blocoDoc("Última decisão de mérito", a.merito, a.merito.doc));
-    blocos.push(el("div", { class: "bloco" }, el("h3", {}, "Desde a última decisão"),
-      a.desde && a.desde.length ? el("ol", {}, a.desde.map((m) => el("li", {}, `${m.data} · ${m.nome}` + (m.complemento ? ` – ${T.resumir(m.complemento, 140)}` : "") + (a.motivo && m.seq === a.motivo.seq ? "  ← motivo" : ""))))
-        : el("div", { class: "sub" }, "Nada relevante depois da decisão.")));
   } else if (a && a.status === "erro") {
     blocos.push(el("div", { class: "bloco" }, el("h3", {}, "Erro"), el("div", {}, a.erro)));
   } else {
@@ -607,15 +601,48 @@ function linhaTabela(l) {
   } },
     el("td", { class: "fin" }, l.final),
     el("td", {}, el("div", { class: "proc" }, el("a", { href: l.url, target: "_blank", rel: "noopener", title: "Abrir o processo no SEEU (o mesmo que clicar no nº)" }, l.processo)),
-      el("div", { class: "nome" }, l.executado || "—"), el("div", { class: "sub" }, T.ABAS[l.aba])),
+      nomeCopiavel(l.executado), el("div", { class: "sub" }, T.ABAS[l.aba])),
     el("td", {}, l.defensor || el("span", { class: "sub" }, "sem defensor")),
-    el("td", {}, el("div", { class: "vence" + (dias != null && dias <= 2 ? " perto" : "") }, l.ultimoDia || "—"),
-      el("div", { class: "sub" }, (l.prazo || "") + (dias != null ? ` · ${dias < 0 ? "venceu" : dias === 0 ? "vence hoje" : "faltam " + dias + "d"}` : "")),
-      el("div", { class: "sub" }, "enviado " + (l.dataEnvio || "—"))),
+    el("td", {}, celulaPrazo(l, dias)),
     el("td", {}, celulaMotivo(a, l)),
     el("td", {}, celulaDecisao(a)),
-    el("td", {}, celulaAlertas(a)));
+    el("td", {}, celulaProvidencia(a, l)));
   return tr;
+}
+
+// prazo: em "Recebidas e não lidas" o último dia é o da LEITURA (depois dele a intimação vai para "Lidas e aguardando
+// análise" e só então corre o prazo de resposta); nas lidas, é o último dia da RESPOSTA
+function celulaPrazo(l, dias) {
+  const sit = Number(l.situacao || estado.situacao || 1);
+  const falta = dias == null ? "" : dias < 0 ? "venceu" : dias === 0 ? "vence hoje" : "faltam " + dias + "d";
+  const rot = sit === 1 ? "Leitura até" : sit === 2 ? "Resposta até" : "Último dia";
+  return el("div", {},
+    el("div", { class: "sub" }, rot),
+    el("div", { class: "vence" + (dias != null && dias <= 2 ? " perto" : "") }, l.ultimoDia || "—"),
+    falta ? el("div", { class: "sub" + (dias <= 2 ? " vence perto" : "") }, falta) : null,
+    el("div", { class: "sub", title: sit === 1 ? "O prazo de resposta começa a correr depois da leitura (ou quando vence o prazo de leitura e a intimação passa para \"Lidas e aguardando análise\")." : "" },
+      sit === 1 ? `Resposta: ${l.prazo || "—"}, após a leitura` : `Resposta: ${l.prazo || "—"}`),
+    el("div", { class: "sub" }, "enviado " + (l.dataEnvio || "—")));
+}
+
+// nome do sentenciado: passar o mouse mostra "copiar"; clicar no nome (ou no botão) copia
+function nomeCopiavel(nome) {
+  if (!nome) return el("div", { class: "nome" }, "—");
+  const aviso = el("span", { class: "copiado" }, "copiado ✓");
+  const copiar = (ev) => {
+    ev.stopPropagation();
+    // cópia imediata (no próprio clique); a área de transferência assíncrona fica como reserva
+    let feito = false;
+    try {
+      const t = el("textarea", { style: "position:fixed;left:-9999px;top:0" }, nome);
+      document.body.append(t); t.select(); feito = document.execCommand("copy"); t.remove();
+    } catch (e) {}
+    if (!feito && navigator.clipboard) navigator.clipboard.writeText(nome).catch(() => {});
+    aviso.classList.add("on");
+    setTimeout(() => aviso.classList.remove("on"), 1400);
+  };
+  return el("div", { class: "nome copiavel", title: "Clique para copiar o nome", onclick: copiar },
+    el("span", {}, nome), el("button", { class: "copiar", type: "button", title: "Copiar o nome", onclick: copiar }, "copiar"), aviso);
 }
 function desenharLinha(l) {
   const k = chaveLinha(l);
@@ -640,15 +667,15 @@ function desenhar() {
     if (abertas.has(chaveLinha(l))) corpo.append(linhaDetalhe(l, estado.analises[chaveLinha(l)]));
   }
   const lidos = linhas.filter((l) => (estado.analises[chaveLinha(l)] || {}).status === "ok");
-  const altos = lidos.filter((l) => (estado.analises[chaveLinha(l)].alertas || []).some((x) => x.nivel === "alto")).length;
+  const altos = lidos.filter((l) => { const p = providenciaDe(estado.analises[chaveLinha(l)], l); return p && p.urgente; }).length;
   const venc = linhas.filter((l) => { const d = diasAte(l.ultimoDia); return d != null && d <= 2; }).length;
   const r = $("resumo");
   r.textContent = "";
   if (estado.linhas.length) {
     r.append(el("span", {}, el("b", {}, linhas.length), ` de ${estado.linhas.length} na Mesa`),
       el("span", {}, el("b", {}, lidos.length), " lidos"),
-      el("span", {}, el("b", {}, altos), " com alerta vermelho"),
-      el("span", {}, el("b", {}, venc), " vencem em até 2 dias"),
+      el("span", {}, el("b", {}, altos), " com providência urgente"),
+      el("span", {}, el("b", {}, venc), estado.situacao === 1 ? " com leitura vencendo em até 2 dias" : " vencem em até 2 dias"),
       el("span", {}, `Mesa lida em ${new Date(estado.quando).toLocaleString("pt-BR")} · ${T.SITUACOES[estado.situacao] || ""}`));
   }
   $("lerProc").disabled = !!rodando || !linhas.length;
@@ -661,22 +688,21 @@ function desenhar() {
 function exportarXlsx() {
   const linhas = ordenar(filtradas());
   const cab = ["Final", "Processo", "Assistido", "Defensor", "Aba", "Enviado em", "Último dia", "Prazo", "Motivo (pendência)", "Movimento do motivo", "Resumo do motivo",
-    "Última decisão", "Data da decisão", "Resumo da decisão", "Mérito anterior", "Alertas", "Temas", "Desde a decisão"];
+    "Última decisão", "Data da decisão", "Resumo da decisão", "Providência sugerida", "Tipo da providência"];
   const dados = [cab];
   for (const l of linhas) {
     const a = estado.analises[chaveLinha(l)] || {};
-    const md = a.motivo && a.motivo.doc, dd = a.decisao && a.decisao.doc, mm = a.merito && a.merito.doc;
+    const md = a.motivo && a.motivo.doc, dd = a.decisao && a.decisao.doc;
+    const pv = providenciaDe(a, l);
     const txtDoc = (d) => !d ? "" : d.erro ? "(não lido: " + d.erro + ")" : d.semArquivo ? "(sem arquivo)" : d.semTexto ? "(sem texto: abrir no SEEU)" : d.resumo;
     dados.push([l.final, l.processo, l.executado, l.defensor, T.ABAS[l.aba], l.dataEnvio, l.ultimoDia, l.prazo,
       a.status === "erro" ? "erro: " + a.erro : a.pendencia ? a.pendencia.texto : a.status === "ok" ? "sem pendência" : "não lido",
       a.motivo ? `seq. ${a.motivo.seq} · ${a.motivo.data} · ${a.motivo.nome}` : "",
       a.mesma ? "(é a última decisão)" : txtDoc(md),
       a.decisao ? `seq. ${a.decisao.seq} · ${a.decisao.nome}` : "", a.decisao ? a.decisao.data : "", txtDoc(dd),
-      a.merito ? `seq. ${a.merito.seq} · ${a.merito.data} · ${a.merito.nome}: ${txtDoc(mm)}` : "",
-      (a.alertas || []).map((x) => x.txt).join("; "), (a.temas || []).join(", "),
-      (a.desde || []).map((m) => `${m.data} ${m.nome}`).join("; ")]);
+      pv ? pv.texto : "", pv ? pv.tipo + (pv.urgente ? " (urgente)" : "") : ""]);
   }
-  const bytes = T.xlsx(dados, [5, 26, 28, 24, 13, 11, 11, 15, 46, 36, 60, 34, 11, 70, 50, 40, 26, 50], "Triagem");
+  const bytes = T.xlsx(dados, [5, 26, 28, 24, 13, 11, 11, 15, 46, 36, 60, 34, 11, 70, 60, 18], "Triagem");
   const url = URL.createObjectURL(new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
   const d = new Date(), p = (n) => String(n).padStart(2, "0");
   const a = el("a", { href: url, download: `Triagem_Mesa_${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}.xlsx` });
@@ -727,7 +753,7 @@ $("salvarFaixa").onclick = () => {
 };
 $("busca").oninput = () => desenhar();
 $("tipo").onchange = () => desenhar();
-$("soAlerta").onchange = () => desenhar();
+$("prov").onchange = () => desenhar();
 $("situacao").onchange = () => { prefs.situacao = $("situacao").value; guardarPrefs(); };
 document.querySelectorAll(".aba").forEach((c) => { c.onchange = () => { prefs.abas = [...document.querySelectorAll(".aba:checked")].map((x) => x.value); guardarPrefs(); desenhar(); }; });
 document.querySelectorAll("th[data-ord]").forEach((th) => { th.onclick = () => { prefs.ordem = prefs.ordem === th.dataset.ord ? "urgencia" : th.dataset.ord; guardarPrefs(); desenhar(); }; });

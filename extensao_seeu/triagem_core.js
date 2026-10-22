@@ -440,11 +440,57 @@
     return { carimbo: carimbo(bruto), corpo, resumo: resumir(disp, 480), dispositivo: disp, alertas: an.alertas, temas: an.temas, prazo: an.prazo, semTexto: false };
   }
 
+  // ---------------------------------------------------------------- providência sugerida
+  // a partir da aba (Ciência/Manifestação), do motivo e da última decisão já lidos: {texto, tipo, urgente}
+  function providencia(a, aba) {
+    if (!a) return null;
+    const usavel = (d) => d && !d.erro && !d.semTexto && !d.semArquivo;
+    const md = a.motivo && a.motivo.doc, dd = a.decisao && a.decisao.doc;
+    const docMot = a.mesma ? dd : md;
+    const nMot = normal(usavel(docMot) ? docMot.corpo : "");
+    const alMot = (usavel(docMot) ? docMot.alertas : []) || [];
+    const tem = (lista, re) => lista.find((x) => re.test(x.txt));
+    const risco = tem(alMot, /^Risco:/);
+    const riscoTxt = risco ? " – sob pena de " + risco.txt.replace(/^Risco:\s*/, "") : "";
+    const prazoTxt = usavel(docMot) && docMot.prazo ? ` (prazo no texto: ${docMot.prazo} dia${docMot.prazo > 1 ? "s" : ""})` : "";
+    const ciencia = /^ci[eê]ncia/i.test((a.pendencia && a.pendencia.juntar) || "") || (!(a.pendencia && a.pendencia.juntar) && /ci[eê]ncia/i.test(aba || ""));
+    const decisaoNoMotivo = a.mesma || /despacho|decis|senten/i.test((a.motivo && a.motivo.nome) || "");
+    const indeferiu = decisaoNoMotivo ? tem(alMot, /^Indeferimento/) : null;
+    const dataDec = a.decisao ? a.decisao.data : "";
+    const r = (texto, tipo, urgente) => ({ texto, tipo, urgente: !!urgente });
+    if (ciencia) {
+      if (indeferiu) return r(`Avaliar agravo em execução contra a decisão de ${dataDec}; depois dar ciência`, "Agravo", true);
+      if (risco) return r("Dar ciência e avisar o assistido" + riscoTxt, "Ciência", true);
+      return r("Dar ciência", "Ciência", false);
+    }
+    const aud = tem(alMot, /^Audiência \d/);
+    if (tem(alMot, /^Justificativa/)) return r("Apresentar justificativa" + riscoTxt + prazoTxt, "Justificativa", true);
+    if (aud) return r(`Preparar a ${aud.txt.toLowerCase()} (contato com o assistido)`, "Audiência", true);
+    if (indeferiu) return r(`Avaliar agravo em execução contra a decisão de ${dataDec}`, "Agravo", true);
+    if (tem(alMot, /^Audiência designada/)) return r("Preparar a audiência designada (contato com o assistido)", "Audiência", true);
+    if (tem(alMot, /^Cálculo/)) return r("Conferir o cálculo/atestado de pena e manifestar concordância ou impugnação" + prazoTxt, "Cálculo", !!risco);
+    const tipo = tipoDoMotivo(a.pendencia ? a.pendencia.movimento : (a.motivo && a.motivo.nome) || "");
+    if (tipo === "Certidão") {
+      if (/nao compareceu|deixou de comparecer|nao comparecimento|ausencia (de|do) comparecimento|descumpri|nao (assinou|recolheu|cumpriu|apresentou)|inadimpl|violac/.test(nMot)) return r("Justificar o descumprimento noticiado na certidão" + prazoTxt, "Certidão", true);
+      if (/nao (foi )?localizad|nao encontrad|endereco (incorreto|inexistente|desatualizado)|mudou-se|paradeiro/.test(nMot)) return r("Informar o endereço atualizado do assistido", "Certidão", true);
+      if (/fuga|evadi|evasao|foragido/.test(nMot)) return r("Manifestar sobre a fuga/evasão noticiada na certidão", "Certidão", true);
+      if (/condenatoria|nova condenacao|transitad|outra execucao|outro processo|guia de recolhimento|sem gr|unifica/.test(nMot)) return r("Manifestar sobre a nova condenação/guia noticiada na certidão (unificação, regime)", "Certidão", false);
+      if (/prisao|preso|recolhido|flagrante/.test(nMot)) return r("Manifestar sobre a prisão noticiada na certidão", "Certidão", true);
+      return r("Manifestar sobre a certidão" + prazoTxt, "Certidão", !!risco);
+    }
+    if (tipo === "Manifestação" && /minist/i.test((a.motivo && a.motivo.cargo) || "")) return r("Manifestar sobre o parecer do MP" + prazoTxt, "Parecer do MP", !!risco);
+    if (tipo === "Laudo/exame") return r("Manifestar sobre o laudo/exame" + prazoTxt, "Laudo", !!risco);
+    if (tipo === "Documento/ofício") return r("Manifestar sobre o documento juntado" + riscoTxt + prazoTxt, "Documento", !!risco);
+    if (decisaoNoMotivo && tem(alMot, /^Deferimento/)) return r("Ciência da decisão favorável; conferir o cumprimento", "Ciência", false);
+    if (tem(alMot, /^Pede manifestação/) || !nMot) return r("Manifestar" + (a.motivo ? " sobre o " + a.motivo.nome.toLowerCase() : "") + riscoTxt + prazoTxt, "Manifestação", !!risco);
+    return r("Ler o documento e manifestar" + riscoTxt + prazoTxt, "Manifestação", !!risco);
+  }
+
   // ---------------------------------------------------------------- prioridade da linha
   // 0 = mais urgente. Alerta alto > último dia mais próximo > alerta médio
   function urgencia(linha, analise, hoje) {
     const h = hoje ? dataNum(hoje) : 0;
-    const alto = analise && (analise.alertas || []).some((a) => a.nivel === "alto");
+    const alto = analise && (analise.providencia ? analise.providencia.urgente : (analise.alertas || []).some((a) => a.nivel === "alto"));
     const medio = analise && (analise.alertas || []).some((a) => a.nivel === "medio");
     const ud = dataNum(linha.ultimoDia);
     return (alto ? 0 : 1) * 1e9 + (ud || 99999999) - (medio ? 0.5 : 0) + (h && ud && ud < h ? -5e8 : 0);
@@ -524,7 +570,7 @@
     ABAS, SITUACOES, entidades, texto, normal, cnj, finalDoNumero, absoluto, dataNum, faixasFinal, faixaTexto,
     lerMesa, lerPendencias, lerMovimentos, lerProcesso, paginaDeLogin, lerArquivos, arquivoPrincipal,
     ehAtoDoJuiz, ehMeroExpediente, pendenciaDaAba, movimentoDaPendencia, escolher, tipoDoMotivo,
-    itensParaTexto, carimbo, corpoDoDocumento, dispositivo, resumir, analisarTexto, lerDocumento, urgencia,
+    itensParaTexto, carimbo, corpoDoDocumento, dispositivo, resumir, analisarTexto, lerDocumento, providencia, urgencia,
     crc32, zip, xlsx, colunaLetra,
   };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
