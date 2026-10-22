@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "APTO - RSPE do SEEU, Triagem da Mesa, Ficha do SIAPEN e processos do SAP",
   "short_name": "APTO RSPE",
-  "version": "1.8.2",
+  "version": "1.8.3",
   "description": "RSPE do SEEU e ficha do SIAPEN para a pasta do APTO, triagem da Mesa do Defensor (só leitura) e nº do processo no SAP.",
   "minimum_chrome_version": "116",
   "permissions": [

@@ -180,5 +180,19 @@ const alto = { alertas: [{ nivel: "alto", txt: "x" }] };
 ok(T.urgencia({ ultimoDia: "30/10/2026" }, alto, "21/10/2026") < T.urgencia({ ultimoDia: "22/10/2026" }, { alertas: [] }, "21/10/2026"), "alerta vermelho antes do prazo");
 ok(T.urgencia({ ultimoDia: "22/10/2026" }, null, "21/10/2026") < T.urgencia({ ultimoDia: "25/10/2026" }, null, "21/10/2026"), "prazo mais próximo antes");
 
+// ---- proteção do prazo
+const movs = [
+  { seq: 60, nome: "JUNTADA DE CERTIDÃO", complemento: "" },
+  { seq: 61, nome: "CONFIRMADA A INTIMAÇÃO ELETRÔNICA", complemento: "Referente ao evento (seq. 58)" },
+];
+ok(T.novaConfirmacao(movs, 61).length === 0, "nada novo depois da leitura: sem alarme");
+ok(T.novaConfirmacao(movs, 60).length === 1, "confirmação de intimação nova: alarme");
+ok(T.novaConfirmacao([{ seq: 62, nome: "CONFIRMADA A INTIMAÇÃO ELETRÔNICA", complemento: "MINISTÉRIO PÚBLICO" }], 61).length === 0, "confirmação do MP não conta");
+ok(T.novaConfirmacao([{ seq: 62, nome: "JUNTADA DE PETIÇÃO", complemento: "" }], 61).length === 0, "movimento novo comum não conta");
+const lidos = [{ aba: "2", processo: "A" }, { aba: "2", processo: "B" }, { aba: "5", processo: "A" }];
+const sairam = T.sairamDaMesa(lidos, [{ aba: "2", processo: "A" }, { aba: "5", processo: "B" }]);
+ok(sairam.length === 2 && sairam[0].processo === "B" && sairam[1].aba === "5", "processos que saíram da Mesa (por aba e nº)");
+ok(T.sairamDaMesa(lidos, lidos).length === 0, "todos continuam: nenhum saiu");
+
 if (falhas) { console.log(falhas + " falha(s)"); process.exit(1); }
 console.log("ok: triagem da Mesa (Mesa, processo, arquivos, PDF, decisão, alertas, filtros, endereços permitidos, planilha)");

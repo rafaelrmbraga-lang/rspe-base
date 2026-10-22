@@ -85,6 +85,14 @@ TRIAGEM DA MESA DO DEFENSOR (1.7)
  - Todas as páginas da Mesa (1.8.2): a triagem pede página por página até
    ter lido o total informado pelo SEEU ("39 registro(s) encontrado(s)"); se
    o SEEU não entregar uma página, avisa quantos de quantos foram lidos.
+ - Proteção do prazo (1.8.3): a triagem só lê e nunca chama Analisar,
+   Leitura de Prazo ou Dispensar Juntada. Mesmo assim, em "Recebidas e não
+   lidas" ela confere sozinha que o prazo não começou: depois do 1º processo
+   lido, reabre a página dele (surgiu "CONFIRMADA A INTIMAÇÃO"?) e procura-o
+   na Mesa; se algo mudou, PARA na hora e diz qual processo conferir. Ao fim
+   da leitura, relê a Mesa e marca em vermelho, na coluna Prazo, qualquer
+   processo lido que tenha saído de "Recebidas e não lidas" (o prazo de
+   leitura pode ter vencido no meio, ou alguém o analisou).
  - Filtros: defensor (inclusive "Sem defensor vinculado"), final do nº (o
    último algarismo antes do traço: 0011147-54... = 7; clique nos
    algarismos 0 a 9 ou escreva a faixa: "0-2" = finais 0, 1 e 2; "0-2, 5,
