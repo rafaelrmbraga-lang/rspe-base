@@ -117,13 +117,13 @@ const mov = (nome, data, cargo) => ({ seq: 1, nome, data, cargo: cargo || "" });
 const PV = (a, aba) => T.providencia(a, aba);
 let pv = PV({ pendencia: { juntar: "MANIFESTAÇÃO", movimento: "PROFERIDO DESPACHO DE MERO EXPEDIENTE" }, mesma: true,
   motivo: mov("PROFERIDO DESPACHO DE MERO EXPEDIENTE", "02/10/2026"), decisao: Object.assign(mov("PROFERIDO DESPACHO DE MERO EXPEDIENTE", "02/10/2026"), { doc: d }) }, "Manifestação");
-ok(pv.texto === "Apresentar justificativa – sob pena de internação, suspensão (prazo no texto: 5 dias)" && pv.tipo === "Justificativa" && pv.urgente, "justificativa: " + JSON.stringify(pv));
+ok(pv.texto === "Requerer a intimação pessoal do sentenciado para justificar – sob pena de internação, suspensão (prazo no texto: 5 dias)" && pv.tipo === "Intimação pessoal" && pv.urgente, "justificativa -> intimação pessoal: " + JSON.stringify(pv));
 const certGr = T.lerDocumento("CERTIDÃO\nCERTIFICO, para os devidos fins, que em consulta ao SAJ, autos nº 0900000-00.2026.8.12.0001, constatei sentença condenatória [2 anos em regime aberto], mas sem GR expedida até o momento.\nCampo Grande, 20 de outubro de 2026.");
 pv = PV({ pendencia: { juntar: "MANIFESTAÇÃO", movimento: "JUNTADA DE CERTIDÃO" }, motivo: Object.assign(mov("JUNTADA DE CERTIDÃO", "20/10/2026"), { doc: certGr }),
   decisao: Object.assign(mov("PROFERIDO DESPACHO DE MERO EXPEDIENTE", "14/10/2026"), { doc: T.lerDocumento("Vistos,\nCiente da informação. Ao MP e à defesa.\nCampo Grande, 14 de outubro de 2026.\nJuiz de Direito") }) }, "Manifestação");
 ok(pv.tipo === "Certidão" && /nova condenação\/guia/.test(pv.texto) && !pv.urgente, "certidão de nova condenação sem GR: " + JSON.stringify(pv));
 pv = PV({ pendencia: { juntar: "MANIFESTAÇÃO", movimento: "JUNTADA DE CERTIDÃO" }, motivo: Object.assign(mov("JUNTADA DE CERTIDÃO", "13/10/2026"), { doc: cert }) }, "Manifestação");
-ok(pv.texto.startsWith("Justificar o descumprimento noticiado na certidão") && pv.urgente, "certidão de não comparecimento: " + JSON.stringify(pv));
+ok(pv.texto.startsWith("Requerer a intimação pessoal do sentenciado sobre o descumprimento") && pv.tipo === "Intimação pessoal" && pv.urgente, "certidão de não comparecimento: " + JSON.stringify(pv));
 pv = PV({ pendencia: { juntar: "MANIFESTAÇÃO", movimento: "DECISÃO INTERLOCUTÓRIA DE MÉRITO" }, mesma: true, motivo: mov("DECISÃO INTERLOCUTÓRIA DE MÉRITO", "03/10/2026"),
   decisao: Object.assign(mov("DECISÃO INTERLOCUTÓRIA DE MÉRITO", "03/10/2026"), { doc: neg }) }, "Manifestação");
 ok(pv.texto === "Avaliar agravo em execução contra a decisão de 03/10/2026" && pv.tipo === "Agravo" && pv.urgente, "indeferimento: " + JSON.stringify(pv));

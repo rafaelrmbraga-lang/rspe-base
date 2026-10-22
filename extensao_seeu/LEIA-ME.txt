@@ -98,13 +98,14 @@ TRIAGEM DA MESA DO DEFENSOR (1.7)
        contam). É sempre a mais recente (não busca decisões anteriores) e
        vale também quando o motivo é uma certidão;
      . a providência sugerida (1.7.4, no lugar dos alertas): uma frase a
-       partir da aba e do texto lido. Ex.: "Apresentar justificativa – sob
-       pena de revogação (prazo no texto: 15 dias)", "Avaliar agravo em
-       execução contra a decisão de 14/10/2026", "Justificar o
+       partir da aba e do texto lido. Ex.: "Requerer a intimação pessoal do
+       sentenciado para justificar – sob pena de revogação (prazo no texto:
+       15 dias)", "Avaliar agravo em execução contra a decisão de
+       14/10/2026", "Requerer a intimação pessoal do sentenciado sobre o
        descumprimento noticiado na certidão", "Manifestar sobre a nova
        condenação/guia noticiada na certidão", "Conferir o cálculo",
        "Manifestar sobre o parecer do MP", "Dar ciência". Em vermelho, as
-       urgentes (justificativa, audiência, agravo, risco ao assistido).
+       urgentes (intimação pessoal, audiência, agravo, risco ao assistido).
        Filtro "Providência": todas, só urgentes ou por tipo.
  - Prazo: em "Recebidas e não lidas", a data é o prazo de LEITURA ("Leitura
    até"); vencido, a intimação passa para "Lidas e aguardando análise" e só

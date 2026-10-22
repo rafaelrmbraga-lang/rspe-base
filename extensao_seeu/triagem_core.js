@@ -464,14 +464,15 @@
       return r("Dar ciência", "Ciência", false);
     }
     const aud = tem(alMot, /^Audiência \d/);
-    if (tem(alMot, /^Justificativa/)) return r("Apresentar justificativa" + riscoTxt + prazoTxt, "Justificativa", true);
+    // a Defensoria, em regra, não justifica sem ouvir o assistido: pede a intimação pessoal dele
+    if (tem(alMot, /^Justificativa/)) return r("Requerer a intimação pessoal do sentenciado para justificar" + riscoTxt + prazoTxt, "Intimação pessoal", true);
     if (aud) return r(`Preparar a ${aud.txt.toLowerCase()} (contato com o assistido)`, "Audiência", true);
     if (indeferiu) return r(`Avaliar agravo em execução contra a decisão de ${dataDec}`, "Agravo", true);
     if (tem(alMot, /^Audiência designada/)) return r("Preparar a audiência designada (contato com o assistido)", "Audiência", true);
     if (tem(alMot, /^Cálculo/)) return r("Conferir o cálculo/atestado de pena e manifestar concordância ou impugnação" + prazoTxt, "Cálculo", !!risco);
     const tipo = tipoDoMotivo(a.pendencia ? a.pendencia.movimento : (a.motivo && a.motivo.nome) || "");
     if (tipo === "Certidão") {
-      if (/nao compareceu|deixou de comparecer|nao comparecimento|ausencia (de|do) comparecimento|descumpri|nao (assinou|recolheu|cumpriu|apresentou)|inadimpl|violac/.test(nMot)) return r("Justificar o descumprimento noticiado na certidão" + prazoTxt, "Certidão", true);
+      if (/nao compareceu|deixou de comparecer|nao comparecimento|ausencia (de|do) comparecimento|descumpri|nao (assinou|recolheu|cumpriu|apresentou)|inadimpl|violac/.test(nMot)) return r("Requerer a intimação pessoal do sentenciado sobre o descumprimento noticiado na certidão" + prazoTxt, "Intimação pessoal", true);
       if (/nao (foi )?localizad|nao encontrad|endereco (incorreto|inexistente|desatualizado)|mudou-se|paradeiro/.test(nMot)) return r("Informar o endereço atualizado do assistido", "Certidão", true);
       if (/fuga|evadi|evasao|foragido/.test(nMot)) return r("Manifestar sobre a fuga/evasão noticiada na certidão", "Certidão", true);
       if (/condenatoria|nova condenacao|transitad|outra execucao|outro processo|guia de recolhimento|sem gr|unifica/.test(nMot)) return r("Manifestar sobre a nova condenação/guia noticiada na certidão (unificação, regime)", "Certidão", false);

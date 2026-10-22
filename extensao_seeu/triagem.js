@@ -553,7 +553,8 @@ function celulaDecisao(a) {
     d ? el("div", { class: "txt" }, d.erro ? "documento não lido: " + d.erro : d.semArquivo ? "(sem arquivo)" : d.semTexto ? "documento sem texto (escaneado): abrir no SEEU" : T.resumir(d.resumo, 300)) : null);
 }
 function providenciaDe(a, l) {
-  return a && a.status === "ok" ? (a.providencia || T.providencia(a, T.ABAS[l.aba])) : null;
+  // recalculada sempre: uma regra nova vale também para os processos já lidos
+  return a && a.status === "ok" ? T.providencia(a, T.ABAS[l.aba]) : null;
 }
 function celulaProvidencia(a, l) {
   const p = providenciaDe(a, l);
