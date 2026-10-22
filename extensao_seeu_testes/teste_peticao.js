@@ -52,7 +52,7 @@ const texto = (xml) => xml.replace(/<w:p[ >]/g, "\n<w:p ").replace(/<[^>]+>/g, "
   try {
     const tmp = path.join(require("os").tmpdir(), "apto_teste_ciencia.pdf");
     fs.writeFileSync(tmp, await PET.gerarPdf(new Uint8Array(fs.readFileSync(path.join(E, "modelos", "ciencia.docx"))), campos, { inflar, PDFLib, fontkit, fontes }));
-    const t = execFileSync("pdftotext", ["-layout", tmp, "-"], { encoding: "utf-8" });
+    const t = execFileSync("pdftotext", ["-enc", "UTF-8", "-layout", tmp, "-"], { encoding: "utf-8" });
     ok(/Feito nº 7000117-54\.2016\.8\.12\.0001/.test(t) && /A Defensoria Pública manifesta ciência\./.test(t) && /Campo Grande, 22 de outubro de 2026\./.test(t) &&
        /Cahuê Duarte e Urdiales/.test(t) && /Rua Barão do Melgaço/.test(t), "texto do PDF da Ciência: " + t.replace(/\s+/g, " ").slice(0, 200));
     fs.unlinkSync(tmp);
