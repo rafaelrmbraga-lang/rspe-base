@@ -34,6 +34,12 @@ ok("bt-pesquisar" in sap and "'designar'\\s*:\\s*'0'" in sap and "bt-designar" n
 bg = open(os.path.join(EXT, "background.js"), encoding="utf-8").read()
 ok("rspeAuto: true" in bg and 'if (!c.rspeAuto && !forcar && !lote) return { ok: false, motivo: "rspe automático desligado" };' in bg,
    "chave do RSPE automático: desligada, só o botão do painel (forcar) e o lote baixam")
+# downloads da triagem (petição, planilha): o nome guardado pela página é sugerido pelo service worker (sem isso o
+# Chrome nomeia pelo código interno do blob)
+ok('"nomeBlob:" + item.url' in bg and 'sugerir({ filename: nome, conflictAction: "uniquify" })' in bg,
+   "nome dos downloads da triagem aplicado no onDeterminingFilename")
+tj = open(os.path.join(EXT, "triagem.js"), encoding="utf-8").read()
+ok('chrome.storage.session.set({ ["nomeBlob:" + url]: n })' in tj, "a triagem guarda o nome do download antes de baixar")
 ok('id="rspeAuto"' in open(os.path.join(EXT, "popup.html"), encoding="utf-8").read(), "opção do RSPE automático no painel")
 ok(m["content_security_policy"]["extension_pages"].endswith("connect-src 'self' https://seeu.pje.jus.br https://seeu-transfer.s3.sa-east-1.amazonaws.com https://seeu-transfer.s3.amazonaws.com http://127.0.0.1:47321"),
    "conexão própria só com os arquivos da extensão (modelos), o SEEU, o servidor de arquivos do SEEU (PDF das movimentações) e o APTO deste computador")

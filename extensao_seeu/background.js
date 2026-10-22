@@ -212,8 +212,17 @@ async function criarPastas() {
 
 // nome de cada download
 chrome.downloads.onDeterminingFilename.addListener((item, sugerir) => {
-  // downloads da página da triagem (planilha, petição: endereço blob:) ficam com o nome que a página deu, em Downloads
-  if (item.byExtensionId === chrome.runtime.id && /^blob:/.test(item.url || "")) return false;
+  // downloads da página da triagem (planilha, petição: endereço blob:): o nome vem da página (guardado em storage.session
+  // antes do download). Precisa ser sugerido aqui: sem sugestão, o Chrome usa o nome interno do blob (um código)
+  if (item.byExtensionId === chrome.runtime.id && /^blob:/.test(item.url || "")) {
+    const chave = "nomeBlob:" + item.url;
+    chrome.storage.session.get(chave).then((r) => {
+      const nome = r[chave];
+      chrome.storage.session.remove(chave).catch(() => {});
+      nome ? sugerir({ filename: nome, conflictAction: "uniquify" }) : sugerir();
+    }, () => sugerir());
+    return true;
+  }
   if (item.byExtensionId === chrome.runtime.id) {
     const arq = proximosNomes.shift();
     arq ? sugerir({ filename: arq, conflictAction: /LEIA-ME\.txt$/.test(arq) ? "overwrite" : "uniquify" }) : sugerir();

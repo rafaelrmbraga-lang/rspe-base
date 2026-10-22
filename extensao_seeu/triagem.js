@@ -192,24 +192,33 @@ async function lerMesa() {
   const avisos = [];
   try {
     for (const aba of abas) {
-      let pagina = 1, total = null, campos = null;
+      let pagina = 1, total = null, campos = null, falhou = false;
+      const vistos = new Set();
+      const novosDe = (m) => m.linhas.filter((l) => !vistos.has(l.processo)).length;
       while (pagina <= 40) {
         progresso(0, 0, `Mesa · ${T.ABAS[aba]} · página ${pagina}${total != null ? " · " + total + " registro(s)" : ""}`);
         let url = `/seeu/usuario/mesaDefensor1Grau.do?actionType=listar&finalidadeRemessa=${aba}&situacao=${situacao}&pageNumber=${pagina}`;
         let r = await buscar(url);
         let m = T.lerMesa(r.texto);
-        if (pagina > 1 && m.de === 1 && campos) {
+        if (pagina > 1 && campos && (m.de === 1 || !novosDe(m))) {
           // o SEEU ignorou a página pedida por GET: pede como o próprio formulário da Mesa (POST, só a lista)
           const corpo = new URLSearchParams(Object.assign({}, campos, { pageNumber: String(pagina), finalidadeRemessa: aba, situacao })).toString();
           r = await buscar(`/seeu/usuario/mesaDefensor1Grau.do?actionType=listar`, { metodo: "POST", corpo });
           m = T.lerMesa(r.texto);
-          if (m.de === 1) { avisos.push(`${T.ABAS[aba]}: só a 1ª página pôde ser lida`); break; }
+          if (!novosDe(m)) { falhou = true; break; }
         }
-        if (pagina === 1) { total = m.total; campos = filtrarCampos(m.campos); }
-        for (const l of m.linhas) if (!linhas.some((x) => x.aba === aba && x.processo === l.processo)) linhas.push(Object.assign(l, { aba, situacao: Number(situacao) }));
-        if (!m.linhas.length || !m.ate || m.ate >= m.total) break;
+        if (pagina === 1) { total = m.total || null; campos = filtrarCampos(m.campos); }
+        for (const l of m.linhas) {
+          if (vistos.has(l.processo)) continue;
+          vistos.add(l.processo);
+          linhas.push(Object.assign(l, { aba, situacao: Number(situacao) }));
+        }
+        // fim da lista: pelo total da Mesa ("N registro(s) encontrado(s)"); sem ele, pela página incompleta
+        const fim = !m.linhas.length || (total ? vistos.size >= total : m.linhas.length < (m.pageSize || 20));
+        if (fim) break;
         pagina++;
       }
+      if (total && vistos.size < total) avisos.push(`${T.ABAS[aba]}: lidos ${vistos.size} de ${total} processos` + (falhou ? " (o SEEU não entregou as páginas seguintes)" : ""));
     }
   } catch (e) {
     terminar();
@@ -787,14 +796,18 @@ function exportarXlsx() {
 const semAcento = (s) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\x20-\x7e]/g, "_");
 async function salvarArquivo(bytes, tipo, nome) {
   const url = URL.createObjectURL(new Blob([bytes], { type: tipo }));
+  // o nome vai também para o service worker, que o aplica na hora de nomear o download (ver background.js)
+  const baixar = async (n) => {
+    await chrome.storage.session.set({ ["nomeBlob:" + url]: n });
+    await chrome.downloads.download({ url, filename: n, conflictAction: "uniquify", saveAs: false });
+    return n;
+  };
   try {
     try {
-      await chrome.downloads.download({ url, filename: nome, conflictAction: "uniquify", saveAs: false });
-      return nome;
+      return await baixar(nome);
     } catch (e) {
       if (!/filename/i.test(String(e && e.message))) throw e;
-      await chrome.downloads.download({ url, filename: semAcento(nome), conflictAction: "uniquify", saveAs: false });
-      return semAcento(nome);
+      return await baixar(semAcento(nome));
     }
   } finally {
     setTimeout(() => URL.revokeObjectURL(url), 60000);
