@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "APTO - RSPE do SEEU, Triagem da Mesa, Ficha do SIAPEN e processos do SAP",
   "short_name": "APTO RSPE",
-  "version": "1.7.5",
+  "version": "1.8.0",
   "description": "RSPE do SEEU e ficha do SIAPEN para a pasta do APTO, triagem da Mesa do Defensor (só leitura) e nº do processo no SAP.",
   "minimum_chrome_version": "116",
   "permissions": [
@@ -81,6 +81,6 @@
     "128": "icones/128.png"
   },
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'none'; connect-src https://seeu.pje.jus.br https://seeu-transfer.s3.sa-east-1.amazonaws.com https://seeu-transfer.s3.amazonaws.com http://127.0.0.1:47321"
+    "extension_pages": "script-src 'self'; object-src 'none'; connect-src 'self' https://seeu.pje.jus.br https://seeu-transfer.s3.sa-east-1.amazonaws.com https://seeu-transfer.s3.amazonaws.com http://127.0.0.1:47321"
   }
 }

@@ -78,6 +78,26 @@
   .copiavel:hover .copiar{display:inline-block}
   .copiado{display:none;font-size:10px;color:var(--g)}
   .copiado.on{display:inline}
+  .btn-pet{margin-top:6px;padding:2px 8px;font-size:11px;border-radius:5px;color:var(--b);border-color:#CBD9EA;background:#F5F8FC}
+  #petFundo{position:fixed;inset:0;background:rgba(20,30,25,.38);display:none;align-items:flex-start;justify-content:center;z-index:20;padding:40px 16px;overflow:auto}
+  #petFundo.on{display:flex}
+  #pet{background:#fff;border-radius:12px;box-shadow:0 18px 50px rgba(0,0,0,.25);width:min(760px,100%);padding:16px 18px}
+  #pet h2{margin:0 0 2px;font:600 15px Georgia,serif;color:var(--pri)}
+  #pet .campos{display:grid;grid-template-columns:1.2fr 1.6fr 1fr;gap:8px;margin:12px 0}
+  #pet .campos label{font-size:11px;color:var(--tx2)}
+  #pet .campos input{width:100%;margin-top:3px}
+  #pet ul{list-style:none;margin:0;padding:0;border:1px solid var(--line);border-radius:8px}
+  #pet li{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--line)}
+  #pet li:last-child{border-bottom:0}
+  #pet li.sug{background:#F0F7F2}
+  #pet li .nm{flex:1;font-weight:600}
+  #pet li .nm small{display:block;font-weight:400;color:var(--tx3);font-size:11px}
+  #pet .sugtag{font-size:10px;padding:1px 7px;border-radius:999px;background:var(--pri);color:#fff;margin-left:6px;font-weight:600}
+  #pet .rodape{display:flex;justify-content:space-between;align-items:center;margin-top:12px;font-size:11px;color:var(--tx3)}
+  #petMsg{font-size:12px;margin-top:8px;min-height:16px}
+  #pet .destino{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:12px;font-size:12px;color:var(--tx2)}
+  #pet .destino button{padding:3px 9px;font-size:12px}
+  #petMsg.erro{color:var(--r)}
   .txt{font-size:12px;color:var(--tx2);margin-top:2px}
   td{overflow-wrap:anywhere}
   th:first-child{border-top-left-radius:10px}
@@ -172,9 +192,30 @@
     </tr></thead>
     <tbody id="corpo"><tr><td colspan="7" class="vazio">Clique em "1 · Ler a Mesa" com o SEEU aberto e logado em outra aba.</td></tr></tbody>
   </table>
+  <div id="petFundo" role="dialog" aria-modal="true" aria-labelledby="petTit">
+    <div id="pet">
+      <h2 id="petTit">Gerar petição</h2>
+      <div class="sub" id="petSub"></div>
+      <div class="campos">
+        <div><label for="petProc">Processo</label><input type="text" id="petProc"></div>
+        <div><label for="petNome">Nome do sentenciado</label><input type="text" id="petNome"></div>
+        <div><label for="petData">Data</label><input type="text" id="petData"></div>
+      </div>
+      <ul id="petLista"></ul>
+      <div class="destino">Salvar em: <b id="petDestino">Downloads</b>
+        <button id="petPasta" type="button">Escolher pasta…</button>
+        <button id="petLimparPasta" type="button" style="display:none" title="Voltar a salvar em Downloads">usar Downloads</button>
+        <label class="chk"><input type="checkbox" id="petPerguntar"> perguntar onde salvar a cada vez</label></div>
+      <div id="petMsg"></div>
+      <div class="rodape"><span>Endereçamento: 2ª VEP de Campo Grande · assina Cahuê Duarte e Urdiales, Defensor Público (como nos modelos)</span><button id="petFechar">Fechar</button></div>
+    </div>
+  </div>
   <footer>A leitura é uma triagem: ordena e destaca. Não substitui ler a decisão no SEEU. Nada sai deste computador.</footer>
 </main>
 <script src="comum.js"></script>
+<script src="pdflib/pdf-lib.min.js"></script>
+<script src="pdflib/fontkit.umd.min.js"></script>
+<script src="peticao.js"></script>
 <script src="triagem_core.js"></script>
 <script type="module" src="triagem.js"></script>
 </body>

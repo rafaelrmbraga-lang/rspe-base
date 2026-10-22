@@ -558,9 +558,84 @@ function providenciaDe(a, l) {
 }
 function celulaProvidencia(a, l) {
   const p = providenciaDe(a, l);
-  if (!p) return "";
-  return el("div", {}, el("div", { class: "prov" + (p.urgente ? " urg" : "") }, p.texto), el("div", { class: "sub" }, p.tipo));
+  const botao = el("button", { class: "btn-pet", type: "button", title: "Escolher um modelo e gerar a petição (PDF ou Word)", onclick: (ev) => { ev.stopPropagation(); abrirPeticao(l); } }, "Gerar petição");
+  if (!p) return el("div", {}, botao);
+  return el("div", {}, el("div", { class: "prov" + (p.urgente ? " urg" : "") }, p.texto), el("div", { class: "sub" }, p.tipo), botao);
 }
+
+// ---------------------------------------------------------------- petições (modelos da pasta "modelos")
+const PET = self.PETICAO;
+let petLinha = null;
+let fontesPdf = null;
+async function bytesDaExtensao(caminho) {
+  const r = await fetch(chrome.runtime.getURL(caminho));
+  if (!r.ok) throw new Error("arquivo da extensão não encontrado: " + caminho);
+  return new Uint8Array(await r.arrayBuffer());
+}
+async function inflar(b) {
+  const s = new Blob([b]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+  return new Uint8Array(await new Response(s).arrayBuffer());
+}
+function abrirPeticao(l) {
+  petLinha = l;
+  const a = estado.analises[chaveLinha(l)];
+  const prov = providenciaDe(a, l);
+  const sug = PET.modeloSugerido(prov, a);
+  $("petSub").textContent = `${l.processo} · ${l.executado || ""}` + (prov ? ` · providência sugerida: ${prov.texto}` : "");
+  $("petProc").value = l.processo;
+  $("petNome").value = PET.nomeProprio(l.executado || "");
+  $("petData").value = PET.dataPorExtenso(new Date());
+  $("petMsg").textContent = ""; $("petMsg").className = "";
+  const ul = $("petLista");
+  ul.textContent = "";
+  const ordem = PET.MODELOS.slice().sort((x, y) => (y.id === sug) - (x.id === sug));
+  for (const m of ordem) {
+    const botoes = m.formato === "pdf"
+      ? [el("button", { class: "pri", type: "button", onclick: () => gerarPeticao(m, "pdf") }, "PDF"), el("button", { type: "button", onclick: () => gerarPeticao(m, "docx") }, "Word")]
+      : [el("button", { class: "pri", type: "button", onclick: () => gerarPeticao(m, "docx") }, "Word")];
+    ul.append(el("li", { class: m.id === sug ? "sug" : "" },
+      el("span", { class: "nm" }, m.nome, m.id === sug ? el("span", { class: "sugtag" }, "sugerido") : null,
+        el("small", {}, m.formato === "pdf" ? "pronto: nº, data e assinatura preenchidos" : "pede dados do caso: sai em Word, com os pontos a completar em amarelo")),
+      ...botoes));
+  }
+  $("petFundo").className = "on";
+  mostrarDestino();
+  $("petNome").focus();
+}
+function fecharPeticao() { $("petFundo").className = ""; petLinha = null; }
+async function gerarPeticao(m, formato) {
+  const msg = $("petMsg");
+  msg.className = ""; msg.textContent = "Gerando…";
+  try {
+    const campos = { processo: $("petProc").value.trim(), nome: $("petNome").value.trim(), data: $("petData").value.trim() };
+    const modelo = await bytesDaExtensao("modelos/" + m.arquivo);
+    let bytes, tipo;
+    if (formato === "pdf") {
+      if (!fontesPdf) {
+        const f = (n) => bytesDaExtensao("fontes_pdf/carlito-latin-" + n + ".woff");
+        fontesPdf = { r: await f("400-normal"), b: await f("700-normal"), i: await f("400-italic"), bi: await f("700-italic") };
+      }
+      bytes = await PET.gerarPdf(modelo, campos, { inflar, PDFLib: self.PDFLib, fontkit: self.fontkit, fontes: fontesPdf, titulo: m.nome + " " + campos.processo, autor: "Cahuê Duarte e Urdiales" });
+      tipo = "application/pdf";
+    } else {
+      bytes = await PET.gerarDocx(modelo, campos, inflar);
+      tipo = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+    }
+    const nome = PET.nomeArquivo(m.nome, campos.processo, formato);
+    const onde = await salvarPeticao(bytes, tipo, nome, formato);
+    if (!onde) { msg.textContent = "Cancelado."; return; }
+    msg.textContent = `Salvo em ${onde}` + (formato === "docx" && m.formato === "docx" ? " (complete os trechos em amarelo)" : "");
+  } catch (e) {
+    msg.className = "erro";
+    msg.textContent = "Não foi possível gerar: " + (e && e.message || e);
+  }
+}
+$("petFechar").onclick = fecharPeticao;
+$("petPasta").onclick = escolherPasta;
+$("petLimparPasta").onclick = async () => { await guardarPasta(null); mostrarDestino(); mensagemPet("As petições voltam a ir para Downloads."); };
+$("petPerguntar").onchange = () => { prefs.perguntarDestino = $("petPerguntar").checked; guardarPrefs(); mostrarDestino(); };
+$("petFundo").addEventListener("click", (ev) => { if (ev.target.id === "petFundo") fecharPeticao(); });
+document.addEventListener("keydown", (ev) => { if (ev.key === "Escape" && petLinha) fecharPeticao(); });
 
 function blocoDoc(titulo, mov, d) {
   if (!mov) return null;
@@ -704,13 +779,89 @@ function exportarXlsx() {
       pv ? pv.texto : "", pv ? pv.tipo + (pv.urgente ? " (urgente)" : "") : ""]);
   }
   const bytes = T.xlsx(dados, [5, 26, 28, 24, 13, 11, 11, 15, 46, 36, 60, 34, 11, 70, 60, 18], "Triagem");
-  const url = URL.createObjectURL(new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
   const d = new Date(), p = (n) => String(n).padStart(2, "0");
-  const a = el("a", { href: url, download: `Triagem_Mesa_${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}.xlsx` });
-  document.body.append(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 30000);
+  salvarArquivo(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", `Triagem_Mesa_${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}.xlsx`);
+}
+// salva em Downloads com o nome dado (fora da pasta vigiada do APTO, que é só para RSPE e ficha). Se o Chrome recusar o
+// nome (acentos, em alguns sistemas), salva com o nome sem acento
+const semAcento = (s) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\x20-\x7e]/g, "_");
+async function salvarArquivo(bytes, tipo, nome) {
+  const url = URL.createObjectURL(new Blob([bytes], { type: tipo }));
+  try {
+    try {
+      await chrome.downloads.download({ url, filename: nome, conflictAction: "uniquify", saveAs: false });
+      return nome;
+    } catch (e) {
+      if (!/filename/i.test(String(e && e.message))) throw e;
+      await chrome.downloads.download({ url, filename: semAcento(nome), conflictAction: "uniquify", saveAs: false });
+      return semAcento(nome);
+    }
+  } finally {
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  }
+}
+
+// ---- destino das petições: pasta escolhida pelo usuário (guardada), perguntar a cada vez, ou Downloads
+function bancoPastas() {
+  return new Promise((ok, erro) => {
+    const r = indexedDB.open("apto-triagem", 1);
+    r.onupgradeneeded = () => r.result.createObjectStore("pastas");
+    r.onsuccess = () => ok(r.result);
+    r.onerror = () => erro(r.error);
+  });
+}
+async function pastaGuardada() {
+  try {
+    const db = await bancoPastas();
+    return await new Promise((ok) => { const g = db.transaction("pastas").objectStore("pastas").get("peticoes"); g.onsuccess = () => ok(g.result || null); g.onerror = () => ok(null); });
+  } catch (e) { return null; }
+}
+async function guardarPasta(h) {
+  const db = await bancoPastas();
+  await new Promise((ok, erro) => { const t = db.transaction("pastas", "readwrite"); h ? t.objectStore("pastas").put(h, "peticoes") : t.objectStore("pastas").delete("peticoes"); t.oncomplete = ok; t.onerror = () => erro(t.error); });
+}
+async function mostrarDestino() {
+  const h = await pastaGuardada();
+  $("petDestino").textContent = prefs.perguntarDestino ? "perguntar a cada vez" : h ? "pasta “" + h.name + "”" : "Downloads";
+  $("petLimparPasta").style.display = h && !prefs.perguntarDestino ? "" : "none";
+  $("petPerguntar").checked = !!prefs.perguntarDestino;
+}
+async function escolherPasta() {
+  if (!self.showDirectoryPicker) return mensagemPet("Este navegador não permite escolher a pasta; as petições vão para Downloads.", true);
+  try {
+    const h = await self.showDirectoryPicker({ id: "apto-peticoes", mode: "readwrite", startIn: "documents" });
+    await guardarPasta(h);
+    prefs.perguntarDestino = false; guardarPrefs();
+    mostrarDestino();
+    mensagemPet("As petições serão salvas na pasta “" + h.name + "”.");
+  } catch (e) { if (e && e.name !== "AbortError") mensagemPet("Não foi possível usar a pasta: " + e.message, true); }
+}
+function mensagemPet(t, erro) { $("petMsg").textContent = t; $("petMsg").className = erro ? "erro" : ""; }
+const TIPOS = { pdf: { description: "PDF", accept: { "application/pdf": [".pdf"] } }, docx: { description: "Documento do Word", accept: { "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"] } } };
+// devolve onde salvou (texto para a mensagem) ou "" se cancelado
+async function salvarPeticao(bytes, tipo, nome, formato) {
+  if (prefs.perguntarDestino && self.showSaveFilePicker) {
+    try {
+      const fh = await self.showSaveFilePicker({ id: "apto-peticoes", suggestedName: nome, types: [TIPOS[formato]] });
+      const w = await fh.createWritable(); await w.write(bytes); await w.close();
+      return fh.name;
+    } catch (e) { if (e && e.name === "AbortError") return ""; throw e; }
+  }
+  const pasta = await pastaGuardada();
+  if (pasta) {
+    let perm = await pasta.queryPermission({ mode: "readwrite" });
+    if (perm !== "granted") perm = await pasta.requestPermission({ mode: "readwrite" });
+    if (perm === "granted") {
+      let final = nome;
+      for (let k = 2; k < 100; k++) {
+        try { await pasta.getFileHandle(final); final = nome.replace(/(\.\w+)$/, ` (${k})$1`); } catch (e) { break; }
+      }
+      const fh = await pasta.getFileHandle(final, { create: true });
+      const w = await fh.createWritable(); await w.write(bytes); await w.close();
+      return "“" + pasta.name + "”: " + final;
+    }
+  }
+  return "Downloads: " + (await salvarArquivo(bytes, tipo, nome));
 }
 
 // ---------------------------------------------------------------- estado da tela

@@ -155,6 +155,36 @@ TRIAGEM DA MESA DO DEFENSOR (1.7)
    triagem, os filtros e os textos dos últimos 220 documentos lidos.
  - É triagem: ordena e destaca. Não substitui ler a decisão no SEEU.
 
+PETIÇÕES A PARTIR DA TRIAGEM (1.8)
+ - Em cada linha da triagem, "Gerar petição" abre a lista dos modelos da
+   Defensoria (pasta "modelos"). A triagem só SUGERE um modelo (destacado);
+   quem escolhe é você.
+ - Nº do processo, nome do sentenciado e data vêm preenchidos e podem ser
+   corrigidos na janela antes de gerar. Endereçamento: 2ª VEP de Campo
+   Grande. Assinatura: Cahuê Duarte e Urdiales, Defensor Público (como nos
+   modelos).
+ - Saem em PDF (com opção de Word): 1. Ciência, 1. Não Opor - MP,
+   1. Advogado Particular, 1. Esgotamento Prévio, 1. Aud Justificação.
+ - Saem em Word, com os trechos a completar destacados em amarelo
+   (regime, datas, percentual...): 1. Justificativa - primeira falta,
+   1. Extinção Punibilidade, 1. LC, 1. Progressão Aberto.
+ - Nome do arquivo: "<modelo> <7 primeiros dígitos do nº>", ex.:
+   "1. Ciência 6003870.pdf".
+ - Onde salvar (na janela): "Escolher pasta..." grava direto na pasta
+   escolhida (fica guardada; o Chrome pode pedir para confirmar o acesso uma
+   vez por sessão); "perguntar onde salvar a cada vez" abre a janela do
+   sistema; sem nada escolhido, vai para Downloads (fora da pasta vigiada do
+   APTO). Se o Chrome recusar o acento no nome, salva sem acento.
+ - O PDF é montado dentro do navegador a partir do próprio modelo .docx
+   (timbre, margens, recuos, negrito, citações, imagens e nota de rodapé),
+   com a fonte Carlito (mesmas medidas da Calibri; pasta fontes_pdf) e as
+   bibliotecas pdf-lib e fontkit (pasta pdflib). Nada sai do computador.
+ - Ajustes feitos nas cópias dos modelos: nomes e nºs dos casos de exemplo
+   viraram campos; a Aud. Justificação só requer a designação da audiência;
+   o 1º parágrafo do Esgotamento Prévio ficou genérico. Para trocar um
+   modelo, substitua o .docx na pasta "modelos" mantendo {{processo}},
+   {{nome}} e {{data}} onde devem ser preenchidos.
+
 FICHA DO SIAPEN
  - Toda ficha aberta no SIAPEN (Consultas > nome > "Ficha") é salva em
    Downloads\APTO\<base>\FD_<NOME>_<data>.pdf e entra na base pela pasta

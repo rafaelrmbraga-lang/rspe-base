@@ -212,6 +212,8 @@ async function criarPastas() {
 
 // nome de cada download
 chrome.downloads.onDeterminingFilename.addListener((item, sugerir) => {
+  // downloads da página da triagem (planilha, petição: endereço blob:) ficam com o nome que a página deu, em Downloads
+  if (item.byExtensionId === chrome.runtime.id && /^blob:/.test(item.url || "")) return false;
   if (item.byExtensionId === chrome.runtime.id) {
     const arq = proximosNomes.shift();
     arq ? sugerir({ filename: arq, conflictAction: /LEIA-ME\.txt$/.test(arq) ? "overwrite" : "uniquify" }) : sugerir();
