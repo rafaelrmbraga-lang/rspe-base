@@ -5130,6 +5130,7 @@ PATRIMONIO_CP = set(str(a) for a in range(155, 181))  # Título II do CP
 
 
 IMP_FORA_SOMA = "sentença posterior ao decreto, fora da soma"
+IMP_FATO_POST = "fato posterior aos decretos, fora da soma"
 
 
 def _analise_decretos_modo(campos, crimes, eventos, incidentes, hoje, modo=None, sem_art2=False):
@@ -5173,6 +5174,15 @@ def _analise_decretos_modo(campos, crimes, eventos, incidentes, hoje, modo=None,
     for _ref in DECRETOS.values():
         imped_geral += _imped_em(_ref, geral=True)
         orcrim_algum = orcrim_algum or any(c.get("comando_orcrim") == "S" for c in todos_ativos if c not in _posteriores(_ref))
+    # crime de fato posterior a todos os decretos (ex.: tráfico de 2026): não entra em nenhuma soma, mas o rótulo "crime impeditivo"
+    # da execução o indica - com a ressalva - e ele impede os decretos futuros (conferência independente 7.14.7)
+    _ult = max(DECRETOS.values())
+    for c in crimes:
+        _fc = to_date(c.get("data_infracao") or "")
+        if _fc and _fc > _ult:
+            r_ = impeditivo_decreto(c, _fc)
+            if r_:
+                imped_geral.append("art. 1º, %s: %s" % r_ + " (%s: %s)" % (crimes_curto([c]), IMP_FATO_POST))
     imped_geral = list(dict.fromkeys(imped_geral))
     # o mesmo impeditivo dentro e fora da soma de algum decreto: fica a versão sem a ressalva
     _base_imp = lambda x: re.sub(r" \([^()]*: %s\)$" % re.escape(IMP_FORA_SOMA), "", x)
