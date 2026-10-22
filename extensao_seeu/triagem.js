@@ -796,14 +796,18 @@ function exportarXlsx() {
 const semAcento = (s) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\x20-\x7e]/g, "_");
 async function salvarArquivo(bytes, tipo, nome) {
   const url = URL.createObjectURL(new Blob([bytes], { type: tipo }));
+  // o nome vai também para o service worker, que o aplica na hora de nomear o download (ver background.js)
+  const baixar = async (n) => {
+    await chrome.storage.session.set({ ["nomeBlob:" + url]: n });
+    await chrome.downloads.download({ url, filename: n, conflictAction: "uniquify", saveAs: false });
+    return n;
+  };
   try {
     try {
-      await chrome.downloads.download({ url, filename: nome, conflictAction: "uniquify", saveAs: false });
-      return nome;
+      return await baixar(nome);
     } catch (e) {
       if (!/filename/i.test(String(e && e.message))) throw e;
-      await chrome.downloads.download({ url, filename: semAcento(nome), conflictAction: "uniquify", saveAs: false });
-      return semAcento(nome);
+      return await baixar(semAcento(nome));
     }
   } finally {
     setTimeout(() => URL.revokeObjectURL(url), 60000);

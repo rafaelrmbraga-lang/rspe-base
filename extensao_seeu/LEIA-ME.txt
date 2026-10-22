@@ -179,7 +179,8 @@ PETIÇÕES A PARTIR DA TRIAGEM (1.8)
    escolhida (fica guardada; o Chrome pode pedir para confirmar o acesso uma
    vez por sessão); "perguntar onde salvar a cada vez" abre a janela do
    sistema; sem nada escolhido, vai para Downloads (fora da pasta vigiada do
-   APTO). Se o Chrome recusar o acento no nome, salva sem acento.
+   APTO). Se o Chrome recusar o acento no nome, salva sem acento. (1.8.2:
+   o nome do arquivo passa a ser respeitado; antes podia sair um código.)
  - O PDF é montado dentro do navegador a partir do próprio modelo .docx
    (timbre, margens, recuos, negrito, citações, imagens e nota de rodapé),
    com a fonte Carlito (mesmas medidas da Calibri; pasta fontes_pdf) e as
