@@ -699,12 +699,37 @@ FUND_127 = ("LEP, art. 127 (até 1/3; a contagem recomeça da data da infração
             "TJDFT, Acórdão 1230029.")
 
 
-def perdas_por_falta(incidentes, eventos=None):
+def _uteis_entre(ini, fim, a=None, b=None):
+    """Dias de segunda a sábado de ini a fim dentro de (a, b] (a ou b None: sem limite)."""
+    x = max(ini, a + timedelta(days=1)) if a else ini
+    y = min(fim, b) if b else fim
+    if not x or not y or y < x:
+        return 0
+    n = (y - x).days + 1
+    return n - sum(1 for i in range(n) if (x + timedelta(days=i)).weekday() == 6)
+
+
+def _remicao_na_janela(x, a, b, periodos):
+    """(7.14.5) Parte da remição x adquirida em (a, b]: pelo período trabalhado que a ficha dá ao documento ligado a ela (atestado com
+    período ou período implícito), proporcional aos dias de segunda a sábado de cada trecho dentro da janela (a falta alcança o tempo
+    remido pelo trabalho anterior a ela, declarado depois ou não - LEP, art. 127); sem período, pela data da remição no RSPE."""
+    segs = (periodos or {}).get((x.get("dec"), float(x["n"])))
+    if not segs:
+        return x["n"] if x["d"] and x["d"] <= b and (a is None or x["d"] > a) else 0
+    pesos = [(w if w else _uteis_entre(i, f_)) for i, f_, w in segs]
+    tot = float(sum(pesos)) or 1.0
+    return round(sum(x["n"] * (p_ / tot) * (_uteis_entre(i, f_, a, b) / float(_uteis_entre(i, f_) or 1)) for (i, f_, _w), p_ in zip(segs, pesos)), 2)
+
+
+def perdas_por_falta(incidentes, eventos=None, ficha=None):
     """Para cada falta grave homologada no RSPE com perda de dias remidos: a perda, as parcelas e a remição
     sobre a qual cada parcela incidiu (parcela = 1/3 da remição, arredondado), a falta anterior e a janela de
     remição entre a falta anterior e a atual (LEP, art. 127: a contagem recomeça da data da infração).
     eventos: a fuga/evasão cuja perda de remidos o RSPE lança sem o incidente de homologação (rs.mapa_faltas: sanção da mesma
-    ocorrência) também é falta - a perda dela não se soma à da falta homologada anterior."""
+    ocorrência) também é falta - a perda dela não se soma à da falta homologada anterior.
+    ficha (7.14.5, aba Remição): {"periodos": {(decisão, dias): [(início, fim, peso)]} - o período trabalhado do documento da ficha ligado
+    à remição do RSPE; "pendentes": [{"n", "ini", "fim", "rot"}] - atestado ainda não declarado, com o período; "atividade": [(início, fim)]
+    - trabalho sem atestado}. Com ela, a base de 1/3 é a remição pelo trabalho na janela, e não pela data da decisão."""
     _reconh = []
     if eventos:
         try:
@@ -773,16 +798,28 @@ def perdas_por_falta(incidentes, eventos=None):
             if rem:
                 resid[id(rem)] = max(0, resid[id(rem)] - q)
         janela = sum(x["n"] for x in remicoes if x["d"] and x["d"] <= f and (prev is None or x["d"] > prev))
-        out.append({"falta": f, "prev": prev, "perda": sum(pf), "parcelas": parcelas, "janela": janela, "sem_fato": f in sem_fato,
+        extra = {}
+        if ficha:
+            per_ = ficha.get("periodos") or {}
+            j_ = sum(_remicao_na_janela(x, prev, f, per_) for x in remicoes)
+            pend_ = [(z, round(z["n"] * _uteis_entre(z["ini"], z["fim"], prev, f) / float(_uteis_entre(z["ini"], z["fim"]) or 1), 2))
+                     for z in ficha.get("pendentes") or [] if z.get("ini") and z.get("fim")]
+            pend_ = [(z, v) for z, v in pend_ if v > 0]
+            ativ_ = round(sum(_uteis_entre(i, f_, prev, f) for i, f_ in ficha.get("atividade") or []) / 3.0, 2)
+            j_ = round(j_ + sum(v for _z, v in pend_), 2)
+            extra = {"janela_rspe": janela, "pendentes": pend_, "atividade": ativ_,
+                     "pelo_periodo": abs(j_ - janela) > 0.5}
+            janela = int(j_) if abs(j_ - round(j_)) < 0.01 else j_
+        out.append({"falta": f, "prev": prev, "perda": sum(pf), "parcelas": parcelas, "janela": janela, "sem_fato": f in sem_fato, **extra,
                     "inferida": [g for g in (f, prev) if g and g in _reconh and g not in _homol],
                     "remido_ate": sum(x["n"] for x in remicoes if x["d"] and x["d"] <= f)})
     return out, faltas, perdas
 
 
-def _perda_remidos(incidentes, perdidos, eventos=None):
+def _perda_remidos(incidentes, perdidos, eventos=None, ficha=None):
     """LEP, art. 127: a falta grave permite revogar ATÉ 1/3 do tempo remido, e a contagem recomeça da data da
     infração - nova falta só alcança a remição adquirida depois da falta anterior (vedado o desconto em duplicidade)."""
-    res, faltas, perdas = perdas_por_falta(incidentes, eventos)
+    res, faltas, perdas = perdas_por_falta(incidentes, eventos, ficha)
     if not faltas or not perdas:
         _fg = [e for e in (eventos or []) if re.search(r"FUGA|EVAS|ABANDONO", ((e.get("tipo") or "") + " " + (e.get("motivo") or "")).upper())]
         _dp_ = [rs.to_date(i.get("data_decisao") or i.get("data_referencia") or "") for i in incidentes if "PERDIDOS" in (i.get("tipo") or "").upper()]
@@ -836,7 +873,31 @@ def _perda_remidos(incidentes, perdidos, eventos=None):
                      "de remidos (mesma ocorrência). Conferir nos autos a decisão da perda e os períodos das remições, que fixam a base de 1/3."
                      % " e de ".join(rs.fmt(g) for g in _inf))
         _niv = "verificar" if _inf else "alerta"
+        # (7.14.5) base pelo período trabalhado (ficha): o que mudou em relação à data das decisões do RSPE
+        if x.get("pelo_periodo") or x.get("pendentes"):
+            ress += (" Base contada pelo período trabalhado que a ficha dá aos atestados (pela data das decisões do RSPE seriam %s)%s." % (
+                rs.pl(x.get("janela_rspe") or 0, "dia", "dias"),
+                ("; inclui %s, ainda não declarad%s (a perda alcança o tempo remido pelo trabalho anterior à falta, declarado ou não)" % (
+                    " e ".join("%s do %s" % (rs.num_txt(v), z.get("rot") or "atestado") for z, v in x["pendentes"]),
+                    "os" if sum(v for _z, v in x["pendentes"]) >= 2 else "o")) if x.get("pendentes") else ""))
         dup = [(q, rem) for q, rem in x["parcelas"] if prev and rem and rem["d"] and rem["d"] <= prev]
+        if prev and not dup and not x["janela"] and x["perda"]:
+            # (7.14.5) nenhuma remição adquirida entre a falta anterior (com perda decretada) e esta: a perda só pode ter recaído sobre a
+            # remição anterior àquela falta, já atingida por ela (desconto em duplicidade) - salvo remição declarada depois por
+            # trabalho do intervalo (origem que o RSPE não dá)
+            _ativ = x.get("atividade") or 0
+            itens.append(_item(_niv if ficha else "verificar", "Perda de dias remidos em duplicidade (falta de %s)" % rs.fmt(f),
+                               "Entre a falta de %s, que teve perda de dias decretada, e a de %s não há remição adquirida%s: a perda de %s "
+                               "só pode ter recaído sobre a remição anterior à falta de %s, já atingida por aquela perda. A contagem recomeçou "
+                               "em %s (LEP, art. 127)%s. Cabe impugnar o cálculo%s." % (
+                                   rs.fmt(prev), rs.fmt(f), " no RSPE" if not ficha else " (nem atestado na ficha com trabalho no intervalo)",
+                                   rs.pl(x["perda"], "dia", "dias"), rs.fmt(prev), rs.fmt(prev),
+                                   ("; a ficha registra trabalho sem atestado no intervalo (≈ %s de remição, se declarados): mesmo com ele, o limite "
+                                    "seria ≈ %s (excesso de ≈ %s)" % (rs.pl(_ativ, "dia", "dias"), rs.pl(int(_ativ // 3), "dia", "dias"),
+                                                                      rs.pl(max(0, x["perda"] - int(_ativ // 3)), "dia", "dias"))) if _ativ >= 1 else "",
+                                   "" if ficha else " - conferir antes se alguma remição decidida depois veio de trabalho desse intervalo") + ress,
+                               FUND_127, tipo="perda-de-dias-remidos-em-duplicidade-falta-de", ref=rs.fmt(f)))
+            continue
         if dup:
             itens.append(_item(_niv, "Perda de dias remidos em duplicidade (falta de %s)" % rs.fmt(f),
                                "A perda de %s pela falta de %s incidiu sobre remição anterior à falta de %s, que teve perda de dias decretada: %s. A contagem recomeçou em %s; "
