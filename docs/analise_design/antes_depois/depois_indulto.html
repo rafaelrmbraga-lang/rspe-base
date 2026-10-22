@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Depois · Indulto</title><link rel="stylesheet" href="ds.css">
+<style>
+.lay{flex:1;min-height:0;display:grid;grid-template-columns:220px 1fr;gap:var(--s3);padding:0 var(--s5) var(--s3)}
+.side{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);overflow:auto;padding:var(--s2)}
+.side h4{margin:var(--s2) 8px 4px;font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--tx-3)}
+.side button{display:flex;width:100%;align-items:center;gap:6px;padding:6px 8px;border:0;background:none;border-radius:var(--r-md);text-align:left;color:var(--tx-2)}
+.side button.on{background:var(--brand-soft);color:var(--brand-strong);font-weight:700}
+.side button .n{margin-left:auto;font-size:var(--f-xs);color:var(--tx-2)}
+.side button .n i{font-style:normal;color:var(--ok);font-weight:700}.side button .n em{font-style:normal;color:var(--med);font-weight:700}
+.side button.vz{color:var(--tx-3)}
+</style></head>
+<body>
+<div id="casca" data-aba="ind"></div>
+<div class="fbar" role="group" aria-label="Legenda e filtros dos decretos">
+  <span style="font-weight:700">Selo de cada decreto:</span>
+  <button class="chip"><span class="dz cabe">25 ✓</span> Cabe</button>
+  <button class="chip"><span class="dz ver">24 ?</span> A verificar</button>
+  <button class="chip"><span class="dz nao">22 ✕</span> Não cabe</button>
+  <button class="chip"><span class="dz impd">23 ⊘</span> Impeditivo</button>
+  <button class="chip"><span class="dz conc">17 ★</span> Concedido</button>
+  <button class="chip"><span class="dz indef">16 ✕</span> Indeferido</button>
+  <button class="chip"><span class="dz fora">21 –</span> Não alcançado</button>
+  <span class="hint">O símbolo repete a cor: dá para ler impresso e sem distinguir cores</span>
+</div>
+<div class="lay">
+  <aside class="side" aria-label="Decretos">
+    <button class="on">Todos os decretos</button>
+    <h4>Decretos · cabe / a verificar</h4>
+    <button>Decreto de 2025<span class="n"><i>62</i> · <em>34</em></span></button>
+    <button>Decreto de 2024<span class="n"><i>51</i> · <em>35</em></span></button>
+    <button>Decreto de 2023<span class="n"><i>3</i> · <em>14</em></span></button>
+    <button>Decreto de 2022<span class="n"><i>23</i> · <em>10</em></span></button>
+    <button class="vz">Decreto de 2021<span class="n">nenhum</span></button>
+    <button class="vz">Decreto de 2020<span class="n">nenhum</span></button>
+    <button>Dia das Mães 2018<span class="n"><i>1</i> · <em>0</em></span></button>
+    <button>Decreto de 2017<span class="n"><i>1</i> · <em>3</em></span></button>
+    <button>Decreto de 2016<span class="n"><i>0</i> · <em>2</em></span></button>
+  </aside>
+  <main class="card">
+  <table>
+  <thead><tr><th>Nome</th><th>Nº da execução</th><th>Decretos desde a primeira prisão</th><th>Linha do tempo</th><th>Pedido</th><th style="text-align:right">Ações</th></tr></thead>
+  <tbody>
+  <tr><td class="nome">Simulado Caso 001</td><td class="num">9900001-00.2026.8.12.0001</td><td><span class="dec"><span class="dz cabe" title="2022: cabe">22 ✓</span><span class="dz ver" title="2024: a verificar">24 ?</span><span class="dz cabe" title="2025: cabe">25 ✓</span></span></td><td><button class="btn sm">Ver encaixe nos decretos</button></td><td><button class="ped"><span class="bx"></span>Marcar</button></td><td class="acoes"></td></tr>
+  <tr><td class="nome">Simulado Caso 002</td><td class="num">9900002-00.2026.8.12.0001</td><td><span class="dec"><span class="dz ver">22 ?</span><span class="dz ver">24 ?</span><span class="dz cabe">25 ✓</span></span></td><td><button class="btn sm">Ver encaixe nos decretos</button></td><td><button class="ped"><span class="bx"></span>Marcar</button></td><td class="acoes"></td></tr>
+  <tr><td class="nome">Simulado Caso 004</td><td class="num">9900004-00.2026.8.12.0001</td><td><span class="dec"><span class="dz ver">25 ?</span></span></td><td><button class="btn sm">Ver encaixe nos decretos</button></td><td><button class="ped"><span class="bx"></span>Marcar</button></td><td class="acoes"></td></tr>
+  <tr><td class="nome">Simulado Caso 006</td><td class="num">9900006-00.2026.8.12.0001</td><td><span class="dec"><span class="dz nao">22 ✕</span><span class="dz impd">23 ⊘</span><span class="dz impd">24 ⊘</span><span class="dz impd">25 ⊘</span></span></td><td><button class="btn sm">Ver encaixe nos decretos</button></td><td><button class="ped"><span class="bx"></span>Marcar</button></td><td class="acoes"></td></tr>
+  <tr><td class="nome">Simulado Caso 008</td><td class="num">9900008-00.2026.8.12.0001</td><td><span class="dec"><span class="dz impd">23 ⊘</span><span class="dz impd">24 ⊘</span><span class="dz impd">25 ⊘</span></span></td><td><button class="btn sm">Ver encaixe nos decretos</button></td><td><button class="ped"><span class="bx"></span>Marcar</button></td><td class="acoes"></td></tr>
+  <tr><td class="nome">Simulado Caso 011</td><td class="num">9900011-00.2026.8.12.0001</td><td><span class="dec"><span class="dz impd">25 ⊘</span></span></td><td><button class="btn sm">Ver encaixe nos decretos</button></td><td><button class="ped"><span class="bx"></span>Marcar</button></td><td class="acoes"></td></tr>
+  <tr><td class="nome">Simulado Caso 014</td><td class="num">9900014-00.2026.8.12.0001</td><td><span class="dec"><span class="dz conc">17 ★</span><span class="dz fora">22 –</span><span class="dz cabe">25 ✓</span></span></td><td><button class="btn sm">Ver encaixe nos decretos</button></td><td><button class="ped"><span class="bx"></span>Marcar</button></td><td class="acoes"></td></tr>
+  <tr><td class="nome">Simulado Caso 019</td><td class="num">9900019-00.2026.8.12.0001</td><td><span class="dec"><span class="dz indef">16 ✕</span><span class="dz cabe">24 ✓</span></span></td><td><button class="btn sm">Ver encaixe nos decretos</button></td><td><button class="ped"><span class="bx"></span>Marcar</button></td><td class="acoes"></td></tr>
+  </tbody></table>
+  </main>
+</div>
+<footer class="ft"><span>Linhas sem cor própria: a situação está em cada selo · o selo mostra o ano do decreto e o resultado</span><span class="sp"></span><span>Hoje 12/10/2026 · base jurídica 2026-10-08i</span></footer>
+<script src="casca.js"></script>
+<script>
+const I={st:['Saída temporária','<circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/>'],qd:['Enviar ao Quadro','<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 8v6M15 8v3"/>'],ab:['Abrir ficha do assistido','<path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>']};
+document.querySelectorAll('td.acoes').forEach(td=>td.innerHTML=Object.values(I).map(([t,p])=>`<button class="ib" title="${t}" aria-label="${t}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${p}</svg></button>`).join(' '));
+</script>
+</body></html>

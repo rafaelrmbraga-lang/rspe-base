@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>APTO · Antes e depois</title>
+<style>
+:root{--bg:#F5F6F6;--tx:#1E2226;--tx2:#454B50;--line:#DADDE0;--brand:#1D5A3B}
+body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.5 Arial,"Liberation Sans",sans-serif}
+header{padding:20px 24px;background:#fff;border-bottom:2px solid var(--brand)}
+h1{margin:0;font-size:22px;color:#153F2A}header p{margin:4px 0 0;color:var(--tx2)}
+section{padding:20px 24px;border-bottom:1px solid var(--line)}
+h2{margin:0 0 4px;font-size:18px}section>p{margin:0 0 12px;color:var(--tx2);max-width:1100px}
+.par{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+figure{margin:0;background:#fff;border:1px solid var(--line);border-radius:4px;padding:8px}
+figcaption{font-weight:700;margin-bottom:6px}figcaption span{font-weight:400;color:var(--tx2)}
+img{width:100%;display:block;border:1px solid var(--line)}
+.fr{position:relative;width:100%;aspect-ratio:1440/860;overflow:hidden;border:1px solid var(--line)}
+.fr iframe{position:absolute;top:0;left:0;width:1440px;height:860px;border:0;transform-origin:0 0}
+.fr.p150{aspect-ratio:1280/680}.fr.p150 iframe{width:1280px;height:680px}
+ul{margin:8px 0 0;padding-left:20px}li{margin:2px 0}
+a{color:var(--brand)}
+@media (max-width:900px){.par{grid-template-columns:1fr}}
+</style></head>
+<body>
+<header><h1>APTO · antes e depois</h1>
+<p>À esquerda, captura da versão 7.14.4 com a base fictícia (144 “Simulado Caso”). À direita, protótipo estático da proposta, com os mesmos dados, colunas e textos jurídicos: muda a ordem, a forma e a densidade, sem omitir informação. Abra cada protótipo em tamanho real pelo link.</p></header>
+
+<section><h2>1. Aba Progressão: quem já atingiu o lapso e ainda não tem pedido</h2>
+<p>Hoje a lista vem em ordem alfabética: os 13 vencidos ficam espalhados entre os 144. A coluna Situação é estreita e quebra em 4 linhas, enquanto Nome e Nº sobram. A cor é um filete de 3 px. Na proposta, a lista abre agrupada por urgência, com forma + cor + texto, e o pedido vira um botão com rótulo.</p>
+<div class="par"><figure><figcaption>Antes</figcaption><img src="../capturas/app_aba_prog_1440.png" alt="Aba Progressão hoje"></figure>
+<figure><figcaption>Depois <span>· <a href="depois_progressao.html">abrir em tamanho real</a></span></figcaption><div class="fr"><iframe src="depois_progressao.html" title="Progressão, proposta" loading="lazy"></iframe></div></figure></div>
+<ul><li>Abas agrupadas por tarefa (Prazos · Benefícios por decreto · Conferência · Panorama), numa linha só.</li><li>Cabeçalho em uma faixa: a tabela começa 40 px mais acima em 1440 px e 120 px mais acima com 150 %.</li><li>“Até 90 dias” deixa de ser verde: o verde fica só para “em ordem / cabe”.</li></ul></section>
+
+<section><h2>2. Escala do Windows em 150% (notebook Full HD)</h2>
+<p>Com 150%, a área útil cai para cerca de 1280×680 px. Hoje cabem 2,5 linhas da tabela: cabeçalho, barras e rodapé ocupam 47% da altura e as linhas altas fazem o resto. Na proposta cabem cerca de 7.</p>
+<div class="par"><figure><figcaption>Antes</figcaption><img src="../capturas/app_prog_escala150_1280x680.png" alt="Progressão em 150%"></figure>
+<figure><figcaption>Depois</figcaption><img src="../capturas/depois_progressao_escala150.png" alt="Proposta em 150%"></figure></div></section>
+
+<section><h2>3. Aba Indulto e comutação: selos dos decretos</h2>
+<p>Hoje o selo (“22”, “24”, “25”) só diz o resultado pela cor. “Não cabe” e “Impeditivo” são dois vermelhos quase iguais (ΔE 8), e o branco sobre o laranja tem 4,3:1. Na proposta, cada selo traz um símbolo (✓ ? ✕ ⊘ ★ –), a legenda vira filtro e o botão repetido em cada linha fica mais leve.</p>
+<div class="par"><figure><figcaption>Antes</figcaption><img src="../capturas/app_aba_ind_1440.png" alt="Indulto hoje"></figure>
+<figure><figcaption>Depois <span>· <a href="depois_indulto.html">abrir em tamanho real</a></span></figcaption><div class="fr"><iframe src="depois_indulto.html" title="Indulto, proposta" loading="lazy"></iframe></div></figure></div></section>
+
+<section><h2>4. Ficha do assistido: por que “A verificar” e copiar a fundamentação</h2>
+<p>Hoje a linha “Indulto” mostra só os decretos cabíveis. O “a verificar” de 2024 e a sua fundamentação estão em “Cálculos do programa”, abaixo da dobra. Na proposta, o motivo aparece junto da linha, em passos numerados, com “Copiar fundamentação” ao lado. Os textos no protótipo seguem os do programa; o item 3 e o número de linhas são ilustrativos.</p>
+<div class="par"><figure><figcaption>Antes</figcaption><img src="../capturas/app_ficha_assistido_topo.png" alt="Ficha hoje"></figure>
+<figure><figcaption>Depois <span>· <a href="depois_ficha.html">abrir em tamanho real</a></span></figcaption><div class="fr"><iframe src="depois_ficha.html" title="Ficha, proposta" loading="lazy"></iframe></div></figure></div></section>
+
+<section><h2>5. Resumo da importação de 300 PDFs</h2>
+<p>Hoje as falhas, as leituras parciais e os duplicados vêm misturados numa lista corrida, e o botão do registro em PDF aparece só às vezes. Na proposta, os totais vêm primeiro, separados pelo que exige ação, e cada grupo traz o próximo passo.</p>
+<div class="par"><figure><figcaption>Antes</figcaption><img src="../capturas/app_estado_importacao_concluida.png" alt="Importação hoje"></figure>
+<figure><figcaption>Depois <span>· <a href="depois_importacao.html">abrir em tamanho real</a></span></figcaption><div class="fr"><iframe src="depois_importacao.html" title="Importação, proposta" loading="lazy"></iframe></div></figure></div></section>
+<script>
+// escala os protótipos (desenhados em 1440×860) para a largura da coluna
+function esc(){ document.querySelectorAll('.fr').forEach(f=>{ const i=f.querySelector('iframe'); i.style.transform='scale('+(f.clientWidth/parseInt(getComputedStyle(i).width))+')'; }); }
+addEventListener('resize',esc); addEventListener('load',esc); esc();
+</script>
+</body></html>

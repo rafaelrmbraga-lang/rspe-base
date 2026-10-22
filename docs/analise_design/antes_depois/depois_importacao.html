@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Depois · Importação</title><link rel="stylesheet" href="ds.css">
+<style>.fundo{flex:1;padding:var(--s3) var(--s5);color:var(--tx-3)}</style></head>
+<body>
+<div id="casca" data-aba="geral"></div>
+<div class="fundo">(lista da aba Geral)</div>
+<div class="mveil">
+<section class="modal" role="dialog" aria-modal="true" aria-labelledby="mt">
+  <div class="mh"><h2 id="mt">Importação concluída · 300 arquivos</h2>
+    <div style="color:var(--tx-2);margin-top:4px">Base Comarca Fictícia · 12/10/2026 14:32 · levou 3 min 10 s</div></div>
+  <div class="mb">
+    <div class="tot">
+      <div class="ok"><b>272</b><span>entraram na base<br>241 novos · 31 atualizados</span></div>
+      <div class="crit"><b>5</b><span>falharam<br>não foram importados</span></div>
+      <div class="med"><b>9</b><span>entraram com ressalva<br>6 fichas parciais · 3 dados incompletos</span></div>
+      <div class="neutro"><b>16</b><span>ignorados de propósito<br>12 duplicados · 4 mais antigos</span></div>
+    </div>
+    <details class="gr" open><summary><span class="mk crit"></span>Falharam: o que fazer <span class="n">5 arquivos</span></summary>
+      <ul><li><code>SIMULADO_001.pdf</code> · não parece um RSPE do SEEU (sem o cabeçalho “Relatório da Situação Processual Executória”) → baixe de novo pelo SEEU</li>
+      <li><code>SIMULADO_002.pdf</code> · idem</li><li><code>SIMULADO_003.pdf</code> · idem</li><li><code>SIMULADO_004.pdf</code> · idem</li><li><code>SIMULADO_005.pdf</code> · idem</li></ul></details>
+    <details class="gr"><summary><span class="mk med"></span>Entraram com ressalva: conferir <span class="n">9 arquivos</span></summary>
+      <ul><li><code>SIMULADO_010.pdf</code> · ficha de SIMULADO CASO 010 - leitura parcial: sem a tabela de faltas</li><li>… mais 5 fichas parciais</li><li>3 com dados incompletos → aparecem na aba Auditoria <button class="btn sm">Ver na Auditoria</button></li></ul></details>
+    <details class="gr"><summary><span class="mk neutro"></span>Ignorados de propósito <span class="n">16 arquivos</span></summary>
+      <ul><li>12 duplicados: mesmo arquivo, ou RSPE do mesmo processo com a mesma data de geração</li><li>4 mais antigos que o atual: guardados no histórico (botão Histórico, na aba Geral), sem substituir o atual</li></ul></details>
+    <p style="color:var(--tx-2);font-size:12px;margin:var(--s3) 0">Os anteriores ficam guardados. Lista completa em importacao_avisos.txt.</p>
+  </div>
+  <div class="mf"><button class="btn">Copiar lista de falhas</button><button class="btn">Registro da importação (PDF)</button><span class="sp"></span><button class="btn pri">Fechar</button></div>
+</section></div>
+<script src="casca.js"></script>
+</body></html>
