@@ -1402,6 +1402,12 @@ def derivar(f, eventos):
             continue
         faltas.append({"data_registro": e["data"], "data_fato": e["data"], "artigo": "", "grave": "FALTA GRAVE" in us, "texto": e["texto"], "padic": "",
                        "resultado": "", "situacao": "PADIC instaurado" if re.search(r"RESPONDE\s*(?:PROCESSO|PADIC|CD SIMPLIFICADA|/)", us) else "registrada"})
+    # isolamento preventivo em cela disciplinar com PADIC em curso, sem a natureza da falta: o isolamento é sanção só da falta grave
+    # (LEP, arts. 53, IV, 57, p. ú., e 60) - indício de falta grave, a apurar até o resultado do PADIC
+    for x in faltas:
+        ux = rs._sem_acento(x.get("texto") or "").upper()
+        if not x.get("grave") and re.search(r"ISOLAD[OA]\s+PREVENTIV", ux) and (x.get("situacao") == "PADIC instaurado" or "PADIC" in ux):
+            x["grave_indicio"] = True
     # andamento e resultado do PADIC / CD simplificada: casados com a falta pela data do fato ("referente ao fato ocorrido em",
     # "cometida em"), pelo número do PADIC ou, na instauração sem data, pela falta registrada mais próxima; vale o último resultado
     def _nd(x):
@@ -2307,11 +2313,17 @@ def _processos_x_ficha(r, f):
     # número que difere de um processo do RSPE só por erro de digitação (um dígito, dígitos invertidos, um zero a mais, ou só o dígito
     # verificador): é o mesmo processo, não processo novo
     _sem_dv = lambda p: (lambda d: d[:7] + d[9:] if len(d) == 20 else d)(re.sub(r"\D", "", p or "").zfill(20))
+    # ... ou só pelo segmento do tribunal (J.TR: "8.23" no lugar de "8.12"), com número, dígito verificador, ano e origem iguais
+    # (só quando o número da ficha tem dígito verificador inválido: com o segmento trocado, o DV deixa de conferir - CNJ, Res. 65/2008)
+    _sem_jtr = lambda p: (lambda d: d[:13] + d[16:] if len(d) == 20 else d)(re.sub(r"\D", "", p or "").zfill(20))
+    _dv_ok = lambda p: (lambda d: len(d) == 20 and 98 - int(d[:7] + d[9:] + "00") % 97 == int(d[7:9]))(re.sub(r"\D", "", p or "").zfill(20))
     _rspe_n = [x for x in rspe if x]
-    tipo = {p: next((q for q in _rspe_n if rs.processo_parecido(p, q) or _sem_dv(p) == _sem_dv(q)), None) for p in fora}
+    tipo = {p: next((q for q in _rspe_n if rs.processo_parecido(p, q) or _sem_dv(p) == _sem_dv(q)
+                     or (_sem_jtr(p) == _sem_jtr(q) and not _dv_ok(p) and _dv_ok(q))), None)
+            for p in fora}
     fora_real = [p for p in fora if not tipo[p]]
     _dig = [p for p in fora if tipo[p]]
-    _dig_txt = " ".join("%s na ficha é provável erro de digitação de %s (difere só por um dígito, dígitos invertidos ou o dígito verificador)."
+    _dig_txt = " ".join("%s na ficha é provável erro de digitação de %s (difere só por um dígito, dígitos invertidos, o dígito verificador ou o segmento do tribunal)."
                         % (p, _cnj_fmt(tipo[p])) for p in _dig)
     if fora_real:
         return [_item_rf("info", "Processos na ficha que o RSPE não lista: %d" % len(fora_real),
@@ -2913,6 +2925,30 @@ def _norm(t):
     return re.sub(r"\W", "", t)
 
 
+def _sem_setores_baixados(t, eventos):
+    """Vínculo em curso que junta setores abertos no mesmo dia ("FABRICA / EMPRESA X"): tira do nome o setor com baixa posterior
+    na ficha ("Trabalho: Deixa de trabalhar, no setor de trabalho FABRICA ...") - o trabalho atual é só o que segue aberto."""
+    sets = t.get("setores") or []
+    ti = _dp(t.get("inicio") or "")
+    if len(sets) < 2 or not ti:
+        return t
+    norm = lambda x: re.sub(r"\W", "", rs._sem_acento(x or "").upper())
+    baix = set()
+    for e in eventos:
+        d = _dp(e.get("data") or "")
+        u = rs._sem_acento(e.get("texto") or "").upper()
+        mm = re.match(r"\s*TRABALHO:\s*DEIXA DE TRABALHAR,?\s*NO SETOR DE TRABALHO\s*(.*?)(?:,|$)", u)
+        if d and d > ti and mm:
+            baix.add(norm(mm.group(1)))
+    resto = [x for x in sets if norm(x) not in baix]
+    if not resto or len(resto) == len(sets):
+        return t
+    t2 = dict(t, setor=" / ".join(resto), setores=resto)
+    if t2.get("empresa") and " / " in t2["empresa"]:
+        t2["empresa"] = " / ".join(x for x in t2["empresa"].split(" / ") if norm(x) not in baix) or t2["empresa"]
+    return t2
+
+
 def _nome_emprego(t):
     return t.get("empresa") or re.sub(r"^(PP|CC|A1|R1)\s*-\s*", "", t.get("setor") or "") or "?"
 
@@ -3428,7 +3464,7 @@ def comparativo(r, f, hoje=None, conferidos=None, manuais=None, vinculos=None):
         L["un"] = _unidade_em(tl_ex, L["ini"])
     # trabalho em curso (coluna "Trabalho atual"): o vínculo aberto da ficha
     em = [x for x in f.get("trabalho") or [] if not x.get("fim") and not x.get("so_lancamento")]
-    out["fd_trab"] = ("%s desde %s" % (_nome_emprego(em[-1]), em[-1]["inicio"])) if em else "sem trabalho em curso"
+    out["fd_trab"] = ("%s desde %s" % (_nome_emprego(_sem_setores_baixados(em[-1], f.get("eventos") or [])), em[-1]["inicio"])) if em else "sem trabalho em curso"
     out["fd_estuda"] = any(e.get("inicio") and not e.get("fim") for e in f.get("estudos") or [])  # matrícula ativa na ficha
     ult_at = N["ult_at"]
     sem_pos = [L for L in T["linhas"] if L["st"] == "sem" and (L.get("pedir_dias") or not ult_at or L["fim"] > ult_at)]

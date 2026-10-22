@@ -63,7 +63,8 @@ try:
 
     # ---- 3) detração antes da fração: Diferença = lapso impresso − forma favorável (as três linhas fecham) ----
     t = ra._texto_blocos([[Fraction(2, 5), rs.pena_para_dias("15a2m20d"), rs.pena_para_dias("5a4m24d"), 626, [5, 4, 24], [15, 2, 20]]])
-    ok("Lapso total impresso: 5 anos, 4 meses e 24 dias" in t and "4 anos, 4 meses e 6 dias" in t and "Diferença: 1 ano e 18 dias" in t,
+    # (7.14.5) ano de 365 dias: forma favorável 4a4m16d; diferença 1a0m8d (373 dias ≈ 626 × 0,6)
+    ok("Lapso total impresso: 5 anos, 4 meses e 24 dias" in t and "4 anos, 4 meses e 16 dias" in t and "Diferença: 1 ano e 8 dias" in t,
        "3: diferença coerente: %s" % t)
 
     # ---- 4) regime inicial relançado: o item "sem efeito atual" cita o último válido (a análise não muda) ----

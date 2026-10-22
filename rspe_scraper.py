@@ -2560,7 +2560,7 @@ def faltas_da_ficha(r, ficha, hoje=None):
     datas_rspe, datas_ficha = list(datas), []
     for x in ficha.get("faltas") or []:
         d = to_date(x.get("data_fato") or x.get("data_registro") or "")
-        if (not d or not x.get("grave") or x.get("situacao") == "arquivada" or d < corte_faltas(hoje)
+        if (not d or not (x.get("grave") or (x.get("grave_indicio") and not x.get("resultado"))) or x.get("situacao") == "arquivada" or d < corte_faltas(hoje)
                 or (_ini_f and d < _ini_f) or any(abs((d - y).days) <= 30 for y in datas_rspe) or d in datas_ficha):
             continue
         sit = x.get("situacao") or "registrada"
@@ -2568,7 +2568,9 @@ def faltas_da_ficha(r, ficha, hoje=None):
         # complemento; nas janelas de 12 meses fica a verificar (indicios_falta)
         cien = (" (%s)" % (x.get("data_fato_obs") or "data da ciência do resultado: a data do fato não consta da ficha")) if x.get("data_fato_ciencia") else ""
         r["_incidentes"].append({"tipo": "FALTA GRAVE NA FICHA DISCIPLINAR (SIAPEN)",
-                                 "complemento": "Data da infração: %s%s%s - %s" % (fmt(d), cien, (" - " + x["artigo"]) if x.get("artigo") else "", sit),
+                                 "complemento": "Data da infração: %s%s%s - %s%s" % (fmt(d), cien, (" - " + x["artigo"]) if x.get("artigo") else "", sit,
+                                                                                   " (isolamento preventivo com PADIC, natureza da falta não informada)"
+                                                                                   if x.get("grave_indicio") and not x.get("grave") else ""),
                                  "situacao": "PENDENTE", "data_referencia": fmt(d), "data_decisao": "", "_ficha": True,
                                  **({"_data_ciencia": True} if cien else {})})
         datas.append(d)
@@ -2961,6 +2963,12 @@ def falta_livramento(r, d_seeu, hoje):
             if (not f and d and abs((_um_ano_depois(d) - d_seeu).days) <= 3
                     and not any(abs((x - d_seeu).days) <= 3 for x, _t in firmes)):
                 return ("apurar", d, t)
+    # falta ainda sem sanção reconhecida cujos 12 meses acabam DEPOIS da data do SEEU (fuga com recaptura recente, sem PAD):
+    # sem a homologação ela não se opõe (Súmula 533/STJ), mas, reconhecida, empurra o livramento - a data fica a verificar
+    _pend = [(_um_ano_depois(d), d, t) for t, f, d in ind if not f and d and _um_ano_depois(d) > d_seeu + timedelta(days=3)]
+    if _pend and not (firmes and max(x for x, _t in firmes) >= max(p[0] for p in _pend)):
+        lib, d, t = max(_pend, key=lambda x: x[0])
+        return ("apurar_depois", lib, t)
     return None
 
 
@@ -4790,7 +4798,9 @@ def duvidas_livramento(campos, eventos, incidentes, dl=None):
         d = to_date(i.get("data_referencia") or i.get("data_decisao") or "")
         t = ((i.get("tipo") or "") + " " + (i.get("complemento") or "")).upper()
         if d and d0 and d > d0 and "REGIME" in t and i.get("situacao") == "CONCEDIDO":
-            duv.append("alteração de regime em %s (%s)" % (fmt(d), (i.get("complemento") or "").strip()))
+            # a alteração de data-base (tipo com "REGIME" no nome) não muda o regime: o texto diz o que foi
+            duv.append(("alteração de data-base em %s (%s)" if e_alteracao_data_base(i) else "alteração de regime em %s (%s)") % (
+                fmt(d), (i.get("complemento") or "").strip()))
         if "SUSPENS" in t and "LIVRAMENTO" in t:
             duv.append("suspensão do livramento registrada" + (" em %s" % fmt(d) if d else ""))
     return duv

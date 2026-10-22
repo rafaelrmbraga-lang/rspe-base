@@ -839,6 +839,57 @@ def custodia_sem_calculo(r):
             "ficha_dias": antes - antes0} if (antes or desde) else None
 
 
+def _livramento_fracao_legal(r, m):
+    """Fração de livramento do SEEU maior que a legal (alerta da Auditoria, ex.: art. 16 da Lei 10.826 tratado como hediondo):
+    a coluna da fração mostra as frações legais (com a do SEEU entre parênteses) e a situação traz a data pela fração legal -
+    a do SEEU menos pena x diferença das frações, somadas por anos, meses e dias como no SEEU. A data da aba segue a do SEEU
+    (como na progressão), com o aviso."""
+    _ai = [it for it in m.get("aud_itens") or [] if it.get("tipo") == "fracao-de-livramento-diverge" and it.get("nivel") == "alerta"
+           and not it.get("baixado") and it.get("fr_legal")]
+    if not _ai or m.get("liv_cor") in ("azul", "cinza"):
+        return
+    import rspe_calc as rc
+    por_ref = {it.get("ref"): it for it in _ai}
+    fs_legal, dif30, achou = [], Fraction(0), False
+    for c in r.get("_crimes", []):
+        if (c.get("extinto") or "").upper().startswith("S") or rs.pena_para_dias(c.get("pena_imposta")) == 0:
+            continue
+        f = rs.parse_fracao(c.get("fracao_livramento"))
+        it = por_ref.get(ra._nome(c))
+        if it:
+            fl, fsu = Fraction(it["fr_legal"]), Fraction(it["fr_seeu"])
+            amd = rs.pena_amd(c.get("pena_imposta"))
+            if amd and fsu > fl:
+                dif30 += (amd[0] * 360 + amd[1] * 30 + amd[2]) * (fsu - fl)
+                achou = True
+            f = fl
+        if f and f not in fs_legal:
+            fs_legal.append(f)
+    if not achou or not fs_legal:
+        return
+    fs_legal.sort()
+    _fmt = lambda f: "vedado" if f >= 1 else "%d/%d" % (f.numerator, f.denominator)
+    _leg = (_fmt(fs_legal[0]) if len(fs_legal) == 1 else
+            "%s e %s (cada fração sobre a pena do seu crime)" % (", ".join(_fmt(f) for f in fs_legal[:-1]), _fmt(fs_legal[-1])))
+    m["frac_liv"] = "%s (SEEU: %s - ver Auditoria)" % (_leg, (m.get("frac_liv") or "?").split(" (")[0])
+    seeu = r.get("livramento_previsao_seeu") or ""
+    d_seeu = rs.to_date(seeu)
+    if not d_seeu or not (m.get("liv") or "").startswith(seeu):
+        return
+    a, mm, d = rc.normal(int(dif30))
+    d_leg = rc.mais(d_seeu, a, mm, d, sinal=-1)
+    _av = ("A verificar · fração de livramento do SEEU acima da legal (%s): pela fração legal, livramento em %s%s (data do SEEU "
+           "menos %s, a pena do crime vezes a diferença das frações) - ver Auditoria" % (
+               _leg.split(" (")[0], rs.fmt(d_leg), ", data já atingida" if d_leg <= HOJE else "", rs.pena_extenso("%da%dm%dd" % (a, mm, d))))
+    # a situação "1/1 do SEEU maior que o legal" (livramento vedado contestado) é substituída pela conta com a fração legal
+    _sub = lambda t: "" if (not t or t == "Em cumprimento" or t.startswith("1/1 do SEEU maior que o legal")) else t
+    base = _sub(m.get("liv_sit"))
+    m["liv_sit"] = (base + " · " + _av) if base else _av
+    m["liv_sit_full"] = (_sub(m.get("liv_sit_full")) + " · " + _av) if _sub(m.get("liv_sit_full")) else m["liv_sit"]
+    if m.get("liv_cor") != "vencido":
+        m["liv_cor"] = "amarelo"
+
+
 def fracoes_texto(r, campo):
     """Fração de progressão ou de livramento para tela, resumo e petição. Em concurso com frações diferentes, cada uma incide
     sobre a pena do seu crime e o requisito é a soma (CP, art. 84; LEP, art. 112): lista as frações em vez de afirmar só a
@@ -977,6 +1028,32 @@ def todos_extintos_(r):
     return bool(crs) and all((c.get("extinto") or "").upper().startswith("S") for c in crs)
 
 
+def _rem_ate_decisao_lc(rem, dlc, lcs):
+    """Remição datada depois do início do livramento, mas concedida até a decisão que o deferiu (decidida junto com ele, por
+    exemplo): abate a pena remanescente do período de prova (LEP, art. 128) - a conta do cumprido na data do livramento não a
+    inclui, porque a data dela é posterior."""
+    dec = [rs.to_date(i.get("data_decisao") or "") for i in lcs
+           if (rs.to_date(i.get("data_referencia") or i.get("data_decisao") or i.get("complemento") or "") or date.min) == dlc]
+    dec = max((d for d in dec if d), default=None)
+    if not dec or dec <= dlc:
+        return 0
+    return sum(n for d, n in rem or [] if d and dlc < d <= dec and n > 0)
+
+
+def _livramento_so_penas_extintas(r, dlc):
+    """As condenações que existiam no deferimento do livramento (fato e sentença até a data) estão todas extintas no RSPE, e há
+    outras, ativas, somadas depois: o livramento não alcança nenhuma pena em execução."""
+    crs = r.get("_crimes", [])
+    if not dlc or dlc == date.min or not crs:
+        return False
+    dentro, fora = [], []
+    for c in crs:
+        fato, sent = rs.to_date(c.get("data_infracao") or ""), rs.to_date(c.get("data_sentenca") or "")
+        (fora if ((fato and fato > dlc) or (sent and sent > dlc)) else dentro).append(c)
+    _ext = lambda c: (c.get("extinto") or "").upper().startswith("S")
+    return bool(dentro) and bool(fora) and all(_ext(c) for c in dentro) and not all(_ext(c) for c in fora)
+
+
 def pena_na_data(r, ref):
     """Pena em execução numa data passada (fim do período de prova do livramento): a pena total do SEEU, se todas as condenações
     já existiam (fato e sentença até ref); senão, só as penas impostas das condenações com fato e sentença até ref - as somadas
@@ -1070,6 +1147,11 @@ def extincao(r, presc, interr):
     inc = r.get("_incidentes", [])
     _lc_ok, _ = rs.livramento_em_curso(r, inc)
     lcs = [i for i in inc if rs.e_concessao_livramento(i)]
+    if lcs and _livramento_so_penas_extintas(r, max((rs.to_date(i.get("data_referencia") or i.get("data_decisao") or i.get("complemento") or "")
+                                                     or date.min for i in lcs))):
+        # o livramento alcançava só condenações já declaradas extintas (o RSPE registra a extinção): não resta pena do período
+        # de prova - a hipótese da Súmula 617/STJ não se aplica; as condenações ativas são posteriores e não estiveram em livramento
+        lcs = []
     if lcs:
         dlc = max((rs.to_date(i.get("data_referencia") or i.get("data_decisao") or i.get("complemento") or "") or date.min for i in lcs))
         revs = [rs.to_date(j.get("data_referencia") or j.get("data_decisao") or "") or date.min for j in inc
@@ -1084,7 +1166,7 @@ def extincao(r, presc, interr):
             try:
                 import rspe_decretos as _rd
                 cx = _rd._ctx(r)
-                c_dlc = rs.cumprido_na_data(r, cx["periodos"], cx["rem"], dlc)[0]
+                c_dlc = rs.cumprido_na_data(r, cx["periodos"], cx["rem"], dlc)[0] + _rem_ate_decisao_lc(cx["rem"], dlc, lcs)
                 fim_prova = _soma_pena(dlc, max(0, pt_lc - c_dlc))  # pelo calendário, como o término do SEEU
             except Exception:
                 fim_prova = None
@@ -1106,7 +1188,8 @@ def extincao(r, presc, interr):
                 try:
                     import rspe_decretos as _rd
                     cx = _rd._ctx(r)
-                    fim_lc = _soma_pena(dlc, max(0, pt_lc - rs.cumprido_na_data(r, cx["periodos"], cx["rem"], dlc)[0]))
+                    fim_lc = _soma_pena(dlc, max(0, pt_lc - rs.cumprido_na_data(r, cx["periodos"], cx["rem"], dlc)[0]
+                                                 - _rem_ate_decisao_lc(cx["rem"], dlc, lcs)))
                 except Exception:
                     fim_lc = None
             fim_lc = fim_lc or term
@@ -1138,14 +1221,15 @@ def extincao(r, presc, interr):
         if l.get("ppe_saldo_zero_crit") and not l.get("ppe_saldo_zero"):
             # várias condenações na fuga: por algum critério de imputação do tempo cumprido, a pena deste crime já estava cumprida
             _z = l["ppe_saldo_zero_crit"]
-            hip.append("%s: a verificar - pel%s %s, o tempo cumprido até a fuga de %s já esgotava a pena deste crime (saldo zero). "
+            hip.append("%s: a verificar - pel%s %s, o tempo cumprido até a %s de %s já esgotava a pena deste crime (saldo zero). "
                        "Conferir o saldo no cálculo do SEEU e, se confirmado, pedir a extinção pelo cumprimento (LEP, art. 66, II)" % (
-                           l.get("rotulo") or l["crime"], "os critérios" if " e " in _z["criterios"] else "o critério", _z["criterios"], _z["fuga"]))
+                           l.get("rotulo") or l["crime"], "os critérios" if " e " in _z["criterios"] else "o critério", _z["criterios"],
+                           _z.get("evento") or "fuga", _z["fuga"]))
             a_verificar = True
         if l.get("ppe_saldo_zero"):
             # única condenação em execução: pelo tempo cumprido nos eventos do RSPE, a pena se esgotou antes da fuga
-            hip.append("%s: pena já cumprida na fuga de %s, pelos eventos do RSPE. Conferir no cálculo do SEEU e pedir a extinção "
-                       "(LEP, art. 66, II)" % (l.get("rotulo") or l["crime"], l["ppe_saldo_zero"]))
+            hip.append("%s: pena já cumprida na %s de %s, pelos eventos do RSPE. Conferir no cálculo do SEEU e pedir a extinção "
+                       "(LEP, art. 66, II)" % (l.get("rotulo") or l["crime"], l.get("ppe_saldo_zero_evento") or "fuga", l["ppe_saldo_zero"]))
             a_verificar = True
     # item 155 de 16/10: prisão cautelar em outro processo, com fato desta execução anterior a ela, que alcança a pena remanescente
     try:
@@ -1588,6 +1672,14 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
         lsit = ("A verificar · a data do SEEU é 12 meses da falta de %s, ainda sem sanção reconhecida em juízo (%s): sem a homologação, "
                 "a falta não impede o livramento (CP, art. 83, III, b; Súmula 533/STJ) - conferir o PAD e o lapso" % (rs.fmt(_lf[1]), _lf[2]))
         lcor = "amarelo"
+    elif _lf and _lf[0] == "apurar_depois" and lcor != "vencido":
+        # (vencido: a dica do prazo vencido já traz a falta a apurar nos últimos 12 meses)
+        # falta (fuga, por exemplo) ainda sem sanção reconhecida: a data do SEEU vale enquanto não houver homologação, mas o PAD
+        # que a reconhecer empurra o livramento para 12 meses depois (da recaptura, na fuga)
+        _av = ("A verificar · falta ainda sem sanção reconhecida em juízo (%s): se reconhecida no PAD, o livramento só a partir de %s, "
+               "12 meses depois (CP, art. 83, III, b); sem a homologação, vale a data do SEEU (Súmula 533/STJ) - conferir o PAD" % (
+                   _lf[2], rs.fmt(_lf[1])))
+        lsit, lcor = _av, "amarelo"
     if est:
         psit, pcor = ({"extinta": "Pena extinta", "cumprida": "Pena cumprida", "lc": "Em livramento", "aberto": "Já no aberto", "lc_duvida": "A verificar (livramento)",
                        "nao_iniciou": "Não iniciou o cumprimento"}[est[0]],
@@ -1878,7 +1970,18 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
     # o assistido, mas o juízo pode recalcular como reincidente - a linha avisa
     _rl = [it for it in m.get("aud_itens") or [] if it.get("tipo") == "reincidente-pela-lei-sem-marcacao" and it.get("efeito")]
     if _rl:
-        if any("livramento" in it["efeito"] for it in _rl) and m.get("liv_sit") and m.get("liv_cor") not in ("azul", "cinza"):
+        _ved = [it for it in _rl if "livramento vedado" in it["efeito"]]
+        if _ved and (m.get("liv_sit") or re.match(r"^\d{2}/\d{2}/\d{4}", m.get("liv") or "")) and m.get("liv_cor") not in ("azul", "cinza"):
+            # reincidente específico pela lei (tráfico após tráfico transitado, por exemplo): o livramento é vedado quanto à pena
+            # desse crime - a data do SEEU não se sustenta se o juízo reconhecer a reincidência
+            _av = (" · reincidente específico pela lei (%s): livramento vedado quanto a esse crime (%s) - a data do SEEU não se "
+                   "sustenta; ver Auditoria" % ("; ".join((it.get("ref") or "").split(" · ")[0] for it in _ved),
+                                                "Lei 11.343/06, art. 44, p. ú." if "Drogas" in _ved[0]["efeito"] else "CP, art. 83, V"))
+            m["liv_sit"] = (m["liv_sit"] if m.get("liv_sit") not in ("", None, "Em cumprimento") else "A verificar") + _av
+            m["liv_sit_full"] = (m["liv_sit_full"] + _av) if m.get("liv_sit_full") else m["liv_sit"]
+            if m.get("liv_cor") != "vencido":
+                m["liv_cor"] = "amarelo"
+        elif any("livramento" in it["efeito"] for it in _rl) and m.get("liv_sit") and m.get("liv_cor") not in ("azul", "cinza"):
             _av = " · reincidente pela lei (o SEEU usa a fração do primário): o juízo pode recalcular - ver Auditoria"
             m["liv_sit_full"] = (m.get("liv_sit_full") or m["liv_sit"]) + _av
         if any("progressão" in it["efeito"] for it in _rl) and m.get("prog_sit") and m.get("prog_cor") not in ("azul", "cinza"):
@@ -1895,6 +1998,10 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
         _full = m.get("prog_sit_full") or m["prog_sit"]
         m["prog_sit"] += _av
         m["prog_sit_full"] = _full if "acima do legal" in _full else _full + _av
+    try:
+        _livramento_fracao_legal(r, m)
+    except Exception:
+        pass
     # cada análise no seu try: a falha de uma não apaga a outra, e o quadro diz que não foi possível analisar
     for _fn, _k in ((saida_temporaria, "st"), (progressao_antecipada, "pa")):
         try:
