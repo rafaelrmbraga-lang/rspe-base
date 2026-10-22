@@ -159,7 +159,8 @@ ok(l10 and l10[0].get("reinc") and not l10[0].get("reinc_sem_base"), "10: prescr
 # ---- 12a: forma favorável pela conta direta (pena do bloco x fração em meses, menos a detração) ----
 blocos = [[Fraction(2, 5), rs.pena_para_dias("15a2m20d"), rs.pena_para_dias("5a4m24d"), 626, [5, 4, 24], [15, 2, 20]]]
 t12 = ra._texto_blocos(blocos)
-ok("pena × fração − detração): 4 anos, 4 meses e 6 dias" in t12, "12a: forma favorável: %s" % t12[-300:])
+# (7.14.6) conta em anos, meses e dias, como o SEEU: 6a1m2d − 626 dias (1a8m21d) = 4a4m11d
+ok("pena × fração − detração): 4 anos, 4 meses e 11 dias" in t12, "12a: forma favorável: %s" % t12[-300:])
 
 if falhas:
     print("FALHAS (%d):" % len(falhas))
