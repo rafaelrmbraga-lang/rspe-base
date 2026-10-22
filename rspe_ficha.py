@@ -111,7 +111,7 @@ def _estudos(eventos, cancel_sem=None):
                 or (not msai and re.search(r"\bTRANSFERID[OA] PARA\b|\bEVADI\w*|\bEVASAO\b|\bFUGA\b|EMPREENDEU FUGA|POSTO EM LIBERDADE|COLOCADO EM LIBERDADE", uf))):
             for p in [p for p in abertos if not p.get("livre")]:
                 fechar(p, e["data"], "saída da unidade" + ((" (%s)" % msai.group(1).strip(" .").lower()) if msai and msai.group(1).strip(" .") else ""))
-        if not re.search(r"EDUCA|\bCURSO\b|ESCOLA|ESTUD|ALUNOS", us):
+        if not re.search(r"EDUCA|\bCURSO\b|ESCOLA|ESTUD|ALUNOS|HORAS?.AULA", us):
             continue
         ua = re.sub(r"\s+", " ", us)
         if re.search(r"ATESTADO|\bATP\b", ua) and (rrm.RE_AT_ESTUDO.search(rrm._norm_at(ua)) or re.search(r"FREQUENCIA ESCOLAR", ua)) \
@@ -122,6 +122,8 @@ def _estudos(eventos, cancel_sem=None):
             mp = re.search(r"DATA INICIAL\W*(\d{2}[./]\d{2}[./]\d{4})\W*(?:DATA FINAL|ATE)\W*(\d{2}[./]\d{2}[./]\d{4})", ua) or \
                 re.search(r"(\d{2}[./]\d{2}[./]\d{4})\s*(?:A|ATE|-)\s*(\d{2}[./]\d{2}[./]\d{4})", ua)
             mh = re.search(r"(?:ESTUDO|CARGA HORARIA|TOTALIZANDO|HORAS)\D{0,25}?(\d+)\s*/?\s*(?:H/A|H\b|HORAS)|(\d+)\s*/?\s*H/A", ua)
+            # (7.14.5) "atestado de horas aulas, remir (180) cento e oitenta horas aulas": o número (com o extenso repetido) antes de "horas aulas"
+            mh = mh or re.search(r"(?<![\d,.])(\d+)\s+(?:%s\s+)*HORAS?.AULAS?\b()" % rrm._NUM_EXT, ua)
             if mh:
                 ini = rrm._dt(mp.group(1)).strftime("%d.%m.%Y") if mp and rrm._dt(mp.group(1)) else e["data"]
                 fim = rrm._dt(mp.group(2)).strftime("%d.%m.%Y") if mp and rrm._dt(mp.group(2)) else ""
@@ -133,6 +135,10 @@ def _estudos(eventos, cancel_sem=None):
                 md_ = re.search(r"(?<![\d,.])(\d{1,3}(?:[,.]\d{1,2})?)\s*DIAS?\s*(?:A SEREM\s*)?REMID", ua)
                 if md_ and float(md_.group(1).replace(",", ".")):
                     p.update(dias_remidos=float(md_.group(1).replace(",", ".")), data=e["data"], texto=e["texto"])
+                elif re.search(r"\bREMIR\b", ua) and mh.group(2) == "":
+                    # (7.14.5) "atestado de horas aulas, remir (180) horas aulas": as horas a remir são o documento (12 h = 1 dia, LEP,
+                    # art. 126, § 1º, I) - entra na comparação como o atestado de estudo com dias declarados
+                    p.update(dias_remidos=round(p["horas"] / 12.0, 2), data=e["data"], texto=e["texto"])
                 if not any(x.get("livre") and ((num and x["curso"] == p["curso"]) or (x["inicio"], x["fim"], x["horas"]) == (p["inicio"], p["fim"], p["horas"])) for x in out):
                     out.append(p)
             continue
@@ -1206,7 +1212,7 @@ def derivar(f, eventos):
         atest.append({"ano_corrigido": "; ".join(corr), "data": a["emissao"].strftime("%d.%m.%Y"), "numero": a["numero"], "dias_trabalhados": a["trab"] or 0, "dias_remidos": a["rem"] or 0,
                       "periodo_inicio": rrm._f(min(x["ini"] for x in ss)) if ss else "", "periodo_fim": rrm._f(max(x["fim"] for x in ss)) if ss else "",
                       "empresa": ", ".join(dict.fromkeys(x["setor"] for x in a["segs"] if x["setor"])), "autos": a.get("autos", ""),
-                      "trechos": [{"setor": x["setor"], "inicio": rrm._f(x["ini"]), "fim": rrm._f(x["fim"])} for x in ss] if len(ss) > 1 else []})
+                      "trechos": [{"setor": x["setor"], "inicio": rrm._f(x["ini"]), "fim": rrm._f(x["fim"]), "rem": x.get("rem")} for x in ss] if len(ss) > 1 else []})
     f["atestados"] = atest
     # ENCCEJA / ENEM: certificado peticionado ou registrado na ficha (remição por aprovação - Res. CNJ 391/2021; LEP, art. 126,
     # e § 5º, +1/3, quando houver conclusão do ensino certificada)
@@ -3189,6 +3195,21 @@ def nome_unidade(nome):
                     for k, w in enumerate((nome or "").strip().upper().split()))
 
 
+def _data_local_doc(d, linhas=None):
+    """(7.14.5) Data que dá a unidade do documento: o fim do período atestado (o trabalho foi feito lá - "366/2025/ST/PED", emitido já
+    em outra unidade, é da PED), e não a emissão; sem período no texto, o fim do trabalho da ficha ligado a ele (sugerido); sem nada
+    disso, a emissão."""
+    fims = [b for _a, b in d.get("_segs") or [] if b]
+    if not fims:
+        ps = (d.get("periodo") or "").split(" a ")
+        fims = [x for x in [rs.to_date(ps[-1].strip())] if x] if len(ps) == 2 else []
+    if not fims and d.get("chave"):
+        # o início do último trabalho ligado (a unidade da linha de trabalho é a do início dela)
+        fims = [L["ini"] + timedelta(days=1) for L in linhas or [] if L.get("at_chave") == d["chave"] and L.get("ini")]
+    fim = max(fims) - timedelta(days=1) if fims else None  # o último dia do período pode ser o da transferência
+    return min(fim, d["emissao"]) if fim and d.get("emissao") else (fim or d.get("emissao"))
+
+
 def _unidade_em(tl, d):
     u = SEM_UNIDADE
     for e, x in tl or []:
@@ -3327,7 +3348,7 @@ def fundamentacao_remicao(res, r=None):
     if est:
         ped.append("%s) a declaração da remição pelo estudo indicada acima, com a requisição à unidade da certidão de frequência ou dos "
                    "certificados e relatórios correspondentes, se ainda não juntados (LEP, art. 126, § 1º, I, e § 5º; Res. CNJ 391/2021);" % next(k))
-    atual = uns[-1] if uns else "[unidade atual]"
+    atual = res.get("unidade_atual_f") or (uns[-1] if uns else "[unidade atual]")
     ped.append("%s) a expedição de ofício à direção da unidade %s para que, no prazo de [10] dias, certifique com base na ficha do SIAPEN todos "
                "os períodos de trabalho e estudo do apenado, inclusive os cumpridos em outras unidades. A certidão deve indicar, para cada "
                "período, a unidade, os dias trabalhados ou as horas de estudo, e o número do atestado correspondente. Os atestados ainda "
@@ -3342,9 +3363,37 @@ def fundamentacao_remicao(res, r=None):
     if ats and (not prog or prog > date.today()):
         # a remição conta como pena cumprida: a data da progressão recua os dias remidos (sugestão entre colchetes, a conferir no
         # cálculo); com a data já transcorrida, o reflexo não se aplica e a seção sai
-        nova = ("[data recalculada: por volta de %s - conferir no cálculo]" % rs.fmt(prog - timedelta(days=int(total)))) if prog else "[data recalculada]"
+        # (7.14.5) trabalho anterior à data-base: a remição reduz a pena remanescente nessa data, e o lapso cai só a fração sobre ela
+        # (1/6 de 84 dias ≈ 14 dias), não os dias inteiros; o trabalho depois da data-base conta inteiro como pena cumprida
+        import rspe_remicao as rrm
+        db_ = rs.to_date(r.get("data_base_seeu") or "")
+        mfr = re.fullmatch(r"\s*(\d+)\s*/\s*(\d+)\s*", r.get("fracao_progressao_aplicada") or "")
+        fr_ = (int(mfr.group(1)) / float(mfr.group(2))) if mfr and int(mfr.group(2)) else None
+        antes = 0.0
+        if db_:
+            for a in ats:
+                ini_, fim_ = rs.to_date(a.get("periodo_inicio") or ""), rs.to_date(a.get("periodo_fim") or "")
+                v_ = max(a["dias_remidos"], a["dias_trabalhados"] / 3.0) if (todos_trab and a in cheios) else float(a["dias_remidos"])
+                if ini_ and fim_ and ini_ <= fim_:
+                    n_ = rrm._dias_seg_sab(ini_, fim_)
+                    antes += v_ * (rrm._dias_seg_sab(ini_, min(fim_, db_ - timedelta(days=1))) / float(n_ or 1)) if ini_ < db_ else 0.0
+                elif not ini_ and _dp(a.get("data") or "") and _dp(a["data"]) < db_:
+                    antes += v_  # sem período: emitido antes da data-base, o trabalho é anterior a ela
+            antes = min(antes, total)
+        if antes > 0.5 and fr_:
+            red = (total - antes) + antes * fr_
+            nova = ("[data recalculada: por volta de %s - conferir no cálculo]" % rs.fmt(prog - timedelta(days=int(round(red))))) if prog else "[data recalculada]"
+            expl_ = (" O trabalho %s é anterior à data-base (%s): a remição reduz a pena remanescente nessa data, sobre a qual incide a fração "
+                     "de %s, e o lapso diminui ≈ %s%s." % (
+                         "remido" if antes >= total - 0.5 else "de %s desses dias" % _dias_txt(round(antes, 2)), rs.fmt(db_),
+                         r.get("fracao_progressao_aplicada").strip(), _dias_txt(round(antes * fr_, 2)),
+                         ("; os %s do trabalho posterior a ela contam inteiros" % _dias_txt(round(total - antes, 2))) if total - antes > 0.5 else ""))
+        else:
+            nova = ("[data recalculada: por volta de %s - conferir no cálculo]" % rs.fmt(prog - timedelta(days=int(total)))) if prog else "[data recalculada]"
+            expl_ = (" O trabalho é anterior à data-base (%s): o lapso diminui só a fração sobre os dias remidos - conferir no cálculo." % rs.fmt(db_)
+                     if antes > 0.5 else "")
         out += ("\n\nDO REFLEXO NA PROGRESSÃO DE REGIME\nCom a declaração da remição de %s, a data prevista para a progressão de regime "
-                "passará de %s para %s, conforme cálculo [anexo]." % (_dias_txt(total), rs.fmt(prog) if prog else "[data atual]", nova))
+                "passará de %s para %s, conforme cálculo [anexo].%s" % (_dias_txt(total), rs.fmt(prog) if prog else "[data atual]", nova, expl_))
     return out
 
 
@@ -3393,7 +3442,11 @@ def _res_fundamentacao(N, T, f, hoje):
             sem_at.append("%s, desde %s, em curso" % (L["local"], rs.fmt(a)) if L.get("em_curso") and (L["fim"] - b).days <= 7
                           else "%s, %s a %s" % (L["local"], rs.fmt(a), rs.fmt(b)))
     return {"atestados_pendentes": ats, "estudo_horas_pend": horas, "estudos_pendentes": est_pend, "exames_f": exames, "leituras_f": leituras,
-            "educacao_f": edu, "sem_atestado_f": sem_at, "unidades_f": list(dict.fromkeys(nome_unidade(u) for _d, u in linha_unidades_exibicao(f) if u))}
+            "educacao_f": edu, "sem_atestado_f": sem_at, "unidades_f": list(dict.fromkeys(nome_unidade(u) for _d, u in linha_unidades_exibicao(f) if u)),
+            # (7.14.5) a unidade atual é a da última entrada (a lista acima é por ordem da primeira passagem: quem volta a uma unidade
+            # já visitada ficaria com a anterior)
+            "unidade_atual_f": next((n_ for n_ in (nome_unidade(u) for _d, u in reversed(linha_unidades_exibicao(f)) if u)
+                                     if n_ and n_ != SEM_UNIDADE), "")}
 
 
 def _rotulo_doc(d):
@@ -3502,13 +3555,13 @@ def comparativo(r, f, hoje=None, conferidos=None, manuais=None, vinculos=None):
     linhas = [{"emp": L["local"] + (" (externo)" if L.get("externo") else ""), "un": L["un"], "per": L["periodo"], "dias": L["dias"], "at": ("nº " + L["at"]) if L["at"] else "—",
                "sit": ST[L["st"]][0] + (" · vínculo sem baixa: conferir" if L.get("conf_dias") and not L.get("pedir_dias") else ""), "cor": cor_l(L)}
               for L in T["linhas"]]
-    linhas += [{"emp": _rotulo_doc(d), "un": _unidade_em(tl_ex, d["emissao"]), "per": d["periodo"] or "—", "dias": "—",
+    linhas += [{"emp": _rotulo_doc(d), "un": _unidade_em(tl_ex, _data_local_doc(d, T["linhas"])), "per": d["periodo"] or "—", "dias": "—",
                 "at": ("%s remidos" % _fmtn(d["dias"])) if d.get("dias") else "—", "sit": d["sit"], "cor": d["cor"]}
                for d in N["docs"] if d["cor"] in ("vermelho", "amarelo")]
     # modelo da tela (JSON): sem as referências repetidas aos documentos
     docs = [{k: v for k, v in d.items()} for d in N["docs"]]
     for d in docs:
-        d["un"] = _unidade_em(tl_ex, d["emissao"])
+        d["un"] = _unidade_em(tl_ex, _data_local_doc(d, T["linhas"]))
     novo = {k: v for k, v in N.items() if k not in ("docs", "pontos", "post", "vermelho", "faltas_127", "fora")}
     novo.update(docs=docs, pontos=[dict(p_, docs=[d["chave"] for d in p_["docs"]]) for p_ in N["pontos"]], trab=T,
                 fora_n=len(N["fora"]), fatos=[{"data": x["data"], "dias": x["dias"], "rotulo": x["rotulo"], "chave": x["doc"]["chave"]} for x in fatos],
