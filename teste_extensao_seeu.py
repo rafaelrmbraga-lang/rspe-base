@@ -31,6 +31,10 @@ ok([c.get("world") for c in m["content_scripts"]] == [None, None, "MAIN", None] 
 sap = open(os.path.join(EXT, "sap.js"), encoding="utf-8").read()
 ok("bt-pesquisar" in sap and "'designar'\\s*:\\s*'0'" in sap and "bt-designar" not in sap and "bt-atendimentos" not in sap,
    "SAP: só a lupa Visualizar (designar=0)")
+bg = open(os.path.join(EXT, "background.js"), encoding="utf-8").read()
+ok("rspeAuto: true" in bg and 'if (!c.rspeAuto && !forcar && !lote) return { ok: false, motivo: "rspe automático desligado" };' in bg,
+   "chave do RSPE automático: desligada, só o botão do painel (forcar) e o lote baixam")
+ok('id="rspeAuto"' in open(os.path.join(EXT, "popup.html"), encoding="utf-8").read(), "opção do RSPE automático no painel")
 ok(m["content_security_policy"]["extension_pages"].endswith("connect-src https://seeu.pje.jus.br https://seeu-transfer.s3.sa-east-1.amazonaws.com https://seeu-transfer.s3.amazonaws.com http://127.0.0.1:47321"),
    "conexão própria só com o SEEU, o servidor de arquivos do SEEU (PDF das movimentações) e o APTO deste computador")
 for f in ["background.js", "content.js", "siapen.js", "siapen_pagina.js", "sap.js", "comum.js", "popup.js", "popup.html", "triagem.html", "triagem.js", "triagem_core.js"] + list(m["icons"].values()):

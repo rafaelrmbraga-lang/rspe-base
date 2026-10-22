@@ -147,7 +147,7 @@
     pedido = true;
     const r = await baixar(url, processo, forcar);
     if (r && r.ok) aviso("APTO: RSPE salvo em Downloads\\" + String(r.arquivo || "").replace(/\//g, "\\"));
-    else if (r && !r.repetido && r.motivo !== "desligada") aviso("APTO: " + (r.motivo || "não foi possível salvar o RSPE"), true);
+    else if (r && !r.repetido && r.motivo !== "desligada" && r.motivo !== "rspe automático desligado") aviso("APTO: " + (r.motivo || "não foi possível salvar o RSPE"), true);
     return Object.assign({ achou: true, processo }, r || {});
   }
 

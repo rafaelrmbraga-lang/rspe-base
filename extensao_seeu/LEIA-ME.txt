@@ -40,6 +40,15 @@ CONFIGURAR
  - Se o Chrome perguntar onde salvar cada arquivo, desligue em Configurações >
    Downloads > "Perguntar onde salvar cada arquivo antes de fazer download".
 
+DESLIGAR SÓ O RSPE AUTOMÁTICO (1.7.3)
+ - No painel, desmarque "Baixar o RSPE automaticamente ao abrir um
+   processo". Abrir um processo ou a "Situação Carcerária" no SEEU deixa de
+   baixar o RSPE (nenhum pedido ao SEEU, nenhum aviso na página).
+ - O botão "Baixar o RSPE do processo aberto" e o lote continuam baixando
+   quando você pede; a triagem, a ficha do SIAPEN e o SAP não mudam.
+ - A chave "ligada/desligada" do topo do painel desliga a extensão inteira.
+ - A escolha fica guardada; marque de novo para voltar ao automático.
+
 COMO FUNCIONA
  - Automático: ao abrir um processo, a extensão acha na página o endereço do
    relatório "Situação Carcerária" e busca o PDF com a sua sessão do SEEU.
