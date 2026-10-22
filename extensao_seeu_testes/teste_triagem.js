@@ -26,6 +26,14 @@ ok(mesa.linhas[1].final === 0 && mesa.linhas[1].classe === "Execução de Medida
 ok(mesa.linhas[2].defensor === "" && mesa.linhas[2].executado === "Ciclano & Filho", "sem defensor vinculado e entidade (&amp;)");
 ok(mesa.linhas.every((l) => !/preAnalise/.test(l.url)), "nenhum link de Analisar");
 
+// ---- acentos em entidades HTML, como o SEEU às vezes manda ("at&eacute;"): a navegação da Mesa precisa ser lida
+const navEnt = T.lerMesa(ler("mesa_manifestacao.html").replace("exibindo de 1 até 20", "exibindo de 21 at&eacute; 39").replace("23 registro(s)", "39 registro(s)"));
+ok(navEnt.total === 39 && navEnt.de === 21 && navEnt.ate === 39, "navegação com &eacute;: " + JSON.stringify([navEnt.total, navEnt.de, navEnt.ate]));
+ok(T.texto("Juntar MANIFESTA&Ccedil;&Atilde;O referente ao movimento - JUNTADA DE CERTID&Atilde;O") === "Juntar MANIFESTAÇÃO referente ao movimento - JUNTADA DE CERTIDÃO", "entidades maiúsculas (&Ccedil; &Atilde;)");
+ok(T.texto("Execu&ccedil;&atilde;o &amp; &uacute;ltimo &ordm; &laquo;x&raquo; &yuml;") === "Execução & último º «x» ÿ", "entidades do Latin-1");
+const pendEnt = T.lerPendencias('<fieldset id="quadroPendencias"><legend>Pend&ecirc;ncias</legend>Juntar MANIFESTA&Ccedil;&Atilde;O referente ao movimento - JUNTADA DE CERTID&Atilde;O ( 13 de outubro de 2026 &agrave;s 17:31 )</fieldset>');
+ok(pendEnt.length === 1 && pendEnt[0].movimento === "JUNTADA DE CERTIDÃO" && pendEnt[0].hora === "17:31", "pendência com entidades: " + JSON.stringify(pendEnt));
+
 // ---- final do nº
 ok(T.finalDoNumero("0011147-54.2016.8.12.0001") === 7, "final: o último algarismo antes do traço");
 ok([...T.faixasFinal("0-2")].join() === "0,1,2", "0-2 = finais 0, 1 e 2");

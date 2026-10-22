@@ -82,6 +82,9 @@ TRIAGEM DA MESA DO DEFENSOR (1.7)
    Lidas e aguardando análise, Aguardando assinatura), todas as páginas.
    De cada linha: processo, assistido, defensor, data de envio, último dia
    e prazo.
+ - Todas as páginas da Mesa (1.8.2): a triagem pede página por página até
+   ter lido o total informado pelo SEEU ("39 registro(s) encontrado(s)"); se
+   o SEEU não entregar uma página, avisa quantos de quantos foram lidos.
  - Filtros: defensor (inclusive "Sem defensor vinculado"), final do nº (o
    último algarismo antes do traço: 0011147-54... = 7; clique nos
    algarismos 0 a 9 ou escreva a faixa: "0-2" = finais 0, 1 e 2; "0-2, 5,

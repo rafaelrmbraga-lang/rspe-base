@@ -15,13 +15,21 @@
   const MESES = { janeiro: 1, fevereiro: 2, marco: 3, abril: 4, maio: 5, junho: 6, julho: 7, agosto: 8, setembro: 9, outubro: 10, novembro: 11, dezembro: 12 };
 
   // ---------------------------------------------------------------- texto
-  const ENT = { nbsp: " ", amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", ordm: "º", ordf: "ª", sect: "§", deg: "°", ndash: "–", mdash: "—", laquo: "«", raquo: "»" };
+  // entidades nomeadas do HTML (o SEEU às vezes manda "at&eacute;", "MANIFESTA&Ccedil;&Atilde;O"): todo o Latin-1 e as aspas/traços
+  const ENT = { nbsp: " ", amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", ndash: "–", mdash: "—", lsquo: "‘", rsquo: "’", ldquo: "“", rdquo: "”",
+    sbquo: "‚", bdquo: "„", hellip: "…", bull: "•", middot: "·", euro: "€", trade: "™", ensp: " ", emsp: " ", thinsp: " " };
+  ("iexcl cent pound curren yen brvbar sect uml copy ordf laquo not shy reg macr deg plusmn sup2 sup3 acute micro para middot cedil sup1 ordm raquo " +
+   "frac14 frac12 frac34 iquest Agrave Aacute Acirc Atilde Auml Aring AElig Ccedil Egrave Eacute Ecirc Euml Igrave Iacute Icirc Iuml ETH Ntilde " +
+   "Ograve Oacute Ocirc Otilde Ouml times Oslash Ugrave Uacute Ucirc Uuml Yacute THORN szlig agrave aacute acirc atilde auml aring aelig ccedil " +
+   "egrave eacute ecirc euml igrave iacute icirc iuml eth ntilde ograve oacute ocirc otilde ouml divide oslash ugrave uacute ucirc uuml yacute thorn yuml")
+    .split(" ").forEach((nome, i) => { if (!(nome in ENT)) ENT[nome] = String.fromCharCode(0xa1 + i); });
   function entidades(s) {
     return String(s || "").replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (m, e) => {
       if (e[0] === "#") {
         const n = e[1] === "x" || e[1] === "X" ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10);
         return n > 0 && n < 0x110000 ? String.fromCodePoint(n) : m;
       }
+      if (Object.prototype.hasOwnProperty.call(ENT, e)) return ENT[e];   // maiúscula/minúscula importa (&Ccedil; x &ccedil;)
       const k = e.toLowerCase();
       return Object.prototype.hasOwnProperty.call(ENT, k) ? ENT[k] : m;
     });
