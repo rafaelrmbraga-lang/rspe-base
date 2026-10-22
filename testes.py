@@ -27,6 +27,7 @@ TESTES += ["teste_conf4_remicao.py"]  # conferência 7.14.3, frente remição
 TESTES += ["teste_conf4_demais.py"]
 TESTES += ["teste_conf5.py"]  # validação da 7.14.3: resíduos (7.14.4)
 TESTES += ["teste_conf6_demais.py"]  # conferência independente (7.14.5): livramento, extinção, auditoria, prescrição e progressão
+TESTES += ["teste_conf6_indulto.py"]
 TESTES += ["teste_triagem_seeu.py"]  # extensão: triagem da Mesa do Defensor
 TESTES += ["teste_conf6_remicao.py"]  # conferência 7.14.4 (70 casos novos), frente remição (7.14.5)
 # saída em UTF-8 em qualquer console (no Windows o padrão cp1252 não imprime símbolos como "✓" e derruba o teste)

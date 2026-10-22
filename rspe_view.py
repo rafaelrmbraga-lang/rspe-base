@@ -692,7 +692,9 @@ def curto_impeditivo(r):
     partes = [p.split(":")[0].replace("art. 1º, ", "") + " · " + p.split(":")[1].strip().split(" (")[0]
               for p in det.split("; ") if ":" in p]
     sup = " (hediondez posterior ao fato)" if "fato anterior" in det else ""
-    return "Sim · art. 1º, " + "; ".join(partes) + sup
+    if all(rs.IMP_FORA_SOMA in p_ for p_ in det.split("; ") if p_):
+        sup += " (sentença posterior: fora da soma dos decretos)"
+    return "Sim · art. 1º, " + "; ".join(dict.fromkeys(partes)) + sup
 
 
 def compacto_indulto(txt):
@@ -730,7 +732,7 @@ def cor_indulto(r):
         st.add("verificar" if (s == "possivel" and rs.falta_a_verificar(r.get(k))) else s)
     if "possivel" in st:
         return "verde"  # mesmo com crime impeditivo: art. 7º, p. ú., ou tese da hediondez superveniente
-    if r.get("indulto_crime_impeditivo") == "SIM":
+    if r.get("indulto_crime_impeditivo") == "SIM" and not all(rs.IMP_FORA_SOMA in p_ for p_ in (r.get("indulto_crime_impeditivo_detalhe") or "").split("; ") if p_):
         return "vermelho"
     if "verificar" in st:
         return "amarelo"

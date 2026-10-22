@@ -209,6 +209,15 @@ def _estudos(eventos, cancel_sem=None):
                     (_dp(p["inicio"]) or date.max) <= (_dp(e["data"]) or date.min) for p in out):
                 # matrícula cancelada sem a matrícula registrada na ficha: houve estudo cujo período a ficha não mostra
                 cancel_sem.append({"data": e["data"], "texto": e["texto"]})
+            if not abertos and "CANCELAMENTO" in u and e.get("data"):
+                # cancelamento sem matrícula aberta, depois de uma matrícula encerrada pela saída da unidade (transferência,
+                # progressão) e sem outra matrícula depois dela: a escola pode ter mantido a matrícula ativa até o cancelamento -
+                # o fim alternativo (fim_cancel) é o limite máximo do estudo (a contagem fica a conferir, não descartada)
+                _reg = [p for p in out if not p.get("livre")]
+                _ult = max(_reg, key=lambda p: _dp(p["inicio"]) or date.min, default=None)
+                if _ult and (_ult.get("motivo_fim") or "").startswith("saída da unidade") and _dp(_ult.get("fim") or "") \
+                        and _dp(_ult["fim"]) < (_dp(e["data"]) or date.min) and not _ult.get("fim_cancel"):
+                    _ult["fim_cancel"] = e["data"]
             for p in list(abertos):
                 fechar(p, e["data"], "concluído" if "CONCLU" in u else "matrícula cancelada" + (" (saída da unidade)" if "SA" in u and "PRES" in u else ""))
             continue
@@ -3949,6 +3958,16 @@ def complementar_decretos(r, f, hoje=None):
         meses, anos_j = (18, 5) if reinc else (12, 3)
         dest = _dias_no_intervalo([(a, b) for a, b, _ in estudos], ref - timedelta(days=anos_j * 365), ref)
         res["XII"] = ((dest >= meses * 30), "ficha: %s de matrícula em estudo nos %s anteriores (exige %s)" % (rs.pl(dest, "dia", "dias"), rs.pl(anos_j, "ano", "anos"), rs.pl(meses, "mês", "meses")))
+        # matrícula encerrada pela saída da unidade, com o cancelamento lançado só depois (fim_cancel): se ela seguiu ativa até o
+        # cancelamento, o tempo pode alcançar o requisito - a conferir (não se afirma o "não atende")
+        _alt = [(a, min(_dp(e["fim_cancel"]), ref) if e.get("fim_cancel") and _dp(e["fim_cancel"]) else b, e) for a, b, e in estudos]
+        dest_alt = _dias_no_intervalo([(a, b) for a, b, _ in _alt], ref - timedelta(days=anos_j * 365), ref)
+        if dest < meses * 30 <= dest_alt:
+            _ec = [e for _a, _b, e in estudos if e.get("fim_cancel")]
+            res["XII"] = (None, "ficha: %s de matrícula em estudo nos %s anteriores (exige %s), contando a matrícula até a saída da unidade em %s; "
+                                "o cancelamento da matrícula só foi lançado em %s - se ela seguiu ativa até lá, até %s: conferir a frequência escolar" % (
+                                    rs.pl(dest, "dia", "dias"), rs.pl(anos_j, "ano", "anos"), rs.pl(meses, "mês", "meses"),
+                                    _br(_ec[-1]["fim"]), _br(_ec[-1]["fim_cancel"]), rs.pl(dest_alt, "dia", "dias")))
         # XIII: curso concluído durante a execução (ENCCEJA/ENEM certificado, ou curso concluído na ficha)
         # XIII: conclusão durante a execução e nos 3 anos anteriores à data do decreto
         j13 = ref - timedelta(days=3 * 365)
