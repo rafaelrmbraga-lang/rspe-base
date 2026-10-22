@@ -1308,7 +1308,8 @@ def trabalho_x_atestados(f, hoje=None, manuais=None, vinculos=None, inicio=None,
             continue  # o mesmo vínculo repetido (ou contido em outro do mesmo setor)
         # (7.14.3) vínculo sem baixa: o fim é só a saída da unidade (ou evasão/transferência), não o desligamento do setor
         uni.append({"a": a, "b": b, "s": s, "aberto": not t.get("fim"), "ext": bool(t.get("externo")), "jornada": t.get("jornada") or "",
-                    "sem_baixa": bool(t.get("fim")) and (t.get("motivo_fim") or "").startswith("saída/evasão/transferência")})
+                    "sem_baixa": bool(t.get("fim")) and (t.get("motivo_fim") or "").startswith("saída/evasão/transferência"),
+                    "baixa_tardia": _dt(t.get("baixa_tardia") or "") if t.get("fim") else None})
     blocos = []
     for u in uni:
         cob = []
@@ -1492,7 +1493,9 @@ def trabalho_x_atestados(f, hoje=None, manuais=None, vinculos=None, inicio=None,
             local = setor_chave(u["s"])[1] if u["s"] else "Trabalho"
             local = re.sub(r"^([a-z]{1,3})(?=\s)", lambda m: m.group(1).upper(), local)  # "fe Freitas Valdez" -> "FE Freitas Valdez"
             linhas.append({"chave": ch_t, "local": local,
-                           "ini": a, "fim": b, "periodo": "%s a %s%s" % (_f(a), _f(b), " (em curso na impressão da ficha)" if em_curso else ""),
+                           "ini": a, "fim": b, "periodo": "%s a %s%s" % (_f(a), _f(b), " (em curso na impressão da ficha)" if em_curso else (
+                               " (fim suposto: início de outro setor; a ficha só dá baixa em %s)" % _f(u["baixa_tardia"]))
+                               if u.get("baixa_tardia") and b == u["b"] and u["baixa_tardia"] > b else ""),
                            "dias": (b - a).days + 1, "at": alvo["num"] if alvo else "", "at_chave": alvo["chave"] if alvo else "",
                            "st": st, "como": "período e nome da empresa" if nome else "período (único trabalho no período)",
                            "sem_confirmado": confirmado_sem, "em_curso": em_curso, "externo": u["ext"], "jornada": u["jornada"],
@@ -2358,7 +2361,7 @@ def comparacao(r, f, hoje=None, manuais=None, homologados=None, trab=None):
     return {"onde": onde, "rspe_maior": rspe_maior, "outra_exec": outra, "acomp": acomp_l, "corte": corte, "_sem_doc": sem_doc, "R": R, "docs": docs, "at_desta": soma(at_), "n_desta": len(at_), "man": soma(man_), "n_man": len(man_), "est_comp": soma(est_),
             "leitura": soma(lei_), "obras": int(round(soma(lei_) / 4)), "fora": [d for d in docs if d["fora"]], "comp": comp, "dif": dif,
             "estim": estim, "dif_estim": round(dif + estim, 2), "pouco": pouco, "concl": concl, "concl_cor": concl_cor, "pontos": pontos,
-            "pedir_dias": len(pedir) / 3.0, "talvez_dias": len(talvez) / 3.0, "conf_dias": len(conferir) / 3.0, "est_estim": est_estim, "impressao": imp, "inicio": inicio,
+            "pedir_dias": len(pedir) / 3.0, "talvez_dias": len(talvez) / 3.0, "conf_dias": len(conferir) / 3.0, "est_estim": est_estim, "est_cert_fim": cert_fim, "impressao": imp, "inicio": inicio,
             "ult_at": ult_at, "post": post, "vermelho": verm, "faltas_127": faltas_graves(r, f)}
 
 

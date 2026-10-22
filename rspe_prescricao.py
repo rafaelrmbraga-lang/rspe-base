@@ -1019,11 +1019,24 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
                                   "desta pena, não interrompe a prescrição deste crime (art. 117, V)." % (rs.fmt(a2), procs)))
                 todos.append((a, b))
                 continue
-            cumpr.append((a2, b))
-            ef = "cumprimento da pena unificada (LEP, art. 111): interrompe (art. 117, V) e conta como tempo cumprido"
             # somatório ou unificação concedido até o início deste trecho que inclui esta ação: a custódia já é cumprimento desta pena,
             # sem ressalva (conferência 7.13, prescricao-21)
             _soma_ini = next((d_ for d_, _r in MA["unif"] if d_ <= a2), None)
+            if not liga and not _soma_ini and (rs.suspenso_rspe(c) or _e_art28(c)):
+                # (7.14.6) pena com "Suspenso: Sim" no RSPE (sursis, substituição) ou do art. 28 da Lei 11.343/2006 (sanções que não se
+                # cumprem em prisão): a prisão registrada só para outro processo não é cumprimento dela - preso por outro motivo, o
+                # prazo fica suspenso (CP, art. 116, p. único), sem interromper
+                _por = "esta pena consta como suspensa no RSPE (\"Suspenso: Sim\")" if rs.suspenso_rspe(c) else \
+                    "as sanções do art. 28 da Lei 11.343/2006 não se cumprem em prisão"
+                susp.append((a2, b))
+                lt(a2, b, "outro_motivo", fonte, "registrada só para outro processo e %s: preso por outro motivo - suspende o prazo (art. 116, "
+                                                 "p. único), sem interromper - conferir" % _por)
+                corpo.append((a2, "Prisão por outro motivo de %s a %s (%s, processo %s): %s, e a prisão por outro processo não é cumprimento "
+                                  "dela - o prazo fica suspenso (CP, art. 116, p. único) - conferir." % (rs.fmt(a2), fim_txt, mot, procs, _por)))
+                todos.append((a, b))
+                continue
+            cumpr.append((a2, b))
+            ef = "cumprimento da pena unificada (LEP, art. 111): interrompe (art. 117, V) e conta como tempo cumprido"
             if not liga and _soma_ini:
                 ef += "; o somatório das penas de %s inclui esta ação penal" % rs.fmt(_soma_ini)
             elif not liga:
@@ -1186,6 +1199,14 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
                 corpo.append((min(_marcos_x), "Novo crime (%s) com a data do fato registrada em %s, depois da denúncia ou da sentença daquele processo "
                                               "(erro de cadastro): a data não foi usada; o fato real é anterior a %s e, se posterior a %s, interrompeu o "
                                               "prazo (art. 117, VI) - conferir." % (_rot_x, rs.fmt(dx), rs.fmt(min(_marcos_x)), rs.fmt(termo))))
+            continue
+        if dx and dx > termo and _contravencao(x) != _contravencao(c):
+            # (7.14.6) a reincidência do art. 117, VI, é a do art. 63 do CP (crime depois de crime) ou, para a contravenção, a do art. 7º
+            # da LCP: a contravenção posterior não interrompe a executória do crime (nem o crime posterior a da contravenção)
+            corpo.append((dx, "%s em %s (%s): não interrompe a prescrição desta pena - %s (CP, art. 63; LCP, art. 7º)." % (
+                "Contravenção" if _contravencao(x) else "Crime", rs.fmt(dx), "%s, ação penal %s" % (rs.crimes_curto([x]) or "infração", x.get("processo_criminal") or "não informada"),
+                "a reincidência do art. 117, VI, é a prática de novo crime" if _contravencao(x) else
+                "o crime posterior à contravenção não gera a reincidência que interrompe a prescrição da contravenção")))
             continue
         if dx and dx > termo:
             novos.append((dx, "%s, ação penal %s" % (rs.crimes_curto([x]) or "crime", x.get("processo_criminal") or "não informada"),
@@ -2422,12 +2443,17 @@ def _marcos_modalidade(c, r, ctx, termo, apos=None):
             continue
         dx = rs.to_date(x.get("data_infracao") or "")
         _marcos_x = [d_ for d_ in (rs.to_date(x.get(k_) or "") for k_ in ("data_denuncia", "data_sentenca", "transito_mp", "transito_processo")) if d_]
-        if dx and dx > termo and not (_marcos_x and dx > min(_marcos_x)):
+        if dx and dx > termo and not (_marcos_x and dx > min(_marcos_x)) and _contravencao(x) == _contravencao(c):
             novos.append((dx, "%s, ação penal %s" % (rs.crimes_curto([dict(x, extinto="Não")]) or "crime", x.get("processo_criminal") or "não informada")))
     if rs.to_date(c.get("_novo_crime") or ""):
         novos.append((rs.to_date(c["_novo_crime"]), "informado pelo operador"))
     novos.sort(key=lambda t: t[0])
     return cumpr, susp, novos
+
+
+def _contravencao(x):
+    """Contravenção penal (Decreto-Lei 3.688/41): não é "novo crime" para a interrupção do art. 117, VI."""
+    return rs.num_lei(x.get("lei")) == "3688" or "CONTRAVEN" in (x.get("lei") or "").upper()
 
 
 def _corre(ctx, M, inicio, meses, com_cumpr=True):

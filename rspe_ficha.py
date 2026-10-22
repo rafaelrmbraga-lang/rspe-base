@@ -1094,6 +1094,10 @@ def derivar(f, eventos):
                     trabalho.append(aberto)
                     aberto = None
                     continue
+                # (7.14.6) baixa tardia (saída da unidade) do setor encerrado só pelo início de outro: o fim exibido é suposto -
+                # a tela diz a data da baixa que a ficha registra
+                if v and v.get("motivo_fim") == "início de outra atividade" and fv and d_ and d_ > fv:
+                    v.setdefault("baixa_tardia", e["data"])
                 # baixa de um setor sem trabalho aberto: a unidade o mantinha alocado sem registrar o início
                 baixas_orfas.append({"data": e["data"], "setor": m.group(1).strip(" ,."),
                                      "ultimo_inicio": v["inicio"] if v else "", "ultimo_fim": v.get("fim", "") if v else ""})
@@ -1402,6 +1406,26 @@ def derivar(f, eventos):
             continue
         faltas.append({"data_registro": e["data"], "data_fato": e["data"], "artigo": "", "grave": "FALTA GRAVE" in us, "texto": e["texto"], "padic": "",
                        "resultado": "", "situacao": "PADIC instaurado" if re.search(r"RESPONDE\s*(?:PROCESSO|PADIC|CD SIMPLIFICADA|/)", us) else "registrada"})
+    # (7.14.6) sanção disciplinar registrada só pelo efeito ("deixa de estudar por estar sancionado, respondendo por falta disciplinar",
+    # mudança de cela "Motivo: sancionado - CI ..."), sem o registro da falta: a falta é do dia do lançamento, com natureza e
+    # homologação não informadas; o isolamento em cela no mesmo dia (motivo sanção) indica falta grave (LEP, art. 57, p. ú.)
+    for e in eventos:
+        us = rs._sem_acento(e["texto"]).upper()
+        # (só o lançamento que diz a falta - "respondendo por falta disciplinar", "por estar sancionado"; a mudança de cela "motivo:
+        # sancionado", sozinha, é em geral o cumprimento da sanção de falta já registrada, às vezes semanas depois do fato)
+        if not e["d"] or not re.search(r"RESPONDENDO (?:A |POR )?(?:PROCESSO |FALTA )?DISCIPLINAR|POR ESTAR SANCI\w*", us) \
+                or re.search(r"TERMINO|FIM D[OA] SANC|ARQUIV|ABSOLV|CONSELHO DISCIPLINAR|PADIC", us):
+            continue
+        _dx = lambda x, k: _dp((x.get(k) or "").replace("/", "."))
+        if any(_dx(x, k) and -10 <= (e["d"] - _dx(x, k)).days <= 90 for x in faltas for k in ("data_registro", "data_fato", "data_resultado")):
+            continue  # sanção de falta já registrada (o resultado do PADIC vem semanas depois do fato)
+        isol = any(x["d"] and abs((x["d"] - e["d"]).days) <= 1 and re.search(r"^\W*MUDANCA DE CELA.*MOTIVO:\s*SANCI", rs._sem_acento(x["texto"]).upper())
+                   for x in eventos)
+        txt_ = " | ".join(x["texto"] for x in eventos if x["d"] == e["d"] and re.search(r"SANCI|FALTA DISCIPLINAR", rs._sem_acento(x["texto"]).upper()))
+        faltas.append({"data_registro": e["data"], "data_fato": e["data"], "artigo": "", "grave": isol, "texto": txt_ or e["texto"], "padic": "",
+                       "resultado": "", "situacao": "registrada", "sancao_sem_registro": True,
+                       "data_fato_obs": "sanção disciplinar registrada sem o lançamento da falta: natureza e homologação não constam da ficha%s"
+                                        % ("; o isolamento em cela indica falta grave (LEP, art. 57, p. ú.)" if isol else "")})
     # andamento e resultado do PADIC / CD simplificada: casados com a falta pela data do fato ("referente ao fato ocorrido em",
     # "cometida em"), pelo número do PADIC ou, na instauração sem data, pela falta registrada mais próxima; vale o último resultado
     def _nd(x):
@@ -1548,7 +1572,7 @@ def confrontar(r, f, hoje=None, manuais=None):
     itens.extend(_regime_x_ficha(r, f))
     # 3e) identidade, prisão, processos, pena, unidade x regime, fuga e conduta
     for fn in (_identidade_x_ficha, _prisao_x_ficha, _detracao_x_ficha, _soltura_x_ficha, _processos_x_ficha, _pena_x_ficha, _unidade_x_ficha, _fuga_x_ficha, _conduta_x_ficha,
-               _historico_anterior_x_ficha, _faltas_outra_execucao_x_ficha):
+               _historico_anterior_x_ficha, _faltas_outra_execucao_x_ficha, _monitoramento_x_ficha):
         try:
             itens.extend(fn(r, f))
         except Exception as e:
@@ -2147,6 +2171,81 @@ def _prisao_x_ficha(r, f):
                      "unificado), os dias entram como detração e antecipam progressão, livramento e término. Conferir o auto de prisão e pedir a retificação." % (
                          rs.fmt(x), "o cálculo (RSPE com o reinício lançado pelo programa a partir da ficha)" if pela_ficha else "o RSPE", rs.fmt(s)),
                      "CP, art. 42; LEP, art. 111.")]
+
+
+def _monitoramento_x_ficha(r, f):
+    """(7.14.6) Cumprimento desta execução em monitoramento eletrônico (entrada na unidade de monitoramento pelos autos desta
+    execução ou de processo dela) em período que o RSPE trata como interrupção (liberdade): é pena cumprida. Item "verificar" com o
+    efeito estimado na progressão (fração média das penas sobre os dias antes da data-base; os dias depois dela contam inteiros);
+    a aba mantém a data do SEEU, com a ressalva (prog_estimada)."""
+    evs = sorted((e for e in r.get("_eventos", []) if not e.get("_ficha") and rs.to_date(e.get("data") or "")), key=lambda e: rs.to_date(e["data"]))
+    ev = sorted(((_dp(e.get("data") or ""), e.get("texto") or "") for e in f.get("eventos", [])), key=lambda x: x[0] or date.min)
+    ev = [(x, t) for x, t in ev if x]
+    if not evs or not ev:
+        return []
+    meus = [c.get("processo_criminal") or "" for c in r.get("_crimes", [])] + [r.get("processo_execucao") or ""]
+    per = rs.periodos_custodia(evs)
+    imp = _dp(f.get("data_impressao") or "") or date.today()
+    out, feitos = [], []
+    for x, t in ev:
+        if not RE_ENTRADA_MONITORA.search(t) or any(a <= x <= b for a, b in feitos):
+            continue
+        txt = " ".join(u for y, u in ev if y == x)
+        if not any(rs.processo_parecido(n, q) for n in rs.processos_no_texto(txt) for q in meus if rs.chave_processo(q)):
+            continue  # monitoramento cautelar ou de outro processo: não é cumprimento desta execução
+        sai = next(((y, u) for y, u in ev if y > x and (RE_SAIDA_MONITORA.search(u) or RE_SAIDA_LIVRE.search(u))), None)
+        fim = sai[0] if sai else imp
+        feitos.append((x, fim))
+        # só a entrada no monitoramento dentro de um intervalo que o RSPE trata como liberdade (soltura, não fuga nem descumprimento):
+        # com a entrada já em custódia, o SEEU conta o período; depois de evasão ou descumprimento, a saída da unidade de
+        # monitoramento só registra a recaptura
+        if any(a <= x and (b is None or x < b) for a, b in per):
+            continue
+        inter = [e for e in evs if "INTERRUP" in (e.get("tipo") or "").upper() and rs.to_date(e["data"]) <= x]
+        if not inter or re.search(r"FUGA|EVAS|DESCUMPR|ABANDON|REVOG|FORAGID", rs._sem_acento(inter[-1].get("motivo") or "").upper()):
+            continue
+        ie = inter[-1]
+        ret = min([a for a, _b in per if a > x] or [None], key=lambda v: v or date.max)
+        # o intervalo vai até a retomada no RSPE, a próxima interrupção dele ou a saída do monitoramento
+        prox_i = min([rs.to_date(e["data"]) for e in evs if "INTERRUP" in (e.get("tipo") or "").upper() and rs.to_date(e["data"]) > x] or [date.max])
+        fim = min(fim, ret or date.max, prox_i)
+        fora = (fim - x).days
+        if fora < 30:
+            continue
+        db = rs.to_date(r.get("data_base_seeu") or "")
+        prog = rs.to_date(r.get("progressao_previsao_seeu") or "")
+        ativos = [c for c in r.get("_crimes", []) if not (c.get("extinto") or "").upper().startswith("S")]
+        pesos = [(rs.parse_fracao(c.get("fracao_progressao") or ""), rs.pena_para_dias(c.get("pena_imposta")) or 0) for c in ativos]
+        pesos = [(fr, p) for fr, p in pesos if fr is not None and p]
+        efeito, est = None, None
+        if pesos and prog:
+            fm = sum(float(fr) * p for fr, p in pesos) / sum(p for _fr, p in pesos)
+            antes_db = fora if not db else sum(1 for k in range((fim - x).days) if (x + timedelta(days=k)) < db
+                                                and not any(a <= x + timedelta(days=k) and (b is None or x + timedelta(days=k) < b) for a, b in per))
+            efeito = int(round(antes_db * fm + (fora - antes_db)))
+            est = prog - timedelta(days=efeito) if efeito else None
+        # pelos autos da execução: cumprimento (semiaberto/harmonizado); pelos de uma ação penal desta execução: cautelar - detração
+        n_ = [n for n in rs.processos_no_texto(txt) for q in meus if rs.chave_processo(q) and rs.processo_parecido(n, q)]
+        exe_ = any(rs.processo_parecido(n, r.get("processo_execucao") or "") for n in n_) if rs.chave_processo(r.get("processo_execucao") or "") else False
+        it = _item_rf("verificar", "Monitoramento eletrônico %s de %s a %s na ficha; o RSPE trata o período como interrupção (%s sem cômputo)" % (
+                          "desta execução" if exe_ else "cautelar em ação penal desta execução", rs.fmt(x), rs.fmt(fim), rs.pl(fora, "dia", "dias")),
+                      "A ficha registra a entrada na unidade de monitoramento eletrônico em %s pelos autos %s e %s; o RSPE "
+                      "interrompe o cumprimento em %s (%s)%s. %s: computados esses dias (salvo período de evasão ou descumprimento que a ficha "
+                      "não mostre), o saldo da pena diminui%s. A aba mantém a data do SEEU. Conferir nos autos a decisão que fixou o "
+                      "monitoramento e pedir a retificação do cálculo." % (
+                          rs.fmt(x), "desta execução" if exe_ else "%s (ação penal desta execução)" % (n_[0] if n_ else ""),
+                          ("a saída em %s" % rs.fmt(fim)) if sai else "nenhuma saída até a impressão da ficha (%s)" % rs.fmt(imp),
+                          rs.fmt(rs.to_date(ie["data"])), (ie.get("motivo") or "motivo não consta").strip().lower(),
+                          (" e só o retoma em %s" % rs.fmt(ret)) if ret else "",
+                          "O cumprimento da pena em monitoramento eletrônico (semiaberto ou regime harmonizado) é pena cumprida, não liberdade"
+                          if exe_ else "O monitoramento eletrônico cautelar é detração (CP, art. 42; STJ, Tema 1155), não liberdade",
+                          (" e a progressão ficaria por volta de %s (≈ %s antes da data do SEEU, %s - estimativa pela fração média das penas "
+                           "sobre os dias anteriores à data-base)" % (rs.fmt(est), rs.pl(efeito, "dia", "dias"), rs.fmt(prog))) if est else ""),
+                      "LEP, arts. 111, 112 e 146-B; CP, art. 42." if exe_ else "CP, art. 42; STJ, Tema 1155; LEP, art. 111.")
+        if est:
+            it["prog_estimada"], it["prog_rotulo"] = rs.fmt(est), "computado o monitoramento eletrônico"
+        out.append(it)
+    return out
 
 
 RE_PENDENCIA_ALVARA = re.compile(r"PEND[ÊE]NCIA|(?<!N[ÃA]O )(?:EXISTEM?|H[ÁA]) IMPEDIMENTO", re.I)
@@ -3276,11 +3375,15 @@ def fundamentacao_remicao(res, r=None):
         par.append(txt)
     if sem_at:
         par.append(("A ficha registra, ainda, trabalho sem atestado emitido: %s." if ats else
-                    "A ficha disciplinar do SIAPEN registra trabalho sem atestado emitido nem remição correspondente no RSPE: %s.") % "; ".join(sem_at))
+                    "A ficha disciplinar do SIAPEN registra trabalho sem atestado emitido nem remição correspondente no RSPE: %s.") % "; ".join(sem_at)
+                   + ((" [Conferir antes de requerer: há falta grave posterior a parte desse trabalho - %s; os dias trabalhados até a falta, "
+                       "ainda que não declarados, sujeitam-se à perda de até 1/3 (LEP, art. 127).]" % res["ressalva_127_trab"])
+                      if res.get("ressalva_127_trab") else ""))
     # estudo: frequência escolar, certificação (ENCCEJA/ENEM) e leitura
     est = []
     if est_h >= 12:
-        cursos = "; ".join("%s (%s%s)" % (e["curso"].title(), _br(e["inicio"]), (" a " + _br(e["fim"])) if e.get("fim") else " em diante")
+        cursos = "; ".join("%s (%s%s)" % (e["curso"].title(), rs.fmt(e["_ini"]) if e.get("_ini") else _br(e["inicio"]),
+                                          (" a " + _br(e["fim"])) if e.get("fim") else " em diante")
                            for e in res.get("estudos_pendentes") or [])
         est.append("matrícula em estudo sem remição no RSPE%s, a ser comprovada por certidão de frequência, para a remição à razão de "
                    "1 dia de pena a cada 12 horas de frequência escolar, divididas em no mínimo 3 dias (LEP, art. 126, § 1º, I)"
@@ -3348,6 +3451,19 @@ def fundamentacao_remicao(res, r=None):
     return out
 
 
+def _ini_pedir(T):
+    """Inícios dos trechos de trabalho sem atestado que entram no pedido ("Pedir atestado")."""
+    return [a for L in T.get("linhas") or [] if L["st"] == "sem" and L.get("pedir_dias")
+            for a, _b in (L.get("pedir_trechos") or [(L["pedir_ini"], L["pedir_fim"])])]
+
+
+def _ressalva_127_trab(N, T):
+    """Falta grave depois do início do trabalho sem atestado pedido: ressalva da perda de até 1/3 (LEP, art. 127), entre colchetes."""
+    ini = min(_ini_pedir(T) or [None], key=lambda d: d or date.max)
+    fx = sorted([(_prio_127(r_), d_, r_) for d_, r_ in N.get("faltas_127") or [] if ini and d_ > ini])
+    return ", ".join(r_ for _p, _d, r_ in fx[:3]) + (" e outras" if len(fx) > 3 else "") if fx else ""
+
+
 def _res_fundamentacao(N, T, f, hoje):
     """Entrada da fundamentação do pedido (fundamentacao_remicao) no modelo da 7.14: só documentos com fato certo - desta execução,
     emitidos ou peticionados depois da última decisão de remição do RSPE e sem ✓ Homologado - e o trabalho registrado depois do
@@ -3367,11 +3483,16 @@ def _res_fundamentacao(N, T, f, hoje):
     # estudo registrado depois da última decisão de remição (a parte posterior a ela), sem certidão: estimativa de 4 h por dia letivo
     ate = N["impressao"]
     est_pend, dias_ = [], set()
+    # (7.14.6) com certidão de frequência na ficha, o corte é o fim do último semestre certificado (a mesma estimativa da tela): os
+    # semestres certificados - remidos ou pedidos pela própria certidão - não se pedem de novo; sem certidão, a última decisão de remição
+    # (só para o estudo ainda em curso depois dela)
+    corte_ = N.get("est_cert_fim") or ult
     for e in f.get("estudos") or []:
         a, b = _dp(e.get("inicio") or ""), _dp(e.get("fim") or "") or ate
-        if not a or not b or b < a or (ult and b <= ult) or e.get("horas"):
+        # (o estudo encerrado antes da última decisão de remição continua fora: a decisão pode tê-lo alcançado)
+        if not a or not b or b < a or (corte_ and b <= corte_) or (ult and b <= ult) or e.get("horas"):
             continue
-        a2 = max(a, ult + timedelta(days=1)) if ult else a
+        a2 = max(a, corte_ + timedelta(days=1)) if corte_ else a
         ds = {x for x in dias_jornada_set(a2, b, "seg-sex") if not em_recesso(x)} - dias_
         if len(ds) >= 3:
             dias_ |= ds
@@ -3393,7 +3514,7 @@ def _res_fundamentacao(N, T, f, hoje):
             sem_at.append("%s, desde %s, em curso" % (L["local"], rs.fmt(a)) if L.get("em_curso") and (L["fim"] - b).days <= 7
                           else "%s, %s a %s" % (L["local"], rs.fmt(a), rs.fmt(b)))
     return {"atestados_pendentes": ats, "estudo_horas_pend": horas, "estudos_pendentes": est_pend, "exames_f": exames, "leituras_f": leituras,
-            "educacao_f": edu, "sem_atestado_f": sem_at, "unidades_f": list(dict.fromkeys(nome_unidade(u) for _d, u in linha_unidades_exibicao(f) if u))}
+            "educacao_f": edu, "sem_atestado_f": sem_at, "ressalva_127_trab": _ressalva_127_trab(N, T) if sem_at else "", "unidades_f": list(dict.fromkeys(nome_unidade(u) for _d, u in linha_unidades_exibicao(f) if u))}
 
 
 def _rotulo_doc(d):
@@ -3492,7 +3613,8 @@ def comparativo(r, f, hoje=None, conferidos=None, manuais=None, vinculos=None):
     # fatos certos (documentos desta execução posteriores à última decisão, sem ✓): os dias que os decretos e a prioridade consideram,
     # sempre "a conferir nos autos"; ressalva da perda de até 1/3 quando há falta grave depois do período (LEP, art. 127)
     fatos = rrm.fatos_pendentes(N)
-    d0 = min([x["doc"]["emissao"] for x in fatos if x["doc"]["emissao"]] or [None], key=lambda d: d or date.max)
+    # (7.14.6) o trabalho sem atestado cujo atestado se pede também: os dias trabalhados antes da falta, ainda que não declarados
+    d0 = min([x["doc"]["emissao"] for x in fatos if x["doc"]["emissao"]] + _ini_pedir(T) or [None], key=lambda d: d or date.max)
     fx = sorted([(_prio_127(r_), d_, r_) for d_, r_ in N["faltas_127"] if d0 and d_ > d0])
     ress = ("salvo perda de até 1/3 dos dias até a falta (LEP, art. 127): %s" % (", ".join(r_ for _p, _d, r_ in fx[:3]) + (" e outras" if len(fx) > 3 else ""))) if fx else ""
     # linhas (exportação da aba, relatório individual): uma por período de trabalho (seção C) e uma por documento com fato ou ponto

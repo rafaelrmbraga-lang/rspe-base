@@ -478,41 +478,52 @@ def _detracao_blocos(r, ativos, det=None):
     lapso impresso e detração descontada nele ((pena x fração - lapso) / fração; zero quando a diferença é só arredondamento do
     SEEU, até 5 dias). Com um só bloco descontado e a estimativa perto da custódia anterior à data-base (det), vale a custódia.
     None quando o RSPE não traz os lapsos ou eles não casam com as frações dos crimes. Devolve [[fração, pena, lapso, detração]]."""
-    impresso, amd_imp = {}, {}
-    for l in r.get("seeu_fracoes_progressao") or []:
-        m = re.search(r"\(([^()]*)\)\s*:\s*(\d+a\d+m\d+d)\s*$", l)
-        f = rs.parse_fracao(m.group(1)) if m else None
-        d = rs.pena_para_dias(m.group(2)) if m else None
-        if not f or d is None:
+    # (7.14.6) o SEEU imprime um bloco por fração COMO ESCRITA ("2/5" e "40%" são blocos distintos, embora valham o mesmo): a chave é
+    # (fração, forma); sem casar com os crimes assim, volta a só a fração
+    _forma = lambda t: "%" if re.match(r"\s*\d+(?:[.,]\d+)?\s*%", t or "") else "/"
+    for por_forma in (True, False):
+        impresso, amd_imp = {}, {}
+        for l in r.get("seeu_fracoes_progressao") or []:
+            m = re.search(r"\(([^()]*)\)\s*:\s*(\d+a\d+m\d+d)\s*$", l)
+            f = rs.parse_fracao(m.group(1)) if m else None
+            d = rs.pena_para_dias(m.group(2)) if m else None
+            if not f or d is None:
+                return None
+            k = (f, _forma(m.group(1)) if por_forma else "")
+            impresso[k] = impresso.get(k, 0) + d
+            amd_imp[k] = [x + int(y) for x, y in zip(amd_imp.get(k, [0, 0, 0]), re.findall(r"\d+", m.group(2)))]
+        if not impresso:
             return None
-        impresso[f] = impresso.get(f, 0) + d
-        amd_imp[f] = [x + int(y) for x, y in zip(amd_imp.get(f, [0, 0, 0]), re.findall(r"\d+", m.group(2)))]
-    if not impresso:
-        return None
-    grupos, amd = {}, {}
-    for c in ativos:
-        p = rs.pena_para_dias(c.get("pena_imposta"))
-        if not p:
-            continue
-        f = _fr_seeu(c.get("fracao_progressao"))
-        if not f:
-            return None
-        grupos[f] = grupos.get(f, 0) + p
-        a_, m_, d_ = _amd(rs.dias_para_pena(p))
-        amd[f] = [x + y for x, y in zip(amd.get(f, [0, 0, 0]), (a_, m_, d_))]
-    if set(grupos) != set(impresso):
+        grupos, amd = {}, {}
+        for c in ativos:
+            p = rs.pena_para_dias(c.get("pena_imposta"))
+            if not p:
+                continue
+            f = _fr_seeu(c.get("fracao_progressao"))
+            if not f:
+                return None
+            k = (f, _forma(c.get("fracao_progressao")) if por_forma else "")
+            grupos[k] = grupos.get(k, 0) + p
+            a_, m_, d_ = _amd(rs.dias_para_pena(p))
+            amd[k] = [x + y for x, y in zip(amd.get(k, [0, 0, 0]), (a_, m_, d_))]
+        if set(grupos) == set(impresso):
+            break
+    else:
         return None
     out = []
-    for f in sorted(grupos):
-        P, L = grupos[f], impresso[f]
+    for k in sorted(grupos):
+        f = k[0]
+        P, L = grupos[k], impresso[k]
         # a fração como o SEEU a aplica: sobre os meses (ano = 12 meses) e, à parte, sobre os dias; o resto do mês em dias de 30
         # (3a8m × 16% = 44 m × 0,16 = 7,04 m = 7m1d) - a conta em dias corridos desvia alguns dias e infla a detração estimada
-        _mm = Fraction(amd[f][0] * 12 + amd[f][1]) * f
-        _esp = (int(_mm) // 12) * rs.DIAS_ANO + (int(_mm) % 12) * 30 + float((_mm - int(_mm)) * 30) + float(amd[f][2] * f)
+        _mm = Fraction(amd[k][0] * 12 + amd[k][1]) * f
+        _esp = (int(_mm) // 12) * rs.DIAS_ANO + (int(_mm) % 12) * 30 + float((_mm - int(_mm)) * 30) + float(amd[k][2] * f)
         falta = _esp - L
         if falta < -5:
             return None  # lapso maior que a fração sobre a pena inteira: não é a conta esperada
-        out.append([f, P, L, int(round(falta / float(f))) if falta > 5 else 0, amd_imp[f], amd[f]])
+        # rótulo do bloco como o SEEU o imprime ("2/5" ou "40%")
+        rot = "%d/%d" % (f.numerator, f.denominator) if k[1] == "/" else rs.pct(f)
+        out.append([f, P, L, int(round(falta / float(f))) if falta > 5 else 0, amd_imp[k], amd[k], rot])
     desc = [b for b in out if b[3] >= 10]
     if len(desc) == 1 and det and abs(desc[0][3] - det) <= max(15, det // 10):
         desc[0][3] = det
@@ -575,8 +586,14 @@ def _texto_blocos(blocos):
         mm = tot_m - dif_m
         if mm >= 0:
             _fav_txt = rs.pena_extenso("%da%dm%dd" % (mm // 12, mm % 12, dd))
+    _rot = lambda b: b[6] if len(b) > 6 else rs.pct(b[0])
     partes = "; ".join("no bloco de %s (pena de %s), %s de detração: lapso impresso de %s = (pena do bloco − detração) × %s" % (
-        rs.pct(b[0]), ext(b[1]), rs.pl(b[3], "dia", "dias"), _tot_txt if len(blocos) == 1 else ext_b(b), rs.pct(b[0])) for b in desc)
+        _rot(b), ext(b[1]), rs.pl(b[3], "dia", "dias"), _tot_txt if len(blocos) == 1 else ext_b(b), _rot(b)) for b in desc)
+    _sem = [b for b in blocos if b[3] < 10]
+    if desc and _sem and any(b[0] == d[0] for b in _sem for d in desc):
+        # a mesma fração em dois blocos (2/5 e 40%): diz qual bloco tem a fração cheia
+        partes += "; no bloco de %s (pena de %s), fração sobre a pena inteira (lapso de %s)" % (
+            "; ".join(_rot(b) for b in _sem), "; ".join(ext(b[1]) for b in _sem), "; ".join(ext_b(b) for b in _sem))
     return (" Pelos lapsos que o SEEU imprime por fração, a detração foi descontada antes da fração %s. Lapso total impresso: %s; com a "
             "fração sobre a pena inteira e a detração descontada depois (pena × fração − detração): %s. Diferença: %s a mais pela forma "
             "mais gravosa (lapso impresso − forma favorável; ≈ detração × (1 − fração do bloco))." % (
@@ -2203,7 +2220,7 @@ def auditar(r, hoje=None):
             # consumado. Consumado, o resultado morte é do próprio tipo (LEP, art. 112, VI, a, e VIII) - o percentual que o SEEU
             # aplica pode ser o certo; tentado, vale o do hediondo sem morte. Sem a sentença, é ponto a conferir, não erro
             _hom = (_cp and hed and not morte and not _tentado(c) and not tent_ficha and (art == "121-A" or (art == "121" and rs.vga_elementar(c))
-                                                    or (art == "157" and re.match(r"\s*§\s*3", _tp))))
+                                                    or (art == "157" and re.match(r"\s*§\s*3", _tp) and rs.paragrafo_inciso(c) != ("3", "I"))))
             _fm = None
             if _hom:
                 _fm = rg.fracao_mais_benefica(fato, hed, True, vga, reinc, especial=especial)[0]
