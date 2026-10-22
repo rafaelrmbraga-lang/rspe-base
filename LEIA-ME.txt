@@ -1,9 +1,9 @@
-APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.14.4
+APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.14.5
 (antigo RSPE Base; SEEU, programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-7.14.4. A documentação técnica completa (cada parâmetro, a regra, a norma e
+7.14.5. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -1002,6 +1002,54 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v7.14.5
+  Correções da conferência independente (70 casos nunca usados).
+  - Remição: o atestado de horas-aula ("remir 180 horas aulas") entra como
+    atestado de estudo (180 h ÷ 12 = 15 dias). Atestados sem período,
+    emitidos durante o mesmo trabalho depois do atestado anterior, passam a
+    cobrir esse trabalho, e o programa deixa de pedir atestado de período já
+    atestado. A perda por falta grave (art. 127) é conferida na aba pela
+    remição do trabalho anterior à falta, declarada ou não, e não pela data
+    da decisão. Quando não há remição entre duas faltas, a perda da segunda
+    é apontada como duplicidade. O reflexo na progressão de trabalho
+    anterior à data-base reduz só a fração. Textos: a conclusão deixa de
+    dizer "nada a requerer" quando há atestado pendente; "valor próximo"
+    quando os dias diferem (51 × 50); soma de atestado com leitura; números
+    de atestado com ano curto; unidade do atestado pelo período trabalhado;
+    ofício à unidade atual (última entrada).
+  - Indulto e comutação: com o cumprimento interrompido e a fração já
+    cumprida antes da interrupção, os incisos são analisados com o tempo até
+    a data (o XV não exige fração nem regime; os incisos de regime ficam a
+    verificar; a interrupção genérica entra como falta a verificar).
+    Impeditivo e não impeditivo na mesma sentença sem trânsito para a
+    acusação ficam vedados. A prisão provisória lançada no dia da
+    "interrupção por prisão em outro processo" não conta para a execução
+    quando o SEEU a interrompe, e o aviso de custódia por outro processo
+    some quando há recaptura no mesmo dia ou quando o SEEU soma o período. A
+    fuga homologada depois da publicação que atravessa a janela fica como
+    falta a verificar. O impeditivo de sentença posterior aparece no rótulo,
+    fora da soma. O XII fica "?" quando a matrícula só foi cancelada depois
+    da saída da unidade. O tráfico privilegiado com pena convertida recebe a
+    ressalva do art. 8º, I (2022). Na execução unificada com outras penas em
+    cumprimento não se sugere a extinção pelo cumprimento de pena isolada: o
+    decreto se conclui pelos requisitos do indulto.
+  - A aba do Livramento passa a refletir a Auditoria: reincidente específico
+    pela lei (tráfico depois de tráfico transitado; hediondo depois de
+    hediondo) aparece como livramento vedado quanto a esse crime; fração do
+    SEEU acima da legal mostra as frações legais e a data por elas, mantida
+    a do SEEU; falta ainda sem sanção cujos 12 meses passam da data do SEEU
+    fica a verificar, com a data que valeria se reconhecida. Na Extinção, o
+    livramento que só alcançava pena já extinta não gera a hipótese da
+    Súmula 617, e a remição decidida com o livramento abate o período de
+    prova. A Auditoria tira a guia "Suspenso: Sim" dos blocos de detração,
+    conta a forma favorável com ano de 365 dias e reconhece número com o
+    segmento do tribunal trocado como digitação. Na Prescrição, os dias de
+    suspensão do texto batem com os da conta; o +1/3 é afastado também com
+    uma só condenação quando o SEEU aplica fração de primário; o aviso sobre
+    o livramento só aparece se houve livramento. Na Progressão, setor com
+    baixa sai do trabalho atual, e isolamento preventivo com PADIC sem
+    resultado conta como falta a apurar.
 
 v7.14.4
   Resíduos da validação da 7.14.3.
