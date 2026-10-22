@@ -1475,6 +1475,22 @@ def simplificar(m):
                 "Em cumprimento" if (m.get("cumprimento") or "").startswith("EM CUMPRIMENTO") and not m.get("estado_exec") else "Não se aplica")
     if m.get("ext_sit") == "Extinção a verificar" and m.get("ext_hipoteses") not in (None, "", TRACO):
         m["ext_sit_full"] = "Extinção a verificar · " + m["ext_hipoteses"]
+    # limite de cumprimento (CP, art. 75) apontado pela Auditoria: a aba mantém o término do SEEU, com a ressalva visível (decisão do
+    # usuário, 7.14.5 - como na data-base)
+    _l75 = next((it for it in m.get("aud_itens") or [] if str(it.get("tipo") or "").startswith("limite-de-cumprimento-art-75")
+                 and it.get("nivel") in ("alerta", "verificar") and not it.get("baixado")), None)
+    if _l75 and re.match(r"^\d{2}/\d{2}/\d{4}", m.get("ext_termino") or "") and m.get("ext_termino") != _l75.get("termino_limite"):
+        _mx = re.search(r"máximo em (\d{2}/\d{2}/\d{4})", _l75.get("titulo") or "")
+        _an = re.search(r"limite de (\d+) anos", _l75.get("titulo") or "")
+        _res = "término do SEEU além do limite de %scumprimento (CP, art. 75)%s - ver Auditoria" % (
+            (_an.group(1) + " anos de ") if _an else "", (": máximo em " + _mx.group(1)) if _mx else "")
+        m["ext_sit_full"] = (m.get("ext_sit_full") or m.get("ext_sit") or "") + " · " + _res
+        if m.get("ext_sit") == "Em cumprimento":
+            m["ext_sit"] = "Em cumprimento · art. 75 a verificar"
+            if not m.get("ext_cor"):
+                m["ext_cor"] = "amarelo"
+        m["ext_motivo"] = ((m.get("ext_motivo") or "") + " · " if m.get("ext_motivo") else "") + _res[0].upper() + _res[1:]
+        m["ext_termino_motivo"] = (m.get("ext_termino_motivo") or "") + " (" + _res + ")"
     # indulto e comutação
     m["imp_curto"] = "Sim" if (m.get("imp") or "").startswith("Sim") else ("Não" if m.get("imp") else "")
     for k in ("i22", "i24", "c24", "i25", "c25"):

@@ -37,3 +37,4 @@ if falhas:
     print("FALHOU: " + ", ".join(falhas))
     sys.exit(1)
 print("todos os testes passaram (%d)" % len(TESTES))
+TESTES += ["teste_conf6_art75.py"]  # extinção mostra a ressalva do art. 75 (7.14.5)
