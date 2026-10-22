@@ -1,9 +1,9 @@
-APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.14.6
+APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.14.7
 (antigo RSPE Base; SEEU, programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-7.14.6. A documentação técnica completa (cada parâmetro, a regra, a norma e
+7.14.7. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -1002,6 +1002,35 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v7.14.7
+  Correções da terceira conferência independente (últimos 64 casos nunca usados).
+  - Indulto e comutação: nos decretos que mandam computar a detração no
+    requisito temporal (2004 a 2015, art. 3º/4º; 2023, art. 5º), a prisão
+    provisória pelo próprio processo conta como pena cumprida, e não sai
+    mais "não iniciou o cumprimento". Os decretos restritos de 2019 a 2021
+    (saúde e agentes de segurança) dão o motivo do próprio decreto. Quando a
+    execução começou depois do decreto, mas havia condenação alcançada só
+    por crime impeditivo, a tabela de decretos diz "vedado", como a coluna
+    (inclusive o 2022, "Excluído (art. 7º)"). O rótulo "crime impeditivo"
+    passa a indicar também o crime impeditivo de fato posterior a todos os
+    decretos, com a ressalva.
+  - Na Remição, o "desligado da Escola" encerra a matrícula; o exame
+    respeita o teto do CNJ (ENEM 100 dias) e o atestado de valor próximo
+    decidido na mesma semana é o vínculo provável; duas certidões e uma só
+    remição apontam provável pendência (amarelo); a ficha que cita o número
+    do próprio RSPE não gera aviso de outra execução; o primeiro atestado
+    sem período cobre o trabalho contínuo que declara. A Auditoria alerta a
+    recaptura usada como data-base depois de "descumprimento das condições"
+    sem falta homologada, não trata a regressão da mesma decisão da falta
+    como nova falta, conta o número de processo truncado na ficha e aponta a
+    pena muito acima do máximo do dispositivo cadastrado. O livramento em
+    contravenção fica em 1/3 mesmo com reincidência. O encaminhamento à
+    Disciplinar na ficha passa a ser falta a apurar. Na Prescrição, a evasão
+    registrada na ficha confirma a evasão da interrupção (art. 113), e no
+    art. 28 a custódia suspende o prazo em vez de interrompê-lo. Na saída
+    temporária, o homicídio qualificado anterior à Lei 13.964/2019 não é
+    mais "sem hediondo com resultado morte".
 
 v7.14.6
   Correções da segunda conferência independente (64 casos nunca usados).
