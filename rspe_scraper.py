@@ -1736,7 +1736,9 @@ def eventos_cronologicos(eventos):
     sem período aberto seria descartada e a prisão ficaria aberta até a soltura seguinte (custódia inexistente), ou a
     recaptura seria ignorada e a interrupção criaria dias "sem cômputo" falsos. No mesmo dia, a ordem segue o estado da
     custódia: preso na véspera, primeiro a interrupção e depois a prisão (cumprimento contínuo); solto na véspera,
-    primeiro a prisão e depois a soltura (um dia de custódia)."""
+    primeiro a prisão e depois a soltura (um dia de custódia). A interrupção que não interrompe o cumprimento (incompatibilidade
+    de regime) vai depois dos demais eventos do dia: ela segue o título (prisão definitiva e, sem vaga, a interrupção - a ordem
+    do SEEU); antes da 7.14.6 ia para o começo do dia e invertia a linha do tempo."""
     ordenados = sorted(eventos or [], key=lambda e: to_date(e.get("data") or "") or date.min)
     out, aberto, i = [], False, 0
 
@@ -1755,7 +1757,8 @@ def eventos_cronologicos(eventos):
         grupo = ordenados[i:j]
         if len(grupo) > 1 and d:
             resto = [e for e in grupo if _papel(e) != "neutro"]
-            novo = [e for e in grupo if _papel(e) == "neutro"]
+            neutros = [e for e in grupo if _papel(e) == "neutro"]
+            novo = []
             while resto:
                 quer = "fecha" if aberto else "abre"
                 k = next((n for n, e in enumerate(resto) if _papel(e) == quer), 0)
@@ -1764,7 +1767,7 @@ def eventos_cronologicos(eventos):
                 e = resto.pop(k)
                 novo.append(e)
                 aberto = _papel(e) == "abre"
-            grupo = novo
+            grupo = novo + neutros
         else:
             for e in grupo:
                 if _papel(e) != "neutro" and d:
@@ -1780,8 +1783,43 @@ RE_INTERRUP_INCOMPAT = re.compile(r"INCOMPATIBILIDADE DE REGIME|AGUARDANDO VAGA|
 
 
 def interrupcao_continua_cumprimento(e):
-    """Evento de interrupção que não interrompe o cumprimento (incompatibilidade de regime: espera de vaga, SV 56)."""
-    return "INTERRUP" in (e.get("tipo") or "").upper() and bool(RE_INTERRUP_INCOMPAT.search(e.get("motivo") or ""))
+    """Evento de interrupção que não interrompe o cumprimento (incompatibilidade de regime: espera de vaga, SV 56) - salvo
+    quando o próprio SEEU não contou o período (marca _incompat_corta, de incompatibilidade_pelo_seeu)."""
+    return ("INTERRUP" in (e.get("tipo") or "").upper() and bool(RE_INTERRUP_INCOMPAT.search(e.get("motivo") or ""))
+            and not e.get("_incompat_corta"))
+
+
+def incompatibilidade_pelo_seeu(campos, eventos):
+    """Interrupção por incompatibilidade de regime que o SEEU NÃO contou como cumprimento: a regra do programa (o cumprimento
+    segue - SV 56) vale quando a pessoa ficou em domiciliar ou monitorada à espera de vaga; quando a "Pena Cumprida" impressa só
+    fecha com o período cortado (ex.: prisão definitiva e, no mesmo dia, interrupção por incompatibilidade, e o SEEU conta 4 dias),
+    a pessoa foi solta sem cumprimento registrado e contar o período inventaria custódia contínua (progressão, indulto,
+    comutação, término). Marca esses eventos com _incompat_corta (passam a interromper, em todas as áreas) e devolve a lista
+    deles. Exige que os eventos com o período contado passem da pena cumprida do SEEU (descontado o saldo de remição) em 60
+    dias ou mais e que, cortado, o cumprido fique a até 30 dias (ou 5%) dela."""
+    for e in eventos or []:
+        e.pop("_incompat_corta", None)
+    inc = [e for e in eventos or [] if interrupcao_continua_cumprimento(e)]
+    seeu = pena_para_dias(campos.get("pena_cumprida"))
+    ger = to_date(campos.get("data_geracao_rspe") or "")
+    if not inc or seeu is None or not ger or sem_calculo_decreto(campos):
+        return []
+    alvo = seeu - (saldo_remidos_num(campos.get("saldo_remidos"))[0] or 0)
+
+    def cumprido():
+        return dias_cumpridos_ate(periodos_custodia([e for e in eventos if not e.get("_ficha")]), [], ger)
+    cont = cumprido()
+    if cont - alvo < 60:
+        return []
+    for grupo in [inc] + ([[e] for e in inc] if len(inc) > 1 else []):
+        for e in grupo:
+            e["_incompat_corta"] = True
+        c = cumprido()
+        if abs(c - alvo) <= max(30, alvo // 20):
+            return grupo
+        for e in grupo:
+            e.pop("_incompat_corta", None)
+    return []
 
 
 def periodos_custodia_detalhe(eventos):
@@ -4128,6 +4166,12 @@ def _interrupcoes_omitidas(campos, todos, ini):
     return max(0, seeu - max(0, fora_ev))
 
 
+def _causas(extras, nota_omit):
+    """Causas prováveis de os eventos contarem a mais que o SEEU: o livramento revogado só quando há livramento nos eventos."""
+    partes = (["livramento revogado"] if any(p and p[0] for p in extras or []) else []) + ([nota_omit[2:]] if nota_omit else [])
+    return (" (%s)" % "; ".join(partes)) if partes else ""
+
+
 def cumprido_decreto_info(campos, periodos, remicoes, ref, extras=None, crimes=None, modo=None):
     """Pena cumprida na data, numa regra só para todos os decretos (2000 a 2025, aba, linha do tempo e colunas). Vale a âncora
     do SEEU (cumprido_na_data); a conta pelos eventos (custódia e livramento + remições) entra quando o SEEU não traz o cálculo,
@@ -4143,6 +4187,7 @@ def cumprido_decreto_info(campos, periodos, remicoes, ref, extras=None, crimes=N
     rspe_decretos.avaliar_ficha). Eventos acima da
     pena da execução (estouro) valem nos dois modos, sem depender da distância até a âncora. Sem modo: a regra antiga (só para
     exibição, linha do tempo)."""
+    extras0 = extras
     extras = lc_fora_do_cumprimento(campos, periodos, extras)
     todos = uniao_periodos(list(periodos) + list(extras or []))
     ev = dias_cumpridos_ate(todos, remicoes, ref)
@@ -4180,7 +4225,7 @@ def cumprido_decreto_info(campos, periodos, remicoes, ref, extras=None, crimes=N
                                                      "pela âncora do SEEU o cumprido nesta data (%s) fica abaixo do que os eventos mostram" % dias_para_pena(c))
                 return {"dias": ev, "fonte": "pelos eventos (custódia e livramento + remições)", "origem": "ancora",
                         "aviso": ("%s (o SEEU atual não conta o tempo das penas já extintas nem o das interrupções): pelos eventos, %s, o requisito "
-                                  "é atendido - conferir, pois os eventos podem contar a mais (livramento revogado%s)" % (txt, dias_para_pena(ev), nota_omit))}
+                                  "é atendido - conferir, pois os eventos podem contar a mais%s" % (txt, dias_para_pena(ev), _causas(extras0, nota_omit)))}
             return {"dias": c, "fonte": fonte, "origem": "seeu", "aviso": "", "alt": True}
         if ev > c and not ruim:
             # eventos pouco acima da âncora (menos de 180 dias): não mudam o resultado, mas o "faltavam" negativo pode vir deles
@@ -4193,7 +4238,7 @@ def cumprido_decreto_info(campos, periodos, remicoes, ref, extras=None, crimes=N
         txt = ANCORA_ZERADA if c == 0 else "%s (%s)" % (ANCORA_BAIXA, dias_para_pena(c))
         return {"dias": ev, "fonte": "pelos eventos (custódia e livramento + remições)", "origem": "ancora",
                 "aviso": ("%s (o SEEU atual não conta o tempo das penas já extintas nem o das interrupções): usado o cumprido pelos eventos, %s - "
-                          "conferir, pois os eventos podem contar a mais (livramento revogado%s)" % (txt, dias_para_pena(ev), nota_omit))}
+                          "conferir, pois os eventos podem contar a mais%s" % (txt, dias_para_pena(ev), _causas(extras0, nota_omit)))}
     return {"dias": c, "fonte": fonte, "origem": "seeu", "aviso": ""}
 
 
@@ -6281,6 +6326,11 @@ def _analise_decretos_modo(campos, crimes, eventos, incidentes, hoje, modo=None,
                 out[kk + "_status"] = "verificar"
                 out[kk + "_detalhe"] = (out.get(kk + "_detalhe") or "") + "\n? Reincidência pelas datas: " + txt_r + "."
                 mudou = True
+            elif "primário" in (out.get(kk + "_detalhe") or "") and "Reincidência pelas datas" not in (out.get(kk + "_detalhe") or ""):
+                # o resultado não muda (a verificar ou não atinge pelo tempo), mas a situação "primário" não se afirma sozinha: a mesma
+                # ressalva do Decreto 11.846/2023 (rspe_decretos) - conferência independente 7.14.5
+                out[kk + "_detalhe"] = re.sub(r"(Situação em [^\n]*?) · primário", r"\1 · primário no RSPE (reincidente pelas datas - ver abaixo)",
+                                              out[kk + "_detalhe"], count=1) + "\n? Reincidência pelas datas: " + txt_r + "."
         if mudou and (out.get(kc) or "").startswith("prejudicada") and out.get(kc + "_se_indeferido"):
             t = out[kc + "_se_indeferido"]
             out[kc] = ("A VERIFICAR" + t[len("POSSÍVEL"):] + " | " + txt_r) if t.startswith("POSSÍVEL") else t
@@ -6809,6 +6859,8 @@ def derivar(r, crimes, eventos, incidentes):
     inc_conc = [i for i in incidentes if i.get("situacao") == "CONCEDIDO"]
     inc_neg = [i for i in incidentes if i.get("situacao") == "NÃO CONCEDIDO"]
     inc_pend = [i for i in incidentes if i.get("situacao") == "PENDENTE"]
+    # interrupção por incompatibilidade de regime que o SEEU não contou (Pena Cumprida impressa): passa a interromper
+    incompatibilidade_pelo_seeu(r, eventos)
     # eventos em ordem de data (estável): todo o resto (custódia, interrupção, fuga, término, decretos) lê a lista nessa ordem
     eventos[:] = eventos_cronologicos(eventos)
     r["_reimportar"] = reimportar_motivos(r)

@@ -464,7 +464,8 @@ confere(x["s"] not in ("cabe", "ver"), "(42) comutação ressuscitada em execuç
 # (43) comutação sem pena remanescente (pena inteira cumprida na data): não cabe
 x = dec(reg_([crime("01/01/2019", "01/06/2019", "01/07/2019", pena="3 ano(s), 6 mês(es) e 0 dia(s)"),
               crime("01/01/2019", "01/06/2019", "01/07/2019", artigo="ART 129: Lesão corporal", tipo="CAPUT: Ofender a integridade",
-                    pena="0 ano(s), 6 mês(es) e 0 dia(s)", proc="0000002-00.2019.8.12.0001")], [preso("01/01/2020")], "4a0m0d", ""), "2023")
+                    pena="0 ano(s), 6 mês(es) e 0 dia(s)", proc="0000002-00.2019.8.12.0001")], [preso("26/12/2019")], "4a0m0d", ""), "2023")
+# (a soma é em anos/meses/dias, como a do SEEU, desde a 7.14.6: 3a6m + 6m = 4a0m0d = 1.460 dias - preso desde 26/12/2019)
 confere(not (x["s"] in ("cabe", "ver") and x.get("beneficio") == "Comutação"), "(43) comutação sem remanescente: %s %s" % (x["s"], x.get("mot")))
 
 # (44) decretos de 2000 a 2023: falta na janela ainda não reconhecida em juízo deixa o favorável A VERIFICAR (critério único)

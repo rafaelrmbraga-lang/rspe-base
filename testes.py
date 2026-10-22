@@ -31,6 +31,7 @@ TESTES += ["teste_conf6_indulto.py"]
 TESTES += ["teste_triagem_seeu.py"]  # extensão: triagem da Mesa do Defensor
 TESTES += ["teste_conf6_remicao.py"]  # conferência 7.14.4 (70 casos novos), frente remição (7.14.5)
 TESTES += ["teste_conf6_art75.py"]  # extinção mostra a ressalva do art. 75 (7.14.5)
+TESTES += ["teste_conf7_indulto.py"]
 # saída em UTF-8 em qualquer console (no Windows o padrão cp1252 não imprime símbolos como "✓" e derruba o teste)
 _env = dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUTF8="1")
 falhas = [t for t in TESTES if subprocess.call([sys.executable, t], env=_env) != 0]

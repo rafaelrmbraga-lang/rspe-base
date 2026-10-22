@@ -1283,7 +1283,10 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
                "a execução seguiu em outra modalidade ou lugar: conta como cumprimento e o prazo não corre (art. 117, V) - conferir")
             corpo.append((g0, "De %s a %s: %s - a execução seguiu (outra modalidade ou lugar), não houve liberdade; a prescrição não corre "
                               "(art. 117, V). Conferir se houve abandono depois." % (rs.fmt(g0), fim_txt, _mot0.lower())))
-            L["avisos"].append("interrupção em %s por \"%s\": tratada como continuidade do cumprimento - conferir" % (rs.fmt(g0), _mot0.lower()))
+            _nc = any(e.get("_incompat_corta") and rs.to_date(e.get("data") or "") == g0 for e in eventos or [])
+            L["avisos"].append("interrupção em %s por \"%s\": tratada como continuidade do cumprimento - conferir%s" % (
+                rs.fmt(g0), _mot0.lower(), " (o SEEU não contou o período na pena cumprida: se a pessoa ficou solta sem cumprir, a prescrição "
+                                           "pode ter corrido pelo saldo)" if _nc else ""))
             if g1 >= hoje:
                 L["ppe_nao_corre"] = "execução seguiu desde %s - %s" % (rs.fmt(g0), _mot0.lower())
             continue

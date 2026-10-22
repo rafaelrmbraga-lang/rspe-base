@@ -933,7 +933,9 @@ def _avaliar_ficha(f, r, ctx, ini, hoje):
         base["_sent_inc"] = ("sentença posterior ao trânsito em julgado no RSPE (%s): dado incoerente - considerada a condenação pelo "
                              "trânsito; conferir as datas da sentença e do trânsito (no júri, o trânsito pode ser o da pronúncia)" % "; ".join(
                                  "%s, sentença %s, trânsito %s" % (rs.crimes_curto([c]), c.get("data_sentenca"), rs.fmt(_transito_min(c))) for c in inc))
-    pena = sum(rs.pena_para_dias(c.get("pena_imposta") or c.get("pena_total_processo")) or 0 for c in crimes)
+    # soma componente a componente (anos, meses e dias), como a unificação do SEEU e a análise de 2022/2024/2025 - em dias (365/30)
+    # a pena considerada diferia em alguns dias entre os decretos (conferência independente 7.14.5)
+    pena = rs.soma_penas(crimes, True)
     _ci = _cumprido_info(r, ctx, ref)
     cump, _orig = _ci["dias"], _ci["fonte"]
     if _ci["origem"] in ("ancora", "sem_calculo") and cump:
@@ -998,7 +1000,7 @@ def _avaliar_ficha(f, r, ctx, ini, hoje):
                                         "; ".join(imp), rs.crimes_curto(resto)))
             frc = Fraction(0)
         if frc is not None and resto:
-            pena_imp = sum(rs.pena_para_dias(c.get("pena_imposta") or c.get("pena_total_processo")) or 0 for c in imp_cr)
+            pena_imp = rs.soma_penas(imp_cr, True)
             exig_imp = int(pena_imp * frc.numerator // frc.denominator)  # fração em dias arredondada para baixo (A2), como no resto do programa
             # a fração do impeditivo só conta o tempo posterior ao fato dele (o anterior foi cumprido por outros crimes)
             cump_imp, nota_imp = (rs.cumprido_imputavel_impeditivos(imp_cr, cump, ctx["periodos"], ctx["rem"], ref, ctx["lc"], frc)
@@ -1009,7 +1011,7 @@ def _avaliar_ficha(f, r, ctx, ini, hoje):
                                  str(frc) if frc != 1 else "a íntegra", rs.dias_para_pena(exig_imp)) if not exclui else (
                     "art. 9º: crime do art. 10 excluído da soma; benefício analisado sobre os demais crimes")
                 crimes, imp = resto, []
-                pena = sum(rs.pena_para_dias(c.get("pena_imposta") or c.get("pena_total_processo")) or 0 for c in crimes)
+                pena = rs.soma_penas(crimes, True)
                 cump = cump - exig_imp
                 vga = any(rs.vga_indulto(c) for c in crimes)
                 # números depois do concurso (os da conta das hipóteses), para a linha do tempo mostrar os mesmos da aba
@@ -1086,6 +1088,23 @@ def _avaliar_ficha(f, r, ctx, ini, hoje):
             inint_fuga = ("o período ininterrupto considerado (%s a %s) terminou em fuga (%s): conferir se ele vale para o requisito" % (
                 rs.fmt(_pc[0]), rs.fmt(_pc[1]), ev_f[0].get("data")))
 
+    # sursis concedido no RSPE (incidente), sem revogação até a data: as hipóteses "não beneficiadas com sursis" (ex.: 2023, art. 2º,
+    # I, e art. 3º, caput) não se afirmam - a pena suspensa pode estar na soma; o favorável fica A VERIFICAR (conferência 7.14.5)
+    _sur = [i for i in r.get("_incidentes") or [] if (i.get("situacao") or "") == "CONCEDIDO"
+            and re.search(r"SURSIS|SUSPENS[ÃA]O CONDICIONAL DA PENA", ((i.get("tipo") or "") + " " + (i.get("complemento") or "")).upper())
+            and not re.search(r"REVOG|CASSA", ((i.get("tipo") or "") + " " + (i.get("complemento") or "")).upper())
+            and (rs.to_date(i.get("data_referencia") or i.get("data_decisao") or "") or date.max) <= ref]
+    _sur_rev = [i for i in r.get("_incidentes") or [] if (i.get("situacao") or "") == "CONCEDIDO"
+                and re.search(r"SURSIS|SUSPENS[ÃA]O CONDICIONAL", ((i.get("tipo") or "") + " " + (i.get("complemento") or "")).upper())
+                and re.search(r"REVOG|CASSA", ((i.get("tipo") or "") + " " + (i.get("complemento") or "")).upper())
+                and (rs.to_date(i.get("data_referencia") or i.get("data_decisao") or "") or date.max) <= ref]
+    sursis_txt = ""
+    if _sur and not _sur_rev:
+        _i = _sur[-1]
+        sursis_txt = ("sursis concedido em %s (incidente do RSPE%s): a hipótese exige pessoa não beneficiada com sursis - conferir a que pena "
+                      "ele se refere; sem essa pena, a soma e o tempo mudam" % (
+                          _i.get("data_referencia") or _i.get("data_decisao") or "?",
+                          (", processos %s" % _i["processos"]) if (_i.get("processos") or "").strip(" ,") else ", sem os processos"))
     priv_proprio = any(re.search(r"trafico privilegiado", rs._sem_acento(h.get("outros_requisitos") or "").lower()) for h in f.get("indulto") or [])
     amb_com = [""]  # dúvida (teto no concurso, período ininterrupto que terminou em fuga) da última hipótese de comutação atendida
 
@@ -1168,7 +1187,8 @@ def _avaliar_ficha(f, r, ctx, ini, hoje):
             if inint:
                 return False, exig, "faltavam %s de custódia ininterrupta para %s anos em %s" % (_dias_txt(exig - base_c), anos, rs.fmt(ref))
             return False, exig, "faltavam %s para %s em %s" % (_dias_txt(exig - cump), str(fr) if fr is not None else "%s anos" % anos, rs.fmt(ref))
-        amb_c = "; ".join(x for x in (teto_amb, inint_fuga if inint else "") if x)
+        sur_h = sursis_txt if (sursis_txt and re.search(r"sem sursis|nao beneficiad\w* com sursis", o + " " + rs._sem_acento(h.get("texto") or "").lower())) else ""
+        amb_c = "; ".join(x for x in (teto_amb, inint_fuga if inint else "", sur_h) if x)
         if amb_c and comut and not sem_regime:
             # a comutação não tem o caminho "a verificar" das hipóteses: atende, e a dúvida vai para o resultado (_teto_amb)
             amb_com[0] = amb_c
@@ -1236,9 +1256,64 @@ def _avaliar_ficha(f, r, ctx, ini, hoje):
             return h, True, "regime inicial aberto e sem regressão", subj
         return h, None, "faltam no RSPE as saídas temporárias (ou o trabalho externo) que a hipótese exige - conferir no prontuário", False
 
+    def _patrimonial(h):
+        """Hipótese do crime contra o patrimônio sem violência (ex.: 2023, art. 2º, XV e XVI; 2011 a 2017): afere-se pelos crimes
+        patrimoniais sem violência ou grave ameaça (como os incisos XIV e XV de 2024/2025), com a fração sobre a pena deles; a
+        reparação do dano e o valor do bem o RSPE não traz - atendido o tempo, A VERIFICAR. (ok, exigido, motivo)."""
+        o = rs._sem_acento(h.get("outros_requisitos") or "").lower()
+        if imp:
+            return False, None, "concurso com crime impeditivo"
+        pat = [c for c in crimes if rs.crime_patrimonial(c) and not rs.vga_indulto(c) and not rs.vga_incerta(c)]
+        pat_inc = [c for c in crimes if rs.crime_patrimonial(c) and rs.vga_incerta(c)]
+        if not pat:
+            if pat_inc:
+                return None, None, ("%s com violência ou grave ameaça em branco no RSPE - o tipo costuma tê-la; a hipótese exige crime "
+                                    "patrimonial sem violência: conferir na sentença" % rs.crimes_curto(pat_inc))
+            return False, None, "exige crime contra o patrimônio sem violência ou grave ameaça"
+        p_pat = rs.soma_penas(pat, True)
+        if h.get("pena_max_anos") is not None and p_pat > _anos_pena(h["pena_max_anos"]):
+            return False, None, "pena dos crimes patrimoniais de %s acima de %s anos" % (rs.dias_para_pena(p_pat), h["pena_max_anos"])
+        fr = _fr(h.get("fracao_reincidente") if reinc else h.get("fracao_nao_reincidente"))
+        anos = h.get("anos_reincidente") if reinc else h.get("anos_nao_reincidente")
+        # a fração incide sobre a pena considerada pelo decreto (penas somadas - a mesma das demais hipóteses; no concurso com
+        # impeditivo, a dos crimes não impeditivos); a conta só sobre a pena dos crimes patrimoniais fica como tese no motivo
+        exig = int(pena * fr.numerator // fr.denominator) if fr is not None else (rs.dias_anos(anos, ref) if anos is not None else None)
+        _m = round(anos * 12) if anos is not None else None
+        req = "%s = %s da pena considerada, %s" % (rs.dias_para_pena(exig), fr, rs.dias_para_pena(pena)) if fr is not None else (
+            ("%s de pena cumprida" % (rs.pl(_m, "mês", "meses") if _m and abs(anos * 12 - _m) < 0.01 else _dias_txt(exig))) if exig else "")
+        if exig is not None and cump < exig:
+            tese = ""
+            if fr is not None and p_pat < pena and cump >= int(p_pat * fr.numerator // fr.denominator):
+                tese = (" (tese: só sobre a pena dos crimes patrimoniais, %s, a fração seria atendida - o decreto manda somar as penas)"
+                        % rs.dias_para_pena(p_pat))
+            return False, exig, "faltavam %s para %s em %s%s" % (_dias_txt(exig - cump), req, rs.fmt(ref), tese)
+        conf = []
+        if re.search(r"repara", o):
+            conf.append("a reparação do dano até %s (dispensada se não houve dano ou sem capacidade econômica de repará-lo)" % rs.fmt(ref))
+        if re.search(r"salario minimo", o):
+            conf.append("o valor do bem (até um salário mínimo)")
+        if re.search(r"deposito", o):
+            conf.append("o depósito judicial do prejuízo (salvo incapacidade econômica)")
+        soma = ""
+        parcial = "" if len(pat) == len(crimes) else " - alcança só as penas de %s; as dos demais crimes (%s) seguem" % (
+            rs.crimes_curto(pat), rs.crimes_curto([c for c in crimes if c not in pat]))
+        return None, exig, ("%s: crime contra o patrimônio sem violência ou grave ameaça (%s), cumprido %s%s%s; conferir %s%s" % (
+            h.get("dispositivo") or "hipótese", rs.crimes_curto(pat), rs.dias_para_pena(cump),
+            (" (exigido %s)" % req) if req else "", soma, " e ".join(conf) or "os requisitos da hipótese", parcial))
+
     hips = []  # todas as hipóteses calculadas, para a linha do tempo
     for h in f.get("indulto") or []:
         ex = None
+        if not h.get("objetivo") and re.search(r"crime contra o patrimonio", rs._sem_acento(h.get("outros_requisitos") or "").lower()):
+            ok, exig, mot = _patrimonial(h)
+            hips.append({"tipo": "indulto", "dispositivo": h.get("dispositivo") or "", "ok": False, "exigido": exig, "mot": mot,
+                         "texto": h.get("texto") or "", "fracao": (h.get("fracao_reincidente") if reinc else h.get("fracao_nao_reincidente")) or ""})
+            if ok is None:
+                if ind_ver and ind_ver[0].get("_pat"):
+                    ind_ver = (ind_ver[0], ind_ver[1], ind_ver[2] + " | " + mot)  # XV e XVI juntos: os dois caminhos no motivo
+                else:
+                    ind_ver = ind_ver or (dict(h, _pat=True), exig, mot)
+            continue  # hipótese especial: não entra como "a que chegou mais perto"
         if not h.get("objetivo"):
             ex = _extra(h)
             if ex is None:
