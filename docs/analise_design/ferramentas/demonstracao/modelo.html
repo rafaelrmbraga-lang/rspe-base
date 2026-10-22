@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>APTO · Progressão: alfabética ou por urgência</title>
+<style>
+__FONTS__
+:root{
+  --verde:#1D5A3B; --verde-esc:#123824; --verde-claro:#E9F0EB; --ouro:#B8975A;
+  --fundo:#F4F5F2; --sup:#FFFFFF; --sup2:#FAFAF8; --fio:#E1E4DF; --fio2:#C9CEC8;
+  --tx:#1C211E; --tx2:#4A514C; --tx3:#5F6762;
+  --venc:#9F1D1A; --venc-bg:#FBECEA; --venc-fio:#C4302B;
+  --u30:#8F4300;  --u30-bg:#FDF0E2;  --u30-fio:#D9782A;
+  --u60:#6E5500;  --u60-bg:#F8F1DA;  --u60-fio:#C29A1B;
+  --u90:#1F5E38;  --u90-bg:#E7F2EA;  --u90-fio:#3B8C5A;
+  --long:#3E4641; --long-bg:#EEF0ED; --long-fio:#A7AEA9;
+  --semp:#5F6762; --semp-bg:#F2F3F1; --semp-fio:#C9CEC8;
+  --ext:#284A6B;  --ext-bg:#E8EEF5;  --ext-fio:#4E7299;
+  --ped:#284A6B;  --ped-bg:#E8EEF5;
+  --sans:"Source Sans 3",Arial,sans-serif; --serif:"Source Serif 4",Georgia,serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{font:14px/1.4 var(--sans);color:var(--tx);background:var(--fundo);display:flex;flex-direction:column;font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--verde);outline-offset:2px}
+
+/* faixa institucional */
+.topo{display:flex;align-items:center;gap:16px;padding:10px 28px;background:var(--sup);border-bottom:1px solid var(--fio);position:relative}
+.topo::after{content:"";position:absolute;left:0;right:0;bottom:-4px;height:3px;background:linear-gradient(90deg,var(--verde) 0 82%,var(--ouro) 82% 100%)}
+.marca{display:flex;align-items:center;gap:12px}
+.marca img{width:40px;height:40px}
+.marca b{display:block;font:700 19px/1 Cinzel,serif;letter-spacing:3px;color:var(--verde-esc)}
+.marca small{display:block;font-size:11.5px;color:var(--tx3);margin-top:3px;letter-spacing:.2px}
+.base{margin-left:12px;padding:6px 12px;border:1px solid var(--fio2);border-radius:6px;font-size:13px;color:var(--tx2);background:var(--sup2)}
+.base b{color:var(--tx)}
+.esp{flex:1}
+.busca{position:relative}
+.busca input{width:320px;height:36px;padding:0 12px 0 36px;border:1px solid var(--fio2);border-radius:6px;font:inherit;background:var(--sup)}
+.busca input:focus{outline:none;border-color:var(--verde);box-shadow:0 0 0 3px var(--verde-claro)}
+.busca svg{position:absolute;left:12px;top:11px;width:15px;height:15px;color:var(--tx3)}
+.btn{height:36px;padding:0 16px;border:1px solid var(--fio2);border-radius:6px;background:var(--sup);font-weight:600;font-size:13.5px}
+.btn.pri{background:var(--verde);border-color:var(--verde);color:#fff}
+.btn.pri:hover{background:var(--verde-esc)}
+
+.abas{display:flex;gap:4px;padding:10px 28px 0;margin-top:3px}
+.aba{padding:9px 12px 10px;border:0;background:none;color:var(--tx2);font-size:14px;border-bottom:2px solid transparent}
+.aba span{color:var(--tx3);margin-left:5px;font-weight:600}
+.aba.on{color:var(--verde-esc);font-weight:700;border-bottom-color:var(--verde)}
+.aba.on span{color:var(--verde)}
+.aba[aria-disabled]{cursor:default}
+
+/* cabeçalho da página */
+.cab{display:flex;align-items:flex-end;gap:20px;padding:18px 28px 12px;border-top:1px solid var(--fio)}
+.cab h1{margin:0;font:600 24px/1.15 var(--serif);color:var(--verde-esc)}
+.cab p{margin:4px 0 0;color:var(--tx3);font-size:13px}
+.ordem{display:flex;flex-direction:column;gap:5px;align-items:flex-end}
+.ordem label{font-size:11.5px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:var(--tx3)}
+.seg{display:inline-flex;padding:3px;background:#E7EAE5;border-radius:8px}
+.seg button{border:0;background:none;padding:7px 16px;border-radius:6px;font-weight:600;color:var(--tx2);font-size:13.5px}
+.seg button[aria-pressed=true]{background:var(--sup);color:var(--verde-esc);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.seg small{font-weight:400;color:var(--tx3);margin-left:4px}
+
+/* resumo por situação: cartões que filtram */
+.cartoes{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:10px;padding:0 28px 12px}
+.cartao{position:relative;text-align:left;border:1px solid var(--fio);background:var(--sup);border-radius:8px;padding:10px 12px 9px 15px;transition:border-color .15s,box-shadow .15s}
+.cartao::before{content:"";position:absolute;left:0;top:10px;bottom:10px;width:3px;border-radius:0 3px 3px 0;background:var(--c)}
+.cartao b{display:block;font:600 24px/1.1 var(--serif);color:var(--tx)}
+.cartao span{display:block;font-size:12.5px;color:var(--tx2);margin-top:2px}
+.cartao:hover{border-color:var(--fio2)}
+.cartao[aria-pressed=true]{border-color:var(--verde);box-shadow:0 0 0 2px var(--verde-claro)}
+.cartao.venc b{color:var(--venc)}
+
+/* painel do ganho */
+.ganho{margin:0 28px 12px;background:var(--sup);border:1px solid var(--fio);border-radius:8px;padding:12px 16px}
+.ganho h2{margin:0 0 10px;font:600 15px var(--serif);color:var(--verde-esc);display:flex;align-items:center;gap:10px}
+.ganho h2 small{font:400 12.5px var(--sans);color:var(--tx3)}
+.ganho h2 button{margin-left:auto;border:0;background:none;color:var(--verde);font-weight:600;font-size:12.5px}
+.cmp{display:grid;grid-template-columns:150px 1fr 1fr;gap:6px 18px;align-items:center}
+.cmp .cab2{font-size:11.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--tx3)}
+.cmp .cab2.on{color:var(--verde-esc)}
+.cmp .rot{font-size:12.5px;color:var(--tx2)}
+.cmp .v{font-size:13px}.cmp .v b{font:600 16px var(--serif)}
+.cmp .v.on b{color:var(--verde-esc)}
+.mapa{display:flex;height:16px;border-radius:3px;overflow:hidden;background:var(--semp-bg)}
+.mapa i{flex:1;min-width:0;border-right:1px solid rgba(255,255,255,.6)}
+.mapa i.vencido{background:var(--venc-fio)}.mapa i.laranja{background:var(--u30-fio)}.mapa i.amarelo{background:var(--u60-fio)}
+.mapa i.verde{background:#BFDCC8}.mapa i.longo{background:#E2E5E1}.mapa i.cinza{background:#ECEEEB}.mapa i.azul{background:#C9D6E5}.mapa i.ped{background:#C9D6E5}
+.mapa i.tela{box-shadow:inset 0 -3px 0 var(--verde-esc)}
+.ganho .nota{margin-top:8px;font-size:12px;color:var(--tx3)}
+.ganho.fechado .cmp,.ganho.fechado .nota{display:none}.ganho.fechado h2{margin:0}
+
+/* tabela */
+.lista{flex:1;min-height:0;margin:0 28px 0;background:var(--sup);border:1px solid var(--fio);border-radius:8px 8px 0 0;overflow:auto}
+table{width:100%;border-collapse:separate;border-spacing:0}
+thead th{position:sticky;top:0;z-index:3;background:var(--sup2);text-align:left;font-size:12px;font-weight:700;color:var(--tx2);padding:10px 12px;border-bottom:1px solid var(--fio2);white-space:nowrap}
+thead th.ativa{color:var(--verde-esc)}
+thead th.ativa::after{content:" ↑";color:var(--verde)}
+tbody td{padding:0 12px;height:44px;border-bottom:1px solid #EDEFEB;font-size:13.5px;vertical-align:middle}
+tbody tr.l:hover td{background:#F6F8F5}
+tbody tr.l td:first-child{box-shadow:inset 3px 0 0 var(--fio-c,transparent)}
+td.nome{font-weight:600;white-space:nowrap}
+td.num{white-space:nowrap;color:var(--tx2)}
+td.dt{white-space:nowrap}
+tr.grupo td{position:sticky;top:37px;z-index:2;height:34px;background:#F1F3EF;border-bottom:1px solid var(--fio);font-size:12.5px;color:var(--tx2)}
+tr.grupo td b{font-weight:700;color:var(--tx);margin-right:6px}
+tr.grupo td .tag{display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--c);margin-right:8px;vertical-align:-1px}
+.sit{display:inline-flex;align-items:baseline;gap:6px;max-width:100%;padding:3px 9px;border-radius:5px;background:var(--b);color:var(--t);font-size:13px;line-height:1.35}
+.sit b{font-weight:700;white-space:nowrap}
+.sit.semcor{padding-left:0;background:none}
+.ped{display:inline-flex;align-items:center;gap:7px;height:30px;padding:0 10px;border:1px solid var(--fio2);border-radius:6px;background:var(--sup);font-size:12.5px;color:var(--tx2);white-space:nowrap}
+.ped:hover{border-color:var(--verde);color:var(--verde-esc)}
+.ped .cx{width:14px;height:14px;border:1.5px solid var(--tx3);border-radius:3px}
+.ped.feito{border-color:transparent;background:var(--ped-bg);color:var(--ped);font-weight:600}
+.ped.feito .cx{border-color:var(--ped);background:var(--ped);box-shadow:inset 0 0 0 2px var(--ped-bg)}
+.vazio{padding:40px;text-align:center;color:var(--tx3)}
+
+.rod{display:flex;gap:18px;align-items:center;margin:0 28px 14px;padding:8px 14px;background:var(--sup);border:1px solid var(--fio);border-top:0;border-radius:0 0 8px 8px;font-size:12px;color:var(--tx3)}
+.aviso{position:fixed;left:50%;bottom:28px;transform:translate(-50%,12px);opacity:0;transition:.2s;background:#1C211E;color:#fff;padding:10px 14px 10px 16px;border-radius:8px;display:flex;gap:14px;align-items:center;font-size:13.5px;box-shadow:0 8px 24px rgba(0,0,0,.2)}
+.aviso.on{opacity:1;transform:translate(-50%,0)}
+.aviso button{border:0;background:none;color:#9FD3B1;font-weight:700}
+.demo{position:fixed;right:14px;bottom:10px;font-size:11px;color:var(--tx3)}
+</style></head>
+<body>
+<header class="topo">
+  <div class="marca"><img src="__SELO__" alt=""><div><b>APTO</b><small>Defensoria Pública de Mato Grosso do Sul · Execução penal</small></div></div>
+  <div class="base">Base <b>Comarca Fictícia</b> · 144 assistidos</div>
+  <div class="esp"></div>
+  <label class="busca"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    <input id="q" placeholder="Buscar nome ou nº do processo" aria-label="Buscar assistido"></label>
+  <button class="btn">Exportar</button><button class="btn pri">Importar PDFs</button>
+</header>
+<nav class="abas" aria-label="Abas">
+  <button class="aba" aria-disabled="true">Geral</button><button class="aba on" aria-current="page">Progressão<span>13</span></button><button class="aba" aria-disabled="true">Livramento<span>5</span></button><button class="aba" aria-disabled="true">Indulto e comutação<span>85</span></button><button class="aba" aria-disabled="true">Prescrição<span>19</span></button><button class="aba" aria-disabled="true">Extinção<span>14</span></button><button class="aba" aria-disabled="true">Ficha disciplinar<span>3</span></button><button class="aba" aria-disabled="true">Auditoria<span>60</span></button>
+</nav>
+<section class="cab">
+  <div><h1>Progressão de regime</h1><p>Referência 12/10/2026 · base jurídica 2026-10-08i · mesmos dados, colunas e textos da versão 7.14.4</p></div>
+  <div class="esp"></div>
+  <div class="ordem"><label id="lord">Ordem da lista</label>
+    <div class="seg" role="group" aria-labelledby="lord">
+      <button id="o-alfa" aria-pressed="false">Alfabética <small>como hoje</small></button>
+      <button id="o-urg" aria-pressed="true">Por urgência <small>proposta</small></button>
+    </div></div>
+</section>
+<div class="cartoes" id="cartoes"></div>
+<section class="ganho" id="ganho" aria-label="Comparação entre as duas ordens">
+  <h2>O que muda na prática <small>calculado sobre esta lista, com o filtro e a busca atuais</small><button id="fechaGanho">Ocultar</button></h2>
+  <div class="cmp" id="cmp"></div>
+  <div class="nota">Cada faixa é a lista inteira, de cima para baixo, uma marca por assistido; em vermelho, os vencidos. O traço verde embaixo mostra o que cabe na primeira tela, sem rolar (contando a tela sem este painel, que só existe na demonstração).</div>
+</section>
+<main class="lista" id="lista"><table><thead><tr id="th"></tr></thead><tbody id="tb"></tbody></table></main>
+<div class="rod"><span id="contagem"></span><span class="esp"></span><span>Demonstração com dados fictícios · clique em "Marcar" para registrar um pedido</span></div>
+<div class="aviso" id="aviso" role="status"><span id="avisoTx"></span><button id="desfaz">Desfazer</button></div>
+<script>
+const DADOS = __DADOS__;
+// categoria a partir da cor que o próprio APTO calcula (prog_cor): nada é recalculado aqui
+const CAT = {
+  vencido:{rot:'Vencido', grupo:'Vencidos', ord:0, t:'--venc', b:'--venc-bg', f:'--venc-fio'},
+  laranja:{rot:'Até 30 dias', grupo:'Vence em até 30 dias', ord:1, t:'--u30', b:'--u30-bg', f:'--u30-fio'},
+  amarelo:{rot:'Até 60 dias / a verificar', grupo:'Vence em até 60 dias ou a verificar', ord:2, t:'--u60', b:'--u60-bg', f:'--u60-fio'},
+  verde:{rot:'Até 90 dias', grupo:'Vence em até 90 dias', ord:3, t:'--u90', b:'--u90-bg', f:'--u90-fio'},
+  longo:{rot:'Mais de 90 dias', grupo:'Em cumprimento, mais de 90 dias', ord:4, t:'--long', b:'--long-bg', f:'--long-fio'},
+  ped:{rot:'Pedido feito', grupo:'Pedido feito', ord:5, t:'--ped', b:'--ped-bg', f:'--ext-fio'},
+  cinza:{rot:'Sem prazo', grupo:'Sem prazo: não se aplica, interrompida, suspensa, não iniciou', ord:6, t:'--semp', b:'--semp-bg', f:'--semp-fio'},
+  azul:{rot:'Extinta', grupo:'Execução extinta', ord:7, t:'--ext', b:'--ext-bg', f:'--ext-fio'},
+};
+const ORDEM_CARTOES = ['vencido','laranja','amarelo','verde','longo','cinza','azul'];
+DADOS.forEach(r => { r.cat = r.prog_cor || 'longo'; r.ped = null; });
+const st = { ordem:'urg', filtro:null, q:'' };
+const v = n => `var(${n})`;
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const semAc = s => String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
+const catDe = r => r.ped ? 'ped' : r.cat;
+
+function ordenar(rs, ordem){
+  const a = rs.slice();
+  if (ordem === 'alfa') return a.sort((x,y) => semAc(x.nome).localeCompare(semAc(y.nome)));
+  // por urgência: grupo; dentro do grupo, o mais vencido primeiro e o prazo mais curto primeiro; empate pelo nome
+  return a.sort((x,y) => CAT[catDe(x)].ord - CAT[catDe(y)].ord || (x.dias ?? 1e9) - (y.dias ?? 1e9) || semAc(x.nome).localeCompare(semAc(y.nome)));
+}
+function visiveis(){
+  const q = semAc(st.q), qd = st.q.replace(/\D/g,'');
+  return DADOS.filter(r => (!st.filtro || catDe(r) === st.filtro) && (!q || semAc(r.nome).includes(q) || (qd && r.proc.replace(/\D/g,'').includes(qd))));
+}
+function situacao(r){
+  const k = catDe(r), c = CAT[k];
+  let txt = r.ped ? 'Pedido feito em ' + r.ped : r.sit;
+  // a primeira parte (antes do " · ") em negrito; o resto do texto do programa, inteiro
+  const [p, ...resto] = txt.split(' · ');
+  const corpo = `<b>${esc(p)}</b>${resto.length ? '<span>· ' + esc(resto.join(' · ')) + '</span>' : ''}`;
+  if (k === 'longo' || k === 'cinza') return `<span class="sit semcor" style="--t:${v(c.t)}">${corpo}</span>`;
+  return `<span class="sit" style="--t:${v(c.t)};--b:${v(c.b)}">${corpo}</span>`;
+}
+const COLS = [['Nome','nome'],['Nº da execução','num'],['Regime',''],['Data da progressão','dt'],['Situação',''],['Conduta (ficha)',''],['Falta (12 meses)',''],['Pedido','']];
+function linha(r){
+  const c = CAT[catDe(r)];
+  const fio = ['vencido','laranja','amarelo','verde'].includes(catDe(r)) ? `--fio-c:${v(c.f)}` : '';
+  return `<tr class="l" style="${fio}"><td class="nome">${esc(r.nome)}</td><td class="num">${esc(r.proc)}</td><td>${esc(r.regime)}</td><td class="dt">${esc(r.prog||'—')}</td><td>${situacao(r)}</td><td>${esc(r.conduta)}</td><td>${esc(r.falta)}</td>
+    <td><button class="ped ${r.ped?'feito':''}" data-id="${esc(r.id)}" aria-pressed="${!!r.ped}"><span class="cx"></span>${r.ped?'Feito':'Marcar'}</button></td></tr>`;
+}
+// linhas que cabem na primeira tela do programa: a altura da lista somada à do painel de comparação, que só existe nesta demonstração
+function linhasPorTela(){ const L=document.getElementById('lista'), G=document.getElementById('ganho'); const extra = G.classList.contains('fechado') ? 0 : G.offsetHeight + 12; return Math.max(1, Math.floor((L.clientHeight + extra - 38) / 44)); }
+function metricas(ordem, rs){
+  // posição de cada linha como ela aparece na tela (as faixas de grupo também ocupam uma linha)
+  const o = ordenar(rs, ordem); let pos = 0, ult = null; const posV = [];
+  o.forEach(r => { if (ordem==='urg' && catDe(r)!==ult){ pos++; ult=catDe(r); } pos++; if (catDe(r)==='vencido') posV.push(pos); });
+  const n = linhasPorTela();
+  return { o, n, prim: posV[0] ?? null, ult: posV.at(-1) ?? null, naTela: posV.filter(p => p <= n).length, total: posV.length,
+           telas: posV.length ? Math.ceil(posV.at(-1) / n) : 0 };
+}
+function render(){
+  const rs = visiveis();
+  // cartões (contam a base toda, como hoje)
+  document.getElementById('cartoes').innerHTML = ORDEM_CARTOES.map(k => { const n = DADOS.filter(r => catDe(r) === k).length;
+    return `<button class="cartao ${k==='vencido'?'venc':''}" style="--c:${v(CAT[k].f)}" aria-pressed="${st.filtro===k}" data-k="${k}"><b>${n}</b><span>${CAT[k].rot}</span></button>`; }).join('');
+  document.getElementById('th').innerHTML = COLS.map(([t]) => `<th class="${(st.ordem==='alfa'&&t==='Nome')||(st.ordem==='urg'&&t==='Situação')?'ativa':''}">${t}</th>`).join('');
+  const m = metricas(st.ordem, rs);
+  let h = '', ult = null;
+  m.o.forEach(r => { const k = catDe(r);
+    if (st.ordem === 'urg' && k !== ult){ ult = k; const n = m.o.filter(x => catDe(x) === k).length;
+      h += `<tr class="grupo"><td colspan="8"><span class="tag" style="--c:${v(CAT[k].f)}"></span><b>${CAT[k].grupo}</b>${n} ${n===1?'assistido':'assistidos'}</td></tr>`; }
+    h += linha(r); });
+  document.getElementById('tb').innerHTML = h || `<tr><td colspan="8" class="vazio">Nenhum assistido com este filtro e esta busca.</td></tr>`;
+  document.getElementById('contagem').textContent = `${rs.length} de ${DADOS.length} assistidos na lista · ordem: ${st.ordem==='alfa'?'alfabética':'por urgência'}`;
+  document.getElementById('o-alfa').setAttribute('aria-pressed', st.ordem==='alfa');
+  document.getElementById('o-urg').setAttribute('aria-pressed', st.ordem==='urg');
+  painel(rs);
+}
+function faixa(m){
+  return `<div class="mapa" aria-hidden="true">${m.o.map((r,i) => `<i class="${catDe(r)==='longo'?'longo':catDe(r)} ${i < m.n ? 'tela':''}"></i>`).join('')}</div>`;
+}
+function painel(rs){
+  const A = metricas('alfa', rs), U = metricas('urg', rs), on = k => st.ordem===k ? ' on' : '';
+  const f = (m, campo) => { if (!m.total) return '—';
+    if (campo==='prim') return `<b>${m.prim}ª</b> linha`;
+    if (campo==='ult') return `<b>${m.ult}ª</b> linha`;
+    if (campo==='tela') return `<b>${m.naTela}</b> de ${m.total}`;
+    if (campo==='telas') return `<b>${m.telas}</b> ${m.telas===1?'tela':'telas'} de rolagem`; };
+  const lin = (rot, campo) => `<div class="rot">${rot}</div><div class="v${on('alfa')}">${f(A,campo)}</div><div class="v${on('urg')}">${f(U,campo)}</div>`;
+  document.getElementById('cmp').innerHTML =
+    `<div></div><div class="cab2${on('alfa')}">Alfabética (como hoje)</div><div class="cab2${on('urg')}">Por urgência (proposta)</div>` +
+    `<div class="rot">A lista inteira</div><div>${faixa(A)}</div><div>${faixa(U)}</div>` +
+    lin('Primeiro vencido', 'prim') + lin('Último vencido', 'ult') + lin('Vencidos na 1ª tela', 'tela') + lin('Para ver todos', 'telas');
+}
+// interação
+document.getElementById('o-alfa').onclick = () => { st.ordem='alfa'; render(); document.getElementById('lista').scrollTop=0; };
+document.getElementById('o-urg').onclick = () => { st.ordem='urg'; render(); document.getElementById('lista').scrollTop=0; };
+document.getElementById('cartoes').onclick = e => { const b = e.target.closest('.cartao'); if (!b) return; st.filtro = st.filtro===b.dataset.k ? null : b.dataset.k; render(); };
+let t; document.getElementById('q').oninput = e => { clearTimeout(t); t = setTimeout(() => { st.q = e.target.value.trim(); render(); }, 150); };
+let ultimo = null, tAv;
+document.getElementById('tb').onclick = e => { const b = e.target.closest('.ped'); if (!b) return; const r = DADOS.find(x => x.id===b.dataset.id);
+  r.ped = r.ped ? null : '12/10/2026'; ultimo = r; render();
+  document.getElementById('avisoTx').textContent = r.ped ? `Pedido de progressão registrado para ${r.nome}` : `Pedido desmarcado para ${r.nome}`;
+  const A = document.getElementById('aviso'); A.classList.add('on'); clearTimeout(tAv); tAv = setTimeout(() => A.classList.remove('on'), 6000); };
+document.getElementById('desfaz').onclick = () => { if (ultimo){ ultimo.ped = ultimo.ped ? null : '12/10/2026'; render(); } document.getElementById('aviso').classList.remove('on'); };
+document.getElementById('fechaGanho').onclick = e => { const g = document.getElementById('ganho'); g.classList.toggle('fechado'); e.target.textContent = g.classList.contains('fechado') ? 'Mostrar comparação' : 'Ocultar'; painel(visiveis()); };
+addEventListener('resize', () => painel(visiveis()));
+const p = new URLSearchParams(location.search); if (p.get('ordem')==='alfa') st.ordem='alfa'; if (p.get('filtro')) st.filtro=p.get('filtro');
+render();
+</script>
+</body></html>
