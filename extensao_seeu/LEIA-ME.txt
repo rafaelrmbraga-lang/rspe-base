@@ -164,7 +164,9 @@ PETIÇÕES A PARTIR DA TRIAGEM (1.8)
    Grande. Assinatura: Cahuê Duarte e Urdiales, Defensor Público (como nos
    modelos).
  - Saem em PDF (com opção de Word): 1. Ciência, 1. Não Opor - MP,
-   1. Advogado Particular, 1. Esgotamento Prévio, 1. Aud Justificação.
+   1. Advogado Particular, 1. Esgotamento Prévio, 1. Aud Justificação,
+   1. Intimação Pessoal - Justificativa (sugerido quando a providência é
+   "Requerer a intimação pessoal do sentenciado").
  - Saem em Word, com os trechos a completar destacados em amarelo
    (regime, datas, percentual...): 1. Justificativa - primeira falta,
    1. Extinção Punibilidade, 1. LC, 1. Progressão Aberto.
@@ -181,6 +183,9 @@ PETIÇÕES A PARTIR DA TRIAGEM (1.8)
    bibliotecas pdf-lib e fontkit (pasta pdflib). Nada sai do computador.
  - Ajustes feitos nas cópias dos modelos: nomes e nºs dos casos de exemplo
    viraram campos; a Aud. Justificação só requer a designação da audiência;
+   na Intimação Pessoal, a 1ª frase ficou genérica ("Verificou-se a
+   ocorrência de incidentes no decorrer do cumprimento da pena pelo
+   sentenciado.");
    o 1º parágrafo do Esgotamento Prévio ficou genérico. Para trocar um
    modelo, substitua o .docx na pasta "modelos" mantendo {{processo}},
    {{nome}} e {{data}} onde devem ser preenchidos.

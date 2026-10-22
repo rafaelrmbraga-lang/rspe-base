@@ -450,6 +450,7 @@
     { id: "advogado_particular", nome: "1. Advogado Particular", arquivo: "advogado_particular.docx", formato: "pdf" },
     { id: "esgotamento_previo", nome: "1. Esgotamento Prévio", arquivo: "esgotamento_previo.docx", formato: "pdf" },
     { id: "aud_justificacao", nome: "1. Aud Justificação", arquivo: "aud_justificacao.docx", formato: "pdf" },
+    { id: "intimacao_pessoal_justificativa", nome: "1. Intimação Pessoal - Justificativa", arquivo: "intimacao_pessoal_justificativa.docx", formato: "pdf" },
     { id: "justificativa_primeira_falta", nome: "1. Justificativa - primeira falta", arquivo: "justificativa_primeira_falta.docx", formato: "docx" },
     { id: "extincao_punibilidade", nome: "1. Extinção Punibilidade", arquivo: "extincao_punibilidade.docx", formato: "docx" },
     { id: "livramento_condicional", nome: "1. LC", arquivo: "livramento_condicional.docx", formato: "docx" },
@@ -461,6 +462,7 @@
     const t = providencia.texto || "";
     if (providencia.tipo === "Ciência") return "ciencia";
     if (providencia.tipo === "Parecer do MP") return "nao_opor_mp";
+    if (providencia.tipo === "Intimação pessoal") return "intimacao_pessoal_justificativa";
     if (/endereço atualizado|localiza/i.test(t)) return "esgotamento_previo";
     if (/prisão noticiada/i.test(t)) return "aud_justificacao";
     void analise;

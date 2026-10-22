@@ -17,10 +17,11 @@ ok(PET.nomeArquivo("1. Não Opor - MP", "", "docx") === "1. Não Opor - MP.docx"
 ok(PET.nomeProprio("EDGAR CENTURION CACERES") === "Edgar Centurion Caceres" && PET.nomeProprio("MARIA DA SILVA E SOUZA") === "Maria da Silva e Souza", "nome em maiúsculas -> nome próprio");
 ok(PET.nomeProprio("Felipe Batista Pereira") === "Felipe Batista Pereira", "nome já escrito fica como está");
 ok(PET.dataPorExtenso(new Date(2026, 9, 2)) === "2 de outubro de 2026", "data por extenso");
-ok(PET.MODELOS.length === 9 && PET.MODELOS.filter((m) => m.formato === "docx").map((m) => m.id).sort().join() ===
+ok(PET.MODELOS.length === 10 && PET.MODELOS.filter((m) => m.formato === "docx").map((m) => m.id).sort().join() ===
    "extincao_punibilidade,justificativa_primeira_falta,livramento_condicional,progressao_aberto", "modelos que pedem dados saem em Word");
 ok(PET.modeloSugerido({ tipo: "Ciência", texto: "Dar ciência" }) === "ciencia" && PET.modeloSugerido({ tipo: "Parecer do MP", texto: "Manifestar sobre o parecer do MP" }) === "nao_opor_mp" &&
    PET.modeloSugerido({ tipo: "Certidão", texto: "Informar o endereço atualizado do assistido" }) === "esgotamento_previo" && PET.modeloSugerido(null) === null, "sugestão do modelo");
+ok(PET.modeloSugerido({ tipo: "Intimação pessoal", texto: "Requerer a intimação pessoal do sentenciado para justificar" }) === "intimacao_pessoal_justificativa", "intimação pessoal sugere o modelo de intimação pessoal");
 
 const campos = { processo: "7000117-54.2016.8.12.0001", nome: "Fulano de Tal Exemplo", data: "22 de outubro de 2026" };
 const texto = (xml) => xml.replace(/<w:p[ >]/g, "\n<w:p ").replace(/<[^>]+>/g, "");
@@ -30,7 +31,8 @@ const texto = (xml) => xml.replace(/<w:p[ >]/g, "\n<w:p ").replace(/<[^>]+>/g, "
     const partes = await PET.lerZip(bytes, inflar);
     const xml = new TextDecoder().decode(partes["word/document.xml"]);
     ok(/\{\{processo\}\}/.test(xml) && /\{\{data\}\}/.test(xml), m.id + ": modelo com {{processo}} e {{data}}");
-    ok(!/Estevão|Gildesio|Genilson|em razão da prisão informada|realizou-se uma tentativa/.test(xml), m.id + ": sem dados de casos reais nem textos retirados");
+    ok(!/Estevão|Gildesio|Genilson|em razão da prisão informada|realizou-se uma tentativa|Constatou-se em ev|6001281-65/.test(xml), m.id + ": sem dados de casos reais nem textos retirados");
+    if (m.id === "intimacao_pessoal_justificativa") ok(texto(xml).includes("Verificou-se a ocorrência de incidentes no decorrer do cumprimento da pena pelo sentenciado. A apresentação de justificativa") && texto(xml).includes("art. 186, do CPC"), "intimação pessoal: 1ª frase trocada, resto igual");
     ok(!/template\.main\+xml/.test(new TextDecoder().decode(partes["[Content_Types].xml"])), m.id + ": é documento, não modelo do Word (.dotx)");
     // Word preenchido
     const docx = await PET.gerarDocx(bytes, campos, inflar);
@@ -56,5 +58,5 @@ const texto = (xml) => xml.replace(/<w:p[ >]/g, "\n<w:p ").replace(/<[^>]+>/g, "
     fs.unlinkSync(tmp);
   } catch (e) { if (e.code !== "ENOENT") throw e; }
   if (falhas) { console.log(falhas + " falha(s)"); process.exit(1); }
-  console.log("ok: petições (9 modelos em Word e PDF, campos, nome do arquivo, sugestão, sem dados reais)");
+  console.log("ok: petições (10 modelos em Word e PDF, campos, nome do arquivo, sugestão, sem dados reais)");
 })().catch((e) => { console.log("FALHA: " + (e && e.stack || e)); process.exit(1); });
