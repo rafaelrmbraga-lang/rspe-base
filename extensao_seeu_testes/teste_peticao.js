@@ -32,7 +32,7 @@ const texto = (xml) => xml.replace(/<w:p[ >]/g, "\n<w:p ").replace(/<[^>]+>/g, "
     const xml = new TextDecoder().decode(partes["word/document.xml"]);
     ok(/\{\{processo\}\}/.test(xml) && /\{\{data\}\}/.test(xml), m.id + ": modelo com {{processo}} e {{data}}");
     ok(!/Estevão|Gildesio|Genilson|em razão da prisão informada|realizou-se uma tentativa|Constatou-se em ev|6001281-65/.test(xml), m.id + ": sem dados de casos reais nem textos retirados");
-    if (m.id === "intimacao_pessoal_justificativa") ok(texto(xml).includes("Verificou-se a ocorrência de incidentes no decorrer do cumprimento da pena pelo sentenciado. A apresentação de justificativa") && texto(xml).includes("art. 186, do CPC"), "intimação pessoal: 1ª frase trocada, resto igual");
+    if (m.id === "intimacao_pessoal_justificativa") ok(texto(xml).includes("Verificou-se a ocorrência de incidentes no decorrer do cumprimento da pena pelo sentenciado. A apresentação de justificativa sobre os incidentes depende de informações") && texto(xml).includes("art. 186, do CPC"), "intimação pessoal: 1ª frase trocada, resto igual");
     ok(!/template\.main\+xml/.test(new TextDecoder().decode(partes["[Content_Types].xml"])), m.id + ": é documento, não modelo do Word (.dotx)");
     // Word preenchido
     const docx = await PET.gerarDocx(bytes, campos, inflar);
