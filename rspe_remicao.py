@@ -2459,7 +2459,8 @@ def comparacao(r, f, hoje=None, manuais=None, homologados=None, trab=None):
                 d["cor"] = "cinza"
     outra = outra_execucao(r, f)
     onde = onde_diferenca(dif, docs, post, verm, pontos, trab, ult_dec, rspe_maior, acomp_l)
-    return {"onde": onde, "rspe_maior": rspe_maior, "outra_exec": outra, "acomp": acomp_l, "corte": corte, "_sem_doc": sem_doc, "R": R, "docs": docs, "at_desta": soma(at_), "n_desta": len(at_), "man": soma(man_), "n_man": len(man_), "est_comp": soma(est_),
+    diag = diagnostico(dif, verm, len(pedir) / 3.0, pontos, rspe_maior, any(d.get("pend_prov") for d in docs if not d["fora"]), acomp_l, trab)
+    return {"onde": onde, "diag": diag, "rspe_maior": rspe_maior, "outra_exec": outra, "acomp": acomp_l, "corte": corte, "_sem_doc": sem_doc, "R": R, "docs": docs, "at_desta": soma(at_), "n_desta": len(at_), "man": soma(man_), "n_man": len(man_), "est_comp": soma(est_),
             "leitura": soma(lei_), "obras": int(round(soma(lei_) / 4)), "fora": [d for d in docs if d["fora"]], "comp": comp, "dif": dif,
             "estim": estim, "dif_estim": round(dif + estim, 2), "pouco": pouco, "concl": concl, "concl_cor": concl_cor, "pontos": pontos,
             "pedir_dias": len(pedir) / 3.0, "talvez_dias": len(talvez) / 3.0, "conf_dias": len(conferir) / 3.0, "est_estim": est_estim, "est_cert_fim": cert_fim, "impressao": imp, "inicio": inicio,
@@ -2518,6 +2519,33 @@ def outra_execucao(r, f):
         return ("RSPE de outra execução? A ficha não cita nenhum dos processos do RSPE (execução %s): conferir se é o RSPE desta execução "
                 "antes de usar a comparação." % (r.get("processo_execucao") or "?"))
     return ""
+
+
+def diagnostico(dif, verm, pedir_dias, pontos, rspe_maior=False, pend_prov=False, acomp=None, trab=None):
+    """Visão inicial da aba Ficha - "Diagnóstico": uma frase curta com o que fazer (os detalhes ficam em "Pendências apontadas" e a
+    comparação dos totais, na visualização detalhada). Ordem: documento vermelho (posterior à última decisão, sem apreciação) >
+    diferença a favor da ficha > pedir atestado > vínculo ou ponto a conferir > RSPE maior > acompanhar > em ordem."""
+    dias_ = lambda v: "%s %s" % (_nf(v), "dia" if _nf(v) == "1" else "dias")
+    conf_ = [p_ for p_ in pontos if p_["cor"] == "amarelo"]
+    vinc_ = [L for L in ((trab or {}).get("linhas") or []) if L["st"] in ("possivel", "provavel")]
+    extra = " Pedir também os atestados que faltam." if pedir_dias and (verm or dif > TOL_COMPARACAO) else ""
+    if verm:
+        return {"t": "Requerer a remição: %s à última decisão, ainda sem apreciação.%s" % (
+            "há documento posterior" if len(verm) == 1 else "há %d documentos posteriores" % len(verm), extra), "c": "vermelho"}
+    if dif > TOL_COMPARACAO:
+        return {"t": "A ficha comprova %s a mais que o RSPE: conferir as pendências nos autos e requerer o que faltar.%s" % (
+            dias_(dif), extra), "c": "amarelo"}
+    if pedir_dias:
+        return {"t": "Pedir à unidade os atestados de trabalho que faltam (≈ %s de remição)." % dias_(int(round(pedir_dias)) or 1), "c": "amarelo"}
+    if pend_prov:
+        return {"t": "Conferir a certidão peticionada e não apreciada; se confirmada, requerer a remição.", "c": "amarelo"}
+    if vinc_ or conf_:
+        return {"t": "Conferir as pendências apontadas; sem diferença nos totais, não há pedido por ora.", "c": "amarelo"}
+    if rspe_maior:
+        return {"t": "Nada a requerer: o RSPE já concedeu %s a mais do que a ficha comprova." % dias_(-dif), "c": "cinza"}
+    if acomp:
+        return {"t": "Nada a requerer agora; acompanhar o trabalho em curso e pedir o atestado ao fim.", "c": "cinza"}
+    return {"t": "Remição em ordem: nada a fazer.", "c": "verde"}
 
 
 def onde_diferenca(dif, docs, post, verm, pontos, trab, ult_dec, rspe_maior=False, acomp=None):
