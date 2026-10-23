@@ -192,33 +192,9 @@ async function lerMesa() {
   const avisos = [];
   try {
     for (const aba of abas) {
-      let pagina = 1, total = null, campos = null, falhou = false;
-      const vistos = new Set();
-      const novosDe = (m) => m.linhas.filter((l) => !vistos.has(l.processo)).length;
-      while (pagina <= 40) {
-        progresso(0, 0, `Mesa · ${T.ABAS[aba]} · página ${pagina}${total != null ? " · " + total + " registro(s)" : ""}`);
-        let url = `/seeu/usuario/mesaDefensor1Grau.do?actionType=listar&finalidadeRemessa=${aba}&situacao=${situacao}&pageNumber=${pagina}`;
-        let r = await buscar(url);
-        let m = T.lerMesa(r.texto);
-        if (pagina > 1 && campos && (m.de === 1 || !novosDe(m))) {
-          // o SEEU ignorou a página pedida por GET: pede como o próprio formulário da Mesa (POST, só a lista)
-          const corpo = new URLSearchParams(Object.assign({}, campos, { pageNumber: String(pagina), finalidadeRemessa: aba, situacao })).toString();
-          r = await buscar(`/seeu/usuario/mesaDefensor1Grau.do?actionType=listar`, { metodo: "POST", corpo });
-          m = T.lerMesa(r.texto);
-          if (!novosDe(m)) { falhou = true; break; }
-        }
-        if (pagina === 1) { total = m.total || null; campos = filtrarCampos(m.campos); }
-        for (const l of m.linhas) {
-          if (vistos.has(l.processo)) continue;
-          vistos.add(l.processo);
-          linhas.push(Object.assign(l, { aba, situacao: Number(situacao) }));
-        }
-        // fim da lista: pelo total da Mesa ("N registro(s) encontrado(s)"); sem ele, pela página incompleta
-        const fim = !m.linhas.length || (total ? vistos.size >= total : m.linhas.length < (m.pageSize || 20));
-        if (fim) break;
-        pagina++;
-      }
-      if (total && vistos.size < total) avisos.push(`${T.ABAS[aba]}: lidos ${vistos.size} de ${total} processos` + (falhou ? " (o SEEU não entregou as páginas seguintes)" : ""));
+      const r = await lerAbaDaMesa(aba, situacao, "Mesa");
+      for (const l of r.linhas) linhas.push(l);
+      if (r.total && r.linhas.length < r.total) avisos.push(`${T.ABAS[aba]}: lidos ${r.linhas.length} de ${r.total} processos` + (r.falhou ? " (o SEEU não entregou as páginas seguintes)" : ""));
     }
   } catch (e) {
     terminar();
@@ -233,6 +209,38 @@ async function lerMesa() {
   desenhar();
   mensagem(`Mesa lida: ${linhas.length} processo(s).` + (avisos.length ? " Atenção: " + avisos.join("; ") + "." : "") +
     " Filtre por defensor ou final do nº e clique em \"2 · Ler processos e decisões\".", avisos.length > 0);
+}
+// uma aba da Mesa, página por página até o total; com "procurar", para assim que achar esse processo
+async function lerAbaDaMesa(aba, situacao, rotulo, procurar) {
+  let pagina = 1, total = null, campos = null, falhou = false;
+  const vistos = new Set(), linhas = [];
+  const novosDe = (m) => m.linhas.filter((l) => !vistos.has(l.processo)).length;
+  while (pagina <= 40) {
+    progresso(0, 0, `${rotulo} · ${T.ABAS[aba]} · página ${pagina}${total != null ? " · " + total + " registro(s)" : ""}`);
+    const url = `/seeu/usuario/mesaDefensor1Grau.do?actionType=listar&finalidadeRemessa=${aba}&situacao=${situacao}&pageNumber=${pagina}`;
+    let r = await buscar(url);
+    let m = T.lerMesa(r.texto);
+    if (pagina > 1 && campos && (m.de === 1 || !novosDe(m))) {
+      // o SEEU ignorou a página pedida por GET: pede como o próprio formulário da Mesa (POST, só a lista)
+      const corpo = new URLSearchParams(Object.assign({}, campos, { pageNumber: String(pagina), finalidadeRemessa: aba, situacao })).toString();
+      r = await buscar(`/seeu/usuario/mesaDefensor1Grau.do?actionType=listar`, { metodo: "POST", corpo });
+      m = T.lerMesa(r.texto);
+      if (!novosDe(m)) { falhou = true; break; }
+    }
+    if (pagina === 1) { total = m.total || null; campos = filtrarCampos(m.campos); }
+    for (const l of m.linhas) {
+      if (vistos.has(l.processo)) continue;
+      vistos.add(l.processo);
+      linhas.push(Object.assign(l, { aba, situacao: Number(situacao) }));
+    }
+    if (procurar && vistos.has(procurar)) return { linhas, total, falhou, achou: true, completa: false };
+    // fim da lista: pelo total da Mesa ("N registro(s) encontrado(s)"); sem ele, pela página incompleta
+    const fim = !m.linhas.length || (total ? vistos.size >= total : m.linhas.length < (m.pageSize || 20));
+    if (fim) break;
+    pagina++;
+  }
+  const completa = !falhou && (total ? vistos.size >= total : pagina <= 40);
+  return { linhas, total, falhou, achou: false, completa };
 }
 function filtrarCampos(c) {
   const ok = ["org.apache.struts.taglib.html.TOKEN", "selectedIcon", "pageSize", "pageNumber", "sortColumn", "sortOrder", "finalidadeRemessa"];
@@ -366,7 +374,8 @@ async function lerProcessos() {
     .filter((l) => forcar || !estado.analises[chaveLinha(l)] || estado.analises[chaveLinha(l)].status !== "ok" || new Date(estado.analises[chaveLinha(l)].quando).toDateString() !== hoje);
   if (!fila.length) return mensagem("Os processos do filtro já foram lidos hoje. Marque \"reler tudo\" para ler de novo.", false);
   iniciar("Lendo processos…");
-  let feitos = 0, erros = 0, seguidas = 0, motivoParada = "";
+  let feitos = 0, erros = 0, seguidas = 0, motivoParada = "", testado = false;
+  const lidosAgora = [];
   for (const l of fila) {
     if (rodando.parar) break;
     progresso(feitos, fila.length, `${l.processo} · ${l.executado || ""}`);
@@ -376,6 +385,20 @@ async function lerProcessos() {
     try {
       estado.analises[k] = await analisarLinha(l);
       seguidas = 0;
+      if (Number(l.situacao) === 1) {
+        lidosAgora.push(l);
+        // teste logo no primeiro: se a leitura tivesse dado ciência, para aqui, antes de ler os outros
+        if (!testado) {
+          testado = true;
+          const problema = await testarPrazo(l, estado.analises[k]);
+          if (problema) {
+            estado.analises[k].alertaPrazo = problema;
+            motivoParada = `A triagem parou por segurança: ${l.processo} – ${problema}. Confira esse processo no SEEU antes de ler os demais.`;
+            feitos++;
+            break;
+          }
+        }
+      }
     } catch (e) {
       if (e instanceof Parada) {
         estado.analises[k] = Object.assign({}, estado.analises[k], { status: estado.analises[k].ultimoSeq ? "ok" : "fila" });
@@ -390,11 +413,61 @@ async function lerProcessos() {
     await guardarEstado();
     desenharLinha(l);
   }
+  // conferência final: os lidos em "Recebidas e não lidas" continuam lá?
+  let conferencia = "";
+  if (lidosAgora.length && !motivoParada) {
+    if (rodando.parar) conferencia = " A conferência do prazo não foi feita porque a leitura foi interrompida.";
+    else {
+      try { conferencia = await conferirPrazos(lidosAgora); } catch (e) {
+        conferencia = " Não consegui reler a Mesa para conferir o prazo (" + (e.message || e) + ").";
+      }
+    }
+  }
   await guardarEstado();
   terminar();
   desenhar();
   if (motivoParada) mensagem(motivoParada, true);
-  else mensagem(`Leitura concluída: ${feitos} processo(s)` + (erros ? `, ${erros} com erro (veja a coluna Motivo)` : "") + ".", erros > 0);
+  else mensagem(`Leitura concluída: ${feitos} processo(s)` + (erros ? `, ${erros} com erro (veja a coluna Motivo)` : "") + "." + conferencia,
+    erros > 0 || /saiu|saíram|Não consegui|não foi/.test(conferencia));
+}
+
+// ---------------------------------------------------------------- proteção do prazo
+// A triagem só lê (endereços de leitura numa lista fechada; Analisar, Leitura de Prazo e Dispensar bloqueados).
+// Como o comportamento do SEEU pode mudar, ela confere: depois do 1º processo lido em "Recebidas e não lidas",
+// reabre a página dele (surgiu confirmação de intimação?) e procura-o na Mesa; no fim, relê a Mesa toda.
+async function testarPrazo(l, a) {
+  progresso(0, 0, "Conferindo que o prazo não começou · " + l.processo);
+  try {
+    const proc = await paginaDoProcesso(l);
+    const novas = T.novaConfirmacao(proc.movimentos, a.ultimoSeq);
+    if (novas.length) return `apareceu "${novas[0].nome}" (mov. ${novas[0].seq}) depois da leitura`;
+    const r = await lerAbaDaMesa(l.aba, 1, "Conferindo o prazo", l.processo);
+    if (!r.achou && r.completa) return `saiu de "Recebidas e não lidas" depois da leitura`;
+  } catch (e) {
+    if (e instanceof Parada) throw e;
+    return "não consegui conferir se o prazo continua intacto (" + (e.message || e) + ")";
+  }
+  return "";
+}
+async function conferirPrazos(lidos) {
+  const porAba = {};
+  for (const l of lidos) (porAba[l.aba] = porAba[l.aba] || []).push(l);
+  const sairam = [], semConferir = [];
+  for (const aba of Object.keys(porAba)) {
+    const r = await lerAbaDaMesa(aba, 1, "Conferindo o prazo");
+    if (!r.completa) { semConferir.push(T.ABAS[aba]); continue; }
+    for (const l of T.sairamDaMesa(porAba[aba], r.linhas)) {
+      sairam.push(l.processo);
+      const k = chaveLinha(l);
+      if (estado.analises[k]) estado.analises[k].alertaPrazo = "saiu de \"Recebidas e não lidas\" durante a triagem";
+      desenharLinha(l);
+    }
+  }
+  let t = "";
+  if (sairam.length) t += ` ATENÇÃO: ${sairam.length} processo(s) saíram de "Recebidas e não lidas" durante a triagem (o prazo de leitura pode ter vencido, ou alguém os analisou): ${sairam.join(", ")}. Confira-os no SEEU; estão marcados em vermelho na coluna Prazo.`;
+  else if (!semConferir.length) t += lidos.length === 1 ? ` Prazo conferido: o processo continua em "Recebidas e não lidas".` : ` Prazo conferido: os ${lidos.length} processos continuam em "Recebidas e não lidas".`;
+  if (semConferir.length) t += ` Não foi possível conferir o prazo em: ${semConferir.join(", ")} (o SEEU não entregou a Mesa inteira).`;
+  return t;
 }
 
 // ---------------------------------------------------------------- filtros e tabela
@@ -701,7 +774,9 @@ function celulaPrazo(l, dias) {
   const sit = Number(l.situacao || estado.situacao || 1);
   const falta = dias == null ? "" : dias < 0 ? "venceu" : dias === 0 ? "vence hoje" : "faltam " + dias + "d";
   const rot = sit === 1 ? "Leitura até" : sit === 2 ? "Resposta até" : "Último dia";
+  const alerta = (estado.analises[chaveLinha(l)] || {}).alertaPrazo;
   return el("div", {},
+    alerta ? el("div", { class: "alertaPrazo", title: "Confira este processo no SEEU" }, "⚠ " + alerta) : null,
     el("div", { class: "sub" }, rot),
     el("div", { class: "vence" + (dias != null && dias <= 2 ? " perto" : "") }, l.ultimoDia || "—"),
     falta ? el("div", { class: "sub" + (dias <= 2 ? " vence perto" : "") }, falta) : null,

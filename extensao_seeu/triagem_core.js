@@ -575,11 +575,26 @@
     ]);
   }
 
+  // ---------------------------------------------------------------- proteção do prazo
+  // A triagem só lê. Mesmo assim, em "Recebidas e não lidas", ela confere que a leitura não deu ciência por acidente:
+  // 1) movimentos novos (depois da leitura) que confirmam intimação, fora os do Ministério Público;
+  function novaConfirmacao(movimentos, ultimoSeq) {
+    return (movimentos || []).filter((m) => m.seq > (ultimoSeq || 0) &&
+      /CONFIRMADA A INTIMA|LEITURA DE INTIMA|INTIMA[ÇC][ÃA]O LIDA|CI[ÊE]NCIA (DA|DE) INTIMA/i.test(m.nome + " " + (m.complemento || "")) &&
+      !/MINIST[ÉE]RIO P[ÚU]BLICO/i.test((m.complemento || "") + " " + (m.autor || "") + " " + (m.cargo || "")));
+  }
+  // 2) processos lidos que saíram da lista (comparando aba e nº com a Mesa relida)
+  function sairamDaMesa(lidos, mesaRelida) {
+    const ficou = new Set((mesaRelida || []).map((l) => l.aba + "|" + l.processo));
+    return (lidos || []).filter((l) => !ficou.has(l.aba + "|" + l.processo));
+  }
+
   const api = {
     ABAS, SITUACOES, entidades, texto, normal, cnj, finalDoNumero, absoluto, dataNum, faixasFinal, faixaTexto,
     lerMesa, lerPendencias, lerMovimentos, lerProcesso, paginaDeLogin, lerArquivos, arquivoPrincipal,
     ehAtoDoJuiz, ehMeroExpediente, pendenciaDaAba, movimentoDaPendencia, escolher, tipoDoMotivo,
     itensParaTexto, carimbo, corpoDoDocumento, dispositivo, resumir, analisarTexto, lerDocumento, providencia, urgencia,
+    novaConfirmacao, sairamDaMesa,
     crc32, zip, xlsx, colunaLetra,
   };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
