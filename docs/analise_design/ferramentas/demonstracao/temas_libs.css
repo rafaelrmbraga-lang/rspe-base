@@ -175,3 +175,58 @@ body.tema-7{--nav:204px}.tema-7 .marca{width:auto}.tema-7 .marca small{display:n
 .ac:has(em){padding:0 5px;gap:4px}.ac:has(em) em{font-size:11.5px}body:has(.ac em) td.nome{min-width:165px}
 body:has(.ac em) td.proc{font-size:12px}body:has(.ac em) td.nome{min-width:150px}
 :is(.tema-7,.tema-8,.tema-9,.tema-10) .cartao span{white-space:normal;overflow:visible;line-height:1.2}
+/* ===== E · menu lateral que recolhe e expande (sobre a linha A, NavigationView do Fluent 2) ===== */
+.tema-7 .aba.alterna{color:var(--tx2);margin-bottom:4px}.tema-7 .aba.alterna svg{color:var(--tx2)}
+body.tema-7.menu-recolhido,body.tema-7.menu-sobre{--nav:52px}
+:is(.menu-recolhido,.menu-sobre) .marca{min-width:0}
+.menu-recolhido .abas{padding:2px 6px 12px}
+.menu-recolhido .aba{justify-content:center;padding:0;gap:0}.menu-recolhido .aba .nm{display:none}
+.menu-recolhido .aba span{position:absolute;top:1px;right:1px;margin:0;min-width:16px;height:15px;padding:0 3px;border-radius:8px;background:#E8E8E8;color:var(--tx2);font-size:10px;line-height:15px;text-align:center;font-weight:600}
+.menu-recolhido .aba.on span{background:var(--verde);color:#fff}
+.menu-recolhido .aba.on::before{left:-2px}
+.menu-recolhido .abas .div{font-size:0;height:1px;background:var(--fio);margin:7px 8px}
+.aba.foco{background:rgba(0,0,0,.035)}
+.dica{position:fixed;z-index:9;transform:translateY(-50%);background:#fff;border:1px solid #E5E5E5;border-radius:4px;box-shadow:0 4px 8px rgba(0,0,0,.14);padding:5px 9px;font-size:12.5px;color:var(--tx);white-space:nowrap}
+.menu-sobre .abas{width:252px;background:#F9F9F9;border-right:1px solid #E5E5E5;box-shadow:0 8px 16px rgba(0,0,0,.14);z-index:7;border-radius:0 8px 0 0}
+.menu-sobre .abas .aba{padding-left:14px}
+
+/* ===== notebooks (até 1400 px de largura): mais compacto, sem tirar nada ===== */
+@media (max-width:1400px){
+ :is(.tema-7,.tema-8,.tema-9,.tema-10) .cab{padding-top:10px;padding-bottom:8px}
+ :is(.tema-7,.tema-8,.tema-9,.tema-10) .cab h1{font-size:21px}
+ :is(.tema-7,.tema-8,.tema-9,.tema-10) :is(.cab,.cartoes,.lista,.rod,.custom,.layind,.alt){margin-left:16px!important;margin-right:16px!important}
+ :is(.tema-7,.tema-8,.tema-9,.tema-10) :is(.cab,.cartoes){padding-left:16px;padding-right:16px;margin-left:0!important;margin-right:0!important}
+ :is(.tema-7,.tema-8,.tema-9,.tema-10) .decleg{padding-left:16px}
+ :is(.tema-7,.tema-8,.tema-9,.tema-10) .cartoes{gap:6px;padding-bottom:8px}
+ :is(.tema-7,.tema-8,.tema-9,.tema-10) .cartao{padding:5px 10px}
+ :is(.tema-7,.tema-8,.tema-9,.tema-10) .cartao b{font-size:18px}
+ :is(.tema-7,.tema-8,.tema-9,.tema-10) .cartao span{font-size:11.5px}
+ :is(.tema-7,.tema-8,.tema-9,.tema-10) tbody td{height:36px;font-size:12.5px;padding:3px 6px}
+ :is(.tema-7,.tema-8,.tema-9,.tema-10) thead th{padding:7px 6px;font-size:12px}
+ :is(.tema-7,.tema-8,.tema-9,.tema-10) td.nome{min-width:150px}
+ :is(.tema-7,.tema-8,.tema-9,.tema-10) td.proc{font-size:11.5px}
+ :is(.tema-7,.tema-8,.tema-9,.tema-10) .cmp2{max-width:180px;font-size:11.5px}
+ :is(.tema-7,.tema-8,.tema-9,.tema-10) .sit{font-size:11.5px}
+ :is(.tema-7,.tema-8,.tema-9,.tema-10) .ped{font-size:0;gap:0}
+ :is(.tema-7,.tema-8,.tema-9,.tema-10) .ac{min-width:24px;width:auto;height:26px;margin-left:0;padding:0 3px}
+ :is(.tema-7,.tema-8,.tema-9,.tema-10) .ico{margin-left:3px}
+ :is(.tema-7,.tema-8,.tema-9,.tema-10) .rod{font-size:11px;padding:5px 12px}
+ :is(.tema-7,.tema-8,.tema-9,.tema-10) .topo .busca input{width:170px}
+ :is(.tema-7,.tema-8,.tema-9,.tema-10) .topo .btn{padding:0 9px;font-size:13px}
+ :is(.tema-7,.tema-8,.tema-9,.tema-10) .base{font-size:12px;padding:3px 8px}
+ :is(.tema-7,.tema-8,.tema-9,.tema-10) .marca small{max-width:110px;white-space:normal;line-height:1.15}
+ :is(.tema-7,.tema-8,.tema-9,.tema-10) .layind{grid-template-columns:190px minmax(0,1fr)}
+ :is(.tema-7,.tema-8,.tema-9,.tema-10) .mx i{min-width:22px;height:20px;font-size:10.5px}
+ :is(.tema-7,.tema-8,.tema-9,.tema-10) .tlb{font-size:11.5px;padding:0 7px;height:26px}
+ :is(.tema-9,.tema-10) .abas{flex-wrap:wrap}
+ .tema-8 .aba{margin-bottom:5px}.tema-8 .abas{padding-top:8px}.tema-8 .aba svg{height:26px;padding:4px 17px}.tema-8 .aba{font-size:11px;line-height:13px}
+ .tema-8 .topo{height:54px}.tema-8 .busca input{height:38px}.tema-8 .btn{height:34px}
+ .tema-9 .aba{height:48px;font-size:12px;padding:0 7px}.tema-9 .aba svg{width:17px;height:17px}
+ .tema-10 .aba{padding:8px 5px;font-size:12.5px}
+}
+@media (max-height:720px){ :is(.tema-7,.tema-8,.tema-9,.tema-10) .topo{padding-top:4px;padding-bottom:4px} body.tema-7 .topo{height:44px} body.tema-7::before,.tema-7 .abas{top:44px} .tema-7 .aba{height:31px} .tema-7 .abas .div[data-g]{margin-top:7px} }
+@media (max-width:1400px){body.tema-7:not(.menu-recolhido):not(.menu-sobre){--nav:184px}.tema-7:not(.menu-recolhido) .aba{gap:8px;padding-left:10px}}
+@media (max-width:1400px){.tema-9 .cartao{padding-left:38px}.tema-9 .cartao::after{left:10px;width:20px;height:20px;margin-top:-10px}.tema-7:not(.menu-recolhido):not(.menu-sobre) td.nome{min-width:130px}.tema-7:not(.menu-recolhido):not(.menu-sobre) .aba span{font-size:11px}}
+@media (max-width:1400px){body.tema-7:not(.menu-recolhido):not(.menu-sobre){--nav:192px}.tema-7:not(.menu-recolhido) .aba{font-size:12.5px;padding-right:6px}.tema-7:not(.menu-recolhido):not(.menu-sobre) td.nome{min-width:0}.tema-7:not(.menu-recolhido):not(.menu-sobre) td.proc{font-size:11px}}
+@media (max-width:1300px){.tema-7:not(.menu-recolhido):not(.menu-sobre) .cmp2{max-width:150px}.tema-7:not(.menu-recolhido):not(.menu-sobre) :is(td.c-falta,td.c-regime){max-width:110px}}
+@media (max-width:1300px){.tema-7:not(.menu-recolhido):not(.menu-sobre) :is(tbody td,thead th){padding-left:4px;padding-right:4px}}

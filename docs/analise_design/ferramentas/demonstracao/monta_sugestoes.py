@@ -84,7 +84,7 @@ SUG = [
  ("Mais lista visível em notebooks (Windows em 150 %)",
   "Com a escala de 150 %, comum em notebooks Full HD, hoje cabem cerca de 2 linhas e meia da tabela.",
   ["escala150"], ["escala150"],
-  "Com o cabeçalho em uma faixa e cartões compactos, cabem mais assistidos na mesma tela, sem tirar nenhum botão.", "lado", "M"),
+  "Com o cabeçalho em uma faixa e o modo compacto para telas pequenas, cabem 5 a 7 assistidos na mesma tela, sem tirar nenhum botão; com o menu lateral recolhido (linha E), a tabela ganha ainda mais largura.", "lado", "M"),
 ]
 
 css = f"""
@@ -131,6 +131,9 @@ table.res td{{padding:2.2pt 5pt;border-bottom:.5pt solid #E1E4DF;vertical-align:
 table.res td:first-child{{font:700 10pt Sans;color:#1D5A3B;width:9mm}}
 table.res td.e{{text-align:center;font-weight:700;color:#1D5A3B;width:16mm}}
 .alts{{display:grid;grid-template-columns:1fr 1fr;gap:4mm 7mm;flex:1;min-height:0}}.alts figure{{margin:0;min-width:0;min-height:0;display:flex;flex-direction:column}}.alts img{{max-width:100%;max-height:52mm;object-fit:contain;object-position:left top;border:.7pt solid #9DBBA8;border-radius:3pt;align-self:flex-start}}.alts figcaption{{font-size:9pt;color:#4A514C;margin-top:2pt}}
+.tres3{{display:grid;grid-template-columns:repeat(2,minmax(0,108mm));justify-content:center;gap:3mm 8mm;flex:1;min-height:0}}.tres3 .ganho{{align-self:center}}.tres3 figure{{margin:0;min-width:0}}.tres3 img{{width:100%;border:.7pt solid #9DBBA8;border-radius:3pt;display:block}}.tres3 figcaption{{font-size:9pt;color:#4A514C;margin-top:3pt}}
+.nbg{{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:2mm 5mm;max-width:215mm}}.nbg figure{{margin:0;min-width:0}}.nbg img{{width:100%;border:.7pt solid #C9CEC8;border-radius:3pt;display:block}}.nbg figcaption{{font-size:8.5pt;margin-top:2pt}}
+table.res.nb td:first-child{{width:auto;font-size:9.5pt}}
 .nota{{font-size:9pt;color:#5F6762;margin-top:6pt}}
 .grade5{{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6mm 5mm}}
 .grade5.g3{{grid-template-columns:repeat(3,minmax(0,1fr));gap:4mm 5mm}}.grade5 figure{{margin:0;min-width:0}}.grade5 img{{width:100%;border:.7pt solid #C9CEC8;border-radius:3pt;display:block}}
@@ -150,12 +153,12 @@ pags = []
 pags.append("""<div class="pg capa"><div class="m">APTO</div>
 <h1>Sugestões de visual e experiência</h1>
 <div class="pr"><b>O princípio: facilitar.</b> A tela diz o essencial, de forma clara e objetiva. Quem quiser se aprofundar tem os botões de sempre. Nenhuma função sai da tela nem vai para um menu escondido. Todas as abas seguem a mesma linha gráfica.</div>
-<div class="pe">Parte 1: a versão atual e quatro linhas gráficas baseadas nas bibliotecas visuais atuais do Python · o que voltou para a tela e por quê · Parte 2: 15 sugestões de experiência, cada uma com a tela de hoje e a proposta · dados fictícios (“Simulado Caso NNN”), exportados do próprio programa · nenhuma regra, cálculo ou texto jurídico alterado</div></div>""")
+<div class="pe">Parte 1: a versão atual, cinco linhas gráficas baseadas nas bibliotecas visuais atuais do Python, o menu lateral que recolhe e o uso em notebooks · o que voltou para a tela e por quê · Parte 2: 15 sugestões de experiência, cada uma com a tela de hoje e a proposta · dados fictícios (“Simulado Caso NNN”), exportados do próprio programa · nenhuma regra, cálculo ou texto jurídico alterado</div></div>""")
 
 # ---------- pesquisa ----------
 BIB = [
- ("PySide6-Fluent-Widgets (QFluentWidgets)", "1.4.x · 2026", "Fluent 2, o visual do Windows 11", "GPLv3 ou licença comercial", "Exigiria refazer a tela em Qt", "A"),
- ("Fluent UI Web Components (Microsoft)", "base FAST", "Fluent 2 para páginas web", "MIT", "Cabe no ui.html; basta seguir as medidas e cores", "A"),
+ ("PySide6-Fluent-Widgets (QFluentWidgets)", "1.4.x · 2026", "Fluent 2, o visual do Windows 11", "GPLv3 ou licença comercial", "Exigiria refazer a tela em Qt", "A, E"),
+ ("Fluent UI Web Components (Microsoft)", "base FAST", "Fluent 2 para páginas web", "MIT", "Cabe no ui.html; basta seguir as medidas e cores", "A, E"),
  ("Flet 1.0", "15/09/2026", "Material 3 (Flutter)", "Apache 2.0", "Exigiria refazer a tela inteira", "B"),
  ("NiceGUI 3.0", "out/2025", "Quasar (Vue) e Tailwind 4", "MIT", "Exigiria refazer a tela e um servidor local", "C"),
  ("Dash Mantine Components 2.7", "mai/2026 · Mantine 8", "Mantine", "MIT", "Exigiria refazer a tela em Dash", "D"),
@@ -163,8 +166,8 @@ BIB = [
  ("pywebview 6.2.1 (o que o APTO usa)", "abr/2026", "qualquer HTML/CSS", "BSD", "Fica como está", "todas"),
 ]
 lin = "".join(f"<tr><td><b>{a}</b></td><td>{b}</td><td>{c}</td><td>{d}</td><td>{e}</td><td class='e'>{f}</td></tr>" for a, b, c, d, e, f in BIB)
-pags.append(f"""<div class="pg"><div class="k">Pesquisa</div><h2>De onde vêm as quatro linhas</h2><div class="faixa"></div>
-<p class="pq">Busquei as bibliotecas de interface mais atuais do Python (out/2026). Cada uma traz uma <b>linguagem visual</b> pronta e testada por milhares de sistemas: medidas, cores, letras e componentes. As linhas A a D aplicam essas linguagens ao APTO. Isso evita o visual “inventado” das propostas anteriores.</p>
+pags.append(f"""<div class="pg"><div class="k">Pesquisa</div><h2>De onde vêm as linhas</h2><div class="faixa"></div>
+<p class="pq">Busquei as bibliotecas de interface mais atuais do Python (out/2026). Cada uma traz uma <b>linguagem visual</b> pronta e testada por milhares de sistemas: medidas, cores, letras e componentes. As linhas A a E aplicam essas linguagens ao APTO. Isso evita o visual “inventado” das propostas anteriores.</p>
 <table class="res"><tr><th>Biblioteca</th><th>Versão</th><th>Linguagem visual</th><th>Licença</th><th>Para usar no APTO</th><th>Linha</th></tr>{lin}</table>
 <div class="ganho" style="margin-top:10pt"><b>Recomendação técnica:</b> manter o pywebview e o ui.html como estão (arquivo único, offline) e adotar só a <b>linguagem visual</b> escolhida, em CSS. Não entra biblioteca nova, nada de CDN, e o <code>testes.py</code> continua valendo. Trocar de biblioteca (Flet, NiceGUI, Dash, Qt) obrigaria a reescrever a tela inteira, sem ganho para quem usa. O QFluentWidgets, além disso, é GPL ou pago.</div>
 <div class="nota">Letras: a linha A usa a Segoe UI, que já vem no Windows (nas capturas, a Open Sans faz as vezes dela). As linhas B e C usam Roboto e a D usa Inter: cerca de 90 KB embutidos no ui.html, sem internet. Fontes: pypi.org/project/pyside6-fluent-widgets · learn.microsoft.com/fluent-ui/web-components · byteiota.com (Flet 1.0) · talkpython.fm/525 (NiceGUI 3) · community.plotly.com (DMC 2) · reflex.dev/changelog · archlinux.org (pywebview).</div></div>""")
@@ -192,9 +195,13 @@ LINHAS = [
   (TT, "t10_prog"), (TT, "t10_painel"), (TT, "t10_ind"),
   ["Cabeçalho branco em uma faixa; abas logo abaixo, com ícone, nome e contador, como hoje", "Letra Inter; cartões com o rótulo em cima e o número embaixo", "Tabela limpa, com cabeçalho em negrito", "A menor mudança em relação à tela atual"],
   "a equipe quiser modernizar sem reaprender nada: as abas, os ícones e os botões ficam onde estão."),
+ ("E", "Menu lateral que recolhe e expande", "Fluent 2 · NavigationView · telas em notebook (1280 × 680)",
+  (TT, "tE_prog"), (TT, "tE_painel"), (TT, "tE_ind"),
+  ["A linha A com um botão ☰ no alto do menu: expandido mostra ícone, nome e contador; recolhido, só o ícone e o contador", "Recolhido, o menu ocupa 52 px e a tabela ganha cerca de 150 px de largura", "Ao parar o mouse sobre um ícone, aparece o nome da aba", "O programa lembra a escolha; em telas estreitas, o menu expande por cima da lista, sem apertar a tabela", "Telas desta linha em 1280 × 680, o tamanho útil de um notebook Full HD com escala de 150 %"],
+  "o APTO for usado em notebooks, ou se a equipe quiser escolher entre ver os nomes das abas ou ganhar espaço para a lista."),
 ]
 ABAS_T = [('geral','Geral'),('prog','Progressão'),('liv','Livramento'),('ind','Indulto e comutação'),('presc','Prescrição'),('ext','Extinção'),('fd','Ficha disciplinar'),('aud','Auditoria'),('base','Dados da base'),('geo','Dados prisionais'),('teses','Jurisprudências'),('quadro','Quadro do usuário')]
-parte1 = ['<div class="pg parte"><div class="k">Parte 1</div><h1>A versão atual e quatro linhas gráficas</h1><div class="faixa"></div><p>A versão atual (0) e quatro propostas (A a D), cada uma seguindo a linguagem visual de uma biblioteca atual do Python. É a mesma aba, com os mesmos dados. Escolhida a linha, ela vale para todas as abas, para os relatórios em PDF e para a extensão.</p><p><b>Em todas as linhas, como hoje:</b></p><ul style="font-size:11.5pt;color:#4A514C;max-width:220mm"><li>as 12 abas à vista, com os ícones ao lado do nome e o contador;</li><li>a aba Indulto com a barra de decretos e o mapa de cabimento por decreto em cada assistido;</li><li>os ícones ao lado do nome do assistido (saída temporária, progressão antecipada, divergência);</li><li>na linha: fixar, caixa do pedido, ficha, Quadro e abrir;</li><li>no topo: base, cópia de segurança, busca, Importar PDFs, Importar pasta, Exportar, tamanho da letra, calculadora, Legenda e método;</li><li>o filtro, a ordem da lista e a ordenação pelo título da coluna;</li><li>no rodapé, a legenda dos ícones, “* calculado pelo programa” e a dica da caixa do pedido.</li></ul><p>Nada vai para menu “Mais” ou “⋯”.</p></div>']
+parte1 = ['<div class="pg parte"><div class="k">Parte 1</div><h1>A versão atual e cinco linhas gráficas</h1><div class="faixa"></div><p>A versão atual (0) e cinco propostas (A a E), cada uma seguindo a linguagem visual de uma biblioteca atual do Python. É a mesma aba, com os mesmos dados. Escolhida a linha, ela vale para todas as abas, para os relatórios em PDF e para a extensão.</p><p><b>Em todas as linhas, como hoje:</b></p><ul style="font-size:11.5pt;color:#4A514C;max-width:220mm"><li>as 12 abas à vista, com os ícones ao lado do nome e o contador;</li><li>a aba Indulto com a barra de decretos e o mapa de cabimento por decreto em cada assistido;</li><li>os ícones ao lado do nome do assistido (saída temporária, progressão antecipada, divergência);</li><li>na linha: fixar, caixa do pedido, ficha, Quadro e abrir;</li><li>no topo: base, cópia de segurança, busca, Importar PDFs, Importar pasta, Exportar, tamanho da letra, calculadora, Legenda e método;</li><li>o filtro, a ordem da lista e a ordenação pelo título da coluna;</li><li>no rodapé, a legenda dos ícones, “* calculado pelo programa” e a dica da caixa do pedido.</li></ul><p>Nada vai para menu “Mais” ou “⋯”.</p></div>']
 fig = "".join(f'<figure><img src="{img(a[3][0], a[3][1], 1000)}" style="{"border:1.5pt solid #7A3B36" if a[0]=="0" else ""}"><figcaption><b>{a[0]} · {a[1]}</b> — {a[2]}</figcaption></figure>' for a in LINHAS)
 parte1.append(f'<div class="pg"><div class="k">Parte 1 · visão geral</div><h2>Atual e propostas lado a lado: aba Progressão</h2><div class="faixa"></div><div class="grade5 g3">{fig}</div></div>')
 for n, nome, sub, prog, pain, ind, carac, indic in LINHAS:
@@ -207,6 +214,18 @@ for n, nome, sub, prog, pain, ind, carac, indic in LINHAS:
         cel = "".join(f'<figure><img src="{img(TT, pref + "_" + a, 1000)}"><figcaption>{rot}</figcaption></figure>' for a, rot in ABAS_T[k:k + 4])
         parte1.append(f'<div class="pg"><div class="k">Linha {n} · {nome} · todas as abas ({k // 4 + 1}/3)</div><div class="g4">{cel}</div></div>')
 pags.extend(parte1)
+NBD = os.path.join(FON, "notebook"); LJ = json.load(open(os.path.join(NBD, "linhas.json")))
+pags.append(f"""<div class="pg"><div class="k">Linha E · menu lateral</div><h2>Três estados do menu: expandido, recolhido e por cima da lista</h2><div class="faixa"></div>
+<div class="tres3"><figure><div class="rot p">Expandido</div><img src="{img(NBD, 'E_aberto', 1000)}"><figcaption>Ícone, nome e contador, separados por tarefa. Para monitores largos. O botão ☰ “Recolher o menu” fica no alto.</figcaption></figure>
+<figure><div class="rot p">Recolhido</div><img src="{img(NBD, 'E_recolhido', 1000)}"><figcaption>Só o ícone e o contador, em 52 px. Ao parar o mouse, aparece o nome (“Indulto e comutação · 85”). As 12 abas continuam à vista.</figcaption></figure>
+<figure><div class="rot p">Expandido por cima da lista</div><img src="{img(NBD, 'E_sobre', 1000)}"><figcaption>Em notebook, o ☰ abre o menu sobre a lista, sem apertar a tabela; escolhida a aba, ele volta a recolher.</figcaption></figure>
+<div class="ganho"><b>O que muda:</b> quem tem monitor largo deixa o menu aberto; quem usa notebook recolhe e ganha cerca de 150 px para a tabela. Nenhuma aba some: recolhido, o menu mostra todos os ícones e contadores. O programa guarda a escolha de cada computador.</div></div></div>""")
+nbt = "".join(f"<tr><td><b>{n}</b> <span style='font-size:8pt;color:#5F6762'>{d}</span></td><td class='e'>{LJ[n+'_1280']}</td><td class='e'>{LJ[n+'_1366']}</td><td class='e'>{LJ[n+'_1440']}</td></tr>" for n, d in [("A","Fluent 2, menu à esquerda aberto"),("B","Material 3, trilho"),("C","Quasar, abas no cabeçalho verde"),("D","Mantine, abas no alto (como hoje)"),("E","Menu lateral recolhido")])
+nbf = "".join(f'<figure><img src="{img(NBD, n + "_1280", 900)}"><figcaption><b>{n}</b> · {LJ[n+"_1280"]} assistidos visíveis</figcaption></figure>' for n in "ABCDE")
+pags.append(f"""<div class="pg"><div class="k">Notebooks</div><h2>Em notebook: tudo à vista, mais compacto</h2><div class="faixa"></div>
+<p class="pq">Medido na aba Progressão, sem rolar. 1280 × 680 é o espaço útil de um notebook Full HD com escala de 150 % (o padrão do Windows nesses aparelhos); 1366 × 700, de um notebook HD a 100 %. Abaixo de 1400 px, todas as linhas ficam mais compactas (letra 12,5 px, linhas de 36 px, cartões menores) sem tirar nenhum botão. A caixa do pedido fica sem o texto, como hoje, e o título “Pedido” continua na coluna. Nas linhas C e D, as abas passam a ocupar duas fileiras.</p>
+<div style="display:flex;gap:6mm;align-items:flex-start"><div class="nbg"><figure><img src="{img(H, 'escala150', 900)}" style="border-color:#7A3B36"><figcaption><b>0 · hoje</b> · cerca de 2 assistidos e meio</figcaption></figure>{nbf}</div>
+<table class="res nb" style="width:78mm;flex:none"><tr><th>Linha</th><th>1280</th><th>1366</th><th>1440</th></tr>{nbt}</table></div><div class="nota">Assistidos visíveis por largura de tela (altura útil 680, 700 e 860 px).</div></div>""")
 VOLTA = [
  ("Ícones da linha: ficha, Quadro e abrir", "Troquei por “Abrir ›” e um menu “⋯”, para limpar a linha.", "Escondia funções e somava um clique a cada uso.", "Voltam os três ícones, no mesmo lugar, com mais contraste e dica ao passar o mouse; a ficha fica verde quando foi importada."),
  ("Fixar no topo (alfinete)", "Levei para o painel do assistido.", "É usado na própria lista.", "Volta ao lado do nome."),
@@ -218,8 +237,8 @@ VOLTA = [
 ]
 lv = "".join(f"<tr><td><b>{a}</b></td><td>{b}</td><td>{c}</td><td>{d}</td></tr>" for a, b, c, d in VOLTA)
 pags.append(f"""<div class="pg"><div class="k">O que voltou para a tela</div><h2>Funções que eu tinha tirado ou escondido, e por quê voltaram</h2><div class="faixa"></div>
-<p class="pq">Nas propostas anteriores, tirei ou escondi controles para a tela parecer mais limpa. Foi um erro: o APTO é usado todos os dias, e cada função escondida custa cliques e obriga a procurar. Nas linhas A a D, tudo o que existe hoje continua à vista.</p>
-<table class="res"><tr><th>Função</th><th>O que eu tinha feito</th><th>Por que não serve</th><th>Agora, nas linhas A a D</th></tr>{lv}</table></div>""")
+<p class="pq">Nas propostas anteriores, tirei ou escondi controles para a tela parecer mais limpa. Foi um erro: o APTO é usado todos os dias, e cada função escondida custa cliques e obriga a procurar. Nas linhas A a E, tudo o que existe hoje continua à vista.</p>
+<table class="res"><tr><th>Função</th><th>O que eu tinha feito</th><th>Por que não serve</th><th>Agora, nas linhas A a E</th></tr>{lv}</table></div>""")
 pags.append(f"""<div class="pg"><div class="k">O que voltou para a tela · alternativas</div><h2>Duas formas de mostrar as ações da linha e o filtro</h2><div class="faixa"></div>
 <div class="alts">
 <figure><div class="rot p">Ações · alternativa 1: ícones, como hoje</div><img src="{img(P, 'alt_acoes_icones', 1100)}"><figcaption>Os três ícones de hoje, mais escuros (hoje parecem desabilitados), com dica ao passar o mouse. A ficha fica verde quando foi importada. Ocupa pouco espaço.</figcaption></figure>
