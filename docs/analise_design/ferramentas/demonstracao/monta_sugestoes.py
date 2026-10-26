@@ -32,11 +32,11 @@ SUG = [
  ("Cabeçalho em uma faixa só",
   "Hoje o topo ocupa três faixas (marca e busca, botões, abas). A busca fica longe dos botões e a lista começa mais abaixo.",
   ["cabecalho"], ["cabecalho"],
-  "Marca, base, busca e as duas ações principais (Exportar e Importar) numa só faixa. A lista começa mais acima e a busca fica sempre no mesmo lugar.", "pilha", "M"),
+  "Marca, base (com a data da cópia de segurança), busca e todos os botões de hoje numa só faixa; o filtro vai para junto da ordem da lista. A lista começa mais acima.", "pilha", "M"),
  ("Abas agrupadas por tarefa e com nomes por extenso",
   "Hoje as 12 abas têm o mesmo peso. “Ficha” (disciplinar) se confunde com a ficha do assistido, e Extinção fica longe de Progressão e Livramento.",
   ["abas"], ["abas"],
-  "Grupos separados por um traço: Geral · Prazos · Decretos · Conferência · Panorama. Nomes completos (“Ficha disciplinar”, “Indulto e comutação”). Em telas menores, as ferramentas vão para “Mais”.", "pilha", "P"),
+  "Grupos separados por um traço: Geral · Prazos · Decretos · Conferência · Panorama. Nomes completos (“Ficha disciplinar”, “Indulto e comutação”), com os ícones e os contadores de hoje. As 12 abas ficam sempre à vista.", "pilha", "P"),
  ("Cartões de resumo que se leem de longe e também filtram",
   "Hoje os contadores são chips pequenos, com uma barrinha de cor de 3 px. O número se perde no texto.",
   ["cartoes"], ["cartoes"],
@@ -49,10 +49,10 @@ SUG = [
   "Hoje a coluna Situação quebra em até 4 linhas (“Em 66 dias · percentual do / SEEU acima do / legal - ver / Auditoria”) e as linhas ficam com alturas diferentes.",
   ["situacao"], ["situacao"],
   "Primeiro o que importa, em destaque (“Vencido há 649 dias”); embaixo, em letra menor, o complemento do programa. O texto completo continua no painel do assistido.", "pilha", "P"),
- ("Botões que dizem o que fazem",
-  "Hoje o pedido é uma caixinha sem rótulo, e as ações da linha são três ícones cinza-claro, que parecem desabilitados.",
+ ("Ações da linha mais fáceis de ver",
+  "Hoje o pedido é uma caixinha sem rótulo, e os três ícones da linha (ficha, Quadro, abrir) são cinza-claro e parecem desabilitados.",
   ["fim_linha"], ["fim_linha"],
-  "“Marcar pedido” e “Abrir ›” escritos, sempre no fim da linha, na mesma ordem em todas as abas.", "lado", "P"),
+  "Os mesmos ícones, no mesmo lugar e na mesma ordem em todas as abas, com mais contraste e dica ao passar o mouse; a ficha fica verde quando foi importada. A caixa ganha o nome “Marcar pedido”. Nada sai da linha.", "lado", "P"),
  ("Uma cor, um significado, em todas as abas",
   "Hoje o verde é “vence em até 90 dias” na Progressão (um prazo correndo) e “guia em ordem” na Auditoria. A mesma cor diz coisas opostas.",
   ["cartoes", "cartoes_aud"], ["cartoes_prog", "cartoes_aud"],
@@ -61,14 +61,14 @@ SUG = [
   "Hoje “Legenda e método” é um bloco corrido que descreve as cores por extenso (“vermelho = …”) e mistura todas as abas.",
   ["legenda_ajuda"], ["legenda_ajuda"],
   "A legenda abre na aba atual: a etiqueta como aparece na tela, o que quer dizer e o que fazer. O método completo continua a um clique.", "lado", "P"),
- ("Painel do assistido: o essencial e o porquê no mesmo lugar",
+ ("Painel do assistido: só o essencial",
   "Hoje a linha “Indulto” do painel mostra só os decretos cabíveis. O “a verificar” e a sua fundamentação ficam mais abaixo, em “Cálculos do programa”, com outro nome.",
   ["painel"], ["painel"],
-  "Todos os resultados na mesma linha (2022 Possível · 2024 A verificar · 2025 Possível) e, logo abaixo, o motivo do “A verificar” com “Copiar fundamentação”.", "lado", "M"),
- ("Detalhe da linha em passos, com as ações sempre no mesmo lugar",
+  "Todos os resultados do indulto na mesma linha (2022 Possível · 2024 A verificar · 2025 Possível). Os cálculos seguem logo abaixo, com “ver cálculo completo” e “Copiar”; os botões de hoje ficam no topo e no rodapé do painel.", "lado", "M"),
+ ("Detalhe da linha em passos, sem perder nada",
   "Hoje o detalhe da Prescrição é uma tabela larga, de 12 colunas, que passa da largura da tela e corta o botão “Abrir ficha”.",
   ["presc_detalhe"], ["presc_detalhe"],
-  "O cálculo em três passos (prazo, termo inicial, executória) e uma barra fixa de ações: Copiar fundamentação · Ver linha do tempo · Editar dados · Abrir painel.", "pilha", "M"),
+  "As datas do processo numa linha (pena, fato, recebimento da denúncia, sentença, acórdão, trânsito), o cálculo em três passos (prazo, termo inicial, executória) e os botões de hoje: Ver cálculo, Editar dados e Abrir ficha completa.", "pilha", "M"),
  ("Avisos claros: o sucesso com “Desfazer”, o erro que fica",
   "Hoje sucesso e erro usam o mesmo aviso preto, que some em 3,5 segundos. Um erro como “nada foi gravado” pode passar despercebido.",
   ["aviso"], ["aviso"],
@@ -84,41 +84,39 @@ SUG = [
  ("Mais lista visível em notebooks (Windows em 150 %)",
   "Com a escala de 150 %, comum em notebooks Full HD, hoje cabem cerca de 2 linhas e meia da tabela.",
   ["escala150"], ["escala150"],
-  "Com cabeçalho em uma faixa, abas agrupadas e cartões compactos, cabem cerca de 5 a 6 assistidos na mesma tela.", "lado", "M"),
+  "Com o cabeçalho em uma faixa e cartões compactos, cabem mais assistidos na mesma tela, sem tirar nenhum botão.", "lado", "M"),
 ]
 
 css = f"""
-@font-face{{font-family:Serif;font-weight:600;src:url(data:font/woff2;base64,{f64('SourceSerif4-SemiBold')})}}
-@font-face{{font-family:Sans;font-weight:400;src:url(data:font/woff2;base64,{f64('SourceSans3-Regular')})}}
-@font-face{{font-family:Sans;font-weight:600;src:url(data:font/woff2;base64,{f64('SourceSans3-SemiBold')})}}
-@font-face{{font-family:Sans;font-weight:700;src:url(data:font/woff2;base64,{f64('SourceSans3-Bold')})}}
-@font-face{{font-family:Marca;font-weight:700;src:url(data:font/woff2;base64,{f64('Cinzel-Bold')})}}
+@font-face{{font-family:Sans;font-weight:400;src:url(data:font/woff2;base64,{f64('inter-latin-400-normal')})}}
+@font-face{{font-family:Sans;font-weight:600;src:url(data:font/woff2;base64,{f64('inter-latin-600-normal')})}}
+@font-face{{font-family:Sans;font-weight:700;src:url(data:font/woff2;base64,{f64('inter-latin-700-normal')})}}
 @page{{size:A4 landscape;margin:11mm 13mm 12mm}}
 *{{box-sizing:border-box}}
-body{{margin:0;font:10.5pt/1.42 Sans,Arial,sans-serif;color:#1C211E}}
+body{{margin:0;font:9.8pt/1.45 Sans,Arial,sans-serif;color:#1C211E}}
 .pg{{height:186mm;break-after:page;display:flex;flex-direction:column;overflow:hidden}}.pg:last-child{{break-after:auto}}
-.k{{font-size:8.5pt;font-weight:700;letter-spacing:.8pt;text-transform:uppercase;color:#1D5A3B}}
-h1{{font:600 26pt Serif,serif;color:#123824;margin:4pt 0}}
-h2{{font:600 17pt Serif,serif;color:#123824;margin:2pt 0 3pt}}
+.k{{font-size:9pt;font-weight:600;color:#1D5A3B}}
+h1{{font:700 24pt Sans,sans-serif;letter-spacing:-.3pt;color:#1C211E;margin:4pt 0}}
+h2{{font:700 15.5pt Sans,sans-serif;letter-spacing:-.2pt;color:#1C211E;margin:2pt 0 3pt}}
 .pq{{color:#4A514C;margin:0 0 6pt;max-width:255mm}}
-.faixa{{height:3pt;background:linear-gradient(90deg,#1D5A3B 0 82%,#B8975A 82% 100%);margin:6pt 0 10pt}}
+.faixa{{height:.8pt;background:#D5D9DE;margin:6pt 0 10pt;width:auto!important}}
 .paineis{{flex:1;min-height:0;display:flex;gap:6mm}}
 .paineis.pilha{{flex-direction:column;gap:4mm}}
 .col{{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column}}
-.rot{{font-size:8.5pt;font-weight:700;letter-spacing:.6pt;text-transform:uppercase;margin-bottom:2pt}}
+.rot{{font-size:9pt;font-weight:700;margin-bottom:2pt}}
 .rot.h{{color:#7A3B36}}.rot.p{{color:#1D5A3B}}
 .quadro{{flex:1;min-height:0;display:flex;gap:3mm;align-items:flex-start}}
 .quadro img{{max-width:100%;max-height:100%;object-fit:contain;object-position:left top;border:.7pt solid #C9CEC8;border-radius:3pt}}
 .col.h .quadro img{{border-color:#D9C4C1}}.col.p .quadro img{{border-color:#9DBBA8}}
 .quadro.vert{{flex-direction:column}}
-.ganho{{margin-top:5pt;padding:6pt 10pt;background:#E9F0EB;border-left:3pt solid #1D5A3B;border-radius:0 4pt 4pt 0;font-size:10.5pt}}
+.ganho{{margin-top:5pt;padding:6pt 10pt;background:#F1F3F2;border-radius:4pt;font-size:10pt}}
 .ganho b{{color:#123824}}
-.num{{font:600 30pt Serif,serif;color:#B8975A;line-height:1;margin-right:8pt}}
+.num{{font:700 24pt Sans,sans-serif;color:#1D5A3B;line-height:1;margin-right:10pt}}
 .tit{{display:flex;align-items:flex-end}}
 .capa{{justify-content:center;padding-left:6mm}}
-.capa .m{{font:700 36pt Marca,serif;letter-spacing:7pt;color:#123824}}
+.capa .m{{font:700 30pt Sans;letter-spacing:1pt;color:#1D5A3B}}
 .capa h1{{font-size:28pt;margin-top:10pt}}
-.capa .pr{{margin-top:14pt;max-width:210mm;font-size:13pt;color:#2E3531;border-left:3pt solid #B8975A;padding-left:10pt}}
+.capa .pr{{margin-top:14pt;max-width:210mm;font-size:12.5pt;color:#2E3531}}
 .capa .pe{{margin-top:22pt;font-size:9.5pt;color:#5F6762}}
 .regras{{display:grid;grid-template-columns:96mm 1fr;gap:8mm;flex:1;min-height:0}}
 .regras ol{{margin:0;padding:0;list-style:none;counter-reset:r}}
@@ -126,70 +124,79 @@ h2{{font:600 17pt Serif,serif;color:#123824;margin:2pt 0 3pt}}
 .regras li::before{{content:counter(r);position:absolute;left:0;top:-1pt;width:17pt;height:17pt;border-radius:50%;background:#1D5A3B;color:#fff;font:700 9.5pt Sans;display:grid;place-items:center}}
 .regras li b{{display:block;color:#123824}}
 .anot{{position:relative;align-self:start}}.anot img{{width:100%;display:block;border:.7pt solid #C9CEC8;border-radius:3pt}}
-.anot i{{position:absolute;width:17pt;height:17pt;margin:-8.5pt 0 0 -8.5pt;border-radius:50%;background:#B8975A;color:#fff;font:700 9.5pt Sans;font-style:normal;display:grid;place-items:center;box-shadow:0 0 0 2pt #fff}}
+.anot i{{position:absolute;width:17pt;height:17pt;margin:-8.5pt 0 0 -8.5pt;border-radius:50%;background:#1D5A3B;color:#fff;font:700 9.5pt Sans;font-style:normal;display:grid;place-items:center;box-shadow:0 0 0 2pt #fff}}
 table.res{{width:100%;border-collapse:collapse;font-size:8.9pt;line-height:1.3}}
-table.res th{{text-align:left;font-size:8.5pt;letter-spacing:.5pt;text-transform:uppercase;color:#4A514C;border-bottom:1.2pt solid #1D5A3B;padding:3pt 5pt}}
+table.res th{{text-align:left;font-size:8.8pt;color:#4A514C;border-bottom:1pt solid #1C211E;padding:3pt 5pt}}
 table.res td{{padding:2.2pt 5pt;border-bottom:.5pt solid #E1E4DF;vertical-align:top}}
-table.res td:first-child{{font:600 11pt Serif;color:#B8975A;width:9mm}}
+table.res td:first-child{{font:700 10pt Sans;color:#1D5A3B;width:9mm}}
 table.res td.e{{text-align:center;font-weight:700;color:#1D5A3B;width:16mm}}
+.alts{{display:grid;grid-template-columns:1fr 1fr;gap:4mm 7mm;flex:1;min-height:0}}.alts figure{{margin:0;min-width:0;min-height:0;display:flex;flex-direction:column}}.alts img{{max-width:100%;max-height:52mm;object-fit:contain;object-position:left top;border:.7pt solid #9DBBA8;border-radius:3pt;align-self:flex-start}}.alts figcaption{{font-size:9pt;color:#4A514C;margin-top:2pt}}
 .nota{{font-size:9pt;color:#5F6762;margin-top:6pt}}
 .grade5{{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6mm 5mm}}
-.grade5 figure{{margin:0;min-width:0}}.grade5 img{{width:100%;border:.7pt solid #C9CEC8;border-radius:3pt;display:block}}
-.grade5 figcaption{{font-size:9.5pt;margin-top:2pt}}.grade5 figcaption b{{font:600 11pt Serif;color:#123824}}
+.grade5.g3{{grid-template-columns:repeat(3,minmax(0,1fr));gap:4mm 5mm}}.grade5 figure{{margin:0;min-width:0}}.grade5 img{{width:100%;border:.7pt solid #C9CEC8;border-radius:3pt;display:block}}
+.grade5 figcaption{{font-size:9.5pt;margin-top:2pt}}.grade5 figcaption b{{font:700 10.5pt Sans;color:#1C211E}}
 .linha{{display:grid;grid-template-columns:minmax(0,63fr) minmax(0,37fr);gap:6mm;flex:1;min-height:0}}
 .linha>div{{min-width:0;min-height:0}}
 .linha .g img{{width:100%;border:.7pt solid #C9CEC8;border-radius:3pt;display:block}}
 .linha .d{{display:flex;flex-direction:column;gap:3mm}}
 .linha .d img{{width:100%;max-height:47%;object-fit:contain;object-position:left top;border:.7pt solid #C9CEC8;border-radius:3pt;display:block}}
 .linha ul{{margin:5pt 0 0;padding-left:14pt;font-size:10pt}}.linha li{{margin:1.5pt 0}}
-.linha .ind{{font-size:10pt;background:#F4F5F2;border-left:3pt solid #B8975A;padding:5pt 8pt;margin-top:5pt}}
-.g4{{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:3mm 6mm;max-width:238mm;margin:4mm auto 0}}.g4 figure{{margin:0;min-width:0}}.g4 img{{width:100%;display:block;border:.7pt solid #C9CEC8;border-radius:3pt}}.g4 figcaption{{font:600 10pt Serif;color:#123824;margin-top:1.5pt}}
+.linha .ind{{font-size:9.8pt;background:#F1F3F2;border-radius:4pt;padding:5pt 8pt;margin-top:5pt}}
+.g4{{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:3mm 6mm;max-width:238mm;margin:4mm auto 0}}.g4 figure{{margin:0;min-width:0}}.g4 img{{width:100%;display:block;border:.7pt solid #C9CEC8;border-radius:3pt}}.g4 figcaption{{font:700 9.5pt Sans;color:#1C211E;margin-top:1.5pt}}
 .parte{{justify-content:center}}.parte h1{{font-size:30pt}}.parte p{{max-width:220mm;font-size:12pt;color:#4A514C}}
 """
 
 pags = []
-pags.append("""<div class="pg capa"><div class="m">APTO</div><div class="faixa" style="width:150mm"></div>
+pags.append("""<div class="pg capa"><div class="m">APTO</div>
 <h1>Sugestões de visual e experiência</h1>
-<div class="pr"><b>O princípio: facilitar.</b> A tela diz o essencial, de forma clara e objetiva. Quem quiser se aprofundar tem os botões para isso. Todas as abas seguem a mesma linha gráfica, pensada para achar a informação rápido e entender as funções sem explicação.</div>
-<div class="pe">Parte 1: a versão atual e seis linhas gráficas para avaliar · Parte 2: 15 sugestões de experiência, cada uma com a tela de hoje e a proposta · dados fictícios (“Simulado Caso NNN”), exportados do próprio programa · nenhuma regra, cálculo ou texto jurídico alterado</div></div>""")
+<div class="pr"><b>O princípio: facilitar.</b> A tela diz o essencial, de forma clara e objetiva. Quem quiser se aprofundar tem os botões de sempre. Nenhuma função sai da tela nem vai para um menu escondido. Todas as abas seguem a mesma linha gráfica.</div>
+<div class="pe">Parte 1: a versão atual e quatro linhas gráficas baseadas nas bibliotecas visuais atuais do Python · o que voltou para a tela e por quê · Parte 2: 15 sugestões de experiência, cada uma com a tela de hoje e a proposta · dados fictícios (“Simulado Caso NNN”), exportados do próprio programa · nenhuma regra, cálculo ou texto jurídico alterado</div></div>""")
 
+# ---------- pesquisa ----------
+BIB = [
+ ("PySide6-Fluent-Widgets (QFluentWidgets)", "1.4.x · 2026", "Fluent 2, o visual do Windows 11", "GPLv3 ou licença comercial", "Exigiria refazer a tela em Qt", "A"),
+ ("Fluent UI Web Components (Microsoft)", "base FAST", "Fluent 2 para páginas web", "MIT", "Cabe no ui.html; basta seguir as medidas e cores", "A"),
+ ("Flet 1.0", "15/09/2026", "Material 3 (Flutter)", "Apache 2.0", "Exigiria refazer a tela inteira", "B"),
+ ("NiceGUI 3.0", "out/2025", "Quasar (Vue) e Tailwind 4", "MIT", "Exigiria refazer a tela e um servidor local", "C"),
+ ("Dash Mantine Components 2.7", "mai/2026 · Mantine 8", "Mantine", "MIT", "Exigiria refazer a tela em Dash", "D"),
+ ("Reflex 0.9.7", "jul/2026", "Radix Themes", "Apache 2.0", "Exigiria refazer a tela; visual próximo de D", "—"),
+ ("pywebview 6.2.1 (o que o APTO usa)", "abr/2026", "qualquer HTML/CSS", "BSD", "Fica como está", "todas"),
+]
+lin = "".join(f"<tr><td><b>{a}</b></td><td>{b}</td><td>{c}</td><td>{d}</td><td>{e}</td><td class='e'>{f}</td></tr>" for a, b, c, d, e, f in BIB)
+pags.append(f"""<div class="pg"><div class="k">Pesquisa</div><h2>De onde vêm as quatro linhas</h2><div class="faixa"></div>
+<p class="pq">Busquei as bibliotecas de interface mais atuais do Python (out/2026). Cada uma traz uma <b>linguagem visual</b> pronta e testada por milhares de sistemas: medidas, cores, letras e componentes. As linhas A a D aplicam essas linguagens ao APTO. Isso evita o visual “inventado” das propostas anteriores.</p>
+<table class="res"><tr><th>Biblioteca</th><th>Versão</th><th>Linguagem visual</th><th>Licença</th><th>Para usar no APTO</th><th>Linha</th></tr>{lin}</table>
+<div class="ganho" style="margin-top:10pt"><b>Recomendação técnica:</b> manter o pywebview e o ui.html como estão (arquivo único, offline) e adotar só a <b>linguagem visual</b> escolhida, em CSS. Não entra biblioteca nova, nada de CDN, e o <code>testes.py</code> continua valendo. Trocar de biblioteca (Flet, NiceGUI, Dash, Qt) obrigaria a reescrever a tela inteira, sem ganho para quem usa. O QFluentWidgets, além disso, é GPL ou pago.</div>
+<div class="nota">Letras: a linha A usa a Segoe UI, que já vem no Windows (nas capturas, a Open Sans faz as vezes dela). As linhas B e C usam Roboto e a D usa Inter: cerca de 90 KB embutidos no ui.html, sem internet. Fontes: pypi.org/project/pyside6-fluent-widgets · learn.microsoft.com/fluent-ui/web-components · byteiota.com (Flet 1.0) · talkpython.fm/525 (NiceGUI 3) · community.plotly.com (DMC 2) · reflex.dev/changelog · archlinux.org (pywebview).</div></div>""")
 
-# ---------- Parte 1: cinco linhas gráficas ----------
+# ---------- Parte 1 ----------
 TT = os.path.join(FON, "telas_todas"); CAPS = "/home/user/rspe-base/docs/analise_design/capturas"
 LINHAS = [
  ("0", "Versão atual (7.14.4)", "referência para comparar",
   (TT, "t0_prog"), (TT, "t0_painel"), (TT, "t0_ind"),
-  ["Arial 13 px, verde da Defensoria, cantos retos", "Ícones ao lado do nome de cada aba; 12 abas numa fila", "Lista em ordem alfabética; situação em texto colorido", "Ícones nas linhas (fixar, saída temporária, quadro, abrir) e caixa sem rótulo para o pedido"],
-  "for preciso manter tudo como está; serve de base para comparar as outras seis."),
- ("1", "Sóbria com símbolos", "apresentada antes",
-  (TT, "t1_prog"), (TT, "t1_painel"), (TT, "t1_ind"),
-  ["Arial, verde da marca e fundo neutro", "Cada situação com uma forma (losango, triângulo, círculo) além da cor", "Abas agrupadas, com o nome do grupo em cima", "Cartões compactos e grupos com títulos em maiúsculas"],
-  "a impressão em preto e branco e a leitura por quem não distingue cores forem prioridade."),
- ("2", "Institucional", "verde e dourado",
-  (TT, "t2_prog"), (TT, "t2_painel"), (TT, "t2_ind"),
-  ["Faixa verde com filete dourado, títulos com a mesma letra serifada dos relatórios em PDF", "Situação em etiqueta com fundo suave; complemento em letra menor", "Cartões grandes de resumo", "Botões escritos: “Marcar pedido”, “Abrir”"],
-  "a identidade da Defensoria e a coerência com os relatórios impressos forem prioridade."),
- ("3", "Clara e compacta", "moderna, mais linhas por tela",
-  (TT, "t3_prog"), (TT, "t3_painel"), (TT, "t3_ind"),
-  ["Fundo claro e um único verde de destaque", "Situação com ponto colorido + texto, sem caixas", "Linhas mais baixas: cabem mais assistidos na tela", "Abas em botões arredondados, numa linha só"],
-  "as bases forem grandes e o trabalho for, na maior parte do tempo, percorrer listas."),
- ("4", "Familiar ao SEEU", "clássica, de sistema judicial",
-  (TT, "t4_prog"), (TT, "t4_painel"), (TT, "t4_ind"),
-  ["Faixa superior verde-escura, Arial, cantos retos", "Abas em fichário, como nos sistemas do Judiciário", "Tabela com grade e linhas alternadas; títulos em maiúsculas", "Situação em texto colorido e negrito"],
-  "a equipe preferir uma tela parecida com o SEEU e o PJe, com o menor estranhamento possível."),
- ("5", "Barra lateral", "navegação sempre à vista",
-  (TT, "t5_prog"), (TT, "t5_painel"), (TT, "t5_ind"),
-  ["Abas numa coluna verde à esquerda, agrupadas por tarefa", "Todas as abas visíveis, sem menu “Mais”", "Cabeçalho só com base, busca e ações", "Conteúdo com os mesmos cartões e etiquetas da proposta 2"],
-  "a equipe trocar muito de aba e usar monitores largos."),
- ("6", "Institucional com ícones nas abas", "a linha 2, mantendo os ícones de hoje",
-  (TT, "t6_prog"), (TT, "t6_painel"), (TT, "t6_ind"),
-  ["Tudo da linha 2 (faixa verde e dourada, títulos serifados, etiquetas, botões escritos)", "Mantém os ícones atuais ao lado do nome de cada aba", "Abas agrupadas por tarefa, todas na mesma linha", "Quem já usa o APTO reconhece as abas pelo ícone"],
-  "a equipe já se orienta pelos ícones das abas e não quiser perder essa referência. Os ícones também podem ser levados para as linhas 3, 4 e 5."),
+  ["Três faixas no topo: marca e busca, botões e filtro, abas", "Ícones ao lado do nome de cada aba; 12 abas numa fila", "Lista em ordem alfabética; situação em texto colorido, que quebra em várias linhas", "Ícones nas linhas (fixar, ficha, Quadro, abrir) e caixa sem rótulo para o pedido"],
+  "for preciso manter tudo como está; serve de base para comparar as outras."),
+ ("A", "Fluent 2 (Windows 11)", "QFluentWidgets · Fluent UI",
+  (TT, "t7_prog"), (TT, "t7_painel"), (TT, "t7_ind"),
+  ["Abas numa coluna à esquerda, com ícone, nome e contador, separadas por tarefa (Prazos, Decretos, Conferência, Panorama)", "Visual nativo do Windows 11: letra Segoe UI, cantos de 4 px, botão principal no verde da Defensoria", "Conteúdo numa “folha” clara ao lado da navegação", "Todas as abas e botões à vista"],
+  "a equipe quiser que o APTO pareça um programa do próprio Windows, e usar monitores de 1440 px ou mais."),
+ ("B", "Material 3", "Flet 1.0 · Flutter",
+  (TT, "t8_prog"), (TT, "t8_painel"), (TT, "t8_ind"),
+  ["Trilho de navegação à esquerda: ícone em cima, nome embaixo, contador no ícone", "Busca em pílula; botões arredondados; ordem em botão segmentado com ✓", "Cartões em tom verde-claro; cantos de 12 px", "Visual dos aplicativos Android e Google atuais"],
+  "a equipe preferir um visual mais suave e arredondado, parecido com o do celular."),
+ ("C", "Quasar", "NiceGUI 3",
+  (TT, "t9_prog"), (TT, "t9_painel"), (TT, "t9_ind"),
+  ["Cabeçalho verde da Defensoria com as abas embaixo: ícone em cima, nome embaixo, contador", "Tabela densa, com sombras leves nos cartões", "Ordem em botões verdes de alternância", "Lembra os sistemas web institucionais"],
+  "a identidade da Defensoria (o verde no topo) for prioridade, mantendo as abas no alto como hoje."),
+ ("D", "Mantine", "Dash Mantine Components 2 · Mantine 8",
+  (TT, "t10_prog"), (TT, "t10_painel"), (TT, "t10_ind"),
+  ["Cabeçalho branco em uma faixa; abas logo abaixo, com ícone, nome e contador, como hoje", "Letra Inter; cartões com o rótulo em cima e o número embaixo", "Tabela limpa, com cabeçalho em negrito", "A menor mudança em relação à tela atual"],
+  "a equipe quiser modernizar sem reaprender nada: as abas, os ícones e os botões ficam onde estão."),
 ]
 ABAS_T = [('geral','Geral'),('prog','Progressão'),('liv','Livramento'),('ind','Indulto e comutação'),('presc','Prescrição'),('ext','Extinção'),('fd','Ficha disciplinar'),('aud','Auditoria'),('base','Dados da base'),('geo','Dados prisionais'),('teses','Jurisprudências'),('quadro','Quadro do usuário')]
-parte1 = ['<div class="pg parte"><div class="k">Parte 1</div><h1>Seis linhas gráficas e a versão atual</h1><div class="faixa" style="width:150mm"></div><p>A versão atual (0) e seis propostas (1 a 6): a mesma aba, com os mesmos dados. Todas seguem as regras de facilitar (o que exige ação primeiro, a situação em destaque, ações com nome); muda a aparência. Escolhida a linha, ela vale para todas as abas, para os relatórios em PDF e para a extensão.</p><p><b>Em todas as linhas, como hoje:</b> a aba Indulto com a barra de decretos e o mapa de cabimento por decreto em cada assistido, e os ícones ao lado do nome (saída temporária, progressão antecipada, divergência).</p></div>']
+parte1 = ['<div class="pg parte"><div class="k">Parte 1</div><h1>A versão atual e quatro linhas gráficas</h1><div class="faixa"></div><p>A versão atual (0) e quatro propostas (A a D), cada uma seguindo a linguagem visual de uma biblioteca atual do Python. É a mesma aba, com os mesmos dados. Escolhida a linha, ela vale para todas as abas, para os relatórios em PDF e para a extensão.</p><p><b>Em todas as linhas, como hoje:</b></p><ul style="font-size:11.5pt;color:#4A514C;max-width:220mm"><li>as 12 abas à vista, com os ícones ao lado do nome e o contador;</li><li>a aba Indulto com a barra de decretos e o mapa de cabimento por decreto em cada assistido;</li><li>os ícones ao lado do nome do assistido (saída temporária, progressão antecipada, divergência);</li><li>na linha: fixar, caixa do pedido, ficha, Quadro e abrir;</li><li>no topo: base, cópia de segurança, busca, Importar PDFs, Importar pasta, Exportar, tamanho da letra, calculadora, Legenda e método;</li><li>o filtro, a ordem da lista e a ordenação pelo título da coluna;</li><li>no rodapé, a legenda dos ícones, “* calculado pelo programa” e a dica da caixa do pedido.</li></ul><p>Nada vai para menu “Mais” ou “⋯”.</p></div>']
 fig = "".join(f'<figure><img src="{img(a[3][0], a[3][1], 1000)}" style="{"border:1.5pt solid #7A3B36" if a[0]=="0" else ""}"><figcaption><b>{a[0]} · {a[1]}</b> — {a[2]}</figcaption></figure>' for a in LINHAS)
-parte1.append(f'<div class="pg"><div class="k">Parte 1 · visão geral</div><h2>Atual e propostas lado a lado: aba Progressão</h2><div class="faixa"></div><div class="grade5">{fig}</div></div>')
+parte1.append(f'<div class="pg"><div class="k">Parte 1 · visão geral</div><h2>Atual e propostas lado a lado: aba Progressão</h2><div class="faixa"></div><div class="grade5 g3">{fig}</div></div>')
 for n, nome, sub, prog, pain, ind, carac, indic in LINHAS:
     li = "".join(f"<li>{c}</li>" for c in carac)
     parte1.append(f'<div class="pg"><div class="tit"><span class="num">{n}</span><div><div class="k">Linha gráfica · {sub}</div><h2>{nome}</h2></div></div><div class="faixa" style="margin:4pt 0 6pt"></div>'
@@ -200,7 +207,27 @@ for n, nome, sub, prog, pain, ind, carac, indic in LINHAS:
         cel = "".join(f'<figure><img src="{img(TT, pref + "_" + a, 1000)}"><figcaption>{rot}</figcaption></figure>' for a, rot in ABAS_T[k:k + 4])
         parte1.append(f'<div class="pg"><div class="k">Linha {n} · {nome} · todas as abas ({k // 4 + 1}/3)</div><div class="g4">{cel}</div></div>')
 pags.extend(parte1)
-pags.append('<div class="pg parte"><div class="k">Parte 2</div><h1>15 sugestões de experiência</h1><div class="faixa" style="width:150mm"></div><p>O que muda no uso, independentemente da linha escolhida. Cada sugestão traz a tela de hoje e a proposta (ilustrada com a linha 2), e uma frase com o ganho.</p></div>')
+VOLTA = [
+ ("Ícones da linha: ficha, Quadro e abrir", "Troquei por “Abrir ›” e um menu “⋯”, para limpar a linha.", "Escondia funções e somava um clique a cada uso.", "Voltam os três ícones, no mesmo lugar, com mais contraste e dica ao passar o mouse; a ficha fica verde quando foi importada."),
+ ("Fixar no topo (alfinete)", "Levei para o painel do assistido.", "É usado na própria lista.", "Volta ao lado do nome."),
+ ("Filtro “Todas ▾”", "Troquei pelos cartões de resumo.", "Os cartões só filtram a situação; o seletor tem 17 filtros (pedido, saída temporária, divergência…).", "Volta, ao lado da ordem da lista; os cartões também filtram."),
+ ("Ordenar pelo título da coluna", "Deixei só “Alfabética / Por situação”.", "A equipe ordena por data, regime e outras colunas.", "Volta em todas as colunas (↕); a ordem atual fica marcada (↑)."),
+ ("Ver cálculo, datas do processo e botões do detalhe", "Resumi o detalhe da Prescrição em três passos.", "Sumiram o “Ver cálculo” e parte das datas.", "Voltam todas as datas e os botões de hoje (Ver cálculo, Editar dados, Abrir ficha completa)."),
+ ("Abas em telas menores e cópia de segurança", "Em telas estreitas, mandei 3 abas para “Mais” e ocultei a data da cópia.", "Era esconder.", "As 12 abas ficam sempre à vista; a data da cópia fica sob o nome da base."),
+ ("Legenda do rodapé", "Não estava no protótipo.", "Explica os ícones e o asterisco.", "Volta: ícones, “* calculado pelo programa” e a dica da caixa do pedido."),
+]
+lv = "".join(f"<tr><td><b>{a}</b></td><td>{b}</td><td>{c}</td><td>{d}</td></tr>" for a, b, c, d in VOLTA)
+pags.append(f"""<div class="pg"><div class="k">O que voltou para a tela</div><h2>Funções que eu tinha tirado ou escondido, e por quê voltaram</h2><div class="faixa"></div>
+<p class="pq">Nas propostas anteriores, tirei ou escondi controles para a tela parecer mais limpa. Foi um erro: o APTO é usado todos os dias, e cada função escondida custa cliques e obriga a procurar. Nas linhas A a D, tudo o que existe hoje continua à vista.</p>
+<table class="res"><tr><th>Função</th><th>O que eu tinha feito</th><th>Por que não serve</th><th>Agora, nas linhas A a D</th></tr>{lv}</table></div>""")
+pags.append(f"""<div class="pg"><div class="k">O que voltou para a tela · alternativas</div><h2>Duas formas de mostrar as ações da linha e o filtro</h2><div class="faixa"></div>
+<div class="alts">
+<figure><div class="rot p">Ações · alternativa 1: ícones, como hoje</div><img src="{img(P, 'alt_acoes_icones', 1100)}"><figcaption>Os três ícones de hoje, mais escuros (hoje parecem desabilitados), com dica ao passar o mouse. A ficha fica verde quando foi importada. Ocupa pouco espaço.</figcaption></figure>
+<figure><div class="rot p">Ações · alternativa 2: ícone e nome</div><img src="{img(P, 'alt_acoes_rotulos', 1100)}"><figcaption>Cada ícone com o nome ao lado (Ficha, Quadro, Abrir). Quem chega ao APTO entende sem passar o mouse; a linha fica mais larga.</figcaption></figure>
+<figure><div class="rot p">Filtro · alternativa 1: seletor, como hoje</div><img src="{img(P, 'alt_filtro_a', 1100)}"><figcaption>O mesmo seletor de hoje, agora ao lado da ordem da lista, com os 17 filtros agrupados (Situação, Pedido, Benefícios a conferir, Conferência).</figcaption></figure>
+<figure><div class="rot p">Filtro · alternativa 2: combinar filtros</div><img src="{img(P, 'alt_filtro_b', 1100)}"><figcaption>A situação filtra pelos cartões; os demais filtros abrem em caixas de marcar, que podem ser combinadas (ex.: “sem pedido” + “divergência”).</figcaption></figure>
+</div></div>""")
+pags.append('<div class="pg parte"><div class="k">Parte 2</div><h1>15 sugestões de experiência</h1><div class="faixa" style="width:150mm"></div><p>O que muda no uso, independentemente da linha escolhida. Cada sugestão traz a tela de hoje e a proposta (ilustrada com a linha D, a que menos muda a tela de hoje), e uma frase com o ganho.</p></div>')
 
 # linha gráfica com a tela anotada
 cx = json.load(open(os.path.join(P, "caixas.json")))
@@ -208,13 +235,13 @@ marc = [("topo", 0.45, 0.5), ("abas", 0.03, 0.5), ("cab", 1.04, 0.5), ("cartoes"
 pins = "".join(f'<i style="left:{(cx[k][0] + cx[k][2] * fx) / 1440 * 100:.2f}%;top:{(cx[k][1] + cx[k][3] * fy) / 860 * 100:.2f}%">{n}</i>' for n, (k, fx, fy) in enumerate(marc, 1))
 pags.append(f"""<div class="pg"><div class="k">A linha gráfica</div><h2>Sete regras, as mesmas em todas as abas</h2><div class="faixa"></div>
 <div class="regras"><ol>
-<li><b>Um cabeçalho, sempre igual</b>Marca, base aberta, busca e as ações principais no mesmo lugar.</li>
-<li><b>Abas por tarefa</b>Prazos, decretos, conferência e panorama separados, com nomes por extenso.</li>
+<li><b>Um cabeçalho, sempre igual</b>Marca, base, cópia de segurança, busca e todos os botões de hoje, numa faixa.</li>
+<li><b>Abas por tarefa</b>Prazos, decretos, conferência e panorama separados, com ícone, nome por extenso e contador.</li>
 <li><b>Título e ordem à vista</b>O usuário sabe em que aba está e como a lista está ordenada.</li>
 <li><b>Cartões que contam e filtram</b>O número de cada situação, grande; um clique filtra.</li>
 <li><b>Primeiro o que exige ação</b>A lista se agrupa por situação, do mais urgente ao menos urgente.</li>
 <li><b>O essencial em destaque</b>A situação curta em evidência; o complemento logo abaixo, menor.</li>
-<li><b>Ações com nome, no mesmo lugar</b>“Marcar pedido” e “Abrir” no fim de toda linha.</li>
+<li><b>Ações no mesmo lugar</b>“Marcar pedido” e os ícones de hoje (ficha, Quadro, abrir) no fim de toda linha.</li>
 </ol><div class="anot"><img src="{img(P, 'prog_inteira', 1700)}">{pins}</div></div></div>""")
 
 # quadro-resumo
