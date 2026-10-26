@@ -12,6 +12,7 @@ __FONTS__
   --u60:#6E5500;  --u60-bg:#F8F1DA;  --u60-f:#C29A1B;
   --ok:#1F5E38;   --ok-bg:#E7F2EA;   --ok-f:#3B8C5A;
   --neu:#4A514C;  --neu-bg:#F0F1EE;  --neu-f:#C9CEC8;
+  --prox:#2F4F5C;  --prox-bg:#E9EFF1;  --prox-f:#6F8C98;
   --ext:#284A6B;  --ext-bg:#E8EEF5;  --ext-f:#4E7299;
   --sans:"Source Sans 3",Arial,sans-serif; --serif:"Source Serif 4",Georgia,serif;
 }
@@ -55,9 +56,9 @@ button{font:inherit;color:inherit}
 table{width:100%;border-collapse:separate;border-spacing:0}
 thead th{background:var(--sup2);text-align:left;font-size:12px;font-weight:700;color:var(--tx2);padding:10px 12px;border-bottom:1px solid var(--fio2);white-space:nowrap}
 thead th.ativa{color:var(--verde-esc)}thead th.ativa::after{content:" ↑";color:var(--verde)}
-tbody td{padding:0 12px;height:44px;border-bottom:1px solid #EDEFEB;font-size:13.5px;vertical-align:middle}
+tbody td{padding:5px 10px;height:44px;border-bottom:1px solid #EDEFEB;font-size:13.5px;vertical-align:middle}
 tbody tr.l td:first-child{box-shadow:inset 3px 0 0 var(--fc,transparent)}
-td.nome{font-weight:600;white-space:nowrap}td.proc{white-space:nowrap;color:var(--tx2)}td.dt{white-space:nowrap}
+td.nome{font-weight:600;white-space:nowrap;min-width:232px}td.proc{white-space:nowrap;color:var(--tx2)}td.dt{white-space:nowrap}
 tr.grupo td{height:34px;background:#F1F3EF;border-bottom:1px solid var(--fio);font-size:12.5px;color:var(--tx2)}
 tr.grupo td b{font-weight:700;color:var(--tx);margin-right:6px}
 tr.grupo .tag{display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--c);margin-right:8px;vertical-align:-1px}
@@ -69,6 +70,16 @@ tr.grupo .tag{display:inline-block;width:10px;height:10px;border-radius:2px;back
 .ped{display:inline-flex;align-items:center;gap:7px;height:30px;padding:0 10px;border:1px solid var(--fio2);border-radius:6px;background:var(--sup);font-size:12.5px;color:var(--tx2);white-space:nowrap}
 .ped .cx{width:14px;height:14px;border:1.5px solid var(--tx3);border-radius:3px}
 .link{color:var(--verde);font-weight:600;font-size:12.5px;white-space:nowrap}
+.cmp2{display:block;max-width:330px;margin-top:3px;font-size:12px;color:var(--tx3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.etqs{display:block;margin-top:3px;font-weight:400;white-space:normal;line-height:1.9}.etq{display:inline-block;white-space:nowrap;margin-right:6px;padding:1px 7px;border:1px solid var(--fio2);border-radius:4px;font-size:11.5px;font-weight:600;color:var(--tx2);vertical-align:1px;background:var(--sup)}
+.etq.at{border-color:#E3C9C7;color:var(--crit);background:#FFF8F7}
+.abrir{display:inline-flex;align-items:center;gap:4px;height:30px;padding:0 12px;border:1px solid var(--fio2);border-radius:6px;background:var(--sup);font-size:12.5px;font-weight:600;color:var(--verde-esc);white-space:nowrap}
+.vazio{padding:70px 20px;text-align:center;color:var(--tx2)}.vazio b{display:block;font:600 18px var(--serif);color:var(--tx);margin-bottom:6px}.vazio .btn{margin-top:14px}
+.toasts{position:fixed;left:50%;bottom:70px;transform:translateX(-50%);display:flex;flex-direction:column;gap:10px;z-index:9}
+.toast{display:flex;align-items:center;gap:16px;min-width:520px;padding:12px 16px;border-radius:8px;font-size:14px;box-shadow:0 10px 26px rgba(0,0,0,.18)}
+.toast.ok{background:#1C211E;color:#fff}.toast.ok button{margin-left:auto;border:0;background:none;color:#9FD3B1;font-weight:700}
+.toast.erro{background:#FFF;color:var(--crit);border:1px solid #E3C9C7;border-left:4px solid var(--crit-f)}.toast.erro b{color:var(--crit)}.toast.erro button{margin-left:auto;border:0;background:none;color:var(--tx2);font-size:18px}
+.leg{width:100%;border-collapse:collapse;font-size:13.5px}.leg td,.leg th{padding:9px 10px;border-bottom:1px solid var(--fio);text-align:left;vertical-align:top}.leg th{font-size:12px;color:var(--tx2)}
 .rod{display:flex;gap:18px;align-items:center;margin:0 28px 14px;padding:8px 14px;background:var(--sup);border:1px solid var(--fio);border-top:0;border-radius:0 0 8px 8px;font-size:12px;color:var(--tx3);flex:none}
 .alt{display:inline-flex;padding:3px;background:#E7EAE5;border-radius:8px;margin:0 28px 10px;align-self:flex-start}
 .alt button{border:0;background:none;padding:6px 14px;border-radius:6px;font-weight:600;color:var(--tx2);font-size:13px}.alt button.on{background:var(--sup);color:var(--verde-esc);box-shadow:0 1px 2px rgba(0,0,0,.12)}
@@ -116,6 +127,69 @@ tr.exp td{background:#FBFCFA;padding:14px 18px 16px 22px;height:auto;border-bott
 .prog-imp{position:fixed;right:40px;bottom:64px;width:380px;background:var(--sup);border:1px solid var(--fio2);border-radius:10px;box-shadow:0 10px 28px rgba(0,0,0,.16);padding:14px 16px;z-index:4}
 .prog-imp b{font:600 15px var(--serif)}.prog-imp .tr{height:6px;background:#E3E7E4;border-radius:3px;margin:10px 0 8px}.prog-imp .tr i{display:block;height:100%;width:46%;background:var(--verde);border-radius:3px}
 .prog-imp small{display:block;color:var(--tx2);font-size:12.5px}
+@media (min-width:1367px){.aba.mais{display:none}}
+@media (max-width:1366px){.aba.xtra{display:none}tbody td,thead th{padding-left:7px;padding-right:7px}td.nome{min-width:200px}.ped{padding:0 7px}.abrir{padding:0 8px}.cmp2{max-width:240px}.lista,.rod{margin-left:16px;margin-right:16px}.cartoes,.cab,.abas,.topo{padding-left:16px;padding-right:16px}td.proc{font-size:12.5px}}
+
+/* ===== tema 3 · Clara e compacta ===== */
+body.tema-3{--fundo:#F7F8F9;--fio:#E6E8EB;--fio2:#D5D9DE;--sans:"Source Sans 3",Arial,sans-serif;--serif:"Source Sans 3",Arial,sans-serif;font-size:13.5px}
+.tema-3 .topo{padding:8px 24px}.tema-3 .topo::after{display:none}.tema-3 .topo{border-bottom:1px solid var(--fio)}
+.tema-3 .marca img{width:30px;height:30px}.tema-3 .marca b{font:700 16px/1 "Source Sans 3",sans-serif;letter-spacing:1.5px;color:var(--verde)}
+.tema-3 .abas{background:var(--sup);padding:6px 24px;gap:4px;border-bottom:1px solid var(--fio);margin-top:0}
+.tema-3 .aba{border:0;border-radius:6px;padding:6px 12px;font-size:13.5px;margin:0}.tema-3 .aba.on{background:var(--verde-claro);color:var(--verde-esc)}.tema-3 .abas .div{margin:0 6px;height:18px}
+.tema-3 .cab{padding:14px 24px 10px}.tema-3 .cab h1{font:700 20px/1.2 "Source Sans 3",sans-serif;color:var(--tx)}
+.tema-3 .cartoes{padding:0 24px 10px;gap:8px}.tema-3 .cartao{border-radius:10px;padding:8px 12px;border:1px solid var(--fio)}.tema-3 .cartao::before{display:none}
+.tema-3 .cartao b{font:700 20px/1.1 "Source Sans 3",sans-serif;display:inline;margin-right:6px}.tema-3 .cartao span{display:inline;font-size:12.5px}
+.tema-3 .cartao::after{content:"";position:absolute;right:12px;top:14px;width:8px;height:8px;border-radius:50%;background:var(--c)}
+.tema-3 .lista,.tema-3 .rod{margin-left:24px;margin-right:24px}.tema-3 .lista{border-radius:10px 10px 0 0}.tema-3 .rod{border-radius:0 0 10px 10px}
+.tema-3 tbody td{height:38px;padding:3px 10px;font-size:13px}.tema-3 tbody tr.l td:first-child{box-shadow:none}
+.tema-3 .sit{background:none!important;padding:0;gap:7px}.tema-3 .sit::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--t);align-self:center;flex:none}
+.tema-3 .sit.sc::before{background:#B9BFC6}.tema-3 .cmp2{margin-left:15px;margin-top:1px}
+.tema-3 tr.grupo td{height:30px;background:#F2F4F6;font-size:12px;text-transform:uppercase;letter-spacing:.5px}.tema-3 tr.grupo .tag{border-radius:50%}
+.tema-3 .ped,.tema-3 .abrir,.tema-3 .btn{border-radius:8px}.tema-3 .dec{border-radius:20px;padding:2px 10px}
+.tema-3 .seg{border-radius:20px}.tema-3 .seg button{border-radius:20px;padding:5px 14px}
+.tema-3 .painel .ph h2,.tema-3 .sec h3,.tema-3 .kv b,.tema-3 .porque h4{font-family:"Source Sans 3",sans-serif;font-weight:700}
+.tema-3 .ph h2{font-size:22px;color:var(--tx)}.tema-3 .sec h3{color:var(--tx);font-size:15px}
+
+/* ===== tema 4 · Familiar ao SEEU ===== */
+body.tema-4{--fundo:#EEF0EE;--fio:#D3D7D4;--fio2:#B7BDB9;--sans:Arial,"Liberation Sans",sans-serif;--serif:Arial,"Liberation Sans",sans-serif;font-size:13px}
+.tema-4 .topo{background:var(--verde-esc);border:0;padding:8px 24px}.tema-4 .topo::after{height:4px;bottom:-4px;background:var(--ouro)}
+.tema-4 .marca img{background:#fff;border-radius:50%;padding:2px;width:36px;height:36px}.tema-4 .marca b{color:#fff;font-size:18px}.tema-4 .marca small{color:#CFE0D5}
+.tema-4 .base{background:transparent;border-color:rgba(255,255,255,.35);color:#E7F0EA}.tema-4 .base b{color:#fff}
+.tema-4 .busca input{border-radius:2px}.tema-4 .btn{border-radius:2px}.tema-4 .topo .btn{background:transparent;color:#fff;border-color:rgba(255,255,255,.5)}.tema-4 .topo .btn.pri{background:var(--ouro);border-color:var(--ouro);color:#1C211E}
+.tema-4 .abas{background:#DDE2DE;padding:8px 24px 0;margin-top:4px;gap:3px;border-bottom:1px solid var(--fio2)}
+.tema-4 .aba{background:#ECEFEC;border:1px solid var(--fio2);border-bottom:0;border-radius:3px 3px 0 0;padding:7px 12px;font-size:13px;margin:0}.tema-4 .aba.on{background:var(--sup);color:var(--verde-esc);border-bottom:0;position:relative;top:1px}
+.tema-4 .abas .div{display:none}
+.tema-4 .cab{background:var(--sup);border-bottom:1px solid var(--fio);padding:12px 24px}.tema-4 .cab h1{font:700 18px/1.2 Arial,sans-serif;color:var(--verde-esc);text-transform:uppercase;letter-spacing:.5px}
+.tema-4 .cartoes{padding:12px 24px;gap:0}.tema-4 .cartao{border-radius:0;border-right-width:0;padding:7px 12px 6px 14px}.tema-4 .cartao:last-child{border-right-width:1px}
+.tema-4 .cartao b{font:700 19px/1.1 Arial,sans-serif}
+.tema-4 .lista,.tema-4 .rod{margin-left:24px;margin-right:24px;border-radius:0}
+.tema-4 thead th{background:#DDE2DE;text-transform:uppercase;font-size:11px;letter-spacing:.4px;border:1px solid var(--fio2);border-width:0 1px 1px 0;color:#2E3531}
+.tema-4 tbody td{border-right:1px solid #E3E6E3;height:36px;font-size:12.5px}.tema-4 tbody tr.l:nth-child(even) td{background:#F6F7F5}
+.tema-4 .sit{background:none!important;padding:0;font-size:12.5px}.tema-4 .sit b{text-transform:uppercase;font-size:11.5px;letter-spacing:.3px}
+.tema-4 tr.grupo td{background:#E6EAE6;text-transform:uppercase;font-size:11.5px;font-weight:700;letter-spacing:.4px;height:28px}
+.tema-4 .ped,.tema-4 .abrir{border-radius:2px;height:26px}.tema-4 .dec{border-radius:2px;font-size:12px}
+.tema-4 .seg{border-radius:2px;padding:2px}.tema-4 .seg button{border-radius:2px;padding:5px 12px}
+.tema-4 .ph h2,.tema-4 .sec h3,.tema-4 .kv b,.tema-4 .porque h4{font-family:Arial,sans-serif;font-weight:700}.tema-4 .sec h3{text-transform:uppercase;font-size:13px;letter-spacing:.4px}
+.tema-4 .painel{border-left:4px solid var(--verde-esc)}.tema-4 .kv div,.tema-4 .porque{border-radius:0}
+
+/* ===== tema 5 · Barra lateral ===== */
+body.tema-5{padding-left:220px}
+.tema-5 .abas{position:fixed;left:0;top:0;bottom:0;width:220px;flex-direction:column;align-items:stretch;gap:2px;padding:76px 12px 12px;background:#123824;border:0;margin:0;z-index:4}
+.tema-5 .abas::before{content:"APTO";position:absolute;top:22px;left:22px;font:700 20px/1 Cinzel,serif;letter-spacing:4px;color:#fff}
+.tema-5 .abas::after{content:"Defensoria Pública de MS";position:absolute;top:48px;left:22px;font-size:11px;color:#9FC2AD}
+.tema-5 .aba{color:#D3E3D8;text-align:left;border:0;border-left:3px solid transparent;border-radius:0 6px 6px 0;padding:8px 12px;margin:0;font-size:14px;display:flex;justify-content:space-between}
+.tema-5 .aba span{color:#9FC2AD}.tema-5 .aba.on{background:rgba(255,255,255,.1);color:#fff;border-left-color:var(--ouro)}.tema-5 .aba.on span{color:#fff}
+.tema-5 .abas .div{width:auto;height:1px;margin:8px 10px;background:rgba(255,255,255,.15)}
+.tema-5 .aba.xtra{display:flex!important}.tema-5 .aba.mais{display:none!important}
+.tema-5 .topo{padding:10px 28px}.tema-5 .topo::after{display:none}.tema-5 .marca{display:none}.tema-5 .base{margin-left:0}
+.tema-5 .cab h1{font-size:26px}
+.tema-5 .lista{border-radius:10px 10px 0 0}.tema-5 .rod{border-radius:0 0 10px 10px}.tema-5 .cartao{border-radius:10px}
+.tema-5 .veu{left:0}
+.tema-4 tbody td,.tema-4 thead th,.tema-5 tbody td,.tema-5 thead th{padding-left:7px;padding-right:7px}
+.tema-4 td.nome,.tema-5 td.nome{min-width:190px}.tema-4 .ped,.tema-5 .ped{padding:0 7px}.tema-4 .abrir,.tema-5 .abrir{padding:0 8px}
+.tema-4 .cmp2,.tema-5 .cmp2{max-width:230px}.tema-4 td.proc,.tema-5 td.proc{font-size:12px}.tema-5 .dec{font-size:12px;padding:2px 6px}
+.tema-5 .lista,.tema-5 .rod{margin-left:18px;margin-right:18px}.tema-5 .cartoes,.tema-5 .cab,.tema-5 .topo{padding-left:18px;padding-right:18px}
+.tema-5 .ped .cx{display:none}
 </style></head>
 <body>
 <header class="topo">
@@ -135,11 +209,15 @@ tr.exp td{background:#FBFCFA;padding:14px 18px 16px 22px;height:auto;border-bott
 <script>
 const R = __DADOS__;
 const P = new URLSearchParams(location.search);
+if (P.get('tema')) document.body.classList.add('tema-'+P.get('tema'));
+let LONGO = false;
 const ABA = P.get('aba') || 'prog', ORDEM = P.get('ordem') || 'urg', SOBRE = P.get('sobre') || '';
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const semAc = s => String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
 // tons: a cor que o APTO já calcula (campo *_cor) vira um tom; a semântica de cada aba não muda
 const TOM = { vencido:'crit', vermelho:'crit', laranja:'u30', amarelo:'u60', verde:'ok', azul:'ext', cinza:'neu', '':'' };
+const PRAZO = ['prazo','ext'];
+const tomDe = (c, prazo) => (prazo && c==='verde') ? 'prox' : TOM[c];
 const t = (k, v) => `--${k}:var(--${v})`;
 // grupos e rótulos de cada aba (os mesmos do LEIA-ME e da legenda de hoje)
 const G = {
@@ -160,25 +238,25 @@ const CART = {
 };
 const ABAS = {
   geral:{t:'Visão geral da base', cor:'geral_cor', dias:null, g:null,
-    cols:[['nome','Nome'],['proc','Nº da execução'],['regime','Regime'],['prog','Progressão','dt'],['liv','Livramento','dt'],['termino','Término','dt'],['_hist','']]},
+    cols:[['nome','Nome'],['proc','Nº da execução'],['regime','Regime'],['prog','Progressão','dt'],['liv','Livramento','dt'],['termino','Término','dt'],['_hist',''],['_abrir','']]},
   prog:{t:'Progressão de regime', cor:'prog_cor', dias:'prog_dias', g:'prazo', pil:'prog_sit',
-    cols:[['nome','Nome'],['proc','Nº da execução'],['regime','Regime'],['prog','Data da progressão','dt'],['prog_sit','Situação'],['conduta','Conduta (ficha)'],['falta','Falta (12 meses)'],['_ped','Pedido']]},
+    cols:[['nome','Nome'],['proc','Nº da execução'],['regime','Regime'],['prog','Data da progressão','dt'],['prog_sit','Situação'],['conduta','Conduta (ficha)'],['falta','Falta (12 meses)'],['_ped','Pedido'],['_abrir','']]},
   liv:{t:'Livramento condicional', cor:'liv_cor', dias:'liv_dias', g:'prazo', pil:'liv_sit',
-    cols:[['nome','Nome'],['proc','Nº da execução'],['liv','Data do livramento','dt'],['liv_sit','Situação'],['conduta','Conduta (ficha)'],['falta','Falta (12 meses)'],['_ped','Pedido']]},
+    cols:[['nome','Nome'],['proc','Nº da execução'],['liv','Data do livramento','dt'],['liv_sit','Situação'],['conduta','Conduta (ficha)'],['falta','Falta (12 meses)'],['_ped','Pedido'],['_abrir','']]},
   ind:{t:'Indulto e comutação', cor:'ind_cor', dias:null, g:'ind',
-    cols:[['nome','Nome'],['proc','Nº da execução'],['imp','Impeditivo (art. 1º)','d:imp_cor'],['i22','Indulto 2022','d:i22_cor'],['i24','Indulto 2024','d:i24_cor'],['c24','Comutação 2024','d:c24_cor'],['i25','Indulto 2025','d:i25_cor'],['c25','Comutação 2025','d:c25_cor'],['_ped','Pedido']]},
+    cols:[['nome','Nome'],['proc','Nº da execução'],['imp','Impeditivo (art. 1º)','d:imp_cor'],['i22','Indulto 2022','d:i22_cor'],['i24','Indulto 2024','d:i24_cor'],['c24','Comutação 2024','d:c24_cor'],['i25','Indulto 2025','d:i25_cor'],['c25','Comutação 2025','d:c25_cor'],['_ped','Pedido'],['_abrir','']]},
   presc:{t:'Prescrição', cor:'presc_ppe_cor', dias:'presc_dias', g:'presc', pil:'presc_ppe',
-    cols:[['nome','Nome'],['proc','Nº da execução'],['presc_ppe','Pretensão executória'],['presc_prox','Prescrição em','dt'],['_det','Detalhe'],['_ped','Pedido']]},
+    cols:[['nome','Nome'],['proc','Nº da execução'],['presc_ppe','Pretensão executória'],['presc_prox','Prescrição em','dt'],['_det','Detalhe'],['_ped','Pedido'],['_abrir','']]},
   ext:{t:'Extinção da pena', cor:'ext_cor', dias:'ext_dias', g:'ext', pil:'ext_sit',
-    cols:[['nome','Nome'],['proc','Nº da execução'],['ext_termino','Término','dt'],['ext_sit','Situação'],['_ped','Pedido']]},
+    cols:[['nome','Nome'],['proc','Nº da execução'],['ext_termino','Término','dt'],['ext_sit','Situação'],['_ped','Pedido'],['_abrir','']]},
   fd:{t:'Ficha disciplinar', cor:'fd_cor', dias:null, g:'fd', pil:'fd_sit',
-    cols:[['nome','Nome'],['proc','Nº da execução'],['fd_trab','Trabalho atual'],['fd_atestar','Trabalho a atestar'],['fd_estudo','Estudo a requerer'],['fd_sit','Situação'],['_ped','Pedido']]},
+    cols:[['nome','Nome'],['proc','Nº da execução'],['fd_trab','Trabalho atual'],['fd_atestar','Trabalho a atestar'],['fd_estudo','Estudo a requerer'],['fd_sit','Situação'],['_ped','Pedido'],['_abrir','']]},
   aud:{t:'Auditoria do cálculo', cor:'aud_cor', dias:null, g:'aud', pil:'aud_resumo',
-    cols:[['nome','Nome'],['proc','Nº da execução'],['aud_resumo','Resultado da auditoria'],['_det','Detalhe']]},
+    cols:[['nome','Nome'],['proc','Nº da execução'],['aud_resumo','Resultado da auditoria'],['_det','Detalhe'],['_abrir','']]},
 };
 const A = ABAS[ABA];
 const NAV = [['geral','Geral',null],['|'],['prog','Progressão',13],['liv','Livramento',5],['ext','Extinção',14],['presc','Prescrição',19],['|'],['ind','Indulto e comutação',85],['|'],['fd','Ficha disciplinar',3],['aud','Auditoria',60],['|'],['base','Dados da base',null],['geo','Dados prisionais',null],['teses','Jurisprudências',null],['quadro','Quadro',null]];
-document.getElementById('abas').innerHTML = NAV.map(n => n[0]==='|' ? '<span class="div"></span>' : `<button class="aba ${n[0]===ABA?'on':''}">${n[1]}${n[2]!=null?`<span>${n[2]}</span>`:''}</button>`).join('');
+document.getElementById('abas').innerHTML = NAV.map(n => n[0]==='|' ? '<span class="div"></span>' : `<button class="aba ${n[0]===ABA?'on':''} ${['geo','teses','quadro'].includes(n[0])?'xtra':''}">${n[1]}${n[2]!=null?`<span>${n[2]}</span>`:''}</button>`).join('') + '<button class="aba mais">Mais ▾</button>';
 document.getElementById('tit').textContent = A.t;
 document.getElementById('sub').textContent = 'Referência 12/10/2026 · base jurídica 2026-10-08i · 144 assistidos';
 if (A.g) document.getElementById('ordem').innerHTML = `<div class="ordem"><label>Ordem da lista</label><div class="seg"><button class="${ORDEM==='alfa'?'on':''}">Alfabética</button><button class="${ORDEM==='urg'?'on':''}">Por situação</button></div></div>`;
@@ -193,20 +271,24 @@ if (P.get('so')) rs = rs.filter(r => cor(r) === P.get('so'));
 // a linha aberta (expandida) vai para o topo do seu grupo, para caber na captura
 if (P.get('expande')){ const i = rs.findIndex(r => r.id===P.get('expande')); if (i>=0){ const [x] = rs.splice(i,1); const j = rs.findIndex(r => cor(r)===cor(x)); rs.splice(j<0?0:j,0,x); } }
 
-if (A.g) document.getElementById('cartoes').innerHTML = CART[A.g].map(([k,rot]) => { const n = R.filter(r => cor(r)===k).length; const tom = TOM[k] || 'neu';
+if (A.g) document.getElementById('cartoes').innerHTML = CART[A.g].map(([k,rot]) => { const n = R.filter(r => cor(r)===k).length; const tom = tomDe(k, PRAZO.includes(A.g)) || 'neu';
   return `<div class="cartao ${tom==='crit'?'crit':''}" style="--c:var(--${tom}-f)"><b>${n}</b><span>${rot}</span></div>`; }).join('');
 else document.getElementById('cartoes').style.display='none';
 
-function situacao(txt, c){
-  const tom = TOM[c]; const [p, ...resto] = String(txt||'—').split(' · ');
-  const corpo = `<b>${esc(p)}</b>${resto.length ? `<span>· ${esc(resto.join(' · '))}</span>` : ''}`;
-  return tom && tom!=='neu' ? `<span class="sit" style="${t('t',tom)};${t('b',tom+'-bg')}">${corpo}</span>` : `<span class="sit sc">${corpo}</span>`;
+function situacao(txt, c, prazo){
+  if (prazo===undefined) prazo = PRAZO.includes(A.g);
+  const tom = tomDe(c, prazo); const [p, ...resto] = String(txt||'—').split(' · ');
+  const curto = !LONGO;
+  const corpo = `<b>${esc(p)}</b>${!curto && resto.length ? `<span>· ${esc(resto.join(' · '))}</span>` : ''}`;
+  const sel = tom && tom!=='neu' ? `<span class="sit" style="${t('t',tom)};${t('b',tom+'-bg')}">${corpo}</span>` : `<span class="sit sc">${corpo}</span>`;
+  return sel + (curto && resto.length ? `<span class="cmp2" title="${esc(resto.join(' · '))}">${esc(resto.join(' · '))}</span>` : '');
 }
 function celula(r, [k, rot, tipo]){
-  if (k==='_ped') return `<td><span class="ped"><span class="cx"></span>Marcar</span></td>`;
+  if (k==='_ped') return `<td><span class="ped"><span class="cx"></span>Marcar pedido</span></td>`;
+  if (k==='_abrir') return `<td style="text-align:right"><span class="abrir">Abrir ›</span></td>`;
   if (k==='_det') return `<td><span class="link">Ver cálculo e fundamentação</span></td>`;
   if (k==='_hist') return `<td style="text-align:right"><span class="link">Histórico (${r.hist_n||1})</span></td>`;
-  if (k==='nome') return `<td class="nome">${esc(r.nome)}</td>`;
+  if (k==='nome') return `<td class="nome">${esc(r.nome)}${(()=>{const e=(r.pa_quase?'<span class="etq">Progressão antecipada: conferir</span>':'')+(r.st_quase?'<span class="etq">Saída temporária: conferir</span>':'')+((r.div_seeu||[]).length?'<span class="etq at">Divergência no SEEU</span>':''); return e?`<span class="etqs">${e}</span>`:''})()}</td>`;
   if (k==='proc') return `<td class="proc">${esc(r.proc)}</td>`;
   if (tipo==='dt') return `<td class="dt">${esc(r[k]||'—')}</td>`;
   if (tipo && tipo.startsWith('d:')){ const c = r[tipo.slice(2)]||''; const tom = TOM[c];
@@ -217,12 +299,13 @@ function celula(r, [k, rot, tipo]){
 document.getElementById('th').innerHTML = A.cols.map(([k,rot]) => `<th class="${(ORDEM==='alfa'||!A.g)&&k==='nome'?'ativa':(A.g&&ORDEM==='urg'&&k===A.pil)?'ativa':''}">${rot}</th>`).join('');
 let h = '', ult = null; const exp = P.get('expande');
 rs.slice(0, 40).forEach(r => { const c = cor(r);
-  if (A.g && ORDEM==='urg' && c !== ult){ ult = c; const n = rs.filter(x => cor(x)===c).length; const rot = (G[A.g].find(g => g[0]===c)||[,c])[1]; const tom = TOM[c]||'neu';
+  if (A.g && ORDEM==='urg' && c !== ult){ ult = c; const n = rs.filter(x => cor(x)===c).length; const rot = (G[A.g].find(g => g[0]===c)||[,c])[1]; const tom = tomDe(c, PRAZO.includes(A.g))||'neu';
     h += `<tr class="grupo"><td colspan="${A.cols.length}"><span class="tag" style="--c:var(--${tom}-f)"></span><b>${esc(rot)}</b>${n} ${n===1?'assistido':'assistidos'}</td></tr>`; }
-  const tom = TOM[c]; const fio = tom && !['neu','ok','ext'].includes(tom) || (A.g!=='prazo' && tom==='ok') ? `--fc:var(--${tom}-f)` : '';
+  const tom = tomDe(c, PRAZO.includes(A.g)); const fio = tom && !['neu','ext'].includes(tom) ? `--fc:var(--${tom}-f)` : '';
   h += `<tr class="l" style="${fio}">${A.cols.map(col => celula(r, col)).join('')}</tr>`;
   if (exp && r.id===exp) h += `<tr class="exp"><td colspan="${A.cols.length}">${expandida(r)}</td></tr>`;
 });
+if (P.get('q')){ h = `<tr><td colspan="${A.cols.length}" class="vazio"><b>Nenhum assistido encontrado para “${esc(P.get('q'))}”</b>A busca procura em nome, nº da execução, processos e crimes, em todas as abas.<br><button class="btn">Limpar busca</button></td></tr>`; document.querySelector('.busca input').value = P.get('q'); }
 document.getElementById('tb').innerHTML = h;
 document.getElementById('rod').innerHTML = `<span>${rs.length} assistidos · ordem: ${A.g ? (ORDEM==='urg' ? 'por situação, o mais urgente primeiro' : 'alfabética') : 'alfabética'}</span><span class="esp"></span><span>Clique na linha para abrir o painel do assistido</span>`;
 
@@ -238,15 +321,15 @@ function expandida(r){
 }
 
 // sobreposições: painel do assistido, importação
-if (SOBRE==='painel'){ const r = R.find(x => x.nome==='Simulado Caso 001');
+if (SOBRE==='painel'){ LONGO = true; const r = R.find(x => x.nome==='Simulado Caso 001');
   document.getElementById('sobre').innerHTML = `<div class="veu"></div><aside class="painel"><div class="ph"><h2>${esc(r.nome)}</h2>
    <div class="meta">${esc(r.proc)} · ${esc(r.regime)} · RSPE de ${esc(r.geracao)} · 1ª Vara de Execução Penal</div>
    <div class="acoes"><button class="btn sm">Copiar resumo</button><button class="btn sm">Relatório em PDF</button><button class="btn sm">Registro para o SAP</button><button class="btn sm">Enviar ao Quadro</button></div></div>
    <div class="pb"><div class="kv"><div><small>Pena total</small><b>${esc(r.pena_total)}</b></div><div><small>Cumprida</small><b>${esc(r.pena_cumprida)}</b></div><div><small>Remanescente</small><b>${esc(r.pena_rem)}</b></div><div><small>Término</small><b>${esc(r.termino)}</b></div></div>
    <div style="font-size:13.5px;color:var(--tx2)">Data-base da progressão: <b style="color:var(--tx)">${esc(r.db)}</b> · ${esc(r.db_motivo)} <span class="link" style="margin-left:8px">Editar</span></div>
    <div class="sec"><h3>Benefícios</h3><table class="ben">
-   <tr><td>Progressão</td><td class="dt">${esc(r.prog)}</td><td>${situacao(r.prog_sit, r.prog_cor)}</td></tr>
-   <tr><td>Livramento</td><td class="dt">${esc(r.liv)}</td><td>${situacao(r.liv_sit, r.liv_cor)}</td></tr>
+   <tr><td>Progressão</td><td class="dt">${esc(r.prog)}</td><td>${situacao(r.prog_sit, r.prog_cor, true)}</td></tr>
+   <tr><td>Livramento</td><td class="dt">${esc(r.liv)}</td><td>${situacao(r.liv_sit, r.liv_cor, true)}</td></tr>
    <tr><td>Indulto</td><td class="dt"></td><td>${situacao('2022 · Possível','verde')} ${situacao('2024 · A verificar','amarelo')} ${situacao('2025 · Possível','verde')}</td></tr>
    <tr><td>Comutação</td><td class="dt"></td><td>${situacao('Nenhum decreto cabível','')}</td></tr>
    <tr><td>Prescrição</td><td class="dt">${esc(r.presc_prox)}</td><td>${situacao(r.presc_ppe_full.replace(': ',' · '),'vermelho')}</td></tr>
@@ -261,6 +344,11 @@ if (SOBRE==='importacao'){
   <details class="gr"><summary>Entraram com ressalva: conferir <span class="n">9 arquivos</span></summary></details>
   <details class="gr"><summary>Ignorados de propósito <span class="n">16 arquivos</span></summary></details></div>
   <div class="mf"><button class="btn">Copiar lista de falhas</button><button class="btn">Registro da importação (PDF)</button><span class="esp"></span><button class="btn pri">Fechar</button></div></section></div>`; }
+if (SOBRE==='avisos'){
+  document.getElementById('sobre').innerHTML = `<div class="toasts"><div class="toast ok">Pedido de progressão registrado para Simulado Caso 134<button>Desfazer</button></div><div class="toast erro"><b>Não foi gravado.</b> A base está aberta só para consulta.<button aria-label="Fechar">×</button></div></div>`; }
+if (SOBRE==='legenda'){
+  const L = [['crit','Vencido','O lapso já foi atingido.','Requerer ou conferir o motivo indicado.'],['u30','Até 30 dias','O lapso vence nos próximos 30 dias.','Preparar o pedido.'],['u60','Até 60 dias / a verificar','Vence em até 60 dias, ou há um dado a conferir.','Conferir o ponto indicado.'],['prox','Até 90 dias','Vence em até 90 dias.','Acompanhar.'],['neu','Mais de 90 dias · sem prazo','Em cumprimento, ou não se aplica.','Nenhuma ação agora.'],['ext','Extinta · pedido feito','Já registrado.','Nenhuma ação.']];
+  document.getElementById('sobre').innerHTML = `<div class="veu"></div><div class="modal-f"><section class="modal"><div class="mh"><h2>Legenda · Progressão</h2><p>O que cada situação quer dizer nesta aba e o que fazer.</p></div><div class="mb"><table class="leg"><tr><th>Situação</th><th>O que quer dizer</th><th>O que fazer</th></tr>${L.map(([tom,a,b,c]) => `<tr><td>${tom==='neu'?`<span class="sit sc"><b>${a}</b></span>`:`<span class="sit" style="${t('t',tom)};${t('b',tom+'-bg')}"><b>${a}</b></span>`}</td><td>${b}</td><td>${c}</td></tr>`).join('')}</table></div><div class="mf"><span class="link" style="align-self:center">Ver o método completo</span><span class="esp"></span><button class="btn pri">Fechar</button></div></section></div>`; }
 if (SOBRE==='importando'){
   document.getElementById('sobre').innerHTML = `<div class="prog-imp"><b>Importando 137 de 300 PDFs</b><div class="tr"><i></i></div><small>SIMULADO_137.pdf · 2 falhas até agora · faltam cerca de 1 min 50 s</small><div style="display:flex;gap:8px;margin-top:10px"><button class="btn sm">Ver falhas</button><button class="btn sm">Parar depois deste arquivo</button></div></div>`; }
 </script>
