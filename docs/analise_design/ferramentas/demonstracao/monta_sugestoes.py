@@ -14,7 +14,7 @@ def img(pasta, nome, larg=1800):
     im = Image.open(os.path.join(pasta, nome + ".png")).convert("RGB")
     if im.width > larg:
         im = im.resize((larg, round(im.height * larg / im.width)), Image.LANCZOS)
-    b = io.BytesIO(); im.save(b, "JPEG", quality=85, optimize=True)
+    b = io.BytesIO(); im.save(b, "JPEG", quality=74, optimize=True, progressive=True)
     return "data:image/jpeg;base64," + base64.b64encode(b.getvalue()).decode()
 
 
@@ -26,7 +26,7 @@ def f64(n):
 # arranjo: "pilha" (um sobre o outro: recortes largos), "lado" (lado a lado), "tres" (3 miniaturas por linha)
 SUG = [
  ("Uma estrutura igual em todas as abas",
-  "Hoje cada aba se organiza de um jeito: a Indulto tem barra lateral e legenda no topo, a Prescrição tem botões próprios, a Ficha tem outra disposição. Quem aprende uma aba precisa reaprender a próxima.",
+  "Hoje cada aba se organiza de um jeito: a Prescrição tem botões próprios no topo, a Ficha tem outra disposição, a Geral não tem cartões. Quem aprende uma aba precisa reaprender a próxima. A Indulto mantém a barra de decretos e o mapa de cabimento.",
   ["aba_ind", "aba_presc", "aba_fd"], ["aba_ind", "aba_presc", "aba_fd"],
   "Toda aba tem a mesma ordem: título, cartões de resumo, lista e, ao clicar, o detalhe. Aprender uma aba é saber usar todas.", "tres", "G"),
  ("Cabeçalho em uma faixa só",
@@ -49,18 +49,10 @@ SUG = [
   "Hoje a coluna Situação quebra em até 4 linhas (“Em 66 dias · percentual do / SEEU acima do / legal - ver / Auditoria”) e as linhas ficam com alturas diferentes.",
   ["situacao"], ["situacao"],
   "Primeiro o que importa, em destaque (“Vencido há 649 dias”); embaixo, em letra menor, o complemento do programa. O texto completo continua no painel do assistido.", "pilha", "P"),
- ("Etiquetas escritas no lugar de ícones soltos",
-  "Hoje ícones pequenos ao lado do nome (degraus, triângulo, pessoa) só se explicam passando o mouse. Quem não conhece não sabe o que significam.",
-  ["nome_icone"], ["nome_tags"],
-  "Uma etiqueta curta e escrita: “Progressão antecipada: conferir”, “Saída temporária: conferir”, “Divergência no SEEU”. Lê-se sem precisar decorar ícones.", "lado", "M"),
  ("Botões que dizem o que fazem",
   "Hoje o pedido é uma caixinha sem rótulo, e as ações da linha são três ícones cinza-claro, que parecem desabilitados.",
   ["fim_linha"], ["fim_linha"],
   "“Marcar pedido” e “Abrir ›” escritos, sempre no fim da linha, na mesma ordem em todas as abas.", "lado", "P"),
- ("Indulto: o resultado de cada decreto por extenso",
-  "Hoje cada decreto é um quadradinho colorido com o ano (“22”, “24”, “25”). O resultado depende só da cor, e “Não cabe” e “Impeditivo” têm vermelhos quase iguais.",
-  ["indulto"], ["indulto"],
-  "Uma coluna por decreto com a palavra do programa (Sim, Verificar, Vedado, Não atinge), com a cor de apoio. A lista se agrupa por “algum benefício possível”.", "pilha", "P"),
  ("Uma cor, um significado, em todas as abas",
   "Hoje o verde é “vence em até 90 dias” na Progressão (um prazo correndo) e “guia em ordem” na Auditoria. A mesma cor diz coisas opostas.",
   ["cartoes", "cartoes_aud"], ["cartoes_prog", "cartoes_aud"],
@@ -141,7 +133,7 @@ table.res td{{padding:2.2pt 5pt;border-bottom:.5pt solid #E1E4DF;vertical-align:
 table.res td:first-child{{font:600 11pt Serif;color:#B8975A;width:9mm}}
 table.res td.e{{text-align:center;font-weight:700;color:#1D5A3B;width:16mm}}
 .nota{{font-size:9pt;color:#5F6762;margin-top:6pt}}
-.grade5{{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5mm 6mm}}
+.grade5{{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6mm 5mm}}
 .grade5 figure{{margin:0;min-width:0}}.grade5 img{{width:100%;border:.7pt solid #C9CEC8;border-radius:3pt;display:block}}
 .grade5 figcaption{{font-size:9.5pt;margin-top:2pt}}.grade5 figcaption b{{font:600 11pt Serif;color:#123824}}
 .linha{{display:grid;grid-template-columns:minmax(0,63fr) minmax(0,37fr);gap:6mm;flex:1;min-height:0}}
@@ -151,6 +143,7 @@ table.res td.e{{text-align:center;font-weight:700;color:#1D5A3B;width:16mm}}
 .linha .d img{{width:100%;max-height:47%;object-fit:contain;object-position:left top;border:.7pt solid #C9CEC8;border-radius:3pt;display:block}}
 .linha ul{{margin:5pt 0 0;padding-left:14pt;font-size:10pt}}.linha li{{margin:1.5pt 0}}
 .linha .ind{{font-size:10pt;background:#F4F5F2;border-left:3pt solid #B8975A;padding:5pt 8pt;margin-top:5pt}}
+.g4{{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:3mm 6mm;max-width:238mm;margin:4mm auto 0}}.g4 figure{{margin:0;min-width:0}}.g4 img{{width:100%;display:block;border:.7pt solid #C9CEC8;border-radius:3pt}}.g4 figcaption{{font:600 10pt Serif;color:#123824;margin-top:1.5pt}}
 .parte{{justify-content:center}}.parte h1{{font-size:30pt}}.parte p{{max-width:220mm;font-size:12pt;color:#4A514C}}
 """
 
@@ -158,43 +151,56 @@ pags = []
 pags.append("""<div class="pg capa"><div class="m">APTO</div><div class="faixa" style="width:150mm"></div>
 <h1>Sugestões de visual e experiência</h1>
 <div class="pr"><b>O princípio: facilitar.</b> A tela diz o essencial, de forma clara e objetiva. Quem quiser se aprofundar tem os botões para isso. Todas as abas seguem a mesma linha gráfica, pensada para achar a informação rápido e entender as funções sem explicação.</div>
-<div class="pe">Parte 1: cinco linhas gráficas para avaliar · Parte 2: 17 sugestões de experiência, cada uma com a tela de hoje e a proposta · dados fictícios (“Simulado Caso NNN”), exportados do próprio programa · nenhuma regra, cálculo ou texto jurídico alterado</div></div>""")
+<div class="pe">Parte 1: a versão atual e seis linhas gráficas para avaliar · Parte 2: 15 sugestões de experiência, cada uma com a tela de hoje e a proposta · dados fictícios (“Simulado Caso NNN”), exportados do próprio programa · nenhuma regra, cálculo ou texto jurídico alterado</div></div>""")
 
 
 # ---------- Parte 1: cinco linhas gráficas ----------
-TT = os.path.join(FON, "telas_temas"); CAPS = "/home/user/rspe-base/docs/analise_design/capturas"
+TT = os.path.join(FON, "telas_todas"); CAPS = "/home/user/rspe-base/docs/analise_design/capturas"
 LINHAS = [
+ ("0", "Versão atual (7.14.4)", "referência para comparar",
+  (TT, "t0_prog"), (TT, "t0_painel"), (TT, "t0_ind"),
+  ["Arial 13 px, verde da Defensoria, cantos retos", "Ícones ao lado do nome de cada aba; 12 abas numa fila", "Lista em ordem alfabética; situação em texto colorido", "Ícones nas linhas (fixar, saída temporária, quadro, abrir) e caixa sem rótulo para o pedido"],
+  "for preciso manter tudo como está; serve de base para comparar as outras seis."),
  ("1", "Sóbria com símbolos", "apresentada antes",
-  (CAPS, "depois_progressao_1440"), (CAPS, "depois_ficha_1440"), (CAPS, "depois_indulto_1440"),
-  ["Arial, verde da marca e fundo neutro", "Cada situação com uma forma (losango, triângulo, círculo) além da cor", "Abas agrupadas, com o nome do grupo em cima", "Selos de decreto com símbolos (✓ ? ✕)"],
-  "a impressão em preto e branco e a leitura por quem não distingue cores forem prioridade. Os símbolos podem ser trocados por etiquetas escritas."),
+  (TT, "t1_prog"), (TT, "t1_painel"), (TT, "t1_ind"),
+  ["Arial, verde da marca e fundo neutro", "Cada situação com uma forma (losango, triângulo, círculo) além da cor", "Abas agrupadas, com o nome do grupo em cima", "Cartões compactos e grupos com títulos em maiúsculas"],
+  "a impressão em preto e branco e a leitura por quem não distingue cores forem prioridade."),
  ("2", "Institucional", "verde e dourado",
-  (TT, "tema2_prog"), (TT, "tema2_painel"), (TT, "tema2_ind"),
+  (TT, "t2_prog"), (TT, "t2_painel"), (TT, "t2_ind"),
   ["Faixa verde com filete dourado, títulos com a mesma letra serifada dos relatórios em PDF", "Situação em etiqueta com fundo suave; complemento em letra menor", "Cartões grandes de resumo", "Botões escritos: “Marcar pedido”, “Abrir”"],
   "a identidade da Defensoria e a coerência com os relatórios impressos forem prioridade."),
  ("3", "Clara e compacta", "moderna, mais linhas por tela",
-  (TT, "tema3_prog"), (TT, "tema3_painel"), (TT, "tema3_ind"),
+  (TT, "t3_prog"), (TT, "t3_painel"), (TT, "t3_ind"),
   ["Fundo claro e um único verde de destaque", "Situação com ponto colorido + texto, sem caixas", "Linhas mais baixas: cabem mais assistidos na tela", "Abas em botões arredondados, numa linha só"],
   "as bases forem grandes e o trabalho for, na maior parte do tempo, percorrer listas."),
  ("4", "Familiar ao SEEU", "clássica, de sistema judicial",
-  (TT, "tema4_prog"), (TT, "tema4_painel"), (TT, "tema4_ind"),
+  (TT, "t4_prog"), (TT, "t4_painel"), (TT, "t4_ind"),
   ["Faixa superior verde-escura, Arial, cantos retos", "Abas em fichário, como nos sistemas do Judiciário", "Tabela com grade e linhas alternadas; títulos em maiúsculas", "Situação em texto colorido e negrito"],
   "a equipe preferir uma tela parecida com o SEEU e o PJe, com o menor estranhamento possível."),
  ("5", "Barra lateral", "navegação sempre à vista",
-  (TT, "tema5_prog"), (TT, "tema5_painel"), (TT, "tema5_ind"),
+  (TT, "t5_prog"), (TT, "t5_painel"), (TT, "t5_ind"),
   ["Abas numa coluna verde à esquerda, agrupadas por tarefa", "Todas as abas visíveis, sem menu “Mais”", "Cabeçalho só com base, busca e ações", "Conteúdo com os mesmos cartões e etiquetas da proposta 2"],
   "a equipe trocar muito de aba e usar monitores largos."),
+ ("6", "Institucional com ícones nas abas", "a linha 2, mantendo os ícones de hoje",
+  (TT, "t6_prog"), (TT, "t6_painel"), (TT, "t6_ind"),
+  ["Tudo da linha 2 (faixa verde e dourada, títulos serifados, etiquetas, botões escritos)", "Mantém os ícones atuais ao lado do nome de cada aba", "Abas agrupadas por tarefa, todas na mesma linha", "Quem já usa o APTO reconhece as abas pelo ícone"],
+  "a equipe já se orienta pelos ícones das abas e não quiser perder essa referência. Os ícones também podem ser levados para as linhas 3, 4 e 5."),
 ]
-parte1 = ['<div class="pg parte"><div class="k">Parte 1</div><h1>Cinco linhas gráficas para avaliar</h1><div class="faixa" style="width:150mm"></div><p>A mesma aba, com os mesmos dados, em cinco estilos. Todas seguem as regras de facilitar (o que exige ação primeiro, a situação em destaque, ações com nome); muda a aparência. Escolhida a linha, ela vale para todas as abas, para os relatórios em PDF e para a extensão.</p></div>']
-fig = "".join(f'<figure><img src="{img(a[3][0], a[3][1], 1000)}"><figcaption><b>{a[0]} · {a[1]}</b> — {a[2]}</figcaption></figure>' for a in LINHAS)
-parte1.append(f'<div class="pg"><div class="k">Parte 1 · visão geral</div><h2>As cinco lado a lado: aba Progressão</h2><div class="faixa"></div><div class="grade5">{fig}</div></div>')
+ABAS_T = [('geral','Geral'),('prog','Progressão'),('liv','Livramento'),('ind','Indulto e comutação'),('presc','Prescrição'),('ext','Extinção'),('fd','Ficha disciplinar'),('aud','Auditoria'),('base','Dados da base'),('geo','Dados prisionais'),('teses','Jurisprudências'),('quadro','Quadro do usuário')]
+parte1 = ['<div class="pg parte"><div class="k">Parte 1</div><h1>Seis linhas gráficas e a versão atual</h1><div class="faixa" style="width:150mm"></div><p>A versão atual (0) e seis propostas (1 a 6): a mesma aba, com os mesmos dados. Todas seguem as regras de facilitar (o que exige ação primeiro, a situação em destaque, ações com nome); muda a aparência. Escolhida a linha, ela vale para todas as abas, para os relatórios em PDF e para a extensão.</p><p><b>Em todas as linhas, como hoje:</b> a aba Indulto com a barra de decretos e o mapa de cabimento por decreto em cada assistido, e os ícones ao lado do nome (saída temporária, progressão antecipada, divergência).</p></div>']
+fig = "".join(f'<figure><img src="{img(a[3][0], a[3][1], 1000)}" style="{"border:1.5pt solid #7A3B36" if a[0]=="0" else ""}"><figcaption><b>{a[0]} · {a[1]}</b> — {a[2]}</figcaption></figure>' for a in LINHAS)
+parte1.append(f'<div class="pg"><div class="k">Parte 1 · visão geral</div><h2>Atual e propostas lado a lado: aba Progressão</h2><div class="faixa"></div><div class="grade5">{fig}</div></div>')
 for n, nome, sub, prog, pain, ind, carac, indic in LINHAS:
     li = "".join(f"<li>{c}</li>" for c in carac)
     parte1.append(f'<div class="pg"><div class="tit"><span class="num">{n}</span><div><div class="k">Linha gráfica · {sub}</div><h2>{nome}</h2></div></div><div class="faixa" style="margin:4pt 0 6pt"></div>'
                   f'<div class="linha"><div class="g"><img src="{img(prog[0], prog[1], 1700)}"><ul>{li}</ul><div class="ind"><b>Indicada se</b> {indic}</div></div>'
                   f'<div class="d"><img src="{img(pain[0], pain[1], 1000)}"><img src="{img(ind[0], ind[1], 1000)}"></div></div></div>')
+    pref = prog[1].split("_")[0]
+    for k in range(0, 12, 4):
+        cel = "".join(f'<figure><img src="{img(TT, pref + "_" + a, 1000)}"><figcaption>{rot}</figcaption></figure>' for a, rot in ABAS_T[k:k + 4])
+        parte1.append(f'<div class="pg"><div class="k">Linha {n} · {nome} · todas as abas ({k // 4 + 1}/3)</div><div class="g4">{cel}</div></div>')
 pags.extend(parte1)
-pags.append('<div class="pg parte"><div class="k">Parte 2</div><h1>17 sugestões de experiência</h1><div class="faixa" style="width:150mm"></div><p>O que muda no uso, independentemente da linha escolhida. Cada sugestão traz a tela de hoje e a proposta (ilustrada com a linha 2), e uma frase com o ganho.</p></div>')
+pags.append('<div class="pg parte"><div class="k">Parte 2</div><h1>15 sugestões de experiência</h1><div class="faixa" style="width:150mm"></div><p>O que muda no uso, independentemente da linha escolhida. Cada sugestão traz a tela de hoje e a proposta (ilustrada com a linha 2), e uma frase com o ganho.</p></div>')
 
 # linha gráfica com a tela anotada
 cx = json.load(open(os.path.join(P, "caixas.json")))
@@ -213,7 +219,7 @@ pags.append(f"""<div class="pg"><div class="k">A linha gráfica</div><h2>Sete re
 
 # quadro-resumo
 linhas = "".join(f"<tr><td>{i}</td><td><b>{t}</b></td><td>{g}</td><td class='e'>{e}</td></tr>" for i, (t, _, _, _, g, _, e) in enumerate(SUG, 1))
-pags.append(f"""<div class="pg"><div class="k">Resumo</div><h2>As 17 sugestões</h2><div class="faixa"></div>
+pags.append(f"""<div class="pg"><div class="k">Resumo</div><h2>As 15 sugestões</h2><div class="faixa"></div>
 <table class="res"><tr><th></th><th>Sugestão</th><th>O que muda para quem usa</th><th>Esforço</th></tr>{linhas}</table>
 <div class="nota">Esforço: P = até 1 dia · M = 2 a 5 dias · G = mais de uma semana.</div></div>""")
 
