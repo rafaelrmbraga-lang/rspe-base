@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Depois · Ficha do assistido</title><link rel="stylesheet" href="ds.css">
+<style>.fundo{flex:1;padding:var(--s3) var(--s5);color:var(--tx-3)}</style></head>
+<body>
+<div id="casca" data-aba="geral"></div>
+<div class="fundo">(lista da aba Geral, atrás do véu)</div>
+<div class="veil"></div>
+<aside class="drawer" role="dialog" aria-modal="true" aria-labelledby="dtit">
+  <div class="dh">
+    <div style="display:flex;align-items:flex-start;gap:12px">
+      <div><h2 id="dtit">Simulado Caso 001</h2>
+        <div class="meta">9900001-00.2026.8.12.0001 · Fechado · RSPE de 05/10/2026 · 1ª VEP</div></div>
+      <span class="sp"></span><button class="ib" aria-label="Fechar (Esc)" title="Fechar (Esc)">✕</button>
+    </div>
+    <div class="acts">
+      <button class="btn sm">Copiar resumo</button><button class="btn sm">Relatório em PDF</button><button class="btn sm">Registro para o SAP</button>
+      <button class="btn sm">Enviar ao Quadro</button><button class="btn sm ghost">Fixar no topo</button>
+    </div>
+  </div>
+  <div class="db">
+    <div class="sec">
+      <div class="kv"><div><small>Pena total</small><b>3 anos</b></div><div><small>Cumprida</small><b>1 ano e 1 dia</b></div><div><small>Remanescente</small><b>1 a, 11 m e 29 d</b></div><div><small>Término</small><b>03/10/2028</b></div></div>
+      <div style="margin-top:8px;color:var(--tx-2)">Data-base (progressão): <b style="color:var(--tx)">05/10/2025</b> · prisão/início do cumprimento (prisão definitiva) <button class="btn sm">Editar</button></div>
+    </div>
+    <div class="sec"><h3>Benefícios</h3>
+      <table class="ben">
+        <tr><td>Progressão</td><td class="dt">17/12/2026</td><td><span class="sit med"><span class="mk med"></span><span><strong>Em 66 dias</strong> · percentual do SEEU acima do legal - <u>ver Auditoria</u></span></span></td></tr>
+        <tr><td>Livramento</td><td class="dt">08/10/2027</td><td><span class="sit neutro"><span class="mk neutro"></span>Em cumprimento</span></td></tr>
+        <tr><td>Indulto</td><td class="dt"></td><td><span class="sit ok"><span class="mk ok"></span>2022 Cabível</span> &nbsp; <span class="sit med"><span class="mk med"></span><strong>2024 A verificar</strong></span> &nbsp; <span class="sit ok"><span class="mk ok"></span>2025 Cabível</span></td></tr>
+        <tr><td>Comutação</td><td class="dt"></td><td><span class="sit neutro"><span class="mk neutro"></span>Nenhum decreto cabível</span></td></tr>
+        <tr><td>Prescrição</td><td class="dt">24/11/2023</td><td><span class="sit crit"><span class="mk crit"></span><strong>Aparente</strong>: art. 155 CP</span></td></tr>
+        <tr><td>Extinção</td><td class="dt"></td><td><span class="sit neutro"><span class="mk neutro"></span>Em cumprimento</span></td></tr>
+      </table>
+      <!-- o "por quê" fica junto da linha que o usuário clicou, e não 3 telas abaixo em "Cálculos do programa" -->
+      <div class="call" id="porque">
+        <h4><span class="mk med"></span>Por que “A verificar” no Indulto 2024?</h4>
+        <div style="color:var(--tx-2)">Decreto 12.338/2024 · data de referência 25/12/2024 · texto do programa (inalterado):</div>
+        <ol>
+          <li>Art. 9º, XV: sem pena em cumprimento até 25/12/2024.</li>
+          <li>O inciso XV não exige fração cumprida (STJ exige início do cumprimento nos incisos com fração: AgRg no HC 1.042.931).</li>
+          <li><b>Ponto a conferir nos autos:</b> crime patrimonial com violência ou grave ameaça; reparação do dano dispensada (ponto controvertido).</li>
+        </ol>
+        <div class="fund"><b>Fundamentação</b> · pronta para colar na petição · ao copiar, aviso “Fundamentação copiada”</div>
+        <div class="bar"><button class="btn pri sm">Copiar fundamentação</button><button class="btn sm">Ver texto completo</button><button class="btn sm">Linha do tempo do decreto</button></div>
+      </div>
+    </div>
+    <div class="sec"><h3>Crimes em execução</h3>
+      <div style="border:1px solid var(--line);border-radius:var(--r-md);padding:8px 10px"><b>Furto</b> <span style="color:var(--tx-2)">(art. 155, caput, do CP)</span> · 3 anos · fato 10/03/2015</div>
+    </div>
+    <div class="sec"><h3>Cálculos do programa <span style="font-weight:400;color:var(--tx-3);font-size:12px">(todos, recolhidos)</span></h3>
+      <div style="color:var(--tx-2)">▸ Indulto 2025 · cabível &nbsp; ▸ Indulto 2024 · a verificar &nbsp; ▸ Indulto 2022 · cabível</div>
+    </div>
+  </div>
+</aside>
+<script src="casca.js"></script>
+</body></html>

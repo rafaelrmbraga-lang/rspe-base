@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Depois · Progressão</title><link rel="stylesheet" href="ds.css"></head>
+<body>
+<!-- Protótipo estático da aba Progressão. Dados fictícios. Mesmas colunas e textos de situação de hoje; muda a ordem, a forma e a densidade. -->
+<header class="hd">
+  <span class="marca"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 3h12M6 21h12M7 3c0 5 10 7 10 9s-10 4-10 9M17 3c0 5-10 7-10 9s10 4 10 9"/></svg></i>APTO</span>
+  <span class="base">Base <b>Comarca Fictícia</b> · 144 <span aria-hidden="true">▾</span></span>
+  <span style="font-size:12px;color:var(--tx-3)">cópia de segurança: hoje 12:00</span>
+  <span class="sp"></span>
+  <button class="btn pri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Importar</button>
+  <button class="btn">Exportar ▾</button>
+  <button class="btn ghost" title="Calculadora de penas">Calculadora</button>
+  <button class="btn ghost">Legenda</button>
+  <label class="busca"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input placeholder="Buscar nome, processo ou crime (Ctrl+K)"></label>
+</header>
+<nav class="nav" aria-label="Abas">
+  <div class="grp"><small>Visão geral</small><div><button class="tab">Geral</button></div></div>
+  <span class="sep"></span>
+  <div class="grp"><small>Prazos</small><div><button class="tab on" aria-current="page">Progressão<b>13</b></button><button class="tab">Livramento<b>5</b></button><button class="tab">Extinção<b>14</b></button><button class="tab">Prescrição<b>19</b></button></div></div>
+  <span class="sep"></span>
+  <div class="grp"><small>Benefícios por decreto</small><div><button class="tab">Indulto e comutação<b>85</b></button></div></div>
+  <span class="sep"></span>
+  <div class="grp"><small>Conferência</small><div><button class="tab">Ficha disciplinar<b>3</b></button><button class="tab">Auditoria<b>60</b></button></div></div>
+  <span class="sp"></span>
+  <div class="grp extra"><small>Panorama e ferramentas</small><div><button class="tab">Dados da base</button><button class="tab">Dados prisionais</button><button class="tab">Jurisprudências</button><button class="tab">Quadro</button></div></div>
+  <div class="grp mais"><small>&nbsp;</small><div><button class="tab">Mais ▾ <span style="color:var(--tx-3)">(dados, jurisprudências, quadro)</span></button></div></div>
+</nav>
+<div class="fbar" role="group" aria-label="Filtrar por situação">
+  <button class="chip" aria-pressed="false"><span class="mk crit"></span><b>13</b> Vencido</button>
+  <button class="chip"><span class="mk urg"></span><b>2</b> Até 30 dias</button>
+  <button class="chip"><span class="mk med"></span><b>3</b> Até 60 dias / a verificar</button>
+  <button class="chip"><span class="mk prox"></span><b>8</b> Até 90 dias</button>
+  <button class="chip"><span class="mk neutro"></span><b>58</b> Sem prazo</button>
+  <button class="chip"><span class="mk info"></span><b>1</b> Extinta</button>
+  <button class="chip"><span class="mk info"></span><b>0</b> Pedido feito</button>
+  <button class="chip"><b>1</b> RSPE antigo</button>
+  <span class="hint">Todas as situações · ordem: situação (mais urgente primeiro) · clique no título para mudar</span>
+</div>
+<main class="wrap"><div class="card">
+<table>
+<thead><tr><th>Nome</th><th>Nº da execução</th><th>Regime</th><th>Data da progressão</th><th>Situação<span class="ord">▲</span></th><th>Conduta (ficha)</th><th>Falta (12 meses)</th><th>Pedido</th><th style="text-align:right">Ações</th></tr></thead>
+<tbody>
+<tr class="grupo"><td colspan="9">Vencido · 13</td></tr>
+<tr class="crit"><td class="nome">Simulado Caso 105</td><td class="num">9900105-00.2026.8.12.0001</td><td>Fechado</td><td class="dt">01/01/2024</td><td><span class="sit crit"><span class="mk crit"></span><span><strong>Vencido há 1.015 dias</strong> · sem pedido no RSPE - requerer</span></span></td><td>Sem ficha</td><td>Não consta</td><td><button class="ped"><span class="bx"></span>Marcar</button></td><td class="acoes"></td></tr>
+<tr class="crit"><td class="nome">Simulado Caso 117</td><td class="num">9900117-00.2026.8.12.0001</td><td>Fechado</td><td class="dt">01/01/2025</td><td><span class="sit crit"><span class="mk crit"></span><span><strong>Vencido há 649 dias</strong> · sem pedido no RSPE - requerer</span></span></td><td>Sem ficha</td><td>Não consta</td><td><button class="ped"><span class="bx"></span>Marcar</button></td><td class="acoes"></td></tr>
+<tr class="crit"><td class="nome">Simulado Caso 110</td><td class="num">9900110-00.2026.8.12.0001</td><td>Fechado</td><td class="dt">19/10/2025</td><td><span class="sit crit"><span class="mk crit"></span><span><strong>Vencido há 358 dias</strong> · sem pedido no RSPE - requerer</span></span></td><td>Sem ficha</td><td>Não consta ✎</td><td><button class="ped"><span class="bx"></span>Marcar</button></td><td class="acoes"></td></tr>
+<tr class="crit"><td class="nome">Simulado Caso 111</td><td class="num">9900111-00.2026.8.12.0001</td><td>Fechado</td><td class="dt">01/12/2025</td><td><span class="sit crit"><span class="mk crit"></span><span><strong>Vencido há 315 dias</strong> · sem pedido no RSPE - requerer</span></span></td><td>Sem ficha</td><td>Não consta</td><td><button class="ped"><span class="bx"></span>Marcar</button></td><td class="acoes"></td></tr>
+<tr class="crit"><td class="nome">Simulado Caso 041</td><td class="num">9900041-00.2026.8.12.0001</td><td>Fechado</td><td class="dt">01/09/2026</td><td><span class="sit crit"><span class="mk crit"></span><span><strong>Vencido há 41 dias</strong> · verificar criminológico, indeferimento ou falta</span></span></td><td>Sem ficha</td><td>Não consta</td><td><button class="ped feito"><span class="bx" style="background:var(--info-mk);border-color:var(--info-mk)"></span>Feito 10/10</button></td><td class="acoes"></td></tr>
+<tr class="crit"><td class="nome">Simulado Caso 048</td><td class="num">9900048-00.2026.8.12.0001</td><td>Fechado</td><td class="dt">20/08/2026</td><td><span class="sit crit"><span class="mk crit"></span><span><strong>Vencido há 53 dias</strong> · verificar criminológico, indeferimento ou falta</span></span></td><td>Sem ficha</td><td><span class="sit crit"><span class="mk crit"></span>Sim</span></td><td><button class="ped"><span class="bx"></span>Marcar</button></td><td class="acoes"></td></tr>
+<tr class="grupo"><td colspan="9">Até 30 dias · 2</td></tr>
+<tr class="urg"><td class="nome">Simulado Caso 022</td><td class="num">9900022-00.2026.8.12.0001</td><td>Semiaberto</td><td class="dt">29/10/2026</td><td><span class="sit urg"><span class="mk urg"></span><span><strong>Em 17 dias</strong></span></span></td><td>Boa</td><td>Não consta</td><td><button class="ped"><span class="bx"></span>Marcar</button></td><td class="acoes"></td></tr>
+<tr class="grupo"><td colspan="9">Até 60 dias / a verificar · 3</td></tr>
+<tr class="med"><td class="nome">Simulado Caso 001</td><td class="num">9900001-00.2026.8.12.0001</td><td>Fechado</td><td class="dt">17/12/2026</td><td><span class="sit med"><span class="mk med"></span><span><strong>Em 66 dias</strong> · percentual do SEEU acima do legal - <u>ver Auditoria</u></span></span></td><td>Sem ficha</td><td>Não consta</td><td><button class="ped"><span class="bx"></span>Marcar</button></td><td class="acoes"></td></tr>
+<tr class="grupo"><td colspan="9">Até 90 dias · 8</td></tr>
+<tr><td class="nome">Simulado Caso 003</td><td class="num">9900003-00.2026.8.12.0001</td><td>Fechado</td><td class="dt">17/12/2026</td><td><span class="sit prox"><span class="mk prox"></span><span><strong>Em 66 dias</strong></span></span></td><td>Sem ficha</td><td>Não consta</td><td><button class="ped"><span class="bx"></span>Marcar</button></td><td class="acoes"></td></tr>
+</tbody></table>
+</div></main>
+<footer class="ft">
+  <span class="leg"><span><span class="mk crit"></span>Vencido</span><span><span class="mk urg"></span>Até 30 dias</span><span><span class="mk med"></span>Até 60 dias / a verificar</span><span><span class="mk prox"></span>Até 90 dias</span><span><span class="mk neutro"></span>Sem prazo</span><span><span class="mk info"></span>Extinta · pedido feito</span><span>* calculado pelo programa</span></span>
+  <span class="sp"></span><span>Hoje 12/10/2026 · base jurídica 2026-10-08i</span>
+</footer>
+<script>
+// mesmos três ícones de hoje, agora com rótulo acessível e contraste de 4,9:1
+const I={st:['Saída temporária','<circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/>'],qd:['Enviar ao Quadro','<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 8v6M15 8v3"/>'],ab:['Abrir ficha do assistido','<path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>']};
+document.querySelectorAll('td.acoes').forEach(td=>td.innerHTML=Object.values(I).map(([t,p])=>`<button class="ib" title="${t}" aria-label="${t}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${p}</svg></button>`).join(' '));
+</script>
+</body></html>

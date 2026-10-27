@@ -839,6 +839,163 @@ tbody tr.geo-on td{background:var(--pri-soft)!important}
 .calc .nota-c{color:var(--tx2);font-size:11.5px;margin-top:8px}
 /* doze abas: em telas de até 1500 px, menos folga entre elas, para caberem numa linha */
 @media (max-width:1500px){.tabs{gap:0;padding-left:16px;padding-right:16px}.tab{padding-left:6px;padding-right:6px;gap:4px;font-size:12.5px}.tab svg{width:16px;height:16px}}
+/* ===== linha E (aprovada em 27/10/2026): visual do Windows 11 (Fluent 2), cabeçalho numa faixa, menu lateral que recolhe ===== */
+:root{--nav:228px;--mica:#F3F3F3;--folha:#F9F9F9;--fl:#E5E5E5;--fl2:#D1D1D1;
+  --p-bg:#E9EFF1;--p-tx:#2F4F5C;--p-dot:#6F8C98;   /* até 90 dias nas abas de prazo: azul-acinzentado (o verde fica só para "em ordem / cabe") */
+  --v-bg:#FBEEDF;--v-tx:#86460F;--v-dot:#B5651D}   /* "A verificar" nas abas de prazo: a cor do RSPE antigo */
+body{background:var(--mica)}
+/* cabeçalho numa faixa */
+.top{gap:8px;padding:6px 14px 6px 16px;min-height:52px;background:var(--mica);border-bottom:0}
+.top .logo,.top .logo img{width:28px;height:28px}
+.top .brand b{font-size:14px;letter-spacing:1.5px}.top .brand span{font-size:11px;margin-top:1px}
+.basecol{display:flex;flex-direction:column;align-items:flex-start;gap:1px;margin-left:8px;min-width:0}
+.top .base{margin-left:0;padding:2px 4px 2px 10px;border-radius:4px;border-color:var(--fl);background:#FDFDFD;font-size:12.5px}
+.top .base .n{padding:1px 7px}.top .base button{border-radius:4px}
+.top .copia{margin-left:2px;font-size:11px}
+.top .search input{width:250px;padding:6px 10px 6px 32px;border-radius:4px;border-color:var(--fl);border-bottom-color:#8A8A8A;background:#FDFDFD}
+.top .search input:focus{border-bottom:2px solid var(--pri);box-shadow:none}
+.top .search svg{left:10px}
+.top .btn{padding:6px 12px;border-radius:4px;box-shadow:none;border-color:var(--fl);border-bottom-color:#CCCCCC;background:#FDFDFD;font-weight:600;white-space:nowrap;flex:none}
+.top .btn:hover{background:#F6F6F6}
+.top .btn.pri{background:var(--pri);border-color:var(--pri2);color:#fff}.top .btn.pri:hover{background:var(--pri2)}
+.top .btn.pri .car{color:#DDEBE2}
+.top .btn.ghost{background:none;border-color:transparent;color:var(--pri)}.top .btn.ghost:hover{background:rgba(0,0,0,.04)}
+.top .letra{height:32px;border-radius:4px;box-shadow:none;border-color:var(--fl);background:#FDFDFD;flex:none}
+.top .letra button{height:26px;min-width:28px;border-radius:3px}
+.top .btn-calc{padding:6px 8px}
+.top .menu{top:38px;border-radius:6px;border-color:var(--fl);box-shadow:0 8px 16px rgba(0,0,0,.14)}.top .menu.dir{left:auto;right:0}
+#mImp{min-width:300px}#mImp button{display:flex;align-items:flex-start;gap:10px;padding:8px 10px;border-radius:4px}
+#mImp svg{width:16px;height:16px;flex:none;margin-top:2px;color:var(--tx2)}#mImp b{display:block;font-weight:600;color:var(--tx)}#mImp small{display:block;color:var(--tx3);font-size:11.5px;margin-top:1px}
+/* corpo: menu lateral + folha da aba */
+.corpo{flex:1;min-height:0;display:flex}
+.tabs{flex:none;width:var(--nav);flex-direction:column;flex-wrap:nowrap;gap:2px;padding:2px 6px 12px;overflow-y:auto;overflow-x:hidden}
+.tabs .tab{position:relative;flex:none;height:34px;padding:0 8px 0 14px;gap:12px;border-radius:4px;font-weight:400;font-size:13.5px;color:var(--tx);background:none;box-shadow:none}
+.tabs .tab:hover{background:rgba(0,0,0,.04);color:var(--tx)}
+.tabs .tab.on{background:rgba(0,0,0,.06);color:var(--tx);font-weight:600;box-shadow:none}
+.tabs .tab.on::before{content:"";position:absolute;left:0;top:9px;bottom:9px;width:3px;border-radius:2px;background:var(--pri)}
+.tabs .tab svg{width:16px;height:16px;color:var(--tx)}.tabs .tab.on svg{color:var(--pri)}
+.tabs .tab .tnm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;text-align:left}
+.tabs .tab .cnt{background:none;color:var(--tx3);font-weight:400;font-size:12px;padding:0}.tabs .tab.on .cnt{background:none;color:var(--tx2)}
+.tabs .tab.alterna{color:var(--tx2);margin-bottom:2px}.tabs .tab.alterna svg{color:var(--tx2)}
+.tabs .navg{margin:12px 14px 3px;font-size:12px;font-weight:600;color:var(--tx3);white-space:nowrap}
+body.menu-recolhido{--nav:52px}
+.menu-recolhido .tabs .tab{justify-content:center;padding:0;gap:0}
+.menu-recolhido .tabs .tab .tnm{display:none}
+.menu-recolhido .tabs .tab .cnt{position:absolute;top:1px;right:0;min-width:16px;height:15px;padding:0 3px;border-radius:8px;background:#E6E6E6!important;color:var(--tx2)!important;font-size:10px;line-height:15px;text-align:center;font-weight:600}
+.menu-recolhido .tabs .tab.on .cnt{background:var(--pri)!important;color:#fff!important}
+.menu-recolhido .tabs .tab.on::before{left:-2px}
+.menu-recolhido .tabs .navg{font-size:0;height:1px;background:var(--fl);margin:7px 8px}
+.pagina{flex:1;min-width:0;display:flex;flex-direction:column;background:var(--folha);border:1px solid var(--fl);border-right:0;border-bottom:0;border-top-left-radius:8px}
+/* cabeçalho da aba: título, data e base jurídica; filtros e ordem à direita */
+.cababa{display:flex;align-items:flex-end;gap:16px;padding:16px 24px 2px}
+.cababa h1{margin:0;font-size:24px;font-weight:600;line-height:1.25;color:var(--tx)}
+.cababa .ctit p{margin:3px 0 0;font-size:12px}
+.cababa .sel select{padding:6px 30px 6px 10px;border-radius:4px;border-color:var(--fl);border-bottom-color:#CCC}
+.legado{display:none!important}
+.ctl{display:flex;flex-direction:column;align-items:flex-end;gap:4px;position:relative}.ctl:empty{display:none}
+.ctl>label{font-size:12px;font-weight:600;color:var(--tx3)}
+.seg2{display:inline-flex;padding:2px;border:1px solid var(--fl);border-radius:4px;background:#FDFDFD}
+.seg2 button{padding:4px 12px;border-radius:3px;font-size:13px;color:var(--tx)}.seg2 button.on{background:var(--pri);color:#fff;font-weight:600}
+.subtabs{padding:8px 24px 0}.fixbar{padding:8px 24px 0}.stats{padding:10px 24px 0}
+.wrap{padding:10px 24px 0}
+.card{border-radius:6px;border-color:var(--fl);box-shadow:none}
+.foot{padding:7px 24px 9px;border-top:0}
+thead th{background:#fff!important;color:#616161!important;font-size:12px;font-weight:600!important;text-transform:none;letter-spacing:0;border-bottom:1px solid var(--fl)!important}
+tbody td{border-bottom:1px solid #F0F0F0}
+.subtabs button{border-radius:4px}
+/* contadores (formato 2): número, traço de cor e rótulo numa linha; preenchem a faixa */
+.stats .stat{flex:1 1 auto;justify-content:center;height:42px;gap:8px;padding:0 12px;border-radius:4px;border-color:var(--fl);background:#fff}
+.stats .stat b{order:-1;font-family:inherit!important;font-size:19px!important;font-weight:600!important}
+.stats .stat .dot{width:3px!important;height:18px!important;border-radius:1px!important}
+.stats .stat span{font-size:12.5px;color:var(--tx2);white-space:nowrap}
+.stats .stat.vermelho b,.stats .stat.vencido b{color:var(--r-tx)}
+.stats .stat.on{border-color:var(--pri);box-shadow:0 0 0 1px var(--pri);background:#fff}
+.stats .stat.verificar .dot{background:var(--v-dot)}
+body.aba-prazo .stats .stat.verde .dot{background:var(--p-dot)}
+.stats .info,.stats .pend-info{flex:0 1 auto}
+/* situação: a primeira parte em destaque; o complemento do programa embaixo, em letra menor (texto inteiro na dica) */
+.pill.sitb{display:inline-block;max-width:235px;background:var(--sb,transparent)!important;padding:1px 8px;border-radius:4px;font-weight:600;font-size:12.5px;white-space:normal}
+.pill.sitb.vermelho,.pill.sitb.vencido{--sb:var(--r-bg)}.pill.sitb.laranja{--sb:var(--o-bg)}.pill.sitb.amarelo{--sb:var(--a-bg)}.pill.sitb.verde{--sb:var(--g-bg)}
+.pill.sitb.azul{--sb:var(--b-bg)}.pill.sitb.cinza{--sb:var(--c-bg)}.pill.sitb.none{padding-left:0;font-weight:400}
+.pill.verificar{color:var(--v-tx)}.pill.sitb.verificar{--sb:var(--v-bg)}
+body.aba-prazo .pill.verde{color:var(--p-tx)}body.aba-prazo .pill.sitb.verde{--sb:var(--p-bg)}
+body.aba-prazo tr.verde td.first::before{background:var(--p-dot)}tr.verificar td.first::before{background:var(--v-dot)}
+body.aba-prazo tbody tr.verde:hover td{background:#F1F5F6}tbody tr.verificar:hover td{background:#FDF5EC}
+.cmp2{display:block;max-width:220px;margin-top:2px;font-size:11.5px;color:var(--tx3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:400}
+td.c-regime{max-width:170px}
+.card>table>thead th{width:auto!important}
+tbody td{padding:8px 8px;font-size:12.8px}thead th{padding:9px 8px}tbody td:first-child,thead th:first-child{padding-left:12px}.nmc{min-width:170px}
+/* ações da linha: os ícones de hoje, mais escuros */
+.fico{color:#8A9099}.fico.ok{color:#2F7A4F}.qbtn{color:#424242;border-color:var(--fl);border-radius:4px}
+/* grupos da lista "por situação" */
+tr.grp td{background:#FAFAFA!important;padding:7px 14px!important;font-size:13px;color:var(--tx2);cursor:default;border-bottom:1px solid var(--fl)}
+tr.grp td b{color:var(--tx);font-weight:600;margin-right:6px}
+tr.grp i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:8px;vertical-align:0;background:var(--gd,#C8CEC8)}
+/* combinar filtros */
+.fbtn{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border:1px solid var(--fl);border-bottom-color:#CCC;border-radius:4px;background:#FDFDFD;font-size:13px;font-weight:600;color:var(--tx)}
+.fbtn.on{border-color:var(--pri);color:var(--pri)}
+.fpan{position:absolute;right:0;top:100%;margin-top:4px;z-index:16;display:none;grid-template-columns:repeat(2,250px);gap:4px 18px;padding:12px 14px;background:#fff;border:1px solid var(--fl);border-radius:6px;box-shadow:0 8px 16px rgba(0,0,0,.14);text-align:left}
+.fpan.on{display:grid}
+.fpan .fg{display:flex;flex-direction:column}.fpan .fg>b{font-size:12px;color:var(--tx3);margin:4px 0 2px}
+.fpan label{display:flex;align-items:flex-start;gap:8px;padding:3px 2px;font-size:13px;font-weight:400;color:var(--tx);cursor:pointer;line-height:1.35}
+.fpan input{margin:2px 0 0;accent-color:var(--pri)}
+.fpan .fpb{grid-column:1/-1;display:flex;align-items:center;gap:12px;border-top:1px solid var(--fl);padding-top:8px;margin-top:4px;font-size:12.5px;color:var(--tx2)}
+.fpan .fpb .spacer{flex:1}
+/* busca sem resultado */
+.empty .btn{margin-top:12px}
+/* notebook: até 1400 px de largura, tudo mais compacto (nada sai da tela) */
+@media (max-width:1400px){
+  .top{gap:6px;padding-left:10px;padding-right:10px}.top .brand span{display:block;max-width:100px;white-space:normal;line-height:1.15}
+  .top .search input{width:170px}.top .btn{padding:6px 9px;font-size:12.5px}.top .base{font-size:12px}
+  .cababa{padding:10px 16px 0}.cababa h1{font-size:21px}
+  .subtabs,.fixbar,.stats,.wrap{padding-left:16px;padding-right:16px}.foot{padding-left:16px;padding-right:16px;font-size:11.5px}
+  .stats{padding-top:8px}.stats .stat{height:34px;padding:0 8px;gap:6px}.stats .stat b{font-size:16px!important}.stats .stat span{font-size:12px}
+  tbody td{padding:6px 7px;font-size:12.5px}thead th{padding:8px 7px}tbody td:first-child,thead th:first-child{padding-left:10px}
+  .nmc{min-width:200px}.cmp2{max-width:210px}td.c-regime{max-width:170px}
+}
+@media (max-height:760px){.top{min-height:46px;padding-top:4px;padding-bottom:4px}.tabs .tab{height:31px}.tabs .navg{margin-top:8px}}
+/* Prescrição: detalhe da linha em passos */
+.pc table.pcs{width:100%;table-layout:fixed}.pc table.pcs td{padding:10px 14px!important;white-space:normal!important}
+.pcx-h{display:flex;align-items:center;gap:10px;font-size:13.5px;margin-bottom:4px}
+.pcx-d{display:flex;flex-wrap:wrap;gap:3px 18px;font-size:12.5px;color:var(--tx2);margin-bottom:8px}.pcx-d b{color:var(--tx);font-weight:600;margin-left:3px}
+.pcx-p{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:8px}.pcx-p.p2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.pcx-p>div{border:1px solid var(--fl);border-radius:4px;background:#FAFAFA;padding:7px 10px;font-size:12.5px;line-height:1.4}
+.pcx-p small.pt{display:block;font-size:11.5px;font-weight:600;color:var(--tx3);margin-bottom:2px}.pcx-p b{font-size:14px;font-weight:600}.pcx-p>div>small:not(.pt){display:block;color:var(--tx3);font-size:11.5px}
+.pcx-a{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.why.bt{display:inline-flex;align-items:center;height:28px;padding:0 12px;border:1px solid var(--fl);border-bottom-color:#CCC;border-radius:4px;background:#FDFDFD;color:var(--tx);font-size:12.5px;font-weight:600;text-decoration:none!important}
+.why.bt:first-child{background:var(--pri);border-color:var(--pri2);color:#fff}.why.bt.on{box-shadow:0 0 0 2px var(--pri-soft)}
+.pc>table.pcs{min-width:0}.pcs .pcx{font-weight:400}.pcs .pcx-h b{font-weight:700}
+/* avisos: sucesso discreto (com Desfazer quando dá), erro em destaque até fechar */
+.toast{display:flex;align-items:center;gap:14px;border-radius:6px;padding:10px 14px;background:#2B2B2B}
+.toast .tdes{color:#9FD3B1;font-weight:700;padding:2px 4px}.toast .tdes:hover{text-decoration:underline}
+.toast.erro{background:#fff;color:var(--r-tx);border:1px solid #E3C9C7;border-left:4px solid var(--r-dot);box-shadow:0 8px 24px rgba(0,0,0,.18)}
+.toast .tfx{color:var(--tx2);font-size:15px;padding:0 4px;margin-left:4px}
+/* importação: quadro de andamento e resumo com quatro totais */
+.impcard{position:fixed;right:24px;bottom:84px;z-index:35;width:380px;background:#fff;border:1px solid var(--fl);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.16);padding:14px 16px}
+.impcard b{font-size:14px;font-weight:600}.impcard .tr{height:6px;background:#E6E6E6;border-radius:3px;margin:10px 0 7px;overflow:hidden}.impcard .tr i{display:block;height:100%;background:var(--pri);transition:width .25s}
+.impcard small{display:block;color:var(--tx2);font-size:12.5px}.impcard .ifl{color:var(--r-tx);font-weight:600}.impcard .ia{margin-top:10px}.impcard .ia .btn{padding:6px 12px;border-radius:4px;box-shadow:none;font-size:12.5px}
+.itot{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:10px 0 12px}
+.itot>div{position:relative;border:1px solid var(--fl);border-radius:6px;padding:9px 10px 8px 14px}.itot>div::before{content:"";position:absolute;left:0;top:10px;bottom:10px;width:3px;border-radius:0 2px 2px 0;background:var(--c)}
+.itot b{display:block;font-size:22px;font-weight:600;line-height:1.1}.itot span{font-size:12px;color:var(--tx2);line-height:1.35}
+.help .ih{display:block;margin:2px 0 4px;font-size:12.5px}.help .ih.r{color:var(--r-tx)}
+/* legenda da aba */
+.lgh{margin:6px 0 6px;font-size:14px;font-weight:600}
+.lgt{width:100%;border-collapse:collapse;margin-bottom:10px}.lgt th{position:static!important;text-align:left;font-size:12px;color:var(--tx3);padding:6px 8px;border-bottom:1px solid var(--fl)}
+.lgt td{padding:7px 8px;border-bottom:1px solid #F0F0F0;font-size:13px;vertical-align:top;cursor:default}.lgt tr:hover td{background:none}
+.lgm summary{cursor:pointer;font-weight:600;color:var(--pri);margin:6px 0}
+/* painel do assistido: mesmo acabamento (cantos e bordas) */
+.drawer{border-radius:8px 0 0 8px;box-shadow:0 0 8px rgba(0,0,0,.12),0 32px 64px rgba(0,0,0,.14)}
+.drawer .dbbox,.drawer .mb{border-radius:6px;border-color:var(--fl)}.drawer .cc{border-radius:6px;border-color:var(--fl)}.drawer .close{border-radius:4px}
+.drawer .mini{border-radius:4px;padding:4px 9px}
+.box{border-radius:8px}.lgt td:first-child{white-space:nowrap}.lgt .pill.sitb{white-space:nowrap;max-width:none}
+/* notebook com o menu expandido: um pouco mais compacto, para a tabela caber sem cortar colunas */
+@media (max-width:1400px){
+  body:not(.menu-recolhido){--nav:196px}
+  body:not(.menu-recolhido) .tabs .tab{gap:9px;padding-left:10px;font-size:12.5px}
+  body:not(.menu-recolhido) tbody td{padding:5px 5px;font-size:12px}body:not(.menu-recolhido) thead th{padding:7px 5px;font-size:11.5px}
+  body:not(.menu-recolhido) .nmc{min-width:150px}body:not(.menu-recolhido) .cmp2{max-width:170px}body:not(.menu-recolhido) td.c-regime{max-width:120px}
+  body:not(.menu-recolhido) .pill.sitb{font-size:11.5px;padding:1px 6px}body:not(.menu-recolhido) .qbtn,body:not(.menu-recolhido) .fico{margin-left:1px}
+}
 </style>
 </head>
 <body>
@@ -846,6 +1003,7 @@ tbody tr.geo-on td{background:var(--pri-soft)!important}
 <div class="top">
   <div class="logo"><img alt="APTO" src="data:image/png;base64,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"></div>
   <div class="brand"><b>APTO</b><span>Execução penal no SEEU</span></div>
+  <div class="basecol">
   <div class="base rel">
     <span>Base</span><b id="baseNome">—</b><span class="n" id="baseN">0</span>
     <button onclick="ui.menu('mBase')">▾</button>
@@ -861,45 +1019,49 @@ tbody tr.geo-on td{background:var(--pri-soft)!important}
     </div>
   </div>
   <span class="copia" id="copia" title="Cópia automática feita ao abrir a base (guarda as 10 últimas) · clique para ver ou restaurar" onclick="ui.modalCopias()"></span>
+  </div>
   <div class="spacer"></div>
   <div class="search" id="search">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
     <input id="q" placeholder="Buscar nome, processo, crime… (Ctrl+K)" oninput="ui.filtrar()">
     <button class="x" onclick="ui.limparBusca()">✕</button>
   </div>
-</div>
-
-<div class="bar">
-  <button class="btn pri" onclick="api('importar_pdfs')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Importar PDFs</button>
-  <button class="btn" onclick="api('importar_pasta')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Importar pasta</button>
-  <div class="sep"></div>
+  <div class="rel expm impm"><button class="btn pri" id="btnImp" aria-haspopup="menu" title="Importar RSPE e fichas disciplinares em PDF" onclick="ui.menu('mImp')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Importar<span class="car">▾</span></button>
+    <div class="menu" id="mImp" role="menu">
+      <button role="menuitem" onclick="api('importar_pdfs')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span><b>Arquivos PDF…</b><small>RSPE e fichas disciplinares, um ou vários</small></span></button>
+      <button role="menuitem" onclick="api('importar_pasta')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span><b>Uma pasta inteira…</b><small>todos os PDF da pasta e das subpastas</small></span></button>
+    </div></div>
   <div class="rel expm"><button class="btn" id="btnExp" aria-haspopup="menu" title="Excel, PDF da aba, relatórios em PDF e providências" onclick="ui.menu('mExp')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>Exportar<span class="car">▾</span></button>
-    <div class="menu" id="mExp" role="menu">
+    <div class="menu dir" id="mExp" role="menu">
       <button role="menuitem" onclick="ui.modalExportar('xlsx')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4zM4 10h16M10 4v16"/></svg><span><b>Excel</b><small>as abas da base, numa planilha</small></span></button>
       <button role="menuitem" onclick="ui.modalExportar('pdf')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/></svg><span><b>PDF da aba</b><small>a tabela da aba aberta, em paisagem</small></span></button>
       <button role="menuitem" onclick="ui.modalRelatorios()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h8l4 4v14H6z"/><path d="M9 13h6M9 17h6M9 9h2"/></svg><span><b>Relatórios em PDF</b><small>individuais, geral da base, remição</small></span></button>
       <button role="menuitem" onclick="ui.modalProvidencias()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg><span><b>Relatório de providências</b><small>pedidos e ofícios marcados, por mês</small></span></button>
     </div></div>
-  <div class="sep"></div>
-  <div class="sel" id="modoWrap" style="display:none"><select id="modo" onchange="ui.prescModo=this.value;ui.filtroCor=null;ui.aberto=null;ui.render()"><option value="pe">Pretensão executória</option><option value="pp">Pretensão punitiva</option></select></div>
-  <div class="sel"><select id="filtro" onchange="ui.filtroSel=this.value;ui.render()"></select></div>
-  <div class="spacer"></div>
-  <!-- modelos de petição desativados nesta versão (MODELOS_ATIVOS) -->
   <span class="letra" title="Tamanho da letra (vale para todas as telas; fica gravado neste computador)"><button class="s" id="letraMenos" title="Diminuir" onclick="ui.letra(-1)">A</button><button class="g" id="letraMais" title="Aumentar" onclick="ui.letra(1)">A</button></span>
   <button class="btn btn-calc" onclick="ui.cpAbrir()" title="Calculadora de penas" aria-label="Calculadora de penas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4.5" y="2.5" width="15" height="19" rx="2.2"/><rect x="7.5" y="5.5" width="9" height="4" rx=".8"/><rect x="7.3" y="12" width="2.6" height="2" rx=".4" fill="currentColor" stroke="none"/><rect x="10.7" y="12" width="2.6" height="2" rx=".4" fill="currentColor" stroke="none"/><rect x="14.1" y="12" width="2.6" height="2" rx=".4" fill="currentColor" stroke="none"/><rect x="7.3" y="15.3" width="2.6" height="2" rx=".4" fill="currentColor" stroke="none"/><rect x="10.7" y="15.3" width="2.6" height="2" rx=".4" fill="currentColor" stroke="none"/><rect x="14.1" y="15.3" width="2.6" height="2" rx=".4" fill="currentColor" stroke="none"/><rect x="7.3" y="18.4" width="2.6" height="2" rx=".4" fill="currentColor" stroke="none"/><rect x="10.7" y="18.4" width="2.6" height="2" rx=".4" fill="currentColor" stroke="none"/><rect x="14.1" y="18.4" width="2.6" height="2" rx=".4" fill="currentColor" stroke="none"/></svg></button>
   <button class="btn ghost" onclick="ui.ajuda()">Legenda e método</button>
 </div>
 
-<div class="tabs" id="tabs"></div>
+<div class="corpo">
+<nav class="tabs" id="tabs" aria-label="Abas"></nav>
+<main class="pagina">
+  <div class="cababa" id="cababa"><div class="ctit"><h1 id="abaTit"></h1><p class="muted" id="hoje"></p></div><div class="spacer"></div>
+  <div class="sel" id="modoWrap" style="display:none"><select id="modo" onchange="ui.prescModo=this.value;ui.filtroCor=null;ui.aberto=null;ui.render()"><option value="pe">Pretensão executória</option><option value="pp">Pretensão punitiva</option></select></div>
+  <div class="legado"><div class="sel"><select id="filtro" onchange="ui.filtros=this.value==='todas'?[]:[this.value];ui.render()"></select></div></div>
+  <div class="ctl" id="fcomb"></div>
+  <div class="ctl" id="ordsit"></div>
+  </div>
 <div class="subtabs" id="subtabs"></div>
 <div class="fixbar" id="fixbar"></div>
 <div class="stats" id="stats"></div>
 <div class="wrap"><div class="card" id="card"></div></div>
 <div class="foot">
   <span id="legenda"></span>
-  <span class="muted" id="hoje"></span>
   <span class="muted" id="dica">O ícone ↗ ao lado do assistido abre a ficha completa · clique no título da coluna para ordenar</span>
   <div class="prog" id="prog"><span id="progTxt">Importando…</span><div class="track"><div class="fill" id="progFill"></div></div></div>
+</div>
+</main>
 </div>
 
 <div class="veil" id="veil" onclick="ui.fecharDrawer()"></div>
@@ -929,10 +1091,10 @@ function mesclar(r){ if(!r || !r.parcial) return r; const regs=(ui.dados.registr
 const API = () => { const b=API_(); if(!b) return b; return new Proxy(b,{get:(t,k)=>typeof t[k]==='function' ? (...a)=>Promise.resolve(t[k](...a)).then(mesclar) : t[k]}); };
 const MODELOS_ATIVOS = false; // petições a partir de modelos .docx: desativadas por ora (foco na matemática)
 // a mensagem da resposta (r.msg) aparece também quando ela traz a lista atualizada (baixa, fixar, dado gravado, restaurar cópia...)
-async function api(m, ...a){ try{ const r = await API()[m](...a); if(r && r.registros) ui.carregar(r); if(r && r.erro) ui.toast(r.erro); else if(r && r.msg) ui.toast(r.msg); return r; }catch(e){ ui.toast(/readonly|read-only|somente leitura/i.test(String(e))?'Base aberta só para consulta: nada foi gravado.':'Erro: '+e); } }
+async function api(m, ...a){ try{ const r = await API()[m](...a); if(r && r.registros) ui.carregar(r); if(r && r.erro) ui.toast(r.erro,{erro:true}); else if(r && r.msg) ui.toast(r.msg); return r; }catch(e){ ui.toast(/readonly|read-only|somente leitura/i.test(String(e))?'Base aberta só para consulta: nada foi gravado.':'Erro: '+e,{erro:true}); } }
 
 const ui = {
-  dados:{registros:[],abas:[],base:'',hoje:''}, aba:'geral', filtro:'', filtroCor:null, filtroSel:'todas', ordem:{}, sel:null, aberto:null,
+  dados:{registros:[],abas:[],base:'',hoje:''}, aba:'geral', filtro:'', filtroCor:null, filtroSel:'todas', filtros:[], ordem:{}, ordSit:{}, sel:null, aberto:null,
   carregar(d){ this.dados=d; this._bdChave=null; this._bdAtd=undefined;  // a aba Dados da Base reconta na próxima vez que for desenhada
     if(document.getElementById('calcWin')) this.cpLista().then(()=>this.cpDesenha()); if(!this._geoChecado){ this._geoChecado=true; Promise.resolve(API().geo_precisa()).then(p=>{ if(p) this.geoAtualizar(true); }).catch(()=>{}); } const w=document.getElementById('welcome');
     if(this.aberto){ const ra=(d.registros||[]).find(x=>x.id===this.aberto); if(ra&&ra._leve) setTimeout(()=>this.completo(ra.id),0); }
@@ -988,7 +1150,20 @@ const ui = {
       +P.map(x=>`<tr class="pend"><td><span class="nmc"><span class="copy" title="Clique para copiar o nome" onclick="event.stopPropagation();ui.copiar(ui._clips[${this.clip(String(x.nome))}])">${esc(x.nome)}</span></span></td><td colspan="${ncol-1}"><span class="falta-doc">Falta juntar o RSPE e a ficha disciplinar</span></td></tr>`).join(''); },
   visiveis(){ const q=semAcento(this.filtro); let rs=this.dados.registros; if(q){ const qd=/\d/.test(q)&&/^[\d.\-\/\s]+$/.test(q)?q.replace(/\D/g,''):'';
       rs=rs.filter(r=>{ const b=this.buscaTxt(r); return b.txt.includes(q) || (qd && b.dig.includes(qd)); }); } return rs; },
-  cor(r,spec){ const x=this.sitPed(r,spec); if(x) return x.cor; return spec.cor ? (r[spec.cor]||'') : ''; },
+  cor(r,spec){ const x=this.sitPed(r,spec); if(x) return x.cor; return this.corVer(r,spec,spec.cor ? (r[spec.cor]||'') : ''); },
+  // Progressão, Livramento e Extinção: o amarelo que não é contagem de dias ("A verificar: …", "Extinção a verificar") vira "A verificar",
+  // com contador, grupo e cor próprios (a cor do RSPE antigo); "Até 60 dias" fica só com os prazos. Só a tela muda: regra e cálculo são os mesmos
+  ABAS_PRAZO:['prog','liv','ext'],
+  corVer(r,spec,c){ if(c!=='amarelo'||!spec||!this.ABAS_PRAZO.includes(spec.id)) return c; const k=(spec.cols.find(x=>/_sit$/.test(x[0]))||[])[0];
+    return k && !/\d+ dias?\b/.test(String(r[k]||'').split(' · ')[0]) ? 'verificar' : c; },
+  rotulosAba(spec){ const R=Object.assign({},(this.dados.rotulos||{})[spec.legenda]||{}); if(!this.ABAS_PRAZO.includes(spec.id)||!('amarelo' in R)) return R;
+    const out={}; Object.keys(R).forEach(k=>{ if(k==='amarelo'){ out.amarelo=spec.id==='ext'?'Término em até 60 dias':String(R.amarelo).replace(/\s*\/\s*a verificar$/i,''); out.verificar='A verificar'; } else out[k]=R[k]; }); return out; },
+  dicasAba(spec){ const D=Object.assign({},((this.dados.rotulos_dica||{})[spec.legenda])||{}); if(this.ABAS_PRAZO.includes(spec.id)) D.verificar='Situação a verificar: o programa não conseguiu fechar o prazo (o motivo vem na própria situação)'; return D; },
+  // situação: a primeira parte em destaque e o complemento do programa embaixo, menor; o texto inteiro fica na dica da célula.
+  // "sem pedido no RSPE - requerer" não aparece na coluna (decisão de 27/10/2026); continua no relatório e na dica
+  SEM_CMP:['sem pedido no RSPE - requerer'],
+  sitHtml(txt,cor){ const [p,...resto]=String(txt||'').split(' · '); const r=resto.filter(x=>!this.SEM_CMP.includes(x.trim()));
+    return `<span class="pill sitb ${cor||'none'}">${esc(p)}</span>${r.length?`<span class="cmp2">${esc(r.join(' · '))}</span>`:''}`; },
   // situação depois da providência: pedido marcado (Progressão, Livramento, Prescrição, Extinção, Ficha) ou todos os itens da ficha
   // conferidos. Pedido cuja situação mudou depois: amarelo "situação mudou depois" em todas as abas, salvo prazo vencido (vermelho), que
   // continua vermelho; a mesma cor vale para a linha, os cartões e o contador da aba (contaCor usa ui.cor)
@@ -997,10 +1172,10 @@ const ui = {
       return {txt:'Pedido feito em '+P.data+(mud?' · situação mudou depois':''), cor:mud?(venc?base:'amarelo'):'azul', dica:this.pedDica(P,mud)}; }
     return null; },
   render(){
-    this.stPop(null);  // o quadro da saída temporária não fica aberto sobre a tela redesenhada
+    this.stPop(null); document.getElementById('fcomb').innerHTML=''; document.getElementById('ordsit').innerHTML='';  // o quadro da saída temporária não fica aberto sobre a tela redesenhada
     const spec=this.spec(); const rs=this.visiveis();
     // abas
-    document.getElementById('tabs').innerHTML=this.dados.abas.concat(this.ABAS_EXTRA).map(a=>`<button class="tab ${a.id===this.aba?'on':''}" title="${esc(a.titulo)}" onclick="ui.irAba(${jsa(a.id)})">${this.ICONE[a.id]?`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${this.ICONE[a.id]}</svg>`:''}${this.CURTO[a.id]||a.titulo}${a.cor&&!a.sem_stats?`<span class="cnt"${a.id==='ind'?' title="Assistidos com indulto ou comutação cabível em ao menos um decreto (2000 a 2025), com ou sem pedido - o mesmo número do relatório geral"':''}>${this.contaCor(a,rs)}</span>`:''}${a.id==='quadro'&&this.qdAlertas()?`<span class="cnt" style="background:#F6E4E3;color:#8E2424" title="Cartões com prazo vencido ou para hoje">${this.qdAlertas()}</span>`:''}</button>`).join('');
+    this.renderNav(rs);
     document.getElementById('dica').textContent=this.DICA[this.aba]||'O ícone ↗ ao lado do assistido abre a ficha completa · clique no título da coluna para ordenar';
     this.renderFixados();
     if(this.aba==='ind'){ const selE=document.getElementById('filtro'); selE.parentElement.style.display='none'; selE.dataset.aba=''; document.getElementById('legenda').innerHTML=this.decLegenda()+this.prioLegenda()+this.divLegenda(); document.getElementById('subtabs').classList.remove('on'); document.getElementById('modoWrap').style.display='none'; return this.renderIndulto(rs); }
@@ -1012,7 +1187,7 @@ const ui = {
     if(this.aba==='teses'){ const selE=document.getElementById('filtro'); selE.parentElement.style.display='none'; selE.dataset.aba=''; document.getElementById('legenda').innerHTML='';
       document.getElementById('modoWrap').style.display='none'; return this.renderTeses(); }
     // resumo
-    const st=document.getElementById('stats'); const rot=this.dados.rotulos[spec.legenda];
+    const st=document.getElementById('stats'); const rot=this.rotulosAba(spec);
     const nVelho=rs.filter(r=>this.idadeRSPE(r)>this.RSPE_VELHO).length; if(!nVelho) this.filtroVelho=false;
     const chipVelho=nVelho?`<div class="stat velho ${this.filtroVelho?'on':''}" title="RSPE desatualizado: emitido há mais de ${this.RSPE_VELHO} dias. Vale baixar um novo no SEEU · clique para filtrar" onclick="ui.filtroVelho=!ui.filtroVelho;ui.render()"><i class="dot"></i><b>${nVelho}</b><span>RSPE antigo</span></div>`:'';
     if(!spec.cor || spec.sem_stats){ const rsf=rs.filter(r=>this.passaFiltro(r,spec)), nExt=rsf.filter(r=>r.geral_cor==='azul').length; st.innerHTML=`<div class="info">${rsf.length!==rs.length?rsf.length+' de ':''}${pl(rs.length,'assistido','assistidos')}${nExt?` · <span class="pill azul">${nExt} com pena extinta registrada</span>`:''}. As abas seguintes mostram cada marco com prazo, cor e falta nos últimos 12 meses.</div>`+chipVelho
@@ -1022,13 +1197,13 @@ const ui = {
       // pedido feito (e a situação não mudou depois): sai da contagem da situação e entra em "Pedido feito"
       // os cartões seguem o filtro de situação da caixa e o de RSPE antigo (a contagem é a do que a tabela pode mostrar)
       rs.filter(r=>this.passaFiltro(r,spec)&&(!this.filtroVelho||this.idadeRSPE(r)>this.RSPE_VELHO)).forEach(r=>{ if(temPed && !this.pedPendente(r,spec.id)){ nPed++; return; } const c=this.cor(r,spec); cont[c]=(cont[c]||0)+1;});
-      const dica=(this.dados.rotulos_dica||{})[spec.legenda]||{};
+      const dica=this.dicasAba(spec);
       const PU=this.dados.pendentes, nP=PU&&PU.lista?PU.lista.length:0;
       st.innerHTML=Object.keys(rot).map(c=>`<div class="stat ${c||'neutro'} ${this.filtroCor===c?'on':''}" title="${esc(dica[c]||'')}" onclick="ui.filtrarCor(${jsa(c)})"><i class="dot"></i><b>${cont[c]||0}</b><span>${rot[c]}</span></div>`).join('')
         +(temPed?`<div class="stat pedido ${this.filtroCor==='__ped'?'on':''}" title="Pedido feito (e a situação não mudou depois): sai da contagem da situação" onclick="ui.filtrarCor('__ped')"><i class="dot"></i><b>${nPed}</b><span>Feito</span></div>`:'')+chipVelho
         +(nP?`<div class="pend-info" title="Internos da listagem da unidade ainda sem RSPE nesta base. Não é erro do sistema: esta aba se preenche quando o RSPE e a ficha disciplinar forem juntados. Clique para ver a lista." onclick="ui.atendimentos()">+ ${pl(nP,'interno','internos')} da unidade sem RSPE: falta juntar o RSPE e a ficha</div>`:''); }
     // legenda
-    document.getElementById('legenda').innerHTML=Object.keys(rot).filter(c=>c||spec.id==='presc').map(c=>`<span class="leg" title="${esc(((this.dados.rotulos_dica||{})[spec.legenda]||{})[c]||'')}"><i style="background:${c?`var(--${({vermelho:'r',laranja:'o',amarelo:'a',vencido:'r',verde:'g',cinza:'c',azul:'b'})[c]}-dot)`:'#C8CEC8'}"></i>${rot[c]}</span>`).join('')
+    const dicaL=this.dicasAba(spec), prz=this.ABAS_PRAZO.includes(spec.id); document.getElementById('legenda').innerHTML=Object.keys(rot).filter(c=>c||spec.id==='presc').map(c=>`<span class="leg" title="${esc(dicaL[c]||'')}"><i style="background:${c?`var(--${({vermelho:'r',laranja:'o',amarelo:'a',vencido:'r',verde:prz?'p':'g',cinza:'c',azul:'b',verificar:'v'})[c]}-dot)`:'#C8CEC8'}"></i>${rot[c]}</span>`).join('')
       + this.prioLegenda() + this.divLegenda() + (rs.some(r=>r.calc_notas&&Object.keys(r.calc_notas).length)?`<span class="leg" title="O SEEU não imprimiu o dado (ou ele foi recalculado com dado informado); o cálculo está na ficha do assistido"><b style="color:var(--tx)">*</b> calculado pelo programa</span>`:'');
     // seletor de situação
     const selEl=document.getElementById('filtro');
@@ -1036,7 +1211,8 @@ const ui = {
     if(this.aba==='presc') stb.innerHTML=[['pe','Pretensão executória'],['pp','Pretensão punitiva']].map(x=>`<button class="${this.prescModo===x[0]?'on':''}" onclick="ui.prescModo='${x[0]}';ui.filtroCor=null;ui.aberto=null;ui.render()">${x[1]}</button>`).join('')+`<span class="muted">${this.prescModo==='pp'?'retroativa e intercorrente (art. 110, § 1º), crime a crime':'prescrição da pena (arts. 110 a 113), crime a crime'}</span>`;
     if(this.aba==='ind') stb.innerHTML=[{id:'todos',r:'Todos os decretos'}].concat(this.IND_DEC).map(x=>`<button class="${this.indDec===x.id?'on':''}" onclick="ui.irDec(${jsa(x.id)})">${x.r}</button>`).join('')+`<span class="muted">${this.indDec==='todos'?'visão geral':'só este decreto: colunas, cores, contagem e linha do tempo'}</span>`;
     document.getElementById('modoWrap').style.display='none'; document.getElementById('modo').value=this.prescModo;
-    if(selEl.dataset.aba!==this.aba+'|'+this.indDec){ selEl.innerHTML=(spec.filtros||[]).map(f=>`<option value="${f[0]}">${f[1]}</option>`).join(''); selEl.dataset.aba=this.aba+'|'+this.indDec; selEl.value=this.filtroSel='todas'; selEl.parentElement.style.display=spec.filtros&&spec.filtros.length?'':'none'; }
+    if(selEl.dataset.aba!==this.aba+'|'+this.indDec){ selEl.innerHTML=(spec.filtros||[]).map(f=>`<option value="${f[0]}">${f[1]}</option>`).join(''); selEl.dataset.aba=this.aba+'|'+this.indDec; selEl.value=this.filtroSel='todas'; this.filtros=[]; selEl.parentElement.style.display=spec.filtros&&spec.filtros.length?'':'none'; }
+    this.renderControles(spec);
     // tabela
     let linhas=this.filtrarSituacao(rs,spec);
     // ordem padrão: alfabética pelo nome (acento e maiúscula não contam); clicar no título da coluna ordena por ela
@@ -1046,22 +1222,30 @@ const ui = {
         if(x!==null&&y!==null&&x!==y) return x-y; if(x!==null&&y===null) return -1; if(x===null&&y!==null) return 1; } return cmp(a[o.k],b[o.k]); };
     linhas = o ? [...linhas].sort((a,b)=>cmpO(a,b)*(o.inv?-1:1))
       : [...linhas].sort((a,b)=>String(a.nome||'').localeCompare(String(b.nome||''),'pt',{sensitivity:'base'})||String(a.id||'').localeCompare(String(b.id||'')));
+    const porSit=!o && this.porSit(spec), gk=r=>this.grupoSit(r,spec), GO=porSit?this.ordemGrupos(spec):{};
+    if(porSit){ const kd2=spec.campo_dias; linhas=[...linhas].sort((a,b)=>((GO[gk(a)]??99)-(GO[gk(b)]??99)) || (kd2?((typeof a[kd2]==='number'?a[kd2]:1e9)-(typeof b[kd2]==='number'?b[kd2]:1e9)):0) || String(a.nome||'').localeCompare(String(b.nome||''),'pt',{sensitivity:'base'})); }
     linhas=[...linhas].sort((a,b)=>(b.fixado?1:0)-(a.fixado?1:0));
     const card=document.getElementById('card');
     const ncolG=spec.cols.length+1;
     if(!this.dados.registros.length && this.aba==='geral' && this.pendVis().length){ card.innerHTML=`<table><thead><tr>${spec.cols.map(c=>`<th>${c[1]}</th>`).join('')}<th></th></tr></thead><tbody>${this.pendLinhas(ncolG)}</tbody></table>`; return; }
-    if(!this.dados.registros.length){ card.innerHTML=`<div class="empty"><div><b>Nenhum RSPE nesta base</b>Clique em <em>Importar PDFs</em> ou <em>Importar pasta</em>. Pode selecionar centenas de arquivos de uma vez.</div></div>`; return; }
-    if(!linhas.length && !(this.aba==='geral' && !this.filtroAtivo() && this.pendVis().length)){ card.innerHTML=`<div class="empty"><div><b>Nada encontrado</b>Ajuste a busca ou o filtro de situação.</div></div>`; return; }
+    if(!this.dados.registros.length){ card.innerHTML=`<div class="empty"><div><b>Nenhum RSPE nesta base</b>Clique em <em>Importar ▾</em> e escolha arquivos PDF ou uma pasta inteira. Pode selecionar centenas de arquivos de uma vez.</div></div>`; return; }
+    if(!linhas.length && !(this.aba==='geral' && !this.filtroAtivo() && this.pendVis().length)){ const fa=this.filtroAtivo();
+      card.innerHTML=`<div class="empty"><div>${this.filtro?`<b>Nenhum assistido encontrado para “${esc(document.getElementById('q').value.trim())}”${fa?' com os filtros marcados':''}</b>A busca procura em nome, nº da execução, processos e crimes, em todas as abas.`:`<b>Nada encontrado</b>Ajuste a busca ou o filtro de situação.`}
+        <div>${this.filtro?'<button class="btn" onclick="ui.limparBusca()">Limpar busca</button> ':''}${fa?'<button class="btn" onclick="ui.filtroCor=null;ui.filtroVelho=false;ui.fLimpar()">Limpar filtros</button>':''}</div></div></div>`; return; }
     const NW=new Set(['proc','regime','frac_prog','frac_liv','dbase','termino','presc_prox','presc_n','ext_termino','pena_total','pena_cumprida']);
     const tot=spec.cols.reduce((s,c)=>s+c[2],0);
     const th=spec.cols.map(c=>`<th class="${NW.has(c[0])?'nw':''}" style="${NW.has(c[0])?'width:1%':'width:'+(100*c[2]/tot).toFixed(2)+'%'}" onclick="ui.ordenar(${jsa(c[0])})">${c[1]}${o&&o.k===c[0]?`<span class="arr">${o.inv?'▼':'▲'}</span>`:''}</th>`).join('')+'<th class="nw" style="width:1%"></th>';
     const svgCopy='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>';
+    let gAnt=null; const nG={}; if(porSit) linhas.forEach(r=>{ const k=r.fixado?'__fix':gk(r); nG[k]=(nG[k]||0)+1; });
+    const rotG=porSit?this.rotulosAba(spec):{};
     const tr=linhas.map(r=>{ const cor=this.cor(r,spec); const exp=spec.expansivel && this.aberto===r.id;
+      let cabG=''; if(porSit){ const k=r.fixado?'__fix':gk(r); if(k!==gAnt){ gAnt=k; const rt=k==='__fix'?'Fixados no topo':k==='__ped'?'Pedido feito':(rotG[k]||'Sem situação');
+        cabG=`<tr class="grp"><td colspan="${spec.cols.length+1}"><i style="--gd:${k==='__fix'?'#C49A3A':this.corHex(k,spec)}"></i><b>${esc(rt)}</b>${pl(nG[k],'assistido','assistidos')}</td></tr>`; } }
       const tds=spec.cols.map((c,i)=>{ let v=r[c[0]]??''; const pk=spec.pilulas[c[0]];
         if(c[0]==='proc'){ v=`<span class="copy" title="Clique para copiar" onclick="event.stopPropagation();ui.copiar(${jsa(v)})">${esc(v)}${svgCopy}</span>`; }
         else if(c[0]==='nome'&&v){ const id_=this.idadeRSPE(r); v=`<span class="nmc">`+this.pinHtml(r)+`<span class="copy" title="Clique para copiar o nome" onclick="event.stopPropagation();ui.copiar(ui._clips[${this.clip(String(v))}])">${esc(v)}${svgCopy}</span>`+this.stHtml(r)+(id_>this.RSPE_VELHO?`<span class="rs-old" title="RSPE desatualizado: emitido em ${esc(r.geracao)}, há ${id_} dias (mais de ${this.RSPE_VELHO}). Vale baixar um novo no SEEU." onclick="event.stopPropagation()">!</span>`:'')+`</span>`; }
-        else if(pk && /_sit$/.test(c[0]) && this.sitPed(r,spec)){ const x=this.sitPed(r,spec); v=`<span class="pill ${x.cor}" title="${esc(x.dica)}">${esc(x.txt)}</span>`; }
-        else if(pk){ const pc = r[pk]||''; v = v ? `<span class="pill ${pc||'none'}">${esc(v)}</span>` : (/_sit$/.test(c[0]) ? '' : '<span class="muted">—</span>'); }
+        else if(pk && /_sit$/.test(c[0]) && this.sitPed(r,spec)){ const x=this.sitPed(r,spec); v=`<span title="${esc(x.dica)}">${this.sitHtml(x.txt,x.cor)}</span>`; }
+        else if(pk){ const pc = this.corVer(r,spec,r[pk]||''); v = v ? (spec.id==='ind' ? `<span class="pill ${pc||'none'}">${esc(v)}</span>` : this.sitHtml(v,pc)) : (/_sit$/.test(c[0]) ? '' : '<span class="muted">—</span>'); }
         else if(c[0]==='pedido'){ const P=(r.pedidos||{})[spec.id]; const mud=P&&P.ref&&P.ref!==this.pedRef(r,spec.id);
           // só o ícone: marcado = check; a data e a observação ficam na ficha do assistido (e na janela do clique)
           v = P ? `<span class="pck ok ${mud?'mud':''}" title="${esc(this.pedDica(P,mud))}" onclick="event.stopPropagation();ui.pedidoAbrir(${jsa(r.id)},'${spec.id}')">✓</span>`
@@ -1073,9 +1257,9 @@ const ui = {
           if((r.faltas_itens||[]).length) v=`<span class="fedit" title="Ver e decidir as faltas (vale em todas as abas)" onclick="event.stopPropagation();ui.faltasModal(${jsa(r.id)})">${v} <span class="fe">✎</span></span>`; }
         else { v = esc(v).replace('(est.)','<span class="est">(est.)</span>'); if(!v) v='<span class="muted">—</span>'; }
         if(i===0 && spec.expansivel) v=`<span class="chev">▶</span>${v}`;
-        return `<td class="${i===0?'first':''} ${NW.has(c[0])?'nw':''} ${pk&&spec.id==='ind'?'pl':''}" title="${esc(String(r[c[0]+'_full']??r[c[0]]??''))}">${v}</td>`; }).join('');
+        return `<td class="${i===0?'first':''} ${NW.has(c[0])?'nw':''} ${pk&&spec.id==='ind'?'pl':''} c-${c[0]}" title="${esc(String(r[c[0]+'_full']??r[c[0]]??''))}">${v}</td>`; }).join('');
       const acao=`<td class="nw act">${spec.id==='geral'?`<span class="hbtn" title="Histórico comparativo dos RSPE importados deste assistido" onclick="event.stopPropagation();ui.historico(${jsa(r.id)})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg>Histórico (${r.hist_n||1})</span>`:''}${spec.id==='geral'&&r.mesma_pessoa_marcada?`<span class="mini" title="Estas execuções foram marcadas como da mesma pessoa: desfazer volta cada uma à sua linha" onclick="event.stopPropagation();ui.mesmaPessoaDesfazer(${jsa(r.id)})">Desfazer mesma pessoa</span> `:''}${spec.id==='ind'?`<span class="mini" title="Linha do tempo: crimes, impeditivos, pena cumprida em cada decreto, faltas na janela e resultado" onclick="event.stopPropagation();ui.indTL(${jsa(r.id)})">Verificar indulto/comutação</span> `:''}${spec.id==='ext'?`<span class="mini" title="Linha do tempo: períodos cumpridos, fugas, faltas, hoje e término da pena" onclick="event.stopPropagation();ui.extTL(${jsa(r.id)})">Linha do tempo</span> `:''}${MODELOS_ATIVOS?`<span class="mini" title="Preencher modelo .docx com os dados deste assistido" onclick="event.stopPropagation();ui.peticao(${jsa(r.id)})">Petição</span>`:''}${this.fichaIcoHtml(r)}${this.qbtnHtml(r)}${this.abrirBtnHtml(r)}</td>`;
-      let html=`<tr class="${cor} ${exp?'exp':''} ${r.fixado?'fix':''} ${spec.expansivel?'':'noclk'}" ${spec.expansivel?`onclick="ui.expandir(${jsa(r.id)})"`:''}>${tds}${acao}</tr>`;
+      let html=cabG+`<tr class="${cor} ${exp?'exp':''} ${r.fixado?'fix':''} ${spec.expansivel?'':'noclk'}" ${spec.expansivel?`onclick="ui.expandir(${jsa(r.id)})"`:''}>${tds}${acao}</tr>`;
       if(exp) html+=`<tr class="sub"><td colspan="${spec.cols.length+1}"><div class="subwrap">${this.subTabela(r,spec)}</div></td></tr>`;
       return html; }).join('');
     const pend=this.aba==='geral' && !this.filtroAtivo() ? this.pendLinhas(ncolG) : '';
@@ -1089,8 +1273,12 @@ const ui = {
     return linhas; },
   // há filtro de situação ativo na aba aberta? (as abas Indulto, Quadro e Jurisprudências não têm)
   filtroAtivo(){ if(['ind','quadro','teses','geo','base'].includes(this.aba)) return false; const spec=this.spec(); if(!spec) return false;
-    return this.filtroCor!==null || (!!this.filtroSel&&this.filtroSel!=='todas') || !!this.filtroVelho; },
-  passaFiltro(r,spec){ const f=this.filtroSel||'todas'; if(f==='todas') return true;
+    return this.filtroCor!==null || this.filtros.length>0 || !!this.filtroVelho; },
+  // filtros combináveis (27/10/2026): no mesmo grupo vale qualquer um ("vencidas" ou "até 30 dias"); entre grupos valem todos ("vencidas" e "sem pedido")
+  GRUPO_F(f){ return /^(pedfeito|pedsem)$/.test(f)?'Pedido':/^(st_|pa_)/.test(f)?'Benefícios a conferir':/^(rem_prio|div_seeu|rspe_velho)$/.test(f)?'Conferência':/^b:/.test(f)?'Decretos':'Situação'; },
+  passaFiltro(r,spec){ const F=(this.filtros||[]).filter(f=>f&&f!=='todas'); if(!F.length) return true; const G={}; F.forEach(f=>{ (G[this.GRUPO_F(f)]=G[this.GRUPO_F(f)]||[]).push(f); });
+    return Object.values(G).every(L=>L.some(f=>this.passaUm(r,spec,f))); },
+  passaUm(r,spec,f){ if(!f||f==='todas') return true;
     if(f.startsWith('b:')){ const p=f.split(':'); const ks=p[1]==='*'?['i22','i24','c24','i25','c25']:[p[1]];
       if(p[2]==='Fato posterior') return ks.some(k=>r[k]==='Fato posterior'||/fato posterior/i.test(String(r[k+'_txt']||'')));
       return ks.some(k=>r[k]===p[2]); }
@@ -1542,16 +1730,19 @@ const ui = {
     const cards=Object.keys(grupos).sort().map(k=>{ const xs=grupos[k];
       const pior=xs.find(x=>x[sc]==='vermelho')||xs.find(x=>x[sc]==='amarelo')||xs.find(x=>/^Verificar/.test(x[st]||''))||xs[0];
       const meta=[['R. Denúncia',um(xs,'denuncia')],['Sentença',um(xs,'sentenca')],['Trânsito',um(xs,'transito')]].filter(m=>m[1]!==null).map(m=>m[0]+' '+d(m[1])).join(' · ');
-      // todos os marcos do processo na linha (fato, denúncia, sentença, acórdão, trânsito) e, na executória, o termo inicial e a pena sobre a qual o prazo foi calculado
-      const cols=pe?[['Crime',11],['Pena',8],['Fato',7],['R. Denúncia',8],['Sentença',7],['Acórdão',7],['Trânsito',7],['Termo inicial',7],['Prazo (pena de cálculo)',16],['Executória',18]]
-                   :[['Crime',14],['Pena',8],['Fato',7],['R. Denúncia',8],['Sentença',7],['Acórdão',7],['Trânsito',7],['Prazo PPP',11],['Retroativa / intercorrente',27]];
-      const lin=xs.map(x=>{ const marcos=[x.crime,x.pena,x.fato,x.denuncia,x.sentenca,x.acordao,x.transito||x.transito_mp];
-        const v=pe?marcos.concat([x.ppe_termo, {h:`${penaExt(esc(x.ppe_prazo_efetivo||x.prazo_ppe||'—'))}${x.ppe_base_txt?`<div class="muted" style="font-size:11px;line-height:1.3;margin-top:2px">sobre ${penaExt(esc(x.ppe_base_txt))}</div>`:''}`}]):marcos.concat([x.prazo_ppp]);
-        const tem=false; const ti=ui.tlReg(x);  // sem linha do tempo na executória
+      // detalhe em passos (27/10/2026): as datas do processo numa linha, o cálculo em passos e os botões de sempre; as linhas ocultas
+      // (cálculo, linha do tempo, editar dados) seguem logo depois, como antes, para "Ver cálculo" e "Editar dados" abrirem no mesmo lugar
+      const lin=xs.map(x=>{ const tem=false; const ti=ui.tlReg(x);  // sem linha do tempo na executória
         const verif=pe&&/^A VERIFICAR/.test(x.ppe_status||'');
-        return `<tr class="${rel(x)?'':'fora'}">${v.map((y,j)=>`<td class="${j>=2&&j<=(pe?7:6)?'dt':''}">${y&&y.h!==undefined?y.h:penaExt(d(y))}${j===0&&x.ajustado?'<span class="aj" title="Dados preenchidos ou corrigidos pelo operador">✎ ajustado</span>':''}</td>`).join('')}<td>${x[st]?`<span class="pill ${x[sc]||'none'}">${esc(cur(x[st]))}</span>`:'—'}${verif?`<div style="margin-top:4px"><span class="btn-sal" onclick="event.stopPropagation();ui.pfAbrir(this,${ti},'saldo')">CONFERIR / INFORMAR SALDO</span></div>`:''}</td><td style="white-space:nowrap!important"><span class="why" onclick="event.stopPropagation();ui.tlToggle(this,'calc',${ti})">cálculo</span> · <span class="why" onclick="event.stopPropagation();ui.pfAbrir(this,${ti})">editar dados</span>${tem?` · <span class="why" onclick="event.stopPropagation();ui.tlToggle(this,'tl',${ti})">linha do tempo</span>`:''}</td></tr><tr style="display:none"><td colspan="${cols.length+1}">${pe?ui.explicaHtml(x):''}${ui.memoria(x, pe?'pe':'pp')}</td></tr><tr style="display:none"><td colspan="${cols.length+1}"></td></tr><tr style="display:none"><td colspan="${cols.length+1}"><div class="pf-holder"></div></td></tr>`; }).join('');
+        const datas=[['Pena',x.pena],['Fato',x.fato],['Recebimento da denúncia',x.denuncia],['Sentença',x.sentenca],['Acórdão',x.acordao],['Trânsito',x.transito||x.transito_mp]].map(m=>`<span>${m[0]} <b>${penaExt(d(m[1]))}</b></span>`).join('');
+        const sit=x[st]?`<span class="pill ${x[sc]||'none'}">${esc(cur(x[st]))}</span>`:'—';
+        const passos=pe?[['1 · Prazo (pena de cálculo)',`<b>${penaExt(esc(x.ppe_prazo_efetivo||x.prazo_ppe||'—'))}</b>${x.ppe_base_txt?`<small>sobre ${penaExt(esc(x.ppe_base_txt))}</small>`:''}`],['2 · Termo inicial',`<b>${d(x.ppe_termo)}</b>`],['3 · Executória',sit]]
+                       :[['1 · Prazo da pretensão punitiva',`<b>${penaExt(d(x.prazo_ppp))}</b>`],['2 · Retroativa / intercorrente',sit]];
+        return `<tr class="${rel(x)?'':'fora'}"><td><div class="pcx"><div class="pcx-h"><b>${penaExt(d(x.crime))}</b>${x.ajustado?'<span class="aj" title="Dados preenchidos ou corrigidos pelo operador">✎ ajustado</span>':''}</div>
+          <div class="pcx-d">${datas}</div><div class="pcx-p p${passos.length}">${passos.map(q=>`<div><small class="pt">${q[0]}</small>${q[1]}</div>`).join('')}</div>
+          <div class="pcx-a"><span class="why bt" onclick="event.stopPropagation();ui.tlToggle(this,'calc',${ti})">Ver cálculo</span><span class="why bt" onclick="event.stopPropagation();ui.pfAbrir(this,${ti})">Editar dados</span>${verif?`<span class="btn-sal" onclick="event.stopPropagation();ui.pfAbrir(this,${ti},'saldo')">CONFERIR / INFORMAR SALDO</span>`:''}${tem?`<span class="why bt" onclick="event.stopPropagation();ui.tlToggle(this,'tl',${ti})">Linha do tempo</span>`:''}</div></div></td></tr><tr style="display:none"><td>${pe?ui.explicaHtml(x):''}${ui.memoria(x, pe?'pe':'pp')}</td></tr><tr style="display:none"><td></td></tr><tr style="display:none"><td><div class="pf-holder"></div></td></tr>`; }).join('');
       return `<div class="pc"><div class="pc-h"><b>Ação penal ${esc(k)}</b><span class="pc-m">${pl(xs.length,'crime','crimes')}</span><span class="sp"></span>${pior[st]?`<span class="pill ${pior[sc]||'none'}">${esc(cur(pior[st]).split(' em ')[0])}</span>`:''}</div>
-        <table><thead><tr>${cols.map(c=>`<th style="width:${c[1]}%">${c[0]}</th>`).join('')}<th style="width:300px"></th></tr></thead><tbody>${lin}</tbody></table></div>`; }).join('');
+        <table class="pcs"><tbody>${lin}</tbody></table></div>`; }).join('');
     const abrir=`<div style="text-align:right;margin-top:8px"><span class="mini" onclick="event.stopPropagation();ui.abrir(${jsa(r.id)})">Abrir ficha completa</span></div>`;
     return cards?`<div class="pc-wrap">${cards}</div>${abrir}`:`<div class="muted">Nenhum crime com prescrição ${pe?'executória aparente ou iminente':'da pretensão punitiva aparente ou a verificar'} nem datas a verificar.</div>`; },
   subTabela(r,spec){ if(spec.id==='aud') return this.audCards(r); if(spec.id==='presc') return this.prescCards(r); const cols=spec.sub_cols; let rows=r[spec.sub]||[]; const tot=cols.reduce((s,c)=>s+c[2],0)+6;
@@ -1570,7 +1761,7 @@ const ui = {
         return `<tr class="${s.baixado?'bx':''}">${tds2}<td style="white-space:nowrap">${bx}</td></tr>`; }
       if(!calc) return `<tr>${tds}</tr>`;
       return `<tr>${tds}<td><span class="why" onclick="event.stopPropagation();const n=this.closest('tr').nextElementSibling;n.style.display=n.style.display==='none'?'':'none'">cálculo</span></td></tr><tr style="display:none"><td colspan="${cols.length+1}">${ui.memoria(s, spec.id==='presc'?(ui.prescModo==='pp'?'pp':'pe'):null)}</td></tr>`; }).join('');
-    const cab = spec.id==='aud' ? `<b>${esc(r.nome)}</b> <span class="muted">· ${esc(r.aud_resumo)} · conferido com a ${esc(r.aud_base)} · alertas apontam o que demanda atenção, não afirmam erro</span>${(ocultos||this.mostrarTudo)?` · <span class="mini" onclick="event.stopPropagation();ui.mostrarTudo=!ui.mostrarTudo;ui.render()">${this.mostrarTudo?'ocultar informativos e OK':'mostrar '+pl(ocultos,'informativo','informativos')+'/OK'}</span>`:''}${r.ficha_resumo?`<div class="muted" style="margin-top:3px">Ficha disciplinar: ${esc(r.ficha_resumo)}</div>`:''}` : spec.id==='fd' ? (r.ficha_tem?`<span class="muted" style="font-weight:400">Ficha disciplinar (SIAPEN) impressa em ${esc((r.ficha||{}).data_impressao||'?')}</span>${(r.fd_sit_itens||[]).length?`<ul class="fdpts">${r.fd_sit_itens.map(x=>`<li class="${esc(x.c)}">${esc(x.t)}</li>`).join('')}</ul>`:` · <span class="fdsit verde">Em ordem</span>`}`:'<span class="muted">Sem ficha disciplinar importada: importe o PDF da ficha (SIAPEN) pelo botão Importar PDFs.</span>')+`${r.ficha_tem&&r.fd_remicoes&&(!r.fd_novo||(ui._fdDet||{})[r.id])?`<div class="muted" style="font-size:12px;margin-top:5px;font-weight:400">${esc(r.fd_remicoes)}</div>`:''}` : `<b>${esc(r.nome)}</b> <span class="muted">· ${pl((r.presc_linhas||[]).length,'crime','crimes')}, ${rows.length} ${ui.prescModo==='pp'?'com prescrição da pretensão punitiva aparente':'com prescrição executória aparente ou iminente'} ou datas a verificar na ação penal · cada crime prescreve isoladamente (art. 119)${r.presc_obs?' · '+esc(r.presc_obs):''}</span>`;
+    const cab = spec.id==='aud' ? `<b>${esc(r.nome)}</b> <span class="muted">· ${esc(r.aud_resumo)} · conferido com a ${esc(r.aud_base)} · alertas apontam o que demanda atenção, não afirmam erro</span>${(ocultos||this.mostrarTudo)?` · <span class="mini" onclick="event.stopPropagation();ui.mostrarTudo=!ui.mostrarTudo;ui.render()">${this.mostrarTudo?'ocultar informativos e OK':'mostrar '+pl(ocultos,'informativo','informativos')+'/OK'}</span>`:''}${r.ficha_resumo?`<div class="muted" style="margin-top:3px">Ficha disciplinar: ${esc(r.ficha_resumo)}</div>`:''}` : spec.id==='fd' ? (r.ficha_tem?`<span class="muted" style="font-weight:400">Ficha disciplinar (SIAPEN) impressa em ${esc((r.ficha||{}).data_impressao||'?')}</span>${(r.fd_sit_itens||[]).length?`<ul class="fdpts">${r.fd_sit_itens.map(x=>`<li class="${esc(x.c)}">${esc(x.t)}</li>`).join('')}</ul>`:` · <span class="fdsit verde">Em ordem</span>`}`:'<span class="muted">Sem ficha disciplinar importada: importe o PDF da ficha (SIAPEN) pelo botão Importar ▾ (Arquivos PDF…).</span>')+`${r.ficha_tem&&r.fd_remicoes&&(!r.fd_novo||(ui._fdDet||{})[r.id])?`<div class="muted" style="font-size:12px;margin-top:5px;font-weight:400">${esc(r.fd_remicoes)}</div>`:''}` : `<b>${esc(r.nome)}</b> <span class="muted">· ${pl((r.presc_linhas||[]).length,'crime','crimes')}, ${rows.length} ${ui.prescModo==='pp'?'com prescrição da pretensão punitiva aparente':'com prescrição executória aparente ou iminente'} ou datas a verificar na ação penal · cada crime prescreve isoladamente (art. 119)${r.presc_obs?' · '+esc(r.presc_obs):''}</span>`;
     const vazio = (spec.id==='presc' && !rows.length) ? `<tr><td colspan="${cols.length+1}" class="muted">Nenhum crime com prescrição ${ui.prescModo==='pp'?'da pretensão punitiva aparente':'executória aparente ou iminente'} nem datas faltando.</td></tr>` : '';
     if(spec.id==='fd' && r.ficha_tem) return `<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:8px"><span>${cab}</span><span style="white-space:nowrap">${r.fd_conf_tot?`<span class="muted" style="font-size:12.5px;margin-right:10px" title="Documentos desta execução marcados como homologados em juízo (✓ Homologado)">Homologados <b style="color:var(--g-tx)">${r.fd_conf_n||0}</b> de ${r.fd_conf_tot}</span>`:''}${r.fd_fund?`<span class="mini pre" onclick="event.stopPropagation();ui.copiarClip(${ui.clip(r.fd_fund)})">Copiar fundamentação</span> `:''}<span class="mini" title="Tabela em Word, para colar na petição" onclick="event.stopPropagation();ui.fdExportar(${jsa(r.id)})">Exportar tabela</span> <span class="mini" onclick="event.stopPropagation();ui.fdAdicionar(${jsa(r.id)})">+ Adicionar atestado</span> <span class="mini" onclick="event.stopPropagation();ui.abrir(${jsa(r.id)})">Abrir ficha completa</span></span></div>${this.fdTabela(r)}`;
     return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><span>${cab}</span><span class="mini" onclick="event.stopPropagation();ui.abrir(${jsa(r.id)})">Abrir ficha completa</span></div><table class="subtab">${cg}${head}${body}${vazio}</table>`; },
@@ -1778,8 +1969,11 @@ const ui = {
     if(!remover&&!/^\d{2}\/\d{2}\/\d{4}$/.test(data)){ this.toast('Use a data no formato dd/mm/aaaa.'); return; }
     const tipo=remover?'':(document.getElementById('ped_tipo')||{}).value||'pedido';
     const dsel=document.getElementById('ped_dec'); if(!remover&&aba==='ind'&&dsel&&dsel.value) aba='ind_'+dsel.value;  // pedido do indulto é por decreto
-    const res=await API().pedido(id, aba, data, obs, this.pedRef(r,aba), tipo); if(res&&res.erro){ this.toast(res.erro); return; }
-    this.fecharModal(); if(res&&res.registros) this.carregar(res); if(res&&res.quadro) this._qd=res.quadro; if(res&&res.msg) this.toast(res.msg);
+    const antes=(r.pedidos||{})[aba];
+    const res=await API().pedido(id, aba, data, obs, this.pedRef(r,aba), tipo); if(res&&res.erro){ this.toast(res.erro,{erro:true}); return; }
+    this.fecharModal(); if(res&&res.registros) this.carregar(res); if(res&&res.quadro) this._qd=res.quadro;
+    const volta=!remover&&!antes&&!(res&&res.quadro) ? async()=>{ const x=await API().pedido(id, aba, '', '', '', ''); if(x&&x.registros) this.carregar(x); this.render(); this.toast(x&&x.erro?x.erro:'Marcação de pedido desfeita.', x&&x.erro?{erro:true}:{}); } : null;
+    if(res&&res.msg) this.toast(res.msg, volta?{desfazer:volta}:{});
     const dep=this._pedDepois; this._pedDepois=null; if(dep&&!remover) await dep(); else { this.render(); this.qdRefFicha(); } },
   // dar baixa: o motivo é obrigatório e fica no Histórico de alertas; o alerta sai da linha e a guia passa a "em ordem"
   darBaixa(id, chave, titulo){ const t=String(titulo||''); this._bx={id, chave, t};
@@ -1843,7 +2037,7 @@ const ui = {
   letraAplicar(){ let z=1; try{ z=parseFloat(localStorage.getItem('rspe_letra'))||1; }catch(e){} if(!this.LETRAS.includes(z)) z=1;
     document.documentElement.style.zoom=z; document.body.style.height=(100/z)+'vh';
     const a=document.getElementById('letraMenos'), b=document.getElementById('letraMais'); if(a) a.disabled=z<=this.LETRAS[0]; if(b) b.disabled=z>=this.LETRAS[this.LETRAS.length-1]; return z; },
-  letra(d){ const z=this.letraAplicar(); const i=Math.max(0,Math.min(this.LETRAS.length-1,this.LETRAS.indexOf(z)+d)); try{ localStorage.setItem('rspe_letra',String(this.LETRAS[i])); }catch(e){} this.letraAplicar(); },
+  letra(d){ const z=this.letraAplicar(); const i=Math.max(0,Math.min(this.LETRAS.length-1,this.LETRAS.indexOf(z)+d)); try{ localStorage.setItem('rspe_letra',String(this.LETRAS[i])); }catch(e){} this.letraAplicar(); if(this.dados&&this.dados.abas&&this.dados.abas.length) this.render(); },
   // histórico comparativo dos RSPE importados (aba Geral)
   // atendimentos por unidade: listagem de internos ativos (SIAPEN) + relatórios de atendimento (SAP, somados) + registros no APTO
   atdFiltro:'', atdQ:'', atdDe:'', atdAte:'', atdReg:null,
@@ -2563,30 +2757,81 @@ const ui = {
     const m0=card.querySelector('.jz-main'), sc=m0?m0.scrollTop:0;
     card.innerHTML=`<div class="jz">${side}<div class="jz-main">${T.aviso?`<div class="jz-head" style="color:#7A5410;background:#FBF6EA;border-radius:8px;padding:8px 12px;margin-bottom:8px">${esc(T.aviso)}</div>`:''}<div class="jz-head"><b>${V.length}</b> ${V.length===1?'decisão favorável à defesa':'decisões favoráveis à defesa'}${this.tesTema?' em <b style="font-size:13px">'+esc(this.tesTema)+'</b>':''}${this.tesQ?' para “'+esc(this.tesQ)+'”':''}<span class="sp"></span><select class="jz-sort" onchange="ui.tesOrdem=this.value;ui.tesLista()"><option value="recentes" ${this.tesOrdem==='recentes'?'selected':''}>Mais recentes</option><option value="antigos" ${this.tesOrdem==='antigos'?'selected':''}>Mais antigos</option></select></div>${V.length?cards:vazio}${V.length>this.tesN?`<div style="text-align:center;padding:12px"><span class="jz-b" onclick="ui.tesN+=60;ui.tesLista(1)">Mostrar mais (${V.length-this.tesN})</span></div>`:''}</div></div>`;
     if(sc && manter) card.querySelector('.jz-main').scrollTop=sc; this.tesResumos(V.slice(0,this.tesN)); },
-  irAba(id){ this.aba=id; this.filtroCor=null; this.filtroSel='todas'; this.aberto=null; this.render(); },
+  // linha E: menu lateral com as abas agrupadas por tarefa; recolhe (só ícone e contador) e expande; a escolha fica gravada neste computador
+  NOME:{geral:'Geral',prog:'Progressão',liv:'Livramento',ind:'Indulto e comutação',presc:'Prescrição',ext:'Extinção',fd:'Ficha disciplinar',aud:'Auditoria',base:'Dados da base',geo:'Dados prisionais',teses:'Jurisprudências',quadro:'Quadro do usuário'},
+  TITULO:{geral:'Visão geral da base',prog:'Progressão de regime',liv:'Livramento condicional',ind:'Indulto e comutação',presc:'Prescrição',ext:'Extinção da pena',fd:'Ficha disciplinar',aud:'Auditoria do cálculo',base:'Dados da base',geo:'Dados prisionais de MS',teses:'Jurisprudências',quadro:'Quadro do usuário'},
+  NAV_GRUPOS:[[null,['geral']],['Prazos',['prog','liv','ext','presc']],['Decretos',['ind']],['Conferência',['fd','aud']],['Panorama e ferramentas',['base','geo','teses','quadro']]],
+  MENU_SVG:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>',
+  menuRecolhido(){ let v=null; try{ v=localStorage.getItem('apto_menu'); }catch(e){} const z=parseFloat(document.documentElement.style.zoom)||1; return v ? v==='recolhido' : window.innerWidth/z<1400; },  // letra maior conta como tela menor
+  menuAplicar(){ document.body.classList.toggle('menu-recolhido', this.menuRecolhido()); },
+  menuAlternar(){ const rec=!this.menuRecolhido(); try{ localStorage.setItem('apto_menu', rec?'recolhido':'aberto'); }catch(e){} this.menuAplicar(); this.render(); },
+  renderNav(rs){ this.menuAplicar(); const rec=this.menuRecolhido(); const todas=this.dados.abas.concat(this.ABAS_EXTRA);
+    const item=a=>{ const n=a.cor&&!a.sem_stats?this.contaCor(a,rs):''; const qa=a.id==='quadro'?this.qdAlertas():0; const nome=this.NOME[a.id]||a.titulo;
+      const dica=nome+(n?' · '+n:'')+(a.id==='ind'&&n?' (assistidos com indulto ou comutação cabível em ao menos um decreto, com ou sem pedido)':'')+(qa?' · '+qa+' cartões com prazo vencido ou para hoje':'');
+      return `<button class="tab ${a.id===this.aba?'on':''}" title="${esc(rec?dica:(a.id==='ind'?'Assistidos com indulto ou comutação cabível em ao menos um decreto (2000 a 2025), com ou sem pedido - o mesmo número do relatório geral':nome))}" onclick="ui.irAba(${jsa(a.id)})">${this.ICONE[a.id]?`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${this.ICONE[a.id]}</svg>`:''}<span class="tnm">${esc(nome)}</span>${n?`<span class="cnt">${n}</span>`:''}${qa?`<span class="cnt" style="background:#F6E4E3;color:#8E2424">${qa}</span>`:''}</button>`; };
+    const usadas=new Set(); let h=`<button class="tab alterna" title="${rec?'Expandir o menu':'Recolher o menu'}" onclick="ui.menuAlternar()">${this.MENU_SVG}<span class="tnm">${rec?'Expandir o menu':'Recolher o menu'}</span></button>`;
+    this.NAV_GRUPOS.forEach(([g,ids])=>{ const L=ids.map(id=>todas.find(a=>a.id===id)).filter(Boolean); if(!L.length) return; if(g) h+=`<div class="navg">${g}</div>`; L.forEach(a=>{ usadas.add(a.id); h+=item(a); }); });
+    todas.filter(a=>!usadas.has(a.id)).forEach(a=>{ h+=item(a); });  // aba nova que ainda não tenha grupo: entra no fim
+    document.getElementById('tabs').innerHTML=h;
+    document.getElementById('abaTit').textContent=this.TITULO[this.aba]||((todas.find(a=>a.id===this.aba)||{}).titulo)||'';
+    document.body.classList.toggle('aba-prazo', ['prog','liv','ext'].includes(this.aba)); },
+  // ordem da lista: por situação (padrão: o que exige ação primeiro, em grupos) ou alfabética; clicar no título da coluna ordena por ela
+  porSit(spec){ return !!(spec&&spec.cor&&!spec.sem_stats&&spec.id!=='ind'&&this.ordSit[spec.id]!==false); },
+  grupoSit(r,spec){ if(this.abaPedido(spec)&&!this.pedPendente(r,spec.id)) return '__ped'; return this.cor(r,spec); },
+  ordemGrupos(spec){ const O={}; Object.keys(this.rotulosAba(spec)).forEach((k,i)=>O[k]=i); O.__ped=90; return O; },
+  corHex(k,spec){ const prz=this.ABAS_PRAZO.includes(spec&&spec.id); const t=({vermelho:'r',vencido:'r',laranja:'o',amarelo:'a',verde:prz?'p':'g',cinza:'c',azul:'b',verificar:'v',__ped:'b'})[k]; return t?`var(--${t}-dot)`:'#C8CEC8'; },
+  ordemPor(sit){ this.ordSit[this.aba]=sit; delete this.ordem[this.aba]; this.render(); },
+  renderControles(spec){ const fc=document.getElementById('fcomb'), os=document.getElementById('ordsit');
+    const L=(spec.filtros||[]).filter(f=>f[0]!=='todas');
+    if(L.length){ const G={}; L.forEach(f=>{ (G[this.GRUPO_F(f[0])]=G[this.GRUPO_F(f[0])]||[]).push(f); }); const n=this.filtros.length;
+      const marc=L.filter(f=>this.filtros.includes(f[0])).map(f=>f[1]);
+      fc.innerHTML=`<label>Filtros</label><button class="fbtn ${n?'on':''}" aria-haspopup="true" onclick="event.stopPropagation();ui.fpAlternar()">${n?`Filtros (${n})`:'Combinar filtros'} ▾</button>
+        <div class="fpan ${this._fpOpen?'on':''}" id="fpan" onclick="event.stopPropagation()">${Object.keys(G).map(g=>`<div class="fg"><b>${esc(g)}</b>${G[g].map(f=>`<label><input type="checkbox" ${this.filtros.includes(f[0])?'checked':''} onchange="ui.fMarcar(${jsa(f[0])},this.checked)">${esc(f[1])}</label>`).join('')}</div>`).join('')}
+        <div class="fpb"><span>${n?esc(pl(n,'filtro marcado','filtros marcados')+': '+marc.join(', ')):'Marque um ou mais filtros: no mesmo grupo vale qualquer um; entre grupos, todos.'}</span><span class="spacer"></span>${n?'<button class="btn ghost" onclick="ui.fLimpar()">Limpar</button>':''}</div></div>`; }
+    if(this.porSit(spec)||(spec&&spec.cor&&!spec.sem_stats&&spec.id!=='ind')){ const o=this.ordem[this.aba], ps=this.porSit(spec);
+      os.innerHTML=`<label>Ordem da lista</label><div class="seg2"><button class="${!o&&!ps?'on':''}" onclick="ui.ordemPor(false)">Alfabética</button><button class="${!o&&ps?'on':''}" onclick="ui.ordemPor(true)">Por situação</button></div>`; } },
+  fpAlternar(){ this._fpOpen=!this._fpOpen; const p=document.getElementById('fpan'); if(p) p.classList.toggle('on',this._fpOpen); },
+  fMarcar(f,on){ this.filtros=this.filtros.filter(x=>x!==f); if(on) this.filtros.push(f); this.filtroSel=this.filtros[0]||'todas'; this.render(); },
+  fLimpar(){ this.filtros=[]; this.filtroSel='todas'; this.render(); },
+  irAba(id){ this.aba=id; this.filtroCor=null; this.filtroSel='todas'; this.filtros=[]; this._fpOpen=false; this.aberto=null; this.render(); },
   filtrarCor(c){ this.filtroCor = this.filtroCor===c ? null : c; this.render(); },
   filtrar(){ const q=document.getElementById('q'); this.filtro=q.value.trim().toLowerCase(); document.getElementById('search').classList.toggle('has',!!this.filtro); this.render(); },
   limparBusca(){ document.getElementById('q').value=''; this.filtrar(); },
   ordenar(k){ const o=this.ordem[this.aba]; this.ordem[this.aba]={k, inv: o&&o.k===k?!o.inv:false}; this.render(); },
   menu(id){ const m=document.getElementById(id); m.classList.toggle('on'); setTimeout(()=>document.addEventListener('click',()=>m.classList.remove('on'),{once:true}),0); },
   abrirPasta(){ api('abrir_pasta_bases'); },
-  toast(t){ const e=document.getElementById('toast'); e.textContent=t; e.classList.add('on'); clearTimeout(this._t); this._t=setTimeout(()=>e.classList.remove('on'),3500); },
-  progresso(n,tot){ const p=document.getElementById('prog'); p.classList.add('on'); document.getElementById('progTxt').textContent=`Importando ${n} de ${tot}`; document.getElementById('progFill').style.width=(100*n/tot)+'%'; },
+  // avisos (27/10/2026): o de sucesso é discreto e some sozinho (com "Desfazer" quando a ação tem volta exata); o de erro fica em destaque
+  // até o usuário fechar. Erro: op.erro, ou texto que começa por "Erro", "Não foi", "Falha", "Nada foi gravado" ou "Base aberta só para consulta"
+  toast(t,op){ op=op||{}; const e=document.getElementById('toast'); t=String(t??''); const erro=op.erro||/^(erro|não foi|falha|nada foi gravado|base aberta só para consulta)/i.test(t.trim());
+    clearTimeout(this._t); this._desf=op.desfazer||null; e.classList.toggle('erro',erro); e.setAttribute('role',erro?'alert':'status');
+    e.innerHTML=`<span class="tt">${esc(t)}</span>${this._desf?'<button class="tdes" onclick="ui.desfazer()">Desfazer</button>':''}${erro?'<button class="tfx" aria-label="Fechar o aviso" onclick="ui.toastFechar()">✕</button>':''}`;
+    e.classList.add('on'); if(!erro) this._t=setTimeout(()=>e.classList.remove('on'),this._desf?7000:3500); },
+  toastFechar(){ clearTimeout(this._t); document.getElementById('toast').classList.remove('on'); },
+  async desfazer(){ const f=this._desf; this._desf=null; this.toastFechar(); if(f) await f(); },
+  // importação: quadro de andamento (27/10/2026) com o número de arquivos, as falhas até agora, o tempo que falta e "Parar depois deste arquivo"
+  progresso(n,tot,err){ let c=document.getElementById('impCard'); if(!c){ c=document.createElement('div'); c.id='impCard'; c.className='impcard'; c.setAttribute('role','status'); document.body.appendChild(c); this._impT0=Date.now(); this._impPar=false; }
+    if(!n) this._impT0=Date.now(); const pc=tot?Math.round(100*n/tot):0, seg=n>2?Math.round((Date.now()-this._impT0)/1000*(tot-n)/n):null;
+    const falta=seg==null?'calculando o tempo…':seg<60?`faltam cerca de ${Math.max(5,Math.round(seg/5)*5)} s`:`faltam cerca de ${Math.round(seg/60)} min`;
+    c.innerHTML=`<b>Importando ${n} de ${pl(tot,'arquivo','arquivos')}</b><div class="tr"><i style="width:${pc}%"></i></div><small>${err?`<span class="ifl">${pl(err,'falha','falhas')} até agora</span> · `:''}${n<tot?falta:'concluindo…'}</small>
+      <div class="ia">${this._impPar?'<span class="muted">Vai parar depois do arquivo em leitura…</span>':`<button class="btn" onclick="ui.impParar()">Parar depois deste arquivo</button>`}</div>`; },
+  async impParar(){ this._impPar=true; await api('parar_importacao'); const c=document.getElementById('impCard'); if(c){ const a=c.querySelector('.ia'); if(a) a.innerHTML='<span class="muted">Vai parar depois do arquivo em leitura…</span>'; } },
   // barra de andamento de tarefas longas (exportar PDF/Excel): texto e fração; trabalho(null) esconde
   trabalho(t,f){ const p=document.getElementById('prog'); if(!t){ p.classList.remove('on'); return; } p.classList.add('on'); document.getElementById('progTxt').textContent=t; if(f!=null) document.getElementById('progFill').style.width=Math.round(100*f)+'%'; },
-  importado(r){ document.getElementById('prog').classList.remove('on'); const pL=api('listar');
+  importado(r){ document.getElementById('prog').classList.remove('on'); const ic=document.getElementById('impCard'); if(ic) ic.remove(); const pL=api('listar');
     const partes=[]; if(r.novos) partes.push(pl(r.novos,'novo','novos')); if(r.atualizados) partes.push(pl(r.atualizados,'atualizado','atualizados')+' por RSPE mais recente');
     if(r.duplicados) partes.push(pl(r.duplicados,'duplicado ignorado','duplicados ignorados')); if(r.historico) partes.push(pl(r.historico,'mais antigo guardado no histórico','mais antigos guardados no histórico')); if(r.antigos-(r.historico||0)>0) partes.push(pl(r.antigos-(r.historico||0),'mais antigo ignorado','mais antigos ignorados')); if(r.erros) partes.push(pl(r.erros,'falha','falhas')); if(r.fichas) partes.push(pl(r.fichas,'ficha disciplinar','fichas disciplinares')); if(r.fichas_revinculadas) partes.push(pl(r.fichas_revinculadas,'ficha já importada revinculada','fichas já importadas revinculadas')); if(r.sem_data) partes.push(pl(r.sem_data,'RSPE sem data ignorado','RSPE sem data ignorados')); if(r.incompletos) partes.push(`${r.incompletos} com dados incompletos (ver Auditoria)`); if(r.atendimentos) partes.push(pl(r.atendimentos,'arquivo de atendimentos (aba Geral > Atendimentos)','arquivos de atendimentos (aba Geral > Atendimentos)'));
     if(!partes.length) partes.push('nada importado');
     // todo lote tem o registro da importação em PDF (arquivo a arquivo, com leitura parcial e causa provável)
-    const mostrar=()=>{ this.modalAvisos(partes.join(' · '), (r.avisos&&r.avisos.length)?r.avisos:['Sem avisos: todos os arquivos foram lidos e importados.'], r.interrompida);
+    const mostrar=()=>{ this.modalAvisos(partes.join(' · '), (r.avisos&&r.avisos.length)?r.avisos:['Sem avisos: todos os arquivos foram lidos e importados.'], r.interrompida, r);
       pL.then(async()=>{ if(!await api('falhas_tem')) return; const b=document.getElementById('btFalhas'); if(b) b.style.display=''; }); };
     // janela com formulário aberta (pedido, atestado, cartão…): o resumo espera ela fechar, para não apagar o que está sendo digitado
     const M=document.getElementById('modal'); if(M.classList.contains('on') && M.querySelector('input:not([type=checkbox]):not([type=radio]),textarea,select')){ this._impPend=mostrar; this.toast((r.interrompida?'Importação interrompida':'Importação concluída')+': '+partes.join(' · ')+'. O resumo aparece ao fechar esta janela.'); return; }
     mostrar(); },
   falhasPdf(){ api('falhas_pdf'); },
-  modalAvisos(titulo, avisos, interrompida){ document.getElementById('modal').innerHTML=`<div class="box" style="width:640px"><h2>${interrompida?'Importação interrompida':'Importação concluída'}</h2><p>${esc(titulo)}</p>
-      <div class="help" style="max-height:50vh"><ul style="margin:0;padding-left:18px">${avisos.map(a=>`<li>${esc(a)}</li>`).join('')}</ul></div>
+  modalAvisos(titulo, avisos, interrompida, r){ r=r||{}; const er=(r.erros_txt||[]), outros=avisos.filter(a=>!er.includes(a));
+    const tot=r.novos!=null?`<div class="itot"><div style="--c:var(--g-dot)"><b>${(r.novos||0)+(r.atualizados||0)}</b><span>entraram na base<br>${r.novos||0} novos · ${r.atualizados||0} atualizados</span></div><div style="--c:var(--r-dot)"><b>${r.erros||0}</b><span>falharam<br>não foram importados</span></div><div style="--c:var(--a-dot)"><b>${(r.incompletos||0)+(r.parciais||0)}</b><span>com ressalva<br>dados incompletos ou leitura parcial</span></div><div style="--c:var(--c-dot)"><b>${(r.duplicados||0)+(r.antigos||0)+(r.sem_data||0)}</b><span>ignorados ou no histórico<br>duplicados, mais antigos, sem data</span></div></div>`:'';
+    document.getElementById('modal').innerHTML=`<div class="box" style="width:720px"><h2>${interrompida?'Importação interrompida':r.parados?'Importação parada':'Importação concluída'}</h2><p>${esc(titulo)}</p>${tot}
+      <div class="help" style="max-height:46vh">${er.length?`<b class="ih r">Falharam: baixar de novo pelo SEEU ou pelo SIAPEN (${er.length})</b><ul style="margin:0 0 8px;padding-left:18px">${er.map(a=>`<li>${esc(a)}</li>`).join('')}</ul>`:''}${outros.length?`${er.length?'<b class="ih">Demais avisos</b>':''}<ul style="margin:0;padding-left:18px">${outros.map(a=>`<li>${esc(a)}</li>`).join('')}</ul>`:''}</div>
       <p style="margin-top:10px">Dados incompletos = o programa não conseguiu ler algum campo essencial; o assistido entra na base com alerta na Auditoria. Duplicado = mesmo arquivo ou RSPE do mesmo processo com a mesma data de geração. Um RSPE mais recente do mesmo processo substitui o atual; um mais antigo entra só no histórico (botão Histórico, na aba Geral), sem substituir o atual. Os anteriores ficam guardados. Lista completa em importacao_avisos.txt.</p>
       <div class="acts"><button class="btn" id="btFalhas" style="display:none" title="PDF com o registro completo deste lote: cada arquivo, como foi lido, falhas e causa provável" onclick="ui.falhasPdf()">Registro da importação (PDF)</button><button class="btn pri" onclick="ui.fecharModal()">Fechar</button></div></div>`; document.getElementById('modal').classList.add('on'); },
   // ficha
@@ -3192,7 +3437,12 @@ const ui = {
     else if(acao==='pasta'){ r=await API().modelo_pasta(); }
     if(r&&r.erro) this.toast(r.erro); else if(r&&r.msg) this.toast(r.msg);
     if(acao!=='abrir'&&acao!=='pasta') this.modelos(); },
-  ajuda(){ document.getElementById('modal').innerHTML=`<div class="box" style="width:640px"><h2>Legenda e método</h2><div class="help">${this.dados.ajuda}</div><div class="acts"><button class="btn pri" onclick="ui.fecharModal()">Fechar</button></div></div>`; document.getElementById('modal').classList.add('on'); }
+  // Legenda e método (27/10/2026): abre com a legenda da aba aberta, em tabela (a etiqueta como aparece na tela e o que quer dizer, nas
+  // palavras do programa); o método completo, o mesmo texto de sempre, fica logo abaixo, a um clique
+  ajuda(){ const spec=this.spec(); let leg='';
+    if(spec&&spec.cor&&!spec.sem_stats&&spec.id!=='ind'){ const rot=this.rotulosAba(spec), dic=this.dicasAba(spec);
+      leg=`<h3 class="lgh">Legenda · ${esc(this.NOME[spec.id]||spec.titulo)}</h3><table class="lgt"><thead><tr><th>Situação</th><th>O que quer dizer</th></tr></thead><tbody>${Object.keys(rot).map(c=>`<tr><td><span class="pill sitb ${c||'none'}">${esc(rot[c])}</span></td><td>${esc(dic[c]||'—')}</td></tr>`).join('')}${this.abaPedido(spec)?`<tr><td><span class="pill sitb azul">Feito</span></td><td>Pedido feito (e a situação não mudou depois): sai da contagem da situação</td></tr>`:''}</tbody></table>`; }
+    document.getElementById('modal').innerHTML=`<div class="box" style="width:720px"><h2>Legenda e método</h2>${leg}<details class="lgm" ${leg?'':'open'}><summary>Método completo</summary><div class="help">${this.dados.ajuda}</div></details><div class="acts"><button class="btn pri" onclick="ui.fecharModal()">Fechar</button></div></div>`; document.getElementById('modal').classList.add('on'); }
 };
 function curtoInd(t){ return (t||'').split(' | ')[0]; }
 function penaExt(t){ return String(t).replace(/(-?)\b(\d+)a(\d+)m(\d+)d\b/g,(m0,sg,a,mm,d)=>{ a=+a; mm=+mm; d=+d; const p=[]; if(a)p.push(a+(a>1?' anos':' ano')); if(mm)p.push(mm+(mm>1?' meses':' mês')); if(d)p.push(d+(d>1?' dias':' dia')); if(!p.length) return 'zero'; return sg+(p.length===1?p[0]:p.slice(0,-1).join(', ')+' e '+p[p.length-1]); }); }
@@ -3206,9 +3456,10 @@ function jsa(s){ return esc("'"+String(s??'').replace(/\\/g,'\\\\').replace(/'/g
 function esc(s){ return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 function cmp(a,b){ const da=dt(a), db=dt(b); if(da&&db) return da-db; if(da) return -1; if(db) return 1; return String(a??'').localeCompare(String(b??''),'pt',{numeric:true}); }
 function dt(v){ const m=/^(\d{2})\/(\d{2})\/(\d{4})/.exec(String(v??'')); return m? new Date(+m[3],+m[2]-1,+m[1]).getTime():null; }
-window.addEventListener('resize',()=>{ clearTimeout(ui._rz); ui._rz=setTimeout(()=>{ if(document.getElementById('tlv').classList.contains('on')) (ui._tlvModo==='ext'?ui.renderExtTL():ui.renderTLV()); },200); });
+window.addEventListener('resize',()=>{ clearTimeout(ui._rz); ui._rz=setTimeout(()=>{ if(ui.menuRecolhido()!==document.body.classList.contains('menu-recolhido')) ui.render(); if(document.getElementById('tlv').classList.contains('on')) (ui._tlvModo==='ext'?ui.renderExtTL():ui.renderTLV()); },200); });
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ ui.fecharDrawer(); ui.fecharModal(); ui.fecharTLV(); document.querySelectorAll('.menu.on').forEach(m=>m.classList.remove('on')); } });
 document.addEventListener('click',e=>ui.tlClick(e));
+document.addEventListener('click',e=>{ if(ui._fpOpen && !(e.target.closest&&e.target.closest('#fcomb'))){ ui._fpOpen=false; const p=document.getElementById('fpan'); if(p) p.classList.remove('on'); } });
 ui.letraAplicar();
 // atalho para a busca de assistido (Ctrl+K ou /): em bases grandes, achar o nome sem rolar a lista
 document.addEventListener('keydown',e=>{ const t=(e.target&&e.target.tagName)||''; if(((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k')||(e.key==='/'&&!/INPUT|TEXTAREA|SELECT/.test(t))){ e.preventDefault(); const q=document.getElementById('q'); q.focus(); q.select(); } });

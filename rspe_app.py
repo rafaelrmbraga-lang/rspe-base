@@ -43,7 +43,7 @@ import rspe_atendimentos as ratd
 import rspe_resumo as rres
 
 APP = "APTO"
-VERSAO = "7.14.7"
+VERSAO = "7.15.0"
 GEO_AUTO_DIAS = 30           # dados prisionais: baixados de novo sozinhos quando têm 30 dias ou mais
 GEO_REPETIR_MIN = 10         # ... ou 10 minutos depois de um download em que algum relatório falhou (nova tentativa automática)
 GEO_REPETIR_MAX = 3          # tentativas automáticas seguidas com o programa aberto (depois, na próxima abertura ou pelo botão)
@@ -371,7 +371,7 @@ existir. PDF solto na pasta mãe é ignorado; nada é apagado ou movido. O arqui
 o que deu erro (aberto em outro programa, copiado pela metade) é tentado de novo nas próximas verificações (até 3 vezes; depois, só
 quando o arquivo for substituído), e o aviso cita o arquivo.
 <h4>Ficha disciplinar (SIAPEN/AGEPEN)</h4>
-Importe o PDF da Ficha Disciplinar pelo mesmo botão "Importar PDFs": o programa reconhece o documento e o vincula ao RSPE pelos autos
+Importe o PDF da Ficha Disciplinar pelo mesmo botão "Importar ▾" (Arquivos PDF…): o programa reconhece o documento e o vincula ao RSPE pelos autos
 citados na ficha. Sem esse vínculo, a ficha fica guardada pelo nome e vale para o assistido de mesmo nome só se houver um único na base
 (com homônimos, não é ligada a ninguém). Extrai conduta, períodos de trabalho (setor/empresa), atestados de trabalho com dias
 trabalhados e remidos, estudo, faltas disciplinares (registro, PADIC, arquivamento/homologação), regressão/restabelecimento, isolamento e
@@ -2991,6 +2991,12 @@ class Api:
         self._importar(sorted(arqs))
         return None
 
+    def parar_importacao(self):
+        """Botão "Parar depois deste arquivo" do quadro de andamento: a importação manual em curso termina o arquivo em leitura e
+        para; o que já foi lido fica gravado e o resumo diz quantos arquivos não foram lidos."""
+        self._parar_imp = True
+        return {"msg": "A importação vai parar depois do arquivo em leitura."}
+
     def _importar(self, arqs):
         threading.Thread(target=self._worker, args=(arqs,), daemon=True).start()
 
@@ -3055,7 +3061,9 @@ class Api:
         vistos = set()
         lock = threading.Lock()
         if not silencioso:
-            self._js("ui.progresso(0,%d)" % total)
+            self._parar_imp = False  # "Parar depois deste arquivo" (tela): vale só para a importação manual em curso
+            self._js("ui.progresso(0,%d,0)" % total)
+        parados = 0
         # lote grande: a leitura dos PDFs (pdfplumber, puro Python) vai para processos paralelos, um por núcleo; em lote pequeno
         # ou se os processos não subirem, threads
         ex = None
@@ -3068,6 +3076,11 @@ class Api:
         with ex:
             futs = {ex.submit(_extrair_com_hash, a): a for a in arqs}
             for n, fut in enumerate(as_completed(futs), 1):
+                if not silencioso and getattr(self, "_parar_imp", False):  # pedido de parar (também depois de um arquivo pulado)
+                    parados = total - n + 1
+                    for f_ in futs:
+                        f_.cancel()
+                    break
                 a = futs[fut]
                 nome_arq = os.path.basename(a)
                 try:
@@ -3161,8 +3174,13 @@ class Api:
                     falhos.append(a)
                     erros.append("%s: %s" % (nome_arq, me))
                     reg(nome_arq, "?", "", "", "não importado", "falhou", [me])
-                if not silencioso and (n % 3 == 0 or n == total):
-                    self._js("ui.progresso(%d,%d)" % (n, total))
+                if not silencioso and (n % 3 == 0 or n == total or getattr(self, "_parar_imp", False)):
+                    self._js("ui.progresso(%d,%d,%d)" % (n, total, len(erros)))
+                if not silencioso and getattr(self, "_parar_imp", False) and n < total:
+                    parados = total - n  # o que já foi lido fica gravado; os demais não são lidos
+                    for f_ in futs:
+                        f_.cancel()
+                    break
         if True:  # fichas do lote e fichas que esperavam o RSPE
             info = self._indice_vinculo(base)
             for nome_arq, r, a in pend_fichas:
@@ -3200,6 +3218,9 @@ class Api:
         parciais = ["%s: ficha de %s - leitura parcial: %s" % (x["arquivo"], x["nome"] or "?", "; ".join(x["obs"]))
                     for x in registro if x["tipo"] == "Ficha" and x["leitura"] == "parcial"]
         avisos = incompletos + parciais + duplicados + antigos + sem_data + erros + fichas_ok + revinculadas
+        if parados:
+            avisos.insert(0, "Importação parada a pedido: %s - importe de novo para incluí-los (os já lidos ficaram na base)."
+                          % rs.pl(parados, "arquivo não foi lido", "arquivos não foram lidos"))
         # cópia dos avisos em arquivo (a tela os mostra de qualquer forma; pasta do programa sem gravação não impede nada).
         # Importação manual: importacao_avisos.txt sempre reescrito (lote sem avisos diz isso, sem sobra do lote anterior).
         # Pasta vigiada: em arquivo próprio, acrescentado ao fim (só os lotes com avisos), sem apagar o da importação manual
@@ -3228,7 +3249,7 @@ class Api:
         resumo = {"novos": novos, "atualizados": atualizados, "historico": historicos, "duplicados": len(duplicados), "antigos": len(antigos),
                   "erros": len(erros), "fichas": len(fichas_ok), "incompletos": len(incompletos), "avisos": avisos[:60],
                   "sem_data": len(sem_data), "fichas_revinculadas": n_revinc[0],
-                  "falhos": falhos, "erros_txt": list(erros)}
+                  "falhos": falhos, "erros_txt": list(erros), "parciais": len(parciais), "parados": parados}
         return resumo
 
     @staticmethod
