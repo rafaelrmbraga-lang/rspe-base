@@ -2213,7 +2213,7 @@ def _prisao_x_ficha(r, f):
 
 def _monitoramento_x_ficha(r, f):
     """(7.14.6) Cumprimento desta execução em monitoramento eletrônico (entrada na unidade de monitoramento pelos autos desta
-    execução ou de processo dela) em período que o RSPE trata como interrupção (liberdade): é pena cumprida. Item "verificar" com o
+    execução ou de processo dela) em período que o RSPE trata como interrupção (liberdade): é pena cumprida. Item "alerta" com o
     efeito estimado na progressão (fração média das penas sobre os dias antes da data-base; os dias depois dela contam inteiros);
     a aba mantém a data do SEEU, com a ressalva (prog_estimada)."""
     evs = sorted((e for e in r.get("_eventos", []) if not e.get("_ficha") and rs.to_date(e.get("data") or "")), key=lambda e: rs.to_date(e["data"]))
@@ -2265,7 +2265,9 @@ def _monitoramento_x_ficha(r, f):
         # pelos autos da execução: cumprimento (semiaberto/harmonizado); pelos de uma ação penal desta execução: cautelar - detração
         n_ = [n for n in rs.processos_no_texto(txt) for q in meus if rs.chave_processo(q) and rs.processo_parecido(n, q)]
         exe_ = any(rs.processo_parecido(n, r.get("processo_execucao") or "") for n in n_) if rs.chave_processo(r.get("processo_execucao") or "") else False
-        it = _item_rf("verificar", "Monitoramento eletrônico %s de %s a %s na ficha; o RSPE trata o período como interrupção (%s sem cômputo)" % (
+        # política 7.14.8: monitoramento lançado como interrupção é data do SEEU contrária à lei - alerta (a aba mantém a data do
+        # SEEU, com a ressalva); antes (7.14.6), "verificar"
+        it = _item_rf("alerta", "Monitoramento eletrônico %s de %s a %s na ficha; o RSPE trata o período como interrupção (%s sem cômputo)" % (
                           "desta execução" if exe_ else "cautelar em ação penal desta execução", rs.fmt(x), rs.fmt(fim), rs.pl(fora, "dia", "dias")),
                       "A ficha registra a entrada na unidade de monitoramento eletrônico em %s pelos autos %s e %s; o RSPE "
                       "interrompe o cumprimento em %s (%s)%s. %s: computados esses dias (salvo período de evasão ou descumprimento que a ficha "
