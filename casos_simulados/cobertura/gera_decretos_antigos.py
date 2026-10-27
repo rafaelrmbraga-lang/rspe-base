@@ -114,15 +114,15 @@ def regime(compl, data):
     return inc_(REG, compl, data, data)
 
 
-FURTO_Q = dict(artigo="155, § 4º, I", tipo="§ 4º, I: furto qualificado, Reclusão: 2 a 8 anos E Multa")
-FURTO = dict(artigo="155, caput", tipo="CAPUT: furto, Reclusão: 1 a 4 anos E Multa")
-ESTEL = dict(artigo="171, caput", tipo="CAPUT: estelionato, Reclusão: 1 a 5 anos E Multa")
-ROUBO = dict(artigo="157, caput", tipo="CAPUT: roubo, Reclusão: 4 a 10 anos E Multa", vga="S")
-ROUBO_CONC = dict(artigo="157, § 2º, II", tipo="§ 2º, II: roubo majorado pelo concurso de pessoas, Reclusão: 4 a 10 anos E Multa", vga="S")
-TRAF = dict(artigo="33, caput", tipo="CAPUT: tráfico de drogas, Reclusão: 5 a 15 anos E Multa", lei=DROGAS, fp="2/5 - Hediondo", fl="2/3 - Hediondo")
-TRAF_PRIV = dict(artigo="33, § 4º", tipo="§ 4º: tráfico privilegiado, Reclusão: 5 a 15 anos E Multa", lei=DROGAS)
-ASSOC = dict(artigo="35, caput", tipo="CAPUT: associação para o tráfico, Reclusão: 3 a 10 anos E Multa", lei=DROGAS)
-HOMIC = dict(artigo="121, caput", tipo="CAPUT: homicídio simples, Reclusão: 6 a 20 anos", vga="S")
+FURTO_Q = dict(artigo="ART 155: Furto", tipo="§ 4º, I: furto qualificado, Reclusão: 2 a 8 anos E Multa")
+FURTO = dict(artigo="ART 155: Furto", tipo="CAPUT: furto, Reclusão: 1 a 4 anos E Multa")
+ESTEL = dict(artigo="ART 171: Estelionato", tipo="CAPUT: estelionato, Reclusão: 1 a 5 anos E Multa")
+ROUBO = dict(artigo="ART 157: Roubo", tipo="CAPUT: roubo, Reclusão: 4 a 10 anos E Multa", vga="S")
+ROUBO_CONC = dict(artigo="ART 157: Roubo", tipo="§ 2º, II: roubo majorado pelo concurso de pessoas, Reclusão: 4 a 10 anos E Multa", vga="S")
+TRAF = dict(artigo="ART 33: Tráfico de drogas", tipo="CAPUT: tráfico de drogas, Reclusão: 5 a 15 anos E Multa", lei=DROGAS, fp="2/5 - Hediondo", fl="2/3 - Hediondo")
+TRAF_PRIV = dict(artigo="ART 33: Tráfico de drogas", tipo="§ 4º: tráfico privilegiado, Reclusão: 5 a 15 anos E Multa", lei=DROGAS)
+ASSOC = dict(artigo="ART 35: Associação para o tráfico", tipo="CAPUT: associação para o tráfico, Reclusão: 3 a 10 anos E Multa", lei=DROGAS)
+HOMIC = dict(artigo="ART 121: Matar alguem:", tipo="CAPUT: homicídio simples, Reclusão: 6 a 20 anos", vga="S")
 
 
 def cr(k, n, pena, fato, ano=None, **kw):
@@ -217,10 +217,10 @@ novo(k, "Decreto 4.495/2002: roubo com falta grave homologada 5 meses antes da p
      "cumpridos %d) também cai. Decreto 4.904/2003, art. 3º, I: crime violento, janela de 24 meses da publicação "
      "(02/12/2001 a 02/12/2003), para os dois benefícios: falta dentro. (Conferido no Planalto.)" % cump("10/01/2000", "25/12/2002"),
      montar(k, [c1], "10/01/2000", fuga="10/02/2004", inc=[falta("10/07/2002", "10/09/2002")]),
-     [DECR("2002", "nao", "falta"), DECR("2003", "nao", "falta")])
+     [DECR("2002", "nao", "falta", nota="programa mostra 'Cabe - Comutação art. 2º': troca a janela para 24 meses só do indulto e deixa a comutação livre, mas a falta está nos 12 meses do art. 3º, I, que vale para indulto e comutação"), DECR("2003", "nao", "falta")])
 
 k = 7007
-c1 = cr(k, 1, anos(3), "10/03/2001", artigo="12, caput", tipo="CAPUT: tráfico de entorpecentes, Reclusão: 3 a 15 anos E Multa", lei=LEI_6368)
+c1 = cr(k, 1, anos(3), "10/03/2001", artigo="ART 12: Tráfico ilícito de entorpecentes", tipo="CAPUT: tráfico de entorpecentes, Reclusão: 3 a 15 anos E Multa", lei=LEI_6368)
 novo(k, "Decreto 4.495/2002, art. 7º, § 2º: tráfico (Lei 6.368, art. 12) com pena de 3 anos - a vedação legal ao indulto do tráfico continua",
      "2002: não cabe o indulto: Impeditivo (Lei 8.072/1990, art. 2º, I); no mínimo, não pode aparecer 'Cabe'",
      "O § 2º do art. 7º do Decreto 4.495/2002 afasta 'as restrições deste artigo' para pena até 4 anos. Mas a proibição de "
@@ -305,7 +305,7 @@ novo(k, "Decreto 5.993/2006, art. 2º, p. ú.: comutação anterior (2005) conce
      "dias, abaixo de 1/3 da soma (2.311). O art. 2º, p. ú. do Decreto 5.993/2006 manda calcular a nova comutação de quem já "
      "teve comutação 'sem necessidade de novo requisito temporal': cabe, redução de 1/5 do remanescente (descontada a "
      "comutação anterior, que o RSPE não quantifica). Indulto: pena acima de 6 anos, sem 60 anos nem 15 anos. (Conferido no Planalto.)" % n,
-     montar(k, [c1, c2], "01/02/2002",
+     montar(k, [c1, c2], "01/02/2002", fuga="10/02/2007",
             inc=[inc_("COMUTAÇÃO DE PENA", "Decreto 5.620/2005", "10/03/2006", "25/12/2005")]),
      [DECR("2005", "conc"), DECR("2006", "cabe", "Comutação")])
 
@@ -343,7 +343,7 @@ novo(k, "Decreto 6.706/2008, art. 1º, I: pena de exatamente 8 anos está no tet
      "2008: Cabe o indulto (art. 1º, I), exigido 2a8m3d",
      "Estelionato, 8 anos = 2.920 dias, primário, preso em 01/03/2006. 1/3 = 973 dias (2a8m3d); cumpriu %d dias (%s) em "
      "25/12/2008. (Conferido no Planalto.)" % (n, T(n)),
-     montar(k, [c1], "01/03/2006"),
+     montar(k, [c1], "01/03/2006", fuga="10/02/2009"),
      [DECR("2008", "cabe", ["Indulto", "exigido 2a8m3d"])])
 
 k = 7017
@@ -356,7 +356,7 @@ novo(k, "Decreto 6.706/2008: soma de 8a0m2d passa do teto de 8 anos - cabe só a
      "Estelionato 6 anos + furto qualificado 2a0m2d = 8a0m2d = 2.922 dias (acima de 2.920). Indulto I: pena acima de 8 anos; "
      "II: sem 60 anos; III: sem 15 anos. Comutação: 1/4 = 730 dias; cumpriu %d dias; redução de 1/4 do remanescente "
      "(2.922 - %d = %d) = %d dias (%s). (Conferido no Planalto.)" % (n, n, 2922 - n, red, T(red)),
-     montar(k, [c1, c2], "01/03/2006"),
+     montar(k, [c1, c2], "01/03/2006", fuga="10/02/2009"),
      [DECR("2008", "cabe", ["Comutação", "redução de %s" % T(red)])])
 
 # Decreto 7.046/2009
@@ -394,7 +394,7 @@ novo(k, "Decreto 7.420/2010, art. 1º, IV: 70 anos completos, 1/4 da pena",
      "Estelionato, 10 anos (3.650 dias), primário, nascido em 10/01/1940 (70 anos em 25/12/2010), preso em 01/06/2008. "
      "I (até 8 anos) e III (60 anos, 1/3 = 1.216) não atendidos; IV: 70 anos, sem teto, 1/4 = 912 dias (2a6m0d... 912 = "
      "2a6m2d). Cumpriu %d dias (%s). (Conferido no Planalto.)" % (n, T(n)),
-     montar(k, [c1], "01/06/2008", nasc="10/01/1940"),
+     montar(k, [c1], "01/06/2008", fuga="10/02/2011", nasc="10/01/1940"),
      [DECR("2010", "cabe", ["Indulto", "IV", "exigido %s" % T(anos(10) // 4)])])
 CASOS[-1]["esperado"] = "2010: Cabe o indulto (art. 1º, IV), exigido %s" % T(anos(10) // 4)
 CASOS[-1]["conta"] = CASOS[-1]["conta"].replace("(2a6m0d... 912 = 2a6m2d)", "(%s)" % T(912))
@@ -406,7 +406,7 @@ novo(k, "Decreto 7.420/2010, art. 1º, II: pena entre 8 e 12 anos, crime sem vio
      "2010: Cabe o indulto (art. 1º, II), exigido %s" % T(anos(11) // 3),
      "Estelionato, 11 anos (4.015 dias), primário, preso em 01/03/2007. Art. 1º, II: pena superior a 8 e até 12 anos, sem "
      "violência; 1/3 = %d dias (%s). Cumpriu %d dias (%s). (Conferido no Planalto.)" % (anos(11) // 3, T(anos(11) // 3), n, T(n)),
-     montar(k, [c1], "01/03/2007"),
+     montar(k, [c1], "01/03/2007", fuga="10/02/2011"),
      [DECR("2010", "cabe", ["Indulto", "II"])])
 
 k = 7022
@@ -415,7 +415,7 @@ novo(k, "Comutação do Decreto 7.420/2010 concedida no RSPE: a decisão prevale
      "2010: Concedido (comutação concedida em 15/04/2011, incidente do RSPE)",
      "Furto qualificado, 14 anos, primário; em 25/12/2010 cumpriu %d dias (1/4 = 1.277): a comutação cabia pela conta e foi "
      "concedida. A decisão do juízo prevalece sobre o cálculo." % cump("01/03/2007", "25/12/2010"),
-     montar(k, [c1], "01/03/2007", inc=[inc_("COMUTAÇÃO DE PENA", "Decreto 7.420/2010", "15/04/2011", "25/12/2010")]),
+     montar(k, [c1], "01/03/2007", fuga="10/06/2011", inc=[inc_("COMUTAÇÃO DE PENA", "Decreto 7.420/2010", "15/04/2011", "25/12/2010")]),
      [DECR("2010", "conc")])
 
 # Regime aberto (2011, 2012), livramento (2023), aberto (2015)
@@ -449,7 +449,7 @@ novo(k, "Decreto 11.846/2023, art. 2º, XIV: em livramento condicional (última 
             inc=[regime("Semiaberto - Progressão de regime", "01/06/2021"),
                  inc_("LIVRAMENTO CONDICIONAL", "Concessão de livramento condicional", lc, lc)],
             livramento_obs_seeu="(Em livramento condicional deferido em %s)" % lc),
-     [DECR("2023", "cabe", ["Indulto", "XIV"])])
+     [DECR("2023", "cabe", ["Indulto", "XIV"], nota="programa mostra 'Cabe - Comutação art. 3º, caput': o XIV falha porque a última decisão de regime é semiaberto, embora o livramento estivesse em curso na data")])
 
 k = 7025
 c1 = cr(k, 1, anos(8, 6), "01/03/2009", **ROUBO)
@@ -473,7 +473,7 @@ novo(k, "Decreto 7.648/2011, art. 1º, XV: crime contra o patrimônio sem violê
      "Furto qualificado 8 anos + estelionato 5 anos = 13 anos (4.745 dias), reincidente, preso em 01/01/2008. I e II: pena "
      "acima de 12 anos. XV: 1/4 (reincidente) = 1.186 dias; cumpriu %d. Falta a reparação do dano até 25/12/2011 (ou prova de "
      "incapacidade econômica), que o RSPE não mostra. Comutação: 1/3 = 1.581, não atingido. (Conferido no Planalto.)" % n,
-     montar(k, [c1, c2], "01/01/2008"),
+     montar(k, [c1, c2], "01/01/2008", fuga="10/02/2012"),
      [DECR("2011", "ver", "XV")])
 
 k = 7027
@@ -485,7 +485,7 @@ novo(k, "Decreto 7.873/2012, art. 1º, XVI (pequeno valor): pena de 1a2m não su
      "XV: 1/4 = 106, atendido - depende da reparação. XVI: exige pena 'superior a dezoito meses e não superior a quatro anos' - "
      "1a2m está abaixo, a hipótese não alcança o caso. Comutação: 1/3 = 141 dias, não atingido. (Conferido no Planalto.)" % n,
      montar(k, [c1], "10/08/2012", fuga="10/02/2013"),
-     [DECR("2012", "ver", "XV"), DECR("2012", None, sem="XVI", nota="piso de 18 meses do art. 1º, XVI")])
+     [DECR("2012", "ver", "XV"), DECR("2012", None, sem="XVI", nota="programa lista o art. 1º, XVI como a verificar com pena de 1a2m: não confere o piso 'superior a dezoito meses'")])
 
 k = 7028
 c1 = cr(k, 1, anos(2), "01/08/2015", sentenca="01/10/2015", transito="10/11/2015", **FURTO)
@@ -519,7 +519,7 @@ novo(k, "Decreto 8.172/2013, art. 5º: falta grave reconhecida em audiência, pr
      "Estelionato, 7 anos, primário, preso em 01/03/2011; cumpriu %d dias em 25/12/2013 (1/3 = 851: o art. 1º, I caberia). "
      "Falta grave praticada em 10/06/2013 e reconhecida em 10/08/2013: dentro da janela de 24/12/2012 a 24/12/2013. Art. 5º "
      "barra indulto e comutação. (Conferido no Planalto.)" % cump("01/03/2011", "25/12/2013"),
-     montar(k, [c1], "01/03/2011", inc=[falta("10/06/2013", "10/08/2013")]),
+     montar(k, [c1], "01/03/2011", fuga="10/02/2014", inc=[falta("10/06/2013", "10/08/2013")]),
      [DECR("2013", "nao", "falta")])
 
 # Decreto 8.380/2014
@@ -535,7 +535,7 @@ novo(k, "Decreto 8.380/2014, art. 2º, § 1º: comutação sobre o período cump
      "12 anos; V: sem 15 anos. XVI (patrimonial): 1/6 atendido, depende da reparação - a verificar. Comutação: 1/4 = 1.277; "
      "cumpriu %d dias (%s), remanescente %d (%s). Como o cumprido é maior, a base é o cumprido (§ 1º): %d/4 = %d dias (%s). "
      "(Conferido no Planalto.)" % (n, T(n), rem, T(rem), n, red, T(red)),
-     montar(k, [c1, c2], "01/03/2006"),
+     montar(k, [c1, c2], "01/03/2006", fuga="10/02/2015"),
      [DECR("2014", "cabe", ["Comutação", "redução de %s" % T(red)])])
 
 k = 7032
@@ -552,7 +552,7 @@ novo(k, "Falta grave praticada em 20/12/2014: dentro da janela de 2014 (publica�
 
 # Hediondez superveniente: 2015 (praticado após) e 2016
 k = 7034
-c1 = cr(k, 1, anos(5), "01/03/2014", artigo="218-B, caput",
+c1 = cr(k, 1, anos(5), "01/03/2014", artigo="ART 218-B: Favorecimento da prostituição ou de outra forma de exploração sexual de criança ou adolescente ou de vulnerável",
         tipo="CAPUT: favorecimento da prostituição de vulnerável, Reclusão: 4 a 10 anos")
 n15, n16 = cump("01/03/2014", "25/12/2015"), cump("01/03/2014", "25/12/2016")
 novo(k, "Hediondez superveniente: art. 218-B com fato antes da Lei 12.978/2014 - Decreto 8.615/2015 e Decreto 8.940/2016",
@@ -590,7 +590,7 @@ novo(k, "Decreto 8.940/2016, art. 9º: fuga na janela, sem apuração - a declar
      rspe(k, [c1], [prisao("01/02/2014", p), interr("10/05/2016", "FUGA", p), prisao("20/05/2016", p, "RECAPTURA/REINÍCIO DE CUMPRIMENTO"),
                     interr("10/02/2017", "FUGA", p), prisao("01/04/2026", p, "RECAPTURA/REINÍCIO DE CUMPRIMENTO")], [],
           ini="01/02/2014", interrompidos=gap + (D("01/04/2026") - D("10/02/2017")).days - 1),
-     [DECR("2016", "ver")])
+     [DECR("2016", "ver", nota="programa mostra 'Não cabe - falta grave' pela fuga não homologada; o art. 9º, p. ú. do Decreto 8.940 suspende a declaração até a apuração")])
 
 k = 7037
 c1 = cr(k, 1, anos(3), "01/03/2016", **TRAF_PRIV)
@@ -618,7 +618,7 @@ novo(k, "Dia das Mães 2017 e 2018: mulher reincidente, tráfico comum (art. 33,
      "comutação é indulto parcial (STF). Os decretos do Dia das Mães não têm rol de vedações, mas não podem afastar a lei. "
      "(Decreto 9.370/2018 conferido no Planalto; texto do decreto s/nº de 12/04/2017 não confirmado.)" % (n17, n18),
      montar(k, [c1], "01/03/2015", fuga="10/06/2018"),
-     [DECR("2017_maes", "imp|nao"), DECR("2018_maes", "imp|nao")],
+     [DECR("2017_maes", "imp|nao", nota="programa mostra 'Cabe - Comutação art. 2º, I' (redução de 254 dias): aplica a vedação legal do tráfico só ao indulto"), DECR("2018_maes", "imp|nao", nota="programa mostra 'Cabe - Comutação art. 2º, I' (redução de 163 dias)")],
      manuais={"sexo": "F"})
 
 k = 7039
@@ -683,7 +683,7 @@ novo(k, "Decreto 9.246/2017, art. 2º, § 1º, I: pessoa com 70 anos ou mais - 1
      "Estelionato, 10 anos (3.650 dias), primário, nascido em 10/03/1946 (71 anos em 25/12/2017), preso em 01/04/2016; "
      "cumpriu %d dias (%s). Art. 1º, I exige 1/5 = 730 (não atingido); para maiores de 70 anos o art. 2º, § 1º, I reduz a 1/6 = "
      "608 dias (1a8m3d) - atingido. (Conferido no Planalto.)" % (n, T(n)),
-     montar(k, [c1], "01/04/2016", nasc="10/03/1946"),
+     montar(k, [c1], "01/04/2016", fuga="10/02/2018", nasc="10/03/1946"),
      [DECR("2017", "cabe", "Indulto")])
 
 k = 7046
@@ -695,7 +695,7 @@ novo(k, "Indulto do Decreto 7.873/2012 indeferido no RSPE; comutação não deci
      "art. 1º, I (1/3 = 851) caberia, mas o juízo indeferiu o indulto em 10/05/2013. A decisão prevalece para o indulto. A "
      "comutação (1/4 = 638 atendido) não foi decidida: pode ser pedida, salvo se o indeferimento teve fundamento que também a "
      "afasta (falta, crime impeditivo)." % n,
-     montar(k, [c1], "01/03/2010", inc=[inc_("INDULTO", "Decreto 7.873/2012", "10/05/2013", "25/12/2012", sit="NÃO CONCEDIDO")]),
+     montar(k, [c1], "01/03/2010", fuga="10/06/2013", inc=[inc_("INDULTO", "Decreto 7.873/2012", "10/05/2013", "25/12/2012", sit="NÃO CONCEDIDO")]),
      [DECR("2012", "ver|indef", "indeferid")])
 
 # Decretos restritos 2019-2021
@@ -711,7 +711,7 @@ novo(k, "Decretos 10.189/2019, 10.590/2020 e 10.913/2021: só doença, deficiên
      [DECR("2019", "nao"), DECR("2020", "nao"), DECR("2021", "nao")])
 
 k = 7048
-c1 = cr(k, 1, anos(5), "01/03/2020", **FURTO_Q)
+c1 = cr(k, 1, anos(8), "01/03/2020", **FURTO_Q)
 novo(k, "Decreto 10.189/2019: fato e prisão posteriores à data de referência",
      "2019: Não alcançado (sem condenação até o decreto / execução posterior)",
      "Furto qualificado, fato e prisão em 01/03/2020, depois de 25/12/2019: o decreto não alcança a condenação.",
@@ -726,7 +726,7 @@ novo(k, "Decreto 11.846/2023, art. 2º, I: furto qualificado de 5 anos, primári
      "2023: Cabe o indulto (art. 2º, I), exigido 1a3m1d",
      "Furto qualificado, 5 anos (1.825 dias), primário, preso em 01/03/2022. Art. 2º, I: sem violência, até 8 anos, 1/4 = 456 "
      "dias (1a3m1d); cumpriu %d dias (%s). (Conferido no Planalto.)" % (n, T(n)),
-     montar(k, [c1], "01/03/2022"),
+     montar(k, [c1], "01/03/2022", fuga="10/02/2024"),
      [DECR("2023", "cabe", ["Indulto", "exigido 1a3m1d"])])
 
 k = 7050
@@ -759,16 +759,16 @@ novo(k, "Decreto 11.846/2023, art. 3º, § 3º, I: comutação de maior de 65 an
      [DECR("2023", "cabe", ["Comutação", "redução de %s" % T(red)])])
 
 k = 7052
-c1 = cr(k, 1, anos(5), "01/02/2021", artigo="1º, caput", tipo="CAPUT: lavagem de dinheiro, Reclusão: 3 a 10 anos E Multa", lei=LAVAGEM)
+c1 = cr(k, 1, anos(5), "01/02/2021", artigo="ART 1: Lavagem de dinheiro", tipo="CAPUT: lavagem de dinheiro, Reclusão: 3 a 10 anos E Multa", lei=LAVAGEM)
 novo(k, "Decreto 11.846/2023, art. 1º, III: lavagem com pena acima de 4 anos é vedada",
      "2023: Impeditivo",
      "Lavagem (Lei 9.613/1998, art. 1º), 5 anos, preso em 01/02/2021. O art. 1º, III veda a lavagem 'exceto quando a pena "
      "aplicada não for superior a quatro anos' - 5 anos é superior. (Conferido no Planalto.)",
-     montar(k, [c1], "01/02/2021"),
+     montar(k, [c1], "01/02/2021", fuga="10/02/2024"),
      [DECR("2023", "imp")])
 
 k = 7053
-c1 = cr(k, 1, anos(3), "01/03/2022", artigo="1º, caput", tipo="CAPUT: lavagem de dinheiro, Reclusão: 3 a 10 anos E Multa", lei=LAVAGEM)
+c1 = cr(k, 1, anos(3), "01/03/2022", artigo="ART 1: Lavagem de dinheiro", tipo="CAPUT: lavagem de dinheiro, Reclusão: 3 a 10 anos E Multa", lei=LAVAGEM)
 n = cump("01/03/2022", "25/12/2023")
 novo(k, "Decreto 11.846/2023, art. 1º, III: lavagem com pena de 3 anos não é vedada",
      "2023: Cabe o indulto (art. 2º, I), exigido 0a9m3d",
@@ -810,7 +810,7 @@ novo(k, "Decreto 7.046/2009, art. 1º, I: faltam dias para 1/3 - não cabe; comu
      "2009: Não cabe (faltavam para a fração)",
      "Estelionato, 9 anos (3.285 dias), primário, preso em 01/03/2009; cumpriu %d dias em 25/12/2009. Indulto: pena acima de 8 "
      "anos (I) e sem 60 anos (II); comutação 1/4 = 821 - não atingido. (Conferido no Planalto.)" % n,
-     montar(k, [c1], "01/03/2009"),
+     montar(k, [c1], "01/03/2009", fuga="10/02/2010"),
      [DECR("2009", "nao")])
 
 for c in CASOS:  # trânsito até a publicação dos decretos verificados
