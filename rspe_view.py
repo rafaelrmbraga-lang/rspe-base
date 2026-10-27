@@ -174,6 +174,7 @@ def estado_execucao(r):
         duv = rs.duvidas_livramento(r, r.get("_eventos", []), r.get("_incidentes", []), dl)
         if duv and not r.get("_lc_confirmado"):
             return ("lc_duvida", "Livramento a confirmar" + (" (%s)" % rs.fmt(dl) if dl else "") + " · ver Auditoria")
+        dl = rs.inicio_periodo_prova(r.get("_eventos", []), dl)  # período de prova: da audiência/soltura (LEP, art. 137)
         return ("lc", "Em livramento condicional" + (" desde %s" % rs.fmt(dl) if dl else ""))
     if nao_iniciou(r):
         return ("nao_iniciou", "Não iniciou o cumprimento")
@@ -296,15 +297,18 @@ def _prog_pela_db_manual(r):
 
 
 def _fr_prog_refeita(c):
-    """Fração de progressão do crime para a progressão refeita: a do SEEU, salvo o 1/6 em fato da janela em que a lei prevê 16%
-    (Lei 13.964/2019 até 07/05/2026): 16%, como na Auditoria (mais favorável). Fora dessa janela, a fração literal."""
+    """Fração de progressão do crime para a progressão refeita: a do SEEU, salvo o 1/6 em fato até 07/05/2026 (fim da janela em que a
+    lei prevê 16%, Lei 13.964/2019): 16%, como na Auditoria (mais favorável e retroativa ao fato anterior). Depois, a fração literal."""
     f = rs.parse_fracao(c.get("fracao_progressao") or "")
     # o 16% é do primário, em crime sem violência ou grave ameaça e não hediondo (LEP, art. 112, I): com violência (marcada ou
     # elementar do tipo, como a lesão corporal dolosa), reincidência ou hediondez, a lei dá 25% ou mais, e o 1/6 do SEEU é o favorável
     if f == Fraction(1, 6) and not (rs.vga_indulto(c) or c.get("hediondo_ou_equiparado") == "S"
                                     or c.get("reincidente_comum") == "S" or c.get("reincidente_especifico") == "S"):
-        j = rg.regime_progressao(rs.to_date(c.get("data_infracao") or ""))
-        if j and rg.fr(j.get("comum")) == Fraction(16, 100):
+        # a lei do fato ou qualquer lei posterior (intermediária, inclusive) com 16%: a mais benéfica retroage (CF, art. 5º, XL; CP,
+        # art. 2º, p. ú.) - o fato anterior a 23/01/2020 (1/6 na lei do fato) também alcança os 16% da Lei 13.964/2019
+        fato = rs.to_date(c.get("data_infracao") or "")
+        if fato and any(rg.fr(j.get("comum")) == Fraction(16, 100) and (rg.d(j.get("ate") or "") or date.max) >= fato
+                        for j in rg.carregar().get("progressao", {}).get("regimes_vigencia", [])):
             return Fraction(16, 100)
     return f
 
@@ -1233,6 +1237,16 @@ def extincao(r, presc, interr):
                            l.get("rotulo") or l["crime"], "os critérios" if " e " in _z["criterios"] else "o critério", _z["criterios"],
                            _z.get("evento") or "fuga", _z["fuga"]))
             a_verificar = True
+        _zd = l.get("ppe_saldo_zero_detr")
+        if _zd and not l.get("ppe_saldo_zero"):
+            # o SEEU não abateu a detração que os eventos mostram neste processo: com ela, a pena já estava cumprida na fuga
+            hip.append("%s: a verificar - pena cumprida antes da %s de %s: o SEEU não abateu a detração de %s (prisão provisória neste "
+                       "processo, visível nos eventos) e imprime remanescente de %s; com a detração obrigatória (CP, art. 42), %s cumpridos "
+                       "esgotavam a pena (%s). Conferir o cálculo do SEEU e pedir a extinção pelo cumprimento (LEP, art. 66, II), "
+                       "não só a prescrição pelo remanescente" % (
+                           l.get("rotulo") or l["crime"], _zd["evento"], _zd["data"], rs.dias_para_pena(_zd["detr"]),
+                           rs.dias_para_pena(_zd["rem_seeu"]), rs.dias_para_pena(_zd["detr"] + _zd["cumprido"]), l.get("pena")))
+            a_verificar = True
         if l.get("ppe_saldo_zero"):
             # única condenação em execução: pelo tempo cumprido nos eventos do RSPE, a pena se esgotou antes da fuga
             hip.append("%s: pena já cumprida na %s de %s, pelos eventos do RSPE. Conferir no cálculo do SEEU e pedir a extinção "
@@ -1279,6 +1293,15 @@ def extincao(r, presc, interr):
             and not r.get("execucao_extinta") and not hip:
         hip.append("A verificar: execução arquivada no SEEU, mas %s sem extinção registrada no RSPE - conferir se a pena foi declarada "
                    "extinta (cumprimento, prescrição, indulto) ou pedir a declaração (LEP, art. 66, II)" % rs.crimes_curto(_atv_arq))
+        a_verificar = True
+    # óbito lançado como interrupção, sem extinção declarada: a morte extingue a punibilidade (CP, art. 107, I), declarada à vista da
+    # certidão de óbito (CPP, art. 62)
+    _ob = next((e for e in r.get("_eventos", []) if re.search(r"[ÓO]BITO|FALECIMENTO|FALECEU|MORTE DO (APENADO|SENTENCIADO)",
+                                                                (e.get("motivo") or "").upper())), None)
+    if _ob and not (r.get("execucao_extinta") or todos_extintos_(r)):
+        hip.append("A verificar: óbito registrado no RSPE em %s (%s), sem extinção declarada - a morte do agente extingue a punibilidade "
+                   "(CP, art. 107, I), declarada à vista da certidão de óbito (CPP, art. 62): juntar a certidão e pedir a declaração" % (
+                       _ob.get("data") or "data não informada", ((_ob.get("tipo") or "").lower() + " - " + (_ob.get("motivo") or "").lower()).strip(" -")))
         a_verificar = True
     multa_txt = ""  # multa: hipossuficiência presumida (Defensoria) - sem aviso na extinção
     # crimes já extintos no RSPE
@@ -1900,7 +1923,10 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
         "pena_cumprida": rs.pena_extenso(r.get("pena_cumprida", "")),
         "pena_rem": rs.pena_extenso(r.get("pena_remanescente", "")),
         "remidos": r.get("saldo_remidos", ""),
-        "cumprimento": r.get("situacao_cumprimento", ""),
+        # quem nunca iniciou o cumprimento (só prisão provisória encerrada antes do trânsito) não teve a pena interrompida: a
+        # coluna diz o mesmo que as abas (LEP, art. 105; o tempo de prisão provisória é detração, CP, art. 42)
+        "cumprimento": ("NÃO INICIOU O CUMPRIMENTO (só prisão provisória encerrada - detração)"
+                        if sem_inicio and (r.get("situacao_cumprimento") or "").startswith("PENA INTERROMPIDA") else r.get("situacao_cumprimento", "")),
         "imp_det": r.get("indulto_crime_impeditivo_detalhe", ""),
         "ind24": r.get("indulto_2024", ""), "ind25": r.get("indulto_2025", ""),
         "com24": r.get("comutacao_2024", ""), "com25": r.get("comutacao_2025", ""),

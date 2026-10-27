@@ -2050,6 +2050,7 @@ def situacao_execucao(campos, eventos, incidentes, crimes, hoje):
           and livramento_em_curso(campos, incidentes)[0]):
         # a interrupção (motivo genérico ou o próprio livramento) é a saída para o período de prova: a pena segue em cumprimento
         _dl = livramento_em_curso(campos, incidentes)[1]
+        _dl = inicio_periodo_prova(eventos, _dl)
         out["situacao_cumprimento"] = "EM CUMPRIMENTO (livramento condicional%s)" % (
             (" desde %s" % fmt(_dl)) if isinstance(_dl, date) and _dl != date.min else "")
     elif (out["situacao_cumprimento"] != "EM CUMPRIMENTO" and ult and "INTERRUP" in (ult.get("tipo") or "").upper()
@@ -2847,6 +2848,10 @@ def indicios_falta_datas(incidentes, ref, dias=365, eventos=None, ate=None, hoje
                     txt if fmt(d) in txt else "%s %s" % (txt, fmt(d)), "fuga" if eph["fuga"] else "evasão/descumprimento",
                     fmt(eph["ini"]), fmt(eph["fim"] or d)), True, d)
                 continue
+            if not ep and eph and d and d < limite:
+                # homologação com a data da evasão, anterior à janela: a falta é permanente e dura até a recaptura (STJ, HC 527.625)
+                # - conta se a recaptura cai na janela, e os 12 meses correm dela (CP, art. 83, III, b)
+                ep = eph
             if d and (na_janela(ep) if ep else limite <= d <= fim):
                 if i.get("_data_ciencia"):
                     # falta da ficha datada pela ciência do resultado: o fato é anterior e pode estar fora da janela - a verificar
@@ -2876,6 +2881,8 @@ def indicios_falta_datas(incidentes, ref, dias=365, eventos=None, ate=None, hoje
                 elif not RE_DATA.search(i.get("complemento") or "") and (not i.get("data_referencia") or i.get("data_referencia") == i.get("data_decisao")):
                     # sem a data do fato: a referência é a da própria decisão - não se presume que a falta foi cometida na janela
                     add("%s (data do fato não consta; decisão em %s - conferir se a falta foi cometida na janela)" % (txt, fmt(d)), False, d)
+                elif ep and ep["permanente"] and ep["ini"] < limite and ep["fim"]:
+                    add("%s (%s)" % (txt, periodo(ep, d)), True, conta(ep, d))  # falta permanente trazida à janela pela recaptura
                 else:
                     add(txt if fmt(d) in txt else "%s (%s)" % (txt, fmt(d)), True, d)  # sem repetir a data que o rótulo já traz
             continue
@@ -4800,6 +4807,17 @@ def periodos_livramento(eventos, incidentes):
             per[-1] = (per[-1][0], ini)  # um livramento posterior pressupõe o fim do anterior
         per.append((ini, fim))
     return per
+
+
+def inicio_periodo_prova(eventos, dl):
+    """Início do período de prova do livramento deferido em dl: a audiência admonitória/soltura (LEP, art. 137), não a decisão.
+    O SEEU lança a saída como interrupção (motivo livramento, ou genérico) na data da soltura: a primeira interrupção entre o
+    deferimento e 180 dias depois. Sem ela, a data do deferimento (dl)."""
+    if not isinstance(dl, date) or dl == date.min:
+        return dl
+    ds = sorted(d for d in (to_date(e.get("data") or "") for e in eventos or [] if "INTERRUP" in (e.get("tipo") or "").upper()
+                            and not re.search(r"FUGA|EVAS|ABANDON|OBITO|ÓBITO", (e.get("motivo") or "").upper())) if d and dl <= d and (d - dl).days <= 180)
+    return ds[0] if ds else dl
 
 
 def livramento_em_curso(campos, incidentes, ref=None):
