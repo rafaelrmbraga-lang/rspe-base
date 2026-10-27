@@ -58,12 +58,21 @@ def dec(r, ano):
 cs = [crime(pena_imposta="4 ano(s), 0 mês(es) e 0 dia(s)", processo_criminal="000000%d-11.2004.8.12.0001" % n) for n in range(1, 5)]
 evs = [ev(PR, "PRISÃO DEFINITIVA", "10/07/2004"), ev(IN, "FUGA", "15/12/2015"), ev(PR, "RECAPTURA/REINÍCIO DE CUMPRIMENTO", "05/02/2016")]
 x = dec(reg(cs, evs, "16a0m0d"), "2016")
-ok(x["s"] == "nao" and (x.get("mot") or "").startswith("pena total") and "também falta grave" in (x.get("mot") or ""),
-   "1: motivo objetivo antes da fuga não homologada: %s | %s" % (x["s"], x.get("mot")))
+# (7.14.8) o art. 9º, p. ú., do Decreto 8.940/2016 posterga a declaração até a apuração: a fuga não submetida ao juízo não impede
+# (fica a verificar) - o motivo é só o objetivo
+ok(x["s"] == "nao" and (x.get("mot") or "").startswith("pena total"),
+   "1: motivo objetivo (pena acima do teto): %s | %s" % (x["s"], x.get("mot")))
 ok((x.get("mot_c") or "").startswith("Pena total"), "1: o motivo curto é o objetivo: %s" % x.get("mot_c"))
-# sem impedimento objetivo, a falta continua sendo o motivo
 cs1 = [crime(pena_imposta="4 ano(s), 0 mês(es) e 0 dia(s)")]
 x1 = dec(reg(cs1, evs, "4a0m0d"), "2016")
+ok(x1["s"] == "ver" and "posterga" in (x1.get("mot") or ""), "1: 2016, fuga não apurada - a verificar: %s" % x1.get("mot"))
+# o mesmo ordenamento num decreto em que a fuga sem homologação impede (Decreto 6.294/2007, art. 4º: não exige apuração)
+evs7 = [ev(PR, "PRISÃO DEFINITIVA", "10/07/2004"), ev(IN, "FUGA", "15/12/2006"), ev(PR, "RECAPTURA/REINÍCIO DE CUMPRIMENTO", "05/02/2007")]
+x7 = dec(reg(cs, evs7, "16a0m0d"), "2007")
+ok(x7["s"] == "nao" and (x7.get("mot") or "").startswith("faltavam") and "também falta grave" in (x7.get("mot") or ""),
+   "1: motivo objetivo antes da fuga não homologada: %s | %s" % (x7["s"], x7.get("mot")))
+# sem impedimento objetivo, a falta continua sendo o motivo
+x1 = dec(reg(cs1, evs7, "4a0m0d"), "2007")
 ok(x1["s"] == "nao" and (x1.get("mot") or "").startswith("falta grave"), "1: só a falta impede - ela é o motivo: %s" % x1.get("mot"))
 
 # 2. (I2, #14) indulto do XV indeferido no RSPE: a comutação recalculada "sem as penas indultadas" volta à conta da soma total

@@ -4023,7 +4023,10 @@ def remicao_pendente_decretos(r, comp):
             continue
         for k in ("indulto_%s" % ano, "comutacao_%s" % ano):
             v, det = r.get(k) or "", r.get(k + "_detalhe") or ""
-            if not v.startswith("não atinge") or v.startswith("não atinge: pena dos crimes impeditivos") or "posterior à publicação" in v:
+            # já a verificar por outro motivo (ex.: § 2º, II a VI; falta a verificar): a remição pendente que cobre o que faltava num
+            # inciso não atendido também se aponta (conferência independente 7.14.8)
+            ja_ver = v.upper().startswith("A VERIFICAR") and not v.startswith("A VERIFICAR (remição pendente)")
+            if not (v.startswith("não atinge") or ja_ver) or v.startswith("não atinge: pena dos crimes impeditivos") or "posterior à publicação" in v:
                 continue
             faltas = []
             if k.startswith("comutacao"):
@@ -4039,7 +4042,7 @@ def remicao_pendente_decretos(r, comp):
             if not faltas or tot < min(faltas):
                 continue
             nota = rs.nota_remicao_pendente(tot, rots, ref, min(faltas))
-            r[k] = "A VERIFICAR (remição pendente): " + nota
+            r[k] = "A VERIFICAR (remição pendente): " + nota + ((" | também a verificar: " + v[len("A VERIFICAR"):].lstrip(": ")) if ja_ver else "")
             r[k + "_detalhe"] = det + "\n? Remição pendente: " + nota
             r[k + "_status"] = "verificar"
 

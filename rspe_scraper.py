@@ -2361,6 +2361,8 @@ RE_INTERRUP_CONTINUA = re.compile(r"PROGRESS[ÃA]O AO REGIME ABERTO|OUTRA COMARC
                                   r"CONVERS[ÃA]O DO TIPO DE PRIS|ADEQUA[ÇC][ÃA]O PELA LEP|INCOMPATIBILIDADE DE REGIME|"
                                   r"SUBSTITUI[ÇC][ÃA]O DA PENA POR PENA RESTRITIVA", re.I)
 RE_FUGA_EV = re.compile(r"FUGA|EVAS|ABANDON|FORAGID|N[ÃA]O RETORN", re.I)
+# soltura pelo cumprimento da pena (motivo do evento de interrupção, sem acento): não é fuga nem falta
+RE_SOLTURA_CUMPRIMENTO = re.compile(r"^\s*(?:CUMPRIMENTO|TERMINO|FIM) DA PENA|PENA CUMPRIDA|EXTINC?CAO DA (?:PENA|PUNIBILIDADE)|CUMPRIMENTO INTEGRAL")
 
 
 def chave_falta(texto, d):
@@ -4439,6 +4441,16 @@ def analise_decreto_2022(campos, crimes, eventos, incidentes):
     return _por_requisito(_analise_decreto_2022_modo, (campos, crimes, eventos, incidentes), ["indulto_2022", "comutacao_2022"])
 
 
+def _incisos_verif(txt):
+    """Incisos do art. 9º citados no "A VERIFICAR: art. 9º, I, XII..." (antes do " | "), sem o § 2º, II a VI (metade do lapso, que
+    depende de dado fora do RSPE) e o art. 10 - vazio em outro resultado."""
+    t = (txt or "").split(" | ")[0]
+    if not t.upper().startswith("A VERIFICAR: ART. 9"):
+        return set()
+    t = re.sub(r"§ 2º, II a VI \(metade do lapso\)|art\. 10 \(mulheres\)|^A VERIFICAR: art\. 9º,", "", t)
+    return set(re.findall(r"\b[IVX]+\b", t))
+
+
 def mesclar_por_requisito(out_a, out_e, chaves):
     """Decisão pelo requisito (cumprido_decreto_info, modo), por decreto (o indulto e a comutação do ano andam juntos - a
     comutação "prejudicada" depende do indulto cabível): fica a análise pela âncora quando ela dá resultado possível; senão a
@@ -4471,6 +4483,10 @@ def mesclar_por_requisito(out_a, out_e, chaves):
             continue
         for k in ks:  # nenhum indulto possível: cada resultado, o melhor dos dois
             if out_e.get(k) and nota(out_e, k) > nota(out_a, k):
+                troca(k)
+            elif out_e.get(k) and nota(out_e, k) == nota(out_a, k) == 2 and _incisos_verif(out_e.get(k)) > _incisos_verif(out_a.get(k)):
+                # os dois a verificar, mas pelos eventos há inciso atendido (a verificar só pelo tempo cumprido) que a âncora não
+                # tem: vale o dos eventos, que cita o inciso - como a comutação do mesmo decreto (conferência independente 7.14.8)
                 troca(k)
             elif out_e.get(k) and nota(out_e, k) == nota(out_a, k) and nota(out_a, k) <= 1:
                 # o mesmo resultado negativo: o texto mostra o "faltam" menor (o dos eventos, quando é ele), com a fonte
@@ -5396,9 +5412,13 @@ def _analise_decretos_modo(campos, crimes, eventos, incidentes, hoje, modo=None,
             # verificar (se foi fuga punida como falta grave, art. 6º)
             _mi = next((e.get("motivo") or "" for e in eventos if "INTERRUP" in (e.get("tipo") or "").upper() and ult_i
                         and to_date(e.get("data") or "") == ult_i), "")
-            # a interrupção por prisão em outro processo não é falta; a fuga já entra pela regra do art. 6º (falta_art6)
-            interr_ctx.update(motivo=motivo, data=ult_i, cump=cump_i, det=det_base,
-                              falta=not (RE_OUTRO_PROC.search(_mi) or RE_FUGA_EV.search(_mi)), mot_ev=_mi)
+            # a interrupção por prisão em outro processo não é falta; a fuga já entra pela regra do art. 6º (falta_art6); a soltura
+            # pelo cumprimento da pena (término, extinção) não é fuga; e a interrupção fora dos 12 meses do art. 6º (até a
+            # publicação) não pesa no decreto (conferência independente 7.14.8)
+            _so_cump = bool(RE_SOLTURA_CUMPRIMENTO.search(_sem_acento(_mi).upper()))
+            _jan = bool(ult_i and ref - timedelta(days=dias_anos(1, ref)) <= ult_i <= (publicacao or ref))
+            interr_ctx.update(motivo=motivo, data=ult_i, cump=cump_i, det=det_base, so_cumprimento=_so_cump,
+                              falta=not (RE_OUTRO_PROC.search(_mi) or RE_FUGA_EV.search(_mi) or _so_cump) and _jan, mot_ev=_mi)
             return "seguir"
 
         def _iniciou_antes(ref):
@@ -5872,8 +5892,8 @@ def _analise_decretos_modo(campos, crimes, eventos, incidentes, hoje, modo=None,
             # da outra condenação
             sem_rem = bool(pena_total and remanescente <= 0 and not aviso_cump and not concurso and ano not in notas_post and not pena_div)
             if sem_rem:
-                out[k] = "não se aplica: sem pena remanescente a indultar em %s (cumprido %s de %s)" % (
-                    fmt(ref), dias_para_pena(cumprido), dias_para_pena(pena_total)) + (" | " + aviso if aviso else "")
+                out[k] = ("não se aplica: sem pena remanescente a indultar em %s (cumprido %s de %s) - pedir a extinção pelo cumprimento "
+                          "(LEP, art. 66, II)" % (fmt(ref), dias_para_pena(cumprido), dias_para_pena(pena_total))) + (" | " + aviso if aviso else "")
                 out[k + "_status"] = "nao"
             # preso de novo depois do aberto/livramento (recaptura, nova prisão) sem regressão registrada: o rótulo diz a custódia,
             # e o regime formal do SEEU vem como ressalva - não "regime Livramento condicional" de quem estava preso na data
