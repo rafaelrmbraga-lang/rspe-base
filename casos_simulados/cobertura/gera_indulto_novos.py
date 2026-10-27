@@ -904,19 +904,21 @@ novo(k, "Indulto 2024: SEEU conta 400 dias a menos do que os eventos mostram",
      [RX("ind24", r"^A VERIFICAR[^|]*\bI\b", nota="Pelos eventos o inciso I é atendido (666 dias >= 365); a comutação do mesmo decreto usa os eventos, o indulto não.")])
 
 k = 6073
-P = anos(5); ini = D("01/03/2024"); ev25 = dd(ini, R25) - 365
-r_ = rspe(k, [t297(k, 0, P, "01/06/2023")], [p_def(ini, k)], [reg("Fechado - Regime Inicial", ini)], ini=F(ini), remidos=100)
-r_["saldo_remidos"] = "0 dias (0 dias remidos - 0 dias perdidos)"
-c24e = dd(ini, R24)
+P = anos(6); c24e = 400; ini = ini_para(R24, c24e)
+r_ = rspe(k, [roubo(k, 0, P, "01/06/2023")], [p_def(ini, k)], [reg("Fechado - Regime Inicial", ini)], ini=F(ini), remidos=100)
+r_["saldo_remidos"] = "0 dias (0 dias remidos - 0 dias perdidos)"  # o SEEU conta 100 dias a mais, sem remição registrada
 assert c24e < fr(P, 1, 5) <= c24e + 100
-novo(k, "Indulto 2024: SEEU conta 100 dias a mais que os eventos, sem data (detração de outro período)",
-     "Tempo a mais do SEEU, sem data, que pode ser anterior ao decreto",
-     "Indulto 2024 A VERIFICAR: pelos eventos {0} dias (abaixo de 1/5 = {1}); com os 100 dias do SEEU, {2} (atingiria). Sem a data do tempo a mais, "
-     "não se pode negar nem afirmar".format(c24e, fr(P, 1, 5), c24e + 100),
-     f"CP, art. 297, 5a. Eventos: preso desde {F(ini)} = {c24e} dias em 25/12/2024. O cálculo do SEEU tem 100 dias a mais (término antecipado), sem remição nem "
-     "evento que os date - típico de detração de prisão anterior (CP, art. 42), que contaria antes do decreto.",
-     r_, [dict(RX("ind24", "^A VERIFICAR"), nota="Tempo sem data: o programa pode preferir os eventos e dar 'não atinge'; o gabarito pede conferência (possível detração anterior).",
-               decisao=True)])
+NOTA73 = ("Tempo sem data: o gabarito pede conferência (pode ser detração anterior ao decreto); se o programa usar só os eventos e negar, "
+          "a escolha é de prudência discutível, contra o assistido.")
+novo(k, "Comutação 2024: SEEU conta 100 dias a mais que os eventos, sem data (detração de outro período)",
+     "Tempo a mais do SEEU, sem data, que pode ser anterior ao decreto (âncora acima dos eventos)",
+     "Comutação 2024 e indulto 2024 (XII/XIII) A VERIFICAR: pelos eventos %d dias (abaixo de 1/5 = %d); com os 100 dias do SEEU, %d (atingiria). "
+     "Sem a data do tempo a mais, não se pode negar nem afirmar" % (c24e, fr(P, 1, 5), c24e + 100),
+     f"Roubo 6a = {P} dias, primário (sem o § 2º: o III não cabe, pena acima de 4 anos). Eventos: preso desde {F(ini)} = {c24e} dias em 25/12/2024. "
+     "O cálculo do SEEU tem 100 dias a mais (término antecipado), sem remição nem evento que os date - típico de detração de prisão anterior "
+     "(CP, art. 42), que contaria antes do decreto. Comutação e XII/XIII exigem 1/5 = %d." % fr(P, 1, 5),
+     r_, [dict(RX("com24", "^(A VERIFICAR|POSSÍVEL)"), nota=NOTA73, decisao=True),
+          dict(RX("ind24", r"^A VERIFICAR[^|]*\bXII\b"), nota=NOTA73, decisao=True)])
 
 # =====================================================================================================================
 # REMIÇÃO
