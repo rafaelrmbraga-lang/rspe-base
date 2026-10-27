@@ -2656,11 +2656,13 @@ def faltas_da_ficha(r, ficha, hoje=None):
     _ini = min([x for x in (to_date(e.get("data") or "") for e in r.get("_eventos", []) if not e.get("_ficha")) if x]
                or [x for x in (to_date(c.get("data_infracao") or "") for c in r.get("_crimes", [])) if x] or [None], key=lambda x: x or date.max)
     _eps_r = episodios_evasao([], r.get("_eventos", []))
+    import rspe_ficha as _rf  # (import tardio: rspe_ficha importa este módulo)
     for e in ficha.get("eventos") or []:
         t = e.get("texto") or ""
         d = to_date((e.get("data") or "").replace(".", "/"))
         if (not d or (d < corte_faltas(hoje) and falta_prescrita(d, True, r.get("_eventos"), hoje, _recaptura_ficha(ficha, d)))
-                or not re.search(r"\bFUGA\b|EVADIU|EVAS[ÃA]O|FORAGID|N[ÃA]O RETORNOU|EMPREENDEU FUGA", t, re.I)
+                # (7.14.8) o mesmo filtro das falsas fugas da Auditoria (tentativa, "sob pena de evasão", não retorno do hospital...)
+                or not _rf._RE_FUGA_FICHA_RX.search(_rf._sem_fuga_falsa(t))
                 or re.search(r"ABANDONO D[OE] (SERVI|TRABALHO|CURSO)", t, re.I)
                 # retorno/recaptura citando a evasão não é nova fuga
                 or re.search(r"RETORNOU D[AE] EVAS|RECAPTUR|\bPRES[OA]\b.{0,80}EVAS", t, re.I)

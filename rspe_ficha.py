@@ -1225,7 +1225,7 @@ def derivar(f, eventos):
             if x["ini"] > x["fim"]:
                 for ini_, fim_ in ((x["ini"].replace(year=x["fim"].year) if not (x["ini"].month == 2 and x["ini"].day == 29) else None, x["fim"]),
                                    (x["ini"], x["fim"].replace(year=x["ini"].year) if not (x["fim"].month == 2 and x["fim"].day == 29) else None)):
-                    if ini_ and fim_ and ini_ <= fim_ and any(ti <= ini_ + timedelta(days=3) and fim_ <= tf + timedelta(days=3) for ti, tf in trab_p):
+                    if ini_ and fim_ and ini_ <= fim_ and any(ti - timedelta(days=3) <= ini_ and fim_ - timedelta(days=3) <= tf for ti, tf in trab_p):
                         corr.append("%s: %s a %s lido como %s a %s" % (x["setor"] or "trecho", rrm._f(x["ini"]), rrm._f(x["fim"]), rrm._f(ini_), rrm._f(fim_)))
                         x = dict(x, ini=ini_, fim=fim_)
                         break
@@ -1307,7 +1307,7 @@ def derivar(f, eventos):
                 ant.update(data=e["data"], meses=meses, obras=obras, texto=e["texto"])  # fica o lançamento do ano do ofício
             continue
         lt = {"data": e["data"], "meses": meses, "obras": obras, "texto": e["texto"], "oficio": mof.group(1) if mof else ""}
-        mci = re.search(r"\bCICLO\s*N?\W{0,3}(\d{1,2}\s*/\s*\d{2,4})", us)
+        mci = re.search(r"\bCICLO\s*(?:N[ºª°O]?)?\W{0,3}(\d{1,2}\s*/\s*\d{2,4})", us)  # "CICLO Nº 03/2020": o "º" é letra para o \W
         if mci and not meses:
             # atestado por ciclo, sem mês ("Atestado de Remição por Leitura nº 71/2020 - CICLO nº 03/2020"): o lançamento fica no mês
             # do próprio atestado/protocolo (referência só para exibir; "meses" segue vazio e a conta segue 4 dias por obra)
@@ -1331,7 +1331,10 @@ def derivar(f, eventos):
         us = _texto_falta(e["texto"])
         u = us
         if "CONSELHO DISCIPLINAR" not in u and "FALTA DISCIPLINAR" not in u and "FALTA GRAVE" not in u and \
-                not re.search(r"FALTA (?:DISCIPLINAR )?DE NATUREZA|INSTAURAD\w* (?:A |S )?CDS|SANCIONADO ADMINISTRATIVAMENTE|RECONHECO A PRATICA|" + _PROC_RES, us):
+                not re.search(r"FALTA (?:DISCIPLINAR )?DE NATUREZA|INSTAURAD\w* (?:A |S )?CDS|SANCIONADO ADMINISTRATIVAMENTE|RECONHECO A PRATICA|" + _PROC_RES, us) and \
+                not re.search(r"^REGRESSAO DE REGIME.*(?:EVADI|EVASAO|\bFUGA\b|FUGIU)", us):
+            # (7.14.8) a regressão judicial pela evasão reconhece a falta grave (LEP, arts. 50, II, e 118, I), com ou sem a palavra
+            # "falta" no lançamento
             continue
         if re.search(_RE_NARRATIVA, us):
             narrativas.append(e)  # casado com a falta do fato depois de lidas todas
@@ -1900,7 +1903,8 @@ class _ReFicha:
         return self.rx.search(_sem_fuga_falsa(t))
 
 
-RE_FUGA_FICHA = _ReFicha(re.compile(r"\bFUGA\b|EVADIU|EVAS[ÃA]O|FORAGID|N[ÃA]O RETORNOU|EMPREENDEU FUGA", re.I))
+_RE_FUGA_FICHA_RX = re.compile(r"\bFUGA\b|EVADIU|EVAS[ÃA]O|FORAGID|N[ÃA]O RETORNOU|EMPREENDEU FUGA", re.I)
+RE_FUGA_FICHA = _ReFicha(_RE_FUGA_FICHA_RX)
 # Unidades da AGEPEN/MS (levantamento de set/2026 nas páginas e notícias da AGEPEN e da SEJUSP): padrão do nome -> (regime,
 # nome usual). Ordem importa: a primeira que casa decide ("Penitenciária de Regime Fechado da Gameleira" antes do
 # "Centro Penal Agroindustrial da Gameleira"; "Regime Semiaberto, Aberto e Assistência ao Albergado" é semiaberto).
@@ -2246,8 +2250,11 @@ def _monitoramento_x_ficha(r, f):
         ret = min([a for a, _b in per if a > x] or [None], key=lambda v: v or date.max)
         # o intervalo vai até a retomada no RSPE, a próxima interrupção dele ou a saída do monitoramento
         prox_i = min([rs.to_date(e["data"]) for e in evs if "INTERRUP" in (e.get("tipo") or "").upper() and rs.to_date(e["data"]) > x] or [date.max])
+        fim_m = fim
         fim = min(fim, ret or date.max, prox_i)
-        fora = (fim - x).days
+        # (7.14.8) os dois extremos do monitoramento contam, como na detração (CP, art. 10); a retomada ou a nova interrupção do
+        # RSPE, quando fecham o intervalo, já são dias do próprio SEEU
+        fora = (fim - x).days + (1 if fim == fim_m and fim < min(ret or date.max, prox_i) else 0)
         if fora < 30:
             continue
         db = rs.to_date(r.get("data_base_seeu") or "")
@@ -2258,7 +2265,7 @@ def _monitoramento_x_ficha(r, f):
         efeito, est = None, None
         if pesos and prog:
             fm = sum(float(fr) * p for fr, p in pesos) / sum(p for _fr, p in pesos)
-            antes_db = fora if not db else sum(1 for k in range((fim - x).days) if (x + timedelta(days=k)) < db
+            antes_db = fora if not db else sum(1 for k in range(fora) if (x + timedelta(days=k)) < db
                                                 and not any(a <= x + timedelta(days=k) and (b is None or x + timedelta(days=k) < b) for a, b in per))
             efeito = int(round(antes_db * fm + (fora - antes_db)))
             est = prog - timedelta(days=efeito) if efeito else None
@@ -2521,6 +2528,17 @@ def _unidade_x_ficha(r, f):
             return []  # execução suspensa (preso em outro processo): a unidade é a da outra prisão
         if any(tp == "custodia-nao-desta" for tp, _x in r.get("_reconc_ficha") or []):
             return []  # a ficha vincula a prisão atual a outro processo (ou é prisão civil): a unidade é a dessa prisão (item próprio)
+        # (7.14.8) regressão ao fechado registrada na ficha depois da última mudança de regime do RSPE: a pessoa está no regime que o
+        # juiz fixou (LEP, art. 118) - não é falta de vaga; a regressão não lançada no RSPE tem item próprio
+        _ult_reg = max([x for x in (rs.to_date(i.get("data_decisao") or i.get("data_referencia") or i.get("data") or "")
+                                    for i in r.get("_incidentes", []) if rs.e_incidente_regime(i) and not rs._negado(i)) if x] or [date.min])
+        for _rg in f.get("regressoes") or []:
+            _dr = _dp(_rg.split(" - ")[0])
+            _ur = rs._sem_acento(_rg).upper()
+            if (_dr and _dr >= _ult_reg and re.search(r"REGRE\w*.{0,120}\bFECHADO\b", _ur)
+                    and re.search(r"DECISAO|JUDICIAL|JUIZ|^\S+ - REGRESSAO DE REGIME", _ur)
+                    and not re.search(r"PROPOSTA|SUGER|PEDIDO|REQUER|INDEFERI|NEGAD|AFASTAD|REVOGAD", _ur)):
+                return []
         # nova prisão lançada pelo programa a partir da ficha (recaptura/reinício): justifica o fechado ou a regressão cautelar
         nova = [e for e in evs if e.get("_ficha")]
         # nova prisão na ficha ainda sem reinício lançado (item 51 de 16/10: conferir em que processo) - também pode justificar o fechado

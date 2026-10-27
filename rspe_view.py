@@ -1553,7 +1553,9 @@ def chave_item(it):
 
 # tipos com vários pontos distintos por assistido e sem ref própria (confronto RSPE x ficha: fuga, prisão, regime, processos):
 # a chave leva o título, só com as datas (sem contagens de dias, que mudam), para a baixa de um não esconder os outros
-RE_FICHA_SEM_PREJUIZO = re.compile(r"^(Rein[íi]cio omitido no RSPE|RSPE sem evento de pris[ãa]o|Retomada divergente|Regress[ãa]o registrada na ficha|"
+# (7.14.8) reinício omitido e RSPE sem evento de prisão saíram daqui: custódia que o SEEU não conta é prejuízo certo (LEP, art. 111;
+# CP, art. 42) - ficam alerta
+RE_FICHA_SEM_PREJUIZO = re.compile(r"^(Retomada divergente|Regress[ãa]o registrada na ficha|"
                                    r"(Nascimento|M[ãa]e|CPF|Nome) na ficha)", re.I)
 TIPOS_REF_TITULO = ("rspe-x-ficha",)
 
@@ -1773,7 +1775,7 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
         # o confronto da ficha já apontava o CPF diferente: fica um só alerta (o da divergência, com baixa própria)
         aud["aud_itens"] = [i for i in aud["aud_itens"] if not (i.get("tipo") == "rspe-x-ficha" and (i.get("titulo") or "").startswith("CPF da ficha"))]
     aud["aud_itens"] = _dv + aud["aud_itens"]
-    # confronto com a ficha sem prejuízo direto ao assistido (reinício/início lançado pela ficha, retomada divergente, regressão
+    # confronto com a ficha sem prejuízo direto ao assistido (retomada divergente, regressão
     # ausente no RSPE, divergência de identidade): pesa como "verificar", não como alerta vermelho. O que prejudica (prisão sem
     # cômputo, fuga com alvará, regime mais gravoso, benefício ausente no RSPE) continua alerta
     for i in aud["aud_itens"]:
