@@ -1198,14 +1198,18 @@ def derivar(f, eventos):
         if _cobertura_externa(t0) != _cobertura_externa(trabalho):
             trabalho, baixas_orfas = t0, b0
     # jornada de cada trabalho: a ficha às vezes registra a carga horária ("de segunda a sexta", "12x36") no início
+    # (7.15.1) o lançamento que cita outro setor (e não este) não dá a jornada deste: a baixa da Horta "de segunda a sexta" no dia em
+    # que começa a Portaria em escala 12x36 não contamina a Portaria; o lançamento que cita este setor vem antes do que não cita nenhum
+    import rspe_remicao as rrm
     for t in trabalho:
         ti, tf = _dp(t["inicio"]), _dp(t.get("fim") or "")
-        for e in eventos:
-            if e["d"] and ti and ti - timedelta(days=3) <= e["d"] <= min(tf or date.max, ti + timedelta(days=30)):
-                j = jornada_do_texto(e["texto"])
-                if j:
-                    t["jornada"] = j
-                    break
+        outros = {o["setor"] for o in trabalho if o.get("setor") and re.sub(r"\W", "", o["setor"].upper()) != re.sub(r"\W", "", (t.get("setor") or "").upper())}
+        cs = [e for e in eventos if e["d"] and ti and ti - timedelta(days=3) <= e["d"] <= min(tf or date.max, ti + timedelta(days=30))
+              and jornada_do_texto(e["texto"])]
+        meu = [e for e in cs if t.get("setor") and rrm.palavra_comum(t["setor"], e["texto"])]
+        neutro = [e for e in cs if e not in meu and not any(rrm.palavra_comum(s, e["texto"]) for s in outros)]
+        if meu or neutro:
+            t["jornada"] = jornada_do_texto((meu or neutro)[0]["texto"])
     f["trabalho"] = _separar_mesmo_dia(_juntar_mesmo_dia(trabalho), eventos)
     f["baixas_sem_inicio"] = baixas_orfas
     # "foi autorizado o trabalho externo" e termo de compromisso de trabalho externo: início "a conferir" (inciso XI dos decretos),
@@ -3690,7 +3694,7 @@ def comparativo(r, f, hoje=None, conferidos=None, manuais=None, vinculos=None):
     out["fd_trab"] = ("%s desde %s" % (_nome_emprego(_sem_setores_baixados(em[-1], f.get("eventos") or [])), em[-1]["inicio"])) if em else "sem trabalho em curso"
     out["fd_estuda"] = any(e.get("inicio") and not e.get("fim") for e in f.get("estudos") or [])  # matrícula ativa na ficha
     ult_at = N["ult_at"]
-    sem_pos = [L for L in T["linhas"] if L["st"] == "sem" and (L.get("pedir_dias") or not ult_at or L["fim"] > ult_at)]
+    sem_pos = [L for L in T["linhas"] if L["st"] == "sem" and not L.get("aparte_total") and (L.get("pedir_dias") or not ult_at or L["fim"] > ult_at)]
     out["fd_atestar"] = "Sim" if sem_pos else "Não"
     ult = R["ult_dec"]
     est_post = [d for d in N["post"] if d["tipo"] in ("Certidão de frequência escolar", "Curso de qualificação", "Atestado de estudo", "Leitura", "Exame")]
