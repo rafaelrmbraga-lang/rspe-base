@@ -1,17 +1,18 @@
-APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.14.7
+APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.15.0
 (antigo RSPE Base; SEEU, programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-7.14.7. A documentação técnica completa (cada parâmetro, a regra, a norma e
+7.15.0. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
 Janela com doze abas (interface em HTML dentro de uma janela nativa; no
 Windows 10/11 usa o WebView2 que já vem no sistema), alimentada pelos RSPE
 (PDF) dos assistidos e, se houver, pela Ficha Disciplinar do SIAPEN. Aceita
-centenas de PDFs de uma vez ("Importar PDFs…" com seleção múltipla, "Importar
-pasta…" varrendo subpastas, ou arrastando PDFs/pasta sobre o .exe).
+centenas de PDFs de uma vez (botão "Importar ▾": "Arquivos PDF…" com seleção
+múltipla ou "Uma pasta inteira…" varrendo subpastas; ou arrastando PDFs/pasta
+sobre o .exe).
   - Datas de progressão, livramento e término: as impressas pelo SEEU no
     RSPE. O programa não as recalcula.
   - Cálculos do programa: indulto e comutação, inciso por inciso, nos
@@ -219,15 +220,45 @@ DUPLICADOS
   nome de um RSPE da base mas com outra mãe (ou com homônimos) fica guardada
   pelo nome e o aviso diz "NÃO VINCULADA" com o motivo: conferir.
 
-BARRA SUPERIOR
-  Importar PDFs, Importar pasta, Exportar (um botão com o menu: Excel das
-  abas da base; PDF da aba; Relatórios em PDF - individuais, geral da base
-  e remição detalhada; Relatório de providências), o seletor de filtro da
-  aba, o tamanho da letra (A pequeno / A grande), a calculadora de penas
-  (ícone de calculadora; "Calculadora de penas" ao passar o mouse) e
-  "Legenda e método". Abas, na ordem: Geral, Progressão, Livramento,
-  Indulto, Prescrição, Extinção, Ficha, Auditoria, Dados prisionais, Dados
-  da Base, Jurisprudências e Quadro do Usuário.
+CABEÇALHO (uma faixa só)
+  Marca, base aberta (com a data da cópia de segurança logo abaixo), busca,
+  Importar (um botão com o menu: Arquivos PDF… ou Uma pasta inteira…),
+  Exportar (um botão com o menu: Excel das abas da base; PDF da aba;
+  Relatórios em PDF - individuais, geral da base e remição detalhada;
+  Relatório de providências), o tamanho da letra (A pequeno / A grande), a
+  calculadora de penas (ícone de calculadora; "Calculadora de penas" ao
+  passar o mouse) e "Legenda e método".
+
+MENU LATERAL (as abas)
+  As abas ficam numa coluna à esquerda, agrupadas por tarefa: Geral;
+  Prazos (Progressão, Livramento, Extinção, Prescrição); Decretos (Indulto e
+  comutação); Conferência (Ficha disciplinar, Auditoria); Panorama e
+  ferramentas (Dados da base, Dados prisionais, Jurisprudências, Quadro do
+  usuário). Cada aba mostra o ícone, o nome e o contador. O botão ☰ no alto
+  recolhe o menu (fica só o ícone e o contador; o nome aparece ao parar o
+  mouse) e expande de novo. Em telas com menos de 1400 px de largura
+  (notebooks) o menu começa recolhido; depois vale a última escolha, gravada
+  neste computador. Abaixo de 1400 px a tela também fica mais compacta, sem
+  tirar nenhum botão ou coluna.
+
+CABEÇALHO DA ABA
+  Título da aba, data de referência e base jurídica; à direita, "Combinar
+  filtros" e "Ordem da lista". Os filtros são caixas de marcar em grupos
+  (Situação, Pedido, Benefícios a conferir, Conferência): no mesmo grupo vale
+  qualquer um ("vencidas" ou "até 30 dias"); entre grupos valem todos
+  ("vencidas" e "sem pedido"). A exportação segue os filtros marcados, como
+  antes. A ordem da lista começa "Por situação" (o que exige ação primeiro,
+  em grupos com o nome e a contagem, do mais atrasado ao menos atrasado);
+  "Alfabética" fica a um clique, e clicar no título da coluna ordena por ela.
+  Os contadores ficam numa faixa (número, traço de cor e rótulo) e, como
+  antes, clicar num deles filtra a lista. Na Progressão, no Livramento e na
+  Extinção, "A verificar" tem contador e grupo próprios, na cor do RSPE
+  antigo; "Até 60 dias" fica só com os prazos; "Até 90 dias" fica em
+  azul-acinzentado (o verde passa a querer dizer só "em ordem / cabe").
+  Na coluna Situação, a primeira parte vem em destaque e o complemento do
+  programa embaixo, em letra menor (o texto inteiro aparece ao parar o
+  mouse). O complemento "sem pedido no RSPE - requerer" não aparece na
+  coluna; continua no relatório em PDF.
 
 ABAS (colunas)
   Geral        Nome, Nº da execução, Regime, Progressão, Livramento, Término.
@@ -731,7 +762,7 @@ AUDITORIA
   contam como alerta e podem ser baixados.
 
 FICHA DISCIPLINAR (SIAPEN/AGEPEN)
-  Importe o PDF da Ficha Disciplinar pelo botão "Importar PDFs" (pode ir no
+  Importe o PDF da Ficha Disciplinar pelo botão "Importar ▾" (pode ir no
   mesmo lote dos RSPEs). O programa reconhece a ficha e a vincula ao RSPE
   pelos autos citados nela. Sem esse vínculo, a ficha fica guardada pelo
   nome e vale para o assistido de mesmo nome só se houver um único na base;
@@ -1002,6 +1033,34 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v7.15.0
+  Tela nova (linha E, aprovada em 27/10/2026), sem mudar nenhuma regra,
+  cálculo ou texto jurídico, e sem tirar nenhuma função da tela.
+  - Visual do Windows 11; cabeçalho numa faixa; "Importar ▾" num botão só
+    (Arquivos PDF… ou Uma pasta inteira…).
+  - Abas num menu lateral agrupado por tarefa, que recolhe e expande (em
+    notebook começa recolhido; a escolha fica gravada). Modo compacto abaixo
+    de 1400 px de largura: tudo cabe sem rolar para o lado.
+  - Cada aba com título; filtros combináveis em caixas de marcar; ordem
+    "Por situação" com grupos (alfabética a um clique); contadores numa
+    faixa; "A verificar" separado de "Até 60 dias" nas abas de prazo;
+    "Até 90 dias" em azul-acinzentado.
+  - Situação em destaque, com o complemento embaixo; o complemento "sem
+    pedido no RSPE - requerer" sai da coluna (fica no relatório).
+  - Prescrição: o detalhe do crime mostra as datas do processo numa linha,
+    o cálculo em três passos (prazo, termo inicial, executória) e os botões
+    Ver cálculo e Editar dados, sem passar da largura da tela.
+  - Avisos: o de sucesso some sozinho e, ao marcar um pedido, traz
+    "Desfazer"; o de erro fica até ser fechado.
+  - Importação: quadro de andamento com as falhas até agora, o tempo que
+    falta e "Parar depois deste arquivo" (o que já foi lido fica na base; o
+    resumo diz quantos arquivos não foram lidos). No fim, quatro totais
+    (entraram, falharam, com ressalva, ignorados) e as falhas primeiro.
+  - "Legenda e método" abre com a legenda da aba em tabela; o método
+    completo, o mesmo texto, fica logo abaixo.
+  - Busca sem resultado: a tela diz o que foi buscado, onde a busca procura
+    e oferece "Limpar busca".
 
 v7.14.7
   Correções da terceira conferência independente (últimos 64 casos nunca usados).
@@ -1674,7 +1733,7 @@ v7.9.5
     na base.
   - Internos da listagem ainda sem RSPE aparecem na aba Geral com "Falta
     juntar o RSPE e a ficha disciplinar" e são contados nas demais abas.
-  - Os dois PDFs também entram pelo "Importar PDFs" e pela pasta vigiada.
+  - Os dois PDFs também entram pelo "Importar ▾" e pela pasta vigiada.
   - Atendimentos em PDF (com gráficos) e no card "Atendimentos" da aba Dados
     da Base.
   - Relatórios do SAP somados (sem repetir atendimentos), filtro por período,

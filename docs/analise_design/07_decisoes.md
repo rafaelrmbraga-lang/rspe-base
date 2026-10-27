@@ -32,3 +32,7 @@ Linha gráfica escolhida: **E · menu lateral que recolhe e expande**, no visual
 | 15 | Notebooks | aprovada; o menu começa recolhido abaixo de 1400 px e expandido em telas largas; depois vale a última escolha do usuário |
 
 Protótipo: `demonstracao/abas_simuladas.html?tema=7&menu=aberto` (ou `menu=recolhido`, `menu=sobre`).
+
+## Aplicação no programa (versão 7.15.0)
+
+A linha E e as 15 decisões foram aplicadas no `ui.html` (e, para "Parar depois deste arquivo", uma função nova na `Api` do `rspe_app.py`). Antes e depois, com o programa real e a base fictícia, em [APTO_7.15_antes_depois.pdf](APTO_7.15_antes_depois.pdf). Nenhuma regra, cálculo ou texto jurídico mudou; o inventário de controles da tela, antes e depois, não perdeu nenhuma função. Os 81 testes passam (o novo `teste_linha_e.py` cobre a tela e a parada da importação).
