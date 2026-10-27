@@ -2717,11 +2717,20 @@
     "contem": null,
     "nivel": null,
     "nota": ""
+   },
+   {
+    "t": "aud",
+    "tipo": "seeu-tratou-como-hediondo-mas-o-tipo-nao-consta",
+    "presente": false,
+    "contem": null,
+    "nivel": null,
+    "nota": "Os 75% são o percentual legal da milícia (LEP, art. 112, VI, c); o SEEU não tratou o crime como hediondo."
    }
   ],
   "aba": "Progressão",
   "situacao": "Milícia privada (art. 288-A), fato de 01/06/2026: 75% confere; livramento 1/3 (sem vedação)",
-  "esperado": "Auditoria: 'percentual de progressão confere (75%)'; sem alerta de livramento."
+  "esperado": "Auditoria: 'percentual de progressão confere (75%)'; sem alerta de livramento; nenhum item de 'SEEU tratou como hediondo'.",
+  "nota": "O programa reconhece 75% como selo de hediondo e alerta que o art. 288-A não está no rol, embora 75% seja o percentual próprio da milícia."
  },
  {
   "acoes": [],
@@ -2832,11 +2841,28 @@
     "contem": null,
     "nivel": null,
     "nota": ""
+   },
+   {
+    "t": "aud",
+    "tipo": "comando-de-organizacao-criminosa-fato-em-75-so-s",
+    "presente": false,
+    "contem": null,
+    "nivel": null,
+    "nota": ""
+   },
+   {
+    "t": "aud",
+    "tipo": "livramento-vedado-pelo-seeu-1-1-so-se-a-organiza",
+    "presente": false,
+    "contem": null,
+    "nivel": null,
+    "nota": ""
    }
   ],
   "aba": "Progressão",
   "situacao": "Comando de organização criminosa ultraviolenta pelo próprio tipo (Lei 15.358/2026, art. 2º, § 1º, I): 75% e livramento vedado certos",
-  "esperado": "Auditoria: nenhum alerta de fração (75% e 1/1 conferem); a condição de 'ultraviolenta' está no próprio tipo da condenação."
+  "esperado": "Auditoria: nenhum alerta de fração e nenhum 'verificar' sobre a organização ser ultraviolenta (75% e 1/1 conferem; a condição está no próprio tipo).",
+  "nota": "O programa manda verificar se a organização é ultraviolenta, mas a condenação é pelo próprio crime de domínio social estruturado (Lei 15.358/2026, art. 2º), praticado por integrante de organização criminosa ultraviolenta: a condição está no tipo."
  },
  {
   "acoes": [],
@@ -3315,7 +3341,8 @@
   ],
   "aba": "Progressão",
   "situacao": "Crime contra o Estado Democrático de Direito (Título XII do CP), fato de 2023, primário: a Lei 15.402/2026 afasta os 25% e retroage (1/6)",
-  "esperado": "Auditoria: alerta 'percentual de progressão do SEEU (25%) maior que o legal (1/6 = 16,67%)'."
+  "esperado": "Auditoria: alerta 'percentual de progressão do SEEU (25%) maior que o legal (1/6 = 16,67%)'.",
+  "nota": "Divergência: a Lei 15.402/2026 tirou os crimes do Título XII dos incisos I e II do art. 112; o programa confere 25%."
  },
  {
   "acoes": [],
@@ -3576,7 +3603,7 @@
   "id": "S3030",
   "grupo": "P-Progressão",
   "titulo": "Estupro de 15/04/2026, reincidente genérico (anterior: furto): o SEEU aplica 80%; pela leitura do Tema 1084, 70%",
-  "conta": "Fato em 15/04/2026 (Lei 15.358/2026). O inciso VII (80%) fala do 'reincidente na prática de crime hediondo' - mesma redação que o STJ (Tema 1084) e o STF (Tema 1169) leram como reincidência específica. Reincidente genérico: 70% (V). Pena 8 anos = 2.920 dias: 80% = 2.336; 70% = 2.044.",
+  "conta": "Fato em 15/04/2026 (Lei 15.358/2026). O inciso VII (80%) fala do 'reincidente na prática de crime hediondo' - mesma redação que o STJ (Tema 1084) e o STF (Tema 1169) leram como reincidência específica. Anterior: furto transitado em 20/09/2019, extinto em 15/12/2022 (+5 anos = 15/12/2027 > fato) - reincidente genérico: 70% (V). Pena 8 anos = 2.920 dias: 80% = 2.336; 70% = 2.044.",
   "processo": "9903030-00.2026.8.12.0001",
   "rspe": {
    "arquivo": "SIMULADO_3030.pdf",
@@ -3634,7 +3661,7 @@
      "fracao_livramento": "1/3 - Comum Primário",
      "extinto": "Sim",
      "suspenso": "Não",
-     "data_extincao": "15/12/2020"
+     "data_extincao": "15/12/2022"
     },
     {
      "processo_criminal": "8803030-00.2026.8.12.0001",
@@ -3707,7 +3734,9 @@
   ],
   "aba": "Progressão",
   "situacao": "Estupro de 15/04/2026, reincidente genérico (anterior: furto): o SEEU aplica 80%; pela leitura do Tema 1084, 70%",
-  "esperado": "Auditoria: item de percentual acima do legal (80% x 70%) - tese, sem precedente próprio para a Lei 15.358/2026."
+  "esperado": "Auditoria: item de percentual acima do legal (80% x 70%) - tese, sem precedente próprio para a Lei 15.358/2026.",
+  "nota": "Tese: aplica ao inciso VII da Lei 15.358/2026 a leitura do Tema 1084 (sem precedente próprio).",
+  "decisao": true
  },
  {
   "acoes": [],
@@ -4078,10 +4107,10 @@
    "nome_mae": "MAE SIMULADA 3033",
    "filiacao": "MAE SIMULADA 3033",
    "artigo": "",
-   "data_prisao": "",
+   "data_prisao": "25/09/2026",
    "condenacao": "CONDENADO",
    "unidade": "ESTABELECIMENTO PENAL FEMININO SIMULADO",
-   "data_entrada": "",
+   "data_entrada": "25/09/2026",
    "sexo": "F",
    "conduta": "BOA",
    "data_impressao": "01/10/2026",
@@ -4090,7 +4119,12 @@
    "autos": [
     "9903033-00.2026.8.12.0001"
    ],
-   "eventos": [],
+   "eventos": [
+    {
+     "data": "25.09.2026",
+     "texto": "Entrada na Unidade Penal: ESTABELECIMENTO PENAL FEMININO SIMULADO, Procedente: DEPAC."
+    }
+   ],
    "historico_oculto": []
   },
   "manuais": {},
@@ -4904,7 +4938,8 @@
   ],
   "aba": "Progressão",
   "situacao": "Data-base informada, furto de 2018 com 1/6 no SEEU: a data refeita deve usar os 16% retroativos",
-  "esperado": "Aba Progressão: 14/02/2026* (16% sobre 2.190 dias = 350 dias desde 01/03/2025); não 01/03/2026 (1/6)."
+  "esperado": "Aba Progressão: 14/02/2026* (16% sobre 2.190 dias = 350 dias desde 01/03/2025); não 01/03/2026 (1/6).",
+  "nota": "Divergência: progressão refeita com 1/6 (01/03/2026*) em vez dos 16% retroativos (14/02/2026*)."
  },
  {
   "acoes": [],
@@ -4929,7 +4964,7 @@
    "regime_atual": "Semiaberto - ATIVO",
    "pena_total": "11a0m0d",
    "pena_cumprida": "0a0m0d",
-   "pena_remanescente": "10a3m6d",
+   "pena_remanescente": "11a0m0d",
    "total_interrupcoes": "0a0m0d",
    "saldo_remidos": "0 dias (0 dias remidos - 0 dias perdidos)",
    "data_base_seeu": "15/01/2026",
@@ -5051,7 +5086,7 @@
   "id": "S3042",
   "grupo": "P-Progressão",
   "titulo": "Tema 1006/STJ: data-base movida para a data do somatório das penas, com a pessoa presa sem interrupção desde 2024",
-  "conta": "STJ, Tema 1006 (REsp 1.753.509): a superveniência de nova condenação no curso da execução não altera a data-base para a progressão; a soma das penas (LEP, art. 111) só refaz o cálculo sobre a pena total. Presa desde 01/04/2024, sem falta nem regressão; o SEEU usa 20/03/2026 (data do somatório): pena 9 anos = 3.285 dias, cumpridos 718 até 19/03/2026, 2.567 x 16% = 410 -> 03/05/2027. Pela data-base legal (01/04/2024): 3.285 x 16% = 525 -> 08/09/2025 (já vencida).",
+  "conta": "STJ, Tema 1006 (REsp 1.753.509): a superveniência de nova condenação no curso da execução não altera a data-base para a progressão; a soma das penas (LEP, art. 111) só refaz o cálculo sobre a pena total. Presa desde 01/04/2024, sem falta nem regressão; o SEEU usa 20/03/2026 (data do somatório): pena 9 anos = 3.285 dias, cumpridos 718 até 19/03/2026, 2.567 x 16% = 410,7 -> 410 -> 04/05/2027. Pela data-base legal (01/04/2024): 3.285 x 16% = 525 -> 08/09/2025 (já vencida).",
   "processo": "9903042-00.2026.8.12.0001",
   "rspe": {
    "arquivo": "SIMULADO_3042.pdf",
@@ -6639,10 +6674,10 @@
    "nome_mae": "MAE SIMULADA 3054",
    "filiacao": "MAE SIMULADA 3054",
    "artigo": "",
-   "data_prisao": "",
+   "data_prisao": "10/01/2024",
    "condenacao": "CONDENADO",
    "unidade": "CENTRO PENAL AGROINDUSTRIAL DA GAMELEIRA",
-   "data_entrada": "",
+   "data_entrada": "10/01/2024",
    "sexo": "M",
    "conduta": "BOA",
    "data_impressao": "01/10/2026",
@@ -6651,7 +6686,12 @@
    "autos": [
     "9903054-00.2026.8.12.0001"
    ],
-   "eventos": [],
+   "eventos": [
+    {
+     "data": "10.01.2024",
+     "texto": "Entrada na Unidade Penal: CENTRO PENAL AGROINDUSTRIAL DA GAMELEIRA, Procedente: DEPAC."
+    }
+   ],
    "historico_oculto": []
   },
   "manuais": {},
@@ -6778,10 +6818,10 @@
    "nome_mae": "MAE SIMULADA 3055",
    "filiacao": "MAE SIMULADA 3055",
    "artigo": "",
-   "data_prisao": "",
+   "data_prisao": "20/09/2024",
    "condenacao": "CONDENADO",
    "unidade": "CENTRO PENAL AGROINDUSTRIAL DA GAMELEIRA",
-   "data_entrada": "",
+   "data_entrada": "20/09/2024",
    "sexo": "M",
    "conduta": "OTIMA",
    "data_impressao": "01/10/2026",
@@ -6790,7 +6830,12 @@
    "autos": [
     "9903055-00.2026.8.12.0001"
    ],
-   "eventos": [],
+   "eventos": [
+    {
+     "data": "20.09.2024",
+     "texto": "Entrada na Unidade Penal: CENTRO PENAL AGROINDUSTRIAL DA GAMELEIRA, Procedente: DEPAC."
+    }
+   ],
    "historico_oculto": []
   },
   "manuais": {},
@@ -6950,10 +6995,10 @@
    "nome_mae": "MAE SIMULADA 3056",
    "filiacao": "MAE SIMULADA 3056",
    "artigo": "",
-   "data_prisao": "",
+   "data_prisao": "10/09/2023",
    "condenacao": "CONDENADO",
    "unidade": "CENTRO PENAL AGROINDUSTRIAL DA GAMELEIRA",
-   "data_entrada": "",
+   "data_entrada": "10/09/2023",
    "sexo": "M",
    "conduta": "BOA",
    "data_impressao": "01/10/2026",
@@ -6962,7 +7007,12 @@
    "autos": [
     "9903056-00.2026.8.12.0001"
    ],
-   "eventos": [],
+   "eventos": [
+    {
+     "data": "10.09.2023",
+     "texto": "Entrada na Unidade Penal: CENTRO PENAL AGROINDUSTRIAL DA GAMELEIRA, Procedente: DEPAC."
+    }
+   ],
    "historico_oculto": []
   },
   "manuais": {},
@@ -7123,10 +7173,10 @@
    "nome_mae": "MAE SIMULADA 3058",
    "filiacao": "MAE SIMULADA 3058",
    "artigo": "",
-   "data_prisao": "",
+   "data_prisao": "04/01/2025",
    "condenacao": "CONDENADO",
    "unidade": "CENTRO PENAL AGROINDUSTRIAL DA GAMELEIRA",
-   "data_entrada": "",
+   "data_entrada": "04/01/2025",
    "sexo": "M",
    "conduta": "BOA",
    "data_impressao": "01/10/2026",
@@ -7135,7 +7185,12 @@
    "autos": [
     "9903058-00.2026.8.12.0001"
    ],
-   "eventos": [],
+   "eventos": [
+    {
+     "data": "04.01.2025",
+     "texto": "Entrada na Unidade Penal: CENTRO PENAL AGROINDUSTRIAL DA GAMELEIRA, Procedente: DEPAC."
+    }
+   ],
    "historico_oculto": []
   },
   "manuais": {},
@@ -7269,10 +7324,10 @@
    "nome_mae": "MAE SIMULADA 3059",
    "filiacao": "MAE SIMULADA 3059",
    "artigo": "",
-   "data_prisao": "",
+   "data_prisao": "10/03/2021",
    "condenacao": "CONDENADO",
    "unidade": "CENTRO PENAL AGROINDUSTRIAL DA GAMELEIRA",
-   "data_entrada": "",
+   "data_entrada": "10/03/2021",
    "sexo": "M",
    "conduta": "OTIMA",
    "data_impressao": "01/10/2026",
@@ -7281,7 +7336,12 @@
    "autos": [
     "9903059-00.2026.8.12.0001"
    ],
-   "eventos": [],
+   "eventos": [
+    {
+     "data": "10.03.2021",
+     "texto": "Entrada na Unidade Penal: CENTRO PENAL AGROINDUSTRIAL DA GAMELEIRA, Procedente: DEPAC."
+    }
+   ],
    "historico_oculto": []
   },
   "manuais": {},
@@ -7415,10 +7475,10 @@
    "nome_mae": "MAE SIMULADA 3060",
    "filiacao": "MAE SIMULADA 3060",
    "artigo": "",
-   "data_prisao": "",
+   "data_prisao": "10/01/2024",
    "condenacao": "CONDENADO",
    "unidade": "CENTRO PENAL AGROINDUSTRIAL DA GAMELEIRA",
-   "data_entrada": "",
+   "data_entrada": "10/01/2024",
    "sexo": "M",
    "conduta": "BOA",
    "data_impressao": "01/10/2026",
@@ -7428,6 +7488,10 @@
     "9903060-00.2026.8.12.0001"
    ],
    "eventos": [
+    {
+     "data": "10.01.2024",
+     "texto": "Entrada na Unidade Penal: CENTRO PENAL AGROINDUSTRIAL DA GAMELEIRA, Procedente: DEPAC."
+    },
     {
      "data": "08.09.2026",
      "texto": "Saída confirmada do benefício de: SAÍDA TEMPORÁRIA"
@@ -7580,10 +7644,10 @@
    "nome_mae": "MAE SIMULADA 3062",
    "filiacao": "MAE SIMULADA 3062",
    "artigo": "",
-   "data_prisao": "",
+   "data_prisao": "10/01/2024",
    "condenacao": "CONDENADO",
    "unidade": "CENTRO PENAL AGROINDUSTRIAL DA GAMELEIRA",
-   "data_entrada": "",
+   "data_entrada": "10/01/2024",
    "sexo": "M",
    "conduta": "BOA",
    "data_impressao": "01/10/2026",
@@ -7592,7 +7656,12 @@
    "autos": [
     "9903062-00.2026.8.12.0001"
    ],
-   "eventos": [],
+   "eventos": [
+    {
+     "data": "10.01.2024",
+     "texto": "Entrada na Unidade Penal: CENTRO PENAL AGROINDUSTRIAL DA GAMELEIRA, Procedente: DEPAC."
+    }
+   ],
    "historico_oculto": []
   },
   "manuais": {},
@@ -7716,10 +7785,10 @@
    "nome_mae": "MAE SIMULADA 3063",
    "filiacao": "MAE SIMULADA 3063",
    "artigo": "",
-   "data_prisao": "",
+   "data_prisao": "30/12/2025",
    "condenacao": "CONDENADO",
    "unidade": "ESTABELECIMENTO PENAL SIMULADO DE CAMPO GRANDE",
-   "data_entrada": "",
+   "data_entrada": "30/12/2025",
    "sexo": "M",
    "conduta": "BOA",
    "data_impressao": "01/10/2026",
@@ -7728,7 +7797,12 @@
    "autos": [
     "9903063-00.2026.8.12.0001"
    ],
-   "eventos": [],
+   "eventos": [
+    {
+     "data": "30.12.2025",
+     "texto": "Entrada na Unidade Penal: ESTABELECIMENTO PENAL SIMULADO DE CAMPO GRANDE, Procedente: DEPAC."
+    }
+   ],
    "historico_oculto": []
   },
   "manuais": {},
@@ -7871,10 +7945,10 @@
    "nome_mae": "MAE SIMULADA 3064",
    "filiacao": "MAE SIMULADA 3064",
    "artigo": "",
-   "data_prisao": "",
+   "data_prisao": "21/10/2025",
    "condenacao": "CONDENADO",
    "unidade": "ESTABELECIMENTO PENAL SIMULADO DE CAMPO GRANDE",
-   "data_entrada": "",
+   "data_entrada": "21/10/2025",
    "sexo": "M",
    "conduta": "OTIMA",
    "data_impressao": "01/10/2026",
@@ -7883,7 +7957,12 @@
    "autos": [
     "9903064-00.2026.8.12.0001"
    ],
-   "eventos": [],
+   "eventos": [
+    {
+     "data": "21.10.2025",
+     "texto": "Entrada na Unidade Penal: ESTABELECIMENTO PENAL SIMULADO DE CAMPO GRANDE, Procedente: DEPAC."
+    }
+   ],
    "historico_oculto": []
   },
   "manuais": {},
@@ -8007,10 +8086,10 @@
    "nome_mae": "MAE SIMULADA 3065",
    "filiacao": "MAE SIMULADA 3065",
    "artigo": "",
-   "data_prisao": "",
+   "data_prisao": "03/01/2026",
    "condenacao": "CONDENADO",
    "unidade": "ESTABELECIMENTO PENAL SIMULADO DE CAMPO GRANDE",
-   "data_entrada": "",
+   "data_entrada": "03/01/2026",
    "sexo": "M",
    "conduta": "BOA",
    "data_impressao": "01/10/2026",
@@ -8019,7 +8098,12 @@
    "autos": [
     "9903065-00.2026.8.12.0001"
    ],
-   "eventos": [],
+   "eventos": [
+    {
+     "data": "03.01.2026",
+     "texto": "Entrada na Unidade Penal: ESTABELECIMENTO PENAL SIMULADO DE CAMPO GRANDE, Procedente: DEPAC."
+    }
+   ],
    "historico_oculto": []
   },
   "manuais": {},

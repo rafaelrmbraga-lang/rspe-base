@@ -102,9 +102,18 @@ def exe(k, crimes, ini=None, db=None, regime="Fechado - ATIVO", incs=None, evs=N
     return rspe(k, crimes, eventos, incidentes, ini=ini, db=db, prog=prog, liv=liv, regime=regime, **kw)
 
 
-def novo(k, aba, situacao, esperado, conta, r, checks, titulo=None, **kw):
+def novo(k, aba, situacao, esperado, conta, r, checks, titulo=None, nota=None, decisao=None, **kw):
+    f = kw.get("ficha")
+    if f and not f.get("data_prisao"):
+        p0 = min((ev_ for ev_ in r["_eventos"] if ev_["tipo"].startswith("PRISÃO")), key=lambda e: D(e["data"]))["data"]
+        f["data_prisao"] = f["data_entrada"] = p0
+        f["eventos"] = [{"data": p0.replace("/", "."), "texto": "Entrada na Unidade Penal: %s, Procedente: DEPAC." % f["unidade"]}] + f["eventos"]
     c = caso(k, "P-" + aba, titulo or situacao, conta, r, checks, **kw)
     c.update(aba=aba, situacao=situacao, esperado=esperado)
+    if nota:
+        c["nota"] = nota
+    if decisao:
+        c["decisao"] = True
     CASOS.append(c)
     return c
 
@@ -322,21 +331,26 @@ k = 3022
 c1 = crime(P(k, 2026), "ART 288-A: Constituição de milícia privada", anos(6), "01/06/2026", sentenca="10/08/2026", transito="20/09/2026",
            tipo=T_MILICIA, fp="75% - Art.112, VI, c, da LEP", fl="1/3 - Comum Primário")
 novo(k, "Progressão", "Milícia privada (art. 288-A), fato de 01/06/2026: 75% confere; livramento 1/3 (sem vedação)",
-     "Auditoria: 'percentual de progressão confere (75%)'; sem alerta de livramento.",
+     "Auditoria: 'percentual de progressão confere (75%)'; sem alerta de livramento; nenhum item de 'SEEU tratou como hediondo'.",
      "Fato em 01/06/2026: LEP, art. 112, VI, c, com o caput do inciso VI na redação da Lei 15.358/2026: 75%. A alínea c não veda o "
      "livramento; o art. 288-A não é hediondo - 1/3 (CP, art. 83, I).",
-     exe(k, [c1], ini="01/06/2026"), [AUD(CONF), AUD(DIV, False), AUD(LDIV, False)])
+     exe(k, [c1], ini="01/06/2026"), [AUD(CONF), AUD(DIV, False), AUD(LDIV, False),
+                                  AUD("seeu-tratou-como-hediondo-mas-o-tipo-nao-consta", False, nota="Os 75% são o percentual legal da milícia (LEP, art. 112, VI, c); o SEEU não tratou o crime como hediondo.")],
+     nota="O programa reconhece 75% como selo de hediondo e alerta que o art. 288-A não está no rol, embora 75% seja o percentual próprio da milícia.")
 
 k = 3023
 c1 = crime(P(k, 2026), "ART 2: Domínio social estruturado", anos(26, 8), "02/05/2026", sentenca="20/08/2026", transito="30/09/2026",
            lei="15358/26 - Marco Legal do Combate ao Crime Organizado", tipo=T_DOMINIO, vga="S", orcrim="S",
            fp="75% - Art.112, VI, b, da LEP", fl="1/1 - Comando de organização ultraviolenta")
 novo(k, "Progressão", "Comando de organização criminosa ultraviolenta pelo próprio tipo (Lei 15.358/2026, art. 2º, § 1º, I): 75% e livramento vedado certos",
-     "Auditoria: nenhum alerta de fração (75% e 1/1 conferem); a condição de 'ultraviolenta' está no próprio tipo da condenação.",
+     "Auditoria: nenhum alerta de fração e nenhum 'verificar' sobre a organização ser ultraviolenta (75% e 1/1 conferem; a condição está no próprio tipo).",
      "Fato em 02/05/2026. O crime de domínio social estruturado é praticado por integrante de organização criminosa ultraviolenta "
      "(Lei 15.358/2026, art. 2º, caput e § 2º), com o aumento do comando (§ 1º, I); é hediondo (Lei 8.072/90, art. 1º, p. ú., VIII). "
      "LEP, art. 112, VI, b: 75%, vedado o livramento; a própria Lei 15.358/2026, art. 2º, § 4º, III, também veda o livramento.",
-     exe(k, [c1], ini="02/05/2026"), [AUD(DIV, False), AUD(LDIV, False)])
+     exe(k, [c1], ini="02/05/2026"), [AUD(DIV, False), AUD(LDIV, False),
+                                  AUD("comando-de-organizacao-criminosa-fato-em-75-so-s", False),
+                                  AUD("livramento-vedado-pelo-seeu-1-1-so-se-a-organiza", False)],
+     nota="O programa manda verificar se a organização é ultraviolenta, mas a condenação é pelo próprio crime de domínio social estruturado (Lei 15.358/2026, art. 2º), praticado por integrante de organização criminosa ultraviolenta: a condição está no tipo.")
 
 # Lei 15.402/2026
 k = 3024
@@ -377,7 +391,8 @@ novo(k, "Progressão", "Crime contra o Estado Democrático de Direito (Título X
      "excluiu expressamente dos incisos I e II do art. 112 'os crimes previstos no Título XII da Parte Especial' do CP (arts. 359-I a "
      "359-U, crimes contra o Estado Democrático de Direito): o primário fica no caput, 1/6. É lei posterior mais benéfica e retroage "
      "(CF, art. 5º, XL; CP, art. 2º, p. ú.). Pena 5a6m = 2.005 dias: 25% = 501; 1/6 = 334 - 167 dias a mais.",
-     exe(k, [c1]), [AUD(DIV, contem=["25%"], nota="O programa não tem regra para a exceção do Título XII da Lei 15.402/2026: confere os 25% da Lei 13.964/2019. Pela lei, 1/6 (retroativo).")])
+     exe(k, [c1]), [AUD(DIV, contem=["25%"], nota="O programa não tem regra para a exceção do Título XII da Lei 15.402/2026: confere os 25% da Lei 13.964/2019. Pela lei, 1/6 (retroativo).")],
+     nota="Divergência: a Lei 15.402/2026 tirou os crimes do Título XII dos incisos I e II do art. 112; o programa confere 25%.")
 
 # hediondo antes de 2007 e entre 2007 e 2020
 k = 3028
@@ -401,15 +416,17 @@ novo(k, "Progressão", "Estupro de vulnerável de 2012, reincidente genérico (a
      "transitado em 20/08/2009, extinto 20/11/2010 (+5 = 20/11/2015 > fato).", exe(k, [a, c1]), [AUD(DIV, contem=["60%", "40%"])])
 
 k = 3030
-a = anterior(k, "ART 155: Furto", 400, "10/02/2019", "10/08/2019", "20/09/2019", "15/12/2020", tipo=T_FURTO, ano=2019)
+a = anterior(k, "ART 155: Furto", 400, "10/02/2019", "10/08/2019", "20/09/2019", "15/12/2022", tipo=T_FURTO, ano=2019)
 c1 = crime(P(k, 2026), "ART 213: Estupro", anos(8), "15/04/2026", sentenca="10/07/2026", transito="20/08/2026", tipo=T_ESTUPRO,
            vga="S", rc="S", fp="80% - Art.112, VII, da LEP", fl="2/3 - Hediondo")
 novo(k, "Progressão", "Estupro de 15/04/2026, reincidente genérico (anterior: furto): o SEEU aplica 80%; pela leitura do Tema 1084, 70%",
      "Auditoria: item de percentual acima do legal (80% x 70%) - tese, sem precedente próprio para a Lei 15.358/2026.",
      "Fato em 15/04/2026 (Lei 15.358/2026). O inciso VII (80%) fala do 'reincidente na prática de crime hediondo' - mesma redação que o "
-     "STJ (Tema 1084) e o STF (Tema 1169) leram como reincidência específica. Reincidente genérico: 70% (V). Pena 8 anos = 2.920 dias: "
+     "STJ (Tema 1084) e o STF (Tema 1169) leram como reincidência específica. Anterior: furto transitado em 20/09/2019, extinto em "
+     "15/12/2022 (+5 anos = 15/12/2027 > fato) - reincidente genérico: 70% (V). Pena 8 anos = 2.920 dias: "
      "80% = 2.336; 70% = 2.044.", exe(k, [a, c1], ini="15/04/2026"),
-     [dict(AUD(DIV, contem=["80%", "70%"]), decisao=True)])
+     [dict(AUD(DIV, contem=["80%", "70%"]), decisao=True)], decisao=True,
+     nota="Tese: aplica ao inciso VII da Lei 15.358/2026 a leitura do Tema 1084 (sem precedente próprio).")
 
 k = 3031
 c1 = crime(P(k, 2023), "ART 33: Tráfico de drogas", anos(1, 8), "14/02/2023", lei=DROGAS, tipo=T_TRAF_P, fp="40% - Hediondo primário",
@@ -512,7 +529,8 @@ novo(k, "Progressão", "Data-base informada, furto de 2018 com 1/6 no SEEU: a da
      "Mesmo quadro do caso anterior, com fato em 10/10/2018: a lei do fato dava 1/6, mas os 16% da Lei 13.964/2019 retroagem (CF, "
      "art. 5º, XL) - a Auditoria do próprio programa os aponta. Lapso 2.190 x 16% = 350 -> 14/02/2026. Com 1/6 seriam 365 dias -> "
      "01/03/2026. SEEU (1/6 desde 01/09/2025): 2.006 / 6 = 334,3 -> 334 -> 01/08/2026.",
-     r, [C("prog", "eq", "14/02/2026*", nota="A data refeita usa o 1/6 do SEEU para fato anterior a 23/01/2020, embora a própria Auditoria diga que os 16% retroagem: 15 dias a mais contra o assistido.")], manuais={"data_base": "01/03/2025|início da prisão"})
+     r, [C("prog", "eq", "14/02/2026*", nota="A data refeita usa o 1/6 do SEEU para fato anterior a 23/01/2020, embora a própria Auditoria diga que os 16% retroagem: 15 dias a mais contra o assistido.")], manuais={"data_base": "01/03/2025|início da prisão"},
+     nota="Divergência: progressão refeita com 1/6 (01/03/2026*) em vez dos 16% retroativos (14/02/2026*).")
 
 k = 3041
 c1 = crime(P(k, 2021), "ART 155: Furto", anos(2), "10/06/2021", sentenca="10/01/2022", transito="10/03/2022", tipo=T_FURTO,
@@ -523,6 +541,7 @@ r = rspe(k, [c1, c2], [prisao("15/01/2026", P(k, 2023), "PRISÃO PREVENTIVA")],
          [inc(REG, "Semiaberto - Regime Inicial", "05/05/2022", "05/05/2022")], ini="15/01/2026", regime="Semiaberto - ATIVO",
          prog="", liv="", pena_cumprida="0a0m0d")
 r["pena_cumprida"] = "0a0m0d"
+r["pena_remanescente"] = r["pena_total"]
 novo(k, "Progressão", "Nova condenação em regime fechado não unificada (semiaberto atual): unificação pendente",
      "Aba Progressão: data estimada 09/08/2028* com a ressalva 'a verificar: unificação pendente' (início da custódia, 15/01/2026, + 937 dias); regime 'a verificar'.",
      "Regime atual semiaberto; roubo sentenciado em 10/03/2026 em regime fechado, sem soma/unificação decidida depois: a pena nova "
@@ -544,8 +563,8 @@ novo(k, "Progressão", "Tema 1006/STJ: data-base movida para a data do somatóri
      "01/04/2024, ou o último marco legal).",
      "STJ, Tema 1006 (REsp 1.753.509): a superveniência de nova condenação no curso da execução não altera a data-base para a "
      "progressão; a soma das penas (LEP, art. 111) só refaz o cálculo sobre a pena total. Presa desde 01/04/2024, sem falta nem "
-     "regressão; o SEEU usa 20/03/2026 (data do somatório): pena 9 anos = 3.285 dias, cumpridos 718 até 19/03/2026, 2.567 x 16% = 410 "
-     "-> 03/05/2027. Pela data-base legal (01/04/2024): 3.285 x 16% = 525 -> 08/09/2025 (já vencida).",
+     "regressão; o SEEU usa 20/03/2026 (data do somatório): pena 9 anos = 3.285 dias, cumpridos 718 até 19/03/2026, 2.567 x 16% = 410,7 -> 410 "
+     "-> 04/05/2027. Pela data-base legal (01/04/2024): 3.285 x 16% = 525 -> 08/09/2025 (já vencida).",
      r, [AUD("data-base-coincide-com-a-soma-unificacao-das-pen", contem=["20/03/2026"])])
 
 k = 3043
