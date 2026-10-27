@@ -47,12 +47,22 @@ def prazo_base_anos(pena_dias, data_fato=None):
     """Art. 109 pela pena (aplicada), em anos (tabela da base jurídica), pela redação vigente na data do fato
     (inciso VI: 2 anos para fatos anteriores à Lei 12.234/2010). No crime do art. 28 da Lei 11.343/2006 em análise (_ART28),
     2 anos em qualquer caso (art. 30 da Lei de Drogas), na punitiva e na executória."""
-    if _ART28[0]:
+    if _ART28[0] or _MULTA[0]:
         return 2
     return rg.prazo_art109_anos(pena_dias, data_fato)
 
 
 _ART28 = [False]  # o crime que analisar() está calculando é o do art. 28 da Lei 11.343/2006
+_MULTA = [False]  # o crime que analisar() está calculando teve só a multa aplicada (CP, art. 114, I: 2 anos)
+
+
+def _multa_isolada(c, pena):
+    """Condenação só à multa (sem pena privativa: pena 0 ou em branco, com a multa no texto da pena): prescreve em 2 anos (CP, art.
+    114, I), na punitiva e na executória."""
+    if pena:
+        return False
+    t = rs._sem_acento(" ".join(str(c.get(k) or "") for k in ("pena_total_processo", "pena_imposta", "pena_multa", "multa"))).upper()
+    return bool(re.search(r"\bMULTA\b|DIAS?[- ]MULTA", t)) and not re.search(r"MEDIDA DE SEGURANCA|CONVERTIDA", t)
 
 
 def _trafico_privilegiado(c):
@@ -1596,6 +1606,13 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
                 _sem_rem_dep = not any(d_ and d_ > g0 for d_, _n in remicoes)
                 _so_este = len(ativos) == 1 or rs.pena_para_dias(r.get("pena_total")) == pena
                 if (aberto or (_so_ficha and _sem_rem_dep)) and rem_seeu and _so_este and not ult_ppl:  # com o último comparecimento, o remanescente do SEEU conta tempo que não houve
+                    # a detração visível nos eventos (prisão provisória neste processo) não foi abatida pelo SEEU: o remanescente
+                    # impresso é a pena menos só o cumprimento desde o termo; com a detração obrigatória (CP, art. 42) o saldo era
+                    # zero - a pena estava cumprida antes da fuga (extinção pelo cumprimento a verificar, não só a prescrição)
+                    if (detr and not detr_sem_proc and rem_seeu > 0 and saldo_max == 0
+                            and abs(rem_seeu - max(0, pena - cumprido_g0 - rem_g0)) <= 2):
+                        L["ppe_saldo_zero_detr"] = {"data": rs.fmt(g0), "evento": _evento_interrupcao(motivo), "detr": detr,
+                                                     "rem_seeu": rem_seeu, "cumprido": cumprido_g0 + rem_g0}
                     saldo_min = saldo_max = rem_seeu
                     fonte_saldo = " (pena remanescente do RSPE)"
             elif hcalc or hlin:
@@ -2917,6 +2934,33 @@ def _executoria_art28(L, c, ctx, termo, termo_txt, ppe_meses, meia):
     return det
 
 
+def _executoria_multa(L, c, ctx, termo, termo_txt, ppe_meses):
+    """Multa como única pena aplicada: a executória prescreve em 2 anos (CP, art. 114, I), do trânsito (art. 112, I). Não há pena
+    privativa nem saldo: a custódia não é cumprimento da multa - a prisão por outro motivo suspende o prazo (art. 116, p. único) e o
+    novo crime o interrompe (art. 117, VI), como nas demais modalidades sem saldo. A cobrança da multa segue as causas interruptivas e
+    suspensivas da dívida ativa (CP, art. 51), que o RSPE não mostra: conferir antes de requerer."""
+    hoje = ctx["hoje"]
+    cumpr, susp, novos = _marcos_modalidade(c, ctx["r"], ctx, termo)
+    if cumpr:
+        susp = list(susp) + [(a, b, "preso (%s) - a custódia não é cumprimento da multa" % f) for a, b, f in cumpr]
+    M = ([], susp, novos)
+    _prd_campos(L, 0, rs.to_date(c.get("data_infracao") or ""), ppe_meses, None, 1)
+    L["inciso109"] = ""
+    L["ppe_meses_art109"] = ppe_meses
+    R = _corre(ctx, M, termo, ppe_meses)
+    L["ppe_linha_tempo"] = [{"inicio": rs.fmt(termo), "fim": "", "tipo": "liberdade", "fonte": "trânsito em julgado da condenação à multa",
+                             "efeito": "prazo de 2 anos (CP, art. 114, I)", "atribuicao": "comprovada"}]
+    _lt_corre(L["ppe_linha_tempo"], R)
+    det = ["Termo inicial: %s." % termo_txt,
+           "Multa como única pena aplicada: a execução prescreve em %s (CP, art. 114, I), não pela tabela do art. 109." % L["prazo_ppe"],
+           "A cobrança da multa segue as causas interruptivas e suspensivas da dívida ativa (CP, art. 51): conferir na execução da multa."]
+    L["ppe_saldo_rotulo"] = "Prazo do art. 114, I, do CP (multa isolada): não há saldo."
+    _fim_modalidade(L, det, R, hoje, "o trânsito", ppe_meses, "multa em execução", "Multa isolada (CP, art. 114, I)")
+    if L.get("ppe_cor") == "vermelho":
+        det.append("Conferir também as causas interruptivas da cobrança da multa (CP, art. 51; LEF, art. 8º, § 2º, e CTN, art. 174), que o RSPE não mostra.")
+    return det
+
+
 def _executoria_ms(L, c, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, meia):
     """Medida de segurança do inimputável (absolvição imprópria): prazo pela pena máxima em abstrato do crime (STJ, AgRg no
     REsp 1.667.508; STF, HC 97.621), interrompido pelo início do cumprimento - inclusive a internação ou prisão já em curso no
@@ -3575,6 +3619,8 @@ def analisar(r, hoje=None, ficha=None):
         L["art115"] = meia
 
         art28_sem_pena = False
+        multa_isolada = False
+        _MULTA[0] = False
         if not pena and _ms_rspe and c.get("_modalidade") not in ("PPL", "PRD", "SURSIS", "MS98"):
             # medida de segurança (absolvição imprópria): não há pena aplicada - o prazo se regula pela pena máxima cominada ao crime
             # (STJ, Súmula 527; AgRg no REsp 1.667.508), não "sem pena"
@@ -3603,6 +3649,11 @@ def analisar(r, hoje=None, ficha=None):
             # se calcula pelas datas; a executória fica a verificar (sem a duração da pena não há saldo)
             art28_sem_pena = True
             L["pena"] = "pena não privativa / não informada"
+        elif not pena and not extinto and c.get("_modalidade") not in ("PPL", "PRD", "SURSIS", "MS98") and _multa_isolada(c, pena):
+            # multa como única pena aplicada: prazo de 2 anos (CP, art. 114, I), na punitiva e na executória
+            multa_isolada = True
+            _MULTA[0] = True
+            L["pena"] = "multa (única pena aplicada)"
         elif not pena:
             L.update(retro_status="sem pena no RSPE", retro_cor="cinza", ppe_status="sem pena no RSPE", ppe_cor="cinza",
                      prazo_ppp="", prazo_ppe="", ppe_termo="", ppe_previsao="", retro_detalhe="", ppe_detalhe="")
@@ -3629,7 +3680,12 @@ def analisar(r, hoje=None, ficha=None):
             continue
         base_meses = prazo_base_anos(pena, fato) * 12
         L["pena_dias"] = pena  # pena aplicada em uso (com a correção do operador), em dias
-        L["inciso109"] = "" if art28_sem_pena else rg.inciso_art109(pena)
+        L["inciso109"] = "" if (art28_sem_pena or multa_isolada) else rg.inciso_art109(pena)
+        L["multa_isolada"] = multa_isolada
+        if multa_isolada:
+            L["avisos"].append("multa como única pena aplicada (%s): a prescrição ocorre em 2 anos (CP, art. 114, I), na punitiva e na "
+                               "executória - a execução da multa segue as causas interruptivas e suspensivas da dívida ativa (CP, art. 51), "
+                               "que o RSPE não mostra" % ((c.get("pena_total_processo") or c.get("pena_imposta") or "").strip() or "multa"))
         L["art28"] = _ART28[0]
         L["art28_sem_pena"] = art28_sem_pena
         if L["art28"]:
@@ -4006,7 +4062,14 @@ def analisar(r, hoje=None, ficha=None):
             if _lst_ult and not any(_mesmo_processo(c.get("processo_criminal") or "", q) for q in _lst_ult):
                 _outro_proc = _evs[-1][2].get("processos") or ""
         # o cumprimento tem de ser posterior ao fato desta condenação (sem o fato, ao ano da ação penal): prisão anterior é de outra
-        if art28_sem_pena:
+        if multa_isolada:
+            if termo:
+                det = _executoria_multa(L, c, ctx, termo, termo_txt, ppe_meses)
+            else:
+                L["ppe_status"] = "Verificar na ação penal: trânsito em julgado não consta no RSPE"
+                L["ppe_cor"] = "cinza"
+                det = ["Multa como única pena aplicada: prazo de %s (CP, art. 114, I). Sem data de trânsito no RSPE: verificar na ação penal." % L["prazo_ppe"]]
+        elif art28_sem_pena:
             # art. 28 sem pena privativa: prazo de 2 anos (art. 30) do termo; sem a duração e o cumprimento da pena, não há saldo nem
             # interrupções a afirmar - a verificar
             if termo:
@@ -4258,6 +4321,7 @@ def analisar(r, hoje=None, ficha=None):
                                    periodo=L.get("ppe_art28_periodo") or ("cumprimento da pena do art. 28 não consta do RSPE (a verificar)" if L.get("ppe_termo") else L["ppe_quadro"].get("periodo", "")))
         linhas.append(L)
     _ART28[0] = False
+    _MULTA[0] = False
     # avisos próprios de cada crime identificam o crime e a ação penal (uma execução pode ter vários processos)
     geral = set(avisos_gerais)
     for L in linhas:
