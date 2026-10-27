@@ -1831,6 +1831,24 @@ def comparacao(r, f, hoje=None, manuais=None, homologados=None, trab=None):
         else:
             d["dias_soma"] = round(novo, 2)
             d["contido"] = "repete parte %s: soma-se só a parte nova (≈ %s dias)" % (("dos atestados " if len(quem) > 1 else "do atestado ") + nums, _nf(novo))
+    # (7.15.1) leitura: até 12 obras a cada 12 meses (Res. CNJ 391/2021, art. 5º - até 48 dias por ano). Na ordem do mês de referência
+    # (o último mês citado; sem mês, o da emissão), cada relatório soma só as obras que cabem nos 12 meses que terminam no seu mês
+    def _mes_lei(d_):
+        ms = [(int(y), int(mm)) for mm, y in re.findall(r"\b(\d{2})/(\d{4})\b", d_.get("periodo") or "") if 1 <= int(mm) <= 12]
+        return max(ms) if ms else ((d_["emissao"].year, d_["emissao"].month) if d_["emissao"] else None)
+    lei_c = []
+    for d in sorted([d for d in docs if d["tipo"] == "Leitura" and not d["fora"] and d["dias"] and _mes_lei(d)],
+                    key=lambda d: (_mes_lei(d), d["emissao"] or date.min)):
+        y_, m_ = _mes_lei(d)
+        n_ = y_ * 12 + m_
+        usadas = sum(ob_ for k_, ob_ in lei_c if n_ - 11 <= k_ <= n_)
+        ob = int(round(d["dias"] / 4.0))
+        cabe = max(0, min(ob, 12 - usadas))
+        lei_c.append((n_, cabe))
+        if cabe < ob:
+            d["dias_soma"] = 4.0 * cabe
+            d["contido"] = ("passa do limite de 12 obras a cada 12 meses (Res. CNJ 391/2021, art. 5º: até 48 dias por ano): %s" % (
+                "não se soma" if not cabe else "soma-se só %s (%s dias)" % (rs.pl(cabe, "obra", "obras"), _nf(4.0 * cabe))))
     soma = lambda L: round(sum((d["dias_soma"] if "dias_soma" in d else d["dias"]) or 0 for d in L), 2)
     at_ = [d for d in desta if d["tipo"] == "Atestado de trabalho"]
     man_ = [d for d in desta if d["tipo"].endswith("(informado por você)")]
@@ -1962,6 +1980,22 @@ def comparacao(r, f, hoje=None, manuais=None, homologados=None, trab=None):
         if i is not None:
             orig[i] = d
             menor.append((d, rem_[i]))
+    # (7.15.1) certidão de semestre peticionada, com a matrícula da ficha (estimativa), sem nenhuma remição do RSPE que a explique: as
+    # remições decididas depois do peticionamento já estão ligadas a outros documentos e nenhuma ficou livre - provável pendência
+    # (amarelo; LEP, arts. 126, § 8º, e 129), não "peticionado · conferir a decisão" em cinza
+    for d in [d for d in desta if d["tipo"] == "Certidão de frequência escolar" and not d["dias"] and d.get("estim") and d["emissao"]
+              and d["pet_ok"] and not d["hom"] and not any(d.get(k_) for k_ in ("provavel", "provavel_ex", "rem_conf", "pend_prov"))]:
+        dep = [i for i, x in enumerate(rem_) if x["decisao"] and x["decisao"] >= d["emissao"]]
+        if not dep or any(i not in orig for i in dep) or (imp - d["emissao"]).days <= 180:
+            continue
+        lig = sorted(dep, key=lambda i: rem_[i]["decisao"])
+        d["pend_prov"] = "%s, peticionada em %s (estimativa ≈ %s dias), sem remição no RSPE que a explique (%s depois do peticionamento: %s) - " \
+            "provavelmente ainda não foi apreciada; conferir nos autos e, se for o caso, requerer a remição pendente" % (
+                nome_doc0(d), _f(d["emissao"]), _nf(d["estim"]["dias"]),
+                "a remição decidida" if len(lig) == 1 else "as remições decididas",
+                _lista(["%s dias em %s, ligada %s" % (_nf(rem_[i]["dias"]), _f(rem_[i]["decisao"]), re.sub(r"^a ", "à ", re.sub(r"^o ", "ao ", nome_doc0(orig[i]))) if re.match(r"[ao] ", nome_doc0(orig[i])) else "a " + nome_doc0(orig[i]))
+                        for i in lig]))
+        d["pend_docs"], d["pend_sem_rem"] = [d["chave"]], True
     # ---- estimados (fora da conta): trabalho sem atestado (todo o da execução) e estudo sem certidão ----
     ult_at = max([d["emissao"] if d["periodo"].startswith("sem período") else _dt(d["periodo"].split(" a ")[-1]) for d in at_ + man_
                   if d["emissao"]] or [None], key=lambda x: x or date.min)
@@ -2042,6 +2076,8 @@ def comparacao(r, f, hoje=None, manuais=None, homologados=None, trab=None):
                 x_ = em_int(min(fo_))
                 aparte.append("%s, %s a %s (%s, %s a %s)" % (L["local"], _f(min(fo_)), _f(max(fo_)), x_[2], _f(x_[0]), _f(x_[1])))
                 L["aparte"] = True
+                # (7.15.1) todo o trabalho do vínculo no período interrompido: nada a atestar nesta execução
+                L["aparte_total"] = not (ds_ - fo_)
             dias_l[id(L)] = ds_ - fo_
     # trabalho em curso há até 90 dias, sem remição sem documento depois do início: acompanhar (fora do saldo e do pedido)
     recente = {k for k, L in ((id(L), L) for L in linhas_ if L["st"] == "sem") if L.get("em_curso") and dias_l[k]
@@ -2236,7 +2272,7 @@ def comparacao(r, f, hoje=None, manuais=None, homologados=None, trab=None):
     for d in [d for d in vivos if d.get("pend_prov")]:
         ponto("A conferir", "amarelo", "Provável pendência: %s." % d["pend_prov"], "pend_cert",
               docs_=[o for o in vivos if o["chave"] in d["pend_docs"]] or [d])
-    sv = [d for d in vivos if d["sem_valor"] and d["tipo"] != "Exame" and not d.get("provavel_ex")]
+    sv = [d for d in vivos if d["sem_valor"] and d["tipo"] != "Exame" and not d.get("provavel_ex") and not d.get("pend_sem_rem")]
     if sv:
         ponto("A conferir", "amarelo", "Sem valor na ficha (fora da comparação): %s - conferir nos autos." % _lista(
             ["%s (%s: %s)" % (nome_doc(d), _f(d["emissao"]), d["sem_valor"]) for d in sv]), "sem_valor", docs_=sv)
@@ -2438,6 +2474,8 @@ def comparacao(r, f, hoje=None, manuais=None, homologados=None, trab=None):
             d["sit"], d["cor"] = "Possivelmente remido em %s: conferir %s" % (d["provavel_ex"], "as áreas" if d["tipo"] == "Exame" else "as horas"), "cinza"
         elif d.get("menor"):
             d["sit"], d["cor"] = "Remida a menor? RSPE: %s - conferir" % d["menor"], "cinza"
+        elif d.get("pend_sem_rem"):
+            d["sit"], d["cor"] = "Peticionado, sem remição no RSPE que o explique: provável pendência", "amarelo"
         elif not d["pet_ok"]:
             d["sit"], d["cor"] = "Sem registro de peticionamento", "amarelo"
         else:
@@ -2455,11 +2493,12 @@ def comparacao(r, f, hoje=None, manuais=None, homologados=None, trab=None):
             if p_["cor"] == "amarelo" and p_["tipo"] not in ("pedir_atestado", "pend_cert"):
                 p_["cor"], p_["cor0"] = "cinza", "amarelo"
         for d in docs:
-            if d["cor"] == "amarelo":
+            if d["cor"] == "amarelo" and not d.get("pend_sem_rem"):
                 d["cor"] = "cinza"
     outra = outra_execucao(r, f)
     onde = onde_diferenca(dif, docs, post, verm, pontos, trab, ult_dec, rspe_maior, acomp_l)
-    return {"onde": onde, "rspe_maior": rspe_maior, "outra_exec": outra, "acomp": acomp_l, "corte": corte, "_sem_doc": sem_doc, "R": R, "docs": docs, "at_desta": soma(at_), "n_desta": len(at_), "man": soma(man_), "n_man": len(man_), "est_comp": soma(est_),
+    diag = diagnostico(dif, verm, len(pedir) / 3.0, pontos, rspe_maior, any(d.get("pend_prov") for d in docs if not d["fora"]), acomp_l, trab)
+    return {"onde": onde, "diag": diag, "rspe_maior": rspe_maior, "outra_exec": outra, "acomp": acomp_l, "corte": corte, "_sem_doc": sem_doc, "R": R, "docs": docs, "at_desta": soma(at_), "n_desta": len(at_), "man": soma(man_), "n_man": len(man_), "est_comp": soma(est_),
             "leitura": soma(lei_), "obras": int(round(soma(lei_) / 4)), "fora": [d for d in docs if d["fora"]], "comp": comp, "dif": dif,
             "estim": estim, "dif_estim": round(dif + estim, 2), "pouco": pouco, "concl": concl, "concl_cor": concl_cor, "pontos": pontos,
             "pedir_dias": len(pedir) / 3.0, "talvez_dias": len(talvez) / 3.0, "conf_dias": len(conferir) / 3.0, "est_estim": est_estim, "est_cert_fim": cert_fim, "impressao": imp, "inicio": inicio,
@@ -2518,6 +2557,33 @@ def outra_execucao(r, f):
         return ("RSPE de outra execução? A ficha não cita nenhum dos processos do RSPE (execução %s): conferir se é o RSPE desta execução "
                 "antes de usar a comparação." % (r.get("processo_execucao") or "?"))
     return ""
+
+
+def diagnostico(dif, verm, pedir_dias, pontos, rspe_maior=False, pend_prov=False, acomp=None, trab=None):
+    """Visão inicial da aba Ficha - "Diagnóstico": uma frase curta com o que fazer (os detalhes ficam em "Pendências apontadas" e a
+    comparação dos totais, na visualização detalhada). Ordem: documento vermelho (posterior à última decisão, sem apreciação) >
+    diferença a favor da ficha > pedir atestado > vínculo ou ponto a conferir > RSPE maior > acompanhar > em ordem."""
+    dias_ = lambda v: "%s %s" % (_nf(v), "dia" if _nf(v) == "1" else "dias")
+    conf_ = [p_ for p_ in pontos if p_["cor"] == "amarelo"]
+    vinc_ = [L for L in ((trab or {}).get("linhas") or []) if L["st"] in ("possivel", "provavel")]
+    extra = " Pedir também os atestados que faltam." if pedir_dias and (verm or dif > TOL_COMPARACAO) else ""
+    if verm:
+        return {"t": "Requerer a remição: %s à última decisão, ainda sem apreciação.%s" % (
+            "há documento posterior" if len(verm) == 1 else "há %d documentos posteriores" % len(verm), extra), "c": "vermelho"}
+    if dif > TOL_COMPARACAO:
+        return {"t": "A ficha comprova %s a mais que o RSPE: conferir as pendências nos autos e requerer o que faltar.%s" % (
+            dias_(dif), extra), "c": "amarelo"}
+    if pedir_dias:
+        return {"t": "Pedir à unidade os atestados de trabalho que faltam (≈ %s de remição)." % dias_(int(round(pedir_dias)) or 1), "c": "amarelo"}
+    if pend_prov:
+        return {"t": "Conferir a certidão peticionada e não apreciada; se confirmada, requerer a remição.", "c": "amarelo"}
+    if vinc_ or conf_:
+        return {"t": "Conferir as pendências apontadas; sem diferença nos totais, não há pedido por ora.", "c": "amarelo"}
+    if rspe_maior:
+        return {"t": "Nada a requerer: o RSPE já concedeu %s a mais do que a ficha comprova." % dias_(-dif), "c": "cinza"}
+    if acomp:
+        return {"t": "Nada a requerer agora; acompanhar o trabalho em curso e pedir o atestado ao fim.", "c": "cinza"}
+    return {"t": "Remição em ordem: nada a fazer.", "c": "verde"}
 
 
 def onde_diferenca(dif, docs, post, verm, pontos, trab, ult_dec, rspe_maior=False, acomp=None):

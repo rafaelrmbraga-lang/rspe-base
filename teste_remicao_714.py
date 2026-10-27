@@ -127,6 +127,7 @@ try:
     o = rf.comparativo(R((50, "10/08/2024", "30/06/2024")), f, HOJE)
     N = o["fd_novo"]
     ok(N["onde"] == [{"t": "Sem diferença a conferir.", "c": "verde"}], "onde sem diferença: %s" % N["onde"])
+    ok(N["diag"] == {"t": "Remição em ordem: nada a fazer.", "c": "verde"}, "diagnóstico em ordem: %s" % N["diag"])
     ok(N["comp"] == 52.5 and N["dif"] == 2.5 and N["concl"].startswith("Sem diferença:") and o["fd_cor"] == "verde" and o["fd_sit"] == "Em ordem",
        "tolerância de 3 dias: %s %s %s" % (N["dif"], o["fd_cor"], N["concl"]))
     o = rf.comparativo(R((48, "10/08/2024", "30/06/2024")), f, HOJE)
@@ -169,6 +170,8 @@ try:
     # "Onde pode estar a diferença" (visão inicial): até 4 linhas, o fato certo primeiro
     ok(N["onde"] and len(N["onde"]) <= 4 and N["onde"][0]["c"] == "vermelho" and "052/2025" in N["onde"][0]["t"]
        and "sem decisão de remição posterior no RSPE (última: 15/01/2025)" in N["onde"][0]["t"], "onde: %s" % N["onde"])
+    # diagnóstico: uma frase com o que fazer, o documento posterior à última decisão primeiro
+    ok(N["diag"]["c"] == "vermelho" and N["diag"]["t"].startswith("Requerer a remição: há documento posterior à última decisão"), "diagnóstico vermelho: %s" % N["diag"])
     # o corte é a data da DECISÃO, não a da referência: o 051/2024 (emitido antes da decisão de 15/01/2025, ref. 31/08/2024) não é posterior
     ok(not any("051/2024" in x["rotulo"] for x in N["fatos"]), "corte pela decisão: %s" % N["fatos"])
     # curso posterior à última decisão: amarelo "posterior"
@@ -184,6 +187,7 @@ try:
     tp = {p["tipo"]: p for p in o["fd_novo"]["pontos"]}
     ok("pedir_atestado" in tp and "Pedir o atestado" in tp["pedir_atestado"]["texto"] and o["fd_atestar"] == "Sim"
        and o["fd_novo"]["comp"] == 50 and "Pedir atestado" in o["fd_sit"], "pedir atestado: %s / %s" % (list(tp), o["fd_sit"]))
+    ok(o["fd_novo"]["diag"]["t"].startswith("Pedir à unidade os atestados de trabalho que faltam"), "diagnóstico pedir atestado: %s" % o["fd_novo"]["diag"])
     # trabalho em curso há até 90 dias: acompanhar (o atestado ainda não costuma ter sido emitido), sem "pedir atestado"
     f = F([T("MARCENARIA", "01.02.2024", "30.06.2024"), T("COPA", "01.09.2026", "")],
           [A("061/2024", "05.07.2024", "01/02/2024", "30/06/2024", 50, 150, "Marcenaria")], [("05.07.2024", "PETICIONADO ATESTADO DE TRABALHO Nº 061/2024")])
@@ -192,6 +196,8 @@ try:
     ok("em_curso" in tp and "pedir_atestado" not in tp and o["fd_cor"] == "cinza" and o["fd_sit"] == "Acompanhar atestado"
        and any(x["t"].startswith("Acompanhar: trabalho em Copa em curso desde 01/09/2026") and x["c"] == "cinza" for x in o["fd_novo"]["onde"]),
        "em curso há até 90 dias: %s %s %s %s" % (tp, o["fd_cor"], o["fd_sit"], o["fd_novo"]["onde"]))
+    ok(o["fd_novo"]["diag"] == {"t": "Nada a requerer agora; acompanhar o trabalho em curso e pedir o atestado ao fim.", "c": "cinza"},
+       "diagnóstico acompanhar: %s" % o["fd_novo"]["diag"])
 except Exception as e:
     import traceback
     traceback.print_exc()

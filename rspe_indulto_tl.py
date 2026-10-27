@@ -1546,7 +1546,7 @@ def _decreto_ficha(f, x, C, cumprido, faltas, crimes_all=None):
         _ant = "anteriores à data de referência" if F.get("contada_de") == "referencia" else "anteriores à publicação"
         # decreto que exige a falta apurada ou homologada (salvo 2023, mesma redação de 2024/2025): a fuga sem homologação fica a
         # verificar, como no motor - o texto não pode dizer "tratada como falta grave"
-        fuga_ver = bool(F.get("exige_homologacao")) and not rd.fuga_impede(f)
+        fuga_ver = rd.fuga_a_verificar(f)  # inclui o decreto que posterga a declaração até a apuração (2016, art. 9º, p. ú.)
         for fl in faltas:
             if fl["fato"]:
                 dentro = j0 <= fl["fato"] <= j1
@@ -1554,7 +1554,8 @@ def _decreto_ficha(f, x, C, cumprido, faltas, crimes_all=None):
                     and "confirmada pelo operador" not in fl["texto"]
                 faltas_out.append({"fato": _f(fl["fato"]), "homol": _f(fl["homol"]),
                                    "texto": (re.sub(r"tratada como falta grave(?:, LEP, art\. 50, II| \(LEP, art\. 50, II\))","em tese falta grave (LEP, art. 50, II); "
-                                                    "este decreto exige a falta apurada ou homologada - só impede se reconhecida", fl["texto"])
+                                                    + ("este decreto posterga a declaração até a conclusão da apuração" if rd.falta_posterga(f) else
+                                                       "este decreto exige a falta apurada ou homologada") + " - só impede se reconhecida", fl["texto"])
                                              if fsh else fl["texto"]),
                                    "estado": ("verificar" if (fl["pendente"] or fsh) else "impede") if dentro else "fora"})
         # o que o motor conta como falta e a lista da linha não tem (crime doloso durante a execução - LEP, art. 52; regressão sem

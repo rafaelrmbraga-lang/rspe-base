@@ -164,7 +164,7 @@ ok("fora dos 12 meses" not in s, "L1: falta dentro da janela marcada como fora: 
 s = rv._com_nota("Vencido há 52 dias · sem pedido no RSPE - requerer", "Indeferido em 24/08/2026", date(2026, 8, 30), HOJE)
 ok(s == "Vencido há 52 dias · indeferido antes do lapso (RSPE: Indeferido em 24/08/2026): requerer", "carona: indeferido antes do lapso: %s" % s)
 
-# ---- decisão 1: data-base do SEEU no início da guia nova com a pessoa presa - "verificar" com a data certa ----
+# ---- decisão 1: data-base do SEEU no início da guia nova com a pessoa presa - "alerta" com a data certa (política 7.14.8; era "verificar") ----
 c1 = crime(data_infracao="25/09/2014", fracao_progressao="20% - Art.112, II, da LEP")
 c2 = crime(processo_criminal=P2, data_infracao="08/07/2025", data_sentenca="16/01/2026", transito_processo="02/02/2026",
            fracao_progressao="20% - Art.112, II, da LEP")
@@ -174,7 +174,7 @@ r = reg([c1, c2], [inc(AR, "Aberto - Regime Inicial", "", "02/09/2020"), inc(AR,
          ev(PR, "PRISÃO EM FLAGRANTE", "08/07/2025"), ev(PR, "INÍCIO DO CUMPRIMENTO REGIME SEMIARBERTO", "17/01/2026")],
         regime_atual="Semiaberto - ATIVO", pena_total="4a0m0d", data_base_seeu="17/01/2026", progressao_previsao_seeu="07/12/2026")
 x = itens(r, "data-base-no-inicio-da-guia-nova-com-a-pessoa-presa")
-ok(x and x[0]["nivel"] == "verificar" and "08/07/2025" in x[0]["titulo"] and "Tema 1006" in x[0]["fundamento"] and "60 dias em 10/03/2026" in x[0]["detalhe"],
+ok(x and x[0]["nivel"] == "alerta" and "08/07/2025" in x[0]["titulo"] and "Tema 1006" in x[0]["fundamento"] and "60 dias em 10/03/2026" in x[0]["detalhe"],
    "decisão 1: guia nova com a pessoa presa: %s" % x)
 ok(not itens(r, "data-base-confere-com-o-rspe"), "decisão 1: ainda diz que a data-base confere")
 

@@ -1,0 +1,5 @@
+tmp_*.sqlite
+tmp_*.sqlite-journal
+copias/
+saida/
+__pycache__/

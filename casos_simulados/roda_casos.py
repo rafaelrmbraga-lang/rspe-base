@@ -29,7 +29,7 @@ def _norm(t):
 
 
 def preparar(casos, vazia):
-    destino = os.path.join(AQUI, "base_sim.sqlite")
+    destino = os.environ.get("APTO_SIM_DESTINO") or os.path.join(AQUI, "base_sim.sqlite")
     for x in (destino, destino + "-journal"):
         if os.path.exists(x):
             os.remove(x)

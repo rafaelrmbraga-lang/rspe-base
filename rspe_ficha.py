@@ -604,7 +604,7 @@ def _extrair_texto(caminho, pags, vis, ocultas=(), dp_chars="", parcial=None):
 # lançamento do dia d", "desconsiderar a função X", "Liberação do Setor de Trabalho" sem baixa no dia, o vínculo simultâneo só quando
 # o outro setor acabou antes da baixa tardia (não a baixa "saída do presídio"), nomes de setor sem "nesta UP", "CI nº ...", "sendo",
 # "E" e "ATIVIDADE EXTERNA NA"; sinônimos e palavras próprias no singular)
-VERSAO_LEITURA = 15
+VERSAO_LEITURA = 16
 # versão da extração do PDF (camada de caracteres): a mesma ficha extraída por versão anterior é extraída de novo ao reimportar
 VERSAO_EXTRACAO = 2
 
@@ -1198,14 +1198,18 @@ def derivar(f, eventos):
         if _cobertura_externa(t0) != _cobertura_externa(trabalho):
             trabalho, baixas_orfas = t0, b0
     # jornada de cada trabalho: a ficha às vezes registra a carga horária ("de segunda a sexta", "12x36") no início
+    # (7.15.1) o lançamento que cita outro setor (e não este) não dá a jornada deste: a baixa da Horta "de segunda a sexta" no dia em
+    # que começa a Portaria em escala 12x36 não contamina a Portaria; o lançamento que cita este setor vem antes do que não cita nenhum
+    import rspe_remicao as rrm
     for t in trabalho:
         ti, tf = _dp(t["inicio"]), _dp(t.get("fim") or "")
-        for e in eventos:
-            if e["d"] and ti and ti - timedelta(days=3) <= e["d"] <= min(tf or date.max, ti + timedelta(days=30)):
-                j = jornada_do_texto(e["texto"])
-                if j:
-                    t["jornada"] = j
-                    break
+        outros = {o["setor"] for o in trabalho if o.get("setor") and re.sub(r"\W", "", o["setor"].upper()) != re.sub(r"\W", "", (t.get("setor") or "").upper())}
+        cs = [e for e in eventos if e["d"] and ti and ti - timedelta(days=3) <= e["d"] <= min(tf or date.max, ti + timedelta(days=30))
+              and jornada_do_texto(e["texto"])]
+        meu = [e for e in cs if t.get("setor") and rrm.palavra_comum(t["setor"], e["texto"])]
+        neutro = [e for e in cs if e not in meu and not any(rrm.palavra_comum(s, e["texto"]) for s in outros)]
+        if meu or neutro:
+            t["jornada"] = jornada_do_texto((meu or neutro)[0]["texto"])
     f["trabalho"] = _separar_mesmo_dia(_juntar_mesmo_dia(trabalho), eventos)
     f["baixas_sem_inicio"] = baixas_orfas
     # "foi autorizado o trabalho externo" e termo de compromisso de trabalho externo: início "a conferir" (inciso XI dos decretos),
@@ -1225,7 +1229,7 @@ def derivar(f, eventos):
             if x["ini"] > x["fim"]:
                 for ini_, fim_ in ((x["ini"].replace(year=x["fim"].year) if not (x["ini"].month == 2 and x["ini"].day == 29) else None, x["fim"]),
                                    (x["ini"], x["fim"].replace(year=x["ini"].year) if not (x["fim"].month == 2 and x["fim"].day == 29) else None)):
-                    if ini_ and fim_ and ini_ <= fim_ and any(ti <= ini_ + timedelta(days=3) and fim_ <= tf + timedelta(days=3) for ti, tf in trab_p):
+                    if ini_ and fim_ and ini_ <= fim_ and any(ti - timedelta(days=3) <= ini_ and fim_ - timedelta(days=3) <= tf for ti, tf in trab_p):
                         corr.append("%s: %s a %s lido como %s a %s" % (x["setor"] or "trecho", rrm._f(x["ini"]), rrm._f(x["fim"]), rrm._f(ini_), rrm._f(fim_)))
                         x = dict(x, ini=ini_, fim=fim_)
                         break
@@ -1307,7 +1311,7 @@ def derivar(f, eventos):
                 ant.update(data=e["data"], meses=meses, obras=obras, texto=e["texto"])  # fica o lançamento do ano do ofício
             continue
         lt = {"data": e["data"], "meses": meses, "obras": obras, "texto": e["texto"], "oficio": mof.group(1) if mof else ""}
-        mci = re.search(r"\bCICLO\s*N?\W{0,3}(\d{1,2}\s*/\s*\d{2,4})", us)
+        mci = re.search(r"\bCICLO\s*(?:N[ºª°O]?)?\W{0,3}(\d{1,2}\s*/\s*\d{2,4})", us)  # "CICLO Nº 03/2020": o "º" é letra para o \W
         if mci and not meses:
             # atestado por ciclo, sem mês ("Atestado de Remição por Leitura nº 71/2020 - CICLO nº 03/2020"): o lançamento fica no mês
             # do próprio atestado/protocolo (referência só para exibir; "meses" segue vazio e a conta segue 4 dias por obra)
@@ -1331,7 +1335,10 @@ def derivar(f, eventos):
         us = _texto_falta(e["texto"])
         u = us
         if "CONSELHO DISCIPLINAR" not in u and "FALTA DISCIPLINAR" not in u and "FALTA GRAVE" not in u and \
-                not re.search(r"FALTA (?:DISCIPLINAR )?DE NATUREZA|INSTAURAD\w* (?:A |S )?CDS|SANCIONADO ADMINISTRATIVAMENTE|RECONHECO A PRATICA|" + _PROC_RES, us):
+                not re.search(r"FALTA (?:DISCIPLINAR )?DE NATUREZA|INSTAURAD\w* (?:A |S )?CDS|SANCIONADO ADMINISTRATIVAMENTE|RECONHECO A PRATICA|" + _PROC_RES, us) and \
+                not re.search(r"^REGRESSAO DE REGIME.*(?:EVADI|EVASAO|\bFUGA\b|FUGIU)", us):
+            # (7.14.8) a regressão judicial pela evasão reconhece a falta grave (LEP, arts. 50, II, e 118, I), com ou sem a palavra
+            # "falta" no lançamento
             continue
         if re.search(_RE_NARRATIVA, us):
             narrativas.append(e)  # casado com a falta do fato depois de lidas todas
@@ -1900,7 +1907,8 @@ class _ReFicha:
         return self.rx.search(_sem_fuga_falsa(t))
 
 
-RE_FUGA_FICHA = _ReFicha(re.compile(r"\bFUGA\b|EVADIU|EVAS[ÃA]O|FORAGID|N[ÃA]O RETORNOU|EMPREENDEU FUGA", re.I))
+_RE_FUGA_FICHA_RX = re.compile(r"\bFUGA\b|EVADIU|EVAS[ÃA]O|FORAGID|N[ÃA]O RETORNOU|EMPREENDEU FUGA", re.I)
+RE_FUGA_FICHA = _ReFicha(_RE_FUGA_FICHA_RX)
 # Unidades da AGEPEN/MS (levantamento de set/2026 nas páginas e notícias da AGEPEN e da SEJUSP): padrão do nome -> (regime,
 # nome usual). Ordem importa: a primeira que casa decide ("Penitenciária de Regime Fechado da Gameleira" antes do
 # "Centro Penal Agroindustrial da Gameleira"; "Regime Semiaberto, Aberto e Assistência ao Albergado" é semiaberto).
@@ -2213,7 +2221,7 @@ def _prisao_x_ficha(r, f):
 
 def _monitoramento_x_ficha(r, f):
     """(7.14.6) Cumprimento desta execução em monitoramento eletrônico (entrada na unidade de monitoramento pelos autos desta
-    execução ou de processo dela) em período que o RSPE trata como interrupção (liberdade): é pena cumprida. Item "verificar" com o
+    execução ou de processo dela) em período que o RSPE trata como interrupção (liberdade): é pena cumprida. Item "alerta" com o
     efeito estimado na progressão (fração média das penas sobre os dias antes da data-base; os dias depois dela contam inteiros);
     a aba mantém a data do SEEU, com a ressalva (prog_estimada)."""
     evs = sorted((e for e in r.get("_eventos", []) if not e.get("_ficha") and rs.to_date(e.get("data") or "")), key=lambda e: rs.to_date(e["data"]))
@@ -2246,8 +2254,11 @@ def _monitoramento_x_ficha(r, f):
         ret = min([a for a, _b in per if a > x] or [None], key=lambda v: v or date.max)
         # o intervalo vai até a retomada no RSPE, a próxima interrupção dele ou a saída do monitoramento
         prox_i = min([rs.to_date(e["data"]) for e in evs if "INTERRUP" in (e.get("tipo") or "").upper() and rs.to_date(e["data"]) > x] or [date.max])
+        fim_m = fim
         fim = min(fim, ret or date.max, prox_i)
-        fora = (fim - x).days
+        # (7.14.8) os dois extremos do monitoramento contam, como na detração (CP, art. 10); a retomada ou a nova interrupção do
+        # RSPE, quando fecham o intervalo, já são dias do próprio SEEU
+        fora = (fim - x).days + (1 if fim == fim_m and fim < min(ret or date.max, prox_i) else 0)
         if fora < 30:
             continue
         db = rs.to_date(r.get("data_base_seeu") or "")
@@ -2258,14 +2269,16 @@ def _monitoramento_x_ficha(r, f):
         efeito, est = None, None
         if pesos and prog:
             fm = sum(float(fr) * p for fr, p in pesos) / sum(p for _fr, p in pesos)
-            antes_db = fora if not db else sum(1 for k in range((fim - x).days) if (x + timedelta(days=k)) < db
+            antes_db = fora if not db else sum(1 for k in range(fora) if (x + timedelta(days=k)) < db
                                                 and not any(a <= x + timedelta(days=k) and (b is None or x + timedelta(days=k) < b) for a, b in per))
             efeito = int(round(antes_db * fm + (fora - antes_db)))
             est = prog - timedelta(days=efeito) if efeito else None
         # pelos autos da execução: cumprimento (semiaberto/harmonizado); pelos de uma ação penal desta execução: cautelar - detração
         n_ = [n for n in rs.processos_no_texto(txt) for q in meus if rs.chave_processo(q) and rs.processo_parecido(n, q)]
         exe_ = any(rs.processo_parecido(n, r.get("processo_execucao") or "") for n in n_) if rs.chave_processo(r.get("processo_execucao") or "") else False
-        it = _item_rf("verificar", "Monitoramento eletrônico %s de %s a %s na ficha; o RSPE trata o período como interrupção (%s sem cômputo)" % (
+        # política 7.14.8: monitoramento lançado como interrupção é data do SEEU contrária à lei - alerta (a aba mantém a data do
+        # SEEU, com a ressalva); antes (7.14.6), "verificar"
+        it = _item_rf("alerta", "Monitoramento eletrônico %s de %s a %s na ficha; o RSPE trata o período como interrupção (%s sem cômputo)" % (
                           "desta execução" if exe_ else "cautelar em ação penal desta execução", rs.fmt(x), rs.fmt(fim), rs.pl(fora, "dia", "dias")),
                       "A ficha registra a entrada na unidade de monitoramento eletrônico em %s pelos autos %s e %s; o RSPE "
                       "interrompe o cumprimento em %s (%s)%s. %s: computados esses dias (salvo período de evasão ou descumprimento que a ficha "
@@ -2521,6 +2534,17 @@ def _unidade_x_ficha(r, f):
             return []  # execução suspensa (preso em outro processo): a unidade é a da outra prisão
         if any(tp == "custodia-nao-desta" for tp, _x in r.get("_reconc_ficha") or []):
             return []  # a ficha vincula a prisão atual a outro processo (ou é prisão civil): a unidade é a dessa prisão (item próprio)
+        # (7.14.8) regressão ao fechado registrada na ficha depois da última mudança de regime do RSPE: a pessoa está no regime que o
+        # juiz fixou (LEP, art. 118) - não é falta de vaga; a regressão não lançada no RSPE tem item próprio
+        _ult_reg = max([x for x in (rs.to_date(i.get("data_decisao") or i.get("data_referencia") or i.get("data") or "")
+                                    for i in r.get("_incidentes", []) if rs.e_incidente_regime(i) and not rs._negado(i)) if x] or [date.min])
+        for _rg in f.get("regressoes") or []:
+            _dr = _dp(_rg.split(" - ")[0])
+            _ur = rs._sem_acento(_rg).upper()
+            if (_dr and _dr >= _ult_reg and re.search(r"REGRE\w*.{0,120}\bFECHADO\b", _ur)
+                    and re.search(r"DECISAO|JUDICIAL|JUIZ|^\S+ - REGRESSAO DE REGIME", _ur)
+                    and not re.search(r"PROPOSTA|SUGER|PEDIDO|REQUER|INDEFERI|NEGAD|AFASTAD|REVOGAD", _ur)):
+                return []
         # nova prisão lançada pelo programa a partir da ficha (recaptura/reinício): justifica o fechado ou a regressão cautelar
         nova = [e for e in evs if e.get("_ficha")]
         # nova prisão na ficha ainda sem reinício lançado (item 51 de 16/10: conferir em que processo) - também pode justificar o fechado
@@ -3672,7 +3696,7 @@ def comparativo(r, f, hoje=None, conferidos=None, manuais=None, vinculos=None):
     out["fd_trab"] = ("%s desde %s" % (_nome_emprego(_sem_setores_baixados(em[-1], f.get("eventos") or [])), em[-1]["inicio"])) if em else "sem trabalho em curso"
     out["fd_estuda"] = any(e.get("inicio") and not e.get("fim") for e in f.get("estudos") or [])  # matrícula ativa na ficha
     ult_at = N["ult_at"]
-    sem_pos = [L for L in T["linhas"] if L["st"] == "sem" and (L.get("pedir_dias") or not ult_at or L["fim"] > ult_at)]
+    sem_pos = [L for L in T["linhas"] if L["st"] == "sem" and not L.get("aparte_total") and (L.get("pedir_dias") or not ult_at or L["fim"] > ult_at)]
     out["fd_atestar"] = "Sim" if sem_pos else "Não"
     ult = R["ult_dec"]
     est_post = [d for d in N["post"] if d["tipo"] in ("Certidão de frequência escolar", "Curso de qualificação", "Atestado de estudo", "Leitura", "Exame")]
@@ -4023,7 +4047,10 @@ def remicao_pendente_decretos(r, comp):
             continue
         for k in ("indulto_%s" % ano, "comutacao_%s" % ano):
             v, det = r.get(k) or "", r.get(k + "_detalhe") or ""
-            if not v.startswith("não atinge") or v.startswith("não atinge: pena dos crimes impeditivos") or "posterior à publicação" in v:
+            # já a verificar por outro motivo (ex.: § 2º, II a VI; falta a verificar): a remição pendente que cobre o que faltava num
+            # inciso não atendido também se aponta (conferência independente 7.14.8)
+            ja_ver = v.upper().startswith("A VERIFICAR") and not v.startswith("A VERIFICAR (remição pendente)")
+            if not (v.startswith("não atinge") or ja_ver) or v.startswith("não atinge: pena dos crimes impeditivos") or "posterior à publicação" in v:
                 continue
             faltas = []
             if k.startswith("comutacao"):
@@ -4039,7 +4066,7 @@ def remicao_pendente_decretos(r, comp):
             if not faltas or tot < min(faltas):
                 continue
             nota = rs.nota_remicao_pendente(tot, rots, ref, min(faltas))
-            r[k] = "A VERIFICAR (remição pendente): " + nota
+            r[k] = "A VERIFICAR (remição pendente): " + nota + ((" | também a verificar: " + v[len("A VERIFICAR"):].lstrip(": ")) if ja_ver else "")
             r[k + "_detalhe"] = det + "\n? Remição pendente: " + nota
             r[k + "_status"] = "verificar"
 

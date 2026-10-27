@@ -43,6 +43,11 @@ def _fr(t):
 def _anos_pena(n):
     """Teto/piso de pena "não superior a N anos" em dias, na convenção do SEEU em que a pena está (ano de 365 dias, mês de 30),
     como em rspe_scraper.impeditivo_decreto e na análise de 2024/2025 - e não em anos de calendário (8a0m2d passaria por 8 anos)."""
+    a = int(float(n))
+    m = (float(n) - a) * 12
+    if abs(m - round(m)) < 1e-6:
+        # fração de ano em meses (1,5 = 1 ano e 6 meses: "dezoito meses" = 1a6m0d = 545 dias, não 547,5 arredondado)
+        return a * rs.DIAS_ANO + int(round(m)) * 30
     return int(round(float(n) * rs.DIAS_ANO))
 
 
@@ -416,6 +421,8 @@ def _artigo_vedado(entrada, art, c):
 FUGA_TRATADA = "tratada como falta grave (LEP, art. 50, II)"  # texto de rs.indicios_falta (fuga_firme) para a fuga sem homologação
 FUGA_APURAR = ("em tese falta grave (LEP, art. 50, II); o decreto exige a falta apurada ou homologada - só impede se reconhecida "
                "em juízo (STJ, Tema 1195)")
+FUGA_POSTERGA = ("em tese falta grave (LEP, art. 50, II), ainda não submetida ao juízo: o %s posterga a declaração do indulto até a "
+                 "conclusão da apuração - só impede se reconhecida")
 
 
 def fuga_impede(f):
@@ -427,6 +434,17 @@ def fuga_impede(f):
     if not F.get("exige_homologacao"):
         return True
     return bool(F.get("fuga_sem_homologacao_impede", False))
+
+
+def falta_posterga(f):
+    """Decreto que, diante da infração não submetida ao juízo, posterga a declaração até a conclusão da apuração (Decreto
+    8.940/2016, art. 9º, p. ú.): a fuga só registrada como evento fica a verificar, não impede."""
+    return bool(re.search(r"postergad|ate a conclusao da apuracao", rs._sem_acento((f.get("falta_grave") or {}).get("texto") or "").lower()))
+
+
+def fuga_a_verificar(f):
+    """A fuga sem homologação na janela fica a verificar (não impede) neste decreto."""
+    return bool((f.get("falta_grave") or {}).get("exige_homologacao") and not fuga_impede(f)) or falta_posterga(f)
 
 
 def _regra_concurso(f):
@@ -1080,33 +1098,54 @@ def _avaliar_ficha(f, r, ctx, ini, hoje):
     # falta grave na janela (até a publicação)
     F = f.get("falta_grave") or {}
     falta_firme = falta_ind = []
+    falta_firme_ind, falta_firme_com, falta_meses = [], [], {}
     f_meses, f_afeta = F.get("meses"), (F.get("afeta") or "indulto e comutação").lower()
+    janelas = [(f_meses, f_afeta)]
     if F.get("meses_vga") and vga:
-        # crime com violência ou grave ameaça: janela maior (2002, art. 1º, § 1º, I; 2003, art. 3º, I - 24 meses)
-        f_meses, f_afeta = F["meses_vga"], (F.get("afeta_vga") or f_afeta).lower()
-    if f_meses or (F.get("texto") and F.get("meses") is None and re.search(r"punid", F.get("texto") or "", re.I)
-                   and not re.search(r"n[ãa]o trata", F.get("texto") or "", re.I)):
+        # crime com violência ou grave ameaça: janela maior (2002, art. 1º, § 1º, I; 2003, art. 3º, I - 24 meses), para os benefícios
+        # que ela alcança (2002: só o indulto); a janela geral continua valendo para os demais (2002, art. 3º, I: a comutação segue
+        # com os 12 meses - conferência independente 7.14.8)
+        janelas = [(F["meses_vga"], (F.get("afeta_vga") or f_afeta).lower())] + ([(f_meses, f_afeta)] if f_meses else [])
+    # Decreto 8.940/2016, art. 9º, p. ú.: a infração não submetida ao juízo posterga a declaração do indulto até a conclusão da
+    # apuração - a fuga só registrada como evento fica A VERIFICAR, não impede (conferência independente 7.14.8)
+    posterga = falta_posterga(f)
+    _fv_af = []
+    for jm, ja in janelas:
+        if not (jm or (F.get("texto") and F.get("meses") is None and re.search(r"punid", F.get("texto") or "", re.I)
+                       and not re.search(r"n[ãa]o trata", F.get("texto") or "", re.I))):
+            continue
         # janela de meses de calendário contada para trás da publicação (ou da data de referência, se o decreto assim
         # disser: 2015, 2023); sem janela fixada (Dia das Mães 2017), qualquer falta punida até a data
         base_f = ref if F.get("contada_de") == "referencia" else pub
-        dias_f = rs.dias_anos(float(f_meses) / 12, base_f) if f_meses else 36500
+        dias_f = rs.dias_anos(float(jm) / 12, base_f) if jm else 36500
         ach = rs.indicios_falta(r.get("_incidentes") or [], base_f, dias=dias_f, eventos=r.get("_eventos") or [], ate=min(pub, base_f), hoje=pub,  # prescrição da falta aferida na data do decreto
                                 crimes=r.get("_crimes") or [], inicio=ini, fuga_firme=True)
         # decreto que exige a falta apurada/homologada (ex.: "falta sem a devida apuração não impede"): a não homologada
         # (fuga só registrada como evento) não impede - fica como ressalva
         # Decreto 11.846/2023, art. 6º (mesma redação do art. 6º de 2024/2025): a fuga sem homologação na janela impede, como lá
-        hom = F.get("exige_homologacao") and not fuga_impede(f)
-        falta_firme = [t for t, firme in ach if firme and not (hom and "não homologada" in t)]
-        falta_ind = [(t.replace(FUGA_TRATADA, FUGA_APURAR) if hom and "não homologada" in t else t)
-                     for t, firme in ach if not firme or (hom and "não homologada" in t)]
-        a52 = [t for t in falta_ind if "LEP, art. 52" in t]
-        if a52:
-            base["_art52"] = "crime doloso na janela da falta grave (%s): %s" % (F.get("dispositivo") or "decreto", "; ".join(a52))
-        outras = [t for t in falta_ind if "LEP, art. 52" not in t]
-        if outras:
-            # critério único (o de 2022 a 2025): falta na janela ainda não reconhecida em juízo - o favorável fica A VERIFICAR
-            base["_falta_ver_afeta"] = f_afeta
-            base["_falta_ver"] = "falta na janela a verificar (%s; só impede se reconhecida): %s" % (F.get("dispositivo") or "decreto", "; ".join(outras))
+        hom = fuga_a_verificar(f)
+        apurar = FUGA_POSTERGA % (F.get("dispositivo") or "decreto") if posterga else FUGA_APURAR
+        j_firme = [t for t, firme in ach if firme and not (hom and "não homologada" in t)]
+        j_ind = [(t.replace(FUGA_TRATADA, apurar) if hom and "não homologada" in t else t)
+                 for t, firme in ach if not firme or (hom and "não homologada" in t)]
+        for t in j_firme:
+            falta_meses[t] = jm  # a menor janela que a contém (a geral vem por último)
+        if "indulto" in ja:
+            falta_firme_ind += [t for t in j_firme if t not in falta_firme_ind]
+        if "comuta" in ja:
+            falta_firme_com += [t for t in j_firme if t not in falta_firme_com]
+        falta_firme = falta_firme + [t for t in j_firme if t not in falta_firme]
+        falta_ind = falta_ind + [t for t in j_ind if t not in falta_ind]
+        if [t for t in j_ind if "LEP, art. 52" not in t]:
+            _fv_af.append(ja)
+    a52 = [t for t in falta_ind if "LEP, art. 52" in t]
+    if a52:
+        base["_art52"] = "crime doloso na janela da falta grave (%s): %s" % (F.get("dispositivo") or "decreto", "; ".join(a52))
+    outras = [t for t in falta_ind if "LEP, art. 52" not in t]
+    if outras:
+        # critério único (o de 2022 a 2025): falta na janela ainda não reconhecida em juízo - o favorável fica A VERIFICAR
+        base["_falta_ver_afeta"] = " ".join(_fv_af) or f_afeta
+        base["_falta_ver"] = "falta na janela a verificar (%s; só impede se reconhecida): %s" % (F.get("dispositivo") or "decreto", "; ".join(outras))
     # Decreto 9.246/2017, art. 4º, II a IV: veda a quem passou pelo RDD ou pelo Sistema Penitenciário Federal ou descumpriu as
     # condições da prisão domiciliar ou do livramento, a qualquer tempo - só com indício no RSPE, e como a verificar
     if re.search(r"descumpri\w*\s+(?:as\s+)?condi", F.get("texto") or "", re.I):
@@ -1218,7 +1257,9 @@ def _avaliar_ficha(f, r, ctx, ini, hoje):
                 sem_regime = "regime em %s não informado no RSPE (hipótese exige %s)" % (rs.fmt(ref), ", ".join(h["regime"]))
             elif not any(regime and x.split()[0] == regime for x in reg if "livramento" not in x):
                 return False, None, "não estava em livramento condicional em %s" % rs.fmt(ref)
-        elif reg and regime and not any(x.split()[0] == regime for x in reg):
+        elif reg and regime and not (em_lc and any("livramento" in x for x in reg)) and not any(x.split()[0] == regime for x in reg):
+            # em livramento condicional na data, a hipótese "regime aberto ou livramento condicional" é atendida, qualquer que seja a
+            # última decisão de regime (ex.: semiaberto antes do livramento - 2011 a 2015 e 2023, art. 2º, XIV)
             return False, None, "regime em %s: %s (exigido %s)" % (rs.fmt(ref), regime, ", ".join(h["regime"]))
         fr = _fr(h.get("fracao_reincidente") if reinc else h.get("fracao_nao_reincidente"))
         anos = h.get("anos_reincidente") if reinc else h.get("anos_nao_reincidente")
@@ -1319,6 +1360,11 @@ def _avaliar_ficha(f, r, ctx, ini, hoje):
                                     "patrimonial sem violência: conferir na sentença" % rs.crimes_curto(pat_inc))
             return False, None, "exige crime contra o patrimônio sem violência ou grave ameaça"
         p_pat = rs.soma_penas(pat, True)
+        if h.get("pena_min_anos") is not None and p_pat <= _anos_pena(h["pena_min_anos"]):
+            # piso da hipótese (ex.: 2012, art. 1º, XVI; 2013 a 2015 e 2017: "superior a dezoito meses e não superior a quatro anos")
+            _pm = float(h["pena_min_anos"])
+            return False, None, "pena dos crimes patrimoniais de %s não supera %s" % (
+                rs.dias_para_pena(p_pat), ("%d meses" % round(_pm * 12)) if _pm != int(_pm) else "%d anos" % _pm)
         if h.get("pena_max_anos") is not None and p_pat > _anos_pena(h["pena_max_anos"]):
             return False, None, "pena dos crimes patrimoniais de %s acima de %s anos" % (rs.dias_para_pena(p_pat), h["pena_max_anos"])
         fr = _fr(h.get("fracao_reincidente") if reinc else h.get("fracao_nao_reincidente"))
@@ -1446,10 +1492,18 @@ def _avaliar_ficha(f, r, ctx, ini, hoje):
                alc=[n for n, c in enumerate(r.get("_crimes") or []) if any(c is y for y in crimes0)])
     imp_ind = bool(imp) and "comuta" not in afeta.replace("indulto e comuta", "")
     imp_com = bool(imp) and ("indulto e comuta" in afeta or "só comuta" in afeta or afeta.startswith("so comuta"))
-    f_ind = bool(falta_firme) and "indulto" in f_afeta
-    f_com = bool(falta_firme) and ("comuta" in f_afeta)
+    # hediondo, tortura, terrorismo e tráfico: a vedação vem da lei (CF, art. 5º, XLIII; Lei 8.072/90, art. 2º, I), não do decreto, e
+    # alcança também a comutação, indulto parcial - ainda que o decreto só a liste para o indulto (Dia das Mães 2017
+    # e 2018: conferência independente 7.14.8)
+    imp_legal = not imp_com and any("hediondo ou equiparado na data do fato" in x for x in imp)
+    if imp_legal:
+        imp_com = True
+    f_ind = bool(falta_firme_ind)
+    f_com = bool(falta_firme_com)
     res["ind_ver"] = bool(ind_ver and not ind and not imp_ind and not f_ind)  # hipótese de indulto a verificar (linha do tempo)
-    mot_falta = "falta grave %s: %s" % (("nos %s meses anteriores" % f_meses) if f_meses else "punida até a data", falta_firme[0]) if falta_firme else ""
+    _t_f = (falta_firme_ind or falta_firme_com or falta_firme or [None])[0]
+    _m_f = falta_meses.get(_t_f)
+    mot_falta = "falta grave %s: %s" % (("nos %s meses anteriores" % _m_f) if _m_f else "punida até a data", _t_f) if _t_f else ""
     if f_ind and (f_com or not (com and not imp_com)):
         if all("não homologada" in t for t in falta_firme) and not ind and not ind_ver and not com:
             # vários impedimentos: o objetivo (crime, pena, prazo) vem primeiro; a fuga não homologada, que depende de decisão
@@ -1519,7 +1573,8 @@ def _avaliar_ficha(f, r, ctx, ini, hoje):
         return dict(res, s="nao", mot="decreto restrito (doença, deficiência, agentes de segurança ou outros grupos): nenhuma hipótese "
                                       "aferível pelo RSPE; há também crime impeditivo (%s)" % "; ".join(imp))
     if imp:
-        return dict(res, s="imp", mot="; ".join(imp))
+        return dict(res, s="imp", mot="; ".join(imp) + (" - vedação legal (CF, art. 5º, XLIII; Lei 8.072/90, art. 2º, I), que alcança também a "
+                                                     "comutação, indulto parcial, ainda que o decreto não a liste" if imp_legal else ""))
     sem_rem = next((x for x in hips if x["tipo"] == "comutacao" and (x.get("mot") or "").startswith("sem pena remanescente a comutar")), None)
     if sem_rem:
         # a comutação caiu só porque a pena considerada já estava cumprida na data (o requisito de tempo foi atendido): esse é o
