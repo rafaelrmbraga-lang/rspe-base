@@ -1,7 +1,7 @@
 # Correção 7.14.8 — divergências da base simulada independente
 
-Base: branch claude/vibrant-wright-db4zqo, commit d7c789f. ANTES de tudo, no seu worktree, confirme que está nesse commit
-(`git merge-base --is-ancestor d7c789f HEAD`); se não estiver, `git fetch origin claude/vibrant-wright-db4zqo && git reset --hard d7c789f`.
+Base: branch claude/vibrant-wright-db4zqo, commit c5413fd. ANTES de tudo, no seu worktree, confirme que está nesse commit
+(`git merge-base --is-ancestor c5413fd HEAD`); se não estiver, `git fetch origin claude/vibrant-wright-db4zqo && git reset --hard c5413fd`.
 
 ## O que corrigir
 Os casos da sua frente estão em casos_simulados/cobertura/<area>.json (campo "conta", "esperado" e a "nota" de cada verificação
