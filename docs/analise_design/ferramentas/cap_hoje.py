@@ -1,0 +1,50 @@
+import sys, os, json
+import ponte
+S = "/tmp/claude-0/-home-user-rspe-base/883108c0-aece-5660-92ba-781fc4fe86e8/scratchpad"
+OUT = S + "/sug/hoje/"
+api, jan = ponte.criar(S + "/bases/Comarca_Ficticia.sqlite")
+from playwright.sync_api import sync_playwright
+def bb(pg, sel): return pg.locator(sel).first.bounding_box()
+def clip(pg, nome, x, y, w, h): pg.screenshot(path=OUT + nome + ".png", clip={"x": x, "y": y, "width": w, "height": h}); print(nome)
+with sync_playwright() as p:
+    b = p.chromium.launch(executable_path="/opt/pw-browsers/chromium")
+    pg = b.new_page(viewport={"width": 1440, "height": 860}, device_scale_factor=1.5)
+    ponte.abrir(pg, api, jan); pg.wait_for_function("document.querySelector('tbody tr')", timeout=120000); pg.wait_for_timeout(800)
+    pg.evaluate("document.getElementById('toast').classList.remove('on')")
+    pg.evaluate("ui.irAba('prog')"); pg.wait_for_timeout(800)
+    t = bb(pg, "#tabs"); clip(pg, "cabecalho", 0, 0, 1440, t["y"] + t["height"] + 4)
+    clip(pg, "abas", 0, t["y"] - 4, 1440, t["height"] + 10)
+    s = bb(pg, "#stats"); clip(pg, "cartoes", 0, s["y"] - 6, 1440, s["height"] + 12)
+    c = bb(pg, "#card"); clip(pg, "lista_alfa", c["x"], c["y"], c["width"], 330)
+    th = pg.evaluate("[...document.querySelectorAll('thead th')].map(e=>{const r=e.getBoundingClientRect();return [e.textContent.trim(),r.x,r.width]})")
+    sit = [x for x in th if x[0].startswith("Situa")][0]
+    clip(pg, "situacao", c["x"], c["y"], sit[1] + sit[2] - c["x"] + 4, 330)
+    r1 = bb(pg, "tbody tr:nth-child(1)"); clip(pg, "nome_icone", c["x"], r1["y"] - 2, 420, r1["height"] * 2 + 4)
+    clip(pg, "fim_linha", c["x"] + c["width"] - 470, c["y"], 470, 200)
+    f = bb(pg, ".foot"); clip(pg, "legenda_prog", 0, f["y"], 1440, 34)
+    pg.evaluate("ui.irAba('aud')"); pg.wait_for_timeout(700); f = bb(pg, ".foot"); clip(pg, "legenda_aud", 0, f["y"], 1440, 34)
+    s2 = bb(pg, "#stats"); clip(pg, "cartoes_aud", 0, s2["y"] - 6, 1440, s2["height"] + 12)
+    pg.evaluate("ui.irAba('ind')"); pg.wait_for_timeout(900); c = bb(pg, "#card"); clip(pg, "indulto", c["x"], c["y"] - 50, c["width"], 380)
+    pg.evaluate("ui.irAba('geral')"); pg.wait_for_timeout(500)
+    ids = pg.evaluate("ui.dados.registros.map(r=>r.id)")
+    pg.evaluate("id=>ui.abrir(id)", ids[0]); pg.wait_for_timeout(2500); d = bb(pg, "#drawer"); clip(pg, "painel", d["x"], 0, d["width"], 860); pg.evaluate("ui.fecharDrawer()"); pg.wait_for_timeout(400)
+    pg.evaluate("ui.irAba('presc')"); pg.wait_for_timeout(700); pg.evaluate("id=>ui.expandir(id)", ids[0]); pg.wait_for_timeout(2000)
+    r = bb(pg, "tr.sub"); clip(pg, "presc_detalhe", 24, r["y"] - 46, 1392, min(r["height"] + 50, 420))
+    pg.evaluate("ui.irAba('prog')"); pg.wait_for_timeout(600)
+    pg.evaluate("ui.toast('Base aberta só para consulta: nada foi gravado.')"); pg.wait_for_timeout(500); tb = bb(pg, "#toast"); clip(pg, "aviso", tb["x"] - 120, tb["y"] - 20, tb["width"] + 240, tb["height"] + 40)
+    pg.evaluate("document.getElementById('toast').classList.remove('on')"); pg.wait_for_timeout(300)
+    pg.evaluate("ui.progresso(137,300)"); pg.wait_for_timeout(300); f = bb(pg, ".foot"); clip(pg, "importando", 0, f["y"] - 4, 1440, f["height"] + 8)
+    pg.evaluate("document.getElementById('prog').classList.remove('on')")
+    av = ["SIMULADO_%03d.pdf: não parece um RSPE do SEEU (sem o cabeçalho 'Relatório da Situação Processual Executória')" % i for i in range(1, 6)] + ["SIMULADO_%03d.pdf: ficha de SIMULADO CASO %03d - leitura parcial: sem a tabela de faltas" % (i, i) for i in range(10, 16)] + ["SIMULADO_%03d.pdf: duplicado (mesmo processo e mesma data de geração)" % i for i in range(20, 32)]
+    pg.evaluate("r=>ui.importado(r)", {"novos": 241, "atualizados": 31, "duplicados": 12, "historico": 4, "antigos": 4, "erros": 5, "fichas": 6, "incompletos": 3, "avisos": av}); pg.wait_for_timeout(1200)
+    m = bb(pg, "#modal .box"); clip(pg, "importacao", m["x"], m["y"], m["width"], m["height"]); pg.evaluate("ui.fecharModal()"); pg.wait_for_timeout(300)
+    pg.evaluate("ui.ajuda()"); pg.wait_for_timeout(600); m = bb(pg, "#modal .box"); clip(pg, "legenda_ajuda", m["x"], m["y"], m["width"], m["height"]); pg.evaluate("ui.fecharModal()"); pg.wait_for_timeout(300)
+    pg.fill("#q", "zzzz inexistente"); pg.evaluate("ui.filtrar()"); pg.wait_for_timeout(600); c = bb(pg, "#card"); clip(pg, "vazio", 0, 0, 1440, c["y"] + 220)
+    pg.fill("#q", ""); pg.evaluate("ui.filtrar()")
+    for a in ["ind", "presc", "fd"]:
+        pg.evaluate("id=>ui.irAba(id)", a); pg.wait_for_timeout(700); pg.screenshot(path=OUT + "aba_" + a + ".png"); print("aba", a)
+    b.close()
+    b = p.chromium.launch(executable_path="/opt/pw-browsers/chromium")
+    pg = b.new_page(viewport={"width": 1280, "height": 680}, device_scale_factor=1.5)
+    ponte.abrir(pg, api, jan); pg.wait_for_function("document.querySelector('tbody tr')", timeout=120000); pg.wait_for_timeout(800)
+    pg.evaluate("document.getElementById('toast').classList.remove('on')"); pg.evaluate("ui.irAba('prog')"); pg.wait_for_timeout(700); pg.screenshot(path=OUT + "escala150.png"); print("escala150")

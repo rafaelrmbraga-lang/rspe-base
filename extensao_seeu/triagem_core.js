@@ -15,13 +15,21 @@
   const MESES = { janeiro: 1, fevereiro: 2, marco: 3, abril: 4, maio: 5, junho: 6, julho: 7, agosto: 8, setembro: 9, outubro: 10, novembro: 11, dezembro: 12 };
 
   // ---------------------------------------------------------------- texto
-  const ENT = { nbsp: " ", amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", ordm: "º", ordf: "ª", sect: "§", deg: "°", ndash: "–", mdash: "—", laquo: "«", raquo: "»" };
+  // entidades nomeadas do HTML (o SEEU às vezes manda "at&eacute;", "MANIFESTA&Ccedil;&Atilde;O"): todo o Latin-1 e as aspas/traços
+  const ENT = { nbsp: " ", amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", ndash: "–", mdash: "—", lsquo: "‘", rsquo: "’", ldquo: "“", rdquo: "”",
+    sbquo: "‚", bdquo: "„", hellip: "…", bull: "•", middot: "·", euro: "€", trade: "™", ensp: " ", emsp: " ", thinsp: " " };
+  ("iexcl cent pound curren yen brvbar sect uml copy ordf laquo not shy reg macr deg plusmn sup2 sup3 acute micro para middot cedil sup1 ordm raquo " +
+   "frac14 frac12 frac34 iquest Agrave Aacute Acirc Atilde Auml Aring AElig Ccedil Egrave Eacute Ecirc Euml Igrave Iacute Icirc Iuml ETH Ntilde " +
+   "Ograve Oacute Ocirc Otilde Ouml times Oslash Ugrave Uacute Ucirc Uuml Yacute THORN szlig agrave aacute acirc atilde auml aring aelig ccedil " +
+   "egrave eacute ecirc euml igrave iacute icirc iuml eth ntilde ograve oacute ocirc otilde ouml divide oslash ugrave uacute ucirc uuml yacute thorn yuml")
+    .split(" ").forEach((nome, i) => { if (!(nome in ENT)) ENT[nome] = String.fromCharCode(0xa1 + i); });
   function entidades(s) {
     return String(s || "").replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (m, e) => {
       if (e[0] === "#") {
         const n = e[1] === "x" || e[1] === "X" ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10);
         return n > 0 && n < 0x110000 ? String.fromCodePoint(n) : m;
       }
+      if (Object.prototype.hasOwnProperty.call(ENT, e)) return ENT[e];   // maiúscula/minúscula importa (&Ccedil; x &ccedil;)
       const k = e.toLowerCase();
       return Object.prototype.hasOwnProperty.call(ENT, k) ? ENT[k] : m;
     });
@@ -440,11 +448,58 @@
     return { carimbo: carimbo(bruto), corpo, resumo: resumir(disp, 480), dispositivo: disp, alertas: an.alertas, temas: an.temas, prazo: an.prazo, semTexto: false };
   }
 
+  // ---------------------------------------------------------------- providência sugerida
+  // a partir da aba (Ciência/Manifestação), do motivo e da última decisão já lidos: {texto, tipo, urgente}
+  function providencia(a, aba) {
+    if (!a) return null;
+    const usavel = (d) => d && !d.erro && !d.semTexto && !d.semArquivo;
+    const md = a.motivo && a.motivo.doc, dd = a.decisao && a.decisao.doc;
+    const docMot = a.mesma ? dd : md;
+    const nMot = normal(usavel(docMot) ? docMot.corpo : "");
+    const alMot = (usavel(docMot) ? docMot.alertas : []) || [];
+    const tem = (lista, re) => lista.find((x) => re.test(x.txt));
+    const risco = tem(alMot, /^Risco:/);
+    const riscoTxt = risco ? " – sob pena de " + risco.txt.replace(/^Risco:\s*/, "") : "";
+    const prazoTxt = usavel(docMot) && docMot.prazo ? ` (prazo no texto: ${docMot.prazo} dia${docMot.prazo > 1 ? "s" : ""})` : "";
+    const ciencia = /^ci[eê]ncia/i.test((a.pendencia && a.pendencia.juntar) || "") || (!(a.pendencia && a.pendencia.juntar) && /ci[eê]ncia/i.test(aba || ""));
+    const decisaoNoMotivo = a.mesma || /despacho|decis|senten/i.test((a.motivo && a.motivo.nome) || "");
+    const indeferiu = decisaoNoMotivo ? tem(alMot, /^Indeferimento/) : null;
+    const dataDec = a.decisao ? a.decisao.data : "";
+    const r = (texto, tipo, urgente) => ({ texto, tipo, urgente: !!urgente });
+    if (ciencia) {
+      if (indeferiu) return r(`Avaliar agravo em execução contra a decisão de ${dataDec}; depois dar ciência`, "Agravo", true);
+      if (risco) return r("Dar ciência e avisar o assistido" + riscoTxt, "Ciência", true);
+      return r("Dar ciência", "Ciência", false);
+    }
+    const aud = tem(alMot, /^Audiência \d/);
+    // a Defensoria, em regra, não justifica sem ouvir o assistido: pede a intimação pessoal dele
+    if (tem(alMot, /^Justificativa/)) return r("Requerer a intimação pessoal do sentenciado para justificar" + riscoTxt + prazoTxt, "Intimação pessoal", true);
+    if (aud) return r(`Preparar a ${aud.txt.toLowerCase()} (contato com o assistido)`, "Audiência", true);
+    if (indeferiu) return r(`Avaliar agravo em execução contra a decisão de ${dataDec}`, "Agravo", true);
+    if (tem(alMot, /^Audiência designada/)) return r("Preparar a audiência designada (contato com o assistido)", "Audiência", true);
+    if (tem(alMot, /^Cálculo/)) return r("Conferir o cálculo/atestado de pena e manifestar concordância ou impugnação" + prazoTxt, "Cálculo", !!risco);
+    const tipo = tipoDoMotivo(a.pendencia ? a.pendencia.movimento : (a.motivo && a.motivo.nome) || "");
+    if (tipo === "Certidão") {
+      if (/nao compareceu|deixou de comparecer|nao comparecimento|ausencia (de|do) comparecimento|descumpri|nao (assinou|recolheu|cumpriu|apresentou)|inadimpl|violac/.test(nMot)) return r("Requerer a intimação pessoal do sentenciado sobre o descumprimento noticiado na certidão" + prazoTxt, "Intimação pessoal", true);
+      if (/nao (foi )?localizad|nao encontrad|endereco (incorreto|inexistente|desatualizado)|mudou-se|paradeiro/.test(nMot)) return r("Informar o endereço atualizado do assistido", "Certidão", true);
+      if (/fuga|evadi|evasao|foragido/.test(nMot)) return r("Manifestar sobre a fuga/evasão noticiada na certidão", "Certidão", true);
+      if (/condenatoria|nova condenacao|transitad|outra execucao|outro processo|guia de recolhimento|sem gr|unifica/.test(nMot)) return r("Manifestar sobre a nova condenação/guia noticiada na certidão (unificação, regime)", "Certidão", false);
+      if (/prisao|preso|recolhido|flagrante/.test(nMot)) return r("Manifestar sobre a prisão noticiada na certidão", "Certidão", true);
+      return r("Manifestar sobre a certidão" + prazoTxt, "Certidão", !!risco);
+    }
+    if (tipo === "Manifestação" && /minist/i.test((a.motivo && a.motivo.cargo) || "")) return r("Manifestar sobre o parecer do MP" + prazoTxt, "Parecer do MP", !!risco);
+    if (tipo === "Laudo/exame") return r("Manifestar sobre o laudo/exame" + prazoTxt, "Laudo", !!risco);
+    if (tipo === "Documento/ofício") return r("Manifestar sobre o documento juntado" + riscoTxt + prazoTxt, "Documento", !!risco);
+    if (decisaoNoMotivo && tem(alMot, /^Deferimento/)) return r("Ciência da decisão favorável; conferir o cumprimento", "Ciência", false);
+    if (tem(alMot, /^Pede manifestação/) || !nMot) return r("Manifestar" + (a.motivo ? " sobre o " + a.motivo.nome.toLowerCase() : "") + riscoTxt + prazoTxt, "Manifestação", !!risco);
+    return r("Ler o documento e manifestar" + riscoTxt + prazoTxt, "Manifestação", !!risco);
+  }
+
   // ---------------------------------------------------------------- prioridade da linha
   // 0 = mais urgente. Alerta alto > último dia mais próximo > alerta médio
   function urgencia(linha, analise, hoje) {
     const h = hoje ? dataNum(hoje) : 0;
-    const alto = analise && (analise.alertas || []).some((a) => a.nivel === "alto");
+    const alto = analise && (analise.providencia ? analise.providencia.urgente : (analise.alertas || []).some((a) => a.nivel === "alto"));
     const medio = analise && (analise.alertas || []).some((a) => a.nivel === "medio");
     const ud = dataNum(linha.ultimoDia);
     return (alto ? 0 : 1) * 1e9 + (ud || 99999999) - (medio ? 0.5 : 0) + (h && ud && ud < h ? -5e8 : 0);
@@ -524,7 +579,7 @@
     ABAS, SITUACOES, entidades, texto, normal, cnj, finalDoNumero, absoluto, dataNum, faixasFinal, faixaTexto,
     lerMesa, lerPendencias, lerMovimentos, lerProcesso, paginaDeLogin, lerArquivos, arquivoPrincipal,
     ehAtoDoJuiz, ehMeroExpediente, pendenciaDaAba, movimentoDaPendencia, escolher, tipoDoMotivo,
-    itensParaTexto, carimbo, corpoDoDocumento, dispositivo, resumir, analisarTexto, lerDocumento, urgencia,
+    itensParaTexto, carimbo, corpoDoDocumento, dispositivo, resumir, analisarTexto, lerDocumento, providencia, urgencia,
     crc32, zip, xlsx, colunaLetra,
   };
   if (typeof module !== "undefined" && module.exports) module.exports = api;

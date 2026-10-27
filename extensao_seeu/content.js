@@ -6,6 +6,9 @@
   "use strict";
   if (window.__aptoRspe) return;
   window.__aptoRspe = true;
+  // moldura invisível da Triagem da Mesa (abre a página do processo como o clique no nº): aqui o script não faz nada
+  // (nem o RSPE automático)
+  if (window.name === "apto-triagem-oculta") return;
   const A = self.APTO;
   let pedido = false;
 
@@ -144,7 +147,7 @@
     pedido = true;
     const r = await baixar(url, processo, forcar);
     if (r && r.ok) aviso("APTO: RSPE salvo em Downloads\\" + String(r.arquivo || "").replace(/\//g, "\\"));
-    else if (r && !r.repetido && r.motivo !== "desligada") aviso("APTO: " + (r.motivo || "não foi possível salvar o RSPE"), true);
+    else if (r && !r.repetido && r.motivo !== "desligada" && r.motivo !== "rspe automático desligado") aviso("APTO: " + (r.motivo || "não foi possível salvar o RSPE"), true);
     return Object.assign({ achou: true, processo }, r || {});
   }
 
@@ -172,7 +175,8 @@
     try {
       resp = await fetch(new URL(msg.url, location.href).href, op);
     } catch (e) {
-      return { ok: false, motivo: "o SEEU não respondeu (" + (e && e.message || e) + ")" };
+      // erro de rede do navegador (ex.: o SEEU redirecionou para um endereço que um pedido em segundo plano não segue)
+      return { ok: false, rede: true, motivo: "o navegador não completou o pedido (" + (e && e.message || e) + ")" };
     }
     const bytes = new Uint8Array(await resp.arrayBuffer());
     const fim = resp.url || "";
@@ -185,7 +189,64 @@
     return Object.assign(base, { ok: resp.ok, pdf: false, texto: txt });
   }
 
+  // página do processo numa moldura invisível, dentro do próprio SEEU: o mesmo que clicar no nº (navegação normal, com
+  // os redirecionamentos do SEEU). Lê o HTML quando a página termina de carregar e remove a moldura.
+  function documentoComCorpo(w, prof) {
+    try {
+      const d = w.document;
+      if (d && d.body && d.body.tagName === "BODY" && location.origin === w.location.origin) return d;
+    } catch (e) { return null; }
+    if (prof > 3) return null;
+    for (let i = 0; i < w.frames.length; i++) {
+      const d = documentoComCorpo(w.frames[i], prof + 1);
+      if (d) return d;
+    }
+    return null;
+  }
+  function carregarNaMoldura(url, limiteMs) {
+    return new Promise((resolve) => {
+      const doc = documentoComCorpo(window, 0);
+      if (!doc) return resolve({ ok: false, motivo: "não há onde abrir a moldura invisível nesta página do SEEU" });
+      const old = doc.querySelectorAll("iframe[name=apto-triagem-oculta]");
+      old.forEach((x) => x.remove());
+      const f = doc.createElement("iframe");
+      f.name = "apto-triagem-oculta";
+      f.setAttribute("aria-hidden", "true");
+      f.tabIndex = -1;
+      f.style.cssText = "position:fixed;left:-10000px;top:0;width:1024px;height:700px;border:0;visibility:hidden";
+      const inicio = Date.now();
+      let fim = false;
+      const terminar = (r) => { if (fim) return; fim = true; clearInterval(t); setTimeout(() => f.remove(), 50); resolve(r); };
+      const t = setInterval(() => {
+        let d = null, href = "";
+        try { d = f.contentDocument; href = f.contentWindow.location.href; } catch (e) {
+          return terminar({ ok: false, login: true, motivo: "o SEEU abriu outro endereço (login?)" });
+        }
+        const pronto = d && href && href !== "about:blank" && (d.readyState === "complete" ||
+          (d.readyState === "interactive" && /mov1Grau|quadroPendencias|type\s*=\s*["']?password/i.test(d.documentElement.innerHTML)));
+        if (pronto) {
+          const html = "<!DOCTYPE html>" + d.documentElement.outerHTML;
+          return terminar({ ok: true, status: 200, url: href, pdf: false, texto: html, login: /type\s*=\s*["']?password/i.test(html) });
+        }
+        if (Date.now() - inicio > (limiteMs || 45000)) terminar({ ok: false, motivo: "a página do processo não terminou de carregar em 45 s" });
+      }, 300);
+      f.src = new URL(url, location.href).href;
+      doc.body.appendChild(f);
+    });
+  }
+
   chrome.runtime.onMessage.addListener((msg, _s, responder) => {
+    if (msg.tipo === "triagemMoldura") {
+      if (window !== window.top) return false;
+      if (!_s || _s.id !== chrome.runtime.id || !String(_s.url || "").startsWith(chrome.runtime.getURL("triagem.html"))) return false;
+      const recusa = A.pedidoTriagemPermitido(msg.url, "GET", "");
+      if (recusa || !/\/seeu\/visualizacaoProcesso\.do$/.test(new URL(msg.url, location.href).pathname)) {
+        responder({ ok: false, motivo: "pedido recusado pela extensão: " + (recusa || "só a página do processo") });
+        return false;
+      }
+      carregarNaMoldura(msg.url).then(responder);
+      return true;
+    }
     if (msg.tipo === "triagemBuscar") {
       // só a moldura principal do SEEU e só a página da triagem da própria extensão
       if (window !== window.top) return false;
