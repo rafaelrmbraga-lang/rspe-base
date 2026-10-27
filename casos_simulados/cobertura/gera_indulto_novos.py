@@ -371,11 +371,11 @@ novo(k, "Indulto 2025, art. 9º, XII com 1/6 (XIII exige 1/5)",
 # INCISOS XIV e XV
 # =====================================================================================================================
 k = 6025
-P = anos(1, 8); c = 55; ini = ini_para(R24, c)
+P = anos(3); c = 55; ini = ini_para(R24, c)
 novo(k, "Indulto 2024, art. 9º, XV: estelionato com 55 dias (XIV exige 3 meses)",
      "Inciso XV (patrimônio sem violência, reparação dispensada para assistido da Defensoria) sem o XIV",
      "Indulto 2024 POSSÍVEL pelo art. 9º, XV (o XIV não: menos de 3 meses cumpridos); comutação prejudicada",
-     f"Estelionato (CP, art. 171), 1a8m = {P} dias, primário. Cumprido até 25/12/2024: {c} dias. XV: crime patrimonial sem violência; a reparação é dispensada "
+     f"Estelionato (CP, art. 171), 3a = {P} dias, primário. Cumprido até 25/12/2024: {c} dias. XV: crime patrimonial sem violência; a reparação é dispensada "
      "nas hipóteses do art. 12, § 2º (I: representado pela Defensoria). XIV: exige 90 dias - não. I: 1/5 = %d - não." % fr(P, 1, 5),
      rspe(k, [crime(proc(k), "ART 171: Estelionato", P, "01/01/2024", tipo="CAPUT: Obter, para si ou para outrem, vantagem ilícita, Reclusão: 1 a 5 anos E Multa")],
           [p_def(ini, k)], [reg("Semiaberto - Regime Inicial", ini)], ini=F(ini), regime="Semiaberto - ATIVO"),
@@ -490,33 +490,33 @@ novo(k, "Indulto 2024 e 2025: homicídio qualificado (hediondo) vedado",
      [RX("ind24", "^VEDADO"), RX("com24", "^VEDADA"), RX("ind25", "^VEDADO"), RX("com25", "^VEDADA")])
 
 k = 6035
-P = anos(5); ini = D("01/12/2021")
+P = anos(7); ini = D("01/12/2021")
 novo(k, "Tráfico (art. 33, caput): excluído em 2022, vedado em 2024 e 2025",
      "Tráfico de drogas do caput: exclusão do art. 7º, VI (2022) e vedação do art. 1º, XVIII (2024 e 2025)",
      "Decreto 2022: excluído (art. 7º); 2024 e 2025: indulto VEDADO e comutação VEDADA",
-     f"Tráfico (Lei 11.343, art. 33, caput), 5a, fato 10/03/2021, sentença e trânsito em 2021, preso desde {F(ini)}. Decreto 11.302/2022, art. 7º, VI; "
+     f"Tráfico (Lei 11.343, art. 33, caput), 7a, fato 10/03/2021, sentença e trânsito em 2021, preso desde {F(ini)}. Decreto 11.302/2022, art. 7º, VI; "
      "Decretos 12.338/2024 e 12.790/2025, art. 1º, XVIII.",
      rspe(k, [crime(proc(k), "ART 33: Tráfico de drogas", P, "10/03/2021", lei=DROGAS, tipo="CAPUT: Importar, exportar, remeter, preparar, Reclusão: 5 a 15 anos E Multa")],
           [p_def(ini, k)], [reg("Fechado - Regime Inicial", ini)], ini=F(ini)),
      [RX("ind22", "^excluído"), RX("ind24", "^VEDADO"), RX("com24", "^VEDADA"), RX("ind25", "^VEDADO")])
 
 k = 6036
-P = anos(1, 8); ini = D("01/11/2024"); c25 = dd(ini, R25)
+P = anos(3, 4); ini = D("01/11/2024"); c25 = dd(ini, R25)
 novo(k, "Indulto 2025: tráfico privilegiado (§ 4º) não é impeditivo",
      "Tráfico privilegiado fora do rol do art. 1º, XVIII (só caput e § 1º)",
      "Indulto 2025 POSSÍVEL pelo art. 9º, I e II; rótulo de crime impeditivo 'Não'",
-     f"Tráfico privilegiado (Lei 11.343, art. 33, § 4º), 1a8m = {P} dias, primário. Preso desde {F(ini)}: {c25} dias até 25/12/2025. "
+     f"Tráfico privilegiado (Lei 11.343, art. 33, § 4º), 3a4m = {P} dias, primário. Preso desde {F(ini)}: {c25} dias até 25/12/2025. "
      f"I: 1/5 = {fr(P,1,5)}; II: 1/3 = {fr(P,1,3)} - atendidos. Art. 1º, XVIII só veda o caput e o § 1º.",
      rspe(k, [crime(proc(k), "ART 33: Tráfico de drogas", P, "01/02/2024", lei=DROGAS, tipo="§ 4º: tráfico privilegiado, Reclusão: 5 a 15 anos E Multa",
                     sentenca="19/08/2024")], [p_def(ini, k)], [reg("Semiaberto - Regime Inicial", ini)], ini=F(ini), regime="Semiaberto - ATIVO"),
      [POS("ind25", ["I", "II"]), C("imp", "nao_contem", "Sim")])
 
 k = 6037
-P = anos(4); ini = D("01/06/2022")
+P = anos(6); ini = D("01/06/2022")
 novo(k, "Indulto 2024 e 2025: organização criminosa (Lei 12.850) vedada",
      "Vedação do art. 1º, IV (Lei 12.850/2013)",
      "Indulto VEDADO e comutação VEDADA em 2024 e 2025",
-     f"Integrar organização criminosa (Lei 12.850, art. 2º), 4a, preso desde {F(ini)} (mais de 1/5 cumprido). Decretos 2024/2025, art. 1º, IV.",
+     f"Integrar organização criminosa (Lei 12.850, art. 2º), 6a, preso desde {F(ini)} (mais de 1/5 cumprido). Decretos 2024/2025, art. 1º, IV.",
      rspe(k, [crime(proc(k), "ART 2º - Promover, constituir, financiar ou integrar organização criminosa", P, "01/01/2022", lei="12850/13 - Organização Criminosa",
                     tipo="CAPUT: Promover, constituir, financiar ou integrar organização criminosa, Reclusão: 3 a 8 anos E Multa")],
           [p_def(ini, k)], [reg("Fechado - Regime Inicial", ini)], ini=F(ini)),
@@ -555,22 +555,22 @@ novo(k, "Indulto 2025: lavagem com pena de exatamente 4 anos não é vedada",
      [POS("ind25", ["I"])])
 
 k = 6042
-P = anos(2); c = 300; ini = ini_para(R25, c)
+P = anos(3); c = 300; ini = ini_para(R25, c)
 novo(k, "Indulto 2025: crime ambiental (Lei 9.605) vedado qualquer que seja a pena",
      "Vedação do art. 1º, XIV (Lei 9.605/1998)",
      "Indulto 2025 VEDADO e comutação VEDADA",
-     f"Poluição (Lei 9.605, art. 54), 2a, cumprido {c} dias (mais de 1/5 e de 1/3). Decreto 12.790/2025, art. 1º, XIV, sem exceção de pena.",
+     f"Poluição (Lei 9.605, art. 54), 3a, cumprido {c} dias (mais de 1/5 e de 1/3). Decreto 12.790/2025, art. 1º, XIV, sem exceção de pena.",
      rspe(k, [crime(proc(k), "ART 54 - Causar poluição", P, "01/03/2024", lei="9605/98 - Crimes Ambientais",
                     tipo="CAPUT: Causar poluição de qualquer natureza, Reclusão: 1 a 4 anos E Multa")],
           [p_def(ini, k)], [reg("Semiaberto - Regime Inicial", ini)], ini=F(ini), regime="Semiaberto - ATIVO"),
      [RX("ind25", "^VEDADO"), RX("com25", "^VEDADA")])
 
 k = 6043
-P = anos(1); c = 200; ini = ini_para(R25, c)
+P = anos(2); c = 200; ini = ini_para(R25, c)
 novo(k, "Indulto 2025: descumprimento de medida protetiva (Lei 11.340) vedado",
      "Vedação do art. 1º, XVII (crimes da Lei 11.340/2006)",
      "Indulto 2025 VEDADO e comutação VEDADA",
-     f"Descumprimento de medida protetiva de urgência (Lei 11.340, art. 24-A), 1a, cumprido {c} dias (mais de 1/5). Decreto 12.790/2025, art. 1º, XVII.",
+     f"Descumprimento de medida protetiva de urgência (Lei 11.340, art. 24-A), 2a, cumprido {c} dias (mais de 1/5). Decreto 12.790/2025, art. 1º, XVII.",
      rspe(k, [crime(proc(k), "ART 24-A - Descumprir decisão judicial que defere medidas protetivas", P, "01/03/2024", lei="11340/06 - Lei Maria da Penha",
                     tipo="CAPUT: Descumprir decisão judicial que defere medidas protetivas de urgência, Detenção: 3 meses a 2 anos")],
           [p_def(ini, k)], [reg("Semiaberto - Regime Inicial", ini)], ini=F(ini), regime="Semiaberto - ATIVO"),
@@ -766,16 +766,18 @@ novo(k, "Pena integralmente cumprida antes de 25/12/2024: extinção, não indul
      "pelo cumprimento (LEP, art. 66, II), não o indulto nem a comutação.",
      rspe(k, [t297(k, 0, P, "01/06/2022", sentenca="18/12/2022")], [p_def(ini, k), interr(F(fim), "CUMPRIMENTO DA PENA")],
           [reg("Fechado - Regime Inicial", ini)], ini=F(ini), term=F(fim)),
-     [RX("ind24", r"^(?!POSS).*extin"), NAO_POS("com24")])
+     [RX("ind24", r"^não se aplica: sem pena remanescente"), NAO_POS("com24"),
+      C("ind24", "contem", "extinção", nota="O resultado não orienta pedir a extinção pelo cumprimento (LEP, art. 66, II)."),
+      C("ind25", "nao_contem", "falta a verificar", nota="A soltura por cumprimento (28/02/2024) não é fuga e fica fora da janela de 2025 (25/12/2024 a 23/12/2025).")])
 
 k = 6059
 ini = D("01/02/2023"); c24 = dd(ini, R24)
 novo(k, "Execução unificada: pena alcançada coberta pelo tempo, mas sem sugerir extinção isolada",
      "Execução unificada com outra pena (fato posterior ao decreto) em cumprimento",
      "Indulto 2024 POSSÍVEL (pena de 2022 alcançada), sem 'pedir a extinção pelo cumprimento' (política: não se sugere extinção de pena isolada na execução unificada)",
-     f"CP, art. 297: crime A 1a (fato 2022) e crime B 3a (fato 01/03/2025, fora do Decreto 12.338/2024). Preso desde {F(ini)}: {c24} dias em 25/12/2024, mais que a "
+     f"CP, art. 297: crime A 1a (fato 2022) e crime B 4a (fato 01/03/2025, fora do Decreto 12.338/2024). Preso desde {F(ini)}: {c24} dias em 25/12/2024, mais que a "
      "pena de A; como a execução é unificada (LEP, art. 111) e B segue em cumprimento, fica o indulto da pena alcançada (decisão do usuário).",
-     rspe(k, [t297(k, 0, anos(1), "01/06/2022", sentenca="18/12/2022"), t297(k, 1, anos(3), "01/03/2025", sentenca="01/09/2025")],
+     rspe(k, [t297(k, 0, anos(1), "01/06/2022", sentenca="18/12/2022"), t297(k, 1, anos(4), "01/03/2025", sentenca="01/09/2025")],
           [p_def(ini, k)], [reg("Fechado - Regime Inicial", ini)], ini=F(ini)),
      [RX("ind24", "^POSSÍVEL"), C("ind24", "nao_contem", "extinção pelo cumprimento")])
 
@@ -783,12 +785,12 @@ novo(k, "Execução unificada: pena alcançada coberta pelo tempo, mas sem suger
 # DECRETO 11.302/2022
 # =====================================================================================================================
 k = 6060
-P = anos(1, 8); ini = D("15/10/2022")
+P = anos(1, 8); ini = D("01/06/2026")
 novo(k, "Decreto 2022: tráfico privilegiado e o art. 5º (pena máxima em abstrato)",
      "Tráfico privilegiado no Decreto 11.302/2022 (art. 7º, VI ressalva o § 4º, mas o art. 5º exige pena máxima até 5 anos)",
      "Pelo texto: o art. 7º, VI só tira o § 4º das exclusões; a pena máxima do tráfico privilegiado (15 anos reduzidos de 1/6 = 12a6m) passa de 5 anos, "
      "então o art. 5º não alcança - indulto 2022 não é 'possível' (tese contrária: STJ, 6ª Turma)",
-     "Tráfico privilegiado (Lei 11.343, art. 33, § 4º), 1a8m, fato 01/03/2021, sentença 01/08/2022, trânsito 01/10/2022. Decreto 11.302/2022, art. 5º "
+     "Tráfico privilegiado (Lei 11.343, art. 33, § 4º), 1a8m, fato 01/03/2021, sentença 01/08/2022, trânsito 01/10/2022, início do cumprimento em 01/06/2026. Decreto 11.302/2022, art. 5º "
      "(pena máxima em abstrato não superior a 5 anos) e art. 7º, VI.",
      rspe(k, [crime(proc(k), "ART 33: Tráfico de drogas", P, "01/03/2021", lei=DROGAS, tipo="§ 4º: tráfico privilegiado, Reclusão: 5 a 15 anos E Multa",
                     sentenca="01/08/2022", transito="01/10/2022")], [p_def(ini, k)], [reg("Semiaberto - Regime Inicial", ini)], ini=F(ini), regime="Semiaberto - ATIVO"),
@@ -800,9 +802,9 @@ P = anos(2); ini = D("15/10/2022")
 novo(k, "Decreto 2022, art. 5º: furto simples (máximo 4 anos); falta grave não afasta",
      "Art. 5º (pena máxima em abstrato até 5 anos, sem tempo cumprido) e ausência de requisito disciplinar no Decreto 2022",
      "Indulto 2022 POSSÍVEL pelo art. 5º, mesmo com falta grave homologada em 2022",
-     "Furto simples (CP, art. 155, caput: 1 a 4 anos), 2a, fato 01/03/2021, sentença 01/08/2022, trânsito 01/10/2022. Art. 5º não exige tempo cumprido. "
+     "Três furtos simples (CP, art. 155, caput: 1 a 4 anos), 2a cada, fato 01/03/2021, sentença 01/08/2022, trânsito 01/10/2022. Art. 5º não exige tempo cumprido. "
      "Falta grave com fato em 01/11/2022, homologada em 01/12/2022: o Decreto 11.302/2022 não tem requisito disciplinar.",
-     rspe(k, [furto(k, 0, P, "01/03/2021", sentenca="01/08/2022", transito="01/10/2022")], [p_def(ini, k)],
+     rspe(k, [furto(k, i, P, "01/03/2021", sentenca="01/08/2022", transito="01/10/2022") for i in range(3)], [p_def(ini, k)],
           [reg("Fechado - Regime Inicial", ini), inc(FALTA, "01/11/2022", "01/12/2022", "01/11/2022")], ini=F(ini)),
      [RX("ind22", r"^POSSÍVEL[^|]*art\. 5º")])
 
@@ -819,45 +821,46 @@ novo(k, "Decreto 2022, art. 5º crime a crime: furto alcançado, receptação qu
      [RX("ind22", r"^POSSÍVEL[^|]*art\. 5º"), RX("det22", r"✗[^\n]*180")])
 
 k = 6063
-P = anos(6); ini = D("01/12/2020"); c22 = dd(ini, R22)
+P = anos(8); ini = D("01/12/2019"); c22 = dd(ini, R22)
 assert c22 >= P / 3
 novo(k, "Decreto 2022, art. 4º: 72 anos com 1/3 cumprido",
      "Art. 4º do Decreto 11.302/2022 (maiores de 70 anos, 1/3 da pena)",
      "Indulto 2022 POSSÍVEL pelo art. 4º (o art. 5º não: máximo do art. 297 é 6 anos)",
-     f"CP, art. 297 (2 a 6 anos), 6a = {P} dias, nascido em 01/01/1950 (72 anos em 25/12/2022). Preso desde {F(ini)}: {c22} dias; 1/3 = {P // 3} - atendido.",
-     rspe(k, [t297(k, 0, P, "01/03/2020", sentenca="01/09/2020", transito="01/11/2020")], [p_def(ini, k)], [reg("Fechado - Regime Inicial", ini)], ini=F(ini), nasc="01/01/1950"),
+     f"Duas condenações do CP, art. 297 (2 a 6 anos), 6a + 2a = {P} dias, nascido em 01/01/1950 (72 anos em 25/12/2022). Preso desde {F(ini)}: {c22} dias; 1/3 = {P // 3} - atendido.",
+     rspe(k, [t297(k, 0, anos(6), "01/11/2019", sentenca="01/09/2020", transito="01/11/2020"), t297(k, 1, anos(2), "01/11/2019", sentenca="01/09/2020", transito="01/11/2020")],
+          [prisao(F(ini), proc(k, 0) + ", " + proc(k, 1))], [reg("Fechado - Regime Inicial", ini)], ini=F(ini), nasc="01/01/1950"),
      [RX("ind22", r"^POSSÍVEL[^|]*art\. 4º")])
 
 k = 6065
-ini = D("01/01/2020"); c22 = dd(ini, R22); Pr = anos(5, 6)
+ini = D("01/01/2020"); c22 = dd(ini, R22); Pr = anos(7)
 assert c22 < Pr
 novo(k, "Decreto 2022: furto em concurso com roubo - só depois de cumprida a pena inteira do roubo",
      "Art. 7º, II (violência) e art. 11, parágrafo único (pena integral do crime impeditivo)",
      "Indulto 2022 não atinge: o roubo é excluído e o furto só seria indultado depois de cumprida toda a pena do roubo",
-     f"Furto simples 1a e roubo 5a6m = {Pr} dias, ambos de 2019, preso desde {F(ini)}: {c22} dias em 25/12/2022, menos que a pena do roubo. "
+     f"Furto simples 1a e roubo 7a = {Pr} dias, ambos de 2019, preso desde {F(ini)}: {c22} dias em 25/12/2022, menos que a pena do roubo. "
      "Decreto 11.302/2022, arts. 7º, II, e 11, p. ú.",
      rspe(k, [furto(k, 0, anos(1), "01/06/2019"), roubo(k, 1, Pr, "01/06/2019")], [p_def(ini, k)], [reg("Fechado - Regime Inicial", ini)], ini=F(ini)),
      [RX("ind22", "^não atinge")])
 
 k = 6066
-ini = D("01/02/2023")
+ini = D("01/06/2026")
 novo(k, "Decreto 2022: trânsito para a acusação só depois da publicação",
      "Art. 9º do Decreto 11.302/2022: condenação sem trânsito para a acusação em 23/12/2022",
      "Indulto 2022 A VERIFICAR (controvérsia: o STJ exige o trânsito para a acusação na publicação; a leitura literal do art. 9º, p. ú., só barra recurso "
      "da acusação após o 2º grau)",
-     "Furto simples (1 a 4 anos), 2a, fato 10/01/2022, sentença 10/11/2022, trânsito para a acusação e final em 15/01/2023. Art. 5º alcançaria o crime.",
+     "Furto simples (1 a 4 anos), 2a, fato 10/01/2022, sentença 10/11/2022, trânsito para a acusação e final em 15/01/2023; cumprimento iniciado em 01/06/2026. Art. 5º alcançaria o crime.",
      rspe(k, [furto(k, 0, anos(2), "10/01/2022", sentenca="10/11/2022", transito="15/01/2023")], [p_def(ini, k)],
           [reg("Semiaberto - Regime Inicial", ini)], ini=F(ini), regime="Semiaberto - ATIVO"),
      [RX("ind22", "^A VERIFICAR")])
 
 k = 6067
-ini = D("01/12/2022")
+ini = D("01/06/2026")
 novo(k, "Decreto 2022: pena substituída por restritiva de direitos (art. 8º, I)",
      "Art. 8º, I do Decreto 11.302/2022: o indulto não se estende às penas restritivas de direitos",
      "Indulto 2022 não é 'possível': a pena era restritiva de direitos em 25/12/2022 (art. 8º, I)",
-     "Furto simples, 1a, substituída por prestação de serviços (sentença 01/08/2022, trânsito 01/10/2022), cumprimento iniciado em 01/12/2022.",
-     rspe(k, [furto(k, 0, anos(1), "01/03/2021", sentenca="01/08/2022", transito="01/10/2022", regime="Aberto",
-                    pena_total_processo="1a0m0d - PENA ORIGINÁRIA - CONVERTIDA EM RESTRITIVA DE DIREITOS")],
+     "Furto simples, 2a, substituída por prestação de serviços (sentença 01/08/2022, trânsito 01/10/2022): em 25/12/2022 a pena era restritiva de direitos; cumprimento iniciado em 01/06/2026.",
+     rspe(k, [furto(k, 0, anos(2), "01/03/2021", sentenca="01/08/2022", transito="01/10/2022", regime="Aberto",
+                    pena_total_processo="2a0m0d - PENA ORIGINÁRIA - CONVERTIDA EM RESTRITIVA DE DIREITOS")],
           [ev("PRISÃO/INÍCIO DE CUMPRIMENTO", "INÍCIO DE CUMPRIMENTO - PENA RESTRITIVA DE DIREITOS", F(ini), proc(k))],
           [reg("Restritiva de Direitos - Substituição", ini)], ini=F(ini), regime="Restritiva de Direitos - ATIVO"),
      [NAO_POS("ind22")])
@@ -898,7 +901,7 @@ novo(k, "Indulto 2024: SEEU conta 400 dias a menos do que os eventos mostram",
      f"CP, art. 297, 5a = {P}. Eventos: preso desde {F(ini)} sem interrupção = {ev24} dias em 25/12/2024 (I: 1/5 = {fr(P,1,5)} atendido). O SEEU registra "
      f"{falta_seeu} dias de interrupção que os eventos não mostram: pelo cálculo dele, {ev24 - falta_seeu} dias. Dado conflitante: não se pode afirmar nem negar.",
      rspe(k, [t297(k, 0, P, "01/06/2022", sentenca="01/09/2022")], [p_def(ini, k)], [reg("Fechado - Regime Inicial", ini)], ini=F(ini), interrompidos=falta_seeu),
-     [RX("ind24", r"^A VERIFICAR[^|]*\bI\b")])
+     [RX("ind24", r"^A VERIFICAR[^|]*\bI\b", nota="Pelos eventos o inciso I é atendido (666 dias >= 365); a comutação do mesmo decreto usa os eventos, o indulto não.")])
 
 k = 6073
 P = anos(5); ini = D("01/03/2024"); ev25 = dd(ini, R25) - 365
