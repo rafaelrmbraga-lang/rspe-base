@@ -1,9 +1,9 @@
-APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.15.0
+APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.15.1
 (antigo RSPE Base; SEEU, programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-7.15.0. A documentação técnica completa (cada parâmetro, a regra, a norma e
+7.15.1. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -1033,6 +1033,47 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v7.15.1
+  Correções da base simulada independente (463 casos novos, com o resultado
+  esperado calculado pela lei, sem consultar o programa) e volta da visão
+  inicial da aba Ficha.
+  - Ficha disciplinar: ao abrir o assistido, só o Diagnóstico (o que fazer)
+    e as Pendências apontadas; a comparação RSPE x ficha fica na
+    visualização detalhada (mudança de 23/10 que não tinha entrado).
+  - Leitura da ficha (relida ao abrir a base): atestado com ano corrigido e
+    trabalho sem baixa não derruba mais a ficha; "CICLO Nº" reconhecido;
+    "tentativa de fuga frustrada" e "sob pena de evasão" não viram fuga;
+    regressão judicial pela evasão vira falta homologada; sem alerta de
+    falta de vaga quando a ficha registra a regressão ao fechado; reinício
+    omitido e RSPE sem prisão em alerta; monitoramento conta os dois
+    extremos; jornada de um setor não passa para outro.
+  - Remição: limite de 12 obras de leitura a cada 12 meses; certidão de
+    semestre peticionada há mais de 180 dias sem remição que a explique
+    vira provável pendência (amarelo); trabalho no período em que esta
+    execução estava interrompida não conta em "Trabalho a atestar".
+  - Auditoria: citação dos precedentes inteira (REsp 2.037.377/SC) e
+    parágrafo do prejuízo no 1/6 x 16%; prisão desta execução lançada como
+    "prisão em outro processo", domiciliar/monitoramento e espera de vaga
+    lançados como interrupção, e data-base na guia nova (Tema 1006), em
+    alerta; remição em dobro já somada ao saldo em info (favorece);
+    medida de segurança sem "faltam dados"; milícia e comando com 75% não
+    indicam hediondez; domínio social estruturado sem "só se
+    ultraviolenta"; crimes do Título XII sem violência na Lei 15.402/2026
+    (retroage).
+  - Indulto: soltura por cumprimento não é falta e orienta pedir a
+    extinção; tempo pelos eventos quando atende inciso que o SEEU não
+    atende; remição pendente apontada também no "a verificar"; 2002 (falta
+    nos 12 meses barra a comutação); livramento em curso basta para
+    "regime aberto ou livramento"; piso de 18 meses nas hipóteses
+    patrimoniais; 2016 com fuga não apurada a verificar (art. 9º, p. ú.);
+    Dia das Mães 2017/2018: tráfico veda também a comutação.
+  - Situação e prazos: coluna Falta com a fuga como falta permanente até a
+    recaptura; "não iniciou o cumprimento" na coluna de situação;
+    livramento desde a soltura; progressão refeita com os 16% retroativos
+    para fato anterior a 2020; óbito e pena cumprida antes da fuga
+    (detração não abatida) como extinção a verificar; multa isolada
+    prescreve em 2 anos (CP, art. 114, I).
 
 v7.15.0
   Tela nova (linha E, aprovada em 27/10/2026), sem mudar nenhuma regra,

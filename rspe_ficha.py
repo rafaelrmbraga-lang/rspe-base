@@ -604,7 +604,7 @@ def _extrair_texto(caminho, pags, vis, ocultas=(), dp_chars="", parcial=None):
 # lançamento do dia d", "desconsiderar a função X", "Liberação do Setor de Trabalho" sem baixa no dia, o vínculo simultâneo só quando
 # o outro setor acabou antes da baixa tardia (não a baixa "saída do presídio"), nomes de setor sem "nesta UP", "CI nº ...", "sendo",
 # "E" e "ATIVIDADE EXTERNA NA"; sinônimos e palavras próprias no singular)
-VERSAO_LEITURA = 15
+VERSAO_LEITURA = 16
 # versão da extração do PDF (camada de caracteres): a mesma ficha extraída por versão anterior é extraída de novo ao reimportar
 VERSAO_EXTRACAO = 2
 

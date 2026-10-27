@@ -37,6 +37,7 @@ TESTES += ["teste_conf7_detracao.py"]  # forma favorável da detração em a/m/d
 TESTES += ["teste_conf8_indulto.py"]  # terceira conferência independente (7.14.7), frente indulto e comutação
 TESTES += ["teste_conf8_demais.py"]
 TESTES += ["teste_linha_e.py"]  # tela da linha E (27/10/2026): importar, menu lateral, filtros combináveis, situação, avisos, parar a importação
+TESTES += ["teste_cob_ficha.py", "teste_cob_remicao.py", "teste_cob_indulto.py", "teste_cob_situacao.py", "teste_cob_auditoria.py"]  # 7.15.1: base simulada independente
 # saída em UTF-8 em qualquer console (no Windows o padrão cp1252 não imprime símbolos como "✓" e derruba o teste)
 _env = dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUTF8="1")
 falhas = [t for t in TESTES if subprocess.call([sys.executable, t], env=_env) != 0]
