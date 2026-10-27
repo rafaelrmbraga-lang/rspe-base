@@ -27,6 +27,7 @@
   --ok:#1F5E38;   --ok-bg:#E7F2EA;   --ok-f:#3B8C5A;
   --neu:#4A514C;  --neu-bg:#F0F1EE;  --neu-f:#C9CEC8;
   --prox:#2F4F5C;  --prox-bg:#E9EFF1;  --prox-f:#6F8C98;
+  --ver:#86460F; --ver-bg:#FBEEDF; --ver-f:#B5651D;
   --ext:#284A6B;  --ext-bg:#E8EEF5;  --ext-f:#4E7299;
   --sans:"Source Sans 3",Arial,sans-serif; --serif:"Source Serif 4",Georgia,serif;
 }
@@ -518,6 +519,41 @@ body.tema-7.menu-recolhido,body.tema-7.menu-sobre{--nav:52px}
 @media (max-width:1400px){body.tema-7:not(.menu-recolhido):not(.menu-sobre){--nav:192px}.tema-7:not(.menu-recolhido) .aba{font-size:12.5px;padding-right:6px}.tema-7:not(.menu-recolhido):not(.menu-sobre) td.nome{min-width:0}.tema-7:not(.menu-recolhido):not(.menu-sobre) td.proc{font-size:11px}}
 @media (max-width:1300px){.tema-7:not(.menu-recolhido):not(.menu-sobre) .cmp2{max-width:150px}.tema-7:not(.menu-recolhido):not(.menu-sobre) :is(td.c-falta,td.c-regime){max-width:110px}}
 @media (max-width:1300px){.tema-7:not(.menu-recolhido):not(.menu-sobre) :is(tbody td,thead th){padding-left:4px;padding-right:4px}}
+/* ===== E · ajustes pedidos: cartões em uma linha, importar em um botão, filtros combináveis ===== */
+.tema-7[class*="menu-"] .cartoes{gap:6px;flex-wrap:wrap}
+.tema-7[class*="menu-"] .cartao{flex:0 0 auto;display:flex;align-items:center;gap:7px;height:34px;padding:0 12px;border-radius:4px;box-shadow:none}
+.tema-7[class*="menu-"] .cartao::after{content:"";order:-1;width:8px;height:8px;border-radius:50%;background:var(--c)}
+.tema-7[class*="menu-"] .cartao b{font:700 15px/1 var(--sans);min-width:0}
+.tema-7[class*="menu-"] .cartao span{font-size:13px;color:var(--tx2);white-space:nowrap;margin:0;line-height:1}
+.tema-7[class*="menu-"] .cartao span::before{display:none}
+.tema-7[class*="menu-"] .cartao.velho{background:#FFF8EC;border-color:#EBD3A8}
+.impw{position:relative;display:inline-flex}.imp3{top:38px;left:0;right:auto;min-width:270px}.imp3 span{display:flex;flex-direction:column;gap:1px}.imp3 span:first-child{background:#F0F0F0}.imp3 small{color:var(--tx3);font-size:12px}
+.fpan.comb{width:auto;max-height:none;display:grid;grid-template-columns:repeat(2,250px);gap:4px 18px;padding:12px 14px;right:0}
+.fpan.comb .fg{display:flex;flex-direction:column}.fpan.comb .fpb{grid-column:1/-1}.nfx{font-size:12.5px;color:var(--tx2)}
+.cx2.on{background:var(--verde);border-color:var(--verde);box-shadow:inset 0 0 0 2px #fff}
+.tema-7 .fb{height:32px;border-radius:4px}
+.tema-7 .cab{z-index:3}
+@media (max-width:1400px){.tema-7[class*="menu-"] .cartoes{gap:5px}.tema-7[class*="menu-"] .cartao{padding:0 8px;gap:5px;height:30px}.tema-7[class*="menu-"] .cartao b{font-size:14px}.tema-7[class*="menu-"] .cartao span{font-size:12px}}
+.tema-7 .cab{z-index:3!important}
+/* contadores · variante 2: cartões de mesma largura, número à esquerda alinhado */
+.tema-7.cont-2 .cartoes{flex-wrap:nowrap;gap:6px}
+.tema-7.cont-2 .cartao{flex:1 1 0;min-width:0;height:44px;padding:0 10px;gap:8px;justify-content:flex-start}
+.tema-7.cont-2 .cartao::after{display:none}
+.tema-7.cont-2 .cartao b{font:600 19px/1 var(--sans);min-width:30px;text-align:right;color:var(--tx)}
+.tema-7.cont-2 .cartao.crit b{color:var(--crit)}
+.tema-7.cont-2 .cartao span{white-space:normal;line-height:1.15;font-size:11.5px;padding-left:8px;border-left:3px solid var(--c)}
+/* variante 3: faixa única dividida, número em cima e rótulo embaixo, centralizados */
+.tema-7.cont-3 .cartoes{flex-wrap:nowrap;gap:0}
+.tema-7.cont-3 .cartao{flex:1 1 0;min-width:0;height:auto;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:7px 4px;border-radius:0;border-left-width:0;text-align:center}
+.tema-7.cont-3 .cartao:first-child{border-left-width:1px;border-radius:6px 0 0 6px}.tema-7.cont-3 .cartao:last-child{border-radius:0 6px 6px 0}
+.tema-7.cont-3 .cartao::after{display:none}
+.tema-7.cont-3 .cartao b{font:600 19px/1 var(--sans)}
+.tema-7.cont-3 .cartao span{display:flex;align-items:center;gap:5px;font-size:11.5px;white-space:nowrap}
+.tema-7.cont-3 .cartao span::before{display:inline-block!important;content:"";width:7px;height:7px;border-radius:50%;background:var(--c);margin:0}
+.tema-7.cont-3 .cartao.velho{border-left-width:1px}
+.tema-7.cont-2 .cartao{flex:1 1 auto;height:42px;justify-content:center}.tema-7.cont-2 .cartao span{white-space:nowrap;font-size:12px}.tema-7.cont-2 .cartao b{min-width:0}
+.tema-7.cont-3 .cartao{flex:1 1 auto;padding:7px 8px}
+.tema-7[class*="menu-"] .ped{font-size:0;gap:0}
 </style></head>
 <body>
 <header class="topo">
@@ -591,32 +627,39 @@ ABAS.geo = {t:'Dados prisionais de MS', custom:true, cols:[]};
 ABAS.teses = {t:'Jurisprudências', custom:true, cols:[]};
 ABAS.quadro = {t:'Quadro do usuário', custom:true, cols:[]};
 const A = ABAS[ABA];
+if (P.get('menu')){ // linha E: "a verificar" separado de "até 60 dias", na cor do RSPE antigo
+  TOM.verificar='ver';
+  for (const g of ['prazo','ext']){ const i=G[g].findIndex(x=>x[0]==='amarelo'); G[g][i]=['amarelo', g==='ext'?'Término em até 60 dias':'Vence em até 60 dias']; G[g].splice(i+1,0,['verificar','A verificar']);
+    const j=CART[g].findIndex(x=>x[0]==='amarelo'); CART[g][j]=['amarelo','Até 60 dias']; CART[g].splice(j+1,0,['verificar','A verificar']); }
+  if (!P.get('cont')) document.body.classList.add('cont-2'); }
 const NAV = [['geral','Geral',null],['|'],['prog','Progressão',13],['liv','Livramento',5],['ext','Extinção',14],['presc','Prescrição',19],['|'],['ind','Indulto e comutação',85],['|'],['fd','Ficha disciplinar',3],['aud','Auditoria',60],['|'],['base','Dados da base',null],['geo','Dados prisionais',null],['teses','Jurisprudências',null],['quadro','Quadro',null]];
 let GI=0; const GNAV=['Prazos','Decretos','Conferência','Panorama e ferramentas'];
 document.getElementById('abas').innerHTML = NAV.map(n => n[0]==='|' ? `<span class="div" data-g="${GNAV[GI++]}"></span>` : `<button class="aba ${n[0]===ABA?'on':''}">${COM_ICONE && ICONES[n[0]] ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONES[n[0]]}</svg>` : ''}<i class="nm">${n[1]}</i>${n[2]!=null?`<span>${n[2]}</span>`:''}</button>`).join('');
 // linha E: menu lateral que recolhe e expande (menu=aberto | recolhido | sobre)
 const MENU = P.get('menu');
-if (MENU){ document.body.classList.add('menu-'+MENU);
+if (MENU){ document.body.classList.add('menu-'+MENU); if (P.get('cont')) document.body.classList.add('cont-'+P.get('cont'));
+  const bi=document.querySelector('.topo .btn.pri'); bi.nextElementSibling.remove(); bi.outerHTML=`<span class="impw"><button class="btn pri">Importar ▾</button>${P.get('importar')?'<span class="menu3 imp3"><span><b>Arquivos PDF…</b><small>RSPE, atestados e fichas baixados do SEEU</small></span><span><b>Uma pasta inteira…</b><small>todos os PDF da pasta e das subpastas</small></span></span>':''}</span>`;
   const SVG_MENU='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>';
   document.getElementById('abas').insertAdjacentHTML('afterbegin', `<button class="aba alterna" title="${MENU==='recolhido'?'Expandir o menu':'Recolher o menu'}">${SVG_MENU}<i class="nm">${MENU==='recolhido'?'Expandir o menu':'Recolher o menu'}</i></button>`);
   if (P.get('dica')){ requestAnimationFrame(()=>{ const b=[...document.querySelectorAll('.abas .aba')].find(x=>x.textContent.startsWith(P.get('dica'))); if(!b) return; const r=b.getBoundingClientRect(); document.body.insertAdjacentHTML('beforeend', `<div class="dica" style="left:${r.right+8}px;top:${r.top+r.height/2}px">${b.querySelector('.nm').textContent}${b.querySelector('span')?' · '+b.querySelector('span').textContent:''}</div>`); b.classList.add('foco'); }); } }
 if (P.get('tema')==='1'){ const G1={prog:'Prazos',ind:'Decretos',fd:'Conferência',base:'Panorama e ferramentas'}; document.querySelectorAll('.abas .aba').forEach((b,i)=>{ const id=NAV.filter(n=>n[0]!=='|')[i]; if(id&&G1[id[0]]) b.dataset.g=G1[id[0]]; }); }
 document.getElementById('tit').textContent = A.t;
 document.getElementById('sub').textContent = 'Referência 12/10/2026 · base jurídica 2026-10-08i · 144 assistidos';
-const FV = P.get('filtro') || 'a', FAB = P.get('aberto')==='1';
+const FV = P.get('filtro') || (P.get('menu') ? 'b' : 'a'), FAB = P.get('aberto')==='1';
 const FL = (FILTROS[ABA]||[]).filter(f=>f[0]!=='todas');
 const GRUPOS_F = f => /^(pedfeito|pedsem)$/.test(f)?'Pedido':/^(st_|pa_)/.test(f)?'Benefícios a conferir':/^(rem_prio|div_seeu|rspe_velho)$/.test(f)?'Conferência':'Situação';
 function filtroHtml(){
   if (!FL.length) return '';
-  if (FV==='b'){ const extras = FL.filter(f=>GRUPOS_F(f[0])!=='Situação');
-    return `<div class="fsel"><label>Filtros</label><button class="btn fb">Combinar filtros ▾</button>${FAB?`<div class="fpan">${['Pedido','Benefícios a conferir','Conferência'].map(g=>`<b>${g}</b>${extras.filter(f=>GRUPOS_F(f[0])===g).map(f=>`<label><span class="cx2"></span>${esc(f[1])}</label>`).join('')}`).join('')}<div class="fpb"><span class="link">Limpar</span><button class="btn pri sm">Aplicar</button></div></div>`:''}</div>`; }
+  if (FV==='b'){ const extras = FL; const NSEL = FAB ? 2 : 0;
+    return `<div class="fsel"><label>Filtros</label><button class="btn fb">${NSEL?`Filtros (${NSEL}) ▾`:'Combinar filtros ▾'}</button>${FAB?`<div class="fpan comb">${['Situação','Pedido','Benefícios a conferir','Conferência'].map(g=>`<div class="fg"><b>${g}</b>${extras.filter(f=>GRUPOS_F(f[0])===g).map(f=>`<label><span class="cx2 ${['vencidas','pedsem'].includes(f[0])?'on':''}"></span>${esc(f[1])}</label>`).join('')}</div>`).join('')}<div class="fpb"><span class="nfx">2 filtros marcados: Vencidas e Sem pedido</span><span class="link">Limpar</span><button class="btn pri sm">Aplicar</button></div></div>`:''}</div>`; }
   if (FV==='c') return '';
   return `<div class="fsel"><label>Filtro</label><div class="selx">Todas <span>▾</span></div>${FAB?`<div class="fpan sel1">${['Situação','Pedido','Benefícios a conferir','Conferência'].map(g=>{ const L=FL.filter(f=>GRUPOS_F(f[0])===g); return L.length?`<b>${g}</b>${L.map(f=>`<span>${esc(f[1])}</span>`).join('')}`:''; }).join('')}</div>`:''}</div>`;
 }
 if (A.g) document.getElementById('ordem').innerHTML = filtroHtml() + `<div class="ordem"><label>Ordem da lista</label><div class="seg"><button class="${ORDEM==='alfa'?'on':''}">Alfabética</button><button class="${ORDEM==='urg'?'on':''}">Por situação</button></div></div>`;
 if (ABA==='presc') document.getElementById('extra').innerHTML = `<div class="alt"><button class="on">Pretensão executória</button><button>Pretensão punitiva</button></div>`;
 
-const cor = r => r[A.cor] || '';
+const SEP60 = !!P.get('menu') && ['prazo','ext'].includes(A.g);
+const cor = r => { const c = r[A.cor] || ''; if (SEP60 && c==='amarelo' && !/\d+ dias/.test(String(r[A.pil]||'').split(' · ')[0])) return 'verificar'; return c; };
 const ordG = A.g ? Object.fromEntries(G[A.g].map(([k],i) => [k,i])) : {};
 let rs = R.slice();
 if (A.g && ORDEM==='urg') rs.sort((a,b) => (ordG[cor(a)] ?? 99) - (ordG[cor(b)] ?? 99) || (A.dias ? (a[A.dias] ?? 1e9) - (b[A.dias] ?? 1e9) : 0) || semAc(a.nome).localeCompare(semAc(b.nome)));
@@ -634,7 +677,7 @@ else if (!A.g) document.getElementById('cartoes').style.display='none';
 
 function situacao(txt, c, prazo){
   if (prazo===undefined) prazo = PRAZO.includes(A.g);
-  const tom = tomDe(c, prazo); const [p, ...resto] = String(txt||'—').split(' · ');
+  const tom = tomDe(c, prazo); const [p, ...resto0] = String(txt||'—').split(' · '); const resto = P.get('menu') ? resto0.filter(x => x !== 'sem pedido no RSPE - requerer') : resto0;
   const curto = !LONGO;
   const corpo = `<b>${esc(p)}</b>${!curto && resto.length ? `<span>· ${esc(resto.join(' · '))}</span>` : ''}`;
   const sel = tom && tom!=='neu' ? `<span class="sit tom-${tom}" style="${t('t',tom)};${t('b',tom+'-bg')}">${corpo}</span>` : `<span class="sit sc tom-neu">${corpo}</span>`;
@@ -751,7 +794,7 @@ if (SOBRE==='painel'){ LONGO = false; const r = R.find(x => x.nome==='Simulado C
    <div class="sec"><h3>Benefícios</h3><table class="ben">
    <tr><td>Progressão</td><td class="dt">${esc(r.prog)}</td><td>${situacao(r.prog_sit, r.prog_cor, true)}</td></tr>
    <tr><td>Livramento</td><td class="dt">${esc(r.liv)}</td><td>${situacao(r.liv_sit, r.liv_cor, true)}</td></tr>
-   <tr><td>Indulto</td><td class="dt"></td><td>${situacao('2022 Possível','verde')} ${situacao('2024 A verificar','amarelo')} ${situacao('2025 Possível','verde')}</td></tr>
+   <tr><td>Indulto</td><td class="dt"></td><td>${situacao('2022 Possível','verde')} ${P.get('menu')?'':situacao('2024 A verificar','amarelo')} ${situacao('2025 Possível','verde')}</td></tr>
    <tr><td>Comutação</td><td class="dt"></td><td>${situacao('Nenhum decreto cabível','')}</td></tr>
    <tr><td>Prescrição</td><td class="dt">${esc(r.presc_prox)}</td><td>${situacao(r.presc_ppe_full.replace(': ',' · '),'vermelho')}</td></tr>
    <tr><td>Extinção</td><td class="dt"></td><td>${situacao(r.ext_sit,'')}</td></tr></table>

@@ -230,3 +230,38 @@ body.tema-7.menu-recolhido,body.tema-7.menu-sobre{--nav:52px}
 @media (max-width:1400px){body.tema-7:not(.menu-recolhido):not(.menu-sobre){--nav:192px}.tema-7:not(.menu-recolhido) .aba{font-size:12.5px;padding-right:6px}.tema-7:not(.menu-recolhido):not(.menu-sobre) td.nome{min-width:0}.tema-7:not(.menu-recolhido):not(.menu-sobre) td.proc{font-size:11px}}
 @media (max-width:1300px){.tema-7:not(.menu-recolhido):not(.menu-sobre) .cmp2{max-width:150px}.tema-7:not(.menu-recolhido):not(.menu-sobre) :is(td.c-falta,td.c-regime){max-width:110px}}
 @media (max-width:1300px){.tema-7:not(.menu-recolhido):not(.menu-sobre) :is(tbody td,thead th){padding-left:4px;padding-right:4px}}
+/* ===== E · ajustes pedidos: cartões em uma linha, importar em um botão, filtros combináveis ===== */
+.tema-7[class*="menu-"] .cartoes{gap:6px;flex-wrap:wrap}
+.tema-7[class*="menu-"] .cartao{flex:0 0 auto;display:flex;align-items:center;gap:7px;height:34px;padding:0 12px;border-radius:4px;box-shadow:none}
+.tema-7[class*="menu-"] .cartao::after{content:"";order:-1;width:8px;height:8px;border-radius:50%;background:var(--c)}
+.tema-7[class*="menu-"] .cartao b{font:700 15px/1 var(--sans);min-width:0}
+.tema-7[class*="menu-"] .cartao span{font-size:13px;color:var(--tx2);white-space:nowrap;margin:0;line-height:1}
+.tema-7[class*="menu-"] .cartao span::before{display:none}
+.tema-7[class*="menu-"] .cartao.velho{background:#FFF8EC;border-color:#EBD3A8}
+.impw{position:relative;display:inline-flex}.imp3{top:38px;left:0;right:auto;min-width:270px}.imp3 span{display:flex;flex-direction:column;gap:1px}.imp3 span:first-child{background:#F0F0F0}.imp3 small{color:var(--tx3);font-size:12px}
+.fpan.comb{width:auto;max-height:none;display:grid;grid-template-columns:repeat(2,250px);gap:4px 18px;padding:12px 14px;right:0}
+.fpan.comb .fg{display:flex;flex-direction:column}.fpan.comb .fpb{grid-column:1/-1}.nfx{font-size:12.5px;color:var(--tx2)}
+.cx2.on{background:var(--verde);border-color:var(--verde);box-shadow:inset 0 0 0 2px #fff}
+.tema-7 .fb{height:32px;border-radius:4px}
+.tema-7 .cab{z-index:3}
+@media (max-width:1400px){.tema-7[class*="menu-"] .cartoes{gap:5px}.tema-7[class*="menu-"] .cartao{padding:0 8px;gap:5px;height:30px}.tema-7[class*="menu-"] .cartao b{font-size:14px}.tema-7[class*="menu-"] .cartao span{font-size:12px}}
+.tema-7 .cab{z-index:3!important}
+/* contadores · variante 2: cartões de mesma largura, número à esquerda alinhado */
+.tema-7.cont-2 .cartoes{flex-wrap:nowrap;gap:6px}
+.tema-7.cont-2 .cartao{flex:1 1 0;min-width:0;height:44px;padding:0 10px;gap:8px;justify-content:flex-start}
+.tema-7.cont-2 .cartao::after{display:none}
+.tema-7.cont-2 .cartao b{font:600 19px/1 var(--sans);min-width:30px;text-align:right;color:var(--tx)}
+.tema-7.cont-2 .cartao.crit b{color:var(--crit)}
+.tema-7.cont-2 .cartao span{white-space:normal;line-height:1.15;font-size:11.5px;padding-left:8px;border-left:3px solid var(--c)}
+/* variante 3: faixa única dividida, número em cima e rótulo embaixo, centralizados */
+.tema-7.cont-3 .cartoes{flex-wrap:nowrap;gap:0}
+.tema-7.cont-3 .cartao{flex:1 1 0;min-width:0;height:auto;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:7px 4px;border-radius:0;border-left-width:0;text-align:center}
+.tema-7.cont-3 .cartao:first-child{border-left-width:1px;border-radius:6px 0 0 6px}.tema-7.cont-3 .cartao:last-child{border-radius:0 6px 6px 0}
+.tema-7.cont-3 .cartao::after{display:none}
+.tema-7.cont-3 .cartao b{font:600 19px/1 var(--sans)}
+.tema-7.cont-3 .cartao span{display:flex;align-items:center;gap:5px;font-size:11.5px;white-space:nowrap}
+.tema-7.cont-3 .cartao span::before{display:inline-block!important;content:"";width:7px;height:7px;border-radius:50%;background:var(--c);margin:0}
+.tema-7.cont-3 .cartao.velho{border-left-width:1px}
+.tema-7.cont-2 .cartao{flex:1 1 auto;height:42px;justify-content:center}.tema-7.cont-2 .cartao span{white-space:nowrap;font-size:12px}.tema-7.cont-2 .cartao b{min-width:0}
+.tema-7.cont-3 .cartao{flex:1 1 auto;padding:7px 8px}
+.tema-7[class*="menu-"] .ped{font-size:0;gap:0}

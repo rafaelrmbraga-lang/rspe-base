@@ -11,6 +11,7 @@ Este é um diagnóstico e uma proposta. **Nenhum arquivo do sistema foi alterado
 | [04_tarefas_reais.md](04_tarefas_reais.md) | as 9 tarefas: cliques, dúvidas, onde o olho se perde, e o desempenho com 720 assistidos |
 | [05_roteiro.md](05_roteiro.md) | fases (ganhos rápidos, médias, estruturais), com arquivos e risco |
 | [06_perguntas.md](06_perguntas.md) | decisões que dependem de você e da equipe |
+| [07_decisoes.md](07_decisoes.md) | o que foi decidido: linha E e as 15 sugestões ([PDF](APTO_linha_E_aprovada.pdf)) |
 | [anexos/](anexos/) | relatórios detalhados de PDF/Excel e de extensão/conversor/identidade/petições |
 | [capturas/](capturas/) | 117 capturas: `app_*`, `pdf_*`, `excel_*`, `extensao_*`, `conversor_*`, `identidade_*`, `peticao_*`, `depois_*` |
 | [ferramentas/](ferramentas/) | scripts para reproduzir tudo (`monta_pdf.py` gera o PDF único) |
