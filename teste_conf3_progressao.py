@@ -103,7 +103,7 @@ ok(rs.unificacao_pendente(r) is not None, "P2b: unificação pendente não detec
 ok(rv.estado_execucao(r) is None or rv.estado_execucao(r)[0] != "aberto", "P2b: 'Já no aberto' com unificação pendente: %s" % (rv.estado_execucao(r),))
 t, d = rv.data_progressao(r)
 # 40% de 2005 dias = 802; 16% (lei mais benéfica) de 730 = 116: 918 dias desde 10/10/2025
-ok(d == date(2025, 10, 10) + rv.timedelta(days=802 + 116 - 1) and "unificação pendente" in t, "P2b: estimativa: %s %s" % (t, d))
+ok(d == date(2025, 10, 10) + rv.timedelta(days=802 + 116) and "unificação pendente" in t, "P2b: estimativa: %s %s" % (t, d))
 r3 = copy.deepcopy(r)
 r3["_incidentes"].append(inc("SOMATÓRIO DAS PENAS", "", "05/09/2026", "05/09/2026"))
 ok(rs.unificacao_pendente(r3) is None, "P2b: somatório depois da sentença ainda acusa unificação pendente")

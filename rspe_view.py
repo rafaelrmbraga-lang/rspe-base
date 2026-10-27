@@ -206,7 +206,8 @@ def progressao_unificacao(r):
             return ("A verificar: %s; fração ou pena de crime não informada, sem data" % rot, None)
         lap += int(f * p)
     lap -= sum(n for dt, n in _remicoes_liquidas(r) if dt and dt >= ini)
-    d = ini + timedelta(days=max(0, lap - 1))
+    # convenção do SEEU (a mesma da progressão refeita e da âncora): data prevista = início da contagem + lapso inteiro
+    d = ini + timedelta(days=max(0, lap))
     return ("%s* (estimada pelo programa - a verificar: %s; contada da custódia em %s pelo regime mais grave)" % (rs.fmt(d), rot, rs.fmt(ini)), d)
 
 
@@ -296,15 +297,18 @@ def _prog_pela_db_manual(r):
 
 
 def _fr_prog_refeita(c):
-    """Fração de progressão do crime para a progressão refeita: a do SEEU, salvo o 1/6 em fato da janela em que a lei prevê 16%
-    (Lei 13.964/2019 até 07/05/2026): 16%, como na Auditoria (mais favorável). Fora dessa janela, a fração literal."""
+    """Fração de progressão do crime para a progressão refeita: a do SEEU, salvo o 1/6 em crime comum de primário quando alguma
+    redação do art. 112 vigente desde o fato prevê 16% (Lei 13.964/2019, de 23/01/2020 a 07/05/2026): 16%, como na Auditoria. O 16%
+    é mais benéfico e retroage a fato anterior a 23/01/2020 (CF, art. 5º, XL; STJ, Tema 1354). Fato desde 08/05/2026 (Lei
+    15.402/2026, caput 1/6): a fração literal."""
     f = rs.parse_fracao(c.get("fracao_progressao") or "")
     # o 16% é do primário, em crime sem violência ou grave ameaça e não hediondo (LEP, art. 112, I): com violência (marcada ou
     # elementar do tipo, como a lesão corporal dolosa), reincidência ou hediondez, a lei dá 25% ou mais, e o 1/6 do SEEU é o favorável
     if f == Fraction(1, 6) and not (rs.vga_indulto(c) or c.get("hediondo_ou_equiparado") == "S"
                                     or c.get("reincidente_comum") == "S" or c.get("reincidente_especifico") == "S"):
-        j = rg.regime_progressao(rs.to_date(c.get("data_infracao") or ""))
-        if j and rg.fr(j.get("comum")) == Fraction(16, 100):
+        fato = rs.to_date(c.get("data_infracao") or "")
+        if fato and any(rg.fr(j.get("comum")) == Fraction(16, 100) and (rg.d(j.get("ate") or "") or date.max) >= fato
+                        for j in rg.carregar().get("progressao", {}).get("regimes_vigencia", [])):
             return Fraction(16, 100)
     return f
 
@@ -1966,7 +1970,8 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
         notas["prog"] = ("Progressão*: recalculada pelo programa com a data-base informada (%s): pena total menos a custódia até ela, fração para baixo, "
                          "nunca depois da previsão do SEEU deslocada pela diferença das datas-base; a data do SEEU é %s.%s"
                          % (dbi["db"], r["progressao_previsao_seeu"],
-                            " Usado 16% no lugar do 1/6 do SEEU (LEP, art. 112, I, na redação da Lei 13.964/2019): a diferença para a conta do "
+                            " Usado 16% no lugar do 1/6 do SEEU (LEP, art. 112, I, na redação da Lei 13.964/2019, que retroage ao fato anterior a "
+                            "23/01/2020 por ser mais benéfica - CF, art. 5º, XL; STJ, Tema 1354): a diferença para a conta do "
                             "SEEU deve constar da petição." if _16 else ""))
     # item 58 de 16/10: término além do limite do art. 75 (alerta da Auditoria) - a coluna mostra o término máximo, calculado pelo programa
     _l75 = next((it for it in m.get("aud_itens") or [] if it.get("tipo") == "limite-de-cumprimento-art-75" and it.get("nivel") == "alerta"
@@ -2336,6 +2341,31 @@ def _fora_de_curso(r, est, interr):
     return ""
 
 
+def _reincidencia_saida(r, ficha, crimes):
+    """Reincidência para a fração da saída temporária (LEP, art. 123, II): a mesma regra da Auditoria (rspe_reincidencia), crime a
+    crime. True: algum crime reincidente pelas datas ou marcado sem desmentido e com base no documento; None: marcado sem base no RSPE
+    nem na ficha (a conferir); False: não marcado e não demonstrado, ou marcação desmentida pelas datas (idade, tráfico privilegiado)."""
+    todos = r.get("_crimes", [])
+    pessoa = todos + [o for o in (r.get("_outras_condenacoes") or [])
+                      if not any(rs.mesmo_processo(o.get("processo_criminal"), c.get("processo_criminal")) for c in todos)]
+    nasc = rs.to_date(r.get("data_nascimento") or "")
+    ext = [dict(e, data=rs.to_date(e["data"]) if isinstance(e.get("data"), str) else e.get("data")) for e in r.get("_extincoes_ficha") or []]
+    if not ext and ficha:
+        ext = rr.extincoes_ficha(ficha)
+    ext = [e for e in ext if e.get("data")]
+    duvida = False
+    for c in crimes:
+        R = rr.reincidencia_pelas_datas(c, pessoa, nasc, ext)
+        if rr.reincidencia_em_duvida(R):
+            duvida = True
+        elif rr.reincidente_para_calculo(R):
+            return True
+    if duvida or ((r.get("reincidente") or "").upper().startswith("S") and not any(
+            rr.reincidencia_pelas_datas(c, pessoa, nasc, ext)["estado"] == "nao_reincidente" for c in crimes)):
+        return None
+    return False
+
+
 def saida_temporaria(r, ficha, m, est=None, interr=False, hoje=None):
     """Requisitos da saída temporária para visita à família e atividades de retorno ao convívio social (LEP, art. 122, I e III,
     na redação anterior à Lei 14.843/2024): st_ok só quando todos estão preenchidos; st_quase quando nenhum falha mas algum
@@ -2366,6 +2396,13 @@ def saida_temporaria(r, ficha, m, est=None, interr=False, hoje=None):
         add(None if sem_data else False,
             ("Só há condenação por fato a partir de 11/04/2024 (%s), sem condenação mais antiga em cumprimento: vedada pela Lei 14.843/2024" % rs.fmt(min(novos))
              if novos else "Nenhuma condenação em cumprimento com fato anterior a 11/04/2024") + (" (há crime sem data do fato)" if sem_data else ""))
+        # (7.14.8) a Lei 14.843/2024 só revogou a visita à família e as atividades de retorno ao convívio (art. 122, I e III): a saída
+        # para estudo (II) continua, salvo crime hediondo ou com violência ou grave ameaça (art. 122, § 2º, redação atual)
+        if novos and crimes and not any(rs.vga_indulto(c) or c.get("hediondo_ou_equiparado") == "S" or ra._e_hediondo_lei(c)[0] is True
+                                        for c in crimes):
+            add(None, "Saída para estudo (art. 122, II - curso supletivo profissionalizante, ensino médio ou superior, na comarca): continua "
+                      "possível, porque nenhum crime em cumprimento é hediondo ou tem violência ou grave ameaça (art. 122, § 2º) - conferir "
+                      "a matrícula")
     ved, duv, ant_m = [], [], []
     for d, c in datas:
         nm = (c.get("artigo") or "").split(":")[0].title()
@@ -2390,10 +2427,13 @@ def saida_temporaria(r, ficha, m, est=None, interr=False, hoje=None):
                                                  "Sem hediondo com resultado morte (art. 122, § 2º)"))
     cump, tot = _pena_dias(r.get("pena_cumprida")), _pena_dias(r.get("pena_total"))
     _pt_rspe = bool(tot)  # pena total calculada pelo SEEU
-    reinc = (r.get("reincidente") or "").upper().startswith("S") or any(
-        (c.get("reincidente_comum") == "S" or c.get("reincidente_especifico") == "S") for c in crimes)
+    # (7.14.8) reincidência pelas datas, como na Auditoria (CP, arts. 63 e 64, I), e não só a marcação do SEEU: True demonstrada ou
+    # marcada sem desmentido com base no documento; False desmentida ou não marcada; None marcada sem base no RSPE (a conferir)
+    reinc = _reincidencia_saida(r, ficha, crimes)
     fr = Fraction(1, 4) if reinc else Fraction(1, 6)
-    _fr_txt, _cond_txt = ("1/4" if reinc else "1/6"), ("reincidente" if reinc else "primário")
+    _fr_txt, _cond_txt = ("1/4" if reinc else "1/6"), ("reincidente" if reinc else "primário" if reinc is False else
+                                                      "primário; reincidência marcada sem base no RSPE")
+    _i_fr = len(it)
     # custódia que o SEEU não conta na pena cumprida (guia sem cálculo, RSPE antigo com a pessoa presa): se só ela alcança a fração,
     # o requisito fica a conferir - nunca "não atendido" pela pena cumprida zerada ou desatualizada do SEEU
     est_c, est_txt = _cumprido_estimado(r, hoje, interr)
@@ -2451,6 +2491,11 @@ def saida_temporaria(r, ficha, m, est=None, interr=False, hoje=None):
         add(cump >= int(tot * fr), "%s da pena cumprida (%s): %s de %s (art. 123, II; Súmula 40 do STJ)%s" % (
             _fr_txt, _cond_txt, r.get("pena_cumprida"), tot_txt,
             (" · %s" % det_txt) if det_f and cump < int(tot * fr) else ""))
+    if reinc is None and len(it) > _i_fr and it[_i_fr]["ok"] is True and tot and cump is not None and cump < int(tot * Fraction(1, 4)):
+        # 1/6 alcançado, 1/4 não: depende de a reincidência marcada pelo SEEU ser confirmada
+        it[_i_fr]["ok"] = None
+        it[_i_fr]["txt"] += (" - atendido se primário; se a reincidência marcada for confirmada, 1/4 (%s), ainda não alcançado - conferir a "
+                             "certidão de antecedentes (CP, arts. 63 e 64, I)" % rs.dias_para_pena(int(tot * Fraction(1, 4))))
     if not ficha:
         add(None, "Sem ficha disciplinar: conduta, trabalho e saídas anteriores não conferidos")
     else:
@@ -2498,8 +2543,8 @@ def saida_temporaria(r, ficha, m, est=None, interr=False, hoje=None):
 def progressao_antecipada(r, ficha, m, est=None, interr=False, hoje=None):
     """Pedido de progressão antecipada (faltando de 1 a 90 dias para a data do SEEU): critério do juízo, não de lei - a 1ª VEP de
     Campo Grande antecipa em até 90 dias a progressão de quem tem condenação só por crimes sem violência ou grave ameaça à pessoa,
-    conduta boa ou ótima e não integra organização criminosa (ADPF 347, SV 56, LEP, art. 185; mantido pelo TJMS nas cautelares do
-    MP, ex.: 2ª Câm. Crim., 1421350-44.2026.8.12.0000, j. 14/10/2026). Aqui: regime fechado ou semiaberto em curso, crimes sem
+    conduta boa ou ótima e não integra organização criminosa (ADPF 347, SV 56, LEP, art. 185; o TJMS negou efeito suspensivo aos
+    agravos do MP em ações cautelares, sem julgar o mérito, ex.: 2ª Câm. Crim., 1421350-44.2026.8.12.0000, j. 14/10/2026). Aqui: regime fechado ou semiaberto em curso, crimes sem
     violência nem grave ameaça (marcação do RSPE ou elementar do tipo), sem organização criminosa e conduta Boa/Ótima sem falta
     nos 12 meses (trabalho em curso não é exigido). pa_ok só com todos os requisitos; pa_quase quando nenhum falha e algum fica
     a conferir; pa_itens = [{ok, txt}]."""

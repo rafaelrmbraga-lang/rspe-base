@@ -35,8 +35,9 @@ def porte_uso(c):
 
 
 def gera_reincidencia(o):
-    """Condenação anterior que gera reincidência: não a contravenção seguida de crime (CP, art. 63; LCP, art. 7º) nem o porte
-    para consumo próprio (art. 28 da Lei 11.343/06; STJ: não gera reincidência)."""
+    """Condenação anterior que gera reincidência: não a contravenção seguida de crime (CP, art. 63) nem o porte para consumo próprio
+    (art. 28 da Lei 11.343/06; STJ: não gera reincidência). Contravenção seguida de contravenção gera reincidência pela LCP, art. 7º,
+    mas o programa não a conta: escolha favorável ao assistido (as frações de reincidente ficam "a verificar" se o SEEU a marcar)."""
     return rs.num_lei(o.get("lei")) != "3688" and "CONTRAVEN" not in (o.get("lei") or "").upper() and not porte_uso(o)
 
 
@@ -54,6 +55,13 @@ def _mais_anos(d, n):
 def depurada(extincao, fato):
     """CP, art. 64, I: mais de 5 anos entre a extinção (ou o cumprimento) da pena anterior e o novo fato."""
     return bool(extincao and fato and fato > _mais_anos(extincao, 5))
+
+
+def periodo_de_prova(o):
+    """A pena anterior terminou pelo livramento condicional ou pela suspensão condicional (sursis): o período de prova conta no prazo
+    depurador (CP, art. 64, I). Lido do motivo da extinção ou da marcação "Suspenso: Sim" do crime."""
+    t = rs._sem_acento(" ".join(str(o.get(k) or "") for k in ("extincao_motivo", "processo_situacao"))).upper()
+    return bool(re.search(r"LIVRAMENTO|SURSIS|SUSPENSAO CONDICIONAL|PERIODO DE PROVA", t)) or (o.get("suspenso") or "").upper().startswith("S")
 
 
 def trafico_privilegiado(c):
@@ -131,14 +139,16 @@ def reincidencia_pelas_datas(c, crimes, nasc=None, extincoes=None, processos_exc
       outra_execucao: as mesmas, mas só de outra execução da pessoa ("_execucao")
       depuradas: condenações anteriores depuradas (art. 64, I)
       ficha: extinções da ficha antes do fato, há 5 anos ou menos [{processo, data, texto}]
-      sem_transito: condenações anteriores sem trânsito informado, com sentença antes do fato (indício)
+      sem_transito: condenações anteriores sem trânsito do processo, com sentença (ou trânsito só para o MP) antes do fato (indício)
+      depuracao_a_conferir: anteriores extintas pelo livramento ou sursis, cujo período de prova pode ter iniciado os 5 anos antes
+      so_transito_mp: as mesmas, quando só há o trânsito para o MP antes do fato (CP, art. 63: falta o trânsito definitivo)
       transito_duvidoso: condenações com trânsito antes do fato, mas em data impossível (antes da sentença ou do fato delas)
       motivo: frase curta que explica o estado (para a tela)
     """
     fato = rs.to_date(c.get("data_infracao") or "")
     marc = c.get("reincidente_comum") == "S" or c.get("reincidente_especifico") == "S"
     R = {"estado": "indeterminado", "fonte": "", "marcado": marc, "anteriores": [], "outra_execucao": [], "depuradas": [],
-         "ficha": [], "sem_transito": [], "transito_duvidoso": [], "motivo": ""}
+         "ficha": [], "sem_transito": [], "so_transito_mp": [], "depuracao_a_conferir": [], "transito_duvidoso": [], "motivo": ""}
     if not fato:
         R["motivo"] = "sem a data do fato não é possível aferir a reincidência"
         return R
@@ -149,7 +159,10 @@ def reincidencia_pelas_datas(c, crimes, nasc=None, extincoes=None, processos_exc
         po = o.get("processo_criminal") or ""
         if po and proc_c and rs.mesmo_processo(po, proc_c):
             continue
-        t = transito(o)
+        # (7.14.8) a reincidência exige o trânsito em julgado definitivo (CP, art. 63): o trânsito só para o MP não basta - a defesa
+        # pode ter recorrido. Sem o trânsito do processo, a data do MP é só indício (como a sentença sem trânsito)
+        t = rs.to_date(o.get("transito_processo") or "")
+        t_mp = rs.to_date(o.get("transito_mp") or "")
         s_o, f_o = rs.to_date(o.get("data_sentenca") or ""), rs.to_date(o.get("data_infracao") or "")
         if t and t < fato:
             if (s_o and t < s_o) or (f_o and t < f_o):
@@ -158,12 +171,19 @@ def reincidencia_pelas_datas(c, crimes, nasc=None, extincoes=None, processos_exc
             ext = rs.to_date(o.get("data_extincao") or "") if (o.get("extinto") or "").upper().startswith("S") else None
             if depurada(ext, fato):
                 R["depuradas"].append(o)
+            elif ext and fato > _mais_anos(t, 5) and periodo_de_prova(o):
+                # (7.14.8) pena extinta pelo livramento ou pelo sursis: o período de prova entra nos 5 anos (CP, art. 64, I), e ele
+                # começou antes da extinção lançada - se começou mais de 5 anos antes do fato, a condenação está depurada. O RSPE
+                # não traz o início: a conferir, sem afirmar a reincidência
+                R["depuracao_a_conferir"].append(o)
             elif o.get("_execucao"):
                 R["outra_execucao"].append(o)
             else:
                 R["anteriores"].append(o)
-        elif not t and s_o and s_o < fato and (not f_o or f_o < fato):
+        elif not t and ((s_o and s_o < fato) or (t_mp and t_mp < fato)) and (not f_o or f_o < fato):
             R["sem_transito"].append(o)
+            if t_mp and t_mp < fato:
+                R["so_transito_mp"].append(o)
     # a extinção da ficha pode citar o número da execução (não o da ação penal): o de outra execução já lida também decide pelas
     # datas e pelos crimes dela (ex.: execução só do art. 28 da Lei 11.343/06, que não gera reincidência)
     procs_rspe = ([x.get("processo_criminal") or "" for x in crimes] + [x.get("_execucao") or "" for x in crimes]
@@ -212,9 +232,18 @@ def reincidencia_pelas_datas(c, crimes, nasc=None, extincoes=None, processos_exc
             "proc. %s, trânsito em %s" % (o.get("processo_criminal") or "?", rs.fmt(transito(o))) for o in R["outra_execucao"][:4]))
     else:
         partes = []
-        if R["sem_transito"]:
+        _st = [o for o in R["sem_transito"] if o not in R["so_transito_mp"]]
+        if _st:
             partes.append("condenação anterior com sentença antes do fato e sem trânsito informado (%s)" % "; ".join(
-                "proc. %s, sentença em %s" % (o.get("processo_criminal") or "?", o.get("data_sentenca")) for o in R["sem_transito"][:4]))
+                "proc. %s, sentença em %s" % (o.get("processo_criminal") or "?", o.get("data_sentenca")) for o in _st[:4]))
+        if R["depuracao_a_conferir"]:
+            partes.append("condenação anterior extinta depois de livramento ou sursis (%s): o período de prova conta nos 5 anos do art. 64, "
+                          "I, do CP - se começou mais de 5 anos antes do fato, a condenação está depurada; conferir a data de início" % "; ".join(
+                              "proc. %s, trânsito em %s, extinta em %s" % (o.get("processo_criminal") or "?", rs.fmt(transito(o)), o.get("data_extincao"))
+                              for o in R["depuracao_a_conferir"][:4]))
+        if R["so_transito_mp"]:
+            partes.append("condenação anterior com trânsito só para o MP antes do fato, sem o trânsito para a defesa (%s)" % "; ".join(
+                "proc. %s, trânsito para o MP em %s" % (o.get("processo_criminal") or "?", o.get("transito_mp")) for o in R["so_transito_mp"][:4]))
         if R["transito_duvidoso"]:
             partes.append("trânsito em data impossível (%s)" % "; ".join(
                 "proc. %s, trânsito em %s" % (o.get("processo_criminal") or "?", rs.fmt(transito(o))) for o in R["transito_duvidoso"][:4]))

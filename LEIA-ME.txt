@@ -1,9 +1,9 @@
-APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.14.7
+APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.14.8
 (antigo RSPE Base; SEEU, programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-7.14.7. A documentação técnica completa (cada parâmetro, a regra, a norma e
+7.14.8. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -880,8 +880,9 @@ PROGRESSÃO ANTECIPADA (ícone azul de degraus ao lado do nome)
   Grande (antecipação em até 90 dias para quem tem condenação só por crimes
   sem violência ou grave ameaça à pessoa, conduta boa ou ótima e não
   integra organização criminosa, com base na ADPF 347, na SV 56 e no art.
-  185 da LEP), mantido pelo TJMS nas cautelares do Ministério Público (ex.:
-  2ª Câm. Crim., 1421350-44.2026.8.12.0000, j. 14/10/2026). Aparece nos
+  185 da LEP). O TJMS negou efeito suspensivo aos agravos do Ministério
+  Público em ações cautelares, sem julgar o mérito (ex.: 2ª Câm. Crim.,
+  1421350-44.2026.8.12.0000, j. 14/10/2026). Aparece nos
   mesmos lugares do ícone da saída temporária. Requisitos:
   - regime fechado ou semiaberto, com o cumprimento em curso;
   - progressão prevista para daqui a 1 a 90 dias (o lapso já atingido fica
@@ -1002,6 +1003,40 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v7.14.8
+  Revisão jurídica do Capítulo 3 (progressão e livramento), conferida com o
+  texto vigente do art. 112 da LEP (Leis 15.358/2026 e 15.402/2026) e com os
+  precedentes no JusRatio.
+  - Progressão refeita e estimativa da unificação pendente: o 16% (LEP, art.
+    112, I, na redação da Lei 13.964/2019) retroage ao crime comum de
+    primário com fato anterior a 23/01/2020, como na Auditoria (Tema
+    1354/STJ). Antes a aba mantinha o 1/6 do SEEU.
+  - Homicídio doloso ou latrocínio hediondo sem a marcação "resultado
+    morte": o livramento 1/1 do SEEU fica "verificar" (certo se consumado;
+    2/3 se tentado), como a progressão, e não mais alerta.
+  - Saída temporária: a fração (1/6 ou 1/4) segue a reincidência pelas
+    datas, como a Auditoria; marcada pelo SEEU sem base no RSPE, fica a
+    conferir quando só o 1/6 foi alcançado. Com só condenações por fato
+    desde 11/04/2024, lembra a saída para estudo (art. 122, II), que
+    continua possível sem crime hediondo ou violento.
+  - "SEEU tratou como hediondo, mas o tipo não consta do rol" não sai mais
+    para o percentual do comando de organização criminosa ou da milícia
+    privada (art. 112, VI, b e c) nem para o 1/1 da revogação do
+    livramento, que tem alerta próprio.
+  - Reincidência pelas datas: o trânsito só para o MP não demonstra a
+    reincidência (falta o trânsito definitivo); pena anterior extinta pelo
+    livramento ou pelo sursis com fato mais de 5 anos após o trânsito fica a
+    conferir (o período de prova entra nos 5 anos do art. 64, I, do CP); o
+    teste crime a crime usa a mesma regra do cálculo.
+  - Crimes contra o Estado Democrático de Direito (CP, Título XII): desde a
+    Lei 15.402/2026 os incisos I e II do art. 112 não se aplicam a eles; a
+    exceção retroage e sai como "verificar", com o aviso das ADIs 7966 a
+    7969 no STF.
+  - Art. 148 do CP fora da lista de tipos com violência ou grave ameaça;
+    estimativa da unificação pendente na convenção do SEEU (data-base mais o
+    lapso); rótulo do 1/6 da redação anterior no item crime a crime; texto
+    do TJMS 1421350-44.2026 (negou efeito suspensivo em cautelar).
 
 v7.14.7
   Correções da terceira conferência independente (últimos 64 casos nunca usados).

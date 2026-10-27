@@ -158,9 +158,10 @@ ok(t and "anterior só por crime culposo" in t[0]["titulo"], "42 anterior: %s" %
 ok(not itens(reg([dict(ant, processo_criminal="0000021-00.2015.8.12.0001", lei=CP, artigo=FURTO[0], tipo_penal=FURTO[1]), a]),
              "livramento-reincidencia-em-crime-culposo"), "42: anterior doloso, sem item")
 
-# 162 - progressão refeita: 16% no lugar do 1/6 na janela da Lei 13.964/2019; fora dela, a fração literal
+# 162 - progressão refeita: 16% no lugar do 1/6 na janela da Lei 13.964/2019 e, por retroatividade (Tema 1354), no fato anterior a
+# 23/01/2020 (7.14.8: antes ficava 1/6, em desacordo com a Auditoria); no fato desde 08/05/2026 (Lei 15.402/2026), a fração literal
 ok(rv._fr_prog_refeita({"fracao_progressao": "1/6 - Comum", "data_infracao": "01/06/2023"}) == rs.Fraction(16, 100), "162: 16%")
-ok(rv._fr_prog_refeita({"fracao_progressao": "1/6 - Comum", "data_infracao": "01/06/2015"}) == rs.Fraction(1, 6), "162: 1/6 antes de 2020")
+ok(rv._fr_prog_refeita({"fracao_progressao": "1/6 - Comum", "data_infracao": "01/06/2015"}) == rs.Fraction(16, 100), "162: 16% retroage antes de 2020")
 ok(rv._fr_prog_refeita({"fracao_progressao": "1/6 - Art.112, caput, da LEP", "data_infracao": "10/05/2026"}) == rs.Fraction(1, 6), "162: 1/6 da Lei 15.402")
 
 # 163 - ancorada na previsão do SEEU: nunca depois dela deslocada pela diferença das datas-base

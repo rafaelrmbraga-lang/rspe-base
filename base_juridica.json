@@ -1,5 +1,5 @@
 {
- "versao": "2026-10-08i",
+ "versao": "2026-10-27a",
  "descricao": "Base juridica do RSPE Base. Editavel: o programa le este arquivo ao abrir (copia ao lado do .exe tem prioridade sobre a embutida). Datas em AAAA-MM-DD. Fracoes como 'num/den' ou percentual 'NN%'.",
  "prescricao": {
   "art109_tabela": [
@@ -247,7 +247,7 @@
     "notas": [
      "Art. 112, VI, b (comando de organização criminosa ULTRAVIOLENTA estruturada para hediondos, vedado o livramento), c (milícia privada) e d (feminicídio, primário, vedado o livramento): 75%.",
      "Reincidente genérico em hediondo (não específico): 70% (75% com morte) por analogia in bonam partem (ratio dos STJ Temas 1084 e 1196 e STF Tema 1169), sem precedente específico sobre a Lei 15.358/2026 - conferir.",
-     "Lei 15.402/2026 (DOU e vigência em 08/05/2026): caput 1/6; I 25% (primário, VGA); II 30% (reincidente, VGA - basta a reincidência); III 20% (reincidente em crime diverso). I e II não se aplicam aos crimes do Título XII da Parte Especial do CP (contra o Estado Democrático de Direito)."
+     "Lei 15.402/2026 (DOU e vigência em 08/05/2026): caput 1/6; I 25% (primário, VGA); II 30% (reincidente, VGA - basta a reincidência); III 20% (reincidente em crime diverso). I e II não se aplicam aos crimes do Título XII da Parte Especial do CP (contra o Estado Democrático de Direito). A exceção do Título XII é mais benéfica e retroage. A lei é questionada no STF (ADIs 7966, 7967, 7968 e 7969; liminar do relator, de 09/05/2026, suspendeu a aplicação só nos processos dos atos de 8 de janeiro em trâmite no STF; mérito pendente)."
     ]
    }
   ],
@@ -621,7 +621,6 @@
    "146",
    "147",
    "147-A",
-   "148",
    "157",
    "158",
    "159",
@@ -654,7 +653,7 @@
    "9437:10",
    "180-A"
   ],
-  "nota": "Artigo simples = Código Penal; 'lei:artigo' = lei especial (a busca confere a lei). Lista orientativa por artigo do CP (e arts. 33/35/28 da Lei 11.343, 12/14/16 da Lei 10.826, 2 da Lei 12.850, 1 da Lei 9.455). Art. 329 (resistencia) e 331 (desacato): VGA controvertido - verificar. 329 e 331 retirados da lista N (o tipo de resistência exige violência ou ameaça; desacato controvertido). Arts. 215, 218 e 218-B não têm violência nem grave ameaça no tipo; art. 150 depende do § 1º (fora das duas listas)."
+  "nota": "Artigo simples = Código Penal; 'lei:artigo' = lei especial (a busca confere a lei). Lista orientativa por artigo do CP (e arts. 33/35/28 da Lei 11.343, 12/14/16 da Lei 10.826, 2 da Lei 12.850, 1 da Lei 9.455). Art. 329 (resistencia) e 331 (desacato): VGA controvertido - verificar. 329 e 331 retirados da lista N (o tipo de resistência exige violência ou ameaça; desacato controvertido). Arts. 215, 218 e 218-B não têm violência nem grave ameaça no tipo; art. 148 (sequestro e cárcere privado) retirado da lista S em 27/10/2026: a privação da liberdade não exige violência ou grave ameaça; art. 150 depende do § 1º (fora das duas listas)."
  },
  "patrimonio_cp": {
   "de": 155,

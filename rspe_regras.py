@@ -9,6 +9,7 @@ inválido ou por ser mais antiga) ficam em avisos() e aparecem na tela.
 import json
 import os
 import sys
+import re
 from datetime import date
 from fractions import Fraction
 
@@ -233,12 +234,25 @@ ESPECIAIS = {  # hipóteses próprias do art. 112 (chave na janela de vigência 
 }
 
 
-def fracao_progressao_esperada(data_fato, hediondo, morte, vga, reincidente, reinc_especifico=None, especial=None):
+def titulo_xii(artigo):
+    """Crime do Título XII da Parte Especial do CP (crimes contra o Estado Democrático de Direito, arts. 359-I a 359-U, com os
+    359-M-A e 359-M-B da Lei 15.402/2026): desde a Lei 15.402/2026 os incisos I e II do art. 112 da LEP não se aplicam a eles."""
+    return bool(re.match(r"359-[I-U](?:-[AB])?$", (artigo or "").strip().upper()))
+
+
+def _sem_vga_titulo_xii(j, vga, txii):
+    """Na redação da Lei 15.402/2026, o crime do Título XII com violência ou grave ameaça vai para o caput (1/6) ou o inciso III (20%)."""
+    return False if (txii and vga and (d(j.get("de") or "") or date.min) >= data_lei_15402()) else vga
+
+
+def fracao_progressao_esperada(data_fato, hediondo, morte, vga, reincidente, reinc_especifico=None, especial=None, titulo_xii=False):
     """Devolve (fração, rótulo, observações) esperadas pela lei da data do fato, com as teses do STJ/STF.
-    reinc_especifico: None = desconhecido. especial: chave de ESPECIAIS (usada só se a janela a prevê)."""
+    reinc_especifico: None = desconhecido. especial: chave de ESPECIAIS (usada só se a janela a prevê).
+    titulo_xii: crime contra o Estado Democrático de Direito (exceção dos incisos I e II desde a Lei 15.402/2026)."""
     j = regime_progressao(data_fato)
     if not j:
         return None, "", ["sem data do fato: fração não aferida"]
+    vga = _sem_vga_titulo_xii(j, vga, titulo_xii)
     obs = []
     if especial and j.get(especial) and not (especial == "feminicidio_primario" and reincidente):
         valor = j.get(especial)
@@ -278,7 +292,7 @@ def fracao_progressao_esperada(data_fato, hediondo, morte, vga, reincidente, rei
     return fr(valor), "%s (%s)" % (valor, j.get("lei", "")), obs
 
 
-def fracao_mais_benefica(data_fato, hediondo, morte, vga, reincidente, especial=None):
+def fracao_mais_benefica(data_fato, hediondo, morte, vga, reincidente, especial=None, titulo_xii=False):
     """Considera retroatividade da lei mais benéfica (Tema 1354): menor fração entre a da data do fato e as posteriores."""
     jan = carregar().get("progressao", {}).get("regimes_vigencia", [])
     if not data_fato:
@@ -288,13 +302,17 @@ def fracao_mais_benefica(data_fato, hediondo, morte, vga, reincidente, especial=
         ate = d(j.get("ate", "9999-12-31")) or date.max
         if ate < data_fato:
             continue
-        f, rot, _ = _fracao_em(j, hediondo, morte, vga, reincidente, especial)
+        f, rot, _ = _fracao_em(j, hediondo, morte, _sem_vga_titulo_xii(j, vga, titulo_xii), reincidente, especial)
         if f is not None:
             cands.append((f, rot, j.get("lei", "")))
     if not cands:
         return None, "", []
-    f_fato, rot_fato, obs = fracao_progressao_esperada(data_fato, hediondo, morte, vga, reincidente, especial=especial)
+    f_fato, rot_fato, obs = fracao_progressao_esperada(data_fato, hediondo, morte, vga, reincidente, especial=especial, titulo_xii=titulo_xii)
     melhor = min(cands, key=lambda x: x[0])
+    if titulo_xii and vga and not hediondo and "15.402" in melhor[2]:
+        obs.append("crime contra o Estado Democrático de Direito (CP, Título XII): desde a Lei 15.402/2026 os incisos I e II do art. 112 "
+                   "não se aplicam a ele; a lei, mais benéfica, retroage. Ela é questionada no STF (ADIs 7966 a 7969), com liminar que "
+                   "suspendeu sua aplicação nos processos dos atos de 8 de janeiro em trâmite no STF - conferir")
     if f_fato is not None and melhor[0] < f_fato:
         obs.append("lei posterior mais benéfica retroage: %s" % melhor[1])
         return melhor[0], melhor[1], obs

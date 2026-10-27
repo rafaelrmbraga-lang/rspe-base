@@ -184,7 +184,9 @@ def _tentado_pela_ficha(c, crimes, artigo_ficha):
 def _reinc_no_total(c, crimes, crimes_pessoa, nasc=None, ext=None):
     """Outro crime desta execução é reincidente pela lei: o STJ estende a reincidência à pena unificada inteira (AgRg no HC
     790.968, 5ª T., 10/12/2024; AgRg no HC 494.119, 5ª T., 10/09/2019), ainda que este fato seja anterior ao primeiro trânsito."""
-    return any(o is not c and _reincidencia_legal(o, crimes_pessoa, nasc, ext)[0] for o in crimes)
+    # (7.14.8) a mesma regra do cálculo (rspe_reincidencia.reincidente_para_calculo): a condenação só de outra execução, sem
+    # marcação, não torna o outro crime reincidente sozinha
+    return any(o is not c and rr.reincidente_para_calculo(rr.reincidencia_pelas_datas(o, crimes_pessoa, nasc, ext)) for o in crimes)
 
 
 def _cap_criada(c, desc):
@@ -645,6 +647,21 @@ def _hediondo_seeu(c):
     # no tráfico de pessoas (CP, art. 149-A) os 2/3 do livramento são os legais (CP, art. 83, V): não indicam hediondez
     fl_hed = fl is not None and (fl >= Fraction(1, 1) if _trafico_pessoas(c) else fl >= Fraction(2, 3))
     return bool((fp is not None and fp >= Fraction(2, 5)) or fl_hed)
+
+
+def _selo_explicado(c, lei, art, lc_hist):
+    """(7.14.8) A fração "de hediondo" do SEEU (40% ou mais; livramento 2/3 ou 1/1) tem outra causa legal ou já tem item próprio, e o
+    alerta "SEEU tratou como hediondo, mas o tipo não consta do rol" seria falso ou duplicado: o percentual do comando de organização
+    criminosa ou da milícia privada (LEP, art. 112, VI, b e c: 50% de 23/01/2020 a 24/03/2026; 75% desde 25/03/2026, com o livramento
+    vedado ao comando de organização ultraviolenta), e o 1/1 lançado no crime com livramento concedido ou revogado nesta execução
+    (alerta próprio "fração de livramento 1/1 lançada no crime")."""
+    fp, fl = _fr_seeu(c.get("fracao_progressao")), _fr_seeu(c.get("fracao_livramento"))
+    cp = lei in ("2848", "") or ("PENAL" in (c.get("lei") or "").upper() and "MILITAR" not in (c.get("lei") or "").upper())
+    especial = c.get("comando_orcrim") == "S" or (cp and art == "288-A")
+    prog_ok = fp is None or fp < Fraction(2, 5) or (especial and any(abs(float(fp) - v) < 0.001 for v in (0.5, 0.75)))
+    lc_ok = (fl is None or fl < Fraction(2, 3) or (fl >= 1 and bool(lc_hist))
+             or (fl >= 1 and c.get("comando_orcrim") == "S" and abs(float(fp or 0) - 0.75) < 0.001))
+    return prog_ok and lc_ok
 
 
 def _hed_progressao(o):
@@ -2206,7 +2223,8 @@ def auditar(r, hoje=None):
                 "A hediondez se rege pela lei da data do fato (irretroatividade da lei penal mais gravosa). Reflete no percentual de progressão (comum, não 40%%-60%% ou 70%%+), no livramento (1/3-1/2, não 2/3) e no indulto (art. 1º dos decretos). No RSPE: progressão %s; livramento %s." % (
                     rs.pct_rotulo(c.get("fracao_progressao")), c.get("fracao_livramento")),
                 "CF, art. 5º, XL; CP, art. 2º; Lei 8.072/90 e alterações; STJ, Temas 1084 e 1196.", tipo="seeu-tratou-como-hediondo-mas-o-fato-e-anterior", ref=nome))
-        elif hed_lei is False and hed_seeu and ("HEDIONDO" in (c.get("fracao_progressao") or "").upper() or not (lei == "11343" and art in ("33", "34", "35", "36", "37"))):
+        elif hed_lei is False and hed_seeu and not _selo_explicado(c, lei, art, _lc_hist) and (
+                "HEDIONDO" in (c.get("fracao_progressao") or "").upper() or not (lei == "11343" and art in ("33", "34", "35", "36", "37"))):
             itens.append(_item("alerta", "%s: SEEU tratou como hediondo, mas o tipo não consta do rol" % nome,
                                (obs_h or "Verificar a capitulação (qualificadora/§) que justifique a hediondez.") + " No RSPE: progressão %s; livramento %s." % (rs.pct_rotulo(c.get("fracao_progressao")), c.get("fracao_livramento")),
                                "Lei 8.072/90, art. 1º; LEP, art. 112, § 5º.", tipo="seeu-tratou-como-hediondo-mas-o-tipo-nao-consta", ref=nome))
@@ -2248,7 +2266,8 @@ def auditar(r, hoje=None):
         orcrim_uv = especial == "comando_orcrim" and fato and fato >= rg.data_lei_15358()
         if orcrim_uv:
             especial = None
-        f_esp, rot, obs = rg.fracao_mais_benefica(fato, hed, morte, vga, reinc, especial=especial)
+        _txii = bool(_cp and rg.titulo_xii(art))  # crime contra o Estado Democrático de Direito (exceção da Lei 15.402/2026)
+        f_esp, rot, obs = rg.fracao_mais_benefica(fato, hed, morte, vga, reinc, especial=especial, titulo_xii=_txii)
         # feminicídio (LEP, art. 112, VI-A, e VI, d): a hipótese especial pressupõe o crime consumado - na tentativa não há morte, e a
         # tese é o percentual do hediondo sem morte (V ou, desde 25/03/2026, o da Lei 15.358). O RSPE quase nunca indica a tentativa:
         # sem "resultado morte" marcado (ou com a tentativa lida no tipo), "verificar" - o esperado continua o da hipótese especial
@@ -2382,6 +2401,9 @@ def auditar(r, hoje=None):
                                    "tipo e o percentual legal é %s (LEP, art. 112, VI, a, ou VIII) - conferir a sentença." % rs.pct(_fm) if _fm is not None else ""),
                                "LEP, art. 112 (redação vigente na data do fato; lei posterior só retroage se mais benéfica - CF, art. 5º, XL; STJ Temas 1084, 1196 e 1354 - na pena unificada, cada condenação mantém a sua fração, REsp 2.037.377/SC, 3ª Seção, 18/06/2026; STF Tema 1169).", tipo="percentual-de-progressao-diverge", ref=nome))
                 _it = itens[-1]
+                if _txii and vga and not hed and float(f_seeu) > float(f_esp):
+                    # (7.14.8) a exceção do Título XII vem da Lei 15.402/2026, questionada no STF (ADIs 7966 a 7969): tese, não erro firmado
+                    _it["nivel"] = "verificar"
                 if _d16:
                     _it["titulo"] = "%s: percentual de progressão do SEEU (1/6 = 16,67%%) maior que o legal (16%%) - %s" % (
                         nome, ("%s a mais" % rs.pl(_dias16, "dia", "dias")) if _dias16 >= 1 else "menos de 1 dia, sem efeito")
@@ -2414,8 +2436,11 @@ def auditar(r, hoje=None):
                         # fato anterior ao primeiro trânsito, com outro crime reincidente na execução: o STJ estende a reincidência à
                         # pena unificada; aferi-la crime a crime é tese defensiva, não "fração legal" (não é alerta)
                         _it.update(nivel="verificar", tipo="reincidencia-crime-a-crime-progressao",
-                                   titulo="%s: percentual de reincidente (%s) em fato anterior ao primeiro trânsito - tese defensiva: %s" % (
-                                       nome, rs.pct_rotulo(c.get("fracao_progressao")), rs.pct(f_esp)),
+                                   titulo=("%s: 1/6 da redação anterior à Lei 13.964/2019 (igual para primário e reincidente; ultra-ativo ao "
+                                           "reincidente) em fato anterior ao primeiro trânsito - tese defensiva: %s" % (nome, rs.pct(f_esp))
+                                           if _d16 and fato and fato < rg.data_lei_13964() else
+                                           "%s: percentual de reincidente (%s) em fato anterior ao primeiro trânsito - tese defensiva: %s" % (
+                                               nome, rs.pct_rotulo(c.get("fracao_progressao")), rs.pct(f_esp))),
                                    detalhe="Fato em %s, anterior a qualquer condenação transitada no RSPE; %s O "
                                            "SEEU aplica o percentual de reincidente porque outro crime desta execução é reincidente, e o STJ estende a "
                                            "reincidência à pena unificada inteira (AgRg no HC 790.968, 5ª T., 10/12/2024). Tese defensiva: a reincidência "
@@ -2473,6 +2498,11 @@ def auditar(r, hoje=None):
         fl_esp, rotl = rg.fracao_livramento_esperada(hed, reinc_ef, trafico, _trafico_pessoas(c))
         jv = rg.regime_progressao(fato) if fato else None
         chave_m = "hediondo_morte_reincidente" if reinc_ef else "hediondo_morte_primario"
+        # homicídio doloso (121, 121-A) ou latrocínio sem a marcação "resultado morte" nem a tentativa no RSPE ou na ficha: a
+        # consumação fica a conferir também no livramento (a mesma condição da progressão)
+        _hom_lc = (_cp and hed and not morte and not _tentado(c) and not tent_ficha
+                   and (art == "121-A" or (art == "121" and rs.vga_elementar(c))
+                        or (art == "157" and bool(re.match(r"\s*§\s*3", _tp)) and rs.paragrafo_inciso(c) != ("3", "I"))))
         lc_vedado = bool(jv and hed and morte and chave_m in (jv.get("vedado_lc") or []))
         lc_vedado_esp = bool(jv and especial and jv.get(especial) and especial in (jv.get("vedado_lc") or [])
                              and not (especial == "feminicidio_primario" and reinc_ef))
@@ -2506,6 +2536,16 @@ def auditar(r, hoje=None):
                                "Desde 25/03/2026, o art. 112, VI, b, da LEP veda o livramento ao comando de organização criminosa ultraviolenta. "
                                "O RSPE não informa essa qualificação: sem ela, vale a fração de livramento do crime (%s)." % rotl,
                                "LEP, art. 112, VI, b (redação da Lei 15.358/2026); CP, art. 83.", tipo="livramento-vedado-pelo-seeu-1-1-so-se-a-organiza", ref=nome))
+        elif (fl_seeu is not None and float(fl_seeu) >= 1 and float(fl_esp) < 1 and _hom_lc and jv
+              and chave_m in (jv.get("vedado_lc") or [])):
+            # (7.14.8) homicídio doloso ou latrocínio hediondo sem a marcação "resultado morte": como na progressão, o RSPE não diz se o
+            # crime foi consumado. Consumado, a morte integra o tipo e o livramento é vedado (LEP, art. 112, VI, a, e VIII) - o 1/1 do
+            # SEEU é o certo; tentado, vale 2/3 (CP, art. 83, V). Ponto a conferir, não erro firmado
+            itens.append(_item("verificar", "%s: livramento vedado pelo SEEU (1/1) - certo se o crime foi consumado; %s se tentado" % (nome, rotl.split(" (")[0]),
+                               "O RSPE não marca o resultado morte e não informa se o crime foi consumado. Consumado, o resultado morte é do próprio "
+                               "tipo e a lei da data do fato (%s) veda o livramento (LEP, art. 112, VI, a, e VIII): o 1/1 do SEEU está certo. Tentado, "
+                               "não há morte, e a fração é %s. Conferir a sentença antes de pedir a correção." % (rs.fmt(fato), rotl),
+                               "LEP, art. 112, VI, a, e VIII; CP, arts. 14, II, e 83, V.", tipo="livramento-consumacao-a-conferir", ref=nome))
         elif fl_seeu is not None and float(fl_seeu) >= 1 and float(fl_esp) < 1 and _lc_hist and (not hed or hom_selo):
             # revogação do livramento registrada como 1/1 no cadastro do crime, em vez do incidente próprio vinculado ao livramento
             itens.append(_item("alerta", "%s: fração de livramento 1/1 lançada no crime, com livramento %s" % (nome, _lc_hist),
