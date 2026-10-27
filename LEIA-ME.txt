@@ -1,9 +1,9 @@
-APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.14.4
+APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.14.7
 (antigo RSPE Base; SEEU, programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-7.14.4. A documentação técnica completa (cada parâmetro, a regra, a norma e
+7.14.7. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -1002,6 +1002,115 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v7.14.7
+  Correções da terceira conferência independente (últimos 64 casos nunca usados).
+  - Indulto e comutação: nos decretos que mandam computar a detração no
+    requisito temporal (2004 a 2015, art. 3º/4º; 2023, art. 5º), a prisão
+    provisória pelo próprio processo conta como pena cumprida, e não sai
+    mais "não iniciou o cumprimento". Os decretos restritos de 2019 a 2021
+    (saúde e agentes de segurança) dão o motivo do próprio decreto. Quando a
+    execução começou depois do decreto, mas havia condenação alcançada só
+    por crime impeditivo, a tabela de decretos diz "vedado", como a coluna
+    (inclusive o 2022, "Excluído (art. 7º)"). O rótulo "crime impeditivo"
+    passa a indicar também o crime impeditivo de fato posterior a todos os
+    decretos, com a ressalva.
+  - Na Remição, o "desligado da Escola" encerra a matrícula; o exame
+    respeita o teto do CNJ (ENEM 100 dias) e o atestado de valor próximo
+    decidido na mesma semana é o vínculo provável; duas certidões e uma só
+    remição apontam provável pendência (amarelo); a ficha que cita o número
+    do próprio RSPE não gera aviso de outra execução; o primeiro atestado
+    sem período cobre o trabalho contínuo que declara. A Auditoria alerta a
+    recaptura usada como data-base depois de "descumprimento das condições"
+    sem falta homologada, não trata a regressão da mesma decisão da falta
+    como nova falta, conta o número de processo truncado na ficha e aponta a
+    pena muito acima do máximo do dispositivo cadastrado. O livramento em
+    contravenção fica em 1/3 mesmo com reincidência. O encaminhamento à
+    Disciplinar na ficha passa a ser falta a apurar. Na Prescrição, a evasão
+    registrada na ficha confirma a evasão da interrupção (art. 113), e no
+    art. 28 a custódia suspende o prazo em vez de interrompê-lo. Na saída
+    temporária, o homicídio qualificado anterior à Lei 13.964/2019 não é
+    mais "sem hediondo com resultado morte".
+
+v7.14.6
+  Correções da segunda conferência independente (64 casos nunca usados).
+  - Indulto e comutação: a interrupção por incompatibilidade de regime
+    lançada no mesmo dia da prisão definitiva fica depois dela, como no
+    SEEU; quando a "Pena Cumprida" impressa mostra que o SEEU não contou o
+    período, a interrupção corta a custódia em todas as abas, e não se
+    inventa cumprimento contínuo para comutação, término ou saída
+    temporária. Nos decretos analisados pela ficha (2011 a 2017 e 2023), as
+    hipóteses do crime contra o patrimônio sem violência entram na conta
+    (2023, art. 2º, XV e XVI), inclusive com o tempo excedente aos 2/3 do
+    crime impeditivo; atendido o tempo, ficam a verificar (reparação do
+    dano, valor do bem). A pena considerada é somada em anos, meses e dias,
+    como no SEEU. Sursis concedido no RSPE deixa a verificar as hipóteses
+    "não beneficiadas com sursis". Em 2024/2025, "primário" com reincidência
+    pelas datas leva a ressalva no detalhamento.
+  - Remição: o estudo pedido na fundamentação começa depois do último
+    semestre certificado; o pedido de atestado de trabalho anterior a falta
+    grave traz a ressalva da perda de até 1/3 (LEP, art. 127); o setor
+    encerrado só pelo início de outro mostra o fim suposto e a data da baixa
+    da ficha. Ficha: a sanção registrada sem o lançamento da falta entra
+    como falta a apurar. Progressão e Auditoria: o monitoramento eletrônico
+    desta execução que o SEEU lança como interrupção gera um item
+    "verificar" com a progressão estimada; a aba mantém a data do SEEU, com
+    a ressalva. O roubo com lesão grave (art. 157, § 3º, I) não é tratado
+    como resultado morte. Auditoria: os blocos "2/5" e "40%" do SEEU ficam
+    separados na detração antes da fração, e a forma favorável é calculada
+    em anos, meses e dias, como o SEEU (6 anos menos 26 dias = 5a11m4d).
+    Prescrição: a pena suspensa no RSPE ou do art. 28, com a pessoa presa
+    por outro processo, fica suspensa (CP, art. 116, p. ú.); a contravenção
+    posterior não interrompe a prescrição do crime (art. 117, VI), nem o
+    crime a da contravenção.
+
+v7.14.5
+  Correções da conferência independente (70 casos nunca usados).
+  - Remição: o atestado de horas-aula ("remir 180 horas aulas") entra como
+    atestado de estudo (180 h ÷ 12 = 15 dias). Atestados sem período,
+    emitidos durante o mesmo trabalho depois do atestado anterior, passam a
+    cobrir esse trabalho, e o programa deixa de pedir atestado de período já
+    atestado. A perda por falta grave (art. 127) é conferida na aba pela
+    remição do trabalho anterior à falta, declarada ou não, e não pela data
+    da decisão. Quando não há remição entre duas faltas, a perda da segunda
+    é apontada como duplicidade. O reflexo na progressão de trabalho
+    anterior à data-base reduz só a fração. Textos: a conclusão deixa de
+    dizer "nada a requerer" quando há atestado pendente; "valor próximo"
+    quando os dias diferem (51 × 50); soma de atestado com leitura; números
+    de atestado com ano curto; unidade do atestado pelo período trabalhado;
+    ofício à unidade atual (última entrada).
+  - Indulto e comutação: com o cumprimento interrompido e a fração já
+    cumprida antes da interrupção, os incisos são analisados com o tempo até
+    a data (o XV não exige fração nem regime; os incisos de regime ficam a
+    verificar; a interrupção genérica entra como falta a verificar).
+    Impeditivo e não impeditivo na mesma sentença sem trânsito para a
+    acusação ficam vedados. A prisão provisória lançada no dia da
+    "interrupção por prisão em outro processo" não conta para a execução
+    quando o SEEU a interrompe, e o aviso de custódia por outro processo
+    some quando há recaptura no mesmo dia ou quando o SEEU soma o período. A
+    fuga homologada depois da publicação que atravessa a janela fica como
+    falta a verificar. O impeditivo de sentença posterior aparece no rótulo,
+    fora da soma. O XII fica "?" quando a matrícula só foi cancelada depois
+    da saída da unidade. O tráfico privilegiado com pena convertida recebe a
+    ressalva do art. 8º, I (2022). Na execução unificada com outras penas em
+    cumprimento não se sugere a extinção pelo cumprimento de pena isolada: o
+    decreto se conclui pelos requisitos do indulto.
+  - A aba do Livramento passa a refletir a Auditoria: reincidente específico
+    pela lei (tráfico depois de tráfico transitado; hediondo depois de
+    hediondo) aparece como livramento vedado quanto a esse crime; fração do
+    SEEU acima da legal mostra as frações legais e a data por elas, mantida
+    a do SEEU; falta ainda sem sanção cujos 12 meses passam da data do SEEU
+    fica a verificar, com a data que valeria se reconhecida. Na Extinção, o
+    livramento que só alcançava pena já extinta não gera a hipótese da
+    Súmula 617, e a remição decidida com o livramento abate o período de
+    prova. A Auditoria tira a guia "Suspenso: Sim" dos blocos de detração,
+    conta a forma favorável com ano de 365 dias e reconhece número com o
+    segmento do tribunal trocado como digitação. Na Prescrição, os dias de
+    suspensão do texto batem com os da conta; o +1/3 é afastado também com
+    uma só condenação quando o SEEU aplica fração de primário; o aviso sobre
+    o livramento só aparece se houve livramento. Na Progressão, setor com
+    baixa sai do trabalho atual, e isolamento preventivo com PADIC sem
+    resultado conta como falta a apurar.
 
 v7.14.4
   Resíduos da validação da 7.14.3.

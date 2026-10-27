@@ -79,8 +79,8 @@ ok(bl and [b[3] for b in bl if b[3]] == [398] and [str(b[0]) for b in bl if b[3]
 x = itens(r, RI)
 # (7.14.4) a "Diferença" é o lapso impresso menos a forma favorável, nas mesmas unidades do SEEU (meses de 30 dias: 2 anos x 30% =
 # 7m6d, não 219 dias): 4a3m10d - 3a5m28d = 9m12d (detração x 0,7 = 279 dias, 3 a menos, não fechava com as duas linhas impressas)
-ok(len(x) == 1 and x[0]["nivel"] == "alerta" and "bloco de 30%" in x[0]["detalhe"] and "Diferença: 9 meses e 12 dias" in x[0]["detalhe"]
-   and "média" not in x[0]["detalhe"], "detração no bloco de 30%%: 4a3m10d - 3a5m28d = 9m12d: %s" % x)
+ok(len(x) == 1 and x[0]["nivel"] == "alerta" and "bloco de 30%" in x[0]["detalhe"] and "Diferença: 9 meses e 7 dias" in x[0]["detalhe"]
+   and "média" not in x[0]["detalhe"], "detração no bloco de 30%%: 4a3m10d - 3a6m3d = 9m7d (7.14.6: conta em a/m/d; 398 x 0,7 = 279 dias): %s" % x)
 # lapsos com a fração sobre a pena inteira de cada bloco: a detração não foi descontada antes da fração - sem alerta
 r2 = dict(r, seeu_fracoes_progressao=["Hediondo primário (40%): 4a0m0d", "Reincidente com violência ou grave ameaça (30%): 0a7m9d"])
 x = itens(r2, RI)

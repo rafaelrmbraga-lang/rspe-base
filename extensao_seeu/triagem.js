@@ -72,6 +72,9 @@ async function buscar(url, op) {
   ultimoPedido = Date.now();
   if (!abaSeeu && !(await acharSeeu())) throw new Parada("Abra o SEEU logado em outra aba e tente de novo.");
   let r;
+  // o PDF do movimento vem do servidor de arquivos do SEEU (Amazon S3), por redirecionamento: depois do primeiro,
+  // vai direto pela página da extensão (o pedido feito de dentro do SEEU é barrado pelo navegador)
+  if (pdfDireto && /\/seeu\/arquivo\.do\?/.test(url)) return conferirDireto(await buscarDireto(url, op));
   try {
     r = await chrome.tabs.sendMessage(abaSeeu.id, { tipo: "triagemBuscar", url, metodo: op.metodo || "GET", corpo: op.corpo || "", binario: !!op.binario }, { frameId: 0 });
   } catch (e) {
@@ -79,9 +82,79 @@ async function buscar(url, op) {
     throw new Parada("A aba do SEEU foi fechada ou recarregada. Deixe o SEEU aberto e tente de novo.");
   }
   if (!r) throw new Parada("O SEEU não respondeu (recarregue a página do SEEU).");
+  // o navegador barrou o pedido feito de dentro do SEEU (ex.: o PDF vem de outro servidor, por redirecionamento):
+  // a própria página da extensão faz o pedido, que pode seguir o redirecionamento
+  if (!r.ok && r.rede) {
+    r = conferirDireto(await buscarDireto(url, op));
+    if (r.pdf && /\/seeu\/arquivo\.do\?/.test(url)) pdfDireto = true;
+    return r;
+  }
   if (r.login) throw new Parada("Sessão do SEEU expirada: faça login de novo e clique em continuar.");
   if (!r.ok) throw new Error(r.motivo || ("o SEEU respondeu com erro " + r.status));
   return r;
+}
+let pdfDireto = false;
+function conferirDireto(r) {
+  // no pedido pela extensão, a tela de login quer dizer que o navegador não mandou a sessão do SEEU junto
+  if (r.login) throw new Error("o SEEU não reconheceu a sessão no pedido feito pela extensão (confira se o navegador bloqueia cookies de terceiros para extensões)");
+  if (!r.ok) throw new Error(r.motivo || ("o SEEU respondeu com erro " + r.status));
+  return r;
+}
+
+// pedido feito pela página da extensão (com a sessão do navegador). Mesma lista de endereços permitidos; o
+// redirecionamento só pode ir ao SEEU e ao servidor de arquivos do SEEU (permissão e política de segurança da extensão)
+let destinoDescoberto = null;
+async function buscarDireto(url, op) {
+  const abs = new URL(url, "https://seeu.pje.jus.br/seeu/").href;
+  const metodo = (op.metodo || "GET").toUpperCase(), corpo = op.corpo || "";
+  const recusa = self.APTO.pedidoTriagemPermitido(abs, metodo, corpo);
+  if (recusa) return { ok: false, motivo: "pedido recusado pela extensão: " + recusa };
+  const o = { credentials: "include", cache: "no-store", method: metodo, redirect: "follow" };
+  if (metodo === "POST") { o.body = corpo; o.headers = { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8", "X-Requested-With": "XMLHttpRequest" }; }
+  let resp;
+  try {
+    resp = await fetch(abs, o);
+  } catch (e) {
+    let onde = "";
+    if (/\/seeu\/arquivo\.do$/.test(new URL(abs).pathname)) onde = await descobrirDestino(abs);
+    return { ok: false, motivo: "o navegador não completou o pedido, nem pelo SEEU nem pela extensão (" + (e && e.message || e) + ")" +
+      (onde ? `. O SEEU entrega o arquivo a partir de ${onde}: avise para liberar esse endereço na extensão` : "") };
+  }
+  const bytes = new Uint8Array(await resp.arrayBuffer());
+  const fim = resp.url || abs;
+  let host = "";
+  try { host = new URL(fim).hostname; } catch (e) {}
+  const login = host !== "seeu.pje.jus.br" && !/\.pdf/i.test(fim) && !self.APTO.ehPdf(bytes) ? /login|sso|auth/i.test(fim) : false;
+  if (op.binario && self.APTO.ehPdf(bytes)) return { ok: resp.ok, pdf: true, bytes, url: fim, status: resp.status };
+  const ct = resp.headers.get("content-type") || "";
+  let cs = (/charset=([\w-]+)/i.exec(ct) || /<meta[^>]+charset=["']?([\w-]+)/i.exec(new TextDecoder("latin1").decode(bytes.subarray(0, 4096))) || [, "windows-1252"])[1].toLowerCase();
+  if (/^(iso-8859-1|latin1|us-ascii|ascii)$/.test(cs)) cs = "windows-1252";
+  let texto;
+  try { texto = new TextDecoder(cs).decode(bytes); } catch (e) { texto = new TextDecoder("windows-1252").decode(bytes); }
+  return { ok: resp.ok, pdf: false, texto, url: fim, status: resp.status, login: login || /type\s*=\s*["']?password/i.test(texto) };
+}
+
+// onde o SEEU entrega o arquivo: o download do próprio navegador segue o redirecionamento e informa o endereço final.
+// Feito uma vez; o download é cancelado e apagado na hora (fica fora da pasta vigiada do APTO).
+async function descobrirDestino(abs) {
+  if (destinoDescoberto !== null) return destinoDescoberto;
+  destinoDescoberto = "";
+  let id;
+  try {
+    id = await chrome.downloads.download({ url: abs, filename: "apto_triagem_diagnostico.pdf", conflictAction: "uniquify", saveAs: false });
+    for (let i = 0; i < 40; i++) {
+      const [it] = await chrome.downloads.search({ id });
+      if (it && it.finalUrl && it.finalUrl !== abs) { destinoDescoberto = new URL(it.finalUrl).origin; break; }
+      if (!it || it.state !== "in_progress") break;
+      await new Promise((r) => setTimeout(r, 250));
+    }
+  } catch (e) {}
+  if (id != null) {
+    try { await chrome.downloads.cancel(id); } catch (e) {}
+    try { const [it] = await chrome.downloads.search({ id }); if (it && it.state === "complete") await chrome.downloads.removeFile(id); } catch (e) {}
+    try { await chrome.downloads.erase({ id }); } catch (e) {}
+  }
+  return destinoDescoberto;
 }
 
 // ---------------------------------------------------------------- PDF
@@ -91,8 +164,8 @@ function b64ParaBytes(b64) {
   for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
   return u;
 }
-async function textoDoPdf(b64) {
-  const doc = await pdfjsLib.getDocument({ data: b64ParaBytes(b64), isEvalSupported: false, disableFontFace: true, useSystemFonts: false, verbosity: 0 }).promise;
+async function textoDoPdf(dados) {
+  const doc = await pdfjsLib.getDocument({ data: typeof dados === "string" ? b64ParaBytes(dados) : dados, isEvalSupported: false, disableFontFace: true, useSystemFonts: false, verbosity: 0 }).promise;
   const partes = [];
   try {
     for (let i = 1; i <= Math.min(doc.numPages, 30); i++) {
@@ -119,24 +192,33 @@ async function lerMesa() {
   const avisos = [];
   try {
     for (const aba of abas) {
-      let pagina = 1, total = null, campos = null;
+      let pagina = 1, total = null, campos = null, falhou = false;
+      const vistos = new Set();
+      const novosDe = (m) => m.linhas.filter((l) => !vistos.has(l.processo)).length;
       while (pagina <= 40) {
         progresso(0, 0, `Mesa · ${T.ABAS[aba]} · página ${pagina}${total != null ? " · " + total + " registro(s)" : ""}`);
         let url = `/seeu/usuario/mesaDefensor1Grau.do?actionType=listar&finalidadeRemessa=${aba}&situacao=${situacao}&pageNumber=${pagina}`;
         let r = await buscar(url);
         let m = T.lerMesa(r.texto);
-        if (pagina > 1 && m.de === 1 && campos) {
+        if (pagina > 1 && campos && (m.de === 1 || !novosDe(m))) {
           // o SEEU ignorou a página pedida por GET: pede como o próprio formulário da Mesa (POST, só a lista)
           const corpo = new URLSearchParams(Object.assign({}, campos, { pageNumber: String(pagina), finalidadeRemessa: aba, situacao })).toString();
           r = await buscar(`/seeu/usuario/mesaDefensor1Grau.do?actionType=listar`, { metodo: "POST", corpo });
           m = T.lerMesa(r.texto);
-          if (m.de === 1) { avisos.push(`${T.ABAS[aba]}: só a 1ª página pôde ser lida`); break; }
+          if (!novosDe(m)) { falhou = true; break; }
         }
-        if (pagina === 1) { total = m.total; campos = filtrarCampos(m.campos); }
-        for (const l of m.linhas) if (!linhas.some((x) => x.aba === aba && x.processo === l.processo)) linhas.push(Object.assign(l, { aba }));
-        if (!m.linhas.length || !m.ate || m.ate >= m.total) break;
+        if (pagina === 1) { total = m.total || null; campos = filtrarCampos(m.campos); }
+        for (const l of m.linhas) {
+          if (vistos.has(l.processo)) continue;
+          vistos.add(l.processo);
+          linhas.push(Object.assign(l, { aba, situacao: Number(situacao) }));
+        }
+        // fim da lista: pelo total da Mesa ("N registro(s) encontrado(s)"); sem ele, pela página incompleta
+        const fim = !m.linhas.length || (total ? vistos.size >= total : m.linhas.length < (m.pageSize || 20));
+        if (fim) break;
         pagina++;
       }
+      if (total && vistos.size < total) avisos.push(`${T.ABAS[aba]}: lidos ${vistos.size} de ${total} processos` + (falhou ? " (o SEEU não entregou as páginas seguintes)" : ""));
     }
   } catch (e) {
     terminar();
@@ -177,7 +259,7 @@ async function lerDocumentoDoMovimento(processo, mov) {
     if (!arq) return { semArquivo: true };
     const r = await buscar(arq.url, { binario: true });
     if (r.pdf) {
-      try { texto = await textoDoPdf(r.b64); } catch (e) { texto = ""; }
+      try { texto = await textoDoPdf(r.bytes || r.b64); } catch (e) { texto = ""; }
     } else {
       // documento em HTML (texto do próprio SEEU); uma página inteira do SEEU (erro, aviso) não é o documento
       texto = /SEEU - Sistema Eletr|<frameset/i.test(r.texto || "") ? "" : T.texto(r.texto || "");
@@ -189,13 +271,55 @@ async function lerDocumentoDoMovimento(processo, mov) {
 }
 
 function resumoMov(m) {
-  return m ? { seq: m.seq, data: m.data, hora: m.hora, nome: m.nome, complemento: m.complemento, autor: m.autor, cargo: m.cargo } : null;
+  return m ? { seq: m.seq, data: m.data, hora: m.hora, nome: m.nome, complemento: m.complemento, autor: m.autor, cargo: m.cargo, papel: m.papel } : null;
+}
+
+// página do processo: 1) pelo nº (como o lote de RSPE); 2) pelo link do nº na Mesa; 3) numa moldura invisível dentro do
+// SEEU (o mesmo que clicar no nº). Vale a primeira que trouxer este processo.
+let modoProcesso = 0;   // a partir de qual tentativa começar (aprende com a primeira que funcionar)
+async function paginaDoProcesso(l) {
+  const dig = l.processo.replace(/\D/g, "");
+  const tentativas = [
+    ["pelo nº", () => buscar("/seeu/visualizacaoProcesso.do?actionType=visualizar&numeroUnico=" + dig)],
+    ["pelo link da Mesa", () => buscar(l.url)],
+    ["pela moldura", () => moldura(l.url)],
+  ];
+  const motivos = [];
+  for (let i = modoProcesso; i < tentativas.length; i++) {
+    const [nome, fazer] = tentativas[i];
+    try {
+      const r = await fazer();
+      const proc = T.lerProcesso(r.texto);
+      if (proc.processo === l.processo || (!proc.processo && proc.pendencias.length)) { modoProcesso = i; return proc; }
+      motivos.push(nome + ": " + (proc.processo ? "abriu outro processo (" + proc.processo + ")" : "página sem o processo"));
+    } catch (e) {
+      if (e instanceof Parada) throw e;
+      motivos.push(nome + ": " + (e.message || e));
+    }
+  }
+  throw new Error("não abriu a página do processo – " + motivos.join("; "));
+}
+async function moldura(url) {
+  if (rodando && rodando.parar) throw new Parada("parado");
+  const espera = ultimoPedido + INTERVALO_MS - Date.now();
+  if (espera > 0) await new Promise((r) => setTimeout(r, espera));
+  ultimoPedido = Date.now();
+  if (!abaSeeu && !(await acharSeeu())) throw new Parada("Abra o SEEU logado em outra aba e tente de novo.");
+  let r;
+  try {
+    r = await chrome.tabs.sendMessage(abaSeeu.id, { tipo: "triagemMoldura", url }, { frameId: 0 });
+  } catch (e) {
+    abaSeeu = null;
+    throw new Parada("A aba do SEEU foi fechada ou recarregada. Deixe o SEEU aberto e tente de novo.");
+  }
+  if (!r) throw new Error("o SEEU não respondeu (recarregue a página do SEEU)");
+  if (r.login) throw new Parada("Sessão do SEEU expirada: faça login de novo e clique em continuar.");
+  if (!r.ok) throw new Error(r.motivo || "falha na moldura");
+  return r;
 }
 
 async function analisarLinha(l) {
-  const r = await buscar(l.url);
-  let proc = T.lerProcesso(r.texto);
-  if (proc.processo && proc.processo !== l.processo) throw new Error("o SEEU abriu outro processo (" + proc.processo + ")");
+  let proc = await paginaDoProcesso(l);
   if (!proc.movimentos.length && proc.temAbaMovimentos) {
     const r2 = await buscar("/seeu/visualizacaoProcesso.do?actionType=visualizar&selectedIcon=tabMovimentacoesProcesso");
     const p2 = T.lerProcesso(r2.texto);
@@ -208,21 +332,27 @@ async function analisarLinha(l) {
     status: "ok", quando: Date.now(), ultimoSeq,
     pendencia: e.pendencia, pendencias: proc.pendencias,
     tipoMotivo: T.tipoDoMotivo(e.pendencia ? e.pendencia.movimento : ""),
-    motivo: resumoMov(e.motivo), decisao: resumoMov(e.decisao), merito: resumoMov(e.merito),
-    desde: e.desde.map(resumoMov),
+    motivo: resumoMov(e.motivo), decisao: resumoMov(e.decisao),
     mesma: !!(e.motivo && e.decisao && e.motivo.seq === e.decisao.seq),
   };
-  if (e.motivo) a.motivo.doc = await lerDocumentoDoMovimento(l.processo, e.motivo);
-  if (e.decisao) a.decisao.doc = a.mesma ? a.motivo.doc : await lerDocumentoDoMovimento(l.processo, e.decisao);
-  if (e.merito) a.merito.doc = await lerDocumentoDoMovimento(l.processo, e.merito);
+  // cada documento falha sozinho: a linha continua com o motivo, a decisão e a movimentação
+  const doc = async (m) => {
+    try { return await lerDocumentoDoMovimento(l.processo, m); } catch (er) {
+      if (er instanceof Parada) throw er;
+      return { erro: er.message || String(er), alertas: [], temas: [] };
+    }
+  };
+  if (e.motivo) a.motivo.doc = await doc(e.motivo);
+  if (e.decisao) a.decisao.doc = a.mesma ? a.motivo.doc : await doc(e.decisao);
   const alertas = [], temas = [];
-  for (const d of [a.motivo && a.motivo.doc, a.decisao && a.decisao.doc, a.merito && a.merito.doc]) {
+  for (const d of [a.motivo && a.motivo.doc, a.decisao && a.decisao.doc]) {
     if (!d) continue;
     for (const x of d.alertas || []) if (!alertas.some((y) => y.txt === x.txt)) alertas.push(x);
     for (const x of d.temas || []) if (!temas.includes(x)) temas.push(x);
   }
   a.alertas = alertas.sort((x, y) => ({ alto: 0, medio: 1, info: 2 })[x.nivel] - ({ alto: 0, medio: 1, info: 2 })[y.nivel]);
   a.temas = temas;
+  a.providencia = T.providencia(a, T.ABAS[l.aba]);
   return a;
 }
 
@@ -264,7 +394,7 @@ async function lerProcessos() {
   terminar();
   desenhar();
   if (motivoParada) mensagem(motivoParada, true);
-  else mensagem(`Leitura concluída: ${feitos} processo(s)` + (erros ? `, ${erros} com erro (veja a coluna Alertas)` : "") + ".", erros > 0);
+  else mensagem(`Leitura concluída: ${feitos} processo(s)` + (erros ? `, ${erros} com erro (veja a coluna Motivo)` : "") + ".", erros > 0);
 }
 
 // ---------------------------------------------------------------- filtros e tabela
@@ -274,7 +404,7 @@ function filtradas() {
   const fx = T.faixasFinal($("faixa").value);
   const busca = T.normal($("busca").value);
   const tipo = $("tipo").value;
-  const soAlerta = $("soAlerta").checked;
+  const prov = $("prov").value;
   const defs = prefs.defensores;
   return estado.linhas.filter((l) => {
     if (!abas.has(String(l.aba))) return false;
@@ -282,7 +412,8 @@ function filtradas() {
     if (fx && !fx.has(l.final)) return false;
     const a = estado.analises[chaveLinha(l)];
     if (tipo && (!a || a.tipoMotivo !== tipo)) return false;
-    if (soAlerta && !(a && (a.alertas || []).some((x) => x.nivel === "alto"))) return false;
+    if (prov === "urgente" && !(a && a.providencia && a.providencia.urgente)) return false;
+    if (prov && prov !== "urgente" && !(a && a.providencia && a.providencia.tipo === prov)) return false;
     if (busca) {
       const alvo = T.normal([l.processo, l.executado, l.defensor, a && a.pendencia && a.pendencia.texto,
         a && a.motivo && a.motivo.doc && a.motivo.doc.corpo, a && a.decisao && a.decisao.doc && a.decisao.doc.corpo].join(" "));
@@ -419,27 +550,101 @@ function celulaMotivo(a, l) {
   return el("div", {},
     el("div", { class: "mot" }, p ? (p.movimento || p.texto) : "sem pendência no quadro"),
     el("div", { class: "sub" }, [p && p.juntar ? "Juntar " + p.juntar.toLowerCase() : "", a.motivo ? `seq. ${a.motivo.seq} · ${a.motivo.data}` : ""].filter(Boolean).join(" · ")),
-    d && !a.mesma ? el("div", { class: "txt" }, d.semArquivo ? "(sem arquivo)" : d.semTexto ? "documento sem texto (escaneado): abrir no SEEU" : T.resumir(d.resumo, 260)) : null);
+    d && !a.mesma ? el("div", { class: "txt" }, d.erro ? "documento não lido: " + d.erro : d.semArquivo ? "(sem arquivo)" : d.semTexto ? "documento sem texto (escaneado): abrir no SEEU" : T.resumir(d.resumo, 260)) : null);
 }
 function celulaDecisao(a) {
   if (!a || a.status !== "ok") return "";
   if (!a.decisao) return el("span", { class: "sub" }, "nenhum ato do juiz com documento na movimentação");
   const d = a.decisao.doc;
-  const m = a.merito;
   return el("div", {},
     el("div", { class: "mot" }, a.decisao.nome + (a.mesma ? " (é o motivo)" : "")),
     el("div", { class: "sub" }, `seq. ${a.decisao.seq} · ${a.decisao.data}`),
-    d ? el("div", { class: "txt" }, d.semArquivo ? "(sem arquivo)" : d.semTexto ? "documento sem texto (escaneado): abrir no SEEU" : T.resumir(d.resumo, 300)) : null,
-    m ? el("div", { class: "sub", style: "margin-top:4px" }, `Mérito anterior: ${m.nome} · seq. ${m.seq} · ${m.data}`) : null);
+    d ? el("div", { class: "txt" }, d.erro ? "documento não lido: " + d.erro : d.semArquivo ? "(sem arquivo)" : d.semTexto ? "documento sem texto (escaneado): abrir no SEEU" : T.resumir(d.resumo, 300)) : null);
 }
-function celulaAlertas(a) {
-  if (!a || a.status !== "ok") return "";
-  const f = document.createDocumentFragment();
-  for (const x of a.alertas || []) f.append(tag(x.nivel, x.txt));
-  for (const t of a.temas || []) f.append(tag("tema", t));
-  if (!(a.alertas || []).length && !(a.temas || []).length) f.append(el("span", { class: "sub" }, "—"));
-  return f;
+function providenciaDe(a, l) {
+  // recalculada sempre: uma regra nova vale também para os processos já lidos
+  return a && a.status === "ok" ? T.providencia(a, T.ABAS[l.aba]) : null;
 }
+function celulaProvidencia(a, l) {
+  const p = providenciaDe(a, l);
+  const botao = el("button", { class: "btn-pet", type: "button", title: "Escolher um modelo e gerar a petição (PDF ou Word)", onclick: (ev) => { ev.stopPropagation(); abrirPeticao(l); } }, "Gerar petição");
+  if (!p) return el("div", {}, botao);
+  return el("div", {}, el("div", { class: "prov" + (p.urgente ? " urg" : "") }, p.texto), el("div", { class: "sub" }, p.tipo), botao);
+}
+
+// ---------------------------------------------------------------- petições (modelos da pasta "modelos")
+const PET = self.PETICAO;
+let petLinha = null;
+let fontesPdf = null;
+async function bytesDaExtensao(caminho) {
+  const r = await fetch(chrome.runtime.getURL(caminho));
+  if (!r.ok) throw new Error("arquivo da extensão não encontrado: " + caminho);
+  return new Uint8Array(await r.arrayBuffer());
+}
+async function inflar(b) {
+  const s = new Blob([b]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+  return new Uint8Array(await new Response(s).arrayBuffer());
+}
+function abrirPeticao(l) {
+  petLinha = l;
+  const a = estado.analises[chaveLinha(l)];
+  const prov = providenciaDe(a, l);
+  const sug = PET.modeloSugerido(prov, a);
+  $("petSub").textContent = `${l.processo} · ${l.executado || ""}` + (prov ? ` · providência sugerida: ${prov.texto}` : "");
+  $("petProc").value = l.processo;
+  $("petNome").value = PET.nomeProprio(l.executado || "");
+  $("petData").value = PET.dataPorExtenso(new Date());
+  $("petMsg").textContent = ""; $("petMsg").className = "";
+  const ul = $("petLista");
+  ul.textContent = "";
+  const ordem = PET.MODELOS.slice().sort((x, y) => (y.id === sug) - (x.id === sug));
+  for (const m of ordem) {
+    const botoes = m.formato === "pdf"
+      ? [el("button", { class: "pri", type: "button", onclick: () => gerarPeticao(m, "pdf") }, "PDF"), el("button", { type: "button", onclick: () => gerarPeticao(m, "docx") }, "Word")]
+      : [el("button", { class: "pri", type: "button", onclick: () => gerarPeticao(m, "docx") }, "Word")];
+    ul.append(el("li", { class: m.id === sug ? "sug" : "" },
+      el("span", { class: "nm" }, m.nome, m.id === sug ? el("span", { class: "sugtag" }, "sugerido") : null,
+        el("small", {}, m.formato === "pdf" ? "pronto: nº, data e assinatura preenchidos" : "pede dados do caso: sai em Word, com os pontos a completar em amarelo")),
+      ...botoes));
+  }
+  $("petFundo").className = "on";
+  mostrarDestino();
+  $("petNome").focus();
+}
+function fecharPeticao() { $("petFundo").className = ""; petLinha = null; }
+async function gerarPeticao(m, formato) {
+  const msg = $("petMsg");
+  msg.className = ""; msg.textContent = "Gerando…";
+  try {
+    const campos = { processo: $("petProc").value.trim(), nome: $("petNome").value.trim(), data: $("petData").value.trim() };
+    const modelo = await bytesDaExtensao("modelos/" + m.arquivo);
+    let bytes, tipo;
+    if (formato === "pdf") {
+      if (!fontesPdf) {
+        const f = (n) => bytesDaExtensao("fontes_pdf/carlito-latin-" + n + ".woff");
+        fontesPdf = { r: await f("400-normal"), b: await f("700-normal"), i: await f("400-italic"), bi: await f("700-italic") };
+      }
+      bytes = await PET.gerarPdf(modelo, campos, { inflar, PDFLib: self.PDFLib, fontkit: self.fontkit, fontes: fontesPdf, titulo: m.nome + " " + campos.processo, autor: "Cahuê Duarte e Urdiales" });
+      tipo = "application/pdf";
+    } else {
+      bytes = await PET.gerarDocx(modelo, campos, inflar);
+      tipo = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+    }
+    const nome = PET.nomeArquivo(m.nome, campos.processo, formato);
+    const onde = await salvarPeticao(bytes, tipo, nome, formato);
+    if (!onde) { msg.textContent = "Cancelado."; return; }
+    msg.textContent = `Salvo em ${onde}` + (formato === "docx" && m.formato === "docx" ? " (complete os trechos em amarelo)" : "");
+  } catch (e) {
+    msg.className = "erro";
+    msg.textContent = "Não foi possível gerar: " + (e && e.message || e);
+  }
+}
+$("petFechar").onclick = fecharPeticao;
+$("petPasta").onclick = escolherPasta;
+$("petLimparPasta").onclick = async () => { await guardarPasta(null); mostrarDestino(); mensagemPet("As petições voltam a ir para Downloads."); };
+$("petPerguntar").onchange = () => { prefs.perguntarDestino = $("petPerguntar").checked; guardarPrefs(); mostrarDestino(); };
+$("petFundo").addEventListener("click", (ev) => { if (ev.target.id === "petFundo") fecharPeticao(); });
+document.addEventListener("keydown", (ev) => { if (ev.key === "Escape" && petLinha) fecharPeticao(); });
 
 function blocoDoc(titulo, mov, d) {
   if (!mov) return null;
@@ -447,6 +652,7 @@ function blocoDoc(titulo, mov, d) {
   return el("div", { class: "bloco" },
     el("h3", {}, titulo),
     el("div", { class: "meta" }, `seq. ${mov.seq} · ${mov.data} ${mov.hora || ""} · ${mov.nome}` + (mov.autor ? ` · ${mov.autor}` : "") + (mov.complemento ? ` · ${mov.complemento}` : "")),
+    d && d.erro ? el("div", { class: "sub" }, "Documento não lido: " + d.erro) :
     d && d.semArquivo ? el("div", { class: "sub" }, "Movimento sem arquivo.") :
       d && d.semTexto ? el("div", { class: "sub" }, "Documento sem texto (provavelmente escaneado). Abra no SEEU.") :
         el("pre", {}, corpo || "(texto não lido)"),
@@ -458,10 +664,6 @@ function linhaDetalhe(l, a) {
     if (a.pendencias && a.pendencias.length > 1) blocos.push(el("div", { class: "bloco" }, el("h3", {}, "Pendências"), el("ol", {}, a.pendencias.map((p) => el("li", {}, p.texto)))));
     blocos.push(blocoDoc(a.mesma ? "Motivo e última decisão" : "Motivo da intimação", a.motivo, a.motivo && a.motivo.doc));
     if (!a.mesma) blocos.push(blocoDoc("Última decisão", a.decisao, a.decisao && a.decisao.doc));
-    if (a.merito) blocos.push(blocoDoc("Última decisão de mérito", a.merito, a.merito.doc));
-    blocos.push(el("div", { class: "bloco" }, el("h3", {}, "Desde a última decisão"),
-      a.desde && a.desde.length ? el("ol", {}, a.desde.map((m) => el("li", {}, `${m.data} · ${m.nome}` + (m.complemento ? ` – ${T.resumir(m.complemento, 140)}` : "") + (a.motivo && m.seq === a.motivo.seq ? "  ← motivo" : ""))))
-        : el("div", { class: "sub" }, "Nada relevante depois da decisão.")));
   } else if (a && a.status === "erro") {
     blocos.push(el("div", { class: "bloco" }, el("h3", {}, "Erro"), el("div", {}, a.erro)));
   } else {
@@ -484,15 +686,48 @@ function linhaTabela(l) {
   } },
     el("td", { class: "fin" }, l.final),
     el("td", {}, el("div", { class: "proc" }, el("a", { href: l.url, target: "_blank", rel: "noopener", title: "Abrir o processo no SEEU (o mesmo que clicar no nº)" }, l.processo)),
-      el("div", { class: "nome" }, l.executado || "—"), el("div", { class: "sub" }, T.ABAS[l.aba])),
+      nomeCopiavel(l.executado), el("div", { class: "sub" }, T.ABAS[l.aba])),
     el("td", {}, l.defensor || el("span", { class: "sub" }, "sem defensor")),
-    el("td", {}, el("div", { class: "vence" + (dias != null && dias <= 2 ? " perto" : "") }, l.ultimoDia || "—"),
-      el("div", { class: "sub" }, (l.prazo || "") + (dias != null ? ` · ${dias < 0 ? "venceu" : dias === 0 ? "vence hoje" : "faltam " + dias + "d"}` : "")),
-      el("div", { class: "sub" }, "enviado " + (l.dataEnvio || "—"))),
+    el("td", {}, celulaPrazo(l, dias)),
     el("td", {}, celulaMotivo(a, l)),
     el("td", {}, celulaDecisao(a)),
-    el("td", {}, celulaAlertas(a)));
+    el("td", {}, celulaProvidencia(a, l)));
   return tr;
+}
+
+// prazo: em "Recebidas e não lidas" o último dia é o da LEITURA (depois dele a intimação vai para "Lidas e aguardando
+// análise" e só então corre o prazo de resposta); nas lidas, é o último dia da RESPOSTA
+function celulaPrazo(l, dias) {
+  const sit = Number(l.situacao || estado.situacao || 1);
+  const falta = dias == null ? "" : dias < 0 ? "venceu" : dias === 0 ? "vence hoje" : "faltam " + dias + "d";
+  const rot = sit === 1 ? "Leitura até" : sit === 2 ? "Resposta até" : "Último dia";
+  return el("div", {},
+    el("div", { class: "sub" }, rot),
+    el("div", { class: "vence" + (dias != null && dias <= 2 ? " perto" : "") }, l.ultimoDia || "—"),
+    falta ? el("div", { class: "sub" + (dias <= 2 ? " vence perto" : "") }, falta) : null,
+    el("div", { class: "sub", title: sit === 1 ? "O prazo de resposta começa a correr depois da leitura (ou quando vence o prazo de leitura e a intimação passa para \"Lidas e aguardando análise\")." : "" },
+      sit === 1 ? `Resposta: ${l.prazo || "—"}, após a leitura` : `Resposta: ${l.prazo || "—"}`),
+    el("div", { class: "sub" }, "enviado " + (l.dataEnvio || "—")));
+}
+
+// nome do sentenciado: passar o mouse mostra "copiar"; clicar no nome (ou no botão) copia
+function nomeCopiavel(nome) {
+  if (!nome) return el("div", { class: "nome" }, "—");
+  const aviso = el("span", { class: "copiado" }, "copiado ✓");
+  const copiar = (ev) => {
+    ev.stopPropagation();
+    // cópia imediata (no próprio clique); a área de transferência assíncrona fica como reserva
+    let feito = false;
+    try {
+      const t = el("textarea", { style: "position:fixed;left:-9999px;top:0" }, nome);
+      document.body.append(t); t.select(); feito = document.execCommand("copy"); t.remove();
+    } catch (e) {}
+    if (!feito && navigator.clipboard) navigator.clipboard.writeText(nome).catch(() => {});
+    aviso.classList.add("on");
+    setTimeout(() => aviso.classList.remove("on"), 1400);
+  };
+  return el("div", { class: "nome copiavel", title: "Clique para copiar o nome", onclick: copiar },
+    el("span", {}, nome), el("button", { class: "copiar", type: "button", title: "Copiar o nome", onclick: copiar }, "copiar"), aviso);
 }
 function desenharLinha(l) {
   const k = chaveLinha(l);
@@ -517,15 +752,15 @@ function desenhar() {
     if (abertas.has(chaveLinha(l))) corpo.append(linhaDetalhe(l, estado.analises[chaveLinha(l)]));
   }
   const lidos = linhas.filter((l) => (estado.analises[chaveLinha(l)] || {}).status === "ok");
-  const altos = lidos.filter((l) => (estado.analises[chaveLinha(l)].alertas || []).some((x) => x.nivel === "alto")).length;
+  const altos = lidos.filter((l) => { const p = providenciaDe(estado.analises[chaveLinha(l)], l); return p && p.urgente; }).length;
   const venc = linhas.filter((l) => { const d = diasAte(l.ultimoDia); return d != null && d <= 2; }).length;
   const r = $("resumo");
   r.textContent = "";
   if (estado.linhas.length) {
     r.append(el("span", {}, el("b", {}, linhas.length), ` de ${estado.linhas.length} na Mesa`),
       el("span", {}, el("b", {}, lidos.length), " lidos"),
-      el("span", {}, el("b", {}, altos), " com alerta vermelho"),
-      el("span", {}, el("b", {}, venc), " vencem em até 2 dias"),
+      el("span", {}, el("b", {}, altos), " com providência urgente"),
+      el("span", {}, el("b", {}, venc), estado.situacao === 1 ? " com leitura vencendo em até 2 dias" : " vencem em até 2 dias"),
       el("span", {}, `Mesa lida em ${new Date(estado.quando).toLocaleString("pt-BR")} · ${T.SITUACOES[estado.situacao] || ""}`));
   }
   $("lerProc").disabled = !!rodando || !linhas.length;
@@ -538,29 +773,108 @@ function desenhar() {
 function exportarXlsx() {
   const linhas = ordenar(filtradas());
   const cab = ["Final", "Processo", "Assistido", "Defensor", "Aba", "Enviado em", "Último dia", "Prazo", "Motivo (pendência)", "Movimento do motivo", "Resumo do motivo",
-    "Última decisão", "Data da decisão", "Resumo da decisão", "Mérito anterior", "Alertas", "Temas", "Desde a decisão"];
+    "Última decisão", "Data da decisão", "Resumo da decisão", "Providência sugerida", "Tipo da providência"];
   const dados = [cab];
   for (const l of linhas) {
     const a = estado.analises[chaveLinha(l)] || {};
-    const md = a.motivo && a.motivo.doc, dd = a.decisao && a.decisao.doc, mm = a.merito && a.merito.doc;
-    const txtDoc = (d) => !d ? "" : d.semArquivo ? "(sem arquivo)" : d.semTexto ? "(sem texto: abrir no SEEU)" : d.resumo;
+    const md = a.motivo && a.motivo.doc, dd = a.decisao && a.decisao.doc;
+    const pv = providenciaDe(a, l);
+    const txtDoc = (d) => !d ? "" : d.erro ? "(não lido: " + d.erro + ")" : d.semArquivo ? "(sem arquivo)" : d.semTexto ? "(sem texto: abrir no SEEU)" : d.resumo;
     dados.push([l.final, l.processo, l.executado, l.defensor, T.ABAS[l.aba], l.dataEnvio, l.ultimoDia, l.prazo,
       a.status === "erro" ? "erro: " + a.erro : a.pendencia ? a.pendencia.texto : a.status === "ok" ? "sem pendência" : "não lido",
       a.motivo ? `seq. ${a.motivo.seq} · ${a.motivo.data} · ${a.motivo.nome}` : "",
       a.mesma ? "(é a última decisão)" : txtDoc(md),
       a.decisao ? `seq. ${a.decisao.seq} · ${a.decisao.nome}` : "", a.decisao ? a.decisao.data : "", txtDoc(dd),
-      a.merito ? `seq. ${a.merito.seq} · ${a.merito.data} · ${a.merito.nome}: ${txtDoc(mm)}` : "",
-      (a.alertas || []).map((x) => x.txt).join("; "), (a.temas || []).join(", "),
-      (a.desde || []).map((m) => `${m.data} ${m.nome}`).join("; ")]);
+      pv ? pv.texto : "", pv ? pv.tipo + (pv.urgente ? " (urgente)" : "") : ""]);
   }
-  const bytes = T.xlsx(dados, [5, 26, 28, 24, 13, 11, 11, 15, 46, 36, 60, 34, 11, 70, 50, 40, 26, 50], "Triagem");
-  const url = URL.createObjectURL(new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
+  const bytes = T.xlsx(dados, [5, 26, 28, 24, 13, 11, 11, 15, 46, 36, 60, 34, 11, 70, 60, 18], "Triagem");
   const d = new Date(), p = (n) => String(n).padStart(2, "0");
-  const a = el("a", { href: url, download: `Triagem_Mesa_${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}.xlsx` });
-  document.body.append(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 30000);
+  salvarArquivo(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", `Triagem_Mesa_${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}.xlsx`);
+}
+// salva em Downloads com o nome dado (fora da pasta vigiada do APTO, que é só para RSPE e ficha). Se o Chrome recusar o
+// nome (acentos, em alguns sistemas), salva com o nome sem acento
+const semAcento = (s) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\x20-\x7e]/g, "_");
+async function salvarArquivo(bytes, tipo, nome) {
+  const url = URL.createObjectURL(new Blob([bytes], { type: tipo }));
+  // o nome vai também para o service worker, que o aplica na hora de nomear o download (ver background.js)
+  const baixar = async (n) => {
+    await chrome.storage.session.set({ ["nomeBlob:" + url]: n });
+    await chrome.downloads.download({ url, filename: n, conflictAction: "uniquify", saveAs: false });
+    return n;
+  };
+  try {
+    try {
+      return await baixar(nome);
+    } catch (e) {
+      if (!/filename/i.test(String(e && e.message))) throw e;
+      return await baixar(semAcento(nome));
+    }
+  } finally {
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  }
+}
+
+// ---- destino das petições: pasta escolhida pelo usuário (guardada), perguntar a cada vez, ou Downloads
+function bancoPastas() {
+  return new Promise((ok, erro) => {
+    const r = indexedDB.open("apto-triagem", 1);
+    r.onupgradeneeded = () => r.result.createObjectStore("pastas");
+    r.onsuccess = () => ok(r.result);
+    r.onerror = () => erro(r.error);
+  });
+}
+async function pastaGuardada() {
+  try {
+    const db = await bancoPastas();
+    return await new Promise((ok) => { const g = db.transaction("pastas").objectStore("pastas").get("peticoes"); g.onsuccess = () => ok(g.result || null); g.onerror = () => ok(null); });
+  } catch (e) { return null; }
+}
+async function guardarPasta(h) {
+  const db = await bancoPastas();
+  await new Promise((ok, erro) => { const t = db.transaction("pastas", "readwrite"); h ? t.objectStore("pastas").put(h, "peticoes") : t.objectStore("pastas").delete("peticoes"); t.oncomplete = ok; t.onerror = () => erro(t.error); });
+}
+async function mostrarDestino() {
+  const h = await pastaGuardada();
+  $("petDestino").textContent = prefs.perguntarDestino ? "perguntar a cada vez" : h ? "pasta “" + h.name + "”" : "Downloads";
+  $("petLimparPasta").style.display = h && !prefs.perguntarDestino ? "" : "none";
+  $("petPerguntar").checked = !!prefs.perguntarDestino;
+}
+async function escolherPasta() {
+  if (!self.showDirectoryPicker) return mensagemPet("Este navegador não permite escolher a pasta; as petições vão para Downloads.", true);
+  try {
+    const h = await self.showDirectoryPicker({ id: "apto-peticoes", mode: "readwrite", startIn: "documents" });
+    await guardarPasta(h);
+    prefs.perguntarDestino = false; guardarPrefs();
+    mostrarDestino();
+    mensagemPet("As petições serão salvas na pasta “" + h.name + "”.");
+  } catch (e) { if (e && e.name !== "AbortError") mensagemPet("Não foi possível usar a pasta: " + e.message, true); }
+}
+function mensagemPet(t, erro) { $("petMsg").textContent = t; $("petMsg").className = erro ? "erro" : ""; }
+const TIPOS = { pdf: { description: "PDF", accept: { "application/pdf": [".pdf"] } }, docx: { description: "Documento do Word", accept: { "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"] } } };
+// devolve onde salvou (texto para a mensagem) ou "" se cancelado
+async function salvarPeticao(bytes, tipo, nome, formato) {
+  if (prefs.perguntarDestino && self.showSaveFilePicker) {
+    try {
+      const fh = await self.showSaveFilePicker({ id: "apto-peticoes", suggestedName: nome, types: [TIPOS[formato]] });
+      const w = await fh.createWritable(); await w.write(bytes); await w.close();
+      return fh.name;
+    } catch (e) { if (e && e.name === "AbortError") return ""; throw e; }
+  }
+  const pasta = await pastaGuardada();
+  if (pasta) {
+    let perm = await pasta.queryPermission({ mode: "readwrite" });
+    if (perm !== "granted") perm = await pasta.requestPermission({ mode: "readwrite" });
+    if (perm === "granted") {
+      let final = nome;
+      for (let k = 2; k < 100; k++) {
+        try { await pasta.getFileHandle(final); final = nome.replace(/(\.\w+)$/, ` (${k})$1`); } catch (e) { break; }
+      }
+      const fh = await pasta.getFileHandle(final, { create: true });
+      const w = await fh.createWritable(); await w.write(bytes); await w.close();
+      return "“" + pasta.name + "”: " + final;
+    }
+  }
+  return "Downloads: " + (await salvarArquivo(bytes, tipo, nome));
 }
 
 // ---------------------------------------------------------------- estado da tela
@@ -604,7 +918,7 @@ $("salvarFaixa").onclick = () => {
 };
 $("busca").oninput = () => desenhar();
 $("tipo").onchange = () => desenhar();
-$("soAlerta").onchange = () => desenhar();
+$("prov").onchange = () => desenhar();
 $("situacao").onchange = () => { prefs.situacao = $("situacao").value; guardarPrefs(); };
 document.querySelectorAll(".aba").forEach((c) => { c.onchange = () => { prefs.abas = [...document.querySelectorAll(".aba:checked")].map((x) => x.value); guardarPrefs(); desenhar(); }; });
 document.querySelectorAll("th[data-ord]").forEach((th) => { th.onclick = () => { prefs.ordem = prefs.ordem === th.dataset.ord ? "urgencia" : th.dataset.ord; guardarPrefs(); desenhar(); }; });

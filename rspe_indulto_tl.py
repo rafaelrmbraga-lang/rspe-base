@@ -397,7 +397,7 @@ def linha(r, hoje=None):
                                    "remição" if n > 0 else "perda de dias remidos", "LEP, art. 128 (remição é pena cumprida)" if n > 0 else "LEP, art. 127",
                                    ("+" if n > 0 else "−") + rs.pl(abs(n), "dia", "dias"), "entra no cumprido a partir de %s" % _f(dt))})
 
-    per_seeu = rs.periodos_custodia(eventos)
+    per_seeu = rs.periodos_custodia(rs.eventos_sem_custodia_outro_processo(eventos, r))
     lc_seeu = rs.periodos_livramento(eventos, incidentes)
     rem_seeu = [(dt, n) for dt, n, k, _ in remicoes]  # remições e perdas de remidos: a mesma conta da aba (rs.remicoes_liquidas)
 
@@ -939,6 +939,8 @@ def _cond_prosa(cond, evento=""):
 def _pena_cumprida(B):
     """(pena, cumprido) quando a pena considerada pelo decreto já estava integralmente cumprida na data (nada a indultar); senão None."""
     pc, cu = _p2d(B.get("pena_considerada_txt")), _p2d(B.get("cumprido_txt"))
+    if B.get("unificada"):
+        return None  # execução unificada com outras penas em cumprimento: não há extinção de pena isolada (rd.execucao_unificada)
     if pc and cu is not None and cu >= pc:
         return pc, cu
     return None
@@ -1400,7 +1402,8 @@ def _decreto(D, ref, pub, C, cumprido, data_atinge, faltas, hoje, ultimo, em_cur
     if num_i:
         ind.update({"pena_considerada_txt": _pena(num_i["pena"]), "cumprido_txt": _pena(num_i["cumprido"]),
                     "remanescente_txt": _pena(num_i["remanescente"]), "fonte": num_i.get("fonte", ""),
-                    "reinc": "reincidente" if num_i.get("reinc") else ("primária" if r.get("_sexo") == "F" else "primário")})
+                    "reinc": "reincidente" if num_i.get("reinc") else ("primária" if r.get("_sexo") == "F" else "primário"),
+                    "unificada": rd.execucao_unificada(r, num_i["pena"])})
     out["indulto"] = ind
 
     # comutação: a da aba
@@ -1646,7 +1649,7 @@ def _decreto_ficha(f, x, C, cumprido, faltas, crimes_all=None):
     # concurso com impeditivo: o cabeçalho mostra os números da conta das hipóteses (depois da fração do impeditivo), os mesmos da aba
     p_h, c_h = de.get("pena_conc", de.get("pena") or 0), de.get("cumprido_conc", de.get("cumprido") or 0)
     ind = {"status": st_i, "rotulo": rot_i, "texto_aba": rot_i, "checklist": ind_ck, "projecao": None,
-           "pena_considerada_txt": _pena(p_h), "cumprido_txt": _pena(c_h), "remanescente_txt": _pena(max(0, p_h - c_h)),
+           "pena_considerada_txt": _pena(p_h), "cumprido_txt": _pena(c_h), "remanescente_txt": _pena(max(0, p_h - c_h)), "unificada": bool(x.get("unificada")),
            "fonte": (de.get("fonte") or "eventos do RSPE") + ((" - crimes não impeditivos (pena total %s, cumprido total %s)%s" % (
                _pena(de.get("pena") or 0), _pena(de.get("cumprido") or 0), conc_txt)) if "pena_conc" in de else ""), "reinc": reinc}
     hc_ok = next((h for h in hc if h["ok"]), hc[0] if hc else None)

@@ -22,6 +22,11 @@ async function carregar() {
   $("ativoTxt").textContent = cfg.ativo ? "ligada" : "desligada";
   $("raiz").value = cfg.raiz;
   $("aviso").checked = !!cfg.avisoNaPagina;
+  $("rspeAuto").checked = cfg.rspeAuto !== false;
+  $("rspeDica").textContent = cfg.rspeAuto !== false
+    ? "O automático baixa um RSPE por processo, base e dia, só do processo aberto na tela. Este botão baixa de novo mesmo que já tenha baixado hoje."
+    : "Download automático do RSPE desligado: abrir um processo não baixa nada. Este botão e o lote continuam baixando quando você pede.";
+  $("rspeDica").className = "dica" + (cfg.rspeAuto !== false ? "" : " e");
   $("dlRaiz").textContent = "Downloads\\" + cfg.raiz;
   // bases: as do APTO (lidas do APTO aberto) e as incluídas aqui
   const ap = st.apto || { ok: false, bases: [], aberta: "" };
@@ -79,6 +84,7 @@ async function salvar(parcial) {
 
 $("ativo").onchange = (e) => salvar({ ativo: e.target.checked });
 $("aviso").onchange = (e) => salvar({ avisoNaPagina: e.target.checked });
+$("rspeAuto").onchange = (e) => salvar({ rspeAuto: e.target.checked });
 $("base").onchange = (e) => salvar({ base: e.target.value });
 $("raiz").onchange = (e) => salvar({ raiz: e.target.value });
 $("add").onclick = () => {

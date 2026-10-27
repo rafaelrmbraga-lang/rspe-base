@@ -8,7 +8,8 @@ importScripts("comum.js");
 const A = self.APTO;
 
 const AUTO = "@apto";            // base de destino = a base aberta no APTO
-const PADRAO = { ativo: true, raiz: "APTO", base: AUTO, bases: [], avisoNaPagina: true };
+// rspeAuto: baixa o RSPE sozinho ao abrir um processo (e ao abrir "Situação Carcerária"); desligado, só o botão do painel e o lote baixam
+const PADRAO = { ativo: true, rspeAuto: true, raiz: "APTO", base: AUTO, bases: [], avisoNaPagina: true };
 const APTO_URL = "http://127.0.0.1:47321/apto"; // o APTO aberto informa as bases e a base aberta (só neste computador)
 const INTERVALO_MS = 4000;      // mínimo entre dois downloads
 const TETO_HORA = 40;           // downloads automáticos por hora (ao abrir processos)
@@ -155,6 +156,7 @@ async function podeBaixar(processo, forcar, lote) {
   const c = await cfgDestino(lote);
   const st = await estado();
   if (!c.ativo) return { ok: false, motivo: "desligada" };
+  if (!c.rspeAuto && !forcar && !lote) return { ok: false, motivo: "rspe automático desligado" };
   if (st.pausadoAte > Date.now()) return { ok: false, motivo: "pausada depois de falhas seguidas; faça login no SEEU e clique em \"retomar\" no ícone do APTO" };
   if (!processo) return { ok: false, motivo: "nº do processo não encontrado na página" };
   const chave = A.chaveDia(c, processo, A.hojeISO());
@@ -210,6 +212,17 @@ async function criarPastas() {
 
 // nome de cada download
 chrome.downloads.onDeterminingFilename.addListener((item, sugerir) => {
+  // downloads da página da triagem (planilha, petição: endereço blob:): o nome vem da página (guardado em storage.session
+  // antes do download). Precisa ser sugerido aqui: sem sugestão, o Chrome usa o nome interno do blob (um código)
+  if (item.byExtensionId === chrome.runtime.id && /^blob:/.test(item.url || "")) {
+    const chave = "nomeBlob:" + item.url;
+    chrome.storage.session.get(chave).then((r) => {
+      const nome = r[chave];
+      chrome.storage.session.remove(chave).catch(() => {});
+      nome ? sugerir({ filename: nome, conflictAction: "uniquify" }) : sugerir();
+    }, () => sugerir());
+    return true;
+  }
   if (item.byExtensionId === chrome.runtime.id) {
     const arq = proximosNomes.shift();
     arq ? sugerir({ filename: arq, conflictAction: /LEIA-ME\.txt$/.test(arq) ? "overwrite" : "uniquify" }) : sugerir();
@@ -255,10 +268,10 @@ chrome.tabs.onUpdated.addListener(async (tabId, info, tab) => {
   // sem o nº (página do processo não vista), salva assim mesmo: o APTO lê o nº de dentro do PDF
   const p = processo ? await podeBaixar(processo, false) : await (async () => {
     const c = await cfgDestino();
-    return c.ativo ? { ok: true, chave: "", cfg: c } : { ok: false, motivo: "desligada" };
+    return !c.ativo ? { ok: false, motivo: "desligada" } : !c.rspeAuto ? { ok: false, motivo: "rspe automático desligado" } : { ok: true, chave: "", cfg: c };
   })();
   if (!p.ok) {
-    if (!p.repetido && p.motivo !== "desligada") await registrar({ processo, base: (await cfgDestino()).base, status: "erro", msg: p.motivo });
+    if (!p.repetido && p.motivo !== "desligada" && p.motivo !== "rspe automático desligado") await registrar({ processo, base: (await cfgDestino()).base, status: "erro", msg: p.motivo });
     return;
   }
   const arquivo = A.caminhoArquivo(p.cfg, processo, A.hojeISO());

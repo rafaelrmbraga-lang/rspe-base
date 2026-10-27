@@ -41,7 +41,7 @@
 <header>
   <img src="icones/48.png" alt="">
   <div><b>APTO</b><small>RSPE do SEEU e ficha do SIAPEN para a pasta vigiada</small></div>
-  <label class="liga" title="Liga ou desliga o download automático"><input type="checkbox" id="ativo"> <span id="ativoTxt">ligada</span></label>
+  <label class="liga" title="Liga ou desliga a extensão inteira (RSPE, lote, ficha do SIAPEN e SAP). Para desligar só o RSPE automático, use a opção abaixo."><input type="checkbox" id="ativo"> <span id="ativoTxt">ligada</span></label>
 </header>
 
 <section>
@@ -59,9 +59,10 @@
 </section>
 
 <section>
+  <label class="chk" style="margin:0 0 8px" title="Desligado: abrir um processo ou a Situação Carcerária no SEEU não baixa o RSPE. O botão abaixo e o lote continuam baixando."><input type="checkbox" id="rspeAuto"> <b>Baixar o RSPE automaticamente ao abrir um processo</b></label>
   <button class="pri" id="agora">Baixar o RSPE do processo aberto (SEEU)</button>
   <div class="estado" id="estado"></div>
-  <div class="dica">O automático baixa um RSPE por processo, base e dia, só do processo aberto na tela. Este botão baixa de novo mesmo que já tenha baixado hoje.</div>
+  <div class="dica" id="rspeDica">O automático baixa um RSPE por processo, base e dia, só do processo aberto na tela. Este botão baixa de novo mesmo que já tenha baixado hoje.</div>
 </section>
 
 <section>

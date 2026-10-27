@@ -156,6 +156,8 @@
     if (p === "/seeu/visualizacaoProcesso.do") {
       if (metodo !== "GET" || corpo) return "processo: só GET";
       if (q.has("_tj") && so("_tj") && /^[0-9a-f]+$/.test(q.get("_tj"))) return "";
+      // pelo nº do processo (o mesmo endereço do lote de RSPE)
+      if (q.get("actionType") === "visualizar" && so("actionType", "numeroUnico") && /^\d{20}$/.test(q.get("numeroUnico") || "")) return "";
       if (q.get("actionType") === "visualizar" && so("actionType", "selectedIcon") && (!q.has("selectedIcon") || q.get("selectedIcon") === "tabMovimentacoesProcesso")) return "";
       return "parâmetro não permitido no processo";
     }
