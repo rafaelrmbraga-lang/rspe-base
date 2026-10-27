@@ -2173,9 +2173,12 @@ def campos_faltantes(r):
     # pena e não imprime regime nem término - não falta nada
     encerrada = bool(r.get("execucao_extinta")) or (bool(r.get("_crimes")) and not ativos) or \
         "ARQUIVAD" in _sem_acento(str(r.get("status_execucao") or r.get("status") or "")).upper()
+    # só medida de segurança ativa: o prazo mínimo não é pena e a internação/tratamento não tem término (CP, art. 97, § 1º) - pena
+    # total, pena cumprida, regime e término em branco ou zerados não são dados faltando
+    so_ms = bool(ativos) and all(medida_seguranca(c) for c in ativos)
     for k, rot in (("nome", "nome"), ("data_geracao_rspe", "data de geração"), ("pena_total", "pena total"),
                    ("pena_cumprida", "pena cumprida"), ("regime_atual", "regime atual")):
-        if (encerrada or sem_inicio_seeu(r) or sem_calculo_seeu(r) or sem_condenacao_seeu(r)) and k in ("pena_total", "pena_cumprida", "regime_atual"):
+        if (encerrada or so_ms or sem_inicio_seeu(r) or sem_calculo_seeu(r) or sem_condenacao_seeu(r)) and k in ("pena_total", "pena_cumprida", "regime_atual"):
             continue
         if k == "regime_atual" and (interrompida_no_seeu(r) or sem_evento_seeu(r)):
             continue  # pena interrompida ou sem prisão lançada no SEEU: o regime só é impresso com o cumprimento em curso
@@ -2188,7 +2191,7 @@ def campos_faltantes(r):
             falta.append("pena de algum crime")
         if any(not c.get("data_infracao") for c in ativos):
             falta.append("data do fato de algum crime")
-    if not r.get("termino_previsao_seeu") and not interrompida_no_seeu(r) and not encerrada and not sem_inicio_seeu(r) \
+    if not r.get("termino_previsao_seeu") and not interrompida_no_seeu(r) and not encerrada and not so_ms and not sem_inicio_seeu(r) \
             and not sem_evento_seeu(r) \
             and not sem_calculo_seeu(r) and not sem_condenacao_seeu(r):
         falta.append("término")

@@ -233,18 +233,28 @@ ESPECIAIS = {  # hipóteses próprias do art. 112 (chave na janela de vigência 
 }
 
 
-def fracao_progressao_esperada(data_fato, hediondo, morte, vga, reincidente, reinc_especifico=None, especial=None):
+def _vga_na_janela(j, vga, titulo_xii):
+    """Crime do Título XII da Parte Especial do CP (arts. 359-I e seguintes, contra o Estado Democrático de Direito): na janela
+    que o exclui dos incisos de violência (Lei 15.402/2026, "vga_exclui_titulo_xii"), o percentual é o do crime sem violência."""
+    return bool(vga) and not (titulo_xii and j.get("vga_exclui_titulo_xii"))
+
+
+def fracao_progressao_esperada(data_fato, hediondo, morte, vga, reincidente, reinc_especifico=None, especial=None, titulo_xii=False):
     """Devolve (fração, rótulo, observações) esperadas pela lei da data do fato, com as teses do STJ/STF.
-    reinc_especifico: None = desconhecido. especial: chave de ESPECIAIS (usada só se a janela a prevê)."""
+    reinc_especifico: None = desconhecido. especial: chave de ESPECIAIS (usada só se a janela a prevê). titulo_xii: crime do
+    Título XII do CP (a Lei 15.402/2026 o excluiu dos incisos I e II do art. 112)."""
     j = regime_progressao(data_fato)
     if not j:
         return None, "", ["sem data do fato: fração não aferida"]
     obs = []
+    if vga and not _vga_na_janela(j, vga, titulo_xii):
+        vga = False
+        obs.append("crime do Título XII do CP (contra o Estado Democrático de Direito): excluído dos incisos de violência do art. 112 (Lei 15.402/2026)")
     if especial and j.get(especial) and not (especial == "feminicidio_primario" and reincidente):
         valor = j.get(especial)
         if especial in ("comando_orcrim", "milicia"):
             # hipótese que se soma às demais: vale o percentual mais alto entre ela e o do crime (ex.: reincidente em hediondo)
-            f_base, rot_base, obs_base = fracao_progressao_esperada(data_fato, hediondo, morte, vga, reincidente, reinc_especifico)
+            f_base, rot_base, obs_base = fracao_progressao_esperada(data_fato, hediondo, morte, vga, reincidente, reinc_especifico, titulo_xii=titulo_xii)
             if f_base is not None and f_base > fr(valor):
                 return f_base, rot_base, obs_base + ["%s: %s, menor que o do crime" % (ESPECIAIS[especial], valor)]
         obs.append(ESPECIAIS.get(especial, especial))
@@ -278,7 +288,7 @@ def fracao_progressao_esperada(data_fato, hediondo, morte, vga, reincidente, rei
     return fr(valor), "%s (%s)" % (valor, j.get("lei", "")), obs
 
 
-def fracao_mais_benefica(data_fato, hediondo, morte, vga, reincidente, especial=None):
+def fracao_mais_benefica(data_fato, hediondo, morte, vga, reincidente, especial=None, titulo_xii=False):
     """Considera retroatividade da lei mais benéfica (Tema 1354): menor fração entre a da data do fato e as posteriores."""
     jan = carregar().get("progressao", {}).get("regimes_vigencia", [])
     if not data_fato:
@@ -288,20 +298,23 @@ def fracao_mais_benefica(data_fato, hediondo, morte, vga, reincidente, especial=
         ate = d(j.get("ate", "9999-12-31")) or date.max
         if ate < data_fato:
             continue
-        f, rot, _ = _fracao_em(j, hediondo, morte, vga, reincidente, especial)
+        f, rot, _ = _fracao_em(j, hediondo, morte, vga, reincidente, especial, titulo_xii)
         if f is not None:
             cands.append((f, rot, j.get("lei", "")))
     if not cands:
         return None, "", []
-    f_fato, rot_fato, obs = fracao_progressao_esperada(data_fato, hediondo, morte, vga, reincidente, especial=especial)
+    f_fato, rot_fato, obs = fracao_progressao_esperada(data_fato, hediondo, morte, vga, reincidente, especial=especial, titulo_xii=titulo_xii)
     melhor = min(cands, key=lambda x: x[0])
     if f_fato is not None and melhor[0] < f_fato:
         obs.append("lei posterior mais benéfica retroage: %s" % melhor[1])
+        if titulo_xii and vga and "15.402" in melhor[2]:
+            obs[-1] += "; o crime é do Título XII do CP, que a Lei 15.402/2026 excluiu dos incisos de violência do art. 112"
         return melhor[0], melhor[1], obs
     return f_fato, rot_fato, obs
 
 
-def _fracao_em(j, hediondo, morte, vga, reincidente, especial=None):
+def _fracao_em(j, hediondo, morte, vga, reincidente, especial=None, titulo_xii=False):
+    vga = _vga_na_janela(j, vga, titulo_xii)
     if especial and j.get(especial) and not (especial == "feminicidio_primario" and reincidente):
         v = j.get(especial)
         if especial in ("comando_orcrim", "milicia"):

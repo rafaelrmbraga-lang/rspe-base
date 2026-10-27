@@ -642,6 +642,15 @@ def _hediondo_seeu(c):
     ou 1/1. O rótulo engana: "1/3 - Crime Hediondo até 24/07/1990" e "1/6 - Crime Hediondo até 28/03/2007" são as frações comuns
     da regra anterior à hediondez."""
     fp, fl = _fr_seeu(c.get("fracao_progressao")), _fr_seeu(c.get("fracao_livramento"))
+    # milícia privada (CP, art. 288-A) e comando de organização criminosa: o percentual próprio do art. 112, VI, b e c (50% ou
+    # 75%, conforme a data do fato) é o legal da hipótese, não indica tratamento como hediondo
+    _lei = rs.num_lei(c.get("lei"))
+    _cp = _lei in ("2848", "") or ("PENAL" in (c.get("lei") or "").upper() and "MILITAR" not in (c.get("lei") or "").upper())
+    _esp = "milicia" if (_cp and rs.num_art(c.get("artigo")) == "288-A") else "comando_orcrim" if c.get("comando_orcrim") == "S" else None
+    _fato = rs.to_date(c.get("data_infracao") or "")
+    _pe = (rg.regime_progressao(_fato) or {}).get(_esp) if (_esp and _fato) else None
+    if _pe and fp is not None and abs(float(fp) - float(rg.fr(_pe))) < 0.005:
+        fp = None
     # no tráfico de pessoas (CP, art. 149-A) os 2/3 do livramento são os legais (CP, art. 83, V): não indicam hediondez
     fl_hed = fl is not None and (fl >= Fraction(1, 1) if _trafico_pessoas(c) else fl >= Fraction(2, 3))
     return bool((fp is not None and fp >= Fraction(2, 5)) or fl_hed)
@@ -1067,24 +1076,35 @@ def _lancamentos_seeu(r, crimes, ativos, incidentes, eventos):
         ger = D(r.get("data_geracao_rspe"))
         prop = [e for e in eventos if not e.get("_ficha")]
         cump = rs.pena_para_dias(r.get("pena_cumprida"))
-        if ger and prop and cump and rs.pena_para_dias(r.get("pena_total")) and "SUSPENSA" not in (r.get("situacao_eventos") or r.get("situacao_cumprimento") or "").upper():
+        _procs = [c.get("processo_criminal") for c in crimes if c.get("processo_criminal")]
+
+        def _procs_do_dia(e):
+            # o processo da prisão pode vir no evento de prisão do mesmo dia, não no da interrupção
+            return [q for e2 in prop if e2.get("data") == e.get("data") for q in rs.lista_processos(e2.get("processos"))]
+        # interrupção "por prisão em outro processo" cujo processo é desta execução: a custódia é desta pena (detração
+        # obrigatória, CP, art. 42) - o caso é de alerta, com o período a computar, também com a execução "suspensa" (o SEEU lança
+        # a interrupção sozinha, sem reinício: a pessoa segue presa por esta execução e nada é computado)
+        _int_proprio = [e for e in prop if "INTERRUP" in (e.get("tipo") or "").upper() and re.search(r"OUTRO PROCESSO", e.get("motivo") or "", re.I)
+                        and any(rs.mesmo_processo(q, x) for q in _procs_do_dia(e) for x in _procs)] if ger and prop else []
+        if ger and prop and cump and rs.pena_para_dias(r.get("pena_total")) and ("SUSPENSA" not in (r.get("situacao_eventos") or r.get("situacao_cumprimento") or "").upper()
+                                                                               or _int_proprio):
             cust = sum(((fim or ger) - ini).days for ini, fim in rs.periodos_custodia(prop) if ini <= ger)
             _rb, _rp = rs.saldo_remidos_num(r.get("saldo_remidos"))
             rem = max((_rb or 0) - (_rp or 0), 0)  # saldo (remidos menos os perdidos), não o bruto
+            # período depois de cada interrupção desta execução até o evento seguinte (ou a emissão): custódia desta pena
+            _ord = rs.eventos_cronologicos(prop)
+            for e in _int_proprio:
+                d0 = D(e.get("data"))
+                if not d0 or d0 > ger:
+                    continue
+                _seg = [D(x.get("data")) for x in _ord if D(x.get("data")) and D(x.get("data")) >= d0 and "INTERRUP" not in (x.get("tipo") or "").upper()]
+                cust += ((min(_seg) if _seg else ger) - d0).days
             falta = cust + rem - cump
-            # interrupção "por prisão em outro processo" cujo processo é desta execução: a custódia é desta pena (detração
-            # obrigatória, CP, art. 42) - o caso é de alerta, com o período a computar
-            _procs = [c.get("processo_criminal") for c in crimes if c.get("processo_criminal")]
-            def _procs_do_dia(e):
-                # o processo da prisão pode vir no evento de prisão do mesmo dia, não no da interrupção
-                return [q for e2 in prop if e2.get("data") == e.get("data") for q in rs.lista_processos(e2.get("processos"))]
-            _int_proprio = [e for e in prop if "INTERRUP" in (e.get("tipo") or "").upper() and re.search(r"OUTRO PROCESSO", e.get("motivo") or "", re.I)
-                            and any(rs.mesmo_processo(q, x) for q in _procs_do_dia(e) for x in _procs)]
             if falta > 60 and not [c for c in crimes if c not in ativos] and _int_proprio:
                 out.append(_item("alerta", "Prisão por processo desta execução lançada como interrupção (%s): %s sem cômputo" % (
                                      _int_proprio[-1].get("data") or "?", rs.pl(falta, "dia", "dias")),
                                  "O SEEU interrompeu o cumprimento em %s por \"prisão em outro processo\", mas o processo indicado (%s) integra esta "
-                                 "execução: a custódia é desta pena e deve ser computada (detração). Os eventos de prisão somam %s de custódia e o saldo "
+                                 "execução: a custódia é desta pena e deve ser computada (detração). Com ela, a custódia soma %s e o saldo "
                                  "de remição é de %s, e o SEEU imprime %s de pena cumprida. Pedir a retificação do evento e o recálculo." % (
                                      _int_proprio[-1].get("data") or "?", ", ".join(q for q in _procs_do_dia(_int_proprio[-1]) if any(rs.mesmo_processo(q, x) for x in _procs)) or "?",
                                      rs.pl(cust, "dia", "dias"), rs.pl(rem, "dia", "dias"), r.get("pena_cumprida")),
@@ -1365,6 +1385,56 @@ def _detracao_outro_processo(r, crimes, ativos, eventos):
     return out
 
 
+RE_INTERRUP_CUMPRIMENTO = re.compile(r"MONITORA|TORNOZEL|DOMICILIAR", re.I)
+RE_INTERRUP_LIVRE = re.compile(r"FUGA|EVAS|FORAGID|DESCUMPR|ROMPIMENT|VIOLA[CÇ]|REVOG|ABANDON|OUTRO PROCESSO|OUTRA EXECU", re.I)
+
+
+def _cumprimento_como_interrupcao(r):
+    """Interrupção do SEEU por período que é cumprimento de pena: prisão domiciliar ou monitoramento eletrônico no lugar do regime
+    (LEP, arts. 117 e 146-B; SV 56 e RE 641.320) e a espera de vaga por incompatibilidade de regime que o próprio SEEU não contou
+    (marca _incompat_corta). Data do SEEU contrária à lei: a aba mantém os números do SEEU, com ressalva, e a Auditoria alerta,
+    com os dias sem cômputo (da interrupção até o evento seguinte do RSPE ou a emissão)."""
+    ger = rs.to_date(r.get("data_geracao_rspe") or "")
+    evs = rs.eventos_cronologicos([e for e in r.get("_eventos", []) if not e.get("_ficha") and rs.to_date(e.get("data") or "")])
+    out = []
+    if not ger:
+        return out
+    for k, e in enumerate(evs):
+        if "INTERRUP" not in (e.get("tipo") or "").upper():
+            continue
+        mot = rs._sem_acento(e.get("motivo") or "").upper()
+        incompat = bool(e.get("_incompat_corta"))
+        if not incompat and not (RE_INTERRUP_CUMPRIMENTO.search(mot) and not RE_INTERRUP_LIVRE.search(mot)):
+            continue
+        d0 = rs.to_date(e["data"])
+        if d0 > ger:
+            continue
+        prox = next((x for x in evs[k + 1:] if "INTERRUP" not in (x.get("tipo") or "").upper()), None)
+        fim = min(rs.to_date(prox["data"]), ger) if prox else ger
+        dias = (fim - d0).days
+        if dias < 1:
+            continue
+        ate = ("até o reinício em %s" % rs.fmt(fim)) if prox and fim < ger else "até a emissão do RSPE (%s), sem reinício lançado" % rs.fmt(ger)
+        if incompat:
+            tit = "Espera de vaga (incompatibilidade de regime) lançada como interrupção (%s): %s sem cômputo" % (rs.fmt(d0), rs.pl(dias, "dia", "dias"))
+            det = ("O SEEU interrompeu o cumprimento em %s por \u201c%s\u201d e não contou o período (%s): a pena cumprida impressa (%s) só "
+                   "fecha sem ele. A falta de vaga no regime fixado não pode prejudicar o condenado: enquanto espera, ele cumpre a pena em "
+                   "regime menos gravoso, em domiciliar ou em monitoramento eletrônico, e o período é pena cumprida, não liberdade. A aba "
+                   "mantém os números do SEEU. Pedir o cômputo do período como cumprimento e o recálculo da progressão, do livramento e "
+                   "do término." % (rs.fmt(d0), (e.get("motivo") or "").strip().lower(), ate, r.get("pena_cumprida") or "?"))
+            fund = "Súmula Vinculante 56/STF; STF, RE 641.320; LEP, arts. 111 e 112."
+        else:
+            tit = "Monitoramento eletrônico/prisão domiciliar lançado como interrupção (%s): %s sem cômputo" % (rs.fmt(d0), rs.pl(dias, "dia", "dias"))
+            det = ("O SEEU interrompeu o cumprimento em %s por \u201c%s\u201d (%s). A prisão domiciliar e o monitoramento eletrônico fixados "
+                   "na execução, no lugar do regime ou por falta de vaga, são cumprimento de pena, não liberdade: o período deve ser "
+                   "computado (salvo evasão ou descumprimento reconhecidos). A aba mantém os números do SEEU. Conferir a decisão que fixou "
+                   "a medida e pedir o cômputo do período como cumprimento e o recálculo da progressão, do livramento e do término." % (
+                       rs.fmt(d0), (e.get("motivo") or "").strip().lower(), ate))
+            fund = "LEP, arts. 117 e 146-B; Súmula Vinculante 56/STF; STF, RE 641.320; LEP, art. 111."
+        out.append(_item("alerta", tit, det, fund, tipo="cumprimento-lancado-como-interrupcao", ref=rs.fmt(d0)))
+    return out
+
+
 def auditar(r, hoje=None):
     hoje = hoje or date.today()
     itens = []
@@ -1470,6 +1540,7 @@ def auditar(r, hoje=None):
                                (_u.get("tipo") or "interrupção").lower(), (" - " + _u.get("motivo").lower()) if _u.get("motivo") else "", _u.get("data") or "?",
                                " nem ".join(x for x, v in (("o regime atual", r.get("regime_atual")), ("o término", r.get("termino_previsao_seeu"))) if not v)),
                            "LEP, arts. 111 e 112.", tipo="pena-interrompida-seeu"))
+    itens.extend(_cumprimento_como_interrupcao(r))
     _oe = r.get("_outras_execucoes") or []
     if _oe:
         _at = [o for o in _oe if not o["encerrada"] and o["tem_crime"]]
@@ -1783,6 +1854,8 @@ def auditar(r, hoje=None):
                for a_ in r.get("_acoes_sem_crime") or [] if "MEDIDA" not in (a_.get("pena_total_processo") or "").upper()]
         _sc = [(n_, d_) for n_, d_ in _sc if d_]
         _ms = [c for c in ativos if c.get("medida_seguranca")]
+    if not pena_total and ativos and not rs.sem_inicio_seeu(r) and len(ativos) - len(_ms) + len(_sc) > 0:
+        # só medida de segurança (sem pena e sem ação com pena): não há pena a calcular (CP, art. 97, § 1º)
         itens.append(_item("alerta", "Guia sem pena calculada: pena total %s com %s" % (
                                r.get("pena_total") or "em branco", rs.pl(len(ativos) - len(_ms) + len(_sc), "condenação ativa", "condenações ativas")),
                            "As condenações ativas somam %s%s%s%s. Sem cálculo de pena, o SEEU não imprime pena cumprida, regime atual, marcos nem término - não é falha "
@@ -2245,10 +2318,15 @@ def auditar(r, hoje=None):
         elif _cp and (art == "121-A" or (art == "121" and rs.re.match(r"\s*§\s*2[ºo°]?\s*,?\s*(inciso\s*)?VI\b", _tp))):
             especial = "feminicidio_primario"
         # desde 25/03/2026 o VI, b exige organização criminosa ULTRAVIOLENTA: o RSPE não diz; 75% só se o SEEU aplicou (conferir)
-        orcrim_uv = especial == "comando_orcrim" and fato and fato >= rg.data_lei_15358()
+        # salvo quando a organização ultraviolenta é elementar do tipo: domínio social estruturado (Lei 15.358/2026, art. 2º) ou
+        # capitulação que a nomeia - aí os 75% e a vedação do livramento são certos
+        _uv_tipo = (lei == "15358" and art == "2") or "ULTRAVIOLENT" in rs._sem_acento("%s %s" % (c.get("artigo") or "", _tp)).upper()
+        orcrim_uv = especial == "comando_orcrim" and fato and fato >= rg.data_lei_15358() and not _uv_tipo
         if orcrim_uv:
             especial = None
-        f_esp, rot, obs = rg.fracao_mais_benefica(fato, hed, morte, vga, reinc, especial=especial)
+        # crime do Título XII do CP (arts. 359-I e seguintes): a Lei 15.402/2026 o excluiu dos incisos de violência (retroage)
+        tit_xii = bool(_cp and re.match(r"359-[I-U]$", art or ""))
+        f_esp, rot, obs = rg.fracao_mais_benefica(fato, hed, morte, vga, reinc, especial=especial, titulo_xii=tit_xii)
         # feminicídio (LEP, art. 112, VI-A, e VI, d): a hipótese especial pressupõe o crime consumado - na tentativa não há morte, e a
         # tese é o percentual do hediondo sem morte (V ou, desde 25/03/2026, o da Lei 15.358). O RSPE quase nunca indica a tentativa:
         # sem "resultado morte" marcado (ou com a tentativa lida no tipo), "verificar" - o esperado continua o da hipótese especial
@@ -2268,7 +2346,7 @@ def auditar(r, hoje=None):
             if not _semt_g:
                 obs = obs + ["sem condenação anterior por hediondo transitada antes do fato no RSPE"]
             for _dref in ([fato, rg.data_lei_13964()] if fato and fato < rg.data_lei_13964() else [fato]):
-                f_esp2, rot2, obs2 = rg.fracao_progressao_esperada(_dref, hed, morte, vga, reinc, reinc_especifico=False, especial=especial)
+                f_esp2, rot2, obs2 = rg.fracao_progressao_esperada(_dref, hed, morte, vga, reinc, reinc_especifico=False, especial=especial, titulo_xii=tit_xii)
                 if f_esp2 is not None and (f_esp is None or f_esp2 < f_esp):
                     f_esp, rot, obs = f_esp2, rot2, obs + obs2 + (["retroatividade da lei mais benéfica (Lei 13.964/2019; STJ Tema 1084)"] if _dref != fato else [])
         rot = _rot_dispositivo(rot, fato, hed)
@@ -2693,8 +2771,21 @@ def auditar(r, hoje=None):
         if rs.e_remicao_concedida(i) and not i.get("_ficha"):
             k = ((i.get("complemento") or "").strip(), i.get("data_referencia") or "", i.get("data_decisao") or "")
             _rems[k] = _rems.get(k, 0) + 1
+    # saldo de remidos do SEEU que já soma a duplicata: o erro aumenta a pena cumprida e favorece o assistido - só informação
+    # (política: a Auditoria só alerta o que prejudica); saldo menor que a soma dos incidentes: se são remições distintas, pode
+    # faltar remição no saldo - alerta
+    _rb_d = rs.saldo_remidos_num(r.get("saldo_remidos"))[0]
+    _soma_d = sum(rs.dias_de(i.get("complemento") or "") or 0 for i in incidentes if rs.e_remicao_concedida(i) and not i.get("_ficha"))
+    _dup_fav = bool(_rb_d is not None and _soma_d and _rb_d >= _soma_d)
     for (cp_, ref_, dec_), n_ in _rems.items():
-        if n_ > 1:
+        if n_ > 1 and _dup_fav:
+            itens.append(_item("info", "Remição lançada em duplicidade (favorável ao assistido): %s, referência %s" % (cp_ or "?", ref_ or "?"),
+                               "O RSPE tem %d incidentes de remição iguais (%s, referência %s, decisão %s), e o saldo de remidos do SEEU (%s) "
+                               "soma todos eles. Se o juízo reconheceu uma só remição, a duplicata aumenta a pena cumprida: o erro favorece o "
+                               "assistido, e não cabe pedido da defesa. Conferir antes de usar o saldo em pedido (o juízo pode corrigir de ofício)." % (
+                                   n_, cp_ or "?", ref_ or "?", dec_ or "?", rs.pl(_rb_d, "dia", "dias")),
+                               "LEP, arts. 126 e 128.", tipo="remicao-lancada-em-duplicidade", ref="%s %s" % (cp_, ref_)))
+        elif n_ > 1:
             itens.append(_item("alerta", "Remição lançada em duplicidade: %s, referência %s" % (cp_ or "?", ref_ or "?"),
                                "O RSPE tem %d incidentes de remição iguais (%s, referência %s, decisão %s). Se o juízo reconheceu uma só remição, "
                                "a duplicata soma dias que não existem e precisa ser excluída; se são remições distintas, conferir o período de cada "
@@ -3365,8 +3456,9 @@ def auditar(r, hoje=None):
                 rs.fmt(db_seeu), ("%s - %s" % (rs.fmt(_ant[-1][0]), _ant[-1][1])) if _ant else "a do marco anterior (última prisão ou progressão)"))
         elif bate and any(abs((x - db_seeu).days) <= 1 for x in _fictas) and all(
                 re.search(r"REGIME INICIAL|IN[ÍI]CIO DO CUMPRIMENTO", rs._sem_acento(m_[1]).upper()) for m_ in bate):
-            # decisão do usuário (7.14.2): data-base do SEEU no regime inicial/início da guia nova, com a pessoa presa sem interrupção
-            # desde antes - "verificar" com a data certa (início da custódia em curso) e o fundamento; a aba mantém a data do SEEU
+            # data-base do SEEU no regime inicial/início da guia nova, com a pessoa presa sem interrupção desde antes: a aba mantém a
+            # data do SEEU (com ressalva) e a Auditoria alerta com a data certa (início da custódia em curso) e o fundamento - política
+            # 7.14.8 (data do SEEU contrária à lei = alerta; antes, 7.14.2, "verificar")
             _per_g = rs.periodos_custodia(sorted((e for e in eventos if rs.to_date(e.get("data") or "")), key=lambda e: rs.to_date(e["data"])))
             _ini_g = min((a for a, b_ in _per_g if a < db_seeu - timedelta(days=1) and (b_ is None or b_ >= db_seeu)), default=None)
             _fr_g = [(rs.parse_fracao(c.get("fracao_progressao") or ""), rs.pena_para_dias(c.get("pena_imposta")) or 0) for c in ativos]
@@ -3397,7 +3489,7 @@ def auditar(r, hoje=None):
                                  "mais o lapso inteiro do cálculo, sem descontá-las." if _sem_rem else
                                  " As remições posteriores à data-base (%s) também devem abater o lapso: conferir se o SEEU as descontou da previsão.") % (
                         "; ".join("%s em %s" % (rs.pl(n, "dia", "dias"), rs.fmt(x)) for x, n in _rem_g)))
-                _it_g = _item("verificar", "Data-base (%s) no início da guia nova, com a pessoa presa sem interrupção desde %s: a data certa é %s" % (
+                _it_g = _item("alerta", "Data-base (%s) no início da guia nova, com a pessoa presa sem interrupção desde %s: a data certa é %s" % (
                                        rs.fmt(db_seeu), rs.fmt(_ini_g), rs.fmt(_ini_g)),
                                    "A data-base impressa coincide com o marco \u201c%s\u201d, lançado com a pessoa já presa nesta execução desde %s, sem interrupção. O regime "
                                    "inicial da nova condenação e a unificação não alteram a data-base (STJ, Tema 1006): ela fica na última prisão ou "
@@ -4255,7 +4347,7 @@ FUND_TIPOS.update({
     "percentual-16-x-1-6": (
         "Ao condenado primário por crime cometido sem violência ou grave ameaça, o art. 112, I, da LEP, na redação da Lei 13.964/2019, exige "
         "16% da pena. O percentual de 16,67% (1/6) é maior que o legal; para fatos anteriores a 23/01/2020, a lei nova é mais benéfica e "
-        "retroage (CF, art. 5º, XL; CP, art. 2º, p. ú.). A diferença, ainda que de poucos dias, retarda o benefício.",
+        "retroage (CF, art. 5º, XL; CP, art. 2º, p. ú.).",
         "Requer-se a retificação do percentual de progressão para 16%, com o recálculo da data do benefício."),
     "livramento-trafico-anterior-fora-da-lei-de-drogas": (
         "O art. 44, parágrafo único, da Lei 11.343/2006 veda o livramento condicional ao reincidente específico, e o Superior Tribunal de "
@@ -4468,6 +4560,9 @@ _IMPACTO = [
     (r"reincidencia-especifica",
      "Com isso, o livramento condicional é vedado ou postergado e, conforme a lei da data do fato, o percentual de progressão pode ser "
      "elevado, sem que a reincidência específica esteja demonstrada."),
+    (r"^percentual-16-x-1-6$",
+     "Com isso, exige-se para a progressão mais pena cumprida do que a lei determina (1/6 no lugar de 16%): a diferença, ainda que de "
+     "poucos dias, posterga a data do benefício, e o assistido permanece em regime mais gravoso que o devido."),
     (r"percentual-de-progressao|reincidente-vga|comando-de-organizacao",
      "Com isso, exige-se para a progressão mais pena cumprida do que a lei determina{pct}: a data do benefício é postergada e o assistido "
      "permanece em regime mais gravoso que o devido."),
@@ -4529,7 +4624,7 @@ def _fatos(it):
     for f in [y for x in _frases(it.get("detalhe")) for y in re.split(r"(?<=\.)\s+(?=[a-z])", x)]:
         if _RE_ORIENTACAO.search(f):
             continue
-        f = re.sub(r"\s*[-:;,]\s*(conferir|verificar|confira|verifique)\b.*$", ".", f, flags=re.I).rstrip(";").strip()
+        f = re.sub(r"\s*[-:;,]\s*(conferir|verificar|confira|verifique|pedir)\b.*$", ".", f, flags=re.I).rstrip(";").strip()
         if not re.search(r"\d", f) and not re.search(r"\b(reincidente|prim[áa]ri[oa]|hediondo|anacr[ôo]nico|reda[çc][ãa]o da [ée]poca)\b", f, re.I):
             continue
         if re.search(r"\b(s[óo] se|n[ãa]o pode|pode vir|pode ter|afeta|deve|devem|exce[çc][ãa]o)\b", f, re.I):
@@ -4600,19 +4695,52 @@ def _razao(tipo, it, tit):
     return ""
 
 
+_RX_PREC = r"(?:Temas?|S[úu]mulas?(?:\s+Vinculantes?)?|AgRg(?:\s+n[oa]s?|\s+em)?\s+(?:HC|RHC|REsp|AREsp)|HC|RHC|REsp|AREsp|RE)\b"
+# complemento do julgado que acompanha a citação: órgão, data, relator, monocrática
+_RX_COMP = (r",\s*(?:\d+ª\s*(?:Seção|Turma|T\.)|(?:Primeira|Segunda|Terceira|Quinta|Sexta)\s+(?:Seção|Turma)|Pleno|Plenário|Corte Especial|"
+            r"(?:decisão\s+)?monocrática|(?:j\.|DJEN|DJe)?\s*\d{2}/\d{2}/\d{4}|Rel\.\s[^,;()]+)")
+
+
+def _lista(nums):
+    return nums[0] if len(nums) == 1 else ", ".join(nums[:-1]) + " e " + nums[-1]
+
+
 def _citacoes(fund, ja):
-    """Precedentes do campo fundamento que ainda não estão no texto (sem repetir a lei já citada)."""
+    """Precedentes do campo fundamento que ainda não estão no texto (sem repetir a lei já citada). Cada precedente é citado por
+    inteiro: os temas pela lista de números; o julgado (REsp, HC...) pelo número, com o órgão e a data quando o fundamento os traz
+    (antes, os números da data do julgado entravam na lista de temas: "Temas 1084, 2.037.377, 18, 06 e 2026"). Precedente citado
+    "em sentido contrário" não entra no "Nesse sentido"."""
     out = []
-    for trib, corpo in re.findall(r"\b(STJ|STF),?\s+((?:Temas?|S[úu]mulas?|AgRg|HC|RHC|REsp|RE)\b[^;()]*?)(?=[;)]|$)", fund):
-        corpo = corpo.strip().rstrip(".")
-        nums = re.findall(r"\d[\d.]*", corpo)
-        novos = [n for n in nums if n not in ja]
-        if not nums or not novos:
+    for mt in re.finditer(r"\b(STJ|STF),?\s+(%s[^;()]*?)(?=[;)]|,\s*(?:STJ|STF)\b|$)" % _RX_PREC, fund):
+        trib, corpo = mt.group(1), mt.group(2)
+        if re.search(r"sentido contrário,?\s*$", fund[max(0, mt.start() - 40):mt.start()]):
             continue
-        if re.match(r"Temas?\b", corpo) and len(novos) < len(nums):
-            corpo = ("Tema %s" if len(novos) == 1 else "Temas %s") % (", ".join(novos[:-1]) + " e " + novos[-1] if len(novos) > 1 else novos[0])
-        out.append("%s, %s" % (trib, corpo))
-    return "; ".join(out)
+        for seg in re.split(r"\s*(?:[-,]\s*e?|\be)\s+(?=%s)" % _RX_PREC, corpo.strip().rstrip(".")):
+            seg = seg.strip()
+            analog = ", por analogia" if re.search(r"\bpor analogia\b", seg) else ""
+            m = re.match(r"(Temas?|S[úu]mulas?(?:\s+Vinculantes?)?)\s+(\d[\d.]*(?:/[A-Z]{2,3})?(?:\s*(?:,|e)\s*\d[\d.]*(?:/[A-Z]{2,3})?)*)", seg)
+            if m:
+                nums = re.findall(r"\d[\d.]*(?:/[A-Z]{2,3})?", m.group(2))
+                novos = [n for n in nums if n.split("/")[0] not in ja]
+                if novos:
+                    rot = re.sub(r"s\b", "", m.group(1)) + ("" if len(novos) == 1 else "")
+                    if len(novos) > 1:
+                        rot = re.sub(r"^(Tema|S[úu]mula)", lambda x: x.group(1) + "s", rot)
+                        rot = rot.replace("Vinculante", "Vinculantes")
+                    out.append((trib, "%s %s%s" % (rot, _lista(novos), analog)))
+                continue
+            m = re.match(r"(%s)\s+(\d[\d.]*(?:/[A-Z]{2})?)((?:%s)*)" % (_RX_PREC, _RX_COMP), seg)
+            if m and m.group(2).split("/")[0] not in ja:
+                comp = re.sub(r"^,\s*", "", m.group(3) or "")
+                out.append((trib, "%s %s%s%s" % (m.group(1), m.group(2), (" (%s)" % comp) if comp else "", analog)))
+    grupos = []
+    for trib, item in out:  # os precedentes seguidos do mesmo tribunal numa citação só: "STJ, Temas 1084 e 1354, e REsp ..."
+        if grupos and grupos[-1][0] == trib:
+            grupos[-1][1].append(item)
+        else:
+            grupos.append((trib, [item]))
+    return "; ".join("%s, %s" % (t, its[0] if len(its) == 1 else ", ".join(its[:-1]) + (", e " if any(" e " in x for x in its) else " e ") + its[-1])
+                     for t, its in grupos)
 
 
 def fundamentacao(it, r):

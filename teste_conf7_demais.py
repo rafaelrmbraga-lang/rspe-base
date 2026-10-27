@@ -123,7 +123,7 @@ f6 = {"data_impressao": "02/10/2026", "eventos": [
     {"data": "15.02.2024", "texto": "Entrando na monitoração em: UNIDADE MISTA DE MONITORAMENTO VIRTUAL ESTADUAL, Conforme Ofício: %s" % PEXEC},
     {"data": "04.02.2026", "texto": "Saída da Unidade Penal: UNIDADE MISTA DE MONITORAMENTO VIRTUAL ESTADUAL, Destino: PENITENCIÁRIA X, Motivo: Regressão de Regime, Conforme: %s." % PEXEC}]}
 i6 = rf._monitoramento_x_ficha(r6, f6)
-ok(len(i6) == 1 and i6[0]["nivel"] == "verificar" and "715 dias" in i6[0]["titulo"], "6: item do monitoramento: %s" % i6)
+ok(len(i6) == 1 and i6[0]["nivel"] == "alerta" and "715 dias" in i6[0]["titulo"], "6: item do monitoramento: %s" % i6)
 ok(i6 and i6[0].get("prog_estimada") == rs.fmt(date(2027, 7, 22) - __import__("datetime").timedelta(days=286)), "6: estimativa: %s" % (i6 and i6[0].get("prog_estimada")))
 f6b = copy.deepcopy(f6)
 for e in f6b["eventos"]:
