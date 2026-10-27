@@ -73,7 +73,7 @@ def status(r):
         return "Programa confere", VERDE
     if all(x.get("decisao") for x in f):
         return "Diverge: tese discutível", AMAR
-    return "Diverge da lei", VERM
+    return "Diverge do gabarito", VERM
 
 
 ws = wb.active
@@ -101,7 +101,7 @@ for c in casos:
     for x in r.get("checks", []):
         if not x["ok"]:
             esperado = x.get("v") if x.get("v") is not None else x.get("contem")
-            L2.append([c["id"], NOME_AREA[c["area"]], c.get("situacao") or c.get("titulo", ""), "Tese discutível" if x.get("decisao") else "Diverge da lei",
+            L2.append([c["id"], NOME_AREA[c["area"]], c.get("situacao") or c.get("titulo", ""), "Tese discutível" if x.get("decisao") else "Diverge do gabarito",
                        x.get("nota") or "", json.dumps(esperado, ensure_ascii=False) if not isinstance(esperado, str) else esperado,
                        (x.get("real") if isinstance(x.get("real"), str) else json.dumps(x.get("real"), ensure_ascii=False))[:600]])
 folha(ws2, ["Caso", "Área", "Situação", "Tipo", "Explicação", "Esperado (verificação)", "O que o programa mostrou"], L2, [8, 18, 45, 16, 70, 35, 60])
@@ -110,12 +110,12 @@ ws3 = wb.create_sheet("Resumo")
 tot = {}
 for c in casos:
     st, _ = status(res.get(c["id"], {"checks": [], "erro": "x"}))
-    t = tot.setdefault(NOME_AREA[c["area"]], {"casos": 0, "Programa confere": 0, "Diverge da lei": 0, "Diverge: tese discutível": 0, "Erro de montagem": 0})
+    t = tot.setdefault(NOME_AREA[c["area"]], {"casos": 0, "Programa confere": 0, "Diverge do gabarito": 0, "Diverge: tese discutível": 0, "Erro de montagem": 0})
     t["casos"] += 1
     t[st] += 1
-L3 = [[a, t["casos"], t["Programa confere"], t["Diverge da lei"], t["Diverge: tese discutível"], t["Erro de montagem"]] for a, t in tot.items()]
+L3 = [[a, t["casos"], t["Programa confere"], t["Diverge do gabarito"], t["Diverge: tese discutível"], t["Erro de montagem"]] for a, t in tot.items()]
 L3.append(["Total"] + [sum(l[i] for l in L3) for i in range(1, 6)])
-folha(ws3, ["Área", "Casos", "Programa confere", "Diverge da lei", "Tese discutível", "Erro de montagem"], L3, [28, 10, 16, 14, 14, 16])
+folha(ws3, ["Área", "Casos", "Programa confere", "Diverge do gabarito", "Tese discutível", "Erro de montagem"], L3, [28, 10, 16, 14, 14, 16])
 ws3.append([])
 for t in ["Como usar: no APTO, menu da base > Abrir base... > APTO_base_simulada_independente.sqlite. Os assistidos aparecem como",
           "SIMULADO CASO nnn; o número do caso (S1001...) está na planilha. O gabarito foi calculado pela lei, sem consultar o programa,",
