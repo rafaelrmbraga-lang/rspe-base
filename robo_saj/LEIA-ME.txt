@@ -1,5 +1,5 @@
-ROBÔ DO SAJ DEFENSORIAS (favorito) - versão 0.3
-================================================
+ROBÔ DO SAJ DEFENSORIAS (favorito) - versão 0.3.1
+==================================================
 
 O QUE FAZ
 Na fila "Para peticionar › Intimação" do Painel de Tarefas (painel-saj.ms.def.br),
@@ -23,8 +23,7 @@ MODOS
    enviada ao tribunal", fecha a caixa e segue.
 
 PULA a tarefa: nº que não começa com 0/5 ou sem a tarja do perfil; sigilo,
-segredo de justiça ou réu preso no card; modelo de DEVOLVER/ADV PARTICULAR/
-FINALIZAR; Movimentação que não aparece na lista ou aparece mais de uma vez
+segredo de justiça ou réu preso no card; Movimentação que não aparece na lista ou aparece mais de uma vez
 parecida; Evento/Tipo/Sigilo/Defensor fora do perfil; Peticionar desativado.
 
 PARA a rodada: erro do SAJ ou nenhuma resposta 3 min depois de Peticionar;

@@ -158,7 +158,7 @@ const avisoRobo = (pg) => pg.evaluate(() => document.getElementById("robo-saj-ho
   console.log("menu e categorias");
   confere("fila Para peticionar > Intimação reconhecida", (await pg.evaluate(() => window.__roboSAJ.filaSelecionada())).ok);
   const cat = await pg.evaluate(() => ["IMPUG - INSUMOS - GENÉRICA", "ADV PARTICULAR - DEVOLVER", "REITERAR SEQUESTRO", "CIÊNCIA"].map(window.__roboSAJ.categoria));
-  confere("categorias", JSON.stringify(cat) === JSON.stringify(["Impugnação", "Devolver", "Cumprimento/bloqueio", "Ciência"]), cat);
+  confere("categorias", JSON.stringify(cat) === JSON.stringify(["Impugnação", "Adv. particular", "Cumprimento/bloqueio", "Ciência"]), cat);
 
   console.log("modo Conferir (4 tarefas)");
   let res = await rodada(pg, "conferir", 4);

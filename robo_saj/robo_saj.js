@@ -9,7 +9,7 @@
 (function () {
   "use strict";
 
-  const VERSAO = "0.3.0";
+  const VERSAO = "0.3.1";
   const HOST = "painel-saj.ms.def.br";
   const CHAVE_SESSAO = "roboSAJ_resultados";
   const ESPERA_ENVIO_MS = 180000; // tempo para digitar o PIN e o SAJ responder
@@ -58,7 +58,7 @@
   const comeca = (a, b) => chave(a).startsWith(chave(b));
 
   const CATEGORIAS = [
-    [/DEVOLV|ADV(OGADO)? PARTICULAR|FINALIZ/, "Devolver"],
+    [/ADV(OGADO)? PARTICULAR/, "Adv. particular"],
     [/^CIENCIA\b/, "Ciência"],
     [/^IMPUG/, "Impugnação"],
     [/^MANIF/, "Manifestação"],
@@ -296,7 +296,6 @@
     r.titulo = texto(q('[data-testid="editor-container"] p[role="banner"]'));
     r.categoria = categoria(r.titulo);
     const sair = async (res) => { r.resultado = res; await fecharEditor(); return r; };
-    if (r.categoria === "Devolver") return sair(`PULADO – modelo "${r.titulo}" é de devolver/advogado particular`);
 
     let p = lerPropriedades();
     if (!p) return sair("PULADO – não consegui ler a aba Propriedades");
