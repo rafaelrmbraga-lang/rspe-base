@@ -1,0 +1,37 @@
+ROBÔ DO SAJ DEFENSORIAS (favorito) - versão 0.1: SÓ CONFERE, NÃO PETICIONA
+==========================================================================
+
+O QUE FAZ
+Na fila "Para peticionar › Intimação" do Painel de Tarefas (painel-saj.ms.def.br),
+abre cada tarefa ("Continuar"), lê a peça e a aba Propriedades, diz se a tarefa
+passaria nas conferências do prompt de peticionamento (ou por que seria pulada)
+e fecha o editor. Não usa IA nem tokens: são regras fixas.
+
+Não peticiona, não altera campo, não marca nem desmarca caixa, não salva.
+Só três botões podem ser clicados pelo código (Continuar do card, aba
+Propriedades e o "×" do editor); qualquer outro clique é recusado.
+
+INSTALAR
+Abra instalar_robo_saj.html no Chrome/Edge e arraste o botão azul para a barra
+de favoritos (Ctrl+Shift+B mostra a barra).
+
+CONFERÊNCIAS
+ - nº do card: 20 dígitos, começa com 0 (perfil A, tarja SAJ) ou 5 (perfil B, tarja EPROC)
+ - categoria pelo título do modelo: CIÊNCIA, IMPUG, MANIF, CUMPR/BLOQ, CONTRARR,
+   RECURSO/RI; qualquer outro título = Outros = pula
+ - tarjas além de 1º/2º grau, SAJ, EPROC; "sigilo", "segredo de justiça", "réu preso" no card
+ - corpo: vazio/curto; sem assinatura no fim; nenhum ou outro nº de processo;
+   colchetes fora de [Data atual do sistema...] e [Nome do Defensor...];
+   XXX/???/PENDENTE/[VERIFICAR]/[COMPLETAR] (inciso XXX/XXXV não conta);
+   comentário, fundo colorido, texto vermelho; menção a anexo; parte ativa
+   (nome completo do card) ou 1ª parte passiva ausentes; CIÊNCIA que pede/impugna
+ - Propriedades exatamente no perfil (Movimentação, Evento, Tipo de documento),
+   Sigilo 0 - Público, Defensor Cahuê Duarte e Urdiales, certificado vazio ou o do Defensor.
+   Liminar/Redistribuir marcadas e certificado vazio entram como "faria" (não são mexidos).
+
+TESTE (sem o SAJ)
+  node teste_robo_saj.js <painel salvo.html> <editor salvo.html>
+As páginas salvas têm dados de processos: não vão para o repositório.
+
+DEPOIS DE MUDAR robo_saj.js
+  node gerar_instalador.js   (gera de novo instalar_robo_saj.html)
