@@ -1,4 +1,4 @@
-ROBÔ DO SAJ DEFENSORIAS (favorito) - versão 0.1: SÓ CONFERE, NÃO PETICIONA
+ROBÔ DO SAJ DEFENSORIAS (favorito) - versão 0.2: SÓ CONFERE, NÃO PETICIONA
 ==========================================================================
 
 O QUE FAZ
@@ -15,19 +15,24 @@ INSTALAR
 Abra instalar_robo_saj.html no Chrome/Edge e arraste o botão azul para a barra
 de favoritos (Ctrl+Shift+B mostra a barra).
 
-CONFERÊNCIAS
+CONFERÊNCIAS (motivo de pulo)
  - nº do card: 20 dígitos, começa com 0 (perfil A, tarja SAJ) ou 5 (perfil B, tarja EPROC)
- - categoria pelo título do modelo: CIÊNCIA, IMPUG, MANIF, CUMPR/BLOQ, CONTRARR,
-   RECURSO/RI; qualquer outro título = Outros = pula
+ - categoria pelo título do modelo: CIÊNCIA, IMPUG, MANIF, CUMPR/BLOQ/SEQUESTRO, CONTRARR,
+   RECURSO/RI. DEVOLVER, ADV PARTICULAR, FINALIZAR e qualquer outro título = Outros = pula
  - tarjas além de 1º/2º grau, SAJ, EPROC; "sigilo", "segredo de justiça", "réu preso" no card
  - corpo: vazio/curto; sem assinatura no fim; nenhum ou outro nº de processo;
-   colchetes fora de [Data atual do sistema...] e [Nome do Defensor...];
+   colchetes fora de [Data atual do sistema...], [Nome do Defensor...] e notas de rodapé [1];
    XXX/???/PENDENTE/[VERIFICAR]/[COMPLETAR] (inciso XXX/XXXV não conta);
-   comentário, fundo colorido, texto vermelho; menção a anexo; parte ativa
-   (nome completo do card) ou 1ª parte passiva ausentes; CIÊNCIA que pede/impugna
- - Propriedades exatamente no perfil (Movimentação, Evento, Tipo de documento),
-   Sigilo 0 - Público, Defensor Cahuê Duarte e Urdiales, certificado vazio ou o do Defensor.
-   Liminar/Redistribuir marcadas e certificado vazio entram como "faria" (não são mexidos).
+   comentário; marca-texto (cor saturada; sombreado pálido e campo automático não contam);
+   texto vermelho; menção a anexo; CIÊNCIA que pede/impugna
+ - Sigilo diferente de 0 - Público
+
+AJUSTES (a versão que peticiona fará e conferirá; não são motivo de pulo)
+ - Movimentação, Evento e Tipo de documento fora do perfil; Defensor; certificado
+   vazio ou de outra pessoa; Liminar/Redistribuir marcadas
+
+OBSERVAÇÕES (só aviso)
+ - parte ativa do card ou nenhuma das partes passivas citadas na peça
 
 TESTE (sem o SAJ)
   node teste_robo_saj.js <painel salvo.html> <editor salvo.html>

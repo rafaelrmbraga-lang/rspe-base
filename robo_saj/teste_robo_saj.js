@@ -27,7 +27,9 @@ const peca = (num, ativa, extra) =>
   `<p>EXCELENTÍSSIMO SENHOR JUIZ DO 1º JUIZADO ESPECIAL DA SAÚDE</p><p>Processo nº ${num}</p>` +
   `<p>${ativa}, já qualificada nos autos da ação movida em face do MUNICÍPIO DE CAMPO GRANDE, vem, por intermédio da Defensoria Pública, ` +
   `apresentar IMPUGNAÇÃO à contestação, nos termos do art. 5º, inciso XXXV, da Constituição Federal, pelas razões a seguir expostas. ` +
-  `A pretensão encontra amparo na jurisprudência consolidada e nos documentos já juntados aos autos, que comprovam a necessidade do tratamento.</p>` +
+  `A pretensão encontra amparo na jurisprudência consolidada[1] e nos documentos já juntados aos autos, que comprovam a necessidade do tratamento.</p>` +
+  `<table><tr><td style="background-color:#dbe5f1">Síntese do pedido</td></tr></table>` +
+  `<p>Data: <span contenteditable="false" style="background-color:#ffff00">28 de outubro de 2026</span></p>` +
   (extra || "") + ASS;
 
 let falhas = 0;
@@ -59,7 +61,7 @@ const confere = (nome, cond, info) => { if (cond) console.log("  ok  " + nome); 
     if (saj[4]) { corpos[saj[4]] = peca(saj[4], ativaDe(saj[4]), "<p><span style='background-color:yellow'>conferir valor</span></p>"); window.__esperado[saj[4]] = "destaque"; }
     if (saj[5]) { corpos[saj[5]] = peca(saj[5], ativaDe(saj[5]), "<p>[INSERIR DATA DA PERÍCIA]</p>"); window.__esperado[saj[5]] = "colchetes"; }
     if (saj[0]) window.__esperado[saj[0]] = "OK";
-    ep.forEach((n) => (window.__esperado[n] = "propriedades do perfil A num processo B"));
+    ep.forEach((n) => (window.__esperado[n] = "OK-B"));
     window.__corpos = corpos;
     window.__cliques = [];
     document.addEventListener("click", (ev) => {
@@ -99,8 +101,8 @@ const confere = (nome, cond, info) => { if (cond) console.log("  ok  " + nome); 
   confere("card: tarjas", lc.tarjas.length >= 2, lc.tarjas);
 
   console.log("categorias");
-  const cat = await pg.evaluate(() => ["IMPUG - VAGA HOSPITALAR", "CIÊNCIA", "Manifestação genérica", "CONTRARRAZÕES", "EMBARGOS DE DECLARAÇÃO"].map(window.__roboSAJ.categoria));
-  confere("títulos -> categorias", JSON.stringify(cat) === JSON.stringify(["Impugnação", "Ciência", "Manifestação", "Contrarrazões", "Outros"]), cat);
+  const cat = await pg.evaluate(() => ["IMPUG - VAGA HOSPITALAR", "CIÊNCIA", "Manifestação genérica", "CONTRARRAZÕES", "EMBARGOS DE DECLARAÇÃO", "ADV PARTICULAR - DEVOLVER", "REITERAR SEQUESTRO"].map(window.__roboSAJ.categoria));
+  confere("títulos -> categorias", JSON.stringify(cat) === JSON.stringify(["Impugnação", "Ciência", "Manifestação", "Contrarrazões", "Outros", "Outros", "Cumprimento/bloqueio"]), cat);
 
   console.log("rodada simulada (15 tarefas)");
   const sh = await pg.evaluateHandle(() => document.getElementById("robo-saj-host").shadowRoot);
@@ -114,12 +116,14 @@ const confere = (nome, cond, info) => { if (cond) console.log("  ok  " + nome); 
       : e === "outro nº" ? /outro nº/.test(r.resultado)
       : e === "rascunho" ? /rascunho/.test(r.resultado)
       : e === "anexo" ? /anexo/.test(r.resultado)
-      : e === "destaque" ? /fundo colorido/.test(r.resultado)
+      : e === "destaque" ? /marca-texto #ffff00: "conferir valor"/.test(r.resultado)
+      : e === "OK-B" ? r.resultado.startsWith("OK") && r.ajustes.some((a) => /^Movimentação → 1000150/.test(a))
       : e === "colchetes" ? /colchetes/.test(r.resultado)
-      : /Movimentação interna|Evento|Tipo de documento/.test(r.resultado);
+      : false;
     confere(`${r.num} (${e})`, bate, r.resultado);
   }
   confere("tarefa OK pede desmarcar Liminar e escolher certificado", res.filter((r) => r.resultado.startsWith("OK")).every((r) => r.ajustes.includes("desmarcar Liminar") && r.ajustes.includes("escolher o certificado")));
+  confere("partes ausentes viram observação, não pulo", res.some((r) => r.resultado.startsWith("OK") && r.obs.length) || res.every((r) => !r.obs.length));
   const cliques = await pg.evaluate(() => window.__cliques);
   const proib = cliques.filter((t) => !["btn-atividade-generic", "action-menu-propriedades", "action-emissao-expediente-close-btn"].includes(t));
   confere("só cliques permitidos", proib.length === 0, proib);

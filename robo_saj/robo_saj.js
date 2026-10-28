@@ -1,4 +1,4 @@
-// Robô do SAJ Defensorias (painel-saj.ms.def.br) - versão 0.1: SÓ CONFERE, NÃO PETICIONA.
+// Robô do SAJ Defensorias (painel-saj.ms.def.br) - versão 0.2: SÓ CONFERE, NÃO PETICIONA.
 // Roda como favorito (bookmarklet) na aba do Painel de Tarefas, fila "Para peticionar > Intimação".
 // Para cada tarefa: abre ("Continuar"), lê a peça e as Propriedades, aplica as conferências e fecha o editor.
 // Não digita, não altera campo, não marca nem desmarca caixa, não clica em Peticionar/Devolver/Excluir.
@@ -6,7 +6,7 @@
 (function () {
   "use strict";
 
-  const VERSAO = "0.1.0";
+  const VERSAO = "0.2.0";
   const HOST = "painel-saj.ms.def.br";
   const CHAVE_SESSAO = "roboSAJ_resultados";
 
@@ -52,11 +52,13 @@
   const TARJAS_ACEITAS = ["1º grau", "2º grau", "EPROC", "SAJ"].map(chave);
 
   // título do modelo (canto superior esquerdo do editor) -> categoria. Fora daqui = "Outros" = pula.
+  // A primeira regra que casar vale. Modelos de devolver/finalizar nunca são peticionados.
   const CATEGORIAS = [
+    [/DEVOLV|ADV(OGADO)? PARTICULAR|FINALIZ/, "Outros"],
     [/^CIENCIA\b/, "Ciência"],
     [/^IMPUG/, "Impugnação"],
     [/^MANIF/, "Manifestação"],
-    [/^(CUMPR|BLOQ)/, "Cumprimento/bloqueio"],
+    [/^(CUMPR|BLOQ)|SEQUESTRO|BLOQUEIO/, "Cumprimento/bloqueio"],
     [/^CONTRARR/, "Contrarrazões"],
     [/^(RECURSO|RI\b)/, "Recurso"],
   ];
@@ -123,7 +125,7 @@
         botao: texto(q('[data-testid="btn-atividade-generic"]', cont)),
         ativa: rotulo('[data-testid="wrapper-parte-ativa"]', /^Parte ativa:\s*/i),
         passiva: rotulo('[data-testid="wrapper-parte-passiva"]', /^Parte passiva:\s*/i),
-        maisPassivas: !!q('[data-testid="wrapper-mais-parte-passiva"]', cont),
+        demaisPassivas: qa('[data-testid="wrapper-mais-parte-passiva"] [data-testid^="name-parte-passiva-"]', cont).map(texto).filter(Boolean),
         tarjas: qa('[data-testid="stamp-group"] [role="listitem"]', cont).map((x) => x.getAttribute("aria-label") || texto(x)),
         textoCard: texto(cont),
       };
@@ -174,14 +176,24 @@
     if (q("[data-mce-annotation], [data-mce-annotation-uid], .mce-annotation", c.body)) achados.push("comentário na peça");
     if (q("mark", c.body)) achados.push("texto marcado");
     const cor = (s) => { const m = String(s).match(/\d+(\.\d+)?/g); return m ? m.map(Number) : null; };
+    // cor de marca-texto: saturada (amarelo, verde, ciano, rosa...); cinzas e tons pálidos de tabela/moldura não contam
+    const saturada = (c) => { if (!c || (c.length === 4 && c[3] < 0.3)) return false; const mx = Math.max(c[0], c[1], c[2]), mn = Math.min(c[0], c[1], c[2]); return mx > 60 && (mx - mn) / mx > 0.4; };
+    const hex = (c) => "#" + c.slice(0, 3).map((v) => Math.round(v).toString(16).padStart(2, "0")).join("");
+    const trecho = (el) => '"' + texto(el).replace(/\s+/g, " ").slice(0, 50) + '"';
+    let fundo = null, verm = null;
     for (const el of qa("*", c.body)) {
       if (!Array.from(el.childNodes).some((n) => n.nodeType === 3 && n.textContent.trim())) continue;
+      // campos automáticos do SAJ (não editáveis) e os dois colchetes previstos não contam
+      if (el.closest('[contenteditable="false"], .mceNonEditable')) continue;
+      if (/^\[\s*(data atual do sistema|nome do defensor)/.test(norm(texto(el)))) continue;
       const cs = c.win.getComputedStyle(el);
-      const fundo = cor(cs.backgroundColor);
-      if (fundo && !(fundo.length === 4 && fundo[3] === 0) && !(fundo[0] > 240 && fundo[1] > 240 && fundo[2] > 240)) { achados.push("texto com fundo colorido (destaque)"); break; }
-      const letra = cor(cs.color);
-      if (letra && letra[0] > 150 && letra[1] < 110 && letra[2] < 110) { achados.push("texto em vermelho"); break; }
+      const f = cor(cs.backgroundColor), l = cor(cs.color);
+      if (!fundo && saturada(f)) fundo = `texto com marca-texto ${hex(f)}: ${trecho(el)}`;
+      if (!verm && l && l[0] > 150 && l[1] < 110 && l[2] < 110) verm = `texto em vermelho: ${trecho(el)}`;
+      if (fundo && verm) break;
     }
+    if (fundo) achados.push(fundo);
+    if (verm) achados.push(verm);
     return achados;
   }
 
@@ -196,9 +208,10 @@
     return false;
   }
 
-  // devolve {categoria, perfil, motivos[], ajustes[]}; motivos vazio = a tarefa passaria na conferência
+  // devolve {categoria, perfil, motivos[], ajustes[], obs[]}; motivos vazio = a tarefa passaria na conferência.
+  // ajustes = o que a versão que peticiona mudaria nas Propriedades; obs = avisos que não impedem.
   function conferir(card, titulo, corpo, props) {
-    const motivos = [], ajustes = [];
+    const motivos = [], ajustes = [], obs = [];
     const num = card.num, dig = soDig(num);
     const perfil = dig[0] === "5" ? "B" : dig[0] === "0" ? "A" : "";
     const cat = categoria(titulo);
@@ -224,15 +237,17 @@
       if (!nums.length) motivos.push("nº do processo não aparece no corpo");
       const outros = nums.filter((n) => n !== dig);
       if (outros.length) motivos.push("outro nº de processo no corpo: " + outros.map(fmtCNJ).join(", "));
-      const colch = (t.match(/\[[^\]\n]{0,200}\]/g) || []).filter((c) => !/^\[\s*(data atual do sistema|nome do defensor)/.test(norm(c)));
+      const colch = (t.match(/\[[^\]\n]{0,200}\]/g) || []).filter((c) => !/^\[\s*(data atual do sistema|nome do defensor)/.test(norm(c)) && !/^\[\s*\d{1,3}\s*\]$/.test(c));
       if (colch.length) motivos.push("campo entre colchetes: " + colch.slice(0, 2).join(" "));
       if (RE_RASCUNHO.test(t) || temXXX(t)) motivos.push("marca de rascunho (XXX, ???, PENDENTE, [VERIFICAR]...)");
       for (const m of marcasVisuais(corpo)) motivos.push(m);
       if (RE_ANEXO.test(t)) motivos.push("a peça menciona anexo (conferir a aba Anexos à mão)");
       const nt = norm(t);
-      if (card.ativa && !nt.includes(norm(card.ativa))) motivos.push(`parte ativa do card (${card.ativa}) não aparece na peça`);
-      const passiva = chave(card.passiva.replace(/\s*[\/-]\s*MS\s*$/i, "")).split(" ").slice(0, 4).join(" ");
-      if (passiva && !chave(t).includes(passiva)) motivos.push(`parte passiva do card (${card.passiva}) não aparece na peça`);
+      // a peça pode não nomear as partes (modelos curtos): só avisa. Peça de outro processo é pega pelo nº.
+      if (card.ativa && !nt.includes(norm(card.ativa))) obs.push(`parte ativa (${card.ativa}) não aparece na peça`);
+      const passivas = [card.passiva].concat(card.demaisPassivas || []).filter(Boolean)
+        .map((p) => chave(p.replace(/\s*[\/-]\s*MS\s*$/i, "")).split(" ").slice(0, 4).join(" "));
+      if (passivas.length && !passivas.some((p) => chave(t).includes(p))) obs.push(`nenhuma parte passiva do card (${card.passiva}${(card.demaisPassivas || []).length ? " e demais" : ""}) aparece na peça`);
       if (cat === "Ciência" && RE_PEDE.test(t)) motivos.push("título CIÊNCIA, mas o texto pede ou impugna algo");
     }
 
@@ -241,18 +256,20 @@
     else if (perfil) {
       const P = PERFIS[perfil];
       const igual = (a, b) => chave(a) === chave(b);
-      if (!igual(props.movLabel, P.movLabel) || !chave(props.movPai).startsWith(chave(P.movPai))) motivos.push(`Movimentação interna veio "${(props.movPai + " " + props.movLabel).trim() || "vazia"}"`);
-      if (!igual(props.evento, P.evento)) motivos.push(`Evento veio "${props.evento || "vazio"}"`);
-      if (!chave(props.tipoDoc).startsWith(chave(P.tipoDoc)) || (props.tipoDocCod && props.tipoDocCod !== P.tipoDocCod)) motivos.push(`Tipo de documento veio "${props.tipoDoc || "vazio"}"`);
+      // campos que o prompt manda deixar no perfil: divergência vira ajuste (a versão que peticiona troca e confere)
+      if (!igual(props.movLabel, P.movLabel) || !chave(props.movPai).startsWith(chave(P.movPai))) ajustes.push(`Movimentação → ${P.movLabel} (veio ${props.movLabel || "vazia"})`);
+      if (!igual(props.evento, P.evento)) ajustes.push(`Evento → ${P.evento} (veio ${props.evento || "vazio"})`);
+      if (!chave(props.tipoDoc).startsWith(chave(P.tipoDoc)) || (props.tipoDocCod && props.tipoDocCod !== P.tipoDocCod)) ajustes.push(`Tipo de documento → ${P.tipoDoc} (veio ${props.tipoDoc || "vazio"})`);
+      if (!igual(props.defensor, COMUM.defensor)) ajustes.push(`Defensor → ${COMUM.defensor} (veio ${props.defensor || "vazio"})`);
+      if (props.certificado && !igual(props.certificado, COMUM.certificado)) ajustes.push(`Certificado → ${COMUM.certificado} (veio ${props.certificado})`);
+      // sigilo não se altera: diferente de Público = pula
       if (!igual(props.sigilo, COMUM.sigilo)) motivos.push(`Sigilo veio "${props.sigilo || "vazio"}"`);
-      if (!igual(props.defensor, COMUM.defensor)) motivos.push(`Defensor veio "${props.defensor || "vazio"}"`);
-      if (props.certificado && !igual(props.certificado, COMUM.certificado)) motivos.push(`Certificado veio "${props.certificado}"`);
       if (props.liminar === null || props.redistribuir === null) motivos.push("não achei as caixas Liminar/Redistribuir");
       if (props.liminar) ajustes.push("desmarcar Liminar");
       if (props.redistribuir) ajustes.push("desmarcar Redistribuir");
       if (!props.certificado) ajustes.push("escolher o certificado");
     }
-    return { categoria: cat, perfil, motivos, ajustes };
+    return { categoria: cat, perfil, motivos, ajustes, obs };
   }
 
   // ------------------------------------------------------------ rodada
@@ -316,7 +333,7 @@
     const titulo = texto(q('[data-testid="editor-container"] p[role="banner"]'));
     const props = lerPropriedades();
     const c = conferir(card, titulo, corpo, props);
-    Object.assign(r, { perfil: c.perfil, categoria: c.categoria, titulo, ajustes: c.ajustes });
+    Object.assign(r, { perfil: c.perfil, categoria: c.categoria, titulo, ajustes: c.ajustes, obs: c.obs });
     r.resultado = c.motivos.length ? "PULARIA – " + c.motivos.join("; ") : "OK – pronta para peticionar";
     await fecharEditor();
     return r;
@@ -356,8 +373,8 @@
   }
 
   function relatorioTexto() {
-    const linhas = ["| # | Processo | Perfil | Categoria | Modelo | Resultado | Ajustes que faria |", "|---|---|---|---|---|---|---|"];
-    estado.resultados.forEach((r, i) => linhas.push(`| ${i + 1} | ${r.num} | ${r.perfil} | ${r.categoria} | ${r.titulo} | ${r.resultado} | ${(r.ajustes || []).join(", ")} |`));
+    const linhas = ["| # | Processo | Perfil | Categoria | Modelo | Resultado | Ajustes que faria | Observações |", "|---|---|---|---|---|---|---|---|"];
+    estado.resultados.forEach((r, i) => linhas.push(`| ${i + 1} | ${r.num} | ${r.perfil} | ${r.categoria} | ${r.titulo} | ${r.resultado} | ${(r.ajustes || []).join("; ")} | ${(r.obs || []).join("; ")} |`));
     const ok = estado.resultados.filter((r) => r.resultado.startsWith("OK")).length;
     const pul = estado.resultados.filter((r) => r.resultado.startsWith("PUL")).length;
     const par = estado.resultados.filter((r) => r.resultado.startsWith("PARADO")).length;
@@ -431,7 +448,7 @@
       const h = tb.insertRow(); ["#", "Processo", "Perfil/Cat.", "Resultado"].forEach((x) => { const th = document.createElement("th"); th.textContent = x; h.appendChild(th); });
       estado.resultados.forEach((r, i) => {
         const tr = tb.insertRow();
-        [String(i + 1), r.num, [r.perfil, r.categoria].filter(Boolean).join(" · ") + (r.titulo ? "\n" + r.titulo : ""), r.resultado + ((r.ajustes || []).length ? "\nFaria: " + r.ajustes.join(", ") : "")].forEach((v, k) => {
+        [String(i + 1), r.num, [r.perfil, r.categoria].filter(Boolean).join(" · ") + (r.titulo ? "\n" + r.titulo : ""), r.resultado + ((r.ajustes || []).length ? "\nFaria: " + r.ajustes.join("; ") : "") + ((r.obs || []).length ? "\nObs.: " + r.obs.join("; ") : "")].forEach((v, k) => {
           const td = tr.insertCell(); td.textContent = v; td.style.whiteSpace = "pre-wrap";
           if (k === 3) td.className = r.resultado.startsWith("OK") ? "ok" : r.resultado.startsWith("PARADO") ? "pa" : "pu";
         });
