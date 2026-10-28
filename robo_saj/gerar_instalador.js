@@ -24,8 +24,9 @@ const html = `<!doctype html>
  li{margin:4px 0}
 </style></head><body>
 <h1>Robô do SAJ Defensorias · versão ${versao}</h1>
-<div class="box alerta"><b>Esta versão só confere.</b> Ela abre cada tarefa da fila "Para peticionar › Intimação", lê a peça e as Propriedades,
-diz se peticionaria ou por que pularia, e fecha o editor. Não peticiona, não altera campo, não marca nem desmarca caixa e não salva nada.</div>
+<div class="box alerta">Na fila "Para peticionar › Intimação", o robô acerta a <b>Movimentação interna</b> do perfil
+(nº com 0: 920198 - Manifestação; nº com 5: 1000150 - Petição Intermediária TJ), escolhe o <b>certificado</b> do Defensor e clica
+<b>uma vez</b> em Peticionar. Liminar, Redistribuir e o texto da peça ficam como estão.</div>
 <h2>Instalar (uma vez)</h2>
 <ol>
  <li>Mostre a barra de favoritos: <b>Ctrl+Shift+B</b>.</li>
@@ -39,11 +40,18 @@ diz se peticionaria ou por que pularia, e fecha o editor. Não peticiona, não a
 <ol>
  <li>No SAJ (painel-saj.ms.def.br), abra o Painel de Tarefas › <b>Para peticionar › Intimação</b>. Não deixe nenhuma tarefa aberta.</li>
  <li>Clique no favorito <b>Robô SAJ</b>. Abre um painel azul no canto direito, que confirma se a fila está certa.</li>
- <li>Escolha quantas tarefas (até 15, que é uma página da fila) e clique em <b>Iniciar</b>. Deixe a aba à vista enquanto ele roda.</li>
+ <li>Escolha o modo:
+  <ul>
+   <li><b>Conferir</b>: abre cada tarefa, mostra o que faria e fecha. Não altera nada.</li>
+   <li><b>Preparar</b>: acerta Movimentação e certificado e fecha <b>sem peticionar</b>. Bom para testar sem assinar.</li>
+   <li><b>Peticionar</b>: marque "Autorizo peticionar". Se o assinador pedir o PIN, digite; o robô espera até 3 minutos.
+    Ao aparecer a caixa verde, ele a fecha e segue. Se vier erro, ou nada, ele para e não clica de novo.</li>
+  </ul></li>
+ <li>Escolha quantas tarefas e clique em <b>Iniciar</b>. Deixe a aba à vista enquanto ele roda.</li>
  <li>No fim, clique em <b>Copiar relatório</b> e cole na conversa com o Claude.</li>
 </ol>
 <div class="box">Se aparecer uma pergunta do SAJ que o robô não conhece (ex.: ao fechar o editor), ele para e pede para você resolver.
-Saia sempre <b>sem salvar e sem peticionar</b> e depois clique em <b>Continuar a rodada</b>. Copie o texto da pergunta para eu automatizar.</div>
+Não peticione por ali; resolva e depois clique em <b>Continuar a rodada</b>. Copie o texto da pergunta para eu automatizar.</div>
 <p style="color:#5b6472;font-size:13px">Atualizou a versão? Apague o favorito antigo e arraste o novo.</p>
 </body></html>
 `;

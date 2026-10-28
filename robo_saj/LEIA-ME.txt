@@ -1,42 +1,50 @@
-ROBÔ DO SAJ DEFENSORIAS (favorito) - versão 0.2: SÓ CONFERE, NÃO PETICIONA
-==========================================================================
+ROBÔ DO SAJ DEFENSORIAS (favorito) - versão 0.3
+================================================
 
 O QUE FAZ
 Na fila "Para peticionar › Intimação" do Painel de Tarefas (painel-saj.ms.def.br),
-abre cada tarefa ("Continuar"), lê a peça e a aba Propriedades, diz se a tarefa
-passaria nas conferências do prompt de peticionamento (ou por que seria pulada)
-e fecha o editor. Não usa IA nem tokens: são regras fixas.
+para cada tarefa: abre ("Continuar"), acerta a Movimentação interna do perfil,
+escolhe o certificado do Defensor e clica UMA vez em "Peticionar". As peças já
+estão prontas: o texto não é conferido nem alterado. Liminar e Redistribuir
+ficam como estão. Não usa IA nem tokens.
 
-Não peticiona, não altera campo, não marca nem desmarca caixa, não salva.
-Só três botões podem ser clicados pelo código (Continuar do card, aba
-Propriedades e o "×" do editor); qualquer outro clique é recusado.
+PERFIS (pelo 1º algarismo do nº do processo)
+ - 0 (tarja SAJ):   Movimentação 920198 - Manifestação (920281-ATOS FINALÍSTICOS)
+ - 5 (tarja EPROC): Movimentação 1000150 - Petição Intermediária TJ (1000000-MOVIMENTAÇÕES DE SISTEMA)
+O robô só lê Evento, Tipo de documento, Sigilo e Defensor: se não estiverem no
+perfil (Manifestação do Autor / 9934, ou PETIÇÃO / 13; 0 - Público; Cahuê Duarte e
+Urdiales), pula a tarefa sem mexer.
+
+MODOS
+ - Conferir: abre, mostra o que faria e fecha. Não altera nada.
+ - Preparar: acerta Movimentação e certificado e fecha sem peticionar.
+ - Peticionar: exige marcar "Autorizo peticionar". Fecha a caixa verde velha,
+   clica uma vez, espera até 3 min (PIN) pela caixa "Sua petição está sendo
+   enviada ao tribunal", fecha a caixa e segue.
+
+PULA a tarefa: nº que não começa com 0/5 ou sem a tarja do perfil; sigilo,
+segredo de justiça ou réu preso no card; modelo de DEVOLVER/ADV PARTICULAR/
+FINALIZAR; Movimentação que não aparece na lista ou aparece mais de uma vez
+parecida; Evento/Tipo/Sigilo/Defensor fora do perfil; Peticionar desativado.
+
+PARA a rodada: erro do SAJ ou nenhuma resposta 3 min depois de Peticionar;
+certificado que não aparece; janela desconhecida; tarefa peticionada que
+continua na fila; "Falhas" subiu no menu; editor que não abre.
+
+Só estes cliques são possíveis (o código recusa qualquer outro): Continuar do
+card, aba Propriedades, "×" do editor, abrir a lista de Movimentação/certificado
+e escolher uma opção nela, Peticionar (só no modo Peticionar autorizado) e o
+"×" da caixa de aviso do SAJ.
 
 INSTALAR
 Abra instalar_robo_saj.html no Chrome/Edge e arraste o botão azul para a barra
-de favoritos (Ctrl+Shift+B mostra a barra).
-
-CONFERÊNCIAS (motivo de pulo)
- - nº do card: 20 dígitos, começa com 0 (perfil A, tarja SAJ) ou 5 (perfil B, tarja EPROC)
- - categoria pelo título do modelo: CIÊNCIA, IMPUG, MANIF, CUMPR/BLOQ/SEQUESTRO, CONTRARR,
-   RECURSO/RI. DEVOLVER, ADV PARTICULAR, FINALIZAR e qualquer outro título = Outros = pula
- - tarjas além de 1º/2º grau, SAJ, EPROC; "sigilo", "segredo de justiça", "réu preso" no card
- - corpo: vazio/curto; sem assinatura no fim; nenhum ou outro nº de processo;
-   colchetes fora de [Data atual do sistema...], [Nome do Defensor...] e notas de rodapé [1];
-   XXX/???/PENDENTE/[VERIFICAR]/[COMPLETAR] (inciso XXX/XXXV não conta);
-   comentário; marca-texto (cor saturada; sombreado pálido e campo automático não contam);
-   texto vermelho; menção a anexo; CIÊNCIA que pede/impugna
- - Sigilo diferente de 0 - Público
-
-AJUSTES (a versão que peticiona fará e conferirá; não são motivo de pulo)
- - Movimentação, Evento e Tipo de documento fora do perfil; Defensor; certificado
-   vazio ou de outra pessoa; Liminar/Redistribuir marcadas
-
-OBSERVAÇÕES (só aviso)
- - parte ativa do card ou nenhuma das partes passivas citadas na peça
+de favoritos (Ctrl+Shift+B mostra a barra). A cada versão nova, troque o favorito.
 
 TESTE (sem o SAJ)
   node teste_robo_saj.js <painel salvo.html> <editor salvo.html>
 As páginas salvas têm dados de processos: não vão para o repositório.
+As listas de Movimentação e de certificado do teste são imitações: as do SAJ
+ainda não foram salvas abertas.
 
 DEPOIS DE MUDAR robo_saj.js
   node gerar_instalador.js   (gera de novo instalar_robo_saj.html)
