@@ -1,4 +1,4 @@
-// Robô do SAJ Defensorias (painel-saj.ms.def.br) - versão 0.3: acerta a Movimentação interna, escolhe o certificado
+// Robô do SAJ Defensorias (painel-saj.ms.def.br) - versão 0.4: acerta a Movimentação interna, escolhe o certificado
 // e peticiona as tarefas da fila "Para peticionar > Intimação". As peças já estão prontas: o texto não é conferido.
 // Liminar e Redistribuir ficam sempre como estão (o robô não toca nessas caixas).
 // Roda como favorito (bookmarklet) na aba do Painel de Tarefas. Três modos:
@@ -9,10 +9,11 @@
 (function () {
   "use strict";
 
-  const VERSAO = "0.3.1";
+  const VERSAO = "0.4.0";
   const HOST = "painel-saj.ms.def.br";
   const CHAVE_SESSAO = "roboSAJ_resultados";
   const ESPERA_ENVIO_MS = 180000; // tempo para digitar o PIN e o SAJ responder
+  const esperaCert = () => window.__roboSAJ_esperaCert || 120000; // tempo para a lista de certificados carregar (assinador/token)
 
   if (window.__roboSAJ && window.__roboSAJ.mostrar && !window.__roboSAJ_teste) { window.__roboSAJ.mostrar(); return; }
 
@@ -82,6 +83,7 @@
     fecharAviso: (el) => naCaixaVerde(el) && !el.closest('[data-testid="editor-container"]'),
     abrirLista: (el) => /(movement-type-select|certificado)__control/.test(String(el.className)),
     opcao: (el) => !!el.closest('[class*="movement-type-select__menu"], [class*="certificado__menu"]'),
+    atualizarCertificados: (el) => el.getAttribute("data-testid") === "refreshButton" && el.getAttribute("aria-label") === "Atualizar lista de certificado",
   };
   function clicar(el, tipo) {
     if (!el || !PERMITIDOS[tipo] || !PERMITIDOS[tipo](el)) throw new Error(`clique recusado pelo robô (${tipo})`);
@@ -215,6 +217,30 @@
     return "";
   }
 
+  // Escolhe o certificado do Defensor. A lista vem do assinador e pode demorar: tenta de novo a cada 5 s
+  // por até 2 min, e a cada 30 s clica em "Atualizar lista de certificado". Devolve "" ou o motivo da falha.
+  async function escolherCertificado() {
+    const inicio = Date.now();
+    let ultimoAtualizar = Date.now(), motivo = "";
+    for (;;) {
+      const raiz = raizProps();
+      const caixa = raiz && q('[data-testid="propriedades-certificado"]', raiz);
+      if (!caixa) return "a caixa Certificado digital sumiu da aba Propriedades";
+      if (igual(lerPropriedades().certificado, CERTIFICADO)) return "";
+      motivo = await escolherNaLista("certificado", caixa.parentElement, "URDIALES", CERTIFICADO);
+      if (!motivo && igual(lerPropriedades().certificado, CERTIFICADO)) return "";
+      if (/parecidas/.test(motivo)) return `há ${motivo.replace(/ com .*/, "")} com o nome do Defensor na lista de certificados`;
+      const seg = Math.round((Date.now() - inicio) / 1000);
+      if (Date.now() - inicio > esperaCert()) return `o certificado ${CERTIFICADO} não apareceu na lista em ${seg} s`;
+      ui.aviso(`Aguardando o certificado carregar (${seg} s de ${esperaCert() / 1000} s). Deixe o assinador aberto e o token conectado.`);
+      if (Date.now() - ultimoAtualizar > 30000) {
+        const b = q('[data-testid="refreshButton"]', raiz);
+        if (b && !b.disabled) { clicar(b, "atualizarCertificados"); ultimoAtualizar = Date.now(); }
+      }
+      await esperar(5000);
+    }
+  }
+
   // ------------------------------------------------------------ caixa verde (aviso do SAJ)
   function avisos() {
     return qa('.MuiSnackbar-root, [role="alert"]')
@@ -254,7 +280,9 @@
 
   // r.resultado começa com: CONFERIDA, PREPARADA, PETICIONADO, PULADO ou PARADO
   async function tratar(card) {
-    const r = { num: card.num, perfil: "", categoria: "", titulo: "", resultado: "", feito: [] };
+    const r = { num: card.num, perfil: "", categoria: "", titulo: "", resultado: "", feito: [], dica: "" };
+    // PARADO: motivo (o que aconteceu) + dica (o que você faz agora)
+    const parado = (motivo, dica) => { r.resultado = "PARADO – " + motivo; r.dica = dica; return r; };
     const cont = contDoCard(card.num);
     if (!cont) { r.resultado = "PULADO – card sumiu da fila"; return r; }
     if (norm(card.tipo) !== "intimacao") { r.resultado = `PULADO – card não é Intimação (${card.tipo})`; return r; }
@@ -271,8 +299,8 @@
     const aberto = await aguardar(() => editorAberto() || dialogoEstranho(), 20000);
     if (!aberto || !editorAberto()) {
       const d = dialogoEstranho();
-      r.resultado = "PARADO – " + (d ? `apareceu: "${texto(d).slice(0, 200)}"` : "o editor não abriu em 20 s");
-      return r;
+      return d ? parado(`ao abrir a tarefa, o SAJ mostrou a janela "${texto(d).slice(0, 200)}"`, "Leia a janela, resolva no SAJ e clique em Iniciar de novo. Mande o texto dela para eu automatizar.")
+        : parado("o editor da tarefa não abriu em 20 s", "O SAJ pode estar lento ou ter pedido login. Recarregue o painel (F5), clique no favorito e em Iniciar.");
     }
     const sel = q('[data-testid^="card-"][aria-selected="true"]');
     if (!sel || sel.getAttribute("data-testid") !== "card-" + card.num) {
@@ -316,7 +344,7 @@
       const erro = await escolherNaLista("movement-type-select", q('[data-testid="select-tree-movimentacao"]', raizProps()).parentElement, P.movCod, P.movLabel.replace(/^\d+\s*-\s*/, ""));
       p = lerPropriedades();
       if (erro || !movCerta(p, P)) return sair(`PULADO – não consegui pôr a Movimentação ${P.movLabel}: ${erro || "veio " + p.movLabel}`);
-      if (dialogoEstranho()) { r.resultado = `PARADO – ao trocar a Movimentação apareceu: "${texto(dialogoEstranho()).slice(0, 200)}"`; return r; }
+      if (dialogoEstranho()) return parado(`ao trocar a Movimentação, o SAJ mostrou a janela "${texto(dialogoEstranho()).slice(0, 200)}"`, "Resolva a janela no SAJ, feche o editor sem peticionar e clique em Iniciar. Mande o texto dela para eu automatizar.");
       r.feito.push("Movimentação acertada");
       await esperar(800); // Evento e Tipo de documento podem mudar junto
       p = lerPropriedades();
@@ -328,13 +356,13 @@
     if (!igual(p.defensor, DEFENSOR)) return sair(`PULADO – Defensor veio "${p.defensor || "vazio"}"`);
     // 3) certificado
     if (!igual(p.certificado, CERTIFICADO)) {
-      const erro = await escolherNaLista("certificado", q('[data-testid="propriedades-certificado"]', raizProps()).parentElement, CERTIFICADO, CERTIFICADO);
+      const erro = await escolherCertificado();
+      if (dialogoEstranho()) return parado(`ao escolher o certificado, o SAJ mostrou a janela "${texto(dialogoEstranho()).slice(0, 200)}"`, "Resolva a janela no SAJ, feche o editor sem peticionar e clique em Iniciar.");
       p = lerPropriedades();
       if (erro || !igual(p.certificado, CERTIFICADO)) {
-        r.resultado = `PARADO – certificado não escolhido: ${erro || "veio " + (p.certificado || "vazio")}. O assinador está aberto e o token conectado?`;
-        await fecharEditor(); return r;
+        await fecharEditor();
+        return parado(erro || `o certificado ficou "${p.certificado || "vazio"}"`, "Abra o assinador do SAJ, conecte o token, clique em \"Atualizar lista de certificado\" numa tarefa para ver se o nome aparece e depois clique em Iniciar.");
       }
-      if (dialogoEstranho()) { r.resultado = `PARADO – ao escolher o certificado apareceu: "${texto(dialogoEstranho()).slice(0, 200)}"`; return r; }
       r.feito.push("certificado escolhido");
     }
     if (!movCerta(p, P)) return sair("PULADO – a Movimentação mudou depois de escolher o certificado");
@@ -342,9 +370,9 @@
     if (estado.modo === "preparar") return sair("PREPARADA (não peticionada)");
 
     // 4) Peticionar: uma vez só
-    if (!(await fecharAvisos())) { r.resultado = "PARADO – há uma caixa de aviso do SAJ que não consegui fechar"; return r; }
-    const pet = await aguardar(() => { const b = q('[data-testid="action-emissao-expediente-peticionar-btn"]'); return b && !b.disabled && b.getAttribute("aria-disabled") !== "true" ? b : null; }, 8000);
-    if (!pet) return sair("PULADO – o botão Peticionar continuou desativado");
+    if (!(await fecharAvisos())) return parado("havia uma caixa de aviso do SAJ na tela que o robô não conseguiu fechar", "Feche a caixa de aviso no canto da tela e clique em Iniciar.");
+    const pet = await aguardar(() => { const b = q('[data-testid="action-emissao-expediente-peticionar-btn"]'); return b && !b.disabled && b.getAttribute("aria-disabled") !== "true" ? b : null; }, 30000);
+    if (!pet) return sair("PULADO – o botão Peticionar ficou desativado por 30 s (algum campo obrigatório vazio?)");
     estado.peticionados.add(card.num);
     clicar(pet, "peticionar");
     r.feito.push("Peticionar clicado");
@@ -355,12 +383,17 @@
       if (d && !/certificado|pin|senha|assinad/.test(norm(texto(d)))) return { erro: "apareceu: " + texto(d).slice(0, 200) };
       return null;
     }, ESPERA_ENVIO_MS, 500);
-    if (!fim) { r.resultado = "PARADO – sem caixa de sucesso nem de erro em 3 min depois de Peticionar. Confira em Em processamento/Falhas"; return r; }
-    if (fim.erro) { r.resultado = "PARADO – o SAJ avisou: " + fim.erro; return r; }
+    if (!fim) return parado("depois de clicar em Peticionar, não veio a caixa verde nem erro em 3 min", "NÃO peticione de novo. Veja se o processo está em \"Em processamento\" ou \"Falhas\" antes de seguir.");
+    if (fim.erro) return parado("o SAJ respondeu com erro depois de Peticionar: " + fim.erro, "NÃO peticione de novo. Veja o processo em \"Falhas\" e mande o texto do erro para mim.");
     await fecharAvisos();
-    if (!(await aguardar(() => !editorAberto(), 15000))) { r.resultado = "PARADO – a caixa de sucesso apareceu, mas o editor não fechou"; return r; }
+    if (!(await aguardar(() => !editorAberto(), 15000))) return parado("a caixa verde apareceu, mas o editor não fechou", "A petição provavelmente foi enviada. Confira em \"Em processamento\", feche o editor sem peticionar e clique em Iniciar.");
     r.resultado = "PETICIONADO";
     return r;
+  }
+
+  function avisoParada(motivo, dica, num) {
+    estado.parada = { motivo, dica, num };
+    ui.aviso(`PAROU POR CAUSA DE: ${motivo}.` + (num ? `\nProcesso: ${num}` : "") + (dica ? `\nO QUE FAZER: ${dica}` : ""), true);
   }
 
   async function rodar(limite) {
@@ -370,20 +403,20 @@
     if (editorAberto()) { ui.aviso("Feche o editor que está aberto (sem peticionar) e clique em Iniciar de novo.", true); return; }
     const f = filaSelecionada();
     if (!f.ok) { ui.aviso("Não comecei: " + f.motivo + ".", true); return; }
-    estado.rodando = true; estado.parar = false; estado.inicio = contagens();
+    estado.rodando = true; estado.parar = false; estado.parada = null; estado.inicio = contagens();
     ui.estadoBotoes();
-    let falhasSeguidas = 0, feitos = 0;
+    let feitos = 0;
     const vistos = new Set(estado.resultados.filter((x) => x.modo === estado.modo || x.resultado.startsWith("PETICIONADO")).map((x) => x.num));
     try {
       while (feitos < limite && !estado.parar) {
         const fila = filaSelecionada();
-        if (!fila.ok) { ui.aviso("Parei: " + fila.motivo + ".", true); break; }
+        if (!fila.ok) { avisoParada(fila.motivo, 'No menu da esquerda, clique em "Para peticionar" e depois em "Intimação"; então clique em Iniciar.'); break; }
         const cards = lerCards();
         const volta = cards.find((c) => estado.peticionados.has(c.num));
         if (volta && estado.modo === "peticionar") {
           // a tarefa peticionada pode levar uns segundos para sair da fila
           if (await aguardar(() => !lerCards().some((c) => c.num === volta.num), 20000)) continue;
-          ui.aviso(`Parei: ${volta.num} foi peticionado e continua na fila. Confira antes de seguir.`, true); break;
+          avisoParada(`o processo ${volta.num} foi peticionado, mas continua na fila depois de 20 s`, 'NÃO peticione de novo. Confira o processo em "Em processamento" e "Falhas"; se estiver tudo certo, recarregue o painel (F5) e clique em Iniciar.'); break;
         }
         const card = cards.find((c) => !vistos.has(c.num));
         if (!card) break;
@@ -391,16 +424,13 @@
         ui.aviso(`${estado.modo === "conferir" ? "Conferindo" : estado.modo === "preparar" ? "Preparando" : "Peticionando"} ${card.num}...`);
         const falhasAntes = contagens().falhas;
         let r;
-        try { r = await tratar(card); } catch (e) { r = { num: card.num, perfil: "", categoria: "", titulo: "", feito: [], resultado: "PARADO – erro do robô: " + e.message }; }
+        try { r = await tratar(card); } catch (e) { r = { num: card.num, perfil: "", categoria: "", titulo: "", feito: [], resultado: "PARADO – falha no próprio robô: " + e.message, dica: "Copie o relatório e mande para mim." }; }
         r.modo = estado.modo;
         estado.resultados.push(r); salvar(); ui.tabela(); feitos++;
-        if (r.resultado.startsWith("PARADO")) {
-          falhasSeguidas++;
-          if (estado.modo === "peticionar" || editorAberto() || dialogoEstranho() || falhasSeguidas >= 2) { ui.aviso("Parei em " + card.num + ": " + r.resultado.slice(9), true); break; }
-        } else falhasSeguidas = 0;
+        if (r.resultado.startsWith("PARADO")) { avisoParada(r.resultado.slice(9), r.dica, card.num); break; }
         await esperar(1500);
         const falhasDepois = contagens().falhas;
-        if (falhasAntes !== "?" && falhasDepois !== "?" && Number(falhasDepois) > Number(falhasAntes)) { ui.aviso(`Parei: "Falhas" subiu de ${falhasAntes} para ${falhasDepois}.`, true); break; }
+        if (falhasAntes !== "?" && falhasDepois !== "?" && Number(falhasDepois) > Number(falhasAntes)) { avisoParada(`o contador "Falhas" do menu subiu de ${falhasAntes} para ${falhasDepois} depois do processo ${card.num}`, 'Abra "Falhas" no menu e veja o motivo antes de seguir.'); break; }
       }
     } finally {
       estado.rodando = false; estado.fim = contagens(); ui.estadoBotoes();
@@ -424,6 +454,7 @@
     linhas.push("", `${conta("PETICIONADO")} peticionadas, ${conta("PREPARADA")} preparadas, ${conta("CONFERIDA")} conferidas, ${conta("PULADO")} puladas, ${conta("PARADO")} paradas. Robô ${VERSAO}; ${estado.acoes} cliques.`);
     const fmt = (c) => (c ? `Intimação ${c.intimacao}, Em processamento ${c.emProcessamento}, Falhas ${c.falhas}` : "-");
     linhas.push(`Menu no início: ${fmt(estado.inicio)}. No fim: ${fmt(estado.fim)}.`);
+    if (estado.parada) linhas.push("", `PAROU POR CAUSA DE: ${estado.parada.motivo}.` + (estado.parada.num ? ` Processo ${estado.parada.num}.` : "") + (estado.parada.dica ? ` O que fazer: ${estado.parada.dica}` : ""));
     return linhas.join("\n");
   }
 

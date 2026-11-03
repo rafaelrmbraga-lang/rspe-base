@@ -1,5 +1,5 @@
-ROBÔ DO SAJ DEFENSORIAS (favorito) - versão 0.3.1
-==================================================
+ROBÔ DO SAJ DEFENSORIAS (favorito) - versão 0.4
+================================================
 
 O QUE FAZ
 Na fila "Para peticionar › Intimação" do Painel de Tarefas (painel-saj.ms.def.br),
@@ -26,13 +26,18 @@ PULA a tarefa: nº que não começa com 0/5 ou sem a tarja do perfil; sigilo,
 segredo de justiça ou réu preso no card; Movimentação que não aparece na lista ou aparece mais de uma vez
 parecida; Evento/Tipo/Sigilo/Defensor fora do perfil; Peticionar desativado.
 
-PARA a rodada: erro do SAJ ou nenhuma resposta 3 min depois de Peticionar;
-certificado que não aparece; janela desconhecida; tarefa peticionada que
+CERTIFICADO: a lista vem do assinador e pode demorar. O robô tenta de novo a
+cada 5 s por até 2 min e, a cada 30 s, clica em "Atualizar lista de certificado".
+Só para se o nome do Defensor não aparecer nesse tempo.
+
+PARA a rodada (o painel mostra "PAROU POR CAUSA DE", o processo e "O QUE FAZER"):
+erro do SAJ ou nenhuma resposta 3 min depois de Peticionar;
+certificado que não aparece em 2 min; janela desconhecida; tarefa peticionada que
 continua na fila; "Falhas" subiu no menu; editor que não abre.
 
 Só estes cliques são possíveis (o código recusa qualquer outro): Continuar do
 card, aba Propriedades, "×" do editor, abrir a lista de Movimentação/certificado
-e escolher uma opção nela, Peticionar (só no modo Peticionar autorizado) e o
+e escolher uma opção nela, "Atualizar lista de certificado", Peticionar (só no modo Peticionar autorizado) e o
 "×" da caixa de aviso do SAJ.
 
 INSTALAR

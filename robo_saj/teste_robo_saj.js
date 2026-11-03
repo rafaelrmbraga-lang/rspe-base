@@ -81,7 +81,9 @@ function simularSAJ({ dialogo, semOpcao }) {
       });
     }
     if (/certificado__control/.test(ctl.className)) {
-      menu(cont, "certificado", [["", ["CAHUE DUARTE E URDIALES:26255213846", "OUTRA PESSOA:111"]]], (pai, o) => {
+      // enquanto o assinador não responde, a lista abre vazia
+      const certs = Date.now() < (window.__certProntoEm || 0) ? [] : ["CAHUE DUARTE E URDIALES:26255213846", "OUTRA PESSOA:111"];
+      menu(cont, "certificado", [["", certs]], (pai, o) => {
         const vc = ctl.querySelector(".certificado__value-container");
         const ph = vc.querySelector(".certificado__placeholder");
         if (ph) ph.remove();
@@ -197,7 +199,7 @@ const avisoRobo = (pg) => pg.evaluate(() => document.getElementById("robo-saj-ho
   confere("nenhum aviso sobrando na tela", await pg.evaluate(() => !document.querySelector(".MuiSnackbar-root")));
   confere("nunca mexe em Liminar/Redistribuir", !cl.some((t) => /Liminar|Redistribuir|urgente|redistribuir/.test(String(t))), cl.filter((t) => /Liminar|Redistribuir/.test(String(t))));
   confere("Liminar chegou ao envio como veio (marcada)", (await pg.evaluate(() => window.__liminarNoEnvio)).every(Boolean));
-  const proib = cl.filter((t) => !["btn-atividade-generic", "action-emissao-expediente-close-btn", "action-menu-propriedades", "action-emissao-expediente-peticionar-btn", "Close", "abrirLista", undefined, null].includes(t));
+  const proib = cl.filter((t) => !["btn-atividade-generic", "action-emissao-expediente-close-btn", "action-menu-propriedades", "action-emissao-expediente-peticionar-btn", "Close", "abrirLista", "refreshButton", undefined, null].includes(t));
   confere("só cliques permitidos", proib.length === 0, proib);
 
   console.log("erro do SAJ depois de Peticionar");
@@ -214,9 +216,32 @@ const avisoRobo = (pg) => pg.evaluate(() => document.getElementById("robo-saj-ho
   });
   res = await rodada(pg, "peticionar", 3, true);
   const parados = res.filter((r) => r.resultado.startsWith("PARADO"));
-  confere("para na primeira com erro, sem seguir", parados.length === 1 && res[res.length - 1] === parados[0] && /o SAJ avisou: erro/.test(parados[0].resultado), res.map((r) => r.resultado));
+  confere("para na primeira com erro, sem seguir", parados.length === 1 && res[res.length - 1] === parados[0] && /o SAJ respondeu com erro depois de Peticionar/.test(parados[0].resultado), res.map((r) => r.resultado));
   const aind = await pg.evaluate(() => window.__cliques.filter((t) => t === "peticionar-com-erro").length);
   confere("um único clique em Peticionar", aind === 1, aind);
+
+  confere("depois do erro, o editor fica aberto para você ver", await pg.evaluate(() => !!document.querySelector('[data-testid="editor-container"]')));
+  res = await rodada(pg, "preparar", 1);
+  confere("não começa com editor aberto", res.length === 0 && /Feche o editor/.test(await avisoRobo(pg)));
+  await pg.evaluate(() => { document.querySelectorAll("#dlg").forEach((x) => x.remove()); const e = document.querySelector('[data-testid="editor-container"]'); if (e) e.closest(".MuiDialog-root").remove(); });
+
+  console.log("certificado demorando a carregar");
+  await pg.evaluate(() => { window.__certProntoEm = Date.now() + 38000; window.__cliques.length = 0; });
+  res = await rodada(pg, "preparar", 2);
+  const prep = res.filter((r) => r.resultado.startsWith("PREPARADA"));
+  confere("esperou o certificado e seguiu", prep.length >= 1 && prep[0].feito.includes("certificado escolhido") && !res.some((r) => r.resultado.startsWith("PARADO")), res.map((r) => r.resultado));
+  confere("clicou em Atualizar lista de certificado", (await pg.evaluate(() => window.__cliques)).includes("refreshButton"));
+
+  console.log("certificado que nunca carrega");
+  await pg.evaluate(() => { window.__certProntoEm = Infinity; window.__roboSAJ_esperaCert = 15000; });
+  res = await rodada(pg, "preparar", 3);
+  const ult = res[res.length - 1];
+  confere("para (não pula) com o motivo do certificado", res.filter((r) => r.resultado.startsWith("PARADO")).length === 1 && /PARADO – o certificado CAHUE DUARTE E URDIALES não apareceu na lista/.test(ult.resultado), res.map((r) => r.resultado));
+  const av = await avisoRobo(pg);
+  console.log("     painel: " + av.replace(/\n/g, " | "));
+  confere("aviso diz PAROU POR CAUSA DE / Processo / O QUE FAZER", /^PAROU POR CAUSA DE: .+\nProcesso: \d{7}-.+\nO QUE FAZER: .+/.test(av), av);
+  confere("editor fechado depois de parar", await pg.evaluate(() => !document.querySelector('[data-testid="editor-container"]')));
+  await pg.evaluate(() => { window.__certProntoEm = 0; window.__roboSAJ_esperaCert = 0; });
 
   const rel = await pg.evaluate(() => window.__roboSAJ.relatorioTexto());
   if (process.env.COMPLETO) console.log("\n" + rel);
