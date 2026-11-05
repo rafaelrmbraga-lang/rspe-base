@@ -566,11 +566,12 @@ r = rspe(k, [c], [prisao("01/03/2016", c["processo_criminal"], "PRISÃO DEFINITI
          [inc(REG, "Fechado - Regime Inicial", "01/03/2016", "01/03/2016")], ini="01/03/2016")
 add(k, "Extinção", "Limite de 30 anos do art. 75 (fatos anteriores a 23/01/2020): a aba Extinção mantém o término do SEEU com ressalva; a Auditoria alerta",
     "Extinção: término do SEEU (%s) mantido, situação 'Em cumprimento · art. 75 a verificar' (amarelo); Auditoria: alerta do art. 75 com máximo em %s; "
-    "coluna Término geral %s*" % (r["termino_previsao_seeu"], lim, lim),
+    "coluna Término geral com o término do SEEU e '⚠', máximo %s na dica (P02, 7.15.3)" % (r["termino_previsao_seeu"], lim, lim),
     "Art. 75 - 50 anos, limite de 30", "Pena 50 anos, fato 2015 (antes da Lei 13.964/2019): limite de 30 anos (CP, art. 75, redação anterior). Preso desde "
     "01/03/2016 sem interrupção: 01/03/2016 + 30 anos - 1 = %s. O SEEU imprime término %s (50 anos)." % (lim, r["termino_previsao_seeu"]), r,
     [C("ext_termino", "eq", r["termino_previsao_seeu"]), C("ext_sit", "contem", "art. 75"), C("ext_cor", "eq", "amarelo"),
-     AUD("limite-de-cumprimento-art-75", nivel="alerta", contem=lim), C("termino", "eq", lim + "*")])
+     AUD("limite-de-cumprimento-art-75", nivel="alerta", contem=lim), C("termino", "eq", r["termino_previsao_seeu"] + " ⚠"),
+     C("termino_full", "contem", lim)])
 
 k = 8050
 c = cr(k, ROUBO, anos(45), "01/03/2021", sentenca="01/11/2021", transito="01/02/2022", regime="Fechado")
@@ -657,7 +658,8 @@ NOTAS = {
         0: ("Programa: 'Prescrição executória aparente em 09/05/2023', pelo remanescente impresso pelo SEEU (81 dias -> 3 anos). Os eventos do "
             "próprio RSPE mostram o flagrante de 01/02/2019 a 30/04/2019 neste processo (89 dias), que o SEEU não abateu: pela detração "
             "obrigatória (CP, art. 42) a pena se esgotou em 02/05/2020, antes da fuga. O resultado prático (extinção da punibilidade) é "
-            "favorável de qualquer modo; a divergência é o fundamento (prescrição em vez de cumprimento).", True),
+            "favorável de qualquer modo; a divergência é o fundamento (prescrição em vez de cumprimento). Decidido no P57 (7.15.3, gabarito): "
+            "a linha fica A VERIFICAR, com o fundamento no cumprimento e a prescrição pelo remanescente do SEEU só como hipótese.", False),
         1: ("Programa: 'Pena interrompida', sem hipótese de extinção. Pela lei a pena estava cumprida antes da fuga (detração de 89 dias + "
             "284 dias de cumprimento = 373 >= 365; CP, art. 42; LEP, art. 66, II). O programa confia no remanescente do SEEU e não confere a "
             "detração visível nos eventos.", False),

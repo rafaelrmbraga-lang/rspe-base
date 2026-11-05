@@ -3,7 +3,7 @@
 Módulo de relatórios em PDF (ReportLab):
 - relatório individual: um PDF por assistido, com a situação executória lida do RSPE, os cálculos do
   programa (indulto, comutação, prescrição, remição a requerer) e os pontos da Auditoria;
-- relatório geral: um PDF da base, com os números do lote e a fila de prioridade.
+- relatório geral: um PDF da base, com os números do lote.
 
 Nada é inventado: datas de progressão, livramento e término são as do SEEU (RSPE); o que o programa
 calcula sai identificado como cálculo do programa, sujeito a conferência com o Atestado de Pena.
@@ -853,7 +853,7 @@ def relatorio_individual(m, caminho, nome_base):
         fp = (c.get("frac_prog") or "—").split(" - ")[0]
         fl = (c.get("frac_liv") or "—").split(" - ")[0]
         cd.append([Paragraph("<b>%s</b> <font color='%s'>%s</font>%s" % (_t(c.get("nome_crime")), TX2, _t(c.get("dispositivo")), " <font color='%s'>· extinto</font>" % TX3 if ext else ""), st["cel"]),
-                   c.get("pena") or "—", c.get("fato") or "—", "sim" if c.get("hediondo") == "S" else "não",
+                   c.get("pena") or "—", c.get("fato") or "—", (Paragraph(_t(c["hediondo_txt"]), st["cel"]) if len(c.get("hediondo_txt") or "") > 4 else (c.get("hediondo_txt") or ("sim" if c.get("hediondo") == "S" else "não"))),
                    {"S": "sim", "presumida": "presumida"}.get(c.get("vga_res") or c.get("vga"), "não"), reinc, fp, "vedado" if fl.strip() in ("1", "1/1") else fl])
     el.append(_tabela(cd, [W * 0.3, W * 0.12, W * 0.1, W * 0.08, W * 0.06, W * 0.1, W * 0.12, W * 0.12], st))
 
@@ -1295,43 +1295,6 @@ def estatisticas(modelos, hoje=None):
     E["com_alerta"] = sum(1 for m in modelos if m.get("aud_alertas"))
     E["n_alertas"], E["n_verificar"] = sum(cat.values()), sum(catv.values())
     return E
-
-
-def fila_prioridade(modelos):
-    """(prioridade, nome, execução, motivo, data) - ordem de atuação."""
-    fila = []
-    for m in modelos:
-        mot = []
-        if m.get("ext_cor") == "vermelho":
-            mot.append((1, "Extinção pelo cumprimento cabível", m.get("ext_termino")))
-        # cada pretensão com a sua cor; a data (presc_prox) é só da executória
-        if m.get("presc_retro_cor") == "vermelho":
-            mot.append((1, "Prescrição da pretensão punitiva aparente", ""))
-        if m.get("presc_ppe_cor") == "vermelho":
-            mot.append((1, "Prescrição executória aparente", m.get("presc_prox")))
-        elif m.get("presc_ppe_cor") == "amarelo":
-            mot.append((1, "Prescrição executória iminente", m.get("presc_prox")))
-        if m.get("prog_cor") == "vencido":
-            mot.append((2, "Progressão vencida (%s)" % (m.get("prog_sit") or "").split(" ·")[0], m.get("prog")))
-        if m.get("liv_cor") == "vencido":
-            mot.append((2, "Livramento vencido (%s)" % (m.get("liv_sit") or "").split(" ·")[0], m.get("liv")))
-        peds = m.get("pedidos") or {}
-        cab = [x for x in ((m.get("dec") or {}).get("decretos") or []) if x.get("s") == "cabe" and not peds.get("ind_" + str(x.get("id"))) and not peds.get("ind")]
-        if cab:
-            mot.append((3, "Indulto/comutação cabível sem pedido: %s" % ", ".join("%s (%s)" % (x.get("beneficio") or "benefício", x.get("ano")) for x in cab), ""))
-        if m.get("fd_cor") == "vermelho":
-            mot.append((3, m.get("fd_sit"), ""))
-        elif m.get("ficha_tem") and m.get("fd_cor") == "amarelo":
-            mot.append((4, m.get("fd_sit"), ""))
-        for campo, rot in (("prog_dias", "Progressão"), ("liv_dias", "Livramento")):
-            d = m.get(campo)
-            if d is not None and 0 < d <= 30 and not m.get("estado_exec"):
-                mot.append((4, "%s em %s" % (rot, rs.pl(d, "dia", "dias")), m.get("prog" if campo == "prog_dias" else "liv")))
-        if mot:
-            p = min(x[0] for x in mot)
-            fila.append((p, m.get("nome"), m.get("proc"), "; ".join(x[1] for x in sorted(mot)), next((x[2] for x in sorted(mot) if x[2]), "")))
-    fila.sort(key=lambda x: (x[0], x[1] or ""))
-    return fila
 
 
 # ---------------------------------------------------------------- relatório geral: PDF

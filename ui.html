@@ -1256,7 +1256,7 @@ const ui = {
                 : `<span class="pck" title="Marcar pedido feito" onclick="event.stopPropagation();ui.pedidoAbrir(${jsa(r.id)},'${spec.id}')"></span>`; }
         else if(c[0]==='presc_calc'){ const e=this.calcEstado(r);
           v = !e? '<span class="muted">—</span>' : `<span class="jz-b ${e==='pend'?'pri':''}" title="${e==='pend'?'Evasão com várias condenações: digite o saldo de cada uma na data da fuga':'Ver o cálculo da fuga nos 4 critérios e a fundamentação'}" onclick="event.stopPropagation();ui.prescCalc(${jsa(r.id)})">${e==='pend'?'Calcular':'Ver cálculo'}</span>`; }
-        else if(c[0]==='conduta'){ v = r.conduta_ruim ? `<span class="falta">${esc(v)}</span>` : (r.ficha_tem ? esc(v) : `<span class="muted">${esc(v)}</span>`); }
+        else if(c[0]==='conduta'){ v = r.conduta_ruim ? `<span class="falta">${esc(v)}</span>` : r.conduta_apurar ? `<span class="apurar">${esc(v)}</span>` : (r.ficha_tem ? esc(v) : `<span class="muted">${esc(v)}</span>`); }
         else if(c[0]==='falta'){ v = r.falta_sim ? `<span class="falta">Sim</span>` : (r.falta_apurar ? `<span class="apurar">A apurar</span>` : `<span class="muted">${esc(v)}</span>`);
           if((r.faltas_itens||[]).length) v=`<span class="fedit" title="Ver e decidir as faltas (vale em todas as abas)" onclick="event.stopPropagation();ui.faltasModal(${jsa(r.id)})">${v} <span class="fe">✎</span></span>`; }
         else { v = esc(v).replace('(est.)','<span class="est">(est.)</span>'); if(!v) v='<span class="muted">—</span>'; }
@@ -1683,7 +1683,7 @@ const ui = {
     L.push(`Extinção: ${r.ext_sit||'—'}${r.ext_hipoteses&&r.ext_hipoteses!=='—'?' · '+r.ext_hipoteses:''}${r.ext_multa?' · '+r.ext_multa:''}`);
     if(r.falta_sim) L.push(`Falta (12 meses): ${r.falta.replace(/^Sim · /,'')}`);
     else if(r.falta_apurar) L.push(`Falta a apurar (12 meses, sem sanção reconhecida): ${r.falta_det}`);
-    const cr=(r.crimes_det||[]).filter(c=>!/^S/i.test(c.extinto||'')).map(c=>`• ${c.nome_crime||'Crime'} (${c.dispositivo||''}) · pena ${c.pena||''} · fato ${c.fato||'—'} · processo ${c.proc||'—'}`);
+    const cr=(r.crimes_det||[]).filter(c=>!/^S/i.test(c.extinto||'')).map(c=>`• ${c.nome_crime||'Crime'} (${c.dispositivo||''}) · pena ${c.pena||''} · fato ${c.fato||'—'} · processo ${c.proc||'—'}${/^hediondo a verificar/.test(c.hediondo_txt||'')?' · '+c.hediondo_txt:''}`);
     if(cr.length) L.push('\nCrimes em execução\n'+cr.join('\n'));
     const pts=(r.aud_itens||[]).filter(i=>!i.baixado&&(i.nivel==='alerta'||i.nivel==='verificar'));
     if(pts.length) L.push('\nPontos de atenção\n'+pts.map(i=>'• '+i.titulo).join('\n'));
@@ -2848,7 +2848,7 @@ const ui = {
     const pill=(t,c)=> t?`<span class="pill ${c||'none'}">${esc(t)}</span>`:'<span class="muted">—</span>';
     const lin=(rot,conteudo)=>`<div class="ln"><span class="lr">${rot}</span><span class="lv">${conteudo}</span></div>`;
     const dataSit=(d,sit,cor)=> `${esc(d||'—')}${sit&&sit!==d?' '+pill(sit,cor):''}`;
-    const crimes=(r.crimes_det||[]).filter(c=>!/^S/i.test(c.extinto||'')).map(c=>`<b>${esc(c.nome_crime||'Crime')}</b> <span class="muted">(${esc(c.dispositivo||'')})</span> · ${esc(c.pena||'')}`).join('<br>');
+    const crimes=(r.crimes_det||[]).filter(c=>!/^S/i.test(c.extinto||'')).map(c=>`<b>${esc(c.nome_crime||'Crime')}</b> <span class="muted">(${esc(c.dispositivo||'')})</span> · ${esc(c.pena||'')}${/^hediondo a verificar/.test(c.hediondo_txt||'')?` <span class="pill amarelo">${esc(c.hediondo_txt)}</span>`:''}`).join('<br>');
     // Benefícios: só os decretos em que o indulto ou a comutação é cabível ("2005 Cabível; 2019 Cabível")
     const cabiveis=ben=>{ const L=this.decDe(r).filter(d=>d.s==='cabe'&&d.beneficio===ben);
       return L.length?'<div style="display:flex;flex-wrap:wrap;gap:4px 12px">'+L.map(d=>`<div><span class="muted">${esc(String(d.ano||d.id))}${/_maes$/.test(d.id||'')?' (Dia das Mães)':''}</span> ${pill('Cabível','verde')}</div>`).join('')+'</div>'

@@ -1389,6 +1389,13 @@ def _outra_execucao_em_curso(r, a, b):
     return ""
 
 
+def _livramentos(r, eventos):
+    try:
+        return list(rs.periodos_livramento([e for e in eventos if not e.get("_ficha")], r.get("_incidentes") or []))
+    except Exception:
+        return []
+
+
 def _detracao_outro_processo(r, crimes, ativos, eventos):
     """Custódia do RSPE por processo que não integra esta execução (nem outra execução da pessoa), já encerrada, com fato de crime
     ativo anterior ao início dela: detração possível nesta execução - "verificar" com o período e a tese (item 155 de 16/10)."""
@@ -1422,6 +1429,21 @@ def _detracao_outro_processo(r, crimes, ativos, eventos):
             continue
         if pela_ficha and not (_rem and dias >= _rem):
             continue  # prisão que só a ficha mostra: só quando, sozinha, alcança a pena que falta (hipótese de extinção)
+        # P50 (7.15.3): prisão durante o período de prova de livramento não suspenso: o período de prova é cumprimento da pena
+        # (Súmula 617/STJ) e a pena nova só começa depois dele (STJ, Tema 1.367) - não se propõe a detração, que contaria o mesmo
+        # tempo duas vezes (CP, art. 42); aviso a verificar, para conferir se houve suspensão do livramento
+        _lcs = [(x, y) for x, y in _livramentos(r, eventos) if x <= b and (y is None or y >= a)]
+        if _lcs:
+            out.append(_item("verificar", "Prisão em outro processo (%s) de %s a %s durante o livramento condicional: detração não proposta" % (
+                ", ".join(ps), rs.fmt(a), rs.fmt(b)),
+                "A custódia de %s a %s por processo que não integra esta execução (%s) caiu no período de prova do livramento de %s. Sem "
+                "decisão de suspensão, o período de prova segue sendo cumprimento da pena (Súmula 617/STJ), e a pena por fato novo só começa "
+                "no dia seguinte ao fim dele (STJ, Tema 1.367): esse tempo já conta nesta execução e não se detrai de novo (CP, art. 42). "
+                "Conferir se o livramento foi suspenso nesse período - se foi, a detração da prisão cautelar pode ser pedida." % (
+                    rs.fmt(a), rs.fmt(b), ", ".join(ps), rs.fmt(_lcs[0][0])),
+                "CP, arts. 42 e 90; Súmula 617/STJ; STJ, Tema 1.367.", tipo="detracao-prisao-em-outro-processo-no-livramento",
+                ref=rs.fmt(a)))
+            continue
         _fim = "" if pela_ficha else next((rs._texto_evento(e) for e in eventos if rs.to_date(e.get("data") or "") == b and "INTERRUP" in (e.get("tipo") or "").upper()), "")
         out.append(_item("verificar", "Detração por prisão em outro processo (%s): %s a %s - %s" % (", ".join(ps), rs.fmt(a), rs.fmt(b), rs.pl(dias, "dia", "dias")),
                          ("A ficha SIAPEN registra" if pela_ficha else "O RSPE registra") +
@@ -2342,6 +2364,18 @@ def auditar(r, hoje=None):
             itens.append(_item("alerta", "%s: SEEU tratou como hediondo, mas o tipo não consta do rol" % nome,
                                (obs_h or "Verificar a capitulação (qualificadora/§) que justifique a hediondez.") + " No RSPE: progressão %s; livramento %s." % (rs.pct_rotulo(c.get("fracao_progressao")), c.get("fracao_livramento")),
                                "Lei 8.072/90, art. 1º; LEP, art. 112, § 5º.", tipo="seeu-tratou-como-hediondo-mas-o-tipo-nao-consta", ref=nome))
+        elif hed_lei is None and hed_seeu and rs.hediondo_selo_verificar(c):
+            # P07 (7.15.3): § 2º-D do art. 121 (Lei 15.358/2026) com o selo do SEEU - fora do texto do rol: hediondo a verificar
+            itens.append(_item("verificar", "%s: %s" % (nome, rs.hediondo_selo_verificar(c)),
+                               "O SEEU trata como hediondo o homicídio do art. 121, § 2º-D, do CP (incluído pela Lei 15.358/2026; progressão %s; livramento "
+                               "%s). O art. 1º, I, da Lei 8.072/90 fala em homicídio qualificado (art. 121, § 2º) e em atividade típica de grupo de "
+                               "extermínio, e a Lei 15.358/2026 (art. 4º) declara hediondos só os crimes dos seus arts. 2º e 3º: o § 2º-D não está "
+                               "escrito no rol, e não se localizou precedente sobre o ponto. A Auditoria confere as frações como hediondo; se a "
+                               "hediondez for afastada, valem as frações do crime comum e não incide a vedação do livramento do hediondo com resultado "
+                               "morte - conferir a sentença e sustentar a leitura estrita do rol." % (
+                                   rs.pct_rotulo(c.get("fracao_progressao")), c.get("fracao_livramento")),
+                               "Lei 8.072/90, art. 1º, I; Lei 15.358/2026, art. 4º; CF, art. 5º, XXXIX; LEP, art. 112; CP, art. 83.",
+                               tipo="homicidio-2d-com-selo-de-hediondo", ref=nome))
         elif hed_lei is None and art:
             itens.append(_item("info", "%s: hediondez depende do parágrafo/inciso" % nome, "Hediondo apenas se: %s. SEEU aplicou %s." % (obs_h, "fração de hediondo" if hed_seeu else "fração comum"), "Lei 8.072/90, art. 1º.", tipo="hediondez-depende-do-paragrafo-inciso", ref=nome))
         # VGA
@@ -3899,7 +3933,7 @@ def auditar(r, hoje=None):
                                    "Início do cumprimento por estas condenações: %s; %s; término impresso pelo SEEU: %s (%s depois do início). %s O "
                                    "tempo de cumprimento não pode passar de %d anos%s: término máximo em %s%s%s. As frações de progressão e livramento "
                                    "continuam a incidir sobre a pena total unificada (Súmula 715/STF); o limite alcança o término. A coluna Término "
-                                   "mostra o término máximo, calculado pelo programa (*)." % (
+                                   "mantém a data do SEEU com o sinal ⚠ e traz o término máximo na dica." % (
                                        rs.fmt(_ini75), "fatos de %s a %s" % (rs.fmt(min(_fatos_at)), rs.fmt(max(_fatos_at))) if min(_fatos_at) != max(_fatos_at) else "fato em %s" % rs.fmt(_fatos_at[0]),
                                        rs.fmt(_term), ("%.1f anos" % ((_term - _ini75).days / 365.25)).replace(".", ","),
                                        ("Todos os fatos são anteriores a %s, quando a Lei 13.964/2019 elevou o limite para 40 anos; a lei mais gravosa "
@@ -4068,7 +4102,8 @@ def auditar(r, hoje=None):
                            "reinício. Não é fuga nem liberdade - a prescrição executória não corre enquanto estiver preso por outro motivo "
                            "(CP, art. 116, p. único). Conferir se a prisão no outro processo já foi convertida em cumprimento da pena unificada.",
                            "CP, art. 116, p. único; LEP, art. 111.", tipo="execucao-suspensa-preso-em-outro-processo"))
-    elif "INTERROMPIDA" in (r.get("situacao_cumprimento") or ""):
+    elif "INTERROMPIDA" in (r.get("situacao_cumprimento") or "") or ("SV 56" in (r.get("situacao_cumprimento") or "")
+                                                                     and "INTERROMPIDA" in (r.get("situacao_eventos") or "")):
         itens.append(_item("info", "Cumprimento interrompido (último evento é interrupção)", "Verificar se há prisão posterior não lançada ou se a pessoa está foragida ou em liberdade. A prescrição executória corre da interrupção: "
                            "pelo restante da pena só na fuga e na revogação do livramento (art. 113); nas demais interrupções, pela pena aplicada "
                            "(STF, HC 236.292; STJ, RHC 67.403).", "CP, arts. 112, II, e 113.", tipo="cumprimento-interrompido-ultimo-evento-e-interru"))
