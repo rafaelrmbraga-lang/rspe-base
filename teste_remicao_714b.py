@@ -64,7 +64,9 @@ try:
        "A2: cores dos pontos: %s" % {k: v["cor"] for k, v in tp.items()})
     ok(o["fd_cor"] == "amarelo" and o["fd_sit"] == "Pedir atestado"
        and [x["c"] for x in N["onde"] if x["t"].startswith("Pedir atestado: trabalho em Copa")] == ["amarelo"]
-       and all(x["c"] == "cinza" for x in N["onde"] if not x["t"].startswith("Pedir atestado")), "A2: só o pedido fica amarelo: %s %s" % (o["fd_sit"], N["onde"]))
+       # (7.15.2, revisão do cap. 5, achado 1) o documento posterior à última decisão também fica amarelo: a remição anterior não o explica
+       and all(x["c"] == ("amarelo" if x["t"].startswith("Curso de qualificação") else "cinza") for x in N["onde"] if not x["t"].startswith("Pedir atestado")),
+       "A2: só o pedido e o posterior ficam amarelos: %s %s" % (o["fd_sit"], N["onde"]))
     ok(any(L["sit"] == "Sem atestado" and L["cor"] == "cinza" for L in o["fd_linhas"]) and any(L["cor"] == "amarelo" for L in o["fd_linhas"]),
        "A2: linhas de trabalho: %s" % [(L["emp"], L["cor"]) for L in o["fd_linhas"]])
     o, N = comp(R((60, "01/08/2024", "30/06/2024")), F([T("MARCENARIA", "01.02.2024", "30.06.2024")]))

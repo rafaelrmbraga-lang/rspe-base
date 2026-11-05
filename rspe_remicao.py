@@ -696,7 +696,21 @@ def _totais(u):
     return None, None
 
 
+def horas_texto(t):
+    """(7.15.2) Carga horária declarada no texto da certidão ou do curso ("CARGA HORÁRIA DE 412 HORAS", "412 h/a", "412 horas-aula",
+    "totalizando 412h"): as horas (12 h de estudo = 1 dia - LEP, art. 126, § 1º, I) ou None. Hora do relógio ("08:00 horas") não conta."""
+    u = re.sub(r"\s+", " ", _sa(t))
+    m = re.search(r"CARGA HORARIA\D{0,20}?(?<![\d:,.])(\d{2,4})(?![\d:,.])", u) or \
+        re.search(r"(?<![\d:,./])(\d{2,4})\s*(?:H/A\b|HORAS?(?:[- ]AULAS?)?\b|HS?\b)", u)
+    if not m:
+        return None
+    h = int(m.group(1))
+    return h if 12 <= h <= 4000 else None
+
+
 def _limpa_setor(t):
+    # (7.15.2) "Atestado de Trabalho Prisional nº 010/2023 Faxina (d a d)": o nome do setor começa depois do número do atestado
+    t = re.sub(r"^.*?\bATESTADO\b[^/]{0,60}?\d{1,4}\s*/\s*(?:\d{4}|\d{2}\b|[A-Z]{2,8}\b)\s*[-–,:;]?\s*", "", t.strip(" ,.;:-"))
     t = re.sub(r"^.*?\b(?:FUNCAO|SETOR DE|SETOR|NA EMPRESA|EMPRESA)\s+", "", t.strip(" ,.;:-"))
     t = re.sub(r"^(?:SENDO|NA|NO|E)\s+(?=\w{3})", "", t)  # "sendo Serviços Gerais (d a d) ...": "sendo" é palavra do texto
     t = re.sub(r"\s+(?:NO|DO|NUM) PERIODO\b.*$|\s+DESDE\b.*$", "", t)
@@ -1707,7 +1721,7 @@ def comparacao(r, f, hoje=None, manuais=None, homologados=None, trab=None):
             sem_valor="" if rem else "sem os dias remidos ou as horas")
     for c in f.get("certidoes_estudo") or []:
         d = _dt(c.get("data") or "")
-        h = c.get("horas") or 0
+        h = c.get("horas") or horas_texto(c.get("texto")) or 0
         pet, ok, pdt = _pet_texto(c.get("texto"), d)
         sem_ = "" if h else "certidão sem a carga horária no texto da ficha"
         doc("Certidão de frequência escolar", ("%dº semestre de %s" % (c["semestre"], c["ano"])) if c.get("semestre") and c.get("ano") else "",
@@ -1731,7 +1745,7 @@ def comparacao(r, f, hoje=None, manuais=None, homologados=None, trab=None):
         e["_doc"] = True
     for c in f.get("cursos_peticionados") or []:
         d = _dt(c.get("data") or "")
-        h = c.get("horas") or c.get("carga") or 0
+        h = c.get("horas") or c.get("carga") or horas_texto(c.get("texto")) or 0
         pet, ok, pdt = _pet_texto(c.get("texto"), d)
         doc("Curso de qualificação", ("meses " + ", ".join(c.get("meses") or [])) if c.get("meses") else "", d, ", ".join(c.get("meses") or []),
             None, (h / 12.0) if h else None, pet, ok, pdt, fora_de(c.get("autos"), d), "fd:edu:curso:%s" % c.get("data"),
@@ -1929,8 +1943,8 @@ def comparacao(r, f, hoje=None, manuais=None, homologados=None, trab=None):
     sem_v = [d for d in desta if not d["dias"] and d["emissao"] and d["tipo"] in ("Exame", "Certidão de frequência escolar", "Curso de qualificação")]
     for d in sorted(sem_v, key=lambda d: (d["tipo"] != "Exame", not d.get("cert"), d["emissao"])):
         minimo = 10 if d["tipo"] == "Exame" else 1
-        # (7.14.7) teto do exame (Res. CNJ 391/2021, art. 3º): ENEM, até o ensino médio inteiro (1.200 h ÷ 12 = 100 dias; o ENEM não
-        # certifica a conclusão desde 2017, sem o +1/3); ENCCEJA, até o fundamental inteiro com a conclusão (1.600 h ÷ 12 × 4/3 ≈ 177,78)
+        # (7.14.7) teto do exame (Res. CNJ 391/2021, art. 3º): ENEM, até o ensino médio inteiro (1.200 h ÷ 12 = 100 dias; o +1/3 da
+        # conclusão pelo ENEM - Portaria MEC 382/2025, STJ, Tema 1270 - fica a conferir, fora do teto); ENCCEJA, até o fundamental inteiro com a conclusão (1.600 h ÷ 12 × 4/3 ≈ 177,78)
         teto = 400 if d["tipo"] != "Exame" else 100 if re.search(r"ENEM", d.get("num") or "", re.I) else 1600 / 12.0 * 4 / 3.0 \
             if re.search(r"ENCCEJA", d.get("num") or "", re.I) else 400
         i = _livres(d, 180, lambda x, m=minimo, t=teto: m <= x["dias"] <= t + 1 and not (x["dias"] <= 16 and x["dias"] % 4 == 0),
@@ -2182,9 +2196,13 @@ def comparacao(r, f, hoje=None, manuais=None, homologados=None, trab=None):
             continue  # matrícula aberta há mais de um ano sem registro escolar: a ficha não mostra frequência
         if cert_fim and a <= cert_fim and not e.get("horas"):
             a = cert_fim + timedelta(days=1)
+        if inicio and a < inicio and not e.get("horas"):
+            a = inicio  # (7.15.2) a estimativa começa no início desta execução (o estudo anterior é de outra execução)
+        # (o texto mostra os dias inteiros - "≈ 34 dias" -; a conta usa as horas ÷ 12 com as frações: ver a revisão do cap. 5, achado 14)
+        _dd = lambda h_: rs.pl(int(h_ // 12), "dia", "dias")
         if e.get("horas"):
             est_estim.append({"txt": "%s, %s a %s: %s h declaradas na ficha ≈ %s%s" % (
-                e["curso"] if (e.get("curso") or "").startswith("Atestado") else (e.get("curso") or "Estudo").title(), _f(a), _f(b), _nf(e["horas"]), rs.pl(int(e["horas"] // 12), "dia", "dias"),
+                e["curso"] if (e.get("curso") or "").startswith("Atestado") else (e.get("curso") or "Estudo").title(), _f(a), _f(b), _nf(e["horas"]), _dd(e["horas"]),
                 " (datas invertidas na ficha: conferir datas)" if inv else ""), "dias": e["horas"] / 12.0, "fim": b})
             continue
         dl = {d for d in _rf.dias_jornada_set(a, b, "seg-sex") if not _rf.em_recesso(d)} - est_dias
@@ -2193,7 +2211,7 @@ def comparacao(r, f, hoje=None, manuais=None, homologados=None, trab=None):
             h = len(dl) * _rf.HORAS_DIA_ESTUDO
             est_estim.append({"txt": "%s, %s a %s: ≈ %s × %d h = %d h ≈ %s" % (
                 (e.get("curso") or "Estudo").title(), _f(a), _f(b), rs.pl(len(dl), "dia letivo", "dias letivos"), _rf.HORAS_DIA_ESTUDO, h,
-                rs.pl(int(h // 12), "dia", "dias")), "dias": h / 12.0, "fim": b})
+                _dd(h)), "dias": h / 12.0, "fim": b})
     acomp_dias = round(sum(L.get("acomp_dias") or 0 for L in (trab or {}).get("linhas") or []), 2)
     estim = round(len(pedir) / 3.0 + len(talvez) / 3.0 + len(conferir) / 3.0 + acomp_dias + sum(x["dias"] for x in est_estim), 2)
     # ---- pontos a conferir (B) ----
@@ -2349,10 +2367,11 @@ def comparacao(r, f, hoje=None, manuais=None, homologados=None, trab=None):
         nome_ = setor_chave(t.get("setor") or "")[1] if t.get("setor") else "Trabalho"
         if re.search(r"COVID|PANDEMIA|CORONA ?VIRUS|SARS.?COV", mf):
             volta = min([x for _t, x, _f in trs if x and x > fim] or [None], key=lambda x: x or date.max)
-            b_ = min(x for x in ((volta - timedelta(days=1)) if volta else None, date(2022, 4, 22), imp) if x)
+            b_ = min(x for x in ((volta - timedelta(days=1)) if volta else None, date(2022, 5, 22), imp) if x)
             if b_ > fim:
                 ponto("Remição ficta", "amarelo", "%s: trabalho suspenso pela pandemia de %s a %s (≈ %s de remição, estimativa de segunda a sábado até "
-                      "o retorno ou o fim da emergência sanitária, 22/04/2022) - conferir com a unidade e requerer a remição ficta (STJ, Tema 1.120)." % (
+                      "o retorno ou o fim da emergência sanitária, 22/05/2022 - Portaria GM/MS 913/2022, em vigor 30 dias após a publicação) - conferir com a "
+                      "unidade e requerer a remição ficta (STJ, Tema 1.120)." % (
                           nome_, _f(fim + timedelta(days=1)), _f(b_), _nf(_rf.dias_trabalho(fim + timedelta(days=1), b_) / 3.0)), "ficta")
         elif re.search(r"ACIDENT", mf):
             ponto("A conferir", "amarelo", "%s: afastamento por acidente de trabalho em %s - o preso impossibilitado de prosseguir no trabalho por "
@@ -2486,14 +2505,16 @@ def comparacao(r, f, hoje=None, manuais=None, homologados=None, trab=None):
         for k_ in ("nota_autos", "nota_ano"):
             if d.get(k_):
                 d["sit"] += " · " + d[k_]
-    # RSPE maior que a ficha: o que seria amarelo vira cinza (informativo). Ficam com a cor só o pedido de atestado do trabalho depois
-    # da última remição de trabalho e o documento vermelho (com dias, sem peticionamento, depois da última decisão)
+    # RSPE maior que a ficha: o que seria amarelo vira cinza (informativo). Ficam com a cor o pedido de atestado do trabalho depois
+    # da última remição de trabalho, o documento vermelho (com dias, sem peticionamento, depois da última decisão) e (7.15.2) o que a
+    # diferença dos totais não explica: o documento emitido ou peticionado depois da última decisão de remição (nenhuma remição
+    # anterior o alcança - LEP, arts. 126, § 8º, e 128), o estudo estimado que passa dela e a perda de remidos acima da lei (art. 127)
     if rspe_maior:
         for p_ in pontos:
-            if p_["cor"] == "amarelo" and p_["tipo"] not in ("pedir_atestado", "pend_cert"):
+            if p_["cor"] == "amarelo" and p_["tipo"] not in RSPE_MAIOR_MANTEM:
                 p_["cor"], p_["cor0"] = "cinza", "amarelo"
         for d in docs:
-            if d["cor"] == "amarelo" and not d.get("pend_sem_rem"):
+            if d["cor"] == "amarelo" and not d.get("pend_sem_rem") and d not in post:
                 d["cor"] = "cinza"
     outra = outra_execucao(r, f)
     onde = onde_diferenca(dif, docs, post, verm, pontos, trab, ult_dec, rspe_maior, acomp_l)
@@ -2503,6 +2524,10 @@ def comparacao(r, f, hoje=None, manuais=None, homologados=None, trab=None):
             "estim": estim, "dif_estim": round(dif + estim, 2), "pouco": pouco, "concl": concl, "concl_cor": concl_cor, "pontos": pontos,
             "pedir_dias": len(pedir) / 3.0, "talvez_dias": len(talvez) / 3.0, "conf_dias": len(conferir) / 3.0, "est_estim": est_estim, "est_cert_fim": cert_fim, "impressao": imp, "inicio": inicio,
             "ult_at": ult_at, "post": post, "vermelho": verm, "faltas_127": faltas_graves(r, f)}
+
+
+# pontos que ficam amarelos mesmo com o RSPE maior que a ficha (não dependem da comparação dos totais)
+RSPE_MAIOR_MANTEM = ("pedir_atestado", "pend_cert", "posterior", "ja_remido_periodo", "estudo_estimado", "perda")
 
 
 def _sem_pedido_totais(post, ult_dec, nome_doc):
@@ -2593,7 +2618,8 @@ def onde_diferenca(dif, docs, post, verm, pontos, trab, ult_dec, rspe_maior=Fals
     (2) "Pedir atestado": trabalho sem atestado, do mais recente ao mais antigo, com o trecho que entra na estimativa; (3) numa linha só,
     o trabalho sem atestado que "pode já estar remido"; (4) trabalho em curso há até 90 dias, a acompanhar; (5) vínculo a confirmar;
     (6) os demais pontos a conferir e os avisos de leitura remida a menor e de dias implausíveis. Passando de 4, as 3 primeiras e
-    "… e mais N". RSPE maior que a ficha: o amarelo vira cinza, salvo o pedido de atestado e o vermelho. Sem nada: "Sem diferença a conferir."."""
+    "… e mais N". RSPE maior que a ficha: o amarelo vira cinza, salvo o pedido de atestado, o vermelho, o documento posterior à
+    última decisão e a perda acima da lei (RSPE_MAIOR_MANTEM). Sem nada: "Sem diferença a conferir."."""
     out = []
     am = "cinza" if rspe_maior else "amarelo"
     dias_ = lambda v: "%s %s" % (_nf(v), "dia" if _nf(v) == "1" else "dias")
@@ -2604,11 +2630,14 @@ def onde_diferenca(dif, docs, post, verm, pontos, trab, ult_dec, rspe_maior=Fals
         per = d.get("periodo") or ""
         return n_ + ((" de " + per) if per and not per.startswith("sem período") else "") + ((" (%s)" % dias_(d["dias"])) if d.get("dias") else "")
 
+    linha_doc = {}  # (7.15.2) linha de cada documento já listado: os outros motivos do mesmo documento entram nela, não em outra linha
     for d in verm + [d for d in post if d not in verm]:
+        linha_doc[id(d)] = len(out)
         quando = ("peticionado em %s" % _f(d["data_ref"])) if d["pet_ok"] else "emitido em %s, sem registro de peticionamento" % _f(d["emissao"])
         ja_ = (" - pedir ≈ %s (%s − %s): conferir antes a remição de %s, com referência dentro do período" % (
             _nf(d["dias_pedir"]), _nf(d["dias"]), _nf(sum(x["dias"] for x in d["ja_rem"])), _lista([_f(x["decisao"]) for x in d["ja_rem"]]))) if d.get("ja_rem") else ""
-        out.append({"t": "%s, %s, %s%s" % (nome(d), quando, dec, ja_), "c": "vermelho" if d in verm else am})
+        # (7.15.2) o documento posterior à última decisão fica amarelo mesmo com o RSPE maior: nenhuma remição anterior o explica
+        out.append({"t": "%s, %s, %s%s" % (nome(d), quando, dec, ja_), "c": "vermelho" if d in verm else "amarelo"})
     if dif > TOL_COMPARACAO:
         for d in [d for d in docs if not d["fora"] and not d["hom"] and d not in post and not d["pet_ok"] and d.get("dias") and not d.get("provavel")]:
             out.append({"t": "%s %s - conferir se foi juntado e apreciado" % (nome(d), "enviado à Defensoria, sem registro de protocolo" if d["defensoria"]
@@ -2646,6 +2675,10 @@ def onde_diferenca(dif, docs, post, verm, pontos, trab, ult_dec, rspe_maior=Fals
     for p_ in pontos:
         if ((p_.get("cor0") or p_["cor"]) == "amarelo" and p_["tipo"] not in ja) or p_["tipo"] in ("leitura_menor", "implausivel", "outra_unidade"):
             t_ = p_["curto"]
+            ks = [linha_doc.get(id(d)) for d in p_.get("docs") or []]
+            if len(ks) == 1 and ks[0] is not None:
+                out[ks[0]]["t"] += " · " + t_
+                continue
             out.append({"t": t_[0].upper() + t_[1:], "c": p_["cor"]})
     if len(out) > 4:
         out = out[:3] + [{"t": "… e mais %d na visualização detalhada" % (len(out) - 3), "c": "cinza"}]

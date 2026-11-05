@@ -742,8 +742,9 @@ def _agrupar_por_crime(itens):
     return ordem
 
 
-FUND_127 = ("LEP, art. 127 (até 1/3; a contagem recomeça da data da infração); STJ, HC 398.850/SP, HC 293.475/SP e HC 377.088/SP; "
-            "TJDFT, Acórdão 1230029.")
+# (7.15.2) cada precedente na sua tese: o HC 398.850 trata do período entre as faltas; os HCs 293.475 e 377.088, do teto de 1/3 no total
+FUND_127 = ("LEP, art. 127 (até 1/3 no total - STJ, HC 293.475/SP e HC 377.088/SP; a contagem recomeça da data da infração anterior - "
+            "STJ, HC 398.850/SP); TJDFT, Acórdão 1230029.")
 
 
 def _uteis_entre(ini, fim, a=None, b=None):
@@ -879,7 +880,7 @@ def _perda_remidos(incidentes, perdidos, eventos=None, ficha=None):
                          (" (decisão de %s)" % rs.fmt(max(_dp_))) if _dp_ else ""))
         return [_item("verificar", "Perda de %s remidos sem falta grave datada no RSPE" % rs.pl(perdidos, "dia", "dias"),
                       "O saldo registra dias perdidos, mas não há incidente de homologação de falta grave com data: conferir a decisão e o PAD." + extra,
-                      "LEP, arts. 118 e 127; Súmula 533/STJ; STF, Tema 941.", tipo="perda-de-remidos-sem-falta-grave-datada-no-rspe")]
+                      "LEP, arts. 118 e 127; Súmula 533/STJ, mitigada pelo STF, Tema 941 (a audiência de justificação em juízo supre o procedimento disciplinar).", tipo="perda-de-remidos-sem-falta-grave-datada-no-rspe")]
     itens = []
     # perda decidida antes da primeira falta grave datada: não se liga a nenhuma falta homologada no RSPE
     orfas = [(d, q) for d, q in perdas if d and d < faltas[0]]
@@ -887,7 +888,7 @@ def _perda_remidos(incidentes, perdidos, eventos=None, ficha=None):
         itens.append(_item("verificar", "Perda de %s remidos sem falta grave datada no RSPE (decisão de %s)" % (rs.num_txt(q), rs.fmt(d)),
                            "O RSPE registra a perda, mas nenhuma falta grave homologada anterior a ela: conferir a decisão e o PAD (a falta precisa "
                            "ter sido apurada e homologada, e o limite de 1/3 incide só sobre a remição adquirida até a falta).",
-                           "LEP, arts. 118 e 127; Súmula 533/STJ; STF, Tema 941.", tipo="perda-de-remidos-sem-falta-grave-datada-no-rspe", ref=rs.fmt(d)))
+                           "LEP, arts. 118 e 127; Súmula 533/STJ, mitigada pelo STF, Tema 941 (a audiência de justificação em juízo supre o procedimento disciplinar).", tipo="perda-de-remidos-sem-falta-grave-datada-no-rspe", ref=rs.fmt(d)))
     for x in res:
         f, prev = x["falta"], x["prev"]
         # parcela da perda ligada a remição decidida depois da falta: a falta só alcança a remição adquirida até ela

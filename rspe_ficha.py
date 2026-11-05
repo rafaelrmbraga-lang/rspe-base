@@ -111,7 +111,8 @@ def _estudos(eventos, cancel_sem=None):
                 or (not msai and re.search(r"\bTRANSFERID[OA] PARA\b|\bEVADI\w*|\bEVASAO\b|\bFUGA\b|EMPREENDEU FUGA|POSTO EM LIBERDADE|COLOCADO EM LIBERDADE", uf))):
             for p in [p for p in abertos if not p.get("livre")]:
                 fechar(p, e["data"], "saída da unidade" + ((" (%s)" % msai.group(1).strip(" .").lower()) if msai and msai.group(1).strip(" .") else ""))
-        if not re.search(r"EDUCA|\bCURSO\b|ESCOLA|ESTUD|ALUNOS|HORAS?.AULA", us):
+        # (7.15.2) "Matriculou-se na Série: ..." transcrito sem o prefixo "EDUCAÇÃO:" também abre o estudo
+        if not re.search(r"EDUCA|\bCURSO\b|ESCOLA|ESTUD|ALUNOS|HORAS?.AULA|MATRICULOU-SE NA SERIE", us):
             continue
         ua = re.sub(r"\s+", " ", us)
         if re.search(r"ATESTADO|\bATP\b", ua) and (rrm.RE_AT_ESTUDO.search(rrm._norm_at(ua)) or re.search(r"FREQUENCIA ESCOLAR", ua)) \
@@ -1246,8 +1247,9 @@ def derivar(f, eventos):
         u = e["texto"].upper()
         mx = re.search(r"\b(ENCCEJA|ENEM)\b\s*(\d{4})?", u)
         if mx and re.search(r"CERTIFICAD|APROVA|PETICION|DECLARA", u):
-            # conclusão certificada (art. 9º, XIII, dos Decretos 2024/2025): só o certificado do ENCCEJA; o ENEM não certifica a
-            # conclusão desde 2017, e a declaração parcial ou a aprovação por área não é conclusão
+            # conclusão certificada (art. 9º, XIII, dos Decretos 2024/2025): só o certificado do ENCCEJA conta direto; o do ENEM
+            # (certificação restaurada pela Portaria MEC 382/2025 - STJ, Tema 1270) fica a conferir (a edição coberta não está
+            # confirmada), e a declaração parcial ou a aprovação por área não é conclusão
             cert = mx.group(1) == "ENCCEJA" and conclusao_certificada(u)
             exames.append({"exame": mx.group(1) + ((" " + mx.group(2)) if mx.group(2) else ""), "data": e["data"], "certificado": cert,
                            "ano": int(mx.group(2)) if mx.group(2) else None, "autos": _autos_citados(rs._sem_acento(u))})
@@ -2667,10 +2669,23 @@ def _conduta_x_ficha(r, f, hoje=None):
                              "(Decreto Estadual 12.140/2006, art. 133) é bis in idem; o bom comportamento se readquire pelo art. 112, § 7º, da LEP "
                              "(após 1 ano da falta ou antes, cumprido o requisito temporal).",
                              "LEP, art. 112, §§ 6º e 7º; RIBUP-MS, art. 133; TJMS, 1603197-76.2026 e 1604181-94.2025 (3ª Câm.), 1605442-31.2024 (1ª Câm.).")]
+        # (7.15.2) falta grave há menos de 1 ano, sem regressão, mas com o requisito temporal da progressão (data do SEEU, posterior à
+        # falta) já cumprido: o bom comportamento está readquirido antes do ano (LEP, art. 112, § 7º)
+        prog = rs.to_date(r.get("progressao_previsao_seeu") or "")
+        _ult_g = max([d for d in _dfs if d], default=None)
+        if prog and _ult_g and _ult_g < prog <= hoje < _ult_g + timedelta(days=365):
+            return [_item_rf("alerta", "Conduta na ficha: %s - requisito temporal cumprido em %s, antes de 1 ano da falta grave de %s" % (
+                                 c.lower(), rs.fmt(prog), rs.fmt(_ult_g)),
+                             "A falta grave de %s tem menos de 1 ano, mas o requisito temporal da progressão (data do SEEU, %s) já foi cumprido. "
+                             "Pela LEP, o bom comportamento é readquirido após 1 ano da ocorrência do fato, ou antes, após o cumprimento do "
+                             "requisito temporal exigível (art. 112, § 7º): a classificação da conduta pela unidade não impede, por si, a "
+                             "progressão - pedir o atestado de conduta atualizado ou sustentar a reabilitação pela lei." % (rs.fmt(_ult_g), rs.fmt(prog)),
+                             "LEP, art. 112, §§ 1º e 7º; TJMS, 1603197-76.2026 e 1604181-94.2025 (3ª Câm.), 1605442-31.2024 (1ª Câm.).")]
         return []
     return [_item_rf("alerta", "Conduta na ficha: %s, sem falta nos últimos %d meses" % (c.lower(), meses),
-                     "Nem o RSPE nem a ficha registram falta de %s até hoje. A classificação da conduta pela unidade deveria ter sido reabilitada "
-                     "(RIBUP-MS, Decreto Estadual 12.140/2006, art. 133: falta grave, 12 meses do cumprimento da sanção; nova falta interrompe - art. 136) "
+                     "Nem o RSPE nem a ficha registram falta de %s até hoje. A classificação da conduta pela unidade deveria ter sido reabilitada: "
+                     "a conta segue a LEP, pela data do fato (art. 112, § 7º: 1 ano da ocorrência do fato, ou antes, cumprido o requisito temporal); "
+                     "o RIBUP-MS (Decreto Estadual 12.140/2006, art. 133) conta 12 meses do cumprimento da sanção, e a nova falta interrompe (art. 136) "
                      "- pedir o atestado de conduta atualizado: ele pesa no requisito subjetivo da progressão e do livramento." % rs.fmt(lim),
                      "LEP, art. 112, §§ 1º e 7º; CP, art. 83, III; RIBUP-MS, arts. 133 e 136.")]
 
@@ -3189,7 +3204,8 @@ def _pascoa(ano):
 
 
 def feriados(ano):
-    """Feriados nacionais (Lei 662/1949, Lei 6.802/1980, Lei 14.759/2023 - 20/11 desde 2024) e a Sexta-feira Santa."""
+    """Feriados nacionais (Lei 662/1949, Lei 6.802/1980, Lei 14.759/2023 - 20/11 desde 2024) e a Sexta-feira Santa (feriado religioso
+    declarado em lei municipal - Lei 9.093/1995, art. 2º -, não nacional: mantida na estimativa como feriado local usual)."""
     fs = {date(ano, 1, 1), date(ano, 4, 21), date(ano, 5, 1), date(ano, 9, 7), date(ano, 10, 12), date(ano, 11, 2),
           date(ano, 11, 15), date(ano, 12, 25), _pascoa(ano) - timedelta(days=2)}
     if ano >= 2024:
@@ -3521,6 +3537,13 @@ def fundamentacao_remicao(res, r=None):
     if est:
         par.append(("Quanto ao estudo, a ficha registra " if (ats or sem_at) else "A ficha disciplinar do SIAPEN registra ") +
                    "; ".join(est) + (". Caso a remição correspondente ainda não tenha sido declarada, deve sê-lo." if exames else "."))
+    sfq = res.get("estudos_sem_freq") or []
+    if sfq and (est or ats or sem_at):
+        # (7.15.2) matrícula aberta sem registro escolar há mais de 1 ano: não se afirma a frequência; só a requisição da certidão
+        par.append("[Conferir antes de requerer: a ficha registra matrícula em %s, sem registro escolar desde %s - não se afirma a frequência; "
+                   "se houver, requisitar a certidão de frequência escolar à unidade.]" % (
+                       _lista_e(["%s (desde %s)" % ((x["curso"] or "estudo").title(), rs.fmt(x["inicio"])) for x in sfq]),
+                       _lista_e([rs.fmt(x["ult"]) for x in sfq])))
     uns = res.get("unidades_f") or []
     par.append("A divergência indica que nem todos os atestados de trabalho e estudo produzidos pela administração penitenciária chegaram aos "
                "autos ou foram apreciados.%s Exigir que a defesa requisite, unidade por unidade, cada atestado faltante transfere ao apenado "
@@ -3627,12 +3650,21 @@ def _res_fundamentacao(N, T, f, hoje):
     # semestres certificados - remidos ou pedidos pela própria certidão - não se pedem de novo; sem certidão, a última decisão de remição
     # (só para o estudo ainda em curso depois dela)
     corte_ = N.get("est_cert_fim") or ult
+    ini_x = N.get("inicio")
+    sem_freq = []
     for e in f.get("estudos") or []:
         a, b = _dp(e.get("inicio") or ""), _dp(e.get("fim") or "") or ate
         # (o estudo encerrado antes da última decisão de remição continua fora: a decisão pode tê-lo alcançado)
-        if not a or not b or b < a or (corte_ and b <= corte_) or (ult and b <= ult) or e.get("horas"):
+        if not a or not b or b < a or (corte_ and b <= corte_) or (ult and b <= ult) or e.get("horas") or (ini_x and b < ini_x):
+            continue
+        # (7.15.2) o mesmo corte da tela: matrícula aberta há mais de 1 ano sem registro escolar na ficha não se pede como remição (a
+        # ficha não mostra frequência) - vai à petição só como pedido da certidão, a conferir
+        _ult_reg = max(a, _dp(e.get("ult_registro_edu") or "") or a)
+        if not e.get("fim") and ate and (ate - _ult_reg).days > 365:
+            sem_freq.append({"curso": e.get("curso") or "", "inicio": a, "ult": _ult_reg})
             continue
         a2 = max(a, corte_ + timedelta(days=1)) if corte_ else a
+        a2 = max(a2, ini_x) if ini_x else a2  # (7.15.2) a estimativa começa no início desta execução
         ds = {x for x in dias_jornada_set(a2, b, "seg-sex") if not em_recesso(x)} - dias_
         if len(ds) >= 3:
             dias_ |= ds
@@ -3653,7 +3685,7 @@ def _res_fundamentacao(N, T, f, hoje):
         for a, b in L.get("pedir_trechos") or [(L["pedir_ini"], L["pedir_fim"])]:
             sem_at.append("%s, desde %s, em curso" % (L["local"], rs.fmt(a)) if L.get("em_curso") and (L["fim"] - b).days <= 7
                           else "%s, %s a %s" % (L["local"], rs.fmt(a), rs.fmt(b)))
-    return {"atestados_pendentes": ats, "estudo_horas_pend": horas, "estudos_pendentes": est_pend, "exames_f": exames, "leituras_f": leituras,
+    return {"atestados_pendentes": ats, "estudo_horas_pend": horas, "estudos_pendentes": est_pend, "estudos_sem_freq": sem_freq, "exames_f": exames, "leituras_f": leituras,
             "educacao_f": edu, "sem_atestado_f": sem_at, "ressalva_127_trab": _ressalva_127_trab(N, T) if sem_at else "", "unidades_f": list(dict.fromkeys(nome_unidade(u) for _d, u in linha_unidades_exibicao(f) if u)),
             # (7.14.5) a unidade atual é a da última entrada (a lista acima é por ordem da primeira passagem: quem volta a uma unidade
             # já visitada ficaria com a anterior)
@@ -3696,7 +3728,9 @@ def comparativo(r, f, hoje=None, conferidos=None, manuais=None, vinculos=None):
     out["fd_trab"] = ("%s desde %s" % (_nome_emprego(_sem_setores_baixados(em[-1], f.get("eventos") or [])), em[-1]["inicio"])) if em else "sem trabalho em curso"
     out["fd_estuda"] = any(e.get("inicio") and not e.get("fim") for e in f.get("estudos") or [])  # matrícula ativa na ficha
     ult_at = N["ult_at"]
-    sem_pos = [L for L in T["linhas"] if L["st"] == "sem" and not L.get("aparte_total") and (L.get("pedir_dias") or not ult_at or L["fim"] > ult_at)]
+    # (7.15.2) "Trabalho a atestar" = há atestado a pedir ("Pedir atestado"); o trabalho que pode já estar remido e o em curso a
+    # acompanhar não entram
+    sem_pos = [L for L in T["linhas"] if L["st"] == "sem" and not L.get("aparte_total") and L.get("pedir_dias")]
     out["fd_atestar"] = "Sim" if sem_pos else "Não"
     ult = R["ult_dec"]
     est_post = [d for d in N["post"] if d["tipo"] in ("Certidão de frequência escolar", "Curso de qualificação", "Atestado de estudo", "Leitura", "Exame")]
@@ -3727,7 +3761,14 @@ def comparativo(r, f, hoje=None, conferidos=None, manuais=None, vinculos=None):
         itens.append({"t": "Pedir atestado (≈ %s de remição)" % rs.pl(int(round(N["pedir_dias"])) or 1, "dia", "dias"), "c": "amarelo"})
     if conf_ and not rot:
         rot.append("Conferir pontos")
-    cor = "vermelho" if N["vermelho"] else "amarelo" if (N["dif"] > rrm.TOL_COMPARACAO or conf_) else "verde"
+    # (7.15.2) vínculo "possível" ou "sugerido · confirmar" entre trabalho e atestado: a linha nunca fica "Em ordem" (um vínculo errado
+    # esconde trabalho sem atestado - LEP, art. 129)
+    vinc_ = [L for L in T["linhas"] if L["st"] in ("possivel", "provavel")]
+    if vinc_:
+        rot.append("Confirmar vínculo")
+        itens.append({"t": "Confirmar vínculo: %s" % rs.pl(len(vinc_), "período com vínculo a confirmar", "períodos com vínculo a confirmar"),
+                      "c": "amarelo"})
+    cor = "vermelho" if N["vermelho"] else "amarelo" if (N["dif"] > rrm.TOL_COMPARACAO or conf_ or vinc_) else "verde"
     # RSPE maior que a ficha: o que seria amarelo fica cinza (informativo) - salvo o pedido de atestado e o vermelho
     if cor == "verde" and any(p_.get("cor0") for p_ in N["pontos"]):
         rot.append("Conferir (informativo)")
@@ -4157,8 +4198,9 @@ def complementar_decretos(r, f, hoje=None):
         if conc:
             res["XIII"] = (True, "ficha: %s" % "; ".join("%s (certificado registrado em %s)" % (x["exame"], _br(x["data"] or "")) for x in conc))
         elif exs_ver:
-            res["XIII"] = (None, "ficha: %s - conferir se houve conclusão de curso certificada (o ENEM não certifica a conclusão do ensino médio "
-                                 "desde 2017; petição, declaração parcial ou aprovação por área não é certificado de conclusão)" % "; ".join(
+            res["XIII"] = (None, "ficha: %s - conferir se houve conclusão de curso certificada (o ENEM voltou a certificar a conclusão do "
+                                 "ensino médio pela Portaria MEC 382/2025 - STJ, Tema 1270: conferir a edição e o certificado; petição, declaração "
+                                 "parcial ou aprovação por área não é certificado de conclusão)" % "; ".join(
                                      "%s em %s" % (x["exame"], _br(x["data"] or "")) for x in exs_ver))
         elif livres:
             res["XIII"] = (None, "ficha: curso %s (%d h, %s a %s) - conferir se é profissionalizante com certificado" % (

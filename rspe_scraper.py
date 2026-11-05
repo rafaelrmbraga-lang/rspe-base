@@ -2694,6 +2694,17 @@ RE_FALTA_NA_FICHA = re.compile(
     r"CONSELHO DISCIPLINAR|ISOLAD[OA] PREVENTIVA|APREENS|APARELHO CELULAR|ENTORPECENTE|SUBST[ÂA]NCIA", re.I)
 
 
+def _sem_falta_falsa(t):
+    """(7.15.2) Texto da ficha sem o que só cita a fuga e não é fato: a ameaça ("sob pena de evasão", "será considerado evasão"), a
+    intenção não realizada ("não teve coragem") e o não retorno do hospital/plantão. A tentativa de fuga fica: é falta (LEP, art. 49,
+    p. ú.), e explica o indício como qualquer outro registro de falta."""
+    u = _sem_acento(t or "").upper()
+    u = re.sub(r"SOB PENA DE (?:EVASAO|FUGA)|SERA CONSIDERAD[OA] (?:COMO )?(?:EVASAO|FUGA)|NAO TEVE CORAGEM", " ", u)
+    if re.search(r"HOSPITAL|INTERNAC|INTERNAD|PLANTAO|CONSULTA", u) and not re.search(r"EVADI|\bFUGA\b|EVASAO|FORAGID", u):
+        u = u.replace("NAO RETORNOU", " ")
+    return u
+
+
 def explicar_indicios_ficha(r, ficha, hoje=None):
     """Indícios de falta do RSPE sem sanção (regressão sem falta homologada, perda de remidos sem falta datada, incidente de
     falta pendente) confrontados com a ficha disciplinar: registro de falta, fuga/evasão, violação do monitoramento ou apreensão
@@ -2723,7 +2734,7 @@ def explicar_indicios_ficha(r, ficha, hoje=None):
         if not d or d < corte_faltas(hoje):
             continue
         ini = d - timedelta(days=120)
-        achados = [(x, t) for x, t in ev if ini <= x <= d + timedelta(days=5) and RE_FALTA_NA_FICHA.search(t)
+        achados = [(x, t) for x, t in ev if ini <= x <= d + timedelta(days=5) and RE_FALTA_NA_FICHA.search(_sem_falta_falsa(t))
                    and not re.search(r"ARQUIVAD|ABSOLVI|N[ÃA]O (FOI )?CONFIGURAD|ABANDONO D[OE] (SERVI|TRABALHO|CURSO)", t, re.I)]
         if achados:
             x, t = achados[0]

@@ -40,7 +40,7 @@ ROTULO = {
     "indulto": {"verde": "Possível", "amarelo": "A verificar", "vermelho": "Crime impeditivo / vedado", "cinza": "Não atinge", "azul": "Extinta"},
     "presc": {"vermelho": "Prescrição aparente", "amarelo": "Iminente / a verificar", "": "Não prescrita", "cinza": "Sem dados", "azul": "Extinta"},
     "presc_pp": {"vermelho": "Prescrição aparente", "amarelo": "A verificar", "": "Não configurada", "cinza": "Sem dados"},
-    "fd": {"vermelho": "Atestado sem peticionamento, posterior à última remição", "amarelo": "Verificar remição / pontos a conferir / pedir atestado", "verde": "Em ordem", "cinza": "Sem ficha"},
+    "fd": {"vermelho": "Atestado sem peticionamento, posterior à última remição", "amarelo": "Verificar remição / pontos a conferir / pedir atestado", "verde": "Em ordem", "cinza": "Sem ficha / informativo"},
     "aud": {"vermelho": "Com alertas", "amarelo": "Pontos a verificar", "verde": "Guia em ordem", "azul": "Extinta"},
     "ext": {"vermelho": "Extinção cabível", "laranja": "Término em até 30 dias", "amarelo": "Até 60 dias / a verificar", "verde": "Término em até 90 dias", "cinza": "Sem previsão / interrompida", "azul": "Extinta (registrada)"},
 }
@@ -56,7 +56,7 @@ FILTROS = {
         ("impeditivo", "Atestado sem peticionamento"),
         ("verificar", "Verificar remição / pontos a conferir"),
         ("ok", "Em ordem"),
-        ("nao", "Sem ficha"),
+        ("nao", "Sem ficha / informativo"),
     ],
     "lapso": [
         ("todas", "Todas"),
@@ -2618,11 +2618,26 @@ def prioridade_remicao(m, r, hoje=None):
     out = []
     if tot >= 1:
         n = int(tot)
+        # (7.15.2) na progressão, a remição de trabalho anterior à data-base só reduz a pena remanescente nessa data, sobre a qual incide
+        # a fração (a mesma conta do "Reflexo na progressão" da fundamentação); a posterior conta inteira. No livramento e no término,
+        # a remição é pena cumprida e conta inteira (LEP, art. 128)
+        n_prog = n
+        db_ = rs.to_date(r.get("data_base_seeu") or "")
+        if db_:
+            _fa = r.get("fracao_progressao_aplicada") or ""
+            _m = re.fullmatch(r"\s*(\d+)\s*/\s*(\d+)\s*", _fa) or re.fullmatch(r"\s*(\d+(?:[.,]\d+)?)\s*%\s*", _fa)
+            fr_ = (int(_m.group(1)) / float(_m.group(2)) if _m.lastindex == 2 and int(_m.group(2)) else
+                   float(_m.group(1).replace(",", ".")) / 100.0 if _m and _m.lastindex == 1 else 0.0) if _m else 0.0
+            its = [x for x in (r.get("_rem_pend") or []) if (rs.to_date(x[0]) or date.max) <= hoje]
+            n_prog = int(sum(x[2] if (rs.to_date(x[0]) or date.max) >= db_ else x[2] * fr_ for x in its))
         for k, rot, g in (("prog", "Progressão de regime", "a"), ("liv", "Livramento condicional", "o"), ("termino", "Término da pena (extinção)", "o")):
             d = rs.to_date(m.get(k) or "")
-            if d and d > hoje and d - timedelta(days=n) <= hoje:
-                out.append("%s: previst" % rot + g + " para %s; com a remição possivelmente pendente de %s (a conferir nos autos), o tempo já estaria cumprido (por volta de %s)." % (
-                    rs.fmt(d), rs.pl(n, "dia", "dias"), rs.fmt(d - timedelta(days=n))))
+            n = n_prog if k == "prog" else int(tot)
+            if d and n >= 1 and d > hoje and d - timedelta(days=n) <= hoje:
+                out.append("%s: previst" % rot + g + " para %s; com a remição possivelmente pendente de %s%s (a conferir nos autos), o tempo já estaria cumprido (por volta de %s)." % (
+                    rs.fmt(d), rs.pl(int(tot), "dia", "dias"),
+                    (" (≈ %s a menos no lapso: a parte anterior à data-base só reduz a pena sobre a qual incide a fração)" % rs.pl(n, "dia", "dias"))
+                    if n != int(tot) else "", rs.fmt(d - timedelta(days=n))))
     for x in (m.get("dec") or {}).get("decretos") or []:
         if "remição pendente" in (x.get("mot") or "") and x.get("s") == "ver":
             out.append("Indulto/comutação, Decreto %s (%s): o tempo que faltava seria coberto pela remição possivelmente pendente (a conferir nos autos)." % (
