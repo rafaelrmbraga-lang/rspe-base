@@ -108,7 +108,8 @@ l = linha(reg(*_a8, [inc("LIVRAMENTO CONDICIONAL", "28/12/2020", "28/12/2020", "
                      inc("REVOGAÇÃO DE LIVRAMENTO CONDICIONAL", "", "01/08/2024")], nasc="09/06/1992"))
 # rev. 4 (A5): com o teto da remição em 2/3 dos dias (mais a leitura), um saldo inferior a 1 ano passa a ser possível nesta fuga
 # longa, e o programa pede a pena remanescente (antes, com 1/2, concluía "não prescrita")
-confere(l["ppe_status"] in ("Não prescrita", "A VERIFICAR: informe a pena remanescente na fuga de 01/08/2024") and "art. 88" in l["ppe_detalhe"],
+# 7.15.2 (revisão do cap. 8, achado 5): a interrupção é a revogação do livramento, não fuga - o texto diz o evento
+confere(l["ppe_status"] in ("Não prescrita", "A VERIFICAR: informe a pena remanescente na revogação do livramento de 01/08/2024") and "art. 88" in l["ppe_detalhe"],
         "A8: período de prova fora do saldo: %s" % l["ppe_status"])
 l = linha(reg(*_a8, [inc("LIVRAMENTO CONDICIONAL", "28/12/2020", "28/12/2020", "25/11/2022")], nasc="09/06/1992"))
 confere("pressupõe a revogação" in l["ppe_detalhe"] and "não se desconta do saldo (CP, art. 88" not in l["ppe_detalhe"],

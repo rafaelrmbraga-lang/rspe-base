@@ -3823,7 +3823,8 @@ def auditar(r, hoje=None):
                                        ("Todos os fatos são posteriores a %s: vale o limite de 40 anos da Lei 13.964/2019." % rs.fmt(rg.data_lei_13964())),
                                        _anos, " (CP, art. 75, caput)",
                                        rs.fmt(_lim), (", somados %s fora da custódia" % rs.pl(_fora, "dia", "dias")) if _fora else "",
-                                       (", antes ainda com o desconto de %s remidos" % rs.pl(_rem75, "dia", "dias")) if _rem75 else ""),
+                                       (". Os %s remidos não encurtam esse limite: pela jurisprudência do STJ e do STF, a remição abate da pena "
+                                        "total, não do limite (Súmula 715/STF; STF, HC 242.974); tese contrária possível (LEP, art. 128)" % rs.pl(_rem75, "dia", "dias")) if _rem75 else ""),
                                    "CP, art. 75, caput e § 2º; CF, art. 5º, XL; Lei 13.964/2019; Súmula 715/STF.", tipo="limite-de-cumprimento-art-75"))
                 itens[-1]["termino_limite"] = rs.fmt(_lim)  # item 58: término recalculado na coluna (marca "calculado pelo programa")
                 itens[-1]["termino_limite_anos"] = _anos

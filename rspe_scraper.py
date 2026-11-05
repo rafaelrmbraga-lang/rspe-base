@@ -1687,7 +1687,8 @@ def e_hediondo(c, ref=None):
 def triagem_indulto(crimes):
     """Devolve (situacao, motivos[]) — triagem pelo art. 1º dos Decretos 12.338/2024 e 12.790/2025 (mesmo rol).
     Só aponta vedação que o decreto prevê: violência ou grave ameaça, resultado morte e tráfico privilegiado não são
-    impeditivos (a VGA só limita os incisos I a III do art. 9º; STJ, Tema 1336; STF, Tema 1400)."""
+    impeditivos (a VGA só limita os incisos I a III do art. 9º do próprio decreto; o tráfico privilegiado não é impeditivo - STF, Tema
+    1400 e SV 63 -, ao contrário do tráfico do caput e do § 1º - STJ, Tema 1336)."""
     carregar_tabelas_decretos()  # tabelas da base já na primeira análise (antes, só depois de analise_decretos)
     motivos = []
     ref = max(DECRETOS.values()) if DECRETOS else date(2025, 12, 25)
@@ -2075,7 +2076,7 @@ def situacao_execucao(campos, eventos, incidentes, crimes, hoje):
     # data-base (quando o SEEU não a imprime): última fixação/alteração de regime CONCEDIDA ou alteração de data-base da
     # progressão (data de referência). Progressão negada ou pendente não move a data-base; a regressão cautelar e o regime
     # fixado pela soma/unificação também não (STJ, Tema 1006); a alteração de data-base só do livramento é de outro prazo
-    data_base = None
+    data_base, db_sem_ref = None, False
     for i in incidentes:
         if i.get("situacao") != "CONCEDIDO":
             continue
@@ -2085,7 +2086,12 @@ def situacao_execucao(campos, eventos, incidentes, crimes, hoje):
             d = to_date(i.get("data_referencia") or i.get("data_decisao") or "")
             if d and (data_base is None or d > data_base):
                 data_base = d
+                # sem a data de referência, a data da decisão: a progressão é declaratória e a data-base é a do preenchimento do
+                # último requisito (STJ, Tema 1165), em regra anterior à decisão - a conferir
+                db_sem_ref = not to_date(i.get("data_referencia") or "") and e_incidente_regime(i) and "PROGRESS" in _sem_acento(
+                    "%s %s" % (i.get("tipo") or "", i.get("complemento") or "")).upper()
     out["data_base"] = fmt(data_base)
+    out["data_base_sem_referencia"] = bool(data_base and db_sem_ref)
     return out
 
 
@@ -2869,7 +2875,7 @@ def indicios_falta_datas(incidentes, ref, dias=365, eventos=None, ate=None, hoje
                 elif i.get("_fuga_ficha"):
                     if not falta_prescrita(d, True, eventos, hoje, ep["fim"] if ep else None):
                         add(*(("%s (%s%s)" % (txt, periodo(ep, d), FUGA_SH), True) if fuga_firme else
-                              ("%s (%s - fuga: em tese falta grave (LEP, art. 50, II), sem sanção reconhecida em juízo - só impede se reconhecida (STJ, Tema 1195))"
+                              ("%s (%s - fuga: em tese falta grave (LEP, art. 50, II), sem sanção reconhecida em juízo - só impede se reconhecida em juízo (Súmula 533/STJ))"
                                % (txt, periodo(ep, d)), False)), conta(ep, d))
                 elif i.get("_ficha_falta") and _pendente(i):
                     _ff = i["_ficha_falta"]
@@ -2952,7 +2958,7 @@ def indicios_falta_datas(incidentes, ref, dias=365, eventos=None, ate=None, hoje
         elif ep["fuga"]:
             if not falta_prescrita(d, True, eventos, hoje, ep["fim"] if perm else None):
                 add(*(("%s (%s%s%s)" % (t, periodo(ep, d), FUGA_SH, vinc(ep)), True) if fuga_firme else
-                      ("%s (%s - fuga: em tese falta grave (LEP, art. 50, II), sem sanção reconhecida em juízo - só impede se reconhecida (STJ, Tema 1195)%s)"
+                      ("%s (%s - fuga: em tese falta grave (LEP, art. 50, II), sem sanção reconhecida em juízo - só impede se reconhecida em juízo (Súmula 533/STJ)%s)"
                        % (t, periodo(ep, d), vinc(ep)), False)), conta(ep, d))
         elif not falta_prescrita(d, perm, eventos, hoje, ep["fim"] if perm else None):
             add("%s (%s; falta a apurar%s)" % (t, periodo(ep, d), vinc(ep)), False, conta(ep, d))
@@ -4784,7 +4790,7 @@ def e_suspensao_livramento(i):
 
 def periodos_livramento(eventos, incidentes):
     """Períodos de prova do livramento condicional [(inicio, fim|None)] - a pena se cumpre e a prescrição executória não
-    corre (STJ, HC 429.545). Início: o incidente de concessão ou, sem ele, a interrupção da custódia com motivo "livramento
+    corre (CP, art. 117, V: o livramento é cumprimento da pena). Início: o incidente de concessão ou, sem ele, a interrupção da custódia com motivo "livramento
     condicional" (a saída da unidade para o período de prova). Fim: revogação ou suspensão decidida, regressão concedida,
     fuga/evasão ou nova prisão (LEP, art. 145)."""
     inicios = []
