@@ -3745,6 +3745,10 @@ def analisar(r, hoje=None, ficha=None):
                 L["avisos"].append("art. 115: a data de nascimento da ficha (%s) diverge da do RSPE (%s) e muda a metade do prazo - a verificar "
                                    "no documento de identidade" % (rs.fmt(_alt), rs.fmt(nasc)))
         L["art115"] = meia
+        # motivo da metade, para a tela dizer por que o prazo caiu (ex.: 8 anos -> 4 anos)
+        L["art115_motivo"] = "" if not meia else ("informado pelo operador" if _v115 == "sim" else
+                             "menor de 21 anos na data do fato" if (i_fato is not None and 18 <= i_fato < menor21) else
+                             "maior de 70 anos na data da sentença" if (i_sent is not None and i_sent >= maior70) else "")
 
         art28_sem_pena = False
         multa_isolada = False
