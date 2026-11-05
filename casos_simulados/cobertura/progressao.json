@@ -5073,8 +5073,7 @@
     "campo": "prog",
     "op": "regex",
     "v": "^09/08/2028\\*",
-    "nota": "O programa estima início + lapso - 1 (08/08/2028), ao passo que a progressão refeita pela data-base informada usa data-base + lapso (convenção do SEEU). Diferença de 1 dia; convenção.",
-    "decisao": true
+    "nota": "Decidido (7.15.2, P23): início + lapso, a convenção do SEEU e da progressão refeita pela data-base informada."
    }
   ],
   "aba": "Progressão",
