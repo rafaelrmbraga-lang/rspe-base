@@ -1072,6 +1072,34 @@ def derivar(f, eventos):
                         and re.sub(r"\W", "", aberto["setor"].upper())[:12] == setor_fim[:12]:
                     aberto = None
                     continue
+                # (7.15.2) reinscrição: "Iniciou" e "Deixa de trabalhar" do mesmo setor no mesmo dia, com outra baixa desse setor depois
+                # (sem novo início dele nem saída da unidade no meio) - é recadastro no SIAPEN, não o fim do trabalho: o vínculo segue
+                # (o anterior do mesmo setor, encerrado só por esse início, é reaberto) até a baixa posterior
+                if aberto and aberto["inicio"] == e["data"] and not aberto.get("texto_livre") and setor_fim \
+                        and re.sub(r"\W", "", aberto["setor"].upper())[:12] == setor_fim[:12]:
+                    rx_ = lambda e2, tipo: re.match(r"\s*TRABALHO:\s*" + tipo + r",?\s*NO SETOR DE TRABALHO\s*(.*?)(?:,\s*CONFORME|$)", e2["texto"], re.I)
+                    mesmo_ = lambda m2: m2 and re.sub(r"\W", "", m2.group(1).upper())[:12] == setor_fim[:12]
+                    depois = None
+                    for e2 in eventos[k_ev + 1:]:
+                        if not e2["d"] or (d_ and e2["d"] <= d_):
+                            continue
+                        if mesmo_(rx_(e2, "INICIOU ATIVIDADE LABORAL")) or _saida_trabalho(e2["texto"]):
+                            break
+                        if mesmo_(rx_(e2, "DEIXA DE TRABALHAR")):
+                            depois = e2
+                            break
+                    if depois:
+                        i_ = next((i for i in range(len(trabalho) - 1, -1, -1) if trabalho[i].get("fim") == e["data"]
+                                   and trabalho[i].get("motivo_fim") == "início de outra atividade"
+                                   and re.sub(r"\W", "", trabalho[i]["setor"].upper())[:12] == setor_fim[:12]), None)
+                        if i_ is not None:
+                            v = trabalho.pop(i_)
+                            v["fim"] = ""
+                            v.pop("motivo_fim", None)
+                            aberto = v
+                        aberto["reinscricao"] = e["data"]
+                        usou = True  # (a lista volta à ordem dos inícios)
+                        continue
                 # só encerra o trabalho do mesmo setor (a baixa de um setor antigo não encerra o atual)
                 # (o vínculo aberto em texto livre com outra grafia do setor - "Montagem de Prendedores Prendebem" x "PRENDEBEM/PDIB" -
                 # é o mesmo setor: a baixa estruturada o encerra)
@@ -3805,9 +3833,10 @@ def comparativo(r, f, hoje=None, conferidos=None, manuais=None, vinculos=None):
     # linhas (exportação da aba, relatório individual): uma por período de trabalho (seção C) e uma por documento com fato ou ponto
     ST = {"auto": ("Vinculado automaticamente", "verde"), "possivel": ("Possível · confirmar", "amarelo"), "provavel": ("Sugerido · confirmar", "amarelo"),
           "sem": ("Sem atestado", "amarelo"), "manual": ("Vinculado por você", "azul")}
-    cor_l = lambda L: "cinza" if (N.get("rspe_maior") and ST[L["st"]][1] == "amarelo" and not L.get("pedir_dias")) else ST[L["st"]][1]
+    cor_l = lambda L: "cinza" if (L.get("dup") or N.get("rspe_maior") and ST[L["st"]][1] == "amarelo" and not L.get("pedir_dias")) else ST[L["st"]][1]
     linhas = [{"emp": L["local"] + (" (externo)" if L.get("externo") else ""), "un": L["un"], "per": L["periodo"], "dias": L["dias"], "at": ("nº " + L["at"]) if L["at"] else "—",
-               "sit": ST[L["st"]][0] + (" · vínculo sem baixa: conferir" if L.get("conf_dias") and not L.get("pedir_dias") else ""), "cor": cor_l(L)}
+               "sit": ST[L["st"]][0] + (" · provável registro duplicado: a conferir (sem dias)" if L.get("dup") else
+                                         " · vínculo sem baixa: conferir" if L.get("conf_dias") and not L.get("pedir_dias") else ""), "cor": cor_l(L)}
               for L in T["linhas"]]
     linhas += [{"emp": _rotulo_doc(d), "un": _unidade_em(tl_ex, _data_local_doc(d, T["linhas"])), "per": d["periodo"] or "—", "dias": "—",
                 "at": ("%s remidos" % _fmtn(d["dias"])) if d.get("dias") else "—", "sit": d["sit"], "cor": d["cor"]}
