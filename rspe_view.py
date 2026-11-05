@@ -376,6 +376,17 @@ def data_base_calculada(r):
     desde = max([d0] + [b for b in ant if b < ini])
     nada = not any((b is None or b >= d0) and a < ini for a, b in per[:-1]) and not (rs.pena_para_dias(r.get("pena_cumprida")) or 0)
     crime_novo = [c for c in r.get("_crimes", []) if desde <= (rs.to_date(c.get("data_infracao") or "") or date.min) <= ini + timedelta(days=1)]
+    if crime_novo and not nada:
+        # o crime no período só move a data-base reconhecido como falta grave (homologada) ou com a condenação transitada (LEP, art.
+        # 112, § 6º; Súmulas 526 e 534/STJ); sem isso fica a última alteração de regime, a conferir (a recaptura sem falta também não move)
+        _fh = any(rs.RE_FALTA_PROPRIA.search(rs._rotulo_incidente(i)) and (i.get("situacao") or "").startswith("CONCEDIDO")
+                  and desde - timedelta(days=1) <= (rs._data_fato_falta(i) or date.min) <= ini + timedelta(days=1)
+                  for i in r.get("_incidentes", []))
+        _tr = [c for c in crime_novo if rs.to_date(c.get("transito_processo") or "") or rs.to_date(c.get("transito_mp") or "")]
+        if not (_fh or _tr):
+            return rs.fmt(d0), "%s - crime de %s no período antes da nova prisão de %s, sem trânsito nem falta reconhecida no RSPE: conferir" % (
+                fonte, rs.fmt(rs.to_date(crime_novo[0].get("data_infracao"))), rs.fmt(ini))
+        crime_novo = _tr or crime_novo
     if not (nada or crime_novo):
         return rs.fmt(d0), fonte
     ev = next((e for e in r.get("_eventos", []) if rs.to_date(e.get("data") or "") == ini and "INTERRUP" not in (e.get("tipo") or "").upper()), {})
@@ -463,6 +474,11 @@ def data_base_info(r, itens, ficha=None):
                 mot += "; ficha em %s: %s" % (rs.fmt(x), rf._br(t)[:70])
         else:
             mot += "; nada na ficha nessa data"
+    if not cor and "sem trânsito nem falta reconhecida" in fonte:
+        cor = "amarelo"  # crime no período sem trânsito nem falta: a data-base fica na última alteração de regime, a conferir
+    elif not cor and not mot and fonte == "última alteração de regime" and r.get("data_base_sem_referencia"):
+        cor, mot = "amarelo", ("data de referência ausente no RSPE: usada a data da decisão de progressão - a data-base é a do preenchimento "
+                               "dos requisitos (STJ, Tema 1165), em regra anterior; conferir")
     return {"db": rs.fmt(d0), "db_motivo": ("calculada pelo programa: %s" % fonte if (fonte != "SEEU" and not mot) else
                                             (mot or "motivo não identificado") + ("" if fonte == "SEEU" else " (calculada: %s)" % fonte)),
             "db_cor": cor, "db_editada": False, "db_orig": orig}
@@ -751,7 +767,12 @@ def cor_indulto(r):
 def _soma_pena(d, dias):
     """d + pena pelo calendário, como o SEEU: anos e meses (ano de 365 e mês de 30 na conversão), depois os dias."""
     a, resto = divmod(dias, rs.DIAS_ANO)
-    m, dd = divmod(resto, 30)
+    # a mesma conversão de rs.dias_para_pena: o resto de 360 a 364 dias é 11 meses e 25 a 29 dias, não "12 meses e 0 a 4 dias"
+    # (passaria de um ano e adiaria a data em até 5 dias - ex.: 4a menos 2a0m1d = 1a11m29d)
+    m = min(resto // 30, 11)
+    dd = resto - 30 * m
+    if dd >= 30:
+        dd = resto - 335
     return rp.soma_meses(d, a * 12 + m) + timedelta(days=dd)
 
 
@@ -1098,6 +1119,31 @@ def livramento_substituido(r, dlc, ate):
     return ""
 
 
+# art. 89 do CP pela leitura do STJ (Súmula 617; AgRg no HC 972.875) e do STF (HC 119.938): sem suspensão decidida no período de prova,
+# o processo pendente não prorroga o livramento; a pena do crime cometido no livramento começa no dia seguinte ao fim do período de
+# prova (STJ, Tema 1.367)
+TXT_ART89 = ("Ressalva do art. 89 do CP: só impede a extinção se o juiz suspendeu o livramento antes do fim do período de prova (Súmula 617/STJ); o "
+             "processo por crime cometido no livramento, sozinho, não prorroga o período, e a prisão por esse crime não o suspende por si - a "
+             "pena nova começa no dia seguinte ao fim do período de prova (STJ, Tema 1.367)")
+RE_INT_EVASAO = re.compile(r"FUGA|EVAS|ABANDON|FORAGID|N[ÃA]O RETORN|REVOGA", re.I)
+
+
+def _interrupcao_antes_termino(r, term):
+    """(data, motivo) da fuga/evasão/abandono/revogação do livramento lançada pelo SEEU depois do último início do cumprimento e
+    antes do término impresso, sem reinício posterior; senão None. Os eventos da ficha não contam."""
+    own = sorted([(rs.to_date(e.get("data") or ""), e) for e in r.get("_eventos", []) if not e.get("_ficha") and rs.to_date(e.get("data") or "")],
+                 key=lambda t: t[0])
+    if not own:
+        return None
+    d, e = own[-1]
+    if "INTERRUP" not in rs._sem_acento(e.get("tipo") or "").upper() or d >= term:
+        return None
+    mot = e.get("motivo") or ""
+    if not RE_INT_EVASAO.search(rs._sem_acento(mot)):
+        return None
+    return d, mot
+
+
 def extincao(r, presc, interr):
     """Hipóteses de extinção da pena/punibilidade aferíveis pelo RSPE."""
     hip, cor, d_ref = [], "", None
@@ -1120,6 +1166,7 @@ def extincao(r, presc, interr):
             _rem0 = soma_penas_ativas(r)
         _pf = termino_por_fato(r, cust, _rem0 or 0, remidos_sem_calculo(r)) if _rem0 else None
     rf_ver = bool(term_calc and not cust and reinicio_ficha(r) and term <= HOJE)
+    int_ver = False  # término do SEEU alcançado, mas com fuga/evasão posterior ao último início do cumprimento: a verificar
     # 1) pena cumprida
     if pt and cump is not None and cump >= pt:
         hip.append("Pena integralmente cumprida (%s de %s): extinção pelo cumprimento (LEP, art. 66, II)" % (rs.dias_para_pena(cump), rs.dias_para_pena(pt)))
@@ -1141,6 +1188,14 @@ def extincao(r, presc, interr):
                        ("%s%s - conferir se o cumprimento seguiu sem nova interrupção (fuga, descumprimento, regressão) até o término" % (
                            _cfp["texto"], (", e registra saída em %s (%s)" % _cfp["saida"]) if _cfp.get("saida") else ""))
                        if _cfp else "a custódia da ficha pode ser de outro processo - conferir"))
+    elif term and term <= HOJE and not term_calc and _interrupcao_antes_termino(r, term):
+        # o término impresso é anterior a uma fuga/evasão/revogação do livramento posterior ao último início do cumprimento: o
+        # cumprimento parou antes dele, e não se afirma a extinção (o ponto é o saldo na interrupção - CP, art. 113)
+        _gi, _mi = _interrupcao_antes_termino(r, term)
+        hip.append("A verificar: término do SEEU (%s) já alcançado, mas o cumprimento foi interrompido antes dele, em %s (%s), sem reinício "
+                   "registrado - a pena não se cumpriu até o término; conferir o saldo na interrupção e a prescrição pelo saldo (CP, art. "
+                   "113) na aba Prescrição" % (rs.fmt(term), rs.fmt(_gi), _mi.lower()))
+        int_ver = True
     elif term and term <= HOJE:
         hip.append("Término da pena %s %s já alcançado" % ("calculado (data do RSPE + pena remanescente, pelo calendário) para" if term_calc else "previsto para", rs.fmt(term)))
         cor, d_ref = "vermelho", term
@@ -1207,20 +1262,31 @@ def extincao(r, presc, interr):
             # o livramento substituído por nova alteração de regime antes do fim do período de prova (soma de penas, regressão,
             # adequação) deixou de existir: não há extinção pela Súmula 617
             if fim_lc and fim_lc <= HOJE and not livramento_substituido(r, dlc, fim_lc):
-                hip.append("A verificar: livramento condicional desde %s, sem revogação registrada (%s); o período de prova terminou em %s%s - se "
-                           "não houve revogação nem suspensão até essa data, extinção da pena (CP, art. 90; LEP, art. 146; Súmula 617/STJ), "
-                           "observado o art. 89 do CP (processo por crime cometido na vigência do livramento)" % (
-                               rs.fmt(dlc), "; ".join(duv), rs.fmt(fim_lc), (" (%s)" % _nota_lc) if _nota_lc else ""))
+                hip.append("A verificar: livramento condicional desde %s, sem revogação registrada (%s); o período de prova terminou em %s%s - "
+                           "conferir se houve decisão de suspensão ou revogação até essa data; se não houve, extinção da pena (CP, art. 90; LEP, "
+                           "art. 146; Súmula 617/STJ). %s" % (
+                               rs.fmt(dlc), "; ".join(duv), rs.fmt(fim_lc), (" (%s)" % _nota_lc) if _nota_lc else "", TXT_ART89))
                 lc_ver = True
         elif dlc != date.min and not revog and term:
             if term <= HOJE:
-                hip.append("Livramento condicional desde %s com período de prova expirado em %s sem revogação (CP, art. 90; LEP, art. 146; Súmula 617/STJ), observado o art. 89 do CP (processo por crime cometido na vigência do livramento)" % (rs.fmt(dlc), rs.fmt(term)))
+                hip.append("Livramento condicional desde %s com período de prova expirado em %s sem revogação (CP, art. 90; LEP, art. 146; Súmula 617/STJ). %s" % (rs.fmt(dlc), rs.fmt(term), TXT_ART89))
                 cor = "vermelho"
     # 3) detração que alcança toda a pena do processo (custódia provisória anterior ao trânsito): hipótese a verificar,
     #    porque a mesma prisão pode servir a várias condenações (LEP, art. 111). Prescrição e indulto ficam nas próprias abas.
     a_verificar = _parcial_ver
     for l in presc.get("presc_linhas", []):
-        if l.get("ppe_detracao_cobre") and l.get("ppe_detracao_exclusiva"):
+        _outras_atv = [c for c in r.get("_crimes", []) if not (c.get("extinto") or "").upper().startswith("S")
+                       and not rs.mesmo_processo(c.get("processo_criminal"), l.get("proc_crim"))]
+        if l.get("ppe_detracao_cobre") and l.get("ppe_detracao_exclusiva") and _outras_atv:
+            # execução unificada com outras penas ativas: não se afirma a extinção de pena isolada (política da equipe) - o tempo já
+            # está na pena unificada; fica a verificar
+            hip.append("%s: a verificar - custódia anterior ao trânsito de %s iguala ou supera a pena do processo (%s) e só pode ser imputada "
+                       "a ele (CP, art. 42), mas a execução tem outras penas ativas (%s): o tempo já entra na pena unificada - conferir se cabe "
+                       "declarar a extinção desta pena (LEP, arts. 66, II, e 111)" % (
+                           l.get("rotulo") or l["crime"], rs.dias_para_pena(l.get("ppe_detracao_dias") or 0), l.get("ppe_pena_processo") or l["pena"],
+                           rs.crimes_curto(_outras_atv)))
+            a_verificar = True
+        elif l.get("ppe_detracao_cobre") and l.get("ppe_detracao_exclusiva"):
             hip.append("%s: custódia anterior ao trânsito de %s iguala ou supera a pena do processo (%s), e nenhuma outra condenação do RSPE tem "
                        "fato anterior a essa prisão - a detração só pode ser imputada a este processo: extinção pelo cumprimento (CP, art. 42; "
                        "LEP, art. 66, II)" % (l.get("rotulo") or l["crime"], rs.dias_para_pena(l.get("ppe_detracao_dias") or 0), l.get("ppe_pena_processo") or l["pena"]))
@@ -1326,7 +1392,7 @@ def extincao(r, presc, interr):
             cor = "cinza"
         if a_verificar and cor in ("", "cinza", "verde"):
             cor = "amarelo"
-        if cust_ver or rf_ver or lc_ver:
+        if cust_ver or rf_ver or lc_ver or int_ver:
             cor = "amarelo"
     return {
         "ext_hipoteses": "; ".join(hip) if hip else ("Não iniciou o cumprimento - sem previsão" if nao_iniciou(r) else ("" if not interr else rotulo_parada(r) + " - sem previsão")),
@@ -1334,7 +1400,7 @@ def extincao(r, presc, interr):
         # execução extinta: sem término nem "interrompida" (o último evento é anterior à extinção)
         "ext_termino": (rs.fmt(term) + ("*" if term_calc else "")) if term else ("" if ja_extinta else ("Não iniciou" if nao_iniciou(r) else (rotulo_parada(r, True) if interr else (termino(r) if termino(r).startswith("Pena cumprida") else "")))),
         "ext_dias": (term - HOJE).days if term else None,
-        "ext_sit": ("Pena extinta (registrada)" if ja_extinta else ("Extinção a verificar" if ((cust_ver or rf_ver or lc_ver) and cor != "vermelho") else ("Extinção cabível" if cor == "vermelho" else situacao(term)[0].replace("Vence", "Término").replace("Em ", "Término em ")) if (term or cor == "vermelho") else "")),
+        "ext_sit": ("Pena extinta (registrada)" if ja_extinta else ("Extinção a verificar" if ((cust_ver or rf_ver or lc_ver or int_ver) and cor != "vermelho") else ("Extinção cabível" if cor == "vermelho" else situacao(term)[0].replace("Vence", "Término").replace("Em ", "Término em ")) if (term or cor == "vermelho") else "")),
         "ext_extintos": "; ".join(ext),
         "ext_multa": multa_txt,
         "ext_n": len(hip),
@@ -2298,7 +2364,26 @@ def falta_12m_hoje(r, hoje=None):
     return r.get("falta_12m")
 
 
-def _conduta_requisito(add, ficha, fal):
+def _conduta_readquirida(r, hoje):
+    """LEP, art. 112, § 7º: o bom comportamento se readquire em 1 ano do fato ou, antes, com o requisito temporal cumprido. Com a
+    falta nos 12 meses, a data-base já depois dela e o lapso da progressão contado dela vencido (data do SEEU), devolve a data da
+    falta; senão None."""
+    if not r:
+        return None
+    try:
+        datas = [rs.to_date(x) for x in re.findall(r"\d{2}/\d{2}/\d{4}", r.get("falta_12m_detalhe") or "")]
+        datas = [d for d in datas if d and d <= (hoje or HOJE)]
+        fx = max(datas) if datas else None
+        db = _data(r.get("data_base_seeu") or data_base_calculada(r)[0] or "")
+        pv = _data(r.get("progressao_previsao_seeu") or "")
+        if fx and db and pv and db >= fx - timedelta(days=1) and pv <= (hoje or HOJE):
+            return fx
+    except Exception:
+        return None
+    return None
+
+
+def _conduta_requisito(add, ficha, fal, r=None, hoje=None):
     """Conduta e falta nos 12 meses (saída temporária e progressão antecipada). Itens 148 e 150 de 16/10: a falta "a apurar" (indício
     sem sanção reconhecida) e a conduta "sem lapso" (sem tempo para classificar) ficam a conferir (amarelo), não como requisito não
     atendido - a falta só produz efeito depois de reconhecida em juízo (Súmula 533/STJ). Falta reconhecida ou conduta ruim: não atende."""
@@ -2308,7 +2393,10 @@ def _conduta_requisito(add, ficha, fal):
     # "Responde PADIC/IPCG": procedimento disciplinar em curso, sem sanção reconhecida - a conferir, como a falta a apurar
     padic = cond.startswith("RESPONDE")
     sem_lapso = not padic and ("SEM LAPSO" in cond or (cond not in ("OTIMA", "BOA") and not re.search(r"\b(?:REGULAR|MA|PESSIMA|RUIM|NEGATIVA)\b", cond)))
-    if fal == "SIM" or not (cond in ("OTIMA", "BOA") or sem_lapso or padic):
+    readq = _conduta_readquirida(r, hoje) if fal == "SIM" else None
+    if readq and (cond in ("OTIMA", "BOA") or sem_lapso or padic):
+        ok = None  # conduta readquirida pelo lapso cumprido depois da falta (art. 112, § 7º): a conferir, não "não atende"
+    elif fal == "SIM" or not (cond in ("OTIMA", "BOA") or sem_lapso or padic):
         ok = False
     else:
         ok = None if (fal == "A APURAR" or sem_lapso or padic) else True
@@ -2317,7 +2405,9 @@ def _conduta_requisito(add, ficha, fal):
         (" (sem tempo para classificar, não conduta ruim): pedir o atestado de conduta" if "SEM LAPSO" in cond else
          " (a ficha não classifica a conduta): pedir o atestado de conduta") if sem_lapso else
         " (procedimento disciplinar em curso, sem sanção reconhecida): conferir o resultado do PADIC antes de pedir (Súmula 533/STJ)" if padic else "",
-        "" if fal not in ("SIM", "A APURAR") else (" · falta nos últimos 12 meses: sim" if fal == "SIM" else
+        "" if fal not in ("SIM", "A APURAR") else ((" · falta nos últimos 12 meses (%s), mas o lapso da progressão contado dela já venceu: a "
+                                                    "conferir - conduta readquirida (LEP, art. 112, § 7º)" % rs.fmt(readq)) if readq else
+                                                   " · falta nos últimos 12 meses: sim" if fal == "SIM" else
                                                   " · falta a apurar nos últimos 12 meses, sem sanção reconhecida: conferir o PAD antes de pedir (Súmula 533/STJ)")))
 
 
@@ -2537,7 +2627,7 @@ def saida_temporaria(r, ficha, m, est=None, interr=False, hoje=None):
               "(Súmula Vinculante 56)" % rf.nome_unidade(un)) if _sv56 else
              "%s: %s (a saída temporária pressupõe o cumprimento no semiaberto)" % (
                  "Unidade de monitoramento eletrônico" if tipo_un == "monitoramento" else "Unidade de regime %s" % tipo_un, rf.nome_unidade(un))))
-        _conduta_requisito(add, ficha, falta_12m_hoje(r, hoje))
+        _conduta_requisito(add, ficha, falta_12m_hoje(r, hoje), r, hoje)
         trab = _trabalho_atual(ficha, m)  # o trabalho externo também conta
         # o trabalho não é requisito da saída temporária (LEP, art. 123): só informação, sem ✓ nem ✗
         add("info", ("Trabalhando: " + trab if trab else "Sem trabalho em curso na ficha") + " (informação: o trabalho não é requisito do art. 123 da LEP)")
@@ -2619,7 +2709,7 @@ def progressao_antecipada(r, ficha, m, est=None, interr=False, hoje=None):
     if not ficha:
         add(None, "Sem ficha disciplinar: conduta não conferida")
     else:
-        _conduta_requisito(add, ficha, falta_12m_hoje(r, hoje))
+        _conduta_requisito(add, ficha, falta_12m_hoje(r, hoje), r, hoje)
         imp = rs.to_date(((ficha.get("data_impressao") or "").split() or [""])[0].replace(".", "/"))
         if imp and (hoje - imp).days > 90:
             add(None, "Ficha impressa em %s (há %d dias, mais de 90): conferir a conduta atual" % (rs.fmt(imp), (hoje - imp).days))
