@@ -4508,7 +4508,7 @@ def _montar_modelo(r, ctx):
 # campos de cada crime da prescrição que a lista usa (colunas, cores, "Calcular"); o resto vem com o registro completo
 _PRESC_LEVE = {"ppe_termo_txt", "crime", "rotulo", "proc_crim", "pena", "fato", "denuncia", "sentenca", "transito", "transito_mp", "acordao", "modalidade",
                "ppe_status", "ppe_cor", "retro_status", "retro_cor", "prazo_ppe", "prazo_ppp", "ppe_termo", "ppe_previsao", "ppe_dias",
-               "chave_ajuste", "ajustado"}
+               "chave_ajuste", "ajustado", "art115", "art115_motivo"}
 
 
 def _leve(j):

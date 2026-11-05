@@ -1041,6 +1041,9 @@ v7.15.4
   junto). Os favoritos ficam na configuração deste computador
   (rspe_config.json), valem para qualquer base e continuam ao atualizar o
   programa.
+  Prescrição: quando o prazo cai pela metade (CP, art. 115), o quadro do
+  crime diz isso e o motivo (menor de 21 anos no fato, maior de 70 na
+  sentença ou informado pelo operador), ex.: "4 anos - reduzido à metade".
 
 v7.15.3
   Aba Ficha disciplinar mais prática e decisão dos 57 pareceres (P01 a

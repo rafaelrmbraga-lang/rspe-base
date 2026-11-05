@@ -42,6 +42,7 @@ TESTES += ["teste_rev_ficha_remicao.py", "teste_rev_progressao_auditoria.py", "t
 TESTES += ["teste_ui_remicao.py"]  # 7.15.3: aba Ficha didática ("O que pedir", remições x o que cada uma cobre, vínculos e documentos)
 TESTES += ["teste_dec_leitura_prazos.py", "teste_dec_ficha_remicao.py", "teste_dec_progressao_auditoria.py", "teste_dec_indulto.py"]  # 7.15.3: decisões dos pareceres P01-P57
 TESTES += ["teste_teses_favoritos.py"]  # 7.15.4: favoritos na aba Jurisprudências
+TESTES += ["teste_presc_art115_tela.py"]  # 7.15.4: motivo da metade do art. 115 no quadro da prescrição
 # saída em UTF-8 em qualquer console (no Windows o padrão cp1252 não imprime símbolos como "✓" e derruba o teste)
 _env = dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUTF8="1")
 falhas = [t for t in TESTES if subprocess.call([sys.executable, t], env=_env) != 0]
