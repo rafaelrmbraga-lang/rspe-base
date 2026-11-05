@@ -2654,9 +2654,13 @@ def faltas_da_ficha(r, ficha, hoje=None):
             cien = " (%s)" % x.get("data_fato_obs")  # (7.14.6) sanção sem o lançamento da falta: a data é a do lançamento da sanção
         r["_incidentes"].append({"tipo": "FALTA GRAVE NA FICHA DISCIPLINAR (SIAPEN)",
                                  "complemento": "Data da infração: %s%s%s - %s%s" % (fmt(d), cien, (" - " + x["artigo"]) if x.get("artigo") else "", sit,
-                                                                                   " (isolamento preventivo com PADIC, natureza da falta não informada)"
+                                                                                   " (isolamento preventivo com PADIC, natureza da falta não informada: "
+                                                                                   "falta de natureza a confirmar - o isolamento preventivo não é sanção, "
+                                                                                   "LEP, art. 60; fora das janelas de 12 meses até o resultado do PADIC)"
                                                                                    if x.get("grave_indicio") and not x.get("grave") else ""),
                                  "situacao": "PENDENTE", "data_referencia": fmt(d), "data_decisao": "", "_ficha": True,
+                                 # (P10, 7.15.3) só o isolamento preventivo (LEP, art. 60): não entra nas janelas de falta
+                                 **({"_natureza_a_confirmar": True} if x.get("grave_indicio") and not x.get("grave") else {}),
                                  **({"_data_ciencia": True} if x.get("data_fato_ciencia") else {})})
         datas.append(d)
         datas_ficha.append(d)
@@ -2851,6 +2855,8 @@ def indicios_falta_datas(incidentes, ref, dias=365, eventos=None, ate=None, hoje
             continue
         if i.get("_falta") == "nao":
             continue  # o operador informou que não houve falta grave
+        if i.get("_natureza_a_confirmar") and i.get("_falta") != "sim":
+            continue  # (P10, 7.15.3) isolamento preventivo sem a natureza da falta: a confirmar, fora das janelas
         if i in proprias:
             d = _data_fato_falta(i)
             ep = ep_obj.get(id(i))

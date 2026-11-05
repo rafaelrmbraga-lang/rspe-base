@@ -1275,10 +1275,9 @@ def derivar(f, eventos):
         u = e["texto"].upper()
         mx = re.search(r"\b(ENCCEJA|ENEM)\b\s*(\d{4})?", u)
         if mx and re.search(r"CERTIFICAD|APROVA|PETICION|DECLARA", u):
-            # conclusão certificada (art. 9º, XIII, dos Decretos 2024/2025): só o certificado do ENCCEJA conta direto; o do ENEM
-            # (certificação restaurada pela Portaria MEC 382/2025 - STJ, Tema 1270) fica a conferir (a edição coberta não está
-            # confirmada), e a declaração parcial ou a aprovação por área não é conclusão
-            cert = mx.group(1) == "ENCCEJA" and conclusao_certificada(u)
+            # conclusão certificada (art. 9º, XIII, dos Decretos 2024/2025): o certificado de conclusão do ENCCEJA e o do ENEM (P08,
+            # 7.15.3: fora das edições de 2017 a 2024, que não certificavam); a declaração parcial ou a aprovação por área não é conclusão
+            cert = exame_conclui(mx.group(1), int(mx.group(2)) if mx.group(2) else None, u)
             exames.append({"exame": mx.group(1) + ((" " + mx.group(2)) if mx.group(2) else ""), "data": e["data"], "certificado": cert,
                            "ano": int(mx.group(2)) if mx.group(2) else None, "autos": _autos_citados(rs._sem_acento(u))})
     f["exames"] = exames
@@ -2308,8 +2307,22 @@ def _monitoramento_x_ficha(r, f):
         exe_ = any(rs.processo_parecido(n, r.get("processo_execucao") or "") for n in n_) if rs.chave_processo(r.get("processo_execucao") or "") else False
         # política 7.14.8: monitoramento lançado como interrupção é data do SEEU contrária à lei - alerta (a aba mantém a data do
         # SEEU, com a ressalva); antes (7.14.6), "verificar"
-        it = _item_rf("alerta", "Monitoramento eletrônico %s de %s a %s na ficha; o RSPE trata o período como interrupção (%s sem cômputo)" % (
-                          "desta execução" if exe_ else "cautelar em ação penal desta execução", rs.fmt(x), rs.fmt(fim), rs.pl(fora, "dia", "dias")),
+        # (P09, 7.15.3) três casos: pelos autos da execução, cumprimento de pena (alerta); cautelar com recolhimento noturno ou nos
+        # dias de folga registrado na ficha, detração das horas de recolhimento convertidas em dias (STJ, Tema 1155 - alerta, com o
+        # total de dias como teto); cautelar só com monitoramento, tese defensiva que o STJ não acolhe (verificar)
+        recolh = (not exe_) and any(re.search(r"RECOLHIMENTO\s+(?:DOMICILIAR\s+)?NOTURNO|RECOLHIMENTO\s+NOS\s+DIAS\s+DE\s+FOLGA|RECOLHER-SE",
+                                              rs._sem_acento(u).upper()) for y, u in ev if x <= y <= fim)
+        nivel_m = "alerta" if exe_ or recolh else "verificar"
+        cit_m = ("O cumprimento da pena em monitoramento eletrônico (semiaberto ou regime harmonizado) é pena cumprida, não liberdade" if exe_ else
+                 "A ficha registra recolhimento noturno ou nos dias de folga: as horas de recolhimento são detração, convertidas em dias e "
+                 "desprezada a fração menor que 24 horas (CP, art. 42; STJ, Tema 1155, REsp 1.977.135, 3ª Seção, 23/11/2022) - o número de dias "
+                 "acima é o teto, não o resultado" if recolh else
+                 "Monitoramento cautelar sem recolhimento registrado na ficha: contá-lo como detração é tese defensiva (proporcionalidade, CP, "
+                 "art. 42), que o STJ não acolhe - só o recolhimento noturno e nos dias de folga gera detração (Tema 1155; AgRg no HC 1.078.634, "
+                 "5ª Turma, 27/05/2026). Se a decisão cautelar impôs recolhimento, a detração é das horas (Tema 1155)")
+        it = _item_rf(nivel_m, "Monitoramento eletrônico %s de %s a %s na ficha; o RSPE trata o período como interrupção (%s sem cômputo)" % (
+                          "desta execução" if exe_ else "cautelar em ação penal desta execução" + (", com recolhimento noturno" if recolh else ""),
+                          rs.fmt(x), rs.fmt(fim), rs.pl(fora, "dia", "dias")),
                       "A ficha registra a entrada na unidade de monitoramento eletrônico em %s pelos autos %s e %s; o RSPE "
                       "interrompe o cumprimento em %s (%s)%s. %s: computados esses dias (salvo período de evasão ou descumprimento que a ficha "
                       "não mostre), o saldo da pena diminui%s. A aba mantém a data do SEEU. Conferir nos autos a decisão que fixou o "
@@ -2318,13 +2331,17 @@ def _monitoramento_x_ficha(r, f):
                           ("a saída em %s" % rs.fmt(fim)) if sai else "nenhuma saída até a impressão da ficha (%s)" % rs.fmt(imp),
                           rs.fmt(rs.to_date(ie["data"])), (ie.get("motivo") or "motivo não consta").strip().lower(),
                           (" e só o retoma em %s" % rs.fmt(ret)) if ret else "",
-                          "O cumprimento da pena em monitoramento eletrônico (semiaberto ou regime harmonizado) é pena cumprida, não liberdade"
-                          if exe_ else "O monitoramento eletrônico cautelar é detração (CP, art. 42; STJ, Tema 1155), não liberdade",
+                          cit_m,
                           (" e a progressão ficaria por volta de %s (≈ %s antes da data do SEEU, %s - estimativa pela fração média das penas "
-                           "sobre os dias anteriores à data-base)" % (rs.fmt(est), rs.pl(efeito, "dia", "dias"), rs.fmt(prog))) if est else ""),
-                      "LEP, arts. 111, 112 e 146-B; CP, art. 42." if exe_ else "CP, art. 42; STJ, Tema 1155; LEP, art. 111.")
+                           "sobre os dias anteriores à data-base%s)" % (rs.fmt(est), rs.pl(efeito, "dia", "dias"), rs.fmt(prog),
+                                                                      "" if exe_ else ", contados todos os dias: no máximo" if recolh else
+                                                                      ", se acolhida a tese")) if est else ""),
+                      "LEP, arts. 111, 112 e 146-B; CP, art. 42." if exe_ else "CP, art. 42; STJ, Tema 1155; LEP, art. 111." if recolh else
+                      "CP, art. 42 (tese defensiva); contra: STJ, Tema 1155 e AgRg no HC 1.078.634.")
         if est:
-            it["prog_estimada"], it["prog_rotulo"] = rs.fmt(est), "computado o monitoramento eletrônico"
+            it["prog_estimada"], it["prog_rotulo"] = rs.fmt(est), ("computado o monitoramento eletrônico" if exe_ else
+                                                                   "no máximo, computado o recolhimento noturno" if recolh else
+                                                                   "se acolhida a tese de detração do monitoramento")
         out.append(it)
     return out
 
@@ -3836,6 +3853,7 @@ def comparativo(r, f, hoje=None, conferidos=None, manuais=None, vinculos=None):
     cor_l = lambda L: "cinza" if (L.get("dup") or N.get("rspe_maior") and ST[L["st"]][1] == "amarelo" and not L.get("pedir_dias")) else ST[L["st"]][1]
     linhas = [{"emp": L["local"] + (" (externo)" if L.get("externo") else ""), "un": L["un"], "per": L["periodo"], "dias": L["dias"], "at": ("nº " + L["at"]) if L["at"] else "—",
                "sit": ST[L["st"]][0] + (" · provável registro duplicado: a conferir (sem dias)" if L.get("dup") else
+                                         " · sem baixa nem atestado recente: confirmar com a unidade" if L.get("conf_curso") and not L.get("pedir_dias") else
                                          " · vínculo sem baixa: conferir" if L.get("conf_dias") and not L.get("pedir_dias") else ""), "cor": cor_l(L)}
               for L in T["linhas"]]
     linhas += [{"emp": _rotulo_doc(d), "un": _unidade_em(tl_ex, _data_local_doc(d, T["linhas"])), "per": d["periodo"] or "—", "dias": "—",
@@ -4040,6 +4058,24 @@ def _lancamentos_saida_temporaria(eventos):
     return ds
 
 
+# (P08, 7.15.3) edições do ENEM sem certificação do ensino médio: de 2017 (a certificação passou ao ENCCEJA) até a retomada
+# pelo ENEM 2025 (Decreto 9.432/2018, art. 7º-A, II, incluído pelo Decreto 12.915/2026; Portaria MEC 382/2025)
+ENEM_SEM_CERTIFICACAO = range(2017, 2025)
+
+
+def exame_conclui(exame, ano, texto):
+    """Certificado de conclusão do ensino por exame (art. 9º, XIII, dos Decretos 2024/2025; LEP, art. 126, § 5º - o +1/3; STJ,
+    Tema 1270, tese 3: o acréscimo pressupõe a aprovação plena com a certificação da conclusão): o registro diz o certificado e a
+    conclusão (conclusao_certificada). ENCCEJA, sempre; ENEM, fora das edições de 2017 a 2024 (sem certificação) - sem o ano, vale
+    o certificado registrado."""
+    if not conclusao_certificada(texto):
+        return False
+    if ano is None:
+        _ma = re.search(r"\b(?:19|20)\d{2}\b", exame or "")
+        ano = int(_ma.group(0)) if _ma else None
+    return (exame or "").upper().startswith("ENCCEJA") or ((exame or "").upper().startswith("ENEM") and ano not in ENEM_SEM_CERTIFICACAO)
+
+
 def conclusao_certificada(texto):
     """Conclusão do ensino certificada expressamente (art. 9º, XIII, dos Decretos 2024/2025; LEP, art. 126, § 5º - acréscimo de 1/3):
     o registro diz o certificado e a conclusão. A mera petição ("peticionado certificado do ENCCEJA"), a declaração parcial ou a
@@ -4218,7 +4254,7 @@ def complementar_decretos(r, f, hoje=None):
             us = [e["texto"].upper() for e in ev if e.get("data") == x["data"] and x["exame"].split()[0] in (e.get("texto") or "").upper()]
             if not us:
                 return bool(x.get("certificado"))
-            return x["exame"].startswith("ENCCEJA") and any(conclusao_certificada(u) for u in us)
+            return any(exame_conclui(x["exame"], x.get("ano"), u) for u in us)
         conc = [x for x in exs13 if _cert(x)]
         exs_ver = [x for x in exs13 if x not in conc]  # ENEM ou ENCCEJA sem certificado de conclusão: a verificar
         conc += [{"exame": e["curso"].title(), "data": e.get("fim")} for a, b, e in estudos
@@ -4227,10 +4263,18 @@ def complementar_decretos(r, f, hoje=None):
         if conc:
             res["XIII"] = (True, "ficha: %s" % "; ".join("%s (certificado registrado em %s)" % (x["exame"], _br(x["data"] or "")) for x in conc))
         elif exs_ver:
-            res["XIII"] = (None, "ficha: %s - conferir se houve conclusão de curso certificada (o ENEM voltou a certificar a conclusão do "
-                                 "ensino médio pela Portaria MEC 382/2025 - STJ, Tema 1270: conferir a edição e o certificado; petição, declaração "
-                                 "parcial ou aprovação por área não é certificado de conclusão)" % "; ".join(
-                                     "%s em %s" % (x["exame"], _br(x["data"] or "")) for x in exs_ver))
+            # (P56, 7.15.3) só a petição do certificado, a aprovação por área ou a declaração parcial: a verificar, com a requisição
+            # do certificado de conclusão (o ENEM de 2017 a 2024 não certificava)
+            _us13 = lambda x: " ".join(rs._sem_acento(e.get("texto") or "").upper() for e in ev if e.get("data") == x["data"])
+            _pet13 = [x for x in exs_ver if re.search(r"PETICION|PROTOCOL|JUNTAD", _us13(x))]
+            _enem_sc = [x for x in exs_ver if x["exame"].startswith("ENEM")
+                        and (x.get("ano") or int((re.findall(r"\d{4}", x["exame"]) or [0])[0])) in ENEM_SEM_CERTIFICACAO]
+            res["XIII"] = (None, "ficha: %s - a verificar: %sconferir se houve conclusão do ensino certificada (petição, declaração parcial "
+                                 "ou aprovação por área não é certificado de conclusão; o ENEM voltou a certificar o ensino médio a partir da "
+                                 "edição de 2025 - Portaria MEC 382/2025; STJ, Tema 1270%s)" % (
+                                     "; ".join("%s em %s" % (x["exame"], _br(x["data"] or "")) for x in exs_ver),
+                                     "requisitar o certificado de conclusão (o registro só diz que foi peticionado); " if _pet13 else "",
+                                     "; as edições de 2017 a 2024 não certificavam" if _enem_sc else ""))
         elif livres:
             res["XIII"] = (None, "ficha: curso %s (%d h, %s a %s) - conferir se é profissionalizante com certificado" % (
                 livres[0]["curso"].title(), livres[0]["horas"], _br(livres[0]["inicio"]), _br(livres[0]["fim"])))
