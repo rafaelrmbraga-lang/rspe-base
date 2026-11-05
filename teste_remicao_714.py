@@ -185,6 +185,17 @@ try:
           [("05.07.2024", "PETICIONADO ATESTADO DE TRABALHO Nº 060/2024")])
     o = rf.comparativo(R((50, "01/08/2024", "30/06/2024")), f, HOJE)
     tp = {p["tipo"]: p for p in o["fd_novo"]["pontos"]}
+    # (P19, 7.15.3 - decisão do defensor: vínculo sem baixa presumido em curso, depois do último atestado do vínculo, é "confirmar com
+    # a unidade", não "pedir atestado"; antes este caso esperava "pedir atestado")
+    ok("sem_baixa_curso" in tp and "confirmar com a unidade" in tp["sem_baixa_curso"]["texto"] and "pedir_atestado" not in tp
+       and o["fd_atestar"] != "Sim" and o["fd_novo"]["comp"] == 50, "confirmar com a unidade: %s / %s" % (list(tp), o["fd_sit"]))
+    ok(o["fd_novo"]["diag"]["t"].startswith("Confirmar com a unidade"), "diagnóstico confirmar: %s" % o["fd_novo"]["diag"])
+    # vínculo sem nenhum documento (nem atestado nem remição), há mais de 90 dias: pedir o atestado, como antes
+    f = F([T("MARCENARIA", "01.02.2024", "30.06.2024"), T("COPA", "01.02.2025", "")],
+          [A("060/2024", "05.07.2024", "01/02/2024", "30/06/2024", 50, 150, "Marcenaria")],
+          [("05.07.2024", "PETICIONADO ATESTADO DE TRABALHO Nº 060/2024")])
+    o = rf.comparativo(R((50, "01/08/2024", "30/06/2024")), f, HOJE)
+    tp = {p["tipo"]: p for p in o["fd_novo"]["pontos"]}
     ok("pedir_atestado" in tp and "Pedir o atestado" in tp["pedir_atestado"]["texto"] and o["fd_atestar"] == "Sim"
        and o["fd_novo"]["comp"] == 50 and "Pedir atestado" in o["fd_sit"], "pedir atestado: %s / %s" % (list(tp), o["fd_sit"]))
     ok(o["fd_novo"]["diag"]["t"].startswith("Pedir à unidade os atestados de trabalho que faltam"), "diagnóstico pedir atestado: %s" % o["fd_novo"]["diag"])

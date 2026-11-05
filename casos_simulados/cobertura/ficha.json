@@ -444,20 +444,16 @@
   "checks": [
    {
     "t": "aud",
-    "tipo": "rspe-x-ficha",
+    "tipo": "divergencia-siapen-nascimento",
     "presente": true,
-    "contem": [
-     "Nascimento na ficha",
-     "20/05/1991"
-    ],
-    "nivel": "alerta",
-    "nota": "O programa mostra 'verificar', não 'alerta'. O relatório (2.2) promete alerta quando a diferença muda marco de idade; aqui muda o do art. 115 do CP (menor de 21 no fato). Como não se sabe qual data é a certa, 'verificar' é defensável: escolha de política.",
-    "decisao": true
+    "contem": null,
+    "nivel": "verificar",
+    "nota": "P57/S2003 (decisão 7.15.3: programa): a data certa é desconhecida - 'verificar' no item da divergência da fonte (P28: um item só); a tese do art. 115 do CP fica a conferir, não alerta firme."
    }
   ],
   "aba": "Auditoria",
   "situacao": "RSPE diz nascimento em 20/05/1990 e a ficha em 20/05/1991; o fato é de 10/02/2012.",
-  "esperado": "Auditoria: alerta de nascimento divergente, porque pela ficha a pessoa tinha menos de 21 anos no fato (prescrição pela metade)."
+  "esperado": "Auditoria: 'verificar' na divergência do nascimento (SEEU x ficha do SIAPEN): pela ficha a pessoa tinha menos de 21 anos no fato (prescrição pela metade, CP, art. 115) - conferir qual data é a certa."
  },
  {
   "acoes": [],
@@ -4049,14 +4045,13 @@
     "t": "campo",
     "campo": "ficha",
     "op": "regex",
-    "v": "\"inicio\": \"10\\.01\\.2025\", \"fim\": \"20\\.06\\.2025\", \"setor\": \"HORTA",
-    "nota": "Tese discutível (relatório 2.7, baixa tardia): fim na baixa x fim suposto no início da cozinha.",
-    "decisao": true
+    "v": "\"inicio\": \"10\\.01\\.2025\", \"fim\": \"01\\.04\\.2025\", \"setor\": \"HORTA\"[^}]*\"baixa_tardia\": \"20\\.06\\.2025\"",
+    "nota": "P20/S2024 (decisão 7.15.3, opção c): a horta fica com o fim suposto no início da cozinha e a baixa tardia aparece; o resto do período (01/04 a 20/06/2025) está coberto pela cozinha em curso - os dias contam uma vez (LEP, art. 126), sem ponto a conferir."
    }
   ],
   "aba": "Ficha/Remição",
   "situacao": "Horta iniciada em 10/01/2025; cozinha iniciada em 01/04/2025 (sem baixa); horta baixada 'a pedido' só em 20/06/2025.",
-  "esperado": "A horta vai de 10/01/2025 a 20/06/2025 (a ficha prova o vínculo até a baixa); a cozinha segue em curso. Tese discutível: o programa declara encerrar a horta em 01/04/2025 e só anotar a baixa."
+  "esperado": "A horta vai de 10/01/2025 até o início da cozinha (fim suposto), com a baixa tardia de 20/06/2025 visível; a cozinha segue em curso. O resto do período da horta está coberto pela cozinha (decisão P20, opção c)."
  },
  {
   "acoes": [],

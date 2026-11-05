@@ -847,7 +847,7 @@ def _agrupar_por_crime(itens):
 
 # (7.15.2) cada precedente na sua tese: o HC 398.850 trata do período entre as faltas; os HCs 293.475 e 377.088, do teto de 1/3 no total
 FUND_127 = ("LEP, art. 127 (até 1/3 no total - STJ, HC 293.475/SP e HC 377.088/SP; a contagem recomeça da data da infração anterior - "
-            "STJ, HC 398.850/SP); TJDFT, Acórdão 1230029.")
+            "STJ, HC 398.850/SP); TJDFT, Acórdão 1230029 (AgEP 0716724-08.2019.8.07.0000, 3ª Turma Criminal, j. 06/02/2020).")
 
 
 # (7.15.2, P57/S4034) a duplicidade é tese defensiva com apoio no TJMS, mas não pacífica: o item fica "verificar", com a ressalva
