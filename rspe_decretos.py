@@ -318,6 +318,14 @@ def _impeditivos(f, crimes, ref, pena_total=None, ver=None, contexto=None, incer
             incerto.append("%s: homicídio simples com o selo de hediondo do SEEU - impeditivo só se em atividade típica de grupo de "
                            "extermínio (Lei 8.072/90, art. 1º, I); conferir na sentença" % rot)
         priv_vedado = priv and I.get("trafico_privilegiado_ressalvado") is False
+        if priv_vedado and incerto is not None and not re.search(r"§\s*4|privilegiad", I.get("texto") or "", re.I):
+            # o decreto veda o tráfico do art. 33 sem excetuar o § 4º, mas não fala do privilegiado (ex.: 2007, art. 8º, I): ele não é
+            # hediondo (Súmula Vinculante 63; STF, RE 1.542.482 RG, 30/05/2025: é constitucional o indulto ao privilegiado) - tese, a
+            # verificar, e não vedação firme (decisão de 05/11/2026, P42; sem precedente sobre este decreto)
+            incerto.append("%s: tráfico privilegiado - o %s veda o tráfico do art. 33 sem mencionar o § 4º; o privilegiado não é hediondo "
+                           "(Súmula Vinculante 63; STF, RE 1.542.482 RG) - tese de que a vedação não o alcança, conferir" % (
+                               rot, ("%s do Decreto %s" % (I.get("dispositivo") or "", f.get("numero") or "")).strip()))
+            continue
         # hediondos, tortura, tráfico e terrorismo: vedados pela própria lei (CF, art. 5º, XLIII; Lei 8.072, art. 2º, I), ainda
         # que o decreto não os liste (ex.: Dia das Mães 2017 e 2018)
         if True:
@@ -441,6 +449,14 @@ def falta_posterga(f):
     """Decreto que, diante da infração não submetida ao juízo, posterga a declaração até a conclusão da apuração (Decreto
     8.940/2016, art. 9º, p. ú.): a fuga só registrada como evento fica a verificar, não impede."""
     return bool(re.search(r"postergad|ate a conclusao da apuracao", rs._sem_acento((f.get("falta_grave") or {}).get("texto") or "").lower()))
+
+
+def falta_antes_da_publicacao(f):
+    """O decreto conta a falta "nos doze meses anteriores à (data de) publicação" (2016, 2017, 2019, 2020): a janela termina na
+    véspera da publicação - a falta cometida no próprio dia não está nela (decisão de 05/11/2026, P44). Nos demais ("contados
+    retroativamente à publicação", "últimos doze meses"), o dia da publicação continua na janela."""
+    F = f.get("falta_grave") or {}
+    return F.get("contada_de") != "referencia" and bool(re.search(r"anteriores\s+[àa]\s+(?:data\s+de\s+)?publica", F.get("texto") or "", re.I))
 
 
 def fuga_a_verificar(f):
@@ -1060,13 +1076,15 @@ def _avaliar_ficha(f, r, ctx, ini, hoje):
                if lim and pena <= _anos_pena(lim) else [])
     if sem_lim:
         nota_conc = ("restrições do decreto afastadas para pena aplicada de até %s anos (%s)" % (lim, (f.get("impeditivos") or {}).get("dispositivo") or "decreto"))
-        hed = [x for x in sem_lim if "hediondo ou equiparado" in x or "tráfico" in x]
+        hed = [x for x in sem_lim if ("hediondo ou equiparado" in x or "tráfico" in x) and "privilegiado" not in x]
         if hed:
-            # a vedação a hediondos e tráfico vem da CF (art. 5º, XLIII) e da Lei 8.072/90 (art. 2º, I), que o decreto não afasta (ex.:
-            # 2002, art. 7º, § 2º): o favorável fica A VERIFICAR; os demais impeditivos do decreto ficam afastados
-            base["_hed_lim"] = ("%s: o %s afasta as restrições do decreto para pena aplicada de até %s anos, mas a vedação a hediondos e tráfico "
-                                "vem da CF, art. 5º, XLIII, e da Lei 8.072/90, art. 2º, I, que o decreto não afasta" % (
-                                    "; ".join(hed), (f.get("impeditivos") or {}).get("dispositivo") or "decreto", lim))
+            # a vedação a hediondos e tráfico vem da CF (art. 5º, XLIII) e da Lei 8.072/90 (art. 2º, I), que o decreto não afasta: o STF
+            # deu interpretação conforme ao art. 7º, § 2º, do Decreto 4.495/2002 (ADI 2.795 MC, Pleno, 08/05/2003) - o crime continua
+            # impeditivo (decisão de 05/11/2026, caso S7007); os demais impeditivos do decreto ficam afastados
+            imp = imp + ["%s - o %s afasta as restrições do decreto para pena aplicada de até %s anos, mas não a vedação constitucional e "
+                         "legal a hediondos, tortura, terrorismo e tráfico (CF, art. 5º, XLIII; Lei 8.072/90, art. 2º, I; STF, ADI 2.795 MC, "
+                         "Pleno, 08/05/2003, interpretação conforme do art. 7º, § 2º, do Decreto 4.495/2002)" % (
+                             x, (f.get("impeditivos") or {}).get("dispositivo") or "decreto", lim) for x in hed]
     pena_tot0, cump_tot0 = pena, cump  # antes do concurso: a soma total (teto do inciso no concurso - hip_ok)
     _op = custodia_outro_processo(r, ref, crimes)
     if _op:
@@ -1140,6 +1158,10 @@ def _avaliar_ficha(f, r, ctx, ini, hoje):
         # janela de meses de calendário contada para trás da publicação (ou da data de referência, se o decreto assim
         # disser: 2015, 2023); sem janela fixada (Dia das Mães 2017), qualquer falta punida até a data
         base_f = ref if F.get("contada_de") == "referencia" else pub
+        if base_f == pub and falta_antes_da_publicacao(f):
+            # "nos doze meses anteriores à (data de) publicação" (2016, 2017, 2019 e 2020): o dia da publicação fica fora da janela
+            # (decisão de 05/11/2026, P44)
+            base_f = pub - timedelta(days=1)
         # (meses contados para trás com o dia do começo incluído: 12 meses até 25/12 começam em 26/12 do ano anterior)
         dias_f = rs.dias_anos(float(jm) / 12, base_f) - 1 if jm else 36500
         ach = rs.indicios_falta(r.get("_incidentes") or [], base_f, dias=dias_f, eventos=r.get("_eventos") or [], ate=min(pub, base_f), hoje=pub,  # prescrição da falta aferida na data do decreto
@@ -1149,7 +1171,7 @@ def _avaliar_ficha(f, r, ctx, ini, hoje):
         # Decreto 11.846/2023, art. 6º (mesma redação do art. 6º de 2024/2025): a fuga sem homologação na janela impede, como lá
         hom = fuga_a_verificar(f)
         apurar = FUGA_POSTERGA % (F.get("dispositivo") or "decreto") if posterga else FUGA_APURAR
-        j_firme = [t for t, firme in ach if firme and not (hom and "não homologada" in t)]
+        j_firme = rs.nota_mora_estatal(r.get("_incidentes") or [], [t for t, firme in ach if firme and not (hom and "não homologada" in t)])
         j_ind = [(t.replace(FUGA_TRATADA, apurar) if hom and "não homologada" in t else t)
                  for t, firme in ach if not firme or (hom and "não homologada" in t)]
         for t in j_firme:
@@ -1424,6 +1446,7 @@ def _avaliar_ficha(f, r, ctx, ini, hoje):
             (" (exigido %s)" % req) if req else "", soma, " e ".join(conf) or "os requisitos da hipótese", parcial))
 
     hips = []  # todas as hipóteses calculadas, para a linha do tempo
+    naf = []  # hipóteses não aferíveis pelo RSPE com a pena e o tempo atendidos: (hipótese, exigido)
     for h in f.get("indulto") or []:
         ex = None
         if not h.get("objetivo") and re.search(r"crime contra o patrimonio", rs._sem_acento(h.get("outros_requisitos") or "").lower()):
@@ -1439,6 +1462,11 @@ def _avaliar_ficha(f, r, ctx, ini, hoje):
         if not h.get("objetivo"):
             ex = _extra(h)
             if ex is None:
+                # hipótese que depende de dado que o RSPE não traz (filho, gestante, estudo, doença...): com a pena e o tempo atendidos,
+                # fica registrada como "não aferida" - sinal na tabela quando o resultado é "não cabe" (decisão de 05/11/2026, P43)
+                _okn, _exn, _mn = hip_ok(h)
+                if _okn is not False and _exn:
+                    naf.append((h, _exn))
                 continue
             h = ex[0]
         elif not _decisiva(h):
@@ -1614,6 +1642,17 @@ def _avaliar_ficha(f, r, ctx, ini, hoje):
         # motivo, e não o da hipótese de indulto que chegou mais perto
         return dict(res, s="nao", mot=sem_rem["mot"] + ((" - indulto: %s" % ind_n[2]) if (ind_n and ind_n[2]) else ""),
                     exigido=sem_rem.get("exigido"), dispositivo=sem_rem.get("dispositivo") or "")
+    if naf:
+        h0, ex0 = naf[0]
+        _req = re.sub(r";\s*PPL não substituída.*$", "", (h0.get("outros_requisitos") or "").strip()).rstrip(" ;.")
+        _naf_txt = "%s: pena e tempo atendidos (cumpriu %s em %s, exigido %s), mas depende de condição que o RSPE não registra (%s) - conferir" % (
+            h0.get("dispositivo") or "hipótese", rs.dias_para_pena(cump), rs.fmt(ref), rs.dias_para_pena(ex0), _req)
+        if ind_n and ind_n[1] is None and re.search(r"hip[óo]tese (?:só para|própria)", ind_n[2] or ""):
+            # o tipo do crime só cabe na hipótese não aferida (ex.: 2016, art. 4º - tráfico privilegiado só nas situações do art. 1º, § 1º):
+            # o "não cabe" dependeria só do dado que falta - A VERIFICAR (caso S7037)
+            return dict(res, s="ver", beneficio="Indulto", mot="A VERIFICAR - " + _naf_txt, dispositivo=h0.get("dispositivo") or "", exigido=ex0)
+        res["naf"] = [h.get("dispositivo") or "" for h, _e in naf]
+        res["ressalva"] = "hipótese não aferida pelo RSPE - " + _naf_txt
     if ind_n and ind_n[2]:
         return dict(res, s="nao", mot=ind_n[2], exigido=ind_n[1], dispositivo=ind_n[0].get("dispositivo") or "")
     if com_n and com_n[2]:
@@ -2059,6 +2098,10 @@ def avaliar(r, hoje, completo=False):
                                                                                "concedida" if d[0] == "conc" else
                                                                                "indeferido" if ben == "Indulto" else "indeferida",
                                                                                (" em " + d[1]) if d[1] else ""))
+            # decisão registrada: o dispositivo e a redução calculados pelo programa não são os da decisão (decisão de 05/11/2026, P41)
+            x["dispositivo"] = "conforme decisão do RSPE"
+            for _k in ("reducao", "fracao", "reducao_calc"):
+                x.pop(_k, None)
             if outro:
                 # a outra decisão do mesmo decreto também consta (ex.: comutação concedida e indulto indeferido)
                 x["ressalva"] = "%s no RSPE%s" % (

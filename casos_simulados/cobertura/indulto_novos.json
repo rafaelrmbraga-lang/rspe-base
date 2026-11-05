@@ -6134,14 +6134,13 @@
     "t": "campo",
     "campo": "ind24",
     "op": "regex",
-    "v": "^POSSÍVEL(?=[^|]*\\bI\\b)",
-    "nota": "Art. 5º do decreto conta a prisão cautelar sem exigir custódia na data; o programa exige início do cumprimento (STJ, AgRg no HC 1.042.931) - tese discutível.",
-    "decisao": true
+    "v": "^A VERIFICAR(?=[^|]*\\bI\\b)",
+    "nota": "Art. 5º do decreto conta a prisão cautelar; a 5ª Turma do STJ exige o início do cumprimento (AgRg no REsp 2.257.552; AgRg no HC 1.042.931): a verificar, com a corrente contrária (decisão de 05/11/2026, P30)."
    }
   ],
   "aba": "Indulto",
   "situacao": "Art. 5º do Decreto 12.338/2024 para quem teve só prisão cautelar e não estava preso em 25/12/2024",
-  "esperado": "Pelo texto do art. 5º, os 152 dias de prisão cautelar contam como pena cumprida: 1/5 (146) atingido - indulto 2024 POSSÍVEL pelo art. 9º, I (tese: parte da jurisprudência exige o início do cumprimento)"
+  "esperado": "Pelo texto do art. 5º, os 152 dias de prisão cautelar contam como pena cumprida: 1/5 (146) atingido - indulto 2024 A VERIFICAR pelo art. 9º, I (a 5ª Turma do STJ exige o início do cumprimento: AgRg no REsp 2.257.552 e AgRg no HC 1.042.931 - decisão de 05/11/2026, P30)"
  },
  {
   "acoes": [],
@@ -6781,14 +6780,13 @@
     "t": "campo",
     "campo": "ind22",
     "op": "regex",
-    "v": "^(?!POSS)",
-    "nota": "Leitura literal do art. 5º; o STJ (6ª Turma, AgRg no HC 818.978) admite o indulto do privilegiado pelo art. 5º c/c art. 7º, VI.",
-    "decisao": true
+    "v": "^POSSÍVEL: art\\. 5º c/c art\\. 7º, VI",
+    "nota": "O STJ, nas duas Turmas, admite o indulto do privilegiado pelo art. 5º c/c art. 7º, VI (6ª T., AgRg no HC 818.978; 5ª T., AgRg no HC 952.317) - decisão de 05/11/2026."
    }
   ],
   "aba": "Indulto",
   "situacao": "Tráfico privilegiado no Decreto 11.302/2022 (art. 7º, VI ressalva o § 4º, mas o art. 5º exige pena máxima até 5 anos)",
-  "esperado": "Pelo texto: o art. 7º, VI só tira o § 4º das exclusões; a pena máxima do tráfico privilegiado (15 anos reduzidos de 1/6 = 12a6m) passa de 5 anos, então o art. 5º não alcança - indulto 2022 não é 'possível' (tese contrária: STJ, 6ª Turma)"
+  "esperado": "Pelo STJ, nas duas Turmas, o art. 7º, VI excepciona o limite do art. 5º para o tráfico privilegiado (6ª T., AgRg no HC 818.978; 5ª T., AgRg no HC 952.317): indulto 2022 POSSÍVEL pelo art. 5º c/c art. 7º, VI (decisão de 05/11/2026, P57)"
  },
  {
   "acoes": [],
@@ -8031,16 +8029,14 @@
     "campo": "com24",
     "op": "regex",
     "v": "^(A VERIFICAR|POSSÍVEL)",
-    "nota": "Tempo sem data: o gabarito pede conferência (pode ser detração anterior ao decreto); se o programa usar só os eventos e negar, a escolha é de prudência discutível, contra o assistido.",
-    "decisao": true
+    "nota": "Tempo sem data: o gabarito pede conferência (pode ser detração anterior ao decreto); se o programa usar só os eventos e negar, a escolha é de prudência discutível, contra o assistido."
    },
    {
     "t": "campo",
     "campo": "ind24",
     "op": "regex",
     "v": "^A VERIFICAR[^|]*\\bXII\\b",
-    "nota": "Tempo sem data: o gabarito pede conferência (pode ser detração anterior ao decreto); se o programa usar só os eventos e negar, a escolha é de prudência discutível, contra o assistido.",
-    "decisao": true
+    "nota": "Tempo sem data: o gabarito pede conferência (pode ser detração anterior ao decreto); se o programa usar só os eventos e negar, a escolha é de prudência discutível, contra o assistido."
    }
   ],
   "aba": "Indulto",

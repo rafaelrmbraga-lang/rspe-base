@@ -228,7 +228,7 @@ novo(k, "Decreto 4.495/2002, art. 7º, § 2º: tráfico (Lei 6.368, art. 12) com
      "%d dias de 1.095 (1/3 = 365 atendido), mas o crime é impeditivo por lei." % cump("10/03/2001", "25/12/2002"),
      montar(k, [c1], "10/03/2001", fuga="10/02/2003"),
      [DECR("2002", "imp|nao|ver"),
-      DECR("2002", "imp", nota="Lei 8.072/90, art. 2º, I prevalece sobre o art. 7º, § 2º do decreto", decisao=True)])
+      DECR("2002", "imp", nota="Lei 8.072/90, art. 2º, I prevalece sobre o art. 7º, § 2º do decreto (STF, ADI 2.795 MC: interpretação conforme)")])
 
 k = 7008
 c1 = cr(k, 1, anos(4), "10/01/2000", **FURTO_Q)
@@ -326,15 +326,16 @@ novo(k, "Decreto 5.993/2006, art. 1º, I: sursis concedido no RSPE sem processo 
 k = 7015
 c1 = cr(k, 1, anos(4), "10/03/2007", **TRAF_PRIV)
 n08, n09 = cump("10/03/2007", "25/12/2008"), cump("10/03/2007", "25/12/2009")
-novo(k, "Tráfico privilegiado em 2007 (vedado), 2008 (ressalva da mercancia) e 2009 (não vedado)",
-     "2007: Impeditivo. 2008: A verificar (conferir se a conduta configurou mercancia). 2009: Cabe o indulto (art. 1º, I)",
+novo(k, "Tráfico privilegiado em 2007 (vedado pela letra; tese), 2008 (ressalva da mercancia) e 2009 (não vedado)",
+     "2007: Não cabe pelo tempo (faltavam dias para 1/3); a vedação do art. 8º, I, que não fala do § 4º, é só tese a verificar (o privilegiado não é hediondo - SV 63). 2008: A verificar (conferir se a conduta configurou mercancia). 2009: Cabe o indulto (art. 1º, I)",
      "Tráfico privilegiado (art. 33, § 4º), 4 anos (1.460 dias), primário, preso em 10/03/2007; 1/3 = 486 dias. Decreto "
      "6.294/2007, art. 8º, I: veda o tráfico do art. 33 'excetuadas as hipóteses dos §§ 2º e 3º' - o § 4º fica vedado pela letra. "
      "Decreto 6.706/2008, art. 8º, I: ressalva os §§ 2º a 4º 'desde que a conduta típica não tenha configurado a prática da "
      "mercancia' (cumpriu %d dias: o tempo basta, falta conferir a mercancia). Decreto 7.046/2009, art. 8º, I: veda só o art. "
      "33, caput e § 1º, e arts. 34 a 37 - o privilegiado não é vedado; cumpriu %d dias. (Textos conferidos no Planalto.)" % (n08, n09),
      montar(k, [c1], "10/03/2007", fuga="10/02/2010"),
-     [DECR("2007", "imp"), DECR("2008", "ver", "mercancia"), DECR("2009", "cabe", "Indulto")])
+     [DECR("2007", "nao", "faltavam", nota="P42 (decisão de 05/11/2026): o silêncio sobre o § 4º vira tese a verificar, não vedação firme - resta o tempo"),
+      DECR("2008", "ver", "mercancia"), DECR("2009", "cabe", "Indulto")])
 
 k = 7016
 c1 = cr(k, 1, anos(8), "01/03/2006", **ESTEL)
@@ -602,7 +603,7 @@ novo(k, "Tráfico privilegiado (homem): 2016 só para as pessoas do art. 1º, §
      "ou trabalho, doença), com 1/4 = 273 dias; cumpriu %d. As condições não aparecem no RSPE: não se pode afirmar nem negar. "
      "2017 (Decreto 9.246): art. 1º, IV, 1/4 para homens = 273; cumpriu %d. (Conferido no Planalto.)" % (n16, n17),
      montar(k, [c1], "01/03/2016", fuga="10/02/2018"),
-     [DECR("2016", "ver", nota="art. 4º depende do art. 1º, § 1º: o resultado firme 'não cabe' esconde a hipótese", decisao=True),
+     [DECR("2016", "ver", nota="art. 4º depende do art. 1º, § 1º: o resultado firme 'não cabe' esconde a hipótese"),
       DECR("2017", "cabe", ["Indulto", "IV"])],
      manuais={"sexo": "M"})
 

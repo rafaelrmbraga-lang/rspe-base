@@ -48,8 +48,11 @@ def _d(t):
 
 
 def _pena(n):
-    """'2a8m0d' (convenção do SEEU: ano 365, mês 30)."""
-    return rs.dias_para_pena(max(0, int(n or 0)))
+    """'2a8m0d' (convenção do SEEU: ano 365, mês 30). Resto do ano de 360 a 364 dias: com o total em dias - "0a11m29d (364 dias)" -,
+    porque o "11 meses e 25 a 29 dias" desses restos se confunde com os de 355 a 359 (decisão de 05/11/2026, P39)."""
+    n = max(0, int(n or 0))
+    t = rs.dias_para_pena(n)
+    return ("%s (%d dias)" % (t, n)) if n % rs.DIAS_ANO >= 360 else t
 
 
 def _fr(txt):
@@ -546,7 +549,7 @@ def linha(r, hoje=None):
             for tp in ("indulto", "comutacao"):
                 B = dd.get(tp) or {}
                 if B.get("checklist") and B.get("status") in ("cabe", "verificar"):
-                    B["fundamentacao"] = _fundamentacao(dd, tp, B if tp == "comutacao" else None, nomes=_nomes(C))
+                    B["fundamentacao"] = _fundamentacao(dd, tp, B if tp == "comutacao" else None, nomes=_nomes(C), crimes=C)
         for tp in ("indulto", "comutacao"):
             if (dd.get(tp) or {}).get("checklist"):
                 dd[tp]["explicacao"] = _explicacao(dd, tp, C, faixas, ini_exec, remicoes)
@@ -1414,7 +1417,7 @@ def _decreto(D, ref, pub, C, cumprido, data_atinge, faltas, hoje, ultimo, em_cur
     txt_c = r.get(kc)
     if txt_c is None:
         out["comutacao"] = {"status": "nao", "rotulo": "Decreto sem comutação", "checklist": []}
-        ind["fundamentacao"] = _fundamentacao(out, "indulto", nomes=_nomes(C))
+        ind["fundamentacao"] = _fundamentacao(out, "indulto", nomes=_nomes(C), crimes=C)
         return out
     st_c = _st_aba(txt_c)
     num_c = r.get(kc + "_num") or {}
@@ -1438,8 +1441,8 @@ def _decreto(D, ref, pub, C, cumprido, data_atinge, faltas, hoje, ultimo, em_cur
                            "a pena remanescente passa de %s para %s e alimenta os demais cálculos" % (_pena(num_c["antes"]), _pena(num_c["depois"])))}
     out["comutacao"] = {"status": st_c, "rotulo": rv.curto_indulto(txt_c) or txt_c, "texto_aba": txt_c, "checklist": ck, "reducao": red,
                         "fracao": num_c.get("fracao", ""), "exigido": num_c.get("exigido"), "exigido_txt": _pena(num_c["exigido"]) if num_c.get("exigido") is not None else ""}
-    ind["fundamentacao"] = _fundamentacao(out, "indulto", nomes=_nomes(C))
-    out["comutacao"]["fundamentacao"] = _fundamentacao(out, "comutacao", num_c, nomes=_nomes(C))
+    ind["fundamentacao"] = _fundamentacao(out, "indulto", nomes=_nomes(C), crimes=C)
+    out["comutacao"]["fundamentacao"] = _fundamentacao(out, "comutacao", num_c, nomes=_nomes(C), crimes=C)
     return out
 
 
@@ -1544,6 +1547,8 @@ def _decreto_ficha(f, x, C, cumprido, faltas, crimes_all=None):
     janela, faltas_out = None, []
     if F.get("meses"):
         base_f = ref if F.get("contada_de") == "referencia" else pub
+        if base_f == pub and rd.falta_antes_da_publicacao(f):
+            base_f = pub - timedelta(days=1)  # "anteriores à publicação": a janela termina na véspera, como no motor
         j0 = _meses_antes(base_f, int(F["meses"])) + timedelta(days=1)  # dia do começo incluído, como no motor
         j1 = min(pub, base_f)  # o motor fecha a janela na publicação: falta posterior a ela não impede
         janela = {"ini": _f(j0), "fim": _f(j1), "meses": int(F["meses"]), "dispositivo": F.get("dispositivo", ""), "informativa": False}
@@ -1679,13 +1684,16 @@ def _decreto_ficha(f, x, C, cumprido, faltas, crimes_all=None):
 
 def _pena_ext(t):
     """'2a5m9d' -> '2 anos, 5 meses e 9 dias' (texto para petição)."""
-    m = re.match(r"^(\d+)a(\d+)m(\d+)d$", t or "")
+    m = re.match(r"^(\d+)a(\d+)m(\d+)d(?: \((\d+) dias\))?$", t or "")
     if not m:
         return t or ""
+    if m.group(4):
+        # total em dias (resto de 360 a 364 - _pena): o extenso e, entre parênteses, o total, que desfaz a ambiguidade
+        return "%s (%s dias)" % (_pena_ext("%sa%sm%sd" % m.groups()[:3]), m.group(4))
     # a convenção do SEEU (ano de 365 e mês de 30 dias) deixa sobrar até 34 dias depois dos 11 meses; a normalização é pelo total
     # de dias (sem somar nada): os dias acima de 30 viram mês só até os 11 meses, e 12 meses de 30 dias (360) não são um ano -
     # 1a11m30d (725 dias) fica "1 ano, 11 meses e 25 dias", não "2 anos" (730) nem "11 meses e 30 dias"
-    tot = sum(int(x) * k for x, k in zip(m.groups(), (rs.DIAS_ANO, 30, 1)))
+    tot = sum(int(x) * k for x, k in zip(m.groups()[:3], (rs.DIAS_ANO, 30, 1)))
     a, resto = divmod(tot, rs.DIAS_ANO)
     me = min(resto // 30, 11)
     d = resto - me * 30
@@ -1698,7 +1706,7 @@ def _pena_ext(t):
 
 
 def _ext_txt(t):
-    return re.sub(r"\b\d+a\d+m\d+d\b", lambda m: _pena_ext(m.group(0)), t or "")
+    return re.sub(r"\b\d+a\d+m\d+d\b(?: \(\d+ dias\))?", lambda m: _pena_ext(m.group(0)), t or "")
 
 
 def _fund_curto(f):
@@ -1731,7 +1739,36 @@ def _nomes(C):
     return {x["id"]: ("%s (ação penal %s)" % (n[x["id"]], x["proc"]) if vs.count(n[x["id"]]) > 1 and x["proc"] else n[x["id"]]) for x in C if x["id"] in n}
 
 
-def _fundamentacao(out, tipo, num_c=None, nomes=None):
+def _hediondez_superveniente(out, crimes):
+    """Crimes da soma cuja única dúvida de natureza neste decreto é a hediondez posterior ao fato: [(id, fato, desde)]."""
+    res = []
+    for x in crimes or []:
+        s = (x.get("selos") or {}).get(out.get("id")) or {}
+        if s.get("selo") == "A_VERIFICAR" and (str(s.get("se_sim") or "").startswith("hediondez na data do decreto")
+                                              or str(s.get("motivo") or "").startswith("hediondez posterior ao fato")):
+            c = x.get("_c") or {}
+            dh, _ = rs.hediondo_desde(c)
+            res.append((x["id"], c.get("data_infracao") or "", rs.fmt(dh) if dh else ""))
+    return res
+
+
+def _par_tese_hediondez(hs, indulto, dec):
+    """Parágrafo da tese da irretroatividade (hediondez posterior ao fato) e o pedido alternativo - marcado como tese: o STJ afere a
+    hediondez na data do decreto (decisão de 05/11/2026, P34; precedentes conferidos no JusRatio)."""
+    cr = "; ".join("%s, fato em %s%s" % (i, f, (", hediondo só desde %s" % d) if d else "") for i, f, d in hs)
+    tit = "DA TESE DA IRRETROATIVIDADE - hediondez posterior ao fato (tese: o STJ afere a hediondez na data do decreto)"
+    par = ("A natureza hedionda que impediria o benefício foi atribuída ao crime por lei posterior ao fato (%s). A vedação do %s, que "
+           "agrava a situação de quem cumpre pena, não pode alcançar o fato anterior à lei que a criou, sob pena de retroatividade da lei "
+           "penal mais gravosa (CF, art. 5º, XL; CP, art. 2º). Nesse sentido: STF, 2ª Turma, RHC 267.297 AgR e HC 273.296 AgR; TJMS"
+           ", 2ª Seção Criminal, Embargos Infringentes 1603891-45.2026 (09/10/2026); 2ª Câmara Criminal, 1602182-72.2026 "
+           "(26/06/2026) e 1605969-12.2026 (29/10/2026)." % (cr, dec))
+    ped = ("Requer-se, assim, que a natureza do crime seja aferida na data do fato, afastado o óbice da hediondez superveniente, e %s; "
+           "subsidiariamente, caso se entenda que a natureza se afere na data do decreto, a análise do benefício quanto aos demais crimes, "
+           "nos termos da regra do concurso do %s." % ("concedido o indulto" if indulto else "declarada a comutação", dec))
+    return "\n".join((tit, par, ped))
+
+
+def _fundamentacao(out, tipo, num_c=None, nomes=None, crimes=None):
     """Fundamentação pronta para a petição (botão "Copiar fundamentação"), no padrão do programa: título, um parágrafo com
     os fatos e os fundamentos (dispositivo entre parênteses) e o pedido. Usa só o que a aba já concluiu. Os crimes vão
     pelo nome (nomes: C1 -> artigo), não pelo rótulo interno da tela."""
@@ -1886,7 +1923,9 @@ def _fundamentacao(out, tipo, num_c=None, nomes=None):
         ped = "Não cabe %s em %s: %s.%s" % ("o indulto" if indulto else "a comutação", ref, mot,
                                             (" Pontos a conferir, que não alteram a conclusão: %s." % "; ".join(qs)) if qs and ko else "")
         corpo = " ".join(par[:1] + ([imp_txt + "."] if imp_txt else []))
-    txt = re.sub(r"(?<!\.)\.\.(?!\.)", ".", "\n".join(p for p in (tit, corpo, ped) if p.strip()))
+    hs = _hediondez_superveniente(out, crimes) if st in ("verificar", "nao") else []
+    tese = _par_tese_hediondez(hs, indulto, dec) if hs else ""
+    txt = re.sub(r"(?<!\.)\.\.(?!\.)", ".", "\n".join(p for p in (tit, corpo, ped, tese) if p.strip()))
     return re.sub(r"\bC\d+\b", lambda m: (nomes or {}).get(m.group(0), m.group(0)), txt)
 
 

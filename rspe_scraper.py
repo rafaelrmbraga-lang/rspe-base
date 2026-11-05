@@ -3766,7 +3766,7 @@ TESE_ART9_2022 = ("pela leitura literal do art. 9º, p. ú., o indulto alcança 
 REINC_ART5_2022 = ("reincidente: o art. 5º é constitucional (STF, Tema 1267, RE 1.450.100, 19/05/2025), mas o STJ nega o indulto do art. 5º "
                    "ao reincidente pelo art. 12 do decreto (condenação primária): AgRg no REsp 2.268.813, 5ª T., 01/10/2026; AgRg no REsp "
                    "2.280.116, 6ª T., 16/09/2026; no mesmo sentido, TJDFT (3ª Turma Criminal, 0749686-45.2023.8.07.0000 e "
-                   "0700400-64.2024.8.07.0000) e TJMS (1ª Câm. Crim., 1603080-85.2026). Tese defensiva: o art. 12 regula a concessão pelo "
+                   "0700400-64.2024.8.07.0000) e TJMS (1ª Câm. Crim., 1603080-85.2026, 04/08/2026; 3ª Câm. Crim., 1605808-70.2024). Tese defensiva: o art. 12 regula a concessão pelo "
                    "juízo do conhecimento, não é requisito do art. 5º - a verificar")
 
 
@@ -4315,6 +4315,19 @@ def cumprido_decreto_info(campos, periodos, remicoes, ref, extras=None, crimes=N
                     "aviso": "%s: usado o cumprido pelos eventos do RSPE, %s até %s - conferir" % (SEM_CALCULO, dias_para_pena(ev), fmt(ref))}
         return {"dias": 0, "fonte": "o SEEU não traz o cálculo da pena e os eventos não mostram cumprimento até a data", "origem": "seeu", "aviso": ""}
     c, fonte = cumprido_na_data(campos, periodos, remicoes, ref, extras)
+    if modo and "sem data - não entram antes" in (fonte or ""):
+        # o SEEU registra mais tempo do que os eventos explicam, sem data: pode ser detração de prisão anterior (CP, art. 42), que
+        # contaria antes do decreto. A conta firme fica pelos eventos; com o tempo a mais, o favorável fica A VERIFICAR, e não negado
+        # (decisão de 05/11/2026, caso S6073)
+        _b, _g = cumprida_seeu_dias(campos)
+        _extra = (_b - dias_cumpridos_ate(todos, remicoes, _g)) if (_b is not None and _g) else 0
+        if _extra > 30 and not (teto and c + _extra > teto):
+            if modo in ("eventos", "eventos_txt"):
+                return {"dias": c + _extra, "fonte": "pelos eventos mais o tempo sem data do SEEU", "origem": "ancora",
+                        "aviso": ("o SEEU registra %s a mais do que os eventos mostram, sem data (pode ser detração de prisão anterior - CP, art. 42 -, "
+                                  "que contaria antes do decreto): com ele, %s, o requisito é atendido - conferir a origem desse tempo" % (
+                                      pl(_extra, "dia", "dias"), dias_para_pena(c + _extra)))}
+            return {"dias": c, "fonte": fonte, "origem": "seeu", "aviso": "", "alt": True}
     if modo:
         if ev > c and (ev >= 180 or modo == "eventos_txt"):
             if ruim:
@@ -5699,6 +5712,15 @@ def _analise_decretos_modo(campos, crimes, eventos, incidentes, hoje, modo=None,
         com_ant = [i for i in incidentes if i.get("situacao") == "CONCEDIDO" and "COMUTA" in (i.get("tipo") or "").upper()
                    and (to_date(i.get("data_decisao") or i.get("data_referencia") or "") or date.max) <= ref
                    and DECRETO_NUM[ano] not in re.sub(r"[.\s]", "", (i.get("tipo") or "") + " " + (i.get("complemento") or ""))]
+        # comutação de decreto ANTERIOR decidida depois da data deste: a decisão é declaratória (o direito nasceu na data do decreto
+        # anterior) - tese de que também dispensa o novo requisito temporal (§ 2º), a verificar; sem precedente localizado (decisão
+        # de 05/11/2026, P36)
+        _nums_post = {n for a_, n in DECRETO_NUM.items() if a_ >= ano}
+        com_ant_tese = [i for i in incidentes if i.get("situacao") == "CONCEDIDO" and "COMUTA" in (i.get("tipo") or "").upper()
+                        and i not in com_ant and (to_date(i.get("data_decisao") or i.get("data_referencia") or "") or date.min) > ref
+                        and re.findall(r"\b\d{4,5}\b", re.sub(r"(\d)\.(\d{3})", r"\1\2", (i.get("tipo") or "") + " " + (i.get("complemento") or "")))
+                        and not any(n in re.sub(r"[.\s]", "", (i.get("tipo") or "") + " " + (i.get("complemento") or "")) for n in _nums_post)
+                        and any(int(y) < int(ano) for y in re.findall(r"\b(?:19|20)\d{2}\b", (i.get("tipo") or "") + " " + (i.get("complemento") or "")))]
 
         def avaliar(pena_total, cumprido, remanescente, vga, patrimonial, ativos):
             anos_pena = pena_total / float(DIAS_ANO)
@@ -5726,7 +5748,13 @@ def _analise_decretos_modo(campos, crimes, eventos, incidentes, hoje, modo=None,
 
             # I
             if vga:
-                nao.append("I: não se aplica - crime com violência ou grave ameaça")
+                # concurso de crimes com e sem violência: o STJ não aplica o I ou o II só à pena dos crimes sem violência (art. 7º, soma
+                # das penas; decisão de 05/11/2026, P35 - sem precedente favorável localizado)
+                _sv = [c for c in ativos if not vga_indulto(c)]
+                nao.append("I: não se aplica - crime com violência ou grave ameaça" + (
+                    " (no concurso, o STJ não aplica o I nem o II só à pena dos crimes sem violência - %s: o art. 7º manda somar as penas; "
+                    "AgRg no HC 1.010.942 e AgRg no HC 1.017.354, 6ª T., 15/10/2025; AgRg no HC 1.006.334, 5ª T., 29/10/2025)" % crimes_curto(_sv)
+                    if _sv and len(_sv) < len(ativos) else ""))
             elif anos_pena > A("I", "pena_max_anos", 8):
                 nao.append("I: não se aplica - pena total %s superior a %s" % (dias_para_pena(pena_total), pl(A("I", "pena_max_anos", 8), "ano", "anos")))
             else:
@@ -5967,6 +5995,10 @@ def _analise_decretos_modo(campos, crimes, eventos, incidentes, hoje, modo=None,
                     possiveis.remove(p_)
                     verificar.append(p_ + " - só prisão provisória até %s: o cumprimento no regime não começou (STJ, 5ª T., AgRg no REsp "
                                           "2.257.552: o VII exige o início da execução)" % fmt(ref))
+            if len(possiveis) == 1 and possiveis[0].startswith("VIII:") and "aberto como regime inicial" in possiveis[0]:
+                # o VIII é o único inciso e o aberto é o da sentença: a 6ª Turma aplica o VII, e não o VIII - a verificar (decisão de
+                # 05/11/2026, P37)
+                verificar.append(possiveis.pop() + " (único inciso atendido)")
             # ordena por inciso
             ordem_inc = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII", "XIII", "XIV", "XV", "XVI"]
             def _k(t):
@@ -6022,6 +6054,7 @@ def _analise_decretos_modo(campos, crimes, eventos, incidentes, hoje, modo=None,
                 # própria pena) é incerto - o favorável que depende dele fica a verificar
                 ressalvas.append(("conferir o tempo cumprido (eventos do RSPE incoerentes com o SEEU)" if cump_orig == "estouro" else
                                   "conferir o tempo cumprido (o SEEU não traz o cálculo)" if cump_orig == "sem_calculo"
+                                  else "conferir o tempo cumprido (o SEEU registra tempo a mais, sem data)" if "tempo sem data" in (cump_fonte or "")
                                   else "conferir o tempo cumprido (âncora do SEEU abaixo dos eventos)", aviso_cump))
             if pena_div:
                 ressalvas.append(("conferir a pena considerada", pena_div))
@@ -6177,6 +6210,13 @@ def _analise_decretos_modo(campos, crimes, eventos, incidentes, hoje, modo=None,
                 com_txt = "POSSÍVEL: art. 13 (%s do %s)" % (prop13, base13)
             elif cump_orig == "estouro":
                 com_txt = "A VERIFICAR: art. 13 - tempo cumprido incerto (eventos do RSPE incoerentes com o SEEU)"
+            elif com_ant_tese and remanescente > 0:
+                _ct = com_ant_tese[-1]
+                com_txt = ("A VERIFICAR (tese): art. 13, § 2º (%s do %s) - comutação anterior (%s) concedida em %s, depois de %s: a decisão é "
+                           "declaratória (o direito nasceu na data do decreto anterior), o que dispensaria o novo requisito temporal; sem a tese, "
+                           "não atinge %s até %s - sem precedente localizado, conferir" % (
+                               prop13, base13, " ".join(((_ct.get("tipo") or "") + " " + (_ct.get("complemento") or "")).split()),
+                               _ct.get("data_decisao") or _ct.get("data_referencia") or "?", fmt(ref), fmt_fr(*f13, par2=False), fmt(ref)))
             else:
                 com_txt = "não atinge (%s até %s)" % (fmt_fr(*f13, par2=False), fmt(ref))
             # art. 11: comutação das mulheres - não cumulativa com a do art. 13; vale a mais benéfica (art. 13, § 3º)
@@ -6287,7 +6327,8 @@ def _analise_decretos_modo(campos, crimes, eventos, incidentes, hoje, modo=None,
                 nomes_sup = crimes_curto(imp_sup)
                 nota = ("Hediondez posterior ao fato (%s): o STJ afere a hediondez na data do decreto e veda o benefício (AgRg no HC 1.087.914/SP, 6ª Turma, 11/06/2026); "
                         "pela irretroatividade concedem o STF (2ª Turma, RHC 267.297 AgR e HC 273.296 AgR; monocráticas) e julgados da 2ª Câmara Criminal do "
-                        "TJMS (1602182-72.2026, 26/06/2026, Decreto 12.790; 1603697-45.2026) - posição não pacífica nem nessa Câmara; "
+                        "TJMS (1602182-72.2026, 26/06/2026, Decreto 12.790; 1603697-45.2026; 1605969-12.2026, 29/10/2026) e a 2ª Seção Criminal, "
+                        "em embargos infringentes (1603891-45.2026, 09/10/2026) - a 2ª Câmara já decidiu também em sentido contrário (1601883-95.2026); "
                         "em sentido contrário, a 1ª Turma do STF (RHC 273.867 AgR, 24/08/2026) e, no TJMS, a 1ª e a 3ª Câmaras Criminais "
                         "(1602495-33.2026; 1602318-69.2026) aferem na data do decreto." % nomes_sup)
                 out[k] = rotulo_tese(out[k])
@@ -6908,7 +6949,30 @@ def falta_art6(incidentes, ref, eventos=None, publicacao=None, crimes=None, inic
     # (12 meses contados para trás com o dia do começo incluído - de 26/12 do ano anterior a 25/12 -, e não 12 meses e 1 dia:
     #  revisão do cap. 6, achado 8)
     ach = indicios_falta(incidentes, ref, dias=dias_anos(1, ref) - 1, eventos=eventos, ate=publicacao, crimes=crimes, inicio=inicio, fuga_firme=False)
-    return [t for t, f in ach if f], [t for t, f in ach if not f]
+    return nota_mora_estatal(incidentes, [t for t, f in ach if f]), [t for t, f in ach if not f]
+
+
+MORA_MESES = 6  # homologação mais de 6 meses depois do fato: nota de conferência da mora estatal (decisão de 05/11/2026, P31)
+
+
+def nota_mora_estatal(incidentes, textos):
+    """Faltas firmes dos decretos (art. 6º de 2023 a 2025; janelas de 2000 a 2022): quando a homologação veio mais de 6 meses
+    depois do fato, a nota "conferir inércia ou mora estatal" - pelo STJ (Tema 1195), a apuração concluída depois impede se a falta
+    foi cometida na janela, salvo inércia ou mora do Estado. Só nota: o resultado não muda."""
+    out = []
+    for t in textos:
+        nota = ""
+        for i in incidentes or []:
+            rot = _rotulo_incidente(i)
+            if not RE_FALTA_PROPRIA.search(rot) or _negado(i) or _pendente(i) or not t.startswith(rot):
+                continue
+            fato, dec = _data_fato_falta(i), to_date(i.get("data_decisao") or "")
+            if fato and dec and dias_anos(MORA_MESES / 12.0, dec) < (dec - fato).days:
+                nota = (" - homologada em %s, mais de %d meses depois do fato: conferir se houve inércia ou mora estatal na apuração "
+                        "(STJ, Tema 1195)" % (fmt(dec), MORA_MESES))
+                break
+        out.append(t + nota if nota and nota not in t else t)
+    return out
 
 
 # --------------------------------------------------------------------------- #
