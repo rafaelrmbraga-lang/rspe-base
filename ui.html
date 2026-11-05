@@ -1923,7 +1923,7 @@ const ui = {
     // demais pontos a conferir (amarelos ou vermelhos) que as linhas acima não cobrem
     const ja=this._fdJa;
     for(const p of (N.pontos||[]).filter(p=>((p.cor==='amarelo'||p.cor==='vermelho')&&!ja.has(p.tipo))||(p.cor==='cinza'&&this._fdConfCinza.has(p.tipo)))){
-      const t=p.curto||p.texto||''; add({g:5,cor:p.cor==='cinza'?'cinza':p.cor,verbo:'Conferir',obj:esc(t.charAt(0).toUpperCase()+t.slice(1)),html:true,nota:p.rot&&p.rot!=='A conferir'?esc(p.rot):'',txt:p.texto||t});
+      const t=p.curto||p.texto||''; add({g:5,cor:p.cor==='cinza'?'cinza':p.cor,verbo:({sem_baixa_curso:'Confirmar com a unidade',domiciliar_9:'Conferir nos autos',baixa_tardia:'Conferir com a unidade'})[p.tipo]||'Conferir',obj:esc(t.charAt(0).toUpperCase()+t.slice(1)),html:true,nota:p.rot&&p.rot!=='A conferir'?esc(p.rot):'',txt:p.texto||t});
     }
     // 5) acompanhar: trabalho em curso há até 90 dias, sem atestado
     for(const a of (N.acomp||[])) add({g:6,cor:'azul',verbo:'Acompanhar',dias:a.dias,obj:`Trabalho em <b>${esc(a.local)}</b> · em curso desde ${esc(a.ini)}`,html:true,
