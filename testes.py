@@ -38,7 +38,7 @@ TESTES += ["teste_conf8_indulto.py"]  # terceira conferência independente (7.14
 TESTES += ["teste_conf8_demais.py"]
 TESTES += ["teste_linha_e.py"]  # tela da linha E (27/10/2026): importar, menu lateral, filtros combináveis, situação, avisos, parar a importação
 TESTES += ["teste_cob_ficha.py", "teste_cob_remicao.py", "teste_cob_indulto.py", "teste_cob_situacao.py", "teste_cob_auditoria.py"]  # 7.15.1: base simulada independente
-TESTES += ["teste_rev_ficha_remicao.py", "teste_rev_progressao_auditoria.py", "teste_rev_leitura_prazos.py", "teste_rev_indulto.py"]  # 7.15.2: revisões jurídicas por capítulo
+TESTES += ["teste_rev_ficha_remicao.py", "teste_rev_progressao_auditoria.py", "teste_rev_leitura_prazos.py", "teste_rev_indulto.py", "teste_rev_comparacao.py"]  # 7.15.2: revisões jurídicas por capítulo
 # saída em UTF-8 em qualquer console (no Windows o padrão cp1252 não imprime símbolos como "✓" e derruba o teste)
 _env = dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUTF8="1")
 falhas = [t for t in TESTES if subprocess.call([sys.executable, t], env=_env) != 0]

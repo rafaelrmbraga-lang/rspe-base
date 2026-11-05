@@ -605,7 +605,7 @@ def _extrair_texto(caminho, pags, vis, ocultas=(), dp_chars="", parcial=None):
 # lançamento do dia d", "desconsiderar a função X", "Liberação do Setor de Trabalho" sem baixa no dia, o vínculo simultâneo só quando
 # o outro setor acabou antes da baixa tardia (não a baixa "saída do presídio"), nomes de setor sem "nesta UP", "CI nº ...", "sendo",
 # "E" e "ATIVIDADE EXTERNA NA"; sinônimos e palavras próprias no singular)
-VERSAO_LEITURA = 16
+VERSAO_LEITURA = 17
 # versão da extração do PDF (camada de caracteres): a mesma ficha extraída por versão anterior é extraída de novo ao reimportar
 VERSAO_EXTRACAO = 2
 
@@ -946,7 +946,7 @@ def _separar_mesmo_dia(trabalho, eventos):
 
 
 def _autos_citados(us):
-    """Número CNJ citado no texto ("nos Autos Nº 6001397-76.2023.8.12.0001" ou "Nº60013977620238120001"), só os dígitos; '' sem número."""
+    """Número CNJ citado no texto ("nos Autos Nº 0000000-00.2023.8.12.0001" ou "Nº00000000020238120001"), só os dígitos; '' sem número."""
     m = re.search(r"\d{7}-?\d{2}\.?\d{4}\.?\d\.?\d{2}\.?\d{4}", us or "")
     return re.sub(r"\D", "", m.group(0)) if m else ""
 
