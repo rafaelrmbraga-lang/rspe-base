@@ -136,8 +136,8 @@
      "CPF",
      "difere"
     ],
-    "nivel": "alerta",
-    "nota": ""
+    "nivel": "verificar",
+    "nota": "Decidido (7.15.2, P27): dígitos vizinhos trocados com nascimento e mãe iguais nos dois cadastros - provável erro de digitação, 'verificar' (não prejudica o assistido)."
    },
    {
     "t": "aud",
@@ -294,17 +294,17 @@
    },
    {
     "t": "aud",
-    "tipo": "rspe-x-ficha",
+    "tipo": "divergencia-siapen-nascimento",
     "presente": true,
-    "contem": "Nascimento na ficha",
+    "contem": "nascimento",
     "nivel": "info",
-    "nota": ""
+    "nota": "Decidido (7.15.2, P28): o nascimento divergente gera um só item, o da divergência da fonte (com o botão Preencher); o do confronto com a ficha saiu."
    },
    {
     "t": "aud",
-    "tipo": "rspe-x-ficha",
+    "tipo": "divergencia-siapen-nascimento",
     "presente": false,
-    "contem": "Nascimento na ficha",
+    "contem": "nascimento",
     "nivel": "alerta",
     "nota": ""
    }

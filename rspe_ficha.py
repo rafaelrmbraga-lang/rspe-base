@@ -2156,8 +2156,17 @@ def _identidade_x_ficha(r, f):
         _dif = sum(1 for a, b in zip(c1, c2) if a != b)
         _dig = (" Os números diferem só em dígitos trocados, deslocados ou em até dois dígitos: provável erro de digitação em um dos cadastros."
                 if _dif <= 2 or sorted(c1) == sorted(c2) or c1[1:] == c2[:-1] or c1[:-1] == c2[1:] else "")
-        out.append(_item_rf("alerta", "CPF da ficha (%s) difere do RSPE (%s)" % (f.get("cpf"), r.get("cpf")),
-                            "A ficha vinculada pode ser de outra pessoa (homônimo) ou um dos cadastros está errado. Conferir antes de usar os dados da ficha." + _dig,
+        # (7.15.2, P27) diferença típica de digitação com o nascimento e a mãe iguais nos dois cadastros: é a mesma pessoa, e o erro
+        # de cadastro não prejudica o assistido - "verificar", não alerta
+        _d1 = rs.to_date(r.get("_nasc_rspe") or ("" if r.get("_nasc_fonte") else r.get("data_nascimento")) or "")
+        _mm = lambda x: " ".join(rs._sem_acento(x or "").upper().split())
+        _mesma_id = bool(_dig and _d1 and _d1 == _dp(f.get("data_nascimento") or "") and _mm(r.get("nome_mae"))
+                         and any(mesma_mae(_mm(r.get("nome_mae")), _mm(x)) for x in [f.get("nome_mae")] + re.split(r"\s*[\\/|]\s*", f.get("filiacao") or "") if x and x.strip()))
+        out.append(_item_rf("verificar" if _mesma_id else "alerta",
+                            "CPF da ficha (%s) difere do RSPE (%s)%s" % (f.get("cpf"), r.get("cpf"), " - provável erro de digitação" if _mesma_id else ""),
+                            ("Nascimento e mãe iguais nos dois cadastros: é a mesma pessoa, e um dos CPFs foi digitado errado. Conferir o número "
+                             "correto no documento e pedir a correção do cadastro." if _mesma_id else
+                             "A ficha vinculada pode ser de outra pessoa (homônimo) ou um dos cadastros está errado. Conferir antes de usar os dados da ficha.") + _dig,
                             "Identificação do apenado (LEP, art. 106)."))
     # CPF e nascimento iguais nos dois: é a mesma pessoa - nome ou mãe diferentes são grafia/cadastro (info, não alerta)
     d1, d2 = rs.to_date(r.get("_nasc_rspe") or ("" if r.get("_nasc_fonte") else r.get("data_nascimento")) or ""), _dp(f.get("data_nascimento") or "")
@@ -3860,7 +3869,9 @@ def comparativo(r, f, hoje=None, conferidos=None, manuais=None, vinculos=None):
                 "at": ("%s remidos" % _fmtn(d["dias"])) if d.get("dias") else "—", "sit": d["sit"], "cor": d["cor"]}
                for d in N["docs"] if d["cor"] in ("vermelho", "amarelo")]
     # modelo da tela (JSON): sem as referências repetidas aos documentos
-    docs = [{k: v for k, v in d.items()} for d in N["docs"]]
+    # (7.15.3) "posterior": o documento está entre os posteriores à última decisão de remição (N["post"]) - só exposição, para "O que pedir"
+    post_ids = {id(d) for d in N["post"]}
+    docs = [dict({k: v for k, v in d.items()}, posterior=id(d) in post_ids) for d in N["docs"]]
     for d in docs:
         d["un"] = _unidade_em(tl_ex, _data_local_doc(d, T["linhas"]))
     novo = {k: v for k, v in N.items() if k not in ("docs", "pontos", "post", "vermelho", "faltas_127", "fora")}
