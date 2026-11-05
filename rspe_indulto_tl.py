@@ -988,7 +988,7 @@ def _pontos_conferir(B, dd, hips_ids):
     sj = _subjetivo(B)
     J = dd.get("janela_falta")
     if sj and sj.get("estado") == "q" and not (J and J.get("informativa")):
-        out.append("a falta na janela%s, que só impede o benefício se a sanção for reconhecida em juízo (STJ, Tema 1195): %s" % (
+        out.append("a falta na janela%s, que só impede o benefício se a sanção for reconhecida em juízo (pelo STJ (Tema 1195), a apuração concluída depois impede se a falta foi cometida na janela, salvo inércia ou mora estatal): %s" % (
             (" de %s a %s" % (J["ini"], J["fim"])) if J else "", _falta_verif_txt(sj)))
     return list(dict.fromkeys(out))
 
@@ -1037,7 +1037,10 @@ def _peticao(dd, tp, nomes):
     ct = dd.get("cumprido_txt") or {}
     reinc = (B.get("reinc") or (dd.get("indulto") or {}).get("reinc") or "").strip()
     reinc = "primária" if reinc == "primário" and quem == "a pessoa assistida" else reinc
-    _tot = ct.get("total") or B.get("cumprido_txt") or ""
+    # o tempo que decidiu o resultado (a análise do decreto: âncora ou eventos, pelo requisito), e não o total da exibição - senão o
+    # pedido se contradiz ("exige X ... foram cumpridos Y < X"); no concurso com impeditivo vale o total da execução (a imputação
+    # vem à parte) - revisão do cap. 6, achado 4
+    _tot = ((B.get("cumprido_txt") or ct.get("total")) if not I.get("crimes_imp") else (ct.get("total") or B.get("cumprido_txt"))) or ""
     p1 = "%s cumpre pena por %s%s. %s" % (
         quem[0].upper() + quem[1:], lista([nm(c) for c in A.get("crimes") or []]) or "crimes não impeditivos", (", %s segundo o RSPE" % reinc) if reinc else "",
         ("Até %s, data de referência do %s, havia cumprido %s, somados o tempo de prisão, a detração (CP, art. 42) e a remição (LEP, art. 128)." % (
@@ -1216,7 +1219,7 @@ def _decreto(D, ref, pub, C, cumprido, data_atinge, faltas, hoje, ultimo, em_cur
         if sent and sent > lim_pub:
             fora.append((x, "sentença posterior à publicação (%s)" % _f(lim_pub)))
             x["selos"][ano] = {"selo": "FORA", "motivo": "sentença posterior à publicação (%s): não havia condenação na data - não alcançado "
-                                                         "(STJ, AgRg no HC 441.551 e AgRg no HC 919.210)" % _f(lim_pub), "dispositivo": (D.get("regra_fato") or {}).get("dispositivo", "")}
+                                                         "(STJ, AgRg no HC 894.488 e AgRg no HC 919.210)" % _f(lim_pub), "dispositivo": (D.get("regra_fato") or {}).get("dispositivo", "")}
             continue
         nat = natureza(c, D, ref)
         x["selos"][ano] = nat
@@ -1260,7 +1263,8 @@ def _decreto(D, ref, pub, C, cumprido, data_atinge, faltas, hoje, ultimo, em_cur
     FG = D.get("falta_grave")
     janela, faltas_out = None, []
     if FG:
-        j0 = _meses_antes(ref, FG.get("janela_meses", 12))
+        # os 12 meses contados para trás com o dia do começo incluído: de 26/12 do ano anterior a 25/12 (revisão do cap. 6, achado 8)
+        j0 = _meses_antes(ref, FG.get("janela_meses", 12)) + timedelta(days=1)
         j1 = min(ref, pub) if (FG.get("ate") == "publicacao" and pub) else ref
         janela = {"ini": _f(j0), "fim": _f(j1), "meses": FG.get("janela_meses", 12), "dispositivo": FG.get("dispositivo", ""),
                   "informativa": FG.get("exige") is False}
@@ -1540,7 +1544,7 @@ def _decreto_ficha(f, x, C, cumprido, faltas, crimes_all=None):
     janela, faltas_out = None, []
     if F.get("meses"):
         base_f = ref if F.get("contada_de") == "referencia" else pub
-        j0 = _meses_antes(base_f, int(F["meses"]))
+        j0 = _meses_antes(base_f, int(F["meses"])) + timedelta(days=1)  # dia do começo incluído, como no motor
         j1 = min(pub, base_f)  # o motor fecha a janela na publicação: falta posterior a ela não impede
         janela = {"ini": _f(j0), "fim": _f(j1), "meses": int(F["meses"]), "dispositivo": F.get("dispositivo", ""), "informativa": False}
         _ant = "anteriores à data de referência" if F.get("contada_de") == "referencia" else "anteriores à publicação"
