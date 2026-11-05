@@ -3842,7 +3842,9 @@ def comparativo(r, f, hoje=None, conferidos=None, manuais=None, vinculos=None):
                 "at": ("%s remidos" % _fmtn(d["dias"])) if d.get("dias") else "—", "sit": d["sit"], "cor": d["cor"]}
                for d in N["docs"] if d["cor"] in ("vermelho", "amarelo")]
     # modelo da tela (JSON): sem as referências repetidas aos documentos
-    docs = [{k: v for k, v in d.items()} for d in N["docs"]]
+    # (7.15.3) "posterior": o documento está entre os posteriores à última decisão de remição (N["post"]) - só exposição, para "O que pedir"
+    post_ids = {id(d) for d in N["post"]}
+    docs = [dict({k: v for k, v in d.items()}, posterior=id(d) in post_ids) for d in N["docs"]]
     for d in docs:
         d["un"] = _unidade_em(tl_ex, _data_local_doc(d, T["linhas"]))
     novo = {k: v for k, v in N.items() if k not in ("docs", "pontos", "post", "vermelho", "faltas_127", "fora")}

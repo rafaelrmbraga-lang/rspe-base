@@ -437,6 +437,33 @@ body:has(.welcome.on) .btn-calc{display:none} /* calculadora só com a base aber
 .fdt.fdn-t td{vertical-align:top}.fdn-un,.fdn-mot{font-size:11px}.fdn-mot{display:block;margin-top:1px}
 .fdn-vb{font:inherit;font-size:11.5px;padding:3px 9px;border:1px solid var(--pri);color:var(--pri);background:var(--card,#fff);border-radius:6px;cursor:pointer;white-space:nowrap}.fdn-vb:hover{background:var(--g-bg)}
 .fdn-nota{font-size:11.5px;margin:10px 0 14px;font-weight:400;line-height:1.55}
+/* (7.15.3) visão inicial didática: "O que pedir", "Remições do RSPE e o que cada uma cobre" e linha do tempo */
+.fdx{max-width:1180px;margin:0 0 12px;font-weight:400}.fdx.cob{max-width:none}
+.fdx-h{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:14px 0 6px}
+.fdx-h b{font-size:13.5px;font-weight:700;color:var(--pri2)}.fdx-h .muted{font-size:11.5px}
+.fdx-ac{border:1px solid var(--line);border-radius:8px;background:var(--card,#fff);overflow:hidden}
+.fdx-a{display:grid;grid-template-columns:22px 200px minmax(0,1fr) 96px;gap:0 12px;align-items:start;padding:8px 12px;border-bottom:1px solid #F0F1F3;border-left:3px solid #AEB5B0;font-size:12.5px;line-height:1.5}
+.fdx-a:last-child{border-bottom:0}.fdx-x{padding-top:1px}.fdx-x input{width:15px;height:15px;accent-color:var(--pri);cursor:pointer}
+.fdx-a.feito .fdx-v,.fdx-a.feito .fdx-o{opacity:.55}.fdx-a.feito .fdx-o>b,.fdx-a.feito .fdx-o{text-decoration:line-through;text-decoration-color:#8E958F}.fdx-a.feito .fdx-o .muted{text-decoration:none}
+.fdx-a.vermelho{border-left-color:var(--r-dot)}.fdx-a.amarelo{border-left-color:var(--a-dot)}.fdx-a.azul{border-left-color:var(--b-dot)}.fdx-a.cinza{border-left-color:#AEB5B0}
+.fdx-v{font-weight:700}.fdx-a.vermelho .fdx-v{color:var(--r-tx)}.fdx-a.amarelo .fdx-v{color:var(--a-tx)}.fdx-a.azul .fdx-v{color:var(--b-tx)}.fdx-a.cinza .fdx-v{color:var(--tx2)}
+.fdx-n{display:inline-block;min-width:18px;margin-right:4px;font-variant-numeric:tabular-nums;color:var(--tx2);font-weight:600}
+.fdx-o b{font-weight:600}.fdx-o .muted{display:block;font-size:11.5px;margin-top:1px}
+.fdx-d{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}.fdx-d b{font-weight:700;font-size:13px}.fdx-d small{display:block;color:var(--tx2);font-size:10.5px}
+.fdx-ok{border:1px solid var(--line);border-left:3px solid var(--g-dot);border-radius:8px;background:var(--g-bg);color:var(--g-tx);padding:8px 12px;font-size:12.5px;font-weight:600}
+.fdx-t{width:100%;border-collapse:collapse;table-layout:fixed;background:var(--card,#fff);border:1px solid var(--line);font-size:12.5px}
+.fdx-t th{background:#F7F8F6;color:var(--tx2);font-size:11px;text-transform:uppercase;letter-spacing:.3px;text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);font-weight:600}
+.fdx-t td{padding:7px 10px!important;border-bottom:1px solid #F0F1F3;vertical-align:top;line-height:1.45;font-size:12.5px;font-weight:400;background:var(--card,#fff)}
+.fdx-t td.n,.fdx-t th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.fdx-t ul{margin:0;padding-left:15px}.fdx-t li{margin:0 0 2px}.fdx-t li .muted{font-size:11.5px}
+.fdx-t tr.sep td{background:#F7F8F6;font-weight:700;font-size:12px;color:var(--tx);border-top:1px solid var(--line)}
+.fdx-t tr.sep td .muted{font-weight:400}
+.fdx-t tr.tot td{font-weight:700;border-top:1px solid var(--line);background:#FBFCFA}
+.fdx-g{display:inline-block;font-weight:700;font-size:11.5px;padding:1px 7px;border-radius:10px;margin-right:4px;white-space:nowrap}
+.fdx-g.verde{background:var(--g-bg);color:var(--g-tx)}.fdx-g.azul{background:var(--b-bg);color:var(--b-tx)}.fdx-g.amarelo{background:var(--a-bg);color:var(--a-tx)}
+.fdx-g.vermelho{background:var(--r-bg);color:var(--r-tx)}.fdx-g.cinza{background:var(--c-bg);color:var(--tx2)}
+.fdx-falta{color:var(--a-tx);font-size:11.5px;display:block;margin-top:2px}
+@media (max-width:1400px){.fdx-a{grid-template-columns:22px 170px minmax(0,1fr) 88px}}
 .vpop{position:absolute;z-index:60;background:var(--card,#fff);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow2);padding:12px 14px;width:440px;max-width:94vw;font-size:12.5px;font-weight:400}
 .vpop .vtit{font-weight:700;font-size:13px}.vpop .vsub{font-size:11.5px;margin:1px 0 8px}.vpop .vlst{max-height:300px;overflow:auto}
 .vpop .vop{display:flex;gap:8px;align-items:flex-start;padding:6px 6px;border-radius:6px;cursor:pointer;line-height:1.4}.vpop .vop:hover{background:#F3F5F2}
@@ -1765,32 +1792,16 @@ const ui = {
         return `<tr class="${s.baixado?'bx':''}">${tds2}<td style="white-space:nowrap">${bx}</td></tr>`; }
       if(!calc) return `<tr>${tds}</tr>`;
       return `<tr>${tds}<td><span class="why" onclick="event.stopPropagation();const n=this.closest('tr').nextElementSibling;n.style.display=n.style.display==='none'?'':'none'">cálculo</span></td></tr><tr style="display:none"><td colspan="${cols.length+1}">${ui.memoria(s, spec.id==='presc'?(ui.prescModo==='pp'?'pp':'pe'):null)}</td></tr>`; }).join('');
-    const cab = spec.id==='aud' ? `<b>${esc(r.nome)}</b> <span class="muted">· ${esc(r.aud_resumo)} · conferido com a ${esc(r.aud_base)} · alertas apontam o que demanda atenção, não afirmam erro</span>${(ocultos||this.mostrarTudo)?` · <span class="mini" onclick="event.stopPropagation();ui.mostrarTudo=!ui.mostrarTudo;ui.render()">${this.mostrarTudo?'ocultar informativos e OK':'mostrar '+pl(ocultos,'informativo','informativos')+'/OK'}</span>`:''}${r.ficha_resumo?`<div class="muted" style="margin-top:3px">Ficha disciplinar: ${esc(r.ficha_resumo)}</div>`:''}` : spec.id==='fd' ? (r.ficha_tem?`<span class="muted" style="font-weight:400">Ficha disciplinar (SIAPEN) impressa em ${esc((r.ficha||{}).data_impressao||'?')}</span>${r.fd_novo?'':(r.fd_sit_itens||[]).length?`<ul class="fdpts">${r.fd_sit_itens.map(x=>`<li class="${esc(x.c)}">${esc(x.t)}</li>`).join('')}</ul>`:` · <span class="fdsit verde">Em ordem</span>`}`:'<span class="muted">Sem ficha disciplinar importada: importe o PDF da ficha (SIAPEN) pelo botão Importar ▾ (Arquivos PDF…).</span>')+`${r.ficha_tem&&r.fd_remicoes&&(!r.fd_novo||(ui._fdDet||{})[r.id])?`<div class="muted" style="font-size:12px;margin-top:5px;font-weight:400">${esc(r.fd_remicoes)}</div>`:''}` : `<b>${esc(r.nome)}</b> <span class="muted">· ${pl((r.presc_linhas||[]).length,'crime','crimes')}, ${rows.length} ${ui.prescModo==='pp'?'com prescrição da pretensão punitiva aparente':'com prescrição executória aparente ou iminente'} ou datas a verificar na ação penal · cada crime prescreve isoladamente (art. 119)${r.presc_obs?' · '+esc(r.presc_obs):''}</span>`;
+    const cab = spec.id==='aud' ? `<b>${esc(r.nome)}</b> <span class="muted">· ${esc(r.aud_resumo)} · conferido com a ${esc(r.aud_base)} · alertas apontam o que demanda atenção, não afirmam erro</span>${(ocultos||this.mostrarTudo)?` · <span class="mini" onclick="event.stopPropagation();ui.mostrarTudo=!ui.mostrarTudo;ui.render()">${this.mostrarTudo?'ocultar informativos e OK':'mostrar '+pl(ocultos,'informativo','informativos')+'/OK'}</span>`:''}${r.ficha_resumo?`<div class="muted" style="margin-top:3px">Ficha disciplinar: ${esc(r.ficha_resumo)}</div>`:''}` : spec.id==='fd' ? (r.ficha_tem?`<span class="muted" style="font-weight:400">Ficha disciplinar (SIAPEN) impressa em ${esc((r.ficha||{}).data_impressao||'?')}</span>${r.fd_novo?'':(r.fd_sit_itens||[]).length?`<ul class="fdpts">${r.fd_sit_itens.map(x=>`<li class="${esc(x.c)}">${esc(x.t)}</li>`).join('')}</ul>`:` · <span class="fdsit verde">Em ordem</span>`}`:'<span class="muted">Sem ficha disciplinar importada: importe o PDF da ficha (SIAPEN) pelo botão Importar ▾ (Arquivos PDF…).</span>')+`${r.ficha_tem&&r.fd_remicoes&&!r.fd_novo?`<div class="muted" style="font-size:12px;margin-top:5px;font-weight:400">${esc(r.fd_remicoes)}</div>`:''}` : `<b>${esc(r.nome)}</b> <span class="muted">· ${pl((r.presc_linhas||[]).length,'crime','crimes')}, ${rows.length} ${ui.prescModo==='pp'?'com prescrição da pretensão punitiva aparente':'com prescrição executória aparente ou iminente'} ou datas a verificar na ação penal · cada crime prescreve isoladamente (art. 119)${r.presc_obs?' · '+esc(r.presc_obs):''}</span>`;
     const vazio = (spec.id==='presc' && !rows.length) ? `<tr><td colspan="${cols.length+1}" class="muted">Nenhum crime com prescrição ${ui.prescModo==='pp'?'da pretensão punitiva aparente':'executória aparente ou iminente'} nem datas faltando.</td></tr>` : '';
     if(spec.id==='fd' && r.ficha_tem) return `<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:8px"><span>${cab}</span><span style="white-space:nowrap">${r.fd_conf_tot?`<span class="muted" style="font-size:12.5px;margin-right:10px" title="Documentos desta execução marcados como homologados em juízo (✓ Homologado)">Homologados <b style="color:var(--g-tx)">${r.fd_conf_n||0}</b> de ${r.fd_conf_tot}</span>`:''}${r.fd_fund?`<span class="mini pre" onclick="event.stopPropagation();ui.copiarClip(${ui.clip(r.fd_fund)})">Copiar fundamentação</span> `:''}<span class="mini" title="Tabela em Word, para colar na petição" onclick="event.stopPropagation();ui.fdExportar(${jsa(r.id)})">Exportar tabela</span> <span class="mini" onclick="event.stopPropagation();ui.fdAdicionar(${jsa(r.id)})">+ Adicionar atestado</span> <span class="mini" onclick="event.stopPropagation();ui.abrir(${jsa(r.id)})">Abrir ficha completa</span></span></div>${this.fdTabela(r)}`;
     return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><span>${cab}</span><span class="mini" onclick="event.stopPropagation();ui.abrir(${jsa(r.id)})">Abrir ficha completa</span></div><table class="subtab">${cg}${head}${body}${vazio}</table>`; },
-  // remição (7.14): o programa compara os totais e não liga remição a atestado - (A) comparação RSPE x ficha, (B) pontos a conferir,
-  // (C) trabalho da ficha x atestados (com "Vincular atestado"), (D) documentos da ficha (✓ Homologado) e (E) remições do RSPE
+  // remição (7.15.3): visão inicial = diagnóstico + "O que pedir"; visualização detalhada = remições do RSPE x o que cada uma cobre,
+  // linha do tempo, trabalho da ficha x atestados (com "Vincular atestado") e documentos da ficha (✓ Homologado)
   fdConc(r){ const N=r.fd_novo; if(!N) return '';
     const nf=v=>(v==null||v==='')?'—':(Math.round(v*100)/100).toLocaleString('pt-BR',{maximumFractionDigits:2}), sg=v=>(v>0?'+':'')+nf(v);
     const pill=(t,c)=>t?`<span class="pill ${c||'cinza'}">${esc(t)}</span>`:'';
-    const hd=t=>`<div class="fdn-h">${t}</div>`, R=N.R||{}, dif=N.dif||0, T=N.trab||{linhas:[],ats:[]};
-    const cor=dif>3?'amarelo':dif<-3?'cinza':'verde';
-    const lin=[[`Remição concedida <span class="muted">· ${pl((R.remicoes||[]).length,'decisão','decisões')}</span>`,nf(R.concedido)]];
-    if(R.perdido) lin.push([`Dias perdidos por falta (LEP, art. 127) <span class="muted">· saldo: ${nf(R.saldo)}; a comparação usa o concedido</span>`,'− '+nf(R.perdido)]);
-    const fic=[[`Atestados de trabalho desta execução <span class="muted">· ${N.n_desta||0}</span>`,nf(N.at_desta)],
-      [`Estudo e leitura${N.leitura?` <span class="muted">· leitura: ${pl(N.obras||0,'obra','obras')}</span>`:''}`,nf((N.est_comp||0)+(N.leitura||0))]];
-    if(N.n_man) fic.push([`Informados por você (juntados nos autos) <span class="muted">· ${N.n_man}</span>`,nf(N.man)]);
-    // tabela A lado a lado: RSPE à esquerda, ficha à direita (cada um com as suas linhas e o seu total); a diferença ocupa a largura
-    const col=(tit,ls,tot,rot)=>{ const vz=Math.max(lin.length,fic.length)-ls.length;
-      return `<table class="fdn-lado"><tr><th>${tit}</th><th>Dias</th></tr>${ls.map(([a,b])=>`<tr><td>${a}</td><td>${b}</td></tr>`).join('')}${'<tr class="vz"><td>&nbsp;</td><td></td></tr>'.repeat(vz)}<tr class="tot"><td>${rot}</td><td>${nf(tot)}</td></tr></table>`; };
-    const A=`<div class="fdn-cmp2">${col('RSPE (SEEU)',lin,R.concedido,'Total concedido')}${col('Ficha disciplinar (SIAPEN)',fic,N.comp,'Total comprovado')}
-      <div class="fdn-dif2 ${cor}"><span>Diferença (ficha − RSPE)</span><b>${sg(dif)}</b></div>
-      ${N.estim?`<div class="fdn-est2"><span>Com o estimado (estudo sem certidão e trabalho sem atestado: ≈ ${nf(N.estim)})</span><span>${sg(N.dif_estim)}</span></div>`:''}
-      ${N.fora_n?`<div class="fdn-est2"><span>Documentos à parte (outros autos, anteriores à execução ou de período interrompido): ${N.fora_n} - não entram na conta</span><span></span></div>`:''}</div>
-      <p class="fdn-concl ${esc(N.concl_cor||'')}">${esc(N.concl)}</p>`;
-    const P=N.pontos||[];
-    const B=P.length?`<ul class="fdn-pts">${P.map(p=>`<li>${pill(p.rot,p.cor)} ${esc(p.texto)}</li>`).join('')}</ul>`:'<div class="muted fdn-vazio">Nenhum ponto a conferir.</div>';
+    const hd=t=>`<div class="fdn-h">${t}</div>`, T=N.trab||{linhas:[],ats:[]};
     const ST={auto:['Vinculado automaticamente','verde'],possivel:['Possível · confirmar','amarelo'],provavel:['Sugerido · confirmar','amarelo'],sem:['Sem atestado','amarelo'],manual:['Vinculado por você','azul']};
     const mot=l=>l.st==='auto'?'pelo '+l.como:l.st==='possivel'?'o período bate, mas havia outro trabalho no mesmo período':l.st==='provavel'?'mesmo nome; o atestado não traz o período':l.st==='manual'?'vínculo informado na conferência':l.sem_confirmado?'confirmado na conferência: pedir à unidade':l.dup?'aberto no mesmo dia de '+l.dup_com+' e sem baixa própria (provável registro duplicado): a conferir com a unidade, sem dias':(l.conf_dias&&!l.pedir_dias)?'vínculo sem baixa na ficha (só a saída da unidade): conferir com a unidade':'nenhum atestado da ficha cobre este período';
     const btn=(l,i)=>`<button class="fdn-vb" onclick="event.stopPropagation();ui.vincAbrir(this,${jsa(r.id)},${i})">${l.st==='auto'||l.st==='manual'?'Alterar':l.st==='sem'?'Vincular atestado':'Confirmar / vincular'}</button>`;
@@ -1805,23 +1816,185 @@ const ui = {
     const D=`<table class="fdt fdn-t"><colgroup><col style="width:19%"><col style="width:9%"><col style="width:15%"><col style="width:6%"><col style="width:7%"><col style="width:19%"><col><col style="width:92px"></colgroup>
       <tr><th>Documento</th><th>Emissão</th><th>Período</th><th>Trab.</th><th>Remição</th><th>Peticionamento</th><th>Situação</th><th class="c" title="Homologado em juízo (marque na conferência)">✓ Homologado</th></tr>
       ${docs.map(d=>`<tr class="${d.hom?'ok':''}"><td>${nome(d)}</td><td>${esc(d.emissao||'—')}</td><td>${esc(d.periodo||'—')}</td><td>${d.trab!=null&&d.trab!==''?d.trab:'—'}</td><td>${nf(d.dias)}</td><td>${esc(d.pet||'—')}</td><td>${pill(d.sit,d.cor)}</td><td class="c">${d.fora?'':tk(d)}</td></tr>`).join('')||'<tr><td colspan="8" class="muted">Nenhum documento de remição na ficha.</td></tr>'}</table>`;
-    const E=`<table class="fdt fdn-t"><colgroup><col style="width:16%"><col style="width:18%"><col style="width:10%"><col></colgroup><tr><th>Decisão</th><th>Data de referência</th><th>Dias</th><th>Origem</th></tr>
-      ${(R.remicoes||[]).map(x=>`<tr><td>${esc(x.decisao||'—')}</td><td>${esc(x.ref||'—')}</td><td>${nf(x.dias)}</td><td class="muted">conferir na decisão a que se refere (trabalho, estudo, leitura ou exame)</td></tr>`).join('')||'<tr><td colspan="4" class="muted">Nenhuma remição no RSPE.</td></tr>'}</table>`;
-    // visão inicial: a comparação, "onde pode estar a diferença" (até 4 linhas) e o botão da visualização detalhada (estado por assistido, só na tela)
-    const O=N.onde||[], det=!!(this._fdDet||{})[r.id];
-    // borda do quadro pela cor mais forte das linhas (RSPE maior que a ficha: cinza, salvo pedir atestado e o vermelho)
-    const oc=O.some(x=>x.c==='vermelho')?'vermelho':O.some(x=>x.c==='amarelo')?'amarelo':O.every(x=>x.c==='verde')?'verde':'cinza';
-    // visão inicial: só o diagnóstico (uma frase com o que fazer) e as pendências apontadas; a comparação vai para o detalhe
+    // estado da visualização detalhada por assistido (só na tela)
+    const det=!!(this._fdDet||{})[r.id];
     const DG=N.diag||{t:N.concl||'',c:N.concl_cor||'cinza'};
-    const PA=O.filter(x=>x.t!=='Sem diferença a conferir.');
-    const Q=`<div class="fdn-diag ${esc(DG.c)}"><div class="fdn-onde-t">Diagnóstico</div><div class="fdn-diag-t">${esc(DG.t)}</div></div>
-      ${PA.length?`<div class="fdn-onde ${oc}"><div class="fdn-onde-t">Pendências apontadas</div><ul>${PA.map(x=>`<li class="${esc(x.c)}">${esc(x.t)}</li>`).join('')}</ul></div>`:''}
-      <button class="fdn-det" onclick="event.stopPropagation();ui.fdDetalhe(${jsa(r.id)})">${det?'Ocultar detalhes':'Visualização detalhada'}</button>`;
+    // (7.15.3) visão simples (análise rápida): o diagnóstico e "O que pedir" (as antigas "Pendências apontadas" viraram ações). Visualização
+    // detalhada: o diagnóstico, as remições do RSPE com o que cada uma cobre (total e "Fora de qualquer remição"), o vínculo trabalho x
+    // atestado (Vincular atestado) e os documentos da ficha (✓ Homologado). Saíram, por repetirem esses blocos: a comparação de totais
+    // (A), a lista de pontos (B), a de remições do RSPE (E) e as observações informativas soltas
+    const DQ=`<div class="fdn-diag ${esc(DG.c)}"><div class="fdn-onde-t">Diagnóstico</div><div class="fdn-diag-t">${esc(DG.t)}</div></div>`;
+    const BT=`<button class="fdn-det" onclick="event.stopPropagation();ui.fdDetalhe(${jsa(r.id)})">${det?'Voltar à visão simples':'Visualização detalhada: o que cada remição cobre, vínculos e documentos'}</button>`;
     const AV=N.outra_exec?`<div class="fdn-aviso">⚠ ${esc(N.outra_exec)}</div>`:'';
-    if(!det) return `<div class="fdn">${AV}${Q}</div>`;
-    return `<div class="fdn">${AV}${Q}${hd('A) Comparação: RSPE × ficha disciplinar')}${A}${hd('B) Pontos a conferir')}${B}${hd('C) Trabalho registrado na ficha × atestados')}${C}
-      ${hd('D) Atestados e documentos de remição da ficha')}${D}${hd('E) Remições no RSPE')}${E}
-      <div class="muted fdn-nota">O programa compara os totais e não liga cada remição do RSPE a um atestado: a diferença indica onde conferir, não o quanto requerer. Dois controles da conferência: <b>Vincular atestado</b> liga um período de trabalho ao atestado quando o programa não ligou (ou corrige a ligação); <b>✓ Homologado</b> marca o documento cuja remição já foi homologada em juízo. As marcações ficam salvas e continuam valendo quando uma nova ficha for importada. “Provavelmente remido” é só indicação por valor e data (remição do RSPE com o mesmo valor, decidida até 180 dias depois da emissão; depois disso, até 3 anos, aparece só “mesmo valor decidido em …: conferir”): não liga, não muda os totais e não marca ✓.</div></div>`; },
+    if(!det) return `<div class="fdn">${AV}${DQ}${this.fdOQuePedir(r,N)}${BT}</div>`;
+    return `<div class="fdn">${AV}${DQ}${BT}${this.fdCobertura(r,N)}
+      ${hd('Vínculos trabalho × atestado')}${C}
+      ${hd('Documentos da ficha')}${D}
+      <div class="muted fdn-nota">A ligação de cada remição aos documentos é do programa, pelo valor e pela data (“Certo”: mesmo valor, decidida até 180 dias depois da emissão; “Provável”: valor próximo, soma de documentos ou decisão mais tardia; “Inferido”: remição sem documento na ficha, atribuída ao trabalho sem atestado mais próximo): confira o que não é “Certo”. Dois controles da conferência: <b>Vincular atestado</b> liga um período de trabalho ao atestado quando o programa não ligou (ou corrige a ligação); <b>✓ Homologado</b> marca o documento cuja remição já foi homologada em juízo. As marcações ficam salvas e continuam valendo quando uma nova ficha for importada.</div></div>`; },
+  // (7.15.3) visão inicial didática - só apresentação dos dados já calculados (rspe_remicao.comparacao / rspe_ficha.comparativo):
+  // "O que pedir" (ações prontas, com o texto para copiar), "Remições do RSPE e o que cada uma cobre" (N.ligacao) e a linha do tempo
+  _fdJa:new Set(['sem_pet_posterior','posterior','ja_remido_periodo','pend_cert','remida_diferente','sem_pet','defensoria','pedir_atestado','talvez_remido','sem_baixa','duplicado','em_curso','contido','provavel_remido','trabalho_aparte','estudo_estimado']),
+  _fdConfCinza:new Set(['leitura_menor','implausivel','outra_unidade']),
+  // caixa "feito" de cada ação de "O que pedir": conveniência deste computador (localStorage), não vai para a base
+  _fdFeitoGet(){ try{ return JSON.parse(localStorage.getItem('apto_fd_feito')||'{}')||{}; }catch(e){ return {}; } },
+  fdFeito(k,el){ const m=this._fdFeitoGet(); if(el.checked) m[k]=new Date().toISOString().slice(0,10); else delete m[k];
+    try{ localStorage.setItem('apto_fd_feito',JSON.stringify(m)); }catch(e){}
+    const row=el.closest('.fdx-a'); if(row) row.classList.toggle('feito',el.checked); },
+  _fdNf(v){ return (v==null||v==='')?'—':(Math.round(v*100)/100).toLocaleString('pt-BR',{maximumFractionDigits:2}); },
+  _fdDt(s){ const m=/^(\d{2})\/(\d{2})\/(\d{4})$/.exec(String(s||'').trim()); return m?Date.UTC(+m[3],+m[2]-1,+m[1]):null; },
+  _fdDocNome(d){ return d.tipo+(d.num?(/^Atestado/.test(d.tipo)?' nº ':' · ')+d.num:''); },
+  _fdPer(d){ const p=d.periodo||''; return p&&!/^sem período/.test(p)?p:''; },
+  fdAcoes(r,N){
+    const nf=v=>this._fdNf(v), A=[], R=N.R||{}, T=N.trab||{}, L=T.linhas||[], ud=R.ult_dec, dt=s=>this._fdDt(s);
+    const nome=d=>this._fdDocNome(d), per=d=>this._fdPer(d), quem=`${r.nome||'o(a) assistido(a)'} (execução penal nº ${r.id})`;
+    const dd=v=>v==null?'':(nf(v)+' '+(nf(v)==='1'?'dia':'dias'));
+    const trs=(tr,a,b)=>(tr&&tr.length?tr:[[a,b]]).map(([x,y])=>`${x} a ${y}`).join(' e ');
+    const add=o=>A.push(Object.assign({cor:'amarelo',dias:null,nota:'',txt:''},o));
+    const docs=(N.docs||[]).filter(d=>!d.fora&&!d.hom&&!(d.contido&&!d.dias_soma));
+    // 1) requerer a remição: documento desta execução emitido ou peticionado depois da última decisão de remição (o sem peticionamento primeiro)
+    const rq=[];
+    for(const d of docs.filter(d=>d.vermelho||d.posterior).sort((a,b)=>(b.vermelho?1:0)-(a.vermelho?1:0))){
+      const dias=d.ja_rem?d.dias_pedir:(d.dias_soma!=null?d.dias_soma:d.dias), p=per(d);
+      const jr=d.ja_rem?(d.ja_rem||[]).map(x=>`${nf(x.dias)} dias em ${x.decisao}`).join(' e '):'';
+      const quando=d.pet_ok?`peticionado em ${d.data_ref||d.emissao}`:'sem registro de peticionamento';
+      rq.push({d,g:1,cor:d.vermelho?'vermelho':'amarelo',verbo:'Requerer a remição',dias,
+        obj:`${nome(d)}${p?' · '+p:''}`,
+        nota:`Emitido em ${d.emissao||'?'}, ${quando}; ${ud?`a última decisão de remição do RSPE é de ${ud}`:'o RSPE não tem remição concedida'}.${d.ja_rem?` Já remidos ${jr} com referência dentro do período: pede-se a diferença (${nf(d.dias)} − ${nf((d.ja_rem||[]).reduce((s,x)=>s+(+x.dias||0),0))}); conferir essa decisão antes.`:''}${dias==null?' Sem o valor na ficha: conferir os dias no documento.':''}`,
+        txt:`Requer-se a remição de ${dias!=null?(d.ja_rem?'aproximadamente ':'')+dd(dias):'(dias a conferir no documento)'} de pena de ${quem}, com base no ${nome(d)}${p?`, referente ao período de ${p}`:''}, emitido em ${d.emissao||'?'}${d.pet_ok?` e peticionado em ${d.data_ref||d.emissao}`:''}, ainda não apreciado (${ud?`posterior à última decisão de remição, de ${ud}`:'não há remição concedida nesta execução'}).${d.ja_rem?` Do total de ${dd(d.dias)} do atestado, descontam-se os ${jr} já remidos com referência dentro do período.`:''}`});
+    }
+    // mais de 3 documentos do mesmo tipo e da mesma situação (12 relatórios de leitura, p. ex.): uma linha só, com a lista no texto copiado
+    const grp={}; rq.forEach(a=>{ const k=a.d.tipo+'|'+a.cor; (grp[k]=grp[k]||[]).push(a); });
+    for(const k of Object.keys(grp)){ const G=grp[k];
+      if(G.length<=3){ G.forEach(a=>add(a)); continue; }
+      const d0=G[0].d, s=G.reduce((t,a)=>t+(+a.dias||0),0), em=G.map(a=>this._fdDt(a.d.emissao)).filter(v=>v!=null);
+      const f=v=>new Date(v).toISOString().slice(0,10).split('-').reverse().join('/');
+      add({g:1,cor:G[0].cor,verbo:'Requerer a remição',dias:Math.round(s*100)/100,
+        obj:`${G.length} documentos · ${d0.tipo}${em.length?` · emitidos de ${f(Math.min(...em))} a ${f(Math.max(...em))}`:''}`,
+        nota:`${G[0].d.vermelho?'Sem registro de peticionamento':'Peticionados'} e posteriores à última decisão de remição${ud?` (${ud})`:''}: ${G.map(a=>nome(a.d)+(this._fdPer(a.d)?' ('+this._fdPer(a.d)+')':'')).join('; ')}.`,
+        txt:G.map(a=>a.txt).join('\n')});
+    }
+    // 2) pedir atestado: trabalho registrado na ficha sem atestado (o trecho que entra na estimativa)
+    for(const l of L.filter(l=>l.pedir_dias&&!l.dup)){
+      const t=trs(l.pedir_trechos,l.pedir_ini,l.pedir_fim), emc=l.em_curso&&l.pedir_fim&&l.fim&&dt(l.fim)-dt(l.pedir_fim)<=7*864e5;
+      add({g:2,verbo:'Pedir atestado à unidade',dias:l.pedir_dias,obj:`Trabalho em <b>${esc(l.local)}</b> · ${esc(t)}${emc?' (em curso: até a impressão da ficha)':''}`,html:true,
+        nota:`${l.un?esc(l.un)+' · ':''}a ficha registra o trabalho, mas nenhum atestado cobre este período.`,
+        txt:`Solicito a emissão de atestado de trabalho, para fins de remição de pena, de ${quem}, referente ao trabalho em ${l.local}${l.un?` (${l.un})`:''}, no período de ${t}${emc?' (vínculo em curso)':''}, com a indicação dos dias efetivamente trabalhados e da jornada cumprida.`});
+    }
+    for(const l of L.filter(l=>l.conf_dias&&!l.dup)){
+      const t=trs(l.conf_trechos,l.conf_ini,l.conf_fim);
+      add({g:2,verbo:'Conferir com a unidade',dias:l.conf_dias,obj:`Trabalho em <b>${esc(l.local)}</b> · ${esc(t)}`,html:true,
+        nota:'O vínculo não tem baixa na ficha (só a saída da unidade): confirmar se houve trabalho neste trecho antes de pedir o atestado.',
+        txt:`Solicito informar se ${quem} trabalhou em ${l.local}${l.un?` (${l.un})`:''} no período de ${t} e, em caso positivo, emitir o atestado de trabalho correspondente, para fins de remição de pena.`});
+    }
+    // 3) estudo sem certidão (estimativa) posterior à última decisão: pedir a certidão de horas
+    for(const x of (N.est_estim||[]).filter(x=>!ud||dt(x.fim)>dt(ud))){
+      add({g:3,verbo:'Pedir certidão de estudo',dias:x.dias,obj:esc(x.txt),html:true,nota:'Estimativa: a ficha registra o estudo, mas não há certidão de horas.',
+        txt:`Solicito a emissão de certidão de frequência escolar, com a carga horária, para fins de remição de pena, de ${quem}, referente a: ${x.txt.replace(/:.*$/,'')}.`});
+    }
+    // 4) conferir a decisão: o que pode ser pedido depois de conferir nos autos
+    for(const d of docs.filter(d=>(d.pend_prov||d.pend_sem_rem)&&!d.posterior&&!d.vermelho)){
+      add({g:4,verbo:'Conferir a decisão',dias:(d.estim||{}).dias,obj:`${nome(d)}${d.emissao?' · peticionado em '+d.emissao:''}`,
+        nota:'Peticionado, sem remição no RSPE que o explique: provavelmente ainda não apreciado. Se confirmado, requerer a remição.',txt:(d.pend_prov||d.sit||'')});
+    }
+    for(const d of docs.filter(d=>d.valor_dif&&d.valor_dif.menor&&!d.valor_dif.conta&&!d.posterior)){
+      const vd=d.valor_dif;
+      add({g:4,verbo:'Conferir a decisão',dias:Math.round((d.dias-vd.dias)*100)/100,obj:`Decisão de ${vd.decisao}: ${nf(vd.dias)} dias para o ${nome(d)} (${nf(d.dias)} dias)`,
+        nota:'Remido a menor que o atestado: conferir a decisão; se for o caso, requerer a diferença.',
+        txt:`Conferir a decisão de ${vd.decisao} (remição de ${nf(vd.dias)} dias), provavelmente do ${nome(d)}, que declara ${nf(d.dias)} dias: se remido a menor, requerer a diferença de ${dd(Math.round((d.dias-vd.dias)*100)/100)}.`});
+    }
+    for(const g of (N.ligacao||[]).filter(g=>g.i!=null&&g.grau==='inferido'&&(g.trab||[]).length)){
+      const tt=(g.trab||[]), s=tt.reduce((a,t)=>a+(+t.dias||0),0), txt=tt.map(t=>`${t.local}, ${t.ini} a ${t.fim}`).join('; ');
+      add({g:4,cor:N.rspe_maior?'cinza':'amarelo',verbo:'Conferir a decisão',dias:s,obj:`Decisão de ${g.decisao} (${nf(g.dias)} dias, sem documento na ficha) · ${txt}`,
+        nota:'O programa supõe que esta remição cobriu o trabalho sem atestado acima (é o mais próximo da data). Se a decisão não tratou desse trabalho, pedir o atestado.',
+        txt:`Conferir se a decisão de ${g.decisao} (remição de ${nf(g.dias)} dias) se refere ao trabalho em ${txt}; se não, pedir à unidade o atestado de trabalho desse período, para fins de remição de pena.`});
+    }
+    const semPet=docs.filter(d=>!d.posterior&&!d.vermelho&&d.cor==='amarelo'&&/^Sem registro de peticionamento/.test(d.sit||''));
+    for(const d of semPet){
+      add({g:4,verbo:'Conferir nos autos',dias:d.dias_soma!=null?d.dias_soma:d.dias,obj:`${nome(d)}${per(d)?' · '+per(d):''}`,
+        nota:`Emitido em ${d.emissao||'?'}, sem registro de peticionamento e sem remição do mesmo valor no RSPE: conferir se foi juntado e apreciado; se não, requerer a remição.`,
+        txt:`Conferir nos autos se o ${nome(d)}${per(d)?` (período de ${per(d)})`:''}, emitido em ${d.emissao||'?'}, foi juntado e apreciado; se não, requerer a remição de ${dd(d.dias)}.`});
+    }
+    if(N.dif>3&&!A.some(a=>a.g===1||a.g===4)){
+      add({g:4,verbo:'Conferir a decisão',dias:N.dif,obj:`A ficha comprova ${dd(N.dif)} a mais que o RSPE`,nota:'Sem documento posterior à última remição: conferir nos autos se cada atestado foi apreciado e com quantos dias.',
+        txt:`A ficha disciplinar comprova ${dd(N.dif)} de remição a mais que o RSPE: conferir nos autos se cada atestado foi apreciado e com quantos dias.`});
+    }
+    L.forEach(l=>{ if(l.st==='possivel'||l.st==='provavel') add({g:5,verbo:'Confirmar o vínculo',obj:`Trabalho em <b>${esc(l.local)}</b> · ${esc(l.periodo)} com o atestado nº ${esc(l.at)}`,html:true,
+      nota:(l.st==='provavel'?'Mesmo nome; o atestado não traz o período.':'O período bate, mas havia outro trabalho no mesmo período.')+' Confirmar em “Vincular atestado”, na visualização detalhada.'}); });
+    // demais pontos a conferir (amarelos ou vermelhos) que as linhas acima não cobrem
+    const ja=this._fdJa;
+    for(const p of (N.pontos||[]).filter(p=>((p.cor==='amarelo'||p.cor==='vermelho')&&!ja.has(p.tipo))||(p.cor==='cinza'&&this._fdConfCinza.has(p.tipo)))){
+      const t=p.curto||p.texto||''; add({g:5,cor:p.cor==='cinza'?'cinza':p.cor,verbo:'Conferir',obj:esc(t.charAt(0).toUpperCase()+t.slice(1)),html:true,nota:p.rot&&p.rot!=='A conferir'?esc(p.rot):'',txt:p.texto||t});
+    }
+    // 5) acompanhar: trabalho em curso há até 90 dias, sem atestado
+    for(const a of (N.acomp||[])) add({g:6,cor:'azul',verbo:'Acompanhar',dias:a.dias,obj:`Trabalho em <b>${esc(a.local)}</b> · em curso desde ${esc(a.ini)}`,html:true,
+      nota:'O atestado do período ainda não costuma ter sido emitido: pedir ao fim do período.',
+      txt:`Acompanhar o trabalho de ${quem} em ${a.local}, em curso desde ${a.ini}, e pedir o atestado de trabalho ao fim do período, para fins de remição de pena.`});
+    A.sort((a,b)=>a.g-b.g||(b.dias||0)-(a.dias||0));
+    return A;
+  },
+  fdOQuePedir(r,N){
+    const nf=v=>this._fdNf(v), A=this.fdAcoes(r,N), reais=A.filter(a=>a.g<6);
+    const fm=this._fdFeitoGet();
+    const row=(a,k)=>{ const ch=r.id+'|'+a.verbo+'|'+String(a.obj).replace(/<[^>]+>/g,''), f=!!fm[ch];
+      const cx=`<label class="fdx-x" title="Marcar como feito (fica salvo neste computador)" onclick="event.stopPropagation()"><input type="checkbox" ${f?'checked':''} aria-label="Feito: ${esc(a.verbo)}" onchange="ui.fdFeito(${jsa(ch)},this)"></label>`;
+      return `<div class="fdx-a ${a.cor}${f?' feito':''}">${cx}<div class="fdx-v"><span class="fdx-n">${k+1}.</span>${esc(a.verbo)}</div>
+        <div class="fdx-o">${a.html?a.obj:esc(a.obj)}${a.nota?`<span class="muted">${a.html?a.nota:esc(a.nota)}</span>`:''}</div>
+        <div class="fdx-d">${a.dias!=null&&a.dias!==''?`<b>≈ ${nf(a.dias)}</b><small>dias de remição</small>`:'<small>—</small>'}</div></div>`; };
+    const tudo=A.filter(a=>a.txt).map((a,k)=>`${k+1}. ${a.verbo}: ${a.txt}`).join('\n\n');
+    const ok=!reais.length?`<div class="fdx-ok">✓ Nada a pedir nem a conferir agora${(N.R||{}).remicoes&&(N.R.remicoes.length)?': as remições do RSPE cobrem os documentos da ficha.':'.'}</div>`:'';
+    const tot=reais.filter(a=>a.g<=3&&a.dias).reduce((s,a)=>s+a.dias,0);
+    return `<div class="fdx"><div class="fdx-h"><b>O que pedir</b><span class="muted">${reais.length?`${pl(reais.length,'ação','ações')}${reais.length>1?' (a que dá benefício primeiro)':''}${tot?` · pedidos ≈ ${nf(tot)} dias de remição`:''} · `:''}${tudo?`<span class="mini" onclick="event.stopPropagation();ui.copiarClip(${this.clip(tudo)})">Copiar tudo</span>`:''}</span></div>
+      ${ok}${A.length?`<div class="fdx-ac"${ok?' style="margin-top:6px"':''}>${A.map(row).join('')}</div>`:''}</div>`;
+  },
+  fdCobertura(r,N){
+    const nf=v=>this._fdNf(v), R=N.R||{}, docs=N.docs||[], T=N.trab||{}, L=T.linhas||[], G=(N.ligacao||[]);
+    const porCh={}; docs.forEach(d=>porCh[d.chave]=d);
+    const GR={certo:['Certo','verde','mesmo valor e data'],provavel:['Provável','azul',''],inferido:['Inferido','amarelo',''],ambiguo:['Ambíguo','amarelo',''],nenhum:['Sem documento','cinza','']};
+    const dv=d=>d.dias_soma!=null?d.dias_soma:(d.dias||0);
+    const trabDe=d=>L.filter(l=>l.at_chave&&l.at_chave===d.chave);
+    const ligados=new Set(), trabInf=new Set();
+    const exc=G.filter(g=>g.i==null);
+    const cobre=g=>{ const it=[]; let s=0;
+      for(const ch of g.docs||[]){ const d=porCh[ch]; if(!d) continue; ligados.add(ch); s+=dv(d);
+        const tl=trabDe(d);
+        it.push(`<li><b>${esc(this._fdDocNome(d))}</b>${this._fdPer(d)?' · '+esc(this._fdPer(d)):''} · <b>${nf(dv(d))}</b> dias${d.emissao?` <span class="muted">(emitido em ${esc(d.emissao)})</span>`:''}${tl.length?`<br><span class="muted">trabalho na ficha: ${tl.map(l=>esc(l.local+', '+l.periodo)).join('; ')}</span>`:''}</li>`); }
+      for(const t of g.trab||[]){ trabInf.add(t.chave); s+=(+t.dias||0); it.push(`<li>Trabalho <b>sem atestado</b> em ${esc(t.local)} · ${esc(t.ini)} a ${esc(t.fim)} · ≈ <b>${nf(t.dias)}</b> dias</li>`); }
+      for(const x of exc.filter(x=>(x.docs||[]).some(c=>(g.docs||[]).includes(c)))) for(const t of x.trab||[]){ trabInf.add(t.chave); it.push(`<li class="muted">e trabalho anterior ao período do atestado (dias declarados além do período): ${esc(t.local)}, ${esc(t.ini)} a ${esc(t.fim)}</li>`); }
+      return [it,s]; };
+    let somaCob=0;
+    const linhas=G.filter(g=>g.i!=null).map(g=>{ const [it,s]=cobre(g), [gl,gc]=GR[g.grau]||GR.nenhum; somaCob+=Math.min(s,g.dias||0);
+      const falta=(g.dias||0)-s;
+      const mot=g.grau==='certo'?'mesmo valor e data compatível':g.motivo||'';
+      return `<tr><td class="n">${esc(g.decisao||'—')}${g.ref&&g.ref!==g.decisao?`<div class="muted" style="font-size:11px">ref. ${esc(g.ref)}</div>`:''}</td><td class="n"><b>${nf(g.dias)}</b></td>
+        <td>${it.length?`<ul>${it.join('')}</ul>`:'<span class="muted">nenhum documento ou período da ficha</span>'}${it.length&&Math.abs(falta)>1?`<span class="fdx-falta">${falta>0?`a ficha explica ${nf(s)} dos ${nf(g.dias)} dias`:`os documentos somam ${nf(s)} dias, ${nf(-falta)} a mais que a remição`}</span>`:''}</td>
+        <td><span class="fdx-g ${gc}">${gl}</span> <span class="muted" style="font-size:11.5px">${esc(mot)}</span></td><td class="n">${it.length?nf(s):'—'}</td></tr>`; }).join('');
+    // o que ficou fora: documentos desta execução sem remição correspondente e o trabalho sem atestado que nenhuma remição cobre
+    const fora=[];
+    for(const d of docs){ if(ligados.has(d.chave)) continue;
+      const tl=trabDe(d), por=d.fora?'À parte: não entra na conta':d.hom?'Homologado (marcado por você)':(d.sit||'');
+      const rot=d.fora?'À parte':d.hom?'Homologado':(d.contido&&!d.dias_soma)?'Não se soma':(d.vermelho||d.posterior)?'Requerer':d.cor==='amarelo'?'Conferir':'Informativo';
+      fora.push({c:d.fora?'cinza':d.hom?'verde':d.cor||'cinza',rot,est:false,t:`<b>${esc(this._fdDocNome(d))}</b>${this._fdPer(d)?' · '+esc(this._fdPer(d)):''}${d.emissao?` <span class="muted">(emitido em ${esc(d.emissao)})</span>`:''}${tl.length?`<br><span class="muted">trabalho na ficha: ${tl.map(l=>esc(l.local+', '+l.periodo)).join('; ')}</span>`:''}`,
+        dias:d.fora?null:dv(d)||null,por:d.fora?'À parte: '+d.fora:por}); }
+    for(const l of L.filter(l=>l.st==='sem')){
+      const p=[]; if(l.pedir_dias) p.push(['amarelo',`sem atestado: pedir à unidade (${(l.pedir_trechos||[[l.pedir_ini,l.pedir_fim]]).map(([a,b])=>a+' a '+b).join(' e ')})`,l.pedir_dias]);
+      if(l.conf_dias) p.push(['amarelo',`vínculo sem baixa: conferir com a unidade (${(l.conf_trechos||[[l.conf_ini,l.conf_fim]]).map(([a,b])=>a+' a '+b).join(' e ')})`,l.conf_dias]);
+      if(l.acomp_dias) p.push(['azul','em curso há até 90 dias: acompanhar',l.acomp_dias]);
+      if(l.dup) p.push(['cinza','provável registro duplicado: a conferir com a unidade, sem dias',null]);
+      if(l.aparte_total) p.push(['cinza','em período em que esta execução estava interrompida: à parte',null]);
+      if(!p.length&&!trabInf.has(l.chave)&&!l.talvez_dias) p.push(['cinza','sem atestado e fora da estimativa',null]);
+      const RT={amarelo:'Pedir atestado',azul:'Acompanhar',cinza:'Informativo'};
+      for(const [c,t,dd] of p) fora.push({c,rot:/vínculo sem baixa/.test(t)?'Conferir':RT[c],est:true,t:`Trabalho em <b>${esc(l.local)}</b> · ${esc(l.periodo)}`,dias:dd,por:t});
+    }
+    const foraH=fora.map(x=>`<tr><td></td><td class="n">${x.dias!=null?(x.est?'≈ ':'')+nf(x.dias):'—'}</td><td>${x.t}</td><td colspan="2"><span class="fdx-g ${x.c}">${esc(x.rot)}</span> <span class="muted" style="font-size:11.5px">${esc(x.por)}</span></td></tr>`).join('');
+    const nR=G.filter(g=>g.i!=null).length;
+    return `<div class="fdx cob"><div class="fdx-h"><b>Remições do RSPE e o que cada uma cobre</b><span class="muted">a ligação é do programa, pelo valor e pela data: confira o que não é “Certo”</span></div>
+      <table class="fdx-t"><colgroup><col style="width:104px"><col style="width:72px"><col><col style="width:30%"><col style="width:76px"></colgroup>
+      <tr><th class="n">Decisão</th><th class="n">Dias</th><th>Documentos e períodos da ficha que ela cobre</th><th>Certeza</th><th class="n">Soma</th></tr>
+      ${linhas||'<tr><td colspan="5" class="muted">Nenhuma remição no RSPE.</td></tr>'}
+      ${nR?`<tr class="tot"><td class="n">Total</td><td class="n">${nf(R.concedido)}</td><td colspan="2"><span class="muted" style="font-weight:400">${Math.abs((R.concedido||0)-somaCob)>1?`a ficha explica ${nf(somaCob)} dos ${nf(R.concedido)} dias concedidos; o resto não tem documento nem trabalho na ficha que o explique`:'a ficha explica todas as remições'}${R.perdido?` · dias perdidos por falta (LEP, art. 127): ${nf(R.perdido)}; saldo ${nf(R.saldo)}`:''}</span></td><td class="n">${nf(somaCob)}</td></tr>`:''}
+      ${fora.length?`<tr class="sep"><td colspan="5">Fora de qualquer remição <span class="muted">· documentos e períodos da ficha sem remição correspondente: ${pl(fora.length,'item','itens')}, e por quê</span></td></tr>${foraH}`:`<tr class="sep"><td colspan="5">Fora de qualquer remição <span class="muted">· nenhum documento ou período da ficha</span></td></tr>`}
+      </table></div>`;
+  },
   fdDetalhe(id){ this._fdDet=this._fdDet||{}; this._fdDet[id]=!this._fdDet[id]; this.vincFechar(); this.render(); },
   fdTabela(r){ return this.fdConc(r)||'<p class="muted">Nenhum trabalho ou estudo nesta execução.</p>'; },
   // janela "Vincular atestado" de um período de trabalho (seção C)
