@@ -54,7 +54,7 @@ ok(o["fd_novo"]["R"]["concedido"] == 164 and abs(o["fd_novo"]["dif"] - 0.32) < 0
    "2: linhas 52 + 112: %s" % o["fd_novo"]["dif"])
 
 # ---- 6: leitura - 2ª função sem o parêntese de abertura e atestado de estudo na mesma linha ----
-a = rrm.atestados(F([("14.08.2024", "Peticionado o Atestado de Trabalho n 128/2024, no Sistema SEEU, Autos 0049107-59.2007.8.12.0001, função Prendedores "
+a = rrm.atestados(F([("14.08.2024", "Peticionado o Atestado de Trabalho n 128/2024, no Sistema SEEU, Autos 0000007-00.2007.8.12.0001, função Prendedores "
                                     "Prendebem 19/06/2023 a 22/10/2023) totalizando 90 trabalhados e 30 remidos; função Artesanato (23/10/2023 a 07/06/2024) "
                                     "totalizando 164 dias trabalhados e 54,66 remidos.")])["eventos"])
 ok(len(a) == 1 and a[0]["rem"] == 84.66 and len(a[0]["segs"]) == 2, "6: 2ª função sem parêntese: %s" % [(x["rem"], len(x["segs"])) for x in a])
