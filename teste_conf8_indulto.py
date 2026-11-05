@@ -73,7 +73,10 @@ x2 = dec(r2, "2015")
 ok("não iniciou" not in (x2.get("mot") or "") and "art. 4º" in (x2.get("ressalva") or "") + (x2.get("mot") or ""),
    "2: 2015 %s - %s / %s" % (x2["s"], x2.get("mot"), x2.get("ressalva")))
 x2b = dec(r2, "2016")
-ok(x2b["s"] == "nao" and "não iniciou" in (x2b.get("mot") or ""), "2: 2016 %s - %s" % (x2b["s"], x2b.get("mot")))
+# (revisão do cap. 7, achado A1: o Decreto 8.940/2016 não tem a cláusula, mas o STJ, Tema 1277 - repetitivo -, computa a prisão
+#  provisória nos requisitos de qualquer decreto; o tempo conta, sem "não iniciou", e o favorável fica a verificar)
+ok("não iniciou" not in (x2b.get("mot") or "") and "Tema 1277" in (x2b.get("ressalva") or ""), "2: 2016 %s - %s / %s" % (
+    x2b["s"], x2b.get("mot"), x2b.get("ressalva")))
 
 # 3. Decretos restritos (2019 e 2020: saúde e agentes de segurança): a hipótese não exige o início do cumprimento - o motivo é
 #    o do decreto

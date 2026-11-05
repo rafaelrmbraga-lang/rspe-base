@@ -172,11 +172,12 @@ ok(h5 and h5["ok"], "94: período anterior com remição não atingiu os 15 anos
 h5 = _h5(dict(r, _incidentes=[]))
 ok(h5 and not h5["ok"] and "custódia ininterrupta" in h5["mot"] and not h5["mot"].startswith("faltavam 14 anos"), "94: sem a remição: %s" % h5)
 
-# ---- 95: Decreto 4.495/2002 - hediondo/tráfico com pena até 4 anos: a verificar (CF, art. 5º, XLIII) ----
+# ---- 95: Decreto 4.495/2002 - hediondo/tráfico com pena até 4 anos: impeditivo (CF, art. 5º, XLIII; STF, ADI 2.795 MC, interpretação
+# conforme do art. 7º, § 2º - decisão de 05/11/2026, caso S7007; antes: a verificar) ----
 c95 = crime("01/01/2001", "01/06/2001", "01/07/2001", pena="3 ano(s), 0 mês(es) e 0 dia(s)", lei="6368/76 - Lei de Tóxicos",
             artigo="ART 12: Tráfico", tipo="CAPUT: Importar ou exportar, Reclusão: 3 a 15 anos")
 x = dec(reg([c95], [ev("01/01/2001")], "3a0m0d"), "2002")
-ok(x["s"] == "ver" and "XLIII" in (x.get("mot") or ""), "95: %s %s" % (x["s"], x.get("mot")))
+ok(x["s"] == "imp" and "XLIII" in (x.get("mot") or "") and "ADI 2.795" in (x.get("mot") or ""), "95: %s %s" % (x["s"], x.get("mot")))
 
 # ---- 96: 2022 sem trânsito para a acusação na publicação: a verificar nas duas telas (tese do art. 9º, p. ú., e o STJ) ----
 o = rs.analise_decreto_2022({"pena_total": "1a0m0d"}, [crime("10/01/2020", "10/10/2022", "10/01/2023")], [], [])

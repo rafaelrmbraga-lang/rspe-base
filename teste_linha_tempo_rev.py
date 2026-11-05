@@ -98,9 +98,10 @@ dd["alcance"] = tl._alcance(dd, Cx)
 dd["_sexo"] = "M"
 P = textos({"peticao": tl._peticao(dd, "indulto", {"C1": "art. 157 CP"})})
 ok(P and "estão atendidos." not in P[0] and "não houve falta grave" not in P[0] and "sentença posterior ao trânsito" in P[0]
-   and "a falta na janela de 23/12/2015 a 23/12/2016" in P[0], "A1 (2016): %s" % P)
+   and "a falta na janela de 23/12/2015 a 22/12/2016" in P[0], "A1 (2016): %s" % P)  # 12 meses com o dia do começo incluído (revisão do cap. 6, achado 8);
+# "nos doze meses anteriores à publicação" (2016, art. 9º): a janela termina na véspera da publicação (decisão de 05/11/2026, P44)
 R = tl._resumo(dd, "indulto")
-ok(any(l.startswith("Falta grave de 23/12/2015 a 23/12/2016: 24/08/2016") and "sem homologação" in l for l in R)
+ok(any(l.startswith("Falta grave de 23/12/2015 a 22/12/2016: 24/08/2016") and "sem homologação" in l for l in R)
    and not any("não houve falta grave" in l for l in R), "A1 resumo: %s" % R)
 
 # A2: as linhas "?" do detalhe (§ 2º, XVI) entram no checklist; o § 2º vira enquadramento (art. 9º, § 2º, II a VI)

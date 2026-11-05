@@ -211,8 +211,8 @@ mk(k, "Auditoria", "Semiaberto harmonizado: 'prisão domiciliar com monitorament
    r, [C("aud_itens", "regex", r'"nivel": "(alerta|verificar)"[^}]*monitor',
          "Programa: só 'info' (pena interrompida, pedir reinício). Pela SV 56/RE 641.320 e pela política, a Auditoria deve alertar que o "
          "período monitorado é cumprimento e o SEEU parou de contar."),
-       dict(C("cumprimento", "nao_contem", "INTERROMPIDA (sem evento"), decisao=True,
-            nota="Tese: pela SV 56 a execução segue; a política manda manter o dado do SEEU com ressalva - conferir se o rótulo traz a ressalva")])
+       dict(C("cumprimento", "nao_contem", "INTERROMPIDA (sem evento"),
+            nota="Decidido no P57 (7.15.3, gabarito): pela SV 56 a execução segue - o rótulo da situação diz 'EM CUMPRIMENTO (SV 56 ...)', com a ressalva de que os números do SEEU pararam")])
 
 # 1011 - incompatibilidade de regime contada pelo SEEU
 k = 1011
@@ -242,8 +242,8 @@ mk(k, "Auditoria", "Prisão e 'incompatibilidade de regime - aguardando vaga' no
    r, [C("aud_itens", "regex", r'"nivel": "(alerta|verificar)"[^}]*incompatibilidade',
          "Programa: só 'info' (pena interrompida, pedir reinício) e situação 'pena interrompida'. Pela SV 56 a espera de vaga é cumprimento: "
          "a Auditoria deve alertar que o SEEU não contou 217 dias."),
-       dict(C("cumprimento", "contem", "EM CUMPRIMENTO"), decisao=True,
-            nota="Tese: o programa conclui, pela pena cumprida do SEEU, que a pessoa foi solta; pela SV 56 a pena corre")])
+       dict(C("cumprimento", "contem", "EM CUMPRIMENTO"),
+            nota="Decidido no P57 (7.15.3, gabarito, como a verificar): 'EM CUMPRIMENTO? (a verificar - SV 56 ...)' - se a pessoa ficou em domiciliar ou monitorada à espera da vaga, a pena corre")])
 
 # 1013 - pena suspensa: preso em outro processo
 k = 1013
@@ -454,9 +454,10 @@ T = F(D(ini).replace(year=2062) - timedelta(days=1))
 r = rspe(k, cr, [prisao(ini, pa + ", " + pb, "PRISÃO PREVENTIVA")], [regime_ini("10/02/2015")], ini=ini, term="02/05/2062", fp="1/6", fl="1/3",
          prog="", liv="")
 mk(k, "Extinção", "Penas somadas de 48 anos, fatos de 2014, preso desde 03/05/2014: término do SEEU 02/05/2062",
-   "Aba Geral: término 02/05/2044*; Auditoria alerta limite de 30 anos (máximo em 02/05/2044); aba Extinção mantém 02/05/2062 com 'art. 75 a verificar'.",
+   "Aba Geral: término do SEEU 02/05/2062 com '⚠' e o máximo 02/05/2044 na dica (P02, 7.15.3); Auditoria alerta limite de 30 anos (máximo em 02/05/2044); aba Extinção mantém 02/05/2062 com 'art. 75 a verificar'.",
    "CP, art. 75 (redação anterior à Lei 13.964/2019, fatos de 2014): 30 anos desde 03/05/2014, dia do começo incluído -> último dia 02/05/2044.",
-   r, [C("termino", "contem", "02/05/2044"), AUD("limite-de-cumprimento-art-75", contem="02/05/2044"), C("ext_termino", "contem", "02/05/2062")])
+   r, [C("termino", "eq", "02/05/2062 ⚠", nota="P02 (7.15.3): a coluna mantém a data do SEEU com o sinal; o máximo vai à dica"),
+       AUD("limite-de-cumprimento-art-75", contem="02/05/2044"), C("ext_termino", "contem", "02/05/2062"), C("termino_full", "contem", "02/05/2044")])
 
 # 1029 - art. 75: 40 anos (fato posterior a 23/01/2020)
 k = 1029
@@ -465,9 +466,10 @@ pa = proc_crim(k, 2021)
 cr = [crime(pa, pena_dias=anos(52), fato="15/02/2021", **ROUBO)]
 r = rspe(k, cr, [prisao(ini, pa, "PRISÃO PREVENTIVA")], [regime_ini("20/10/2021")], ini=ini, term="28/02/2073", fp="25%", fl="1/3", prog="", liv="")
 mk(k, "Extinção", "Pena de 52 anos por fato de 15/02/2021, preso desde 01/03/2021: término do SEEU 28/02/2073",
-   "Aba Geral: término 28/02/2061*; Auditoria alerta o limite de 40 anos (máximo 28/02/2061).",
+   "Aba Geral: término do SEEU 28/02/2073 com '⚠' e o máximo 28/02/2061 na dica (P02, 7.15.3); Auditoria alerta o limite de 40 anos (máximo 28/02/2061).",
    "CP, art. 75, com a Lei 13.964/2019 (fato posterior a 23/01/2020): 40 anos desde 01/03/2021 -> último dia 28/02/2061.",
-   r, [C("termino", "contem", "28/02/2061"), AUD("limite-de-cumprimento-art-75", contem="28/02/2061")])
+   r, [C("termino", "eq", "28/02/2073 ⚠", nota="P02 (7.15.3): a coluna mantém a data do SEEU com o sinal; o máximo vai à dica"),
+       AUD("limite-de-cumprimento-art-75", contem="28/02/2061"), C("termino_full", "contem", "28/02/2061")])
 
 # =============================== 5. Coluna Falta ===============================
 FALTA_INI = "02/02/2024"
@@ -563,7 +565,7 @@ mk(k, "Progressão", "Ficha com conduta 'RESPONDE PADIC' (procedimento disciplin
    "Coluna Conduta 'Responde Padic'; requisito de conduta 'a conferir', não 'conduta ruim'.",
    "Procedimento em curso não é sanção reconhecida (CF, art. 5º, LVII; LEP, arts. 59 e 118, § 2º).",
    r, [C("conduta", "contem", "Responde"),
-       dict(C("conduta_ruim", "eq", False), decisao=True, nota="Tese: PADIC em curso não é conduta ruim; o programa pode marcar 'conduta ruim' só como filtro")],
+       dict(C("conduta_ruim", "eq", False), nota="Decidido no P57 (7.15.3, gabarito): PADIC em curso não é conduta ruim - fica 'a apurar' (conduta_apurar)")],
    ficha=ficha(k, "RESPONDE PADIC", prisao_="07/03/2024"))
 
 # =============================== 7. Pena zero, medida de segurança, suspenso ===============================

@@ -1,9 +1,9 @@
-APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.15.1
+APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.15.3
 (antigo RSPE Base; SEEU, programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-7.15.1. A documentação técnica completa (cada parâmetro, a regra, a norma e
+7.15.3. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -1033,6 +1033,71 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v7.15.3
+  Aba Ficha disciplinar mais prática e decisão dos 57 pareceres (P01 a
+  P57), com os precedentes conferidos no JusRatio.
+  - Aba Ficha: ao clicar no nome, só o Diagnóstico e "O que pedir" (cada
+    ação com o que fazer, o documento ou período exato e os dias, e uma
+    caixa para marcar quando feito, guardada neste computador). Na
+    visualização detalhada: o que cada remição do RSPE cobre (certo,
+    provável, inferido ou sem documento) e o que ficou fora de qualquer
+    remição; os vínculos trabalho x atestado ("Vincular atestado"); os
+    documentos da ficha ("✓ Homologado"). Saíram a comparação de totais e
+    as listas repetidas.
+  - Ficha do assistido: sem o bloco "Cálculos do programa" (o detalhe do
+    indulto fica na aba Indulto).
+  - Decisões principais: trabalho sem baixa depois do último atestado vira
+    "Confirmar com a unidade" (não pede atestado); certificado de conclusão
+    do ENEM conta, salvo edições de 2017 a 2024 (a verificar); monitoramento
+    separado em três casos (execução, cautelar com recolhimento pelo Tema
+    1155, só monitoramento como tese); isolamento preventivo sem natureza
+    fora das janelas; regime domiciliar (art. 126, § 9º) a conferir; coluna
+    Término com a data do SEEU e "⚠" (o máximo do art. 75 na dica); falta
+    dos 12 meses do livramento contada até hoje; Súmula 497 em vermelho
+    quando todas as frações prescrevem; unificação pendente com data-base +
+    lapso; 1/6 x 16% em dias inteiros; CPF com erro típico de digitação em
+    verificar; um só item de nascimento divergente; Decreto 2002 com
+    tráfico impeditivo (ADI 2.795); tráfico privilegiado em 2007 como tese
+    (SV 63); janela da falta até a véspera da publicação nos decretos que
+    dizem "anteriores à publicação"; "?" na tabela de decretos quando há
+    hipótese não aferida.
+  - Releitura das fichas gravadas ao abrir a base.
+
+v7.15.2
+  Correções das 10 revisões jurídicas por capítulo (sobre a 7.14.7) e da
+  comparação com 5 conferências manuais de remição feitas na PDIB (410
+  assistidos; o programa acertou 99,1% dos períodos). Os pontos que
+  dependem de decisão ficaram no "Relatório de pareceres" (P01 a P57).
+  - Ficha e remição: "Ajudante" aberto no mesmo dia de outro setor e sem
+    baixa fica "a conferir, sem dias" (não pede atestado); remição de valor
+    diferente decidida até 30 dias depois do atestado fica ligada a ele
+    ("remido a menor/maior: conferir a decisão"), sem dizer "sem
+    peticionamento"; número dos autos com erro de digitação na ficha não
+    manda o atestado para "à parte"; reinscrição no mesmo setor no mesmo dia
+    não encerra o vínculo; matrícula sem o prefixo "EDUCAÇÃO:" abre o estudo;
+    carga horária lida no texto da certidão e do curso; remição ficta da
+    pandemia até 22/05/2022; documento posterior à última remição em amarelo
+    mesmo com o RSPE maior que a ficha; conduta readquirida (art. 112, § 7º).
+  - Progressão e Auditoria: livramento de homicídio/latrocínio sem
+    "resultado morte" em verificar; saída temporária pela reincidência das
+    datas; fundamento do percentual pelo perfil do crime; parágrafo do
+    prejuízo em todos os tipos; data-base do livramento igual à da
+    progressão também sem fuga; "16%" no lugar de "4/25"; Temas 1195, 1126,
+    1106 e 1457 citados com as ressalvas; ADIs 7966 a 7969 na Lei 15.402.
+  - Prescrição e extinção: art. 366 sem data de fim não soma dias depois da
+    sentença; crime continuado e concurso formal conferidos sem o acréscimo
+    (Súmula 497); revogação do livramento não é chamada de fuga; extinção
+    pela Súmula 617 (art. 89 só com suspensão antes do fim do período de
+    prova); fuga sem reinício e detração de pena com outras ativas como "a
+    verificar"; data-base calculada não se move por crime sem trânsito.
+  - Indulto: prisão provisória pelo próprio processo conta no tempo (art. 5º
+    de 2024/2025; Tema 1277), a verificar; comutação não fica "prejudicada"
+    depois de o indulto ser rebaixado; janela da falta de 26/12 a 25/12;
+    VI e X com o dia do começo; IX e X com a metade do § 2º; 2022 art. 4º
+    com 1/3 arredondado; sexo não informado a verificar; empate âncora x
+    eventos pela versão com mais hipóteses atendidas; citações revistas.
+  - Releitura das fichas gravadas ao abrir a base (regras de leitura novas).
 
 v7.15.1
   Correções da base simulada independente (463 casos novos, com o resultado

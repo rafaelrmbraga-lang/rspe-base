@@ -102,9 +102,8 @@ _f = [p for p in L["ppe_linha_tempo"] if "ficha SIAPEN" in p["fonte"]]
 confere(_f and "entrada em 01/05/2011, considerada a partir de 10/01/2012" in _f[0]["fonte"] and _f[0]["fim"] == "01/03/2012",
         "R3-A1/R4-A8: texto da prisão da ficha: %s" % (_f and _f[0]))
 
-# A2: a punitiva "a verificar" aparece na prioridade e tem rótulo
-n, mot, _ = rv.prioridade({"presc_retro_cor": "amarelo"})
-confere("prescrição punitiva a verificar" in mot, "R3-A2: prioridade sem a punitiva a verificar: %s" % mot)
+# A2: a punitiva "a verificar" tem rótulo (a escala de prioridade de 1 a 7, sem uso em tela, foi retirada na 7.15.3 - parecer P04)
+confere(not hasattr(rv, "prioridade"), "P04: escala de prioridade sem uso ainda presente")
 confere(rv.ROTULO["presc_pp"].get("amarelo") == "A verificar", "R3-A2: rótulo amarelo da punitiva")
 
 # A3: pela pena aplicada, a data sai dos números: novo crime e suspensão no resumo, no quadro e na fundamentação (Wanderson)

@@ -163,8 +163,9 @@ r = reg(c30, [inc(AR, "Fechado - Regime Inicial", "", "15/01/2015")], [ev(PR, "P
 x = itens(r, "limite-de-cumprimento-art-75")
 ok(len(x) == 1 and x[0]["nivel"] == "alerta" and x[0].get("termino_limite") == "14/01/2045", "58 alerta: %s" % x)
 m = rv.modelo(copy.deepcopy(r), {}, None, [])
-ok(m["termino"] == "14/01/2045*" and "calculado pelo programa" in m["calc_notas"].get("termino", "") and "15/01/2060" in m["termino_motivo"],
-   "58 coluna: %s | %s" % (m["termino"], m.get("calc_notas")))
+# P02 (7.15.3, decisão sobre os pareceres): a coluna mantém a data do SEEU com "⚠" e o máximo na dica, como a aba Extinção
+ok(m["termino"] == "15/01/2060 ⚠" and "14/01/2045" in m["termino_motivo"] and "art. 75" in m["termino_full"] and not m["calc_notas"].get("termino"),
+   "58 coluna: %s | %s | %s" % (m["termino"], m.get("termino_motivo"), m.get("calc_notas")))
 
 # ---- 156: fatos antes e depois de 23/01/2020, penas dos anteriores acima de 30 anos: verificar ----
 cm = [crime(pena_imposta="32 ano(s), 0 mês(es) e 0 dia(s)", data_infracao="10/01/2015"),

@@ -399,8 +399,7 @@
     "presente": true,
     "contem": null,
     "nivel": "verificar",
-    "nota": "O programa mostra 'Cumprimento não iniciado no SEEU' em info, não 'Pena não iniciada' em verificar. Guia transitada sem nenhum lançamento deve ser iniciada (LEP, arts. 105 e 106); mas, se a pessoa está solta, a demora não a prejudica (a executória corre). Escolha de nível discutível.",
-    "decisao": true
+    "nota": "Decidido (7.15.2, P57): guia transitada sem nenhum lançamento fica 'verificar' - deve ser iniciada se a pessoa está presa (LEP, arts. 105 e 106); solta, a demora não a prejudica."
    },
    {
     "t": "aud",
@@ -4462,8 +4461,7 @@
     "presente": true,
     "contem": null,
     "nivel": "verificar",
-    "nota": "O programa dá alerta; o gabarito diz verificar porque a tese da duplicidade não é pacífica: o art. 127 da LEP fala em 'até 1/3 do tempo remido' e parte da jurisprudência admite que a segunda falta alcance o saldo remanescente. O RSPE é verificável (não há remição entre as faltas), mas o direito é discutível: nível amarelo seria o coerente com a regra dos níveis.",
-    "decisao": true
+    "nota": "Decidido (7.15.2, P57): 'verificar' - o RSPE é verificável (não há remição entre as faltas), mas a tese da duplicidade não é pacífica (art. 127 da LEP: 'até 1/3 do tempo remido'); a ressalva vai no texto."
    }
   ],
   "aba": "Auditoria",
@@ -7214,7 +7212,7 @@
   "id": "S4056",
   "grupo": "AUD-L fundamentação",
   "titulo": "Fundamentação do alerta 1/6 x 16%",
-  "conta": "LEP, art. 112, I (Lei 13.964/2019): 16%. Pena 2.190 dias: 1/6 = 365; 16% = 350,4 → 14 dias a mais. A citação de precedente deve ser a do julgado (STJ, REsp 2.037.377/SC), não fragmentos de data ('18, 06 e 2026').",
+  "conta": "LEP, art. 112, I (Lei 13.964/2019): 16%. Pena 2.190 dias: 1/6 = 365; 16% = 350 (lapsos em dias, para baixo) → 15 dias a mais (decidido em 7.15.2, P29: diferença real entre as datas). A citação de precedente deve ser a do julgado (STJ, REsp 2.037.377/SC), não fragmentos de data ('18, 06 e 2026').",
   "processo": "9904056-00.2026.8.12.0001",
   "rspe": {
    "arquivo": "SIMULADO_4056.pdf",
@@ -7307,7 +7305,7 @@
     "t": "aud",
     "tipo": "percentual-de-progressao-diverge",
     "presente": true,
-    "contem": "14 dias",
+    "contem": "15 dias",
     "nivel": "alerta",
     "nota": ""
    },

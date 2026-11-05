@@ -9,6 +9,7 @@ inválido ou por ser mais antiga) ficam em avisos() e aparecem na tela.
 import json
 import os
 import sys
+import re
 from datetime import date
 from fractions import Fraction
 
@@ -233,6 +234,11 @@ ESPECIAIS = {  # hipóteses próprias do art. 112 (chave na janela de vigência 
 }
 
 
+# (7.15.2) a Lei 15.402/2026 é questionada no STF: o aviso acompanha toda conta que usa a exceção do Título XII
+AVISO_ADI_15402 = ("; a Lei 15.402/2026 é questionada no STF (ADIs 7966 a 7969: a liminar suspendeu a aplicação só nos processos dos "
+                   "atos de 8 de janeiro em trâmite no STF; mérito pendente) - conferir")
+
+
 def _vga_na_janela(j, vga, titulo_xii):
     """Crime do Título XII da Parte Especial do CP (arts. 359-I e seguintes, contra o Estado Democrático de Direito): na janela
     que o exclui dos incisos de violência (Lei 15.402/2026, "vga_exclui_titulo_xii"), o percentual é o do crime sem violência."""
@@ -249,7 +255,7 @@ def fracao_progressao_esperada(data_fato, hediondo, morte, vga, reincidente, rei
     obs = []
     if vga and not _vga_na_janela(j, vga, titulo_xii):
         vga = False
-        obs.append("crime do Título XII do CP (contra o Estado Democrático de Direito): excluído dos incisos de violência do art. 112 (Lei 15.402/2026)")
+        obs.append("crime do Título XII do CP (contra o Estado Democrático de Direito): excluído dos incisos de violência do art. 112 (Lei 15.402/2026)" + AVISO_ADI_15402)
     if especial and j.get(especial) and not (especial == "feminicidio_primario" and reincidente):
         valor = j.get(especial)
         if especial in ("comando_orcrim", "milicia"):
@@ -308,7 +314,7 @@ def fracao_mais_benefica(data_fato, hediondo, morte, vga, reincidente, especial=
     if f_fato is not None and melhor[0] < f_fato:
         obs.append("lei posterior mais benéfica retroage: %s" % melhor[1])
         if titulo_xii and vga and "15.402" in melhor[2]:
-            obs[-1] += "; o crime é do Título XII do CP, que a Lei 15.402/2026 excluiu dos incisos de violência do art. 112"
+            obs[-1] += "; o crime é do Título XII do CP, que a Lei 15.402/2026 excluiu dos incisos de violência do art. 112" + AVISO_ADI_15402
         return melhor[0], melhor[1], obs
     return f_fato, rot_fato, obs
 
