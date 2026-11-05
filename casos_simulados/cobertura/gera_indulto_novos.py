@@ -717,16 +717,16 @@ P = anos(2); a, b = D("01/03/2024"), D("30/07/2024"); cc = dd(a, b); it = (GER -
 assert cc >= fr(P, 1, 5)
 novo(k, "Indulto 2024: só prisão em flagrante (152 dias), solto na data do decreto - art. 5º",
      "Art. 5º do Decreto 12.338/2024 para quem teve só prisão cautelar e não estava preso em 25/12/2024",
-     "Pelo texto do art. 5º, os 152 dias de prisão cautelar contam como pena cumprida: 1/5 (146) atingido - indulto 2024 POSSÍVEL pelo art. 9º, I "
-     "(tese: parte da jurisprudência exige o início do cumprimento)",
+     "Pelo texto do art. 5º, os 152 dias de prisão cautelar contam como pena cumprida: 1/5 (146) atingido - indulto 2024 A VERIFICAR pelo art. 9º, I "
+     "(a 5ª Turma do STJ exige o início do cumprimento: AgRg no REsp 2.257.552 e AgRg no HC 1.042.931 - decisão de 05/11/2026, P30)",
      f"CP, art. 297, 2a = {P}. Flagrante em {F(a)}, liberdade provisória em {F(b)}: {cc} dias. Sentença 01/08/2024, trânsito 01/10/2024, sem prisão depois. "
      f"Art. 5º: 'deverá ser computada como pena cumprida ... o período cumprido em prisão cautelar'. I: 1/5 = {fr(P,1,5)} - atendido. O decreto não exige "
      "estar preso na data (art. 9º: 'tenham cumprido, até 25 de dezembro').",
      rspe(k, [t297(k, 0, P, "15/02/2024", sentenca="01/08/2024", transito="01/10/2024", regime="Semiaberto")],
           [prisao(F(a), proc(k), "PRISÃO EM FLAGRANTE"), interr(F(b), "LIBERDADE PROVISÓRIA")],
           [reg("Semiaberto - Regime Inicial", D("01/10/2024"))], ini=F(a), interrompidos=it, regime="Semiaberto - ATIVO"),
-     [dict(POS("ind24", ["I"], nota="Art. 5º do decreto conta a prisão cautelar sem exigir custódia na data; o programa exige início do cumprimento "
-                                    "(STJ, AgRg no HC 1.042.931) - tese discutível."), decisao=True)])
+     [RX("ind24", r"^A VERIFICAR(?=[^|]*\bI\b)", nota="Art. 5º do decreto conta a prisão cautelar; a 5ª Turma do STJ exige o início do cumprimento "
+                                                       "(AgRg no REsp 2.257.552; AgRg no HC 1.042.931): a verificar, com a corrente contrária (decisão de 05/11/2026, P30).")])
 
 # =====================================================================================================================
 # COMUTAÇÃO
@@ -788,14 +788,14 @@ k = 6060
 P = anos(1, 8); ini = D("01/06/2026")
 novo(k, "Decreto 2022: tráfico privilegiado e o art. 5º (pena máxima em abstrato)",
      "Tráfico privilegiado no Decreto 11.302/2022 (art. 7º, VI ressalva o § 4º, mas o art. 5º exige pena máxima até 5 anos)",
-     "Pelo texto: o art. 7º, VI só tira o § 4º das exclusões; a pena máxima do tráfico privilegiado (15 anos reduzidos de 1/6 = 12a6m) passa de 5 anos, "
-     "então o art. 5º não alcança - indulto 2022 não é 'possível' (tese contrária: STJ, 6ª Turma)",
+     "Pelo STJ, nas duas Turmas, o art. 7º, VI excepciona o limite do art. 5º para o tráfico privilegiado (6ª T., AgRg no HC 818.978; 5ª T., AgRg no HC "
+     "952.317): indulto 2022 POSSÍVEL pelo art. 5º c/c art. 7º, VI (decisão de 05/11/2026, P57)",
      "Tráfico privilegiado (Lei 11.343, art. 33, § 4º), 1a8m, fato 01/03/2021, sentença 01/08/2022, trânsito 01/10/2022, início do cumprimento em 01/06/2026. Decreto 11.302/2022, art. 5º "
      "(pena máxima em abstrato não superior a 5 anos) e art. 7º, VI.",
      rspe(k, [crime(proc(k), "ART 33: Tráfico de drogas", P, "01/03/2021", lei=DROGAS, tipo="§ 4º: tráfico privilegiado, Reclusão: 5 a 15 anos E Multa",
                     sentenca="01/08/2022", transito="01/10/2022")], [p_def(ini, k)], [reg("Semiaberto - Regime Inicial", ini)], ini=F(ini), regime="Semiaberto - ATIVO"),
-     [dict(NAO_POS("ind22", nota="Leitura literal do art. 5º; o STJ (6ª Turma, AgRg no HC 818.978) admite o indulto do privilegiado pelo art. 5º c/c art. 7º, VI."),
-           decisao=True)])
+     [RX("ind22", r"^POSSÍVEL: art\. 5º c/c art\. 7º, VI", nota="O STJ, nas duas Turmas, admite o indulto do privilegiado pelo art. 5º c/c art. 7º, VI "
+                                                              "(6ª T., AgRg no HC 818.978; 5ª T., AgRg no HC 952.317) - decisão de 05/11/2026.")])
 
 k = 6061
 P = anos(2); ini = D("15/10/2022")
@@ -917,8 +917,8 @@ novo(k, "Comutação 2024: SEEU conta 100 dias a mais que os eventos, sem data (
      f"Roubo 6a = {P} dias, primário (sem o § 2º: o III não cabe, pena acima de 4 anos). Eventos: preso desde {F(ini)} = {c24e} dias em 25/12/2024. "
      "O cálculo do SEEU tem 100 dias a mais (término antecipado), sem remição nem evento que os date - típico de detração de prisão anterior "
      "(CP, art. 42), que contaria antes do decreto. Comutação e XII/XIII exigem 1/5 = %d." % fr(P, 1, 5),
-     r_, [dict(RX("com24", "^(A VERIFICAR|POSSÍVEL)"), nota=NOTA73, decisao=True),
-          dict(RX("ind24", r"^A VERIFICAR[^|]*\bXII\b"), nota=NOTA73, decisao=True)])
+     r_, [dict(RX("com24", "^(A VERIFICAR|POSSÍVEL)"), nota=NOTA73),
+          dict(RX("ind24", r"^A VERIFICAR[^|]*\bXII\b"), nota=NOTA73)])
 
 # =====================================================================================================================
 # REMIÇÃO
