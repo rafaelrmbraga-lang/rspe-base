@@ -131,11 +131,12 @@ f = FICHA(k, [("06/04/2018", ent("PTRAN", "DEPAC CENTRO")), ("20/05/2018", ent("
           nasc="20/05/1991", unidade="ESTABELECIMENTO PENAL JAIR FERREIRA DE CARVALHO", data_prisao="05/04/2018", data_entrada="20/05/2018")
 add(k, "Auditoria", "Nascimento divergente que muda a idade de 21 anos no fato",
     "RSPE diz nascimento em 20/05/1990 e a ficha em 20/05/1991; o fato é de 10/02/2012.",
-    "Auditoria: alerta de nascimento divergente, porque pela ficha a pessoa tinha menos de 21 anos no fato (prescrição pela metade).",
+    "Auditoria: 'verificar' na divergência do nascimento (SEEU x ficha do SIAPEN): pela ficha a pessoa tinha menos de 21 anos "
+    "no fato (prescrição pela metade, CP, art. 115) - conferir qual data é a certa.",
     "Fato 10/02/2012. Pelo RSPE (20/05/1990): 21 anos e 8 meses no fato. Pela ficha (20/05/1991): 20 anos e 8 meses, menor de 21. "
     "O CP, art. 115, reduz pela metade os prazos de prescrição de quem era menor de 21 anos ao tempo do crime: a divergência muda "
     "um marco legal e prejudica o assistido se a data certa for a da ficha. Alerta.",
-    r, [AUD(X, contem=["Nascimento na ficha", "20/05/1991"], nivel="alerta")], f)
+    r, [dict(AUD("divergencia-siapen-nascimento", nivel="verificar"), nota="P57/S2003 (decisão 7.15.3: programa): a data certa é desconhecida - 'verificar' no item da divergência da fonte (P28: um item só); a tese do art. 115 do CP fica a conferir, não alerta firme.")], f)
 
 # =====================================================================================================================
 # 2.3 Unidades e unidade atual
@@ -484,13 +485,13 @@ f = FICHA(k, BASE_TR + [("10/01/2025", ini_trab("HORTA")), ("01/04/2025", ini_tr
                         ("20/06/2025", fim_trab("HORTA", "A PEDIDO")), ("10/09/2026", cela("IPCG"))], **TR)
 add(k, "Ficha/Remição", "Baixa tardia: horta baixada com a cozinha ainda em curso",
     "Horta iniciada em 10/01/2025; cozinha iniciada em 01/04/2025 (sem baixa); horta baixada 'a pedido' só em 20/06/2025.",
-    "A horta vai de 10/01/2025 a 20/06/2025 (a ficha prova o vínculo até a baixa); a cozinha segue em curso. Tese discutível: o programa "
-    "declara encerrar a horta em 01/04/2025 e só anotar a baixa.",
+    "A horta vai de 10/01/2025 até o início da cozinha (fim suposto), com a baixa tardia de 20/06/2025 visível; a cozinha "
+    "segue em curso. O resto do período da horta está coberto pela cozinha (decisão P20, opção c).",
     "A ficha é a prova do vínculo: a horta só foi baixada em 20/06/2025, a pedido (motivo de trabalho, não registro de saída). "
     "Trabalhos simultâneos são possíveis e os dias contam uma vez (LEP, art. 126). Pela leitura mais favorável e literal, a horta "
     "termina na baixa. A data da baixa tem de aparecer em qualquer caso.",
-    r, [C("ficha", "contem", "20.06.2025"), dict(C("ficha", "regex", trab(f, "HORTA", "10/01/2025", "20/06/2025")), decisao=True,
-                                                 nota="Tese discutível (relatório 2.7, baixa tardia): fim na baixa x fim suposto no início da cozinha.")], f)
+    r, [C("ficha", "contem", "20.06.2025"), dict(C("ficha", "regex", trab(f, "HORTA", "10/01/2025", "01/04/2025") + '"[^}]*"baixa_tardia": "20\\.06\\.2025"'),
+                                                 nota='P20/S2024 (decisão 7.15.3, opção c): a horta fica com o fim suposto no início da cozinha e a baixa tardia aparece; o resto do período (01/04 a 20/06/2025) está coberto pela cozinha em curso - os dias contam uma vez (LEP, art. 126), sem ponto a conferir.')], f)
 
 k = prox()
 r = R_tr(k)
@@ -934,9 +935,6 @@ add(k, "Auditoria", "Processo da ficha com dois dígitos vizinhos trocados",
 
 # ---- notas das verificações em que o programa diverge do gabarito (achados da rodada de 12/10/2026) ----
 NOTAS = {
-    ("S2003", 0): ("O programa mostra 'verificar', não 'alerta'. O relatório (2.2) promete alerta quando a diferença muda marco de "
-                   "idade; aqui muda o do art. 115 do CP (menor de 21 no fato). Como não se sabe qual data é a certa, 'verificar' é "
-                   "defensável: escolha de política.", True),
     ("S2007", 0): ("O programa lança o reinício em 18/11/2024, mas rebaixa o item para 'verificar'. A ficha prova a custódia desde a "
                    "recaptura e o SEEU não a conta (LEP, art. 111; CP, art. 42): prejuízo certo, deveria ser alerta.", False),
     ("S2016", 1): ("O programa diz 292 dias; de 03/04/2024 a 20/01/2025, contando os dois extremos (como o próprio programa conta a "
