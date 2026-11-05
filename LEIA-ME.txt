@@ -1,9 +1,9 @@
-APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.15.2
+APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.15.3
 (antigo RSPE Base; SEEU, programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-7.15.2. A documentação técnica completa (cada parâmetro, a regra, a norma e
+7.15.3. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -1033,6 +1033,36 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v7.15.3
+  Aba Ficha disciplinar mais prática e decisão dos 57 pareceres (P01 a
+  P57), com os precedentes conferidos no JusRatio.
+  - Aba Ficha: ao clicar no nome, só o Diagnóstico e "O que pedir" (cada
+    ação com o que fazer, o documento ou período exato e os dias, e uma
+    caixa para marcar quando feito, guardada neste computador). Na
+    visualização detalhada: o que cada remição do RSPE cobre (certo,
+    provável, inferido ou sem documento) e o que ficou fora de qualquer
+    remição; os vínculos trabalho x atestado ("Vincular atestado"); os
+    documentos da ficha ("✓ Homologado"). Saíram a comparação de totais e
+    as listas repetidas.
+  - Ficha do assistido: sem o bloco "Cálculos do programa" (o detalhe do
+    indulto fica na aba Indulto).
+  - Decisões principais: trabalho sem baixa depois do último atestado vira
+    "Confirmar com a unidade" (não pede atestado); certificado de conclusão
+    do ENEM conta, salvo edições de 2017 a 2024 (a verificar); monitoramento
+    separado em três casos (execução, cautelar com recolhimento pelo Tema
+    1155, só monitoramento como tese); isolamento preventivo sem natureza
+    fora das janelas; regime domiciliar (art. 126, § 9º) a conferir; coluna
+    Término com a data do SEEU e "⚠" (o máximo do art. 75 na dica); falta
+    dos 12 meses do livramento contada até hoje; Súmula 497 em vermelho
+    quando todas as frações prescrevem; unificação pendente com data-base +
+    lapso; 1/6 x 16% em dias inteiros; CPF com erro típico de digitação em
+    verificar; um só item de nascimento divergente; Decreto 2002 com
+    tráfico impeditivo (ADI 2.795); tráfico privilegiado em 2007 como tese
+    (SV 63); janela da falta até a véspera da publicação nos decretos que
+    dizem "anteriores à publicação"; "?" na tabela de decretos quando há
+    hipótese não aferida.
+  - Releitura das fichas gravadas ao abrir a base.
 
 v7.15.2
   Correções das 10 revisões jurídicas por capítulo (sobre a 7.14.7) e da

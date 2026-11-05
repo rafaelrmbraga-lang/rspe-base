@@ -1389,7 +1389,7 @@ const ui = {
   tlTem(L){ return !!(L && L.ppe_termo && (L.fato||L.ppe_termo)); },
   tlD(s){ const [d,m,a]=String(s).split('/'); return new Date(+a,+m-1,+d); },
   tlDias(n){ n=Math.round(n||0); return n===1?'1 dia':`${n.toLocaleString('pt-BR')} dias`; },
-  tlAmd(n){ n=Math.max(0,Math.round(n||0)); const a=Math.floor(n/365), r=n%365, m=Math.min(Math.floor(r/30),11), d=r-30*m; const p=[]; if(a)p.push(a===1?'1 ano':a+' anos'); if(m)p.push(m===1?'1 mês':m+' meses'); if(d||!p.length)p.push(this.tlDias(d)); return p.join(', '); },
+  tlAmd(n){ n=Math.max(0,Math.round(n||0)); const a=Math.floor(n/365), r=n%365, m=Math.min(Math.floor(r/30),11), d=r-30*m; const p=[]; if(a)p.push(a===1?'1 ano':a+' anos'); if(r>=360){ p.push(this.tlDias(r)); return p.join(', '); } /* resto de 360 a 364 dias: em dias, para não mostrar "11 meses, 34 dias" */ if(m)p.push(m===1?'1 mês':m+' meses'); if(d||!p.length)p.push(this.tlDias(d)); return p.join(', '); },
   tlHoje(){ return this.dados&&this.dados.hoje? this.tlD(this.dados.hoje) : new Date(); },
   tlTipo(p){ return (p.tipo==='cumprimento' && p.atribuicao==='nao_comprovada') ? 'duvida' : p.tipo; },
   prescTimelineSvg(L, idx){
