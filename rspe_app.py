@@ -43,7 +43,7 @@ import rspe_atendimentos as ratd
 import rspe_resumo as rres
 
 APP = "APTO"
-VERSAO = "7.15.3"
+VERSAO = "7.15.4"
 GEO_AUTO_DIAS = 30           # dados prisionais: baixados de novo sozinhos quando têm 30 dias ou mais
 GEO_REPETIR_MIN = 10         # ... ou 10 minutos depois de um download em que algum relatório falhou (nova tentativa automática)
 GEO_REPETIR_MAX = 3          # tentativas automáticas seguidas com o programa aberto (depois, na próxima abertura ou pelo botão)
@@ -2285,6 +2285,21 @@ class Api:
         else:
             self._geo_agendar(0)
         return {"geo": d, "mapa": rmapa.MAPA, "ind": self._geo_ind(), "cats": rgeo.CATEGORIAS, "temas": {str(k): v for k, v in rgeo.TEMAS.items()}, "msg": msg}
+
+    def teses_favoritos(self):
+        """Jurisprudências marcadas como favoritas (aba Jurisprudências): ids guardados na configuração deste computador."""
+        return [str(x) for x in (self._cfg().get("teses_favoritos") or [])]
+
+    def tese_favoritar(self, id_, on=True):
+        """Marca (on=True) ou desmarca uma jurisprudência como favorita; devolve a lista atualizada."""
+        fav = self.teses_favoritos()
+        id_ = str(id_)
+        if on and id_ not in fav:
+            fav.append(id_)
+        if not on:
+            fav = [x for x in fav if x != id_]
+        self._cfg_gravar(teses_favoritos=fav)
+        return fav
 
     def teses(self):
         """Jurisprudências da execução penal (aba Jurisprudências): decisões do TJMS, STJ e STF favoráveis à defesa, triadas pela

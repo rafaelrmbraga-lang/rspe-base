@@ -1,9 +1,9 @@
-APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.15.3
+APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.15.4
 (antigo RSPE Base; SEEU, programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-7.15.3. A documentação técnica completa (cada parâmetro, a regra, a norma e
+7.15.4. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -1033,6 +1033,14 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v7.15.4
+  Jurisprudências: seção "Favoritos". A estrela "☆ Favoritar" em cada
+  cartão guarda a decisão; "★ Favoritos", no topo da lista de temas, mostra
+  só as guardadas (com a busca e os filtros de tribunal e decisão valendo
+  junto). Os favoritos ficam na configuração deste computador
+  (rspe_config.json), valem para qualquer base e continuam ao atualizar o
+  programa.
 
 v7.15.3
   Aba Ficha disciplinar mais prática e decisão dos 57 pareceres (P01 a
