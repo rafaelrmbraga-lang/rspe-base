@@ -1093,6 +1093,12 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
             continue
         a2 = max(a, termo)
         fim_txt = rs.fmt(b) if b else "hoje"
+        if (a, b) in extras_lc and a < termo and r.get("_tese_stj_116"):
+            # P46: segunda conta, pela posição do STJ (HC 429.545) - o livramento por outra pena também suspende (art. 116, p. único)
+            susp.append((a2, b))
+            lt(a2, b, "outro_motivo", "livramento condicional de %s (outra condenação)" % rs.fmt(a),
+               "conta pela posição do STJ (HC 429.545): o livramento por outra pena suspende o prazo desta (art. 116, p. único)")
+            continue
         if (a, b) in extras_lc and a < termo:
             # livramento que começou antes desta condenação existir: é de outra pena (esta só começa depois do período de
             # prova - STJ, Tema 1.367). A suspensão do art. 116, p. único, exige estar PRESO por outro motivo; em livramento, a
@@ -1129,6 +1135,12 @@ def _executoria(L, c, r, ctx, termo, termo_txt, pena, fato, fator, ppe_meses, me
                "por outro processo - conferir na guia", "nao_comprovada")
             corpo.append((pa, "Ficha SIAPEN: %s%s (%s), que o RSPE não registra - indica cumprimento desta pena (interrompe - art. 117, V), "
                               "e não prisão por outro processo; conferir na guia." % (_ent, (", saída em %s" % rs.fmt(pb_txt)) if pb_txt else "", F["porque"])))
+            continue
+        if F["tipo"] == "nao_susp" and r.get("_tese_stj_116"):
+            # P46: segunda conta, pela posição do STJ (HC 429.545) - monitoramento, domiciliar ou aberto por outra pena suspendem
+            susp.append((pa, F["fim_calc"]))
+            lt(pa, pb_txt, "outro_motivo", "ficha SIAPEN: %s, monitoramento eletrônico, domiciliar ou regime aberto (processo %s)" % (_ent, F["processo"]),
+               "conta pela posição do STJ (HC 429.545): suspende o prazo desta pena (art. 116, p. único)")
             continue
         if F["tipo"] == "nao_susp":
             lt(pa, pb_txt, "liberdade", "ficha SIAPEN: %s, monitoramento eletrônico, domiciliar ou regime aberto (processo %s)" % (_ent, F["processo"]),
@@ -2800,10 +2812,15 @@ def _executoria_sursis(L, c, ctx, termo, termo_txt, pena, fato, fator, ppe_meses
     LT.append({"inicio": rs.fmt(aud or termo), "fim": rs.fmt(rev), "tipo": "prd", "fonte": "período de prova do sursis", "efeito": "a prescrição não corre", "atribuicao": "comprovada"})
     LT.append({"inicio": rs.fmt(rev), "fim": rs.fmt(R["retomada"][0]) if R["retomada"] else "", "tipo": "liberdade", "rotulo": "Revogação do sursis",
                "fonte": "revogação do sursis em %s (informada pelo operador)" % rs.fmt(rev),
-               "efeito": "prazo pela pena inteira, do trânsito da decisão que revogou o sursis (art. 112, I) - conferir se a data informada é a do trânsito", "atribuicao": "comprovada"})
+               "efeito": "prazo pela pena inteira, da data da decisão que revogou o sursis (art. 112, I, parte final - leitura literal; STJ, AgRg no HC "
+                         "514.499); a verificar: se o juízo contar do trânsito dessa decisão, o termo se desloca para ele", "atribuicao": "comprovada"})
     _lt_corre(LT, R)
-    L["ppe_saldo_rotulo"] = "Prazo pela pena inteira, do trânsito da decisão que revogou o sursis."
-    det.append("Sursis revogado em %s: prazo de %s pela pena inteira." % (rs.fmt(rev), fmt_prazo(ppe_meses)))
+    # P48 (7.15.3): o termo é a data da decisão que revoga (a favorável, como no livramento); o trânsito dessa decisão fica como
+    # hipótese contrária, a verificar
+    L["ppe_saldo_rotulo"] = "Prazo pela pena inteira, da data da decisão que revogou o sursis (a verificar: o trânsito dessa decisão, se o juízo o adotar)."
+    L["ppe_rev_sursis_hipotese"] = "trânsito em julgado da decisão que revogou o sursis (se adotado, o termo inicial passa a ser ele)"
+    det.append("Sursis revogado em %s: prazo de %s pela pena inteira, contado da decisão que revogou (CP, art. 112, I, parte final; STJ, AgRg no "
+               "HC 514.499). A verificar: contado do trânsito dessa decisão, o vencimento se desloca na mesma medida." % (rs.fmt(rev), fmt_prazo(ppe_meses)))
     _fim_modalidade(L, det, R, hoje, "a revogação", ppe_meses, "cumprimento iniciado", "Sursis revogado em %s, com a pena de %s" % (rs.fmt(rev), L["pena"]))
     return det
 
@@ -3250,8 +3267,8 @@ def fundamentacao(L, parte):
         fatos = ("A absolvição imprópria (fato em %s) transitou em julgado em %s. Na medida de segurança do inimputável, a prescrição regula-se pela "
                  "pena máxima em abstrato do crime (STJ, AgRg no REsp 1.667.508; STF, HC 97.621), e o prazo é %s" % (L.get("fato") or "—", L.get("ppe_termo") or "—", reg))
     elif mod == "SURSIS" and L.get("ppe_rev_sursis"):
-        fatos = ("A condenação a %s (fato em %s) teve a pena suspensa, e o sursis foi revogado em %s. Revogado o sursis, a prescrição corre do trânsito "
-                 "em julgado da decisão que o revoga, pela pena inteira (CP, art. 112, I, parte final; STJ, AgRg no HC 514.499), e o prazo é %s" % (
+        fatos = ("A condenação a %s (fato em %s) teve a pena suspensa, e o sursis foi revogado em %s. Revogado o sursis, a prescrição corre da data "
+                 "da decisão que o revoga, pela pena inteira (CP, art. 112, I, parte final; STJ, AgRg no HC 514.499), e o prazo é %s" % (
                      L.get("pena", ""), L.get("fato") or "—", L["ppe_rev_sursis"], reg))
     elif mod == "PRD" and L.get("ppe_ult_comp"):
         fatos = ("A condenação a %s (fato em %s), substituída por restritiva de direitos, teve o último comparecimento em %s, quando a execução foi "
@@ -3419,6 +3436,21 @@ def _sumula497(L, r, c, hoje, ficha, cont, det):
             cond = "em qualquer fração do acréscimo (de %s a %s)" % (frs[0], frs[-1])
         else:
             cond = "se o acréscimo foi de %s ou mais" % f
+        if f == frs[0] and l2.get(k + "_cor") == "vermelho":
+            # P45 (7.15.3): prescrita em todas as frações possíveis do acréscimo - não há dúvida a conferir: vermelho, com a conta da
+            # menor fração (a pena sem o acréscimo mais alta, que dá a data mais tardia)
+            L[k + "_status"] = "%s aparente sem o acréscimo %s, %s" % (qual[0].upper() + qual[1:], nome, cond)
+            L[k + "_cor"] = "vermelho"
+            _txt = ("✘ Sem o acréscimo %s, a pena seria de %s a %s; em qualquer dessas penas a %s aparece (%s). A conta usa a menor fração "
+                    "(%s), que dá a pena mais alta e a data mais tardia." % (
+                        nome, rs.dias_para_pena(int(Fraction(pena) / (1 + frs[-1]))), rs.dias_para_pena(int(Fraction(pena) / (1 + frs[0]))),
+                        qual, (l2.get(k + "_status") or "").split(" - ")[0], frs[0]))
+            if k == "retro":
+                L["retro_detalhe"] = ((L.get("retro_detalhe") or "") + "\n" + _txt).strip()
+            else:
+                L["ppe_previsao"], L["ppe_dias"] = l2.get("ppe_previsao") or "", l2.get("ppe_dias")
+                det.append(_txt)
+            continue
         L[k + "_status"] = "A VERIFICAR: %s aparente sem o acréscimo %s, %s - conferir a pena-base na sentença" % (qual, nome, cond)
         L[k + "_cor"] = "amarelo"
         _txt = ("⚠ A verificar: sem o acréscimo %s, a pena seria de %s a %s; %s, a %s aparece (%s). Conferir a pena sem o acréscimo "
@@ -3610,6 +3642,22 @@ def analisar(r, hoje=None, ficha=None):
                     L["fato"], ("; a primeira transitou em %s" % rs.fmt(_trs[0])) if _trs else "",
                     ("; o SEEU aplica a este crime fração de primário (%s)" % " / ".join(_fr_prim)) if (_fr_prim and not _outras) else ""))
             L["avisos"].append("reincidência marcada no RSPE sem condenação anterior transitada: prazo calculado sem o +1/3 (CP, arts. 63 e 110) - conferir a certidão de antecedentes")
+        # P47 (7.15.3): reincidência que pode ter por base a condenação pelo art. 28 da Lei 11.343/2006 de outro processo deste RSPE,
+        # transitada antes do fato: a condenação pelo art. 28 não gera reincidência, por desproporcionalidade (STJ, REsp 1.672.654,
+        # 6ª T., 2018; AgRg no HC 475.304, 5ª T., 2019; STF, RHC 178.512, 2ª T., 2022), e, se a droga era maconha, a conduta deixou de
+        # ser infração penal (STF, Tema 506) - aviso nesta linha, com o efeito no +1/3 do prazo
+        if L["reinc"] and not _e_art28(c):
+            _b28 = [o for o in _outras if _e_art28(o) and _fx and (rs.to_date(o.get("transito_processo") or o.get("transito_mp") or "") or date.max) < _fx]
+            if _b28:
+                _so28 = not any(not _e_art28(o) and (rs.to_date(o.get("transito_processo") or o.get("transito_mp") or "") or date.max) < _fx
+                                for o in _outras)
+                L["avisos"].append(
+                    "reincidência que pode ter por base a condenação pelo art. 28 da Lei 11.343/2006 (processo %s, trânsito em %s): essa "
+                    "condenação não gera reincidência (STJ, REsp 1.672.654 e AgRg no HC 475.304; STF, RHC 178.512) e, se a droga era maconha, "
+                    "a conduta deixou de ser infração penal (STF, Tema 506 - RE 635.659)%s" % (
+                        _b28[0].get("processo_criminal") or "não informado", _b28[0].get("transito_processo") or _b28[0].get("transito_mp"),
+                        " - é a única condenação anterior deste RSPE: sem ela, o prazo fica sem o +1/3 (CP, art. 110); conferir a certidão de "
+                        "antecedentes" if _so28 else " - conferir qual condenação a sentença usou para a reincidência"))
         pena = rs.pena_para_dias(c.get("pena_imposta") or c.get("pena_total_processo"))
         _ms_rspe = "MEDIDA DE SEGURANCA" in rs._sem_acento(c.get("pena_total_processo") or "").upper() or bool(c.get("medida_seguranca"))  # absolvição imprópria (RSPE)
         if c.get("pena_da_acao"):
@@ -4419,6 +4467,39 @@ def analisar(r, hoje=None, ficha=None):
                     if k == "ppe":
                         L["ppe_previsao"], L["ppe_dias"] = "", None
                         L["ppe_faltam"] = ["natureza do crime na sentença (%s)" % impr[1].split(":")[0]] + list(L.get("ppe_faltam") or [])
+        if L.get("ppe_cor") == "vermelho" and not r.get("_tese_stj_116") and not r.get("_s497_interno") \
+                and any("429.545" in str(p_.get("efeito") or p_.get("fonte") or p_) for p_ in (L.get("ppe_linha_tempo") or [])):
+            # P46 (7.15.3): a prescrição só aparece pela tese defensiva de que só a prisão suspende o prazo (CP, art. 116, p. único -
+            # leitura restritiva). Refaz a conta pela posição do STJ (HC 429.545: livramento, aberto e domiciliar por outra pena também
+            # suspendem); se por ela não prescreve, a linha fica amarela, com as duas contas
+            try:
+                _l2 = next((x for x in analisar(dict(r, _tese_stj_116=True), hoje, ficha)["presc_linhas"]
+                            if x.get("chave_ajuste") == c.get("_chave_ajuste")), None)
+            except Exception:
+                _l2 = None
+            if _l2 and _l2.get("ppe_cor") != "vermelho":
+                _lim1 = L.get("ppe_previsao") or "?"
+                _st2 = (_l2.get("ppe_status") or "").split(" - ")[0]
+                L["ppe_status"] = ("A VERIFICAR: prescrição executória aparente em %s pela tese defensiva (só a prisão por outro motivo suspende o "
+                                   "prazo - CP, art. 116, p. único); pela posição do STJ (HC 429.545), %s" % (_lim1, _st2[0].lower() + _st2[1:] if _st2 else "não prescrita"))
+                L["ppe_cor"], L["ppe_dias"] = "amarelo", None
+                L["ppe_tese_stj"] = {"status": _l2.get("ppe_status"), "previsao": _l2.get("ppe_previsao")}
+                det.append("Conclusão ajustada: A VERIFICAR - pela leitura restritiva do art. 116, p. único (tese defensiva), a prescrição "
+                           "venceu em %s; pela posição do STJ (HC 429.545), em que o livramento, o aberto e a domiciliar por outra pena "
+                           "também suspendem o prazo: %s. Sustentar a tese defensiva com as duas contas à vista." % (_lim1, _l2.get("ppe_status") or "?"))
+        _zd = L.get("ppe_saldo_zero_detr")
+        if _zd and L.get("ppe_cor") == "vermelho":
+            # P57 (S8027): o remanescente do SEEU dá prescrição, mas os eventos mostram detração não abatida neste processo que zera o
+            # saldo na fuga - a pena estava cumprida antes dela (CP, art. 42; LEP, art. 66, II). O fundamento é o cumprimento (aba
+            # Extinção); a prescrição pelo remanescente do SEEU fica como hipótese subsidiária, a verificar
+            _lim0 = L.get("ppe_previsao") or ""
+            L["ppe_status"] = ("A VERIFICAR: pena já cumprida antes da %s de %s com a detração de %s que o SEEU não abateu (CP, art. 42) - "
+                               "pedir a extinção pelo cumprimento (ver Extinção); só pelo remanescente do SEEU, prazo vencido em %s" % (
+                                   _zd.get("evento") or "fuga", _zd.get("data"), rs.dias_para_pena(_zd.get("detr") or 0), _lim0 or "?"))
+            L["ppe_cor"], L["ppe_previsao"], L["ppe_dias"] = "amarelo", "", None
+            det.append("Conclusão ajustada: A VERIFICAR - com a detração obrigatória da prisão provisória neste processo (CP, art. 42), o saldo "
+                       "na %s de %s era zero: o caminho é a extinção pelo cumprimento (LEP, art. 66, II). Se o juízo mantiver o cálculo do "
+                       "SEEU, a prescrição pelo remanescente (art. 113) venceu em %s." % (_zd.get("evento") or "fuga", _zd.get("data"), _lim0 or "?"))
         if aviso497 and not r.get("_s497_interno") and not impr and not (c.get("_ajuste", {}).get("valores") or {}).get("pena"):
             _sumula497(L, r, c, hoje, ficha, cont, det)
         L["ppe_detalhe"] = "\n".join(det)

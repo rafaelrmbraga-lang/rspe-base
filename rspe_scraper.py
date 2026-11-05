@@ -2030,6 +2030,34 @@ def _custodia_so_ficha(campos, todos, extras, ref, ger):
     return sum((y - x).days + 1 for x, y in ficha)
 
 
+RE_INTERRUP_DOMICILIAR = re.compile(r"DOMICILIAR|MONITORA", re.I)
+
+
+def rotulo_sv56(eventos):
+    """Rótulo da situação quando a última interrupção do SEEU, sem início ou reinício depois, é a prisão domiciliar ou o
+    monitoramento eletrônico (cumprimento de pena: SV 56 e RE 641.320) ou a espera de vaga que o SEEU não contou (a verificar:
+    a pena corre se a pessoa ficou em domiciliar ou monitorada à espera da vaga). "" nos demais casos."""
+    seeu = [e for e in eventos if not e.get("_ficha") and to_date(e.get("data") or "")]
+    ints = [e for e in seeu if "INTERRUP" in (e.get("tipo") or "").upper()]
+    if not ints:
+        return ""
+    ult = ints[-1]
+    for e in ints:
+        if to_date(e["data"]) >= to_date(ult["data"]):
+            ult = e
+    d = to_date(ult["data"])
+    if any(to_date(e["data"]) > d and "INTERRUP" not in (e.get("tipo") or "").upper() for e in seeu):
+        return ""
+    mot = (ult.get("motivo") or "").strip()
+    if RE_INTERRUP_DOMICILIAR.search(mot):
+        return ("EM CUMPRIMENTO (SV 56: %s desde %s, lançada no SEEU como interrupção - os números do SEEU pararam nessa data; "
+                "ver Auditoria)" % (mot.lower(), fmt(d)))
+    if RE_INTERRUP_INCOMPAT.search(mot):
+        return ("EM CUMPRIMENTO? (a verificar - SV 56: %s em %s, sem reinício; o SEEU não contou o período: se a pessoa ficou em "
+                "domiciliar ou monitorada à espera da vaga, a pena corre - ver Auditoria)" % (mot.lower(), fmt(d)))
+    return ""
+
+
 def em_custodia(periodos, hoje):
     return any(ini <= hoje and (fim is None or fim > hoje) for ini, fim in periodos)
 
@@ -2060,6 +2088,13 @@ def situacao_execucao(campos, eventos, incidentes, crimes, hoje):
     # rótulo próprio da execução encerrada ou não iniciada (o cálculo pelos eventos fica em situacao_eventos, que as regras usam):
     # "Pena interrompida" ou "Em cumprimento" numa execução extinta ou arquivada levaria a providência inútil
     out["situacao_eventos"] = out["situacao_cumprimento"]
+    # P57 (S1010, S1012): interrupção lançada no SEEU por domiciliar/monitoramento ou por espera de vaga, sem reinício. A execução
+    # segue (STF, SV 56 e RE 641.320; STJ, Tema 993): o rótulo da situação diz isso, com a ressalva; as regras continuam a ler o
+    # cálculo do SEEU (situacao_eventos, "interrompida") - a data do SEEU fica, com ressalva, e a Auditoria alerta
+    if out["situacao_cumprimento"].startswith("PENA INTERROMPIDA"):
+        _sv = rotulo_sv56(eventos)
+        if _sv:
+            out["situacao_cumprimento"] = _sv
     if not out["situacao_cumprimento"].startswith("SEM CONDENA"):
         if campos.get("execucao_extinta") or (crimes and all((c.get("extinto") or "").upper().startswith("S") for c in crimes)):
             out["situacao_cumprimento"] = "EXTINTA"
@@ -3405,6 +3440,23 @@ def homicidio_simples_selo(c):
     if "HEDIONDO" not in ((c.get("fracao_progressao") or "") + (c.get("fracao_livramento") or "")).upper():
         return False
     return hediondo_condicional(c) is False and not qualificado_privilegiado(c)
+
+
+def hediondo_selo_verificar(c):
+    """Selo de hediondo do SEEU que a lei não confirma nem afasta (P05 e P07, 7.15.3): o texto "hediondo a verificar (...)" para o
+    resumo do crime, ou "". Homicídio simples com o selo: só é hediondo em atividade típica de grupo de extermínio (Lei 8.072/90,
+    art. 1º, I), dado que o RSPE não informa. Homicídio do § 2º-D (Lei 15.358/2026) com o selo: o § 2º-D não está escrito no rol
+    (art. 1º, I, fala no § 2º) e a Lei 15.358/2026, art. 4º, só declara hediondos os crimes dos seus arts. 2º e 3º."""
+    if num_art(c.get("artigo")) != "121" or num_lei(c.get("lei")) not in ("2848", ""):
+        return ""
+    if "HEDIONDO" not in ((c.get("fracao_progressao") or "") + (c.get("fracao_livramento") or "")).upper() and c.get("hediondo_ou_equiparado") != "S":
+        return ""
+    if homicidio_simples_selo(c):
+        return "hediondo a verificar (grupo de extermínio não informado)"
+    pi = paragrafo_inciso(c)
+    if pi and pi[0] == "2-D" and "EXTERM" not in " ".join(str(c.get(k) or "") for k in ("tipo_penal", "artigo")).upper():
+        return "hediondo a verificar (§ 2º-D fora do texto do art. 1º, I, da Lei 8.072/90)"
+    return ""
 
 
 def impeditivo_decreto(c, ref=date(2024, 12, 25)):

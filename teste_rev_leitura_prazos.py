@@ -95,10 +95,11 @@ confere(L["retro_status"].startswith("não configurada"), "1c: suspensão inform
 c2 = crime(data_infracao="01/01/2014", data_denuncia="01/02/2014", data_sentenca="01/03/2019", transito_mp="01/05/2019",
            transito_processo="01/05/2019", pena_imposta=pena(2, 4), tipo_penal=FURTO + " (ART. 71 - CRIME CONTINUADO)")
 L = linha(reg([c2]))
-confere(L["retro_status"].startswith("A VERIFICAR") and "Súmula 497" in L["retro_status"] and L["retro_cor"] == "amarelo",
+# P45 (7.15.3): prescrita em todas as frações do acréscimo - vermelho, não mais "A VERIFICAR" (teste ajustado à decisão do parecer)
+confere("Súmula 497" in L["retro_status"] and L["retro_cor"] == "vermelho",
         "2: punitiva sem o acréscimo da continuidade: %s" % L["retro_status"])
 confere("em qualquer fração" in L["retro_status"], "2: de 1/6 a 2/3 o prazo é de 4 anos - todas prescritas: %s" % L["retro_status"])
-confere(L["ppe_status"].startswith("A VERIFICAR") and "Súmula 497" in L["ppe_status"], "2: executória sem o acréscimo: %s" % L["ppe_status"])
+confere("Súmula 497" in L["ppe_status"] and L["ppe_cor"] == "vermelho", "2: executória sem o acréscimo: %s" % L["ppe_status"])
 # sem continuidade, a mesma pena não prescreve
 L = linha(reg([crime(data_infracao="01/01/2014", data_denuncia="01/02/2014", data_sentenca="01/03/2019", transito_mp="01/05/2019",
                      transito_processo="01/05/2019", pena_imposta=pena(2, 4))]))

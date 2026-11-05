@@ -3031,8 +3031,7 @@
     "campo": "ppe_status",
     "op": "nao_contem",
     "v": "aparente",
-    "nota": "Programa: 'Prescrição executória aparente em 09/05/2023', pelo remanescente impresso pelo SEEU (81 dias -> 3 anos). Os eventos do próprio RSPE mostram o flagrante de 01/02/2019 a 30/04/2019 neste processo (89 dias), que o SEEU não abateu: pela detração obrigatória (CP, art. 42) a pena se esgotou em 02/05/2020, antes da fuga. O resultado prático (extinção da punibilidade) é favorável de qualquer modo; a divergência é o fundamento (prescrição em vez de cumprimento).",
-    "decisao": true
+    "nota": "Programa: 'Prescrição executória aparente em 09/05/2023', pelo remanescente impresso pelo SEEU (81 dias -> 3 anos). Os eventos do próprio RSPE mostram o flagrante de 01/02/2019 a 30/04/2019 neste processo (89 dias), que o SEEU não abateu: pela detração obrigatória (CP, art. 42) a pena se esgotou em 02/05/2020, antes da fuga. O resultado prático (extinção da punibilidade) é favorável de qualquer modo; a divergência é o fundamento (prescrição em vez de cumprimento). Decidido no P57 (7.15.3, gabarito): a linha fica A VERIFICAR, com o fundamento no cumprimento e a prescrição pelo remanescente do SEEU só como hipótese."
    },
    {
     "t": "campo",
@@ -3052,7 +3051,7 @@
   "aba": "Prescrição",
   "situacao": "Saldo zero na fuga quando o SEEU não lançou a detração (remanescente impresso > 0)",
   "esperado": "Prescrição: nada a prescrever pelo saldo (sem 'aparente'); Extinção: hipótese de pena cumprida na fuga (a verificar ou cabível)",
-  "nota": "Programa: 'Prescrição executória aparente em 09/05/2023', pelo remanescente impresso pelo SEEU (81 dias -> 3 anos). Os eventos do próprio RSPE mostram o flagrante de 01/02/2019 a 30/04/2019 neste processo (89 dias), que o SEEU não abateu: pela detração obrigatória (CP, art. 42) a pena se esgotou em 02/05/2020, antes da fuga. O resultado prático (extinção da punibilidade) é favorável de qualquer modo; a divergência é o fundamento (prescrição em vez de cumprimento). Programa: 'Pena interrompida', sem hipótese de extinção. Pela lei a pena estava cumprida antes da fuga (detração de 89 dias + 284 dias de cumprimento = 373 >= 365; CP, art. 42; LEP, art. 66, II). O programa confia no remanescente do SEEU e não confere a detração visível nos eventos. Mesma divergência: nenhuma hipótese de pena cumprida na fuga."
+  "nota": "Programa: 'Prescrição executória aparente em 09/05/2023', pelo remanescente impresso pelo SEEU (81 dias -> 3 anos). Os eventos do próprio RSPE mostram o flagrante de 01/02/2019 a 30/04/2019 neste processo (89 dias), que o SEEU não abateu: pela detração obrigatória (CP, art. 42) a pena se esgotou em 02/05/2020, antes da fuga. O resultado prático (extinção da punibilidade) é favorável de qualquer modo; a divergência é o fundamento (prescrição em vez de cumprimento). Decidido no P57 (7.15.3, gabarito): a linha fica A VERIFICAR, com o fundamento no cumprimento e a prescrição pelo remanescente do SEEU só como hipótese. Programa: 'Pena interrompida', sem hipótese de extinção. Pela lei a pena estava cumprida antes da fuga (detração de 89 dias + 284 dias de cumprimento = 373 >= 365; CP, art. 42; LEP, art. 66, II). O programa confia no remanescente do SEEU e não confere a detração visível nos eventos. Mesma divergência: nenhuma hipótese de pena cumprida na fuga."
  },
  {
   "acoes": [
@@ -5115,13 +5114,20 @@
     "t": "campo",
     "campo": "termino",
     "op": "eq",
-    "v": "28/02/2046*",
+    "v": "16/02/2066 ⚠",
+    "nota": ""
+   },
+   {
+    "t": "campo",
+    "campo": "termino_full",
+    "op": "contem",
+    "v": "28/02/2046",
     "nota": ""
    }
   ],
   "aba": "Extinção",
   "situacao": "Limite de 30 anos do art. 75 (fatos anteriores a 23/01/2020): a aba Extinção mantém o término do SEEU com ressalva; a Auditoria alerta",
-  "esperado": "Extinção: término do SEEU (16/02/2066) mantido, situação 'Em cumprimento · art. 75 a verificar' (amarelo); Auditoria: alerta do art. 75 com máximo em 28/02/2046; coluna Término geral 28/02/2046*"
+  "esperado": "Extinção: término do SEEU (16/02/2066) mantido, situação 'Em cumprimento · art. 75 a verificar' (amarelo); Auditoria: alerta do art. 75 com máximo em 28/02/2046; coluna Término geral com o término do SEEU e '⚠', máximo 28/02/2046 na dica (P02, 7.15.3)"
  },
  {
   "acoes": [],

@@ -1392,8 +1392,7 @@
     "campo": "cumprimento",
     "op": "nao_contem",
     "v": "INTERROMPIDA (sem evento",
-    "nota": "Tese: pela SV 56 a execução segue; a política manda manter o dado do SEEU com ressalva - conferir se o rótulo traz a ressalva",
-    "decisao": true
+    "nota": "Decidido no P57 (7.15.3, gabarito): pela SV 56 a execução segue - o rótulo da situação diz 'EM CUMPRIMENTO (SV 56 ...)', com a ressalva de que os números do SEEU pararam"
    }
   ],
   "aba": "Auditoria",
@@ -1637,8 +1636,7 @@
     "campo": "cumprimento",
     "op": "contem",
     "v": "EM CUMPRIMENTO",
-    "nota": "Tese: o programa conclui, pela pena cumprida do SEEU, que a pessoa foi solta; pela SV 56 a pena corre",
-    "decisao": true
+    "nota": "Decidido no P57 (7.15.3, gabarito, como a verificar): 'EM CUMPRIMENTO? (a verificar - SV 56 ...)' - se a pessoa ficou em domiciliar ou monitorada à espera da vaga, a pena corre"
    }
   ],
   "aba": "Auditoria",
@@ -3718,9 +3716,9 @@
    {
     "t": "campo",
     "campo": "termino",
-    "op": "contem",
-    "v": "02/05/2044",
-    "nota": ""
+    "op": "eq",
+    "v": "02/05/2062 ⚠",
+    "nota": "P02 (7.15.3): a coluna mantém a data do SEEU com o sinal; o máximo vai à dica"
    },
    {
     "t": "aud",
@@ -3736,11 +3734,18 @@
     "op": "contem",
     "v": "02/05/2062",
     "nota": ""
+   },
+   {
+    "t": "campo",
+    "campo": "termino_full",
+    "op": "contem",
+    "v": "02/05/2044",
+    "nota": ""
    }
   ],
   "aba": "Extinção",
   "situacao": "Penas somadas de 48 anos, fatos de 2014, preso desde 03/05/2014: término do SEEU 02/05/2062",
-  "esperado": "Aba Geral: término 02/05/2044*; Auditoria alerta limite de 30 anos (máximo em 02/05/2044); aba Extinção mantém 02/05/2062 com 'art. 75 a verificar'."
+  "esperado": "Aba Geral: término do SEEU 02/05/2062 com '⚠' e o máximo 02/05/2044 na dica (P02, 7.15.3); Auditoria alerta limite de 30 anos (máximo em 02/05/2044); aba Extinção mantém 02/05/2062 com 'art. 75 a verificar'."
  },
  {
   "acoes": [],
@@ -3839,9 +3844,9 @@
    {
     "t": "campo",
     "campo": "termino",
-    "op": "contem",
-    "v": "28/02/2061",
-    "nota": ""
+    "op": "eq",
+    "v": "28/02/2073 ⚠",
+    "nota": "P02 (7.15.3): a coluna mantém a data do SEEU com o sinal; o máximo vai à dica"
    },
    {
     "t": "aud",
@@ -3850,11 +3855,18 @@
     "contem": "28/02/2061",
     "nivel": null,
     "nota": ""
+   },
+   {
+    "t": "campo",
+    "campo": "termino_full",
+    "op": "contem",
+    "v": "28/02/2061",
+    "nota": ""
    }
   ],
   "aba": "Extinção",
   "situacao": "Pena de 52 anos por fato de 15/02/2021, preso desde 01/03/2021: término do SEEU 28/02/2073",
-  "esperado": "Aba Geral: término 28/02/2061*; Auditoria alerta o limite de 40 anos (máximo 28/02/2061)."
+  "esperado": "Aba Geral: término do SEEU 28/02/2073 com '⚠' e o máximo 28/02/2061 na dica (P02, 7.15.3); Auditoria alerta o limite de 40 anos (máximo 28/02/2061)."
  },
  {
   "acoes": [],
@@ -5515,8 +5527,7 @@
     "campo": "conduta_ruim",
     "op": "eq",
     "v": false,
-    "nota": "Tese: PADIC em curso não é conduta ruim; o programa pode marcar 'conduta ruim' só como filtro",
-    "decisao": true
+    "nota": "Decidido no P57 (7.15.3, gabarito): PADIC em curso não é conduta ruim - fica 'a apurar' (conduta_apurar)"
    }
   ],
   "aba": "Progressão",

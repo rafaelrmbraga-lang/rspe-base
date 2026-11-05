@@ -118,6 +118,10 @@ def parada(r):
 def rotulo_parada(r, curto=False):
     if "SUSPENSA" in (r.get("situacao_eventos") or r.get("situacao_cumprimento") or ""):
         return "Suspensa" if curto else "Pena suspensa (preso em outro processo)"
+    if "SV 56" in (r.get("situacao_cumprimento") or ""):
+        # P57 (S1010, S1012): interrupção do SEEU por domiciliar/monitoramento ou espera de vaga - a pena corre (SV 56), os números
+        # do SEEU estão parados: o rótulo traz a ressalva, em todas as abas
+        return "Interrompida no SEEU (SV 56)" if curto else "Pena interrompida no SEEU (SV 56: a pena corre - ver Auditoria)"
     return "Interrompida" if curto else "Pena interrompida"
 
 
@@ -570,7 +574,9 @@ def _vencido_pedido(r, sc, d, palavra):
     # nota do cálculo do SEEU "(Em trâmite desde …)" ao lado da data prevista: há pedido em trâmite
     nota = r.get("progressao_nota" if palavra == "PROGRESS" else "livramento_nota") or ""
     tramite = bool(re.match(r"em tr[âa]mite", nota, re.I))
-    if not inc and not crim and not tramite and r.get("falta_12m") not in ("SIM", "A APURAR"):
+    # P01: o livramento é prazo - a falta dos 12 meses (CP, art. 83, III, b) conta até hoje, não até a emissão do RSPE
+    fal = falta_12m_detalhe_hoje(r)[0] if palavra == "LIVRAMENTO" else r.get("falta_12m")
+    if not inc and not crim and not tramite and fal not in ("SIM", "A APURAR"):
         return ("%s · sem pedido no RSPE - requerer" % sit.split(" · ")[0], cor)
     return sc
 
@@ -1427,10 +1433,14 @@ def _vencido_full(r, sit, cor, palavra):
                            key=lambda x: rs.to_date(x) or date.min)
             partes.append("A verificar: exame exigido só pela Lei 14.843/2024 (LEP, art. 112, § 1º) não alcança fato anterior à vigência dela "
                           "(STJ, HC 950.729 e AgRg no HC 974.282; STF, Tema 1408: repercussão geral reconhecida no RE 1.536.743, 13/06/2025 - conferir se já houve julgamento)%s" % ((" - fatos de " + ", ".join(fatos)) if fatos else ""))
-    if r.get("falta_12m") == "SIM":
-        partes.append("Falta nos últimos 12 meses: " + (r.get("falta_12m_detalhe") or "sim"))
-    elif r.get("falta_12m") == "A APURAR":
-        partes.append("Falta a apurar nos últimos 12 meses (sem sanção reconhecida no RSPE): " + (r.get("falta_12m_detalhe") or ""))
+    fal, fdet = falta_12m_detalhe_hoje(r) if palavra == "LIVRAMENTO" else (r.get("falta_12m"), r.get("falta_12m_detalhe"))
+    if fal == "SIM":
+        partes.append("Falta nos últimos 12 meses: " + (fdet or "sim"))
+    elif fal == "A APURAR":
+        partes.append("Falta a apurar nos últimos 12 meses (sem sanção reconhecida no RSPE): " + (fdet or ""))
+    if palavra == "LIVRAMENTO" and fal != r.get("falta_12m") and r.get("falta_12m") in ("SIM", "A APURAR"):
+        partes.append("Na emissão do RSPE (%s) havia falta nos 12 meses (%s); contada até hoje, ela já saiu da janela do art. 83, III, b, do CP"
+                      % (r.get("data_geracao_rspe") or "?", r.get("falta_12m_detalhe") or "sem detalhe"))
     return " · ".join(partes)
 
 
@@ -1956,7 +1966,11 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
         **ext,
         **_comp,
         "ficha_resumo": rf.resumo(ficha) if ficha else "",
-        "conduta_ruim": bool(ficha and re.search(r"RESPONDE|REGULAR|\bM[ÁA]\b|P[ÉE]SSIMA|RUIM", (ficha.get("conduta") or "").upper())),
+        # P57 (S1042): "Responde PADIC" é procedimento em curso, sem sanção reconhecida - não é conduta ruim (fica "a apurar", como a
+        # falta sem homologação: Súmula 533/STJ); o requisito de conduta já sai "a conferir"
+        "conduta_ruim": bool(ficha and re.search(r"REGULAR|\bM[ÁA]\b|P[ÉE]SSIMA|RUIM", (ficha.get("conduta") or "").upper())
+                             and not (ficha.get("conduta") or "").upper().strip().startswith("RESPONDE")),
+        "conduta_apurar": bool(ficha and (ficha.get("conduta") or "").upper().strip().startswith("RESPONDE")),
         "conduta": (_conduta_txt(ficha.get("conduta") or "não informada na ficha").replace("Ipcg", "IPCG").replace("Pessima", "Péssima") if ficha else "Sem ficha"),
         "ficha_tem": bool(ficha),
         "status_exec": (r.get("status_execucao") or "").strip().upper(),
@@ -2020,7 +2034,8 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
             {"nome_crime": rs.nome_crime(c), "dispositivo": rs.dispositivo(c), "lei": rs.lei_curta(c.get("lei")), "artigo": ("art. " + rs.num_art(c.get("artigo")) + ((" " + rs.paragrafo_texto(c)) if rs.paragrafo_texto(c) else "")) if rs.num_art(c.get("artigo")) else "", "extinto": c.get("extinto", ""),
              "pena": rs.pena_extenso(c.get("pena_imposta")), "fato": c.get("data_infracao"),
              "vga": c.get("vga"), "vga_res": rs.vga_resumo(c), "vga_txt": rs.vga_resumo_txt(c), "morte": c.get("resultado_morte"), "reinc": "%s/%s" % (c.get("reincidente_comum"), c.get("reincidente_especifico")),
-             "hediondo": c.get("hediondo_ou_equiparado"), "proc": c.get("processo_criminal"), "desc": c.get("tipo_penal"),
+             "hediondo": c.get("hediondo_ou_equiparado"), "hediondo_txt": rs.hediondo_selo_verificar(c) or ("sim" if c.get("hediondo_ou_equiparado") == "S" else "não"),
+             "proc": c.get("processo_criminal"), "desc": c.get("tipo_penal"),
              "frac_prog": rs.pct_rotulo(c.get("fracao_progressao")), "frac_liv": c.get("fracao_livramento")}
             for c in r.get("_crimes", [])],
         "incidentes": [
@@ -2078,15 +2093,17 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
                             " Usado 16% no lugar do 1/6 do SEEU (LEP, art. 112, I, na redação da Lei 13.964/2019, que retroage ao fato anterior a "
                             "23/01/2020 por ser mais benéfica - CF, art. 5º, XL; STJ, Tema 1354): a diferença para a conta do "
                             "SEEU deve constar da petição." if _16 else ""))
-    # item 58 de 16/10: término além do limite do art. 75 (alerta da Auditoria) - a coluna mostra o término máximo, calculado pelo programa
+    # término além do limite do art. 75 (alerta da Auditoria). P02 (7.15.3): a coluna mostra a data do SEEU com o sinal "⚠", e o
+    # término máximo fica na dica - a mesma regra da aba Extinção (data do SEEU contrária à lei: a aba mantém a data, com ressalva,
+    # e a Auditoria alerta); antes (item 58 de 16/10) a coluna trazia o máximo calculado com "*"
     _l75 = next((it for it in m.get("aud_itens") or [] if it.get("tipo") == "limite-de-cumprimento-art-75" and it.get("nivel") == "alerta"
                  and it.get("termino_limite") and not it.get("baixado")), None)
-    if _l75:
-        m["termino"] = _l75["termino_limite"] + "*"
-        m["termino_motivo"] = "%s* - calculado pelo programa: limite de %d anos de cumprimento (CP, art. 75); SEEU: %s" % (
-            _l75["termino_limite"], _l75.get("termino_limite_anos") or 30, r.get("termino_previsao_seeu") or "?")
-        notas["termino"] = ("Término*: calculado pelo programa - limite de %d anos de cumprimento (CP, art. 75), contado do início do cumprimento "
-                            "por estas condenações; o SEEU imprime %s. Ver a Auditoria." % (_l75.get("termino_limite_anos") or 30, r.get("termino_previsao_seeu") or "?"))
+    if _l75 and re.match(r"^\d{2}/\d{2}/\d{4}$", m.get("termino") or ""):
+        _seeu75 = m["termino"]
+        m["termino"] = _seeu75 + " ⚠"
+        m["termino_motivo"] = m["termino_full"] = (
+            "%s (SEEU) ⚠ além do limite de %d anos de cumprimento (CP, art. 75): término máximo em %s, calculado pelo programa - ver Auditoria" % (
+                _seeu75, _l75.get("termino_limite_anos") or 30, _l75["termino_limite"]))
     if notas.get("termino") and any(it.get("tipo") == "pena-cumprida-menor-que-custodia" for it in m.get("aud_itens") or []):
         notas["termino"] += (" Atenção: a Auditoria aponta pena cumprida do SEEU menor que a custódia dos eventos - este término parte do "
                              "remanescente do SEEU e pode estar atrasado; conferir.")
@@ -2146,84 +2163,8 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
     return m
 
 
-# ---------------- prioridade: do mais grave (liberdade imediata) ao mais simples ----------------
-PRIO_NIVEIS = {1: ("Crítica", "vermelho"), 2: ("Alta", "laranja"), 3: ("Média", "amarelo"), 4: ("Atenção", "amarelo"), 5: ("Rotina", "verde"),
-               6: ("Em ordem", "cinza"), 7: ("Extinta / arquivada", "azul")}
-
-
-def prioridade(m):
-    """(nível, motivos, dias de atraso): 1 crítica - a pena pode já não ser devida (extinção cabível, prescrição aparente, indulto
-    cabível sem decisão); 2 alta - benefício vencido sem decisão (progressão, livramento) ou comutação cabível; 3 média - remição a
-    requerer, término ou benefício em até 30 dias; 4 atenção - indulto/comutação a verificar, prescrição iminente, benefício em até
-    90 dias, erro de cálculo na Auditoria; 5 rotina - pontos a verificar; 6 em ordem; 7 execução extinta ou arquivada no SEEU."""
-    if m.get("estado_exec") == "extinta" or m.get("geral_cor") == "azul" or "ARQUIV" in (m.get("status_exec") or ""):
-        return 7, ["execução %s no SEEU" % ("arquivada" if "ARQUIV" in (m.get("status_exec") or "") else "extinta")], 0
-    mot = {k: [] for k in range(1, 6)}
-    atraso = 0
-    if m.get("ext_cor") == "vermelho":
-        es = (m.get("ext_sit") or "").strip()
-        mot[1].append("extinção cabível" + ((" (%s)" % es) if es and es.lower() != "extinção cabível" else ""))
-    if m.get("presc_ppe_cor") == "vermelho":
-        mot[1].append("prescrição executória aparente")
-    if m.get("presc_retro_cor") == "vermelho":
-        mot[1].append("prescrição punitiva aparente")
-    for k, ano in (("i25", 2025), ("i24", 2024), ("i22", 2022)):
-        if m.get(k) == "Sim":
-            mot[1].append("indulto %d cabível" % ano)
-    sem_estado = not m.get("estado_exec")
-    for k, rot in (("prog", "progressão"), ("liv", "livramento")):
-        d = m.get(k + "_dias")
-        if sem_estado and d is not None and d <= 0 and m.get(k + "_cor") == "vencido":
-            mot[2].append("%s %s há %s" % (rot, "vencida" if k == "prog" else "vencido", rs.pl(-d, "dia", "dias")))
-            atraso = max(atraso, -d)
-        elif sem_estado and d is not None and 0 < d <= 30:
-            mot[3].append("%s em %s" % (rot, rs.pl(d, "dia", "dias")))
-        elif sem_estado and d is not None and 30 < d <= 90:
-            mot[4].append("%s em %d dias" % (rot, d))
-    for k, ano in (("c25", 2025), ("c24", 2024)):
-        if m.get(k) == "Sim":
-            mot[2].append("comutação %d cabível" % ano)
-    if m.get("fd_cor") == "vermelho":
-        # fato documental certo (atestado sem peticionamento, posterior à última remição): conferir nos autos, sem valor a requerer
-        mot[3].append("atestado sem peticionamento posterior à última remição: conferir nos autos")
-    ed = m.get("ext_dias")
-    if m.get("ext_cor") in ("laranja",) or (ed is not None and 0 <= ed <= 30 and m.get("ext_cor") != "vermelho"):
-        mot[3].append("término em %s" % rs.pl(ed, "dia", "dias") if ed is not None else "término próximo")
-    for k, rot in (("i25", "indulto 2025"), ("c25", "comutação 2025"), ("i24", "indulto 2024"), ("c24", "comutação 2024")):
-        if m.get(k) == "Verificar":
-            mot[4].append(rot + " a verificar")
-    if m.get("presc_ppe_cor") == "amarelo":
-        mot[4].append("prescrição executória iminente / a verificar")
-    if m.get("presc_retro_cor") == "amarelo":
-        # punitiva aparente pelas datas do RSPE, mas dependente de marco que ele não traz (pronúncia, acórdão, datas incoerentes)
-        mot[4].append("prescrição punitiva a verificar")
-    if m.get("aud_status") == "atencao":
-        mot[4].append(rs.pl(int(m.get("aud_alertas") or 0), "alerta", "alertas") + " na Auditoria")
-    if m.get("aud_status") == "verificar":
-        mot[5].append("pontos a verificar na Auditoria")
-    if m.get("fd_cor") == "amarelo":
-        mot[5].append("conferir remição / atestado")
-    if m.get("falta_apurar"):
-        mot[5].append("falta a apurar")
-    for n in range(1, 6):
-        if mot[n]:
-            if n == 1:  # dentro das críticas: extinção, prescrição executória, indulto, prescrição punitiva
-                peso = min(next((i for i, p_ in enumerate(("extinção", "prescrição executória", "indulto", "prescrição punitiva")) if x.startswith(p_)), 4)
-                           for x in mot[1])
-                atraso = (4 - peso) * 100000 + atraso
-            return n, mot[n] + [x for k in range(n + 1, 6) for x in mot[k]][:6], atraso
-    return 6, [], 0
-
-
-def aplicar_prioridade(m):
-    n, mot, atraso = prioridade(m)
-    rot, cor = PRIO_NIVEIS[n]
-    m["prio_n"], m["prio"], m["prio_cor"] = n, "%d · %s" % (n, rot), cor
-    m["prio_mot"] = "; ".join(mot[:2]) + (" (+%d)" % (len(mot) - 2) if len(mot) > 2 else "")
-    m["prio_mot_full"] = "; ".join(mot)
-    m["prio_ord"] = "%d|%06d|%s" % (n, 999999 - min(atraso, 999999), rs._sem_acento(m.get("nome") or "").upper())
-    return m
-
+# P04 (7.15.3): a escala de prioridade de 1 a 7 (prioridade/aplicar_prioridade) foi retirada - nenhuma tela, relatório ou
+# exportação a usava; a ordem de atuação é a das abas e dos cartões de situação.
 
 
 def item_falha(titulo, tipo="falha"):
@@ -2377,6 +2318,22 @@ def falta_12m_hoje(r, hoje=None):
     except Exception:
         pass
     return r.get("falta_12m")
+
+
+def falta_12m_detalhe_hoje(r, hoje=None):
+    """(falta_12m, falta_12m_detalhe) contados até hoje (P01: o livramento é prazo e se mede na data de hoje; a coluna Falta continua
+    o retrato do RSPE). Mesma condição de falta_12m_hoje: registro informado à mão fica como está."""
+    hoje = hoje or HOJE
+    try:
+        ger = rs.to_date(r.get("data_geracao_rspe") or "")
+        if ger and hoje > ger:
+            args = (r, r.get("_eventos") or [], r.get("_incidentes") or [])
+            if rs.faltas(*args, ger, r.get("_crimes") or [])["falta_12m"] == r.get("falta_12m"):
+                f = rs.faltas(*args, hoje, r.get("_crimes") or [])
+                return f["falta_12m"], f["falta_12m_detalhe"]
+    except Exception:
+        pass
+    return r.get("falta_12m"), r.get("falta_12m_detalhe")
 
 
 def _conduta_readquirida(r, hoje):

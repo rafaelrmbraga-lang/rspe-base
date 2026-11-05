@@ -72,16 +72,33 @@ def exportar_xlsx(modelos, saida, abas):
         ws.auto_filter.ref = ws.dimensions
     if "completo" in abas:
         ws = wb.create_sheet("Completo")
-        ws.append([rs.TITULOS_BONITOS.get(c, c) for c in rs.COLUNAS])
+        ws.append([COMPLETO_TITULOS.get(c, rs.TITULOS_BONITOS.get(c, c)) for c in colunas_completo()])
         for cell in ws[1]:
             cell.font = Font(bold=True, color="FFFFFF")
             cell.fill = PatternFill("solid", fgColor=NAVY.lstrip("#"))
         for m in modelos:
-            r = m["_bruto"]
-            ws.append([r.get(c, "") for c in rs.COLUNAS])
+            ws.append(linha_completo(m))
             _sem_formula(ws)
         ws.freeze_panes = "B2"
     wb.save(saida)
+
+
+# P03 (7.15.3): a planilha "Completo" traz as duas datas-base, com rótulo - a gravada na leitura do RSPE (a da regressão, por exemplo)
+# e a que a tela mostra (a calculada pelo programa ou informada pelo operador), com o motivo; antes só a gravada, diferente da tela
+COMPLETO_TITULOS = {"data_base": "data_base (gravada na leitura do RSPE)", "data_base_seeu": "data_base_seeu (impressa no cálculo do SEEU)",
+                    "data_base_tela": "data_base_tela (a da tela: calculada ou informada)", "data_base_tela_motivo": "data_base_tela_motivo"}
+
+
+def colunas_completo():
+    cols = list(rs.COLUNAS)
+    i = cols.index("data_base") + 1 if "data_base" in cols else len(cols)
+    return cols[:i] + ["data_base_tela", "data_base_tela_motivo"] + cols[i:]
+
+
+def linha_completo(m):
+    r = m["_bruto"]
+    extra = {"data_base_tela": m.get("db") or m.get("dbase") or "", "data_base_tela_motivo": m.get("db_motivo") or ""}
+    return [extra[c] if c in extra else r.get(c, "") for c in colunas_completo()]
 
 
 def aud_na_tela(it):
