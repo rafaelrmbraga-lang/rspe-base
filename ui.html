@@ -1943,7 +1943,7 @@ const ui = {
     const tudo=A.filter(a=>a.txt).map((a,k)=>`${k+1}. ${a.verbo}: ${a.txt}`).join('\n\n');
     const ok=!reais.length?`<div class="fdx-ok">✓ Nada a pedir nem a conferir agora${(N.R||{}).remicoes&&(N.R.remicoes.length)?': as remições do RSPE cobrem os documentos da ficha.':'.'}</div>`:'';
     const tot=reais.filter(a=>a.g<=3&&a.dias).reduce((s,a)=>s+a.dias,0);
-    return `<div class="fdx"><div class="fdx-h"><b>O que pedir</b><span class="muted">${reais.length?`${pl(reais.length,'ação','ações')}${reais.length>1?' (a que dá benefício primeiro)':''}${tot?` · pedidos ≈ ${nf(tot)} dias de remição`:''} · `:''}${tudo?`<span class="mini" onclick="event.stopPropagation();ui.copiarClip(${this.clip(tudo)})">Copiar tudo</span>`:''}</span></div>
+    return `<div class="fdx"><div class="fdx-h"><b>O que pedir</b><span class="muted">${reais.length?`${pl(reais.length,'ação','ações')}${reais.length>1?' (a que dá benefício primeiro)':''}${tot?` · pedidos ≈ ${nf(tot)} dias de remição`:''} · `:''}</span></div>
       ${ok}${A.length?`<div class="fdx-ac"${ok?' style="margin-top:6px"':''}>${A.map(row).join('')}</div>`:''}</div>`;
   },
   fdCobertura(r,N){
