@@ -103,7 +103,8 @@ ok(rs.unificacao_pendente(r) is not None, "P2b: unificação pendente não detec
 ok(rv.estado_execucao(r) is None or rv.estado_execucao(r)[0] != "aberto", "P2b: 'Já no aberto' com unificação pendente: %s" % (rv.estado_execucao(r),))
 t, d = rv.data_progressao(r)
 # 40% de 2005 dias = 802; 16% (lei mais benéfica) de 730 = 116: 918 dias desde 10/10/2025
-ok(d == date(2025, 10, 10) + rv.timedelta(days=802 + 116 - 1) and "unificação pendente" in t, "P2b: estimativa: %s %s" % (t, d))
+# (7.15.2, P23) início + lapso, como o SEEU e a progressão refeita (antes: lapso - 1)
+ok(d == date(2025, 10, 10) + rv.timedelta(days=802 + 116) and "unificação pendente" in t, "P2b: estimativa: %s %s" % (t, d))
 r3 = copy.deepcopy(r)
 r3["_incidentes"].append(inc("SOMATÓRIO DAS PENAS", "", "05/09/2026", "05/09/2026"))
 ok(rs.unificacao_pendente(r3) is None, "P2b: somatório depois da sentença ainda acusa unificação pendente")
@@ -195,7 +196,8 @@ ok(t.count("5 anos, 4 meses e 24 dias") == 2, "carona: um bloco, dois valores pa
 r = reg([crime(data_infracao="10/01/2021", pena_imposta="2 ano(s), 0 mês(es) e 0 dia(s)")], [inc(AR, "Fechado - Regime Inicial", "", "10/06/2021")],
         [ev(PR, "PRISÃO EM FLAGRANTE", "10/06/2021")], data_base_seeu="10/06/2021")
 x = [i for i in itens(r, "percentual-de-progressao-diverge") if "16%" in i["titulo"]]
-ok(x and "4 dias a mais" in x[0]["titulo"] and "121,7 dias; 16% = 116,8 dias - 4 dias a mais" in x[0]["detalhe"], "carona 16%%: %s" % x)
+# (7.15.2, P29) lapsos em dias inteiros, para baixo: 121 - 116 = 5 (antes: 730 x 1/150 = 4,87 -> 4)
+ok(x and "5 dias a mais" in x[0]["titulo"] and "121 dias; 16% = 116 dias - 5 dias a mais" in x[0]["detalhe"], "carona 16%%: %s" % x)
 
 # ---- carona: "p. ú.." ----
 it = ra._item("info", "t", "d", "CP, art. 83; Lei 11.343/06, art. 44, p. ú..")

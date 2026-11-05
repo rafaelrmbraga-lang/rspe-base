@@ -207,7 +207,9 @@ def progressao_unificacao(r):
             return ("A verificar: %s; fração ou pena de crime não informada, sem data" % rot, None)
         lap += int(f * p)
     lap -= sum(n for dt, n in _remicoes_liquidas(r) if dt and dt >= ini)
-    d = ini + timedelta(days=max(0, lap - 1))
+    # (7.15.2, P23) início + lapso, a convenção do SEEU para a data prevista e a da progressão refeita pela data-base informada: os
+    # dias do lapso, contado o do começo (CP, art. 10), vencem na véspera; a progressão é devida no dia seguinte
+    d = ini + timedelta(days=max(0, lap))
     return ("%s* (estimada pelo programa - a verificar: %s; contada da custódia em %s pelo regime mais grave)" % (rs.fmt(d), rot, rs.fmt(ini)), d)
 
 
@@ -332,6 +334,9 @@ DB_TIPOS = {  # itens da Auditoria sobre a data-base -> (cor, motivo)
     "data-base-na-data-do-fato-de-condenacao": ("amarelo", "data do fato de condenação desta execução - provável crime durante o cumprimento tratado como falta grave (Súmulas 526 e 534/STJ); conferir"),
     "data-base-no-inicio-da-guia-nova-com-a-pessoa-presa": ("amarelo", "início da guia nova com a pessoa presa sem interrupção - a data certa é a do início da custódia (STJ, Tema 1006); ver Auditoria"),
     "inconsistencia-da-data-base-sem-prisao-alteracao": ("amarelo", "sem prisão, alteração de regime ou falta grave homologada nessa data"),
+    # (7.15.2, P25) a data-base fica a do SEEU (nova prisão); o que se confere é a detração antes da fração
+    "data-base-na-nova-prisao-tema-1457": ("amarelo", "nova prisão depois de soltura - conferir se a custódia anterior foi descontada depois da "
+                                                      "fração (data-base com prisão descontínua: STJ, Tema 1457, sem tese); ver Auditoria"),
 }
 
 
@@ -1863,6 +1868,16 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
     if any(i["tipo"] == "divergencia-siapen-cpf" for i in _dv):
         # o confronto da ficha já apontava o CPF diferente: fica um só alerta (o da divergência, com baixa própria)
         aud["aud_itens"] = [i for i in aud["aud_itens"] if not (i.get("tipo") == "rspe-x-ficha" and (i.get("titulo") or "").startswith("CPF da ficha"))]
+    _dvn = [i for i in _dv if i["tipo"] == "divergencia-siapen-nascimento"]
+    if _dvn:
+        # (7.15.2, P28) nascimento: fica só o item da divergência da fonte (baixa própria); o do confronto com a ficha sai, e o
+        # botão Preencher e a baixa pela data informada passam para ele
+        _nf = [i for i in aud["aud_itens"] if i.get("tipo") == "rspe-x-ficha" and (i.get("titulo") or "").startswith("Nascimento na ficha")]
+        for i in _nf:
+            for k in ("preencher", "auto_baixa"):
+                if i.get(k) and not _dvn[0].get(k):
+                    _dvn[0][k] = i[k]
+        aud["aud_itens"] = [i for i in aud["aud_itens"] if i not in _nf]
     aud["aud_itens"] = _dv + aud["aud_itens"]
     # confronto com a ficha sem prejuízo direto ao assistido (retomada divergente, regressão
     # ausente no RSPE, divergência de identidade): pesa como "verificar", não como alerta vermelho. O que prejudica (prisão sem

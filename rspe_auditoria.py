@@ -706,6 +706,59 @@ def _nova_prisao_pos_soltura(eventos, d):
     return False
 
 
+def _item_nova_prisao_1457(r, eventos, crimes, incidentes, itens, hoje):
+    """(7.15.2, P25) Prisão provisória encerrada (soltura) e nova prisão depois, com a data-base do SEEU nesta: a contagem começa
+    na nova prisão e a custódia anterior vira detração. Se o lapso do SEEU passa do que dá a corrente favorável - fração sobre a pena
+    total, com a custódia anterior descontada depois (pena x fração - detração), sem contar o período em liberdade -, "verificar"
+    com a data estimada por ela. A data-base com prisão descontínua está no Tema 1457/STJ (afetado, sem tese): rever depois."""
+    db = rs.to_date(r.get("data_base_seeu") or "")
+    pv = rs.to_date(r.get("progressao_previsao_seeu") or "")
+    if not (db and pv and pv > db) or not _nova_prisao_pos_soltura(eventos, db):
+        return
+    if any(it.get("tipo") == "regime-inicial-depois-da-primeira-prisao" and (it.get("nivel") in ("alerta", "verificar") or it.get("ref") == rs.fmt(db))
+           for it in itens):
+        return  # o item do regime inicial (ou da data-base) depois da primeira prisão já faz a conta desses blocos
+    # progressão concedida depois da nova prisão: a contagem já é outra
+    if any("PROGRESS" in ((i.get("tipo") or "") + " " + (i.get("complemento") or "")).upper() and not rs._negado(i)
+           and (rs.to_date(i.get("data_referencia") or i.get("data_decisao") or "") or date.min) > db for i in incidentes):
+        return
+    _ev = sorted((e for e in eventos if rs.to_date(e.get("data") or "") and not e.get("_ficha")), key=lambda e: rs.to_date(e["data"]))
+    per = rs.periodos_custodia(_ev)
+    det = rs.dias_cumpridos_ate(per, [], db - timedelta(days=1)) if per else 0
+    pp = [(rs.parse_fracao(c.get("fracao_progressao") or ""), rs.pena_para_dias(c.get("pena_imposta")) or 0) for c in crimes
+          if not (c.get("extinto") or "").upper().startswith("S")]
+    if det < 1 or not pp or any(not f or not d for f, d in pp):
+        return
+    pt = sum(d for _f, d in pp)
+    fr = sum(f * d for f, d in pp) / pt
+    if not 0 < fr < 1:
+        return
+    lap_seeu = (pv - db).days
+    lap_fav = int(sum(f * d for f, d in pp)) - det  # pena x fração (cada crime, para baixo no total) - custódia anterior
+    dif = min(int(det * (1 - fr)), lap_seeu - max(0, lap_fav))  # a forma gravosa difere em detração x (1 - fração)
+    if dif < 1:
+        return
+    est = pv - timedelta(days=dif)
+    _passou = est < hoje and pv < hoje
+    itens.append(_item("info" if _passou else "verificar",
+                       "Data-base na nova prisão depois de soltura (%s): pela fração sobre a pena total, progressão em %s, não %s%s" % (
+                           rs.fmt(db), rs.fmt(est), rs.fmt(pv), " - lapso já atingido" if _passou else ""),
+                       "A prisão provisória anterior terminou com soltura e a contagem recomeçou na nova prisão (%s); a custódia anterior "
+                       "(%s) é pena cumprida e entra como detração (CP, art. 42). Pela corrente favorável, a fração incide sobre a pena "
+                       "total e a custódia anterior se desconta depois, sem contar o período em liberdade: pena × fração − detração, o que "
+                       "antecipa a progressão em cerca de %s (detração × (1 − fração)), para %s. Conferir no cálculo do SEEU se a detração foi "
+                       "descontada antes da fração (opção \"diminuir a detração após os cálculos\"). A 5ª e a 6ª Turmas do STJ fixam a "
+                       "data-base na última prisão (AgRg no REsp 2.263.217, 5ª T., 24/06/2026; AgRg no REsp 2.255.153, 6ª T., 15/09/2026), "
+                       "e a 6ª Turma aplica a fração sobre a pena total, com a prisão provisória como pena cumprida (AgRg no HC 1.039.806/AM, "
+                       "19/08/2026); o TJMS também, com prisão descontínua (Agravo de Execução Penal 1604202-36.2026.8.12.0000, 3ª Câmara "
+                       "Criminal, 01/10/2026), mas há acórdãos do TJMS que descontam a detração da pena total antes da fração "
+                       "(1606876-21.2025.8.12.0000, 1ª Câmara Criminal, 15/10/2025). A data-base com prisão descontínua está afetada aos "
+                       "repetitivos (STJ, Tema 1457, ProAfR no REsp 2.266.131/BA, 3ª Seção, 16/06/2026, sem tese firmada) - rever quando a "
+                       "tese for fixada." % (rs.fmt(db), rs.pl(det, "dia", "dias"), rs.pl(dif, "dia", "dias"), rs.fmt(est)),
+                       "CP, art. 42; LEP, art. 112; STJ, AgRg no HC 1.039.806/AM; STJ, Tema 1457 (afetado, sem tese).",
+                       tipo="data-base-na-nova-prisao-tema-1457", ref=rs.fmt(db)))
+
+
 def _hed_progressao(o):
     """Condenação anterior que gera a reincidência específica da PROGRESSÃO (LEP, art. 112, VII e VIII: reincidente em crime
     hediondo ou equiparado): só o hediondo ou equiparado pela lei. A associação para o tráfico (art. 35) e o tráfico de pessoas fora
@@ -795,6 +848,12 @@ def _agrupar_por_crime(itens):
 # (7.15.2) cada precedente na sua tese: o HC 398.850 trata do período entre as faltas; os HCs 293.475 e 377.088, do teto de 1/3 no total
 FUND_127 = ("LEP, art. 127 (até 1/3 no total - STJ, HC 293.475/SP e HC 377.088/SP; a contagem recomeça da data da infração anterior - "
             "STJ, HC 398.850/SP); TJDFT, Acórdão 1230029.")
+
+
+# (7.15.2, P57/S4034) a duplicidade é tese defensiva com apoio no TJMS, mas não pacífica: o item fica "verificar", com a ressalva
+RESS_DUP_127 = (" Tese defensiva, não pacífica: o TJMS limita a um desconto por período e exclui o já atingido por desconto anterior "
+                "(Agravo de Execução Penal 1604831-44.2025.8.12.0000, 3ª Câmara Criminal, j. 11/09/2025); a leitura contrária faz a nova perda "
+                "incidir sobre o saldo remido existente na data da nova falta (art. 127: \"até 1/3 do tempo remido\").")
 
 
 def _uteis_entre(ini, fim, a=None, b=None):
@@ -984,7 +1043,8 @@ def _perda_remidos(incidentes, perdidos, eventos=None, ficha=None):
             # remição anterior àquela falta, já atingida por ela (desconto em duplicidade) - salvo remição declarada depois por
             # trabalho do intervalo (origem que o RSPE não dá)
             _ativ = x.get("atividade") or 0
-            itens.append(_item(_niv if ficha else "verificar", "Perda de dias remidos em duplicidade (falta de %s)" % rs.fmt(f),
+            # (7.15.2, P57/S4034) "verificar": o RSPE é verificável, mas a tese da duplicidade não é pacífica (ressalva no texto)
+            itens.append(_item("verificar", "Perda de dias remidos em duplicidade (falta de %s)" % rs.fmt(f),
                                "Entre a falta de %s, que teve perda de dias decretada, e a de %s não há remição adquirida%s: a perda de %s "
                                "só pode ter recaído sobre a remição anterior à falta de %s, já atingida por aquela perda. A contagem recomeçou "
                                "em %s (LEP, art. 127)%s. Cabe impugnar o cálculo%s." % (
@@ -993,16 +1053,16 @@ def _perda_remidos(incidentes, perdidos, eventos=None, ficha=None):
                                    ("; a ficha registra trabalho sem atestado no intervalo (≈ %s de remição, se declarados): mesmo com ele, o limite "
                                     "seria ≈ %s (excesso de ≈ %s)" % (rs.pl(_ativ, "dia", "dias"), rs.pl(int(_ativ // 3), "dia", "dias"),
                                                                       rs.pl(max(0, x["perda"] - int(_ativ // 3)), "dia", "dias"))) if _ativ >= 1 else "",
-                                   "" if ficha else " - conferir antes se alguma remição decidida depois veio de trabalho desse intervalo") + ress,
+                                   "" if ficha else " - conferir antes se alguma remição decidida depois veio de trabalho desse intervalo") + ress + RESS_DUP_127,
                                FUND_127, tipo="perda-de-dias-remidos-em-duplicidade-falta-de", ref=rs.fmt(f)))
             continue
         if dup:
-            itens.append(_item(_niv, "Perda de dias remidos em duplicidade (falta de %s)" % rs.fmt(f),
+            itens.append(_item("verificar", "Perda de dias remidos em duplicidade (falta de %s)" % rs.fmt(f),
                                "A perda de %s pela falta de %s incidiu sobre remição anterior à falta de %s, que teve perda de dias decretada: %s. A contagem recomeçou em %s; "
                                "a nova perda só pode alcançar a remição adquirida entre as duas faltas (%s; limite de 1/3: %d). Cabe impugnar o cálculo." % (
                                    rs.pl(x["perda"], "dia", "dias"), rs.fmt(f), rs.fmt(prev),
                                    "; ".join("%s sobre a remição de %s de %s" % (rs.pl(q, "dia", "dias"), rs.pl(rem["n"], "dia", "dias"), rem["data"]) for q, rem in dup),
-                                   rs.fmt(prev), rs.pl(x["janela"], "dia", "dias"), x["janela"] // 3) + ress, FUND_127, tipo="perda-de-dias-remidos-em-duplicidade-falta-de", ref=rs.fmt(f)))
+                                   rs.fmt(prev), rs.pl(x["janela"], "dia", "dias"), x["janela"] // 3) + ress + RESS_DUP_127, FUND_127, tipo="perda-de-dias-remidos-em-duplicidade-falta-de", ref=rs.fmt(f)))
         base = x["janela"]
         limite = base // 3
         if base and x["perda"] > limite:
@@ -1301,7 +1361,7 @@ _TIPOS_SO_PROGRESSAO = ("percentual-de-progressao-diverge", "regime-inicial-depo
                         "alteracao-de-data-base-sem-falta-homologada", "alteracao-de-data-base-no-lugar-do-incidente",
                         "data-base-na-data-do-fato-de-condenacao", "inconsistencia-da-data-base-sem-prisao-alteracao",
                         "data-base-movida-para-a-recaptura-sem-falta-homo", "data-base-coincide-com-a-soma-unificacao-das-pen",
-                        "data-base-na-guia-nova-de-quem-ja-estava-preso")
+                        "data-base-na-guia-nova-de-quem-ja-estava-preso", "data-base-na-nova-prisao-tema-1457")
 _TIPOS_FRACAO = ("percentual-de-progressao-diverge", "fracao-de-livramento-diverge")
 
 
@@ -1560,14 +1620,22 @@ def auditar(r, hoje=None):
     # "Faltam dados": cada dado essencial que o programa não leu vira um alerta com o botão Preencher; o valor informado entra
     # nos cálculos como se viesse do RSPE e o alerta passa a "Dado informado" (com a data)
     faltam = rs.campos_faltantes(r)
-    if rs.sem_inicio_seeu(r):
+    # (7.15.2, P57/S4004) guia sem evento nem incidente lançado no SEEU, ainda que ele imprima a pena total: o cumprimento não foi
+    # iniciado - "verificar" (se a pessoa está presa, a demora a prejudica; solta, não). A execução suspensa fica de fora (info abaixo)
+    _sem_ini_v = rs.sem_inicio_seeu(r) or (
+        bool(r.get("_crimes")) and not [e for e in r.get("_eventos", []) if not e.get("_ficha")]
+        and not [i for i in r.get("_incidentes", []) if not i.get("_ficha")]
+        and not re.search(r"SUSPENS|SOBRESTA", rs._sem_acento(str(r.get("status_execucao") or "")).upper()))
+    if _sem_ini_v:
         # guia sem evento nem incidente no SEEU: os campos de cálculo vêm vazios porque a pena não foi iniciada no sistema
         _soma = sum(rs.pena_para_dias(c.get("pena_imposta")) or 0 for c in r.get("_crimes", []) if not c.get("extinto", "").upper().startswith("S"))
         itens.append(_item("verificar", "Pena não iniciada no SEEU: sem cálculo de pena",
                            "O RSPE não tem nenhum evento (prisão/início do cumprimento) nem incidente: a guia não teve o cumprimento iniciado no SEEU, "
-                           "por isso não traz pena total, pena cumprida, regime atual nem término - não são dados faltando na leitura.%s Se a pessoa "
+                           "por isso não traz %s regime atual nem término - não são dados faltando na leitura.%s Se a pessoa "
                            "já está presa por estes processos, pedir o início do cumprimento e o cálculo de pena (a prisão desde então conta como "
-                           "detração ou cumprimento)." % ((" Soma das penas das condenações: %s." % rs.pena_extenso(rs.dias_para_pena(_soma))) if _soma else ""),
+                           "detração ou cumprimento); se está solta, a demora não a prejudica." % (
+                               "pena cumprida," if rs.pena_para_dias(r.get("pena_total")) else "pena total, pena cumprida,",
+                               (" Soma das penas das condenações: %s." % rs.pena_extenso(rs.dias_para_pena(_soma))) if _soma else ""),
                            "LEP, arts. 105, 106 e 111; CP, art. 42.", tipo="pena-nao-iniciada-seeu"))
     if rs.interrompida_no_seeu(r) and not rs.sem_inicio_seeu(r) and (not r.get("regime_atual") or not r.get("termino_previsao_seeu")):
         # o SEEU deixa de imprimir regime e término enquanto o cumprimento está interrompido (fuga, evasão, soltura sem reinício)
@@ -1575,7 +1643,7 @@ def auditar(r, hoje=None):
         _u = _ult[-1][1] if _ult else {}
         _nao_impr = [x for x, v in (("regime atual", r.get("regime_atual")), ("término", r.get("termino_previsao_seeu"))) if not v]
         _nimp_txt = " nem ".join(x for x, v in (("o regime atual", r.get("regime_atual")), ("o término", r.get("termino_previsao_seeu"))) if not v)
-    if rs.interrompida_no_seeu(r) and not rs.sem_inicio_seeu(r) and (not r.get("regime_atual") or not r.get("termino_previsao_seeu")) and not _u:
+    if rs.interrompida_no_seeu(r) and not _sem_ini_v and (not r.get("regime_atual") or not r.get("termino_previsao_seeu")) and not _u:
         # RSPE sem nenhum evento lançado no SEEU: não houve interrupção - a execução está suspensa ou o cumprimento não começou
         _susp = bool(re.search(r"SUSPENS|SOBRESTA", rs._sem_acento(str(r.get("status_execucao") or "")).upper()))
         itens.append(_item("info", "%s: %s não impress%s" % ("Execução suspensa no SEEU" if _susp else "Cumprimento não iniciado no SEEU",
@@ -1587,7 +1655,7 @@ def auditar(r, hoje=None):
                                " e a execução está %s" % re.sub(r"\b(suspens|sobrestad)o\b", r"\1a", (r.get("status_execucao") or "").strip().lower())
                                if _susp else "", _nimp_txt),
                            "LEP, arts. 105 e 111; CP, art. 42.", tipo="pena-interrompida-seeu"))
-    elif rs.interrompida_no_seeu(r) and not rs.sem_inicio_seeu(r) and (not r.get("regime_atual") or not r.get("termino_previsao_seeu")):
+    elif rs.interrompida_no_seeu(r) and not _sem_ini_v and (not r.get("regime_atual") or not r.get("termino_previsao_seeu")) and _u:
         itens.append(_item("info", "Pena interrompida no SEEU: %s não impress%s" % (" e ".join(_nao_impr), "os" if len(_nao_impr) > 1 else "o"),
                            "O último evento do RSPE é %s%s (%s): enquanto não houver reinício lançado no SEEU, o sistema não imprime %s. Não é falha "
                            "de leitura. Se a pessoa já está presa (ficha ou autos), pedir o lançamento do reinício/recaptura no SEEU." % (
@@ -2474,7 +2542,9 @@ def auditar(r, hoje=None):
             _eq16 = False
             _d16 = (Fraction(f_seeu) == Fraction(1, 6) and Fraction(f_esp) == Fraction(16, 100))
             _pena_c = rs.pena_para_dias(c.get("pena_imposta")) or 0
-            _dias16 = int(_pena_c * (Fraction(1, 6) - Fraction(16, 100))) if _d16 else 0
+            # (7.15.2, P29) diferença entre os dois lapsos em dias inteiros, cada um arredondado para baixo como o SEEU o conta
+            # (2.190 dias: 365 - 350 = 15), que é a diferença real entre as datas - não a fração da diferença (14,6 -> 14)
+            _dias16 = (_pena_c // 6 - _pena_c * 16 // 100) if _d16 else 0
             # homicídio (CP, arts. 121 doloso e 121-A) ou latrocínio sem a marcação "resultado morte": o RSPE não diz se o crime foi
             # consumado. Consumado, o resultado morte é do próprio tipo (LEP, art. 112, VI, a, e VIII) - o percentual que o SEEU
             # aplica pode ser o certo; tentado, vale o do hediondo sem morte. Sem a sentença, é ponto a conferir, não erro
@@ -2525,9 +2595,9 @@ def auditar(r, hoje=None):
                     _it["detalhe"] += (" Primário, sem violência ou grave ameaça: 16%% (LEP, art. 112, I, na redação da Lei 13.964/2019%s). "
                                        "Sobre a pena deste crime (%s): 1/6 = %s; 16%% = %s - %s." % (
                                            ", mais benéfica que o 1/6 da redação anterior e retroativa - CF, art. 5º, XL" if fato and fato < rg.data_lei_13964() else "",
-                                           # com uma casa decimal: a diferença (o mesmo número do título) se lê na subtração
-                                           rs.pena_extenso(c.get("pena_imposta")), ("%.1f dias" % (_pena_c / 6.0)).replace(".", ","),
-                                           ("%.1f dias" % (_pena_c * 0.16)).replace(".", ","),
+                                           # lapsos em dias inteiros (para baixo): a diferença (o mesmo número do título) se lê na subtração
+                                           rs.pena_extenso(c.get("pena_imposta")), rs.pl(_pena_c // 6, "dia", "dias"),
+                                           rs.pl(_pena_c * 16 // 100, "dia", "dias"),
                                            ("%s a mais contra o assistido: pedir a retificação do cálculo" % rs.pl(_dias16, "dia", "dias"))
                                            if _dias16 >= 1 else "diferença de menos de 1 dia, sem efeito prático"))
                     _it["dias_diferenca"] = _dias16
@@ -3232,6 +3302,7 @@ def auditar(r, hoje=None):
                                    "Pedir a conta pena × fração − detração, mantida a data-base (opção \"diminuir a detração após os cálculos\" do SEEU)."),
                                "CP, art. 42 (a detração é pena cumprida); LEP, art. 112; STJ, AgRg no HC 719.763; STJ, Tema 1165.",
                                tipo="regime-inicial-depois-da-primeira-prisao", ref=rs.fmt(_db_atual)))
+    _item_nova_prisao_1457(r, eventos, crimes, incidentes, itens, hoje)
     db_seeu = rs.to_date(r.get("data_base_seeu") or "")
     # regressão por falta grave: a data-base é a da falta (Súmula 534/STJ), anterior à data em que a regressão foi lançada
     _falta_db = db_seeu and ult and "REGRESS" in (ult[1].get("complemento") or "").upper() and any(
@@ -3724,6 +3795,23 @@ def auditar(r, hoje=None):
                            "inicial e a soma de penas não reiniciam esse prazo, e o tempo anterior é pena cumprida - descontam-se só os períodos "
                            "fora da custódia." % (rs.fmt(db_seeu), rs.fmt(_pri) if _pri else "primeira prisão desta execução"),
                            "CP, arts. 42 e 83; LEP, art. 111; STJ, Tema 1006.", tipo="data-base-do-livramento-igual-a-da-progressao"))
+    elif _dbl and not _dbl_ini and db_seeu and abs((db_seeu - _dbl).days) <= 1 and _nova_prisao_pos_soltura(eventos, _dbl):
+        # (7.15.2, P24) nova prisão depois de soltura (liberdade intermediária): a 5ª Turma admite a última prisão como data-base
+        # também do livramento, e o tema está afetado aos repetitivos (Tema 1457). Mantida a regra até a tese, o ponto que pesa é
+        # a custódia anterior entrar como pena cumprida - "verificar", não alerta
+        _det_l = rs.dias_cumpridos_ate(_per_c, [], _dbl - timedelta(days=1)) if _per_c else 0
+        itens.append(_item("verificar", "Data-base do livramento (%s) na nova prisão depois de soltura: conferir o cômputo da custódia anterior" % rs.fmt(_dbl),
+                           "A data-base do livramento coincide com a da progressão (%s), que é uma nova prisão depois de período em liberdade; a "
+                           "primeira prisão desta execução é de %s%s. O livramento condicional se conta pela pena cumprida (CP, art. 83), e a "
+                           "custódia anterior é pena cumprida (CP, art. 42): conferir se o SEEU a considerou no requisito do livramento, "
+                           "descontada depois da fração, e não só na pena remanescente. A 5ª Turma do STJ fixa a data-base na última prisão "
+                           "também para o livramento (AgRg no REsp 2.263.217, 24/06/2026; AgRg no AREsp 3.222.593, 06/10/2026); a data-base "
+                           "com prisão descontínua está afetada aos repetitivos (STJ, Tema 1457, ProAfR no REsp 2.266.131/BA, 3ª Seção, "
+                           "16/06/2026, sem tese firmada) - rever quando a tese for fixada." % (
+                               rs.fmt(db_seeu), rs.fmt(_pri) if _pri else "?",
+                               (" (%s de custódia antes da nova prisão)" % rs.pl(_det_l, "dia", "dias")) if _det_l else ""),
+                           "CP, arts. 42 e 83; STJ, 5ª T., AgRg no REsp 2.263.217 e AgRg no AREsp 3.222.593; STJ, Tema 1457 (afetado, sem tese).",
+                           tipo="data-base-do-livramento-na-nova-prisao", ref=rs.fmt(_dbl)))
     # data-base do livramento na data de uma soma/unificação de penas (com ou sem "alteração de data-base do livramento" lançada no
     # mesmo dia), fora do início do cumprimento: a unificação não altera a data-base (Tema 1006) e a falta grave não interrompe o
     # prazo do livramento (Súmula 441/STJ) - "verificar" com a data certa; a aba mantém a data do SEEU (decisão do usuário, 7.14.2)
@@ -4127,8 +4215,11 @@ FUND_TIPOS = {
         "inicial em data posterior à primeira prisão, que leva o SEEU a operar a forma mais gravosa. O Superior Tribunal de Justiça "
         "reconhece que a fração do art. 112 da LEP incide sobre o total da pena, antes da detração (STJ, AgRg no AREsp 2.956.206, Sexta "
         "Turma, j. 18/03/2026; STJ, AgRg no HC 719.763, Sexta Turma, j. 29/03/2022; STJ, AREsp 3.228.879, decisão monocrática, DJEN "
-        "27/05/2026). Ainda que se mantenha a data-base na última prisão quando houve liberdade intermediária, como entende a Quinta "
-        "Turma (STJ, AgRg no REsp 2.248.958, j. 09/09/2026), a detração se desconta depois da fração, por ser pena cumprida.",
+        "27/05/2026; STJ, AgRg no HC 1.039.806/AM, Sexta Turma, j. 19/08/2026, que reconheceu o equívoco da metodologia que desconta a "
+        "prisão provisória antes da fração). No mesmo sentido, o Tribunal de Justiça de Mato Grosso do Sul aplica a fração sobre a pena "
+        "total, com posterior abatimento da prisão cautelar (TJMS, Agravo de Execução Penal 1602525-68.2026.8.12.0000, 1ª Câmara Criminal, "
+        "j. 27/07/2026), inclusive com prisão descontínua, sem cômputo do período em liberdade (TJMS, Agravo de Execução Penal "
+        "1604202-36.2026.8.12.0000, 3ª Câmara Criminal, j. 01/10/2026). Mantida a data-base na última prisão, a detração se desconta depois da fração, por ser pena cumprida.",
         "Requer-se a revisão da metodologia, para que a fração do requisito objetivo incida sobre a pena total e o período de prisão "
         "provisória seja considerado depois, como pena cumprida (CP, art. 42; LEP, arts. 66, III, c, e 112), mantida a data-base, com o uso "
         "da opção do SEEU \"diminuir a detração após os cálculos\", e a apresentação de "
