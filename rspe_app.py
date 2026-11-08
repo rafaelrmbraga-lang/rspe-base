@@ -43,7 +43,7 @@ import rspe_atendimentos as ratd
 import rspe_resumo as rres
 
 APP = "APTO"
-VERSAO = "7.15.4"
+VERSAO = "7.16.0"
 GEO_AUTO_DIAS = 30           # dados prisionais: baixados de novo sozinhos quando têm 30 dias ou mais
 GEO_REPETIR_MIN = 10         # ... ou 10 minutos depois de um download em que algum relatório falhou (nova tentativa automática)
 GEO_REPETIR_MAX = 3          # tentativas automáticas seguidas com o programa aberto (depois, na próxima abertura ou pelo botão)
@@ -2111,6 +2111,70 @@ class Api:
         """Resumo (EMENTA do fim da decisão ou o começo do texto) das decisões da triagem automática pedidas pela tela."""
         R = self._teses_auto().get("resumos") or {}
         return {i: R.get(i, "") for i in (ids or [])[:200]}
+
+    # ---- Monitor (aba Jurisprudências): como está a tese, como vota o relator / a câmara / a seção ----
+    _mon = None
+
+    def _monitor_base(self):
+        """Linhas do monitor (rspe_monitor.preparar) e os itens por id; montadas uma vez com a base da aba."""
+        if Api._mon is None:
+            import rspe_monitor
+            d = self.teses()
+            itens = d.get("itens") or []
+            Api._mon = {"linhas": rspe_monitor.preparar(itens), "por_id": {x["id"]: x for x in itens},
+                        "idx": [(x["id"], self._norm_busca(" ".join([x.get("tese") or "", x.get("ementa") or "", x.get("proc") or "", x.get("relator") or "",
+                                                                     x.get("orgao") or "", x.get("classe") or "", " ".join(x.get("temas") or [])])))
+                                for x in itens if not x.get("auto")]}
+        return Api._mon
+
+    def _monitor_termo(self, termo):
+        """Ids com todos os termos: curadas pelos campos (tese, ementa, processo, relator...); triagem automática pelo texto
+        integral e pela tese/ementa - a mesma busca da Pesquisa."""
+        import rspe_teses
+        if not (termo or "").strip():
+            return None
+        M = self._monitor_base()
+        ids = set(rspe_teses.buscar(M["idx"], termo, limite=10 ** 6))
+        ids.update(rspe_teses.buscar(self._teses_indice(), termo, limite=10 ** 6))
+        return ids
+
+    def teses_monitor(self, filtros=None):
+        """Monitor: {numeros, series, facetas, ids, total, aviso} do recorte (tema, termo, tribunal, tipo, relator, câmara/turma,
+        seção, ano inicial e final)."""
+        import rspe_monitor
+        f = dict(filtros or {})
+        try:
+            M = self._monitor_base()
+            r = rspe_monitor.monitor(M["linhas"], f, self._monitor_termo(f.get("termo")))
+            r["recorte"] = rspe_monitor.descrever(f)
+            return r
+        except Exception as e:
+            logging.getLogger("rspe").exception("monitor de jurisprudência")
+            return {"erro": "Falha ao montar o monitor: %s" % e}
+
+    def teses_monitor_pdf(self, filtros=None):
+        """Relatório do Monitor em PDF: recorte, números, gráficos e a lista das decisões."""
+        import rspe_monitor
+        f = dict(filtros or {})
+        r = self.teses_monitor(f)
+        if r.get("erro"):
+            return r
+        if not r.get("total"):
+            return {"erro": "Nenhuma decisão no recorte."}
+        nome = "Monitor de jurisprudência - %s - %s.pdf" % (re.sub(r"[^\w\s-]", "", f.get("tema") or f.get("termo") or "todas as áreas").strip()[:60],
+                                                            datetime.now().strftime("%d-%m-%Y"))
+        c = _um(self._janela.create_file_dialog(webview.SAVE_DIALOG, save_filename=nome, file_types=("PDF (*.pdf)",)))
+        if not c:
+            return None
+        if not c.lower().endswith(".pdf"):
+            c += ".pdf"
+        try:
+            rspe_monitor.relatorio_pdf(r, f, self._monitor_base()["por_id"], c, self.base.nome if self.base else "")
+        except Exception as e:
+            logging.getLogger("rspe").exception("PDF do monitor")
+            return {"erro": "Falha ao gerar o PDF: %s" % e}
+        _abrir(c)
+        return {"caminho": c, "msg": "PDF salvo."}
 
     # ---- dados prisionais de MS (Geopresídios/CNJ): guardados ao lado do programa, atualizados só pelo botão ----
     def _geo_arq(self):

@@ -91,6 +91,31 @@ input{font:inherit}
 .jz-b:hover{border-color:var(--pri);color:var(--pri)}.jz-b.pri{background:var(--pri);border-color:var(--pri);color:#fff}.jz-b.pri:hover{color:#fff;background:var(--pri2)}.jz-b svg{width:14px;height:14px}
 .jz-src{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--tx3);white-space:nowrap}
 .jz-src b{background:#E8F1EB;color:#1F5B39;border-radius:6px;padding:2px 8px;font-size:11px}
+/* Monitor (aba Jurisprudências) */
+.mon-alt{display:inline-flex;flex:none;border:1px solid var(--line2);border-radius:4px;overflow:hidden}.mon-alt span{padding:6px 14px;font-size:12.5px;cursor:pointer;color:var(--tx2);background:#fff}
+.mon-alt span+span{border-left:1px solid var(--line2)}.mon-alt span.on{background:var(--pri);color:#fff;font-weight:700}.mon-alt span:not(.on):hover{color:var(--pri)}
+.tesbar .sel{flex:none}.tesbar .sel select{padding:7px 30px 7px 10px;max-width:230px}
+.mon-q{height:100%;overflow:auto;display:flex;justify-content:center;padding:34px 24px}.mon-qb{max-width:900px;width:100%}
+.mon-qb h2{font-family:"Source Serif 4",Georgia,serif;font-size:24px;color:var(--pri2);margin:0 0 6px}.mon-qb>p{color:var(--tx2);margin:0 0 18px;font-size:13.5px}
+.mon-qb h4{font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);margin:24px 0 8px;font-weight:700}
+.mon-qr{display:flex;gap:10px;align-items:center}.mon-qr .search{flex:1;max-width:none}.mon-qr input{width:100%}.mon-qr .jz-b{height:36px;padding:0 18px}
+.mon-temas{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:6px}
+.mon-tm{display:flex;align-items:center;gap:9px;padding:9px 12px;border:1px solid var(--line);background:#fff;border-radius:4px;cursor:pointer;font-size:13px;color:var(--tx)}
+.mon-tm:hover{border-color:var(--pri);color:var(--pri)}.mon-tm i{width:9px;height:9px;border-radius:1px;flex:none}.mon-tm b{margin-left:auto;color:var(--tx3);font-weight:600;font-size:12px}
+.mon-cv{display:flex;flex-wrap:wrap;gap:8px}
+.mon-side label{display:block;font-size:12px;color:var(--tx2);margin:14px 2px 5px;font-weight:700}.mon-side .sel select{width:100%;max-width:none;padding:7px 30px 7px 10px;font-weight:400;font-size:12.5px}
+.mon-side .sel.foco select{border-color:var(--pri);box-shadow:0 0 0 3px var(--pri-soft)}
+.mon-chips{display:flex;flex-wrap:wrap;gap:4px}.mon-chips .jz-f{font-size:11.5px;padding:3px 8px}
+.mon-anos{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.mon-reg{font-size:11.5px;color:var(--tx3);margin:18px 2px 0;line-height:1.45}
+.mon-aviso{color:#6B5300;background:#FBF6EA;border-left:3px solid #B38B00;padding:8px 12px;margin:0 0 10px;font-size:12.5px}
+.mon-leg{margin:-4px 0 4px}.mon-load{color:var(--tx3);font-size:12px}
+.mon-bar g.ck{cursor:pointer}.mon-bar g.ck:hover text.nm{fill:var(--pri);text-decoration:underline}
+.mon .bd-2{gap:12px 28px}.mon-h3{font-size:14px;margin:20px 0 4px;color:var(--pri2)}.mon-h3 .muted{font-weight:400;font-size:12px}
+.mon-l td{font-size:12px;white-space:normal!important}.mon-l td:first-child,.mon-l td.mon-ac{white-space:nowrap!important}.mon-l td .muted{font-size:11px}.mon-l .tt{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-width:260px;color:var(--tx)}
+.mon-l td.mon-ac>div{display:grid;grid-template-columns:1fr auto;gap:4px}.mon-l td.mon-ac .jz-b{justify-content:center}.mon-l td.mon-ac .mon-cp{grid-column:1/3;grid-row:2}.mon-l .jz-b{height:24px;padding:0 8px;font-size:11.5px}
+.mon-l td:nth-child(2){min-width:130px}.mon-l td:nth-child(3){min-width:120px}.mon-l td:nth-child(4){min-width:150px}
+.mon-s{display:inline-block;padding:1px 7px;border-radius:3px;font-size:11px;font-weight:700;color:#fff}
 .jz-f{cursor:pointer;background:#F1F2EF;color:#4D5550;border-radius:6px;padding:2px 8px;font-size:11px}.jz-f i{font-style:normal;opacity:.7}.jz-f.on{background:#E8F1EB;color:#1F5B39;font-weight:600}
 .jz-trib{font-size:11px;font-weight:600;color:#3A423D;background:#F1F2EF;border-radius:6px;padding:1px 7px}.jz-src s{text-decoration:none;background:#F1F2EF;color:#8E958F;border-radius:6px;padding:2px 8px;font-size:11px}
 .teses{padding:6px 16px 16px}.tescnt{padding:8px 2px 10px;font-size:12.5px}
@@ -2912,12 +2937,13 @@ const ui = {
     return this.bdSec('bd8','8','Atendimentos'+(A.listagem.unidade?' · '+A.listagem.unidade:''),sub+(per?' Relatório do SAP: '+per+'.':''),corpo); },
   renderTeses(){ if(!this._teses){ this.tesCarregar(); }
     document.getElementById('subtabs').classList.remove('on');
-    document.getElementById('stats').innerHTML=`<div class="tesbar"><div class="search has"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="tq" placeholder="Pesquisar tese, ementa, relator ou número (ex.: remição ENEM, falta grave bis in idem)" value="${esc(this.tesQ)}" oninput="ui.tesBusca(this.value)"></div>
+    if(this.tesVista==='monitor') return this.monRender();
+    document.getElementById('stats').innerHTML=`<div class="tesbar">${this.tesAlt()}<div class="search has"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="tq" placeholder="Pesquisar tese, ementa, relator ou número (ex.: remição ENEM, falta grave bis in idem)" value="${esc(this.tesQ)}" oninput="ui.tesBusca(this.value)"></div>
       <div class="jz-src">${(()=>{ const T=this._teses||{itens:[]}; const n=(k,v)=>T.itens.filter(x=>(k==='t'?(x.tribunal||'TJMS'):(x.tipo||'Acórdão'))===v).length;
         const b=(k,v,rot)=>`<span class="jz-f ${this[k]===v?'on':''}" onclick="ui.tesFiltro(${jsa(k)},${jsa(v)})">${rot}${v?` <i>${n(k==='tesTrib'?'t':'p',v)}</i>`:''}</span>`;
         return `Tribunal ${b('tesTrib','','Todos')}${['TJMS','STJ','STF'].map(v=>b('tesTrib',v,v)).join('')}<span style="width:10px"></span>Decisão ${b('tesTipo','','Todas')}${b('tesTipo','Acórdão','Acórdão')}${b('tesTipo','Monocrática','Monocrática')}`; })()}</div></div>`;
     this.tesLista(); },
-  tesLista(manter){ const card=document.getElementById('card'); const T=this._teses||{itens:[]};
+  tesLista(manter){ if(this.tesVista==='monitor') return; const card=document.getElementById('card'); const T=this._teses||{itens:[]};
     if(T.carregando){ card.innerHTML='<div class="empty"><div><b>Carregando as jurisprudências…</b></div></div>'; return; }
     if(T.erro){ card.innerHTML=`<div class="empty"><div><b>Jurisprudências indisponíveis</b>${esc(T.erro)}</div></div>`; return; }
     const temas=T.temas||[]; const k={}; temas.forEach((t,i)=>k[t.tema]=i%this.TES_COR.length);
@@ -2944,6 +2970,111 @@ const ui = {
     const m0=card.querySelector('.jz-main'), sc=m0?m0.scrollTop:0;
     card.innerHTML=`<div class="jz">${side}<div class="jz-main">${T.aviso?`<div class="jz-head" style="color:#7A5410;background:#FBF6EA;border-radius:8px;padding:8px 12px;margin-bottom:8px">${esc(T.aviso)}</div>`:''}<div class="jz-head"><b>${V.length}</b> ${V.length===1?'decisão favorável à defesa':'decisões favoráveis à defesa'}${this.tesSoFav?' nos <b style="font-size:13px">favoritos</b>':''}${this.tesTema?' em <b style="font-size:13px">'+esc(this.tesTema)+'</b>':''}${this.tesQ?' para “'+esc(this.tesQ)+'”':''}<span class="sp"></span><select class="jz-sort" onchange="ui.tesOrdem=this.value;ui.tesLista()"><option value="recentes" ${this.tesOrdem==='recentes'?'selected':''}>Mais recentes</option><option value="antigos" ${this.tesOrdem==='antigos'?'selected':''}>Mais antigos</option></select></div>${V.length?cards:vazio}${V.length>this.tesN?`<div style="text-align:center;padding:12px"><span class="jz-b" onclick="ui.tesN+=60;ui.tesLista(1)">Mostrar mais (${V.length-this.tesN})</span></div>`:''}</div></div>`;
     if(sc && manter) card.querySelector('.jz-main').scrollTop=sc; this.tesResumos(V.slice(0,this.tesN)); },
+  // ---- Monitor: como está a tese (área ou termo), como vota o relator / a câmara-turma / a seção. Números, séries e facetas
+  // vêm calculados do programa (Api.teses_monitor, módulo rspe_monitor); aqui só se desenha ----
+  tesVista:'pesquisa', monF:null, monR:null, monN:100, _monSeq:0, monCarregando:false, monFoco:'',
+  MON_COR:{favoravel:'#2F7A4F',parcial:'#B38B00',desfavoravel:'#A33A36',nao_conhecido:'#9AA0A6'},
+  MON_ROT:{favoravel:'Favoráveis',parcial:'Parcialmente favoráveis',desfavoravel:'Desfavoráveis',nao_conhecido:'Não conhecidos'},
+  MON_UM:{favoravel:'Favorável',parcial:'Parcial',desfavoravel:'Desfavorável',nao_conhecido:'Não conhecido'},
+  MON_S:['favoravel','parcial','desfavoravel','nao_conhecido'],
+  tesAlt(){ const v=this.tesVista==='monitor'; return `<div class="mon-alt"><span class="${v?'':'on'}" onclick="ui.tesVer('pesquisa')" title="Pesquisar decisões por palavras e tema">Pesquisa</span><span class="${v?'on':''}" onclick="ui.tesVer('monitor')" title="Números e gráficos de uma tese: quantas decisões, como vota o relator, a câmara/turma e a seção">Monitor</span></div>`; },
+  tesVer(v){ this.tesVista=v; this.renderTeses(); },
+  monVazio(){ return {tema:'',termo:'',tribunal:'',tipo:'',relator:'',camara:'',secao:'',ano_de:'',ano_ate:''}; },
+  monPergunta(){ this.monF=null; this.monR=null; this.renderTeses(); },
+  monComecar(tema,foco){ const el=document.getElementById('monq'); const q=el?el.value.trim():'';
+    this.monF=Object.assign(this.monVazio(),{tema:tema||'',termo:tema?'':q}); this.monFoco=foco||''; this.monN=100; this.monR=null; this.monRender(); },
+  monSet(k,v){ if(!this.monF) return; this.monF[k]=v==null?'':v; if(k==='camara'&&v) this.monF.secao=''; if(k==='secao'&&v) this.monF.camara=''; this.monN=100; this.monFoco='';
+    if(k!=='termo'){ const t=document.getElementById('montq'); if(t) t.value=this.monF.termo; } this.monAtualizar(k==='termo'?450:0); },
+  monLimpar(){ Object.assign(this.monF,{tribunal:'',tipo:'',relator:'',camara:'',secao:'',ano_de:'',ano_ate:''}); this.monN=100; this.monAtualizar(0); },
+  monAtualizar(espera){ clearTimeout(this._monT); this._monT=setTimeout(async()=>{ const seq=++this._monSeq; this.monCarregando=true; this.monPintar();
+      let r; try{ r=await API().teses_monitor(Object.assign({},this.monF)); }catch(e){ r={erro:String(e)}; }
+      if(seq!==this._monSeq) return; this.monCarregando=false; this.monR=r||{erro:'Sem resposta do programa.'}; if(this.aba==='teses'&&this.tesVista==='monitor') this.monPintar(); }, espera||0); },
+  async monRelatorio(){ if(!this.monF) return; this.toast('Gerando o relatório…'); try{ const x=await API().teses_monitor_pdf(Object.assign({},this.monF)); if(x) this.toast(x.erro||x.msg); }catch(e){ this.toast('Falha ao gerar o relatório: '+e); } },
+  monRender(){ const st=document.getElementById('stats'), T=this._teses||{itens:[],temas:[]};
+    if(!this.monF){ st.innerHTML=`<div class="tesbar">${this.tesAlt()}<span class="jz-src">Monitor: números e gráficos de uma tese, como vota o relator, a câmara/turma e a seção</span></div>`;
+      const card=document.getElementById('card');
+      if(T.carregando){ card.innerHTML='<div class="empty"><div><b>Carregando as jurisprudências…</b></div></div>'; return; }
+      const k={}; (T.temas||[]).forEach((t,i)=>k[t.tema]=i%this.TES_COR.length);
+      card.innerHTML=`<div class="mon-q"><div class="mon-qb"><h2>O que você quer acompanhar?</h2>
+        <p>Escolha uma área ou digite um termo. Depois, filtre por tribunal, acórdão ou monocrática, relator, câmara/turma, seção e período, e gere o relatório.</p>
+        <div class="mon-qr"><div class="search has"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="monq" placeholder="Termo específico (ex.: remição ENEM, falta grave prescrição, bis in idem)" onkeydown="if(event.key==='Enter')ui.monComecar('')"></div><span class="jz-b pri" onclick="ui.monComecar('')">Acompanhar</span></div>
+        <h4>Ou escolha uma área</h4><div class="mon-temas">${(T.temas||[]).map(t=>`<span class="mon-tm" onclick="ui.monComecar(ui._clips[${this.clip(t.tema)}])"><i style="background:${this.TES_COR[k[t.tema]]}"></i>${esc(t.tema)}<b>${t.n.toLocaleString('pt-BR')}</b></span>`).join('')}</div>
+        <h4>Ou veja como vota</h4><div class="mon-cv"><span class="jz-b" onclick="ui.monComecar('','relator')">um relator</span><span class="jz-b" onclick="ui.monComecar('','camara')">uma câmara ou turma</span><span class="jz-b" onclick="ui.monComecar('','secao')">uma seção</span><span class="jz-b" onclick="ui.monComecar('')">todo o acervo</span></div>
+        </div></div>`;
+      setTimeout(()=>{ const e=document.getElementById('monq'); if(e) e.focus(); },0); return; }
+    const F=this.monF, temas=T.temas||[];
+    st.innerHTML=`<div class="tesbar">${this.tesAlt()}<div class="sel"><select id="montema" onchange="ui.monSet('tema',this.value)" title="Área (tema)"><option value="">Todas as áreas</option>${temas.map(t=>`<option ${F.tema===t.tema?'selected':''}>${esc(t.tema)}</option>`).join('')}</select></div>
+      <div class="search has"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="montq" placeholder="Termo específico (busca também no texto integral)" value="${esc(F.termo)}" oninput="ui.monSet('termo',this.value)"></div>
+      <span class="jz-b" onclick="ui.monPergunta()" title="Voltar à pergunta inicial">Mudar a pergunta</span><span class="jz-b pri" onclick="ui.monRelatorio()" title="Relatório em PDF com o recorte, os números, os gráficos e a lista">${this.tesIc('<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/><path d="M9 13h6M9 17h4"/>')}Relatório</span></div>`;
+    document.getElementById('card').innerHTML=`<div class="jz mon"><div class="jz-side mon-side" id="monside"></div><div class="jz-main" id="monmain"></div></div>`;
+    if(this.monR) this.monPintar(); else this.monAtualizar(0); },
+  monCorta(t,n){ t=String(t||''); return t.length>n?t.slice(0,n-1).trim()+'…':t; },
+  monN0(n){ return (n||0).toLocaleString('pt-BR'); },
+  monPct(v){ return String(v).replace('.',',')+'%'; },
+  // barras horizontais empilhadas pelo sentido; total (e taxa, quando há desfavoráveis) à direita; clique filtra
+  monBarras(titulo,L,o){ o=o||{}; L=(L||[]).filter(z=>z.n); if(!L.length) return `<div class="bd-g"><h4>${esc(titulo)}</h4><p class="muted">Sem dados.</p></div>`;
+    const W=540, lw=o.lw||200, rw=o.taxa?92:52, rh=22, H=rh*L.length+6, mx=Math.max(...L.map(z=>z.n))||1, area=W-lw-rw; let s='';
+    L.forEach((z,i)=>{ const y=2+rh*i; let x=lw; const ck=o.clique?o.clique(z):'';
+      let g=`<text class="nm" x="${lw-8}" y="${y+15}" text-anchor="end" font-size="12" fill="var(--tx2)">${esc(this.monCorta(z.nome,32))}<title>${esc(z.nome)}${ck?' (clique para filtrar)':''}</title></text>`;
+      this.MON_S.forEach(k=>{ if(!z[k]) return; const w=Math.max(area*z[k]/mx,1.5); g+=`<rect x="${x}" y="${y+4}" width="${w}" height="14" fill="${this.MON_COR[k]}" stroke="#fff" stroke-width=".8"><title>${esc(z.nome)} · ${this.MON_ROT[k]}: ${z[k]}</title></rect>`; x+=w; });
+      g+=`<text x="${x+6}" y="${y+15}" font-size="12" font-weight="700" fill="var(--tx)">${this.monN0(z.n)}${o.taxa&&z.taxa!=null?`<tspan font-weight="400" fill="var(--tx2)"> · ${this.monPct(z.taxa)}</tspan>`:''}</text>`;
+      s+=ck?`<g class="ck" onclick="${ck}">${g}</g>`:g; });
+    return `<div class="bd-g"><h4>${esc(titulo)}</h4><svg class="mon-bar" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" style="display:block;max-width:100%;height:auto">${s}</svg>${o.nota?`<p class="bd-nota">${esc(o.nota)}</p>`:''}</div>`; },
+  monSide(R){ const F=this.monF, Fc=(R&&R.facetas)||{}, n=x=>` (${this.monN0(x)})`;
+    const chips=(k,lista,rot)=>`<div class="mon-chips"><span class="jz-f ${!F[k]?'on':''}" onclick="ui.monSet('${k}','')">${rot}</span>${lista.map(v=>{ const c=((Fc[k]||[]).find(z=>z.v===v)||{}).n||0; return `<span class="jz-f ${F[k]===v?'on':''}" onclick="ui.monSet('${k}',${jsa(F[k]===v?'':v)})">${esc(v)} <i>${this.monN0(c)}</i></span>`; }).join('')}</div>`;
+    const sel=(k,lista,vazio,grupos)=>{ let L=(Fc[k]||[]).slice(); if(F[k]&&!L.some(z=>z.v===F[k])) L.unshift({v:F[k],n:0,tribunal:''});
+      const op=z=>`<option value="${esc(z.v)}" ${F[k]===z.v?'selected':''}>${esc(z.v)}${n(z.n)}</option>`;
+      const corpo=grupos?['TJMS','STJ','STF',''].map(t=>{ const g=L.filter(z=>(z.tribunal||'')===t); return g.length?`<optgroup label="${t||'—'}">${g.map(op).join('')}</optgroup>`:''; }).join(''):L.map(op).join('');
+      return `<div class="sel ${this.monFoco===k?'foco':''}"><select id="mons_${k}" onchange="ui.monSet('${k}',this.value)"><option value="">${vazio}</option>${corpo}</select></div>`; };
+    const anos=Fc.ano||[], an=(k,vazio)=>`<div class="sel"><select onchange="ui.monSet('${k}',this.value)"><option value="">${vazio}</option>${anos.map(a=>`<option ${String(F[k])===String(a)?'selected':''}>${a}</option>`).join('')}</select></div>`;
+    const algum=['tribunal','tipo','relator','camara','secao','ano_de','ano_ate'].some(k=>F[k]);
+    return `<div class="jz-h">Filtros</div>
+      <label>Tribunal</label>${chips('tribunal',['TJMS','STJ','STF'],'Todos')}
+      <label>Decisão</label>${chips('tipo',['Acórdão','Monocrática'],'Todas')}
+      <label title="Só os processos da relatoria do magistrado (acórdãos e monocráticas)">Como vota o relator</label>${sel('relator',0,'Todos os relatores',1)}
+      <label title="Câmara criminal (TJMS) ou turma (STJ, STF). No STJ, quando o acervo não traz o órgão, a turma é inferida pelo relator">Como vota a câmara / turma</label>${sel('camara',0,'Todas as câmaras e turmas',1)}
+      <label title="Decisões tomadas pela própria seção (TJMS: 1ª e 2ª Seção Criminal, Seção Especial; STJ: Terceira Seção, Corte Especial; STF: Plenário)">Como vota a seção</label>${sel('secao',0,'Todas as seções',1)}
+      <label>Período (ano do julgamento)</label><div class="mon-anos">${an('ano_de','De')}${an('ano_ate','Até')}</div>
+      ${algum?`<div style="margin-top:14px"><span class="jz-b" onclick="ui.monLimpar()">Limpar filtros</span></div>`:''}
+      <p class="mon-reg">Sentido de cada decisão: pelo resultado e pelo rótulo da triagem, do ponto de vista da defesa (recurso do MP desprovido = favorável). Órgão vazio no acervo do STJ: turma inferida pelo relator.</p>`; },
+  monPintar(){ const side=document.getElementById('monside'), main=document.getElementById('monmain'); if(!side||!main) return;
+    const R=this.monR, F=this.monF, T=this._teses||{itens:[]};
+    if(!R){ main.innerHTML=`<div class="empty"><div><b>${F.termo?'Buscando no texto integral…':'Calculando…'}</b>${F.termo?'Na primeira busca o programa prepara o índice das decisões; as próximas são imediatas.':''}</div></div>`; return; }
+    const sc=main.scrollTop; side.innerHTML=this.monSide(R);
+    const tm=document.getElementById('montema'), tq=document.getElementById('montq'); if(tm) tm.value=F.tema||''; if(tq&&document.activeElement!==tq) tq.value=F.termo||'';
+    if(this.monFoco){ const e=document.getElementById('mons_'+this.monFoco); if(e) e.focus(); }
+    if(R.erro){ main.innerHTML=`<div class="empty"><div><b>Monitor indisponível</b>${esc(R.erro)}</div></div>`; return; }
+    const N=R.numeros, S=R.series, mt=N.tem_desfavoravel, load=this.monCarregando?'<span class="mon-load">atualizando…</span>':'';
+    const head=`<div class="jz-head"><span><b>${esc(R.recorte||'')}</b></span><span class="sp"></span>${load}</div>`;
+    if(!R.total){ main.innerHTML=head+`<div class="empty"><div><b>Nenhuma decisão no recorte</b>Tente outro termo, outra área ou tire um filtro.</div></div>`; return; }
+    const per=N.ano_de?(N.ano_de===N.ano_ate?String(N.ano_de):N.ano_de+' a '+N.ano_ate):'—';
+    const nums=[[this.monN0(R.total),'decisões no recorte',this.monN0(N.acordaos)+' acórdãos · '+this.monN0(N.monocraticas)+' monocráticas'],
+      [this.monN0(N.favoravel),'favoráveis à defesa',N.parcial?'+ '+this.monN0(N.parcial)+' parcialmente favoráveis':''],
+      [this.monN0(N.desfavoravel),'desfavoráveis',N.nao_conhecido?this.monN0(N.nao_conhecido)+' não conhecidos':'']];
+    const cores={1:'verde',2:'vermelho'};
+    if(mt){ nums.push([this.monPct(N.taxa),'de acolhimento','favoráveis e parciais sobre as decisões de mérito ('+this.monPct(N.taxa_integral)+' integralmente)']); }
+    nums.push([this.monN0(N.relatores),'relatores',''],[per,'período (julgamento)',Object.entries(N.tribunais||{}).map(([t,v])=>t+' '+this.monN0(v)).join(' · ')]);
+    const sents=this.MON_S.filter(k=>N[k]);
+    const ano=this.bdColunas({titulo:'Decisões por ano de julgamento, pelo sentido para a defesa',categorias:S.ano.map(a=>a.nome),series:sents.map(k=>[this.MON_ROT[k]+' ('+this.monN0(N[k])+')',S.ano.map(a=>a[k]),this.MON_COR[k]])},210);
+    const ckRel=z=>F.relator===z.nome?'':`ui.monSet('relator',${jsa(z.nome)})`;
+    const ckOrg=z=>{ const nome=z.nome.replace(/ · monocráticas$/,''); if(/não informado/.test(nome)||!z.nivel) return ''; const k=z.nivel==='secao'?'secao':'camara'; return F[k]===nome?'':`ui.monSet('${k}',${jsa(nome)})`; };
+    const rel=F.relator?'':this.monBarras(`Como votam os relatores${S.relator.length<S.relator_total?' (os '+S.relator.length+' com mais decisões, de '+S.relator_total+')':''}${mt?', com a taxa de acolhimento':''}`,S.relator,{taxa:mt,clique:ckRel,nota:'Só processos da relatoria de cada um. Clique no nome para ver como ele vota.'});
+    const org=this.monBarras('Por câmara/turma e seção (órgão julgador)',S.orgao,{taxa:mt,clique:ckOrg,nota:'Câmaras e turmas primeiro, depois seções e plenário; monocráticas à parte.'+(N.orgao_inferido?' Em '+this.monN0(N.orgao_inferido)+' decisões o órgão veio vazio no acervo e a turma foi inferida pelo relator.':'')});
+    const res=this.monBarras('Por resultado (rótulo do ponto de vista da defesa, quando há)',S.resultado,{lw:230});
+    const tem=F.tema&&S.tema.length<=1?'':this.monBarras('Áreas (temas) das decisões do recorte',S.tema,{clique:z=>F.tema===z.nome?'':`ui.monSet('tema',${jsa(z.nome)})`,nota:'Uma decisão pode ter mais de um tema.'});
+    // lista: mais recentes primeiro
+    const idx=this._monIdx&&this._monIdx.n===T.itens.length?this._monIdx:(this._monIdx={n:T.itens.length,m:new Map(T.itens.map((x,i)=>[x.id,i]))});
+    const linhas=(R.lista||[]).slice(0,this.monN).map(([id,s,org,inf])=>{ const i=idx.m.get(id); if(i==null) return ''; const x=T.itens[i]; const sup=(x.tribunal||'TJMS')!=='TJMS'; const fav=this.tesFav&&this.tesFav.has(x.id);
+      return `<tr><td>${esc(x.julg||'—')}</td><td>${esc(x.tribunal||'TJMS')} · ${esc(org)}${inf?' <span class="muted" title="órgão inferido pelo relator (o acervo não traz o órgão)">(inferida)</span>':''}${x.tipo==='Monocrática'?'<br><span class="muted">monocrática</span>':''}</td><td>${esc(x.relator||'—')}</td><td>${esc(x.proc)}${sup?'':`<br><span class="muted">${esc(x.classe)}</span>`}</td><td><div class="tt" title="${esc(x.tese||'')}">${esc(x.tese||'')}</div></td><td><span class="mon-s" style="background:${this.MON_COR[s]}">${this.MON_UM[s]}</span></td>
+        <td class="mon-ac"><div>${x.link?`<span class="jz-b" onclick="api('abrir_url',ui._clips[${this.clip(x.link)}])">Inteiro teor</span>`:''}<span class="jz-b mon-cp" onclick="ui.tesCopiar(${i},'cit')">Copiar referência</span><span class="jz-b jz-fb ${fav?'on':''}" title="${fav?'Tirar dos favoritos':'Guardar nos favoritos'}" onclick="ui.monFav(ui._clips[${this.clip(x.id)}])">${fav?'★':'☆'}</span></div></td></tr>`; }).join('');
+    const mais=(R.lista||[]).length>this.monN?`<div style="text-align:center;padding:12px"><span class="jz-b" onclick="ui.monN+=100;ui.monPintar()">Mostrar mais (${this.monN0(Math.min(R.lista.length,R.total)-this.monN)})</span></div>`:(R.total>(R.lista||[]).length?`<p class="bd-nota">Lista com as ${this.monN0(R.lista.length)} decisões mais recentes do recorte.</p>`:'');
+    main.innerHTML=head+(R.aviso?`<div class="mon-aviso">${esc(R.aviso)}</div>`:'')+this.bdNum(nums,cores)
+      +`<div class="bd-1">${ano}</div>`+(()=>{ const g=[rel,org,tem,res].filter(Boolean); let h=''; for(let i=0;i<g.length;i+=2) h+=`<div class="bd-2">${g[i]}${g[i+1]||''}</div>`; return h; })()
+      +`<h3 class="mon-h3">Decisões do recorte <span class="muted">(${this.monN0(R.total)}, das mais recentes às mais antigas)</span></h3>
+        <table class="bd-t mon-l"><thead><tr><th>Julg.</th><th>Tribunal · órgão</th><th>Relator</th><th>Processo</th><th>Tese</th><th>Sentido</th><th></th></tr></thead><tbody>${linhas}</tbody></table>${mais}`;
+    main.scrollTop=sc; },
+  async monFav(id){ const Fv=this.tesFav||(this.tesFav=new Set()); const on=!Fv.has(id); on?Fv.add(id):Fv.delete(id); this.monPintar();
+    try{ this.tesFav=new Set(await API().tese_favoritar(id,on)||[]); }catch(e){} },
   // linha E: menu lateral com as abas agrupadas por tarefa; recolhe (só ícone e contador) e expande; a escolha fica gravada neste computador
   NOME:{geral:'Geral',prog:'Progressão',liv:'Livramento',ind:'Indulto e comutação',presc:'Prescrição',ext:'Extinção',fd:'Ficha disciplinar',aud:'Auditoria',base:'Dados da base',geo:'Dados prisionais',teses:'Jurisprudências',quadro:'Quadro do usuário'},
   TITULO:{geral:'Visão geral da base',prog:'Progressão de regime',liv:'Livramento condicional',ind:'Indulto e comutação',presc:'Prescrição',ext:'Extinção da pena',fd:'Ficha disciplinar',aud:'Auditoria do cálculo',base:'Dados da base',geo:'Dados prisionais de MS',teses:'Jurisprudências',quadro:'Quadro do usuário'},

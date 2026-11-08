@@ -1,9 +1,9 @@
-APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.15.4
+APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.16.0
 (antigo RSPE Base; SEEU, programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-7.15.4. A documentação técnica completa (cada parâmetro, a regra, a norma e
+7.16.0. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -840,6 +840,30 @@ JURISPRUDÊNCIAS
   programa (rspe_teses.py e teses_auto.bin); um teses_execucao.json ao lado
   do programa substitui a base curada só se for de versão igual ou mais
   nova (um arquivo antigo esquecido na pasta é ignorado).
+  Monitor (alternador "Pesquisa | Monitor" no topo da aba): pergunta o que
+  acompanhar (uma área/tema ou um termo, com a mesma busca no texto
+  integral da Pesquisa) e mostra os números, os gráficos e a lista do
+  recorte. Filtros: tribunal, acórdão ou monocrática, "como vota o relator"
+  (só os processos da relatoria dele), "como vota a câmara/turma", "como
+  vota a seção" (decisões da própria seção, do plenário ou da corte
+  especial) e período. Gráficos: decisões por ano (pelo sentido), por
+  relator (os 15 com mais decisões; clique filtra), por câmara/turma e
+  seção (monocráticas à parte), por resultado e por tema. "Relatório" gera
+  o PDF com o recorte, os números, os gráficos e a lista (até 300 decisões,
+  as mais recentes). Sentido de cada decisão para a defesa (favorável,
+  parcial, desfavorável, não conhecido): campo "sentido" do item, se houver;
+  senão o rótulo da triagem ("Recurso do MP desprovido", "Ordem concedida",
+  inclusive de ofício em HC não conhecido = favorável; "Ordem denegada",
+  "Recurso da defesa desprovido", "Recurso do MP provido" = desfavorável;
+  "parcial" = parcial); sem rótulo, o resultado (provido = favorável,
+  parcialmente = parcial, desprovido = desfavorável, não conhecido). A taxa
+  de acolhimento (favoráveis e parciais sobre favoráveis, parciais e
+  desfavoráveis) só aparece quando o recorte tem decisões desfavoráveis; a
+  base atual tem só as favoráveis, e o monitor avisa que os números são de
+  volume. Órgão vazio (STJ da triagem automática, monocráticas do STF):
+  turma inferida pelo relator quando 2/3 ou mais das decisões dele com
+  turma informada na base são de uma só turma; senão "órgão não informado".
+  Cálculo no módulo rspe_monitor.py.
 
 ARQUIVOS
   rspe_app.py        janela, bases, importação em lote, pasta vigiada (API da interface)
@@ -858,6 +882,7 @@ ARQUIVOS
   rspe_decretos.py   decretos de indulto de 2000 a 2025 (mapa da aba Indulto)
   rspe_indulto_tl.py linha do tempo do indulto e da comutação
   rspe_teses.py      jurisprudências curadas (decisões favoráveis à defesa; embutido)
+  rspe_monitor.py    Monitor da aba Jurisprudências (sentido, turma pelo relator, números, relatório)
   teses_auto.bin     jurisprudências da triagem automática (embutido)
   fontes/            fontes dos relatórios em PDF (com a licença)
   apto_selo.png      selo da tela e dos relatórios
@@ -1033,6 +1058,31 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v7.16.0
+  Jurisprudências: "Monitor", ao lado da Pesquisa (alternador no topo da
+  aba). Começa perguntando o que acompanhar: uma área (os temas da aba),
+  um termo (a mesma busca da Pesquisa, também no texto integral) ou "como
+  vota" um relator, uma câmara/turma ou uma seção. Filtros: tribunal
+  (TJMS, STJ, STF), acórdão ou monocrática, relator (só a relatoria dele,
+  com a contagem), câmara/turma, seção e período (ano inicial e final).
+  Números do recorte (decisões, favoráveis, desfavoráveis, relatores,
+  período), gráficos (por ano pelo sentido, por relator, por câmara/turma
+  e seção, por resultado, por tema; clique no nome filtra) e a lista das
+  decisões com "Inteiro teor", "Copiar referência" e favoritos. Botão
+  "Relatório": PDF com o recorte, os números, os gráficos e a lista.
+  - Sentido de cada decisão para a defesa: favorável, parcial,
+    desfavorável ou não conhecido (regra na seção JURISPRUDÊNCIAS). A taxa
+    de acolhimento só aparece quando o recorte tem desfavoráveis; a base
+    de hoje tem só as favoráveis e o Monitor avisa que os números mostram
+    volume. Quando vier a base com as desfavoráveis, basta cada item trazer
+    "sentido" (ou o rótulo/resultado do ponto de vista da defesa).
+  - Turma inferida pelo relator quando o acervo não traz o órgão (STJ da
+    triagem automática, monocráticas do STF): turma de 2/3 ou mais das
+    decisões do mesmo relator com turma informada; senão "órgão não
+    informado". Grafias do mesmo ministro unificadas (Rogerio Schietti /
+    Rogerio Schietti Cruz; Marluce Caldas / Maria Marluce Caldas).
+  - A Pesquisa não mudou (só ganhou o alternador).
 
 v7.15.4
   Jurisprudências: seção "Favoritos". A estrela "☆ Favoritar" em cada
