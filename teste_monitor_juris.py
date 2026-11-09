@@ -1,5 +1,6 @@
-"""Monitor da aba Jurisprudências (7.16.0): sentido de cada decisão, turma inferida pelo relator, números e séries, taxa de
-acolhimento só com desfavoráveis no recorte, filtros e facetas, relatório em PDF; Api.teses_monitor com a base real."""
+"""Monitor da aba Jurisprudências (7.16.0/7.16.1): sentido de cada decisão, turma inferida pelo relator, números e séries, taxa de
+acolhimento só com desfavoráveis no recorte, filtros e facetas, relatório em PDF; base nos dois sentidos (monitor_juris.bin) e
+Api.teses_monitor com a base real; a Pesquisa continua só com as favoráveis."""
 import os, sys, tempfile, types
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 wv = types.ModuleType("webview"); wv.SAVE_DIALOG = 1; wv.FOLDER_DIALOG = 2; wv.OPEN_DIALOG = 0; sys.modules["webview"] = wv
@@ -146,6 +147,43 @@ try:
 except ImportError:
     pass
 
+# ---- base do Monitor nos dois sentidos (monitor_juris.bin, 7.16.1) ----
+import json, struct, zlib
+from collections import Counter
+AQUI = os.path.dirname(os.path.abspath(__file__))
+BIN = os.path.join(AQUI, "monitor_juris.bin")
+ok(os.path.isfile(BIN), "monitor_juris.bin presente no repositório (embutido no .exe)")
+JB = {"cab": {}, "itens": []}
+if os.path.isfile(BIN):
+    b_ = open(BIN, "rb").read()
+    ok(b_[:8] == b"APTOMON1", "cabeçalho APTOMON1")
+    ok(len(b_) < 25 * 1024 * 1024, "arquivo compacto (< 25 MB): %d bytes" % len(b_))
+    n_ = struct.unpack("<I", b_[8:12])[0]
+    JB = json.loads(zlib.decompress(b_[12:12 + n_]).decode("utf-8"))
+IT = JB["itens"]
+ok(len(IT) > 50000, "base com dezenas de milhares de decisões: %d" % len(IT))
+ok(len({x["id"] for x in IT}) == len(IT), "ids únicos")
+ok(all(x.get("sentido") in M.SENTIDOS for x in IT), "toda decisão traz o sentido (favorável, parcial, desfavorável, não conhecido)")
+ok(all(len(x.get("tese") or "") <= 301 and x.get("tese") for x in IT), "tese/ementa curta (até ~300 caracteres) em todas")
+ok(all(set(("id", "tribunal", "tipo", "orgao", "relator", "julg", "pub", "ano", "classe", "proc", "temas", "sentido", "resultado", "rot", "link", "tese")) <= set(x) for x in IT),
+   "campos de cada decisão")
+ok(not any("ementa" in x or "texto" in x for x in IT), "sem texto integral nem ementa longa")
+cs = Counter((x["tribunal"], x["sentido"]) for x in IT)
+for t_ in ("TJMS", "STJ", "STF"):
+    ok(cs[(t_, "desfavoravel")] > 100 and cs[(t_, "favoravel")] > 100, "%s com favoráveis e desfavoráveis: %r" % (t_, {k[1]: v for k, v in cs.items() if k[0] == t_}))
+temas_aba = {"Progressão de regime", "Remição", "Falta grave e PAD", "Hediondos e frações", "Exame criminológico", "Indulto e comutação", "Prisão domiciliar",
+             "Livramento condicional", "Saúde e condições prisionais", "Competência e processamento", "Unificação e soma de penas", "Monitoração eletrônica",
+             "Regressão de regime", "Detração", "Extinção da pena", "Regime aberto e condições", "Penas restritivas de direitos", "Data-base", "Prescrição",
+             "Pena de multa", "Medida de segurança", "Saída temporária", "Trabalho externo", "Execução provisória", "Outros"}
+ok({t for x in IT for t in x["temas"]} <= temas_aba, "temas com o mesmo vocabulário da aba")
+ok({x["orgao"] for x in IT if x["tribunal"] == "TJMS"} >= {"1ª Câmara Criminal", "2ª Câmara Criminal", "3ª Câmara Criminal", "1ª Seção Criminal"}, "órgãos do TJMS normalizados")
+ok({x["orgao"] for x in IT if x["tribunal"] == "STJ"} >= {"Quinta Turma", "Sexta Turma", "Terceira Seção"}, "turmas e seção do STJ")
+ok(not any(x["relator"].startswith(("Des", "Min.")) or "(" in x["relator"] for x in IT), "relator sem título nem '(desembargador convocado ...)'")
+ok("Rogerio Schietti" not in {x["relator"] for x in IT} and "Marluce Caldas" not in {x["relator"] for x in IT}, "grafias do mesmo ministro unificadas")
+ok(all(x["link"] for x in IT if x["tribunal"] == "TJMS"), "TJMS: link do inteiro teor (e-SAJ) em todas")
+ok(all(not x["julg"] or (len(x["julg"]) == 10 and x["julg"][2] == "/") for x in IT), "data dd/mm/aaaa")
+ok("precisao" in JB["cab"] and "por_tribunal" in JB["cab"], "cabeçalho com a precisão medida e os números por tribunal")
+
 # ---- Api com a base real ----
 import rspe_app as app
 app.CONFIG = os.path.join(tempfile.mkdtemp(), "c.json")
@@ -153,17 +191,63 @@ api = app.Api()
 R = api.teses_monitor({})
 ok(not R.get("erro"), "Api.teses_monitor: %r" % R.get("erro"))
 d = api.teses()
-ok(R["total"] == len(d["itens"]), "monitor cobre a base inteira da aba (%s x %s)" % (R.get("total"), len(d["itens"])))
-ok(R["numeros"]["desfavoravel"] == 0 and R["aviso"], "base atual: só favoráveis, com aviso")
+ok(R["base"] == "juris" and R["total"] == len(IT), "Monitor usa monitor_juris.bin (%s x %s)" % (R.get("total"), len(IT)))
+ok(R["numeros"]["desfavoravel"] > 0 and R["aviso"] == "" and R["numeros"]["taxa"] is not None, "com desfavoráveis: taxa e sem o aviso de 'só favoráveis'")
+# a Pesquisa não muda: continua só com as favoráveis curadas
+ok(not any(M.sentido(x) == "desfavoravel" for x in d["itens"]), "Pesquisa continua só com favoráveis")
+ok(len(d["itens"]) < len(IT), "Pesquisa e Monitor com bases distintas")
+# recorte conhecido: como vota um relator do TJMS (taxa conferida com a contagem direta da base)
+rel_ = Counter(x["relator"] for x in IT if x["tribunal"] == "TJMS" and x["relator"]).most_common(1)[0][0]
+mine = [x for x in IT if x["tribunal"] == "TJMS" and x["relator"] == rel_]
+c_ = Counter(x["sentido"] for x in mine)
+tx = round(100.0 * (c_["favoravel"] + c_["parcial"]) / (c_["favoravel"] + c_["parcial"] + c_["desfavoravel"]), 1)
+R3 = api.teses_monitor({"tribunal": "TJMS", "relator": rel_})
+ok(R3["total"] == len(mine) and R3["numeros"]["desfavoravel"] == c_["desfavoravel"], "como vota %s: %s decisões" % (rel_, R3["total"]))
+ok(R3["numeros"]["taxa"] == tx and 0 < tx < 100, "taxa de acolhimento de %s = %s%% (base: %s%%)" % (rel_, R3["numeros"]["taxa"], tx))
+ok(R3["series"]["orgao"] and all(o["taxa"] is not None for o in R3["series"]["orgao"] if o["desfavoravel"]), "taxa por câmara no recorte do relator")
+R4 = api.teses_monitor({"camara": "1ª Câmara Criminal"})
+ok(R4["total"] > 500 and R4["numeros"]["taxa"] is not None and all(z["tribunal"] == "TJMS" for z in R4["facetas"]["relator"]), "como vota a 1ª Câmara Criminal")
+R5 = api.teses_monitor({"tema": "Remição", "tribunal": "STJ", "tipo": "Acórdão", "ano_de": 2023, "ano_ate": 2025})
+ok(R5["total"] > 0 and R5["numeros"]["ano_de"] >= 2023 and R5["numeros"]["ano_ate"] <= 2025, "filtro de área, tribunal, tipo e período")
+ok(R5["numeros"]["monocraticas"] == 0, "só acórdãos")
+R6 = api.teses_monitor({"secao": "Terceira Seção"})
+ok(R6["total"] > 20 and R6["numeros"]["taxa"] is not None, "como vota a Terceira Seção do STJ")
 R2 = api.teses_monitor({"tema": "Remição", "tribunal": "TJMS"})
 ok(0 < R2["total"] < R["total"] and all(z["tribunal"] == "TJMS" for z in R2["facetas"]["relator"]), "recorte por área e tribunal")
 ok(R2["recorte"] == "Área: Remição · TJMS", "recorte descrito")
+ok(R2["itens"] and all(k in R2["itens"] for k, *_ in R2["lista"][:50]), "itens das primeiras linhas vêm com o recorte")
+desf = [k for k, s_, *_ in R2["lista"] if s_ == "desfavoravel"]
+ok(desf and api.teses_monitor_itens(desf[:5])[desf[0]]["sentido"] == "desfavoravel", "desfavoráveis na lista, com o sentido")
+mais = api.teses_monitor_itens([k for k, *_ in R2["lista"][150:200]])
+ok(len(mais) == len(R2["lista"][150:200]) and all(v.get("link") for v in mais.values()), "Mostrar mais: itens sob demanda, com o link do inteiro teor")
+info = api.teses_monitor_info()
+ok(info["base"] == "juris" and info["total"] == len(IT) and info["temas"][0]["n"] > 1000 and info["sentidos"]["desfavoravel"] > 1000, "pergunta inicial com os números da base")
 stj = api._monitor_base()["linhas"]
-ok(sum(1 for x in stj if x["inferido"]) > 1000, "turma inferida em boa parte do STJ automático")
+ok(sum(1 for x in stj if x["inferido"]) > 1000, "turma inferida em boa parte do STJ (monocráticas)")
+R7 = api.teses_monitor({"termo": "encceja"})
+ok(R7["total"] > 50 and R7["numeros"]["desfavoravel"] > 0, "termo (ENCCEJA) também nas desfavoráveis")
+# recorte sem desfavoráveis na base nova: aviso do recorte (não da base)
+L2 = M.preparar([dict(x, sentido="favoravel") for x in A[:3]])
+ok(M.monitor(L2, {}, dois_sentidos=True)["aviso"] == M.AVISO_SEM_DESF_RECORTE, "aviso de recorte sem desfavoráveis")
+# relatório com a base nova
+try:
+    import reportlab  # noqa
+    c3 = os.path.join(tempfile.mkdtemp(), "m3.pdf")
+    M.relatorio_pdf(R3, {"tribunal": "TJMS", "relator": rel_}, api._monitor_base()["por_id"], c3, "teste", rodape=M.RODAPE_JURIS, fonte="Base do Monitor")
+    ok(os.path.getsize(c3) > 5000, "PDF do relator com taxa")
+except ImportError:
+    pass
+# sem o arquivo: volta à base da Pesquisa (só favoráveis, com o aviso)
+app.Api._juris, app.Api._mon = {}, None
+Rf = api.teses_monitor({})
+ok(Rf["base"] == "pesquisa" and Rf["total"] == len(d["itens"]) and Rf["numeros"]["desfavoravel"] == 0 and Rf["aviso"] == M.AVISO_SO_FAVORAVEIS,
+   "sem monitor_juris.bin: base da Pesquisa, com aviso")
+app.Api._juris, app.Api._mon = None, None
 
 h = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "ui.html"), encoding="utf-8").read()
 for t in ("O que você quer acompanhar?", "API().teses_monitor(", "API().teses_monitor_pdf(", "tesVer('monitor')", "Como vota o relator",
-          "Como vota a câmara / turma", "Como vota a seção", "monBarras", "Copiar referência", "tesFavoritar"):
+          "Como vota a câmara / turma", "Como vota a seção", "monBarras", "Copiar referência", "tesFavoritar", "API().teses_monitor_itens(",
+          "API().teses_monitor_info(", "mon-desf", "Base do Monitor", "x.link"):
     ok(t in h, "ui.html: " + t)
 if falhas:
     print("FALHOU (monitor de jurisprudência): " + "; ".join(falhas)); sys.exit(1)

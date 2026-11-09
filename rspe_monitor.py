@@ -16,7 +16,15 @@ SENTIDO DA DECISÃO (para a defesa) - campo "sentido" de cada item: "favoravel" 
   3. Sem "rot", pelo "resultado" (recurso da defesa): Provido -> favoravel; Parcialmente provido -> parcial;
      Desprovido/Improcedente -> desfavoravel; Não conhecido / Não identificado -> nao_conhecido.
      ATENÇÃO: "Desprovido" só é desfavorável sem rótulo; com "Recurso do MP desprovido" é vitória da defesa.
-  Na base atual (triagem que guardou só as favoráveis) não sai nenhuma "desfavoravel": o monitor mostra volume, não taxa.
+  A base da Pesquisa (triagem que guardou só as favoráveis) não tem "desfavoravel". Desde a 7.16.1 o Monitor usa monitor_juris.bin
+  (BASE NOS DOIS SENTIDOS, abaixo), em que cada decisão já traz "sentido"; sem o arquivo, volta à base da Pesquisa (volume, sem taxa).
+
+BASE NOS DOIS SENTIDOS (monitor_juris.bin, gerado do acervo_jurisprudencia.db): só execução penal (fora dosimetria, regime inicial,
+prisão cautelar, nulidades e mérito da ação penal); "sentido" pelo dispositivo x quem recorreu (HC/RHC e embargos infringentes: defesa;
+agravo em execução, REsp, AREsp, RE, agravo interno: pela marca do recurso na ementa/relatório - "interposto pelo Ministério Público",
+"recurso ministerial", "insurgência defensiva"...; agravo interno sem marca: pelo cabeçalho da ementa, "ordem concedida", "irretroatividade"
+etc. = agravo do MP). HC não conhecido sem ordem de ofício = nao_conhecido; com ordem de ofício = favoravel. Decisão sem sentido determinável
+(conflito de competência, embargos de declaração, liminar, dispositivo fora do trecho do acervo, recorrente não identificado) não entra.
 
 ÓRGÃO: câmara/turma (fracionário) ou seção (seção, plenário, corte especial). Órgão vazio (STJ da triagem automática e
 monocráticas do STF): turma inferida pelo relator, quando a maioria qualificada (2/3 ou mais) das decisões do mesmo relator,
@@ -99,6 +107,8 @@ def turmas_por_relator(itens, fracao=2 / 3.0):
 
 
 def _ano(x):
+    if isinstance(x.get("ano"), int) and x["ano"]:
+        return x["ano"]
     for k in ("julg", "pub"):
         m = re.search(r"(\d{4})\s*$", x.get(k) or "")
         if m:
@@ -282,11 +292,12 @@ def agregar(sel):
 
 
 AVISO_SO_FAVORAVEIS = ("A base atual tem só decisões favoráveis à defesa: os números mostram volume, não taxa de acolhimento.")
+AVISO_SEM_DESF_RECORTE = ("Neste recorte não há decisão desfavorável à defesa na base: os números mostram volume, não taxa de acolhimento.")
 
 
-def monitor(linhas, f, ids_termo=None, limite_lista=3000):
+def monitor(linhas, f, ids_termo=None, limite_lista=3000, dois_sentidos=False):
     """{numeros, series, facetas, ids (mais recentes primeiro, até limite_lista), lista ([id, sentido, órgão, inferido]),
-    total, aviso}."""
+    total, aviso}. dois_sentidos: a base traz as desfavoráveis (monitor_juris.bin); o aviso sem taxa diz que é o recorte, não a base."""
     sel = filtrar(linhas, f, ids_termo)
     r = agregar(sel)
     sel.sort(key=lambda L: L["data"], reverse=True)
@@ -294,7 +305,7 @@ def monitor(linhas, f, ids_termo=None, limite_lista=3000):
     r["lista"] = [[L["id"], L["sentido"], L["orgao"], 1 if L["inferido"] else 0] for L in sel[:limite_lista]]
     r["total"] = len(sel)
     r["facetas"] = facetas(linhas, f, ids_termo)
-    r["aviso"] = "" if r["numeros"]["tem_desfavoravel"] or not sel else AVISO_SO_FAVORAVEIS
+    r["aviso"] = "" if r["numeros"]["tem_desfavoravel"] or not sel else (AVISO_SEM_DESF_RECORTE if dois_sentidos else AVISO_SO_FAVORAVEIS)
     return r
 
 
@@ -368,7 +379,14 @@ def _barras_sentido(titulo, linhas, largura, st, nota="", mostrar_taxa=False, ma
     return corpo
 
 
-def relatorio_pdf(res, f, itens_por_id, caminho, nome_base="", limite=300):
+RODAPE_FAV = ("Acervo de jurisprudência da aba Jurisprudências (decisões curadas e triagem automática do STJ). Sentido da decisão pelo "
+              "resultado e pelo rótulo da triagem; turma inferida pelo relator quando o órgão não veio no acervo. Conferir o inteiro teor antes de citar.")
+RODAPE_JURIS = ("Base do Monitor (monitor_juris.bin): decisões de execução penal do TJMS, STJ e STF nos dois sentidos, coletadas por termo de busca até "
+                "a data da coleta. Sentido para a defesa pelo dispositivo e por quem recorreu (precisão medida em amostra: ver o LEIA-ME); turma "
+                "inferida pelo relator quando o órgão não veio no acervo. Conferir o inteiro teor antes de citar.")
+
+
+def relatorio_pdf(res, f, itens_por_id, caminho, nome_base="", limite=300, rodape=None, fonte=None):
     """PDF do Monitor: recorte, números, gráficos (ano, relator, órgão, resultado) e a lista das decisões do recorte."""
     import rspe_relatorio as rr
     from datetime import datetime
@@ -382,7 +400,7 @@ def relatorio_pdf(res, f, itens_por_id, caminho, nome_base="", limite=300):
     rec = descrever(f)
     el = [Paragraph(rr._t("Monitor de jurisprudência"), st["tit"]),
           Paragraph(rr._t(rec), st["sub"]),
-          Paragraph(rr._t("Acervo da aba Jurisprudências (TJMS, STJ e STF) · gerado em %s" % datetime.now().strftime("%d/%m/%Y %H:%M")), st["mut"]),
+          Paragraph(rr._t("%s · gerado em %s" % (fonte or "Acervo da aba Jurisprudências (TJMS, STJ e STF)", datetime.now().strftime("%d/%m/%Y %H:%M"))), st["mut"]),
           Spacer(1, 8)]
     per = ("%s-%s" % (N["ano_de"], N["ano_ate"]) if N["ano_de"] != N["ano_ate"] else str(N["ano_de"])) if N.get("ano_de") else "—"
     nums = [(rr._num(N["total"]), "decisões no recorte"), (rr._num(N["favoravel"]), "favoráveis"), (rr._num(N["desfavoravel"]), "desfavoráveis")]
@@ -440,7 +458,7 @@ def relatorio_pdf(res, f, itens_por_id, caminho, nome_base="", limite=300):
         if not x:
             continue
         trib = x.get("tribunal") or "TJMS"
-        dados.append([x.get("julg") or "—",
+        dados.append([x.get("julg") or x.get("pub") or "—",
                       Paragraph(rr._t("%s · %s" % (trib, org)) + (peq % ("turma inferida pelo relator" if inf else "")) * bool(inf)
                                 + (peq % "monocrática") * (x.get("tipo") == "Monocrática"), st["cel"]),
                       Paragraph(rr._t(relator(x)), st["cel"]),
@@ -451,8 +469,6 @@ def relatorio_pdf(res, f, itens_por_id, caminho, nome_base="", limite=300):
     el.append(rr._tabela(dados, [17 * mm, 27 * mm, 24 * mm, 37 * mm, W - 122 * mm, 17 * mm], st, cores_linha=cores, pad=3, vpad=2.5))
     doc = SimpleDocTemplate(caminho, pagesize=A4, leftMargin=16 * mm, rightMargin=16 * mm, topMargin=21 * mm, bottomMargin=20 * mm,
                             title="Monitor de jurisprudência", author="APTO")
-    fr = rr._moldura("Monitor de jurisprudência", nome_base or "—",
-                     rodape="Acervo de jurisprudência da aba Jurisprudências (decisões curadas e triagem automática do STJ). Sentido da decisão pelo "
-                            "resultado e pelo rótulo da triagem; turma inferida pelo relator quando o órgão não veio no acervo. Conferir o inteiro teor antes de citar.")
+    fr = rr._moldura("Monitor de jurisprudência", nome_base or "—", rodape=rodape or RODAPE_FAV)
     doc.build(el, onFirstPage=fr, onLaterPages=fr, canvasmaker=rr._canvas_numerado())
     return caminho

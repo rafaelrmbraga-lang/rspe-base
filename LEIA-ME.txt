@@ -1,9 +1,9 @@
-APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.16.0
+APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.16.1
 (antigo RSPE Base; SEEU, programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-7.16.0. A documentação técnica completa (cada parâmetro, a regra, a norma e
+7.16.1. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -859,11 +859,55 @@ JURISPRUDÊNCIAS
   parcialmente = parcial, desprovido = desfavorável, não conhecido). A taxa
   de acolhimento (favoráveis e parciais sobre favoráveis, parciais e
   desfavoráveis) só aparece quando o recorte tem decisões desfavoráveis; a
-  base atual tem só as favoráveis, e o monitor avisa que os números são de
-  volume. Órgão vazio (STJ da triagem automática, monocráticas do STF):
+  base do Monitor (abaixo) as traz; sem ela, a base da Pesquisa tem só as
+  favoráveis e o monitor avisa que os números são de volume. Órgão vazio (STJ da triagem automática, monocráticas do STF):
   turma inferida pelo relator quando 2/3 ou mais das decisões dele com
   turma informada na base são de uma só turma; senão "órgão não informado".
   Cálculo no módulo rspe_monitor.py.
+  Base do Monitor (7.16.1): monitor_juris.bin, embutido no .exe, com
+  94.101 decisões de execução penal do TJMS, do STJ e do STF NOS DOIS
+  SENTIDOS (favoráveis e desfavoráveis à defesa), tiradas do acervo de
+  188.037 decisões coletadas por termo de busca. A Pesquisa não muda:
+  continua só com as favoráveis curadas. Cada decisão traz o sentido para
+  a defesa, apurado pelo dispositivo e por quem recorreu: habeas corpus,
+  recurso em HC e embargos infringentes são da defesa; nos recursos
+  (agravo em execução, REsp, AREsp, RE, agravo interno) o recorrente sai
+  da ementa e do relatório ("interposto pelo Ministério Público",
+  "recurso ministerial", "insurgência defensiva"...); no TJMS, agravo sem
+  marca do MP é da defesa, salvo ementa com tese inequivocamente
+  favorável (irretroatividade, bis in idem, in bonam partem) e recurso
+  desprovido. HC não conhecido sem ordem de ofício = não conhecido; com
+  ordem de ofício = favorável; recurso do MP desprovido = favorável;
+  provido = desfavorável. Ficam fora da base (e das taxas) as decisões sem
+  sentido determinável: conflitos de competência, embargos de declaração,
+  liminares, dispositivo fora do trecho do acervo (a maior parte das
+  monocráticas do STF, que vêm em trechos) e recorrente não identificado.
+  Escopo: só execução penal (fora dosimetria, regime inicial, prisão
+  cautelar, nulidades e mérito da ação penal), como na triagem da
+  Pesquisa. Temas com o mesmo vocabulário da aba. Órgão normalizado
+  ("1ª Câmara Criminal", "Quinta Turma"); no STJ, a turma dos acórdãos vem
+  do próprio texto ("acordam os Ministros da Quinta Turma") e a das
+  monocráticas é inferida pelo relator. Relator sem título e sem
+  "(desembargador convocado)", grafias unificadas. Na lista do Monitor,
+  as desfavoráveis aparecem marcadas (faixa e rótulo em vermelho), com o
+  rótulo do ponto de vista da defesa ("Ordem denegada", "Recurso do MP
+  provido"...); "Inteiro teor" abre o tribunal (no TJMS, a consulta do
+  e-SAJ pelo número). Sem o arquivo, o Monitor volta à base da Pesquisa
+  (volume, sem taxa, com o aviso).
+  Precisão medida: 577 decisões lidas uma a uma em cinco amostras
+  estratificadas por tribunal e sentido; a última, sorteada depois dos
+  ajustes, mede as regras finais: sentido certo em TJMS 90,6% (29/32),
+  STJ 100% (20/20), STF 93,1% (27/29); as regras finais sobre todas as
+  amostras: TJMS 95,7%, STJ 99,0%, STF 94,8%. O erro que resta está
+  sobretudo no recorrente sem marca na ementa (agravo do MP no TJMS lido
+  como da defesa) e, no STF, em trechos com decisão transcrita.
+  Limites: a base é o que a coleta trouxe por termo de busca (quase tudo
+  "execução penal"; também "falta grave", "progressão de regime",
+  "indulto" etc.), até a data da coleta (TJMS até 06/10/2026, STJ até
+  07/10/2026, STF até 06/10/2026); TJMS e STF praticamente desde 2020 e
+  o STJ desde 2021 (antes disso, poucos casos). Decisão que não usa os
+  termos não está; a taxa de um relator ou câmara é a do que foi coletado,
+  não um censo. Conferir o inteiro teor antes de citar.
 
 ARQUIVOS
   rspe_app.py        janela, bases, importação em lote, pasta vigiada (API da interface)
@@ -884,6 +928,7 @@ ARQUIVOS
   rspe_teses.py      jurisprudências curadas (decisões favoráveis à defesa; embutido)
   rspe_monitor.py    Monitor da aba Jurisprudências (sentido, turma pelo relator, números, relatório)
   teses_auto.bin     jurisprudências da triagem automática (embutido)
+  monitor_juris.bin  base do Monitor: decisões nos dois sentidos (embutido)
   fontes/            fontes dos relatórios em PDF (com a licença)
   apto_selo.png      selo da tela e dos relatórios
   *.docx             modelos de petição da unidade (desativados)
@@ -1058,6 +1103,32 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v7.16.1
+  Jurisprudências, Monitor: base nos dois sentidos. Arquivo novo embutido
+  no .exe, monitor_juris.bin (9 MB), com 94.101 decisões de execução penal
+  do TJMS (8.345), do STJ (84.216) e do STF (1.540) tiradas do acervo de
+  188.037 decisões: 27.416 favoráveis à defesa (com 1.276 parcialmente),
+  29.101 desfavoráveis e 37.584 não conhecidas. Com as desfavoráveis, o
+  Monitor mostra a taxa de acolhimento de verdade: como vota o relator,
+  a câmara/turma e a seção (ex.: Remição, 63,7%; 1ª Câmara Criminal do
+  TJMS, 21,4%). A Pesquisa não mudou (só as favoráveis curadas).
+  - Sentido de cada decisão pelo dispositivo e por quem recorreu (regra na
+    seção JURISPRUDÊNCIAS); 30.984 decisões no escopo ficaram fora por não
+    ter sentido determinável (TJMS 1.190, STJ 8.174, STF 21.620 - no STF o
+    acervo traz trechos das monocráticas, quase sempre sem o dispositivo).
+  - Precisão medida em 577 decisões lidas: última amostra (regras finais)
+    TJMS 90,6%, STJ 100%, STF 93,1%; regras finais sobre todas as amostras
+    TJMS 95,7%, STJ 99,0%, STF 94,8%.
+  - Lista do Monitor: desfavoráveis marcadas, rótulo do ponto de vista da
+    defesa, "Inteiro teor" pelo link do tribunal, "Copiar referência";
+    "Mostrar mais" busca as decisões seguintes no programa. A pergunta
+    inicial mostra os números da base do Monitor. Aviso "só favoráveis"
+    sai quando o recorte tem desfavoráveis (recorte sem desfavorável na
+    base nova: aviso de que é o recorte).
+  - Relatório em PDF: fonte e rodapé da base nova.
+  - Build (build.yml, .github/workflows/build.yml, build_exe.bat): inclui
+    monitor_juris.bin, como teses_auto.bin.
 
 v7.16.0
   Jurisprudências: "Monitor", ao lado da Pesquisa (alternador no topo da
