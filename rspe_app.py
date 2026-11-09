@@ -43,7 +43,7 @@ import rspe_atendimentos as ratd
 import rspe_resumo as rres
 
 APP = "APTO"
-VERSAO = "7.15.4"
+VERSAO = "7.16.1"
 GEO_AUTO_DIAS = 30           # dados prisionais: baixados de novo sozinhos quando têm 30 dias ou mais
 GEO_REPETIR_MIN = 10         # ... ou 10 minutos depois de um download em que algum relatório falhou (nova tentativa automática)
 GEO_REPETIR_MAX = 3          # tentativas automáticas seguidas com o programa aberto (depois, na próxima abertura ou pelo botão)
@@ -2111,6 +2111,129 @@ class Api:
         """Resumo (EMENTA do fim da decisão ou o começo do texto) das decisões da triagem automática pedidas pela tela."""
         R = self._teses_auto().get("resumos") or {}
         return {i: R.get(i, "") for i in (ids or [])[:200]}
+
+    # ---- Monitor (aba Jurisprudências): como está a tese, como vota o relator / a câmara / a seção ----
+    # Base do Monitor: monitor_juris.bin (decisões de execução penal nos dois sentidos, com "sentido" de cada uma); sem o arquivo,
+    # a base da Pesquisa (só favoráveis: volume, sem taxa). A Pesquisa não muda: continua com as favoráveis curadas.
+    _mon = None
+    _juris = None
+
+    def _monitor_juris(self):
+        """{"cab": {...}, "itens": [...]} de monitor_juris.bin (embutido no .exe ou ao lado dele); {} se faltar ou não abrir."""
+        if Api._juris is None:
+            import struct
+            import zlib
+            Api._juris = {}
+            c = recurso("monitor_juris.bin")
+            if not os.path.isfile(c) and os.path.isfile(os.path.join(pasta_app(), "monitor_juris.bin")):
+                c = os.path.join(pasta_app(), "monitor_juris.bin")
+            try:
+                if os.path.isfile(c):
+                    with open(c, "rb") as f:
+                        b = f.read()
+                    if b[:8] == b"APTOMON1":
+                        n = struct.unpack("<I", b[8:12])[0]
+                        Api._juris = json.loads(zlib.decompress(b[12:12 + n]).decode("utf-8"))
+            except Exception:
+                logging.getLogger("rspe").exception("base do monitor %s", c)
+                Api._juris = {}
+        return Api._juris
+
+    def _monitor_base(self):
+        """Linhas do monitor (rspe_monitor.preparar), os itens por id e o índice da busca por termo; montados uma vez."""
+        if Api._mon is None:
+            import rspe_monitor
+            J = self._monitor_juris()
+            if J.get("itens"):
+                itens, fonte = J["itens"], "juris"
+            else:
+                itens, fonte = self.teses().get("itens") or [], "pesquisa"
+            Api._mon = {"linhas": rspe_monitor.preparar(itens), "por_id": {x["id"]: x for x in itens}, "fonte": fonte,
+                        "idx": [(x["id"], self._norm_busca(" ".join([x.get("tese") or "", x.get("ementa") or "", x.get("proc") or "", x.get("relator") or "",
+                                                                     x.get("orgao") or "", x.get("classe") or "", " ".join(x.get("temas") or [])])))
+                                for x in itens if not x.get("auto")]}
+        return Api._mon
+
+    def _monitor_termo(self, termo):
+        """Ids com todos os termos: pelos campos de cada decisão (tese/ementa, processo, relator, órgão, classe, temas) e, para as
+        decisões do STJ da triagem automática, também pelo texto integral - a mesma busca da Pesquisa."""
+        import rspe_teses
+        if not (termo or "").strip():
+            return None
+        M = self._monitor_base()
+        ids = set(rspe_teses.buscar(M["idx"], termo, limite=10 ** 6))
+        ids.update(rspe_teses.buscar(self._teses_indice(), termo, limite=10 ** 6))
+        return ids
+
+    @staticmethod
+    def _mon_item(x):
+        """Campos de uma decisão que a lista do Monitor desenha (e a referência copiada usa)."""
+        return {k: x.get(k) for k in ("id", "tribunal", "tipo", "orgao", "relator", "julg", "pub", "classe", "proc", "tese", "rot", "resultado",
+                                      "link", "sentido", "temas") if x.get(k) not in (None, "")}
+
+    def teses_monitor(self, filtros=None):
+        """Monitor: {numeros, series, facetas, ids, lista, itens (as primeiras da lista), total, aviso, base} do recorte (tema, termo,
+        tribunal, tipo, relator, câmara/turma, seção, ano inicial e final)."""
+        import rspe_monitor
+        f = dict(filtros or {})
+        try:
+            M = self._monitor_base()
+            r = rspe_monitor.monitor(M["linhas"], f, self._monitor_termo(f.get("termo")), dois_sentidos=M["fonte"] == "juris")
+            r["recorte"] = rspe_monitor.descrever(f)
+            r["base"] = M["fonte"]
+            r["itens"] = {k: self._mon_item(M["por_id"][k]) for k, *_ in (r.get("lista") or [])[:150] if k in M["por_id"]}
+            return r
+        except Exception as e:
+            logging.getLogger("rspe").exception("monitor de jurisprudência")
+            return {"erro": "Falha ao montar o monitor: %s" % e}
+
+    def teses_monitor_itens(self, ids):
+        """Decisões da lista do Monitor pedidas pela tela ("Mostrar mais"), até 300 por vez."""
+        M = self._monitor_base()
+        return {k: self._mon_item(M["por_id"][k]) for k in (ids or [])[:300] if k in M["por_id"]}
+
+    def teses_monitor_info(self):
+        """Pergunta inicial do Monitor: áreas (temas) com o número de decisões da base do Monitor, total e de onde vem a base."""
+        M = self._monitor_base()
+        cont = {}
+        for L in M["linhas"]:
+            for t in L["temas"]:
+                cont[t] = cont.get(t, 0) + 1
+        temas = [{"tema": t, "n": n} for t, n in sorted(cont.items(), key=lambda z: (z[0] == "Outros", -z[1]))]
+        sent = {}
+        for L in M["linhas"]:
+            sent[L["sentido"]] = sent.get(L["sentido"], 0) + 1
+        cab = (self._monitor_juris().get("cab") or {}) if M["fonte"] == "juris" else {}
+        return {"base": M["fonte"], "total": len(M["linhas"]), "temas": temas, "sentidos": sent, "fonte": cab.get("fonte", ""),
+                "precisao": cab.get("precisao", "")}
+
+    def teses_monitor_pdf(self, filtros=None):
+        """Relatório do Monitor em PDF: recorte, números, gráficos e a lista das decisões."""
+        import rspe_monitor
+        f = dict(filtros or {})
+        r = self.teses_monitor(f)
+        if r.get("erro"):
+            return r
+        if not r.get("total"):
+            return {"erro": "Nenhuma decisão no recorte."}
+        nome = "Monitor de jurisprudência - %s - %s.pdf" % (re.sub(r"[^\w\s-]", "", f.get("tema") or f.get("termo") or "todas as áreas").strip()[:60],
+                                                            datetime.now().strftime("%d-%m-%Y"))
+        c = _um(self._janela.create_file_dialog(webview.SAVE_DIALOG, save_filename=nome, file_types=("PDF (*.pdf)",)))
+        if not c:
+            return None
+        if not c.lower().endswith(".pdf"):
+            c += ".pdf"
+        try:
+            M = self._monitor_base()
+            juris = M["fonte"] == "juris"
+            rspe_monitor.relatorio_pdf(r, f, M["por_id"], c, self.base.nome if self.base else "",
+                                       rodape=rspe_monitor.RODAPE_JURIS if juris else None,
+                                       fonte="Base do Monitor: execução penal no TJMS, STJ e STF, decisões favoráveis e desfavoráveis à defesa" if juris else None)
+        except Exception as e:
+            logging.getLogger("rspe").exception("PDF do monitor")
+            return {"erro": "Falha ao gerar o PDF: %s" % e}
+        _abrir(c)
+        return {"caminho": c, "msg": "PDF salvo."}
 
     # ---- dados prisionais de MS (Geopresídios/CNJ): guardados ao lado do programa, atualizados só pelo botão ----
     def _geo_arq(self):
