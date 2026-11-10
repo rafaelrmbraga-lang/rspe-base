@@ -4329,7 +4329,9 @@ def cumprido_decreto_info(campos, periodos, remicoes, ref, extras=None, crimes=N
                                       pl(_extra, "dia", "dias"), dias_para_pena(c + _extra)))}
             return {"dias": c, "fonte": fonte, "origem": "seeu", "aviso": "", "alt": True}
     if modo:
-        if ev > c and (ev >= 180 or modo == "eventos_txt"):
+        # âncora zerada (o SEEU não conta tempo nenhum até a data) com tempo pelos eventos: os eventos entram mesmo abaixo de 180
+        # dias - em pena curta, poucos dias de prisão provisória decidem a fração (revisão do indulto, 7.16.2)
+        if ev > c and (ev >= 180 or modo == "eventos_txt" or c == 0):
             if ruim:
                 return estouro(c, fonte, "usado o cálculo do SEEU, %s" % dias_para_pena(c))
             if modo in ("eventos", "eventos_txt"):

@@ -237,8 +237,8 @@ _cr = crime(reincidente_comum="S", pena_imposta="2 ano(s), 0 mês(es) e 0 dia(s)
 _out = crime(processo_criminal=_Q2, data_infracao="01/01/2009", data_denuncia="01/02/2014", data_sentenca="01/06/2014", transito_mp="10/01/2015",
              transito_processo="10/01/2015")
 L = run(reg([_cr, _out], [ev(PRI, "PRISÃO DEFINITIVA", "01/03/2017", P)]))
-confere(L["ppe_status"].startswith("A VERIFICAR") and L["ppe_cor"] == "amarelo" and "Com o +1/3" in (L.get("ppe_reinc_aviso") or ""),
-        "AUD-2: reincidência afastada que muda o resultado: %s" % L["ppe_status"])
+confere(L["ppe_status"].startswith("A VERIFICAR") and L["ppe_cor"] == "amarelo" and "Sem o +1/3" in (L.get("ppe_reinc_aviso") or "") and "+1/3" in L["prazo_ppe"],
+        "AUD-2: reincidência sem base que muda o resultado (decisão 11/2026: +1/3 no cálculo principal): %s" % L["ppe_status"])
 _mesmo = crime(artigo="ART 330: Desobediência", data_infracao="01/01/2010")
 L = run(reg([_cr, _mesmo], [ev(PRI, "PRISÃO DEFINITIVA", "01/03/2017", P)]))
 confere("+1/3" in L["prazo_ppe"] and L["ppe_status"].startswith("A VERIFICAR"), "AUD-2: crime do mesmo processo contado como outra condenação: %s / %s" % (

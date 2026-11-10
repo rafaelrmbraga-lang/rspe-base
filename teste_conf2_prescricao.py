@@ -123,7 +123,7 @@ confere("demora na" in det and "intimação" in det and "só se explica por recu
 # ---------------- 5. reincidência sem base com a outra condenação sem trânsito ----------------
 cr5 = [crime("06/01/2025", "16/03/2026", TRES, proc=P1, reincidente_comum="S"), crime("27/03/2025", "", TRES, proc=P2)]
 l = linha(reg(cr5), P1)
-confere(not l["reinc"] and "+1/3" not in (l.get("prazo_ppe") or ""), "5: +1/3 afastado com a outra condenação sem trânsito: %s" % l.get("prazo_ppe"))
+confere(l["reinc"] and "+1/3" in (l.get("prazo_ppe") or "") and "Sem o +1/3" in (l.get("ppe_reinc_aviso") or ""), "5: decisão 11/2026 - +1/3 no principal e a hipótese sem ele no aviso: %s" % l.get("prazo_ppe"))
 # condenação única: segue a reincidência marcada (o RSPE não mostra o passado)
 l = linha(reg(cr5[:1]), P1)
 confere(l["reinc"], "5: condenação única mantém a reincidência marcada")

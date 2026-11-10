@@ -115,6 +115,12 @@ def _estudos(eventos, cancel_sem=None):
         if not re.search(r"EDUCA|\bCURSO\b|ESCOLA|ESTUD|ALUNOS|HORAS?.AULA|MATRICULOU-SE NA SERIE", us):
             continue
         ua = re.sub(r"\s+", " ", us)
+        # (rev. ficha) atestado de trabalho e atestado de estudo no mesmo lançamento ("Atestado de Trabalho X ... N dias trabalhados
+        # e M dias remidos. E Atestado de Trabalho Y, de estudo, totalizando H h/a de estudo e D dias remidos"): a parte do estudo é
+        # lida como atestado de estudo (a de trabalho segue no atestado de trabalho)
+        m_est = re.search(r"\bE (ATESTADO\b[^.]{0,60}?\bDE ESTUDO\b.*)", ua)
+        if m_est and re.search(rrm.NDIAS + r"\s*DIAS\s*TRABALHAD", ua[:m_est.start()]) and not re.search(rrm.NDIAS + r"\s*DIAS\s*TRABALHAD", m_est.group(1)):
+            ua = m_est.group(1)
         if re.search(r"ATESTADO|\bATP\b", ua) and (rrm.RE_AT_ESTUDO.search(rrm._norm_at(ua)) or re.search(r"FREQUENCIA ESCOLAR", ua)) \
                 and not re.search(rrm.NDIAS + r"\s*DIAS\s*TRABALHAD", ua):
             # atestado de estudo ("Tipo: Estudante; Data Inicial: d; Data Final: d; Tempo de Estudo: 329 h/a", "tempo de estudo 400h",
@@ -133,7 +139,8 @@ def _estudos(eventos, cancel_sem=None):
                 p = {"curso": "Atestado de estudo" + (" nº " + num if num else ""), "turma": "", "turno": "", "inicio": ini, "fim": fim or ini,
                      "motivo_fim": "atestado de estudo" if fim else "carga horária declarada", "horas": int(mh.group(1) or mh.group(2)), "livre": True}
                 # (7.14.3) os dias de remição declarados no atestado ("com 06 dias a serem remidos"): o atestado é documento da comparação
-                md_ = re.search(r"(?<![\d,.])(\d{1,3}(?:[,.]\d{1,2})?)\s*DIAS?\s*(?:A SEREM\s*)?REMID", ua)
+                md_ = re.search(r"(?<![\d,.])(\d{1,3}(?:[,.]\d{1,2})?)\s*DIAS?\s*(?:A SEREM\s*)?REMID", ua) or \
+                    re.search(r"TEMPO DE REMI[CS]+AO\W{0,3}(\d{1,3}(?:[,.]\d{1,2})?)\s*DIAS?\b", ua)  # (rev. ficha) "Tempo de Remissão: N dias"
                 if md_ and float(md_.group(1).replace(",", ".")):
                     p.update(dias_remidos=float(md_.group(1).replace(",", ".")), data=e["data"], texto=e["texto"])
                 elif re.search(r"\bREMIR\b", ua) and mh.group(2) == "":
@@ -179,7 +186,9 @@ def _estudos(eventos, cancel_sem=None):
             continue
         # início em texto livre: setor escolar / setor educacional / rol de alunos / atividades escolares
         mi = re.search(r"INICIOU NO SETOR ESCOLAR|PASSA A FREQUENTAR O SETOR EDUCACIONAL(?: NO| NA)?\s*([^,.]*)|INCLUIDO NO ROL DE ALUNOS[^,;]*?(?:MATRICULADO NA|[,;]\s*NA)\s+([^,.]+)|"
-                       r"COMECOU SUAS ATIVIDADES ESCOLARES|INICIA ATIVIDADES (?:ESCOLARES|PEDAGOGICAS)", us)
+                       r"COMECOU SUAS ATIVIDADES ESCOLARES|INICIA ATIVIDADES (?:ESCOLARES|PEDAGOGICAS)|"
+                       # (rev. ficha) "deu início às atividades educacionais em dd/mm/aaaa"
+                       r"(?:DEU INICIO|INICIOU|INICIA)\s+(?:A|AS|À|ÀS)?\s*(?:SUAS\s+)?ATIVIDADES\s+(?:EDUCACIONAIS|ESCOLARES)", us)
         if mi:
             nome = next((g for g in mi.groups() if g and g.strip()), "") or "Setor escolar"
             abrir(nome.strip(" .-").upper(), e["data"])
@@ -605,7 +614,7 @@ def _extrair_texto(caminho, pags, vis, ocultas=(), dp_chars="", parcial=None):
 # lançamento do dia d", "desconsiderar a função X", "Liberação do Setor de Trabalho" sem baixa no dia, o vínculo simultâneo só quando
 # o outro setor acabou antes da baixa tardia (não a baixa "saída do presídio"), nomes de setor sem "nesta UP", "CI nº ...", "sendo",
 # "E" e "ATIVIDADE EXTERNA NA"; sinônimos e palavras próprias no singular)
-VERSAO_LEITURA = 18
+VERSAO_LEITURA = 19
 # versão da extração do PDF (camada de caracteres): a mesma ficha extraída por versão anterior é extraída de novo ao reimportar
 VERSAO_EXTRACAO = 2
 
@@ -879,6 +888,45 @@ def _marcar_externo(trabalho, eventos, ext):
 
 _RE_EXTERNO_AUTORIZADO = re.compile(r"(?:FOI |FICA |ESTA |SENDO )?AUTORIZAD[OA]\W+(?:A\s+|O\s+|PARA\s+(?:O\s+)?|A REALIZAR\s+(?:O\s+)?)?TRABALHO EXTERNO|"
                                     r"AUTORIZACAO\W+(?:DE\s+|PARA\s+|DO\s+)?(?:O\s+)?TRABALHO EXTERNO|TERMO DE COMPROMISSO\b.{0,400}?TRABALHO EXTERNO")
+
+
+RE_CELA_EXT = re.compile(r"DESTINO:\s*[^,]*?\bTRAB(?:ALHO)?\.? EXTERNO\b(?:[^,]*?CONV[EÊ]NIO\s*-\s*([^/,]+))?")
+
+
+def _trabalho_externo_cela(eventos, trabalho):
+    """(rev. ficha) Trabalho externo do semiaberto registrado só pela cela ("Mudança de Cela ... Destino: ... SEMIABERTO TRAB EXTERNO/
+    CONVÊNIO - EMPRESA"): da entrada na cela de trabalho externo até a ida para outra cela ou a saída da unidade. Entra só o período
+    que nenhum outro registro de trabalho da ficha toca (o lançamento "TRABALHO:" do mesmo vínculo prevalece), como trabalho externo."""
+    per, aberto = [], None
+    for e in eventos:
+        d = _dp(e.get("data") or "")
+        if not d:
+            continue
+        u = rs._sem_acento(e["texto"]).upper()
+        if u.startswith("MUDANCA DE CELA"):
+            m = RE_CELA_EXT.search(u)
+            if m and not aberto:
+                aberto = {"ini": d, "setor": (m.group(1) or "").strip(" .") or "convênio"}
+            elif not m and aberto:
+                per.append((aberto, d - timedelta(days=1)))
+                aberto = None
+        elif aberto and re.match(r"\W*(?:DEU )?SAIDA DA UNIDADE PENAL", u):
+            per.append((aberto, d))
+            aberto = None
+    if aberto:
+        per.append((aberto, None))
+    ocup = [(_dp(t.get("inicio") or ""), _dp(t.get("fim") or "") or date.max) for t in trabalho if _dp(t.get("inicio") or "")]
+    out = []
+    for a, fim in per:
+        ini, fim_ = a["ini"], fim or date.max
+        if fim_ < ini or any(x <= fim_ and ini <= y for x, y in ocup):
+            continue
+        out.append({"inicio": ini.strftime("%d.%m.%Y"), "fim": fim.strftime("%d.%m.%Y") if fim else "",
+                    "setor": "Trabalho externo - %s" % a["setor"].title(), "externo": True,
+                    # sem o lançamento de trabalho, o vínculo é "a conferir com a unidade" (como o vínculo sem baixa), e não pedido de
+                    # atestado: o atestado sem período emitido depois pode já cobri-lo
+                    "motivo_fim": "saída/evasão/transferência (saída da cela de trabalho externo)" if fim else "", "cela_externo": True})
+    return out
 
 
 def _juntar_mesmo_dia(trabalho):
@@ -1239,6 +1287,7 @@ def derivar(f, eventos):
         neutro = [e for e in cs if e not in meu and not any(rrm.palavra_comum(s, e["texto"]) for s in outros)]
         if meu or neutro:
             t["jornada"] = jornada_do_texto((meu or neutro)[0]["texto"])
+    trabalho += _trabalho_externo_cela(eventos, trabalho)
     f["trabalho"] = _separar_mesmo_dia(_juntar_mesmo_dia(trabalho), eventos)
     f["baixas_sem_inicio"] = baixas_orfas
     # "foi autorizado o trabalho externo" e termo de compromisso de trabalho externo: início "a conferir" (inciso XI dos decretos),
