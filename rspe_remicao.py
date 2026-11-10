@@ -1383,6 +1383,7 @@ def trabalho_x_atestados(f, hoje=None, manuais=None, vinculos=None, inicio=None,
         # (7.14.3) vínculo sem baixa: o fim é só a saída da unidade (ou evasão/transferência), não o desligamento do setor
         uni.append({"a": a, "b": b, "s": s, "aberto": not t.get("fim"), "ext": bool(t.get("externo")), "jornada": t.get("jornada") or "",
                     "sem_baixa": bool(t.get("fim")) and (t.get("motivo_fim") or "").startswith("saída/evasão/transferência"),
+                    "cela": bool(t.get("cela_externo")),
                     "baixa_tardia": _dt(t.get("baixa_tardia") or "") if t.get("fim") else None, "dup": _dup(t)})
     blocos = []
     for u in uni:
@@ -1595,7 +1596,7 @@ def trabalho_x_atestados(f, hoje=None, manuais=None, vinculos=None, inicio=None,
                            "dias": (b - a).days + 1, "at": alvo["num"] if alvo else "", "at_chave": alvo["chave"] if alvo else "",
                            "st": st, "como": "período e nome da empresa" if nome else "período (único trabalho no período)",
                            "sem_confirmado": confirmado_sem, "em_curso": em_curso, "externo": u["ext"], "jornada": u["jornada"],
-                           "vinc": (u["a"], u["b"], u["s"]), "sem_baixa": u["sem_baixa"],
+                           "vinc": (u["a"], u["b"], u["s"]), "sem_baixa": u["sem_baixa"], "cela_externo": u.get("cela"),
                            # (P20, 7.15.3) baixa tardia: o fim exibido é suposto (início de outro setor); a baixa da ficha, para o resto
                            "baixa_tardia": u["baixa_tardia"] if u.get("baixa_tardia") and b == u["b"] and u["baixa_tardia"] > b else None})
             if u["dup"] and st == "sem" and a >= u["dup"][0]:
@@ -1937,11 +1938,16 @@ def comparacao(r, f, hoje=None, manuais=None, homologados=None, trab=None):
     for d in sorted([d for d in docs if d["tipo"] == "Leitura" and not d["fora"] and d["dias"] and _mes_lei(d)],
                     key=lambda d: (_mes_lei(d), d["emissao"] or date.min)):
         y_, m_ = _mes_lei(d)
-        n_ = y_ * 12 + m_
-        usadas = sum(ob_ for k_, ob_ in lei_c if n_ - 11 <= k_ <= n_)
         ob = int(round(d["dias"] / 4.0))
-        cabe = max(0, min(ob, 12 - usadas))
-        lei_c.append((n_, cabe))
+        # (rev. ficha) cada obra conta no seu mês de referência (relatório de cinco meses: uma obra em cada mês); sem um mês por obra,
+        # todas no último mês citado. Antes, as obras iam todas para o último mês e a janela de 12 meses cortava obra que cabia.
+        ms_ = sorted({int(y) * 12 + int(mm) for mm, y in re.findall(r"\b(\d{2})/(\d{4})\b", d.get("periodo") or "") if 1 <= int(mm) <= 12})
+        meses_ob = ms_ if len(ms_) == ob else [y_ * 12 + m_] * ob
+        cabe = 0
+        for n_ in meses_ob:
+            if sum(1 for k_ in lei_c if n_ - 11 <= k_ <= n_) < 12:
+                lei_c.append(n_)
+                cabe += 1
         if cabe < ob:
             d["dias_soma"] = 4.0 * cabe
             d["contido"] = ("passa do limite de 12 obras a cada 12 meses (Res. CNJ 391/2021, art. 5º: até 48 dias por ano): %s" % (
@@ -2037,7 +2043,10 @@ def comparacao(r, f, hoje=None, manuais=None, homologados=None, trab=None):
         # (7.14.7) teto do exame (Res. CNJ 391/2021, art. 3º): ENEM, até o ensino médio inteiro (1.200 h ÷ 12 = 100 dias; com o
         # certificado de conclusão registrado, mais 1/3 - LEP, art. 126, § 5º; STJ, Tema 1270, tese 3; P08, 7.15.3); ENCCEJA, até o
         # fundamental inteiro com a conclusão (1.600 h ÷ 12 × 4/3 ≈ 177,78)
-        teto = 400 if d["tipo"] != "Exame" else (400 / 3.0 if d.get("cert") else 100) if re.search(r"ENEM", d.get("num") or "", re.I) \
+        # (rev. ficha) aqui se explica remição JÁ concedida: o valor com o acréscimo de 1/3 (133,33 no ENEM) decidido logo depois do
+        # certificado peticionado mostra que o juízo reconheceu a conclusão - o teto sem a conclusão (100) jogava essa remição no
+        # trabalho sem atestado ("pode já estar remido") e o atestado deixava de ser pedido
+        teto = 400 if d["tipo"] != "Exame" else 400 / 3.0 if re.search(r"ENEM", d.get("num") or "", re.I) \
             else 1600 / 12.0 * 4 / 3.0 if re.search(r"ENCCEJA", d.get("num") or "", re.I) else 400
         i = _livres(d, 180, lambda x, m=minimo, t=teto: m <= x["dias"] <= t + 1 and not (x["dias"] <= 16 and x["dias"] % 4 == 0),
                     chave=(lambda x: (not na_tab(x["dias"]), x["decisao"])) if d["tipo"] == "Exame" else None)
@@ -2287,7 +2296,10 @@ def comparacao(r, f, hoje=None, manuais=None, homologados=None, trab=None):
         # "pedir atestado"
         conf_ = set()
         doc_ = ([max(antes)] if antes else []) + [o["fim"] for o in linhas_ if o is not L and o.get("vinc") == L["vinc"] and o["st"] != "sem"]
-        if L.get("sem_baixa") and (L["vinc"][1] - L["vinc"][0]).days > 365:
+        if L.get("cela_externo"):
+            # (rev. ficha) trabalho externo só pela cela de trabalho externo, sem lançamento de trabalho: confirmar com a unidade
+            conf_ = dias_ - antes
+        elif L.get("sem_baixa") and (L["vinc"][1] - L["vinc"][0]).days > 365:
             if doc_:
                 conf_ = {d for d in dias_ - antes if d > max(doc_)}
         elif L.get("em_curso") and doc_:
@@ -2455,6 +2467,20 @@ def comparacao(r, f, hoje=None, manuais=None, homologados=None, trab=None):
     if sv:
         ponto("A conferir", "amarelo", "Sem valor na ficha (fora da comparação): %s - conferir nos autos." % _lista(
             ["%s (%s: %s)" % (nome_doc(d), _f(d["emissao"]), d["sem_valor"]) for d in sv]), "sem_valor", docs_=sv)
+    # (rev. ficha) indício de trabalho sem registro: pagamento do trabalho (pecúlio, depósito judicial) lançado na ficha num mês em
+    # que nenhum período de trabalho está aberto - o trabalho remunerado conta para a remição (LEP, art. 126): pedir à unidade
+    per_tr = [(_dt(t.get("inicio") or ""), _dt(t.get("fim") or "") or date.max) for t in f.get("trabalho") or [] if _dt(t.get("inicio") or "")]
+    ind_ = []
+    for e in f.get("eventos") or []:
+        de_ = _dt(e.get("data") or "")
+        u_ = _sa(e.get("texto"))
+        if de_ and re.search(r"PAGAMENTO D[OA] TRABALHO|DEPOSITO JUDICIAL,? REFERENTE AO PAGAMENTO", u_) and \
+                not any(a_ - timedelta(days=45) <= de_ and (b_ == date.max or de_ <= b_ + timedelta(days=45)) for a_, b_ in per_tr):
+            ind_.append(de_)
+    if ind_:
+        ponto("A conferir", "amarelo", "Pagamento de trabalho lançado na ficha sem período de trabalho registrado (%s): pedir à unidade o "
+              "registro e o atestado desse trabalho, para fins de remição (LEP, art. 126)." % _lista([_f(x) for x in ind_]), "indicio_trabalho",
+              curto="pagamento de trabalho sem trabalho registrado (%s): pedir à unidade o atestado" % _lista([_f(x) for x in ind_]))
     # teste de capacidade (só aviso): dias declarados x dias possíveis no período (segunda a sábado)
     for d in at_:
         ps = d["periodo"].split(" a ")
