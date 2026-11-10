@@ -1148,6 +1148,14 @@ v7.16.2
   ficava em 0% até o fim, embora o download corresse (leva 1 a 3 minutos).
   A mesma falha impedia a nova tentativa automática depois de relatórios
   recusados pelo CNJ e o aviso de "carregando" ao abrir a base.
+  Menu lateral recolhido em novo estilo: faixa de ícones maiores, com um
+  quadrado arredondado na aba aberta (verde claro) e na aba sob o mouse;
+  bolinha no canto do ícone quando a aba tem assistidos (vermelha no
+  Quadro com cartão vencido). Ao passar o mouse, um balão escuro mostra o
+  nome da aba, o número e o atalho. Atalhos novos: Alt+1 a Alt+9 e Alt+0
+  abrem as dez primeiras abas, na ordem do menu (Alt+1 Geral, Alt+2
+  Progressão...). O logo do APTO fica centrado sobre a faixa. O menu
+  expandido, com os nomes, continua pelo botão do topo.
 
 v7.16.1
   Jurisprudências, Monitor: base nos dois sentidos. Arquivo novo embutido

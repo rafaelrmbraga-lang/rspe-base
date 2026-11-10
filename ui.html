@@ -938,13 +938,24 @@ body{background:var(--mica)}
 .tabs .tab .cnt{background:none;color:var(--tx3);font-weight:400;font-size:12px;padding:0}.tabs .tab.on .cnt{background:none;color:var(--tx2)}
 .tabs .tab.alterna{color:var(--tx2);margin-bottom:2px}.tabs .tab.alterna svg{color:var(--tx2)}
 .tabs .navg{margin:12px 14px 3px;font-size:12px;font-weight:600;color:var(--tx3);white-space:nowrap}
-body.menu-recolhido{--nav:52px}
-.menu-recolhido .tabs .tab{justify-content:center;padding:0;gap:0}
+/* menu recolhido (7.16.2): faixa de ícones; quadrado arredondado na aba aberta e sob o mouse; bolinha = aba com pendência;
+   o nome, o número e o atalho (Alt+n) aparecem no balão escuro ao lado (#navTip) */
+body.menu-recolhido{--nav:64px}
+.menu-recolhido .top{padding-left:18px}.menu-recolhido .top .logo,.menu-recolhido .top .logo img{width:30px;height:30px}
+.menu-recolhido .tabs{align-items:center;gap:4px;padding:4px 0 12px}
+.menu-recolhido .tabs .tab{border:0;width:40px;height:40px;flex:none;justify-content:center;padding:0;gap:0;border-radius:11px;color:var(--tx2)}
+.menu-recolhido .tabs .tab svg{width:20px;height:20px;color:var(--tx2);stroke-width:1.6}
+.menu-recolhido .tabs .tab:hover{background:rgba(0,0,0,.06)}.menu-recolhido .tabs .tab:hover svg{color:var(--tx)}
+.menu-recolhido .tabs .tab.on{background:var(--pri-soft);font-weight:400}.menu-recolhido .tabs .tab.on svg{color:var(--pri)}
+.menu-recolhido .tabs .tab.on::before{display:none}
 .menu-recolhido .tabs .tab .tnm{display:none}
-.menu-recolhido .tabs .tab .cnt{position:absolute;top:1px;right:0;min-width:16px;height:15px;padding:0 3px;border-radius:8px;background:#E6E6E6!important;color:var(--tx2)!important;font-size:10px;line-height:15px;text-align:center;font-weight:600}
-.menu-recolhido .tabs .tab.on .cnt{background:var(--pri)!important;color:#fff!important}
-.menu-recolhido .tabs .tab.on::before{left:-2px}
-.menu-recolhido .tabs .navg{font-size:0;height:1px;background:var(--fl);margin:7px 8px}
+.menu-recolhido .tabs .tab .cnt{position:absolute;top:8px;right:8px;width:7px;height:7px;min-width:0;padding:0!important;border-radius:50%;font-size:0!important;background:var(--a-dot)!important;box-shadow:0 0 0 2px var(--mica,#F3F4F1)}
+.menu-recolhido .tabs .tab .cnt.alerta{background:var(--r-dot)!important}
+.menu-recolhido .tabs .tab.on .cnt{background:var(--pri)!important;box-shadow:0 0 0 2px var(--pri-soft)}
+.menu-recolhido .tabs .navg{font-size:0;width:22px;height:1px;background:var(--fl);margin:6px 0}
+#navTip{position:fixed;z-index:9999;pointer-events:none;display:none;align-items:center;gap:10px;padding:7px 13px;border-radius:999px;background:#1C1D1F;color:#fff;font-weight:600;font-size:14px;white-space:nowrap;box-shadow:0 6px 18px rgba(0,0,0,.22);transform:translateY(-50%)}
+#navTip.on{display:flex}#navTip .c{font-size:12px;background:rgba(255,255,255,.15);padding:1px 7px;border-radius:999px}#navTip .c.alerta{background:#A33A36}
+#navTip .k{color:#8C8F94;font-size:12.5px}
 .pagina{flex:1;min-width:0;display:flex;flex-direction:column;background:var(--folha);border:1px solid var(--fl);border-right:0;border-bottom:0;border-top-left-radius:8px}
 /* cabeçalho da aba: título, data e base jurídica; filtros e ordem à direita */
 .cababa{display:flex;align-items:flex-end;gap:16px;padding:16px 24px 2px}
@@ -3093,14 +3104,20 @@ const ui = {
   TITULO:{geral:'Visão geral da base',prog:'Progressão de regime',liv:'Livramento condicional',ind:'Indulto e comutação',presc:'Prescrição',ext:'Extinção da pena',fd:'Ficha disciplinar',aud:'Auditoria do cálculo',base:'Dados da base',geo:'Dados prisionais de MS',teses:'Jurisprudências',quadro:'Quadro do usuário'},
   NAV_GRUPOS:[[null,['geral']],['Prazos',['prog','liv','ext','presc']],['Decretos',['ind']],['Conferência',['fd','aud']],['Panorama e ferramentas',['base','geo','teses','quadro']]],
   MENU_SVG:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>',
+  // atalhos Alt+1 ... Alt+9 e Alt+0 para as dez primeiras abas, na ordem do menu
+  navAtalho(id){ const L=this.NAV_GRUPOS.flatMap(g=>g[1]); const i=L.indexOf(id); return i<0||i>9?'':String((i+1)%10); },
+  navTip(bt){ const t=document.getElementById('navTip')||document.body.appendChild(Object.assign(document.createElement('div'),{id:'navTip'}));
+    if(!bt){ t.classList.remove('on'); return; } const d=bt.dataset, r=bt.getBoundingClientRect(), z=parseFloat(document.documentElement.style.zoom)||1;
+    t.innerHTML=bt.classList.contains('alterna')?'Expandir o menu':esc(d.nome||'')+(d.n?`<span class="c">${esc(d.n)}</span>`:'')+(d.qa?`<span class="c alerta">${esc(d.qa)} vencidos</span>`:'')+(d.k?`<span class="k">Alt ${d.k}</span>`:'');
+    t.style.left=(r.right/z+10)+'px'; t.style.top=((r.top+r.height/2)/z)+'px'; t.classList.add('on'); },
   menuRecolhido(){ let v=null; try{ v=localStorage.getItem('apto_menu'); }catch(e){} const z=parseFloat(document.documentElement.style.zoom)||1; return v ? v==='recolhido' : window.innerWidth/z<1400; },  // letra maior conta como tela menor
   menuAplicar(){ document.body.classList.toggle('menu-recolhido', this.menuRecolhido()); },
   menuAlternar(){ const rec=!this.menuRecolhido(); try{ localStorage.setItem('apto_menu', rec?'recolhido':'aberto'); }catch(e){} this.menuAplicar(); this.render(); },
   renderNav(rs){ this.menuAplicar(); const rec=this.menuRecolhido(); const todas=this.dados.abas.concat(this.ABAS_EXTRA);
     const item=a=>{ const n=a.cor&&!a.sem_stats?this.contaCor(a,rs):''; const qa=a.id==='quadro'?this.qdAlertas():0; const nome=this.NOME[a.id]||a.titulo;
       const dica=nome+(n?' · '+n:'')+(a.id==='ind'&&n?' (assistidos com indulto ou comutação cabível em ao menos um decreto, com ou sem pedido)':'')+(qa?' · '+qa+' cartões com prazo vencido ou para hoje':'');
-      return `<button class="tab ${a.id===this.aba?'on':''}" title="${esc(rec?dica:(a.id==='ind'?'Assistidos com indulto ou comutação cabível em ao menos um decreto (2000 a 2025), com ou sem pedido - o mesmo número do relatório geral':nome))}" onclick="ui.irAba(${jsa(a.id)})">${this.ICONE[a.id]?`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${this.ICONE[a.id]}</svg>`:''}<span class="tnm">${esc(nome)}</span>${n?`<span class="cnt">${n}</span>`:''}${qa?`<span class="cnt" style="background:#F6E4E3;color:#8E2424">${qa}</span>`:''}</button>`; };
-    const usadas=new Set(); let h=`<button class="tab alterna" title="${rec?'Expandir o menu':'Recolher o menu'}" onclick="ui.menuAlternar()">${this.MENU_SVG}<span class="tnm">${rec?'Expandir o menu':'Recolher o menu'}</span></button>`;
+      const k=this.navAtalho(a.id); return `<button class="tab ${a.id===this.aba?'on':''}" data-nome="${esc(nome)}" data-n="${n||''}" data-qa="${qa||''}" data-k="${k||''}" title="${rec?'':esc((a.id==='ind'?'Assistidos com indulto ou comutação cabível em ao menos um decreto (2000 a 2025), com ou sem pedido - o mesmo número do relatório geral':nome))}" onclick="ui.irAba(${jsa(a.id)})">${this.ICONE[a.id]?`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${this.ICONE[a.id]}</svg>`:''}<span class="tnm">${esc(nome)}</span>${n?`<span class="cnt">${n}</span>`:''}${qa?`<span class="cnt alerta" style="background:#F6E4E3;color:#8E2424">${qa}</span>`:''}</button>`; };
+    const usadas=new Set(); let h=`<button class="tab alterna" title="${rec?'':'Recolher o menu'}" onclick="ui.menuAlternar()">${this.MENU_SVG}<span class="tnm">${rec?'Expandir o menu':'Recolher o menu'}</span></button>`;
     this.NAV_GRUPOS.forEach(([g,ids])=>{ const L=ids.map(id=>todas.find(a=>a.id===id)).filter(Boolean); if(!L.length) return; if(g) h+=`<div class="navg">${g}</div>`; L.forEach(a=>{ usadas.add(a.id); h+=item(a); }); });
     todas.filter(a=>!usadas.has(a.id)).forEach(a=>{ h+=item(a); });  // aba nova que ainda não tenha grupo: entra no fim
     document.getElementById('tabs').innerHTML=h;
@@ -3776,6 +3793,11 @@ const ui = {
     document.getElementById('modal').innerHTML=`<div class="box" style="width:720px"><h2>Legenda e método</h2>${leg}<details class="lgm" ${leg?'':'open'}><summary>Método completo</summary><div class="help">${this.dados.ajuda}</div></details><div class="acts"><button class="btn pri" onclick="ui.fecharModal()">Fechar</button></div></div>`; document.getElementById('modal').classList.add('on'); }
 };
 window.ui = ui;  // o Python chama "window.ui && ui.xxx(...)" (andamento, carregando, nova tentativa): sem isto, "const" não cria window.ui e os avisos se perdiam
+// menu recolhido: balão com o nome da aba ao passar o mouse; Alt+1 ... Alt+0 abrem as abas
+document.addEventListener('mouseover',e=>{ const b=e.target.closest&&e.target.closest('#tabs .tab'); ui.navTip(b&&document.body.classList.contains('menu-recolhido')?b:null); });
+['click','scroll','blur'].forEach(ev=>window.addEventListener(ev,()=>ui.navTip(null),true));
+document.addEventListener('keydown',e=>{ if(!e.altKey||e.ctrlKey||e.metaKey||!/^[0-9]$/.test(e.key)) return; const L=ui.NAV_GRUPOS.flatMap(g=>g[1]); const id=L[(+e.key+9)%10];
+  if(id&&ui.dados&&ui.dados.abas&&ui.dados.abas.concat(ui.ABAS_EXTRA||[]).some(a=>a.id===id)){ e.preventDefault(); ui.irAba(id); } });
 function curtoInd(t){ return (t||'').split(' | ')[0]; }
 function penaExt(t){ return String(t).replace(/(-?)\b(\d+)a(\d+)m(\d+)d\b/g,(m0,sg,a,mm,d)=>{ a=+a; mm=+mm; d=+d; const p=[]; if(a)p.push(a+(a>1?' anos':' ano')); if(mm)p.push(mm+(mm>1?' meses':' mês')); if(d)p.push(d+(d>1?' dias':' dia')); if(!p.length) return 'zero'; return sg+(p.length===1?p[0]:p.slice(0,-1).join(', ')+' e '+p[p.length-1]); }); }
 function pl(n,a,b){ return n+' '+(n===1?a:b); }
