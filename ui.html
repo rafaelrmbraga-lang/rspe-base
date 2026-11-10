@@ -1085,9 +1085,12 @@ tr.grp i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-righ
 .geo-3d .gm-lado2 path{fill:#5C8A70;stroke:#5C8A70;stroke-width:1.5}
 .geo-3d .gm{fill:url(#gm-f)!important;stroke:#fff!important;stroke-width:1!important;transition:fill .15s}
 .geo-3d .gm.tem{fill:#CFE0D4!important}.geo-3d .gm:hover{fill:#B9D2C1!important}
-.geo-3d .gb circle{stroke:rgba(255,255,255,.9)!important;stroke-width:1.5!important;fill-opacity:1!important;transition:transform .2s;transform-box:fill-box;transform-origin:center}
-.geo-3d .gb .gsh{fill:#0B3B22;opacity:.18}
-.geo-3d .gb:hover circle,.geo-3d .gb.sel circle{transform:scale(1.12);stroke:#fff!important;stroke-width:3!important}
+.geo-3d .gb .pin{filter:url(#gm-psh);transition:transform .18s cubic-bezier(.2,.8,.2,1)}
+.geo-3d .gb .pin path{fill:url(#gm-pin)!important;stroke:#fff!important;stroke-width:1.5!important}
+.geo-3d .gb .pin circle{fill:#fff!important;stroke:none!important}
+.geo-3d .gb .gsh{fill:#0B3B22;opacity:.22}
+.geo-3d .gb:hover .pin,.geo-3d .gb.sel .pin{transform:translateY(-4px) scale(1.15)}
+.geo-3d .gb.sel .pin circle{fill:#B8E0C6!important}
 .geo-ks{gap:12px!important}
 .geo-k{border:0!important;border-radius:16px!important;background:#fff!important;box-shadow:0 1px 2px rgba(16,24,40,.06),0 4px 14px rgba(16,24,40,.05);padding:14px 16px!important;position:relative}
 .geo-k b{font-size:26px!important;letter-spacing:-.5px}
@@ -1103,7 +1106,6 @@ tr.grp i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-righ
 .geo-base .geo-cond b{color:var(--r-tx);font-size:12.5px}
 .geo-wrap table{border-collapse:separate;border-spacing:0}
 .geo-wrap tbody tr:hover td{background:rgba(0,0,0,.025)}
-.geo-3d .gb.verde circle{fill:url(#gs-verde)!important}.geo-3d .gb.laranja circle{fill:url(#gs-laranja)!important}.geo-3d .gb.vermelho circle{fill:url(#gs-vermelho)!important}.geo-3d .gb.cinza circle{fill:url(#gs-cinza)!important}
 .geo-acts .btn{white-space:nowrap}
 .geo-k .gk-bar{background:#D98580!important}.geo-k.verde .gk-bar{background:#E3EFE7!important}.geo-k.laranja .gk-bar{background:#E8A867!important}
 .geo-k .gk-bar i{background:var(--g-dot)!important}
@@ -1111,6 +1113,29 @@ tr.grp i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-righ
 .geo-k .gk-leg span{font-size:10.5px!important;color:var(--tx3)!important}
 body:has(.geo-3d) #stpop{border:0!important;border-radius:16px!important;box-shadow:0 12px 32px rgba(16,24,40,.18),0 2px 6px rgba(16,24,40,.08)!important;padding:14px 16px!important;backdrop-filter:blur(6px);background:rgba(255,255,255,.96)!important}
 .geo-top2{align-items:start!important}.geo-mapbox{position:sticky;top:10px;align-self:start}
+
+/* Dados prisionais: gráficos da unidade */
+.geo-graf text{font-family:"Source Sans 3",system-ui,sans-serif!important}
+.geo-graf .gtit{font-weight:700;font-size:24px;fill:#0B3B22}
+.geo-graf .gl{fill:#6B746E!important}.geo-graf .gll{fill:#1F2622!important}
+.geo-graf .gp{font-weight:700!important;font-size:21px!important;fill:#fff!important;stroke:rgba(0,0,0,.18)!important;stroke-width:3px!important}
+.geo-graf .gct{font-weight:700;font-size:48px;fill:#0B3B22;text-anchor:middle;letter-spacing:-1px}
+.geo-graf .gcl{font-size:19px;fill:#6B746E;text-anchor:middle}
+.geo-vis{gap:4px!important;margin:0 0 10px!important;padding:4px;border-radius:12px;background:rgba(0,0,0,.045);display:inline-flex!important}
+.geo-vis span{border:0!important;border-radius:9px!important;background:transparent!important;padding:6px 12px!important;color:var(--tx2)}
+.geo-vis span:hover{background:rgba(255,255,255,.7)!important;color:var(--tx)}
+.geo-vis span.on{background:#fff!important;color:var(--pri)!important;font-weight:700;box-shadow:0 1px 2px rgba(16,24,40,.12)}
+.geo-vis label{margin-left:8px}.geo-vis select{border-radius:9px!important;border:0!important;background:#fff!important;padding:4px 8px!important}
+.geo-mapbox .geo-cond{min-height:0!important;padding:6px 6px 10px!important}
+.geo-mapbox .gc-card{background:#fff;border-radius:14px;padding:12px 14px;margin:10px 0!important;box-shadow:0 1px 2px rgba(16,24,40,.06)}
+.geo-mapbox .gc-card ul{padding-left:18px}.geo-mapbox .gc-card li{margin:3px 0}
+.geo-mapbox .gc-ok{background:var(--pri-soft);color:var(--pri);border-radius:12px;padding:10px 12px;font-weight:600}
+.geo-sel .mini{border-radius:9px!important}
+.geo-det{border-radius:12px;overflow:hidden}.geo-det thead th{background:#F1F5F2!important;color:#0B3B22;border:0!important}
+.geo-sel .mini,.box .mini{border:0!important;border-radius:9px!important;background:rgba(0,0,0,.05)!important;padding:5px 10px!important}
+.geo-sel .mini:hover,.box .mini:hover{background:rgba(0,0,0,.09)!important}
+.geo-sel .mini.pre,.box .mini.pre{background:var(--pri)!important;color:#fff!important}
+body:has(.geo-3d) .box .btn{border-radius:10px!important}
 </style>
 </head>
 <body>
@@ -2635,11 +2660,10 @@ const ui = {
     const mun=Object.entries(M.municipios).map(([k,m])=>`<path d="${m.d}" class="gm${comU.has(k)?' tem':''}" onmouseenter="ui.geoMunTip(event,${jsa(m.nome)})" onmouseleave="ui.stPop(null)"></path>`).join('');
     const pos={}; Object.values(M.municipios).forEach(m=>{ pos[m.nome]=m.c; });
     const L=C.map(c=>Object.assign(c,{p:pos[c.nome],r:7+26*Math.sqrt(c.pop/mx)})).filter(c=>c.p).sort((a,b)=>b.pop-a.pop);
-    // relevo: o estado ganha espessura (cópia escura deslocada) e sombra; cada cidade é uma esfera com a cor da ocupação
-    const cor=c=>this.geoCor(c.cap?c.popC/c.cap:null);
-    const bol=L.map(c=>`<g class="gb ${cor(c)}${this.geoCid===c.nome?' sel':''}" onclick="ui.geoCidade(${jsa(c.nome)})" onmouseenter="ui.geoTip(event,${jsa(c.nome)})" onmouseleave="ui.stPop(null)"><ellipse class="gsh" cx="${(c.p[0]+c.r*0.25).toFixed(1)}" cy="${(c.p[1]+c.r*0.95).toFixed(1)}" rx="${(c.r*0.95).toFixed(1)}" ry="${(c.r*0.32).toFixed(1)}"/><circle cx="${c.p[0]}" cy="${c.p[1]}" r="${c.r.toFixed(1)}" fill="url(#gs-${cor(c)})"/></g>`).join('');
-    const esf=k=>{ const h=this.GEO_HEX[k]; return `<radialGradient id="gs-${k}" cx="35%" cy="30%" r="75%"><stop offset="0" stop-color="#fff" stop-opacity=".85"/><stop offset=".18" stop-color="${h}" stop-opacity=".75"/><stop offset=".75" stop-color="${h}"/><stop offset="1" stop-color="#0d1f16" stop-opacity=".9"/></radialGradient>`; };
-    const defs=`<defs><linearGradient id="gm-f" x1="0" y1="0" x2=".35" y2="1"><stop offset="0" stop-color="#F4F7F4"/><stop offset="1" stop-color="#DCE6DF"/></linearGradient><filter id="gm-sh" x="-10%" y="-10%" width="130%" height="140%"><feDropShadow dx="0" dy="18" stdDeviation="16" flood-color="#0B3B22" flood-opacity=".22"/></filter>${['verde','laranja','vermelho','cinza'].map(esf).join('')}</defs>`;
+    // relevo: o estado ganha espessura (cópia escura deslocada) e sombra; cada cidade é um alfinete, maior quanto mais presos
+    const pin='M0,0 C-9,-12 -14,-19 -14,-27 A14,14 0 1 1 14,-27 C14,-19 9,-12 0,0 z';
+    const bol=L.map(c=>{ const k=Math.sqrt(c.pop/mx), e=(0.6+0.95*k).toFixed(2); return `<g class="gb${this.geoCid===c.nome?' sel':''}" onclick="ui.geoCidade(${jsa(c.nome)})" onmouseenter="ui.geoTip(event,${jsa(c.nome)})" onmouseleave="ui.stPop(null)"><ellipse class="gsh" cx="${c.p[0]}" cy="${c.p[1]+1}" rx="${(7*e).toFixed(1)}" ry="${(2.6*e).toFixed(1)}"/><g transform="translate(${c.p[0]} ${c.p[1]}) scale(${e})"><g class="pin"><path d="${pin}"/><circle cx="0" cy="-27" r="5.5"/></g></g></g>`; }).join('');
+    const defs=`<defs><linearGradient id="gm-f" x1="0" y1="0" x2=".35" y2="1"><stop offset="0" stop-color="#F4F7F4"/><stop offset="1" stop-color="#DCE6DF"/></linearGradient><filter id="gm-sh" x="-10%" y="-10%" width="130%" height="140%"><feDropShadow dx="0" dy="18" stdDeviation="16" flood-color="#0B3B22" flood-opacity=".22"/></filter><linearGradient id="gm-pin" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2E8A5C"/><stop offset="1" stop-color="#0B3B22"/></linearGradient><filter id="gm-psh"><feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#0B3B22" flood-opacity=".35"/></filter></defs>`;
     const borda=Object.values(M.municipios).map(m=>`<path d="${m.d}"/>`).join('');
     // sem nomes fixos: o nome do município aparece ao passar o mouse (no círculo, com os estabelecimentos; fora dele, só o nome)
     return `<svg viewBox="-10 -10 ${P.W+20} ${P.H+40}" class="geo-map geo-3d">${defs}<g filter="url(#gm-sh)"><g class="gm-lado" transform="translate(0 12)">${borda}</g><g class="gm-lado2" transform="translate(0 6)">${borda}</g></g>${mun}${bol}</svg>`; },
@@ -2648,41 +2672,44 @@ const ui = {
     el.innerHTML=`<b style="margin:0">${esc(nome)}</b>`+(c?`<small>${c.us.length} estabelecimento${c.us.length>1?'s':''} dos tipos marcados · passe o mouse no círculo.</small>`:'');
     el.style.left=Math.min(ev.clientX+14, innerWidth-470)+'px'; el.style.top=Math.max(8,ev.clientY-10)+'px'; },
   // gráfico da unidade (pizza): por regime, provisórios, crescimento, ocupação, perfil e condições; mês da inspeção escolhível
-  GEO_COR:['#1D5A3B','#4E8C66','#9CBFA9','#C9DDD0','#7C8C82','#B7C4BB'],
+  GEO_COR:['#1F6B45','#5FA07A','#A9CDB6','#D5E6DB','#8A9A90','#BFCBC3'],
   GEO_VIS:[['regime','Por regime'],['provisorios','Provisórios'],['crescimento','Crescimento'],['ocupacao','Ocupação'],['perfil','Perfil'],['condicoes','Condições']],
   geoVisao(v){ this.geoVis=v; this.render(); },
   geoCiclo(c){ this.geoCic=c; this.render(); },
   geoPizza(fat,tit,sub,notas){ const fmt=n=>Number(n||0).toLocaleString('pt-BR'); const F=fat.filter(f=>f.v>0), tot=F.reduce((s,f)=>s+f.v,0);
-    const W=1000, H=600, cx=290, cy=330, R=215;
+    const W=1000, H=600, cx=290, cy=340, R=210, Ri=132, rm=(R+Ri)/2;
     if(!tot) return `<svg viewBox="0 0 ${W} ${H}" class="geo-graf"><text x="40" y="44" class="gtit">${esc(tit)}</text><text x="40" y="120" class="gl">Sem dados para esta visão.</text></svg>`;
-    let a=-Math.PI/2, g='';
-    F.forEach(f=>{ const ang=2*Math.PI*f.v/tot, a2=a+ang, big=ang>Math.PI?1:0, t=`<title>${esc(f.n)}: ${fmt(f.v)} (${Math.round(100*f.v/tot)}%)</title>`;
-      g+= F.length===1?`<circle cx="${cx}" cy="${cy}" r="${R}" fill="${f.cor}">${t}</circle>`
-        :`<path d="M${cx},${cy} L${(cx+R*Math.cos(a)).toFixed(1)},${(cy+R*Math.sin(a)).toFixed(1)} A${R},${R} 0 ${big} 1 ${(cx+R*Math.cos(a2)).toFixed(1)},${(cy+R*Math.sin(a2)).toFixed(1)} Z" fill="${f.cor}" stroke="#fff" stroke-width="3">${t}</path>`;
-      if(f.v/tot>=0.06){ const m=(a+a2)/2; g+=`<text x="${(cx+R*0.62*Math.cos(m)).toFixed(1)}" y="${(cy+R*0.62*Math.sin(m)+7).toFixed(1)}" class="gp">${Math.round(100*f.v/tot)}%</text>`; }
-      a=a2; });
-    const leg=F.map((f,i)=>`<rect x="560" y="${130+i*48}" width="22" height="22" fill="${f.cor}"/><text x="594" y="${148+i*48}" class="gll">${esc(f.n)}</text><text x="${W-30}" y="${148+i*48}" class="glv">${fmt(f.v)} · ${Math.round(100*f.v/tot)}%</text>`).join('');
-    const nt=(notas||[]).map((t,i)=>`<text x="560" y="${150+F.length*48+20+i*30}" class="gl">${esc(t)}</text>`).join('');
-    return `<svg viewBox="0 0 ${W} ${H}" class="geo-graf"><text x="40" y="44" class="gtit">${esc(tit)}</text>${sub?`<text x="40" y="76" class="gl">${esc(sub)}</text>`:''}${g}${leg}${nt}</svg>`; },
+    // rosca: anel com um vão de 2° entre as fatias; total no centro
+    let a=-Math.PI/2, g=`<circle cx="${cx}" cy="${cy}" r="${rm}" fill="none" stroke="#EEF2EF" stroke-width="${R-Ri}"/>`; const vao=F.length>1?0.035:0;
+    const P=(r,t)=>`${(cx+r*Math.cos(t)).toFixed(1)},${(cy+r*Math.sin(t)).toFixed(1)}`;
+    F.forEach(f=>{ const ang=2*Math.PI*f.v/tot, a1=a+vao/2, a2=a+ang-vao/2, big=(a2-a1)>Math.PI?1:0, t=`<title>${esc(f.n)}: ${fmt(f.v)} (${Math.round(100*f.v/tot)}%)</title>`;
+      g+= F.length===1?`<circle cx="${cx}" cy="${cy}" r="${rm}" fill="none" stroke="${f.cor}" stroke-width="${R-Ri}">${t}</circle>`
+        :`<path d="M${P(R,a1)} A${R},${R} 0 ${big} 1 ${P(R,a2)} L${P(Ri,a2)} A${Ri},${Ri} 0 ${big} 0 ${P(Ri,a1)} Z" fill="${f.cor}">${t}</path>`;
+      if(f.v/tot>=0.07){ const m=a+ang/2; g+=`<text x="${(cx+rm*Math.cos(m)).toFixed(1)}" y="${(cy+rm*Math.sin(m)+7).toFixed(1)}" class="gp">${Math.round(100*f.v/tot)}%</text>`; }
+      a+=ang; });
+    g+=`<text x="${cx}" y="${cy+4}" class="gct">${fmt(tot)}</text><text x="${cx}" y="${cy+40}" class="gcl">no total</text>`;
+    const leg=F.map((f,i)=>`<g><rect x="560" y="${128+i*54}" width="400" height="42" rx="12" fill="#F4F7F5"/><rect x="576" y="${140+i*54}" width="18" height="18" rx="5" fill="${f.cor}"/><text x="606" y="${155+i*54}" class="gll">${esc(f.n)}</text><text x="${W-56}" y="${155+i*54}" class="glv">${fmt(f.v)} · ${Math.round(100*f.v/tot)}%</text></g>`).join('');
+    const nt=(notas||[]).map((t,i)=>`<text x="560" y="${150+F.length*54+24+i*30}" class="gl">${esc(t)}</text>`).join('');
+    return `<svg viewBox="0 0 ${W} ${H}" class="geo-graf"><text x="40" y="44" class="gtit">${esc(tit)}</text>${sub?`<text x="40" y="76" class="gl"${sub.length*8.4>920?' textLength="920" lengthAdjust="spacingAndGlyphs"':''}>${esc(sub)}</text>`:''}${g}${leg}${nt}</svg>`; },
   geoColunas(cols,segs,tit,sub,linha,notas){ const fmt=n=>Number(n||0).toLocaleString('pt-BR');
     const W=1000, H=600, x0=96, x1=linha?W-120:W-30, yT=150, yB=500, n=cols.length;
     if(!n) return `<svg viewBox="0 0 ${W} ${H}" class="geo-graf"><text x="40" y="44" class="gtit">${esc(tit)}</text><text x="40" y="120" class="gl">Sem dados para esta visão.</text></svg>`;
     const mx=Math.max(1,...cols.map(c=>c.total),linha?linha.v:0)*1.12, Y=v=>yB-(yB-yT)*v/mx;
     const pas=Math.pow(10,Math.floor(Math.log10(mx/4))), st=[1,2,2.5,5,10].map(k=>k*pas).find(k=>mx/k<=5);
-    let g=''; for(let v=0; v<=mx; v+=st) g+=`<line x1="${x0}" x2="${x1}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}" stroke="#E3E7E4" stroke-width="1"/><text x="${x0-10}" y="${(Y(v)+6).toFixed(1)}" class="gl" text-anchor="end">${fmt(v)}</text>`;
+    let g=''; for(let v=0; v<=mx; v+=st) g+=`<line x1="${x0}" x2="${x1}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}" stroke="#E6EBE7" stroke-width="1" stroke-dasharray="${v?'4 6':''}"/><text x="${x0-10}" y="${(Y(v)+6).toFixed(1)}" class="gl" text-anchor="end">${fmt(v)}</text>`;
     const slot=(x1-x0)/n, bw=Math.min(120,slot*0.58);
     cols.forEach((c,i)=>{ const cx=x0+slot*(i+0.5); let y=yB;
       segs.forEach(sg=>{ const v=c.vals[sg.k]||0; if(v<=0) return; const h=(yB-yT)*v/mx;
-        g+=`<rect x="${(cx-bw/2).toFixed(1)}" y="${(y-h).toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" fill="${sg.cor}" stroke="#fff" stroke-width="2"><title>${esc(c.rot)} · ${esc(sg.n)}: ${fmt(v)}</title></rect>`; y-=h; });
+        g+=`<rect x="${(cx-bw/2).toFixed(1)}" y="${(y-h).toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="${Math.min(8,h/2).toFixed(1)}" fill="${sg.cor}" stroke="#fff" stroke-width="3"><title>${esc(c.rot)} · ${esc(sg.n)}: ${fmt(v)}</title></rect>`; y-=h; });
       g+=`<text x="${cx.toFixed(1)}" y="${(Y(c.total)-12).toFixed(1)}" class="gll" text-anchor="middle" font-weight="700">${fmt(c.total)}</text>`;
       if(c.topo) g+=`<text x="${cx.toFixed(1)}" y="${(Y(c.total)-34).toFixed(1)}" class="gl" text-anchor="middle" fill="${c.topoCor||'#4F555A'}">${esc(c.topo)}</text>`;
       g+=`<text x="${cx.toFixed(1)}" y="${yB+28}" class="gl" text-anchor="middle">${esc(c.rot)}</text>`; });
-    g+=`<line x1="${x0}" x2="${x1}" y1="${yB}" y2="${yB}" stroke="#7C8C82" stroke-width="1.5"/>`;
-    if(linha) g+=`<line x1="${x0}" x2="${x1}" y1="${Y(linha.v).toFixed(1)}" y2="${Y(linha.v).toFixed(1)}" stroke="#212529" stroke-width="2" stroke-dasharray="8 6"/><text x="${x1+8}" y="${(Y(linha.v)+6).toFixed(1)}" class="gll" font-weight="700">${fmt(linha.v)}</text><text x="${x1+8}" y="${(Y(linha.v)+26).toFixed(1)}" class="gl">vagas</text>`;
-    let lx=40; const leg=segs.filter(sg=>cols.some(c=>(c.vals[sg.k]||0)>0)).map(sg=>{ const t=`<rect x="${lx}" y="${96}" width="18" height="18" fill="${sg.cor}"/><text x="${lx+26}" y="${111}" class="gll">${esc(sg.n)}</text>`; lx+=26+sg.n.length*9.6+26; return t; }).join('')
+    g+=`<line x1="${x0}" x2="${x1}" y1="${yB}" y2="${yB}" stroke="#C9D2CC" stroke-width="1.5"/>`;
+    if(linha) g+=`<line x1="${x0}" x2="${x1}" y1="${Y(linha.v).toFixed(1)}" y2="${Y(linha.v).toFixed(1)}" stroke="#0B3B22" stroke-width="2" stroke-dasharray="8 6"/><text x="${x1+8}" y="${(Y(linha.v)+6).toFixed(1)}" class="gll" font-weight="700">${fmt(linha.v)}</text><text x="${x1+8}" y="${(Y(linha.v)+26).toFixed(1)}" class="gl">vagas</text>`;
+    let lx=40; const leg=segs.filter(sg=>cols.some(c=>(c.vals[sg.k]||0)>0)).map(sg=>{ const t=`<rect x="${lx}" y="${96}" width="18" height="18" rx="5" fill="${sg.cor}"/><text x="${lx+26}" y="${111}" class="gll">${esc(sg.n)}</text>`; lx+=26+sg.n.length*9.6+26; return t; }).join('')
       +(linha?`<line x1="${lx}" x2="${lx+30}" y1="105" y2="105" stroke="#212529" stroke-width="2" stroke-dasharray="8 6"/><text x="${lx+38}" y="111" class="gll">${esc(linha.rot)}</text>`:'');
     const nt=(notas||[]).map((t,i,A)=>`<text x="40" y="${H-12-(A.length-1-i)*24}" class="gl">${esc(t)}</text>`).join('');
-    return `<svg viewBox="0 0 ${W} ${H}" class="geo-graf"><text x="40" y="44" class="gtit">${esc(tit)}</text>${sub?`<text x="40" y="76" class="gl">${esc(sub)}</text>`:''}${leg}${g}${nt}</svg>`; },
+    return `<svg viewBox="0 0 ${W} ${H}" class="geo-graf"><text x="40" y="44" class="gtit">${esc(tit)}</text>${sub?`<text x="40" y="76" class="gl"${sub.length*8.4>920?' textLength="920" lengthAdjust="spacingAndGlyphs"':''}>${esc(sub)}</text>`:''}${leg}${g}${nt}</svg>`; },
   geoGraficoUnidade(u){ const fmt=n=>Number(n||0).toLocaleString('pt-BR'), C=this.GEO_COR;
     const S=(u.serie&&u.serie.length)?u.serie:(u.inspecao?[{ciclo:u.inspecao.ciclo,pop:this.geoPop(u),provisorios:u.provisorios,fechado:u.fechado,semiaberto:u.semiaberto,aberto:u.aberto}]:[]);
     const vis=this.geoVis, ciclos=S.map(x=>x.ciclo), cic=ciclos.includes(this.geoCic)?this.geoCic:ciclos[ciclos.length-1], x=S.find(z=>z.ciclo===cic)||{};
@@ -2693,20 +2720,20 @@ const ui = {
       svg=this.geoPizza([{n:'Provisórios',v:x.provisorios,cor:C[2]},{n:'Regime fechado',v:x.fechado,cor:C[0]},{n:'Regime semiaberto',v:x.semiaberto,cor:C[1]},{n:'Regime aberto',v:x.aberto,cor:C[3]},{n:'Medida de segurança e outros',v:Math.max(0,(x.pop||0)-soma),cor:C[4]}],
         'Presos por regime',`Inspeção de ${cic} · ${fmt(x.pop)} presos`); }
     else if(vis==='provisorios'){ const p=x.provisorios||0;
-      svg=this.geoPizza([{n:'Presos provisórios',v:p,cor:'#A3201D'},{n:'Condenados',v:Math.max(0,(x.pop||0)-p),cor:C[0]}],'Presos provisórios',`Inspeção de ${cic} · ${fmt(p)} de ${fmt(x.pop)} presos sem condenação definitiva`,
+      svg=this.geoPizza([{n:'Presos provisórios',v:p,cor:'#C49A3A'},{n:'Condenados',v:Math.max(0,(x.pop||0)-p),cor:C[0]}],'Presos provisórios',`Inspeção de ${cic} · ${fmt(p)} de ${fmt(x.pop)} presos sem condenação definitiva`,
         S.length>1?[`Provisórios em ${S[0].ciclo}: ${fmt(S[0].provisorios)}`,`Provisórios em ${cic}: ${fmt(p)}`]:[]); }
     else if(vis==='crescimento'){ const a=S[0], b=S[S.length-1], d=(b.pop||0)-(a.pop||0), v=a.pop?Math.round(100*d/a.pop):0, sn=n=>(n>0?'+':'')+fmt(n);
       const segs=[{k:'provisorios',n:'Provisórios',cor:C[2]},{k:'fechado',n:'Fechado',cor:C[0]},{k:'semiaberto',n:'Semiaberto',cor:C[1]},{k:'aberto',n:'Aberto',cor:C[3]},{k:'outros',n:'Outros',cor:C[4]}];
       const cols=S.map((z,i)=>{ const so=(z.provisorios||0)+(z.fechado||0)+(z.semiaberto||0)+(z.aberto||0), dd=i?(z.pop||0)-(S[i-1].pop||0):null;
-        return {rot:z.ciclo,total:z.pop||0,vals:{provisorios:z.provisorios,fechado:z.fechado,semiaberto:z.semiaberto,aberto:z.aberto,outros:Math.max(0,(z.pop||0)-so)},topo:dd==null?'':sn(dd)+' no mês',topoCor:dd>0?'#A3201D':'#4F555A'}; });
+        return {rot:z.ciclo,total:z.pop||0,vals:{provisorios:z.provisorios,fechado:z.fechado,semiaberto:z.semiaberto,aberto:z.aberto,outros:Math.max(0,(z.pop||0)-so)},topo:dd==null?'':sn(dd)+' no mês',topoCor:dd>0?'#9E3B36':'#4F555A'}; });
       const reg=S.length<2?[]:[['provisorios','Provisórios'],['fechado','Fechado'],['semiaberto','Semiaberto'],['aberto','Aberto']].map(([k,n])=>`${n}: ${sn((b[k]||0)-(a[k]||0))}`);
       const cap=u.capacidade||0, exc=z=>Math.max(0,(z.pop||0)-cap);
       const nts=[...(reg.length?['Variação por regime no período: '+reg.join(' · ')]:[]),...(cap?[S.length>1?`Acima das ${fmt(cap)} vagas (linha tracejada): ${fmt(exc(a))} presos em ${a.ciclo} e ${fmt(exc(b))} em ${b.ciclo}`:`Acima das ${fmt(cap)} vagas (linha tracejada): ${fmt(exc(b))} presos`]:[])];
       svg=this.geoColunas(cols,segs,'Crescimento de apenados',S.length<2?`Inspeção de ${a.ciclo} · só uma inspeção na série`:`De ${fmt(a.pop)} em ${a.ciclo} para ${fmt(b.pop)} em ${b.ciclo} (${v>0?'+':''}${v}%) · acima de cada coluna, a variação desde a inspeção anterior`,cap?{v:cap,rot:'Vagas existentes'}:null,nts); }
     else if(vis==='ocupacao'){ const cap=u.capacidade||0;
-      const cols=S.map(z=>{ const p=z.pop||0; return {rot:z.ciclo,total:p,vals:cap?{dentro:Math.min(p,cap),alem:Math.max(0,p-cap)}:{dentro:p},topo:cap?Math.round(100*p/cap)+'%':'',topoCor:cap&&p>cap?'#A3201D':'#4F555A'}; });
+      const cols=S.map(z=>{ const p=z.pop||0; return {rot:z.ciclo,total:p,vals:cap?{dentro:Math.min(p,cap),alem:Math.max(0,p-cap)}:{dentro:p},topo:cap?Math.round(100*p/cap)+'%':'',topoCor:cap&&p>cap?'#9E3B36':'#4F555A'}; });
       const ult=S[S.length-1]||{};
-      svg=this.geoColunas(cols,[{k:'dentro',n:'Presos nas vagas existentes',cor:C[0]},{k:'alem',n:'Presos além da capacidade',cor:'#A3201D'}],'Ocupação',
+      svg=this.geoColunas(cols,[{k:'dentro',n:'Presos nas vagas existentes',cor:C[0]},{k:'alem',n:'Presos além da capacidade',cor:'#D98580'}],'Ocupação',
         cap?`${fmt(cap)} vagas (tema "Aspectos gerais") · ${fmt(ult.pop)} presos em ${ult.ciclo} (${Math.round(100*(ult.pop||0)/cap)}%) · acima de cada coluna, a taxa de ocupação`:'Capacidade não informada na inspeção; colunas só com a população.',
         cap?{v:cap,rot:'Vagas existentes'}:null); }
     else if(vis==='perfil'){ const nt=[['idosos','Mais de 60 anos'],['indigenas','Indígenas'],['migrantes','Migrantes'],['lgbt','LGBTQIAPN+'],['deficiencia_fisica','Deficiência física'],['transtorno_mental','Transtorno mental'],['gestantes','Gestantes']].filter(([k])=>u[k]).map(([k,n])=>`${n}: ${fmt(u[k])}`);
@@ -2715,14 +2742,14 @@ const ui = {
       const L=this._geoInd.filter(I=>I.alerta&&this.geoTem(u,I.k)), r=L.filter(I=>this.geoRuim(u,I.k)), T=this._geoTemas||{};
       const temas=[...new Set(r.map(I=>String(I.tema)))].sort();
       svg=`<div class="geo-cond"><div class="gtit2">Problemas constatados nas inspeções</div><div class="gl2">${L.length?`${r.length} de ${L.length} indicadores acompanhados com problema`:'Sem inspeção dos temas de condições no Geopresídios.'}</div>
-        ${temas.map(t=>{ const tm=(u.temas||{})[t]||{}; return `<div class="gc-t"><div class="gc-h"><b>${esc(T[t]||'Tema '+t)}</b><span class="muted"> · inspeção de ${esc(tm.ciclo||'')}</span></div><ul>${r.filter(I=>String(I.tema)===t).map(I=>`<li>${esc(I.problema||I.rot)}<span class="muted"> - resposta: ${esc(((tm.ind||{})[I.k]||{}).v||'')}</span></li>`).join('')}</ul></div>`; }).join('')}
+        ${temas.map(t=>{ const tm=(u.temas||{})[t]||{}; return `<div class="gc-t gc-card"><div class="gc-h"><b>${esc(T[t]||'Tema '+t)}</b><span class="muted"> · inspeção de ${esc(tm.ciclo||'')}</span></div><ul>${r.filter(I=>String(I.tema)===t).map(I=>`<li>${esc(I.problema||I.rot)}<span class="muted"> - resposta: ${esc(((tm.ind||{})[I.k]||{}).v||'')}</span></li>`).join('')}</ul></div>`; }).join('')}
         ${L.length&&!r.length?'<div class="gc-ok">Nenhum problema constatado nos indicadores acompanhados.</div>':''}
         ${L.length-r.length>0&&r.length?`<div class="muted" style="margin-top:8px">Nos outros ${L.length-r.length} indicadores acompanhados, a inspeção não constatou problema (${esc(L.filter(I=>!this.geoRuim(u,I.k)).map(I=>I.rot).slice(0,6).join('; '))}${L.length-r.length>6?'…':''}).</div>`:''}</div>`; }
     return bt+svg; },
   async renderGeo(){ if(!this._geoOk) await this.geoCarregar(); const G=this._geo; const fmt=n=>n==null?'—':Number(n).toLocaleString('pt-BR'), pct=o=>o==null?'—':Math.round(o*100)+'%';
     document.getElementById('stats').innerHTML=`<div class="geo-head"><div><b>Sistema prisional de Mato Grosso do Sul</b><span class="muted">${G?`Geopresídios/CNIEP (CNJ): inspeções judiciais mensais de cada unidade (população da mais recente; vagas e perfil do tema "Aspectos gerais"; condições dos demais temas) · baixado em ${esc(G.atualizado)} · <a href="#" onclick="event.preventDefault();api('abrir_url','${esc(G.fonte||'https://geopresidios.cnj.jus.br/')}')">geopresidios.cnj.jus.br</a>`:'Dados da API pública do Geopresídios (CNJ), guardados neste computador.'}</span></div>
       <div class="geo-acts">${G?`<button class="btn" onclick="ui.geoPdf('geral')" title="Indicadores, mapa, ocupação, condições e evolução de todo o estado; escolha os tipos de estabelecimento">Relatório geral (PDF)</button><button class="btn" onclick="ui.geoPdf('condicoes')" title="Escolha as unidades: em quais foi constatado cada problema, e os problemas de cada uma">Condições por unidade (PDF)</button>`:''}<button class="btn ${G?'':'pri'}" id="geoBt" onclick="ui.geoAtualizar()" ${this._geoBaixando?'disabled':''} title="Os dados são baixados sozinhos quando têm 30 dias ou mais">${this._geoBaixando?'Atualizando… '+(this._geoPct||0)+'%':G?'Atualizar dados':'Baixar dados do Geopresídios (MS)'}</button></div></div>`;
-    document.getElementById('legenda').innerHTML=`<span class="leg"><i style="background:#1D5A3B"></i>no mapa, o círculo é a cidade, com o tamanho pelo número de presos</span><span class="leg">Ocupação: <b style="color:var(--g-tx)">até 100%</b> · <b style="color:var(--o-tx)">100% a 149%</b> · <b style="color:var(--r-tx)">150% ou mais</b></span><span class="leg">Clique na cidade para filtrar; escolha a unidade (lista ou tabela) para o gráfico, o detalhe e o relatório</span>`;
+    document.getElementById('legenda').innerHTML=`<span class="leg"><i style="background:#1D5A3B"></i>no mapa, o alfinete é a cidade, maior quanto mais presos</span><span class="leg">Ocupação: <b style="color:var(--g-tx)">até 100%</b> · <b style="color:var(--o-tx)">100% a 149%</b> · <b style="color:var(--r-tx)">150% ou mais</b></span><span class="leg">Clique na cidade para filtrar; escolha a unidade (lista ou tabela) para o gráfico, o detalhe e o relatório</span>`;
     if(!G){ document.getElementById('card').innerHTML=`<div class="empty"><div><b>Dados prisionais de MS</b>${this._geoBaixando?`<span id="geoPctTxt">${this.geoPctTxt()}</span><div class="geo-bar"><i id="geoPctBar" style="width:${this._geoPct||0}%"></i></div>`:'Clique em "Baixar dados do Geopresídios (MS)". Leva cerca de 2 minutos; os dados ficam guardados neste computador e são baixados de novo sozinhos quando têm 30 dias ou mais.'}</div></div>`; return; }
     const Utodas=this.geoUnidades(), Ucid=this.geoCid?Utodas.filter(u=>u.cidade===this.geoCid):Utodas, Usel=this.geoUnid!=null?Utodas.find(u=>u.id===this.geoUnid):null; if(this.geoUnid!=null&&!Usel) this.geoUnid=null; const U=Usel?[Usel]:Ucid; const Ut=this.geoFiltroInd?U.filter(u=>this.geoRuim(u,this.geoFiltroInd)):U;
     const comI=U.filter(u=>u.inspecao), comCap=comI.filter(u=>u.capacidade>0);
@@ -2738,7 +2765,7 @@ const ui = {
         const bons=Object.keys(C).filter(c=>Object.keys(C[c]).length>=0.8*comI.length).sort((a,b)=>this.geoCicloOrd(a)-this.geoCicloOrd(b)); if(bons.length<2) return '';
         const ids=Object.keys(C[bons[0]]).filter(i=>i in C[bons[bons.length-1]]); const a=ids.reduce((s,i)=>s+C[bons[0]][i],0), b=ids.reduce((s,i)=>s+C[bons[bons.length-1]][i],0);
         const serie=bons.map(c=>({ciclo:c,pop:ids.reduce((s,i)=>s+(C[c][i]||0),0)})); const v=a?Math.round(100*(b-a)/a):0;
-        return `<div class="geo-base"><b>Evolução da população</b><div style="display:flex;align-items:center;gap:12px">${this.geoSpark(serie,240,56)}<span>${fmt(a)} em ${esc(bons[0])} → <b style="display:inline;color:${v>0?'var(--r-tx)':'var(--g-tx)'}">${fmt(b)}</b> em ${esc(bons[bons.length-1])} (${v>0?'+':''}${v}%)<br><span class="muted" style="font-size:11.5px">${ids.length} unidades com dado nos ${bons.length} ciclos</span></span></div></div>`; })()}
+        return `<div class="geo-base"><b>Evolução da população</b><div style="display:flex;align-items:center;gap:12px">${this.geoSpark(serie,240,56)}<span>${fmt(a)} em ${esc(bons[0])} → <b style="display:inline;color:${v>0?'var(--r-tx)':'var(--g-tx)'}">${fmt(b)}</b> em ${esc(bons[bons.length-1])} (${v>0?'+':''}${v}%)<br><span class="muted" style="font-size:11.5px">${pl(ids.length,'unidade','unidades')} com dado nos ${bons.length} ciclos</span></span></div></div>`; })()}
       ${(()=>{ const L=this._geoInd.filter(I=>I.alerta).map(I=>{ const com=comI.filter(u=>this.geoTem(u,I.k)), r=com.filter(u=>this.geoRuim(u,I.k)); return {I,n:r.length,de:com.length}; }).filter(x=>x.n).sort((a,b)=>b.n/b.de-a.n/a.de);
         if(!L.length) return ''; return `<div class="geo-base"><b>Condições constatadas nas inspeções</b><div class="geo-cond">${L.map(x=>`<div class="${this.geoFiltroInd===x.I.k?'on':''}" style="--p:${Math.round(100*x.n/x.de)}%" onclick="ui.geoIndFiltro(${jsa(x.I.k)})" title="Clique para ver só essas unidades"><span>${esc(x.I.problema||x.I.rot)}</span><b>${x.n} de ${x.de}</b></div>`).join('')}</div></div>`; })()}
       ${nBase?`<div class="geo-base"><b>Assistidos desta base</b>${fmt(nBase)} nestas unidades, pela ficha do SIAPEN${nBaseSF?`<div class="geo-sv">${fmt(nBaseSF)} no semiaberto ou no aberto pelo RSPE e custodiados em unidade de regime fechado, enquanto a inspeção informa ${fmt(nSemiF)}: conferir o regime adequado (Súmula Vinculante 56)</div>`:''}</div>`:''}</div>`;
