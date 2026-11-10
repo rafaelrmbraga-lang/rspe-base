@@ -1143,6 +1143,51 @@ v7.16.2
     aviso e, se mudar o resultado, a linha fica "A VERIFICAR". Assim a
     data prevista nunca sai antes da real. Tráfico privilegiado continua
     sem o +1/3.
+  Dados prisionais: o andamento do download volta a aparecer ("Atualizando…
+  37%" e a barra). Os avisos do programa para a tela se perdiam: o botão
+  ficava em 0% até o fim, embora o download corresse (leva 1 a 3 minutos).
+  A mesma falha impedia a nova tentativa automática depois de relatórios
+  recusados pelo CNJ e o aviso de "carregando" ao abrir a base.
+  Menu lateral recolhido em novo estilo: faixa de ícones maiores, com um
+  quadrado arredondado na aba aberta (verde claro) e na aba sob o mouse;
+  bolinha no canto do ícone quando a aba tem assistidos (vermelha no
+  Quadro com cartão vencido). Ao passar o mouse, um balão escuro mostra o
+  nome da aba, o número e o atalho. Atalhos novos: Alt+1 a Alt+9 e Alt+0
+  abrem as dez primeiras abas, na ordem do menu (Alt+1 Geral, Alt+2
+  Progressão...). O logo do APTO fica centrado sobre a faixa. O menu
+  expandido, com os nomes, continua pelo botão do topo.
+  Dados prisionais em novo visual:
+  - Mapa do estado em relevo (com espessura e sombra), com um alfinete
+    verde por cidade, maior quanto mais presos; o mapa acompanha a
+    rolagem.
+  - Janela da cidade (mouse sobre o alfinete): total da cidade (unidades,
+    presos, vagas e ocupação) e as unidades da mais lotada para a menos,
+    cada uma com a ocupação numa pílula e uma barra com a marca dos 100%.
+  - Números em cartões arredondados; a taxa de ocupação com a barra de
+    vagas e excedente; evolução da população em gráfico de área;
+    condições constatadas com barra proporcional às unidades; filtros em
+    pílulas.
+  - Gráficos da unidade: rosca com o total no centro (regime,
+    provisórios, perfil), colunas com cantos arredondados (crescimento,
+    ocupação), cores suaves; condições da unidade em cartões por tema.
+  - Os três PDFs da aba (relatório geral, condições por unidade e
+    relatório da unidade) no mesmo visual: cartões, mapa em relevo com
+    alfinetes centralizado, ocupação em pílulas, barras, área e roscas.
+  - Correções: subtítulo dos gráficos de colunas cortado; "1 unidades".
+  Desempenho (nenhum resultado muda; conferido campo a campo com uma base
+  de 632 assistidos e com as bases simuladas):
+  - Cálculo guardado: o resultado de cada assistido fica guardado com a
+    "impressão digital" de tudo o que entra no cálculo (RSPE, ficha,
+    baixas, pedidos, dados informados, data de hoje e versões do programa
+    e da base jurídica). Se nada mudou, é reaproveitado; o que mudou é
+    recalculado. Na base de 632 assistidos: remontar a lista (vincular ou
+    desvincular ficha, remover, restaurar cópia) passou de ~50 s para ~2 s;
+    reabrir a base no mesmo dia, de ~60 s para ~3 s. O cache fica em
+    "cache_calculos" (13 MB por base, comprimido), vale só no dia e para
+    esta versão, e o de bases não abertas há 7 dias é apagado.
+  - Primeira abertura do dia: de ~60 s para ~35 s (contas repetidas da
+    prescrição guardadas, como datas e números de processo, e todos os
+    núcleos do processador no cálculo paralelo).
 
 v7.16.1
   Jurisprudências, Monitor: base nos dois sentidos. Arquivo novo embutido

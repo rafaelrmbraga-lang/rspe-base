@@ -49,6 +49,9 @@ TESTES += ["teste_rev_ficha_leitura.py", "teste_rev_ficha_estudo.py", "teste_rev
            "teste_rev_ficha_pagamento.py"]  # revisão da aba Ficha na base real (150 casos): leitura, estudo, exame, cela, pagamento
 TESTES += ["teste_rev_presc_termo_mp.py"]  # revisão da Prescrição (11/2026): termo pelo trânsito para a acusação não informado (Tema 788)
 TESTES += ["teste_rev_presc_reinc.py"]  # revisão da Prescrição (11/2026): +1/3 da reincidência marcada no prazo principal, hipótese sem ele no aviso
+TESTES += ["teste_ui_avisos.py"]  # 7.16.2: avisos do Python chegam à tela (window.ui; andamento dos dados prisionais)
+TESTES += ["teste_ui_menu.py"]  # 7.16.2: menu lateral recolhido (balão com nome, número e Alt+n; expansão mantida)
+TESTES += ["teste_cache_calculo.py"]  # 7.16.2: cache dos cálculos idêntico ao cálculo do zero
 # saída em UTF-8 em qualquer console (no Windows o padrão cp1252 não imprime símbolos como "✓" e derruba o teste)
 _env = dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUTF8="1")
 falhas = [t for t in TESTES if subprocess.call([sys.executable, t], env=_env) != 0]
