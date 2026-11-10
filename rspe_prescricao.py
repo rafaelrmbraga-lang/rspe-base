@@ -3385,6 +3385,37 @@ def _sem_transito_limites(L, c, r, ctx, sent, pena, fato, hips, ppp_meses, hoje)
                 rs.fmt(sent), fmt_prazo(ppp_meses), rs.fmt(x2), fmt_prazo(min(h_[1] for h_ in hips)), fmt_prazo(max(h_[1] for h_ in hips)))]
 
 
+def _termo_mp_limites(L, L0, c, r, ctx, termo, sent, teto, pena, fato, fator, ppe_meses, meia):
+    """Termo contado do trânsito final só por falta do trânsito para a acusação (modulação do Tema 788: o termo real é este, anterior e
+    não informado). A contagem do trânsito final é a mais desfavorável ao assistido; se, com o termo em alguma data possível do
+    trânsito para a acusação (da sentença até o trânsito final ou 12/11/2020, o que vier antes), a executória se completa, o
+    resultado "não prescrita" não se sustenta: devolve o status dessa hipótese (para A VERIFICAR), senão None."""
+    if not sent or not termo or _classe(L) != "n":
+        return None
+    fim = min(termo, teto)
+    if fim <= sent:
+        return None
+    marcos = {sent, fim - timedelta(days=1)}
+    bordas = [(a, b) for a, b, _m, _p in ctx.get("periodos_det") or []] + [(f_.get("ini"), f_.get("fim")) for f_ in ctx.get("ficha_per") or []]
+    for a, b in bordas:
+        for d in (a, b):
+            if d:
+                marcos.update((d - timedelta(days=1), d, d + timedelta(days=1)))
+    span = (fim - sent).days
+    passo = max(7, span // 60)
+    ts = sorted({sent + timedelta(days=k) for k in range(0, span, passo)} | {d for d in marcos if sent <= d < fim})
+    for T in ts:
+        Lx = copy.deepcopy(L0)
+        try:
+            _exec(Lx, c, r, ctx, T, "trânsito para a acusação hipotético em %s (não consta do RSPE)" % rs.fmt(T), pena, fato, fator, ppe_meses, meia)
+        except Exception:
+            return None
+        Lx.pop("_acao_sem_soma", None)
+        if _classe(Lx) == "p":
+            return T, Lx.get("ppe_status") or ""
+    return None
+
+
 FR_CONTINUIDADE = (Fraction(1, 6), Fraction(1, 5), Fraction(1, 4), Fraction(1, 3), Fraction(1, 2), Fraction(2, 3))  # CP, art. 71, caput
 FR_CONT_ESPECIFICA = FR_CONTINUIDADE + (Fraction(1), Fraction(2))  # art. 71, parágrafo único: até o triplo
 FR_CONCURSO_FORMAL = FR_CONTINUIDADE[:5]  # CP, art. 70: de 1/6 até a metade
@@ -3612,7 +3643,10 @@ def analisar(r, hoje=None, ficha=None):
         # com uma condenação só, mas com o SEEU aplicando a este crime fração de primário (progressão ou livramento): a própria execução
         # trata o condenado como primário - a reincidência marcada sem base também é afastada, como com várias condenações
         _fr_prim = [x for x in (c.get("fracao_progressao"), c.get("fracao_livramento")) if x and re.search(r"PRIM[AÁ]RI", x, re.I)]
-        reinc_afastada = bool(reinc_sem_base and (_outras or _fr_prim))
+        # decisão da revisão de 11/2026: a reincidência marcada no RSPE fica no cálculo principal (+1/3), também com várias condenações;
+        # sem condenação anterior transitada neste RSPE, a hipótese sem o +1/3 é conferida e, se mudar o resultado, fica A VERIFICAR
+        # (a condenação anterior pode estar fora deste RSPE; STJ, Tema 1208) - a data prevista nunca sai antes da real
+        reinc_afastada = False
         # o RSPE marca primário (ou não informa), mas outra condenação dele transitou antes do fato: a reincidência (+1/3 no prazo da
         # executória - CP, arts. 63 e 110) pode ter sido reconhecida na sentença - a hipótese com ela é conferida (conferência 7.13)
         _tr_ant = [d_ for d_ in _trs if _fx and d_ < _fx]
@@ -4316,6 +4350,16 @@ def analisar(r, hoje=None, ficha=None):
                         _nao_muda(L, Lx) if _classe(Lx) == _classe(L) else "o resultado seria " + (Lx.get("ppe_status") or "").lower()))
                     if _classe(Lx) != _classe(L) and _classe(L) != "v":  # já a verificar por outro motivo: mantém o motivo, com o alerta
                         difs.append((nome_v, Lx))
+                elif nome_v.startswith("reincidência sem"):
+                    # decisão 11/2026: o +1/3 fica no principal; a nota da hipótese sem ele aparece também quando muda o resultado
+                    _base_do_prazo(Lx)
+                    L["ppe_reinc_aviso"] = ("Reincidência marcada no RSPE sem condenação anterior transitada neste RSPE%s (ver Auditoria: conferir a "
+                                            "certidão de antecedentes e o período depurador - CP, art. 64, I). Sem o +1/3, o prazo seria %s: "
+                                            "%s." % ((" e com fração de primário no SEEU (%s)" % " / ".join(_fr_prim)) if _fr_prim else "",
+                                                     Lx.get("ppe_prazo_efetivo") or Lx.get("prazo_ppe") or "—",
+                                                     _nao_muda(L, Lx) if _classe(Lx) == _classe(L) else "o resultado seria " + (Lx.get("ppe_status") or "").lower()))
+                    if _classe(Lx) != _classe(L):
+                        difs.append((nome_v, Lx))
                 elif _classe(Lx) != _classe(L):
                     difs.append((nome_v, Lx))
                 elif nome_v == V_REINC_N:
@@ -4324,11 +4368,6 @@ def analisar(r, hoje=None, ficha=None):
                                             "antes do fato (%s): se a sentença reconheceu a reincidência, o prazo aumenta de 1/3 (CP, art. 110) - "
                                             "com o +1/3, o prazo seria %s: %s." % (
                                                 rs.fmt(_tr_ant[0]), L["fato"], Lx.get("ppe_prazo_efetivo") or Lx.get("prazo_ppe") or "—", _nao_muda(L, Lx)))
-                elif nome_v.startswith("reincidência sem"):
-                    _base_do_prazo(Lx)
-                    L["ppe_reinc_aviso"] = ("Reincidência marcada no RSPE sem condenação anterior transitada neste RSPE (ver Auditoria: conferir a "
-                                            "certidão de antecedentes e o período depurador - CP, art. 64, I). Sem o +1/3, o prazo seria %s: "
-                                            "%s." % (Lx.get("ppe_prazo_efetivo") or Lx.get("prazo_ppe") or "—", _nao_muda(L, Lx)))
             if difs:
                 antes = L["ppe_status"]
                 # as duas variantes da reincidência sem base (afastada com várias condenações; mantida com uma só) têm o mesmo rótulo
@@ -4384,6 +4423,21 @@ def analisar(r, hoje=None, ficha=None):
                                "Se esta ação já estava na execução unificada antes disso (LEP, art. 111), aquela prisão era cumprimento desta pena "
                                "(art. 117, V), e o resultado seria: %s. Conferir na execução a data do somatório das penas." % (
                                    _sem_soma, antes, Lx.get("ppe_status") or ""))
+            # só o trânsito final no RSPE e o termo real é o trânsito para a acusação, anterior e não informado (modulação do Tema 788):
+            # contar do final pode esconder a prescrição - testa as datas possíveis do trânsito para a acusação
+            if not tmp and tpr and termo == tpr and (tpr <= TEMA_788 or (sent and sent < TEMA_788)):
+                _alt = _termo_mp_limites(L, L0, c, r, ctx, termo, sent, TEMA_788, pena, fato, fator, ppe_meses, meia)
+                if _alt:
+                    antes = L["ppe_status"]
+                    L["ppe_status"] = ("A VERIFICAR: prescrição executória possível, conforme a data do trânsito em julgado para a acusação "
+                                       "(não consta do RSPE)")
+                    L["ppe_cor"], L["ppe_previsao"], L["ppe_dias"] = "amarelo", "", None
+                    L["ppe_faltam"] = (["data do trânsito em julgado para a acusação (termo inicial pelo art. 112, I, na modulação do STF no "
+                                        "Tema 788, quando anterior a 12/11/2020)"] + list(L.get("ppe_faltam") or []))
+                    det.append("Conclusão ajustada: A VERIFICAR - contado do trânsito final (%s): %s. Se o trânsito para a acusação ocorreu em "
+                               "%s ou perto disso (até 12/11/2020 ele é o termo inicial - CP, art. 112, I; modulação do Tema 788), o resultado "
+                               "seria: %s. Conferir a data na ação penal e informá-la em \"editar dados\"." % (
+                                   rs.fmt(tpr), antes, rs.fmt(_alt[0]), _alt[1]))
         L.pop("_acao_sem_soma", None)
         if aviso497:
             det.append("⚠ " + aviso497[0].upper() + aviso497[1:] + ".")
