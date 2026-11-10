@@ -3775,6 +3775,7 @@ const ui = {
       leg=`<h3 class="lgh">Legenda · ${esc(this.NOME[spec.id]||spec.titulo)}</h3><table class="lgt"><thead><tr><th>Situação</th><th>O que quer dizer</th></tr></thead><tbody>${Object.keys(rot).map(c=>`<tr><td><span class="pill sitb ${c||'none'}">${esc(rot[c])}</span></td><td>${esc(dic[c]||'—')}</td></tr>`).join('')}${this.abaPedido(spec)?`<tr><td><span class="pill sitb azul">Feito</span></td><td>Pedido feito (e a situação não mudou depois): sai da contagem da situação</td></tr>`:''}</tbody></table>`; }
     document.getElementById('modal').innerHTML=`<div class="box" style="width:720px"><h2>Legenda e método</h2>${leg}<details class="lgm" ${leg?'':'open'}><summary>Método completo</summary><div class="help">${this.dados.ajuda}</div></details><div class="acts"><button class="btn pri" onclick="ui.fecharModal()">Fechar</button></div></div>`; document.getElementById('modal').classList.add('on'); }
 };
+window.ui = ui;  // o Python chama "window.ui && ui.xxx(...)" (andamento, carregando, nova tentativa): sem isto, "const" não cria window.ui e os avisos se perdiam
 function curtoInd(t){ return (t||'').split(' | ')[0]; }
 function penaExt(t){ return String(t).replace(/(-?)\b(\d+)a(\d+)m(\d+)d\b/g,(m0,sg,a,mm,d)=>{ a=+a; mm=+mm; d=+d; const p=[]; if(a)p.push(a+(a>1?' anos':' ano')); if(mm)p.push(mm+(mm>1?' meses':' mês')); if(d)p.push(d+(d>1?' dias':' dia')); if(!p.length) return 'zero'; return sg+(p.length===1?p[0]:p.slice(0,-1).join(', ')+' e '+p[p.length-1]); }); }
 function pl(n,a,b){ return n+' '+(n===1?a:b); }

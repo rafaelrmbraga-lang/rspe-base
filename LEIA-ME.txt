@@ -1143,6 +1143,11 @@ v7.16.2
     aviso e, se mudar o resultado, a linha fica "A VERIFICAR". Assim a
     data prevista nunca sai antes da real. Tráfico privilegiado continua
     sem o +1/3.
+  Dados prisionais: o andamento do download volta a aparecer ("Atualizando…
+  37%" e a barra). Os avisos do programa para a tela se perdiam: o botão
+  ficava em 0% até o fim, embora o download corresse (leva 1 a 3 minutos).
+  A mesma falha impedia a nova tentativa automática depois de relatórios
+  recusados pelo CNJ e o aviso de "carregando" ao abrir a base.
 
 v7.16.1
   Jurisprudências, Monitor: base nos dois sentidos. Arquivo novo embutido
