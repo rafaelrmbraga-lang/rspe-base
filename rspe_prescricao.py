@@ -3385,6 +3385,37 @@ def _sem_transito_limites(L, c, r, ctx, sent, pena, fato, hips, ppp_meses, hoje)
                 rs.fmt(sent), fmt_prazo(ppp_meses), rs.fmt(x2), fmt_prazo(min(h_[1] for h_ in hips)), fmt_prazo(max(h_[1] for h_ in hips)))]
 
 
+def _termo_mp_limites(L, L0, c, r, ctx, termo, sent, teto, pena, fato, fator, ppe_meses, meia):
+    """Termo contado do trânsito final só por falta do trânsito para a acusação (modulação do Tema 788: o termo real é este, anterior e
+    não informado). A contagem do trânsito final é a mais desfavorável ao assistido; se, com o termo em alguma data possível do
+    trânsito para a acusação (da sentença até o trânsito final ou 12/11/2020, o que vier antes), a executória se completa, o
+    resultado "não prescrita" não se sustenta: devolve o status dessa hipótese (para A VERIFICAR), senão None."""
+    if not sent or not termo or _classe(L) != "n":
+        return None
+    fim = min(termo, teto)
+    if fim <= sent:
+        return None
+    marcos = {sent, fim - timedelta(days=1)}
+    bordas = [(a, b) for a, b, _m, _p in ctx.get("periodos_det") or []] + [(f_.get("ini"), f_.get("fim")) for f_ in ctx.get("ficha_per") or []]
+    for a, b in bordas:
+        for d in (a, b):
+            if d:
+                marcos.update((d - timedelta(days=1), d, d + timedelta(days=1)))
+    span = (fim - sent).days
+    passo = max(7, span // 60)
+    ts = sorted({sent + timedelta(days=k) for k in range(0, span, passo)} | {d for d in marcos if sent <= d < fim})
+    for T in ts:
+        Lx = copy.deepcopy(L0)
+        try:
+            _exec(Lx, c, r, ctx, T, "trânsito para a acusação hipotético em %s (não consta do RSPE)" % rs.fmt(T), pena, fato, fator, ppe_meses, meia)
+        except Exception:
+            return None
+        Lx.pop("_acao_sem_soma", None)
+        if _classe(Lx) == "p":
+            return T, Lx.get("ppe_status") or ""
+    return None
+
+
 FR_CONTINUIDADE = (Fraction(1, 6), Fraction(1, 5), Fraction(1, 4), Fraction(1, 3), Fraction(1, 2), Fraction(2, 3))  # CP, art. 71, caput
 FR_CONT_ESPECIFICA = FR_CONTINUIDADE + (Fraction(1), Fraction(2))  # art. 71, parágrafo único: até o triplo
 FR_CONCURSO_FORMAL = FR_CONTINUIDADE[:5]  # CP, art. 70: de 1/6 até a metade
@@ -4384,6 +4415,21 @@ def analisar(r, hoje=None, ficha=None):
                                "Se esta ação já estava na execução unificada antes disso (LEP, art. 111), aquela prisão era cumprimento desta pena "
                                "(art. 117, V), e o resultado seria: %s. Conferir na execução a data do somatório das penas." % (
                                    _sem_soma, antes, Lx.get("ppe_status") or ""))
+            # só o trânsito final no RSPE e o termo real é o trânsito para a acusação, anterior e não informado (modulação do Tema 788):
+            # contar do final pode esconder a prescrição - testa as datas possíveis do trânsito para a acusação
+            if not tmp and tpr and termo == tpr and (tpr <= TEMA_788 or (sent and sent < TEMA_788)):
+                _alt = _termo_mp_limites(L, L0, c, r, ctx, termo, sent, TEMA_788, pena, fato, fator, ppe_meses, meia)
+                if _alt:
+                    antes = L["ppe_status"]
+                    L["ppe_status"] = ("A VERIFICAR: prescrição executória possível, conforme a data do trânsito em julgado para a acusação "
+                                       "(não consta do RSPE)")
+                    L["ppe_cor"], L["ppe_previsao"], L["ppe_dias"] = "amarelo", "", None
+                    L["ppe_faltam"] = (["data do trânsito em julgado para a acusação (termo inicial pelo art. 112, I, na modulação do STF no "
+                                        "Tema 788, quando anterior a 12/11/2020)"] + list(L.get("ppe_faltam") or []))
+                    det.append("Conclusão ajustada: A VERIFICAR - contado do trânsito final (%s): %s. Se o trânsito para a acusação ocorreu em "
+                               "%s ou perto disso (até 12/11/2020 ele é o termo inicial - CP, art. 112, I; modulação do Tema 788), o resultado "
+                               "seria: %s. Conferir a data na ação penal e informá-la em \"editar dados\"." % (
+                                   rs.fmt(tpr), antes, rs.fmt(_alt[0]), _alt[1]))
         L.pop("_acao_sem_soma", None)
         if aviso497:
             det.append("⚠ " + aviso497[0].upper() + aviso497[1:] + ".")
