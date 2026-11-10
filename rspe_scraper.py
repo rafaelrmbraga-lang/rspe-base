@@ -56,10 +56,19 @@ RE_DATA = re.compile(r"\b(\d{2}/\d{2}/\d{4})\b")
 RE_CNJ = re.compile(r"\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}")
 
 
+_RE_NAO_DIGITO = re.compile(r"\D")
+
+
+@functools.lru_cache(maxsize=65536)
+def _chave_processo(num):
+    return _RE_NAO_DIGITO.sub("", num).lstrip("0")
+
+
 def chave_processo(num):
     """Chave de comparação de número de processo: só dígitos, sem zeros à esquerda. O SEEU imprime o mesmo
     processo antigo de dois jeitos ("0000000-00.0000.0.03.2698" no crime e "32698" no evento)."""
-    return re.sub(r"\D", "", num or "").lstrip("0")
+    # resultado guardado por texto (chamada milhões de vezes na prescrição; a resposta só depende do texto)
+    return _chave_processo(num) if isinstance(num, str) else re.sub(r"\D", "", num or "").lstrip("0")
 
 
 def lista_processos(txt):
@@ -68,6 +77,17 @@ def lista_processos(txt):
         return []
     if isinstance(txt, (list, tuple, set)):
         return [str(x).strip() for x in txt if str(x).strip()]
+    if isinstance(txt, str):
+        return list(_lista_processos(txt))  # cópia: quem chama pode alterar a lista
+    return _lista_processos_(txt)
+
+
+@functools.lru_cache(maxsize=32768)
+def _lista_processos(txt):
+    return tuple(_lista_processos_(txt))
+
+
+def _lista_processos_(txt):
     out = []
     for x in re.split(r"[,;\n]+", txt):
         x = x.strip()
@@ -159,7 +179,19 @@ _RE_DATA_BR = re.compile(r"^(\d{1,2})([/.])(\d{1,2})\2(\d{4})$")
 
 
 def to_date(s):
-    # sem strptime: é chamada centenas de milhares de vezes ao abrir a base
+    # sem strptime: é chamada centenas de milhares de vezes ao abrir a base; o resultado de cada texto fica guardado
+    # (a data é imutável e só depende do texto)
+    if isinstance(s, str):
+        return _to_date_txt(s)
+    return _to_date(s)
+
+
+@functools.lru_cache(maxsize=65536)
+def _to_date_txt(s):
+    return _to_date(s)
+
+
+def _to_date(s):
     try:
         m = _RE_DATA_BR.match(s.strip())
         # ano fora de 1900-2100: lixo de leitura (01/01/0001, 99/99/9999) - ignorado, para não estourar as contas de datas
@@ -169,7 +201,14 @@ def to_date(s):
 
 
 def fmt(d):
+    if type(d) is date:
+        return _fmt_data(d)  # texto de cada data guardado (chamada centenas de milhares de vezes)
     return d.strftime("%d/%m/%Y") if isinstance(d, date) else (d or "")
+
+
+@functools.lru_cache(maxsize=65536)
+def _fmt_data(d):
+    return d.strftime("%d/%m/%Y")
 
 
 DIAS_ANO = 365  # SEEU: ano de 365 dias e mês de 30 (o remanescente vira término pelo calendário)

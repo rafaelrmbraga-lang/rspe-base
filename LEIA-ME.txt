@@ -1174,6 +1174,20 @@ v7.16.2
     relatório da unidade) no mesmo visual: cartões, mapa em relevo com
     alfinetes centralizado, ocupação em pílulas, barras, área e roscas.
   - Correções: subtítulo dos gráficos de colunas cortado; "1 unidades".
+  Desempenho (nenhum resultado muda; conferido campo a campo com uma base
+  de 632 assistidos e com as bases simuladas):
+  - Cálculo guardado: o resultado de cada assistido fica guardado com a
+    "impressão digital" de tudo o que entra no cálculo (RSPE, ficha,
+    baixas, pedidos, dados informados, data de hoje e versões do programa
+    e da base jurídica). Se nada mudou, é reaproveitado; o que mudou é
+    recalculado. Na base de 632 assistidos: remontar a lista (vincular ou
+    desvincular ficha, remover, restaurar cópia) passou de ~50 s para ~2 s;
+    reabrir a base no mesmo dia, de ~60 s para ~3 s. O cache fica em
+    "cache_calculos" (13 MB por base, comprimido), vale só no dia e para
+    esta versão, e o de bases não abertas há 7 dias é apagado.
+  - Primeira abertura do dia: de ~60 s para ~35 s (contas repetidas da
+    prescrição guardadas, como datas e números de processo, e todos os
+    núcleos do processador no cálculo paralelo).
 
 v7.16.1
   Jurisprudências, Monitor: base nos dois sentidos. Arquivo novo embutido
