@@ -180,15 +180,15 @@ try:
     ok(rp._nao_muda({"ppe_status": "Não prescrita"}, {"ppe_status": "Não prescrita"}) == "o resultado não muda", "9: conclusão igual")
     ok(rp._dias_susp(date(2019, 6, 9), date(2019, 8, 8), date(2018, 12, 10), date(2019, 8, 8)) == 61, "9: 61 dias de 09/06 a 08/08")
 
-    # ---- 10) prescrição: uma condenação só, marcada reincidente sem base, com fração de primário no SEEU: sem o +1/3 ----
+    # ---- 10) prescrição: uma condenação só, marcada reincidente sem base, com fração de primário no SEEU: +1/3 no principal (decisão 11/2026), hipótese sem ele no aviso ----
     r = reg([crime(artigo="ART 213: Estupro", tipo_penal="§ 1º: Se da conduta resulta", pena_imposta="12 ano(s), 0 mês(es) e 0 dia(s)",
                    data_infracao="09/12/2012", data_sentenca="13/04/2022", transito_mp="14/02/2023", transito_processo="14/02/2023",
                    reincidente_comum="S", fracao_progressao="2/5 - Hediondo Primario", fracao_livramento="2/3 - Hediondo")],
             eventos=[ev(PR, "PRISÃO DEFINITIVA", "20/02/2023")], pena_total="12a0m0d", reincidente="S")
     _A = rp.analisar(copy.deepcopy(r), HOJE)
     L = (_A.get("linhas") or _A.get("presc_linhas"))[0]
-    ok(not L["reinc"] and "+1/3" not in (L.get("prazo_ppe") or "") and "fração de primário" in (L.get("ppe_reinc_aviso") or ""),
-       "10: +1/3 afastado: %s | %s" % (L.get("prazo_ppe"), (L.get("ppe_reinc_aviso") or "")[:200]))
+    ok(L["reinc"] and "+1/3" in (L.get("prazo_ppe") or "") and "fração de primário" in (L.get("ppe_reinc_aviso") or "") and "Sem o +1/3" in (L.get("ppe_reinc_aviso") or ""),
+       "10: decisão 11/2026 - +1/3 no principal, fração de primário no aviso: %s | %s" % (L.get("prazo_ppe"), (L.get("ppe_reinc_aviso") or "")[:200]))
 
     # ---- 11) progressão: setor com baixa posterior sai do "trabalho atual" ----
     t = {"inicio": "04.05.2023", "fim": "", "setor": "FABRICA / EMPRESA TESTE", "setores": ["FABRICA", "EMPRESA TESTE"]}

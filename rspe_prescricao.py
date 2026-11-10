@@ -3643,7 +3643,10 @@ def analisar(r, hoje=None, ficha=None):
         # com uma condenação só, mas com o SEEU aplicando a este crime fração de primário (progressão ou livramento): a própria execução
         # trata o condenado como primário - a reincidência marcada sem base também é afastada, como com várias condenações
         _fr_prim = [x for x in (c.get("fracao_progressao"), c.get("fracao_livramento")) if x and re.search(r"PRIM[AÁ]RI", x, re.I)]
-        reinc_afastada = bool(reinc_sem_base and (_outras or _fr_prim))
+        # decisão da revisão de 11/2026: a reincidência marcada no RSPE fica no cálculo principal (+1/3), também com várias condenações;
+        # sem condenação anterior transitada neste RSPE, a hipótese sem o +1/3 é conferida e, se mudar o resultado, fica A VERIFICAR
+        # (a condenação anterior pode estar fora deste RSPE; STJ, Tema 1208) - a data prevista nunca sai antes da real
+        reinc_afastada = False
         # o RSPE marca primário (ou não informa), mas outra condenação dele transitou antes do fato: a reincidência (+1/3 no prazo da
         # executória - CP, arts. 63 e 110) pode ter sido reconhecida na sentença - a hipótese com ela é conferida (conferência 7.13)
         _tr_ant = [d_ for d_ in _trs if _fx and d_ < _fx]
@@ -4347,6 +4350,16 @@ def analisar(r, hoje=None, ficha=None):
                         _nao_muda(L, Lx) if _classe(Lx) == _classe(L) else "o resultado seria " + (Lx.get("ppe_status") or "").lower()))
                     if _classe(Lx) != _classe(L) and _classe(L) != "v":  # já a verificar por outro motivo: mantém o motivo, com o alerta
                         difs.append((nome_v, Lx))
+                elif nome_v.startswith("reincidência sem"):
+                    # decisão 11/2026: o +1/3 fica no principal; a nota da hipótese sem ele aparece também quando muda o resultado
+                    _base_do_prazo(Lx)
+                    L["ppe_reinc_aviso"] = ("Reincidência marcada no RSPE sem condenação anterior transitada neste RSPE%s (ver Auditoria: conferir a "
+                                            "certidão de antecedentes e o período depurador - CP, art. 64, I). Sem o +1/3, o prazo seria %s: "
+                                            "%s." % ((" e com fração de primário no SEEU (%s)" % " / ".join(_fr_prim)) if _fr_prim else "",
+                                                     Lx.get("ppe_prazo_efetivo") or Lx.get("prazo_ppe") or "—",
+                                                     _nao_muda(L, Lx) if _classe(Lx) == _classe(L) else "o resultado seria " + (Lx.get("ppe_status") or "").lower()))
+                    if _classe(Lx) != _classe(L):
+                        difs.append((nome_v, Lx))
                 elif _classe(Lx) != _classe(L):
                     difs.append((nome_v, Lx))
                 elif nome_v == V_REINC_N:
@@ -4355,11 +4368,6 @@ def analisar(r, hoje=None, ficha=None):
                                             "antes do fato (%s): se a sentença reconheceu a reincidência, o prazo aumenta de 1/3 (CP, art. 110) - "
                                             "com o +1/3, o prazo seria %s: %s." % (
                                                 rs.fmt(_tr_ant[0]), L["fato"], Lx.get("ppe_prazo_efetivo") or Lx.get("prazo_ppe") or "—", _nao_muda(L, Lx)))
-                elif nome_v.startswith("reincidência sem"):
-                    _base_do_prazo(Lx)
-                    L["ppe_reinc_aviso"] = ("Reincidência marcada no RSPE sem condenação anterior transitada neste RSPE (ver Auditoria: conferir a "
-                                            "certidão de antecedentes e o período depurador - CP, art. 64, I). Sem o +1/3, o prazo seria %s: "
-                                            "%s." % (Lx.get("ppe_prazo_efetivo") or Lx.get("prazo_ppe") or "—", _nao_muda(L, Lx)))
             if difs:
                 antes = L["ppe_status"]
                 # as duas variantes da reincidência sem base (afastada com várias condenações; mantida com uma só) têm o mesmo rótulo

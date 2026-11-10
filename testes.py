@@ -45,6 +45,7 @@ TESTES += ["teste_teses_favoritos.py"]  # 7.15.4: favoritos na aba Jurisprudênc
 TESTES += ["teste_presc_art115_tela.py"]  # 7.15.4: motivo da metade do art. 115 no quadro da prescrição
 TESTES += ["teste_monitor_juris.py"]  # 7.16.0: Monitor na aba Jurisprudências (sentido, turma pelo relator, taxa, filtros, relatório)
 TESTES += ["teste_rev_presc_termo_mp.py"]  # revisão da Prescrição (11/2026): termo pelo trânsito para a acusação não informado (Tema 788)
+TESTES += ["teste_rev_presc_reinc.py"]  # revisão da Prescrição (11/2026): +1/3 da reincidência marcada no prazo principal, hipótese sem ele no aviso
 # saída em UTF-8 em qualquer console (no Windows o padrão cp1252 não imprime símbolos como "✓" e derruba o teste)
 _env = dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUTF8="1")
 falhas = [t for t in TESTES if subprocess.call([sys.executable, t], env=_env) != 0]
