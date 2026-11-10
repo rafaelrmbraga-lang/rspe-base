@@ -2715,6 +2715,7 @@ def _geo_mapa(U, mapa, larg, f, C, sel=""):
             tx = bx if anc == "start" else bx + w if anc == "end" else bx + w / 2
             d.add(String(tx, by + 2, nome, fontName=f["b"], fontSize=6.5, fillColor=C(TX), textAnchor=anc))
             break
+    d.hAlign = "CENTER"  # mapa centralizado na página
     return d
 
 

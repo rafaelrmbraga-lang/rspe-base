@@ -1156,6 +1156,24 @@ v7.16.2
   abrem as dez primeiras abas, na ordem do menu (Alt+1 Geral, Alt+2
   Progressão...). O logo do APTO fica centrado sobre a faixa. O menu
   expandido, com os nomes, continua pelo botão do topo.
+  Dados prisionais em novo visual:
+  - Mapa do estado em relevo (com espessura e sombra), com um alfinete
+    verde por cidade, maior quanto mais presos; o mapa acompanha a
+    rolagem.
+  - Janela da cidade (mouse sobre o alfinete): total da cidade (unidades,
+    presos, vagas e ocupação) e as unidades da mais lotada para a menos,
+    cada uma com a ocupação numa pílula e uma barra com a marca dos 100%.
+  - Números em cartões arredondados; a taxa de ocupação com a barra de
+    vagas e excedente; evolução da população em gráfico de área;
+    condições constatadas com barra proporcional às unidades; filtros em
+    pílulas.
+  - Gráficos da unidade: rosca com o total no centro (regime,
+    provisórios, perfil), colunas com cantos arredondados (crescimento,
+    ocupação), cores suaves; condições da unidade em cartões por tema.
+  - Os três PDFs da aba (relatório geral, condições por unidade e
+    relatório da unidade) no mesmo visual: cartões, mapa em relevo com
+    alfinetes centralizado, ocupação em pílulas, barras, área e roscas.
+  - Correções: subtítulo dos gráficos de colunas cortado; "1 unidades".
 
 v7.16.1
   Jurisprudências, Monitor: base nos dois sentidos. Arquivo novo embutido
