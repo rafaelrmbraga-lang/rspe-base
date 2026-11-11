@@ -317,7 +317,8 @@ def _impeditivos(f, crimes, ref, pena_total=None, ver=None, contexto=None, incer
             incerto.append("%s: homicídio simples com o selo de hediondo do SEEU - impeditivo só se em atividade típica de grupo de "
                            "extermínio (Lei 8.072/90, art. 1º, I); conferir na sentença" % rot)
         priv_vedado = priv and I.get("trafico_privilegiado_ressalvado") is False
-        if priv_vedado and incerto is not None and not re.search(r"§\s*4|privilegiad", I.get("texto") or "", re.I):
+        # (o § 4º pode vir numa lista: "art. 33, caput, §§ 1º e 4º" - 2019 e 2020, art. 4º, II, g: vedação expressa, sem tese)
+        if priv_vedado and incerto is not None and not re.search(r"§§?\s*(?:\d+\s*[ºo°]?\s*(?:,|e)\s*)*4\s*[ºo°]?(?!\d)|privilegiad", I.get("texto") or "", re.I):
             # o decreto veda o tráfico do art. 33 sem excetuar o § 4º, mas não fala do privilegiado (ex.: 2007, art. 8º, I): ele não é
             # hediondo (Súmula Vinculante 63; STF, RE 1.542.482 RG, 30/05/2025: é constitucional o indulto ao privilegiado) - tese, a
             # verificar, e não vedação firme (decisão de 05/11/2026, P42; sem precedente sobre este decreto)
@@ -360,6 +361,13 @@ def _impeditivos(f, crimes, ref, pena_total=None, ver=None, contexto=None, incer
                 if mot and ver is not None:
                     ver.append("%s: %s" % (rot, mot))
                 continue
+            if lt.strip().lower() == "qualquer":
+                # vedação pela natureza do crime, qualquer que seja a lei (ex.: 2021, art. 4º, II - "crimes praticados mediante grave
+                # ameaça ou violência contra a pessoa"): decide-se pela violência do crime, como nas hipóteses
+                if re.search(r"grave ameaca ou violencia|violencia ou grave ameaca", rs._sem_acento(o.get("descricao") or "").lower()) and rs.vga_indulto(c):
+                    out.append("%s: %s" % (rot, o.get("descricao")))
+                    break
+                continue
             leis = rs.num_lei(lt) if lt and not re.search(r"\bCP\b|PENAL", lt, re.I) else "2848"
             if not (lei == leis or (leis == "2848" and lei in ("", "2848"))):
                 continue
@@ -372,6 +380,11 @@ def _impeditivos(f, crimes, ref, pena_total=None, ver=None, contexto=None, incer
                 # privilegiado: só a vedação que cite o § 4º expressamente o alcança
                 arts = [a for a in arts if re.search(r"§\s*4", str(a))]
             if art and any(_artigo_vedado(a, art, c) for a in arts):
+                if o.get("verificar") and incerto is not None:
+                    # vedação que depende de dado que o RSPE não traz (ex.: 2001, art. 10, III - roubo "com o emprego de arma de
+                    # fogo", quando o art. 157, § 2º, I, alcançava qualquer arma): não se presume - a verificar
+                    incerto.append("%s: %s" % (rot, o["verificar"]))
+                    break
                 out.append("%s: %s" % (rot, o.get("descricao") or "vedado pelo decreto"))
                 break
         else:
@@ -1255,6 +1268,30 @@ def _avaliar_ficha(f, r, ctx, ini, hoje):
                       "ele se refere; sem essa pena, a soma e o tempo mudam" % (
                           _i.get("data_referencia") or _i.get("data_decisao") or "?",
                           (", processos %s" % _i["processos"]) if (_i.get("processos") or "").strip(" ,") else ", sem os processos"))
+    def _continuo_fs():
+        """(revisão 11/2026) Maior tempo cumprido "em regime fechado ou semiaberto, ininterruptamente" até a data (2003 a 2009,
+        art. 1º, III): o regime qualifica o tempo cumprido, não a situação em 25/12. Dentro de cada período de custódia, os trechos
+        no regime aberto (pelos incidentes de regime; sem incidente, o regime da sentença) ficam fora e quebram a continuidade; as
+        remições concedidas dentro do trecho contam (LEP, art. 128). Regime não informado: fechado ou semiaberto (custódia)."""
+        mud = sorted({d for d in (rs.to_date(i.get("data_referencia") or i.get("data_decisao") or "") for i in r.get("_incidentes") or []
+                                  if rs.e_incidente_regime(i) and (i.get("situacao") or "").upper() == "CONCEDIDO") if d and d <= ref})
+        melhor = 0
+        for a, b in _pu:
+            if a > ref:
+                continue
+            b2 = b if (b and b <= ref) else ref
+            cortes = [a] + [d for d in mud if a < d <= b2] + [b2 + timedelta(days=1)]
+            ini_t = None
+            for k in range(len(cortes) - 1):
+                t0, t1 = cortes[k], cortes[k + 1] - timedelta(days=1)
+                if (_regime_em(r, t0) or _regime_inicial(r, crimes, t0)) == "aberto":
+                    ini_t = None
+                    continue
+                if ini_t is None:
+                    ini_t = t0
+                melhor = max(melhor, (t1 - ini_t).days + 1 + sum(n for d, n in ctx["rem"] if d and ini_t <= d <= t1))
+        return melhor
+
     priv_proprio = any(re.search(r"trafico privilegiado", rs._sem_acento(h.get("outros_requisitos") or "").lower()) for h in f.get("indulto") or [])
     amb_com = [""]  # dúvida (teto no concurso, período ininterrupto que terminou em fuga) da última hipótese de comutação atendida
 
@@ -1299,6 +1336,12 @@ def _avaliar_ficha(f, r, ctx, ini, hoje):
         if (h.get("violencia_grave_ameaca") or "") == "exigida" and not vga:
             return False, None, "hipótese só para crime com violência ou grave ameaça"
         reg = [rs._sem_acento(x).lower() for x in (h.get("regime") or [])]
+        # "tenha cumprido, em regime fechado ou semiaberto, ininterruptamente, N anos": o regime é o do tempo cumprido (_continuo_fs),
+        # não o da data - quem cumpriu os anos e foi ao aberto antes de 25/12 tem direito; o tempo no aberto não conta
+        inint_reg = bool(h.get("ininterrupto") and reg and all(re.match(r"fechado|semiaberto", x) for x in reg)
+                         and (h.get("anos_reincidente") if reinc else h.get("anos_nao_reincidente")) is not None)
+        if inint_reg:
+            reg = []
         sem_regime = ""
         if reg and not regime and not any("livramento" in x for x in reg):
             if h.get("ininterrupto") and continuo_atual and all(re.match(r"fechado|semiaberto", x) for x in reg):
@@ -1338,10 +1381,11 @@ def _avaliar_ficha(f, r, ctx, ini, hoje):
         base_c = cump
         inint = bool(h.get("ininterrupto") and anos is not None)
         if inint:
-            base_c = continuo  # anos ininterruptos: o maior período contínuo até a data, com as remições dentro dele
+            base_c = _continuo_fs() if inint_reg else continuo  # anos ininterruptos: o maior período contínuo até a data, com as remições dentro dele
         if exig is not None and base_c < exig:
             if inint:
-                return False, exig, "faltavam %s de custódia ininterrupta para %s anos em %s" % (_dias_txt(exig - base_c), anos, rs.fmt(ref))
+                return False, exig, "faltavam %s de custódia ininterrupta%s para %s anos em %s" % (
+                    _dias_txt(exig - base_c), " em regime fechado ou semiaberto" if inint_reg else "", anos, rs.fmt(ref))
             return False, exig, "faltavam %s para %s em %s" % (_dias_txt(exig - cump), str(fr) if fr is not None else "%s anos" % anos, rs.fmt(ref))
         sur_h = sursis_txt if (sursis_txt and re.search(r"sem sursis|nao beneficiad\w* com sursis", o + " " + rs._sem_acento(h.get("texto") or "").lower())) else ""
         amb_c = "; ".join(x for x in (teto_amb, inint_fuga if inint else "", sur_h, sx_amb) if x)
@@ -1370,9 +1414,12 @@ def _avaliar_ficha(f, r, ctx, ini, hoje):
         # (revisão 11/2026) "60 anos ou mais, ou menos de 21 anos" na data do decreto (Dia das Mães 2017 e 2018, alínea c; Decreto
         # 9.246/2017, art. 5º, III, a): decide-se pela data de nascimento, como as demais hipóteses de idade
         m_ou = re.search(r"(\d+) anos ou mais,? ou menos de (\d+) anos", o)
+        # (revisão 11/2026) "progressão a regime aberto até 31/12 do ano anterior, sem posterior regressão" (2000, VII; 2001, VII;
+        # 2002, VIII): o RSPE traz os incidentes de regime com data - decide-se por eles
+        m_pa = re.search(r"progressao ao (?:regime )?aberto (?:obtida )?ate (\d{2}/\d{2}/\d{4})", o)
         m_ab = re.search(r"regime inicial aberto", o)
         m_sa = re.search(r"saidas? tempor", o)
-        if not (m_id or m_21 or m_ab or m_sa or m_ou):
+        if not (m_id or m_21 or m_ab or m_sa or m_ou or m_pa):
             return None
         subj = bool(vga and re.search(r"condicoes pessoais|circunstancias favoraveis|avaliacao judicial", o))
         if m_id:
@@ -1383,6 +1430,18 @@ def _avaliar_ficha(f, r, ctx, ini, hoje):
             if idade < n:
                 return h, False, "tinha %d anos em %s (a hipótese exige %d)" % (idade, rs.fmt(ref), n), subj
             return h, True, "%d anos completos em %s" % (idade, rs.fmt(ref)), subj
+        if m_pa:
+            lim = rs.to_date(m_pa.group(1))
+            h = dict(h, regime=None)  # o requisito é a progressão obtida até a data-limite, não o regime em 25/12
+            incs = sorted((d, rs._sem_acento(i.get("complemento") or "").lower()) for d, i in (
+                (rs.to_date(i.get("data_referencia") or i.get("data_decisao") or ""), i) for i in r.get("_incidentes") or []
+                if rs.e_incidente_regime(i) and (i.get("situacao") or "").upper() == "CONCEDIDO") if d and d <= ref)
+            prog = [d for d, cpl in incs if lim and d <= lim and "aberto" in cpl.replace("semiaberto", "") and not re.search(r"inicial|regress", cpl)]
+            if not prog:
+                return h, False, "sem progressão ao regime aberto até %s nos incidentes do RSPE" % rs.fmt(lim), subj
+            if any(d > max(prog) and (re.search(r"regress|fechado|semiaberto", cpl)) for d, cpl in incs):
+                return h, False, "houve regressão de regime depois da progressão ao aberto (%s)" % rs.fmt(max(prog)), subj
+            return h, True, "progressão ao regime aberto em %s, sem regressão até %s" % (rs.fmt(max(prog)), rs.fmt(ref)), subj
         if m_ou:
             n1, n2 = int(m_ou.group(1)), int(m_ou.group(2))
             if not nasc:
@@ -1406,7 +1465,7 @@ def _avaliar_ficha(f, r, ctx, ini, hoje):
             h = dict(h, regime=None)  # o requisito é o regime inicial, não o da data
             if any(x and "aberto" not in x.replace("semiaberto", "") for x in regs):
                 return h, False, "regime inicial fixado na sentença não é o aberto", subj
-            if any(re.search(r"REGRESS", (i.get("tipo") or "").upper()) and (i.get("situacao") or "").upper() == "CONCEDIDO"
+            if any(re.search(r"REGRESS", ((i.get("tipo") or "") + " " + (i.get("complemento") or "")).upper()) and (i.get("situacao") or "").upper() == "CONCEDIDO"
                    and (rs.to_date(i.get("data_referencia") or i.get("data_decisao") or "") or date.max) <= ref for i in r.get("_incidentes") or []):
                 return h, False, "houve regressão de regime até %s" % rs.fmt(ref), subj
             if not all(regs):
@@ -1478,7 +1537,10 @@ def _avaliar_ficha(f, r, ctx, ini, hoje):
                 else:
                     ind_ver = ind_ver or (dict(h, _pat=True), exig, mot)
             continue  # hipótese especial: não entra como "a que chegou mais perto"
-        if not h.get("objetivo"):
+        if h.get("objetivo") and re.search(r"progressao ao (?:regime )?aberto (?:obtida )?ate \d", rs._sem_acento(h.get("outros_requisitos") or "").lower()):
+            ex = _extra(h)  # hipótese objetiva sem requisito numérico, decidida pelos incidentes de regime
+            h = ex[0]
+        elif not h.get("objetivo"):
             ex = _extra(h)
             if ex is None:
                 # hipótese que depende de dado que o RSPE não traz (filho, gestante, estudo, doença...): com a pena e o tempo atendidos,

@@ -2129,6 +2129,7 @@
      {
       "descricao": "roubo qualificado com o emprego de arma de fogo",
       "lei": "CP",
+      "verificar": "roubo com emprego de arma (CP, art. 157, § 2º, I, na redação anterior à Lei 13.654/2018: arma de qualquer espécie) - o Decreto 4.011/2001, art. 10, III, só veda o roubo qualificado com o emprego de arma de FOGO, e o RSPE não diz qual foi a arma: impeditivo se de fogo; conferir na sentença",
       "artigos": [
        "157, §2º, I"
       ]
@@ -7380,15 +7381,27 @@
       "artigos": []
      },
      {
-      "descricao": "lesão corporal contra agente de segurança (§ 12 do art. 129), crimes sexuais e contra a administração pública",
+      "descricao": "lesão corporal contra agente de segurança (CP, art. 129, § 12 - art. 4º, II, d)",
       "lei": "CP",
       "artigos": [
-       "129 § 12",
+       "129 § 12"
+      ]
+     },
+     {
+      "descricao": "crime sexual do art. 4º, II, d (CP, arts. 215, 215-A, 216-A, 218 e 218-A)",
+      "lei": "CP",
+      "artigos": [
        "215",
        "215-A",
        "216-A",
        "218",
-       "218-A",
+       "218-A"
+      ]
+     },
+     {
+      "descricao": "crime contra a administração pública do art. 4º, II, d (CP, arts. 312, 316 a 319, 332 e 333)",
+      "lei": "CP",
+      "artigos": [
        "312",
        "316",
        "317",
@@ -7595,15 +7608,27 @@
       "artigos": []
      },
      {
-      "descricao": "lesão corporal contra agente de segurança (§ 12 do art. 129), crimes sexuais e contra a administração pública",
+      "descricao": "lesão corporal contra agente de segurança (CP, art. 129, § 12 - art. 4º, II, d)",
       "lei": "CP",
       "artigos": [
-       "129 § 12",
+       "129 § 12"
+      ]
+     },
+     {
+      "descricao": "crime sexual do art. 4º, II, d (CP, arts. 215, 215-A, 216-A, 218 e 218-A)",
+      "lei": "CP",
+      "artigos": [
        "215",
        "215-A",
        "216-A",
        "218",
-       "218-A",
+       "218-A"
+      ]
+     },
+     {
+      "descricao": "crime contra a administração pública do art. 4º, II, d (CP, arts. 312, 316 a 319, 332 e 333)",
+      "lei": "CP",
+      "artigos": [
        "312",
        "316",
        "317",
