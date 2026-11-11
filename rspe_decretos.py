@@ -302,14 +302,13 @@ def _impeditivos(f, crimes, ref, pena_total=None, ver=None, contexto=None, incer
         pi = rs.paragrafo_inciso(c) or ("", "")
         par = re.match(r"\d*", pi[0]).group(0)
         # tráfico equiparado a hediondo: art. 12 (e 13) da Lei 6.368 e art. 33, caput e § 1º, da Lei 11.343. Fora: associação
-        # (art. 14 / art. 35 - o STJ não a equipara), os §§ 2º e 3º do art. 33 (induzimento e uso compartilhado) e o § 4º
+        # (art. 14 / art. 35 - o STJ não a equipara; a do art. 35 e o art. 37 são vedados pelo art. 44 da lei, no fim do laço), os §§ 2º e 3º do art. 33 (induzimento e uso compartilhado) e o § 4º
         # (privilegiado - STF, HC 118.533), salvo vedação expressa do decreto (trafico_privilegiado_ressalvado = false)
         trafico = (lei == "6368" and art in ("12", "13")) or (lei == "11343" and art == "33" and par not in ("2", "3", "4"))
         priv = _priv(c)
         if incerto is not None and rs.trafico_incerto(c):
             # art. 33 sem caput/§ 1º nem § 4º legível no RSPE: a natureza não se presume (a mesma regra de 2022, 2024 e 2025)
-            incerto.append("%s: tráfico sem indicação do caput/§ 1º nem do § 4º no RSPE - se privilegiado (§ 4º), não é impeditivo; "
-                           "conferir na sentença" % rot)
+            incerto.append("%s: tráfico %s - se privilegiado (§ 4º), não é impeditivo; conferir na sentença" % (rot, rs.trafico_incerto_motivo(c)))
             continue
         hom_selo = incerto is not None and rs.homicidio_simples_selo(c) and not f.get("_hom_selo_imp")
         if hom_selo:
@@ -375,6 +374,15 @@ def _impeditivos(f, crimes, ref, pena_total=None, ver=None, contexto=None, incer
             if art and any(_artigo_vedado(a, art, c) for a in arts):
                 out.append("%s: %s" % (rot, o.get("descricao") or "vedado pelo decreto"))
                 break
+        else:
+            # (revisão 11/2026) associação para o tráfico e colaboração como informante (Lei 11.343/06, arts. 35 e 37): não são
+            # hediondos nem equiparados, mas o art. 44 da lei os declara "insuscetíveis de ... indulto"; o STF e o STJ aplicam a
+            # vedação ao indulto e à comutação ainda que o decreto não os liste. A associação da Lei 6.368/76 (art. 14) não a tem
+            _f35 = rs.to_date(c.get("data_infracao") or "")
+            if lei == "11343" and art in ("35", "37") and (_f35 or ref) >= date(2006, 10, 8):
+                out.append("%s: %s (Lei 11.343/06, art. %s) - insuscetível de indulto e de comutação por força do art. 44 da lei, ainda que o "
+                           "decreto não o liste (STF, 2ª T., HC 191.462 AgR, 04/11/2020; STJ, AgRg no HC 464.605, 5ª T., 02/04/2019, e AgRg nos "
+                           "EDcl no HC 589.590, 6ª T., 09/02/2021)" % (rot, "associação para o tráfico" if art == "35" else "colaboração como informante", art))
     return list(dict.fromkeys(out))
 
 
@@ -1359,9 +1367,12 @@ def _avaliar_ficha(f, r, ctx, ini, hoje):
             return None
         m_id = re.search(r"(\d+) anos de idade completos", o)
         m_21 = re.search(r"menor de 21 anos ao tempo do crime", o)
+        # (revisão 11/2026) "60 anos ou mais, ou menos de 21 anos" na data do decreto (Dia das Mães 2017 e 2018, alínea c; Decreto
+        # 9.246/2017, art. 5º, III, a): decide-se pela data de nascimento, como as demais hipóteses de idade
+        m_ou = re.search(r"(\d+) anos ou mais,? ou menos de (\d+) anos", o)
         m_ab = re.search(r"regime inicial aberto", o)
         m_sa = re.search(r"saidas? tempor", o)
-        if not (m_id or m_21 or m_ab or m_sa):
+        if not (m_id or m_21 or m_ab or m_sa or m_ou):
             return None
         subj = bool(vga and re.search(r"condicoes pessoais|circunstancias favoraveis|avaliacao judicial", o))
         if m_id:
@@ -1372,6 +1383,14 @@ def _avaliar_ficha(f, r, ctx, ini, hoje):
             if idade < n:
                 return h, False, "tinha %d anos em %s (a hipótese exige %d)" % (idade, rs.fmt(ref), n), subj
             return h, True, "%d anos completos em %s" % (idade, rs.fmt(ref)), subj
+        if m_ou:
+            n1, n2 = int(m_ou.group(1)), int(m_ou.group(2))
+            if not nasc:
+                return h, None, "data de nascimento não informada (a hipótese exige %d anos ou mais, ou menos de %d, em %s)" % (n1, n2, rs.fmt(ref)), subj
+            idade = rs._idade_em(r.get("data_nascimento"), ref)
+            if n2 <= idade < n1:
+                return h, False, "tinha %d anos em %s (a hipótese exige %d anos ou mais, ou menos de %d)" % (idade, rs.fmt(ref), n1, n2), subj
+            return h, True, "%d anos em %s (%s)" % (idade, rs.fmt(ref), ("%d anos ou mais" % n1) if idade >= n1 else ("menos de %d anos" % n2)), subj
         if m_21:
             if not nasc:
                 return h, None, "data de nascimento não informada (a hipótese exige menos de 21 anos ao tempo do crime)", subj
@@ -1531,6 +1550,10 @@ def _avaliar_ficha(f, r, ctx, ini, hoje):
         amb_h = amb_com[0]
         if ex is not None and ex[1] is False:
             ok, mot = False, ex[2]
+        if ok and com_ant and f.get("comutacao_exclui_ja_comutado"):
+            # (revisão 11/2026) decreto que só concede a comutação a quem não obteve as de decretos anteriores (9.246/2017, art. 7º,
+            # p. ú. - a leitura pacífica do STJ): com comutação anterior concedida no RSPE, esta não cabe
+            ok, mot = False, "já obteve comutação de decreto anterior (%s): %s" % (", ".join(dict.fromkeys(_com_ant_l)), f["comutacao_exclui_ja_comutado"])
         if ok and pena and pena - cump <= 0 and _ci["origem"] == "seeu":
             # pena considerada já integralmente cumprida na data (no concurso, a dos demais crimes, pela imputação): nada a comutar
             ok, mot = False, "sem pena remanescente a comutar em %s (cumprido %s de %s)" % (rs.fmt(ref), rs.dias_para_pena(cump), rs.dias_para_pena(pena))
@@ -1551,7 +1574,7 @@ def _avaliar_ficha(f, r, ctx, ini, hoje):
     # hediondo, tortura, terrorismo e tráfico: a vedação vem da lei (CF, art. 5º, XLIII; Lei 8.072/90, art. 2º, I), não do decreto, e
     # alcança também a comutação, indulto parcial - ainda que o decreto só a liste para o indulto (Dia das Mães 2017
     # e 2018: conferência independente 7.14.8)
-    imp_legal = not imp_com and any("hediondo ou equiparado na data do fato" in x for x in imp)
+    imp_legal = not imp_com and any("hediondo ou equiparado na data do fato" in x or "por força do art. 44 da lei" in x for x in imp)
     if imp_legal:
         imp_com = True
     f_ind = bool(falta_firme_ind)
@@ -1949,6 +1972,8 @@ def _tese_comutacoes_anteriores(out, fx, dec):
         # (vedado pelo crime: a comutação dos anteriores também não cabe por este decreto - revisão do cap. 7, achado T4)
         if not f or x.get("s") in ("fora", "futuro", "imp"):
             continue
+        if f.get("comutacao_exclui_ja_comutado"):
+            continue  # 2017, art. 7º, p. ú.: restringe a comutação do próprio decreto (STJ); não concede as dos anteriores
         txt = " ".join([str(h.get("texto") or "") + " " + str(h.get("outros_requisitos") or "") for h in f.get("comutacao") or []]
                        + [str(o) for o in f.get("observacoes") or []])
         m = RE_COM_ANT.search(txt)
@@ -2049,9 +2074,14 @@ def avaliar(r, hoje, completo=False):
         di, dc = dec.get((ano, "indulto")), dec.get((ano, "comutacao"))
         # concessão de um dos dois prevalece (o quadro conta o melhor resultado); a de indulto, se houver as duas
         d = next((y for y in (di, dc) if y and y[0] == "conc"), None) or di or dc
-        if d and d[0] == "indef" and ano == "2017" and x.get("s") == "cabe":
-            # Decreto 9.246/2017: indeferimentos apoiados na cautelar da ADI 5874 (julgada improcedente em 09/05/2019) podem ser renovados
-            x["ressalva"] = "indeferido no RSPE em %s; a cautelar da ADI 5874 caiu (ação improcedente, 09/05/2019): o pedido pode ser renovado" % (d[1] or "?")
+        _d5874 = rs.to_date((d[1] if d else "") or "")
+        if d and d[0] == "indef" and ano == "2017" and x.get("s") == "cabe" and (not _d5874 or date(2017, 12, 28) <= _d5874 <= date(2019, 5, 9)):
+            # Decreto 9.246/2017: indeferimentos apoiados na cautelar da ADI 5874 (julgada improcedente em 09/05/2019) podem ser
+            # renovados. (revisão 11/2026) Só os decididos enquanto a cautelar valeu (28/12/2017 a 09/05/2019) ou sem data no RSPE: o
+            # indeferimento posterior ao julgamento não se apoiou nela e prevalece sobre a conta, como nos demais decretos
+            x["ressalva"] = ("indeferido no RSPE em %s, na vigência da cautelar da ADI 5874 (28/12/2017 a 09/05/2019), que suspendeu o art. 1º, I, o "
+                             "art. 2º, § 1º, I, e os arts. 8º, 10 e 11 do decreto; a ação foi julgada improcedente em 09/05/2019: o pedido pode ser "
+                             "renovado se o indeferimento se apoiou na cautelar - conferir a decisão" % (d[1] or "data não informada"))
             continue
         if di and di[0] == "indef" and not dc:
             # indulto indeferido e comutação não decidida: a comutação cabível (ou a verificar) continua a valer

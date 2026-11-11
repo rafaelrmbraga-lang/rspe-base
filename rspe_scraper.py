@@ -3431,15 +3431,30 @@ def trafico_incerto(c):
     if num_lei(c.get("lei")) != "11343" or num_art(c.get("artigo")) != "33":
         return False
     txt = " ".join(str(c.get(k) or "") for k in ("tipo_penal", "artigo", "artigo_rspe"))
-    if re.search(r"§\s*[1234](?!\d)|PRIVILEGI|CAPUT", txt, re.I):
+    if re.search(r"§\s*[234](?!\d)|PRIVILEGI", txt, re.I):
         return False
-    # texto do caput ("Importar, exportar, remeter, preparar...") com pena de 5 anos ou mais: é o caput. Abaixo de 5 anos (mínimo
-    # do caput, Súmula 231/STJ), a pena só se explica pela redução do § 4º - continua a verificar
+    # caput ou § 1º (pelo rótulo "CAPUT"/"§ 1º" ou pelo texto "Importar, exportar, remeter, preparar...") com pena de 5 anos ou
+    # mais: é o tráfico do caput. Abaixo de 5 anos (mínimo cominado, Súmula 231/STJ), a pena só se explica por causa de diminuição,
+    # quase sempre a do § 4º, que o SEEU nem sempre cadastra - continua a verificar, ainda que o rótulo diga "CAPUT" (revisão
+    # 11/2026: o rótulo decidia antes da pena, e o privilegiado cadastrado como caput saía impeditivo certo)
     t_ = _sem_acento(c.get("tipo_penal") or "").upper()
-    if re.search(r"IMPORTAR,? EXPORTAR|REMETER,? PREPARAR|TER EM DEPOSITO,? TRANSPORTAR", t_) and \
-            (pena_para_dias(c.get("pena_imposta")) or 0) >= 5 * DIAS_ANO:
+    _pena = pena_para_dias(c.get("pena_imposta")) or 0
+    if re.search(r"§\s*1(?!\d)|CAPUT", txt, re.I):
+        return 0 < _pena < 5 * DIAS_ANO
+    if re.search(r"IMPORTAR,? EXPORTAR|REMETER,? PREPARAR|TER EM DEPOSITO,? TRANSPORTAR", t_) and _pena >= 5 * DIAS_ANO:
         return False
     return True
+
+
+def trafico_incerto_motivo(c):
+    """Por que o tráfico é incerto (trafico_incerto): sem o parágrafo no RSPE, ou cadastrado como caput/§ 1º com pena abaixo do
+    mínimo cominado (5 anos)."""
+    txt = " ".join(str(c.get(k) or "") for k in ("tipo_penal", "artigo", "artigo_rspe"))
+    _pena = pena_para_dias(c.get("pena_imposta")) or 0
+    if re.search(r"§\s*1(?!\d)|CAPUT", txt, re.I) and 0 < _pena < 5 * DIAS_ANO:
+        return ("cadastrado no SEEU como caput ou § 1º, mas com pena de %s, abaixo do mínimo de 5 anos: a pena só se explica por causa de "
+                "diminuição, em regra a do § 4º (tráfico privilegiado), que o cadastro pode não trazer" % dias_para_pena(_pena))
+    return "sem indicação, no RSPE, de caput/§ 1º nem do § 4º"
 
 
 def homicidio_simples_selo(c):
@@ -3470,9 +3485,9 @@ def hediondo_selo_verificar(c):
     return ""
 
 
-def impeditivo_decreto(c, ref=date(2024, 12, 25)):
+def impeditivo_decreto(c, ref=date(2024, 12, 25), _sem_hediondez=False):
     """Devolve (inciso, motivo) se o crime está no art. 1º dos Decretos 12.338/24 e 12.790/25, senão None.
-    Hediondez aferida na data do decreto (ref), conforme o STJ."""
+    Hediondez aferida na data do decreto (ref), conforme o STJ. _sem_hediondez: só os demais incisos (uso interno)."""
     if c.get("extinto", "").upper().startswith("S"):
         return None
     lei, art = num_lei(c.get("lei")), num_art(c.get("artigo"))
@@ -3480,8 +3495,14 @@ def impeditivo_decreto(c, ref=date(2024, 12, 25)):
     codigo_penal = lei in ("2848", "") or ("PENAL" in (c.get("lei") or "").upper() and "MILITAR" not in (c.get("lei") or "").upper())
     if trafico_incerto(c):
         return None  # a verificar (impeditivo_verificar): caput/§ 1º impede; § 4º não
-    if e_hediondo(c, ref):
+    if not _sem_hediondez and e_hediondo(c, ref):
         if not e_hediondo(c):
+            # (revisão 11/2026) hediondez posterior ao fato: a tese da irretroatividade só afasta o inciso I. O crime que o art. 1º
+            # também veda por inciso próprio, pelo tipo (XI: arts. 215 a 218-C do CP; XIII: ECA; IV: Lei 12.850...), é impeditivo
+            # certo, sem tese (ex.: art. 241-B do ECA por fato anterior a 15/01/2024; art. 218-B do CP por fato anterior a 22/05/2014)
+            _proprio = impeditivo_decreto(c, ref, _sem_hediondez=True)
+            if _proprio:
+                return _proprio
             d, lei_h = hediondo_desde(c)
             return ("I", "crime hediondo (%s, vigência %s) - fato anterior, mas a hediondez é aferida na data do decreto (STJ) · "
                          "tese defensiva: irretroatividade (STF, 2ª T., RHC 267.297 AgR e HC 273.296 AgR; monocráticas do STF; TJMS, julgados da 2ª Câm. Crim. - a 1ª e a 3ª Câm. seguem o STJ)" % (lei_h or "Lei 8.072/90", fmt(d)))
@@ -3710,7 +3731,7 @@ def impeditivo_verificar(c):
     if c.get("extinto", "").upper().startswith("S"):
         return ""
     if trafico_incerto(c):
-        return ("tráfico (art. 33 da Lei 11.343/06) sem indicação, no RSPE, de caput/§ 1º ou do § 4º: caput ou § 1º é impeditivo "
+        return ("tráfico (art. 33 da Lei 11.343/06) " + trafico_incerto_motivo(c) + ": caput ou § 1º é impeditivo "
                 "(Decretos 2024 e 2025, art. 1º, XVIII; Decreto 2022, art. 7º, I e VI); o § 4º (privilegiado) não é (STF, Súmula Vinculante 63 e Tema 1400 - RE 1.542.482 RG; STJ, Tema 1336) - conferir na sentença")
     if num_lei(c.get("lei")) == "1001" or "MILITAR" in (c.get("lei") or "").upper():
         return "crime militar (CPM): só impede se corresponder a crime do art. 1º, I a XVIII (Decretos 2024 e 2025, XIX) ou do art. 7º, I a V (Decreto 2022, VII) - conferir"

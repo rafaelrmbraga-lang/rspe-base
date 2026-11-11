@@ -99,7 +99,7 @@ def natureza(c, D, ref):
     regra = (D.get("vedacoes") or {}).get("regra")
     num = D.get("numero", "")
     if regra in ("art1_2024_2025", "art7_2022") and _trafico_incerto(c):
-        return {"selo": "A_VERIFICAR", "motivo": "tráfico (art. 33 da Lei 11.343/06) sem indicação, no SEEU, de caput/§ 1º ou do § 4º (tráfico privilegiado)",
+        return {"selo": "A_VERIFICAR", "motivo": "tráfico (art. 33 da Lei 11.343/06) " + rs.trafico_incerto_motivo(c),
                 "dispositivo": "Decreto %s, %s (só caput e § 1º; § 4º fora - STJ, Tema 1336; STF, Tema 1400)" % (num, "art. 1º, XVIII" if regra == "art1_2024_2025" else "art. 7º, I e VI"),
                 "se_sim": "caput ou § 1º: IMPEDITIVO", "se_nao": "§ 4º (privilegiado): NÃO IMPEDITIVO"}
     if regra == "art1_2024_2025" and rs.homicidio_simples_selo(c):
