@@ -1,5 +1,5 @@
 {
- "versao": "2026-11-05a",
+ "versao": "2026-11-11a",
  "descricao": "Base juridica do RSPE Base. Editavel: o programa le este arquivo ao abrir (copia ao lado do .exe tem prioridade sobre a embutida). Datas em AAAA-MM-DD. Fracoes como 'num/den' ou percentual 'NN%'.",
  "prescricao": {
   "art109_tabela": [
@@ -265,13 +265,14 @@
   "trafico_art44_lei11343": "2/3, vedado ao reincidente especifico (Lei 11.343/06, art. 44, p. ú.: arts. 33, caput e § 1º, e 34 a 37; art. 33, §§ 2º, 3º e 4º fora)",
   "trafico_pessoas": "2/3 (CP, art. 83, V, na redação da Lei 13.344/2016, que também criou o art. 149-A)",
   "vedado_lc_lep112": "Vedado o livramento (LEP, art. 112): hediondo com morte primário (VI, a) e reincidente em hediondo com morte (VIII) desde 23/01/2020; feminicídio primário (VI-A) de 10/10/2024 a 24/03/2026; a partir de 25/03/2026 (Lei 15.358/2026): VI, a; VI, b (comando de organização criminosa ultraviolenta); VI, d (feminicídio primário) e VIII. A retroação do 50% sem a vedação é entendimento do STJ (Tema 1196, tese firmada; recurso extraordinário sobrestado até o julgamento do Tema 1319/STF); no STF é o Tema 1319, com repercussão geral reconhecida e mérito pendente.",
-  "art83_iii_b": "sem falta grave nos ultimos 12 meses",
+  "vedado_lc_lei_15358": "Lei 15.358/2026 (fatos desde 25/03/2026): os crimes do art. 2º (domínio social estruturado) são insuscetíveis de livramento condicional (art. 2º, § 4º, III), regra estendida ao art. 3º (favorecimento) pelo seu parágrafo único - a vedação é do tipo e não depende de marcação do RSPE.",
+ "art83_iii_b": "sem falta grave nos ultimos 12 meses",
   "pena_minima_anos": 2,
   "fonte": "CP, art. 83 (texto vigente conferido em 18/09/2026): I mais de 1/3 se não reincidente em crime doloso e bons antecedentes; II mais da metade se reincidente em crime doloso; III a) bom comportamento, b) sem falta grave nos últimos 12 meses; V mais de 2/3 para hediondo, tortura, tráfico, tráfico de pessoas e terrorismo, se não reincidente específico",
   "art88": "Revogado o livramento, não pode ser novamente concedido e o tempo solto não se desconta (salvo revogação por crime anterior ao benefício)"
  },
  "hediondos": {
-  "fonte": "Lei 8.072/90, art. 1º (texto vigente conferido em 23/09/2026, com as Leis 15.134/2025, 15.159/2025, 15.384/2026 e 15.487/2026)",
+  "fonte": "Lei 8.072/90, art. 1º (texto vigente conferido em 10/11/2026, com as Leis 15.134/2025, 15.159/2025, 15.384/2026 e 15.487/2026)",
   "lei_8072_art1_cp_sempre": [
    "121-A",
    "159",
@@ -328,9 +329,14 @@
     "2": "só quando direcionada à prática de crime hediondo ou equiparado"
    },
    "8069": [
-    "240 §1",
-    "241-B"
+    "240",
+    "241",
+    "241-A",
+    "241-B",
+    "241-D",
+    "244-A"
    ],
+   "_nota_8069": "Parágrafo único, VII, na redação da Lei 15.487/2026 (DOU e vigência em 07/08/2026): 'os crimes previstos no caput e nos §§ 1º e 2º do art. 240, no caput e no parágrafo único do art. 241, no caput e nos §§ 1º e 3º do art. 241-A, no caput do art. 241-B, no caput e nos §§ 1º e 2º do art. 241-D e no caput e no § 1º do art. 244-A' do ECA. Antes (Lei 14.811/2024, de 15/01/2024 a 06/08/2026): só o § 1º do art. 240 e o art. 241-B. A época do fato é conferida pela tabela 'desde'. O art. 241-C e o § 4º do art. 241-B (acessar ou visualizar, criado pela Lei 15.487/2026) não são hediondos (o § 4º é tratado no código).",
    "15358": [
     "2 caput, §§ 1º e 3º",
     "3"
@@ -536,6 +542,26 @@
     "desde": "2024-01-15",
     "lei": "Lei 14.811/2024"
    },
+   "8069:240": {
+    "desde": "2026-08-07",
+    "lei": "Lei 15.487/2026 (caput e § 2º; o § 1º já era hediondo desde a Lei 14.811/2024)"
+   },
+   "8069:241": {
+    "desde": "2026-08-07",
+    "lei": "Lei 15.487/2026"
+   },
+   "8069:241-A": {
+    "desde": "2026-08-07",
+    "lei": "Lei 15.487/2026"
+   },
+   "8069:241-D": {
+    "desde": "2026-08-07",
+    "lei": "Lei 15.487/2026"
+   },
+   "8069:244-A": {
+    "desde": "2026-08-07",
+    "lei": "Lei 15.487/2026"
+   },
    "2848:214": {
     "desde": "1990-07-26",
     "ate": "2009-08-09",
@@ -551,7 +577,10 @@
    }
   },
   "condicional_paragrafos": {
-   "_nota": "Artigos do CP em que a hediondez depende do parágrafo/inciso (Lei 8.072/90, art. 1º). Lista de '§X' ou '§X INCISO'; '§X' vale para qualquer inciso. Fora da lista = não hediondo. A época do fato é conferida à parte (tabela 'desde'). Casos especiais no código: 121 com 'extermínio' no tipo = hediondo, 121 § 6º = a verificar; 149-A § 1º, II = a verificar (só criança ou adolescente); 158 § 2º = hediondo só com morte e fato até 22/01/2020; 129 §§ 2º e 3º = a verificar (vítima). 121 §§ 2º-B e 2º-C: majorantes do homicídio qualificado dos incisos IX e X (hediondo); 121 § 7º: aumento do feminicídio, que só incide no feminicídio qualificado (§ 2º, VI) - hediondo; 121 § 2º-D (integrante de organização ultraviolenta, milícia ou grupo paramilitar, 20 a 40 anos): a verificar - a Lei 8.072 fala em 'homicídio qualificado'.",
+   "122": [
+    "§4"
+   ],
+   "_nota": "Artigos do CP em que a hediondez depende do parágrafo/inciso (Lei 8.072/90, art. 1º). Lista de '§X' ou '§X INCISO'; '§X' vale para qualquer inciso. Fora da lista = não hediondo. A época do fato é conferida à parte (tabela 'desde'). 122: só o § 4º (conduta realizada por rede de computadores, rede social ou transmitida em tempo real - art. 1º, X, desde a Lei 14.811/2024). Casos especiais no código: 121 com 'extermínio' no tipo = hediondo, 121 § 6º = a verificar; 149-A § 1º, II = a verificar (só criança ou adolescente); 158 § 2º = hediondo só com morte e fato até 22/01/2020; 129 §§ 2º e 3º = a verificar (vítima). 121 §§ 2º-B e 2º-C: majorantes do homicídio qualificado dos incisos IX e X (hediondo); 121 § 7º: aumento do feminicídio, que só incide no feminicídio qualificado (§ 2º, VI) - hediondo; 121 § 2º-D (integrante de organização ultraviolenta, milícia ou grupo paramilitar, 20 a 40 anos): a verificar - a Lei 8.072 fala em 'homicídio qualificado'.",
    "121": [
     "§2",
     "§2-B",
@@ -586,31 +615,6 @@
     "§1-A",
     "§1-B"
    ]
-  },
-  "pendentes_de_confirmacao": {
-   "_nota": "'Lei 15.487/2026' NÃO localizada: o texto vigente da Lei 8.072 (art. 1º, p. ú., VII), conferido em 29/09/2026, traz só o § 1º do art. 240 e o art. 241-B do ECA. Entradas mantidas fora do cálculo; para reativar, conferir a lei no Planalto e devolvê-las a 'desde' e a paragrafo_unico['8069'].",
-   "entradas": {
-    "8069:240": {
-     "desde": "2026-08-07",
-     "lei": "Lei 15.487/2026"
-    },
-    "8069:241": {
-     "desde": "2026-08-07",
-     "lei": "Lei 15.487/2026"
-    },
-    "8069:241-A": {
-     "desde": "2026-08-07",
-     "lei": "Lei 15.487/2026"
-    },
-    "8069:241-D": {
-     "desde": "2026-08-07",
-     "lei": "Lei 15.487/2026"
-    },
-    "8069:244-A": {
-     "desde": "2026-08-07",
-     "lei": "Lei 15.487/2026"
-    }
-   }
   }
  },
  "vga_esperado": {
@@ -1033,7 +1037,7 @@
    "fonte": "STJ, REsp 2.024.901 e 2.090.454 (Tema 931, revisão), 3ª Seção, j. 28/02/2024, DJe 01/03/2024",
    "nivel": "repetitivo",
    "tese": "O inadimplemento da pena de multa, após cumprida a pena privativa de liberdade ou restritiva de direitos, não obsta a extinção da punibilidade, ante a alegada hipossuficiência do condenado, salvo se diversamente entender o juiz competente, em decisão suficientemente motivada, que indique concretamente a possibilidade de pagamento da sanção pecuniária.",
-   "aplicacao": "Aba Extinção: multa pendente é apontada. Pela tese revista, o inadimplemento não obsta a extinção ante a alegada hipossuficiência, salvo decisão motivada em sentido contrário; há julgados que, com base na ADI 7.032, exigem prova da impossibilidade (STJ, REsp 2.055.935): instruir o pedido por cautela."
+   "aplicacao": "Aba Extinção: a multa pendente não gera aviso (assistido da Defensoria: hipossuficiência presumida - decisão de 11/11/2026, que mantém a anterior); a extinção é indicada pelo cumprimento da pena privativa. Pela tese revista, o inadimplemento não obsta a extinção ante a alegada hipossuficiência, salvo decisão motivada em sentido contrário; há julgados que, com base na ADI 7.032, exigem prova da impossibilidade (STJ, REsp 2.055.935): instruir o pedido por cautela."
   },
   {
    "tema": "Extinção - multa e ADI 7.032",
@@ -1935,6 +1939,7 @@
    "falta_grave": {
     "dispositivo": "art. 3º, I",
     "meses": 12,
+    "ancora_incerta": "o texto (\"nos últimos doze meses de cumprimento da pena\") não diz se a janela termina na publicação ou em 25/12: falta que só uma das duas contas alcança fica a verificar (decisão de 11/11/2026)",
     "exige_homologacao": true,
     "afeta": "indulto e comutação",
     "texto": "Constituem também requisitos para concessão do indulto e da comutação que o condenado: I - não tenha cometido falta grave apurada na forma prevista na Lei nº 7.210, de 1984, durante os últimos doze meses de cumprimento da pena, computada a detração (art. 42 do Código Penal); II - não esteja sendo processado por outro crime praticado com violência ou grave ameaça contra a pessoa ou por aqueles descritos no art. 10 deste Decreto."
@@ -2126,6 +2131,7 @@
      {
       "descricao": "roubo qualificado com o emprego de arma de fogo",
       "lei": "CP",
+      "verificar": "roubo com emprego de arma (CP, art. 157, § 2º, I, na redação anterior à Lei 13.654/2018: arma de qualquer espécie) - o Decreto 4.011/2001, art. 10, III, só veda o roubo qualificado com o emprego de arma de FOGO, e o RSPE não diz qual foi a arma: impeditivo se de fogo; conferir na sentença",
       "artigos": [
        "157, §2º, I"
       ]
@@ -2153,6 +2159,7 @@
    "falta_grave": {
     "dispositivo": "art. 3º, I",
     "meses": 12,
+    "ancora_incerta": "o texto (\"nos últimos doze meses de cumprimento da pena\") não diz se a janela termina na publicação ou em 25/12: falta que só uma das duas contas alcança fica a verificar (decisão de 11/11/2026)",
     "exige_homologacao": true,
     "afeta": "indulto e comutação",
     "texto": "Constituem também requisitos para concessão do indulto e da comutação que o condenado: I - não tenha cometido falta grave apurada na forma prevista na Lei nº 7.210, de 1984, durante os últimos doze meses de cumprimento da pena, computada a detração (art. 42 do Código Penal); II - não esteja sendo processado por outro crime praticado com violência ou grave ameaça contra a pessoa ou por aqueles descritos no art. 10 deste Decreto."
@@ -6219,6 +6226,66 @@
      "texto": "Nos crimes praticados com grave ameaça ou violência à pessoa, PPL superior a quatro e igual ou inferior a oito anos, cumprido um terço da pena, se não reincidentes, e metade, se reincidentes, nas hipóteses do § 1º do art. 1º"
     },
     {
+     "dispositivo": "art. 3º, II (c/c art. 1º, § 1º, II)",
+     "objetivo": false,
+     "pena_max_anos": 12,
+     "pena_min_anos": null,
+     "fracao_nao_reincidente": "1/6",
+     "fracao_reincidente": "1/4",
+     "anos_nao_reincidente": null,
+     "anos_reincidente": null,
+     "ininterrupto": false,
+     "violencia_grave_ameaca": "vedada",
+     "regime": null,
+     "outros_requisitos": "70 anos de idade completos até 25/12/2016 (art. 1º, § 1º, II: maiores de 70 anos de idade), aferida pela data de nascimento do RSPE; frações reduzidas do art. 3º, II",
+     "texto": "art. 1º, § 1º, II, c/c art. 3º, II: para a pessoa maior de 70 anos de idade, nos crimes sem grave ameaça ou violência à pessoa, PPL não superior a doze anos, cumprido um sexto da pena, se não reincidente, ou um quarto, se reincidente"
+    },
+    {
+     "dispositivo": "art. 4º (c/c art. 1º, § 1º, II)",
+     "objetivo": false,
+     "pena_max_anos": null,
+     "pena_min_anos": null,
+     "fracao_nao_reincidente": "1/4",
+     "fracao_reincidente": "1/4",
+     "anos_nao_reincidente": null,
+     "anos_reincidente": null,
+     "ininterrupto": false,
+     "violencia_grave_ameaca": "indiferente",
+     "regime": null,
+     "outros_requisitos": "tráfico privilegiado (art. 33, § 4º) reconhecido na condenação; 70 anos de idade completos até 25/12/2016 (art. 1º, § 1º, II: maiores de 70 anos de idade), aferida pela data de nascimento do RSPE; um quarto da pena (art. 4º)",
+     "texto": "art. 1º, § 1º, II, c/c art. 4º: tráfico privilegiado (caput e § 1º c/c § 4º do art. 33 da Lei 11.343/2006) de pessoa maior de 70 anos de idade, cumprido um quarto da pena"
+    },
+    {
+     "dispositivo": "art. 5º, I, b (c/c art. 1º, § 1º, II)",
+     "objetivo": false,
+     "pena_max_anos": 4,
+     "pena_min_anos": null,
+     "fracao_nao_reincidente": "1/4",
+     "fracao_reincidente": "1/3",
+     "anos_nao_reincidente": null,
+     "anos_reincidente": null,
+     "ininterrupto": false,
+     "violencia_grave_ameaca": "exigida",
+     "regime": null,
+     "outros_requisitos": "70 anos de idade completos até 25/12/2016 (art. 1º, § 1º, II: maiores de 70 anos de idade), aferida pela data de nascimento do RSPE; frações reduzidas do art. 5º, I, b",
+     "texto": "art. 1º, § 1º, II, c/c art. 5º, I, b: para a pessoa maior de 70 anos de idade, nos crimes com grave ameaça ou violência à pessoa, PPL não superior a quatro anos, cumprido um quarto da pena, se não reincidente, ou um terço, se reincidente"
+    },
+    {
+     "dispositivo": "art. 5º, II, b (c/c art. 1º, § 1º, II)",
+     "objetivo": false,
+     "pena_max_anos": 8,
+     "pena_min_anos": 4,
+     "fracao_nao_reincidente": "1/3",
+     "fracao_reincidente": "1/2",
+     "anos_nao_reincidente": null,
+     "anos_reincidente": null,
+     "ininterrupto": false,
+     "violencia_grave_ameaca": "exigida",
+     "regime": null,
+     "outros_requisitos": "70 anos de idade completos até 25/12/2016 (art. 1º, § 1º, II: maiores de 70 anos de idade), aferida pela data de nascimento do RSPE; frações reduzidas do art. 5º, II, b",
+     "texto": "art. 1º, § 1º, II, c/c art. 5º, II, b: para a pessoa maior de 70 anos de idade, nos crimes com grave ameaça ou violência à pessoa, PPL superior a quatro e igual ou inferior a oito anos, cumprido um terço da pena, se não reincidente, e metade, se reincidente"
+    },
+    {
      "dispositivo": "art. 6º",
      "objetivo": false,
      "pena_max_anos": null,
@@ -6513,6 +6580,7 @@
   },
   {
    "id": "2017",
+   "comutacao_exclui_ja_comutado": "o art. 7º, parágrafo único, do Decreto 9.246/2017 só concede a comutação a quem não obteve, até 25/12/2017, as comutações de decretos anteriores (STJ, entendimento pacificado: AgRg no HC 493.716, 5ª T., 02/04/2019; AgRg no HC 471.779, 6ª T., 22/10/2019; AgRg no HC 891.745, 5ª T., 19/03/2024; AgRg no HC 944.626, 6ª T., 04/11/2024)",
    "ano": 2017,
    "numero": "9.246",
    "data_publicacao": "22/12/2017",
@@ -7316,15 +7384,27 @@
       "artigos": []
      },
      {
-      "descricao": "lesão corporal contra agente de segurança (§ 12 do art. 129), crimes sexuais e contra a administração pública",
+      "descricao": "lesão corporal contra agente de segurança (CP, art. 129, § 12 - art. 4º, II, d)",
       "lei": "CP",
       "artigos": [
-       "129 § 12",
+       "129 § 12"
+      ]
+     },
+     {
+      "descricao": "crime sexual do art. 4º, II, d (CP, arts. 215, 215-A, 216-A, 218 e 218-A)",
+      "lei": "CP",
+      "artigos": [
        "215",
        "215-A",
        "216-A",
        "218",
-       "218-A",
+       "218-A"
+      ]
+     },
+     {
+      "descricao": "crime contra a administração pública do art. 4º, II, d (CP, arts. 312, 316 a 319, 332 e 333)",
+      "lei": "CP",
+      "artigos": [
        "312",
        "316",
        "317",
@@ -7531,15 +7611,27 @@
       "artigos": []
      },
      {
-      "descricao": "lesão corporal contra agente de segurança (§ 12 do art. 129), crimes sexuais e contra a administração pública",
+      "descricao": "lesão corporal contra agente de segurança (CP, art. 129, § 12 - art. 4º, II, d)",
       "lei": "CP",
       "artigos": [
-       "129 § 12",
+       "129 § 12"
+      ]
+     },
+     {
+      "descricao": "crime sexual do art. 4º, II, d (CP, arts. 215, 215-A, 216-A, 218 e 218-A)",
+      "lei": "CP",
+      "artigos": [
        "215",
        "215-A",
        "216-A",
        "218",
-       "218-A",
+       "218-A"
+      ]
+     },
+     {
+      "descricao": "crime contra a administração pública do art. 4º, II, d (CP, arts. 312, 316 a 319, 332 e 333)",
+      "lei": "CP",
+      "artigos": [
        "312",
        "316",
        "317",

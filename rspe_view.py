@@ -337,6 +337,7 @@ DB_TIPOS = {  # itens da Auditoria sobre a data-base -> (cor, motivo)
     "data-base-na-guia-nova-de-quem-ja-estava-preso": ("vermelho", "início da guia nova com a pessoa já presa - a condenação nova não altera a data-base (STJ, Tema 1006)"),
     "data-base-na-data-do-fato-de-condenacao": ("amarelo", "data do fato de condenação desta execução - provável crime durante o cumprimento tratado como falta grave (Súmulas 526 e 534/STJ); conferir"),
     "data-base-no-inicio-da-guia-nova-com-a-pessoa-presa": ("amarelo", "início da guia nova com a pessoa presa sem interrupção - a data certa é a do início da custódia (STJ, Tema 1006); ver Auditoria"),
+    "data-base-na-decisao-da-falta-grave": ("amarelo", "data da decisão que homologou a falta grave - a data certa é a da infração (Súmula 534/STJ); ver Auditoria"),
     "inconsistencia-da-data-base-sem-prisao-alteracao": ("amarelo", "sem prisão, alteração de regime ou falta grave homologada nessa data"),
     # (7.15.2, P25) a data-base fica a do SEEU (nova prisão); o que se confere é a detração antes da fração
     "data-base-na-nova-prisao-tema-1457": ("amarelo", "nova prisão depois de soltura - conferir se a custódia anterior foi descontada depois da "
@@ -538,7 +539,43 @@ def data_livramento(r):
         if _ex is not None and 0 < _ex <= _pc and _ex < pt:
             return ("Lapso atingido pela pena cumprida do SEEU (%s de %s exigidos); o SEEU parou na interrupção e o reinício foi lançado "
                     "pela ficha - conferir" % (rs.dias_para_pena(_pc), rs.dias_para_pena(_ex)), "atingido")
+    # (decisão de 11/11/2026) o SEEU não imprimiu a data do livramento, mas a pena admite o benefício: estimativa pelas frações de cada
+    # crime impressas no RSPE e pela pena cumprida do SEEU - "a verificar", nunca como data do SEEU
+    _est = _livramento_estimado(r, pt, _min)
+    if _est:
+        return _est
     return _sem_data(r)
+
+
+def _livramento_estimado(r, pt, minimo):
+    """(texto, "atingido"|None) para o livramento sem data no RSPE: lapso = soma das frações de livramento do RSPE sobre a pena de
+    cada crime (CP, art. 84), comparado com a pena cumprida do SEEU na data do RSPE. None se não há base para a conta (sem fração em
+    algum crime, crime com livramento vedado, pena abaixo do mínimo, execução parada ou sem pena cumprida)."""
+    if parada(r) or not pt or pt < minimo * rs.DIAS_ANO:
+        return None
+    _pc = rs.pena_para_dias(r.get("pena_cumprida"))
+    if _pc is None:
+        return None
+    lapso = 0
+    for c in r.get("_crimes", []):
+        if (c.get("extinto") or "").upper().startswith("S"):
+            continue
+        f, d = rs.parse_fracao(c.get("fracao_livramento")), rs.pena_para_dias(c.get("pena_imposta"))
+        if not d:
+            continue
+        if not f or f >= 1:
+            return None
+        lapso += int(d * f)
+    if not lapso or lapso >= pt:
+        return None
+    ger = rs.to_date(r.get("data_geracao_rspe") or "")
+    base = "A verificar · o SEEU não calculou o livramento; pelas frações do RSPE, lapso de %s (CP, arts. 83 e 84)" % rs.dias_para_pena(lapso)
+    if _pc >= lapso:
+        return ("%s, já atingido pela pena cumprida do SEEU (%s%s) - conferir o cálculo e requerer" % (
+            base, rs.dias_para_pena(_pc), (" em %s" % rs.fmt(ger)) if ger else ""), "atingido")
+    return ("%s; cumpridos %s%s - faltam cerca de %s%s" % (
+        base, rs.dias_para_pena(_pc), (" em %s" % rs.fmt(ger)) if ger else "", rs.pl(lapso - _pc, "dia", "dias"),
+        (" (por volta de %s, sem interrupção nem remição)" % rs.fmt(ger + timedelta(days=lapso - _pc))) if ger else ""), None)
 
 
 VERIFICAR_VENCIDO = "verificar criminológico, indeferimento ou falta"
@@ -550,6 +587,10 @@ def situacao(d, interrompida=False, rot="Pena interrompida"):
         return ("%s · lapso atingido" % rot.replace("Pena i", "I").replace("Pena s", "S").split(" (")[0], "cinza") if interrompida else ("Lapso atingido · " + VERIFICAR_VENCIDO, "vencido")
     if not d:
         return ((rot, "cinza") if interrompida else ("", ""))
+    if interrompida and isinstance(d, date):
+        # (decisão de 11/11/2026) pena interrompida (fuga sem recaptura, por exemplo) com data impressa pelo SEEU: sem prazo a correr
+        # nem "vencido" - a data fica como informação
+        return ("%s · data do SEEU: %s" % (rot, rs.fmt(d)), "cinza")
     n = (d - HOJE).days
     if n < 0:
         return ("Vencido há %d dia%s · %s" % (-n, "s" if n < -1 else "", VERIFICAR_VENCIDO), "vencido")
@@ -610,10 +651,23 @@ def _com_nota(sit, nota, d=None, hoje=None, ger=None):
     return ("%s · RSPE: %s" % (sit, nota)) if sit else "RSPE: %s" % nota
 
 
+def _livramento_revogado(r):
+    """Data da revogação do livramento posterior à última concessão registrada no RSPE (None se não houve)."""
+    inc = r.get("_incidentes", [])
+    dls = [d for d in (rs.to_date(i.get("data_referencia") or i.get("data_decisao") or "") for i in inc if rs.e_concessao_livramento(i)) if d]
+    if not dls:
+        return None
+    rv = [d for d in (rs.to_date(i.get("data_referencia") or i.get("data_decisao") or "") for i in inc if rs.e_revogacao_livramento(i))
+          if d and d > max(dls)]
+    return max(rv) if rv else None
+
+
 def pedidos(r, palavra):
-    # a alteração de data-base ("... PROGRESSÃO DE REGIME/LIVRAMENTO CONDICIONAL") não é pedido do benefício
+    # a alteração de data-base ("... PROGRESSÃO DE REGIME/LIVRAMENTO CONDICIONAL") não é pedido do benefício, nem a revogação ou a
+    # suspensão do livramento (incidentes "CONCEDIDO" que não são pedido do assistido)
     inc = [i for i in r.get("_incidentes", []) if palavra in ("%s %s" % (i.get("tipo", ""), i.get("complemento", ""))).upper()
-           and "DATA-BASE" not in rs._sem_acento(i.get("tipo") or "").upper().replace("DATA BASE", "DATA-BASE")]
+           and "DATA-BASE" not in rs._sem_acento(i.get("tipo") or "").upper().replace("DATA BASE", "DATA-BASE")
+           and not (palavra == "LIVRAMENTO" and (rs.e_revogacao_livramento(i) or rs.e_suspensao_livramento(i)))]
     if not inc:
         return ""
     partes = []
@@ -1178,8 +1232,20 @@ def extincao(r, presc, interr):
         _pf = termino_por_fato(r, cust, _rem0 or 0, remidos_sem_calculo(r)) if _rem0 else None
     rf_ver = bool(term_calc and not cust and reinicio_ficha(r) and term <= HOJE)
     int_ver = False  # término do SEEU alcançado, mas com fuga/evasão posterior ao último início do cumprimento: a verificar
+    # (revisão 11/2026) livramento suspenso (LEP, art. 145) antes do término, sem revogação nem novo livramento depois: o SEEU pode
+    # seguir contando o tempo, mas a extinção depende do desfecho (CP, arts. 86, 88 e 89) - não se afirma "extinção cabível"
+    _susp = _livramento_suspenso_pendente(r)
+    _susp_ver = bool(_susp and (not term or _susp <= term))
     # 1) pena cumprida
-    if pt and cump is not None and cump >= pt:
+    if _susp_ver and ((pt and cump is not None and cump >= pt) or (term and term <= HOJE and not term_calc)):
+        hip.append("A verificar: pelo cálculo do SEEU %s, mas o livramento condicional foi suspenso em %s, antes do fim do período de prova, e o "
+                   "RSPE não registra o desfecho - a extinção depende da decisão final (LEP, art. 145; CP, art. 89): mantido o livramento, "
+                   "extinção da pena (CP, art. 90); revogado por crime cometido na vigência dele, o tempo solto não se desconta (CP, arts. 86, "
+                   "I, e 88)" % (
+                       ("a pena estaria integralmente cumprida (%s de %s)" % (rs.dias_para_pena(cump), rs.dias_para_pena(pt)))
+                       if (pt and cump is not None and cump >= pt) else "o término (%s) já foi alcançado" % rs.fmt(term), rs.fmt(_susp)))
+        int_ver = True
+    elif pt and cump is not None and cump >= pt:
         hip.append("Pena integralmente cumprida (%s de %s): extinção pelo cumprimento (LEP, art. 66, II)" % (rs.dias_para_pena(cump), rs.dias_para_pena(pt)))
         cor, d_ref = "vermelho", HOJE
     elif cust_ver:
@@ -1231,7 +1297,10 @@ def extincao(r, presc, interr):
         lcs = []
     if lcs:
         dlc = max((rs.to_date(i.get("data_referencia") or i.get("data_decisao") or i.get("complemento") or "") or date.min for i in lcs))
-        revs = [rs.to_date(j.get("data_referencia") or j.get("data_decisao") or "") or date.min for j in inc
+        # (revisão 11/2026) a data que importa é a da DECISÃO que suspendeu ou revogou (Súmula 617/STJ: "ausência de suspensão ou
+        # revogação ... antes do término do período de prova"); a data de referência do incidente pode ser a do fato que a motivou
+        # (novo crime, descumprimento), anterior à decisão - só vale na falta da data da decisão
+        revs = [rs.to_date(j.get("data_decisao") or j.get("data_referencia") or "") or date.min for j in inc
                 if (rs.e_revogacao_livramento(j) or rs.e_suspensao_livramento(j))]
         revog = any(d > dlc for d in revs)
         # fim do período de prova = deferimento + pena remanescente no deferimento; revogação/suspensão decidida só depois
@@ -1418,6 +1487,20 @@ def extincao(r, presc, interr):
     }
 
 
+def _livramento_suspenso_pendente(r):
+    """Data da suspensão do livramento (LEP, art. 145) decidida depois da última concessão e ainda sem desfecho no RSPE (sem
+    revogação a partir dela e sem novo livramento depois); None se não há."""
+    inc = r.get("_incidentes", [])
+    _dec = lambda i: rs.to_date(i.get("data_decisao") or i.get("data_referencia") or "")
+    dls = [d for d in (rs.to_date(i.get("data_referencia") or i.get("data_decisao") or "") for i in inc if rs.e_concessao_livramento(i)) if d]
+    if not dls:
+        return None
+    sus = [d for d in (_dec(i) for i in inc if rs.e_suspensao_livramento(i) and not rs.e_revogacao_livramento(i)) if d and d > max(dls)]
+    if not sus or any((_dec(i) or date.min) >= min(sus) for i in inc if rs.e_revogacao_livramento(i)):
+        return None
+    return min(sus)
+
+
 def _vencido_full(r, sit, cor, palavra):
     """Dica (tooltip) do prazo vencido: o que o RSPE mostra sobre pedidos, exame criminológico e faltas."""
     if cor != "vencido":
@@ -1594,7 +1677,13 @@ def simplificar(m):
         _res = "término do SEEU além do limite de %scumprimento (CP, art. 75)%s - ver Auditoria" % (
             (_an.group(1) + " anos de ") if _an else "", (": máximo em " + _mx.group(1)) if _mx else "")
         m["ext_sit_full"] = (m.get("ext_sit_full") or m.get("ext_sit") or "") + " · " + _res
-        if m.get("ext_sit") == "Em cumprimento":
+        _dmx = rs.to_date(_mx.group(1)) if _mx else None
+        if m.get("ext_sit") in ("Em cumprimento", "Extinção a verificar") and _dmx and _dmx <= HOJE:
+            # (decisão de 11/11/2026) o término máximo do art. 75 já passou: a pessoa pode estar presa além do limite - extinção a
+            # verificar, com destaque, e não "em cumprimento"
+            m["ext_sit"] = "Extinção a verificar · limite do art. 75 alcançado em %s" % _mx.group(1)
+            m["ext_cor"] = "vermelho"
+        elif m.get("ext_sit") == "Em cumprimento":
             m["ext_sit"] = "Em cumprimento · art. 75 a verificar"
             if not m.get("ext_cor"):
                 m["ext_cor"] = "amarelo"
@@ -1824,6 +1913,9 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
         psit, pcor = (ptxt.split(" (")[0] if ptxt and not re.match(r"^\d{2}/\d{2}/\d{4}", ptxt) else "Não consta no RSPE"), "cinza"
     if pd is None and (ptxt or "").startswith("A verificar: unificação pendente"):
         psit, pcor = "A verificar: unificação pendente", "amarelo"
+    if (ltxt or "").startswith("A verificar · o SEEU não calculou o livramento") and not est:
+        # estimativa pelas frações do RSPE (decisão de 11/11/2026): amarelo, ou "lapso atingido" se a pena cumprida já basta
+        lsit, lcor = ((ltxt, "vencido") if ld == "atingido" else (ltxt, "amarelo"))
     if not lsit and not lcor and ld is None:
         lsit, lcor = (ltxt.split(" (")[0] if ltxt and not re.match(r"^\d{2}/\d{2}/\d{4}", ltxt) else "Não consta no RSPE"), "cinza"
     # nota do SEEU depois da data prevista: exibida junto da data que veio do SEEU (sem mudar a cor nem o prazo)
@@ -1941,6 +2033,9 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
     # coluna Falta: "Sim" só com sanção reconhecida; indício sem ela, "A apurar" (o detalhe fica na ficha do assistido)
     falta = (("Sim · " + (r.get("falta_12m_detalhe") or "")) if r.get("falta_12m") == "SIM" else
              "A apurar" if r.get("falta_12m") == "A APURAR" else "Não consta")
+    if r.get("falta_12m") in ("SIM", "A APURAR") and falta_12m_hoje(r) not in ("SIM", "A APURAR"):
+        # (decisão de 11/11/2026) a coluna é o retrato do RSPE (12 meses até a emissão); contada até hoje, a falta já saiu da janela
+        falta += " · na emissão do RSPE (%s); contada até hoje (%s), já fora dos 12 meses" % (r.get("data_geracao_rspe") or "?", rs.fmt(HOJE))
     m = {
         "id": r.get("processo_execucao") or r.get("arquivo"),
         "nome": nome_proprio(r.get("nome", "")),
@@ -2117,6 +2212,12 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
         if r.get("livramento_previsao_seeu"):
             m["liv"] = r["livramento_previsao_seeu"]
             m["liv_dias"] = _dias_para(_data(r["livramento_previsao_seeu"]))
+    # (decisão de 11/11/2026) livramento "vedado" de reincidente não específico em hediondo com morte: a vedação é tese - a aba diz isso
+    if (m.get("liv_sit") or "").startswith("Vedado") and any(it.get("tipo") == "hediondo-com-morte-reincidente-generico-livramento"
+                                                             and it.get("nivel") == "verificar" and not it.get("baixado")
+                                                             for it in m.get("aud_itens") or []):
+        m["liv_sit"] = m["liv_sit_full"] = "Vedado pelo SEEU · tese: 2/3 (reincidente não específico em hediondo com morte) - ver Auditoria"
+        m["liv_cor"] = "amarelo"
     # reincidente pela lei sem a marcação do SEEU, com efeito nas frações: a data da aba (do SEEU, com a fração do primário) favorece
     # o assistido, mas o juízo pode recalcular como reincidente - a linha avisa
     _rl = [it for it in m.get("aud_itens") or [] if it.get("tipo") == "reincidente-pela-lei-sem-marcacao" and it.get("efeito")]
@@ -2138,6 +2239,33 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
         if any("progressão" in it["efeito"] for it in _rl) and m.get("prog_sit") and m.get("prog_cor") not in ("azul", "cinza"):
             _av = " · reincidente pela lei (o SEEU usa o percentual do primário): o juízo pode recalcular - ver Auditoria"
             m["prog_sit_full"] = (m.get("prog_sit_full") or m["prog_sit"]) + _av
+    # (revisão 11/2026) data de livramento impressa pelo SEEU que a lei não sustenta: a aba mantém a data, mas não manda "requerer"
+    # sem a ressalva - (1) a lei da data do fato veda o livramento quanto a algum crime (item da Auditoria); (2) o livramento já foi
+    # revogado (CP, art. 88; LEP, arts. 141 e 142); (3) a pena total é inferior a 2 anos (CP, art. 83, caput)
+    if re.match(r"^\d{2}/\d{2}/\d{4}", m.get("liv") or "") and (m.get("liv") or "").startswith(r.get("livramento_previsao_seeu") or "?") \
+            and m.get("liv_cor") not in ("azul", "cinza"):
+        _avs = []
+        _vl = [it for it in m.get("aud_itens") or [] if it.get("lc_vedado_lei") and not it.get("baixado")]
+        if _vl:
+            _avs.append("a lei da data do fato veda o livramento quanto a %s - a data do SEEU não se sustenta nessa parte; ver Auditoria" % (
+                "; ".join(dict.fromkeys((it.get("ref") or "").split(" · ")[-1] for it in _vl))))
+        _rvg = _livramento_revogado(r)
+        if _rvg:
+            _avs.append("livramento revogado em %s: não se concede de novo quanto à mesma pena (CP, art. 88; LEP, art. 142), salvo se a "
+                        "revogação veio de condenação por crime anterior ao benefício (LEP, art. 141) ou quanto à pena de condenação nova - "
+                        "conferir antes de requerer" % rs.fmt(_rvg))
+        _ptl, _minl = rs.pena_para_dias(r.get("pena_total")), rg.carregar().get("livramento", {}).get("pena_minima_anos", 2)
+        if _ptl and _ptl < _minl * rs.DIAS_ANO:
+            _avs.append("pena total inferior a %s: o livramento exige pena igual ou superior, somadas as penas (CP, arts. 83, caput, e 84) - "
+                        "conferir antes de requerer" % rs.pl(_minl, "ano", "anos"))
+        if _avs:
+            _av = " · " + " · ".join(_avs)
+            _b = (m.get("liv_sit") or "").replace("sem pedido no RSPE - requerer", "sem pedido no RSPE")
+            _bf = (m.get("liv_sit_full") or "").replace("sem pedido no RSPE - requerer", "sem pedido no RSPE")
+            m["liv_sit"] = (_b if _b not in ("", "Em cumprimento") else "A verificar") + _av
+            m["liv_sit_full"] = (_bf + _av) if _bf else m["liv_sit"]
+            if m.get("liv_cor") != "vencido":
+                m["liv_cor"] = "amarelo"
     # percentual do SEEU maior que o legal (alerta da Auditoria): a data da aba é a do SEEU e pode estar atrasada - a linha avisa
     # (também o percentual que decorre da reincidência específica não demonstrada: o alerta é o da reincidência)
     _ai = m.get("aud_itens") or []

@@ -52,6 +52,7 @@ TESTES += ["teste_rev_presc_reinc.py"]  # revisão da Prescrição (11/2026): +1
 TESTES += ["teste_ui_avisos.py"]  # 7.16.2: avisos do Python chegam à tela (window.ui; andamento dos dados prisionais)
 TESTES += ["teste_ui_menu.py"]  # 7.16.2: menu lateral recolhido (balão com nome, número e Alt+n; expansão mantida)
 TESTES += ["teste_cache_calculo.py"]  # 7.16.2: cache dos cálculos idêntico ao cálculo do zero
+TESTES += ["teste_rev_randomizada.py"]  # revisão independente e randomizada (11/2026): hediondos, progressão, livramento, extinção e indulto
 # saída em UTF-8 em qualquer console (no Windows o padrão cp1252 não imprime símbolos como "✓" e derruba o teste)
 _env = dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUTF8="1")
 falhas = [t for t in TESTES if subprocess.call([sys.executable, t], env=_env) != 0]

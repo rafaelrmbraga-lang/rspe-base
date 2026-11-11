@@ -113,10 +113,16 @@ ok(not any(re.search(r"m3\d d|m3\dd", rs.dias_para_pena(n)) for n in range(0, 3 
 # ---- 4b. comutação anterior concedida: a redução sobre a soma das penas impostas é o valor máximo - o texto avisa ----
 c4 = crime("01/01/2010", "01/06/2010", "01/07/2010", artigo="ART 157: Roubo", tipo="CAPUT: Subtrair coisa móvel alheia, mediante grave ameaça",
            pena="20 ano(s), 0 mês(es) e 0 dia(s)", proc="0000007-00.2010.8.12.0001", vga="S")
-r = reg([c4], [ev("01/01/2011")], "20a0m0d", "8a9m0d", ger="05/10/2019",
-        incid=[inc("COMUTAÇÃO", "DECRETO Nº 8.615, DE 23 DE DEZEMBRO DE 2015", "26/05/2016")])
-x = dec(r, "2017")
+# (revisão 11/2026) o caso usava o Decreto 9.246/2017 com comutação de 2015 concedida; o art. 7º, p. ú., desse decreto só concede a
+# comutação a quem não obteve as de decretos anteriores (STJ, AgRg no HC 493.716 e AgRg no HC 944.626): o aviso dos "valores
+# máximos" passa a ser conferido no Decreto 8.615/2015 (comutação de 2014 concedida), e o de 2017 deixa de caber
+r = reg([c4], [ev("01/08/2010")], "20a0m0d", "9a2m5d", ger="05/10/2019",
+        incid=[inc("COMUTAÇÃO", "DECRETO Nº 8.380, DE 24 DE DEZEMBRO DE 2014", "26/05/2015")])
+x = dec(r, "2015")
 ok(x.get("beneficio") == "Comutação" and "não está descontada" in (x.get("mot") or ""), "4b: comutação anterior: %s %s" % (x["s"], x.get("mot")))
+x = next(y for y in rd.avaliar(r, HOJE, completo=True)["decretos"] if str(y["id"]) == "2017")
+ok(x.get("beneficio") != "Comutação" and any("já obteve comutação de decreto anterior" in (h.get("mot") or "") for h in x.get("hips") or []),
+   "4b: 2017 com comutação anterior não cabe (art. 7º, p. ú.): %s %s" % (x["s"], x.get("mot")))
 
 # ---- 5. cumpriu pena e fugiu: "cumprimento interrompido", não "não iniciou o cumprimento" ----
 c5 = crime("01/01/2022", "01/06/2022", "01/07/2022", pena="4 ano(s), 0 mês(es) e 0 dia(s)", proc="0000008-00.2022.8.12.0001")

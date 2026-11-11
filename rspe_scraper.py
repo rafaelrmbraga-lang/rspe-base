@@ -194,8 +194,9 @@ def _to_date_txt(s):
 def _to_date(s):
     try:
         m = _RE_DATA_BR.match(s.strip())
-        # ano fora de 1900-2100: lixo de leitura (01/01/0001, 99/99/9999) - ignorado, para não estourar as contas de datas
-        return date(int(m.group(4)), int(m.group(3)), int(m.group(1))) if (m and 1900 <= int(m.group(4)) <= 2100) else None
+        # ano fora de 1900-2999: lixo de leitura (01/01/0001, 31/12/9999) - ignorado, para não estourar as contas de datas. O teto
+        # não pode ser 2100: penas somadas de mais de 75 anos têm o término impresso pelo SEEU depois disso (e são as do art. 75 do CP)
+        return date(int(m.group(4)), int(m.group(3)), int(m.group(1))) if (m and 1900 <= int(m.group(4)) <= 2999) else None
     except Exception:
         return None
 
@@ -1306,6 +1307,10 @@ def hediondo_pu(c, h=None):
             return (True, "") if regra[art] == "sempre" else (None, "art. 1º, p. ú., Lei 8.072/90: " + regra[art])
         return False, ""
     if isinstance(regra, list):
+        if lei == "8069" and art == "241-B" and pi and pi[0] == "4":
+            # o p. ú., VII, na redação da Lei 15.487/2026, refere só o caput do art. 241-B; o § 4º (acessar ou visualizar) foi
+            # criado pela mesma lei e ficou fora do rol
+            return False, "art. 1º, p. ú., VII, Lei 8.072/90: do art. 241-B do ECA, hediondo só o caput (o § 4º, criado pela Lei 15.487/2026, não consta do rol)"
         for a_, pars in _itens_pu(regra):
             if a_ != art:
                 continue
@@ -3419,6 +3424,9 @@ def violencia_domestica(c):
     if art == "215-A" and (lei in ("2848", "") or "PENAL" in (c.get("lei") or "").upper()):
         # art. 1º, XVII: "crimes de violência contra a mulher" da Lei 13.718/2018 - a vítima da importunação pode ser homem
         return ("provavel", "art. 215-A (importunação sexual): confirmar se a vítima é mulher")
+    if art == "218-C" and (lei in ("2848", "") or "PENAL" in (c.get("lei") or "").upper()):
+        # (revisão 11/2026) o outro tipo criado pela Lei 13.718/2018: a vítima da divulgação de cena de estupro ou de sexo pode ser homem
+        return ("provavel", "art. 218-C (divulgação de cena de estupro, de sexo ou de pornografia): confirmar se a vítima é mulher")
     return None
 
 
@@ -3465,15 +3473,30 @@ def trafico_incerto(c):
     if num_lei(c.get("lei")) != "11343" or num_art(c.get("artigo")) != "33":
         return False
     txt = " ".join(str(c.get(k) or "") for k in ("tipo_penal", "artigo", "artigo_rspe"))
-    if re.search(r"§\s*[1234](?!\d)|PRIVILEGI|CAPUT", txt, re.I):
+    if re.search(r"§\s*[234](?!\d)|PRIVILEGI", txt, re.I):
         return False
-    # texto do caput ("Importar, exportar, remeter, preparar...") com pena de 5 anos ou mais: é o caput. Abaixo de 5 anos (mínimo
-    # do caput, Súmula 231/STJ), a pena só se explica pela redução do § 4º - continua a verificar
+    # caput ou § 1º (pelo rótulo "CAPUT"/"§ 1º" ou pelo texto "Importar, exportar, remeter, preparar...") com pena de 5 anos ou
+    # mais: é o tráfico do caput. Abaixo de 5 anos (mínimo cominado, Súmula 231/STJ), a pena só se explica por causa de diminuição,
+    # quase sempre a do § 4º, que o SEEU nem sempre cadastra - continua a verificar, ainda que o rótulo diga "CAPUT" (revisão
+    # 11/2026: o rótulo decidia antes da pena, e o privilegiado cadastrado como caput saía impeditivo certo)
     t_ = _sem_acento(c.get("tipo_penal") or "").upper()
-    if re.search(r"IMPORTAR,? EXPORTAR|REMETER,? PREPARAR|TER EM DEPOSITO,? TRANSPORTAR", t_) and \
-            (pena_para_dias(c.get("pena_imposta")) or 0) >= 5 * DIAS_ANO:
+    _pena = pena_para_dias(c.get("pena_imposta")) or 0
+    if re.search(r"§\s*1(?!\d)|CAPUT", txt, re.I):
+        return 0 < _pena < 5 * DIAS_ANO
+    if re.search(r"IMPORTAR,? EXPORTAR|REMETER,? PREPARAR|TER EM DEPOSITO,? TRANSPORTAR", t_) and _pena >= 5 * DIAS_ANO:
         return False
     return True
+
+
+def trafico_incerto_motivo(c):
+    """Por que o tráfico é incerto (trafico_incerto): sem o parágrafo no RSPE, ou cadastrado como caput/§ 1º com pena abaixo do
+    mínimo cominado (5 anos)."""
+    txt = " ".join(str(c.get(k) or "") for k in ("tipo_penal", "artigo", "artigo_rspe"))
+    _pena = pena_para_dias(c.get("pena_imposta")) or 0
+    if re.search(r"§\s*1(?!\d)|CAPUT", txt, re.I) and 0 < _pena < 5 * DIAS_ANO:
+        return ("cadastrado no SEEU como caput ou § 1º, mas com pena de %s, abaixo do mínimo de 5 anos: a pena só se explica por causa de "
+                "diminuição, em regra a do § 4º (tráfico privilegiado), que o cadastro pode não trazer" % dias_para_pena(_pena))
+    return "sem indicação, no RSPE, de caput/§ 1º nem do § 4º"
 
 
 def homicidio_simples_selo(c):
@@ -3504,9 +3527,9 @@ def hediondo_selo_verificar(c):
     return ""
 
 
-def impeditivo_decreto(c, ref=date(2024, 12, 25)):
+def impeditivo_decreto(c, ref=date(2024, 12, 25), _sem_hediondez=False):
     """Devolve (inciso, motivo) se o crime está no art. 1º dos Decretos 12.338/24 e 12.790/25, senão None.
-    Hediondez aferida na data do decreto (ref), conforme o STJ."""
+    Hediondez aferida na data do decreto (ref), conforme o STJ. _sem_hediondez: só os demais incisos (uso interno)."""
     if c.get("extinto", "").upper().startswith("S"):
         return None
     lei, art = num_lei(c.get("lei")), num_art(c.get("artigo"))
@@ -3514,8 +3537,14 @@ def impeditivo_decreto(c, ref=date(2024, 12, 25)):
     codigo_penal = lei in ("2848", "") or ("PENAL" in (c.get("lei") or "").upper() and "MILITAR" not in (c.get("lei") or "").upper())
     if trafico_incerto(c):
         return None  # a verificar (impeditivo_verificar): caput/§ 1º impede; § 4º não
-    if e_hediondo(c, ref):
+    if not _sem_hediondez and e_hediondo(c, ref):
         if not e_hediondo(c):
+            # (revisão 11/2026) hediondez posterior ao fato: a tese da irretroatividade só afasta o inciso I. O crime que o art. 1º
+            # também veda por inciso próprio, pelo tipo (XI: arts. 215 a 218-C do CP; XIII: ECA; IV: Lei 12.850...), é impeditivo
+            # certo, sem tese (ex.: art. 241-B do ECA por fato anterior a 15/01/2024; art. 218-B do CP por fato anterior a 22/05/2014)
+            _proprio = impeditivo_decreto(c, ref, _sem_hediondez=True)
+            if _proprio:
+                return _proprio
             d, lei_h = hediondo_desde(c)
             return ("I", "crime hediondo (%s, vigência %s) - fato anterior, mas a hediondez é aferida na data do decreto (STJ) · "
                          "tese defensiva: irretroatividade (STF, 2ª T., RHC 267.297 AgR e HC 273.296 AgR; monocráticas do STF; TJMS, julgados da 2ª Câm. Crim. - a 1ª e a 3ª Câm. seguem o STJ)" % (lei_h or "Lei 8.072/90", fmt(d)))
@@ -3744,7 +3773,7 @@ def impeditivo_verificar(c):
     if c.get("extinto", "").upper().startswith("S"):
         return ""
     if trafico_incerto(c):
-        return ("tráfico (art. 33 da Lei 11.343/06) sem indicação, no RSPE, de caput/§ 1º ou do § 4º: caput ou § 1º é impeditivo "
+        return ("tráfico (art. 33 da Lei 11.343/06) " + trafico_incerto_motivo(c) + ": caput ou § 1º é impeditivo "
                 "(Decretos 2024 e 2025, art. 1º, XVIII; Decreto 2022, art. 7º, I e VI); o § 4º (privilegiado) não é (STF, Súmula Vinculante 63 e Tema 1400 - RE 1.542.482 RG; STJ, Tema 1336) - conferir na sentença")
     if num_lei(c.get("lei")) == "1001" or "MILITAR" in (c.get("lei") or "").upper():
         return "crime militar (CPM): só impede se corresponder a crime do art. 1º, I a XVIII (Decretos 2024 e 2025, XIX) ou do art. 7º, I a V (Decreto 2022, VII) - conferir"
@@ -3870,6 +3899,16 @@ def _analise_decreto_2022_modo(campos, crimes, eventos, incidentes, modo=None):
             # pena aplicada abaixo do mínimo cominado do tipo cadastrado (ex.: art. 306 do CP, 2 a 6 anos, com pena de 7 meses - a do
             # art. 306 do CTB): o cadastro pode estar errado e ele decide a pena máxima do art. 5º - a verificar, sem negar
             linhas.append("? %s: %s" % (nome, aviso_pena_minima(c, _pa, _pmin)))
+            verificar.append(nome)
+            continue
+        if not _priv_c and _pm0 is not None and _pm0 <= 5 * DIAS_ANO and _pa and _pa > _pm0 and not (fato and fato > ref):
+            # (revisão 11/2026) pena aplicada ACIMA do máximo lido do tipo cadastrado: só se explica por causa de aumento que o texto
+            # impresso não traz (e que integra a pena máxima em abstrato do art. 5º) ou por concurso/continuidade (que o parágrafo
+            # único manda desprezar) - o máximo lido não é seguro: a verificar, sem afirmar o "possível"
+            linhas.append("? %s: pena aplicada (%s) acima do máximo do tipo cadastrado no SEEU (%s) - se houve causa de aumento, ela integra a pena "
+                          "máxima em abstrato do art. 5º (STJ, AgRg nos EDcl no RHC 201.341, 6ª T., 30/10/2024) e pode levá-la acima de 5 anos; se a "
+                          "diferença vem de concurso ou continuidade, não conta (art. 5º, p. ú.) - conferir na sentença" % (
+                              nome, dias_para_pena(_pa), dias_para_pena(_pm0)))
             verificar.append(nome)
             continue
         if not _priv_c and _pm0 is not None and _pm0 > 5 * DIAS_ANO and not (fato and fato > ref):
@@ -4102,6 +4141,18 @@ def _analise_decreto_2022_modo(campos, crimes, eventos, incidentes, modo=None):
                     dias_para_pena(pena_imp - cump22_imp)))
                 out["indulto_2022"] = "não atinge: pena dos crimes impeditivos não cumprida até 25/12/2022 (art. 11, p. ú.)"
                 out["indulto_2022_status"] = "nao"
+                # (decisão de 11/11/2026) tese: o art. 11, p. ú., diz que o crime não impeditivo não será indultado "enquanto" não cumprida
+                # a pena do impeditivo - cumprida depois de 25/12/2022, o indulto dos demais (art. 5º) pode ser declarado então
+                _liv22 = [c for c in alc4 if c not in _fora7 and c not in posteriores and (pena_maxima_abstrata(c) or 10 ** 6) <= 5 * DIAS_ANO]
+                _fim22 = ref + timedelta(days=pena_imp - cump22_imp)
+                if _liv22:
+                    linhas.append("? Art. 11, p. ú. (tese): \u201cenquanto a pessoa condenada não cumprir\u201d a pena do impeditivo - pela conta, ela se "
+                                  "cumpre por volta de %s (sem interrupção nem remição); cumprida, o indulto do art. 5º para %s pode ser declarado "
+                                  "então. A leitura do programa exige a pena cumprida até 25/12/2022 - conferir." % (fmt(_fim22), crimes_curto(_liv22)))
+                    if _fim22 <= date.today():
+                        out["indulto_2022"] = ("A VERIFICAR (tese - art. 11, p. ú.): a pena dos impeditivos se cumpriu por volta de %s, depois de "
+                                               "25/12/2022; pela tese do \u201cenquanto não cumprir\u201d, art. 5º para %s" % (fmt(_fim22), crimes_curto(_liv22)))
+                        out["indulto_2022_status"] = "verificar"
             elif cump22 is not None and pena_imp:
                 # imputação do tempo cumprido primeiro à pena do impeditivo. O CP (arts. 69 e 76) manda executar a reclusão antes da
                 # detenção: com impeditivo de detenção e demais crimes de reclusão, a ordem legal põe o impeditivo por último - a
@@ -5912,7 +5963,13 @@ def _analise_decretos_modo(campos, crimes, eventos, incidentes, hoje, modo=None,
             else:
                 nao.append("VIII: exige regime aberto ou livramento (em %s)" % (regime or "?"))
             # IX
-            if aberto or lc or prd:
+            _ri_ab = [(c.get("regime_sentenca") or "").strip().upper() for c in ativos]
+            if ano == "2025" and aberto and not lc and not prd and _ri_ab and all(x and not x.startswith("ABERTO") for x in _ri_ab):
+                # (decisão de 11/11/2026) o Decreto 12.790/2025 exige o regime inicial aberto: com o regime da sentença fechado ou
+                # semiaberto no RSPE, o inciso não se aplica (antes ficava "?")
+                nao.append("IX: não se aplica - o Decreto 12.790/2025 exige o regime INICIAL aberto, e o RSPE registra regime inicial %s" % (
+                    " / ".join(sorted({x.lower() for x in _ri_ab}))))
+            elif aberto or lc or prd:
                 verificar.append("IX: %s - verificar %s em programa de egressos (patronato, escritório social)%s%s" % (
                     "PRD/sursis" if prd else "aberto/LC", "1 ano (2 anos, ½ pelo § 2º)" if meia else "2 anos", " e se o regime aberto é o inicial (Decreto 2025)" if (ano == "2025" and aberto and not lc and not prd) else "", obs_ab))
             else:
@@ -6142,8 +6199,11 @@ def _analise_decretos_modo(campos, crimes, eventos, incidentes, hoje, modo=None,
                         _rot.append("§ 2º, II a VI (metade do lapso)")
                     elif p.startswith("Art. 10"):
                         _rot.append("art. 10 (mulheres)")
-                inc = ", ".join(dict.fromkeys(_rot)) or "conferir"
-                out[k] = "A VERIFICAR: art. 9º, " + inc + (" | " + aviso if aviso else "")
+                # o indulto especial das mulheres é o art. 10, não um inciso do art. 9º: rótulo à parte
+                _r9 = [x for x in dict.fromkeys(_rot) if not x.startswith("art. 10")]
+                inc = "; ".join(x for x in (("art. 9º, " + ", ".join(_r9)) if _r9 else "", "art. 10 (mulheres)" if len(_r9) < len(set(_rot)) else "") if x) \
+                    or "art. 9º, conferir"
+                out[k] = "A VERIFICAR: " + inc + (" | " + aviso if aviso else "")
                 out[k + "_status"] = "verificar"
             elif cump_orig == "estouro":
                 # os eventos não servem e a âncora do SEEU fica abaixo deles: o "não atinge" pela âncora não se sustenta
@@ -6360,7 +6420,20 @@ def _analise_decretos_modo(campos, crimes, eventos, incidentes, hoje, modo=None,
                 return txt.replace("A VERIFICAR: ", "A VERIFICAR (tese: hediondez superveniente): ", 1)
             return txt
 
-        if not imped or (imp_sup and not imp_est):
+        # (revisão 11/2026) só hediondez posterior ao fato, em concurso com crime não impeditivo: se pela corrente do STJ (o critério
+        # principal: hediondez aferida na data do decreto) os 2/3 do impeditivo já estão cumpridos e há inciso de indulto para os
+        # demais crimes, o resultado é esse (art. 7º, p. ú.), com a tese registrada - "a verificar (tese)" só quando só a tese dá o
+        # benefício (antes, o caso com impeditivo certo saía "possível" e o de hediondez superveniente, "a verificar")
+        _stj_indulto = False
+        if imp_sup and not imp_est and livres:
+            _pi_s = soma_penas(imp_sup)
+            _ex_s = _dois_tercos(_pi_s)
+            if cumprido_imputavel_impeditivos(imp_sup, cumprido, periodos, remicoes, ref, periodos_lc)[0] >= _ex_s:
+                _cl_s = cumprido - _ex_s
+                _pl_s = _pena_cons(pena_total - _pi_s, livres, "a do impeditivo (%s)" % dias_para_pena(_pi_s))[0]
+                _stj_indulto = bool(avaliar(_pl_s, _cl_s, max(0, _pl_s - _cl_s), any(vga_indulto(c) for c in livres),
+                                            all(crime_patrimonial(c) for c in livres), livres)[0])
+        if not imped or (imp_sup and not imp_est and not _stj_indulto):
             # sem impeditivo, ou só hediondez posterior ao fato: análise da pena toda
             res = avaliar(pena_total, cumprido, remanescente, vga, patrimonial, ativos)
             concluir(*res[:3], pena_total, cumprido, remanescente, *res[3:], cump_fonte, crimes_c=ativos)
@@ -6408,6 +6481,11 @@ def _analise_decretos_modo(campos, crimes, eventos, incidentes, hoje, modo=None,
             nomes = crimes_curto(livres)
             out[k + "_imp"] = {"pena_imp": pena_imp, "exigido": exig, "fracao": "2/3", "cumprido_total": cumprido}
             cab = "Crime impeditivo: " + "; ".join(imped)
+            if _stj_indulto:
+                cab += ("\n⚠ Hediondez posterior ao fato (%s): pela corrente do STJ (hediondez aferida na data do decreto) o crime é impeditivo, "
+                        "e a análise segue o art. 7º, p. ú. - o resultado abaixo vale para os crimes não impeditivos. Pela tese da "
+                        "irretroatividade (STF, 2ª T., RHC 267.297 AgR e HC 273.296 AgR), ele não seria impeditivo e entraria na soma com os "
+                        "demais: conferir também por essa leitura, que pode alcançar a pena dele." % crimes_curto(imp_sup))
             # hediondez superveniente em concurso com impeditivo certo: pela tese da irretroatividade, os 2/3 incidem só sobre a pena
             # dos impeditivos certos (imp_est); se por ela o requisito estiver cumprido, o resultado é tese - A VERIFICAR, não vedado
             exig_t = _dois_tercos(soma_penas(imp_est)) if (imp_sup and imp_est) else None
@@ -6797,7 +6875,9 @@ def roubo_cp(c):
     return cp and num_art(c.get("artigo")) == "157"
 
 
-VGA_ELEMENTAR_CP = ("147", "157", "158", "159", "213")  # o art. 146 admite "qualquer outro meio": depende do campo VGA  # violência ou grave ameaça no próprio tipo
+# violência ou grave ameaça no próprio tipo; o art. 146 admite "qualquer outro meio": depende do campo VGA. (revisão 11/2026) arts.
+# 344 (coação no curso do processo: "usar de violência ou grave ameaça") e 352 (evasão "usando de violência contra a pessoa")
+VGA_ELEMENTAR_CP = ("147", "157", "158", "159", "213", "344", "352")
 
 
 def vga_elementar(c):
