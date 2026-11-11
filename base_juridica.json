@@ -265,7 +265,8 @@
   "trafico_art44_lei11343": "2/3, vedado ao reincidente especifico (Lei 11.343/06, art. 44, p. ú.: arts. 33, caput e § 1º, e 34 a 37; art. 33, §§ 2º, 3º e 4º fora)",
   "trafico_pessoas": "2/3 (CP, art. 83, V, na redação da Lei 13.344/2016, que também criou o art. 149-A)",
   "vedado_lc_lep112": "Vedado o livramento (LEP, art. 112): hediondo com morte primário (VI, a) e reincidente em hediondo com morte (VIII) desde 23/01/2020; feminicídio primário (VI-A) de 10/10/2024 a 24/03/2026; a partir de 25/03/2026 (Lei 15.358/2026): VI, a; VI, b (comando de organização criminosa ultraviolenta); VI, d (feminicídio primário) e VIII. A retroação do 50% sem a vedação é entendimento do STJ (Tema 1196, tese firmada; recurso extraordinário sobrestado até o julgamento do Tema 1319/STF); no STF é o Tema 1319, com repercussão geral reconhecida e mérito pendente.",
-  "art83_iii_b": "sem falta grave nos ultimos 12 meses",
+  "vedado_lc_lei_15358": "Lei 15.358/2026 (fatos desde 25/03/2026): os crimes do art. 2º (domínio social estruturado) são insuscetíveis de livramento condicional (art. 2º, § 4º, III), regra estendida ao art. 3º (favorecimento) pelo seu parágrafo único - a vedação é do tipo e não depende de marcação do RSPE.",
+ "art83_iii_b": "sem falta grave nos ultimos 12 meses",
   "pena_minima_anos": 2,
   "fonte": "CP, art. 83 (texto vigente conferido em 18/09/2026): I mais de 1/3 se não reincidente em crime doloso e bons antecedentes; II mais da metade se reincidente em crime doloso; III a) bom comportamento, b) sem falta grave nos últimos 12 meses; V mais de 2/3 para hediondo, tortura, tráfico, tráfico de pessoas e terrorismo, se não reincidente específico",
   "art88": "Revogado o livramento, não pode ser novamente concedido e o tempo solto não se desconta (salvo revogação por crime anterior ao benefício)"

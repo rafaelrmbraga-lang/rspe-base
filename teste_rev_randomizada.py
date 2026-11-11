@@ -249,6 +249,156 @@ _susp(91304, "10/06/2024", [C("ext_sit", "eq", "Extinção a verificar"), C("ext
 _susp(91305, "", [C("ext_sit", "eq", "Extinção cabível"), C("ext_hipoteses", "contem", "Súmula 617")],
       "Controle: livramento sem suspensão e período de prova expirado: extinção cabível")
 
+# ------------------------------------------------------------------ indulto e comutação
+def DEC(did, sit, tambem=None):
+    """Verificação do mapa de decretos (campo "dec"): situação do decreto `did` e, se dado, um trecho no mesmo registro."""
+    mesmo = r'(?:(?!"id": ").)*?'  # sem sair do registro do decreto
+    base = r'"id": "%s",%s"s": "%s"' % (did, mesmo, sit)
+    return C("dec", "regex", (base + mesmo + tambem + "|" + r'"id": "%s",%s%s%s"s": "%s"' % (did, mesmo, tambem, mesmo, sit)) if tambem else base)
+
+
+def ind(k, titulo, conta, crimes, ini, checks, incidentes=(), eventos=None, nasc="01/01/1980", sexo=None, tardia=True, **kw):
+    """Execução com custódia contínua desde `ini`. tardia: acrescenta uma condenação com sentença de 2022, que mantém a execução
+    ativa em 2026 e fica fora dos decretos até 2021 (sentença posterior à publicação)."""
+    cs = list(crimes)
+    if tardia:
+        cs.append(crime(proc_crim(k + 900, 2015), "ART 180: Receptação", anos(12), F(D(ini) - timedelta(days=200)), sentenca="01/06/2022",
+                        tipo="CAPUT: receptação, Reclusão: 1 a 4 anos E Multa", rc=crimes[0].get("reincidente_comum", "N")))
+    procs = ", ".join(c["processo_criminal"] for c in crimes)
+    r = rspe(k, cs, eventos or [prisao(ini, procs, "PRISÃO DEFINITIVA")], [inc(REG, "Fechado - Regime Inicial", "", ini)] + list(incidentes),
+             ini=ini, nasc=nasc, **kw)
+    casos.append(caso(k, "revisão randomizada", titulo, conta, r, checks, manuais={"sexo": sexo} if sexo else None))
+
+
+def _inc(tipo, compl, dec, ref, sit="CONCEDIDO"):
+    return {"tipo": tipo, "motivo": "", "complemento": compl, "data": "", "data_decisao": dec, "data_referencia": ref, "processos": "", "situacao": sit}
+
+
+ASSOC = dict(lei=DROGAS, tipo="CAPUT: associação para o tráfico, Reclusão: 3 a 10 anos E Multa")
+FURTO_Q = "§ 4º, I: furto qualificado, Reclusão: 2 a 8 anos E Multa"
+k = 91401
+ind(k, "Decreto 9.246/2017, associação para o tráfico (art. 35): impeditivo pelo art. 44 da Lei 11.343/06",
+    "Lei 11.343/06, art. 44: os crimes dos arts. 33, caput e § 1º, e 34 a 37 são insuscetíveis de indulto; STF, 2ª T., HC 191.462 AgR; STJ, AgRg no HC "
+    "464.605 - ainda que o art. 3º do decreto não liste o art. 35.",
+    [crime(proc_crim(k, 2015), "ART 35: Associação para o tráfico", anos(5), "10/01/2015", **ASSOC)], "16/12/2016",
+    [DEC("2017", "imp", "art. 44 da lei")])
+k = 91402
+ind(k, "Decreto 6.706/2008, associação para o tráfico (art. 35, fato de 2006): impeditivo",
+    "O mesmo art. 44 (fato a partir de 08/10/2006); a associação da Lei 6.368/76 não tem a vedação.",
+    [crime(proc_crim(k, 2006), "ART 35: Associação para o tráfico", anos(4), "10/11/2006", **ASSOC)], "10/11/2006", [DEC("2008", "imp")], tardia=False,
+    eventos=None)
+ECA_241B = dict(lei=ECA, tipo="CAPUT: Adquirir, possuir ou armazenar, Reclusão: 1 a 4 anos E Multa")
+k = 91403
+ind(k, "Decretos 2024/2025, ECA 241-B por fato de 2022: vedado pelo art. 1º, XIII, sem tese",
+    "Art. 1º, XIII (crimes dos arts. 239 a 244-B do ECA): veda pelo tipo; a tese da hediondez posterior ao fato só afasta o inciso I.",
+    [crime(proc_crim(k, 2022), "ART 241-B: Adquirir, possuir ou armazenar", anos(4), "10/03/2022", **ECA_241B)], "01/06/2023",
+    [C("ind24", "contem", "VEDADO"), C("ind25", "contem", "VEDADO"), C("com25", "contem", "VEDADA"), C("imp_full", "contem", "XIII"),
+     C("ind25", "nao_contem", "tese")], tardia=False)
+k = 91404
+ind(k, "Tráfico cadastrado como CAPUT com pena de 4 anos e 2 meses: a verificar em 2022 e 2023",
+    "A pena abaixo do mínimo do caput (5 anos) só se explica por causa de diminuição, em regra o § 4º, que não é impeditivo (STJ, Tema 1336): não se "
+    "afirma o impeditivo.",
+    [crime(proc_crim(k, 2021), "ART 33: Tráfico de drogas", anos(4, 2), "10/03/2021", lei=DROGAS, tipo=TRAF, fp="16% - Art.112, I, da LEP")], "01/08/2022",
+    [C("ind22", "contem", "A VERIFICAR"), DEC("2023", "ver"), C("ind22", "nao_contem", "excluíd")], tardia=False)
+k = 91405
+ind(k, "Controle: tráfico do caput com pena de 5 anos: impeditivo em 2022 e 2023",
+    "Lei 8.072/90, art. 2º, I; Decreto 11.302/2022, art. 7º, VI; Decreto 11.846/2023, art. 1º.",
+    [crime(proc_crim(k, 2021), "ART 33: Tráfico de drogas", anos(5), "10/03/2021", lei=DROGAS, tipo=TRAF, fp="40% - Hediondo Primário", fl="2/3 - Hediondo")],
+    "01/08/2022", [DEC("2023", "imp"), C("ind22", "nao_contem", "A VERIFICAR")], tardia=False)
+ROUBO2 = dict(tipo="§ 2º, II: concurso de pessoas, Reclusão: 4 a 10 anos E Multa", vga="S")
+k = 91406
+ind(k, "Decreto 9.246/2017, comutação a quem já teve a de 2015: não cabe (art. 7º, p. ú.)",
+    "Art. 7º, p. ú.: a comutação é concedida a quem não obteve as de decretos anteriores (STJ, AgRg no HC 493.716 e AgRg no HC 944.626).",
+    [crime(proc_crim(k, 2012), "ART 157: Roubo", anos(12), "10/01/2012", **ROUBO2)], "20/05/2014", [DEC("2017", "nao")],
+    incidentes=[_inc("COMUTAÇÃO", "DECRETO Nº 8.615, DE 23 DE DEZEMBRO DE 2015", "26/05/2016", "25/12/2015")])
+k = 91407
+ind(k, "Controle: o mesmo, sem comutação anterior: cabe a comutação de 2017",
+    "Art. 7º, I: 1/4 cumprido (primário), comutação de 1/3.",
+    [crime(proc_crim(k, 2012), "ART 157: Roubo", anos(12), "10/01/2012", **ROUBO2)], "20/05/2014", [DEC("2017", "cabe", '"beneficio": "Comutação"')])
+for k, dt, chk in [(91408, "10/03/2020", DEC("2017", "ver", "indulto indeferido no RSPE em 10/03/2020")),
+                   (91409, "10/05/2018", DEC("2017", "cabe", "cautelar da ADI 5874"))]:
+    ind(k, "Decreto 9.246/2017, indulto indeferido no RSPE em %s: %s" % (
+            dt, "prevalece o indeferimento (resta a comutação, a verificar)" if dt.endswith("2020") else "renovável (ADI 5.874)"),
+        "A cautelar da ADI 5.874 valeu de 28/12/2017 a 09/05/2019: só o indeferimento decidido nesse período pode ter se apoiado nela.",
+        [crime(proc_crim(k, 2015), "ART 155: Furto", anos(4), "10/01/2015", tipo=FURTO_Q)], "20/12/2016", [chk],
+        incidentes=[_inc("INDULTO", "DECRETO Nº 9.246, DE 21 DE DEZEMBRO DE 2017", dt, dt, sit="NÃO CONCEDIDO")])
+k = 91410
+ind(k, "Decreto 8.940/2016, 71 anos em 25/12/2016, furto de 6 anos com 1/6 cumprido: cabe (art. 3º, II)",
+    "Art. 1º, § 1º, II (maiores de 70 anos de idade) c/c art. 3º, II: 1/6 da pena - a idade se decide pela data de nascimento.",
+    [crime(proc_crim(k, 2015), "ART 155: Furto", anos(6), "10/01/2015", tipo=FURTO_Q)], "07/12/2015", [DEC("2016", "cabe", '"beneficio": "Indulto"')],
+    nasc="10/10/1945")
+k = 91411
+ind(k, "Controle: 69 anos em 25/12/2016: não cabe pelo art. 3º, II",
+    "Sem os 70 anos, vale o art. 3º, I (1/4).", [crime(proc_crim(k, 2015), "ART 155: Furto", anos(6), "10/01/2015", tipo=FURTO_Q)], "07/12/2015",
+    [DEC("2016", "nao")], nasc="10/10/1947")
+k = 91412
+ind(k, "Dia das Mães 2018, mulher de 60 anos, furto de 6 anos com 1/6 cumprido: cabe (art. 1º, II, c)",
+    "Decreto 9.370/2018, art. 1º, II, c: 60 anos ou mais, ou menos de 21, com 1/6 da pena - idade pela data de nascimento.",
+    [crime(proc_crim(k, 2015), "ART 155: Furto", anos(6), "10/01/2015", tipo=FURTO_Q)], "14/05/2017", [DEC("2018_maes", "cabe", '"beneficio": "Indulto"')],
+    nasc="10/10/1957", sexo="F")
+
+
+def _p42(k):  # 42 anos em 6 condenações sem violência, fatos de 1987
+    return [crime(proc_crim(k * 10 + n, 1987), art, anos(p), "%02d/11/1987" % (n + 1), tipo=tp, sentenca="10/05/1988")
+            for n, (art, tp, p) in enumerate([("ART 155: Furto", FURTO_Q, 8)] * 4 + [("ART 171: Estelionato", "CAPUT: estelionato, Reclusão: 1 a 5 anos E Multa", 5)] * 2, 1)]
+
+
+_reg = lambda nome, d: inc(REG, nome, d, d)
+k = 91413
+ind(k, "Decreto 5.620/2005: 16 anos seguidos em fechado/semiaberto e aberto desde 26/10/2005: cabe o indulto (art. 1º, III)",
+    "Art. 1º, III: \"tenha cumprido, em regime fechado ou semi-aberto, ininterruptamente, quinze anos da pena\" - o regime qualifica o tempo, não o dia 25/12.",
+    _p42(k), "01/03/1989", [DEC("2005", "cabe", '"beneficio": "Indulto"')], tardia=False, nasc="05/05/1960",
+    incidentes=[_reg("Semiaberto - Progressão de regime", "10/05/1999"), _reg("Aberto - Progressão de regime", "26/10/2005")])
+k = 91414
+ind(k, "Decreto 5.295/2004: 16 anos de custódia, 6 deles no aberto (1994 a 2000): não cabe o inciso III",
+    "O tempo no regime aberto não conta nem deixa os 15 anos seguidos em fechado/semiaberto; resta a comutação.",
+    _p42(k), "01/03/1988", [DEC("2004", "cabe", '"beneficio": "Comutação"')], tardia=False, nasc="05/05/1960",
+    incidentes=[_reg("Semiaberto - Progressão de regime", "01/03/1992"), _reg("Aberto - Progressão de regime", "01/03/1994"),
+                _reg("Fechado - Regressão de regime", "01/03/2000")])
+k = 91415
+ind(k, "Decreto 3.667/2000: progressão ao aberto em 31/12/1999, sem regressão: cabe o indulto (art. 1º, VII)",
+    "Art. 1º, VII: \"condenado que tenha obtido progressão a regime aberto até 31 de dezembro de 1999, sem que tenha havido posterior regressão\".",
+    _p42(k)[:4], "01/03/1989", [DEC("2000", "cabe", '"dispositivo": "art. 1º, VII"')], tardia=False, nasc="01/01/1950",
+    incidentes=[_reg("Semiaberto - Progressão de regime", "01/03/1994"), _reg("Aberto - Progressão de regime", "31/12/1999")])
+k = 91416
+p = proc_crim(k, 1999)
+ind(k, "Decreto 4.011/2001, roubo do art. 157, § 2º, I (emprego de arma): a verificar, não impeditivo certo",
+    "Art. 10, III: veda o \"roubo qualificado com o emprego de arma de fogo\"; o § 2º, I, alcançava qualquer arma - o RSPE não diz qual.",
+    [crime(p, "ART 157: Roubo", anos(6), "10/03/1999", tipo="§ 2º, I: se a violência ou ameaça é exercida com emprego de arma, Reclusão: 4 a 10 anos E Multa", vga="S")],
+    "10/03/1999", [DEC("2001", "ver", "arma de FOGO"), DEC("2000", "imp")], tardia=False, nasc="05/05/1960", interrompidos=(D("01/10/2026") - D("01/02/2004")).days - 1,
+    eventos=[prisao("10/03/1999", p, "PRISÃO DEFINITIVA"), interr("01/02/2004", "FUGA", p), prisao("01/10/2026", p, "RECAPTURA/REINÍCIO DE CUMPRIMENTO")])
+k = 91417
+ind(k, "Decreto 10.913/2021, homicídio simples: impeditivo (art. 4º, II - crime com violência)",
+    "Art. 4º, II: o indulto não abrange os crimes praticados mediante grave ameaça ou violência contra a pessoa.",
+    [crime(proc_crim(k, 2018), "ART 121: Homicídio", anos(8), "10/01/2018", tipo="CAPUT: Matar alguém, Reclusão: 6 a 20 anos", vga="S", morte="S")],
+    "20/12/2018", [C("dec", "regex", r'"id": "2021"(?:(?!"id": ").)*?grave amea')])
+for k, art, tipo in [(91418, "ART 344: Coação no curso do processo", "CAPUT: Usar de violência ou grave ameaça, Reclusão: 1 a 4 anos E Multa"),
+                     (91419, "ART 352: Evasão mediante violência contra a pessoa", "CAPUT: Evadir-se usando de violência contra a pessoa, Detenção: 3 meses a 1 ano")]:
+    ind(k, "Decreto 11.302/2022, %s com o campo VGA \"N\": excluído pelo art. 7º, II" % art.split(":")[0].lower(),
+        "A violência ou grave ameaça é elementar do tipo: prevalece sobre a marcação do SEEU.",
+        [crime(proc_crim(k, 2021), art, anos(1), "10/03/2021", tipo=tipo, vga="N")], "01/08/2022", [C("i22", "contem", "Vedado")], tardia=False)
+k = 91420
+ind(k, "Decreto 11.846/2023, art. 218-C do CP: a verificar (vítima mulher?)",
+    "Art. 1º, XIV: crimes de violência contra a mulher da Lei 13.718/2018 (arts. 215-A e 218-C do CP) - a vedação depende da vítima.",
+    [crime(proc_crim(k, 2021), "ART 218-C: Divulgação de cena de estupro", anos(3), "10/03/2021", tipo="CAPUT: Oferecer, trocar, disponibilizar, Reclusão: 1 a 5 anos"),
+     crime(proc_crim(k + 500, 2021), "ART 297: Falsificação de documento público", anos(3), "10/03/2021", tipo="CAPUT: Falsificar documento público, Reclusão: 2 a 6 anos E Multa")],
+    "25/02/2022", [DEC("2023", "ver", "confirmar se a v")], tardia=False)
+k = 91421
+ind(k, "Decreto 11.302/2022, pena aplicada (5 anos) acima do máximo do tipo cadastrado (4 anos): a verificar",
+    "A causa de aumento integra a pena máxima em abstrato do art. 5º (STJ, AgRg nos EDcl no RHC 201.341): o máximo lido do tipo não é seguro.",
+    [crime(proc_crim(k, 2021), "ART 14: Porte ilegal de arma de fogo de uso permitido", anos(5), "10/03/2021", lei="10826/03 - Estatuto do Desarmamento",
+           tipo="CAPUT: Portar arma de fogo de uso permitido, Reclusão: 2 a 4 anos E Multa")], "01/08/2022",
+    [C("i22", "eq", "Verificar"), C("det22", "contem", "acima do máximo do tipo cadastrado")], tardia=False)
+ROUBO_V = "§ 2º, V: se o agente mantém a vítima em seu poder, restringindo sua liberdade, Reclusão: 4 a 10 anos E Multa"
+FALSO = "CAPUT: Falsificar documento público, Reclusão: 2 a 6 anos E Multa"
+k = 91422
+ind(k, "Decretos 2024/2025: roubo com restrição de liberdade de 2017 (hediondez posterior) + falso, 2/3 do roubo cumpridos: possível pelo art. 7º, p. ú.",
+    "Pela corrente do STJ o roubo é impeditivo; cumpridos 2/3 da pena dele (4 de 6 anos), o falso é indultável pelo art. 9º, II - resultado firme, com a "
+    "tese da irretroatividade registrada.",
+    [crime(proc_crim(k, 2017), "ART 157: Roubo", anos(6), "01/05/2017", tipo=ROUBO_V, vga="S", sentenca="01/11/2017", transito="01/02/2018"),
+     crime(proc_crim(k + 500, 2017), "ART 297: Falsificação de documento público", anos(4), "01/05/2017", tipo=FALSO, sentenca="01/11/2017", transito="01/02/2018")],
+    "01/06/2018", [C("ind25", "contem", "POSSÍVEL (crimes não impeditivos"), C("det25", "contem", "irretroatividade")], tardia=False)
+
 # ------------------------------------------------------------------ execução
 tmp = tempfile.mkdtemp()
 arq = os.path.join(tmp, "casos_rev_randomizada.json")
