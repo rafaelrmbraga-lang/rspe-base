@@ -1334,7 +1334,8 @@ const ui = {
   // "sem pedido no RSPE - requerer" não aparece na coluna (decisão de 27/10/2026); continua no relatório e na dica
   SEM_CMP:['sem pedido no RSPE - requerer'],
   sitHtml(txt,cor){ const [p,...resto]=String(txt||'').split(' · '); const r=resto.filter(x=>!this.SEM_CMP.includes(x.trim()));
-    return `<span class="pill sitb ${cor||'none'}">${esc(p)}</span>${r.length?`<span class="cmp2">${esc(r.join(' · '))}</span>`:''}`; },
+    // o complemento (ex.: "verificar criminológico, indeferimento ou falta") fica na ficha do assistido; na lista, só ao passar o mouse
+    return `<span class="pill sitb ${cor||'none'}"${r.length?` title="${esc(r.join(' · '))}"`:''}>${esc(p)}</span>`; },
   // situação depois da providência: pedido marcado (Progressão, Livramento, Prescrição, Extinção, Ficha) ou todos os itens da ficha
   // conferidos. Pedido cuja situação mudou depois: amarelo "situação mudou depois" em todas as abas, salvo prazo vencido (vermelho), que
   // continua vermelho; a mesma cor vale para a linha, os cartões e o contador da aba (contaCor usa ui.cor)
@@ -1427,7 +1428,8 @@ const ui = {
         else if(c[0]==='falta'){ v = r.falta_sim ? `<span class="falta">Sim</span>` : (r.falta_apurar ? `<span class="apurar">A apurar</span>` : `<span class="muted">${esc(v)}</span>`);
           if((r.faltas_itens||[]).length) v=`<span class="fedit" title="Ver e decidir as faltas (vale em todas as abas)" onclick="event.stopPropagation();ui.faltasModal(${jsa(r.id)})">${v} <span class="fe">✎</span></span>`; }
         else { const m_=/^([^()]{1,40}?)\s+\((.{12,})\)\s*$/.exec(String(v));
-          v = m_ ? `<span class="cel2" title="${esc(v)}">${esc(m_[1])}<span class="cel2-sub">${esc(m_[2])}</span></span>`
+          // a explicação entre parênteses fica na ficha do assistido; na lista, só o valor (o texto inteiro ao passar o mouse)
+          v = m_ ? `<span title="${esc(v)}">${esc(m_[1])}</span>`
                  : esc(v).replace('(est.)','<span class="est">(est.)</span>'); if(!v) v='<span class="muted">—</span>'; }
         if(i===0 && spec.expansivel) v=`<span class="chev">▶</span>${v}`;
         return `<td class="${i===0?'first':''} ${NW.has(c[0])?'nw':''} ${pk&&spec.id==='ind'?'pl':''} c-${c[0]}" title="${esc(String(r[c[0]+'_full']??r[c[0]]??''))}">${v}</td>`; }).join('');
