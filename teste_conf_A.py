@@ -204,7 +204,8 @@ ok(pf and pf["antigas"] == rv._soma_pena(d("05/02/2016"), rs.pena_para_dias("5a0
 ok(rv.termino_calc(r) == rv._soma_pena(d("15/12/2024"), rs.pena_para_dias("2a6m0d")) - timedelta(days=1),
    "6: a pena nova corre do fato: %s" % rv.termino_calc(r))
 ex = rv.extincao(r, {"presc_linhas": []}, False)
-ok("extinção parcial" in ex["ext_hipoteses"] and ex["ext_cor"] == "amarelo", "6: extinção parcial das penas antigas: %s" % ex["ext_hipoteses"])
+# (decisão de 11/11/2026) o programa não calcula o término: sem previsão no RSPE, a aba Extinção não afirma nem sugere a extinção parcial
+ok("extinção parcial" not in ex["ext_hipoteses"] and ex["ext_cor"] != "amarelo", "6: sem término do SEEU, nada de extinção parcial calculada: %s" % ex["ext_hipoteses"])
 
 # ---------------- 7: soma das penas por componente (como o SEEU) ----------------
 cr = [crime(P1, pena="8 ano(s), 10 mês(es) e 20 dia(s)"), crime(P2, pena="5 ano(s), 4 mês(es) e 0 dia(s)"),

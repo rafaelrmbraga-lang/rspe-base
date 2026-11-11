@@ -511,11 +511,12 @@ cb = cr(k, FURTO, anos(1), "01/06/2019", n=2, ano=2019, sentenca="01/03/2020", t
 dt = dias("10/01/2020", "20/08/2021")
 r = rspe(k, [ca, cb], [prisao("10/01/2020", ca["processo_criminal"]), interr("20/08/2021", "LIBERDADE PROVISÓRIA")], regime="Aberto - ATIVO")
 add(k, "Extinção", "Detração que cobre a pena de um processo, mas outra condenação tem fato anterior à prisão: a mesma custódia pode servir às duas",
-    "Extinção a verificar, amarelo (detração não exclusiva); não 'Extinção cabível'",
-    "Detração não exclusiva - a verificar", "Prisão de 10/01/2020 a 20/08/2021 = %d d, lançada na ação A (pena 1 ano). A ação B (pena 1 ano) tem fato de "
+    "Em cumprimento, com a observação da detração (decisão de 11/11/2026: na execução unificada, a hipótese de um crime não muda a situação); não 'Extinção cabível'",
+    "Detração não exclusiva - só observação", "Prisão de 10/01/2020 a 20/08/2021 = %d d, lançada na ação A (pena 1 ano). A ação B (pena 1 ano) tem fato de "
     "01/06/2019, anterior à prisão, e transitou em 01/05/2020, durante ela: o tempo pode ser imputado a B (CP, art. 42; LEP, art. 111). Pena unificada "
-    "730 d > %d: não se pode afirmar a extinção de A isoladamente - a verificar." % (dt, dt), r,
-    [C("ext_sit", "eq", "Extinção a verificar"), C("ext_cor", "eq", "amarelo")])
+    "730 d > %d: não se pode afirmar a extinção de A isoladamente; com a execução unificada e outra pena ativa, a hipótese fica como observação "
+    "e a situação segue o término do SEEU (decisão do defensor de 11/11/2026)." % (dt, dt), r,
+    [C("ext_sit", "nao_contem", "Extinção"), C("ext_hipoteses", "regex", "custódia anterior ao trânsito")])
 
 k = 8046
 c = cr(k, FURTOQ, anos(2), "01/03/2019", sentenca="01/10/2019", transito="01/12/2019")
@@ -645,11 +646,11 @@ k = 8056
 c = cr(k, ROUBO, anos(5, 4), "01/01/2022", sentenca="01/08/2022", transito="01/10/2022")
 r = rspe(k, [c], [prisao("02/10/2022", c["processo_criminal"], "PRISÃO DEFINITIVA")],
          [inc(REG, "Fechado - Regime Inicial", "02/10/2022", "02/10/2022")], ini="02/10/2022", term="")
-add(k, "Extinção", "Sem término impresso: o programa calcula o término (data do RSPE + remanescente) e marca com asterisco",
-    "Término calculado com asterisco, posterior a 31/03/2027; situação 'Em cumprimento'; sem hipótese de extinção",
-    "Término calculado pelo programa", "Pena 5a4m (1.945 d), presa desde 02/10/2022; RSPE de 05/10/2026 sem término. Remanescente impressa = pena - cumprida. "
-    "Término = data do RSPE + remanescente (somada como no SEEU) -> por volta de 01/2028, com asterisco: 'Em cumprimento'.", r,
-    [C("ext_termino", "regex", r"\*"), C("ext_sit", "eq", "Em cumprimento"), C("ext_hipoteses", "nao_contem", "xtin")])
+add(k, "Extinção", "Sem término impresso: o programa não calcula o término (decisão de 11/11/2026) - fica sem previsão",
+    "Sem término (nada calculado, sem asterisco); situação 'Em cumprimento'; sem hipótese de extinção",
+    "Término não calculado", "Pena 5a4m (1.945 d), presa desde 02/10/2022; RSPE de 05/10/2026 sem término. O término pode faltar por sursis ou por a "
+    "pena não estar em cumprimento: o programa não o estima (decisão do defensor de 11/11/2026) - a coluna fica sem data e a situação é 'Em cumprimento'.", r,
+    [C("ext_termino", "nao_contem", "*"), C("ext_sit", "eq", "Em cumprimento"), C("ext_hipoteses", "nao_contem", "xtin")])
 
 
 # ---- achados: divergências mantidas (o gabarito segue a lei; nota explica) ------------------------------------------------
