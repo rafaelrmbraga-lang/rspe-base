@@ -162,8 +162,9 @@ def to_date(s):
     # sem strptime: é chamada centenas de milhares de vezes ao abrir a base
     try:
         m = _RE_DATA_BR.match(s.strip())
-        # ano fora de 1900-2100: lixo de leitura (01/01/0001, 99/99/9999) - ignorado, para não estourar as contas de datas
-        return date(int(m.group(4)), int(m.group(3)), int(m.group(1))) if (m and 1900 <= int(m.group(4)) <= 2100) else None
+        # ano fora de 1900-2999: lixo de leitura (01/01/0001, 31/12/9999) - ignorado, para não estourar as contas de datas. O teto
+        # não pode ser 2100: penas somadas de mais de 75 anos têm o término impresso pelo SEEU depois disso (e são as do art. 75 do CP)
+        return date(int(m.group(4)), int(m.group(3)), int(m.group(1))) if (m and 1900 <= int(m.group(4)) <= 2999) else None
     except Exception:
         return None
 
@@ -1267,6 +1268,10 @@ def hediondo_pu(c, h=None):
             return (True, "") if regra[art] == "sempre" else (None, "art. 1º, p. ú., Lei 8.072/90: " + regra[art])
         return False, ""
     if isinstance(regra, list):
+        if lei == "8069" and art == "241-B" and pi and pi[0] == "4":
+            # o p. ú., VII, na redação da Lei 15.487/2026, refere só o caput do art. 241-B; o § 4º (acessar ou visualizar) foi
+            # criado pela mesma lei e ficou fora do rol
+            return False, "art. 1º, p. ú., VII, Lei 8.072/90: do art. 241-B do ECA, hediondo só o caput (o § 4º, criado pela Lei 15.487/2026, não consta do rol)"
         for a_, pars in _itens_pu(regra):
             if a_ != art:
                 continue
