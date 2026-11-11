@@ -1197,6 +1197,14 @@ select,textarea{font-family:inherit}
 td.act{white-space:nowrap}
 .dc-main .card,.dc-main table{border-radius:0}
 .dctab td.dact{white-space:nowrap!important}.dctab td.dact>*{vertical-align:middle}.dctab td.dact .mini.dbtn{margin-right:6px}
+
+/* alinhamento das colunas: título e conteúdo juntos - valores curtos centralizados; nome e textos longos (motivo) à esquerda */
+.card tbody tr:not(.grp) td{text-align:center}
+.card thead th:first-child,.card tbody tr:not(.grp) td.first,.card tbody tr:not(.grp) td:first-child{text-align:left!important}
+.card tbody tr.grp td{text-align:left}
+.dctab thead th:nth-child(4),.dctab td.dmot{text-align:left!important}
+.dctab td.dresb .dres{display:inline-block;text-align:center}
+.card tbody td .nmc{justify-content:flex-start}
 </style>
 </head>
 <body>
