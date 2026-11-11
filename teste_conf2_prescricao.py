@@ -92,8 +92,8 @@ pres = rp.analisar(reg(cr, eventos), HOJE)
 l = next(x for x in pres["presc_linhas"] if x["proc_crim"] == P1)
 confere(l.get("ppe_saldo_zero_crit"), "2: critério que zera o saldo registrado: %s" % l.get("ppe_saldo_zero_crit"))
 ext = rv.extincao(reg(cr, eventos), pres, None)
-confere(ext["ext_cor"] == "amarelo" and "ação penal %s): a verificar - pelo" % P1 in ext["ext_hipoteses"]
-        and "já esgotava a pena deste crime (saldo zero)" in ext["ext_hipoteses"], "2: tese do saldo zero na aba Extinção: %s" % ext)
+# (decisão de 11/11/2026) execução unificada: a tese do saldo zero de um crime fica como observação, sem mudar a situação da execução
+confere(ext["ext_cor"] != "amarelo" and "já esgotava a pena deste crime (saldo zero)" in ext["ext_hipoteses"], "2: tese do saldo zero na aba Extinção: %s" % ext)
 confere("ação penal %s): a verificar - pelo" % P2 not in ext["ext_hipoteses"], "2: sem a tese para a condenação com saldo: %s" % ext)
 # condenação sem trânsito, por fato anterior à fuga, com pena que absorve o tempo: a tese não se sustenta
 cr2 = cr + [crime("01/01/2016", "", "7 ano(s), 0 mês(es) e 0 dia(s)", proc=P3, artigo="ART 157: Roubo", tipo="CAPUT: Reclusão: 4 a 10 anos E Multa")]

@@ -4456,8 +4456,8 @@
   "acoes": [],
   "id": "S8045",
   "grupo": "D-extinção",
-  "titulo": "Detração não exclusiva - a verificar",
-  "conta": "Prisão de 10/01/2020 a 20/08/2021 = 589 d, lançada na ação A (pena 1 ano). A ação B (pena 1 ano) tem fato de 01/06/2019, anterior à prisão, e transitou em 01/05/2020, durante ela: o tempo pode ser imputado a B (CP, art. 42; LEP, art. 111). Pena unificada 730 d > 589: não se pode afirmar a extinção de A isoladamente - a verificar.",
+  "titulo": "Detração não exclusiva - só observação",
+  "conta": "Prisão de 10/01/2020 a 20/08/2021 = 589 d, lançada na ação A (pena 1 ano). A ação B (pena 1 ano) tem fato de 01/06/2019, anterior à prisão, e transitou em 01/05/2020, durante ela: o tempo pode ser imputado a B (CP, art. 42; LEP, art. 111). Pena unificada 730 d > 589: não se pode afirmar a extinção de A isoladamente; com a execução unificada e outra pena ativa, a hipótese fica como observação e a situação segue o término do SEEU (decisão do defensor de 11/11/2026).",
   "processo": "9908045-00.2026.8.12.0001",
   "rspe": {
    "arquivo": "SIMULADO_8045.pdf",
@@ -4573,21 +4573,21 @@
    {
     "t": "campo",
     "campo": "ext_sit",
-    "op": "eq",
-    "v": "Extinção a verificar",
+    "op": "nao_contem",
+    "v": "Extinção",
     "nota": ""
    },
    {
     "t": "campo",
-    "campo": "ext_cor",
-    "op": "eq",
-    "v": "amarelo",
+    "campo": "ext_hipoteses",
+    "op": "regex",
+    "v": "custódia anterior ao trânsito",
     "nota": ""
    }
   ],
   "aba": "Extinção",
   "situacao": "Detração que cobre a pena de um processo, mas outra condenação tem fato anterior à prisão: a mesma custódia pode servir às duas",
-  "esperado": "Extinção a verificar, amarelo (detração não exclusiva); não 'Extinção cabível'"
+  "esperado": "Em cumprimento, com a observação da detração (decisão de 11/11/2026: na execução unificada, a hipótese de um crime não muda a situação); não 'Extinção cabível'"
  },
  {
   "acoes": [],
@@ -5907,8 +5907,8 @@
   "acoes": [],
   "id": "S8056",
   "grupo": "D-extinção",
-  "titulo": "Término calculado pelo programa",
-  "conta": "Pena 5a4m (1.945 d), presa desde 02/10/2022; RSPE de 05/10/2026 sem término. Remanescente impressa = pena - cumprida. Término = data do RSPE + remanescente (somada como no SEEU) -> por volta de 01/2028, com asterisco: 'Em cumprimento'.",
+  "titulo": "Término não calculado",
+  "conta": "Pena 5a4m (1.945 d), presa desde 02/10/2022; RSPE de 05/10/2026 sem término. O término pode faltar por sursis ou por a pena não estar em cumprimento: o programa não o estima (decisão do defensor de 11/11/2026) - a coluna fica sem data e a situação é 'Em cumprimento'.",
   "processo": "9908056-00.2026.8.12.0001",
   "rspe": {
    "arquivo": "SIMULADO_8056.pdf",
@@ -6000,8 +6000,8 @@
    {
     "t": "campo",
     "campo": "ext_termino",
-    "op": "regex",
-    "v": "\\*",
+    "op": "nao_contem",
+    "v": "*",
     "nota": ""
    },
    {
@@ -6020,7 +6020,7 @@
    }
   ],
   "aba": "Extinção",
-  "situacao": "Sem término impresso: o programa calcula o término (data do RSPE + remanescente) e marca com asterisco",
-  "esperado": "Término calculado com asterisco, posterior a 31/03/2027; situação 'Em cumprimento'; sem hipótese de extinção"
+  "situacao": "Sem término impresso: o programa não calcula o término (decisão de 11/11/2026) - fica sem previsão",
+  "esperado": "Sem término (nada calculado, sem asterisco); situação 'Em cumprimento'; sem hipótese de extinção"
  }
 ]

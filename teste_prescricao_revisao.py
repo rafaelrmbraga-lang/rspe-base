@@ -53,8 +53,9 @@ r = reg([crime("11/04/2021", "23/04/2025", "0 ano(s), 1 mês(es) e 26 dia(s)", a
 # o dia da prisão conta (CP, art. 10): 29/04/2025 + 1m26d - 1 dia = 23/06/2025
 confere(rv.termino_calc(r) == date(2025, 6, 23), "A1: término com a custódia deveria ser 23/06/2025: %s" % rv.termino_calc(r))
 ex = rv.extincao(r, rp.analisar(r, HOJE), False)
-confere(ex["ext_cor"] == "amarelo" and ex["ext_sit"] == "Extinção a verificar" and "LEP, art. 66, II" in ex["ext_hipoteses"]
-        and "outro" in ex["ext_hipoteses"], "A1: extinção pelo cumprimento a verificar: %s" % ex)
+# (decisão de 11/11/2026) o programa não calcula o término: sem previsão no SEEU, a aba Extinção não afirma a extinção pela custódia
+confere(ex["ext_cor"] != "amarelo" and ex["ext_sit"] != "Extinção a verificar" and "término calculado" not in ex["ext_hipoteses"],
+        "A1: sem término do SEEU, nada de extinção pelo término calculado: %s" % ex)
 
 # A2: término pelo calendário (anos e meses, depois dias), como o SEEU
 r = reg([crime("01/01/2023", "01/06/2024", "3 ano(s), 1 mês(es) e 10 dia(s)")], [ev("01/06/2024", "PRISÃO DEFINITIVA")],

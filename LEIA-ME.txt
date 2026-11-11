@@ -1,9 +1,9 @@
-APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.16.4
+APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.17.0
 (antigo RSPE Base; SEEU, programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-7.16.4. A documentação técnica completa (cada parâmetro, a regra, a norma e
+7.17.0. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -291,7 +291,9 @@ ABAS (colunas)
   Extinção     Nome, Nº, Término, Situação. Só a extinção pelo cumprimento:
                pena integralmente cumprida ou término alcançado, período de
                prova do livramento expirado sem revogação, detração que
-               alcança toda a pena do crime. Prescrição e indulto ficam nas
+               alcança toda a pena do crime. O término é o do SEEU: quando
+               o SEEU não traz (sursis, pena não iniciada), o programa não
+               o calcula. Prescrição e indulto ficam nas
                próprias abas. A multa cominada aparece na ficha do assistido
                (o inadimplemento não obsta a extinção ante a alegada
                hipossuficiência - STJ, Tema 931, tese revista).
@@ -1103,6 +1105,25 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v7.17.0
+  Visual mais suave em todas as abas, aprovado aba por aba, e correção na
+  aba Extinção.
+  - Fonte padrão: Source Sans 3, embutida no programa (antes, Arial).
+    Títulos em seminegrito, títulos das colunas centralizados.
+  - Progressão: a coluna mostra só o valor; a explicação entre parênteses
+    aparece ao passar o mouse e continua na ficha. A linha amarela abaixo
+    da situação saiu (está na ficha).
+  - Indulto, Extinção, Auditoria, Dados prisionais, Jurisprudências
+    (Pesquisa e Monitor): seleção discreta (fundo branco com barra verde),
+    cartões arredondados, contadores e botões em tons claros, etiquetas
+    em pílula. Na Auditoria, o topo do assistido aberto não repete o nome
+    e "Abrir ficha completa" fica na linha das outras opções.
+  - Extinção: o programa não calcula mais o término quando o SEEU não o
+    traz (sursis, pena não iniciada): antes aparecia um término estimado
+    (*), às vezes anos à frente e marcado "a verificar". A hipótese de
+    custódia que alcança a pena só fica "a verificar" quando não há outra
+    pena em execução.
 
 v7.16.4
   Indulto: pontos abertos do relatório técnico-jurídico do indulto (todos

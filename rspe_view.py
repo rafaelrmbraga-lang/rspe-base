@@ -1217,9 +1217,9 @@ def extincao(r, presc, interr):
     if cump is None and pt and rs.pena_para_dias(r.get("pena_remanescente")) is not None:
         cump = max(0, pt - rs.pena_para_dias(r.get("pena_remanescente")))  # pena cumprida = total - remanescente
     term = rs.to_date(r.get("termino_previsao_seeu") or "")
+    # (decisão de 11/11/2026) o programa não calcula o término: sem previsão no RSPE (sursis, pena que não está em cumprimento,
+    # guia sem cálculo), a aba mostra só que o SEEU não traz a previsão
     term_calc = False
-    if not term and termino_calc(r):
-        term, term_calc = termino_calc(r), True
     # término calculado sobre a custódia (o SEEU não fez o cálculo): já alcançado, é hipótese a verificar - a custódia da
     # ficha ou sem processo indicado pode ser de outro processo
     cust = custodia_sem_calculo(r) if term_calc else None
@@ -1365,7 +1365,6 @@ def extincao(r, presc, interr):
                        "declarar a extinção desta pena (LEP, arts. 66, II, e 111)" % (
                            l.get("rotulo") or l["crime"], rs.dias_para_pena(l.get("ppe_detracao_dias") or 0), l.get("ppe_pena_processo") or l["pena"],
                            rs.crimes_curto(_outras_atv)))
-            a_verificar = True
         elif l.get("ppe_detracao_cobre") and l.get("ppe_detracao_exclusiva"):
             hip.append("%s: custódia anterior ao trânsito de %s iguala ou supera a pena do processo (%s), e nenhuma outra condenação do RSPE tem "
                        "fato anterior a essa prisão - a detração só pode ser imputada a este processo: extinção pelo cumprimento (CP, art. 42; "
@@ -1374,7 +1373,7 @@ def extincao(r, presc, interr):
         elif l.get("ppe_detracao_cobre"):
             hip.append("%s: a verificar - custódia anterior ao trânsito de %s iguala ou supera a pena do processo (%s); se computada nesta "
                        "condenação, extinção pelo cumprimento (CP, art. 42; LEP, arts. 66, II, e 111)" % (l.get("rotulo") or l["crime"], rs.dias_para_pena(l.get("ppe_detracao_dias") or 0), l.get("ppe_pena_processo") or l["pena"]))
-            a_verificar = True
+            a_verificar = a_verificar or not _outras_atv  # (11/11/2026) com outras penas ativas, só observação
         if l.get("ppe_saldo_zero_crit") and not l.get("ppe_saldo_zero"):
             # várias condenações na fuga: por algum critério de imputação do tempo cumprido, a pena deste crime já estava cumprida
             _z = l["ppe_saldo_zero_crit"]
@@ -1382,7 +1381,7 @@ def extincao(r, presc, interr):
                        "Conferir o saldo no cálculo do SEEU e, se confirmado, pedir a extinção pelo cumprimento (LEP, art. 66, II)" % (
                            l.get("rotulo") or l["crime"], "os critérios" if " e " in _z["criterios"] else "o critério", _z["criterios"],
                            _z.get("evento") or "fuga", _z["fuga"]))
-            a_verificar = True
+            a_verificar = a_verificar or not _outras_atv  # (11/11/2026) com outras penas ativas, só observação
         _zd = l.get("ppe_saldo_zero_detr")
         if _zd and not l.get("ppe_saldo_zero"):
             # o SEEU não abateu a detração que os eventos mostram neste processo: com ela, a pena já estava cumprida na fuga
@@ -1392,7 +1391,7 @@ def extincao(r, presc, interr):
                        "não só a prescrição pelo remanescente" % (
                            l.get("rotulo") or l["crime"], _zd["evento"], _zd["data"], rs.dias_para_pena(_zd["detr"]),
                            rs.dias_para_pena(_zd["rem_seeu"]), rs.dias_para_pena(_zd["detr"] + _zd["cumprido"]), l.get("pena")))
-            a_verificar = True
+            a_verificar = a_verificar or not _outras_atv  # (11/11/2026) com outras penas ativas, só observação
         if l.get("ppe_saldo_zero"):
             # única condenação em execução: pelo tempo cumprido nos eventos do RSPE, a pena se esgotou antes da fuga
             hip.append("%s: pena já cumprida na %s de %s, pelos eventos do RSPE. Conferir no cálculo do SEEU e pedir a extinção "
