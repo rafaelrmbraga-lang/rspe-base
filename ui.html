@@ -1179,6 +1179,24 @@ select,textarea{font-family:inherit}
 .card thead th{font-weight:600!important;color:#5F6662!important;text-align:center!important}
 .stat b{font-weight:600!important}.card tr.grp td b{font-weight:600!important}
 .pill.sitb{font-weight:600!important}
+
+/* Indulto: decreto selecionado discreto (fundo branco, traço verde), contadores em tons claros, botão numa linha só */
+.dc-side{background:#F8FAF9!important}
+.dc-it{border-radius:10px!important;font-weight:400!important}
+.dc-it:hover{background:#EEF3EF!important}
+.dc-it.on{background:#fff!important;color:var(--pri)!important;font-weight:600!important;box-shadow:inset 3px 0 0 var(--pri),0 1px 3px rgba(16,24,40,.08)!important}
+.dc-it.geral{font-weight:600!important}
+.dc-it b{font-weight:600!important;font-size:11px!important;padding:1px 8px!important;border-radius:999px!important;margin-left:3px}
+.dc-it b.c{background:#E6F2EA!important;color:#1F5B39!important}.dc-it b.v{background:#FBEEDD!important;color:#9A5410!important}
+.dc-it b.z{background:transparent!important;color:#A3AAA5!important}
+.dc-ch{font-weight:600!important;border:1px solid transparent}
+.dc-ch.c{background:#E6F2EA!important;color:#1F5B39!important}.dc-ch.v{background:#FBEEDD;color:#9A5410}.dc-ch.n{background:#F7E7E6!important;color:#8E2424!important}
+.dc-ch.f{background:#fff!important;border:1px dashed #DDE2DE!important}
+.mini.dbtn{white-space:nowrap;display:inline-flex;align-items:center;padding:5px 10px!important;border-radius:8px!important;border:1px solid #CFE3D6!important;background:#F2F8F4!important;color:var(--pri)!important;font-weight:600}
+.mini.dbtn:hover{background:#E3F0E7!important}
+td.act{white-space:nowrap}
+.dc-main .card,.dc-main table{border-radius:0}
+.dctab td.dact{white-space:nowrap!important}.dctab td.dact>*{vertical-align:middle}.dctab td.dact .mini.dbtn{margin-right:6px}
 </style>
 </head>
 <body>
@@ -2507,7 +2525,7 @@ const ui = {
     // legenda das cores desta aba (os contadores antigos não filtravam nada)
     document.getElementById('stats').innerHTML=`<div class="dleg"><b>Legenda</b>${['cabe','ver','conc','indef','nao','imp','fora','ped'].map(k=>`<span><i style="background:${this.DEC_COR[k]||'#CDD2CC'}"></i>${this.DEC_ROT[k]}</span>`).join('')}</div>`;
     const side=`<div class="dc-side"><div class="dc-it geral ${!this.decSel?'on':''}" onclick="ui.decSel=null;ui.render()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg><span>Geral</span></div><div class="dc-h">Decretos</div>${D.map(x=>{ const n=rs.filter(r=>this.decDe(r).some(y=>y.id===x.id&&y.s==='cabe')).length, nv=rs.filter(r=>this.decDe(r).some(y=>y.id===x.id&&y.s==='ver')).length;
-      return `<div class="dc-it ${this.decSel===x.id?'on':''} ${n||nv?'':'vz'}" title="${esc(this.decRot(x))} · Decreto ${esc(x.numero)} · referência ${esc(x.ref)} · ${n} cabem · ${nv} a verificar" onclick="ui.decSel='${x.id}';ui.decAberto=null;ui.render()"><span>${esc(this.decRot(x))}</span><b class="${n?'':'z'}" title="cabem">${n}</b>${nv?`<b title="a verificar" style="background:${this.DEC_COR.ver};color:#fff;margin-left:3px">${nv}</b>`:''}</div>`; }).join('')}</div>`;
+      return `<div class="dc-it ${this.decSel===x.id?'on':''} ${n||nv?'':'vz'}" title="${esc(this.decRot(x))} · Decreto ${esc(x.numero)} · referência ${esc(x.ref)} · ${n} cabem · ${nv} a verificar" onclick="ui.decSel='${x.id}';ui.decAberto=null;ui.render()"><span>${esc(this.decRot(x))}</span><b class="${n?'c':'z'}" title="cabem">${n}</b>${nv?`<b class="v" title="a verificar">${nv}</b>`:''}</div>`; }).join('')}</div>`;
     const selBen=`<select class="dc-sel" onchange="ui.decBen=this.value;ui.render()"><option value="todos" ${this.decBen==='todos'?'selected':''}>Indulto e comutação</option><option value="indulto" ${this.decBen==='indulto'?'selected':''}>Só indulto</option><option value="comutacao" ${this.decBen==='comutacao'?'selected':''}>Só comutação</option></select>`;
     let main='';
     if(!this.decSel){
@@ -2522,7 +2540,7 @@ const ui = {
       const c=s_=>rs.filter(r=>((this.decDe(r).find(y=>y.id===x0.id)||{s:'fora'}).s)===s_).length;
       main=`<div class="dc-top"><div class="dc-nav"><button title="Decreto anterior" onclick="ui.decSel='${(D[i+1]||x0).id}';ui.render()">‹</button><button title="Decreto seguinte" onclick="ui.decSel='${(D[i-1]||x0).id}';ui.render()">›</button></div>
           <div class="tt"><b>${esc(this.decRot(x0))}</b><small>Decreto ${esc(x0.numero)} · data de referência ${esc(x0.ref)}</small></div>
-          <span class="dc-ch c">${c('cabe')} cabem</span>${c('ver')?`<span class="dc-ch" style="background:${this.DEC_COR.ver};color:#fff">${c('ver')} a verificar</span>`:''}<span class="dc-ch n">${c('nao')+c('imp')} não cabem</span>${c('conc')+c('indef')?`<span class="dc-ch k">${c('conc')+c('indef')} já decididos</span>`:''}<span class="dc-ch f" title="execução posterior ao decreto, sem condenação até o decreto ou decreto só para mulheres">${c('fora')} não alcançados</span><span class="sp"></span>
+          <span class="dc-ch c">${c('cabe')} cabem</span>${c('ver')?`<span class="dc-ch v">${c('ver')} a verificar</span>`:''}<span class="dc-ch n">${c('nao')+c('imp')} não cabem</span>${c('conc')+c('indef')?`<span class="dc-ch k">${c('conc')+c('indef')} já decididos</span>`:''}<span class="dc-ch f" title="execução posterior ao decreto, sem condenação até o decreto ou decreto só para mulheres">${c('fora')} não alcançados</span><span class="sp"></span>
           ${selBen}<select class="dc-sel" onchange="ui.decMostrar=this.value;ui.render()"><option value="todos" ${this.decMostrar==='todos'?'selected':''}>Todos</option><option value="cabe" ${this.decMostrar==='cabe'?'selected':''}>Só quem cabe</option><option value="cabe_ver" ${this.decMostrar==='cabe_ver'?'selected':''}>Cabe ou a verificar</option></select></div>
         <table class="dctab"><thead><tr><th>Nome</th><th class="nw" style="width:1%">Nº da execução</th><th>Resultado e benefício</th><th>Motivo</th><th style="width:1%"></th><th style="width:1%">Pedido</th></tr></thead><tbody>${L.map(({r,d})=>`<tr class="${r.fixado?'fix':''} noclk" style="${d.s==='fora'?'opacity:.5':''}"><td class="first dnome">${this.pinHtml(r)}${this.cpNomeTxt(r)}${this.prioHtml(r)}${this.divHtml(r)}</td><td class="nw">${this.cpProc(r)}</td><td class="dresb"><span class="dres ${d.s}">${esc(this.decRotS(d))}${d.naf&&d.s==='nao'?' ?':''}</span>${d.naf&&d.s==='nao'?`<div class="dben" title="${esc(d.ressalva||'')}">hipótese não aferida pelo RSPE: ${esc(d.naf.join(', '))}</div>`:''}${this.decBenTxt(d)!=='—'?`<div class="dben">${esc(this.decBenTxt(d))}</div>`:''}</td><td class="dmot" title="${esc(this.decMotTodo(d))}">${esc(d.mot_c||d.mot||'')}</td><td class="dact">${d.s==='fora'?'':this.decBtn(r)}${this.fichaIcoHtml(r)}${this.qbtnHtml(r)}${this.abrirBtnHtml(r)}</td><td>${this.decPed(r,x0.id)}</td></tr>`).join('')}</tbody></table>`;
     }
