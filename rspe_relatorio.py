@@ -2704,7 +2704,7 @@ def _geo_mapa(U, mapa, larg, f, C, sel=""):
     for i, (nome, x, y, r) in enumerate(bol):
         if i >= 9 and not (sel and nome == sel):
             continue
-        w, h = stringWidth(nome, f["b"], 6.5) + 2, 8
+        w, h = stringWidth(nome, f["sb"], 6.5) + 2, 8
         for bx, by, anc in ((x + r + 2, y - 3, "start"), (x - r - 2 - w, y - 3, "end"), (x - w / 2, y + r + 1.5, "middle"), (x - w / 2, y - r - 1.5 - h, "middle")):
             caixa = (bx, by, w, h)
             if bx < 0 or bx + w > P["W"] * esc or by < 0 or by + h > H:
@@ -2713,7 +2713,7 @@ def _geo_mapa(U, mapa, larg, f, C, sel=""):
                 continue
             caixas.append(caixa)
             tx = bx if anc == "start" else bx + w if anc == "end" else bx + w / 2
-            d.add(String(tx, by + 2, nome, fontName=f["b"], fontSize=6.5, fillColor=C(TX), textAnchor=anc))
+            d.add(String(tx, by + 2, nome, fontName=f["sb"], fontSize=6.5, fillColor=C(TX), textAnchor=anc))
             break
     d.hAlign = "CENTER"  # mapa centralizado na página
     return d
