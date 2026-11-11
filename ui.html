@@ -1153,6 +1153,20 @@ body:has(.geo-3d) .box .btn{border-radius:10px!important}
 #stpop.gtp .gtp-b em{position:absolute;top:0;bottom:0;width:1.5px;background:#0B3B22;opacity:.45}
 #stpop.gtp .gtp-f{padding:8px 16px 10px;font-size:11.5px;color:var(--tx3);border-top:1px solid #EEF1EE}
 #stpop.gtp div{display:block;margin:0;gap:0}#stpop.gtp .gtp-h,#stpop.gtp .gtp-r,#stpop.gtp .gtp-r2{display:flex}#stpop.gtp .gtp-h b{margin:0}#stpop.gtp small{margin-top:2px}#stpop.gtp i,#stpop.gtp em{font-style:normal}
+
+/* ===== visual suave, aba por aba (Progressão): cartões do topo, tabela e explicações das colunas ===== */
+.cel2{display:inline-flex;flex-direction:column;gap:2px;max-width:210px}
+.cel2-sub{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;white-space:normal;font-size:11.5px;line-height:1.3;color:var(--tx3)}
+td.nw .cel2{white-space:nowrap}td.nw .cel2-sub{white-space:normal}
+.stats .stat{border-radius:12px!important;border:1px solid #E3E8E4!important;box-shadow:0 1px 2px rgba(16,24,40,.04)!important;background:#fff!important;transition:background .15s,border-color .15s,box-shadow .15s}
+.stats .stat:hover{border-color:#C9D6CD!important;box-shadow:0 2px 8px rgba(16,24,40,.07)!important}
+.stats .stat.on{background:#EEF6F0!important;border:1px solid #A9CDB6!important;box-shadow:0 0 0 3px rgba(0,96,44,.08)!important;outline:none!important}
+.stats .stat.on b,.stats .stat.on span{color:inherit}
+.card{border-radius:14px!important;border-color:#E3E8E4!important;box-shadow:0 1px 2px rgba(16,24,40,.04)!important;overflow:hidden}
+.card tbody tr:not(.grp):hover td{background:#F6F9F7}
+.card tbody td{border-bottom-color:#EEF1EE!important}
+.card tr.grp td{background:#F7F9F8!important}
+.pill.sitb,.pill.vencido,.pill.vermelho,.pill.amarelo,.pill.verde,.pill.laranja{border-radius:7px!important}
 </style>
 </head>
 <body>
@@ -1412,7 +1426,9 @@ const ui = {
         else if(c[0]==='conduta'){ v = r.conduta_ruim ? `<span class="falta">${esc(v)}</span>` : r.conduta_apurar ? `<span class="apurar">${esc(v)}</span>` : (r.ficha_tem ? esc(v) : `<span class="muted">${esc(v)}</span>`); }
         else if(c[0]==='falta'){ v = r.falta_sim ? `<span class="falta">Sim</span>` : (r.falta_apurar ? `<span class="apurar">A apurar</span>` : `<span class="muted">${esc(v)}</span>`);
           if((r.faltas_itens||[]).length) v=`<span class="fedit" title="Ver e decidir as faltas (vale em todas as abas)" onclick="event.stopPropagation();ui.faltasModal(${jsa(r.id)})">${v} <span class="fe">✎</span></span>`; }
-        else { v = esc(v).replace('(est.)','<span class="est">(est.)</span>'); if(!v) v='<span class="muted">—</span>'; }
+        else { const m_=/^([^()]{1,40}?)\s+\((.{12,})\)\s*$/.exec(String(v));
+          v = m_ ? `<span class="cel2" title="${esc(v)}">${esc(m_[1])}<span class="cel2-sub">${esc(m_[2])}</span></span>`
+                 : esc(v).replace('(est.)','<span class="est">(est.)</span>'); if(!v) v='<span class="muted">—</span>'; }
         if(i===0 && spec.expansivel) v=`<span class="chev">▶</span>${v}`;
         return `<td class="${i===0?'first':''} ${NW.has(c[0])?'nw':''} ${pk&&spec.id==='ind'?'pl':''} c-${c[0]}" title="${esc(String(r[c[0]+'_full']??r[c[0]]??''))}">${v}</td>`; }).join('');
       const acao=`<td class="nw act">${spec.id==='geral'?`<span class="hbtn" title="Histórico comparativo dos RSPE importados deste assistido" onclick="event.stopPropagation();ui.historico(${jsa(r.id)})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg>Histórico (${r.hist_n||1})</span>`:''}${spec.id==='geral'&&r.mesma_pessoa_marcada?`<span class="mini" title="Estas execuções foram marcadas como da mesma pessoa: desfazer volta cada uma à sua linha" onclick="event.stopPropagation();ui.mesmaPessoaDesfazer(${jsa(r.id)})">Desfazer mesma pessoa</span> `:''}${spec.id==='ind'?`<span class="mini" title="Linha do tempo: crimes, impeditivos, pena cumprida em cada decreto, faltas na janela e resultado" onclick="event.stopPropagation();ui.indTL(${jsa(r.id)})">Verificar indulto/comutação</span> `:''}${spec.id==='ext'?`<span class="mini" title="Linha do tempo: períodos cumpridos, fugas, faltas, hoje e término da pena" onclick="event.stopPropagation();ui.extTL(${jsa(r.id)})">Linha do tempo</span> `:''}${MODELOS_ATIVOS?`<span class="mini" title="Preencher modelo .docx com os dados deste assistido" onclick="event.stopPropagation();ui.peticao(${jsa(r.id)})">Petição</span>`:''}${this.fichaIcoHtml(r)}${this.qbtnHtml(r)}${this.abrirBtnHtml(r)}</td>`;
