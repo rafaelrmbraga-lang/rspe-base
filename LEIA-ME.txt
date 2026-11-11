@@ -1,9 +1,9 @@
-APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.18.0
+APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.18.1
 (antigo RSPE Base; SEEU, programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-7.18.0. A documentação técnica completa (cada parâmetro, a regra, a norma e
+7.18.1. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -1112,6 +1112,12 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v7.18.1
+  Correção: a lista de assistidos volta a rolar com a roda do mouse em
+  todas as abas. Na 7.17.0 o quadro da lista ficou travado (uma regra de
+  estilo passou a impedir a rolagem), e a 7.18.0 manteve o defeito. No
+  Indulto e na Jurisprudências rola o painel interno, como antes.
 
 v7.18.0
   Tela revista com a skill de interface (ui-ux-pro-max) e o estilo do

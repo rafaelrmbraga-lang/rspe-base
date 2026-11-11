@@ -33,6 +33,9 @@ raio_lit = [s for s, d in fora_root for v in re.findall(r"border-radius:\s*([^;}
 ok(not raio_lit, "CSS: canto fora da escala em %s" % raio_lit[:5])
 medias = re.findall(r"@media\s*([^{]+)\{", CSS)
 ok(len(medias) == len({re.sub(r"\s+", "", m) for m in medias}), "CSS: um bloco @media por condição (%s)" % medias)
+# a lista de assistidos rola dentro do quadro: a última regra .card com overflow tem de deixar rolar (a 7.17.0 travou com overflow:hidden)
+ov = [v for s_, d in fora_root if s_ == ".card" for v in re.findall(r"overflow:\s*([a-z]+)", d)]
+ok(ov and ov[-1] in ("auto", "scroll"), "lista: o quadro da lista precisa rolar (overflow do .card: %s)" % ov)
 ok(CSS.count("!important") <= 210, "CSS: !important voltou a crescer (%d)" % CSS.count("!important"))
 
 # ---------- propostas ----------
