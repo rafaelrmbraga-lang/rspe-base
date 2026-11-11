@@ -2549,15 +2549,112 @@ def _geo_nome(n):
     return _re.sub(r"\b(De|Da|Do|Das|Dos|E|Ao|À|Em)\b", lambda m: m.group(1).lower(), n)
 
 
+# ---- Dados prisionais: elementos do visual suave (cartões arredondados, pílulas, barras, área, rosca) ----
+GEO_G1, GEO_G2, GEO_G3, GEO_G4 = "#1F6B45", "#5FA07A", "#A9CDB6", "#D5E6DB"
+GEO_OCRE, GEO_ROSA, GEO_SUAVE = "#C49A3A", "#D98580", "#F2F5F3"
+
+
+def _geo_cartoes(nums, W, f, C):
+    """Cartões arredondados lado a lado: (valor, rótulo, detalhe, cor do valor, ocupação para a barra vagas/excedente ou None)."""
+    from reportlab.graphics.shapes import Drawing, Rect, String
+    from reportlab.pdfbase.pdfmetrics import stringWidth
+    n, gap, H = len(nums), 6, 60
+    cw = (W - gap * (n - 1)) / n
+    d = Drawing(W, H)
+    corta = lambda t, fn, fs, w: t if stringWidth(t, fn, fs) <= w else next((t[:k] + "…" for k in range(len(t), 0, -1) if stringWidth(t[:k] + "…", fn, fs) <= w), "")
+    for i, (v, r, sub, cor, bar) in enumerate(nums):
+        x = i * (cw + gap)
+        d.add(Rect(x, 0, cw, H, rx=8, ry=8, fillColor=C(GEO_SUAVE), strokeColor=None))
+        d.add(String(x + 10, H - 25, v, fontName=f["b"], fontSize=17, fillColor=C(cor or NAVY)))
+        d.add(String(x + 10, H - 37, corta(r, f["n"], 7.6, cw - 18), fontName=f["n"], fontSize=7.6, fillColor=C(TX)))
+        if sub:
+            d.add(String(x + 10, H - 47, corta(sub, f["n"], 6.3, cw - 18), fontName=f["n"], fontSize=6.3, fillColor=C(TX3)))
+        if bar is not None:
+            bw = cw - 20
+            d.add(Rect(x + 10, 7, bw, 4, rx=2, ry=2, fillColor=C(GEO_ROSA if bar > 1 else GEO_G4), strokeColor=None))
+            d.add(Rect(x + 10, 7, bw * (1 / bar if bar > 1 else bar), 4, rx=2, ry=2, fillColor=C(GEO_G1), strokeColor=None))
+    return d
+
+
+def _geo_pilula(oc, f, C, w=34, h=11):
+    """Taxa de ocupação numa pílula de cor suave (verde até 100%, areia de 100% a 149%, rosada de 150% em diante)."""
+    from reportlab.graphics.shapes import Drawing, Rect, String
+    bg, tx = (("#ECEEEB", "#6B746E") if oc is None else ("#F6E1DF", "#8E2424") if oc >= 1.5 else ("#F8EBD6", "#8A5A12") if oc >= 1 else ("#E3F1E8", "#1F5B39"))
+    d = Drawing(w, h)
+    d.add(Rect(0, 0, w, h, rx=h / 2, ry=h / 2, fillColor=C(bg), strokeColor=None))
+    d.add(String(w / 2, 3.1, "—" if oc is None else "%d%%" % round(oc * 100), fontName=f["b"], fontSize=6.8, fillColor=C(tx), textAnchor="middle"))
+    return d
+
+
+def _geo_barras(itens, W, f, C):
+    """Uma linha por constatação, com a barra proporcional às unidades em que foi constatada: (rótulo, n, de, tema)."""
+    from reportlab.graphics.shapes import Drawing, Rect, String
+    from reportlab.pdfbase.pdfmetrics import stringWidth
+    row = 15
+    H = row * len(itens)
+    d = Drawing(W, H)
+    for i, (r, n, de, tema) in enumerate(itens):
+        y = H - (i + 1) * row
+        d.add(Rect(0, y + 1.5, W, row - 3, rx=5, ry=5, fillColor=C(GEO_SUAVE), strokeColor=None))
+        d.add(Rect(0, y + 1.5, max(10, W * n / max(1, de)), row - 3, rx=5, ry=5, fillColor=C("#F3DCD9"), strokeColor=None))
+        d.add(String(7, y + 5.2, r, fontName=f["n"], fontSize=7.3, fillColor=C(TX)))
+        if tema:
+            d.add(String(7 + stringWidth(r, f["n"], 7.3) + 6, y + 5.2, tema, fontName=f["n"], fontSize=6.2, fillColor=C(TX3)))
+        d.add(String(W - 7, y + 5.2, "%d de %d" % (n, de), fontName=f["b"], fontSize=7.3, fillColor=C("#8E2424"), textAnchor="end"))
+    return d
+
+
+def _geo_progresso(n, de, W, C):
+    from reportlab.graphics.shapes import Drawing, Rect
+    d = Drawing(W, 5)
+    d.add(Rect(0, 0, W, 4, rx=2, ry=2, fillColor=C(GEO_SUAVE), strokeColor=None))
+    d.add(Rect(0, 0, max(4, W * n / max(1, de)), 4, rx=2, ry=2, fillColor=C(GEO_ROSA), strokeColor=None))
+    return d
+
+
+def _geo_area(pts, W, f, C, H=96):
+    """Evolução: área verde sob a linha, um ponto por ciclo com o valor acima e o mês abaixo."""
+    from reportlab.graphics.shapes import Drawing, Polygon, PolyLine, Circle, String, Line
+    fmt = lambda n: "{:,}".format(int(n or 0)).replace(",", ".")
+    d = Drawing(W, H)
+    v = [p[1] for p in pts]
+    mn, mx = min(v), max(v)
+    mn, mx = mn - (mx - mn or mx) * 0.35, mx + (mx - mn or mx) * 0.15
+    x0, x1, yB, yT = 18, W - 18, 16, H - 16
+    X = lambda i: x0 + (x1 - x0) * i / max(1, len(pts) - 1)
+    Y = lambda y: yB + (yT - yB) * (y - mn) / ((mx - mn) or 1)
+    for k in range(4):
+        yy = yB + (yT - yB) * k / 3
+        d.add(Line(x0, yy, x1, yy, strokeColor=C("#E6EBE7"), strokeWidth=0.4, strokeDashArray=None if k == 0 else [2, 3]))
+    xy = [c for i, p in enumerate(pts) for c in (X(i), Y(p[1]))]
+    d.add(Polygon([x0, yB] + xy + [x1, yB], fillColor=C("#DCEBE1"), strokeColor=None))
+    d.add(PolyLine(xy, strokeColor=C(GEO_G1), strokeWidth=1.6))
+    for i, (rot, val) in enumerate(pts):
+        d.add(Circle(X(i), Y(val), 2.6, fillColor=C("#FFFFFF"), strokeColor=C(GEO_G1), strokeWidth=1.2))
+        d.add(String(X(i), Y(val) + 6, fmt(val), fontName=f["b"], fontSize=6.6, fillColor=C(TX), textAnchor="middle"))
+        d.add(String(X(i), 4, rot, fontName=f["n"], fontSize=6.2, fillColor=C(TX2), textAnchor="middle"))
+    return d
+
+
+def _geo_suave(t, C):
+    """Tabela no visual suave: cabeçalho em verde-claro, sem zebra, linhas finas."""
+    from reportlab.platypus import TableStyle
+    t.setStyle(TableStyle([("BACKGROUND", (0, 1), (-1, -1), C("#FFFFFF")), ("BACKGROUND", (0, 0), (-1, 0), C("#EAF2EC")),
+                           ("LINEBELOW", (0, 0), (-1, -1), 0.3, C("#E3E9E5")), ("LINEBELOW", (0, 0), (-1, 0), 0.3, C("#EAF2EC")),
+                           ("VALIGN", (0, 0), (-1, -1), "MIDDLE")]))
+    return t
+
+
 def _geo_mapa(U, mapa, larg, f, C, sel=""):
-    """Mapa de MS: um círculo verde-escuro por cidade (tamanho pelo número de presos); municípios com estabelecimento tingidos."""
+    """Mapa de MS em relevo (o estado com espessura) e um alfinete verde por cidade, maior quanto mais presos; municípios com
+    estabelecimento tingidos."""
     import math
     import re as _re
-    from reportlab.graphics.shapes import Drawing, Polygon, Circle, String
+    from reportlab.graphics.shapes import Drawing, Polygon, Circle, String, Ellipse
     P = mapa["proj"]
     esc = larg / P["W"]
     H = P["H"] * esc
-    d = Drawing(P["W"] * esc, H)
+    d = Drawing(P["W"] * esc, H + 6)
     cid, com = {}, set()
     for u in U:
         if u.get("ibge"):
@@ -2565,22 +2662,41 @@ def _geo_mapa(U, mapa, larg, f, C, sel=""):
         if u.get("cidade"):
             cid[u["cidade"]] = cid.get(u["cidade"], 0) + _geo_pop(u)
     pos = {m["nome"]: m["c"] for m in mapa["municipios"].values()}
+    aneis = []
     for k, m in mapa["municipios"].items():
         for anel in _re.findall(r"M([^Z]+)Z", m["d"]):
             xy = [float(v) for v in _re.findall(r"-?\d+(?:\.\d+)?", anel)]
             pts = []
             for i in range(0, len(xy) - 1, 2):
-                pts += [xy[i] * esc, H - xy[i + 1] * esc]
-            d.add(Polygon(pts, fillColor=C("#D5E2D9" if k in com else "#E9ECEA"), strokeColor=C("#FFFFFF"), strokeWidth=0.5))
+                pts += [xy[i] * esc, H + 6 - xy[i + 1] * esc]
+            aneis.append((k, pts))
+    for dy, cor in ((-5, "#2E5D45"), (-2.5, "#5C8A70")):  # espessura do estado (relevo)
+        for k, pts in aneis:
+            d.add(Polygon([v + (dy if i % 2 else 0) for i, v in enumerate(pts)], fillColor=C(cor), strokeColor=C(cor), strokeWidth=0.8))
+    for k, pts in aneis:
+        d.add(Polygon(pts, fillColor=C("#CFE0D4" if k in com else "#EEF3EF"), strokeColor=C("#FFFFFF"), strokeWidth=0.5))
     mx = max(list(cid.values()) + [1])
     bol = []
     for nome, pop in sorted(cid.items(), key=lambda x: -x[1]):
         if nome not in pos:
             continue
         x, y = pos[nome]
-        bol.append((nome, x * esc, H - y * esc, (7 + 26 * math.sqrt(pop / mx)) * esc))
-    for nome, x, y, r in bol:
-        d.add(Circle(x, y, r, fillColor=C("#0B2E1C" if (sel and nome == sel) else "#1D5A3B"), strokeColor=C("#FFFFFF"), strokeWidth=0.8))
+        e = (0.6 + 0.95 * math.sqrt(pop / mx)) * esc
+        bol.append((nome, x * esc, H + 6 - y * esc + 22 * e, 12 * e))  # (x, y) do centro da cabeça do alfinete
+    from reportlab.graphics.shapes import Path
+    for nome, x, y, r in sorted(bol, key=lambda b: -b[2]):
+        e = r / 12
+        tip = y - 22 * e
+        d.add(Ellipse(x, tip, 7 * e, 2.4 * e, fillColor=C("#0B3B22"), fillOpacity=0.25, strokeColor=None))
+        corp = C("#0B2E1C" if (sel and nome == sel) else GEO_G1)
+        pth = Path(fillColor=corp, strokeColor=C("#FFFFFF"), strokeWidth=0.6)
+        pth.moveTo(x, tip)
+        pth.curveTo(x - 6 * e, tip + 8 * e, x - 11 * e, tip + 14 * e, x - 11 * e, y)
+        pth.curveTo(x - 11 * e, y + 15 * e, x + 11 * e, y + 15 * e, x + 11 * e, y)
+        pth.curveTo(x + 11 * e, tip + 14 * e, x + 6 * e, tip + 8 * e, x, tip)
+        pth.closePath()
+        d.add(pth)
+        d.add(Circle(x, y + 1 * e, 4.2 * e, fillColor=C("#FFFFFF"), strokeColor=None))
     # nomes das maiores cidades (e da escolhida): direita, esquerda, acima ou abaixo, sem cobrir outro nome nem outro círculo
     from reportlab.pdfbase.pdfmetrics import stringWidth
     caixas = []
@@ -2599,13 +2715,14 @@ def _geo_mapa(U, mapa, larg, f, C, sel=""):
             tx = bx if anc == "start" else bx + w if anc == "end" else bx + w / 2
             d.add(String(tx, by + 2, nome, fontName=f["b"], fontSize=6.5, fillColor=C(TX), textAnchor=anc))
             break
+    d.hAlign = "CENTER"  # mapa centralizado na página
     return d
 
 
 def _geo_pizzas_unidade(u, larg, f, C):
-    """Duas pizzas da última inspeção: presos por regime e provisórios x condenados."""
+    """Duas roscas da última inspeção, com o total no centro: presos por regime e provisórios x condenados."""
     from reportlab.graphics.shapes import Drawing, Rect, String
-    from reportlab.graphics.charts.piecharts import Pie
+    from reportlab.graphics.charts.doughnut import Doughnut
     S = u.get("serie") or []
     x = S[-1] if S else ({"pop": _geo_pop(u), "provisorios": u.get("provisorios"), "fechado": u.get("fechado"), "semiaberto": u.get("semiaberto"),
                           "aberto": u.get("aberto"), "ciclo": (u.get("inspecao") or {}).get("ciclo", "")} if u.get("inspecao") else None)
@@ -2614,32 +2731,38 @@ def _geo_pizzas_unidade(u, larg, f, C):
     fmt = lambda n: "{:,}".format(int(n or 0)).replace(",", ".")
     soma = sum((x.get(k) or 0) for k in ("provisorios", "fechado", "semiaberto", "aberto"))
     cap = u.get("capacidade") or 0
-    grupos = [("Por regime", [("Provisórios", x.get("provisorios"), "#9CBFA9"), ("Fechado", x.get("fechado"), "#1D5A3B"), ("Semiaberto", x.get("semiaberto"), "#4E8C66"),
-                              ("Aberto", x.get("aberto"), "#C9DDD0"), ("Outros", max(0, x["pop"] - soma), "#7C8C82")]),
-              ("Provisórios", [("Provisórios", x.get("provisorios"), "#A3201D"), ("Condenados", max(0, x["pop"] - (x.get("provisorios") or 0)), "#1D5A3B")])]
-    W, H = larg, 52 * 2.835
+    grupos = [("Por regime", [("Provisórios", x.get("provisorios"), GEO_G3), ("Fechado", x.get("fechado"), GEO_G1), ("Semiaberto", x.get("semiaberto"), GEO_G2),
+                              ("Aberto", x.get("aberto"), GEO_G4), ("Outros", max(0, x["pop"] - soma), "#8A9A90")]),
+              ("Provisórios", [("Provisórios", x.get("provisorios"), GEO_OCRE), ("Condenados", max(0, x["pop"] - (x.get("provisorios") or 0)), GEO_G1)])]
+    W, H = larg, 56 * 2.835
     d = Drawing(W, H)
     col = W / len(grupos)
     for gi, (tit, fat) in enumerate(grupos):
         fat = [(n, v or 0, c) for n, v, c in fat if (v or 0) > 0]
         tot = sum(v for _, v, _ in fat) or 1
         x0 = gi * col
-        d.add(String(x0 + 4, H - 9, tit, fontName=f["b"], fontSize=7.5, fillColor=C(NAVY)))
-        pie = Pie()
-        pie.x, pie.y, pie.width, pie.height = x0 + 6, H - 82, 66, 66
-        pie.data = [v for _, v, _ in fat]
-        pie.labels = None
-        pie.slices.strokeColor = C("#FFFFFF")
-        pie.slices.strokeWidth = 0.8
+        d.add(Rect(x0, 0, col - 6, H, rx=8, ry=8, fillColor=C(GEO_SUAVE), strokeColor=None))
+        d.add(String(x0 + 10, H - 14, tit, fontName=f["b"], fontSize=8, fillColor=C(NAVY)))
+        dn = Doughnut()
+        dn.x, dn.y, dn.width, dn.height = x0 + 10, 14, 96, 96
+        dn.data = [v for _, v, _ in fat] if len(fat) > 1 else [fat[0][1], 0.0001]
+        dn.labels = None
+        dn.innerRadiusFraction = 0.62
+        dn.slices.strokeColor = C(GEO_SUAVE)
+        dn.slices.strokeWidth = 1.4
         for i, (_, _, c) in enumerate(fat):
-            pie.slices[i].fillColor = C(c)
-        d.add(pie)
+            dn.slices[i].fillColor = C(c)
+        d.add(dn)
+        d.add(String(x0 + 58, 64, fmt(tot), fontName=f["b"], fontSize=11.5, fillColor=C(NAVY), textAnchor="middle"))
+        d.add(String(x0 + 58, 55, "no total", fontName=f["n"], fontSize=6.2, fillColor=C(TX3), textAnchor="middle"))
         for i, (n, v, c) in enumerate(fat):
-            yy = H - 22 - i * 11
-            d.add(Rect(x0 + 80, yy, 6, 6, fillColor=C(c), strokeColor=None))
-            d.add(String(x0 + 89, yy + 0.5, "%s: %s (%d%%)" % (n, fmt(v), round(100 * v / tot)), fontName=f["n"], fontSize=6.5, fillColor=C(TX)))
-    d.add(String(4, 4, "Inspeção de %s · %s presos%s" % (x.get("ciclo") or "", fmt(x["pop"]), (" · %s vagas" % fmt(cap)) if cap else ""),
-                 fontName=f["n"], fontSize=6.5, fillColor=C("#767C82")))
+            yy = H - 34 - i * 15
+            d.add(Rect(x0 + 116, yy - 3, col - 132, 12, rx=4, ry=4, fillColor=C("#FFFFFF"), strokeColor=None))
+            d.add(Rect(x0 + 121, yy, 6, 6, rx=1.8, ry=1.8, fillColor=C(c), strokeColor=None))
+            d.add(String(x0 + 131, yy + 0.6, n, fontName=f["n"], fontSize=6.8, fillColor=C(TX)))
+            d.add(String(x0 + col - 21, yy + 0.6, "%s · %d%%" % (fmt(v), round(100 * v / tot)), fontName=f["b"], fontSize=6.8, fillColor=C(TX), textAnchor="end"))
+    d.add(String(4, 3, "Inspeção de %s · %s presos%s" % (x.get("ciclo") or "", fmt(x["pop"]), (" · %s vagas" % fmt(cap)) if cap else ""),
+                 fontName=f["n"], fontSize=6.3, fillColor=C(TX3)))
     return d
 
 
@@ -2664,14 +2787,16 @@ def _geo_colunas_unidade(u, larg, f, C):
         lx = x0 + 2
         for n, cor in [(n, c) for k, n, c in segs if any((cc["v"].get(k) or 0) > 0 for cc in cols)] + ([("Vagas existentes", None)] if linha else []):
             if cor:
-                d.add(Rect(lx, H - 21, 5.5, 5.5, fillColor=C(cor), strokeColor=None))
+                d.add(Rect(lx, H - 21, 5.5, 5.5, rx=1.6, ry=1.6, fillColor=C(cor), strokeColor=None))
             else:
                 d.add(Line(lx, H - 18.2, lx + 9, H - 18.2, strokeColor=C(TX), strokeWidth=0.9, strokeDashArray=[2.5, 2]))
                 lx += 3.5
             d.add(String(lx + 8, H - 20.5, n, fontName=f["n"], fontSize=6.2, fillColor=C(TX)))
             lx += 8 + len(n) * 3.2 + 8
         lp = larg_g - (24 if linha else 0)
-        d.add(Line(x0, yB, x0 + lp, yB, strokeColor=C("#7C8C82"), strokeWidth=0.6))
+        for k in range(1, 4):
+            d.add(Line(x0, yB + (yT - yB) * k / 4, x0 + lp, yB + (yT - yB) * k / 4, strokeColor=C("#E6EBE7"), strokeWidth=0.4, strokeDashArray=[2, 3]))
+        d.add(Line(x0, yB, x0 + lp, yB, strokeColor=C("#C9D2CC"), strokeWidth=0.6))
         slot = lp / len(cols)
         bw = min(34, slot * 0.58)
         for i, c in enumerate(cols):
@@ -2682,7 +2807,7 @@ def _geo_colunas_unidade(u, larg, f, C):
                 if v <= 0:
                     continue
                 h = (yT - yB) * v / mx
-                d.add(Rect(cx - bw / 2, y, bw, h, fillColor=C(cor), strokeColor=C("#FFFFFF"), strokeWidth=0.6))
+                d.add(Rect(cx - bw / 2, y, bw, h, rx=min(2.5, h / 2), ry=min(2.5, h / 2), fillColor=C(cor), strokeColor=C("#FFFFFF"), strokeWidth=0.9))
                 y += h
             d.add(String(cx, Y(c["tot"]) + 3, fmt(c["tot"]), fontName=f["b"], fontSize=6.3, fillColor=C(TX), textAnchor="middle"))
             if c.get("topo"):
@@ -2701,16 +2826,16 @@ def _geo_colunas_unidade(u, larg, f, C):
     for i, x in enumerate(S):
         so = sum((x.get(k) or 0) for k in ("provisorios", "fechado", "semiaberto", "aberto"))
         dd = None if i == 0 else (x["pop"] or 0) - (S[i - 1]["pop"] or 0)
-        cols.append({"rot": rot(x["ciclo"]), "tot": x["pop"] or 0, "topo": "" if dd is None else sn(dd) + " no mês", "cor": "#A3201D" if (dd or 0) > 0 else None,
+        cols.append({"rot": rot(x["ciclo"]), "tot": x["pop"] or 0, "topo": "" if dd is None else sn(dd) + " no mês", "cor": "#9E3B36" if (dd or 0) > 0 else None,
                      "v": {"provisorios": x.get("provisorios"), "fechado": x.get("fechado"), "semiaberto": x.get("semiaberto"), "aberto": x.get("aberto"),
                            "outros": max(0, (x["pop"] or 0) - so)}})
     grafico(0, "Crescimento de apenados", cols,
-            [("provisorios", "Provisórios", "#9CBFA9"), ("fechado", "Fechado", "#1D5A3B"), ("semiaberto", "Semiaberto", "#4E8C66"),
-             ("aberto", "Aberto", "#C9DDD0"), ("outros", "Outros", "#7C8C82")], cap or None)
+            [("provisorios", "Provisórios", GEO_G3), ("fechado", "Fechado", GEO_G1), ("semiaberto", "Semiaberto", GEO_G2),
+             ("aberto", "Aberto", GEO_G4), ("outros", "Outros", "#8A9A90")], cap or None)
     cols = [{"rot": rot(x["ciclo"]), "tot": x["pop"] or 0, "topo": ("%d%%" % round(100 * (x["pop"] or 0) / cap)) if cap else "",
-             "cor": "#A3201D" if cap and (x["pop"] or 0) > cap else None,
+             "cor": "#9E3B36" if cap and (x["pop"] or 0) > cap else None,
              "v": {"dentro": min(x["pop"] or 0, cap), "alem": max(0, (x["pop"] or 0) - cap)} if cap else {"dentro": x["pop"] or 0}} for x in S]
-    grafico(larg_g + 14, "Ocupação", cols, [("dentro", "Nas vagas", "#1D5A3B"), ("alem", "Além das vagas", "#A3201D")], cap or None)
+    grafico(larg_g + 14, "Ocupação", cols, [("dentro", "Nas vagas", GEO_G1), ("alem", "Além das vagas", GEO_ROSA)], cap or None)
     if cap:
         exc = lambda x: max(0, (x["pop"] or 0) - cap)
         d.add(String(2, 9, "Acima das %s vagas existentes (linha tracejada): %s presos em %s e %s em %s." % (fmt(cap), fmt(exc(S[0])), S[0]["ciclo"], fmt(exc(S[-1])), S[-1]["ciclo"])
@@ -2750,19 +2875,18 @@ def relatorio_prisional(dados, mapa, caminho, nome_base, cidade="", cats=None):
           Paragraph(_t("Geopresídios/CNIEP (CNJ): inspeções judiciais mensais de cada unidade · dados baixados em %s · %d unidades%s"
                        % (dados.get("atualizado", "?"), len(U), " (%s)" % _geo_tipos(cats))), st["sub"]),
           Spacer(1, 8)]
-    nums = [(fmt(pop), "pessoas presas"), (fmt(cap), "vagas"), (pct(popC / cap if cap else None), "taxa de ocupação"),
-            (fmt(max(0, popC - cap)), "déficit de vagas"), (fmt(soma("provisorios")), "provisórios")]
-    cel = [[Paragraph(_t(n), st["num"]) for n, _ in nums], [Paragraph(_t(r), st["rot"]) for _, r in nums]]
-    tb = Table(cel, colWidths=[W / len(nums)] * len(nums))
-    tb.setStyle(TableStyle([("BOX", (0, 0), (-1, -1), 0.6, C(LINE)), ("INNERGRID", (0, 0), (-1, -1), 0.6, C(LINE)),
-                            ("BACKGROUND", (0, 0), (-1, -1), C(ZEBRA)), ("LEFTPADDING", (0, 0), (-1, -1), 8),
-                            ("TOPPADDING", (0, 0), (-1, 0), 7), ("BOTTOMPADDING", (0, 1), (-1, 1), 7), ("VALIGN", (0, 0), (-1, -1), "TOP")]))
-    el += [tb, Paragraph(_t("Regimes: fechado %s · semiaberto %s · aberto %s. A população é a da inspeção mais recente de cada unidade; a capacidade, "
+    ocg = popC / cap if cap else None
+    tb = _geo_cartoes([(fmt(pop), "pessoas presas", "%d de %d unidades com inspeção" % (len(comI), len(U)), None, None),
+                       (fmt(cap), "vagas", "%d unidades com capacidade" % len(comCap), None, None),
+                       (pct(ocg), "taxa de ocupação", "vagas e excedente", "#8E2424" if (ocg or 0) >= 1.5 else None, ocg),
+                       (fmt(max(0, popC - cap)), "déficit de vagas", "", None, None),
+                       (fmt(soma("provisorios")), "provisórios", "%d%% dos presos" % round(100 * soma("provisorios") / pop) if pop else "", None, None)], W, f, C)
+    el += [tb, Spacer(1, 3), Paragraph(_t("Regimes: fechado %s · semiaberto %s · aberto %s. A população é a da inspeção mais recente de cada unidade; a capacidade, "
                             "a do tema \"Aspectos gerais\". Unidades sem capacidade informada ficam fora da taxa." % (fmt(soma("fechado")), fmt(soma("semiaberto")), fmt(soma("aberto")))), st["mut"])]
     # mapa
     if mapa:
         el += [Paragraph("Mapa", st["h2"]), _geo_mapa(U if not cidade else _geo_sel(dados, "", cats), mapa, min(W, 120 * mm), f, C, cidade),
-               Paragraph(_t("Cada círculo é uma cidade, com o tamanho pelo número de presos%s." % (" (%s em destaque)" % cidade if cidade else "")), st["mut"])]
+               Paragraph(_t("Cada alfinete é uma cidade, maior quanto mais presos%s." % (" (%s em destaque)" % cidade if cidade else "")), st["mut"])]
     # ranking
     from reportlab.lib.styles import ParagraphStyle
     peq = ParagraphStyle("geo_peq", parent=st["cel"], fontSize=7.4, leading=9.6)
@@ -2773,11 +2897,11 @@ def relatorio_prisional(dados, mapa, caminho, nome_base, cidade="", cats=None):
     for u in L:
         oc = _geo_pop(u) / u["capacidade"] if (u.get("capacidade") or 0) > 0 else None
         linhas.append([_geo_nome(u["nome"]), u.get("cidade") or "", fmt(u.get("capacidade")), fmt(_geo_pop(u)),
-                       '<font color="%s"><b>%s</b></font>' % (cor_oc(oc), pct(oc)), fmt(u.get("provisorios")), fmt(u.get("fechado")),
+                       _geo_pilula(oc, f, C), fmt(u.get("provisorios")), fmt(u.get("fechado")),
                        fmt(u.get("semiaberto")), fmt(u.get("aberto")), u.get("pop_ciclo") or (u.get("inspecao") or {}).get("ciclo", "")])
-    linhas = [[Paragraph(_t(c) if not c.startswith("<font") else c, cabp if i == 0 else peq) for c in l] for i, l in enumerate(linhas)]
+    linhas = [[c if not isinstance(c, str) else Paragraph(_t(c), cabp if i == 0 else peq) for c in l] for i, l in enumerate(linhas)]
     el += [Paragraph("Ocupação por unidade", st["h2"]),
-           _tabela(linhas, [46 * mm, 23 * mm, 11 * mm, 12 * mm, 14 * mm, 12 * mm, 13 * mm, 13 * mm, 11 * mm, W - 155 * mm], st, pad=4)]
+           _geo_suave(_tabela(linhas, [44 * mm, 22 * mm, 11 * mm, 12 * mm, 17 * mm, 12 * mm, 13 * mm, 13 * mm, 11 * mm, W - 155 * mm], st, pad=4), C)]
     # condições constatadas nas inspeções
     linhas = [["Constatação nas inspeções", "Unidades", "Tema"]]
     for ch, t, q, rot, ruim in rgeo.INDICADORES:
@@ -2788,8 +2912,8 @@ def relatorio_prisional(dados, mapa, caminho, nome_base, cidade="", cats=None):
         if ruins:
             linhas.append([rgeo.PROBLEMA.get(ch, rot), "%d de %d" % (len(ruins), len(com)), rgeo.TEMAS[t]])
     if len(linhas) > 1:
-        linhas = [linhas[0]] + sorted(linhas[1:], key=lambda l: -int(l[1].split()[0]))
-        el += [Paragraph("Condições constatadas", st["h2"]), _tabela(linhas, [W - 70 * mm, 22 * mm, 48 * mm], st),
+        itens = sorted([(l[0], int(l[1].split()[0]), int(l[1].split()[2]), l[2]) for l in linhas[1:]], key=lambda x: -x[1] / x[2])
+        el += [Paragraph("Condições constatadas", st["h2"]), _geo_barras(itens, W, f, C),
                Paragraph(_t("Pela última inspeção de cada tema (rodízio mensal), nas unidades que responderam à questão."), st["mut"])]
     # evolução: soma por ciclo de inspeção, só nos ciclos em que ao menos 80% das unidades informaram
     ciclos = {}
@@ -2803,7 +2927,7 @@ def relatorio_prisional(dados, mapa, caminho, nome_base, cidade="", cats=None):
             linhas.append([c, str(len(ciclos[c])), fmt(sum(ciclos[c].values()))])
         ids = set(ciclos[bons[0]]) & set(ciclos[bons[-1]])
         a, b = sum(ciclos[bons[0]][i] for i in ids), sum(ciclos[bons[-1]][i] for i in ids)
-        el += [KeepTogether([Paragraph("Evolução da população", st["h2"]), _tabela(linhas, [50 * mm, 40 * mm, 40 * mm], st),
+        el += [KeepTogether([Paragraph("Evolução da população", st["h2"]), _geo_area([(c, sum(ciclos[c].values())) for c in bons], W, f, C),
                              Paragraph(_t("Nas %d unidades com dado nos dois ciclos: de %s presos em %s para %s em %s (%s%d%%)."
                                           % (len(ids), fmt(a), bons[0], fmt(b), bons[-1], "+" if b >= a else "", round(100 * (b - a) / a) if a else 0)), st["mut"])])]
     doc = SimpleDocTemplate(caminho, pagesize=A4, leftMargin=16 * mm, rightMargin=16 * mm, topMargin=21 * mm, bottomMargin=20 * mm,
@@ -2854,9 +2978,9 @@ def relatorio_condicoes_prisional(dados, caminho, nome_base, cidade="", cats=Non
             T = u["temas"][str(t)]
             linhas.append([Paragraph(_t(_geo_nome(u["nome"])), peq), Paragraph(_t(u.get("cidade") or ""), peq),
                            Paragraph(_t(T["ind"][ch]["v"]), peq), Paragraph(_t(T.get("ciclo") or ""), peq)])
-        tab = _tabela(linhas, [72 * mm, 32 * mm, W - 128 * mm, 24 * mm], st, pad=4)
+        tab = _geo_suave(_tabela(linhas, [72 * mm, 32 * mm, W - 128 * mm, 24 * mm], st, pad=4), st["C"])
         cab = [Paragraph(_t("%s · %d de %d estabelecimentos" % (rgeo.PROBLEMA.get(ch, rot), len(ruins), len(com))), st["neg"]),
-               Paragraph(_t(rgeo.TEMAS[t]), st["mut"])]
+               _geo_progresso(len(ruins), len(com), W, st["C"]), Spacer(1, 2), Paragraph(_t(rgeo.TEMAS[t]), st["mut"])]
         # tabela curta fica inteira com o título; a longa quebra entre páginas (o cabeçalho se repete)
         el += ([KeepTogether(cab + [tab])] if len(linhas) <= 12 else cab + [tab]) + [Spacer(1, 8)]
     el.append(Paragraph("Por estabelecimento", st["h2"]))
@@ -2865,7 +2989,7 @@ def relatorio_condicoes_prisional(dados, caminho, nome_base, cidade="", cats=Non
         ps = [rgeo.PROBLEMA.get(p[0], p[2]) for p in probs if u in p[4]]
         linhas.append([Paragraph(_t(_geo_nome(u["nome"])), peq), Paragraph(_t(u.get("cidade") or ""), peq),
                        Paragraph(_t(("%d: " % len(ps) + "; ".join(ps)) if ps else "nenhuma"), peq)])
-    el.append(_tabela(linhas, [62 * mm, 28 * mm, W - 90 * mm], st, pad=4))
+    el.append(_geo_suave(_tabela(linhas, [62 * mm, 28 * mm, W - 90 * mm], st, pad=4), st["C"]))
     el.append(Paragraph(_t("Constatação = resposta do formulário de inspeção que indica o problema (ex.: \"Não\" em \"Cinco refeições diárias\"). "
                            "Pela última inspeção de cada tema (rodízio mensal: habitabilidade, assistências, segurança e saúde)."), st["mut"]))
     doc = SimpleDocTemplate(caminho, pagesize=A4, leftMargin=16 * mm, rightMargin=16 * mm, topMargin=21 * mm, bottomMargin=20 * mm,
@@ -2895,14 +3019,13 @@ def relatorio_unidade_prisional(u, atualizado, assistidos, caminho, nome_base):
     el = [Paragraph(_t(titulo), st["tit"]),
           Paragraph(_t("%s%s · %s · dados do Geopresídios/CNIEP (CNJ) baixados em %s" % (u.get("cidade") or "", (" · " + u["endereco"]) if u.get("endereco") else "",
                                                                                       rgeo.CATEGORIAS.get(u.get("cat") or "penal", ""), atualizado)), st["sub"]), Spacer(1, 6)]
-    nums = [(fmt(pop), "pessoas presas" + (" (%s)" % u["pop_ciclo"] if u.get("pop_ciclo") else "")), (fmt(u.get("capacidade")), "vagas"),
-            ("—" if oc is None else "%d%%" % round(oc * 100), "taxa de ocupação"), (fmt(u.get("servidores_seguranca")), "agentes de segurança")]
-    cel = [[Paragraph(_t(n), st["num"]) for n, _ in nums], [Paragraph(_t(r), st["rot"]) for _, r in nums]]
-    tb = Table(cel, colWidths=[W / len(nums)] * len(nums))
-    tb.setStyle(TableStyle([("BOX", (0, 0), (-1, -1), 0.6, C(LINE)), ("INNERGRID", (0, 0), (-1, -1), 0.6, C(LINE)),
-                            ("BACKGROUND", (0, 0), (-1, -1), C(ZEBRA)), ("LEFTPADDING", (0, 0), (-1, -1), 8),
-                            ("TOPPADDING", (0, 0), (-1, 0), 7), ("BOTTOMPADDING", (0, 1), (-1, 1), 7), ("VALIGN", (0, 0), (-1, -1), "TOP")]))
-    el.append(tb)
+    tb = _geo_cartoes([(fmt(pop), "pessoas presas", ("inspeção de %s" % u["pop_ciclo"]) if u.get("pop_ciclo") else "", None, None),
+                       (fmt(u.get("capacidade")), "vagas", "capacidade informada" if u.get("capacidade") else "capacidade não informada", None, None),
+                       ("—" if oc is None else "%d%%" % round(oc * 100), "taxa de ocupação", "déficit de %s vagas" % fmt(max(0, pop - u["capacidade"])) if oc else "",
+                        "#8E2424" if (oc or 0) >= 1.5 else None, oc),
+                       (fmt(u.get("servidores_seguranca")), "agentes de segurança", ("%d presos por agente" % round(pop / u["servidores_seguranca"])) if u.get("servidores_seguranca") else "", None, None)],
+                      W, _fontes(), C)
+    el += [tb, Spacer(1, 3)]
     if insp:
         el.append(Paragraph(_t("Aspectos gerais: inspeção de %s (ciclo %s) · %s · %s%s" % ("/".join(reversed(insp.get("data", "").split("-"))), insp.get("ciclo", ""),
                                                                                        u.get("classificacao") or "", u.get("destinacao") or "",
@@ -2913,7 +3036,7 @@ def relatorio_unidade_prisional(u, atualizado, assistidos, caminho, nome_base):
     per = [["Perfil", ""], ["Homens", fmt(u.get("homens"))], ["Mulheres", fmt(u.get("mulheres"))], ["Mais de 60 anos", fmt(u.get("idosos"))],
            ["Indígenas", fmt(u.get("indigenas"))], ["Migrantes", fmt(u.get("migrantes"))], ["LGBTQIAPN+", fmt(u.get("lgbt"))],
            ["Deficiência física", fmt(u.get("deficiencia_fisica"))], ["Transtorno mental", fmt(u.get("transtorno_mental"))]]
-    duas = Table([[_tabela(sit, [50 * mm, 25 * mm], st, pad=4), _tabela(per, [50 * mm, 25 * mm], st, pad=4)]], colWidths=[W / 2, W / 2])
+    duas = Table([[_geo_suave(_tabela(sit, [50 * mm, 25 * mm], st, pad=4), C), _geo_suave(_tabela(per, [50 * mm, 25 * mm], st, pad=4), C)]], colWidths=[W / 2, W / 2])
     duas.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP"), ("LEFTPADDING", (0, 0), (-1, -1), 0)]))
     el += [Paragraph("População", st["h2"]), duas,
            Paragraph(_t("Servidores: %s no total, %s na segurança." % (fmt(u.get("servidores")), fmt(u.get("servidores_seguranca")))), st["mut"])]
@@ -2932,7 +3055,7 @@ def relatorio_unidade_prisional(u, atualizado, assistidos, caminho, nome_base):
                 linhas.append([Paragraph(_t(rot), peq), Paragraph(fmt(I[ch]["n"]), peq)])
         if len(linhas) > 1:
             el.append(KeepTogether([Paragraph(_t("%s · inspeção de %s" % (rgeo.TEMAS[int(t)], T.get("ciclo") or "")), st["h2"]),
-                                    _tabela(linhas, [W - 60 * mm, 60 * mm], st, pad=4)]))
+                                    _geo_suave(_tabela(linhas, [W - 60 * mm, 60 * mm], st, pad=4), C)]))
     graf = _geo_pizzas_unidade(u, W, _fontes(), C)
     if graf is not None:
         el.append(KeepTogether([Paragraph("Composição na última inspeção", st["h2"]), graf]))
@@ -2952,7 +3075,7 @@ def relatorio_unidade_prisional(u, atualizado, assistidos, caminho, nome_base):
         linhas = [["Ciclo da inspeção", "Presos", "Provisórios", "Fechado", "Semiaberto", "Aberto"]]
         for x in u["serie"]:
             linhas.append([x["ciclo"], fmt(x["pop"]), fmt(x.get("provisorios")), fmt(x.get("fechado")), fmt(x.get("semiaberto")), fmt(x.get("aberto"))])
-        el.append(KeepTogether([Paragraph("Evolução da população", st["h2"]), _tabela(linhas, [40 * mm] + [(W - 40 * mm) / 5] * 5, st, pad=4)]))
+        el.append(KeepTogether([Paragraph("Evolução da população", st["h2"]), _geo_suave(_tabela(linhas, [40 * mm] + [(W - 40 * mm) / 5] * 5, st, pad=4), C)]))
     if assistidos:
         semi = [a for a in assistidos if a["regime"].upper().startswith(("SEMI", "ABERTO"))]
         el.append(Paragraph(_t("Assistidos da base %s nesta unidade (%d)" % (nome_base, len(assistidos))), st["h2"]))

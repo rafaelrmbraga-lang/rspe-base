@@ -13,6 +13,8 @@ import hashlib
 import json
 import logging
 import os
+import pickle
+import zlib
 import re
 import shutil
 import sqlite3
@@ -1517,26 +1519,54 @@ class Api:
         ctx = self._contexto(brutos)
         # a lista é montada à parte e só substitui a atual no fim: exportar, relatórios e registro não leem uma lista pela metade
         modelos = []
+        # resultado guardado de cada assistido pela "impressão digital" de tudo o que entra no cálculo (registro, fatia do
+        # contexto, data de hoje, versões do programa e da base jurídica): só o que mudou é recalculado
+        subs = [_ctx_de(ctx, r) for r in brutos]
+        cache = self._cache_calc()
+        chaves = [_chave_calculo(r, sb, rv.HOJE) for r, sb in zip(brutos, subs)]
+        prontos = {}
+        for i, k in enumerate(chaves):
+            b = cache.get(k)
+            if b is not None:
+                try:
+                    prontos[i] = pickle.loads(zlib.decompress(b))
+                except Exception:
+                    pass
+        falta = [i for i in range(len(brutos)) if i not in prontos]
         res = None
-        if len(brutos) >= 80:
+        if len(brutos) >= 80 and len(falta) >= 16:
             # base grande: cada assistido é montado num processo paralelo (a análise é pesada: ~45 ms por assistido)
             try:
-                with ProcessPoolExecutor(max_workers=max(2, min(8, (os.cpu_count() or 2) - 1))) as ex:
-                    res = list(ex.map(_montar_proc, [(r, _ctx_de(ctx, r), rv.HOJE) for r in brutos], chunksize=10))
+                # todos os núcleos: o processo principal só espera os resultados
+                with ProcessPoolExecutor(max_workers=max(2, min(8, os.cpu_count() or 2))) as ex:
+                    res = list(ex.map(_montar_proc, [(brutos[i], subs[i], rv.HOJE) for i in falta], chunksize=6))
             except Exception:
                 logging.getLogger("rspe").exception("montagem paralela indisponível; montando em sequência")
                 res = None
-        if res is not None:
-            for m, migrar in res:
-                for ch, de, para in migrar:
-                    try:
-                        self.base.migrar_baixa(ch, de, para)
-                    except Exception:
-                        logging.getLogger("rspe").exception("falha ao migrar baixa %s", ch)
-                modelos.append(m)
-        else:
-            for r in brutos:
-                modelos.append(self._montar(r, ctx))
+        if res is None:
+            # base pequena (o contexto inteiro, como sempre) ou poucos assistidos mudados numa base grande (a fatia do contexto,
+            # como no processo paralelo)
+            res = [_montar_modelo(brutos[i], ctx if len(brutos) < 80 else subs[i]) for i in falta]
+        novo = {}
+        for i, mm in zip(falta, res):
+            try:
+                novo[chaves[i]] = zlib.compress(pickle.dumps(mm, protocol=pickle.HIGHEST_PROTOCOL), 1)  # comprimido: ~8x menor
+            except Exception:
+                pass
+        for i, k in enumerate(chaves):
+            if i in prontos and k in cache:
+                novo[k] = cache[k]
+        self._cache_calc_guardar(novo)
+        calc = dict(prontos)
+        calc.update(zip(falta, res))
+        for i in range(len(brutos)):
+            m, migrar = calc[i]
+            for ch, de, para in migrar:
+                try:
+                    self.base.migrar_baixa(ch, de, para)
+                except Exception:
+                    logging.getLogger("rspe").exception("falha ao migrar baixa %s", ch)
+            modelos.append(m)
         ativos = _so_ativos(modelos, brutos)
         _ids = {id(m) for m in ativos}
         self._json = {}
@@ -1594,6 +1624,62 @@ class Api:
         ctx["outras_exec"] = _outras_exec(brutos) if brutos is not None else {}
         ctx["homon_det"] = _homonimos_det(brutos) if brutos is not None else {}
         return ctx
+
+    # ---- cache dos cálculos: em memória (remontagens na sessão) e em disco (reabrir a base no mesmo dia) ----
+    def _cache_calc_arq(self):
+        b = getattr(self.base, "caminho", "") or ""
+        return os.path.join(pasta_app(), "cache_calculos", hashlib.sha1(os.path.abspath(b).encode("utf-8")).hexdigest()[:20] + ".bin")
+
+    def _cache_calc(self):
+        """Resultados guardados para a base aberta (chave -> modelo serializado). Do disco, só se forem desta versão do programa e de hoje."""
+        c = getattr(self, "_calc_mem", None)
+        if c is not None and c[0] == getattr(self.base, "caminho", None):
+            return c[1]
+        itens = {}
+        try:
+            with open(self._cache_calc_arq(), "rb") as fh:
+                d = pickle.load(fh)
+            if d.get("v") == 2 and d.get("versao") == VERSAO and d.get("hoje") == rv.HOJE.isoformat():
+                itens = d.get("itens") or {}
+        except Exception:
+            itens = {}
+        self._calc_mem = (getattr(self.base, "caminho", None), itens)
+        return itens
+
+    def _cache_calc_guardar(self, itens):
+        """Guarda na memória e grava no disco em segundo plano (falha de gravação não atrapalha: só não acelera a próxima abertura)."""
+        caminho = getattr(self.base, "caminho", None)
+        self._calc_mem = (caminho, itens)
+        if not caminho or getattr(self.base, "somente_leitura", False):
+            return
+        arq, dados = self._cache_calc_arq(), {"v": 2, "versao": VERSAO, "hoje": rv.HOJE.isoformat(), "itens": itens}
+
+        def gravar():
+            try:
+                os.makedirs(os.path.dirname(arq), exist_ok=True)
+                tmp = arq + ".tmp%d" % threading.get_ident()
+                with open(tmp, "wb") as fh:
+                    pickle.dump(dados, fh, protocol=pickle.HIGHEST_PROTOCOL)
+                os.replace(tmp, arq)
+                # faxina: caches de bases não abertas há mais de 7 dias (e restos de gravação interrompida)
+                pasta, agora = os.path.dirname(arq), time.time()
+                for n in os.listdir(pasta):
+                    f = os.path.join(pasta, n)
+                    try:
+                        if f != arq and agora - os.path.getmtime(f) > (7 * 86400 if n.endswith(".bin") else 3600):
+                            os.remove(f)
+                    except OSError:
+                        pass
+            except Exception:
+                logging.getLogger("rspe").exception("cache dos cálculos não gravado")
+        threading.Thread(target=gravar, daemon=True).start()
+
+    def _cache_calc_limpar(self):
+        self._calc_mem = None
+        try:
+            os.remove(self._cache_calc_arq())
+        except OSError:
+            pass
 
     def _atualizar(self, processo, msg=None):
         """Refaz só o assistido alterado (marcar pedido, baixar alerta, dado informado...) em vez da base inteira:
@@ -3033,6 +3119,7 @@ class Api:
 
     def recarregar_base_juridica(self):
         rg.carregar(forcar=True)
+        self._calc_mem = None  # a impressão digital já leva a base jurídica; descarta também o que está na memória
         r = self.listar()
         av = rg.avisos()
         orig = rg.origem().split(" (atenção:")[0]
@@ -4812,6 +4899,39 @@ def _so_ativos(modelos, brutos=None):
             princ = max(g, key=lambda m: _rank_exec(m.get("_bruto") or {}))
             fora |= {id(m) for m in g if m is not princ}
     return [m for m in modelos if id(m) not in fora]
+
+
+def _enc_chave(o):
+    if isinstance(o, (set, frozenset)):
+        return sorted(o, key=str)
+    if isinstance(o, (date, datetime)):
+        return o.isoformat()
+    return repr(o)
+
+
+_BJ_DIG = [None, None]
+
+
+def _bj_digital():
+    """Impressão digital da base jurídica carregada (muda se outro base_juridica.json for carregado, mesmo com a mesma versão)."""
+    b = getattr(rg, "_BASE", None)
+    if _BJ_DIG[0] is not b:
+        try:
+            _BJ_DIG[1] = hashlib.sha1(json.dumps(b, sort_keys=True, default=_enc_chave, ensure_ascii=False).encode("utf-8")).hexdigest()
+        except Exception:
+            _BJ_DIG[1] = "%s|%s" % (rg.versao(), id(b))
+        _BJ_DIG[0] = b
+    return _BJ_DIG[1]
+
+
+def _chave_calculo(r, sub, hoje):
+    """Impressão digital de um cálculo: tudo o que entra em _montar_modelo (o registro, a fatia do contexto, a data de hoje e as
+    versões do programa, da leitura da ficha e da base jurídica). Mesma chave = mesmo resultado."""
+    h = hashlib.sha1()
+    h.update(("%s|%s|%s|%s|" % (VERSAO, rf.VERSAO_LEITURA, _bj_digital(), hoje.isoformat())).encode("utf-8"))
+    h.update(json.dumps(r, sort_keys=True, default=_enc_chave, ensure_ascii=False).encode("utf-8"))
+    h.update(json.dumps(sub, sort_keys=True, default=_enc_chave, ensure_ascii=False).encode("utf-8"))
+    return h.hexdigest()
 
 
 def _ctx_de(ctx, r):

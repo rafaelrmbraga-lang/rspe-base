@@ -36,6 +36,7 @@ Penas mais leves prescrevem com as mais graves (art. 118); cada crime isoladamen
 
 from datetime import date, timedelta
 import copy
+import functools
 import re
 from fractions import Fraction
 
@@ -477,6 +478,17 @@ RE_PROVISORIA = rs.re.compile(r"FLAGRANTE|PREVENTIV|TEMPOR|PROVIS", rs.re.I)
 def _mesmo_processo(a, b):
     """Mesmo processo pelos dígitos (sem zeros à esquerda): iguais, ou um termina com o outro e o menor tem 5 dígitos ou mais
     ("32698" é o 0000000-00.0000.0.03.2698; "001030824550" é o 0000000-00.0103.0.82.4550)."""
+    if isinstance(a, str) and isinstance(b, str):
+        return _mesmo_processo_txt(a, b)  # resposta guardada por par de textos (chamada mais de um milhão de vezes)
+    return _mesmo_processo_(a, b)
+
+
+@functools.lru_cache(maxsize=65536)
+def _mesmo_processo_txt(a, b):
+    return _mesmo_processo_(a, b)
+
+
+def _mesmo_processo_(a, b):
     ka, kb = rs.chave_processo(a), rs.chave_processo(b)
     if not ka or not kb:
         return False
