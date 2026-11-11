@@ -43,13 +43,6 @@ input{font:inherit}
 .bar .btn,.bar .letra{flex:none;white-space:nowrap}
 .bar .sel{flex:none}
 .bar .sel select{text-overflow:ellipsis}
-@media (max-width:1500px){
-.bar{gap:6px}
-.bar .btn{padding:9px 11px}
-.bar .btn.ghost{padding:9px 6px}
-.bar .sep{margin:0 2px}
-.bar .sel select{max-width:190px}
-}
 /* abas */
 .tab svg{width:17px;height:17px;flex:none;color:#6B726D}
 .tab.on svg{color:var(--pri)}
@@ -803,9 +796,6 @@ body:has(.welcome.on) .btn-calc{display:none}
 .fdx-g.vermelho{background:var(--r-bg);color:var(--r-tx)}
 .fdx-g.cinza{background:var(--c-bg);color:var(--tx2)}
 .fdx-falta{color:var(--a-tx);font-size:11.5px;display:block;margin-top:2px}
-@media (max-width:1400px){
-.fdx-a{grid-template-columns:22px 170px minmax(0,1fr) 88px}
-}
 .vpop{position:absolute;z-index:60;background:var(--card,#fff);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow2);padding:12px 14px;width:440px;max-width:94vw;font-size:12.5px;font-weight:400}
 .vpop .vtit{font-weight:700;font-size:13px}
 .vpop .vsub{font-size:11.5px;margin:1px 0 8px}
@@ -1397,6 +1387,11 @@ tbody tr.geo-on td{background:var(--pri-soft)!important}
 .calc .nota-c{color:var(--tx2);font-size:11.5px;margin-top:8px}
 /* doze abas: em telas de até 1500 px, menos folga entre elas, para caberem numa linha */
 @media (max-width:1500px){
+.bar{gap:6px}
+.bar .btn{padding:9px 11px}
+.bar .btn.ghost{padding:9px 6px}
+.bar .sep{margin:0 2px}
+.bar .sel select{max-width:190px}
 .tab{padding-left:6px;padding-right:6px;gap:4px;font-size:12.5px}
 .tab svg{width:16px;height:16px}
 }
@@ -1545,27 +1540,6 @@ tr.grp i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-righ
 /* busca sem resultado */
 .empty .btn{margin-top:12px}
 /* notebook: até 1400 px de largura, tudo mais compacto (nada sai da tela) */
-@media (max-width:1400px){
-.top{gap:6px;padding-left:10px;padding-right:10px}
-.top .brand span{display:block;max-width:100px;white-space:normal;line-height:1.15}
-.top .search input{width:170px}
-.top .btn{padding:6px 9px;font-size:12.5px}
-.top .base{font-size:12px}
-.cababa{padding:10px 16px 0}
-.cababa h1{font-size:21px}
-.subtabs,.fixbar,.stats,.wrap{padding-left:16px;padding-right:16px}
-.foot{padding-left:16px;padding-right:16px;font-size:11.5px}
-.stats{padding-top:8px}
-.stats .stat{height:34px;padding:0 8px;gap:6px}
-.stats .stat b{font-size:16px!important}
-.stats .stat span{font-size:12px}
-tbody td{padding:6px 7px;font-size:12.5px}
-thead th{padding:8px 7px}
-tbody td:first-child,thead th:first-child{padding-left:10px}
-.nmc{min-width:200px}
-.cmp2{max-width:210px}
-td.c-regime{max-width:170px}
-}
 @media (max-height:760px){
 .top{min-height:46px;padding-top:4px;padding-bottom:4px}
 .tabs .tab{height:31px}
@@ -1630,6 +1604,26 @@ td.c-regime{max-width:170px}
 .lgt .pill.sitb{white-space:nowrap;max-width:none}
 /* notebook com o menu expandido: um pouco mais compacto, para a tabela caber sem cortar colunas */
 @media (max-width:1400px){
+.fdx-a{grid-template-columns:22px 170px minmax(0,1fr) 88px}
+.top{gap:6px;padding-left:10px;padding-right:10px}
+.top .brand span{display:block;max-width:100px;white-space:normal;line-height:1.15}
+.top .search input{width:170px}
+.top .btn{padding:6px 9px;font-size:12.5px}
+.top .base{font-size:12px}
+.cababa{padding:10px 16px 0}
+.cababa h1{font-size:21px}
+.subtabs,.fixbar,.stats,.wrap{padding-left:16px;padding-right:16px}
+.foot{padding-left:16px;padding-right:16px;font-size:11.5px}
+.stats{padding-top:8px}
+.stats .stat{height:34px;padding:0 8px;gap:6px}
+.stats .stat b{font-size:16px!important}
+.stats .stat span{font-size:12px}
+tbody td{padding:6px 7px;font-size:12.5px}
+thead th{padding:8px 7px}
+tbody td:first-child,thead th:first-child{padding-left:10px}
+.nmc{min-width:200px}
+.cmp2{max-width:210px}
+td.c-regime{max-width:170px}
 body:not(.menu-recolhido){--nav:196px}
 body:not(.menu-recolhido) .tabs .tab{gap:9px;padding-left:10px;font-size:12.5px}
 body:not(.menu-recolhido) tbody td{padding:5px 5px;font-size:12px}
