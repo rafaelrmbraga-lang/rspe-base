@@ -1217,7 +1217,8 @@ def _avaliar_ficha(f, r, ctx, ini, hoje):
         # Decreto 11.846/2023, art. 6º (mesma redação do art. 6º de 2024/2025): a fuga sem homologação na janela impede, como lá
         hom = fuga_a_verificar(f)
         apurar = FUGA_POSTERGA % (F.get("dispositivo") or "decreto") if posterga else FUGA_APURAR
-        j_firme = rs.nota_mora_estatal(r.get("_incidentes") or [], [t for t, firme in ach if firme and not (hom and "não homologada" in t)])
+        j_firme = rs.nota_mora_estatal(r.get("_incidentes") or [], [t for t, firme in ach if firme and not (hom and "não homologada" in t)],
+                                       r.get("_eventos") or [])
         j_ind = [(t.replace(FUGA_TRATADA, apurar) if hom and "não homologada" in t else t)
                  for t, firme in ach if not firme or (hom and "não homologada" in t)]
         for t in j_firme:
@@ -1571,7 +1572,10 @@ def _avaliar_ficha(f, r, ctx, ini, hoje):
                 # hipótese que depende de dado que o RSPE não traz (filho, gestante, estudo, doença...): com a pena e o tempo atendidos,
                 # fica registrada como "não aferida" - sinal na tabela quando o resultado é "não cabe" (decisão de 05/11/2026, P43)
                 _okn, _exn, _mn = hip_ok(h)
-                if _okn is not False and _exn:
+                # a hipótese do crime culposo (agente de segurança, 2019 a 2021: art. 2º, II) só pode alcançar quem tem crime culposo:
+                # sem nenhum, não há o que conferir fora do RSPE (antes, quase todo assistido recebia o sinal nesses decretos)
+                _so_culp = bool(re.search(r"\bcrime culposo\b", rs._sem_acento(h.get("outros_requisitos") or "").lower()))
+                if _okn is not False and _exn and not (_so_culp and not any(rs.crime_culposo(c) for c in crimes)):
                     naf.append((h, _exn))
                 continue
             h = ex[0]

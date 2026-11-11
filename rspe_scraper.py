@@ -3853,6 +3853,7 @@ def _analise_decreto_2022_modo(campos, crimes, eventos, incidentes, modo=None):
     ativos = [c for c in ativos if c not in posteriores]
     linhas, alcanca, verificar = [], [], []
     vd_conf = []
+    sent_inc = []  # sentença registrada depois do trânsito (dado incoerente): vale o trânsito e o crime fica a verificar
     if posteriores:
         linhas.append("Obs.: fato posterior a 25/12/2022 (%s): o decreto não alcança essa pena, que segue em execução; a análise usa só os crimes anteriores "
                       "(art. 11; STJ, HC 190.963)." % "; ".join("%s, fato de %s" % (crimes_curto([c]), c.get("data_infracao")) for c in posteriores))
@@ -3878,10 +3879,16 @@ def _analise_decreto_2022_modo(campos, crimes, eventos, incidentes, modo=None):
         # publicação - sem ele, A VERIFICAR (nem "cabe" contra o STJ, nem "não alcança" pela leitura restritiva)
         _pub = DECRETOS_PUB.get("2022")
         _ds, _tm, _tp = to_date(c.get("data_sentenca") or ""), to_date(c.get("transito_mp") or ""), to_date(c.get("transito_processo") or "")
-        if _ds and _ds > _pub:
+        if _ds and _ds > _pub and _sem_condenacao_na_data(c, _pub):
             linhas.append("✗ %s: sentença de %s, posterior à publicação do decreto (%s) - não havia condenação na data: não alcançado "
                           "(STJ, AgRg no HC 894.488 e AgRg no HC 919.210)" % (nome, fmt(_ds), fmt(_pub)))
             continue
+        if _ds and _ds > _pub:
+            # sentença registrada depois do trânsito, que é anterior à publicação (dado incoerente do SEEU; no júri, o trânsito pode
+            # ser o da pronúncia): vale o trânsito, como em 2024/2025 e nos demais decretos - fica na análise, a verificar
+            linhas.append("? %s: sentença de %s registrada depois do trânsito em julgado (%s) no RSPE - dado incoerente: considerada a "
+                          "condenação pelo trânsito; conferir as datas na ação penal" % (nome, fmt(_ds), fmt(min(d for d in (_tm, _tp) if d))))
+            sent_inc.append(nome)
         if sem_pena_privativa(c):
             # art. 5º: "pena privativa de liberdade máxima em abstrato" - o crime sem pena privativa (porte para consumo, tipo só com
             # multa) não é alcançado nem conta (art. 8º, I: o indulto não se estende às restritivas e à multa)
@@ -3978,12 +3985,17 @@ def _analise_decreto_2022_modo(campos, crimes, eventos, incidentes, modo=None):
                 alcanca.append(nome)
         else:
             linhas.append("✗ %s: pena máxima em abstrato %s supera 5 anos" % (nome, dias_para_pena(pm)))
+    for nome in sent_inc:  # o favorável com a data incoerente não é afirmado: a verificar
+        if nome in alcanca:
+            alcanca.remove(nome)
+        if nome not in verificar:
+            verificar.append(nome)
     idade = _idade_em(campos.get("data_nascimento"), ref)
     pena_total = pena_para_dias(campos.get("pena_total"))
     # art. 11: penas somadas até 25/12/2022 - condenação sem trânsito para a acusação nessa data fica fora da soma do art. 4º
     # (STJ, AgRg no HC 894.488); no art. 5º cada crime conta isoladamente e o art. 9º dispensa o trânsito
     pub22 = DECRETOS_PUB.get("2022") or ref
-    sem_tr22 = [c for c in ativos if _sentenca_posterior(c, pub22)]
+    sem_tr22 = [c for c in ativos if _sem_condenacao_na_data(c, pub22)]  # sentença posterior ao trânsito (incoerente) vale pelo trânsito, como em 2024/2025
     if sem_tr22:
         linhas.append("Obs.: sentença posterior à publicação do decreto (23/12/2022) (%s): não havia condenação na data - fora da soma do art. 11 (art. 4º) - "
                       "STJ, AgRg no HC 894.488." % crimes_curto(sem_tr22))
@@ -5692,7 +5704,8 @@ def _analise_decretos_modo(campos, crimes, eventos, incidentes, hoje, modo=None,
             # pelo cumprimento da pena (término, extinção) não é fuga; e a interrupção fora dos 12 meses do art. 6º (até a
             # publicação) não pesa no decreto (conferência independente 7.14.8)
             _so_cump = bool(RE_SOLTURA_CUMPRIMENTO.search(_sem_acento(_mi).upper()))
-            _jan = bool(ult_i and ref - timedelta(days=dias_anos(1, ref)) <= ult_i <= (publicacao or ref))
+            # mesma janela do art. 6º (12 meses com o dia do começo incluído: de 26/12 do ano anterior até a publicação)
+            _jan = bool(ult_i and ref - timedelta(days=dias_anos(1, ref) - 1) <= ult_i <= (publicacao or ref))
             interr_ctx.update(motivo=motivo, data=ult_i, cump=cump_i, det=det_base, so_cumprimento=_so_cump,
                               falta=not (RE_OUTRO_PROC.search(_mi) or RE_FUGA_EV.search(_mi) or _so_cump) and _jan, mot_ev=_mi)
             return "seguir"
@@ -6896,6 +6909,20 @@ def vga_elementar(c):
     return False
 
 
+def crime_culposo(c):
+    """Crime culposo pelo tipo lido do RSPE: "culposo/culposa" na descrição, homicídio culposo (CP, art. 121, § 3º), lesão corporal
+    culposa (art. 129, § 6º) e os culposos do Código de Trânsito (arts. 302 e 303)."""
+    txt = _sem_acento(" ".join(str(c.get(k) or "") for k in ("tipo_penal", "artigo", "nome", "descricao"))).upper()
+    if "CULPOS" in txt:
+        return True
+    lei, art = num_lei(c.get("lei")), num_art(c.get("artigo"))
+    if lei == "9503" and art in ("302", "303"):
+        return True
+    if lei in ("2848", "") and art in ("121", "129"):
+        return bool(re.match(r"\s*§\s*%s(?!\d)" % ("3" if art == "121" else "6"), c.get("tipo_penal") or ""))
+    return False
+
+
 def vga_indulto(c):
     """Violência ou grave ameaça para o indulto e a comutação: a marcação do RSPE ou, nos tipos em que ela é elementar
     (roubo, ameaça, lesão dolosa, homicídio doloso, extorsão, estupro...), sempre - prevalece sobre a marcação em branco ou 'N'."""
@@ -7070,13 +7097,13 @@ def falta_art6(incidentes, ref, eventos=None, publicacao=None, crimes=None, inic
     # (12 meses contados para trás com o dia do começo incluído - de 26/12 do ano anterior a 25/12 -, e não 12 meses e 1 dia:
     #  revisão do cap. 6, achado 8)
     ach = indicios_falta(incidentes, ref, dias=dias_anos(1, ref) - 1, eventos=eventos, ate=publicacao, crimes=crimes, inicio=inicio, fuga_firme=False)
-    return nota_mora_estatal(incidentes, [t for t, f in ach if f]), [t for t, f in ach if not f]
+    return nota_mora_estatal(incidentes, [t for t, f in ach if f], eventos), [t for t, f in ach if not f]
 
 
 MORA_MESES = 6  # homologação mais de 6 meses depois do fato: nota de conferência da mora estatal (decisão de 05/11/2026, P31)
 
 
-def nota_mora_estatal(incidentes, textos):
+def nota_mora_estatal(incidentes, textos, eventos=None):
     """Faltas firmes dos decretos (art. 6º de 2023 a 2025; janelas de 2000 a 2022): quando a homologação veio mais de 6 meses
     depois do fato, a nota "conferir inércia ou mora estatal" - pelo STJ (Tema 1195), a apuração concluída depois impede se a falta
     foi cometida na janela, salvo inércia ou mora do Estado. Só nota: o resultado não muda."""
@@ -7088,9 +7115,12 @@ def nota_mora_estatal(incidentes, textos):
             if not RE_FALTA_PROPRIA.search(rot) or _negado(i) or _pendente(i) or not t.startswith(rot):
                 continue
             fato, dec = _data_fato_falta(i), to_date(i.get("data_decisao") or "")
-            if fato and dec and dias_anos(MORA_MESES / 12.0, dec) < (dec - fato).days:
-                nota = (" - homologada em %s, mais de %d meses depois do fato: conferir se houve inércia ou mora estatal na apuração "
-                        "(STJ, Tema 1195)" % (fmt(dec), MORA_MESES))
+            # fuga ou evasão: a apuração só pode começar com a recaptura (a falta é permanente até ela) - os 6 meses contam dali
+            rec = recaptura_apos(fato, eventos) if (fato and eventos and RE_FUGA_EV.search(rot + " " + (i.get("complemento") or ""))) else None
+            ini = rec if (rec and dec and rec <= dec) else fato
+            if ini and dec and dias_anos(MORA_MESES / 12.0, dec) < (dec - ini).days:
+                nota = (" - homologada em %s, mais de %d meses depois %s: conferir se houve inércia ou mora estatal na apuração "
+                        "(STJ, Tema 1195)" % (fmt(dec), MORA_MESES, ("da recaptura (%s)" % fmt(rec)) if ini is rec else "do fato"))
                 break
         out.append(t + nota if nota and nota not in t else t)
     return out
