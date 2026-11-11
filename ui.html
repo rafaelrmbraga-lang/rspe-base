@@ -1205,6 +1205,25 @@ td.act{white-space:nowrap}
 .dctab thead th:nth-child(4),.dctab td.dmot{text-align:left!important}
 .dctab td.dresb .dres{display:inline-block;text-align:center}
 .card tbody td .nmc{justify-content:flex-start}
+
+/* Auditoria: detalhe aberto suave - painel claro, cartões arredondados com faixa fina, nível em etiqueta, botões sem borda */
+.subwrap{border-left:0!important;background:#F8FAF9;padding:12px 18px 16px 22px!important}
+.ac{border:1px solid #E8ECE9!important;border-left:3px solid #C8CEC8!important;border-radius:12px!important;background:#fff;box-shadow:0 1px 2px rgba(16,24,40,.04)}
+.ac.alerta{border-left-color:#D07A74!important}.ac.verificar{border-left-color:#D9AC5E!important}.ac.ok{border-left-color:#7DB592!important}
+.ac-lista{display:flex;flex-direction:column;gap:10px}
+.ac-h b{font-weight:600!important}
+.ac-h .pill{border-radius:6px!important;padding:2px 9px!important;font-size:11.5px!important;font-weight:600!important;white-space:nowrap}
+.ac-h .pill::before{display:none!important}
+.ac.alerta .ac-h .pill{background:#F7E4E2!important;color:#8E2424!important}
+.ac.verificar .ac-h .pill{background:#FBEEDD!important;color:#9A5410!important}
+.ac.ok .ac-h .pill{background:#E6F2EA!important;color:#1F5B39!important}
+.ac.info .ac-h .pill{background:#EEF0EE!important;color:#5F6662!important}
+.subwrap .mini{border:1px solid transparent!important;background:rgba(0,0,0,.045)!important;border-radius:8px!important;padding:4px 10px!important;color:var(--tx)}
+.subwrap .mini:hover{background:rgba(0,0,0,.085)!important}
+.subwrap .ac-fund .mini.pre{background:#F2F8F4!important;border-color:#CFE3D6!important;color:var(--pri)!important;font-weight:600}
+.subwrap .ac-fund .mini.pre:hover{background:#E3F0E7!important}
+.subwrap .ac-chips .mini.pre{background:var(--pri)!important;color:#fff!important}
+.ac-fund{border-top:1px solid #EEF1EE!important}
 </style>
 </head>
 <body>
