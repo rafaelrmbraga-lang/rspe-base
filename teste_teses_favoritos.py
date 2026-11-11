@@ -16,7 +16,7 @@ ok(api.tese_favoritar("a1") == ["a1", "7"], "não duplica")
 ok(api.tese_favoritar("a1", False) == ["7"], "desmarca")
 ok(app.Api().teses_favoritos() == ["7"], "fica gravado na configuração")
 h = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "ui.html"), encoding="utf-8").read()
-for t in ("tesFavoritar", "tesVerFav", "Favoritos", "☆ Favoritar", "★ Favorito", "Nenhum favorito ainda", "API().teses_favoritos()"):
+for t in ("tesFavoritar", "tesVerFav", "Favoritos", "ui.ICO.estrela+' Favoritar'", "ui.ICO.estrelaCheia+' Favorito'", "Nenhum favorito ainda", "API().teses_favoritos()"):
     ok(t in h, "ui.html: " + t)
 if falhas:
     print("FALHOU (favoritos): " + "; ".join(falhas)); sys.exit(1)

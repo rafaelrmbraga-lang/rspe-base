@@ -36,3 +36,22 @@ Protótipo: `demonstracao/abas_simuladas.html?tema=7&menu=aberto` (ou `menu=reco
 ## Aplicação no programa (versão 7.15.0)
 
 A linha E e as 15 decisões foram aplicadas no `ui.html` (e, para "Parar depois deste arquivo", uma função nova na `Api` do `rspe_app.py`). Antes e depois, com o programa real e a base fictícia, em [APTO_7.15_antes_depois.pdf](APTO_7.15_antes_depois.pdf). Nenhuma regra, cálculo ou texto jurídico mudou; o inventário de controles da tela, antes e depois, não perdeu nenhuma função. Os 81 testes passam (o novo `teste_linha_e.py` cobre a tela e a parada da importação).
+
+## Revisão de interface da 7.18.0 (11/11/2026)
+
+Revisão feita com a skill de interface (ui-ux-pro-max) sobre a 7.17.0, com o programa real e a base fictícia. As 12 propostas ficaram numa página de apresentação, com antes e depois. A troca de abas continua instantânea: transições foram dispensadas.
+
+| nº | proposta | decisão |
+|---|---|---|
+| A1 | tirar o filete verde que sobrava sob a aba ativa do menu | aplicada |
+| A2 | contadores sempre numa linha, rótulo em até duas | aplicada; "A verificar" passa a "Verificar", para não quebrar |
+| A3 | tabela do decreto (Indulto) cabendo na tela; legenda só no rodapé | aplicada; o botão passa a "Linha do tempo", como na Extinção |
+| A4 | Quadro com as quatro colunas na janela; quadro vazio orienta | aplicada |
+| A5 | dica própria no rodapé de Dados prisionais | aplicada |
+| A6 | busca legível no notebook ("Buscar (Ctrl+K)") | aplicada |
+| B1 | subnavegação em três formatos (segmentado, lista lateral, seções), verde cheio só nas ações principais | aplicada |
+| B2 | um título só em Dados da base e Dados prisionais | aplicada |
+| B3 | ficha do assistido: ações no topo, "Mais" para remover, conduta em etiqueta, barra de cumprimento | aplicada |
+| B4 | ícones desenhados no lugar de caracteres | aplicada |
+| B5 | algarismos alinhados nas colunas | aplicada |
+| C1 | consolidar o CSS (uma regra por seletor, paleta, escalas, menos !important) | aplicada de uma vez, em seis etapas conferidas com o estilo calculado de 220 mil elementos em 47 telas |

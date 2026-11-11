@@ -206,9 +206,14 @@ ok(all(x in UI for x in ("id=\"mExp\"", "ui.modalExportar('xlsx')", "ui.modalExp
 ok("fichaHtml(" not in UI and "Ficha disciplinar (SIAPEN)</h3>" not in UI and "ui.removerFicha(" in UI, "painel do assistido sem a seção da ficha, com Remover ficha")
 ok('aria-label="Calculadora de penas"' in UI and '<span class="lb">Letra</span>' not in UI and "body.drawer-on .btn-calc" in UI,
    "barra: A/A sem 'Letra', calculadora só com o ícone e sob a gaveta aberta")
-ok("background:#fff;color:#C0261F;border:1px solid #C0261F" in UI.split(".dv-seeu{", 1)[-1].split("}", 1)[0],
+import re as _re
+def _cor(txt):
+    """troca var(--x) pelo valor de --x no :root (7.18: as cores ficam numa paleta) e normaliza #fff/#FFFFFF"""
+    txt = _re.sub(r"var\((--[\w-]+)\)", lambda m: (_re.search(_re.escape(m.group(1)) + r":([^;}]+)", UI) or m).group(1).strip(), txt)
+    return _re.sub(r"#([0-9a-fA-F]{3})\b", lambda m: "#" + "".join(c * 2 for c in m.group(1)), txt).lower()
+ok(_cor("background:#fff;color:#C0261F;border:1px solid #C0261F") in _cor(UI.split(".dv-seeu{", 1)[-1].split("}", 1)[0]),
    "triângulo de divergência em caixinha branca com borda vermelha")
-ok("background:#FBE8EF;color:#8E1F4A" in UI.split(".pr-rem{", 1)[-1].split("}", 1)[0], "prioridade da remição em caixinha vinho")
+ok(_cor("background:#FBE8EF;color:#8E1F4A") in _cor(UI.split(".pr-rem{", 1)[-1].split("}", 1)[0]), "prioridade da remição em caixinha vinho")
 
 # ------------------------------------------------------------------ 7. cópia de segurança e restauração (inclusive de versão anterior)
 api._fazer_copia()

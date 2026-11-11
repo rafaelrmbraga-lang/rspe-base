@@ -1,9 +1,9 @@
-APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.17.0
+APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.18.0
 (antigo RSPE Base; SEEU, programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-7.17.0. A documentação técnica completa (cada parâmetro, a regra, a norma e
+7.18.0. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -250,11 +250,13 @@ CABEÇALHO DA ABA
   antes. A ordem da lista começa "Por situação" (o que exige ação primeiro,
   em grupos com o nome e a contagem, do mais atrasado ao menos atrasado);
   "Alfabética" fica a um clique, e clicar no título da coluna ordena por ela.
-  Os contadores ficam numa faixa (número, traço de cor e rótulo) e, como
-  antes, clicar num deles filtra a lista. Na Progressão, no Livramento e na
-  Extinção, "A verificar" tem contador e grupo próprios, na cor do RSPE
-  antigo; "Até 60 dias" fica só com os prazos; "Até 90 dias" fica em
-  azul-acinzentado (o verde passa a querer dizer só "em ordem / cabe").
+  Os contadores ficam numa linha só (número, traço de cor e rótulo; o
+  rótulo longo quebra em até duas linhas) e, como antes, clicar num deles
+  filtra a lista. Na Progressão, no Livramento e na Extinção, "Verificar"
+  tem contador e grupo próprios, na cor do RSPE antigo; "Até 60 dias" fica
+  só com os prazos; "Até 90 dias" fica em azul-acinzentado (o verde passa a
+  querer dizer só "em ordem / cabe"). "RSPE antigo" é um aviso sobre o
+  documento: fica compacto no fim da linha, com borda tracejada.
   Na coluna Situação, a primeira parte vem em destaque e o complemento do
   programa embaixo, em letra menor (o texto inteiro aparece ao parar o
   mouse). O complemento "sem pedido no RSPE - requerer" não aparece na
@@ -413,9 +415,14 @@ CLIQUES E FICHA DO ASSISTIDO
   pena, data-base, uma linha por benefício, falta (12 meses), pedidos
   feitos, crimes em execução e, recolhidos, os cálculos do programa
   (indulto e comutação possíveis ou a verificar). A ficha disciplinar
-  (atestados, faltas, regressões, isolamentos) fica na aba Ficha; no pé do
-  painel, ao lado de "Relatório em PDF" e "Remover este assistido da
-  base", aparece "Remover ficha" quando há ficha vinculada. Com o painel
+  (atestados, faltas, regressões, isolamentos) fica na aba Ficha. As ações
+  ficam no topo do painel: "Relatório em PDF", "Resumo para o assistido",
+  "Registro para o SAP" e "Copiar resumo"; depois "Enviar ao Quadro" e
+  "Fixar no topo"; em "Mais", à parte, "Remover ficha" (quando há ficha
+  vinculada) e "Remover este assistido da base", que pede confirmação. Ao
+  lado do nome, a conduta da ficha do SIAPEN em etiqueta ("Conduta boa");
+  sob os números da pena, uma barra com a parte cumprida (pena cumprida ÷
+  pena total, em dias, como no RSPE). Com o painel
   aberto, o botão da calculadora fica sob o véu, sem cobrir o cabeçalho
   do painel. Clique no título da
   coluna para ordenar (a coluna Situação ordena pelos dias, do mais
@@ -1105,6 +1112,43 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v7.18.0
+  Tela revista com a skill de interface (ui-ux-pro-max) e o estilo do
+  programa reorganizado. Nenhuma regra, cálculo ou texto jurídico mudou.
+  - Contadores sempre numa linha (o rótulo longo quebra em até duas):
+    antes, na Ficha disciplinar e na Extinção, parte deles caía numa
+    segunda fileira, esticada. "A verificar" passa a "Verificar".
+    "RSPE antigo" fica compacto no fim, com borda tracejada.
+  - Indulto, um decreto aberto: a tabela cabe na tela (antes passava
+    224 px da borda e o botão ficava cortado); resultado e benefício na
+    mesma linha; o botão chama "Linha do tempo", como na Extinção; a
+    legenda fica só no rodapé, agora com "Não alcançado".
+  - Quadro do usuário: as quatro colunas cabem na janela; com o quadro
+    vazio, uma frase diz como criar o primeiro cartão.
+  - Dados prisionais: dica própria no rodapé. Dados da base e Dados
+    prisionais: um título só, na mesma grade das outras abas; em Dados da
+    base, a faixa de seções marca a que está à vista.
+  - Busca: "Buscar (Ctrl+K)" na caixa (no notebook o texto cortava); o
+    texto completo fica na dica.
+  - Pretensão executória/punitiva e a ordem da lista usam o mesmo
+    seletor da Jurisprudências (Pesquisa | Monitor); o verde cheio fica só
+    nas ações principais. Listas de decretos e de temas com a mesma
+    altura de linha.
+  - Ficha do assistido: as ações juntas no topo (gerar, depois organizar)
+    e "Mais" com Remover ficha e Remover este assistido, à parte. Conduta
+    em etiqueta ("Conduta boa") e barra com a parte cumprida da pena.
+  - Ícones desenhados no lugar de caracteres (fechar, copiar, editar,
+    favorito, setas, selos da linha do tempo, avisos), que mudavam com a
+    fonte do Windows. Algarismos alinhados nas colunas de datas e números.
+  - Estilo (CSS) reorganizado: uma regra por seletor, um bloco por
+    tamanho de tela, as cores numa paleta só (211 cores escritas direto
+    viraram 142 nomeadas), letra em 7 tamanhos, cantos em 4 raios, sombras
+    em 3 níveis, espaçamentos em passos de 2 px; 395 declarações que nunca
+    valiam saíram e os !important caíram de 367 para 207. Cada etapa foi
+    conferida com o estilo calculado de 220 mil elementos em 47 telas
+    (base fictícia).
+  Teste novo: teste_ui_718.py.
 
 v7.17.0
   Visual mais suave em todas as abas, aprovado aba por aba, e correção na
