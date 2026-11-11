@@ -1224,6 +1224,7 @@ td.act{white-space:nowrap}
 .subwrap .ac-fund .mini.pre:hover{background:#E3F0E7!important}
 .subwrap .ac-chips .mini.pre{background:var(--pri)!important;color:#fff!important}
 .ac-fund{border-top:1px solid #EEF1EE!important}
+.ac-top{justify-content:flex-end!important;align-items:center!important}.ac-top .ac-chips{flex-wrap:nowrap!important;white-space:nowrap}
 </style>
 </head>
 <body>
@@ -1931,7 +1932,7 @@ const ui = {
           <span class="mini" onclick="event.stopPropagation();const b=this.closest('.ac-fund').querySelector('.ac-ft');b.classList.toggle('on');this.textContent=b.classList.contains('on')?'Ocultar texto':'Ver texto'">Ver texto</span></div>
           <div class="ac-ft">${esc(penaExt(s.fundamentacao))}</div></div>`:''}
         ${s.baixado?`<div class="ac-f">Baixado${s.baixa_data?' em '+esc(s.baixa_data):''}${s.baixa_obs?' · '+esc(s.baixa_obs):''}</div>`:''}</div>`; };
-    const cab=`<div class="ac-top"><div><b>${esc(r.nome)}</b> <span class="muted">· conferência dos números e datas do RSPE (frações, soma das penas, data-base, perda de remidos, reincidência) · ${esc(r.aud_base)}</span></div>
+    const cab=`<div class="ac-top" title="Conferência dos números e datas do RSPE (frações, soma das penas, data-base, perda de remidos, reincidência) · ${esc(r.aud_base)}">
       <div class="ac-chips">${nA?`<span class="pill vermelho">${nA} ${nA===1?'alerta':'alertas'}</span>`:''}${nV?`<span class="pill amarelo">${nV} ${nV===1?'ponto a verificar':'pontos a verificar'}</span>`:''}${!nA&&!nV?'<span class="pill verde">Guia em ordem</span>':''}
       ${(ocultos||this.mostrarTudo)?`<span class="mini" onclick="event.stopPropagation();ui.mostrarTudo=!ui.mostrarTudo;ui.render()">${this.mostrarTudo?'ocultar conferências OK':'ver '+pl(ocultos,'conferência OK / informativa','conferências OK / informativas')}</span>`:''}
       <span class="mini" onclick="event.stopPropagation();ui.copiarClip(${ui.clip(ui.txtAudTodos(r))})">Copiar pendências</span>
