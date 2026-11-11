@@ -2115,6 +2115,9 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
         "pena_total": rs.pena_extenso(r.get("pena_total", "")),
         "pena_cumprida": rs.pena_extenso(r.get("pena_cumprida", "")),
         "pena_rem": rs.pena_extenso(r.get("pena_remanescente", "")),
+        # em dias (ano de 365, mês de 30: convenção do SEEU), para a barra de cumprimento da ficha do assistido
+        "pena_total_dias": rs.pena_para_dias(r.get("pena_total", "")),
+        "pena_cumprida_dias": rs.pena_para_dias(r.get("pena_cumprida", "")),
         "remidos": r.get("saldo_remidos", ""),
         # quem nunca iniciou o cumprimento (só prisão provisória encerrada antes do trânsito) não teve a pena interrompida: a
         # coluna diz o mesmo que as abas (LEP, art. 105; o tempo de prisão provisória é detração, CP, art. 42)

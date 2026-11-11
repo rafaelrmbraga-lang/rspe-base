@@ -65,7 +65,7 @@ for t, m in [("id=\"mImp\"", "Importar num botão com menu"), ("onclick=\"api('i
              ("NAV_GRUPOS:[[null,['geral']],['Prazos'", "abas agrupadas por tarefa"), ("passaUm(r,spec,f)", "filtros combináveis"),
              ("Object.values(G).every(L=>L.some(", "no mesmo grupo vale qualquer um; entre grupos, todos"),
              ("this.ordSit[spec.id]!==false", "ordem por situação é o padrão"), ("SEM_CMP:['sem pedido no RSPE - requerer']", "complemento fora da coluna"),
-             ("out.verificar='A verificar'", "'A verificar' com contador próprio"), ("--v-dot:#B5651D", "'A verificar' na cor do RSPE antigo"),
+             ("out.verificar='Verificar'", "'Verificar' com contador próprio (7.18: sem o \"A\", cabe no contador)"), ("--v-dot:#B5651D", "'A verificar' na cor do RSPE antigo"),
              ("ui.impParar()", "botão Parar depois deste arquivo"), ("api('parar_importacao')", "tela chama parar_importacao"),
              ("<summary>Método completo</summary>", "método completo a um clique"), ("Limpar busca</button>", "busca vazia oferece Limpar busca"),
              ("{desfazer:volta}", "aviso de pedido com Desfazer"), ("ui.toastFechar()", "aviso de erro fica até fechar"),
