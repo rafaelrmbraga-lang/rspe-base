@@ -399,6 +399,121 @@ ind(k, "Decretos 2024/2025: roubo com restrição de liberdade de 2017 (hedionde
      crime(proc_crim(k + 500, 2017), "ART 297: Falsificação de documento público", anos(4), "01/05/2017", tipo=FALSO, sentenca="01/11/2017", transito="01/02/2018")],
     "01/06/2018", [C("ind25", "contem", "POSSÍVEL (crimes não impeditivos"), C("det25", "contem", "irretroatividade")], tardia=False)
 
+# ------------------------------------------------------------------ decisões de 11/11/2026 (teses e políticas da revisão)
+LATRO = "§ 3º, II: se resulta morte, Reclusão: 20 a 30 anos E Multa"
+k = 91501
+um(k, "Decisão 1: latrocínio de 2022, reincidente só por furto, SEEU 1/1: livramento vedado ou 2/3 (tese)",
+   "O VI, a, do art. 112 é do primário e o VIII, do reincidente em hediondo com morte; ao não específico, tese do 2/3 (CP, art. 83, V).",
+   [crime(proc_crim(k + 500, 2015), "ART 155: Furto", anos(2), "10/03/2015", sentenca="20/11/2015", transito="20/01/2016", tipo=FURTO, extinto="Sim",
+          data_extincao="20/01/2019"),
+    crime(proc_crim(k, 2022), "ART 157: Roubo", anos(22), "10/03/2022", sentenca="20/11/2022", transito="20/01/2023", tipo=LATRO, vga="S", morte="S", rc="S",
+          fp="70% - Art.112, VIII, da LEP", fl="1/1 - Hediondo com resultado morte")],
+   [AUD("hediondo-com-morte-reincidente-generico-livramento", True, nivel="verificar"), AUD("hediondo-com-resultado-morte-fato-em-livramento", False),
+    C("liv_sit", "contem", "tese: 2/3")], "09/04/2022", prog="01/01/2040")
+k = 91502
+um(k, "Decisão 2: extorsão com morte (art. 158, § 2º) de 2015: hediondez discutível (verificar)",
+   "Lei 13.964/2019: o art. 1º, III, da Lei 8.072 passou a citar só o § 3º - tese da retroatividade.",
+   [crime(proc_crim(k, 2015), "ART 158: Extorsão", anos(6), "01/03/2015", tipo="§ 2º: Aplica-se à extorsão praticada mediante violência o disposto no § 3º do artigo anterior",
+          vga="S", morte="S", fp="2/5 - Hediondo Primário", fl="2/3 - Hediondo")],
+   [AUD("extorsao-com-morte-hediondez-discutivel", True, nivel="verificar")], "05/10/2025", prog="01/01/2028")
+k = 91503
+um(k, "Decisão 3: feminicídio de 2025, reincidente não específico, SEEU 55%: tese (verificar), não alerta",
+   "O VI-A (55%) é só do primário; o genérico iria a 50% por analogia, abaixo do primário do mesmo crime - tese.",
+   [crime(proc_crim(k + 500, 2019), "ART 155: Furto", anos(1), "10/03/2019", sentenca="10/10/2019", transito="10/12/2019", tipo=FURTO, extinto="Sim",
+          data_extincao="15/01/2021"),
+    crime(proc_crim(k, 2025), "ART 121-A: Feminicídio", anos(25), "15/01/2025", tipo="CAPUT: Matar mulher por razões da condição do sexo feminino, Reclusão: 20 a 40 anos",
+          vga="S", morte="S", rc="S", fp="55% - Art.112, VI-A", fl="1/1 - Hediondo")],
+   [AUD("percentual-de-progressao-diverge", True, nivel="verificar"), AUD("percentual-de-progressao-diverge", False, nivel="alerta")],
+   "20/01/2025", prog="01/01/2039")
+k = 91504
+um(k, "Decisão 4: tráfico de 11/05/2026, reincidente genérico, SEEU 80%: alerta firme (70%)",
+   "O inciso VII da Lei 15.358/2026 manteve a redação lida pelo STF (Tema 1169) e pelo STJ (Temas 1084 e 1196) como reincidência específica.",
+   [crime(proc_crim(k + 500, 2020), "ART 155: Furto", anos(1), "10/03/2020", sentenca="10/10/2020", transito="10/12/2020", tipo=FURTO, extinto="Sim",
+          data_extincao="15/01/2022"),
+    crime(proc_crim(k, 2026), "ART 33: Tráfico de drogas", anos(6), "11/05/2026", sentenca="10/08/2026", transito="20/09/2026", lei=DROGAS, tipo=TRAF, rc="S",
+          fp="80% - Hediondo reincidente")],
+   [AUD("percentual-de-progressao-diverge", True, contem="70%", nivel="alerta")], "12/05/2026", prog="01/01/2031")
+for k, prog, presente in [(91505, "12/01/2026", True), (91506, "18/12/2025", False)]:
+    p = proc_crim(k, 2021)
+    um(k, "Decisão 5: data-base na falta grave e previsão %s: %s" % (prog, "lapso sobre a pena total - alerta" if presente else "pelo remanescente - confere"),
+       "LEP, art. 112, § 6º: depois da falta, o lapso recomeça sobre a pena remanescente (1.155 - 158 = 997 dias; 16% = 159 dias: 18/12/2025).",
+       [crime(p, "ART 155: Furto", 1155, "10/03/2021", tipo=FURTO, fp="16% - Art.112, I, da LEP")],
+       [AUD("progressao-sobre-pena-total-apos-falta-grave", presente)], "04/02/2025",
+       incidentes=[inc(REG, "Fechado - Regime Inicial", "", "04/02/2025"), inc("HOMOLOGAÇÃO DE FALTA GRAVE", "12/07/2025", "20/09/2025", "12/07/2025")],
+       db="12/07/2025", prog=prog)
+k = 91507
+um(k, "Decisão 6: SEEU sem data de livramento, furto de 3 anos com 1/3 cumprido: lapso atingido pelas frações do RSPE (verificar)",
+   "CP, art. 83, I: 1/3 de 3 anos = 365 dias; cumpridos 366 em 05/10/2026.",
+   [crime(proc_crim(k, 2021), "ART 155: Furto", anos(3), "10/03/2021", tipo=FURTO, fp="16% - Comum", fl="1/3 - Comum Primário")],
+   [C("liv_sit", "contem", "o SEEU não calculou o livramento"), C("liv_sit", "contem", "já atingido")], "05/10/2025", prog="01/01/2027", liv="")
+k = 91508
+p = proc_crim(k, 2025)
+um(k, "Decisão 7: fuga sem recaptura e data de progressão impressa: pena interrompida, sem prazo correndo",
+   "Pena interrompida: a data do SEEU fica como informação (cinza), sem \"vencido\" nem \"em N dias\".",
+   [crime(p, "ART 155: Furto", anos(3), "10/03/2025", tipo=FURTO, fp="16% - Comum")],
+   [C("prog_sit_full", "contem", "data do SEEU: 01/12/2026"), C("prog_cor", "eq", "cinza")], "01/06/2026",
+   eventos=[prisao("01/06/2026", p, "PRISÃO DEFINITIVA"), interr("20/09/2026", "FUGA", p)], interrompidos=16, prog="01/12/2026")
+k = 91509
+um(k, "Decisão 8: falta de 08/10/2025 - nos 12 meses na emissão do RSPE (05/10/2026), fora deles hoje (12/10/2026)",
+   "A coluna Falta é o retrato do RSPE; contada até hoje, a falta já saiu da janela - a coluna diz isso.",
+   [crime(proc_crim(k, 2021), "ART 155: Furto", anos(6), "10/03/2021", tipo=FURTO_Q, fp="16% - Comum")],
+   [C("falta", "contem", "já fora dos 12 meses")], "05/10/2024",
+   incidentes=[inc(REG, "Fechado - Regime Inicial", "", "05/10/2024"), inc("HOMOLOGAÇÃO DE FALTA GRAVE", "08/10/2025", "20/11/2025", "08/10/2025")],
+   db="08/10/2025", prog="01/06/2027")
+k = 91510
+um(k, "Decisão 10: pena de 110 anos desde 1996 (fato de 1995): limite do art. 75 já alcançado - extinção a verificar",
+   "CP, art. 75 (30 anos): máximo em 31/05/2026, já passado.",
+   [crime(proc_crim(k, 1995), "ART 121: Homicídio", anos(110), "10/03/1995", tipo="§ 2º, I: Homicídio qualificado, Reclusão: 12 a 30 anos", vga="S", morte="S")],
+   [C("ext_sit", "contem", "Extinção a verificar · limite do art. 75")], "01/06/1996", incidentes=[inc(REG, "Fechado - Regime Inicial", "01/06/1996", "01/06/1996")])
+k = 91511
+ind(k, "Decisão 11: Dia das Mães 2018, sexo não informado, 60 anos, furto de 6 anos com 1/6: a verificar (se mulher)",
+    "O decreto é só para mulheres; sem o sexo, nada se presume contra - a conta é feita como mulher e o resultado fica a verificar.",
+    [crime(proc_crim(k, 2015), "ART 155: Furto", anos(6), "10/01/2015", tipo=FURTO_Q)], "14/05/2017",
+    [DEC("2018_maes", "ver", "sexo não está informado")], nasc="10/10/1957")
+k = 91512
+ind(k, "Decisão 11: roubo de 6 anos em 2017, 1/3 cumprido: cabe a comutação, com o sinal do indulto possível (art. 2º, § 1º, III)",
+    "Decreto 9.246/2017: o indulto do art. 2º, § 1º, III (1/3, pessoas do art. 2º: filho, neto, gestante...) depende de condição que o RSPE não registra.",
+    [crime(proc_crim(k, 2015), "ART 157: Roubo", anos(6), "10/06/2015", **ROUBO2)], "16/11/2015",
+    [DEC("2017", "cabe", "indulto possível pelo art. 2º, § 1º, III")])
+k = 91513
+ind(k, "Decisão 13: Decreto 3.667/2000, falta grave em 10/12/2000 (depois da publicação, antes de 25/12): a verificar",
+    "O texto (\"últimos doze meses de cumprimento da pena\") não diz se a janela termina na publicação ou em 25/12.",
+    [crime(proc_crim(k, 1998), "ART 155: Furto", anos(3), "10/03/1998", tipo=FURTO, sentenca="10/09/1998")], "01/01/1999",
+    [DEC("2000", "ver", "janela do decreto sem termo fixado")], tardia=False, nasc="05/05/1960",
+    incidentes=[_inc("HOMOLOGAÇÃO DE FALTA GRAVE", "10/12/2000", "15/12/2000", "10/12/2000")])
+k = 91514
+ind(k, "Decisão 14: Decreto 11.302/2022, tráfico (impeditivo) + furto; pena do tráfico cumprida em 2026: tese do art. 11, p. ú.",
+    "\"Enquanto não cumprir\" a pena do impeditivo: cumprida depois de 25/12/2022, o indulto do art. 5º para o furto pode ser declarado - a verificar.",
+    [crime(proc_crim(k, 2020), "ART 33: Tráfico de drogas", anos(5), "10/03/2020", lei=DROGAS, tipo=TRAF, fp="40% - Hediondo Primário", fl="2/3 - Hediondo"),
+     crime(proc_crim(k + 500, 2020), "ART 155: Furto", anos(1), "10/03/2020", tipo=FURTO)], "01/06/2021",
+    [C("ind22", "contem", "tese - art. 11, p. ú."), C("det22", "contem", "enquanto a pessoa condenada não cumprir")], tardia=False)
+k = 91515
+ind(k, "Decisão 15: Dia das Mães 2018, reincidente com falta grave (só impede o indulto), furto de 6 anos com 1/3: comutação, com a conta "
+       "literal \"um quarto da pena\" como tese",
+    "Art. 2º, I: \"em um quarto da pena\" - o programa calcula sobre o remanescente; a leitura literal vai em tese. A falta grave só impede o indulto.",
+    [crime(proc_crim(k, 2015), "ART 155: Furto", anos(6), "10/01/2015", tipo=FURTO_Q, rc="S")], "04/03/2016",
+    [DEC("2018_maes", "cabe", "um quarto da pena")], sexo="F",
+    incidentes=[_inc("HOMOLOGAÇÃO DE FALTA GRAVE", "10/01/2018", "10/02/2018", "10/01/2018")])
+k = 91516
+ind(k, "Decisão 16: 2023, primário pelo RSPE e reincidente pelas datas: comutação, com o aviso de que, como primário, caberia o indulto",
+    "Decreto 11.846/2023: como primário, art. 2º, I (1/4); como reincidente, 1/3 não atingido - cabe a comutação.",
+    [crime(proc_crim(k + 500, 2018), "ART 155: Furto", anos(1), "10/03/2018", tipo=FURTO, sentenca="10/09/2018", transito="10/11/2018", extinto="Sim",
+           data_extincao="10/11/2019"),
+     crime(proc_crim(k, 2021), "ART 155: Furto", anos(6), "10/03/2021", tipo=FURTO_Q, sentenca="10/09/2021", transito="10/11/2021")], "03/05/2022",
+    [DEC("2023", "cabe", "caberia o INDULTO")], tardia=False)
+k = 91517
+ind(k, "Decisão 17b: art. 16 da Lei 10.826 (uso restrito) de 2016 no Decreto 9.246/2017: a verificar (hediondo na data do decreto)",
+    "Lei 13.497/2017 (27/10/2017): hediondo na data do decreto; a Lei 13.964/2019 retroage - as duas leituras.",
+    [crime(proc_crim(k, 2016), "ART 16: Posse ou porte ilegal de arma de fogo de uso restrito", anos(3), "10/03/2016", lei="10826/03 - Estatuto do Desarmamento",
+           tipo="CAPUT: Possuir, deter, portar arma de fogo de uso restrito, Reclusão: 3 a 6 anos E Multa")], "01/06/2016",
+    [DEC("2017", "ver", "Lei 13.497/2017")], tardia=True)
+k = 91518
+ind(k, "Decisão 17c: Decreto 12.790/2025, regime aberto por progressão e regime inicial fechado: inciso IX não se aplica",
+    "O Decreto 12.790/2025 exige o regime inicial aberto no inciso IX.",
+    [crime(proc_crim(k, 2019), "ART 155: Furto", anos(6), "10/03/2019", tipo=FURTO_Q, regime="Fechado")], "01/06/2020",
+    [C("det25", "contem", "exige o regime INICIAL aberto")], tardia=False,
+    incidentes=[_reg("Semiaberto - Progressão de regime", "01/06/2022"), _reg("Aberto - Progressão de regime", "01/06/2025")], regime="Aberto - ATIVO")
+
 # ------------------------------------------------------------------ execução
 tmp = tempfile.mkdtemp()
 arq = os.path.join(tmp, "casos_rev_randomizada.json")

@@ -4102,6 +4102,18 @@ def _analise_decreto_2022_modo(campos, crimes, eventos, incidentes, modo=None):
                     dias_para_pena(pena_imp - cump22_imp)))
                 out["indulto_2022"] = "não atinge: pena dos crimes impeditivos não cumprida até 25/12/2022 (art. 11, p. ú.)"
                 out["indulto_2022_status"] = "nao"
+                # (decisão de 11/11/2026) tese: o art. 11, p. ú., diz que o crime não impeditivo não será indultado "enquanto" não cumprida
+                # a pena do impeditivo - cumprida depois de 25/12/2022, o indulto dos demais (art. 5º) pode ser declarado então
+                _liv22 = [c for c in alc4 if c not in _fora7 and c not in posteriores and (pena_maxima_abstrata(c) or 10 ** 6) <= 5 * DIAS_ANO]
+                _fim22 = ref + timedelta(days=pena_imp - cump22_imp)
+                if _liv22:
+                    linhas.append("? Art. 11, p. ú. (tese): \u201cenquanto a pessoa condenada não cumprir\u201d a pena do impeditivo - pela conta, ela se "
+                                  "cumpre por volta de %s (sem interrupção nem remição); cumprida, o indulto do art. 5º para %s pode ser declarado "
+                                  "então. A leitura do programa exige a pena cumprida até 25/12/2022 - conferir." % (fmt(_fim22), crimes_curto(_liv22)))
+                    if _fim22 <= date.today():
+                        out["indulto_2022"] = ("A VERIFICAR (tese - art. 11, p. ú.): a pena dos impeditivos se cumpriu por volta de %s, depois de "
+                                               "25/12/2022; pela tese do \u201cenquanto não cumprir\u201d, art. 5º para %s" % (fmt(_fim22), crimes_curto(_liv22)))
+                        out["indulto_2022_status"] = "verificar"
             elif cump22 is not None and pena_imp:
                 # imputação do tempo cumprido primeiro à pena do impeditivo. O CP (arts. 69 e 76) manda executar a reclusão antes da
                 # detenção: com impeditivo de detenção e demais crimes de reclusão, a ordem legal põe o impeditivo por último - a
@@ -5912,7 +5924,13 @@ def _analise_decretos_modo(campos, crimes, eventos, incidentes, hoje, modo=None,
             else:
                 nao.append("VIII: exige regime aberto ou livramento (em %s)" % (regime or "?"))
             # IX
-            if aberto or lc or prd:
+            _ri_ab = [(c.get("regime_sentenca") or "").strip().upper() for c in ativos]
+            if ano == "2025" and aberto and not lc and not prd and _ri_ab and all(x and not x.startswith("ABERTO") for x in _ri_ab):
+                # (decisão de 11/11/2026) o Decreto 12.790/2025 exige o regime inicial aberto: com o regime da sentença fechado ou
+                # semiaberto no RSPE, o inciso não se aplica (antes ficava "?")
+                nao.append("IX: não se aplica - o Decreto 12.790/2025 exige o regime INICIAL aberto, e o RSPE registra regime inicial %s" % (
+                    " / ".join(sorted({x.lower() for x in _ri_ab}))))
+            elif aberto or lc or prd:
                 verificar.append("IX: %s - verificar %s em programa de egressos (patronato, escritório social)%s%s" % (
                     "PRD/sursis" if prd else "aberto/LC", "1 ano (2 anos, ½ pelo § 2º)" if meia else "2 anos", " e se o regime aberto é o inicial (Decreto 2025)" if (ano == "2025" and aberto and not lc and not prd) else "", obs_ab))
             else:

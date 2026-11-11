@@ -919,12 +919,18 @@ def _avaliar_ficha_um(f, r, ctx, ini, hoje):
         # reincidente: se ainda cabe, vale ela (fração e redução de reincidente: o documento resolve); se não, A VERIFICAR
         xr = _avaliar_ficha(dict(f, _forca_reinc=True), r, ctx, ini, hoje)
         if xr.get("s") == "cabe":
+            _prim_ind = x.get("beneficio") == "Indulto" and xr.get("beneficio") != "Indulto"
+            _prim_disp = x.get("dispositivo") or ""
             for k in ("beneficio", "dispositivo", "exigido", "fracao", "reducao", "mot", "reducao_calc", "detalhe"):
                 if k in xr:
                     x[k] = xr[k]
                 elif k in x and k in ("reducao_calc",):
                     x.pop(k)
             x["ressalva"] = "; ".join(y for y in (x.get("ressalva") or "", "conta feita como reincidente: " + _rl) if y)
+            if _prim_ind:
+                # (decisão de 11/11/2026) a reincidência pelas datas rebaixou o indulto: como primário (a marcação do RSPE), caberia o indulto
+                x["ressalva"] += ("; como primário (o RSPE não marca a reincidência), caberia o INDULTO (%s) - conferir a certidão de "
+                                  "antecedentes e, se a reincidência não se confirmar, pedir o indulto" % _prim_disp)
         else:
             x.update(s="ver", mot="%s; A VERIFICAR - %s; como reincidente, o benefício não é atingido nesta data" % (x.get("mot") or "", _rl))
     elif _rl and x.get("s") == "ver":
@@ -1017,6 +1023,15 @@ def _avaliar_ficha(f, r, ctx, ini, hoje):
     if not ini or ini > ref:
         return dict(base, s="fora", mot="execução posterior ao decreto" + ((" (%s)" % "; ".join(_inc)) if _inc else ""))
     if (f.get("publico") == "mulheres") and (r.get("_sexo") or "") != "F":
+        if not (r.get("_sexo") or "").strip():
+            # (decisão de 11/11/2026) sexo não informado: a conta é feita como mulher; se o benefício caberia, fica A VERIFICAR (nada se
+            # presume contra o assistido), e não "não alcançado"
+            xm = _avaliar_ficha(f, dict(r, _sexo="F"), ctx, ini, hoje)
+            if xm.get("s") in ("cabe", "ver"):
+                _av = ("A VERIFICAR - decreto só para mulheres e o sexo não está informado (importar a ficha do SIAPEN ou informar no "
+                       "registro): se mulher, %s" % (("cabe %s (%s)" % ((xm.get("beneficio") or "o benefício").lower(), xm.get("dispositivo") or ""))
+                                                    if xm.get("s") == "cabe" else "a verificar"))
+                return dict(xm, s="ver", mot="%s; %s" % (_av, xm.get("mot") or "") if xm.get("mot") else _av)
         return dict(base, s="fora", mot="decreto só para mulheres" + ("" if r.get("_sexo") else " (sexo não informado)"))
     crimes = crimes0 = _alcancados(r, ref, pub)
     if not crimes:
@@ -1187,6 +1202,16 @@ def _avaliar_ficha(f, r, ctx, ini, hoje):
         dias_f = rs.dias_anos(float(jm) / 12, base_f) - 1 if jm else 36500
         ach = rs.indicios_falta(r.get("_incidentes") or [], base_f, dias=dias_f, eventos=r.get("_eventos") or [], ate=min(pub, base_f), hoje=pub,  # prescrição da falta aferida na data do decreto
                                 crimes=r.get("_crimes") or [], inicio=ini, fuga_firme=True)
+        if F.get("ancora_incerta") and jm:
+            # (decisão de 11/11/2026) 2000 e 2001: a janela pode terminar na publicação ou em 25/12 - a falta que só uma das contas
+            # alcança não impede com certeza: fica a verificar, com a razão
+            _d_ref = rs.dias_anos(float(jm) / 12, ref) - 1
+            ach_r = rs.indicios_falta(r.get("_incidentes") or [], ref, dias=_d_ref, eventos=r.get("_eventos") or [], ate=ref, hoje=pub,
+                                      crimes=r.get("_crimes") or [], inicio=ini, fuga_firme=True)
+            _fp, _fr_ = {t for t, fm in ach if fm}, {t for t, fm in ach_r if fm}
+            _nota_anc = " - janela do decreto sem termo fixado (publicação ou 25/12): só uma das contas a alcança, a verificar"
+            ach = ([(t, fm) for t, fm in ach if not (fm and t not in _fr_)] + [(t + _nota_anc, False) for t, fm in ach if fm and t not in _fr_]
+                   + [(t + _nota_anc, False) for t in _fr_ - _fp])
         # decreto que exige a falta apurada/homologada (ex.: "falta sem a devida apuração não impede"): a não homologada
         # (fuga só registrada como evento) não impede - fica como ressalva
         # Decreto 11.846/2023, art. 6º (mesma redação do art. 6º de 2024/2025): a fuga sem homologação na janela impede, como lá
@@ -1711,7 +1736,14 @@ def _avaliar_ficha(f, r, ctx, ini, hoje):
                     mot="cumpriu %s em %s%s; %s" % (rs.dias_para_pena(cump), rs.fmt(ref), (" (exigido %s)" % rs.dias_para_pena(exig)) if exig else "", red_txt),
                     ressalva="; ".join(x for x in ("",
                                                    ("indulto a verificar (%s): %s" % (ind_ver[0].get("dispositivo") or "", ind_ver[2]))
-                                                   if (ind_ver and not ind and not imp_ind and not f_ind) else "") if x))
+                                                   if (ind_ver and not ind and not imp_ind and not f_ind) else "",
+                                                   # (decisão de 11/11/2026) indulto que depende de condição que o RSPE não registra (mãe com
+                                                   # filho, gestante...), com a pena e o tempo atendidos: sinal também quando cabe a comutação
+                                                   ("indulto possível pelo %s, se atendida a condição que o RSPE não registra (%s) - pena e tempo "
+                                                    "atendidos; conferir" % (naf[0][0].get("dispositivo") or "decreto",
+                                                                              re.sub(r";\s*PPL não substituída.*$", "", (naf[0][0].get("outros_requisitos") or "").strip()).rstrip(" ;.")[:220]))
+                                                   if (naf and not ind and not imp_ind and not f_ind) else "",
+                                                   _tese_quarto_da_pena(f, rc, red, pena)) if x))
     restrito = _restrito(f)
     if imp and restrito:
         # decreto só para grupos (doença, deficiência...): o resultado é o mesmo com ou sem o crime impeditivo - diz o motivo
@@ -1745,6 +1777,21 @@ def _avaliar_ficha(f, r, ctx, ini, hoje):
     if restrito:
         return dict(res, s="nao", mot="decreto restrito (doença, deficiência, agentes de segurança ou outros grupos): nenhuma hipótese pelos dados do RSPE")
     return dict(res, s="nao", mot="nenhuma hipótese objetiva do decreto alcança o caso")
+
+
+def _tese_quarto_da_pena(f, rc, red, pena):
+    """(decisão de 11/11/2026) Dia das Mães de 2017 e 2018: o texto comuta "em um quarto da pena", sem dizer "remanescente" (o Decreto
+    9.246/2017 o diz) - o programa calcula sobre o remanescente; pela leitura literal, sobre a pena: a tese com a conta."""
+    if str(f.get("id")) not in ("2017_maes", "2018_maes") or not rc or rc.get("base") != "remanescente" or not pena:
+        return ""
+    fr_ = _fr(red)
+    if not fr_:
+        return ""
+    lit = int(pena * fr_.numerator // fr_.denominator)
+    if lit <= rc.get("reducao", 0):
+        return ""
+    return ("tese: o decreto comuta \u201cem um quarto da pena\u201d, sem dizer \u201cremanescente\u201d - pela leitura literal, a redução é de "
+            "%s (%s da pena de %s), e não de %s" % (_dias_txt(lit), red, rs.dias_para_pena(pena), _dias_txt(rc.get("reducao", 0))))
 
 
 def _base_comutacao(f):
@@ -1802,6 +1849,17 @@ def _tese_hediondez(f, r, x):
            and (rs.to_date(c.get("data_infracao") or "") or date.min) <= ref]
     if les and not sup:
         return dict(x, s="ver", mot="%s: %s - %s" % (rs.crimes_curto(les), rs.impeditivo_verificar(les[0]), x.get("mot") or ""))
+    # (decisão de 11/11/2026) art. 16 da Lei 10.826 (uso restrito ou numeração suprimida): hediondo na data de decreto de 27/10/2017 a
+    # 22/01/2020 (Lei 13.497/2017) e não mais desde a Lei 13.964/2019, que retroage por ser mais benéfica - pelo STJ (data do decreto)
+    # seria impeditivo: a verificar, com as duas leituras
+    a16 = [c for c in r.get("_crimes") or [] if date(2017, 10, 27) <= ref <= date(2020, 1, 22) and _em_execucao(c, ref, r)
+           and rs.num_lei(c.get("lei")) == "10826" and rs.num_art(c.get("artigo")) == "16" and rs.hediondo_pu(c)[0] is False
+           and (rs.to_date(c.get("data_infracao") or "") or date.min) <= ref]
+    if a16 and not sup:
+        return dict(x, s="ver", mot=("%s: na data do decreto, o art. 16 da Lei 10.826 era hediondo (Lei 13.497/2017, vigência 27/10/2017); a "
+                                     "Lei 13.964/2019 manteve hediondo só o uso proibido, e a lei mais benéfica retroage (STJ, HC 575.933) - pela "
+                                     "corrente do STJ que afere a hediondez na data do decreto, seria impeditivo: conferir; o benefício (%s) cabe "
+                                     "pela retroatividade - %s" % (rs.crimes_curto(a16), x.get("beneficio") or "", x.get("mot") or "")))
     if not sup:
         return x
     return dict(x, s="ver", mot=("hediondez posterior ao fato (%s): pelo STJ, que a afere na data do decreto, é crime impeditivo; o benefício "

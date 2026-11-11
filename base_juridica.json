@@ -1,5 +1,5 @@
 {
- "versao": "2026-11-10a",
+ "versao": "2026-11-11a",
  "descricao": "Base juridica do RSPE Base. Editavel: o programa le este arquivo ao abrir (copia ao lado do .exe tem prioridade sobre a embutida). Datas em AAAA-MM-DD. Fracoes como 'num/den' ou percentual 'NN%'.",
  "prescricao": {
   "art109_tabela": [
@@ -1037,7 +1037,7 @@
    "fonte": "STJ, REsp 2.024.901 e 2.090.454 (Tema 931, revisão), 3ª Seção, j. 28/02/2024, DJe 01/03/2024",
    "nivel": "repetitivo",
    "tese": "O inadimplemento da pena de multa, após cumprida a pena privativa de liberdade ou restritiva de direitos, não obsta a extinção da punibilidade, ante a alegada hipossuficiência do condenado, salvo se diversamente entender o juiz competente, em decisão suficientemente motivada, que indique concretamente a possibilidade de pagamento da sanção pecuniária.",
-   "aplicacao": "Aba Extinção: multa pendente é apontada. Pela tese revista, o inadimplemento não obsta a extinção ante a alegada hipossuficiência, salvo decisão motivada em sentido contrário; há julgados que, com base na ADI 7.032, exigem prova da impossibilidade (STJ, REsp 2.055.935): instruir o pedido por cautela."
+   "aplicacao": "Aba Extinção: a multa pendente não gera aviso (assistido da Defensoria: hipossuficiência presumida - decisão de 11/11/2026, que mantém a anterior); a extinção é indicada pelo cumprimento da pena privativa. Pela tese revista, o inadimplemento não obsta a extinção ante a alegada hipossuficiência, salvo decisão motivada em sentido contrário; há julgados que, com base na ADI 7.032, exigem prova da impossibilidade (STJ, REsp 2.055.935): instruir o pedido por cautela."
   },
   {
    "tema": "Extinção - multa e ADI 7.032",
@@ -1939,6 +1939,7 @@
    "falta_grave": {
     "dispositivo": "art. 3º, I",
     "meses": 12,
+    "ancora_incerta": "o texto (\"nos últimos doze meses de cumprimento da pena\") não diz se a janela termina na publicação ou em 25/12: falta que só uma das duas contas alcança fica a verificar (decisão de 11/11/2026)",
     "exige_homologacao": true,
     "afeta": "indulto e comutação",
     "texto": "Constituem também requisitos para concessão do indulto e da comutação que o condenado: I - não tenha cometido falta grave apurada na forma prevista na Lei nº 7.210, de 1984, durante os últimos doze meses de cumprimento da pena, computada a detração (art. 42 do Código Penal); II - não esteja sendo processado por outro crime praticado com violência ou grave ameaça contra a pessoa ou por aqueles descritos no art. 10 deste Decreto."
@@ -2158,6 +2159,7 @@
    "falta_grave": {
     "dispositivo": "art. 3º, I",
     "meses": 12,
+    "ancora_incerta": "o texto (\"nos últimos doze meses de cumprimento da pena\") não diz se a janela termina na publicação ou em 25/12: falta que só uma das duas contas alcança fica a verificar (decisão de 11/11/2026)",
     "exige_homologacao": true,
     "afeta": "indulto e comutação",
     "texto": "Constituem também requisitos para concessão do indulto e da comutação que o condenado: I - não tenha cometido falta grave apurada na forma prevista na Lei nº 7.210, de 1984, durante os últimos doze meses de cumprimento da pena, computada a detração (art. 42 do Código Penal); II - não esteja sendo processado por outro crime praticado com violência ou grave ameaça contra a pessoa ou por aqueles descritos no art. 10 deste Decreto."

@@ -100,22 +100,23 @@ ok(rd._impeditivos({"impeditivos": {}, "_hom_selo_imp": True}, [hs], date(2019, 
 n = tl.natureza(hs, {"numero": "12.338/2024", "vedacoes": {"regra": "art1_2024_2025"}}, date(2024, 12, 25))
 ok(n["selo"] == "A_VERIFICAR" and "extermínio" in n["motivo"], "35: linha do tempo %s" % n)
 
-# 36 - reincidência específica não demonstrada em fato da Lei 15.358/2026: verificar; antes dela, alerta
+# 36 - reincidência específica não demonstrada em fato da Lei 15.358/2026: alerta, como antes dela (decisão de 11/11/2026: o inciso VII
+# manteve a redação que o STF e o STJ leram como reincidência específica - antes, "verificar")
 tr = ("ART 33: Tráfico", "CAPUT: Importar, exportar, remeter, preparar, Reclusão: 5 a 15 anos E Multa")
 a = crime("0000010-00.2026.8.12.0001", *tr, "01/05/2026", "01/09/2026", "80% - Art.112, VII, da LEP", "1/1 - Hediondo Reincidente/Reincidente Específico",
           lei="11343/06 - Lei de Drogas", esp="S")
 t = itens(reg([a]), "reincidencia-especifica-nao-demonstrada-no-rspe")
-ok(len(t) == 1 and t[0]["nivel"] == "verificar", "36 lei nova: %s" % t)
+ok(len(t) == 1 and t[0]["nivel"] == "alerta" and "Tema 1169" in t[0]["detalhe"], "36 lei nova: %s" % t)
 ok(not [i for i in itens(reg([a])) if i["nivel"] == "alerta" and i["tipo"] in ra._TIPOS_FRACAO], "36: frações no mesmo item")
 a = crime("0000011-00.2021.8.12.0001", *tr, "01/05/2021", "01/09/2021", "60% - Art.112, VII, da LEP", "1/1 - Hediondo Reincidente/Reincidente Específico",
           lei="11343/06 - Lei de Drogas", esp="S")
 t = itens(reg([a]), "reincidencia-especifica-nao-demonstrada-no-rspe")
 ok(len(t) == 1 and t[0]["nivel"] == "alerta", "36 60%% após 2020 continua alerta: %s" % t)
-# reincidente genérico (específico não marcado) com 80% em fato desde 25/03/2026: verificar
+# reincidente genérico (específico não marcado) com 80% em fato desde 25/03/2026: alerta (decisão de 11/11/2026)
 ant = crime("0000012-00.2020.8.12.0001", *FURTO, "01/01/2020", "01/01/2021", "16% - Art.112, I, da LEP", "1/3 - Comum Primário")
 a = crime("0000013-00.2026.8.12.0001", *tr, "01/05/2026", "01/09/2026", "80% - Art.112, VII, da LEP", "2/3 - Hediondo", lei="11343/06 - Lei de Drogas", reinc="S")
 t = [i for i in itens(reg([ant, a]), "percentual-de-progressao-diverge") if i["ref"] == ra._nome(a)]
-ok(t and t[0]["nivel"] == "verificar" and "sem precedente específico" in t[0]["detalhe"], "36 genérico: %s" % t)
+ok(t and t[0]["nivel"] == "alerta" and "manteve a redação" in t[0]["detalhe"], "36 genérico: %s" % t)
 
 # 39 - Lei 15.402/2026: 30% do SEEU a reincidente em crime sem violência - verificar com a tese dos 20%
 ant = crime("0000014-00.2020.8.12.0001", *ROUBO, "01/01/2020", "01/01/2021", "25% - Art.112, III, da LEP", "1/3 - Comum Primário", vga="S")

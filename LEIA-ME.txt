@@ -1112,8 +1112,9 @@ v7.16.3
   indulto, os 27 decretos de 2000 a 2025, com a transcrição de cada decreto
   conferida contra o texto oficial. As divergências que eram erro do
   programa foram corrigidas (lista abaixo); as que são tese ou escolha de
-  política ficaram para decisão. Teste novo: teste_rev_randomizada.py (54
-  casos fictícios, um por erro corrigido, mais os controles).
+  política foram decididas pelo defensor (abaixo). Teste novo: teste_rev_randomizada.py (72
+  casos fictícios, um por erro corrigido ou decisão aplicada, mais os
+  controles).
   Rol de hediondos (base jurídica 2026-11-10a)
   - Lei 15.487/2026 (DOU de 07/08/2026), antes "não localizada": passam a
     ser hediondos, para fatos a partir dela, os arts. 240, 241, 241-A,
@@ -1180,6 +1181,49 @@ v7.16.3
     abstrato).
   - Rótulo do indulto das mulheres (art. 10) e barra da pena unificada na
     linha do tempo (soma por anos, meses e dias).
+  Decisões do defensor sobre as teses da revisão (11/11/2026; base jurídica
+  2026-11-11a)
+  - Livramento do reincidente não específico em hediondo com morte (fato
+    desde 23/01/2020): tese, não vedação firme - "vedado ou 2/3".
+  - Extorsão com morte (art. 158, § 2º) por fato anterior a 23/01/2020:
+    hediondez discutível (a Lei 13.964/2019 passou a citar só o § 3º) -
+    item "verificar" com as duas leituras.
+  - Feminicídio de reincidente não específico (10/10/2024 a 24/03/2026):
+    os 50% passam a tese; os 55% do SEEU não geram alerta firme.
+  - Reincidente genérico em hediondo desde 25/03/2026 (Lei 15.358):
+    alerta firme com 70% (75% com morte) - o inciso VII manteve a redação
+    que STF e STJ já interpretaram.
+  - Nova conferência: com a data-base na falta grave, a previsão do SEEU
+    contada sobre a pena total (e não sobre a remanescente - LEP, art.
+    112, § 6º) gera alerta com a data estimada.
+  - Livramento sem data no RSPE: estimativa pelas frações do próprio
+    RSPE e pela pena cumprida do SEEU ("a verificar").
+  - Pena interrompida com data impressa: "Pena interrompida · data do
+    SEEU", em cinza, sem "vencido" nem "em N dias".
+  - Coluna Falta: avisa quando a falta, contada até hoje, já saiu dos 12
+    meses (a coluna continua o retrato do RSPE).
+  - Multa na extinção: sem aviso (mantido); o texto da base jurídica foi
+    corrigido.
+  - Limite do art. 75 já alcançado: "Extinção a verificar", em destaque.
+  - Indulto: nos decretos só para mulheres, sexo não informado não é mais
+    "não alcançado" - a conta é feita e o resultado fica a verificar; o
+    indulto que depende de condição fora do RSPE (filho, gestante) é
+    sinalizado também quando cabe a comutação.
+  - Decretos de 2000 e 2001: falta que só uma das contas da janela
+    (publicação ou 25/12) alcança fica a verificar.
+  - Decreto 11.302/2022, art. 11, p. ú.: tese do "enquanto não cumprir" -
+    a verificar quando a pena do impeditivo se cumpriu depois de 2022.
+  - Dia das Mães (2017 e 2018): a comutação literal "em um quarto da
+    pena" vai em tese, ao lado da conta sobre o remanescente.
+  - Reincidência pelas datas que rebaixa o indulto para comutação: aviso
+    de que, como primário (marcação do RSPE), caberia o indulto.
+  - Art. 16 da Lei 10.826 nos decretos de 27/10/2017 a 22/01/2020: a
+    verificar (hediondo na data do decreto). Decreto 12.790/2025, inciso
+    IX: com regime inicial fechado no RSPE, "não se aplica".
+  - Mantidos: fuga sem homologação nos decretos que não exigem sanção
+    reconhecida (2007, 2016); hediondez posterior ao fato em 2000-2002 "a
+    verificar". Pendente: data da revogação dos incisos I e III do art.
+    122 da LEP (saída temporária), à espera da conferência no Planalto.
 
 v7.16.2
   Indulto: revisão jurídica da aba, com a base real (amostra de 150
