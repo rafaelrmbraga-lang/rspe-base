@@ -1830,7 +1830,9 @@ def modelo(r, baixas=None, ficha=None, manuais=None, extras=None):
                 rs.limpar_decretos(r)  # sem isso, a chave que a reanálise não grava (ex.: _explica) ficava da análise anterior
                 r.update(rs.analise_decretos(r, r.get("_crimes", []), r.get("_eventos", []), r.get("_incidentes", []), None))
                 r.update(rs.analise_decreto_2022(r, r.get("_crimes", []), r.get("_eventos", []), r.get("_incidentes", [])))
-                rs.aplicar_decisoes_decretos(r, r.get("_incidentes", []))
+                # a mesma sequência da análise principal: sem a camada do nascimento divergente, a ressalva de idade sumia
+                rs.nascimento_divergente_decretos(r, r.get("_crimes", []), r.get("_eventos", []), r.get("_incidentes", []), None)
+                rs.aplicar_decisoes_decretos(r, r.get("_incidentes", []), r.get("_crimes", []))
             except Exception:
                 pass
     if ficha:

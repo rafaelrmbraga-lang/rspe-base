@@ -1,9 +1,9 @@
-APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.16.3
+APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.16.4
 (antigo RSPE Base; SEEU, programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-7.16.3. A documentação técnica completa (cada parâmetro, a regra, a norma e
+7.16.4. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -1103,6 +1103,27 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v7.16.4
+  Indulto: pontos abertos do relatório técnico-jurídico do indulto (todos
+  os decretos), conferidos contra a 7.16.3 e corrigidos.
+  - Decretos 10.189/2019, 10.590/2020 e 10.913/2021, art. 2º, II c/c § 2º
+    (agente de segurança pública, crime culposo): a hipótese não aferida
+    pelo RSPE (sinal "?" e ressalva) só aparece para quem tem crime
+    culposo. Antes, quase todo assistido recebia o sinal nesses três
+    decretos (82 de 632 na base conferida).
+  - 2024/2025: a interrupção que entra como falta a verificar usa a mesma
+    janela do art. 6º (12 meses com o dia do começo incluído, de 26/12 do
+    ano anterior); antes começava um dia antes.
+  - Decreto 11.302/2022: sentença registrada depois do trânsito (dado
+    incoerente do SEEU) com o trânsito anterior à publicação - vale o
+    trânsito e o crime fica a verificar, como em 2024/2025 e nos demais
+    decretos (antes: "não se aplica: sem condenação até 23/12/2022").
+  - Livramento confirmado pelo operador: a reanálise dos decretos aplica
+    também a ressalva do nascimento divergente (RSPE x ficha), que sumia.
+  - Nota de mora estatal (Tema 1195) na fuga: os 6 meses contam da
+    recaptura, quando a apuração pode começar, e não da evasão.
+  Teste novo: teste_rev_indulto_pontos.py (casos fictícios).
 
 v7.16.3
   Revisão independente e randomizada das regras de indulto, progressão,

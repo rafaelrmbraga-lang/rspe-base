@@ -53,6 +53,7 @@ TESTES += ["teste_ui_avisos.py"]  # 7.16.2: avisos do Python chegam à tela (win
 TESTES += ["teste_ui_menu.py"]  # 7.16.2: menu lateral recolhido (balão com nome, número e Alt+n; expansão mantida)
 TESTES += ["teste_cache_calculo.py"]  # 7.16.2: cache dos cálculos idêntico ao cálculo do zero
 TESTES += ["teste_rev_randomizada.py"]  # revisão independente e randomizada (11/2026): hediondos, progressão, livramento, extinção e indulto
+TESTES += ["teste_rev_indulto_pontos.py"]  # 7.16.4: pontos abertos do relatório do indulto (crime culposo 2019-2021, janela, sentença incoerente 2022, nascimento x livramento, mora)
 # saída em UTF-8 em qualquer console (no Windows o padrão cp1252 não imprime símbolos como "✓" e derruba o teste)
 _env = dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUTF8="1")
 falhas = [t for t in TESTES if subprocess.call([sys.executable, t], env=_env) != 0]
