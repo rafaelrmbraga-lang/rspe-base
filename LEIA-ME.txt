@@ -1116,6 +1116,8 @@ HISTÓRICO DE VERSÕES
 v7.18.0
   Tela revista com a skill de interface (ui-ux-pro-max) e o estilo do
   programa reorganizado. Nenhuma regra, cálculo ou texto jurídico mudou.
+  - Correção: a lista de assistidos volta a rolar com a roda do mouse em
+    todas as abas (na 7.17.0, o quadro da lista ficou travado).
   - Contadores sempre numa linha (o rótulo longo quebra em até duas):
     antes, na Ficha disciplinar e na Extinção, parte deles caía numa
     segunda fileira, esticada. "A verificar" passa a "Verificar".
