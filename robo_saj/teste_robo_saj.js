@@ -43,7 +43,9 @@ function simularSAJ({ dialogo, semOpcao }) {
   aviso("Sua petição está sendo enviada ao tribunal. Aguarde confirmação."); // caixa velha de outra petição
   // Evento como no SAJ real: busca no servidor (2 s com "Carregando..."), opções com código na frente,
   // e a busca não acha nada se o texto vier com acento
-  const EVENTOS = ["85 - PETIÇÃO", "86 - PETIÇÃO INICIAL", "120 - Manifestação do Autor", "121 - Manifestação do Réu"];
+  // como no SAJ: cada opção traz o grupo em cima do nome
+  const EVENTOS = [["Petição Diversas", "Manifestação do Autor"], ["Petição Diversas", "Manifestação do Réu"], ["Petição Diversas", "Manifestação Sobre Cálculo"],
+    ["Petição", "PETIÇÃO"], ["Petição", "PETIÇÃO INICIAL"], ["Petição", "Petição Intermediária TJ"]];
   function eventoServidor(cont, txt) {
     cont.querySelectorAll(".select-petition-type__menu").forEach((m) => m.remove());
     const m = document.createElement("div");
@@ -54,14 +56,14 @@ function simularSAJ({ dialogo, semOpcao }) {
     window.__tEvento = setTimeout(() => {
       const temAcento = /[^\x00-\x7f]/.test(txt);
       const sa = (x) => x.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-      const ops = temAcento ? [] : EVENTOS.filter((e) => sa(e).includes(sa(txt)));
+      const ops = temAcento ? [] : EVENTOS.filter((e) => sa(e.join(" ")).includes(sa(txt)));
       m.innerHTML = "";
       if (!ops.length) m.innerHTML = '<div class="select-petition-type__menu-notice select-petition-type__menu-notice--no-options">Nenhuma opção</div>';
       for (const o of ops) {
         const d = document.createElement("div");
         d.className = "select-petition-type__option";
-        d.textContent = o;
-        d.addEventListener("click", () => { window.__poe("select-petition-type", o); window.__eventosEscolhidos = (window.__eventosEscolhidos || []).concat(o); m.remove(); });
+        d.innerHTML = `<p style="margin:0">${o[0]}</p><p style="margin:0">${o[1]}</p>`;
+        d.addEventListener("click", () => { window.__poe("select-petition-type", o[1]); window.__eventosEscolhidos = (window.__eventosEscolhidos || []).concat(o[1]); m.remove(); });
         m.appendChild(d);
       }
     }, 2000);
@@ -244,7 +246,7 @@ const avisoRobo = (pg) => pg.evaluate(() => document.getElementById("robo-saj-ho
   res = await rodada(pg, "preparar", 3);
   confere("3 tarefas: 2 preparadas, 1 pulada", res.length === 3 && res.filter((r) => r.resultado.startsWith("PREPARADA")).length === 2, res.map((r) => r.resultado));
   const rv = res.find((r) => r.num === ep[1]) || {};
-  confere("Evento: esperou a lista carregar e escolheu \"85 - PETIÇÃO\"", (await pg.evaluate(() => window.__eventosEscolhidos || [])).includes("85 - PETIÇÃO"), await pg.evaluate(() => window.__eventosEscolhidos));
+  confere("Evento: esperou a lista carregar e escolheu \"PETIÇÃO\" (opção com o grupo em cima)", (await pg.evaluate(() => window.__eventosEscolhidos || [])).includes("PETIÇÃO"), await pg.evaluate(() => window.__eventosEscolhidos));
   confere("campos vazios: preenche Evento, Tipo, Sigilo e Defensor", (rv.resultado || "").startsWith("PREPARADA") && ["Evento", "Tipo de documento", "Sigilo do documento", "Defensor responsável"].every((n) => rv.feito.includes(n + " preenchido")), rv);
   const re = res.find((r) => r.num === ep[2]) || {};
   confere("Evento preenchido com outro valor: pula e não troca", /PULADO – Evento está "Manifestação do Réu" \(esperado "PETIÇÃO"\); o robô só preenche campo vazio/.test(re.resultado || ""), re.resultado);

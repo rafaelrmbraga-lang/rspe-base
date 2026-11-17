@@ -1,4 +1,4 @@
-ROBÔ DO SAJ DEFENSORIAS (favorito) - versão 0.6.1
+ROBÔ DO SAJ DEFENSORIAS (favorito) - versão 0.6.2
 ================================================
 
 O QUE FAZ

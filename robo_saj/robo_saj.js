@@ -1,4 +1,4 @@
-// Robô do SAJ Defensorias (painel-saj.ms.def.br) - versão 0.6.1: acerta a Movimentação interna, escolhe o certificado
+// Robô do SAJ Defensorias (painel-saj.ms.def.br) - versão 0.6.2: acerta a Movimentação interna, escolhe o certificado
 // e peticiona as tarefas das filas "Para peticionar > Intimação" e "Para peticionar > Intermediária". As peças já estão prontas: o texto não é conferido.
 // Liminar e Redistribuir ficam sempre como estão (o robô não toca nessas caixas).
 // Roda como favorito (bookmarklet) na aba do Painel de Tarefas. Três modos:
@@ -9,7 +9,7 @@
 (function () {
   "use strict";
 
-  const VERSAO = "0.6.1";
+  const VERSAO = "0.6.2";
   const HOST = "painel-saj.ms.def.br";
   const CHAVE_SESSAO = "roboSAJ_resultados";
   const ESPERA_ENVIO_MS = 180000; // tempo para digitar o PIN e o SAJ responder
@@ -208,6 +208,8 @@
     return saida;
   }
   const textoOpcao = (o) => (typeof o.label === "string" ? o.label : Object.values(o).filter((v) => typeof v === "string" || typeof v === "number").join(" "));
+  const linhasOp = (o) => texto(o).split(/\n+/).map((x) => x.trim()).filter(Boolean);
+  const nomeOp = (o) => { const l = linhasOp(o); return l[l.length - 1] || ""; };
   const NOME_LISTA = { "movement-type-select": "Movimentação interna", certificado: "Certificado digital", "select-petition-type": "Evento",
     "select-tipo-documento": "Tipo de documento", "select-prosecutor": "Defensor responsável", "select-sigilo-documento": "Sigilo do documento" };
 
@@ -248,10 +250,11 @@
       const m = q(menuSel);
       const nota = m && q(`[class*="${prefixo}__menu-notice"]`, m);
       if (nota && texto(nota)) aviso = texto(nota);
-      for (const o of ops || []) vistos.add(texto(o));
-      const cand = (ops || []).filter((o) => casa(texto(o)));
+      for (const o of ops || []) vistos.add(linhasOp(o).join(" › "));
+      // a opção pode trazer o grupo junto ("Petição Diversas" + "Manifestação do Autor"): vale o próprio nome (última linha)
+      const cand = (ops || []).filter((o) => casa(nomeOp(o)) || casa(linhasOp(o).join(" ")));
       if (cand.length === 1 || (primeira && cand.length)) { clicar(cand[0], "opcao"); await esperar(500); return ""; }
-      if (cand.length > 1) { fecharLista(input); return `${cand.length} opções parecidas com ${codigo}: ${cand.slice(0, 4).map(texto).join("; ")}`; }
+      if (cand.length > 1) { fecharLista(input); return `${cand.length} opções parecidas com ${codigo}: ${cand.slice(0, 4).map((o) => linhasOp(o).join(" › ")).join("; ")}`; }
     }
     fecharLista(input); // fecha: na próxima tentativa a lista abre de novo, já atualizada
     await esperar(200);
