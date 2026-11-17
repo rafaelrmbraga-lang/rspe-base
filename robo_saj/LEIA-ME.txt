@@ -1,4 +1,4 @@
-ROBÔ DO SAJ DEFENSORIAS (favorito) - versão 0.4
+ROBÔ DO SAJ DEFENSORIAS (favorito) - versão 0.4.2
 ================================================
 
 O QUE FAZ
@@ -26,7 +26,8 @@ PULA a tarefa: nº que não começa com 0/5 ou sem a tarja do perfil; sigilo,
 segredo de justiça ou réu preso no card; Movimentação que não aparece na lista ou aparece mais de uma vez
 parecida; Evento/Tipo/Sigilo/Defensor fora do perfil; Peticionar desativado.
 
-CERTIFICADO: a lista vem do assinador e pode demorar. O robô tenta de novo a
+CERTIFICADO: escolhe sempre o 1º da lista com o nome CAHUE DUARTE E URDIALES
+(se houver mais de um token dele, fica com o primeiro). A lista vem do assinador e pode demorar. O robô tenta de novo a
 cada 5 s por até 2 min e, a cada 30 s, clica em "Atualizar lista de certificado".
 Só para se o nome do Defensor não aparecer nesse tempo.
 

@@ -82,14 +82,16 @@ function simularSAJ({ dialogo, semOpcao }) {
     }
     if (/certificado__control/.test(ctl.className)) {
       // enquanto o assinador não responde, a lista abre vazia
-      const certs = Date.now() < (window.__certProntoEm || 0) ? [] : ["CAHUE DUARTE E URDIALES:26255213846", "OUTRA PESSOA:111"];
+      if (window.__certAtraso && !window.__certProntoEm) window.__certProntoEm = Date.now() + window.__certAtraso; // conta a partir da 1ª abertura
+      const certs = Date.now() < (window.__certProntoEm || 0) ? [] : ["OUTRA PESSOA:111", "CAHUE DUARTE E URDIALES:26255213846 (token 1)", "CAHUE DUARTE E URDIALES:26255213846 (token 2)"];
       menu(cont, "certificado", [["", certs]], (pai, o) => {
         const vc = ctl.querySelector(".certificado__value-container");
         const ph = vc.querySelector(".certificado__placeholder");
         if (ph) ph.remove();
         let sv = vc.querySelector(".certificado__single-value");
         if (!sv) { sv = document.createElement("div"); sv.className = "certificado__single-value"; vc.prepend(sv); }
-        sv.textContent = o.split(":")[0];
+        sv.textContent = o; // o SAJ pode mostrar o nome com CPF/validade
+        window.__certEscolhido = (window.__certEscolhido || []).concat(o);
         const b = document.querySelector('[data-testid="action-emissao-expediente-peticionar-btn"]');
         b.disabled = false; b.removeAttribute("disabled"); b.classList.remove("Mui-disabled");
       });
@@ -187,6 +189,8 @@ const avisoRobo = (pg) => pg.evaluate(() => document.getElementById("robo-saj-ho
   confere("3 preparadas", res.length === 3 && res.every((r) => r.resultado.startsWith("PREPARADA")), res.map((r) => r.resultado));
   const prepB = res.filter((r) => r.perfil === "B");
   confere("preparar EPROC: Movimentação acertada + certificado", prepB.length > 0 && prepB.every((r) => r.feito.includes("Movimentação acertada") && r.feito.includes("certificado escolhido")), prepB.map((r) => r.feito));
+  const ce = await pg.evaluate(() => window.__certEscolhido || []);
+  confere("certificado: sempre o 1º com o nome do Cahuê (dois tokens dele na lista)", ce.length > 0 && ce.every((c) => c === "CAHUE DUARTE E URDIALES:26255213846 (token 1)"), ce);
   cl = await pg.evaluate(() => window.__cliques.splice(0));
   confere("preparar: nunca clica em Peticionar", !cl.includes("action-emissao-expediente-peticionar-btn"));
   cl.length = 0;
@@ -233,14 +237,14 @@ const avisoRobo = (pg) => pg.evaluate(() => document.getElementById("robo-saj-ho
   await pg.evaluate(() => { document.querySelectorAll("#dlg").forEach((x) => x.remove()); const e = document.querySelector('[data-testid="editor-container"]'); if (e) e.closest(".MuiDialog-root").remove(); });
 
   console.log("certificado demorando a carregar");
-  await pg.evaluate(() => { window.__certProntoEm = Date.now() + 75000; window.__cliques.length = 0; });
+  await pg.evaluate(() => { window.__certProntoEm = 0; window.__certAtraso = 40000; window.__cliques.length = 0; });
   res = await rodada(pg, "preparar", 3);
   const prep = res.filter((r) => r.resultado.startsWith("PREPARADA"));
   confere("esperou o certificado e seguiu", prep.length >= 1 && prep[0].feito.includes("certificado escolhido") && !res.some((r) => r.resultado.startsWith("PARADO")), res.map((r) => r.resultado));
   confere("clicou em Atualizar lista de certificado", (await pg.evaluate(() => window.__cliques)).includes("refreshButton"));
 
   console.log("certificado que nunca carrega");
-  await pg.evaluate(() => { window.__certProntoEm = Infinity; window.__roboSAJ_esperaCert = 15000; });
+  await pg.evaluate(() => { window.__certAtraso = 0; window.__certProntoEm = Infinity; window.__roboSAJ_esperaCert = 15000; });
   res = await rodada(pg, "preparar", 3);
   const ult = res[res.length - 1];
   confere("para (não pula) com o motivo do certificado", res.filter((r) => r.resultado.startsWith("PARADO")).length === 1 && /PARADO – o certificado CAHUE DUARTE E URDIALES não apareceu na lista/.test(ult.resultado), res.map((r) => r.resultado));

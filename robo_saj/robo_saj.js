@@ -1,4 +1,4 @@
-// Robô do SAJ Defensorias (painel-saj.ms.def.br) - versão 0.4.1: acerta a Movimentação interna, escolhe o certificado
+// Robô do SAJ Defensorias (painel-saj.ms.def.br) - versão 0.4.2: acerta a Movimentação interna, escolhe o certificado
 // e peticiona as tarefas da fila "Para peticionar > Intimação". As peças já estão prontas: o texto não é conferido.
 // Liminar e Redistribuir ficam sempre como estão (o robô não toca nessas caixas).
 // Roda como favorito (bookmarklet) na aba do Painel de Tarefas. Três modos:
@@ -9,7 +9,7 @@
 (function () {
   "use strict";
 
-  const VERSAO = "0.4.1";
+  const VERSAO = "0.4.2";
   const HOST = "painel-saj.ms.def.br";
   const CHAVE_SESSAO = "roboSAJ_resultados";
   const ESPERA_ENVIO_MS = 180000; // tempo para digitar o PIN e o SAJ responder
@@ -56,6 +56,7 @@
   const DEFENSOR = "Cahuê Duarte e Urdiales";
   const CERTIFICADO = "CAHUE DUARTE E URDIALES";
   const igual = (a, b) => chave(a) === chave(b);
+  const certOk = (c) => !!c && chave(c).includes(chave(CERTIFICADO));
   const comeca = (a, b) => chave(a).startsWith(chave(b));
 
   const CATEGORIAS = [
@@ -199,7 +200,8 @@
   }
   const textoOpcao = (o) => Object.values(o).filter((v) => typeof v === "string" || typeof v === "number").join(" ");
 
-  async function escolherNaLista(prefixo, raiz, codigo, rotulo) {
+  // primeira=true: com várias opções que casam, fica com a 1ª da lista (usado no certificado)
+  async function escolherNaLista(prefixo, raiz, codigo, rotulo, primeira) {
     const input = q(`input.${prefixo}__input`, raiz) || q(`[class*="${prefixo}__control"] input`, raiz);
     const controle = q(`[class*="${prefixo}__control"]`, raiz);
     if (!input || !controle) return "não achei a lista";
@@ -223,7 +225,7 @@
     if (ops) {
       // só opções-folha (a de dentro do grupo), que tenham o código e o nome
       const cand = ops.filter((o) => casa(texto(o)) && !q(`[class*="${prefixo}__option"]`, o));
-      if (cand.length === 1) { clicar(cand[0], "opcao"); await esperar(500); return ""; }
+      if (cand.length === 1 || (primeira && cand.length)) { clicar(cand[0], "opcao"); await esperar(500); return ""; }
       fecharLista(input);
       return cand.length ? `${cand.length} opções parecidas com ${codigo}` : `a opção ${codigo} não aparece na lista`;
     }
@@ -231,13 +233,15 @@
     const p = propsDoSelect(input) || propsDoSelect(controle);
     if (!p) return "a lista não abriu";
     const cand = folhas(p.options, []).filter((o) => casa(textoOpcao(o)));
+    if (primeira && cand.length > 1) cand.length = 1;
     if (cand.length !== 1) return cand.length ? `${cand.length} opções parecidas com ${codigo}` : `a opção ${codigo} não existe na lista`;
     p.onChange(cand[0], { action: "select-option", option: cand[0], name: p.name });
     await esperar(500);
     return "";
   }
 
-  // Escolhe o certificado do Defensor. A lista vem do assinador e pode demorar: tenta de novo a cada 5 s
+  // Escolhe o 1º certificado da lista com o nome do Defensor (pode haver mais de um token dele).
+  // A lista vem do assinador e pode demorar: tenta de novo a cada 5 s
   // por até 2 min, e a cada 30 s clica em "Atualizar lista de certificado". Devolve "" ou o motivo da falha.
   async function escolherCertificado() {
     const inicio = Date.now();
@@ -246,10 +250,9 @@
       const raiz = raizProps();
       const caixa = raiz && q('[data-testid="propriedades-certificado"]', raiz);
       if (!caixa) return "a caixa Certificado digital sumiu da aba Propriedades";
-      if (igual(lerPropriedades().certificado, CERTIFICADO)) return "";
-      motivo = await escolherNaLista("certificado", caixa.parentElement, "URDIALES", CERTIFICADO);
-      if (!motivo && igual(lerPropriedades().certificado, CERTIFICADO)) return "";
-      if (/parecidas/.test(motivo)) return `há ${motivo.replace(/ com .*/, "")} com o nome do Defensor na lista de certificados`;
+      if (certOk(lerPropriedades().certificado)) return "";
+      motivo = await escolherNaLista("certificado", caixa.parentElement, "URDIALES", CERTIFICADO, true);
+      if (!motivo && certOk(lerPropriedades().certificado)) return "";
       const seg = Math.round((Date.now() - inicio) / 1000);
       if (Date.now() - inicio > esperaCert()) return `o certificado ${CERTIFICADO} não apareceu na lista em ${seg} s`;
       ui.aviso(`Aguardando o certificado carregar (${seg} s de ${esperaCert() / 1000} s). Deixe o assinador aberto e o token conectado.`);
@@ -355,7 +358,7 @@
         const ctl = q('[data-testid="select-tree-movimentacao"] [class*="movement-type-select__control"]', raizProps());
         faria.push(`Movimentação → ${P.movLabel} (veio ${p.movLabel || "vazia"})` + (bloqueado(ctl) ? " – ATENÇÃO: a lista de Movimentação está bloqueada" : ""));
       }
-      if (!igual(p.certificado, CERTIFICADO)) faria.push("escolher o certificado");
+      if (!certOk(p.certificado)) faria.push("escolher o certificado");
       if (!igual(p.evento, P.evento)) faria.push(`ATENÇÃO: Evento veio "${p.evento || "vazio"}"`);
       if (!comeca(p.tipoDoc, P.tipoDoc)) faria.push(`ATENÇÃO: Tipo de documento veio "${p.tipoDoc || "vazio"}"`);
       r.feito = faria;
@@ -378,11 +381,11 @@
     if (!comeca(p.tipoDoc, P.tipoDoc)) return sair(`PULADO – Tipo de documento veio "${p.tipoDoc || "vazio"}" (esperado ${P.tipoDoc})`);
     if (!igual(p.defensor, DEFENSOR)) return sair(`PULADO – Defensor veio "${p.defensor || "vazio"}"`);
     // 3) certificado
-    if (!igual(p.certificado, CERTIFICADO)) {
+    if (!certOk(p.certificado)) {
       const erro = await escolherCertificado();
       if (dialogoEstranho()) return parado(`ao escolher o certificado, o SAJ mostrou a janela "${texto(dialogoEstranho()).slice(0, 200)}"`, "Resolva a janela no SAJ, feche o editor sem peticionar e clique em Iniciar.");
       p = lerPropriedades();
-      if (erro || !igual(p.certificado, CERTIFICADO)) {
+      if (erro || !certOk(p.certificado)) {
         await fecharEditor();
         return parado(erro || `o certificado ficou "${p.certificado || "vazio"}"`, "Abra o assinador do SAJ, conecte o token, clique em \"Atualizar lista de certificado\" numa tarefa para ver se o nome aparece e depois clique em Iniciar.");
       }
