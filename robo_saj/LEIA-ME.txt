@@ -1,8 +1,9 @@
-ROBÔ DO SAJ DEFENSORIAS (favorito) - versão 0.4.2
+ROBÔ DO SAJ DEFENSORIAS (favorito) - versão 0.5
 ================================================
 
 O QUE FAZ
-Na fila "Para peticionar › Intimação" do Painel de Tarefas (painel-saj.ms.def.br),
+Nas filas "Para peticionar › Intimação" e "Para peticionar › Intermediária" do
+Painel de Tarefas (painel-saj.ms.def.br), na que estiver destacada no menu,
 para cada tarefa: abre ("Continuar"), acerta a Movimentação interna do perfil,
 escolhe o certificado do Defensor e clica UMA vez em "Peticionar". As peças já
 estão prontas: o texto não é conferido nem alterado. Liminar e Redistribuir

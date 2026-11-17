@@ -1,5 +1,5 @@
-// Robô do SAJ Defensorias (painel-saj.ms.def.br) - versão 0.4.2: acerta a Movimentação interna, escolhe o certificado
-// e peticiona as tarefas da fila "Para peticionar > Intimação". As peças já estão prontas: o texto não é conferido.
+// Robô do SAJ Defensorias (painel-saj.ms.def.br) - versão 0.5: acerta a Movimentação interna, escolhe o certificado
+// e peticiona as tarefas das filas "Para peticionar > Intimação" e "Para peticionar > Intermediária". As peças já estão prontas: o texto não é conferido.
 // Liminar e Redistribuir ficam sempre como estão (o robô não toca nessas caixas).
 // Roda como favorito (bookmarklet) na aba do Painel de Tarefas. Três modos:
 //   Conferir  - abre, lê as Propriedades e fecha; não altera nada
@@ -9,7 +9,7 @@
 (function () {
   "use strict";
 
-  const VERSAO = "0.4.2";
+  const VERSAO = "0.5.0";
   const HOST = "painel-saj.ms.def.br";
   const CHAVE_SESSAO = "roboSAJ_resultados";
   const ESPERA_ENVIO_MS = 180000; // tempo para digitar o PIN e o SAJ responder
@@ -116,22 +116,28 @@
       const v = p && p.parentElement && q('[data-testid="count-value"]', p.parentElement);
       return v ? texto(v) : "?";
     };
-    return { intimacao: val("count-content-27_Intimacao"), emProcessamento: porRotulo("Em processamento"), falhas: val("count-content-falhas") };
+    return { intimacao: val("count-content-27_Intimacao"), intermediaria: val("count-content-27_TarefaAvulsa"), emProcessamento: porRotulo("Em processamento"), falhas: val("count-content-falhas") };
   }
 
-  // A fila selecionada é o único subitem do menu com estilo diferente dos demais.
+  // Filas em que o robô trabalha (subitens de "Para peticionar").
+  const FILAS = {
+    intimacao: { testid: "count-content-27_Intimacao", nome: "Intimação" },
+    intermediaria: { testid: "count-content-27_TarefaAvulsa", nome: "Intermediária" },
+  };
+  const nomeFila = (k) => `"Para peticionar › ${FILAS[k] ? FILAS[k].nome : k}"`;
+  // A fila selecionada é o único subitem do menu com estilo diferente dos demais. Devolve {ok, fila}.
   function filaSelecionada() {
     const itens = qa('li[data-testid="option-container-datatestid"]');
     if (!itens.length) return { ok: false, motivo: "não achei o menu lateral de tarefas" };
     const freq = {};
     for (const li of itens) freq[li.className] = (freq[li.className] || 0) + 1;
     const diferentes = itens.filter((li) => freq[li.className] === 1);
-    const alvo = q('[data-testid="count-content-27_Intimacao"]');
-    const liAlvo = alvo && alvo.closest('li[data-testid="option-container-datatestid"]');
-    if (!liAlvo) return { ok: false, motivo: 'não achei "Para peticionar › Intimação" no menu (expanda "Para peticionar")' };
-    if (diferentes.length === 1 && diferentes[0] === liAlvo) return { ok: true };
+    const liDe = (k) => { const a = q(`[data-testid="${FILAS[k].testid}"]`); return a && a.closest('li[data-testid="option-container-datatestid"]'); };
+    if (!Object.keys(FILAS).some(liDe)) return { ok: false, motivo: 'não achei "Para peticionar" aberto no menu (clique nele para expandir)' };
+    const fila = diferentes.length === 1 ? Object.keys(FILAS).find((k) => liDe(k) === diferentes[0]) : null;
+    if (fila) return { ok: true, fila };
     const nome = diferentes.length === 1 ? texto(q("p", diferentes[0])) : "nenhum ou mais de um";
-    return { ok: false, motivo: `o item destacado no menu não é "Para peticionar › Intimação" (destacado: ${nome})` };
+    return { ok: false, motivo: `o item destacado no menu não é ${nomeFila("intimacao")} nem ${nomeFila("intermediaria")} (destacado: ${nome})` };
   }
 
   function lerCards() {
@@ -308,7 +314,8 @@
     const parado = (motivo, dica) => { r.resultado = "PARADO – " + motivo; r.dica = dica; return r; };
     const cont = contDoCard(card.num);
     if (!cont) { r.resultado = "PULADO – card sumiu da fila"; return r; }
-    if (norm(card.tipo) !== "intimacao") { r.resultado = `PULADO – card não é Intimação (${card.tipo})`; return r; }
+    r.fila = estado.fila;
+    if (estado.fila === "intimacao" && norm(card.tipo) !== "intimacao") { r.resultado = `PULADO – card não é Intimação (${card.tipo})`; return r; }
     const dig = soDig(card.num);
     r.perfil = dig.length === 20 && dig[0] === "5" ? "B" : dig.length === 20 && dig[0] === "0" ? "A" : "";
     if (!r.perfil) { r.resultado = 'PULADO – nº não começa com "0" nem com "5"'; return r; }
@@ -316,7 +323,7 @@
     if (!card.tarjas.some((t) => igual(t, P.tarja))) { r.resultado = `PULADO – nº de perfil ${r.perfil}, mas o card não tem a tarja ${P.tarja}`; return r; }
     if (/sigil|segredo de justica|reu preso/.test(norm(card.textoCard))) { r.resultado = "PULADO – card indica sigilo/segredo/réu preso"; return r; }
     const btn = q('[data-testid="btn-atividade-generic"]', cont);
-    if (!btn || norm(texto(btn)) !== "continuar") { r.resultado = "PULADO – card sem o botão Continuar"; return r; }
+    if (!btn || norm(texto(btn)) !== "continuar") { r.resultado = `PULADO – o botão do card ${btn ? `diz "${texto(btn)}"` : "não existe"}, e o robô só usa "Continuar"`; return r; }
 
     clicar(btn, "continuar");
     const aberto = await aguardar(() => editorAberto() || dialogoEstranho(), 20000);
@@ -429,6 +436,7 @@
     if (editorAberto()) { ui.aviso("Feche o editor que está aberto (sem peticionar) e clique em Iniciar de novo.", true); return; }
     const f = filaSelecionada();
     if (!f.ok) { ui.aviso("Não comecei: " + f.motivo + ".", true); return; }
+    estado.fila = f.fila;
     estado.rodando = true; estado.parar = false; estado.parada = null; estado.inicio = contagens();
     ui.estadoBotoes();
     let feitos = 0;
@@ -436,7 +444,11 @@
     try {
       while (feitos < limite && !estado.parar) {
         const fila = filaSelecionada();
-        if (!fila.ok) { avisoParada(fila.motivo, 'No menu da esquerda, clique em "Para peticionar" e depois em "Intimação"; então clique em Iniciar.'); break; }
+        if (!fila.ok || fila.fila !== estado.fila) {
+          avisoParada(fila.ok ? `a fila mudou de ${nomeFila(estado.fila)} para ${nomeFila(fila.fila)} no meio da rodada` : fila.motivo,
+            `No menu da esquerda, clique em "Para peticionar" e depois em "${FILAS[estado.fila].nome}" (ou em "Intimação"/"Intermediária"); então clique em Iniciar.`);
+          break;
+        }
         const cards = lerCards();
         const volta = cards.find((c) => estado.peticionados.has(c.num));
         if (volta && estado.modo === "peticionar") {
@@ -478,7 +490,8 @@
       linhas.push(`| Total | ${conta("PETICIONADO")} |`);
     }
     linhas.push("", `${conta("PETICIONADO")} peticionadas, ${conta("PREPARADA")} preparadas, ${conta("CONFERIDA")} conferidas, ${conta("PULADO")} puladas, ${conta("PARADO")} paradas. Robô ${VERSAO}; ${estado.acoes} cliques.`);
-    const fmt = (c) => (c ? `Intimação ${c.intimacao}, Em processamento ${c.emProcessamento}, Falhas ${c.falhas}` : "-");
+    const fmt = (c) => (c ? `Intimação ${c.intimacao}, Intermediária ${c.intermediaria}, Em processamento ${c.emProcessamento}, Falhas ${c.falhas}` : "-");
+    if (estado.fila) linhas.push(`Fila: ${nomeFila(estado.fila)}.`);
     linhas.push(`Menu no início: ${fmt(estado.inicio)}. No fim: ${fmt(estado.fim)}.`);
     if (estado.parada) linhas.push("", `PAROU POR CAUSA DE: ${estado.parada.motivo}.` + (estado.parada.num ? ` Processo ${estado.parada.num}.` : "") + (estado.parada.dica ? ` O que fazer: ${estado.parada.dica}` : ""));
     return linhas.join("\n");
@@ -582,5 +595,5 @@
   ui.tabela();
   const f = filaSelecionada();
   if (location.host !== HOST && !window.__roboSAJ_teste) ui.aviso(`Esta aba não é o SAJ (${HOST}).`, true);
-  else ui.aviso(f.ok ? `Fila certa: Para peticionar › Intimação. ${JSON.stringify(contagens())}. Escolha o modo e clique em Iniciar.` : "Atenção: " + f.motivo + ".", !f.ok);
+  else ui.aviso(f.ok ? `Fila: ${nomeFila(f.fila)}. Escolha o modo e clique em Iniciar.` : "Atenção: " + f.motivo + ".", !f.ok);
 })();

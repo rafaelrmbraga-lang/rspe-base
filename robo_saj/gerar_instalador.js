@@ -24,7 +24,7 @@ const html = `<!doctype html>
  li{margin:4px 0}
 </style></head><body>
 <h1>Robô do SAJ Defensorias · versão ${versao}</h1>
-<div class="box alerta">Na fila "Para peticionar › Intimação", o robô acerta a <b>Movimentação interna</b> do perfil
+<div class="box alerta">Nas filas "Para peticionar › Intimação" e "Para peticionar › Intermediária", o robô acerta a <b>Movimentação interna</b> do perfil
 (nº com 0: 920198 - Manifestação; nº com 5: 1000150 - Petição Intermediária TJ), escolhe o <b>certificado</b> do Defensor e clica
 <b>uma vez</b> em Peticionar. Liminar, Redistribuir e o texto da peça ficam como estão.</div>
 <h2>Instalar (uma vez)</h2>
@@ -38,7 +38,7 @@ const html = `<!doctype html>
 <p><button onclick="navigator.clipboard.writeText(document.getElementById('cod').value).then(()=>this.textContent='Copiado')">Copiar código</button></p>
 <h2>Usar</h2>
 <ol>
- <li>No SAJ (painel-saj.ms.def.br), abra o Painel de Tarefas › <b>Para peticionar › Intimação</b>. Não deixe nenhuma tarefa aberta.</li>
+ <li>No SAJ (painel-saj.ms.def.br), abra o Painel de Tarefas › <b>Para peticionar › Intimação</b> ou <b>› Intermediária</b>. O robô trabalha na fila destacada no menu. Não deixe nenhuma tarefa aberta.</li>
  <li>Clique no favorito <b>Robô SAJ</b>. Abre um painel azul no canto direito, que confirma se a fila está certa.</li>
  <li>Escolha o modo:
   <ul>

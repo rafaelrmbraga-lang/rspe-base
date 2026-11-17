@@ -166,7 +166,8 @@ const avisoRobo = (pg) => pg.evaluate(() => document.getElementById("robo-saj-ho
   await pg.addScriptTag({ content: robo });
 
   console.log("menu e categorias");
-  confere("fila Para peticionar > Intimação reconhecida", (await pg.evaluate(() => window.__roboSAJ.filaSelecionada())).ok);
+  const fs0 = await pg.evaluate(() => window.__roboSAJ.filaSelecionada());
+  confere("fila Para peticionar > Intimação reconhecida", fs0.ok && fs0.fila === "intimacao", fs0);
   const cat = await pg.evaluate(() => ["IMPUG - INSUMOS - GENÉRICA", "ADV PARTICULAR - DEVOLVER", "REITERAR SEQUESTRO", "CIÊNCIA"].map(window.__roboSAJ.categoria));
   confere("categorias", JSON.stringify(cat) === JSON.stringify(["Impugnação", "Adv. particular", "Cumprimento/bloqueio", "Ciência"]), cat);
 
@@ -253,6 +254,31 @@ const avisoRobo = (pg) => pg.evaluate(() => document.getElementById("robo-saj-ho
   confere("aviso diz PAROU POR CAUSA DE / Processo / O QUE FAZER", /^PAROU POR CAUSA DE: .+\nProcesso: \d{7}-.+\nO QUE FAZER: .+/.test(av), av);
   confere("editor fechado depois de parar", await pg.evaluate(() => !document.querySelector('[data-testid="editor-container"]')));
   await pg.evaluate(() => { window.__certProntoEm = 0; window.__roboSAJ_esperaCert = 0; });
+
+  console.log("fila Intermediária");
+  // destaca "Intermediária" no menu (troca o estilo com "Intimação") e muda o tipo dos cards
+  const trocaFila = () => pg.evaluate(() => {
+    const li = (t) => document.querySelector(`[data-testid="${t}"]`).closest('li[data-testid="option-container-datatestid"]');
+    const a = li("count-content-27_Intimacao"), b = li("count-content-27_TarefaAvulsa"), c = a.className;
+    a.className = b.className; b.className = c;
+  });
+  await trocaFila();
+  await pg.evaluate(() => document.querySelectorAll('[data-testid="tipo-documento"]').forEach((x) => (x.textContent = "Petição intermediária")));
+  const fs1 = await pg.evaluate(() => window.__roboSAJ.filaSelecionada());
+  confere("fila Intermediária reconhecida", fs1.ok && fs1.fila === "intermediaria", fs1);
+  await pg.evaluate(() => { window.__movTravada = []; });
+  res = await rodada(pg, "preparar", 4);
+  confere("Intermediária: prepara cards que não são Intimação", res.some((r) => r.resultado.startsWith("PREPARADA")) && !res.some((r) => /não é Intimação/.test(r.resultado)) && res.every((r) => r.fila === "intermediaria"), res.map((r) => r.resultado.slice(0, 60)));
+  confere("relatório diz a fila", /Fila: "Para peticionar › Intermediária"/.test(await pg.evaluate(() => window.__roboSAJ.relatorioTexto())));
+  // trocar de fila no meio da rodada: para e explica
+  await pg.evaluate(() => {
+    const t = setInterval(() => { if (document.querySelector('[data-testid="editor-container"]')) { clearInterval(t); window.__trocar = true; } }, 100);
+  });
+  const prom = rodada(pg, "preparar", 3);
+  await pg.waitForFunction(() => window.__trocar, null, { timeout: 30000 });
+  await trocaFila();
+  res = await prom;
+  confere("fila trocada no meio: para e diz por quê", /PAROU POR CAUSA DE: a fila mudou de "Para peticionar › Intermediária" para "Para peticionar › Intimação"/.test(await avisoRobo(pg)), await avisoRobo(pg));
 
   const rel = await pg.evaluate(() => window.__roboSAJ.relatorioTexto());
   if (process.env.COMPLETO) console.log("\n" + rel);
