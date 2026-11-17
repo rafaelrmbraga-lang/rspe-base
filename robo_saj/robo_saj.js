@@ -1,4 +1,4 @@
-// Robô do SAJ Defensorias (painel-saj.ms.def.br) - versão 0.5: acerta a Movimentação interna, escolhe o certificado
+// Robô do SAJ Defensorias (painel-saj.ms.def.br) - versão 0.6: acerta a Movimentação interna, escolhe o certificado
 // e peticiona as tarefas das filas "Para peticionar > Intimação" e "Para peticionar > Intermediária". As peças já estão prontas: o texto não é conferido.
 // Liminar e Redistribuir ficam sempre como estão (o robô não toca nessas caixas).
 // Roda como favorito (bookmarklet) na aba do Painel de Tarefas. Três modos:
@@ -9,7 +9,7 @@
 (function () {
   "use strict";
 
-  const VERSAO = "0.5.0";
+  const VERSAO = "0.6.0";
   const HOST = "painel-saj.ms.def.br";
   const CHAVE_SESSAO = "roboSAJ_resultados";
   const ESPERA_ENVIO_MS = 180000; // tempo para digitar o PIN e o SAJ responder
@@ -82,13 +82,13 @@
     fecharEditor: (el) => el.getAttribute("data-testid") === "action-emissao-expediente-close-btn",
     peticionar: (el) => el.getAttribute("data-testid") === "action-emissao-expediente-peticionar-btn" && estado.modo === "peticionar" && estado.autorizado,
     fecharAviso: (el) => naCaixaVerde(el) && !el.closest('[data-testid="editor-container"]'),
-    abrirLista: (el) => /(movement-type-select|certificado)__control/.test(String(el.className)),
-    opcao: (el) => !!el.closest('[class*="movement-type-select__menu"], [class*="certificado__menu"]'),
+    abrirLista: (el) => /(movement-type-select|certificado|select-petition-type|select-tipo-documento|select-prosecutor|select-sigilo-documento)__control/.test(String(el.className)),
+    opcao: (el) => /(movement-type-select|certificado|select-petition-type|select-tipo-documento|select-prosecutor|select-sigilo-documento)__menu/.test(String((el.closest('[class*="__menu"]') || {}).className || "")),
     atualizarCertificados: (el) => el.getAttribute("data-testid") === "refreshButton" && el.getAttribute("aria-label") === "Atualizar lista de certificado",
   };
   const NOME_CLIQUE = {
     continuar: 'o botão "Continuar" do card', propriedades: 'a aba "Propriedades"', fecharEditor: 'o "×" do editor',
-    peticionar: 'o botão "Peticionar"', fecharAviso: 'o "×" da caixa de aviso', abrirLista: "a lista de Movimentação/certificado",
+    peticionar: 'o botão "Peticionar"', fecharAviso: 'o "×" da caixa de aviso', abrirLista: "a lista do campo",
     opcao: "a opção da lista", atualizarCertificados: 'o botão "Atualizar lista de certificado"',
   };
   function clicar(el, tipo) {
@@ -204,17 +204,20 @@
     }
     return saida;
   }
-  const textoOpcao = (o) => Object.values(o).filter((v) => typeof v === "string" || typeof v === "number").join(" ");
+  const textoOpcao = (o) => (typeof o.label === "string" ? o.label : Object.values(o).filter((v) => typeof v === "string" || typeof v === "number").join(" "));
+  const NOME_LISTA = { "movement-type-select": "Movimentação interna", certificado: "Certificado digital", "select-petition-type": "Evento",
+    "select-tipo-documento": "Tipo de documento", "select-prosecutor": "Defensor responsável", "select-sigilo-documento": "Sigilo do documento" };
 
   // primeira=true: com várias opções que casam, fica com a 1ª da lista (usado no certificado)
-  async function escolherNaLista(prefixo, raiz, codigo, rotulo, primeira) {
+  // casaFn: regra própria para dizer se o texto de uma opção é a certa (senão: contém o código e o rótulo)
+  async function escolherNaLista(prefixo, raiz, codigo, rotulo, primeira, casaFn) {
     const input = q(`input.${prefixo}__input`, raiz) || q(`[class*="${prefixo}__control"] input`, raiz);
     const controle = q(`[class*="${prefixo}__control"]`, raiz);
     if (!input || !controle) return "não achei a lista";
-    const casa = (t) => { const c = chave(t); return c.includes(chave(codigo)) && c.includes(chave(rotulo)); };
+    const casa = casaFn || ((t) => { const c = chave(t); return c.includes(chave(codigo)) && c.includes(chave(rotulo)); });
     // o SAJ deixa a lista bloqueada enquanto carrega: espera liberar (até 30 s)
     if (bloqueado(controle)) {
-      ui.aviso(`Aguardando a lista ${prefixo === "certificado" ? "de certificado" : "de Movimentação interna"} liberar (o SAJ ainda está carregando)...`);
+      ui.aviso(`Aguardando a lista "${NOME_LISTA[prefixo] || prefixo}" liberar (o SAJ ainda está carregando)...`);
       if (!(await aguardar(() => !bloqueado(controle), 30000, 500))) return "a lista ficou bloqueada (desativada) no SAJ por 30 s";
       await esperar(500);
     }
@@ -244,6 +247,25 @@
     p.onChange(cand[0], { action: "select-option", option: cand[0], name: p.name });
     await esperar(500);
     return "";
+  }
+
+  // Campos que o robô PREENCHE SE VIEREM VAZIOS. Preenchidos com outro valor: pula a tarefa (não troca).
+  const CAMPOS = [
+    { nome: "Evento", prefixo: "select-petition-type", caixa: () => q('[data-testid="select-petition"]', raizProps()),
+      valor: (p) => p.evento, ok: (v, P) => igual(v, P.evento), alvo: (P) => P.evento, digita: (P) => P.evento },
+    { nome: "Tipo de documento", prefixo: "select-tipo-documento", caixa: () => q('[data-testid="select-tipo-documento"]', raizProps()),
+      valor: (p) => p.tipoDoc, ok: (v, P) => comeca(v, P.tipoDoc), alvo: (P) => P.tipoDoc, digita: (P) => P.tipoDoc.split(" ")[0] },
+    { nome: "Sigilo do documento", prefixo: "select-sigilo-documento", caixa: () => q('[data-testid="select-sigilo-documento"]', raizProps()),
+      valor: (p) => p.sigilo, ok: (v) => igual(v, SIGILO), alvo: () => SIGILO, digita: () => "Público" },
+    { nome: "Defensor responsável", prefixo: "select-prosecutor", caixa: () => { const i = q('input[aria-label="Defensor responsável"]', raizProps()); return i && i.closest('[class*="__control"]'); },
+      valor: (p) => p.defensor, ok: (v) => igual(v, DEFENSOR), alvo: () => DEFENSOR, digita: () => "Urdiales" },
+  ];
+  async function preencherCampo(c, P) {
+    const caixa = c.caixa();
+    if (!caixa) return `não achei o campo ${c.nome}`;
+    const alvo = c.alvo(P);
+    const casa = c.nome === "Tipo de documento" ? (t) => comeca(t, alvo) : (t) => igual(t, alvo);
+    return escolherNaLista(c.prefixo, caixa.parentElement, c.digita(P), alvo, false, casa);
   }
 
   // Escolhe o 1º certificado da lista com o nome do Defensor (pode haver mais de um token dele).
@@ -357,7 +379,6 @@
 
     let p = lerPropriedades();
     if (!p) return sair("PULADO – não consegui ler a aba Propriedades");
-    if (!igual(p.sigilo, SIGILO)) return sair(`PULADO – Sigilo veio "${p.sigilo || "vazio"}" (não altero sigilo)`);
 
     if (estado.modo === "conferir") {
       const faria = [];
@@ -366,8 +387,11 @@
         faria.push(`Movimentação → ${P.movLabel} (veio ${p.movLabel || "vazia"})` + (bloqueado(ctl) ? " – ATENÇÃO: a lista de Movimentação está bloqueada" : ""));
       }
       if (!certOk(p.certificado)) faria.push("escolher o certificado");
-      if (!igual(p.evento, P.evento)) faria.push(`ATENÇÃO: Evento veio "${p.evento || "vazio"}"`);
-      if (!comeca(p.tipoDoc, P.tipoDoc)) faria.push(`ATENÇÃO: Tipo de documento veio "${p.tipoDoc || "vazio"}"`);
+      for (const c of CAMPOS) {
+        const v = c.valor(p);
+        if (!v) faria.push(`preencher ${c.nome} → ${c.alvo(P)}`);
+        else if (!c.ok(v, P)) faria.push(`ATENÇÃO: ${c.nome} está "${v}" (esperado "${c.alvo(P)}"; pode mudar junto com a Movimentação)`);
+      }
       r.feito = faria;
       return sair("CONFERIDA");
     }
@@ -382,11 +406,23 @@
       await esperar(800); // Evento e Tipo de documento podem mudar junto
       p = lerPropriedades();
     }
-    // 2) campos que o robô não mexe: têm de estar certos
+    // 2) Evento, Tipo de documento, Sigilo e Defensor: preenche os vazios, nessa ordem (um pode depender do outro)
+    for (const c of CAMPOS) {
+      p = lerPropriedades();
+      const v = c.valor(p);
+      if (v && c.ok(v, P)) continue;
+      if (v) return sair(`PULADO – ${c.nome} está "${v}" (esperado "${c.alvo(P)}"); o robô só preenche campo vazio, não troca o que já veio preenchido`);
+      const erro = await preencherCampo(c, P);
+      if (dialogoEstranho()) return parado(`ao preencher ${c.nome}, o SAJ mostrou a janela "${texto(dialogoEstranho()).slice(0, 200)}"`, "Resolva a janela no SAJ, feche o editor sem peticionar e clique em Iniciar.");
+      await esperar(800);
+      p = lerPropriedades();
+      if (erro || !c.ok(c.valor(p), P)) return sair(`PULADO – não consegui preencher ${c.nome} com "${c.alvo(P)}": ${erro || `ficou "${c.valor(p) || "vazio"}"`}`);
+      r.feito.push(`${c.nome} preenchido`);
+    }
+    // confere tudo de novo (um campo pode ter limpado outro)
     p = lerPropriedades();
-    if (!igual(p.evento, P.evento)) return sair(`PULADO – Evento veio "${p.evento || "vazio"}" (esperado ${P.evento})`);
-    if (!comeca(p.tipoDoc, P.tipoDoc)) return sair(`PULADO – Tipo de documento veio "${p.tipoDoc || "vazio"}" (esperado ${P.tipoDoc})`);
-    if (!igual(p.defensor, DEFENSOR)) return sair(`PULADO – Defensor veio "${p.defensor || "vazio"}"`);
+    if (!movCerta(p, P)) return sair(`PULADO – a Movimentação mudou para "${p.movLabel || "vazia"}" ao preencher os outros campos`);
+    for (const c of CAMPOS) if (!c.ok(c.valor(p), P)) return sair(`PULADO – ${c.nome} ficou "${c.valor(p) || "vazio"}" ao preencher os outros campos (esperado "${c.alvo(P)}")`);
     // 3) certificado
     if (!certOk(p.certificado)) {
       const erro = await escolherCertificado();

@@ -41,6 +41,15 @@ function simularSAJ({ dialogo, semOpcao }) {
   };
   window.__aviso = aviso;
   aviso("Sua petição está sendo enviada ao tribunal. Aguarde confirmação."); // caixa velha de outra petição
+  // põe (ou apaga, com null) o valor mostrado numa lista do SAJ
+  window.__poe = (pre, txt) => {
+    const vc = document.querySelector(`[data-testid="propriedades-root"] .${pre}__value-container`);
+    vc.querySelectorAll(`.${pre}__single-value, .${pre}__placeholder`).forEach((x) => x.remove());
+    const d = document.createElement("div");
+    d.className = txt == null ? `${pre}__placeholder` : `${pre}__single-value`;
+    d.textContent = txt == null ? "Selecione a opção" : txt;
+    vc.prepend(d);
+  };
   const numAberto = () => { const c = document.querySelector('[data-testid^="card-"][aria-selected="true"]'); return c ? c.getAttribute("data-testid").slice(5) : ""; };
   const menu = (container, prefixo, grupos, aoEscolher) => {
     container.querySelectorAll(`.${prefixo}__menu`).forEach((m) => m.remove());
@@ -75,10 +84,22 @@ function simularSAJ({ dialogo, semOpcao }) {
         raiz.querySelector('[data-testid="option-parent"]').textContent = v[0];
         raiz.querySelector('[data-testid="option-label"]').textContent = v[1];
         if (MOV[cod]) {
-          raiz.querySelector(".select-petition-type__single-value").textContent = v[2];
-          raiz.querySelector(".select-tipo-documento__single-value").textContent = v[3];
+          const n = numAberto();
+          window.__poe("select-petition-type", (window.__vazios || []).includes(n) ? null : (window.__eventoErrado || []).includes(n) ? "Manifestação do Réu" : v[2]);
+          window.__poe("select-tipo-documento", (window.__vazios || []).includes(n) ? null : v[3]);
         }
       });
+    }
+    // Evento, Tipo de documento, Defensor e Sigilo
+    const OUTRAS = { "select-petition-type": ["Manifestação do Autor", "Manifestação do Réu", "PETIÇÃO", "PETIÇÃO INICIAL"],
+      "select-tipo-documento": ["9934 - Manifestação da Defensoria -  Autor", "9932 - Manifestação da Defensoria", "13 - PETIÇÃO", "130 - PETIÇÃO ANTIGA"],
+      "select-prosecutor": ["Outro Defensor", "Cahuê Duarte e Urdiales"], "select-sigilo-documento": ["0 - Público", "1 - Segredo de Justiça"] };
+    for (const pre of Object.keys(OUTRAS)) {
+      if (new RegExp(pre + "__control").test(ctl.className)) {
+        const filtro = (cont.querySelector("input").value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+        const ops = OUTRAS[pre].filter((o) => o.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().includes(filtro));
+        menu(cont, pre, [["", ops]], (pai, o) => window.__poe(pre, o));
+      }
     }
     if (/certificado__control/.test(ctl.className)) {
       // enquanto o assinador não responde, a lista abre vazia
@@ -114,6 +135,7 @@ function simularSAJ({ dialogo, semOpcao }) {
         const ifr = w.querySelector("iframe.tox-edit-area__iframe");
         ifr.removeAttribute("src");
         // a lista de Movimentação começa bloqueada (SAJ carregando); num processo, fica bloqueada de vez
+        if ((window.__vazios || []).includes(numAberto())) { window.__poe("select-prosecutor", null); window.__poe("select-sigilo-documento", null); }
         const ctl = w.querySelector(".movement-type-select__control");
         const bloq = (v) => { ctl.setAttribute("aria-disabled", String(v)); ctl.classList.toggle("movement-type-select__control--is-disabled", v); };
         bloq(true);
@@ -162,7 +184,7 @@ const avisoRobo = (pg) => pg.evaluate(() => document.getElementById("robo-saj-ho
   console.log(`cards: ${cards.length} (${ep.length} EPROC, ${saj.length} SAJ)`);
   const semOpcao = [ep[3]]; // nesse a lista não tem a 1000150: tem de pular, sem chutar outra
   await pg.evaluate(simularSAJ, { dialogo, semOpcao });
-  await pg.evaluate((n) => { window.__movTravada = [n]; }, ep[5]);
+  await pg.evaluate(([t, v, e]) => { window.__movTravada = [t]; window.__vazios = [v]; window.__eventoErrado = [e]; }, [ep[5], ep[1], ep[2]]);
   await pg.addScriptTag({ content: robo });
 
   console.log("menu e categorias");
@@ -187,8 +209,12 @@ const avisoRobo = (pg) => pg.evaluate(() => document.getElementById("robo-saj-ho
 
   console.log("modo Preparar (3 tarefas)");
   res = await rodada(pg, "preparar", 3);
-  confere("3 preparadas", res.length === 3 && res.every((r) => r.resultado.startsWith("PREPARADA")), res.map((r) => r.resultado));
-  const prepB = res.filter((r) => r.perfil === "B");
+  confere("3 tarefas: 2 preparadas, 1 pulada", res.length === 3 && res.filter((r) => r.resultado.startsWith("PREPARADA")).length === 2, res.map((r) => r.resultado));
+  const rv = res.find((r) => r.num === ep[1]) || {};
+  confere("campos vazios: preenche Evento, Tipo, Sigilo e Defensor", (rv.resultado || "").startsWith("PREPARADA") && ["Evento", "Tipo de documento", "Sigilo do documento", "Defensor responsável"].every((n) => rv.feito.includes(n + " preenchido")), rv);
+  const re = res.find((r) => r.num === ep[2]) || {};
+  confere("Evento preenchido com outro valor: pula e não troca", /PULADO – Evento está "Manifestação do Réu" \(esperado "PETIÇÃO"\); o robô só preenche campo vazio/.test(re.resultado || ""), re.resultado);
+  const prepB = res.filter((r) => r.perfil === "B" && r.resultado.startsWith("PREPARADA"));
   confere("preparar EPROC: Movimentação acertada + certificado", prepB.length > 0 && prepB.every((r) => r.feito.includes("Movimentação acertada") && r.feito.includes("certificado escolhido")), prepB.map((r) => r.feito));
   const ce = await pg.evaluate(() => window.__certEscolhido || []);
   confere("certificado: sempre o 1º com o nome do Cahuê (dois tokens dele na lista)", ce.length > 0 && ce.every((c) => c === "CAHUE DUARTE E URDIALES:26255213846 (token 1)"), ce);
@@ -201,7 +227,7 @@ const avisoRobo = (pg) => pg.evaluate(() => document.getElementById("robo-saj-ho
   for (const r of res) console.log("     " + r.num + " " + r.perfil + " → " + r.resultado);
   const pet = res.filter((r) => r.resultado === "PETICIONADO");
   const sim = await pg.evaluate(() => window.__peticionados);
-  confere("peticionou as que deviam (esperando a lista liberar)", pet.length === 6, pet.length);
+  confere("peticionou as que deviam (esperando a lista liberar)", pet.length === 5, pet.length);
   confere("lista travada: pula e diz por quê", res.some((r) => r.num === ep[5] && /PULADO – não consegui pôr a Movimentação .*ficou bloqueada \(desativada\) no SAJ por 30 s/.test(r.resultado)), (res.find((r) => r.num === ep[5]) || {}).resultado);
   confere("a sem a opção 1000150 foi pulada", res.some((r) => r.num === semOpcao[0] && /não consegui pôr a Movimentação.*não aparece/.test(r.resultado)), res.find((r) => r.num === semOpcao[0]));
   confere("um clique em Peticionar por tarefa", sim.length === pet.length && new Set(sim).size === sim.length, sim);
@@ -214,6 +240,7 @@ const avisoRobo = (pg) => pg.evaluate(() => document.getElementById("robo-saj-ho
   const proib = cl.filter((t) => !["btn-atividade-generic", "action-emissao-expediente-close-btn", "action-menu-propriedades", "action-emissao-expediente-peticionar-btn", "Close", "abrirLista", "refreshButton", undefined, null].includes(t));
   confere("só cliques permitidos", proib.length === 0, proib);
 
+  await pg.evaluate(() => { window.__eventoErrado = []; }); // armadilha já testada: sai do caminho das próximas rodadas
   console.log("erro do SAJ depois de Peticionar");
   await pg.evaluate(() => {
     // próxima petição: o SAJ responde com erro em vez da caixa verde

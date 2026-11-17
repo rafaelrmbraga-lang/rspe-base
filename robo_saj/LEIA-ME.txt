@@ -1,4 +1,4 @@
-ROBÔ DO SAJ DEFENSORIAS (favorito) - versão 0.5
+ROBÔ DO SAJ DEFENSORIAS (favorito) - versão 0.6
 ================================================
 
 O QUE FAZ
@@ -12,9 +12,10 @@ ficam como estão. Não usa IA nem tokens.
 PERFIS (pelo 1º algarismo do nº do processo)
  - 0 (tarja SAJ):   Movimentação 920198 - Manifestação (920281-ATOS FINALÍSTICOS)
  - 5 (tarja EPROC): Movimentação 1000150 - Petição Intermediária TJ (1000000-MOVIMENTAÇÕES DE SISTEMA)
-O robô só lê Evento, Tipo de documento, Sigilo e Defensor: se não estiverem no
-perfil (Manifestação do Autor / 9934, ou PETIÇÃO / 13; 0 - Público; Cahuê Duarte e
-Urdiales), pula a tarefa sem mexer.
+Evento, Tipo de documento, Sigilo e Defensor: se vierem VAZIOS, o robô preenche
+com os valores do perfil (Manifestação do Autor / 9934, ou PETIÇÃO / 13;
+0 - Público; Cahuê Duarte e Urdiales). Se vierem preenchidos com outro valor,
+ele não troca: pula a tarefa e diz qual campo e o que veio.
 
 MODOS
  - Conferir: abre, mostra o que faria e fecha. Não altera nada.
