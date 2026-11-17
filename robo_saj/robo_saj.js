@@ -1,4 +1,4 @@
-// Robô do SAJ Defensorias (painel-saj.ms.def.br) - versão 0.6.2: acerta a Movimentação interna, escolhe o certificado
+// Robô do SAJ Defensorias (painel-saj.ms.def.br) - versão 0.7: acerta a Movimentação interna, escolhe o certificado
 // e peticiona as tarefas das filas "Para peticionar > Intimação" e "Para peticionar > Intermediária". As peças já estão prontas: o texto não é conferido.
 // Liminar e Redistribuir ficam sempre como estão (o robô não toca nessas caixas).
 // Roda como favorito (bookmarklet) na aba do Painel de Tarefas. Três modos:
@@ -9,7 +9,7 @@
 (function () {
   "use strict";
 
-  const VERSAO = "0.6.2";
+  const VERSAO = "0.7.0";
   const HOST = "painel-saj.ms.def.br";
   const CHAVE_SESSAO = "roboSAJ_resultados";
   const ESPERA_ENVIO_MS = 180000; // tempo para digitar o PIN e o SAJ responder
@@ -41,12 +41,12 @@
 
   // ------------------------------------------------------------ regras
   const PERFIS = {
-    A: { /* nº começa com 0 (SAJ) */
+    A: { /* nº que NÃO começa com 5: Movimentação fica como veio; Evento/Tipo só se vierem vazios */
       tarja: "SAJ",
       movCod: "920198", movLabel: "920198 - Manifestação", movPai: "920281",
       evento: "Manifestação do Autor", tipoDoc: "9934 - Manifestação da Defensoria",
     },
-    B: { /* nº começa com 5 (EPROC) */
+    B: { /* nº começa com 5: Movimentação conferida e acertada para 1000150 */
       tarja: "EPROC",
       movCod: "1000150", movLabel: "1000150 - Petição Intermediária TJ", movPai: "1000000",
       evento: "PETIÇÃO", tipoDoc: "13 - PETIÇÃO",
@@ -271,7 +271,8 @@
     return "";
   }
 
-  // Campos que o robô PREENCHE SE VIEREM VAZIOS. Preenchidos com outro valor: pula a tarefa (não troca).
+  // Campos que o robô PREENCHE SE VIEREM VAZIOS. Se já vierem preenchidos, ficam como estão
+  // (exceto Sigilo diferente de "0 - Público": a tarefa é pulada).
   const CAMPOS = [
     { nome: "Evento", prefixo: "select-petition-type", caixa: () => q('[data-testid="select-petition"]', raizProps()),
       valor: (p) => p.evento, ok: (v, P) => igualNome(v, P.evento), alvo: (P) => P.evento, digita: (P) => P.evento },
@@ -361,10 +362,10 @@
     r.fila = estado.fila;
     if (estado.fila === "intimacao" && norm(card.tipo) !== "intimacao") { r.resultado = `PULADO – card não é Intimação (${card.tipo})`; return r; }
     const dig = soDig(card.num);
-    r.perfil = dig.length === 20 && dig[0] === "5" ? "B" : dig.length === 20 && dig[0] === "0" ? "A" : "";
-    if (!r.perfil) { r.resultado = 'PULADO – nº não começa com "0" nem com "5"'; return r; }
+    // Só o nº que começa com 5 tem a Movimentação conferida e acertada (1000150). Os demais ficam com a que veio.
+    r.perfil = dig[0] === "5" ? "B" : "A";
     const P = PERFIS[r.perfil];
-    if (!card.tarjas.some((t) => igual(t, P.tarja))) { r.resultado = `PULADO – nº de perfil ${r.perfil}, mas o card não tem a tarja ${P.tarja}`; return r; }
+    const acertaMov = r.perfil === "B";
     if (/sigil|segredo de justica|reu preso/.test(norm(card.textoCard))) { r.resultado = "PULADO – card indica sigilo/segredo/réu preso"; return r; }
     const btn = q('[data-testid="btn-atividade-generic"]', cont);
     if (!btn || norm(texto(btn)) !== "continuar") { r.resultado = `PULADO – o botão do card ${btn ? `diz "${texto(btn)}"` : "não existe"}, e o robô só usa "Continuar"`; return r; }
@@ -404,7 +405,7 @@
 
     if (estado.modo === "conferir") {
       const faria = [];
-      if (!movCerta(p, P)) {
+      if (acertaMov && !movCerta(p, P)) {
         const ctl = q('[data-testid="select-tree-movimentacao"] [class*="movement-type-select__control"]', raizProps());
         faria.push(`Movimentação → ${P.movLabel} (veio ${p.movLabel || "vazia"})` + (bloqueado(ctl) ? " – ATENÇÃO: a lista de Movimentação está bloqueada" : ""));
       }
@@ -412,14 +413,14 @@
       for (const c of CAMPOS) {
         const v = c.valor(p);
         if (!v) faria.push(`preencher ${c.nome} → ${c.alvo(P)}`);
-        else if (!c.ok(v, P)) faria.push(`ATENÇÃO: ${c.nome} está "${v}" (esperado "${c.alvo(P)}"; pode mudar junto com a Movimentação)`);
+        else if (!c.ok(v, P)) faria.push(c.nome === "Sigilo do documento" ? `ATENÇÃO: Sigilo está "${v}": pularia` : `${c.nome} fica como veio: "${v}"`);
       }
       r.feito = faria;
       return sair("CONFERIDA");
     }
 
-    // 1) Movimentação interna
-    if (!movCerta(p, P)) {
+    // 1) Movimentação interna (só nº com 5)
+    if (acertaMov && !movCerta(p, P)) {
       const erro = await escolherNaLista("movement-type-select", q('[data-testid="select-tree-movimentacao"]', raizProps()).parentElement, P.movCod, P.movLabel.replace(/^\d+\s*-\s*/, ""));
       p = lerPropriedades();
       if (erro || !movCerta(p, P)) return sair(`PULADO – não consegui pôr a Movimentação ${P.movLabel} (estava "${p.movLabel || "vazia"}"): ${erro || "a escolha não pegou"}`);
@@ -433,7 +434,8 @@
       p = lerPropriedades();
       const v = c.valor(p);
       if (v && c.ok(v, P)) continue;
-      if (v) return sair(`PULADO – ${c.nome} está "${v}" (esperado "${c.alvo(P)}"); o robô só preenche campo vazio, não troca o que já veio preenchido`);
+      if (v && c.nome === "Sigilo do documento") return sair(`PULADO – Sigilo do documento está "${v}" (o robô não peticiona documento com sigilo nem altera o sigilo)`);
+      if (v) { r.feito.push(`${c.nome} mantido como veio: "${v}"`); continue; }
       const erro = await preencherCampo(c, P);
       if (dialogoEstranho()) return parado(`ao preencher ${c.nome}, o SAJ mostrou a janela "${texto(dialogoEstranho()).slice(0, 200)}"`, "Resolva a janela no SAJ, feche o editor sem peticionar e clique em Iniciar.");
       await esperar(800);
@@ -443,8 +445,12 @@
     }
     // confere tudo de novo (um campo pode ter limpado outro)
     p = lerPropriedades();
-    if (!movCerta(p, P)) return sair(`PULADO – a Movimentação mudou para "${p.movLabel || "vazia"}" ao preencher os outros campos`);
-    for (const c of CAMPOS) if (!c.ok(c.valor(p), P)) return sair(`PULADO – ${c.nome} ficou "${c.valor(p) || "vazio"}" ao preencher os outros campos (esperado "${c.alvo(P)}")`);
+    if (acertaMov && !movCerta(p, P)) return sair(`PULADO – a Movimentação mudou para "${p.movLabel || "vazia"}" ao preencher os outros campos`);
+    for (const c of CAMPOS) {
+      const v = c.valor(p);
+      if (!v) return sair(`PULADO – ${c.nome} ficou vazio ao preencher os outros campos`);
+      if (c.nome === "Sigilo do documento" && !c.ok(v, P)) return sair(`PULADO – Sigilo do documento ficou "${v}" ao preencher os outros campos`);
+    }
     // 3) certificado
     if (!certOk(p.certificado)) {
       const erro = await escolherCertificado();
@@ -456,7 +462,7 @@
       }
       r.feito.push("certificado escolhido");
     }
-    if (!movCerta(p, P)) return sair("PULADO – a Movimentação mudou depois de escolher o certificado");
+    if (acertaMov && !movCerta(p, P)) return sair("PULADO – a Movimentação mudou depois de escolher o certificado");
 
     if (estado.modo === "preparar") return sair("PREPARADA (não peticionada)");
 

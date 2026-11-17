@@ -1,24 +1,28 @@
-ROBÔ DO SAJ DEFENSORIAS (favorito) - versão 0.6.2
+ROBÔ DO SAJ DEFENSORIAS (favorito) - versão 0.7
 ================================================
 
 O QUE FAZ
 Nas filas "Para peticionar › Intimação" e "Para peticionar › Intermediária" do
 Painel de Tarefas (painel-saj.ms.def.br), na que estiver destacada no menu,
-para cada tarefa: abre ("Continuar"), acerta a Movimentação interna do perfil,
-escolhe o certificado do Defensor e clica UMA vez em "Peticionar". As peças já
+para cada tarefa: abre ("Continuar"), acerta a Movimentação interna (só nº com 5),
+preenche os campos que vierem vazios, escolhe o certificado do Defensor e clica UMA vez em "Peticionar". As peças já
 estão prontas: o texto não é conferido nem alterado. Liminar e Redistribuir
 ficam como estão. Não usa IA nem tokens.
 
-PERFIS (pelo 1º algarismo do nº do processo)
- - 0 (tarja SAJ):   Movimentação 920198 - Manifestação (920281-ATOS FINALÍSTICOS)
- - 5 (tarja EPROC): Movimentação 1000150 - Petição Intermediária TJ (1000000-MOVIMENTAÇÕES DE SISTEMA)
-Evento, Tipo de documento, Sigilo e Defensor: se vierem VAZIOS, o robô preenche
-com os valores do perfil (Manifestação do Autor / 9934, ou PETIÇÃO / 13;
-0 - Público; Cahuê Duarte e Urdiales). Se vierem preenchidos com outro valor,
-ele não troca: pula a tarefa e diz qual campo e o que veio.
-Listas que buscam no servidor (ex.: Evento): o robô espera até 10 s a lista
-carregar e tenta o texto todo, as 4 primeiras letras sem acento e a lista
-inteira. Se não achar, o relatório diz quais opções a lista mostrou.
+REGRAS
+ - Nº que começa com 5: a Movimentação interna é conferida e, se precisar,
+   trocada para 1000150 - Petição Intermediária TJ (1000000-MOVIMENTAÇÕES DE SISTEMA).
+ - Qualquer outro nº: a Movimentação fica como veio (o robô não mexe).
+ - Evento, Tipo de documento, Sigilo e Defensor: o que vier preenchido fica
+   como está; só os VAZIOS são preenchidos:
+     nº com 5: Evento PETIÇÃO, Tipo 13 - PETIÇÃO
+     demais:   Evento Manifestação do Autor, Tipo 9934 - Manifestação da Defensoria
+     todos:    Sigilo 0 - Público, Defensor Cahuê Duarte e Urdiales
+ - Sigilo que vier diferente de 0 - Público: a tarefa é pulada.
+ - Listas que buscam no servidor (ex.: Evento): o robô espera até 10 s a lista
+   carregar e tenta o texto todo, as 4 primeiras letras sem acento e a lista
+   inteira. Se não achar, o relatório diz quais opções a lista mostrou.
+ - Certificado: o 1º da lista com o nome CAHUE DUARTE E URDIALES.
 
 MODOS
  - Conferir: abre, mostra o que faria e fecha. Não altera nada.
@@ -27,9 +31,10 @@ MODOS
    clica uma vez, espera até 3 min (PIN) pela caixa "Sua petição está sendo
    enviada ao tribunal", fecha a caixa e segue.
 
-PULA a tarefa: nº que não começa com 0/5 ou sem a tarja do perfil; sigilo,
-segredo de justiça ou réu preso no card; Movimentação que não aparece na lista ou aparece mais de uma vez
-parecida; Evento/Tipo/Sigilo/Defensor fora do perfil; Peticionar desativado.
+PULA a tarefa: sigilo, segredo de justiça ou réu preso no card; Sigilo do
+documento diferente de 0 - Público; opção que não aparece na lista (ou mais de
+uma parecida, fora o certificado); campo vazio que não consegue preencher;
+Peticionar desativado.
 
 CERTIFICADO: escolhe sempre o 1º da lista com o nome CAHUE DUARTE E URDIALES
 (se houver mais de um token dele, fica com o primeiro). A lista vem do assinador e pode demorar. O robô tenta de novo a

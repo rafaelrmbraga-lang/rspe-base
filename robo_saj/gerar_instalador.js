@@ -24,8 +24,8 @@ const html = `<!doctype html>
  li{margin:4px 0}
 </style></head><body>
 <h1>Robô do SAJ Defensorias · versão ${versao}</h1>
-<div class="box alerta">Nas filas "Para peticionar › Intimação" e "Para peticionar › Intermediária", o robô acerta a <b>Movimentação interna</b> do perfil
-(nº com 0: 920198 - Manifestação; nº com 5: 1000150 - Petição Intermediária TJ), preenche Evento, Tipo de documento, Sigilo e Defensor <b>se vierem vazios</b>, escolhe o <b>certificado</b> do Defensor e clica
+<div class="box alerta">Nas filas "Para peticionar › Intimação" e "Para peticionar › Intermediária", o robô acerta a <b>Movimentação interna</b> só nos processos que começam com 5
+(1000150 - Petição Intermediária TJ; nos demais ela fica como veio), preenche Evento, Tipo de documento, Sigilo e Defensor <b>se vierem vazios</b>, escolhe o <b>certificado</b> do Defensor e clica
 <b>uma vez</b> em Peticionar. Liminar, Redistribuir e o texto da peça ficam como estão.</div>
 <h2>Instalar (uma vez)</h2>
 <ol>

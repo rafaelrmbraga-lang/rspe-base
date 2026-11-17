@@ -170,6 +170,11 @@ function simularSAJ({ dialogo, semOpcao }) {
         const ifr = w.querySelector("iframe.tox-edit-area__iframe");
         ifr.removeAttribute("src");
         // a lista de Movimentação começa bloqueada (SAJ carregando); num processo, fica bloqueada de vez
+        if ((window.__movOutra || []).includes(numAberto())) {
+          w.querySelector('[data-testid="option-parent"]').textContent = "1000000-MOVIMENTAÇÕES DE SISTEMA";
+          w.querySelector('[data-testid="option-label"]').textContent = "1000150 - Petição Intermediária TJ";
+        }
+        if ((window.__sigiloErrado || []).includes(numAberto())) window.__poe("select-sigilo-documento", "1 - Segredo de Justiça");
         if ((window.__vazios || []).includes(numAberto())) { window.__poe("select-prosecutor", null); window.__poe("select-sigilo-documento", null); }
         const ctl = w.querySelector(".movement-type-select__control");
         const bloq = (v) => { ctl.setAttribute("aria-disabled", String(v)); ctl.classList.toggle("movement-type-select__control--is-disabled", v); };
@@ -194,6 +199,7 @@ function simularSAJ({ dialogo, semOpcao }) {
   window.__roboSAJ_teste = true;
 }
 
+const TODOS = []; // resultados de todas as rodadas
 async function rodada(pg, modo, n, autorizar) {
   await pg.evaluate(({ modo, n, autorizar }) => {
     const s = document.getElementById("robo-saj-host").shadowRoot;
@@ -205,7 +211,9 @@ async function rodada(pg, modo, n, autorizar) {
   }, { modo, n, autorizar });
   await pg.waitForTimeout(300);
   await pg.waitForFunction(() => !window.__roboSAJ.estado.rodando, null, { timeout: 240000 });
-  return pg.evaluate(() => window.__roboSAJ.estado.resultados.map((r) => ({ ...r })));
+  const res = await pg.evaluate(() => window.__roboSAJ.estado.resultados.map((r) => ({ ...r })));
+  TODOS.push(...res);
+  return res;
 }
 const avisoRobo = (pg) => pg.evaluate(() => document.getElementById("robo-saj-host").shadowRoot.querySelector(".a").textContent);
 
@@ -219,7 +227,7 @@ const avisoRobo = (pg) => pg.evaluate(() => document.getElementById("robo-saj-ho
   console.log(`cards: ${cards.length} (${ep.length} EPROC, ${saj.length} SAJ)`);
   const semOpcao = [ep[3]]; // nesse a lista não tem a 1000150: tem de pular, sem chutar outra
   await pg.evaluate(simularSAJ, { dialogo, semOpcao });
-  await pg.evaluate(([t, v, e]) => { window.__movTravada = [t]; window.__vazios = [v]; window.__eventoErrado = [e]; }, [ep[5], ep[1], ep[2]]);
+  await pg.evaluate(([t, v, e, g, h]) => { window.__movTravada = [t]; window.__vazios = [v]; window.__eventoErrado = [e]; window.__sigiloErrado = [g]; window.__movOutra = [h]; }, [ep[5], ep[1], ep[2], saj[2], saj[1]]);
   await pg.addScriptTag({ content: robo });
 
   console.log("menu e categorias");
@@ -244,12 +252,12 @@ const avisoRobo = (pg) => pg.evaluate(() => document.getElementById("robo-saj-ho
 
   console.log("modo Preparar (3 tarefas)");
   res = await rodada(pg, "preparar", 3);
-  confere("3 tarefas: 2 preparadas, 1 pulada", res.length === 3 && res.filter((r) => r.resultado.startsWith("PREPARADA")).length === 2, res.map((r) => r.resultado));
+  confere("3 tarefas preparadas", res.length === 3 && res.every((r) => r.resultado.startsWith("PREPARADA")), res.map((r) => r.resultado));
   const rv = res.find((r) => r.num === ep[1]) || {};
   confere("Evento: esperou a lista carregar e escolheu \"PETIÇÃO\" (opção com o grupo em cima)", (await pg.evaluate(() => window.__eventosEscolhidos || [])).includes("PETIÇÃO"), await pg.evaluate(() => window.__eventosEscolhidos));
   confere("campos vazios: preenche Evento, Tipo, Sigilo e Defensor", (rv.resultado || "").startsWith("PREPARADA") && ["Evento", "Tipo de documento", "Sigilo do documento", "Defensor responsável"].every((n) => rv.feito.includes(n + " preenchido")), rv);
   const re = res.find((r) => r.num === ep[2]) || {};
-  confere("Evento preenchido com outro valor: pula e não troca", /PULADO – Evento está "Manifestação do Réu" \(esperado "PETIÇÃO"\); o robô só preenche campo vazio/.test(re.resultado || ""), re.resultado);
+  confere("Evento que já veio preenchido fica como está (não troca, não pula)", (re.resultado || "").startsWith("PREPARADA") && re.feito.includes('Evento mantido como veio: "Manifestação do Réu"'), re);
   const prepB = res.filter((r) => r.perfil === "B" && r.resultado.startsWith("PREPARADA"));
   confere("preparar EPROC: Movimentação acertada + certificado", prepB.length > 0 && prepB.every((r) => r.feito.includes("Movimentação acertada") && r.feito.includes("certificado escolhido")), prepB.map((r) => r.feito));
   const ce = await pg.evaluate(() => window.__certEscolhido || []);
@@ -263,7 +271,7 @@ const avisoRobo = (pg) => pg.evaluate(() => document.getElementById("robo-saj-ho
   for (const r of res) console.log("     " + r.num + " " + r.perfil + " → " + r.resultado);
   const pet = res.filter((r) => r.resultado === "PETICIONADO");
   const sim = await pg.evaluate(() => window.__peticionados);
-  confere("peticionou as que deviam (esperando a lista liberar)", pet.length === 5, pet.length);
+  confere("peticionou as que deviam (esperando a lista liberar)", pet.length === 6, pet.length);
   confere("lista travada: pula e diz por quê", res.some((r) => r.num === ep[5] && /PULADO – não consegui pôr a Movimentação .*ficou bloqueada \(desativada\) no SAJ por 30 s/.test(r.resultado)), (res.find((r) => r.num === ep[5]) || {}).resultado);
   confere("a sem a opção 1000150 foi pulada", res.some((r) => r.num === semOpcao[0] && /não consegui pôr a Movimentação.*não aparece/.test(r.resultado)), res.find((r) => r.num === semOpcao[0]));
   confere("um clique em Peticionar por tarefa", sim.length === pet.length && new Set(sim).size === sim.length, sim);
@@ -342,6 +350,11 @@ const avisoRobo = (pg) => pg.evaluate(() => document.getElementById("robo-saj-ho
   await trocaFila();
   res = await prom;
   confere("fila trocada no meio: para e diz por quê", /PAROU POR CAUSA DE: a fila mudou de "Para peticionar › Intermediária" para "Para peticionar › Intimação"/.test(await avisoRobo(pg)), await avisoRobo(pg));
+
+  const r0 = TODOS.filter((r) => r.num === saj[1]);
+  confere("nº com 0: Movimentação fica como veio (não troca)", r0.length > 0 && r0.every((r) => !r.resultado.startsWith("PULADO") && !(r.feito || []).includes("Movimentação acertada") && !(r.feito || []).some((f) => /Movimentação →/.test(f))), r0.map((r) => [r.resultado, r.feito]));
+  const rs = TODOS.filter((r) => r.num === saj[2]);
+  confere("Sigilo que já veio diferente de Público: pula", rs.length > 0 && rs.every((r) => /PULADO – Sigilo do documento está "1 - Segredo de Justiça"/.test(r.resultado)), rs.map((r) => r.resultado));
 
   const rel = await pg.evaluate(() => window.__roboSAJ.relatorioTexto());
   if (process.env.COMPLETO) console.log("\n" + rel);
