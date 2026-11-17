@@ -1,4 +1,4 @@
-// Robô do SAJ Defensorias (painel-saj.ms.def.br) - versão 0.6: acerta a Movimentação interna, escolhe o certificado
+// Robô do SAJ Defensorias (painel-saj.ms.def.br) - versão 0.6.1: acerta a Movimentação interna, escolhe o certificado
 // e peticiona as tarefas das filas "Para peticionar > Intimação" e "Para peticionar > Intermediária". As peças já estão prontas: o texto não é conferido.
 // Liminar e Redistribuir ficam sempre como estão (o robô não toca nessas caixas).
 // Roda como favorito (bookmarklet) na aba do Painel de Tarefas. Três modos:
@@ -9,7 +9,7 @@
 (function () {
   "use strict";
 
-  const VERSAO = "0.6.0";
+  const VERSAO = "0.6.1";
   const HOST = "painel-saj.ms.def.br";
   const CHAVE_SESSAO = "roboSAJ_resultados";
   const ESPERA_ENVIO_MS = 180000; // tempo para digitar o PIN e o SAJ responder
@@ -56,6 +56,9 @@
   const DEFENSOR = "Cahuê Duarte e Urdiales";
   const CERTIFICADO = "CAHUE DUARTE E URDIALES";
   const igual = (a, b) => chave(a) === chave(b);
+  // "85 - PETIÇÃO" ou "PETIÇÃO (EPROC)" contam como "PETIÇÃO"
+  const nucleo = (t) => String(t || "").replace(/^\s*\d+\s*-\s*/, "").replace(/\s*\([^)]*\)\s*$/, "");
+  const igualNome = (a, b) => igual(a, b) || igual(nucleo(a), b);
   const certOk = (c) => !!c && chave(c).includes(chave(CERTIFICADO));
   const comeca = (a, b) => chave(a).startsWith(chave(b));
 
@@ -221,29 +224,45 @@
       if (!(await aguardar(() => !bloqueado(controle), 30000, 500))) return "a lista ficou bloqueada (desativada) no SAJ por 30 s";
       await esperar(500);
     }
-    clicar(controle, "abrirLista");
-    await esperar(300);
-    digitar(input, codigo);
-    const menuSel = `[class*="${prefixo}__menu"]`;
-    const ops = await aguardar(() => {
+    // A lista pode buscar as opções no servidor depois da digitação. Tenta: o texto todo, as 4 primeiras letras
+    // sem acento e a lista inteira; em cada tentativa espera até 10 s ela terminar de carregar e parar de mudar.
+    const menuSel = `[class*="${prefixo}__menu"]`, optSel = `[class*="${prefixo}__option"]`;
+    const folha = (o) => !q(optSel, o);
+    const carregando = () => !!(q(`[class*="${prefixo}__loading-indicator"]`, raiz) || q(`[class*="${prefixo}__menu-notice--loading"]`));
+    const vistos = new Set();
+    let aviso = "";
+    const tentativas = [...new Set([codigo, semAcento(codigo).slice(0, 4), ""])];
+    for (const txt of tentativas) {
+      if (!q(menuSel)) { clicar(controle, "abrirLista"); await esperar(300); }
+      digitar(input, txt);
+      let ant = -1;
+      const ops = await aguardar(() => {
+        const m = q(menuSel);
+        if (!m || carregando()) { ant = -1; return null; }
+        const o = qa(optSel, m).filter(folha);
+        const pronto = o.length === ant; // mesma quantidade em duas leituras seguidas
+        ant = o.length;
+        if (!pronto) return null;
+        return o.length || q(`[class*="${prefixo}__menu-notice"]`, m) ? o : null;
+      }, 10000, 600);
       const m = q(menuSel);
-      if (!m) return null;
-      const o = qa(`[class*="${prefixo}__option"]`, m);
-      return o.length ? o : null;
-    }, 5000);
-    if (ops) {
-      // só opções-folha (a de dentro do grupo), que tenham o código e o nome
-      const cand = ops.filter((o) => casa(texto(o)) && !q(`[class*="${prefixo}__option"]`, o));
+      const nota = m && q(`[class*="${prefixo}__menu-notice"]`, m);
+      if (nota && texto(nota)) aviso = texto(nota);
+      for (const o of ops || []) vistos.add(texto(o));
+      const cand = (ops || []).filter((o) => casa(texto(o)));
       if (cand.length === 1 || (primeira && cand.length)) { clicar(cand[0], "opcao"); await esperar(500); return ""; }
-      fecharLista(input);
-      return cand.length ? `${cand.length} opções parecidas com ${codigo}` : `a opção ${codigo} não aparece na lista`;
+      if (cand.length > 1) { fecharLista(input); return `${cand.length} opções parecidas com ${codigo}: ${cand.slice(0, 4).map(texto).join("; ")}`; }
     }
+    fecharLista(input); // fecha: na próxima tentativa a lista abre de novo, já atualizada
+    await esperar(200);
+    const mostrou = vistos.size ? ` (a lista mostrou: ${[...vistos].slice(0, 10).join("; ")}${vistos.size > 10 ? "; ..." : ""})`
+      : aviso ? ` (a lista disse: "${aviso}")` : " (a lista não mostrou nenhuma opção)";
     fecharLista(input);
     const p = propsDoSelect(input) || propsDoSelect(controle);
-    if (!p) return "a lista não abriu";
+    if (!p) return `a opção ${codigo} não aparece na lista${mostrou}`;
     const cand = folhas(p.options, []).filter((o) => casa(textoOpcao(o)));
     if (primeira && cand.length > 1) cand.length = 1;
-    if (cand.length !== 1) return cand.length ? `${cand.length} opções parecidas com ${codigo}` : `a opção ${codigo} não existe na lista`;
+    if (cand.length !== 1) return cand.length ? `${cand.length} opções parecidas com ${codigo}` : `a opção ${codigo} não aparece na lista${mostrou}`;
     p.onChange(cand[0], { action: "select-option", option: cand[0], name: p.name });
     await esperar(500);
     return "";
@@ -252,19 +271,19 @@
   // Campos que o robô PREENCHE SE VIEREM VAZIOS. Preenchidos com outro valor: pula a tarefa (não troca).
   const CAMPOS = [
     { nome: "Evento", prefixo: "select-petition-type", caixa: () => q('[data-testid="select-petition"]', raizProps()),
-      valor: (p) => p.evento, ok: (v, P) => igual(v, P.evento), alvo: (P) => P.evento, digita: (P) => P.evento },
+      valor: (p) => p.evento, ok: (v, P) => igualNome(v, P.evento), alvo: (P) => P.evento, digita: (P) => P.evento },
     { nome: "Tipo de documento", prefixo: "select-tipo-documento", caixa: () => q('[data-testid="select-tipo-documento"]', raizProps()),
       valor: (p) => p.tipoDoc, ok: (v, P) => comeca(v, P.tipoDoc), alvo: (P) => P.tipoDoc, digita: (P) => P.tipoDoc.split(" ")[0] },
     { nome: "Sigilo do documento", prefixo: "select-sigilo-documento", caixa: () => q('[data-testid="select-sigilo-documento"]', raizProps()),
       valor: (p) => p.sigilo, ok: (v) => igual(v, SIGILO), alvo: () => SIGILO, digita: () => "Público" },
     { nome: "Defensor responsável", prefixo: "select-prosecutor", caixa: () => { const i = q('input[aria-label="Defensor responsável"]', raizProps()); return i && i.closest('[class*="__control"]'); },
-      valor: (p) => p.defensor, ok: (v) => igual(v, DEFENSOR), alvo: () => DEFENSOR, digita: () => "Urdiales" },
+      valor: (p) => p.defensor, ok: (v) => igualNome(v, DEFENSOR), alvo: () => DEFENSOR, digita: () => "Urdiales" },
   ];
   async function preencherCampo(c, P) {
     const caixa = c.caixa();
     if (!caixa) return `não achei o campo ${c.nome}`;
     const alvo = c.alvo(P);
-    const casa = c.nome === "Tipo de documento" ? (t) => comeca(t, alvo) : (t) => igual(t, alvo);
+    const casa = c.nome === "Tipo de documento" ? (t) => comeca(t, alvo) : (t) => igualNome(t, alvo);
     return escolherNaLista(c.prefixo, caixa.parentElement, c.digita(P), alvo, false, casa);
   }
 

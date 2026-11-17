@@ -1,4 +1,4 @@
-ROBÔ DO SAJ DEFENSORIAS (favorito) - versão 0.6
+ROBÔ DO SAJ DEFENSORIAS (favorito) - versão 0.6.1
 ================================================
 
 O QUE FAZ
@@ -16,6 +16,9 @@ Evento, Tipo de documento, Sigilo e Defensor: se vierem VAZIOS, o robô preenche
 com os valores do perfil (Manifestação do Autor / 9934, ou PETIÇÃO / 13;
 0 - Público; Cahuê Duarte e Urdiales). Se vierem preenchidos com outro valor,
 ele não troca: pula a tarefa e diz qual campo e o que veio.
+Listas que buscam no servidor (ex.: Evento): o robô espera até 10 s a lista
+carregar e tenta o texto todo, as 4 primeiras letras sem acento e a lista
+inteira. Se não achar, o relatório diz quais opções a lista mostrou.
 
 MODOS
  - Conferir: abre, mostra o que faria e fecha. Não altera nada.
