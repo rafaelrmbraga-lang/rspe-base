@@ -1,4 +1,4 @@
-// Robô do SAJ Defensorias (painel-saj.ms.def.br) - versão 0.4: acerta a Movimentação interna, escolhe o certificado
+// Robô do SAJ Defensorias (painel-saj.ms.def.br) - versão 0.4.1: acerta a Movimentação interna, escolhe o certificado
 // e peticiona as tarefas da fila "Para peticionar > Intimação". As peças já estão prontas: o texto não é conferido.
 // Liminar e Redistribuir ficam sempre como estão (o robô não toca nessas caixas).
 // Roda como favorito (bookmarklet) na aba do Painel de Tarefas. Três modos:
@@ -9,7 +9,7 @@
 (function () {
   "use strict";
 
-  const VERSAO = "0.4.0";
+  const VERSAO = "0.4.1";
   const HOST = "painel-saj.ms.def.br";
   const CHAVE_SESSAO = "roboSAJ_resultados";
   const ESPERA_ENVIO_MS = 180000; // tempo para digitar o PIN e o SAJ responder
@@ -85,12 +85,26 @@
     opcao: (el) => !!el.closest('[class*="movement-type-select__menu"], [class*="certificado__menu"]'),
     atualizarCertificados: (el) => el.getAttribute("data-testid") === "refreshButton" && el.getAttribute("aria-label") === "Atualizar lista de certificado",
   };
+  const NOME_CLIQUE = {
+    continuar: 'o botão "Continuar" do card', propriedades: 'a aba "Propriedades"', fecharEditor: 'o "×" do editor',
+    peticionar: 'o botão "Peticionar"', fecharAviso: 'o "×" da caixa de aviso', abrirLista: "a lista de Movimentação/certificado",
+    opcao: "a opção da lista", atualizarCertificados: 'o botão "Atualizar lista de certificado"',
+  };
   function clicar(el, tipo) {
-    if (!el || !PERMITIDOS[tipo] || !PERMITIDOS[tipo](el)) throw new Error(`clique recusado pelo robô (${tipo})`);
-    if (el.disabled || el.getAttribute("aria-disabled") === "true") throw new Error("botão desabilitado (" + tipo + ")");
+    const nome = NOME_CLIQUE[tipo] || tipo;
+    if (!el || !PERMITIDOS[tipo] || !PERMITIDOS[tipo](el)) throw new Error(`o robô se recusou a clicar em ${nome} (não era o elemento esperado)`);
+    if (bloqueado(el)) throw new Error(`${nome} estava bloqueado (desativado) no SAJ`);
     estado.acoes++;
     if (tipo === "abrirLista") { el.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true, button: 0 })); return; }
     el.click();
+  }
+
+  // desativado: botão disabled, aria-disabled ou a lista do SAJ com "--is-disabled"
+  function bloqueado(el) {
+    if (!el) return true;
+    if (el.disabled || el.getAttribute("aria-disabled") === "true" || /--is-disabled/.test(String(el.className))) return true;
+    const inp = el.tagName === "INPUT" ? null : q("input", el);
+    return !!(inp && inp.disabled && /__control/.test(String(el.className)));
   }
 
   // ------------------------------------------------------------ painel do SAJ
@@ -190,6 +204,12 @@
     const controle = q(`[class*="${prefixo}__control"]`, raiz);
     if (!input || !controle) return "não achei a lista";
     const casa = (t) => { const c = chave(t); return c.includes(chave(codigo)) && c.includes(chave(rotulo)); };
+    // o SAJ deixa a lista bloqueada enquanto carrega: espera liberar (até 30 s)
+    if (bloqueado(controle)) {
+      ui.aviso(`Aguardando a lista ${prefixo === "certificado" ? "de certificado" : "de Movimentação interna"} liberar (o SAJ ainda está carregando)...`);
+      if (!(await aguardar(() => !bloqueado(controle), 30000, 500))) return "a lista ficou bloqueada (desativada) no SAJ por 30 s";
+      await esperar(500);
+    }
     clicar(controle, "abrirLista");
     await esperar(300);
     digitar(input, codigo);
@@ -331,7 +351,10 @@
 
     if (estado.modo === "conferir") {
       const faria = [];
-      if (!movCerta(p, P)) faria.push(`Movimentação → ${P.movLabel} (veio ${p.movLabel || "vazia"})`);
+      if (!movCerta(p, P)) {
+        const ctl = q('[data-testid="select-tree-movimentacao"] [class*="movement-type-select__control"]', raizProps());
+        faria.push(`Movimentação → ${P.movLabel} (veio ${p.movLabel || "vazia"})` + (bloqueado(ctl) ? " – ATENÇÃO: a lista de Movimentação está bloqueada" : ""));
+      }
       if (!igual(p.certificado, CERTIFICADO)) faria.push("escolher o certificado");
       if (!igual(p.evento, P.evento)) faria.push(`ATENÇÃO: Evento veio "${p.evento || "vazio"}"`);
       if (!comeca(p.tipoDoc, P.tipoDoc)) faria.push(`ATENÇÃO: Tipo de documento veio "${p.tipoDoc || "vazio"}"`);
@@ -343,7 +366,7 @@
     if (!movCerta(p, P)) {
       const erro = await escolherNaLista("movement-type-select", q('[data-testid="select-tree-movimentacao"]', raizProps()).parentElement, P.movCod, P.movLabel.replace(/^\d+\s*-\s*/, ""));
       p = lerPropriedades();
-      if (erro || !movCerta(p, P)) return sair(`PULADO – não consegui pôr a Movimentação ${P.movLabel}: ${erro || "veio " + p.movLabel}`);
+      if (erro || !movCerta(p, P)) return sair(`PULADO – não consegui pôr a Movimentação ${P.movLabel} (estava "${p.movLabel || "vazia"}"): ${erro || "a escolha não pegou"}`);
       if (dialogoEstranho()) return parado(`ao trocar a Movimentação, o SAJ mostrou a janela "${texto(dialogoEstranho()).slice(0, 200)}"`, "Resolva a janela no SAJ, feche o editor sem peticionar e clique em Iniciar. Mande o texto dela para eu automatizar.");
       r.feito.push("Movimentação acertada");
       await esperar(800); // Evento e Tipo de documento podem mudar junto
@@ -424,7 +447,7 @@
         ui.aviso(`${estado.modo === "conferir" ? "Conferindo" : estado.modo === "preparar" ? "Preparando" : "Peticionando"} ${card.num}...`);
         const falhasAntes = contagens().falhas;
         let r;
-        try { r = await tratar(card); } catch (e) { r = { num: card.num, perfil: "", categoria: "", titulo: "", feito: [], resultado: "PARADO – falha no próprio robô: " + e.message, dica: "Copie o relatório e mande para mim." }; }
+        try { r = await tratar(card); } catch (e) { r = { num: card.num, perfil: "", categoria: "", titulo: "", feito: [], resultado: "PARADO – " + e.message, dica: (editorAberto() ? "Feche o editor sem peticionar. " : "") + "Copie o relatório e mande para mim." }; }
         r.modo = estado.modo;
         estado.resultados.push(r); salvar(); ui.tabela(); feitos++;
         if (r.resultado.startsWith("PARADO")) { avisoParada(r.resultado.slice(9), r.dica, card.num); break; }

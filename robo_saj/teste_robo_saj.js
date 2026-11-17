@@ -111,6 +111,11 @@ function simularSAJ({ dialogo, semOpcao }) {
         document.body.appendChild(w);
         const ifr = w.querySelector("iframe.tox-edit-area__iframe");
         ifr.removeAttribute("src");
+        // a lista de Movimentação começa bloqueada (SAJ carregando); num processo, fica bloqueada de vez
+        const ctl = w.querySelector(".movement-type-select__control");
+        const bloq = (v) => { ctl.setAttribute("aria-disabled", String(v)); ctl.classList.toggle("movement-type-select__control--is-disabled", v); };
+        bloq(true);
+        if (!(window.__movTravada || []).includes(numAberto())) setTimeout(() => bloq(false), window.__movBloqueioMs || 3000);
         ifr.srcdoc = "<html><body><p>Processo nº " + numAberto() + "</p><p>Texto da peça, já pronto, com mais de cinquenta caracteres.</p></body></html>";
       }, 300);
     }
@@ -155,6 +160,7 @@ const avisoRobo = (pg) => pg.evaluate(() => document.getElementById("robo-saj-ho
   console.log(`cards: ${cards.length} (${ep.length} EPROC, ${saj.length} SAJ)`);
   const semOpcao = [ep[3]]; // nesse a lista não tem a 1000150: tem de pular, sem chutar outra
   await pg.evaluate(simularSAJ, { dialogo, semOpcao });
+  await pg.evaluate((n) => { window.__movTravada = [n]; }, ep[5]);
   await pg.addScriptTag({ content: robo });
 
   console.log("menu e categorias");
@@ -190,7 +196,8 @@ const avisoRobo = (pg) => pg.evaluate(() => document.getElementById("robo-saj-ho
   for (const r of res) console.log("     " + r.num + " " + r.perfil + " → " + r.resultado);
   const pet = res.filter((r) => r.resultado === "PETICIONADO");
   const sim = await pg.evaluate(() => window.__peticionados);
-  confere("peticionou as que deviam", pet.length === 7, pet.length);
+  confere("peticionou as que deviam (esperando a lista liberar)", pet.length === 6, pet.length);
+  confere("lista travada: pula e diz por quê", res.some((r) => r.num === ep[5] && /PULADO – não consegui pôr a Movimentação .*ficou bloqueada \(desativada\) no SAJ por 30 s/.test(r.resultado)), (res.find((r) => r.num === ep[5]) || {}).resultado);
   confere("a sem a opção 1000150 foi pulada", res.some((r) => r.num === semOpcao[0] && /não consegui pôr a Movimentação.*não aparece/.test(r.resultado)), res.find((r) => r.num === semOpcao[0]));
   confere("um clique em Peticionar por tarefa", sim.length === pet.length && new Set(sim).size === sim.length, sim);
   confere("o que o SAJ recebeu = o que o robô diz", JSON.stringify([...sim].sort()) === JSON.stringify(pet.map((r) => r.num).sort()));
@@ -226,8 +233,8 @@ const avisoRobo = (pg) => pg.evaluate(() => document.getElementById("robo-saj-ho
   await pg.evaluate(() => { document.querySelectorAll("#dlg").forEach((x) => x.remove()); const e = document.querySelector('[data-testid="editor-container"]'); if (e) e.closest(".MuiDialog-root").remove(); });
 
   console.log("certificado demorando a carregar");
-  await pg.evaluate(() => { window.__certProntoEm = Date.now() + 38000; window.__cliques.length = 0; });
-  res = await rodada(pg, "preparar", 2);
+  await pg.evaluate(() => { window.__certProntoEm = Date.now() + 75000; window.__cliques.length = 0; });
+  res = await rodada(pg, "preparar", 3);
   const prep = res.filter((r) => r.resultado.startsWith("PREPARADA"));
   confere("esperou o certificado e seguiu", prep.length >= 1 && prep[0].feito.includes("certificado escolhido") && !res.some((r) => r.resultado.startsWith("PARADO")), res.map((r) => r.resultado));
   confere("clicou em Atualizar lista de certificado", (await pg.evaluate(() => window.__cliques)).includes("refreshButton"));
