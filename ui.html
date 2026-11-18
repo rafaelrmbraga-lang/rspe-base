@@ -633,6 +633,8 @@ body:not(.fn-exec) .fnpag{display:block}
 .fnpag ul{margin:8px 0 0 18px;padding:0;color:var(--tx2);line-height:1.6}
 .fnpag .fnetapa{display:inline-block;margin-top:14px;padding:3px 10px;border-radius:var(--r-pill);background:var(--ambar-97-2);color:var(--ambar-37);font-size:var(--fs-12);font-weight:600}
 .fnpag .acts{margin-top:18px;display:flex;gap:8px}
+.fnpag.moldura{overflow:hidden}
+.fnpag iframe{display:block;width:100%;height:100%;border:0;background:var(--bg)}
 /* tela inicial (sem base) */
 .welcome{position:fixed;inset:0;background:var(--bg);display:none;place-items:center;z-index:25}
 .btn-calc{position:relative;z-index:30}
@@ -1986,7 +1988,7 @@ tbody td,.stat b,.dc-it,.jz-t b,.bd-leg td,.tabs .tab .cnt,.kv{font-variant-nume
 </main>
 </div>
 
-<section class="fnpag" id="fnPagina" aria-live="polite"></section>
+<section class="fnpag" id="fnPagina"><div id="fnConteudo" aria-live="polite"></div></section>
 <div class="veil" id="veil" onclick="ui.fecharDrawer()"></div>
 <aside class="drawer" id="drawer"></aside>
 
@@ -4711,15 +4713,42 @@ document.addEventListener('keydown',e=>{ const el=e.target; if(!el||!el.hasAttri
 ui.FUNCOES={
   exec:{titulo:'Execução'},
   sei:{titulo:'SEI', html:()=>`<div class="fnbox"><h1>SEI</h1><p>Processos do SEI do núcleo, lidos pela extensão do APTO na sessão aberta do SEI (só leitura), com demandas, prazos, providências e ofícios.</p><p>Os dados ficam só neste computador, na base do gabinete (separada das bases da Execução).</p><span class="fnetapa">Em construção · etapa 5</span></div>`},
-  atend:{titulo:'Atendimentos', html:()=>`<div class="fnbox"><h1>Atendimentos</h1><p>A fila do SAP de hoje, lida pela extensão do APTO na aba do SAP aberta (só leitura): nome, horário, presencial ou virtual, chegada e o Fato Narrado de cada um.</p><ul><li>o dia, com os cartões e o texto para o SAP;</li><li>pendências (no Quadro), mensagens de WhatsApp, Fluxo e Controle do mês;</li><li>relatório do dia em Word e petições a partir dos modelos do gabinete.</li></ul><p>O controle por unidade (listagem do SIAPEN e relatório do SAP) continua em Execução, aba Geral, botão "Atendimentos".</p><span class="fnetapa">Em construção · etapas 2 a 4</span></div>`},
+  atend:{titulo:'Atendimentos', painel:'atend'},
   seeu:{titulo:'SEEU', html:()=>`<div class="fnbox"><h1>SEEU · Mesa do Defensor</h1><p>Triagem da Mesa do Defensor no SEEU, lida pela extensão do APTO na aba do SEEU aberta e logada (só leitura): as intimações e os prazos de cada processo, com o texto das decisões, para decidir o que pedir.</p><p>Hoje a triagem abre numa página da própria extensão; aqui ela passa a abrir dentro do APTO, ligada aos assistidos da base da Execução.</p><span class="fnetapa">Em construção</span></div>`},
-  rel:{titulo:'Relatório', html:()=>`<div class="fnbox"><h1>Relatório</h1><p>Os relatórios do gabinete num só lugar:</p><ul><li><b>Produção do mês</b>: a tabela CONTROLE - 3ª DPEP (atendimentos e peças por tipo), somando Atendimentos, SEI e Execução;</li><li><b>Relatório do dia</b>: os atendimentos do dia em Word, no formato de sempre;</li><li><b>Relatórios da Execução</b>: individuais, geral da base e remição, em PDF.</li></ul>${ui.dados&&ui.dados.base?`<div class="acts"><button class="btn pri" onclick="ui.funcao('exec');ui.modalRelatorios()">Relatórios da Execução (base ${esc(ui.dados.base)})</button></div>`:'<p>Os relatórios da Execução já funcionam: abra uma base em Execução.</p>'}<span class="fnetapa">Produção do mês e relatório do dia em construção · etapas 3 e 4</span></div>`},
-  quadro:{titulo:'Quadro', html:()=>`<div class="fnbox"><h1>Quadro</h1><p>Kanban do gabinete: os cartões de todas as funções num só lugar (Execução, SEI e as pendências dos Atendimentos, com etiqueta de origem).</p><p>Por enquanto o Quadro do Usuário de cada base continua dentro da Execução.</p>${ui.dados&&ui.dados.base?`<div class="acts"><button class="btn pri" onclick="ui.funcao('exec');ui.irAba('quadro')">Abrir o Quadro da base ${esc(ui.dados.base)}</button></div>`:''}<span class="fnetapa">Em construção · etapa 3</span></div>`},
+  rel:{titulo:'Relatório', painel:'rel'},
+  quadro:{titulo:'Quadro', painel:'quadro'},
 };
 ui.fn='exec';
 ui.funcao=function(id){ if(!this.FUNCOES[id]) return; this.fn=id; document.body.className=document.body.className.replace(/\bfn-\w+/g,'').trim()+' fn-'+id;
   document.querySelectorAll('#fnbar .fn').forEach(b=>{ const on=b.id==='fn_'+id; b.classList.toggle('on',on); b.setAttribute('aria-selected',on?'true':'false'); });
-  const P=document.getElementById('fnPagina'); P.innerHTML=id==='exec'?'':this.FUNCOES[id].html(); };
+  const P=document.getElementById('fnPagina'), F=this.FUNCOES[id], C=document.getElementById('fnConteudo');
+  P.classList.toggle('moldura', !!F.painel);
+  C.hidden=!!F.painel || id==='exec'; C.innerHTML=F.html?F.html():'';
+  let M=document.getElementById('atdFrame');
+  if(F.painel){ if(!M){ M=document.createElement('iframe'); M.id='atdFrame'; M.title='Atendimentos, Quadro e Relatório';
+      M.src='atendimentos/painel.html#'+F.painel; P.appendChild(M); }
+    else M.contentWindow&&M.contentWindow.postMessage({apto:'atd', evento:'aba', grupo:F.painel},'*');
+    M.hidden=false; }
+  else if(M) M.hidden=true; };
+// o painel (moldura) pede ao APTO: métodos atd_* do Python, ou ações da tela ("ui:...")
+window.addEventListener('message', async e=>{ const M=document.getElementById('atdFrame'); if(!M||e.source!==M.contentWindow) return;
+  const m=e.data||{}; if(m.apto!=='atd'||!m.id) return; let r=null, erro=null;
+  try{ const met=String(m.metodo||''), a=Array.isArray(m.args)?m.args:[], B=API_();
+    if(met.startsWith('ui:')) r=await ui.atdUi(met.slice(3), ...a);
+    else if(/^atd_[a-z_]+$/.test(met) && B && typeof B[met]==='function') r=await B[met](...a);
+    else erro=B?'função não disponível: '+met:'o APTO ainda está abrindo; tente de novo em instantes'; }
+  catch(x){ erro=String((x&&x.message)||x); }
+  M.contentWindow.postMessage({apto:'atd', id:m.id, r, erro},'*'); });
+// o Python avisa (fila e Fato Narrado lidos no SAP, aba do SAP aberta ou fechada): repassa ao painel
+ui.atdEvento=function(d){ const M=document.getElementById('atdFrame'); if(M&&M.contentWindow) M.contentWindow.postMessage(Object.assign({apto:'atd'}, d),'*'); };
+// pedidos da Execução (base aberta) para a tabela do mês: assunto -> coluna do CONTROLE (ofício conta como Ofícios)
+ui.PROV_COLUNA={'Progressão de regime':'PROG','Livramento condicional':'LC','Prescrição':'PRESC','Extinção da pena':'EXT','Remição':'REMICAO','Saída temporária':'ST'};
+ui.atdUi=async function(acao){ if(acao==='providenciasExecucao'){ if(!(this.dados&&this.dados.base&&this.dados.registros)) return {itens:[], base:''};
+    return {base:this.dados.base, itens:this.provLinhas().map(x=>({data:x.data, coluna:x.tipo==='Ofício à unidade prisional'?'OFICIO':x.tipo==='Outra providência'?'':(this.PROV_COLUNA[x.assunto]||(/^Indulto/.test(x.assunto)?'INDULTO':''))})).filter(x=>x.coluna)}; }
+  if(acao==='quadroExecucao'){ if(!(this.dados&&this.dados.base)){ this.toast('Abra uma base em Execução para o Quadro do Usuário dela.'); return {ok:false}; } this.funcao('exec'); this.irAba('quadro'); return {ok:true}; }
+  if(acao==='relatoriosExecucao'){ if(!(this.dados&&this.dados.base)){ this.toast('Abra uma base em Execução para os relatórios da Execução.'); return {ok:false}; }
+    this.funcao('exec'); this.modalRelatorios(); return {ok:true}; }
+  return {erro:'ação desconhecida'}; };
 // Ctrl+1 ... Ctrl+6 trocam de função (Alt+número continua para as abas da Execução)
 document.addEventListener('keydown',e=>{ if(!e.ctrlKey||e.altKey||e.shiftKey||e.metaKey||!/^[1-6]$/.test(e.key)) return; e.preventDefault(); ui.funcao(['atend','exec','seeu','sei','quadro','rel'][+e.key-1]); });
 window.addEventListener('pywebviewready', ()=>api('listar'));

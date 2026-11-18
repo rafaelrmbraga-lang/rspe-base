@@ -1,9 +1,9 @@
-APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.19.0
+APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.20.0
 (antigo RSPE Base; SEEU, programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-7.19.0. A documentação técnica completa (cada parâmetro, a regra, a norma e
+7.20.0. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -34,9 +34,10 @@ Ctrl+6, na ordem da barra; Alt+número continua abrindo as abas da
 Execução). O programa abre na Execução.
   Atendimentos  a fila do SAP do dia, lida pela extensão na aba do SAP
                 aberta (só leitura), com o texto para o SAP, pendências,
-                WhatsApp, Fluxo e Controle do mês. Em construção. O controle
-                por unidade (listagem do SIAPEN e relatório do SAP) continua
-                na Execução (aba Geral, botão "Atendimentos").
+                WhatsApp, Fluxo, frases prontas e petições (ver
+                "ATENDIMENTOS"). O controle por unidade (listagem do SIAPEN
+                e relatório do SAP) continua na Execução (aba Geral, botão
+                "Atendimentos").
   Execução      o APTO das bases, descrito nas seções abaixo: escolha (ou
                 crie) a base e use as abas de sempre.
   SEEU          triagem da Mesa do Defensor no SEEU, lida pela extensão
@@ -44,12 +45,49 @@ Execução). O programa abre na Execução.
                 continua na página da extensão.
   SEI           processos do SEI do núcleo, lidos pela extensão na sessão
                 aberta do SEI (só leitura). Em construção.
-  Quadro        kanban do gabinete, com os cartões de todas as funções. Em
-                construção; por enquanto o Quadro do Usuário de cada base
-                continua dentro da Execução.
+  Quadro        as pendências dos atendimentos em kanban (ver "QUADRO");
+                o Quadro do Usuário de cada base continua na Execução.
   Relatório     produção do mês (CONTROLE - 3ª DPEP), relatório do dia em
-                Word e os relatórios da Execução (estes já funcionam: botão
-                que abre os relatórios em PDF da base aberta).
+                Word e os relatórios da Execução em PDF (ver "RELATÓRIO").
+
+ATENDIMENTOS (função Atendimentos, na barra do topo)
+A fila do SAP do dia, lida pela extensão do APTO na aba do SAP aberta (só
+leitura; ver extensao_seeu\LEIA-ME.txt, "ATENDIMENTOS DO SAP PARA O APTO"). É o
+painel da antiga extensão "APTO Atendimentos", agora dentro do programa.
+  Atendimentos do dia: contadores (clique para filtrar), uma linha por
+    atendimento (hora, nome, processo, pedido, Presencial/Virtual, situação
+    sempre escrita); clique para abrir: forma, presença, Agendamento (Fato
+    Narrado), Registro para o SAP (começo montado sozinho, frases prontas,
+    "Sem êxito no contato...", Copiar para o SAP), pendências, petição e
+    mensagem de WhatsApp. "Chamar" e "Ver no SAP" agem na aba do SAP; "Ler
+    fila do SAP" lê os Fatos Narrados de hoje. O selo "SAP aberto" mostra se a
+    aba do SAP está aberta com a extensão.
+  Fluxo: um + e um - por coluna da tabela CONTROLE - 3ª DPEP.
+  Modelos e backup: onde salvar o relatório do dia (a pasta "2. Atendimentos":
+    ele grava na pasta do mês, ex.: "8. Novembro\17.11.docx") e as petições (sem
+    pasta escolhida, o APTO pergunta); frases prontas, documentos e textos das
+    mensagens; importar o backup da extensão antiga.
+  Dados: na base do gabinete, "gabinete.sqlite", ao lado da pasta "bases"
+    (uma cópia por dia em "copias\gabinete", guarda as 10 últimas). Têm
+    telefone e informação da execução: guarde só em pasta da Defensoria.
+  Petições: os modelos do gabinete (a pasta "modelos" da extensão antiga:
+    lista.json e os .docx) ficam fora do programa, na pasta
+    "modelos_atendimentos" ao lado da pasta "bases". Nome, nº do processo e
+    data saem prontos (também nos modelos com {{processo}}, {{nome}}, {{data}}).
+QUADRO (função Quadro)
+  As pendências dos atendimentos em kanban: Aguardando documento, A fazer, Não
+  encaminhou. Arraste o cartão ou use ‹ ›. "Feita" pede a data do protocolo e
+  conta na produção do mês; "Arquivar" não conta. WhatsApp (documentos ou
+  baixa) e Petição no cartão. "Quadro do Usuário da base..." abre o quadro da
+  base aberta em Execução.
+RELATÓRIO (função Relatório)
+  Produção do mês (CONTROLE - 3ª DPEP): atendimentos realizados, pendências
+  feitas e Fluxo, por dia; qualquer célula pode ser corrigida à mão (fica
+  amarela). "Somar os pedidos e ofícios registrados na Execução" (desligado de
+  início) soma os pedidos da base aberta: progressão, livramento, indulto,
+  prescrição, extinção, remição, saída temporária e ofícios. Planilha (CSV) e
+  Imprimir/PDF. Também: relatório do dia em Word (escolha o dia) e os
+  relatórios da Execução em PDF.
 
 ABERTURA
 O programa abre SEM base carregada. A tela inicial pede: criar uma base nova
@@ -1136,6 +1174,17 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v7.20.0
+  Atendimentos, Quadro e Relatório funcionando (ver "ATENDIMENTOS", "QUADRO"
+  e "RELATÓRIO"). A extensão "APTO Atendimentos" entrou na extensão do APTO
+  (1.9.0): ela lê a fila e o Fato Narrado no SAP e entrega ao APTO; o painel
+  dela virou a tela do APTO. Os dados passam do navegador para a base do
+  gabinete (gabinete.sqlite, com cópia diária); o backup da extensão antiga
+  entra por "Importar (.json)". Chamar, Ver no SAP e Ler a fila são pedidos
+  pelo APTO e feitos pela extensão na aba do SAP. A produção do mês pode
+  somar os pedidos registrados na Execução. Petições também a partir de
+  modelos com {{processo}}, {{nome}} e {{data}}.
 
 v7.19.0
   O APTO passa a ter funções, numa barra fixa no topo: Atendimentos,

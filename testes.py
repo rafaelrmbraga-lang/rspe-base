@@ -56,6 +56,9 @@ TESTES += ["teste_rev_randomizada.py"]  # revisão independente e randomizada (1
 TESTES += ["teste_rev_indulto_pontos.py"]  # 7.16.4: pontos abertos do relatório do indulto (crime culposo 2019-2021, janela, sentença incoerente 2022, nascimento x livramento, mora)
 TESTES += ["teste_ui_718.py"]  # 7.18.0: CSS consolidado e propostas de interface
 TESTES += ["teste_ui_funcoes.py"]  # 7.19.0: barra fixa das funções (Atendimentos, Execução, SEEU, SEI, Quadro, Relatório)
+TESTES += ["teste_atendimentos_apto.py"]  # 7.20.0: Atendimentos no APTO (base do gabinete, servidor da extensão, pedidos ao SAP)
+TESTES += ["teste_atd_sap.py"]  # 7.20.0: extensão lê a fila e o Fato Narrado do SAP para o APTO (SAP fictício)
+TESTES += ["teste_ui_atendimentos.py"]  # 7.20.0: tela de Atendimentos no APTO (moldura, subabas, Word, petição, Quadro, produção do mês)
 # saída em UTF-8 em qualquer console (no Windows o padrão cp1252 não imprime símbolos como "✓" e derruba o teste)
 _env = dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUTF8="1")
 falhas = [t for t in TESTES if subprocess.call([sys.executable, t], env=_env) != 0]

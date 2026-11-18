@@ -1,0 +1,2 @@
+pdf-lib 1.17.1 e @pdf-lib/fontkit 1.1.1 (licença MIT): montam o PDF das petições dentro do navegador.
+Fonte Carlito (pasta fontes_pdf, licença SIL OFL 1.1): mesmas medidas da Calibri dos modelos.

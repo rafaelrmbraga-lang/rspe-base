@@ -1,5 +1,5 @@
-APTO - RSPE do SEEU, Triagem da Mesa, Ficha do SIAPEN e processos do SAP (Chrome e Edge)
-==========================================================================================
+APTO - RSPE do SEEU, Triagem da Mesa, Ficha do SIAPEN, processos e atendimentos do SAP (Chrome e Edge)
+======================================================================================================
 
 O QUE FAZ
 Ao abrir um processo no SEEU, a extensão salva o RSPE (o PDF do botão "Situação
@@ -211,6 +211,29 @@ FICHA DO SIAPEN
    pessoa com essa mãe. Nome que não aparece: "não encontrado".
  - O filtro de status da consulta (Ativo, etc.) é o que estiver escolhido na
    tela.
+
+ATENDIMENTOS DO SAP PARA O APTO (versão 1.9.0)
+A extensão lê, no SAP da Defensoria, a fila "Assistidos em Espera" do dia e o
+Fato Narrado de cada um, e entrega ao APTO (função Atendimentos, na barra do
+topo do programa). É a antiga extensão "APTO Atendimentos", agora dentro desta:
+o painel dela passou a ser a tela do APTO.
+ - Só lê. Nunca digita, salva, registra ou marca chegada no SAP. A única ação
+   é "Chamar", e só quando você clica em Chamar no APTO.
+ - O que abrir no SAP (fila, Fato Narrado) entra sozinho. "Ler a fila de hoje"
+   (selo verde no canto da página do SAP, ou botão "Ler fila do SAP" no APTO)
+   seleciona cada assistido de hoje, abre o Fato Narrado, lê e fecha pelo X.
+   Não use o SAP nessa aba até o selo mostrar "N de N lidos".
+ - No APTO: "Chamar" e "Ver no SAP" agem na aba do SAP aberta (ela vem para a
+   frente) e o APTO mostra "SAP aberto" enquanto a aba da fila está aberta.
+ - Com o APTO fechado, o que foi lido fica guardado na extensão (até 300
+   leituras) e é entregue quando o APTO abrir. Nada vai para fora do
+   computador: só para o APTO (127.0.0.1).
+ - Se você usava a extensão "APTO Atendimentos" separada: nela, "Modelos e
+   backup" > "Exportar tudo (.json)"; no APTO, Atendimentos > "Modelos e
+   backup" > "Importar (.json)". Depois remova a extensão antiga em
+   chrome://extensions (as duas juntas leriam a fila duas vezes).
+ - Firefox: o manifesto já traz o necessário (128+), mas a extensão só foi
+   conferida no Chrome e no Edge.
 
 PROCESSOS DO SAP (Defensoria)
  - Para cada nome da lista, acha no SAP o nº do processo (CNJ) escrito no
