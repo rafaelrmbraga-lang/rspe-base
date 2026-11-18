@@ -26,7 +26,12 @@ const SHOTS = process.env.APTO_CAPTURAS || "";
   await pg.waitForTimeout(400);
   const falhas = [];
   const ok = (c, m) => { if (!c) falhas.push(m); };
-  const aba = async (nome) => { await pg.click(`#seiPag .fx-vistas button:has-text("${nome}")`); await pg.waitForTimeout(500); };
+  const aba = async (nome) => {
+    if (nome === "Cadastros") await pg.click('#nusCabW button:has-text("Cadastros")');
+    else if (nome === "Prazos" || nome === "Comunicações") { await pg.click('#seiPag .fx-vistas button:has-text("Providências")'); await pg.waitForTimeout(400);
+      await pg.click(`#nusVista .nus-sub button:has-text("${nome === "Prazos" ? "Prazos e calendário" : "Ofícios"}")`); }
+    else await pg.click(`#seiPag .fx-vistas button:has-text("${nome}")`);
+    await pg.waitForTimeout(500); };
   const form = async (campos, botao) => {
     await pg.waitForSelector("#modal.on form", { timeout: 5000 });
     for (const [k, v] of Object.entries(campos)) {
@@ -39,8 +44,9 @@ const SHOTS = process.env.APTO_CAPTURAS || "";
   };
   await pg.click("#fn_sei");
   await pg.waitForTimeout(500);
-  ok((await pg.$$eval("#seiPag .fx-vistas button", (x) => x.map((b) => b.textContent))).join("|") === "Visão geral|Processos|Providências|Prazos|Demandas|Comunicações|Inspeções|Histórico e relatório|Cadastros",
-    "abas da gestão na função SEI");
+  ok((await pg.$$eval("#seiPag .fx-vistas button", (x) => x.map((b) => b.textContent))).join("|") === "Visão geral|Processos|Providências|Demandas|Inspeções|Histórico e relatório",
+    "seis abas na função SEI (prazos e ofícios dentro de Providências; Cadastros num botão)");
+  ok((await pg.textContent("#seiPag h1")) === "SEI", "o nome é só SEI");
   // Cadastros: Quem
   await aba("Cadastros");
   await pg.fill("#ql", "Servidora Fictícia\nCoordenador Fictício");
@@ -48,6 +54,8 @@ const SHOTS = process.env.APTO_CAPTURAS || "";
   await pg.waitForTimeout(500);
   // sem Quem não registra
   await aba("Providências");
+  await pg.click('#nusVista .nus-sub button:has-text("Lista")');
+  await pg.waitForTimeout(300);
   await pg.click('#nusVista button:has-text("Registrar providência")');
   await form({ descricao: "Cobrar o fornecimento de água (fictício)", processo: "99/000123/2026" });
   ok(/Escolha quem/.test(await pg.textContent("#nfMsg")), "sem Quem, a janela pede quem registra");
@@ -117,7 +125,7 @@ const SHOTS = process.env.APTO_CAPTURAS || "";
   ok(/faltam 2 dias/.test(await pg.textContent("#nusVista table.fx-tabsei")), "painel de prazos");
   await aba("Visão geral");
   await pg.waitForTimeout(500);
-  ok(/Gestão/.test(await pg.textContent("#nusGeral")) && /Vencem em até 7 dias/.test(await pg.textContent("#nusGeral")), "Visão geral com os números da gestão");
+  ok(/Vencem em até 7 dias/.test(await pg.textContent("#seiPag")) && (await pg.$$eval("#seiPag .fx-at", (x) => x.length)) === 1, "Visão geral única: um Atenção hoje só");
   // histórico e relatório
   await aba("Histórico e relatório");
   const h = await pg.textContent("#nusVista");

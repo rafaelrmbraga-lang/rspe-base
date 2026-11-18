@@ -235,7 +235,7 @@ class Sei:
         return {"status": "concluida"}
 
     # ---- importação de PDF (o processo baixado do SEI, ou um anexo em PDF): como no NUSPEN ----
-    def importar_pdf(self, caminho, pasta_originais, quem=""):
+    def importar_pdf(self, caminho, pasta_originais, quem="", processo_hint="", titulo_hint="", id_hint="", nome_hint=""):
         """Lê o PDF página a página, separa os documentos pelo rodapé do SEI, classifica e aplica as regras (tudo sugestão).
         O original fica imutável (cópia com o SHA-256 no nome); o mesmo arquivo de novo só registra o recebimento. Página só de
         imagem fica sem texto (sem OCR neste computador): é avisada, nunca dada como lida."""
@@ -251,7 +251,7 @@ class Sei:
             for bloco in iter(lambda: f.read(1 << 20), b""):
                 h.update(bloco)
         sha = h.hexdigest()
-        nome = os.path.basename(caminho)
+        nome = nome_hint or os.path.basename(caminho)
         with self._trava, self._con:
             self._con.execute("INSERT INTO sei_recebimentos(sha256, nome, quando, quem) VALUES(?,?,?,?)", (sha, nome, _agora(), _t(quem, 100)))
             ja = self._con.execute("SELECT documentos, sem_texto FROM sei_arquivos WHERE sha256=?", (sha,)).fetchone()
@@ -262,6 +262,7 @@ class Sei:
             paginas = extrair_paginas(caminho)
         except Exception as e:  # pdfplumber/pdfminer levantam tipos variados
             return {"erro": "Não foi possível ler o PDF (%s)." % type(e).__name__}
+        paginas, por_ocr = self._ocr(caminho, paginas)
         segs = segmentar(paginas)
         os.makedirs(pasta_originais, exist_ok=True)
         destino = os.path.join(pasta_originais, "%s.pdf" % sha)
@@ -271,7 +272,7 @@ class Sei:
         # trecho sem rodapé fica no processo que predomina no arquivo (é um processo baixado do SEI); sem nenhum, no nome do arquivo
         from collections import Counter
         mais = Counter(sg.processo for sg in segs if sg.processo).most_common(1)
-        principal = next((sg.processo_original for sg in segs if mais and sg.processo == mais[0][0]), None)
+        principal = next((sg.processo_original for sg in segs if mais and sg.processo == mais[0][0]), None) or processo_hint or None
         ses = self.iniciar("pdf")["sessao"]
         itens, procs = [], {}
         for i, sg in enumerate(segs, 1):
@@ -282,11 +283,13 @@ class Sei:
             chave = normalizar_numero_processo(proc) or proc
             if chave not in procs:
                 procs[chave] = proc
-                itens.append({"tipo": "processo", "id_sei": "pdf-%s-%s" % (sha[:10], proc), "numero": proc, "especificacao": "", "unidade": "",
-                              "adaptador": "pdf"})
+                # processo já lido do SEI (anexo dele, ou PDF do mesmo processo): não troca o id nem a especificação dele
+                if not self._con.execute("SELECT 1 FROM sei_processos WHERE numero=?", (chave,)).fetchone():
+                    itens.append({"tipo": "processo", "id_sei": "pdf-%s-%s" % (sha[:10], proc), "numero": proc, "especificacao": "", "unidade": "",
+                                  "adaptador": "pdf"})
             faixa = "p. %d" % sg.paginas[0] if len(sg.paginas) == 1 else "p. %d–%d" % (sg.paginas[0], sg.paginas[-1])
-            idd = sg.id_documento if sg.id_documento and not sg.id_repetido else "%s-%d" % (sha[:10], i)
-            rot = sg.rotulo or ("trecho sem rodapé do SEI" if sg.orfao else "documento")
+            idd = sg.id_documento if sg.id_documento and not sg.id_repetido else ("%s-%d" % (id_hint, i) if id_hint else "%s-%d" % (sha[:10], i))
+            rot = sg.rotulo or (titulo_hint if titulo_hint and sg.orfao else "trecho sem rodapé do SEI" if sg.orfao else "documento")
             itens.append({"tipo": "documento", "id_sei": "pdf-%s" % idd, "processo": proc, "titulo": "%s (PDF %s, %s)" % (rot, nome[:60], faixa),
                           "versao": sha[:12], "conteudo": texto, "hash": sha_txt(texto), "adaptador": "pdf"})
         r = self.receber_lote(ses, itens)
@@ -298,8 +301,11 @@ class Sei:
             self._con.execute("INSERT INTO sei_arquivos(sha256, nome, caminho, paginas, sem_texto, documentos, importado, quem) VALUES(?,?,?,?,?,?,?,?)",
                               (sha, nome, destino, len(paginas), json.dumps(sem), ndoc, _agora(), _t(quem, 100)))
         aviso = []
+        if por_ocr:
+            aviso.append("%d página(s) escaneada(s) lida(s) por OCR (confiança baixa: confira o texto): %s" % (len(por_ocr), ", ".join(map(str, por_ocr[:20]))))
         if sem:
-            aviso.append("%d página(s) sem texto (escaneadas: sem OCR neste computador, não foram lidas): %s" % (len(sem), ", ".join(map(str, sem[:20]))))
+            aviso.append("%d página(s) sem texto (escaneadas: %s, não foram lidas): %s" % (
+                len(sem), "o OCR não conseguiu ler" if self.ocr_exe() else "sem OCR neste computador", ", ".join(map(str, sem[:20]))))
         if prej:
             aviso.append("%d página(s) com leitura prejudicada: %s" % (len(prej), ", ".join(map(str, prej[:20]))))
         orf = sum(1 for sg in segs if sg.orfao)
@@ -307,6 +313,29 @@ class Sei:
             aviso.append("%d trecho(s) sem o rodapé do SEI (ficam como documento à parte, para conferir)" % orf)
         return {"ok": True, "novo": True, "nome": nome, "paginas": len(paginas), "documentos": ndoc, "processos": list(procs.values()), "novos": r["novos"],
                 "sem_texto": sem, "avisos": aviso, "msg": "%s: %d página(s), %d documento(s) em %d processo(s)." % (nome, len(paginas), ndoc, len(procs))}
+
+    ocr_exe = staticmethod(lambda: __import__("nuspen_regras.leitura", fromlist=["tesseract"]).tesseract())
+    ocr_pagina = staticmethod(lambda caminho, n, exe: __import__("nuspen_regras.leitura", fromlist=["ocr_pagina"]).ocr_pagina(caminho, n, exe))
+
+    def _ocr(self, caminho, paginas):
+        """Páginas só de imagem: lidas pelo Tesseract, se houver (texto marcado; o original não muda). Até 60 páginas por arquivo."""
+        from nuspen_regras.leitura import PaginaLida, classificar_leitura
+        sem = [p.numero for p in paginas if p.leitura == "sem_texto"]
+        exe = self.ocr_exe() if sem else None
+        if not exe:
+            return paginas, []
+        lidas, out = [], []
+        for p in paginas:
+            if p.leitura == "sem_texto" and len(lidas) < 60:
+                try:
+                    t = self.ocr_pagina(caminho, p.numero, exe)
+                except Exception:  # Tesseract ou a renderização falharam: a página continua sem texto
+                    t = ""
+                if t.strip():
+                    lidas.append(p.numero)
+                    p = PaginaLida(numero=p.numero, texto="[lido por OCR, confiança baixa]\n" + t, leitura=classificar_leitura(t))
+            out.append(p)
+        return out, lidas
 
     def arquivos(self):
         with self._trava:
@@ -344,6 +373,46 @@ class Sei:
                           (estado, _t(mensagem, 300), _agora(), sid, *campos.values(), tipo, id_sei))
 
     def receber_lote(self, sid, itens, cursor=None):
+        """Lote da extensão. O anexo PDF (7.28) passa pela importação de PDF depois do lote (rodapé, classificação, regras)."""
+        itens = itens if isinstance(itens, list) else []
+        anexos = [d for d in itens if isinstance(d, dict) and d.get("tipo") == "anexo"]
+        r = self._receber_lote(sid, [d for d in itens if not (isinstance(d, dict) and d.get("tipo") == "anexo")], cursor)
+        for d in anexos[:20]:
+            x = self._anexo(sid, d)
+            r["novos"] += x.get("novos", 0)
+        return r
+
+    def _anexo(self, sid, d):
+        import base64
+        import os
+        import tempfile
+        id_sei, proc, titulo = _t(d.get("id_sei"), 80), _t(d.get("processo"), 60), _t(d.get("titulo"))
+        try:
+            b = base64.b64decode(str(d.get("pdf_b64") or ""), validate=True)
+        except Exception:
+            b = b""
+        with self._trava, self._con:
+            s = self._sessao(sid)
+            if not b or hashlib.sha256(b).hexdigest() != str(d.get("hash") or ""):
+                self._marcar(s, "documento", id_sei, "falha", "anexo: hash divergente ou vazio", processo=proc)
+                return {"erro": "anexo inválido"}
+        pasta = os.path.join(os.path.dirname(os.path.abspath(self.g.caminho)), "originais_sei")
+        fd, tmp = tempfile.mkstemp(suffix=".pdf")
+        try:
+            with os.fdopen(fd, "wb") as f:
+                f.write(b)
+            r = self.importar_pdf(tmp, pasta, "leitura do SEI", processo_hint=proc, titulo_hint=titulo, id_hint=id_sei, nome_hint=titulo or "anexo")
+        finally:
+            try:
+                os.remove(tmp)
+            except OSError:
+                pass
+        with self._trava, self._con:
+            self._marcar(self._sessao(sid), "documento", id_sei, "analisado" if r.get("ok") else "falha", r.get("erro", ""), hash=d.get("hash"),
+                         processo=proc, titulo=titulo, adaptador=d.get("adaptador"))
+        return r
+
+    def _receber_lote(self, sid, itens, cursor=None):
         res = {"novos": 0, "modificados": 0, "recebidos": 0, "falhas": 0}
         with self._lote, self._trava, self._con:
             s = self._sessao(sid)

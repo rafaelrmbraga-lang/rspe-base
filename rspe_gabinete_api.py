@@ -95,13 +95,21 @@ class GabineteApi:
         if metodo not in rnus.PUBLICOS:
             return {"erro": "função desconhecida"}
         a = args if isinstance(args, list) else ([] if args is None else [args])
+        N = self._nus()
         try:
-            r = getattr(self._nus(), metodo)(*a)
+            r = getattr(N, metodo)(*a)
         except rnus.Erro as e:
+            N.tirar_mudancas()
             return {"erro": str(e)}
         except (TypeError, ValueError) as e:
+            N.tirar_mudancas()
             logging.getLogger("rspe").exception("nus %s", metodo)
             return {"erro": "dados inválidos (%s)" % e}
+        if metodo in ("prazo_decidir", "prazo_completar", "prazo_alterar", "prazo_registrar", "obrigacao_decidir", "em_lote"):
+            N.sincronizar_quadro()  # o cartão do Quadro acompanha o vencimento validado
+        m = N.tirar_mudancas()
+        if m:
+            self._atd_evento("mudou", {"pecas": m})
         if metodo not in ("obrigacoes", "demandas", "prazos", "lacunas", "comunicacoes", "inspecoes", "regras", "modelos", "historico_geral", "buscar",
                           "obrigacao", "demanda", "inspecao", "minuta", "painel", "relatorio", "escolhas", "quem_lista", "comparar", "historico_de",
                           "o_que_mudou", "novidades", "perguntas", "consultar", "arquivos_pdf"):
@@ -282,7 +290,10 @@ class GabineteApi:
              "criadoEm": int(time.time() * 1000)}
         self._gabinete().mudar({"pecas": {"upsert": [p]}})
         self._sei().marcar_quadro(oid, p["id"])
-        self._atd_evento("mudou", {"pecas": {"upsert": [p]}})
+        N = self._nus()
+        N.sincronizar_quadro()  # já com o vencimento, se houver prazo validado
+        m = N.tirar_mudancas() or {"upsert": []}
+        self._atd_evento("mudou", {"pecas": {"upsert": [x for x in self._gabinete().lista("pecas") if x["id"] == p["id"]], "remover": m.get("remover", [])}})
         return {"ok": True}
 
     def sei_estado(self):
@@ -406,25 +417,72 @@ class GabineteApi:
     def seeu_parar(self):
         return self._cmd_de("seeu").pedir("pararMesa", {})
 
-    def seeu_concluir(self, chave, peca="", data="", obs=""):
-        r = self._seeu().concluir(chave, peca, data, obs)
+    # peça da baixa -> aba da Execução em que o pedido pode ser marcado como feito
+    PECA_ABA = {"PROG": "prog", "LC": "liv", "INDULTO": "ind", "COMUT": "ind", "PRESC": "presc", "EXT": "ext", "REMICAO": "fd"}
+
+    def seeu_concluir(self, chave, peca="", data="", obs="", quem=""):
+        r = self._seeu().concluir(chave, peca, data, obs, quem)
         if r.get("peca"):
             self._atd_evento("mudou", {"pecas": {"upsert": [r["peca"]]}})
+            if peca in self.PECA_ABA:  # a tela oferece marcar o pedido na base aberta da Execução (com um clique)
+                r["sugerir_pedido"] = {"aba": self.PECA_ABA[peca], "processo": r["peca"].get("processo", ""), "data": r["peca"].get("feitoEm", "")}
         return r
 
     def seeu_reabrir(self, chave):
         r = self._seeu().reabrir(chave)
         if r.get("removidas"):
             self._atd_evento("mudou", {"pecas": {"remover": r["removidas"]}})
+        if r.get("voltou"):
+            self._atd_evento("mudou", {"pecas": {"upsert": [r["voltou"]]}})
         return r
 
-    def seeu_para_quadro(self, processo, nome, texto, ultimo_dia=""):
+    def seeu_atribuir(self, chave, quem=""):
+        return self._seeu().atribuir(chave, quem)
+
+    def agenda(self):
+        """Agenda única (7.28): os prazos do Quadro (pendências), da Mesa do SEEU (intimações em aberto) e do SEI (prazos VALIDADOS), com a
+        data em aaaa-mm-dd. Prazo do SEI que já está num cartão do Quadro aparece uma vez só (pelo cartão)."""
+        itens = []
+        pend = [p for p in self._gabinete().lista("pecas") if p.get("status") == "pendente"]
+        for p in pend:
+            if p.get("prazo"):
+                itens.append({"data": p["prazo"], "origem": "quadro", "titulo": " · ".join(x for x in (p.get("nome"), p.get("obs") or "") if x)[:160],
+                              "processo": p.get("processo", ""), "id": p["id"]})
+        for l in self._seeu().listar():
+            m = re.match(r"^(\d{2})/(\d{2})/(\d{4})", str(l.get("ultimoDia") or ""))
+            if l.get("status") != "concluido" and m and not l.get("quadro"):
+                itens.append({"data": "%s-%s-%s" % (m.group(3), m.group(2), m.group(1)), "origem": "seeu", "titulo": "%s · %s" % (l.get("executado") or "", l.get("aba") or ""),
+                              "processo": l.get("processo", ""), "id": l["chave"]})
+        no_quadro = {p["id"] for p in pend}
+        with self._gabinete()._trava:
+            cartao = dict(self._gabinete()._con.execute("SELECT id, quadro FROM sei_obrigacoes WHERE quadro IS NOT NULL").fetchall()) if self._sei() else {}
+        for p in self._nus().prazos():
+            if p["status"] in ("validada", "ajustada") and p.get("vencimento_efetivo") and cartao.get(p["obrigacao"]) not in no_quadro:
+                itens.append({"data": p["vencimento_efetivo"], "origem": "sei", "titulo": p["obrigacao_descricao"][:160], "processo": p.get("processo") or "",
+                              "id": p["obrigacao"]})
+        return sorted(itens, key=lambda x: (x["data"], x["origem"]))
+
+    def contadores(self):
+        """Números na barra do topo: SEEU (intimações em aberto que vencem hoje ou já venceram) e SEI (prazos validados vencidos ou de hoje)."""
+        hoje = time.strftime("%Y-%m-%d")
+        n_seeu = 0
+        for l in self._seeu().listar():
+            m = re.match(r"^(\d{2})/(\d{2})/(\d{4})", str(l.get("ultimoDia") or ""))
+            if l.get("status") != "concluido" and m and "%s-%s-%s" % (m.group(3), m.group(2), m.group(1)) <= hoje:
+                n_seeu += 1
+        n_sei = sum(1 for p in self._nus().prazos() if p["status"] in ("validada", "ajustada") and p["situacao"]["ordem"] <= 1
+                    and (p["vencimento_efetivo"] or "9999") <= hoje)
+        return {"seeu": n_seeu, "sei": n_sei}
+
+    def seeu_para_quadro(self, processo, nome, texto, ultimo_dia="", chave=""):
         """A providência sugerida pela triagem vira cartão do Quadro (A fazer), com o último dia da Mesa como prazo."""
         m = re.match(r"^(\d{2})/(\d{2})/(\d{4})", str(ultimo_dia or ""))
         p = {"id": rgab.novo_id(), "tipo": "", "processo": str(processo or "")[:30], "nome": rgab.nome_proprio(str(nome or ""))[:200], "data": rgab.hoje_iso(),
              "status": "pendente", "coluna": "fazer", "prazo": "%s-%s-%s" % (m.group(3), m.group(2), m.group(1)) if m else "",
              "obs": ("Mesa do SEEU: " + str(texto or ""))[:500], "origem": "seeu", "atendimentoId": "", "criadoEm": int(time.time() * 1000)}
         self._gabinete().mudar({"pecas": {"upsert": [p]}})
+        if chave:
+            self._seeu().ligar_quadro(chave, p["id"])
         self._atd_evento("mudou", {"pecas": {"upsert": [p]}})
         return {"ok": True}
 

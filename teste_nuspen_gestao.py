@@ -208,6 +208,17 @@ ok(r2["ok"] and not r2["novo"] and "já tinha sido importado" in r2["msg"], "mes
 docs = s.processo("99/000123/2026")["documentos"]
 ok(any("PDF processo_t1_ficticio.pdf, p. 2–3" in d["titulo"] for d in docs), "documento com as páginas do PDF")
 ok(erro(lambda: None) is False and s.importar_pdf(__file__, orig, Q).get("erro") == "O arquivo não é um PDF.", "só PDF")
+# ---- OCR opcional: sem Tesseract, a página escaneada é avisada; com ele (simulado aqui), o texto vem marcado ----
+from nuspen_regras.leitura import PaginaLida  # noqa: E402
+pags = [PaginaLida(1, "", "sem_texto"), PaginaLida(2, "texto nativo", "ok")]
+s.ocr_exe = lambda: None
+ok(s._ocr("x.pdf", pags) == (pags, []), "sem Tesseract: nada muda")
+s.ocr_exe = lambda: "tesseract"
+s.ocr_pagina = lambda c, n, e: "Determino a expedição de ofício fictício."
+pp, lidas = s._ocr("x.pdf", pags)
+ok(lidas == [1] and pp[0].texto.startswith("[lido por OCR, confiança baixa]") and pp[1].texto == "texto nativo", "com Tesseract: página escaneada lida e marcada")
+s.ocr_exe = type(s).ocr_exe
+s.ocr_pagina = type(s).ocr_pagina
 # ---- o que mudou nas leituras, novidades desde a visita, encerramento só confirmado ----
 M = N.o_que_mudou()
 ok(M["total"] > 0 and "Resposta recebida" in M["por_tipo"] and any(e["sugestao"] == "providencia" for e in M["eventos"]), "eventos com sugestão: %s" % M["por_tipo"])
@@ -229,6 +240,30 @@ ok(N.consultar("respostas_incompletas")["nota"] == "Sem evidência suficiente no
 sugs = [o["id"] for o in N.obrigacoes() if o["status"] == "sugestao"]
 L = N.em_lote("validar", sugs + [99999], Q)
 ok(L["feitos"] == len(sugs) and len(L["erros"]) == 1 and not [o for o in N.obrigacoes() if o["status"] == "sugestao"], "validar em lote, item a item: %s" % L)
+# ---- 7.28: Quadro com o vencimento validado; ofício enviado e reiteração na produção do mês; minuta de ofício ----
+import time as _tm  # noqa: E402
+pq = {"id": "q1", "tipo": "", "processo": "99/000123/2026", "nome": "SEI", "data": date.today().isoformat(), "status": "pendente", "coluna": "fazer",
+      "prazo": "", "obs": "", "origem": "sei", "atendimentoId": "", "criadoEm": int(_tm.time() * 1000)}
+g.mudar({"pecas": {"upsert": [pq]}})
+s.marcar_quadro(o1["id"], "q1")
+N.sincronizar_quadro()
+ok(next(x for x in g.lista("pecas") if x["id"] == "q1")["prazo"] == novo, "cartão do Quadro com o vencimento validado (prorrogado)")
+novo2 = (date.today() + timedelta(days=9)).isoformat()
+N.prazo_alterar(pid, {"tipo": "prorrogacao", "novo_vencimento": novo2, "motivo": "nova prorrogação", "fonte": "ofício fictício"}, Q)
+N.sincronizar_quadro()
+ok(next(x for x in g.lista("pecas") if x["id"] == "q1")["prazo"] == novo2, "o cartão acompanha a prorrogação")
+of_ = [x for x in g.lista("pecas") if x.get("tipo") == "OFICIO" and x.get("origem") == "sei"]
+ok(len(of_) == 2 and all(x["status"] == "feito" for x in of_), "envio e reiteração contam como Ofícios na produção: %d" % len(of_))
+cid2 = N.comunicacao_criar({"assunto": "Outro ofício fictício", "destinatario": "Unidade Fictícia", "data_envio": date.today().isoformat()}, Q)["id"]
+ok(len([x for x in g.lista("pecas") if x.get("tipo") == "OFICIO"]) == 3, "ofício já enviado ao registrar: conta")
+N.remover("comunicacao", cid2, Q, "registrado em duplicidade (fictício)")
+ok(len([x for x in g.lista("pecas") if x.get("tipo") == "OFICIO"]) == 2, "ofício removido sai da produção")
+mo = N.minuta(N.minuta_gerar(o1["id"], "oficio-v1", Q)["minuta"])["versoes"][0]
+tx = mo["texto_para_sei"]
+ok(tx.startswith("A FULANO FICTÍCIO, Diretor do Presídio Fictício,") and "até " in tx and "Atenciosamente." in tx and "conclusao" not in [f["bloco"] for f in mo["frases"]],
+   "minuta de ofício: vocativo, prazo validado, sem conclusão: %s" % tx[:160])
+mr = N.minuta(N.minuta_gerar(o2["id"], "reiteracao-v1", Q)["minuta"])["versoes"][0]
+ok([f["bloco"] for f in mr["frases"]][0] == "abertura" and "pedido" in [f["bloco"] for f in mr["frases"]], "minuta de reiteração")
 g.fechar()
 if falhas:
     print("FALHA: " + "; ".join(falhas))

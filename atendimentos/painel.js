@@ -117,6 +117,7 @@
   function desenharAba(nome) {
     if (nome === "dia") renderDia();
     if (nome === "pend") renderKanban();
+    if (nome === "agenda") renderAgenda();
     if (nome === "fluxo") renderFluxo();
     if (nome === "ctrl") renderControle();
     if (nome === "cfg") renderCfg();
@@ -699,6 +700,42 @@
     renderKanban();
   });
 
+  // ---------- AGENDA (7.28): um calendário para o Quadro, a Mesa do SEEU e os prazos validados do SEI ----------
+  const ORIG_AG = { quadro: ["Quadro", "q"], seeu: ["SEEU", "s"], sei: ["SEI", "i"] };
+  let agMes = null;
+  async function renderAgenda() {
+    let itens = [];
+    if (ext.apto) { try { itens = await self.ATD_APTO.ui("agenda"); } catch (e) { itens = []; } if (!Array.isArray(itens)) itens = []; }
+    else itens = D.pecas.filter((p) => p.status === "pendente" && p.prazo).map((p) => ({ data: p.prazo, origem: "quadro", titulo: p.nome, processo: p.processo, id: p.id }));
+    const hoje = A.hojeISO();
+    if (!agMes) agMes = [Number(hoje.slice(0, 4)), Number(hoje.slice(5, 7)) - 1];
+    const [ano, mes] = agMes, ini = new Date(ano, mes, 1), dias = new Date(ano, mes + 1, 0).getDate(), pad = (ini.getDay() + 6) % 7;
+    $("#agMes").textContent = ini.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+    const por = {};
+    for (const x of itens) (por[x.data] = por[x.data] || []).push(x);
+    const item = (x) => {
+      const [rot, cl] = ORIG_AG[x.origem] || [x.origem, ""];
+      const b = el("button", { className: "agIt ag-" + cl + (x.data < hoje ? " venc" : ""), type: "button", title: `${rot}: ${x.titulo} ${x.processo || ""}` },
+        el("span", { className: "agOrig", textContent: (x.data < hoje ? "◆ " : "") + rot }), " " + (x.titulo || x.processo || ""));
+      b.addEventListener("click", () => { if (x.origem === "quadro") mostrarAba("pend"); else if (ext.apto) self.ATD_APTO.ui("irPara", x.origem, x.id); });
+      return b;
+    };
+    const cab = el("tr", {}, ...["seg", "ter", "qua", "qui", "sex", "sáb", "dom"].map((d) => el("th", { scope: "col", textContent: d })));
+    const celulas = [...Array(pad)].map(() => el("td"));
+    for (let d = 1; d <= dias; d++) {
+      const k = `${ano}-${String(mes + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+      celulas.push(el("td", { className: (k === hoje ? "hoje" : "") }, el("span", { className: "agDia", textContent: String(d) }), ...(por[k] || []).map(item)));
+    }
+    const linhas = [];
+    for (let i = 0; i < celulas.length; i += 7) linhas.push(el("tr", {}, ...celulas.slice(i, i + 7)));
+    $("#agCal").replaceChildren(el("thead", {}, cab), el("tbody", {}, ...linhas));
+    const ate = A.hojeISO(new Date(Date.now() + 30 * 864e5));
+    const prox = itens.filter((x) => x.data <= ate);
+    $("#agLista").replaceChildren(...(prox.length ? prox.map((x) => el("li", {}, el("b", { textContent: A.brDeIso(x.data) + " " }), item(x))) : [el("li", { className: "vazio", textContent: "Nada nos próximos 30 dias." })]));
+  }
+  $("#agAnt").addEventListener("click", () => { agMes = agMes[1] === 0 ? [agMes[0] - 1, 11] : [agMes[0], agMes[1] - 1]; renderAgenda(); });
+  $("#agProx").addEventListener("click", () => { agMes = agMes[1] === 11 ? [agMes[0] + 1, 0] : [agMes[0], agMes[1] + 1]; renderAgenda(); });
+
   // ---------- PETIÇÕES ----------
   // palavras do nome do modelo que combinam com cada peça (só para pôr no topo da lista)
   const MODELO_PECA = { ST: /sa[ií]da/i, PROG: /progress/i, LC: /\bLC\b/i, INDULTO: /indulto/i, COMUT: /comuta/i, PRESC: /prescri/i, EXT: /extin/i,
@@ -1023,7 +1060,7 @@
   });
 
   // ---------- dentro do APTO: cada função mostra as suas abas ----------
-  const GRUPOS = { atend: ["dia", "fluxo", "cfg"], quadro: ["pend"], rel: ["ctrl"], pet: [] };
+  const GRUPOS = { atend: ["dia", "fluxo", "cfg"], quadro: ["pend", "agenda"], rel: ["ctrl"], pet: [] };
   window.__atdAba = (grupo, aba) => {
     const abas = GRUPOS[grupo] || GRUPOS.atend;
     document.body.dataset.grupo = grupo;

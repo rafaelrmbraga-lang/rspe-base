@@ -16,7 +16,9 @@
 // Paginação da lista: não observada (a lista coube numa página); se o SEI paginar, o leitor lê a primeira página e avisa.
 import { EstruturaInesperada, SessaoAusente } from "./erros.js";
 
-export const ACOES_PERMITIDAS = new Set(["procedimento_controlar", "procedimento_trabalhar", "procedimento_visualizar", "documento_visualizar"]);
+// 7.28: e baixar o anexo (PDF) para ler o texto no APTO: continua só GET, nada é escrito no SEI
+export const ACOES_PERMITIDAS = new Set(["procedimento_controlar", "procedimento_trabalhar", "procedimento_visualizar", "documento_visualizar",
+  "documento_download_anexo"]);
 export const HOST = "sei.defensoria.ms.def.br";
 
 const ENT = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " ", ordm: "º", ordf: "ª", deg: "°", sect: "§", ndash: "–", mdash: "—",
@@ -125,8 +127,14 @@ export const adaptadorSeiDpms = {
     for (const [i, a] of nos) {
       if (a[0] !== "DOCUMENTO") continue;
       const href = src.get(i) || "";
-      if (acaoDe(href) !== "documento_visualizar") continue; // anexo externo (PDF etc.): ainda não lido
-      docs.push({ id: String(a[1]), versao: "", titulo: decodificar(String(a[6] || a[5] || "")).trim(), href });
+      const titulo = decodificar(String(a[6] || a[5] || "")).trim();
+      if (acaoDe(href) === "documento_download_anexo") {
+        // anexo externo: só o PDF (ícone ou rótulo de PDF); outros formatos ficam de fora
+        if (/pdf/i.test(String(a[7] || "") + " " + titulo)) docs.push({ id: String(a[1]), versao: "", titulo, href, anexo: true });
+        continue;
+      }
+      if (acaoDe(href) !== "documento_visualizar") continue;
+      docs.push({ id: String(a[1]), versao: "", titulo, href });
     }
     return docs;
   },

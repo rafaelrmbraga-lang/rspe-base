@@ -37,6 +37,7 @@
     <nav class="abas">
       <button data-aba="dia" class="ativa">Atendimentos do dia</button>
       <button data-aba="pend">Pendências <span id="nPend" class="cont"></span></button>
+      <button data-aba="agenda">Agenda</button>
       <button data-aba="fluxo">Fluxo</button>
       <button data-aba="ctrl">Controle do mês</button>
       <button data-aba="cfg">Modelos e backup</button>
@@ -82,6 +83,13 @@
     </section>
 
     <!-- PENDÊNCIAS (kanban) -->
+    <section id="aba-agenda" class="aba" hidden>
+      <div class="barraDia"><div class="grupo"><button id="agAnt" class="icone" aria-label="Mês anterior">‹</button><b id="agMes" class="agMes"></b><button id="agProx" class="icone" aria-label="Próximo mês">›</button></div>
+        <div class="grupo"><span class="dica">Um calendário só: pendências do Quadro, Mesa do SEEU e prazos validados do SEI. Clique para abrir.</span></div></div>
+      <table id="agCal" class="agCal"></table>
+      <h3 class="agSub">Próximos 30 dias (e o que já venceu)</h3>
+      <ul id="agLista" class="agLista"></ul>
+    </section>
     <section id="aba-pend" class="aba" hidden>
       <div class="barraDia">
         <div class="grupo">

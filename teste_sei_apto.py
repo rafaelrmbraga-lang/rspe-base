@@ -170,14 +170,18 @@ if node:
             if j2:
                 ok(j2["semEntrada"] == "sessao_ausente", "SEI da Defensoria sem o Controle de Processos aberto: pede para abrir (%s)" % j2["semEntrada"])
                 d1, d2 = j2["primeira"], j2["repetida"]
-                ok(d1["processos"] == 3 and d1["documentosLidos"] == 6 and d1["parada"] is None, "SEI da Defensoria: 3 processos, 6 documentos (o anexo PDF fica de fora): %s" % d1)
-                ok(d2["documentosLidos"] == 0 and d2["documentosPulados"] == 6, "2ª leitura: nada relido (hash): %s" % d2)
-                ok(j2["metodos"] == ["GET"] and set(j2["acoes"]) <= {"procedimento_controlar", "procedimento_trabalhar", "procedimento_visualizar", "documento_visualizar"},
+                ok(d1["processos"] == 3 and d1["documentosLidos"] == 9 and d1["parada"] is None, "SEI da Defensoria: 3 processos, 6 documentos e 3 anexos PDF: %s" % d1)
+                ok(d2["documentosLidos"] == 0 and d2["documentosPulados"] == 9, "2ª leitura: nada relido (hash, também do anexo): %s" % d2)
+                ok(j2["metodos"] == ["GET"] and set(j2["acoes"]) <= {"procedimento_controlar", "procedimento_trabalhar", "procedimento_visualizar", "documento_visualizar",
+                                                                    "documento_download_anexo"},
                    "só GET e só as quatro leituras: %s %s" % (j2["metodos"], j2["acoes"]))
                 det = api.sei_processo("99/000111/2026")
                 ok(det and det["especificacao"].startswith("Inspeção - Unidade Prisional") and det["unidade"] == "NUSPEN-FICT", "processo com tipo, especificação e unidade: %s" % (det and det["especificacao"]))
                 ob = [o for o in (det or {}).get("obrigacoes", []) if "Determino" in o["frase"]]
                 ok(ob and ob[0]["prazo_quantidade"] == 30, "regras do NUSPEN no texto do SEI da Defensoria: obrigação com prazo de 30 dias")
+                anx = api.sei_processo("99/000123/2026")
+                ok(anx and len(anx["documentos"]) >= 15 and any("Relatório (PDF)" in d["titulo"] or "PDF" in d["titulo"] for d in anx["documentos"]),
+                   "anexo PDF lido pela importação de PDF (os documentos dele, pelo rodapé): %s" % (anx and len(anx["documentos"])))
                 # Visão geral: o retrato da lista do Controle (atribuição, marcadores, não visualizado) chega ao APTO
                 rp = {p["original"]: p for p in api.sei_resumo()["processos"]}
                 p1, p2 = rp.get("99/000111/2026", {}), rp.get("99/000222/2026", {})

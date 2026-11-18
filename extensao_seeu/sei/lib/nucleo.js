@@ -97,7 +97,27 @@ export function criarLeitor({
     }
     throw ultimo;
   }
-  return { get, metricas, controle, ritmo };
+  // anexo PDF: mesma lista de endereços, mesmo ritmo; só PDF, até 12 MB (vai ao APTO em base64)
+  async function getPdf(url) {
+    const u = validar(url);
+    await aguardarControle();
+    await limitar();
+    if (ritmo.pausaMs) await relogio.dormir(ritmo.pausaMs);
+    metricas.requisicoes++;
+    const r = await fetchImpl(u.href, { method: "GET", credentials: "include", redirect: "follow", headers: cabecalhos });
+    if (r.status !== 200) throw new RespostaInesperada(`anexo: HTTP ${r.status}`);
+    const tipo = (r.headers && r.headers.get && r.headers.get("content-type")) || "";
+    if (/html/i.test(tipo)) {
+      const t = await r.text();
+      if (adaptador.ehLogin(t)) throw new SessaoExpirada();
+      throw new RespostaInesperada("anexo: o SEI devolveu uma página, não o PDF");
+    }
+    const bytes = new Uint8Array(await r.arrayBuffer());
+    if (bytes.length > 12 * 1024 * 1024) throw new RespostaInesperada("anexo maior que 12 MB: não lido");
+    if (String.fromCharCode(...bytes.subarray(0, 5)) !== "%PDF-") throw new RespostaInesperada("anexo não é PDF");
+    return bytes;
+  }
+  return { get, getPdf, metricas, controle, ritmo };
 }
 
 // O SEI da DPMS entrega ISO-8859-1 (content-type ou <meta charset>); r.text() leria como UTF-8 e trocaria cada acento por "\uFFFD"
@@ -119,6 +139,16 @@ async function textoDaResposta(r, tipo) {
   try { return new TextDecoder("utf-8", { fatal: true }).decode(bytes); } catch (e) {
     return cs ? new TextDecoder("utf-8").decode(bytes) : new TextDecoder("windows-1252").decode(bytes);
   }
+}
+
+async function sha256Bytes(bytes) {
+  const buf = await crypto.subtle.digest("SHA-256", bytes);
+  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+function paraBase64(bytes) {
+  let s = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  return btoa(s);
 }
 
 async function sha256(texto) {
@@ -240,6 +270,16 @@ export async function sincronizar({ adaptador, leitor, app, opcoes = {}, progres
         }
         docsBuscados++;
         try {
+          if (d.anexo) {
+            if (!leitor.getPdf) continue;
+            const bytes = await leitor.getPdf(new URL(d.href, ar.url).href);
+            const hash = await sha256Bytes(bytes);
+            if (k && k.hash === hash) { res.documentosPulados++; continue; }
+            locais.push({ tipo: "anexo", id_sei: d.id, processo: numero, titulo: d.titulo, pdf_b64: paraBase64(bytes), hash, adaptador: ident });
+            res.documentosLidos++;
+            registro({ evento: "lido", tipo: "anexo", id: d.id });
+            continue;
+          }
           const dr = await leitor.get(new URL(d.href, ar.url).href);
           if (dr.status !== 200) throw new Error(`HTTP ${dr.status}`);
           const conteudo = adaptador.lerDocumento(dr.texto);
@@ -280,6 +320,7 @@ export async function sincronizar({ adaptador, leitor, app, opcoes = {}, progres
         if (tetoProcessos !== null && res.processos >= tetoProcessos) { res.parada = "teto"; break laco; }
         const locais = await lerProcesso(p, pg, i);
         buffer.push(...locais);
+        if (locais.some((x) => x.tipo === "anexo")) await descarregar(null);
         res.processos++;
         achados.add(String(p.numero)); achados.add(String(p.id));
         cursorLimpo = { pagina, indice: i + 1 };

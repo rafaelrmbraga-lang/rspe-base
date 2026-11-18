@@ -35,7 +35,7 @@ jobs:
           python -m PyInstaller --onefile --windowed --clean --name APTO
           --icon rspe.ico --add-data "rspe.ico;." --add-data "apto_selo.png;." --add-data "logo_defensoria.png;." --add-data "fontes;fontes" --add-data "ui.html;." --add-data "atendimentos;atendimentos" --add-data "base_juridica.json;." --add-data "teses_auto.bin;." --add-data "monitor_juris.bin;."
           --collect-data pdfminer --collect-data pdfplumber --collect-data reportlab --hidden-import reportlab.graphics.shapes --hidden-import rspe_relatorio --hidden-import rspe_remicao --hidden-import rspe_gabinete --hidden-import rspe_gabinete_api --hidden-import rspe_sei --hidden-import rspe_seeu --hidden-import rspe_nuspen --hidden-import nuspen_regras.leitura --hidden-import nuspen_regras.segmentacao
-          --collect-all webview
+          --collect-all webview --collect-all pypdfium2 --collect-all pypdfium2_raw
           --exclude-module docxtpl --exclude-module docx --exclude-module docx2pdf
           rspe_app.py
 
@@ -55,6 +55,8 @@ jobs:
           # extensão do navegador (RSPE do SEEU, Triagem da Mesa, SIAPEN e SAP): pasta pronta para "Carregar sem compactação"
           Copy-Item -Recurse extensao_seeu pacote\extensao_seeu
           if (-not (Test-Path pacote\extensao_seeu\manifest.json)) { throw "extensao_seeu não entrou no pacote" }
+          # o laboratório (SEI fictício e os testes do leitor) não vai para quem usa: só fica no repositório
+          Remove-Item -Recurse -Force pacote\extensao_seeu\sei\teste, pacote\extensao_seeu\sei\lib\adaptador_ficticio.js, pacote\extensao_seeu\sei\lib\adaptador_sei_real.js -ErrorAction SilentlyContinue
           Compress-Archive -Path pacote\* -DestinationPath "APTO_v${{ steps.versao.outputs.v }}.zip"
 
       - name: Guardar o .exe (aba Actions)

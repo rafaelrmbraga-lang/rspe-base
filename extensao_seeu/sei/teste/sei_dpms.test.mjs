@@ -12,9 +12,9 @@ test("dpms: tem todos os membros do contrato", () => {
   for (const m of ["nome", "versao", "temVersao", "ativo", "permitido", "urlLista", "ehLogin", "listarProcessos", "lerProcesso", "listarDocumentos", "lerDocumento"]) assert.ok(m in A, m);
   assert.equal(A.temVersao, false);
 });
-test("dpms: permitido só as quatro leituras, só no SEI da Defensoria", () => {
-  for (const a of ["procedimento_controlar", "procedimento_trabalhar", "procedimento_visualizar", "documento_visualizar"]) assert.equal(A.permitido(`${B}/sei/controlador.php?acao=${a}&infra_hash=x`), true, a);
-  for (const a of ["documento_excluir", "documento_assinar", "procedimento_enviar", "procedimento_concluir", "documento_gerar", "anotacao_registrar", "arvore_visualizar", "documento_download_anexo"])
+test("dpms: permitido só as leituras (e baixar o anexo PDF, 7.28), só no SEI da Defensoria", () => {
+  for (const a of ["procedimento_controlar", "procedimento_trabalhar", "procedimento_visualizar", "documento_visualizar", "documento_download_anexo"]) assert.equal(A.permitido(`${B}/sei/controlador.php?acao=${a}&infra_hash=x`), true, a);
+  for (const a of ["documento_excluir", "documento_assinar", "procedimento_enviar", "procedimento_concluir", "documento_gerar", "anotacao_registrar", "arvore_visualizar", "documento_upload_anexo"])
     assert.equal(A.permitido(`${B}/sei/controlador.php?acao=${a}`), false, a);
   assert.equal(A.permitido("https://outro.invalid/sei/controlador.php?acao=documento_visualizar"), false);
 });
@@ -47,9 +47,10 @@ test("dpms: lista com mais processos do que linhas avisa (paginação ainda não
   A.listarProcessos(P("lista.html").replace("(3 registros)", "(250 registros)"));
   assert.match(A.avisos[0], /3 de 250/);
 });
-test("dpms: árvore: documentos com o endereço do conteúdo; anexo PDF fica de fora (ainda não lido)", () => {
+test("dpms: árvore: documentos com o endereço do conteúdo; anexo PDF marcado como anexo (lido no APTO pela importação de PDF)", () => {
   const d = A.listarDocumentos(P("arvore.html"));
-  assert.deepEqual(d.map((x) => [x.id, x.titulo]), [["5001", "Despacho 1000001"], ["5002", "Ofício 1000002"]]);
+  assert.deepEqual(d.map((x) => [x.id, x.titulo, !!x.anexo]), [["5001", "Despacho 1000001", false], ["5002", "Ofício 1000002", false], ["5003", "Relatório (PDF) 1000003", true]]);
+  assert.match(d[2].href, /acao=documento_download_anexo&.*infra_hash=d3$/);
   assert.match(d[0].href, /acao=documento_visualizar&.*infra_hash=d1$/);
 });
 test("dpms: documento: texto por parágrafo, entidades decodificadas, sem estilo", () => {

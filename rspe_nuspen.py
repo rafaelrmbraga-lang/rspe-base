@@ -61,12 +61,19 @@ BLOCOS = [("abertura", "Abertura (fórmula do modelo)"), ("dados", "Dados objeti
           ("fecho", "Fecho (fórmula do modelo)")]
 _PEDIDO = "Ante o exposto, solicita-se a conferência da providência e, se for o caso, a reiteração da comunicação."
 MODELOS_EMBUTIDOS = {
-    "modelo-nuspen-v0": {"nome": "Padrão NUSPEN (blocos)", "descricao": "Só os quatro blocos: dados objetivos, conclusão no condicional, consequência "
+    "modelo-nuspen-v0": {"nome": "Padrão (blocos)", "descricao": "Só os quatro blocos: dados objetivos, conclusão no condicional, consequência "
                          "em tempo e omissão delimitada no tempo. Sem abertura nem fecho.", "formulas": {}},
-    "despacho-v1": {"nome": "Despacho", "descricao": "Abertura de despacho, blocos do padrão NUSPEN, pedido condicional e fecho.",
+    "despacho-v1": {"nome": "Despacho", "descricao": "Abertura de despacho, blocos do padrão, pedido condicional e fecho.",
                     "formulas": {"abertura": "Trata-se de acompanhamento da providência registrada {documento}.", "pedido": _PEDIDO,
                                  "fecho": "Cumpra-se."}},
-    "manifestacao-v1": {"nome": "Manifestação à coordenação", "descricao": "Abertura dirigida ao coordenador, blocos do padrão NUSPEN, pedido e fecho.",
+    "oficio-v1": {"nome": "Ofício", "descricao": "Ofício ao destinatário da providência: vocativo, referência ao documento, o pedido com o prazo validado e o fecho.",
+                  "blocos": ["abertura", "dados", "pedido", "fecho"],
+                  "formulas": {"abertura": "{vocativo}", "pedido": "Solicito a Vossa Senhoria as providências necessárias quanto ao exposto{prazo}, com o "
+                               "envio da resposta a esta unidade.", "fecho": "Atenciosamente."}},
+    "reiteracao-v1": {"nome": "Ofício de reiteração", "descricao": "Reitera o ofício enviado e não respondido: referência, a omissão delimitada no tempo, "
+                      "o pedido e o fecho.", "blocos": ["abertura", "dados", "omissao", "pedido", "fecho"],
+                      "formulas": {"abertura": "{vocativo}", "pedido": "Reitero o pedido anterior, solicitando a resposta{prazo}.", "fecho": "Atenciosamente."}},
+    "manifestacao-v1": {"nome": "Manifestação à coordenação", "descricao": "Abertura dirigida ao coordenador, blocos do padrão, pedido e fecho.",
                         "formulas": {"abertura": "Prezado Coordenador,", "pedido": _PEDIDO, "fecho": "Atenciosamente."}},
 }
 RESSALVA = ("a existência de resposta juntada a outro processo, de prorrogação ou suspensão do prazo e de providência não importada "
@@ -179,11 +186,60 @@ class Nuspen:
             import rspe_sei
             self._con.executescript(rspe_sei.TABELAS)
             self._con.executescript(TABELAS)
-            for tab, cols in (("sei_obrigacoes", COLUNAS_OBRIGACAO), ("sei_decisoes", COLUNAS_DECISAO)):
+            for tab, cols in (("sei_obrigacoes", COLUNAS_OBRIGACAO), ("sei_decisoes", COLUNAS_DECISAO), ("nus_comunicacoes", (("peca", "TEXT"),)),
+                              ("nus_reiteracoes", (("peca", "TEXT"),))):
                 tem = [r[1] for r in self._con.execute("PRAGMA table_info(%s)" % tab)]
                 for c, tp in cols:
                     if c not in tem:
                         self._con.execute("ALTER TABLE %s ADD COLUMN %s %s" % (tab, c, tp))
+
+    # ---------------------------------------------------------------- ligações com o resto do APTO (Quadro e produção do mês)
+    pecas_mudadas = None
+
+    def _pecas(self, upsert=(), remover=()):
+        """Muda o Quadro/produção do gabinete e guarda o que mudou, para a tela do Quadro ser avisada (rspe_gabinete_api.nus)."""
+        up, rm = [p for p in upsert if p], [r for r in remover if r]
+        if not up and not rm:
+            return
+        self.g.mudar({"pecas": {"upsert": up, "remover": rm}})
+        if self.pecas_mudadas is None:
+            self.pecas_mudadas = {"upsert": [], "remover": []}
+        self.pecas_mudadas["upsert"] += up
+        self.pecas_mudadas["remover"] += rm
+
+    def tirar_mudancas(self):
+        m, self.pecas_mudadas = self.pecas_mudadas, None
+        return m
+
+    def sincronizar_quadro(self):
+        """O cartão do Quadro de cada providência leva o vencimento VALIDADO (o mais próximo), e acompanha prorrogação e suspensão."""
+        with self._trava:
+            ligados = self._q("SELECT id, quadro FROM sei_obrigacoes WHERE quadro IS NOT NULL AND quadro<>'' AND removido_em IS NULL").fetchall()
+            if not ligados:
+                return 0
+            pecas = {p["id"]: p for p in self.g.lista("pecas")}
+            up = []
+            for oid, pid in ligados:
+                p = pecas.get(pid)
+                if not p or p.get("status") != "pendente":
+                    continue
+                datas = sorted(v for v in (self._venc_efetivo(x) for x in self._prazos_de(oid) if x["status"] in STATUS_FATO) if v)
+                novo = datas[0] if datas else ""
+                if (p.get("prazo") or "") != novo and (novo or p.get("prazoDoSei")):
+                    up.append(dict(p, prazo=novo, prazoDoSei=bool(novo)))
+        self._pecas(up)
+        return len(up)
+
+    def _peca_oficio(self, pid, data, assunto, processo, quem):
+        """O ofício enviado (ou reiterado) conta na produção do mês: coluna "Ofícios" do CONTROLE."""
+        import rspe_gabinete as rgab
+        import time as _time
+        ant = next((x for x in self.g.lista("pecas") if pid and x.get("id") == pid), None)
+        p = dict(ant) if ant else {"id": rgab.novo_id(), "tipo": "OFICIO", "nome": "", "status": "feito", "coluna": "fazer", "origem": "sei", "atendimentoId": "",
+                                   "criadoEm": int(_time.time() * 1000)}
+        p.update(processo=_t(processo, 30), data=data, feitoEm=data, obs=("Ofício (SEI): %s · %s" % (assunto, quem))[:500])
+        self._pecas([p])
+        return p["id"]
 
     # ---------------------------------------------------------------- comum
     def arquivos_pdf(self):
@@ -230,6 +286,10 @@ class Nuspen:
             if not self._um("SELECT 1 FROM %s WHERE id=? AND removido_em IS NULL" % tab, int(oid)):
                 raise Erro("Registro não encontrado (ou já removido).")
             self._q("UPDATE %s SET removido_em=?, removido_por=?, motivo_remocao=? WHERE id=?" % tab, _agora(), quem, _t(motivo, 600), int(oid))
+            if objeto == "comunicacao":  # o ofício removido sai da produção do mês (o registro fica, com o motivo)
+                ps = [r[0] for r in self._q("SELECT peca FROM nus_comunicacoes WHERE id=? UNION SELECT peca FROM nus_reiteracoes WHERE comunicacao=?",
+                                            int(oid), int(oid)).fetchall() if r[0]]
+                self._pecas(remover=ps)
             self._hist(objeto, oid, "remoção lógica", "", "removido", quem, motivo)
         return {"ok": True}
 
@@ -842,10 +902,13 @@ class Nuspen:
             raise Erro("Informe o assunto e o destinatário.")
         obr = [int(x) for x in d.get("obrigacoes") or []]
         with self._trava, self._con:
+            envio = data_iso(d.get("data_envio"), "data de envio")
             c = self._q("INSERT INTO nus_comunicacoes(assunto, documento, processo, destinatario, meio, data_envio, criada, quem) VALUES(?,?,?,?,?,?,?,?)",
                         _t(d["assunto"]), d.get("documento") or None, _t(d.get("processo"), 60), _t(d["destinatario"]), _t(d.get("meio") or "ofício", 60),
-                        data_iso(d.get("data_envio"), "data de envio"), _agora(), quem)
+                        envio, _agora(), quem)
             cid = c.lastrowid
+            if envio:
+                self._q("UPDATE nus_comunicacoes SET peca=? WHERE id=?", self._peca_oficio(None, envio, _t(d["assunto"]), _t(d.get("processo"), 60), quem), cid)
             for o in obr:
                 self._q("INSERT OR IGNORE INTO nus_com_obrigacoes VALUES(?,?)", cid, o)
                 self._hist("obrigacao", o, "comunicação", "", _t(d["assunto"], 200), quem)
@@ -861,6 +924,8 @@ class Nuspen:
                 raise Erro("Comunicação não encontrada.")
             self._q("UPDATE nus_comunicacoes SET data_envio=? WHERE id=?", iso, int(cid))
             self._hist("comunicacao", cid, "envio registrado", br(r[0] or ""), br(iso), quem)
+            c = self._um("SELECT assunto, processo, peca FROM nus_comunicacoes WHERE id=?", int(cid))
+            self._q("UPDATE nus_comunicacoes SET peca=? WHERE id=?", self._peca_oficio(c[2], iso, c[0], c[1], quem), int(cid))
         return {"ok": True}
 
     def comunicacao_vincular(self, cid, oid, quem):
@@ -875,8 +940,10 @@ class Nuspen:
         with self._trava, self._con:
             if not self._um("SELECT 1 FROM nus_comunicacoes WHERE id=? AND removido_em IS NULL AND data_envio<>''", int(cid)):
                 raise Erro("Só se reitera comunicação já enviada.")
-            self._q("INSERT INTO nus_reiteracoes(comunicacao, data, documento, quem, quando) VALUES(?,?,?,?,?)", int(cid), data_iso(data, "data", True),
-                    documento or None, quem, _agora())
+            c = self._um("SELECT assunto, processo FROM nus_comunicacoes WHERE id=?", int(cid))
+            pid = self._peca_oficio(None, data_iso(data, "data", True), "reiteração: " + c[0], c[1], quem)
+            self._q("INSERT INTO nus_reiteracoes(comunicacao, data, documento, quem, quando, peca) VALUES(?,?,?,?,?,?)", int(cid), data_iso(data, "data", True),
+                    documento or None, quem, _agora(), pid)
             self._hist("comunicacao", cid, "reiteração", "", br(data_iso(data, "data", True)), quem)
         return {"ok": True}
 
@@ -1152,7 +1219,7 @@ class Nuspen:
                           "regra de contagem aprovada)." % (br(v), hoje.strftime("%d/%m/%Y"), (hoje - date.fromisoformat(v)).days), p["fonte_trecho"] or fonte))
                 break
         if not cumprida:
-            base = "Sem que, até a conferência realizada pelo NUSPEN em %s, constasse dos autos importados" % hoje.strftime("%d/%m/%Y")
+            base = "Sem que, até a conferência realizada em %s, constasse dos autos importados" % hoje.strftime("%d/%m/%Y")
             env = [c for c in coms if c["data_envio"]]
             sem = [c for c in env if not c["respostas"]]
             if not coms:
@@ -1161,9 +1228,16 @@ class Nuspen:
                 s.append(("omissao", "%s registro de envio do ofício «%s»." % (base, coms[0]["assunto"]), fonte))
             elif sem:
                 s.append(("omissao", "%s resposta de %s ao ofício enviado em %s." % (base, sem[0]["destinatario"], br(sem[0]["data_envio"])), fonte))
+        if modelo.get("blocos"):
+            s = [x for x in s if x[0] == "dados"][:2] + [x for x in s if x[0] == "omissao" and "omissao" in modelo["blocos"]]
         f = modelo.get("formulas") or {}
         if f:
-            ctx = {"documento": ("no documento %s" % numero) if tem_doc else "em registro do núcleo", "pagina": ""}
+            pv = next((p for p in val if p.get("vencimento_efetivo")), None) or next(iter(val), None)
+            prazo = (" até %s" % br(pv["vencimento_efetivo"])) if pv and pv.get("vencimento_efetivo") else \
+                (" no prazo de %s %s" % (pv["quantidade"], pv["unidade"] or "dias")) if pv and pv.get("quantidade") else ""
+            dest = o.get("destinatario") or ""
+            ctx = {"documento": ("no documento %s" % numero) if tem_doc else "em registro do núcleo", "pagina": "", "prazo": prazo,
+                   "destinatario": dest or "[destinatário]", "processo": proc, "vocativo": ("A %s," % dest) if dest else "[Destinatário],"}
             s.insert(0, ("abertura", f["abertura"].format(**ctx), "fórmula do modelo %s" % modelo["nome"]))
             s.append(("pedido", f["pedido"].format(**ctx), "fórmula do modelo %s" % modelo["nome"]))
             if f.get("fecho"):

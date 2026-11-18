@@ -41,3 +41,44 @@ def extrair_paginas(caminho: Path | str) -> list[PaginaLida]:
                 PaginaLida(numero=numero, texto=texto, leitura=classificar_leitura(texto))
             )
     return paginas
+
+
+# ---- OCR opcional (7.28, APTO): só se o Tesseract estiver instalado neste computador; o texto vem marcado como lido por OCR ----
+def tesseract():
+    """Caminho do tesseract (PATH ou a instalação padrão no Windows); None se não houver."""
+    import os
+    import shutil
+
+    achado = shutil.which("tesseract")
+    if achado:
+        return achado
+    for c in (r"C:\Program Files\Tesseract-OCR\tesseract.exe", r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe"):
+        if os.path.isfile(c):
+            return c
+    return None
+
+
+def ocr_pagina(caminho: Path | str, numero: int, exe: str, resolucao: int = 200) -> str:
+    """Texto de UMA página (numero a partir de 1) pelo Tesseract (português; sem o idioma, o padrão). '' se falhar."""
+    import os
+    import subprocess
+    import tempfile
+
+    import pdfplumber
+
+    with pdfplumber.open(caminho) as pdf:
+        img = pdf.pages[numero - 1].to_image(resolution=resolucao)
+        fd, png = tempfile.mkstemp(suffix=".png")
+        os.close(fd)
+        try:
+            img.save(png)
+            for idioma in (["-l", "por"], []):
+                r = subprocess.run([exe, png, "stdout", *idioma], capture_output=True, text=True, timeout=90)
+                if r.returncode == 0 and r.stdout.strip():
+                    return r.stdout
+            return ""
+        finally:
+            try:
+                os.remove(png)
+            except OSError:
+                pass

@@ -15,7 +15,7 @@ const SHOTS = process.env.APTO_CAPTURAS || "";
   // os modelos do gabinete (pasta "modelos" ao lado das bases): aqui um modelo fictício da extensão
   await pg.exposeFunction("__arq", (c) => {
     if (c === "modelos/lista.json") return { b64: Buffer.from(JSON.stringify([{ id: "m1", nome: "1. Ciência", grupo: "Fluxo", arquivo: "m1.docx", formato: "docx" }, { id: "m2", nome: "1. Não homologação do cálculo", grupo: "Fluxo", arquivo: "m1.docx", formato: "docx" }])).toString("base64") };
-    if (c === "modelos/m1.docx") return { b64: fs.readFileSync(path.join(RAIZ, "extensao_seeu", "modelos", "ciencia.docx")).toString("base64") };
+    if (c === "modelos/m1.docx") return { b64: fs.readFileSync(path.join(RAIZ, "extensao_seeu_testes", "modelo_ficticio.docx")).toString("base64") };
     const p = path.join(RAIZ, "atendimentos", ...c.split("/"));
     return fs.existsSync(p) ? { b64: fs.readFileSync(p).toString("base64") } : { erro: "não encontrado" };
   });
@@ -45,7 +45,7 @@ const SHOTS = process.env.APTO_CAPTURAS || "";
       seeu_prefs_gravar: (p) => { window.__chamadas.push(["prefs", p]); return { ok: true }; },
       seeu_planilha: (ks) => { window.__chamadas.push(["planilha", ks]); return { ok: true, caminho: "C:\\x.xlsx" }; },
       seeu_estado: () => fx.triagem.leitura,
-      seeu_concluir: (k, pc, dt, ob) => { window.__chamadas.push(["baixa", k, pc, dt, ob]); const it = fx.triagem.itens.find((x) => x.chave === k); if (it) { it.status = "concluido"; it.baixa = { peca: pc, pecaNome: fx.triagem.pecas[pc] || "", data: dt, obs: ob }; } return { ok: true }; },
+      seeu_concluir: (k, pc, dt, ob, q) => { window.__chamadas.push(["baixa", k, pc, dt, ob, q]); const it = fx.triagem.itens.find((x) => x.chave === k); if (it) { it.status = "concluido"; it.baixa = { peca: pc, pecaNome: fx.triagem.pecas[pc] || "", data: dt, obs: ob }; } return { ok: true }; },
       seeu_reabrir: (k) => { window.__chamadas.push(["reabrir", k]); return { ok: true, removidas: [] }; },
       sei_estado: () => fx.resumo.leitura,
       sei_ler: (m) => { window.__chamadas.push(["lerSei", m]); return { ok: true }; },
@@ -69,6 +69,10 @@ const SHOTS = process.env.APTO_CAPTURAS || "";
   await pg.click("#fn_atend");
   await pg.waitForTimeout(200);
   ok(await pg.isVisible("#atdFrame"), "Atendimentos volta");
+  // o caso relatado: Quadro aberto e depois SEEU (a mesma moldura do painel)
+  await pg.click("#fn_quadro");
+  await pg.waitForTimeout(300);
+  ok(await pg.isVisible("#atdFrame"), "Quadro aparece");
   // ---- SEEU ----
   await pg.click("#fn_seeu");
   await pg.waitForTimeout(200);
@@ -158,9 +162,14 @@ const SHOTS = process.env.APTO_CAPTURAS || "";
   // baixa: peça sugerida pela providência ("Impugnar o cálculo" -> Manifestações), data de hoje; conclui e sai da lista em aberto
   ok((await pg.inputValue("#seeuPag .fx-baixa select")) === "MANIF", "peça sugerida para a baixa");
   await pg.click('#seeuPag .fx-baixa button:has-text("Registrar baixa")');
+  await pg.waitForTimeout(300);
+  ok(!(await pg.evaluate(() => window.__chamadas)).some((c) => c[0] === "baixa"), "sem Quem, a baixa não é registrada");
+  await pg.selectOption("#seeuQuem", "Servidora Fictícia");
+  if (!(await pg.isVisible("#seeuPag .fx-baixa"))) { await pg.focus("#seeuPag .fx-l"); await pg.keyboard.press("Enter"); await pg.waitForTimeout(200); }
+  await pg.click('#seeuPag .fx-baixa button:has-text("Registrar baixa")');
   await pg.waitForTimeout(400);
   const bx = (await pg.evaluate(() => window.__chamadas)).find((c) => c[0] === "baixa");
-  ok(bx && bx[2] === "MANIF" && /^\d{4}-\d{2}-\d{2}$/.test(bx[3]), "baixa registrada com peça e data: " + JSON.stringify(bx));
+  ok(bx && bx[2] === "MANIF" && /^\d{4}-\d{2}-\d{2}$/.test(bx[3]) && bx[5] === "Servidora Fictícia", "baixa registrada com peça e data: " + JSON.stringify(bx));
   await pg.click('#seeuPag .fx-cont button:has-text("concluídas")');
   await pg.waitForTimeout(200);
   ok(/baixa: Manifestações/.test(await pg.textContent("#seeuPag .fx-tab")), "concluída mostra a baixa (fica no APTO, pode reabrir)");
@@ -168,20 +177,21 @@ const SHOTS = process.env.APTO_CAPTURAS || "";
   await pg.click("#fn_sei");
   await pg.waitForTimeout(400);
   // Visão geral (abre nela): atenção hoje, todos os processos, por marcador, o que entrou
-  ok((await pg.$$eval("#seiPag > .fx-at .fx-atc", (x) => x.length)) === 5, "Visão geral: cinco cartões de atenção");
-  const cNovo = await pg.textContent('#seiPag > .fx-at .fx-atc:has-text("documento novo") b');
+  ok((await pg.$$eval("#seiPag > .fx-at .fx-atc:not(.nus-atc)", (x) => x.length)) === 5, "Visão geral: cinco cartões de atenção");
+  const cNovo = await pg.textContent('#seiPag > .fx-at .fx-atc:not(.nus-atc):has-text("documento novo") b');
   ok(cNovo === "1", "com documento novo (na leitura ou não visualizado): " + cNovo);
   ok((await pg.$$eval("#seiPag .fx-tabsei tbody tr", (x) => x.length)) === 2, "tabela com os dois processos");
   const lin = await pg.textContent('#seiPag .fx-tabsei tbody tr:has-text("99/000123/2026")');
   ok(/Aguardando resposta/.test(lin) && /assessor ficticio/.test(lin) && /a validar/.test(lin) && /prazo no documento/.test(lin), "linha com marcador, responsável e situação: " + lin);
   ok(/Aguardando resposta\s*1/.test(await pg.textContent("#seiPag .fx-barras")), "processos por marcador");
   if (SHOTS) await pg.screenshot({ path: path.join(SHOTS, "sei_geral.png"), fullPage: true });
-  await pg.click('#seiPag > .fx-at .fx-atc:has-text("a validar")');
+  await pg.click('#seiPag > .fx-at .fx-atc:not(.nus-atc):has-text("a validar")');
   await pg.waitForTimeout(200);
   ok((await pg.$$eval("#seiPag .fx-tabsei tbody tr", (x) => x.length)) === 1, "cartão filtra a tabela");
   await pg.click('#seiPag .fx-tabsei tbody tr');
   await pg.waitForTimeout(400);
-  ok(await pg.isVisible("#seiDet .fx-obr") && /Validar<\/b> = você confirma/.test(await pg.innerHTML("#seiDet")), "linha abre o processo, com a explicação do Validar");
+  ok(await pg.isVisible("#seiDet .fx-obr") && /Validar<\/b> = você confirma/.test(await pg.innerHTML("#seiDet")) && /na própria providência/.test(await pg.innerHTML("#seiDet")),
+    "linha abre o processo, com a explicação do Validar");
   await pg.click('#seiPag .fx-vistas button:has-text("Processos")');
   await pg.waitForTimeout(200);
   ok((await pg.$$eval("#seiPag .fx-proc", (x) => x.length)) === 2, "SEI: dois processos");
@@ -199,19 +209,9 @@ const SHOTS = process.env.APTO_CAPTURAS || "";
   ok(/prazo no documento: 30 dias/.test(t) && /vencimento não calculado/.test(t), "prazo expresso sem vencimento");
   ok(/“[^”]*Determino[^”]*”/.test(t), "frase de origem (fonte)");
   if (SHOTS) await pg.screenshot({ path: path.join(SHOTS, "sei.png") });
-  await pg.selectOption("#nusQuem", "Servidora Fictícia");
-  await pg.click('#seiDet .fx-obr button:has-text("Validar")');
-  await pg.waitForTimeout(400);
-  ok((await pg.evaluate(() => window.__chamadas)).some((c) => c[0] === "decidir" && c[2] === "validada" && c[4] === "Servidora Fictícia"), "validar, com o Quem");
-  await pg.click('#seiDet .fx-obr button:has-text("Rejeitar")');
-  await pg.waitForSelector("#modal.on textarea", { timeout: 5000 });
-  await pg.fill("#modal textarea", "não é obrigação do núcleo");
-  await pg.click("#modal button[type=submit]");
-  await pg.waitForTimeout(400);
-  ok((await pg.evaluate(() => window.__chamadas)).some((c) => c[0] === "decidir" && c[2] === "rejeitada" && c[3]), "rejeitar com motivo");
-  await pg.click('#seiDet .fx-obr button:has-text("Enviar ao Quadro")');
-  await pg.waitForTimeout(300);
-  ok((await pg.evaluate(() => window.__chamadas)).some((c) => c[0] === "quadroSei"), "obrigação ao Quadro");
+  // validar fica num lugar só (a providência): no Processos, só a leitura e o botão que leva até ela
+  ok(!(await pg.$('#seiDet .fx-obr button:text-is("Validar")')) && await pg.isVisible('#seiDet .fx-obr button:has-text("Validar na providência")'),
+    "Processos sem Validar: leva à providência");
   await pg.click("#seiDet .fx-docb");
   await pg.waitForTimeout(200);
   ok(await pg.isVisible("#seiDet .fx-pre"), "texto do documento abre");
