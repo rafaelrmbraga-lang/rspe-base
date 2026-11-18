@@ -24,8 +24,11 @@ ok(m["host_permissions"] == ["https://seeu.pje.jus.br/*", "https://seeu-transfer
                              "https://app.siapen.ms.gov.br/*", "https://*.defensoria.ms.def.br/*", "http://127.0.0.1:47321/*"],
    "só o SEEU (e o servidor de arquivos do SEEU), o SIAPEN, o SAP da Defensoria e o APTO deste computador: %s" % m["host_permissions"])
 ok([c["matches"] for c in m["content_scripts"]] == [["https://seeu.pje.jus.br/seeu/*"], ["https://app.siapen.ms.gov.br/*"], ["https://app.siapen.ms.gov.br/*"],
-                                                   ["https://*.defensoria.ms.def.br/sap/*"]], "scripts só no SEEU, no SIAPEN e no SAP")
-ok([c.get("world") for c in m["content_scripts"]] == [None, None, "MAIN", None] and m["content_scripts"][2]["js"] == ["siapen_pagina.js"],
+                                                   ["https://*.defensoria.ms.def.br/sap/*"], ["https://*.defensoria.ms.def.br/sap/*"], ["https://sei.defensoria.ms.def.br/sei/*"]],
+   "scripts só no SEEU, no SIAPEN, no SAP e no SEI da Defensoria")
+ok(m["content_scripts"][5]["js"] == ["sei_aba.js"], "SEI: só guarda o endereço do Controle de Processos aberto")
+ok(m["content_scripts"][4]["js"] == ["atd_comum.js", "atd_sap.js"], "SAP: atendimentos (fila e Fato Narrado para o APTO)")
+ok([c.get("world") for c in m["content_scripts"]] == [None, None, "MAIN", None, None, None] and m["content_scripts"][2]["js"] == ["siapen_pagina.js"],
    "só o siapen_pagina.js roda no mundo da página")
 # SAP: só leitura - a lupa "Visualizar" (designar=0) é o único botão de linha clicado; nunca "Designar Assistido"
 sap = open(os.path.join(EXT, "sap.js"), encoding="utf-8").read()
@@ -41,8 +44,13 @@ ok('"nomeBlob:" + item.url' in bg and 'sugerir({ filename: nome, conflictAction:
 tj = open(os.path.join(EXT, "triagem.js"), encoding="utf-8").read()
 ok('chrome.storage.session.set({ ["nomeBlob:" + url]: n })' in tj, "a triagem guarda o nome do download antes de baixar")
 ok('id="rspeAuto"' in open(os.path.join(EXT, "popup.html"), encoding="utf-8").read(), "opção do RSPE automático no painel")
-ok(m["content_security_policy"]["extension_pages"].endswith("connect-src 'self' https://seeu.pje.jus.br https://seeu-transfer.s3.sa-east-1.amazonaws.com https://seeu-transfer.s3.amazonaws.com http://127.0.0.1:47321"),
-   "conexão própria só com os arquivos da extensão (modelos), o SEEU, o servidor de arquivos do SEEU (PDF das movimentações) e o APTO deste computador")
+# 1.9.0: a leitura do SEI (vinda do NUSPEN) lê o endereço do SEI que a pessoa autorizar (permissão opcional, pedida na hora):
+# as páginas da extensão podem conectar a https e ao APTO deste computador; sem a permissão do endereço, o navegador barra
+ok(m["content_security_policy"]["extension_pages"].endswith("connect-src 'self' https://seeu.pje.jus.br https://seeu-transfer.s3.sa-east-1.amazonaws.com https://seeu-transfer.s3.amazonaws.com http://127.0.0.1:* https:"),
+   "conexão própria: arquivos da extensão, SEEU, servidor de arquivos do SEEU, o APTO deste computador e o SEI autorizado")
+ok(m.get("optional_host_permissions") == ["https://*/*", "http://*/*"], "endereço do SEI: só permissão opcional, pedida ao informar o endereço")
+cfg_sei = open(os.path.join(EXT, "sei", "lib", "config.js"), encoding="utf-8").read()
+ok("export const ADAPTADOR_REAL_LIGADO = false;" in cfg_sei, "leitor do SEI real continua desligado (só o SEI fictício, até calibrar)")
 for f in ["background.js", "content.js", "siapen.js", "siapen_pagina.js", "sap.js", "comum.js", "popup.js", "popup.html", "triagem.html", "triagem.js", "triagem_core.js"] + list(m["icons"].values()):
     ok(os.path.isfile(os.path.join(EXT, f)), "arquivo %s" % f)
 
@@ -151,7 +159,7 @@ try:
     ok(st == 200 and j["bases"] == ["2ª VEP", "5ª vep"] and j["aberta"] == "" and acao == "chrome-extension://abcdefghijklmnop",
        "extensão recebe as bases: %s %s" % (st, j))
     ok(pedir("/apto", "https://site.qualquer")[0] == 403, "página da internet recebe 403")
-    ok(pedir("/outra", "chrome-extension://abc")[0] == 403, "só /apto")
+    ok(pedir("/outra", "chrome-extension://abc")[0] in (403, 404), "só /apto e /atd/...")
     api.base = types.SimpleNamespace(caminho=os.path.join(tmp, "bases", "2ª VEP.sqlite"))
     ok(pedir("/apto")[1]["aberta"] == "2ª VEP", "base aberta informada")
     if srv:

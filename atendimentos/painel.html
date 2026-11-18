@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>APTO Atendimentos</title>
+  <script src="ponte.js"></script>
+  <link rel="stylesheet" href="painel.css">
+</head>
+<body>
+  <!-- ícones (traço no estilo Lucide) -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+      <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+      <symbol id="i-chev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+      <symbol id="i-esq" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+      <symbol id="i-dir" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+      <symbol id="i-mais" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></symbol>
+      <symbol id="i-menos" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+      <symbol id="i-ler" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></symbol>
+      <symbol id="i-doc" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></symbol>
+      <symbol id="i-copiar" viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></symbol>
+      <symbol id="i-msg" viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></symbol>
+      <symbol id="i-lixo" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></symbol>
+      <symbol id="i-reabrir" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></symbol>
+      <symbol id="i-tela" viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="3" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></symbol>
+      <symbol id="i-chamar" viewBox="0 0 24 24"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></symbol>
+      <symbol id="i-sap" viewBox="0 0 24 24"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></symbol>
+      <symbol id="i-pessoa" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+      <symbol id="i-palavra" viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><path d="M8 13l1.5 5 1.5-4 1.5 4L14 13"/></symbol>
+    </defs>
+  </svg>
+
+  <header class="topo">
+    <div class="marca">APTO Atendimentos</div>
+    <nav class="abas">
+      <button data-aba="dia" class="ativa">Atendimentos do dia</button>
+      <button data-aba="pend">Pendências <span id="nPend" class="cont"></span></button>
+      <button data-aba="fluxo">Fluxo</button>
+      <button data-aba="ctrl">Controle do mês</button>
+      <button data-aba="cfg">Modelos e backup</button>
+    </nav>
+  </header>
+
+  <main>
+    <!-- DIA -->
+    <section id="aba-dia" class="aba">
+      <div class="barraDia">
+        <div class="grupo">
+          <label class="campoLinha" for="dia">Dia</label>
+          <input type="date" id="dia">
+          <button id="hojeBtn" class="fantasma">Hoje</button>
+          <span class="sep" aria-hidden="true"></span>
+          <label class="campoLinha" for="ordemDia">Ordem</label>
+          <select id="ordemDia">
+            <option value="hora">Horário do agendamento</option>
+            <option value="virtual">Virtuais primeiro</option>
+            <option value="presencial">Presenciais primeiro</option>
+            <option value="situacao">Presentes primeiro (quem chamar)</option>
+            <option value="nome">Nome (A–Z)</option>
+          </select>
+        </div>
+        <div class="grupo acoesDia">
+          <span id="sapStatus" class="sapStatus off" role="status" aria-live="polite" hidden><svg class="ic" aria-hidden="true"><use href="#i-sap"/></svg><span class="sapTxt">SAP não detectado</span></span>
+          <button id="lerSapBtn" class="sec" title="Na aba do SAP aberta: seleciona cada assistido de hoje e lê o Fato Narrado (só lê)"><svg class="ic" aria-hidden="true"><use href="#i-ler"/></svg>Ler fila do SAP</button>
+          <button id="novoAtd" class="sec"><svg class="ic" aria-hidden="true"><use href="#i-mais"/></svg>Sem agenda</button>
+          <button id="relatorioBtn"><svg class="ic" aria-hidden="true"><use href="#i-palavra"/></svg>Relatório do dia</button>
+        </div>
+      </div>
+      <div class="contadores" id="contadores" role="group" aria-label="Filtrar por situação"></div>
+      <p id="msgDia" class="msg" hidden></p>
+      <div id="lista"></div>
+      <details id="concluidosBox" class="arquivo" hidden>
+        <summary>Concluídos <span id="nConc"></span></summary>
+        <div id="concluidos"></div>
+      </details>
+      <p id="vazioDia" class="vazio" hidden>
+        Nenhum atendimento neste dia. Abra o SAP na tela de atendimento (Assistidos em Espera) e clique em
+        <b>Ler a fila de hoje</b> (aqui ou no selo verde no canto da página do SAP).
+      </p>
+    </section>
+
+    <!-- PENDÊNCIAS (kanban) -->
+    <section id="aba-pend" class="aba" hidden>
+      <div class="barraDia">
+        <div class="grupo">
+          <label class="campoLinha" for="buscaPend">Buscar</label>
+          <input id="buscaPend" placeholder="nome, processo ou peça">
+        </div>
+        <div class="grupo"><span class="dica">Arraste o cartão entre as filas (ou use ‹ ›). Prazo vencido fica em vermelho.</span>
+          <button id="novaPend" class="sec"><svg class="ic" aria-hidden="true"><use href="#i-mais"/></svg>Pendência</button>
+          <button id="quadroExecBtn" class="fantasma" hidden title="Os cartões que você criou nos assistidos da base aberta em Execução">Quadro do Usuário da base…</button></div>
+      </div>
+      <div id="kanban" class="kanban"></div>
+      <details id="arquivoBox" class="arquivo">
+        <summary>Arquivadas (últimos 60 dias) <span id="nArq"></span></summary>
+        <table class="tabela" id="tabArq">
+          <thead><tr><th>Em</th><th>Assistido</th><th>Processo</th><th>Peça</th><th>Como</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </details>
+    </section>
+
+    <!-- FLUXO -->
+    <section id="aba-fluxo" class="aba" hidden>
+      <div class="barraDia">
+        <div class="grupo">
+          <label class="campoLinha" for="diaFluxo">Dia</label>
+          <input type="date" id="diaFluxo">
+          <button id="hojeFluxo" class="fantasma">Hoje</button>
+        </div>
+        <div class="grupo"><span class="totFluxo" id="totFluxo"></span></div>
+      </div>
+      <p class="dica">Cada <b>+</b> lança uma peça do fluxo no dia; <b>−</b> desfaz o último lançamento dessa peça. "No mês" é o total do dia na tabela de controle (fluxo + atendimentos + pendências feitas).</p>
+      <div id="fluxo" class="fluxo"></div>
+    </section>
+
+    <!-- CONTROLE -->
+    <section id="aba-ctrl" class="aba" hidden>
+      <div class="barraDia naoImprime">
+        <div class="grupo">
+          <label class="campoLinha" for="mes">Mês</label>
+          <input type="month" id="mes">
+        </div>
+        <div class="grupo">
+          <button id="csvBtn" class="sec">Planilha (CSV)</button>
+          <button id="imprimirBtn">Imprimir / PDF</button>
+        </div>
+      </div>
+      <section class="relOutros naoImprime" aria-labelledby="relOutrosTit">
+        <h2 id="relOutrosTit" class="vh">Outros relatórios</h2>
+        <div class="relCard">
+          <div><b>Relatório do dia</b><span class="dica">Os atendimentos do dia em Word (DD.MM.docx), no formato de sempre.</span></div>
+          <label class="campoLinha" for="diaRel">Dia</label><input type="date" id="diaRel">
+          <button id="relDiaBtn" class="sec"><svg class="ic" aria-hidden="true"><use href="#i-palavra"/></svg>Gerar</button>
+        </div>
+        <div class="relCard">
+          <div><b>Relatórios da Execução</b><span class="dica">Individuais, geral da base e remição, em PDF (da base aberta em Execução).</span></div>
+          <button id="relExecBtn" class="sec"><svg class="ic" aria-hidden="true"><use href="#i-doc"/></svg>Abrir</button>
+        </div>
+      </section>
+      <p id="msgRel" class="msg naoImprime" hidden></p>
+      <h2 class="ctrlTit naoImprime">Produção do mês</h2>
+      <p class="dica naoImprime">Vem dos atendimentos, das pendências feitas e do Fluxo. Pode corrigir qualquer célula: a correção fica guardada e a célula fica amarela.</p>
+      <div id="somarExecBox" class="somarExec naoImprime" hidden>
+        <label class="chk"><input type="checkbox" id="somarExec"> Somar os pedidos e ofícios registrados na Execução (base aberta)</label>
+        <span class="dica" id="somarExecInfo"></span>
+        <span class="dica">Ligue só se as peças protocoladas não forem marcadas também como "Feita" nas pendências (senão contam duas vezes).</span>
+      </div>
+      <div id="controle"></div>
+    </section>
+
+    <!-- MODELOS E BACKUP -->
+    <section id="aba-cfg" class="aba" hidden>
+      <p id="msgCfg" class="msg" hidden></p>
+      <div class="cfgGrade">
+        <section class="cfgSec">
+          <h2>Onde salvar</h2>
+          <div class="cfgItem">
+            <b>Relatório do dia</b>
+            <p class="dica" id="pastaInfo"></p>
+            <div class="acoes"><button id="pastaBtn" class="sec">Escolher a pasta "2. Atendimentos"…</button><button id="pastaLimpar" class="fantasma">Voltar para Downloads</button></div>
+          </div>
+          <div class="cfgItem">
+            <b>Petições</b>
+            <p class="dica" id="pastaPetInfo"></p>
+            <div class="acoes"><button id="pastaPetBtn" class="sec">Escolher a pasta das petições…</button><button id="pastaPetLimpar" class="fantasma">Voltar para Downloads</button></div>
+          </div>
+        </section>
+        <section class="cfgSec">
+          <h2>Cópia de segurança</h2>
+          <p class="dica">Os dados ficam na base do gabinete do APTO (gabinete.sqlite, ao lado das bases, com uma cópia por dia na pasta "copias\gabinete"). Para trazer o que está na extensão APTO Atendimentos antiga: lá, "Exportar tudo (.json)"; aqui, "Importar (.json)" (junta, sem apagar).</p>
+          <div class="acoes"><button id="exportar" class="sec">Exportar tudo (.json)</button><label class="botaoArquivo">Importar (.json)<input type="file" id="importar" accept=".json,application/json" hidden></label></div>
+        </section>
+      </div>
+
+      <details class="cfgSec dobra">
+        <summary><h2>Frases prontas do atendimento <span class="cont3" id="nModelos"></span></h2></summary>
+        <p class="dica"><code>{o}</code> muda com quem foi atendido: orientad<b>{o}</b> vira orientado, orientada ou orientados.</p>
+        <div class="cabModelo" aria-hidden="true"><span>Nome na lista</span><span>Texto inserido</span></div>
+        <div id="modelos"></div>
+        <button id="novoModelo" class="sec"><svg class="ic" aria-hidden="true"><use href="#i-mais"/></svg>Frase</button>
+      </details>
+
+      <details class="cfgSec dobra">
+        <summary><h2>Documentos da mensagem de WhatsApp</h2></summary>
+        <p class="dica">Texto que entra na lista numerada da mensagem. A segunda coluna diz quando o documento vem marcado sozinho: palavras do atendimento separadas por <code>|</code> (ex.: <code>holerite|parcel</code>).</p>
+        <div class="cabModelo" aria-hidden="true"><span>Documento</span><span>Marca sozinho quando o texto tiver</span></div>
+        <div id="docsCfg"></div>
+        <button id="novoDoc" class="sec"><svg class="ic" aria-hidden="true"><use href="#i-mais"/></svg>Documento</button>
+      </details>
+
+      <details class="cfgSec dobra">
+        <summary><h2>Textos das mensagens de WhatsApp</h2></summary>
+        <p class="dica"><code>{saudacao}</code> vira Bom dia!, Boa tarde! ou Boa noite! conforme a hora.</p>
+        <div class="msgsGrade">
+          <label class="bloco">Pedido de documentos (início)<textarea id="msgDocsIni" rows="3"></textarea></label>
+          <label class="bloco">Pedido de documentos (fim)<textarea id="msgDocsFim" rows="7"></textarea></label>
+          <label class="bloco">Mensagem padrão<textarea id="msgPadrao" rows="9"></textarea></label>
+          <label class="bloco">Baixa (não encaminhou)<textarea id="msgBaixa" rows="9"></textarea></label>
+        </div>
+        <button id="msgRestaurar" class="fantasma">Voltar os textos originais</button>
+      </details>
+    </section>
+  </main>
+
+  <template id="tplCard">
+    <article class="card">
+      <!-- resumo: sempre visível; clicar abre o atendimento -->
+      <div class="topoCard">
+        <button type="button" class="linha" aria-expanded="false">
+          <span class="hora"></span>
+          <span class="quemLinha"><span class="nomeTxt"></span><span class="sub"></span></span>
+          <span class="pill pillForma"></span>
+          <span class="pill pillEstado"></span>
+          <svg class="ic chev" aria-hidden="true"><use href="#i-chev"/></svg>
+        </button>
+        <button type="button" class="chamarBtn" title="Chama no SAP (o mesmo Chamar do botão direito da fila) e abre a aba do SAP"><svg class="ic" aria-hidden="true"><use href="#i-chamar"/></svg>Chamar</button>
+      </div>
+
+      <div class="detalhe" hidden>
+        <div class="faixa">
+          <div class="faixaGrupo">
+            <span class="faixaRot">Forma</span>
+            <div class="seg forma" role="group" aria-label="Forma do atendimento">
+              <button type="button" data-v="presencial">Presencial</button><button type="button" data-v="virtual">Virtual</button>
+            </div>
+          </div>
+          <div class="faixaGrupo">
+            <span class="faixaRot">Presença</span>
+            <div class="seg presenca" role="group" aria-label="Presença"></div>
+          </div>
+          <span class="espaco"></span>
+          <button class="verSap sec" title="Seleciona o assistido na fila do SAP e abre a aba do SAP (não chama)"><svg class="ic" aria-hidden="true"><use href="#i-sap"/></svg>Ver no SAP</button>
+          <button class="concluir ok" title="Tira da lista do dia (fica em Concluídos, pode reabrir)"><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg>Concluir</button>
+          <button class="excluir icone" title="Excluir este atendimento" aria-label="Excluir este atendimento"><svg class="ic" aria-hidden="true"><use href="#i-lixo"/></svg></button>
+        </div>
+
+        <div class="grade">
+          <section class="secao">
+            <h3 class="secTit">Agendamento</h3>
+            <p class="pedido" hidden></p>
+            <details class="fato" hidden>
+              <summary></summary>
+              <div class="fatoTexto"></div>
+            </details>
+            <div class="campos">
+              <label class="cheio">Nome do assistido <input class="nome"></label>
+              <label class="cheio">Processo(s) <input class="processos" placeholder="0000000-00.0000.8.12.0001"></label>
+              <label class="cheio">Contato <input class="contato" placeholder="(67) 99999-9999 – Nome"></label>
+              <label>Quem foi atendido <select class="quem"></select></label>
+              <label class="chk"><input type="checkbox" class="assistida"> assistida (feminino)</label>
+            </div>
+          </section>
+
+          <section class="secao texto">
+            <h3 class="secTit">Registro para o SAP</h3>
+            <label class="chk abre"><input type="checkbox" class="abertura"> <span><b>Começar com</b> <span class="aberturaTxt"></span></span></label>
+            <label class="semRotulo">O que foi feito
+              <textarea class="corpo" rows="5" placeholder="Ex.: Foi orientada sobre o cálculo. Será requerida a saída temporária."></textarea>
+            </label>
+            <div class="acoes">
+              <select class="inserir" aria-label="Inserir frase pronta"><option value="">Inserir frase pronta…</option></select>
+              <button class="semExitoBtn sec">Sem êxito no contato…</button>
+              <span class="espaco"></span>
+              <button class="copiar"><svg class="ic" aria-hidden="true"><use href="#i-copiar"/></svg>Copiar para o SAP</button>
+            </div>
+          </section>
+        </div>
+
+        <section class="secao pendSec">
+          <h3 class="secTit">Pendências deste atendimento <span class="tags"></span></h3>
+          <div class="sugPecas" hidden><span class="rotulo">Sugeridas pelo texto</span> <span class="sugBotoes"></span></div>
+          <div class="pend">
+            <label>Peça <select class="pPeca"></select></label>
+            <label>Fila <select class="pFila"></select></label>
+            <label>Prazo <input type="date" class="pPrazo"></label>
+            <button class="pAdd sec"><svg class="ic" aria-hidden="true"><use href="#i-mais"/></svg>Adicionar</button>
+          </div>
+        </section>
+
+        <div class="ferramentas">
+          <button class="gerarPet sec"><svg class="ic" aria-hidden="true"><use href="#i-doc"/></svg>Gerar petição…</button>
+        </div>
+      <details class="zap">
+        <summary><svg class="ic" aria-hidden="true"><use href="#i-msg"/></svg>Mensagem de WhatsApp</summary>
+        <div class="zapTipo seg">
+          <button type="button" data-v="docs">Pedir documentos</button><button type="button" data-v="padrao">Padrão</button><button type="button" data-v="baixa">Baixa</button>
+        </div>
+        <div class="zapDocs"></div>
+        <div class="zapLinha">
+          <input class="zapOutro" placeholder="Outro documento (escreva e tecle Enter)">
+          <label class="chk"><input type="checkbox" class="zapComPrazo"> prazo até</label>
+          <input type="date" class="zapPrazo">
+        </div>
+        <textarea class="zapTexto" rows="10"></textarea>
+        <div class="acoes">
+          <span class="dica zapFone"></span>
+          <span class="espaco"></span>
+          <button class="zapCopiar sec">Copiar</button>
+          <button class="zapAbrir">Abrir no WhatsApp</button>
+        </div>
+      </details>
+      </div>
+    </article>
+  </template>
+
+  <div id="petFundo" class="fundo" hidden>
+    <div class="janela" role="dialog" aria-labelledby="petTitulo">
+      <div class="jcab"><h2 id="petTitulo">Gerar petição</h2><button id="petFechar" class="icone" title="Fechar">✕</button></div>
+      <div class="jcampos">
+        <label>Assistido <input id="petNome"></label>
+        <label>Processo <input id="petProc" list="petProcs"></label>
+        <datalist id="petProcs"></datalist>
+        <label class="chk"><input type="checkbox" id="petFem"> assistida (já qualificada)</label>
+        <label>Buscar modelo <input id="petBusca" placeholder="ex.: indulto, HC, justificativa"></label>
+      </div>
+      <p class="dica">Nome, nº do processo e data saem prontos. <b>PDF</b> só nos modelos que não pedem mais nada; nos demais, o Word sai com o resto do caso de exemplo para você revisar (eventos, datas, frações, fatos).</p>
+      <p id="petMsg" class="msg" hidden></p>
+      <ul id="petLista" class="petLista"></ul>
+    </div>
+  </div>
+
+  <script src="comum.js"></script>
+  <script src="docx.js"></script>
+  <script src="mensagens.js"></script>
+  <script src="pdflib/pdf-lib.min.js"></script>
+  <script src="pdflib/fontkit.umd.min.js"></script>
+  <script src="peticao.js"></script>
+  <script src="peticoes.js"></script>
+  <script src="painel.js"></script>
+</body>
+</html>

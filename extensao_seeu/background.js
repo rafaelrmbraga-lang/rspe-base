@@ -4,7 +4,8 @@
 // for PDF de verdade (sessão expirada ou página de erro não viram arquivo); pausa sozinha depois de 3 falhas seguidas;
 // nada é enviado para fora do computador (a extensão não tem nenhuma conexão própria além do pedido ao SEEU).
 "use strict";
-importScripts("comum.js");
+// Chrome/Edge: service worker (importScripts); Firefox: página de fundo com comum.js carregado antes (manifest "scripts")
+if (typeof importScripts === "function" && !self.APTO) importScripts("comum.js");
 const A = self.APTO;
 
 const AUTO = "@apto";            // base de destino = a base aberta no APTO
@@ -431,9 +432,72 @@ async function sapPlanilha() {
   return { ok: true, arquivo };
 }
 
+// ---------- Atendimentos: o que a extensão lê no SAP vai para o APTO (função Atendimentos) ----------
+// Só fala com o APTO neste computador (127.0.0.1). Com o APTO fechado, a fila e os Fatos Narrados lidos ficam guardados aqui
+// (até 300 leituras) e são entregues quando o APTO abrir; nada vai para outro lugar.
+const APTO_RAIZ = "http://127.0.0.1:47321";
+const ATD_GUARDA_MAX = 300;
+async function aptoPedir(caminho, corpo, ms) {
+  const ctl = new AbortController();
+  const t = setTimeout(() => ctl.abort(), ms || 5000);
+  try {
+    const op = corpo === undefined ? { cache: "no-store", signal: ctl.signal }
+      : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(corpo), cache: "no-store", signal: ctl.signal };
+    const r = await fetch(APTO_RAIZ + caminho, op);
+    if (!r.ok) throw new Error("APTO respondeu " + r.status);
+    return await r.json();
+  } finally { clearTimeout(t); }
+}
+let atdEntregando = Promise.resolve();
+function atdEnviar(caminho, corpo) {
+  // um envio por vez, na ordem em que a página leu (a fila antes do Fato Narrado do mesmo assistido)
+  const vez = atdEntregando.then(async () => {
+    const { atdGuardados } = await chrome.storage.local.get("atdGuardados");
+    const guardados = atdGuardados || [];
+    try {
+      for (let i = 0; i < guardados.length; i++) await aptoPedir(guardados[i].caminho, guardados[i].corpo);
+      if (guardados.length) await chrome.storage.local.set({ atdGuardados: [] });
+      return await aptoPedir(caminho, corpo);
+    } catch (e) {
+      const L = guardados.concat([{ caminho, corpo, quando: Date.now() }]).slice(-ATD_GUARDA_MAX);
+      await chrome.storage.local.set({ atdGuardados: L });
+      return { ok: false, offline: true, pendentes: L.length };
+    }
+  });
+  atdEntregando = vez.catch(() => {});
+  return vez;
+}
+async function atdMensagem(msg, sender) {
+  if (msg.tipo === "atdFila") return (msg.itens || []).length ? atdEnviar("/atd/fila", { itens: msg.itens }) : { ok: true };
+  if (msg.tipo === "atdFato") return atdEnviar("/atd/fato", { nome: msg.nome, fato: msg.fato, forma: msg.forma, fatoLido: msg.fatoLido });
+  if (msg.tipo === "atdComando") {
+    try { return await aptoPedir("/atd/comando", undefined, 1500); } catch (e) { return { cmd: null, offline: true }; }
+  }
+  if (msg.tipo === "atdResposta") {
+    try { return await aptoPedir("/atd/resposta", { id: msg.id, resposta: msg.resposta }); } catch (e) { return { ok: false }; }
+  }
+  if (msg.tipo === "atdLeitura") {
+    try { return await aptoPedir("/atd/leitura", { lendo: !!msg.lendo, msg: msg.msg || "" }, 1500); } catch (e) { return { ok: false }; }
+  }
+  if (msg.tipo === "atdFocar") {
+    // Chamar / Ver no SAP: a aba do SAP vem para a frente, já com o assistido selecionado
+    try { await chrome.tabs.update(sender.tab.id, { active: true }); if (sender.tab.windowId != null) await chrome.windows.update(sender.tab.windowId, { focused: true }); } catch (e) { /* segue */ }
+    return { ok: true };
+  }
+  return { ok: false };
+}
+
 chrome.runtime.onMessage.addListener((msg, sender, responder) => {
   (async () => {
     try {
+      if (sender.tab && doSap(sender.url) && msg && /^atd[A-Z]/.test(String(msg.tipo || ""))) return responder(await atdMensagem(msg, sender));
+      // SEI da Defensoria: a aba (já logada) informa o endereço assinado do Controle de Processos, de onde a leitura começa
+      if (sender.tab && /^https:\/\/sei\.defensoria\.ms\.def\.br\/sei\//.test(sender.url || "") && msg && msg.tipo === "seiEntrada") {
+        const u = String(msg.url || "");
+        if (!/^https:\/\/sei\.defensoria\.ms\.def\.br\/sei\/controlador\.php\?acao=procedimento_controlar&/.test(u)) return responder({ ok: false });
+        await chrome.storage.session.set({ seiEntrada: { url: u, quando: Date.now() } });
+        return responder({ ok: true });
+      }
       const daPagina = sender.tab && (doSeeu(sender.url) || doSiapen(sender.url) || doSap(sender.url));
       const doSiapenMsg = sender.tab && doSiapen(sender.url);
       if (doSiapenMsg && msg.tipo === "podeFicha") {
@@ -496,6 +560,10 @@ chrome.runtime.onMessage.addListener((msg, sender, responder) => {
         return responder(r.lote ? Object.assign({}, r.lote, { sapNomes: r.sapNomes || {}, temSap: !!r.ultimoSap }) : null);
       }
       if (msg.tipo === "sapParaSeeu") return responder(await sapParaSeeu());
+      // a triagem da Mesa vai também para o APTO (função SEEU); com o APTO fechado, vai na próxima atualização
+      if (msg.tipo === "seeuTriagem") {
+        try { return responder(await aptoPedir("/seeu/triagem", { triagem: msg.triagem }, 8000)); } catch (e) { return responder({ ok: false, offline: true }); }
+      }
       if (msg.tipo === "sapPlanilha") return responder(await sapPlanilha());
       if (msg.tipo === "estado") {
         const st = await estado();

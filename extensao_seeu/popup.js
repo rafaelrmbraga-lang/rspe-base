@@ -101,6 +101,10 @@ $("rem").onclick = () => {
 };
 $("limpar").onclick = async () => { await enviar({ tipo: "limparHistorico" }); carregar(); };
 
+$("leituraSei").onclick = async () => {
+  await chrome.tabs.create({ url: chrome.runtime.getURL("sei/painel.html") });
+  window.close();
+};
 $("triagem").onclick = async () => {
   await chrome.tabs.create({ url: chrome.runtime.getURL("triagem.html") });
   window.close();

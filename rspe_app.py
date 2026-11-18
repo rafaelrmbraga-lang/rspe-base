@@ -43,9 +43,11 @@ import rspe_mapa_ms as rmapa
 import rspe_calc as rcalc
 import rspe_atendimentos as ratd
 import rspe_resumo as rres
+from rspe_gabinete_api import GabineteApi
+import rspe_gabinete_api as rgabapi
 
 APP = "APTO"
-VERSAO = "7.18.1"
+VERSAO = "7.22.0"
 GEO_AUTO_DIAS = 30           # dados prisionais: baixados de novo sozinhos quando têm 30 dias ou mais
 GEO_REPETIR_MIN = 10         # ... ou 10 minutos depois de um download em que algum relatório falhou (nova tentativa automática)
 GEO_REPETIR_MAX = 3          # tentativas automáticas seguidas com o programa aberto (depois, na próxima abertura ou pelo botão)
@@ -1408,8 +1410,10 @@ class Base:
 # API exposta ao HTML
 # --------------------------------------------------------------------------- #
 
-class Api:
+class Api(GabineteApi):
     _serializable = True
+    _pasta_dados = PASTA_DADOS            # base do gabinete (Atendimentos), ao lado das bases
+    _recurso = staticmethod(recurso)
 
     def __init__(self):
         self._janela = None
@@ -3687,8 +3691,9 @@ class Api:
         return {"app": APP, "versao": VERSAO, "bases": self.vigia_info()["bases"], "aberta": aberta, "pasta": self._pasta_extensao()}
 
     def _extensao_servidor(self):
-        """Responde à extensão do navegador, só em 127.0.0.1 e só para extensões (página da internet recebe 403): a lista
-        de bases e a base aberta. Nada de assistido sai daqui; é só leitura."""
+        """Responde à extensão do navegador, só em 127.0.0.1 e só para extensões (página da internet recebe 403).
+        GET /apto: a lista de bases e a base aberta (só leitura). Atendimentos (/atd/...): a extensão entrega a fila e o Fato Narrado
+        lidos no SAP e pega os pedidos da tela (Chamar, Ver no SAP, Ler a fila). Os POST exigem origem de extensão e JSON."""
         import http.server
         api = self
 
@@ -3696,20 +3701,21 @@ class Api:
             def log_message(self, *a):
                 pass
 
-            def do_GET(self):
+            def _origem_ok(self, exigir):
                 origem = self.headers.get("Origin") or ""
                 host = (self.headers.get("Host") or "").rsplit(":", 1)[0]
-                if self.path.split("?")[0] != "/apto" or host not in ("127.0.0.1", "localhost") or \
-                        (origem and not origem.startswith(("chrome-extension://", "extension://"))):
-                    self.send_error(403)
-                    return
-                try:
-                    corpo = json.dumps(api._extensao_dados(), ensure_ascii=False).encode("utf-8")
-                except Exception as e:
-                    logging.getLogger("rspe").warning("extensão: %s", e)
-                    self.send_error(500)
-                    return
-                self.send_response(200)
+                if host not in ("127.0.0.1", "localhost"):
+                    return None
+                if origem and not origem.startswith(("chrome-extension://", "extension://", "moz-extension://")):
+                    return None
+                if exigir and not origem:
+                    return None
+                return origem
+
+            def _responder(self, dados, origem):
+                status = dados.pop("__status", 200) if isinstance(dados, dict) else 200
+                corpo = json.dumps(dados, ensure_ascii=False).encode("utf-8")
+                self.send_response(status)
                 self.send_header("Content-Type", "application/json; charset=utf-8")
                 self.send_header("Content-Length", str(len(corpo)))
                 self.send_header("Cache-Control", "no-store")
@@ -3717,6 +3723,62 @@ class Api:
                     self.send_header("Access-Control-Allow-Origin", origem)
                 self.end_headers()
                 self.wfile.write(corpo)
+
+            def do_GET(self):
+                caminho = self.path.split("?")[0]
+                origem = self._origem_ok(exigir=False)
+                if origem is None:
+                    self.send_error(403)
+                    return
+                if caminho == "/sei/token" and not origem:  # o token só vai para extensões
+                    self.send_error(403)
+                    return
+                try:
+                    dados = api._extensao_dados() if caminho == "/apto" else api._ext_get(caminho, self.headers)
+                except Exception as e:
+                    logging.getLogger("rspe").warning("extensão: %s", e)
+                    self.send_error(500)
+                    return
+                if dados is None:
+                    self.send_error(404)
+                    return
+                self._responder(dados, origem)
+
+            def do_POST(self):
+                caminho = self.path.split("?")[0]
+                origem = self._origem_ok(exigir=True)
+                if origem is None or not (self.headers.get("Content-Type") or "").startswith("application/json"):
+                    self.send_error(403)
+                    return
+                try:
+                    n = int(self.headers.get("Content-Length") or 0)
+                except ValueError:
+                    n = -1
+                if n < 0 or n > rgabapi.MAX_CORPO:
+                    self.send_error(413)
+                    return
+                try:
+                    corpo = json.loads(self.rfile.read(n).decode("utf-8") or "{}")
+                    dados = api._ext_post(caminho, corpo if isinstance(corpo, dict) else {}, self.headers)
+                except Exception as e:
+                    logging.getLogger("rspe").exception("extensão: %s", caminho)
+                    self.send_error(500, str(e)[:100])
+                    return
+                if dados is None:
+                    self.send_error(404)
+                    return
+                self._responder(dados, origem)
+
+            def do_OPTIONS(self):
+                origem = self._origem_ok(exigir=True)
+                if origem is None:
+                    self.send_error(403)
+                    return
+                self.send_response(204)
+                self.send_header("Access-Control-Allow-Origin", origem)
+                self.send_header("Access-Control-Allow-Methods", "GET, POST")
+                self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+                self.end_headers()
 
         try:
             srv = http.server.ThreadingHTTPServer(("127.0.0.1", PORTA_EXTENSAO), Pedido)

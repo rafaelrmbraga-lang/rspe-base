@@ -612,6 +612,109 @@ tr.exp .chev{transform:rotate(90deg);color:var(--pri)}
 .box .acts{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;position:sticky;bottom:-22px;z-index:3;background:var(--card);padding:10px 0 2px;margin-bottom:-2px;box-shadow:0 -8px 10px -8px rgba(16,24,40,.12);flex:none}
 .help h4{margin:14px 0 4px;color:var(--tx);font-size:var(--fs-13)}
 .help h4:first-child{margin-top:0}
+/* (7.19) barra fixa das funções do APTO: Atendimentos | Execução | SEEU | SEI | Quadro | Relatório */
+:root{--fn-h:38px}
+.fnbar{flex:none;height:var(--fn-h);display:flex;align-items:stretch;gap:2px;padding:0 10px;background:var(--verde-16);color:var(--branco);position:relative;z-index:45;user-select:none}
+.fnbar .fnmarca{display:flex;align-items:center;padding:0 14px 0 6px;margin-right:6px;font-weight:700;letter-spacing:1.5px;font-size:var(--fs-13);border-right:1px solid rgba(255,255,255,.18)}
+.fnbar .fn{display:flex;align-items:center;gap:8px;padding:0 16px;border:0;background:none;color:rgba(255,255,255,.78);font:inherit;font-size:var(--fs-13);cursor:pointer;position:relative}
+.fnbar .fn svg{width:16px;height:16px}
+.fnbar .fn:hover{color:var(--branco);background:rgba(255,255,255,.08)}
+.fnbar .fn.on{color:var(--branco);font-weight:600;background:rgba(255,255,255,.12)}
+.fnbar .fn.on::after{content:"";position:absolute;left:10px;right:10px;bottom:0;height:3px;border-radius:var(--r-1) var(--r-1) 0 0;background:var(--verde-80)}
+.fnbar .fn:focus-visible{outline:2px solid var(--verde-80);outline-offset:-2px}
+.welcome,.loading{top:var(--fn-h)}
+body:not(.fn-exec) .top,body:not(.fn-exec) .corpo,body:not(.fn-exec) .btn-calc{display:none}
+body:not(.fn-exec) .welcome.on{display:none}
+.fnpag{display:none;flex:1;min-height:0;overflow:auto;background:var(--bg)}
+body:not(.fn-exec) .fnpag{display:block}
+.fnpag .fnbox{max-width:760px;margin:48px auto;padding:28px 32px;background:var(--card);border:1px solid var(--line);border-radius:var(--r-3)}
+.fnpag .fnbox h1{margin:0 0 6px;font-size:var(--fs-20)}
+.fnpag .fnbox p{color:var(--tx2);line-height:1.55;margin:8px 0}
+.fnpag .fnbox ul{margin:8px 0 0 18px;padding:0;color:var(--tx2);line-height:1.6}
+.fnpag .fnetapa{display:inline-block;margin-top:14px;padding:3px 10px;border-radius:var(--r-pill);background:var(--ambar-97-2);color:var(--ambar-37);font-size:var(--fs-12);font-weight:600}
+.fnpag .acts{margin-top:18px;display:flex;gap:8px}
+.fnpag.moldura{overflow:hidden}
+.fnpag iframe{display:block;width:100%;height:100%;border:0;background:var(--bg)}
+/* (7.21) SEEU (Mesa do Defensor) e SEI: mesma paleta, escalas e situação (forma + texto) do APTO */
+.fx{max-width:1320px;margin:0 auto;padding:18px 20px 48px}
+.fx-cab{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.fx-cab h1{margin:0;font-size:var(--fs-20)}
+.fx-cab .sub{margin:2px 0 0;color:var(--tx2);font-size:var(--fs-13)}
+.fx-cont{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.fx-cont button{display:flex;flex-direction:column;align-items:flex-start;gap:0;min-height:60px;padding:8px 14px;background:var(--card);border:1px solid var(--line);border-radius:var(--r-2);color:var(--tx);cursor:pointer;text-align:left;font:inherit}
+.fx-cont button:hover{border-color:var(--line2)}
+.fx-cont button b{font-size:var(--fs-24);line-height:1.1;font-variant-numeric:tabular-nums}
+.fx-cont button span{font-size:var(--fs-13);color:var(--tx2);font-weight:600}
+.fx-cont button.crit b{color:var(--r-tx)}
+.fx-cont button.urg b{color:var(--o-tx)}
+.fx-cont button.med b{color:var(--a-tx)}
+.fx-cont button.ok b{color:var(--g-tx)}
+.fx-cont button.on{border-color:var(--pri);box-shadow:inset 0 0 0 1px var(--pri);background:var(--pri-soft)}
+.fx-cont button:focus-visible,.fx-proc:focus-visible,.fx-docb:focus-visible,.fx-l:focus-visible,.fx-base:focus-visible{outline:3px solid var(--pri);outline-offset:2px}
+.fx-filtros{display:flex;gap:8px 10px;flex-wrap:wrap;align-items:center;margin-bottom:10px;font-size:var(--fs-13)}
+.fx-filtros input,.fx-filtros select,.fx-sei aside input{min-height:36px;padding:6px 10px;border:1px solid var(--line2);border-radius:var(--r-1);background:var(--card);color:var(--tx);font:inherit}
+.fx-filtros input{min-width:280px;flex:1 1 280px}
+.fx-tabw{overflow:auto;border:1px solid var(--line);border-radius:var(--r-2);background:var(--card)}
+.fx-tab{width:100%;border-collapse:collapse;font-size:var(--fs-13)}
+.fx-tab th{position:sticky;top:0;background:var(--folha);text-align:left;font-weight:600;color:var(--tx2);padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+.fx-tab td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+.fx-l{cursor:pointer}
+.fx-l:hover td{background:var(--sobre-1)}
+.fx-l.aberta td{background:var(--pri-soft)}
+.fx-prazo{white-space:nowrap}
+.fx-prazo > b,.fx-prazo > span{display:block}
+.vh{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.fx-prazo b{font-variant-numeric:tabular-nums}
+.fx-prazo.crit b,.fx-prazo.crit span:last-child{color:var(--r-tx)}
+.fx-prazo.urg b,.fx-prazo.urg span:last-child{color:var(--o-tx)}
+.fx-prazo.med b{color:var(--a-tx)}
+.fx-forte{font-weight:600}
+.fx-num{font-variant-numeric:tabular-nums}
+.fx-prov{font-weight:600}
+.fx-prov.urg{color:var(--r-tx)}
+.fx-base{margin-top:4px;padding:2px 8px;min-height:24px;border:1px solid var(--line2);border-radius:var(--r-pill);background:var(--card);color:var(--pri);font:inherit;font-size:var(--fs-12);cursor:pointer}
+.fx-base:hover{background:var(--pri-soft)}
+.fx-det td{background:var(--folha)}
+.fx-detg{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px 18px}
+.fx-detg h3,.fx-detp h3{margin:10px 0 4px;font-size:var(--fs-13);text-transform:uppercase;letter-spacing:.04em;color:var(--tx2)}
+.fx-detg p{margin:2px 0}
+.fx-txt{white-space:pre-wrap;color:var(--tx)}
+.fx-acoes{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;align-items:center}
+.fx-tag{display:inline-block;padding:1px 8px;border-radius:var(--r-pill);font-size:var(--fs-12);font-weight:600;white-space:nowrap}
+.fx-tag.crit{background:var(--r-bg);color:var(--r-tx)}
+.fx-tag.urg{background:var(--o-bg);color:var(--o-tx)}
+.fx-tag.med{background:var(--a-bg);color:var(--a-tx)}
+.fx-tag.ok{background:var(--g-bg);color:var(--g-tx)}
+.fx-tag.neu{background:var(--c-bg);color:var(--c-tx)}
+.fx-nada{text-align:center;color:var(--tx3);padding:22px}
+.fx-nota{margin-top:10px}
+.fx-vazio{max-width:760px;padding:22px 26px;background:var(--card);border:1px dashed var(--line2);border-radius:var(--r-3);line-height:1.55}
+.fx-vazio ol{margin:8px 0 8px 20px;padding:0}
+.fx-aviso{background:var(--ambar-97-2);color:var(--ambar-37);border-radius:var(--r-2);padding:8px 12px}
+.fx-sei{display:grid;grid-template-columns:minmax(280px,380px) minmax(0,1fr);gap:14px;align-items:start}
+.fx-sei aside{display:flex;flex-direction:column;gap:8px;position:sticky;top:0}
+.fx-procs li{margin:0;padding:0}
+.fx-procs{list-style:none;margin:0;padding:0;max-height:calc(100vh - 290px);overflow:auto;border:1px solid var(--line);border-radius:var(--r-2);background:var(--card)}
+.fx-proc{display:flex;flex-direction:column;align-items:flex-start;gap:1px;width:100%;padding:8px 12px;border:0;border-bottom:1px solid var(--line);background:none;color:var(--tx);font:inherit;text-align:left;cursor:pointer}
+.fx-proc:hover{background:var(--sobre-1)}
+.fx-proc.on{background:var(--pri-soft);box-shadow:inset 3px 0 0 var(--pri)}
+.fx-proc span{font-size:var(--fs-13)}
+.fx-proc small{color:var(--tx3);font-size:var(--fs-12)}
+#seiDet{background:var(--card);border:1px solid var(--line);border-radius:var(--r-2);padding:14px 18px;min-height:240px}
+#seiDet:focus{outline:none}
+.fx-detp h2{margin:0;font-size:var(--fs-16)}
+.fx-lista{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.fx-obr{padding:10px 12px;border:1px solid var(--line);border-left:4px solid var(--a-dot);border-radius:var(--r-2);background:var(--folha)}
+.fx-obr.validada{border-left-color:var(--g-dot)}
+.fx-obr.rejeitada,.fx-obr.substituida{border-left-color:var(--c-dot);opacity:.8}
+.fx-obrc{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.fx-fonte{margin:6px 0 2px;padding:4px 10px;border-left:3px solid var(--line2);color:var(--tx2);font-style:italic}
+.fx-doc{border:1px solid var(--line);border-radius:var(--r-2)}
+.fx-doc.subst{opacity:.75}
+.fx-docb{display:flex;flex-direction:column;align-items:flex-start;width:100%;padding:8px 12px;border:0;background:none;color:var(--tx);font:inherit;text-align:left;cursor:pointer}
+.fx-docb:hover{background:var(--sobre-1)}
+.fx-docx{padding:0 12px 10px}
+.fx-pre{white-space:pre-wrap;max-height:320px;overflow:auto;background:var(--folha);border:1px solid var(--line);border-radius:var(--r-1);padding:8px 10px;font:inherit;font-size:var(--fs-13)}
 /* tela inicial (sem base) */
 .welcome{position:fixed;inset:0;background:var(--bg);display:none;place-items:center;z-index:25}
 .btn-calc{position:relative;z-index:30}
@@ -1898,7 +2001,8 @@ td.act{white-space:nowrap}
 tbody td,.stat b,.dc-it,.jz-t b,.bd-leg td,.tabs .tab .cnt,.kv{font-variant-numeric:tabular-nums}
 </style>
 </head>
-<body>
+<body class="fn-exec">
+<nav class="fnbar" id="fnbar" role="tablist" aria-label="Funções do APTO"><span class="fnmarca">APTO</span><button class="fn" role="tab" id="fn_atend" aria-selected="false" title="Atendimentos (Ctrl+1)" onclick="ui.funcao('atend')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18.5 14a6 6 0 0 1 3 5.5"/></svg>Atendimentos</button><button class="fn on" role="tab" id="fn_exec" aria-selected="true" title="Execução (Ctrl+2)" onclick="ui.funcao('exec')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v14"/><path d="M2 21h20M9 7h6M9 11h6M9 15h4"/></svg>Execução</button><button class="fn" role="tab" id="fn_seeu" aria-selected="false" title="SEEU (Ctrl+3)" onclick="ui.funcao('seeu')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18M5 7h14M7 7l-3 7a3 3 0 0 0 6 0zM17 7l-3 7a3 3 0 0 0 6 0z"/><path d="M8 21h8"/></svg>SEEU</button><button class="fn" role="tab" id="fn_sei" aria-selected="false" title="SEI (Ctrl+4)" onclick="ui.funcao('sei')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 13h6M9 17h6"/></svg>SEI</button><button class="fn" role="tab" id="fn_quadro" aria-selected="false" title="Quadro (Ctrl+5)" onclick="ui.funcao('quadro')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/></svg>Quadro</button><button class="fn" role="tab" id="fn_rel" aria-selected="false" title="Relatório (Ctrl+6)" onclick="ui.funcao('rel')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Relatório</button></nav>
 
 <div class="top">
   <div class="logo"><img alt="APTO" src="data:image/png;base64,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"></div>
@@ -1964,6 +2068,7 @@ tbody td,.stat b,.dc-it,.jz-t b,.bd-leg td,.tabs .tab .cnt,.kv{font-variant-nume
 </main>
 </div>
 
+<section class="fnpag" id="fnPagina"><div id="fnConteudo" aria-live="polite"></div></section>
 <div class="veil" id="veil" onclick="ui.fecharDrawer()"></div>
 <aside class="drawer" id="drawer"></aside>
 
@@ -2007,7 +2112,7 @@ const ui = {
     document.getElementById('copia').innerHTML=d.copia?`<i></i>cópia de segurança: ${esc(d.copia.quando)}`:'';
     document.getElementById('hoje').textContent='Hoje '+d.hoje+(d.base_juridica?' · base jurídica '+d.base_juridica.versao:''); if(!this.dados.abas.concat(this.ABAS_EXTRA).find(a=>a.id===this.aba)) this.aba='geral'; this.render(); },
   // tela de carregamento: aparece assim que a base é escolhida e mostra a etapa (o Python avisa cada uma)
-  carregando(txt){ const e=document.getElementById('loadEtapa'); if(e) e.textContent=txt; },
+  carregando(txt){ if(this.fn!=='exec') this.funcao('exec'); const e=document.getElementById('loadEtapa'); if(e) e.textContent=txt; },
   async abrirBase(caminho, nome){
     if(!caminho){ try{ caminho=await API().escolher_base(); }catch(e){ return this.toast('Erro: '+e); } if(!caminho) return; }
     if(!nome) nome=String(caminho).split(/[\\/]/).pop().replace(/\.sqlite$/i,'');
@@ -4684,6 +4789,170 @@ new MutationObserver(()=>{ if(_kbAgendado) return; _kbAgendado=true; requestAnim
 kbFocaveis();
 document.addEventListener('keydown',e=>{ const el=e.target; if(!el||!el.hasAttribute||!el.hasAttribute('data-kb')) return;
   if(e.key==='Enter'||e.key===' '||e.key==='Spacebar'){ e.preventDefault(); el.click(); } });
+// (7.19) funções do APTO na barra fixa: Atendimentos, Execução (o APTO das bases), SEEU (Mesa do Defensor), SEI, Quadro e Relatório
+ui.FUNCOES={
+  exec:{titulo:'Execução'},
+  sei:{titulo:'SEI', html:()=>'<div class="fx" id="seiPag"><p class="muted">Carregando…</p></div>', depois(){ this.seiCarregar(); }},
+  atend:{titulo:'Atendimentos', painel:'atend'},
+  seeu:{titulo:'SEEU', html:()=>'<div class="fx" id="seeuPag"><p class="muted">Carregando…</p></div>', depois(){ this.seeuCarregar(); }},
+  rel:{titulo:'Relatório', painel:'rel'},
+  quadro:{titulo:'Quadro', painel:'quadro'},
+};
+ui.fn='exec';
+ui.funcao=function(id){ if(!this.FUNCOES[id]) return; this.fn=id; document.body.className=document.body.className.replace(/\bfn-\w+/g,'').trim()+' fn-'+id;
+  document.querySelectorAll('#fnbar .fn').forEach(b=>{ const on=b.id==='fn_'+id; b.classList.toggle('on',on); b.setAttribute('aria-selected',on?'true':'false'); });
+  const P=document.getElementById('fnPagina'), F=this.FUNCOES[id], C=document.getElementById('fnConteudo');
+  P.classList.toggle('moldura', !!F.painel);
+  C.hidden=!!F.painel || id==='exec'; C.innerHTML=F.html?F.html():'';
+  if(F.depois) F.depois.call(this);
+  let M=document.getElementById('atdFrame');
+  if(F.painel){ if(!M){ M=document.createElement('iframe'); M.id='atdFrame'; M.title='Atendimentos, Quadro e Relatório';
+      M.src='atendimentos/painel.html#'+F.painel; P.appendChild(M); }
+    else M.contentWindow&&M.contentWindow.postMessage({apto:'atd', evento:'aba', grupo:F.painel},'*');
+    M.hidden=false; }
+  else if(M) M.hidden=true; };
+// o painel (moldura) pede ao APTO: métodos atd_* do Python, ou ações da tela ("ui:...")
+window.addEventListener('message', async e=>{ const M=document.getElementById('atdFrame'); if(!M||e.source!==M.contentWindow) return;
+  const m=e.data||{}; if(m.apto!=='atd'||!m.id) return; let r=null, erro=null;
+  try{ const met=String(m.metodo||''), a=Array.isArray(m.args)?m.args:[], B=API_();
+    if(met.startsWith('ui:')) r=await ui.atdUi(met.slice(3), ...a);
+    else if(/^atd_[a-z_]+$/.test(met) && B && typeof B[met]==='function') r=await B[met](...a);
+    else erro=B?'função não disponível: '+met:'o APTO ainda está abrindo; tente de novo em instantes'; }
+  catch(x){ erro=String((x&&x.message)||x); }
+  M.contentWindow.postMessage({apto:'atd', id:m.id, r, erro},'*'); });
+// o Python avisa (fila e Fato Narrado lidos no SAP, aba do SAP aberta ou fechada): repassa ao painel
+ui.atdEvento=function(d){ const M=document.getElementById('atdFrame'); if(M&&M.contentWindow) M.contentWindow.postMessage(Object.assign({apto:'atd'}, d),'*'); };
+// pedidos da Execução (base aberta) para a tabela do mês: assunto -> coluna do CONTROLE (ofício conta como Ofícios)
+ui.PROV_COLUNA={'Progressão de regime':'PROG','Livramento condicional':'LC','Prescrição':'PRESC','Extinção da pena':'EXT','Remição':'REMICAO','Saída temporária':'ST'};
+ui.atdUi=async function(acao){ if(acao==='providenciasExecucao'){ if(!(this.dados&&this.dados.base&&this.dados.registros)) return {itens:[], base:''};
+    return {base:this.dados.base, itens:this.provLinhas().map(x=>({data:x.data, coluna:x.tipo==='Ofício à unidade prisional'?'OFICIO':x.tipo==='Outra providência'?'':(this.PROV_COLUNA[x.assunto]||(/^Indulto/.test(x.assunto)?'INDULTO':''))})).filter(x=>x.coluna)}; }
+  if(acao==='quadroExecucao'){ if(!(this.dados&&this.dados.base)){ this.toast('Abra uma base em Execução para o Quadro do Usuário dela.'); return {ok:false}; } this.funcao('exec'); this.irAba('quadro'); return {ok:true}; }
+  if(acao==='relatoriosExecucao'){ if(!(this.dados&&this.dados.base)){ this.toast('Abra uma base em Execução para os relatórios da Execução.'); return {ok:false}; }
+    this.funcao('exec'); this.modalRelatorios(); return {ok:true}; }
+  return {erro:'ação desconhecida'}; };
+// Ctrl+1 ... Ctrl+6 trocam de função (Alt+número continua para as abas da Execução)
+document.addEventListener('keydown',e=>{ if(!e.ctrlKey||e.altKey||e.shiftKey||e.metaKey||!/^[1-6]$/.test(e.key)) return; e.preventDefault(); ui.funcao(['atend','exec','seeu','sei','quadro','rel'][+e.key-1]); });
+// (7.21) SEEU (Mesa do Defensor) e SEI: telas do APTO para o que a extensão leu. Tudo só leitura no sistema de origem; as
+// sugestões (providência da triagem, obrigação do SEI) só viram tarefa quando a pessoa manda ao Quadro ou valida.
+ui.fxDias=function(br){ const m=/(\d{2})\/(\d{2})\/(\d{4})/.exec(br||''); if(!m) return null; const h=new Date(); h.setHours(0,0,0,0);
+  return Math.round((new Date(+m[3],+m[2]-1,+m[1])-h)/864e5); };
+// nível do prazo na escala única do APTO (forma + texto, nunca só a cor): até 2 dias = agir já
+ui.fxNivel=d=>d==null?'neu':d<0?'crit':d<=2?'urg':d<=5?'med':'prox';
+ui.FX_FORMA={crit:'◆',urg:'▲',med:'●',prox:'○',neu:'–',ok:'✓'};
+ui.fxDig=s=>String(s||'').replace(/\D/g,'');
+ui.fxNaBase=function(proc){ const d=this.fxDig(proc); if(d.length<15) return null; return (this.dados.registros||[]).find(r=>this.fxDig(r.proc)===d)||null; };
+ui.fxCont=function(id, itens, ativo, aoClicar){ return `<div class="fx-cont" role="group" aria-label="Filtrar">${itens.map(([k,n,rot,cls])=>`<button type="button" class="${cls||''}${ativo===k?' on':''}" aria-pressed="${ativo===k}" onclick="${aoClicar}(${jsa(k)})"><b>${n}</b><span>${esc(rot)}</span></button>`).join('')}</div>`; };
+
+// ---------------- SEEU ----------------
+ui.seeu={f:'todos', q:'', def:'', aba:'', abertos:new Set()};
+ui.seeuCarregar=async function(){ const B=API_(); try{ this._seeu=B&&B.seeu_triagem? (await B.seeu_triagem())||{}:{}; }catch(e){ this._seeu={}; } this.seeuPintar(); };
+ui.seeuEvento=function(){ if(this.fn==='seeu') this.seeuCarregar(); else this._seeu=null; };
+ui.seeuFiltro=function(k){ this.seeu.f=this.seeu.f===k?'todos':k; this.seeuPintar(); };
+ui.seeuLinhas=function(){ const T=this._seeu||{}, S=this.seeu, q=semAcento(S.q||'');
+  return (T.linhas||[]).filter(l=>{ const a=l.analise, d=this.fxDias(l.ultimoDia);
+    if(S.def && l.defensor!==S.def) return false; if(S.aba && l.aba!==S.aba) return false;
+    if(q && !semAcento(l.processo+' '+l.executado+' '+(a&&a.providencia?a.providencia.texto:'')).includes(q)) return false;
+    if(S.f==='lidos') return a&&a.status==='ok'; if(S.f==='urg') return a&&a.providencia&&a.providencia.urgente;
+    if(S.f==='perto') return d!=null&&d<=2; if(S.f==='base') return !!this.fxNaBase(l.processo); return true; })
+    .sort((x,y)=>{ const dx=this.fxDias(x.ultimoDia), dy=this.fxDias(y.ultimoDia); return (dx==null?9999:dx)-(dy==null?9999:dy) || x.processo.localeCompare(y.processo); }); };
+ui.seeuPintar=function(){ const P=document.getElementById('seeuPag'); if(!P) return; const T=this._seeu;
+  if(!T){ P.innerHTML='<p class="muted">Carregando…</p>'; return; }
+  if(!(T.linhas||[]).length){ P.innerHTML=`<div class="fx-cab"><div><h1>SEEU · Mesa do Defensor</h1><p class="sub">Nenhuma triagem recebida ainda.</p></div></div>
+    <div class="fx-vazio"><b>Como trazer a Mesa para cá</b><ol><li>Abra o SEEU no navegador e entre com a sua conta.</li><li>Clique no ícone do APTO na barra do navegador &gt; <b>Triagem da Mesa do Defensor</b>.</li>
+    <li>Use <b>1 · Ler a Mesa</b> e <b>2 · Ler processos e decisões</b>. O resultado aparece aqui sozinho, com este programa aberto.</li></ol>
+    <p class="muted">A extensão só lê o SEEU, na sua sessão. Nada é enviado para fora do computador.</p></div>`; return; }
+  const L=this.seeuLinhas(), todas=T.linhas, S=this.seeu;
+  const lidos=todas.filter(l=>l.analise&&l.analise.status==='ok').length, urg=todas.filter(l=>l.analise&&l.analise.providencia&&l.analise.providencia.urgente).length;
+  const perto=todas.filter(l=>{ const d=this.fxDias(l.ultimoDia); return d!=null&&d<=2; }).length, base=todas.filter(l=>this.fxNaBase(l.processo)).length;
+  const defs=[...new Set(todas.map(l=>l.defensor).filter(Boolean))].sort(), abas=[...new Set(todas.map(l=>l.aba).filter(Boolean))];
+  const rotPrazo=T.situacao===1?'Leitura até':T.situacao===2?'Resposta até':'Último dia';
+  const linha=l=>{ const a=l.analise||null, d=this.fxDias(l.ultimoDia), nv=this.fxNivel(d), r=this.fxNaBase(l.processo), k=l.aba+'|'+l.processo, ab=S.abertos.has(k);
+    const falta=d==null?'':d<0?'venceu':d===0?'vence hoje':'faltam '+d+' d';
+    const mot=!a?'<span class="muted">não lido</span>':a.status==='erro'?`<span class="fx-tag crit">erro</span> ${esc(a.erro)}`:a.status!=='ok'?'<span class="muted">não lido</span>':
+      `<div class="fx-forte">${esc(a.pendencia?a.pendencia.texto:'sem pendência no quadro')}</div><div class="muted">${a.motivo?esc('seq. '+a.motivo.seq+' · '+a.motivo.data):''}</div>`;
+    const dec=a&&a.status==='ok'?(a.decisao?`<div class="fx-forte">${esc(a.decisao.nome)}${a.mesma?' <span class="muted">(é o motivo)</span>':''}</div><div class="muted">${esc('seq. '+a.decisao.seq+' · '+a.decisao.data)}</div>`:'<span class="muted">nenhum ato do juiz com documento</span>'):'';
+    const pv=a&&a.providencia?`<div class="fx-prov${a.providencia.urgente?' urg':''}">${a.providencia.urgente?'<span aria-hidden="true">▲</span> ':''}${esc(a.providencia.texto)}${a.providencia.urgente?'<span class="vh"> (urgente)</span>':''}</div><div class="muted">${esc(a.providencia.tipo)}</div>`:'';
+    const det=ab?`<tr class="fx-det"><td colspan="6"><div class="fx-detg">
+      ${a&&a.motivo?`<div><h3>Motivo da intimação</h3><p>${esc(a.motivo.nome)}</p><p class="fx-txt">${esc(a.motivo.resumo||(a.motivo.semTexto?'documento sem texto (escaneado): abrir no SEEU':a.motivo.erroDoc?'documento não lido: '+a.motivo.erroDoc:''))}</p></div>`:''}
+      ${a&&a.decisao&&!a.mesma?`<div><h3>Última decisão</h3><p>${esc(a.decisao.nome)}</p><p class="fx-txt">${esc(a.decisao.resumo||'')}</p></div>`:''}
+      ${a&&(a.alertas||[]).length?`<div><h3>Alertas</h3><ul>${a.alertas.map(x=>`<li><span class="fx-tag ${x.nivel==='alto'?'crit':x.nivel==='medio'?'urg':'neu'}">${esc(x.nivel)}</span> ${esc(x.txt)}</li>`).join('')}</ul></div>`:''}
+      <div><h3>Na Mesa</h3><p class="muted">${esc([l.aba,l.classe,l.assunto&&'('+l.assunto+')','enviado '+(l.dataEnvio||'—'),'resposta: '+(l.prazo||'—')].filter(Boolean).join(' · '))}</p>
+      <div class="fx-acoes">${l.url?`<button type="button" class="btn" onclick="ui.seeuAbrir(${jsa(l.url)})">Abrir no SEEU</button>`:''}
+      ${a&&a.providencia?`<button type="button" class="btn" onclick="ui.seeuQuadro(${jsa(k)})">Enviar ao Quadro</button>`:''}</div></div></div></td></tr>`:'';
+    return `<tr class="fx-l${ab?' aberta':''}" tabindex="0" aria-expanded="${ab}" onclick="ui.seeuAbrirLinha(event,${jsa(k)})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();ui.seeuAbrirLinha(event,${jsa(k)})}">
+      <td class="fx-prazo ${nv}"><span class="muted">${rotPrazo}</span><b><span aria-hidden="true">${this.FX_FORMA[nv]}</span> ${esc(l.ultimoDia||'—')}</b><span>${esc(falta)}</span></td>
+      <td><div class="fx-forte fx-num">${esc(l.processo)}</div><div>${esc(l.executado||'—')}</div>${r?`<button type="button" class="fx-base" title="Abrir a ficha na base aberta em Execução" onclick="event.stopPropagation();ui.abrir(${jsa(r.id)})">na base · abrir ficha</button>`:''}</td>
+      <td><div>${esc(l.aba)}</div><div class="muted">${esc(l.defensor||'sem defensor')}</div></td><td>${mot}</td><td>${dec}</td><td>${pv}</td></tr>${det}`; };
+  P.innerHTML=`<div class="fx-cab"><div><h1>SEEU · Mesa do Defensor</h1><p class="sub">Triagem lida em ${esc(T.quando?new Date(T.quando).toLocaleString('pt-BR'):'—')} · ${esc(T.situacaoNome||'')} · recebida pelo APTO em ${esc(T.recebida||'—')}</p></div>
+    <span class="spacer"></span><button type="button" class="btn" onclick="ui.seeuCarregar()">Atualizar</button></div>
+    ${this.fxCont('seeu',[['todos',todas.length,'na Mesa'],['lidos',lidos,'lidos'],['urg',urg,'providência urgente','crit'],['perto',perto,'prazo em até 2 dias','urg'],['base',base,'na base aberta']],S.f,'ui.seeuFiltro')}
+    <div class="fx-filtros"><label class="vh" for="seeuQ">Buscar</label><input id="seeuQ" type="search" placeholder="Buscar nome, processo ou providência" value="${esc(S.q)}" oninput="ui.seeu.q=this.value;ui.seeuPintar();document.getElementById('seeuQ').focus()">
+      <label for="seeuDef">Defensor</label><select id="seeuDef" onchange="ui.seeu.def=this.value;ui.seeuPintar()"><option value="">todos</option>${defs.map(x=>`<option ${S.def===x?'selected':''}>${esc(x)}</option>`).join('')}</select>
+      <label for="seeuAba">Aba</label><select id="seeuAba" onchange="ui.seeu.aba=this.value;ui.seeuPintar()"><option value="">todas</option>${abas.map(x=>`<option ${S.aba===x?'selected':''}>${esc(x)}</option>`).join('')}</select>
+      <span class="muted">${L.length} de ${todas.length}</span></div>
+    <div class="fx-tabw"><table class="fx-tab"><thead><tr><th scope="col">Prazo</th><th scope="col">Processo e assistido</th><th scope="col">Aba e defensor</th><th scope="col">Motivo</th><th scope="col">Última decisão</th><th scope="col">Providência sugerida</th></tr></thead>
+    <tbody>${L.length?L.map(linha).join(''):'<tr><td colspan="6" class="fx-nada">Nenhum processo neste filtro.</td></tr>'}</tbody></table></div>
+    <p class="muted fx-nota">A providência é sugestão da triagem, para conferir; o processo continua no SEEU. "na base" liga o nº do processo a um assistido da base aberta em Execução.</p>`;
+  const q=document.getElementById('seeuQ'); if(q&&S.q){ q.setSelectionRange(S.q.length,S.q.length); } };
+ui.seeuAbrirLinha=function(ev,k){ if(ev.target.closest('button,a,select,input')) return; const A=this.seeu.abertos; A.has(k)?A.delete(k):A.add(k); this.seeuPintar(); };
+ui.seeuAbrir=async function(url){ const B=API_(); const r=B&&B.abrir_seeu?await B.abrir_seeu(url):{erro:'indisponível'}; if(r&&r.erro) this.toast(r.erro,{erro:true}); };
+ui.seeuQuadro=async function(k){ const l=((this._seeu||{}).linhas||[]).find(x=>x.aba+'|'+x.processo===k); if(!l||!l.analise||!l.analise.providencia) return;
+  const r=await API_().seeu_para_quadro(l.processo, l.executado, l.analise.providencia.texto, l.ultimoDia); this.toast(r&&r.ok?'Enviado ao Quadro (A fazer), com o último dia da Mesa como prazo.':(r&&r.erro)||'Falha.'); };
+
+// ---------------- SEI ----------------
+ui.sei={q:'', f:'todos', sel:null, docs:new Set()};
+ui.seiCarregar=async function(){ const B=API_(); try{ this._sei=B&&B.sei_resumo? await B.sei_resumo():{processos:[],totais:{}}; }catch(e){ this._sei={processos:[],totais:{}}; }
+  if(this.sei.sel){ try{ this._seiP=await API_().sei_processo(this.sei.sel); }catch(e){ this._seiP=null; } } this.seiPintar(); };
+ui.seiEvento=function(){ clearTimeout(this._seiT); this._seiT=setTimeout(()=>{ if(this.fn==='sei') this.seiCarregar(); else this._sei=null; },800); };
+ui.seiFiltro=function(k){ this.sei.f=this.sei.f===k?'todos':k; this.seiPintar(); };
+ui.seiAbrirProc=async function(n){ this.sei.sel=n; this.sei.docs=new Set(); this._seiP=await API_().sei_processo(n); this.seiPintar(); const d=document.getElementById('seiDet'); if(d) d.focus(); };
+ui.seiDecidir=async function(id, st){ let motivo=''; if(st==='rejeitada'){ motivo=prompt('Motivo para rejeitar a sugestão (fica registrado):',''); if(motivo===null) return; }
+  const r=await API_().sei_decidir(id, st, motivo); if(r&&r.erro){ this.toast(r.erro,{erro:true}); return; } await this.seiCarregar(); };
+ui.seiQuadro=async function(id){ const r=await API_().sei_para_quadro(id); this.toast(r&&r.ok?'Enviado ao Quadro (A fazer).':(r&&r.erro)||'Falha.',{erro:!(r&&r.ok)}); await this.seiCarregar(); };
+ui.seiDoc=function(id){ const D=this.sei.docs; D.has(id)?D.delete(id):D.add(id); this.seiPintar(); };
+ui.SEI_ST={sugestao:['Sugestão','med'],validada:['Validada','ok'],rejeitada:['Rejeitada','neu'],substituida:['Substituída','neu']};
+ui.seiPintar=function(){ const P=document.getElementById('seiPag'); if(!P) return; const R=this._sei;
+  if(!R){ P.innerHTML='<p class="muted">Carregando…</p>'; return; }
+  const T=R.totais||{}, S=this.sei;
+  if(!(R.processos||[]).length){ P.innerHTML=`<div class="fx-cab"><div><h1>SEI</h1><p class="sub">Nenhum processo do SEI lido ainda.</p></div></div>
+    <div class="fx-vazio"><b>Como trazer o SEI para cá</b><ol><li>No navegador, entre no SEI da Defensoria e abra o <b>Controle de Processos</b> (a leitura começa dele).</li>
+    <li>Com este programa aberto, clique no ícone do APTO na barra do navegador &gt; <b>Leitura do SEI para o APTO</b> (o endereço do SEI já vem preenchido).</li><li>Escolha o que ler e clique em <b>Iniciar leitura…</b>. Deixe a página aberta até terminar.</li></ol>
+    <p class="fx-aviso">Ainda não lido: anexos em PDF (só os documentos feitos no SEI) e a lista paginada (se o SEI mostrar a lista em várias páginas, só a primeira é lida, com aviso).</p>
+    <p class="muted">A leitura é só leitura, na sua sessão: nada é escrito no SEI, e nada vai para fora do computador.</p></div>`; return; }
+  const q=semAcento(S.q||'');
+  const Ps=R.processos.filter(p=>(!q||semAcento(p.original+' '+p.especificacao+' '+p.unidade).includes(q)) &&
+    (S.f==='todos' || (S.f==='sug'&&p.obrigacoes.sugestao) || (S.f==='val'&&p.obrigacoes.validada) || (S.f==='falhas'&&p.falhas) || (S.f==='fora'&&p.fora_da_lista)));
+  const lista=Ps.map(p=>`<li><button type="button" class="fx-proc${S.sel===p.numero?' on':''}" aria-current="${S.sel===p.numero}" onclick="ui.seiAbrirProc(${jsa(p.numero)})">
+    <b class="fx-num">${esc(p.original)}</b><span>${esc(p.especificacao||'(sem especificação)')}</span>
+    <small>${esc(p.unidade||'')}${p.documentos?' · '+p.documentos+' doc.':''}${p.obrigacoes.sugestao?` · <span class="fx-tag med">● ${p.obrigacoes.sugestao} a validar</span>`:''}${p.falhas?` · <span class="fx-tag crit">◆ ${p.falhas} falha(s)</span>`:''}${p.fora_da_lista?' · <span class="fx-tag neu">fora da lista</span>':''}</small></button></li>`).join('')||'<li class="fx-nada">Nenhum processo neste filtro.</li>';
+  const D=this._seiP && this._seiP.numero===S.sel ? this._seiP : null;
+  const prazo=o=>o.prazo_natureza==='expresso'?`<span class="fx-tag urg">▲ prazo no documento: ${esc(o.prazo_quantidade+' '+o.prazo_unidade)}</span> <span class="muted">vencimento não calculado (o termo inicial não é presumido)</span>`:
+    o.prazo_natureza==='nao_identificado'?'<span class="fx-tag med">● urgência sem prazo em número</span>':'<span class="muted">sem prazo no texto</span>';
+  const obr=o=>{ const st=this.SEI_ST[o.status]||[o.status,'neu'];
+    return `<li class="fx-obr ${o.status}"><div class="fx-obrc"><span class="fx-tag ${st[1]}">${this.FX_FORMA[st[1]]} ${esc(st[0])}</span><b>${esc(o.descricao)}</b></div>
+      ${o.destinatario?`<div class="muted">Para: ${esc(o.destinatario)}</div>`:''}<div>${prazo(o)}</div>
+      <blockquote class="fx-fonte" title="Frase do documento (fonte)">“${esc(o.frase)}”</blockquote><div class="muted">regra «${esc(String(o.regra||'').split(':').pop())}» (${esc(String(o.regra||'').split(':')[0])})${o.motivo?' · '+esc(o.motivo):''}${o.decidido_em?' · '+esc(o.decidido_em):''}</div>
+      <div class="fx-acoes">${o.status==='sugestao'?`<button type="button" class="btn pri" onclick="ui.seiDecidir(${o.id},'validada')">Validar</button><button type="button" class="btn" onclick="ui.seiDecidir(${o.id},'rejeitada')">Rejeitar…</button>`:''}
+      ${o.status==='validada'||o.status==='rejeitada'?`<button type="button" class="btn ghost" onclick="ui.seiDecidir(${o.id},'sugestao')">Voltar a sugestão</button>`:''}
+      ${o.status!=='substituida'&&o.status!=='rejeitada'?(o.quadro?'<span class="muted">✓ no Quadro</span>':`<button type="button" class="btn" onclick="ui.seiQuadro(${o.id})">Enviar ao Quadro</button>`):''}</div></li>`; };
+  const doc=d=>{ const ab=S.docs.has(d.id);
+    return `<li class="fx-doc${d.substituido_por?' subst':''}"><button type="button" class="fx-docb" aria-expanded="${ab}" onclick="ui.seiDoc(${d.id})"><b>${esc(d.titulo||'(sem título)')}</b>
+      <span class="muted">${esc([d.tipo_nome?d.tipo_nome+' (sugerido, confiança '+d.tipo_confianca+')':'tipo não reconhecido', d.versao&&'versão '+d.versao, 'recebido '+d.recebido, d.substituido_por&&'substituído por versão nova'].filter(Boolean).join(' · '))}</span></button>
+      ${ab?`<div class="fx-docx">${(d.sinalizacoes||[]).length?`<p class="fx-aviso">${d.sinalizacoes.map(x=>esc(x.descricao)+': “'+esc(x.frase)+'”').join('<br>')}</p>`:''}${d.prazo_expresso?`<p class="muted">Prazo no texto: ${esc(d.prazo_expresso.quantidade+' '+d.prazo_expresso.unidade)} (“${esc(d.prazo_expresso.trecho)}”)</p>`:''}<pre class="fx-pre">${esc(d.texto)}</pre></div>`:''}</li>`; };
+  const det=!S.sel?'<div class="fx-vazio"><b>Escolha um processo</b><p class="muted">À esquerda. As obrigações sugeridas pelas regras (com a frase do documento) aparecem aqui para validar.</p></div>':
+    !D?'<p class="muted">Carregando…</p>':`<div class="fx-detp"><h2>${esc(D.original)}</h2><p class="muted">${esc([D.especificacao, D.unidade, 'atualizado '+D.atualizado, D.fora_da_lista&&'não aparece mais na lista do SEI'].filter(Boolean).join(' · '))}</p>
+      ${(D.falhas||[]).length?`<p class="fx-aviso">◆ ${D.falhas.length} item(ns) com falha ou inacessível: ${D.falhas.map(f=>esc(f.id_sei+' ('+(f.mensagem||f.estado)+')')).join('; ')}. A leitura deste processo não está completa.</p>`:''}
+      <h3>Obrigações sugeridas <span class="muted">(${D.obrigacoes.length})</span></h3>${D.obrigacoes.length?`<ul class="fx-lista">${D.obrigacoes.slice().sort((a,b)=>(a.status==='sugestao'?0:1)-(b.status==='sugestao'?0:1)).map(obr).join('')}</ul>`:'<p class="muted">Nenhuma determinação, solicitação ou recomendação reconhecida pelas regras.</p>'}
+      <h3>Documentos <span class="muted">(${D.documentos.length})</span></h3><ul class="fx-lista">${D.documentos.map(doc).join('')}</ul>
+      ${(D.eventos||[]).length?`<h3>Mudanças</h3><ul class="fx-lista">${D.eventos.map(e=>`<li class="muted">${esc(e.quando)} · ${esc(e.descricao)}</li>`).join('')}</ul>`:''}</div>`;
+  const U=R.ultima;
+  P.innerHTML=`<div class="fx-cab"><div><h1>SEI</h1><p class="sub">${U?esc('Última leitura: '+(U.concluida||U.iniciada)+' · '+(U.status==='concluida'?'concluída':U.status)+' · '+U.novos+' novo(s), '+U.modificados+' alterado(s)'+(U.falhas?', '+U.falhas+' falha(s)':'')):''}</p></div>
+    <span class="spacer"></span><button type="button" class="btn" onclick="ui.seiCarregar()">Atualizar</button></div>
+    ${this.fxCont('sei',[['todos',T.processos||0,'processos'],['sug',T.sugestoes||0,'obrigações a validar','med'],['val',T.validadas||0,'validadas','ok'],['falhas',T.falhas||0,'falhas de leitura','crit']],S.f,'ui.seiFiltro')}
+    <div class="fx-sei"><aside><label class="vh" for="seiQ">Buscar processo</label><input id="seiQ" type="search" placeholder="Buscar nº, especificação ou unidade" value="${esc(S.q)}" oninput="ui.sei.q=this.value;ui.seiPintar();document.getElementById('seiQ').focus()">
+      <ul class="fx-procs">${lista}</ul></aside><section id="seiDet" tabindex="-1" aria-live="polite">${det}</section></div>
+    <p class="muted fx-nota">Obrigação e prazo são sugestões das regras do NUSPEN, sempre com a frase do documento; só a pessoa valida. O APTO nunca escreve no SEI.</p>`;
+  const q2=document.getElementById('seiQ'); if(q2&&S.q){ q2.setSelectionRange(S.q.length,S.q.length); } };
 window.addEventListener('pywebviewready', ()=>api('listar'));
 // cabeçalho das tabelas internas da linha aberta (aba Ficha) fica preso logo abaixo do cabeçalho principal ao rolar
 // (a posição é a borda inferior real do cabeçalho principal dentro da lista, medida a cada rolagem, clique, mudança de letra ou janela)

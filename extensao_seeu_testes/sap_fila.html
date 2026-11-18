@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><title>SAP fictício - Assistidos em Espera</title></head>
+<body>
+<!-- imitação mínima (dados fictícios) da tela de atendimento do SAP: fila "Assistidos em Espera" (PrimeFaces), quadro
+     "Registrar Atendimento" e a janela do Fato Narrado. Os scripts abaixo fazem o papel do SAP (selecionar, chamar, abrir/fechar). -->
+<form id="form_espera">
+<div id="form_espera:listaAssistidoEspera" class="ui-datatable">
+  <table><thead><tr>
+    <th><span class="ui-column-title">Nome Assistido</span></th><th><span class="ui-column-title">Senha</span></th>
+    <th><span class="ui-column-title">Chegada</span></th><th><span class="ui-column-title">Unidade</span></th>
+    <th><span class="ui-column-title">Defensor</span></th><th><span class="ui-column-title">Status</span></th>
+    <th><span class="ui-column-title">Data Desig.</span></th></tr></thead>
+  <tbody id="form_espera:listaAssistidoEspera_data"></tbody></table>
+</div>
+<ul><li id="form_espera:chamar" onclick="sapChamar()">Chamar</li><li id="form_espera:cancelar" onclick="window.__cancelou=true">Cancelar</li></ul>
+</form>
+<form id="form_registra">
+  <div id="form_registra:pHeaderFormRegistra"></div>
+  <input type="radio" name="forma" value="PRESENCIAL" id="rp"><input type="radio" name="forma" value="VIRTUAL" id="rv">
+  <button type="button" id="form_registra:btFato" onclick="sapAbrirFato()">Fato Narrado</button>
+  <button type="button" id="form_registra:salvar" onclick="window.__salvou=true">Salvar</button>
+</form>
+<div id="form_dialogFato:dialogFato" class="ui-dialog" style="display:none">
+  <div class="ui-dialog-titlebar"><span id="form_dialogFato:dialogFato_title"><span>Assistido:</span> <span id="tituloNome"></span></span>
+    <a class="ui-dialog-titlebar-close" href="#" onclick="sapFecharFato();return false">x</a></div>
+  <div id="form_dialogFato:tbFato" class="ui-datatable"><table><thead><tr>
+    <th><span class="ui-column-title">Data Cadastro</span></th><th><span class="ui-column-title">Defensor</span></th><th><span class="ui-column-title">Fato Narrado</span></th></tr></thead>
+    <tbody id="form_dialogFato:tbFato_data"></tbody></table></div>
+</div>
+<script>
+  const hoje = new Date(); const p = (n) => String(n).padStart(2, "0");
+  const HOJE = `${p(hoje.getDate())}/${p(hoje.getMonth() + 1)}/${hoje.getFullYear()}`;
+  window.FILA = [
+    { rk: "101", nome: "FULANO DE TAL FICTICIO", tipo: "P", chegada: "", status: "AGUARDANDO", hora: "08:30" },
+    { rk: "102", nome: "BELTRANA DA SILVA FICTICIA (USAR ESTE)", tipo: "V", chegada: "", status: "AGUARDANDO", hora: "09:00" },
+    { rk: "103", nome: "CICLANO FICTICIO", tipo: "P", chegada: "08:41", status: "PRESENTE", hora: "09:30" },
+  ];
+  window.FATOS = {
+    "FULANO DE TAL FICTICIO": "Atendimento solicitado pela genitora.\nTelefone de contato: (67) 99999-0001 (mãe)\nProcesso: 0000001-11.2024.8.12.0001\nDeseja saída temporária.",
+    "BELTRANA DA SILVA FICTICIA (USAR ESTE)": "Atendimento via telefone.\nProcesso: 0000002-22.2023.8.12.0001\nDúvida sobre o cálculo.",
+  };
+  window.chamados = [];
+  function desenhar() {
+    const t = document.getElementById("form_espera:listaAssistidoEspera_data");
+    const novo = document.createElement("tbody"); novo.id = t.id;
+    for (const x of FILA) {
+      const tr = document.createElement("tr"); tr.setAttribute("data-rk", x.rk); tr.setAttribute("aria-selected", String(window.sel === x.rk));
+      tr.innerHTML = `<td><span>${x.nome}</span> <b id="r${x.rk}:idtoolTipoAtendimento">${x.tipo}</b></td><td>1</td><td>${x.chegada}</td><td>3ª DPEP</td><td>Def. Fictício</td><td>${x.status}</td><td>${HOJE} ${x.hora}</td>`;
+      tr.children[0].addEventListener("click", () => sapSelecionar(x.rk));
+      novo.appendChild(tr);
+    }
+    t.replaceWith(novo);
+  }
+  function sapSelecionar(rk) {
+    window.sel = rk;
+    setTimeout(() => { const x = FILA.find((y) => y.rk === rk);
+      document.getElementById("form_registra:pHeaderFormRegistra").textContent = x.nome;
+      document.getElementById(x.tipo === "V" ? "rv" : "rp").checked = true; desenhar(); }, 120);
+  }
+  function sapChamar() { chamados.push(window.sel); setTimeout(desenhar, 100); }
+  function sapAbrirFato() {
+    const nome = document.getElementById("form_registra:pHeaderFormRegistra").textContent;
+    const d = document.getElementById("form_dialogFato:dialogFato");
+    setTimeout(() => {
+      document.getElementById("tituloNome").textContent = nome;
+      const f = FATOS[nome];
+      document.getElementById("form_dialogFato:tbFato_data").innerHTML = f ? `<tr><td>10/11/2026 10:00</td><td>Defensor Fictício</td><td>${f.replace(/\n/g, "<br>")}</td></tr>`
+        : '<tr class="ui-datatable-empty-message"><td colspan="3">Nenhum registro</td></tr>';
+      d.style.display = "block";
+    }, 150);
+  }
+  function sapFecharFato() { document.getElementById("form_dialogFato:dialogFato").style.display = "none"; }
+  desenhar();
+</script>
+</body></html>

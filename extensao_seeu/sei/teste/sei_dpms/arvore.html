@@ -1,0 +1,11 @@
+<html><head><script>
+var Nos = new Array(); var Acoes = new Array();
+Nos[0] = new infraArvoreNo("PROCESSO","111",null,"controlador.php?acao=arvore_visualizar&acao_origem=procedimento_visualizar&id_procedimento=111&infra_hash=a0","ifrConteudoVisualizacao","Inspeção fictícia","99/000111/2026","svg/processo.svg","svg/processo.svg","svg/processo.svg",true,true,null,null,"99/000111/2026","PROCESSO");
+Nos[0].src = '';
+Nos[1] = new infraArvoreNo("DOCUMENTO","5001","111","controlador.php?acao=arvore_visualizar&acao_origem=procedimento_visualizar&id_documento=5001&infra_hash=a1","ifrConteudoVisualizacao","Despacho NUSPEN","Despacho 1000001","svg/documento_interno.svg","svg/documento_interno.svg","svg/documento_interno.svg",true,true,null,null,"18/11/2026","1000001");
+Nos[1].src = 'controlador.php?acao=documento_visualizar&acao_origem=procedimento_visualizar&id_documento=5001&arvore=1&infra_hash=d1';
+Nos[2] = new infraArvoreNo("DOCUMENTO","5002","111","controlador.php?acao=arvore_visualizar&id_documento=5002&infra_hash=a2","ifrConteudoVisualizacao","Ofício \"Direção\"","Ofício 1000002","svg/documento_interno.svg","svg/documento_interno.svg","svg/documento_interno.svg",true,true,null,null,"18/11/2026","1000002");
+Nos[2].src = "controlador.php?acao=documento_visualizar&id_documento=5002&infra_hash=d2";
+Nos[3] = new infraArvoreNo("DOCUMENTO","5003","111","controlador.php?acao=arvore_visualizar&id_documento=5003&infra_hash=a3","ifrConteudoVisualizacao","Anexo","Relatório (PDF) 1000003","svg/pdf.svg","svg/pdf.svg","svg/pdf.svg",true,true,null,null,"18/11/2026","1000003");
+Nos[3].src = 'controlador.php?acao=documento_download_anexo&id_anexo=9&infra_hash=d3';
+</script></head><body><div id="divArvore"></div><form id="frmArvore"></form></body></html>

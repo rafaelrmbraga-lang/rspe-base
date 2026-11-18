@@ -26,7 +26,31 @@ async function carregarGuardados() {
   if (r.triagemUltima && r.triagemUltima.linhas) estado = Object.assign(estado, r.triagemUltima);
 }
 const guardarPrefs = () => chrome.storage.local.set({ triagemPrefs: prefs });
-const guardarEstado = () => chrome.storage.local.set({ triagemUltima: estado }).catch(() => {});
+const guardarEstado = () => { enviarAoApto(); return chrome.storage.local.set({ triagemUltima: estado }).catch(() => {}); };
+// a triagem vai também para o APTO (função SEEU): um resumo de cada linha (sem os textos inteiros dos documentos), no máximo a
+// cada 3 s; com o APTO fechado, vai na próxima vez
+let aptoAgendado = null;
+function enviarAoApto() {
+  clearTimeout(aptoAgendado);
+  aptoAgendado = setTimeout(async () => {
+    const curto = (m) => (m ? { nome: m.nome || "", seq: m.seq || "", data: m.data || "", resumo: m.doc && !m.doc.erro ? T.resumir(m.doc.resumo || "", 500) : "",
+      erroDoc: m.doc && m.doc.erro ? String(m.doc.erro).slice(0, 200) : "", semTexto: !!(m.doc && m.doc.semTexto) } : null);
+    const linhas = estado.linhas.map((l) => {
+      const a = estado.analises[chaveLinha(l)];
+      const prov = a && a.status === "ok" ? T.providencia(a, T.ABAS[l.aba]) : null;
+      return { processo: l.processo, executado: l.executado || "", defensor: l.defensor || "", aba: T.ABAS[l.aba] || String(l.aba), situacao: l.situacao || estado.situacao,
+        ultimoDia: l.ultimoDia || "", prazo: l.prazo || "", dataEnvio: l.dataEnvio || "", url: l.url || "", classe: l.classe || "", assunto: l.assunto || "", final: l.final || "",
+        analise: !a ? null : { status: a.status, erro: a.erro || "", quando: a.quando || 0,
+          pendencia: a.pendencia ? { texto: a.pendencia.movimento || a.pendencia.texto || "", juntar: a.pendencia.juntar || "" } : null,
+          motivo: curto(a.motivo), decisao: curto(a.decisao), mesma: !!a.mesma,
+          providencia: prov ? { texto: prov.texto, tipo: prov.tipo || "", urgente: !!prov.urgente } : null,
+          alertas: (a.alertas || []).slice(0, 8).map((x) => ({ txt: x.txt, nivel: x.nivel })), temas: (a.temas || []).slice(0, 8) } };
+    });
+    // pelo service worker (que fala com o APTO); esta página só pede ao SEEU
+    try { await chrome.runtime.sendMessage({ tipo: "seeuTriagem", triagem: { quando: estado.quando, situacao: estado.situacao, situacaoNome: T.SITUACOES[estado.situacao] || "", linhas } }); }
+    catch (e) { /* APTO fechado: vai na próxima vez */ }
+  }, 3000);
+}
 async function docGuardado(chave) {
   const { triagemDocs } = await chrome.storage.local.get("triagemDocs");
   return (triagemDocs || {})[chave] || null;

@@ -33,8 +33,8 @@ jobs:
       - name: Compilar com PyInstaller
         run: >
           python -m PyInstaller --onefile --windowed --clean --name APTO
-          --icon rspe.ico --add-data "rspe.ico;." --add-data "apto_selo.png;." --add-data "logo_defensoria.png;." --add-data "fontes;fontes" --add-data "ui.html;." --add-data "base_juridica.json;." --add-data "teses_auto.bin;." --add-data "monitor_juris.bin;."
-          --collect-data pdfminer --collect-data pdfplumber --collect-data reportlab --hidden-import reportlab.graphics.shapes --hidden-import rspe_relatorio --hidden-import rspe_remicao
+          --icon rspe.ico --add-data "rspe.ico;." --add-data "apto_selo.png;." --add-data "logo_defensoria.png;." --add-data "fontes;fontes" --add-data "ui.html;." --add-data "atendimentos;atendimentos" --add-data "base_juridica.json;." --add-data "teses_auto.bin;." --add-data "monitor_juris.bin;."
+          --collect-data pdfminer --collect-data pdfplumber --collect-data reportlab --hidden-import reportlab.graphics.shapes --hidden-import rspe_relatorio --hidden-import rspe_remicao --hidden-import rspe_gabinete --hidden-import rspe_gabinete_api --hidden-import rspe_sei
           --collect-all webview
           --exclude-module docxtpl --exclude-module docx --exclude-module docx2pdf
           rspe_app.py
@@ -69,6 +69,6 @@ jobs:
         with:
           tag_name: v${{ steps.versao.outputs.v }}
           name: APTO v${{ steps.versao.outputs.v }}
-          body: "Gerado automaticamente a partir do commit ${{ github.sha }}. Baixe o .zip, extraia e rode APTO.exe (Windows 10/11). A pasta extensao_seeu é a extensão do navegador (Chrome/Edge): chrome://extensions > Modo do desenvolvedor > Carregar sem compactação (veja extensao_seeu\\LEIA-ME.txt)."
+          body: "Gerado automaticamente a partir do commit ${{ github.sha }}. Baixe o .zip, extraia e rode APTO.exe (Windows 10/11). A pasta extensao_seeu é a extensão do navegador (Chrome/Edge): chrome://extensions > Modo do desenvolvedor > Carregar sem compactação (veja extensao_seeu\\LEIA-ME.txt). Ela também lê a fila do SAP para a função Atendimentos."
           files: APTO_v${{ steps.versao.outputs.v }}.zip
           make_latest: true
