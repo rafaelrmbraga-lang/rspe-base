@@ -193,3 +193,20 @@ setInterval(desenharLote, 2000);
 
 carregar();
 desenharLote();
+
+// Painel do SEI (sei_painel.js): preferências guardadas neste navegador (seiPainel)
+(async function painelSei() {
+  const PADRAO = { ligado: true, temaEscuro: false, contadorAba: true, mostrarEspecificacao: true, mostrarAnotacao: true, alertaDias: 5, criticoDias: 2, regrasTexto: "" };
+  let p = Object.assign({}, PADRAO, (await chrome.storage.local.get("seiPainel")).seiPainel || {});
+  const campos = { seiPainel: "ligado", seiEsp: "mostrarEspecificacao", seiNota: "mostrarAnotacao", seiContador: "contadorAba", seiEscuro: "temaEscuro" };
+  const gravar = async (parcial) => {
+    p = Object.assign({}, PADRAO, (await chrome.storage.local.get("seiPainel")).seiPainel || {}, parcial);
+    await chrome.storage.local.set({ seiPainel: p });
+  };
+  for (const [id, k] of Object.entries(campos)) { $(id).checked = !!p[k]; $(id).onchange = (e) => gravar({ [k]: e.target.checked }); }
+  $("seiAlerta").value = p.alertaDias; $("seiCritico").value = p.criticoDias; $("seiRegras").value = p.regrasTexto || "";
+  const num = (v, d) => { const n = Math.round(Number(v)); return Number.isFinite(n) && n >= 0 && n <= 60 ? n : d; };
+  $("seiAlerta").onchange = (e) => gravar({ alertaDias: num(e.target.value, 5) });
+  $("seiCritico").onchange = (e) => gravar({ criticoDias: num(e.target.value, 2) });
+  $("seiRegras").onchange = (e) => gravar({ regrasTexto: e.target.value.slice(0, 4000) });
+})();

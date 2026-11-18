@@ -166,6 +166,48 @@ PETIÇÕES (desde a 1.14, no APTO)
    ou Atendimentos), com os modelos do gabinete. Os modelos, o pdf-lib e as
    fontes que ficavam na extensão saíram dela.
 
+PAINEL DO SEI (1.15.0)
+Ao abrir o Controle de Processos no SEI da Defensoria, aparece no topo o painel
+do APTO, e cada processo da lista ganha ícones. Funções inspiradas no que o
+SEI Pro e o SEI++ oferecem, escritas do zero para o APTO (sem código deles).
+ - Cartões: processos, não visualizados, prazo vencido, vencendo, urgentes,
+   sem atribuição, com anotação e monitorados. Clique num cartão para
+   mostrar só esses processos; clique de novo para mostrar todos.
+ - Blocos: categorias (execução penal, unidade prisional, atendimento,
+   comunicação, administrativo), tipos de processo, marcadores e atribuição,
+   com barra de quantidade. Clique numa linha para filtrar.
+ - Busca rápida: a partir de 3 letras, sem acento e sem pontuação, em número,
+   tipo, especificação, interessados, marcadores e anotação. Esc limpa.
+ - Em cada processo: ícone da categoria, prazo colorido, alerta de urgente
+   (linha em vermelho claro), especificação abaixo do número, anotação à
+   vista (clique para abrir inteira), alvo para monitorar e botão de copiar
+   o número.
+ - Prazo: escreva a data no texto do marcador (ou na anotação).
+   "ATÉ 20/11/2026", "prazo 20/11", "vence 20/11/2026" = vencimento ("vence
+   em 2 d"; vermelho se vencido, laranja até o crítico, amarelo até o
+   alerta). Só a data num marcador = parado desde ("há 8 d"). O retorno
+   programado e o controle de prazo do SEI, se aparecerem na lista, também
+   contam.
+ - Urgente: a palavra "urgente" na especificação, na anotação ou num
+   marcador.
+ - Botões do painel: "Prazo" ordena a lista (vencidos primeiro); planilha
+   baixa os processos visíveis em CSV; lua liga o tema escuro no SEI; seta
+   recolhe o painel.
+ - Monitorados e Visitados recentemente: listas guardadas só neste
+   navegador. Atalhos: os links do menu do SEI (blocos de assinatura,
+   retorno programado, acompanhamento especial, marcadores, pesquisa).
+ - O título da aba mostra quantos processos não foram visualizados, e na
+   página do processo mostra o número e o tipo.
+ - No painel da extensão: liga/desliga o painel, a especificação, a anotação,
+   o contador na aba, o tema escuro, os dias de alerta e crítico e as cores
+   por palavra-chave ("indulto: #B42318", uma por linha).
+ - Só aparência: filtrar esconde linhas só na tela (recarregar volta tudo).
+   A extensão não faz nenhum pedido ao SEI por causa do painel, não clica e
+   não grava nada no SEI.
+ - [A calibrar no SEI real] O painel foi feito sobre a estrutura do SEI 4 da
+   Defensoria (linhas P<id>, dicas dos ícones). Se um marcador, a anotação ou
+   o prazo não aparecerem como esperado, avise para ajustar.
+
 FICHA DO SIAPEN
  - Toda ficha aberta no SIAPEN (Consultas > nome > "Ficha") é salva em
    Downloads\APTO\<base>\FD_<NOME>_<data>.pdf e entra na base pela pasta
@@ -317,7 +359,9 @@ CUIDADOS
    no painel). Faça login de novo no SEEU antes de retomar.
  - Liga e desliga pelo painel. Desligada, não faz nenhum pedido ao SEEU.
  - O aviso "RSPE salvo" no canto da página do SEEU pode ser desligado; a
-   extensão não altera mais nada na página e convive com o AZflow.
+   extensão não altera mais nada na página do SEEU e convive com o AZflow.
+ - No SEI, o painel do Controle de Processos (1.15.0) só muda a aparência
+   da tela: não faz pedido ao SEI, não clica e não envia nada.
  - Nomes de pasta são limpos (sem \ / : * ? " < > | e sem nomes reservados do
    Windows).
  - Uso funcional, para os processos sob atendimento da Defensoria; siga as

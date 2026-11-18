@@ -59,6 +59,20 @@
 </section>
 
 <section>
+  <label class="chk" style="margin:0 0 6px" title="Painel no topo do Controle de Processos do SEI e ícones em cada processo. Só aparência: não altera nada no SEI."><input type="checkbox" id="seiPainel"> <b>Painel do SEI ao abrir o Controle de Processos</b></label>
+  <details id="seiPainelOpc"><summary style="cursor:pointer;font-size:12px;color:var(--tx2)">Opções do painel do SEI</summary>
+    <label class="chk"><input type="checkbox" id="seiEsp"> Especificação abaixo do número</label>
+    <label class="chk"><input type="checkbox" id="seiNota"> Anotação à vista na lista</label>
+    <label class="chk"><input type="checkbox" id="seiContador"> Não visualizados no título da aba</label>
+    <label class="chk"><input type="checkbox" id="seiEscuro"> Tema escuro no SEI</label>
+    <div class="lin" style="align-items:center;font-size:12px;color:var(--tx2)">Alerta com <input type="number" id="seiAlerta" min="0" max="60" style="width:52px;flex:none;padding:4px"> dias; crítico com <input type="number" id="seiCritico" min="0" max="60" style="width:52px;flex:none;padding:4px"> dias</div>
+    <label class="t" for="seiRegras" style="margin-top:8px">Cor por palavra-chave (no tipo ou na especificação), uma por linha</label>
+    <textarea id="seiRegras" rows="3" style="width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font:12px/1.35 ui-monospace,Consolas,monospace" placeholder="indulto: #B42318&#10;remição: teal"></textarea>
+    <div class="dica">Prazo: escreva a data no marcador ("ATÉ 20/11/2026" = vencimento; só a data = parado desde). Recarregue a página do SEI para ver as mudanças.</div>
+  </details>
+</section>
+
+<section>
   <label class="chk" style="margin:0 0 8px" title="Desligado: abrir um processo ou a Situação Carcerária no SEEU não baixa o RSPE. O botão abaixo e o lote continuam baixando."><input type="checkbox" id="rspeAuto"> <b>Baixar o RSPE automaticamente ao abrir um processo</b></label>
   <button class="pri" id="agora">Baixar o RSPE do processo aberto (SEEU)</button>
   <label class="chk" style="margin:10px 0 8px" title="Desligado: abrir a ficha disciplinar no SIAPEN não grava nada. O botão abaixo e o lote continuam gravando."><input type="checkbox" id="fichaAuto"> <b>Baixar a ficha do SIAPEN automaticamente ao abri-la</b></label>

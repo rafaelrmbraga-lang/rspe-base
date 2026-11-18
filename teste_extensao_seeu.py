@@ -24,13 +24,16 @@ ok(m["host_permissions"] == ["https://seeu.pje.jus.br/*", "https://seeu-transfer
                              "https://app.siapen.ms.gov.br/*", "https://*.defensoria.ms.def.br/*", "http://127.0.0.1:47321/*"],
    "só o SEEU (e o servidor de arquivos do SEEU), o SIAPEN, o SAP da Defensoria e o APTO deste computador: %s" % m["host_permissions"])
 ok([c["matches"] for c in m["content_scripts"]] == [["https://seeu.pje.jus.br/seeu/*"], ["https://app.siapen.ms.gov.br/*"], ["https://app.siapen.ms.gov.br/*"],
-                                                   ["https://*.defensoria.ms.def.br/sap/*"], ["https://*.defensoria.ms.def.br/sap/*"], ["https://sei.defensoria.ms.def.br/sei/*"], ["https://seeu.pje.jus.br/seeu/*"]],
+                                                   ["https://*.defensoria.ms.def.br/sap/*"], ["https://*.defensoria.ms.def.br/sap/*"], ["https://sei.defensoria.ms.def.br/sei/*"], ["https://seeu.pje.jus.br/seeu/*"],
+                                                   ["https://sei.defensoria.ms.def.br/sei/*"]],
    "scripts só no SEEU, no SIAPEN, no SAP e no SEI da Defensoria")
 ok(m["content_scripts"][5]["js"] == ["sei_aba.js"], "SEI: endereço do Controle de Processos e o botão Ler o SEI do APTO")
 ok(m["content_scripts"][6]["js"] == ["seeu_aba.js"], "SEEU: o botão Ler a Mesa do APTO (abre a triagem)")
 ok(m.get("web_accessible_resources") == [{"resources": ["sei/lib/*.js"], "matches": ["https://sei.defensoria.ms.def.br/*"]}], "só o leitor do SEI, só para o SEI da Defensoria")
 ok(m["content_scripts"][4]["js"] == ["atd_comum.js", "atd_sap.js"], "SAP: atendimentos (fila e Fato Narrado para o APTO)")
-ok([c.get("world") for c in m["content_scripts"]] == [None, None, "MAIN", None, None, None, None] and m["content_scripts"][2]["js"] == ["siapen_pagina.js"],
+ok(m["content_scripts"][7]["js"] == ["sei_painel_core.js", "sei_painel.js"] and m["content_scripts"][7].get("all_frames") is True,
+   "SEI: painel do Controle de Processos (e o tema escuro nas molduras)")
+ok([c.get("world") for c in m["content_scripts"]] == [None, None, "MAIN", None, None, None, None, None] and m["content_scripts"][2]["js"] == ["siapen_pagina.js"],
    "só o siapen_pagina.js roda no mundo da página")
 # SAP: só leitura - a lupa "Visualizar" (designar=0) é o único botão de linha clicado; nunca "Designar Assistido"
 sap = open(os.path.join(EXT, "sap.js"), encoding="utf-8").read()
@@ -53,12 +56,16 @@ ok(m["content_security_policy"]["extension_pages"].endswith("connect-src 'self' 
 ok(m.get("optional_host_permissions") == ["https://*/*", "http://*/*"], "endereço do SEI: só permissão opcional, pedida ao informar o endereço")
 cfg_sei = open(os.path.join(EXT, "sei", "lib", "config.js"), encoding="utf-8").read()
 ok("export const ADAPTADOR_REAL_LIGADO = false;" in cfg_sei, "leitor do SEI real continua desligado (só o SEI fictício, até calibrar)")
-for f in ["background.js", "content.js", "siapen.js", "siapen_pagina.js", "sap.js", "comum.js", "popup.js", "popup.html", "triagem.html", "triagem.js", "triagem_core.js"] + list(m["icons"].values()):
+# 1.15.0: painel do SEI - só aparência: nenhum pedido de rede, nenhum clique ou envio de formulário no SEI
+pj = open(os.path.join(EXT, "sei_painel.js"), encoding="utf-8").read() + open(os.path.join(EXT, "sei_painel_core.js"), encoding="utf-8").read()
+ok(not any(x in pj for x in ("fetch(", "XMLHttpRequest", ".submit(", "sendMessage", "infraHash", "documento_assinar")), "painel do SEI: sem pedidos ao SEI e sem envio de formulário")
+ok('id="seiPainel"' in open(os.path.join(EXT, "popup.html"), encoding="utf-8").read(), "opção do painel do SEI no painel da extensão")
+for f in ["background.js", "content.js", "siapen.js", "siapen_pagina.js", "sap.js", "comum.js", "popup.js", "popup.html", "triagem.html", "triagem.js", "triagem_core.js", "sei_painel.js", "sei_painel_core.js"] + list(m["icons"].values()):
     ok(os.path.isfile(os.path.join(EXT, f)), "arquivo %s" % f)
 
 node = shutil.which("node")
 if node:
-    for f in ("background.js", "content.js", "siapen.js", "siapen_pagina.js", "sap.js", "comum.js", "popup.js", "triagem_core.js"):
+    for f in ("background.js", "content.js", "siapen.js", "siapen_pagina.js", "sap.js", "comum.js", "popup.js", "triagem_core.js", "sei_painel.js", "sei_painel_core.js"):
         r = subprocess.run([node, "--check", os.path.join(EXT, f)], capture_output=True, text=True)
         ok(r.returncode == 0, "sintaxe de %s: %s" % (f, r.stderr.strip()))
     js = r"""
@@ -102,6 +109,16 @@ const L = A.pessoasDaLista("NOME;MÃE\nFulano de Tal ; Maria de Tal\n1. Beltrano
 t(JSON.stringify(L) === JSON.stringify([{ nome: "FULANO DE TAL", mae: "MARIA DE TAL", cpf: "", num: "" }, { nome: "BELTRANO SILVA", mae: "", cpf: "12345678909", num: "4321" },
   { nome: "CICLANO SOUZA", mae: "ANA SOUZA", cpf: "", num: "" }]), "lista de pessoas: " + JSON.stringify(L));
 """
+    # painel do SEI: o motor no node e o painel no Chromium (se o Playwright estiver instalado; sem ele, só o motor)
+    env = dict(os.environ)
+    try:
+        raiz_npm = subprocess.run(["npm", "root", "-g"], capture_output=True, text=True, timeout=30, shell=(os.name == "nt")).stdout.strip()
+        if raiz_npm:
+            env["NODE_PATH"] = os.pathsep.join(x for x in (env.get("NODE_PATH", ""), raiz_npm) if x)
+    except Exception:
+        pass
+    r = subprocess.run([node, os.path.join(AQUI, "extensao_seeu_testes", "teste_sei_painel.mjs")], capture_output=True, text=True, env=env, timeout=300)
+    ok(r.returncode == 0 and "painel do SEI: ok" in r.stdout, "painel do SEI: %s %s" % (r.stdout.strip()[-1500:], r.stderr.strip()[-800:]))
     r = subprocess.run([node, "-e", js, os.path.join(EXT, "comum.js")], capture_output=True, text=True)
     ok(r.returncode == 0 and "FALHA" not in r.stdout, "funções de comum.js: %s %s" % (r.stdout.strip(), r.stderr.strip()))
 
