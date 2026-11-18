@@ -637,6 +637,15 @@ class GabineteApi:
         cab = cab or {}
         if caminho.startswith("/api/sync/"):
             return self._ext_sei(caminho, corpo, cab)
+        if caminho == "/painel/dossie":
+            # painel no SEEU: dados pessoais do assistido - só com o token que o APTO entrega à extensão (GET /sei/token)
+            if not self._sei().token_ok(cab.get("Authorization")):
+                return {"__status": 401, "erro": "token inválido ou expirado"}
+            return self._painel_dossie(corpo.get("processo"))
+        if caminho == "/painel/abrir":
+            if not self._sei().token_ok(cab.get("Authorization")):
+                return {"__status": 401, "erro": "token inválido ou expirado"}
+            return self._painel_abrir(corpo.get("processo"))
         if caminho == "/seeu/triagem":
             t = corpo.get("triagem")
             if not isinstance(t, dict):

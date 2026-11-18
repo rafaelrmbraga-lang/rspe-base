@@ -47,8 +47,9 @@ from rspe_gabinete_api import GabineteApi
 import rspe_gabinete_api as rgabapi
 
 APP = "APTO"
-VERSAO = "7.31.0"
+VERSAO = "7.32.0"
 import rspe_motor
+import rspe_painel as rpainel
 from rspe_motor import (_mesma_mae, _so_digitos, _ficha_prova, _ficha_alternativa, _fichas_candidatas, _norm, _montar_modelo, _ref_decreto, _enc_chave, _BJ_DIG, _bj_digital, _chave_calculo, _ctx_de, _CONTEUDO_CRIME, _CONTEUDO_BLOCO, _conteudo_rspe)  # o motor (também roda na extensão: o painel no SEEU)
 rspe_motor.VERSAO = VERSAO
 GEO_AUTO_DIAS = 30           # dados prisionais: baixados de novo sozinhos quando têm 30 dias ou mais
@@ -3580,6 +3581,44 @@ class Api(GabineteApi):
     def _extensao_dados(self):
         aberta = os.path.splitext(os.path.basename(self.base.caminho))[0] if self.base else ""
         return {"app": APP, "versao": VERSAO, "bases": self.vigia_info()["bases"], "aberta": aberta, "pasta": self._pasta_extensao()}
+
+    def _painel_dossie(self, processo):
+        """Painel no SEEU (extensão): o registro do processo na base aberta, a fatia do contexto (ficha, ajustes manuais,
+        pedidos), a data de referência, a base jurídica EM USO e o resultado do APTO. A extensão refaz a conta com o mesmo
+        motor e confere a assinatura: "confere com o APTO" só quando os dois dão o mesmo resultado. Entrada e resultado
+        passam por JSON nos dois lados (o que a extensão recebe é exatamente o que o APTO calculou)."""
+        if not self.base:
+            return {"tem": False, "motivo": "nenhuma base aberta no APTO"}
+        dig = re.sub(r"\D", "", str(processo or ""))
+        if len(dig) != 20:
+            return {"__status": 400, "erro": "número de processo inválido"}
+        brutos = self.base.todos()
+        r = next((x for x in brutos if re.sub(r"\D", "", x.get("processo_execucao") or "") == dig), None)
+        if r is None:
+            return {"tem": False, "motivo": "processo fora da base aberta", "base": self.base.nome}
+        ctx = self._contexto(brutos)
+        ida = lambda o: json.loads(json.dumps(o, ensure_ascii=False, default=rspe_motor._enc_chave))
+        sub, r = ida(rspe_motor._ctx_de(ctx, r)), ida(r)
+        hoje = datetime.now().date()
+        bj = rg.carregar()
+        p = rpainel.analisar(r, sub, hoje)
+        return {"tem": True, "base": self.base.nome, "r": r, "sub": sub, "hoje": hoje.strftime("%d/%m/%Y"), "base_juridica": bj,
+                "painel": ida(p)}
+
+    def _painel_abrir(self, processo):
+        """Botão "Abrir no APTO" do painel no SEEU: a janela do APTO vem para a frente, filtrada no processo."""
+        dig = re.sub(r"\D", "", str(processo or ""))
+        if len(dig) != 20:
+            return {"__status": 400, "erro": "número de processo inválido"}
+        proc = "%s-%s.%s.%s.%s.%s" % (dig[:7], dig[7:9], dig[9:13], dig[13], dig[14:16], dig[16:])
+        if self._janela:
+            for f in ("restore", "show"):
+                try:
+                    getattr(self._janela, f)()
+                except Exception:
+                    pass
+        self._js("window.ui && ui.soEste && ui.soEste(%s)" % json.dumps(proc))
+        return {"ok": True}
 
     def _extensao_servidor(self):
         """Responde à extensão do navegador, só em 127.0.0.1 e só para extensões (página da internet recebe 403).

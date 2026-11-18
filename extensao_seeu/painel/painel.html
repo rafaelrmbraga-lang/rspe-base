@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>APTO - análise do processo</title><link rel="stylesheet" href="painel.css"></head>
+<body>
+<aside class="painel" aria-label="Análise do APTO">
+  <header class="p-head">
+    <span class="marca">APTO</span>
+    <span class="proc" id="proc"></span>
+    <button class="btn-ic" id="atualizar" type="button" aria-label="Atualizar a análise" title="Atualizar">↻</button>
+    <button class="btn-ic" id="recolher" type="button" aria-label="Recolher o painel" title="Recolher">›</button>
+  </header>
+  <main class="corpo" id="corpo" aria-live="polite"></main>
+  <footer class="p-pe">
+    <button class="btn pri" id="abrirApto" type="button">Abrir no APTO</button>
+    <button class="btn" id="copiar" type="button">Copiar resumo</button>
+    <span class="so">Só leitura<br>SEEU inalterado</span>
+  </footer>
+</aside>
+<script src="painel_core.js"></script>
+<script src="painel.js"></script>
+</body></html>

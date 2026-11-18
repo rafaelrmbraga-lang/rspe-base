@@ -1,4 +1,4 @@
-APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.31.0
+APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.32.0
 (antigo RSPE Base; SEEU, programa em abas)
 =========================================
 
@@ -1300,6 +1300,32 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v7.32.0
+  Painel do APTO na página do processo do SEEU (extensão 1.15.0). Ao abrir um
+  processo no SEEU, aparece à direita a análise do APTO: o que pede ação já
+  (◆), em até 30 dias (▲), a conferir (●), até 90 dias (○) e o que cabe (✓),
+  com a conta e o fundamento de cada item, as hipóteses afastadas (recolhidas)
+  e os prazos (término do SEEU e do APTO, prescrição, pena cumprida). O SEEU
+  não muda: o painel reserva a sua largura na página (nada fica coberto), não
+  abre aba nem janela e recolhe numa lingueta com a contagem. Liga e desliga
+  no painel da extensão.
+  Mesmo resultado do APTO: a extensão roda os MESMOS arquivos .py do APTO
+  (Python no navegador, Pyodide), com o registro, a ficha, os ajustes manuais
+  e a base jurídica que o APTO aberto usa. O selo "Confere com o APTO" só
+  aparece quando os dois chegam à mesma assinatura; diferente, o painel avisa
+  "Diverge do APTO". A compilação só gera o pacote se os 144 casos simulados
+  derem resultado idêntico nos dois.
+  Regras do painel: o que depende da ficha disciplinar (falta grave,
+  comportamento, trabalho) sai "a conferir" sem a ficha, dizendo o quê e onde,
+  nunca "cabe"; custodiado sem remição decidida há mais de 6 meses: "a
+  conferir: pedir atestado de trabalho ou estudo à unidade".
+  Nesta versão o painel usa os dados do APTO aberto (o processo precisa estar
+  na base aberta; a extensão já salva o RSPE ao abrir o processo). A leitura
+  direta das abas do SEEU, sem o APTO, entra quando as abas forem mapeadas.
+  Motor do APTO em módulo próprio (rspe_motor.py), sem mudança de regra.
+  Indulto: teste novo garante que as hipóteses de saídas temporárias só ficam
+  "a conferir" quando o regime na data do decreto permitia as saídas.
 
 v7.31.0
   Barra fixa redesenhada: o selo do APTO na marca, a função ativa em

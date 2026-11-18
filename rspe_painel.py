@@ -19,7 +19,7 @@ import copy
 import hashlib
 import json
 import re
-from datetime import date, timedelta
+from datetime import date
 
 import rspe_motor as mt
 import rspe_regras as rg
@@ -211,7 +211,7 @@ def analisar(r, sub=None, hoje=None):
     sub = sub or copy.deepcopy(CTX_VAZIO)
     rv.HOJE = hoje
     chave = mt._chave_calculo(r, sub, hoje)
-    m, _migrar = mt._montar_modelo(copy.deepcopy(r), sub)
+    m, _migrar = mt._montar_modelo(copy.deepcopy(r), copy.deepcopy(sub))  # o motor altera o que recebe: a entrada fica intacta
     m = rv.json_seguro({k: v for k, v in m.items() if k != "_bruto"})
     p = montar(r, m, hoje)
     p["assinatura"] = _assinar(p)
@@ -219,7 +219,30 @@ def analisar(r, sub=None, hoje=None):
     return p
 
 
+def usar_base(b):
+    """Base jurídica que o APTO aberto está usando de fato (a cópia editável ao lado do APTO.exe pode ser mais nova que a
+    embutida): a extensão calcula com ela, para o resultado bater. Sem APTO, vale a embutida no pacote do motor."""
+    if not isinstance(b, dict) or not b:
+        return False
+    if rg._BASE is b:
+        return True
+    rg._BASE, rg._ORIGEM, rg._AVISOS = b, "APTO aberto", []
+    mt._BJ_DIG[0] = None  # a impressão digital da base é refeita
+    return True
+
+
 def analisar_json(txt):
-    """Entrada e saída em texto JSON (a ponte com o JavaScript da extensão): {"r": registro, "sub": fatia, "hoje": "dd/mm/aaaa"}."""
+    """Entrada e saída em texto JSON (a ponte com o JavaScript da extensão):
+    {"r": registro, "sub": fatia do contexto, "hoje": "dd/mm/aaaa", "base_juridica": base em uso no APTO (opcional)}."""
     e = json.loads(txt)
+    if e.get("base_juridica"):
+        usar_base(e["base_juridica"])
     return json.dumps(analisar(e["r"], e.get("sub"), e.get("hoje")), ensure_ascii=False)
+
+
+def analisar_dossie(txt):
+    """O dossiê do APTO (POST /painel/dossie), em TEXTO, como chegou: a extensão não o relê em JavaScript antes (o JSON.parse
+    do navegador troca 5.0 por 5 e muda a impressão digital da entrada). Devolve o painel calculado aqui, em JSON."""
+    d = json.loads(txt)
+    usar_base(d.get("base_juridica"))
+    return json.dumps(analisar(d["r"], d.get("sub"), d.get("hoje")), ensure_ascii=False)

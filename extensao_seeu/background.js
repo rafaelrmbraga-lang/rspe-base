@@ -6,12 +6,14 @@
 "use strict";
 // Chrome/Edge: service worker (importScripts); Firefox: página de fundo com comum.js carregado antes (manifest "scripts")
 if (typeof importScripts === "function" && !self.APTO) importScripts("comum.js");
+// painel do APTO na página do processo (1.15): o motor do APTO roda na extensão e confere com o APTO aberto
+if (typeof importScripts === "function" && !self.APTO_PAINEL) importScripts("painel/painel_bg.js");
 const A = self.APTO;
 
 const AUTO = "@apto";            // base de destino = a base aberta no APTO
 // rspeAuto: baixa o RSPE sozinho ao abrir um processo (e ao abrir "Situação Carcerária"); desligado, só o botão do painel e o lote baixam
 // fichaAuto: grava sozinha a ficha do SIAPEN que a pessoa abre na tela; desligado, só o botão do painel e o lote gravam
-const PADRAO = { ativo: true, rspeAuto: true, fichaAuto: true, raiz: "APTO", base: AUTO, bases: [], avisoNaPagina: true };
+const PADRAO = { ativo: true, rspeAuto: true, fichaAuto: true, painel: true, raiz: "APTO", base: AUTO, bases: [], avisoNaPagina: true };
 const APTO_URL = "http://127.0.0.1:47321/apto"; // o APTO aberto informa as bases e a base aberta (só neste computador)
 const INTERVALO_MS = 4000;      // mínimo entre dois downloads
 const TETO_HORA = 40;           // downloads automáticos por hora (ao abrir processos)
@@ -552,6 +554,8 @@ async function atdMensagem(msg, sender) {
 chrome.runtime.onMessage.addListener((msg, sender, responder) => {
   (async () => {
     try {
+      if (msg && msg.alvo === "motor") return;  // pedido ao documento offscreen do motor: não é para cá
+      if (msg && /^painel[A-Z]/.test(String(msg.tipo || "")) && self.APTO_PAINEL.daPainel(sender)) return responder(await self.APTO_PAINEL.mensagem(msg));
       if (sender.tab && doSap(sender.url) && msg && /^atd[A-Z]/.test(String(msg.tipo || ""))) return responder(await atdMensagem(msg, sender));
       // SEI da Defensoria: a aba (já logada) informa o Controle de Processos e atende o botão "Ler o SEI" do APTO
       if (sender.tab && /^https:\/\/sei\.defensoria\.ms\.def\.br\/sei\//.test(sender.url || "") && msg && /^sei[A-Z]/.test(String(msg.tipo || ""))) return responder(await seiMensagem(msg));

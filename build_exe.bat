@@ -17,6 +17,8 @@ if errorlevel 1 (
     pause
     exit /b 1
 )
+REM painel no SEEU: copia os mesmos .py do APTO para a extensão e baixa o Pyodide fixado (precisa de internet na 1a vez)
+python ferramentas\motor_extensao\empacotar.py
 python -m PyInstaller --onefile --windowed --clean --name APTO ^
     --icon rspe.ico --add-data "rspe.ico;." --add-data "apto_selo.png;." --add-data "logo_defensoria.png;." --add-data "fontes;fontes" --add-data "ui.html;." --add-data "atendimentos;atendimentos" --add-data "base_juridica.json;." --add-data "teses_auto.bin;." --add-data "monitor_juris.bin;." ^
     --collect-data pdfminer --collect-data pdfplumber --collect-data reportlab --hidden-import reportlab.graphics.shapes --hidden-import rspe_relatorio --hidden-import rspe_remicao --hidden-import rspe_legislacao --hidden-import rspe_monitor --hidden-import rspe_gabinete --hidden-import rspe_gabinete_api --hidden-import rspe_sei --hidden-import rspe_seeu --hidden-import rspe_nuspen --hidden-import nuspen_regras.leitura --hidden-import nuspen_regras.segmentacao ^
