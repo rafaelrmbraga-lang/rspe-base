@@ -37,6 +37,10 @@ class Seeu:
         self._trava = gabinete._trava
         with self._trava, self._con:
             self._con.execute(TABELA)
+            tem = [r[1] for r in self._con.execute("PRAGMA table_info(seeu_itens)")]
+            for c in ("atribuido", "quadro"):  # 7.28: quem cuida da intimação; o cartão do Quadro ligado a ela
+                if c not in tem:
+                    self._con.execute("ALTER TABLE seeu_itens ADD COLUMN %s TEXT" % c)
 
     def receber(self, t):
         """Triagem da extensão: {quando, situacao, abas: [nomes], linhas: [...]}. Devolve {novas, atualizadas, sairam}."""
@@ -71,20 +75,39 @@ class Seeu:
 
     def listar(self):
         with self._trava:
-            rows = self._con.execute("SELECT chave, json, status, primeiro_visto, ultimo_visto, fora_da_mesa, concluido_em, baixa FROM seeu_itens").fetchall()
+            rows = self._con.execute("SELECT chave, json, status, primeiro_visto, ultimo_visto, fora_da_mesa, concluido_em, baixa, atribuido, quadro "
+                                     "FROM seeu_itens").fetchall()
         out = []
-        for k, j, st, pv, uv, fora, conc, baixa in rows:
+        for k, j, st, pv, uv, fora, conc, baixa, atr, qd in rows:
             l = json.loads(j)
             l.update(chave=k, status=st, primeiroVisto=pv, ultimoVisto=uv, foraDaMesa=fora or "", concluidoEm=conc or "",
-                     baixa=json.loads(baixa) if baixa else None)
+                     baixa=json.loads(baixa) if baixa else None, atribuido=atr or "", quadro=qd or "")
             out.append(l)
+        # histórico do processo: as outras intimações dele (anteriores ou de outra aba), com a baixa de cada uma
+        por = {}
+        for l in out:
+            por.setdefault(re.sub(r"\D", "", str(l.get("processo") or "")), []).append(l)
+        for l in out:
+            l["anteriores"] = sorted(({"aba": x.get("aba"), "dataEnvio": x.get("dataEnvio"), "status": x["status"], "concluidoEm": x["concluidoEm"],
+                                      "baixa": (x["baixa"] or {}).get("pecaNome", "")} for x in por.get(re.sub(r"\D", "", str(l.get("processo") or "")), [])
+                                     if x["chave"] != l["chave"]), key=lambda x: x["concluidoEm"] or x["dataEnvio"] or "", reverse=True)
         return out
+
+    def atribuir(self, chave, quem):
+        """Quem cuida desta intimação (vazio = ninguém)."""
+        with self._trava, self._con:
+            n = self._con.execute("UPDATE seeu_itens SET atribuido=? WHERE chave=?", (str(quem or "")[:100], str(chave))).rowcount
+        return {"ok": True} if n else {"erro": "intimação não encontrada"}
+
+    def ligar_quadro(self, chave, peca_id):
+        with self._trava, self._con:
+            self._con.execute("UPDATE seeu_itens SET quadro=? WHERE chave=?", (str(peca_id)[:40], str(chave)))
 
     def _item(self, chave):
         r = self._con.execute("SELECT json, status, baixa FROM seeu_itens WHERE chave=?", (str(chave),)).fetchone()
         return (json.loads(r[0]), r[1], json.loads(r[2]) if r[2] else None) if r else (None, None, None)
 
-    def concluir(self, chave, peca="", data="", obs=""):
+    def concluir(self, chave, peca="", data="", obs="", quem=""):
         """Conclui a intimação. Com peça (código do CONTROLE) e data (dd/mm/aaaa ou aaaa-mm-dd): a peça conta na produção do mês."""
         if peca and peca not in PECAS:
             return {"erro": "peça desconhecida"}
@@ -96,17 +119,28 @@ class Seeu:
                 return {"erro": "informe a data da peça (dd/mm/aaaa)"}
         with self._trava:
             l, st, _ = self._item(chave)
+            qd = (self._con.execute("SELECT quadro FROM seeu_itens WHERE chave=?", (str(chave),)).fetchone() or [None])[0]
         if not l:
             return {"erro": "intimação não encontrada"}
         if st == "concluido":
             return {"erro": "já concluída"}
-        baixa = {"peca": peca, "pecaNome": PECAS.get(peca, ""), "data": iso, "obs": str(obs or "")[:500], "pecaId": ""}
+        baixa = {"peca": peca, "pecaNome": PECAS.get(peca, ""), "data": iso, "obs": str(obs or "")[:500], "pecaId": "", "quem": str(quem or "")[:100],
+                 "doQuadro": False}
+        cartao = next((x for x in self.g.lista("pecas") if qd and x.get("id") == qd and x.get("status") == "pendente"), None)
         p = None
         if peca:
-            p = {"id": rgab.novo_id(), "tipo": peca, "processo": str(l.get("processo") or "")[:30], "nome": rgab.nome_proprio(str(l.get("executado") or ""))[:200],
-                 "data": iso, "status": "feito", "feitoEm": iso, "coluna": "fazer", "prazo": "", "obs": ("Mesa do SEEU (%s): %s" % (l.get("aba") or "", obs or ""))[:500],
-                 "origem": "seeu", "atendimentoId": "", "criadoEm": int(time.time() * 1000)}
+            if cartao:  # o cartão do Quadro desta intimação vira a peça feita: conta uma vez só
+                p = dict(cartao, tipo=peca, status="feito", feitoEm=iso, obs=(str(cartao.get("obs") or "") + (" · baixa: " + obs if obs else ""))[:500])
+                baixa["doQuadro"] = True
+            else:
+                p = {"id": rgab.novo_id(), "tipo": peca, "processo": str(l.get("processo") or "")[:30], "nome": rgab.nome_proprio(str(l.get("executado") or ""))[:200],
+                     "data": iso, "status": "feito", "feitoEm": iso, "coluna": "fazer", "prazo": "", "obs": ("Mesa do SEEU (%s): %s" % (l.get("aba") or "", obs or ""))[:500],
+                     "origem": "seeu", "atendimentoId": "", "criadoEm": int(time.time() * 1000)}
             baixa["pecaId"] = p["id"]
+            self.g.mudar({"pecas": {"upsert": [p]}})
+        elif cartao:  # concluída sem peça: o cartão sai do Quadro (arquivado, não conta)
+            p = dict(cartao, status="arquivado", feitoEm=rgab.hoje_iso())
+            baixa["pecaId"], baixa["doQuadro"] = p["id"], True
             self.g.mudar({"pecas": {"upsert": [p]}})
         with self._trava, self._con:
             self._con.execute("UPDATE seeu_itens SET status='concluido', concluido_em=?, baixa=? WHERE chave=?", (_agora(), json.dumps(baixa, ensure_ascii=False), str(chave)))
@@ -117,10 +151,15 @@ class Seeu:
             l, st, baixa = self._item(chave)
         if not l:
             return {"erro": "intimação não encontrada"}
-        rem = []
-        if baixa and baixa.get("pecaId"):
+        rem, volta = [], None
+        if baixa and baixa.get("pecaId") and baixa.get("doQuadro"):  # o cartão do Quadro volta a ser pendência
+            c = next((x for x in self.g.lista("pecas") if x.get("id") == baixa["pecaId"]), None)
+            if c:
+                volta = dict(c, status="pendente", feitoEm="", tipo="" if c.get("status") == "feito" else c.get("tipo", ""))
+                self.g.mudar({"pecas": {"upsert": [volta]}})
+        elif baixa and baixa.get("pecaId"):
             rem = [baixa["pecaId"]]
             self.g.mudar({"pecas": {"remover": rem}})
         with self._trava, self._con:
             self._con.execute("UPDATE seeu_itens SET status='aberto', concluido_em=NULL, baixa=NULL WHERE chave=?", (str(chave),))
-        return {"ok": True, "removidas": rem}
+        return {"ok": True, "removidas": rem, "voltou": volta}

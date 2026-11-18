@@ -84,7 +84,7 @@ export function criarLeitor({
         if (!/html|text|xml/i.test(tipo)) throw new RespostaInesperada("tipo de conteúdo inesperado");
         seguidas = 0;
         if (++ritmo.sucessos % 10 === 0 && ritmo.pausaMs > ritmo.base) ritmo.pausaMs = Math.max(ritmo.base, Math.floor(ritmo.pausaMs / 2));
-        const texto = await r.text();
+        const texto = await textoDaResposta(r, tipo);
         if (adaptador.ehLogin(texto)) throw new SessaoExpirada();
         return { status: r.status, texto, url: u.href };
       } catch (e) {
@@ -97,7 +97,58 @@ export function criarLeitor({
     }
     throw ultimo;
   }
-  return { get, metricas, controle, ritmo };
+  // anexo PDF: mesma lista de endereços, mesmo ritmo; só PDF, até 12 MB (vai ao APTO em base64)
+  async function getPdf(url) {
+    const u = validar(url);
+    await aguardarControle();
+    await limitar();
+    if (ritmo.pausaMs) await relogio.dormir(ritmo.pausaMs);
+    metricas.requisicoes++;
+    const r = await fetchImpl(u.href, { method: "GET", credentials: "include", redirect: "follow", headers: cabecalhos });
+    if (r.status !== 200) throw new RespostaInesperada(`anexo: HTTP ${r.status}`);
+    const tipo = (r.headers && r.headers.get && r.headers.get("content-type")) || "";
+    if (/html/i.test(tipo)) {
+      const t = await r.text();
+      if (adaptador.ehLogin(t)) throw new SessaoExpirada();
+      throw new RespostaInesperada("anexo: o SEI devolveu uma página, não o PDF");
+    }
+    const bytes = new Uint8Array(await r.arrayBuffer());
+    if (bytes.length > 12 * 1024 * 1024) throw new RespostaInesperada("anexo maior que 12 MB: não lido");
+    if (String.fromCharCode(...bytes.subarray(0, 5)) !== "%PDF-") throw new RespostaInesperada("anexo não é PDF");
+    return bytes;
+  }
+  return { get, getPdf, metricas, controle, ritmo };
+}
+
+// O SEI da DPMS entrega ISO-8859-1 (content-type ou <meta charset>); r.text() leria como UTF-8 e trocaria cada acento por "\uFFFD"
+// ("Of\uFFFDcio"). Decodifica pelo charset declarado; sem declaração, UTF-8, e volta a windows-1252 se o UTF-8 não fechar.
+function charsetDe(tipo, bytes) {
+  const m = /charset\s*=\s*["']?([\w-]+)/i.exec(tipo || "");
+  if (m) return m[1].toLowerCase();
+  const ini = new TextDecoder("latin1").decode(bytes.subarray(0, 4096));
+  const n = /<meta[^>]+charset\s*=\s*["']?([\w-]+)/i.exec(ini);
+  return n ? n[1].toLowerCase() : "";
+}
+async function textoDaResposta(r, tipo) {
+  if (typeof r.arrayBuffer !== "function") return r.text();
+  const bytes = new Uint8Array(await r.arrayBuffer());
+  const cs = charsetDe(tipo, bytes);
+  if (cs && !/^utf-?8$/.test(cs)) {
+    try { return new TextDecoder(/^(iso-8859-1|latin1|us-ascii)$/.test(cs) ? "windows-1252" : cs).decode(bytes); } catch (e) { /* charset desconhecido: segue */ }
+  }
+  try { return new TextDecoder("utf-8", { fatal: true }).decode(bytes); } catch (e) {
+    return cs ? new TextDecoder("utf-8").decode(bytes) : new TextDecoder("windows-1252").decode(bytes);
+  }
+}
+
+async function sha256Bytes(bytes) {
+  const buf = await crypto.subtle.digest("SHA-256", bytes);
+  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+function paraBase64(bytes) {
+  let s = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  return btoa(s);
 }
 
 async function sha256(texto) {
@@ -165,6 +216,7 @@ export async function sincronizar({ adaptador, leitor, app, opcoes = {}, progres
   const alvo = new Set(selecionados.map(String));
   const achados = new Set();
   const listados = [];
+  const retrato = []; // o que a lista mostrou (atribuição, marcadores...), também dos processos não relidos nesta rodada
   const comecouDoInicio = pagina === 0 && indice === 0 && !ini.cursor?.pagina;
   const res = {
     sessao, parada: null, processos: 0, processosPulados: 0, documentosLidos: 0, documentosPulados: 0,
@@ -218,6 +270,16 @@ export async function sincronizar({ adaptador, leitor, app, opcoes = {}, progres
         }
         docsBuscados++;
         try {
+          if (d.anexo) {
+            if (!leitor.getPdf) continue;
+            const bytes = await leitor.getPdf(new URL(d.href, ar.url).href);
+            const hash = await sha256Bytes(bytes);
+            if (k && k.hash === hash) { res.documentosPulados++; continue; }
+            locais.push({ tipo: "anexo", id_sei: d.id, processo: numero, titulo: d.titulo, pdf_b64: paraBase64(bytes), hash, adaptador: ident });
+            res.documentosLidos++;
+            registro({ evento: "lido", tipo: "anexo", id: d.id });
+            continue;
+          }
           const dr = await leitor.get(new URL(d.href, ar.url).href);
           if (dr.status !== 200) throw new Error(`HTTP ${dr.status}`);
           const conteudo = adaptador.lerDocumento(dr.texto);
@@ -246,7 +308,7 @@ export async function sincronizar({ adaptador, leitor, app, opcoes = {}, progres
     if (pagina > 0) pg = await leitor.get(adaptador.urlLista(app.baseSei, pagina));
     laco: for (;;) {
       const { itens, proxima } = adaptador.listarProcessos(pg.texto);
-      for (const p of itens) listados.push(String(p.id));
+      for (const p of itens) { listados.push(String(p.id)); if (p.extra) retrato.push({ id: String(p.id), numero: p.numero, ...p.extra }); }
       await carregarConhecidos(itens.map((p) => `processo:${p.id}`));
       for (let i = indice; i < itens.length; i++) {
         const p = itens[i];
@@ -258,6 +320,7 @@ export async function sincronizar({ adaptador, leitor, app, opcoes = {}, progres
         if (tetoProcessos !== null && res.processos >= tetoProcessos) { res.parada = "teto"; break laco; }
         const locais = await lerProcesso(p, pg, i);
         buffer.push(...locais);
+        if (locais.some((x) => x.tipo === "anexo")) await descarregar(null);
         res.processos++;
         achados.add(String(p.numero)); achados.add(String(p.id));
         cursorLimpo = { pagina, indice: i + 1 };
@@ -288,7 +351,7 @@ export async function sincronizar({ adaptador, leitor, app, opcoes = {}, progres
   // lista completa so se a rodada percorreu a lista inteira desde o inicio, sem salto e sem parada
   const listaCompleta = comecouDoInicio && res.parada === null && (modo === "todos" || modo === "novos");
   if (res.parada === null || res.parada === "teto") {
-    await cli.chamar(`/api/sync/sessoes/${sessao}/concluir/`, { requisicoes: leitor.metricas.requisicoes, duracao_s: duracao, ...(listaCompleta ? { lista_completa: true, listados } : {}) });
+    await cli.chamar(`/api/sync/sessoes/${sessao}/concluir/`, { requisicoes: leitor.metricas.requisicoes, duracao_s: duracao, ...(retrato.length ? { retrato } : {}), ...(listaCompleta ? { lista_completa: true, listados } : {}) });
   }
   emitir("concluida");
   return { ...res, requisicoesSei: leitor.metricas.requisicoes, falhasRede: leitor.metricas.falhas, requisicoesApp: cli.metricas.requisicoes, duracaoS: duracao };

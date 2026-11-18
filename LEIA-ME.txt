@@ -1,9 +1,9 @@
-APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.25.0
+APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.28.0
 (antigo RSPE Base; SEEU, programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-7.25.0. A documentação técnica completa (cada parâmetro, a regra, a norma e
+7.28.0. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -42,13 +42,21 @@ Execução). O programa abre na Execução.
                 crie) a base e use as abas de sempre.
   SEEU          a triagem da Mesa do Defensor feita pela extensão, com os
                 prazos, ligada aos assistidos da base (ver "SEEU").
-  SEI           processos do SEI lidos pela extensão (leitor do NUSPEN, só
-                leitura), com as obrigações sugeridas para validar (ver
-                "SEI"), no SEI da Defensoria.
-  Quadro        as pendências dos atendimentos em kanban (ver "QUADRO");
-                o Quadro do Usuário de cada base continua na Execução.
+  SEI           processos lidos pela extensão (ou importados em PDF) e a
+                gestão: providências (com prazos e ofícios), demandas,
+                inspeções, minutas e histórico (ver "SEI" e "SEI: A
+                GESTÃO").
+  Quadro        um quadro só, em kanban, para todo o APTO: pendências dos
+                atendimentos, da Execução ("Enviar ao Quadro"), da Mesa do
+                SEEU e do SEI (ver "QUADRO").
   Relatório     produção do mês (CONTROLE - 3ª DPEP), relatório do dia em
                 Word e os relatórios da Execução em PDF (ver "RELATÓRIO").
+  Importar e Exportar ficam na mesma barra, à direita, e valem para o APTO
+  todo: Importar traz RSPE e fichas (Execução, base aberta) ou a cópia do
+  gabinete (.json, também a da extensão antiga: só junta o que falta);
+  Exportar leva Excel, PDF da aba, relatórios e providências (Execução), a
+  planilha da Mesa do SEEU, o relatório do dia e a produção do mês (função
+  Relatório) e a cópia do gabinete (.json).
 
 ATENDIMENTOS (função Atendimentos, na barra do topo)
 A fila do SAP do dia, lida pela extensão do APTO na aba do SAP aberta (só
@@ -66,7 +74,8 @@ painel da antiga extensão "APTO Atendimentos", agora dentro do programa.
   Modelos e backup: onde salvar o relatório do dia (a pasta "2. Atendimentos":
     ele grava na pasta do mês, ex.: "8. Novembro\17.11.docx") e as petições (sem
     pasta escolhida, o APTO pergunta); frases prontas, documentos e textos das
-    mensagens; importar o backup da extensão antiga.
+    mensagens. A cópia de segurança (levar ou trazer) é pelo Importar/Exportar
+    da barra do APTO.
   Dados: na base do gabinete, "gabinete.sqlite", ao lado da pasta "bases"
     (uma cópia por dia em "copias\gabinete", guarda as 10 últimas). Têm
     telefone e informação da execução: guarde só em pasta da Defensoria.
@@ -78,8 +87,12 @@ QUADRO (função Quadro)
   As pendências dos atendimentos em kanban: Aguardando documento, A fazer, Não
   encaminhou. Arraste o cartão ou use ‹ ›. "Feita" pede a data do protocolo e
   conta na produção do mês; "Arquivar" não conta. WhatsApp (documentos ou
-  baixa) e Petição no cartão. "Quadro do Usuário da base..." abre o quadro da
-  base aberta em Execução.
+  baixa) e Petição no cartão. O cartão diz de onde veio (Execução e base, Mesa
+  do SEEU, SEI) e mostra "Pedido feito" quando o pedido do mesmo benefício é
+  marcado na Execução. É o único quadro: o antigo "Quadro do Usuário" de cada
+  base saiu da Execução; os cartões abertos dele vêm para cá (fila A fazer,
+  com a coluna antiga na observação) na primeira vez que a base abre na 7.26;
+  as tabelas antigas ficam na base, nada é apagado.
 RELATÓRIO (função Relatório)
   Produção do mês (CONTROLE - 3ª DPEP): atendimentos realizados, pendências
   feitas e Fluxo, por dia; qualquer célula pode ser corrigida à mão (fica
@@ -90,41 +103,108 @@ RELATÓRIO (função Relatório)
   relatórios da Execução em PDF.
 
 SEEU (função SEEU: Mesa do Defensor)
-  A última triagem da Mesa do Defensor feita pela extensão (ícone do APTO no
-  navegador > "Triagem da Mesa do Defensor", com o SEEU aberto e logado): a
-  triagem continua sendo lida e feita na extensão (sessão do SEEU e leitura dos
-  PDFs); o resultado vem sozinho para o APTO aberto. Contadores (clique para
-  filtrar): na Mesa, lidos, providência urgente, prazo em até 2 dias, na base
-  aberta. Uma linha por processo: prazo (rótulo "Leitura até"/"Resposta até",
-  forma e texto: ▲ faltam 1 d, ◆ venceu), processo e assistido ("na base · abrir
-  ficha" quando o nº está na base aberta em Execução), aba e defensor, motivo,
-  última decisão e a providência sugerida (▲ urgente). Clique (ou Enter) na
-  linha: motivo, decisão, alertas, "Abrir no SEEU" (no navegador) e "Enviar ao
-  Quadro" (cartão em A fazer, com o último dia da Mesa como prazo). A providência
-  é sugestão, para conferir.
+  Com o SEEU aberto e logado numa aba (e a extensão do APTO), escolha as abas e
+  a situação e clique em "1 · Ler a Mesa"; depois "2 · Ler processos e
+  decisões". A extensão lê em segundo plano, sem iniciar prazo, e o andamento
+  aparece aqui (etapa 1 de 2, a Mesa; 2 de 2, processos e decisões). Trocar a
+  situação (fluxo) mostra só as intimações daquele fluxo. Contadores (clique
+  para filtrar): em aberto, providência urgente, prazo em até 2 dias, saíram da
+  Mesa, na base aberta, comigo e concluídas. Cada linha: prazo (forma e texto),
+  processo e assistido ("na base · abrir ficha"), aba, defensor e quem cuida,
+  motivo, última decisão e a providência sugerida. Na linha aberta: motivo,
+  decisão, alertas, quem cuida, histórico do processo (as outras intimações e
+  baixas), "Abrir no SEEU", "Gerar petição…" (o diálogo dos Atendimentos) e
+  "Enviar ao Quadro". Registrar a baixa (com o Quem, no alto) conta na produção
+  do mês; se a intimação estava no Quadro, o cartão vira a peça feita (conta uma
+  vez só). Baixa de progressão, livramento, indulto, prescrição, extinção ou
+  remição oferece marcar o pedido feito na base aberta da Execução. A
+  intimação fica no APTO até você concluir, mesmo que saia da Mesa.
 SEI (função SEI)
-  Processos do SEI lidos pela extensão: no navegador, entre no SEI da
-  Defensoria e abra o Controle de Processos (a leitura começa dele: cada link
-  do SEI é assinado na sua sessão); depois ícone do APTO > "Leitura do SEI para
-  o APTO" (o endereço já vem preenchido) e inicie a leitura; deixe a página
-  aberta até terminar. É o leitor do NUSPEN (só leitura, na sua sessão,
-  incremental: a próxima rodada só lê o que mudou; pausa, cancela e retoma),
-  com o leitor do SEI da Defensoria calibrado pela estrutura das páginas
-  (lista, processo, árvore e documento). O código de pareamento vem sozinho do
-  APTO. Ainda não lido: anexos em PDF (só documentos feitos no SEI) e a lista
-  em várias páginas (lê a primeira e avisa). Laboratório: o SEI fictício
-  (ferramentas\sei_ficticio) continua disponível.
-  Na tela: contadores (processos, obrigações a validar, validadas, falhas de
-  leitura); à esquerda os processos; à direita o processo escolhido, com as
-  obrigações sugeridas pelas regras do NUSPEN (determinação, solicitação,
-  recomendação), cada uma com a frase do documento (fonte), o destinatário e o
-  prazo como está no documento ("prazo no documento: 30 dias"; o vencimento
-  NÃO é calculado, porque o termo inicial não é presumido). Validar, Rejeitar
-  (com motivo, fica registrado), Voltar a sugestão e Enviar ao Quadro. Depois os
-  documentos (tipo sugerido com a confiança, versão, texto, sinalizações). Nada
-  se apaga: documento alterado no SEI vira versão nova e a anterior fica como
-  substituída (obrigação já validada fica, com o aviso "conferir").
+  Processos do SEI lidos pela extensão: entre no SEI da Defensoria e abra o
+  Controle de Processos (a leitura começa dele: cada link do SEI é assinado na
+  sua sessão); depois, aqui, "Ler o SEI". Só leitura, na sua sessão e
+  incremental (a próxima rodada só lê o que mudou; parou, continua de onde
+  parou). Os anexos em PDF também são lidos (pela importação de PDF). Ainda não
+  lida: a lista em várias páginas (lê a primeira e avisa).
+  Processos: à esquerda a lista; à direita o processo, com as providências
+  sugeridas pelas regras de leitura (determinação, solicitação, recomendação),
+  cada uma com a frase do documento (fonte), o destinatário e o prazo como está
+  no documento (sem vencimento calculado: o termo inicial não é presumido), e o
+  botão que leva à providência, onde se valida. Depois os documentos (tipo
+  sugerido com a confiança, versão, texto, indícios de resposta e sinalizações).
+  Nada se apaga: documento alterado no SEI vira versão nova e a anterior fica
+  como substituída (providência já validada fica, com o aviso "conferir").
   Dados na base do gabinete (gabinete.sqlite).
+
+SEI: A GESTÃO (7.27; abas reorganizadas na 7.28)
+  A gestão depois da leitura, na mesma base do gabinete e ligada ao SEEU, ao
+  Quadro e ao Relatório. Abas da função SEI: Visão geral, Processos,
+  Providências (com "Lista", "Prazos e calendário" e "Ofícios"), Demandas,
+  Inspeções e Histórico e relatório; o botão "Cadastros" (no alto) tem o Quem,
+  as regras de contagem e os modelos de minuta. Validar, ajustar e rejeitar
+  ficam só na providência (em Processos, "Validar na providência…" leva até
+  ela).
+  Quem: no alto, escolha o seu nome (a lista é cadastrada em Cadastros). Toda
+  decisão e todo registro guardam quem fez; sem Quem, nada é registrado.
+  Validar: as regras SUGEREM (obrigação, prazo, avaliação); só a pessoa valida.
+    Validar = é obrigação do núcleo (passa a contar como fato); Ajustar =
+    corrigir o texto (o anterior fica guardado); Rejeitar = não é obrigação
+    (com justificativa). Em lote: marque na lista, veja a prévia e confirme.
+  Providências: cada uma com as nove etapas (do documento de origem à
+    resolução), dados (prioridade, responsável, quem assina, destinatário,
+    demanda, encaminhada à coordenação, observações), prazos, lacunas,
+    ofícios, cumprimento, minuta e histórico. Registradas pela leitura do SEI,
+    por PDF, à mão ou a partir de um achado de inspeção.
+  Prazos: natureza (expresso, calculado, não identificado), origem,
+    finalidade, termo inicial com a fonte e regra de contagem. Vencimento só
+    com a data expressa no documento ou calculado por regra APROVADA pela
+    coordenação, de dias corridos, com termo inicial documentado (dias úteis
+    não calculam: falta o calendário de feriados aprovado). Prorrogação,
+    suspensão, retomada e alteração guardam o vencimento anterior. Prazo não
+    validado nunca aparece como vencido. O que falta saber vira LACUNA (prazo
+    sem termo inicial, sem prazo no documento), em vez de inventar. Calendário
+    do mês com os prazos validados.
+  Demandas: demanda não é processo SEI (uma demanda junta vários processos e
+    providências; "concluído no SEI" não é "resolvido"). Situação, tipo,
+    prioridade, histórico; desvincular pede motivo; cancelar, justificativa.
+  Comunicações: o ofício que cumpre ou cobra providências. O APTO não envia
+    nada: registre o envio feito no SEI, reiterações, respostas e a juntada
+    (documento lido do SEI). O estado vem dos fatos (aguardando envio,
+    aguardando resposta, resposta sem juntada, juntada). Resposta recebida NÃO
+    é cumprimento: a avaliação da resposta e a do cumprimento são separadas, e
+    só a avaliação do cumprimento validada muda a situação da providência.
+  Inspeções: estabelecimento, data, achados (categoria, gravidade,
+    recomendação, acompanhamento). A recorrência com a inspeção anterior do
+    mesmo estabelecimento e categoria é só SUGERIDA: você confirma (achados
+    parecidos nunca são fundidos). Cada achado gera providência própria.
+    Comparação com a inspeção anterior (recorrente, só na anterior, nova).
+  Minutas: sem IA, nada sai do computador. Só de providência validada, só com
+    fatos validados, cada frase com a fonte, no padrão (dados
+    objetivos, conclusão no condicional, consequência em tempo, omissão
+    delimitada) e o modelo escolhido (Despacho, Manifestação à coordenação ou
+    os cadastrados, com versões). Editar, restaurar e aprovar criam versões
+    (nenhuma se perde); "Copiar o texto para o SEI".
+  Importar PDF do SEI (botão no alto da função SEI, ou Importar > PDF de
+    processo do SEI): o processo baixado do SEI (ou um anexo em PDF) é lido
+    página a página, separado em documentos pelo rodapé do SEI, classificado e
+    lido pelas regras (tudo sugestão). O original fica guardado sem alteração
+    ("originais_sei", com o SHA-256 no nome); o mesmo arquivo de novo só
+    registra o recebimento. Página escaneada fica sem texto (sem OCR neste
+    computador) e é avisada.
+  Visão geral: além do painel do SEI, os números da gestão (prazos vencidos,
+    vencem em 7 dias, a validar, lacunas, ofícios aguardando, demandas
+    abertas), "Desde a sua última visita" (o marco só avança quando você
+    marca), "O que mudou nas leituras" (despacho, ofício, resposta, documento
+    de outro órgão, arquivamento: arquivamento só SUGERE e, confirmado, leva as
+    providências abertas à coordenação, sem dar nada por cumprido) e as
+    perguntas prontas (consultas fixas, sem IA, com a origem).
+  Histórico e relatório: tudo o que foi registrado, por Quem, tipo e período,
+    e o relatório de gestão do período. Busca (no alto) em processos,
+    documentos, providências, demandas, ofícios e inspeções, sem acento.
+  Nada se apaga: remover é remoção lógica, com motivo, e fica no histórico.
+  Ficaram de fora, de propósito: a IA na nuvem (o APTO não manda nada para fora
+    do computador), o OCR (sem Tesseract) e os perfis de acesso com senha (o
+    APTO é local; o Quem registra quem fez).
 
 ABERTURA
 O programa abre SEM base carregada. A tela inicial pede: criar uma base nova
@@ -1133,7 +1213,7 @@ CALCULADORA DE PENAS (ícone de calculadora no topo, em qualquer aba)
     maximiza (□ no título) ou se redimensiona pelo canto inferior direito;
     ao fechar e abrir de novo, começa zerada (os registros ficam).
 
-DADOS PRISIONAIS (aba ao lado do Quadro do Usuário)
+DADOS PRISIONAIS (aba do grupo "Panorama e ferramentas")
   Retrato do sistema prisional de MS pela API pública do Geopresídios/CNIEP
   (CNJ): para cada unidade, a última inspeção judicial mensal do tema
   "Aspectos gerais" (vagas, presos por regime, perfil da população e
@@ -1211,6 +1291,77 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v7.28.0
+  SEEU: a baixa da intimação que foi ao Quadro fecha o cartão (a peça conta uma
+  vez só; reabrir devolve o cartão); a baixa de um benefício oferece marcar o
+  pedido feito na base aberta da Execução (um clique); a baixa guarda quem
+  fez (Quem, no alto); "Quem cuida" da intimação e o filtro "comigo";
+  histórico do processo (as outras intimações e baixas); a leitura mostra a
+  etapa (1 de 2, a Mesa; 2 de 2, processos e decisões).
+  Barra do topo: número em SEEU (intimações que vencem hoje ou venceram) e em
+  SEI (prazos validados que vencem hoje ou venceram).
+  SEI: só "SEI" no nome; seis abas (prazos e ofícios dentro de Providências;
+  Cadastros num botão); um "Atenção hoje" só; "providência" em toda a tela;
+  validar só na providência. Anexos em PDF lidos pela extensão (1.14.0) e pela
+  importação de PDF. OCR opcional: com o Tesseract instalado no computador, as
+  páginas escaneadas são lidas e marcadas "lido por OCR, confiança baixa".
+  O cartão do Quadro de uma providência leva o prazo validado e acompanha a
+  prorrogação. Minutas de ofício e de reiteração (vocativo, prazo validado).
+  Ofício enviado e reiteração contam na produção do mês (Ofícios); ofício
+  removido sai da contagem.
+  Quadro: aba "Agenda", um calendário só para as pendências do Quadro, a Mesa
+  do SEEU e os prazos validados do SEI (clique abre o item).
+  Extensão 1.14.0: a triagem e a leitura do SEI são só pelo APTO (a página da
+  triagem, aberta à mão, só avisa); petições, modelos, pdf-lib e fontes saíram
+  da extensão; o laboratório (SEI fictício) não vai no pacote.
+  Corrigido: o Quadro aparecia por baixo do SEEU (a moldura escondida também
+  some pelo estilo direto).
+
+v7.27.0
+  A gestão do SEI dentro do APTO (ver "SEI: A GESTÃO"): demandas,
+  providências (validar, ajustar, rejeitar, em lote), prazos com regra de
+  contagem aprovada, alterações e lacunas, comunicações com resposta e
+  avaliação, cumprimento, inspeções com achados e recorrência confirmada,
+  minutas com fontes e versões, importação de PDF do SEI (rodapé), o que
+  mudou nas leituras, desde a última visita, perguntas prontas, calendário de
+  prazos, histórico, relatório de gestão e busca. Tudo com Quem; nada se apaga.
+
+v7.26.0
+  Revisão geral das funções novas, todas ligadas entre si.
+  - Atendimentos não fica mais por baixo do SEI e do SEEU (a moldura escondida
+    continuava visível).
+  - SEI: acentos certos (o SEI da Defensoria responde em ISO-8859-1 e era lido
+    como UTF-8: "Of?cio"); o que já tinha sido lido com acento quebrado é lido
+    de novo na próxima leitura, mesmo em "só novos". Leitura do ofício: a
+    frase da obrigação não leva mais o cabeçalho (número, data, destinatário,
+    assunto) junto, e o destinatário é o nome e o cargo do bloco "Ao Ilmo.
+    Senhor" (antes saía "Ilmo"). Indício de resposta (regra do NUSPEN):
+    certidão ou termo que cita resposta a ofício e manifestação que afirma
+    atendimento aparecem no documento (é indício, não cumprimento). Cada
+    validação/rejeição fica no histórico da obrigação ("Voltar a sugestão" não
+    apaga mais o motivo anterior). Situação da última leitura por extenso.
+  - SEEU: trocar de fluxo (situação) zera a lista e mostra só as intimações
+    daquele fluxo (as outras ficam guardadas até concluir); sem escolha
+    guardada, abre no fluxo da última leitura. "Gerar petição…" abre o mesmo
+    diálogo dos Atendimentos (mesmos modelos do gabinete, mesma busca, mesma
+    pasta), já com o nome e o processo, e a peça sugerida no topo.
+  - Quadro único: saiu o "Quadro do Usuário" da Execução; "Enviar ao Quadro"
+    (na linha e na ficha) grava no Quadro, um por processo e benefício, com
+    Desfazer; "pedido feito" marca a pendência; os cartões antigos vêm para o
+    Quadro uma vez.
+  - Importar e Exportar únicos, na barra do APTO (ver "FUNÇÕES").
+  - SEI: "Visão geral" (abre nela): Atenção hoje (entraram nos últimos 3
+    dias, com documento novo, com obrigação a validar, com prazo no
+    documento, parados há 30 dias ou mais; clique para filtrar), todos os
+    processos (assunto, marcadores, responsável, quando entrou, última
+    movimentação, situação; a linha abre o processo), processos por marcador
+    e o que entrou desde a leitura anterior. Marcadores, responsável e "não
+    visualizado" vêm da lista do Controle de Processos (extensão 1.13.0);
+    "entrou" e "parado" contam do que o APTO viu, porque a lista do SEI não
+    mostra a data de entrada. Junto das obrigações, uma explicação do
+    Validar/Rejeitar.
+  - Extensão 1.13.0: acentos do SEI e o retrato da lista para a Visão geral.
 
 v7.25.0
   Função SEEU: "Gerar petição…" na intimação aberta, com os mesmos modelos e

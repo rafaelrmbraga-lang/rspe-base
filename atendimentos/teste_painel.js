@@ -9,7 +9,7 @@ const os = require("os");
 let chromium;
 try { ({ chromium } = require("playwright")); } catch (e) { console.log("ok: (sem Playwright: teste da tela de Atendimentos não executado)"); process.exit(0); }
 const RAIZ = path.join(__dirname, "..");
-const MODELO = path.join(RAIZ, "extensao_seeu", "modelos", fs.readdirSync(path.join(RAIZ, "extensao_seeu", "modelos")).find((n) => n.endsWith(".docx")));
+const MODELO = path.join(RAIZ, "extensao_seeu_testes", "modelo_ficticio.docx");
 
 (async () => {
   const b = await chromium.launch();
@@ -106,9 +106,12 @@ const MODELO = path.join(RAIZ, "extensao_seeu", "modelos", fs.readdirSync(path.j
   // Quadro: só as pendências
   await pg.click("#fn_quadro");
   await pg.waitForTimeout(500);
-  ok(await fr.isHidden(".topo"), "Quadro: sem subabas (uma só)");
+  ok((await fr.$$eval(".abas button:not([hidden])", (x) => x.map((b) => b.dataset.aba))).join() === "pend,agenda", "Quadro: Pendências e Agenda");
   ok((await fr.$$eval(".kcard", (x) => x.length)) === 1, "a pendência no Quadro");
-  ok(await fr.isVisible("#quadroExecBtn"), "atalho para o Quadro do Usuário da base");
+  await fr.click('.abas button[data-aba="agenda"]');
+  await pg.waitForTimeout(400);
+  ok(await fr.isVisible("#agCal td.hoje"), "agenda única: calendário do mês");
+  await fr.click('.abas button[data-aba="pend"]');
   // Relatório: produção do mês com o atendimento do dia; somar a Execução (sem base: nada)
   await pg.click("#fn_rel");
   await pg.waitForTimeout(500);

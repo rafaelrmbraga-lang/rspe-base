@@ -49,6 +49,8 @@ ok(o.get("status") == "sugestao" and "Determino" in o.get("frase", "") and o.get
 ok("vencimento" not in json.dumps(o), "prazo sem vencimento calculado")
 ok(s.decidir(o["id"], "rejeitada", "")["erro"].startswith("diga o motivo"), "rejeitar pede motivo")
 ok(s.decidir(o["id"], "validada").get("ok"), "validar")
+h = [x["historico"] for x in s.processo("99/000123/2026")["obrigacoes"] if x["id"] == o["id"]][0]
+ok([(x["de"], x["para"]) for x in h] == [("sugestao", "validada")], "decisão no histórico: %s" % h)
 # nova versão do documento: a anterior fica (substituída); a obrigação validada fica para conferir
 txt2 = txt.replace("30(trinta)", "15(quinze)")
 s.receber_lote(ses, [{"tipo": "documento", "id_sei": "70", "processo": "99/000123/2026", "titulo": "Despacho", "versao": "v2", "conteudo": txt2, "hash": rsei.sha(txt2)}])
@@ -59,6 +61,36 @@ ok(p["obrigacoes"][1]["status"] == "sugestao" and p["obrigacoes"][1]["prazo_quan
 ok(s.conhecidos(["documento:70", "processo:7", "documento:71"]) == {"documento:70": {"versao": "v2", "hash": rsei.sha(txt2), "ultima_movimentacao": ""},
                                                                     "processo:7": {"versao": "", "hash": "", "ultima_movimentacao": ""}},
    "conhecidos: só o que foi lido bem (falha não conta): %s" % s.conhecidos(["documento:70", "processo:7", "documento:71"]))
+# ofício com cabeçalho em linhas sem ponto (como o SEI entrega): a frase da obrigação não leva o cabeçalho junto, e o destinatário é
+# o nome e o cargo do bloco "Ao Ilmo. Senhor" (não "Ilmo")
+of = ("OFÍCIO Nº 1234/2026/NUSPEN/DPGE-MS\nCampo Grande, 10 de novembro de 2026.\nAo Ilmo. Senhor\nFULANO DE TAL FICTÍCIO\n"
+      "Diretor do Estabelecimento Penal Fictício\nAssunto: Inspeção prisional - informações\nSenhor Diretor,\n"
+      "Solicito informações sobre o fornecimento de água no estabelecimento, no prazo de 10 (dez) dias.\nAtenciosamente,\nDEFENSOR FICTÍCIO")
+s.receber_lote(ses, [{"tipo": "documento", "id_sei": "80", "processo": "99/000123/2026", "titulo": "Ofício", "versao": "v1", "conteudo": of, "hash": rsei.sha(of)}])
+ob = [x for x in s.processo("99/000123/2026")["obrigacoes"] if x["frase"].startswith("Solicito") or "Assunto" in x["frase"]]
+ok(len(ob) == 1 and ob[0]["frase"].startswith("Solicito informações") and "Assunto" not in ob[0]["frase"], "frase da obrigação sem o cabeçalho: %s" % [x["frase"] for x in ob])
+ok(ob and ob[0]["destinatario"] == "FULANO DE TAL FICTÍCIO, Diretor do Estabelecimento Penal Fictício", "destinatário do ofício: %s" % (ob and ob[0]["destinatario"]))
+ok(ob and ob[0]["prazo_quantidade"] == 10, "prazo do ofício: 10 dias")
+ok(rsei._frases_por_linha("Determino a expedição de ofício\nà direção, com prazo de 5 dias.") == "Determino a expedição de ofício\nà direção, com prazo de 5 dias.",
+   "frase que continua na linha de baixo (minúscula) não é cortada")
+# indício de resposta (regra do NUSPEN): certidão que cita resposta a ofício; é indício, não cumprimento
+cert = "CERTIDÃO\nCertifico que foi juntada a resposta ao ofício nº 1234567, encaminhada pela unidade."
+s.receber_lote(ses, [{"tipo": "documento", "id_sei": "82", "processo": "99/000123/2026", "titulo": "Certidão", "versao": "v1", "conteudo": cert, "hash": rsei.sha(cert)}])
+dc = [d for d in s.processo("99/000123/2026")["documentos"] if d["id_sei"] == "82"][0]
+ok(dc["tipo_codigo"] == "A4" and [x["oficio"] for x in dc["indicios"]] == ["1234567"], "indício de resposta ao ofício 1234567: %s %s" % (dc["tipo_codigo"], dc["indicios"]))
+# Visão geral: "entrou desde a última leitura" só a partir da 2ª leitura, comparando com a anterior
+s.concluir(ses, {"retrato": [{"id": "7", "numero": "99/000123/2026", "atribuicao": "fulano", "marcadores": [{"nome": "Inspeção"}]}]})
+ok(not any(p["entrou_agora"] for p in s.resumo()["processos"]), "1ª leitura: nada para comparar")
+ses2 = s.iniciar("todos")["sessao"]
+s.concluir(ses2, {"retrato": [{"id": "7", "numero": "99/000123/2026"}, {"id": "9", "numero": "99/000125/2026", "tipo": "Carta", "naoVisualizado": True}]})
+rr = {p["original"]: p for p in s.resumo()["processos"]}
+ok(rr["99/000125/2026"]["entrou_agora"] and not rr["99/000123/2026"]["entrou_agora"] and rr["99/000125/2026"]["nao_visualizado"] == 1,
+   "2ª leitura: o processo novo na lista aparece como entrou agora: %s" % {k: v["entrou_agora"] for k, v in rr.items()})
+ses = ses2
+# lido antes da 7.26 com acento quebrado (ISO-8859-1 lido como UTF-8): volta a ser desconhecido, para a próxima leitura trazer de novo
+ruim = "Of\ufffdcio n\ufffd 3. Solicito informa\ufffd\ufffdes."
+s.receber_lote(ses, [{"tipo": "documento", "id_sei": "81", "processo": "99/000123/2026", "titulo": "Of\ufffdcio", "versao": "v1", "conteudo": ruim, "hash": rsei.sha(ruim)}])
+ok(s.conhecidos(["documento:81", "documento:80"]).keys() == {"documento:80"}, "documento com acento quebrado é lido de novo; o bom, não")
 g.fechar()
 
 # ---- ponta a ponta com o SEI fictício e o servidor do APTO ----
@@ -138,14 +170,24 @@ if node:
             if j2:
                 ok(j2["semEntrada"] == "sessao_ausente", "SEI da Defensoria sem o Controle de Processos aberto: pede para abrir (%s)" % j2["semEntrada"])
                 d1, d2 = j2["primeira"], j2["repetida"]
-                ok(d1["processos"] == 3 and d1["documentosLidos"] == 6 and d1["parada"] is None, "SEI da Defensoria: 3 processos, 6 documentos (o anexo PDF fica de fora): %s" % d1)
-                ok(d2["documentosLidos"] == 0 and d2["documentosPulados"] == 6, "2ª leitura: nada relido (hash): %s" % d2)
-                ok(j2["metodos"] == ["GET"] and set(j2["acoes"]) <= {"procedimento_controlar", "procedimento_trabalhar", "procedimento_visualizar", "documento_visualizar"},
+                ok(d1["processos"] == 3 and d1["documentosLidos"] == 9 and d1["parada"] is None, "SEI da Defensoria: 3 processos, 6 documentos e 3 anexos PDF: %s" % d1)
+                ok(d2["documentosLidos"] == 0 and d2["documentosPulados"] == 9, "2ª leitura: nada relido (hash, também do anexo): %s" % d2)
+                ok(j2["metodos"] == ["GET"] and set(j2["acoes"]) <= {"procedimento_controlar", "procedimento_trabalhar", "procedimento_visualizar", "documento_visualizar",
+                                                                    "documento_download_anexo"},
                    "só GET e só as quatro leituras: %s %s" % (j2["metodos"], j2["acoes"]))
                 det = api.sei_processo("99/000111/2026")
                 ok(det and det["especificacao"].startswith("Inspeção - Unidade Prisional") and det["unidade"] == "NUSPEN-FICT", "processo com tipo, especificação e unidade: %s" % (det and det["especificacao"]))
                 ob = [o for o in (det or {}).get("obrigacoes", []) if "Determino" in o["frase"]]
                 ok(ob and ob[0]["prazo_quantidade"] == 30, "regras do NUSPEN no texto do SEI da Defensoria: obrigação com prazo de 30 dias")
+                anx = api.sei_processo("99/000123/2026")
+                ok(anx and len(anx["documentos"]) >= 15 and any("Relatório (PDF)" in d["titulo"] or "PDF" in d["titulo"] for d in anx["documentos"]),
+                   "anexo PDF lido pela importação de PDF (os documentos dele, pelo rodapé): %s" % (anx and len(anx["documentos"])))
+                # Visão geral: o retrato da lista do Controle (atribuição, marcadores, não visualizado) chega ao APTO
+                rp = {p["original"]: p for p in api.sei_resumo()["processos"]}
+                p1, p2 = rp.get("99/000111/2026", {}), rp.get("99/000222/2026", {})
+                ok(p1.get("atribuicao") == "fulano" and [m["nome"] for m in p1.get("marcadores", [])] == ["Aguardando resposta"] and p1.get("primeiro_visto"),
+                   "retrato da lista: atribuição e marcador: %s" % {k: p1.get(k) for k in ("atribuicao", "marcadores", "primeiro_visto")})
+                ok(p2.get("nao_visualizado") == 1 and p2.get("tipo") == "Ofício", "não visualizado no SEI e tipo: %s" % {k: p2.get(k) for k in ("nao_visualizado", "tipo")})
     finally:
         if srv:
             srv.shutdown()

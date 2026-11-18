@@ -12,9 +12,9 @@ test("dpms: tem todos os membros do contrato", () => {
   for (const m of ["nome", "versao", "temVersao", "ativo", "permitido", "urlLista", "ehLogin", "listarProcessos", "lerProcesso", "listarDocumentos", "lerDocumento"]) assert.ok(m in A, m);
   assert.equal(A.temVersao, false);
 });
-test("dpms: permitido só as quatro leituras, só no SEI da Defensoria", () => {
-  for (const a of ["procedimento_controlar", "procedimento_trabalhar", "procedimento_visualizar", "documento_visualizar"]) assert.equal(A.permitido(`${B}/sei/controlador.php?acao=${a}&infra_hash=x`), true, a);
-  for (const a of ["documento_excluir", "documento_assinar", "procedimento_enviar", "procedimento_concluir", "documento_gerar", "anotacao_registrar", "arvore_visualizar", "documento_download_anexo"])
+test("dpms: permitido só as leituras (e baixar o anexo PDF, 7.28), só no SEI da Defensoria", () => {
+  for (const a of ["procedimento_controlar", "procedimento_trabalhar", "procedimento_visualizar", "documento_visualizar", "documento_download_anexo"]) assert.equal(A.permitido(`${B}/sei/controlador.php?acao=${a}&infra_hash=x`), true, a);
+  for (const a of ["documento_excluir", "documento_assinar", "procedimento_enviar", "procedimento_concluir", "documento_gerar", "anotacao_registrar", "arvore_visualizar", "documento_upload_anexo"])
     assert.equal(A.permitido(`${B}/sei/controlador.php?acao=${a}`), false, a);
   assert.equal(A.permitido("https://outro.invalid/sei/controlador.php?acao=documento_visualizar"), false);
 });
@@ -31,6 +31,12 @@ test("dpms: lista de processos (visualizado e não visualizado, dica com especif
   assert.deepEqual(r.itens.map((x) => [x.id, x.numero]), [["111", "99/000111/2026"], ["222", "99/000222/2026"], ["333", "99/000333/2026"]]);
   assert.match(r.itens[0].href, /^controlador\.php\?acao=procedimento_trabalhar&acao_origem=.*&infra_hash=h111$/);
   assert.equal(r.proxima, null); assert.equal(r.total, 3); assert.deepEqual(A.avisos, []);
+  // o que a linha mostra além do número (Visão geral do APTO): atribuição, tipo, interessados, marcadores, não visualizado
+  assert.deepEqual(r.itens[0].extra, { atribuicao: "fulano", tipo: "Inspeção - Unidade Prisional", especificacao: "Inspeção fictícia no EPMF",
+    interessados: ["Pessoa Fictícia"], marcadores: [{ nome: "Aguardando resposta", texto: "Cobrar a resposta da unidade" }], naoVisualizado: false });
+  assert.equal(r.itens[1].extra.naoVisualizado, true);
+  assert.deepEqual(r.itens[1].extra.marcadores, []);
+  assert.equal(r.itens[1].extra.atribuicao, "");
   const p = A.lerProcesso(P("processo.html"));
   assert.equal(p.especificacao, "Inspeção - Unidade Prisional — Inspeção fictícia no EPMF");
   assert.equal(p.unidade, "NUSPEN-FICT");
@@ -41,9 +47,10 @@ test("dpms: lista com mais processos do que linhas avisa (paginação ainda não
   A.listarProcessos(P("lista.html").replace("(3 registros)", "(250 registros)"));
   assert.match(A.avisos[0], /3 de 250/);
 });
-test("dpms: árvore: documentos com o endereço do conteúdo; anexo PDF fica de fora (ainda não lido)", () => {
+test("dpms: árvore: documentos com o endereço do conteúdo; anexo PDF marcado como anexo (lido no APTO pela importação de PDF)", () => {
   const d = A.listarDocumentos(P("arvore.html"));
-  assert.deepEqual(d.map((x) => [x.id, x.titulo]), [["5001", "Despacho 1000001"], ["5002", "Ofício 1000002"]]);
+  assert.deepEqual(d.map((x) => [x.id, x.titulo, !!x.anexo]), [["5001", "Despacho 1000001", false], ["5002", "Ofício 1000002", false], ["5003", "Relatório (PDF) 1000003", true]]);
+  assert.match(d[2].href, /acao=documento_download_anexo&.*infra_hash=d3$/);
   assert.match(d[0].href, /acao=documento_visualizar&.*infra_hash=d1$/);
 });
 test("dpms: documento: texto por parágrafo, entidades decodificadas, sem estilo", () => {

@@ -20,7 +20,7 @@ ok('<body class="fn-exec">' in UI, "abre na Execução (body.fn-exec)")
 bar = re.search(r'<nav class="fnbar" id="fnbar"[^>]*>(.*?)</nav>', UI, re.S)
 ok(bar, "barra das funções ausente")
 if bar:
-    nomes = re.findall(r'<button class="fn[^"]*" role="tab" id="fn_(\w+)"[^>]*>.*?</svg>([^<]+)</button>', bar.group(1), re.S)
+    nomes = re.findall(r'<button class="fn[^"]*" role="tab" id="fn_(\w+)"[^>]*>.*?</svg>([^<]+)(?:<span class="fnbadge"[^>]*></span>)?</button>', bar.group(1), re.S)
     ok(nomes == [("atend", "Atendimentos"), ("exec", "Execução"), ("seeu", "SEEU"), ("sei", "SEI"), ("quadro", "Quadro"), ("rel", "Relatório")], "ordem das funções: %s" % nomes)
     ok(UI.index('id="fnbar"') < UI.index('<div class="top">'), "a barra vem antes do cabeçalho da Execução")
 for sel in ("body:not(.fn-exec) .top", "body:not(.fn-exec) .corpo", "body:not(.fn-exec) .welcome.on", "body:not(.fn-exec) .fnpag"):
@@ -32,6 +32,7 @@ for k in ("seeu", "sei"):
 for k in ("atend", "quadro", "rel"):
     ok(re.search(r"\b%s:\{titulo:'[^']+', painel:'%s'\}" % (k, k), UI), "função %s abre o painel de atendimentos (moldura)" % k)
 ok("M.src='atendimentos/painel.html#'+F.painel" in UI, "moldura do painel")
+ok(".fnpag iframe[hidden]{display:none}" in CSS, "moldura escondida não aparece sob SEI/SEEU/Execução")
 ok("/^atd_[a-z_]+$/.test(met)" in UI, "a moldura só chama as funções atd_* do Python")
 ok("['atend','exec','seeu','sei','quadro','rel'][+e.key-1]" in UI and "/^[1-6]$/" in UI, "atalhos Ctrl+1 a Ctrl+6")
 ok("carregando(txt){ if(this.fn!=='exec') this.funcao('exec');" in UI, "abrir/importar base volta para a Execução")

@@ -121,9 +121,13 @@
     tr.det td{display:table-cell}
     .bloco pre{max-height:none}
   }
+  html.so-motor body > *:not(#soMotor){display:none!important}
+  #soMotor{display:none;max-width:640px;margin:60px auto;padding:20px 24px;border:1px solid #d7dadd;border-radius:10px;background:#fff;font:15px/1.5 system-ui,sans-serif}
+  html.so-motor #soMotor{display:block}
 </style>
 </head>
 <body>
+<div id="soMotor"><b>A triagem da Mesa agora é no APTO</b><p>Abra o APTO, função <b>SEEU</b>, e use "1 · Ler a Mesa" e "2 · Ler processos e decisões" (com o SEEU aberto e logado numa aba). As abas, os filtros, a baixa e as petições ficam lá. Esta página só trabalha por baixo, quando o APTO pede a leitura.</p></div>
 <header>
   <img src="icones/48.png" alt="">
   <div><h1>Triagem da Mesa do Defensor</h1><small>APTO · lê a Mesa, o motivo de cada intimação e a última decisão, sem abrir abas</small></div>
@@ -192,30 +196,9 @@
     </tr></thead>
     <tbody id="corpo"><tr><td colspan="7" class="vazio">Clique em "1 · Ler a Mesa" com o SEEU aberto e logado em outra aba.</td></tr></tbody>
   </table>
-  <div id="petFundo" role="dialog" aria-modal="true" aria-labelledby="petTit">
-    <div id="pet">
-      <h2 id="petTit">Gerar petição</h2>
-      <div class="sub" id="petSub"></div>
-      <div class="campos">
-        <div><label for="petProc">Processo</label><input type="text" id="petProc"></div>
-        <div><label for="petNome">Nome do sentenciado</label><input type="text" id="petNome"></div>
-        <div><label for="petData">Data</label><input type="text" id="petData"></div>
-      </div>
-      <ul id="petLista"></ul>
-      <div class="destino">Salvar em: <b id="petDestino">Downloads</b>
-        <button id="petPasta" type="button">Escolher pasta…</button>
-        <button id="petLimparPasta" type="button" style="display:none" title="Voltar a salvar em Downloads">usar Downloads</button>
-        <label class="chk"><input type="checkbox" id="petPerguntar"> perguntar onde salvar a cada vez</label></div>
-      <div id="petMsg"></div>
-      <div class="rodape"><span>Endereçamento: 2ª VEP de Campo Grande · assina Cahuê Duarte e Urdiales, Defensor Público (como nos modelos)</span><button id="petFechar">Fechar</button></div>
-    </div>
-  </div>
   <footer>A leitura é uma triagem: ordena e destaca. Não substitui ler a decisão no SEEU. Nada sai deste computador.</footer>
 </main>
 <script src="comum.js"></script>
-<script src="pdflib/pdf-lib.min.js"></script>
-<script src="pdflib/fontkit.umd.min.js"></script>
-<script src="peticao.js"></script>
 <script src="triagem_core.js"></script>
 <script type="module" src="triagem.js"></script>
 </body>

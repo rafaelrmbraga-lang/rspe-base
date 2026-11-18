@@ -11,11 +11,13 @@ import tempfile
 AQUI = os.path.dirname(os.path.abspath(__file__))
 EXT = os.path.join(AQUI, "extensao_seeu")
 falhas = []
-for f in ("triagem.html", "triagem.js", "triagem_core.js", "pdfjs/pdf.min.mjs", "pdfjs/pdf.worker.min.mjs", "pdfjs/LICENSE.txt", "peticao.js",
-          "pdflib/pdf-lib.min.js", "pdflib/fontkit.umd.min.js", "pdflib/LICENSE-pdf-lib.md", "pdflib/LICENSE-fontkit.txt", "fontes_pdf/LICENSE-Carlito-OFL.txt",
-          "fontes_pdf/carlito-latin-400-normal.woff", "fontes_pdf/carlito-latin-700-normal.woff", "fontes_pdf/carlito-latin-400-italic.woff", "fontes_pdf/carlito-latin-700-italic.woff"):
+for f in ("triagem.html", "triagem.js", "triagem_core.js", "pdfjs/pdf.min.mjs", "pdfjs/pdf.worker.min.mjs", "pdfjs/LICENSE.txt"):
     if not os.path.isfile(os.path.join(EXT, f)):
         falhas.append("arquivo %s" % f)
+# 7.28: a triagem é no APTO; a página da extensão é só o motor (aberta à mão, só o aviso); petições e modelos saíram da extensão
+for f in ("peticao.js", "modelos", "pdflib", "fontes_pdf", "sei/painel.html", "sei/servico.js"):
+    if os.path.exists(os.path.join(EXT, f)):
+        falhas.append("%s não devia estar mais na extensão" % f)
 html = open(os.path.join(EXT, "triagem.html"), encoding="utf-8").read()
 if '<script src="triagem_core.js"></script>' not in html or '<script type="module" src="triagem.js"></script>' not in html:
     falhas.append("triagem.html carrega triagem_core.js e triagem.js")
@@ -26,6 +28,8 @@ if js.count("fetch(") - js.count("fetch(chrome.runtime.getURL(") != 1 or "new XM
     falhas.append("triagem.js: um só pedido direto, conferido por pedidoTriagemPermitido")
 if js.index("pedidoTriagemPermitido(abs") > js.index("fetch("):
     falhas.append("triagem.js: confere o endereço antes do pedido direto")
+if 'if (!AUTO) document.documentElement.classList.add("so-motor");' not in js or 'id="soMotor"' not in html or "abrirPeticao" in js:
+    falhas.append("triagem aberta à mão: só o aviso de usar o APTO; sem petição")
 if "preAnalise" in js:
     falhas.append("triagem.js não cita o Analisar")
 # o pacote do build (zip do Releases e artefato do Actions) leva a pasta da extensão
@@ -34,7 +38,7 @@ if "Copy-Item -Recurse extensao_seeu pacote\\extensao_seeu" not in wf:
     falhas.append("build.yml: a pasta extensao_seeu entra no pacote")
 node = shutil.which("node")
 if node:
-    for f in ("triagem_core.js", "peticao.js"):
+    for f in ("triagem_core.js",):
         r = subprocess.run([node, "--check", os.path.join(EXT, f)], capture_output=True, text=True)
         if r.returncode:
             falhas.append("sintaxe de %s: %s" % (f, r.stderr.strip()))
@@ -44,7 +48,7 @@ if node:
         r = subprocess.run([node, "--check", mjs], capture_output=True, text=True)
         if r.returncode:
             falhas.append("sintaxe de triagem.js: " + r.stderr.strip())
-    for t in ("teste_triagem.js", "teste_peticao.js"):
+    for t in ("teste_triagem.js",):
         r = subprocess.run([node, os.path.join(AQUI, "extensao_seeu_testes", t)], capture_output=True, text=True, encoding="utf-8")
         sys.stdout.write(r.stdout)
         if r.returncode:

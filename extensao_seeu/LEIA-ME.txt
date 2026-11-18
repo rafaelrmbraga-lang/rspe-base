@@ -1,4 +1,4 @@
-APTO - RSPE do SEEU, Triagem da Mesa, Ficha do SIAPEN, processos e atendimentos do SAP (Chrome e Edge)
+APTO - RSPE do SEEU, leitura da Mesa e do SEI, Ficha do SIAPEN, processos e atendimentos do SAP (Chrome e Edge)
 ======================================================================================================
 
 O QUE FAZ
@@ -6,8 +6,9 @@ Ao abrir um processo no SEEU, a extensão salva o RSPE (o PDF do botão "Situaç
 Carcerária", gerado pelo próprio SEEU) em
 Downloads\APTO\<base>\<nº do processo>_<data>.pdf. O RSPE entra sozinho na base
 de mesmo nome da subpasta, enquanto o APTO estiver aberto.
-A Triagem da Mesa do Defensor lê a Mesa, o motivo de cada intimação e a última
-decisão, só lendo (veja "TRIAGEM DA MESA DO DEFENSOR").
+A Mesa do Defensor (o motivo de cada intimação e a última decisão) e o SEI são
+lidos quando o APTO pede (botões "Ler a Mesa" e "Ler o SEI", nas funções SEEU e
+SEI do APTO), só lendo. Os controles, a baixa e as petições ficam no APTO.
 
 LIGAÇÃO COM O APTO (automática, nada a configurar)
  - Com o APTO aberto, ele cria Downloads\APTO\<base> para cada base sua e
@@ -74,9 +75,11 @@ LOTE (lista de processos)
  - Antes de usar em volume, confirme com a Defensoria/TJ as regras de acesso
    automatizado ao SEEU.
 
-TRIAGEM DA MESA DO DEFENSOR (1.7)
- - No painel da extensão, "Triagem da Mesa do Defensor" abre uma aba própria.
-   Deixe o SEEU aberto e logado em outra aba.
+LEITURA DA MESA DO DEFENSOR (1.7; desde a 1.14 só pelo APTO)
+ - No APTO, função SEEU: "1 · Ler a Mesa" e "2 · Ler processos e decisões".
+   Deixe o SEEU aberto e logado numa aba. A extensão abre a página da triagem
+   em segundo plano (é o motor da leitura) e fecha ao terminar; aberta à mão,
+   ela só avisa para usar o APTO.
  - "1 · Ler a Mesa": lê as abas marcadas (Manifestação, Ciência,
    Razões/Contrarrazões) e a situação escolhida (Recebidas e não lidas,
    Lidas e aguardando análise, Aguardando assinatura), todas as páginas.
@@ -158,41 +161,10 @@ TRIAGEM DA MESA DO DEFENSOR (1.7)
    triagem, os filtros e os textos dos últimos 220 documentos lidos.
  - É triagem: ordena e destaca. Não substitui ler a decisão no SEEU.
 
-PETIÇÕES A PARTIR DA TRIAGEM (1.8)
- - Em cada linha da triagem, "Gerar petição" abre a lista dos modelos da
-   Defensoria (pasta "modelos"). A triagem só SUGERE um modelo (destacado);
-   quem escolhe é você.
- - Nº do processo, nome do sentenciado e data vêm preenchidos e podem ser
-   corrigidos na janela antes de gerar. Endereçamento: 2ª VEP de Campo
-   Grande. Assinatura: Cahuê Duarte e Urdiales, Defensor Público (como nos
-   modelos).
- - Saem em PDF (com opção de Word): 1. Ciência, 1. Não Opor - MP,
-   1. Advogado Particular, 1. Esgotamento Prévio, 1. Aud Justificação,
-   1. Intimação Pessoal - Justificativa (sugerido quando a providência é
-   "Requerer a intimação pessoal do sentenciado").
- - Saem em Word, com os trechos a completar destacados em amarelo
-   (regime, datas, percentual...): 1. Justificativa - primeira falta,
-   1. Extinção Punibilidade, 1. LC, 1. Progressão Aberto.
- - Nome do arquivo: "<modelo> <7 primeiros dígitos do nº>", ex.:
-   "1. Ciência 6003870.pdf".
- - Onde salvar (na janela): "Escolher pasta..." grava direto na pasta
-   escolhida (fica guardada; o Chrome pode pedir para confirmar o acesso uma
-   vez por sessão); "perguntar onde salvar a cada vez" abre a janela do
-   sistema; sem nada escolhido, vai para Downloads (fora da pasta vigiada do
-   APTO). Se o Chrome recusar o acento no nome, salva sem acento. (1.8.2:
-   o nome do arquivo passa a ser respeitado; antes podia sair um código.)
- - O PDF é montado dentro do navegador a partir do próprio modelo .docx
-   (timbre, margens, recuos, negrito, citações, imagens e nota de rodapé),
-   com a fonte Carlito (mesmas medidas da Calibri; pasta fontes_pdf) e as
-   bibliotecas pdf-lib e fontkit (pasta pdflib). Nada sai do computador.
- - Ajustes feitos nas cópias dos modelos: nomes e nºs dos casos de exemplo
-   viraram campos; a Aud. Justificação só requer a designação da audiência;
-   na Intimação Pessoal, a 1ª frase ficou genérica ("Verificou-se a
-   ocorrência de incidentes no decorrer do cumprimento da pena pelo
-   sentenciado.");
-   o 1º parágrafo do Esgotamento Prévio ficou genérico. Para trocar um
-   modelo, substitua o .docx na pasta "modelos" mantendo {{processo}},
-   {{nome}} e {{data}} onde devem ser preenchidos.
+PETIÇÕES (desde a 1.14, no APTO)
+ - As petições saem no APTO (função SEEU, "Gerar petição…" na intimação aberta;
+   ou Atendimentos), com os modelos do gabinete. Os modelos, o pdf-lib e as
+   fontes que ficavam na extensão saíram dela.
 
 FICHA DO SIAPEN
  - Toda ficha aberta no SIAPEN (Consultas > nome > "Ficha") é salva em
@@ -212,25 +184,37 @@ FICHA DO SIAPEN
  - O filtro de status da consulta (Ativo, etc.) é o que estiver escolhido na
    tela.
 
-LEITURA DO SEI PARA O APTO (versão 1.9.0)
-O leitor do SEI do NUSPEN, dentro desta extensão: lê os processos e documentos
-que você já vê no SEI, com a sua sessão, e entrega ao APTO aberto (função SEI).
- - SEI da Defensoria: entre no SEI e abra o Controle de Processos; a extensão
-   guarda o endereço dele (cada link do SEI é assinado na sessão) e a leitura
-   começa dali. Só 4 ações de leitura: Controle de Processos, abrir processo,
-   árvore e documento. Anexos em PDF ainda não são lidos.
- - Abrir: ícone do APTO > "Leitura do SEI para o APTO" (abre uma página da
-   extensão; deixe-a aberta enquanto lê).
- - Endereço do SEI: informe e clique em "Permitir acesso". O navegador pede a
-   sua autorização só para esse endereço (permissão opcional).
- - O código de pareamento vem sozinho do APTO (nada a colar). Não é a sua senha.
- - Só leitura: só páginas de uma lista fixa de leitura; para sozinha se o SEI
-   pedir calma, mudar de aparência ou pedir login de novo; não grava processo
-   incompleto; pausa, cancela e retoma de onde parou.
- - Laboratório (outro endereço): o SEI fictício. Rode
-   "python ferramentas\sei_ficticio\servidor.py 8001", abra
-   http://127.0.0.1:8001/sei/entrar_ficticio e use o endereço
-   http://127.0.0.1:8001.
+LEITURA DO SEI (versão 1.9.0; desde a 1.14 só pelo APTO)
+Lê os processos e documentos que você já vê no SEI, com a sua sessão, e entrega
+ao APTO aberto (função SEI).
+ - Entre no SEI da Defensoria e abra o Controle de Processos; a extensão guarda
+   o endereço dele (cada link do SEI é assinado na sessão). Depois, no APTO,
+   função SEI: "Ler o SEI". A página "Leitura do SEI para o APTO" da extensão
+   saiu (o botão do APTO faz o mesmo).
+ - Só leitura: Controle de Processos, abrir processo, árvore, documento e, desde
+   a 1.14, baixar o anexo em PDF (para ler o texto no APTO). Só GET; nada é
+   escrito no SEI. Para sozinha se o SEI pedir calma, mudar de aparência ou
+   pedir login de novo; não grava processo incompleto; retoma de onde parou.
+ - O laboratório (SEI fictício) só existe no repositório, para os testes: não
+   vai no pacote.
+
+ANEXOS EM PDF DO SEI (versão 1.14.0)
+ - O anexo em PDF da árvore do processo é baixado (só leitura) e entregue ao
+   APTO, que o lê como a importação de PDF: separado pelo rodapé do SEI,
+   classificado e lido pelas regras (tudo sugestão). Até 12 MB por anexo;
+   outros formatos ficam de fora. Na leitura seguinte, o anexo igual (mesmo
+   conteúdo) não é baixado de novo para análise.
+
+SEI: ACENTOS E VISÃO GERAL (versão 1.13.0)
+ - As páginas do SEI da Defensoria (ISO-8859-1) são lidas com os acentos
+   certos.
+ - A cada leitura, a extensão manda ao APTO o que a lista do Controle de
+   Processos mostra de cada processo: atribuição, marcadores, tipo,
+   interessados e se está "não visualizado". É o que alimenta a Visão geral
+   da função SEI. Os marcadores são reconhecidos pelo ícone e pela dica do
+   SEI [a conferir na primeira leitura real: se não aparecerem, avise].
+ - Atualize a extensão (Recarregar em chrome://extensions) depois de
+   atualizar o APTO.
 
 DOWNLOAD AUTOMÁTICO (versão 1.12.0)
  - "Baixar o RSPE automaticamente ao abrir um processo": desligado, abrir um

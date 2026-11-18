@@ -104,7 +104,29 @@ import openpyxl  # noqa: E402
 ws = openpyxl.load_workbook(destino).active
 ok(r.get("ok") and ws.max_row == len(s.listar()) + 1 and ws["B1"].value == "Processo" and ws["M1"].value == "Situação no APTO", "planilha da Mesa: %s" % r)
 api._recurso = staticmethod(lambda n: os.path.join(AQUI, n))
-ok(api.seeu_modelo("ciencia.docx").get("b64") and api.seeu_modelo("../rspe_app.py").get("erro") == "modelo inválido", "modelos de petição: só os da triagem")
+# 7.28: a intimação mandada ao Quadro e depois baixada conta UMA vez (o cartão vira a peça feita); reabrir devolve o cartão
+api._sei_obj = api._nus_obj = api._cmd = None
+api._js = lambda c: None
+abertas = [x for x in s.listar() if x["status"] != "concluido"]
+it = abertas[0]
+api.seeu_para_quadro(it["processo"], it.get("executado", ""), "Pedir progressão", it.get("ultimoDia", ""), it["chave"])
+cart = [x for x in g.lista("pecas") if x.get("origem") == "seeu" and x["status"] == "pendente"]
+ok(len(cart) == 1 and s.listar() and next(x for x in s.listar() if x["chave"] == it["chave"])["quadro"] == cart[0]["id"], "cartão do Quadro ligado à intimação")
+antes = len(g.lista("pecas"))
+rc = api.seeu_concluir(it["chave"], "PROG", "18/11/2026", "", "Servidora Fictícia")
+P = g.lista("pecas")
+ok(len(P) == antes and next(x for x in P if x["id"] == cart[0]["id"])["status"] == "feito" and next(x for x in P if x["id"] == cart[0]["id"])["tipo"] == "PROG",
+   "baixa converte o cartão em peça feita (conta uma vez)")
+ok(rc.get("sugerir_pedido", {}).get("aba") == "prog", "baixa de progressão sugere marcar o pedido na Execução: %s" % rc.get("sugerir_pedido"))
+ok(next(x for x in s.listar() if x["chave"] == it["chave"])["baixa"]["quem"] == "Servidora Fictícia", "baixa com Quem")
+api.seeu_reabrir(it["chave"])
+ok(next(x for x in g.lista("pecas") if x["id"] == cart[0]["id"])["status"] == "pendente" and len(g.lista("pecas")) == antes, "reabrir devolve o cartão à pendência")
+it2 = abertas[1] if len(abertas) > 1 else abertas[0]
+ok(api.seeu_atribuir(it2["chave"], "Coordenador Fictício").get("ok") and next(x for x in s.listar() if x["chave"] == it2["chave"])["atribuido"] == "Coordenador Fictício",
+   "atribuir a intimação")
+ok(all("anteriores" in x for x in s.listar()), "histórico do processo em cada intimação")
+c = api.contadores()
+ok(set(c) == {"seeu", "sei"} and all(isinstance(v, int) for v in c.values()), "números da barra: %s" % c)
 g.fechar()
 if falhas:
     print("FALHA: " + "; ".join(falhas))

@@ -37,6 +37,7 @@
     <nav class="abas">
       <button data-aba="dia" class="ativa">Atendimentos do dia</button>
       <button data-aba="pend">Pendências <span id="nPend" class="cont"></span></button>
+      <button data-aba="agenda">Agenda</button>
       <button data-aba="fluxo">Fluxo</button>
       <button data-aba="ctrl">Controle do mês</button>
       <button data-aba="cfg">Modelos e backup</button>
@@ -82,6 +83,13 @@
     </section>
 
     <!-- PENDÊNCIAS (kanban) -->
+    <section id="aba-agenda" class="aba" hidden>
+      <div class="barraDia"><div class="grupo"><button id="agAnt" class="icone" aria-label="Mês anterior">‹</button><b id="agMes" class="agMes"></b><button id="agProx" class="icone" aria-label="Próximo mês">›</button></div>
+        <div class="grupo"><span class="dica">Um calendário só: pendências do Quadro, Mesa do SEEU e prazos validados do SEI. Clique para abrir.</span></div></div>
+      <table id="agCal" class="agCal"></table>
+      <h3 class="agSub">Próximos 30 dias (e o que já venceu)</h3>
+      <ul id="agLista" class="agLista"></ul>
+    </section>
     <section id="aba-pend" class="aba" hidden>
       <div class="barraDia">
         <div class="grupo">
@@ -90,7 +98,7 @@
         </div>
         <div class="grupo"><span class="dica">Arraste o cartão entre as filas (ou use ‹ ›). Prazo vencido fica em vermelho.</span>
           <button id="novaPend" class="sec"><svg class="ic" aria-hidden="true"><use href="#i-mais"/></svg>Pendência</button>
-          <button id="quadroExecBtn" class="fantasma" hidden title="Os cartões que você criou nos assistidos da base aberta em Execução">Quadro do Usuário da base…</button></div>
+          </div>
       </div>
       <div id="kanban" class="kanban"></div>
       <details id="arquivoBox" class="arquivo">
@@ -170,8 +178,8 @@
         </section>
         <section class="cfgSec">
           <h2>Cópia de segurança</h2>
-          <p class="dica">Os dados ficam na base do gabinete do APTO (gabinete.sqlite, ao lado das bases, com uma cópia por dia na pasta "copias\gabinete"). Para trazer o que está na extensão APTO Atendimentos antiga: lá, "Exportar tudo (.json)"; aqui, "Importar (.json)" (junta, sem apagar).</p>
-          <div class="acoes"><button id="exportar" class="sec">Exportar tudo (.json)</button><label class="botaoArquivo">Importar (.json)<input type="file" id="importar" accept=".json,application/json" hidden></label></div>
+          <p class="dica">Os dados ficam na base do gabinete do APTO (gabinete.sqlite, ao lado das bases, com uma cópia por dia na pasta "copias\gabinete"). Para levar ou trazer uma cópia (também a da extensão APTO Atendimentos antiga), use <b>Importar</b> e <b>Exportar</b> na barra do APTO, no alto: valem para o sistema todo.</p>
+          <div class="acoes semApto"><button id="exportar" class="sec">Exportar tudo (.json)</button><label class="botaoArquivo">Importar (.json)<input type="file" id="importar" accept=".json,application/json" hidden></label></div>
         </section>
       </div>
 

@@ -47,7 +47,7 @@ from rspe_gabinete_api import GabineteApi
 import rspe_gabinete_api as rgabapi
 
 APP = "APTO"
-VERSAO = "7.25.0"
+VERSAO = "7.28.0"
 GEO_AUTO_DIAS = 30           # dados prisionais: baixados de novo sozinhos quando têm 30 dias ou mais
 GEO_REPETIR_MIN = 10         # ... ou 10 minutos depois de um download em que algum relatório falhou (nova tentativa automática)
 GEO_REPETIR_MAX = 3          # tentativas automáticas seguidas com o programa aberto (depois, na próxima abertura ou pelo botão)
@@ -1889,65 +1889,9 @@ class Api(GabineteApi):
         _abrir(c)
         return {"caminho": c, "msg": "PDF salvo."}
 
-    def quadro(self):
-        """Quadro do Usuário: colunas e cartões (processos acompanhados de perto, com observação, prazo e etiqueta)."""
-        if not self.base:
-            return {"erro": "Nenhuma base aberta."}
-        return self.base.quadro()
-
-    def quadro_gravar(self, cartao):
-        if not self.base:
-            return {"erro": "Nenhuma base aberta."}
-        cartao = dict(cartao or {})
-        if cartao.get("prazo") and not rs.to_date(cartao["prazo"]):
-            return {"erro": "Prazo inválido: use dd/mm/aaaa."}
-        if not (cartao.get("titulo") or "").strip() and not cartao.get("processo"):
-            return {"erro": "Dê um título ao cartão ou escolha um assistido."}
-        self.base.quadro_gravar(cartao)
-        q = self.base.quadro()
-        q["msg"] = "Cartão gravado no Quadro do Usuário."
-        return q
-
-    def quadro_mover(self, cid, coluna, ordem):
-        if not self.base:
-            return {"erro": "Nenhuma base aberta."}
-        c = next((x for x in self.base.quadro()["cartoes"] if x["id"] == cid), None)
-        if not c:
-            return {"erro": "Cartão não encontrado."}
-        c.update(coluna=coluna, ordem=ordem)
-        self.base.quadro_gravar(c)
-        return self.base.quadro()
-
-    def quadro_arquivar(self, cid, on, coluna=None):
-        """Arquiva o cartão (sai do quadro e fica na lista "Cartões arquivados") ou o devolve ao quadro, na coluna indicada."""
-        if not self.base:
-            return {"erro": "Nenhuma base aberta."}
-        c = next((x for x in self.base.quadro()["cartoes"] if x["id"] == cid), None)
-        if not c:
-            return {"erro": "Cartão não encontrado."}
-        c["arquivado"] = datetime.now().strftime("%d/%m/%Y %H:%M") if on else ""
-        if not on and coluna and coluna != c["coluna"]:
-            c.update(coluna=coluna, ordem=None)
-        self.base.quadro_gravar(c)
-        q = self.base.quadro()
-        q["msg"] = "Cartão arquivado: consulte em \"Cartões arquivados\"." if on else "Cartão devolvido ao quadro."
-        return q
-
-    def quadro_excluir(self, cid):
-        if not self.base:
-            return {"erro": "Nenhuma base aberta."}
-        self.base.quadro_excluir(cid)
-        q = self.base.quadro()
-        q["msg"] = "Cartão excluído."
-        return q
-
-    def quadro_coluna(self, cid, nome):
-        if not self.base:
-            return {"erro": "Nenhuma base aberta."}
-        erro = self.base.quadro_coluna(cid, (nome or "").strip())
-        if erro:
-            return {"erro": erro}
-        return self.base.quadro()
+    # (7.26) o Quadro é um só (o do gabinete, função Quadro): o "Quadro do Usuário" de cada base saiu da Execução.
+    # Os métodos quadro_* estão em rspe_gabinete_api (quadro_enviar, quadro_pendencias); os cartões antigos da base são
+    # copiados para o Quadro único quando a base abre (Base.quadro continua lendo as tabelas antigas, que não são apagadas).
 
     HIST_ABAS = {"prog": ("Progressão", r"PROGRESS"), "liv": ("Livramento condicional", r"LIVRAMENTO"),
                  "ind": ("Indulto/comutação", r"INDULTO|COMUTA"), "presc": ("Prescrição", r"PRESCRI"),
@@ -2134,11 +2078,8 @@ class Api(GabineteApi):
         if data and not ref and (aba or "").startswith("ind_"):
             ref = self._ref_ind(processo, aba)  # situação do decreto agora, para avisar se mudar com um RSPE novo
         self.base.pedido_gravar(processo, aba, {"data": data, "obs": (obs or "").strip(), "ref": ref or "", "tipo": tipo or "pedido"} if data else None)
-        n = self.base.quadro_pedido_feito(processo, aba) if data else 0
-        out = self._atualizar(processo, ("Pedido registrado." + (" Cartão do Quadro marcado como \"Pedido feito\"." if n else "")) if data else "Marcação de pedido removida.")
-        if n and isinstance(out, dict):
-            out["quadro"] = self.base.quadro()
-        return out
+        n = self.quadro_pedido_feito(processo, aba, data) if data else 0
+        return self._atualizar(processo, ("Pedido registrado." + (" Pendência do Quadro marcada como \"Pedido feito\"." if n else "")) if data else "Marcação de pedido removida.")
 
     def _ref_ind(self, processo, aba):
         """Situação do decreto (aba Indulto) no pedido "ind_<decreto>": a mesma de m["pedidos"][aba]["ref_atual"]."""
@@ -2817,6 +2758,10 @@ class Api(GabineteApi):
             return {"erro": _msg_erro_base(caminho, e)}
         velha, self.base = self.base, nova
         self._modelos, self._json = [], {}
+        try:
+            self.quadro_migrar_base()
+        except Exception:
+            logging.getLogger("rspe").exception("copiar o Quadro do Usuário da base para o Quadro")
         if velha:
             try:
                 velha.fechar()

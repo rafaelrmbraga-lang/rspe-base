@@ -29,7 +29,9 @@ const guardarPrefs = () => chrome.storage.local.set({ triagemPrefs: prefs });
 const guardarEstado = () => { enviarAoApto(); return chrome.storage.local.set({ triagemUltima: estado }).catch(() => {}); };
 // aberta pelo botão "Ler a Mesa" do APTO (triagem.html?auto=1): lê a Mesa e os processos sozinha, com as abas e os filtros guardados
 const AUTO = new URLSearchParams(location.search).get("auto") === "1";
-const avisarAndamento = (a) => { if (AUTO) chrome.runtime.sendMessage({ tipo: "seeuAndamento", andamento: a }).catch(() => {}); };
+if (!AUTO) document.documentElement.classList.add("so-motor");
+let etapaAuto = 0; // etapa pedida pelo APTO (1 = Mesa, 2 = processos e decisões): vai junto do andamento
+const avisarAndamento = (a) => { if (AUTO) chrome.runtime.sendMessage({ tipo: "seeuAndamento", andamento: Object.assign({ etapa: etapaAuto }, a) }).catch(() => {}); };
 // a triagem vai também para o APTO (função SEEU): um resumo de cada linha (sem os textos inteiros dos documentos), no máximo a
 // cada 3 s; com o APTO fechado, vai na próxima vez
 let aptoAgendado = null;
@@ -597,84 +599,10 @@ function providenciaDe(a, l) {
 }
 function celulaProvidencia(a, l) {
   const p = providenciaDe(a, l);
-  const botao = el("button", { class: "btn-pet", type: "button", title: "Escolher um modelo e gerar a petição (PDF ou Word)", onclick: (ev) => { ev.stopPropagation(); abrirPeticao(l); } }, "Gerar petição");
-  if (!p) return el("div", {}, botao);
-  return el("div", {}, el("div", { class: "prov" + (p.urgente ? " urg" : "") }, p.texto), el("div", { class: "sub" }, p.tipo), botao);
+  if (!p) return el("div", {});
+  return el("div", {}, el("div", { class: "prov" + (p.urgente ? " urg" : "") }, p.texto), el("div", { class: "sub" }, p.tipo));
 }
 
-// ---------------------------------------------------------------- petições (modelos da pasta "modelos")
-const PET = self.PETICAO;
-let petLinha = null;
-let fontesPdf = null;
-async function bytesDaExtensao(caminho) {
-  const r = await fetch(chrome.runtime.getURL(caminho));
-  if (!r.ok) throw new Error("arquivo da extensão não encontrado: " + caminho);
-  return new Uint8Array(await r.arrayBuffer());
-}
-async function inflar(b) {
-  const s = new Blob([b]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
-  return new Uint8Array(await new Response(s).arrayBuffer());
-}
-function abrirPeticao(l) {
-  petLinha = l;
-  const a = estado.analises[chaveLinha(l)];
-  const prov = providenciaDe(a, l);
-  const sug = PET.modeloSugerido(prov, a);
-  $("petSub").textContent = `${l.processo} · ${l.executado || ""}` + (prov ? ` · providência sugerida: ${prov.texto}` : "");
-  $("petProc").value = l.processo;
-  $("petNome").value = PET.nomeProprio(l.executado || "");
-  $("petData").value = PET.dataPorExtenso(new Date());
-  $("petMsg").textContent = ""; $("petMsg").className = "";
-  const ul = $("petLista");
-  ul.textContent = "";
-  const ordem = PET.MODELOS.slice().sort((x, y) => (y.id === sug) - (x.id === sug));
-  for (const m of ordem) {
-    const botoes = m.formato === "pdf"
-      ? [el("button", { class: "pri", type: "button", onclick: () => gerarPeticao(m, "pdf") }, "PDF"), el("button", { type: "button", onclick: () => gerarPeticao(m, "docx") }, "Word")]
-      : [el("button", { class: "pri", type: "button", onclick: () => gerarPeticao(m, "docx") }, "Word")];
-    ul.append(el("li", { class: m.id === sug ? "sug" : "" },
-      el("span", { class: "nm" }, m.nome, m.id === sug ? el("span", { class: "sugtag" }, "sugerido") : null,
-        el("small", {}, m.formato === "pdf" ? "pronto: nº, data e assinatura preenchidos" : "pede dados do caso: sai em Word, com os pontos a completar em amarelo")),
-      ...botoes));
-  }
-  $("petFundo").className = "on";
-  mostrarDestino();
-  $("petNome").focus();
-}
-function fecharPeticao() { $("petFundo").className = ""; petLinha = null; }
-async function gerarPeticao(m, formato) {
-  const msg = $("petMsg");
-  msg.className = ""; msg.textContent = "Gerando…";
-  try {
-    const campos = { processo: $("petProc").value.trim(), nome: $("petNome").value.trim(), data: $("petData").value.trim() };
-    const modelo = await bytesDaExtensao("modelos/" + m.arquivo);
-    let bytes, tipo;
-    if (formato === "pdf") {
-      if (!fontesPdf) {
-        const f = (n) => bytesDaExtensao("fontes_pdf/carlito-latin-" + n + ".woff");
-        fontesPdf = { r: await f("400-normal"), b: await f("700-normal"), i: await f("400-italic"), bi: await f("700-italic") };
-      }
-      bytes = await PET.gerarPdf(modelo, campos, { inflar, PDFLib: self.PDFLib, fontkit: self.fontkit, fontes: fontesPdf, titulo: m.nome + " " + campos.processo, autor: "Cahuê Duarte e Urdiales" });
-      tipo = "application/pdf";
-    } else {
-      bytes = await PET.gerarDocx(modelo, campos, inflar);
-      tipo = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-    }
-    const nome = PET.nomeArquivo(m.nome, campos.processo, formato);
-    const onde = await salvarPeticao(bytes, tipo, nome, formato);
-    if (!onde) { msg.textContent = "Cancelado."; return; }
-    msg.textContent = `Salvo em ${onde}` + (formato === "docx" && m.formato === "docx" ? " (complete os trechos em amarelo)" : "");
-  } catch (e) {
-    msg.className = "erro";
-    msg.textContent = "Não foi possível gerar: " + (e && e.message || e);
-  }
-}
-$("petFechar").onclick = fecharPeticao;
-$("petPasta").onclick = escolherPasta;
-$("petLimparPasta").onclick = async () => { await guardarPasta(null); mostrarDestino(); mensagemPet("As petições voltam a ir para Downloads."); };
-$("petPerguntar").onchange = () => { prefs.perguntarDestino = $("petPerguntar").checked; guardarPrefs(); mostrarDestino(); };
-$("petFundo").addEventListener("click", (ev) => { if (ev.target.id === "petFundo") fecharPeticao(); });
-document.addEventListener("keydown", (ev) => { if (ev.key === "Escape" && petLinha) fecharPeticao(); });
 
 function blocoDoc(titulo, mov, d) {
   if (!mov) return null;
@@ -844,68 +772,6 @@ async function salvarArquivo(bytes, tipo, nome) {
   }
 }
 
-// ---- destino das petições: pasta escolhida pelo usuário (guardada), perguntar a cada vez, ou Downloads
-function bancoPastas() {
-  return new Promise((ok, erro) => {
-    const r = indexedDB.open("apto-triagem", 1);
-    r.onupgradeneeded = () => r.result.createObjectStore("pastas");
-    r.onsuccess = () => ok(r.result);
-    r.onerror = () => erro(r.error);
-  });
-}
-async function pastaGuardada() {
-  try {
-    const db = await bancoPastas();
-    return await new Promise((ok) => { const g = db.transaction("pastas").objectStore("pastas").get("peticoes"); g.onsuccess = () => ok(g.result || null); g.onerror = () => ok(null); });
-  } catch (e) { return null; }
-}
-async function guardarPasta(h) {
-  const db = await bancoPastas();
-  await new Promise((ok, erro) => { const t = db.transaction("pastas", "readwrite"); h ? t.objectStore("pastas").put(h, "peticoes") : t.objectStore("pastas").delete("peticoes"); t.oncomplete = ok; t.onerror = () => erro(t.error); });
-}
-async function mostrarDestino() {
-  const h = await pastaGuardada();
-  $("petDestino").textContent = prefs.perguntarDestino ? "perguntar a cada vez" : h ? "pasta “" + h.name + "”" : "Downloads";
-  $("petLimparPasta").style.display = h && !prefs.perguntarDestino ? "" : "none";
-  $("petPerguntar").checked = !!prefs.perguntarDestino;
-}
-async function escolherPasta() {
-  if (!self.showDirectoryPicker) return mensagemPet("Este navegador não permite escolher a pasta; as petições vão para Downloads.", true);
-  try {
-    const h = await self.showDirectoryPicker({ id: "apto-peticoes", mode: "readwrite", startIn: "documents" });
-    await guardarPasta(h);
-    prefs.perguntarDestino = false; guardarPrefs();
-    mostrarDestino();
-    mensagemPet("As petições serão salvas na pasta “" + h.name + "”.");
-  } catch (e) { if (e && e.name !== "AbortError") mensagemPet("Não foi possível usar a pasta: " + e.message, true); }
-}
-function mensagemPet(t, erro) { $("petMsg").textContent = t; $("petMsg").className = erro ? "erro" : ""; }
-const TIPOS = { pdf: { description: "PDF", accept: { "application/pdf": [".pdf"] } }, docx: { description: "Documento do Word", accept: { "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"] } } };
-// devolve onde salvou (texto para a mensagem) ou "" se cancelado
-async function salvarPeticao(bytes, tipo, nome, formato) {
-  if (prefs.perguntarDestino && self.showSaveFilePicker) {
-    try {
-      const fh = await self.showSaveFilePicker({ id: "apto-peticoes", suggestedName: nome, types: [TIPOS[formato]] });
-      const w = await fh.createWritable(); await w.write(bytes); await w.close();
-      return fh.name;
-    } catch (e) { if (e && e.name === "AbortError") return ""; throw e; }
-  }
-  const pasta = await pastaGuardada();
-  if (pasta) {
-    let perm = await pasta.queryPermission({ mode: "readwrite" });
-    if (perm !== "granted") perm = await pasta.requestPermission({ mode: "readwrite" });
-    if (perm === "granted") {
-      let final = nome;
-      for (let k = 2; k < 100; k++) {
-        try { await pasta.getFileHandle(final); final = nome.replace(/(\.\w+)$/, ` (${k})$1`); } catch (e) { break; }
-      }
-      const fh = await pasta.getFileHandle(final, { create: true });
-      const w = await fh.createWritable(); await w.write(bytes); await w.close();
-      return "“" + pasta.name + "”: " + final;
-    }
-  }
-  return "Downloads: " + (await salvarArquivo(bytes, tipo, nome));
-}
 
 // ---------------------------------------------------------------- estado da tela
 function mensagem(txt, erro) {
@@ -994,6 +860,7 @@ chrome.runtime.onMessage.addListener((m) => { if (m && m.tipo === "triagemParar"
     escolher($("tipo"), typeof o.tipo === "string" ? o.tipo : "");
     escolher($("prov"), typeof o.prov === "string" ? o.prov : "");
     const etapa = String(o.etapa) === "2" ? 2 : 1;
+    etapaAuto = etapa;
     avisarAndamento({ fase: "lendo", txt: etapa === 1 ? "Lendo a Mesa…" : "Lendo processos e decisões…", etapa });
     try {
       if (etapa === 1) await lerMesa();

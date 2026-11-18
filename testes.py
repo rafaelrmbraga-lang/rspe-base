@@ -63,6 +63,8 @@ TESTES += ["teste_nuspen_regras.py"]  # 7.21.0: regras e leitor do SEI vindos do
 TESTES += ["teste_sei_apto.py"]  # 7.21.0: SEI no APTO, ponta a ponta com o SEI fictício
 TESTES += ["teste_seeu_apto.py"]  # 7.23.0: intimações do SEEU guardadas até concluir, baixa na produção do mês, botões Ler a Mesa / Ler o SEI
 TESTES += ["teste_ui_sei_seeu.py"]  # 7.21.0: telas SEEU (Mesa do Defensor) e SEI
+TESTES += ["teste_quadro_unico.py"]  # 7.26.0: Quadro único (sem Quadro do Usuário na Execução)
+TESTES += ["teste_nuspen_gestao.py", "teste_ui_nuspen.py"]  # 7.27.0: gestão do NUSPEN (demandas, providências, prazos, ofícios, inspeções, minutas, PDF)
 # saída em UTF-8 em qualquer console (no Windows o padrão cp1252 não imprime símbolos como "✓" e derruba o teste)
 _env = dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUTF8="1")
 falhas = [t for t in TESTES if subprocess.call([sys.executable, t], env=_env) != 0]

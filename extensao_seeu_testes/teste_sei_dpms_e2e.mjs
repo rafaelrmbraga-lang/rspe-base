@@ -20,6 +20,10 @@ globalThis.fetch = async (u, o = {}) => {
   if (acao === "procedimento_trabalhar") return resp(P("processo.html").replace(/id_procedimento=111/g, "id_procedimento=" + url.searchParams.get("id_procedimento")));
   if (acao === "procedimento_visualizar") return resp(P("arvore.html").replace(/id_documento=(500\d)/g, (m, d) => `id_documento=${url.searchParams.get("id_procedimento")}${d}`).replace(/"(500\d)"/g, (m, d) => `"${url.searchParams.get("id_procedimento")}${d}"`));
   if (acao === "documento_visualizar") return resp(P("documento.html"));
+  if (acao === "documento_download_anexo") {  // o anexo PDF: o processo fictício do NUSPEN
+    const b = fs.readFileSync(new URL("./pdfs_nuspen/processo_t1_ficticio.pdf", import.meta.url));
+    return { status: 200, ok: true, headers: { get: () => "application/pdf" }, arrayBuffer: async () => b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength), text: async () => "" };
+  }
   return { status: 404, ok: false, headers: { get: () => "text/html" }, text: async () => "" };
 };
 const app = { base: APP_BASE, baseSei: BASE, token: TOKEN };

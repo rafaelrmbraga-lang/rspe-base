@@ -230,7 +230,7 @@ r = api.copia_restaurar(os.path.basename(velha))
 ok(r and not r.get("erro") and "restaurada" in (r.get("msg") or ""), "restaurar cópia antiga: %s" % (r or {}).get("msg"))
 try:
     api.base.pedidos()
-    api.quadro()
+    api.base.quadro()
 except Exception as e:
     ok(False, "base utilizável depois de restaurar: %s" % e)
 

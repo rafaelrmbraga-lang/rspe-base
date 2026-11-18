@@ -16,6 +16,7 @@ import webbrowser
 import webview
 
 import rspe_gabinete as rgab
+import rspe_nuspen as rnus
 import rspe_sei as rsei
 import rspe_seeu as rseeu
 
@@ -46,6 +47,7 @@ class GabineteApi:
 
     _gab = None
     _sei_obj = None
+    _nus_obj = None
     _gab_trava = threading.Lock()
     _cmd = None
     _sap_aberto = None
@@ -67,6 +69,52 @@ class GabineteApi:
             if self._sei_obj is None:
                 self._sei_obj = rsei.Sei(g)
             return self._sei_obj
+
+    def _nus(self):
+        g = self._gabinete()
+        self._sei()  # as tabelas do SEI antes das da gestão
+        with self._gab_trava:
+            if self._nus_obj is None:
+                self._nus_obj = rnus.Nuspen(g)
+            return self._nus_obj
+
+    def sei_importar_pdf(self, quem="", caminhos=None):
+        """PDF do processo do SEI (ou anexo): escolhidos na janela; cada um é lido, separado pelo rodapé e analisado (sugestões)."""
+        if not caminhos:
+            c = self._janela.create_file_dialog(webview.OPEN_DIALOG, allow_multiple=True, file_types=("PDF (*.pdf)",)) if self._janela else None
+            caminhos = list(c or [])
+        if not caminhos:
+            return {"cancelado": True}
+        out = [self._sei().importar_pdf(c, os.path.join(self._pasta_dados, "originais_sei"), quem) for c in caminhos[:50]]
+        self._js("window.ui && ui.seiEvento && ui.seiEvento({})")
+        return {"ok": True, "arquivos": out}
+
+    def nus(self, metodo, args=None):
+        """Gestão do NUSPEN (demandas, providências, prazos, comunicações, inspeções, minutas, histórico): um ponto de entrada
+        para a tela, só com os métodos públicos (rspe_nuspen.PUBLICOS); regra do domínio volta como {"erro": ...}."""
+        if metodo not in rnus.PUBLICOS:
+            return {"erro": "função desconhecida"}
+        a = args if isinstance(args, list) else ([] if args is None else [args])
+        N = self._nus()
+        try:
+            r = getattr(N, metodo)(*a)
+        except rnus.Erro as e:
+            N.tirar_mudancas()
+            return {"erro": str(e)}
+        except (TypeError, ValueError) as e:
+            N.tirar_mudancas()
+            logging.getLogger("rspe").exception("nus %s", metodo)
+            return {"erro": "dados inválidos (%s)" % e}
+        if metodo in ("prazo_decidir", "prazo_completar", "prazo_alterar", "prazo_registrar", "obrigacao_decidir", "em_lote"):
+            N.sincronizar_quadro()  # o cartão do Quadro acompanha o vencimento validado
+        m = N.tirar_mudancas()
+        if m:
+            self._atd_evento("mudou", {"pecas": m})
+        if metodo not in ("obrigacoes", "demandas", "prazos", "lacunas", "comunicacoes", "inspecoes", "regras", "modelos", "historico_geral", "buscar",
+                          "obrigacao", "demanda", "inspecao", "minuta", "painel", "relatorio", "escolhas", "quem_lista", "comparar", "historico_de",
+                          "o_que_mudou", "novidades", "perguntas", "consultar", "arquivos_pdf"):
+            self._js("window.ui && ui.nusMudou && ui.nusMudou(%s)" % json.dumps(metodo))
+        return r if r is not None else {"erro": "não encontrado"}
 
     def _seeu(self):
         g = self._gabinete()
@@ -242,7 +290,10 @@ class GabineteApi:
              "criadoEm": int(time.time() * 1000)}
         self._gabinete().mudar({"pecas": {"upsert": [p]}})
         self._sei().marcar_quadro(oid, p["id"])
-        self._atd_evento("mudou", {"pecas": {"upsert": [p]}})
+        N = self._nus()
+        N.sincronizar_quadro()  # já com o vencimento, se houver prazo validado
+        m = N.tirar_mudancas() or {"upsert": []}
+        self._atd_evento("mudou", {"pecas": {"upsert": [x for x in self._gabinete().lista("pecas") if x["id"] == p["id"]], "remover": m.get("remover", [])}})
         return {"ok": True}
 
     def sei_estado(self):
@@ -329,41 +380,203 @@ class GabineteApi:
             return {"erro": "não foi possível gravar (%s)" % e}
         return {"ok": True, "caminho": c}
 
-    def seeu_modelo(self, arquivo):
-        """Modelo de petição da triagem (extensao_seeu/modelos, os mesmos da extensão), em base64."""
-        a = str(arquivo or "")
-        if not re.match(r"^[a-z0-9_]+\.docx$", a):
-            return {"erro": "modelo inválido"}
-        p = os.path.join(self._recurso("extensao_seeu"), "modelos", a)
-        if not os.path.isfile(p):
-            return {"erro": "modelo não encontrado: " + a}
-        with open(p, "rb") as f:
-            return {"b64": base64.b64encode(f.read()).decode("ascii")}
+    # ---- Importar / Exportar únicos (barra do APTO): cópia do gabinete (Atendimentos, Quadro, produção, frases) ----
+    def gabinete_exportar(self):
+        d = self._gabinete().tudo()
+        d = {k: d.get(k) for k in ("atendimentos", "pecas", "ajustes", "modelos", "config")}
+        d.update(app="APTO Atendimentos", exportadoEm=time.strftime("%Y-%m-%dT%H:%M:%S"))
+        nome = "APTO gabinete %s.json" % time.strftime("%Y-%m-%d")
+        c = self._janela.create_file_dialog(webview.SAVE_DIALOG, save_filename=nome, file_types=("Cópia do gabinete (*.json)",)) if self._janela else None
+        c = c[0] if isinstance(c, (list, tuple)) and c else c
+        if not c:
+            return {"cancelado": True}
+        try:
+            with open(c, "w", encoding="utf-8") as f:
+                json.dump(d, f, ensure_ascii=False, indent=1)
+        except OSError as e:
+            return {"erro": "não foi possível gravar (%s)" % e}
+        return {"ok": True, "caminho": c}
+
+    def gabinete_importar(self, caminho=None):
+        """Junta uma cópia (.json do APTO ou da extensão APTO Atendimentos antiga): só entra o que ainda não existe; nada é apagado."""
+        if not caminho:
+            c = self._janela.create_file_dialog(webview.OPEN_DIALOG, file_types=("Cópia do gabinete (*.json)",)) if self._janela else None
+            caminho = c[0] if isinstance(c, (list, tuple)) and c else c
+        if not caminho:
+            return {"cancelado": True}
+        try:
+            with open(caminho, encoding="utf-8") as f:
+                n = self._gabinete().importar_backup(json.load(f))
+        except (OSError, ValueError) as e:
+            return {"erro": "Não foi possível importar: %s" % e}
+        d = self._gabinete().tudo()  # a tela do painel recebe tudo (só junta: o que já estava fica)
+        self._atd_evento("mudou", {"atendimentos": {"upsert": d["atendimentos"]}, "pecas": {"upsert": d["pecas"]}, "ajustes": d["ajustes"],
+                                   **{k: d[k] for k in ("modelos", "config") if d.get(k) is not None}})
+        return {"ok": True, "novos": n, "msg": "Cópia importada: %d registro(s) novo(s)." % n}
 
     def seeu_parar(self):
         return self._cmd_de("seeu").pedir("pararMesa", {})
 
-    def seeu_concluir(self, chave, peca="", data="", obs=""):
-        r = self._seeu().concluir(chave, peca, data, obs)
+    # peça da baixa -> aba da Execução em que o pedido pode ser marcado como feito
+    PECA_ABA = {"PROG": "prog", "LC": "liv", "INDULTO": "ind", "COMUT": "ind", "PRESC": "presc", "EXT": "ext", "REMICAO": "fd"}
+
+    def seeu_concluir(self, chave, peca="", data="", obs="", quem=""):
+        r = self._seeu().concluir(chave, peca, data, obs, quem)
         if r.get("peca"):
             self._atd_evento("mudou", {"pecas": {"upsert": [r["peca"]]}})
+            if peca in self.PECA_ABA:  # a tela oferece marcar o pedido na base aberta da Execução (com um clique)
+                r["sugerir_pedido"] = {"aba": self.PECA_ABA[peca], "processo": r["peca"].get("processo", ""), "data": r["peca"].get("feitoEm", "")}
         return r
 
     def seeu_reabrir(self, chave):
         r = self._seeu().reabrir(chave)
         if r.get("removidas"):
             self._atd_evento("mudou", {"pecas": {"remover": r["removidas"]}})
+        if r.get("voltou"):
+            self._atd_evento("mudou", {"pecas": {"upsert": [r["voltou"]]}})
         return r
 
-    def seeu_para_quadro(self, processo, nome, texto, ultimo_dia=""):
+    def seeu_atribuir(self, chave, quem=""):
+        return self._seeu().atribuir(chave, quem)
+
+    def agenda(self):
+        """Agenda única (7.28): os prazos do Quadro (pendências), da Mesa do SEEU (intimações em aberto) e do SEI (prazos VALIDADOS), com a
+        data em aaaa-mm-dd. Prazo do SEI que já está num cartão do Quadro aparece uma vez só (pelo cartão)."""
+        itens = []
+        pend = [p for p in self._gabinete().lista("pecas") if p.get("status") == "pendente"]
+        for p in pend:
+            if p.get("prazo"):
+                itens.append({"data": p["prazo"], "origem": "quadro", "titulo": " · ".join(x for x in (p.get("nome"), p.get("obs") or "") if x)[:160],
+                              "processo": p.get("processo", ""), "id": p["id"]})
+        for l in self._seeu().listar():
+            m = re.match(r"^(\d{2})/(\d{2})/(\d{4})", str(l.get("ultimoDia") or ""))
+            if l.get("status") != "concluido" and m and not l.get("quadro"):
+                itens.append({"data": "%s-%s-%s" % (m.group(3), m.group(2), m.group(1)), "origem": "seeu", "titulo": "%s · %s" % (l.get("executado") or "", l.get("aba") or ""),
+                              "processo": l.get("processo", ""), "id": l["chave"]})
+        no_quadro = {p["id"] for p in pend}
+        with self._gabinete()._trava:
+            cartao = dict(self._gabinete()._con.execute("SELECT id, quadro FROM sei_obrigacoes WHERE quadro IS NOT NULL").fetchall()) if self._sei() else {}
+        for p in self._nus().prazos():
+            if p["status"] in ("validada", "ajustada") and p.get("vencimento_efetivo") and cartao.get(p["obrigacao"]) not in no_quadro:
+                itens.append({"data": p["vencimento_efetivo"], "origem": "sei", "titulo": p["obrigacao_descricao"][:160], "processo": p.get("processo") or "",
+                              "id": p["obrigacao"]})
+        return sorted(itens, key=lambda x: (x["data"], x["origem"]))
+
+    def contadores(self):
+        """Números na barra do topo: SEEU (intimações em aberto que vencem hoje ou já venceram) e SEI (prazos validados vencidos ou de hoje)."""
+        hoje = time.strftime("%Y-%m-%d")
+        n_seeu = 0
+        for l in self._seeu().listar():
+            m = re.match(r"^(\d{2})/(\d{2})/(\d{4})", str(l.get("ultimoDia") or ""))
+            if l.get("status") != "concluido" and m and "%s-%s-%s" % (m.group(3), m.group(2), m.group(1)) <= hoje:
+                n_seeu += 1
+        n_sei = sum(1 for p in self._nus().prazos() if p["status"] in ("validada", "ajustada") and p["situacao"]["ordem"] <= 1
+                    and (p["vencimento_efetivo"] or "9999") <= hoje)
+        return {"seeu": n_seeu, "sei": n_sei}
+
+    def seeu_para_quadro(self, processo, nome, texto, ultimo_dia="", chave=""):
         """A providência sugerida pela triagem vira cartão do Quadro (A fazer), com o último dia da Mesa como prazo."""
         m = re.match(r"^(\d{2})/(\d{2})/(\d{4})", str(ultimo_dia or ""))
         p = {"id": rgab.novo_id(), "tipo": "", "processo": str(processo or "")[:30], "nome": rgab.nome_proprio(str(nome or ""))[:200], "data": rgab.hoje_iso(),
              "status": "pendente", "coluna": "fazer", "prazo": "%s-%s-%s" % (m.group(3), m.group(2), m.group(1)) if m else "",
              "obs": ("Mesa do SEEU: " + str(texto or ""))[:500], "origem": "seeu", "atendimentoId": "", "criadoEm": int(time.time() * 1000)}
         self._gabinete().mudar({"pecas": {"upsert": [p]}})
+        if chave:
+            self._seeu().ligar_quadro(chave, p["id"])
         self._atd_evento("mudou", {"pecas": {"upsert": [p]}})
         return {"ok": True}
+
+    # ---- Quadro único (7.26): a Execução manda para o mesmo Quadro do gabinete ----
+    ABA_PECA = {"prog": "PROG", "liv": "LC", "ind": "INDULTO", "presc": "PRESC", "ext": "EXT", "fd": "REMICAO"}
+
+    @staticmethod
+    def _dig(x):
+        return re.sub(r"\D", "", str(x or ""))
+
+    @staticmethod
+    def _iso(d):
+        d = str(d or "").strip()
+        m = re.match(r"^(\d{2})/(\d{2})/(\d{4})$", d)
+        return "%s-%s-%s" % (m.group(3), m.group(2), m.group(1)) if m else (d if re.match(r"^\d{4}-\d{2}-\d{2}$", d) else "")
+
+    def _nome_base(self):
+        b = getattr(self, "base", None)
+        try:
+            return b.nome if b else ""
+        except Exception:
+            return ""
+
+    def quadro_enviar(self, c):
+        """Da Execução para o Quadro: {processo, nome, obs, prazo (dd/mm/aaaa), aba, coluna}. Uma pendência aberta por processo e
+        benefício: se já existe, não duplica."""
+        c = dict(c or {})
+        proc, aba = str(c.get("processo") or "").strip()[:40], str(c.get("aba") or "")[:20]
+        if not proc and not (c.get("nome") or "").strip():
+            return {"erro": "Escolha o assistido."}
+        prazo = self._iso(c.get("prazo"))
+        if c.get("prazo") and not prazo:
+            return {"erro": "Prazo inválido: use dd/mm/aaaa."}
+        g = self._gabinete()
+        dg = self._dig(proc)
+        for x in g.lista("pecas"):
+            if x.get("status") == "pendente" and dg and self._dig(x.get("processo")) == dg and (x.get("aba") or "") == aba and x.get("origem") == "execucao":
+                return {"ok": True, "ja": True, "msg": "Já está no Quadro (%s)." % ("fila " + {"doc": "Aguardando documento", "naoEnc": "Não encaminhou"}.get(x.get("coluna"), "A fazer"))}
+        coluna = c.get("coluna") if c.get("coluna") in ("doc", "fazer", "naoEnc") else "fazer"
+        p = {"id": rgab.novo_id(), "tipo": self.ABA_PECA.get(aba, ""), "processo": proc, "nome": rgab.nome_proprio(str(c.get("nome") or ""))[:200],
+             "data": rgab.hoje_iso(), "status": "pendente", "coluna": coluna, "prazo": prazo, "obs": str(c.get("obs") or "").strip()[:500],
+             "origem": "execucao", "aba": aba, "base": self._nome_base(), "atendimentoId": "", "criadoEm": int(time.time() * 1000)}
+        g.mudar({"pecas": {"upsert": [p]}})
+        self._atd_evento("mudou", {"pecas": {"upsert": [p]}})
+        return {"ok": True, "peca": p, "msg": "Enviado ao Quadro."}
+
+    def quadro_pendencias(self, processo):
+        """Pendências abertas do Quadro para o processo (de qualquer origem: atendimento, Execução, SEEU)."""
+        dg = self._dig(processo)
+        if not dg:
+            return []
+        return [x for x in self._gabinete().lista("pecas") if x.get("status") == "pendente" and self._dig(x.get("processo")) == dg]
+
+    def quadro_pedido_feito(self, processo, aba, data=""):
+        """Pedido marcado na Execução: as pendências do mesmo processo e benefício ganham a etiqueta "Pedido feito"."""
+        aba = aba.split("_")[0] if str(aba).startswith("ind_") else str(aba or "")
+        dg, mud = self._dig(processo), []
+        for x in self._gabinete().lista("pecas"):
+            if dg and x.get("status") == "pendente" and self._dig(x.get("processo")) == dg and (x.get("aba") or "") == aba:
+                mud.append(dict(x, etiqueta="pedido", pedidoEm=self._iso(data) or rgab.hoje_iso()))
+        if mud:
+            self._gabinete().mudar({"pecas": {"upsert": mud}})
+            self._atd_evento("mudou", {"pecas": {"upsert": mud}})
+        return len(mud)
+
+    def quadro_migrar_base(self):
+        """Uma vez por base: os cartões do antigo "Quadro do Usuário" (não arquivados) viram pendências do Quadro único, na fila
+        "A fazer", com a coluna e a etiqueta antigas na observação. As tabelas antigas ficam como estavam (nada é apagado)."""
+        b = getattr(self, "base", None)
+        if not b:
+            return 0
+        g = self._gabinete()
+        chave = "quadroMigrado:" + os.path.abspath(b.caminho)
+        if g.kv(chave):
+            return 0
+        q = b.quadro()
+        cols = {x["id"]: x["nome"] for x in q["colunas"]}
+        with b.lock:
+            nomes = dict(b.con.execute("SELECT processo, nome FROM assistidos").fetchall())
+        novas = []
+        for c in q["cartoes"]:
+            if c.get("arquivado"):
+                continue
+            obs = " · ".join(x for x in (c.get("titulo"), c.get("obs"), "coluna antiga: " + cols.get(c.get("coluna"), "")) if x and not x.endswith(": "))
+            novas.append({"id": rgab.novo_id(), "tipo": self.ABA_PECA.get(c.get("aba") or "", ""), "processo": c.get("processo") or "",
+                          "nome": rgab.nome_proprio(nomes.get(c.get("processo"), "") or c.get("titulo") or "")[:200], "data": rgab.hoje_iso(),
+                          "status": "pendente", "coluna": "fazer", "prazo": self._iso(c.get("prazo")), "obs": obs[:500], "origem": "execucao",
+                          "aba": c.get("aba") or "", "base": b.nome, "etiqueta": c.get("etiqueta") or "", "atendimentoId": "",
+                          "criadoEm": int(time.time() * 1000), "doQuadroDaBase": c["id"]})
+        if novas:
+            g.mudar({"pecas": {"upsert": novas}})
+            self._atd_evento("mudou", {"pecas": {"upsert": novas}})
+        g.gravar_kv(chave, {"quando": rgab.hoje_iso(), "cartoes": len(novas)})
+        return len(novas)
 
     def abrir_seeu(self, url):
         """Abre o processo no SEEU, no navegador (onde a pessoa está logada)."""
