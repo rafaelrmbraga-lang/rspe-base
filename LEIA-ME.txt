@@ -1,9 +1,9 @@
-APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.18.1
+APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.19.0
 (antigo RSPE Base; SEEU, programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-7.18.1. A documentação técnica completa (cada parâmetro, a regra, a norma e
+7.19.0. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -26,6 +26,24 @@ sobre o .exe).
     as conferências da Auditoria (frações de progressão e livramento pela lei
     da data do fato, soma das penas, data-base, hediondez etc.).
   - Convenção do SEEU: ano de 365 dias, mês de 30, prazos pelo calendário.
+
+FUNÇÕES (barra fixa no topo)
+A faixa verde do topo fica sempre visível: APTO | Execução | SEI |
+Atendimentos | Quadro. Clique para trocar de função (ou Ctrl+1 a Ctrl+4;
+Alt+número continua abrindo as abas da Execução).
+  Execução      o APTO das bases, descrito nas seções abaixo: escolha (ou
+                crie) a base e use as abas de sempre.
+  SEI           processos do SEI do núcleo, lidos pela extensão na sessão
+                aberta do SEI (só leitura). Em construção.
+  Atendimentos  a fila do SAP do dia, lida pela extensão na aba do SAP
+                aberta (só leitura), com o texto para o SAP, pendências,
+                WhatsApp, Fluxo, Controle do mês, relatório e petições. Em
+                construção. O controle por unidade (listagem do SIAPEN e
+                relatório do SAP) continua na Execução (aba Geral, botão
+                "Atendimentos").
+  Quadro        kanban do gabinete, com os cartões de todas as funções. Em
+                construção; por enquanto o Quadro do Usuário de cada base
+                continua dentro da Execução.
 
 ABERTURA
 O programa abre SEM base carregada. A tela inicial pede: criar uma base nova
@@ -1112,6 +1130,13 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v7.19.0
+  O APTO passa a ter funções, numa barra fixa no topo: Execução, SEI,
+  Atendimentos e Quadro (ver "FUNÇÕES"). Execução é o programa de sempre,
+  sem mudança. SEI, Atendimentos e Quadro abrem uma página que diz o que
+  vem; serão feitos em etapas. Atalhos Ctrl+1 a Ctrl+4. Abrir uma base
+  ou arrastar PDFs sobre o .exe volta sozinho para a Execução.
 
 v7.18.1
   Correção: a lista de assistidos volta a rolar com a roda do mouse em
