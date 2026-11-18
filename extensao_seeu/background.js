@@ -10,7 +10,8 @@ const A = self.APTO;
 
 const AUTO = "@apto";            // base de destino = a base aberta no APTO
 // rspeAuto: baixa o RSPE sozinho ao abrir um processo (e ao abrir "Situação Carcerária"); desligado, só o botão do painel e o lote baixam
-const PADRAO = { ativo: true, rspeAuto: true, raiz: "APTO", base: AUTO, bases: [], avisoNaPagina: true };
+// fichaAuto: grava sozinha a ficha do SIAPEN que a pessoa abre na tela; desligado, só o botão do painel e o lote gravam
+const PADRAO = { ativo: true, rspeAuto: true, fichaAuto: true, raiz: "APTO", base: AUTO, bases: [], avisoNaPagina: true };
 const APTO_URL = "http://127.0.0.1:47321/apto"; // o APTO aberto informa as bases e a base aberta (só neste computador)
 const INTERVALO_MS = 4000;      // mínimo entre dois downloads
 const TETO_HORA = 40;           // downloads automáticos por hora (ao abrir processos)
@@ -562,7 +563,10 @@ chrome.runtime.onMessage.addListener((msg, sender, responder) => {
         const r = await podeFicha(String(msg.nome || "").toUpperCase(), msg.lote);
         return responder({ ok: r.ok, motivo: r.motivo, repetido: r.repetido });
       }
-      if (doSiapenMsg && msg.tipo === "fichaPdf") return responder(await gravarFicha(msg, sender));
+      if (doSiapenMsg && msg.tipo === "fichaPdf") {
+        if (!msg.lote && !msg.forcar && (await cfg()).fichaAuto === false) return responder({ ok: false, motivo: "ficha automática desligada" });
+        return responder(await gravarFicha(msg, sender));
+      }
       if (msg.tipo === "cfg") return responder(await cfg());
       if (daPagina && msg.tipo === "podeBaixar") {
         const r = await podeBaixar(A.cnj(msg.processo), msg.forcar, msg.lote);
@@ -618,6 +622,14 @@ chrome.runtime.onMessage.addListener((msg, sender, responder) => {
         return responder(r.lote ? Object.assign({}, r.lote, { sapNomes: r.sapNomes || {}, temSap: !!r.ultimoSap }) : null);
       }
       if (msg.tipo === "sapParaSeeu") return responder(await sapParaSeeu());
+      // botão do painel: grava a ficha aberta na aba do SIAPEN (mesmo com o automático desligado)
+      if (msg.tipo === "fichaAgora") {
+        const abas = await chrome.tabs.query({ url: "https://app.siapen.ms.gov.br/*" });
+        if (!abas.length) return responder({ ok: false, motivo: "abra a ficha disciplinar no SIAPEN" });
+        let r = null;
+        for (const t of abas) { r = await chrome.tabs.sendMessage(t.id, { tipo: "fichaAgora" }).catch(() => null); if (r && r.ok) break; }
+        return responder(r || { ok: false, motivo: "recarregue a aba do SIAPEN (F5)" });
+      }
       // triagem aberta pelo botão do APTO: andamento para o APTO e, no fim, a aba se fecha
       if (msg.tipo === "seeuAndamento") {
         try { return responder(await aptoPedir("/seeu/andamento", { andamento: msg.andamento }, 3000)); } catch (e) { return responder({ ok: false }); }

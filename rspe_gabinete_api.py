@@ -329,6 +329,17 @@ class GabineteApi:
             return {"erro": "não foi possível gravar (%s)" % e}
         return {"ok": True, "caminho": c}
 
+    def seeu_modelo(self, arquivo):
+        """Modelo de petição da triagem (extensao_seeu/modelos, os mesmos da extensão), em base64."""
+        a = str(arquivo or "")
+        if not re.match(r"^[a-z0-9_]+\.docx$", a):
+            return {"erro": "modelo inválido"}
+        p = os.path.join(self._recurso("extensao_seeu"), "modelos", a)
+        if not os.path.isfile(p):
+            return {"erro": "modelo não encontrado: " + a}
+        with open(p, "rb") as f:
+            return {"b64": base64.b64encode(f.read()).decode("ascii")}
+
     def seeu_parar(self):
         return self._cmd_de("seeu").pedir("pararMesa", {})
 

@@ -29,21 +29,34 @@
   // ---- 1) captura do PDF da ficha ----
   const capturados = new Set();
   let ultimaCaptura = null; // {src, r} - o lote espera por ela
-  async function capturar(src) {
-    if (capturados.has(src)) return;
+  async function capturar(src, forcar) {
+    if (capturados.has(src) && !forcar) return;
     capturados.add(src);
+    // download automático da ficha desligado no painel: só o lote e o botão "Baixar a ficha aberta" gravam
+    if (!lote && !forcar) {
+      const c = await chrome.runtime.sendMessage({ tipo: "cfg" }).catch(() => null);
+      if (c && c.fichaAuto === false) { ultimaCaptura = { src, r: { ok: false, motivo: "ficha automática desligada" } }; return; }
+    }
     const nome = norm(($id(ID.selecionado) || {}).textContent || "");
     let r;
     try {
       const resp = await fetch(src, { credentials: "include", cache: "no-store" });
       const bytes = new Uint8Array(await resp.arrayBuffer());
       if (!resp.ok || !A.ehPdf(bytes)) r = await chrome.runtime.sendMessage({ tipo: "falha", processo: "", motivo: "o SIAPEN não devolveu o PDF da ficha" });
-      else r = await chrome.runtime.sendMessage({ tipo: "fichaPdf", nome, b64: base64(bytes), lote: !!lote });
+      else r = await chrome.runtime.sendMessage({ tipo: "fichaPdf", nome, b64: base64(bytes), lote: !!lote, forcar: !!forcar });
     } catch (e) {
       r = { ok: false, motivo: "o SIAPEN não respondeu" };
     }
     ultimaCaptura = { src, r: r || { ok: false } };
   }
+  // botão "Baixar a ficha aberta (SIAPEN)" do painel: grava a ficha que está na tela agora
+  chrome.runtime.onMessage.addListener((m, _s, responder) => {
+    if (!m || m.tipo !== "fichaAgora") return;
+    const f = [...document.querySelectorAll("iframe, embed, object")].map((x) => x.getAttribute("src") || x.getAttribute("data") || "").find((s) => RE_FICHA.test(s));
+    if (!f) { responder({ ok: false, motivo: "nenhuma ficha aberta nesta aba do SIAPEN" }); return; }
+    capturar(new URL(f, location.href).href, true).then(() => responder(ultimaCaptura ? ultimaCaptura.r : { ok: false }));
+    return true;
+  });
   function procurarFicha(raiz) {
     for (const f of (raiz || document).querySelectorAll("iframe, embed, object")) {
       const src = f.getAttribute("src") || f.getAttribute("data") || "";

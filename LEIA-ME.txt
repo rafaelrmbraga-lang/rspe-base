@@ -1,9 +1,9 @@
-APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.24.0
+APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.25.0
 (antigo RSPE Base; SEEU, programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-7.24.0. A documentação técnica completa (cada parâmetro, a regra, a norma e
+7.25.0. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -1211,6 +1211,18 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v7.25.0
+  Função SEEU: "Gerar petição…" na intimação aberta, com os mesmos modelos e
+  o mesmo preenchimento da triagem da extensão (processo, nome, data por
+  extenso; PDF nos modelos prontos, Word nos que pedem dados do caso; o
+  modelo sugerido pela providência fica no topo). Vai para a pasta das
+  petições de Atendimentos > Modelos e backup, ou o APTO pergunta.
+  Extensão 1.12.0: opção "Baixar a ficha do SIAPEN automaticamente ao
+  abri-la" (ligada como antes; desligada, abrir a ficha não grava nada) e
+  botão "Baixar a ficha aberta (SIAPEN)"; o lote continua gravando. A opção
+  do RSPE automático já existia ("Baixar o RSPE automaticamente ao abrir um
+  processo").
 
 v7.24.0
   Função SEEU com os mesmos controles da Triagem da Mesa da extensão: Abas

@@ -10,6 +10,11 @@ const SHOTS = process.env.APTO_CAPTURAS || "";
   const pg = await b.newPage({ viewport: { width: 1400, height: 900 } });
   const erros = [];
   pg.on("pageerror", (e) => erros.push(String(e)));
+  const RAIZ = path.join(__dirname, "..");
+  const salvos = [];
+  await pg.exposeFunction("__modelo", (a) => ({ b64: fs.readFileSync(path.join(RAIZ, "extensao_seeu", "modelos", a)).toString("base64") }));
+  await pg.exposeFunction("__arq", (c) => ({ b64: fs.readFileSync(path.join(RAIZ, "atendimentos", ...c.split("/"))).toString("base64") }));
+  await pg.exposeFunction("__salvar", (n, b64, t) => { salvos.push({ n, t, b: Buffer.from(b64, "base64") }); return { ok: true, caminho: "C:\\" + n }; });
   await pg.addInitScript((fx) => {
     window.__chamadas = [];
     const reg = [{ id: "r1", nome: "FULANO DE TAL FICTICIO", proc: "7000117-54.2016.8.12.0001" }];
@@ -22,6 +27,9 @@ const SHOTS = process.env.APTO_CAPTURAS || "";
       sei_para_quadro: (id) => { window.__chamadas.push(["quadroSei", id]); return { ok: true }; },
       seeu_para_quadro: (...a) => { window.__chamadas.push(["quadroSeeu", ...a]); return { ok: true }; },
       seeu_ler: (o) => { window.__chamadas.push(["lerMesa", o]); return { ok: true, iniciado: true }; },
+      seeu_modelo: (a) => window.__modelo(a),
+      atd_arquivo: (c) => window.__arq(c),
+      atd_salvar_arquivo: (n, b64, t) => window.__salvar(n, b64, t),
       seeu_prefs_gravar: (p) => { window.__chamadas.push(["prefs", p]); return { ok: true }; },
       seeu_planilha: (ks) => { window.__chamadas.push(["planilha", ks]); return { ok: true, caminho: "C:\\x.xlsx" }; },
       seeu_estado: () => fx.triagem.leitura,
@@ -101,6 +109,19 @@ const SHOTS = process.env.APTO_CAPTURAS || "";
   ok((await pg.evaluate(() => window.__chamadas)).some((c) => c[0] === "quadroSeeu" && c[1] === "7000117-54.2016.8.12.0001"), "providência vai ao Quadro");
   await pg.click('#seeuPag .fx-det button:has-text("Abrir no SEEU")');
   ok((await pg.evaluate(() => window.__chamadas)).some((c) => c[0] === "abrir"), "abre o processo no SEEU pelo navegador");
+  // petição a partir dos modelos da triagem (mesmo preenchimento): PDF e Word
+  await pg.click('#seeuPag .fx-det button:has-text("Gerar petição")');
+  await pg.waitForSelector("#seeuPet.on", { timeout: 10000 });
+  ok(await pg.$eval("#seeuPet [role=dialog]", (d) => d.getAttribute("aria-modal") === "true"), "janela da petição acessível");
+  await pg.click('#seeuPet li:has-text("1. Ciência") button:has-text("PDF")');
+  await pg.waitForFunction(() => /Salvo em|Não foi possível/.test(document.getElementById("petMsg").textContent), null, { timeout: 30000 });
+  await pg.click('#seeuPet li:has-text("1. Ciência") button:has-text("Word")');
+  await pg.waitForFunction(() => document.getElementById("petMsg").textContent.includes(".docx"), null, { timeout: 30000 }).catch(() => {});
+  const pdf = salvos.find((x) => x.n.endsWith(".pdf")), docx = salvos.find((x) => x.n.endsWith(".docx"));
+  ok(pdf && pdf.t === "peticao" && pdf.b.slice(0, 4).toString() === "%PDF", "petição em PDF: " + (pdf ? pdf.n : await pg.textContent("#petMsg")));
+  ok(docx && docx.b.slice(0, 2).toString() === "PK" && !docx.b.toString("latin1").includes("{{processo}}"), "petição em Word, com o processo preenchido");
+  await pg.keyboard.press("Escape");
+  ok(!(await pg.isVisible("#seeuPet.on")), "Esc fecha a janela");
   // baixa: peça sugerida pela providência ("Impugnar o cálculo" -> Manifestações), data de hoje; conclui e sai da lista em aberto
   ok((await pg.inputValue("#seeuPag .fx-baixa select")) === "MANIF", "peça sugerida para a baixa");
   await pg.click('#seeuPag .fx-baixa button:has-text("Registrar baixa")');

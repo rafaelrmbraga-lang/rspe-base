@@ -731,6 +731,21 @@ body:not(.fn-exec) .fnpag{display:block}
 .fx-baixa label{font-size:var(--fs-12);color:var(--tx2)}
 .fx-baixa select,.fx-baixa input{min-height:34px;padding:5px 8px;border:1px solid var(--line2);border-radius:var(--r-1);background:var(--card);color:var(--tx);font:inherit}
 .fx-l.concl td{color:var(--tx2)}
+.fx-pet{position:fixed;inset:0;z-index:50;display:none;place-items:center;background:rgba(16,24,40,.35)}
+.fx-pet.on{display:grid}
+.fx-petj{width:min(720px,94vw);max-height:88vh;overflow:auto;background:var(--card);border-radius:var(--r-3);box-shadow:var(--sh-3);padding:18px 22px}
+.fx-petc{display:flex;align-items:center;justify-content:space-between}
+.fx-petc h2{margin:0;font-size:var(--fs-16)}
+.fx-petcampos{display:grid;grid-template-columns:1.2fr 1.4fr 1fr;gap:8px;margin:10px 0}
+.fx-petcampos label{display:flex;flex-direction:column;gap:3px;font-size:var(--fs-12);color:var(--tx2);font-weight:600}
+.fx-petcampos input{min-height:34px;padding:5px 8px;border:1px solid var(--line2);border-radius:var(--r-1);font:inherit;color:var(--tx);background:var(--card)}
+.fx-petl{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.fx-petl li{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--line);border-radius:var(--r-2)}
+.fx-petl li.sug{border-color:var(--pri);background:var(--pri-soft)}
+.fx-petl li > span{flex:1;display:flex;flex-direction:column}
+.fx-petl small{color:var(--tx3);font-size:var(--fs-12)}
+.fx-petmsg{margin:10px 0 0;font-weight:600}
+.fx-petmsg.erro{color:var(--r-tx)}
 .fx-mesa{background:var(--card);border:1px solid var(--line);border-radius:var(--r-2);padding:8px 12px;margin:0 0 10px}
 .fx-grp{display:inline-flex;align-items:center;gap:10px;border:0;margin:0;padding:0}
 .fx-grp legend,.fx-rot{float:left;margin-right:4px;font-size:var(--fs-12);font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.04em}
@@ -5022,6 +5037,7 @@ ui.seeuPintar=function(){ const P=document.getElementById('seeuPag'); if(!P) ret
       <div><h3>Na Mesa</h3><p class="muted">${esc([l.aba,l.classe,l.assunto&&'('+l.assunto+')','enviado '+(l.dataEnvio||'—'),'resposta: '+(l.prazo||'—'),'visto pela 1ª vez '+String(l.primeiroVisto||'').slice(0,10).split('-').reverse().join('/')].filter(Boolean).join(' · '))}</p>
       ${l.baixa&&l.baixa.obs?`<p>Observação da baixa: ${esc(l.baixa.obs)}</p>`:''}
       <div class="fx-acoes">${l.url?`<button type="button" class="btn" onclick="ui.seeuAbrir(${jsa(l.url)})">Abrir no SEEU</button>`:''}
+      <button type="button" class="btn" onclick="ui.seeuPeticao(${jsa(k)})">Gerar petição…</button>
       ${a&&a.providencia&&l.status!=='concluido'?`<button type="button" class="btn" onclick="ui.seeuQuadro(${jsa(k)})">Enviar ao Quadro</button>`:''}</div></div></div>
       <div class="fx-acoes">${acoes}</div></td></tr>`:'';
     return `<tr class="fx-l${ab?' aberta':''}${l.status==='concluido'?' concl':''}" tabindex="0" aria-expanded="${ab}" onclick="ui.seeuAbrirLinha(event,${jsa(k)})" onkeydown="if(event.target===this&&(event.key==='Enter'||event.key===' ')){event.preventDefault();ui.seeuAbrirLinha(event,${jsa(k)})}">
@@ -5050,6 +5066,48 @@ ui.seeuConcluirSem=async function(k){ if(!confirm('Concluir sem registrar peça?
   const r=await API_().seeu_concluir(k,'','',''); if(r&&r.erro){ this.toast(r.erro,{erro:true}); return; } this.seeu.abertos.delete(k); this.seeuCarregar(); };
 ui.seeuReabrir=async function(k){ const r=await API_().seeu_reabrir(k); if(r&&r.erro){ this.toast(r.erro,{erro:true}); return; }
   this.toast(r&&r.removidas&&r.removidas.length?'Reaberta: a peça lançada saiu da produção do mês.':'Reaberta.'); this.seeuCarregar(); };
+
+// ---------------- SEEU: petições (os mesmos modelos e o mesmo preenchimento da triagem da extensão: extensao_seeu/peticao.js) ----------------
+ui.seeuPetLibs=function(){ if(this._petLibs) return this._petLibs;
+  const carregar=src=>new Promise((ok,erro)=>{ const s=document.createElement('script'); s.src=src; s.onload=ok; s.onerror=()=>erro(new Error('não carregou '+src)); document.head.appendChild(s); });
+  this._petLibs=carregar('extensao_seeu/peticao.js').then(()=>carregar('atendimentos/pdflib/pdf-lib.min.js')).then(()=>carregar('atendimentos/pdflib/fontkit.umd.min.js'))
+    .catch(e=>{ this._petLibs=null; throw e; });
+  return this._petLibs; };
+ui.seeuB64=function(b64){ const s=atob(b64), u=new Uint8Array(s.length); for(let i=0;i<s.length;i++) u[i]=s.charCodeAt(i); return u; };
+ui.seeuParaB64=function(bytes){ let s=''; for(let i=0;i<bytes.length;i+=0x8000) s+=String.fromCharCode.apply(null, bytes.subarray(i,i+0x8000)); return btoa(s); };
+ui.seeuInflar=async function(b){ const s=new Blob([b]).stream().pipeThrough(new DecompressionStream('deflate-raw')); return new Uint8Array(await new Response(s).arrayBuffer()); };
+ui.seeuPeticao=async function(k){ const l=this.seeuItem(k); if(!l) return;
+  try{ await this.seeuPetLibs(); }catch(e){ this.toast('Não foi possível abrir as petições: '+e.message,{erro:true}); return; }
+  const PET=self.PETICAO, a=l.analise||{}, sug=PET.modeloSugerido(a.providencia, a);
+  const ordem=PET.MODELOS.slice().sort((x,y)=>(y.id===sug)-(x.id===sug));
+  let F=document.getElementById('seeuPet'); if(!F){ F=document.createElement('div'); F.id='seeuPet'; F.className='fx-pet'; document.body.appendChild(F); }
+  this._petK=k; this._petVolta=document.activeElement;
+  F.innerHTML=`<div class="fx-petj" role="dialog" aria-modal="true" aria-labelledby="petTit"><div class="fx-petc"><h2 id="petTit">Gerar petição</h2><button type="button" class="btn ghost" aria-label="Fechar" onclick="ui.seeuPetFechar()"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+    <p class="muted">${esc(l.processo+' · '+(l.executado||''))}${a.providencia?' · providência sugerida: '+esc(a.providencia.texto):''}</p>
+    <div class="fx-petcampos"><label>Processo<input id="petProc" value="${esc(l.processo)}"></label><label>Assistido<input id="petNome" value="${esc(PET.nomeProprio(l.executado||''))}"></label><label>Data<input id="petData" value="${esc(PET.dataPorExtenso(new Date()))}"></label></div>
+    <ul class="fx-petl">${ordem.map(m=>`<li class="${m.id===sug?'sug':''}"><span><b>${esc(m.nome)}</b>${m.id===sug?' <span class="fx-tag ok">sugerido</span>':''}<small>${m.formato==='pdf'?'pronto: nº, data e assinatura preenchidos':'pede dados do caso: sai em Word, com os pontos a completar em amarelo'}</small></span>
+      ${m.formato==='pdf'?`<button type="button" class="btn pri" onclick="ui.seeuPetGerar('${m.id}','pdf')">PDF</button>`:''}<button type="button" class="btn${m.formato==='pdf'?'':' pri'}" onclick="ui.seeuPetGerar('${m.id}','docx')">Word</button></li>`).join('')}</ul>
+    <p id="petMsg" class="fx-petmsg" role="status" aria-live="polite"></p><p class="muted">Vai para a pasta das petições escolhida em Atendimentos &gt; Modelos e backup; sem pasta escolhida, o APTO pergunta onde salvar.</p></div>`;
+  F.classList.add('on'); F.onclick=e=>{ if(e.target===F) this.seeuPetFechar(); };
+  F.onkeydown=e=>{ if(e.key==='Escape') this.seeuPetFechar(); if(e.key==='Tab'){ const f=[...F.querySelectorAll('button,input')], i=f.indexOf(document.activeElement);
+    if(e.shiftKey&&i<=0){ e.preventDefault(); f[f.length-1].focus(); } else if(!e.shiftKey&&i===f.length-1){ e.preventDefault(); f[0].focus(); } } };
+  document.getElementById('petNome').focus(); };
+ui.seeuPetFechar=function(){ const F=document.getElementById('seeuPet'); if(F) F.classList.remove('on'); if(this._petVolta&&this._petVolta.focus) this._petVolta.focus(); };
+ui.seeuPetGerar=async function(id, formato){ const PET=self.PETICAO, m=PET.MODELOS.find(x=>x.id===id), msg=document.getElementById('petMsg'), B=API_();
+  msg.className='fx-petmsg'; msg.textContent='Gerando…';
+  try{ const campos={processo:document.getElementById('petProc').value.trim(), nome:document.getElementById('petNome').value.trim(), data:document.getElementById('petData').value.trim()};
+    const r=await B.seeu_modelo(m.arquivo); if(!r||r.erro) throw new Error((r&&r.erro)||'modelo não encontrado');
+    const modelo=this.seeuB64(r.b64); let bytes;
+    if(formato==='pdf'){ if(!this._petFontes){ const f=async n=>{ const x=await B.atd_arquivo('fontes_pdf/carlito-latin-'+n+'.woff'); if(!x||x.erro) throw new Error('fonte do PDF não encontrada'); return this.seeuB64(x.b64); };
+        this._petFontes={r:await f('400-normal'), b:await f('700-normal'), i:await f('400-italic'), bi:await f('700-italic')}; }
+      bytes=await PET.gerarPdf(modelo, campos, {inflar:this.seeuInflar, PDFLib:self.PDFLib, fontkit:self.fontkit, fontes:this._petFontes, titulo:m.nome+' '+campos.processo, autor:'Cahuê Duarte e Urdiales'}); }
+    else bytes=await PET.gerarDocx(modelo, campos, this.seeuInflar);
+    const nome=PET.nomeArquivo(m.nome, campos.processo, formato);
+    let s=await B.atd_salvar_arquivo(nome, this.seeuParaB64(bytes), 'peticao', null, false);
+    if(s&&s.existe) s=confirm('Já existe '+s.caminho+'. Substituir?')? await B.atd_salvar_arquivo(nome, this.seeuParaB64(bytes), 'peticao', null, true) : {cancelado:true};
+    if(s&&s.erro) throw new Error(s.erro);
+    msg.textContent=s&&s.ok?'Salvo em '+s.caminho+(formato==='docx'&&m.formato==='docx'?' (complete os trechos em amarelo)':''):'Cancelado.'; }
+  catch(e){ msg.className='fx-petmsg erro'; msg.textContent='Não foi possível gerar: '+(e&&e.message||e); } };
 
 // ---------------- SEI ----------------
 ui.sei={q:'', f:'todos', sel:null, docs:new Set()};
