@@ -585,7 +585,19 @@
   }
 
   // ---------- PENDÊNCIAS (kanban) ----------
-  const atdDe = (p) => D.atendimentos.find((a) => a.id === p.atendimentoId);
+  // o atendimento que gerou a pendência: pelo vínculo; nas pendências antigas (sem vínculo, ou trazidas da extensão), pelo
+  // assistido (nome ou nº do processo) no dia da pendência ou no atendimento mais recente antes dele. Só pendência de atendimento.
+  const dig = (x) => String(x || "").replace(/\D/g, "");
+  function atdDe(p) {
+    const ligado = p.atendimentoId && D.atendimentos.find((a) => a.id === p.atendimentoId);
+    if (ligado) return ligado;
+    if (["execucao", "seeu", "sei", "fluxo"].includes(p.origem)) return null; // não veio de atendimento
+    const nome = A.norm(p.nome || ""), proc = dig(p.processo);
+    if (!nome && proc.length < 15) return null;
+    const mesmo = (a) => (nome && A.norm(a.nome || "") === nome) || (proc.length >= 15 && (a.processos || []).some((x) => dig(x) === proc));
+    const cands = D.atendimentos.filter((a) => mesmo(a) && (!p.data || !a.data || a.data <= p.data)).sort((x, y) => String(y.data).localeCompare(String(x.data)));
+    return cands[0] || null;
+  }
   function renderKanban() {
     const busca = A.norm($("#buscaPend").value);
     const casa = (p) => !busca || A.norm(`${p.nome} ${p.processo} ${A.nomeTipo(p.tipo)} ${p.obs}`).includes(busca);
@@ -665,7 +677,7 @@
       ariaExpanded: "false" }) : el("b", { textContent: p.nome || "(sem nome)" });
     if (rel) nomeBt.addEventListener("click", () => { rel.open = !rel.open; });
     if (rel) rel.addEventListener("toggle", () => nomeBt.setAttribute("aria-expanded", String(rel.open)));
-    k.append(
+    k.append(...[
       el("div", { className: "ktopo" }, nomeBt, del),
       el("div", { className: "kproc", textContent: (p.processo || "") + (p.data ? ` · ${p.origem === "execucao" || p.origem === "seeu" || p.origem === "sei" ? "enviado" : "atendido"} em ${A.brDeIso(p.data).slice(0, 5)}` : "") + (a && a.contato ? ` · ${a.contato}` : "") }),
       origemPend(p),
@@ -674,7 +686,7 @@
       obs,
       el("div", { className: "kacoes sec2" }, pet, zap),
       el("div", { className: "kacoes" }, bEsq, bDir, el("span", { className: "espaco" }), arq, feita),
-    );
+    ].filter(Boolean)); // origem e relato podem não existir: nada de "null" no cartão
     return k;
   }
   // de onde veio a pendência (o Quadro é um só para Atendimentos, Execução, SEEU e SEI) e o pedido já feito na Execução

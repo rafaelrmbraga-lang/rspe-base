@@ -1,9 +1,9 @@
-APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.30.0
+APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.31.0
 (antigo RSPE Base; SEEU, programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-7.30.0. A documentação técnica completa (cada parâmetro, a regra, a norma e
+7.30.1. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -29,8 +29,8 @@ sobre o .exe).
 
 FUNÇÕES (barra fixa no topo)
 A faixa verde do topo fica sempre visível: APTO | Atendimentos | Execução |
-SEEU | SEI | Quadro | Relatório. Clique para trocar de função (ou Ctrl+1 a
-Ctrl+6, na ordem da barra; Alt+número continua abrindo as abas da
+SEEU | SEI | Quadro | Relatório | Dados prisionais | Jurisprudências.
+Clique para trocar de função (ou Ctrl+1 a Ctrl+8, na ordem da barra; Alt+número continua abrindo as abas da
 Execução). O programa abre na Execução.
   Atendimentos  a fila do SAP do dia, lida pela extensão na aba do SAP
                 aberta (só leitura), com o texto para o SAP, pendências,
@@ -51,6 +51,10 @@ Execução). O programa abre na Execução.
                 SEEU e do SEI (ver "QUADRO").
   Relatório     produção do mês (CONTROLE - 3ª DPEP), relatório do dia em
                 Word e os relatórios da Execução em PDF (ver "RELATÓRIO").
+  Dados prisionais  os dados do Geopresídios (CNJ) de MS: mapa, ocupação,
+                condições e relatórios em PDF. Funciona sem base aberta.
+  Jurisprudências  o banco de teses do gabinete, por tema. Funciona sem
+                base aberta. (As duas saíram do menu lateral da Execução.)
   Importar e Exportar ficam na mesma barra, à direita, e valem para o APTO
   todo: Importar traz RSPE e fichas (Execução, base aberta) ou a cópia do
   gabinete (.json, também a da extensão antiga: só junta o que falta);
@@ -1296,6 +1300,21 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v7.31.0
+  Barra fixa redesenhada: o selo do APTO na marca, a função ativa em
+  destaque (pílula branca), um separador antes das ferramentas e botões
+  maiores. Dados prisionais e Jurisprudências passaram para a barra fixa
+  (Ctrl+7 e Ctrl+8), sem o menu da Execução e sem precisar de base aberta;
+  ao voltar à Execução, volta-se à aba em que se estava. O botão "Baixar
+  dados do Geopresídios" voltou a ter a cor de botão principal.
+
+v7.30.1
+  Quadro: o cartão não mostra mais "null" (quando não há origem nem relato).
+  As pendências antigas, sem vínculo com o atendimento (criadas antes da 7.29
+  ou trazidas da extensão), acham o atendimento pelo assistido (nome ou nº do
+  processo), no dia da pendência ou no mais recente antes dele, e mostram o
+  relato ao clicar no nome.
 
 v7.30.0
   SEI, acentos: se o SEI declarar UTF-8 e mandar ISO-8859-1, o texto agora sai
