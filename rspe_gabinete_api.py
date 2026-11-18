@@ -17,6 +17,7 @@ import webview
 
 import rspe_gabinete as rgab
 import rspe_sei as rsei
+import rspe_seeu as rseeu
 
 LOG = logging.getLogger("rspe")
 MAX_CORPO = 20 * 1024 * 1024         # tamanho máximo de um pedido da extensão (um lote do SEI tem até 25 documentos)
@@ -31,6 +32,9 @@ class GabineteApi:
     _gab_trava = threading.Lock()
     _cmd = None
     _sap_aberto = None
+    _seeu_obj = None
+    _cmds = None          # SEI e SEEU: {sistema: Comandos}
+    _andamento = None     # SEI e SEEU: último andamento da leitura informado pela extensão
 
     # ---- base do gabinete ----
     def _gabinete(self):
@@ -46,6 +50,37 @@ class GabineteApi:
             if self._sei_obj is None:
                 self._sei_obj = rsei.Sei(g)
             return self._sei_obj
+
+    def _seeu(self):
+        g = self._gabinete()
+        with self._gab_trava:
+            if self._seeu_obj is None:
+                self._seeu_obj = rseeu.Seeu(g)
+            return self._seeu_obj
+
+    def _cmd_de(self, sist):
+        """Fila de pedidos da tela para a aba do SEI ou do SEEU (a do SAP é _comandos)."""
+        with self._gab_trava:
+            if self._cmds is None:
+                self._cmds = {"sei": rgab.Comandos(rgab.TIPOS_SEI, rgab.AVISO_SEI, "SEI"), "seeu": rgab.Comandos(rgab.TIPOS_SEEU, rgab.AVISO_SEEU, "SEEU")}
+                self._andamento = {"sei": None, "seeu": None}
+                threading.Thread(target=self._abas_vigiar, daemon=True).start()
+            return self._cmds[sist]
+
+    def _abas_vigiar(self):
+        """Avisa a tela quando a aba do SEI ou do SEEU (com a extensão) aparece ou some."""
+        antes = {}
+        while True:
+            time.sleep(2)
+            for sist, c in self._cmds.items():
+                aberto = c.estado()["aberto"]
+                if antes.get(sist) != aberto:
+                    antes[sist] = aberto
+                    self._js("window.ui && ui.%sEvento && ui.%sEvento(%s)" % (sist, sist, json.dumps({"estado": self._estado_leitura(sist)}, ensure_ascii=False)))
+
+    def _estado_leitura(self, sist):
+        c = self._cmd_de(sist)
+        return {"aberto": c.estado()["aberto"], "andamento": self._andamento.get(sist)}
 
     def _comandos(self):
         if self._cmd is None:
@@ -193,9 +228,54 @@ class GabineteApi:
         self._atd_evento("mudou", {"pecas": {"upsert": [p]}})
         return {"ok": True}
 
-    # ---- SEEU (função SEEU): a última triagem da Mesa do Defensor, como a extensão leu ----
+    def sei_estado(self):
+        return self._estado_leitura("sei")
+
+    def sei_ler(self, modo="todos"):
+        """Botão "Ler o SEI": o pedido vai para a aba do SEI (já logada); a extensão lê ali, com o leitor do NUSPEN, e informa o andamento.
+        Uma leitura interrompida continua de onde parou (a sessão e o cursor ficam na base do gabinete)."""
+        modo = modo if modo in ("todos", "novos", "documentos_novos") else "todos"
+        retomar = self._sei().sessao_interrompida()
+        r = self._cmd_de("sei").pedir("lerSei", {"modo": modo, "retomar": retomar})
+        if r.get("ok"):
+            self._andamento["sei"] = {"fase": "iniciando", "modo": modo, "quando": time.time()}
+        return r
+
+    def sei_parar(self):
+        return self._cmd_de("sei").pedir("pararSei", {})
+
+    # ---- SEEU (função SEEU): as intimações da Mesa do Defensor, guardadas até a pessoa concluir ----
     def seeu_triagem(self):
-        return self._gabinete().kv("seeu_triagem") or {}
+        t = self._gabinete().kv("seeu_triagem") or {}
+        t["itens"] = self._seeu().listar()
+        t["pecas"] = rseeu.PECAS
+        t["leitura"] = self._estado_leitura("seeu")
+        return t
+
+    def seeu_estado(self):
+        return self._estado_leitura("seeu")
+
+    def seeu_ler(self):
+        """Botão "Ler a Mesa": a extensão abre a triagem (a mesma da extensão, que não inicia prazo) e lê a Mesa e os processos."""
+        r = self._cmd_de("seeu").pedir("lerMesa", {})
+        if r.get("ok"):
+            self._andamento["seeu"] = {"fase": "iniciando", "quando": time.time()}
+        return r
+
+    def seeu_parar(self):
+        return self._cmd_de("seeu").pedir("pararMesa", {})
+
+    def seeu_concluir(self, chave, peca="", data="", obs=""):
+        r = self._seeu().concluir(chave, peca, data, obs)
+        if r.get("peca"):
+            self._atd_evento("mudou", {"pecas": {"upsert": [r["peca"]]}})
+        return r
+
+    def seeu_reabrir(self, chave):
+        r = self._seeu().reabrir(chave)
+        if r.get("removidas"):
+            self._atd_evento("mudou", {"pecas": {"remover": r["removidas"]}})
+        return r
 
     def seeu_para_quadro(self, processo, nome, texto, ultimo_dia=""):
         """A providência sugerida pela triagem vira cartão do Quadro (A fazer), com o último dia da Mesa como prazo."""
@@ -220,6 +300,8 @@ class GabineteApi:
         cab = cab or {}
         if caminho == "/atd/comando":
             return {"cmd": self._comandos().proximo()}
+        if caminho in ("/sei/comando", "/seeu/comando"):
+            return {"cmd": self._cmd_de(caminho.split("/")[1]).proximo()}
         if caminho == "/sei/token":
             return {"token": self._sei().token}
         if caminho == "/api/sync/ping/":
@@ -269,8 +351,24 @@ class GabineteApi:
             if not isinstance(t, dict):
                 return {"__status": 400, "erro": "triagem inválida"}
             t["recebida"] = time.strftime("%Y-%m-%d %H:%M:%S")
+            r = self._seeu().receber(t)
+            t.pop("linhas", None)  # as intimações ficam na tabela seeu_itens; aqui só o resumo da última triagem
             self._gabinete().gravar_kv("seeu_triagem", t)
             self._js("window.ui && ui.seeuEvento && ui.seeuEvento()")
+            return dict(r, ok=True)
+        if caminho in ("/sei/resposta", "/seeu/resposta"):
+            ok = self._cmd_de(caminho.split("/")[1]).responder(int(corpo.get("id") or 0), corpo.get("resposta"))
+            return {"ok": ok}
+        if caminho in ("/sei/andamento", "/seeu/andamento"):
+            sist = caminho.split("/")[1]
+            a = corpo.get("andamento")
+            if not isinstance(a, dict):
+                return {"__status": 400, "erro": "andamento inválido"}
+            a = {k: a[k] for k in list(a)[:40] if isinstance(a[k], (str, int, float, bool, type(None), list))}
+            a["quando"] = time.time()
+            self._cmd_de(sist)
+            self._andamento[sist] = a
+            self._js("window.ui && ui.%sEvento && ui.%sEvento(%s)" % (sist, sist, json.dumps({"estado": self._estado_leitura(sist)}, ensure_ascii=False)))
             return {"ok": True}
         if caminho == "/atd/fila":
             r = self._gabinete().receber_fila(corpo.get("itens") or [])

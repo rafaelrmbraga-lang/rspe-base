@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "APTO - RSPE do SEEU, Triagem da Mesa, Ficha do SIAPEN, processos e atendimentos do SAP",
   "short_name": "APTO RSPE",
-  "version": "1.9.0",
+  "version": "1.10.0",
   "description": "RSPE do SEEU e ficha do SIAPEN para a pasta do APTO, triagem da Mesa do Defensor (só leitura), nº do processo no SAP e a fila de atendimentos do SAP para o APTO (só leitura) e a leitura do SEI para o APTO (só leitura, endereço do SEI autorizado por você).",
   "minimum_chrome_version": "116",
   "permissions": [
@@ -86,6 +86,15 @@
         "sei_aba.js"
       ],
       "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://seeu.pje.jus.br/seeu/*"
+      ],
+      "js": [
+        "seeu_aba.js"
+      ],
+      "run_at": "document_idle"
     }
   ],
   "action": {
@@ -115,5 +124,15 @@
   "optional_host_permissions": [
     "https://*/*",
     "http://*/*"
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "sei/lib/*.js"
+      ],
+      "matches": [
+        "https://sei.defensoria.ms.def.br/*"
+      ]
+    }
   ]
 }

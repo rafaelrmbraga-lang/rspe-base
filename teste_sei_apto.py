@@ -85,11 +85,14 @@ if node:
     try:
         rq = urllib.request.Request("http://127.0.0.1:47396/sei/token", headers={"Origin": "chrome-extension://teste"})
         token = json.loads(urllib.request.build_opener(urllib.request.ProxyHandler({})).open(rq, timeout=5).read())["token"]
+        # a página da extensão pede o token sem "Origin" (pedido da própria extensão): recebe; página da internet: 403
+        r0 = json.loads(urllib.request.build_opener(urllib.request.ProxyHandler({})).open("http://127.0.0.1:47396/sei/token", timeout=5).read())
+        ok(r0.get("token") == token, "página da extensão (sem Origin) recebe o token")
         try:
-            urllib.request.build_opener(urllib.request.ProxyHandler({})).open("http://127.0.0.1:47396/sei/token", timeout=5)
-            ok(False, "token entregue sem origem de extensão")
+            urllib.request.build_opener(urllib.request.ProxyHandler({})).open(urllib.request.Request("http://127.0.0.1:47396/sei/token", headers={"Origin": "https://site.qualquer"}), timeout=5)
+            ok(False, "token entregue a página da internet")
         except urllib.error.HTTPError as e:
-            ok(e.code == 403, "token só para extensões")
+            ok(e.code == 403, "página da internet não recebe o token")
         env = dict(os.environ, SEI_BASE=sei_base, APP_BASE="http://127.0.0.1:47396", TOKEN=token, NO_PROXY="127.0.0.1", no_proxy="127.0.0.1")
         r = subprocess.run([node, os.path.join(AQUI, "extensao_seeu_testes", "teste_sei_e2e.mjs")], capture_output=True, text=True, timeout=600, env=env)
         try:
@@ -122,7 +125,7 @@ if node:
             rq = urllib.request.Request("http://127.0.0.1:47396/seeu/triagem", data=corpo, headers={"Content-Type": "application/json", "Origin": "chrome-extension://teste"})
             ok(json.loads(urllib.request.build_opener(urllib.request.ProxyHandler({})).open(rq, timeout=5).read()).get("ok"), "triagem recebida")
             t = api.seeu_triagem()
-            ok(t.get("linhas", [{}])[0].get("executado") == "FULANO FICTICIO" and t.get("recebida"), "triagem guardada para a função SEEU")
+            ok(t.get("itens", [{}])[0].get("executado") == "FULANO FICTICIO" and t["itens"][0]["status"] == "aberto" and t.get("recebida"), "intimação guardada para a função SEEU")
             ok(any("ui.seeuEvento" in e for e in eventos), "a tela do SEEU é avisada")
             ok(api.abrir_seeu("https://site.qualquer/").get("erro"), "abrir no SEEU: só o endereço do SEEU")
             # leitor do SEI da Defensoria (páginas sintéticas com a estrutura real) até o APTO

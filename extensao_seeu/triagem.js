@@ -27,12 +27,15 @@ async function carregarGuardados() {
 }
 const guardarPrefs = () => chrome.storage.local.set({ triagemPrefs: prefs });
 const guardarEstado = () => { enviarAoApto(); return chrome.storage.local.set({ triagemUltima: estado }).catch(() => {}); };
+// aberta pelo botão "Ler a Mesa" do APTO (triagem.html?auto=1): lê a Mesa e os processos sozinha, com as abas e os filtros guardados
+const AUTO = new URLSearchParams(location.search).get("auto") === "1";
+const avisarAndamento = (a) => { if (AUTO) chrome.runtime.sendMessage({ tipo: "seeuAndamento", andamento: a }).catch(() => {}); };
 // a triagem vai também para o APTO (função SEEU): um resumo de cada linha (sem os textos inteiros dos documentos), no máximo a
 // cada 3 s; com o APTO fechado, vai na próxima vez
 let aptoAgendado = null;
-function enviarAoApto() {
+function enviarAoApto(ja) {
   clearTimeout(aptoAgendado);
-  aptoAgendado = setTimeout(async () => {
+  const enviarAgora = async () => {
     const curto = (m) => (m ? { nome: m.nome || "", seq: m.seq || "", data: m.data || "", resumo: m.doc && !m.doc.erro ? T.resumir(m.doc.resumo || "", 500) : "",
       erroDoc: m.doc && m.doc.erro ? String(m.doc.erro).slice(0, 200) : "", semTexto: !!(m.doc && m.doc.semTexto) } : null);
     const linhas = estado.linhas.map((l) => {
@@ -47,9 +50,12 @@ function enviarAoApto() {
           alertas: (a.alertas || []).slice(0, 8).map((x) => ({ txt: x.txt, nivel: x.nivel })), temas: (a.temas || []).slice(0, 8) } };
     });
     // pelo service worker (que fala com o APTO); esta página só pede ao SEEU
-    try { await chrome.runtime.sendMessage({ tipo: "seeuTriagem", triagem: { quando: estado.quando, situacao: estado.situacao, situacaoNome: T.SITUACOES[estado.situacao] || "", linhas } }); }
+    const abas = (estado.abas || []).map((a) => T.ABAS[a] || String(a));
+    try { await chrome.runtime.sendMessage({ tipo: "seeuTriagem", triagem: { quando: estado.quando, situacao: estado.situacao, situacaoNome: T.SITUACOES[estado.situacao] || "", abas, linhas } }); }
     catch (e) { /* APTO fechado: vai na próxima vez */ }
-  }, 3000);
+  };
+  if (ja) return enviarAgora();
+  aptoAgendado = setTimeout(enviarAgora, 3000);
 }
 async function docGuardado(chave) {
   const { triagemDocs } = await chrome.storage.local.get("triagemDocs");
@@ -251,7 +257,7 @@ async function lerMesa() {
   // guarda as leituras anteriores dos processos que continuam na Mesa
   const analises = {};
   for (const l of linhas) if (estado.analises[chaveLinha(l)]) analises[chaveLinha(l)] = estado.analises[chaveLinha(l)];
-  estado = { quando: Date.now(), situacao: Number(situacao), linhas, analises };
+  estado = { quando: Date.now(), situacao: Number(situacao), abas, linhas, analises };
   await guardarEstado();
   terminar();
   desenhar();
@@ -922,6 +928,7 @@ function terminar() {
   desenhar();
 }
 function progresso(feitos, total, txt) {
+  avisarAndamento({ fase: "lendo", feitos, total, txt: String(txt || "").slice(0, 200) });
   $("progresso").className = "on";
   $("progBarra").style.width = total ? Math.round((feitos / total) * 100) + "%" : "8%";
   $("progTxt").textContent = (total ? `${feitos} de ${total} · ` : "") + (txt || "");
@@ -959,6 +966,8 @@ window.addEventListener("focus", () => { if (!rodando) acharSeeu(); });
 const ajustarTopo = () => document.documentElement.style.setProperty("--hdr", document.querySelector("header").offsetHeight + "px");
 window.addEventListener("resize", ajustarTopo);
 
+chrome.runtime.onMessage.addListener((m) => { if (m && m.tipo === "triagemParar" && rodando) rodando.parar = true; });
+
 (async () => {
   ajustarTopo();
   await carregarGuardados();
@@ -967,4 +976,19 @@ window.addEventListener("resize", ajustarTopo);
   $("faixa").value = prefs.faixa || "";
   desenhar();
   await acharSeeu();
+  if (AUTO) {
+    // as mesmas duas etapas dos botões "1 · Ler a Mesa" e "2 · Ler processos e decisões"; no fim, entrega ao APTO e a aba se fecha
+    avisarAndamento({ fase: "lendo", txt: "Lendo a Mesa…" });
+    try {
+      const antes = estado.quando;
+      await lerMesa();
+      // a Mesa foi lida agora (mesmo com aviso de páginas que o SEEU não entregou): segue para os processos
+      if (estado.quando !== antes && estado.linhas.length) await lerProcessos();
+    } catch (e) { mensagem(e.message || String(e), true); }
+    await enviarAoApto(true);
+    const erro = $("msg").className === "erro";
+    avisarAndamento({ fase: erro ? "parada" : "concluida", txt: $("msg").textContent.slice(0, 300), mesa: estado.linhas.length,
+      lidos: estado.linhas.filter((l) => (estado.analises[chaveLinha(l)] || {}).status === "ok").length });
+    chrome.runtime.sendMessage({ tipo: "triagemAutoFim" }).catch(() => {});
+  }
 })();

@@ -467,6 +467,65 @@ function atdEnviar(caminho, corpo) {
   atdEntregando = vez.catch(() => {});
   return vez;
 }
+// ---------- SEI e SEEU: botões de leitura do APTO ----------
+// A aba do SEI (sei_aba.js) e a do SEEU (seeu_aba.js) perguntam ao APTO se há pedido; o SEI é lido na própria aba (o leitor do NUSPEN)
+// e o que ele entrega passa por aqui, com o código de pareamento do APTO; o SEEU é lido pela triagem, aberta aqui em segundo plano.
+async function seiToken() {
+  try { return (await aptoPedir("/sei/token", undefined, 3000)).token || ""; } catch (e) { return ""; }
+}
+async function seiApp(msg) {
+  const caminho = String(msg.caminho || "");
+  if (!/^\/api\/sync\/[a-z0-9_/]*$/.test(caminho)) return { erro: "caminho não permitido" };
+  const token = await seiToken();
+  if (!token) return { erro: "APTO indisponível" };
+  const ctl = new AbortController();
+  const t = setTimeout(() => ctl.abort(), 60000);
+  try {
+    const r = await fetch(APTO_RAIZ + caminho, { method: msg.metodo === "POST" ? "POST" : "GET", cache: "no-store", signal: ctl.signal,
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + token }, body: msg.metodo === "POST" ? String(msg.corpo || "{}") : undefined });
+    let j = null;
+    try { j = await r.json(); } catch (e) { j = null; }
+    return { status: r.status, json: j };
+  } catch (e) { return { erro: "APTO indisponível" }; } finally { clearTimeout(t); }
+}
+async function seiMensagem(msg) {
+  if (msg.tipo === "seiEntrada") {
+    const u = String(msg.url || "");
+    if (!/^https:\/\/sei\.defensoria\.ms\.def\.br\/sei\/controlador\.php\?acao=procedimento_controlar&/.test(u)) return { ok: false };
+    await chrome.storage.session.set({ seiEntrada: { url: u, quando: Date.now() } });
+    return { ok: true };
+  }
+  if (msg.tipo === "seiEntradaLer") return (await chrome.storage.session.get("seiEntrada")).seiEntrada || null;
+  if (msg.tipo === "seiConfig") {
+    const r = await chrome.storage.local.get(["sei_pausaMs", "sei_limitePorMinuto", "sei_maxFalhasSeguidas"]);
+    return { pausaMs: r.sei_pausaMs, limitePorMinuto: r.sei_limitePorMinuto, maxFalhasSeguidas: r.sei_maxFalhasSeguidas };
+  }
+  if (msg.tipo === "seiComando") { try { return await aptoPedir("/sei/comando", undefined, 1500); } catch (e) { return { cmd: null }; } }
+  if (msg.tipo === "seiResposta") { try { return await aptoPedir("/sei/resposta", { id: msg.id, resposta: msg.resposta }); } catch (e) { return { ok: false }; } }
+  if (msg.tipo === "seiAndamento") { try { return await aptoPedir("/sei/andamento", { andamento: msg.andamento }, 3000); } catch (e) { return { ok: false }; } }
+  if (msg.tipo === "seiApp") return seiApp(msg);
+  return { ok: false };
+}
+async function seeuMensagem(msg) {
+  if (msg.tipo === "seeuComando") { try { return await aptoPedir("/seeu/comando", undefined, 1500); } catch (e) { return { cmd: null }; } }
+  if (msg.tipo === "seeuResposta") { try { return await aptoPedir("/seeu/resposta", { id: msg.id, resposta: msg.resposta }); } catch (e) { return { ok: false }; } }
+  if (msg.tipo === "seeuAbrirTriagem") {
+    const { triagemAuto } = await chrome.storage.session.get("triagemAuto");
+    if (triagemAuto && triagemAuto.tab != null) {
+      try { await chrome.tabs.get(triagemAuto.tab); return { erro: "a leitura da Mesa já está em andamento" }; } catch (e) { /* a aba fechou */ }
+    }
+    const t = await chrome.tabs.create({ url: chrome.runtime.getURL("triagem.html?auto=1"), active: false });
+    await chrome.storage.session.set({ triagemAuto: { tab: t.id, quando: Date.now() } });
+    return { ok: true, iniciado: true };
+  }
+  if (msg.tipo === "seeuPararTriagem") {
+    const { triagemAuto } = await chrome.storage.session.get("triagemAuto");
+    if (triagemAuto && triagemAuto.tab != null) await chrome.tabs.sendMessage(triagemAuto.tab, { tipo: "triagemParar" }).catch(() => {});
+    return { ok: true };
+  }
+  return { ok: false };
+}
+
 async function atdMensagem(msg, sender) {
   if (msg.tipo === "atdFila") return (msg.itens || []).length ? atdEnviar("/atd/fila", { itens: msg.itens }) : { ok: true };
   if (msg.tipo === "atdFato") return atdEnviar("/atd/fato", { nome: msg.nome, fato: msg.fato, forma: msg.forma, fatoLido: msg.fatoLido });
@@ -491,13 +550,10 @@ chrome.runtime.onMessage.addListener((msg, sender, responder) => {
   (async () => {
     try {
       if (sender.tab && doSap(sender.url) && msg && /^atd[A-Z]/.test(String(msg.tipo || ""))) return responder(await atdMensagem(msg, sender));
-      // SEI da Defensoria: a aba (já logada) informa o endereço assinado do Controle de Processos, de onde a leitura começa
-      if (sender.tab && /^https:\/\/sei\.defensoria\.ms\.def\.br\/sei\//.test(sender.url || "") && msg && msg.tipo === "seiEntrada") {
-        const u = String(msg.url || "");
-        if (!/^https:\/\/sei\.defensoria\.ms\.def\.br\/sei\/controlador\.php\?acao=procedimento_controlar&/.test(u)) return responder({ ok: false });
-        await chrome.storage.session.set({ seiEntrada: { url: u, quando: Date.now() } });
-        return responder({ ok: true });
-      }
+      // SEI da Defensoria: a aba (já logada) informa o Controle de Processos e atende o botão "Ler o SEI" do APTO
+      if (sender.tab && /^https:\/\/sei\.defensoria\.ms\.def\.br\/sei\//.test(sender.url || "") && msg && /^sei[A-Z]/.test(String(msg.tipo || ""))) return responder(await seiMensagem(msg));
+      // SEEU: a aba atende o botão "Ler a Mesa" do APTO
+      if (sender.tab && doSeeu(sender.url) && msg && /^seeu(Comando|Resposta|AbrirTriagem|PararTriagem)$/.test(String(msg.tipo || ""))) return responder(await seeuMensagem(msg));
       const daPagina = sender.tab && (doSeeu(sender.url) || doSiapen(sender.url) || doSap(sender.url));
       const doSiapenMsg = sender.tab && doSiapen(sender.url);
       if (doSiapenMsg && msg.tipo === "podeFicha") {
@@ -560,6 +616,16 @@ chrome.runtime.onMessage.addListener((msg, sender, responder) => {
         return responder(r.lote ? Object.assign({}, r.lote, { sapNomes: r.sapNomes || {}, temSap: !!r.ultimoSap }) : null);
       }
       if (msg.tipo === "sapParaSeeu") return responder(await sapParaSeeu());
+      // triagem aberta pelo botão do APTO: andamento para o APTO e, no fim, a aba se fecha
+      if (msg.tipo === "seeuAndamento") {
+        try { return responder(await aptoPedir("/seeu/andamento", { andamento: msg.andamento }, 3000)); } catch (e) { return responder({ ok: false }); }
+      }
+      if (msg.tipo === "triagemAutoFim") {
+        const { triagemAuto } = await chrome.storage.session.get("triagemAuto");
+        await chrome.storage.session.remove("triagemAuto");
+        if (sender.tab && triagemAuto && triagemAuto.tab === sender.tab.id) setTimeout(() => chrome.tabs.remove(sender.tab.id).catch(() => {}), 1500);
+        return responder({ ok: true });
+      }
       // a triagem da Mesa vai também para o APTO (função SEEU); com o APTO fechado, vai na próxima atualização
       if (msg.tipo === "seeuTriagem") {
         try { return responder(await aptoPedir("/seeu/triagem", { triagem: msg.triagem }, 8000)); } catch (e) { return responder({ ok: false, offline: true }); }
