@@ -30,6 +30,7 @@ s.receber_lote(ses, [{"tipo": "processo", "id_sei": "7", "numero": "99/000123/20
                 for k, v in docs.items()] +
                [{"tipo": "processo", "id_sei": "8", "numero": "99/000124/2026", "especificacao": "Outro processo fictício", "unidade": "NUSPEN"}])
 resumo = s.resumo()
+resumo["leitura"] = {"aberto": True, "andamento": {"fase": "concluida", "processos": 2, "novos": 2, "modificados": 0, "falhas": 0, "quando": 0}}
 proc = {p["numero"]: s.processo(p["numero"]) for p in resumo["processos"]}
 g.fechar()
 br = lambda d: d.strftime("%d/%m/%Y")
@@ -43,6 +44,13 @@ triagem = {"quando": 1763460000000, "situacao": 2, "situacaoNome": "Lidas e agua
                  "providencia": {"texto": "Impugnar o cálculo (data-base)", "tipo": "Manifestação", "urgente": True}, "alertas": [{"txt": "data-base divergente", "nivel": "alto"}], "temas": []}},
     {"processo": "7000999-11.2020.8.12.0001", "executado": "BELTRANA FICTICIA", "defensor": "Outra Defensora", "aba": "Ciência", "situacao": 2,
      "ultimoDia": br(hoje + timedelta(days=12)), "prazo": "5 dias", "dataEnvio": br(hoje - timedelta(days=2)), "url": "", "classe": "Execução da Pena", "assunto": "", "final": "0001", "analise": None}]}
+import rspe_seeu as rseeu  # noqa: E402
+g2 = rgab.Gabinete(os.path.join(tmp, "g2.sqlite"))
+se = rseeu.Seeu(g2)
+se.receber(dict(triagem, abas=["Manifestação", "Ciência"]))
+triagem = {k: v for k, v in triagem.items() if k != "linhas"}
+triagem.update(itens=se.listar(), pecas=rseeu.PECAS, leitura={"aberto": True, "andamento": None})
+g2.fechar()
 fx = os.path.join(tmp, "fixture.json")
 json.dump({"resumo": resumo, "processos": proc, "triagem": triagem}, open(fx, "w", encoding="utf-8"), ensure_ascii=False)
 r = subprocess.run([node, os.path.join(AQUI, "extensao_seeu_testes", "teste_ui_sei_seeu.js"), fx], capture_output=True, text=True, timeout=300)

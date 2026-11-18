@@ -47,7 +47,7 @@ from rspe_gabinete_api import GabineteApi
 import rspe_gabinete_api as rgabapi
 
 APP = "APTO"
-VERSAO = "7.22.0"
+VERSAO = "7.23.0"
 GEO_AUTO_DIAS = 30           # dados prisionais: baixados de novo sozinhos quando têm 30 dias ou mais
 GEO_REPETIR_MIN = 10         # ... ou 10 minutos depois de um download em que algum relatório falhou (nova tentativa automática)
 GEO_REPETIR_MAX = 3          # tentativas automáticas seguidas com o programa aberto (depois, na próxima abertura ou pelo botão)
@@ -3730,9 +3730,8 @@ class Api(GabineteApi):
                 if origem is None:
                     self.send_error(403)
                     return
-                if caminho == "/sei/token" and not origem:  # o token só vai para extensões
-                    self.send_error(403)
-                    return
+                # (o token do SEI: a página da extensão pede sem "Origin"; página da internet manda a própria origem e recebe 403,
+                # e sem o cabeçalho de CORS nenhuma página consegue ler a resposta)
                 try:
                     dados = api._extensao_dados() if caminho == "/apto" else api._ext_get(caminho, self.headers)
                 except Exception as e:

@@ -144,6 +144,24 @@
       quem = A.parentesco(par) || A.parentesco(pessoa);
       contato = linha(resto);
       if (!contato) contato = fones.map(linha).join(" / ");
+    } else {
+      // sem "telefone"/"contato" na linha: o telefone pode vir em qualquer linha, ex.: "Atendimento solicitado via plataforma
+      // (67) 99999-0000" (os nºs de processo, CNJ, saem antes da busca para não serem lidos como telefone)
+      const semCnj = (l) => l.replace(/\b\d{7}-?\d{2}\.?\d{4}\.?\d\.?\d{2}\.?\d{4}\b/g, " ");
+      const fones = [], donos = [];
+      for (const l of linhas) {
+        const achados = semCnj(l).match(RE_FONE) || [];
+        RE_FONE.lastIndex = 0;
+        if (!achados.length) continue;
+        fones.push(...achados.map(linha));
+        const par = [...l.matchAll(/\(([^)]*)\)/g)].map((m) => m[1]).filter((x) => /[a-zà-ú]/i.test(x)).join(" ");
+        donos.push(A.parentesco(par) || A.parentesco(semCnj(l).replace(RE_FONE, " ")));
+        RE_FONE.lastIndex = 0;
+      }
+      if (fones.length) {
+        contato = [...new Set(fones)].join(" / ");
+        quem = donos.find(Boolean) || "";
+      }
     }
     const virtual = /via (telefone|virtual|whats|v[ií]deo|liga|plataforma)/i.test(tudo);
     const pedido = linhas.filter((l) => !/^atendimento solicitado/i.test(l) && l !== lt && !/^processo\s*:/i.test(l)).join(" ");

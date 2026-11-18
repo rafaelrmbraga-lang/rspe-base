@@ -60,6 +60,9 @@ const EXT = path.join(__dirname, "..", "extensao_seeu");
   const fatos = msgs.filter((m) => m.tipo === "atdFato");
   const f1 = fatos.find((m) => m.nome === "FULANO DE TAL FICTICIO");
   ok(f1 && f1.fato && f1.fato.processos[0] === "0000001-11.2024.8.12.0001" && f1.fato.quem === "genitora" && /99999-0001/.test(f1.fato.contato), "Fato Narrado interpretado: " + JSON.stringify(f1 && f1.fato));
+  const f2 = fatos.find((m) => /BELTRANA/.test(m.nome));
+  ok(f2 && f2.fato && f2.fato.contato === "(67) 98888-0002" && f2.fato.virtual && f2.fato.processos.length === 2,
+    "telefone sem a palavra \"telefone\" (1ª linha, via plataforma), sem confundir com os nºs de processo: " + JSON.stringify(f2 && f2.fato));
   const f3 = fatos.find((m) => m.nome === "CICLANO FICTICIO");
   ok(f3 && f3.fato === null, "sem Fato Narrado no SAP: vai como lido, vazio");
   ok(msgs.some((m) => m.tipo === "atdLeitura" && m.lendo) && msgs.filter((m) => m.tipo === "atdLeitura").pop().lendo === false, "andamento da leitura para a tela do APTO");

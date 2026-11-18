@@ -715,6 +715,22 @@ body:not(.fn-exec) .fnpag{display:block}
 .fx-docb:hover{background:var(--sobre-1)}
 .fx-docx{padding:0 12px 10px}
 .fx-pre{white-space:pre-wrap;max-height:320px;overflow:auto;background:var(--folha);border:1px solid var(--line);border-radius:var(--r-1);padding:8px 10px;font:inherit;font-size:var(--fs-13)}
+.fx-ler{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:-4px 0 10px}
+.fx-sist{display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:0 12px;border-radius:var(--r-pill);font-size:var(--fs-13);font-weight:600;border:1px dashed var(--line2);color:var(--tx2);background:var(--card)}
+.fx-sist.on{border-style:solid;border-color:transparent;background:var(--g-bg);color:var(--g-tx)}
+.fx-ler select{min-height:36px;padding:6px 10px;border:1px solid var(--line2);border-radius:var(--r-1);background:var(--card);color:var(--tx);font:inherit}
+.fx-andamento{display:flex;flex-direction:column;gap:4px;margin:0 0 12px;padding:10px 14px;background:var(--card);border:1px solid var(--line);border-left:4px solid var(--pri);border-radius:var(--r-2);font-size:var(--fs-13)}
+.fx-andamento.parada{border-left-color:var(--o-dot)}
+.fx-andamento small{color:var(--tx3)}
+.fx-barra{height:6px;border-radius:var(--r-pill);background:var(--pri-soft);overflow:hidden}
+.fx-barra i{display:block;height:100%;background:var(--pri)}
+.fx-barra.ind i{width:30%;animation:fxind 1.2s ease-in-out infinite}
+@keyframes fxind{from{transform:translateX(-100%)}to{transform:translateX(330%)}}
+.fx-baixa{display:flex;align-items:center;gap:6px 8px;flex-wrap:wrap;margin:10px 0 0;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r-2);background:var(--card)}
+.fx-baixa legend{padding:0 4px;font-weight:600;font-size:var(--fs-13)}
+.fx-baixa label{font-size:var(--fs-12);color:var(--tx2)}
+.fx-baixa select,.fx-baixa input{min-height:34px;padding:5px 8px;border:1px solid var(--line2);border-radius:var(--r-1);background:var(--card);color:var(--tx);font:inherit}
+.fx-l.concl td{color:var(--tx2)}
 /* tela inicial (sem base) */
 .welcome{position:fixed;inset:0;background:var(--bg);display:none;place-items:center;z-index:25}
 .btn-calc{position:relative;z-index:30}
@@ -4843,67 +4859,117 @@ ui.fxDig=s=>String(s||'').replace(/\D/g,'');
 ui.fxNaBase=function(proc){ const d=this.fxDig(proc); if(d.length<15) return null; return (this.dados.registros||[]).find(r=>this.fxDig(r.proc)===d)||null; };
 ui.fxCont=function(id, itens, ativo, aoClicar){ return `<div class="fx-cont" role="group" aria-label="Filtrar">${itens.map(([k,n,rot,cls])=>`<button type="button" class="${cls||''}${ativo===k?' on':''}" aria-pressed="${ativo===k}" onclick="${aoClicar}(${jsa(k)})"><b>${n}</b><span>${esc(rot)}</span></button>`).join('')}</div>`; };
 
+// ---------------- leitura pelo APTO (SEI e SEEU): botão, situação da aba do sistema e andamento ----------------
+// est = {aberto, andamento: {fase, ...}} (o Python avisa a cada mudança). Cor nunca sozinha: ponto + texto.
+ui.fxLeitura=function(sist, est, rotBotao){ est=est||{}; const a=est.andamento||{}, nome=sist==='sei'?'SEI':'SEEU';
+  const lendo=(a.fase==='lendo'||a.fase==='iniciando') && Date.now()/1000-(a.quando||0)<180;
+  const fim=a.fase==='concluida'||a.fase==='parada';
+  const txt=sist==='sei'
+    ? (lendo?`Lendo o SEI… ${a.processos||0} processo(s), ${a.documentosLidos||0} documento(s) lido(s)${a.documentosPulados?', '+a.documentosPulados+' já conhecido(s)':''}${a.falhas?', '+a.falhas+' falha(s)':''}`:
+       fim?(a.fase==='parada'?'A leitura parou'+(a.mensagem?': '+a.mensagem:a.mensagemParada?': '+a.mensagemParada:'')+'. Use Ler o SEI de novo: continua de onde parou.':`Leitura concluída: ${a.processos||0} processo(s), ${a.novos||0} documento(s) novo(s), ${a.modificados||0} alterado(s)${a.falhas?', '+a.falhas+' falha(s)':''}.`)+((a.avisos||[]).length?' '+a.avisos.join('; ')+'.':''):'')
+    : (lendo?(a.total?`Lendo… ${a.feitos||0} de ${a.total}${a.txt?' · '+a.txt:''}`:(a.txt||'Lendo a Mesa…')):fim?(a.txt||(a.fase==='parada'?'A leitura parou.':'Mesa lida.')):'');
+  const pct=lendo&&a.total?Math.round(100*(a.feitos||0)/a.total):null;
+  return `<div class="fx-ler"><span class="fx-sist ${est.aberto?'on':'off'}" title="${est.aberto?`A aba do ${nome} está aberta com a extensão do APTO`:`Abra o ${nome} no navegador (já logado), com a extensão do APTO`}"><span aria-hidden="true">${est.aberto?'●':'○'}</span> ${est.aberto?nome+' aberto':nome+' não detectado'}</span>
+    ${sist==='sei'?`<label class="vh" for="seiModo">O que ler</label><select id="seiModo" ${lendo?'disabled':''}><option value="todos">Todos os processos</option><option value="novos">Só processos novos</option><option value="documentos_novos">Só documentos novos</option></select>`:''}
+    ${lendo?`<button type="button" class="btn" onclick="ui.fxParar('${sist}')">Parar</button>`:`<button type="button" class="btn pri" ${est.aberto?'':'disabled'} aria-describedby="${sist}Ajuda" onclick="ui.fxLer('${sist}')">${rotBotao}</button>`}
+    <span class="spacer"></span><button type="button" class="btn ghost" onclick="ui.${sist}Carregar()">Atualizar</button></div>
+    <p id="${sist}Ajuda" class="vh">${sist==='sei'?'Lê o SEI na aba aberta e logada (só leitura): começa do Controle de Processos.':'Abre a triagem da extensão em segundo plano e lê a Mesa e os processos, sem iniciar prazo.'}</p>
+    ${txt?`<div class="fx-andamento${a.fase==='parada'?' parada':''}" role="status" aria-live="polite">${pct!=null?`<div class="fx-barra" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><i style="width:${pct}%"></i></div>`:lendo?'<div class="fx-barra ind" aria-hidden="true"><i></i></div>':''}<span>${esc(txt)}</span>${lendo&&sist==='sei'?'<small>Não navegue na aba do SEI até terminar.</small>':''}</div>`:''}`; };
+ui.fxLer=async function(sist){ const B=API_(); const modo=(document.getElementById('seiModo')||{}).value||'todos';
+  const r=sist==='sei'? await B.sei_ler(modo) : await B.seeu_ler();
+  if(r&&r.erro){ this.toast(r.erro,{erro:true}); return; }
+  this.toast(sist==='sei'?'Lendo o SEI na aba aberta. Acompanhe aqui.':'Lendo a Mesa (a triagem abriu em segundo plano). Acompanhe aqui.');
+  if(sist==='sei') this.seiCarregar(); else this.seeuCarregar(); };
+ui.fxParar=async function(sist){ const B=API_(); const r=sist==='sei'?await B.sei_parar():await B.seeu_parar(); if(r&&r.erro) this.toast(r.erro,{erro:true}); };
+
 // ---------------- SEEU ----------------
-ui.seeu={f:'todos', q:'', def:'', aba:'', abertos:new Set()};
+// As intimações ficam no APTO até a pessoa concluir: "saiu da Mesa" é só um aviso. Concluir com baixa lança a peça na produção do mês.
+ui.seeu={f:'aberto', q:'', def:'', aba:'', abertos:new Set()};
 ui.seeuCarregar=async function(){ const B=API_(); try{ this._seeu=B&&B.seeu_triagem? (await B.seeu_triagem())||{}:{}; }catch(e){ this._seeu={}; } this.seeuPintar(); };
-ui.seeuEvento=function(){ if(this.fn==='seeu') this.seeuCarregar(); else this._seeu=null; };
-ui.seeuFiltro=function(k){ this.seeu.f=this.seeu.f===k?'todos':k; this.seeuPintar(); };
+ui.seeuEvento=function(d){ if(d&&d.estado&&this._seeu){ this._seeu.leitura=d.estado; if(this.fn==='seeu') this.seeuPintarLeitura(); if(!(d.estado.andamento&&d.estado.andamento.fase==='concluida')) return; }
+  clearTimeout(this._seeuT); this._seeuT=setTimeout(()=>{ if(this.fn==='seeu') this.seeuCarregar(); else this._seeu=null; },600); };
+ui.seeuPintarLeitura=function(){ const e=document.getElementById('seeuLer'); if(e&&this._seeu) e.innerHTML=this.fxLeitura('seeu',this._seeu.leitura,'Ler a Mesa'); };
+ui.seeuFiltro=function(k){ this.seeu.f=this.seeu.f===k?'aberto':k; this.seeuPintar(); };
+ui.SEEU_SUGERE=[[/ci[eê]ncia/i,'CIENCIA'],[/agravo|raz[oõ]es|contrarraz/i,'AGEX'],[/habeas|\bHC\b/i,'HC'],[/embargos/i,'ED'],[/progress/i,'PROG'],[/livramento/i,'LC'],
+  [/indulto/i,'INDULTO'],[/comuta/i,'COMUT'],[/prescri/i,'PRESC'],[/extin/i,'EXT'],[/remi[cç]/i,'REMICAO'],[/detra/i,'DETRACAO'],[/justific/i,'JUST'],[/sa[ií]da tempor/i,'ST'],[/domiciliar/i,'DOMIC'],[/of[ií]cio/i,'OFICIO']];
+ui.seeuSugerePeca=function(l){ const a=l.analise||{}, t=[a.providencia&&a.providencia.texto, a.providencia&&a.providencia.tipo, l.aba].filter(Boolean).join(' ');
+  const m=this.SEEU_SUGERE.find(([re])=>re.test(t)); return m?m[1]:'MANIF'; };
 ui.seeuLinhas=function(){ const T=this._seeu||{}, S=this.seeu, q=semAcento(S.q||'');
-  return (T.linhas||[]).filter(l=>{ const a=l.analise, d=this.fxDias(l.ultimoDia);
+  return (T.itens||[]).filter(l=>{ const a=l.analise, d=this.fxDias(l.ultimoDia), aberto=l.status!=='concluido';
     if(S.def && l.defensor!==S.def) return false; if(S.aba && l.aba!==S.aba) return false;
     if(q && !semAcento(l.processo+' '+l.executado+' '+(a&&a.providencia?a.providencia.texto:'')).includes(q)) return false;
-    if(S.f==='lidos') return a&&a.status==='ok'; if(S.f==='urg') return a&&a.providencia&&a.providencia.urgente;
-    if(S.f==='perto') return d!=null&&d<=2; if(S.f==='base') return !!this.fxNaBase(l.processo); return true; })
-    .sort((x,y)=>{ const dx=this.fxDias(x.ultimoDia), dy=this.fxDias(y.ultimoDia); return (dx==null?9999:dx)-(dy==null?9999:dy) || x.processo.localeCompare(y.processo); }); };
+    if(S.f==='concl') return !aberto; if(!aberto) return false;
+    if(S.f==='urg') return a&&a.providencia&&a.providencia.urgente; if(S.f==='perto') return d!=null&&d<=2;
+    if(S.f==='fora') return !!l.foraDaMesa; if(S.f==='base') return !!this.fxNaBase(l.processo); return true; })
+    .sort((x,y)=>{ if(S.f==='concl') return String(y.concluidoEm).localeCompare(String(x.concluidoEm)); const dx=this.fxDias(x.ultimoDia), dy=this.fxDias(y.ultimoDia); return (dx==null?9999:dx)-(dy==null?9999:dy) || x.processo.localeCompare(y.processo); }); };
 ui.seeuPintar=function(){ const P=document.getElementById('seeuPag'); if(!P) return; const T=this._seeu;
   if(!T){ P.innerHTML='<p class="muted">Carregando…</p>'; return; }
-  if(!(T.linhas||[]).length){ P.innerHTML=`<div class="fx-cab"><div><h1>SEEU · Mesa do Defensor</h1><p class="sub">Nenhuma triagem recebida ainda.</p></div></div>
-    <div class="fx-vazio"><b>Como trazer a Mesa para cá</b><ol><li>Abra o SEEU no navegador e entre com a sua conta.</li><li>Clique no ícone do APTO na barra do navegador &gt; <b>Triagem da Mesa do Defensor</b>.</li>
-    <li>Use <b>1 · Ler a Mesa</b> e <b>2 · Ler processos e decisões</b>. O resultado aparece aqui sozinho, com este programa aberto.</li></ol>
-    <p class="muted">A extensão só lê o SEEU, na sua sessão. Nada é enviado para fora do computador.</p></div>`; return; }
-  const L=this.seeuLinhas(), todas=T.linhas, S=this.seeu;
-  const lidos=todas.filter(l=>l.analise&&l.analise.status==='ok').length, urg=todas.filter(l=>l.analise&&l.analise.providencia&&l.analise.providencia.urgente).length;
-  const perto=todas.filter(l=>{ const d=this.fxDias(l.ultimoDia); return d!=null&&d<=2; }).length, base=todas.filter(l=>this.fxNaBase(l.processo)).length;
-  const defs=[...new Set(todas.map(l=>l.defensor).filter(Boolean))].sort(), abas=[...new Set(todas.map(l=>l.aba).filter(Boolean))];
-  const rotPrazo=T.situacao===1?'Leitura até':T.situacao===2?'Resposta até':'Último dia';
-  const linha=l=>{ const a=l.analise||null, d=this.fxDias(l.ultimoDia), nv=this.fxNivel(d), r=this.fxNaBase(l.processo), k=l.aba+'|'+l.processo, ab=S.abertos.has(k);
-    const falta=d==null?'':d<0?'venceu':d===0?'vence hoje':'faltam '+d+' d';
-    const mot=!a?'<span class="muted">não lido</span>':a.status==='erro'?`<span class="fx-tag crit">erro</span> ${esc(a.erro)}`:a.status!=='ok'?'<span class="muted">não lido</span>':
+  const itens=T.itens||[], S=this.seeu, pecas=T.pecas||{};
+  const cab=`<div class="fx-cab"><div><h1>SEEU · Mesa do Defensor</h1><p class="sub">${T.quando?esc('Última leitura: '+new Date(T.quando).toLocaleString('pt-BR')+' · '+(T.situacaoNome||'')):'Nenhuma leitura ainda.'}</p></div></div><div id="seeuLer">${this.fxLeitura('seeu',T.leitura,'Ler a Mesa')}</div>`;
+  if(!itens.length){ P.innerHTML=cab+`<div class="fx-vazio"><b>Como ler a Mesa</b><ol><li>Abra o SEEU no navegador e entre com a sua conta.</li><li>Clique em <b>Ler a Mesa</b>, aqui. A extensão abre a triagem em segundo plano, com as abas e os filtros que você deixou nela, e lê a Mesa e os processos (sem iniciar prazo).</li>
+    <li>As intimações aparecem aqui e ficam até você concluí-las, mesmo que saiam da Mesa no SEEU.</li></ol></div>`; return; }
+  const abertos=itens.filter(l=>l.status!=='concluido'), L=this.seeuLinhas();
+  const urg=abertos.filter(l=>l.analise&&l.analise.providencia&&l.analise.providencia.urgente).length, perto=abertos.filter(l=>{ const d=this.fxDias(l.ultimoDia); return d!=null&&d<=2; }).length;
+  const fora=abertos.filter(l=>l.foraDaMesa).length, base=abertos.filter(l=>this.fxNaBase(l.processo)).length, concl=itens.length-abertos.length;
+  const defs=[...new Set(itens.map(l=>l.defensor).filter(Boolean))].sort(), abas=[...new Set(itens.map(l=>l.aba).filter(Boolean))];
+  const hoje=new Date().toISOString().slice(0,10);
+  const linha=l=>{ const a=l.analise||null, d=this.fxDias(l.ultimoDia), nv=l.status==='concluido'?'ok':this.fxNivel(d), r=this.fxNaBase(l.processo), k=l.chave, ab=S.abertos.has(k);
+    const falta=l.status==='concluido'?'concluída':d==null?'':d<0?'venceu':d===0?'vence hoje':'faltam '+d+' d', rotPrazo=l.situacao===1?'Leitura até':l.situacao===2?'Resposta até':'Último dia';
+    const mot=!a?'<span class="muted">não lido</span>':a.status==='erro'?`<span class="fx-tag crit">◆ erro</span> ${esc(a.erro)}`:a.status!=='ok'?'<span class="muted">não lido</span>':
       `<div class="fx-forte">${esc(a.pendencia?a.pendencia.texto:'sem pendência no quadro')}</div><div class="muted">${a.motivo?esc('seq. '+a.motivo.seq+' · '+a.motivo.data):''}</div>`;
-    const dec=a&&a.status==='ok'?(a.decisao?`<div class="fx-forte">${esc(a.decisao.nome)}${a.mesma?' <span class="muted">(é o motivo)</span>':''}</div><div class="muted">${esc('seq. '+a.decisao.seq+' · '+a.decisao.data)}</div>`:'<span class="muted">nenhum ato do juiz com documento</span>'):'';
     const pv=a&&a.providencia?`<div class="fx-prov${a.providencia.urgente?' urg':''}">${a.providencia.urgente?'<span aria-hidden="true">▲</span> ':''}${esc(a.providencia.texto)}${a.providencia.urgente?'<span class="vh"> (urgente)</span>':''}</div><div class="muted">${esc(a.providencia.tipo)}</div>`:'';
+    const sit=l.status==='concluido'?`<span class="fx-tag ok">✓ ${l.baixa&&l.baixa.peca?'baixa: '+esc(l.baixa.pecaNome)+' em '+esc((l.baixa.data||'').split('-').reverse().join('/')):'concluída sem baixa'}</span>`:
+      l.foraDaMesa?`<span class="fx-tag neu" title="Não apareceu na última leitura da Mesa: continua aqui até você concluir">– saiu da Mesa ${esc(String(l.foraDaMesa).slice(8,10)+'/'+String(l.foraDaMesa).slice(5,7))}</span>`:'';
+    const sugest=this.seeuSugerePeca(l), idk=String(k).replace(/\W/g,'_');
+    const acoes=l.status==='concluido'?`<button type="button" class="btn ghost" onclick="ui.seeuReabrir(${jsa(k)})">Reabrir</button>`:
+      `<fieldset class="fx-baixa"><legend>Registrar a baixa (o que foi feito)</legend>
+        <label for="pc_${idk}">Peça</label><select id="pc_${idk}">${Object.entries(pecas).map(([c,n])=>`<option value="${c}" ${c===sugest?'selected':''}>${esc(n)}</option>`).join('')}</select>
+        <label for="dt_${idk}">Data</label><input id="dt_${idk}" type="date" value="${hoje}">
+        <label for="ob_${idk}">Observação</label><input id="ob_${idk}" type="text" placeholder="opcional">
+        <button type="button" class="btn pri" onclick="ui.seeuBaixa(${jsa(k)},'${idk}')">Registrar baixa</button>
+        <button type="button" class="btn ghost" title="Conclui sem lançar peça (não conta na produção do mês)" onclick="ui.seeuConcluirSem(${jsa(k)})">Concluir sem baixa</button></fieldset>`;
     const det=ab?`<tr class="fx-det"><td colspan="6"><div class="fx-detg">
       ${a&&a.motivo?`<div><h3>Motivo da intimação</h3><p>${esc(a.motivo.nome)}</p><p class="fx-txt">${esc(a.motivo.resumo||(a.motivo.semTexto?'documento sem texto (escaneado): abrir no SEEU':a.motivo.erroDoc?'documento não lido: '+a.motivo.erroDoc:''))}</p></div>`:''}
       ${a&&a.decisao&&!a.mesma?`<div><h3>Última decisão</h3><p>${esc(a.decisao.nome)}</p><p class="fx-txt">${esc(a.decisao.resumo||'')}</p></div>`:''}
       ${a&&(a.alertas||[]).length?`<div><h3>Alertas</h3><ul>${a.alertas.map(x=>`<li><span class="fx-tag ${x.nivel==='alto'?'crit':x.nivel==='medio'?'urg':'neu'}">${esc(x.nivel)}</span> ${esc(x.txt)}</li>`).join('')}</ul></div>`:''}
-      <div><h3>Na Mesa</h3><p class="muted">${esc([l.aba,l.classe,l.assunto&&'('+l.assunto+')','enviado '+(l.dataEnvio||'—'),'resposta: '+(l.prazo||'—')].filter(Boolean).join(' · '))}</p>
+      <div><h3>Na Mesa</h3><p class="muted">${esc([l.aba,l.classe,l.assunto&&'('+l.assunto+')','enviado '+(l.dataEnvio||'—'),'resposta: '+(l.prazo||'—'),'visto pela 1ª vez '+String(l.primeiroVisto||'').slice(0,10).split('-').reverse().join('/')].filter(Boolean).join(' · '))}</p>
+      ${l.baixa&&l.baixa.obs?`<p>Observação da baixa: ${esc(l.baixa.obs)}</p>`:''}
       <div class="fx-acoes">${l.url?`<button type="button" class="btn" onclick="ui.seeuAbrir(${jsa(l.url)})">Abrir no SEEU</button>`:''}
-      ${a&&a.providencia?`<button type="button" class="btn" onclick="ui.seeuQuadro(${jsa(k)})">Enviar ao Quadro</button>`:''}</div></div></div></td></tr>`:'';
-    return `<tr class="fx-l${ab?' aberta':''}" tabindex="0" aria-expanded="${ab}" onclick="ui.seeuAbrirLinha(event,${jsa(k)})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();ui.seeuAbrirLinha(event,${jsa(k)})}">
+      ${a&&a.providencia&&l.status!=='concluido'?`<button type="button" class="btn" onclick="ui.seeuQuadro(${jsa(k)})">Enviar ao Quadro</button>`:''}</div></div></div>
+      <div class="fx-acoes">${acoes}</div></td></tr>`:'';
+    return `<tr class="fx-l${ab?' aberta':''}${l.status==='concluido'?' concl':''}" tabindex="0" aria-expanded="${ab}" onclick="ui.seeuAbrirLinha(event,${jsa(k)})" onkeydown="if(event.target===this&&(event.key==='Enter'||event.key===' ')){event.preventDefault();ui.seeuAbrirLinha(event,${jsa(k)})}">
       <td class="fx-prazo ${nv}"><span class="muted">${rotPrazo}</span><b><span aria-hidden="true">${this.FX_FORMA[nv]}</span> ${esc(l.ultimoDia||'—')}</b><span>${esc(falta)}</span></td>
       <td><div class="fx-forte fx-num">${esc(l.processo)}</div><div>${esc(l.executado||'—')}</div>${r?`<button type="button" class="fx-base" title="Abrir a ficha na base aberta em Execução" onclick="event.stopPropagation();ui.abrir(${jsa(r.id)})">na base · abrir ficha</button>`:''}</td>
-      <td><div>${esc(l.aba)}</div><div class="muted">${esc(l.defensor||'sem defensor')}</div></td><td>${mot}</td><td>${dec}</td><td>${pv}</td></tr>${det}`; };
-  P.innerHTML=`<div class="fx-cab"><div><h1>SEEU · Mesa do Defensor</h1><p class="sub">Triagem lida em ${esc(T.quando?new Date(T.quando).toLocaleString('pt-BR'):'—')} · ${esc(T.situacaoNome||'')} · recebida pelo APTO em ${esc(T.recebida||'—')}</p></div>
-    <span class="spacer"></span><button type="button" class="btn" onclick="ui.seeuCarregar()">Atualizar</button></div>
-    ${this.fxCont('seeu',[['todos',todas.length,'na Mesa'],['lidos',lidos,'lidos'],['urg',urg,'providência urgente','crit'],['perto',perto,'prazo em até 2 dias','urg'],['base',base,'na base aberta']],S.f,'ui.seeuFiltro')}
+      <td><div>${esc(l.aba)}</div><div class="muted">${esc(l.defensor||'sem defensor')}</div>${sit?'<div>'+sit+'</div>':''}</td><td>${mot}</td><td>${a&&a.status==='ok'?(a.decisao?`<div class="fx-forte">${esc(a.decisao.nome)}</div><div class="muted">${esc('seq. '+a.decisao.seq+' · '+a.decisao.data)}</div>`:'<span class="muted">nenhum ato do juiz com documento</span>'):''}</td><td>${pv}</td></tr>${det}`; };
+  P.innerHTML=cab+`${this.fxCont('seeu',[['aberto',abertos.length,'em aberto'],['urg',urg,'providência urgente','crit'],['perto',perto,'prazo em até 2 dias','urg'],['fora',fora,'saíram da Mesa'],['base',base,'na base aberta'],['concl',concl,'concluídas','ok']],S.f,'ui.seeuFiltro')}
     <div class="fx-filtros"><label class="vh" for="seeuQ">Buscar</label><input id="seeuQ" type="search" placeholder="Buscar nome, processo ou providência" value="${esc(S.q)}" oninput="ui.seeu.q=this.value;ui.seeuPintar();document.getElementById('seeuQ').focus()">
       <label for="seeuDef">Defensor</label><select id="seeuDef" onchange="ui.seeu.def=this.value;ui.seeuPintar()"><option value="">todos</option>${defs.map(x=>`<option ${S.def===x?'selected':''}>${esc(x)}</option>`).join('')}</select>
       <label for="seeuAba">Aba</label><select id="seeuAba" onchange="ui.seeu.aba=this.value;ui.seeuPintar()"><option value="">todas</option>${abas.map(x=>`<option ${S.aba===x?'selected':''}>${esc(x)}</option>`).join('')}</select>
-      <span class="muted">${L.length} de ${todas.length}</span></div>
+      <span class="muted">${L.length} na lista</span></div>
     <div class="fx-tabw"><table class="fx-tab"><thead><tr><th scope="col">Prazo</th><th scope="col">Processo e assistido</th><th scope="col">Aba e defensor</th><th scope="col">Motivo</th><th scope="col">Última decisão</th><th scope="col">Providência sugerida</th></tr></thead>
-    <tbody>${L.length?L.map(linha).join(''):'<tr><td colspan="6" class="fx-nada">Nenhum processo neste filtro.</td></tr>'}</tbody></table></div>
-    <p class="muted fx-nota">A providência é sugestão da triagem, para conferir; o processo continua no SEEU. "na base" liga o nº do processo a um assistido da base aberta em Execução.</p>`;
+    <tbody>${L.length?L.map(linha).join(''):'<tr><td colspan="6" class="fx-nada">Nenhuma intimação neste filtro.</td></tr>'}</tbody></table></div>
+    <p class="muted fx-nota">Clique na linha para ver o motivo, a decisão e registrar a baixa. A intimação fica aqui até você concluir, mesmo que saia da Mesa no SEEU; a baixa com peça conta na produção do mês (Relatório). A providência é sugestão da triagem.</p>`;
   const q=document.getElementById('seeuQ'); if(q&&S.q){ q.setSelectionRange(S.q.length,S.q.length); } };
-ui.seeuAbrirLinha=function(ev,k){ if(ev.target.closest('button,a,select,input')) return; const A=this.seeu.abertos; A.has(k)?A.delete(k):A.add(k); this.seeuPintar(); };
+ui.seeuAbrirLinha=function(ev,k){ if(ev.target.closest('button,a,select,input,label,fieldset')) return; const A=this.seeu.abertos; A.has(k)?A.delete(k):A.add(k); this.seeuPintar(); };
 ui.seeuAbrir=async function(url){ const B=API_(); const r=B&&B.abrir_seeu?await B.abrir_seeu(url):{erro:'indisponível'}; if(r&&r.erro) this.toast(r.erro,{erro:true}); };
-ui.seeuQuadro=async function(k){ const l=((this._seeu||{}).linhas||[]).find(x=>x.aba+'|'+x.processo===k); if(!l||!l.analise||!l.analise.providencia) return;
+ui.seeuItem=function(k){ return ((this._seeu||{}).itens||[]).find(x=>x.chave===k); };
+ui.seeuQuadro=async function(k){ const l=this.seeuItem(k); if(!l||!l.analise||!l.analise.providencia) return;
   const r=await API_().seeu_para_quadro(l.processo, l.executado, l.analise.providencia.texto, l.ultimoDia); this.toast(r&&r.ok?'Enviado ao Quadro (A fazer), com o último dia da Mesa como prazo.':(r&&r.erro)||'Falha.'); };
+ui.seeuBaixa=async function(k, idk){ const pc=document.getElementById('pc_'+idk).value, dt=document.getElementById('dt_'+idk).value, ob=document.getElementById('ob_'+idk).value;
+  if(!dt){ this.toast('Informe a data da peça.',{erro:true}); document.getElementById('dt_'+idk).focus(); return; }
+  const r=await API_().seeu_concluir(k, pc, dt, ob); if(r&&r.erro){ this.toast(r.erro,{erro:true}); return; }
+  this.toast('Baixa registrada: conta na produção do mês. A intimação está em Concluídas (pode reabrir).'); this.seeu.abertos.delete(k); this.seeuCarregar(); };
+ui.seeuConcluirSem=async function(k){ if(!confirm('Concluir sem registrar peça? Não conta na produção do mês.')) return;
+  const r=await API_().seeu_concluir(k,'','',''); if(r&&r.erro){ this.toast(r.erro,{erro:true}); return; } this.seeu.abertos.delete(k); this.seeuCarregar(); };
+ui.seeuReabrir=async function(k){ const r=await API_().seeu_reabrir(k); if(r&&r.erro){ this.toast(r.erro,{erro:true}); return; }
+  this.toast(r&&r.removidas&&r.removidas.length?'Reaberta: a peça lançada saiu da produção do mês.':'Reaberta.'); this.seeuCarregar(); };
 
 // ---------------- SEI ----------------
 ui.sei={q:'', f:'todos', sel:null, docs:new Set()};
-ui.seiCarregar=async function(){ const B=API_(); try{ this._sei=B&&B.sei_resumo? await B.sei_resumo():{processos:[],totais:{}}; }catch(e){ this._sei={processos:[],totais:{}}; }
+ui.seiCarregar=async function(){ const B=API_(); try{ this._sei=B&&B.sei_resumo? await B.sei_resumo():{processos:[],totais:{}}; this._sei.leitura=B&&B.sei_estado? await B.sei_estado():null; }catch(e){ this._sei={processos:[],totais:{}}; }
   if(this.sei.sel){ try{ this._seiP=await API_().sei_processo(this.sei.sel); }catch(e){ this._seiP=null; } } this.seiPintar(); };
-ui.seiEvento=function(){ clearTimeout(this._seiT); this._seiT=setTimeout(()=>{ if(this.fn==='sei') this.seiCarregar(); else this._sei=null; },800); };
+ui.seiEvento=function(d){ if(d&&d.estado&&this._sei){ this._sei.leitura=d.estado; const e=document.getElementById('seiLer'); if(e&&this.fn==='sei') e.innerHTML=this.fxLeitura('sei',d.estado,'Ler o SEI'); const f=d.estado.andamento&&d.estado.andamento.fase; if(f!=='concluida'&&f!=='parada') return; }
+  clearTimeout(this._seiT); this._seiT=setTimeout(()=>{ if(this.fn==='sei') this.seiCarregar(); else this._sei=null; },800); };
 ui.seiFiltro=function(k){ this.sei.f=this.sei.f===k?'todos':k; this.seiPintar(); };
 ui.seiAbrirProc=async function(n){ this.sei.sel=n; this.sei.docs=new Set(); this._seiP=await API_().sei_processo(n); this.seiPintar(); const d=document.getElementById('seiDet'); if(d) d.focus(); };
 ui.seiDecidir=async function(id, st){ let motivo=''; if(st==='rejeitada'){ motivo=prompt('Motivo para rejeitar a sugestão (fica registrado):',''); if(motivo===null) return; }
@@ -4914,9 +4980,10 @@ ui.SEI_ST={sugestao:['Sugestão','med'],validada:['Validada','ok'],rejeitada:['R
 ui.seiPintar=function(){ const P=document.getElementById('seiPag'); if(!P) return; const R=this._sei;
   if(!R){ P.innerHTML='<p class="muted">Carregando…</p>'; return; }
   const T=R.totais||{}, S=this.sei;
-  if(!(R.processos||[]).length){ P.innerHTML=`<div class="fx-cab"><div><h1>SEI</h1><p class="sub">Nenhum processo do SEI lido ainda.</p></div></div>
-    <div class="fx-vazio"><b>Como trazer o SEI para cá</b><ol><li>No navegador, entre no SEI da Defensoria e abra o <b>Controle de Processos</b> (a leitura começa dele).</li>
-    <li>Com este programa aberto, clique no ícone do APTO na barra do navegador &gt; <b>Leitura do SEI para o APTO</b> (o endereço do SEI já vem preenchido).</li><li>Escolha o que ler e clique em <b>Iniciar leitura…</b>. Deixe a página aberta até terminar.</li></ol>
+  const ler=`<div id="seiLer">${this.fxLeitura('sei',R.leitura,'Ler o SEI')}</div>`;
+  if(!(R.processos||[]).length){ P.innerHTML=`<div class="fx-cab"><div><h1>SEI</h1><p class="sub">Nenhum processo do SEI lido ainda.</p></div></div>${ler}
+    <div class="fx-vazio"><b>Como ler o SEI</b><ol><li>No navegador, entre no SEI da Defensoria e abra o <b>Controle de Processos</b> (a leitura começa dele). Aqui aparece "SEI aberto".</li>
+    <li>Clique em <b>Ler o SEI</b>, aqui. A extensão lê na própria aba do SEI, com a sua sessão (só leitura); não navegue nela até terminar.</li><li>Se parar no meio, clique de novo: continua de onde parou.</li></ol>
     <p class="fx-aviso">Ainda não lido: anexos em PDF (só os documentos feitos no SEI) e a lista paginada (se o SEI mostrar a lista em várias páginas, só a primeira é lida, com aviso).</p>
     <p class="muted">A leitura é só leitura, na sua sessão: nada é escrito no SEI, e nada vai para fora do computador.</p></div>`; return; }
   const q=semAcento(S.q||'');
@@ -4947,7 +5014,7 @@ ui.seiPintar=function(){ const P=document.getElementById('seiPag'); if(!P) retur
       ${(D.eventos||[]).length?`<h3>Mudanças</h3><ul class="fx-lista">${D.eventos.map(e=>`<li class="muted">${esc(e.quando)} · ${esc(e.descricao)}</li>`).join('')}</ul>`:''}</div>`;
   const U=R.ultima;
   P.innerHTML=`<div class="fx-cab"><div><h1>SEI</h1><p class="sub">${U?esc('Última leitura: '+(U.concluida||U.iniciada)+' · '+(U.status==='concluida'?'concluída':U.status)+' · '+U.novos+' novo(s), '+U.modificados+' alterado(s)'+(U.falhas?', '+U.falhas+' falha(s)':'')):''}</p></div>
-    <span class="spacer"></span><button type="button" class="btn" onclick="ui.seiCarregar()">Atualizar</button></div>
+    </div>${ler}
     ${this.fxCont('sei',[['todos',T.processos||0,'processos'],['sug',T.sugestoes||0,'obrigações a validar','med'],['val',T.validadas||0,'validadas','ok'],['falhas',T.falhas||0,'falhas de leitura','crit']],S.f,'ui.seiFiltro')}
     <div class="fx-sei"><aside><label class="vh" for="seiQ">Buscar processo</label><input id="seiQ" type="search" placeholder="Buscar nº, especificação ou unidade" value="${esc(S.q)}" oninput="ui.sei.q=this.value;ui.seiPintar();document.getElementById('seiQ').focus()">
       <ul class="fx-procs">${lista}</ul></aside><section id="seiDet" tabindex="-1" aria-live="polite">${det}</section></div>

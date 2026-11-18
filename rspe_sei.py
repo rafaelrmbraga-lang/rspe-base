@@ -109,6 +109,12 @@ class Sei:
                                   (_t(modo, 30), "em_andamento", json.dumps(cursor), anterior, _agora()))
             return {"sessao": c.lastrowid, "cursor": cursor, "conhecidos": {}}
 
+    def sessao_interrompida(self):
+        """A última leitura que não terminou (para o botão do APTO continuar de onde parou)."""
+        with self._trava:
+            r = self._con.execute("SELECT id, status FROM sei_sessoes ORDER BY id DESC LIMIT 1").fetchone()
+        return r[0] if r and r[1] in ("em_andamento", "interrompida") else None
+
     def _sessao(self, sid):
         r = self._con.execute("SELECT id FROM sei_sessoes WHERE id=?", (int(sid),)).fetchone()
         if not r:

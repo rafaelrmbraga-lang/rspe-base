@@ -280,13 +280,30 @@ def _limpo(x):
     return out
 
 
+AVISO_SAP = ("o SAP não está aberto com a extensão do APTO. Abra o SAP na tela de atendimento (Assistidos em Espera) e confira se a "
+             "extensão do APTO está instalada e ligada; depois recarregue a aba do SAP (F5).")
+AVISO_SEI = ("o SEI não está aberto com a extensão do APTO. Entre no SEI da Defensoria (numa aba do navegador) e abra o Controle de "
+             "Processos; se já está aberto, recarregue a aba do SEI (F5).")
+AVISO_SEEU = ("o SEEU não está aberto com a extensão do APTO. Entre no SEEU (numa aba do navegador); se já está aberto, recarregue a aba "
+              "do SEEU (F5).")
+# pedidos de cada sistema e quanto tempo esperar a resposta (a leitura do SEI e a do SEEU respondem logo e seguem informando o andamento)
+TIPOS_SAP = {"chamarSap": 45, "selecionarSap": 45, "lerFilaSap": 1200, "pararFilaSap": 15}
+TIPOS_SEI = {"lerSei": 20, "pararSei": 15}
+TIPOS_SEEU = {"lerMesa": 20, "pararMesa": 15}
+
+
 class Comandos:
-    """Pedidos da tela para a aba do SAP (Chamar, Ver no SAP, Ler a fila). A extensão pergunta a cada 2 s se há pedido; quem
-    pede espera a resposta. Só um pedido em andamento por vez; nenhum fica guardado depois de respondido ou vencido."""
+    """Pedidos da tela para a aba do sistema (SAP: Chamar, Ver no SAP, Ler a fila; SEI: Ler o SEI; SEEU: Ler a Mesa). A extensão,
+    na aba aberta e logada, pergunta a cada 2 ou 3 s se há pedido; quem pede espera a resposta. Nenhum pedido fica guardado depois
+    de respondido ou vencido."""
 
-    TIPOS = {"chamarSap": 45, "selecionarSap": 45, "lerFilaSap": 1200, "pararFilaSap": 15}
+    TIPOS = TIPOS_SAP
 
-    def __init__(self):
+    def __init__(self, tipos=None, aviso=AVISO_SAP, nome="SAP"):
+        if tipos is not None:
+            self.TIPOS = tipos
+        self.aviso = aviso
+        self.nome = nome
         self._trava = threading.Lock()
         self._fila = []
         self._seq = 0
@@ -297,23 +314,23 @@ class Comandos:
         if tipo not in self.TIPOS:
             return {"erro": "pedido desconhecido"}
         if time.time() - self.visto > esperar_extensao:
-            return {"erro": "o SAP não está aberto com a extensão do APTO. Abra o SAP na tela de atendimento (Assistidos em Espera) e "
-                            "confira se a extensão do APTO está instalada e ligada; depois recarregue a aba do SAP (F5)."}
+            return {"erro": self.aviso}
         with self._trava:
             self._seq += 1
             c = {"id": self._seq, "tipo": tipo, "nome": str((dados or {}).get("nome") or "")[:300], "rk": str((dados or {}).get("rk") or "")[:80],
-                 "todos": bool((dados or {}).get("todos")), "criado": time.time(), "pego": 0.0, "evento": threading.Event(), "resposta": None}
+                 "todos": bool((dados or {}).get("todos")), "modo": str((dados or {}).get("modo") or "")[:30],
+                 "retomar": (dados or {}).get("retomar") if isinstance((dados or {}).get("retomar"), int) else None, "criado": time.time(), "pego": 0.0, "evento": threading.Event(), "resposta": None}
             self._fila.append(c)
         prazo = self.TIPOS[tipo]
         if not c["evento"].wait(10):
             if not c["pego"]:
                 self._tirar(c)
-                return {"erro": "a extensão não pegou o pedido: recarregue a aba do SAP (F5) e tente de novo."}
+                return {"erro": "a extensão não pegou o pedido: recarregue a aba do %s (F5) e tente de novo." % self.nome}
         if not c["evento"].is_set() and not c["evento"].wait(prazo):
             self._tirar(c)
-            return {"erro": "o SAP não respondeu a tempo"}
+            return {"erro": "o %s não respondeu a tempo" % self.nome}
         self._tirar(c)
-        return c["resposta"] or {"erro": "o SAP não respondeu"}
+        return c["resposta"] or {"erro": "o %s não respondeu" % self.nome}
 
     def _tirar(self, c):
         with self._trava:
@@ -328,7 +345,7 @@ class Comandos:
                 if not c["pego"]:
                     c["pego"] = time.time()
                     # avisa quem espera que a extensão pegou (a espera longa começa agora)
-                    return {k: c[k] for k in ("id", "tipo", "nome", "rk", "todos")}
+                    return {k: c[k] for k in ("id", "tipo", "nome", "rk", "todos", "modo", "retomar")}
         return None
 
     def responder(self, cid, resposta):

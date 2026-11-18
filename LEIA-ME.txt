@@ -1,9 +1,9 @@
-APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.22.0
+APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.23.0
 (antigo RSPE Base; SEEU, programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-7.22.0. A documentação técnica completa (cada parâmetro, a regra, a norma e
+7.23.0. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -1211,6 +1211,25 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v7.23.0
+  Botões de leitura dentro do APTO, como no SAP: "Ler o SEI" (função SEI:
+  a extensão lê na própria aba do SEI já logada, com o leitor do NUSPEN, e o
+  andamento aparece no APTO; não navegue na aba do SEI até terminar; se
+  parar, o botão continua de onde parou) e "Ler a Mesa" (função SEEU: a
+  extensão abre a Triagem da Mesa em segundo plano e roda as duas etapas,
+  "Ler a Mesa" e "Ler processos e decisões", com as abas e filtros guardados
+  nela; a leitura do SEEU é a mesma da extensão, sem iniciar prazo). Mostra
+  "SEI aberto"/"SEEU aberto" quando a aba está aberta com a extensão.
+  SEEU: as intimações ficam no APTO até você concluir, mesmo que saiam da
+  Mesa no SEEU ("saiu da Mesa" é só um aviso). Na linha da intimação,
+  "Registrar baixa" (peça da tabela CONTROLE e data) conclui e lança a peça
+  na produção do mês (Relatório); "Concluir sem baixa" não conta; em
+  "Concluídas", "Reabrir" desfaz (a peça sai da contagem).
+  Correções: o código de pareamento do SEI não chegava à extensão ("APTO
+  encontrado, mas não pareado"); o telefone do Fato Narrado do SAP não era
+  lido quando a linha não dizia "telefone"/"contato" (ex.: "Atendimento
+  solicitado via plataforma (67) 9xxxx-xxxx").
 
 v7.22.0
   SEI da Defensoria: leitor calibrado pela estrutura das páginas do SEI 4

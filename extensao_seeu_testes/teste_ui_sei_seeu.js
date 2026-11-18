@@ -21,6 +21,12 @@ const SHOTS = process.env.APTO_CAPTURAS || "";
       sei_decidir: (id, st, m) => { window.__chamadas.push(["decidir", id, st, m]); const o = Object.values(fx.processos).flatMap((p) => p.obrigacoes).find((x) => x.id === id); if (o) o.status = st; return { ok: true }; },
       sei_para_quadro: (id) => { window.__chamadas.push(["quadroSei", id]); return { ok: true }; },
       seeu_para_quadro: (...a) => { window.__chamadas.push(["quadroSeeu", ...a]); return { ok: true }; },
+      seeu_ler: () => { window.__chamadas.push(["lerMesa"]); return { ok: true, iniciado: true }; },
+      seeu_estado: () => fx.triagem.leitura,
+      seeu_concluir: (k, pc, dt, ob) => { window.__chamadas.push(["baixa", k, pc, dt, ob]); const it = fx.triagem.itens.find((x) => x.chave === k); if (it) { it.status = "concluido"; it.baixa = { peca: pc, pecaNome: fx.triagem.pecas[pc] || "", data: dt, obs: ob }; } return { ok: true }; },
+      seeu_reabrir: (k) => { window.__chamadas.push(["reabrir", k]); return { ok: true, removidas: [] }; },
+      sei_estado: () => fx.resumo.leitura,
+      sei_ler: (m) => { window.__chamadas.push(["lerSei", m]); return { ok: true }; },
       abrir_seeu: (u) => { window.__chamadas.push(["abrir", u]); return { ok: true }; },
     };
     window.__mockApi = new Proxy(L, { get: (t, k) => t[k] || (() => ({})) });
@@ -48,15 +54,34 @@ const SHOTS = process.env.APTO_CAPTURAS || "";
   await pg.waitForTimeout(200);
   ok(await pg.isVisible("#seeuPag .fx-det"), "linha abre pelo teclado (Enter)");
   if (SHOTS) await pg.screenshot({ path: path.join(SHOTS, "seeu.png") });
+  ok(await pg.isVisible('#seeuPag .fx-sist.on'), "SEEU aberto (com a extensão)");
+  await pg.click('#seeuPag .fx-ler button:has-text("Ler a Mesa")');
+  await pg.waitForTimeout(200);
+  ok((await pg.evaluate(() => window.__chamadas)).some((c) => c[0] === "lerMesa"), "botão Ler a Mesa dentro do APTO");
+  if (!(await pg.isVisible("#seeuPag .fx-det"))) { await pg.focus("#seeuPag .fx-l"); await pg.keyboard.press("Enter"); await pg.waitForTimeout(200); }
   await pg.click('#seeuPag .fx-det button:has-text("Enviar ao Quadro")');
   await pg.waitForTimeout(200);
   ok((await pg.evaluate(() => window.__chamadas)).some((c) => c[0] === "quadroSeeu" && c[1] === "7000117-54.2016.8.12.0001"), "providência vai ao Quadro");
   await pg.click('#seeuPag .fx-det button:has-text("Abrir no SEEU")');
   ok((await pg.evaluate(() => window.__chamadas)).some((c) => c[0] === "abrir"), "abre o processo no SEEU pelo navegador");
+  // baixa: peça sugerida pela providência ("Impugnar o cálculo" -> Manifestações), data de hoje; conclui e sai da lista em aberto
+  ok((await pg.inputValue("#seeuPag .fx-baixa select")) === "MANIF", "peça sugerida para a baixa");
+  await pg.click('#seeuPag .fx-baixa button:has-text("Registrar baixa")');
+  await pg.waitForTimeout(400);
+  const bx = (await pg.evaluate(() => window.__chamadas)).find((c) => c[0] === "baixa");
+  ok(bx && bx[2] === "MANIF" && /^\d{4}-\d{2}-\d{2}$/.test(bx[3]), "baixa registrada com peça e data: " + JSON.stringify(bx));
+  await pg.click('#seeuPag .fx-cont button:has-text("concluídas")');
+  await pg.waitForTimeout(200);
+  ok(/baixa: Manifestações/.test(await pg.textContent("#seeuPag .fx-tab")), "concluída mostra a baixa (fica no APTO, pode reabrir)");
   // ---- SEI ----
   await pg.click("#fn_sei");
   await pg.waitForTimeout(400);
   ok((await pg.$$eval("#seiPag .fx-proc", (x) => x.length)) === 2, "SEI: dois processos");
+  ok(/Leitura concluída: 2 processo/.test(await pg.textContent("#seiPag .fx-andamento")), "andamento da leitura do SEI no APTO");
+  await pg.selectOption("#seiModo", "novos");
+  await pg.click('#seiPag .fx-ler button:has-text("Ler o SEI")');
+  await pg.waitForTimeout(200);
+  ok((await pg.evaluate(() => window.__chamadas)).some((c) => c[0] === "lerSei" && c[1] === "novos"), "botão Ler o SEI dentro do APTO, com o modo");
   ok(/a validar/.test(await pg.textContent("#seiPag .fx-proc")), "processo mostra quantas obrigações a validar");
   await pg.click("#seiPag .fx-proc");
   await pg.waitForTimeout(400);
