@@ -37,7 +37,9 @@ const MODELO = path.join(RAIZ, "extensao_seeu_testes", "modelo_ficticio.docx");
     ];
     const L = {
       listar: () => ({ sem_base: true, recentes: [], hoje: dd, registros: [] }),
-      atd_tudo: () => ({ atendimentos: A, pecas: [], ajustes: {}, modelos: null, config: {}, sap: { aberto: true, visto: 0, leitura: null } }),
+      // uma pendência antiga, sem vínculo com o atendimento (como as criadas antes ou trazidas da extensão)
+      atd_tudo: () => ({ atendimentos: A, pecas: [{ id: "p0", tipo: "ST", processo: "0000001-11.2024.8.12.0001", nome: "Fulano de Tal Ficticio", data: iso, status: "pendente",
+        coluna: "doc", prazo: "", obs: "", origem: "manual", atendimentoId: "", criadoEm: 0 }], ajustes: {}, modelos: null, config: {}, sap: { aberto: true, visto: 0, leitura: null } }),
       atd_mudar: (d) => { window.__mud.push(JSON.parse(JSON.stringify(d))); return { ok: true }; },
       atd_sap: (t, d) => { window.__sap.push([t, d]); return t === "lerFilaSap" ? { ok: true, lidos: 2, total: 2, erros: [] } : { ok: true }; },
       atd_arquivo: (c) => window.__lerArquivo(c),
@@ -107,14 +109,17 @@ const MODELO = path.join(RAIZ, "extensao_seeu_testes", "modelo_ficticio.docx");
   await pg.click("#fn_quadro");
   await pg.waitForTimeout(500);
   ok((await fr.$$eval(".abas button:not([hidden])", (x) => x.map((b) => b.dataset.aba))).join() === "pend,agenda", "Quadro: Pendências e Agenda");
-  ok((await fr.$$eval(".kcard", (x) => x.length)) === 1, "a pendência no Quadro");
+  ok((await fr.$$eval(".kcard", (x) => x.length)) === 2, "as pendências no Quadro (a nova e a antiga)");
+  ok(!(await fr.$$eval(".kcard", (x) => x.some((k) => /(^|\s)null(\s|$)/.test(k.innerText)))), "nenhum cartão mostra null");
+  const antiga = await fr.$('.kanban .c-doc .kcard .knome');
+  ok(antiga, "pendência antiga (sem vínculo) acha o atendimento pelo assistido");
   // relato do atendimento que gerou a pendência: clique no nome do cartão
-  await fr.click(".kcard .knome");
+  await fr.click('.kanban .c-fazer .kcard .knome, .kanban .c-doc .kcard:last-child .knome');
   await pg.waitForTimeout(200);
-  const relato = await fr.textContent(".kcard .krel");
-  ok(await fr.$eval(".kcard .krel", (d) => d.open) && /Atendimento solicitado pela genitora/.test(relato) && /Deseja pedir saída temporária/.test(relato),
+  const relato = await fr.textContent(".kcard .krel[open]");
+  ok(await fr.$eval(".kcard .krel[open]", (d) => d.open) && /Atendimento solicitado pela genitora/.test(relato) && /Deseja pedir saída temporária/.test(relato),
     "relato do atendimento no cartão (Fato Narrado e registro): " + relato.slice(0, 120));
-  ok((await fr.getAttribute(".kcard .knome", "aria-expanded")) === "true", "nome do cartão diz que abriu");
+  ok((await fr.$$eval(".kcard .knome[aria-expanded=true]", (x) => x.length)) === 1, "nome do cartão diz que abriu");
   await fr.click('.abas button[data-aba="agenda"]');
   await pg.waitForTimeout(400);
   ok(await fr.isVisible("#agCal td.hoje"), "agenda única: calendário do mês");

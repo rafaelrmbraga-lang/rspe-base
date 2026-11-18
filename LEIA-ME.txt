@@ -1,9 +1,9 @@
-APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.30.0
+APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.30.1
 (antigo RSPE Base; SEEU, programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-7.30.0. A documentação técnica completa (cada parâmetro, a regra, a norma e
+7.30.1. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -1296,6 +1296,13 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v7.30.1
+  Quadro: o cartão não mostra mais "null" (quando não há origem nem relato).
+  As pendências antigas, sem vínculo com o atendimento (criadas antes da 7.29
+  ou trazidas da extensão), acham o atendimento pelo assistido (nome ou nº do
+  processo), no dia da pendência ou no mais recente antes dele, e mostram o
+  relato ao clicar no nome.
 
 v7.30.0
   SEI, acentos: se o SEI declarar UTF-8 e mandar ISO-8859-1, o texto agora sai
