@@ -569,6 +569,9 @@ class Sei:
                            "falhas": q("SELECT COUNT(*) FROM sei_itens WHERE estado='falha'")},
                 "ultima": dict(zip(("id", "modo", "status", "iniciada", "concluida", "novos", "modificados", "falhas"), ult)) if ult else None,
                 "leituras": len(sess), "agora": _agora(),
+                # gravado antes da correção dos acentos (lido como UTF-8): some quando o processo é lido de novo
+                "acentos_quebrados": q("SELECT COUNT(*) FROM sei_processos WHERE especificacao LIKE ?", "%\ufffd%")
+                + q("SELECT COUNT(*) FROM sei_documentos WHERE substituido_por IS NULL AND (texto LIKE ? OR titulo LIKE ?)", "%\ufffd%", "%\ufffd%"),
             }
 
     def processo(self, numero):

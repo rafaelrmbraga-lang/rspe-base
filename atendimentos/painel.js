@@ -732,7 +732,8 @@
     const hoje = A.hojeISO();
     if (!agMes) agMes = [Number(hoje.slice(0, 4)), Number(hoje.slice(5, 7)) - 1];
     const [ano, mes] = agMes, ini = new Date(ano, mes, 1), dias = new Date(ano, mes + 1, 0).getDate(), pad = (ini.getDay() + 6) % 7;
-    $("#agMes").textContent = ini.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+    const nm = ini.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+    $("#agMes").textContent = nm.charAt(0).toUpperCase() + nm.slice(1);
     const por = {};
     for (const x of itens) (por[x.data] = por[x.data] || []).push(x);
     const item = (x) => {

@@ -6,7 +6,7 @@ const URL_PY = process.argv[2];
 const SHOTS = process.env.APTO_CAPTURAS || "";
 (async () => {
   const b = await chromium.launch();
-  const pg = await b.newPage({ viewport: { width: 1400, height: 900 } });
+  const pg = await b.newPage({ viewport: process.env.APTO_TELA === "notebook" ? { width: 1366, height: 768 } : { width: 1400, height: 900 } });
   const erros = [];
   pg.on("pageerror", (e) => erros.push(String(e)));
   await pg.addInitScript((u) => {
@@ -31,7 +31,9 @@ const SHOTS = process.env.APTO_CAPTURAS || "";
     else if (nome === "Prazos" || nome === "Comunicações") { await pg.click('#seiPag .fx-vistas button:has-text("Providências")'); await pg.waitForTimeout(400);
       await pg.click(`#nusVista .nus-sub button:has-text("${nome === "Prazos" ? "Prazos e calendário" : "Ofícios"}")`); }
     else await pg.click(`#seiPag .fx-vistas button:has-text("${nome}")`);
-    await pg.waitForTimeout(500); };
+    await pg.waitForTimeout(500);
+    if (SHOTS) await pg.screenshot({ path: path.join(SHOTS, "aba_" + nome.replace(/\W+/g, "_") + "_" + (++nFoto) + ".png") }); };
+  let nFoto = 0;
   const form = async (campos, botao) => {
     await pg.waitForSelector("#modal.on form", { timeout: 5000 });
     for (const [k, v] of Object.entries(campos)) {
@@ -47,6 +49,15 @@ const SHOTS = process.env.APTO_CAPTURAS || "";
   ok((await pg.$$eval("#seiPag .fx-vistas button", (x) => x.map((b) => b.textContent))).join("|") === "Visão geral|Processos|Providências|Demandas|Inspeções|Histórico e relatório",
     "seis abas na função SEI (prazos e ofícios dentro de Providências; Cadastros num botão)");
   ok((await pg.textContent("#seiPag h1")) === "SEI", "o nome é só SEI");
+  // abas pelo teclado (setas): só a ativa entra no Tab
+  await pg.focus('#seiPag .fx-vistas button[aria-selected="true"]');
+  await pg.keyboard.press("ArrowRight");
+  await pg.waitForTimeout(400);
+  ok((await pg.evaluate(() => document.activeElement && document.activeElement.textContent)) === "Processos" &&
+     (await pg.getAttribute('#seiPag .fx-vistas button:has-text("Processos")', "aria-selected")) === "true", "seta → leva à próxima aba, com o foco nela");
+  ok((await pg.$$eval('#seiPag .fx-vistas button[tabindex="0"]', (x) => x.length)) === 1, "só a aba ativa na ordem do Tab");
+  await pg.keyboard.press("ArrowLeft");
+  await pg.waitForTimeout(400);
   // Cadastros: Quem
   await aba("Cadastros");
   await pg.fill("#ql", "Servidora Fictícia\nCoordenador Fictício");
@@ -126,6 +137,9 @@ const SHOTS = process.env.APTO_CAPTURAS || "";
   await aba("Visão geral");
   await pg.waitForTimeout(500);
   ok(/Vencem em até 7 dias/.test(await pg.textContent("#seiPag")) && (await pg.$$eval("#seiPag .fx-at", (x) => x.length)) === 1, "Visão geral única: um Atenção hoje só");
+  const ordem = await pg.$$eval("#atHoje .fx-atc", (x) => x.map((b) => [Number(getComputedStyle(b).order), b.querySelector("span").textContent]).sort((p, q) => p[0] - q[0]).map((p) => p[1]));
+  ok(ordem[0] === "Prazos vencidos" && ordem[1] === "Vencem em até 7 dias", "Atenção hoje começa pelos prazos: " + ordem.slice(0, 3));
+  ok((await pg.$$eval("#atHoje .fx-atc.zero", (x) => x.length)) >= 1, "contador zerado fica discreto");
   // histórico e relatório
   await aba("Histórico e relatório");
   const h = await pg.textContent("#nusVista");

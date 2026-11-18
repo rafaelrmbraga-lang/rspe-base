@@ -1,9 +1,9 @@
-APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.29.0
+APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.30.0
 (antigo RSPE Base; SEEU, programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-7.29.0. A documentação técnica completa (cada parâmetro, a regra, a norma e
+7.30.0. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -1296,6 +1296,21 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v7.30.0
+  SEI, acentos: se o SEI declarar UTF-8 e mandar ISO-8859-1, o texto agora sai
+  certo (só UTF-8 válido é lido como UTF-8). O texto que já estava gravado com
+  acento estragado (de leituras antigas) não tem como ser consertado sem ler
+  de novo: a tela avisa quantos são e pede "Todos os processos" + "Ler o SEI".
+  Leitura interrompida não aparece mais como "em andamento".
+  Revisão de UX/UI das telas novas (SEI, SEEU, Agenda): cabeçalho mais baixo;
+  "Atenção hoje" começa pelos prazos vencidos e pelos que vencem em 7 dias, e
+  os contadores zerados ficam discretos; datas em dd/mm/aaaa hh:mm; Atualizar
+  e Cadastros com cara de botão; abas do SEI pelas setas do teclado (esquerda,
+  direita, Home, End); calendário com "Novembro de 2026", botões de mês
+  maiores e o dia de hoje escrito; em Prazos, a lista vem antes do calendário;
+  listas vazias com o botão para começar; no SEEU, o Quem fica na barra de
+  leitura e cada rótulo fica junto do seu campo.
 
 v7.29.0
   OCR dentro do APTO: o pacote traz o Tesseract (Apache 2.0, licença na pasta)

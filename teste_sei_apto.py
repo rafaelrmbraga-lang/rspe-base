@@ -91,6 +91,7 @@ ses = ses2
 ruim = "Of\ufffdcio n\ufffd 3. Solicito informa\ufffd\ufffdes."
 s.receber_lote(ses, [{"tipo": "documento", "id_sei": "81", "processo": "99/000123/2026", "titulo": "Of\ufffdcio", "versao": "v1", "conteudo": ruim, "hash": rsei.sha(ruim)}])
 ok(s.conhecidos(["documento:81", "documento:80"]).keys() == {"documento:80"}, "documento com acento quebrado é lido de novo; o bom, não")
+ok(s.resumo()["acentos_quebrados"] >= 1, "a tela é avisada do texto com acento quebrado")
 g.fechar()
 
 # ---- ponta a ponta com o SEI fictício e o servidor do APTO ----

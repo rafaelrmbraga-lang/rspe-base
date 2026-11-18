@@ -7,7 +7,7 @@ const FX = JSON.parse(fs.readFileSync(process.argv[2], "utf-8"));
 const SHOTS = process.env.APTO_CAPTURAS || "";
 (async () => {
   const b = await chromium.launch();
-  const pg = await b.newPage({ viewport: { width: 1400, height: 900 } });
+  const pg = await b.newPage({ viewport: process.env.APTO_TELA === "notebook" ? { width: 1366, height: 768 } : { width: 1400, height: 900 } });
   const erros = [];
   pg.on("pageerror", (e) => erros.push(String(e)));
   const RAIZ = path.join(__dirname, "..");

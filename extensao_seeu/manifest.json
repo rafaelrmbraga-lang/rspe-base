@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "APTO - RSPE do SEEU, Triagem da Mesa, Ficha do SIAPEN, processos e atendimentos do SAP",
   "short_name": "APTO RSPE",
-  "version": "1.14.0",
+  "version": "1.14.1",
   "description": "RSPE do SEEU e ficha do SIAPEN para o APTO; leitura da Mesa, do SEI e da fila do SAP pedida pelo APTO (só leitura).",
   "minimum_chrome_version": "116",
   "permissions": [

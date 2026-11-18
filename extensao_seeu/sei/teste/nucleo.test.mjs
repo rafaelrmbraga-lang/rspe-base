@@ -275,7 +275,7 @@ test("decodifica a pagina pelo charset declarado (ISO-8859-1), no cabecalho ou n
   const latin1 = (s) => Uint8Array.from([...s].map((c) => c.charCodeAt(0)));
   const pag = (corpo, tipo) => ({ status: 200, ok: true, headers: { get: () => tipo }, arrayBuffer: async () => latin1(corpo).buffer, text: async () => new TextDecoder().decode(latin1(corpo)) });
   const url = `${BASE}/sei/controlador.php?acao=procedimento_controlar`;
-  for (const [corpo, tipo] of [["<p>Ofício nº 3 – Execução</p>".replace("–", "-"), "text/html; charset=ISO-8859-1"], ["<meta charset=\"iso-8859-1\"><p>Ofício nº 3 - Execução</p>", "text/html"], ["<p>Ofício nº 3 - Execução</p>", "text/html"]]) {
+  for (const [corpo, tipo] of [["<p>Ofício nº 3 – Execução</p>".replace("–", "-"), "text/html; charset=ISO-8859-1"], ["<meta charset=\"iso-8859-1\"><p>Ofício nº 3 - Execução</p>", "text/html"], ["<p>Ofício nº 3 - Execução</p>", "text/html"], ["<p>Ofício nº 3 - Execução</p>", "text/html; charset=UTF-8"]]) {
     const l = criarLeitor({ baseSei: BASE, adaptador: adp, fetchImpl: async () => pag(corpo, tipo) });
     const { texto } = await l.get(url);
     assert.ok(texto.includes("Ofício nº 3 - Execução") && !texto.includes("�"), tipo + ": " + texto);
