@@ -186,6 +186,7 @@ export async function sincronizar({ adaptador, leitor, app, opcoes = {}, progres
   const alvo = new Set(selecionados.map(String));
   const achados = new Set();
   const listados = [];
+  const retrato = []; // o que a lista mostrou (atribuição, marcadores...), também dos processos não relidos nesta rodada
   const comecouDoInicio = pagina === 0 && indice === 0 && !ini.cursor?.pagina;
   const res = {
     sessao, parada: null, processos: 0, processosPulados: 0, documentosLidos: 0, documentosPulados: 0,
@@ -267,7 +268,7 @@ export async function sincronizar({ adaptador, leitor, app, opcoes = {}, progres
     if (pagina > 0) pg = await leitor.get(adaptador.urlLista(app.baseSei, pagina));
     laco: for (;;) {
       const { itens, proxima } = adaptador.listarProcessos(pg.texto);
-      for (const p of itens) listados.push(String(p.id));
+      for (const p of itens) { listados.push(String(p.id)); if (p.extra) retrato.push({ id: String(p.id), numero: p.numero, ...p.extra }); }
       await carregarConhecidos(itens.map((p) => `processo:${p.id}`));
       for (let i = indice; i < itens.length; i++) {
         const p = itens[i];
@@ -309,7 +310,7 @@ export async function sincronizar({ adaptador, leitor, app, opcoes = {}, progres
   // lista completa so se a rodada percorreu a lista inteira desde o inicio, sem salto e sem parada
   const listaCompleta = comecouDoInicio && res.parada === null && (modo === "todos" || modo === "novos");
   if (res.parada === null || res.parada === "teto") {
-    await cli.chamar(`/api/sync/sessoes/${sessao}/concluir/`, { requisicoes: leitor.metricas.requisicoes, duracao_s: duracao, ...(listaCompleta ? { lista_completa: true, listados } : {}) });
+    await cli.chamar(`/api/sync/sessoes/${sessao}/concluir/`, { requisicoes: leitor.metricas.requisicoes, duracao_s: duracao, ...(retrato.length ? { retrato } : {}), ...(listaCompleta ? { lista_completa: true, listados } : {}) });
   }
   emitir("concluida");
   return { ...res, requisicoesSei: leitor.metricas.requisicoes, falhasRede: leitor.metricas.falhas, requisicoesApp: cli.metricas.requisicoes, duracaoS: duracao };

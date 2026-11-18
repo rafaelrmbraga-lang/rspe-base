@@ -35,6 +35,24 @@ export function decodificar(t) {
 const semTags = (h) => decodificar(String(h || "").replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ").trim();
 const acaoDe = (href) => { const m = /[?&]acao=([a-z_]+)/.exec(String(href || "")); return m ? m[1] : ""; };
 // argumentos de uma chamada JS: "texto", 'texto', null, true, números
+// o que a linha do Controle de Processos mostra além do número (para a Visão geral do APTO). Marcadores: ícones com dica
+// (infraTooltipMostrar ou title) cuja imagem ou rótulo fala em marcador. [A testar no SEI real: calibrado na estrutura do HAR]
+const celula = (linha, rot) => { const c = new RegExp(`<td[^>]*data-label="${rot}"[^>]*>([\\s\\S]*?)<\\/td>`).exec(linha); return c ? c[1] : ""; };
+function extraDaLinha(linha, ancora, espec, tipo) {
+  const resto = linha.replace(ancora, "");
+  const marcadores = [];
+  for (const t of resto.matchAll(/<(?:a|img|span)\b[^>]*?(?:infraTooltipMostrar\(([\s\S]*?)\)|title="([^"]*)")[^>]*>(?:\s*<img\b[^>]*src="([^"]*)")?/g)) {
+    const [txt, rot] = t[1] ? argumentos(decodificar(t[1])) : [decodificar(t[2] || ""), ""];
+    const src = t[3] || (/src="([^"]*)"/.exec(t[0]) || [])[1] || "";
+    if (!/marcador/i.test(String(rot) + " " + src + " " + String(txt).slice(0, 12))) continue;
+    const nome = String(rot && !/^marcador$/i.test(rot) ? rot : txt).replace(/^Marcador:\s*/i, "").trim();
+    if (nome) marcadores.push({ nome, texto: rot && !/^marcador$/i.test(rot) ? String(txt || "") : "" });
+  }
+  const interessados = [...celula(linha, "Interessados").matchAll(/<div[^>]*>([\s\S]*?)<\/div>/g)].map((x) => semTags(x[1])).filter(Boolean);
+  return { atribuicao: semTags(celula(linha, "Atribuição")), tipo: semTags(celula(linha, "Tipo")) || String(tipo || ""), especificacao: String(espec || ""),
+    interessados, marcadores, naoVisualizado: /processoNaoVisualizado/.test(ancora) };
+}
+
 function argumentos(s) {
   const r = [];
   const re = /"((?:[^"\\]|\\.)*)"|'((?:[^'\\]|\\.)*)'|\b(null|true|false)\b|(-?\d+(?:\.\d+)?)/g;
@@ -80,7 +98,7 @@ export const adaptadorSeiDpms = {
       const dica = /infraTooltipMostrar\(([\s\S]*?)\);/.exec(a[0]);
       const [espec, tipo] = dica ? argumentos(decodificar(dica[1])) : [];
       daLista.set(m[1], { especificacao: String(espec || ""), tipo: String(tipo || "") });
-      itens.push({ id: m[1], numero, mov: "", href });
+      itens.push({ id: m[1], numero, mov: "", href, extra: extraDaLinha(m[2], a[0], espec, tipo) });
     }
     const total = Number((/Processos\s*\((\d+)\s*registros?\)/i.exec(html) || [])[1] || 0);
     if (!itens.length && total) throw new EstruturaInesperada("a lista diz ter processos, mas nenhum link de processo foi reconhecido");

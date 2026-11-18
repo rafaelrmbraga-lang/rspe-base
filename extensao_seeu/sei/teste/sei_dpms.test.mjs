@@ -31,6 +31,12 @@ test("dpms: lista de processos (visualizado e não visualizado, dica com especif
   assert.deepEqual(r.itens.map((x) => [x.id, x.numero]), [["111", "99/000111/2026"], ["222", "99/000222/2026"], ["333", "99/000333/2026"]]);
   assert.match(r.itens[0].href, /^controlador\.php\?acao=procedimento_trabalhar&acao_origem=.*&infra_hash=h111$/);
   assert.equal(r.proxima, null); assert.equal(r.total, 3); assert.deepEqual(A.avisos, []);
+  // o que a linha mostra além do número (Visão geral do APTO): atribuição, tipo, interessados, marcadores, não visualizado
+  assert.deepEqual(r.itens[0].extra, { atribuicao: "fulano", tipo: "Inspeção - Unidade Prisional", especificacao: "Inspeção fictícia no EPMF",
+    interessados: ["Pessoa Fictícia"], marcadores: [{ nome: "Aguardando resposta", texto: "Cobrar a resposta da unidade" }], naoVisualizado: false });
+  assert.equal(r.itens[1].extra.naoVisualizado, true);
+  assert.deepEqual(r.itens[1].extra.marcadores, []);
+  assert.equal(r.itens[1].extra.atribuicao, "");
   const p = A.lerProcesso(P("processo.html"));
   assert.equal(p.especificacao, "Inspeção - Unidade Prisional — Inspeção fictícia no EPMF");
   assert.equal(p.unidade, "NUSPEN-FICT");

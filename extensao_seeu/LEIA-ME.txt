@@ -232,6 +232,17 @@ que você já vê no SEI, com a sua sessão, e entrega ao APTO aberto (função 
    http://127.0.0.1:8001/sei/entrar_ficticio e use o endereço
    http://127.0.0.1:8001.
 
+SEI: ACENTOS E VISÃO GERAL (versão 1.13.0)
+ - As páginas do SEI da Defensoria (ISO-8859-1) são lidas com os acentos
+   certos.
+ - A cada leitura, a extensão manda ao APTO o que a lista do Controle de
+   Processos mostra de cada processo: atribuição, marcadores, tipo,
+   interessados e se está "não visualizado". É o que alimenta a Visão geral
+   da função SEI. Os marcadores são reconhecidos pelo ícone e pela dica do
+   SEI [a conferir na primeira leitura real: se não aparecerem, avise].
+ - Atualize a extensão (Recarregar em chrome://extensions) depois de
+   atualizar o APTO.
+
 DOWNLOAD AUTOMÁTICO (versão 1.12.0)
  - "Baixar o RSPE automaticamente ao abrir um processo": desligado, abrir um
    processo no SEEU não baixa nada; o botão "Baixar o RSPE do processo

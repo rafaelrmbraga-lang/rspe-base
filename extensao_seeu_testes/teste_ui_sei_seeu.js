@@ -161,6 +161,23 @@ const SHOTS = process.env.APTO_CAPTURAS || "";
   // ---- SEI ----
   await pg.click("#fn_sei");
   await pg.waitForTimeout(400);
+  // Visão geral (abre nela): atenção hoje, todos os processos, por marcador, o que entrou
+  ok((await pg.$$eval("#seiPag .fx-atc", (x) => x.length)) === 5, "Visão geral: cinco cartões de atenção");
+  const cNovo = await pg.textContent('#seiPag .fx-atc:has-text("documento novo") b');
+  ok(cNovo === "1", "com documento novo (na leitura ou não visualizado): " + cNovo);
+  ok((await pg.$$eval("#seiPag .fx-tabsei tbody tr", (x) => x.length)) === 2, "tabela com os dois processos");
+  const lin = await pg.textContent('#seiPag .fx-tabsei tbody tr:has-text("99/000123/2026")');
+  ok(/Aguardando resposta/.test(lin) && /assessor ficticio/.test(lin) && /a validar/.test(lin) && /prazo no documento/.test(lin), "linha com marcador, responsável e situação: " + lin);
+  ok(/Aguardando resposta\s*1/.test(await pg.textContent("#seiPag .fx-barras")), "processos por marcador");
+  if (SHOTS) await pg.screenshot({ path: path.join(SHOTS, "sei_geral.png"), fullPage: true });
+  await pg.click('#seiPag .fx-atc:has-text("a validar")');
+  await pg.waitForTimeout(200);
+  ok((await pg.$$eval("#seiPag .fx-tabsei tbody tr", (x) => x.length)) === 1, "cartão filtra a tabela");
+  await pg.click('#seiPag .fx-tabsei tbody tr');
+  await pg.waitForTimeout(400);
+  ok(await pg.isVisible("#seiDet .fx-obr") && /Validar<\/b> = você confirma/.test(await pg.innerHTML("#seiDet")), "linha abre o processo, com a explicação do Validar");
+  await pg.click('#seiPag .fx-vistas button:has-text("Processos")');
+  await pg.waitForTimeout(200);
   ok((await pg.$$eval("#seiPag .fx-proc", (x) => x.length)) === 2, "SEI: dois processos");
   ok(/Leitura concluída: 2 processo/.test(await pg.textContent("#seiPag .fx-andamento")), "andamento da leitura do SEI no APTO");
   await pg.selectOption("#seiModo", "novos");

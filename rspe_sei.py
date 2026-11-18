@@ -109,6 +109,13 @@ class Sei:
             # 7.26: indícios de resposta (regra do NUSPEN): certidão/termo que cita resposta a ofício; manifestação que afirma atendimento
             if "indicios" not in [r[1] for r in self._con.execute("PRAGMA table_info(sei_documentos)")]:
                 self._con.execute("ALTER TABLE sei_documentos ADD COLUMN indicios TEXT")
+            # 7.26: retrato da lista do Controle de Processos (para a Visão geral): atribuição, marcadores, tipo, interessados,
+            # "não visualizado" no SEI; e quando o APTO viu o processo pela 1ª vez e recebeu documento novo/alterado
+            tem = [r[1] for r in self._con.execute("PRAGMA table_info(sei_processos)")]
+            for c, t in (("atribuicao", "TEXT"), ("marcadores", "TEXT"), ("tipo", "TEXT"), ("interessados", "TEXT"), ("nao_visualizado", "INTEGER"),
+                         ("primeiro_visto", "TEXT"), ("primeiro_sessao", "INTEGER"), ("ultimo_doc", "TEXT")):
+                if c not in tem:
+                    self._con.execute("ALTER TABLE sei_processos ADD COLUMN %s %s" % (c, t))
 
     # ---- autenticação da extensão (o token é entregue só a extensões, por GET /sei/token) ----
     def token_ok(self, cabecalho):
@@ -178,12 +185,33 @@ class Sei:
             self._con.execute("UPDATE sei_sessoes SET status='concluida', concluida=?, requisicoes=?, duracao_s=? WHERE id=?",
                               (_agora(), int(dados.get("requisicoes") or 0), float(dados.get("duracao_s") or 0), s))
             # lista completa: processo que não aparece mais na lista fica marcado (nada é apagado)
+            self._retrato(s, dados.get("retrato"))
             if dados.get("lista_completa") and isinstance(dados.get("listados"), list):
                 vistos = {str(x) for x in dados["listados"]}
                 for (num, ids) in self._con.execute("SELECT numero, id_sei FROM sei_processos").fetchall():
                     fora = 0 if ids in vistos else 1
                     self._con.execute("UPDATE sei_processos SET fora_da_lista=? WHERE numero=?", (fora, num))
         return {"status": "concluida"}
+
+    def _retrato(self, s, retrato):
+        """O que a lista do Controle de Processos mostrou nesta leitura (todos os processos da página, também os não relidos)."""
+        if not isinstance(retrato, list):
+            return
+        for x in retrato[:LIMITE_IDS]:
+            if not isinstance(x, dict) or not x.get("id"):
+                continue
+            marc = [{"nome": _t(m.get("nome"), 120), "texto": _t(m.get("texto"), 300)} for m in (x.get("marcadores") or [])[:20] if isinstance(m, dict) and m.get("nome")]
+            vals = (_t(x.get("atribuicao"), 120), json.dumps(marc, ensure_ascii=False), _t(x.get("tipo"), 200),
+                    _t("; ".join(str(i) for i in (x.get("interessados") or [])[:10]), 500), 1 if x.get("naoVisualizado") else 0)
+            n = self._con.execute("UPDATE sei_processos SET atribuicao=?, marcadores=?, tipo=?, interessados=?, nao_visualizado=? WHERE id_sei=?",
+                                  (*vals, _t(x.get("id"), 80))).rowcount
+            if not n and x.get("numero"):
+                original = _t(x.get("numero"), 60)
+                num = normalizar_numero_processo(original) or original
+                self._con.execute("INSERT OR IGNORE INTO sei_processos(numero, original, id_sei, especificacao, unidade, ultima_movimentacao, atualizado, "
+                                  "fora_da_lista, primeiro_visto, primeiro_sessao) VALUES(?,?,?,?,?,?,?,0,?,?)",
+                                  (num, original, _t(x.get("id"), 80), _t(x.get("especificacao"), 500), "", "", _agora(), _agora(), s))
+                self._con.execute("UPDATE sei_processos SET atribuicao=?, marcadores=?, tipo=?, interessados=?, nao_visualizado=? WHERE numero=?", (*vals, num))
 
     # ---- itens lidos ----
     def _marcar(self, sid, tipo, id_sei, estado, mensagem="", **extra):
@@ -235,6 +263,7 @@ class Sei:
                           "THEN excluded.especificacao ELSE especificacao END, unidade=CASE WHEN excluded.unidade<>'' THEN excluded.unidade ELSE unidade END, "
                           "ultima_movimentacao=excluded.ultima_movimentacao, atualizado=excluded.atualizado, fora_da_lista=0",
                           (num, original, id_sei, _t(d.get("especificacao"), 500), unidade, _t(d.get("ultima_movimentacao")), _agora()))
+        self._con.execute("UPDATE sei_processos SET primeiro_visto=?, primeiro_sessao=? WHERE numero=? AND primeiro_visto IS NULL", (_agora(), s, num))
         self._marcar(s, "processo", id_sei, "analisado", processo=original, unidade=unidade, ultima_movimentacao=d.get("ultima_movimentacao"),
                      adaptador=d.get("adaptador"))
         vistos = d.get("documentos_vistos")
@@ -284,6 +313,7 @@ class Sei:
             self._substituir(id_sei, novo)
         self._obrigacoes(novo, num, texto, cl.codigo or "")
         self._marcar(s, "documento", id_sei, "analisado", versao=d.get("versao"), hash=h, processo=original, titulo=titulo, adaptador=d.get("adaptador"))
+        self._con.execute("UPDATE sei_processos SET ultimo_doc=? WHERE numero=?", (_agora(), num))
         if resultado == "modificado":
             self._evento(s, num, "documento_alterado", "%s (%s)" % (titulo, id_sei))
         return resultado
@@ -311,8 +341,15 @@ class Sei:
     def resumo(self):
         with self._trava:
             q = lambda sql, *a: self._con.execute(sql, a).fetchone()[0]
-            procs = [dict(zip(("numero", "original", "especificacao", "unidade", "ultima_movimentacao", "atualizado", "fora_da_lista"), r))
-                     for r in self._con.execute("SELECT numero, original, especificacao, unidade, ultima_movimentacao, atualizado, fora_da_lista FROM sei_processos ORDER BY atualizado DESC")]
+            pc = ("numero", "original", "especificacao", "unidade", "ultima_movimentacao", "atualizado", "fora_da_lista", "atribuicao", "marcadores", "tipo",
+                  "interessados", "nao_visualizado", "primeiro_visto", "primeiro_sessao", "ultimo_doc")
+            procs = [dict(zip(pc, r)) for r in self._con.execute("SELECT %s FROM sei_processos ORDER BY atualizado DESC" % ", ".join(pc))]
+            sess = self._con.execute("SELECT id, iniciada FROM sei_sessoes WHERE status='concluida' ORDER BY id DESC LIMIT 2").fetchall()
+            desde = sess[0][1] if sess else None
+            novos_doc = dict(self._con.execute("SELECT processo, COUNT(*) FROM sei_documentos WHERE recebido>=? AND substituido_por IS NULL GROUP BY processo",
+                                               (desde,)).fetchall()) if desde else {}
+            prazos = dict(self._con.execute("SELECT processo, COUNT(*) FROM sei_obrigacoes WHERE status IN ('sugestao','validada') AND prazo_natureza='expresso' "
+                                            "GROUP BY processo").fetchall())
             por_proc = {}
             for num, st, n in self._con.execute("SELECT processo, status, COUNT(*) FROM sei_obrigacoes GROUP BY processo, status"):
                 por_proc.setdefault(num, {})[st] = n
@@ -320,6 +357,11 @@ class Sei:
             falhas = dict(self._con.execute("SELECT processo, COUNT(*) FROM sei_itens WHERE estado='falha' GROUP BY processo").fetchall())
             ult = self._con.execute("SELECT id, modo, status, iniciada, concluida, novos, modificados, falhas FROM sei_sessoes ORDER BY id DESC LIMIT 1").fetchone()
             for p in procs:
+                p["marcadores"] = json.loads(p["marcadores"] or "[]")
+                p["docs_novos"] = novos_doc.get(p["numero"], 0)
+                p["prazos"] = prazos.get(p["numero"], 0)
+                # entrou desde a última leitura: visto pela 1ª vez na última leitura concluída, havendo uma anterior para comparar
+                p["entrou_agora"] = bool(len(sess) > 1 and p["primeiro_sessao"] and p["primeiro_sessao"] > sess[1][0])
                 p["obrigacoes"] = por_proc.get(p["numero"], {})
                 p["documentos"] = docs.get(p["numero"], 0)
                 p["falhas"] = falhas.get(p["original"], 0)
@@ -331,6 +373,7 @@ class Sei:
                            "prazos": q("SELECT COUNT(*) FROM sei_obrigacoes WHERE status IN ('sugestao','validada') AND prazo_natureza='expresso'"),
                            "falhas": q("SELECT COUNT(*) FROM sei_itens WHERE estado='falha'")},
                 "ultima": dict(zip(("id", "modo", "status", "iniciada", "concluida", "novos", "modificados", "falhas"), ult)) if ult else None,
+                "leituras": len(sess), "agora": _agora(),
             }
 
     def processo(self, numero):

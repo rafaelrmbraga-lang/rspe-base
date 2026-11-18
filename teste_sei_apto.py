@@ -78,6 +78,15 @@ cert = "CERTIDÃO\nCertifico que foi juntada a resposta ao ofício nº 1234567, 
 s.receber_lote(ses, [{"tipo": "documento", "id_sei": "82", "processo": "99/000123/2026", "titulo": "Certidão", "versao": "v1", "conteudo": cert, "hash": rsei.sha(cert)}])
 dc = [d for d in s.processo("99/000123/2026")["documentos"] if d["id_sei"] == "82"][0]
 ok(dc["tipo_codigo"] == "A4" and [x["oficio"] for x in dc["indicios"]] == ["1234567"], "indício de resposta ao ofício 1234567: %s %s" % (dc["tipo_codigo"], dc["indicios"]))
+# Visão geral: "entrou desde a última leitura" só a partir da 2ª leitura, comparando com a anterior
+s.concluir(ses, {"retrato": [{"id": "7", "numero": "99/000123/2026", "atribuicao": "fulano", "marcadores": [{"nome": "Inspeção"}]}]})
+ok(not any(p["entrou_agora"] for p in s.resumo()["processos"]), "1ª leitura: nada para comparar")
+ses2 = s.iniciar("todos")["sessao"]
+s.concluir(ses2, {"retrato": [{"id": "7", "numero": "99/000123/2026"}, {"id": "9", "numero": "99/000125/2026", "tipo": "Carta", "naoVisualizado": True}]})
+rr = {p["original"]: p for p in s.resumo()["processos"]}
+ok(rr["99/000125/2026"]["entrou_agora"] and not rr["99/000123/2026"]["entrou_agora"] and rr["99/000125/2026"]["nao_visualizado"] == 1,
+   "2ª leitura: o processo novo na lista aparece como entrou agora: %s" % {k: v["entrou_agora"] for k, v in rr.items()})
+ses = ses2
 # lido antes da 7.26 com acento quebrado (ISO-8859-1 lido como UTF-8): volta a ser desconhecido, para a próxima leitura trazer de novo
 ruim = "Of\ufffdcio n\ufffd 3. Solicito informa\ufffd\ufffdes."
 s.receber_lote(ses, [{"tipo": "documento", "id_sei": "81", "processo": "99/000123/2026", "titulo": "Of\ufffdcio", "versao": "v1", "conteudo": ruim, "hash": rsei.sha(ruim)}])
@@ -169,6 +178,12 @@ if node:
                 ok(det and det["especificacao"].startswith("Inspeção - Unidade Prisional") and det["unidade"] == "NUSPEN-FICT", "processo com tipo, especificação e unidade: %s" % (det and det["especificacao"]))
                 ob = [o for o in (det or {}).get("obrigacoes", []) if "Determino" in o["frase"]]
                 ok(ob and ob[0]["prazo_quantidade"] == 30, "regras do NUSPEN no texto do SEI da Defensoria: obrigação com prazo de 30 dias")
+                # Visão geral: o retrato da lista do Controle (atribuição, marcadores, não visualizado) chega ao APTO
+                rp = {p["original"]: p for p in api.sei_resumo()["processos"]}
+                p1, p2 = rp.get("99/000111/2026", {}), rp.get("99/000222/2026", {})
+                ok(p1.get("atribuicao") == "fulano" and [m["nome"] for m in p1.get("marcadores", [])] == ["Aguardando resposta"] and p1.get("primeiro_visto"),
+                   "retrato da lista: atribuição e marcador: %s" % {k: p1.get(k) for k in ("atribuicao", "marcadores", "primeiro_visto")})
+                ok(p2.get("nao_visualizado") == 1 and p2.get("tipo") == "Ofício", "não visualizado no SEI e tipo: %s" % {k: p2.get(k) for k in ("nao_visualizado", "tipo")})
     finally:
         if srv:
             srv.shutdown()

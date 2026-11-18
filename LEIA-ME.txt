@@ -43,8 +43,8 @@ Execução). O programa abre na Execução.
   SEEU          a triagem da Mesa do Defensor feita pela extensão, com os
                 prazos, ligada aos assistidos da base (ver "SEEU").
   SEI           processos do SEI lidos pela extensão (leitor do NUSPEN, só
-                leitura), com as obrigações sugeridas para validar (ver
-                "SEI"), no SEI da Defensoria.
+                leitura): Visão geral do que pede atenção hoje e, em
+                Processos, as obrigações sugeridas para validar (ver "SEI").
   Quadro        um quadro só, em kanban, para todo o APTO: pendências dos
                 atendimentos, da Execução ("Enviar ao Quadro"), da Mesa do
                 SEEU e do SEI (ver "QUADRO").
@@ -1248,6 +1248,17 @@ v7.26.0
     Desfazer; "pedido feito" marca a pendência; os cartões antigos vêm para o
     Quadro uma vez.
   - Importar e Exportar únicos, na barra do APTO (ver "FUNÇÕES").
+  - SEI: "Visão geral" (abre nela): Atenção hoje (entraram nos últimos 3
+    dias, com documento novo, com obrigação a validar, com prazo no
+    documento, parados há 30 dias ou mais; clique para filtrar), todos os
+    processos (assunto, marcadores, responsável, quando entrou, última
+    movimentação, situação; a linha abre o processo), processos por marcador
+    e o que entrou desde a leitura anterior. Marcadores, responsável e "não
+    visualizado" vêm da lista do Controle de Processos (extensão 1.13.0);
+    "entrou" e "parado" contam do que o APTO viu, porque a lista do SEI não
+    mostra a data de entrada. Junto das obrigações, uma explicação do
+    Validar/Rejeitar.
+  - Extensão 1.13.0: acentos do SEI e o retrato da lista para a Visão geral.
 
 v7.25.0
   Função SEEU: "Gerar petição…" na intimação aberta, com os mesmos modelos e

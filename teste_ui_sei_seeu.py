@@ -29,6 +29,8 @@ s.receber_lote(ses, [{"tipo": "processo", "id_sei": "7", "numero": "99/000123/20
                [{"tipo": "documento", "id_sei": k, "processo": "99/000123/2026", "titulo": "Despacho" if k == "70" else "Ofício", "versao": "v1", "conteudo": v, "hash": rsei.sha(v)}
                 for k, v in docs.items()] +
                [{"tipo": "processo", "id_sei": "8", "numero": "99/000124/2026", "especificacao": "Outro processo fictício", "unidade": "NUSPEN"}])
+s.concluir(ses, {"retrato": [{"id": "7", "numero": "99/000123/2026", "atribuicao": "assessor ficticio", "tipo": "Inspeção - Unidade Prisional",
+                                "marcadores": [{"nome": "Aguardando resposta", "texto": "cobrar a unidade"}], "naoVisualizado": True}]})
 resumo = s.resumo()
 resumo["leitura"] = {"aberto": True, "andamento": {"fase": "concluida", "processos": 2, "novos": 2, "modificados": 0, "falhas": 0, "quando": 0}}
 proc = {p["numero"]: s.processo(p["numero"]) for p in resumo["processos"]}
