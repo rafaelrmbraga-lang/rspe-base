@@ -219,6 +219,29 @@ pp, lidas = s._ocr("x.pdf", pags)
 ok(lidas == [1] and pp[0].texto.startswith("[lido por OCR, confiança baixa]") and pp[1].texto == "texto nativo", "com Tesseract: página escaneada lida e marcada")
 s.ocr_exe = type(s).ocr_exe
 s.ocr_pagina = type(s).ocr_pagina
+# Tesseract que vem com o APTO: pasta "tesseract" ao lado do APTO.exe, com o português em tessdata (sem precisar instalar)
+import subprocess as _sp  # noqa: E402
+import nuspen_regras.leitura as LEI  # noqa: E402
+pasta_exe = os.path.join(tmp, "programa")
+os.makedirs(os.path.join(pasta_exe, "tesseract", "tessdata"))
+open(os.path.join(pasta_exe, "tesseract", "tesseract.exe"), "w").close()
+ant = (getattr(sys, "frozen", None), sys.executable, _sp.run)
+sys.frozen, sys.executable = True, os.path.join(pasta_exe, "APTO.exe")
+chamadas = []
+_sp.run = lambda args, **k: (chamadas.append(args), types_ns(returncode=0, stdout="texto do OCR"))[1]
+types_ns = __import__("types").SimpleNamespace
+try:
+    exe = LEI.tesseract()
+    ok(exe == os.path.join(pasta_exe, "tesseract", "tesseract.exe"), "acha o Tesseract embutido ao lado do APTO.exe: %s" % exe)
+    txt = LEI.ocr_pagina(os.path.join(AQUI, "extensao_seeu_testes", "pdfs_nuspen", "processo_t1_ficticio.pdf"), 1, exe)
+    ok(txt == "texto do OCR" and "--tessdata-dir" in chamadas[0] and os.path.join(pasta_exe, "tesseract", "tessdata") in chamadas[0]
+       and chamadas[0][-2:] == ["-l", "por"], "OCR com o português embutido: %s" % chamadas[:1])
+finally:
+    if ant[0] is None:
+        del sys.frozen
+    else:
+        sys.frozen = ant[0]
+    sys.executable, _sp.run = ant[1], ant[2]
 # ---- o que mudou nas leituras, novidades desde a visita, encerramento só confirmado ----
 M = N.o_que_mudou()
 ok(M["total"] > 0 and "Resposta recebida" in M["por_tipo"] and any(e["sugestao"] == "providencia" for e in M["eventos"]), "eventos com sugestão: %s" % M["por_tipo"])

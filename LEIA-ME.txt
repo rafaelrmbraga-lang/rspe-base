@@ -1,9 +1,9 @@
-APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.28.0
+APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.29.0
 (antigo RSPE Base; SEEU, programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-7.28.0. A documentação técnica completa (cada parâmetro, a regra, a norma e
+7.29.0. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -87,7 +87,9 @@ QUADRO (função Quadro)
   As pendências dos atendimentos em kanban: Aguardando documento, A fazer, Não
   encaminhou. Arraste o cartão ou use ‹ ›. "Feita" pede a data do protocolo e
   conta na produção do mês; "Arquivar" não conta. WhatsApp (documentos ou
-  baixa) e Petição no cartão. O cartão diz de onde veio (Execução e base, Mesa
+  baixa) e Petição no cartão. Clique no nome (ou em "Relato do atendimento")
+  para ver o relato do assistido no atendimento que gerou a pendência: o Fato
+  Narrado do SAP, o pedido, quem procurou e o que foi registrado. O cartão diz de onde veio (Execução e base, Mesa
   do SEEU, SEI) e mostra "Pedido feito" quando o pedido do mesmo benefício é
   marcado na Execução. É o único quadro: o antigo "Quadro do Usuário" de cada
   base saiu da Execução; os cartões abertos dele vêm para cá (fila A fazer,
@@ -189,8 +191,11 @@ SEI: A GESTÃO (7.27; abas reorganizadas na 7.28)
     página a página, separado em documentos pelo rodapé do SEI, classificado e
     lido pelas regras (tudo sugestão). O original fica guardado sem alteração
     ("originais_sei", com o SHA-256 no nome); o mesmo arquivo de novo só
-    registra o recebimento. Página escaneada fica sem texto (sem OCR neste
-    computador) e é avisada.
+    registra o recebimento. Página escaneada é lida pelo OCR (Tesseract, que
+    vem com o APTO: pasta "tesseract" ao lado do APTO.exe, só o português) e o
+    texto vem marcado "lido por OCR, confiança baixa": confira. Sem a pasta, o
+    APTO usa o Tesseract instalado no computador, se houver; sem nenhum, a
+    página fica sem texto e é avisada.
   Visão geral: além do painel do SEI, os números da gestão (prazos vencidos,
     vencem em 7 dias, a validar, lacunas, ofícios aguardando, demandas
     abertas), "Desde a sua última visita" (o marco só avança quando você
@@ -203,8 +208,8 @@ SEI: A GESTÃO (7.27; abas reorganizadas na 7.28)
     documentos, providências, demandas, ofícios e inspeções, sem acento.
   Nada se apaga: remover é remoção lógica, com motivo, e fica no histórico.
   Ficaram de fora, de propósito: a IA na nuvem (o APTO não manda nada para fora
-    do computador), o OCR (sem Tesseract) e os perfis de acesso com senha (o
-    APTO é local; o Quem registra quem fez).
+    do computador) e os perfis de acesso com senha (o APTO é local; o Quem
+    registra quem fez).
 
 ABERTURA
 O programa abre SEM base carregada. A tela inicial pede: criar uma base nova
@@ -1291,6 +1296,13 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v7.29.0
+  OCR dentro do APTO: o pacote traz o Tesseract (Apache 2.0, licença na pasta)
+  com só o português "rápido" (tessdata_fast), na pasta "tesseract" ao lado do
+  APTO.exe; não é preciso instalar nada. Deixe a pasta junto do APTO.exe.
+  Quadro: clique no nome do cartão para ver o relato do atendimento que gerou
+  a pendência (Fato Narrado do SAP, pedido, quem procurou, registro).
 
 v7.28.0
   SEEU: a baixa da intimação que foi ao Quadro fecha o cartão (a peça conta uma

@@ -659,10 +659,17 @@
     pet.addEventListener("click", () => abrirPet({ nome: p.nome, processos: [p.processo].concat(a ? a.processos : []).filter(Boolean), assistida: a && a.assistida, tipo: p.tipo }));
     const del = el("button", { className: "icone", title: "Excluir a pendência", ariaLabel: "Excluir a pendência" }, ico("lixo"));
     del.addEventListener("click", async () => { if (confirm("Excluir esta pendência?")) { await mudarPecas((ps) => ps.filter((x) => x.id !== p.id)); renderKanban(); } });
+    // relato do atendimento que gerou a pendência (Fato Narrado do SAP e o que foi registrado): clique no nome ou em "Relato"
+    const rel = relatoDoAtendimento(a, p);
+    const nomeBt = rel ? el("button", { className: "knome", type: "button", textContent: p.nome || "(sem nome)", title: "Ver o relato do atendimento",
+      ariaExpanded: "false" }) : el("b", { textContent: p.nome || "(sem nome)" });
+    if (rel) nomeBt.addEventListener("click", () => { rel.open = !rel.open; });
+    if (rel) rel.addEventListener("toggle", () => nomeBt.setAttribute("aria-expanded", String(rel.open)));
     k.append(
-      el("div", { className: "ktopo" }, el("b", { textContent: p.nome || "(sem nome)" }), del),
+      el("div", { className: "ktopo" }, nomeBt, del),
       el("div", { className: "kproc", textContent: (p.processo || "") + (p.data ? ` · ${p.origem === "execucao" || p.origem === "seeu" || p.origem === "sei" ? "enviado" : "atendido"} em ${A.brDeIso(p.data).slice(0, 5)}` : "") + (a && a.contato ? ` · ${a.contato}` : "") }),
       origemPend(p),
+      rel,
       el("div", { className: "klinha" }, peca, prazo),
       obs,
       el("div", { className: "kacoes sec2" }, pet, zap),
@@ -677,6 +684,21 @@
     const ped = p.etiqueta === "pedido" ? el("span", { className: "kped", textContent: "✓ Pedido feito" + (p.pedidoEm ? " em " + A.brDeIso(p.pedidoEm).slice(0, 5) : "") }) : null;
     if (!t.length && !ped) return null;
     return el("div", { className: "korig" }, t.length ? el("span", { textContent: t[0] }) : null, ped);
+  }
+  function relatoDoAtendimento(a, p) {
+    if (!a) return null;
+    const f = a.fato || {};
+    const linha = (rot, txt) => (txt ? el("p", { className: "krl" }, el("b", { textContent: rot + ": " }), String(txt)) : null);
+    const corpo = [
+      linha("Atendido em", [A.brDeIso(a.data), a.hora, a.forma === "virtual" ? "virtual" : a.forma === "presencial" ? "presencial" : ""].filter(Boolean).join(" · ")),
+      linha("Quem procurou", [a.quem, a.contato].filter(Boolean).join(" · ")),
+      linha("Pedido", f.pedido),
+      f.texto ? el("div", { className: "krt" }, el("b", { textContent: "Relato (Fato Narrado do SAP)" + (f.data ? ", " + f.data : "") + (f.defensor ? " · " + f.defensor : "") }),
+        el("p", { textContent: f.texto })) : null,
+      a.corpo ? el("div", { className: "krt" }, el("b", { textContent: "Registrado no atendimento" }), el("p", { textContent: a.corpo })) : null,
+    ].filter(Boolean);
+    if (!corpo.length) corpo.push(el("p", { className: "krl", textContent: "O atendimento não tem relato nem registro escrito." }));
+    return el("details", { className: "krel" }, el("summary", { textContent: "Relato do atendimento" }), ...corpo);
   }
   function renderArquivo() {
     const limite = A.hojeISO(new Date(Date.now() - 60 * 864e5));

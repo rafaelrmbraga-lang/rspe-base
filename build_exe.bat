@@ -24,5 +24,12 @@ python -m PyInstaller --onefile --windowed --clean --name APTO ^
     --exclude-module docxtpl --exclude-module docx --exclude-module docx2pdf ^
     rspe_app.py
 echo.
+REM OCR embutido (opcional no build local): com o Tesseract instalado neste computador, copia para dist\tesseract e baixa só o português
+if exist "%ProgramFiles%\Tesseract-OCR\tesseract.exe" (
+    xcopy /E /I /Y /Q "%ProgramFiles%\Tesseract-OCR" dist\tesseract >nul
+    del /Q dist\tesseract\tessdata\*.traineddata
+    powershell -NoProfile -Command "Invoke-WebRequest 'https://github.com/tesseract-ocr/tessdata_fast/raw/main/por.traineddata' -OutFile 'dist\tesseract\tessdata\por.traineddata'"
+    echo OCR: dist\tesseract (deixe a pasta ao lado do APTO.exe)
+)
 echo Pronto: dist\APTO.exe
 pause
