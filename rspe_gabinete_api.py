@@ -16,6 +16,7 @@ import webbrowser
 import webview
 
 import rspe_gabinete as rgab
+import rspe_nuspen as rnus
 import rspe_sei as rsei
 import rspe_seeu as rseeu
 
@@ -46,6 +47,7 @@ class GabineteApi:
 
     _gab = None
     _sei_obj = None
+    _nus_obj = None
     _gab_trava = threading.Lock()
     _cmd = None
     _sap_aberto = None
@@ -67,6 +69,44 @@ class GabineteApi:
             if self._sei_obj is None:
                 self._sei_obj = rsei.Sei(g)
             return self._sei_obj
+
+    def _nus(self):
+        g = self._gabinete()
+        self._sei()  # as tabelas do SEI antes das da gestão
+        with self._gab_trava:
+            if self._nus_obj is None:
+                self._nus_obj = rnus.Nuspen(g)
+            return self._nus_obj
+
+    def sei_importar_pdf(self, quem="", caminhos=None):
+        """PDF do processo do SEI (ou anexo): escolhidos na janela; cada um é lido, separado pelo rodapé e analisado (sugestões)."""
+        if not caminhos:
+            c = self._janela.create_file_dialog(webview.OPEN_DIALOG, allow_multiple=True, file_types=("PDF (*.pdf)",)) if self._janela else None
+            caminhos = list(c or [])
+        if not caminhos:
+            return {"cancelado": True}
+        out = [self._sei().importar_pdf(c, os.path.join(self._pasta_dados, "originais_sei"), quem) for c in caminhos[:50]]
+        self._js("window.ui && ui.seiEvento && ui.seiEvento({})")
+        return {"ok": True, "arquivos": out}
+
+    def nus(self, metodo, args=None):
+        """Gestão do NUSPEN (demandas, providências, prazos, comunicações, inspeções, minutas, histórico): um ponto de entrada
+        para a tela, só com os métodos públicos (rspe_nuspen.PUBLICOS); regra do domínio volta como {"erro": ...}."""
+        if metodo not in rnus.PUBLICOS:
+            return {"erro": "função desconhecida"}
+        a = args if isinstance(args, list) else ([] if args is None else [args])
+        try:
+            r = getattr(self._nus(), metodo)(*a)
+        except rnus.Erro as e:
+            return {"erro": str(e)}
+        except (TypeError, ValueError) as e:
+            logging.getLogger("rspe").exception("nus %s", metodo)
+            return {"erro": "dados inválidos (%s)" % e}
+        if metodo not in ("obrigacoes", "demandas", "prazos", "lacunas", "comunicacoes", "inspecoes", "regras", "modelos", "historico_geral", "buscar",
+                          "obrigacao", "demanda", "inspecao", "minuta", "painel", "relatorio", "escolhas", "quem_lista", "comparar", "historico_de",
+                          "o_que_mudou", "novidades", "perguntas", "consultar", "arquivos_pdf"):
+            self._js("window.ui && ui.nusMudou && ui.nusMudou(%s)" % json.dumps(metodo))
+        return r if r is not None else {"erro": "não encontrado"}
 
     def _seeu(self):
         g = self._gabinete()

@@ -28,6 +28,12 @@ const SHOTS = process.env.APTO_CAPTURAS || "";
       seeu_triagem: () => fx.triagem,
       sei_resumo: () => fx.resumo,
       sei_processo: (n) => fx.processos[n],
+      // decisões passam pela gestão do NUSPEN (com o Quem): obrigacao_decidir(id, decisão, quem, justificativa, novo texto)
+      nus: (m, a) => { if (m === "quem_lista") return ["Servidora Fictícia"]; if (m === "escolhas") return {};
+        if (m === "obrigacao_decidir") { window.__chamadas.push(["decidir", a[0], a[1], a[3], a[2]]); const o = Object.values(fx.processos).flatMap((p) => p.obrigacoes).find((x) => x.id === a[0]); if (o) o.status = a[1]; return { ok: true }; }
+        if (m === "painel") return { vencidos: 0, vencem_7: 0, sugestoes: 0, lacunas: 0, comunicacoes_aguardando: 0, demandas_abertas: 0 };
+        if (m === "o_que_mudou") return { total: 0, eventos: [], por_tipo: {} }; if (m === "perguntas") return []; if (m === "novidades") return null;
+        return {}; },
       sei_decidir: (id, st, m) => { window.__chamadas.push(["decidir", id, st, m]); const o = Object.values(fx.processos).flatMap((p) => p.obrigacoes).find((x) => x.id === id); if (o) o.status = st; return { ok: true }; },
       sei_para_quadro: (id) => { window.__chamadas.push(["quadroSei", id]); return { ok: true }; },
       seeu_para_quadro: (...a) => { window.__chamadas.push(["quadroSeeu", ...a]); return { ok: true }; },
@@ -162,15 +168,15 @@ const SHOTS = process.env.APTO_CAPTURAS || "";
   await pg.click("#fn_sei");
   await pg.waitForTimeout(400);
   // Visão geral (abre nela): atenção hoje, todos os processos, por marcador, o que entrou
-  ok((await pg.$$eval("#seiPag .fx-atc", (x) => x.length)) === 5, "Visão geral: cinco cartões de atenção");
-  const cNovo = await pg.textContent('#seiPag .fx-atc:has-text("documento novo") b');
+  ok((await pg.$$eval("#seiPag > .fx-at .fx-atc", (x) => x.length)) === 5, "Visão geral: cinco cartões de atenção");
+  const cNovo = await pg.textContent('#seiPag > .fx-at .fx-atc:has-text("documento novo") b');
   ok(cNovo === "1", "com documento novo (na leitura ou não visualizado): " + cNovo);
   ok((await pg.$$eval("#seiPag .fx-tabsei tbody tr", (x) => x.length)) === 2, "tabela com os dois processos");
   const lin = await pg.textContent('#seiPag .fx-tabsei tbody tr:has-text("99/000123/2026")');
   ok(/Aguardando resposta/.test(lin) && /assessor ficticio/.test(lin) && /a validar/.test(lin) && /prazo no documento/.test(lin), "linha com marcador, responsável e situação: " + lin);
   ok(/Aguardando resposta\s*1/.test(await pg.textContent("#seiPag .fx-barras")), "processos por marcador");
   if (SHOTS) await pg.screenshot({ path: path.join(SHOTS, "sei_geral.png"), fullPage: true });
-  await pg.click('#seiPag .fx-atc:has-text("a validar")');
+  await pg.click('#seiPag > .fx-at .fx-atc:has-text("a validar")');
   await pg.waitForTimeout(200);
   ok((await pg.$$eval("#seiPag .fx-tabsei tbody tr", (x) => x.length)) === 1, "cartão filtra a tabela");
   await pg.click('#seiPag .fx-tabsei tbody tr');
@@ -193,10 +199,14 @@ const SHOTS = process.env.APTO_CAPTURAS || "";
   ok(/prazo no documento: 30 dias/.test(t) && /vencimento não calculado/.test(t), "prazo expresso sem vencimento");
   ok(/“[^”]*Determino[^”]*”/.test(t), "frase de origem (fonte)");
   if (SHOTS) await pg.screenshot({ path: path.join(SHOTS, "sei.png") });
+  await pg.selectOption("#nusQuem", "Servidora Fictícia");
   await pg.click('#seiDet .fx-obr button:has-text("Validar")');
   await pg.waitForTimeout(400);
-  ok((await pg.evaluate(() => window.__chamadas)).some((c) => c[0] === "decidir" && c[2] === "validada"), "validar");
+  ok((await pg.evaluate(() => window.__chamadas)).some((c) => c[0] === "decidir" && c[2] === "validada" && c[4] === "Servidora Fictícia"), "validar, com o Quem");
   await pg.click('#seiDet .fx-obr button:has-text("Rejeitar")');
+  await pg.waitForSelector("#modal.on textarea", { timeout: 5000 });
+  await pg.fill("#modal textarea", "não é obrigação do núcleo");
+  await pg.click("#modal button[type=submit]");
   await pg.waitForTimeout(400);
   ok((await pg.evaluate(() => window.__chamadas)).some((c) => c[0] === "decidir" && c[2] === "rejeitada" && c[3]), "rejeitar com motivo");
   await pg.click('#seiDet .fx-obr button:has-text("Enviar ao Quadro")');

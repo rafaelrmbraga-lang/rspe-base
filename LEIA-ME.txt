@@ -1,9 +1,9 @@
-APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.26.0
+APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.27.0
 (antigo RSPE Base; SEEU, programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-7.26.0. A documentação técnica completa (cada parâmetro, a regra, a norma e
+7.27.0. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -42,9 +42,10 @@ Execução). O programa abre na Execução.
                 crie) a base e use as abas de sempre.
   SEEU          a triagem da Mesa do Defensor feita pela extensão, com os
                 prazos, ligada aos assistidos da base (ver "SEEU").
-  SEI           processos do SEI lidos pela extensão (leitor do NUSPEN, só
-                leitura): Visão geral do que pede atenção hoje e, em
-                Processos, as obrigações sugeridas para validar (ver "SEI").
+  SEI           SEI · NUSPEN: processos lidos pela extensão (ou importados
+                em PDF) e a gestão do NUSPEN: providências, prazos,
+                demandas, ofícios, inspeções, minutas e histórico (ver "SEI"
+                e "SEI · NUSPEN: A GESTÃO").
   Quadro        um quadro só, em kanban, para todo o APTO: pendências dos
                 atendimentos, da Execução ("Enviar ao Quadro"), da Mesa do
                 SEEU e do SEI (ver "QUADRO").
@@ -137,6 +138,73 @@ SEI (função SEI)
   se apaga: documento alterado no SEI vira versão nova e a anterior fica como
   substituída (obrigação já validada fica, com o aviso "conferir").
   Dados na base do gabinete (gabinete.sqlite).
+
+SEI · NUSPEN: A GESTÃO (7.27, o sistema do NUSPEN dentro do APTO)
+  Tudo o que o sistema do NUSPEN fazia depois da leitura, reescrito no APTO,
+  na mesma base do gabinete e ligado ao SEI, ao Quadro e ao Relatório. Abas da
+  função SEI: Visão geral, Processos, Providências, Prazos, Demandas,
+  Comunicações, Inspeções, Histórico e relatório, Cadastros.
+  Quem: no alto, escolha o seu nome (a lista é cadastrada em Cadastros). Toda
+  decisão e todo registro guardam quem fez; sem Quem, nada é registrado.
+  Validar: as regras SUGEREM (obrigação, prazo, avaliação); só a pessoa valida.
+    Validar = é obrigação do núcleo (passa a contar como fato); Ajustar =
+    corrigir o texto (o anterior fica guardado); Rejeitar = não é obrigação
+    (com justificativa). Em lote: marque na lista, veja a prévia e confirme.
+  Providências: cada uma com as nove etapas (do documento de origem à
+    resolução), dados (prioridade, responsável, quem assina, destinatário,
+    demanda, encaminhada à coordenação, observações), prazos, lacunas,
+    ofícios, cumprimento, minuta e histórico. Registradas pela leitura do SEI,
+    por PDF, à mão ou a partir de um achado de inspeção.
+  Prazos: natureza (expresso, calculado, não identificado), origem,
+    finalidade, termo inicial com a fonte e regra de contagem. Vencimento só
+    com a data expressa no documento ou calculado por regra APROVADA pela
+    coordenação, de dias corridos, com termo inicial documentado (dias úteis
+    não calculam: falta o calendário de feriados aprovado). Prorrogação,
+    suspensão, retomada e alteração guardam o vencimento anterior. Prazo não
+    validado nunca aparece como vencido. O que falta saber vira LACUNA (prazo
+    sem termo inicial, sem prazo no documento), em vez de inventar. Calendário
+    do mês com os prazos validados.
+  Demandas: demanda não é processo SEI (uma demanda junta vários processos e
+    providências; "concluído no SEI" não é "resolvido"). Situação, tipo,
+    prioridade, histórico; desvincular pede motivo; cancelar, justificativa.
+  Comunicações: o ofício que cumpre ou cobra providências. O APTO não envia
+    nada: registre o envio feito no SEI, reiterações, respostas e a juntada
+    (documento lido do SEI). O estado vem dos fatos (aguardando envio,
+    aguardando resposta, resposta sem juntada, juntada). Resposta recebida NÃO
+    é cumprimento: a avaliação da resposta e a do cumprimento são separadas, e
+    só a avaliação do cumprimento validada muda a situação da providência.
+  Inspeções: estabelecimento, data, achados (categoria, gravidade,
+    recomendação, acompanhamento). A recorrência com a inspeção anterior do
+    mesmo estabelecimento e categoria é só SUGERIDA: você confirma (achados
+    parecidos nunca são fundidos). Cada achado gera providência própria.
+    Comparação com a inspeção anterior (recorrente, só na anterior, nova).
+  Minutas: sem IA, nada sai do computador. Só de providência validada, só com
+    fatos validados, cada frase com a fonte, no padrão do NUSPEN (dados
+    objetivos, conclusão no condicional, consequência em tempo, omissão
+    delimitada) e o modelo escolhido (Despacho, Manifestação à coordenação ou
+    os cadastrados, com versões). Editar, restaurar e aprovar criam versões
+    (nenhuma se perde); "Copiar o texto para o SEI".
+  Importar PDF do SEI (botão no alto da função SEI, ou Importar > PDF de
+    processo do SEI): o processo baixado do SEI (ou um anexo em PDF) é lido
+    página a página, separado em documentos pelo rodapé do SEI, classificado e
+    lido pelas regras (tudo sugestão). O original fica guardado sem alteração
+    ("originais_sei", com o SHA-256 no nome); o mesmo arquivo de novo só
+    registra o recebimento. Página escaneada fica sem texto (sem OCR neste
+    computador) e é avisada.
+  Visão geral: além do painel do SEI, os números da gestão (prazos vencidos,
+    vencem em 7 dias, a validar, lacunas, ofícios aguardando, demandas
+    abertas), "Desde a sua última visita" (o marco só avança quando você
+    marca), "O que mudou nas leituras" (despacho, ofício, resposta, documento
+    de outro órgão, arquivamento: arquivamento só SUGERE e, confirmado, leva as
+    providências abertas à coordenação, sem dar nada por cumprido) e as
+    perguntas prontas (consultas fixas, sem IA, com a origem).
+  Histórico e relatório: tudo o que foi registrado, por Quem, tipo e período,
+    e o relatório de gestão do período. Busca (no alto) em processos,
+    documentos, providências, demandas, ofícios e inspeções, sem acento.
+  Nada se apaga: remover é remoção lógica, com motivo, e fica no histórico.
+  Ficaram de fora, de propósito: a IA na nuvem (o APTO não manda nada para fora
+    do computador), o OCR (sem Tesseract) e os perfis de acesso com senha (o
+    APTO é local; o Quem registra quem fez).
 
 ABERTURA
 O programa abre SEM base carregada. A tela inicial pede: criar uma base nova
@@ -1223,6 +1291,15 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v7.27.0
+  O sistema do NUSPEN dentro do APTO (ver "SEI · NUSPEN: A GESTÃO"): demandas,
+  providências (validar, ajustar, rejeitar, em lote), prazos com regra de
+  contagem aprovada, alterações e lacunas, comunicações com resposta e
+  avaliação, cumprimento, inspeções com achados e recorrência confirmada,
+  minutas com fontes e versões, importação de PDF do SEI (rodapé), o que
+  mudou nas leituras, desde a última visita, perguntas prontas, calendário de
+  prazos, histórico, relatório de gestão e busca. Tudo com Quem; nada se apaga.
 
 v7.26.0
   Revisão geral das funções novas, todas ligadas entre si.

@@ -736,6 +736,50 @@ body:not(.fn-exec) .fnpag{display:block}
 .fx-ent button{flex:1;display:flex;flex-direction:column;align-items:flex-start;border:0;background:none;padding:0;font:inherit;text-align:left;cursor:pointer}
 .fx-ent .fx-num{font-size:var(--fs-12);color:var(--tx3)}
 .fx-expl{font-size:var(--fs-13);color:var(--tx2);background:var(--branco);border-radius:var(--r-2);padding:8px 12px;margin:4px 0 8px}
+.nus-cab{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:10px 0 0}
+.nus-cab label{font-size:var(--fs-13);font-weight:600;color:var(--tx2)}
+.nus-cab select,.nus-cab input{min-height:34px;padding:5px 8px;border:1px solid var(--line2);border-radius:var(--r-1);font:inherit;background:var(--card);color:var(--tx)}
+.nus-cab form{display:flex;gap:6px;flex:1;max-width:560px}
+.nus-cab form input{flex:1}
+.nus-mc{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.nus-mc h2{margin:0;font-size:var(--fs-16)}
+.nus-form,.nus-grade{display:grid;gap:10px;margin-top:10px}
+.nus-grade{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+.nus-f{display:flex;flex-direction:column;gap:3px}
+.nus-f label{font-size:var(--fs-12);font-weight:600;color:var(--tx2)}
+.nus-f small{font-size:var(--fs-11);color:var(--tx3)}
+.nus-f input,.nus-f select,.nus-f textarea{min-height:34px;padding:6px 8px;border:1px solid var(--line2);border-radius:var(--r-1);font:inherit;color:var(--tx);background:var(--card)}
+.nus-f textarea{resize:vertical}
+.nus-in{flex-direction:row;align-items:center;gap:8px;margin:4px 0}
+.nus-item{padding:10px 0;border-bottom:1px solid var(--line)}
+.nus-item .fx-acoes{margin-top:6px}
+.nus-resp{margin:6px 0 0 12px;font-size:var(--fs-13)}
+.nus-alt{margin:4px 0 0 18px;font-size:var(--fs-12);color:var(--tx2)}
+.nus-etapas{list-style:none;margin:12px 0;padding:0;display:flex;flex-wrap:wrap;gap:6px}
+.nus-etapas li{padding:4px 10px;border-radius:var(--r-pill);font-size:var(--fs-12);border:1px solid var(--line);color:var(--tx3)}
+.nus-etapas li.feita{background:var(--g-bg);color:var(--g-tx);border-color:transparent}
+.nus-etapas li.atual{border-color:var(--pri);color:var(--pri);font-weight:600}
+.nus-res{list-style:none;margin:0;padding:0}
+.nus-res button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;padding:8px 6px;border:0;border-bottom:1px solid var(--line);background:none;font:inherit;text-align:left;cursor:pointer}
+.nus-res button:hover{background:var(--branco)}
+.nus-res span{font-size:var(--fs-12);color:var(--tx2)}
+.nus-filtros{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px;margin-bottom:8px}
+.nus-cont{display:inline-flex;gap:4px;align-items:baseline;padding:4px 10px;border:1px solid var(--line);border-radius:var(--r-pill);font-size:var(--fs-12)}
+.nus-kv li{grid-template-columns:1fr auto}
+.fx-atc b.nv-crit{color:var(--r-tx)}.fx-atc b.nv-urg{color:var(--o-tx)}.fx-atc b.nv-med{color:var(--a-tx)}.fx-atc b.nv-prox{color:var(--b-tx)}.fx-atc b.nv-neu{color:var(--tx2)}
+.nus-perg{display:flex;flex-wrap:wrap;gap:6px}
+.nus-li{display:flex;align-items:flex-start;gap:6px}
+.nus-li .nus-sel{margin-top:14px;width:18px;height:18px;flex:none}
+.nus-li .fx-proc{flex:1;min-width:0}
+.nus-calc{display:flex;align-items:center;gap:10px;margin:6px 0}
+.nus-calc b{text-transform:capitalize;min-width:160px;text-align:center}
+.nus-cal{width:100%;border-collapse:collapse;table-layout:fixed;margin-bottom:12px}
+.nus-cal th{font-size:var(--fs-12);color:var(--tx2);padding:4px}
+.nus-cal td{border:1px solid var(--line);height:72px;vertical-align:top;padding:4px;background:var(--card)}
+.nus-cal td.hoje{box-shadow:inset 0 0 0 2px var(--pri)}
+.nus-dia{font-size:var(--fs-12);color:var(--tx3)}
+.nus-calp{display:block;width:100%;margin-top:2px;padding:2px 4px;border:0;border-radius:var(--r-1);background:var(--o-bg);color:var(--o-tx);font:inherit;font-size:var(--fs-11);text-align:left;cursor:pointer;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.nus-calp.venc{background:var(--r-bg);color:var(--r-tx)}
 .fx-ind{background:var(--pri-soft);color:var(--tx);border-radius:var(--r-2);padding:8px 12px}
 .fx-hist{margin-top:4px;font-size:var(--fs-12);color:var(--tx2)}
 .fx-hist ul{margin:4px 0 0 18px;padding:0}
@@ -2019,7 +2063,7 @@ tbody td,.stat b,.dc-it,.jz-t b,.bd-leg td,.tabs .tab .cnt,.kv{font-variant-nume
 </head>
 <body class="fn-exec">
 <nav class="fnbar" id="fnbar" aria-label="Funções do APTO"><span class="fnmarca">APTO</span><div class="fntabs" role="tablist" aria-label="Funções"><button class="fn" role="tab" id="fn_atend" aria-selected="false" title="Atendimentos (Ctrl+1)" onclick="ui.funcao('atend')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18.5 14a6 6 0 0 1 3 5.5"/></svg>Atendimentos</button><button class="fn on" role="tab" id="fn_exec" aria-selected="true" title="Execução (Ctrl+2)" onclick="ui.funcao('exec')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v14"/><path d="M2 21h20M9 7h6M9 11h6M9 15h4"/></svg>Execução</button><button class="fn" role="tab" id="fn_seeu" aria-selected="false" title="SEEU (Ctrl+3)" onclick="ui.funcao('seeu')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18M5 7h14M7 7l-3 7a3 3 0 0 0 6 0zM17 7l-3 7a3 3 0 0 0 6 0z"/><path d="M8 21h8"/></svg>SEEU</button><button class="fn" role="tab" id="fn_sei" aria-selected="false" title="SEI (Ctrl+4)" onclick="ui.funcao('sei')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 13h6M9 17h6"/></svg>SEI</button><button class="fn" role="tab" id="fn_quadro" aria-selected="false" title="Quadro (Ctrl+5)" onclick="ui.funcao('quadro')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/></svg>Quadro</button><button class="fn" role="tab" id="fn_rel" aria-selected="false" title="Relatório (Ctrl+6)" onclick="ui.funcao('rel')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Relatório</button></div><span class="fnesp"></span><div class="fnacoes"><div class="rel"><button class="fnbtn" id="btnImp" aria-haspopup="menu" title="Importar: RSPE e fichas (Execução) ou a cópia do gabinete" onclick="ui.menu('mImp')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V9M7 14l5-5 5 5M5 3h14"/></svg>Importar<svg class="car" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button><div class="menu dir" id="mImp" role="menu"><div class="mh">Execução (base aberta)</div><button role="menuitem" onclick="api('importar_pdfs')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span><b>Arquivos PDF…</b><small>RSPE e fichas disciplinares, um ou vários</small></span></button>
-      <button role="menuitem" onclick="api('importar_pasta')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span><b>Uma pasta inteira…</b><small>todos os PDF da pasta e das subpastas</small></span></button><div class="mh">Gabinete (Atendimentos, Quadro, produção)</div><button role="menuitem" onclick="ui.gabImportar()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V9M7 14l5-5 5 5M5 3h14"/></svg><span><b>Cópia do gabinete (.json)…</b><small>junta o que ainda não existe (também a da extensão antiga); nada é apagado</small></span></button></div></div><div class="rel"><button class="fnbtn" id="btnExp" aria-haspopup="menu" title="Exportar: Execução, Mesa do SEEU, relatórios do gabinete e a cópia do gabinete" onclick="ui.menu('mExp')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>Exportar<svg class="car" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button><div class="menu dir" id="mExp" role="menu"><div class="mh">Execução (base aberta)</div><button role="menuitem" onclick="ui.fnExec(()=>ui.modalExportar('xlsx'))"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4zM4 10h16M10 4v16"/></svg><span><b>Excel</b><small>as abas da base, numa planilha</small></span></button>
+      <button role="menuitem" onclick="api('importar_pasta')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span><b>Uma pasta inteira…</b><small>todos os PDF da pasta e das subpastas</small></span></button><div class="mh">SEI</div><button role="menuitem" onclick="ui.nusImportarPdf()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/></svg><span><b>PDF de processo do SEI…</b><small>separado pelo rodapé e lido pelas regras do NUSPEN (sugestões)</small></span></button><div class="mh">Gabinete (Atendimentos, Quadro, produção)</div><button role="menuitem" onclick="ui.gabImportar()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V9M7 14l5-5 5 5M5 3h14"/></svg><span><b>Cópia do gabinete (.json)…</b><small>junta o que ainda não existe (também a da extensão antiga); nada é apagado</small></span></button></div></div><div class="rel"><button class="fnbtn" id="btnExp" aria-haspopup="menu" title="Exportar: Execução, Mesa do SEEU, relatórios do gabinete e a cópia do gabinete" onclick="ui.menu('mExp')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>Exportar<svg class="car" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button><div class="menu dir" id="mExp" role="menu"><div class="mh">Execução (base aberta)</div><button role="menuitem" onclick="ui.fnExec(()=>ui.modalExportar('xlsx'))"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4zM4 10h16M10 4v16"/></svg><span><b>Excel</b><small>as abas da base, numa planilha</small></span></button>
       <button role="menuitem" onclick="ui.fnExec(()=>ui.modalExportar('pdf'))"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/></svg><span><b>PDF da aba</b><small>a tabela da aba aberta, em paisagem</small></span></button>
       <button role="menuitem" onclick="ui.fnExec(()=>ui.modalRelatorios())"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h8l4 4v14H6z"/><path d="M9 13h6M9 17h6M9 9h2"/></svg><span><b>Relatórios em PDF</b><small>individuais, geral da base, remição</small></span></button>
       <button role="menuitem" onclick="ui.fnExec(()=>ui.modalProvidencias())"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg><span><b>Relatório de providências</b><small>pedidos e ofícios marcados, por mês</small></span></button><div class="mh">SEEU e gabinete</div><button role="menuitem" onclick="ui.fnSeeuPlanilha()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16v16H4zM4 10h16M10 4v16"/></svg><span><b>Planilha da Mesa do SEEU</b><small>as intimações à vista na tela do SEEU, em Excel</small></span></button><button role="menuitem" onclick="ui.funcao('rel')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h8l4 4v14H6z"/><path d="M9 13h6M9 17h6M9 9h2"/></svg><span><b>Relatório do dia e produção do mês</b><small>abre a função Relatório</small></span></button><button role="menuitem" onclick="ui.gabExportar()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg><span><b>Cópia do gabinete (.json)</b><small>atendimentos, Quadro, produção e frases prontas</small></span></button></div></div></div></nav>
@@ -4949,11 +4993,12 @@ ui.seiEvento=function(d){ if(d&&d.estado&&this._sei){ this._sei.leitura=d.estado
   clearTimeout(this._seiT); this._seiT=setTimeout(()=>{ if(this.fn==='sei') this.seiCarregar(); else this._sei=null; },800); };
 ui.seiFiltro=function(k){ this.sei.f=this.sei.f===k?'todos':k; this.seiPintar(); };
 ui.seiAbrirProc=async function(n){ this.sei.sel=n; this.sei.docs=new Set(); this._seiP=await API_().sei_processo(n); this.seiPintar(); const d=document.getElementById('seiDet'); if(d) d.focus(); };
-ui.seiDecidir=async function(id, st){ let motivo=''; if(st==='rejeitada'){ motivo=prompt('Motivo para rejeitar a sugestão (fica registrado):',''); if(motivo===null) return; }
+ui.seiDecidir=function(id, st){ return this.nusDecidir(id, st==='sugestao'?'sugestao':st); };
+ui.seiDecidirAntigo=async function(id, st){ let motivo=''; if(st==='rejeitada'){ motivo=prompt('Motivo para rejeitar a sugestão (fica registrado):',''); if(motivo===null) return; }
   const r=await API_().sei_decidir(id, st, motivo); if(r&&r.erro){ this.toast(r.erro,{erro:true}); return; } await this.seiCarregar(); };
 ui.seiQuadro=async function(id){ const r=await API_().sei_para_quadro(id); this.toast(r&&r.ok?'Enviado ao Quadro (A fazer).':(r&&r.erro)||'Falha.',{erro:!(r&&r.ok)}); await this.seiCarregar(); };
 ui.seiDoc=function(id){ const D=this.sei.docs; D.has(id)?D.delete(id):D.add(id); this.seiPintar(); };
-ui.SEI_ST={sugestao:['Sugestão','med'],validada:['Validada','ok'],rejeitada:['Rejeitada','neu'],substituida:['Substituída','neu']};
+ui.SEI_ST={sugestao:['Sugestão','med'],validada:['Validada','ok'],ajustada:['Ajustada','ok'],rejeitada:['Rejeitada','neu'],substituida:['Substituída','neu']};
 // (7.26) Visão geral do SEI: o que pede atenção hoje, a partir do que a extensão leu (lista do Controle de Processos e documentos).
 // "Entrou" e "parado" contam do que o APTO viu (o SEI não mostra a data de entrada na lista); prazo do documento sem vencimento calculado.
 ui.seiDias=function(iso){ if(!iso) return null; const d=new Date(String(iso).replace(' ','T')); if(isNaN(d)) return null; const h=new Date(); return Math.floor((h-d)/864e5); };
@@ -4995,11 +5040,14 @@ ui.seiPintar=function(){ const P=document.getElementById('seiPag'); if(!P) retur
   if(!R){ P.innerHTML='<p class="muted">Carregando…</p>'; return; }
   const T=R.totais||{}, S=this.sei;
   const ler=`<div id="seiLer">${this.fxLeitura('sei',R.leitura,'Ler o SEI')}</div>`;
-  if(!(R.processos||[]).length){ P.innerHTML=`<div class="fx-cab"><div><h1>SEI</h1><p class="sub">Nenhum processo do SEI lido ainda.</p></div></div>${ler}
+  const abas=`<div class="fx-vistas" role="tablist" aria-label="SEI">${this.NUS_VISTAS.map(([k,n])=>`<button type="button" role="tab" aria-selected="${S.vista===k}" class="${S.vista===k?'on':''}" onclick="ui.sei.vista='${k}';ui.seiPintar()">${n}</button>`).join('')}</div>`;
+  if(!(R.processos||[]).length && S.vista!=='geral' && S.vista!=='proc'){ P.innerHTML=`<div class="fx-cab"><div><h1>SEI · NUSPEN</h1><p class="sub">Nenhum processo do SEI lido ainda: a gestão funciona com o que você registrar.</p></div></div>${ler}<div id="nusCabW"></div>${abas}<div id="nusVista"><p class="muted">Carregando…</p></div>`; this.nusPintar(); return; }
+  if(!(R.processos||[]).length){ P.innerHTML=`<div class="fx-cab"><div><h1>SEI · NUSPEN</h1><p class="sub">Nenhum processo do SEI lido ainda.</p></div></div>${ler}<div id="nusCabW"></div>${abas}
     <div class="fx-vazio"><b>Como ler o SEI</b><ol><li>No navegador, entre no SEI da Defensoria e abra o <b>Controle de Processos</b> (a leitura começa dele). Aqui aparece "SEI aberto".</li>
     <li>Clique em <b>Ler o SEI</b>, aqui. A extensão lê na própria aba do SEI, com a sua sessão (só leitura); não navegue nela até terminar.</li><li>Se parar no meio, clique de novo: continua de onde parou.</li></ol>
     <p class="fx-aviso">Ainda não lido: anexos em PDF (só os documentos feitos no SEI) e a lista paginada (se o SEI mostrar a lista em várias páginas, só a primeira é lida, com aviso).</p>
-    <p class="muted">A leitura é só leitura, na sua sessão: nada é escrito no SEI, e nada vai para fora do computador.</p></div>`; return; }
+    <p class="muted">A leitura é só leitura, na sua sessão: nada é escrito no SEI, e nada vai para fora do computador.</p></div>${S.vista==='geral'?'<div id="nusGeral"></div>':''}`;
+    this.nusPrep().then(()=>{ const c=document.getElementById('nusCabW'); if(c) c.innerHTML=this.nusCab(); }); if(S.vista==='geral') this.nusGeral(); return; }
   const q=semAcento(S.q||'');
   const Ps=R.processos.filter(p=>(!q||semAcento(p.original+' '+p.especificacao+' '+p.unidade).includes(q)) &&
     (S.f==='todos' || (S.f==='sug'&&p.obrigacoes.sugestao) || (S.f==='val'&&p.obrigacoes.validada) || (S.f==='falhas'&&p.falhas) || (S.f==='fora'&&p.fora_da_lista)));
@@ -5014,8 +5062,9 @@ ui.seiPintar=function(){ const P=document.getElementById('seiPag'); if(!P) retur
       ${o.destinatario?`<div class="muted">Para: ${esc(o.destinatario)}</div>`:''}<div>${prazo(o)}</div>
       <blockquote class="fx-fonte" title="Frase do documento (fonte)">“${esc(o.frase)}”</blockquote><div class="muted">regra «${esc(String(o.regra||'').split(':').pop())}» (${esc(String(o.regra||'').split(':')[0])})${o.motivo?' · '+esc(o.motivo):''}${o.decidido_em?' · '+esc(o.decidido_em):''}</div>
       ${(o.historico||[]).length>1?`<details class="fx-hist"><summary>Histórico (${o.historico.length})</summary><ul>${o.historico.map(h=>`<li>${esc(h.quando)}: ${esc((this.SEI_ST[h.de]||[h.de])[0])} → ${esc((this.SEI_ST[h.para]||[h.para])[0])}${h.motivo?' · '+esc(h.motivo):''}</li>`).join('')}</ul></details>`:''}
-      <div class="fx-acoes">${o.status==='sugestao'?`<button type="button" class="btn pri" onclick="ui.seiDecidir(${o.id},'validada')">Validar</button><button type="button" class="btn" onclick="ui.seiDecidir(${o.id},'rejeitada')">Rejeitar…</button>`:''}
-      ${o.status==='validada'||o.status==='rejeitada'?`<button type="button" class="btn ghost" onclick="ui.seiDecidir(${o.id},'sugestao')">Voltar a sugestão</button>`:''}
+      <div class="fx-acoes">${o.status==='sugestao'?`<button type="button" class="btn pri" onclick="ui.seiDecidir(${o.id},'validada')">Validar</button><button type="button" class="btn" onclick="ui.seiDecidir(${o.id},'ajustada')">Ajustar…</button><button type="button" class="btn" onclick="ui.seiDecidir(${o.id},'rejeitada')">Rejeitar…</button>`:''}
+      ${o.status!=='sugestao'&&o.status!=='substituida'?`<button type="button" class="btn ghost" onclick="ui.nusIr('prov',${o.id})">Abrir a providência (prazos, ofícios, cumprimento)</button>`:''}
+      ${o.status==='validada'||o.status==='rejeitada'||o.status==='ajustada'?`<button type="button" class="btn ghost" onclick="ui.seiDecidir(${o.id},'sugestao')">Voltar a sugestão</button>`:''}
       ${o.status!=='substituida'&&o.status!=='rejeitada'?(o.quadro?'<span class="muted">✓ no Quadro</span>':`<button type="button" class="btn" onclick="ui.seiQuadro(${o.id})">Enviar ao Quadro</button>`):''}</div></li>`; };
   const doc=d=>{ const ab=S.docs.has(d.id);
     return `<li class="fx-doc${d.substituido_por?' subst':''}"><button type="button" class="fx-docb" aria-expanded="${ab}" onclick="ui.seiDoc(${d.id})"><b>${esc(d.titulo||'(sem título)')}</b>
@@ -5029,14 +5078,352 @@ ui.seiPintar=function(){ const P=document.getElementById('seiPag'); if(!P) retur
       <h3>Documentos <span class="muted">(${D.documentos.length})</span></h3><ul class="fx-lista">${D.documentos.map(doc).join('')}</ul>
       ${(D.eventos||[]).length?`<h3>Mudanças</h3><ul class="fx-lista">${D.eventos.map(e=>`<li class="muted">${esc(e.quando)} · ${esc(e.descricao)}</li>`).join('')}</ul>`:''}</div>`;
   const U=R.ultima;
-  P.innerHTML=`<div class="fx-cab"><div><h1>SEI</h1><p class="sub">${U?esc('Última leitura: '+(U.concluida||U.iniciada)+' · '+({concluida:'concluída',em_andamento:'em andamento',interrompida:'interrompida (continua de onde parou)',falhou:'com falha'}[U.status]||String(U.status||'').replace(/_/g,' '))+' · '+U.novos+' novo(s), '+U.modificados+' alterado(s)'+(U.falhas?', '+U.falhas+' falha(s)':'')):''}</p></div>
-    </div>${ler}
-    <div class="fx-vistas" role="tablist" aria-label="SEI">${[['geral','Visão geral'],['proc','Processos']].map(([k,n])=>`<button type="button" role="tab" aria-selected="${S.vista===k}" class="${S.vista===k?'on':''}" onclick="ui.sei.vista='${k}';ui.seiPintar()">${n}</button>`).join('')}</div>
-    ${S.vista==='geral'?this.seiGeral(R):`${this.fxCont('sei',[['todos',T.processos||0,'processos'],['sug',T.sugestoes||0,'obrigações a validar','med'],['val',T.validadas||0,'validadas','ok'],['falhas',T.falhas||0,'falhas de leitura','crit']],S.f,'ui.seiFiltro')}
+  P.innerHTML=`<div class="fx-cab"><div><h1>SEI · NUSPEN</h1><p class="sub">${U?esc('Última leitura: '+(U.concluida||U.iniciada)+' · '+({concluida:'concluída',em_andamento:'em andamento',interrompida:'interrompida (continua de onde parou)',falhou:'com falha'}[U.status]||String(U.status||'').replace(/_/g,' '))+' · '+U.novos+' novo(s), '+U.modificados+' alterado(s)'+(U.falhas?', '+U.falhas+' falha(s)':'')):''}</p></div>
+    </div>${ler}<div id="nusCabW">${this.nusCab()}</div>
+    <div class="fx-vistas" role="tablist" aria-label="SEI">${this.NUS_VISTAS.map(([k,n])=>`<button type="button" role="tab" aria-selected="${S.vista===k}" class="${S.vista===k?'on':''}" onclick="ui.sei.vista='${k}';ui.seiPintar()">${n}</button>`).join('')}</div>
+    ${S.vista==='geral'?this.seiGeral(R)+'<div id="nusGeral"></div>':S.vista!=='proc'?'<div id="nusVista"><p class="muted">Carregando…</p></div>':`${this.fxCont('sei',[['todos',T.processos||0,'processos'],['sug',T.sugestoes||0,'obrigações a validar','med'],['val',T.validadas||0,'validadas','ok'],['falhas',T.falhas||0,'falhas de leitura','crit']],S.f,'ui.seiFiltro')}
     <div class="fx-sei"><aside><label class="vh" for="seiQ">Buscar processo</label><input id="seiQ" type="search" placeholder="Buscar nº, especificação ou unidade" value="${esc(S.q)}" oninput="ui.sei.q=this.value;ui.seiPintar();document.getElementById('seiQ').focus()">
       <ul class="fx-procs">${lista}</ul></aside><section id="seiDet" tabindex="-1" aria-live="polite">${det}</section></div>`}
     <p class="muted fx-nota">Obrigação e prazo são sugestões das regras do NUSPEN, sempre com a frase do documento; só a pessoa valida. O APTO nunca escreve no SEI.</p>`;
-  const q2=document.getElementById('seiQ'); if(q2&&S.q){ q2.setSelectionRange(S.q.length,S.q.length); } };
+  const q2=document.getElementById('seiQ'); if(q2&&S.q){ q2.setSelectionRange(S.q.length,S.q.length); }
+  if(S.vista==='geral') this.nusGeral(); else if(S.vista!=='proc') this.nusPintar(); else if(!this._nusQuemL) this.nusPrep().then(()=>{ const c=document.getElementById('nusCabW'); if(c) c.innerHTML=this.nusCab(); }); };
+// ---------------- (7.27) NUSPEN no APTO: gestão depois da leitura do SEI (demandas, providências, prazos, comunicações, inspeções,
+// minutas, histórico). Regras em rspe_nuspen.py; aqui só a tela. Toda decisão leva o "Quem"; nada se apaga (remoção lógica com motivo).
+ui.NUS_VISTAS=[['geral','Visão geral'],['proc','Processos'],['prov','Providências'],['prazos','Prazos'],['dem','Demandas'],['com','Comunicações'],['insp','Inspeções'],['hist','Histórico e relatório'],['cad','Cadastros']];
+ui.nusQuem=(()=>{ try{ return localStorage.getItem('apto_quem')||''; }catch(e){ return ''; } })();
+ui.nus=async function(m, ...a){ const B=API_(); if(!B||!B.nus){ this.toast('O APTO ainda está abrindo.',{erro:true}); return null; }
+  const r=await B.nus(m, a); if(r&&r.erro){ this.toast(r.erro,{erro:true}); return null; } return r; };
+ui.nusEsc=async function(){ if(!this._nusEsc) this._nusEsc=await this.nus('escolhas'); return this._nusEsc||{}; };
+ui.nusRot=function(lista, v){ const x=(lista||[]).find(e=>e[0]===v); return x?x[1]:(v||''); };
+ui.nusBr=iso=>iso?String(iso).slice(0,10).split('-').reverse().join('/'):'';
+ui.nusOpts=(lista, v, vazio)=>(vazio!=null?`<option value="">${esc(vazio)}</option>`:'')+(lista||[]).map(([k,n])=>`<option value="${esc(k)}" ${String(k)===String(v??'')?'selected':''}>${esc(n)}</option>`).join('');
+ui.nusTag=(nivel, txt)=>`<span class="fx-tag ${nivel}"><span aria-hidden="true">${ui.FX_FORMA[nivel]||'–'}</span> ${esc(txt)}</span>`;
+ui.NUS_ST={sugestao:['Sugestão','med'],validada:['Validada','ok'],ajustada:['Ajustada','ok'],rejeitada:['Rejeitada','neu'],substituida:['Substituída','neu']};
+ui.nusSt=function(st){ const x=this.NUS_ST[st]||[st,'neu']; return this.nusTag(x[1],x[0]); };
+ui.NUS_ESTADO_NIVEL={'Identificada':'med','Aguardando início':'neu','Em elaboração':'prox','Aguardando envio':'urg','Aguardando resposta':'prox','Aguardando reiteração':'crit',
+  'Resposta recebida':'prox','Juntada identificada':'prox','Em análise':'med','Cumprida parcialmente':'med','Cumprida integralmente':'ok','Não cumprida':'crit','Encerrada':'neu','Rejeitada':'neu'};
+ui.nusMudou=function(){ if(this.fn==='sei'&&this.sei.vista!=='geral'&&this.sei.vista!=='proc'&&!document.querySelector('#modal.on')) this.nusPintar(); };
+// cabeçalho: Quem e busca
+ui.nusCab=function(){ const L=this._nusQuemL||[];
+  return `<div class="nus-cab"><label for="nusQuem">Quem</label><select id="nusQuem" onchange="ui.nusQuemEscolher(this.value)">${this.nusOpts(L.map(n=>[n,n]), this.nusQuem, L.length?'— escolha —':'— cadastre em Cadastros —')}</select>
+    <span class="fx-esp"></span><form role="search" onsubmit="event.preventDefault();ui.nusBuscar(this.q.value)"><label class="vh" for="nusBusca">Buscar no SEI e na gestão</label>
+    <input id="nusBusca" name="q" type="search" placeholder="Buscar em processos, documentos, providências, demandas, inspeções"><button class="btn" type="submit">Buscar</button></form>
+    <button type="button" class="btn" onclick="ui.nusImportarPdf()" title="Processo baixado do SEI ou anexo em PDF: separado pelo rodapé e lido pelas regras do NUSPEN">Importar PDF do SEI…</button></div>`; };
+ui.nusQuemEscolher=function(v){ this.nusQuem=v; try{ localStorage.setItem('apto_quem',v); }catch(e){} };
+ui.nusPrep=async function(){ this._nusQuemL=(await this.nus('quem_lista'))||[]; await this.nusEsc(); };
+ui.nusBuscar=async function(q){ const r=await this.nus('buscar', q); if(!r) return;
+  const ir={processo:x=>`ui.sei.vista='proc';ui.seiAbrirProc(${jsa(x.id)});ui.fecharModal()`, obrigacao:x=>`ui.fecharModal();ui.nusIr('prov',${x.id})`, demanda:x=>`ui.fecharModal();ui.nusIr('dem',${x.id})`,
+    comunicacao:()=>`ui.fecharModal();ui.nusIr('com')`, inspecao:x=>`ui.fecharModal();ui.nusIr('insp',${x.id})`, achado:x=>`ui.fecharModal();ui.nusIr('insp',${x.id})`, documento:()=>`ui.fecharModal();ui.nusIr('proc')`};
+  const T={processo:'Processo',documento:'Documento',obrigacao:'Providência',demanda:'Demanda',comunicacao:'Comunicação',inspecao:'Inspeção',achado:'Achado'};
+  this.nusModal(`Busca: ${q}`, r.length?`<ul class="nus-res">${r.map(x=>`<li><button type="button" onclick="${ir[x.tipo](x)}"><b>${T[x.tipo]}</b><span>${esc(x.trecho)}</span></button></li>`).join('')}</ul>`:'<p class="muted">Nada encontrado.</p>'); };
+ui.nusIr=function(vista, id){ this.sei.vista=vista; this._nusSel=Object.assign(this._nusSel||{}, {[vista]:id??null}); this.seiPintar(); };
+// janela com formulário: campos [{k, rot, tipo, opcoes, valor, obrig, ajuda}] -> aoGravar(valores) (devolve true para fechar)
+ui.nusModal=function(titulo, corpo, largura){ const M=document.getElementById('modal'); this._nusVolta=document.activeElement;
+  M.innerHTML=`<div class="box nus-box" role="dialog" aria-modal="true" aria-labelledby="nusMt" style="width:${largura||640}px;max-height:90vh;overflow:auto"><div class="nus-mc"><h2 id="nusMt">${esc(titulo)}</h2><button type="button" class="btn ghost" aria-label="Fechar" onclick="ui.fecharModal()">${ui.ICO.x}</button></div>${corpo}</div>`;
+  M.classList.add('on'); M.onclick=e=>{ if(e.target===M) this.fecharModal(); }; M.onkeydown=e=>{ if(e.key==='Escape') this.fecharModal(); };
+  const f=M.querySelector('input,select,textarea,button:not(.ghost)'); if(f) f.focus(); };
+ui.nusForm=function(titulo, campos, aoGravar, rotulo){ this._nusF=aoGravar;
+  const campo=c=>{ const id='nf_'+c.k, req=c.obrig?' required aria-required="true"':'';
+    const ctl=c.tipo==='textarea'?`<textarea id="${id}" name="${c.k}" rows="${c.linhas||3}"${req}>${esc(c.valor||'')}</textarea>`:
+      c.tipo==='select'?`<select id="${id}" name="${c.k}"${req}>${this.nusOpts(c.opcoes, c.valor, c.vazio)}</select>`:
+      c.tipo==='multi'?`<select id="${id}" name="${c.k}" multiple size="${Math.min(6,Math.max(2,(c.opcoes||[]).length))}">${this.nusOpts(c.opcoes, '')}</select>`:
+      `<input id="${id}" name="${c.k}" type="${c.tipo==='date'?'text':c.tipo||'text'}" ${c.tipo==='date'?'placeholder="dd/mm/aaaa" inputmode="numeric"':''} value="${esc(c.valor||'')}"${req}>`;
+    return `<div class="nus-f"><label for="${id}">${esc(c.rot)}${c.obrig?' <span aria-hidden="true">*</span>':''}</label>${ctl}${c.ajuda?`<small>${esc(c.ajuda)}</small>`:''}</div>`; };
+  this.nusModal(titulo, `<form class="nus-form" onsubmit="event.preventDefault();ui.nusFormEnviar(this)">${campos.map(campo).join('')}<p class="fx-petmsg" id="nfMsg" role="alert"></p>
+    <div class="fx-acoes"><button type="submit" class="btn pri">${esc(rotulo||'Gravar')}</button><button type="button" class="btn" onclick="ui.fecharModal()">Cancelar</button></div></form>`); };
+ui.nusFormEnviar=async function(f){ const v={}; for(const el of f.elements){ if(!el.name) continue; v[el.name]=el.multiple?[...el.selectedOptions].map(o=>o.value):el.value; }
+  if(!this.nusQuem){ document.getElementById('nfMsg').textContent='Escolha quem está registrando (Quem, no alto da tela).'; return; }
+  const r=await this._nusF(v); if(r){ this.fecharModal(); this.nusRecarregar(); } };
+ui.nusRecarregar=async function(){ if(this.sei.vista==='proc'&&this.sei.sel){ this._sei=await API_().sei_resumo(); this.seiAbrirProc(this.sei.sel); } else if(this.sei.vista==='geral') this.seiCarregar(); else this.nusPintar(); };
+ui.nusPede=function(titulo, rot, aoGravar, obrig){ this.nusForm(titulo, [{k:'t', rot, tipo:'textarea', obrig:obrig!==false}], v=>aoGravar(v.t)); };
+ui.nusRemover=function(objeto, id){ this.nusPede('Remover (nada se apaga)', 'Motivo (fica no histórico)', async m=>{ const r=await this.nus('remover', objeto, id, this.nusQuem, m); if(r) this._nusSel={}; return r; }); };
+// ---------------- desenho de cada vista ----------------
+ui.nusPintar=async function(){ const el=document.getElementById('nusVista'); if(!el) return; const v=this.sei.vista; await this.nusPrep();
+  const cab=document.getElementById('nusCabW'); if(cab) cab.innerHTML=this.nusCab();
+  try{ el.innerHTML=await ({prov:()=>this.nusProv(), prazos:()=>this.nusPrazos(), dem:()=>this.nusDem(), com:()=>this.nusCom(), insp:()=>this.nusInsp(), hist:()=>this.nusHist(), cad:()=>this.nusCad()}[v]||(()=>''))(); }
+  catch(e){ el.innerHTML=`<p class="fx-aviso">Não foi possível montar a tela: ${esc(e.message||e)}</p>`; } };
+// ---- Providências ----
+ui.nusProv=async function(){ const sel=(this._nusSel||{}).prov, f=this._nusFiltro||'';
+  const L=(await this.nus('obrigacoes'))||[], E=await this.nusEsc();
+  const est={}; L.forEach(o=>est[o.estado]=(est[o.estado]||0)+1);
+  if(f&&!est[f]){ this._nusFiltro=''; return this.nusProv(); } // o filtro ficou vazio (ex.: validou todas): volta para todas
+  const chips=`<div class="fx-cont" role="group" aria-label="Filtrar por estado"><button type="button" class="${!f?'on':''}" aria-pressed="${!f}" onclick="ui._nusFiltro='';ui.nusPintar()"><b>${L.length}</b><span>todas</span></button>${Object.entries(est).map(([k,n])=>`<button type="button" class="${f===k?'on':''}" aria-pressed="${f===k}" onclick="ui._nusFiltro=${jsa(k)};ui.nusPintar()"><b>${n}</b><span>${esc(k)}</span></button>`).join('')}</div>`;
+  const vis=L.filter(o=>!f||o.estado===f);
+  const lista=vis.map(o=>`<li class="nus-li"><input type="checkbox" class="nus-sel" value="${o.id}" data-d="${esc(o.descricao.slice(0,100))}" aria-label="Marcar para ação em lote: ${esc(o.descricao.slice(0,60))}"><button type="button" class="fx-proc${sel===o.id?' on':''}" aria-current="${sel===o.id}" onclick="ui.nusIr('prov',${o.id})"><b>${esc(o.descricao)}</b>
+    <span>${esc([o.processo, o.demanda_assunto&&'demanda: '+o.demanda_assunto].filter(Boolean).join(' · ')||'sem processo')}</span>
+    <small>${this.nusTag(this.NUS_ESTADO_NIVEL[o.estado]||'neu', o.estado)} ${o.prazo&&o.prazo.ordem<3?this.nusTag(o.prazo.nivel, o.prazo.rotulo):''}</small></button></li>`).join('')||'<li class="fx-nada">Nenhuma providência neste filtro.</li>';
+  const det=sel?await this.nusProvDet(sel, E):'<div class="fx-vazio"><b>Escolha uma providência</b><p class="muted">As sugeridas pela leitura do SEI ficam como "Identificada" até alguém validar. Também dá para registrar uma à mão.</p></div>';
+  return `${chips}<div class="fx-acoes"><button type="button" class="btn pri" onclick="ui.nusNovaProv()">Registrar providência…</button><span class="fx-esp"></span><span class="muted">Marcadas:</span>
+    <button type="button" class="btn" onclick="ui.nusLote('validar')">Validar</button><button type="button" class="btn" onclick="ui.nusLote('prioridade_alta')">Prioridade alta</button><button type="button" class="btn" onclick="ui.nusLote('coordenacao')">Encaminhar à coordenação</button></div>
+    <div class="fx-sei"><aside><ul class="fx-procs">${lista}</ul></aside><section id="nusDet" tabindex="-1" aria-live="polite">${det}</section></div>`; };
+ui.nusNovaProv=async function(extra){ const E=await this.nusEsc(), D=(await this.nus('demandas'))||[];
+  this.nusForm('Registrar providência', [{k:'descricao', rot:'Providência', tipo:'textarea', obrig:true}, {k:'tipo', rot:'Tipo', tipo:'select', opcoes:E.tipos_obrigacao, valor:'outro'},
+    {k:'origem', rot:'Origem', tipo:'select', opcoes:E.origens_obrigacao, valor:'manual'}, {k:'processo', rot:'Processo SEI', valor:(extra||{}).processo||''},
+    {k:'destinatario', rot:'Destinatário'}, {k:'demanda', rot:'Demanda', tipo:'select', opcoes:D.map(d=>[d.id,d.assunto]), vazio:'— nenhuma —', valor:(extra||{}).demanda||''},
+    {k:'fonte', rot:'Fonte (documento e trecho)', tipo:'textarea', ajuda:'De onde vem a providência; sem fonte, fica "registrada à mão por" quem registrou.'}],
+    async v=>{ const r=await this.nus('obrigacao_criar', v, this.nusQuem); if(r){ this._nusSel=Object.assign(this._nusSel||{},{prov:r.id}); this.sei.vista='prov'; } return r; }); };
+ui.nusProvDet=async function(id, E){ const o=await this.nus('obrigacao', id); if(!o) return '<p class="muted">Não encontrada.</p>';
+  const Q=(this._nusQuemL||[]).map(n=>[n,n]), D=((await this.nus('demandas'))||[]).map(d=>[d.id,d.assunto]);
+  const etapas=`<ol class="nus-etapas" aria-label="Etapas da providência">${o.etapas.map(e=>`<li class="${e.estado}" ${e.nota?`title="${esc(e.nota)}"`:''}><span aria-hidden="true">${e.estado==='feita'?'✓':e.estado==='atual'?'●':'○'}</span> ${esc(e.rotulo)}${e.estado==='atual'?' <small>(agora)</small>':''}</li>`).join('')}</ol>`;
+  const ed=(campo, rot, ctl)=>`<div class="nus-f"><label for="ne_${campo}">${rot}</label>${ctl}</div>`;
+  const muda=campo=>`onchange="ui.nusEditar(${o.id},'${campo}',this.type==='checkbox'?(this.checked?1:0):this.value)"`;
+  const dados=`<div class="nus-grade">${ed('prioridade','Prioridade',`<select id="ne_prioridade" ${muda('prioridade')}>${this.nusOpts(E.prioridades,o.prioridade)}</select>`)}
+    ${ed('responsavel','Responsável',`<select id="ne_responsavel" ${muda('responsavel')}>${this.nusOpts(Q,o.responsavel,'— a definir —')}</select>`)}
+    ${ed('responsavel_assinatura','Quem assina',`<input id="ne_responsavel_assinatura" value="${esc(o.responsavel_assinatura||'')}" placeholder="A designar" ${muda('responsavel_assinatura')}>`)}
+    ${ed('destinatario','Destinatário',`<input id="ne_destinatario" value="${esc(o.destinatario||'')}" ${muda('destinatario')}>`)}
+    ${ed('demanda','Demanda',`<select id="ne_demanda" onchange="ui.nusEditarDemanda(${o.id},this.value)">${this.nusOpts(D,o.demanda||'','— nenhuma —')}</select>`)}
+    <div class="nus-f"><label class="fx-chk"><input type="checkbox" ${o.aguarda_decisao?'checked':''} ${muda('aguarda_decisao')}> Encaminhada à coordenação (aguarda decisão)</label></div>
+    ${ed('observacoes','Observações',`<textarea id="ne_observacoes" rows="2" ${muda('observacoes')}>${esc(o.observacoes||'')}</textarea>`)}</div>`;
+  const valid=o.status==='sugestao'?`<div class="fx-acoes"><button type="button" class="btn pri" onclick="ui.nusDecidir(${o.id},'validada')">Validar</button><button type="button" class="btn" onclick="ui.nusDecidir(${o.id},'ajustada')">Ajustar…</button><button type="button" class="btn" onclick="ui.nusDecidir(${o.id},'rejeitada')">Rejeitar…</button></div>`:
+    (o.status==='validada'||o.status==='ajustada'||o.status==='rejeitada')?`<div class="fx-acoes"><button type="button" class="btn ghost" onclick="ui.nusDecidir(${o.id},'sugestao')">Voltar a sugestão</button></div>`:'';
+  const prazos=o.prazos.map(p=>`<li class="nus-item"><div>${this.nusTag(p.situacao.nivel,p.situacao.rotulo)} ${this.nusSt(p.status)}</div>
+      <div class="muted">${esc([p.natureza_nome, 'origem: '+p.origem_nome, 'finalidade: '+p.finalidade_nome, p.termo_inicial&&'termo inicial '+this.nusBr(p.termo_inicial)+(p.fonte_termo?' ('+p.fonte_termo+')':''), p.regra?'com regra de contagem':'contagem não definida'].filter(Boolean).join(' · '))}</div>
+      ${p.fonte_trecho?`<blockquote class="fx-fonte">“${esc(p.fonte_trecho)}”</blockquote>`:''}
+      ${p.alteracoes.length?`<ul class="nus-alt">${p.alteracoes.map(a=>`<li>${esc(this.nusRot(E.alteracoes_prazo,a.tipo))} em ${this.nusBr(a.data)}: ${esc(this.nusBr(a.vencimento_anterior)||'sem data')} → ${esc(this.nusBr(a.novo_vencimento)||'sem data')} · ${esc(a.motivo)} · ${esc(a.quem)}</li>`).join('')}</ul>`:''}
+      <div class="fx-acoes">${p.status==='sugestao'?`<button type="button" class="btn pri" onclick="ui.nusPrazoDecidir(${p.id},'validada')">Validar prazo</button><button type="button" class="btn" onclick="ui.nusPrazoDecidir(${p.id},'rejeitada')">Rejeitar…</button><button type="button" class="btn" onclick="ui.nusPrazoCompletar(${p.id})">Completar (termo, regra)…</button>`:
+        p.status==='validada'?`<button type="button" class="btn" onclick="ui.nusPrazoAlterar(${p.id})">Prorrogar / suspender / alterar…</button>`:''}</div></li>`).join('')||'<li class="muted">Nenhum prazo registrado.</li>';
+  const lac=o.lacunas.filter(l=>l.aberta).map(l=>`<li class="nus-item">${this.nusTag('med','Lacuna')} ${esc(l.descricao)} <button type="button" class="btn ghost" onclick="ui.nusLacunaFechar(${l.id})">Resolvida…</button></li>`).join('');
+  const coms=o.comunicacoes.map(c=>this.nusComItem(c, E)).join('')||'<li class="muted">Nenhuma comunicação registrada.</li>';
+  const avs=o.avaliacoes_cumprimento.map(a=>`<li class="nus-item">${esc(this.nusRot(E.aval_cumprimento,a.resultado))} ${this.nusSt(a.status)} <span class="muted">· ${esc(a.fonte)} · ${esc(a.quem)} · ${this.nusBr(a.quando)}</span>
+      ${a.status==='sugestao'?`<button type="button" class="btn pri" onclick="ui.nusAvalDecidir(${a.id},'validada')">Validar</button><button type="button" class="btn" onclick="ui.nusAvalDecidir(${a.id},'rejeitada')">Rejeitar…</button>`:''}</li>`).join('');
+  const minutas=o.minutas.map(m=>`<li><button type="button" class="btn" onclick="ui.nusMinuta(${m.id})">Abrir minuta (${this.nusBr(m.criada)})</button></li>`).join('');
+  const hist=[...o.decisoes.map(d=>({quando:d.quando, txt:`validação: ${(this.NUS_ST[d.de]||[d.de||'—'])[0]} → ${(this.NUS_ST[d.para]||[d.para])[0]}${d.motivo?' · '+d.motivo:''}${d.valor_anterior?' · antes: “'+d.valor_anterior+'”':''}`, quem:d.quem})),
+    ...o.historico.map(h=>({quando:h.quando, txt:`${h.campo}: ${h.de||'—'} → ${h.para||'—'}${h.motivo?' · '+h.motivo:''}`, quem:h.quem}))].sort((a,b)=>String(b.quando).localeCompare(String(a.quando)));
+  return `<div class="fx-detp"><h2>${esc(o.descricao)}</h2><p class="muted">${esc([o.tipo_nome, o.processo, o.documento_titulo&&'documento: '+o.documento_titulo, o.achado_dados&&'achado da inspeção em '+o.achado_dados.estabelecimento].filter(Boolean).join(' · '))}</p>
+    <p>${this.nusSt(o.status)} ${this.nusTag(this.NUS_ESTADO_NIVEL[o.estado]||'neu', o.estado)} ${this.nusTag(o.situacao_cumprimento==='cumprida'?'ok':o.situacao_cumprimento==='nao_avaliada'?'neu':'med', 'Cumprimento: '+o.cumprimento_nome)}</p>
+    ${o.frase?`<blockquote class="fx-fonte" title="Fonte">“${esc(o.frase)}”</blockquote>`:''}
+    ${o.status==='sugestao'?'<p class="fx-expl"><b>Validar</b> = confirmar que é uma obrigação do núcleo (passa a contar como fato). <b>Ajustar</b> = corrigir o texto (o anterior fica guardado). <b>Rejeitar</b> = não é obrigação (diga por quê).</p>':''}
+    ${valid}${etapas}
+    <h3>Dados da providência</h3>${dados}
+    ${o.campos_faltantes.length?`<p class="fx-aviso">Falta: ${esc(o.campos_faltantes.join(', '))}.</p>`:''}
+    <h3>Prazos</h3><ul class="fx-lista">${prazos}</ul>${lac?`<ul class="fx-lista">${lac}</ul>`:''}
+    <div class="fx-acoes"><button type="button" class="btn" onclick="ui.nusPrazoNovo(${o.id})">Registrar prazo…</button></div>
+    <h3>Comunicações (ofícios)</h3><ul class="fx-lista">${coms}</ul><div class="fx-acoes"><button type="button" class="btn" onclick="ui.nusComNova(${o.id},${jsa(o.processo||'')},${jsa(o.destinatario||'')})">Registrar ofício…</button></div>
+    <h3>Cumprimento</h3><p class="muted">Resposta recebida não é cumprimento: só a avaliação do cumprimento validada muda a situação.</p>${avs?`<ul class="fx-lista">${avs}</ul>`:''}
+    <div class="fx-acoes"><button type="button" class="btn" onclick="ui.nusAvaliar('obrigacao',${o.id})">Avaliar o cumprimento…</button></div>
+    <h3>Minuta</h3>${minutas?`<ul class="fx-lista">${minutas}</ul>`:''}<div class="fx-acoes">${o.status==='validada'||o.status==='ajustada'?`<button type="button" class="btn" onclick="ui.nusMinutaGerar(${o.id})">Gerar minuta…</button>`:'<span class="muted">Valide a providência para gerar a minuta.</span>'}</div>
+    <div class="fx-acoes">${o.quadro?'<span class="muted">✓ no Quadro</span>':o.status!=='rejeitada'?`<button type="button" class="btn" onclick="ui.seiQuadro(${o.id})">Enviar ao Quadro</button>`:''}<button type="button" class="btn ghost" onclick="ui.nusRemover('obrigacao',${o.id})">Remover…</button></div>
+    <details class="fx-hist"><summary>Histórico (${hist.length})</summary><ul>${hist.map(h=>`<li>${esc(String(h.quando||'').slice(0,16))} · ${esc(h.quem||'')} · ${esc(h.txt)}</li>`).join('')}</ul></details></div>`; };
+ui.nusEditar=async function(id, campo, valor){ if(!this.nusQuem){ this.toast('Escolha quem está registrando (Quem, no alto).',{erro:true}); return; }
+  const r=await this.nus('obrigacao_editar', id, campo, valor, this.nusQuem, ''); if(r) this.toast('Gravado.'); };
+ui.nusEditarDemanda=function(id, v){ if(v){ this.nusEditar(id,'demanda',v); return; } this.nusPede('Desvincular da demanda','Motivo', async m=>this.nus('obrigacao_editar', id, 'demanda', '', this.nusQuem, m)); };
+ui.nusDecidir=function(id, d){ if(d==='validada'||d==='sugestao'){ if(!this.nusQuem){ this.toast('Escolha quem está registrando (Quem, no alto).',{erro:true}); return; }
+    this.nus('obrigacao_decidir', id, d, this.nusQuem, '', '').then(r=>{ if(r){ this.toast(d==='validada'?'Validada: passa a contar como fato.':'Voltou a sugestão.'); this.nusRecarregar(); } }); return; }
+  if(d==='rejeitada') this.nusPede('Rejeitar a sugestão','Por que não é obrigação do núcleo? (fica no histórico)', async m=>this.nus('obrigacao_decidir', id, 'rejeitada', this.nusQuem, m, ''));
+  else this.nusForm('Ajustar a providência', [{k:'novo', rot:'Texto correto da providência', tipo:'textarea', obrig:true}, {k:'just', rot:'Justificativa', tipo:'textarea', obrig:true}],
+    async v=>this.nus('obrigacao_decidir', id, 'ajustada', this.nusQuem, v.just, v.novo)); };
+ui.nusPrazoDecidir=function(id, d){ if(d==='validada'){ if(!this.nusQuem){ this.toast('Escolha quem está registrando (Quem, no alto).',{erro:true}); return; } this.nus('prazo_decidir', id, d, this.nusQuem, '').then(r=>{ if(r) this.nusPintar(); }); return; }
+  this.nusPede('Rejeitar o prazo','Justificativa', async m=>this.nus('prazo_decidir', id, 'rejeitada', this.nusQuem, m)); };
+ui.nusPrazoCompletar=async function(id){ const E=await this.nusEsc(), R=((await this.nus('regras'))||[]).map(r=>[r.id, r.nome+(r.aprovada?' (aprovada)':' (não aprovada: não calcula)')]);
+  this.nusForm('Completar o prazo', [{k:'origem', rot:'Origem', tipo:'select', opcoes:E.origens_prazo}, {k:'finalidade', rot:'Finalidade', tipo:'select', opcoes:E.finalidades},
+    {k:'termo_inicial', rot:'Termo inicial', tipo:'date', ajuda:'Só o que está documentado (ex.: data do recebimento no AR). Nunca presumido.'}, {k:'fonte_termo', rot:'Fonte do termo inicial'},
+    {k:'regra', rot:'Regra de contagem', tipo:'select', opcoes:R, vazio:'— não definida —', ajuda:'Só regra aprovada pela coordenação, de dias corridos, calcula o vencimento.'},
+    {k:'vencimento', rot:'Vencimento expresso no documento', tipo:'date', ajuda:'Só se o documento traz a data.'}], async v=>{ for(const k of Object.keys(v)) if(v[k]==='') delete v[k]; return this.nus('prazo_completar', id, v, this.nusQuem); }); };
+ui.nusPrazoNovo=async function(oid){ const E=await this.nusEsc(), R=((await this.nus('regras'))||[]).filter(r=>r.aprovada).map(r=>[r.id,r.nome]);
+  this.nusForm('Registrar prazo', [{k:'natureza', rot:'Natureza', tipo:'select', opcoes:E.naturezas, obrig:true}, {k:'quantidade', rot:'Quantidade', tipo:'number'}, {k:'unidade', rot:'Unidade', valor:'dias'},
+    {k:'origem', rot:'Origem', tipo:'select', opcoes:E.origens_prazo, valor:'nao_informada'}, {k:'finalidade', rot:'Finalidade', tipo:'select', opcoes:E.finalidades, valor:'outra'},
+    {k:'termo_inicial', rot:'Termo inicial', tipo:'date'}, {k:'fonte_termo', rot:'Fonte do termo inicial'}, {k:'regra', rot:'Regra de contagem (aprovada)', tipo:'select', opcoes:R, vazio:'— não definida —'},
+    {k:'vencimento', rot:'Vencimento expresso no documento', tipo:'date'}, {k:'fonte', rot:'Fonte do prazo (documento e trecho)', tipo:'textarea', obrig:true}],
+    async v=>this.nus('prazo_registrar', oid, v, this.nusQuem)); };
+ui.nusPrazoAlterar=async function(id){ const E=await this.nusEsc();
+  this.nusForm('Alterar o prazo (o anterior fica guardado)', [{k:'tipo', rot:'Tipo', tipo:'select', opcoes:E.alteracoes_prazo, obrig:true}, {k:'data', rot:'Data da alteração', tipo:'date', valor:new Date().toLocaleDateString('pt-BR')},
+    {k:'novo_vencimento', rot:'Novo vencimento', tipo:'date', ajuda:'Em branco na suspensão (o prazo fica sem data até a retomada).'}, {k:'motivo', rot:'Motivo', tipo:'textarea', obrig:true},
+    {k:'fonte', rot:'Fonte (documento e trecho)', obrig:true}], async v=>this.nus('prazo_alterar', id, v, this.nusQuem)); };
+ui.nusLacunaFechar=function(id){ this.nusPede('Lacuna resolvida','Como foi resolvida?', async m=>this.nus('lacuna_fechar', id, this.nusQuem, m)); };
+// ---- comunicações ----
+ui.nusComItem=function(c, E){ const nv={aguardando_envio:'urg',aguardando_resposta:'prox',resposta_sem_juntada:'med',resposta_juntada:'ok'}[c.estado];
+  return `<li class="nus-item"><div><b>${esc(c.assunto)}</b> ${this.nusTag(nv,c.estado_nome)}</div><div class="muted">${esc(['para '+c.destinatario, c.meio, c.data_envio&&'enviado em '+this.nusBr(c.data_envio), c.reiteracoes.length&&c.reiteracoes.length+' reiteração(ões)'].filter(Boolean).join(' · '))}</div>
+    ${c.respostas.map(r=>`<div class="nus-resp">Resposta em ${this.nusBr(r.data_recebimento)} ${r.documento?this.nusTag('ok','juntada'):this.nusTag('med','sem juntada')} ${r.avaliacoes.map(a=>`${esc(this.nusRot(E.aval_resposta,a.resultado))} ${this.nusSt(a.status)}${a.status==='sugestao'?` <button type="button" class="btn ghost" onclick="ui.nusAvalDecidir(${a.id},'validada')">Validar</button>`:''}`).join(' · ')}
+      ${r.documento?'':`<button type="button" class="btn ghost" onclick="ui.nusJuntar(${r.id})">Juntada…</button>`}<button type="button" class="btn ghost" onclick="ui.nusAvaliar('resposta',${r.id})">Avaliar a resposta…</button></div>`).join('')}
+    <div class="fx-acoes">${c.data_envio?`<button type="button" class="btn" onclick="ui.nusComAcao('reiterar',${c.id})">Reiterar…</button><button type="button" class="btn" onclick="ui.nusComAcao('resposta',${c.id})">Resposta recebida…</button>`:`<button type="button" class="btn pri" onclick="ui.nusComAcao('envio',${c.id})">Registrar envio…</button>`}
+      <button type="button" class="btn ghost" onclick="ui.nusRemover('comunicacao',${c.id})">Remover…</button></div></li>`; };
+ui.nusComAcao=function(a, id){ const hoje=new Date().toLocaleDateString('pt-BR');
+  if(a==='envio') this.nusForm('Envio do ofício (feito no SEI por você)', [{k:'d', rot:'Data do envio', tipo:'date', valor:hoje, obrig:true}], async v=>this.nus('comunicacao_envio', id, v.d, this.nusQuem));
+  if(a==='reiterar') this.nusForm('Reiteração', [{k:'d', rot:'Data da reiteração', tipo:'date', valor:hoje, obrig:true}], async v=>this.nus('reiterar', id, v.d, this.nusQuem, null));
+  if(a==='resposta') this.nusForm('Resposta recebida', [{k:'d', rot:'Data do recebimento', tipo:'date', valor:hoje, obrig:true}, {k:'o', rot:'Observação', tipo:'textarea'}],
+    async v=>this.nus('resposta_registrar', id, v.d, this.nusQuem, null, v.o)); };
+ui.nusDocs=async function(){ const R=await API_().sei_resumo(); const out=[]; for(const p of (R&&R.processos)||[]){ const P=await API_().sei_processo(p.numero); for(const d of (P&&P.documentos)||[]) if(!d.substituido_por) out.push([d.id, p.original+' · '+(d.titulo||'documento')+' ('+d.recebido.slice(0,10)+')']); } return out; };
+ui.nusJuntar=async function(rid){ const docs=await this.nusDocs();
+  this.nusForm('Juntada da resposta', [{k:'doc', rot:'Documento lido do SEI', tipo:'select', opcoes:docs, obrig:true, ajuda:'A resposta juntada ao processo, lida pela extensão.'}], async v=>this.nus('resposta_juntar', rid, v.doc, this.nusQuem)); };
+ui.nusAvaliar=async function(alvo, id){ const E=await this.nusEsc();
+  this.nusForm(alvo==='resposta'?'Avaliar a resposta (não muda o cumprimento)':'Avaliar o cumprimento', [{k:'res', rot:'Resultado', tipo:'select', opcoes:alvo==='resposta'?E.aval_resposta:E.aval_cumprimento, obrig:true},
+    {k:'fonte', rot:'Em que se baseia (documento e trecho)', tipo:'textarea', obrig:true}], async v=>this.nus('avaliar', alvo, id, v.res, v.fonte, this.nusQuem)); };
+ui.nusAvalDecidir=function(id, d){ if(d==='validada'){ if(!this.nusQuem){ this.toast('Escolha quem está registrando (Quem, no alto).',{erro:true}); return; } this.nus('avaliacao_decidir', id, d, this.nusQuem, '').then(r=>{ if(r) this.nusPintar(); }); return; }
+  this.nusPede('Rejeitar a avaliação','Justificativa', async m=>this.nus('avaliacao_decidir', id, 'rejeitada', this.nusQuem, m)); };
+ui.nusComNova=async function(oid, processo, dest){ const L=((await this.nus('obrigacoes'))||[]).filter(o=>o.status==='validada'||o.status==='ajustada').map(o=>[o.id, o.descricao.slice(0,90)]);
+  this.nusForm('Registrar ofício (o APTO não envia nada: registre o que fez no SEI)', [{k:'assunto', rot:'Assunto', obrig:true}, {k:'destinatario', rot:'Destinatário', valor:dest||'', obrig:true},
+    {k:'meio', rot:'Meio', valor:'ofício'}, {k:'processo', rot:'Processo SEI', valor:processo||''}, {k:'data_envio', rot:'Data do envio (se já enviado)', tipo:'date'},
+    ...(oid?[]:[{k:'obrigacoes', rot:'Providências que o ofício cumpre ou cobra', tipo:'multi', opcoes:L}])],
+    async v=>{ if(oid) v.obrigacoes=[oid]; return this.nus('comunicacao_criar', v, this.nusQuem); }); };
+ui.nusCom=async function(){ const C=(await this.nus('comunicacoes'))||[], E=await this.nusEsc(); const est={}; C.forEach(c=>est[c.estado_nome]=(est[c.estado_nome]||0)+1);
+  return `<p class="muted">Ofícios e e-mails que cumprem ou cobram providências. O estado vem dos fatos registrados (envio, resposta, juntada); o APTO não envia nada.</p>
+    <div class="fx-cont" role="group" aria-label="Resumo">${Object.entries(est).map(([k,n])=>`<span class="nus-cont"><b>${n}</b> ${esc(k)}</span>`).join('')}</div>
+    <div class="fx-acoes"><button type="button" class="btn pri" onclick="ui.nusComNova(null,'','')">Registrar ofício…</button></div><ul class="fx-lista">${C.map(c=>this.nusComItem(c,E)).join('')||'<li class="muted">Nenhuma comunicação.</li>'}</ul>`; };
+// ---- prazos ----
+ui.nusPrazos=async function(){ const P=(await this.nus('prazos'))||[], L=(await this.nus('lacunas'))||[];
+  const lin=P.map(p=>`<tr tabindex="0" onclick="ui.nusIr('prov',${p.obrigacao})" onkeydown="if(event.key==='Enter'){ui.nusIr('prov',${p.obrigacao})}"><td>${this.nusTag(p.situacao.nivel,p.situacao.rotulo)}</td><td>${esc(p.obrigacao_descricao)}<small class="muted">${esc(p.processo||'')}</small></td>
+    <td>${esc(p.natureza_nome)}<small class="muted">${esc(p.origem_nome)}</small></td><td>${this.nusSt(p.status)}</td></tr>`).join('');
+  const cal=this.nusCal(P);
+  return `${cal}<p class="muted">Só prazo <b>validado</b> conta como fato: o sugerido nunca aparece como vencido. Vencimento só com data expressa no documento ou calculado com regra aprovada e termo inicial documentado.</p>
+    <div class="fx-tabw"><table class="fx-tab fx-tabsei"><thead><tr><th>Situação</th><th>Providência</th><th>Natureza</th><th>Validação</th></tr></thead><tbody>${lin||'<tr><td colspan="4" class="muted">Nenhum prazo.</td></tr>'}</tbody></table></div>
+    <h2 class="fx-sec">Lacunas abertas (${L.length})</h2><p class="muted">O que falta saber, em vez de inventar (prazo sem termo inicial, sem prazo no documento…).</p>
+    <ul class="fx-lista">${L.map(l=>`<li class="nus-item">${this.nusTag('med',l.tipo.replace(/_/g,' '))} ${esc(l.descricao)} <span class="muted">· ${esc(l.obrigacao_descricao||'')}</span> ${l.obrigacao?`<button type="button" class="btn ghost" onclick="ui.nusIr('prov',${l.obrigacao})">Abrir</button>`:''}<button type="button" class="btn ghost" onclick="ui.nusLacunaFechar(${l.id})">Resolvida…</button></li>`).join('')||'<li class="muted">Nenhuma lacuna aberta.</li>'}</ul>`; };
+// ---- demandas ----
+ui.nusDem=async function(){ const sel=(this._nusSel||{}).dem, D=(await this.nus('demandas'))||[], E=await this.nusEsc();
+  const lista=D.map(d=>`<li><button type="button" class="fx-proc${sel===d.id?' on':''}" aria-current="${sel===d.id}" onclick="ui.nusIr('dem',${d.id})"><b>${esc(d.assunto)}</b><span>${esc(d.tipo_nome)} · ${esc(d.situacao_nome)}</span>
+    <small>${d.processos.length} processo(s) · ${d.providencias.validadas} providência(s)${d.providencias.cumpridas?' · '+d.providencias.cumpridas+' cumprida(s)':''}</small></button></li>`).join('')||'<li class="fx-nada">Nenhuma demanda.</li>';
+  let det='<div class="fx-vazio"><b>Demanda ≠ processo SEI</b><p class="muted">Uma demanda junta processos e providências (um processo pode servir a várias demandas). "Concluído no SEI" não quer dizer "resolvido".</p></div>';
+  if(sel){ const d=await this.nus('demanda', sel); if(d){ const muda=c=>`onchange="ui.nusDemEditar(${d.id},'${c}',this.value)"`;
+    const livres=((await this.nus('obrigacoes'))||[]).filter(o=>!o.demanda&&(o.status==='validada'||o.status==='ajustada')).map(o=>[o.id,o.descricao.slice(0,90)]);
+    det=`<div class="fx-detp"><h2>${esc(d.assunto)}</h2><p class="muted">aberta em ${this.nusBr(d.aberta_em)} · responsável ${esc(d.responsavel||'—')}</p>
+      <div class="nus-grade"><div class="nus-f"><label for="nd_s">Situação</label><select id="nd_s" ${muda('situacao')}>${this.nusOpts(E.situacoes_demanda,d.situacao)}</select></div>
+      <div class="nus-f"><label for="nd_t">Tipo</label><select id="nd_t" ${muda('tipo')}>${this.nusOpts(E.tipos_demanda,d.tipo)}</select></div>
+      <div class="nus-f"><label for="nd_p">Prioridade</label><select id="nd_p" ${muda('prioridade')}>${this.nusOpts(E.prioridades,d.prioridade)}</select></div>
+      <div class="nus-f"><label for="nd_d">Destinatário</label><input id="nd_d" value="${esc(d.destinatario||'')}" ${muda('destinatario')}></div>
+      <div class="nus-f"><label for="nd_x">Descrição</label><textarea id="nd_x" rows="2" ${muda('descricao')}>${esc(d.descricao||'')}</textarea></div></div>
+      <h3>Processos SEI</h3><ul class="fx-lista">${d.processos.map(p=>`<li class="nus-item"><button type="button" class="btn ghost" onclick="ui.sei.vista='proc';ui.seiAbrirProc(${jsa(p)})">${esc(p)}</button><button type="button" class="btn ghost" onclick="ui.nusDemDesv(${d.id},${jsa(p)})">Desvincular…</button></li>`).join('')||'<li class="muted">Nenhum.</li>'}</ul>
+      <div class="fx-acoes"><button type="button" class="btn" onclick="ui.nusDemProc(${d.id})">Vincular processo…</button></div>
+      <h3>Providências</h3><ul class="fx-lista">${d.obrigacoes.map(o=>`<li class="nus-item"><button type="button" class="btn ghost" onclick="ui.nusIr('prov',${o.id})">${esc(o.descricao)}</button> ${this.nusTag(this.NUS_ESTADO_NIVEL[o.estado]||'neu',o.estado)}</li>`).join('')||'<li class="muted">Nenhuma.</li>'}</ul>
+      <div class="fx-acoes">${livres.length?`<button type="button" class="btn" onclick='ui.nusDemProv(${d.id},${JSON.stringify(livres).replace(/'/g,"&#39;")})'>Vincular providência…</button>`:''}<button type="button" class="btn" onclick="ui.nusNovaProv({demanda:${d.id}})">Registrar providência…</button><button type="button" class="btn ghost" onclick="ui.nusRemover('demanda',${d.id})">Remover…</button></div>
+      <details class="fx-hist"><summary>Histórico (${d.historico.length})</summary><ul>${d.historico.map(h=>`<li>${esc(h.quando.slice(0,16))} · ${esc(h.quem)} · ${esc(h.campo)}: ${esc(h.de||'—')} → ${esc(h.para||'—')}${h.motivo?' · '+esc(h.motivo):''}</li>`).join('')}</ul></details></div>`; } }
+  return `<div class="fx-acoes"><button type="button" class="btn pri" onclick="ui.nusDemNova()">Nova demanda…</button></div><div class="fx-sei"><aside><ul class="fx-procs">${lista}</ul></aside><section tabindex="-1" aria-live="polite">${det}</section></div>`; };
+ui.nusDemNova=async function(){ const E=await this.nusEsc();
+  this.nusForm('Nova demanda', [{k:'assunto', rot:'Assunto', obrig:true}, {k:'tipo', rot:'Tipo', tipo:'select', opcoes:E.tipos_demanda, valor:'outra'}, {k:'prioridade', rot:'Prioridade', tipo:'select', opcoes:E.prioridades, valor:'normal'},
+    {k:'destinatario', rot:'Destinatário'}, {k:'descricao', rot:'Descrição', tipo:'textarea'}, {k:'processos', rot:'Processos SEI (um por linha)', tipo:'textarea'}],
+    async v=>{ v.processos=String(v.processos||'').split(/\n|;/).map(x=>x.trim()).filter(Boolean); const r=await this.nus('demanda_criar', v, this.nusQuem); if(r) this._nusSel=Object.assign(this._nusSel||{},{dem:r.id}); return r; }); };
+ui.nusDemEditar=function(id, campo, valor){ if(!this.nusQuem){ this.toast('Escolha quem está registrando (Quem, no alto).',{erro:true}); return; }
+  if(campo==='situacao'&&valor==='cancelada'){ this.nusPede('Cancelar a demanda','Justificativa', async m=>this.nus('demanda_editar', id, campo, valor, this.nusQuem, m)); return; }
+  this.nus('demanda_editar', id, campo, valor, this.nusQuem, '').then(r=>{ if(r) this.toast('Gravado.'); }); };
+ui.nusDemProc=async function(id){ const R=await API_().sei_resumo(); const ps=((R&&R.processos)||[]).map(p=>[p.original, p.original+' · '+(p.especificacao||'')]);
+  this.nusForm('Vincular processo', [{k:'p', rot:'Processo lido do SEI', tipo:'select', opcoes:ps, vazio:'— escolha —'}, {k:'o', rot:'ou o número', ajuda:'Processo ainda não lido também pode ser vinculado.'}],
+    async v=>this.nus('demanda_vincular_processo', id, v.p||v.o, this.nusQuem)); };
+ui.nusDemDesv=function(id, p){ this.nusPede('Desvincular '+p, 'Motivo', async m=>this.nus('demanda_desvincular_processo', id, p, this.nusQuem, m)); };
+ui.nusDemProv=function(id, livres){ this.nusForm('Vincular providência', [{k:'o', rot:'Providência validada sem demanda', tipo:'select', opcoes:livres, obrig:true}], async v=>this.nus('demanda_vincular_providencia', id, v.o, this.nusQuem)); };
+// ---- inspeções ----
+ui.nusInsp=async function(){ const sel=(this._nusSel||{}).insp, I=(await this.nus('inspecoes'))||[], E=await this.nusEsc();
+  const lista=I.map(i=>`<li><button type="button" class="fx-proc${sel===i.id?' on':''}" aria-current="${sel===i.id}" onclick="ui.nusIr('insp',${i.id})"><b>${esc(i.estabelecimento)}</b><span>${this.nusBr(i.data)}${i.municipio?' · '+esc(i.municipio):''}</span>
+    <small>${i.achados.length} achado(s)${i.achados.filter(a=>a.gravidade==='alta').length?' · '+this.nusTag('crit',i.achados.filter(a=>a.gravidade==='alta').length+' grave(s)'):''}</small></button></li>`).join('')||'<li class="fx-nada">Nenhuma inspeção.</li>';
+  let det='<div class="fx-vazio"><b>Inspeções prisionais</b><p class="muted">Cada achado tem categoria, gravidade, recomendação e acompanhamento, e gera providências próprias. A recorrência com a inspeção anterior é só sugerida: você confirma.</p></div>';
+  if(sel){ const i=await this.nus('inspecao', sel); if(i){
+    const ach=i.achados.map(a=>`<li class="nus-item"><div><b>${esc(a.descricao)}</b> ${this.nusTag(a.gravidade==='alta'?'crit':a.gravidade==='media'?'med':'neu', 'gravidade '+a.gravidade_nome)} <span class="muted">${esc(a.categoria_nome)}</span></div>
+      ${a.recomendacao?`<div>Recomendação: ${esc(a.recomendacao)}</div>`:''}
+      <div class="nus-f nus-in"><label for="na_${a.id}">Acompanhamento</label><select id="na_${a.id}" onchange="ui.nusAchSit(${a.id},this.value)">${this.nusOpts(E.situacoes_achado,a.situacao)}</select></div>
+      ${a.cadeia.length?`<div class="muted">Recorrente: ${a.cadeia.map(c=>this.nusBr(c.data)+' ('+esc(c.situacao)+')').join(' → ')} → esta</div>`:''}
+      ${!a.anterior&&a.recorrencias_sugeridas.length?`<div class="fx-expl">Parecido com achado de inspeção anterior (mesmo estabelecimento e categoria): ${a.recorrencias_sugeridas.map(r=>`<button type="button" class="btn ghost" onclick="ui.nusRecorr(${a.id},${r.id})">${this.nusBr(r.data)}: ${esc(r.descricao.slice(0,60))} · confirmar recorrência</button>`).join(' ')}</div>`:''}
+      ${a.providencias.map(p=>`<div><button type="button" class="btn ghost" onclick="ui.nusIr('prov',${p.id})">Providência: ${esc(p.descricao.slice(0,80))}</button></div>`).join('')}
+      <div class="fx-acoes"><button type="button" class="btn" onclick="ui.nusAchProv(${a.id})">Gerar providência da recomendação</button></div></li>`).join('')||'<li class="muted">Nenhum achado registrado.</li>';
+    let cmp=''; if(i.anterior){ const C=(await this.nus('comparar', i.anterior, i.id))||[]; const S={recorrente:['crit','recorrente'],somente_na_anterior:['ok','só na anterior (pode ter sido sanado)'],nova:['med','nova']};
+      cmp=`<h3>Comparação com a inspeção anterior</h3><div class="fx-tabw"><table class="fx-tab fx-tabsei"><thead><tr><th>Categoria</th><th>Situação</th><th>Anterior</th><th>Esta</th></tr></thead><tbody>${C.map(x=>`<tr><td>${esc(x.categoria)}</td><td>${this.nusTag(S[x.situacao][0],S[x.situacao][1])}</td><td>${esc(x.anterior?x.anterior.descricao:'—')}</td><td>${esc(x.atual?x.atual.descricao:'—')}</td></tr>`).join('')}</tbody></table></div>`; }
+    det=`<div class="fx-detp"><h2>${esc(i.estabelecimento)}</h2><p class="muted">${this.nusBr(i.data)}${i.municipio?' · '+esc(i.municipio):''} · registrada por ${esc(i.quem||'')}</p>${i.observacoes?`<p>${esc(i.observacoes)}</p>`:''}
+      <h3>Achados (${i.achados.length})</h3><ul class="fx-lista">${ach}</ul><div class="fx-acoes"><button type="button" class="btn pri" onclick="ui.nusAchNovo(${i.id})">Registrar achado…</button><button type="button" class="btn" onclick="ui.nusInspDoc(${i.id})">Vincular documento do SEI…</button><button type="button" class="btn ghost" onclick="ui.nusRemover('inspecao',${i.id})">Remover…</button></div>
+      ${i.documentos.length?`<h3>Documentos</h3><ul class="fx-lista">${i.documentos.map(d=>`<li>${esc(d.processo+' · '+d.titulo)}</li>`).join('')}</ul>`:''}${cmp}
+      <details class="fx-hist"><summary>Histórico (${i.historico.length})</summary><ul>${i.historico.map(h=>`<li>${esc(h.quando.slice(0,16))} · ${esc(h.quem)} · ${esc(h.campo)}: ${esc(h.para||'')}</li>`).join('')}</ul></details></div>`; } }
+  return `<div class="fx-acoes"><button type="button" class="btn pri" onclick="ui.nusInspNova()">Nova inspeção…</button></div><div class="fx-sei"><aside><ul class="fx-procs">${lista}</ul></aside><section tabindex="-1" aria-live="polite">${det}</section></div>`; };
+ui.nusInspNova=function(){ this.nusForm('Nova inspeção', [{k:'estabelecimento', rot:'Estabelecimento', obrig:true}, {k:'municipio', rot:'Município'}, {k:'data', rot:'Data da inspeção', tipo:'date', obrig:true}, {k:'observacoes', rot:'Observações', tipo:'textarea'}],
+  async v=>{ const r=await this.nus('inspecao_criar', v, this.nusQuem); if(r) this._nusSel=Object.assign(this._nusSel||{},{insp:r.id}); return r; }); };
+ui.nusAchNovo=async function(iid){ const E=await this.nusEsc();
+  this.nusForm('Registrar achado', [{k:'descricao', rot:'Situação identificada', tipo:'textarea', obrig:true}, {k:'categoria', rot:'Categoria', tipo:'select', opcoes:E.categorias, valor:'outra'},
+    {k:'gravidade', rot:'Gravidade', tipo:'select', opcoes:E.gravidades, valor:'media'}, {k:'recomendacao', rot:'Recomendação', tipo:'textarea'}], async v=>this.nus('achado_registrar', iid, v, this.nusQuem)); };
+ui.nusAchSit=function(id, v){ if(!this.nusQuem){ this.toast('Escolha quem está registrando (Quem, no alto).',{erro:true}); return; } this.nus('achado_situacao', id, v, this.nusQuem, '').then(r=>{ if(r) this.toast('Gravado.'); }); };
+ui.nusRecorr=function(aid, ant){ this.nusPede('Confirmar recorrência','Por que é a mesma situação? (achados parecidos não são fundidos)', async m=>this.nus('recorrencia_confirmar', aid, ant, this.nusQuem, m), false); };
+ui.nusAchProv=function(aid){ if(!this.nusQuem){ this.toast('Escolha quem está registrando (Quem, no alto).',{erro:true}); return; } this.nus('achado_providencia', aid, {}, this.nusQuem).then(r=>{ if(r){ this.toast('Providência registrada a partir da recomendação.'); this.nusIr('prov', r.id); } }); };
+ui.nusInspDoc=async function(iid){ const docs=await this.nusDocs(); this.nusForm('Vincular documento', [{k:'d', rot:'Documento lido do SEI', tipo:'select', opcoes:docs, obrig:true}], async v=>this.nus('inspecao_documento', iid, v.d, this.nusQuem)); };
+// ---- minutas ----
+ui.nusMinutaGerar=async function(oid){ const M=(await this.nus('modelos'))||[];
+  this.nusForm('Gerar minuta (sem IA: só fatos validados, cada frase com a fonte)', [{k:'m', rot:'Modelo', tipo:'select', opcoes:M.map(m=>[m.id, m.nome+(m.embutido?'':' (v'+m.versao+')')]), obrig:true}],
+    async v=>{ const r=await this.nus('minuta_gerar', oid, v.m, this.nusQuem); if(r) setTimeout(()=>this.nusMinuta(r.minuta),50); return r; }); };
+ui.nusMinuta=async function(mid){ const m=await this.nus('minuta', mid), E=await this.nusEsc(); if(!m) return; const v=m.versoes[0]; this._nusMin=m;
+  this.nusModal('Minuta · versão '+v.numero, `${m.campos_faltantes.length?`<p class="fx-aviso">A minuta não afirma o que falta: ${esc(m.campos_faltantes.join(', '))}.</p>`:''}
+    <p>${this.nusSt(v.status)} <span class="muted">conferência em ${this.nusBr(v.data_conferencia)} · ${esc(v.quem)}</span></p>
+    <form onsubmit="event.preventDefault();ui.nusMinutaSalvar(this,${v.id})">${v.frases.map(f=>`<div class="nus-f"><label for="mf_${f.id}">${esc(this.nusRot(E.blocos,f.bloco))}${f.editada?' · editada':''}</label><textarea id="mf_${f.id}" name="${f.id}" rows="3">${esc(f.texto)}</textarea><small>Fonte: ${esc(f.fonte)}</small></div>`).join('')}
+    <div class="fx-acoes"><button type="submit" class="btn pri">Salvar como nova versão</button><button type="button" class="btn" onclick="ui.copiar(ui._nusMin.versoes[0].texto_para_sei)">Copiar o texto para o SEI</button>
+    ${v.status==='sugestao'?`<button type="button" class="btn" onclick="ui.nusMinutaValidar(${v.id},'validada')">Aprovar esta versão</button><button type="button" class="btn ghost" onclick="ui.nusMinutaValidar(${v.id},'rejeitada')">Rejeitar…</button>`:''}</div></form>
+    ${m.versoes.length>1?`<h3>Versões anteriores</h3><ul class="fx-lista">${m.versoes.slice(1).map(x=>`<li class="nus-item">versão ${x.numero} · ${esc(x.quem)} · ${this.nusBr(x.data)} ${this.nusSt(x.status)} <button type="button" class="btn ghost" onclick="ui.nusMinutaRest(${mid},${x.numero})">Restaurar (cria versão nova)</button></li>`).join('')}</ul>`:''}
+    <p class="muted">Frase em branco sai da nova versão. O APTO não escreve no SEI: copie o texto e cole lá.</p>`, 820); };
+ui.nusMinutaSalvar=async function(f, vid){ if(!this.nusQuem){ this.toast('Escolha quem está registrando (Quem, no alto).',{erro:true}); return; } const ed={}; for(const el of f.elements) if(el.name) ed[el.name]=el.value;
+  const r=await this.nus('minuta_editar', vid, ed, this.nusQuem); if(r){ this.toast('Nova versão gravada.'); this.nusMinuta(this._nusMin.id); } };
+ui.nusMinutaValidar=function(vid, d){ if(d==='validada'){ this.nus('minuta_validar', vid, d, this.nusQuem, '').then(r=>{ if(r) this.nusMinuta(this._nusMin.id); }); return; }
+  this.nusPede('Rejeitar a versão','Justificativa', async m=>{ const r=await this.nus('minuta_validar', vid, 'rejeitada', this.nusQuem, m); return r; }); };
+ui.nusMinutaRest=function(mid, n){ this.nus('minuta_restaurar', mid, n, this.nusQuem).then(r=>{ if(r) this.nusMinuta(mid); }); };
+// ---- histórico e relatório ----
+ui.nusHist=async function(){ const F=this._nusHF||{}, H=(await this.nus('historico_geral', F))||[], R=(await this.nus('relatorio', F.desde||'', F.ate||''))||{};
+  const OB={obrigacao:'Providência',demanda:'Demanda',prazo:'Prazo',comunicacao:'Comunicação',inspecao:'Inspeção',achado:'Achado',avaliacao:'Avaliação',regra:'Regra de contagem',lacuna:'Lacuna',minuta:'Minuta'};
+  const kv=o=>Object.entries(o||{}).map(([k,n])=>`<li><span>${esc(k)}</span><b>${n}</b></li>`).join('')||'<li class="muted">—</li>';
+  return `<form class="nus-filtros" onsubmit="event.preventDefault();ui._nusHF={quem:this.quem.value,objeto:this.objeto.value,desde:this.desde.value,ate:this.ate.value};ui.nusPintar()">
+      <div class="nus-f"><label for="hq">Quem</label><select id="hq" name="quem">${this.nusOpts((this._nusQuemL||[]).map(n=>[n,n]),F.quem,'todos')}</select></div>
+      <div class="nus-f"><label for="ho">O quê</label><select id="ho" name="objeto">${this.nusOpts(Object.entries(OB),F.objeto,'tudo')}</select></div>
+      <div class="nus-f"><label for="hd">Desde</label><input id="hd" name="desde" placeholder="dd/mm/aaaa" value="${esc(F.desde||'')}"></div><div class="nus-f"><label for="ha">Até</label><input id="ha" name="ate" placeholder="dd/mm/aaaa" value="${esc(F.ate||'')}"></div>
+      <button type="submit" class="btn">Filtrar</button></form>
+    <h2 class="fx-sec">Relatório de gestão ${F.desde||F.ate?'('+esc((F.desde||'início')+' a '+(F.ate||'hoje'))+')':'(todo o período)'}</h2>
+    <div class="fx-duas"><section class="fx-quadro"><h3>Providências validadas: ${R.providencias||0}</h3><ul class="fx-barras nus-kv">${kv(R.por_estado)}</ul><h3>Cumprimento</h3><ul class="fx-barras nus-kv">${kv(R.por_cumprimento)}</ul></section>
+      <section class="fx-quadro"><h3>Comunicações: ${R.comunicacoes||0}</h3><ul class="fx-barras nus-kv"><li><span>enviadas</span><b>${R.enviadas||0}</b></li><li><span>respondidas</span><b>${R.respondidas||0}</b></li><li><span>reiterações</span><b>${R.reiteracoes||0}</b></li></ul>
+      <h3>Inspeções: ${R.inspecoes||0} · achados: ${R.achados||0}</h3><ul class="fx-barras nus-kv">${kv(R.achados_por_gravidade)}<li><span>resolvidos</span><b>${R.achados_resolvidos||0}</b></li></ul>
+      <h3>Prazos vencidos (validados): ${(R.vencidos||[]).length}</h3><ul class="fx-lista">${(R.vencidos||[]).map(p=>`<li>${this.nusTag('crit',p.situacao.rotulo)} ${esc(p.obrigacao_descricao)}</li>`).join('')}</ul></section></div>
+    <h2 class="fx-sec">Histórico (${H.length})</h2><div class="fx-tabw"><table class="fx-tab fx-tabsei"><thead><tr><th>Quando</th><th>Quem</th><th>O quê</th><th>Mudança</th></tr></thead>
+    <tbody>${H.map(h=>`<tr><td>${esc(String(h.quando).slice(0,16))}</td><td>${esc(h.quem||'')}</td><td>${esc(OB[h.objeto]||h.objeto)} #${h.obj_id}</td><td>${esc(h.campo)}: ${esc(h.de||'—')} → ${esc(h.para||'—')}${h.motivo?' · '+esc(h.motivo):''}</td></tr>`).join('')||'<tr><td colspan="4" class="muted">Nada registrado.</td></tr>'}</tbody></table></div>`; };
+// ---- cadastros: Quem, regras de contagem, modelos de minuta ----
+ui.nusCad=async function(){ const L=this._nusQuemL||[], R=(await this.nus('regras'))||[], M=(await this.nus('modelos'))||[];
+  return `<div class="fx-duas"><section class="fx-quadro"><h2 class="fx-sec">Quem (quem registra)</h2><p class="muted">Os nomes de quem usa o APTO no núcleo. Cada decisão guarda quem a tomou.</p>
+      <form onsubmit="event.preventDefault();ui.nusQuemSalvar(this.l.value)"><label class="vh" for="ql">Um nome por linha</label><textarea id="ql" name="l" rows="6">${esc(L.join('\n'))}</textarea><div class="fx-acoes"><button type="submit" class="btn pri">Gravar a lista</button></div></form></section>
+    <section class="fx-quadro"><h2 class="fx-sec">Regras de contagem de prazo</h2><p class="muted">Decisão da coordenação: nada vem cadastrado. Só a regra <b>aprovada</b>, de dias corridos, calcula vencimento (dias úteis exigem o calendário de feriados aprovado).</p>
+      <ul class="fx-lista">${R.map(r=>`<li class="nus-item"><b>${esc(r.nome)}</b> ${r.aprovada?this.nusTag('ok','aprovada por '+(r.aprovada_por||'')):this.nusTag('med','não aprovada')} <span class="muted">${r.dias==='uteis'?'dias úteis':'dias corridos'}${r.fonte_normativa?' · '+esc(r.fonte_normativa):''}</span>
+        ${r.aprovada?`<button type="button" class="btn ghost" onclick="ui.nusRegra(${r.id},false)">Retirar aprovação…</button>`:`<button type="button" class="btn" onclick="ui.nusRegra(${r.id},true)">Aprovar</button>`}</li>`).join('')||'<li class="muted">Nenhuma regra cadastrada.</li>'}</ul>
+      <div class="fx-acoes"><button type="button" class="btn" onclick="ui.nusRegraNova()">Cadastrar regra…</button></div></section></div>
+    <section class="fx-quadro"><h2 class="fx-sec">Modelos de minuta</h2><p class="muted">Fórmulas de abertura, pedido e fecho; os blocos do padrão NUSPEN (dados, conclusão no condicional, consequência em tempo, omissão) valem para todos. Mudar um modelo cria a versão seguinte.</p>
+      <ul class="fx-lista">${M.map(m=>`<li class="nus-item"><b>${esc(m.nome)}</b> <span class="muted">${m.embutido?'do APTO':'versão '+m.versao}</span><div class="muted">${esc(m.descricao||'')}</div></li>`).join('')}</ul>
+      <div class="fx-acoes"><button type="button" class="btn" onclick="ui.nusModeloNovo()">Cadastrar modelo (ou nova versão)…</button></div></section>`; };
+ui.nusQuemSalvar=async function(t){ const r=await this.nus('quem_gravar', String(t||'').split('\n')); if(r){ this.toast('Lista gravada.'); this.nusPintar(); } };
+ui.nusRegra=function(id, ap){ if(!this.nusQuem){ this.toast('Escolha quem está registrando (Quem, no alto).',{erro:true}); return; } if(ap){ this.nus('regra_aprovar', id, this.nusQuem, true, '').then(r=>{ if(r) this.nusPintar(); }); return; }
+  this.nusPede('Retirar a aprovação','Motivo', async m=>this.nus('regra_aprovar', id, this.nusQuem, false, m)); };
+ui.nusRegraNova=function(){ this.nusForm('Cadastrar regra de contagem', [{k:'nome', rot:'Nome', obrig:true}, {k:'dias', rot:'Contagem', tipo:'select', opcoes:[['corridos','Dias corridos'],['uteis','Dias úteis']], obrig:true},
+  {k:'fonte_normativa', rot:'Fonte normativa'}, {k:'descricao', rot:'Descrição', tipo:'textarea'}, {k:'feriados', rot:'Tratamento de feriados', tipo:'textarea'}, {k:'vigencia_inicio', rot:'Vigência: início', tipo:'date'}, {k:'vigencia_fim', rot:'Vigência: fim', tipo:'date'}],
+  async v=>this.nus('regra_criar', v, this.nusQuem)); };
+ui.nusModeloNovo=function(){ this.nusForm('Cadastrar modelo de minuta', [{k:'slug', rot:'Nome curto (o mesmo cria a versão seguinte)', obrig:true}, {k:'nome', rot:'Nome', obrig:true}, {k:'descricao', rot:'Descrição', tipo:'textarea'},
+  {k:'abertura', rot:'Abertura', tipo:'textarea', obrig:true, ajuda:'Pode usar {documento}: vira “no documento X” (ou “em registro do núcleo”).'}, {k:'pedido', rot:'Pedido', tipo:'textarea', obrig:true}, {k:'fecho', rot:'Fecho', tipo:'textarea'}], async v=>this.nus('modelo_cadastrar', v, this.nusQuem)); };
+// Visão geral: os números da gestão, ao lado da leitura do SEI
+ui.nusGeral=async function(){ const el=document.getElementById('nusGeral'); if(!el) return; const P=await this.nus('painel'); if(!P) return;
+  const c=(n,rot,nota,vista,nivel)=>`<button type="button" class="fx-atc" onclick="ui.nusIr('${vista}')"><b class="nv-${nivel}">${n}</b><span>${esc(rot)}</span><small>${esc(nota)}</small></button>`;
+  el.innerHTML=`<h2 class="fx-sec">Gestão</h2><div class="fx-at">${c(P.vencidos,'Prazos vencidos','validados','prazos','crit')}${c(P.vencem_7,'Vencem em até 7 dias','validados','prazos','urg')}${c(P.sugestoes,'Providências a validar','sugestões da leitura','prov','med')}
+    ${c(P.lacunas,'Lacunas abertas','o que falta saber','prazos','med')}${c(P.comunicacoes_aguardando,'Ofícios aguardando','envio ou resposta','com','prox')}${c(P.demandas_abertas,'Demandas abertas','não atendidas nem canceladas','dem','neu')}</div><div id="nusGeral2"></div>`;
+  this.nusGeralExtra(); };
+// ---- (7.27) importar PDF do SEI, o que mudou, novidades, perguntas prontas, lote, calendário ----
+ui.nusImportarPdf=async function(){ const B=API_(); if(!B||!B.sei_importar_pdf) return; if(this.fn!=='sei') this.funcao('sei');
+  const r=await B.sei_importar_pdf(this.nusQuem||''); if(!r||r.cancelado) return; if(r.erro){ this.toast(r.erro,{erro:true}); return; }
+  this.nusModal('Importação de PDF', `<ul class="fx-lista">${r.arquivos.map(a=>`<li class="nus-item">${a.erro?this.nusTag('crit','não importado')+' '+esc(a.erro):this.nusTag(a.novo?'ok':'neu',a.novo?'importado':'já importado')+' '+esc(a.msg)}
+    ${(a.avisos||[]).map(x=>`<div class="fx-aviso">${esc(x)}</div>`).join('')}</li>`).join('')}</ul>
+    <p class="muted">Os documentos foram separados pelo rodapé do SEI, classificados e lidos pelas regras do NUSPEN: tudo é sugestão até alguém validar. O original fica guardado sem alteração.</p>`);
+  await this.seiCarregar(); };
+ui.nusGeralExtra=async function(){ const el=document.getElementById('nusGeral2'); if(!el) return;
+  const N=this.nusQuem?await this.nus('novidades', this.nusQuem):null, M=(await this.nus('o_que_mudou'))||{eventos:[],por_tipo:{}}, P=(await this.nus('perguntas'))||[];
+  const nov=N?`<section class="fx-quadro"><h2 class="fx-sec">Desde a sua última visita${N.desde?' ('+esc(N.desde.slice(0,16))+')':''}</h2>
+    <ul class="fx-barras nus-kv"><li><span>documentos novos</span><b>${N.documentos}</b></li><li><span>providências sugeridas</span><b>${N.sugestoes}</b></li><li><span>respostas registradas</span><b>${N.respostas}</b></li>
+    <li><span>decisões registradas</span><b>${N.decisoes}</b></li><li><span>prazos que venceram</span><b>${N.prazos_vencidos}</b></li><li><span>inspeções registradas</span><b>${N.inspecoes}</b></li></ul>
+    <div class="fx-acoes"><button type="button" class="btn" onclick="ui.nusVisto()">Marcar como visto</button></div><p class="muted">O marco só avança quando você marca: o resumo não some sozinho.</p></section>`:
+    '<section class="fx-quadro"><h2 class="fx-sec">Desde a sua última visita</h2><p class="muted">Escolha o seu nome em Quem, no alto.</p></section>';
+  const ev=`<section class="fx-quadro"><h2 class="fx-sec">O que mudou nas leituras (${M.total||0})</h2>${(M.eventos||[]).length?`<ul class="fx-ent">${M.eventos.slice(0,30).map(e=>`<li><button type="button" onclick="ui.sei.vista='proc';ui.seiAbrirProc(${jsa(e.processo)})"><b>${esc(e.rotulo)}</b><span class="fx-num">${esc(e.processo)} · ${esc(e.descricao||'')}</span>${e.ligacao?`<small class="muted">${esc(e.ligacao)}</small>`:''}</button>
+      ${e.sugestao==='encerramento'&&!e.confirmado?`<button type="button" class="btn ghost" onclick="ui.nusEncerrar(${e.id})">Confirmar possível arquivamento…</button>`:''}</li>`).join('')}</ul>`:'<p class="muted">Nada novo desde que foi marcado como visto.</p>'}</section>`;
+  const per=`<section class="fx-quadro"><h2 class="fx-sec">Perguntas prontas</h2><p class="muted">Consultas fixas, sem IA; cada resposta aponta a origem.</p><div class="nus-perg">${P.map(([k,t])=>`<button type="button" class="btn" onclick="ui.nusPerg('${k}')">${esc(t)}</button>`).join('')}</div></section>`;
+  el.innerHTML=`<div class="fx-duas">${nov}${ev}</div>${per}`; };
+ui.nusVisto=function(){ if(!this.nusQuem){ this.toast('Escolha quem está registrando (Quem, no alto).',{erro:true}); return; } this.nus('marcar_visto', this.nusQuem).then(r=>{ if(r){ this.toast('Marcado como visto.'); this.nusGeralExtra(); } }); };
+ui.nusEncerrar=function(eid){ this.nusPede('Possível arquivamento do processo','Por que confirma? (as providências abertas do processo vão à coordenação; nada é dado como cumprido)', async m=>{ const r=await this.nus('evento_encerramento', eid, this.nusQuem, m); if(r) this.toast(r.encaminhadas+' providência(s) encaminhada(s) à coordenação.'); return r; }); };
+ui.nusPerg=async function(k){ const r=await this.nus('consultar', k); if(!r) return;
+  this.nusModal(r.titulo, r.linhas.length?`<ul class="nus-res">${r.linhas.map(l=>`<li><button type="button" onclick="ui.fecharModal();${l.ir[0]==='proc'?`ui.sei.vista='proc';ui.seiAbrirProc(${jsa(l.ir[1])})`:`ui.nusIr('${l.ir[0]}',${jsa(l.ir[1])})`}"><span>${esc(l.texto)}</span></button></li>`).join('')}</ul>`:`<p class="muted">${esc(r.nota)}</p>`); };
+// lote: escolher, ver a prévia, confirmar; cada item passa pela regra da ação individual
+ui.nusLote=function(acao){ const ids=[...document.querySelectorAll('#nusVista .nus-sel:checked')].map(x=>+x.value); if(!ids.length){ this.toast('Marque as providências na lista.',{erro:true}); return; }
+  const nomes={validar:'Validar',prioridade_alta:'Prioridade alta',coordenacao:'Encaminhar à coordenação'}, itens=ids.map(i=>{ const b=document.querySelector(`#nusVista .nus-sel[value="${i}"]`); return b?b.dataset.d:''+i; });
+  this.nusForm(`${nomes[acao]}: ${ids.length} providência(s)`, [{k:'motivo', rot:'Motivo (vai para o histórico de cada uma)', tipo:'textarea', obrig:acao!=='validar'}],
+    async v=>{ const r=await this.nus('em_lote', acao, ids, this.nusQuem, v.motivo); if(r) this.toast(r.feitos+' feita(s)'+(r.erros.length?'; '+r.erros.length+' com erro: '+r.erros.join('; '):'.'),{erro:!!r.erros.length}); return r; }, 'Confirmar');
+  const f=document.querySelector('#modal form'); if(f) f.insertAdjacentHTML('afterbegin', `<p class="muted">Prévia:</p><ul class="nus-alt">${itens.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>`); };
+// calendário do mês (prazos validados com data)
+ui.nusCal=function(P){ const hoje=new Date(); const m=this._nusMes||[hoje.getFullYear(),hoje.getMonth()]; const ini=new Date(m[0],m[1],1), dias=new Date(m[0],m[1]+1,0).getDate(), pad=(ini.getDay()+6)%7;
+  const por={}; P.filter(p=>p.status==='validada'&&p.vencimento_efetivo).forEach(p=>{ (por[p.vencimento_efetivo]=por[p.vencimento_efetivo]||[]).push(p); });
+  const iso=d=>`${m[0]}-${String(m[1]+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`, hj=hoje.toISOString().slice(0,10);
+  const cel=[...Array(pad)].map(()=>'<td></td>').concat([...Array(dias)].map((_,i)=>{ const d=i+1, k=iso(d), L=por[k]||[];
+    return `<td class="${k===hj?'hoje':''}${L.length?' tem':''}"><span class="nus-dia">${d}</span>${L.map(p=>`<button type="button" class="nus-calp ${k<hj?'venc':''}" onclick="ui.nusIr('prov',${p.obrigacao})" title="${esc(p.obrigacao_descricao)}"><span aria-hidden="true">${k<hj?'◆':'▲'}</span> ${esc(p.obrigacao_descricao.slice(0,28))}</button>`).join('')}</td>`; }));
+  const sem=[]; for(let i=0;i<cel.length;i+=7) sem.push('<tr>'+cel.slice(i,i+7).join('')+'</tr>');
+  const nome=ini.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+  return `<div class="nus-calc"><button type="button" class="btn ghost" aria-label="Mês anterior" onclick="ui._nusMes=[${m[1]===0?m[0]-1:m[0]},${(m[1]+11)%12}];ui.nusPintar()">‹</button><b>${esc(nome)}</b><button type="button" class="btn ghost" aria-label="Próximo mês" onclick="ui._nusMes=[${m[1]===11?m[0]+1:m[0]},${(m[1]+1)%12}];ui.nusPintar()">›</button></div>
+    <table class="nus-cal"><caption class="vh">Prazos validados de ${esc(nome)}</caption><thead><tr>${['seg','ter','qua','qui','sex','sáb','dom'].map(d=>`<th scope="col">${d}</th>`).join('')}</tr></thead><tbody>${sem.join('')}</tbody></table>`; };
 window.addEventListener('pywebviewready', ()=>api('listar'));
 // cabeçalho das tabelas internas da linha aberta (aba Ficha) fica preso logo abaixo do cabeçalho principal ao rolar
 // (a posição é a borda inferior real do cabeçalho principal dentro da lista, medida a cada rolagem, clique, mudança de letra ou janela)

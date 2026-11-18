@@ -77,10 +77,47 @@ CREATE TABLE IF NOT EXISTS sei_obrigacoes (id INTEGER PRIMARY KEY AUTOINCREMENT,
   descricao TEXT, destinatario TEXT, frase TEXT, regra TEXT, prazo_quantidade INTEGER, prazo_unidade TEXT, prazo_frase TEXT,
   prazo_natureza TEXT, finalidade TEXT, status TEXT, motivo TEXT, decidido_em TEXT, criado TEXT, quadro TEXT);
 CREATE INDEX IF NOT EXISTS sei_obrigacoes_proc ON sei_obrigacoes(processo);
+CREATE TABLE IF NOT EXISTS sei_arquivos (sha256 TEXT PRIMARY KEY, nome TEXT, caminho TEXT, paginas INTEGER, sem_texto TEXT, documentos INTEGER,
+  importado TEXT, quem TEXT);
+CREATE TABLE IF NOT EXISTS sei_recebimentos (id INTEGER PRIMARY KEY AUTOINCREMENT, sha256 TEXT, nome TEXT, quando TEXT, quem TEXT);
 CREATE TABLE IF NOT EXISTS sei_decisoes (id INTEGER PRIMARY KEY AUTOINCREMENT, obrigacao INTEGER, de TEXT, para TEXT, motivo TEXT, quando TEXT);
 CREATE INDEX IF NOT EXISTS sei_decisoes_obr ON sei_decisoes(obrigacao);
 CREATE TABLE IF NOT EXISTS sei_eventos (id INTEGER PRIMARY KEY AUTOINCREMENT, sessao INTEGER, processo TEXT, tipo TEXT, descricao TEXT, quando TEXT);
 """
+
+
+EVENTOS = {"despacho_decisao": "Despacho ou decisão", "oficio_expedido": "Ofício expedido", "resposta_recebida": "Resposta recebida",
+           "documento_outro_orgao": "Documento de outro órgão", "arquivamento_conclusao": "Arquivamento ou conclusão", "reabertura": "Reabertura",
+           "mudanca_unidade": "Mudança de unidade", "documento_alterado": "Documento alterado", "documento_inacessivel": "Documento deixou de estar acessível",
+           "documento_novo": "Documento novo"}
+LIGACAO = {"providencia": "providência determinada (sugerida, a validar)", "analise": "análise pendente (receber não é cumprir)",
+           "encerramento": "sugere encerrar providências abertas: só com confirmação humana"}
+_ARQUIVAMENTO = re.compile(r"\barquiv(e|em)-se\b|\bencerr(e|em)-se\b|\bconclu(a|am)-se o processo\b|\bprocesso (arquivado|concluido)\b|\bconclusao do processo\b")
+_REABERTURA = re.compile(r"\breabert(ura|o|a)\b|\breabr(a|am)-se\b|\bdesarquiv")
+
+
+def classificar_evento(tipo_codigo, texto):
+    """O que o documento novo significa para o processo (NUSPEN, eventos.py): pelo tipo e pelo conteúdo."""
+    import unicodedata
+    t = "".join(c for c in unicodedata.normalize("NFD", (texto or "").lower()) if unicodedata.category(c) != "Mn")
+    tipos = []
+    if _ARQUIVAMENTO.search(t):
+        tipos.append("arquivamento_conclusao")
+    if _REABERTURA.search(t):
+        tipos.append("reabertura")
+    if tipo_codigo in ("A1", "A7"):
+        tipos.append("despacho_decisao")
+    if tipo_codigo == "A6":
+        tipos.append("oficio_expedido")
+    if tipo_codigo in ("B1", "B9") or extrair_indicios_resposta(texto or "", tipo_codigo):
+        tipos.append("resposta_recebida")
+    elif tipo_codigo.startswith("B"):
+        tipos.append("documento_outro_orgao")
+    return tipos or ["documento_novo"]
+
+
+def sha_txt(texto):
+    return hashlib.sha256(texto.encode("utf-8")).hexdigest()
 
 
 def sha(texto):
@@ -107,6 +144,10 @@ class Sei:
         with self._trava, self._con:
             self._con.executescript(TABELAS)
             # 7.26: indícios de resposta (regra do NUSPEN): certidão/termo que cita resposta a ofício; manifestação que afirma atendimento
+            tem_ev = [r[1] for r in self._con.execute("PRAGMA table_info(sei_eventos)")]
+            for c, t in (("documento", "INTEGER"), ("sugestao", "TEXT"), ("visto", "INTEGER DEFAULT 0"), ("confirmado", "INTEGER DEFAULT 0")):
+                if c not in tem_ev:
+                    self._con.execute("ALTER TABLE sei_eventos ADD COLUMN %s %s" % (c, t))
             if "indicios" not in [r[1] for r in self._con.execute("PRAGMA table_info(sei_documentos)")]:
                 self._con.execute("ALTER TABLE sei_documentos ADD COLUMN indicios TEXT")
             # 7.26: retrato da lista do Controle de Processos (para a Visão geral): atribuição, marcadores, tipo, interessados,
@@ -192,6 +233,85 @@ class Sei:
                     fora = 0 if ids in vistos else 1
                     self._con.execute("UPDATE sei_processos SET fora_da_lista=? WHERE numero=?", (fora, num))
         return {"status": "concluida"}
+
+    # ---- importação de PDF (o processo baixado do SEI, ou um anexo em PDF): como no NUSPEN ----
+    def importar_pdf(self, caminho, pasta_originais, quem=""):
+        """Lê o PDF página a página, separa os documentos pelo rodapé do SEI, classifica e aplica as regras (tudo sugestão).
+        O original fica imutável (cópia com o SHA-256 no nome); o mesmo arquivo de novo só registra o recebimento. Página só de
+        imagem fica sem texto (sem OCR neste computador): é avisada, nunca dada como lida."""
+        import os
+        import shutil
+        from nuspen_regras.leitura import extrair_paginas
+        from nuspen_regras.segmentacao import segmentar
+        with open(caminho, "rb") as f:
+            if f.read(5) != b"%PDF-":
+                return {"erro": "O arquivo não é um PDF."}
+            f.seek(0)
+            h = hashlib.sha256()
+            for bloco in iter(lambda: f.read(1 << 20), b""):
+                h.update(bloco)
+        sha = h.hexdigest()
+        nome = os.path.basename(caminho)
+        with self._trava, self._con:
+            self._con.execute("INSERT INTO sei_recebimentos(sha256, nome, quando, quem) VALUES(?,?,?,?)", (sha, nome, _agora(), _t(quem, 100)))
+            ja = self._con.execute("SELECT documentos, sem_texto FROM sei_arquivos WHERE sha256=?", (sha,)).fetchone()
+        if ja:
+            return {"ok": True, "novo": False, "nome": nome, "documentos": ja[0], "sem_texto": json.loads(ja[1] or "[]"),
+                    "msg": "%s já tinha sido importado (o mesmo arquivo): só o recebimento foi registrado." % nome}
+        try:
+            paginas = extrair_paginas(caminho)
+        except Exception as e:  # pdfplumber/pdfminer levantam tipos variados
+            return {"erro": "Não foi possível ler o PDF (%s)." % type(e).__name__}
+        segs = segmentar(paginas)
+        os.makedirs(pasta_originais, exist_ok=True)
+        destino = os.path.join(pasta_originais, "%s.pdf" % sha)
+        if not os.path.exists(destino):
+            shutil.copyfile(caminho, destino)
+        por_num = {p.numero: p for p in paginas}
+        # trecho sem rodapé fica no processo que predomina no arquivo (é um processo baixado do SEI); sem nenhum, no nome do arquivo
+        from collections import Counter
+        mais = Counter(sg.processo for sg in segs if sg.processo).most_common(1)
+        principal = next((sg.processo_original for sg in segs if mais and sg.processo == mais[0][0]), None)
+        ses = self.iniciar("pdf")["sessao"]
+        itens, procs = [], {}
+        for i, sg in enumerate(segs, 1):
+            texto = "\n".join(por_num[n].texto for n in sg.paginas if por_num[n].texto).strip()
+            if not texto:
+                continue
+            proc = sg.processo_original or principal or "PDF %s" % nome[:40]
+            chave = normalizar_numero_processo(proc) or proc
+            if chave not in procs:
+                procs[chave] = proc
+                itens.append({"tipo": "processo", "id_sei": "pdf-%s-%s" % (sha[:10], proc), "numero": proc, "especificacao": "", "unidade": "",
+                              "adaptador": "pdf"})
+            faixa = "p. %d" % sg.paginas[0] if len(sg.paginas) == 1 else "p. %d–%d" % (sg.paginas[0], sg.paginas[-1])
+            idd = sg.id_documento if sg.id_documento and not sg.id_repetido else "%s-%d" % (sha[:10], i)
+            rot = sg.rotulo or ("trecho sem rodapé do SEI" if sg.orfao else "documento")
+            itens.append({"tipo": "documento", "id_sei": "pdf-%s" % idd, "processo": proc, "titulo": "%s (PDF %s, %s)" % (rot, nome[:60], faixa),
+                          "versao": sha[:12], "conteudo": texto, "hash": sha_txt(texto), "adaptador": "pdf"})
+        r = self.receber_lote(ses, itens)
+        self.concluir(ses, {"requisicoes": 0, "duracao_s": 0})
+        sem = [p.numero for p in paginas if p.leitura == "sem_texto"]
+        prej = [p.numero for p in paginas if p.leitura == "prejudicada"]
+        ndoc = sum(1 for x in itens if x["tipo"] == "documento")
+        with self._trava, self._con:
+            self._con.execute("INSERT INTO sei_arquivos(sha256, nome, caminho, paginas, sem_texto, documentos, importado, quem) VALUES(?,?,?,?,?,?,?,?)",
+                              (sha, nome, destino, len(paginas), json.dumps(sem), ndoc, _agora(), _t(quem, 100)))
+        aviso = []
+        if sem:
+            aviso.append("%d página(s) sem texto (escaneadas: sem OCR neste computador, não foram lidas): %s" % (len(sem), ", ".join(map(str, sem[:20]))))
+        if prej:
+            aviso.append("%d página(s) com leitura prejudicada: %s" % (len(prej), ", ".join(map(str, prej[:20]))))
+        orf = sum(1 for sg in segs if sg.orfao)
+        if orf:
+            aviso.append("%d trecho(s) sem o rodapé do SEI (ficam como documento à parte, para conferir)" % orf)
+        return {"ok": True, "novo": True, "nome": nome, "paginas": len(paginas), "documentos": ndoc, "processos": list(procs.values()), "novos": r["novos"],
+                "sem_texto": sem, "avisos": aviso, "msg": "%s: %d página(s), %d documento(s) em %d processo(s)." % (nome, len(paginas), ndoc, len(procs))}
+
+    def arquivos(self):
+        with self._trava:
+            return [dict(zip(("sha256", "nome", "paginas", "sem_texto", "documentos", "importado", "quem"), r)) for r in self._con.execute(
+                "SELECT sha256, nome, paginas, sem_texto, documentos, importado, quem FROM sei_arquivos ORDER BY importado DESC").fetchall()]
 
     def _retrato(self, s, retrato):
         """O que a lista do Controle de Processos mostrou nesta leitura (todos os processos da página, também os não relidos)."""
@@ -312,6 +432,12 @@ class Sei:
         if resultado == "modificado":
             self._substituir(id_sei, novo)
         self._obrigacoes(novo, num, texto, cl.codigo or "")
+        for tipo in classificar_evento(cl.codigo or "", _frases_por_linha(_sem_rodape(texto))):
+            sug = {"resposta_recebida": "analise", "arquivamento_conclusao": "encerramento"}.get(tipo, "")
+            if tipo == "despacho_decisao" and self._con.execute("SELECT 1 FROM sei_obrigacoes WHERE documento=? LIMIT 1", (novo,)).fetchone():
+                sug = "providencia"
+            self._con.execute("INSERT INTO sei_eventos(sessao, processo, tipo, descricao, quando, documento, sugestao) VALUES(?,?,?,?,?,?,?)",
+                              (s, num, tipo, _t(titulo, 300), _agora(), novo, sug))
         self._marcar(s, "documento", id_sei, "analisado", versao=d.get("versao"), hash=h, processo=original, titulo=titulo, adaptador=d.get("adaptador"))
         self._con.execute("UPDATE sei_processos SET ultimo_doc=? WHERE numero=?", (_agora(), num))
         if resultado == "modificado":
