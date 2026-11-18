@@ -4915,9 +4915,9 @@ ui.seiPintar=function(){ const P=document.getElementById('seiPag'); if(!P) retur
   if(!R){ P.innerHTML='<p class="muted">Carregando…</p>'; return; }
   const T=R.totais||{}, S=this.sei;
   if(!(R.processos||[]).length){ P.innerHTML=`<div class="fx-cab"><div><h1>SEI</h1><p class="sub">Nenhum processo do SEI lido ainda.</p></div></div>
-    <div class="fx-vazio"><b>Como trazer o SEI para cá</b><ol><li>Com este programa aberto, clique no ícone do APTO na barra do navegador &gt; <b>Leitura do SEI para o APTO</b>.</li>
-    <li>Informe o endereço do SEI e permita o acesso (o navegador pede a sua autorização só para esse endereço).</li><li>Escolha o que ler e clique em <b>Iniciar leitura…</b>. Deixe a página aberta até terminar.</li></ol>
-    <p class="fx-aviso">Hoje o leitor só funciona com o <b>SEI fictício do laboratório</b> (ferramentas\\sei_ficticio): o leitor do SEI real está desligado até ser calibrado e testado, como no NUSPEN. Não use com dado real antes disso.</p>
+    <div class="fx-vazio"><b>Como trazer o SEI para cá</b><ol><li>No navegador, entre no SEI da Defensoria e abra o <b>Controle de Processos</b> (a leitura começa dele).</li>
+    <li>Com este programa aberto, clique no ícone do APTO na barra do navegador &gt; <b>Leitura do SEI para o APTO</b> (o endereço do SEI já vem preenchido).</li><li>Escolha o que ler e clique em <b>Iniciar leitura…</b>. Deixe a página aberta até terminar.</li></ol>
+    <p class="fx-aviso">Ainda não lido: anexos em PDF (só os documentos feitos no SEI) e a lista paginada (se o SEI mostrar a lista em várias páginas, só a primeira é lida, com aviso).</p>
     <p class="muted">A leitura é só leitura, na sua sessão: nada é escrito no SEI, e nada vai para fora do computador.</p></div>`; return; }
   const q=semAcento(S.q||'');
   const Ps=R.processos.filter(p=>(!q||semAcento(p.original+' '+p.especificacao+' '+p.unidade).includes(q)) &&

@@ -125,6 +125,24 @@ if node:
             ok(t.get("linhas", [{}])[0].get("executado") == "FULANO FICTICIO" and t.get("recebida"), "triagem guardada para a função SEEU")
             ok(any("ui.seeuEvento" in e for e in eventos), "a tela do SEEU é avisada")
             ok(api.abrir_seeu("https://site.qualquer/").get("erro"), "abrir no SEEU: só o endereço do SEEU")
+            # leitor do SEI da Defensoria (páginas sintéticas com a estrutura real) até o APTO
+            r2 = subprocess.run([node, os.path.join(AQUI, "extensao_seeu_testes", "teste_sei_dpms_e2e.mjs")], capture_output=True, text=True, timeout=300, env=env)
+            try:
+                j2 = json.loads(r2.stdout.strip().splitlines()[-1])
+            except Exception:
+                j2 = {}
+                ok(False, "e2e dpms não rodou: %s %s" % (r2.stdout[-500:], r2.stderr[-1500:]))
+            if j2:
+                ok(j2["semEntrada"] == "sessao_ausente", "SEI da Defensoria sem o Controle de Processos aberto: pede para abrir (%s)" % j2["semEntrada"])
+                d1, d2 = j2["primeira"], j2["repetida"]
+                ok(d1["processos"] == 3 and d1["documentosLidos"] == 6 and d1["parada"] is None, "SEI da Defensoria: 3 processos, 6 documentos (o anexo PDF fica de fora): %s" % d1)
+                ok(d2["documentosLidos"] == 0 and d2["documentosPulados"] == 6, "2ª leitura: nada relido (hash): %s" % d2)
+                ok(j2["metodos"] == ["GET"] and set(j2["acoes"]) <= {"procedimento_controlar", "procedimento_trabalhar", "procedimento_visualizar", "documento_visualizar"},
+                   "só GET e só as quatro leituras: %s %s" % (j2["metodos"], j2["acoes"]))
+                det = api.sei_processo("99/000111/2026")
+                ok(det and det["especificacao"].startswith("Inspeção - Unidade Prisional") and det["unidade"] == "NUSPEN-FICT", "processo com tipo, especificação e unidade: %s" % (det and det["especificacao"]))
+                ob = [o for o in (det or {}).get("obrigacoes", []) if "Determino" in o["frase"]]
+                ok(ob and ob[0]["prazo_quantidade"] == 30, "regras do NUSPEN no texto do SEI da Defensoria: obrigação com prazo de 30 dias")
     finally:
         if srv:
             srv.shutdown()

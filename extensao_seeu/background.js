@@ -491,6 +491,13 @@ chrome.runtime.onMessage.addListener((msg, sender, responder) => {
   (async () => {
     try {
       if (sender.tab && doSap(sender.url) && msg && /^atd[A-Z]/.test(String(msg.tipo || ""))) return responder(await atdMensagem(msg, sender));
+      // SEI da Defensoria: a aba (já logada) informa o endereço assinado do Controle de Processos, de onde a leitura começa
+      if (sender.tab && /^https:\/\/sei\.defensoria\.ms\.def\.br\/sei\//.test(sender.url || "") && msg && msg.tipo === "seiEntrada") {
+        const u = String(msg.url || "");
+        if (!/^https:\/\/sei\.defensoria\.ms\.def\.br\/sei\/controlador\.php\?acao=procedimento_controlar&/.test(u)) return responder({ ok: false });
+        await chrome.storage.session.set({ seiEntrada: { url: u, quando: Date.now() } });
+        return responder({ ok: true });
+      }
       const daPagina = sender.tab && (doSeeu(sender.url) || doSiapen(sender.url) || doSap(sender.url));
       const doSiapenMsg = sender.tab && doSiapen(sender.url);
       if (doSiapenMsg && msg.tipo === "podeFicha") {

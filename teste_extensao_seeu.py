@@ -24,9 +24,11 @@ ok(m["host_permissions"] == ["https://seeu.pje.jus.br/*", "https://seeu-transfer
                              "https://app.siapen.ms.gov.br/*", "https://*.defensoria.ms.def.br/*", "http://127.0.0.1:47321/*"],
    "só o SEEU (e o servidor de arquivos do SEEU), o SIAPEN, o SAP da Defensoria e o APTO deste computador: %s" % m["host_permissions"])
 ok([c["matches"] for c in m["content_scripts"]] == [["https://seeu.pje.jus.br/seeu/*"], ["https://app.siapen.ms.gov.br/*"], ["https://app.siapen.ms.gov.br/*"],
-                                                   ["https://*.defensoria.ms.def.br/sap/*"], ["https://*.defensoria.ms.def.br/sap/*"]], "scripts só no SEEU, no SIAPEN e no SAP")
+                                                   ["https://*.defensoria.ms.def.br/sap/*"], ["https://*.defensoria.ms.def.br/sap/*"], ["https://sei.defensoria.ms.def.br/sei/*"]],
+   "scripts só no SEEU, no SIAPEN, no SAP e no SEI da Defensoria")
+ok(m["content_scripts"][5]["js"] == ["sei_aba.js"], "SEI: só guarda o endereço do Controle de Processos aberto")
 ok(m["content_scripts"][4]["js"] == ["atd_comum.js", "atd_sap.js"], "SAP: atendimentos (fila e Fato Narrado para o APTO)")
-ok([c.get("world") for c in m["content_scripts"]] == [None, None, "MAIN", None, None] and m["content_scripts"][2]["js"] == ["siapen_pagina.js"],
+ok([c.get("world") for c in m["content_scripts"]] == [None, None, "MAIN", None, None, None] and m["content_scripts"][2]["js"] == ["siapen_pagina.js"],
    "só o siapen_pagina.js roda no mundo da página")
 # SAP: só leitura - a lupa "Visualizar" (designar=0) é o único botão de linha clicado; nunca "Designar Assistido"
 sap = open(os.path.join(EXT, "sap.js"), encoding="utf-8").read()

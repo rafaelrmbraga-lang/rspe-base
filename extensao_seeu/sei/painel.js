@@ -101,6 +101,7 @@ async function desenharResultado(snap, fase) {
     ? `${mensagemErro(snap.parada || snap.erro).titulo}. ${mensagemErro(snap.parada || snap.erro).oQueFazer} ${r.resumo}.`
     : `Leitura concluída: ${r.resumo}.`;
   $("txt-problemas").textContent = r.problemas ? `Atenção: ${r.problemas}.` : "Nenhum item com erro ou inacessível.";
+  if (snap.avisos && snap.avisos.length) $("txt-problemas").textContent += " " + snap.avisos.map((x) => x[0].toUpperCase() + x.slice(1) + ".").join(" ");
 
   const reg = (await enviar({ tipo: "registro" })).registro || [];
   const itens = reg.filter((e) => e.evento === "falha" || e.evento === "indisponivel").slice(-20);

@@ -5,6 +5,7 @@
 import { sincronizar, criarLeitor, ErroNuspen } from "./lib/nucleo.js";
 import { adaptadorFicticio } from "./lib/adaptador_ficticio.js";
 import { adaptadorSeiReal } from "./lib/adaptador_sei_real.js";
+import { adaptadorSeiDpms, HOST as HOST_DPMS } from "./lib/adaptador_sei_dpms.js";
 import { ADAPTADOR_REAL_LIGADO, PADROES, VERSAO_EXTENSAO } from "./lib/config.js";
 import { mensagemErro } from "./lib/estado.js";
 
@@ -16,9 +17,25 @@ const ouvintes = [];
 const lerConfig = async () => {
   const c = { ...PADROES, ...(await chrome.storage.local.get(Object.keys(PADROES).map((k) => "sei_" + k)).then((r) => Object.fromEntries(Object.entries(r).map(([k, v]) => [k.slice(4), v])))) };
   c.baseApp = PADROES.baseApp; // sempre o APTO deste computador
+  if (!c.baseSei) c.baseSei = `https://${HOST_DPMS}`;
+  baseAtual = c.baseSei;
   return c;
 };
-const escolherAdaptador = () => (ADAPTADOR_REAL_LIGADO ? adaptadorSeiReal : adaptadorFicticio);
+// SEI da Defensoria (sei.defensoria.ms.def.br): o leitor calibrado; outro endereço: o SEI fictício do laboratório (o leitor
+// genérico do NUSPEN para um SEI real continua desligado em lib/config.js)
+let baseAtual = "";
+function escolherAdaptador() {
+  let host = "";
+  try { host = new URL(baseAtual).hostname; } catch { host = ""; }
+  if (host === HOST_DPMS) return adaptadorSeiDpms;
+  return ADAPTADOR_REAL_LIGADO ? adaptadorSeiReal : adaptadorFicticio;
+}
+// o ponto de partida do SEI da Defensoria: o Controle de Processos aberto na aba do SEI (endereço assinado, guardado por sei_aba.js)
+async function prepararEntrada() {
+  const { seiEntrada } = await chrome.storage.session.get("seiEntrada").catch(() => ({}));
+  adaptadorSeiDpms.entrada = seiEntrada && seiEntrada.url ? seiEntrada.url : "";
+  adaptadorSeiDpms.avisos = [];
+}
 
 async function lerToken() {
   try {
@@ -53,6 +70,7 @@ async function sessaoSei() {
   const cfg = await lerConfig();
   if (!cfg.baseSei) return null;
   const adaptador = escolherAdaptador();
+  await prepararEntrada();
   if (!adaptador.ativo) return null;
   try {
     const origin = new URL(cfg.baseSei).origin;
@@ -61,7 +79,7 @@ async function sessaoSei() {
     await leitor.get(adaptador.urlLista(cfg.baseSei, 0));
     return true;
   } catch (e) {
-    return e?.codigo === "sessao_expirada" ? false : null;
+    return e?.codigo === "sessao_expirada" || e?.codigo === "sessao_ausente" ? false : null;
   }
 }
 
@@ -70,6 +88,7 @@ async function iniciar(msg) {
   const cfg = await lerConfig();
   const adaptador = escolherAdaptador();
   const token = await lerToken();
+  await prepararEntrada();
   controle = { pausado: false, cancelado: false };
   rodando = true;
   const base = { fase: "iniciando", modo: msg.modo, processos: 0, documentosLidos: 0, documentosPulados: 0, falhas: 0, indisponiveis: 0, novos: 0, modificados: 0, adaptador: `${adaptador.nome}@${adaptador.versao}`, versaoExtensao: VERSAO_EXTENSAO, iniciadoEm: Date.now() };
@@ -83,7 +102,7 @@ async function iniciar(msg) {
       progresso: (p) => gravarSnapshot({ ...base, ...p, pausado: controle.pausado }),
       registro: registrar,
     });
-    gravarSnapshot({ ...base, ...r, fase: r.parada ? "parada" : "concluida", pausado: false, finalizadoEm: Date.now() });
+    gravarSnapshot({ ...base, ...r, fase: r.parada ? "parada" : "concluida", pausado: false, finalizadoEm: Date.now(), avisos: (adaptador.avisos || []).slice() });
     return { ok: true };
   } catch (e) {
     const codigo = e instanceof ErroNuspen ? e.codigo : "desconhecido";

@@ -215,6 +215,10 @@ FICHA DO SIAPEN
 LEITURA DO SEI PARA O APTO (versão 1.9.0)
 O leitor do SEI do NUSPEN, dentro desta extensão: lê os processos e documentos
 que você já vê no SEI, com a sua sessão, e entrega ao APTO aberto (função SEI).
+ - SEI da Defensoria: entre no SEI e abra o Controle de Processos; a extensão
+   guarda o endereço dele (cada link do SEI é assinado na sessão) e a leitura
+   começa dali. Só 4 ações de leitura: Controle de Processos, abrir processo,
+   árvore e documento. Anexos em PDF ainda não são lidos.
  - Abrir: ícone do APTO > "Leitura do SEI para o APTO" (abre uma página da
    extensão; deixe-a aberta enquanto lê).
  - Endereço do SEI: informe e clique em "Permitir acesso". O navegador pede a
@@ -223,9 +227,7 @@ que você já vê no SEI, com a sua sessão, e entrega ao APTO aberto (função 
  - Só leitura: só páginas de uma lista fixa de leitura; para sozinha se o SEI
    pedir calma, mudar de aparência ou pedir login de novo; não grava processo
    incompleto; pausa, cancela e retoma de onde parou.
- - HOJE SÓ O SEI FICTÍCIO DO LABORATÓRIO: o leitor do SEI real está desligado
-   (sei\lib\config.js, ADAPTADOR_REAL_LIGADO = false) até ser calibrado com a
-   estrutura do SEI da Defensoria e testado. Laboratório: rode
+ - Laboratório (outro endereço): o SEI fictício. Rode
    "python ferramentas\sei_ficticio\servidor.py 8001", abra
    http://127.0.0.1:8001/sei/entrar_ficticio e use o endereço
    http://127.0.0.1:8001.

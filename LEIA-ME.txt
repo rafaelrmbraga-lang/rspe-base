@@ -1,9 +1,9 @@
-APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.21.0
+APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.22.0
 (antigo RSPE Base; SEEU, programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-7.21.0. A documentação técnica completa (cada parâmetro, a regra, a norma e
+7.22.0. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -44,7 +44,7 @@ Execução). O programa abre na Execução.
                 prazos, ligada aos assistidos da base (ver "SEEU").
   SEI           processos do SEI lidos pela extensão (leitor do NUSPEN, só
                 leitura), com as obrigações sugeridas para validar (ver
-                "SEI"). Hoje só com o SEI fictício do laboratório.
+                "SEI"), no SEI da Defensoria.
   Quadro        as pendências dos atendimentos em kanban (ver "QUADRO");
                 o Quadro do Usuário de cada base continua na Execução.
   Relatório     produção do mês (CONTROLE - 3ª DPEP), relatório do dia em
@@ -103,14 +103,17 @@ SEEU (função SEEU: Mesa do Defensor)
   Quadro" (cartão em A fazer, com o último dia da Mesa como prazo). A providência
   é sugestão, para conferir.
 SEI (função SEI)
-  Processos do SEI lidos pela extensão (ícone do APTO > "Leitura do SEI para o
-  APTO"): informe o endereço do SEI, permita o acesso (o navegador pede só para
-  esse endereço) e inicie a leitura; deixe a página aberta até terminar. É o
-  leitor do NUSPEN (só leitura, na sua sessão, incremental: a próxima rodada só
-  lê o que mudou; pausa, cancela e retoma). O código de pareamento vem sozinho
-  do APTO. ATENÇÃO: hoje o leitor só funciona com o SEI FICTÍCIO do laboratório
-  (ferramentas\sei_ficticio\servidor.py); o leitor do SEI real está desligado
-  até ser calibrado e testado (decisão do NUSPEN). Não use com dado real antes.
+  Processos do SEI lidos pela extensão: no navegador, entre no SEI da
+  Defensoria e abra o Controle de Processos (a leitura começa dele: cada link
+  do SEI é assinado na sua sessão); depois ícone do APTO > "Leitura do SEI para
+  o APTO" (o endereço já vem preenchido) e inicie a leitura; deixe a página
+  aberta até terminar. É o leitor do NUSPEN (só leitura, na sua sessão,
+  incremental: a próxima rodada só lê o que mudou; pausa, cancela e retoma),
+  com o leitor do SEI da Defensoria calibrado pela estrutura das páginas
+  (lista, processo, árvore e documento). O código de pareamento vem sozinho do
+  APTO. Ainda não lido: anexos em PDF (só documentos feitos no SEI) e a lista
+  em várias páginas (lê a primeira e avisa). Laboratório: o SEI fictício
+  (ferramentas\sei_ficticio) continua disponível.
   Na tela: contadores (processos, obrigações a validar, validadas, falhas de
   leitura); à esquerda os processos; à direita o processo escolhido, com as
   obrigações sugeridas pelas regras do NUSPEN (determinação, solicitação,
@@ -1208,6 +1211,14 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v7.22.0
+  SEI da Defensoria: leitor calibrado pela estrutura das páginas do SEI 4
+  (Controle de Processos, processo, árvore, documento), sem nenhum conteúdo
+  real nos testes (páginas sintéticas com a mesma estrutura). Começa do
+  Controle de Processos aberto na aba já logada (a extensão guarda o endereço
+  assinado); só as quatro ações de leitura são permitidas. Fila do SAP
+  conferida com a página real (13 de 13 linhas e o Fato Narrado lidos).
 
 v7.21.0
   SEEU e SEI funcionando (ver "SEEU" e "SEI"). SEEU: a triagem da Mesa do

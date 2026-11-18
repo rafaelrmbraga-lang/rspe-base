@@ -77,6 +77,15 @@
         "atd_sap.js"
       ],
       "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://sei.defensoria.ms.def.br/sei/*"
+      ],
+      "js": [
+        "sei_aba.js"
+      ],
+      "run_at": "document_idle"
     }
   ],
   "action": {
