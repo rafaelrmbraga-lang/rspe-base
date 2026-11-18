@@ -319,7 +319,8 @@ class Comandos:
             self._seq += 1
             c = {"id": self._seq, "tipo": tipo, "nome": str((dados or {}).get("nome") or "")[:300], "rk": str((dados or {}).get("rk") or "")[:80],
                  "todos": bool((dados or {}).get("todos")), "modo": str((dados or {}).get("modo") or "")[:30],
-                 "retomar": (dados or {}).get("retomar") if isinstance((dados or {}).get("retomar"), int) else None, "criado": time.time(), "pego": 0.0, "evento": threading.Event(), "resposta": None}
+                 "retomar": (dados or {}).get("retomar") if isinstance((dados or {}).get("retomar"), int) else None,
+                 "opcoes": (dados or {}).get("opcoes") if isinstance((dados or {}).get("opcoes"), dict) else None, "criado": time.time(), "pego": 0.0, "evento": threading.Event(), "resposta": None}
             self._fila.append(c)
         prazo = self.TIPOS[tipo]
         if not c["evento"].wait(10):
@@ -345,7 +346,7 @@ class Comandos:
                 if not c["pego"]:
                     c["pego"] = time.time()
                     # avisa quem espera que a extensão pegou (a espera longa começa agora)
-                    return {k: c[k] for k in ("id", "tipo", "nome", "rk", "todos", "modo", "retomar")}
+                    return {k: c[k] for k in ("id", "tipo", "nome", "rk", "todos", "modo", "retomar", "opcoes")}
         return None
 
     def responder(self, cid, resposta):

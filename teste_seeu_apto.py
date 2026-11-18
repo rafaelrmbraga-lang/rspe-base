@@ -86,6 +86,25 @@ for _ in range(50):
 ok(cmd and cmd["modo"] == "novos" and cmd["retomar"] == 7, "Ler o SEI leva o modo e a sessão a retomar: %s" % cmd)
 cs.responder(cmd["id"], {"ok": True})
 t.join(5)
+# opções da Mesa conferidas antes de ir para a triagem; planilha da lista
+import types  # noqa: E402
+sys.modules.setdefault("webview", types.SimpleNamespace(SAVE_DIALOG=1, FOLDER_DIALOG=2, OPEN_DIALOG=0))
+import rspe_gabinete_api as rga  # noqa: E402
+o = rga._opcoes_mesa({"abas": ["5", "9", "2"], "situacao": "7", "etapa": "2", "faixa": "0-2;<x>", "defensores": ["Def"], "tipo": "Cálculo", "prov": "urgente", "outro": 1})
+ok(o == {"abas": ["5", "2"], "situacao": "1", "forcar": False, "faixa": "0-2;", "defensores": ["Def"], "tipo": "Cálculo", "prov": "urgente", "busca": "", "etapa": "2"},
+   "opções da Mesa conferidas: %s" % o)
+import rspe_app as app  # noqa: E402
+api = app.Api.__new__(app.Api)
+api._pasta_dados = os.path.dirname(g.caminho)
+api._gab, api._seeu_obj = g, s
+destino = os.path.join(os.path.dirname(g.caminho), "mesa.xlsx")
+api._janela = types.SimpleNamespace(create_file_dialog=lambda *a, **k: destino)
+r = api.seeu_planilha([x["chave"] for x in s.listar()])
+import openpyxl  # noqa: E402
+ws = openpyxl.load_workbook(destino).active
+ok(r.get("ok") and ws.max_row == len(s.listar()) + 1 and ws["B1"].value == "Processo" and ws["M1"].value == "Situação no APTO", "planilha da Mesa: %s" % r)
+api._recurso = staticmethod(lambda n: os.path.join(AQUI, n))
+ok(api.seeu_modelo("ciencia.docx").get("b64") and api.seeu_modelo("../rspe_app.py").get("erro") == "modelo inválido", "modelos de petição: só os da triagem")
 g.fechar()
 if falhas:
     print("FALHA: " + "; ".join(falhas))

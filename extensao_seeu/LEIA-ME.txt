@@ -232,6 +232,14 @@ que você já vê no SEI, com a sua sessão, e entrega ao APTO aberto (função 
    http://127.0.0.1:8001/sei/entrar_ficticio e use o endereço
    http://127.0.0.1:8001.
 
+DOWNLOAD AUTOMÁTICO (versão 1.12.0)
+ - "Baixar o RSPE automaticamente ao abrir um processo": desligado, abrir um
+   processo no SEEU não baixa nada; o botão "Baixar o RSPE do processo
+   aberto" e o lote continuam baixando.
+ - "Baixar a ficha do SIAPEN automaticamente ao abri-la": desligado, abrir a
+   ficha disciplinar no SIAPEN não grava nada; o botão "Baixar a ficha aberta
+   (SIAPEN)" e o lote continuam gravando.
+
 TRIAGEM DA MESA PARA O APTO (versão 1.9.0)
  - O resultado da triagem (Mesa lida, processos e decisões) vai também para o
    APTO aberto (função SEEU), um resumo por processo, no máximo a cada 3 s. Com

@@ -62,6 +62,8 @@
 <section>
   <label class="chk" style="margin:0 0 8px" title="Desligado: abrir um processo ou a Situação Carcerária no SEEU não baixa o RSPE. O botão abaixo e o lote continuam baixando."><input type="checkbox" id="rspeAuto"> <b>Baixar o RSPE automaticamente ao abrir um processo</b></label>
   <button class="pri" id="agora">Baixar o RSPE do processo aberto (SEEU)</button>
+  <label class="chk" style="margin:10px 0 8px" title="Desligado: abrir a ficha disciplinar no SIAPEN não grava nada. O botão abaixo e o lote continuam gravando."><input type="checkbox" id="fichaAuto"> <b>Baixar a ficha do SIAPEN automaticamente ao abri-la</b></label>
+  <button id="fichaAgora" style="width:100%;padding:8px">Baixar a ficha aberta (SIAPEN)</button>
   <div class="estado" id="estado"></div>
   <div class="dica" id="rspeDica">O automático baixa um RSPE por processo, base e dia, só do processo aberto na tela. Este botão baixa de novo mesmo que já tenha baixado hoje.</div>
 </section>

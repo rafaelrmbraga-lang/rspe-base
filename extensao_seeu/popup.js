@@ -27,6 +27,7 @@ async function carregar() {
     ? "O automático baixa um RSPE por processo, base e dia, só do processo aberto na tela. Este botão baixa de novo mesmo que já tenha baixado hoje."
     : "Download automático do RSPE desligado: abrir um processo não baixa nada. Este botão e o lote continuam baixando quando você pede.";
   $("rspeDica").className = "dica" + (cfg.rspeAuto !== false ? "" : " e");
+  $("fichaAuto").checked = cfg.fichaAuto !== false;
   $("dlRaiz").textContent = "Downloads\\" + cfg.raiz;
   // bases: as do APTO (lidas do APTO aberto) e as incluídas aqui
   const ap = st.apto || { ok: false, bases: [], aberta: "" };
@@ -85,6 +86,11 @@ async function salvar(parcial) {
 $("ativo").onchange = (e) => salvar({ ativo: e.target.checked });
 $("aviso").onchange = (e) => salvar({ avisoNaPagina: e.target.checked });
 $("rspeAuto").onchange = (e) => salvar({ rspeAuto: e.target.checked });
+$("fichaAuto").onchange = (e) => salvar({ fichaAuto: e.target.checked });
+$("fichaAgora").onclick = async () => {
+  const r = await enviar({ tipo: "fichaAgora" });
+  $("estado").textContent = r && r.ok ? "Ficha gravada." : "Ficha não gravada: " + ((r && r.motivo) || "abra a ficha no SIAPEN");
+};
 $("base").onchange = (e) => salvar({ base: e.target.value });
 $("raiz").onchange = (e) => salvar({ raiz: e.target.value });
 $("add").onclick = () => {

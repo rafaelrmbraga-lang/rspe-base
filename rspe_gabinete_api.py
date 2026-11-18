@@ -24,6 +24,23 @@ MAX_CORPO = 20 * 1024 * 1024         # tamanho máximo de um pedido da extensão
 LINKS_PERMITIDOS = ("https://wa.me/", "https://api.whatsapp.com/")
 
 
+ABAS_MESA = {"5": "Manifestação", "2": "Ciência", "7": "Razões/Contrarrazões"}
+
+
+def _opcoes_mesa(o, guardar=False):
+    """Só o que a triagem aceita: abas (5, 2, 7), situação (1 a 3), etapa (1 ou 2), reler tudo e os filtros da etapa 2."""
+    o = o if isinstance(o, dict) else {}
+    s = lambda v, n=80: str(v or "")[:n]
+    r = {"abas": [a for a in (o.get("abas") or []) if str(a) in ABAS_MESA][:3], "situacao": s(o.get("situacao"), 1) if s(o.get("situacao"), 1) in ("1", "2", "3") else "1",
+         "forcar": bool(o.get("forcar")), "faixa": re.sub(r"[^0-9,;\- ]", "", s(o.get("faixa"), 40)),
+         "defensores": [s(d, 120) for d in (o.get("defensores") or []) if d][:30], "tipo": s(o.get("tipo"), 60), "prov": s(o.get("prov"), 60), "busca": s(o.get("busca"), 80)}
+    if guardar:
+        r["faixas"] = [{"nome": s(f.get("nome"), 40), "faixa": re.sub(r"[^0-9,;\- ]", "", s(f.get("faixa"), 40))} for f in (o.get("faixas") or []) if isinstance(f, dict) and f.get("nome")][:20]
+    else:
+        r["etapa"] = "2" if str(o.get("etapa")) == "2" else "1"
+    return r
+
+
 class GabineteApi:
     """Mistura da Api: precisa de self._janela, self._js, self._pasta_dados e self._recurso (definidos no rspe_app)."""
 
@@ -250,17 +267,78 @@ class GabineteApi:
         t["itens"] = self._seeu().listar()
         t["pecas"] = rseeu.PECAS
         t["leitura"] = self._estado_leitura("seeu")
+        t["prefs"] = self.seeu_prefs()
         return t
 
     def seeu_estado(self):
         return self._estado_leitura("seeu")
 
-    def seeu_ler(self):
-        """Botão "Ler a Mesa": a extensão abre a triagem (a mesma da extensão, que não inicia prazo) e lê a Mesa e os processos."""
-        r = self._cmd_de("seeu").pedir("lerMesa", {})
+    def seeu_prefs(self):
+        """Abas, situação e filtros da Mesa como a pessoa deixou na função SEEU (os mesmos da triagem da extensão)."""
+        return self._gabinete().kv("seeu_prefs", {}) or {}
+
+    def seeu_prefs_gravar(self, prefs):
+        self._gabinete().gravar_kv("seeu_prefs", _opcoes_mesa(prefs, guardar=True))
+        return {"ok": True}
+
+    def seeu_ler(self, opcoes=None):
+        """Botões "1 · Ler a Mesa" e "2 · Ler processos e decisões": a extensão abre a triagem (a mesma da extensão, que não inicia
+        prazo) com as abas, a situação e os filtros escolhidos aqui, e roda a etapa pedida."""
+        o = _opcoes_mesa(opcoes or {})
+        self._gabinete().gravar_kv("seeu_prefs", dict(self.seeu_prefs(), **{k: v for k, v in o.items() if k != "etapa"}))
+        r = self._cmd_de("seeu").pedir("lerMesa", {"opcoes": o})
         if r.get("ok"):
             self._andamento["seeu"] = {"fase": "iniciando", "quando": time.time()}
         return r
+
+    def seeu_planilha(self, chaves):
+        """Planilha (xlsx) das intimações da lista, na ordem da tela."""
+        from openpyxl import Workbook
+        from openpyxl.styles import Font
+        itens = {x["chave"]: x for x in self._seeu().listar()}
+        ws_linhas = [itens[k] for k in (chaves or []) if k in itens]
+        if not ws_linhas:
+            return {"erro": "nenhuma intimação na lista"}
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Mesa do SEEU"
+        cab = ["Final", "Processo", "Assistido", "Defensor", "Aba", "Enviado em", "Último dia", "Prazo", "Motivo", "Última decisão", "Providência sugerida",
+               "Urgente", "Situação no APTO", "Baixa", "Data da baixa", "Observação"]
+        ws.append(cab)
+        for c in ws[1]:
+            c.font = Font(bold=True)
+        for l in ws_linhas:
+            a = l.get("analise") or {}
+            pv = a.get("providencia") or {}
+            b = l.get("baixa") or {}
+            st = "concluída" if l.get("status") == "concluido" else ("saiu da Mesa" if l.get("foraDaMesa") else "em aberto")
+            ws.append([l.get("final"), l.get("processo"), l.get("executado"), l.get("defensor"), l.get("aba"), l.get("dataEnvio"), l.get("ultimoDia"), l.get("prazo"),
+                       (a.get("pendencia") or {}).get("texto", ""), (a.get("decisao") or {}).get("nome", ""), pv.get("texto", ""), "sim" if pv.get("urgente") else "",
+                       st, b.get("pecaNome", ""), "/".join(reversed(str(b.get("data") or "").split("-"))) if b.get("data") else "", b.get("obs", "")])
+        for col, w in zip("ABCDEFGHIJKLMNOP", (6, 27, 32, 22, 16, 12, 12, 10, 40, 24, 40, 8, 14, 20, 12, 30)):
+            ws.column_dimensions[col].width = w
+        ws.freeze_panes = "A2"
+        nome = "Mesa do SEEU %s.xlsx" % time.strftime("%d-%m-%Y")
+        c = self._janela.create_file_dialog(webview.SAVE_DIALOG, save_filename=nome, file_types=("Excel (*.xlsx)",)) if self._janela else None
+        c = c[0] if isinstance(c, (list, tuple)) and c else c
+        if not c:
+            return {"cancelado": True}
+        try:
+            wb.save(c)
+        except OSError as e:
+            return {"erro": "não foi possível gravar (%s)" % e}
+        return {"ok": True, "caminho": c}
+
+    def seeu_modelo(self, arquivo):
+        """Modelo de petição da triagem (extensao_seeu/modelos, os mesmos da extensão), em base64."""
+        a = str(arquivo or "")
+        if not re.match(r"^[a-z0-9_]+\.docx$", a):
+            return {"erro": "modelo inválido"}
+        p = os.path.join(self._recurso("extensao_seeu"), "modelos", a)
+        if not os.path.isfile(p):
+            return {"erro": "modelo não encontrado: " + a}
+        with open(p, "rb") as f:
+            return {"b64": base64.b64encode(f.read()).decode("ascii")}
 
     def seeu_parar(self):
         return self._cmd_de("seeu").pedir("pararMesa", {})

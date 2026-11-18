@@ -33,7 +33,7 @@ jobs:
       - name: Compilar com PyInstaller
         run: >
           python -m PyInstaller --onefile --windowed --clean --name APTO
-          --icon rspe.ico --add-data "rspe.ico;." --add-data "apto_selo.png;." --add-data "logo_defensoria.png;." --add-data "fontes;fontes" --add-data "ui.html;." --add-data "atendimentos;atendimentos" --add-data "base_juridica.json;." --add-data "teses_auto.bin;." --add-data "monitor_juris.bin;."
+          --icon rspe.ico --add-data "rspe.ico;." --add-data "apto_selo.png;." --add-data "logo_defensoria.png;." --add-data "fontes;fontes" --add-data "ui.html;." --add-data "atendimentos;atendimentos" --add-data "extensao_seeu/modelos;extensao_seeu/modelos" --add-data "extensao_seeu/peticao.js;extensao_seeu" --add-data "base_juridica.json;." --add-data "teses_auto.bin;." --add-data "monitor_juris.bin;."
           --collect-data pdfminer --collect-data pdfplumber --collect-data reportlab --hidden-import reportlab.graphics.shapes --hidden-import rspe_relatorio --hidden-import rspe_remicao --hidden-import rspe_gabinete --hidden-import rspe_gabinete_api --hidden-import rspe_sei --hidden-import rspe_seeu
           --collect-all webview
           --exclude-module docxtpl --exclude-module docx --exclude-module docx2pdf
