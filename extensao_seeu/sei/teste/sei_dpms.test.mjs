@@ -52,6 +52,8 @@ test("dpms: documento: texto por parágrafo, entidades decodificadas, sem estilo
   assert.match(t, /Documento assinado eletronicamente por Defensor Fictício/);
   assert.ok(!/font-size|&[a-z]+;/.test(t));
   assert.equal(A.lerDocumento("sem corpo"), null);
+  // quebras de linha do Windows (CRLF), como o SEI ou o git no Windows podem entregar: mesmo texto
+  assert.equal(A.lerDocumento(P("documento.html").replace(/\r?\n/g, "\r\n")), t);
 });
 test("dpms: estrutura diferente PARA; página de login é reconhecida", () => {
   assert.throws(() => A.listarProcessos("<p>mudou</p>"), EstruturaInesperada);

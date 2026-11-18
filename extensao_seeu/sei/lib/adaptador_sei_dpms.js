@@ -114,7 +114,7 @@ export const adaptadorSeiDpms = {
   },
   lerDocumento(html) {
     if (!/<body[\s>]/i.test(html)) return null;
-    const corpo = html.replace(/<(script|style|head)\b[\s\S]*?<\/\1>/gi, " ")
+    const corpo = String(html).replace(/\r\n?/g, "\n").replace(/<(script|style|head)\b[\s\S]*?<\/\1>/gi, " ")
       .replace(/<br\s*\/?>/gi, "\n").replace(/<\/(p|div|tr|li|h\d|table)>/gi, "\n").replace(/<td\b[^>]*>/gi, " ");
     const texto = decodificar(corpo.replace(/<[^>]+>/g, "")).replace(/[ \t ]+/g, " ").replace(/ *\n */g, "\n").replace(/\n{2,}/g, "\n").trim();
     return texto || null;
