@@ -46,7 +46,7 @@ function enviarAoApto(ja) {
         analise: !a ? null : { status: a.status, erro: a.erro || "", quando: a.quando || 0,
           pendencia: a.pendencia ? { texto: a.pendencia.movimento || a.pendencia.texto || "", juntar: a.pendencia.juntar || "" } : null,
           motivo: curto(a.motivo), decisao: curto(a.decisao), mesma: !!a.mesma,
-          providencia: prov ? { texto: prov.texto, tipo: prov.tipo || "", urgente: !!prov.urgente } : null,
+          providencia: prov ? { texto: prov.texto, tipo: prov.tipo || "", urgente: !!prov.urgente } : null, tipoMotivo: a.tipoMotivo || "",
           alertas: (a.alertas || []).slice(0, 8).map((x) => ({ txt: x.txt, nivel: x.nivel })), temas: (a.temas || []).slice(0, 8) } };
     });
     // pelo service worker (que fala com o APTO); esta página só pede ao SEEU
@@ -977,13 +977,28 @@ chrome.runtime.onMessage.addListener((m) => { if (m && m.tipo === "triagemParar"
   desenhar();
   await acharSeeu();
   if (AUTO) {
-    // as mesmas duas etapas dos botões "1 · Ler a Mesa" e "2 · Ler processos e decisões"; no fim, entrega ao APTO e a aba se fecha
-    avisarAndamento({ fase: "lendo", txt: "Lendo a Mesa…" });
+    // os mesmos botões "1 · Ler a Mesa" e "2 · Ler processos e decisões", com as abas, a situação e os filtros escolhidos no APTO
+    // (os mesmos controles desta página: cada valor é conferido antes de valer); no fim, entrega ao APTO e a aba se fecha
+    let o = {};
+    try { o = JSON.parse(new URLSearchParams(location.search).get("o") || "{}") || {}; } catch (e) { o = {}; }
+    const abas = (Array.isArray(o.abas) ? o.abas : []).map(String).filter((a) => T.ABAS[a]);
+    if (abas.length) { document.querySelectorAll(".aba").forEach((c) => { c.checked = abas.includes(c.value); }); prefs.abas = abas; }
+    if (["1", "2", "3"].includes(String(o.situacao))) { $("situacao").value = String(o.situacao); prefs.situacao = String(o.situacao); }
+    $("forcar").checked = !!o.forcar;
+    $("faixa").value = typeof o.faixa === "string" ? o.faixa : ""; prefs.faixa = $("faixa").value;
+    prefs.defensores = Array.isArray(o.defensores) ? o.defensores.map(String) : [];
+    $("busca").value = typeof o.busca === "string" ? o.busca : "";
+    guardarPrefs();
+    desenhar();
+    const escolher = (sel, v) => { if (!v) { sel.value = ""; return; } if (![...sel.options].some((x) => x.value === v)) sel.append(new Option(v, v)); sel.value = v; };
+    escolher($("tipo"), typeof o.tipo === "string" ? o.tipo : "");
+    escolher($("prov"), typeof o.prov === "string" ? o.prov : "");
+    const etapa = String(o.etapa) === "2" ? 2 : 1;
+    avisarAndamento({ fase: "lendo", txt: etapa === 1 ? "Lendo a Mesa…" : "Lendo processos e decisões…", etapa });
     try {
-      const antes = estado.quando;
-      await lerMesa();
-      // a Mesa foi lida agora (mesmo com aviso de páginas que o SEEU não entregou): segue para os processos
-      if (estado.quando !== antes && estado.linhas.length) await lerProcessos();
+      if (etapa === 1) await lerMesa();
+      else if (estado.linhas.length) await lerProcessos();
+      else mensagem("Leia a Mesa primeiro (etapa 1).", true);
     } catch (e) { mensagem(e.message || String(e), true); }
     await enviarAoApto(true);
     const erro = $("msg").className === "erro";

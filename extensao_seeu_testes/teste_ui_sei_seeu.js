@@ -21,7 +21,9 @@ const SHOTS = process.env.APTO_CAPTURAS || "";
       sei_decidir: (id, st, m) => { window.__chamadas.push(["decidir", id, st, m]); const o = Object.values(fx.processos).flatMap((p) => p.obrigacoes).find((x) => x.id === id); if (o) o.status = st; return { ok: true }; },
       sei_para_quadro: (id) => { window.__chamadas.push(["quadroSei", id]); return { ok: true }; },
       seeu_para_quadro: (...a) => { window.__chamadas.push(["quadroSeeu", ...a]); return { ok: true }; },
-      seeu_ler: () => { window.__chamadas.push(["lerMesa"]); return { ok: true, iniciado: true }; },
+      seeu_ler: (o) => { window.__chamadas.push(["lerMesa", o]); return { ok: true, iniciado: true }; },
+      seeu_prefs_gravar: (p) => { window.__chamadas.push(["prefs", p]); return { ok: true }; },
+      seeu_planilha: (ks) => { window.__chamadas.push(["planilha", ks]); return { ok: true, caminho: "C:\\x.xlsx" }; },
       seeu_estado: () => fx.triagem.leitura,
       seeu_concluir: (k, pc, dt, ob) => { window.__chamadas.push(["baixa", k, pc, dt, ob]); const it = fx.triagem.itens.find((x) => x.chave === k); if (it) { it.status = "concluido"; it.baixa = { peca: pc, pecaNome: fx.triagem.pecas[pc] || "", data: dt, obs: ob }; } return { ok: true }; },
       seeu_reabrir: (k) => { window.__chamadas.push(["reabrir", k]); return { ok: true, removidas: [] }; },
@@ -55,10 +57,45 @@ const SHOTS = process.env.APTO_CAPTURAS || "";
   ok(await pg.isVisible("#seeuPag .fx-det"), "linha abre pelo teclado (Enter)");
   if (SHOTS) await pg.screenshot({ path: path.join(SHOTS, "seeu.png") });
   ok(await pg.isVisible('#seeuPag .fx-sist.on'), "SEEU aberto (com a extensão)");
-  await pg.click('#seeuPag .fx-ler button:has-text("Ler a Mesa")');
+  // os controles da triagem no APTO: abas, situação, etapas 1 e 2, reler tudo; defensor, final do nº, motivo, busca, providência
+  const txtBarra = await pg.textContent("#seeuPag .fx-mesa");
+  ok(/Manifestação/.test(txtBarra) && /Ciência/.test(txtBarra) && /Razões\/Contrarrazões/.test(txtBarra) && /reler tudo/.test(txtBarra), "abas e reler tudo na barra");
+  ok(/2 · Ler processos e decisões \(2\)/.test(txtBarra), "etapa 2 com o nº da Mesa nos filtros (2, sem filtro): " + txtBarra.replace(/\s+/g, " ").slice(0, 200));
+  await pg.selectOption("#seeuSit", "2");
+  await pg.click('#seeuPag .fx-mesa button:has-text("1 · Ler a Mesa")');
   await pg.waitForTimeout(200);
-  ok((await pg.evaluate(() => window.__chamadas)).some((c) => c[0] === "lerMesa"), "botão Ler a Mesa dentro do APTO");
+  let lm = (await pg.evaluate(() => window.__chamadas)).filter((c) => c[0] === "lerMesa").pop();
+  ok(lm && lm[1].etapa === "1" && lm[1].situacao === "2" && lm[1].abas.join() === "5,2", "1 · Ler a Mesa com as abas e a situação: " + JSON.stringify(lm && lm[1]));
+  ok(await pg.isVisible('#seeuPag .fx-tri button:has-text("Sem defensor vinculado")') && (await pg.$$eval('#seeuPag .fx-tri .fx-chip.num', (x) => x.length)) === 10, "defensor e final do nº (0 a 9)");
+  await pg.click('#seeuPag .fx-tri .fx-chip:has-text("Outra Defensora")');
+  await pg.click('#seeuPag .fx-cont button:has-text("em aberto")');
+  await pg.waitForTimeout(200);
+  ok((await pg.$$eval("#seeuPag .fx-l", (x) => x.length)) === 1 && /BELTRANA/.test(await pg.textContent("#seeuPag .fx-tab")), "filtro do defensor");
+  await pg.click('#seeuPag .fx-tri .fx-chip:has-text("Todos")');
+  await pg.click('#seeuPag .fx-tri .fx-chip.num:has-text("1")');
+  await pg.waitForTimeout(200);
+  ok((await pg.inputValue("#seeuFaixa")) === "1" && (await pg.$$eval("#seeuPag .fx-l", (x) => x.length)) === 2, "final do nº (os dois terminam em 1 no 7º dígito)");
+  await pg.click('#seeuPag .fx-tri .fx-chip.num:has-text("1")');
+  await pg.selectOption("#seeuProv", "urgente");
+  await pg.waitForTimeout(200);
+  await pg.click('#seeuPag .fx-mesa button:has-text("2 · Ler processos")');
+  await pg.waitForTimeout(200);
+  lm = (await pg.evaluate(() => window.__chamadas)).filter((c) => c[0] === "lerMesa").pop();
+  ok(lm && lm[1].etapa === "2" && lm[1].prov === "urgente", "2 · Ler processos com os filtros: " + JSON.stringify(lm && lm[1]));
+  await pg.waitForTimeout(800);
+  ok((await pg.evaluate(() => window.__chamadas)).some((c) => c[0] === "prefs"), "abas, situação e filtros ficam guardados");
+  await pg.click('#seeuPag .fx-tri button:has-text("Planilha")');
+  await pg.waitForTimeout(200);
+  ok((await pg.evaluate(() => window.__chamadas)).some((c) => c[0] === "planilha" && c[1].length === 1), "planilha da lista filtrada");
+  const antesDet = await pg.$$eval("#seeuPag .fx-det", (x) => x.length);
+  await pg.click('#seeuPag .fx-tri button:has-text("Abrir/fechar")');
+  await pg.waitForTimeout(200);
+  const depoisDet = await pg.$$eval("#seeuPag .fx-det", (x) => x.length);
+  if (!depoisDet) { await pg.click('#seeuPag .fx-tri button:has-text("Abrir/fechar")'); await pg.waitForTimeout(200); }
+  ok(antesDet !== depoisDet && await pg.isVisible("#seeuPag .fx-det"), "abrir/fechar detalhes");
+  if (SHOTS) await pg.screenshot({ path: path.join(SHOTS, "seeu.png") });
   if (!(await pg.isVisible("#seeuPag .fx-det"))) { await pg.focus("#seeuPag .fx-l"); await pg.keyboard.press("Enter"); await pg.waitForTimeout(200); }
+  await pg.selectOption("#seeuProv", "");
   await pg.click('#seeuPag .fx-det button:has-text("Enviar ao Quadro")');
   await pg.waitForTimeout(200);
   ok((await pg.evaluate(() => window.__chamadas)).some((c) => c[0] === "quadroSeeu" && c[1] === "7000117-54.2016.8.12.0001"), "providência vai ao Quadro");

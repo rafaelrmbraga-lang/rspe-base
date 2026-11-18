@@ -1,9 +1,9 @@
-APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.23.0
+APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.24.0
 (antigo RSPE Base; SEEU, programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-7.23.0. A documentação técnica completa (cada parâmetro, a regra, a norma e
+7.24.0. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -1211,6 +1211,17 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v7.24.0
+  Função SEEU com os mesmos controles da Triagem da Mesa da extensão: Abas
+  (Manifestação, Ciência, Razões/Contrarrazões), Situação, "1 · Ler a Mesa",
+  "2 · Ler processos e decisões (N)", Parar e "reler tudo"; e os filtros
+  Defensor (com "Sem defensor vinculado"), Final do nº (0 a 9, faixa e
+  faixas guardadas), Motivo, busca e Providência, mais Planilha (xlsx),
+  Imprimir e Abrir/fechar detalhes. O que se escolhe aqui vai junto no
+  pedido e a triagem aplica antes de ler (a etapa 2 lê os processos da Mesa
+  que passam nos filtros, como na extensão). Abas, situação e filtros ficam
+  guardados.
 
 v7.23.0
   Botões de leitura dentro do APTO, como no SAP: "Ler o SEI" (função SEI:

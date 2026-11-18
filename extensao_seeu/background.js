@@ -514,7 +514,9 @@ async function seeuMensagem(msg) {
     if (triagemAuto && triagemAuto.tab != null) {
       try { await chrome.tabs.get(triagemAuto.tab); return { erro: "a leitura da Mesa já está em andamento" }; } catch (e) { /* a aba fechou */ }
     }
-    const t = await chrome.tabs.create({ url: chrome.runtime.getURL("triagem.html?auto=1"), active: false });
+    // as abas, a situação, a etapa e os filtros escolhidos no APTO vão no endereço (a triagem confere cada um)
+    const o = msg.opcoes && typeof msg.opcoes === "object" ? msg.opcoes : {};
+    const t = await chrome.tabs.create({ url: chrome.runtime.getURL("triagem.html?auto=1&o=" + encodeURIComponent(JSON.stringify(o).slice(0, 4000))), active: false });
     await chrome.storage.session.set({ triagemAuto: { tab: t.id, quando: Date.now() } });
     return { ok: true, iniciado: true };
   }

@@ -11,7 +11,7 @@
     const c = r && r.cmd;
     if (!c) return;
     let resp;
-    if (c.tipo === "lerMesa") resp = (await enviar({ tipo: "seeuAbrirTriagem" })) || { erro: "a extensão não abriu a triagem" };
+    if (c.tipo === "lerMesa") resp = (await enviar({ tipo: "seeuAbrirTriagem", opcoes: c.opcoes || {} })) || { erro: "a extensão não abriu a triagem" };
     else if (c.tipo === "pararMesa") resp = (await enviar({ tipo: "seeuPararTriagem" })) || { ok: true };
     else resp = { erro: "pedido desconhecido" };
     await enviar({ tipo: "seeuResposta", id: c.id, resposta: resp });

@@ -731,6 +731,26 @@ body:not(.fn-exec) .fnpag{display:block}
 .fx-baixa label{font-size:var(--fs-12);color:var(--tx2)}
 .fx-baixa select,.fx-baixa input{min-height:34px;padding:5px 8px;border:1px solid var(--line2);border-radius:var(--r-1);background:var(--card);color:var(--tx);font:inherit}
 .fx-l.concl td{color:var(--tx2)}
+.fx-mesa{background:var(--card);border:1px solid var(--line);border-radius:var(--r-2);padding:8px 12px;margin:0 0 10px}
+.fx-grp{display:inline-flex;align-items:center;gap:10px;border:0;margin:0;padding:0}
+.fx-grp legend,.fx-rot{float:left;margin-right:4px;font-size:var(--fs-12);font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.04em}
+.fx-chk{display:inline-flex;align-items:center;gap:6px;font-size:var(--fs-13);cursor:pointer}
+.fx-chk input{width:16px;height:16px;accent-color:var(--pri)}
+.fx-tri{background:var(--card);border:1px solid var(--line);border-radius:var(--r-2);padding:8px 12px;margin-bottom:8px}
+.fx-tri input[type=text]{min-width:0;flex:0 0 auto}
+.fx-chips{display:inline-flex;gap:6px;flex-wrap:wrap;align-items:center}
+.fx-chip{display:inline-flex;align-items:center;gap:6px;min-height:28px;padding:0 10px;border:1px solid var(--line2);border-radius:var(--r-pill);background:var(--card);color:var(--tx);font:inherit;font-size:var(--fs-13);cursor:pointer}
+.fx-chip:hover{border-color:var(--pri)}
+.fx-chip.on{background:var(--pri);border-color:var(--pri);color:var(--branco)}
+.fx-chip.num{min-width:28px;justify-content:center;padding:0 6px;font-variant-numeric:tabular-nums}
+.fx-chip.tr{border-style:dashed}
+.fx-chip .n{font-size:var(--fs-12);opacity:.8;font-variant-numeric:tabular-nums}
+.fx-chip.salvo{padding:0;gap:0;overflow:hidden}
+.fx-chip.salvo button{border:0;background:none;color:inherit;font:inherit;min-height:28px;padding:0 8px;cursor:pointer}
+.fx-chip.salvo button+button{border-left:1px solid var(--line2)}
+@media print{body.imprimindo-seeu .fnbar,body.imprimindo-seeu #seeuLer,body.imprimindo-seeu .fx-tri,body.imprimindo-seeu .fx-cont,body.imprimindo-seeu .fx-baixa,body.imprimindo-seeu .fx-acoes,body.imprimindo-seeu .toast{display:none}
+body.imprimindo-seeu,body.imprimindo-seeu .fnpag{overflow:visible;display:block}
+body.imprimindo-seeu .fx-tabw{overflow:visible;border:0}}
 /* tela inicial (sem base) */
 .welcome{position:fixed;inset:0;background:var(--bg);display:none;place-items:center;z-index:25}
 .btn-calc{position:relative;z-index:30}
@@ -4883,35 +4903,102 @@ ui.fxLer=async function(sist){ const B=API_(); const modo=(document.getElementBy
 ui.fxParar=async function(sist){ const B=API_(); const r=sist==='sei'?await B.sei_parar():await B.seeu_parar(); if(r&&r.erro) this.toast(r.erro,{erro:true}); };
 
 // ---------------- SEEU ----------------
-// As intimações ficam no APTO até a pessoa concluir: "saiu da Mesa" é só um aviso. Concluir com baixa lança a peça na produção do mês.
-ui.seeu={f:'aberto', q:'', def:'', aba:'', abertos:new Set()};
-ui.seeuCarregar=async function(){ const B=API_(); try{ this._seeu=B&&B.seeu_triagem? (await B.seeu_triagem())||{}:{}; }catch(e){ this._seeu={}; } this.seeuPintar(); };
+// Os mesmos controles da Triagem da Mesa (abas, situação, etapas 1 e 2, reler tudo; defensor, final do nº, motivo, busca e
+// providência): o que se escolhe aqui vai junto no pedido e a triagem aplica antes de ler. As intimações ficam no APTO até a pessoa
+// concluir: "saiu da Mesa" é só um aviso. Concluir com baixa lança a peça na produção do mês.
+ui.SEEU_ABAS=[['5','Manifestação'],['2','Ciência'],['7','Razões/Contrarrazões']];
+ui.SEEU_SIT=[['1','Recebidas e não lidas'],['2','Lidas e aguardando análise'],['3','Aguardando assinatura']];
+ui.SEEU_PROV=['Intimação pessoal','Audiência','Agravo','Cálculo','Certidão','Parecer do MP','Laudo','Documento','Manifestação','Ciência'];
+ui.SEEU_SEM='(sem defensor)';
+ui.seeu={f:'aberto', q:'', abas:['5','2'], situacao:'1', forcar:false, faixa:'', faixas:[], defensores:[], tipo:'', prov:'', abertos:new Set(), _pref:false};
+ui.seeuCarregar=async function(){ const B=API_(); try{ this._seeu=B&&B.seeu_triagem? (await B.seeu_triagem())||{}:{}; }catch(e){ this._seeu={}; }
+  const S=this.seeu, P=this._seeu.prefs||{};
+  if(!S._pref){ S._pref=true; if(P.abas&&P.abas.length) S.abas=P.abas.slice(); if(P.situacao) S.situacao=P.situacao; S.faixa=P.faixa||''; S.faixas=P.faixas||[];
+    S.defensores=P.defensores||[]; S.tipo=P.tipo||''; S.prov=P.prov||''; S.q=P.busca||''; }
+  this.seeuPintar(); };
+ui.seeuGuardar=function(){ clearTimeout(this._seeuG); const S=this.seeu; this._seeuG=setTimeout(()=>{ const B=API_(); if(B&&B.seeu_prefs_gravar) B.seeu_prefs_gravar({abas:S.abas, situacao:S.situacao,
+  forcar:S.forcar, faixa:S.faixa, faixas:S.faixas, defensores:S.defensores, tipo:S.tipo, prov:S.prov, busca:S.q}); },600); };
+ui.seeuMuda=function(campo, valor){ this.seeu[campo]=valor; this.seeuGuardar(); this.seeuPintar(); };
 ui.seeuEvento=function(d){ if(d&&d.estado&&this._seeu){ this._seeu.leitura=d.estado; if(this.fn==='seeu') this.seeuPintarLeitura(); if(!(d.estado.andamento&&d.estado.andamento.fase==='concluida')) return; }
   clearTimeout(this._seeuT); this._seeuT=setTimeout(()=>{ if(this.fn==='seeu') this.seeuCarregar(); else this._seeu=null; },600); };
-ui.seeuPintarLeitura=function(){ const e=document.getElementById('seeuLer'); if(e&&this._seeu) e.innerHTML=this.fxLeitura('seeu',this._seeu.leitura,'Ler a Mesa'); };
+ui.seeuPintarLeitura=function(){ const e=document.getElementById('seeuLer'); if(e&&this._seeu) e.innerHTML=this.seeuBarra(); };
 ui.seeuFiltro=function(k){ this.seeu.f=this.seeu.f===k?'aberto':k; this.seeuPintar(); };
+ui.seeuFaixas=function(txt){ const s=String(txt||'').trim().replace(/\s*(?:–|—|até|ate|\ba\b)\s*/gi,'-').replace(/\s*-\s*/g,'-'); if(!s) return null; const r=new Set();
+  for(const p of s.split(/[,;\s]+/)){ const m=/^(\d)-(\d)$/.exec(p); if(m){ let a=+m[1], b=+m[2]; if(a>b) [a,b]=[b,a]; for(let i=a;i<=b;i++) r.add(i); } else if(/^\d$/.test(p)) r.add(+p); } return r.size?r:null; };
+ui.seeuFaixaTexto=function(c){ const v=[...c].sort((x,y)=>x-y), out=[]; for(let i=0;i<v.length;i++){ let j=i; while(j+1<v.length&&v[j+1]===v[j]+1) j++; out.push(j-i>=2?v[i]+'-'+v[j]:j>i?v[i]+', '+v[j]:String(v[i])); i=j; } return out.join(', '); };
+ui.seeuFinal=function(n){ const c=this.seeuFaixas(this.seeu.faixa)||new Set(); c.has(n)?c.delete(n):c.add(n); this.seeuMuda('faixa', this.seeuFaixaTexto(c)); };
+ui.seeuGuardarFaixa=function(){ const f=this.seeu.faixa.trim(); if(!this.seeuFaixas(f)){ this.toast('Escreva a faixa antes de guardar (ex.: 0-2, 5).',{erro:true}); return; }
+  const nome=(prompt('Nome para esta faixa (ex.: Meus finais):', f)||'').trim(); if(!nome) return;
+  this.seeu.faixas=(this.seeu.faixas||[]).filter(x=>x.nome!==nome).concat([{nome, faixa:f}]); this.seeuGuardar(); this.seeuPintar(); };
+ui.seeuDef=function(d){ const S=this.seeu; if(d===null) S.defensores=[]; else { const i=S.defensores.indexOf(d); i>=0?S.defensores.splice(i,1):S.defensores.push(d); } this.seeuGuardar(); this.seeuPintar(); };
 ui.SEEU_SUGERE=[[/ci[eê]ncia/i,'CIENCIA'],[/agravo|raz[oõ]es|contrarraz/i,'AGEX'],[/habeas|\bHC\b/i,'HC'],[/embargos/i,'ED'],[/progress/i,'PROG'],[/livramento/i,'LC'],
   [/indulto/i,'INDULTO'],[/comuta/i,'COMUT'],[/prescri/i,'PRESC'],[/extin/i,'EXT'],[/remi[cç]/i,'REMICAO'],[/detra/i,'DETRACAO'],[/justific/i,'JUST'],[/sa[ií]da tempor/i,'ST'],[/domiciliar/i,'DOMIC'],[/of[ií]cio/i,'OFICIO']];
 ui.seeuSugerePeca=function(l){ const a=l.analise||{}, t=[a.providencia&&a.providencia.texto, a.providencia&&a.providencia.tipo, l.aba].filter(Boolean).join(' ');
   const m=this.SEEU_SUGERE.find(([re])=>re.test(t)); return m?m[1]:'MANIF'; };
-ui.seeuLinhas=function(){ const T=this._seeu||{}, S=this.seeu, q=semAcento(S.q||'');
-  return (T.itens||[]).filter(l=>{ const a=l.analise, d=this.fxDias(l.ultimoDia), aberto=l.status!=='concluido';
-    if(S.def && l.defensor!==S.def) return false; if(S.aba && l.aba!==S.aba) return false;
-    if(q && !semAcento(l.processo+' '+l.executado+' '+(a&&a.providencia?a.providencia.texto:'')).includes(q)) return false;
+// os filtros da triagem (abas, defensor, final, motivo, providência, busca), como em filtradas() da extensão
+ui.seeuPassa=function(l){ const S=this.seeu, a=l.analise||null, nomes=new Set(this.SEEU_ABAS.filter(x=>S.abas.includes(x[0])).map(x=>x[1]));
+  if(!nomes.has(l.aba)) return false; if(S.defensores.length && !S.defensores.includes(l.defensor||this.SEEU_SEM)) return false;
+  const fx=this.seeuFaixas(S.faixa); if(fx && !fx.has(Number(l.final))) return false;
+  if(S.tipo && !(a && a.tipoMotivo===S.tipo)) return false;
+  if(S.prov==='urgente' && !(a&&a.providencia&&a.providencia.urgente)) return false;
+  if(S.prov && S.prov!=='urgente' && !(a&&a.providencia&&a.providencia.tipo===S.prov)) return false;
+  const q=semAcento(S.q||''); if(q){ const alvo=semAcento([l.processo,l.executado,l.defensor,a&&a.pendencia&&a.pendencia.texto,a&&a.motivo&&a.motivo.resumo,a&&a.decisao&&a.decisao.resumo].join(' '));
+    if(!alvo.includes(q) && !alvo.replace(/\D/g,'').includes(q.replace(/\D/g,'')||'#')) return false; }
+  return true; };
+ui.seeuLinhas=function(){ const T=this._seeu||{}, S=this.seeu;
+  return (T.itens||[]).filter(l=>{ if(!this.seeuPassa(l)) return false; const a=l.analise, d=this.fxDias(l.ultimoDia), aberto=l.status!=='concluido';
     if(S.f==='concl') return !aberto; if(!aberto) return false;
     if(S.f==='urg') return a&&a.providencia&&a.providencia.urgente; if(S.f==='perto') return d!=null&&d<=2;
     if(S.f==='fora') return !!l.foraDaMesa; if(S.f==='base') return !!this.fxNaBase(l.processo); return true; })
     .sort((x,y)=>{ if(S.f==='concl') return String(y.concluidoEm).localeCompare(String(x.concluidoEm)); const dx=this.fxDias(x.ultimoDia), dy=this.fxDias(y.ultimoDia); return (dx==null?9999:dx)-(dy==null?9999:dy) || x.processo.localeCompare(y.processo); }); };
+// etapa 2 lê os processos da Mesa atual que passam nos filtros (como na triagem)
+ui.seeuNaEtapa2=function(){ return ((this._seeu||{}).itens||[]).filter(l=>!l.foraDaMesa && this.seeuPassa(l)).length; };
+// barra de leitura: os mesmos controles da triagem
+ui.seeuBarra=function(){ const T=this._seeu||{}, S=this.seeu, est=T.leitura||{}, a=est.andamento||{};
+  const lendo=(a.fase==='lendo'||a.fase==='iniciando') && Date.now()/1000-(a.quando||0)<180, fim=a.fase==='concluida'||a.fase==='parada', n2=this.seeuNaEtapa2();
+  const txt=lendo?(a.total?`Lendo… ${a.feitos||0} de ${a.total}${a.txt?' · '+a.txt:''}`:(a.txt||'Lendo a Mesa…')):fim?(a.txt||(a.fase==='parada'?'A leitura parou.':'Leitura concluída.')):'';
+  const pct=lendo&&a.total?Math.round(100*(a.feitos||0)/a.total):null;
+  return `<div class="fx-ler fx-mesa" role="group" aria-label="Leitura da Mesa">
+    <span class="fx-sist ${est.aberto?'on':'off'}" title="${est.aberto?'A aba do SEEU está aberta com a extensão do APTO':'Abra o SEEU no navegador (já logado), com a extensão do APTO'}"><span aria-hidden="true">${est.aberto?'●':'○'}</span> ${est.aberto?'SEEU aberto':'SEEU não detectado'}</span>
+    <fieldset class="fx-grp"><legend>Abas</legend>${this.SEEU_ABAS.map(([c,n])=>`<label class="fx-chk"><input type="checkbox" ${S.abas.includes(c)?'checked':''} ${lendo?'disabled':''} onchange="ui.seeuMuda('abas', [...document.querySelectorAll('.fx-mesa .fx-grp input:checked')].map(x=>x.value))" value="${c}"> ${esc(n)}</label>`).join('')}</fieldset>
+    <label class="fx-rot" for="seeuSit">Situação</label><select id="seeuSit" ${lendo?'disabled':''} onchange="ui.seeuMuda('situacao', this.value)">${this.SEEU_SIT.map(([c,n])=>`<option value="${c}" ${S.situacao===c?'selected':''}>${esc(n)}</option>`).join('')}</select>
+    ${lendo?`<button type="button" class="btn" onclick="ui.fxParar('seeu')">Parar</button>`:`<button type="button" class="btn pri" ${est.aberto&&S.abas.length?'':'disabled'} title="Lê a lista da Mesa no SEEU (sem iniciar prazo)" onclick="ui.seeuLer(1)">1 · Ler a Mesa</button>
+      <button type="button" class="btn pri" ${est.aberto&&n2?'':'disabled'} title="Lê o processo e a última decisão de cada intimação da lista, nos filtros abaixo" onclick="ui.seeuLer(2)">2 · Ler processos e decisões (${n2})</button>`}
+    <label class="fx-chk" title="Lê de novo mesmo os processos já lidos hoje"><input type="checkbox" ${S.forcar?'checked':''} onchange="ui.seeu.forcar=this.checked;ui.seeuGuardar()"> reler tudo</label>
+    <span class="spacer"></span><button type="button" class="btn ghost" onclick="ui.seeuCarregar()">Atualizar</button></div>
+    ${txt?`<div class="fx-andamento${a.fase==='parada'?' parada':''}" role="status" aria-live="polite">${pct!=null?`<div class="fx-barra" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><i style="width:${pct}%"></i></div>`:lendo?'<div class="fx-barra ind" aria-hidden="true"><i></i></div>':''}<span>${esc(txt)}</span></div>`:''}`; };
+ui.seeuLer=async function(etapa){ const S=this.seeu; const r=await API_().seeu_ler({etapa:String(etapa), abas:S.abas, situacao:S.situacao, forcar:S.forcar, faixa:S.faixa, defensores:S.defensores, tipo:S.tipo, prov:S.prov, busca:S.q});
+  if(r&&r.erro){ this.toast(r.erro,{erro:true}); return; }
+  this.toast(etapa===1?'Lendo a Mesa (a triagem abriu em segundo plano). Acompanhe aqui.':'Lendo processos e decisões. Acompanhe aqui.'); this.seeuCarregar(); };
+// filtros (os da triagem) + ações da lista
+ui.seeuFiltros=function(L){ const T=this._seeu||{}, S=this.seeu, itens=(T.itens||[]).filter(l=>this.SEEU_ABAS.some(x=>S.abas.includes(x[0])&&x[1]===l.aba));
+  const cont={}; itens.forEach(l=>{ const d=l.defensor||this.SEEU_SEM; cont[d]=(cont[d]||0)+1; }); const defs=Object.keys(cont).filter(d=>d!==this.SEEU_SEM).sort((x,y)=>x.localeCompare(y,'pt-BR'));
+  const fx=this.seeuFaixas(S.faixa)||new Set(), tipos=[...new Set((T.itens||[]).map(l=>l.analise&&l.analise.tipoMotivo).filter(Boolean))].sort();
+  return `<div class="fx-filtros fx-tri"><span class="fx-rot">Defensor</span><div class="fx-chips" role="group" aria-label="Defensor">
+      <button type="button" class="fx-chip${S.defensores.length?'':' on'}" aria-pressed="${!S.defensores.length}" onclick="ui.seeuDef(null)">Todos</button>
+      ${defs.map(d=>`<button type="button" class="fx-chip${S.defensores.includes(d)?' on':''}" aria-pressed="${S.defensores.includes(d)}" onclick="ui.seeuDef(${jsa(d)})">${esc(d)} <span class="n">${cont[d]}</span></button>`).join('')}
+      <button type="button" class="fx-chip tr${S.defensores.includes(this.SEEU_SEM)?' on':''}" aria-pressed="${S.defensores.includes(this.SEEU_SEM)}" title="Processos da Mesa sem defensor vinculado" onclick="ui.seeuDef(${jsa(this.SEEU_SEM)})">Sem defensor vinculado <span class="n">${cont[this.SEEU_SEM]||0}</span></button>
+      ${itens.length?'':'<span class="muted">leia a Mesa primeiro</span>'}</div></div>
+    <div class="fx-filtros fx-tri"><span class="fx-rot">Final do nº</span><div class="fx-chips" role="group" aria-label="Final do número do processo">
+      ${[0,1,2,3,4,5,6,7,8,9].map(n=>`<button type="button" class="fx-chip num${fx.has(n)?' on':''}" aria-pressed="${fx.has(n)}" onclick="ui.seeuFinal(${n})">${n}</button>`).join('')}</div>
+      <label class="vh" for="seeuFaixa">Faixa de finais</label><input id="seeuFaixa" type="text" size="10" placeholder="ex.: 0-2" value="${esc(S.faixa)}" title="Também pode escrever: 0-2 (= 0, 1 e 2), 5, 7-9" onchange="ui.seeuMuda('faixa', this.value)">
+      <span class="muted">${fx.size?'finais '+esc(this.seeuFaixaTexto(fx)):'todos os finais'}</span><button type="button" class="btn ghost" onclick="ui.seeuGuardarFaixa()">Guardar</button>
+      ${(S.faixas||[]).map(f=>`<span class="fx-chip salvo"><button type="button" title="${esc(f.faixa)}" onclick="ui.seeuMuda('faixa', ${jsa(f.faixa)})">${esc(f.nome)}</button><button type="button" aria-label="Apagar a faixa ${esc(f.nome)}" onclick="ui.seeu.faixas=ui.seeu.faixas.filter(x=>x.nome!==${jsa(f.nome)});ui.seeuGuardar();ui.seeuPintar()">×</button></span>`).join('')}
+      <label class="fx-rot" for="seeuTipo">Motivo</label><select id="seeuTipo" onchange="ui.seeuMuda('tipo', this.value)"><option value="">todos</option>${tipos.concat(S.tipo&&!tipos.includes(S.tipo)?[S.tipo]:[]).map(t=>`<option ${S.tipo===t?'selected':''}>${esc(t)}</option>`).join('')}</select>
+      <label class="vh" for="seeuQ">Buscar</label><input id="seeuQ" type="search" placeholder="buscar nº, nome ou texto" value="${esc(S.q)}" oninput="ui.seeu.q=this.value;ui.seeuGuardar();ui.seeuPintar();document.getElementById('seeuQ').focus()">
+      <label class="fx-rot" for="seeuProv">Providência</label><select id="seeuProv" onchange="ui.seeuMuda('prov', this.value)"><option value="">todas</option><option value="urgente" ${S.prov==='urgente'?'selected':''}>só urgentes</option>${this.SEEU_PROV.map(p=>`<option ${S.prov===p?'selected':''}>${esc(p)}</option>`).join('')}</select>
+      <span class="spacer"></span><button type="button" class="btn" ${L.length?'':'disabled'} onclick="ui.seeuPlanilha()">Planilha (xlsx)</button><button type="button" class="btn" ${L.length?'':'disabled'} onclick="ui.seeuImprimir()">Imprimir</button>
+      <button type="button" class="btn" ${L.length?'':'disabled'} onclick="ui.seeuAbrirTudo()">Abrir/fechar detalhes</button></div>`; };
 ui.seeuPintar=function(){ const P=document.getElementById('seeuPag'); if(!P) return; const T=this._seeu;
   if(!T){ P.innerHTML='<p class="muted">Carregando…</p>'; return; }
   const itens=T.itens||[], S=this.seeu, pecas=T.pecas||{};
-  const cab=`<div class="fx-cab"><div><h1>SEEU · Mesa do Defensor</h1><p class="sub">${T.quando?esc('Última leitura: '+new Date(T.quando).toLocaleString('pt-BR')+' · '+(T.situacaoNome||'')):'Nenhuma leitura ainda.'}</p></div></div><div id="seeuLer">${this.fxLeitura('seeu',T.leitura,'Ler a Mesa')}</div>`;
-  if(!itens.length){ P.innerHTML=cab+`<div class="fx-vazio"><b>Como ler a Mesa</b><ol><li>Abra o SEEU no navegador e entre com a sua conta.</li><li>Clique em <b>Ler a Mesa</b>, aqui. A extensão abre a triagem em segundo plano, com as abas e os filtros que você deixou nela, e lê a Mesa e os processos (sem iniciar prazo).</li>
+  const cab=`<div class="fx-cab"><div><h1>SEEU · Mesa do Defensor</h1><p class="sub">${T.quando?esc('Última leitura: '+new Date(T.quando).toLocaleString('pt-BR')+' · '+(T.situacaoNome||'')):'Nenhuma leitura ainda.'}</p></div></div><div id="seeuLer">${this.seeuBarra()}</div>`;
+  const L=this.seeuLinhas();
+  if(!itens.length){ P.innerHTML=cab+this.seeuFiltros(L)+`<div class="fx-vazio"><b>Como ler a Mesa</b><ol><li>Abra o SEEU no navegador e entre com a sua conta: aqui aparece "SEEU aberto".</li><li>Escolha as abas e a situação e clique em <b>1 · Ler a Mesa</b>. Depois, com os filtros que quiser, <b>2 · Ler processos e decisões</b>. É a mesma leitura da Triagem da Mesa da extensão (sem iniciar prazo), aberta em segundo plano.</li>
     <li>As intimações aparecem aqui e ficam até você concluí-las, mesmo que saiam da Mesa no SEEU.</li></ol></div>`; return; }
-  const abertos=itens.filter(l=>l.status!=='concluido'), L=this.seeuLinhas();
+  const vis=itens.filter(l=>this.seeuPassa(l)), abertos=vis.filter(l=>l.status!=='concluido');
   const urg=abertos.filter(l=>l.analise&&l.analise.providencia&&l.analise.providencia.urgente).length, perto=abertos.filter(l=>{ const d=this.fxDias(l.ultimoDia); return d!=null&&d<=2; }).length;
-  const fora=abertos.filter(l=>l.foraDaMesa).length, base=abertos.filter(l=>this.fxNaBase(l.processo)).length, concl=itens.length-abertos.length;
-  const defs=[...new Set(itens.map(l=>l.defensor).filter(Boolean))].sort(), abas=[...new Set(itens.map(l=>l.aba).filter(Boolean))];
+  const fora=abertos.filter(l=>l.foraDaMesa).length, base=abertos.filter(l=>this.fxNaBase(l.processo)).length, concl=vis.length-abertos.length;
   const hoje=new Date().toISOString().slice(0,10);
   const linha=l=>{ const a=l.analise||null, d=this.fxDias(l.ultimoDia), nv=l.status==='concluido'?'ok':this.fxNivel(d), r=this.fxNaBase(l.processo), k=l.chave, ab=S.abertos.has(k);
     const falta=l.status==='concluido'?'concluída':d==null?'':d<0?'venceu':d===0?'vence hoje':'faltam '+d+' d', rotPrazo=l.situacao===1?'Leitura até':l.situacao===2?'Resposta até':'Último dia';
@@ -4941,15 +5028,15 @@ ui.seeuPintar=function(){ const P=document.getElementById('seeuPag'); if(!P) ret
       <td class="fx-prazo ${nv}"><span class="muted">${rotPrazo}</span><b><span aria-hidden="true">${this.FX_FORMA[nv]}</span> ${esc(l.ultimoDia||'—')}</b><span>${esc(falta)}</span></td>
       <td><div class="fx-forte fx-num">${esc(l.processo)}</div><div>${esc(l.executado||'—')}</div>${r?`<button type="button" class="fx-base" title="Abrir a ficha na base aberta em Execução" onclick="event.stopPropagation();ui.abrir(${jsa(r.id)})">na base · abrir ficha</button>`:''}</td>
       <td><div>${esc(l.aba)}</div><div class="muted">${esc(l.defensor||'sem defensor')}</div>${sit?'<div>'+sit+'</div>':''}</td><td>${mot}</td><td>${a&&a.status==='ok'?(a.decisao?`<div class="fx-forte">${esc(a.decisao.nome)}</div><div class="muted">${esc('seq. '+a.decisao.seq+' · '+a.decisao.data)}</div>`:'<span class="muted">nenhum ato do juiz com documento</span>'):''}</td><td>${pv}</td></tr>${det}`; };
-  P.innerHTML=cab+`${this.fxCont('seeu',[['aberto',abertos.length,'em aberto'],['urg',urg,'providência urgente','crit'],['perto',perto,'prazo em até 2 dias','urg'],['fora',fora,'saíram da Mesa'],['base',base,'na base aberta'],['concl',concl,'concluídas','ok']],S.f,'ui.seeuFiltro')}
-    <div class="fx-filtros"><label class="vh" for="seeuQ">Buscar</label><input id="seeuQ" type="search" placeholder="Buscar nome, processo ou providência" value="${esc(S.q)}" oninput="ui.seeu.q=this.value;ui.seeuPintar();document.getElementById('seeuQ').focus()">
-      <label for="seeuDef">Defensor</label><select id="seeuDef" onchange="ui.seeu.def=this.value;ui.seeuPintar()"><option value="">todos</option>${defs.map(x=>`<option ${S.def===x?'selected':''}>${esc(x)}</option>`).join('')}</select>
-      <label for="seeuAba">Aba</label><select id="seeuAba" onchange="ui.seeu.aba=this.value;ui.seeuPintar()"><option value="">todas</option>${abas.map(x=>`<option ${S.aba===x?'selected':''}>${esc(x)}</option>`).join('')}</select>
-      <span class="muted">${L.length} na lista</span></div>
-    <div class="fx-tabw"><table class="fx-tab"><thead><tr><th scope="col">Prazo</th><th scope="col">Processo e assistido</th><th scope="col">Aba e defensor</th><th scope="col">Motivo</th><th scope="col">Última decisão</th><th scope="col">Providência sugerida</th></tr></thead>
+  this._seeuL=L;
+  P.innerHTML=cab+this.seeuFiltros(L)+`${this.fxCont('seeu',[['aberto',abertos.length,'em aberto'],['urg',urg,'providência urgente','crit'],['perto',perto,'prazo em até 2 dias','urg'],['fora',fora,'saíram da Mesa'],['base',base,'na base aberta'],['concl',concl,'concluídas','ok']],S.f,'ui.seeuFiltro')}
+    <div class="fx-tabw"><table class="fx-tab"><caption class="vh">Intimações da Mesa (${L.length})</caption><thead><tr><th scope="col">Prazo</th><th scope="col">Processo e assistido</th><th scope="col">Aba e defensor</th><th scope="col">Motivo</th><th scope="col">Última decisão</th><th scope="col">Providência sugerida</th></tr></thead>
     <tbody>${L.length?L.map(linha).join(''):'<tr><td colspan="6" class="fx-nada">Nenhuma intimação neste filtro.</td></tr>'}</tbody></table></div>
-    <p class="muted fx-nota">Clique na linha para ver o motivo, a decisão e registrar a baixa. A intimação fica aqui até você concluir, mesmo que saia da Mesa no SEEU; a baixa com peça conta na produção do mês (Relatório). A providência é sugestão da triagem.</p>`;
-  const q=document.getElementById('seeuQ'); if(q&&S.q){ q.setSelectionRange(S.q.length,S.q.length); } };
+    <p class="muted fx-nota">${L.length} na lista. Clique na linha para ver o motivo, a decisão e registrar a baixa. A intimação fica aqui até você concluir, mesmo que saia da Mesa no SEEU; a baixa com peça conta na produção do mês (Relatório). A providência é sugestão da triagem.</p>`;
+  const q=document.getElementById('seeuQ'); if(q&&S.q&&document.activeElement===q){ q.setSelectionRange(S.q.length,S.q.length); } };
+ui.seeuAbrirTudo=function(){ const ks=(this._seeuL||[]).map(l=>l.chave), A=this.seeu.abertos; if(ks.every(k=>A.has(k))) ks.forEach(k=>A.delete(k)); else ks.forEach(k=>A.add(k)); this.seeuPintar(); };
+ui.seeuPlanilha=async function(){ const r=await API_().seeu_planilha((this._seeuL||[]).map(l=>l.chave)); if(r&&r.erro) this.toast(r.erro,{erro:true}); else if(r&&r.ok) this.toast('Planilha salva: '+r.caminho); };
+ui.seeuImprimir=function(){ document.body.classList.add('imprimindo-seeu'); const fim=()=>{ document.body.classList.remove('imprimindo-seeu'); window.removeEventListener('afterprint',fim); }; window.addEventListener('afterprint',fim); window.print(); setTimeout(fim,2000); };
 ui.seeuAbrirLinha=function(ev,k){ if(ev.target.closest('button,a,select,input,label,fieldset')) return; const A=this.seeu.abertos; A.has(k)?A.delete(k):A.add(k); this.seeuPintar(); };
 ui.seeuAbrir=async function(url){ const B=API_(); const r=B&&B.abrir_seeu?await B.abrir_seeu(url):{erro:'indisponível'}; if(r&&r.erro) this.toast(r.erro,{erro:true}); };
 ui.seeuItem=function(k){ return ((this._seeu||{}).itens||[]).find(x=>x.chave===k); };
