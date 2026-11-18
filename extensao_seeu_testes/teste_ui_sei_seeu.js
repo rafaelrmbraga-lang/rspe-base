@@ -9,7 +9,7 @@ const SHOTS = process.env.APTO_CAPTURAS || "";
   const b = await chromium.launch();
   const pg = await b.newPage({ viewport: process.env.APTO_TELA === "notebook" ? { width: 1366, height: 768 } : { width: 1400, height: 900 } });
   const erros = [];
-  pg.on("pageerror", (e) => erros.push(String(e)));
+  pg.on("pageerror", (e) => erros.push(String(e) + " @ " + String(e.stack || "").split("\n").slice(1, 4).join(" | ")));
   const RAIZ = path.join(__dirname, "..");
   const salvos = [];
   // os modelos do gabinete (pasta "modelos" ao lado das bases): aqui um modelo fictício da extensão
@@ -69,6 +69,17 @@ const SHOTS = process.env.APTO_CAPTURAS || "";
   await pg.click("#fn_atend");
   await pg.waitForTimeout(200);
   ok(await pg.isVisible("#atdFrame"), "Atendimentos volta");
+  // 7.31: Dados prisionais e Jurisprudências na barra fixa, sem base aberta (sem o menu da Execução e sem a tela de escolher base)
+  for (const [k, nome] of [["teses", "Jurisprudências"], ["geo", "Dados prisionais"]]) {
+    await pg.click("#fn_" + k);
+    await pg.waitForTimeout(400);
+    ok((await pg.getAttribute("#fn_" + k, "aria-selected")) === "true" && await pg.isVisible(".corpo") && !(await pg.isVisible(".tabs")) && !(await pg.isVisible(".welcome.on")),
+      nome + ": função da barra, com a área de conteúdo e sem o menu da Execução");
+  }
+  if (SHOTS) await pg.screenshot({ path: path.join(SHOTS, "barra_teses.png") });
+  await pg.click("#fn_exec");
+  await pg.waitForTimeout(300);
+  ok(await pg.evaluate(() => ui.aba !== "geo" && ui.aba !== "teses"), "voltar à Execução não fica na aba da ferramenta");
   // o caso relatado: Quadro aberto e depois SEEU (a mesma moldura do painel)
   await pg.click("#fn_quadro");
   await pg.waitForTimeout(300);

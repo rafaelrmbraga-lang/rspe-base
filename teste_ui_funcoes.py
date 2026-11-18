@@ -21,7 +21,8 @@ bar = re.search(r'<nav class="fnbar" id="fnbar"[^>]*>(.*?)</nav>', UI, re.S)
 ok(bar, "barra das funções ausente")
 if bar:
     nomes = re.findall(r'<button class="fn[^"]*" role="tab" id="fn_(\w+)"[^>]*>.*?</svg>([^<]+)(?:<span class="fnbadge"[^>]*></span>)?</button>', bar.group(1), re.S)
-    ok(nomes == [("atend", "Atendimentos"), ("exec", "Execução"), ("seeu", "SEEU"), ("sei", "SEI"), ("quadro", "Quadro"), ("rel", "Relatório")], "ordem das funções: %s" % nomes)
+    ok(nomes == [("atend", "Atendimentos"), ("exec", "Execução"), ("seeu", "SEEU"), ("sei", "SEI"), ("quadro", "Quadro"), ("rel", "Relatório"),
+                     ("geo", "Dados prisionais"), ("teses", "Jurisprudências")], "ordem das funções: %s" % nomes)
     ok(UI.index('id="fnbar"') < UI.index('<div class="top">'), "a barra vem antes do cabeçalho da Execução")
 for sel in ("body:not(.fn-exec) .top", "body:not(.fn-exec) .corpo", "body:not(.fn-exec) .welcome.on", "body:not(.fn-exec) .fnpag"):
     ok(sel in CSS, "CSS: %s" % sel)
@@ -34,9 +35,16 @@ for k in ("atend", "quadro", "rel"):
 ok("M.src='atendimentos/painel.html#'+F.painel" in UI, "moldura do painel")
 ok(".fnpag iframe[hidden]{display:none}" in CSS, "moldura escondida não aparece sob SEI/SEEU/Execução")
 ok("/^atd_[a-z_]+$/.test(met)" in UI, "a moldura só chama as funções atd_* do Python")
-ok("['atend','exec','seeu','sei','quadro','rel'][+e.key-1]" in UI and "/^[1-6]$/" in UI, "atalhos Ctrl+1 a Ctrl+6")
+ok("['atend','exec','seeu','sei','quadro','rel','geo','teses'][+e.key-1]" in UI and "/^[1-8]$/" in UI, "atalhos Ctrl+1 a Ctrl+8")
+# 7.31: Dados prisionais e Jurisprudências na barra fixa (fora do menu da Execução), funcionando sem base aberta
+for k in ("geo", "teses"):
+    ok(re.search(r"\b%s:\{titulo:'[^']+', ferramenta:'%s'\}" % (k, k), UI), "função %s na barra" % k)
+nav = re.search(r"NAV_GRUPOS:\[(.*?)\]\],\n", UI)
+ok(nav and "'geo'" not in nav.group(1) and "'teses'" not in nav.group(1), "Dados prisionais e Jurisprudências saíram do menu da Execução")
+for sel in ("body.fn-ferr .welcome.on{display:none}", "body.fn-ferr .top,body.fn-ferr .tabs"):
+    ok(sel in CSS, "CSS: %s" % sel)
 ok("carregando(txt){ if(this.fn!=='exec') this.funcao('exec');" in UI, "abrir/importar base volta para a Execução")
 if falhas:
     print("FALHA: " + "; ".join(falhas))
     sys.exit(1)
-print("ok: barra fixa APTO | Atendimentos | Execução | SEEU | SEI | Quadro | Relatório, Execução com o APTO das bases, Ctrl+1 a Ctrl+6")
+print("ok: barra fixa APTO | Atendimentos | Execução | SEEU | SEI | Quadro | Relatório | Dados prisionais | Jurisprudências, Ctrl+1 a Ctrl+8")

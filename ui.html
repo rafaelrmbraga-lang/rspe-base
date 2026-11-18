@@ -613,21 +613,26 @@ tr.exp .chev{transform:rotate(90deg);color:var(--pri)}
 .help h4{margin:14px 0 4px;color:var(--tx);font-size:var(--fs-13)}
 .help h4:first-child{margin-top:0}
 /* (7.19) barra fixa das funções do APTO: Atendimentos | Execução | SEEU | SEI | Quadro | Relatório */
-:root{--fn-h:38px}
-.fnbar{flex:none;height:var(--fn-h);display:flex;align-items:stretch;gap:2px;padding:0 10px;background:var(--verde-16);color:var(--branco);position:relative;z-index:45;user-select:none}
-.fnbar .fnmarca{display:flex;align-items:center;padding:0 14px 0 6px;margin-right:6px;font-weight:700;letter-spacing:1.5px;font-size:var(--fs-13);border-right:1px solid rgba(255,255,255,.18)}
-.fnbar .fn{display:flex;align-items:center;gap:8px;padding:0 16px;border:0;background:none;color:rgba(255,255,255,.78);font:inherit;font-size:var(--fs-13);cursor:pointer;position:relative}
-.fnbar .fn svg{width:16px;height:16px}
-.fnbar .fn:hover{color:var(--branco);background:rgba(255,255,255,.08)}
-.fnbar .fn.on{color:var(--branco);font-weight:600;background:rgba(255,255,255,.12)}
-.fnbar .fn.on::after{content:"";position:absolute;left:10px;right:10px;bottom:0;height:3px;border-radius:var(--r-1) var(--r-1) 0 0;background:var(--verde-80)}
-.fnbar .fn:focus-visible{outline:2px solid var(--verde-80);outline-offset:-2px}
+:root{--fn-h:48px}
+.fnbar{flex:none;height:var(--fn-h);display:flex;align-items:center;gap:4px;padding:0 12px;background:var(--verde-16);color:var(--branco);position:relative;z-index:45;user-select:none;box-shadow:0 1px 0 rgba(0,0,0,.18)}
+.fnbar .fnmarca{display:flex;align-items:center;gap:8px;padding:0 16px 0 2px;margin-right:4px;font-weight:700;letter-spacing:1.2px;font-size:var(--fs-14);border-right:1px solid rgba(255,255,255,.16);height:28px}
+.fnbar .fnselo img{width:24px;height:24px;display:block;border-radius:var(--r-pill);background:var(--branco)}
+.fnbar .fn{display:flex;align-items:center;gap:7px;height:34px;padding:0 13px;border:0;border-radius:var(--r-pill);background:none;color:rgba(255,255,255,.86);font:inherit;font-size:var(--fs-13);font-weight:500;cursor:pointer;position:relative;white-space:nowrap;transition:background .15s,color .15s}
+.fnbar .fn svg{width:17px;height:17px;flex:none;opacity:.9}
+.fnbar .fn:hover{color:var(--branco);background:rgba(255,255,255,.1)}
+.fnbar .fn.on{color:var(--verde-16);background:var(--branco);font-weight:700;box-shadow:0 1px 2px rgba(0,0,0,.18)}
+.fnbar .fn.on svg{opacity:1}
+.fnbar .fn:focus-visible{outline:2px solid var(--branco);outline-offset:2px}
+.fnbar .fnsep{width:1px;height:22px;background:rgba(255,255,255,.22);margin:0 6px;flex:none}
+.fnbar .fn.ferr{color:rgba(255,255,255,.78)}
+.fnbar .fn.ferr.on{color:var(--verde-16)}
 .fnbar .fnbadge{min-width:18px;height:18px;padding:0 5px;border-radius:var(--r-pill);background:var(--r-dot);color:var(--branco);font-size:var(--fs-11);font-weight:700;display:inline-flex;align-items:center;justify-content:center;line-height:1}
 .fnbar .fnbadge[hidden]{display:none}
-.fnbar .fntabs{display:flex;align-items:stretch;gap:2px}
+.fnbar .fntabs{display:flex;align-items:center;gap:2px;min-width:0;overflow-x:auto;scrollbar-width:none}
+.fnbar .fntabs::-webkit-scrollbar{display:none}
 .fnbar .fnesp{flex:1}
 .fnbar .fnacoes{display:flex;align-items:center;gap:6px}
-.fnbar .fnbtn{display:flex;align-items:center;gap:6px;min-height:32px;padding:0 12px;border:1px solid rgba(255,255,255,.28);border-radius:var(--r-2);background:none;color:var(--branco);font:inherit;font-size:var(--fs-13);cursor:pointer}
+.fnbar .fnbtn{display:flex;align-items:center;gap:6px;min-height:34px;border-radius:var(--r-pill);padding:0 12px;border:1px solid rgba(255,255,255,.28);border-radius:var(--r-2);background:none;color:var(--branco);font:inherit;font-size:var(--fs-13);cursor:pointer}
 .fnbar .fnbtn svg{width:16px;height:16px}
 .fnbar .fnbtn .car{width:12px;height:12px;opacity:.8}
 .fnbar .fnbtn:hover{background:rgba(255,255,255,.1)}
@@ -638,6 +643,8 @@ tr.exp .chev{transform:rotate(90deg);color:var(--pri)}
 .welcome,.loading{top:var(--fn-h)}
 body:not(.fn-exec) .top,body:not(.fn-exec) .corpo,body:not(.fn-exec) .btn-calc{display:none}
 body:not(.fn-exec) .welcome.on{display:none}
+body.fn-ferr .welcome.on{display:none}
+body.fn-ferr .top,body.fn-ferr .tabs,body.fn-ferr .btn-calc{display:none}
 .fnpag{display:none;flex:1;min-height:0;overflow:auto;background:var(--bg)}
 body:not(.fn-exec) .fnpag{display:block}
 .fnpag .fnbox{max-width:760px;margin:48px auto;padding:28px 32px;background:var(--card);border:1px solid var(--line);border-radius:var(--r-3)}
@@ -1811,6 +1818,8 @@ body:not(.menu-recolhido) .qbtn,body:not(.menu-recolhido) .fico{margin-left:1px}
 .geo-wrap{background:linear-gradient(180deg,var(--branco),var(--branco) 380px)}
 .geo-head .btn,.geo-acts .btn{border-radius:var(--r-2);border-color:transparent;background:rgba(0,0,0,.045);box-shadow:none}
 .geo-acts .btn:hover{background:rgba(0,0,0,.085)!important}
+.geo-acts .btn.pri{background:var(--pri);border-color:var(--pri2);color:var(--branco);font-weight:700}
+.geo-acts .btn.pri:hover{background:var(--pri2)!important}
 .geo-tipos{gap:8px!important;padding:14px 18px 2px!important}
 .geo-tipos label.chk{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:var(--r-pill);background:rgba(0,0,0,.045);cursor:pointer;transition:.15s;user-select:none}
 .geo-tipos label.chk:hover{background:rgba(0,0,0,.08)}
@@ -2080,7 +2089,7 @@ tbody td,.stat b,.dc-it,.jz-t b,.bd-leg td,.tabs .tab .cnt,.kv{font-variant-nume
 </style>
 </head>
 <body class="fn-exec">
-<nav class="fnbar" id="fnbar" aria-label="Funções do APTO"><span class="fnmarca">APTO</span><div class="fntabs" role="tablist" aria-label="Funções"><button class="fn" role="tab" id="fn_atend" aria-selected="false" title="Atendimentos (Ctrl+1)" onclick="ui.funcao('atend')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18.5 14a6 6 0 0 1 3 5.5"/></svg>Atendimentos</button><button class="fn on" role="tab" id="fn_exec" aria-selected="true" title="Execução (Ctrl+2)" onclick="ui.funcao('exec')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v14"/><path d="M2 21h20M9 7h6M9 11h6M9 15h4"/></svg>Execução</button><button class="fn" role="tab" id="fn_seeu" aria-selected="false" title="SEEU (Ctrl+3)" onclick="ui.funcao('seeu')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18M5 7h14M7 7l-3 7a3 3 0 0 0 6 0zM17 7l-3 7a3 3 0 0 0 6 0z"/><path d="M8 21h8"/></svg>SEEU<span class="fnbadge" id="fnb_seeu" hidden></span></button><button class="fn" role="tab" id="fn_sei" aria-selected="false" title="SEI (Ctrl+4)" onclick="ui.funcao('sei')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 13h6M9 17h6"/></svg>SEI<span class="fnbadge" id="fnb_sei" hidden></span></button><button class="fn" role="tab" id="fn_quadro" aria-selected="false" title="Quadro (Ctrl+5)" onclick="ui.funcao('quadro')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/></svg>Quadro</button><button class="fn" role="tab" id="fn_rel" aria-selected="false" title="Relatório (Ctrl+6)" onclick="ui.funcao('rel')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Relatório</button></div><span class="fnesp"></span><div class="fnacoes"><div class="rel"><button class="fnbtn" id="btnImp" aria-haspopup="menu" title="Importar: RSPE e fichas (Execução) ou a cópia do gabinete" onclick="ui.menu('mImp')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V9M7 14l5-5 5 5M5 3h14"/></svg>Importar<svg class="car" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button><div class="menu dir" id="mImp" role="menu"><div class="mh">Execução (base aberta)</div><button role="menuitem" onclick="api('importar_pdfs')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span><b>Arquivos PDF…</b><small>RSPE e fichas disciplinares, um ou vários</small></span></button>
+<nav class="fnbar" id="fnbar" aria-label="Funções do APTO"><span class="fnmarca"><span class="fnselo" id="fnSelo" aria-hidden="true"></span>APTO</span><div class="fntabs" role="tablist" aria-label="Funções"><button class="fn" role="tab" id="fn_atend" aria-selected="false" title="Atendimentos (Ctrl+1)" onclick="ui.funcao('atend')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18.5 14a6 6 0 0 1 3 5.5"/></svg>Atendimentos</button><button class="fn on" role="tab" id="fn_exec" aria-selected="true" title="Execução (Ctrl+2)" onclick="ui.funcao('exec')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v14"/><path d="M2 21h20M9 7h6M9 11h6M9 15h4"/></svg>Execução</button><button class="fn" role="tab" id="fn_seeu" aria-selected="false" title="SEEU (Ctrl+3)" onclick="ui.funcao('seeu')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18M5 7h14M7 7l-3 7a3 3 0 0 0 6 0zM17 7l-3 7a3 3 0 0 0 6 0z"/><path d="M8 21h8"/></svg>SEEU<span class="fnbadge" id="fnb_seeu" hidden></span></button><button class="fn" role="tab" id="fn_sei" aria-selected="false" title="SEI (Ctrl+4)" onclick="ui.funcao('sei')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 13h6M9 17h6"/></svg>SEI<span class="fnbadge" id="fnb_sei" hidden></span></button><button class="fn" role="tab" id="fn_quadro" aria-selected="false" title="Quadro (Ctrl+5)" onclick="ui.funcao('quadro')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/></svg>Quadro</button><button class="fn" role="tab" id="fn_rel" aria-selected="false" title="Relatório (Ctrl+6)" onclick="ui.funcao('rel')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Relatório</button><span class="fnsep" role="presentation"></span><button class="fn ferr" role="tab" id="fn_geo" aria-selected="false" title="Dados prisionais (Ctrl+7)" onclick="ui.funcao('geo')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21h18M5 21V8l7-4 7 4v13"/><path d="M9 21v-6h6v6M9 11h.01M12 11h.01M15 11h.01"/></svg>Dados prisionais</button><button class="fn ferr" role="tab" id="fn_teses" aria-selected="false" title="Jurisprudências (Ctrl+8)" onclick="ui.funcao('teses')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1z"/><path d="M7 21h10M12 3v18M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></svg>Jurisprudências</button></div><span class="fnesp"></span><div class="fnacoes"><div class="rel"><button class="fnbtn" id="btnImp" aria-haspopup="menu" title="Importar: RSPE e fichas (Execução) ou a cópia do gabinete" onclick="ui.menu('mImp')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V9M7 14l5-5 5 5M5 3h14"/></svg>Importar<svg class="car" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button><div class="menu dir" id="mImp" role="menu"><div class="mh">Execução (base aberta)</div><button role="menuitem" onclick="api('importar_pdfs')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span><b>Arquivos PDF…</b><small>RSPE e fichas disciplinares, um ou vários</small></span></button>
       <button role="menuitem" onclick="api('importar_pasta')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span><b>Uma pasta inteira…</b><small>todos os PDF da pasta e das subpastas</small></span></button><div class="mh">SEI</div><button role="menuitem" onclick="ui.nusImportarPdf()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/></svg><span><b>PDF de processo do SEI…</b><small>separado pelo rodapé e lido pelas regras de leitura (sugestões)</small></span></button><div class="mh">Gabinete (Atendimentos, Quadro, produção)</div><button role="menuitem" onclick="ui.gabImportar()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V9M7 14l5-5 5 5M5 3h14"/></svg><span><b>Cópia do gabinete (.json)…</b><small>junta o que ainda não existe (também a da extensão antiga); nada é apagado</small></span></button></div></div><div class="rel"><button class="fnbtn" id="btnExp" aria-haspopup="menu" title="Exportar: Execução, Mesa do SEEU, relatórios do gabinete e a cópia do gabinete" onclick="ui.menu('mExp')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>Exportar<svg class="car" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button><div class="menu dir" id="mExp" role="menu"><div class="mh">Execução (base aberta)</div><button role="menuitem" onclick="ui.fnExec(()=>ui.modalExportar('xlsx'))"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4zM4 10h16M10 4v16"/></svg><span><b>Excel</b><small>as abas da base, numa planilha</small></span></button>
       <button role="menuitem" onclick="ui.fnExec(()=>ui.modalExportar('pdf'))"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/></svg><span><b>PDF da aba</b><small>a tabela da aba aberta, em paisagem</small></span></button>
       <button role="menuitem" onclick="ui.fnExec(()=>ui.modalRelatorios())"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h8l4 4v14H6z"/><path d="M9 13h6M9 17h6M9 9h2"/></svg><span><b>Relatórios em PDF</b><small>individuais, geral da base, remição</small></span></button>
@@ -2180,7 +2189,7 @@ const ui = {
     if(d.aviso_pasta&&!this._avisoPasta){ this._avisoPasta=true; setTimeout(()=>this.toast(d.aviso_pasta),600); }
     w.classList.remove('on'); if(!this._legFeito){ this._legFeito=true; setTimeout(()=>this.legVerificar(),800); } document.getElementById('baseNome').textContent=d.base; document.getElementById('baseN').textContent=d.registros.length;
     document.getElementById('copia').innerHTML=d.copia?`<i></i>cópia de segurança: ${esc(d.copia.quando)}`:'';
-    document.getElementById('hoje').textContent='Hoje '+d.hoje+(d.base_juridica?' · base jurídica '+d.base_juridica.versao:''); if(!this.dados.abas.concat(this.ABAS_EXTRA).find(a=>a.id===this.aba)) this.aba='geral'; this.render(); },
+    document.getElementById('hoje').textContent='Hoje '+d.hoje+(d.base_juridica?' · base jurídica '+d.base_juridica.versao:''); if(!(this.dados.abas||[]).concat(this.ABAS_EXTRA).find(a=>a.id===this.aba)) this.aba='geral'; this.render(); },
   // tela de carregamento: aparece assim que a base é escolhida e mostra a etapa (o Python avisa cada uma)
   carregando(txt){ if(this.fn!=='exec') this.funcao('exec'); const e=document.getElementById('loadEtapa'); if(e) e.textContent=txt; },
   async abrirBase(caminho, nome){
@@ -2197,7 +2206,7 @@ const ui = {
   indDec:'todos',
   IND_DEC:[{id:'2022',k:['i22'],r:'Decreto 11.302/2022'},{id:'2024',k:['i24','c24'],r:'Decreto 12.338/2024'},{id:'2025',k:['i25','c25'],r:'Decreto 12.790/2025'}],
   irDec(id){ this.indDec=id; this.filtroCor=null; this.aberto=null; this.render(); },
-  spec(){ const a=this.dados.abas.find(x=>x.id===this.aba); if(a&&a.id==='ind'&&this.indDec!=='todos'){ const D=this.IND_DEC.find(x=>x.id===this.indDec); if(D){
+  spec(){ const a=(this.dados.abas||[]).find(x=>x.id===this.aba)||(['geo','teses'].includes(this.aba)?this.ABAS_EXTRA.find(x=>x.id===this.aba):null); if(a&&a.id==='ind'&&this.indDec!=='todos'){ const D=this.IND_DEC.find(x=>x.id===this.indDec); if(D){
       const b=Object.assign({},a); b.cols=a.cols.filter(c=>['nome','proc','imp','pedido'].includes(c[0])||D.k.includes(c[0])).map(c=>D.k.includes(c[0])?[c[0],c[1],24]:c);
       b.cor=D.k[0]+'_cor'; b.pilulas={}; Object.keys(a.pilulas).forEach(k=>{ if(k==='imp'||D.k.includes(k)) b.pilulas[k]=a.pilulas[k]; });
       b.filtros=(a.filtros||[]).filter(f=>!/^b:/.test(f[0])||D.k.some(k=>f[0].startsWith('b:'+k+':'))); return b; } }
@@ -2249,7 +2258,8 @@ const ui = {
     return null; },
   render(){
     this.stPop(null); document.getElementById('fcomb').innerHTML=''; document.getElementById('ordsit').innerHTML='';  // o quadro da saída temporária não fica aberto sobre a tela redesenhada
-    const spec=this.spec(); const rs=this.visiveis();
+    const spec=this.spec(); if(!spec&&!['geo','teses','base','ind'].includes(this.aba)) return; // base sem a lista de abas (ou nenhuma): nada a desenhar
+    const rs=this.visiveis();
     // abas
     this.renderNav(rs);
     document.getElementById('dica').textContent=this.DICA[this.aba]||'O ícone ↗ ao lado do assistido abre a ficha completa · clique no título da coluna para ordenar';
@@ -4025,7 +4035,7 @@ const ui = {
   // linha E: menu lateral com as abas agrupadas por tarefa; recolhe (só ícone e contador) e expande; a escolha fica gravada neste computador
   NOME:{geral:'Geral',prog:'Progressão',liv:'Livramento',ind:'Indulto e comutação',presc:'Prescrição',ext:'Extinção',fd:'Ficha disciplinar',aud:'Auditoria',base:'Dados da base',geo:'Dados prisionais',teses:'Jurisprudências',quadro:'Quadro do usuário'},
   TITULO:{geral:'Visão geral da base',prog:'Progressão de regime',liv:'Livramento condicional',ind:'Indulto e comutação',presc:'Prescrição',ext:'Extinção da pena',fd:'Ficha disciplinar',aud:'Auditoria do cálculo',base:'Dados da base',geo:'Dados prisionais de MS',teses:'Jurisprudências',quadro:'Quadro do usuário'},
-  NAV_GRUPOS:[[null,['geral']],['Prazos',['prog','liv','ext','presc']],['Decretos',['ind']],['Conferência',['fd','aud']],['Panorama e ferramentas',['base','geo','teses']]],
+  NAV_GRUPOS:[[null,['geral']],['Prazos',['prog','liv','ext','presc']],['Decretos',['ind']],['Conferência',['fd','aud']],['Panorama e ferramentas',['base']]],
   MENU_SVG:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>',
   // atalhos Alt+1 ... Alt+9 e Alt+0 para as dez primeiras abas, na ordem do menu
   navAtalho(id){ const L=this.NAV_GRUPOS.flatMap(g=>g[1]); const i=L.indexOf(id); return i<0||i>9?'':String((i+1)%10); },
@@ -4036,7 +4046,7 @@ const ui = {
   menuRecolhido(){ let v=null; try{ v=localStorage.getItem('apto_menu'); }catch(e){} const z=parseFloat(document.documentElement.style.zoom)||1; return v ? v==='recolhido' : window.innerWidth/z<1400; },  // letra maior conta como tela menor
   menuAplicar(){ document.body.classList.toggle('menu-recolhido', this.menuRecolhido()); },
   menuAlternar(){ const rec=!this.menuRecolhido(); try{ localStorage.setItem('apto_menu', rec?'recolhido':'aberto'); }catch(e){} this.menuAplicar(); this.render(); },
-  renderNav(rs){ this.menuAplicar(); const rec=this.menuRecolhido(); const todas=this.dados.abas.concat(this.ABAS_EXTRA);
+  renderNav(rs){ this.menuAplicar(); const rec=this.menuRecolhido(); const todas=(this.dados.abas||[]).concat(this.ABAS_EXTRA);
     const item=a=>{ const n=a.cor&&!a.sem_stats?this.contaCor(a,rs):''; const qa=0; const nome=this.NOME[a.id]||a.titulo;
       const dica=nome+(n?' · '+n:'')+(a.id==='ind'&&n?' (assistidos com indulto ou comutação cabível em ao menos um decreto, com ou sem pedido)':'')+(qa?' · '+qa+' cartões com prazo vencido ou para hoje':'');
       const k=this.navAtalho(a.id); return `<button class="tab ${a.id===this.aba?'on':''}" data-nome="${esc(nome)}" data-n="${n||''}" data-qa="${qa||''}" data-k="${k||''}" title="${rec?'':esc((a.id==='ind'?'Assistidos com indulto ou comutação cabível em ao menos um decreto (2000 a 2025), com ou sem pedido - o mesmo número do relatório geral':nome))}" onclick="ui.irAba(${jsa(a.id)})">${this.ICONE[a.id]?`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${this.ICONE[a.id]}</svg>`:''}<span class="tnm">${esc(nome)}</span>${n?`<span class="cnt">${n}</span>`:''}${qa?`<span class="cnt alerta" style="background:var(--r-bg);color:var(--vermelho-32)">${qa}</span>`:''}</button>`; };
@@ -4758,9 +4768,16 @@ ui.FUNCOES={
   seeu:{titulo:'SEEU', html:()=>'<div class="fx" id="seeuPag"><p class="muted">Carregando…</p></div>', depois(){ this.seeuCarregar(); }},
   rel:{titulo:'Relatório', painel:'rel'},
   quadro:{titulo:'Quadro', painel:'quadro'},
+  geo:{titulo:'Dados prisionais', ferramenta:'geo'},
+  teses:{titulo:'Jurisprudências', ferramenta:'teses'},
 };
 ui.fn='exec';
-ui.funcao=function(id){ if(!this.FUNCOES[id]) return; this.fn=id; document.body.className=document.body.className.replace(/\bfn-\w+/g,'').trim()+' fn-'+id;
+ui.funcao=function(id){ if(!this.FUNCOES[id]) return; const F0=this.FUNCOES[id], ferr=['geo','teses'];
+  if(this.fn==='exec'&&!ferr.includes(this.aba)) this._abaExec=this.aba;
+  this.fn=id; document.body.className=document.body.className.replace(/\bfn-\w+/g,'').trim()+' fn-'+id+(F0.ferramenta?' fn-exec fn-ferr':'');
+  if(F0.ferramenta){ if(!this.dados) this.dados={}; if(!this.dados.abas) this.dados.abas=[]; if(!this.dados.registros) this.dados.registros=[];
+    this.aba=F0.ferramenta; this.filtroCor=null; this.filtros=[]; this.aberto=null; try{ this.render(); }catch(e){ console.error(e); } }
+  else if(id==='exec'&&ferr.includes(this.aba)){ this.aba=this._abaExec&&!ferr.includes(this._abaExec)?this._abaExec:'geral'; if(this.dados&&this.dados.base&&(this.dados.abas||[]).length) this.render(); }
   document.querySelectorAll('#fnbar .fn').forEach(b=>{ const on=b.id==='fn_'+id; b.classList.toggle('on',on); b.setAttribute('aria-selected',on?'true':'false'); });
   const P=document.getElementById('fnPagina'), F=this.FUNCOES[id], C=document.getElementById('fnConteudo');
   P.classList.toggle('moldura', !!F.painel);
@@ -4805,7 +4822,7 @@ ui.gabImportar=async function(){ const r=await API_().gabinete_importar(); if(r&
 ui.fnSeeuPlanilha=async function(){ if(this.fn!=='seeu'){ this.funcao('seeu'); await new Promise(ok=>setTimeout(ok,400)); }
   if(!(this._seeu&&(this._seeu.itens||[]).length)){ this.toast('Nenhuma intimação lida do SEEU ainda: use "1 · Ler a Mesa".'); return; } this.seeuPlanilha(); };
 // Ctrl+1 ... Ctrl+6 trocam de função (Alt+número continua para as abas da Execução)
-document.addEventListener('keydown',e=>{ if(!e.ctrlKey||e.altKey||e.shiftKey||e.metaKey||!/^[1-6]$/.test(e.key)) return; e.preventDefault(); ui.funcao(['atend','exec','seeu','sei','quadro','rel'][+e.key-1]); });
+document.addEventListener('keydown',e=>{ if(!e.ctrlKey||e.altKey||e.shiftKey||e.metaKey||!/^[1-8]$/.test(e.key)) return; e.preventDefault(); ui.funcao(['atend','exec','seeu','sei','quadro','rel','geo','teses'][+e.key-1]); });
 // (7.21) SEEU (Mesa do Defensor) e SEI: telas do APTO para o que a extensão leu. Tudo só leitura no sistema de origem; as
 // sugestões (providência da triagem, obrigação do SEI) só viram tarefa quando a pessoa manda ao Quadro ou valida.
 ui.fxDias=function(br){ const m=/(\d{2})\/(\d{2})\/(\d{4})/.exec(br||''); if(!m) return null; const h=new Date(); h.setHours(0,0,0,0);
@@ -5487,6 +5504,7 @@ document.addEventListener('keydown', e=>{ const t=e.target, L=t&&t.closest&&t.cl
   const bs=[...L.querySelectorAll('[role=tab]')], i=bs.indexOf(t); if(i<0) return; e.preventDefault();
   const j=e.key==='Home'?0:e.key==='End'?bs.length-1:(i+(e.key==='ArrowRight'?1:-1)+bs.length)%bs.length; const sel=L.classList.contains('nus-sub')?'.nus-sub':'.fx-vistas', idx=j;
   bs[j].click(); setTimeout(()=>{ const n=[...document.querySelectorAll(sel+' [role=tab]')][idx]; if(n) n.focus(); },120); });
+(function(){ const i=document.querySelector('.top .logo img'), d=document.getElementById('fnSelo'); if(i&&d){ const c=i.cloneNode(); c.alt=''; d.appendChild(c); } })();
 window.addEventListener('pywebviewready', ()=>{ setTimeout(()=>ui.contadores(), 1500); setInterval(()=>ui.contadores(), 300000); });
 window.addEventListener('pywebviewready', ()=>api('listar'));
 // cabeçalho das tabelas internas da linha aberta (aba Ficha) fica preso logo abaixo do cabeçalho principal ao rolar
