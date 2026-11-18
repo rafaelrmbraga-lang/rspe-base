@@ -108,6 +108,13 @@ const MODELO = path.join(RAIZ, "extensao_seeu_testes", "modelo_ficticio.docx");
   await pg.waitForTimeout(500);
   ok((await fr.$$eval(".abas button:not([hidden])", (x) => x.map((b) => b.dataset.aba))).join() === "pend,agenda", "Quadro: Pendências e Agenda");
   ok((await fr.$$eval(".kcard", (x) => x.length)) === 1, "a pendência no Quadro");
+  // relato do atendimento que gerou a pendência: clique no nome do cartão
+  await fr.click(".kcard .knome");
+  await pg.waitForTimeout(200);
+  const relato = await fr.textContent(".kcard .krel");
+  ok(await fr.$eval(".kcard .krel", (d) => d.open) && /Atendimento solicitado pela genitora/.test(relato) && /Deseja pedir saída temporária/.test(relato),
+    "relato do atendimento no cartão (Fato Narrado e registro): " + relato.slice(0, 120));
+  ok((await fr.getAttribute(".kcard .knome", "aria-expanded")) === "true", "nome do cartão diz que abriu");
   await fr.click('.abas button[data-aba="agenda"]');
   await pg.waitForTimeout(400);
   ok(await fr.isVisible("#agCal td.hoje"), "agenda única: calendário do mês");

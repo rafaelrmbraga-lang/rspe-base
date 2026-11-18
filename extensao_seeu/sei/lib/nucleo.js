@@ -136,9 +136,8 @@ async function textoDaResposta(r, tipo) {
   if (cs && !/^utf-?8$/.test(cs)) {
     try { return new TextDecoder(/^(iso-8859-1|latin1|us-ascii)$/.test(cs) ? "windows-1252" : cs).decode(bytes); } catch (e) { /* charset desconhecido: segue */ }
   }
-  try { return new TextDecoder("utf-8", { fatal: true }).decode(bytes); } catch (e) {
-    return cs ? new TextDecoder("utf-8").decode(bytes) : new TextDecoder("windows-1252").decode(bytes);
-  }
+  // UTF-8 só se for UTF-8 válido; senão ISO-8859-1/windows-1252, mesmo que o SEI declare UTF-8 (o texto nunca sai com "\uFFFD")
+  try { return new TextDecoder("utf-8", { fatal: true }).decode(bytes); } catch (e) { return new TextDecoder("windows-1252").decode(bytes); }
 }
 
 async function sha256Bytes(bytes) {

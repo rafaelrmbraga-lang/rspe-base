@@ -44,12 +44,27 @@ def extrair_paginas(caminho: Path | str) -> list[PaginaLida]:
 
 
 # ---- OCR opcional (7.28, APTO): só se o Tesseract estiver instalado neste computador; o texto vem marcado como lido por OCR ----
+def tesseract_embutido():
+    """O Tesseract que vem com o APTO (7.29): pasta "tesseract" ao lado do APTO.exe (ou na pasta do código, ao rodar pelo Python)."""
+    import os
+    import sys
+
+    bases = [os.path.dirname(sys.executable)] if getattr(sys, "frozen", False) else []
+    bases.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    for b in bases:
+        for nome in ("tesseract.exe", "tesseract"):
+            c = os.path.join(b, "tesseract", nome)
+            if os.path.isfile(c):
+                return c
+    return None
+
+
 def tesseract():
-    """Caminho do tesseract (PATH ou a instalação padrão no Windows); None se não houver."""
+    """Caminho do tesseract: o que vem com o APTO; senão o do computador (PATH ou a instalação padrão no Windows); None se não houver."""
     import os
     import shutil
 
-    achado = shutil.which("tesseract")
+    achado = tesseract_embutido() or shutil.which("tesseract")
     if achado:
         return achado
     for c in (r"C:\Program Files\Tesseract-OCR\tesseract.exe", r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe"):
@@ -72,8 +87,11 @@ def ocr_pagina(caminho: Path | str, numero: int, exe: str, resolucao: int = 200)
         os.close(fd)
         try:
             img.save(png)
+            dados = os.path.join(os.path.dirname(exe), "tessdata")
+            extra = ["--tessdata-dir", dados] if os.path.isdir(dados) else []  # o português que vem com o APTO
+            sem_janela = getattr(subprocess, "CREATE_NO_WINDOW", 0)  # no Windows, sem piscar uma janela preta por página
             for idioma in (["-l", "por"], []):
-                r = subprocess.run([exe, png, "stdout", *idioma], capture_output=True, text=True, timeout=90)
+                r = subprocess.run([exe, png, "stdout", *extra, *idioma], capture_output=True, text=True, timeout=90, creationflags=sem_janela)
                 if r.returncode == 0 and r.stdout.strip():
                     return r.stdout
             return ""

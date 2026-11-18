@@ -651,7 +651,7 @@ body:not(.fn-exec) .fnpag{display:block}
 .fnpag iframe[hidden]{display:none}
 /* (7.21) SEEU (Mesa do Defensor) e SEI: mesma paleta, escalas e situação (forma + texto) do APTO */
 .fx{max-width:1320px;margin:0 auto;padding:18px 20px 48px}
-.fx-cab{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.fx-cab{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:8px}
 .fx-cab h1{margin:0;font-size:var(--fs-20)}
 .fx-cab .sub{margin:2px 0 0;color:var(--tx2);font-size:var(--fs-13)}
 .fx-cont{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
@@ -706,13 +706,16 @@ body:not(.fn-exec) .fnpag{display:block}
 .fx-vazio{max-width:760px;padding:22px 26px;background:var(--card);border:1px dashed var(--line2);border-radius:var(--r-3);line-height:1.55}
 .fx-vazio ol{margin:8px 0 8px 20px;padding:0}
 .fx-aviso{background:var(--ambar-97-2);color:var(--ambar-37);border-radius:var(--r-2);padding:8px 12px}
-.fx-vistas{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:14px 0 12px}
+.fx-vistas{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:8px 0 12px}
 .fx-vistas button{border:0;background:none;padding:10px 14px;font:inherit;font-size:var(--fs-14);color:var(--tx2);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-1px}
 .fx-vistas button.on{color:var(--pri);font-weight:600;border-bottom-color:var(--pri)}
 .fx-vistas button:focus-visible,.fx-atc:focus-visible,.fx-tabsei tr:focus-visible,.fx-ent button:focus-visible{outline:2px solid var(--pri);outline-offset:2px}
 .fx-sec{font-size:var(--fs-13);text-transform:uppercase;letter-spacing:.6px;color:var(--tx2);margin:14px 0 8px}
-.fx-at{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
-.fx-atc{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:14px 16px;border:1px solid var(--line);border-radius:var(--r-2);background:var(--card);cursor:pointer;text-align:left;font:inherit}
+.fx-at{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
+@media (min-width:1100px){.fx-at{grid-template-columns:repeat(5,minmax(0,1fr))}}
+.fx-atc.zero b{color:var(--tx3)!important;font-weight:600}
+.fx-atc.zero span{color:var(--tx2)}
+.fx-atc{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:12px 14px;border:1px solid var(--line);border-radius:var(--r-2);background:var(--card);cursor:pointer;text-align:left;font:inherit}
 .fx-atc b{font-size:var(--fs-24);line-height:1.1}
 .fx-atc span{font-size:var(--fs-13);color:var(--tx)}
 .fx-atc small{font-size:var(--fs-11);color:var(--tx3)}
@@ -720,6 +723,8 @@ body:not(.fn-exec) .fnpag{display:block}
 .fx-atc.a0 b,.fx-atc.a1 b{color:var(--b-tx)}.fx-atc.a2 b{color:var(--p-tx)}.fx-atc.a3 b{color:var(--o-tx)}.fx-atc.a4 b{color:var(--r-tx)}
 .fx-quadro{margin-top:14px;padding:12px 16px;border:1px solid var(--line);border-radius:var(--r-2);background:var(--card)}
 .fx-quadro .fx-sec{margin-top:2px}
+.fx-quadro h3{font-size:var(--fs-14);margin:12px 0 6px}
+.nus-filtros .btn{min-height:36px}
 .fx-tabw{overflow-x:auto}
 .fx-tabsei{width:100%;border-collapse:collapse}
 .fx-tabsei th{text-align:left;font-size:var(--fs-12);color:var(--tx2);font-weight:600;padding:8px;border-bottom:1px solid var(--line)}
@@ -738,7 +743,7 @@ body:not(.fn-exec) .fnpag{display:block}
 .fx-ent button{flex:1;display:flex;flex-direction:column;align-items:flex-start;border:0;background:none;padding:0;font:inherit;text-align:left;cursor:pointer}
 .fx-ent .fx-num{font-size:var(--fs-12);color:var(--tx3)}
 .fx-expl{font-size:var(--fs-13);color:var(--tx2);background:var(--branco);border-radius:var(--r-2);padding:8px 12px;margin:4px 0 8px}
-.nus-cab{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:10px 0 0}
+.nus-cab{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:6px 0 0}
 .nus-cab label{font-size:var(--fs-13);font-weight:600;color:var(--tx2)}
 .nus-cab select,.nus-cab input{min-height:34px;padding:5px 8px;border:1px solid var(--line2);border-radius:var(--r-1);font:inherit;background:var(--card);color:var(--tx)}
 .nus-cab form{display:flex;gap:6px;flex:1;max-width:560px}
@@ -750,7 +755,7 @@ body:not(.fn-exec) .fnpag{display:block}
 .nus-f{display:flex;flex-direction:column;gap:3px}
 .nus-f label{font-size:var(--fs-12);font-weight:600;color:var(--tx2)}
 .nus-f small{font-size:var(--fs-11);color:var(--tx3)}
-.nus-f input,.nus-f select,.nus-f textarea{min-height:34px;padding:6px 8px;border:1px solid var(--line2);border-radius:var(--r-1);font:inherit;color:var(--tx);background:var(--card)}
+.nus-f input,.nus-f select,.nus-f textarea{min-height:36px;box-sizing:border-box;padding:6px 8px;border:1px solid var(--line2);border-radius:var(--r-1);font:inherit;color:var(--tx);background:var(--card)}
 .nus-f textarea{resize:vertical}
 .nus-in{flex-direction:row;align-items:center;gap:8px;margin:4px 0}
 .nus-item{padding:10px 0;border-bottom:1px solid var(--line)}
@@ -774,21 +779,25 @@ body:not(.fn-exec) .fnpag{display:block}
 .nus-li .nus-sel{margin-top:14px;width:18px;height:18px;flex:none}
 .nus-li .fx-proc{flex:1;min-width:0}
 .nus-calc{display:flex;align-items:center;gap:10px;margin:6px 0}
-.nus-calc b{text-transform:capitalize;min-width:160px;text-align:center}
+.nus-calc b{min-width:170px;text-align:center}
+.nus-mes{min-width:36px;min-height:36px;justify-content:center;padding:6px 10px}
 .nus-cal{width:100%;border-collapse:collapse;table-layout:fixed;margin-bottom:12px}
 .nus-cal th{font-size:var(--fs-12);color:var(--tx2);padding:4px}
-.nus-cal td{border:1px solid var(--line);height:72px;vertical-align:top;padding:4px;background:var(--card)}
+.nus-cal td{border:1px solid var(--line);height:56px;vertical-align:top;padding:4px;background:var(--card)}
 .nus-cal td.hoje{box-shadow:inset 0 0 0 2px var(--pri)}
 .nus-dia{font-size:var(--fs-12);color:var(--tx3)}
+.nus-hoje{color:var(--pri);font-size:var(--fs-11);text-transform:uppercase;letter-spacing:.4px}
 .nus-calp{display:block;width:100%;margin-top:2px;padding:2px 4px;border:0;border-radius:var(--r-1);background:var(--o-bg);color:var(--o-tx);font:inherit;font-size:var(--fs-11);text-align:left;cursor:pointer;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 .nus-calp.venc{background:var(--r-bg);color:var(--r-tx)}
 .fx-hist-l{margin:4px 0 0 18px;padding:0;font-size:var(--fs-12);color:var(--tx2)}
-.fx-quem{display:flex;align-items:center;gap:8px}
+.fx-par{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.fx-quemrot{font-size:var(--fs-13);font-weight:600;color:var(--tx2)}
 .nus-sub{display:flex;gap:4px;margin:0 0 12px;flex-wrap:wrap}
 .nus-sub button{border:1px solid var(--line);background:var(--card);border-radius:var(--r-pill);padding:6px 14px;font:inherit;font-size:var(--fs-13);color:var(--tx2);cursor:pointer}
 .nus-sub button.on{border-color:var(--pri);color:var(--pri);font-weight:600;background:var(--pri-soft)}
 .nus-sub button:focus-visible{outline:2px solid var(--pri);outline-offset:2px}
 .nus-cab .btn.on{border-color:var(--pri);color:var(--pri)}
+.fx-procs .fx-nada{padding:16px 12px;text-align:center;color:var(--tx2)}
 .fx-ind{background:var(--pri-soft);color:var(--tx);border-radius:var(--r-2);padding:8px 12px}
 .fx-hist{margin-top:4px;font-size:var(--fs-12);color:var(--tx2)}
 .fx-hist ul{margin:4px 0 0 18px;padding:0}
@@ -4818,7 +4827,7 @@ ui.fxLeitura=function(sist, est, rotBotao){ est=est||{}; const a=est.andamento||
   return `<div class="fx-ler"><span class="fx-sist ${est.aberto?'on':'off'}" title="${est.aberto?`A aba do ${nome} está aberta com a extensão do APTO`:`Abra o ${nome} no navegador (já logado), com a extensão do APTO`}"><span aria-hidden="true">${est.aberto?'●':'○'}</span> ${est.aberto?nome+' aberto':nome+' não detectado'}</span>
     ${sist==='sei'?`<label class="vh" for="seiModo">O que ler</label><select id="seiModo" ${lendo?'disabled':''}><option value="todos">Todos os processos</option><option value="novos">Só processos novos</option><option value="documentos_novos">Só documentos novos</option></select>`:''}
     ${lendo?`<button type="button" class="btn" onclick="ui.fxParar('${sist}')">Parar</button>`:`<button type="button" class="btn pri" ${est.aberto?'':'disabled'} aria-describedby="${sist}Ajuda" onclick="ui.fxLer('${sist}')">${rotBotao}</button>`}
-    <span class="spacer"></span><button type="button" class="btn ghost" onclick="ui.${sist}Carregar()">Atualizar</button></div>
+    <span class="spacer"></span><button type="button" class="btn" onclick="ui.${sist}Carregar()">Atualizar</button></div>
     <p id="${sist}Ajuda" class="vh">${sist==='sei'?'Lê o SEI na aba aberta e logada (só leitura): começa do Controle de Processos.':'Abre a triagem da extensão em segundo plano e lê a Mesa e os processos, sem iniciar prazo.'}</p>
     ${txt?`<div class="fx-andamento${a.fase==='parada'?' parada':''}" role="status" aria-live="polite">${pct!=null?`<div class="fx-barra" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><i style="width:${pct}%"></i></div>`:lendo?'<div class="fx-barra ind" aria-hidden="true"><i></i></div>':''}<span>${esc(txt)}</span>${lendo&&sist==='sei'?'<small>Não navegue na aba do SEI até terminar.</small>':''}</div>`:''}`; };
 ui.fxLer=async function(sist){ const B=API_(); const modo=(document.getElementById('seiModo')||{}).value||'todos';
@@ -4896,7 +4905,7 @@ ui.seeuBarra=function(){ const T=this._seeu||{}, S=this.seeu, est=T.leitura||{},
     ${lendo?`<button type="button" class="btn" onclick="ui.fxParar('seeu')">Parar</button>`:`<button type="button" class="btn pri" ${est.aberto&&S.abas.length?'':'disabled'} title="Lê a lista da Mesa no SEEU (sem iniciar prazo)" onclick="ui.seeuLer(1)">1 · Ler a Mesa</button>
       <button type="button" class="btn pri" ${est.aberto&&n2?'':'disabled'} title="Lê o processo e a última decisão de cada intimação da lista, nos filtros abaixo" onclick="ui.seeuLer(2)">2 · Ler processos e decisões (${n2})</button>`}
     <label class="fx-chk" title="Lê de novo mesmo os processos já lidos hoje"><input type="checkbox" ${S.forcar?'checked':''} onchange="ui.seeu.forcar=this.checked;ui.seeuGuardar()"> reler tudo</label>
-    <span class="spacer"></span><button type="button" class="btn ghost" onclick="ui.seeuCarregar()">Atualizar</button></div>
+    <span class="spacer"></span><span class="fx-par">${this.quemSel('seeuQuem')}</span><button type="button" class="btn" onclick="ui.seeuCarregar()">Atualizar</button></div>
     ${txt?`<div class="fx-andamento${a.fase==='parada'?' parada':''}" role="status" aria-live="polite">${pct!=null?`<div class="fx-barra" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><i style="width:${pct}%"></i></div>`:lendo?'<div class="fx-barra ind" aria-hidden="true"><i></i></div>':''}<span>${esc(txt)}</span></div>`:''}`; };
 ui.seeuLer=async function(etapa){ const S=this.seeu; const r=await API_().seeu_ler({etapa:String(etapa), abas:S.abas, situacao:S.situacao, forcar:S.forcar, faixa:S.faixa, defensores:S.defensores, tipo:S.tipo, prov:S.prov, busca:S.q});
   if(r&&r.erro){ this.toast(r.erro,{erro:true}); return; }
@@ -4915,9 +4924,9 @@ ui.seeuFiltros=function(L){ const T=this._seeu||{}, S=this.seeu, itens=(T.itens|
       <label class="vh" for="seeuFaixa">Faixa de finais</label><input id="seeuFaixa" type="text" size="10" placeholder="ex.: 0-2" value="${esc(S.faixa)}" title="Também pode escrever: 0-2 (= 0, 1 e 2), 5, 7-9" onchange="ui.seeuMuda('faixa', this.value)">
       <span class="muted">${fx.size?'finais '+esc(this.seeuFaixaTexto(fx)):'todos os finais'}</span><button type="button" class="btn ghost" onclick="ui.seeuGuardarFaixa()">Guardar</button>
       ${(S.faixas||[]).map(f=>`<span class="fx-chip salvo"><button type="button" title="${esc(f.faixa)}" onclick="ui.seeuMuda('faixa', ${jsa(f.faixa)})">${esc(f.nome)}</button><button type="button" aria-label="Apagar a faixa ${esc(f.nome)}" onclick="ui.seeu.faixas=ui.seeu.faixas.filter(x=>x.nome!==${jsa(f.nome)});ui.seeuGuardar();ui.seeuPintar()">×</button></span>`).join('')}
-      <label class="fx-rot" for="seeuTipo">Motivo</label><select id="seeuTipo" onchange="ui.seeuMuda('tipo', this.value)"><option value="">todos</option>${tipos.concat(S.tipo&&!tipos.includes(S.tipo)?[S.tipo]:[]).map(t=>`<option ${S.tipo===t?'selected':''}>${esc(t)}</option>`).join('')}</select>
+      <span class="fx-par"><label class="fx-rot" for="seeuTipo">Motivo</label><select id="seeuTipo" onchange="ui.seeuMuda('tipo', this.value)"><option value="">todos</option>${tipos.concat(S.tipo&&!tipos.includes(S.tipo)?[S.tipo]:[]).map(t=>`<option ${S.tipo===t?'selected':''}>${esc(t)}</option>`).join('')}</select></span>
       <label class="vh" for="seeuQ">Buscar</label><input id="seeuQ" type="search" placeholder="buscar nº, nome ou texto" value="${esc(S.q)}" oninput="ui.seeu.q=this.value;ui.seeuGuardar();ui.seeuPintar();document.getElementById('seeuQ').focus()">
-      <label class="fx-rot" for="seeuProv">Providência</label><select id="seeuProv" onchange="ui.seeuMuda('prov', this.value)"><option value="">todas</option><option value="urgente" ${S.prov==='urgente'?'selected':''}>só urgentes</option>${this.SEEU_PROV.map(p=>`<option ${S.prov===p?'selected':''}>${esc(p)}</option>`).join('')}</select>
+      <span class="fx-par"><label class="fx-rot" for="seeuProv">Providência</label><select id="seeuProv" onchange="ui.seeuMuda('prov', this.value)"><option value="">todas</option><option value="urgente" ${S.prov==='urgente'?'selected':''}>só urgentes</option>${this.SEEU_PROV.map(p=>`<option ${S.prov===p?'selected':''}>${esc(p)}</option>`).join('')}</select></span>
       <span class="spacer"></span><button type="button" class="btn" ${L.length?'':'disabled'} onclick="ui.seeuPlanilha()">Planilha (xlsx)</button><button type="button" class="btn" ${L.length?'':'disabled'} onclick="ui.seeuImprimir()">Imprimir</button>
       <button type="button" class="btn" ${L.length?'':'disabled'} onclick="ui.seeuAbrirTudo()">Abrir/fechar detalhes</button></div>`; };
 ui.seeuPintar=function(){ const P=document.getElementById('seeuPag'); if(!P) return; const T=this._seeu;
@@ -4963,7 +4972,7 @@ ui.seeuPintar=function(){ const P=document.getElementById('seeuPag'); if(!P) ret
       <td><div class="fx-forte fx-num">${esc(l.processo)}</div><div>${esc(l.executado||'—')}</div>${r?`<button type="button" class="fx-base" title="Abrir a ficha na base aberta em Execução" onclick="event.stopPropagation();ui.abrir(${jsa(r.id)})">na base · abrir ficha</button>`:''}</td>
       <td><div>${esc(l.aba)}</div><div class="muted">${esc(l.defensor||'sem defensor')}</div>${l.atribuido?`<div class="muted">com ${esc(l.atribuido)}</div>`:''}${sit?'<div>'+sit+'</div>':''}</td><td>${mot}</td><td>${a&&a.status==='ok'?(a.decisao?`<div class="fx-forte">${esc(a.decisao.nome)}</div><div class="muted">${esc('seq. '+a.decisao.seq+' · '+a.decisao.data)}</div>`:'<span class="muted">nenhum ato do juiz com documento</span>'):''}</td><td>${pv}</td></tr>${det}`; };
   this._seeuL=L;
-  P.innerHTML=cab+`<div class="fx-filtros fx-quem">${this.quemSel('seeuQuem')}</div>`+this.seeuFiltros(L)+`${this.fxCont('seeu',[['aberto',abertos.length,'em aberto'],['urg',urg,'providência urgente','crit'],['perto',perto,'prazo em até 2 dias','urg'],['fora',fora,'saíram da Mesa'],['base',base,'na base aberta'],...(this.nusQuem?[['minhas',abertos.filter(l=>l.atribuido===this.nusQuem).length,'comigo']]:[]),['concl',concl,'concluídas','ok']],S.f,'ui.seeuFiltro')}
+  P.innerHTML=cab+this.seeuFiltros(L)+`${this.fxCont('seeu',[['aberto',abertos.length,'em aberto'],['urg',urg,'providência urgente','crit'],['perto',perto,'prazo em até 2 dias','urg'],['fora',fora,'saíram da Mesa'],['base',base,'na base aberta'],...(this.nusQuem?[['minhas',abertos.filter(l=>l.atribuido===this.nusQuem).length,'comigo']]:[]),['concl',concl,'concluídas','ok']],S.f,'ui.seeuFiltro')}
     <div class="fx-tabw"><table class="fx-tab"><caption class="vh">Intimações da Mesa (${L.length})</caption><thead><tr><th scope="col">Prazo</th><th scope="col">Processo e assistido</th><th scope="col">Aba e defensor</th><th scope="col">Motivo</th><th scope="col">Última decisão</th><th scope="col">Providência sugerida</th></tr></thead>
     <tbody>${L.length?L.map(linha).join(''):'<tr><td colspan="6" class="fx-nada">Nenhuma intimação neste filtro.</td></tr>'}</tbody></table></div>
     <p class="muted fx-nota">${L.length} na lista. Clique na linha para ver o motivo, a decisão e registrar a baixa. A intimação fica aqui até você concluir, mesmo que saia da Mesa no SEEU; a baixa com peça conta na produção do mês (Relatório). A providência é sugestão da triagem.</p>`;
@@ -4991,7 +5000,7 @@ ui.seeuOferecerPedido=function(l, sp){ const reg=l&&this.fxNaBase(l.processo); i
 ui.seeuMarcarPedido=async function(id, aba, dt){ const r=await API().pedido(id, aba, dt, 'baixa da Mesa do SEEU', '', 'pedido'); this.fecharModal();
   if(r&&r.erro){ this.toast(r.erro,{erro:true}); return; } if(r&&r.registros) this.carregar(r); this.toast((r&&r.msg)||'Pedido marcado.'); };
 ui.seeuAtribuir=async function(k, quem){ const r=await API_().seeu_atribuir(k, quem); if(r&&r.erro){ this.toast(r.erro,{erro:true}); return; } this.toast(quem?'Com '+quem+'.':'Sem responsável.'); this.seeuCarregar(); };
-ui.quemSel=function(id){ const L=this._nusQuemL||[]; return `<label class="fx-rot" for="${id}">Quem</label><select id="${id}" onchange="ui.nusQuemEscolher(this.value);ui.seeuPintar()">${this.nusOpts(L.map(n=>[n,n]), this.nusQuem, L.length?'— escolha —':'— cadastre em SEI > Cadastros —')}</select>`; };
+ui.quemSel=function(id){ const L=this._nusQuemL||[]; return `<label class="fx-quemrot" for="${id}">Quem</label><select id="${id}" onchange="ui.nusQuemEscolher(this.value);ui.seeuPintar()">${this.nusOpts(L.map(n=>[n,n]), this.nusQuem, L.length?'— escolha —':'— cadastre em SEI > Cadastros —')}</select>`; };
 ui.seeuConcluirSem=async function(k){ if(!confirm('Concluir sem registrar peça? Não conta na produção do mês.')) return;
   const r=await API_().seeu_concluir(k,'','','',this.nusQuem||''); if(r&&r.erro){ this.toast(r.erro,{erro:true}); return; } this.seeu.abertos.delete(k); this.seeuCarregar(); };
 ui.seeuReabrir=async function(k){ const r=await API_().seeu_reabrir(k); if(r&&r.erro){ this.toast(r.erro,{erro:true}); return; }
@@ -5039,7 +5048,8 @@ ui.seiAtencao=function(k){ this.sei.at=this.sei.at===k?'':k; this.seiPintar(); }
 ui.seiIr=function(n){ this.sei.vista='proc'; this.seiAbrirProc(n); };
 ui.seiGeral=function(R){ const S=this.sei, P=(R.processos||[]).filter(p=>!p.fora_da_lista), sg=new Map(P.map(p=>[p.numero,this.seiSinais(p)]));
   const n=k=>P.filter(p=>sg.get(p.numero)[k]).length;
-  const cards=`<h2 class="fx-sec">Atenção hoje</h2><div class="fx-at" id="atHoje" role="group" aria-label="O que pede atenção">${this.SEI_AT.map(([k,rot,nota],i)=>`<button type="button" class="fx-atc a${i}${S.at===k?' on':''}" aria-pressed="${S.at===k}" onclick="ui.seiAtencao('${k}')"><b>${n(k)}</b><span>${esc(rot)}</span><small>${esc(nota)}</small></button>`).join('')}</div>`;
+  const ORD={validar:3,novo:4,entrou:5,prazo:6,parado:7};
+  const cards=`<h2 class="fx-sec">Atenção hoje</h2><div class="fx-at" id="atHoje" role="group" aria-label="O que pede atenção">${this.SEI_AT.map(([k,rot,nota],i)=>`<button type="button" class="fx-atc a${i}${S.at===k?' on':''}${n(k)?'':' zero'}" style="order:${ORD[k]}" aria-pressed="${S.at===k}" onclick="ui.seiAtencao('${k}')"><b>${n(k)}</b><span>${esc(rot)}</span><small>${esc(nota)}</small></button>`).join('')}</div>`;
   const vis=P.filter(p=>!S.at||sg.get(p.numero)[S.at]);
   const chips=p=>{ const g=sg.get(p.numero), c=[];
     if(g.novo) c.push(`<span class="fx-tag info">● documento novo${p.docs_novos?' ('+p.docs_novos+')':''}</span>`);
@@ -5066,11 +5076,14 @@ ui.seiGeral=function(R){ const S=this.sei, P=(R.processos||[]).filter(p=>!p.fora
   const ent=`<section class="fx-quadro"><h2 class="fx-sec">O que entrou desde a última leitura</h2>${novos.length?`<ul class="fx-ent">${novos.map(p=>`<li><button type="button" onclick="ui.seiIr(${jsa(p.numero)})"><b>${esc(p.tipo||p.especificacao||p.original)}</b><span class="fx-num">${esc(p.original)}</span></button><span class="fx-tag info">novo</span></li>`).join('')}</ul>`:`<p class="muted">${R.leituras>1?'Nada novo na lista desde a leitura anterior.':'Nada para comparar ainda.'}</p>`}
     <p class="muted">Aparece a partir da segunda leitura, comparando a lista com a leitura anterior.</p></section>`;
   return cards+tab+`<div class="fx-duas">${marc}${ent}</div>`; };
+ui.fxData=function(v){ const m=/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}))?/.exec(String(v||'')); return m?`${m[3]}/${m[2]}/${m[1]}${m[4]?' '+m[4]+':'+m[5]:''}`:String(v||''); };
+ui.seiLendo=function(){ const a=((this._sei||{}).leitura||{}).andamento||{}; return (a.fase==='lendo'||a.fase==='iniciando') && Date.now()/1000-(a.quando||0)<180; };
+ui.seiAvisoAcentos=function(R){ return R&&R.acentos_quebrados?`<p class="fx-aviso" role="status"><b>Acentos estragados em ${R.acentos_quebrados} registro(s)</b> lido(s) antes da correção (aparecem como “Of\uFFFDcio”). Escolha <b>Todos os processos</b> e clique em <b>Ler o SEI</b>: eles são lidos de novo com os acentos certos (a versão estragada fica guardada como substituída).</p>`:''; };
 ui.seiPintar=function(){ const P=document.getElementById('seiPag'); if(!P) return; const R=this._sei;
   if(!R){ P.innerHTML='<p class="muted">Carregando…</p>'; return; }
   const T=R.totais||{}, S=this.sei;
   const ler=`<div id="seiLer">${this.fxLeitura('sei',R.leitura,'Ler o SEI')}</div>`;
-  const abas=`<div class="fx-vistas" role="tablist" aria-label="SEI">${this.NUS_VISTAS.map(([k,n])=>`<button type="button" role="tab" aria-selected="${S.vista===k}" class="${S.vista===k?'on':''}" onclick="ui.sei.vista='${k}';if('${k}'==='prov')ui.sei.provSub='lista';ui.seiPintar()">${n}</button>`).join('')}</div>`;
+  const abas=`<div class="fx-vistas" role="tablist" aria-label="SEI">${this.NUS_VISTAS.map(([k,n])=>`<button type="button" role="tab" aria-selected="${S.vista===k}" tabindex="${S.vista===k?0:-1}" class="${S.vista===k?'on':''}" onclick="ui.sei.vista='${k}';if('${k}'==='prov')ui.sei.provSub='lista';ui.seiPintar()">${n}</button>`).join('')}</div>`;
   if(!(R.processos||[]).length && S.vista!=='geral' && S.vista!=='proc'){ P.innerHTML=`<div class="fx-cab"><div><h1>SEI</h1><p class="sub">Nenhum processo do SEI lido ainda: a gestão funciona com o que você registrar.</p></div></div>${ler}<div id="nusCabW"></div>${abas}<div id="nusVista"><p class="muted">Carregando…</p></div>`; this.nusPintar(); return; }
   if(!(R.processos||[]).length){ P.innerHTML=`<div class="fx-cab"><div><h1>SEI</h1><p class="sub">Nenhum processo do SEI lido ainda.</p></div></div>${ler}<div id="nusCabW"></div>${abas}
     <div class="fx-vazio"><b>Como ler o SEI</b><ol><li>No navegador, entre no SEI da Defensoria e abra o <b>Controle de Processos</b> (a leitura começa dele). Aqui aparece "SEI aberto".</li>
@@ -5105,9 +5118,9 @@ ui.seiPintar=function(){ const P=document.getElementById('seiPag'); if(!P) retur
       <h3>Documentos <span class="muted">(${D.documentos.length})</span></h3><ul class="fx-lista">${D.documentos.map(doc).join('')}</ul>
       ${(D.eventos||[]).length?`<h3>Mudanças</h3><ul class="fx-lista">${D.eventos.map(e=>`<li class="muted">${esc(e.quando)} · ${esc(e.descricao)}</li>`).join('')}</ul>`:''}</div>`;
   const U=R.ultima;
-  P.innerHTML=`<div class="fx-cab"><div><h1>SEI</h1><p class="sub">${U?esc('Última leitura: '+(U.concluida||U.iniciada)+' · '+({concluida:'concluída',em_andamento:'em andamento',interrompida:'interrompida (continua de onde parou)',falhou:'com falha'}[U.status]||String(U.status||'').replace(/_/g,' '))+' · '+U.novos+' novo(s), '+U.modificados+' alterado(s)'+(U.falhas?', '+U.falhas+' falha(s)':'')):''}</p></div>
-    </div>${ler}<div id="nusCabW">${this.nusCab()}</div>
-    <div class="fx-vistas" role="tablist" aria-label="SEI">${this.NUS_VISTAS.map(([k,n])=>`<button type="button" role="tab" aria-selected="${S.vista===k}" class="${S.vista===k?'on':''}" onclick="ui.sei.vista='${k}';if('${k}'==='prov')ui.sei.provSub='lista';ui.seiPintar()">${n}</button>`).join('')}</div>
+  P.innerHTML=`<div class="fx-cab"><div><h1>SEI</h1><p class="sub">${U?esc('Última leitura: '+this.fxData(U.concluida||U.iniciada)+' · '+({concluida:'concluída',em_andamento:this.seiLendo()?'em andamento':'interrompida (Ler o SEI continua de onde parou)',interrompida:'interrompida (Ler o SEI continua de onde parou)',falhou:'com falha'}[U.status]||String(U.status||'').replace(/_/g,' '))+' · '+U.novos+' novo(s), '+U.modificados+' alterado(s)'+(U.falhas?', '+U.falhas+' falha(s)':'')):''}</p></div>
+    </div>${ler}${this.seiAvisoAcentos(R)}<div id="nusCabW">${this.nusCab()}</div>
+    <div class="fx-vistas" role="tablist" aria-label="SEI">${this.NUS_VISTAS.map(([k,n])=>`<button type="button" role="tab" aria-selected="${S.vista===k}" tabindex="${S.vista===k?0:-1}" class="${S.vista===k?'on':''}" onclick="ui.sei.vista='${k}';if('${k}'==='prov')ui.sei.provSub='lista';ui.seiPintar()">${n}</button>`).join('')}</div>
     ${S.vista==='geral'?this.seiGeral(R)+'<div id="nusGeral"></div>':S.vista!=='proc'?'<div id="nusVista"><p class="muted">Carregando…</p></div>':`${this.fxCont('sei',[['todos',T.processos||0,'processos'],['sug',T.sugestoes||0,'providências a validar','med'],['val',T.validadas||0,'validadas','ok'],['falhas',T.falhas||0,'falhas de leitura','crit']],S.f,'ui.seiFiltro')}
     <div class="fx-sei"><aside><label class="vh" for="seiQ">Buscar processo</label><input id="seiQ" type="search" placeholder="Buscar nº, especificação ou unidade" value="${esc(S.q)}" oninput="ui.sei.q=this.value;ui.seiPintar();document.getElementById('seiQ').focus()">
       <ul class="fx-procs">${lista}</ul></aside><section id="seiDet" tabindex="-1" aria-live="polite">${det}</section></div>`}
@@ -5139,7 +5152,7 @@ ui.nusCab=function(){ const L=this._nusQuemL||[];
     <span class="fx-esp"></span><form role="search" onsubmit="event.preventDefault();ui.nusBuscar(this.q.value)"><label class="vh" for="nusBusca">Buscar no SEI e na gestão</label>
     <input id="nusBusca" name="q" type="search" placeholder="Buscar em processos, documentos, providências, demandas, inspeções"><button class="btn" type="submit">Buscar</button></form>
     <button type="button" class="btn" onclick="ui.nusImportarPdf()" title="Processo baixado do SEI ou anexo em PDF: separado pelo rodapé e lido pelas regras de leitura">Importar PDF do SEI…</button>
-    <button type="button" class="btn ghost${this.sei.vista==='cad'?' on':''}" aria-pressed="${this.sei.vista==='cad'}" onclick="ui.sei.vista='cad';ui.seiPintar()" title="Quem, regras de contagem de prazo e modelos de minuta">Cadastros</button></div>`; };
+    <button type="button" class="btn${this.sei.vista==='cad'?' on':''}" aria-pressed="${this.sei.vista==='cad'}" onclick="ui.sei.vista='cad';ui.seiPintar()" title="Quem, regras de contagem de prazo e modelos de minuta">Cadastros</button></div>`; };
 ui.nusQuemEscolher=function(v){ this.nusQuem=v; try{ localStorage.setItem('apto_quem',v); }catch(e){} };
 ui.nusPrep=async function(){ this._nusQuemL=(await this.nus('quem_lista'))||[]; await this.nusEsc(); };
 ui.nusBuscar=async function(q){ const r=await this.nus('buscar', q); if(!r) return;
@@ -5172,7 +5185,7 @@ ui.nusRemover=function(objeto, id){ this.nusPede('Remover (nada se apaga)', 'Mot
 ui.nusPintar=async function(){ const el=document.getElementById('nusVista'); if(!el) return; const v=this.sei.vista; await this.nusPrep();
   const cab=document.getElementById('nusCabW'); if(cab) cab.innerHTML=this.nusCab();
   const sub=this.sei.provSub||'lista';
-  const seg=v==='prov'?`<div class="nus-sub" role="tablist" aria-label="Providências">${this.NUS_SUB.map(([k,n])=>`<button type="button" role="tab" aria-selected="${sub===k}" class="${sub===k?'on':''}" onclick="ui.sei.provSub='${k}';ui.nusPintar()">${n}</button>`).join('')}</div>`:'';
+  const seg=v==='prov'?`<div class="nus-sub" role="tablist" aria-label="Providências">${this.NUS_SUB.map(([k,n])=>`<button type="button" role="tab" aria-selected="${sub===k}" tabindex="${sub===k?0:-1}" class="${sub===k?'on':''}" onclick="ui.sei.provSub='${k}';ui.nusPintar()">${n}</button>`).join('')}</div>`:'';
   const f=v==='prov'?{lista:()=>this.nusProv(), prazos:()=>this.nusPrazos(), com:()=>this.nusCom()}[sub]:{dem:()=>this.nusDem(), insp:()=>this.nusInsp(), hist:()=>this.nusHist(), cad:()=>this.nusCad()}[v];
   try{ el.innerHTML=seg+(f?await f():''); }
   catch(e){ el.innerHTML=`<p class="fx-aviso">Não foi possível montar a tela: ${esc(e.message||e)}</p>`; } };
@@ -5186,7 +5199,8 @@ ui.nusProv=async function(){ const sel=(this._nusSel||{}).prov, f=this._nusFiltr
   const lista=vis.map(o=>`<li class="nus-li"><input type="checkbox" class="nus-sel" value="${o.id}" data-d="${esc(o.descricao.slice(0,100))}" aria-label="Marcar para ação em lote: ${esc(o.descricao.slice(0,60))}"><button type="button" class="fx-proc${sel===o.id?' on':''}" aria-current="${sel===o.id}" onclick="ui.nusIr('prov',${o.id})"><b>${esc(o.descricao)}</b>
     <span>${esc([o.processo, o.demanda_assunto&&'demanda: '+o.demanda_assunto].filter(Boolean).join(' · ')||'sem processo')}</span>
     <small>${this.nusTag(this.NUS_ESTADO_NIVEL[o.estado]||'neu', o.estado)} ${o.prazo&&o.prazo.ordem<3?this.nusTag(o.prazo.nivel, o.prazo.rotulo):''}</small></button></li>`).join('')||'<li class="fx-nada">Nenhuma providência neste filtro.</li>';
-  const det=sel?await this.nusProvDet(sel, E):'<div class="fx-vazio"><b>Escolha uma providência</b><p class="muted">As sugeridas pela leitura do SEI ficam como "Identificada" até alguém validar. Também dá para registrar uma à mão.</p></div>';
+  const det=sel?await this.nusProvDet(sel, E):L.length?'<div class="fx-vazio"><b>Escolha uma providência</b><p class="muted">À esquerda. As sugeridas pela leitura do SEI ficam como "Identificada" até alguém validar.</p></div>':
+    '<div class="fx-vazio"><b>Nenhuma providência ainda</b><p class="muted">Elas chegam pela leitura do SEI (ou por um PDF importado) como sugestões. Também dá para registrar uma à mão.</p><div class="fx-acoes"><button type="button" class="btn pri" onclick="ui.nusNovaProv()">Registrar providência…</button></div></div>';
   return `${chips}<div class="fx-acoes"><button type="button" class="btn pri" onclick="ui.nusNovaProv()">Registrar providência…</button><span class="fx-esp"></span><span class="muted">Marcadas:</span>
     <button type="button" class="btn" onclick="ui.nusLote('validar')">Validar</button><button type="button" class="btn" onclick="ui.nusLote('prioridade_alta')">Prioridade alta</button><button type="button" class="btn" onclick="ui.nusLote('coordenacao')">Encaminhar à coordenação</button></div>
     <div class="fx-sei"><aside><ul class="fx-procs">${lista}</ul></aside><section id="nusDet" tabindex="-1" aria-live="polite">${det}</section></div>`; };
@@ -5237,7 +5251,7 @@ ui.nusProvDet=async function(id, E){ const o=await this.nus('obrigacao', id); if
     <div class="fx-acoes"><button type="button" class="btn" onclick="ui.nusAvaliar('obrigacao',${o.id})">Avaliar o cumprimento…</button></div>
     <h3>Minuta</h3>${minutas?`<ul class="fx-lista">${minutas}</ul>`:''}<div class="fx-acoes">${o.status==='validada'||o.status==='ajustada'?`<button type="button" class="btn" onclick="ui.nusMinutaGerar(${o.id})">Gerar minuta…</button>`:'<span class="muted">Valide a providência para gerar a minuta.</span>'}</div>
     <div class="fx-acoes">${o.quadro?'<span class="muted">✓ no Quadro</span>':o.status!=='rejeitada'?`<button type="button" class="btn" onclick="ui.seiQuadro(${o.id})">Enviar ao Quadro</button>`:''}<button type="button" class="btn ghost" onclick="ui.nusRemover('obrigacao',${o.id})">Remover…</button></div>
-    <details class="fx-hist"><summary>Histórico (${hist.length})</summary><ul>${hist.map(h=>`<li>${esc(String(h.quando||'').slice(0,16))} · ${esc(h.quem||'')} · ${esc(h.txt)}</li>`).join('')}</ul></details></div>`; };
+    <details class="fx-hist"><summary>Histórico (${hist.length})</summary><ul>${hist.map(h=>`<li>${esc(this.fxData(h.quando))} · ${esc(h.quem||'')} · ${esc(h.txt)}</li>`).join('')}</ul></details></div>`; };
 ui.nusEditar=async function(id, campo, valor){ if(!this.nusQuem){ this.toast('Escolha quem está registrando (Quem, no alto).',{erro:true}); return; }
   const r=await this.nus('obrigacao_editar', id, campo, valor, this.nusQuem, ''); if(r) this.toast('Gravado.'); };
 ui.nusEditarDemanda=function(id, v){ if(v){ this.nusEditar(id,'demanda',v); return; } this.nusPede('Desvincular da demanda','Motivo', async m=>this.nus('obrigacao_editar', id, 'demanda', '', this.nusQuem, m)); };
@@ -5298,15 +5312,15 @@ ui.nusPrazos=async function(){ const P=(await this.nus('prazos'))||[], L=(await 
   const lin=P.map(p=>`<tr tabindex="0" onclick="ui.nusIr('prov',${p.obrigacao})" onkeydown="if(event.key==='Enter'){ui.nusIr('prov',${p.obrigacao})}"><td>${this.nusTag(p.situacao.nivel,p.situacao.rotulo)}</td><td>${esc(p.obrigacao_descricao)}<small class="muted">${esc(p.processo||'')}</small></td>
     <td>${esc(p.natureza_nome)}<small class="muted">${esc(p.origem_nome)}</small></td><td>${this.nusSt(p.status)}</td></tr>`).join('');
   const cal=this.nusCal(P);
-  return `${cal}<p class="muted">Só prazo <b>validado</b> conta como fato: o sugerido nunca aparece como vencido. Vencimento só com data expressa no documento ou calculado com regra aprovada e termo inicial documentado.</p>
+  return `<p class="muted">Só prazo <b>validado</b> conta como fato: o sugerido nunca aparece como vencido. Vencimento só com data expressa no documento ou calculado com regra aprovada e termo inicial documentado.</p>
     <div class="fx-tabw"><table class="fx-tab fx-tabsei"><thead><tr><th>Situação</th><th>Providência</th><th>Natureza</th><th>Validação</th></tr></thead><tbody>${lin||'<tr><td colspan="4" class="muted">Nenhum prazo.</td></tr>'}</tbody></table></div>
     <h2 class="fx-sec">Lacunas abertas (${L.length})</h2><p class="muted">O que falta saber, em vez de inventar (prazo sem termo inicial, sem prazo no documento…).</p>
-    <ul class="fx-lista">${L.map(l=>`<li class="nus-item">${this.nusTag('med',l.tipo.replace(/_/g,' '))} ${esc(l.descricao)} <span class="muted">· ${esc(l.obrigacao_descricao||'')}</span> ${l.obrigacao?`<button type="button" class="btn ghost" onclick="ui.nusIr('prov',${l.obrigacao})">Abrir</button>`:''}<button type="button" class="btn ghost" onclick="ui.nusLacunaFechar(${l.id})">Resolvida…</button></li>`).join('')||'<li class="muted">Nenhuma lacuna aberta.</li>'}</ul>`; };
+    <ul class="fx-lista">${L.map(l=>`<li class="nus-item">${this.nusTag('med',l.tipo.replace(/_/g,' '))} ${esc(l.descricao)} <span class="muted">· ${esc(l.obrigacao_descricao||'')}</span> ${l.obrigacao?`<button type="button" class="btn ghost" onclick="ui.nusIr('prov',${l.obrigacao})">Abrir</button>`:''}<button type="button" class="btn ghost" onclick="ui.nusLacunaFechar(${l.id})">Resolvida…</button></li>`).join('')||'<li class="muted">Nenhuma lacuna aberta.</li>'}</ul><h2 class="fx-sec">Calendário dos prazos validados</h2>${cal}`; };
 // ---- demandas ----
 ui.nusDem=async function(){ const sel=(this._nusSel||{}).dem, D=(await this.nus('demandas'))||[], E=await this.nusEsc();
   const lista=D.map(d=>`<li><button type="button" class="fx-proc${sel===d.id?' on':''}" aria-current="${sel===d.id}" onclick="ui.nusIr('dem',${d.id})"><b>${esc(d.assunto)}</b><span>${esc(d.tipo_nome)} · ${esc(d.situacao_nome)}</span>
     <small>${d.processos.length} processo(s) · ${d.providencias.validadas} providência(s)${d.providencias.cumpridas?' · '+d.providencias.cumpridas+' cumprida(s)':''}</small></button></li>`).join('')||'<li class="fx-nada">Nenhuma demanda.</li>';
-  let det='<div class="fx-vazio"><b>Demanda ≠ processo SEI</b><p class="muted">Uma demanda junta processos e providências (um processo pode servir a várias demandas). "Concluído no SEI" não quer dizer "resolvido".</p></div>';
+  let det=`<div class="fx-vazio"><b>${D.length?'Escolha uma demanda':'Nenhuma demanda ainda'}</b><p class="muted">Demanda não é processo SEI: uma demanda junta processos e providências (um processo pode servir a várias demandas). "Concluído no SEI" não quer dizer "resolvido".</p>${D.length?'':'<div class="fx-acoes"><button type="button" class="btn pri" onclick="ui.nusDemNova()">Nova demanda…</button></div>'}</div>`;
   if(sel){ const d=await this.nus('demanda', sel); if(d){ const muda=c=>`onchange="ui.nusDemEditar(${d.id},'${c}',this.value)"`;
     const livres=((await this.nus('obrigacoes'))||[]).filter(o=>!o.demanda&&(o.status==='validada'||o.status==='ajustada')).map(o=>[o.id,o.descricao.slice(0,90)]);
     det=`<div class="fx-detp"><h2>${esc(d.assunto)}</h2><p class="muted">aberta em ${this.nusBr(d.aberta_em)} · responsável ${esc(d.responsavel||'—')}</p>
@@ -5319,7 +5333,7 @@ ui.nusDem=async function(){ const sel=(this._nusSel||{}).dem, D=(await this.nus(
       <div class="fx-acoes"><button type="button" class="btn" onclick="ui.nusDemProc(${d.id})">Vincular processo…</button></div>
       <h3>Providências</h3><ul class="fx-lista">${d.obrigacoes.map(o=>`<li class="nus-item"><button type="button" class="btn ghost" onclick="ui.nusIr('prov',${o.id})">${esc(o.descricao)}</button> ${this.nusTag(this.NUS_ESTADO_NIVEL[o.estado]||'neu',o.estado)}</li>`).join('')||'<li class="muted">Nenhuma.</li>'}</ul>
       <div class="fx-acoes">${livres.length?`<button type="button" class="btn" onclick='ui.nusDemProv(${d.id},${JSON.stringify(livres).replace(/'/g,"&#39;")})'>Vincular providência…</button>`:''}<button type="button" class="btn" onclick="ui.nusNovaProv({demanda:${d.id}})">Registrar providência…</button><button type="button" class="btn ghost" onclick="ui.nusRemover('demanda',${d.id})">Remover…</button></div>
-      <details class="fx-hist"><summary>Histórico (${d.historico.length})</summary><ul>${d.historico.map(h=>`<li>${esc(h.quando.slice(0,16))} · ${esc(h.quem)} · ${esc(h.campo)}: ${esc(h.de||'—')} → ${esc(h.para||'—')}${h.motivo?' · '+esc(h.motivo):''}</li>`).join('')}</ul></details></div>`; } }
+      <details class="fx-hist"><summary>Histórico (${d.historico.length})</summary><ul>${d.historico.map(h=>`<li>${esc(this.fxData(h.quando))} · ${esc(h.quem)} · ${esc(h.campo)}: ${esc(h.de||'—')} → ${esc(h.para||'—')}${h.motivo?' · '+esc(h.motivo):''}</li>`).join('')}</ul></details></div>`; } }
   return `<div class="fx-acoes"><button type="button" class="btn pri" onclick="ui.nusDemNova()">Nova demanda…</button></div><div class="fx-sei"><aside><ul class="fx-procs">${lista}</ul></aside><section tabindex="-1" aria-live="polite">${det}</section></div>`; };
 ui.nusDemNova=async function(){ const E=await this.nusEsc();
   this.nusForm('Nova demanda', [{k:'assunto', rot:'Assunto', obrig:true}, {k:'tipo', rot:'Tipo', tipo:'select', opcoes:E.tipos_demanda, valor:'outra'}, {k:'prioridade', rot:'Prioridade', tipo:'select', opcoes:E.prioridades, valor:'normal'},
@@ -5337,7 +5351,7 @@ ui.nusDemProv=function(id, livres){ this.nusForm('Vincular providência', [{k:'o
 ui.nusInsp=async function(){ const sel=(this._nusSel||{}).insp, I=(await this.nus('inspecoes'))||[], E=await this.nusEsc();
   const lista=I.map(i=>`<li><button type="button" class="fx-proc${sel===i.id?' on':''}" aria-current="${sel===i.id}" onclick="ui.nusIr('insp',${i.id})"><b>${esc(i.estabelecimento)}</b><span>${this.nusBr(i.data)}${i.municipio?' · '+esc(i.municipio):''}</span>
     <small>${i.achados.length} achado(s)${i.achados.filter(a=>a.gravidade==='alta').length?' · '+this.nusTag('crit',i.achados.filter(a=>a.gravidade==='alta').length+' grave(s)'):''}</small></button></li>`).join('')||'<li class="fx-nada">Nenhuma inspeção.</li>';
-  let det='<div class="fx-vazio"><b>Inspeções prisionais</b><p class="muted">Cada achado tem categoria, gravidade, recomendação e acompanhamento, e gera providências próprias. A recorrência com a inspeção anterior é só sugerida: você confirma.</p></div>';
+  let det=`<div class="fx-vazio"><b>${I.length?'Escolha uma inspeção':'Nenhuma inspeção registrada'}</b><p class="muted">Cada achado tem categoria, gravidade, recomendação e acompanhamento, e gera providências próprias. A recorrência com a inspeção anterior é só sugerida: você confirma.</p>${I.length?'':'<div class="fx-acoes"><button type="button" class="btn pri" onclick="ui.nusInspNova()">Nova inspeção…</button></div>'}</div>`;
   if(sel){ const i=await this.nus('inspecao', sel); if(i){
     const ach=i.achados.map(a=>`<li class="nus-item"><div><b>${esc(a.descricao)}</b> ${this.nusTag(a.gravidade==='alta'?'crit':a.gravidade==='media'?'med':'neu', 'gravidade '+a.gravidade_nome)} <span class="muted">${esc(a.categoria_nome)}</span></div>
       ${a.recomendacao?`<div>Recomendação: ${esc(a.recomendacao)}</div>`:''}
@@ -5351,7 +5365,7 @@ ui.nusInsp=async function(){ const sel=(this._nusSel||{}).insp, I=(await this.nu
     det=`<div class="fx-detp"><h2>${esc(i.estabelecimento)}</h2><p class="muted">${this.nusBr(i.data)}${i.municipio?' · '+esc(i.municipio):''} · registrada por ${esc(i.quem||'')}</p>${i.observacoes?`<p>${esc(i.observacoes)}</p>`:''}
       <h3>Achados (${i.achados.length})</h3><ul class="fx-lista">${ach}</ul><div class="fx-acoes"><button type="button" class="btn pri" onclick="ui.nusAchNovo(${i.id})">Registrar achado…</button><button type="button" class="btn" onclick="ui.nusInspDoc(${i.id})">Vincular documento do SEI…</button><button type="button" class="btn ghost" onclick="ui.nusRemover('inspecao',${i.id})">Remover…</button></div>
       ${i.documentos.length?`<h3>Documentos</h3><ul class="fx-lista">${i.documentos.map(d=>`<li>${esc(d.processo+' · '+d.titulo)}</li>`).join('')}</ul>`:''}${cmp}
-      <details class="fx-hist"><summary>Histórico (${i.historico.length})</summary><ul>${i.historico.map(h=>`<li>${esc(h.quando.slice(0,16))} · ${esc(h.quem)} · ${esc(h.campo)}: ${esc(h.para||'')}</li>`).join('')}</ul></details></div>`; } }
+      <details class="fx-hist"><summary>Histórico (${i.historico.length})</summary><ul>${i.historico.map(h=>`<li>${esc(this.fxData(h.quando))} · ${esc(h.quem)} · ${esc(h.campo)}: ${esc(h.para||'')}</li>`).join('')}</ul></details></div>`; } }
   return `<div class="fx-acoes"><button type="button" class="btn pri" onclick="ui.nusInspNova()">Nova inspeção…</button></div><div class="fx-sei"><aside><ul class="fx-procs">${lista}</ul></aside><section tabindex="-1" aria-live="polite">${det}</section></div>`; };
 ui.nusInspNova=function(){ this.nusForm('Nova inspeção', [{k:'estabelecimento', rot:'Estabelecimento', obrig:true}, {k:'municipio', rot:'Município'}, {k:'data', rot:'Data da inspeção', tipo:'date', obrig:true}, {k:'observacoes', rot:'Observações', tipo:'textarea'}],
   async v=>{ const r=await this.nus('inspecao_criar', v, this.nusQuem); if(r) this._nusSel=Object.assign(this._nusSel||{},{insp:r.id}); return r; }); };
@@ -5394,7 +5408,7 @@ ui.nusHist=async function(){ const F=this._nusHF||{}, H=(await this.nus('histori
       <h3>Inspeções: ${R.inspecoes||0} · achados: ${R.achados||0}</h3><ul class="fx-barras nus-kv">${kv(R.achados_por_gravidade)}<li><span>resolvidos</span><b>${R.achados_resolvidos||0}</b></li></ul>
       <h3>Prazos vencidos (validados): ${(R.vencidos||[]).length}</h3><ul class="fx-lista">${(R.vencidos||[]).map(p=>`<li>${this.nusTag('crit',p.situacao.rotulo)} ${esc(p.obrigacao_descricao)}</li>`).join('')}</ul></section></div>
     <h2 class="fx-sec">Histórico (${H.length})</h2><div class="fx-tabw"><table class="fx-tab fx-tabsei"><thead><tr><th>Quando</th><th>Quem</th><th>O quê</th><th>Mudança</th></tr></thead>
-    <tbody>${H.map(h=>`<tr><td>${esc(String(h.quando).slice(0,16))}</td><td>${esc(h.quem||'')}</td><td>${esc(OB[h.objeto]||h.objeto)} #${h.obj_id}</td><td>${esc(h.campo)}: ${esc(h.de||'—')} → ${esc(h.para||'—')}${h.motivo?' · '+esc(h.motivo):''}</td></tr>`).join('')||'<tr><td colspan="4" class="muted">Nada registrado.</td></tr>'}</tbody></table></div>`; };
+    <tbody>${H.map(h=>`<tr><td class="fx-num">${esc(this.fxData(h.quando))}</td><td>${esc(h.quem||'')}</td><td>${esc(OB[h.objeto]||h.objeto)} #${h.obj_id}</td><td>${esc(h.campo)}: ${esc(h.de||'—')} → ${esc(h.para||'—')}${h.motivo?' · '+esc(h.motivo):''}</td></tr>`).join('')||'<tr><td colspan="4" class="muted">Nada registrado.</td></tr>'}</tbody></table></div>`; };
 // ---- cadastros: Quem, regras de contagem, modelos de minuta ----
 ui.nusCad=async function(){ const L=this._nusQuemL||[], R=(await this.nus('regras'))||[], M=(await this.nus('modelos'))||[];
   return `<div class="fx-duas"><section class="fx-quadro"><h2 class="fx-sec">Quem (quem registra)</h2><p class="muted">Os nomes de quem usa o APTO no núcleo. Cada decisão guarda quem a tomou.</p>
@@ -5416,12 +5430,13 @@ ui.nusModeloNovo=function(){ this.nusForm('Cadastrar modelo de minuta', [{k:'slu
   {k:'abertura', rot:'Abertura', tipo:'textarea', obrig:true, ajuda:'Pode usar {documento}: vira “no documento X” (ou “em registro do núcleo”).'}, {k:'pedido', rot:'Pedido', tipo:'textarea', obrig:true}, {k:'fecho', rot:'Fecho', tipo:'textarea'}], async v=>this.nus('modelo_cadastrar', v, this.nusQuem)); };
 // Visão geral: os números da gestão, ao lado da leitura do SEI
 ui.nusGeral=async function(){ const el=document.getElementById('nusGeral'); if(!el) return; const P=await this.nus('painel'); if(!P) return;
-  const c=(n,rot,nota,vista,nivel)=>`<button type="button" class="fx-atc nus-atc" onclick="ui.nusIr('${vista}')"><b class="nv-${nivel}">${n}</b><span>${esc(rot)}</span><small>${esc(nota)}</small></button>`;
+  const ORDG={'Prazos vencidos':1,'Vencem em até 7 dias':2,'Lacunas abertas':8,'Ofícios aguardando':9,'Demandas abertas':10};
+  const c=(n,rot,nota,vista,nivel)=>`<button type="button" class="fx-atc nus-atc${n?'':' zero'}" style="order:${ORDG[rot]||11}" onclick="ui.nusIr('${vista}')"><b class="nv-${nivel}">${n}</b><span>${esc(rot)}</span><small>${esc(nota)}</small></button>`;
   const extra=`${c(P.vencidos,'Prazos vencidos','validados','prazos','crit')}${c(P.vencem_7,'Vencem em até 7 dias','validados','prazos','urg')}
     ${c(P.lacunas,'Lacunas abertas','o que falta saber','prazos','med')}${c(P.comunicacoes_aguardando,'Ofícios aguardando','envio ou resposta','com','prox')}${c(P.demandas_abertas,'Demandas abertas','não atendidas nem canceladas','dem','neu')}`;
   const H=document.getElementById('atHoje');
   if(H){ H.querySelectorAll('.nus-atc').forEach(x=>x.remove()); H.insertAdjacentHTML('beforeend', extra); el.innerHTML='<div id="nusGeral2"></div>'; }
-  else el.innerHTML=`<h2 class="fx-sec">Atenção hoje</h2><div class="fx-at">${extra}</div><div id="nusGeral2"></div>`;
+  else el.innerHTML=`<h2 class="fx-sec">Atenção hoje</h2><div class="fx-at" id="atHoje" role="group" aria-label="O que pede atenção">${extra}</div><div id="nusGeral2"></div>`;
   this.nusGeralExtra(); };
 // ---- (7.27) importar PDF do SEI, o que mudou, novidades, perguntas prontas, lote, calendário ----
 ui.nusImportarPdf=async function(){ const B=API_(); if(!B||!B.sei_importar_pdf) return; if(this.fn!=='sei') this.funcao('sei');
@@ -5456,15 +5471,19 @@ ui.nusCal=function(P){ const hoje=new Date(); const m=this._nusMes||[hoje.getFul
   const por={}; P.filter(p=>p.status==='validada'&&p.vencimento_efetivo).forEach(p=>{ (por[p.vencimento_efetivo]=por[p.vencimento_efetivo]||[]).push(p); });
   const iso=d=>`${m[0]}-${String(m[1]+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`, hj=hoje.toISOString().slice(0,10);
   const cel=[...Array(pad)].map(()=>'<td></td>').concat([...Array(dias)].map((_,i)=>{ const d=i+1, k=iso(d), L=por[k]||[];
-    return `<td class="${k===hj?'hoje':''}${L.length?' tem':''}"><span class="nus-dia">${d}</span>${L.map(p=>`<button type="button" class="nus-calp ${k<hj?'venc':''}" onclick="ui.nusIr('prov',${p.obrigacao})" title="${esc(p.obrigacao_descricao)}"><span aria-hidden="true">${k<hj?'◆':'▲'}</span> ${esc(p.obrigacao_descricao.slice(0,28))}</button>`).join('')}</td>`; }));
+    return `<td class="${k===hj?'hoje':''}${L.length?' tem':''}"><span class="nus-dia">${d}${k===hj?' <b class="nus-hoje">hoje</b>':''}</span>${L.map(p=>`<button type="button" class="nus-calp ${k<hj?'venc':''}" onclick="ui.nusIr('prov',${p.obrigacao})" title="${esc(p.obrigacao_descricao)}"><span aria-hidden="true">${k<hj?'◆':'▲'}</span> ${esc(p.obrigacao_descricao.slice(0,28))}</button>`).join('')}</td>`; }));
   const sem=[]; for(let i=0;i<cel.length;i+=7) sem.push('<tr>'+cel.slice(i,i+7).join('')+'</tr>');
-  const nome=ini.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
-  return `<div class="nus-calc"><button type="button" class="btn ghost" aria-label="Mês anterior" onclick="ui._nusMes=[${m[1]===0?m[0]-1:m[0]},${(m[1]+11)%12}];ui.nusPintar()">‹</button><b>${esc(nome)}</b><button type="button" class="btn ghost" aria-label="Próximo mês" onclick="ui._nusMes=[${m[1]===11?m[0]+1:m[0]},${(m[1]+1)%12}];ui.nusPintar()">›</button></div>
+  const nome0=ini.toLocaleDateString('pt-BR',{month:'long',year:'numeric'}), nome=nome0.charAt(0).toUpperCase()+nome0.slice(1);
+  return `<div class="nus-calc"><button type="button" class="btn nus-mes" aria-label="Mês anterior" onclick="ui._nusMes=[${m[1]===0?m[0]-1:m[0]},${(m[1]+11)%12}];ui.nusPintar()">‹</button><b aria-live="polite">${esc(nome)}</b><button type="button" class="btn nus-mes" aria-label="Próximo mês" onclick="ui._nusMes=[${m[1]===11?m[0]+1:m[0]},${(m[1]+1)%12}];ui.nusPintar()">›</button></div>
     <table class="nus-cal"><caption class="vh">Prazos validados de ${esc(nome)}</caption><thead><tr>${['seg','ter','qua','qui','sex','sáb','dom'].map(d=>`<th scope="col">${d}</th>`).join('')}</tr></thead><tbody>${sem.join('')}</tbody></table>`; };
 // (7.28) números na barra: SEEU (intimações em aberto que vencem hoje ou já venceram) e SEI (prazos validados vencidos ou de hoje)
 ui.contadores=async function(){ const B=API_(); if(!B||!B.contadores) return; let c; try{ c=await B.contadores(); }catch(e){ return; } if(!c) return;
   [['seeu','intimação(ões) vencendo hoje ou vencida(s)'],['sei','prazo(s) do SEI vencendo hoje ou vencido(s)']].forEach(([k,rot])=>{ const b=document.getElementById('fnb_'+k); if(!b) return;
     const n=c[k]||0; b.hidden=!n; b.textContent=n>99?'99+':String(n); b.title=n+' '+rot; b.setAttribute('aria-label', n+' '+rot); }); };
+document.addEventListener('keydown', e=>{ const t=e.target, L=t&&t.closest&&t.closest('.fx-vistas[role=tablist],.nus-sub[role=tablist]'); if(!L||!['ArrowLeft','ArrowRight','Home','End'].includes(e.key)) return;
+  const bs=[...L.querySelectorAll('[role=tab]')], i=bs.indexOf(t); if(i<0) return; e.preventDefault();
+  const j=e.key==='Home'?0:e.key==='End'?bs.length-1:(i+(e.key==='ArrowRight'?1:-1)+bs.length)%bs.length; const sel=L.classList.contains('nus-sub')?'.nus-sub':'.fx-vistas', idx=j;
+  bs[j].click(); setTimeout(()=>{ const n=[...document.querySelectorAll(sel+' [role=tab]')][idx]; if(n) n.focus(); },120); });
 window.addEventListener('pywebviewready', ()=>{ setTimeout(()=>ui.contadores(), 1500); setInterval(()=>ui.contadores(), 300000); });
 window.addEventListener('pywebviewready', ()=>api('listar'));
 // cabeçalho das tabelas internas da linha aberta (aba Ficha) fica preso logo abaixo do cabeçalho principal ao rolar

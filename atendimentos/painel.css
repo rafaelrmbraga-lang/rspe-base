@@ -387,7 +387,8 @@ html:has(body[data-grupo="pet"]), body[data-grupo="pet"] { background: transpare
 .korig { display: flex; flex-wrap: wrap; gap: 6px; font-size: 13px; color: var(--suave); margin: 2px 0 4px; }
 .korig .kped { font-weight: 700; color: var(--ok); }
 /* agenda única (7.28) */
-.agMes { text-transform: capitalize; min-width: 170px; text-align: center; display: inline-block; }
+.agMes { min-width: 170px; text-align: center; display: inline-block; }
+#agAnt, #agProx { min-width: 36px; min-height: 36px; }
 .agCal { width: 100%; border-collapse: collapse; table-layout: fixed; margin: 8px 0 16px; }
 .agCal th { font-size: 12px; color: var(--suave); padding: 4px; font-weight: 600; }
 .agCal td { border: 1px solid var(--linha); height: 84px; vertical-align: top; padding: 4px; background: var(--sup); }
@@ -404,3 +405,13 @@ html:has(body[data-grupo="pet"]), body[data-grupo="pet"] { background: transpare
 .agLista { list-style: none; margin: 0; padding: 0; }
 .agLista li { display: flex; align-items: center; gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--linha); }
 .agLista .agIt { width: auto; flex: 1; }
+/* relato do atendimento no cartão do Quadro (7.29) */
+.knome { border: 0; background: none; padding: 0; font: inherit; font-weight: 700; color: var(--marca); text-align: left; cursor: pointer; text-decoration: underline;
+  text-decoration-thickness: 1px; text-underline-offset: 2px; }
+.knome:focus-visible { outline: 2px solid var(--foco); outline-offset: 2px; }
+.krel { margin: 4px 0 6px; border: 1px solid var(--linha); border-radius: var(--raio); background: var(--sup2); }
+.krel summary { cursor: pointer; padding: 6px 10px; font-size: 13px; font-weight: 600; color: var(--marca); }
+.krel summary:focus-visible { outline: 2px solid var(--foco); outline-offset: 2px; }
+.krel[open] summary { border-bottom: 1px solid var(--linha); }
+.krel .krl, .krel .krt { margin: 6px 10px; font-size: 13px; }
+.krel .krt p { margin: 2px 0 0; white-space: pre-wrap; max-height: 220px; overflow: auto; }

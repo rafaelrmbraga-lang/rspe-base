@@ -57,6 +57,19 @@ jobs:
           if (-not (Test-Path pacote\extensao_seeu\manifest.json)) { throw "extensao_seeu não entrou no pacote" }
           # o laboratório (SEI fictício e os testes do leitor) não vai para quem usa: só fica no repositório
           Remove-Item -Recurse -Force pacote\extensao_seeu\sei\teste, pacote\extensao_seeu\sei\lib\adaptador_ficticio.js, pacote\extensao_seeu\sei\lib\adaptador_sei_real.js -ErrorAction SilentlyContinue
+          # OCR embutido (7.29): o Tesseract (Apache 2.0) e só o português "rápido" (tessdata_fast), numa pasta ao lado do APTO.exe
+          choco install tesseract -y --no-progress
+          $t = "C:\Program Files\Tesseract-OCR"
+          if (-not (Test-Path "$t\tesseract.exe")) { throw "Tesseract não instalado no build" }
+          Copy-Item -Recurse $t pacote\tesseract
+          Get-ChildItem pacote\tesseract\tessdata -Filter *.traineddata | Remove-Item -Force
+          Remove-Item -Recurse -Force pacote\tesseract\tessdata\script, pacote\tesseract\tessdata\tessconfigs, pacote\tesseract\doc, pacote\tesseract\*uninstall* -ErrorAction SilentlyContinue
+          Invoke-WebRequest "https://github.com/tesseract-ocr/tessdata_fast/raw/main/por.traineddata" -OutFile pacote\tesseract\tessdata\por.traineddata
+          Invoke-WebRequest "https://raw.githubusercontent.com/tesseract-ocr/tesseract/main/LICENSE" -OutFile pacote\tesseract\LICENSE-Tesseract-Apache-2.0.txt
+          & pacote\tesseract\tesseract.exe --version
+          $l = & pacote\tesseract\tesseract.exe --list-langs --tessdata-dir pacote\tesseract\tessdata 2>&1 | Out-String
+          if ($l -notmatch "por") { throw "o português do OCR não entrou no pacote" }
+          "{0:N1} MB" -f ((Get-ChildItem -Recurse pacote\tesseract | Measure-Object Length -Sum).Sum / 1MB)
           Compress-Archive -Path pacote\* -DestinationPath "APTO_v${{ steps.versao.outputs.v }}.zip"
 
       - name: Guardar o .exe (aba Actions)
@@ -71,6 +84,6 @@ jobs:
         with:
           tag_name: v${{ steps.versao.outputs.v }}
           name: APTO v${{ steps.versao.outputs.v }}
-          body: "Gerado automaticamente a partir do commit ${{ github.sha }}. Baixe o .zip, extraia e rode APTO.exe (Windows 10/11). A pasta extensao_seeu é a extensão do navegador (Chrome/Edge): chrome://extensions > Modo do desenvolvedor > Carregar sem compactação (veja extensao_seeu\\LEIA-ME.txt). Ela também lê a fila do SAP para a função Atendimentos."
+          body: "Gerado automaticamente a partir do commit ${{ github.sha }}. Baixe o .zip, extraia e rode APTO.exe (Windows 10/11); deixe a pasta tesseract (OCR) ao lado do APTO.exe. A pasta extensao_seeu é a extensão do navegador (Chrome/Edge): chrome://extensions > Modo do desenvolvedor > Carregar sem compactação (veja extensao_seeu\\LEIA-ME.txt). Ela também lê a fila do SAP para a função Atendimentos."
           files: APTO_v${{ steps.versao.outputs.v }}.zip
           make_latest: true
