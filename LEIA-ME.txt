@@ -1,4 +1,4 @@
-APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.31.0
+APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.31.1
 (antigo RSPE Base; SEEU, programa em abas)
 =========================================
 
@@ -83,9 +83,13 @@ painel da antiga extensão "APTO Atendimentos", agora dentro do programa.
   Dados: na base do gabinete, "gabinete.sqlite", ao lado da pasta "bases"
     (uma cópia por dia em "copias\gabinete", guarda as 10 últimas). Têm
     telefone e informação da execução: guarde só em pasta da Defensoria.
-  Petições: os modelos do gabinete (a pasta "modelos" da extensão antiga:
-    lista.json e os .docx) ficam fora do programa, na pasta
-    "modelos_atendimentos" ao lado da pasta "bases". Nome, nº do processo e
+  Petições: os modelos do gabinete ficam fora do programa, na pasta
+    "modelos_atendimentos" ao lado da pasta "bases", ou na pasta escolhida
+    pelo botão "Escolher a pasta dos modelos" (aparece na janela Gerar petição
+    quando não há modelos; vale para este computador). Serve a pasta "modelos"
+    da extensão antiga (com lista.json) ou uma pasta só com os .docx (os da
+    subpasta "Modelos Fluxo" vão para o grupo Fluxo; todos saem em Word até
+    você liberar o PDF do modelo). Nome, nº do processo e
     data saem prontos (também nos modelos com {{processo}}, {{nome}}, {{data}}).
 QUADRO (função Quadro)
   As pendências dos atendimentos em kanban: Aguardando documento, A fazer, Não
@@ -1300,6 +1304,13 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v7.31.1
+  Gerar petição (Atendimentos e Quadro): sem a pasta dos modelos, a janela
+  dizia "Unexpected end of input". Agora diz onde procurou e oferece
+  "Escolher a pasta dos modelos"; a pasta pode ser a da extensão antiga
+  (com lista.json) ou uma pasta só com os .docx. O "assistida (já
+  qualificada)" não quebra mais em duas linhas.
 
 v7.31.0
   Barra fixa redesenhada: o selo do APTO na marca, a função ativa em

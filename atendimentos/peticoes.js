@@ -22,9 +22,15 @@
 
   let lista = null;
   async function catalogo() {
-    if (!lista) lista = await (await fetch(ext.runtime.getURL("modelos/lista.json"))).json();
+    if (!lista) {
+      const r = await fetch(ext.runtime.getURL("modelos/lista.json"));
+      // sem a pasta, o APTO responde 404 com o motivo (e onde pôr a pasta): não ler um corpo vazio como JSON
+      if (!r.ok) throw new Error(r.statusText || "lista dos modelos não encontrada");
+      lista = await r.json();
+    }
     return lista;
   }
+  const esquecer = () => { lista = null; };
 
   // ---------- texto dos parágrafos, com o mapa de volta para os <w:t> ----------
   const ent = (s) => s.replace(/&(lt|gt|amp|quot|apos|#\d+|#x[0-9a-f]+);/gi, (m, e) => ({ lt: "<", gt: ">", amp: "&", quot: '"', apos: "'" })[e.toLowerCase()] ||
@@ -144,5 +150,5 @@
     return { bytes: pdf, tipo: "application/pdf", info };
   }
 
-  self.PETS = { catalogo, analisar, preparar, gerar, trocarNoPar, textoPar, nomeArquivo: P.nomeArquivo };
+  self.PETS = { catalogo, esquecer, analisar, preparar, gerar, trocarNoPar, textoPar, nomeArquivo: P.nomeArquivo };
 })();

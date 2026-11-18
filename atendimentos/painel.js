@@ -793,7 +793,20 @@
   }
   async function listarModelos() {
     let cat = [];
-    try { cat = await self.PETS.catalogo(); } catch (e) { return aviso("#petMsg", "Não achei os modelos da extensão: " + (e.message || e)); }
+    try { cat = await self.PETS.catalogo(); } catch (e) {
+      $("#petLista").replaceChildren();
+      if (!ext.apto) return aviso("#petMsg", "Não achei os modelos da extensão: " + (e.message || e));
+      // no APTO: os modelos ficam fora do programa; escolher a pasta aqui mesmo (vale para este computador)
+      const bt = el("button", { textContent: "Escolher a pasta dos modelos" });
+      bt.addEventListener("click", async () => {
+        try { const r = await self.ATD_APTO.pedir("atd_escolher_pasta", "modelos"); if (r && r.cancelado) return; } catch (err) { return aviso("#petMsg", String(err.message || err)); }
+        self.PETS.esquecer(); $("#petMsg").hidden = true; listarModelos();
+      });
+      const m = $("#petMsg");
+      m.replaceChildren(el("span", { textContent: "Não achei os modelos de petição. " + (e.message || e) + " " }), bt);
+      m.hidden = false;
+      return;
+    }
     const busca = A.norm($("#petBusca").value);
     const re = petCtx && petCtx.tipo && MODELO_PECA[petCtx.tipo];
     const itens = cat.filter((m) => !busca || A.norm(m.nome + " " + m.grupo).includes(busca))

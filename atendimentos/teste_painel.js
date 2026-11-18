@@ -18,7 +18,10 @@ const MODELO = path.join(RAIZ, "extensao_seeu_testes", "modelo_ficticio.docx");
   pg.on("pageerror", (e) => erros.push(String(e)));
   const salvos = [];
   // o Python imitado: arquivos do painel lidos do disco; o que seria gravado fica aqui
+  let semModelos = true; // 7.31.1: a primeira abertura simula a pasta dos modelos ausente
+  await pg.exposeFunction("__semModelos", () => { semModelos = false; return { ok: true }; });
   await pg.exposeFunction("__lerArquivo", (c) => {
+    if (c === "modelos/lista.json" && semModelos) return { erro: 'Nenhum modelo de petição (.docx) em "C:\\x". Use o botão "Escolher a pasta dos modelos".' };
     if (c === "modelos/lista.json") return { b64: Buffer.from(JSON.stringify([{ id: "m1", nome: "1. Ciência", grupo: "Fluxo", arquivo: "m1.docx", formato: "docx" }])).toString("base64") };
     if (c === "modelos/m1.docx") return { b64: fs.readFileSync(MODELO).toString("base64") };
     const p = path.join(__dirname, ...c.split("/"));
@@ -45,6 +48,7 @@ const MODELO = path.join(RAIZ, "extensao_seeu_testes", "modelo_ficticio.docx");
       atd_arquivo: (c) => window.__lerArquivo(c),
       atd_salvar_arquivo: (n, b64, t, m) => window.__salvar(n, b64, t, m),
       atd_abrir_link: (u) => { window.__links.push(u); return { ok: true }; },
+      atd_escolher_pasta: (t) => (t === "modelos" ? window.__semModelos() : { ok: true }),
       atd_pastas: () => ({ relatorio: { caminho: "" }, peticoes: { caminho: "" } }),
     };
     window.__mockApi = new Proxy(L, { get: (t, k) => t[k] || (() => ({})) });
@@ -93,6 +97,12 @@ const MODELO = path.join(RAIZ, "extensao_seeu_testes", "modelo_ficticio.docx");
   // petição a partir do modelo
   await fr.click('.card[data-id="a1"] .gerarPet');
   await pg.waitForTimeout(800);
+  // sem a pasta dos modelos: o motivo (não "Unexpected end of input") e o botão para escolher a pasta ali mesmo
+  const msgSem = (await fr.textContent("#petMsg")) || "";
+  ok(!(await fr.isHidden("#petMsg")) && msgSem.includes("Nenhum modelo de petição") && !/Unexpected|JSON/.test(msgSem), "sem modelos: o motivo, não erro de JSON: " + msgSem);
+  const bEsc = await fr.$('#petMsg button');
+  ok(bEsc, "sem modelos: botão Escolher a pasta dos modelos");
+  if (bEsc) { await bEsc.click(); await pg.waitForTimeout(800); }
   const bWord = await fr.$("#petLista li button:last-child");
   ok(bWord, "lista de modelos de petição");
   if (bWord) { await bWord.click(); await pg.waitForTimeout(2000); }

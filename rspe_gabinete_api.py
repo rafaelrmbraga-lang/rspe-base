@@ -188,10 +188,15 @@ class GabineteApi:
         if not c or ".." in c.split("/"):
             return {"erro": "caminho inválido"}
         if c.startswith("modelos/"):
-            raiz = os.path.join(self._pasta_dados, "modelos_atendimentos")
+            raiz = self._pasta_modelos()
             p = os.path.join(raiz, *c.split("/")[1:])
+            if c == "modelos/lista.json" and not os.path.isfile(p):
+                lista = self._lista_modelos(raiz)
+                if not lista:
+                    return {"erro": 'Nenhum modelo de petição (.docx) em "%s". Use o botão "Escolher a pasta dos modelos".' % raiz}
+                return {"b64": base64.b64encode(json.dumps(lista, ensure_ascii=False).encode("utf-8")).decode("ascii")}
             if not os.path.isfile(p):
-                return {"erro": 'modelo não encontrado. Copie a pasta "modelos" da extensão APTO Atendimentos para %s' % raiz}
+                return {"erro": 'modelo não encontrado em "%s". Use o botão "Escolher a pasta dos modelos".' % raiz}
         else:
             raiz = self._recurso("atendimentos")
             p = os.path.join(raiz, *c.split("/"))
@@ -200,16 +205,43 @@ class GabineteApi:
         with open(p, "rb") as f:
             return {"b64": base64.b64encode(f.read()).decode("ascii")}
 
+    def _pasta_modelos(self):
+        """Pasta dos modelos de petição: a escolhida na tela (vale para este computador) ou "modelos_atendimentos" ao lado das bases."""
+        q = self._pastas().get("modelos", "")
+        return q if q and os.path.isdir(q) else os.path.join(self._pasta_dados, "modelos_atendimentos")
+
+    @staticmethod
+    def _lista_modelos(raiz):
+        """Sem lista.json: o catálogo sai dos .docx da pasta (os da subpasta "Modelos Fluxo" no grupo Fluxo). Todos saem em Word
+        para revisar; o PDF é liberado modelo a modelo na janela."""
+        itens = []
+        if not os.path.isdir(raiz):
+            return itens
+        for dirpath, dirs, arqs in os.walk(raiz):
+            dirs[:] = sorted(d for d in dirs if not d.startswith("."))
+            rel = os.path.relpath(dirpath, raiz)
+            if rel != "." and rel.count(os.sep) >= 2:
+                continue
+            for a in sorted(arqs):
+                if not a.lower().endswith(".docx") or a.startswith("~$"):
+                    continue
+                caminho = a if rel == "." else "/".join(rel.split(os.sep) + [a])
+                itens.append({"id": caminho, "nome": a[:-5], "grupo": "Fluxo" if "fluxo" in rel.lower() else "Modelos",
+                              "arquivo": caminho, "formato": "docx"})
+        return itens
+
     # pastas de gravação escolhidas na tela (só neste computador)
     def _pastas(self):
         return self._gabinete().kv("pastas_locais", {}) or {}
 
     def atd_pastas(self):
         p = self._pastas()
-        return {k: {"caminho": p.get(k, ""), "nome": os.path.basename(p.get(k, "").rstrip("\\/"))} for k in ("relatorio", "peticoes")}
+        r = {k: {"caminho": p.get(k, ""), "nome": os.path.basename(p.get(k, "").rstrip("\\/"))} for k in ("relatorio", "peticoes", "modelos")}
+        r["modelos"]["efetiva"] = self._pasta_modelos()
+        return r
 
     def atd_escolher_pasta(self, tipo):
-        if tipo not in ("relatorio", "peticoes"):
+        if tipo not in ("relatorio", "peticoes", "modelos"):
             return {"erro": "pasta desconhecida"}
         d = self._janela.create_file_dialog(webview.FOLDER_DIALOG) if self._janela else None
         d = d[0] if isinstance(d, (list, tuple)) and d else d

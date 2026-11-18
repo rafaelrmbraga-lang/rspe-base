@@ -158,6 +158,19 @@ try:
     ok(api.atd_arquivo("../rspe_app.py").get("erro") == "caminho inválido", "arquivo: sem ..")
     ok("modelos_atendimentos" in api.atd_arquivo("modelos/lista.json").get("erro", ""), "modelos de petição: diz onde pôr a pasta")
     ok(api.atd_arquivo("modelo_docx/word__styles.xml").get("b64"), "modelo do relatório em Word embutido")
+    # 7.31.1: a pasta dos modelos é escolhida na tela; sem lista.json, o catálogo sai dos .docx (Fluxo na subpasta "Modelos Fluxo")
+    import base64 as _b64, json as _json, tempfile as _tmp
+    _m = _tmp.mkdtemp()
+    os.makedirs(os.path.join(_m, "Modelos Fluxo"))
+    for _a in ("Indulto ficticio.docx", "~$temporario.docx", os.path.join("Modelos Fluxo", "1. Ciencia ficticia.docx"), "nota.txt"):
+        open(os.path.join(_m, _a), "wb").write(b"PK")
+    _p = api._pastas(); _p["modelos"] = _m; api._gabinete().gravar_kv("pastas_locais", _p)
+    _l = _json.loads(_b64.b64decode(api.atd_arquivo("modelos/lista.json")["b64"]).decode("utf-8"))
+    ok(sorted((x["nome"], x["grupo"], x["arquivo"]) for x in _l) == [("1. Ciencia ficticia", "Fluxo", "Modelos Fluxo/1. Ciencia ficticia.docx"), ("Indulto ficticio", "Modelos", "Indulto ficticio.docx")],
+       "catálogo montado dos .docx da pasta escolhida: %s" % _l)
+    ok(api.atd_arquivo("modelos/Modelos Fluxo/1. Ciencia ficticia.docx").get("b64"), "modelo lido da pasta escolhida")
+    ok(api.atd_pastas()["modelos"]["efetiva"] == _m, "pasta dos modelos informada à tela")
+    api.atd_limpar_pasta("modelos")
     ok(api.atd_abrir_link("https://site.qualquer/x").get("erro"), "só links do WhatsApp")
 finally:
     if srv:
