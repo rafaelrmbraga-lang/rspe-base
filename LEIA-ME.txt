@@ -1,9 +1,9 @@
-APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.25.0
+APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.26.0
 (antigo RSPE Base; SEEU, programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-7.25.0. A documentação técnica completa (cada parâmetro, a regra, a norma e
+7.26.0. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -45,10 +45,17 @@ Execução). O programa abre na Execução.
   SEI           processos do SEI lidos pela extensão (leitor do NUSPEN, só
                 leitura), com as obrigações sugeridas para validar (ver
                 "SEI"), no SEI da Defensoria.
-  Quadro        as pendências dos atendimentos em kanban (ver "QUADRO");
-                o Quadro do Usuário de cada base continua na Execução.
+  Quadro        um quadro só, em kanban, para todo o APTO: pendências dos
+                atendimentos, da Execução ("Enviar ao Quadro"), da Mesa do
+                SEEU e do SEI (ver "QUADRO").
   Relatório     produção do mês (CONTROLE - 3ª DPEP), relatório do dia em
                 Word e os relatórios da Execução em PDF (ver "RELATÓRIO").
+  Importar e Exportar ficam na mesma barra, à direita, e valem para o APTO
+  todo: Importar traz RSPE e fichas (Execução, base aberta) ou a cópia do
+  gabinete (.json, também a da extensão antiga: só junta o que falta);
+  Exportar leva Excel, PDF da aba, relatórios e providências (Execução), a
+  planilha da Mesa do SEEU, o relatório do dia e a produção do mês (função
+  Relatório) e a cópia do gabinete (.json).
 
 ATENDIMENTOS (função Atendimentos, na barra do topo)
 A fila do SAP do dia, lida pela extensão do APTO na aba do SAP aberta (só
@@ -66,7 +73,8 @@ painel da antiga extensão "APTO Atendimentos", agora dentro do programa.
   Modelos e backup: onde salvar o relatório do dia (a pasta "2. Atendimentos":
     ele grava na pasta do mês, ex.: "8. Novembro\17.11.docx") e as petições (sem
     pasta escolhida, o APTO pergunta); frases prontas, documentos e textos das
-    mensagens; importar o backup da extensão antiga.
+    mensagens. A cópia de segurança (levar ou trazer) é pelo Importar/Exportar
+    da barra do APTO.
   Dados: na base do gabinete, "gabinete.sqlite", ao lado da pasta "bases"
     (uma cópia por dia em "copias\gabinete", guarda as 10 últimas). Têm
     telefone e informação da execução: guarde só em pasta da Defensoria.
@@ -78,8 +86,12 @@ QUADRO (função Quadro)
   As pendências dos atendimentos em kanban: Aguardando documento, A fazer, Não
   encaminhou. Arraste o cartão ou use ‹ ›. "Feita" pede a data do protocolo e
   conta na produção do mês; "Arquivar" não conta. WhatsApp (documentos ou
-  baixa) e Petição no cartão. "Quadro do Usuário da base..." abre o quadro da
-  base aberta em Execução.
+  baixa) e Petição no cartão. O cartão diz de onde veio (Execução e base, Mesa
+  do SEEU, SEI) e mostra "Pedido feito" quando o pedido do mesmo benefício é
+  marcado na Execução. É o único quadro: o antigo "Quadro do Usuário" de cada
+  base saiu da Execução; os cartões abertos dele vêm para cá (fila A fazer,
+  com a coluna antiga na observação) na primeira vez que a base abre na 7.26;
+  as tabelas antigas ficam na base, nada é apagado.
 RELATÓRIO (função Relatório)
   Produção do mês (CONTROLE - 3ª DPEP): atendimentos realizados, pendências
   feitas e Fluxo, por dia; qualquer célula pode ser corrigida à mão (fica
@@ -1133,7 +1145,7 @@ CALCULADORA DE PENAS (ícone de calculadora no topo, em qualquer aba)
     maximiza (□ no título) ou se redimensiona pelo canto inferior direito;
     ao fechar e abrir de novo, começa zerada (os registros ficam).
 
-DADOS PRISIONAIS (aba ao lado do Quadro do Usuário)
+DADOS PRISIONAIS (aba do grupo "Panorama e ferramentas")
   Retrato do sistema prisional de MS pela API pública do Geopresídios/CNIEP
   (CNJ): para cada unidade, a última inspeção judicial mensal do tema
   "Aspectos gerais" (vagas, presos por regime, perfil da população e
@@ -1211,6 +1223,31 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v7.26.0
+  Revisão geral das funções novas, todas ligadas entre si.
+  - Atendimentos não fica mais por baixo do SEI e do SEEU (a moldura escondida
+    continuava visível).
+  - SEI: acentos certos (o SEI da Defensoria responde em ISO-8859-1 e era lido
+    como UTF-8: "Of?cio"); o que já tinha sido lido com acento quebrado é lido
+    de novo na próxima leitura, mesmo em "só novos". Leitura do ofício: a
+    frase da obrigação não leva mais o cabeçalho (número, data, destinatário,
+    assunto) junto, e o destinatário é o nome e o cargo do bloco "Ao Ilmo.
+    Senhor" (antes saía "Ilmo"). Indício de resposta (regra do NUSPEN):
+    certidão ou termo que cita resposta a ofício e manifestação que afirma
+    atendimento aparecem no documento (é indício, não cumprimento). Cada
+    validação/rejeição fica no histórico da obrigação ("Voltar a sugestão" não
+    apaga mais o motivo anterior). Situação da última leitura por extenso.
+  - SEEU: trocar de fluxo (situação) zera a lista e mostra só as intimações
+    daquele fluxo (as outras ficam guardadas até concluir); sem escolha
+    guardada, abre no fluxo da última leitura. "Gerar petição…" abre o mesmo
+    diálogo dos Atendimentos (mesmos modelos do gabinete, mesma busca, mesma
+    pasta), já com o nome e o processo, e a peça sugerida no topo.
+  - Quadro único: saiu o "Quadro do Usuário" da Execução; "Enviar ao Quadro"
+    (na linha e na ficha) grava no Quadro, um por processo e benefício, com
+    Desfazer; "pedido feito" marca a pendência; os cartões antigos vêm para o
+    Quadro uma vez.
+  - Importar e Exportar únicos, na barra do APTO (ver "FUNÇÕES").
 
 v7.25.0
   Função SEEU: "Gerar petição…" na intimação aberta, com os mesmos modelos e

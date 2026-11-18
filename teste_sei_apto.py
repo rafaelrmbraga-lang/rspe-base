@@ -49,6 +49,8 @@ ok(o.get("status") == "sugestao" and "Determino" in o.get("frase", "") and o.get
 ok("vencimento" not in json.dumps(o), "prazo sem vencimento calculado")
 ok(s.decidir(o["id"], "rejeitada", "")["erro"].startswith("diga o motivo"), "rejeitar pede motivo")
 ok(s.decidir(o["id"], "validada").get("ok"), "validar")
+h = [x["historico"] for x in s.processo("99/000123/2026")["obrigacoes"] if x["id"] == o["id"]][0]
+ok([(x["de"], x["para"]) for x in h] == [("sugestao", "validada")], "decisão no histórico: %s" % h)
 # nova versão do documento: a anterior fica (substituída); a obrigação validada fica para conferir
 txt2 = txt.replace("30(trinta)", "15(quinze)")
 s.receber_lote(ses, [{"tipo": "documento", "id_sei": "70", "processo": "99/000123/2026", "titulo": "Despacho", "versao": "v2", "conteudo": txt2, "hash": rsei.sha(txt2)}])
@@ -59,6 +61,27 @@ ok(p["obrigacoes"][1]["status"] == "sugestao" and p["obrigacoes"][1]["prazo_quan
 ok(s.conhecidos(["documento:70", "processo:7", "documento:71"]) == {"documento:70": {"versao": "v2", "hash": rsei.sha(txt2), "ultima_movimentacao": ""},
                                                                     "processo:7": {"versao": "", "hash": "", "ultima_movimentacao": ""}},
    "conhecidos: só o que foi lido bem (falha não conta): %s" % s.conhecidos(["documento:70", "processo:7", "documento:71"]))
+# ofício com cabeçalho em linhas sem ponto (como o SEI entrega): a frase da obrigação não leva o cabeçalho junto, e o destinatário é
+# o nome e o cargo do bloco "Ao Ilmo. Senhor" (não "Ilmo")
+of = ("OFÍCIO Nº 1234/2026/NUSPEN/DPGE-MS\nCampo Grande, 10 de novembro de 2026.\nAo Ilmo. Senhor\nFULANO DE TAL FICTÍCIO\n"
+      "Diretor do Estabelecimento Penal Fictício\nAssunto: Inspeção prisional - informações\nSenhor Diretor,\n"
+      "Solicito informações sobre o fornecimento de água no estabelecimento, no prazo de 10 (dez) dias.\nAtenciosamente,\nDEFENSOR FICTÍCIO")
+s.receber_lote(ses, [{"tipo": "documento", "id_sei": "80", "processo": "99/000123/2026", "titulo": "Ofício", "versao": "v1", "conteudo": of, "hash": rsei.sha(of)}])
+ob = [x for x in s.processo("99/000123/2026")["obrigacoes"] if x["frase"].startswith("Solicito") or "Assunto" in x["frase"]]
+ok(len(ob) == 1 and ob[0]["frase"].startswith("Solicito informações") and "Assunto" not in ob[0]["frase"], "frase da obrigação sem o cabeçalho: %s" % [x["frase"] for x in ob])
+ok(ob and ob[0]["destinatario"] == "FULANO DE TAL FICTÍCIO, Diretor do Estabelecimento Penal Fictício", "destinatário do ofício: %s" % (ob and ob[0]["destinatario"]))
+ok(ob and ob[0]["prazo_quantidade"] == 10, "prazo do ofício: 10 dias")
+ok(rsei._frases_por_linha("Determino a expedição de ofício\nà direção, com prazo de 5 dias.") == "Determino a expedição de ofício\nà direção, com prazo de 5 dias.",
+   "frase que continua na linha de baixo (minúscula) não é cortada")
+# indício de resposta (regra do NUSPEN): certidão que cita resposta a ofício; é indício, não cumprimento
+cert = "CERTIDÃO\nCertifico que foi juntada a resposta ao ofício nº 1234567, encaminhada pela unidade."
+s.receber_lote(ses, [{"tipo": "documento", "id_sei": "82", "processo": "99/000123/2026", "titulo": "Certidão", "versao": "v1", "conteudo": cert, "hash": rsei.sha(cert)}])
+dc = [d for d in s.processo("99/000123/2026")["documentos"] if d["id_sei"] == "82"][0]
+ok(dc["tipo_codigo"] == "A4" and [x["oficio"] for x in dc["indicios"]] == ["1234567"], "indício de resposta ao ofício 1234567: %s %s" % (dc["tipo_codigo"], dc["indicios"]))
+# lido antes da 7.26 com acento quebrado (ISO-8859-1 lido como UTF-8): volta a ser desconhecido, para a próxima leitura trazer de novo
+ruim = "Of\ufffdcio n\ufffd 3. Solicito informa\ufffd\ufffdes."
+s.receber_lote(ses, [{"tipo": "documento", "id_sei": "81", "processo": "99/000123/2026", "titulo": "Of\ufffdcio", "versao": "v1", "conteudo": ruim, "hash": rsei.sha(ruim)}])
+ok(s.conhecidos(["documento:81", "documento:80"]).keys() == {"documento:80"}, "documento com acento quebrado é lido de novo; o bom, não")
 g.fechar()
 
 # ---- ponta a ponta com o SEI fictício e o servidor do APTO ----

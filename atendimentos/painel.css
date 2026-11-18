@@ -381,3 +381,8 @@ details.dobra > button { align-self: flex-start; }
 .vh { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 button[aria-busy="true"] { cursor: progress; }
 .somarExec { display: flex; flex-direction: column; gap: 2px; margin: -4px 0 14px; padding: 10px 14px; background: var(--sup); border: 1px solid var(--linha); border-radius: var(--raio); }
+
+/* moldura só do diálogo de petição (aberta pelo SEEU): o resto do painel some e o fundo deixa ver o APTO */
+html:has(body[data-grupo="pet"]), body[data-grupo="pet"] { background: transparent; }
+.korig { display: flex; flex-wrap: wrap; gap: 6px; font-size: 13px; color: var(--suave); margin: 2px 0 4px; }
+.korig .kped { font-weight: 700; color: var(--ok); }

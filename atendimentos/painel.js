@@ -660,13 +660,22 @@
     del.addEventListener("click", async () => { if (confirm("Excluir esta pendência?")) { await mudarPecas((ps) => ps.filter((x) => x.id !== p.id)); renderKanban(); } });
     k.append(
       el("div", { className: "ktopo" }, el("b", { textContent: p.nome || "(sem nome)" }), del),
-      el("div", { className: "kproc", textContent: (p.processo || "") + (p.data ? ` · atendido em ${A.brDeIso(p.data).slice(0, 5)}` : "") + (a && a.contato ? ` · ${a.contato}` : "") }),
+      el("div", { className: "kproc", textContent: (p.processo || "") + (p.data ? ` · ${p.origem === "execucao" || p.origem === "seeu" || p.origem === "sei" ? "enviado" : "atendido"} em ${A.brDeIso(p.data).slice(0, 5)}` : "") + (a && a.contato ? ` · ${a.contato}` : "") }),
+      origemPend(p),
       el("div", { className: "klinha" }, peca, prazo),
       obs,
       el("div", { className: "kacoes sec2" }, pet, zap),
       el("div", { className: "kacoes" }, bEsq, bDir, el("span", { className: "espaco" }), arq, feita),
     );
     return k;
+  }
+  // de onde veio a pendência (o Quadro é um só para Atendimentos, Execução, SEEU e SEI) e o pedido já feito na Execução
+  const ORIGEM = { execucao: "Execução", seeu: "Mesa do SEEU", sei: "SEI" };
+  function origemPend(p) {
+    const t = [ORIGEM[p.origem] ? ORIGEM[p.origem] + (p.base ? " · " + p.base : "") : ""].filter(Boolean);
+    const ped = p.etiqueta === "pedido" ? el("span", { className: "kped", textContent: "✓ Pedido feito" + (p.pedidoEm ? " em " + A.brDeIso(p.pedidoEm).slice(0, 5) : "") }) : null;
+    if (!t.length && !ped) return null;
+    return el("div", { className: "korig" }, t.length ? el("span", { textContent: t[0] }) : null, ped);
   }
   function renderArquivo() {
     const limite = A.hojeISO(new Date(Date.now() - 60 * 864e5));
@@ -768,9 +777,19 @@
     return `Downloads\\${nome}`;
   }
   $("#petBusca").addEventListener("input", listarModelos);
-  $("#petFechar").addEventListener("click", () => { $("#petFundo").hidden = true; });
-  $("#petFundo").addEventListener("click", (e) => { if (e.target.id === "petFundo") $("#petFundo").hidden = true; });
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape") $("#petFundo").hidden = true; });
+  function fecharPet() {
+    $("#petFundo").hidden = true;
+    if (ext.apto && document.body.dataset.grupo === "pet") self.ATD_APTO.ui("petFechada");
+  }
+  $("#petFechar").addEventListener("click", fecharPet);
+  $("#petFundo").addEventListener("click", (e) => { if (e.target.id === "petFundo") fecharPet(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("#petFundo").hidden) fecharPet(); });
+  // o SEEU abre o mesmo diálogo: nome, processo e a peça sugerida (os modelos dela vão para o topo)
+  window.__atdPet = async (ctx) => {
+    if (!$("#petFundo").hidden) return; // já aberto (o APTO repete o pedido até a moldura responder)
+    await abrirPet(Object.assign({ nome: "", processos: [], assistida: false, tipo: "" }, ctx || {}));
+    if (ext.apto) self.ATD_APTO.ui("petAberta");
+  };
 
   // ---------- FLUXO ----------
   const diaFluxo = () => $("#diaFluxo").value || A.hojeISO();
@@ -1004,10 +1023,11 @@
   });
 
   // ---------- dentro do APTO: cada função mostra as suas abas ----------
-  const GRUPOS = { atend: ["dia", "fluxo", "cfg"], quadro: ["pend"], rel: ["ctrl"] };
+  const GRUPOS = { atend: ["dia", "fluxo", "cfg"], quadro: ["pend"], rel: ["ctrl"], pet: [] };
   window.__atdAba = (grupo, aba) => {
     const abas = GRUPOS[grupo] || GRUPOS.atend;
     document.body.dataset.grupo = grupo;
+    if (grupo === "pet") { $(".topo").hidden = true; $$(".aba").forEach((x) => (x.hidden = true)); return; } // só o diálogo de petição (SEEU)
     if (grupo === "rel") provExec = null; // a base aberta na Execução pode ter mudado
     $$(".abas button").forEach((b) => { b.hidden = !abas.includes(b.dataset.aba); });
     $(".topo").hidden = abas.length < 2;
@@ -1033,7 +1053,6 @@
     setTimeout(() => clearInterval(espia), 60000);
   });
   if ($("#relExecBtn")) $("#relExecBtn").addEventListener("click", () => self.ATD_APTO.ui("relatoriosExecucao"));
-  if (ext.apto && $("#quadroExecBtn")) { $("#quadroExecBtn").hidden = false; $("#quadroExecBtn").addEventListener("click", () => self.ATD_APTO.ui("quadroExecucao")); }
 
   // ---------- início ----------
   (async function () {
@@ -1051,6 +1070,7 @@
     let aba = "dia";
     try { aba = sessionStorage.getItem("aba") || "dia"; } catch (e) { /* sem importância */ }
     if (ext.apto) {
+      $$(".semApto").forEach((x) => (x.hidden = true)); // no APTO: Importar/Exportar únicos, na barra do APTO
       if ($("#diaRel")) $("#diaRel").value = A.hojeISO();
       window.__atdAba(location.hash.slice(1) || "atend", aba);
       if (self.ATD_APTO.sap()) window.__atdSap(self.ATD_APTO.sap());

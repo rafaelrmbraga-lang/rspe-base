@@ -14,8 +14,44 @@ from datetime import datetime
 
 from nuspen_regras.classificacao import _sem_rodape, classificar_texto
 from nuspen_regras.obrigacoes import VERSAO as VERSAO_OBRIGACOES
-from nuspen_regras.obrigacoes import extrair_obrigacoes, extrair_prazo_do_texto, extrair_sinalizacoes
+from nuspen_regras.obrigacoes import extrair_indicios_resposta, extrair_obrigacoes, extrair_prazo_do_texto, extrair_sinalizacoes
 from nuspen_regras.rodape import encontrar_numeros_processo, normalizar_numero_processo
+
+# ---- antes das regras do NUSPEN: as frases do documento como estão nas linhas ----
+# As regras juntam o texto todo e cortam as frases só no ".", "!" ou "?". No ofício do SEI, o cabeçalho (número, data, "Ao Ilmo.
+# Senhor", nome, cargo, assunto, vocativo) vem em linhas sem ponto: ficava emendado na frase da obrigação, e o "." de "Ilmo." cortava
+# a linha do destinatário ("Ilmo"). Aqui cada linha sem pontuação final vira frase própria, as abreviaturas de tratamento perdem o
+# ponto e o bloco do destinatário vira uma linha só: "Ao FULANO, Diretor do ...". O texto guardado do documento não muda.
+_TRATAMENTO = r"(?:Ilustr[ií]ssim[oa]s?|Excelent[ií]ssim[oa]s?|Ilm[oa]s?\.?|Exm[oa]s?\.?|Senhor(?:a|es|as)?|Sr[as]?\.?|Dr[as]?\.?|Prof[as]?\.?|Doutor(?:a)?|Magn[ií]fic[oa])"
+_ABREV = re.compile(r"\b(Ilm[oa]s?|Exm[oa]s?|Sr[as]?|Dr[as]?|Prof[as]?|MM|Exa|Sra?s?)\.(?=\s)")
+_SO_TRATAMENTO = re.compile(r"^(À|Ao|Aos|Às|A)\s+(?:%s\s*)+$" % _TRATAMENTO, re.I)
+_FIM_FRASE = re.compile(r"[.!?:;,]$")
+_VOCATIVO = re.compile(r"^(?:Senhor(?:a|es|as)?|Prezad[oa]s?|Excelent[ií]ssim[oa]s?|Ilustr[ií]ssim[oa]s?|Atenciosamente|Respeitosamente|Cordialmente)\b.{0,60},$", re.I)
+_NAO_DESTINATARIO = re.compile(r"^(?:Assunto|Ref|Refer[êe]ncia|Processo|SEI|Senhor|Senhora|Prezad)", re.I)
+
+
+def _frases_por_linha(texto):
+    linhas = [" ".join(x.split()) for x in str(texto or "").splitlines()]
+    linhas = [_ABREV.sub(r"\1", x) for x in linhas if x]
+    out, i = [], 0
+    while i < len(linhas):
+        x = linhas[i]
+        m = _SO_TRATAMENTO.match(x)
+        if m:  # "Ao Ilmo. Senhor" + nome + cargo (até 2 linhas, sem passar do assunto/vocativo)
+            partes = []
+            while i + 1 < len(linhas) and len(partes) < 2 and not _NAO_DESTINATARIO.match(linhas[i + 1]):
+                partes.append(linhas[i + 1].rstrip(".,;"))
+                i += 1
+            x = "%s %s" % (m.group(1), ", ".join(partes)) if partes else x
+        seguinte = linhas[i + 1] if i + 1 < len(linhas) else ""
+        if seguinte and (seguinte[0].isupper() or seguinte[0].isdigit() or seguinte[0] == "("):
+            if _VOCATIVO.match(x):
+                x = x[:-1] + "."
+            elif not _FIM_FRASE.search(x):
+                x += "."
+        out.append(x)
+        i += 1
+    return "\n".join(out)
 
 LIMITE_CONTEUDO = 2_000_000   # caracteres por documento
 LIMITE_IDS = 2000
@@ -41,6 +77,8 @@ CREATE TABLE IF NOT EXISTS sei_obrigacoes (id INTEGER PRIMARY KEY AUTOINCREMENT,
   descricao TEXT, destinatario TEXT, frase TEXT, regra TEXT, prazo_quantidade INTEGER, prazo_unidade TEXT, prazo_frase TEXT,
   prazo_natureza TEXT, finalidade TEXT, status TEXT, motivo TEXT, decidido_em TEXT, criado TEXT, quadro TEXT);
 CREATE INDEX IF NOT EXISTS sei_obrigacoes_proc ON sei_obrigacoes(processo);
+CREATE TABLE IF NOT EXISTS sei_decisoes (id INTEGER PRIMARY KEY AUTOINCREMENT, obrigacao INTEGER, de TEXT, para TEXT, motivo TEXT, quando TEXT);
+CREATE INDEX IF NOT EXISTS sei_decisoes_obr ON sei_decisoes(obrigacao);
 CREATE TABLE IF NOT EXISTS sei_eventos (id INTEGER PRIMARY KEY AUTOINCREMENT, sessao INTEGER, processo TEXT, tipo TEXT, descricao TEXT, quando TEXT);
 """
 
@@ -68,6 +106,9 @@ class Sei:
         self._lote = threading.Lock()
         with self._trava, self._con:
             self._con.executescript(TABELAS)
+            # 7.26: indícios de resposta (regra do NUSPEN): certidão/termo que cita resposta a ofício; manifestação que afirma atendimento
+            if "indicios" not in [r[1] for r in self._con.execute("PRAGMA table_info(sei_documentos)")]:
+                self._con.execute("ALTER TABLE sei_documentos ADD COLUMN indicios TEXT")
 
     # ---- autenticação da extensão (o token é entregue só a extensões, por GET /sei/token) ----
     def token_ok(self, cabecalho):
@@ -90,9 +131,19 @@ class Sei:
                 tipo, _, id_sei = str(chave).partition(":")
                 r = self._con.execute("SELECT versao, hash, ultima_movimentacao FROM sei_itens WHERE tipo=? AND id_sei=? AND estado NOT IN ('falha','indisponivel')",
                                       (tipo, id_sei)).fetchone()
-                if r:
+                if r and not self._acento_quebrado(tipo, id_sei):
                     out["%s:%s" % (tipo, id_sei)] = {"versao": r[0] or "", "hash": r[1] or "", "ultima_movimentacao": r[2] or ""}
         return out
+
+    def _acento_quebrado(self, tipo, id_sei):
+        """Lido antes da 7.26 (a página ISO-8859-1 decodificada como UTF-8: "Of\ufffdcio"): conta como desconhecido, para a
+        próxima leitura, mesmo a de "só novos", trazer de novo com os acentos certos (o documento antigo fica como substituído)."""
+        q = "%\ufffd%"
+        if tipo == "documento":
+            return bool(self._con.execute("SELECT 1 FROM sei_documentos WHERE id_sei=? AND substituido_por IS NULL AND (texto LIKE ? OR titulo LIKE ?) LIMIT 1",
+                                          (id_sei, q, q)).fetchone())
+        return bool(self._con.execute("SELECT 1 FROM sei_itens WHERE tipo=? AND id_sei=? AND titulo LIKE ?", (tipo, id_sei, q)).fetchone()
+                    or self._con.execute("SELECT 1 FROM sei_processos WHERE id_sei=? AND especificacao LIKE ?", (id_sei, q)).fetchone())
 
     # ---- sessões ----
     def iniciar(self, modo="todos", retomar=None):
@@ -219,13 +270,15 @@ class Sei:
         cl = classificar_texto(_sem_rodape(texto), titulo)
         prazo = extrair_prazo_do_texto(texto)
         citados = sorted({n.normalizado for n in encontrar_numeros_processo(texto)})
-        sin = [{"frase": x.frase[:500], "tipo": x.tipo, "descricao": x.descricao} for x in extrair_sinalizacoes(_sem_rodape(texto), cl.codigo or "")]
+        frases = _frases_por_linha(_sem_rodape(texto))
+        sin = [{"frase": x.frase[:500], "tipo": x.tipo, "descricao": x.descricao} for x in extrair_sinalizacoes(frases, cl.codigo or "")]
+        ind = [{"frase": x.frase[:500], "oficio": x.oficio, "descricao": x.descricao} for x in extrair_indicios_resposta(frases, cl.codigo or "")]
         c = self._con.execute(
             "INSERT INTO sei_documentos(id_sei, versao, processo, titulo, hash, texto, tipo_codigo, tipo_nome, tipo_confianca, tipo_sinais, prazo_expresso, "
-            "processos_citados, sinalizacoes, recebido, adaptador) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            "processos_citados, sinalizacoes, recebido, adaptador, indicios) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (id_sei, _t(d.get("versao"), 80), num, titulo, h, texto, cl.codigo or "", cl.nome or "", cl.confianca, json.dumps(cl.sinais, ensure_ascii=False),
              json.dumps({"quantidade": prazo.quantidade, "unidade": prazo.unidade, "trecho": prazo.trecho[:300]}, ensure_ascii=False) if prazo else "",
-             json.dumps(citados), json.dumps(sin, ensure_ascii=False), _agora(), _t(d.get("adaptador"))))
+             json.dumps(citados), json.dumps(sin, ensure_ascii=False), _agora(), _t(d.get("adaptador")), json.dumps(ind, ensure_ascii=False)))
         novo = c.lastrowid
         if resultado == "modificado":
             self._substituir(id_sei, novo)
@@ -244,7 +297,7 @@ class Sei:
             self._con.execute("UPDATE sei_obrigacoes SET motivo='documento substituído por nova versão: conferir' WHERE documento=? AND status='validada'", (ant,))
 
     def _obrigacoes(self, doc, processo, texto, tipo_codigo):
-        for c in extrair_obrigacoes(_sem_rodape(texto), tipo_codigo):
+        for c in extrair_obrigacoes(_frases_por_linha(_sem_rodape(texto)), tipo_codigo):
             pre = ROTULO.get(c.regra)
             descricao = "%s: %s" % (pre, c.objeto) if pre else c.objeto[:1].upper() + c.objeto[1:]
             natureza = "expresso" if c.prazo_quantidade is not None else ("nao_identificado" if c.prazo_sem_numero else "")
@@ -288,11 +341,11 @@ class Sei:
                 return None
             p = dict(zip(("numero", "original", "id_sei", "especificacao", "unidade", "ultima_movimentacao", "atualizado", "fora_da_lista"), p))
             cols = ("id", "id_sei", "versao", "titulo", "tipo_codigo", "tipo_nome", "tipo_confianca", "tipo_sinais", "prazo_expresso", "processos_citados",
-                    "sinalizacoes", "recebido", "substituido_por", "texto")
+                    "sinalizacoes", "recebido", "substituido_por", "texto", "indicios")
             docs = []
             for r in self._con.execute("SELECT %s FROM sei_documentos WHERE processo=? ORDER BY id" % ", ".join(cols), (numero,)):
                 x = dict(zip(cols, r))
-                for k in ("tipo_sinais", "processos_citados", "sinalizacoes"):
+                for k in ("tipo_sinais", "processos_citados", "sinalizacoes", "indicios"):
                     x[k] = json.loads(x[k] or "[]")
                 x["prazo_expresso"] = json.loads(x["prazo_expresso"]) if x["prazo_expresso"] else None
                 x["texto"] = (x["texto"] or "")[:20000]
@@ -300,6 +353,12 @@ class Sei:
             ocols = ("id", "documento", "tipo", "origem", "descricao", "destinatario", "frase", "regra", "prazo_quantidade", "prazo_unidade", "prazo_frase",
                      "prazo_natureza", "finalidade", "status", "motivo", "decidido_em", "quadro")
             obr = [dict(zip(ocols, r)) for r in self._con.execute("SELECT %s FROM sei_obrigacoes WHERE processo=? ORDER BY id" % ", ".join(ocols), (numero,))]
+            hist = {}
+            for o, de, para, mot, q in self._con.execute("SELECT obrigacao, de, para, motivo, quando FROM sei_decisoes WHERE obrigacao IN (SELECT id FROM sei_obrigacoes "
+                                                         "WHERE processo=?) ORDER BY id", (numero,)):
+                hist.setdefault(o, []).append({"de": de, "para": para, "motivo": mot, "quando": q})
+            for o in obr:
+                o["historico"] = hist.get(o["id"], [])
             ev = [dict(zip(("tipo", "descricao", "quando"), r)) for r in self._con.execute("SELECT tipo, descricao, quando FROM sei_eventos WHERE processo=? ORDER BY id DESC LIMIT 30", (numero,))]
             falhas = [dict(zip(("id_sei", "mensagem", "estado"), r)) for r in self._con.execute(
                 "SELECT id_sei, mensagem, estado FROM sei_itens WHERE processo=? AND estado IN ('falha','indisponivel')", (p["original"],))]
@@ -318,7 +377,10 @@ class Sei:
                 return {"erro": "obrigação desconhecida"}
             if r[0] == "substituida":
                 return {"erro": "a sugestão é de uma versão substituída do documento"}
-            self._con.execute("UPDATE sei_obrigacoes SET status=?, motivo=?, decidido_em=? WHERE id=?", (status, _t(motivo, 500), _agora(), int(oid)))
+            agora = _agora()
+            self._con.execute("UPDATE sei_obrigacoes SET status=?, motivo=?, decidido_em=? WHERE id=?", (status, _t(motivo, 500), agora, int(oid)))
+            # cada decisão fica no histórico (voltar a sugestão não apaga o motivo da rejeição anterior)
+            self._con.execute("INSERT INTO sei_decisoes(obrigacao, de, para, motivo, quando) VALUES(?,?,?,?,?)", (int(oid), r[0], status, _t(motivo, 500), agora))
         return {"ok": True}
 
     def marcar_quadro(self, oid, peca_id):

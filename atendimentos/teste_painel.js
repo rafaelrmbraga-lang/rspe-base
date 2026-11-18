@@ -108,7 +108,6 @@ const MODELO = path.join(RAIZ, "extensao_seeu", "modelos", fs.readdirSync(path.j
   await pg.waitForTimeout(500);
   ok(await fr.isHidden(".topo"), "Quadro: sem subabas (uma só)");
   ok((await fr.$$eval(".kcard", (x) => x.length)) === 1, "a pendência no Quadro");
-  ok(await fr.isVisible("#quadroExecBtn"), "atalho para o Quadro do Usuário da base");
   // Relatório: produção do mês com o atendimento do dia; somar a Execução (sem base: nada)
   await pg.click("#fn_rel");
   await pg.waitForTimeout(500);

@@ -84,7 +84,7 @@ export function criarLeitor({
         if (!/html|text|xml/i.test(tipo)) throw new RespostaInesperada("tipo de conteúdo inesperado");
         seguidas = 0;
         if (++ritmo.sucessos % 10 === 0 && ritmo.pausaMs > ritmo.base) ritmo.pausaMs = Math.max(ritmo.base, Math.floor(ritmo.pausaMs / 2));
-        const texto = await r.text();
+        const texto = await textoDaResposta(r, tipo);
         if (adaptador.ehLogin(texto)) throw new SessaoExpirada();
         return { status: r.status, texto, url: u.href };
       } catch (e) {
@@ -98,6 +98,27 @@ export function criarLeitor({
     throw ultimo;
   }
   return { get, metricas, controle, ritmo };
+}
+
+// O SEI da DPMS entrega ISO-8859-1 (content-type ou <meta charset>); r.text() leria como UTF-8 e trocaria cada acento por "\uFFFD"
+// ("Of\uFFFDcio"). Decodifica pelo charset declarado; sem declaração, UTF-8, e volta a windows-1252 se o UTF-8 não fechar.
+function charsetDe(tipo, bytes) {
+  const m = /charset\s*=\s*["']?([\w-]+)/i.exec(tipo || "");
+  if (m) return m[1].toLowerCase();
+  const ini = new TextDecoder("latin1").decode(bytes.subarray(0, 4096));
+  const n = /<meta[^>]+charset\s*=\s*["']?([\w-]+)/i.exec(ini);
+  return n ? n[1].toLowerCase() : "";
+}
+async function textoDaResposta(r, tipo) {
+  if (typeof r.arrayBuffer !== "function") return r.text();
+  const bytes = new Uint8Array(await r.arrayBuffer());
+  const cs = charsetDe(tipo, bytes);
+  if (cs && !/^utf-?8$/.test(cs)) {
+    try { return new TextDecoder(/^(iso-8859-1|latin1|us-ascii)$/.test(cs) ? "windows-1252" : cs).decode(bytes); } catch (e) { /* charset desconhecido: segue */ }
+  }
+  try { return new TextDecoder("utf-8", { fatal: true }).decode(bytes); } catch (e) {
+    return cs ? new TextDecoder("utf-8").decode(bytes) : new TextDecoder("windows-1252").decode(bytes);
+  }
 }
 
 async function sha256(texto) {

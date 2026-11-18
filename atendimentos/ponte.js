@@ -61,6 +61,7 @@
     if (m.evento === "mudou") aplicar(m.dados, true);
     if (m.evento === "sap") avisarSap(m.dados);
     if (m.evento === "aba" && window.__atdAba) window.__atdAba(m.grupo, m.aba);
+    if (m.evento === "pet" && window.__atdPet) window.__atdPet(m.ctx);
   });
 
   window.browser = {

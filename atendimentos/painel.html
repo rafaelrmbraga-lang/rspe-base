@@ -90,7 +90,7 @@
         </div>
         <div class="grupo"><span class="dica">Arraste o cartão entre as filas (ou use ‹ ›). Prazo vencido fica em vermelho.</span>
           <button id="novaPend" class="sec"><svg class="ic" aria-hidden="true"><use href="#i-mais"/></svg>Pendência</button>
-          <button id="quadroExecBtn" class="fantasma" hidden title="Os cartões que você criou nos assistidos da base aberta em Execução">Quadro do Usuário da base…</button></div>
+          </div>
       </div>
       <div id="kanban" class="kanban"></div>
       <details id="arquivoBox" class="arquivo">
@@ -170,8 +170,8 @@
         </section>
         <section class="cfgSec">
           <h2>Cópia de segurança</h2>
-          <p class="dica">Os dados ficam na base do gabinete do APTO (gabinete.sqlite, ao lado das bases, com uma cópia por dia na pasta "copias\gabinete"). Para trazer o que está na extensão APTO Atendimentos antiga: lá, "Exportar tudo (.json)"; aqui, "Importar (.json)" (junta, sem apagar).</p>
-          <div class="acoes"><button id="exportar" class="sec">Exportar tudo (.json)</button><label class="botaoArquivo">Importar (.json)<input type="file" id="importar" accept=".json,application/json" hidden></label></div>
+          <p class="dica">Os dados ficam na base do gabinete do APTO (gabinete.sqlite, ao lado das bases, com uma cópia por dia na pasta "copias\gabinete"). Para levar ou trazer uma cópia (também a da extensão APTO Atendimentos antiga), use <b>Importar</b> e <b>Exportar</b> na barra do APTO, no alto: valem para o sistema todo.</p>
+          <div class="acoes semApto"><button id="exportar" class="sec">Exportar tudo (.json)</button><label class="botaoArquivo">Importar (.json)<input type="file" id="importar" accept=".json,application/json" hidden></label></div>
         </section>
       </div>
 

@@ -104,7 +104,6 @@ import openpyxl  # noqa: E402
 ws = openpyxl.load_workbook(destino).active
 ok(r.get("ok") and ws.max_row == len(s.listar()) + 1 and ws["B1"].value == "Processo" and ws["M1"].value == "Situação no APTO", "planilha da Mesa: %s" % r)
 api._recurso = staticmethod(lambda n: os.path.join(AQUI, n))
-ok(api.seeu_modelo("ciencia.docx").get("b64") and api.seeu_modelo("../rspe_app.py").get("erro") == "modelo inválido", "modelos de petição: só os da triagem")
 g.fechar()
 if falhas:
     print("FALHA: " + "; ".join(falhas))
