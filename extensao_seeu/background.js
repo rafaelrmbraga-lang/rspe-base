@@ -553,6 +553,10 @@ chrome.runtime.onMessage.addListener((msg, sender, responder) => {
         return responder(r.lote ? Object.assign({}, r.lote, { sapNomes: r.sapNomes || {}, temSap: !!r.ultimoSap }) : null);
       }
       if (msg.tipo === "sapParaSeeu") return responder(await sapParaSeeu());
+      // a triagem da Mesa vai também para o APTO (função SEEU); com o APTO fechado, vai na próxima atualização
+      if (msg.tipo === "seeuTriagem") {
+        try { return responder(await aptoPedir("/seeu/triagem", { triagem: msg.triagem }, 8000)); } catch (e) { return responder({ ok: false, offline: true }); }
+      }
       if (msg.tipo === "sapPlanilha") return responder(await sapPlanilha());
       if (msg.tipo === "estado") {
         const st = await estado();

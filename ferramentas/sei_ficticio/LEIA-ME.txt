@@ -1,0 +1,7 @@
+SEI FICTÍCIO (laboratório), vindo do NUSPEN (rafhaels1/nuspen-sei, dados_ficticios/sei_ficticio)
+Só para testar a leitura do SEI sem dado real: imita a estrutura geral (lista paginada de processos, árvore de
+documentos, visualização), tudo inventado, só em 127.0.0.1. Qualquer método diferente de GET é recusado e contado.
+  python ferramentas\sei_ficticio\servidor.py 8001
+  no navegador: http://127.0.0.1:8001/sei/entrar_ficticio   (abre a "sessão" fictícia)
+  na extensão do APTO: Leitura do SEI para o APTO > endereço http://127.0.0.1:8001
+O teste teste_sei_apto.py usa este servidor de ponta a ponta.

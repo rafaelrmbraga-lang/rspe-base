@@ -42,8 +42,13 @@ ok('"nomeBlob:" + item.url' in bg and 'sugerir({ filename: nome, conflictAction:
 tj = open(os.path.join(EXT, "triagem.js"), encoding="utf-8").read()
 ok('chrome.storage.session.set({ ["nomeBlob:" + url]: n })' in tj, "a triagem guarda o nome do download antes de baixar")
 ok('id="rspeAuto"' in open(os.path.join(EXT, "popup.html"), encoding="utf-8").read(), "opção do RSPE automático no painel")
-ok(m["content_security_policy"]["extension_pages"].endswith("connect-src 'self' https://seeu.pje.jus.br https://seeu-transfer.s3.sa-east-1.amazonaws.com https://seeu-transfer.s3.amazonaws.com http://127.0.0.1:47321"),
-   "conexão própria só com os arquivos da extensão (modelos), o SEEU, o servidor de arquivos do SEEU (PDF das movimentações) e o APTO deste computador")
+# 1.9.0: a leitura do SEI (vinda do NUSPEN) lê o endereço do SEI que a pessoa autorizar (permissão opcional, pedida na hora):
+# as páginas da extensão podem conectar a https e ao APTO deste computador; sem a permissão do endereço, o navegador barra
+ok(m["content_security_policy"]["extension_pages"].endswith("connect-src 'self' https://seeu.pje.jus.br https://seeu-transfer.s3.sa-east-1.amazonaws.com https://seeu-transfer.s3.amazonaws.com http://127.0.0.1:* https:"),
+   "conexão própria: arquivos da extensão, SEEU, servidor de arquivos do SEEU, o APTO deste computador e o SEI autorizado")
+ok(m.get("optional_host_permissions") == ["https://*/*", "http://*/*"], "endereço do SEI: só permissão opcional, pedida ao informar o endereço")
+cfg_sei = open(os.path.join(EXT, "sei", "lib", "config.js"), encoding="utf-8").read()
+ok("export const ADAPTADOR_REAL_LIGADO = false;" in cfg_sei, "leitor do SEI real continua desligado (só o SEI fictício, até calibrar)")
 for f in ["background.js", "content.js", "siapen.js", "siapen_pagina.js", "sap.js", "comum.js", "popup.js", "popup.html", "triagem.html", "triagem.js", "triagem_core.js"] + list(m["icons"].values()):
     ok(os.path.isfile(os.path.join(EXT, f)), "arquivo %s" % f)
 

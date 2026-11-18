@@ -212,6 +212,29 @@ FICHA DO SIAPEN
  - O filtro de status da consulta (Ativo, etc.) é o que estiver escolhido na
    tela.
 
+LEITURA DO SEI PARA O APTO (versão 1.9.0)
+O leitor do SEI do NUSPEN, dentro desta extensão: lê os processos e documentos
+que você já vê no SEI, com a sua sessão, e entrega ao APTO aberto (função SEI).
+ - Abrir: ícone do APTO > "Leitura do SEI para o APTO" (abre uma página da
+   extensão; deixe-a aberta enquanto lê).
+ - Endereço do SEI: informe e clique em "Permitir acesso". O navegador pede a
+   sua autorização só para esse endereço (permissão opcional).
+ - O código de pareamento vem sozinho do APTO (nada a colar). Não é a sua senha.
+ - Só leitura: só páginas de uma lista fixa de leitura; para sozinha se o SEI
+   pedir calma, mudar de aparência ou pedir login de novo; não grava processo
+   incompleto; pausa, cancela e retoma de onde parou.
+ - HOJE SÓ O SEI FICTÍCIO DO LABORATÓRIO: o leitor do SEI real está desligado
+   (sei\lib\config.js, ADAPTADOR_REAL_LIGADO = false) até ser calibrado com a
+   estrutura do SEI da Defensoria e testado. Laboratório: rode
+   "python ferramentas\sei_ficticio\servidor.py 8001", abra
+   http://127.0.0.1:8001/sei/entrar_ficticio e use o endereço
+   http://127.0.0.1:8001.
+
+TRIAGEM DA MESA PARA O APTO (versão 1.9.0)
+ - O resultado da triagem (Mesa lida, processos e decisões) vai também para o
+   APTO aberto (função SEEU), um resumo por processo, no máximo a cada 3 s. Com
+   o APTO fechado, vai na próxima atualização da triagem.
+
 ATENDIMENTOS DO SAP PARA O APTO (versão 1.9.0)
 A extensão lê, no SAP da Defensoria, a fila "Assistidos em Espera" do dia e o
 Fato Narrado de cada um, e entrega ao APTO (função Atendimentos, na barra do

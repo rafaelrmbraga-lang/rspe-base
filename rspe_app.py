@@ -47,7 +47,7 @@ from rspe_gabinete_api import GabineteApi
 import rspe_gabinete_api as rgabapi
 
 APP = "APTO"
-VERSAO = "7.20.0"
+VERSAO = "7.21.0"
 GEO_AUTO_DIAS = 30           # dados prisionais: baixados de novo sozinhos quando têm 30 dias ou mais
 GEO_REPETIR_MIN = 10         # ... ou 10 minutos depois de um download em que algum relatório falhou (nova tentativa automática)
 GEO_REPETIR_MAX = 3          # tentativas automáticas seguidas com o programa aberto (depois, na próxima abertura ou pelo botão)
@@ -3713,8 +3713,9 @@ class Api(GabineteApi):
                 return origem
 
             def _responder(self, dados, origem):
+                status = dados.pop("__status", 200) if isinstance(dados, dict) else 200
                 corpo = json.dumps(dados, ensure_ascii=False).encode("utf-8")
-                self.send_response(200)
+                self.send_response(status)
                 self.send_header("Content-Type", "application/json; charset=utf-8")
                 self.send_header("Content-Length", str(len(corpo)))
                 self.send_header("Cache-Control", "no-store")
@@ -3729,8 +3730,11 @@ class Api(GabineteApi):
                 if origem is None:
                     self.send_error(403)
                     return
+                if caminho == "/sei/token" and not origem:  # o token só vai para extensões
+                    self.send_error(403)
+                    return
                 try:
-                    dados = api._extensao_dados() if caminho == "/apto" else api._ext_get(caminho)
+                    dados = api._extensao_dados() if caminho == "/apto" else api._ext_get(caminho, self.headers)
                 except Exception as e:
                     logging.getLogger("rspe").warning("extensão: %s", e)
                     self.send_error(500)
@@ -3755,7 +3759,7 @@ class Api(GabineteApi):
                     return
                 try:
                     corpo = json.loads(self.rfile.read(n).decode("utf-8") or "{}")
-                    dados = api._ext_post(caminho, corpo if isinstance(corpo, dict) else {})
+                    dados = api._ext_post(caminho, corpo if isinstance(corpo, dict) else {}, self.headers)
                 except Exception as e:
                     logging.getLogger("rspe").exception("extensão: %s", caminho)
                     self.send_error(500, str(e)[:100])
@@ -3773,7 +3777,7 @@ class Api(GabineteApi):
                 self.send_response(204)
                 self.send_header("Access-Control-Allow-Origin", origem)
                 self.send_header("Access-Control-Allow-Methods", "GET, POST")
-                self.send_header("Access-Control-Allow-Headers", "Content-Type")
+                self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
                 self.end_headers()
 
         try:

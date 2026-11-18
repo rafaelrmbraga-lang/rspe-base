@@ -1,9 +1,9 @@
-APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.20.0
+APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.21.0
 (antigo RSPE Base; SEEU, programa em abas)
 =========================================
 
 As seções abaixo, até "HISTÓRICO DE VERSÕES", descrevem o programa na versão
-7.20.0. A documentação técnica completa (cada parâmetro, a regra, a norma e
+7.21.0. A documentação técnica completa (cada parâmetro, a regra, a norma e
 exemplos numéricos) está em "RSPE_BASE_Memorial_Tecnico-Juridico_de_Parametros.pdf".
 
 O QUE FAZ
@@ -40,11 +40,11 @@ Execução). O programa abre na Execução.
                 "Atendimentos").
   Execução      o APTO das bases, descrito nas seções abaixo: escolha (ou
                 crie) a base e use as abas de sempre.
-  SEEU          triagem da Mesa do Defensor no SEEU, lida pela extensão
-                (só leitura), dentro do APTO. Em construção; por enquanto
-                continua na página da extensão.
-  SEI           processos do SEI do núcleo, lidos pela extensão na sessão
-                aberta do SEI (só leitura). Em construção.
+  SEEU          a triagem da Mesa do Defensor feita pela extensão, com os
+                prazos, ligada aos assistidos da base (ver "SEEU").
+  SEI           processos do SEI lidos pela extensão (leitor do NUSPEN, só
+                leitura), com as obrigações sugeridas para validar (ver
+                "SEI"). Hoje só com o SEI fictício do laboratório.
   Quadro        as pendências dos atendimentos em kanban (ver "QUADRO");
                 o Quadro do Usuário de cada base continua na Execução.
   Relatório     produção do mês (CONTROLE - 3ª DPEP), relatório do dia em
@@ -88,6 +88,40 @@ RELATÓRIO (função Relatório)
   prescrição, extinção, remição, saída temporária e ofícios. Planilha (CSV) e
   Imprimir/PDF. Também: relatório do dia em Word (escolha o dia) e os
   relatórios da Execução em PDF.
+
+SEEU (função SEEU: Mesa do Defensor)
+  A última triagem da Mesa do Defensor feita pela extensão (ícone do APTO no
+  navegador > "Triagem da Mesa do Defensor", com o SEEU aberto e logado): a
+  triagem continua sendo lida e feita na extensão (sessão do SEEU e leitura dos
+  PDFs); o resultado vem sozinho para o APTO aberto. Contadores (clique para
+  filtrar): na Mesa, lidos, providência urgente, prazo em até 2 dias, na base
+  aberta. Uma linha por processo: prazo (rótulo "Leitura até"/"Resposta até",
+  forma e texto: ▲ faltam 1 d, ◆ venceu), processo e assistido ("na base · abrir
+  ficha" quando o nº está na base aberta em Execução), aba e defensor, motivo,
+  última decisão e a providência sugerida (▲ urgente). Clique (ou Enter) na
+  linha: motivo, decisão, alertas, "Abrir no SEEU" (no navegador) e "Enviar ao
+  Quadro" (cartão em A fazer, com o último dia da Mesa como prazo). A providência
+  é sugestão, para conferir.
+SEI (função SEI)
+  Processos do SEI lidos pela extensão (ícone do APTO > "Leitura do SEI para o
+  APTO"): informe o endereço do SEI, permita o acesso (o navegador pede só para
+  esse endereço) e inicie a leitura; deixe a página aberta até terminar. É o
+  leitor do NUSPEN (só leitura, na sua sessão, incremental: a próxima rodada só
+  lê o que mudou; pausa, cancela e retoma). O código de pareamento vem sozinho
+  do APTO. ATENÇÃO: hoje o leitor só funciona com o SEI FICTÍCIO do laboratório
+  (ferramentas\sei_ficticio\servidor.py); o leitor do SEI real está desligado
+  até ser calibrado e testado (decisão do NUSPEN). Não use com dado real antes.
+  Na tela: contadores (processos, obrigações a validar, validadas, falhas de
+  leitura); à esquerda os processos; à direita o processo escolhido, com as
+  obrigações sugeridas pelas regras do NUSPEN (determinação, solicitação,
+  recomendação), cada uma com a frase do documento (fonte), o destinatário e o
+  prazo como está no documento ("prazo no documento: 30 dias"; o vencimento
+  NÃO é calculado, porque o termo inicial não é presumido). Validar, Rejeitar
+  (com motivo, fica registrado), Voltar a sugestão e Enviar ao Quadro. Depois os
+  documentos (tipo sugerido com a confiança, versão, texto, sinalizações). Nada
+  se apaga: documento alterado no SEI vira versão nova e a anterior fica como
+  substituída (obrigação já validada fica, com o aviso "conferir").
+  Dados na base do gabinete (gabinete.sqlite).
 
 ABERTURA
 O programa abre SEM base carregada. A tela inicial pede: criar uma base nova
@@ -1174,6 +1208,18 @@ HISTÓRICO DE VERSÕES
   Registro das mudanças de cada versão. As notas das versões anteriores à
   6.15.13 descrevem o programa daquela época e podem não valer mais: o
   comportamento atual é o descrito nas seções acima.
+
+v7.21.0
+  SEEU e SEI funcionando (ver "SEEU" e "SEI"). SEEU: a triagem da Mesa do
+  Defensor, feita na extensão, chega sozinha ao APTO, com prazo, motivo,
+  decisão, providência sugerida, ligação com a ficha da base e envio ao
+  Quadro. SEI: o leitor do SEI do NUSPEN (rafhaels1/nuspen-sei) entrou na
+  extensão do APTO e entrega ao APTO pela mesma API de sincronização; as regras
+  do NUSPEN (tipo do documento, obrigações, prazo expresso sem vencimento,
+  sinalizações) vieram sem mudança, com os testes originais (83 + 37). Tudo é
+  sugestão com a frase de origem até a pessoa validar. O leitor do SEI real
+  continua desligado: só o SEI fictício do laboratório. Ponta a ponta testado
+  com o SEI fictício (só GET chegou ao SEI).
 
 v7.20.0
   Atendimentos, Quadro e Relatório funcionando (ver "ATENDIMENTOS", "QUADRO"

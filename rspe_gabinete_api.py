@@ -16,9 +16,10 @@ import webbrowser
 import webview
 
 import rspe_gabinete as rgab
+import rspe_sei as rsei
 
 LOG = logging.getLogger("rspe")
-MAX_CORPO = 4 * 1024 * 1024          # tamanho máximo de um pedido da extensão
+MAX_CORPO = 20 * 1024 * 1024         # tamanho máximo de um pedido da extensão (um lote do SEI tem até 25 documentos)
 LINKS_PERMITIDOS = ("https://wa.me/", "https://api.whatsapp.com/")
 
 
@@ -26,6 +27,7 @@ class GabineteApi:
     """Mistura da Api: precisa de self._janela, self._js, self._pasta_dados e self._recurso (definidos no rspe_app)."""
 
     _gab = None
+    _sei_obj = None
     _gab_trava = threading.Lock()
     _cmd = None
     _sap_aberto = None
@@ -37,6 +39,13 @@ class GabineteApi:
                 self._gab = rgab.Gabinete(os.path.join(self._pasta_dados, "gabinete.sqlite"))
                 self._gab.copia_do_dia(os.path.join(self._pasta_dados, "copias", "gabinete"))
             return self._gab
+
+    def _sei(self):
+        g = self._gabinete()
+        with self._gab_trava:
+            if self._sei_obj is None:
+                self._sei_obj = rsei.Sei(g)
+            return self._sei_obj
 
     def _comandos(self):
         if self._cmd is None:
@@ -158,13 +167,111 @@ class GabineteApi:
         webbrowser.open(u)
         return {"ok": True}
 
+    # ---- SEI (função SEI): o que a extensão leu no SEI ----
+    def sei_resumo(self):
+        return self._sei().resumo()
+
+    def sei_processo(self, numero):
+        return self._sei().processo(str(numero or "")) or {"erro": "processo não encontrado"}
+
+    def sei_decidir(self, oid, status, motivo=""):
+        return self._sei().decidir(oid, status, motivo)
+
+    def sei_para_quadro(self, oid):
+        """A obrigação vira um cartão do Quadro (fila "A fazer"), com o processo SEI e o prazo como está no documento."""
+        o = self._sei().obrigacao(oid)
+        if not o:
+            return {"erro": "obrigação desconhecida"}
+        if o["quadro"]:
+            return {"erro": "já está no Quadro"}
+        prazo = (" · prazo no documento: %s %s (sem vencimento calculado)" % (o["prazo_quantidade"], o["prazo_unidade"])) if o["prazo_quantidade"] is not None else ""
+        p = {"id": rgab.novo_id(), "tipo": "", "processo": "SEI " + o["processo"], "nome": "SEI " + o["processo"], "data": rgab.hoje_iso(),
+             "status": "pendente", "coluna": "fazer", "prazo": "", "obs": (o["descricao"] + prazo)[:500], "origem": "sei", "atendimentoId": "",
+             "criadoEm": int(time.time() * 1000)}
+        self._gabinete().mudar({"pecas": {"upsert": [p]}})
+        self._sei().marcar_quadro(oid, p["id"])
+        self._atd_evento("mudou", {"pecas": {"upsert": [p]}})
+        return {"ok": True}
+
+    # ---- SEEU (função SEEU): a última triagem da Mesa do Defensor, como a extensão leu ----
+    def seeu_triagem(self):
+        return self._gabinete().kv("seeu_triagem") or {}
+
+    def seeu_para_quadro(self, processo, nome, texto, ultimo_dia=""):
+        """A providência sugerida pela triagem vira cartão do Quadro (A fazer), com o último dia da Mesa como prazo."""
+        m = re.match(r"^(\d{2})/(\d{2})/(\d{4})", str(ultimo_dia or ""))
+        p = {"id": rgab.novo_id(), "tipo": "", "processo": str(processo or "")[:30], "nome": rgab.nome_proprio(str(nome or ""))[:200], "data": rgab.hoje_iso(),
+             "status": "pendente", "coluna": "fazer", "prazo": "%s-%s-%s" % (m.group(3), m.group(2), m.group(1)) if m else "",
+             "obs": ("Mesa do SEEU: " + str(texto or ""))[:500], "origem": "seeu", "atendimentoId": "", "criadoEm": int(time.time() * 1000)}
+        self._gabinete().mudar({"pecas": {"upsert": [p]}})
+        self._atd_evento("mudou", {"pecas": {"upsert": [p]}})
+        return {"ok": True}
+
+    def abrir_seeu(self, url):
+        """Abre o processo no SEEU, no navegador (onde a pessoa está logada)."""
+        u = str(url or "")
+        if not u.startswith("https://seeu.pje.jus.br/"):
+            return {"erro": "endereço não permitido"}
+        webbrowser.open(u)
+        return {"ok": True}
+
     # ---- pedidos da extensão (servidor local) ----
-    def _ext_get(self, caminho):
+    def _ext_get(self, caminho, cab=None):
+        cab = cab or {}
         if caminho == "/atd/comando":
             return {"cmd": self._comandos().proximo()}
+        if caminho == "/sei/token":
+            return {"token": self._sei().token}
+        if caminho == "/api/sync/ping/":
+            if not self._sei().token_ok(cab.get("Authorization")):
+                return {"__status": 401, "erro": "token inválido ou expirado"}
+            return {"ok": True, "laboratorio": False, "expira_em": None, "conhecidos": self._sei().contagens()}
         return None
 
-    def _ext_post(self, caminho, corpo):
+    def _ext_sei(self, caminho, corpo, cab):
+        """A mesma API de sincronização do NUSPEN (a extensão do SEI não muda), autenticada pelo token do APTO."""
+        s = self._sei()
+        if not s.token_ok(cab.get("Authorization")):
+            return {"__status": 401, "erro": "token inválido ou expirado"}
+        if caminho == "/api/sync/sessoes/":
+            return s.iniciar(str(corpo.get("modo") or "todos"), corpo.get("retomar"))
+        if caminho == "/api/sync/conhecidos/":
+            ids = corpo.get("ids")
+            if not isinstance(ids, list) or len(ids) > rsei.LIMITE_IDS:
+                return {"__status": 400, "erro": "informe até 2000 ids"}
+            return {"conhecidos": s.conhecidos(ids)}
+        if caminho == "/api/sync/token/revogar/":
+            s.revogar()
+            return {"revogado": True}
+        m = re.match(r"^/api/sync/sessoes/(\d+)/(itens|concluir)/$", caminho)
+        if m:
+            try:
+                if m.group(2) == "itens":
+                    if not isinstance(corpo.get("itens", []), list):
+                        return {"__status": 400, "erro": "JSON inválido"}
+                    r = s.receber_lote(int(m.group(1)), corpo.get("itens", []), corpo.get("cursor"))
+                    if r["novos"] or r["modificados"]:
+                        self._js("window.ui && ui.seiEvento && ui.seiEvento()")
+                    return r
+                r = s.concluir(int(m.group(1)), corpo)
+                self._js("window.ui && ui.seiEvento && ui.seiEvento()")
+                return r
+            except KeyError:
+                return {"__status": 404, "erro": "sessão desconhecida"}
+        return None
+
+    def _ext_post(self, caminho, corpo, cab=None):
+        cab = cab or {}
+        if caminho.startswith("/api/sync/"):
+            return self._ext_sei(caminho, corpo, cab)
+        if caminho == "/seeu/triagem":
+            t = corpo.get("triagem")
+            if not isinstance(t, dict):
+                return {"__status": 400, "erro": "triagem inválida"}
+            t["recebida"] = time.strftime("%Y-%m-%d %H:%M:%S")
+            self._gabinete().gravar_kv("seeu_triagem", t)
+            self._js("window.ui && ui.seeuEvento && ui.seeuEvento()")
+            return {"ok": True}
         if caminho == "/atd/fila":
             r = self._gabinete().receber_fila(corpo.get("itens") or [])
             if r["mudados"]:

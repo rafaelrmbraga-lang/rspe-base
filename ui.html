@@ -628,13 +628,93 @@ body:not(.fn-exec) .welcome.on{display:none}
 .fnpag{display:none;flex:1;min-height:0;overflow:auto;background:var(--bg)}
 body:not(.fn-exec) .fnpag{display:block}
 .fnpag .fnbox{max-width:760px;margin:48px auto;padding:28px 32px;background:var(--card);border:1px solid var(--line);border-radius:var(--r-3)}
-.fnpag h1{margin:0 0 6px;font-size:var(--fs-20)}
-.fnpag p{color:var(--tx2);line-height:1.55;margin:8px 0}
-.fnpag ul{margin:8px 0 0 18px;padding:0;color:var(--tx2);line-height:1.6}
+.fnpag .fnbox h1{margin:0 0 6px;font-size:var(--fs-20)}
+.fnpag .fnbox p{color:var(--tx2);line-height:1.55;margin:8px 0}
+.fnpag .fnbox ul{margin:8px 0 0 18px;padding:0;color:var(--tx2);line-height:1.6}
 .fnpag .fnetapa{display:inline-block;margin-top:14px;padding:3px 10px;border-radius:var(--r-pill);background:var(--ambar-97-2);color:var(--ambar-37);font-size:var(--fs-12);font-weight:600}
 .fnpag .acts{margin-top:18px;display:flex;gap:8px}
 .fnpag.moldura{overflow:hidden}
 .fnpag iframe{display:block;width:100%;height:100%;border:0;background:var(--bg)}
+/* (7.21) SEEU (Mesa do Defensor) e SEI: mesma paleta, escalas e situação (forma + texto) do APTO */
+.fx{max-width:1320px;margin:0 auto;padding:18px 20px 48px}
+.fx-cab{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.fx-cab h1{margin:0;font-size:var(--fs-20)}
+.fx-cab .sub{margin:2px 0 0;color:var(--tx2);font-size:var(--fs-13)}
+.fx-cont{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.fx-cont button{display:flex;flex-direction:column;align-items:flex-start;gap:0;min-height:60px;padding:8px 14px;background:var(--card);border:1px solid var(--line);border-radius:var(--r-2);color:var(--tx);cursor:pointer;text-align:left;font:inherit}
+.fx-cont button:hover{border-color:var(--line2)}
+.fx-cont button b{font-size:var(--fs-24);line-height:1.1;font-variant-numeric:tabular-nums}
+.fx-cont button span{font-size:var(--fs-13);color:var(--tx2);font-weight:600}
+.fx-cont button.crit b{color:var(--r-tx)}
+.fx-cont button.urg b{color:var(--o-tx)}
+.fx-cont button.med b{color:var(--a-tx)}
+.fx-cont button.ok b{color:var(--g-tx)}
+.fx-cont button.on{border-color:var(--pri);box-shadow:inset 0 0 0 1px var(--pri);background:var(--pri-soft)}
+.fx-cont button:focus-visible,.fx-proc:focus-visible,.fx-docb:focus-visible,.fx-l:focus-visible,.fx-base:focus-visible{outline:3px solid var(--pri);outline-offset:2px}
+.fx-filtros{display:flex;gap:8px 10px;flex-wrap:wrap;align-items:center;margin-bottom:10px;font-size:var(--fs-13)}
+.fx-filtros input,.fx-filtros select,.fx-sei aside input{min-height:36px;padding:6px 10px;border:1px solid var(--line2);border-radius:var(--r-1);background:var(--card);color:var(--tx);font:inherit}
+.fx-filtros input{min-width:280px;flex:1 1 280px}
+.fx-tabw{overflow:auto;border:1px solid var(--line);border-radius:var(--r-2);background:var(--card)}
+.fx-tab{width:100%;border-collapse:collapse;font-size:var(--fs-13)}
+.fx-tab th{position:sticky;top:0;background:var(--folha);text-align:left;font-weight:600;color:var(--tx2);padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+.fx-tab td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+.fx-l{cursor:pointer}
+.fx-l:hover td{background:var(--sobre-1)}
+.fx-l.aberta td{background:var(--pri-soft)}
+.fx-prazo{white-space:nowrap}
+.fx-prazo > b,.fx-prazo > span{display:block}
+.vh{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.fx-prazo b{font-variant-numeric:tabular-nums}
+.fx-prazo.crit b,.fx-prazo.crit span:last-child{color:var(--r-tx)}
+.fx-prazo.urg b,.fx-prazo.urg span:last-child{color:var(--o-tx)}
+.fx-prazo.med b{color:var(--a-tx)}
+.fx-forte{font-weight:600}
+.fx-num{font-variant-numeric:tabular-nums}
+.fx-prov{font-weight:600}
+.fx-prov.urg{color:var(--r-tx)}
+.fx-base{margin-top:4px;padding:2px 8px;min-height:24px;border:1px solid var(--line2);border-radius:var(--r-pill);background:var(--card);color:var(--pri);font:inherit;font-size:var(--fs-12);cursor:pointer}
+.fx-base:hover{background:var(--pri-soft)}
+.fx-det td{background:var(--folha)}
+.fx-detg{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px 18px}
+.fx-detg h3,.fx-detp h3{margin:10px 0 4px;font-size:var(--fs-13);text-transform:uppercase;letter-spacing:.04em;color:var(--tx2)}
+.fx-detg p{margin:2px 0}
+.fx-txt{white-space:pre-wrap;color:var(--tx)}
+.fx-acoes{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;align-items:center}
+.fx-tag{display:inline-block;padding:1px 8px;border-radius:var(--r-pill);font-size:var(--fs-12);font-weight:600;white-space:nowrap}
+.fx-tag.crit{background:var(--r-bg);color:var(--r-tx)}
+.fx-tag.urg{background:var(--o-bg);color:var(--o-tx)}
+.fx-tag.med{background:var(--a-bg);color:var(--a-tx)}
+.fx-tag.ok{background:var(--g-bg);color:var(--g-tx)}
+.fx-tag.neu{background:var(--c-bg);color:var(--c-tx)}
+.fx-nada{text-align:center;color:var(--tx3);padding:22px}
+.fx-nota{margin-top:10px}
+.fx-vazio{max-width:760px;padding:22px 26px;background:var(--card);border:1px dashed var(--line2);border-radius:var(--r-3);line-height:1.55}
+.fx-vazio ol{margin:8px 0 8px 20px;padding:0}
+.fx-aviso{background:var(--ambar-97-2);color:var(--ambar-37);border-radius:var(--r-2);padding:8px 12px}
+.fx-sei{display:grid;grid-template-columns:minmax(280px,380px) minmax(0,1fr);gap:14px;align-items:start}
+.fx-sei aside{display:flex;flex-direction:column;gap:8px;position:sticky;top:0}
+.fx-procs li{margin:0;padding:0}
+.fx-procs{list-style:none;margin:0;padding:0;max-height:calc(100vh - 290px);overflow:auto;border:1px solid var(--line);border-radius:var(--r-2);background:var(--card)}
+.fx-proc{display:flex;flex-direction:column;align-items:flex-start;gap:1px;width:100%;padding:8px 12px;border:0;border-bottom:1px solid var(--line);background:none;color:var(--tx);font:inherit;text-align:left;cursor:pointer}
+.fx-proc:hover{background:var(--sobre-1)}
+.fx-proc.on{background:var(--pri-soft);box-shadow:inset 3px 0 0 var(--pri)}
+.fx-proc span{font-size:var(--fs-13)}
+.fx-proc small{color:var(--tx3);font-size:var(--fs-12)}
+#seiDet{background:var(--card);border:1px solid var(--line);border-radius:var(--r-2);padding:14px 18px;min-height:240px}
+#seiDet:focus{outline:none}
+.fx-detp h2{margin:0;font-size:var(--fs-16)}
+.fx-lista{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.fx-obr{padding:10px 12px;border:1px solid var(--line);border-left:4px solid var(--a-dot);border-radius:var(--r-2);background:var(--folha)}
+.fx-obr.validada{border-left-color:var(--g-dot)}
+.fx-obr.rejeitada,.fx-obr.substituida{border-left-color:var(--c-dot);opacity:.8}
+.fx-obrc{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.fx-fonte{margin:6px 0 2px;padding:4px 10px;border-left:3px solid var(--line2);color:var(--tx2);font-style:italic}
+.fx-doc{border:1px solid var(--line);border-radius:var(--r-2)}
+.fx-doc.subst{opacity:.75}
+.fx-docb{display:flex;flex-direction:column;align-items:flex-start;width:100%;padding:8px 12px;border:0;background:none;color:var(--tx);font:inherit;text-align:left;cursor:pointer}
+.fx-docb:hover{background:var(--sobre-1)}
+.fx-docx{padding:0 12px 10px}
+.fx-pre{white-space:pre-wrap;max-height:320px;overflow:auto;background:var(--folha);border:1px solid var(--line);border-radius:var(--r-1);padding:8px 10px;font:inherit;font-size:var(--fs-13)}
 /* tela inicial (sem base) */
 .welcome{position:fixed;inset:0;background:var(--bg);display:none;place-items:center;z-index:25}
 .btn-calc{position:relative;z-index:30}
@@ -4712,9 +4792,9 @@ document.addEventListener('keydown',e=>{ const el=e.target; if(!el||!el.hasAttri
 // (7.19) funções do APTO na barra fixa: Atendimentos, Execução (o APTO das bases), SEEU (Mesa do Defensor), SEI, Quadro e Relatório
 ui.FUNCOES={
   exec:{titulo:'Execução'},
-  sei:{titulo:'SEI', html:()=>`<div class="fnbox"><h1>SEI</h1><p>Processos do SEI do núcleo, lidos pela extensão do APTO na sessão aberta do SEI (só leitura), com demandas, prazos, providências e ofícios.</p><p>Os dados ficam só neste computador, na base do gabinete (separada das bases da Execução).</p><span class="fnetapa">Em construção · etapa 5</span></div>`},
+  sei:{titulo:'SEI', html:()=>'<div class="fx" id="seiPag"><p class="muted">Carregando…</p></div>', depois(){ this.seiCarregar(); }},
   atend:{titulo:'Atendimentos', painel:'atend'},
-  seeu:{titulo:'SEEU', html:()=>`<div class="fnbox"><h1>SEEU · Mesa do Defensor</h1><p>Triagem da Mesa do Defensor no SEEU, lida pela extensão do APTO na aba do SEEU aberta e logada (só leitura): as intimações e os prazos de cada processo, com o texto das decisões, para decidir o que pedir.</p><p>Hoje a triagem abre numa página da própria extensão; aqui ela passa a abrir dentro do APTO, ligada aos assistidos da base da Execução.</p><span class="fnetapa">Em construção</span></div>`},
+  seeu:{titulo:'SEEU', html:()=>'<div class="fx" id="seeuPag"><p class="muted">Carregando…</p></div>', depois(){ this.seeuCarregar(); }},
   rel:{titulo:'Relatório', painel:'rel'},
   quadro:{titulo:'Quadro', painel:'quadro'},
 };
@@ -4724,6 +4804,7 @@ ui.funcao=function(id){ if(!this.FUNCOES[id]) return; this.fn=id; document.body.
   const P=document.getElementById('fnPagina'), F=this.FUNCOES[id], C=document.getElementById('fnConteudo');
   P.classList.toggle('moldura', !!F.painel);
   C.hidden=!!F.painel || id==='exec'; C.innerHTML=F.html?F.html():'';
+  if(F.depois) F.depois.call(this);
   let M=document.getElementById('atdFrame');
   if(F.painel){ if(!M){ M=document.createElement('iframe'); M.id='atdFrame'; M.title='Atendimentos, Quadro e Relatório';
       M.src='atendimentos/painel.html#'+F.painel; P.appendChild(M); }
@@ -4751,6 +4832,127 @@ ui.atdUi=async function(acao){ if(acao==='providenciasExecucao'){ if(!(this.dado
   return {erro:'ação desconhecida'}; };
 // Ctrl+1 ... Ctrl+6 trocam de função (Alt+número continua para as abas da Execução)
 document.addEventListener('keydown',e=>{ if(!e.ctrlKey||e.altKey||e.shiftKey||e.metaKey||!/^[1-6]$/.test(e.key)) return; e.preventDefault(); ui.funcao(['atend','exec','seeu','sei','quadro','rel'][+e.key-1]); });
+// (7.21) SEEU (Mesa do Defensor) e SEI: telas do APTO para o que a extensão leu. Tudo só leitura no sistema de origem; as
+// sugestões (providência da triagem, obrigação do SEI) só viram tarefa quando a pessoa manda ao Quadro ou valida.
+ui.fxDias=function(br){ const m=/(\d{2})\/(\d{2})\/(\d{4})/.exec(br||''); if(!m) return null; const h=new Date(); h.setHours(0,0,0,0);
+  return Math.round((new Date(+m[3],+m[2]-1,+m[1])-h)/864e5); };
+// nível do prazo na escala única do APTO (forma + texto, nunca só a cor): até 2 dias = agir já
+ui.fxNivel=d=>d==null?'neu':d<0?'crit':d<=2?'urg':d<=5?'med':'prox';
+ui.FX_FORMA={crit:'◆',urg:'▲',med:'●',prox:'○',neu:'–',ok:'✓'};
+ui.fxDig=s=>String(s||'').replace(/\D/g,'');
+ui.fxNaBase=function(proc){ const d=this.fxDig(proc); if(d.length<15) return null; return (this.dados.registros||[]).find(r=>this.fxDig(r.proc)===d)||null; };
+ui.fxCont=function(id, itens, ativo, aoClicar){ return `<div class="fx-cont" role="group" aria-label="Filtrar">${itens.map(([k,n,rot,cls])=>`<button type="button" class="${cls||''}${ativo===k?' on':''}" aria-pressed="${ativo===k}" onclick="${aoClicar}(${jsa(k)})"><b>${n}</b><span>${esc(rot)}</span></button>`).join('')}</div>`; };
+
+// ---------------- SEEU ----------------
+ui.seeu={f:'todos', q:'', def:'', aba:'', abertos:new Set()};
+ui.seeuCarregar=async function(){ const B=API_(); try{ this._seeu=B&&B.seeu_triagem? (await B.seeu_triagem())||{}:{}; }catch(e){ this._seeu={}; } this.seeuPintar(); };
+ui.seeuEvento=function(){ if(this.fn==='seeu') this.seeuCarregar(); else this._seeu=null; };
+ui.seeuFiltro=function(k){ this.seeu.f=this.seeu.f===k?'todos':k; this.seeuPintar(); };
+ui.seeuLinhas=function(){ const T=this._seeu||{}, S=this.seeu, q=semAcento(S.q||'');
+  return (T.linhas||[]).filter(l=>{ const a=l.analise, d=this.fxDias(l.ultimoDia);
+    if(S.def && l.defensor!==S.def) return false; if(S.aba && l.aba!==S.aba) return false;
+    if(q && !semAcento(l.processo+' '+l.executado+' '+(a&&a.providencia?a.providencia.texto:'')).includes(q)) return false;
+    if(S.f==='lidos') return a&&a.status==='ok'; if(S.f==='urg') return a&&a.providencia&&a.providencia.urgente;
+    if(S.f==='perto') return d!=null&&d<=2; if(S.f==='base') return !!this.fxNaBase(l.processo); return true; })
+    .sort((x,y)=>{ const dx=this.fxDias(x.ultimoDia), dy=this.fxDias(y.ultimoDia); return (dx==null?9999:dx)-(dy==null?9999:dy) || x.processo.localeCompare(y.processo); }); };
+ui.seeuPintar=function(){ const P=document.getElementById('seeuPag'); if(!P) return; const T=this._seeu;
+  if(!T){ P.innerHTML='<p class="muted">Carregando…</p>'; return; }
+  if(!(T.linhas||[]).length){ P.innerHTML=`<div class="fx-cab"><div><h1>SEEU · Mesa do Defensor</h1><p class="sub">Nenhuma triagem recebida ainda.</p></div></div>
+    <div class="fx-vazio"><b>Como trazer a Mesa para cá</b><ol><li>Abra o SEEU no navegador e entre com a sua conta.</li><li>Clique no ícone do APTO na barra do navegador &gt; <b>Triagem da Mesa do Defensor</b>.</li>
+    <li>Use <b>1 · Ler a Mesa</b> e <b>2 · Ler processos e decisões</b>. O resultado aparece aqui sozinho, com este programa aberto.</li></ol>
+    <p class="muted">A extensão só lê o SEEU, na sua sessão. Nada é enviado para fora do computador.</p></div>`; return; }
+  const L=this.seeuLinhas(), todas=T.linhas, S=this.seeu;
+  const lidos=todas.filter(l=>l.analise&&l.analise.status==='ok').length, urg=todas.filter(l=>l.analise&&l.analise.providencia&&l.analise.providencia.urgente).length;
+  const perto=todas.filter(l=>{ const d=this.fxDias(l.ultimoDia); return d!=null&&d<=2; }).length, base=todas.filter(l=>this.fxNaBase(l.processo)).length;
+  const defs=[...new Set(todas.map(l=>l.defensor).filter(Boolean))].sort(), abas=[...new Set(todas.map(l=>l.aba).filter(Boolean))];
+  const rotPrazo=T.situacao===1?'Leitura até':T.situacao===2?'Resposta até':'Último dia';
+  const linha=l=>{ const a=l.analise||null, d=this.fxDias(l.ultimoDia), nv=this.fxNivel(d), r=this.fxNaBase(l.processo), k=l.aba+'|'+l.processo, ab=S.abertos.has(k);
+    const falta=d==null?'':d<0?'venceu':d===0?'vence hoje':'faltam '+d+' d';
+    const mot=!a?'<span class="muted">não lido</span>':a.status==='erro'?`<span class="fx-tag crit">erro</span> ${esc(a.erro)}`:a.status!=='ok'?'<span class="muted">não lido</span>':
+      `<div class="fx-forte">${esc(a.pendencia?a.pendencia.texto:'sem pendência no quadro')}</div><div class="muted">${a.motivo?esc('seq. '+a.motivo.seq+' · '+a.motivo.data):''}</div>`;
+    const dec=a&&a.status==='ok'?(a.decisao?`<div class="fx-forte">${esc(a.decisao.nome)}${a.mesma?' <span class="muted">(é o motivo)</span>':''}</div><div class="muted">${esc('seq. '+a.decisao.seq+' · '+a.decisao.data)}</div>`:'<span class="muted">nenhum ato do juiz com documento</span>'):'';
+    const pv=a&&a.providencia?`<div class="fx-prov${a.providencia.urgente?' urg':''}">${a.providencia.urgente?'<span aria-hidden="true">▲</span> ':''}${esc(a.providencia.texto)}${a.providencia.urgente?'<span class="vh"> (urgente)</span>':''}</div><div class="muted">${esc(a.providencia.tipo)}</div>`:'';
+    const det=ab?`<tr class="fx-det"><td colspan="6"><div class="fx-detg">
+      ${a&&a.motivo?`<div><h3>Motivo da intimação</h3><p>${esc(a.motivo.nome)}</p><p class="fx-txt">${esc(a.motivo.resumo||(a.motivo.semTexto?'documento sem texto (escaneado): abrir no SEEU':a.motivo.erroDoc?'documento não lido: '+a.motivo.erroDoc:''))}</p></div>`:''}
+      ${a&&a.decisao&&!a.mesma?`<div><h3>Última decisão</h3><p>${esc(a.decisao.nome)}</p><p class="fx-txt">${esc(a.decisao.resumo||'')}</p></div>`:''}
+      ${a&&(a.alertas||[]).length?`<div><h3>Alertas</h3><ul>${a.alertas.map(x=>`<li><span class="fx-tag ${x.nivel==='alto'?'crit':x.nivel==='medio'?'urg':'neu'}">${esc(x.nivel)}</span> ${esc(x.txt)}</li>`).join('')}</ul></div>`:''}
+      <div><h3>Na Mesa</h3><p class="muted">${esc([l.aba,l.classe,l.assunto&&'('+l.assunto+')','enviado '+(l.dataEnvio||'—'),'resposta: '+(l.prazo||'—')].filter(Boolean).join(' · '))}</p>
+      <div class="fx-acoes">${l.url?`<button type="button" class="btn" onclick="ui.seeuAbrir(${jsa(l.url)})">Abrir no SEEU</button>`:''}
+      ${a&&a.providencia?`<button type="button" class="btn" onclick="ui.seeuQuadro(${jsa(k)})">Enviar ao Quadro</button>`:''}</div></div></div></td></tr>`:'';
+    return `<tr class="fx-l${ab?' aberta':''}" tabindex="0" aria-expanded="${ab}" onclick="ui.seeuAbrirLinha(event,${jsa(k)})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();ui.seeuAbrirLinha(event,${jsa(k)})}">
+      <td class="fx-prazo ${nv}"><span class="muted">${rotPrazo}</span><b><span aria-hidden="true">${this.FX_FORMA[nv]}</span> ${esc(l.ultimoDia||'—')}</b><span>${esc(falta)}</span></td>
+      <td><div class="fx-forte fx-num">${esc(l.processo)}</div><div>${esc(l.executado||'—')}</div>${r?`<button type="button" class="fx-base" title="Abrir a ficha na base aberta em Execução" onclick="event.stopPropagation();ui.abrir(${jsa(r.id)})">na base · abrir ficha</button>`:''}</td>
+      <td><div>${esc(l.aba)}</div><div class="muted">${esc(l.defensor||'sem defensor')}</div></td><td>${mot}</td><td>${dec}</td><td>${pv}</td></tr>${det}`; };
+  P.innerHTML=`<div class="fx-cab"><div><h1>SEEU · Mesa do Defensor</h1><p class="sub">Triagem lida em ${esc(T.quando?new Date(T.quando).toLocaleString('pt-BR'):'—')} · ${esc(T.situacaoNome||'')} · recebida pelo APTO em ${esc(T.recebida||'—')}</p></div>
+    <span class="spacer"></span><button type="button" class="btn" onclick="ui.seeuCarregar()">Atualizar</button></div>
+    ${this.fxCont('seeu',[['todos',todas.length,'na Mesa'],['lidos',lidos,'lidos'],['urg',urg,'providência urgente','crit'],['perto',perto,'prazo em até 2 dias','urg'],['base',base,'na base aberta']],S.f,'ui.seeuFiltro')}
+    <div class="fx-filtros"><label class="vh" for="seeuQ">Buscar</label><input id="seeuQ" type="search" placeholder="Buscar nome, processo ou providência" value="${esc(S.q)}" oninput="ui.seeu.q=this.value;ui.seeuPintar();document.getElementById('seeuQ').focus()">
+      <label for="seeuDef">Defensor</label><select id="seeuDef" onchange="ui.seeu.def=this.value;ui.seeuPintar()"><option value="">todos</option>${defs.map(x=>`<option ${S.def===x?'selected':''}>${esc(x)}</option>`).join('')}</select>
+      <label for="seeuAba">Aba</label><select id="seeuAba" onchange="ui.seeu.aba=this.value;ui.seeuPintar()"><option value="">todas</option>${abas.map(x=>`<option ${S.aba===x?'selected':''}>${esc(x)}</option>`).join('')}</select>
+      <span class="muted">${L.length} de ${todas.length}</span></div>
+    <div class="fx-tabw"><table class="fx-tab"><thead><tr><th scope="col">Prazo</th><th scope="col">Processo e assistido</th><th scope="col">Aba e defensor</th><th scope="col">Motivo</th><th scope="col">Última decisão</th><th scope="col">Providência sugerida</th></tr></thead>
+    <tbody>${L.length?L.map(linha).join(''):'<tr><td colspan="6" class="fx-nada">Nenhum processo neste filtro.</td></tr>'}</tbody></table></div>
+    <p class="muted fx-nota">A providência é sugestão da triagem, para conferir; o processo continua no SEEU. "na base" liga o nº do processo a um assistido da base aberta em Execução.</p>`;
+  const q=document.getElementById('seeuQ'); if(q&&S.q){ q.setSelectionRange(S.q.length,S.q.length); } };
+ui.seeuAbrirLinha=function(ev,k){ if(ev.target.closest('button,a,select,input')) return; const A=this.seeu.abertos; A.has(k)?A.delete(k):A.add(k); this.seeuPintar(); };
+ui.seeuAbrir=async function(url){ const B=API_(); const r=B&&B.abrir_seeu?await B.abrir_seeu(url):{erro:'indisponível'}; if(r&&r.erro) this.toast(r.erro,{erro:true}); };
+ui.seeuQuadro=async function(k){ const l=((this._seeu||{}).linhas||[]).find(x=>x.aba+'|'+x.processo===k); if(!l||!l.analise||!l.analise.providencia) return;
+  const r=await API_().seeu_para_quadro(l.processo, l.executado, l.analise.providencia.texto, l.ultimoDia); this.toast(r&&r.ok?'Enviado ao Quadro (A fazer), com o último dia da Mesa como prazo.':(r&&r.erro)||'Falha.'); };
+
+// ---------------- SEI ----------------
+ui.sei={q:'', f:'todos', sel:null, docs:new Set()};
+ui.seiCarregar=async function(){ const B=API_(); try{ this._sei=B&&B.sei_resumo? await B.sei_resumo():{processos:[],totais:{}}; }catch(e){ this._sei={processos:[],totais:{}}; }
+  if(this.sei.sel){ try{ this._seiP=await API_().sei_processo(this.sei.sel); }catch(e){ this._seiP=null; } } this.seiPintar(); };
+ui.seiEvento=function(){ clearTimeout(this._seiT); this._seiT=setTimeout(()=>{ if(this.fn==='sei') this.seiCarregar(); else this._sei=null; },800); };
+ui.seiFiltro=function(k){ this.sei.f=this.sei.f===k?'todos':k; this.seiPintar(); };
+ui.seiAbrirProc=async function(n){ this.sei.sel=n; this.sei.docs=new Set(); this._seiP=await API_().sei_processo(n); this.seiPintar(); const d=document.getElementById('seiDet'); if(d) d.focus(); };
+ui.seiDecidir=async function(id, st){ let motivo=''; if(st==='rejeitada'){ motivo=prompt('Motivo para rejeitar a sugestão (fica registrado):',''); if(motivo===null) return; }
+  const r=await API_().sei_decidir(id, st, motivo); if(r&&r.erro){ this.toast(r.erro,{erro:true}); return; } await this.seiCarregar(); };
+ui.seiQuadro=async function(id){ const r=await API_().sei_para_quadro(id); this.toast(r&&r.ok?'Enviado ao Quadro (A fazer).':(r&&r.erro)||'Falha.',{erro:!(r&&r.ok)}); await this.seiCarregar(); };
+ui.seiDoc=function(id){ const D=this.sei.docs; D.has(id)?D.delete(id):D.add(id); this.seiPintar(); };
+ui.SEI_ST={sugestao:['Sugestão','med'],validada:['Validada','ok'],rejeitada:['Rejeitada','neu'],substituida:['Substituída','neu']};
+ui.seiPintar=function(){ const P=document.getElementById('seiPag'); if(!P) return; const R=this._sei;
+  if(!R){ P.innerHTML='<p class="muted">Carregando…</p>'; return; }
+  const T=R.totais||{}, S=this.sei;
+  if(!(R.processos||[]).length){ P.innerHTML=`<div class="fx-cab"><div><h1>SEI</h1><p class="sub">Nenhum processo do SEI lido ainda.</p></div></div>
+    <div class="fx-vazio"><b>Como trazer o SEI para cá</b><ol><li>Com este programa aberto, clique no ícone do APTO na barra do navegador &gt; <b>Leitura do SEI para o APTO</b>.</li>
+    <li>Informe o endereço do SEI e permita o acesso (o navegador pede a sua autorização só para esse endereço).</li><li>Escolha o que ler e clique em <b>Iniciar leitura…</b>. Deixe a página aberta até terminar.</li></ol>
+    <p class="fx-aviso">Hoje o leitor só funciona com o <b>SEI fictício do laboratório</b> (ferramentas\\sei_ficticio): o leitor do SEI real está desligado até ser calibrado e testado, como no NUSPEN. Não use com dado real antes disso.</p>
+    <p class="muted">A leitura é só leitura, na sua sessão: nada é escrito no SEI, e nada vai para fora do computador.</p></div>`; return; }
+  const q=semAcento(S.q||'');
+  const Ps=R.processos.filter(p=>(!q||semAcento(p.original+' '+p.especificacao+' '+p.unidade).includes(q)) &&
+    (S.f==='todos' || (S.f==='sug'&&p.obrigacoes.sugestao) || (S.f==='val'&&p.obrigacoes.validada) || (S.f==='falhas'&&p.falhas) || (S.f==='fora'&&p.fora_da_lista)));
+  const lista=Ps.map(p=>`<li><button type="button" class="fx-proc${S.sel===p.numero?' on':''}" aria-current="${S.sel===p.numero}" onclick="ui.seiAbrirProc(${jsa(p.numero)})">
+    <b class="fx-num">${esc(p.original)}</b><span>${esc(p.especificacao||'(sem especificação)')}</span>
+    <small>${esc(p.unidade||'')}${p.documentos?' · '+p.documentos+' doc.':''}${p.obrigacoes.sugestao?` · <span class="fx-tag med">● ${p.obrigacoes.sugestao} a validar</span>`:''}${p.falhas?` · <span class="fx-tag crit">◆ ${p.falhas} falha(s)</span>`:''}${p.fora_da_lista?' · <span class="fx-tag neu">fora da lista</span>':''}</small></button></li>`).join('')||'<li class="fx-nada">Nenhum processo neste filtro.</li>';
+  const D=this._seiP && this._seiP.numero===S.sel ? this._seiP : null;
+  const prazo=o=>o.prazo_natureza==='expresso'?`<span class="fx-tag urg">▲ prazo no documento: ${esc(o.prazo_quantidade+' '+o.prazo_unidade)}</span> <span class="muted">vencimento não calculado (o termo inicial não é presumido)</span>`:
+    o.prazo_natureza==='nao_identificado'?'<span class="fx-tag med">● urgência sem prazo em número</span>':'<span class="muted">sem prazo no texto</span>';
+  const obr=o=>{ const st=this.SEI_ST[o.status]||[o.status,'neu'];
+    return `<li class="fx-obr ${o.status}"><div class="fx-obrc"><span class="fx-tag ${st[1]}">${this.FX_FORMA[st[1]]} ${esc(st[0])}</span><b>${esc(o.descricao)}</b></div>
+      ${o.destinatario?`<div class="muted">Para: ${esc(o.destinatario)}</div>`:''}<div>${prazo(o)}</div>
+      <blockquote class="fx-fonte" title="Frase do documento (fonte)">“${esc(o.frase)}”</blockquote><div class="muted">regra «${esc(String(o.regra||'').split(':').pop())}» (${esc(String(o.regra||'').split(':')[0])})${o.motivo?' · '+esc(o.motivo):''}${o.decidido_em?' · '+esc(o.decidido_em):''}</div>
+      <div class="fx-acoes">${o.status==='sugestao'?`<button type="button" class="btn pri" onclick="ui.seiDecidir(${o.id},'validada')">Validar</button><button type="button" class="btn" onclick="ui.seiDecidir(${o.id},'rejeitada')">Rejeitar…</button>`:''}
+      ${o.status==='validada'||o.status==='rejeitada'?`<button type="button" class="btn ghost" onclick="ui.seiDecidir(${o.id},'sugestao')">Voltar a sugestão</button>`:''}
+      ${o.status!=='substituida'&&o.status!=='rejeitada'?(o.quadro?'<span class="muted">✓ no Quadro</span>':`<button type="button" class="btn" onclick="ui.seiQuadro(${o.id})">Enviar ao Quadro</button>`):''}</div></li>`; };
+  const doc=d=>{ const ab=S.docs.has(d.id);
+    return `<li class="fx-doc${d.substituido_por?' subst':''}"><button type="button" class="fx-docb" aria-expanded="${ab}" onclick="ui.seiDoc(${d.id})"><b>${esc(d.titulo||'(sem título)')}</b>
+      <span class="muted">${esc([d.tipo_nome?d.tipo_nome+' (sugerido, confiança '+d.tipo_confianca+')':'tipo não reconhecido', d.versao&&'versão '+d.versao, 'recebido '+d.recebido, d.substituido_por&&'substituído por versão nova'].filter(Boolean).join(' · '))}</span></button>
+      ${ab?`<div class="fx-docx">${(d.sinalizacoes||[]).length?`<p class="fx-aviso">${d.sinalizacoes.map(x=>esc(x.descricao)+': “'+esc(x.frase)+'”').join('<br>')}</p>`:''}${d.prazo_expresso?`<p class="muted">Prazo no texto: ${esc(d.prazo_expresso.quantidade+' '+d.prazo_expresso.unidade)} (“${esc(d.prazo_expresso.trecho)}”)</p>`:''}<pre class="fx-pre">${esc(d.texto)}</pre></div>`:''}</li>`; };
+  const det=!S.sel?'<div class="fx-vazio"><b>Escolha um processo</b><p class="muted">À esquerda. As obrigações sugeridas pelas regras (com a frase do documento) aparecem aqui para validar.</p></div>':
+    !D?'<p class="muted">Carregando…</p>':`<div class="fx-detp"><h2>${esc(D.original)}</h2><p class="muted">${esc([D.especificacao, D.unidade, 'atualizado '+D.atualizado, D.fora_da_lista&&'não aparece mais na lista do SEI'].filter(Boolean).join(' · '))}</p>
+      ${(D.falhas||[]).length?`<p class="fx-aviso">◆ ${D.falhas.length} item(ns) com falha ou inacessível: ${D.falhas.map(f=>esc(f.id_sei+' ('+(f.mensagem||f.estado)+')')).join('; ')}. A leitura deste processo não está completa.</p>`:''}
+      <h3>Obrigações sugeridas <span class="muted">(${D.obrigacoes.length})</span></h3>${D.obrigacoes.length?`<ul class="fx-lista">${D.obrigacoes.slice().sort((a,b)=>(a.status==='sugestao'?0:1)-(b.status==='sugestao'?0:1)).map(obr).join('')}</ul>`:'<p class="muted">Nenhuma determinação, solicitação ou recomendação reconhecida pelas regras.</p>'}
+      <h3>Documentos <span class="muted">(${D.documentos.length})</span></h3><ul class="fx-lista">${D.documentos.map(doc).join('')}</ul>
+      ${(D.eventos||[]).length?`<h3>Mudanças</h3><ul class="fx-lista">${D.eventos.map(e=>`<li class="muted">${esc(e.quando)} · ${esc(e.descricao)}</li>`).join('')}</ul>`:''}</div>`;
+  const U=R.ultima;
+  P.innerHTML=`<div class="fx-cab"><div><h1>SEI</h1><p class="sub">${U?esc('Última leitura: '+(U.concluida||U.iniciada)+' · '+(U.status==='concluida'?'concluída':U.status)+' · '+U.novos+' novo(s), '+U.modificados+' alterado(s)'+(U.falhas?', '+U.falhas+' falha(s)':'')):''}</p></div>
+    <span class="spacer"></span><button type="button" class="btn" onclick="ui.seiCarregar()">Atualizar</button></div>
+    ${this.fxCont('sei',[['todos',T.processos||0,'processos'],['sug',T.sugestoes||0,'obrigações a validar','med'],['val',T.validadas||0,'validadas','ok'],['falhas',T.falhas||0,'falhas de leitura','crit']],S.f,'ui.seiFiltro')}
+    <div class="fx-sei"><aside><label class="vh" for="seiQ">Buscar processo</label><input id="seiQ" type="search" placeholder="Buscar nº, especificação ou unidade" value="${esc(S.q)}" oninput="ui.sei.q=this.value;ui.seiPintar();document.getElementById('seiQ').focus()">
+      <ul class="fx-procs">${lista}</ul></aside><section id="seiDet" tabindex="-1" aria-live="polite">${det}</section></div>
+    <p class="muted fx-nota">Obrigação e prazo são sugestões das regras do NUSPEN, sempre com a frase do documento; só a pessoa valida. O APTO nunca escreve no SEI.</p>`;
+  const q2=document.getElementById('seiQ'); if(q2&&S.q){ q2.setSelectionRange(S.q.length,S.q.length); } };
 window.addEventListener('pywebviewready', ()=>api('listar'));
 // cabeçalho das tabelas internas da linha aberta (aba Ficha) fica preso logo abaixo do cabeçalho principal ao rolar
 // (a posição é a borda inferior real do cabeçalho principal dentro da lista, medida a cada rolagem, clique, mudança de letra ou janela)
