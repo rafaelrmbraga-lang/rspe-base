@@ -28,22 +28,28 @@ sobre o .exe).
   - Convenção do SEEU: ano de 365 dias, mês de 30, prazos pelo calendário.
 
 FUNÇÕES (barra fixa no topo)
-A faixa verde do topo fica sempre visível: APTO | Execução | SEI |
-Atendimentos | Quadro. Clique para trocar de função (ou Ctrl+1 a Ctrl+4;
-Alt+número continua abrindo as abas da Execução).
-  Execução      o APTO das bases, descrito nas seções abaixo: escolha (ou
-                crie) a base e use as abas de sempre.
-  SEI           processos do SEI do núcleo, lidos pela extensão na sessão
-                aberta do SEI (só leitura). Em construção.
+A faixa verde do topo fica sempre visível: APTO | Atendimentos | Execução |
+SEEU | SEI | Quadro | Relatório. Clique para trocar de função (ou Ctrl+1 a
+Ctrl+6, na ordem da barra; Alt+número continua abrindo as abas da
+Execução). O programa abre na Execução.
   Atendimentos  a fila do SAP do dia, lida pela extensão na aba do SAP
                 aberta (só leitura), com o texto para o SAP, pendências,
-                WhatsApp, Fluxo, Controle do mês, relatório e petições. Em
-                construção. O controle por unidade (listagem do SIAPEN e
-                relatório do SAP) continua na Execução (aba Geral, botão
-                "Atendimentos").
+                WhatsApp, Fluxo e Controle do mês. Em construção. O controle
+                por unidade (listagem do SIAPEN e relatório do SAP) continua
+                na Execução (aba Geral, botão "Atendimentos").
+  Execução      o APTO das bases, descrito nas seções abaixo: escolha (ou
+                crie) a base e use as abas de sempre.
+  SEEU          triagem da Mesa do Defensor no SEEU, lida pela extensão
+                (só leitura), dentro do APTO. Em construção; por enquanto
+                continua na página da extensão.
+  SEI           processos do SEI do núcleo, lidos pela extensão na sessão
+                aberta do SEI (só leitura). Em construção.
   Quadro        kanban do gabinete, com os cartões de todas as funções. Em
                 construção; por enquanto o Quadro do Usuário de cada base
                 continua dentro da Execução.
+  Relatório     produção do mês (CONTROLE - 3ª DPEP), relatório do dia em
+                Word e os relatórios da Execução (estes já funcionam: botão
+                que abre os relatórios em PDF da base aberta).
 
 ABERTURA
 O programa abre SEM base carregada. A tela inicial pede: criar uma base nova
@@ -1132,10 +1138,10 @@ HISTÓRICO DE VERSÕES
   comportamento atual é o descrito nas seções acima.
 
 v7.19.0
-  O APTO passa a ter funções, numa barra fixa no topo: Execução, SEI,
-  Atendimentos e Quadro (ver "FUNÇÕES"). Execução é o programa de sempre,
-  sem mudança. SEI, Atendimentos e Quadro abrem uma página que diz o que
-  vem; serão feitos em etapas. Atalhos Ctrl+1 a Ctrl+4. Abrir uma base
+  O APTO passa a ter funções, numa barra fixa no topo: Atendimentos,
+  Execução, SEEU, SEI, Quadro e Relatório (ver "FUNÇÕES"). Execução é o
+  programa de sempre, sem mudança. As outras abrem uma página que diz o
+  que vem; serão feitas em etapas. Atalhos Ctrl+1 a Ctrl+6. Abrir uma base
   ou arrastar PDFs sobre o .exe volta sozinho para a Execução.
 
 v7.18.1
