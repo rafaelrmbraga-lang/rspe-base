@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>APTO SEEU</title>
+<style>
+  :root{--pri:#1D5A3B;--tx:#1E2A24;--tx2:#5C6660;--line:#DDE3DD}
+  *{box-sizing:border-box}
+  body{margin:0;width:340px;font:13px/1.45 system-ui,"Segoe UI",Arial,sans-serif;color:var(--tx);background:#fff}
+  header{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line)}
+  header img{width:30px;height:30px}
+  header b{display:block;font-size:15px;color:var(--pri)}
+  header small{display:block;color:var(--tx2);font-size:11.5px}
+  section{padding:8px 14px 12px}
+  label{display:flex;align-items:flex-start;gap:9px;padding:9px 0;border-bottom:1px solid var(--line);cursor:pointer}
+  label:last-child{border-bottom:0}
+  input{margin:2px 0 0;width:17px;height:17px;accent-color:var(--pri);flex:none;cursor:pointer}
+  label span b{display:block;font-size:13px}
+  label span small{display:block;color:var(--tx2);font-size:11.5px;margin-top:1px}
+  input:focus-visible{outline:3px solid #F2B705;outline-offset:2px}
+  .rod{padding:8px 14px;border-top:1px solid var(--line);color:var(--tx2);font-size:11px}
+</style>
+</head>
+<body>
+<header><img src="icones/48.png" alt=""><div><b>APTO SEEU</b><small>Análise do processo de execução no SEEU</small></div></header>
+<section>
+  <label><input type="checkbox" id="painel"><span><b>Mostrar o painel na página do processo</b>
+    <small>Análise, chips dos marcos e destaques das movimentações. Desligado, o SEEU fica como sempre.</small></span></label>
+  <label><input type="checkbox" id="docMonitor2"><span><b>Abrir os documentos no 2º monitor</b>
+    <small>Clicar no link de um documento (ex.: online.pdf) abre o documento numa janela no outro monitor.</small></span></label>
+</section>
+<div class="rod" id="versao"></div>
+<script src="popup.js"></script>
+</body>
+</html>

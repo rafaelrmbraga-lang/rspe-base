@@ -30,7 +30,7 @@
         (carregada ? `<button type="button" class="lnk" data-acao="ficha-retirar">Retirar</button>` : "") + `</span></div>`;
     } else {
       fic = `<div class="ficha amarelo">${ICO.amarelo}<span>Ficha disciplinar não lida: o que depende dela fica para conferir` +
-        `<small>Arraste o PDF da ficha do SIAPEN para cá, ou abra a ficha no SIAPEN.</small></span>` +
+        `<small>Arraste o PDF da ficha do SIAPEN para cá${res && res.siapen === false ? "" : ", ou abra a ficha no SIAPEN"}.</small></span>` +
         `<span class="ficha-acoes"><button type="button" class="btn-f" data-acao="ficha-carregar">Carregar a ficha (PDF)</button></span></div>`;
     }
     return `<div class="fonte" role="note"><span>Regras do APTO sobre o relatório da situação processual do SEEU · referência ${esc(p.hoje || "")}</span></div>` + fic;

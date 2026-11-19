@@ -12,8 +12,11 @@ function avisarPagina(d) {
   try { parent.postMessage(d, SEEU); } catch (e) { /* segue */ }
 }
 
+// a captura da ficha aberta no SIAPEN só existe na extensão completa do APTO (na APTO SEEU, só o upload do PDF)
+const COM_SIAPEN = (chrome.runtime.getManifest().host_permissions || []).some((h) => /siapen/i.test(h));
 function pintar(res) {
   if (res && res.diag) res.ext = chrome.runtime.getManifest().version;
+  if (res) res.siapen = COM_SIAPEN;
   atual = res;
   $("corpo").innerHTML = C.html(res);
   $("corpo").setAttribute("aria-busy", res && res.estado === "carregando" ? "true" : "false");

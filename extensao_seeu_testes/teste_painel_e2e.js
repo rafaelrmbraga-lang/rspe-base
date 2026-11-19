@@ -9,7 +9,7 @@ const fs = require("fs");
 const path = require("path");
 const os = require("os");
 
-const EXT = path.join(__dirname, "..", "extensao_seeu");
+const EXT = process.env.APTO_EXT || path.join(__dirname, "..", "extensao_seeu");   // APTO_EXT: outra pasta (ex.: a extensão APTO SEEU)
 const DADOS = JSON.parse(fs.readFileSync(process.argv[2], "utf-8"));
 const SAIDA = process.argv[3] || path.join(__dirname, "saida_painel");
 const falhas = [];

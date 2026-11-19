@@ -43,6 +43,17 @@ jobs:
           node ferramentas/motor_extensao/paridade_pyodide.mjs paridade.json
           python ferramentas/motor_extensao/paridade_ficha.py
 
+      # APTO SEEU: a extensão separada, só com o painel no SEEU (sem SIAPEN, SEI, SAP e Triagem), dos mesmos arquivos do painel
+      - name: Extensão APTO SEEU
+        run: python ferramentas/apto_seeu/montar.py dist
+
+      - name: Guardar a APTO SEEU (aba Actions)
+        uses: actions/upload-artifact@v4
+        with:
+          name: apto_seeu
+          path: dist/apto_seeu_*.zip
+          retention-days: 30
+
       - name: Compilar com PyInstaller
         run: >
           python -m PyInstaller --onefile --windowed --clean --name APTO

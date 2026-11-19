@@ -24,6 +24,7 @@
     "scripts": [
       "comum.js",
       "painel/painel_bg.js",
+      "painel/docs_bg.js",
       "background.js"
     ]
   },
