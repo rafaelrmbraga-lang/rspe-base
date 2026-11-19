@@ -49,6 +49,45 @@
     for (let i = 0; i < bytes.length; i += 0x8000) t += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
     return btoa(t);
   }
+  // medidas alternativas (aba "Medidas Diversas da Prisão (N)", N > 0): os relatórios de pena alternativa, como o botão "Gerar
+  // Relatório" da aba. Os tipos vêm da própria aba (gerarPenaAlternativa('TIPO')): da página, se ela já é a aba, ou lendo a aba em
+  // segundo plano - o mesmo pedido da troca de aba, com os campos do processo da página. Cada relatório: um GET do PDF.
+  const RE_TIPO = /gerarPenaAlternativa\(\s*'([A-Z_]+)'\s*\)/g;
+  function contagemMedidas() {
+    const m = /Medidas Diversas da Pris[ãa]o\s*\((\d+)\)/i.exec((document.body && document.body.innerText) || "");
+    return m ? +m[1] : 0;
+  }
+  async function lerMedidas(idExec, progresso, diag) {
+    const n = contagemMedidas();
+    diag.medidas = n;
+    if (!n) return [];
+    let html = document.documentElement.innerHTML;
+    if (!RE_TIPO.test(html)) {
+      const campos = ["id", "parentForm", "numeroProcesso", "processoNumeroFormatado", "idEntidadeAcolhedora", "descricaoEntidadeAcolhedora"];
+      const corpo = new URLSearchParams();
+      for (const c of campos) { const el = document.querySelector(`input[name="${c}"]`); corpo.append(c, el ? el.value : ""); }
+      corpo.append("selectedIcon", "tabMedidasDiversasPrisao");
+      progresso("Lendo as medidas diversas da prisão");
+      const r = await fetch("/seeu/visualizacaoProcesso.do?actionType=visualizar", { method: "POST", credentials: "include", cache: "no-store",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: corpo.toString() });
+      html = r.ok ? await r.text() : "";
+    }
+    RE_TIPO.lastIndex = 0;
+    const tipos = [...new Set([...html.matchAll(RE_TIPO)].map((x) => x[1]))].slice(0, 6);
+    diag.medidas_tipos = tipos;
+    const out = [];
+    for (const t of tipos) {
+      progresso("Gerando o relatório das medidas no SEEU");
+      const url = "/seeu/processo/criminal/execucao/processoExecucaoPenal.do?actionType=emitirRelatorioPenaAlternativa&report=relatorioPenaAlternativa" +
+        "&tipoRelatorio=" + encodeURIComponent(t) + "&idProcessoExecucaoPenal=" + encodeURIComponent(idExec);
+      const r = await fetch(url, { credentials: "include", cache: "no-store" });
+      const b = new Uint8Array(await r.arrayBuffer());
+      if (r.ok && A.ehPdf(b)) out.push({ tipo: t, b64: base64(b) });
+    }
+    diag.medidas_relatorios = out.length;
+    return out;
+  }
+
   // diagnóstico sem dados pessoais: onde o painel roda, se o link do relatório foi achado, a resposta do SEEU (código, tipo,
   // tamanho) - nunca o número, o nome ou o conteúdo
   let lendo = null;
@@ -69,7 +108,9 @@
       const bytes = r.bytes;
       Object.assign(diag, { status: r.status, tipo: r.tipo.slice(0, 40), tamanho_kb: Math.round(bytes.length / 1024), pdf: A.ehPdf(bytes) });
       if (!r.ok || !A.ehPdf(bytes)) return { erro: r.ok ? "nao_pdf" : "http", diag };
-      return { b64: base64(bytes), diag };
+      let alternativas = [];
+      try { alternativas = await lerMedidas(rs.id, progresso, diag); } catch (e) { diag.medidas_falha = String((e && e.message) || e).slice(0, 80); }
+      return { b64: base64(bytes), diag, alternativas };
     })().finally(() => { lendo = null; });
     return lendo;
   }

@@ -18,6 +18,7 @@ import json
 import re
 from datetime import date
 
+import rspe_alternativa as ralt
 import rspe_motor as mt
 import rspe_regras as rg
 import rspe_scraper as rs
@@ -401,7 +402,54 @@ def analisar_rspe(txt):
     alt = medida_alternativa(e.get("capa") or {})
     if alt:
         p = _sem_condenacao(p, alt)
+    rels = []
+    for x in e.get("alternativas") or []:   # relatórios de pena alternativa (aba Medidas Diversas da Prisão)
+        tx = x.get("textos") if isinstance(x, dict) and x.get("textos") is not None else \
+            [pg.extract_text() or "" for pg in pp.paginas((x or {}).get("paginas") or [])] if isinstance(x, dict) else []
+        rels.append(ralt.ler(tx))
+    if any(r_.get("medidas") for r_ in rels):
+        p = _com_alternativas(p, rels, hoje)
     return json.dumps(p, ensure_ascii=False)
+
+
+FUND_ALTERNATIVA = "CP, arts. 43 a 46 (conversão: art. 44, § 4º); LEP, arts. 147 a 155"
+
+
+def _com_alternativas(p, rels, hoje):
+    """O painel com o cumprimento das medidas alternativas (relatório da aba Medidas Diversas da Prisão): um cartão por condição
+    (em atraso ou com status "verificar" no SEEU = para conferir; em dia = confere), o chip da medida no lugar do regime e, com a
+    medida ativa, sem o aviso de "não iniciou o cumprimento" (a pena está sendo cumprida pela restritiva)."""
+    q = {k: v for k, v in p.items() if k not in ("assinatura", "chave", "motor", "painel", "base_juridica", "base_digital")}
+    itens, ativa = [], None
+    for rel in rels:
+        if rel.get("processo") and re.sub(r"\D", "", rel["processo"]) != re.sub(r"\D", "", q.get("processo") or ""):
+            continue   # relatório de outro processo: fora
+        for med in rel.get("medidas") or []:
+            if (med.get("status") or "").upper() == "ATIVA" and not ativa:
+                ativa = med
+        for a in ralt.avaliar(rel, hoje):
+            itens.append(_item(a["id"], a["em_dia"], a["titulo"], a["valor"] if a["em_dia"] else "", a["medida"],
+                               "" if a["em_dia"] else "os comprovantes juntados nos autos (movimentações de comprovante de cumprimento) "
+                               "antes da audiência de justificação: o descumprimento pode levar à conversão em privativa de liberdade",
+                               a["conta"], FUND_ALTERNATIVA))
+    if not itens:
+        return p
+    q["alertas"] = [a for a in q.get("alertas") or [] if not (ativa and re.search(r"n[aã]o inici", a.get("titulo") or "", re.I))] + \
+        [x for x in itens if x["status"] != "verde"]
+    q["confere"] = list(q.get("confere") or []) + [x for x in itens if x["status"] == "verde"]
+    if ativa:
+        q["regime"] = "Restritiva de direitos" if re.search(r"restritiva", ativa.get("titulo") or "", re.I) else ativa.get("titulo") or q.get("regime")
+        q["pena"] = dict(q.get("pena") or {}, aviso="")
+    q["icones"] = list(q.get("icones") or []) + [{"tipo": "prd", "rotulo": "Restritiva de direitos" if ativa and "estritiva" in (ativa.get("titulo") or "")
+                                                  else "Medida alternativa",
+                                                  "estado": "ok" if all(x["status"] == "verde" for x in itens) else "conferir",
+                                                  "alvo": next((x["id"] for x in itens if x["status"] != "verde"), itens[0]["id"])}]
+    q["alternativas"] = [{"medida": m.get("titulo"), "status": m.get("status"), "inicio": m.get("inicio"), "pena": m.get("pena")}
+                         for rel in rels for m in rel.get("medidas") or []]
+    q["contagem"] = {"verde": q["contagem"]["verde"] + sum(1 for x in itens if x["status"] == "verde"), "amarelo": len(q["alertas"])}
+    q["assinatura"] = _assinar(q)
+    q.update({k: p[k] for k in ("chave", "motor", "painel", "base_juridica", "base_digital") if k in p})
+    return q
 
 
 # medidas sem condenação (o assunto principal da capa do SEEU diz o que é): acordo de não persecução penal, transação penal e

@@ -10,7 +10,7 @@ A Mesa do Defensor (o motivo de cada intimação e a última decisão) e o SEI s
 lidos quando o APTO pede (botões "Ler a Mesa" e "Ler o SEI", nas funções SEEU e
 SEI do APTO), só lendo. Os controles, a baixa e as petições ficam no APTO.
 
-PAINEL DO APTO NA PÁGINA DO PROCESSO (1.18) - NÃO PRECISA DO APTO
+PAINEL DO APTO NA PÁGINA DO PROCESSO (1.19) - NÃO PRECISA DO APTO
  - Ao abrir um processo no SEEU, a análise aparece à direita, na ordem da ficha
    do assistido: pena, marcos, benefícios e demais pontos. Verde "Confere" =
    há certeza; amarelo "Conferir" = conferir (sem "agir já"). Cada item abre a
@@ -47,6 +47,18 @@ PAINEL DO APTO NA PÁGINA DO PROCESSO (1.18) - NÃO PRECISA DO APTO
    assunto principal da capa do SEEU, o painel reconhece a medida sem
    condenação e não aponta "sem condenação" nem "não iniciou"; mostra o que
    é e que as condições se acompanham na aba Medidas Diversas da Prisão.
+ - Restritiva de direitos e demais medidas (1.19): com "Medidas Diversas da
+   Prisão (N)" na página, o painel lê a aba em segundo plano e gera o
+   relatório de cada medida (o mesmo "Gerar Relatório" da aba). Cada condição
+   vira um cartão: prestação pecuniária (parcelas vencidas sem pagamento e
+   pagas a menor, com o valor em atraso), prestação de serviços (horas
+   devidas até hoje x cumpridas, meses sem registro) e as demais (vencidos
+   sem registro); status "verificar" do SEEU fica a conferir. O chip mostra
+   "Restritiva de direitos" no lugar de "Aberto (não iniciado)".
+ - Prévia dos documentos (1.19): parar o mouse (ou o foco do teclado) sobre
+   o link de um documento do SEEU (ex.: "online.pdf" no detalhe da
+   movimentação) abre a prévia ao lado, sem nova aba; "Expandir" amplia a
+   prévia na página (sem cobrir o painel); Esc ou ✕ fecha.
  - "Copiar fundamento" copia o texto corrido, pronto para a petição (sem as
    marcas do painel), com a base legal no fim.
  - Alertas: indulto ou comutação já decididos no SEEU (concedido ou

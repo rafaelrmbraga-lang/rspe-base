@@ -16,7 +16,7 @@ import urllib.request
 RAIZ = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 DESTINO = os.path.join(RAIZ, "extensao_seeu", "motor")
 # os módulos que o painel usa (rspe_painel importa rspe_motor, que importa os demais; alguns entram por import tardio)
-MODULOS = ["rspe_painel", "rspe_pdf_paginas", "rspe_motor", "rspe_scraper", "rspe_view", "rspe_ficha", "rspe_regras", "rspe_decretos", "rspe_prescricao",
+MODULOS = ["rspe_painel", "rspe_alternativa", "rspe_pdf_paginas", "rspe_motor", "rspe_scraper", "rspe_view", "rspe_ficha", "rspe_regras", "rspe_decretos", "rspe_prescricao",
            "rspe_auditoria", "rspe_reincidencia", "rspe_remicao", "rspe_calc", "rspe_indulto_tl", "rspe_resumo", "rspe_relatorio"]
 DADOS = ["base_juridica.json", "logo_defensoria.png"]  # o logo vai no resumo para o assistido (o mesmo do APTO)
 # resumo para o assistido: o PDF sai do MESMO gerador do APTO (rspe_relatorio), com as fontes do APTO, o reportlab em Python

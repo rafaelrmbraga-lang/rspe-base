@@ -96,13 +96,14 @@ self.APTO_PAINEL = (() => {
     return [...new Uint8Array(await crypto.subtle.digest("SHA-1", bytes))].map((b) => b.toString(16).padStart(2, "0")).join("");
   }
 
-  async function analisar(processo, b64, capa) {
+  async function analisar(processo, b64, capa, alternativas) {
     const dig = digitos(processo);
     if (dig.length !== 20) return { estado: "erro", motivo: "número de processo não identificado na página" };
     if (!b64) return { estado: "sem_dados" };
     const fic = await fichasPara(dig);
     let m;
-    try { m = await motor("rspe", "", { b64, extra: { hoje: hojeBR(), fichas: fic.lista, hash: await sha1(b64), capa: capa || {} } }); } catch (e) { m = { ok: false, erro: String((e && e.message) || e) }; }
+    try { m = await motor("rspe", "", { b64, extra: { hoje: hojeBR(), fichas: fic.lista, hash: await sha1(b64), capa: capa || {},
+      alternativas: (alternativas || []).filter((a) => a && typeof a.b64 === "string").slice(0, 6) } }); } catch (e) { m = { ok: false, erro: String((e && e.message) || e) }; }
     if (!m || !m.ok) return { estado: "erro", motivo: "o motor da extensão falhou: " + ((m && m.erro) || "sem resposta") };
     const painel = JSON.parse(m.painel);
     if (painel.erro) return { estado: "nao_rspe", motivo: painel.motivo || "" };
@@ -119,7 +120,7 @@ self.APTO_PAINEL = (() => {
   }
   async function mensagem(msg) {
     if (msg.tipo === "painelGuardado") return (await guardado(msg.processo)) || null;
-    if (msg.tipo === "painelAnalisar") return analisar(msg.processo, msg.b64, msg.capa);
+    if (msg.tipo === "painelAnalisar") return analisar(msg.processo, msg.b64, msg.capa, msg.alternativas);
     if (msg.tipo === "painelResumo") {
       try { return await motor("resumo", "", { processo: digitos(msg.processo) }); } catch (e) { return { ok: false, erro: String(e) }; }
     }

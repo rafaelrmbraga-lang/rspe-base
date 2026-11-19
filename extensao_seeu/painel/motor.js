@@ -54,7 +54,16 @@ export async function analisarRspe(bytes, extra) {
   const t = performance.now();
   let paginas;
   try { paginas = await caracteresDoPdf(bytes); } catch (e) { return { ok: false, erro: "o PDF do relatório não abriu (" + String((e && e.message) || e) + ")" }; }
-  const painel = m.analisar(JSON.stringify(Object.assign({}, extra || {}, { paginas })));
+  // relatórios de pena alternativa (aba Medidas Diversas da Prisão), em base64: os caracteres de cada um, pelo mesmo caminho
+  const alternativas = [];
+  for (const a of (extra && extra.alternativas) || []) {
+    try {
+      const bin = atob(String(a.b64 || "")), b = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) b[i] = bin.charCodeAt(i);
+      alternativas.push({ tipo: a.tipo || "", paginas: await caracteresDoPdf(b) });
+    } catch (e) { /* relatório que não abriu fica de fora */ }
+  }
+  const painel = m.analisar(JSON.stringify(Object.assign({}, extra || {}, { paginas, alternativas })));
   return { ok: true, painel, info: { versao: m.info.versao, base_juridica: m.info.base_juridica, pyodide: m.info.pyodide }, carga: m.carga,
     ms: Math.round(performance.now() - t) };
 }

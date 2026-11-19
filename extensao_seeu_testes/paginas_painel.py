@@ -23,7 +23,11 @@ import tempfile  # noqa: E402
 import ficha_pdf as fp  # noqa: E402
 import rspe_ficha as rf  # noqa: E402
 
+import copy  # noqa: E402
+import alternativa_pdf as altpdf  # noqa: E402
+
 ids, saida = sys.argv[1].split(","), sys.argv[2]
+PRD = {ids[-1]}   # o último caso cumpre restritiva de direitos: aba Medidas Diversas da Prisão (1) e o relatório de pena alternativa
 hoje = sys.argv[3] if len(sys.argv) > 3 else None
 with open(os.path.join(RAIZ, "extensao_seeu", "motor", "motor.json"), encoding="utf-8") as f:
     rspe_motor.VERSAO = json.load(f)["versao"]
@@ -33,16 +37,26 @@ for i in ids:
     r = dict(casos[i]["rspe"], nome="FULANO DE TAL EXEMPLO %s" % i[1:], nome_mae="MARIA EXEMPLO DA SILVA")
     from datetime import date
     h = hoje or date.today().strftime("%d/%m/%Y")
+    alt_pdf, alternativas = "", []
+    if i in PRD:
+        r["_medidas"] = [{"titulo": "Substituição de pena privativa por restritiva de direito", "tipo": "PENA_SUBSTITUTIVA", "inicio": "30/10/2025", "status": "ATIVA"}]
+        d_alt = copy.deepcopy(altpdf.EXEMPLO)
+        d_alt.update(processo=r["processo_execucao"], nome=r["nome"])
+        alt_pdf = altpdf.gerar(os.path.join(tempfile.mkdtemp(), "alternativa_%s.pdf" % i), d_alt)
+        with pdfplumber.open(alt_pdf) as doc:
+            alternativas = [{"tipo": "PENA_SUBSTITUTIVA", "textos": [x.extract_text() or "" for x in doc.pages]}]
     rspe = rspe_pdf.gerar(os.path.join(tempfile.mkdtemp(), "rspe_%s.pdf" % i), ra.montar_texto(seeu.abas_dict(r), h)[0])
     with pdfplumber.open(rspe) as doc:
         textos = [x.extract_text() or "" for x in doc.pages]
-    entrada = {"textos": textos, "hoje": h, "hash": hashlib.sha1(open(rspe, "rb").read()).hexdigest()}
+    entrada = {"textos": textos, "hoje": h, "hash": hashlib.sha1(open(rspe, "rb").read()).hexdigest(),
+               "capa": {"classe": "386 - Execução da Pena", "assunto": "7791 - Pena Privativa de Liberdade"}, "alternativas": alternativas}
     p = json.loads(rp.analisar_rspe(json.dumps(entrada, ensure_ascii=False)))
     # a ficha disciplinar desta pessoa, em PDF (para o teste de carregar a ficha): o esperado é o painel com a ficha lida pelo APTO
     pdf = fp.gerar(os.path.join(tempfile.mkdtemp(), "ficha_%s.pdf" % i), nome=r["nome"], cpf=r.get("cpf") or "", filiacao=r["nome_mae"] + " \\ PAI EXEMPLO",
                    eventos=fp.EXEMPLO, impresso=h)
     pf = json.loads(rp.analisar_rspe(json.dumps(dict(entrada, fichas=[rv.json_seguro(rf.extrair(pdf))]), ensure_ascii=False)))
-    out[i] = {"processo": r["processo_execucao"], "nome": p["nome"], "paginas": seeu.paginas(r), "rspe_pdf": rspe, "url_rspe": seeu.URL_RSPE % seeu.id_execucao(r), "esperado": {"assinatura": p["assinatura"], "contagem": p["contagem"]},
+    out[i] = {"processo": r["processo_execucao"], "nome": p["nome"], "paginas": seeu.paginas(r), "rspe_pdf": rspe, "url_rspe": seeu.URL_RSPE % seeu.id_execucao(r),
+              "prd": bool(alt_pdf), "alt_pdf": alt_pdf, "url_alt": seeu.URL_ALTERNATIVA % ("PENA_SUBSTITUTIVA", seeu.id_execucao(r)) if alt_pdf else "", "esperado": {"assinatura": p["assinatura"], "contagem": p["contagem"]},
               "ficha_pdf": pdf, "esperado_ficha": {"assinatura": pf["assinatura"], "contagem": pf["contagem"], "ficha": pf["ficha"]}}
 json.dump(out, open(saida, "w", encoding="utf-8"), ensure_ascii=False)
 print("ok", len(out))

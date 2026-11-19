@@ -86,7 +86,7 @@ async function analisar(forcar) {
     ultimoRspe = d;
     pintar(Object.assign({}, atual, { etapa: "Lendo o relatório e calculando com as regras do APTO" }));
     let res;
-    try { res = await chrome.runtime.sendMessage({ tipo: "painelAnalisar", processo, b64: d.b64, capa: d.capa || null }); } catch (e) { res = null; }
+    try { res = await chrome.runtime.sendMessage({ tipo: "painelAnalisar", processo, b64: d.b64, capa: d.capa || null, alternativas: d.alternativas || [] }); } catch (e) { res = null; }
     if (res && res.estado !== "ok") res.diag = Object.assign({}, d.diag || {}, { motor: res.estado });
     res = res || { estado: "erro", motivo: "a extensão não respondeu: recarregue a página do SEEU" };
     if (res.estado === "ok") await chrome.storage.session.set({ painelMotorPronto: true });

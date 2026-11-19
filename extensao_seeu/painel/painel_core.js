@@ -162,6 +162,7 @@
     com: SVG('<rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M8 3v4M16 3v4M3.5 10h17"/><path d="M9 15h6"/>'),   // comutação: menos tempo de pena (calendário com "menos")
     ext: SVG('<circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/>'),                                          // extinção
     presc: SVG('<path d="M6 3h12M6 21h12"/><path d="M7 3c0 5 10 6 10 9s-10 4-10 9"/><path d="M17 3c0 5-10 6-10 9"/>'),   // prescrição: ampulheta
+    prd: SVG('<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1"/><path d="m8.5 13 2.5 2.5 4.5-5"/>'),   // restritiva de direitos: condições
     rem: '<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true" focusable="false"><path d="M3 5.5v13l8.5-6.5zM12.5 5.5v13l8.5-6.5z"/></svg>',  // remição pendente (APTO)
   };
   const CROT = { db: "Data-base", prog: "Progressão", liv: "Livramento", term: "Término" };

@@ -31,6 +31,18 @@ const ok = (c, m) => { if (!c) falhas.push(m); };
     const dig = u.searchParams.get("numeroUnico");
     if (dig) atual = Object.values(DADOS).find((c) => c.processo.replace(/\D/g, "") === dig) || null;
     if (!atual) return rota.fulfill({ status: 404, body: "" });
+    if (/\/seeu\/arquivo\.do$/.test(u.pathname)) {   // documento juntado: o PDF (aqui, o próprio RSPE do caso)
+      return rota.fulfill({ contentType: "application/pdf", headers: { "content-disposition": "attachment; filename=online.pdf" }, body: fs.readFileSync(atual.rspe_pdf) });
+    }
+    if (/processoExecucaoPenal\.do$/.test(u.pathname) && u.searchParams.get("actionType") === "emitirRelatorioPenaAlternativa") {
+      return atual.alt_pdf && u.pathname + u.search === atual.url_alt
+        ? rota.fulfill({ contentType: "application/pdf", body: fs.readFileSync(atual.alt_pdf) }) : rota.fulfill({ status: 404, body: "" });
+    }
+    if (rq.method() === "POST" && /visualizacaoProcesso\.do$/.test(u.pathname)) {   // troca de aba (o mesmo pedido do SEEU)
+      const ic = new URLSearchParams(rq.postData() || "").get("selectedIcon") || "";
+      const h = atual.paginas["/seeu/visualizacaoProcesso.do?actionType=visualizar&selectedIcon=" + ic];
+      return h ? rota.fulfill({ contentType: "text/html; charset=utf-8", body: h }) : rota.fulfill({ status: 404, body: "" });
+    }
     if (/processoExecucaoPenal\.do$/.test(u.pathname)) {
       return u.pathname + u.search === atual.url_rspe
         ? rota.fulfill({ contentType: "application/pdf", body: fs.readFileSync(atual.rspe_pdf) }) : rota.fulfill({ status: 404, body: "" });
@@ -61,9 +73,14 @@ const ok = (c, m) => { if (!c) falhas.push(m); };
       id + ": contagem diferente do Python do APTO (" + leg + " x " + JSON.stringify(c.esperado.contagem) + ")");
     const assin = await sw.evaluate(async (dig) => { const g = await chrome.storage.session.get("painel:" + dig); return g["painel:" + dig] && g["painel:" + dig].resultado.painel.assinatura; }, c.processo.replace(/\D/g, ""));
     ok(assin === c.esperado.assinatura, id + ": assinatura da extensão diferente da do Python do APTO");
-    ok(meus.every((p) => p.metodo === "GET"), id + ": só GET ao SEEU");
+    ok(meus.every((p) => p.metodo === "GET" || (c.prd && p.url === "/seeu/visualizacaoProcesso.do?actionType=visualizar")),
+      id + ": só GET ao SEEU (e, com medidas, a leitura da aba Medidas Diversas da Prisão)");
     ok(meus.every((p) => !/preAnalise|leitura|dispensar|assinar|juntar|salvar|excluir|alterar/i.test(p.url)), id + ": só endereços de leitura");
-    ok(meus.length === 2 && meus[1].url === c.url_rspe, id + ": um único pedido além da página: o RSPE pelo link da página (" + meus.map((p) => p.url.slice(0, 60)).join(" | ") + ")");
+    ok(c.prd ? meus.length === 4 && meus[1].url === c.url_rspe && meus[3].url === c.url_alt
+      : meus.length === 2 && meus[1].url === c.url_rspe, id + ": pedidos ao SEEU: a página, o RSPE" + (c.prd ? ", a aba das medidas e o relatório da pena alternativa" : "") +
+      " (" + meus.map((p) => p.metodo + " " + p.url.slice(0, 60)).join(" | ") + ")");
+    if (c.prd) ok(/Prestação pecuniária: R\$ [\d.,]+ em atraso/.test(await f.textContent("#corpo")) && /PSC: [\d,]+ h em atraso/.test(await f.textContent("#corpo")),
+      id + ": cumprimento da restritiva no painel (pecuniária e PSC em atraso)");
     ok(await pg.evaluate(() => getComputedStyle(document.documentElement).marginRight) === "392px", id + ": a página reserva a largura do painel");
     // chips logo abaixo de "Execução nº" (marcos do APTO, na página); ao rolar, a barra fixa com o nº e o nome
     await pg.waitForSelector("#apto-chips .sg", { timeout: 15000 });
@@ -124,6 +141,25 @@ const ok = (c, m) => { if (!c) falhas.push(m); };
       id + ": movimentações classificadas pelo conteúdo (" + L.map((x) => x[0]).join(",") + ")");
     ok(L[0][0] === "rotina" && L[0][2] === "0.45" && L[0][3] === "", id + ": rotina esmaecida e sem etiqueta");
     await pg.screenshot({ path: path.join(SAIDA, "movimentacoes.png"), fullPage: true });
+    // prévia do documento ao passar o mouse no link (sem nova aba): o quadro abre ao lado, com a 1ª página desenhada
+    const nAbas = ctx.pages().length;
+    await pg.locator('a[href*="/seeu/arquivo.do"]').first().hover();
+    await pg.waitForSelector("#apto-previa .q.on", { timeout: 8000 });
+    const pv = pg.frames().find((x) => x.url().includes("/painel/previa.html"));
+    await pv.waitForSelector("canvas", { timeout: 20000 });
+    ok(await pv.locator("canvas").count() >= 1, id + ": prévia do documento desenhada");
+    ok(ctx.pages().length === nAbas, id + ": a prévia não abre aba");
+    const caixa = await pg.locator("#apto-previa .q").boundingBox();
+    ok(caixa && caixa.x + caixa.width <= 1366 - 392, id + ": a prévia não cobre o painel (" + JSON.stringify(caixa) + ")");
+    await pg.screenshot({ path: path.join(SAIDA, "previa_documento.png") });
+    await pg.locator("#apto-previa #b").click();   // Expandir: ocupa a página sem cobrir o painel e não fecha ao tirar o mouse
+    await pg.mouse.move(5, 5);
+    await pg.waitForTimeout(600);
+    const gr = await pg.locator("#apto-previa .q").boundingBox();
+    ok(gr && gr.width > 800 && gr.x + gr.width <= 1366 - 392 && await pg.locator("#apto-previa .q").isVisible(), id + ": expandir amplia a prévia (" + JSON.stringify(gr) + ")");
+    await pg.screenshot({ path: path.join(SAIDA, "previa_expandida.png") });
+    await pg.keyboard.press("Escape");
+    ok(await pg.locator("#apto-previa .q").isHidden(), id + ": Esc fecha a prévia");
     await pg.locator('#apto-movs [data-rot="ocultar"]').click();
     L = await cat();
     ok(L.filter((x) => x[0] === "rotina").every((x) => !x[1]) && L.filter((x) => x[0] !== "rotina").every((x) => x[1]), id + ": ocultar a rotina");

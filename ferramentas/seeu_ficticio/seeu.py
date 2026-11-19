@@ -13,7 +13,7 @@ import re
 
 ESC = html.escape
 ABAS = [("tabInformacoesGerais", "Informações Gerais"), ("tabInformacoesAdicionais", "Informações Adicionais"),
-        ("tabMedidasDiversas", "Medidas Diversas da Prisão"), ("tabPartes", "Partes"), ("tabMovimentacoesProcesso", "Movimentações"),
+        ("tabMedidasDiversasPrisao", "Medidas Diversas da Prisão"), ("tabPartes", "Partes"), ("tabMovimentacoesProcesso", "Movimentações"),
         ("tabProcessosCriminais", "Processos Criminais"), ("tabEventos", "Eventos"), ("tabIncidentesConcedidos", "Incidentes Concedidos"),
         ("tabIncidentesNaoConcedidos", "Incidentes Não-Concedidos"), ("tabIncidentesPendentes", "Incidentes Pendentes"),
         ("tabMandados", "Mandados/Alvarás de Soltura-Ocorrências"), ("tabBNMP3", "BNMP3")]
@@ -114,7 +114,7 @@ def capa(r):
 def _contagens(r):
     inc = r.get("_incidentes") or []
     return {"tabProcessosCriminais": len({c.get("processo_criminal") for c in r.get("_crimes") or []}), "tabEventos": len(r.get("_eventos") or []),
-            "tabIncidentesConcedidos": sum(1 for i in inc if i.get("situacao") == "CONCEDIDO"), "tabMedidasDiversas": 0, "tabMandados": 0}
+            "tabIncidentesConcedidos": sum(1 for i in inc if i.get("situacao") == "CONCEDIDO"), "tabMedidasDiversasPrisao": len(r.get("_medidas") or []), "tabMandados": 0}
 
 
 def abas(r, ativa):
@@ -147,6 +147,11 @@ MOVS = [("SERVIDOR,SEMARQUIVO", "REMETIDOS OS AUTOS PARA DEFENSORIA PÚBLICA", "
         ("SERVIDOR", "JUNTADA DE GUIA DE RECOLHIMENTO - CARTA DE GUIA", "Servidor Exemplo", "Analista Judiciário")]
 
 
+# documento juntado (no SEEU real, no detalhe da movimentação: "online.pdf", arquivo.do?_tj=...)
+URL_ARQUIVO = "/seeu/arquivo.do?_tj=0f1c2e3d4b5a69788796a5b4c3d2e1f0"
+ARQ = ' <a href="%s" title="Clique para baixar o arquivo">online.pdf</a>' % URL_ARQUIVO
+
+
 def movimentacoes(r):
     linhas = []
     n = len(MOVS)
@@ -154,12 +159,32 @@ def movimentacoes(r):
         idv = "mov1Grau\n," + ",".join("\n" + g for g in gr.split(",")) + ",\n,\n"
         cls = "even" if k % 2 == 0 else "odd"
         linhas.append(f"""<tr class="{cls}" id="{idv}" ><td></td><td align="center">{n - k}</td><td align="center">{(k % 27) + 1:02d}/10/2026 10:00:00</td>
-<td><b><div title="Não é possível movimentar o processo">{ESC(tit)}</div></b><br>Descrição fictícia do evento {n - k}</td><td></td>
+<td><b><div title="Não é possível movimentar o processo">{ESC(tit)}</div></b><br>Descrição fictícia do evento {n - k}{ARQ if k == 3 else ""}</td><td></td>
 <td>{ESC(quem)}<br><font size="1"><b>{ESC(cargo)}</b></font></td></tr>
 <tr id="rowmovimentacoes{k}" class="{cls}" style="display:none"><td colspan="5"><div class="extendedinfo">Carregando...</div></td></tr>""")
     return (f'<div>Total de registros nesta página: {n}</div><table class="resultTable" cellpadding="0" cellspacing="0" width="100%">'
             '<thead><tr><th>&nbsp;</th><th>Seq.</th><th>Data</th><th>Evento</th><th>Ações Auto.</th><th>Movimentado Por</th></tr></thead><tbody>' +
             "".join(linhas) + "</tbody></table>")
+
+
+# aba Medidas Diversas da Prisão, no formato real: um bloco por tipo de medida com o link "Gerar Relatório"
+# (javascript:gerarPenaAlternativa('TIPO')); o relatório sai de URL_ALTERNATIVA (PDF)
+URL_ALTERNATIVA = ("/seeu/processo/criminal/execucao/processoExecucaoPenal.do?actionType=emitirRelatorioPenaAlternativa"
+                   "&report=relatorioPenaAlternativa&tipoRelatorio=%s&idProcessoExecucaoPenal=%s")
+
+
+def medidas(r):
+    ms = r.get("_medidas") or []
+    if not ms:
+        return '<div class="sem-medidas"><strong>Não existem medidas aplicadas nesse processo</strong></div>'
+    js = ('<script type="text/javascript">function gerarPenaAlternativa(tipoRelatorio) { var idProcessoExecucaoPenal = %s; '
+          'var acao = "/seeu/processo/criminal/execucao/processoExecucaoPenal.do?actionType=emitirRelatorioPenaAlternativa&report='
+          'relatorioPenaAlternativa&tipoRelatorio=" + tipoRelatorio + "&idProcessoExecucaoPenal=" + idProcessoExecucaoPenal; '
+          'openDialog(acao, \'Visualizar Pdf\', 800, 600); }</script>') % id_execucao(r)
+    blocos = "".join('<table width="100%%"><tr><td><h4>%s</h4></td><td style="text-align:right"><a href="javascript:gerarPenaAlternativa(\'%s\')" '
+                     'class="link">Gerar Relatório</a></td></tr></table><div>Data de início: %s Status: %s</div>'
+                     % (ESC(m["titulo"]), m["tipo"], ESC(m.get("inicio") or ""), ESC(m.get("status") or "")) for m in ms)
+    return js + blocos
 
 
 def aba_conteudo(r, aba):
@@ -223,6 +248,8 @@ def aba_conteudo(r, aba):
                                  "Data de Decisão", "Juiz", "Situação"], linhas)
     if aba == "tabMovimentacoesProcesso":
         return movimentacoes(r)
+    if aba == "tabMedidasDiversasPrisao":
+        return medidas(r)
     return '<p style="color:#777">Nenhum registro encontrado.</p>'
 
 

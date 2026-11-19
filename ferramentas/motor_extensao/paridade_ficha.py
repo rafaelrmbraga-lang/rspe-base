@@ -58,7 +58,25 @@ def main():
             print("DIFERENTE", os.path.basename(p), [k for k in a if json.dumps(a[k], default=str) != json.dumps(b.get(k), default=str)])
     print("ficha disciplinar: %d/%d PDFs com a mesma leitura no pdf.js (navegador) e no pdfplumber (APTO)" % (len(pdfs) - difs, len(pdfs)))
     difs += rspes(d)
+    difs += alternativas(d)
     sys.exit(1 if difs else 0)
+
+
+def alternativas(d):
+    """Relatório de pena alternativa (fictício): mesmo texto de página e mesma avaliação do cumprimento pelos dois caminhos."""
+    import pdfplumber
+    import alternativa_pdf
+    import rspe_alternativa as ralt
+    from datetime import date
+    p = alternativa_pdf.gerar(os.path.join(d, "alternativa.pdf"))
+    subprocess.run(["node", os.path.join(RAIZ, "ferramentas", "motor_extensao", "pdf_chars_node.mjs"), p, p[:-4] + ".json"], check=True)
+    with pdfplumber.open(p) as doc:
+        ta = [x.extract_text() or "" for x in doc.pages]
+    tb = [x.extract_text() or "" for x in pp.paginas(json.load(open(p[:-4] + ".json", encoding="utf-8")))]
+    hoje = date(2026, 3, 15)
+    ok = ta == tb and ralt.avaliar(ralt.ler(ta), hoje) == ralt.avaliar(ralt.ler(tb), hoje) and ralt.ler(ta)["medidas"]
+    print("pena alternativa: %s" % ("o mesmo texto e a mesma avaliação no pdf.js e no pdfplumber" if ok else "DIFERENTE"))
+    return 0 if ok else 1
 
 
 def rspes(d):

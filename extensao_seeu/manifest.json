@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "APTO - RSPE do SEEU, painel do processo, Triagem da Mesa, Ficha do SIAPEN, processos e atendimentos do SAP",
   "short_name": "APTO RSPE",
-  "version": "1.18.0",
+  "version": "1.19.0",
   "description": "Painel do APTO na página do processo do SEEU (regras do APTO, sem precisar dele; só leitura); RSPE do SEEU e ficha do SIAPEN para o APTO; leitura da Mesa, do SEI e da fila do SAP pedida pelo APTO (só leitura).",
   "minimum_chrome_version": "116",
   "permissions": [
@@ -106,7 +106,8 @@
         "comum.js",
         "painel/painel_core.js",
         "painel/painel_seeu.js",
-        "painel/movs_seeu.js"
+        "painel/movs_seeu.js",
+        "painel/previa_seeu.js"
       ],
       "all_frames": true,
       "run_at": "document_idle"
@@ -154,6 +155,8 @@
         "painel/painel.html",
         "painel/painel.css",
         "icones/128.png",
+        "painel/previa.html",
+        "painel/previa.js",
         "painel/painel.js",
         "painel/painel_core.js",
         "painel/painel_resumo.js",
