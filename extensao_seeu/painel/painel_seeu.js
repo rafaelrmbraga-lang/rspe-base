@@ -74,15 +74,22 @@
   async function lerAbas(progresso) {
     if (lendo) return lendo;
     lendo = (async () => {
-      const abas = { capa: document.documentElement.outerHTML };
+      const abas = { capa: document.documentElement.outerHTML, processo: processoDaPagina() };
       const links = linksDasAbas(document);
       const chaves = Object.keys(ABAS).filter((k) => links[k]);
+      // para o diagnóstico (sem dados pessoais): que abas foram achadas, por qual endereço (sem os parâmetros) e o que falhou
+      const coleta = { achadas: chaves, nao_achadas: Object.keys(ABAS).filter((k) => !links[k]), falhas: {},
+        enderecos: Object.fromEntries(chaves.map((k) => { try { const u = new URL(links[k]); return [k, u.pathname + "?" + [...u.searchParams.keys()].join("&")]; } catch (e) { return [k, "?"]; } })),
+        links_na_pagina: [...document.querySelectorAll("a")].filter((a) => /^(Informa|Partes|Processos Crim|Eventos|Incidentes)/i.test((a.textContent || "").trim()))
+          .slice(0, 12).map((a) => ({ texto: (a.textContent || "").trim().slice(0, 40), href: (a.getAttribute("href") || "").replace(/[?#].*$/, "").slice(0, 80) || "(vazio)",
+            onclick: !!a.getAttribute("onclick"), id: (a.id || "").slice(0, 40) })) };
       let n = 0;
       for (const k of chaves) {
         progresso("Lendo as abas do processo (" + (++n) + " de " + chaves.length + ")");
-        try { abas[k] = await buscar(links[k]); } catch (e) { /* aba que falhou fica de fora: o leitor diz o que faltou */ }
+        try { abas[k] = await buscar(links[k]); } catch (e) { coleta.falhas[k] = String((e && e.message) || e).slice(0, 80); }
         await espera(INTERVALO_MS);
       }
+      abas._coleta = JSON.stringify(coleta);
       if (abas.criminais) {
         const doc = new DOMParser().parseFromString(abas.criminais, "text/html");
         const urls = [...doc.querySelectorAll("a")].filter((a) => /^Processo Criminal\b/i.test((a.textContent || "").trim()))

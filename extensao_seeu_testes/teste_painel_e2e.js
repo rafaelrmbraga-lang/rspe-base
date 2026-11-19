@@ -113,15 +113,20 @@ const ok = (c, m) => { if (!c) falhas.push(m); };
       ok(require("child_process").execFileSync("python3", ["-c", "import sys,pdfplumber;p=pdfplumber.open(sys.argv[1]);print('S' if 'Pedido de atendimento' in ''.join(x.extract_text() or '' for x in p.pages) else 'N')", destino]).toString().trim() === (canhoto ? "S" : "N"),
         id + ": canhoto " + (canhoto ? "devia" : "não devia") + " sair (" + onde + ")");
       await aba.close();
+      await pg.bringToFront();   // a aba do SEEU volta a ser a ativa (como quando a pessoa fecha a aba de impressão)
       if (onde === "unidade") await pg.screenshot({ path: path.join(SAIDA, "painel_resumo_unidade.png") });
     }
     ok(ctx.pages().length === abasAntes, id + ": só a aba de impressão abre (e foi fechada)");
-    await f.click("#resVoltar");
-    await f.waitForSelector(".pena");
+    // nada cobre o "Voltar" (o elemento no centro dele é ele mesmo); no Chromium sem tela, depois de fechar a aba de impressão,
+    // o clique do mouse simulado não chega à moldura: dispara o clique no próprio botão
+    ok(await f.evaluate(() => { const r = document.getElementById("resVoltar").getBoundingClientRect(); return document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2).id === "resVoltar"; }),
+      id + ": o botão Voltar está coberto por outro elemento");
+    await f.locator("#resVoltar").dispatchEvent("click");
+    await f.waitForSelector(".pena", { timeout: 15000 });
   }
   ok(ctx.pages().length === abasAntes, "nenhuma aba nova aberta (" + ctx.pages().length + " x " + abasAntes + ")");
   const f = await moldura();
-  await f.click("#recolher");
+  await f.locator("#recolher").dispatchEvent("click");   // ver o Voltar: clique direto no botão no Chromium sem tela
   await pg.waitForTimeout(300);
   ok(await pg.evaluate(() => getComputedStyle(document.documentElement).marginRight) === "0px", "recolhido: a página volta à largura toda");
   await pg.screenshot({ path: path.join(SAIDA, "painel_recolhido.png") });

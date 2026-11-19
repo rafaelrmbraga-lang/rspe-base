@@ -71,6 +71,13 @@
         `${it.fundamento ? `<div class="fund">${esc(it.fundamento)}</div>` : ""}</details>` : "") + `</li>`;
   }
 
+  // diagnóstico da leitura (só a estrutura das abas: rótulos, títulos, cabeçalhos e contagens; nenhum dado pessoal)
+  function diagnostico() {
+    return `<div class="diag"><p>Para ajustar a leitura ao SEEU, copie o diagnóstico e envie a quem mantém a extensão. Ele traz só a ` +
+      `estrutura das abas (nomes dos campos e das colunas, quantidades), sem nenhum dado do processo ou da pessoa.</p>` +
+      `<button type="button" class="btn-f" data-acao="copiar-diag">Copiar o diagnóstico</button></div>`;
+  }
+
   function corpo(res) {
     const p = res.painel || {};
     let h = topo(p, res) + `<section class="pena" aria-label="Pena e marcos">${pena(p)}${marcos(p)}</section>`;
@@ -85,6 +92,7 @@
       h += `<section aria-labelledby="s-crimes"><h2 id="s-crimes">Crimes em execução</h2><ul class="crimes">` +
         p.crimes.map((c) => `<li><b>${esc(c.texto)}</b>${c.pena ? ` · ${esc(c.pena)}` : ""}${c.hediondo && /verificar/.test(c.hediondo) ? ` <span class="selo-st amarelo">${ICO.amarelo}hediondo a conferir</span>` : ""}</li>`).join("") + `</ul></section>`;
     }
+    if (p.diag) h += `<details class="naocabe"><summary>Leitura das abas incompleta</summary>${diagnostico()}</details>`;
     if ((p.nao_cabe || []).length) {
       h += `<details class="naocabe"><summary>Não cabe: ${p.nao_cabe.length} ${p.nao_cabe.length === 1 ? "hipótese afastada" : "hipóteses afastadas"}</summary><ul>` +
         p.nao_cabe.map((x) => `<li><b>${esc(x.titulo)}</b>: ${esc(x.motivo)}</li>`).join("") + `</ul></details>`;
@@ -104,7 +112,9 @@
     }
     if (AVISO[res.estado]) {
       const [t, d] = AVISO[res.estado];
-      return `<div class="aviso" role="status"><b>${esc(t)}</b><p>${esc(res.motivo || d)}</p></div>`;
+      return `<div class="aviso" role="status"><b>${esc(t)}</b><p>${esc(res.motivo || d)}</p>` +
+        ((res.faltou || []).length ? `<p class="aviso-f">Não achado: ${res.faltou.map(esc).join("; ")}.</p>` : "") +
+        (res.diag ? diagnostico() : "") + `</div>`;
     }
     return corpo(res);
   }

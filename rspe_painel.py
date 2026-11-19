@@ -302,9 +302,12 @@ def analisar_abas(txt):
     hoje = rs.to_date(e.get("hoje") or "") or date.today()
     r, faltou = ra.ler(e.get("abas") or {}, rs.fmt(hoje))
     if not r.get("processo_execucao"):
-        return json.dumps({"erro": "sem_dados", "faltou": faltou}, ensure_ascii=False)
+        return json.dumps({"erro": "sem_dados", "faltou": faltou, "diag": ra.diagnostico(e.get("abas"))}, ensure_ascii=False)
     fichas = [f for f in e.get("fichas") or [] if isinstance(f, dict)]
-    return json.dumps(analisar(r, contexto_fichas(fichas), hoje, faltou, len(fichas)), ensure_ascii=False)
+    p = analisar(r, contexto_fichas(fichas), hoje, faltou, len(fichas))
+    if faltou:
+        p["diag"] = ra.diagnostico(e.get("abas"))  # fora da assinatura: só para ajustar a leitura
+    return json.dumps(p, ensure_ascii=False)
 
 
 def ler_ficha(txt):

@@ -12,6 +12,7 @@ Incidente", "Data de Referência"), não pela marcação: a estrutura foi tirada
 02/2026) e precisa ser conferida com o HTML real das abas. O que não for achado fica em branco - e o que fica em branco no
 registro o motor trata como "a verificar" (amarelo no painel), nunca como dado. A lista "faltou" diz o que não foi lido."""
 import html.parser
+import json
 import re
 
 import rspe_scraper as rs
@@ -169,12 +170,15 @@ def montar_texto(abas, gerado=""):
     "eventos", "concedidos", "nao_concedidos", "pendentes" e "crim:<n>" (uma por processo criminal). Devolve (texto no
     formato do RSPE, lista do que não foi achado)."""
     faltou = []
-    L = {k: _ler(v) for k, v in (abas or {}).items()}
+    L = {k: _ler(v) for k, v in (abas or {}).items() if isinstance(v, str) and k not in ("processo", "_coleta")}
     cap = L.get("capa") or _ler("")
     fc = cap.fichas
-    numero = _kv(fc, "processoNumeroFormatado") or ""
-    if not numero:
-        m = RE_CNJ.search(" ".join(t for t, _ in cap.links) + " " + " ".join(str(f[1:]) for f in fc))
+    # o número: o que a extensão leu na página (o mesmo do painel); senão o campo oculto; senão o 1º número CNJ do texto da capa
+    # (no SEEU real ele fica no cabeçalho "Execução 0000000-00.0000.0.00.0000", fora de tabela)
+    m = RE_CNJ.search(str((abas or {}).get("processo") or ""))
+    numero = m.group(0) if m else (_kv(fc, "processoNumeroFormatado") or "")
+    if not RE_CNJ.search(numero):
+        m = RE_CNJ.search(_txt(re.sub(r"<(script|style)\b[\s\S]*?</\1>|<[^>]+>", " ", (abas or {}).get("capa") or "")))
         numero = m.group(0) if m else ""
     sent = _kv(fc, "Sentenciado")
     nome = re.split(r"\s*\(RJI|\s*\(CPF", sent)[0].strip() if sent else ""
@@ -306,3 +310,26 @@ def ler(abas, gerado=""):
     if faltou:
         r["_abas_faltou"] = faltou
     return r, faltou
+
+
+def diagnostico(abas):
+    """Estrutura do que foi lido em cada aba, SEM DADOS PESSOAIS (só rótulos, títulos e cabeçalhos de tabela, que são do SEEU,
+    e contagens): para ajustar a leitura ao HTML real sem precisar das páginas. Os valores nunca entram."""
+    out = {}
+    try:
+        out["_coleta"] = json.loads((abas or {}).get("_coleta") or "{}")
+    except ValueError:
+        out["_coleta"] = {}
+    for k, v in sorted((abas or {}).items()):
+        if not isinstance(v, str) or k in ("processo", "_coleta"):
+            continue
+        p = _ler(v)
+        aba = p.aba
+        out[k] = {"tamanho": len(v), "barra_de_abas": p.corpo is not None,
+                  "titulos": [f[1][:60] for f in aba if f[0] == "h"][:15],
+                  "rotulos": [f[1][:50] for f in aba if f[0] == "kv"][:40],
+                  "tabelas": [{"cabecalho": [c[:30] for c in f[1]][:12], "linhas": len(f[2])} for f in aba if f[0] == "tab"][:8],
+                  "links_abas": sorted({t[:40] for t, h in p.links if re.match(r"(Informa|Partes|Movimenta|Processos Crim|Eventos|Incidentes|Medidas|Mandados|BNMP)", t)})[:14],
+                  "links_processo_criminal": sum(1 for t, h in p.links if re.match(r"Processo Criminal", t)),
+                  "cnj_no_texto": bool(RE_CNJ.search(_txt(re.sub(r"<[^>]+>", " ", v))))}
+    return out

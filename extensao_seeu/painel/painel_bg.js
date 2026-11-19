@@ -96,7 +96,7 @@ self.APTO_PAINEL = (() => {
     try { m = await motor("analisar", JSON.stringify({ abas, hoje: hojeBR(), fichas: fic.lista })); } catch (e) { m = { ok: false, erro: String((e && e.message) || e) }; }
     if (!m || !m.ok) return { estado: "erro", motivo: "o motor da extensão falhou: " + ((m && m.erro) || "sem resposta") };
     const painel = JSON.parse(m.painel);
-    if (painel.erro) return { estado: "sem_dados", faltou: painel.faltou || [] };
+    if (painel.erro) return { estado: "sem_dados", faltou: painel.faltou || [], diag: painel.diag || null };
     if (digitos(painel.processo) !== dig) return { estado: "erro", motivo: "as abas lidas são de outro processo (" + painel.processo + "): recarregue a página do SEEU" };
     const resultado = { estado: "ok", painel, motor: m.info, ms: m.ms, carga: m.carga, quando: Date.now(),
       fichaCarregada: fic.doPainel ? { resumo: fic.doPainel.resumo, arquivo: fic.doPainel.arquivo } : null };

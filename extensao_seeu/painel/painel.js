@@ -93,6 +93,11 @@ $("corpo").addEventListener("click", async (e) => {
   const b = e.target.closest("[data-acao]");
   if (!b) return;
   if (b.dataset.acao === "ficha-carregar") $("arquivoFicha").click();
+  if (b.dataset.acao === "copiar-diag") {
+    const dg = atual && (atual.diag || (atual.painel && atual.painel.diag));
+    const txt = JSON.stringify({ extensao: chrome.runtime.getManifest().version, diagnostico: dg || null }, null, 1);
+    try { await navigator.clipboard.writeText(txt); aviso("Diagnóstico copiado (sem dados pessoais)."); } catch (e) { aviso("Não foi possível copiar."); }
+  }
   if (b.dataset.acao === "ficha-retirar") {
     await chrome.runtime.sendMessage({ tipo: "painelFichaRetirar", processo }).catch(() => null);
     aviso("Ficha retirada do painel.");
