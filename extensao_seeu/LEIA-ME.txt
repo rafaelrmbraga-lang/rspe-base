@@ -35,7 +35,8 @@ PAINEL DO APTO NA PÁGINA DO PROCESSO (1.15) - NÃO PRECISA DO APTO
  - "Resumo para o assistido": o texto em linguagem simples do APTO, para
    conferir frase a frase. Antes de baixar o PDF, diga onde é o atendimento:
    na unidade prisional (sai o canhoto para o assistido pedir o próximo
-   atendimento) ou fora dela (sem o canhoto). O PDF vai para os downloads.
+   atendimento) ou fora dela (sem o canhoto). "Imprimir" abre o resumo numa
+   aba do navegador e já pede a impressão (o visualizador também deixa baixar).
  - Liga e desliga no painel da extensão ("Mostrar o painel do APTO na página
    do processo").
  - Pasta motor: gerada na compilação (os mesmos .py do APTO e o Pyodide). Quem

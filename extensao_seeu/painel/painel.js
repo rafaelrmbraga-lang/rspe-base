@@ -130,7 +130,7 @@ function pintarResumo() {
   $("corpo").innerHTML = R.tela(res);
   $("corpo").setAttribute("aria-busy", "false");
   $("resPdf").disabled = !res.onde;
-  $("resPdf").title = res.onde ? "" : "Escolha antes onde é o atendimento";
+  $("resPdf").title = res.onde ? "Abre o resumo numa aba do navegador e já pede a impressão" : "Escolha antes onde é o atendimento";
 }
 async function abrirResumo() {
   modoResumo(true);
@@ -173,20 +173,16 @@ $("resPdf").addEventListener("click", async () => {
   try {
     const r = await chrome.runtime.sendMessage({ tipo: "painelResumoPdf", d: R.saida(res), canhoto: res.onde === "unidade" }).catch(() => null);
     if (!r || !r.ok) return aviso("PDF não gerado: " + ((r && r.erro) || "a extensão não respondeu"));
-    const bin = atob(r.b64), bytes = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
-    a.download = "Resumo - " + String(res.nome || "assistido").replace(/[\\/:*?"<>|]+/g, " ").trim() + ".pdf";
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
-    aviso("Resumo salvo nos downloads" + (res.onde === "unidade" && !r.canhoto ? " (sem o canhoto: o texto não coube em uma folha com ele)" : "") +
+    // abre o resumo numa aba do navegador, já pedindo a impressão (o visualizador de PDF também deixa baixar)
+    const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    await chrome.storage.session.set({ ["resumoImprimir:" + id]: { b64: r.b64, nome: res.nome || "" } });
+    await chrome.tabs.create({ url: chrome.runtime.getURL("painel/imprimir.html#" + id), active: true });
+    aviso("Resumo aberto para imprimir" + (res.onde === "unidade" && !r.canhoto ? " (sem o canhoto: o texto não coube em uma folha com ele)" : "") +
       (r.verso ? " · com o verso: imprima frente e verso" : "") + ".");
   } finally {
     b.disabled = false;
     b.removeAttribute("aria-busy");
-    b.textContent = "Baixar o PDF";
+    b.textContent = "Imprimir";
   }
 });
 document.addEventListener("keydown", (e) => {

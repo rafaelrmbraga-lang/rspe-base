@@ -98,17 +98,24 @@ const ok = (c, m) => { if (!c) falhas.push(m); };
     for (const [onde, canhoto] of [["fora", false], ["unidade", true]]) {
       await f.check(`input[name=resOnde][value=${onde}]`);
       await f.waitForSelector("#resPdf:not([disabled])");
-      const [dl] = await Promise.all([pg.waitForEvent("download", { timeout: 90000 }), f.click("#resPdf")]);
+      const [aba] = await Promise.all([ctx.waitForEvent("page", { timeout: 90000 }), f.click("#resPdf")]);
+      await aba.waitForLoadState();
+      ok(/\/painel\/imprimir\.html#/.test(aba.url()), id + ": o resumo abre na página de impressão da extensão (" + aba.url() + ")");
+      await aba.waitForFunction(() => document.body.dataset.impressao, null, { timeout: 30000 });
+      const pedido = await aba.evaluate(() => document.body.dataset.impressao);
+      console.log(id, "· resumo", onde, "· aba de impressão aberta · impressão", pedido, "·", await aba.title());
+      ok(pedido === "pedida", id + ": a impressão devia ser pedida ao abrir (" + pedido + ")");
+      const b64 = await aba.evaluate(async () => { const u = document.getElementById("pdf").src; const b = new Uint8Array(await (await fetch(u)).arrayBuffer());
+        let s = ""; for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000)); return btoa(s); });
       const destino = path.join(SAIDA, `resumo_${onde}.pdf`);
-      await dl.saveAs(destino);
-      const buf = fs.readFileSync(destino);
-      ok(buf.slice(0, 5).toString() === "%PDF-", id + ": resumo (" + onde + ") não é PDF");
-      console.log(id, "· resumo", onde, "·", buf.length, "bytes ·", dl.suggestedFilename());
+      fs.writeFileSync(destino, Buffer.from(b64, "base64"));
+      ok(fs.readFileSync(destino).slice(0, 5).toString() === "%PDF-", id + ": resumo (" + onde + ") não é PDF");
       ok(require("child_process").execFileSync("python3", ["-c", "import sys,pdfplumber;p=pdfplumber.open(sys.argv[1]);print('S' if 'Pedido de atendimento' in ''.join(x.extract_text() or '' for x in p.pages) else 'N')", destino]).toString().trim() === (canhoto ? "S" : "N"),
         id + ": canhoto " + (canhoto ? "devia" : "não devia") + " sair (" + onde + ")");
+      await aba.close();
       if (onde === "unidade") await pg.screenshot({ path: path.join(SAIDA, "painel_resumo_unidade.png") });
     }
-    ok(ctx.pages().length === abasAntes, id + ": baixar o resumo não abriu aba");
+    ok(ctx.pages().length === abasAntes, id + ": só a aba de impressão abre (e foi fechada)");
     await f.click("#resVoltar");
     await f.waitForSelector(".pena");
   }

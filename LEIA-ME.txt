@@ -27,7 +27,8 @@ APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.32.0
   Resumo para o assistido no painel: o mesmo texto e o mesmo PDF do APTO,
   conferidos no próprio painel; antes do PDF, escolha onde é o atendimento -
   na unidade prisional (com o canhoto para pedir o próximo atendimento) ou
-  fora dela (Defensoria, fórum, telefone ou vídeo: sem o canhoto).
+  fora dela (Defensoria, fórum, telefone ou vídeo: sem o canhoto). "Imprimir"
+  abre o resumo numa aba do navegador e já pede a impressão.
   Limite: a leitura foi construída sobre as capturas oficiais do SEEU (TJSP,
   2026) e sobre fichas sintéticas; o HTML real das abas e uma ficha real do
   SIAPEN ainda precisam ser conferidos (docs/painel_seeu).
