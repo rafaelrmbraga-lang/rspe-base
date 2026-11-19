@@ -491,10 +491,10 @@ def _com_alternativas(p, rels, hoje):
                                a["conta"], FUND_ALTERNATIVA))
     if not itens:
         return p
+    prd = ativa if ativa and re.search(r"restritiva", ativa.get("titulo") or "", re.I) else None
     q["alertas"] = [a for a in q.get("alertas") or [] if not (prd and re.search(r"n[aã]o inici", a.get("titulo") or "", re.I))] + \
         [x for x in itens if x["status"] != "verde"]
     q["confere"] = list(q.get("confere") or []) + [x for x in itens if x["status"] == "verde"]
-    prd = ativa if ativa and re.search(r"restritiva", ativa.get("titulo") or "", re.I) else None
     if prd and (not regime or "nao inici" in regime):
         # a pena é cumprida pela restritiva: o regime "aberto (não iniciado)" do RSPE dá lugar à medida; nos demais casos, o regime
         # é sempre o do RSPE
