@@ -47,7 +47,7 @@ from rspe_gabinete_api import GabineteApi
 import rspe_gabinete_api as rgabapi
 
 APP = "APTO"
-VERSAO = "7.32.0"
+VERSAO = "7.32.1"
 import rspe_motor
 from rspe_motor import (_mesma_mae, _so_digitos, _ficha_prova, _ficha_alternativa, _fichas_candidatas, _norm, _montar_modelo, _ref_decreto, _enc_chave, _BJ_DIG, _bj_digital, _chave_calculo, _ctx_de, _CONTEUDO_CRIME, _CONTEUDO_BLOCO, _conteudo_rspe)  # o motor (também roda na extensão: o painel no SEEU)
 rspe_motor.VERSAO = VERSAO

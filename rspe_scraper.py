@@ -320,10 +320,12 @@ def pct_texto(t):
 
 
 def parse_fracao(txt):
-    """'1/6 - Comum' -> Fraction(1,6); '16% - ...' -> Fraction(16,100)."""
+    """'1/6 - Comum' -> Fraction(1,6); '16% - ...' -> Fraction(16,100); '20% - Art.112, III, da LEP até 24/03/2026' -> 1/5 (a data não é
+    fração)."""
     if not txt:
         return None
-    m = re.search(r"(\d+)\s*/\s*(\d+)", txt)
+    # fração "1/6", mas não a data ("até 24/03/2026" virava 24/3 = 800%) nem o número de lei ("Lei 13.964/2019")
+    m = re.search(r"(?<![\d./])(\d{1,2})\s*/\s*(\d{1,2})(?![\d/])", txt)
     if m:
         return Fraction(int(m.group(1)), int(m.group(2))) if int(m.group(2)) else None
     m = re.search(r"(\d+(?:[.,]\d+)?)\s*%", txt)

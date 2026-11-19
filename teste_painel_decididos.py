@@ -72,6 +72,11 @@ assert rp._hipotese_provavel(["Decreto 12.790/2025 · data de referência 25/12/
 assert not rp._medida_vigente({"titulo": "Condições De Cumprimento Do Regime Semiaberto", "status": "ATIVA"}, "aberto")
 assert rp._medida_vigente({"titulo": "Condições De Cumprimento Do Regime Aberto", "status": "ATIVA"}, "aberto")
 assert not rp._medida_vigente({"titulo": "Substituição De Pena Privativa Por Restritiva De Direito", "status": "FINALIZADA"}, "aberto (nao iniciado)")
+# fração com a data de vigência impressa pelo SEEU ("até 24/03/2026") ou com o número da lei: a data não é fração (era 24/3 = 800%)
+from fractions import Fraction  # noqa: E402
+assert rs.parse_fracao("20% - Art.112, III, da LEP até 24/03/2026") == Fraction(1, 5)
+assert rs.parse_fracao("40% - Art.112, V, da LEP até 24/03/2026") == Fraction(2, 5)
+assert rs.parse_fracao("Art. 112, § 3º, Lei 13.769/2018 (1/8)") == Fraction(1, 8) and rs.parse_fracao("1/6 - Comum") == Fraction(1, 6)
 if len(sys.argv) > 1:
     json.dump(out, open(sys.argv[1], 'w'), ensure_ascii=False)
-print('ok: painel - decidido no SEEU não alerta, não alcançado afastado, aviso de cadastro recolhido, recálculo da progressão num cartão só, ANPP sem alerta de condenação, indulto de decreto já comutado, hipótese mais provável, medidas vigentes')
+print('ok: painel - decidido no SEEU não alerta, não alcançado afastado, aviso de cadastro recolhido, recálculo da progressão num cartão só, ANPP sem alerta de condenação, indulto de decreto já comutado, hipótese mais provável, medidas vigentes, fração com data de vigência')

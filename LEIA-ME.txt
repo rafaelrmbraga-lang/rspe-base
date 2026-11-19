@@ -1,4 +1,10 @@
-APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.32.0
+APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.32.1
+  Correção (7.32.1): a fração de progressão com a data de vigência impressa
+  pelo SEEU ("20% - Art.112, III, da LEP até 24/03/2026") era lida como 24/3
+  (800%); agora a data e o número de lei ("Lei 13.964/2019") não viram fração.
+  O painel do processo no SEEU (extensão 1.21) lê o RSPE pelo link da página e
+  traz chips dos marcos e benefícios, destaques das movimentações, prévia dos
+  documentos e as medidas alternativas; a extensão APTO SEEU é só o painel.
   Painel do APTO na página do processo do SEEU (extensão 1.15.0), SEM precisar
   do APTO aberto. Ao abrir um processo no SEEU, aparece à direita a análise, na
   ordem da ficha do assistido: pena e data-base; marcos (progressão,
